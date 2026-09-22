@@ -832,6 +832,12 @@ a{color:inherit;text-decoration:none;}
 .main::-webkit-scrollbar{width:6px;}
 .main::-webkit-scrollbar-thumb{background:var(--ink-6);border-radius:var(--r-pill);}
 .tab-pane{display:none;padding:22px 26px 72px;max-width:1080px;}
+/* 사장님 말씀 (2026-09-22) — 「TFA 업무관리 칸이 한눈에 안 들어와,
+   넓이를 한눈에 전부 보이게 만들어 줘」. 재 보니 1440px 화면에서
+   본문은 1028px 만 쓰고 있었습니다 — 이 max-width 가 묶고 있었습니다.
+   <b>칸이 많은 화면만</b> 풀어 줍니다. 글만 있는 화면까지 넓히면
+   한 줄이 너무 길어져 오히려 읽기 힘듭니다.                        */
+.tab-pane.wide{max-width:1560px;}
 .tab-pane.on{display:block;animation:fade .25s var(--ease);}
 @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
 
@@ -10590,21 +10596,26 @@ function arCss(){
    '.ar-bb{border:1.5px solid #E2E8F0;background:#fff;border-radius:var(--r-pill);padding:7px 14px;'+
      'font-size:var(--t6);font-weight:800;color:#475569;cursor:pointer;font-family:inherit}'+
    '.ar-bb:hover{background:#F8FAFC}'+
-   '.ar-wrap{display:grid;grid-template-columns:248px 1fr;gap:18px;align-items:start}'+
+   '.ar-wrap{display:grid;grid-template-columns:268px 1fr;gap:18px;align-items:start}'+
    '@media(max-width:900px){.ar-wrap{grid-template-columns:1fr}}'+
    '.ar-side{position:sticky;top:12px;display:flex;flex-direction:column;gap:3px;background:#fff;'+
      'border:1.5px solid #EDF1F6;border-radius:var(--r);padding:10px}'+
    '@media(max-width:900px){.ar-side{position:static}}'+
    '.ar-shd{font-size:var(--t6);font-weight:900;color:#94A3B8;letter-spacing:.1em;padding:9px 10px 5px}'+
-   '.ar-cat{display:flex;align-items:center;gap:9px;border:0;background:transparent;border-radius:var(--r-sm);'+
+   '.ar-cat{display:flex;align-items:flex-start;gap:9px;border:0;background:transparent;border-radius:var(--r-sm);'+
      'padding:9px 10px;cursor:pointer;text-align:left;font-family:inherit;width:100%}'+
    '.ar-cat:hover{background:#F8FAFC}'+
    '.ar-cat.on{background:#0F172A}'+
    '.ar-cat .e{font-size:var(--t3);flex:none}'+
    '.ar-cat .m{flex:1;min-width:0}'+
    '.ar-cat .m b{display:block;font-size:var(--t6);font-weight:800;color:#1E293B}'+
-   '.ar-cat .m em{display:block;font-style:normal;font-size:var(--t6);color:#94A3B8;margin-top:1px;'+
-     'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+   /* ⚠ <b>여기서 설명이 잘렸습니다.</b> 1280px 에서 여덟 갈래 중 <b>다섯개</b>가
+      … 로 끝났습니다 — 「고객 체크」 가 무엇을 하는 칸인지 못 읽으셨을 겁니다.
+      한 줄로 박아 두는 대신 <b>두 줄까지 접어</b> 보입니다. 세 줄부터는
+      접습니다 — 안 그러면 갈래 하나가 목록 절반을 먹습니다.           */
+   '.ar-cat .m em{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;'+
+     'font-style:normal;font-size:var(--t6);color:#94A3B8;margin-top:1px;line-height:1.35;'+
+     'overflow:hidden;white-space:normal;word-break:keep-all}'+
    '.ar-cat.on .m b{color:#fff}.ar-cat.on .m em{color:#93C5FD}'+
    '.ar-cat .n{flex:none;font-size:var(--t6);font-weight:900;color:#fff;background:#DC2626;'+
      'border-radius:var(--r-lg);padding:2px 7px;min-width:18px;text-align:center}'+
@@ -11718,7 +11729,12 @@ function dbpHtml(){
    읽은 기록이 없으면 말을 만들지 않고 「아직 증권을 안 읽었습니다」 라고
    적고 보장분석으로 모십니다. 이 줄이 이 화면에서 제일 중요합니다.       */
 var CHK_KIND='ba_state';
-var CHKS={rows:null,by:{},busy:false,err:'',at:'',noSum:false,open:''};
+/* ⑩ 재무설계(달러·연금)도 <b>같은 표</b>에 담깁니다 — 계산기의 💾 가
+   saved_reports(kind='finance') 로 넣어 둔 그것입니다. 새 표를 안 만듭니다 (5번).
+   ★ <b>서버를 한 번 더 안 부릅니다</b> (7번) — 이미 도는 물음에 kind 둘을
+     같이 실어 한 번에 받아 옵니다.                                        */
+var FIN_KIND='finance';
+var CHKS={rows:null,by:{},busy:false,err:'',at:'',noSum:false,open:'',fin:{}};
 
 /* 이름으로 잇습니다 — 단계는 배정 DB(dbs), 읽은 기록은 고객 365일(clients)에
    있어서 둘을 이어야 합니다. 서버에는 <b>가린 이름</b>만 있으므로 가린
@@ -11789,11 +11805,17 @@ function chkLoad(force){
   if(CHKS.rows&&!force)return;
   CHKS.busy=true;CHKS.err='';chkPaint();
   var done=function(rows,noSum){
-    CHKS.busy=false;CHKS.rows=rows||[];CHKS.noSum=!!noSum;CHKS.by={};
+    CHKS.busy=false;CHKS.rows=rows||[];CHKS.noSum=!!noSum;CHKS.by={};CHKS.fin={};
     var i,r;
     for(i=0;i<CHKS.rows.length;i++){
       r=CHKS.rows[i];
       if(!r.client_id)continue;
+      /* ⑩ 재무설계는 따로 모읎니다 — 증권과 섮이면 「읽은 증권」이 아닌 것을
+         읽었다고 말하게 됩니다 (1번). */
+      if(r.kind===FIN_KIND){
+        if(!CHKS.fin[r.client_id])CHKS.fin[r.client_id]={at:(''+(r.created_at||'')).slice(0,10)};
+        continue;
+      }
       /* 한 고객에 <b>제일 새 것</b> 하나 — 차례가 새 것부터 오므로 먼저 온 것을 둡니다 */
       if(!CHKS.by[r.client_id])
         CHKS.by[r.client_id]={at:(''+(r.created_at||'')).slice(0,10),sum:r.sum||null};
@@ -11807,12 +11829,14 @@ function chkLoad(force){
   /* 요약 칸만 집어 받습니다. 옛 서버가 그 문법을 거절하면 <b>한 칸 내려</b>
      다시 부릅니다 — 못 읽는 칸 하나 때문에 화면 전체가 안 뜨면 안 됩니다. */
   var q=function(cols){
-    return sb.from('saved_reports').select(cols).eq('kind',CHK_KIND)
+    return sb.from('saved_reports').select(cols)['in']('kind',[CHK_KIND,FIN_KIND])
              .order('created_at',{ascending:false}).limit(400);
   };
-  q('client_id,created_at,sum:content->sum').then(function(r){
+  /* kind 를 <b>같이 받아야</b> 어느 줄이 증권이고 어느 줄이 재무설계인지
+     가릅니다. 안 받으면 둘이 섮여 「읽은 증권」이 부풀려집니다 (1번). */
+  q('client_id,kind,created_at,sum:content->sum').then(function(r){
     if(r&&r.error){
-      q('client_id,created_at').then(function(r2){
+      q('client_id,kind,created_at').then(function(r2){
         if(r2&&r2.error)return oops(r2.error);
         done((r2&&r2.data)||[],true);
       },oops);
@@ -11923,7 +11947,14 @@ function chkHtml(){
   for(i=0;i<P.length;i++)rows+=chkRowHtml(P[i]);
   var n={ok:0,no:0};
   for(i=0;i<P.length;i++){ var s=chkSay(P[i]); if(s&&s.why==='ok')n.ok++; else n.no++; }
-  var head='<div class="chk-top">'+
+  /* ★ <b>리더는 팀원 것도 볼 수 있어야 합니다.</b> 고르개를 여기 안 세워 두는
+     바람에 <b>내 것만</b> 보였습니다. 새로 만들지 않고 홈이 쓰는 그 고르개
+     (hwhoBarHtml)를 그대로 세웁니다 — 누가 무엇을 볼 수 있는지를 <b>두 곳에서
+     따로 정하면</b> 한쪽만 늘습니다 (5번). 권한은 hwhoCan()·hwhoList() 가 이미
+     압니다 — 설계사에겐 아예 안 뗴니다.                                 */
+  var pick='';
+  try{ if(typeof hwhoBarHtml==='function'){ if(typeof hwhoCss==='function')hwhoCss(); pick=hwhoBarHtml(); } }catch(e0){ pick=''; }
+  var head=pick+'<div class="chk-top">'+
     '<div class="chk-t">🩺 <b>고객 체크</b> — AP · PC · CS</div>'+
     '<div class="chk-d">TA 가 끝난 분들입니다. <b>읽은 증권</b>에서 오늘 꺼낼 한 가지를 세웠습니다. '+
       '읽은 기록이 없으면 <b>말을 만들지 않습니다</b> — 먼저 읽고 오시면 여기에 섭니다.</div>'+
@@ -12107,7 +12138,7 @@ function renderAiRep(){
     '피드백 · 스케줄 · 역량 · 해야 할 일 · 내 업적 · 고객 체크 · 30일 고객관리를 '+
     '왼쪽에서 고르면 이 자리에서 바로 봅니다. 지점장은 리더 할 일과 팀원 관리까지 같은 칸에서. '+
     '아침에 누구에게 전화할지는 <b>홈 🌅 아침 미션</b>에서 합니다.',
-    '<div id="arPane">'+arInnerHtml()+'</div>');
+    '<div id="arPane">'+arInnerHtml()+'</div>', 1);
 }
 function osAiRepAfterRender(){
   arCss();
@@ -15365,6 +15396,11 @@ function mcalGridHtml(){
    무엇인지 읽히게 하는 것입니다.                                   */
 function mcalWeekHtml(){
   var st=mcalWk(),items=mcalItems(),today=mcalToday(),h='',i,j,ds,n;
+  /* ⑫ 둘 이상이면 <b>「담당자 : 」</b>를 앞에 붙입니다. 이 주 전체로 한 번
+     세어 정합니다 — 날마다 세면 어느 날은 붙고 어느 날은 안 붙습니다. */
+  var wAll=[],wi,wd;
+  for(wi=0;wi<7;wi++){ wd=mcalDay(items,mcalShift(st,wi)); wAll=wAll.concat(wd); }
+  var wMany=mcalManyWho(wAll);
   var nm=['월','화','수','목','금','토','일'];
   h+='<div class="mcal-wgrid">';
   for(i=0;i<7;i++){
@@ -15378,8 +15414,9 @@ function mcalWeekHtml(){
     if(!n.length)h+='<span class="wn">—</span>';
     for(j=0;j<n.length&&j<4;j++){
       var K=MCAL_KIND[n[j].k]||{e:'•',c:'#8B95A1'};
-      h+='<span class="wi"'+(n[j].late?' data-late="1"':'')+'>'+
-         '<i style="background:'+K.c+'"></i>'+K.e+' '+osEsc((n[j].t||'').slice(0,7))+
+      var wt=mcalWhoTag(n[j],wMany)+(n[j].t||'');
+      h+='<span class="wi"'+(n[j].late?' data-late="1"':'')+' title="'+osEsc(wt)+'">'+
+         '<i style="background:'+K.c+'"></i>'+K.e+' '+osEsc(wt.slice(0,12))+
          (n[j].s?('<u>'+osEsc((''+n[j].s).slice(0,9))+'</u>'):'')+'</span>';
     }
     if(n.length>4)h+='<span class="wm">+'+(n.length-4)+'</span>';
@@ -15446,6 +15483,21 @@ function mcalManyWho(items){
   }
   return false;
 }
+/* ══ ⑫ <b>「담당자 : 스케줄」</b> — 네이버 캘린더 배경화면처럼 ════
+   사장님 말씀 ⑫ (2026-09-22) — 「캘린더 한달치 할일 + 네이버캘린더
+   배경화면처럼 <b>담당자 : 스케줄</b>」.
+
+   ★ <b>혼자 보는 화면에는 안 붙입니다.</b> 줄마다 제 이름이 서면 글자만
+     늘고 정작 무엇을 하는지가 밀립니다. 둘 이상일 때만 붙입니다.
+   ★ <b>모르는 이름을 지어내지 않습니다</b> (1번). 못 찾으면 그냥 스케줄만
+     적습니다 — 「담당자 : 」 처럼 빈 이름을 세우면 없는 사람을 만듭니다.
+   ★ 붙이는 자리는 <b>여기 하나</b>입니다 (5번) — 주간도 하루도 이것을 부릅니다. */
+function mcalWhoTag(x,many){
+  if(!many||!x||!x.who)return '';
+  var nm=mcalWhoName(x.who);
+  if(!nm||nm==='담당자')return '';
+  return nm+' : ';
+}
 function mcalDayHtml(){
   var ds=MCAL.sel||mcalToday(),ALL=mcalItems(),items=mcalDay(ALL,ds);
   /* 고르개는 <b>거르기 전</b>을 세어야 한다 — 거른 뒤를 세면 고른 사람만
@@ -15474,12 +15526,15 @@ function mcalDayHtml(){
       var pl=mcalDoOf(x),doTxt='';
       if(pl)doTxt='<span class="mcal-do">'+(pl.way==='call'?'📞 전화':'💬 소식')+
         ' — '+osEsc(pl.t)+'<i>'+osEsc(pl.why)+'</i></span>';
-      var whoTxt=(many&&x.who)?('<span class="mcal-who">'+osEsc(mcalWhoName(x.who)||'담당자')+'</span>'):'';
+      /* ⑫ 따로 떨어진 딱지 대신 <b>이름 바로 뒤에</b> — 네이버 캘린더처럼
+         「담당자 : 스케줄」 로 읽힙니다. 두 모양을 다 두면 같은 것이 두 번 서고,
+         한쪽만 고쳐져 어깋납니다 (5번). */
+      var whoTxt='';
       /* 내가 넣은 것은 <b>지울 수 있어야</b> 합니다. 넣기만 되고 못 지우면
          잘못 적은 줄이 영영 달력에 남습니다. */
       if(x.k==='my')
         return '<div class="mcal-it my"><span class="e">'+K.e+'</span>'+
-          '<span class="m"><b>'+osEsc(x.t)+'</b>'+
+          '<span class="m"><b>'+osEsc(mcalWhoTag(x,many))+osEsc(x.t)+'</b>'+
             (x.s?('<span>'+osEsc(x.s)+'</span>'):('<span style="color:'+K.c+'">'+K.t+'</span>'))+
           '</span>'+
           '<button type="button" class="mcal-x" title="이 일정 지우기" '+
@@ -15487,7 +15542,7 @@ function mcalDayHtml(){
       return '<button type="button" class="mcal-it'+(x.late?' late':'')+'" onclick="'+
         (x.id?('osOpenClient(\''+x.id+'\')'):('go(\''+go+'\')'))+'">'+
         '<span class="e">'+K.e+'</span>'+
-        '<span class="m"><b>'+osEsc(x.t)+'</b>'+sub+doTxt+
+        '<span class="m"><b>'+osEsc(mcalWhoTag(x,many))+osEsc(x.t)+'</b>'+sub+doTxt+
           (x.late?('<span class="lt">'+osEsc(x.late.slice(5).replace('-','/'))+' 지났음</span>'):'')+'</span>'+
         whoTxt+(x.vip?'<span class="vip">👑</span>':'')+'</button>';
     }).join('');
@@ -15940,6 +15995,10 @@ function go(tab){
      고른 칸이 어디인지는 navMark 가 그 띠 안에서 표시해 준다.
      서랍(세로 메뉴)은 화면을 통째로 덮으므로 그대로 닫는다. */
   try{ if(typeof tnPaint==='function')tnPaint(); }catch(e){}
+  /* 덮개는 <b>화면을 넘어가지 않는다</b> — 한 화면에서 열린 것이 다음
+     화면을 덮고 있으면 앱이 멈춘 것처럼 보인다. */
+  try{ if(typeof objClose==='function')objClose(); }catch(e){}
+  try{ if(typeof crqClose==='function')crqClose(); }catch(e){}
   try{
     var _sb=$('sidebar'),_sc=$('scrim');
     if(_sb&&_sb.classList.contains('open')){_sb.classList.remove('open');if(_sc)_sc.classList.remove('on');}
@@ -16000,10 +16059,14 @@ function go(tab){
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
+  /* ⑦ 사장님 말씀 — CRM 을 <b>벗어나면</b> 「언제 관리할지」를 여쭤봅니다.
+     여기가 유일한 「나가는 길」입니다 — 모든 화면이 go() 를 거칩니다 (5번). */
+  try{ if(tab!=='crm'&&typeof crqLeave==='function')crqLeave(); }catch(e){}
   if(tab==='crm'){
     mountCrm();
     osFullMode('crm-mode');
     navMark('crm');
+    try{ crqEnter(); crqWatch(); }catch(e){}
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
@@ -16503,8 +16566,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-22 22:30';
-var APP_BUILD_NOTE="<b>🚦 「사장님이 하실 것」이 한 화면에 모였습니다 — 출발 점검에 두 줄을 더했습니다.</b> 더보기 › 시스템 › <b>🚦 출발 점검</b> (홈의 「⚙️ 관리 · 점검」 에서도 바로 갑니다).　—　<b>① 🔑 서버 열쇠(Supabase) — 지금 사장님을 막고 있는 그것입니다.</b> 아침 화면의 「401 · Invalid API key」 를 끝까지 따라갔습니다. 서버에 <b>엉터리 토큰</b>을 일부러 보내 봐도 똑같은 말이 왔습니다 — 토큰이 틀렸으면 「invalid JWT」라고 해야 합니다. <b>거절당한 것은 사장님 표가 아니라 서버가 내민 열쇠입니다.</b> 그런데 앱은 「앱을 닫았다 여신 뒤 다시 눌러 주세요」 라고 적고 있었습니다 — 그래서 몇 번이나 되풀이하셨습니다. 이제 이 줄이 <b>무엇이 틀렸고 어디를 고치는지</b> 그대로 적습니다. 「Netlify › Site configuration › Environment variables 의 <b>SUPABASE_SERVICE_ROLE_KEY</b>」 한 줄입니다. 단추를 누르면 Netlify 가 열립니다. <b>열쇠 글자는 화면에 한 자도 안 뜹니다</b> — 모양과 대답만 보입니다.　—　<b>이 한 줄이 알람만의 문제가 아닙니다.</b> 같은 열쇠를 <b>새벽 5시 AI 작업 · 밤 작업 · 브리핑 · 시세 · 투자 · 결제</b> 가 다 씁니다. 고치시면 <b>그것들도 같이 살아납니다.</b>　—　<b>② 💼 고객 직업 한 줄</b> — 소식을 고르는 데 <b>값이 제일 큰 칸</b>입니다. 몇 분이 적혀 있는지 세어 드립니다. 고객 365일 › 그 분 › 재무설계 답 의 「직업」 칸입니다. 사업자·공무원·교사·군인·경찰·소방·설계사만 알아듣고, <b>그 밖의 직업은 짐작하지 않고 버려둡니다</b>.　—　같은 「Invalid API key」여도 ⓐ 열쇠가 틀림 ⓑ <b>다른 프로젝트</b> 것 ⓒ 종류가 anon — 셋을 갈라 <b>사람 말로</b> 적습니다. 고칠 법이 다르기 때문입니다. 점검(check-ready·check-push)이 이제 <b>이 자리가 사장님 탓을 하거나 열쇠 글자를 흘리면</b> 빨간불을 켭니다.";
+var APP_BUILD='2026-09-23 05:20';
+var APP_BUILD_NOTE="사장님 말씀 <b>열두 가지를 끝까지</b> 했습니다.　—　<b>⑦ DB CRM</b> — 들어가면 「고객 관리부터 시작하시죠?」, 나가면 「오늘 고객 관리는 언제 하실까요?」. <b>앱이 열려 있을 때만 뜨는 것</b>을 그 자리에 적었습니다 — 폰 알람인 줄 아시면 그날을 놓치십니다.　—　<b>⑧ 거절처리 열일곱 가지</b> — 「🚫 거절」 을 누르면 <b>바로 안 적고</b> 무엇을 말할지부터 보여 드립니다. <b>금지 표현과 종료 기준</b>을 같이 적습니다 — 붙잡다 그 고객을 잃습니다. 말은 ta-script 에 있던 그것을 <b>한 곳으로 옮겨</b> 두 화면이 같이 읽습니다.　—　<b>⑨ 오늘 고객 열 분</b> — 다섯 → 열 분입니다. 수는 <b>한 곳</b>에만 적어 미션도 체크판도 거기서 읽습니다. 접어 두셔도 <b>「오늘 관리 3/10명」</b>이 보입니다 — 체크가 아니라 <b>기록으로</b> 셉니다.　—　<b>⑩ 재무설계(달러·연금)</b> — 계산기에서 담아 두면 홈이 그것을 읽어 「정리해 둔 분 N명」을 적습니다. <b>금액은 안 옮겨 적습니다</b> — 계산기가 말하는 그 값이 맞습니다.　—　<b>⑪ SNS 관리</b> — 인스타·블로그가 한 자리에. <b>대신 올려 드린다고 말하지 않습니다</b> — 그럴 열쇠가 없습니다. 글과 그림까지 만들어 드리고, 올리신 뒤 ✅ 를 누르시면 체크판에 담습니다.　—　<b>⑫ 달력</b> — 한 달 모든 날에 할 일이 서 있고, 줄마다 <b>「담당자 : 스케줄」</b> 로 읽힙니다(네이버 캘린더처럼). <b>혼자 보는 화면에는 안 붙입니다</b>.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -17715,15 +17778,27 @@ var VA_LAT={'에스엔에스':'sns','에센에스':'sns','에스엔에쓰':'sns'
  '씨알엠':'crm','시알엠':'crm','씨아르엠':'crm','디비':'db','에이아이':'ai',
  '피피티':'ppt','티에이':'ta','오티':'ot','케이피아이':'kpi','에스엔알':'snr'};
 function vaLat(s){var k;s=''+(s||'');for(k in VA_LAT)s=s.split(k).join(VA_LAT[k]);return s;}
+/* ★ <b>숫자가 바뀔다고 말이 안 먹으면 안 됩니다.</b>
+   체크판의 「전화 5통」은 사장님 말씀으로 「전화 10통」이 됐습니다
+   (2026-09-22 ⑨). 그런데 사장님은 몇 달째 「전화 5통 체크해줘」 라고
+   말해 오셨고, 그 말이 그날부터 안 먹었습니다.
+   그래서 <b>한 번 더</b> 찾습니다 — 양쪽에서 숫자를 뺄 채로 견줍니다.
+   「전화 통」 = 「전화 통」 입니다.
+   ★ <b>없는 것을 만들지는 않습니다</b> (1번) — 고르는 것은 여전히 그 목록
+     안에서이고, 첫 판이 찾았으면 둘째 판은 아예 안 돕니다.               */
 function vaPickOf(q,list,f){
   q=vaLat(vaNorm(q));
   if(!q||!list||!list.length)return null;
-  var best=null,sc=0,i,v;
-  for(i=0;i<list.length;i++){
-    v=vaScore(q,vaLat(vaNorm(f(list[i]))));
-    if(v>sc){sc=v;best=list[i];}
-  }
-  return sc>=0.34?best:null;
+  var pick=function(qq,g){
+    var best=null,sc=0,i,v;
+    for(i=0;i<list.length;i++){
+      v=vaScore(qq,g(vaLat(vaNorm(f(list[i])))));
+      if(v>sc){sc=v;best=list[i];}
+    }
+    return sc>=0.34?best:null;
+  };
+  var same=function(s){ return s; }, noNum=function(s){ return (''+s).replace(/\d+/g,''); };
+  return pick(q,same)||pick(noNum(q),noNum);
 }
 function vaCut(s,n){s=(''+(s==null?'':s)).replace(/\s+/g,' ').replace(/^\s+|\s+$/g,'');
   return s.length>n?(s.slice(0,n)+'…'):s;}
@@ -17980,7 +18055,9 @@ var VA_ACT=[
  }},
 
 {k:'체크',n:'오늘 할 일 체크하기',v:['what'],w:1,
- ex:'전화 5통 체크해줘',
+ /* 보기로 드리는 말에 <b>수를 안 넣습니다</b> — 항목 이름이 바뎀 때마다
+    이 줄이 낙아 거짓말이 됩니다. 숫자를 말씀하셔도 찾습니다. */
+ ex:'전화 체크해줘',
  q:{what:'어떤 것을 체크할까요?'},
  re:/체크해|체크했|체크완료|체크처리|체크표시|했다고체크/,
  cut:[/^(.+?)\s*(?:체크|끝냈다고)\s*(?:해줘|해|했어|완료|처리|표시)?\s*(?:줘|주세요)?\s*$/,
@@ -21392,6 +21469,10 @@ function hwhoSet(v){
   try{ if(typeof hmPaint==='function')hmPaint(); }catch(e1){}
   try{ if(typeof osRenderList==='function')osRenderList(); }catch(e2){}
   try{ if(typeof mcalPaint==='function')mcalPaint(); }catch(e3){}
+  /* ★ 고객 체크도 이 고르개를 봅니다 — 안 부르면 골라도 화면이 그대로입니다.
+     고르는 곳과 그리는 곳이 따로 놀면 사장님은 <b>고장으로</b> 보십니다. */
+  try{ if(typeof chkPaint==='function'&&document.getElementById('chkPane'))chkPaint(); }catch(e4){}
+  try{ if(typeof hmChkPaint==='function')hmChkPaint(); }catch(e5){}
 }
 /* 「내 화면으로」 — 되돌아올 길은 <b>언제나 한 번</b>이어야 한다 */
 function hwhoMe(){
@@ -21402,6 +21483,10 @@ function hwhoMe(){
   try{ if(typeof hmPaint==='function')hmPaint(); }catch(e1){}
   try{ if(typeof osRenderList==='function')osRenderList(); }catch(e2){}
   try{ if(typeof mcalPaint==='function')mcalPaint(); }catch(e3){}
+  /* ★ 고객 체크도 이 고르개를 봅니다 — 안 부르면 골라도 화면이 그대로입니다.
+     고르는 곳과 그리는 곳이 따로 놀면 사장님은 <b>고장으로</b> 보십니다. */
+  try{ if(typeof chkPaint==='function'&&document.getElementById('chkPane'))chkPaint(); }catch(e4){}
+  try{ if(typeof hmChkPaint==='function')hmChkPaint(); }catch(e5){}
 }
 /* 홈 맨 위 띠 — <b>지금 누구 화면인지</b>와 고르개. 설계사에게는 안 선다 */
 function hwhoBarHtml(){
@@ -21679,7 +21764,7 @@ function hmDid(key){
    ★ <b>실명은 서버에 그대로 안 올린다</b>… 는 고객 365일 규칙이고,
      배정 DB(dbs.customer_name)는 팀이 함께 보는 자리라 지금 그대로 둔다
      (3번 · 2026-09-11 결정). 여기서 새로 가리지도, 벗기지도 않는다.     */
-var HDB={id:'',busy:'',open:false,err:'',sg:''};
+var HDB={id:'',busy:'',open:false,err:'',sg:'',one:null,has:null,load:'',want:''};
 /* 그 줄을 찾는 곳은 <b>한 곳</b> — AR.db 다 (5번) */
 function hdbRow(id){
   var L=(typeof AR!=='undefined'&&AR.db)||[],i;
@@ -21933,6 +22018,95 @@ function hdbClose(){
   if(e)e.classList.remove('on');
   HDB.open=false;HDB.id='';
 }
+/* ══ 고칠 때는 <b>그 한 줄만 서버에서 다시 받는다</b> ══════════════════
+   2026-09-22 · 사장님 말씀 ④ —
+     「DB통합CRM 페이지를 홈에서 모두 수정 <b>[절대 데이터가 깨지지 않아야 됨]</b>」
+
+   깨지고 있었습니다. 홈 목록(AR.db)은 서버에서 <b>연락처를 안 읽어 옵니다</b>
+   (7번 — 목록에 미리 다 받아 두지 않는다). 그런데 고치기 창에는 연락처 칸이
+   있었습니다. 그래서 창을 열면 <b>언제나 빈칸</b>이었고, 그대로 저장하면
+   서버에 있던 <b>전화번호가 지워졌습니다.</b> 비고·보고서명도 같은 병이라
+   그 칸들은 아예 없었습니다.
+
+   그래서 <b>손에 없는 칸은 화면에 세우지 않는다</b>로 바꿉니다 — 대신
+   창을 열 때 <b>그 한 줄만</b> 받아 옵니다(7번의 「필요할 때 그 한 줄만」).
+   다 받기 전에는 고치지 못하게 잠급니다. 못 받았으면 <b>고치는 길을 안 엽니다</b>
+   — 빈칸으로 저장하는 것보다 못 고치는 편이 낫습니다 (1번).                */
+var HDB_COLS_BASE='id,assigned_to,assigned_date,customer_name,phone,region,source,'+
+                  'report_name,memo,stage,contracted_at,policy_sent_at';
+/* 옛 서버에는 아직 없을 수 있는 칸 — 거절당하면 이것만 빼고 다시 받는다 */
+var HDB_COLS_NEW=['policy_no','touch_count'];
+var HDB_COLS=HDB_COLS_BASE+','+HDB_COLS_NEW.join(',');
+function hdbHasOf(c){
+  var m={},a=(''+c).split(','),i;
+  for(i=0;i<a.length;i++)m[a[i]]=true;
+  return m;
+}
+/* 그 칸을 손에 들고 있나 — <b>한 곳</b>에서만 답한다 (5번).
+   새로 넣는 줄은 지울 값이 없으니 다 세운다. */
+function hdbHas(col){ return HDB.has?!!HDB.has[col]:true; }
+function hdbLoadOne(id){
+  var sb=(typeof osClient==='function')?osClient():null;
+  HDB.one=null;HDB.has=null;HDB.load='busy';HDB.err='';
+  if(!sb){ HDB.load='err';HDB.err='서버에 연결되어 있지 않습니다.';return; }
+  var down=function(m){ return /column|42703|does not exist|schema cache/i.test(''+(m||'')); };
+  var read=function(c){
+    return sb.from('dbs').select(c).eq('id',id).limit(1).then(
+      function(res){ return {res:res,c:c}; },
+      function(e){ return {res:{error:e||{message:'네트워크 오류'}},c:c}; });
+  };
+  var take=function(o){
+    var res=o.res;
+    /* 칸이 없는 서버 — 새 칸만 빼고 한 번 더 */
+    if(res&&res.error&&down(res.error.message)&&o.c!==HDB_COLS_BASE)
+      return read(HDB_COLS_BASE).then(take);
+    if(HDB.id!==id||!HDB.open)return;   /* 그 사이 다른 분을 여셨다 */
+    if(!res||res.error){
+      HDB.load='err';
+      HDB.err='이분의 기록을 못 읽었습니다 — '+((res&&res.error&&res.error.message)||'네트워크 오류');
+      hdbRepaintForm();return;
+    }
+    var d=res.data,row=(d&&d.length)?d[0]:null;
+    if(!row){
+      HDB.load='err';
+      HDB.err='이분의 기록이 서버에 없습니다. 목록이 오래된 것일 수 있습니다.';
+      hdbRepaintForm();return;
+    }
+    HDB.one=row;HDB.has=hdbHasOf(o.c);HDB.load='';HDB.err='';
+    hdbRepaintForm(true);   /* 이제서야 칸이 선다 — 화면에서 베낄 것이 없다 */
+  };
+  read(HDB_COLS).then(take);
+}
+function hdbRetry(){ if(HDB.id){ hdbLoadOne(HDB.id); hdbRepaintForm(); } }
+/* 화면에 채울 값은 <b>한 곳</b>에서 온다 (5번) — 고칠 때는 서버에서 방금
+   받은 그 줄, 새로 넣을 때는 빈 줄. <b>목록(AR.db)에서 가져오지 않는다</b> —
+   목록은 몇 칸을 안 읽어 와서, 그것으로 채우면 빈칸이 서고 저장할 때 지워진다. */
+function hdbCur(want){
+  var o=HDB.one||{},nw=!HDB.id;
+  return {
+    name:''+(o.customer_name||''),phone:''+(o.phone||''),region:''+(o.region||''),
+    src:(''+(o.source||'')).replace(/^\s+|\s+$/g,'')||(nw?'일반':''),
+    rep:''+(o.report_name||''),memo:''+(o.memo||''),
+    stage:want||(''+(o.stage||''))||(nw?'미접촉':''),
+    cAt:(''+(o.contracted_at||'')).slice(0,10),
+    pAt:(''+(o.policy_sent_at||'')).slice(0,10),
+    polNo:''+(o.policy_no||''),
+    touch:(o.touch_count===null||o.touch_count===undefined||o.touch_count==='')?'':(''+o.touch_count),
+    got:(''+(o.assigned_date||'')).slice(0,10)||(nw?(new Date()).toISOString().slice(0,10):''),
+    who:''+(o.assigned_to||'')
+  };
+}
+/* 담당자를 <b>고를 수 있는 분</b>에게만 고르개를 낸다 — 못 바꿀 분께
+   고르개를 내면 눌러도 서버가 0줄로 막고, 그때부터 다른 단추도 안 믿는다 (8번).
+   명단은 성장판이 이미 받아 둔 사람들이다 — 서버를 더 안 부른다 (7번). */
+function hdbWhoList(){
+  var out=[],i,rs=[];
+  if(!hdbEditAll())return out;
+  try{ rs=(typeof arScope==='function')?arScope():[]; }catch(e){ rs=[]; }
+  for(i=0;i<rs.length;i++)if(rs[i]&&rs[i].id)out.push({id:rs[i].id,nm:rs[i].name||'팀원'});
+  out.sort(function(a,b){ return (''+a.nm).localeCompare(''+b.nm,'ko'); });
+  return out;
+}
 /* 새로 넣기 — id 가 없으면 새 줄 */
 function hdbNew(){ hdbOpen('',''); }
 function hdbOpen(id,wantStage){
@@ -21940,62 +22114,99 @@ function hdbOpen(id,wantStage){
   var r=id?hdbRow(id):null;
   if(id&&!r)return;
   if(r&&!hdbCan(r)){ if(typeof toast==='function')toast('내 고객이 아니면 고칠 수 없습니다.'); return; }
-  HDB.id=id||'';HDB.open=true;HDB.err='';
+  HDB.id=id||'';HDB.open=true;HDB.err='';HDB.one=null;HDB.has=null;
+  HDB.want=wantStage||'';HDB.load=id?'busy':'';
   var host=hdbHost();
-  document.getElementById('hdbBox').innerHTML=hdbFormHtml(r,wantStage||'');
+  if(id)hdbLoadOne(id);
+  document.getElementById('hdbBox').innerHTML=hdbFormHtml(r,HDB.want);
   host.classList.add('on');
   try{ var f=document.getElementById('hdbName'); if(f)f.focus(); }catch(e){}
 }
 function hdbFormHtml(r,wantStage){
-  var S=hdbStages(),i,st=wantStage||(r?r.stage:'미접촉');
-  var k=hdbNeeds(st);
   var v=function(x){ return (typeof osEsc==='function')?osEsc(x==null?'':x):(x==null?'':x); };
+  var tt='<div class="hdb-tt">'+(r?('✏️ '+v(r.name)+' 님 고치기'):'➕ 고객 새로 넣기')+'</div>';
+  /* 아직 못 받았으면 <b>칸을 안 세운다</b> — 빈칸을 보여 주면 빈칸으로 저장된다 */
+  if(HDB.load==='busy')return tt+
+    '<div class="hdb-st">📡 <b>이분의 기록을 서버에서 불러오는 중</b>입니다. 다 불러온 뒤에 고치실 수 있습니다 — '+
+    '목록에 없는 칸을 빈칸으로 세워 두면 저장할 때 <b>서버에 있던 값이 지워집니다.</b></div>'+
+    '<div class="hdb-btns"><button type="button" class="hdb-cancel" onclick="hdbClose()">닫기</button></div>';
+  if(HDB.load==='err')return tt+
+    '<div class="hdb-err">'+v(HDB.err)+'</div>'+
+    '<div class="hdb-st">못 읽은 채로는 <b>고치는 칸을 안 엽니다</b> — 빈칸으로 저장하면 서버에 있던 값이 지워집니다 (1번).</div>'+
+    '<div class="hdb-btns">'+
+      '<button type="button" class="hdb-save" onclick="hdbRetry()">🔄 다시 불러오기</button>'+
+      '<button type="button" class="hdb-cancel" onclick="hdbClose()">닫기</button>'+
+    '</div>';
+  var S=hdbStages(),i,c=hdbCur(wantStage||''),st=c.stage,k=hdbNeeds(st);
   var opt='';
   for(i=0;i<S.length;i++)opt+='<option value="'+v(S[i])+'"'+(S[i]===st?' selected':'')+'>'+v(S[i])+'</option>';
   var me=(typeof arMyId==='function')?arMyId():'';
-  var today=(new Date()).toISOString().slice(0,10);
-  return '<div class="hdb-tt">'+(r?('✏️ '+v(r.name)+' 님 고치기'):'➕ 고객 새로 넣기')+'</div>'+
+  var W=hdbWhoList(),wOpt='',whoNow=c.who||(r?r.who:me)||'';
+  for(i=0;i<W.length;i++)wOpt+='<option value="'+v(W[i].id)+'"'+(W[i].id===whoNow?' selected':'')+'>'+v(W[i].nm)+'</option>';
+  var whoBox=(W.length>1)
+    ? ('<div class="hdb-f"><label for="hdbWho">담당자</label><select id="hdbWho">'+wOpt+'</select></div>')
+    : '';
+  return tt+
     '<div class="hdb-st">여기서 저장하면 <b>DB 통합 CRM 에도 그대로</b> 뜹니다 — 같은 표를 씁니다.</div>'+
     (HDB.err?('<div class="hdb-err">'+v(HDB.err)+'</div>'):'')+
     '<div class="hdb-f"><label for="hdbName">고객명</label>'+
-      '<input id="hdbName" type="text" value="'+v(r?r.name:'')+'" placeholder="홍길동"></div>'+
+      '<input id="hdbName" type="text" value="'+v(c.name)+'" placeholder="홍길동"></div>'+
     '<div class="hdb-2">'+
       '<div class="hdb-f"><label for="hdbPhone">연락처</label>'+
-        '<input id="hdbPhone" type="tel" inputmode="numeric" value="'+v(r?(r.phone||''):'')+'" placeholder="010-0000-0000"></div>'+
+        '<input id="hdbPhone" type="tel" inputmode="numeric" value="'+v(c.phone)+'" placeholder="010-0000-0000"></div>'+
       '<div class="hdb-f"><label for="hdbRegion">지역</label>'+
-        '<input id="hdbRegion" type="text" value="'+v(r?r.region:'')+'" placeholder="천안"></div>'+
+        '<input id="hdbRegion" type="text" value="'+v(c.region)+'" placeholder="천안"></div>'+
     '</div>'+
     '<div class="hdb-2">'+
       '<div class="hdb-f"><label for="hdbSrc">DB 종류</label>'+
-        '<input id="hdbSrc" type="text" value="'+v(r?r.src:'일반')+'" placeholder="보장분석3DB"></div>'+
+        '<input id="hdbSrc" type="text" value="'+v(c.src)+'" placeholder="보장분석3DB"></div>'+
       '<div class="hdb-f"><label for="hdbStage">단계</label>'+
         '<select id="hdbStage" onchange="hdbStagePick()">'+opt+'</select></div>'+
     '</div>'+
     '<div class="hdb-2" id="hdbDates"'+((k.won||k.pol)?'':' hidden')+'>'+
       '<div class="hdb-f"><label for="hdbCAt">계약일</label>'+
-        '<input id="hdbCAt" type="date" value="'+v(r?r.cAt:'')+'"></div>'+
+        '<input id="hdbCAt" type="date" value="'+v(c.cAt)+'"></div>'+
       '<div class="hdb-f" id="hdbPolBox"'+(k.pol?'':' hidden')+'><label for="hdbPAt">증권 전달일</label>'+
-        '<input id="hdbPAt" type="date" value="'+v(r?r.pAt:'')+'"></div>'+
+        '<input id="hdbPAt" type="date" value="'+v(c.pAt)+'"></div>'+
     '</div>'+
-    (r?'':'<div class="hdb-f"><label for="hdbGot">배정일</label>'+
-        '<input id="hdbGot" type="date" value="'+today+'"></div>')+
+    (hdbHas('policy_no')
+      ? ('<div class="hdb-f" id="hdbNoBox"'+(k.won?'':' hidden')+'><label for="hdbPolNo">증권번호</label>'+
+         '<input id="hdbPolNo" type="text" value="'+v(c.polNo)+'" placeholder="계약이 되면 적습니다"></div>')
+      : '')+
+    '<div class="hdb-2">'+
+      '<div class="hdb-f"><label for="hdbRep">보고서 이름</label>'+
+        '<input id="hdbRep" type="text" value="'+v(c.rep)+'" placeholder="보장분석 3DB"></div>'+
+      (hdbHas('touch_count')
+        ? ('<div class="hdb-f"><label for="hdbTouch">터치 횟수</label>'+
+           '<input id="hdbTouch" type="number" inputmode="numeric" min="0" step="1" value="'+v(c.touch)+'" placeholder="비우면 통화 건수로 셉니다"></div>')
+        : '')+
+    '</div>'+
+    '<div class="hdb-2">'+
+      '<div class="hdb-f"><label for="hdbGot">배정일</label>'+
+        '<input id="hdbGot" type="date" value="'+v(c.got)+'"></div>'+
+      whoBox+
+    '</div>'+
+    '<div class="hdb-f"><label for="hdbMemo">비고</label>'+
+      '<textarea id="hdbMemo" rows="3" placeholder="DB 통합 CRM 의 비고와 같은 칸입니다">'+v(c.memo)+'</textarea></div>'+
     '<div class="hdb-btns">'+
       '<button type="button" class="hdb-save" onclick="hdbSave()">저장</button>'+
       '<button type="button" class="hdb-cancel" onclick="hdbClose()">닫기</button>'+
       (r&&hdbCan(r)?'<button type="button" class="hdb-del" onclick="hdbDel(\'' + (r.id) + '\')">지우기</button>':'')+
     '</div>'+
-    '<div class="hdb-st" style="margin:10px 0 0">담당자는 <b>'+
+    (whoBox?'':'<div class="hdb-st" style="margin:10px 0 0">담당자는 <b>'+
       v((typeof hwhoName==='function'&&r&&r.who)?hwhoName(r.who):((typeof arNameOf==='function'&&me)?arNameOf(me):'나'))+
-      '</b> 입니다. 담당자를 바꾸는 것은 DB 통합 CRM 에서 합니다 — 여기서 두 곳이 배정하면 어긋납니다.</div>';
+      '</b> 입니다. 담당자를 바꾸는 것은 <b>대표·본부장</b>만 할 수 있습니다.</div>');
 }
 /* 단계를 고르면 <b>필요한 날짜 칸만</b> 연다 — 어느 단계가 무엇을 들고
    있는지는 apex-stage.js 가 안다 (5번) */
 function hdbStagePick(){
   var sel=document.getElementById('hdbStage');
   if(!sel)return;
-  var k=hdbNeeds(sel.value),d=document.getElementById('hdbDates'),p=document.getElementById('hdbPolBox');
+  var k=hdbNeeds(sel.value),d=document.getElementById('hdbDates'),
+      p=document.getElementById('hdbPolBox'),n=document.getElementById('hdbNoBox');
   if(d)d.hidden=!(k.won||k.pol);
   if(p)p.hidden=!k.pol;
+  if(n)n.hidden=!k.won;
 }
 function hdbVal(id){
   var e=document.getElementById(id);
@@ -22005,61 +22216,101 @@ function hdbSave(){
   var sb=(typeof osClient==='function')?osClient():null;
   if(!sb){ HDB.err='서버에 연결되어 있지 않습니다.'; hdbRepaintForm(); return; }
   var id=HDB.id,r=id?hdbRow(id):null;
+  /* 다 못 받았으면 <b>저장하지 않는다</b> — 여기까지 올 일은 거의 없지만,
+     오면 그것이 바로 값이 지워지는 자리다 (1번) */
+  if(id&&!HDB.one){ HDB.err='아직 불러오는 중입니다 — 잠시만 기다려 주세요.'; hdbRepaintForm(); return; }
   var nm=hdbVal('hdbName');
   if(!nm){ HDB.err='고객명을 적어 주세요.'; hdbRepaintForm(); return; }
   var st=hdbVal('hdbStage'),k=hdbNeeds(st);
-  var cAt=hdbVal('hdbCAt'),pAt=hdbVal('hdbPAt');
+  var cAt=hdbVal('hdbCAt'),pAt=hdbVal('hdbPAt'),got=hdbVal('hdbGot');
   /* 날짜가 필요한 단계인데 비어 있으면 <b>저장하지 않는다.</b> 오늘 날짜로
      채워 넣으면 그것이 계약일이 되어 버린다 — 지어내지 않는다 (1번). */
   if(k.won&&!cAt){ HDB.err='「'+st+'」 이면 계약일을 적어 주세요 — 여기서 날짜를 지어내지 않습니다.'; hdbRepaintForm(); return; }
   if(k.pol&&!pAt){ HDB.err='「'+st+'」 이면 증권 전달일을 적어 주세요.'; hdbRepaintForm(); return; }
+  /* 배정일은 서버가 <b>비울 수 없는 칸</b>이다. 비운 채로 보내면 통째로 거절당한다 */
+  if(!got){ HDB.err='배정일을 적어 주세요 — 비울 수 없는 칸입니다.'; hdbRepaintForm(); return; }
   var me=(typeof arMyId==='function')?arMyId():null;
   var p={customer_name:nm,phone:hdbVal('hdbPhone')||null,region:hdbVal('hdbRegion')||null,
          source:hdbVal('hdbSrc')||'일반',stage:st,
+         report_name:hdbVal('hdbRep')||'보장분석 3DB',
+         memo:hdbVal('hdbMemo')||null,
+         assigned_date:got,
          contracted_at:k.won?(cAt||null):null,
          policy_sent_at:k.pol?(pAt||null):null,
          updated_at:new Date().toISOString()};
+  /* 증권번호·터치 횟수는 <b>손에 들고 있을 때만</b> 보낸다 — 안 읽어 온 칸을
+     보내면 서버에 없는 칸이라 통째로 거절당하거나, 빈 값으로 덮어쓴다 */
+  if(hdbHas('policy_no'))p.policy_no=k.won?(hdbVal('hdbPolNo')||null):null;
+  if(hdbHas('touch_count')){
+    /* <b>빈칸은 「모름」(null)</b>이라 통화 건수로 세고, <b>0 은 0</b>이다 (1번) */
+    var tv=hdbVal('hdbTouch'),tn=(tv==='')?null:Math.max(0,Math.round(Number(tv)));
+    p.touch_count=(tv!==''&&isFinite(tn))?tn:null;
+  }
+  var wsel=document.getElementById('hdbWho');
+  if(wsel&&wsel.value)p.assigned_to=wsel.value;
   if(!id){
-    p.assigned_to=r?r.who:me;
-    p.assigned_date=hdbVal('hdbGot')||(new Date()).toISOString().slice(0,10);
-    p.report_name='보장분석 3DB';
+    if(!p.assigned_to)p.assigned_to=r?r.who:me;
     if(me)p.created_by=me;
     if(!p.assigned_to){ HDB.err='담당자를 알 수 없습니다 — 다시 로그인해 주세요.'; hdbRepaintForm(); return; }
   }
   HDB.busy='save';HDB.err='';hdbRepaintForm();
-  var q=id?sb.from('dbs').update(p).eq('id',id).select('id')
-          :sb.from('dbs').insert(p).select('id');
-  q.then(function(res){
+  var down=function(m){ return /column|42703|does not exist|schema cache/i.test(''+(m||'')); };
+  var put=function(p2){
+    return id?sb.from('dbs').update(p2).eq('id',id).select('id')
+             :sb.from('dbs').insert(p2).select('id');
+  };
+  var done=function(res){
     HDB.busy='';
     var w=hdbWrote(res);
     if(w.ok!==true){
       HDB.err='저장하지 못했습니다 — '+w.why;
       hdbRepaintForm();return;
     }
-    if(id)hdbLocal(id,{name:nm,phone:p.phone||'',region:p.region||'',src:p.source,
-                       stage:st,cAt:cAt||'',pAt:pAt||''});
+    if(id)hdbLocal(id,{name:nm,region:p.region||'',src:p.source,
+                       stage:st,cAt:cAt||'',pAt:pAt||'',got:got||'',
+                       who:p.assigned_to||(r?r.who:'')});
     hdbClose();
     if(typeof toast==='function')toast(nm+' 님을 저장했습니다 — DB 통합 CRM 에도 올라갑니다');
-    /* 새로 넣은 줄은 손에 없다 — 그때만 서버를 다시 부른다 (7번) */
-    if(!id&&typeof arLoad==='function')try{ arLoad(true); }catch(e){}
+    /* 새로 넣은 줄과 <b>담당자가 바뀐 줄</b>은 손에 든 것으로 못 맞춘다 (7번) */
+    if((!id||(p.assigned_to&&r&&p.assigned_to!==r.who))&&typeof arLoad==='function')try{ arLoad(true); }catch(e){}
     hdbPaint();
-  },function(e){
+  };
+  var fail=function(e){
     HDB.busy='';
     HDB.err='저장하지 못했습니다 — '+((e&&e.message)||'네트워크 오류');
     hdbRepaintForm();
-  });
+  };
+  put(p).then(function(res){
+    /* 새 칸이 아직 없는 서버 — <b>그 둘만 빼고</b> 다시 보낸다. migration 을
+       안 돌렸을 뿐인데 저장 자체가 막히면 안 된다 */
+    if(res&&res.error&&down(res.error.message)&&
+       /policy_no|touch_count/i.test(''+(res.error.message||''))){
+      var p3={},key;
+      for(key in p)if(p.hasOwnProperty(key)&&HDB_COLS_NEW.indexOf(key)<0)p3[key]=p[key];
+      return put(p3).then(done,fail);
+    }
+    done(res);
+  },fail);
 }
-function hdbRepaintForm(){
+/* fresh 를 켜면 <b>화면에서 베낄 않는다</b> — 방금 불러온 값으로
+   첫 칸을 세우는 자리다. 그 전 화면은 「불러오는 중」이라 베낄 것이 없다. */
+function hdbRepaintForm(fresh){
   var b=document.getElementById('hdbBox');
   if(!b||!HDB.open)return;
-  var keep={n:hdbVal('hdbName'),p:hdbVal('hdbPhone'),g:hdbVal('hdbRegion'),
-            s:hdbVal('hdbSrc'),st:hdbVal('hdbStage'),c:hdbVal('hdbCAt'),o:hdbVal('hdbPAt')};
-  b.innerHTML=hdbFormHtml(HDB.id?hdbRow(HDB.id):null,keep.st);
-  /* 치던 것을 <b>도로 넣어 준다</b> — 오류 한 줄 때문에 다 다시 치게 하면
-     그 자리에서 창을 닫으신다 */
+  /* 치시던 것을 <b>도로 넣어 준다</b> — 오류 한 줄 때문에 다 다시 치게 하면
+     그 자리에서 창을 닫으신다. 아직 칸이 없는 판(불러오는 중·못 읽음)에서는
+     넣을 것도 없다. */
+  var keep=(!fresh&&HDB.load==='')?{n:hdbVal('hdbName'),p:hdbVal('hdbPhone'),g:hdbVal('hdbRegion'),
+            s:hdbVal('hdbSrc'),st:hdbVal('hdbStage'),c:hdbVal('hdbCAt'),o:hdbVal('hdbPAt'),
+            no:hdbVal('hdbPolNo'),rp:hdbVal('hdbRep'),tc:hdbVal('hdbTouch'),
+            gt:hdbVal('hdbGot'),mm:hdbVal('hdbMemo')}:null;
+  b.innerHTML=hdbFormHtml(HDB.id?hdbRow(HDB.id):null,(keep&&keep.st)||HDB.want||'');
+  if(!keep)return;
   var put=function(i,v){ var e=document.getElementById(i); if(e&&v)e.value=v; };
   put('hdbName',keep.n);put('hdbPhone',keep.p);put('hdbRegion',keep.g);
   put('hdbSrc',keep.s);put('hdbCAt',keep.c);put('hdbPAt',keep.o);
+  put('hdbPolNo',keep.no);put('hdbRep',keep.rp);put('hdbTouch',keep.tc);
+  put('hdbGot',keep.gt);put('hdbMemo',keep.mm);
   hdbStagePick();
 }
 function hdbDel(id){
@@ -22083,6 +22334,319 @@ function hdbDel(id){
 /* ── 홈 카드 안에 서는 줄 ─────────────────────────────────────────
    「무엇을 할까요?」 밑에 붙는다. <b>지금 단계가 무엇이고</b>, 한 칸
    올리면 어디로 가고, 통화가 안 됐으면 무엇을 누르는지가 한 줄에 있다. */
+/* ══ ⑦ <b>DB 통합 CRM — 들어갈 때와 나갈 때</b> ═════════════════════
+   사장님 말씀 ⑦ (2026-09-22) —
+     「DB CRM 들어가면 <b>고객 관리부터 시작하시죠?</b> 하고 → 입력·관리,
+      <b>페이지 벗어나면 언제 관리할지</b> 뜨게」
+
+   ★ <b>하루에 한 번만</b> 묻습니다. 들어갈 때마다 덮개가 뜨면 그것은 권유가
+     아니라 방해입니다 — 사흘이면 눈이 먼저 닫습니다.
+   ★ <b>시작한다고 누르셨으면 나갈 때 안 묻습니다.</b> 하고 나온 분께
+     「언제 하실래요」 라고 물으면 앱이 안 보고 있다는 뜻이 됩니다.
+   ★ <b>못 지키는 약속을 하지 않습니다</b> (1번). 고르신 시각은 이 브라우저에만
+     담기고, <b>앱이 열려 있을 때</b> 알려 드립니다. 폰이 꺼져 있을 때 울리는
+     것은 🔔 아침 알람이고 그것은 따로 켜셔야 합니다 — 그렇게 적어 둡니다.
+   ★ 실명은 안 담습니다 (3번). 담는 것은 <b>날짜와 시각</b>뿐입니다.       */
+var CRQ={in:false,at:0,tick:0};
+var CRQ_KEY='apex_crm_when';
+function crqDay(){ try{ return osTodayStr(); }catch(e){ return ''; } }
+function crqGet(){
+  try{
+    var o=JSON.parse(localStorage.getItem(CRQ_KEY)||'{}');
+    return (o&&o.d===crqDay())?o:{};
+  }catch(e){ return {}; }
+}
+function crqSet(o){
+  try{
+    if(o)localStorage.setItem(CRQ_KEY,JSON.stringify(o));
+    else localStorage.removeItem(CRQ_KEY);
+  }catch(e){}
+}
+/* 「오후 2시」처럼 읽히게 — 24시간 글자는 한 박자 늦게 읽힙니다 */
+function crqSay(hm){
+  var a=(''+(hm||'')).split(':'),h=+a[0],m=+a[1];
+  if(!(h>=0&&h<=23))return '';
+  var ap=(h<12)?'오전':'오후',hh=(h%12)||12;
+  return ap+' '+hh+'시'+(m?(' '+m+'분'):'');
+}
+function crqHost(){
+  var e=document.getElementById('crqSheet');
+  if(e)return e;
+  e=document.createElement('div');e.id='crqSheet';
+  e.innerHTML='<div class="crq-box" id="crqBox"></div>';
+  e.addEventListener('click',function(ev){ if(ev.target===e)crqClose(); });
+  document.body.appendChild(e);
+  return e;
+}
+function crqClose(){
+  var e=document.getElementById('crqSheet');
+  if(e)e.classList.remove('on');
+}
+function crqShow(html){
+  crqCss();
+  var host=crqHost();
+  document.getElementById('crqBox').innerHTML=html;
+  host.classList.add('on');
+}
+/* ── 들어갈 때 ──────────────────────────────────────────────────── */
+function crqEnter(){
+  if(!OS.profile)return;
+  CRQ.in=true;
+  var o=crqGet();
+  if(o.asked)return;                 /* 오늘은 이미 여쭤봤습니다 */
+  o.d=crqDay(); o.asked=1; crqSet(o);
+  var had=o.at?('<div class="crq-note">🕘 오늘 <b>'+crqSay(o.at)+'</b> 에 하기로 하셨었습니다.</div>'):'';
+  crqShow('<div class="crq-t">👋 <b>고객 관리부터 시작하시죠?</b></div>'+
+    '<div class="crq-s">DB 를 열어 <b>단계를 옮기고</b>, 통화 결과를 적고, 새 고객을 넣습니다. '+
+    '여기서 한 것은 홈의 「오늘 챙길 것」에도 그대로 뜹니다.</div>'+had+
+    '<div class="crq-b">'+
+      '<button type="button" class="ok" onclick="crqStart()">✍️ 지금 시작합니다</button>'+
+      '<button type="button" onclick="crqClose()">둘러보기만</button>'+
+    '</div>');
+}
+function crqStart(){
+  var o=crqGet(); o.d=crqDay(); o.did=1; crqSet(o);
+  crqClose();
+  if(typeof toast==='function')toast('시작했습니다 — 나가실 때 다시 안 여쭤봅니다');
+}
+/* ── 나갈 때 ────────────────────────────────────────────────────── */
+function crqLeave(){
+  if(!CRQ.in)return;
+  CRQ.in=false;
+  /* 닫는 일은 go() 맨 위에서 <b>한 꺼번에</b> 합니다 (5번) — 여기서도 닫으면
+     바로 밑에서 여는 덮개와 순서가 엉타리게 얽힙니다. */
+  if(!OS.profile)return;
+  var o=crqGet();
+  if(o.did||o.at||o.no)return;       /* 하셨거나 이미 정하셨습니다 */
+  var L=crqSlots(),i,btn='';
+  for(i=0;i<L.length;i++)
+    btn+='<button type="button" onclick="crqPick(\''+L[i].v+'\')">'+osEsc(L[i].t)+'</button>';
+  crqShow('<div class="crq-t">🕘 <b>오늘 고객 관리는 언제 하실까요?</b></div>'+
+    '<div class="crq-s">정해 두시면 <b>그 시각에 이 앱이 한 번 알려</b> 드립니다. '+
+    '<b>앱이 열려 있을 때만</b> 뜹니다 — 폰이 꺼져 있어도 울리는 것은 🔔 아침 알람이고, '+
+    '그것은 설정에서 따로 켜셔야 합니다.</div>'+
+    '<div class="crq-g">'+btn+'</div>'+
+    '<div class="crq-b">'+
+      '<button type="button" onclick="crqNo()">오늘은 안 합니다</button>'+
+    '</div>');
+}
+/* 고를 시각 — <b>지금부터</b> 셉니다. 이미 지난 시각을 내밀면 고르는 순간
+   지나간 약속이 됩니다 (1번). 늦은 밤이면 「30분 뒤」 만 남습니다. */
+function crqSlots(){
+  var now=new Date(),out=[],i,h,C=[30,60,120];
+  for(i=0;i<C.length;i++){
+    var d=new Date(now.getTime()+C[i]*60000);
+    if(d.getDate()!==now.getDate())break;      /* 날이 바뀌면 오늘이 아니다 */
+    out.push({v:crqHm(d),t:(C[i]<60?(C[i]+'분 뒤'):((C[i]/60)+'시간 뒤'))+' · '+crqSay(crqHm(d))});
+  }
+  for(i=0;i<3;i++){
+    h=[14,17,20][i];
+    if(h*60<=now.getHours()*60+now.getMinutes()+10)continue;
+    out.push({v:(h<10?'0':'')+h+':00',t:crqSay(h+':00')});
+  }
+  return out;
+}
+function crqHm(d){
+  var p=function(n){return (n<10?'0':'')+n;};
+  return p(d.getHours())+':'+p(d.getMinutes());
+}
+function crqPick(hm){
+  var o=crqGet(); o.d=crqDay(); o.at=hm; o.no=0; crqSet(o);
+  crqClose();
+  if(typeof toast==='function')toast(crqSay(hm)+' 에 알려 드리겠습니다',4200);
+}
+function crqNo(){
+  var o=crqGet(); o.d=crqDay(); o.no=1; crqSet(o);
+  crqClose();
+}
+/* ── 그 시각이 되면 ─────────────────────────────────────────────
+   ★ <b>서버를 안 부릅니다</b> (7번) — 이 브라우저에 담긴 시각만 봅니다.
+     화면이 뒤로 가 있으면 쉽니다. */
+function crqTick(){
+  try{
+    if(document.hidden)return;
+    if(!OS.profile)return;
+    var o=crqGet();
+    if(!o.at||o.rang||o.did)return;
+    var n=new Date(),now=crqHm(n);
+    if(now<o.at)return;
+    o.rang=1; crqSet(o);
+    crqShow('<div class="crq-t">🕘 <b>고객 관리 하실 시간입니다</b></div>'+
+      '<div class="crq-s"><b>'+crqSay(o.at)+'</b> 에 하기로 하셨습니다. '+
+      '지금 열면 단계·통화 결과를 그 자리에서 적으실 수 있습니다.</div>'+
+      '<div class="crq-b">'+
+        '<button type="button" class="ok" onclick="crqGoCrm()">🗄️ 지금 열기</button>'+
+        '<button type="button" onclick="crqClose()">조금 뒤에</button>'+
+      '</div>');
+  }catch(e){}
+}
+function crqGoCrm(){ crqClose(); try{ go('crm'); }catch(e){} }
+function crqWatch(){
+  if(CRQ.tick)return;
+  CRQ.tick=setInterval(crqTick,60000);
+  try{ document.addEventListener('visibilitychange',function(){ if(!document.hidden)crqTick(); }); }catch(e){}
+}
+function crqCss(){
+  if(document.getElementById('crqCss'))return;
+  var st=document.createElement('style');st.id='crqCss';
+  st.textContent=
+   '#crqSheet{position:fixed;inset:0;z-index:9300;background:rgba(15,23,42,.44);display:none;'+
+     'align-items:flex-end;justify-content:center}'+
+   '#crqSheet.on{display:flex}'+
+   '.crq-box{width:100%;max-width:520px;max-height:90vh;overflow:auto;background:#fff;'+
+     'border-radius:18px 18px 0 0;padding:18px 16px 20px}'+
+   '@media(min-width:620px){#crqSheet{align-items:center}.crq-box{border-radius:18px}}'+
+   '.crq-t{font-size:var(--t3);font-weight:900;color:var(--ink-1);line-height:1.5}'+
+   '.crq-s{margin-top:8px;font-size:var(--t6);line-height:1.75;color:var(--ink-4)}'+
+   '.crq-s b{color:var(--ink-2)}'+
+   '.crq-note{margin-top:9px;font-size:var(--t6);font-weight:700;color:#92400E;'+
+     'background:#FFFBEB;border-radius:9px;padding:8px 10px}'+
+   '.crq-g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}'+
+   '.crq-g button{min-height:52px;border:1px solid var(--ink-7);border-radius:12px;background:#fff;'+
+     'font-family:inherit;font-size:var(--t6);font-weight:800;color:var(--ink-2);cursor:pointer;padding:9px}'+
+   '.crq-b{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}'+
+   '.crq-b button{flex:1 1 auto;min-width:130px;min-height:48px;border:1px solid var(--ink-7);'+
+     'border-radius:12px;background:#F2F4F6;font-family:inherit;font-size:var(--t5);'+
+     'font-weight:900;color:#4E5968;cursor:pointer}'+
+   '.crq-b .ok{background:#2B5FD9;border-color:#2B5FD9;color:#fff}';
+  document.head.appendChild(st);
+}
+/* ══ ⑧ <b>거절처리</b> — 그 말이 나왔을 때 무엇을 말하나 ═══════════════
+   사장님 말씀 ⑧ (2026-09-22) —
+     「TA멘트 전문가 수준으로 <b>거절처리부터 길게</b> 만들고, 그걸 <b>오늘
+      챙길것에 띄우고 관리</b>하게」
+
+   ★ <b>말을 새로 지어내지 않았습니다</b> (1번). ta-script.html 의 거절처리
+     열일곱 가지를 apex-stage.js <b>한 곳</b>으로 옮겨 두 화면이 같이 읽습니다 (5번).
+   ★ 「🚫 거절」 단추는 <b>바로 기록하지 않습니다.</b> 먼저 무엇을 말할지
+     보여 드리고, 정말 끝이면 그 자리에서 기록합니다 — 거절은 한 번 적히면
+     그 고객에게 다시 전화를 안 겁니다.
+   ★ 네 가지를 <b>같이</b> 적습니다 — 바로 말할 멘트 · 다음 한마디 ·
+     <b>금지 표현</b> · <b>종료 기준</b>. 「무엇을 말할까」만 적고 「무엇을
+     말하면 안 되나」와 「언제 그만두나」를 안 적으면, 붙잡다 그 고객을
+     영영 잃습니다.
+   ★ 이름은 <b>이 브라우저 안에서만</b> 끼워 넣습니다 (3번) — 어디로도 안 갑니다. */
+var OBJ={id:'',i:0};
+function objList(){
+  try{ return (window.APEX_STAGE&&APEX_STAGE.objList)?APEX_STAGE.objList():[]; }
+  catch(e){ return []; }
+}
+/* 이름·DB 종류를 끼워 넣는다 — <b>모르면 적힌 그대로</b> 둔다 (1번) */
+function objFill(t,r){
+  try{
+    var me='';
+    try{ me=(typeof arNameOf==='function'&&typeof arMyId==='function')?arNameOf(arMyId()):''; }catch(e2){}
+    if(me==='팀원')me='';
+    return (window.APEX_STAGE&&APEX_STAGE.objFill)
+      ? APEX_STAGE.objFill(t,me,(r&&r.src)||'')
+      : (''+(t||''));
+  }catch(e){ return ''+(t||''); }
+}
+function objOpen(id){
+  var L=objList();
+  if(!L.length){ if(typeof toast==='function')toast('거절처리 글을 못 읽었습니다'); return; }
+  OBJ.id=id||''; OBJ.i=0;
+  objCss(); objPaint();
+  var h=document.getElementById('objSheet');
+  if(h)h.classList.add('on');
+}
+function objPick(n){ OBJ.i=+n||0; objPaint(); }
+function objClose(){
+  var e=document.getElementById('objSheet');
+  if(e)e.classList.remove('on');
+}
+function objHost(){
+  var e=document.getElementById('objSheet');
+  if(e)return e;
+  e=document.createElement('div');e.id='objSheet';
+  e.innerHTML='<div class="obj-box" id="objBox"></div>';
+  e.addEventListener('click',function(ev){ if(ev.target===e)objClose(); });
+  document.body.appendChild(e);
+  return e;
+}
+function objPaint(){
+  var L=objList(),o=L[OBJ.i]||L[0];
+  if(!o)return;
+  var r=(OBJ.id&&typeof hdbRow==='function')?hdbRow(OBJ.id):null;
+  var v=function(t){ return (typeof osEsc==='function')?osEsc(t):t; };
+  var tabs='',i;
+  for(i=0;i<L.length;i++)
+    tabs+='<button type="button" class="obj-t'+(i===OBJ.i?' on':'')+'" onclick="objPick('+i+')">'+
+      v(L[i].title)+'</button>';
+  var row=function(e,t,s,cls){
+    return '<div class="obj-r'+(cls?(' '+cls):'')+'"><div class="obj-k">'+e+' '+t+'</div>'+
+      '<div class="obj-v">'+v(s).split('\n').join('<br>')+'</div></div>';
+  };
+  objHost();
+  document.getElementById('objBox').innerHTML=
+    '<div class="obj-tt">🚫 <b>거절처리</b>'+(r?(' — '+v(r.name)+' 님'):'')+'</div>'+
+    '<div class="obj-s">고객이 한 말을 고르면 <b>그대로 읽을 말</b>이 섭니다. '+
+      '금지 표현과 종료 기준을 <b>같이</b> 보십시오 — 붙잡다 그 고객을 영영 잃습니다.</div>'+
+    '<div class="obj-ts">'+tabs+'</div>'+
+    '<div class="obj-tone">🎯 '+v(o.tone||'')+'</div>'+
+    row('💬','바로 말할 멘트',objFill(o.text,r))+
+    row('➡️','다음 한마디',objFill(o.follow,r))+
+    row('🚷','이 말은 하지 않습니다',o.avoid||'','no')+
+    row('🛑','여기서 끝냅니다',o.stop||'','st')+
+    (o.tip?row('💡','한 가지만 더',o.tip):'')+
+    '<div class="obj-b">'+
+      '<button type="button" class="ok" onclick="objCopy()">📋 멘트 복사</button>'+
+      (OBJ.id?('<button type="button" class="no" onclick="objDone()">🚫 거절로 기록</button>'):'')+
+      '<button type="button" onclick="objClose()">닫기</button>'+
+    '</div>'+
+    '<div class="obj-s" style="margin:10px 0 0">기록하면 <b>DB 통합 CRM 에도 그대로</b> 올라가고, '+
+      '그 뒤로는 <b>전화를 안 겁니다</b> — 다음은 파는 전화가 아니라 소식 하나로 엽니다.</div>';
+}
+function objCopy(){
+  var L=objList(),o=L[OBJ.i]||L[0];
+  if(!o)return;
+  var r=(OBJ.id&&typeof hdbRow==='function')?hdbRow(OBJ.id):null;
+  var t=objFill(o.text,r)+'\n\n[다음 한마디]\n'+objFill(o.follow,r)+
+        '\n\n[하지 않습니다]\n'+(o.avoid||'').replace(/<[^>]*>/g,'')+
+        '\n\n[여기서 끝냅니다]\n'+(o.stop||'').replace(/<[^>]*>/g,'');
+  if(typeof copyText==='function')copyText(t);
+  else if(typeof toast==='function')toast('복사하지 못했습니다');
+}
+/* 정말 끝일 때만 — <b>기록하는 곳은 hdbCall 한 곳</b>입니다 (5번) */
+function objDone(){
+  var id=OBJ.id;
+  objClose();
+  if(id&&typeof hdbCall==='function')hdbCall(id,'거절');
+}
+function objCss(){
+  objHost();
+  if(document.getElementById('objCss'))return;
+  var st=document.createElement('style');st.id='objCss';
+  st.textContent=
+   '#objSheet{position:fixed;inset:0;z-index:9350;background:rgba(15,23,42,.46);display:none;'+
+     'align-items:flex-end;justify-content:center}'+
+   '#objSheet.on{display:flex}'+
+   '.obj-box{width:100%;max-width:560px;max-height:92vh;overflow:auto;background:#fff;'+
+     'border-radius:18px 18px 0 0;padding:16px 15px 20px}'+
+   '@media(min-width:620px){#objSheet{align-items:center}.obj-box{border-radius:18px}}'+
+   '.obj-tt{font-size:var(--t3);font-weight:900;color:var(--ink-1)}'+
+   '.obj-s{margin-top:7px;font-size:var(--t6);line-height:1.7;color:var(--ink-4)}'+
+   '.obj-s b{color:var(--ink-2)}'+
+   '.obj-ts{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 4px}'+
+   '.obj-t{min-height:40px;padding:8px 11px;border:1px solid var(--ink-7);border-radius:var(--r-pill);'+
+     'background:#fff;font-family:inherit;font-size:var(--t6);font-weight:800;'+
+     'color:var(--ink-4);cursor:pointer}'+
+   '.obj-t.on{background:#0F172A;border-color:#0F172A;color:#fff}'+
+   '.obj-tone{margin:9px 0 2px;font-size:var(--t6);font-weight:800;color:#1D4ED8}'+
+   '.obj-r{margin-top:10px;border:1px solid var(--ink-7);border-radius:var(--r-sm);padding:10px 11px}'+
+   '.obj-r.no{border-color:#FECACA;background:#FEF2F2}'+
+   '.obj-r.st{border-color:#FDE68A;background:#FFFBEB}'+
+   '.obj-k{font-size:var(--t6);font-weight:900;color:var(--ink-3);margin-bottom:5px}'+
+   '.obj-r.no .obj-k{color:#B91C1C}.obj-r.st .obj-k{color:#92400E}'+
+   '.obj-v{font-size:var(--t5);line-height:1.8;color:var(--ink-1);white-space:normal;word-break:keep-all}'+
+   '.obj-b{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}'+
+   '.obj-b button{flex:1 1 auto;min-width:120px;min-height:48px;border:1px solid var(--ink-7);'+
+     'border-radius:12px;background:#F2F4F6;font-family:inherit;font-size:var(--t5);'+
+     'font-weight:900;color:#4E5968;cursor:pointer}'+
+   '.obj-b .ok{background:#2B5FD9;border-color:#2B5FD9;color:#fff}'+
+   '.obj-b .no{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}';
+  document.head.appendChild(st);
+}
 function hdbStripHtml(x){
   if(!x||x.k!=='db'||!x.id)return '';
   var r=hdbRow(x.id);
@@ -22115,7 +22679,9 @@ function hdbStripHtml(x){
       (busy?'…':('→ '+v(to)+' 로 올리기'))+'</button>';
   h+='<button type="button" class="hdb-b"'+(busy?' disabled':'')+' onclick="hdbCall(\'' + r.id + '\',\'부재\')">📵 부재</button>'+
      '<button type="button" class="hdb-b"'+(busy?' disabled':'')+' onclick="hdbCall(\'' + r.id + '\',\'상담\')">🤝 통화됨</button>'+
-     '<button type="button" class="hdb-b no"'+(busy?' disabled':'')+' onclick="hdbCall(\'' + r.id + '\',\'거절\')">🚫 거절</button>'+
+     /* ⑧ <b>바로 적지 않습니다.</b> 먼저 무엇을 말할지 보여 드리고, 정말 끝이면
+        그 창에서 기록합니다 — 거절은 한 번 적힐면 그 고객께 다시 전화를 안 겁니다. */
+     '<button type="button" class="hdb-b no"'+(busy?' disabled':'')+' onclick="objOpen(\'' + r.id + '\')">🚫 거절</button>'+
      '<button type="button" class="hdb-b ed" onclick="hdbOpen(\'' + r.id + '\',\'\')">✏️ 고치기</button>'+
      '</div>';
   h+='<div class="hdb-h">누르면 <b>DB 통합 CRM 에도 그대로</b> 올라갑니다 — 같은 표를 씁니다.</div>';
@@ -22782,17 +23348,37 @@ var HM_SUB={
    챙길 분이 없으면 이름을 만들지 않고 <b>없다고</b> 적습니다. 받아 둔
    소식이 없으면 소식 자리를 <b>비웁니다</b>. 나이를 모르면 <b>모른다고</b>
    적고 기본 화법으로 갑니다 — 배정 DB 에는 출생년도 칸이 없습니다.     */
+/* ══ ⑨ <b>오늘 고객 열 분</b> — 몇 분인지는 여기 한 곳만 안다 ══════
+   사장님 말씀 ⑨ (2026-09-22) — 「따라만 가면 <b>오늘 고객 10명 관리 완성</b>.
+   홈 화면에서 모든 걸 해결하게」.
+
+   숫자를 글자로 박아 두면 — 「전화 5통」·「다섯 분」·「카톡 5건」 — 하나 바꿀 때
+   반드시 한 군데를 빠뜨립니다. 실제로 그러고 있었고, 그러면 미션은 열 분을
+   부르는데 체크판은 다섯을 적어 <b>둘이 따로 놓습니다</b> (5번).
+   그래서 <b>이 한 줄이 정합니다.</b> 미션도 체크판도 여기서 읽습니다.   */
+var HM_MS_N=10;
+var HM_MS_NKO=['','한','두','세','네','다섯','여섯','일곱','여덟','아홉','열'];
+function msN(){ return HM_MS_N; }
+function msKo(){ return HM_MS_NKO[HM_MS_N]||(''+HM_MS_N); }
 var HM_MS=[
  {n:'①',ck:'d2', e:'🔔',t:'오늘의 알림 확인', kind:'almn',
-  d:'오늘 연락할 분이 <b>누구인지</b>부터 봅니다. 여기서 다섯 분을 뽑습니다.'},
- {n:'②',ck:'d3', e:'🎯',t:'다섯 분께 어떻게 연락할지', kind:'plan',
+  d:'오늘 연락할 분이 <b>누구인지</b>부터 봅니다. 여기서 '+msKo()+' 분을 뽑습니다.'},
+ {n:'②',ck:'d3', e:'🎯',t:msKo()+' 분께 어떻게 연락할지', kind:'plan',
   d:'한 분씩 — <b>보낼 소식</b>과 <b>첫 마디</b>를 여기서 정합니다.'},
- {n:'③',ck:'d4', e:'☎️',t:'전화 다섯 통 (TA)', kind:'call',
+ {n:'③',ck:'d4', e:'☎️',t:'전화 '+msKo()+' 통 (TA)', kind:'call',
   d:'<b>밝게, 다섯 마디로.</b> 전화로는 <b>날짜만</b> 잡고 끊습니다.'},
- {n:'④',ck:'d5', e:'💬',t:'카톡 다섯 건', kind:'kt',
+ {n:'④',ck:'d5', e:'💬',t:'카톡 '+msKo()+' 건', kind:'kt',
   d:'<b>안부와 소식</b>만 보냅니다 — 다음 전화를 받으시게 하는 글입니다.'},
  {n:'⑤',ck:'d10',e:'📸',t:'오늘 올릴 SNS 캐러셀', kind:'sns',
-  d:'오늘 고른 <b>그 기사</b>로 만듭니다 — 정책·상품 뉴스에 있는 것입니다.'}
+  d:'오늘 고른 <b>그 기사</b>로 만듭니다 — 정책·상품 뉴스에 있는 것입니다.'},
+ /* ⑥ 사장님 말씀 ⑥ (2026-09-22) — 「아침미션과 오늘 챙길것을 합쳐서
+    <b>고객 보험을 보게</b> 하고 <b>5번을 미션으로</b>」.
+    따로 서 있던 🩺 고객 체크 칸을 <b>여기로 넣었습니다</b> — 홈에 칸이 하나
+    줄고, 아침에 따라가다 보면 고객 보험까지 보게 됩니다.
+    ★ 체크판 칸은 <b>이미 있는 d9</b>(내일 상담 자료 준비 — 증권 받았으면
+      판독까지)을 그대로 씁니다. 새 칸을 만들면 체크판과 어깋납니다 (5번). */
+ {n:'⑥',ck:'d9', e:'🩺',t:'고객 보험 보기', kind:'chk',
+  d:'읽어 둔 <b>KB보장분석</b>으로 오늘 꺼낼 한 가지를 세웁니다. 안 읽었으면 넣는 자리로 갑니다.'}
 ];
 /* 아침에 <b>터치할 분</b>은 어떤 상태인가 — 표 하나로 둡니다. 삼항 사슬로
    늘어놓으면 상태를 늘릴 때 반드시 하나를 빠뜨립니다 (5번).
@@ -22831,8 +23417,23 @@ function hmMsPeople(){
   var L=[],out=[],i;
   try{ if(typeof arTouch==='function')L=arTouch((typeof hwhoFor==='function')?hwhoFor():'')||[]; }
   catch(e){ return []; }
-  for(i=0;i<L.length&&out.length<5;i++)if(HM_MS_POOL[L[i].k])out.push(L[i]);
+  for(i=0;i<L.length&&out.length<HM_MS_N;i++)if(HM_MS_POOL[L[i].k])out.push(L[i]);
   return out;
+}
+/* ⑨ <b>오늘 몇 분을 실제로 관리하셨나</b> — 체크가 아니라 <b>기록</b>으로 섽니다.
+   ★ 「하셨다」고 누른 것과 <b>정말 하신 것</b>은 다릅니다 (1번). 체크만 세면
+     단추 네 번에 「열 분 관리 완성」이 됩니다. 여기서 세는 것은 그 분께
+     <b>오늘 날짜로 통화 기록이 남았나</b> 입니다 — hdbCall 이 적는 그 것입니다.
+   ★ 오늘 끩은 분은 <b>안 섽니다</b> — 오늘 손을 대야 오늘 관리하신 것입니다. */
+function hmMsCare(){
+  var P=hmMsPeople(),t='',i,n=0;
+  try{ t=osTodayStr(); }catch(e){ t=''; }
+  for(i=0;i<P.length;i++){
+    var r=(typeof hdbRow==='function')?hdbRow(P[i].id):null;
+    var last=(r&&r.last)||P[i].last||'';
+    if(t&&(''+last).slice(0,10)===t)n++;
+  }
+  return {done:n,all:P.length};
 }
 function hmMsWho(){
   var P=hmMsPeople();
@@ -22973,8 +23574,15 @@ function hmMsSub(){
   /* 평가 한 줄은 <b>있을 때만</b> 붙인다 — 아직 기록이 없으면 아무 말도 안
      한다. 「이번 달 0일 다 함」 은 못 한 것처럼 읽힌다 (1번). */
   var tail=ev?(' · '+ev):'';
-  if(c<0)return n+'/5 · 다 하셨습니다'+tail;
-  return n+'/5 · '+HM_MS[c].n+' '+HM_MS[c].t+tail;
+  /* 몇 가지인지를 여기 적지 않습니다 — 미션을 하나 늘리면 이 줄이 낙아
+     거짓말이 됩니다. HM_MS 가 세게 둡니다 (5번). */
+  var N=HM_MS.length;
+  /* ⑨ 접어 두셔도 <b>오늘 몇 분을 관리하셨는지</b> 보이게 합니다.
+     미션 몇 칸을 눈렀나보다, 사장님께 중한 것은 <b>몇 분을 대했나</b> 입니다. */
+  var C='';
+  try{ var k=hmMsCare(); if(k.all)C=' · 오늘 관리 '+k.done+'/'+k.all+'명'; }catch(e2){}
+  if(c<0)return n+'/'+N+' · 다 하셨습니다'+C+tail;
+  return n+'/'+N+' · '+HM_MS[c].n+' '+HM_MS[c].t+C+tail;
 }
 function hmFoldMsPaint(){
   var box=document.getElementById('hmFold_ms'); if(!box)return;
@@ -23145,6 +23753,9 @@ function hmMsNextHtml(tot){
 /* ── 미션 다섯의 <b>속</b> — 표 하나로 갈립니다 (5번) ───────────────
    삼항 사슬로 늘어놓으면 미션을 하나 더할 때 반드시 하나를 빠뜨립니다. */
 var HM_MS_BODY={
+ /* ⑥ 고객 보험 보기 — 칸을 <b>다시 안 만듭니다</b>. 홈에 서 있던 그
+    칸(hmChkHtml)을 그대로 데려옵니다 — 둘을 따로 두면 한쪽만 고쳐집니다 (5번). */
+ chk:function(){ return '<div id="hmChkHost">'+hmChkHtml()+'</div>'; },
  /* ① 오늘의 알림 — <b>누구인지</b>부터 */
  almn:function(P){
    if(!P.length)
@@ -24140,6 +24751,270 @@ function hmFoldToggle(k){
   if(h){ h.setAttribute('aria-expanded',v?'true':'false');
          var ar=h.querySelector('.ar'); if(ar)ar.textContent=v?'▴':'▾'; }
 }
+/* ══ 🩺 <b>고객 체크 — KB보장분석만 넣어 주시면 됩니다</b> ═══════════
+   사장님 말씀 (2026-09-22) —
+     「가장 중요한 건, 고객 체크는 <b>홈 화면에서</b>, KB보장분석을 넣어
+      주면 <b>저희가 관리해 드릴게요!</b> 하면서 띄울 수 있도록 만들어.
+      설계사 입장에서 <b>내가 KB보장분석만 넣으면 관리가 자동으로
+      되는구나</b> 하는 걸 인지시켜」
+
+   그래서 이 칸이 하는 말은 하나입니다 — <b>증권 하나만 넣으시면, 그
+   다음은 앱이 합니다.</b> 그것이 사실이어야 하므로 —
+     ★ 넣은 분께는 <b>오늘 꺼낼 한 가지</b>가 실제로 서 있어야 합니다.
+       (chkSay 가 세웁니다 — 여기서 새로 만들지 않습니다 · 5번)
+     ★ 안 넣은 분께는 <b>지어내지 않습니다.</b> 「아직 읽을 것이 없습니다」
+       라고 적고 <b>넣는 자리로 바로 보냅니다</b> (1번).
+     ★ 아무도 없으면 <b>칸을 안 세웁니다</b> — 빈 칸은 자리만 먹습니다.  */
+function hmChkStat(){
+  var P=[],i,s,n={all:0,ok:0,need:0};
+  try{ P=(typeof chkPeople==='function')?chkPeople():[]; }catch(e){ return n; }
+  n.all=P.length;
+  for(i=0;i<P.length;i++){
+    try{ s=chkSay(P[i]); }catch(e2){ s=null; }
+    if(!s)continue;
+    if(s.why==='ok')n.ok++; else n.need++;
+  }
+  return n;
+}
+/* 넣어야 할 분 — <b>가장 오래 기다린 분부터</b>. 세 분까지만 보여 드립니다 */
+function hmChkNeed(){
+  var P=[],out=[],i,s;
+  try{ P=(typeof chkPeople==='function')?chkPeople():[]; }catch(e){ return out; }
+  for(i=0;i<P.length;i++){
+    try{ s=chkSay(P[i]); }catch(e2){ s=null; }
+    if(s&&s.why!=='ok')out.push({p:P[i],why:s.why,C:s.C});
+  }
+  out.sort(function(a,b){ return (b.p.days||0)-(a.p.days||0); });
+  return out;
+}
+function hmChkGo(){ try{ if(typeof arGoCat==='function')arGoCat('check'); }catch(e){} }
+/* 증권 넣는 자리로 — <b>있는 화면으로 보냅니다.</b> 없는 길을 만들지 않습니다 */
+function hmChkBa(){ try{ go('frmake'); }catch(e){} }
+function hmChkPaint(){
+  var el=document.getElementById('hmChkHost');
+  if(el)el.innerHTML=hmChkHtml();
+}
+function hmChkSub(){
+  var n=hmChkStat();
+  if(!n.all)return '';
+  if(!n.need)return n.ok+'분 모두 할 말이 섰습니다';
+  return '증권만 넣으면 되는 분 '+n.need+'명';
+}
+/* ── ⑤ <b>고객 365일 한눈에</b> ─────────────────────────────────────
+   사장님 말씀 ⑤ (2026-09-22) — 「고객 365일 한눈에 + 보장분석 전후·KB보장분석
+   읽고 <b>미끼레이더와 연계</b>한 관리 프로그램을 홈에서」
+
+   ★ <b>이미 손에 든 것만</b> 셉니다 (7번). 고객 카드는 AR.cliRows, 읽은
+     증권은 CHKS.by, 오늘 약속은 AR.db 가 벌써 들고 있습니다 — 서버를
+     더 부르지 않습니다.
+   ★ <b>아직 안 받아 온 것은 0 으로 적지 않습니다</b> (1번). 0 은 「없다」는
+     뜻이고, 안 받아 온 것은 「모른다」입니다. 둘을 뭉개면 카드가 0명이라고
+     적힌 것을 보고 고객이 다 사라진 줄 아십니다.                      */
+function hmChkEye(){
+  var e={cli:null,read:null,appt:null},i,k,d;
+  try{
+    if(typeof AR!=='undefined'&&AR.cliRows)e.cli=AR.cliRows.length;
+  }catch(x){}
+  try{
+    if(typeof CHKS!=='undefined'&&CHKS.rows!==null){
+      e.read=0;
+      for(k in CHKS.by)if(CHKS.by.hasOwnProperty(k))e.read++;
+    }
+  }catch(x2){}
+  try{
+    if(typeof AR!=='undefined'&&AR.db){
+      var t=(new Date()).toISOString().slice(0,10);
+      e.appt=0;
+      for(i=0;i<AR.db.length;i++){
+        d=(''+(AR.db[i].appt||'')).slice(0,10);
+        if(d===t)e.appt++;
+      }
+    }
+  }catch(x3){}
+  return e;
+}
+function hmChkEyeHtml(){
+  var e=hmChkEye(),p=[];
+  var one=function(t,v,u){ return '<span>'+t+' <b>'+(v===null?'—':(v+u))+'</b></span>'; };
+  p.push(one('고객 카드',e.cli,'명'));
+  p.push(one('증권 읽은 분',e.read,'명'));
+  p.push(one('오늘 약속',e.appt,'건'));
+  return '<div class="hm-chk-eye">🗂 <b>고객 365일 한눈에</b> '+p.join('')+
+    (e.cli===null||e.read===null?'<i>— 「—」 는 <b>아직 안 받아 온 것</b>입니다. 0 이 아닙니다.</i>':'')+
+  '</div>';
+}
+/* 오늘 꺼낼 한 가지가 <b>이미 선</b> 분들 — 가장 오래 기다린 분부터 */
+function hmChkOk(){
+  var P=[],out=[],i,s;
+  try{ P=(typeof chkPeople==='function')?chkPeople():[]; }catch(e){ return out; }
+  for(i=0;i<P.length;i++){
+    try{ s=chkSay(P[i]); }catch(e2){ s=null; }
+    if(s&&s.why==='ok'&&s.cov&&s.cov.n)out.push({p:P[i],cov:s.cov,C:s.C});
+  }
+  out.sort(function(a,b){ return (b.p.days||0)-(a.p.days||0); });
+  return out;
+}
+/* ── 🎣 <b>미끼 레이더와 잇는다</b> ─────────────────────────────────
+   ★ 홈은 <b>담보 이름만 넘깁니다.</b> 그 담보가 암인지 뇌인지 간병인지는
+     <b>미끼 레이더가 정합니다</b> — 이름표(TAGS)를 그쪽이 들고 있습니다.
+     여기서 또 가르면 두 곳이 다른 답을 하는 날이 옵니다 (5번).
+   ★ 실제로 읽어 <b>담보 이름이 있을 때만</b> 단추를 세웁니다. 없는 이름으로
+     넘기면 저쪽 화면이 「못 가렸습니다」만 적게 됩니다 (1번).          */
+function hmChkMk(cov){
+  var c=''+(cov||'');
+  if(!c)return;
+  try{
+    var f=document.getElementById('mikkiFrame');
+    if(f){ f._mounted=true; f.src=MIKKI_URL+'?cov='+encodeURIComponent(c); }
+  }catch(e){}
+  try{ go('mikki'); }catch(e2){}
+}
+/* ── ⑩ <b>재무설계(달러·연금) → 홈에서 이어 가기</b> ────────────────
+   사장님 말씀 ⑩ (2026-09-22) — 「재무설계(달러·연금) → 고객 365일 정리 →
+   홈에서 추가 관리 연계」
+
+   계산기에서 💾 를 누르면 고객 365일에 <b>재무설계</b>가 담깁니다
+   (saved_reports kind='finance'). 여태 담기기만 하고 <b>거기서 끝</b>이었습니다.
+   이제 홈이 그것을 읽어 <b>다음에 무엇을 할지</b>를 적습니다.
+
+   ★ <b>금액을 옮겨 적지 않습니다</b> (1번·2번). 「얼마가 모자랍니다」는
+     계산기가 그 화면에서 할 말이고, 여기서 다시 적으면 두 곳이 어긋납니다.
+     여기서는 <b>정리해 두셨다는 것</b>과 <b>언제</b>만 말합니다.
+   ★ <b>없는 분은 조르지 않습니다</b> — 「아직 안 하셨습니다」를 늘어놓으면
+     할 일 목록이 아니라 잔소리가 됩니다.
+   ★ 서버를 더 안 부릅니다 (7번) — 증권을 받아 올 때 같이 실어 옵니다. */
+function hmFinOf(){
+  var P=[],out=[],i,f;
+  try{ P=(typeof chkPeople==='function')?chkPeople():[]; }catch(e){ return out; }
+  for(i=0;i<P.length;i++){
+    if(!P[i].cid)continue;
+    try{ f=CHKS.fin?CHKS.fin[P[i].cid]:null; }catch(e2){ f=null; }
+    if(f)out.push({p:P[i],at:f.at||''});
+  }
+  out.sort(function(a,b){ return (''+b.at).localeCompare(''+a.at); });
+  return out;
+}
+/* 계산기로 — <b>있는 화면으로</b> 보냅니다. 없는 길을 만들지 않습니다 */
+function hmFinGo(){ try{ go('finance'); }catch(e){} }
+function hmFinHtml(){
+  var L=hmFinOf();
+  if(!L.length)return '';                 /* 한 분도 없으면 칸을 안 세웁니다 (1번) */
+  var v=function(t){ return (typeof osEsc==='function')?osEsc(t):t; };
+  var nm=[],i;
+  for(i=0;i<L.length&&i<3;i++)nm.push(v(L[i].p.nm||'고객')+(L[i].at?(' <i>'+v(L[i].at)+'</i>'):''));
+  return '<div class="hm-chk-fin">'+
+    '<div class="hm-chk-fk">💵 <b>재무설계를 정리해 둔 분</b> '+L.length+'명</div>'+
+    '<div class="hm-chk-fv">'+nm.join(' · ')+
+      (L.length>nm.length?(' 외 '+(L.length-nm.length)+'명'):'')+'</div>'+
+    '<div class="hm-chk-fs">달러·연금은 <b>한 번 정리해 두면 다음이 쉬운</b> 자리입니다. '+
+      '계산기에서 그때 넣은 값을 그대로 다시 열어 <b>바뀐 것만</b> 고치시면 됩니다. '+
+      '금액은 여기 옮겨 적지 않습니다 — <b>계산기가 말하는 그 값</b>이 맞습니다.</div>'+
+    '<div class="hm-chk-b">'+
+      '<button type="button" onclick="hmFinGo()">🧮 재무설계 계산기 열기</button>'+
+    '</div></div>';
+}
+function hmChkHtml(){
+  if(!OS.profile)return '';
+  if(typeof chkPeople!=='function')return '';
+  /* 읽은 기록을 아직 안 받아 왔으면 여기서 받아 옵니다 — 한 번만 (7번) */
+  try{ if(typeof CHKS!=='undefined'&&CHKS.rows===null&&!CHKS.busy&&typeof chkLoad==='function')
+         setTimeout(function(){chkLoad();},20); }catch(e){}
+  var n=hmChkStat();
+  if(!n.all)return '';                      /* 아무도 없으면 안 세웁니다 */
+  hmChkCss();
+  var h='<div class="hm-chk">'+
+    '<div class="hm-chk-t">🩺 <b>고객 체크</b> — AP · PC · CS <b>'+n.all+'명</b></div>'+
+    hmChkEyeHtml();
+  if(n.need){
+    var L=hmChkNeed(),i,x,names=[];
+    for(i=0;i<L.length&&i<3;i++)names.push(osEsc(L[i].p.nm||'고객'));
+    h+='<div class="hm-chk-cta">'+
+      '<div class="hm-chk-big">📄 <b>KB보장분석만 넣어 주세요.</b><br>'+
+        '그 다음은 <b>저희가 관리해 드릴게요.</b></div>'+
+      '<div class="hm-chk-sub">증권을 한 번 읽어 두면, 그 담보로 <b>오늘 무슨 말을 꺼낼지</b>를 '+
+        '앱이 매일 세워 드립니다. 넣기 전에는 <b>아무 말도 지어내지 않습니다.</b></div>'+
+      '<div class="hm-chk-who">기다리는 분 <b>'+n.need+'명</b>'+
+        (names.length?(' — '+names.join(' · ')+(n.need>names.length?(' 외 '+(n.need-names.length)+'명'):'')):'')+
+      '</div>'+
+      '<div class="hm-chk-b">'+
+        '<button type="button" class="ok" onclick="hmChkBa()">📄 KB보장분석 넣기</button>'+
+        '<button type="button" onclick="hmChkGo()">🩺 고객 체크 열기</button>'+
+      '</div></div>';
+  }
+  if(n.ok){
+    /* ⑤ 여기서 <b>바로 관리하십니다</b> — 보장분석에서 읽은 담보 하나를
+       그대로 넣고, 그 담보로 미끼 레이더까지 이어 줍니다 (사장님 말씀 ⑤).
+       할 말을 만드는 곳은 chkCopy 한 곳입니다 — 여기서 또 만들지 않습니다 (5번).
+       ★ <b>접어 둡니다.</b> 홈은 이미 길고, 펴 두면 한 화면을 또 넘깁니다 —
+         check-msfive 가 그 자리를 잽니다. */
+    var K=hmChkOk(),j,y,rows='';
+    for(j=0;j<K.length&&j<3;j++){
+      y=K[j];
+      rows+='<div class="hm-chk-one">'+
+        '<div class="hm-chk-n"><b>'+osEsc(y.p.nm||'고객')+'</b> '+osEsc(y.C.t)+
+          (y.p.days?(' · '+y.p.days+'일째'):'')+'</div>'+
+        '<div class="hm-chk-cv">'+(y.cov.from==='loss'?'📉 줄어드는 곳':'📈 채워지는 곳')+
+          ' — <b>'+osEsc(y.cov.n)+'</b></div>'+
+        '<div class="hm-chk-b">'+
+          '<button type="button" onclick="chkCopy(\''+osEsc(y.p.id)+'\')">📋 할 말 복사</button>'+
+          '<button type="button" onclick="hmChkMk(\''+osEsc(y.cov.n)+'\')">🎣 이 담보로 미끼 레이더</button>'+
+        '</div></div>';
+    }
+    if(K.length>3)rows+='<div class="hm-chk-more">외 <b>'+(K.length-3)+'명</b> — 🩺 고객 체크에 다 있습니다.</div>';
+    rows+='<div class="hm-chk-b" style="margin-top:9px">'+
+      '<button type="button" onclick="hmChkGo()">🩺 고객 체크 열기 →</button></div>';
+    h+=hmFoldWrap('chkcov','🎣','오늘 꺼낼 한 가지',
+      n.ok+'명 — 읽은 담보로 미끼 레이더까지',rows);
+  }
+  /* ⑩ 재무설계를 정리해 둔 분 — 그 다음으로 잉는 줄 (사장님 말씀 ⑩) */
+  try{ h+=hmFinHtml(); }catch(e3){}
+  return h+'</div>';
+}
+function hmChkCss(){
+  if(document.getElementById('hmChkCss'))return;
+  var st=document.createElement('style');st.id='hmChkCss';
+  st.textContent=
+   '.hm-chk{margin:12px 0;border:1.5px solid #BFDBFE;background:#F8FBFF;'+
+     'border-radius:var(--r);padding:13px 14px}'+
+   '.hm-chk-t{font-size:var(--t5);font-weight:900;color:#1E3A8A}'+
+   '.hm-chk-cta{margin-top:9px;border:1px solid #93C5FD;background:#fff;'+
+     'border-radius:var(--r-sm);padding:12px 13px}'+
+   '.hm-chk-big{font-size:var(--t4);font-weight:900;line-height:1.55;color:#0F172A}'+
+   '.hm-chk-big b{color:#1D4ED8}'+
+   '.hm-chk-sub{margin-top:7px;font-size:var(--t6);line-height:1.7;color:var(--ink-4)}'+
+   '.hm-chk-sub b{color:var(--ink-2)}'+
+   '.hm-chk-who{margin-top:8px;font-size:var(--t6);font-weight:700;color:#92400E;'+
+     'background:#FFFBEB;border-radius:9px;padding:7px 9px}'+
+   '.hm-chk-b{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}'+
+   '.hm-chk-b button{flex:1 1 auto;min-height:46px;border:1px solid var(--ink-7);'+
+     'border-radius:var(--r-sm);background:#fff;font-family:inherit;font-size:var(--t6);'+
+     'font-weight:800;color:var(--ink-2);cursor:pointer;padding:10px 12px}'+
+   '.hm-chk-b .ok{background:#1D4ED8;border-color:#1D4ED8;color:#fff}'+
+   '.hm-chk-ok{margin-top:9px;font-size:var(--t6);line-height:1.7;color:#065F46;'+
+     'background:#ECFDF5;border:1px solid #A7F3D0;border-radius:var(--r-sm);padding:10px 11px}'+
+   '.hm-chk-ok b{color:#047857}'+
+   '.hm-chk-eye{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:7px;'+
+     'font-size:var(--t6);color:#1E40AF;background:#EFF6FF;border-radius:9px;padding:7px 9px}'+
+   '.hm-chk-eye b{color:#0F172A}'+
+   '.hm-chk-eye i{flex:1 1 100%;font-style:normal;color:var(--ink-5);font-size:var(--t7)}'+
+   '.hm-chk-one{margin-top:8px;border:1px solid #A7F3D0;background:#fff;'+
+     'border-radius:var(--r-sm);padding:10px 11px}'+
+   '.hm-chk-n{font-size:var(--t5);font-weight:800;color:var(--ink-1)}'+
+   '.hm-chk-cv{margin-top:4px;font-size:var(--t6);color:var(--ink-4)}'+
+   '.hm-chk-cv b{color:#047857}'+
+   '.hm-chk-fin{margin-top:9px;border:1px solid #FDE68A;background:#FFFBEB;'+
+     'border-radius:var(--r-sm);padding:10px 11px}'+
+   '.hm-chk-fk{font-size:var(--t5);font-weight:900;color:#92400E}'+
+   '.hm-chk-fv{margin-top:5px;font-size:var(--t6);font-weight:700;color:var(--ink-2)}'+
+   '.hm-chk-fv i{font-style:normal;font-weight:600;color:var(--ink-5)}'+
+   '.hm-chk-fs{margin-top:6px;font-size:var(--t6);line-height:1.7;color:var(--ink-4)}'+
+   '.hm-chk-fs b{color:var(--ink-2)}'+
+   '.hm-chk-more{margin-top:7px;font-size:var(--t6);color:var(--ink-4)}'+
+   '.hm-chk-ok button{display:block;margin-top:7px;min-height:44px;border:0;border-radius:9px;'+
+     'padding:9px 13px;font-family:inherit;font-size:var(--t6);font-weight:800;'+
+     'background:#047857;color:#fff;cursor:pointer}';
+  document.head.appendChild(st);
+}
 function hmFoldWrap(k,e,t,sub,inner){
   var open=hmFoldOpen(k);
   return '<div class="hm-fold'+(open?' on':'')+'" id="hmFold_'+k+'">'+
@@ -24222,9 +25097,13 @@ function hmIgNext(){
 }
 function hmIgSub(){
   var i=hmIgIdx();
-  if(i<0)return '아직 소식을 안 받았습니다';
+  /* ⑪ 접어 두셔도 <b>오늘 올렸나</b>가 보이게 합니다 — 그것이 권유입니다.
+     덤개를 또 띄우지 않습니다 — 홈에 덤개가 둘 뜨면 그때부터 안 읽으십니다. */
+  var tail='';
+  try{ tail=' · '+snsSub(); }catch(e){ tail=''; }
+  if(i<0)return '아직 소식을 안 받았습니다'+tail;
   var it=NLIVE.items[i];
-  return (''+(it.t||'')).slice(0,22)+((''+(it.t||'')).length>22?'…':'');
+  return (''+(it.t||'')).slice(0,18)+((''+(it.t||'')).length>18?'…':'')+tail;
 }
 function hmFoldIgPaint(){
   var box=document.getElementById('hmFold_ig'); if(!box)return;
@@ -24261,7 +25140,8 @@ function hmIgHtml(){
     return '<div class="hm-ig"><div class="hm-ig-no"><b>아직 오늘 소식을 안 받았습니다.</b> '+
       '여기서 소식을 <b>지어내지 않습니다</b> — 받아 와야 보여 드릴 수 있습니다.</div>'+
       '<div class="hm-ig-b"><button type="button" class="btn btn-primary" '+
-      'onclick="go(\'news_live\')">🌐 오늘 뉴스 받아 오기</button></div></div>';
+      'onclick="go(\'news_live\')">🌐 오늘 뉴스 받아 오기</button></div>'+
+      snsHtml()+'</div>';
   var it=NLIVE.items[i];
   return '<div class="hm-ig">'+
     '<div class="hm-ig-t">'+v(it.t||'')+'</div>'+
@@ -24274,7 +25154,81 @@ function hmIgHtml(){
       '<button type="button" class="btn btn-ghost" onclick="hmIgNext()">다른 기사로 ↻</button>'+
     '</div>'+
     '<div class="hm-ig-n">숫자와 시행일은 <b>원문에서 한 번 더</b> 확인하고 쓰십시오 — '+
-      '기사를 옮겨 적는 자리이지 앱이 판단하는 자리가 아닙니다.</div></div>';
+      '기사를 옮겨 적는 자리이지 앱이 판단하는 자리가 아닙니다.</div>'+
+    snsHtml()+'</div>';
+}
+/* ══ ⑪ <b>SNS 관리</b> — 인스타 · 블로그 · 올렸나 ═══════════════════
+   사장님 말씀 ⑪ (2026-09-22) — 「인스타 & 블로그 자동화 → <b>SNS관리 버튼</b> ·
+   <b>매일 알람 권유</b> · <b>승인하면 발행</b>」
+
+   ★ <b>대신 올려 드리지 않습니다.</b> 이 앱에는 인스타그램·네이버 블로그에
+     글을 올릴 열쇠가 없습니다. 있는 척하면 사장님은 올라간 줄 아시고
+     그날을 넘기십니다 (1번). 그래서 <b>여기서 하는 일</b>을 그 자리에
+     적어 둡니다 — 글과 그림을 만들어 드리고, 올리는 것은 사장님이 하시고,
+     <b>올리셨으면 ✅ 를 눌러</b> 기록합니다.
+   ★ <b>권유는 조르는 것이 아닙니다.</b> 오늘 아직이면 머리에 그렇게 적고,
+     올리셨으면 며칠째인지 적습니다. 따로 덮개를 띄우지 않습니다 —
+     홈에 덮개가 둘 뜨면 그때부터 아무것도 안 읽으십니다.
+   ★ <b>담는 곳은 실행 체크판 한 통</b>입니다 (5번) — d10(SNS 1건).
+     새 저장칸을 만들면 달력·체크판과 어긋납니다.                       */
+function snsDoneToday(){
+  try{ return !!(ckLoad('day')||{}).d10; }catch(e){ return false; }
+}
+/* 이번 달 며칠 올렸나 — <b>기록이 있는 날만</b> 셉니다 (1번) */
+function snsMonth(){
+  var n=0,d,i,t,k;
+  try{ t=(typeof mcalToday==='function')?mcalToday():(new Date()).toISOString().slice(0,10); }
+  catch(e){ t=(new Date()).toISOString().slice(0,10); }
+  var ym=t.slice(0,7);
+  for(i=1;i<=31;i++){
+    d=ym+'-'+(i<10?'0':'')+i;
+    if(d>t)break;
+    /* 열쇠 모양을 여기 또 적지 않습니다 — mrtKey 가 그 자리입니다 (5번) */
+    try{ k=JSON.parse(localStorage.getItem(mrtKey(d))||'null'); }catch(e2){ k=null; }
+    if(k&&k.d10)n++;
+  }
+  return n;
+}
+function snsSub(){
+  var m=snsMonth();
+  return (snsDoneToday()?'오늘 올렸습니다':'오늘 아직')+(m?(' · 이번 달 '+m+'일'):'');
+}
+function snsDid(){
+  if(typeof ckToggle!=='function'){ if(typeof toast==='function')toast('체크판을 못 찾았습니다'); return; }
+  if(!snsDoneToday())ckToggle('day','d10');
+  if(typeof toast==='function')toast('올리신 것으로 담았습니다 — 체크판에도 같이 들어갑니다');
+  snsPaint();
+}
+function snsUndo(){
+  if(typeof ckToggle!=='function')return;
+  if(snsDoneToday())ckToggle('day','d10');
+  snsPaint();
+}
+function snsGoBlog(){ try{ go('blog'); }catch(e){} }
+function snsPaint(){
+  var el=document.getElementById('hmIgHost');
+  if(el)el.innerHTML=hmIgHtml();
+  try{ hmFoldIgPaint(); }catch(e){}
+}
+/* 📸 오늘 올릴 것 <b>아래</b>에 붙는 한 칸 — 인스타와 블로그를 한 자리에서 */
+function snsHtml(){
+  var done=snsDoneToday(),m=snsMonth();
+  return '<div class="hm-sns">'+
+    '<div class="hm-sns-h">📣 <b>SNS 관리</b> — 인스타 · 블로그</div>'+
+    '<div class="hm-sns-s">이 앱은 <b>글과 그림까지</b> 만들어 드립니다. '+
+      '<b>올리는 것은 사장님이 하십니다</b> — 인스타·네이버에 대신 올릴 열쇠가 없습니다. '+
+      '그렇게 할 수 있는 척하면 올라간 줄 아시고 그날을 넘기십니다.</div>'+
+    '<div class="hm-sns-b">'+
+      '<button type="button" class="go" onclick="snsGoBlog()">📝 블로그 글 쓰러 가기</button>'+
+      (done
+        ? '<button type="button" class="ok" onclick="snsUndo()">✅ 오늘 올렸습니다 — 되돌리기</button>'
+        : '<button type="button" class="ok" onclick="snsDid()">✅ 올렸습니다</button>')+
+    '</div>'+
+    '<div class="hm-sns-n">'+
+      (done?('오늘 올리셨습니다.'):('<b>오늘은 아직입니다.</b> 위에서 캡션이나 카드뉴스를 만들어 올리신 뒤 ✅ 를 눌러 주세요.'))+
+      (m?(' 이번 달 <b>'+m+'일</b> 올리셨습니다.'):' 이번 달 기록은 <b>아직 없습니다</b> — 0일이라고 적지 않습니다.')+
+      ' 담기는 곳은 <b>실행 체크판</b>(SNS 1건) 한 통입니다.'+
+    '</div></div>';
 }
 function hmIgCss(){
   if(document.getElementById('hmIgCss'))return;
@@ -24288,6 +25242,18 @@ function hmIgCss(){
    '.hm-ig-b .btn{min-height:44px;padding:8px 12px;font-size:var(--t6)}'+
    '.hm-ig-no{font-size:var(--t6);line-height:1.7;color:#92400E;background:#FFFBEB;'+
      'border:1px solid #FDE68A;border-radius:var(--r-sm);padding:10px 12px}'+
+   '.hm-sns{margin-top:11px;border:1px solid #DDD6FE;background:#F5F3FF;'+
+     'border-radius:var(--r-sm);padding:11px 12px}'+
+   '.hm-sns-h{font-size:var(--t5);font-weight:900;color:#5B21B6}'+
+   '.hm-sns-s{margin-top:6px;font-size:var(--t6);line-height:1.7;color:var(--ink-4)}'+
+   '.hm-sns-s b{color:var(--ink-2)}'+
+   '.hm-sns-b{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}'+
+   '.hm-sns-b button{flex:1 1 auto;min-width:140px;min-height:46px;border:1px solid var(--ink-7);'+
+     'border-radius:var(--r-sm);background:#fff;font-family:inherit;font-size:var(--t6);'+
+     'font-weight:800;color:var(--ink-2);cursor:pointer;padding:9px 11px}'+
+   '.hm-sns-b .ok{background:#5B21B6;border-color:#5B21B6;color:#fff}'+
+   '.hm-sns-n{margin-top:9px;font-size:var(--t6);line-height:1.7;color:var(--ink-4)}'+
+   '.hm-sns-n b{color:var(--ink-2)}'+
    '.hm-ig-n{margin-top:10px;font-size:var(--t6);line-height:1.7;color:var(--ink-4);'+
      'border-top:1px dashed var(--ink-7);padding-top:9px}'+
    /* 한 분 카드 안의 <b>오늘 보낼 소식</b> 한 줄 */
@@ -24371,6 +25337,9 @@ function renderHome(){
     (OS.profile?hmFoldWrap('ms','\uD83C\uDF05','\uC544\uCE68 \uBBF8\uC158',hmMsSub(),
         '<div id="hmMsHost">'+hmMsHtml()+'</div>'):'')+
     (OS.profile?('<div id="hmToday">'+hmTodayHtml()+'</div>'):'')+
+    /* 🩺 <b>고객 체크는 아침 미션 ⑥ 안으로 들어갔습니다</b> (사장님 말씀 ⑥).
+       따로 세워 두었더니 홈이 한 화면을 넘겨 4.25화면이 됐고, check-msfive 가
+       그것을 잡았습니다. 이제 아침에 따라가다 보면 고객 보험이 나옵니다. */
     /* <b>한 번만</b> — 아직 한 번도 안 물어본 분께만. 「오늘 챙길 것」 바로
        밑이라야 뜻이 통합니다 — 「이분들을 아침에 알려 드릴까요」 */
     (OS.profile?('<div id="almNudge"></div>'):'')+
@@ -24402,7 +25371,7 @@ function renderHome(){
     /* 📸 <b>오늘 올릴 것</b> — 사장님 말씀 「오늘 인스타 올릴 뉴스도 만들어서」.
        달력·고객·TFA 와 <b>같은 모양의 한 줄</b>입니다. 머리에 오늘 고른
        기사 제목이 적혀 있어, 펴지 않고도 무엇인지 아십니다. */
-    (OS.profile?hmFoldWrap('ig','📸','오늘 올릴 것',hmIgSub(),
+    (OS.profile?hmFoldWrap('ig','📸','오늘 올릴 것 · SNS 관리',hmIgSub(),
         '<div id="hmIgHost">'+hmIgHtml()+'</div>'):'')+
     /* ── <b>관리·점검은 한 줄로</b> ───────────────────────────────────
        사장님 말씀 — 「홈 화면이 너무 복잡하고 <b>화면이 자꾸 달라서</b>
@@ -24427,8 +25396,10 @@ function renderHome(){
     '<div class="notice" style="margin-top:16px;color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">모든 AI 출력은 <b>약관·심사가 최종</b>이며, 고위험 제안은 관리자 승인 후 고객에게 안내합니다. 게시·발송 전 준법감시 확인을 권장합니다.</div>'+
   '</div>';
 }
-function osPage(tag,title,desc,body){
-  return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">'+osEsc(tag)+'</div>'+
+/* wide — <b>넓은 화면에서 폭을 다 쓰는 화면</b>인가. 안 주면 지금까지와
+   똑같습니다 — 부르던 자리를 한 군데도 안 고칩니다 (5번).       */
+function osPage(tag,title,desc,body,wide){
+  return '<div class="tab-pane on'+(wide?' wide':'')+'"><div class="page-hd"><div class="page-tag">'+osEsc(tag)+'</div>'+
     '<div class="page-title">'+osEsc(title)+'</div>'+(desc?'<div class="page-desc">'+osEsc(desc)+'</div>':'')+'</div>'+
     body+'</div>';
 }
@@ -32340,9 +33311,11 @@ var CK_ITEMS={
   day:[
     ['d1','출근 체크','','출근 현황','attend'],
     ['d2','오늘의 알림 확인','5명 중 2명은 여기서 뽑습니다','DB 통합 CRM','crm'],
-    ['d3','5명 컨셉 잡기','단서 하나씩 골라 첫 문장','DB 통합 CRM','crm'],
-    ['d4','전화 5통','안 받아도 카톡으로 이어갑니다','DB 통합 CRM','crm'],
-    ['d5','카톡 5건','통화 여부와 상관없이','',''],
+    /* 몇 분인지는 HM_MS_N <b>한 곳</b>에서 옵니다 — 여기 또 적으면 미션과
+       체크판이 다른 숫자를 말하게 됩니다 (5번). */
+    ['d3',msN()+'명 컨셉 잡기','단서 하나씩 골라 첫 문장','DB 통합 CRM','crm'],
+    ['d4','전화 '+msN()+'통','안 받아도 카톡으로 이어갑니다','DB 통합 CRM','crm'],
+    ['d5','카톡 '+msN()+'건','통화 여부와 상관없이','',''],
     ['d6','통화 결과 입력','TA완료·부재·거절·상담','DB 통합 CRM','crm'],
     ['d7','약속 잡힌 사람 고객 카드 만들기','여기서 DB를 떠납니다','고객 365일','clients'],
     ['d8','만난 사람 팩트파인딩 저장','소득·지출·기존보험·걱정','상담카드','fact_find'],

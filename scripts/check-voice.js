@@ -344,12 +344,21 @@ window.supabase={createClient:function(){
   await page.evaluate(() => {
     window.__spoke = [];
     var m = ckLoad('day'); delete m.d4; ckSave('day', m);
+    /* ★ 수를 <b>글자로 박지 않는다</b> — 「전화 5통」은 사장님 말씀으로
+       「전화 10통」이 됐다(2026-09-22 ⑨). 여기 박아 두면 이름이 바뀔 날
+       <b>사장님 화면이 아니라 점검이 먼저 거짓말</b>을 한다. 체크판에 적힌
+       그 이름을 그대로 불러 본다 (5번·8번). */
+    var lbl = '';
+    for (var li = 0; li < CK_ITEMS.day.length; li++)
+      if (CK_ITEMS.day[li][0] === 'd4') lbl = CK_ITEMS.day[li][1];
+    window.__said = lbl;
     var e = document.getElementById('vaText');
-    if (e) { e.value = '전화 5통 체크해줘'; vaSend(); }
+    if (e) { e.value = lbl + ' 체크해줘'; vaSend(); }
   });
   await page.waitForTimeout(500);
-  vt = await page.evaluate(() => ({ m: ckLoad('day'), spoke: (window.__spoke || []).join(' ') }));
-  ok(vt.m.d4 === 1, '글로 시켜도 실제로 체크된다 — 말과 같은 길을 탄다');
+  vt = await page.evaluate(() => ({ m: ckLoad('day'), spoke: (window.__spoke || []).join(' '),
+                                    said: window.__said || '' }));
+  ok(vt.m.d4 === 1, '글로 시켜도 실제로 체크된다 — 말과 같은 길을 탄다 · 「' + vt.said + ' 체크해줘」');
   ok(/체크했습니다/.test(vt.spoke), '무엇을 했는지 답한다');
 
   /* ── 10-2. 대화 모드 — 서로 주고받기 ── */

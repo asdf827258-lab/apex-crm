@@ -4045,6 +4045,62 @@ function goPaint(o){
 }
 $('#btnGo').onclick=goRun;
 
+/* ══ 🏠 홈에서 넘어온 담보 — ?cov=암진단비 ═════════════════════════
+   사장님 말씀 ⑤ (2026-09-22) — 「보장분석 전후·KB보장분석 읽고
+   <b>미끼레이더와 연계</b>한 관리 프로그램」
+
+   홈(고객 체크)은 보장분석에서 읽은 담보 이름 <b>하나만</b> 넘깁니다.
+   그 담보가 암인지 뇌인지 간병인지는 <b>여기가</b> 정합니다 — 이름표
+   사전(NEWS_RULES)을 들고 있는 곳이 여기라, 저쪽에서 또 가르면 두 곳이
+   다른 답을 하는 날이 옵니다 (5번).
+
+   ★ <b>못 가리면 못 가렸다고 적습니다</b> (1번). 비슷한 갈래를 찍어 주면
+     엉뚱한 약관 줄을 보고 고객에게 말하게 됩니다.
+   ★ <b>저절로 판정을 돌리지 않습니다</b> (7번). 서재를 통째로 읽는 일은
+     사장님이 누르실 때만 합니다.                                       */
+const COV_BCAT={'암':'암','뇌심장':'뇌','간병':'간병·치매','실손':'공통','치아':'공통'};
+function covCat(name){
+  const t=String(name||'').replace(/\s+/g,'');
+  if(!t)return '';
+  for(const r of NEWS_RULES){
+    if(!COV_BCAT[r.tag])continue;
+    for(const k of r.kw)if(t.indexOf(String(k).replace(/\s+/g,''))>=0)return COV_BCAT[r.tag];
+  }
+  /* 사전에 없는 말이지만 갈래가 또렷한 몇 가지 — 이름표 사전은 <b>뉴스</b>를
+     가르는 것이라 담보 이름에는 없는 말이 있다. 여기만 덧댄다. */
+  if(/뇌|심장|심근|허혈/.test(t))return '뇌';
+  if(/암/.test(t))return '암';
+  return '';
+}
+(function(){
+  const m=/[?&]cov=([^&]*)/.exec(location.search);
+  if(!m)return;
+  let nm=''; try{ nm=decodeURIComponent((m[1]||'').replace(/\+/g,' ')); }catch(e){ nm=m[1]||''; }
+  nm=nm.trim();
+  if(!nm)return;
+  const go=()=>{
+    const t=$$('.tab').find(x=>x.dataset.t==='best');
+    if(t)t.click();
+    const out=$('#bestOut'); if(!out)return;
+    const c=covCat(nm);
+    const box=document.createElement('div');
+    box.className='card';
+    box.style.cssText='border:2px solid #2B5FD9;background:#F5F9FF;margin-bottom:14px';
+    box.innerHTML='<h3>🏠 홈에서 넘어온 담보</h3>'+
+      '<p class="desc" style="font-size:15px;line-height:1.7">'+
+        '고객 체크에서 읽은 담보는 <b style="color:#1D4ED8">'+esc(nm)+'</b> 입니다. '+
+        (c?('아래 <b>'+esc(c)+'</b> 줄을 보십시오 — 그 담보로 어느 약관이 앞서는지 줄을 세워 드립니다.')
+          :'<b>어느 갈래인지 못 가렸습니다</b> — 아래에서 직접 골라 주세요. 비슷한 갈래를 찍어 드리지 않습니다.')+
+      '</p>'+
+      '<p class="desc">서재를 읽는 일은 <b>🏆 서재 전체 판정</b> 을 누르실 때 시작합니다 — 저절로 돌리지 않습니다.</p>';
+    out.parentNode.insertBefore(box,out);
+    const st=$('#bestState');
+    if(st&&!st.textContent.trim())st.textContent='「'+nm+'」 로 왔습니다 — 🏆 서재 전체 판정을 눌러 주세요';
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);
+  else setTimeout(go,0);
+})();
+
 /* 시작.bat 으로 열렸으면 (?auto=1) 바로 돌린다 */
 if(/[?&]auto=1/.test(location.search)){
   $$('.tab').find(t=>t.dataset.t==='start')?.click();

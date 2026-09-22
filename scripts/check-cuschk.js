@@ -75,13 +75,18 @@ const SEED = (o) => `
    'delete':function(){return a;},
    select:function(c){st.cols=c||'';return a;},order:function(){return a;},range:function(){return a;},
    limit:function(){return a;},single:function(){return a;},gte:function(){return a;},
-   'in':function(){return a;},is:function(){return a;},neq:function(){return a;},not:function(){return a;},
+   /* ⑩ 이제 앱은 kind 둘을 <b>한 번에</b> 묻습니다(.in) — 서버를 한 번 더
+      안 부르려고 그렇게 했습니다 (7번). 가짜 서버도 그렇게 받아야 합니다. */
+   'in':function(k,v){if(k==='kind')st.kinds=v||[];return a;},
+   is:function(){return a;},neq:function(){return a;},not:function(){return a;},
    eq:function(k,v){if(k==='kind')st.kind=v;return a;},
    then:function(ok,no){
-     if(st.t==='saved_reports'&&st.kind==='ba_state'){
+     var wants=function(x){ return st.kind===x||((st.kinds||[]).indexOf(x)>=0); };
+     if(st.t==='saved_reports'&&wants('ba_state')){
        window.__HIT=(window.__HIT||0)+1; window.__COLS=st.cols;
        return Promise.resolve({data:${o.none ? '[]' : `[
-         {client_id:'c1',created_at:'2026-09-18T09:00:00Z',
+         {client_id:'c2',kind:'finance',created_at:'2026-09-20T09:00:00Z',sum:null},
+         {client_id:'c1',kind:'ba_state',created_at:'2026-09-18T09:00:00Z',
           sum:{name:'홍**가',loss:1,gain:3,cov:24,
                top:{gain:[{k:'cancer',n:'일반암 (최초 1회)',b:0,a:5000}],
                     loss:[{k:'silNB',n:'비급여의료비',b:3000,a:null}]}}}
@@ -195,12 +200,191 @@ const SEED = (o) => `
   is(/onclick="hmMsGoChk\(\)"/.test(SRC) && /arGoCat\('check'\)/.test(SRC),
      '  「🩺 고객 체크 열기」 가 <b>이 칸</b>을 연다');
 
+  console.log('\n[12] 🏠 <b>홈에서 「KB보장분석만 넣어 주세요」 라고 말한다</b>');
+  /* 사장님 말씀 (2026-09-22) —
+       「가장 중요한 건, 고객 체크는 <b>홈 화면에서</b>, KB보장분석을 넣어
+        주면 <b>저희가 관리해 드릴게요!</b> 하면서 띄울 수 있도록. 설계사
+        입장에서 <b>내가 KB보장분석만 넣으면 관리가 자동으로 되는구나</b>
+        하는 걸 인지시켜」
+     그래서 여기서 재는 것은 <b>그 말이 실제로 뜨는가</b>, 그리고 <b>그 말이
+     사실인가</b>(넣은 분께는 할 말이 서 있고, 안 넣은 분께는 안 지어낸다). */
+  {
+    const H = await A.p.evaluate(() => {
+      const el = document.createElement('div');
+      el.innerHTML = hmChkHtml();
+      const t = el.textContent || '';
+      return { t: t, has: !!el.querySelector('.hm-chk'),
+               ba: !!el.querySelector('.hm-chk-b .ok'),
+               stat: hmChkStat(), sub: hmChkSub() };
+    });
+    /* ⚠ <b>함수만 불러 보면 모자란다.</b> 홈에서 그 칸을 통째로 뺀다도
+       hmChkHtml() 은 멀줦하게 돕니다 — 되돌려 보니 빨간불이 안 켜졌습니다.
+       <b>홈이 실제로 건다</b>는 것까지 같이 재다 (8번).                  */
+    is(/id="hmChkHost"/.test(SRC) && /hmChkHtml\(\)/.test(SRC),
+       '홈 화면이 <b>그 칸을 실제로 건다</b> (#hmChkHost)');
+    is(H.has, '  홈에 <b>🦺 고객 체크 칸</b>이 선다');
+    is(/KB보장분석/.test(H.t) && /넣어 주세요/.test(H.t),
+       '  <b>「KB보장분석만 넣어 주세요」</b> 라고 말한다');
+    is(/관리해 드릴게요/.test(H.t),
+       '  <b>「그 다음은 저희가 관리해 드릴게요」</b> — 넣기만 하면 된다는 것을 말한다');
+    is(H.ba, '  <b>넣는 자리로 가는 단추</b>가 있다 — 말만 하고 길을 안 주면 안 한다');
+    is(/지어내지 않습니다/.test(H.t),
+       '  <b>넣기 전에는 안 지어낸다</b>고 같이 적는다 (1번)');
+    is(H.stat.all > 0 && (H.stat.ok + H.stat.need) === H.stat.all,
+       '  숫자가 <b>맞아떨어진다</b> — 전체 ' + H.stat.all + ' = 선 분 ' + H.stat.ok +
+       ' + 기다리는 분 ' + H.stat.need);
+    /* ⚠ 처음엔 이 줄을 `? true : true` 로 적어 <b>언제나 참</b>이었다 — 재는
+       척만 하는 줄이다. 글자에서 숫자를 그대로 찾는다 (8번). */
+    is(H.t.indexOf('기다리는 분') >= 0 && H.t.indexOf(String(H.stat.need) + '명') >= 0,
+       '  <b>몇 분이 기다리는지</b> 적는다 — ' + H.sub);
+    /* ★ <b>아무도 없으면 칸을 안 세운다</b> — 빈 칸은 자리만 먹는다.
+       ⚠ open({none:true}) 은 「읽은 기록이 없다」지 「사람이 없다」가 아니다.
+         그걸로 쟀다가 헛것을 잡을 뻔했다 — 여기서는 명단을 비워 본다. */
+    const z0 = await A.p.evaluate(() => {
+      const keep = AR.db; AR.db = [];
+      const r = { html: hmChkHtml(), sub: hmChkSub(), n: hmChkStat().all };
+      AR.db = keep;
+      return r;
+    });
+    is(z0.n === 0 && z0.html === '', '  <b>AP·PC·CS 에 한 분도 없으면 칸을 안 세운다</b>');
+    is(z0.sub === '', '  머리에도 <b>아무 말도 안 적는다</b> (1번)');
+  }
+
+  console.log('\n[13] 👀 <b>리더는 팀원 것도 본다</b> — 고르개가 이 화면에도 선다');
+  /* 사장님 말씀 — 「고객 체크는 <b>내가 다른 사람들 열람이 안 돼</b>,
+     리더는 자기 권한에 맞게 볼 수 있도록」.
+     고르개(hwhoBarHtml)는 이미 홈에 있습니다 — <b>새로 만들지 않고</b>
+     그것을 이 화면에도 세웁니다 (5번). 권한은 hwhoCan/hwhoList 가 이미
+     압니다. 고르고 나서 <b>화면이 따라 바뀌는지</b>까지 봅니다.        */
+  is(/var head=pick\+/.test(SRC), '고객 체크가 <b>고르개를 먼저</b> 세운다');
+  is(/pick=hwhoBarHtml\(\)/.test(SRC),
+     '  <b>홈이 쓰는 그 고르개</b>를 그대로 쓴다 — 권한 규칙을 두 곳에 안 적는다 (5번)');
+  const hset = (SRC.split('function hwhoSet(')[1] || '').slice(0, 900);
+  is(/chkPaint\(\)/.test(hset),
+     '  고르면 <b>고객 체크도 다시 그린다</b> — 안 그리면 눌러도 그대로라 고장으로 보인다');
+  is(/hmChkPaint\(\)/.test(hset), '  <b>홈 칸도</b> 같이 바뀐다');
+  const hme = (SRC.split('function hwhoMe(')[1] || '').slice(0, 900);
+  is(/chkPaint\(\)/.test(hme), '  <b>「내 화면으로」</b> 로 돌아올 때도 같이 바뀐다');
+
   console.log('\n[11] 한 분도 없으면 <b>사람을 지어내지 않는다</b> (1번)');
   const Z = await open({ none: true });
   const z = await txt(Z.p);
   is(/읽은 기록|안 읽었습니다/.test(z), '  읽은 기록이 하나도 없어도 <b>칸은 선다</b>');
   is(!/일반암/.test(z), '  <b>없는 담보를 만들지 않는다</b>');
 
+  console.log('\n[14] 🗂 <b>고객 365일 한눈에</b> + 🎣 <b>미끼 레이더 연계</b> (사장님 말씀 ⑤)');
+  /* 「고객 365일 한눈에 + 보장분석 전후·KB보장분석 읽고 <b>미끼레이더와 연계</b>한
+     관리 프로그램을 홈에서」 (2026-09-22)
+
+     여기서 재는 것 —
+       ① 한눈에 줄이 서고, <b>안 받아 온 것을 0 으로 안 적는다</b> (1번)
+       ② 읽은 분은 <b>담보 이름</b>이 그 자리에 서고
+       ③ 그 담보로 <b>미끼 레이더까지 이어지는 단추</b>가 있다
+       ④ 홈은 <b>담보 갈래를 안 가른다</b> — 가르는 곳은 미끼 레이더 하나다 (5번) */
+  {
+    const E = await A.p.evaluate(() => {
+      const el = document.createElement('div');
+      el.innerHTML = hmChkHtml();
+      const eye = el.querySelector('.hm-chk-eye');
+      const one = [...el.querySelectorAll('.hm-chk-one')].map(x => ({
+        t: x.textContent || '',
+        mk: (x.querySelector('[onclick*="hmChkMk"]') || {}).getAttribute
+              ? x.querySelector('[onclick*="hmChkMk"]').getAttribute('onclick') : '',
+        cp: !!x.querySelector('[onclick*="chkCopy"]')
+      }));
+      return { eye: eye ? eye.textContent : '', one: one, n: hmChkEye() };
+    });
+    is(/고객 365일 한눈에/.test(E.eye), '  <b>고객 365일 한눈에</b> 줄이 선다 — 「' + E.eye.slice(0, 46) + '…」');
+    is(/고객 카드/.test(E.eye) && /증권 읽은 분/.test(E.eye) && /오늘 약속/.test(E.eye),
+       '  <b>카드 · 증권 읽은 분 · 오늘 약속</b> 셋을 한 줄에 말한다');
+    is(E.n.cli === 3, '  카드 수는 <b>손에 든 것</b>에서 센다 — ' + E.n.cli + '명 (서버를 더 안 부른다 · 7번)');
+    is(E.n.read === 1, '  증권 읽은 분도 <b>이미 받아 둔 것</b>에서 센다 — ' + E.n.read + '명');
+    is(E.one.length >= 1, '  읽은 분이 <b>그 자리에 선다</b> — ' + E.one.length + '분');
+    is(E.one.length >= 1 && /일반암|비급여/.test(E.one[0].t),
+       '  <b>담보 이름</b>이 적힌다 — 「' + (E.one[0] ? E.one[0].t.replace(/\s+/g, ' ').slice(0, 44) : '(없음)') + '…」');
+    is(E.one.length >= 1 && E.one[0].cp, '  <b>할 말 복사</b>는 chkCopy 한 곳을 쓴다 (5번)');
+    is(E.one.length >= 1 && /hmChkMk\(/.test(E.one[0].mk || ''),
+       '  <b>🎣 이 담보로 미끼 레이더</b> 단추가 선다');
+    is(E.one.length >= 1 && /일반암|비급여/.test(E.one[0].mk || ''),
+       '  그 단추가 <b>담보 이름을 그대로</b> 들고 간다 — ' + (E.one[0] ? E.one[0].mk : ''));
+    /* ★ <b>안 받아 온 것을 0 으로 적지 않는다</b> (1번) — 이 줄이 없으면
+       이 절은 「모름」을 한 번도 안 재는 점검이 된다. 걱본에는 세 숫자가
+       다 들어 있어, 그대로만 재면 0 으로 깔아도 초록불이었다 (8번). */
+    const NUL = await A.p.evaluate(() => {
+      const keepR = CHKS.rows, keepC = AR.cliRows;
+      CHKS.rows = null; AR.cliRows = null;
+      const n = hmChkEye();
+      const el = document.createElement('div'); el.innerHTML = hmChkEyeHtml();
+      const t = el.textContent || '';
+      CHKS.rows = keepR; AR.cliRows = keepC;
+      return { n: n, t: t };
+    });
+    is(NUL.n.cli === null && NUL.n.read === null,
+       '  아직 안 받아 왔으면 <b>null(모름)</b> 이다 — 0 이 아니다');
+    is(/—/.test(NUL.t) && !/고객 카드 0명/.test(NUL.t),
+       '  화면에도 <b>「—」</b> 로 적는다 — 「고객 카드 0명」은 「고객이 없다」는 뜻이다 (1번)');
+    is(/안 받아 온 것/.test(NUL.t),
+       '  <b>「—」가 무슨 뜻인지</b>까지 적는다 — 「' + NUL.t.replace(/\s+/g, ' ').slice(-46) + '」');
+  }
+  /* ④ <b>홈은 갈래를 안 가른다.</b> 되돌려 보면, 홈에 갈래 표를 만들어 넣는
+     순간 여기가 빨간불이 됩니다 — 두 곳이 다른 답을 하는 날을 막습니다 (5번). */
+  {
+    const blk = (SRC.split('function hmChkEye()')[1] || '').split('function hmChkHtml()')[0];
+    is(blk.length > 300, '  ⑤ 칸이 index.html 에 있다 — ' + blk.length + '자');
+    is(!/간병·치매|BCATS|'뇌'\s*[:,]/.test(blk),
+       '  홈은 <b>담보 갈래를 안 가른다</b> — 가르는 곳은 미끼 레이더 하나다 (5번)');
+    is(/MIKKI_URL\s*\+\s*'\?cov='/.test(blk),
+       '  <b>담보 이름만 넘긴다</b> — ?cov=');
+  }
+  console.log('\n[15] 💵 <b>재무설계(달러·연금) → 홈에서 이어 가기</b> (사장님 말씀 ⑩)');
+  /* 「재무설계(달러·연금) → 고객 365일 정리 → <b>홈에서 추가 관리 연계</b>」
+     계산기에서 💾 를 누르면 고객 365일에 담깁니다(kind='finance').
+     여태 담기기만 하고 거기서 끝이었습니다 — 이제 홈이 읽습니다.
+
+     여기서 재는 것 —
+       ① 정리해 둔 분이 <b>그 자리에 선다</b>
+       ② <b>금액을 옮겨 적지 않는다</b> (1번·2번) — 계산기가 말하는 그 값이 맞다
+       ③ <b>한 분도 없으면 칸을 안 세운다</b> — 「아직 안 하셨습니다」는 잔소리다
+       ④ <b>서버를 한 번 더 안 부른다</b> (7번) — 증권과 같이 실어 온다
+       ⑤ <b>증권과 안 섞인다</b> — 재무설계를 「읽은 증권」으로 세면 없는 것을
+          읽었다고 말하게 된다 (1번) */
+  {
+    const F = await A.p.evaluate(() => {
+      const el = document.createElement('div');
+      el.innerHTML = hmChkHtml();
+      const box = el.querySelector('.hm-chk-fin');
+      return { t: box ? box.textContent.replace(/\s+/g, ' ') : '',
+        go: !!(box && box.querySelector('[onclick*="hmFinGo"]')),
+        n: hmFinOf().length, read: hmChkEye().read,
+        rows: hmFinOf().map(x => x.p.nm + '@' + x.at) };
+    });
+    is(F.n === 1, '  정리해 둔 분을 <b>센다</b> — ' + F.n + '명 · ' + F.rows.join(', '));
+    is(/재무설계를 정리해 둔 분/.test(F.t), '  홈 칸에 <b>그 줄이 선다</b> — 「' + F.t.slice(0, 46) + '…」');
+    is(F.go, '  <b>계산기로 가는 단추</b>가 있다 — 말만 하고 길을 안 주면 안 한다');
+    is(/달러·연금/.test(F.t), '  <b>달러·연금</b>이라고 말한다 (사장님 말씀 그대로)');
+    /* ② 금액을 옮겨 적지 않는다 — 두 곳이 어긋나면 어느 쪽이 맞는지 알 수 없다 */
+    is(!/\d[\d,]*\s*(만원|원|억)/.test(F.t),
+       '  <b>금액을 옮겨 적지 않는다</b> (1번·2번) — ' +
+       ((F.t.match(/\d[\d,]*\s*(만원|원|억)/g) || []).join(',') || '없음'));
+    /* ⑤ 증권과 안 섞인다 — 견본에는 증권 하나·재무설계 하나가 따로 들어 있다 */
+    is(F.read === 1, '  <b>증권 읽은 분</b>은 그대로 1명이다 — 재무설계가 섞이지 않았다 (1번)');
+  }
+  /* ③ 한 분도 없으면 칸을 안 세운다 */
+  {
+    const N = await A.p.evaluate(() => {
+      const keep = CHKS.fin; CHKS.fin = {};
+      const el = document.createElement('div'); el.innerHTML = hmChkHtml();
+      const has = !!el.querySelector('.hm-chk-fin');
+      CHKS.fin = keep;
+      return has;
+    });
+    is(N === false, '  한 분도 없으면 <b>칸을 안 세운다</b> — 「아직 안 하셨습니다」는 잔소리다');
+  }
+  /* ④ 서버를 한 번 더 안 부른다 — 증권과 <b>한 번에</b> 받아 온다 */
+  const H10 = await A.p.evaluate(() => ({ hit: window.__HIT || 0, cols: window.__COLS || '' }));
+  is(H10.hit === 1, '  서버를 <b>한 번만</b> 부른다 (7번) — saved_reports ' + H10.hit + '번');
+  is(/(^|,)kind(,|$)/.test(H10.cols),
+     '  받아 올 때 <b>kind 를 같이</b> 받는다 — 둘을 가르려면 그 칸이 있어야 한다 · ' + H10.cols);
   await b.close(); srv.close();
   console.log('\n' + '─'.repeat(30));
   console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 고객 체크 — 읽은 증권으로 터치합니다. 안 읽었으면 그렇다고 적습니다.');

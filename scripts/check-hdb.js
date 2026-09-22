@@ -55,6 +55,22 @@ const SEED = `
         {id:'d9',who:'me',name:'홍길동Z',region:'대전',src:'일반',stage:'CS',days:2,n:3,res:'상담',cAt:'',pAt:''},
         {id:'d2',who:'u3',name:'홍갑돌B',region:'천안',src:'일반',stage:'TA',days:9,n:1,res:'부재',cAt:'',pAt:''}];
  AR.cliRows=[];AR.calls=[];
+ /* 서버에 있는 <b>온전한 줄</b> — 목록(AR.db)은 이 중 몇 칸만 읽어 온다.
+    고치기 창은 <b>여기서 다시 받아</b> 세워야 한다 — 목록에 없는 칸을 빈칸으로
+    세우고 저장하면 <b>연락처가 지워진다</b>. 실제로 그러고 있었다. */
+ window.__DBROW={
+  d1:{id:'d1',assigned_to:'me',assigned_date:'2026-09-01',customer_name:'홍길동A',
+      phone:'010-1111-2222',region:'순천',source:'보장분석3DB',report_name:'보장분석 3DB',
+      memo:'첫 통화 전',stage:'미접촉',contracted_at:null,policy_sent_at:null,
+      policy_no:null,touch_count:null},
+  d9:{id:'d9',assigned_to:'me',assigned_date:'2026-09-05',customer_name:'홍길동Z',
+      phone:'010-3333-4444',region:'대전',source:'일반',report_name:'보장분석 3DB',
+      memo:'',stage:'CS',contracted_at:null,policy_sent_at:null,policy_no:null,touch_count:3},
+  d2:{id:'d2',assigned_to:'u3',assigned_date:'2026-09-02',customer_name:'홍갑돌이',
+      phone:'010-5555-6666',region:'천안',source:'일반',report_name:'보장분석 3DB',
+      memo:'',stage:'TA',contracted_at:null,policy_sent_at:null,policy_no:null,touch_count:null}};
+ window.__RD=[];        /* 읽기를 몇 번 했나 (7번) */
+ window.__NOCOL='';     /* 서버에 아직 없는 칸을 틀어지는 자리 */
  CM.loaded=true;CM.who={me:'홍길동',u3:'홍갑돌'};
  OSC.loaded=true;OSC.busy=false;OSC.err='';OSC.list=[];
  window.cmLoadAll=function(cb){if(cb)cb();};
@@ -67,11 +83,27 @@ const SEED = `
        insert:function(p){st.op='insert';st.pay=p;return api;},
        upsert:function(p){st.op='upsert';st.pay=p;return api;},
        'delete':function(){st.op='delete';return api;},
-       select:function(){st.sel=true;return api;},order:function(){return api;},range:function(){return api;},
+       select:function(c){st.sel=true;st.cols=c||'';return api;},order:function(){return api;},range:function(){return api;},
        limit:function(){return api;},single:function(){return api;},gte:function(){return api;},
        'in':function(){return api;},is:function(){return api;},neq:function(){return api;},not:function(){return api;},
        eq:function(k,v){st.id=v;return api;},
        then:function(ok,no){
+         /* ★ <b>읽기는 「나간 글」이 아니다.</b> 예전엔 읽기도 __W 에 쌓았는데,
+            그러면 「날짜가 필요한 단계는 그냥 안 올린다」 같은 줄이 고치기 창이
+            줄을 한 번 읽었다는 이유로 빨간불이 된다. 쓰기만 센다. */
+         if(!st.op){
+           window.__RD.push({t:st.tbl,id:st.id,c:st.cols||''});
+           var one=[];
+           if(st.tbl==='dbs'&&st.id&&window.__DBROW&&window.__DBROW[st.id]){
+             /* 서버에 <b>아직 없는 칸</b>을 물으면 PostgREST 는 통째로 거절한다 */
+             if(window.__NOCOL&&(''+(st.cols||'')).indexOf(window.__NOCOL)>=0)
+               return Promise.resolve({data:null,error:{message:'column dbs.'+window.__NOCOL+' does not exist'}}).then(ok,no);
+             var src=window.__DBROW[st.id],cp={},kk;
+             for(kk in src)if(src.hasOwnProperty(kk))cp[kk]=src[kk];
+             one=[cp];
+           }
+           return Promise.resolve({data:one,error:null}).then(ok,no);
+         }
          window.__W.push({t:st.tbl,op:st.op,id:st.id,pay:st.pay});
          /* ★ 진짜 서버처럼 <b>몇 줄을 바꿨는지</b> 돌려준다.
             Supabase 는 RLS 로 막힌 UPDATE·DELETE 를 <b>에러가 아니라 0줄</b>로
@@ -372,6 +404,148 @@ const SEED = `
   is(!!m9 && /master/.test(m9[1]) && /branch_manager/.test(m9[1]) && !/leader/.test(m9[1]),
      '  명단이 <b>한 곳</b>에 적혀 있다 (HDB_EDIT_ROLES) — ' + (m9 ? m9[1].replace(/['"\s]/g, '') : '못 읽음'));
 
+
+  /* ══════════════════════════════════════════════════════════════════
+     사장님 말씀 ④ (2026-09-22) —
+       「DB통합CRM 페이지를 홈에서 <b>모두 수정</b> [절대 데이터가 깨지지
+        않아야 됨]」
+
+     깨지고 있었습니다. 목록(AR.db)은 서버에서 <b>연락처를 안 읽어 옵니다</b>.
+     그런데 고치기 창에는 연락처 칸이 있었습니다 — 언제나 빈칸이었고, 그대로
+     저장하면 서버의 전화번호가 <b>지워졌습니다.</b> 여기가 그것을 잡는 자리.
+     ══════════════════════════════════════════════════════════════════ */
+  console.log('\n[11] <b>목록에 없는 칸을 빈칸으로 저장하지 않는다</b> (사장님 말씀 ④)');
+  /* 앞에서 d1 을 지웠으니 재는 줄을 하나 심습니다 — 목록에는 <b>몇 칸만</b>,
+     서버에는 <b>온전히</b>. 그 차이가 이 절이 재려는 것입니다. */
+  await page.evaluate(() => {
+    AR.db.push({id:'d7',who:'me',name:'홍길동C',region:'순천',src:'보장분석3DB',
+      stage:'미접촉',days:4,n:0,res:'미진행',cAt:'',pAt:''});
+    window.__DBROW.d7={id:'d7',assigned_to:'me',assigned_date:'2026-09-01',customer_name:'홍길동C',
+      phone:'010-1111-2222',region:'순천',source:'보장분석3DB',report_name:'보장분석 3DB',
+      memo:'첫 통화 전',stage:'미접촉',contracted_at:null,policy_sent_at:null,
+      policy_no:null,touch_count:null};
+    window.__RD = []; hdbOpen('d7', '');
+  });
+  await page.waitForTimeout(500);
+  const F11 = await page.evaluate(() => {
+    const g = i => { const e = document.getElementById(i); return e ? e.value : null; };
+    return { phone: g('hdbPhone'), memo: g('hdbMemo'), rep: g('hdbRep'),
+      got: g('hdbGot'), name: g('hdbName'), region: g('hdbRegion'),
+      touch: g('hdbTouch'), reads: window.__RD.filter(x => x.t === 'dbs').length,
+      listPhone: (hdbRow('d7') || {}).phone };
+  });
+  /* ★ 목록에는 연락처가 <b>없습니다</b>. 그래서 창은 서버에서 그 한 줄을
+     다시 받아야만 연락처를 알 수 있습니다 (7번 — 필요할 때 그 한 줄만). */
+  is(F11.listPhone === undefined || F11.listPhone === null || F11.listPhone === '',
+     '  목록(AR.db)에는 <b>연락처가 없다</b> — 그래서 목록으로 칸을 채우면 안 된다');
+  is(F11.reads === 1, '  창을 열 때 <b>그 한 줄만</b> 다시 받는다 — dbs 읽기 ' + F11.reads + '번 (7번)');
+  is(F11.phone === '010-1111-2222',
+     '  연락처 칸에 <b>서버의 값</b>이 들어 있다 — 「' + F11.phone + '」');
+  is(F11.memo === '첫 통화 전', '  <b>비고</b>도 서버의 값이다 — 「' + F11.memo + '」');
+  is(F11.rep === '보장분석 3DB', '  <b>보고서 이름</b> 칸이 섰다 — 「' + F11.rep + '」');
+  is(F11.got === '2026-09-01', '  <b>배정일</b>도 고칠 수 있다 — 「' + F11.got + '」');
+  is(F11.touch === '', '  터치 횟수는 <b>안 적힌 채로</b> 온다 — 0 으로 깔지 않는다 (1번)');
+
+  await W();   /* 앞 절이 남긴 글을 비운다 — 안 비우면 옵 절의 글을 집는다 */
+  await page.evaluate(() => { document.getElementById('hdbRegion').value = '광양'; });
+  await page.evaluate(() => hdbSave()); await page.waitForTimeout(550);
+  const w11 = (await W()).filter(x => x.t === 'dbs');
+  const p11 = (w11[w11.length - 1] || {}).pay || {};
+  /* ★ 여기가 <b>사장님이 못 박으신 자리</b>입니다. 지역만 고쳤는데 연락처가
+     null 로 나가면, 저장하는 순간 전화번호가 사라집니다. */
+  is(p11.phone === '010-1111-2222',
+     '  지역만 고쳤는데 <b>연락처가 그대로 나간다</b> — ' + JSON.stringify(p11.phone));
+  is(p11.memo === '첫 통화 전', '  <b>비고도 그대로</b> 나간다 — ' + JSON.stringify(p11.memo));
+  is(p11.report_name === '보장분석 3DB', '  <b>보고서 이름도 그대로</b> 나간다');
+  is(p11.assigned_date === '2026-09-01', '  <b>배정일도 그대로</b> 나간다');
+  is(p11.region === '광양', '  고친 것은 <b>고친 대로</b> 나간다');
+  is(p11.touch_count === null, '  터치 횟수는 <b>null(모름)</b> 로 나간다 — 0 이 아니다 (1번)');
+
+  console.log('\n[12] <b>DB 통합 CRM 이 고치는 칸을 홈도 다 고친다</b> (5번)');
+  /* 글에서 뽑아 견줍니다 — 손으로 베껴 적으면 저쪽이 늘어도 여기는 모릅니다 */
+  const crm = fs.readFileSync(path.join(ROOT, 'db-crm.html'), 'utf8');
+  const sv = crm.split('async function saveDb()')[1] || '';
+  const body = sv.split('const put=')[0];
+  const want = {};
+  (body.match(/payload\s*=\s*\{([^}]*)\}/) || ['', ''])[1]
+    .split(',').forEach(x => { const k = (x.split(':')[0] || '').trim(); if (/^[a-z_]+$/.test(k)) want[k] = 1; });
+  (body.match(/payload\.[a-z_]+\s*=/g) || []).forEach(x => { want[x.replace(/payload\.|\s*=/g, '')] = 1; });
+  /* created_by 는 <b>새로 넣을 때만</b> 쓰는 칸이라 고치기에서는 안 봅니다 */
+  delete want.created_by;
+  const need = Object.keys(want).sort();
+  const miss = need.filter(k => !(k in p11));
+  is(need.length >= 12, '  CRM 이 고치는 칸을 <b>글에서 뽑았다</b> — ' + need.length + '칸 · ' + need.join(','));
+  /* 담당자(assigned_to)는 <b>대표·본부장만</b> 바꿉니다 — 바로 밑에서 잽니다 */
+  is(miss.length === 0 || (miss.length === 1 && miss[0] === 'assigned_to'),
+     '  홈이 보낸 글에 <b>그 칸이 다 있다</b>' + (miss.length ? ' — 빠진 것 ' + miss.join(',') : ''));
+
+  console.log('\n[13] <b>담당자는 대표·본부장만</b> 바꾼다 — 못 할 분께 고르개를 안 낸다 (8번)');
+  const W13 = await page.evaluate(() => {
+    const out = {};
+    const r0 = OS.profile.role;
+    ['member', 'leader', 'master'].forEach(role => {
+      OS.profile.role = role;
+      out[role] = hdbWhoList().length;
+    });
+    OS.profile.role = r0;
+    return out;
+  });
+  is(W13.member === 0 && W13.leader === 0, '  설계사·지점장에게는 <b>고르개가 안 뜬다</b> — 서버가 안 받는 자리다');
+  is(W13.master >= 2, '  대표는 <b>팀원 중에서 고른다</b> — ' + W13.master + '명');
+  await page.evaluate(() => { OS.profile.role = 'master'; hdbOpen('d7', ''); });
+  await page.waitForTimeout(500);
+  is(await page.evaluate(() => !!document.getElementById('hdbWho')), '  대표가 열면 <b>담당자 고르개</b>가 선다');
+  await W();
+  await page.evaluate(() => { document.getElementById('hdbWho').value = 'u3'; });
+  await page.evaluate(() => hdbSave()); await page.waitForTimeout(550);
+  const W13b = (await W()).filter(x => x.t === 'dbs');
+  const p13 = (W13b[W13b.length - 1] || {}).pay || {};
+  is(p13.assigned_to === 'u3', '  고른 담당자가 <b>그대로 나간다</b> — ' + JSON.stringify(p13.assigned_to));
+  is(p13.phone === '010-1111-2222', '  담당자를 바꿔도 <b>연락처는 그대로</b>다');
+  /* 담당자를 바꿨 덩에 그 줄은 <b>남의 것</b>이 되었다 — 다음 절을 위해 되돌린다 */
+  await page.evaluate(() => {
+    OS.profile.role = 'member';
+    const r = hdbRow('d7'); if (r) r.who = 'me';
+    window.__DBROW.d7.assigned_to = 'me';
+  });
+
+  console.log('\n[14] <b>못 읽었으면 고치는 칸을 안 연다</b> (1번)');
+  await page.evaluate(() => { const b = window.__DBROW.d9; window.__DBROW.d9 = null; hdbOpen('d9', ''); window.__d9 = b; });
+  await page.waitForTimeout(500);
+  const F14 = await page.evaluate(() => ({
+    open: !!document.querySelector('#hdbSheet.on'),
+    name: !!document.getElementById('hdbName'),
+    save: !!document.querySelector('.hdb-save[onclick*="hdbSave"]'),
+    err: (document.querySelector('.hdb-err') || {}).innerText || ''
+  }));
+  is(F14.open === true, '  창은 뜬다 — 눌렀는데 아무 일도 안 나면 고장으로 보인다');
+  is(F14.name === false, '  <b>고칠 칸을 안 세운다</b> — 빈칸으로 저장하면 값이 지워진다');
+  is(F14.save === false, '  <b>저장 단추도 안 세운다</b>');
+  is(/못 읽었|서버에 없/.test(F14.err), '  <b>왜인지 말한다</b> — 「' + F14.err.slice(0, 40) + '…」');
+  await page.evaluate(() => hdbSave()); await page.waitForTimeout(400);
+  is((await W()).filter(x => x.t === 'dbs').length === 0, '  불러도 <b>아무것도 안 나간다</b>');
+  await page.evaluate(() => { window.__DBROW.d9 = window.__d9; hdbClose(); });
+
+  console.log('\n[15] <b>옛 서버에서도 일이 안 막힌다</b> — 칸이 없으면 그것만 빼고 연다');
+  await page.evaluate(() => { window.__NOCOL = 'touch_count'; window.__RD = []; hdbOpen('d7', ''); });
+  await page.waitForTimeout(600);
+  const F15 = await page.evaluate(() => ({
+    name: (document.getElementById('hdbName') || {}).value,
+    phone: (document.getElementById('hdbPhone') || {}).value,
+    touch: !!document.getElementById('hdbTouch'),
+    reads: window.__RD.filter(x => x.t === 'dbs').length
+  }));
+  is(F15.reads === 2, '  한 번 거절당하면 <b>그 칸만 빼고 다시</b> 묻는다 — 읽기 ' + F15.reads + '번');
+  is(F15.name === '홍길동C' && F15.phone === '010-1111-2222', '  나머지 칸은 <b>그대로 열린다</b> — 일이 안 막힌다');
+  is(F15.touch === false, '  <b>없는 칸은 안 세운다</b> — 세워 두면 빈칸으로 저장된다');
+  await W();
+  await page.evaluate(() => hdbSave()); await page.waitForTimeout(550);
+  const W15 = (await W()).filter(x => x.t === 'dbs');
+  const p15 = (W15[W15.length - 1] || {}).pay || {};
+  is(!('touch_count' in p15) && !('policy_no' in p15),
+     '  <b>안 읽은 칸은 안 보낸다</b> — ' + JSON.stringify(Object.keys(p15).filter(k => /touch|policy_no/.test(k))));
+  is(p15.phone === '010-1111-2222', '  옛 서버에서도 <b>연락처는 안 지워진다</b>');
+  await page.evaluate(() => { window.__NOCOL = ''; });
   is(errs.length === 0, '  화면이 터지지 않았다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await ctx.close(); await browser.close(); srv.close();
