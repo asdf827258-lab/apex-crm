@@ -179,24 +179,48 @@ is(jobFit.read && jobFit.cat === 'econ' && plain(jobFit.why && jobFit.why.say).i
 is(fit({ f_job: '제조업 대표' }, []).cat === 'fund',
    '  <b>사장님은 정책자금</b>으로 — 한 사람이 두 갈래로 갈리지 않는다 (5번)');
 
-head('[7-5] <b>나이대는 가장 약한 근거</b>로 다룬다 (1번)');
+head('[7-5] <b>나이대만으로는 절대 안 고른다</b> (1번)');
+/* 사장님 말씀 (2026-09-22) — 「<b>나이대만 보고 고르지 말고</b>, 매일 아침
+   고객을 미팅할 수 있도록 자료를 정말 완벽하고 꼼꾼하게 준비해 줘」.
+   처음에는 나이대를 힘 42 짜리 근거로 썼는데, 실제 자료로 돌려 보니
+   <b>읽힌 33분 중 19분이 나이만 보고</b> 고른 것이었다. 그건 짐작이다.        */
 const band = b => F.fit({ fp: {}, notes: [], band: b, today: T });
-is(band('2030').read && band('2030').cat === 'help',
-   '<b>20·30대</b> — 청년·신혼부부·출산 지원은 실제로 나이로 갈린다');
-is(band('60').read && band('60').cat === 'econ',
-   '<b>60대 이상</b> — 연금·기초연금도 그렇다');
+is(band('60').read === false && band('2030').read === false,
+   '<b>나이대만 있고 다른 근거가 없으면 못 읽은 것</b>이다 — 60대도 20·30대도');
+is((band('60').need || []).length > 0,
+   '  대신 <b>무엇을 적으시면 읽히는지</b> 말한다 — 「' +
+   plain((band('60').need || []).join('」 · 「')) + '」');
 is(band('4050').read === false,
-   '<b>40·50대는 안 만들었다</b> — 나이로 갈리는 제도가 없어 ' +
-   '지어내느니 <b>모른다고</b> 한다');
-is(band('').read === false && band(null).read === false,
-   '  출생연도를 모르면 당연히 모른다 — 배정 DB 에는 그 칸이 아예 없다');
+   '  40·50대는 표에 아예 없다 — 나이로 갈리는 제도가 없다');
+/* 진짜 근거가 <b>둘 이상이고 힘이 같을 때만</b> 기울인다 */
+const tieNote = [{ src:'메모', at:'', t:'전세 알아보는 중' },
+                 { src:'메모', at:'', t:'연말정산 물어보심' }];
+const noTilt = F.fit({ fp:{}, notes:tieNote, today:T });
+const yesTilt = F.fit({ fp:{}, notes:tieNote, band:'60', today:T });
+is(noTilt.read && !noTilt.tilt, '근거가 둘이면 <b>힘이 큰 쪽</b>이 이긴다 — ' + plain(noTilt.cat));
+const same = [{ src:'메모', at:'', t:'전세 알아보는 중' },
+              { src:'메모', at:'', t:'전세금 올려달라고 함' }];
+is(F.fit({ fp:{}, notes:same, band:'60', today:T }).tilt === null,
+   '  <b>같은 갈래끼리 동점</b>이면 기울일 것도 없다 — 억지로 나이를 끼우지 않는다');
+/* ★ <b>기울이는 길이 진짜로 있는지</b>도 재다. 없는 재주를 재면 죽은 코드를
+   두고 재는 셋이 된다 (5번). 힘 70 에서 <b>부동산(home) · 연금(ret)</b> 이
+   실제로 부딪힌다 — 거기서만 나이대가 끼어든다.                      */
+const tieFp = { f_home:'30000', f_np:'90' };          /* 집도 있고 연금도 있다 — 둘 다 70 */
+const flat = F.fit({ fp:tieFp, notes:[], today:T });
+const old60 = F.fit({ fp:tieFp, notes:[], band:'60', today:T });
+is(flat.read && flat.cat === 'realty' && !flat.tilt,
+   '나이를 모르면 <b>적힌 차례대로</b> 고른다 — ' + plain(flat.cat));
+is(old60.cat === 'econ' && old60.tilt && old60.tilt.band === '60',
+   '<b>힘이 같은 둘</b>이면 그때만 60대 쪽으로 기울인다 — ' +
+   plain(flat.cat) + ' → ' + plain(old60.cat));
+is(plain(old60.tilt && old60.tilt.why).length > 4,
+   '  그때도 <b>기울였다고 화면에 적는다</b> — 「' +
+   plain(old60.tilt && old60.tilt.why).slice(0, 40) + '」');
 const strong = F.fit({ fp: { f_job: '자영업' }, notes: [], band: '2030', today: T });
-is(strong.cat === 'fund',
-   '<b>진짜 근거가 나이대를 이긴다</b> — 자영업 + 20·30대 → ' + plain(strong.cat));
-is((strong.alts || []).length > 0,
-   '  진 것은 <b>alts 로 남긴다</b> — 사장님이 바꾸실 수 있게');
-is(plain(band('60').why && band('60').why.src).indexOf('출생년도') >= 0,
-   '  근거가 <b>어디서 왔는지</b> 적는다 — 「' + plain(band('60').why && band('60').why.src) + '」');
+is(strong.cat === 'fund' && !strong.tilt,
+   '<b>진짜 근거가 있으면 나이대는 안 끼어든다</b> — 자영업 + 20·30대 → ' + plain(strong.cat));
+is(typeof F.bandT === 'object' && F.bandT['60'],
+   '  나이대 이름표도 <b>한 곳</b>에만 있다 (5번) — ' + plain(F.bandT['60']));
 
 head('[7-6] <b>칸에 든 것이 연도인지 날짜인지</b> 가린다 (1번)');
 /* 실제 자료 — clients.birth_year 에 <b>생년월일</b>을 적어 두신 분이 7분
@@ -233,6 +257,55 @@ const rrn = fit({}, [{ src: '가구 메모', at: '',
   t: '홍길동 951222-2512231 식당운영 010-1234-5678' }]);
 is(rrn.read && plain(rrn.why && rrn.why.quote).indexOf('2512231') < 0,
    '<b>화면 근거에도</b> 주민등록번호가 안 박힌다 — 읽기 <b>전에</b> 씻는다 (3번)');
+
+head('[7-8] 📋 <b>아침 미팅 준비 자료</b> — 모으기지 판단이 아니다');
+/* 사장님 말씀 — 「매일 아침 고객을 미팅할 수 있도록 <b>자료를 정말 완벽하고
+   꼼꾼하게</b> 준비해 줘」. 소식 갈래를 못 읽어도 <b>미팅은 됩니다</b> —
+   사장님이 적어 두신 것이 그대로 서기 때문입니다.                        */
+const B1 = F.brief({
+  fp:{ f_job:'순천시청 공무원', f_ins:'80', f_home:'50000', c_cancer:'3000', c_death:'0' },
+  band:'4050', hn:'고등학교친구 / 홍길동 951222-2512231',
+  touch:[{at:'2026-09-04',how:'처리',note:'청약'},{at:'2026-08-12',how:'처리',note:'치아보험/남편보험정리'}],
+  next:{due:'2026-09-30',what:'연금제안'}, names:['홍길동'] });
+const V = k => { for (var i=0;i<B1.rows.length;i++) if (B1.rows[i].k === k) return B1.rows[i]; return null; };
+is(plain(V('다음에 하기로 한 것') && V('다음에 하기로 한 것').v) === '연금제안',
+   '<b>다음에 하기로 한 것</b>이 맨 위에 선다 — 아침에 제일 먼저 보실 줄이다');
+is(plain(V('지난번에 하신 것') && V('지난번에 하신 것').at) === '2026-09-04',
+   '<b>지난 접촉은 날짜와 함께</b> · 최근 것부터 선다');
+is(plain(V('지난번에 하신 것') && V('지난번에 하신 것').v) === '청약',
+   '  <b>그대로</b> 보여 드린다 — 「청약」을 소식 갈래로 <b>해석하지 않는다</b> (8번)');
+is(F.fit({ fp:{}, notes:[{src:'지난 접촉',at:'2026-09-04',t:'청약'}], today:T }).read === false,
+   '  「청약」·「TA」 같은 <b>업무 기록은 근거가 못 된다</b> — 고객의 관심사가 아니다');
+/* <b>모름과 0 을 가른다</b> — 여기서 섮이면 보장이 없는 분과 안 물어본 분이 같아진다 */
+const cov = plain(V('지금 있는 보장') && V('지금 있는 보장').v);
+is(cov.indexOf('사망보험금 0') >= 0 && cov.indexOf('없다고 적으심') >= 0,
+   '<b>0 은 「없다고 적으심」</b>으로 적는다 (1번) — 「' + cov.slice(0, 46) + '」');
+is(cov.indexOf('뇌혈관') < 0 && cov.indexOf('간병') < 0,
+   '  <b>안 적으신 칸은 줄을 안 세운다</b> — 빈칸을 0 으로 적으면 거짓말이 된다');
+is(plain(V('집·빚') && V('집·빚').v).indexOf('5억') >= 0,
+   '<b>큰 금액은 억으로</b> 적는다 (4번) — 「50,000만원」은 한 박자 늦게 읽힌다');
+is(F.briefWon(50000) === '5억' && F.briefWon(65000) === '6억 5,000만원' && F.briefWon(80) === '80만원',
+   '  briefWon 은 <b>만원을 받는다</b> — 이름이 단위를 말한다 (4번)');
+is(F.briefWon('') === '' && F.briefWon(null) === '',
+   '  <b>빈칸은 빈 글자</b> — 0 으로 바꾸지 않는다');
+const hnRow = V('가구 메모');
+is(plain(hnRow && hnRow.v).indexOf('2512231') < 0 && plain(hnRow && hnRow.v).indexOf('홍길동') < 0,
+   '<b>씻어서</b> 세운다 — 주민등록번호도 다른 고객 실명도 안 박힌다 (3번)');
+/* <b>안 적혀 있는 것도 말한다</b> — 줄이 없는 것과 값이 없는 것은 다르다 */
+const B0 = F.brief({});
+is(B0.n === 0 && B0.miss.length > 0,
+   '적힌 것이 하나도 없으면 <b>무엇이 없는지</b> 말한다 — 「' +
+   plain(B0.miss.join('」 · 「')) + '」');
+is(B1.miss.indexOf('메모 한 줄') < 0 && B0.miss.indexOf('메모 한 줄') >= 0,
+   '  <b>있는 것을 없다고 하지 않는다</b> — 헛것을 적으면 사장님이 헛걸음을 하신다 (8번)');
+/* 배정 DB 분들은 이것밖에 없다 — 같은 카드에 같이 선다 (5번) */
+const Bdb = F.brief({ db:{ appt:'2026-09-25T14:00', res:'부재', n:3, last:'2026-09-20' } });
+is(Bdb.n === 2 && plain(Bdb.rows[0].v).indexOf('2026-09-25 14:00') >= 0,
+   '<b>배정 DB 분도 같은 카드</b>를 보신다 — 잡아 둔 약속·마지막 통화');
+is(plain(Bdb.rows[1].v).indexOf('3번') >= 0,
+   '  <b>몇 번째 통화인지</b>까지 적는다 — 세 번째 부재면 걸기 전에 아셔야 한다');
+is(F.brief({ db:{ res:'미진행' } }).n === 0,
+   '  <b>「미진행」은 통화가 아니다</b> — 안 걸었는데 「마지막 통화 미진행」은 거짓말이다');
 
 head('[8] <b>동명이인은 안 잇는다</b> (3번)');
 const pool = [{ name: '홍길동', id: 'a' }, { name: '홍길동', id: 'b' }, { name: '홍길순', id: 'c' }];
@@ -315,6 +388,21 @@ is(/AR\.cliRows/.test(bandSrc) && !/f_age/.test(bandSrc),
 is(/select\('id,advisor_id,name_masked,created_at,birth_year,household_notes'\)/.test(ix),
    '<b>가구 메모를 한 칸 더</b> 받는다 — 부르는 횟수는 그대로다 (7번)');
 const notesSrc = (ix.split('function ccFitNotes(')[1] || '').slice(0, 900);
+/* ── 📋 준비 자료가 <b>실제로 카드에 서는가</b> ──────────────── */
+const brSrc = (ix.split('function ccBriefOf(')[1] || '').slice(0, 900);
+is(/APEX_FIT\.brief/.test(brSrc),
+   '준비 자료를 <b>여기서 다시 짜지 않는다</b> — brief 한 곳이 짜줍니다 (5번)');
+is(/touch:/.test(brSrc) && /next:/.test(brSrc) && /db:db/.test(brSrc),
+   '  <b>지난 접촉·다음 할 일·배정 DB 줄</b>을 다 모아 넘긴다 — 하나라도 빠지면 그 줄이 안 선다');
+is(/names:nm/.test(brSrc) && /cmRealOf/.test(brSrc),
+   '  실명을 <b>씻어서</b> 넘긴다 (3번)');
+const bhSrc = (ix.split('function hmMsBriefHtml(')[1] || '').slice(0, 1400);
+is(/ccBriefOf/.test(bhSrc) && /b\.miss/.test(bhSrc),
+   '카드가 그것을 <b>그려 준다</b> — 안 적혀 있는 것까지 같이');
+const planSrc = (ix.split(' plan:function(P){')[1] || '').slice(0, 420);
+const callSrc = (ix.split(' call:function(P){')[1] || '').slice(0, 520);
+is(/hmMsBriefHtml\(x\)/.test(planSrc) && /hmMsBriefHtml\(x\)/.test(callSrc),
+   '<b>② 어떻게 연락할지·③ 전화 다섯 통</b> 두 칸에 다 선다 — 아침에 여는 자리다');
 is(/t:C\[i\]\.hn/.test(notesSrc),
    '  그 가구 메모가 <b>실제로 엔진에 들어간다</b> — 고객 365일 분들은 ' +
    '통화 메모가 한 줄도 안 잡힌다');
