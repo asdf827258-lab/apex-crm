@@ -16018,10 +16018,14 @@ function go(tab){
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
+  /* ⑦ 사장님 말씀 — CRM 을 <b>벗어나면</b> 「언제 관리할지」를 여쭤봅니다.
+     여기가 유일한 「나가는 길」입니다 — 모든 화면이 go() 를 거칩니다 (5번). */
+  try{ if(tab!=='crm'&&typeof crqLeave==='function')crqLeave(); }catch(e){}
   if(tab==='crm'){
     mountCrm();
     osFullMode('crm-mode');
     navMark('crm');
+    try{ crqEnter(); crqWatch(); }catch(e){}
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
@@ -22275,6 +22279,181 @@ function hdbDel(id){
 /* ── 홈 카드 안에 서는 줄 ─────────────────────────────────────────
    「무엇을 할까요?」 밑에 붙는다. <b>지금 단계가 무엇이고</b>, 한 칸
    올리면 어디로 가고, 통화가 안 됐으면 무엇을 누르는지가 한 줄에 있다. */
+/* ══ ⑦ <b>DB 통합 CRM — 들어갈 때와 나갈 때</b> ═════════════════════
+   사장님 말씀 ⑦ (2026-09-22) —
+     「DB CRM 들어가면 <b>고객 관리부터 시작하시죠?</b> 하고 → 입력·관리,
+      <b>페이지 벗어나면 언제 관리할지</b> 뜨게」
+
+   ★ <b>하루에 한 번만</b> 묻습니다. 들어갈 때마다 덮개가 뜨면 그것은 권유가
+     아니라 방해입니다 — 사흘이면 눈이 먼저 닫습니다.
+   ★ <b>시작한다고 누르셨으면 나갈 때 안 묻습니다.</b> 하고 나온 분께
+     「언제 하실래요」 라고 물으면 앱이 안 보고 있다는 뜻이 됩니다.
+   ★ <b>못 지키는 약속을 하지 않습니다</b> (1번). 고르신 시각은 이 브라우저에만
+     담기고, <b>앱이 열려 있을 때</b> 알려 드립니다. 폰이 꺼져 있을 때 울리는
+     것은 🔔 아침 알람이고 그것은 따로 켜셔야 합니다 — 그렇게 적어 둡니다.
+   ★ 실명은 안 담습니다 (3번). 담는 것은 <b>날짜와 시각</b>뿐입니다.       */
+var CRQ={in:false,at:0,tick:0};
+var CRQ_KEY='apex_crm_when';
+function crqDay(){ try{ return osTodayStr(); }catch(e){ return ''; } }
+function crqGet(){
+  try{
+    var o=JSON.parse(localStorage.getItem(CRQ_KEY)||'{}');
+    return (o&&o.d===crqDay())?o:{};
+  }catch(e){ return {}; }
+}
+function crqSet(o){
+  try{
+    if(o)localStorage.setItem(CRQ_KEY,JSON.stringify(o));
+    else localStorage.removeItem(CRQ_KEY);
+  }catch(e){}
+}
+/* 「오후 2시」처럼 읽히게 — 24시간 글자는 한 박자 늦게 읽힙니다 */
+function crqSay(hm){
+  var a=(''+(hm||'')).split(':'),h=+a[0],m=+a[1];
+  if(!(h>=0&&h<=23))return '';
+  var ap=(h<12)?'오전':'오후',hh=(h%12)||12;
+  return ap+' '+hh+'시'+(m?(' '+m+'분'):'');
+}
+function crqHost(){
+  var e=document.getElementById('crqSheet');
+  if(e)return e;
+  e=document.createElement('div');e.id='crqSheet';
+  e.innerHTML='<div class="crq-box" id="crqBox"></div>';
+  e.addEventListener('click',function(ev){ if(ev.target===e)crqClose(); });
+  document.body.appendChild(e);
+  return e;
+}
+function crqClose(){
+  var e=document.getElementById('crqSheet');
+  if(e)e.classList.remove('on');
+}
+function crqShow(html){
+  crqCss();
+  var host=crqHost();
+  document.getElementById('crqBox').innerHTML=html;
+  host.classList.add('on');
+}
+/* ── 들어갈 때 ──────────────────────────────────────────────────── */
+function crqEnter(){
+  if(!OS.profile)return;
+  CRQ.in=true;
+  var o=crqGet();
+  if(o.asked)return;                 /* 오늘은 이미 여쭤봤습니다 */
+  o.d=crqDay(); o.asked=1; crqSet(o);
+  var had=o.at?('<div class="crq-note">🕘 오늘 <b>'+crqSay(o.at)+'</b> 에 하기로 하셨었습니다.</div>'):'';
+  crqShow('<div class="crq-t">👋 <b>고객 관리부터 시작하시죠?</b></div>'+
+    '<div class="crq-s">DB 를 열어 <b>단계를 옮기고</b>, 통화 결과를 적고, 새 고객을 넣습니다. '+
+    '여기서 한 것은 홈의 「오늘 챙길 것」에도 그대로 뜹니다.</div>'+had+
+    '<div class="crq-b">'+
+      '<button type="button" class="ok" onclick="crqStart()">✍️ 지금 시작합니다</button>'+
+      '<button type="button" onclick="crqClose()">둘러보기만</button>'+
+    '</div>');
+}
+function crqStart(){
+  var o=crqGet(); o.d=crqDay(); o.did=1; crqSet(o);
+  crqClose();
+  if(typeof toast==='function')toast('시작했습니다 — 나가실 때 다시 안 여쭤봅니다');
+}
+/* ── 나갈 때 ────────────────────────────────────────────────────── */
+function crqLeave(){
+  if(!CRQ.in)return;
+  CRQ.in=false;
+  if(!OS.profile)return;
+  var o=crqGet();
+  if(o.did||o.at||o.no)return;       /* 하셨거나 이미 정하셨습니다 */
+  var L=crqSlots(),i,btn='';
+  for(i=0;i<L.length;i++)
+    btn+='<button type="button" onclick="crqPick(\''+L[i].v+'\')">'+osEsc(L[i].t)+'</button>';
+  crqShow('<div class="crq-t">🕘 <b>오늘 고객 관리는 언제 하실까요?</b></div>'+
+    '<div class="crq-s">정해 두시면 <b>그 시각에 이 앱이 한 번 알려</b> 드립니다. '+
+    '<b>앱이 열려 있을 때만</b> 뜹니다 — 폰이 꺼져 있어도 울리는 것은 🔔 아침 알람이고, '+
+    '그것은 설정에서 따로 켜셔야 합니다.</div>'+
+    '<div class="crq-g">'+btn+'</div>'+
+    '<div class="crq-b">'+
+      '<button type="button" onclick="crqNo()">오늘은 안 합니다</button>'+
+    '</div>');
+}
+/* 고를 시각 — <b>지금부터</b> 셉니다. 이미 지난 시각을 내밀면 고르는 순간
+   지나간 약속이 됩니다 (1번). 늦은 밤이면 「30분 뒤」 만 남습니다. */
+function crqSlots(){
+  var now=new Date(),out=[],i,h,C=[30,60,120];
+  for(i=0;i<C.length;i++){
+    var d=new Date(now.getTime()+C[i]*60000);
+    if(d.getDate()!==now.getDate())break;      /* 날이 바뀌면 오늘이 아니다 */
+    out.push({v:crqHm(d),t:(C[i]<60?(C[i]+'분 뒤'):((C[i]/60)+'시간 뒤'))+' · '+crqSay(crqHm(d))});
+  }
+  for(i=0;i<3;i++){
+    h=[14,17,20][i];
+    if(h*60<=now.getHours()*60+now.getMinutes()+10)continue;
+    out.push({v:(h<10?'0':'')+h+':00',t:crqSay(h+':00')});
+  }
+  return out;
+}
+function crqHm(d){
+  var p=function(n){return (n<10?'0':'')+n;};
+  return p(d.getHours())+':'+p(d.getMinutes());
+}
+function crqPick(hm){
+  var o=crqGet(); o.d=crqDay(); o.at=hm; o.no=0; crqSet(o);
+  crqClose();
+  if(typeof toast==='function')toast(crqSay(hm)+' 에 알려 드리겠습니다',4200);
+}
+function crqNo(){
+  var o=crqGet(); o.d=crqDay(); o.no=1; crqSet(o);
+  crqClose();
+}
+/* ── 그 시각이 되면 ─────────────────────────────────────────────
+   ★ <b>서버를 안 부릅니다</b> (7번) — 이 브라우저에 담긴 시각만 봅니다.
+     화면이 뒤로 가 있으면 쉽니다. */
+function crqTick(){
+  try{
+    if(document.hidden)return;
+    if(!OS.profile)return;
+    var o=crqGet();
+    if(!o.at||o.rang||o.did)return;
+    var n=new Date(),now=crqHm(n);
+    if(now<o.at)return;
+    o.rang=1; crqSet(o);
+    crqShow('<div class="crq-t">🕘 <b>고객 관리 하실 시간입니다</b></div>'+
+      '<div class="crq-s"><b>'+crqSay(o.at)+'</b> 에 하기로 하셨습니다. '+
+      '지금 열면 단계·통화 결과를 그 자리에서 적으실 수 있습니다.</div>'+
+      '<div class="crq-b">'+
+        '<button type="button" class="ok" onclick="crqGoCrm()">🗄️ 지금 열기</button>'+
+        '<button type="button" onclick="crqClose()">조금 뒤에</button>'+
+      '</div>');
+  }catch(e){}
+}
+function crqGoCrm(){ crqClose(); try{ go('crm'); }catch(e){} }
+function crqWatch(){
+  if(CRQ.tick)return;
+  CRQ.tick=setInterval(crqTick,60000);
+  try{ document.addEventListener('visibilitychange',function(){ if(!document.hidden)crqTick(); }); }catch(e){}
+}
+function crqCss(){
+  if(document.getElementById('crqCss'))return;
+  var st=document.createElement('style');st.id='crqCss';
+  st.textContent=
+   '#crqSheet{position:fixed;inset:0;z-index:9300;background:rgba(15,23,42,.44);display:none;'+
+     'align-items:flex-end;justify-content:center}'+
+   '#crqSheet.on{display:flex}'+
+   '.crq-box{width:100%;max-width:520px;max-height:90vh;overflow:auto;background:#fff;'+
+     'border-radius:18px 18px 0 0;padding:18px 16px 20px}'+
+   '@media(min-width:620px){#crqSheet{align-items:center}.crq-box{border-radius:18px}}'+
+   '.crq-t{font-size:var(--t3);font-weight:900;color:var(--ink-1);line-height:1.5}'+
+   '.crq-s{margin-top:8px;font-size:var(--t6);line-height:1.75;color:var(--ink-4)}'+
+   '.crq-s b{color:var(--ink-2)}'+
+   '.crq-note{margin-top:9px;font-size:var(--t6);font-weight:700;color:#92400E;'+
+     'background:#FFFBEB;border-radius:9px;padding:8px 10px}'+
+   '.crq-g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}'+
+   '.crq-g button{min-height:52px;border:1px solid var(--ink-7);border-radius:12px;background:#fff;'+
+     'font-family:inherit;font-size:var(--t6);font-weight:800;color:var(--ink-2);cursor:pointer;padding:9px}'+
+   '.crq-b{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}'+
+   '.crq-b button{flex:1 1 auto;min-width:130px;min-height:48px;border:1px solid var(--ink-7);'+
+     'border-radius:12px;background:#F2F4F6;font-family:inherit;font-size:var(--t5);'+
+     'font-weight:900;color:#4E5968;cursor:pointer}'+
+   '.crq-b .ok{background:#2B5FD9;border-color:#2B5FD9;color:#fff}';
+  document.head.appendChild(st);
+}
 function hdbStripHtml(x){
   if(!x||x.k!=='db'||!x.id)return '';
   var r=hdbRow(x.id);
