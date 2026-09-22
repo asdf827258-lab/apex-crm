@@ -144,7 +144,10 @@ const SEED = (o) => `
   const A = await open({});
   is(A.errs.length === 0, '  홈을 여는 동안 콘솔 오류가 없다' + (A.errs.length ? ' — ' + A.errs[0] : ''));
 
-  console.log('\n[1] 홈에 <b>🌅 아침 미션</b> 칸이 서고 다섯 칸이 차례대로');
+  console.log('\n[1] 홈에 <b>🌅 아침 미션</b> 칸이 서고 미션이 차례대로');
+  /* ★ 몇 가지인지를 <b>여기 적지 않는다</b> — 미션을 하나 늘리면 이 줄이 낙아
+     새 미션을 재지 않고 초록불만 콜다. HM_MS 가 세게 둡니다 (5번·8번). */
+  const MSN = await A.p.evaluate(() => HM_MS.length);
   const s1 = await A.p.evaluate(() => {
     const box = document.getElementById('hmFold_ms');
     const host = document.getElementById('hmMsHost');
@@ -164,9 +167,10 @@ const SEED = (o) => `
      지킵니다. 한 번 펴 두었다가 「오늘 할 일」 이 1,173px 로 밀려 첫 화면
      밖으로 나갔습니다. 그래서 여기서는 <b>접혀 있는지</b>를 봅니다. */
   is(s1.has && !s1.open, '  미션 칸이 서고 <b>처음에는 접혀</b> 있다 — 홈의 규칙 그대로');
-  is(s1.sts.length === 5, '  다섯 칸이다 — ' + s1.sts.join(' '));
+  is(s1.sts.length === MSN && MSN >= 5,
+     '  칸이 <b>' + MSN + '개</b> 다 선다 — ' + s1.sts.join(' '));
   is(s1.above, '  자리가 <b>「오늘 챙길 것」 바로 위</b>다');
-  is(/0\/5/.test(s1.head) && /①/.test(s1.head),
+  is(s1.head.indexOf('0/' + MSN) >= 0 && /①/.test(s1.head),
      '  <b>접힌 채로도</b> 머리가 어디까지 왔는지 말한다 — ' + s1.head);
   await openMs(A.p);
   const s1b = await A.p.evaluate(() => {
@@ -185,7 +189,8 @@ const SEED = (o) => `
     return { head: box ? box.querySelector('.hm-fold-h').innerText.replace(/\s+/g, ' ') : '',
              ok: document.querySelectorAll('.hm-ms-st.ok').length };
   });
-  is(s2.ok === 1 && /1\/5/.test(s2.head), '  칸에 ✓ 가 켜지고 머리가 <b>1/5</b> 로 바뀐다');
+  is(s2.ok === 1 && s2.head.indexOf('1/' + MSN) >= 0,
+     '  칸에 ✓ 가 켜지고 머리가 <b>1/' + MSN + '</b> 로 바뀜다 — ' + s2.head);
   await A.p.evaluate(() => hmMsJump(0)); await A.p.waitForTimeout(300);  /* ✓ 칸을 누르면 되돌린다 */
   is(!(await A.p.evaluate(() => ckLoad('day'))).d2, '  ✓ 칸을 다시 누르면 <b>되돌아간다</b>');
   /* 다섯 미션이 <b>다섯 줄</b>에 하나씩 이어져 있다 — 새 통이 아니다 */
@@ -194,7 +199,8 @@ const SEED = (o) => `
     const day = CK_ITEMS.day.map(r => r[0]);
     return { ids, all: ids.every(i => day.indexOf(i) >= 0), uniq: new Set(ids).size };
   });
-  is(link.all && link.uniq === 5, '  다섯 미션이 체크판의 <b>실제 줄</b>을 가리킨다 — ' + link.ids.join(' · '));
+  is(link.all && link.uniq === MSN,
+     '  미션마다 체크판의 <b>실제 줄</b>을 하나씩 가리킨다 — ' + link.ids.join(' · '));
 
   console.log('\n[3] <b>다섯 분을 여기서 또 고르지 않는다</b> (5번)');
   const s3 = await A.p.evaluate(() => {
@@ -346,7 +352,8 @@ const SEED = (o) => `
   is(fin.cnt === 'AP 1명 · PC 1명',
      '  남은 분을 <b>세어서</b> 적는다 — 「' + fin.cnt + '」 (CS 0명은 안 적는다)');
   is(fin.go, '  <b>오늘 챙길 것</b>으로 가는 단추가 있다');
-  is(/5\/5/.test(fin.head), '  접어 두셔도 머리가 <b>5/5</b> 라고 말한다 — ' + fin.head);
+  is(fin.head.indexOf(MSN + '/' + MSN) >= 0,
+     '  접어 두셔도 머리가 <b>' + MSN + '/' + MSN + '</b> 라고 말한다 — ' + fin.head);
 
   console.log('\n[9] <b>칸이 한 화면을 안 넘는다</b> · 홈은 3.8화면 이하');
   const B = await open({});
@@ -357,7 +364,10 @@ const SEED = (o) => `
      그래서 <b>미션 × 사람</b>을 다 돌려 제일 긴 짝을 찾는다 (8번). */
   let worst = 0, worstAt = '', worstHome = 0;
   const nP = await B.p.evaluate(() => hmMsPeople().length);
-  for (let i = 0; i < 5; i++) {
+  /* 미션이 몇 가지인지를 <b>여기 적지 않는다</b> — 하나 늘리면 이 줄이 낙아
+     새 미션을 <b>재지 않고</b> 초록불을 콜다 (8번). */
+  const nM = await B.p.evaluate(() => HM_MS.length);
+  for (let i = 0; i < nM; i++) {
     await jump(B.p, i);
     for (let j = 0; j < Math.max(1, nP); j++) {
       const m = await B.p.evaluate((k) => {

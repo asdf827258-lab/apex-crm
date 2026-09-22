@@ -267,6 +267,52 @@ const SEED = (o) => `
   is(/읽은 기록|안 읽었습니다/.test(z), '  읽은 기록이 하나도 없어도 <b>칸은 선다</b>');
   is(!/일반암/.test(z), '  <b>없는 담보를 만들지 않는다</b>');
 
+  console.log('\n[14] 🗂 <b>고객 365일 한눈에</b> + 🎣 <b>미끼 레이더 연계</b> (사장님 말씀 ⑤)');
+  /* 「고객 365일 한눈에 + 보장분석 전후·KB보장분석 읽고 <b>미끼레이더와 연계</b>한
+     관리 프로그램을 홈에서」 (2026-09-22)
+
+     여기서 재는 것 —
+       ① 한눈에 줄이 서고, <b>안 받아 온 것을 0 으로 안 적는다</b> (1번)
+       ② 읽은 분은 <b>담보 이름</b>이 그 자리에 서고
+       ③ 그 담보로 <b>미끼 레이더까지 이어지는 단추</b>가 있다
+       ④ 홈은 <b>담보 갈래를 안 가른다</b> — 가르는 곳은 미끼 레이더 하나다 (5번) */
+  {
+    const E = await A.p.evaluate(() => {
+      const el = document.createElement('div');
+      el.innerHTML = hmChkHtml();
+      const eye = el.querySelector('.hm-chk-eye');
+      const one = [...el.querySelectorAll('.hm-chk-one')].map(x => ({
+        t: x.textContent || '',
+        mk: (x.querySelector('[onclick*="hmChkMk"]') || {}).getAttribute
+              ? x.querySelector('[onclick*="hmChkMk"]').getAttribute('onclick') : '',
+        cp: !!x.querySelector('[onclick*="chkCopy"]')
+      }));
+      return { eye: eye ? eye.textContent : '', one: one, n: hmChkEye() };
+    });
+    is(/고객 365일 한눈에/.test(E.eye), '  <b>고객 365일 한눈에</b> 줄이 선다 — 「' + E.eye.slice(0, 46) + '…」');
+    is(/고객 카드/.test(E.eye) && /증권 읽은 분/.test(E.eye) && /오늘 약속/.test(E.eye),
+       '  <b>카드 · 증권 읽은 분 · 오늘 약속</b> 셋을 한 줄에 말한다');
+    is(E.n.cli === 3, '  카드 수는 <b>손에 든 것</b>에서 센다 — ' + E.n.cli + '명 (서버를 더 안 부른다 · 7번)');
+    is(E.n.read === 1, '  증권 읽은 분도 <b>이미 받아 둔 것</b>에서 센다 — ' + E.n.read + '명');
+    is(E.one.length >= 1, '  읽은 분이 <b>그 자리에 선다</b> — ' + E.one.length + '분');
+    is(E.one.length >= 1 && /일반암|비급여/.test(E.one[0].t),
+       '  <b>담보 이름</b>이 적힌다 — 「' + (E.one[0] ? E.one[0].t.replace(/\s+/g, ' ').slice(0, 44) : '(없음)') + '…」');
+    is(E.one.length >= 1 && E.one[0].cp, '  <b>할 말 복사</b>는 chkCopy 한 곳을 쓴다 (5번)');
+    is(E.one.length >= 1 && /hmChkMk\(/.test(E.one[0].mk || ''),
+       '  <b>🎣 이 담보로 미끼 레이더</b> 단추가 선다');
+    is(E.one.length >= 1 && /일반암|비급여/.test(E.one[0].mk || ''),
+       '  그 단추가 <b>담보 이름을 그대로</b> 들고 간다 — ' + (E.one[0] ? E.one[0].mk : ''));
+  }
+  /* ④ <b>홈은 갈래를 안 가른다.</b> 되돌려 보면, 홈에 갈래 표를 만들어 넣는
+     순간 여기가 빨간불이 됩니다 — 두 곳이 다른 답을 하는 날을 막습니다 (5번). */
+  {
+    const blk = (SRC.split('function hmChkEye()')[1] || '').split('function hmChkHtml()')[0];
+    is(blk.length > 300, '  ⑤ 칸이 index.html 에 있다 — ' + blk.length + '자');
+    is(!/간병·치매|BCATS|'뇌'\s*[:,]/.test(blk),
+       '  홈은 <b>담보 갈래를 안 가른다</b> — 가르는 곳은 미끼 레이더 하나다 (5번)');
+    is(/MIKKI_URL\s*\+\s*'\?cov='/.test(blk),
+       '  <b>담보 이름만 넘긴다</b> — ?cov=');
+  }
   await b.close(); srv.close();
   console.log('\n' + '─'.repeat(30));
   console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 고객 체크 — 읽은 증권으로 터치합니다. 안 읽었으면 그렇다고 적습니다.');
