@@ -226,6 +226,18 @@ const SEED2=SEED.split('@TODAY@').join(TODAY);
      '  주간에도 <b>「담당자 : 」</b>가 앞에 붙는다 — '+(WK.one.filter(t=>/\s:\s/.test(t))[0]||'(없음)'));
   is(WK.solo.length>0 && WK.solo.every(t=>!/\s:\s/.test(t)),
      '  <b>혼자 보는 화면에는 안 붙는다</b> — '+(WK.solo[0]||'(없음)'));
+  /* ★ <b>모르는 이름 자리를 재야 합니다</b> — 견본에는 이름을 아는 분만
+     있어, 되돌려 「담당자」로 지어내게 해도 초록불이었습니다.
+     안 울리는 알람은 알람이 아닙니다 (8번). */
+  const UNK=await page.evaluate(()=>({
+    known: mcalWhoTag({who:'u2'},true),
+    ghost: mcalWhoTag({who:'없는사람'},true),
+    none:  mcalWhoTag({},true)
+  }));
+  is(/\s:\s$/.test(UNK.known), '  아는 이름은 <b>「이름 : 」</b>으로 붙는다 — 「'+UNK.known+'」');
+  is(UNK.ghost==='' && UNK.none==='',
+     '  <b>모르는 이름은 안 지어낸다</b> (1번) — 「담당자 : 」 처럼 빈 이름을 세우면 '+
+     '없는 사람을 만듭니다 · 모르는 자리 「'+UNK.ghost+'」');
   is(errs.length===0, '터진 곳이 없다'+(errs.length?(' ← '+errs[0]):''));
 
   await b.close(); srv.close();
