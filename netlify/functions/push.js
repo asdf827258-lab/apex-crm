@@ -23,6 +23,12 @@ exports.handler = async function (event) {
   /* ① 앱이 열쇠를 묻는다 — 없으면 <b>없다고</b> 대답한다 (1번).
      ⚠ 나가는 것은 <b>공개 열쇠 하나뿐</b>이다. 비밀 열쇠는 여기서 절대
         안 내보낸다 — 있는지 없는지(has)만 말한다 (10번). */
+  /* 🩺 <b>서버 열쇠가 성한가</b> — 열쇠는 한 글자도 안 나간다 (10번).
+     모양과 Supabase 의 대답만 말한다. 이것이 없어서 「Invalid API key」를
+     눈으로 못 보고 사장님 로그인을 의심했다 (8번 — 안 보이면 못 고친다). */
+  if (method === 'GET' && (q.diag || '') === '1')
+    return { statusCode: 200, headers: P.JSON_HEAD, body: JSON.stringify(await P.keyDiag()) };
+
   if (method === 'GET') {
     const K = await P.keys();
     const why = K.pub ? '' : '서버에 알람 열쇠가 아직 없습니다.';
@@ -62,20 +68,22 @@ exports.handler = async function (event) {
          여태 두 자리가 똑같은 문장이라, 화면만 봐서는 <b>폰이 못 보낸
          것인지 서버가 물린 것인지</b> 알 수가 없었습니다 (1번).
          그래서 서버가 무슨 대답을 했는지(상태 번호)도 같이 적습니다. */
-    let uid = '', st = 0, why = '';
-    try {
-      const base = process.env.SUPABASE_URL || 'https://miakdhxtqofpndtlyzxa.supabase.co';
-      const who = await fetch(base + '/auth/v1/user',
-        { headers: { apikey: P.SB_KEY, Authorization: 'Bearer ' + tok } });
-      st = who.status || 0;
-      const j = await who.json().catch(() => null);
-      uid = (j && j.id) || '';
-      if (!uid) why = String((j && (j.msg || j.message || j.error_description)) || '').slice(0, 80);
-    } catch (e) { uid = ''; why = '서버에 닿지 못했습니다'; }
+    const d = await P.whoIs(tok);
+    const uid = d.uid;
+    /* ⚠ <b>허물을 제 자리에</b> 돌린다 (1번). 「Invalid API key」는 사장님
+       로그인이 아니라 <b>서버가 내민 열쇠</b>가 거절당한 것이다. 여기서
+       「앱을 닫았다 여세요」 라고 적는 바람에 사장님이 그것을 스무 번
+       되풀이하셨다 — 고칠 곳은 Netlify 의 환경변수 한 줄이었다. */
+    if (!uid && P.isKeyFault(d)) return { statusCode: 200, headers: P.JSON_HEAD,
+      /* ⚠ 이유는 <b>맨 글자</b>로만 보낸다. 여기에는 Supabase 가 돌려준 원문이
+         섞이는데, 그것을 화면이 <b>날것으로</b> 그리면 남의 글이 우리 화면에서
+         돈다. 굵게 적는 것은 <b>앱이 제 말로</b> 만든다 (keyFault 한 글자면 된다). */
+      body: JSON.stringify({ ok: false, keyFault: true, reason:
+        '서버 대답 ' + (d.status || '없음') + ' · ' + (d.msg || '') }) };
     if (!uid) return { statusCode: 401, headers: P.JSON_HEAD,
       body: JSON.stringify({ ok: false, reason:
         '서버가 로그인 표를 확인하지 못했습니다 — 앱을 닫았다 여신 뒤 다시 눌러 주세요.'
-        + ' (서버 대답 ' + (st || '없음') + (why ? (' · ' + why) : '') + ')' }) };
+        + ' (서버 대답 ' + (d.status || '없음') + (d.msg ? (' · ' + d.msg) : '') + ')' }) };
 
     const pr = await P.sb('profiles?id=eq.' + encodeURIComponent(uid) + '&select=role&limit=1');
     const role = ((pr.json || [])[0] || {}).role || '';
@@ -99,8 +107,13 @@ exports.handler = async function (event) {
       body: JSON.stringify({ id: 'default', pub: pub, priv: priv, subject: subject,
         made_by: uid, made_at: new Date().toISOString() })
     });
-    if (!w.ok) return { statusCode: 200, headers: P.JSON_HEAD,
-      body: JSON.stringify({ ok: false, reason: '저장하지 못했습니다 — ' + String(w.text || '').slice(0, 160) }) };
+    if (!w.ok) {
+      const kf = /invalid api key/i.test(String(w.text || ''));
+      return { statusCode: 200, headers: P.JSON_HEAD,
+        body: JSON.stringify({ ok: false, keyFault: kf, reason: kf
+          ? ('담는 자리에서 막혔습니다 · ' + String(w.status || ''))
+          : ('저장하지 못했습니다 — ' + String(w.text || '').slice(0, 160)) }) };
+    }
     P.keysForget();
     return { statusCode: 200, headers: P.JSON_HEAD,
       body: JSON.stringify({ ok: true, saved: true }) };

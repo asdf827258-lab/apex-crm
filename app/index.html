@@ -6941,7 +6941,7 @@ var GEN=[
    사람만 할 수 있는 것은 따로 모아 하나씩 지워 나가게 한다.
    "다 됐나?" 를 물을 곳이 한 군데는 있어야 한다.                        */
 
-var RD={rows:null,busy:false,err:'',at:'',ms:0};
+var RD={rows:null,busy:false,err:'',at:'',ms:0,diag:null};
 /* 출발 점검을 <b>다시 읽기까지 기다리는 시간</b>. 홈에서도 부르게 되어
    막는 자리가 필요해졌습니다 — 홈은 하루에 수십 번 여는 화면이라 그냥
    부르면 열 때마다 서버를 셋씩 부릅니다 (7번). 설정·조직도는 자주 바뀌는
@@ -7118,7 +7118,60 @@ function rdAuto(){
       go:'settings'});
   }
 
-  /* 8. 폰 알람 — <b>이 폰이 켜져 있나</b>. 서버엔 안 묻는다 (7번) */
+  /* 8. 🔑 <b>서버 열쇠</b> — 이것이 막히면 서버 일이 <b>통째로</b> 멈춘다.
+     2026-09-22 사장님 화면에 「401 · Invalid API key」 가 뗴는데, 앱은 그것을
+     「로그인을 다시 하세요」 로 옮겨 적었다. 고칠 곳은 Netlify 한 줄이었다.
+     ★ 열쇠 <b>글자는 여기 안 나온다</b> — 모양과 대답뿐이다 (10번). */
+  var dg=RD.diag;
+  /* 아직 <b>안 물어봤으면</b> 줄을 안 세운다 — 모르는 것을 「남았다」고
+     적으면 홈의 「안 된 것 n」 이 헛수를 셎니다 (1번). */
+  if(dg&&!dg.key){
+    add({k:'sbkey',t:'서버 열쇠(Supabase)',st:'warn',now:'확인하지 못했습니다',
+      how:'서버에 닿지 못했습니다. 잠시 뒤 「🔄 다시 확인」 을 눌러 주세요.',
+      go:'phone_app'});
+  }else if(dg){
+    var dk=dg.key||{},dl=dg.live||{},dok=!!(dl.status>=200&&dl.status<300);
+    var dsay=(dk.kind==='none')?'서버에 열쇠가 아예 없습니다'
+      :(dk.kind==='jwt'&&dk.refOk===false)?('다른 프로젝트(「'+(dk.ref||'?')+'」) 열쇠입니다')
+      :(dk.kind==='jwt'&&dk.role&&dk.role!=='service_role')?('종류가 「'+dk.role+'」 입니다 — service_role 이어야 합니다')
+      :dok?'성합니다':('Supabase 가 거절했습니다'+(dl.msg?(' · '+dl.msg):''));
+    add({k:'sbkey',t:'서버 열쇠(Supabase)',
+      st:dok?'ok':'no',
+      now:dsay,
+      how:'Netlify › Site configuration › Environment variables 에서 '+
+           'SUPABASE_SERVICE_ROLE_KEY 를 Supabase › Project Settings › API keys 의 '+
+           'service_role 값으로 다시 넣어 주세요. '+
+           '이 한 줄이 막히면 새벽 5시 AI 작업·밤 작업·브리핑·시세·폰 알람이 함께 멈춥니다. '+
+           '열쇠 값은 채팅·메모에 붙이지 마십시오.',
+      act:'rdSbKeyGo()',actT:'🔑 Netlify 열기',
+      go:'phone_app'});
+  }
+
+  /* 9. 💼 <b>직업 한 줄</b> — 소식을 골라 드리는 데 <b>값이 제일 큰</b> 칸이다.
+     이것이 비어 있어 109분 중 76분을 <b>못 읽고</b> 있다. 짐작으로 채우지
+     않고(1번) <b>몇 분이 비었는지</b>만 적는다.                        */
+  if(typeof CM!=='undefined'&&CM.loaded&&typeof CM.meta==='object'){
+    var jn=0,jt=0,jk;
+    for(jk in CM.meta){
+      if(!Object.prototype.hasOwnProperty.call(CM.meta,jk))continue;
+      jt++;
+      var jf=(CM.meta[jk]&&CM.meta[jk].fp)||{};
+      if((''+(jf.f_job||'')).replace(/\s/g,''))jn++;
+    }
+    add({k:'job',t:'고객 직업 한 줄',
+      st:jt?((jn>=jt)?'ok':(jn?'warn':'no')):'warn',
+      now:jt?(jn+' / '+jt+'분 적혀 있음'):'아직 적은 분이 없습니다',
+      how:'고객 365일 › 그 분 › 재무설계 답 의 「직업」 칸입니다. '+
+           '사업자·공무원·교사·군인·경찰·소방·설계사만 알아듣고, '+
+           '그 밖의 직업은 짐작하지 않고 버려둡니다.',
+      go:'clients'});
+  }else{
+    add({k:'job',t:'고객 직업 한 줄',st:'warn',now:'아직 못 읽었습니다',
+      how:'고객 365일을 한 번 열어 주세요 — 그러면 여기서 셀니다.',
+      go:'clients'});
+  }
+
+  /* 10. 폰 알람 — <b>이 폰이 켜져 있나</b>. 서버엔 안 묻는다 (7번) */
   if(typeof almCan==='function'){
     var ac=almCan(),aw=(typeof almWhy==='function')?almWhy().replace(/<[^>]*>/g,''):'';
     add({k:'alarm',t:'폰 아침 알람',
@@ -7131,6 +7184,14 @@ function rdAuto(){
       go:'phone_app'});
   }
   return L;
+}
+/* Netlify 설정 열기 — <b>어느 사이트인지는 모릅니다.</b> 그래서
+   사이트 주소를 지어내지 않고 <b>목록 화면</b>을 엽니다 (1번).
+   열쇠 값은 이 앱이 <b>보지도 만지도 않습니다</b> (10번).        */
+function rdSbKeyGo(){
+  try{ window.open('https://app.netlify.com/','_blank','noopener'); }catch(e){}
+  if(typeof toast==='function')
+    toast('Netlify → 사이트 → Site configuration → Environment variables 에서 SUPABASE_SERVICE_ROLE_KEY 를 고치십시오',9000);
 }
 function rdDays(a){
   var x=new Date(a+'T00:00:00Z').getTime(),y=new Date(new Date().toISOString().slice(0,10)+'T00:00:00Z').getTime();
@@ -7230,13 +7291,26 @@ function renderReady(){
     '<div class="card-desc">서버·설정·조직도를 실제로 읽어 확인합니다.</div></div>'+
     '<div class="card-body">'+
     '<div class="btn-row" style="margin-bottom:12px">'+
-      '<button class="btn btn-primary" onclick="rdLoad(true)">🔄 다시 확인</button>'+
+      '<button class="btn btn-primary" onclick="rdLoad(true);rdDiagLoad()">🔄 다시 확인</button>'+
       '<button class="btn btn-ghost" onclick="rdCopy()">📋 남은 것 복사</button></div>'+
     '<div id="rdPane">'+rdInnerHtml()+'</div>'+
     '</div></div>';
   return osPage('점검','출발 점검',
     '아직 안 된 것만 모아서 보여 줍니다. 앱이 확인할 수 있는 것은 직접 확인했습니다.',
     hero+card);
+}
+/* 🩺 <b>서버 열쇠</b>은 따로 묻습니다 — 열쇠가 거절당하면 새벽 5시
+   AI 작업·밤 작업·브리핑·시세·폰 알람이 <b>통째로</b> 멈춥니다.
+   ⚠ <b>rdLoad 안에 넣었다가 물렸습니다.</b> 홈도 rdLoad 를 부르므로, 홈을
+     여는 매번 서버를 한 번 더 부르고 있었습니다 (7번). check-invest 가
+     콘솔 404 로 잡았습니다 — 점검이 제 일을 했습니다.
+   이제 <b>이 화면을 여실 때만</b> 묻습니다. 아직 안 물어봤으면 그 줄을
+   <b>안 세웁니다</b> — 모르는 것을 「남았다」고 적지 않습니다 (1번). */
+function rdDiagLoad(){
+  fetch('/.netlify/functions/push?diag=1')
+    .then(function(r){return r.json();})
+    .then(function(j){ RD.diag=j||{}; rdPaint(); },
+          function(){ RD.diag={}; rdPaint(); });
 }
 function osReadyAfterRender(){
   /* <b>화면을 여는 것 자체가 「지금 확인해 주세요」</b> 다. 사장님은 SQL 을
@@ -7246,6 +7320,7 @@ function osReadyAfterRender(){
      홈은 곁다리로 열리니 막이를 두고, <b>여기는 뚫습니다</b> — 하루에
      수십 번 여는 화면이 아닙니다 (7번).                                */
   rdLoad(true);
+  rdDiagLoad();
 }
 function rdCopy(){
   if(!RD.rows){toast('먼저 확인을 눌러 주세요');return;}
@@ -13745,7 +13820,7 @@ var ALM={reg:null,sub:null,busy:'',err:'',key:null,keyAt:0,keyErr:'',keyAns:0,sy
        · 그 칸 안에서도 열쇠가 <b>첫 줄</b>에 섭니다
        · 홈에도 <b>한 줄</b>이 떠서 거기서 바로 갑니다 (대표·관리자만)
      되면 셋 다 <b>저절로 사라집니다</b> — 헛것을 안 세웁니다 (8번).   */
-var ALMK={open:true,busy:false,err:'',pub:'',priv:'',sub:'',show:false};
+var ALMK={open:true,busy:false,err:'',pub:'',priv:'',sub:'',show:false,keyFault:false,diag:null,diagBusy:false};
 var ALM_KEY_TTL=3600000;            /* 서버 열쇠는 한 시간에 한 번만 묻는다 (7번) */
 var ALM_HOUR_KEY='apex_alm_hour';
 var ALM_DAY_KEY='apex_alm_day';
@@ -14299,7 +14374,11 @@ function almkSend(tok){
     body:JSON.stringify({token:tok,pub:ALMK.pub,priv:ALMK.priv,subject:ALMK.sub})
   }).then(function(r){return r.json();}).then(function(j){
     ALMK.busy=false;
-    if(!j||!j.ok){ ALMK.err=(j&&j.reason)||'담지 못했습니다.'; almPaint(); return; }
+    if(!j||!j.ok){ ALMK.err=(j&&j.reason)||'담지 못했습니다.';
+      /* 서버가 <b>자기 잘못이라고</b> 하면 그렇게 적는다 — 사장님께
+         「앱을 닫았다 여세요」 를 스무 번 되풀이하시게 한 자리다 (1번). */
+      ALMK.keyFault=!!(j&&j.keyFault); if(ALMK.keyFault)almkDiag();
+      almPaint(); return; }
     ALM.keyAt=0;                       /* 담았다는 말만 믿지 않는다 — 다시 묻는다 */
     almKeyLoad(function(key){
       if(key){ ALMK.open=false; ALMK.pub=''; ALMK.priv=''; ALMK.show=false;
@@ -14309,6 +14388,54 @@ function almkSend(tok){
       almPaint();
     });
   },function(){ ALMK.busy=false; ALMK.err='서버에 닿지 못했습니다 — 잠시 뒤 다시 해 주세요.'; almPaint(); });
+}
+/* ── 🩺 <b>서버 열쇠가 성한가</b> ──────────────────────────
+   ★ <b>열쇠는 한 글자도 안 내려옵니다</b> (10번). 서버가 보내 주는 것은
+     <b>모양</b>(무슨 꼴인지·몇 글자인지)과 <b>Supabase 의 대답</b>뿐입니다.
+   ★ 이것이 없어서 「Invalid API key」를 <b>눈으로 못 보고</b> 사장님
+     로그인을 의심했습니다 — 안 보이면 못 고칩니다 (8번).            */
+function almkDiag(){
+  if(ALMK.diagBusy)return;
+  ALMK.diagBusy=true; almPaint();
+  fetch('/.netlify/functions/push?diag=1').then(function(r){return r.json();}).then(function(j){
+    ALMK.diagBusy=false; ALMK.diag=j||null; almPaint();
+  },function(){ ALMK.diagBusy=false; ALMK.diag={live:{status:0,msg:'서버에 닿지 못했습니다'}}; almPaint(); });
+}
+/* 진단을 <b>사람 말</b>로 옮깁니다. 같은 「Invalid API key」여도
+   ① 열쇠가 틀렸거나 ② <b>다른 프로젝트</b> 것이거나 — 고칠 법이 다릅니다. */
+function almkDiagSay(d){
+  var k=(d&&d.key)||{},L=(d&&d.live)||{};
+  if(k.kind==='none')
+    return '<b>서버에 열쇠가 아예 없습니다.</b> Netlify 에 <code>SUPABASE_SERVICE_ROLE_KEY</code> 를 넣어 주세요.';
+  if(k.kind==='jwt'&&k.refOk===false)
+    return '<b>다른 프로젝트의 열쇠입니다.</b> 열쇠는 「'+osEsc(k.ref||'?')+
+           '」 것인데 서버는 「'+osEsc(d.url||'?')+'」 를 부릅니다.';
+  if(k.kind==='jwt'&&k.role&&k.role!=='service_role')
+    return '<b>열쇠의 종류가 다릅니다.</b> 지금 들어 있는 것은 <code>'+osEsc(k.role)+
+           '</code> 인데 <code>service_role</code> 이어야 합니다.';
+  if(L.status&&L.status>=200&&L.status<300)
+    return '<b>서버 열쇠는 성합니다.</b> 다른 자리의 문제입니다.';
+  return '<b>서버 열쇠가 거절당했습니다.</b> Netlify 에서 <code>SUPABASE_SERVICE_ROLE_KEY</code> 를 '+
+         '<b>다시 넣어</b> 주셔야 합니다 — Supabase 의 Project Settings › API keys 에서 받으십니다.';
+}
+function almkDiagHtml(){
+  if(!ALMK.keyFault&&!ALMK.diag)return '';
+  var h='<div class="almk-diag"><div class="dh">🩺 서버 열쇠 살펴보기</div>';
+  if(ALMK.diagBusy)return h+'<div class="dl">보는 중…</div></div>';
+  if(!ALMK.diag)
+    return h+'<div class="dl"><button type="button" class="btn btn-ghost" onclick="almkDiag()">🩺 살펴보기</button></div></div>';
+  var d=ALMK.diag,k=d.key||{},L=d.live||{};
+  h+='<div class="dw">'+almkDiagSay(d)+'</div>';
+  h+='<div class="dl"><span>서버가 부르는 곳</span>'+osEsc(d.url||'(모름)')+'</div>';
+  h+='<div class="dl"><span>서버 열쇠 모양</span>'+
+     osEsc(k.kind==='none'?'없음':(k.kind||'?'))+
+     (k.len?(' · '+k.len+'글자'):'')+
+     (k.role?(' · '+osEsc(k.role)):'')+
+     (k.kind==='jwt'?(' · 프로젝트 '+(k.refOk?'맞음':'<b>다름</b>')):'')+'</div>';
+  h+='<div class="dl"><span>Supabase 대답</span>'+(L.status||'없음')+
+     (L.msg?(' · '+osEsc(L.msg)):'')+'</div>';
+  h+='<div class="dn">※ 열쇠 <b>글자 자체는 여기 안 나옵니다</b> — 모양과 대답만 보입니다.</div>';
+  return h+'</div>';
 }
 function almkSubSet(v){ ALMK.sub=(''+(v||'')).replace(/^\s+|\s+$/g,''); almPaint(); }
 function almkCopy(which){
@@ -14348,7 +14475,14 @@ function almkHtml(){
         ' onclick="almkSave()">'+(ALMK.busy?'담는 중…':'② 서버에 담기')+'</button>'):'')+
       '<button type="button" class="btn btn-ghost" onclick="almkToggle()">닫기</button>'+
     '</div>';
-  if(ALMK.err)h+='<div class="alm-why" style="margin-top:9px">'+v(ALMK.err)+'</div>';
+  /* ★ 서버가 보낸 이유는 <b>언제나 씩어서</b> 그린다 — 거기에는 Supabase 가
+     돌려준 남의 글이 섞인다. 굵게 적는 말은 <b>앱이 제 말로</b> 만든다. */
+  if(ALMK.err)
+    h+='<div class="alm-why" style="margin-top:9px">'+
+      (ALMK.keyFault?'<b>사장님 로그인은 멀줦합니다.</b> 서버가 Supabase 에 내민 '+
+        '열쇠가 거절당했습니다 — 아래를 보십시오.<br>':'')+
+      v(ALMK.err)+'</div>';
+  h+=almkDiagHtml();
   h+=almkRow('서버가 앱에게 보여 주는 열쇠입니다','VAPID_PUBLIC',ALMK.pub,'pub',false);
   h+=almkRow('<b>남에게 보이면 안 됩니다</b> — 채팅·메모에 붙이지 마십시오','VAPID_PRIVATE',ALMK.priv,'priv',true);
   h+='<div class="almk-r"><div class="almk-n">VAPID_SUBJECT<span>푸시 서버가 우리를 찾는 주소입니다</span></div>'+
@@ -14372,6 +14506,15 @@ function almCss(){
    /* 열쇠 만드는 칸 */
    '.almk{margin-top:10px;border:1px solid var(--ink-7);border-radius:var(--r-sm);padding:11px 12px;background:#F8FAFC}'+
    '.almk-t{font-size:var(--t5);font-weight:900;color:var(--ink-1);margin-bottom:4px}'+
+   /* 🩺 서버 열쇠 살펴보기 — 열쇠 글자는 여기 안 나옵니다 (10번) */
+   '.almk-diag{margin-top:9px;border:1px solid #FCD9B6;background:#FFFBF5;border-radius:var(--r-sm);'+
+     'padding:9px 11px;font-size:var(--t6);line-height:1.6;color:#7C2D12}'+
+   '.almk-diag .dh{font-weight:900;color:#9A3412;margin-bottom:5px}'+
+   '.almk-diag .dw{font-weight:700;padding:6px 8px;border-radius:9px;background:#FFF1E2;margin-bottom:6px}'+
+   '.almk-diag .dl{display:flex;gap:6px;padding:2px 0;word-break:break-all}'+
+   '.almk-diag .dl span{flex:0 0 106px;font-weight:800;color:#9A3412}'+
+   '.almk-diag .dn{margin-top:6px;color:#A16207;font-weight:700}'+
+   '.almk-diag code{background:#FFF1E2;border-radius:5px;padding:1px 5px}'+
    '.almk-d{font-size:var(--t6);line-height:1.7;color:var(--ink-4);margin-bottom:9px}'+
    '.almk-r{display:flex;gap:8px;flex-wrap:wrap;align-items:center;'+
      'border-top:1px dashed var(--ink-7);padding:9px 0}'+
@@ -16360,8 +16503,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-22 20:10';
-var APP_BUILD_NOTE="<b>📋 아침에 이 카드 하나만 보시면 전화가 됩니다 — 그리고 나이만 보고 고르던 것을 멈췄습니다.</b> 말씀하신 「<b>나이대만 보고 고르지 말고, 매일 아침 고객을 미팅할 수 있도록 자료를 정말 완벽하고 꼼꼼하게 준비해 줘</b>」 에 대한 답입니다.　—　<b>① 나이만으로는 이제 소식을 안 고릅니다.</b> 지난 판에서는 읽힌 33분 중 <b>19분이 나이만 보고</b> 고른 것이었습니다. 그건 근거가 아니라 <b>짐작</b>입니다. 이제 나이대는 <b>진짜 근거가 둘이고 힘이 똑같을 때만</b> 기울이고, 그때도 「60대라 연금 쪽으로 기울였습니다」 라고 <b>화면에 적습니다</b>. 다른 근거가 하나도 없으면 <b>못 읽었다</b>고 합니다.　—　<b>② 대신 「📋 이 분께 적혀 있는 것」 칸을 새로 세웠습니다.</b> 소식을 못 읽어도 <b>미팅은 됩니다</b> — <b>다음에 하기로 한 것</b>(날짜와 함께) · <b>지난번에 하신 것 3건</b>(날짜와 함께 그대로) · 직업 · 나이대 · <b>적어 두신 숫자</b>(수입 · 나가는 돈 · 노후 · 집·빚 · 지금 있는 보장) · 가구 메모 · 통화 메모, 그리고 배정 DB 분은 <b>잡아 둔 약속 · 마지막 통화(몇 번째인지까지)</b>. 사장님 109분 중 <b>61분께 이 칸이 섭니다.</b>　—　<b>③ 우리가 해석해서 얹는 말은 한 줄도 없습니다.</b> 「청약」·「TA」·「증권드림」은 <b>업무 기록</b>이지 고객의 관심사가 아닙니다. 갈래를 그것으로 읽으면 헛것을 잡습니다 — <b>날짜와 함께 그대로</b> 보여 드립니다. 어제 무엇을 했는지가 오늘 첫 마디를 만듭니다.　—　<b>④ 「모름」과 「0」을 가릅니다.</b> 사망보험금 빈칸은 <b>안 적으신 것</b>이고 0 은 <b>「없다고 적으심」</b>입니다. 섞으면 보장이 없는 분과 안 물어본 분이 같아 보입니다. 큰 금액은 <b>억</b>으로 적습니다.　—　<b>⑤ 「청약」 오독을 막았습니다.</b> 이 업에서 「청약」은 <b>보험 청약</b>인데 <b>주택청약</b>으로 읽고 있었습니다 — 사장님 기록 11건이 전부 보험 청약이었습니다. 계약을 넣어 드린 분께 부동산 기사를 보낼 뻔했습니다. 이제 「주택청약·청약통장·청약가점」만 부동산으로 읽습니다.　—　<b>소식 갈래는 6분 → 13분</b>입니다(가구 메모를 한 칸 더 받고 직업표를 더해서). 나머지 분께는 <b>지어내지 않고</b> 「아직 읽을 것이 없습니다」 라고 적고, 무엇을 적으시면 되는지 말씀드립니다. <b>「직업」 한 줄</b>을 적으시면 76분이 더 읽힙니다.";
+var APP_BUILD='2026-09-22 22:30';
+var APP_BUILD_NOTE="<b>🚦 「사장님이 하실 것」이 한 화면에 모였습니다 — 출발 점검에 두 줄을 더했습니다.</b> 더보기 › 시스템 › <b>🚦 출발 점검</b> (홈의 「⚙️ 관리 · 점검」 에서도 바로 갑니다).　—　<b>① 🔑 서버 열쇠(Supabase) — 지금 사장님을 막고 있는 그것입니다.</b> 아침 화면의 「401 · Invalid API key」 를 끝까지 따라갔습니다. 서버에 <b>엉터리 토큰</b>을 일부러 보내 봐도 똑같은 말이 왔습니다 — 토큰이 틀렸으면 「invalid JWT」라고 해야 합니다. <b>거절당한 것은 사장님 표가 아니라 서버가 내민 열쇠입니다.</b> 그런데 앱은 「앱을 닫았다 여신 뒤 다시 눌러 주세요」 라고 적고 있었습니다 — 그래서 몇 번이나 되풀이하셨습니다. 이제 이 줄이 <b>무엇이 틀렸고 어디를 고치는지</b> 그대로 적습니다. 「Netlify › Site configuration › Environment variables 의 <b>SUPABASE_SERVICE_ROLE_KEY</b>」 한 줄입니다. 단추를 누르면 Netlify 가 열립니다. <b>열쇠 글자는 화면에 한 자도 안 뜹니다</b> — 모양과 대답만 보입니다.　—　<b>이 한 줄이 알람만의 문제가 아닙니다.</b> 같은 열쇠를 <b>새벽 5시 AI 작업 · 밤 작업 · 브리핑 · 시세 · 투자 · 결제</b> 가 다 씁니다. 고치시면 <b>그것들도 같이 살아납니다.</b>　—　<b>② 💼 고객 직업 한 줄</b> — 소식을 고르는 데 <b>값이 제일 큰 칸</b>입니다. 몇 분이 적혀 있는지 세어 드립니다. 고객 365일 › 그 분 › 재무설계 답 의 「직업」 칸입니다. 사업자·공무원·교사·군인·경찰·소방·설계사만 알아듣고, <b>그 밖의 직업은 짐작하지 않고 버려둡니다</b>.　—　같은 「Invalid API key」여도 ⓐ 열쇠가 틀림 ⓑ <b>다른 프로젝트</b> 것 ⓒ 종류가 anon — 셋을 갈라 <b>사람 말로</b> 적습니다. 고칠 법이 다르기 때문입니다. 점검(check-ready·check-push)이 이제 <b>이 자리가 사장님 탓을 하거나 열쇠 글자를 흘리면</b> 빨간불을 켭니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
