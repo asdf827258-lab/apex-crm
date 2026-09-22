@@ -21705,7 +21705,7 @@ function hmDid(key){
    ★ <b>실명은 서버에 그대로 안 올린다</b>… 는 고객 365일 규칙이고,
      배정 DB(dbs.customer_name)는 팀이 함께 보는 자리라 지금 그대로 둔다
      (3번 · 2026-09-11 결정). 여기서 새로 가리지도, 벗기지도 않는다.     */
-var HDB={id:'',busy:'',open:false,err:'',sg:''};
+var HDB={id:'',busy:'',open:false,err:'',sg:'',one:null,has:null,load:'',want:''};
 /* 그 줄을 찾는 곳은 <b>한 곳</b> — AR.db 다 (5번) */
 function hdbRow(id){
   var L=(typeof AR!=='undefined'&&AR.db)||[],i;
@@ -21959,6 +21959,95 @@ function hdbClose(){
   if(e)e.classList.remove('on');
   HDB.open=false;HDB.id='';
 }
+/* ══ 고칠 때는 <b>그 한 줄만 서버에서 다시 받는다</b> ══════════════════
+   2026-09-22 · 사장님 말씀 ④ —
+     「DB통합CRM 페이지를 홈에서 모두 수정 <b>[절대 데이터가 깨지지 않아야 됨]</b>」
+
+   깨지고 있었습니다. 홈 목록(AR.db)은 서버에서 <b>연락처를 안 읽어 옵니다</b>
+   (7번 — 목록에 미리 다 받아 두지 않는다). 그런데 고치기 창에는 연락처 칸이
+   있었습니다. 그래서 창을 열면 <b>언제나 빈칸</b>이었고, 그대로 저장하면
+   서버에 있던 <b>전화번호가 지워졌습니다.</b> 비고·보고서명도 같은 병이라
+   그 칸들은 아예 없었습니다.
+
+   그래서 <b>손에 없는 칸은 화면에 세우지 않는다</b>로 바꿉니다 — 대신
+   창을 열 때 <b>그 한 줄만</b> 받아 옵니다(7번의 「필요할 때 그 한 줄만」).
+   다 받기 전에는 고치지 못하게 잠급니다. 못 받았으면 <b>고치는 길을 안 엽니다</b>
+   — 빈칸으로 저장하는 것보다 못 고치는 편이 낫습니다 (1번).                */
+var HDB_COLS_BASE='id,assigned_to,assigned_date,customer_name,phone,region,source,'+
+                  'report_name,memo,stage,contracted_at,policy_sent_at';
+/* 옛 서버에는 아직 없을 수 있는 칸 — 거절당하면 이것만 빼고 다시 받는다 */
+var HDB_COLS_NEW=['policy_no','touch_count'];
+var HDB_COLS=HDB_COLS_BASE+','+HDB_COLS_NEW.join(',');
+function hdbHasOf(c){
+  var m={},a=(''+c).split(','),i;
+  for(i=0;i<a.length;i++)m[a[i]]=true;
+  return m;
+}
+/* 그 칸을 손에 들고 있나 — <b>한 곳</b>에서만 답한다 (5번).
+   새로 넣는 줄은 지울 값이 없으니 다 세운다. */
+function hdbHas(col){ return HDB.has?!!HDB.has[col]:true; }
+function hdbLoadOne(id){
+  var sb=(typeof osClient==='function')?osClient():null;
+  HDB.one=null;HDB.has=null;HDB.load='busy';HDB.err='';
+  if(!sb){ HDB.load='err';HDB.err='서버에 연결되어 있지 않습니다.';return; }
+  var down=function(m){ return /column|42703|does not exist|schema cache/i.test(''+(m||'')); };
+  var read=function(c){
+    return sb.from('dbs').select(c).eq('id',id).limit(1).then(
+      function(res){ return {res:res,c:c}; },
+      function(e){ return {res:{error:e||{message:'네트워크 오류'}},c:c}; });
+  };
+  var take=function(o){
+    var res=o.res;
+    /* 칸이 없는 서버 — 새 칸만 빼고 한 번 더 */
+    if(res&&res.error&&down(res.error.message)&&o.c!==HDB_COLS_BASE)
+      return read(HDB_COLS_BASE).then(take);
+    if(HDB.id!==id||!HDB.open)return;   /* 그 사이 다른 분을 여셨다 */
+    if(!res||res.error){
+      HDB.load='err';
+      HDB.err='이분의 기록을 못 읽었습니다 — '+((res&&res.error&&res.error.message)||'네트워크 오류');
+      hdbRepaintForm();return;
+    }
+    var d=res.data,row=(d&&d.length)?d[0]:null;
+    if(!row){
+      HDB.load='err';
+      HDB.err='이분의 기록이 서버에 없습니다. 목록이 오래된 것일 수 있습니다.';
+      hdbRepaintForm();return;
+    }
+    HDB.one=row;HDB.has=hdbHasOf(o.c);HDB.load='';HDB.err='';
+    hdbRepaintForm(true);   /* 이제서야 칸이 선다 — 화면에서 베낄 것이 없다 */
+  };
+  read(HDB_COLS).then(take);
+}
+function hdbRetry(){ if(HDB.id){ hdbLoadOne(HDB.id); hdbRepaintForm(); } }
+/* 화면에 채울 값은 <b>한 곳</b>에서 온다 (5번) — 고칠 때는 서버에서 방금
+   받은 그 줄, 새로 넣을 때는 빈 줄. <b>목록(AR.db)에서 가져오지 않는다</b> —
+   목록은 몇 칸을 안 읽어 와서, 그것으로 채우면 빈칸이 서고 저장할 때 지워진다. */
+function hdbCur(want){
+  var o=HDB.one||{},nw=!HDB.id;
+  return {
+    name:''+(o.customer_name||''),phone:''+(o.phone||''),region:''+(o.region||''),
+    src:(''+(o.source||'')).replace(/^\s+|\s+$/g,'')||(nw?'일반':''),
+    rep:''+(o.report_name||''),memo:''+(o.memo||''),
+    stage:want||(''+(o.stage||''))||(nw?'미접촉':''),
+    cAt:(''+(o.contracted_at||'')).slice(0,10),
+    pAt:(''+(o.policy_sent_at||'')).slice(0,10),
+    polNo:''+(o.policy_no||''),
+    touch:(o.touch_count===null||o.touch_count===undefined||o.touch_count==='')?'':(''+o.touch_count),
+    got:(''+(o.assigned_date||'')).slice(0,10)||(nw?(new Date()).toISOString().slice(0,10):''),
+    who:''+(o.assigned_to||'')
+  };
+}
+/* 담당자를 <b>고를 수 있는 분</b>에게만 고르개를 낸다 — 못 바꿀 분께
+   고르개를 내면 눌러도 서버가 0줄로 막고, 그때부터 다른 단추도 안 믿는다 (8번).
+   명단은 성장판이 이미 받아 둔 사람들이다 — 서버를 더 안 부른다 (7번). */
+function hdbWhoList(){
+  var out=[],i,rs=[];
+  if(!hdbEditAll())return out;
+  try{ rs=(typeof arScope==='function')?arScope():[]; }catch(e){ rs=[]; }
+  for(i=0;i<rs.length;i++)if(rs[i]&&rs[i].id)out.push({id:rs[i].id,nm:rs[i].name||'팀원'});
+  out.sort(function(a,b){ return (''+a.nm).localeCompare(''+b.nm,'ko'); });
+  return out;
+}
 /* 새로 넣기 — id 가 없으면 새 줄 */
 function hdbNew(){ hdbOpen('',''); }
 function hdbOpen(id,wantStage){
@@ -21966,62 +22055,99 @@ function hdbOpen(id,wantStage){
   var r=id?hdbRow(id):null;
   if(id&&!r)return;
   if(r&&!hdbCan(r)){ if(typeof toast==='function')toast('내 고객이 아니면 고칠 수 없습니다.'); return; }
-  HDB.id=id||'';HDB.open=true;HDB.err='';
+  HDB.id=id||'';HDB.open=true;HDB.err='';HDB.one=null;HDB.has=null;
+  HDB.want=wantStage||'';HDB.load=id?'busy':'';
   var host=hdbHost();
-  document.getElementById('hdbBox').innerHTML=hdbFormHtml(r,wantStage||'');
+  if(id)hdbLoadOne(id);
+  document.getElementById('hdbBox').innerHTML=hdbFormHtml(r,HDB.want);
   host.classList.add('on');
   try{ var f=document.getElementById('hdbName'); if(f)f.focus(); }catch(e){}
 }
 function hdbFormHtml(r,wantStage){
-  var S=hdbStages(),i,st=wantStage||(r?r.stage:'미접촉');
-  var k=hdbNeeds(st);
   var v=function(x){ return (typeof osEsc==='function')?osEsc(x==null?'':x):(x==null?'':x); };
+  var tt='<div class="hdb-tt">'+(r?('✏️ '+v(r.name)+' 님 고치기'):'➕ 고객 새로 넣기')+'</div>';
+  /* 아직 못 받았으면 <b>칸을 안 세운다</b> — 빈칸을 보여 주면 빈칸으로 저장된다 */
+  if(HDB.load==='busy')return tt+
+    '<div class="hdb-st">📡 <b>이분의 기록을 서버에서 불러오는 중</b>입니다. 다 불러온 뒤에 고치실 수 있습니다 — '+
+    '목록에 없는 칸을 빈칸으로 세워 두면 저장할 때 <b>서버에 있던 값이 지워집니다.</b></div>'+
+    '<div class="hdb-btns"><button type="button" class="hdb-cancel" onclick="hdbClose()">닫기</button></div>';
+  if(HDB.load==='err')return tt+
+    '<div class="hdb-err">'+v(HDB.err)+'</div>'+
+    '<div class="hdb-st">못 읽은 채로는 <b>고치는 칸을 안 엽니다</b> — 빈칸으로 저장하면 서버에 있던 값이 지워집니다 (1번).</div>'+
+    '<div class="hdb-btns">'+
+      '<button type="button" class="hdb-save" onclick="hdbRetry()">🔄 다시 불러오기</button>'+
+      '<button type="button" class="hdb-cancel" onclick="hdbClose()">닫기</button>'+
+    '</div>';
+  var S=hdbStages(),i,c=hdbCur(wantStage||''),st=c.stage,k=hdbNeeds(st);
   var opt='';
   for(i=0;i<S.length;i++)opt+='<option value="'+v(S[i])+'"'+(S[i]===st?' selected':'')+'>'+v(S[i])+'</option>';
   var me=(typeof arMyId==='function')?arMyId():'';
-  var today=(new Date()).toISOString().slice(0,10);
-  return '<div class="hdb-tt">'+(r?('✏️ '+v(r.name)+' 님 고치기'):'➕ 고객 새로 넣기')+'</div>'+
+  var W=hdbWhoList(),wOpt='',whoNow=c.who||(r?r.who:me)||'';
+  for(i=0;i<W.length;i++)wOpt+='<option value="'+v(W[i].id)+'"'+(W[i].id===whoNow?' selected':'')+'>'+v(W[i].nm)+'</option>';
+  var whoBox=(W.length>1)
+    ? ('<div class="hdb-f"><label for="hdbWho">담당자</label><select id="hdbWho">'+wOpt+'</select></div>')
+    : '';
+  return tt+
     '<div class="hdb-st">여기서 저장하면 <b>DB 통합 CRM 에도 그대로</b> 뜹니다 — 같은 표를 씁니다.</div>'+
     (HDB.err?('<div class="hdb-err">'+v(HDB.err)+'</div>'):'')+
     '<div class="hdb-f"><label for="hdbName">고객명</label>'+
-      '<input id="hdbName" type="text" value="'+v(r?r.name:'')+'" placeholder="홍길동"></div>'+
+      '<input id="hdbName" type="text" value="'+v(c.name)+'" placeholder="홍길동"></div>'+
     '<div class="hdb-2">'+
       '<div class="hdb-f"><label for="hdbPhone">연락처</label>'+
-        '<input id="hdbPhone" type="tel" inputmode="numeric" value="'+v(r?(r.phone||''):'')+'" placeholder="010-0000-0000"></div>'+
+        '<input id="hdbPhone" type="tel" inputmode="numeric" value="'+v(c.phone)+'" placeholder="010-0000-0000"></div>'+
       '<div class="hdb-f"><label for="hdbRegion">지역</label>'+
-        '<input id="hdbRegion" type="text" value="'+v(r?r.region:'')+'" placeholder="천안"></div>'+
+        '<input id="hdbRegion" type="text" value="'+v(c.region)+'" placeholder="천안"></div>'+
     '</div>'+
     '<div class="hdb-2">'+
       '<div class="hdb-f"><label for="hdbSrc">DB 종류</label>'+
-        '<input id="hdbSrc" type="text" value="'+v(r?r.src:'일반')+'" placeholder="보장분석3DB"></div>'+
+        '<input id="hdbSrc" type="text" value="'+v(c.src)+'" placeholder="보장분석3DB"></div>'+
       '<div class="hdb-f"><label for="hdbStage">단계</label>'+
         '<select id="hdbStage" onchange="hdbStagePick()">'+opt+'</select></div>'+
     '</div>'+
     '<div class="hdb-2" id="hdbDates"'+((k.won||k.pol)?'':' hidden')+'>'+
       '<div class="hdb-f"><label for="hdbCAt">계약일</label>'+
-        '<input id="hdbCAt" type="date" value="'+v(r?r.cAt:'')+'"></div>'+
+        '<input id="hdbCAt" type="date" value="'+v(c.cAt)+'"></div>'+
       '<div class="hdb-f" id="hdbPolBox"'+(k.pol?'':' hidden')+'><label for="hdbPAt">증권 전달일</label>'+
-        '<input id="hdbPAt" type="date" value="'+v(r?r.pAt:'')+'"></div>'+
+        '<input id="hdbPAt" type="date" value="'+v(c.pAt)+'"></div>'+
     '</div>'+
-    (r?'':'<div class="hdb-f"><label for="hdbGot">배정일</label>'+
-        '<input id="hdbGot" type="date" value="'+today+'"></div>')+
+    (hdbHas('policy_no')
+      ? ('<div class="hdb-f" id="hdbNoBox"'+(k.won?'':' hidden')+'><label for="hdbPolNo">증권번호</label>'+
+         '<input id="hdbPolNo" type="text" value="'+v(c.polNo)+'" placeholder="계약이 되면 적습니다"></div>')
+      : '')+
+    '<div class="hdb-2">'+
+      '<div class="hdb-f"><label for="hdbRep">보고서 이름</label>'+
+        '<input id="hdbRep" type="text" value="'+v(c.rep)+'" placeholder="보장분석 3DB"></div>'+
+      (hdbHas('touch_count')
+        ? ('<div class="hdb-f"><label for="hdbTouch">터치 횟수</label>'+
+           '<input id="hdbTouch" type="number" inputmode="numeric" min="0" step="1" value="'+v(c.touch)+'" placeholder="비우면 통화 건수로 셉니다"></div>')
+        : '')+
+    '</div>'+
+    '<div class="hdb-2">'+
+      '<div class="hdb-f"><label for="hdbGot">배정일</label>'+
+        '<input id="hdbGot" type="date" value="'+v(c.got)+'"></div>'+
+      whoBox+
+    '</div>'+
+    '<div class="hdb-f"><label for="hdbMemo">비고</label>'+
+      '<textarea id="hdbMemo" rows="3" placeholder="DB 통합 CRM 의 비고와 같은 칸입니다">'+v(c.memo)+'</textarea></div>'+
     '<div class="hdb-btns">'+
       '<button type="button" class="hdb-save" onclick="hdbSave()">저장</button>'+
       '<button type="button" class="hdb-cancel" onclick="hdbClose()">닫기</button>'+
       (r&&hdbCan(r)?'<button type="button" class="hdb-del" onclick="hdbDel(\'' + (r.id) + '\')">지우기</button>':'')+
     '</div>'+
-    '<div class="hdb-st" style="margin:10px 0 0">담당자는 <b>'+
+    (whoBox?'':'<div class="hdb-st" style="margin:10px 0 0">담당자는 <b>'+
       v((typeof hwhoName==='function'&&r&&r.who)?hwhoName(r.who):((typeof arNameOf==='function'&&me)?arNameOf(me):'나'))+
-      '</b> 입니다. 담당자를 바꾸는 것은 DB 통합 CRM 에서 합니다 — 여기서 두 곳이 배정하면 어긋납니다.</div>';
+      '</b> 입니다. 담당자를 바꾸는 것은 <b>대표·본부장</b>만 할 수 있습니다.</div>');
 }
 /* 단계를 고르면 <b>필요한 날짜 칸만</b> 연다 — 어느 단계가 무엇을 들고
    있는지는 apex-stage.js 가 안다 (5번) */
 function hdbStagePick(){
   var sel=document.getElementById('hdbStage');
   if(!sel)return;
-  var k=hdbNeeds(sel.value),d=document.getElementById('hdbDates'),p=document.getElementById('hdbPolBox');
+  var k=hdbNeeds(sel.value),d=document.getElementById('hdbDates'),
+      p=document.getElementById('hdbPolBox'),n=document.getElementById('hdbNoBox');
   if(d)d.hidden=!(k.won||k.pol);
   if(p)p.hidden=!k.pol;
+  if(n)n.hidden=!k.won;
 }
 function hdbVal(id){
   var e=document.getElementById(id);
@@ -22031,61 +22157,101 @@ function hdbSave(){
   var sb=(typeof osClient==='function')?osClient():null;
   if(!sb){ HDB.err='서버에 연결되어 있지 않습니다.'; hdbRepaintForm(); return; }
   var id=HDB.id,r=id?hdbRow(id):null;
+  /* 다 못 받았으면 <b>저장하지 않는다</b> — 여기까지 올 일은 거의 없지만,
+     오면 그것이 바로 값이 지워지는 자리다 (1번) */
+  if(id&&!HDB.one){ HDB.err='아직 불러오는 중입니다 — 잠시만 기다려 주세요.'; hdbRepaintForm(); return; }
   var nm=hdbVal('hdbName');
   if(!nm){ HDB.err='고객명을 적어 주세요.'; hdbRepaintForm(); return; }
   var st=hdbVal('hdbStage'),k=hdbNeeds(st);
-  var cAt=hdbVal('hdbCAt'),pAt=hdbVal('hdbPAt');
+  var cAt=hdbVal('hdbCAt'),pAt=hdbVal('hdbPAt'),got=hdbVal('hdbGot');
   /* 날짜가 필요한 단계인데 비어 있으면 <b>저장하지 않는다.</b> 오늘 날짜로
      채워 넣으면 그것이 계약일이 되어 버린다 — 지어내지 않는다 (1번). */
   if(k.won&&!cAt){ HDB.err='「'+st+'」 이면 계약일을 적어 주세요 — 여기서 날짜를 지어내지 않습니다.'; hdbRepaintForm(); return; }
   if(k.pol&&!pAt){ HDB.err='「'+st+'」 이면 증권 전달일을 적어 주세요.'; hdbRepaintForm(); return; }
+  /* 배정일은 서버가 <b>비울 수 없는 칸</b>이다. 비운 채로 보내면 통째로 거절당한다 */
+  if(!got){ HDB.err='배정일을 적어 주세요 — 비울 수 없는 칸입니다.'; hdbRepaintForm(); return; }
   var me=(typeof arMyId==='function')?arMyId():null;
   var p={customer_name:nm,phone:hdbVal('hdbPhone')||null,region:hdbVal('hdbRegion')||null,
          source:hdbVal('hdbSrc')||'일반',stage:st,
+         report_name:hdbVal('hdbRep')||'보장분석 3DB',
+         memo:hdbVal('hdbMemo')||null,
+         assigned_date:got,
          contracted_at:k.won?(cAt||null):null,
          policy_sent_at:k.pol?(pAt||null):null,
          updated_at:new Date().toISOString()};
+  /* 증권번호·터치 횟수는 <b>손에 들고 있을 때만</b> 보낸다 — 안 읽어 온 칸을
+     보내면 서버에 없는 칸이라 통째로 거절당하거나, 빈 값으로 덮어쓴다 */
+  if(hdbHas('policy_no'))p.policy_no=k.won?(hdbVal('hdbPolNo')||null):null;
+  if(hdbHas('touch_count')){
+    /* <b>빈칸은 「모름」(null)</b>이라 통화 건수로 세고, <b>0 은 0</b>이다 (1번) */
+    var tv=hdbVal('hdbTouch'),tn=(tv==='')?null:Math.max(0,Math.round(Number(tv)));
+    p.touch_count=(tv!==''&&isFinite(tn))?tn:null;
+  }
+  var wsel=document.getElementById('hdbWho');
+  if(wsel&&wsel.value)p.assigned_to=wsel.value;
   if(!id){
-    p.assigned_to=r?r.who:me;
-    p.assigned_date=hdbVal('hdbGot')||(new Date()).toISOString().slice(0,10);
-    p.report_name='보장분석 3DB';
+    if(!p.assigned_to)p.assigned_to=r?r.who:me;
     if(me)p.created_by=me;
     if(!p.assigned_to){ HDB.err='담당자를 알 수 없습니다 — 다시 로그인해 주세요.'; hdbRepaintForm(); return; }
   }
   HDB.busy='save';HDB.err='';hdbRepaintForm();
-  var q=id?sb.from('dbs').update(p).eq('id',id).select('id')
-          :sb.from('dbs').insert(p).select('id');
-  q.then(function(res){
+  var down=function(m){ return /column|42703|does not exist|schema cache/i.test(''+(m||'')); };
+  var put=function(p2){
+    return id?sb.from('dbs').update(p2).eq('id',id).select('id')
+             :sb.from('dbs').insert(p2).select('id');
+  };
+  var done=function(res){
     HDB.busy='';
     var w=hdbWrote(res);
     if(w.ok!==true){
       HDB.err='저장하지 못했습니다 — '+w.why;
       hdbRepaintForm();return;
     }
-    if(id)hdbLocal(id,{name:nm,phone:p.phone||'',region:p.region||'',src:p.source,
-                       stage:st,cAt:cAt||'',pAt:pAt||''});
+    if(id)hdbLocal(id,{name:nm,region:p.region||'',src:p.source,
+                       stage:st,cAt:cAt||'',pAt:pAt||'',got:got||'',
+                       who:p.assigned_to||(r?r.who:'')});
     hdbClose();
     if(typeof toast==='function')toast(nm+' 님을 저장했습니다 — DB 통합 CRM 에도 올라갑니다');
-    /* 새로 넣은 줄은 손에 없다 — 그때만 서버를 다시 부른다 (7번) */
-    if(!id&&typeof arLoad==='function')try{ arLoad(true); }catch(e){}
+    /* 새로 넣은 줄과 <b>담당자가 바뀐 줄</b>은 손에 든 것으로 못 맞춘다 (7번) */
+    if((!id||(p.assigned_to&&r&&p.assigned_to!==r.who))&&typeof arLoad==='function')try{ arLoad(true); }catch(e){}
     hdbPaint();
-  },function(e){
+  };
+  var fail=function(e){
     HDB.busy='';
     HDB.err='저장하지 못했습니다 — '+((e&&e.message)||'네트워크 오류');
     hdbRepaintForm();
-  });
+  };
+  put(p).then(function(res){
+    /* 새 칸이 아직 없는 서버 — <b>그 둘만 빼고</b> 다시 보낸다. migration 을
+       안 돌렸을 뿐인데 저장 자체가 막히면 안 된다 */
+    if(res&&res.error&&down(res.error.message)&&
+       /policy_no|touch_count/i.test(''+(res.error.message||''))){
+      var p3={},key;
+      for(key in p)if(p.hasOwnProperty(key)&&HDB_COLS_NEW.indexOf(key)<0)p3[key]=p[key];
+      return put(p3).then(done,fail);
+    }
+    done(res);
+  },fail);
 }
-function hdbRepaintForm(){
+/* fresh 를 켜면 <b>화면에서 베낄 않는다</b> — 방금 불러온 값으로
+   첫 칸을 세우는 자리다. 그 전 화면은 「불러오는 중」이라 베낄 것이 없다. */
+function hdbRepaintForm(fresh){
   var b=document.getElementById('hdbBox');
   if(!b||!HDB.open)return;
-  var keep={n:hdbVal('hdbName'),p:hdbVal('hdbPhone'),g:hdbVal('hdbRegion'),
-            s:hdbVal('hdbSrc'),st:hdbVal('hdbStage'),c:hdbVal('hdbCAt'),o:hdbVal('hdbPAt')};
-  b.innerHTML=hdbFormHtml(HDB.id?hdbRow(HDB.id):null,keep.st);
-  /* 치던 것을 <b>도로 넣어 준다</b> — 오류 한 줄 때문에 다 다시 치게 하면
-     그 자리에서 창을 닫으신다 */
+  /* 치시던 것을 <b>도로 넣어 준다</b> — 오류 한 줄 때문에 다 다시 치게 하면
+     그 자리에서 창을 닫으신다. 아직 칸이 없는 판(불러오는 중·못 읽음)에서는
+     넣을 것도 없다. */
+  var keep=(!fresh&&HDB.load==='')?{n:hdbVal('hdbName'),p:hdbVal('hdbPhone'),g:hdbVal('hdbRegion'),
+            s:hdbVal('hdbSrc'),st:hdbVal('hdbStage'),c:hdbVal('hdbCAt'),o:hdbVal('hdbPAt'),
+            no:hdbVal('hdbPolNo'),rp:hdbVal('hdbRep'),tc:hdbVal('hdbTouch'),
+            gt:hdbVal('hdbGot'),mm:hdbVal('hdbMemo')}:null;
+  b.innerHTML=hdbFormHtml(HDB.id?hdbRow(HDB.id):null,(keep&&keep.st)||HDB.want||'');
+  if(!keep)return;
   var put=function(i,v){ var e=document.getElementById(i); if(e&&v)e.value=v; };
   put('hdbName',keep.n);put('hdbPhone',keep.p);put('hdbRegion',keep.g);
   put('hdbSrc',keep.s);put('hdbCAt',keep.c);put('hdbPAt',keep.o);
+  put('hdbPolNo',keep.no);put('hdbRep',keep.rp);put('hdbTouch',keep.tc);
+  put('hdbGot',keep.gt);put('hdbMemo',keep.mm);
   hdbStagePick();
 }
 function hdbDel(id){
