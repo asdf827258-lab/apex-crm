@@ -147,6 +147,15 @@ window.supabase={createClient:function(){
   ok(v.manOn === 1, '새로고침해도 지운 것은 지워진 채로 있다');
 
   /* ── 다 되면 다 됐다고 한다 ── */
+  /* ⚠ <b>흉내를 먼저 걸어 둔다.</b> 아래 osReadyAfterRender() 가 부르는 읽기와
+     뒤에서 거는 강제 읽기가 <b>겹쳐서</b>, 늦게 끝난 쪽(흉내 없는 쪽)이
+     RD.rows 를 덮었다. 3번에 1번 빨간불이 켜졌다 — 깜빡이는 점검은
+     안 잡는 점검보다 나쁘다 (8번). */
+  const diagOk = { url: 'miakdhxtqofpndtlyzxa.supabase.co', anon: true,
+    key: { kind: 'jwt', len: 218, role: 'service_role', ref: 'miakdhxtqofpndtlyzxa', refOk: true },
+    live: { status: 200, msg: '' } };
+  await page.route('**/functions/push**', r =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(diagOk) }));
   await page.evaluate(() => {
     OS.cfg = { schema_version: String(SETUP_VER) };
     LG_BIZ.forEach(x => OS.cfg[x[0]] = '값');
@@ -171,14 +180,11 @@ window.supabase={createClient:function(){
        읽는다」 가 깨져도 이 점검은 모른다 (8번). */
     osReadyAfterRender();
   });
-  /* 열쇠가 성한 대답을 돌려주게 — 사장님이 Netlify 한 줄을 고치신 뒤다 */
-  await page.route('**/functions/push**', r =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
-      url: 'miakdhxtqofpndtlyzxa.supabase.co', anon: true,
-      key: { kind: 'jwt', len: 218, role: 'service_role', ref: 'miakdhxtqofpndtlyzxa', refOk: true },
-      live: { status: 200, msg: '' } }) }));
-  await page.evaluate(() => rdLoad(true));
-  await page.waitForTimeout(900);
+  /* <b>시계로 기다리지 않는다</b> — 값이 될 때까지 기다린다. 900ms 로 재던
+     것이 느린 판에서 덜 끝나 빨간불이 켜졌다 (8번). */
+  await page.waitForFunction(
+    () => { const x = rdAuto().filter(r => r.k === 'sbkey')[0]; return !!(x && x.st === 'ok'); },
+    null, { timeout: 8000 }).catch(() => {});
   v = await view();
   ok(v.no === 0 && v.warn === 0, '전부 채우면 남은 것이 0개가 된다');
   ok(/앱 쪽은 전부 준비됐습니다/.test(v.txt), '앱 쪽이 끝났다고 말해 준다');
@@ -210,12 +216,19 @@ window.supabase={createClient:function(){
      <b>통째로</b> 멈춥니다. 여기서 보이게 하고, <b>사장님 탓을 하지 않는지</b>
      그리고 <b>열쇠 글자가 새지 않는지</b>를 잽니다 (1·8·10번).            */
   const SECRET = 'eyJhbGciOiJIUzI1NiJ9.SECRET_DO_NOT_LEAK.sig';
-  const setDiag = async (body) => {
+  /* 흉내를 갈아 끼우고 <b>그 값이 실제로 올 때까지</b> 기다린다 (시계 금지) */
+  const setDiag = async (body, want) => {
     await page.unroute('**/functions/push**').catch(() => {});
     await page.route('**/functions/push**', r =>
       r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) }));
     await page.evaluate(() => rdLoad(true));
-    await page.waitForTimeout(700);
+    /* ⚠ 기다리다 시간이 넘어도 <b>터지지 않는다</b>. 줄을 통째로 빼 보니
+       여기서 예외가 나 점검이 <b>빨간불 대신 죽었고</b>, 뒤의 여덟 줄을
+       아예 못 쟀다. 한 곳이 망가지면 나머지가 눈이 먼다 — 아래 ok() 들이
+       제 입으로 무엇이 틀렸는지 말하게 둔다 (8번). */
+    await page.waitForFunction(
+      (w) => { const x = rdAuto().filter(r => r.k === 'sbkey')[0]; return !!(x && x.st === w); },
+      want, { timeout: 8000 }).catch(() => {});
   };
   const rowOf = (k) => page.evaluate((kk) => {
     const x = rdAuto().filter(r => r.k === kk)[0] || null;
@@ -224,34 +237,34 @@ window.supabase={createClient:function(){
 
   await setDiag({ url: 'miakdhxtqofpndtlyzxa.supabase.co', anon: false,
                   key: { kind: 'jwt', len: 218, role: 'service_role', ref: 'miakdhxtqofpndtlyzxa', refOk: true },
-                  live: { status: 401, msg: 'Invalid API key' } });
+                  live: { status: 401, msg: 'Invalid API key' } }, 'no');
   let K = await rowOf('sbkey');
   ok(!!K, '🔑 <b>서버 열쇠</b> 줄이 출발 점검에 선다 — 여태 아무 화면에도 없었다');
-  ok(K && K.st === 'no', '  열쇠가 거절당하면 <b>「남음」</b> 으로 뜬다 · ' + (K && K.now));
-  ok(K && !/로그인/.test(K.now + ' ' + K.how),
+  ok(!!(K && K.st === 'no'), '  열쇠가 거절당하면 <b>「남음」</b> 으로 뜬다 · ' + ((K && K.now) || '(줄이 없음)'));
+  ok(!!(K && !/로그인/.test(K.now + ' ' + K.how)),
      '  <b>「로그인을 다시 하세요」 라고 안 한다</b> — 그래 봐야 안 고쳐진다 (1번)');
-  ok(K && /SUPABASE_SERVICE_ROLE_KEY/.test(K.how) && /Netlify/.test(K.how),
+  ok(!!(K && /SUPABASE_SERVICE_ROLE_KEY/.test(K.how) && /Netlify/.test(K.how)),
      '  <b>어디를 고치는지</b> 그대로 적는다 — Netlify 의 그 한 줄');
-  ok(K && /새벽 5시|밤 작업|브리핑/.test(K.how),
+  ok(!!(K && /새벽 5시|밤 작업|브리핑/.test(K.how)),
      '  <b>같이 멈추는 것</b>도 말한다 — 알람만의 문제가 아니다');
 
   await setDiag({ url: 'miakdhxtqofpndtlyzxa.supabase.co', anon: false,
                   key: { kind: 'jwt', len: 218, role: 'service_role', ref: 'someotherproj', refOk: false },
-                  live: { status: 401, msg: 'Invalid API key' } });
+                  live: { status: 401, msg: 'Invalid API key' } }, 'no');
   K = await rowOf('sbkey');
-  ok(K && /다른 프로젝트/.test(K.now),
-     '<b>다른 프로젝트 열쇠</b>를 가려낸다 — 같은 말이 와도 고칠 법이 다르다 · ' + (K && K.now));
+  ok(!!(K && /다른 프로젝트/.test(K.now)),
+     '<b>다른 프로젝트 열쇠</b>를 가려낸다 — 같은 말이 와도 고칠 법이 다르다 · ' + ((K && K.now) || '(줄이 없음)'));
 
   await setDiag({ url: 'miakdhxtqofpndtlyzxa.supabase.co', anon: true,
                   key: { kind: 'jwt', len: 218, role: 'service_role', ref: 'miakdhxtqofpndtlyzxa', refOk: true },
-                  live: { status: 200, msg: '' } });
+                  live: { status: 200, msg: '' } }, 'ok');
   K = await rowOf('sbkey');
-  ok(K && K.st === 'ok', '<b>성하면 「됨」</b> 으로 뜬다 — 헛것을 안 잡는다 (8번) · ' + (K && K.now));
+  ok(!!(K && K.st === 'ok'), '<b>성하면 「됨」</b> 으로 뜬다 — 헛것을 안 잡는다 (8번) · ' + ((K && K.now) || '(줄이 없음)'));
 
   /* 열쇠 글자가 <b>화면에 새는지</b> — 서버가 실수로 실어 보내도 여기서 걸린다 */
   await setDiag({ url: 'x.supabase.co', anon: false, key_RAW: SECRET,
                   key: { kind: 'jwt', len: 218, role: 'service_role', ref: 'x', refOk: true },
-                  live: { status: 401, msg: 'Invalid API key' } });
+                  live: { status: 401, msg: 'Invalid API key' } }, 'no');
   await page.evaluate(() => go('ready'));
   await page.waitForTimeout(600);
   const leak = await page.evaluate(() => (document.getElementById('rdPane') || {}).textContent || '');
@@ -265,8 +278,8 @@ window.supabase={createClient:function(){
   });
   const J = await rowOf('job');
   ok(!!J, '💼 <b>고객 직업 한 줄</b> 줄이 선다');
-  ok(J && /1 \/ 3/.test(J.now), '  <b>몇 분이 적혀 있는지</b> 센다 · ' + (J && J.now));
-  ok(J && J.st === 'warn', '  다 안 적혔으면 <b>「확인」</b> — 0명이면 「남음」');
+  ok(!!(J && /1 \/ 3/.test(J.now)), '  <b>몇 분이 적혀 있는지</b> 센다 · ' + ((J && J.now) || '(줄이 없음)'));
+  ok(!!(J && J.st === 'warn'), '  다 안 적혔으면 <b>「확인」</b> — 0명이면 「남음」');
   ok(!!(J && /짐작/.test(J.how)),
      '  <b>아무 직업이나 읽는 게 아니라고</b> 미리 말한다 — 적어 놓고 안 읽히면 속은 기분이다 (1번)');
   await page.unroute('**/functions/push**').catch(() => {});
