@@ -986,6 +986,53 @@ const AI_OK = `## 활동 보고
   await page.evaluate(() => { document.querySelectorAll('#osOvl,.os-ovl').forEach(x => x.remove()); });
   await seat('owner');
 
+  /* ── 📐 <b>한눈에 들어오는가</b> ────────────────────────────────────
+     사장님 말씀 (2026-09-22) — 「TFA 업무관리 칸이 <b>한눈에 안 들어와</b>,
+     넓이를 한눈에 전부 보이게 만들어 줘」.
+     재 봤더니 두 군데가 걸렸습니다 —
+       ① 1440px 화면인데 본문이 <b>1028px</b> 만 쓰고 있었다(.tab-pane 의
+          max-width:1080). 오른쪽이 그냥 비어 있었다.
+       ② 왼쪽 갈래 설명이 <b>여덟 중 다섯</b>이 … 로 끝났다. 「고객 체크」 가
+          무엇을 하는 칸인지 못 읽으셨을 겁니다.
+     둘 다 여기서 잽니다.                                               */
+  {
+    const wide = async (W) => {
+      await page.setViewportSize({ width: W, height: 1000 });
+      await page.waitForTimeout(350);
+      return page.evaluate(() => {
+        /* ⚠ <b>가로·세로를 다 봐야 한다.</b> 처음엔 세로만 쟀는데, 한 줄로
+           자르면(white-space:nowrap) 넘치는 쪽은 <b>가로</b>라서 되돌려도
+           빨간불이 안 켜졌다. 안 울리는 알람은 알람이 아니다 (8번). */
+        const cut = [...document.querySelectorAll('.ar-cat .m em')]
+          .filter(e => e.scrollWidth > e.clientWidth + 2 || e.scrollHeight > e.clientHeight + 2).length;
+        const main = document.querySelector('.ar-main');
+        const host = document.querySelector('#main') || document.body;
+        return { main: main ? Math.round(main.getBoundingClientRect().width) : 0,
+                 host: Math.round(host.getBoundingClientRect().width),
+                 pane: !!document.querySelector('.tab-pane.wide'),
+                 cut: cut,
+                 sw: document.documentElement.scrollWidth,
+                 cw: document.documentElement.clientWidth };
+      });
+    };
+    const w14 = await wide(1440);
+    ok(w14.pane, '📐 TFA 는 <b>폭을 다 쓰는 판</b>으로 선다 (.tab-pane.wide)');
+    ok(w14.main >= 800,
+       '  1440px 에서 본문이 <b>800px 이상</b> 이다 — ' + w14.main + 'px (고치기 전 694px)');
+    ok(w14.cut === 0,
+       '  왼쪽 갈래 설명이 <b>안 잘린다</b> — 잘린 것 ' + w14.cut + '개 (고치기 전 다섯 개)');
+    const w19 = await wide(1920);
+    ok(w19.main >= 1100,
+       '  1920px 에서도 <b>남는 자리를 쓴다</b> — ' + w19.main + 'px (고치기 전 762px)');
+    ok(w19.sw <= w19.cw + 1, '  넓혀도 <b>옆으로 안 샌다</b> — ' + w19.sw + '/' + w19.cw);
+    /* ★ <b>폰에서는 넓히면 안 된다</b> — 한 줄로 떨어져야 읽힌다 */
+    const w39 = await wide(390);
+    ok(w39.sw <= w39.cw + 1, '  <b>폰(390px)에서도 옆으로 안 샌다</b> — ' + w39.sw + '/' + w39.cw);
+    ok(w39.cut === 0, '  폰에서도 설명이 <b>안 잘린다</b>');
+    await page.setViewportSize({ width: 1240, height: 1400 });
+    await page.waitForTimeout(300);
+  }
+
   ok(errs.length === 0, '자바스크립트 오류 없음' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
 
   await browser.close(); srv.close();

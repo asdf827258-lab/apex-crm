@@ -832,6 +832,12 @@ a{color:inherit;text-decoration:none;}
 .main::-webkit-scrollbar{width:6px;}
 .main::-webkit-scrollbar-thumb{background:var(--ink-6);border-radius:var(--r-pill);}
 .tab-pane{display:none;padding:22px 26px 72px;max-width:1080px;}
+/* 사장님 말씀 (2026-09-22) — 「TFA 업무관리 칸이 한눈에 안 들어와,
+   넓이를 한눈에 전부 보이게 만들어 줘」. 재 보니 1440px 화면에서
+   본문은 1028px 만 쓰고 있었습니다 — 이 max-width 가 묶고 있었습니다.
+   <b>칸이 많은 화면만</b> 풀어 줍니다. 글만 있는 화면까지 넓히면
+   한 줄이 너무 길어져 오히려 읽기 힘듭니다.                        */
+.tab-pane.wide{max-width:1560px;}
 .tab-pane.on{display:block;animation:fade .25s var(--ease);}
 @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
 
@@ -10590,21 +10596,26 @@ function arCss(){
    '.ar-bb{border:1.5px solid #E2E8F0;background:#fff;border-radius:var(--r-pill);padding:7px 14px;'+
      'font-size:var(--t6);font-weight:800;color:#475569;cursor:pointer;font-family:inherit}'+
    '.ar-bb:hover{background:#F8FAFC}'+
-   '.ar-wrap{display:grid;grid-template-columns:248px 1fr;gap:18px;align-items:start}'+
+   '.ar-wrap{display:grid;grid-template-columns:268px 1fr;gap:18px;align-items:start}'+
    '@media(max-width:900px){.ar-wrap{grid-template-columns:1fr}}'+
    '.ar-side{position:sticky;top:12px;display:flex;flex-direction:column;gap:3px;background:#fff;'+
      'border:1.5px solid #EDF1F6;border-radius:var(--r);padding:10px}'+
    '@media(max-width:900px){.ar-side{position:static}}'+
    '.ar-shd{font-size:var(--t6);font-weight:900;color:#94A3B8;letter-spacing:.1em;padding:9px 10px 5px}'+
-   '.ar-cat{display:flex;align-items:center;gap:9px;border:0;background:transparent;border-radius:var(--r-sm);'+
+   '.ar-cat{display:flex;align-items:flex-start;gap:9px;border:0;background:transparent;border-radius:var(--r-sm);'+
      'padding:9px 10px;cursor:pointer;text-align:left;font-family:inherit;width:100%}'+
    '.ar-cat:hover{background:#F8FAFC}'+
    '.ar-cat.on{background:#0F172A}'+
    '.ar-cat .e{font-size:var(--t3);flex:none}'+
    '.ar-cat .m{flex:1;min-width:0}'+
    '.ar-cat .m b{display:block;font-size:var(--t6);font-weight:800;color:#1E293B}'+
-   '.ar-cat .m em{display:block;font-style:normal;font-size:var(--t6);color:#94A3B8;margin-top:1px;'+
-     'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+   /* ⚠ <b>여기서 설명이 잘렸습니다.</b> 1280px 에서 여덟 갈래 중 <b>다섯개</b>가
+      … 로 끝났습니다 — 「고객 체크」 가 무엇을 하는 칸인지 못 읽으셨을 겁니다.
+      한 줄로 박아 두는 대신 <b>두 줄까지 접어</b> 보입니다. 세 줄부터는
+      접습니다 — 안 그러면 갈래 하나가 목록 절반을 먹습니다.           */
+   '.ar-cat .m em{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;'+
+     'font-style:normal;font-size:var(--t6);color:#94A3B8;margin-top:1px;line-height:1.35;'+
+     'overflow:hidden;white-space:normal;word-break:keep-all}'+
    '.ar-cat.on .m b{color:#fff}.ar-cat.on .m em{color:#93C5FD}'+
    '.ar-cat .n{flex:none;font-size:var(--t6);font-weight:900;color:#fff;background:#DC2626;'+
      'border-radius:var(--r-lg);padding:2px 7px;min-width:18px;text-align:center}'+
@@ -12107,7 +12118,7 @@ function renderAiRep(){
     '피드백 · 스케줄 · 역량 · 해야 할 일 · 내 업적 · 고객 체크 · 30일 고객관리를 '+
     '왼쪽에서 고르면 이 자리에서 바로 봅니다. 지점장은 리더 할 일과 팀원 관리까지 같은 칸에서. '+
     '아침에 누구에게 전화할지는 <b>홈 🌅 아침 미션</b>에서 합니다.',
-    '<div id="arPane">'+arInnerHtml()+'</div>');
+    '<div id="arPane">'+arInnerHtml()+'</div>', 1);
 }
 function osAiRepAfterRender(){
   arCss();
@@ -16503,8 +16514,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-22 22:30';
-var APP_BUILD_NOTE="<b>🚦 「사장님이 하실 것」이 한 화면에 모였습니다 — 출발 점검에 두 줄을 더했습니다.</b> 더보기 › 시스템 › <b>🚦 출발 점검</b> (홈의 「⚙️ 관리 · 점검」 에서도 바로 갑니다).　—　<b>① 🔑 서버 열쇠(Supabase) — 지금 사장님을 막고 있는 그것입니다.</b> 아침 화면의 「401 · Invalid API key」 를 끝까지 따라갔습니다. 서버에 <b>엉터리 토큰</b>을 일부러 보내 봐도 똑같은 말이 왔습니다 — 토큰이 틀렸으면 「invalid JWT」라고 해야 합니다. <b>거절당한 것은 사장님 표가 아니라 서버가 내민 열쇠입니다.</b> 그런데 앱은 「앱을 닫았다 여신 뒤 다시 눌러 주세요」 라고 적고 있었습니다 — 그래서 몇 번이나 되풀이하셨습니다. 이제 이 줄이 <b>무엇이 틀렸고 어디를 고치는지</b> 그대로 적습니다. 「Netlify › Site configuration › Environment variables 의 <b>SUPABASE_SERVICE_ROLE_KEY</b>」 한 줄입니다. 단추를 누르면 Netlify 가 열립니다. <b>열쇠 글자는 화면에 한 자도 안 뜹니다</b> — 모양과 대답만 보입니다.　—　<b>이 한 줄이 알람만의 문제가 아닙니다.</b> 같은 열쇠를 <b>새벽 5시 AI 작업 · 밤 작업 · 브리핑 · 시세 · 투자 · 결제</b> 가 다 씁니다. 고치시면 <b>그것들도 같이 살아납니다.</b>　—　<b>② 💼 고객 직업 한 줄</b> — 소식을 고르는 데 <b>값이 제일 큰 칸</b>입니다. 몇 분이 적혀 있는지 세어 드립니다. 고객 365일 › 그 분 › 재무설계 답 의 「직업」 칸입니다. 사업자·공무원·교사·군인·경찰·소방·설계사만 알아듣고, <b>그 밖의 직업은 짐작하지 않고 버려둡니다</b>.　—　같은 「Invalid API key」여도 ⓐ 열쇠가 틀림 ⓑ <b>다른 프로젝트</b> 것 ⓒ 종류가 anon — 셋을 갈라 <b>사람 말로</b> 적습니다. 고칠 법이 다르기 때문입니다. 점검(check-ready·check-push)이 이제 <b>이 자리가 사장님 탓을 하거나 열쇠 글자를 흘리면</b> 빨간불을 켭니다.";
+var APP_BUILD='2026-09-22 23:20';
+var APP_BUILD_NOTE="<b>📐 ① TFA 업무관리가 한눈에 들어옵니다 — 넓이를 다 씁니다.</b> 말씀하신 「TFA 업무관리 칸이 한눈에 안 들어와, 넓이를 한눈에 전부 보이게」 부터 했습니다. 먼저 <b>재 봤습니다</b> — 짐작하지 않았습니다.　—　<b>① 넓은 화면인데 폭을 안 쓰고 있었습니다.</b> 1440px 화면에서 본문이 <b>694px</b> 만 쓰고 오른쪽이 그냥 비어 있었습니다(화면 전체를 1080px 로 묶는 줄이 있었습니다). 이제 <b>834px</b>, 1920px 에서는 762 → <b>1,222px</b> 입니다.　—　<b>② 왼쪽 갈래 설명이 여덟 중 다섯이 잘려 있었습니다.</b> 「고객 체크」 가 무엇을 하는 칸인지 「AP·PC·CS — 읽은 증권으로 무엇을 터치할…」 에서 끊겨 못 읽으셨을 겁니다. 이제 <b>두 줄까지 접어</b> 다 보입니다 — 잘린 것 <b>0개</b>.　—　<b>③ 폰은 그대로입니다.</b> 390px 에서는 한 줄로 떨어지는 것이 맞아 건드리지 않았고, 옆으로 새지 않는지 같이 잽니다.　—　점검(check-airep)이 이제 <b>1440·1920·390 세 폭</b>에서 잽니다 — 폭이 줄거나 설명이 다시 잘리면 빨간불이 켜집니다. 되돌려 네 자리를 확인했습니다. 그러다 제 점검의 흠도 하나 고쳤습니다 — 잘림을 <b>세로만</b> 재고 있어서, 한 줄로 자르면 (가로로 넘칩니다) 빨간불이 안 켜졌습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -24427,8 +24438,10 @@ function renderHome(){
     '<div class="notice" style="margin-top:16px;color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">모든 AI 출력은 <b>약관·심사가 최종</b>이며, 고위험 제안은 관리자 승인 후 고객에게 안내합니다. 게시·발송 전 준법감시 확인을 권장합니다.</div>'+
   '</div>';
 }
-function osPage(tag,title,desc,body){
-  return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">'+osEsc(tag)+'</div>'+
+/* wide — <b>넓은 화면에서 폭을 다 쓰는 화면</b>인가. 안 주면 지금까지와
+   똑같습니다 — 부르던 자리를 한 군데도 안 고칩니다 (5번).       */
+function osPage(tag,title,desc,body,wide){
+  return '<div class="tab-pane on'+(wide?' wide':'')+'"><div class="page-hd"><div class="page-tag">'+osEsc(tag)+'</div>'+
     '<div class="page-title">'+osEsc(title)+'</div>'+(desc?'<div class="page-desc">'+osEsc(desc)+'</div>':'')+'</div>'+
     body+'</div>';
 }
