@@ -260,6 +260,7 @@ table.cx .z{color:#D1D6DB} table.cx .g{color:var(--green);font-weight:800;font-s
     <div class="chips" id="share-chips"></div>
     <div style="height:12px"></div>
     <div class="opt">
+      <label><input type="checkbox" id="o-appc" checked> AP·PC 단계만</label>
       <label><input type="checkbox" id="o-off"> 보류·무산 포함</label>
       <label><input type="checkbox" id="o-db" checked> DB종류 표시</label>
       <label><input type="checkbox" id="o-pol" checked> 증권전달 표시</label>
@@ -367,6 +368,15 @@ const isAdmin = () => ADMINS.indexOf(ME.role) >= 0;
 const isLead = () => ME.role === 'leader';
 const isDone = r => !r.closed && (r.stage === '계약완료' || r.stage === '증권전달');
 const isLive = r => !r.closed && !isDone(r);
+/* AP·PC 는 「지금 만나고 있는 자리」다. 팀장이 카톡으로 받는 표는
+   이것만 본다 (사장님 말씀 2026-09-22 · 「카톡보내기에서 TEAM 진행상황
+   AP-PC 단계만 보이게 해」). 판정을 두 곳에 적으면 한쪽만 고쳐져 어깋나므로
+   여기 한 줄만 둔다 (5번). 위쪽 합계는 <b>이것으로 거르지 않는다</b> —
+   거르면 계약이 있는 팀에 「계약업적 0원」이 찍혀 「계약이 없다」는
+   뜻이 되어 버린다 (1번). */
+const APPC = ['AP', 'PC'];
+const APPC_T = 'AP·PC';
+const isAppc = r => !r.closed && APPC.indexOf(r.stage) >= 0;
 const mem = id => MEMBERS.find(m => m.id === id);
 const memName = id => (mem(id) || {}).name || '(모름)';
 const teamOf = id => (mem(id) || {}).tid || '__none';
@@ -1180,18 +1190,31 @@ function pill(c, x, y, h, txt, cx) {
   c.fillStyle = p[1]; c.textAlign = 'center'; c.fillText(txt, x + w / 2, y + h / 2 + .5); c.textAlign = 'left';
 }
 function shareOpts() {
-  return { off: $('#o-off').checked, db: $('#o-db').checked, memo: $('#o-memo').checked,
-    money: $('#o-money').checked, empty: $('#o-empty').checked, pol: $('#o-pol').checked };
+  return { appc: $('#o-appc').checked, off: $('#o-off').checked, db: $('#o-db').checked,
+    memo: $('#o-memo').checked, money: $('#o-money').checked, empty: $('#o-empty').checked,
+    pol: $('#o-pol').checked };
 }
+/* 돌려주는 줄이 둘이다 —
+     all : 이 팀원의 <b>전부</b>. 건수·금액은 여기서 센다.
+     rs  : 표에 <b>보일</b> 줄. AP·PC 만 보기를 켜면 좁아진다.
+   합계까지 같이 좁히면 계약이 있는데 「계약업적 0원」이 찍힌다 (1번). */
 function teamData(tid, o) {
   const out = [];
   memsOf(tid).forEach(m => {
-    let rs = ROWS.filter(r => r.mid === m.id);
-    if (!o.off) rs = rs.filter(r => !r.closed);
-    rs = sortRows(rs);
-    if (rs.length || o.empty) out.push({ m, rs });
+    let all = ROWS.filter(r => r.mid === m.id);
+    if (!o.off) all = all.filter(r => !r.closed);
+    all = sortRows(all);
+    const rs = o.appc ? all.filter(isAppc) : all;
+    if (rs.length || o.empty) out.push({ m, rs, all });
   });
   return out;
+}
+/* 위쪽 합계는 <b>팀 전체</b>에서 센다. teamData 가 되돌려 준 것을 쓰면
+   AP·PC 가 한 줄도 없는 팀원은 통째로 빠져 그분의 계약까지 안 세진다 (1번). */
+function teamAll(tid, o) {
+  const ids = memsOf(tid).map(m => m.id);
+  const L = ROWS.filter(r => ids.indexOf(r.mid) >= 0);
+  return o.off ? L : L.filter(r => !r.closed);
 }
 function buildCanvas(tid) {
   const o = shareOpts(), t = TEAMS.find(x => x.id === tid) || { name: '팀' }, data = teamData(tid, o);
@@ -1228,15 +1251,17 @@ function buildCanvas(tid) {
   c.fillStyle = '#fff'; c.font = f(800, 17); c.textAlign = 'center'; c.fillText('A+', PAD + 22, 49); c.textAlign = 'left';
   c.font = f(800, 26); c.fillText(`${t.name} 진행현황`, PAD + 58, 44);
   c.font = f(600, 14); c.fillStyle = '#CFE3FF';
-  c.fillText(`${t.leader ? '팀장 ' + t.leader + ' · ' : ''}기준 ${TODAY_S.replace(/-/g, '.')} · 팀원 ${data.length}명`, PAD + 58, 70);
+  c.fillText(`${t.leader ? '팀장 ' + t.leader + ' · ' : ''}기준 ${TODAY_S.replace(/-/g, '.')}`
+    + ` · 팀원 ${memsOf(tid).length}명${o.appc ? ' · ' + APPC_T + ' 단계만' : ''}`, PAD + 58, 70);
 
-  const all = data.flatMap(x => x.rs), live = all.filter(isLive), done = all.filter(isDone);
+  /* 합계는 <b>팀 전체</b>에서 센다 — 표를 AP·PC 로 좁혀도 계약은 계약이다 (1번) */
+  const all = teamAll(tid, o), live = all.filter(isLive), done = all.filter(isDone);
   const pol = all.filter(r => !r.closed && r.stage === '계약완료').length;
   let ky = HDR + 12;
   c.fillStyle = '#F7F9FC'; rr(c, PAD, ky, CW, 46, 12); c.fill();
   const intro = all.reduce((a, r) => a + (+r.introN || 0), 0);
-  const appc = all.filter(r => !r.closed && (r.stage === 'AP' || r.stage === 'PC')).length;
-  const kp = [['AP · PC', `${appc}건`], ['진행중 예상', `${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원`],
+  const appc = all.filter(isAppc).length;
+  const kp = [[APPC_T, `${appc}건`], ['진행중 예상', `${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원`],
   ['계약업적', `${won(done.reduce((a, r) => a + (+r.contract || +r.expect || 0), 0))}원`],
   ['받은 소개', `${intro}명`], ['증권 미전달', `${pol}건`]];
   const kw = CW / kp.length;
@@ -1251,15 +1276,19 @@ function buildCanvas(tid) {
   let y = HDR + KPI + 16;
   if (!data.length) {
     c.font = f(700, 16); c.fillStyle = CO.tx3; c.textAlign = 'center';
-    c.fillText('표시할 진행건이 없습니다', W / 2, y + 40); c.textAlign = 'left'; return cv;
+    c.fillText(o.appc ? APPC_T + ' 단계인 건이 없습니다' : '표시할 진행건이 없습니다',
+      W / 2, y + 40); c.textAlign = 'left'; return cv;
   }
   data.forEach(grp => {
-    const L = grp.rs, lv = L.filter(isLive), dn = L.filter(isDone);
+    /* 보이는 줄은 grp.rs, <b>세는 것은 grp.all</b> — 좁혀 보여 드려도
+       건수·금액은 전부다 (1번). */
+    const L = grp.rs, lv = grp.all.filter(isLive), dn = grp.all.filter(isDone);
     c.fillStyle = '#EEF4FF'; rr(c, PAD, y, CW, MH, 10); c.fill();
     c.font = f(800, 17); c.fillStyle = CO.blueD; c.fillText(grp.m.name, PAD + 14, y + MH / 2);
     const nw = c.measureText(grp.m.name).width;
     c.font = f(600, 13); c.fillStyle = CO.tx2;
-    c.fillText(`진행 ${lv.length}건${dn.length ? ` · 계약 ${dn.length}건` : ''}`, PAD + 22 + nw, y + MH / 2 + 1);
+    c.fillText(`${o.appc ? APPC_T + ' ' + L.length + '건 · ' : ''}진행 ${lv.length}건`
+      + `${dn.length ? ` · 계약 ${dn.length}건` : ''}`, PAD + 22 + nw, y + MH / 2 + 1);
     if (o.money) {
       const cs = dn.reduce((a, r) => a + (+r.contract || +r.expect || 0), 0);
       c.textAlign = 'right';
@@ -1287,7 +1316,11 @@ function buildCanvas(tid) {
       x += col.w;
     });
     y += TH;
-    if (!L.length) { c.font = f(600, 13.5); c.fillStyle = '#B0B8C1'; c.fillText('진행중인 건 없음', PAD + 12, y + RH / 2); y += RH; }
+    if (!L.length) {
+      c.font = f(600, 13.5); c.fillStyle = '#B0B8C1';
+      c.fillText(o.appc ? APPC_T + ' 단계인 건 없음' : '진행중인 건 없음', PAD + 12, y + RH / 2);
+      y += RH;
+    }
     L.forEach((r, i) => {
       if (i % 2) { c.fillStyle = '#FCFDFE'; c.fillRect(PAD, y, CW, RH); }
       const dead = !!r.closed;
@@ -1349,7 +1382,7 @@ function renderShare() {
   drawPreview();
 }
 $('#share-chips').onclick = e => { const c = e.target.closest('[data-t]'); if (!c) return; SHARE.team = c.dataset.t; renderShare(); };
-['#o-off', '#o-db', '#o-memo', '#o-money', '#o-empty', '#o-pol'].forEach(s => $(s).onchange = () => drawPreview());
+['#o-appc', '#o-off', '#o-db', '#o-memo', '#o-money', '#o-empty', '#o-pol'].forEach(s => $(s).onchange = () => drawPreview());
 let PREV = null;
 async function drawPreview() {
   if (!SHARE.team) { $('#prev').innerHTML = `<div class="empty">보여 줄 팀이 없습니다.</div>`; return; }
@@ -1377,11 +1410,12 @@ $('#b-copy').onclick = () => {
 $('#b-png').onclick = () => { if (PREV) PREV.toBlob(b => { dl(b, fileName()); toast('저장했습니다'); }); };
 $('#b-txt').onclick = () => {
   const o = shareOpts(), t = TEAMS.find(x => x.id === SHARE.team) || {}, data = teamData(SHARE.team, o);
-  const L = [`[${t.name} 진행현황] ${TODAY_S.replace(/-/g, '.')}`, ''];
+  const L = [`[${t.name} 진행현황] ${TODAY_S.replace(/-/g, '.')}${o.appc ? ' · ' + APPC_T + ' 단계만' : ''}`, ''];
   data.forEach(g => {
-    const lv = g.rs.filter(isLive);
-    L.push(`▶ ${g.m.name} — 진행 ${lv.length}건 · 예상 ${won(lv.reduce((a, r) => a + (+r.expect || 0), 0))}원`);
-    if (!g.rs.length) L.push('   (진행건 없음)');
+    const lv = g.all.filter(isLive);
+    L.push(`▶ ${g.m.name} — ${o.appc ? APPC_T + ' ' + g.rs.length + '건 · ' : ''}`
+      + `진행 ${lv.length}건 · 예상 ${won(lv.reduce((a, r) => a + (+r.expect || 0), 0))}원`);
+    if (!g.rs.length) L.push(o.appc ? `   (${APPC_T} 단계인 건 없음)` : '   (진행건 없음)');
     g.rs.forEach(r => {
       const b = [];
       if (o.db && r.dbtype) b.push(r.dbtype);
