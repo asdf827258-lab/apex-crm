@@ -11,7 +11,7 @@
 
      [1] 오늘 약속이 <b>시간 순서대로</b> 선다
      [2] 그 지역에서 <b>오늘 걸 분</b>이 같이 뜬다 — 간 김에 도는 사람
-     [3] <b>지어내지 않는다</b> — 약속이 없으면 자리를 안 먹고, 지역을
+     [3] <b>지어내지 않는다</b> — 약속이 없으면 이름도 수도 안 짓고, 지역을
          모르는 줄은 안 붙이고, 못 읽었으면 「없다」고 말하지 않는다
      [4] 눌러서 <b>그 사람 것</b>으로 · 🗺️ 는 <b>CRM</b> 으로 간다
      [5] 서버를 <b>더 안 부른다</b> (7번)
@@ -130,11 +130,28 @@ const SEED=(opt)=>`
   is(N.more===1, '많으면 <b>「더 보기」</b> 하나로 접는다 — 홈이 목록이 되면 안 본다');
 
   console.log('\n[3] <b>지어내지 않는다</b> (1번)');
+  /* ⚠ 2026-09-23 · 여기는 여태 「빈 날이면 칸을 아예 안 세운다」 를 봤습니다.
+     사장님 말씀으로 <b>거꾸로</b> 바뀌었습니다 — 빈 날에 칸이 사라지면 그만큼
+     밑엣것이 올라와 어제와 다른 화면이 되고, 「화면이 자꾸 달라서 힘들다」 가
+     됩니다. 그래서 <b>자리는 지키되</b> 아래를 그대로 지킵니다 (1번) —
+       · 이름도 시간도 <b>한 줄도 짓지 않는다</b>
+       · 「주변에 몇 분」 같은 <b>수를 짓지 않는다</b>
+       · 갈 데가 없다고 <b>말은 한다</b> — 빈 칸만 두면 고장 난 줄 안다
+     느슨해진 것이 아닙니다. 「칸이 없다」 하나를 보던 자리가 <b>세 자리</b>로
+     늘었고, 지어내면 그대로 빨간불입니다 (8번). */
   const Z=await page.evaluate(async(seed)=>{
     (0,eval)(seed); await window.__home();
-    return { shown:!!document.querySelector('#dynPane .hm-rt') };
+    const c=document.querySelector('#dynPane .hm-rt');
+    return { shown:!!c,
+      rows:c?c.querySelectorAll('.hm-rt-r').length:0,
+      chips:c?c.querySelectorAll('.hm-rt-c').length:0,
+      txt:c?(c.textContent||'').replace(/\s+/g,' ').trim():'' };
   },SEED({empty:true}));
-  is(!Z.shown, '오늘 갈 데가 없으면 <b>자리를 안 먹는다</b> — 빈 칸을 세워 두지 않는다');
+  is(Z.shown, '오늘 갈 데가 없어도 <b>자리는 그대로</b> 둔다 — 밑엣것이 올라와 어제와 다른 화면이 되지 않게');
+  is(Z.rows===0&&Z.chips===0&&!/\d+\s*명/.test(Z.txt),
+     '그 자리에 <b>이름도 수도 짓지 않는다</b> (1번) — 줄 '+Z.rows+' · 사람 '+Z.chips);
+  is(/갈 데가 없습니다/.test(Z.txt),
+     '<b>갈 데가 없다고 말한다</b> — 빈 칸만 두면 고장 난 줄 안다 — 「'+Z.txt.slice(0,44)+'…」');
 
   const W=await page.evaluate(async(seed)=>{
     (0,eval)(seed); await window.__home();

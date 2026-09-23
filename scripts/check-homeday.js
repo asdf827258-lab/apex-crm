@@ -86,6 +86,13 @@ const SEED = `(function(){
      안 먹어서, 멀쩡한 앱을 두고 「자꾸 부른다」 고 잡게 됩니다 (8번). */
   OSC.list=[{id:'c1',name_masked:'홍○동'}];
   try{ CM.loaded=true; CM.meta=CM.meta||{}; }catch(e){}
+  /* ★ 2026-09-23 · 심어 둔 이 한 분은 <b>오늘 통화한 것으로</b> 둡니다.
+     안 적어 두면 「한 번도 통화·만남이 없는 분」이 되어 30일 약속 줄이
+     한 줄 더 섭니다 — 그것은 맞는 동작이고 check-queue 가 봅니다.
+     이 판은 <b>달력 줄이 차례대로 서는지</b> 를 재는 자리라, 다른 갈래가
+     섞이면 수가 틀렸을 때 어디가 틀렸는지 알 수 없습니다. 자리를 늦추는
+     것이 아니라 <b>빠져 있던 사실</b>을 채우는 것입니다 (8번). */
+  try{ cmOf('c1').touch=[{at:mcalToday(),how:'전화'}]; }catch(e){}
   try{ AR.loaded=true; GB.loaded=true; }catch(e){}
   window.mstDueList=function(){ return {due:[
     {c:{id:'c9',name_masked:'홍○판'},hit:{d:0,step:{m:3,ic:'📮',t:'석 달째 인사'}}},
