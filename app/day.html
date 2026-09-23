@@ -23,6 +23,9 @@ window.APEX_SB = window.APEX_SB || {
 };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- 「오늘 누구부터」 규칙은 <b>day-rank.js 한 곳</b>에 있습니다.
+     여기 또 적으면 두 벌이 되고 홈과 다른 사람이 뜹니다 (CLAUDE.md 5번). -->
+<script src="day-rank.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>html,body{margin:0;padding:0;background:#F2F5FA}
 @media (prefers-color-scheme:dark){html,body{background:#070C16}}</style>
@@ -807,12 +810,10 @@ function Lset(v){_L=v;_Q=null;try{localStorage.setItem(K,JSON.stringify(v));}cat
 
    그래서 날짜는 <b>사람이 고른 것</b>과 <b>실제로 잡힌 약속</b> 두 가지만
    쓴다. 아무도 안 정했으면 「미정」 이다 — 지어내지 않는다.        */
-function nextOf(r,v){
-  if(v.next[r.id])return v.next[r.id];      /* 사람이 고른 날 */
-  if(r.appt)return (''+r.appt).slice(0,10); /* 잡힌 상담 약속 */
-  return '';                                 /* 미정 */
-}
-function due(r,v){var d=nextOf(r,v);return d?(d<=T0()):false;}
+/* ★ 셈은 <b>day-rank.js</b> 가 합니다. 이 두 줄은 <b>부르는 자리</b>일 뿐입니다 —
+   함수를 지우지 않고 속만 넘겼습니다. 숫자를 여기서 고치지 마십시오.     */
+function nextOf(r,v){ return DAYRANK.nextOf(r,v.next); }
+function due(r,v){ return DAYRANK.due(r,v.next,T0()); }
 
 /* ── 하루에 할 만큼만 ────────────────────────────────────────
    200건짜리 DB 로 돌려 보니 「오늘 걸 사람 198명」 이 떴다.
@@ -836,21 +837,10 @@ function queueAll(){
        ① 오늘 잡힌 약속        ② 사람이 정한 날짜가 됐음
        ③ 아직 한 번도 안 걸었음 · 계약은 됐는데 증권이 안 감
      그 밖은 「손 놓은 지 오래된 순」 으로만 세운다. 이것도 사실이다. */
-  for(i=0;i<R.db.length;i++){
-    var r=R.db[i];
-    if(r.stage==='증권전달')continue;
-    if(v.done[r.id])continue;
-    var w=0, ap=(r.appt&&(''+r.appt).slice(0,10));
-    if(ap===T0())w=100;                            /* 오늘 약속 */
-    else if(r.stage==='계약완료')w=90;             /* 증권이 안 감 — 밀리면 민원 */
-    else if(due(r,v))w=80+Math.min(r.days,15);     /* 정해 둔 날이 됐다 */
-    else if(ap&&ap>T0())continue;                  /* 약속이 앞에 있으면 오늘 아니다 */
-    else if(!r.n)w=60+Math.min(r.days,30);         /* 한 번도 안 걸었다 */
-    else if(v.next[r.id])continue;                 /* 정해 둔 날이 아직 안 왔다 */
-    else w=Math.min(r.days,40);                    /* 손 놓은 지 오래된 순 */
-    out.push({r:r,w:w});
-  }
-  out.sort(function(a,b){return b.w-a.w;});
+  /* ★ 무게와 차례는 <b>day-rank.js</b> 가 정합니다 — 위 주석의 「198명」이
+     났던 그 셈입니다. 여기 다시 적지 않습니다 (5번). day-rank 는 같은
+     사람이 두 줄에 있어도 <b>한 번만</b> 세웁니다 (한 분 = 한 퀘스트).  */
+  out=DAYRANK.rank(R.db,{today:T0(),next:v.next,done:v.done});
   _Q=out.map(function(x){return x.r;});return _Q;
 }
 /* 기계가 정한 순서가 늘 옳지는 않다. 대표에게는 「오늘은 이 사람부터」
