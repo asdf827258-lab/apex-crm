@@ -1192,6 +1192,23 @@ body.apexmap-mode #apexMapScreen{display:block;}
 /* ── 지금 이것 하세요 — 한 건만 크게 ── */
 .hm-now{margin-top:13px;border:1.5px solid var(--primary);background:var(--primary-pale);
   border-radius:var(--r-md);padding:14px 15px}
+/* 🎯 한 분 = 한 퀘스트 — 몇 분 중 몇 번째인지를 동그라미로 (사장님 말씀 2026-09-23) */
+.hm-q{margin:-2px 0 10px;padding:10px 11px;border-radius:var(--r-sm);background:#0F172A;color:#E2E8F0}
+.hm-q-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hm-q-n{font-size:var(--t6);font-weight:800;color:#CBD5E1}
+.hm-q-n b{color:#fff}
+.hm-q-dots{display:flex;gap:4px;align-items:center;flex:1;flex-wrap:wrap}
+.hm-q-dots i{width:9px;height:9px;border-radius:50%;background:#334155;display:block}
+.hm-q-dots i.on{background:#34D399}
+.hm-q-dots i.now{background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.22)}
+.hm-q-dots em{font-style:normal;font-size:var(--t6);color:#94A3B8;margin-left:2px}
+.hm-q-why{margin-top:8px;font-size:var(--t5);font-weight:700;line-height:1.55;color:#fff;word-break:keep-all}
+.hm-q-why b{color:#7DD3FC}
+.hm-q-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.hm-q-t{font-size:var(--t6);font-weight:700;color:#CBD5E1;background:rgba(255,255,255,.10);border-radius:var(--r-pill);padding:4px 9px}
+.hm-q-no{margin-top:8px;font-size:var(--t6);line-height:1.6;color:#FCA5A5;word-break:keep-all}
+.hm-q-no b{color:#FECACA}
+/* ✅ 이분 끝 — 카드에서 제일 큰 단추입니다 */
 .hm-now-k{font-size:var(--t6);font-weight:800;color:#1B64DA;letter-spacing:-.01em}
 .hm-now-k b{font-variant-numeric:tabular-nums}
 .hm-now-m{display:flex;align-items:center;gap:11px;margin-top:9px}
@@ -1223,6 +1240,15 @@ body.apexmap-mode #apexMapScreen{display:block;}
 .hm-ask-o .m b{font-size:var(--t5);font-weight:800;letter-spacing:-.02em;color:var(--ink-1)}
 .hm-ask-o .m span{font-size:var(--t6);font-weight:600;color:var(--ink-4);line-height:1.5}
 .hm-ask-o .ar{flex:none;color:var(--ink-5)}
+/* 🧰 도구는 <b>두 개씩 눕습니다</b> — 여섯을 한 줄씩 세우면 276px 입니다.
+   높이는 <b>44px</b> 그대로 — 폰에서 그 아래로는 손가락이 빗나갑니다. */
+.hm-ask-gt{font-size:var(--t6);font-weight:800;color:var(--ink-4);margin:8px 0 5px}
+.hm-ask-g{display:flex;flex-wrap:wrap;gap:6px}
+.hm-ask-o.tool{width:auto;flex:1 1 calc(50% - 3px);min-width:0;min-height:44px;padding:7px 9px;gap:6px}
+.hm-ask-o.tool .no{width:20px;height:20px;line-height:20px;font-size:var(--t6)}
+.hm-ask-o.tool .e{font-size:var(--t5)}
+.hm-ask-o.tool .m b{font-size:var(--t6);line-height:1.3}
+.hm-ask-o.tool .ar{display:none}
 .hm-tools{margin-top:11px;padding-top:10px;border-top:1px dashed rgba(26,86,219,.28)}
 .hm-tools-t{font-size:var(--t6);font-weight:800;letter-spacing:.06em;color:var(--primary);margin-bottom:7px}
 .hm-tools-b{display:flex;flex-wrap:wrap;gap:6px}
@@ -10596,26 +10622,36 @@ function arCss(){
    '.ar-bb{border:1.5px solid #E2E8F0;background:#fff;border-radius:var(--r-pill);padding:7px 14px;'+
      'font-size:var(--t6);font-weight:800;color:#475569;cursor:pointer;font-family:inherit}'+
    '.ar-bb:hover{background:#F8FAFC}'+
-   '.ar-wrap{display:grid;grid-template-columns:268px 1fr;gap:18px;align-items:start}'+
-   '@media(max-width:900px){.ar-wrap{grid-template-columns:1fr}}'+
-   '.ar-side{position:sticky;top:12px;display:flex;flex-direction:column;gap:3px;background:#fff;'+
-     'border:1.5px solid #EDF1F6;border-radius:var(--r);padding:10px}'+
-   '@media(max-width:900px){.ar-side{position:static}}'+
-   '.ar-shd{font-size:var(--t6);font-weight:900;color:#94A3B8;letter-spacing:.1em;padding:9px 10px 5px}'+
-   '.ar-cat{display:flex;align-items:flex-start;gap:9px;border:0;background:transparent;border-radius:var(--r-sm);'+
-     'padding:9px 10px;cursor:pointer;text-align:left;font-family:inherit;width:100%}'+
+   /* ★ 사장님 말씀 (2026-09-23) — 「TFA 업무관리에서 <b>좌우가 한눈에 안
+      들어와</b> … <b>내 관리 때문에 다 잡아먹고 있는 거</b> 확인하고」.
+      재 보니 맞았습니다 — 1440px 화면에서 서람이 268px, 그 안에서
+      <b>「내 관리」 세로 목록이 또 268px</b> 를 먹어 본문은 834px 밖에 안 됐습니다.
+      그래서 <b>세로 목록을 위 가로 띄로</b> 올립니다. 268px 를 돌려받고
+      본문이 화면을 다 씁니다. 갈래는 그대로이고 놓이는 자리만 바뀝니다. */
+   '.ar-wrap{display:grid;grid-template-columns:1fr;gap:14px;align-items:start}'+
+   '.ar-side{display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;background:#fff;'+
+     'border:1.5px solid #EDF1F6;border-radius:var(--r);padding:8px}'+
+   /* 묶음 이름(내 관리 · 팀 관리)은 가로 띄에서 <b>줄을 끊습니다</b> */
+   '.ar-shd{flex:1 1 100%;font-size:var(--t6);font-weight:900;color:#94A3B8;letter-spacing:.1em;'+
+     'padding:6px 4px 2px}'+
+   '.ar-cat{display:flex;align-items:center;gap:8px;border:1px solid #EDF1F6;background:#fff;'+
+     'border-radius:var(--r-pill);padding:8px 13px;cursor:pointer;text-align:left;'+
+     'font-family:inherit;width:auto;min-height:44px}'+
    '.ar-cat:hover{background:#F8FAFC}'+
    '.ar-cat.on{background:#0F172A}'+
    '.ar-cat .e{font-size:var(--t3);flex:none}'+
    '.ar-cat .m{flex:1;min-width:0}'+
-   '.ar-cat .m b{display:block;font-size:var(--t6);font-weight:800;color:#1E293B}'+
+   '.ar-cat .m b{display:block;font-size:var(--t6);font-weight:800;color:#1E293B;white-space:nowrap}'+
    /* ⚠ <b>여기서 설명이 잘렸습니다.</b> 1280px 에서 여덟 갈래 중 <b>다섯개</b>가
       … 로 끝났습니다 — 「고객 체크」 가 무엇을 하는 칸인지 못 읽으셨을 겁니다.
       한 줄로 박아 두는 대신 <b>두 줄까지 접어</b> 보입니다. 세 줄부터는
       접습니다 — 안 그러면 갈래 하나가 목록 절반을 먹습니다.           */
-   '.ar-cat .m em{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;'+
-     'font-style:normal;font-size:var(--t6);color:#94A3B8;margin-top:1px;line-height:1.35;'+
-     'overflow:hidden;white-space:normal;word-break:keep-all}'+
+   /* 가로 띄에서는 설명을 <b>안 적습니다</b> — 여덟 갈래의 설명을 다 적으면
+      띄가 세 줄이 되어 본문을 또 밀어냅니다. 고른 갈래의 설명은 <b>본문 머리</b>
+      에 이미 서 있습니다. 좋은 화면에서는 떠다니는 글(title)로 봅니다. */
+   '.ar-cat .m em{display:none}'+
+   '@media(max-width:900px){.ar-side{flex-direction:column}.ar-cat{width:100%;border-radius:var(--r-sm)}}'+
+   '.ar-cat.on{border-color:#0F172A}'+
    '.ar-cat.on .m b{color:#fff}.ar-cat.on .m em{color:#93C5FD}'+
    '.ar-cat .n{flex:none;font-size:var(--t6);font-weight:900;color:#fff;background:#DC2626;'+
      'border-radius:var(--r-lg);padding:2px 7px;min-width:18px;text-align:center}'+
@@ -12136,8 +12172,12 @@ function renderAiRep(){
   arCss();
   return osPage('관리','TFA 업무관리',
     '피드백 · 스케줄 · 역량 · 해야 할 일 · 내 업적 · 고객 체크 · 30일 고객관리를 '+
-    '왼쪽에서 고르면 이 자리에서 바로 봅니다. 지점장은 리더 할 일과 팀원 관리까지 같은 칸에서. '+
-    '아침에 누구에게 전화할지는 <b>홈 🌅 아침 미션</b>에서 합니다.',
+    /* 갈래를 <b>위 가로 띄</b>로 올렸습니다 (2026-09-23) — 설명도 같이 고칩니다.
+       한쪽만 고치면 화면은 위인데 글은 왼쪽이라고 하게 됩니다. */
+    '위에서 고르면 이 자리에서 바로 봅니다. 지점장은 리더 할 일과 팀원 관리까지 같은 칸에서. '+
+    /* ⚠ 이 칸은 <b>날글을 그대로 안 씁니다</b> — 예전에 여기 <b> 를 적었더니
+       화면에 그 글자가 그대로 찍혔습니다. 때기는 말로만 적습니다. */
+    '아침에 누구에게 전화할지는 「홈 · 오늘 챙길 것」에서 합니다 — 한 분씩 순서대로 나옵니다.',
     '<div id="arPane">'+arInnerHtml()+'</div>', 1);
 }
 function osAiRepAfterRender(){
@@ -12152,7 +12192,7 @@ function osAiRepAfterRender(){
    화면마다 「무엇을 하는 곳인지 · 어떤 순서로 누르는지 · 막히면 어디를 보는지」 셋만 적는다.
    외울 것을 만들지 않는 것이 목적이다. */
 var OS_HELP={
- airep:['🧭','TFA 업무관리','왼쪽에서 고르면 이 자리에서 다 봅니다',[
+ airep:['🧭','TFA 업무관리','위에서 고르면 이 자리에서 다 봅니다',[
    ['①','아침에 들어오면 창이 하나 뜹니다','오늘 약속 · 밀린 것 · 다시 걸 DB · 식은 고객 · 오늘 공부. 「오늘 할 일 열기」를 누르면 여기로 옵니다.'],
    ['②','오전 8시가 지나면 보고가 저절로 만들어집니다','팀원은 자기 것, 지점장은 팀원 전원 것. 하루 한 번만 만듭니다. 앱을 열어 두었으면 8시에, 꺼져 있었으면 그날 처음 켤 때 만듭니다. 아침 창 아래에서 끌 수 있습니다.'],
    ['②','왼쪽에서 볼 것을 고릅니다','피드백 · 스케줄 · 역량 · 해야 할 일 · 내 업적 · <b>고객 체크</b> · 30일 고객관리. 붉은 숫자는 남은 건수입니다.'],
@@ -16566,8 +16606,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-23 05:20';
-var APP_BUILD_NOTE="사장님 말씀 <b>열두 가지를 끝까지</b> 했습니다.　—　<b>⑦ DB CRM</b> — 들어가면 「고객 관리부터 시작하시죠?」, 나가면 「오늘 고객 관리는 언제 하실까요?」. <b>앱이 열려 있을 때만 뜨는 것</b>을 그 자리에 적었습니다 — 폰 알람인 줄 아시면 그날을 놓치십니다.　—　<b>⑧ 거절처리 열일곱 가지</b> — 「🚫 거절」 을 누르면 <b>바로 안 적고</b> 무엇을 말할지부터 보여 드립니다. <b>금지 표현과 종료 기준</b>을 같이 적습니다 — 붙잡다 그 고객을 잃습니다. 말은 ta-script 에 있던 그것을 <b>한 곳으로 옮겨</b> 두 화면이 같이 읽습니다.　—　<b>⑨ 오늘 고객 열 분</b> — 다섯 → 열 분입니다. 수는 <b>한 곳</b>에만 적어 미션도 체크판도 거기서 읽습니다. 접어 두셔도 <b>「오늘 관리 3/10명」</b>이 보입니다 — 체크가 아니라 <b>기록으로</b> 셉니다.　—　<b>⑩ 재무설계(달러·연금)</b> — 계산기에서 담아 두면 홈이 그것을 읽어 「정리해 둔 분 N명」을 적습니다. <b>금액은 안 옮겨 적습니다</b> — 계산기가 말하는 그 값이 맞습니다.　—　<b>⑪ SNS 관리</b> — 인스타·블로그가 한 자리에. <b>대신 올려 드린다고 말하지 않습니다</b> — 그럴 열쇠가 없습니다. 글과 그림까지 만들어 드리고, 올리신 뒤 ✅ 를 누르시면 체크판에 담습니다.　—　<b>⑫ 달력</b> — 한 달 모든 날에 할 일이 서 있고, 줄마다 <b>「담당자 : 스케줄」</b> 로 읽힙니다(네이버 캘린더처럼). <b>혼자 보는 화면에는 안 붙입니다</b>.";
+var APP_BUILD='2026-09-23 11:05';
+var APP_BUILD_NOTE="<b>한 분 = 한 퀘스트</b> 로 아침을 새로 짰습니다.　—　<b>오늘 챙길 것 + 아침 미션이 한 카드</b>입니다. 아침에 두 곳을 안 보십니다. 뽑힌 분이 없는 조용한 아침에도 미션은 그대로 섭니다 — 전에는 통째로 사라졌습니다.　—　<b>한 분마다 퀘스트 띠</b> — 「오늘 8분 중 3번째 ●●○○○」 와 <b>왜 이분인가</b>가 맨 위에 섭니다. <b>「✅ 이분 끝 → 다음 분으로」</b> 를 누르면 다음 분 카드가 올라옵니다 — 하루가 첫 분에서 안 멈춥니다. 이것은 <b>기록이 아닙니다</b> — 전화·카톡·단계는 저마다 제 자리에 남고, 「오늘 봤다」는 표시일 뿐이라 <b>「오늘 관리한 분」으로는 안 셉니다</b>.　—　<b>이번 주 상담 가시는 동네</b>를 앞으로 올립니다. 같은 단계끼리일 때만입니다 — 동네가 <b>급한 단계를 밀어내지 않습니다</b>. 약속이 없으면 없다고 적습니다.　—　<b>① 오늘의 알림</b>이 한 줄에 네 가지를 답합니다 — 📞 전화/💬 카톡만(어떻게 접촉할지) · 🗂 DB종류 · 📍 지역 · ⏳ 며칠째 · 🎯 무엇을 할지 · 📰 어떤 소식을 드릴지. 머리에 <b>「오늘 8분 중 순천 5분」</b> 이 적힙니다 — 그 동네 분이 없으면 <b>없다고</b> 적고 억지로 안 채웁니다. 줄을 누르면 ②③④ 가 그 분으로 따라오고, <b>차례는 「오늘 챙길 것」 과 같습니다</b>.　—　<b>TFA 업무관리</b> — 왼쪽 목록을 위 띠로 올려 본문이 <b>834 → 1,120px</b> 입니다. 좌우가 한눈에 듭니다.　—　한 분 카드가 <b>1,401 → 1,237px</b>, 홈이 <b>3.14 → 2.95화면</b>. 도구 여섯을 두 개씩 눕혔습니다 — 지운 것이 아니라 눕힌 것이라 여섯이 그대로 있습니다. 「✅ 이분 끝」과 「다음 분 →」은 같은 물음이라 한 줄로 모았습니다.　—　<b>「만남로」</b> 라고 찍히던 것을 고쳤습니다 — 받침이 있으면 「으로」 입니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -21549,6 +21589,88 @@ function hwhoCss(){
   document.head.appendChild(st);
 }
 /* 오늘 것을 <b>한 줄씩</b> 폅니다. 세는 곳(hmCount)과 같은 샘을 씁니다 (5번) */
+/* ══ 🗺 <b>이번 주 AP·PC 가 잡힌 동네</b> — 가는 김에 한 분 더 ══════════
+   사장님 말씀 (2026-09-23) —
+     「이번주 상담 AP/PC 를 찾아내서, <b>그 지역의 10명을 매일 추천</b>해서
+      약속 잡을수 있게 도와줘. <b>한명 한명당 퀘스트</b>로 만들어줘」
+
+   설계사는 하루에 두 군데를 못 돕니다. 순천에 약속이 둘 잡혀 있으면
+   그 날 순천 사람을 한 명 더 잡는 것이 <b>이동 시간을 안 쓰고 버는</b>
+   유일한 길입니다. 여태 홈은 「오래 안 닿은 순」으로만 뽑아, 순천에 가는
+   날 광양 사람을 권했습니다.
+
+   ★ <b>차례를 뒤엎지 않습니다</b> (5번). 갈래 차례(HM_ORD)와 상태 차례
+     (TDO.ord)는 그대로 두고, <b>같은 자리끼리일 때만</b> 그 동네를
+     앞으로 올립니다. 뒤엎으면 「오늘 꼭 해야 할 것」이 밀립니다.
+   ★ <b>약속이 없으면 지어내지 않습니다</b> (1번). 이번 주에 잡힌 AP·PC 가
+     없으면 아무것도 안 올리고, 화면에 그렇게 적습니다.
+   ★ 지역을 <b>안 적어 두신 분</b>은 못 맞춥니다 — 그것도 그대로 적습니다. */
+var HM_HOT={d:'',v:null};
+/* 이번 주 = 오늘부터 이레. 지난 약속은 안 셉니다 — 이미 다녀오신 곳입니다 */
+function hmHotOf(){
+  var t='';
+  try{ t=mcalToday(); }catch(e){ t=(new Date()).toISOString().slice(0,10); }
+  if(HM_HOT.d===t&&HM_HOT.v)return HM_HOT.v;
+  var end='';
+  try{ end=mcalShift(t,6); }catch(e2){ end=t; }
+  var D=(typeof AR!=='undefined'&&AR.db)?AR.db:[],i,r,ds,rg;
+  var cnt={},who='';
+  try{ who=(typeof hwhoFor==='function')?hwhoFor():''; }catch(e3){ who=''; }
+  for(i=0;i<D.length;i++){
+    r=D[i];
+    if(!r||!r.appt)continue;
+    if(who&&r.who!==who)continue;
+    if(r.stage!=='AP'&&r.stage!=='PC')continue;   /* 상담 자리만 — 사장님 말씀 */
+    ds=(''+r.appt).slice(0,10);
+    if(ds<t||ds>end)continue;
+    rg=(''+(r.region||'')).replace(/^\s+|\s+$/g,'');
+    if(!rg)continue;                               /* 지역을 안 적어 두신 줄은 못 셉니다 (1번) */
+    cnt[rg]=(cnt[rg]||0)+1;
+  }
+  var L=[],k;
+  for(k in cnt)if(cnt.hasOwnProperty(k))L.push({rg:k,n:cnt[k]});
+  L.sort(function(a,b){ return b.n-a.n||(''+a.rg).localeCompare(''+b.rg,'ko'); });
+  HM_HOT.d=t; HM_HOT.v={list:L,to:end};
+  return HM_HOT.v;
+}
+/* 그 동네인가 — <b>한 곳</b>에서만 답합니다 (5번) */
+function hmHotHit(region){
+  var H=hmHotOf(),i,rg=(''+(region||'')).replace(/^\s+|\s+$/g,'');
+  if(!rg)return null;
+  for(i=0;i<H.list.length;i++)if(H.list[i].rg===rg)return H.list[i];
+  return null;
+}
+/* 머리에 적을 한 줄 — <b>없으면 없다고</b> 적습니다 (1번) */
+function hmHotSay(){
+  var H=hmHotOf(),i,p=[];
+  if(!H.list.length)
+    return '이번 주에 잡힌 <b>AP·PC 약속이 없어</b> 평소 차례(오래 안 닿은 분부터)로 뽑았습니다.';
+  for(i=0;i<H.list.length&&i<3;i++)p.push('<b>'+osEsc(H.list[i].rg)+'</b> '+H.list[i].n+'건');
+  return '이번 주 상담이 '+p.join(' · ')+
+    (H.list.length>3?(' 외 '+(H.list.length-3)+'곳'):'')+
+    ' 잡혀 있습니다 — <b>그 동네 분을 앞으로</b> 올렸습니다. 가는 김에 한 분 더 잡으십시오.';
+}
+/* <b>왜 이분인가</b> — 한 줄. 짐작은 안 적습니다 (1번).
+   ★ <b>아래 칩이 이미 말하는 것은 여기 안 적습니다</b> (5번). 예전에는
+     마지막에 「📍 <지역>」 을 돌려주어, 바로 밑 칩의 「📍 <지역>」 과 같은
+     말이 두 줄로 찍혔습니다. 할 말이 없으면 <b>빈 줄</b>을 돌려줍니다 —
+     없는 이유를 지어 적는 것보다 낫습니다 (1번).
+   ★ 어느 칩을 접을지는 hmWhyTag 가 <b>한 곳</b>에서 답합니다.          */
+function hmWhy(x){
+  if(!x)return '';
+  var h=hmHotHit(x.region);
+  if(h)return '📍 이번 주 <b>'+osEsc(h.rg)+'</b>에 상담 '+h.n+'건 — <b>가는 김에</b> 한 분 더';
+  if(typeof x.days==='number'&&x.days>=7)
+    return '⏳ <b>'+x.days+'일째</b> 못 닿았습니다 — 오늘이 제일 빠른 날입니다';
+  return '';
+}
+/* 위 한 줄이 <b>이미 말해 버린</b> 칩은 무엇인가 — '' 면 다 세웁니다 */
+function hmWhyTag(x){
+  if(!x)return '';
+  if(hmHotHit(x.region))return 'region';
+  if(typeof x.days==='number'&&x.days>=7)return 'days';
+  return '';
+}
 function hmSteps(){
   /* 달력 줄도 <b>거른 뒤</b>에 가져온다 — mcalItems 를 날것으로 읽으면
      팀원을 골라 놓아도 약속·생일·할 일은 <b>온 팀 것</b>이 그대로 올라왔다.
@@ -21617,10 +21739,16 @@ function hmSteps(){
   var rank={},j;
   for(j=0;j<HM_ORD.length;j++)rank[HM_ORD[j].k]=j;
   rank.my=HM_ORD.length;            /* 내 일정은 맨 뒤 — 앱이 시킨 것이 먼저입니다 */
+  /* ⓐ 같은 자리끼리일 때만 <b>이번 주 상담이 잡힌 동네</b>를 앞으로.
+     갈래 차례(HM_ORD)와 상태 차례(TDO.ord)는 <b>그대로</b> 둡니다 —
+     뒤엎으면 「오늘 꼭 해야 할 것」이 밀립니다 (5번). */
+  var hotOf=function(z){ try{ var h=hmHotHit(z.region); return h?h.n:0; }catch(e){ return 0; } };
   out.sort(function(a,b){
     var d=(rank[a.k]===undefined?99:rank[a.k])-(rank[b.k]===undefined?99:rank[b.k]);
     if(d)return d;
-    return (a.ord2===undefined?0:a.ord2)-(b.ord2===undefined?0:b.ord2);
+    var o=(a.ord2===undefined?0:a.ord2)-(b.ord2===undefined?0:b.ord2);
+    if(o)return o;
+    return hotOf(b)-hotOf(a);
   });
   for(j=0;j<out.length;j++)
     out[j].key=out[j].k+':'+(out[j].id||out[j].my||out[j].t)+':'+(out[j].m||out[j].tk||'');
@@ -21689,10 +21817,97 @@ function hmSkipClear(){
   if(typeof toast==='function')toast('미뤄 둔 분들을 다시 세웠습니다');
   hmPaint();
 }
+/* ══ 🎯 <b>한 분 = 한 퀘스트</b> ═══════════════════════════════════════
+   사장님 말씀 (2026-09-23) —
+     「한명 한명당 퀘스트로 만들어줘. <b>한명미션을 끝내면 → 다음 사람으로</b>
+      하는게 가장 중요해. 오늘 챙길것 + 아침 미션을 <b>하나로</b> 합치는거야」
+
+   여태 아침 미션은 <b>단계별</b>이었습니다 — ①을 열 분 다 하고, ②를 열 분
+   다 하고. 그래서 한 분을 끝까지 데려가지 못했습니다. 이제 <b>사람별</b>입니다.
+
+   한 분 카드 맨 위에 이 띠가 섭니다 —
+     · 오늘 몇 분 중 몇 번째인가 (동그라미로)
+     · <b>왜 이분인가</b> — 이번 주 그 동네에 상담이 잡혀 있어서 / 며칠째라서
+     · <b>어디서 온 분인가</b>(DB 종류) — 첫 마디가 여기서 갈립니다
+     · <b>어떻게 닿을지</b> — 전화인가 카톡인가
+
+   ★ 아는 것만 적습니다 (1번). DB 종류를 안 적어 두셨으면 그 칸을 안 세웁니다.
+   ★ 전화냐 카톡이냐는 <b>HM_MS_POOL 한 곳</b>이 압니다 (5번).           */
+function hmQstWay(x){
+  var k=(x&&x.tk)||'';
+  var m=(typeof HM_MS_POOL!=='undefined')?HM_MS_POOL[k]:null;
+  if(!m)return null;
+  return m.call?{e:'📞',t:'전화',why:''}:{e:'💬',t:'카톡만',why:m.why||''};
+}
+function hmQstHtml(r){
+  if(!r||!r.x)return '';
+  var x=r.x,i,dots='';
+  /* 동그라미 — 몇 분 중 몇 번째인지 <b>한눈에</b>. 열 개까지만 그립니다 */
+  for(i=0;i<r.n&&i<10;i++)dots+='<i class="'+(i<r.i?'on':(i===r.i?'now':''))+'"></i>';
+  var why=hmWhy(x), way=hmQstWay(x);
+  var tag=function(e,t){ return '<span class="hm-q-t">'+e+' '+osEsc(t)+'</span>'; };
+  var tags='';
+  if(x.src)tags+=tag('🗂',x.src);                 /* 어디서 온 분 — 첫 마디가 갈립니다 */
+  /* 위 「왜 이분인가」 가 <b>이미 말한 것</b>은 또 안 적습니다 — 같은 말이
+     두 줄에 있으면 눈이 미끄러집니다 (5번). 무엇을 접을지는 hmWhyTag 가 압니다. */
+  var dup=hmWhyTag(x);
+  if(x.region&&dup!=='region')tags+=tag('📍',x.region);
+  if(typeof x.days==='number'&&dup!=='days')tags+=tag('⏳',x.days+'일째');
+  if(way)tags+=tag(way.e,way.t);
+  return '<div class="hm-q">'+
+    '<div class="hm-q-top"><span class="hm-q-n">오늘 <b>'+r.n+'분</b> 중 <b>'+(r.i+1)+'번째</b></span>'+
+      '<span class="hm-q-dots">'+dots+(r.n>10?('<em>+'+(r.n-10)+'</em>'):'')+'</span></div>'+
+    (why?('<div class="hm-q-why">'+why+'</div>'):'')+
+    (tags?('<div class="hm-q-tags">'+tags+'</div>'):'')+
+    (way&&way.why?('<div class="hm-q-no">'+way.why+'</div>'):'')+
+  '</div>';
+}
+/* ✅ <b>이분 끝</b> — 다음 분으로. 오늘 하루만 기억합니다.
+   ★ <b>기록이 아닙니다.</b> 전화·카톡·단계는 저마다 제 자리에 남고, 이것은
+     「이 분은 오늘 봤다」는 표시일 뿐입니다 — 안 그러면 다음 분으로 못 넘어가
+     하루가 첫 분에서 멈춥니다. 그래서 화면에도 그렇게 적습니다 (1번).      */
+var HM_QDONE_KEY='apex_hm_qdone_v1';
+function hmQdoneAll(){
+  try{
+    var o=JSON.parse(localStorage.getItem(HM_QDONE_KEY)||'null');
+    if(o&&o.d===((typeof mcalToday==='function')?mcalToday():'')&&o.k&&o.k.push)return o.k;
+  }catch(e){}
+  return [];
+}
+function hmQdone(key){ return hmQdoneAll().indexOf(key)>=0; }
+function hmQdoneSet(key){
+  if(!key)return;
+  var L=hmQdoneAll();
+  if(L.indexOf(key)<0)L.push(key);
+  try{ localStorage.setItem(HM_QDONE_KEY,JSON.stringify(
+       {d:(typeof mcalToday==='function')?mcalToday():'',k:L})); }catch(e){}
+}
+function hmQdoneClear(){
+  try{ localStorage.removeItem(HM_QDONE_KEY); }catch(e){}
+  if(typeof toast==='function')toast('오늘 끝낸 표시를 지웠습니다');
+  hmPaint();
+}
+function hmQfin(key){
+  if(!key)return;
+  hmQdoneSet(key);
+  var L=hmSteps(),left=0,i;
+  for(i=0;i<L.length;i++)if(!hmQdone(L[i].key)&&!hmIsDone(L[i].key))left++;
+  if(typeof toast==='function')
+    toast(left?('다음 분으로 갑니다 — '+left+'분 남았습니다'):'오늘 열 분을 다 보셨습니다');
+  hmPaint();
+}
+/* <b>여기서 하루가 넘어갑니다</b> — 끝낸 분과 미룰 분을 <b>한 줄</b>에 둡니다.
+   따로 두 줄로 세웠더니 116px 이었습니다. 무엇보다 「끝」 과 「뒤로」 는
+   같은 물음(<b>이 분을 지금 어떻게 할까</b>)이라 한 자리에 있어야 합니다.
+   ★ <b>이분 끝</b>은 기록이 아닙니다 — 전화·카톡·단계는 저마다 제 자리에
+     남고, 이것은 「오늘 봤다」는 표시입니다. 그게 없으면 하루가 첫 분에서
+     멈춥니다 (사장님 말씀 2026-09-23). 그래서 아래 글로도 그렇게 적습니다. */
 function hmSkipHtml(r){
   if(!r||!r.x)return '';
   var n=hmSkipAll().length;
   return '<div class="hm-nx">'+
+    '<button type="button" class="hm-nx-f" onclick="hmQfin(\''+osEsc(r.x.key)+'\')">'+
+      '✅ 이분 끝 <span>다음 분으로 →</span></button>'+
     (r.n>1?('<button type="button" class="hm-nx-b" onclick="hmSkip(\''+r.x.key+'\')">'+
             '다음 분 → <span>오늘은 뒤로</span></button>'):'')+
     (n?('<button type="button" class="hm-nx-u" onclick="hmSkipClear()">미뤄 둔 '+n+'분 다시 보기</button>'):'')+
@@ -21703,8 +21918,12 @@ function hmSkipHtml(r){
    빈 화면을 보여 드리면 「다 했다」 로 읽히기 때문이다 (1번). */
 function hmNext(){
   var L=hmSteps(),i;
-  for(i=0;i<L.length;i++)if(!hmIsDone(L[i].key)&&!hmSkipped(L[i].key))return {x:L[i],i:i,n:L.length};
-  for(i=0;i<L.length;i++)if(!hmIsDone(L[i].key))return {x:L[i],i:i,n:L.length};
+  /* ✅ <b>이분 끝</b>을 누른 분은 건너뜁니다 — 그게 없으면 하루가 첫 분에서
+     멈춥니다 (사장님 말씀 2026-09-23). 미뤄 둔 분보다 먼저 걸러냅니다. */
+  for(i=0;i<L.length;i++)
+    if(!hmIsDone(L[i].key)&&!hmQdone(L[i].key)&&!hmSkipped(L[i].key))return {x:L[i],i:i,n:L.length};
+  for(i=0;i<L.length;i++)
+    if(!hmIsDone(L[i].key)&&!hmQdone(L[i].key))return {x:L[i],i:i,n:L.length};
   return {x:null,i:L.length,n:L.length};
 }
 /* 열기 — 고객이 붙은 것은 <b>그 분 카드</b>로, 아니면 그 화면으로 */
@@ -22738,6 +22957,16 @@ function hdbSgPick(id,to){
    셋에서 자르면 사장님이 말씀하신 것 중 절반이 <b>안 보인다.</b> 번호가 붙어
    있으니 늘어도 고르기 어렵지 않다. */
 var HM_PICK_TOOLS=6;
+/* <b>「만남로」</b> 라고 찍혔습니다 — 받침이 있으면 「으로」 입니다.
+   수단(ch)은 만남·전화·문자 셋이지만 <b>표로 적지 않습니다</b> — 수단을
+   늘릴 때 그 표만 안 고쳐져 또 「…로」 가 찍힙니다 (5번). 받침으로 가립니다.
+   ㄹ 받침은 「로」 입니다(「이메일로」) — 그래서 따로 봅니다.            */
+function hmRo(w){
+  var s=''+(w||''),c=s.charCodeAt(s.length-1),j;
+  if(!(c>=0xAC00&&c<=0xD7A3))return s+'로';      /* 한글이 아니면 손대지 않습니다 */
+  j=(c-0xAC00)%28;                                /* 0 = 받침 없음 · 8 = ㄹ */
+  return s+((j===0||j===8)?'로':'으로');
+}
 function hmPicks(x){
   var k=(x&&x.k==='db')?x.tk:(x&&x.k),
       m=(typeof TDO!=='undefined'&&TDO[k])||null,
@@ -22748,7 +22977,7 @@ function hmPicks(x){
        <b>달력 갈래</b>(HM_ACT)입니다. 그 줄에도 <b>여는 갈래는 반드시</b>
        세웁니다. 안 그러면 「열기」 가 사라져 그 줄은 <b>손댈 길이 없어집니다.</b>
        실제로 그렇게 만들었다가 점검이 잡았습니다 (8번). */
-  if(m)out.push({t:(m.ch||'연락')+'로 '+String(m.aim||'').replace(/<[^>]*>/g,''),
+  if(m)out.push({t:hmRo(m.ch||'연락')+' '+String(m.aim||'').replace(/<[^>]*>/g,''),
                  s:String(m.way||'').replace(/<[^>]*>/g,''),
                  e:(m.ch==='만남'?'🤝':(m.ch==='문자'?'💬':'☎️')),
                  act:'open'});
@@ -22763,7 +22992,7 @@ function hmPicks(x){
               e:'💬',act:'kt'});
   /* ② 손에 쥘 도구 — 메뉴에 있는 것만이라 누르면 반드시 열립니다 */
   for(i=0;i<L.length&&i<HM_PICK_TOOLS;i++)
-    out.push({t:(L[i].title||L[i].id)+' 열기',s:'',e:L[i].icon||'🧰',
+    out.push({t:(L[i].title||L[i].id),s:'',e:L[i].icon||'🧰',
               act:'go',go:L[i].id});
   /* ③ 끝났으면 끝났다고, 아니면 오늘은 넘긴다 */
   /* 갈래마다 끝냈다는 말이 다릅니다 — 「보냈습니다」 · 「만났습니다」.
@@ -22772,18 +23001,28 @@ function hmPicks(x){
   out.push({t:'이미 '+(B.b||'했습니다'),s:'오늘 한 것으로 표시합니다',e:'✅',act:'did'});
   return out;
 }
+/* ★ <b>도구는 눕혀 세웁니다.</b> AP 한 자리에 도구가 여섯이라 한 줄씩
+     세우면 <b>276px</b> — 한 분 보는 데 화면 반 장이 도구 목록이었습니다.
+     <b>지우는 것이 아니라 눕히는 것</b>이라 여섯이 그대로 다 있고, 높이만
+     44px 를 지켜 두 개씩 눕습니다(손가락은 44px 아래로 빗나갑니다).
+     번호는 그대로 둡니다 — 누르는 자리(hmPick)가 그 번호로 찾습니다.   */
 function hmPicksHtml(x){
-  var P=hmPicks(x),i,h,key=(x&&x.key)||'';
+  var P=hmPicks(x),i,h,key=(x&&x.key)||'',g=false,isT;
   if(!P.length)return '';
   h='<div class="hm-ask"><div class="hm-ask-t">무엇을 할까요?</div>';
-  for(i=0;i<P.length;i++)
-    h+='<button type="button" class="hm-ask-o" '+
+  for(i=0;i<P.length;i++){
+    isT=(P[i].act==='go');
+    if(isT&&!g){ h+='<div class="hm-ask-gt">🧰 손에 쥘 도구</div><div class="hm-ask-g">'; g=true; }
+    if(!isT&&g){ h+='</div>'; g=false; }
+    h+='<button type="button" class="hm-ask-o'+(isT?' tool':'')+'" '+
        'onclick="hmPick(\''+osEsc(key)+'\','+i+')">'+
        '<span class="no">'+(i+1)+'</span>'+
        '<span class="e">'+P[i].e+'</span>'+
        '<span class="m"><b>'+osEsc(P[i].t)+'</b>'+
        (P[i].s?('<span>'+osEsc(P[i].s)+'</span>'):'')+'</span>'+
        '<span class="ar">›</span></button>';
+  }
+  if(g)h+='</div>';
   return h+'</div>';
 }
 /* ══ 홈을 <b>안 떠난다</b> — 도구를 홈 위에 덮는다 ══════════════════
@@ -23237,7 +23476,9 @@ function hmNowHtml(){
      씻습니다</b> — 할 말에는 사장님이 적으신 메모가 섞여 들어옵니다 (3번). */
   var kt=x.kt||A.t, ee=x.e||A.e;
   return '<div class="hm-now">'+
-    '<div class="hm-now-k">'+r.n+'건 중 <b>'+(r.i+1)+'번째</b> · '+osEsc(kt)+'</div>'+
+    /* 🎯 퀴스트 띄 — 몇 분 중 몇 번째 · 왜 이분 · 어디서 온 분 · 어떻게 닿을지 */
+    hmQstHtml(r)+
+    '<div class="hm-now-k">'+osEsc(kt)+'</div>'+
     '<div class="hm-now-m"><span class="e">'+ee+'</span>'+
       '<span class="m"><b>'+osEsc(x.t||kt)+'</b>'+
       (x.s?('<span>'+osEsc(x.s)+'</span>'):'')+'</span></div>'+
@@ -23253,6 +23494,9 @@ function hmNowHtml(){
        붙어서, TA·AP·PC·CS 에는 <b>연락할 구실</b>이 없었습니다. */
     hmNowNewsHtml()+
     /* <b>다음 분으로</b> — 오늘 못 닿는 분에 걸려 하루가 멈추면 안 됩니다 */
+    /* ✅ <b>이분 끝</b> — 누르면 다음 분 카드가 올라옵니다 (사장님 말씀 2026-09-23).
+       이것은 <b>기록이 아닙니다</b> — 전화·카톡·단계는 저마다 제 자리에 남고,
+       여기는 「이 분은 오늘 봤다」는 표시입니다. 그게 없으면 하루가 첫 분에서 멈춥니다. */
     hmSkipHtml(r)+
     '<div class="hm-now-n">'+(A.real
       ? '누르면 <b>기록으로 남습니다</b> — 그래서 이 분은 주기가 오늘부터 다시 셉니다.'
@@ -23362,7 +23606,7 @@ function msN(){ return HM_MS_N; }
 function msKo(){ return HM_MS_NKO[HM_MS_N]||(''+HM_MS_N); }
 var HM_MS=[
  {n:'①',ck:'d2', e:'🔔',t:'오늘의 알림 확인', kind:'almn',
-  d:'오늘 연락할 분이 <b>누구인지</b>부터 봅니다. 여기서 '+msKo()+' 분을 뽑습니다.'},
+  d:'줄마다 <b>어떻게 닿고 · 어디서 온 분이고 · 무엇을 할지</b>가 적힙니다. 누르시면 ②③④ 가 따라옵니다.'},
  {n:'②',ck:'d3', e:'🎯',t:msKo()+' 분께 어떻게 연락할지', kind:'plan',
   d:'한 분씩 — <b>보낼 소식</b>과 <b>첫 마디</b>를 여기서 정합니다.'},
  {n:'③',ck:'d4', e:'☎️',t:'전화 '+msKo()+' 통 (TA)', kind:'call',
@@ -23417,6 +23661,20 @@ function hmMsPeople(){
   var L=[],out=[],i;
   try{ if(typeof arTouch==='function')L=arTouch((typeof hwhoFor==='function')?hwhoFor():'')||[]; }
   catch(e){ return []; }
+  /* ★ <b>차례는 「오늘 챙길 것」 이 세운 그대로</b> 따릅니다 (5번).
+     여태는 arTouch 가 준 차례를 그냥 썼는데, 그 뒤에 「오늘 챙길 것」이
+     <b>이번 주 상담 동네를 앞으로</b> 올리게 되면서 둘이 갈렸습니다 —
+     한 분 카드의 1번은 순천 분인데 ① 목록의 1번은 광양 분이었습니다.
+     화면 두 곳이 다른 1번을 말하면 어느 쪽을 따라야 할지 알 수 없습니다.
+     세는 자리는 hmSteps 한 곳입니다.                                   */
+  var rank={},S=[],ra,rb;
+  try{ S=hmSteps(); }catch(e2){ S=[]; }
+  for(i=0;i<S.length;i++)if(S[i].k==='db'&&S[i].id&&rank[S[i].id]===undefined)rank[S[i].id]=i;
+  L=L.slice().sort(function(a,b){
+    ra=(rank[a.id]===undefined)?9999:rank[a.id];
+    rb=(rank[b.id]===undefined)?9999:rank[b.id];
+    return ra-rb;
+  });
   for(i=0;i<L.length&&out.length<HM_MS_N;i++)if(HM_MS_POOL[L[i].k])out.push(L[i]);
   return out;
 }
@@ -23440,6 +23698,14 @@ function hmMsWho(){
   if(!P.length)return null;
   if(HM_MSP.i>=P.length)HM_MSP.i=0;
   return P[HM_MSP.i];
+}
+/* ① 목록에서 <b>그 분을 눌러</b> 고릅니다 — ②③④ 가 그 분으로 따라옵니다.
+   차례를 세는 자리는 HM_MSP.i <b>한 곳</b>입니다 (5번). */
+function hmMsPick(i){
+  var P=hmMsPeople();
+  if(!P.length||i<0||i>=P.length)return;
+  HM_MSP.i=i;
+  hmMsPaint();
 }
 function hmMsNextWho(){
   var P=hmMsPeople();
@@ -23678,9 +23944,10 @@ function hmMsNewsLine(x){
   if(!x||!x.id)return '';
   var f=ccFitOf(x.id);
   if(!f.read)
-    return '<div class="hm-ms-nonews">❓ <b>이 분은 아직 읽을 것이 없습니다.</b> '+
-      '소식을 <b>지어내지 않습니다</b>.'+
-      (f.need.length?('<br>「<b>'+osEsc(f.need.join('」 · 「'))+'</b>」 을 적어 주시면 읽힙니다. '):' ')+
+    /* ★ <b>「아직」 을 빼지 마십시오.</b> 「없습니다」 는 결론이라, 못 읽은
+       것을 없다고 적으면 그것이 사실이 됩니다 (1번). 점검이 이 말을 봅니다. */
+    return '<div class="hm-ms-nonews">❓ <b>아직 읽을 것이 없습니다</b> — 소식을 지어내지 않습니다.'+
+      (f.need.length?(' 「<b>'+osEsc(f.need.join('」 · 「'))+'</b>」 을 적어 주시면 읽힙니다. '):' ')+
       '<button type="button" onclick="hmMsOpen()">📇 이분 열기</button></div>';
   var c=APEX_FIT.catOf(f.cat)||{t:f.cat,ic:'📰'};
   var i=ccNewsIdx(x.id),w=f.why||{};
@@ -23698,9 +23965,9 @@ function hmMsNewsLine(x){
 }
 /* 왜 이 나이대인가 — <b>세 가지를 갈라 적습니다</b> (1번). 삼항 사슬 금지 (5번) */
 var HM_MS_AGEWHY={
- auto:'고객 365일에 적힌 <b>출생년도</b>로 골랐습니다.',
+ auto:'고객 365일의 <b>출생년도</b>로 골랐습니다.',
  hand:'<b>고르신</b> 나이대입니다 — 앱이 정한 것이 아닙니다.',
- none:'<b>나이를 몰라 기본 화법</b>입니다 — 배정 DB 에는 출생년도 칸이 없습니다. 아시면 눌러 주세요.'
+ none:'<b>나이를 몰라 기본 화법</b>입니다 — 아시면 눌러 주세요.'
 };
 function hmMsAgeHtml(x){
   if(!x||typeof APEX_STAGE==='undefined'||!APEX_STAGE.taAge)return '';
@@ -23752,6 +24019,82 @@ function hmMsNextHtml(tot){
 }
 /* ── 미션 다섯의 <b>속</b> — 표 하나로 갈립니다 (5번) ───────────────
    삼항 사슬로 늘어놓으면 미션을 하나 더할 때 반드시 하나를 빠뜨립니다. */
+/* ── ① <b>오늘의 알림</b> — 한 줄에 네 가지를 답합니다 ────────────────
+   사장님 말씀 (2026-09-23) — 「오늘의 알림 이거 <b>어떻게 접촉할지 · DB종류 ·
+   어떻게 관리할지 · 어떤 연락 드릴지</b>를 자세하게 찾아서 하라니까 이것도
+   안 하고 있고」. 여태는 <b>이름과 단계</b>만 칩으로 늘어놓았습니다 —
+   그러면 사장님이 한 분씩 눌러 들어가 네 가지를 매번 다시 찾으셔야 합니다.
+
+     📞 전화 / 💬 카톡만  ← <b>어떻게 접촉할지</b> (HM_MS_POOL)
+     🗂 DB종류            ← <b>어디서 온 분인지</b> (배정 DB 의 src)
+     🎯 …                 ← <b>어떻게 관리할지</b> (단계표의 aim)
+     📰 …                 ← <b>어떤 연락 드릴지</b> (그 분 갈래의 소식)
+
+   ★ 넷 다 <b>이미 있는 표</b>에서 가져옵니다 (5번). 여기서 새로 정하면
+     ②③④ 와 다른 말을 해, 목록에서 본 것과 통화할 때 보는 것이 갈립니다.
+   ★ <b>모르는 칸은 아예 안 세웁니다</b> (1번) — 지역을 안 적어 두신 분께
+     「지역 없음」 이라 적으면 그것도 하나의 사실로 읽힙니다.            */
+function hmMsAlmCat(x){
+  /* 어떤 소식을 드릴지 — <b>갈래 이름만</b>. 기사 제목은 ② 에서 봅니다.
+     고르는 자리는 ccFitOf·ccNewsIdx 한 곳입니다 (5번). */
+  if(!x||!x.id||typeof APEX_FIT==='undefined')return null;
+  var f,c;
+  try{ f=ccFitOf(x.id); }catch(e){ return null; }
+  if(!f||!f.read)return null;
+  c=APEX_FIT.catOf(f.cat);
+  return c?{ic:c.ic||'📰',t:c.t||f.cat}:null;
+}
+/* 오늘 뽑힌 분 중 <b>그 동네가 몇 분</b>인가 — 사장님 말씀 「이번 주 상담
+   AP·PC 를 찾아내서 <b>그 지역의 열 분</b>을 매일 추천해」.
+   ★ <b>모자라면 모자란 대로</b> 적습니다 (1번). 그 동네에 세 분밖에 없는데
+     열 분을 채우려고 딴 동네를 그 동네라고 적으면, 사장님이 헛걸음하십니다.
+   ★ 여기서 <b>다시 고르지 않습니다</b> (5번) — hmMsPeople 이 세운 그 차례
+     그대로 세고, 몇 분이 그 동네인지만 말합니다. */
+function hmMsHotLine(P){
+  var H=hmHotOf(),i,n=0,rg={};
+  /* 이번 주 상담이 <b>아무 데도</b> 안 잡혔으면 — 그 말은 hmHotSay 한 곳이
+     합니다 (5번). 여기서 또 적으면 두 줄이 같은 말을 합니다. */
+  if(!H.list.length)return '<div class="hm-ms-hot none">📍 '+hmHotSay()+'</div>';
+  for(i=0;i<P.length;i++){
+    var h=hmHotHit(P[i].sub);
+    if(h){ n++; rg[h.rg]=1; }
+  }
+  var L=[],k;
+  for(k in rg)if(rg.hasOwnProperty(k))L.push(k);
+  if(!n)
+    /* 그 동네 분이 <b>하나도 안 뽑혔을</b> 때 — 억지로 채우지 않습니다 (1번) */
+    return '<div class="hm-ms-hot none">📍 이번 주 상담 동네(<b>'+
+      osEsc(H.list.map(function(z){return z.rg;}).join(' · '))+
+      '</b>)에는 <b>오늘 뽑힌 분이 없습니다</b> — 사람을 지어내 채우지 않습니다.</div>';
+  return '<div class="hm-ms-hot">📍 오늘 <b>'+P.length+'분</b> 중 <b>'+
+    osEsc(L.join(' · '))+' '+n+'분</b>이 이번 주 상담 가시는 동네입니다 — '+
+    '<b>가는 김에</b> 약속을 잡으십시오.</div>';
+}
+function hmMsAlmRow(x,i){
+  var R=(typeof HM_MS_POOL!=='undefined'&&HM_MS_POOL[x.k])||{},
+      m=(typeof TDO!=='undefined'&&TDO[x.k])||null,
+      aim=m?String(m.aim||'').replace(/<[^>]*>/g,''):'',
+      c=hmMsAlmCat(x),t='';
+  t+='<span class="hm-ma-t way">'+(R.call===false?'💬 카톡만':'📞 전화')+'</span>';
+  if(x.src)t+='<span class="hm-ma-t">🗂 '+osEsc(x.src)+'</span>';
+  if(x.sub)t+='<span class="hm-ma-t">📍 '+osEsc(x.sub)+'</span>';
+  if(typeof x.d==='number')t+='<span class="hm-ma-t">⏳ '+x.d+'일째</span>';
+  /* <b>어떤 소식</b>은 지금 보고 계신 분께만 폅니다 — 열 분 모두에게 두
+     줄씩 붙이면 ① 하나가 1,002px(화면 한 장 반)이 됩니다. 퀘스트는 한
+     분씩이니, 펴는 것도 <b>지금 그 분</b>입니다. 나머지 분도 어떻게 닿고
+     (📞·💬) 어디서 온 분이고(🗂) 무엇을 할지(🎯)는 접힌 채로 다 보입니다. */
+  var on=(HM_MSP.i===i);
+  return '<button type="button" class="hm-ma'+(on?' on':'')+'" '+
+      'onclick="hmMsPick('+i+')">'+
+    '<span class="hm-ma-h"><i>'+(i+1)+'</i><b>'+osEsc(x.nm||'고객')+'</b>'+
+      '<em>'+osEsc(x.k)+'</em></span>'+
+    '<span class="hm-ma-g">'+t+'</span>'+
+    (aim?('<span class="hm-ma-a">🎯 '+osEsc(aim)+'</span>'):'')+
+    (on?('<span class="hm-ma-n">'+(c
+      ? ('📰 '+osEsc(c.ic)+' <b>'+osEsc(c.t)+'</b> 갈래 소식')
+      : '📰 읽을 것이 없어 <b>소식은 안 고릅니다</b>')+'</span>'):'')+
+  '</button>';
+}
 var HM_MS_BODY={
  /* ⑥ 고객 보험 보기 — 칸을 <b>다시 안 만듭니다</b>. 홈에 서 있던 그
     칸(hmChkHtml)을 그대로 데려옵니다 — 둘을 따로 두면 한쪽만 고쳐집니다 (5번). */
@@ -23773,10 +24116,11 @@ var HM_MS_BODY={
        '<div class="hm-ms-b"><button type="button" class="btn btn-ghost" onclick="go(\'crm\')">📇 DB 통합 CRM 열기</button>'+
        '<button type="button" class="btn btn-ghost" onclick="hdbNew()">➕ 고객 넣기</button></div></div>');
    var h='',i;
-   for(i=0;i<P.length;i++)h+='<span class="hm-ms-chip">'+osEsc(P[i].nm||'고객')+
-     '<i>'+osEsc(P[i].k)+'</i></span>';
-   return '<div class="hm-ms-list"><div class="hm-ms-lh">오늘 뽑힌 <b>'+P.length+'분</b>입니다 — '+
-     '아래 ②③④ 가 <b>이 분들</b>로 갑니다.</div>'+h+'</div>'+
+   for(i=0;i<P.length;i++)h+=hmMsAlmRow(P[i],i);
+   return hmMsHotLine(P)+
+     /* 「누르시면 ②③④ 가 따라옵니다」 는 <b>바로 위 미션 머리</b>가 이미
+        적었습니다 — 두 번 적으면 같은 말을 두 줄 읽습니다 (5번). */
+     '<div class="hm-ms-list">'+h+'</div>'+
      '<div class="hm-ms-b"><button type="button" class="btn btn-ghost" onclick="go(\'crm\')">🔔 DB 통합 CRM 에서 보기</button></div>';
  },
  /* ② 어떻게 연락할지 — 소식과 첫 마디를 <b>한 자리</b>에 */
@@ -23790,7 +24134,7 @@ var HM_MS_BODY={
      (S?('<div class="hm-ms-say"><span class="lb">💬 첫 마디</span>'+osEsc(S.say)+'</div>'):
         '<div class="hm-ms-nonews">이 상태에는 <b>정해 둔 첫 마디가 없습니다</b> — 지어내지 않습니다.</div>')+
      '<div class="hm-ms-b">'+
-       (S?'<button type="button" class="btn btn-primary" onclick="hmMsSayCopy()">📋 첫 마디 복사</button>':'')+
+       (S?'<button type="button" class="btn btn-primary" onclick="hmMsSayCopy()">📋 복사</button>':'')+
        '<button type="button" class="btn btn-ghost" onclick="hmMsOpen()">📇 이분 열기</button>'+
        hmMsNextHtml(P.length)+'</div>';
  },
@@ -24009,7 +24353,7 @@ function hmMsCss(){
    '.hm-ms-warn{margin-top:9px;border:1px solid #FECACA;background:#FEF2F2;border-radius:var(--r-sm);'+
      'padding:10px 12px;font-size:var(--t6);line-height:1.7;color:#991B1B}'+
    /* 나이대 */
-   '.hm-ms-age{margin-top:9px;border:1px solid var(--ink-7);border-radius:var(--r-sm);padding:9px 11px}'+
+   '.hm-ms-age{margin-top:8px;border:1px solid var(--ink-7);border-radius:var(--r-sm);padding:7px 11px}'+
    '.hm-ms-age.own{border-color:#FCD34D;background:#FFFBEB}'+
    '.hm-ms-age-r{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto;'+
      '-webkit-overflow-scrolling:touch;scrollbar-width:none}'+
@@ -24020,7 +24364,7 @@ function hmMsCss(){
      'font-size:var(--t6);font-weight:700;color:var(--ink-3);cursor:pointer}'+
    '.hm-ms-age-c.on{background:#1A56DB;border-color:#1A56DB;color:#fff}'+
    '.hm-ms-age.own .hm-ms-age-c.on{background:#B45309;border-color:#B45309}'+
-   '.hm-ms-age-w{margin-top:7px;font-size:var(--t6);line-height:1.65;color:var(--ink-4)}'+
+   '.hm-ms-age-w{margin-top:5px;font-size:var(--t6);line-height:1.55;color:var(--ink-4)}'+
    '.hm-ms-age-g{margin-top:6px;border-radius:8px;overflow:hidden;font-size:var(--t6);line-height:1.6}'+
    '.hm-ms-age-g .t{background:#EFF6FF;color:#1E3A8A;padding:6px 9px}'+
    '.hm-ms-age-g .n{background:#FEF2F2;color:#991B1B;padding:6px 9px}'+
@@ -24037,12 +24381,12 @@ function hmMsCss(){
    '.hm-ms-fr-d{margin:3px 0 0 22px;font-size:var(--t6);line-height:1.6;color:#4E5968}'+
    /* 할 말 */
    '.hm-ms-say{margin-top:9px;background:#fff;border:1px solid var(--ink-7);border-radius:var(--r-sm);'+
-     'padding:10px 12px;white-space:pre-wrap;font-size:var(--t5);line-height:1.85;font-weight:600;color:#191F28}'+
+     'padding:10px 12px;white-space:pre-wrap;font-size:var(--t5);line-height:1.7;font-weight:600;color:#191F28}'+
    '.hm-ms-say .lb{display:block;font-size:var(--t6);font-weight:900;color:var(--ink-5);margin-bottom:5px}'+
    '.hm-ms-say.kt{background:#FFFBEB;border-color:#FDE68A}'+
    /* 단추 줄 */
    '.hm-ms-b{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}'+
-   '.hm-ms-b .btn{min-height:44px;padding:8px 12px;font-size:var(--t6)}'+
+   '.hm-ms-b .btn{min-height:44px;padding:8px 10px;font-size:var(--t6);white-space:nowrap}'+
    '.hm-ms-nx{min-height:44px;padding:8px 12px;border:1px solid var(--ink-7);background:#fff;'+
      'border-radius:var(--r-sm);font-family:inherit;font-size:var(--t6);font-weight:800;'+
      'color:var(--ink-2);cursor:pointer}'+
@@ -24112,14 +24456,34 @@ function hmMsCss(){
    /* 오늘 뽑힌 분들 */
    '.hm-ms-list{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap}'+
    '.hm-ms-lh{flex:1 1 100%;font-size:var(--t6);line-height:1.65;color:var(--ink-4);margin-bottom:2px}'+
-   '.hm-ms-chip{display:inline-flex;align-items:baseline;gap:5px;background:var(--ink-9,#F5F7FA);'+
-     'border-radius:999px;padding:6px 11px;font-size:var(--t6);font-weight:800;color:var(--ink-2)}'+
-   '.hm-ms-chip i{font-style:normal;font-weight:700;color:var(--ink-5)}'+
+   /* ① 한 분 줄 — <b>눌러 고르는</b> 자리라 44px 를 지킵니다 */
+   '.hm-ma{flex:1 1 100%;display:block;width:100%;text-align:left;min-height:44px;'+
+     'border:1px solid var(--ink-7);background:#fff;border-radius:var(--r-sm);'+
+     'padding:7px 10px;font-family:inherit;cursor:pointer}'+
+   '.hm-ma.on{border-color:var(--primary);background:#F5F9FF;box-shadow:inset 3px 0 0 var(--primary)}'+
+   '.hm-ma-h{display:flex;align-items:baseline;gap:6px;font-size:var(--t5)}'+
+   '.hm-ma-h i{font-style:normal;flex:none;min-width:20px;height:20px;line-height:20px;text-align:center;'+
+     'border-radius:var(--r-xs);background:var(--primary);color:#fff;font-size:var(--t6);font-weight:900}'+
+   '.hm-ma-h b{font-weight:900;color:var(--ink-1);letter-spacing:-.02em}'+
+   '.hm-ma-h em{font-style:normal;font-size:var(--t6);font-weight:800;color:var(--ink-5)}'+
+   '.hm-ma-g{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}'+
+   '.hm-ma-t{font-size:var(--t6);font-weight:700;color:var(--ink-4);background:var(--ink-9,#F5F7FA);'+
+     'border-radius:999px;padding:1px 6px}'+
+   '.hm-ma-t.way{background:#EAF3FF;color:#1E40AF;font-weight:800}'+
+   '.hm-ma-a{display:block;margin-top:3px;font-size:var(--t6);line-height:1.45;color:var(--ink-3)}'+
+   '.hm-ma-n{display:block;margin-top:2px;font-size:var(--t6);line-height:1.45;color:var(--ink-5)}'+
+   '.hm-ma-n b{color:var(--ink-3);font-weight:800}'+
+   /* 📍 이번 주 상담 가시는 동네 — <b>가는 김에</b> */
+   '.hm-ms-hot{margin-top:10px;border:1px solid #A7F3D0;background:#ECFDF5;border-radius:var(--r-sm);'+
+     'padding:9px 11px;font-size:var(--t6);line-height:1.6;color:#065F46}'+
+   '.hm-ms-hot b{color:#047857;font-weight:900}'+
+   '.hm-ms-hot.none{border-color:#FDE68A;background:#FFFBEB;color:#92400E}'+
+   '.hm-ms-hot.none b{color:#B45309}'+
    '.hm-ms-none{margin-top:10px;border:1px solid #FDE68A;background:#FFFBEB;border-radius:var(--r-sm);'+
      'padding:11px 13px;font-size:var(--t6);line-height:1.7;color:#92400E}'+
    /* 했습니다 */
-   '.hm-ms-done{margin-top:10px;border-top:1px dashed var(--ink-7);padding-top:10px}'+
-   '.hm-ms-done .btn{width:100%;min-height:48px;font-size:var(--t5);display:block}'+
+   '.hm-ms-done{margin-top:9px;border-top:1px dashed var(--ink-7);padding-top:9px}'+
+   '.hm-ms-done .btn{width:100%;min-height:46px;font-size:var(--t5);display:block}'+
    '.hm-ms-done .btn span{display:block;margin-top:2px;font-size:var(--t6);font-weight:700;opacity:.85}'+
    /* 다 끝났을 때 */
    '.hm-ms-fin{border:1px solid #6EE7B7;background:#ECFDF5;border-radius:var(--r-sm);padding:12px 14px}'+
@@ -24154,6 +24518,15 @@ function hmTodayHtml(){
       '<button type="button" class="hm-cal" onclick="go(\'mycal\')">📅 내 캘린더</button></div>'+
     '<h2 class="hm-big">'+(c.total?('오늘 챙길 것 <em>'+c.total+'건</em>입니다'):HM_BIG[hmHold()])+'</h2>'+
     '<p class="hm-sub">'+HM_SUB[c.total?'ok':hmHold()](c)+'</p>';
+  /* ☀️ <b>아침 미션을 여기 안으로</b> 데려왔습니다 (사장님 말씀 2026-09-23).
+     칸을 다시 만들지 않고 쓰던 그것(hmMsHtml)을 그대로 씁니다 (5번).
+     ★ <b>먼저 지어 둡니다.</b> 아래 「오늘 챙길 것이 없다」 는 자리에서 그냥
+       return 하는 바람에, 오늘 뽑힌 분이 없거나 <b>아직 읽는 중</b>이면
+       아침 미션이 통째로 사라졌습니다 — 미션은 사람이 없어도 할 것(SNS·
+       고객 보험)이 있고, 무엇보다 「읽는 중」이라고 말해 줄 자리입니다. */
+  var ms='';
+  try{ ms=hmFoldWrap('ms','\uD83C\uDF05','\uC544\uCE68 \uBBF8\uC158',hmMsSub(),
+         '<div id="hmMsHost">'+hmMsHtml()+'</div>'); }catch(eM){ ms=''; }
   if(!c.total)
     /* <b>여기가 거짓말하던 자리입니다.</b> 아직 안 왔을 때도, 못 받았을 때도
        똑같이 「비어 있습니다」 라고 적었습니다. 세 자리를 갈라 놓습니다 (1번). */
@@ -24162,10 +24535,12 @@ function hmTodayHtml(){
       why:hmHoldWhy(),
       again:'hmReload()',
       fill:'고객을 넣고 상태를 적어 두시면, 주기가 돌아오는 날 이 자리에 섭니다.',
-      goT:'고객 365일 열기', go:"go('clients')"})+'</div></div>';
+      goT:'고객 365일 열기', go:"go('clients')"})+ms+'</div></div>';
   /* 「지금 이것」 을 맨 앞에 — 갈래별 줄은 그 아래에 그대로 둡니다.
-     한 건씩 따라가셔도 되고, 전체를 훑어보셔도 됩니다. */
-  return head+hmNowHtml()+'<div class="hm-rows">'+rows+'</div></div></div>';
+     한 건씩 따라가셔도 되고, 전체를 훑어보셔도 됩니다.
+     한 분씩 퀘스트가 <b>먼저</b> 서고, 사람과 상관없는 것(SNS·고객 보험)은
+     그 아래 <b>접혀</b> 있습니다 — 펴 두면 한 분 카드가 밀립니다. */
+  return head+hmNowHtml()+'<div class="hm-rows">'+rows+'</div>'+ms+'</div></div>';
 }
 /* ── 홈에서 <b>TFA 업무관리까지</b> ─────────────────────────────────
    하루 일을 두 화면에서 했습니다 — 고객은 홈에서, 내 일과 팀 일은 TFA 에서.
@@ -24996,7 +25371,7 @@ function hmChkCss(){
    '.hm-chk-eye{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:7px;'+
      'font-size:var(--t6);color:#1E40AF;background:#EFF6FF;border-radius:9px;padding:7px 9px}'+
    '.hm-chk-eye b{color:#0F172A}'+
-   '.hm-chk-eye i{flex:1 1 100%;font-style:normal;color:var(--ink-5);font-size:var(--t7)}'+
+   '.hm-chk-eye i{flex:1 1 100%;font-style:normal;color:var(--ink-5);font-size:var(--t6)}'+
    '.hm-chk-one{margin-top:8px;border:1px solid #A7F3D0;background:#fff;'+
      'border-radius:var(--r-sm);padding:10px 11px}'+
    '.hm-chk-n{font-size:var(--t5);font-weight:800;color:var(--ink-1)}'+
@@ -25265,6 +25640,11 @@ function hmIgCss(){
    /* <b>다음 분</b> 줄 */
    '.hm-nx{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px;'+
      'border-top:1px dashed var(--ink-7);padding-top:11px}'+
+   /* ✅ <b>이분 끝</b> — 같은 줄의 <b>주된</b> 단추입니다 */
+   '.hm-nx-f{flex:1 1 55%;min-height:48px;border:0;background:#047857;color:#fff;'+
+     'border-radius:var(--r-sm);font-family:inherit;font-size:var(--t5);font-weight:900;'+
+     'cursor:pointer;padding:9px 12px}'+
+   '.hm-nx-f span{display:block;font-size:var(--t6);font-weight:700;opacity:.88;margin-top:1px}'+
    '.hm-nx-b{flex:1 1 auto;min-height:48px;border:1px solid var(--ink-7);background:#fff;'+
      'border-radius:var(--r-sm);font-family:inherit;font-size:var(--t5);font-weight:900;'+
      'color:var(--ink-2);cursor:pointer;padding:10px 14px}'+
@@ -25326,16 +25706,11 @@ function renderHome(){
        것이라 「화면이 자꾸 달라지는」 범인이 아닙니다. 매일 떴다 사라지던
        것은 <b>출발 점검</b> 쪽이고, 그것만 접었습니다.                */
     (OS.profile?'<div id="osSetupHome"></div>':'')+
-    /* ── 🌅 <b>아침 미션 다섯</b> ─────────────────────────────────────
-       사장님 말씀 — 「매일 미션이 있는데 <b>홈에서 이것들을 다 하게끔</b>
-       만들고 싶어 … 이걸 완료한다면 <b>TA가 모두 끝났으니 → AP/PC/CS</b>」.
-       그래서 자리도 <b>「오늘 챙길 것」 바로 위</b>입니다 — 아침에 이것을
-       먼저 하고, 다 하면 바로 아래 고객 체크로 내려갑니다.
-       달력·고객·TFA 와 <b>같은 모양의 접는 한 줄</b>이라 홈 모양이
-       안 달라집니다. 머리에 「0/5 · ① 오늘의 알림 확인」 이 적혀 있어
-       <b>접힌 채로도</b> 무엇을 할 차례인지 보입니다. */
-    (OS.profile?hmFoldWrap('ms','\uD83C\uDF05','\uC544\uCE68 \uBBF8\uC158',hmMsSub(),
-        '<div id="hmMsHost">'+hmMsHtml()+'</div>'):'')+
+    /* ── 🌅 <b>아침 미션은 「오늘 챙길 것」 카드 안으로 들어갔습니다</b> ────
+       사장님 말씀 (2026-09-23) — 「오늘 챙길것 + 아침 미션을 <b>하나로</b> 합치는
+       거야」. 둘을 따로 두었더니 홈을 열면 칸이 둘이고, 아침 미션은 접힌 한 줄로만
+       있어 <b>합친 티가 안 났습니다</b>. 이제 카드 하나입니다 — 한 분씩 퀴스트가
+       먼저 서고, 사람과 상관없는 미션(SNS·고객 보험)은 그 아래 접혀 있습니다. */
     (OS.profile?('<div id="hmToday">'+hmTodayHtml()+'</div>'):'')+
     /* 🩺 <b>고객 체크는 아침 미션 ⑥ 안으로 들어갔습니다</b> (사장님 말씀 ⑥).
        따로 세워 두었더니 홈이 한 화면을 넘겨 4.25화면이 됐고, check-msfive 가

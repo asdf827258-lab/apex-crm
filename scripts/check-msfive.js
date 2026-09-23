@@ -157,8 +157,12 @@ const SEED = (o) => `
     return {
       has: !!box, open: box ? box.classList.contains('on') : false,
       sts, head: head ? head.innerText.replace(/\s+/g, ' ') : '',
-      /* <b>오늘 챙길 것 바로 위</b>인가 — 아침에 이것부터 하고 내려간다 */
-      above: (box && today) ? (box.getBoundingClientRect().top < today.getBoundingClientRect().top) : false,
+      /* <b>「오늘 챙길 것」 카드 안</b>인가 — 둘이 한 자리다(사장님 말씀).
+         전에는 「바로 위」였습니다. 따로 서 있으면 아침에 두 곳을 봐야 합니다.
+         ★ today(#hmToday)는 <b>껍데기</b>라 카드 밖으로 빼내도 그 안입니다 —
+           <b>카드</b>로 재야 합니다 (check-quest 에서 되돌려 보고 알았습니다). */
+      inside: (box && today && today.querySelector('.hm-card'))
+        ? today.querySelector('.hm-card').contains(box) : false,
       hostH: host ? Math.round(host.getBoundingClientRect().height) : 0
     };
   });
@@ -169,7 +173,7 @@ const SEED = (o) => `
   is(s1.has && !s1.open, '  미션 칸이 서고 <b>처음에는 접혀</b> 있다 — 홈의 규칙 그대로');
   is(s1.sts.length === MSN && MSN >= 5,
      '  칸이 <b>' + MSN + '개</b> 다 선다 — ' + s1.sts.join(' '));
-  is(s1.above, '  자리가 <b>「오늘 챙길 것」 바로 위</b>다');
+  is(s1.inside, '  자리가 <b>「오늘 챙길 것」 카드 안</b>이다 — 둘이 한 자리');
   is(s1.head.indexOf('0/' + MSN) >= 0 && /①/.test(s1.head),
      '  <b>접힌 채로도</b> 머리가 어디까지 왔는지 말한다 — ' + s1.head);
   await openMs(A.p);
