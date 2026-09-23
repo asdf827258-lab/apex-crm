@@ -37298,6 +37298,40 @@ var HX_SQL={
   "/* 완료. 이후 앱 상단 \"관리 중 사업자\" 바에서 ☁ 저장 / ⬇ 불러오기 버튼이 활성화됩니다. */",
   "/* (로그인 + config.js의 anon 키/URL 설정이 되어 있어야 합니다.) */"
  ]},
+ '41':{label:"공지 사진 크기를 앱이 미리 알게",need:[],repair:true,when:"공지 사진이 안 뜨거나 홈이 느릴 때. 앱이 사진을 받기 전에 크기를 먼저 알아, 너무 큰 것은 아예 안 받습니다.",lines:[
+  "/* ════════════════════════════════════════════════════════════════════════",
+  "   41) 공지 사진 크기 칸 — 받기 전에 얼마나 큰지 알게 한다",
+  "",
+  "   2026-09-23 서버에서 직접 잰 값이다.",
+  "     공지 한 줄의 사진(img)이 12,442,133 글자 = 12.4MB 였다.",
+  "     그 줄을 달라고 하면 서버가 내보내지 못하고 500 으로 끊는다.",
+  "     5.8MB · 2.8MB 짜리는 내보내지기는 하지만, 홈을 한 번 열 때마다",
+  "     8.6MB 가 나간다. 하루 백 번이면 860MB 다.",
+  "",
+  "   앱은 지금 그 줄이 얼마나 큰지 모르는 채로 달라고 한다. 그래서",
+  "   크기를 미리 알려 주는 칸을 하나 만든다. 사진을 담을 때 자동으로",
+  "   채워지므로 손댈 것이 없다.",
+  "",
+  "   ⚠️ 사진 자체는 건드리지 않는다. 지우지도, 줄이지도 않는다.",
+  "      줄이는 것은 앱에서 사장님이 누르실 때만 한다.",
+  "   ════════════════════════════════════════════════════════════════════════ */",
+  "set search_path = public;",
+  "",
+  "/* 재실행해도 안전 — 이미 있으면 건너뛴다 */",
+  "alter table public.os_notices",
+  "  add column if not exists img_len integer",
+  "  generated always as (length(coalesce(img,''))) stored;",
+  "",
+  "/* 앱이 이 칸을 읽을 수 있게 한다. 사진(img)은 그대로 두고 크기만 읽는다. */",
+  "grant select (img_len) on public.os_notices to authenticated, anon;",
+  "",
+  "/* 잘 들어갔는지 — 큰 것부터 보여 준다 */",
+  "select id, active, img_len,",
+  "       round(img_len/1048576.0, 1) as mb",
+  "  from public.os_notices",
+  " where coalesce(img_len,0) > 0",
+  " order by img_len desc;"
+ ]},
  '07':{label:"출근 현황 · 성장 점수",need:["attendance"],lines:[
   "/* 출근(접속) 기록 테이블 — 팀원별 일자별 접속 기록 (#4 출근 달력) */",
   "create table if not exists public.attendance (",
@@ -38849,7 +38883,7 @@ function hxSqlDone(k){
   return true;
 }
 function hxSqlCardHtml(){
-  var ks=['00','06','07','09','10','11','12','13','17','18','23','24','25','26','27','28','33','39'],h='';
+  var ks=['00','06','07','09','10','11','12','13','17','18','23','24','25','26','27','28','33','39','41'],h='';
   h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🗂️</span>필요한 SQL</div>'+
     '<div class="card-desc">눌러서 복사하고 Supabase 에 붙여넣으면 됩니다. 파일을 따로 열지 않아도 됩니다. '+
     '몇 번을 다시 실행해도 안전합니다. <b>맨 위 하나만 실행하면 전부 끝납니다.</b></div></div><div class="card-body">'+
@@ -39170,7 +39204,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    지금까지는 시스템 점검을 찾아 들어가 맨 아래까지 내려야 SQL 이 있었다.
    홈 맨 위에 띄우고, 버튼 하나로 복사와 Supabase 열기를 같이 한다.
    SQL 마지막 줄이 서버에 표시를 남기므로, 다 됐는지도 앱이 스스로 안다. */
-var SETUP_VER=40;   /* 40: 알람 열쇠(push_keys) — 서버만 읽는다. Netlify 없이 앱에서 담는다 */
+var SETUP_VER=41;   /* 41: 공지 사진 크기 칸(img_len) — 받기 전에 얼마나 큰지 알게 한다 */
 var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false,split:false,more:false,got:{}};
 
 /* ══ 준비 SQL 을 <b>나눠서</b> 돌린다 ══════════════════════════════════
@@ -54341,6 +54375,9 @@ function osNtcRow(row){
   if(!row)return null;
   return {id:row.id||'',text:row.text||'',img:row.img||'',on:row.active!==false,
           ts:row.created_at||'',by:row.author||'',
+          /* 사진이 <b>얼마나 큰지</b> — 준비 SQL 41 을 안 돌리셨으면 <b>null</b> 이다.
+             0 으로 채우면 「사진 없음」이 되어 버린다 (1번). */
+          len:(row.img_len==null?null:(+row.img_len||0)),
           targets:osAckArr(row.targets),mustAck:!!row.must_ack};
 }
 /* ══ 공지 사진은 <b>따로</b> 받는다 — 목록에 딸려 오면 공지가 통째로 죽는다 (7번) ══
@@ -54369,10 +54406,37 @@ function osNtcRow(row){
 var OS_NIMG={};      /* 공지 id → wait|busy|ok|none|fail */
 var OS_NIMG_OB=null; /* 눈에 들어오나 보는 눈 */
 function osNtcImgSt(id){ return (id&&OS_NIMG[id])||'wait'; }
-function osNtcImgGet(id){
+/* ══ <b>너무 큰 사진은 아예 안 받는다</b> (7번) ═══════════════════════
+   2026-09-23 배포된 앱을 열어 그대로 셌습니다 — 로그인도 하기 전에
+
+     os_notices?select=img&id=eq.6dac80ac…  →  <b>500</b>   (12.4MB)
+     os_notices?select=img&id=eq.204c2dfc…  →  200          (5.8MB)
+     os_notices?select=img&id=eq.7d09733a…  →  200          (2.8MB)
+
+   12.4MB 짜리는 서버가 <b>내보내지 못하고 끊습니다.</b> 나머지 둘은
+   나오기는 하지만, 홈을 한 번 열 때마다 <b>8.6MB</b> 가 나갑니다.
+   이것이 「무료 한도를 세 배로 넘겨 로그인까지 막힌」 그 자리입니다.
+
+   ★ 담는 쪽은 <b>이미 고쳐져 있습니다</b> — 한 장 400KB · 모두 1.2MB 로
+     줄여 담습니다(osNtcShrink). 지금 터지는 세 줄은 그 고치기 <b>전</b>
+     (8월 2~3일)에 담긴 옛 자료입니다. 그래서 <b>읽는 쪽</b>을 막습니다.
+   ★ <b>크기를 모르면 막지 않습니다</b> (1번). 준비 SQL 41 을 안 돌리셨으면
+     img_len 이 null 이라, 여태처럼 받아 봅니다 — 모르는 것을 「크다」고
+     단정해서 멀쩡한 공지를 숨기면 그게 더 나쁩니다.                    */
+var OS_NIMG_CAP=1500*1024;       /* 이 이상이면 안 받는다 — 1.5MB */
+function osNtcLenOf(id){
+  var L=(OS_NTC.list||[]),i;
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].id===id)return (L[i].len==null?null:L[i].len);
+  return null;
+}
+function osNtcMb(n){ return (Math.round((n/1048576)*10)/10)+'MB'; }
+function osNtcImgGet(id,force){
   if(!id)return;
   var st=osNtcImgSt(id);
   if(st==='busy'||st==='ok'||st==='none')return;   /* 되풀이해서 부르지 않는다 (7번) */
+  if(!force&&st==='big')return;
+  var len=osNtcLenOf(id);
+  if(!force&&len!=null&&len>OS_NIMG_CAP){OS_NIMG[id]='big';osNtcPaint();return;}
   var sb=(typeof osClient==='function')?osClient():null;
   if(!sb){OS_NIMG[id]='fail';return;}
   OS_NIMG[id]='busy';
@@ -54389,6 +54453,14 @@ function osNtcImgGet(id){
   }catch(e){OS_NIMG[id]='fail';}
 }
 function osNtcImgAgain(id){ if(id&&OS_NIMG[id]==='fail'){OS_NIMG[id]='wait';osNtcImgGet(id);} }
+/* 「<b>그래도 한 번 받아 보기</b>」 — 사장님이 누르실 때만 상한을 넘깁니다.
+   한 번 받아 두면 아래 「줄여서 다시 담기」로 <b>영영</b> 줄일 수 있습니다. */
+function osNtcImgForce(id){
+  if(!id)return;
+  if(typeof toast==='function')
+    toast('사진 '+osNtcMb(osNtcLenOf(id)||0)+' 를 한 번 받습니다 — 시간이 걸립니다');
+  OS_NIMG[id]='wait'; osNtcImgGet(id,true);
+}
 /* 그 칸이 <b>눈에 들어올 때</b> 한 번만 부른다 (7번). 그리고 나서 눈을 뗀다. */
 function osNtcImgWatch(){
   var els=document.querySelectorAll('[data-ntc-img]'),i;
@@ -54495,11 +54567,19 @@ function osNoticeLoad(force){
 
        <b>사진(img)은 여기서 안 받는다.</b> 아래 osNtcImgGet 이 그 칸이 눈에
        들어올 때 한 줄씩 받는다 — 까닭은 거기 적어 두었다. */
-    var pick=function(cols,rich){
+    /* 물러서는 차례를 <b>한 곳</b>에 적는다 (5번). 여태는 「풍성한 것 →
+       맨 기본」 두 칸이라, img_len 이 없는 서버에서는 targets·must_ack 까지
+       한꺼번에 잃었습니다 — 준비 SQL 을 한 단계만 덜 돌리신 분이 확인
+       대상 공지를 못 보게 됩니다. 그래서 <b>한 칸씩</b> 물러섭니다. */
+    var COLS=['id,text,active,created_at,author,targets,must_ack,img_len',
+              'id,text,active,created_at,author,targets,must_ack',
+              'id,text,active,created_at,author'];
+    var pick=function(ci){
+      var cols=COLS[ci];
       sb.from('os_notices').select(cols).order('created_at',{ascending:false}).limit(OS_NTC.max)
         .then(function(r){
         if(r&&r.error){
-          if(rich){pick('id,text,active,created_at,author',false);return;}
+          if(ci+1<COLS.length){pick(ci+1);return;}
           OS_NTC.busy=false;OS_NTC.err=r.error.message||'공지를 못 읽었습니다';
           if(!OS_NOTICE)OS_NOTICE=osNoticeLocalGet();
           osNoticeApply();return;
@@ -54521,7 +54601,7 @@ function osNoticeLoad(force){
       },function(){OS_NTC.busy=false;OS_NTC.err='공지를 못 읽었습니다';
                    OS_NOTICE=osNoticeLocalGet();osNoticeApply();});
     };
-    pick('id,text,active,created_at,author,targets,must_ack',true);
+    pick(0);
   }catch(e){OS_NTC.busy=false;OS_NOTICE=osNoticeLocalGet();osNoticeApply();}
 }
 function osNoticeStyleOnce(){
@@ -54545,10 +54625,32 @@ function osNtcImgHtml(n,k){
     /* 사진이 「없다」와 「아직 모른다」는 <b>다른 말</b>이다 (1번) */
     var id=(n&&n.id)||'', st=osNtcImgSt(id);
     if(!id||st==='none')return '';
+    var box=function(bd,bg,fg,inner){
+      return '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:11px;padding:11px 13px;margin:0 0 '+
+        (n.text?'14px':'0')+';font-size:var(--t6);color:'+fg+';line-height:1.7">'+inner+'</div>'; };
+    var link=function(fn,t){
+      return '<span style="cursor:pointer;text-decoration:underline;font-weight:800" onclick="'+fn+'">'+t+'</span>'; };
     if(st==='fail')
-      return '<div style="border:1px solid #FDE68A;background:#FFFBEB;border-radius:11px;padding:11px 13px;margin:0 0 '+(n.text?'14px':'0')+';font-size:var(--t6);color:#92400E;line-height:1.7">'+
+      return box('#FDE68A','#FFFBEB','#92400E',
         '📷 <b>사진을 못 받았습니다</b> — 글은 그대로입니다. '+
-        '<span style="cursor:pointer;text-decoration:underline;font-weight:800" onclick="osNtcImgAgain(\''+osEsc(id)+'\')">다시 받기</span></div>';
+        link('osNtcImgAgain(\''+osEsc(id)+'\')','다시 받기'));
+    /* <b>너무 커서 안 받은</b> 자리 — 몇 MB 인지 그대로 적습니다. 「사진 없음」
+       으로 뭉개면 사장님은 사진을 안 올리신 줄 아십니다 (1번). */
+    if(st==='big'){
+      var mb=osNtcMb(osNtcLenOf(id)||0);
+      return box('#FECACA','#FEF2F2','#991B1B',
+        '📷 <b>사진이 '+mb+' 라 안 받았습니다.</b> 홈을 열 때마다 이만큼이 나가고, '+
+        '더 큰 것은 서버가 아예 내보내지 못합니다. 글은 그대로입니다.'+
+        '<div style="margin-top:7px">'+
+          (osNtcCanFix()
+            ? (link('osNtcImgFix(\''+osEsc(id)+'\')','🗜 줄여서 다시 담기')+' · ')
+            : '')+
+          link('osNtcImgForce(\''+osEsc(id)+'\')','그래도 한 번 받아 보기')+
+        '</div>'+
+        (osNtcCanFix()
+          ? '<div style="margin-top:5px;opacity:.8">「줄여서 다시 담기」는 <b>한 번 받은 뒤에</b> 됩니다 — 받은 사진을 줄여 서버에 되담습니다.</div>'
+          : '<div style="margin-top:5px;opacity:.8">줄여 담는 것은 <b>대표·관리자</b>가 합니다.</div>'));
+    }
     /* wait · busy — 자리만 잡아 둔다. 눈에 들어오면 osNtcImgWatch 가 받아 온다. */
     return '<div data-ntc-img="'+osEsc(id)+'" style="min-height:112px;display:flex;align-items:center;justify-content:center;gap:8px;'+
       'background:linear-gradient(100deg,#F1F5F9 30%,#E2E8F0 50%,#F1F5F9 70%);border-radius:13px;margin:0 0 '+(n.text?'14px':'0')+';'+
@@ -54747,28 +54849,90 @@ var OS_NIMG_ONE=400*1024, OS_NIMG_ALL=1200*1024, OS_NIMG_SIDE=1400;
 function osNtcImgBytes(){var t=0,i;for(i=0;i<OS_NOTICE_IMGS.length;i++)t+=((OS_NOTICE_IMGS[i]||{}).s||'').length;return t;}
 function osNtcKb(b){return Math.round(b/1024)+'KB';}
 /* 한 장을 줄인다. 됐으면 ok(글자), 안 되면 bad(까닭) — <b>조용히 넘기지 않는다</b> */
+/* 줄이는 자리는 <b>여기 하나</b>다 (5번). 파일에서 고른 것도, 서버에 이미
+   담겨 있던 글자(data URL)도 같은 길로 지나간다 — 두 벌로 두면 한쪽만
+   고쳐져 「새로 올린 것은 작은데 줄인 것은 그대로」가 된다. */
+function osNtcShrinkUrl(url,ok,bad){
+  var im=new Image();
+  im.onerror=function(){bad('사진이 아니거나 열 수 없습니다');};
+  im.onload=function(){
+    var w=im.naturalWidth||im.width, h=im.naturalHeight||im.height;
+    if(!w||!h){bad('사진 크기를 못 읽었습니다');return;}
+    var sc=Math.min(1,OS_NIMG_SIDE/Math.max(w,h));
+    var cw=Math.max(1,Math.round(w*sc)), ch=Math.max(1,Math.round(h*sc));
+    var cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+    var cx=cv.getContext&&cv.getContext('2d');
+    if(!cx){bad('이 브라우저에서는 사진을 못 줄입니다');return;}
+    cx.drawImage(im,0,0,cw,ch);
+    var q=[0.82,0.7,0.6,0.5,0.4], out='', i;
+    for(i=0;i<q.length;i++){ out=cv.toDataURL('image/jpeg',q[i]); if(out.length<=OS_NIMG_ONE)break; }
+    ok(out);
+  };
+  im.src=''+url;
+}
 function osNtcShrink(f,ok,bad){
   var rd=new FileReader();
   rd.onerror=function(){bad('파일을 못 읽었습니다');};
-  rd.onload=function(){
-    var im=new Image();
-    im.onerror=function(){bad('사진이 아니거나 열 수 없는 파일입니다');};
-    im.onload=function(){
-      var w=im.naturalWidth||im.width, h=im.naturalHeight||im.height;
-      if(!w||!h){bad('사진 크기를 못 읽었습니다');return;}
-      var sc=Math.min(1,OS_NIMG_SIDE/Math.max(w,h));
-      var cw=Math.max(1,Math.round(w*sc)), ch=Math.max(1,Math.round(h*sc));
-      var cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
-      var cx=cv.getContext&&cv.getContext('2d');
-      if(!cx){bad('이 브라우저에서는 사진을 못 줄입니다');return;}
-      cx.drawImage(im,0,0,cw,ch);
-      var q=[0.82,0.7,0.6,0.5,0.4], out='', i;
-      for(i=0;i<q.length;i++){ out=cv.toDataURL('image/jpeg',q[i]); if(out.length<=OS_NIMG_ONE)break; }
-      ok(out);
-    };
-    im.src=''+rd.result;
-  };
+  rd.onload=function(){ osNtcShrinkUrl(''+rd.result,ok,bad); };
   rd.readAsDataURL(f);
+}
+/* ══ 🗜 <b>줄여서 다시 담기</b> — 옛 공지 사진을 그 자리에서 ═══════════
+   이미 담긴 12MB·5.8MB 는 서버가 줄여 줄 수 없습니다(SQL 로는 사진을 못
+   폅니다). 그래서 <b>앱이 받아서 줄여 되담습니다</b> — 한 번만 하면 됩니다.
+
+   ★ <b>받아 둔 것이 있어야</b> 줄입니다. 서버가 못 내보내는 12.4MB 짜리는
+     「그래도 한 번 받아 보기」가 실패하므로, 그때는 <b>다시 올려 달라고</b>
+     말합니다 — 없는 재주를 있는 척하지 않습니다 (1번).
+   ★ 글(text)·확인 여부는 <b>안 건드립니다</b> — 사진 칸만 바꿉니다.     */
+/* <b>누가 줄여 담을 수 있나</b> — 한 곳에서만 답합니다 (5번).
+   서버 규칙(os_notices_admin_write)은 <b>is_admin() 또는 is_owner()</b> 입니다.
+   팀원에게 단추를 보여 주고 눌렀을 때 막히면 「눌렀는데 안 된다」가 됩니다. */
+function osNtcCanFix(){
+  try{ return (typeof osIsOwner==='function'&&osIsOwner())||
+              (typeof osRoleNorm==='function'&&osRoleNorm()==='branch_manager'); }
+  catch(e){ return false; }
+}
+function osNtcImgFix(id){
+  if(!id)return;
+  if(!osNtcCanFix()){
+    if(typeof toast==='function')toast('공지 사진은 <b>대표·관리자</b>만 줄여 담을 수 있습니다',6000);
+    return;
+  }
+  var st=osNtcImgSt(id);
+  if(st!=='ok'){
+    if(typeof toast==='function')
+      toast('먼저 「그래도 한 번 받아 보기」로 사진을 받아야 줄일 수 있습니다',7000);
+    return;
+  }
+  var L=(OS_NTC.list||[]),i,n=null;
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].id===id)n=L[i];
+  var arr=osNoticeImgsOf(n);
+  if(!arr.length){ if(typeof toast==='function')toast('줄일 사진이 없습니다'); return; }
+  var was=((n&&n.img)||'').length, out=[], why=[];
+  var save=function(){
+    var sb=(typeof osClient==='function')?osClient():null;
+    if(!sb){ if(typeof toast==='function')toast('서버에 연결되어 있지 않습니다'); return; }
+    var v=JSON.stringify(out);
+    sb.from('os_notices').update({img:v}).eq('id',id).then(function(r){
+      if(r&&r.error){ if(typeof toast==='function')toast('되담기 실패 — '+(r.error.message||'')); return; }
+      if(n){n.img=v;n.len=v.length;}
+      OS_NIMG[id]='ok';
+      if(typeof toast==='function')
+        toast('🗜 '+osNtcMb(was)+' → <b>'+osNtcMb(v.length)+'</b> 로 줄여 담았습니다'+
+              (why.length?(' · '+why.length+'장은 그대로 뒀습니다'):''),8000);
+      osNtcPaint();
+    },function(){ if(typeof toast==='function')toast('되담기 실패'); });
+  };
+  var step=function(k){
+    if(k>=arr.length){save();return;}
+    osNtcShrinkUrl(arr[k].s,function(u){
+      /* 줄인 것이 <b>더 크면</b> 원래 것을 둡니다 — 이미 작은 사진입니다 */
+      out.push({s:(u.length<arr[k].s.length?u:arr[k].s),c:arr[k].c||''});
+      step(k+1);
+    },function(w){ why.push(w); out.push(arr[k]); step(k+1); });
+  };
+  if(typeof toast==='function')toast('사진 '+arr.length+'장을 줄이는 중…');
+  step(0);
 }
 function osNoticeImgFile(input){
   var fs=input&&input.files;if(!fs||!fs.length)return;
