@@ -1,0 +1,280 @@
+/* ══════════════════════════════════════════════════════════════════
+   app/ui.css — 토스판 한 벌
+   ──────────────────────────────────────────────────────────────────
+   값은 전부 목업(APEX사본.html)에서 <b>그대로</b> 옮겼습니다.
+   여기서 새로 정한 색·크기·둥글기는 <b>하나도 없습니다</b>.
+
+   ■ 왜 파일로 빼는가
+     지금 토큰과 클래스 여덟 개는 app/index.html 655줄에 <b>인라인</b>으로
+     들어가 있습니다(#435). 그래서 app/day.html · app/finance.html ·
+     문자열로 뽑는 인쇄 페이지는 그 토큰을 못 씁니다. 거기에 또 적으면
+     그 순간 두 벌이 되고, 한쪽만 고쳐져 화면마다 다른 파랑이 됩니다.
+     → 파일 하나로 빼고 <b>전부 이 파일을 link</b> 합니다.
+
+   ■ 규칙 (기존 주석에 있던 것을 그대로 잇습니다)
+     ★ 토큰은 여기 한 곳에만. 두 곳에 생기면 check-ttok 이 잡습니다.
+     ★ .t- 규칙 안에 hex 를 직접 적지 않습니다. 토큰만 씁니다.
+     ★ 누르는 것은 최소 44px (철칙).
+     ★ 이름은 이미 머지된 것(#435)과 <b>한 글자도 바꾸지 않았습니다</b>.
+
+   ■ 붙이는 법
+     app/index.html · app/day.html · app/finance.html 의 <head> 에
+       <link rel="stylesheet" href="ui.css">
+     index.html 이 문자열로 만들어 내보내는 페이지에도 같은 줄을 넣습니다.
+     그리고 index.html 655줄의 인라인 토큰·클래스 블록을 <b>지웁니다</b>
+     (여기로 옮겨 온 것이므로 남겨 두면 두 벌입니다).
+     _redirects 의 /* 잡기는 실제 파일보다 뒤라 ui.css 는 그대로 내려갑니다.
+   ══════════════════════════════════════════════════════════════════ */
+
+:root{
+  /* ── 이미 있는 열둘 + 하나 — #435 에서 한 글자도 바꾸지 않았습니다 ── */
+  --t-ink:#191F28; --t-sub:#6B7684; --t-sub2:#8B95A1; --t-line:#E5E8EB;
+  --t-bg:#F2F4F6; --t-card:#FFFFFF;
+  --t-point:#1A56DB; --t-point-l:#EBF3FF; --t-point-d:#123A96;
+  --t-pos:#059669; --t-warn:#D97706; --t-neg:#DC2626;
+  --t-r:20px; --t-r-btn:15px; --t-r-sm:13px;
+
+  /* ── 여기부터 더한 것 ────────────────────────────────────────────
+     #435 주석이 「목업이 쓴 #F1F3F5·#F5F7F9 는 토큰에 없다. 늘릴지는
+     사장님 말씀을 듣고 하겠다」고 물어 두었습니다. <b>답은 「늘린다」</b>
+     입니다 — --t-line 으로 대신 쓰면 줄이 한 단계 진해져, 카드 안
+     스무 줄짜리 목록에서 눈에 띄게 어지럽습니다.
+     아래 값은 전부 <b>목업에 실제로 쓰인 색</b>이고 제가 고른 것이
+     아닙니다. 이름만 붙였습니다.                                      */
+  --t-line-2:#F1F3F5;   /* 카드 <b>안쪽</b> 줄 — 목업 .row / .ev / .srow 의 border-bottom */
+  --t-bg-2:#F5F7F9;     /* 칩·작은 단추 바탕 — 목업 .pick div / .tchip div / .gb */
+  --t-bg-3:#F7F9FA;     /* 카드 안 상자 — 목업 .why / .kpi div / .scriptbox */
+  --t-sub3:#B0B8C1;     /* 더 흐린 글씨 — 목업 .n(회차) / .dt.more */
+  --t-line-3:#D7DCE2;   /* 끄기 상태 — 목업 .chk 테두리 / .sw.off / 스크롤바 */
+
+  /* 뜻이 있는 바탕색 — 목업의 .tg.g / .note / .tg.r 에서 왔습니다 */
+  --t-pos-l:#ECFDF5; --t-warn-l:#FFF7ED; --t-neg-l:#FEF2F2;
+  /* 보라 — 약속·SNS 자리에만 씁니다(파랑과 구별하려고). 목업 .sl / .rhy */
+  --t-pur:#7C3AED; --t-pur-l:#F5F3FF;
+  /* ⚠ 심의 유의사항 — 이 두 색은 <b>규정이 정한 것</b>입니다.
+     「유의사항을 색상 등을 차별화하여」(가이드라인 p18~21). 바꾸지 마십시오. */
+  --t-seal:#FFF9EC; --t-sealk:#8A6A2F;
+
+  --t-r-sheet:24px;     /* 아래에서 올라오는 시트 — 목업 #sheet */
+  --t-r-xs:10px;        /* 작은 칩 — 목업 .stg / .gb */
+  --t-font:'Pretendard','Malgun Gothic',-apple-system,sans-serif;
+}
+
+/* ══ 1. 뼈대 ════════════════════════════════════════════════════ */
+.t-app{display:flex;min-height:100%;background:var(--t-bg);overflow:hidden}
+.t-side{width:244px;flex:0 0 244px;background:var(--t-card);
+  border-right:1px solid #EEF1F4;display:flex;flex-direction:column}
+.t-main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;position:relative}
+.t-top{height:58px;flex:0 0 58px;display:flex;align-items:center;padding:0 22px;gap:10px;min-width:0}
+.t-scr{flex:1;overflow-y:auto;padding:0 22px 26px}
+.t-scr::-webkit-scrollbar{width:7px}
+.t-scr::-webkit-scrollbar-thumb{background:var(--t-line-3);border-radius:7px}
+.t-tabbar{display:none;height:64px;flex:0 0 64px;background:var(--t-card);
+  border-top:1px solid var(--t-line-2);padding-bottom:8px}
+.t-tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;font-size:10.5px;font-weight:700;color:#C4CBD2;border:0;background:none;
+  font-family:var(--t-font);cursor:pointer;min-height:44px}
+.t-tabbar button.on{color:var(--t-point)}
+@media (max-width:900px){
+  .t-side{display:none} .t-tabbar{display:flex}
+  .t-top{overflow-x:auto;scrollbar-width:none} .t-top::-webkit-scrollbar{height:0}
+}
+
+/* 옆줄 한 줄 — 목업 .it */
+.t-nav{display:flex;align-items:center;gap:9px;min-height:44px;padding:0 10px;
+  border-radius:11px;font-size:13.5px;font-weight:600;color:#4E5968;letter-spacing:-.02em;
+  width:100%;text-align:left;border:0;background:none;font-family:var(--t-font);cursor:pointer}
+.t-nav.on{background:var(--t-point-l);color:var(--t-point);font-weight:700}
+.t-nav .c{margin-left:auto;font-size:11px;font-weight:800;background:var(--t-bg);
+  color:var(--t-sub2);border-radius:6px;padding:2px 7px}
+.t-nav.on .c{background:var(--t-point);color:var(--t-card)}
+.t-glab{font-size:11px;font-weight:800;color:#AEB6BE;padding:13px 10px 5px}
+
+/* ══ 2. 글 ═════════════════════════════════════════════════════ */
+.t-h1{font-size:27px;font-weight:800;line-height:1.38;letter-spacing:-.03em;color:var(--t-ink)}
+.t-h1 span{color:var(--t-sub2)}                  /* 뒷말은 흐리게 — 목업 .h1 span */
+.t-h1 em{font-style:normal;color:var(--t-point)} /* 숫자 강조 — 목업 .h1 em */
+.t-sub{margin-top:12px;font-size:15px;color:var(--t-sub);line-height:1.55;letter-spacing:-.01em}
+.t-lab{font-size:11.5px;font-weight:800;color:var(--t-point);letter-spacing:.01em}
+.t-nm{font-size:15px;font-weight:700;letter-spacing:-.025em;color:var(--t-ink)}
+.t-mt{font-size:12px;color:var(--t-sub2);margin-top:4px;font-weight:600;line-height:1.45}
+.t-big{margin-top:8px;font-size:18px;font-weight:700;letter-spacing:-.03em;line-height:1.45;color:var(--t-ink)}
+.t-big small{display:block;font-size:13.5px;color:var(--t-sub2);font-weight:600;margin-top:6px}
+.t-num{font-size:44px;font-weight:800;letter-spacing:-.045em;line-height:1.1}
+.t-num span{font-size:26px;margin-left:3px;font-weight:700}
+
+/* ══ 3. 상자 ═══════════════════════════════════════════════════ */
+.t-card{background:var(--t-card);border-radius:var(--t-r);box-shadow:none;padding:20px}
+.t-card + .t-card{margin-top:12px}
+.t-note{background:var(--t-warn-l);border-radius:14px;padding:13px 16px;
+  font-size:12.5px;line-height:1.6;color:var(--t-sealk);font-weight:600;margin-top:12px}
+.t-note.b{background:var(--t-point-l);color:var(--t-point)}
+.t-note.g{background:var(--t-pos-l);color:#065F46}
+/* ⚠ 심의 유의사항 전용 — 규정이 정한 색입니다. 본문과 달라야 합니다 */
+.t-seal{background:var(--t-seal);color:var(--t-sealk);border:1px solid #EFE0BE;
+  border-radius:14px;padding:14px 16px;font-size:12.5px;line-height:1.6;font-weight:600}
+.t-empty{padding:40px 10px;text-align:center;color:var(--t-sub2);font-size:14px;
+  font-weight:600;line-height:1.7}
+
+/* ══ 4. 단추 ═══════════════════════════════════════════════════ */
+.t-btn{display:flex;align-items:center;justify-content:center;width:100%;
+  height:56px;border-radius:var(--t-r-btn);border:0;background:var(--t-point);color:var(--t-card);
+  font-family:var(--t-font);font-size:17px;font-weight:700;letter-spacing:-.02em;cursor:pointer}
+.t-btn.g{background:var(--t-bg);color:var(--t-sub)}
+.t-btn.sm{height:46px;font-size:14.5px;border-radius:var(--t-r-sm)}
+.t-btn:disabled{opacity:.4;cursor:default}      /* 못 누르는 것은 보이게 (철칙) */
+.t-btn:active{transform:scale(.99)}
+/* 작은 회색 단추 — 목업 .gb */
+.t-gb{min-height:44px;padding:0 13px;border-radius:var(--t-r-xs);background:var(--t-bg-2);
+  color:#4E5968;font-size:12.5px;font-weight:700;border:0;font-family:var(--t-font);
+  display:inline-flex;align-items:center;cursor:pointer}
+.t-gb.b{background:var(--t-point);color:var(--t-card)}
+/* 고르는 칩 — 목업 .t-chip */
+.t-chip{min-height:44px;padding:0 14px;border-radius:11px;background:var(--t-card);
+  color:var(--t-sub);font-size:13px;font-weight:700;border:0;font-family:var(--t-font);
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer}
+.t-chip.on{background:var(--t-ink);color:var(--t-card)}
+.t-chip b{color:var(--t-point)}
+.t-chip.on b{color:#8FB4FF}
+.t-chips{display:flex;gap:7px;margin-top:14px;flex-wrap:wrap}
+.t-row2{display:flex;gap:8px}
+
+/* ══ 5. 줄 ═════════════════════════════════════════════════════ */
+.t-row{display:flex;align-items:center;gap:13px;width:100%;min-height:44px;
+  padding:14px 0;border:0;border-bottom:1px solid var(--t-line-2);
+  background:none;font-family:var(--t-font);text-align:left;cursor:pointer}
+.t-row:last-child{border-bottom:0}
+.t-row .av{flex:0 0 40px;width:40px;height:40px;border-radius:var(--t-r-sm);
+  background:var(--t-point-l);color:var(--t-point);
+  display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800}
+/* #435 가 쓴 이름 (.m b / .m span) 과 목업이 쓴 이름 (.nm / .mt) 을 <b>둘 다</b> 받습니다 —
+   이미 머지된 화면을 고치지 않으려는 것입니다. 새로 쓰는 곳은 .nm / .mt 를 쓰십시오. */
+.t-row .m{flex:1;min-width:0}
+/* :where() 로 #435 쪽 이름의 우선순위를 낮춰 둡니다 — 안 그러면 .m 안에 쓴
+   .nm 이 「.t-row .m span」 에 눌려 작은 회색 글씨로 나옵니다(실제로 그랬습니다). */
+.t-row :where(.m) b, .t-row .nm{display:block;font-size:15px;font-weight:700;
+  color:var(--t-ink);letter-spacing:-.025em}
+.t-row :where(.m) span, .t-row .mt{display:block;margin-top:3px;font-size:12.5px;
+  color:var(--t-sub2);font-weight:600;line-height:1.45}
+.t-row .r, .t-row .rt{margin-left:auto;flex:none;display:flex;gap:6px;align-items:center}
+/* 작은 표시 — 목업 .stg */
+.t-tag{font-size:10.5px;font-weight:800;padding:3px 7px;border-radius:7px;
+  background:var(--t-bg);color:var(--t-sub);white-space:nowrap}
+.t-tag.due{background:var(--t-warn-l);color:var(--t-warn)}
+.t-tag.ok{background:var(--t-pos-l);color:var(--t-pos)}
+.t-tag.no{background:var(--t-neg-l);color:var(--t-neg)}
+.t-tag.b{background:var(--t-point-l);color:var(--t-point)}
+
+/* ══ 6. 오늘 한 분 카드 — 목업 .one ═══════════════════════════ */
+.t-one .hd{display:flex;align-items:center;gap:12px}
+.t-one .nm2{font-size:21px;font-weight:800;letter-spacing:-.035em;color:var(--t-ink)}
+.t-one .why{margin-top:13px;font-size:12.5px;color:var(--t-sub2);font-weight:600;
+  background:var(--t-bg-3);border-radius:11px;padding:10px 13px;line-height:1.5}
+.t-one .aim{margin-top:15px;font-size:19px;font-weight:700;letter-spacing:-.03em;
+  line-height:1.45;color:var(--t-ink)}
+.t-one .way{margin-top:9px;font-size:13px;color:var(--t-sub);line-height:1.6}
+.t-one .tools{display:flex;gap:6px;margin-top:13px;flex-wrap:wrap}
+.t-one .tools span{font-size:11.5px;font-weight:700;color:#4E5968;background:var(--t-bg-2);
+  border-radius:9px;padding:6px 10px}
+
+/* ══ 7. 막대 ═══════════════════════════════════════════════════ */
+.t-bar{height:6px;border-radius:6px;background:#E3E7EB;overflow:hidden;margin-top:11px}
+.t-bar i{display:block;height:100%;background:var(--t-point);border-radius:6px;transition:.3s}
+
+/* ══ 8. 쌓인 기록 — 목업 .ev ══════════════════════════════════ */
+.t-ev{display:flex;gap:11px;padding:12px 0;border-bottom:1px solid var(--t-line-2)}
+.t-ev:last-child{border-bottom:0}
+.t-ev .d{width:9px;height:9px;border-radius:9px;background:var(--t-point);margin-top:6px;flex:0 0 9px}
+.t-ev .d.g{background:var(--t-line-3)}
+.t-ev .t{font-size:13.5px;font-weight:700;letter-spacing:-.025em;color:var(--t-ink)}
+.t-ev .s{font-size:11.5px;color:var(--t-sub2);margin-top:3px;font-weight:600;line-height:1.5}
+.t-ev .u{margin-left:auto;font-size:11px;font-weight:700;color:var(--t-point);
+  background:var(--t-point-l);border-radius:8px;padding:5px 8px;align-self:flex-start;flex:0 0 auto}
+
+/* ══ 9. 달력 — 목업 .cal ══════════════════════════════════════ */
+.t-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.t-cal .dh{font-size:11px;font-weight:800;color:var(--t-sub2);text-align:center;padding:5px 0}
+.t-cal .cd{min-height:76px;background:var(--t-bg-3);border-radius:var(--t-r-xs);padding:5px}
+.t-cal .cd.out{background:transparent}
+.t-cal .cd.now{background:var(--t-point-l);box-shadow:inset 0 0 0 2px var(--t-point)}
+.t-cal .dn{font-size:11px;font-weight:800;color:var(--t-sub2)}
+.t-cal .dt{margin-top:3px;font-size:9.5px;font-weight:700;border-radius:5px;padding:2px 4px;
+  line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-cal .dt.sns{background:var(--t-pur-l);color:var(--t-pur)}
+.t-cal .dt.bd{background:var(--t-pos-l);color:var(--t-pos)}
+.t-cal .dt.end{background:var(--t-warn-l);color:var(--t-warn)}
+.t-cal .dt.region{background:var(--t-point-l);color:var(--t-point)}
+.t-cal .dt.more{color:var(--t-sub3)}
+@media (max-width:900px){ .t-cal .cd{min-height:58px;padding:3px} .t-cal .dt{font-size:8px;padding:1px 3px} }
+
+/* ══ 10. 캐러셀 미리보기 — 목업 .sl ══════════════════════════ */
+.t-slides{display:flex;gap:8px;margin-top:13px;overflow-x:auto;padding-bottom:6px}
+.t-slides::-webkit-scrollbar{height:5px}
+.t-slides::-webkit-scrollbar-thumb{background:var(--t-line-3);border-radius:5px}
+.t-sl{flex:0 0 146px;height:183px;border-radius:12px;background:#0F2A52;color:var(--t-card);
+  padding:13px 12px;display:flex;flex-direction:column;overflow:hidden}
+.t-sl .no{font-size:9.5px;font-weight:800;opacity:.55}
+.t-sl .tx{margin-top:8px;font-size:13px;font-weight:800;line-height:1.45;letter-spacing:-.03em}
+.t-sl .sm{margin-top:7px;font-size:10px;line-height:1.5;opacity:.78;font-weight:600}
+.t-sl.w{background:var(--t-card);color:var(--t-ink);border:1px solid var(--t-line)}
+.t-sl.w .sm{opacity:1;color:var(--t-sub2)}
+.t-sl.seal{background:var(--t-seal);color:var(--t-sealk);border:1px solid #EFE0BE}
+.t-sl.seal .tx{font-size:10.5px;line-height:1.55}
+.t-sl.seal .sm{font-size:9px;color:var(--t-sealk);opacity:.92}
+
+/* ══ 11. 요일 리듬 · 대본 — 목업 .rhy / .scriptbox ═══════════ */
+.t-rhy{display:flex;gap:8px;margin-top:13px}
+.t-rhy > div{flex:1;background:var(--t-card);border-radius:16px;padding:15px 13px;border:2px solid transparent}
+.t-rhy > div.on{border-color:var(--t-point);background:var(--t-point-l)}
+.t-rhy .w{font-size:12px;font-weight:800;color:var(--t-sub2)}
+.t-rhy > div.on .w{color:var(--t-point)}
+.t-rhy .t{margin-top:7px;font-size:15px;font-weight:700;letter-spacing:-.025em}
+.t-rhy .d{margin-top:5px;font-size:11.5px;color:var(--t-sub2);line-height:1.5;font-weight:600}
+.t-script{background:var(--t-bg-3);border-radius:14px;padding:15px 17px;margin-top:10px}
+.t-script .sh{font-size:11.5px;font-weight:800;color:var(--t-pur)}
+.t-script .sl2{display:flex;gap:10px;padding:7px 0;font-size:13px;line-height:1.6}
+.t-script .sl2 b{flex:0 0 52px;color:var(--t-sub2);font-size:11.5px;font-weight:800;padding-top:2px}
+
+/* ══ 12. 시트 · 알림 — 목업 #sheet / #toast ══════════════════ */
+.t-dim{position:fixed;inset:0;background:rgba(10,14,20,.42);display:none;z-index:40}
+.t-dim.on{display:block}
+.t-sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,105%);width:100%;max-width:480px;
+  background:var(--t-card);border-radius:var(--t-r-sheet) var(--t-r-sheet) 0 0;padding:24px 20px 26px;
+  transition:.25s cubic-bezier(.4,0,.2,1);z-index:41}
+.t-sheet.on{transform:translate(-50%,0)}
+.t-sheet .q{font-size:20px;font-weight:800;letter-spacing:-.03em;line-height:1.4}
+.t-sheet .qs{margin-top:8px;font-size:13px;color:var(--t-sub2);font-weight:600}
+.t-sheet .opts{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+.t-sheet .opts button{flex:1;min-width:92px;min-height:50px;border-radius:var(--t-r-sm);
+  background:var(--t-bg-2);color:#4E5968;font-size:14.5px;font-weight:700;border:0;
+  font-family:var(--t-font);cursor:pointer}
+.t-sheet .opts button.p{background:var(--t-point);color:var(--t-card)}
+.t-sheet .cl{margin-top:12px;width:100%;min-height:48px;border-radius:var(--t-r-sm);
+  background:var(--t-bg);color:var(--t-sub);font-size:14.5px;font-weight:700;border:0;
+  font-family:var(--t-font);cursor:pointer}
+.t-toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,16px);opacity:0;
+  background:var(--t-ink);color:var(--t-card);padding:12px 20px;border-radius:12px;
+  font-size:14px;font-weight:700;transition:.2s;z-index:60;pointer-events:none;
+  max-width:88vw;text-align:center}
+.t-toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ══ 13. 입력 — 목업 .fld ════════════════════════════════════ */
+.t-fld{margin-top:14px}
+.t-fld .l{font-size:12px;font-weight:800;color:var(--t-sub2)}
+.t-fld input, .t-fld textarea{width:100%;border:0;border-bottom:2px solid var(--t-line);
+  background:none;font-family:var(--t-font);font-size:18px;font-weight:700;
+  letter-spacing:-.03em;padding:12px 0 10px;margin-top:2px;color:var(--t-ink)}
+.t-fld textarea{font-size:15px;font-weight:600;letter-spacing:-.01em;min-height:76px;resize:vertical;
+  line-height:1.6;border:1.5px solid var(--t-line);border-radius:var(--t-r-sm);padding:12px 14px;margin-top:6px}
+.t-fld input:focus, .t-fld textarea:focus{outline:0;border-color:var(--t-point)}
+
+/* ══ 14. 인쇄 ═══════════════════════════════════════════════════
+   ⚠ tnum(숫자 폭 고정)은 <b>@media screen 안에만</b> 둡니다.
+     PDF 로 저장하면 숫자가 유니코드를 잃어 읽히지 않습니다. */
+@media screen{
+  .t-num, .t-cal .dn, .t-tag{font-variant-numeric:tabular-nums}
+}
+@media print{
+  .t-side,.t-tabbar,.t-toast,.t-sheet,.t-dim{display:none !important}
+  .t-card{break-inside:avoid;border:1px solid var(--t-line)}
+}
