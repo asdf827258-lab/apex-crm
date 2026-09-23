@@ -224,6 +224,37 @@ const SEED = `(function(){
   is(dup.more === 2, '<b>접은 수를 적어 둔다</b> — ' + dup.more + '건 (조용히 버리지 않는다 · 1번)');
 
   /* ─────────────────────────────────────────────────────────── */
+  /* ★ 2026-09-23 · <b>단계 차례가 점수에 안 밀린다.</b>
+     명세서의 「단계 520+지난일수×3」 을 그대로 옮겼더니 <b>찬 TA 가 계약
+     코앞의 AP 를 밀어냈습니다</b> — 명세서 목업에는 단계라는 것이 아예 없어
+     「며칠 밀렸나」 하나로만 셉니다. 이 앱의 TDO.ord 는 사장님이 정하신
+     영업 차례(AP·PC·CS 먼저)이고, 명세서가 모르는 것이지 틀린 것이
+     아닙니다. 여기서 못 박아 둡니다 — 다시 뒤집히면 홈이 0.3화면 길어지고
+     (TA 에는 화법 칸이 붙습니다) 아침 미션 차례까지 같이 갈립니다.        */
+  head('[2-2] <b>단계 차례가 점수에 안 밀린다</b> (TDO.ord)');
+  const ord = await pg.evaluate(() => {
+    const keep = window.__seed, realMadi = window.mstDueList, realTouch = window.arTouch;
+    window.__seed = {};
+    window.mstDueList = function () { return { due: [], soon: [], none: 0, total: 0 }; };
+    /* 찬 TA 는 <b>마흔 날</b> 밀렸고, 계약 코앞 AP 는 <b>오늘</b> 것입니다.
+       ★ 심는 차례가 중요합니다 — <b>덜 밀린 TA 를 먼저</b> 둡니다. 오래 밀린
+         쪽을 먼저 두면 들어온 차례가 이미 답이라 「오래 밀린 분부터」 를
+         빼도 답이 같아서 <b>알람이 안 울립니다</b> (8번). */
+    window.arTouch = function () { return [
+      { k: 'TA', id: 'o3', nm: '홍병돌', todo: '전화', d: 3 },
+      { k: 'AP', id: 'o2', nm: '홍을돌', todo: '만남', d: 0 },
+      { k: 'TA', id: 'o1', nm: '홍갑돌', todo: '전화', d: 40 }
+    ]; };
+    const L = hmSteps().filter(r => r.k === 'db').map(r => r.t);
+    window.__seed = keep; window.mstDueList = realMadi; window.arTouch = realTouch;
+    return L;
+  });
+  is(ord[0] === '홍을돌',
+     '<b>계약 코앞(AP)</b>이 마흔 날 밀린 찬 TA 보다 먼저 — ' + ord.join(' · '));
+  is(ord[1] === '홍갑돌' && ord[2] === '홍병돌',
+     '<b>같은 단계 안에서는 오래 밀린 분</b>부터 — 40일째 → 3일째');
+
+  /* ─────────────────────────────────────────────────────────── */
   head('[3] 숫자를 <b>새로 세지 않는다</b> (5번)');
   is((SRC.match(/function hmCount\s*\(/g) || []).length === 1, 'hmCount() 가 한 곳에 있다');
   const cnt = SRC.slice(SRC.indexOf('function hmCount('), SRC.indexOf('function hmCount(') + 900);

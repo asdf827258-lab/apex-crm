@@ -130,7 +130,10 @@ const LOOK = () => {
        「확인 중」 이라 답하며 <b>고객 id 를 안 줍니다.</b> 그대로 물으면
        심을 분을 못 찾아, 멀쩡한 앱을 두고 빨간불이 켜집니다.           */
     CHKS.rows = [{}]; CHKS.by = {};
-    var L = hmSteps(), i, cid = '';
+    /* ★ <b>화면에 서는 그 목록</b>에서 고릅니다. hmSteps() 는 홈 전체의
+       차례라 아침 미션에 안 오르는 분도 들어 있습니다 — 그 분께 심으면
+       줄에는 아무도 「있음」 이 안 되어, 멀쩡한 앱을 두고 빨간불이 켜집니다. */
+    var L = hmMsPeople(), i, cid = '';
     for (i = 0; i < L.length; i++) {
       var q = (typeof hmBaOf === 'function') ? hmBaOf(L[i]) : null;
       if (q && q.cid) { cid = q.cid; break; }
