@@ -9085,6 +9085,11 @@ function arTouch(who){
     var ap=(r.appt&&(''+r.appt).slice(0,10)>=t)
       ? ((''+r.appt).slice(0,10)+' '+(''+r.appt).slice(11,16)) : '';
     out.push({k:st,id:r.id,nm:r.name,sub:r.region,src:r.src,who:r.who,
+              /* <b>계약일·증권 전달일이 있는가</b>만 싣는다 (참/거짓). 첫 마디가
+                 「처음 뵙는 인사」로 갈지 「그동안 어떠셨는지」로 갈지가 여기서
+                 갈린다. <b>날짜 자체는 안 싣는다</b> — 말에 쓸 값이 아니고,
+                 화면에 날짜가 흘러 들어가면 그것이 고객에게 읽힌다 (2번). */
+              won:!!r.cAt, pol:!!r.pAt,
               go:m.go,d:d,ap:ap,st:st,ord:m.ord});
   }
   for(i=0;i<cl.length;i++){
@@ -22111,6 +22116,11 @@ function hmSteps(){
                   /* 출생년도는 <b>고객 365일에만</b> 있습니다 — 배정 DB 줄은 늘 null 입니다.
                      null 을 그대로 실어 보내야 화면이 「모른다」 고 적을 수 있습니다 (1번). */
                   by:(y.by==null?null:y.by),
+                  /* <b>저와 계약이 있는 분인가 · 증권까지 드렸는가</b>. 참/거짓만
+                     싣습니다 — 첫 마디가 「처음 뵙는 인사」에서 「그동안 어떠셨는지」
+                     로 갈리는 자리입니다. 배정 DB 줄에만 있고, 고객 365일에서
+                     올라온 줄에는 없습니다 — 없으면 <b>아무 줄도 안 붙습니다</b> (1번). */
+                  won:!!y.won, pol:!!y.pol,
                   /* arTouch 가 주는 것만 싣는다 — <b>없는 칸을 지어내지 않는다</b> (1번).
                      통화 시도 횟수는 arTouch 가 안 준다. 그래서 안 싣고, AI 에게도
                      안 보낸다 — 「몇 회」를 짐작해 적으면 그것이 사실이 된다. */
@@ -24154,10 +24164,32 @@ function hmMsAgeSet(id,k){
   else HM_MSP.age[id]=k;
   hmMsPaint();
 }
+/* ── <b>그 분 사정</b> — 가족 묶음과 보유계약 ────────────────────────
+   사장님 말씀 (2026-09-24) — 「가족구성이랑 보유계약까지 반영해줘」.
+
+   ★ <b>서버를 더 안 부릅니다</b> (7번). 셋 다 이미 손에 있는 값입니다 —
+     계약일·증권 전달일은 배정 DB 줄에 실려 올라오고(hmSteps), 가족 묶음은
+     고객 365일이 홈에서 이미 읽어 둡니다(CM, 25739줄에서 부릅니다).
+   ★ 가족 묶음이 <b>아직 안 읽혔으면 0</b> 을 줍니다 — 「가족이 없다」 가
+     아니라 「모른다」 입니다. 0 이면 whoFit 이 아무 줄도 안 붙입니다 (1번).
+   ★ <b>인원수·이름은 말에 안 들어갑니다</b> (3번). 여기서 세는 것은 「묶음이
+     둘 이상인가」 를 가리기 위해서일 뿐입니다.                            */
+function hmMsFamN(id){
+  if(!id||typeof CM==='undefined'||!CM.loaded)return 0;
+  try{
+    var f=((typeof cmOf==='function')?(cmOf(id).fam||''):'').replace(/^\s+|\s+$/g,'');
+    if(!f)return 0;
+    return (typeof cmFamOf==='function')?cmFamOf(f).length:0;
+  }catch(e){ return 0; }
+}
+function hmMsWhoFit(x){
+  if(!x)return null;
+  return { pol:!!x.pol, mine:!!x.won, fam:hmMsFamN(x.id) };
+}
 /* 그 분 첫 마디 — <b>apex-stage 한 곳</b>에서 옵니다 (5번) */
 function hmMsSay(x){
   if(!x||typeof APEX_STAGE==='undefined'||!APEX_STAGE.script)return null;
-  return APEX_STAGE.script(x.k,x.src,hmMsAge(x));
+  return APEX_STAGE.script(x.k,x.src,hmMsAge(x),hmMsWhoFit(x));
 }
 function hmMsSayCopy(){
   var x=hmMsWho(),S=hmMsSay(x);
@@ -24201,6 +24233,29 @@ function hmMsKt(x){
      올려 둔 것이 있을 때만 「거기서 고르셔도 됩니다」 라고 길을 냅니다 —
      어느 것이 오늘 올릴 것인지는 사장님이 아십니다 (1번).
    ★ 건수만 셉니다. 제목을 여기 옮겨 적으면 저쪽을 고칠 때 한쪽만 갈립니다 (5번). */
+/* ── <b>왜 이 줄이 붙었나</b> — 사정 딱지 ─────────────────────────────
+   첫 마디에 없던 줄이 붙었는데 <b>까닭이 화면에 없으면</b>, 사장님은 그것이
+   지어낸 말인지 기록에서 온 말인지 알 수 없습니다. 그러면 못 믿고 안 씁니다.
+   그래서 <b>딱지는 늘 보이게</b>(28px) 두고, 코칭은 접힌 칸으로 보냅니다 —
+   홈은 제일 많이 여는 화면이라 세로 한 줄이 비쌉니다.                    */
+var HM_FIT_IC={pol:'📄',mine:'🤝',fam:'👨‍👩‍👧'};
+function hmMsFitTagHtml(S){
+  var F=(S&&S.fit)||[],i,h='';
+  if(!F.length)return '';
+  for(i=0;i<F.length;i++)
+    h+='<span class="hm-ms-fit-c">'+(HM_FIT_IC[F[i].k]||'•')+' '+osEsc(F[i].lb)+'</span>';
+  return '<div class="hm-ms-fit"><span class="lb">기록을 보고 붙인 줄</span>'+h+'</div>';
+}
+function hmMsFitTipHtml(S){
+  var F=(S&&S.fit)||[],i,h='';
+  if(!F.length)return '';
+  for(i=0;i<F.length;i++)
+    h+='<div class="hm-ms-age-g" style="margin-top:6px">'+
+       '<div class="t"><b>'+(HM_FIT_IC[F[i].k]||'•')+' '+osEsc(F[i].lb)+'</b> — '+F[i].tip+'</div>'+
+       (F[i].no?('<div class="n"><b>이 말은 안 합니다</b> — '+F[i].no+'</div>'):'')+
+       '</div>';
+  return h;
+}
 function hmMsBizN(){
   try{ var L=(typeof bizNewsExtra==='function')?bizNewsExtra():[]; return (L&&L.length)||0; }
   catch(e){ return 0; }
@@ -24462,7 +24517,10 @@ function hmMsFrameHtml(x){
   }
   return '<div class="hm-ms-fr"><button type="button" class="hm-ms-fr-h" onclick="hmMsFrToggle()" '+
     'aria-expanded="'+(on?'true':'false')+'">☎️ <b>전화를 여는 다섯 마디</b>'+
-    '<span>'+(on?'접기 ▴':'보기 ▾')+'</span></button>'+h+(on?hmMsAgeTipHtml(x):'')+'</div>';
+    '<span>'+(on?'접기 ▴':'보기 ▾')+'</span></button>'+h+
+    /* 나이대 코칭 뒤에 <b>사정 코칭</b>(가족·보유계약)이 이어집니다 — 붙은 줄이
+       없으면 아무것도 안 섭니다 (1번). */
+    (on?(hmMsAgeTipHtml(x)+hmMsFitTipHtml(hmMsSay(x))):'')+'</div>';
 }
 function hmMsFrOpen(){ return hmFoldOpen('msfr'); }
 function hmMsFrToggle(){ hmFoldSet('msfr',!hmMsFrOpen()); hmMsPaint(); }
@@ -24767,7 +24825,7 @@ var HM_MS_BODY={
       다섯 마디 틀·용건으로 이미 <b>한 화면이 꽉</b> 차, 거기 또 넣으면 844px 를
       넘억니다(재 봤습니다). 아침 차례가 ② 준비 → ③ 전화라 여기서 보시면 됩니다. */
    return hmMsWhoHtml(x,HM_MSP.i+1,P.length)+hmMsBriefHtml(x)+hmMsNewsLine(x)+
-     (S?('<div class="hm-ms-say"><span class="lb">💬 첫 마디</span>'+osEsc(S.say)+'</div>'):
+     (S?('<div class="hm-ms-say"><span class="lb">💬 첫 마디</span>'+osEsc(S.say)+'</div>'+hmMsFitTagHtml(S)):
         '<div class="hm-ms-nonews">이 상태에는 <b>정해 둔 첫 마디가 없습니다</b> — 지어내지 않습니다.</div>')+
      '<div class="hm-ms-b">'+
        (S?'<button type="button" class="btn btn-primary" onclick="hmMsSayCopy()">📋 복사</button>':'')+
@@ -24782,7 +24840,7 @@ var HM_MS_BODY={
    return hmMsWhoHtml(x,HM_MSP.i+1,P.length)+
      (R.call===false?('<div class="hm-ms-warn">'+R.why+'</div>'):'')+
      hmMsAgeHtml(x)+hmMsFrameHtml(x)+
-     (S?('<div class="hm-ms-say"><span class="lb">💬 ③ 용건 — 이 분께 할 말</span>'+osEsc(S.say)+'</div>'):'')+
+     (S?('<div class="hm-ms-say"><span class="lb">💬 ③ 용건 — 이 분께 할 말</span>'+osEsc(S.say)+'</div>'+hmMsFitTagHtml(S)):'')+
      '<div class="hm-ms-b">'+
        (S?'<button type="button" class="btn btn-primary" onclick="hmMsSayCopy()">📋 복사</button>':'')+
        '<button type="button" class="btn btn-ghost" onclick="hmMsOpen()">📇 번호 보고 걸기</button>'+
@@ -25001,6 +25059,10 @@ function hmMsCss(){
    '.hm-ms-age-c.on{background:#1A56DB;border-color:#1A56DB;color:#fff}'+
    '.hm-ms-age.own .hm-ms-age-c.on{background:#B45309;border-color:#B45309}'+
    '.hm-ms-age-w{margin-top:5px;font-size:var(--t6);line-height:1.55;color:var(--ink-4)}'+
+   '.hm-ms-fit{margin-top:7px;display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}'+
+   '.hm-ms-fit::-webkit-scrollbar{display:none}'+
+   '.hm-ms-fit .lb{flex:0 0 auto;font-size:var(--t6);font-weight:800;color:var(--ink-5)}'+
+   '.hm-ms-fit-c{flex:0 0 auto;font-size:var(--t6);font-weight:800;padding:4px 9px;border-radius:999px;background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0;white-space:nowrap}'+
    '.hm-ms-age-g{margin-top:6px;border-radius:8px;overflow:hidden;font-size:var(--t6);line-height:1.6}'+
    '.hm-ms-age-g .t{background:#EFF6FF;color:#1E3A8A;padding:6px 9px}'+
    /* 만나서 여는 질문 — 「하세요」(파랑)도 「하지 마세요」(빨강)도 아니라

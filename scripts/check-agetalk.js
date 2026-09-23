@@ -138,6 +138,104 @@ L.forEach(a => {
   is(hit.length === 0, a.chip + ' — ' + (hit.length ? '금지어: ' + hit.join('·') : '없음'));
 });
 
+/* ── 그 분 사정 — 가족 묶음 · 보유계약 ────────────────────────────── */
+console.log('\n[11] 아는 것이 없으면 아무 줄도 안 붙는다 (1번)');
+[undefined, null, {}, { pol: false, mine: false, fam: 0 }, { fam: 1 }].forEach((w, i) => {
+  is(S.whoFit(w).length === 0, '모르는 경우 ' + (i + 1) + ' → 빈 배열');
+});
+is(S.whoFit({ fam: 1 }).length === 0, '혼자뿐인 묶음(fam=1)은 묶음이 아닙니다');
+
+console.log('\n[12] 있는 것만 붙는다 · 많아야 둘');
+const keys = w => S.whoFit(w).map(f => f.k).join('+');
+is(keys({ mine: true }) === 'mine', '계약만 → mine');
+is(keys({ pol: true }) === 'pol', '증권까지 → pol');
+is(keys({ pol: true, mine: true }) === 'pol', '증권이면 계약 줄은 안 겹칩니다');
+is(keys({ fam: 3 }) === 'fam', '가족만 → fam');
+is(keys({ pol: true, mine: true, fam: 4 }) === 'pol+fam', '둘 다여도 줄은 둘까지');
+is(S.whoFit({ pol: true, mine: true, fam: 4 }).length <= 2, '한 분에게 셋은 안 붙습니다');
+
+console.log('\n[13] 붙는 줄에 이름·인원수·숫자가 없다 (2·3번)');
+S.fits.forEach(f => {
+  const say = (typeof f.say === 'function') ? f.say() : f.say;
+  is(!!(say && say.trim()), f.lb + ' — 말이 있습니다');
+  is(!/(\d)|명|분들이 (둘|셋)/.test(say), f.lb + ' — 숫자·인원수가 없습니다');
+  is(!HARD.test(say), f.lb + ' — 단정·약속이 없습니다');
+  is(!LOW.test(say), f.lb + ' — 저자세 금지어가 없습니다');
+});
+
+console.log('\n[14] 증권 받으신 분께 할 말은 증권전달 차례에서 온다 (5번)');
+const polSay = S.whoFit({ pol: true })[0].say;
+const step2 = S.pdel.filter(x => x.n === 2)[0];
+is(!!step2, '증권전달 차례 2번이 있습니다');
+is(step2.say.indexOf(polSay) === 0, '같은 말을 두 곳에 안 적고 거기서 꺼내 씁니다');
+
+console.log('\n[15] 사정이 첫 마디에 실제로 붙는다 — 나이대 줄 뒤에');
+const base = S.script('TA', '보장분석', '40', null);
+const withFit = S.script('TA', '보장분석', '40', { pol: true, fam: 3 });
+is(withFit.say.length > base.say.length, '말이 길어집니다');
+is(withFit.say.indexOf(S.ageOf('40').add) < withFit.say.indexOf(polSay),
+   '나이대 줄이 사정 줄보다 앞에 옵니다');
+is(withFit.fit.length === 2, 'fit 이 둘 실려 옵니다');
+is(base.fit.length === 0, '모르면 fit 이 빈 배열입니다');
+/* 나이를 몰라도 사정은 붙어야 한다 — 둘은 서로 다른 축이다 */
+const noAge = S.script('TA', '보장분석', '', { mine: true });
+is(noAge.fit.length === 1 && noAge.say.indexOf(S.whoFit({ mine: true })[0].say) >= 0,
+   '나이를 몰라도 사정 줄은 붙습니다');
+
+console.log('\n[16] 묻는 줄이 맨 마지막에 남는다');
+/* 첫 마디는 「언제가 편하실까요」 로 끝납니다. 그 뒤에 말을 더 붙이면
+   고객이 답할 자리를 우리가 덮습니다 — 실제로 그렇게 붙여 놓고 찾았습니다. */
+const ASK = /(까요|시겠어요|세요)[.?!]?\s*$/;
+const SRCS = ['보장분석', '소개', '방송', '농협', '개척', '기타'];
+const CASES = [null, { mine: true }, { pol: true }, { fam: 3 }, { pol: true, fam: 3 }];
+let moved = 0, kept = 0;
+SRCS.forEach(src => {
+  ['', '20', '40', '60', '70'].forEach(a => {
+    CASES.forEach(w => {
+      const r = S.script('TA', src, a, w); if (!r) return;
+      const L0 = S.script('TA', src, '', null).say.split('\n');
+      const L = r.say.split('\n');
+      if (!ASK.test(L0[L0.length - 1])) return;      /* 원래 안 묻고 끝나는 첫 마디는 넘긴다 */
+      kept++;
+      if (ASK.test(L[L.length - 1])) moved++;
+    });
+  });
+});
+is(kept > 0 && moved === kept, '묻고 끝나는 첫 마디 ' + kept + '가지 모두 질문이 맨 끝 (' + moved + ')');
+/* 안 묻고 끝나는 첫 마디(개척)는 그냥 뒤에 붙어야 한다 */
+const gc = S.script('TA', '개척', '30', null);
+is(gc.say.split('\n').pop() === S.ageOf('30').add, '안 묻고 끝나는 첫 마디는 뒤에 붙습니다');
+
+console.log('\n[17] 같은 말을 두 번 하지 않는다 · 멀쩡한 줄은 안 지운다');
+/* ⚠ 처음에는 <b>똑같은 줄</b>만 셌습니다. 그런데 겹침 판정을 일부러 없애
+   보니 점검이 <b>그대로 초록</b>이었습니다 — 실제로 겹치는 말은 글자가
+   똑같지 않고 <b>비슷</b>하기 때문입니다. 그래서 여기서 겹침을 <b>따로
+   세어</b> 봅니다. apex-stage 의 판정을 부르지 않고 이 파일이 직접 셉니다 —
+   구현을 그대로 부르면 구현이 틀려도 같이 틀립니다.                      */
+const norm = x => String(x).replace(/[\s.,?!]/g, '');
+function share8(a, b) {
+  a = norm(a); b = norm(b);
+  if (a.length < 8 || b.length < 8) return false;
+  for (let i = 0; i + 8 <= a.length; i++) if (b.indexOf(a.substr(i, 8)) >= 0) return true;
+  return false;
+}
+let dupe = 0, drop = 0, tot = 0;
+SRCS.forEach(src => {
+  ['20', '30', '40', '50', '60', '70'].forEach(a => {
+    const r = S.script('TA', src, a, { pol: true, fam: 3 }); if (!r) return;
+    tot++;
+    const L = r.say.split('\n').map(x => x.trim()).filter(Boolean);
+    if (new Set(L).size !== L.length) { dupe++; console.log('     같은 줄 두 번 : ' + src + ' × ' + a); }
+    else for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++)
+      if (share8(L[i], L[j])) { dupe++; console.log('     비슷한 줄 두 번 : ' + src + ' × ' + a + ' — 「' + L[j].slice(0, 22) + '…」'); i = j = L.length; }
+    if (r.say.indexOf(S.ageOf(a).add) < 0) drop++;
+  });
+});
+is(dupe === 0, '같은 말이 두 번 들어간 조합 없음 (' + tot + '가지 · 글자 여덟 자로 잽니다)');
+/* 겹침 판정이 넓으면 멀쩡한 나이대 줄까지 지운다 (8번) — 다섯 자로 잡았을 때
+   여섯 조합이 지워졌다. 진짜 겹치는 것은 개척 × 70대 하나뿐이다. */
+is(drop <= 1, '겹쳐서 빠진 나이대 줄 ' + drop + '가지 (하나까지만 정상 — 개척 × 70대)');
+
 console.log('\n──────────────────────────────');
 console.log(bad ? ('나이대 화법 점검 ' + bad + '건 걸림') : '나이대 화법 점검 통과');
 process.exit(bad ? 1 : 0);
