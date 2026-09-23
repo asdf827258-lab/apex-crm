@@ -67,9 +67,30 @@ const dirty = rules.filter(r => /#[0-9A-Fa-f]{3,8}\b/.test(r.body));
 is(dirty.length === 0, '  <b>hex 를 직접 적은 자리가 없다</b>' +
    (dirty.length ? (' ← .' + dirty[0].c + ' : ' + (dirty[0].body.match(/#[0-9A-Fa-f]{3,8}/) || [''])[0]) : '') +
    ' — 적으면 토큰을 고쳐도 그 자리만 옛 색으로 남는다');
-/* 토큰을 <b>실제로 쓰고는 있나</b> — 안 쓰면 [2] 가 늘 초록이라 알람이 안 운다 (8번) */
-const uses = rules.filter(r => /var\(--t-/.test(r.body)).length;
-is(uses >= 6, '  <b>' + uses + '개</b> 규칙이 토큰을 쓴다 — 안 쓰면 이 줄이 늘 초록이라 자가 아니다');
+/* ⚠ 처음엔 <b>「토큰 쓰는 규칙이 여섯 개 이상」</b> 이라고 썼는데, 규칙이
+   스무 개라 <b>하나를 걷어내도 안 울렸습니다</b> — 되돌려 보고 알았습니다 (8번).
+   그래서 <b>색을 다루는 자리마다</b> 봅니다: color · background · border
+   값은 토큰이거나, 색이 아닌 말(none·transparent·inherit·0·solid…)이어야
+   합니다. hex 만 보면 <code>color:black</code> 이 그대로 지나갑니다.
+   ★ <b>그림자(box-shadow)는 뺍니다</b> — 토큰에 그림자가 없어, 넣으면
+     못 지킬 것을 재는 것이 됩니다. 헛것은 안 잡는 것보다 나쁩니다 (8번). */
+const SAFE = /^(none|transparent|inherit|initial|currentcolor|unset|0|auto|50%)$/i;
+const colorBad = [];
+rules.forEach(r => {
+  r.body.split(';').forEach(d => {
+    const i = d.indexOf(':'); if (i < 0) return;
+    const prop = d.slice(0, i).trim().toLowerCase();
+    if (!/^(color|background|background-color|border|border-color|border-top|border-bottom)$/.test(prop)) return;
+    const val = d.slice(i + 1).trim();
+    if (/var\(--/.test(val)) return;                 /* 토큰을 쓴다 — 좋다 */
+    const words = val.split(/\s+/).filter(w => !/^(1px|2px|3px|4px|solid|dashed|dotted)$/i.test(w));
+    if (words.every(w => SAFE.test(w))) return;      /* 색이 아닌 말뿐이다 */
+    colorBad.push('.' + r.c + ' { ' + prop + ':' + val + ' }');
+  });
+});
+is(colorBad.length === 0,
+   '  <b>색을 다루는 자리는 모두 토큰</b>이다' + (colorBad.length ? (' ← ' + colorBad[0]) : '') +
+   ' — 토큰을 안 쓰면 그 자리만 옛 색으로 남는다');
 
 console.log('\n[3] 홈에 <b>새 저장 호출</b>이 생겼나');
 /* 사장님 말씀 — 「홈에 저장 코드를 새로 짜지 마십시오. 기존 화면·기존
