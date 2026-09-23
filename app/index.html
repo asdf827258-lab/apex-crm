@@ -13051,6 +13051,7 @@ var TABS=[
  {group:'자료 조회',items:[
    {id:'ref_jeonsan',icon:'🏢',title:'보험사 전산',cnt:'',ak:'보험 레퍼런스'},
    {id:'ref_underwrite',icon:'⚠️',title:'예외질환 인수확인',cnt:'',ak:'보험 레퍼런스'},
+   {id:'ref_asknow',icon:'🧠',title:'AI 언더라이팅 자문',cnt:'',ak:'보험 레퍼런스'},
    {id:'ref_kcd',icon:'📕',title:'질병코드·특약',cnt:'',ak:'계약관리'},
    {id:'ref_surgery',icon:'🔪',title:'수술명 검색',cnt:'',ak:'계약관리'},
    {id:'ref_hira',icon:'🔗',title:'건강보험심사평가원',cnt:'',ak:'보험 레퍼런스'},
@@ -13150,6 +13151,7 @@ var TABS=[
 
 ];
 var TAB_META={
+ ref_asknow:{tag:'REFERENCE',title:'AI 언더라이팅 자문',desc:'회사별 환급률·담보·인수 기준을 한 번에 물어보는 자리입니다. 여기서 기준을 붙인 질문을 만들어 들고 갑니다 — 기준 없이 물으면 답할 때마다 숫자가 달라집니다.'},
  clients:{tag:'OS',title:'고객 보장분석 프로젝트',desc:'고객별 보장분석 상담을 한 곳에서. 문서 업로드·추출·검수·전후비교·리포트까지 이어집니다.'},
  cs_assist:{tag:'CONSULT',title:'AI 통합상담 어시스턴트',desc:'윤시현 「고객이익 통합상담」 방법론으로 상담 준비 브리핑과 녹취 복기를 돕습니다. 녹취는 텍스트 붙여넣기(길이 제한 없음) 또는 오디오 업로드.'},
  blog:{tag:'CONTENT',title:'블로그',desc:'글은 <b>블로그 공장</b>에서 씁니다 — 새 탭으로 열립니다. 여기에는 상위노출 키트만 둡니다.'},
@@ -13259,7 +13261,7 @@ var NAV_WHEN={
  mkt_card:'grow', ext_reply:'grow', ext_thread:'grow', ext_naver:'grow',
  /* 📚 찾아보고 배우기 */
  ref_jeonsan:'know', ref_underwrite:'know', ref_kcd:'know', ref_surgery:'know',
- ref_hira:'know', ref_hidden:'know', dz_guide:'know',
+ ref_hira:'know', ref_hidden:'know', ref_asknow:'know', dz_guide:'know',
  biz_diag:'know', biz_fund:'know', biz_tax:'know', biz_ins:'know',
  biz_retire:'know', biz_staff:'know',
  inv_stock:'know', inv_fund:'know', inv_perf:'know', inv_econ:'know',
@@ -16928,8 +16930,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-24 10:40';
-var APP_BUILD_NOTE="☎️ <b>「오늘 연락할 사람」이 한 줄이 됩니다 — 첫 조각입니다.</b>　—　① <b>「오늘 누구부터」 규칙을 파일 하나로</b> 뺐습니다(app/day-rank.js). 여태 day.html 안에만 있어서 홈이 같은 답을 하려면 또 적어야 했고, 두 벌이 되는 순간 두 화면이 <b>서로 다른 「오늘 그 분」</b> 을 말하게 됩니다. 이 규칙은 한 번 어긋나 <b>「오늘 걸 사람 198명」</b> 이 뜬 적이 있습니다. <b>옮기기만 하고 숫자는 한 글자도 안 고쳤습니다</b> — check-day 로 화면이 같은지 확인했습니다.　—　② <b>한 분 = 한 퀘스트.</b> 같은 분이 달력에도 서고 30일 약속에도 서면 한쪽을 끝내도 다른 쪽이 남아 「다 했는데 안 줄어든다」 가 됩니다. 이제 <b>가장 높은 하나만</b> 세우고 접은 수는 적어 둡니다 — 조용히 버리지 않습니다.　—　③ <b>30일 약속이 드디어 큐에 들어옵니다.</b> 「30일 안에 모든 고객에게」 는 이 앱이 지키자고 만든 약속인데 정작 오늘 자리에 안 섰습니다. 주기는 설정(ccCfg)이 정합니다 — 30일 · VIP 14일.　—　★ <b>접촉은 통화·만남만 셉니다.</b> 단계를 옮긴 것은 접촉이 아닙니다 — 섞으면 앉아서 <b>버튼만 눌러도</b> 약속을 지킨 것이 됩니다. 문자·카톡도 여기서는 안 셉니다. (화면의 「마지막으로 닿은 날」 과 <b>일부러 다릅니다</b> — 그쪽은 「무엇으로든 닿은 날」, 이쪽은 「약속을 지킨 날」 입니다.)　—　④ <b>약속이 없는 날에도 동선 자리를 지킵니다.</b> 여태 빈 날엔 칸을 아예 안 세워서 그만큼 밑엣것이 올라와 어제와 다른 화면이 됐습니다. 이제 「오늘은 갈 데가 없습니다 — 지역을 묶어 하루를 잡으시면」 한 줄이 그 자리를 지킵니다.　—　새 점검 <b>check-queue</b> 가 열여덟 자리를 봅니다. 다섯 자리를 되돌려 다섯 다 빨간불을 확인했습니다.　—　⚠ <b>아직 안 한 것</b> — 신호 점수 카드(생일·납입만기·만기·주년·자녀·보험료 비중·빈 통장·소개자)와 세 자리(아침 미션·고객 체크·오늘의 알림) 합치기는 <b>다음 판</b>입니다. 한 판에 두 가지를 섞지 않습니다.　—　★ <b>남의 고객이 섞이던 자리를 막았습니다.</b> 30일 약속 줄을 세울 때 「누구 것인가」 를 <b>한 번 더 세어</b> 답했더니, 고르개가 없는 <b>설계사</b>에게 남의 고객이 홈에 올라왔습니다. 이제 달력이 쓰는 <b>그 한 곳</b>에 묻습니다 — 「지금 누구 것인가」 는 한 곳만 압니다."
+var APP_BUILD='2026-09-24 01:21';
+var APP_BUILD_NOTE="🧠 <b>회사 언더라이팅 챗봇이 우리 메뉴에 들어왔습니다 — 「AI 언더라이팅 자문」(자료 조회).</b>　—　회사별 환급률·담보·인수 기준을 한 번에 답해 주는 챗봇(애스크나우)이 있는데, 여태 세일즈플러스·보플에서 따로 찾아 들어갔습니다. 이제 왼쪽 <b>자료 조회</b> 칸에 자리가 있습니다.　—　★ <b>다만 이 화면은 답을 만들지 않습니다 — 물어볼 말만 만듭니다.</b> 챗봇의 답은 <b>물어본 조건 기준</b>이라, 나이·성별·가입형을 안 붙이고 물으면 <b>같은 상품인데 환급률이 매번 다르게</b> 나옵니다. 그래서 상품·조건·시점·비교 기준·심사형을 채워 질문을 만들고, 그 끝에 <b>「답변 맨 위에 비교 기준과 기준일을 적어 달라」</b> 는 줄을 늘 붙입니다 — 기준 없는 표는 받아도 고객 앞에서 못 씁니다.　—　자주 쓰는 넷(단기납 종신 환급률 · 간편심사 암보험 담보 · 달러 제외 카드납 · 고혈압 복용 중 인수)은 단추 한 번이고, 상담원에게 정리된 파일을 달라고 할 문구도 복사됩니다.　—　⚠ <b>들어가는 길은 전산과 같습니다 — 본인 계정입니다.</b> 세일즈플러스 왼쪽 아이콘 묶음, 또는 보플 앱 홈의 애스크나우로 들어간 자리에서 넘어가야 열립니다. 주소로 바로 가면 「접근 권한이 없습니다」가 뜹니다. <b>한 사람의 로그인을 여럿이 나눠 쓰지 않습니다</b> — 회사 시스템 접근 기록이 그 사람 것으로 남고, 그 자리는 우리가 손댈 자리가 아닙니다.　—　★ 챗봇이 답한 환급률은 고객에게 제시하기 전에 <b>해당 보험사 설계로 반드시 다시 확인</b>하십시오. 보험료·보장은 심사 결과에 따릅니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -18840,6 +18842,7 @@ var VA_ALIAS={
  '청구':'claims','사후관리':'claims','실비':'med_silbi','실비계산기':'med_silbi',
  '건강검진':'med_checkup','알릴의무':'med_disclosure','고지':'med_disclosure',
  '인수':'ref_underwrite','인수기준':'ref_underwrite','전산':'ref_jeonsan',
+ '언더라이팅':'ref_asknow','환급률':'ref_asknow','애스크나우':'ref_asknow','에스크나우':'ref_asknow','언더라이팅자문':'ref_asknow',
  '코칭':'branch_coach','팀코칭':'branch_coach','내코칭':'mycoach',
  '조직도':'org','조직':'org','매뉴얼':'manual','업무매뉴얼':'manual',
  '건의함':'voice','불편한점':'voice','설정':'settings','시스템점검':'health',
@@ -32919,7 +32922,7 @@ var MAN_MAP=[
      chips:[['contracts','📜','계약관리 판단'],['endorse','✍️','배서 안내서'],['claims','🧾','청구·사후관리'],['med_silbi','🧮','AI 실비계산기'],['med_checkup','🩺','AI 건강검진'],['med_disclosure','📋','알릴의무 필터']],
      how:'계약을 바꾸고 지키는 것부터 청구까지. 해지 이야기가 나오면 여기 계약관리 판단부터 엽니다.'},
     {no:8,ic:'🔎',cat:'자료 조회',when:'언제든 꺼내 볼 때',
-     chips:[['ref_jeonsan','🏢','보험사 전산'],['ref_underwrite','⚠️','예외질환 인수확인'],['ref_kcd','📕','질병코드·특약'],['ref_surgery','🔪','수술명 검색'],['ref_hira','🔗','심평원'],['ref_hidden','💰','숨은보험금찾기']],
+     chips:[['ref_jeonsan','🏢','보험사 전산'],['ref_underwrite','⚠️','예외질환 인수확인'],['ref_asknow','🧠','AI 언더라이팅 자문'],['ref_kcd','📕','질병코드·특약'],['ref_surgery','🔪','수술명 검색'],['ref_hira','🔗','심평원'],['ref_hidden','💰','숨은보험금찾기']],
      how:'전산 로그인·질병코드·수술명·인수 조회를 한 곳에서 엽니다. 예전에 두 칸으로 흩어져 있던 것을 모았습니다.'},
     {no:9,ic:'🏭',cat:'법인 컨설팅',when:'사업자·법인 고객일 때',
      chips:[['biz_diag','🧭','사업자 진단'],['biz_fund','🏦','정책자금'],['biz_tax','🧾','세금컨설팅'],['biz_ins','☂️','보험 솔루션'],['biz_retire','🪙','퇴직금 관리'],['biz_staff','👥','직원관리']],
@@ -50559,7 +50562,101 @@ function csaDebriefRun(){
   var uText='아래 상담 녹취(텍스트)를 윤시현의 「고객이익 통합상담」 어시스턴트로서 복기해줘.'+(note?('\n\n[상담 배경 메모] '+note):'')+'\n\n[상담 녹취]\n'+tx+fmt;
   callAI(csaSys(),uText,8000,'brain').then(function(out){res._raw=out;res.innerHTML=reportResultBox('csa_debRes','csaDebriefRun()','상담 복기 리포트','녹취(텍스트) 분석',out);if(btn){btn.disabled=false;btn.textContent='🎙️ 상담 복기 분석';}}).catch(function(e){res.innerHTML=csaErr('csaDebriefRun()',e);if(btn){btn.disabled=false;btn.textContent='🎙️ 상담 복기 분석';}});
 }
+
+/* ── AI 언더라이팅 자문 — 「물어볼 말」을 만드는 자리 ──
+   회사별 환급률을 한 번에 답해 주는 챗봇(애스크나우)이 있습니다. 다만 그 답은
+   <b>물어본 조건 기준</b>입니다. 나이·성별·가입형을 안 붙이고 물으면 답마다
+   기준이 달라져 <b>같은 상품인데 환급률이 매번 다르게</b> 나옵니다. 고객 앞에서
+   그 숫자가 흔들립니다. 그래서 여기서 기준을 먼저 채우고 질문을 만들어 갑니다.
+   이 화면은 <b>답을 만들지 않습니다</b> — 물어볼 말만 만듭니다(1번 규칙). */
+var AN_ASK={
+  refund:{label:'환급률·해지환급금',line:'환급률을 회사별로 표로 정리해 주세요'},
+  cover :{label:'담보·보장조건',line:'담보 구성과 보장조건을 회사별로 표로 정리해 주세요'},
+  uw    :{label:'인수·고지 기준',line:'인수(고지) 기준과 가입 가능 여부를 회사별로 정리해 주세요'},
+  pay   :{label:'납입·카드납 조건',line:'납입 방법(카드납 가능 여부 포함)을 회사별로 정리해 주세요'}
+};
+/* 자주 쓰는 네 가지. 값은 <b>보기</b>일 뿐이라, 고르면 칸에 채워 두고 고쳐 쓰게 한다. */
+var AN_PRESET=[
+ {t:'단기납 종신 환급률',kind:'refund',prod:'단기납 종신보험',cond:'5년납·7년납',when:'10년 시점',base:'40세 남자',sim:'both'},
+ {t:'간편심사 암보험 담보',kind:'cover',prod:'간편심사 암보험',cond:'',when:'',base:'55세 여자',sim:'간편심사형'},
+ {t:'달러 제외 · 카드납',kind:'pay',prod:'단기납 종신보험(달러 제외)',cond:'',when:'',base:'',sim:'both'},
+ {t:'고혈압 복용 중 인수',kind:'uw',prod:'간편심사 종합건강보험',cond:'고혈압 약 복용 중',when:'',base:'58세 남자',sim:'간편심사형'}
+];
+function anVal(id){var e=$(id);return e?String(e.value||'').trim():'';}
+function anSet(id,v){var e=$(id);if(e)e.value=v||"";}
+function anPreset(i){
+  var p=AN_PRESET[i];if(!p)return;
+  anSet('an_kind',p.kind);anSet('an_prod',p.prod);anSet('an_cond',p.cond);
+  anSet('an_when',p.when);anSet('an_base',p.base);anSet('an_sim',p.sim);
+  anMake();
+}
+function anMake(){
+  var a=AN_ASK[anVal('an_kind')]||AN_ASK.refund;
+  var prod=anVal('an_prod'),cond=anVal('an_cond'),when=anVal('an_when');
+  var base=anVal('an_base'),sim=anVal('an_sim');
+  if(!prod){toast('어떤 상품을 물을지 먼저 적어 주세요');return;}
+  var head=[];
+  if(base)head.push(base);
+  if(sim&&sim!=='both')head.push(sim);
+  var t=head.length?('['+head.join(' / ')+' 기준]\n'):'';
+  var q=prod+(cond?(', '+cond):'')+(when?(' '+when):'');
+  t+=q+' '+a.line+'.\n';
+  if(sim==='both')t+='※ 일반심사형과 간편심사형을 「나눠서」 알려 주세요.\n';
+  /* 이 두 줄이 이 화면의 값입니다 — 기준과 날짜를 안 받으면 표를 받아도 못 씁니다. */
+  t+='※ 답변 맨 위에 비교 기준(나이·성별·가입형·기준일)을 적어 주세요.\n';
+  t+='※ 근거로 삼은 자료(보험사 소식지·영업자료)의 날짜도 함께 알려 주세요.';
+  var box=$('an_res');if(!box)return;
+  box.classList.add('on');/* .calc-res 는 display:none 이 기본 — on 을 안 달면 만들어도 안 보인다 */
+  box.innerHTML=
+    '<textarea id="an_out" rows="9" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--ink-7);border-radius:8px;font-size:13px;line-height:1.7">'+esc(t)+'</textarea>'+
+    '<div class="btn-row" style="margin-top:8px">'+
+    '<button class="btn btn-primary" onclick="anCopy()">📋 질문 복사</button>'+
+    '<a class="btn btn-ghost" href="https://asknow.kr/" target="_blank" rel="noopener">🧠 자문 챗봇 열기 ↗</a>'+
+    '</div>';
+}
+function anCopy(){var e=$('an_out');if(e)copyText(e.value);}
+/* 사람(상담원)에게 정리된 파일을 달라고 할 때. 챗봇이 표로 못 주는 것은 이쪽이 빠르다. */
+function anStaffCopy(){
+  var prod=anVal('an_prod')||'단기납 종신보험';
+  copyText('안녕하세요. '+prod+' 회사별 환급률과 납입 조건(카드납 가능 여부 포함)을 '+
+    '한눈에 볼 수 있게 정리된 파일이 있을까요?\n'+
+    '일반심사형과 간편심사형을 나눠서 주시면 좋겠습니다. 기준일도 함께 부탁드립니다.');
+}
 var CUSTOM=[
+{tab:'ref_asknow',render:function(){
+  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🚪</span>들어가는 길 — 본인 계정으로</div>'+
+   '<div class="card-desc">회사가 주는 <b>언더라이팅 자문 챗봇(애스크나우)</b>입니다. 회사별 환급률·담보·인수 기준을 물으면 표로 답하고, 사람(상담원)에게 정리된 파일도 받습니다.</div></div>'+
+   '<div class="card-body">'+
+   '<div class="notice" style="font-size:12px;line-height:1.8">들어가는 길은 <b>전산과 같습니다</b> — 본인 계정으로 들어간 자리에서 넘어가야 열립니다.<br>'+
+   '· 세일즈플러스 메인 <b>왼쪽 아이콘 묶음</b> → 「애스크나우(언더라이팅 챗봇)」<br>'+
+   '· 보플 앱은 홈의 <b>애스크나우</b> 아이콘<br>'+
+   '주소로 바로 들어가면 「접근 권한이 없습니다」가 뜹니다. 아래 단추는 <b>이미 로그인된 브라우저</b>에서만 열립니다.</div>'+
+   '<div class="btn-row" style="margin-top:11px"><a class="btn btn-primary" href="https://asknow.kr/" target="_blank" rel="noopener">🧠 자문 챗봇 열기 ↗</a></div>'+
+   '<div class="notice" style="margin-top:12px;font-size:11px;color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">챗봇이 답한 환급률은 <b>물어본 조건 기준</b>입니다. 고객에게 제시하기 전에 해당 보험사 설계로 <b>반드시 다시 확인</b>하세요. 보험료·보장은 심사 결과에 따릅니다.</div>'+
+   '</div></div>';
+}},
+{tab:'ref_asknow',render:function(){
+  var kinds='';
+  for(var k in AN_ASK){if(AN_ASK.hasOwnProperty(k))kinds+='<option value="'+k+'">'+esc(AN_ASK[k].label)+'</option>';}
+  var pre='';
+  for(var i=0;i<AN_PRESET.length;i++)pre+='<button class="btn btn-ghost" style="padding:5px 10px;font-size:12px" onclick="anPreset('+i+')">'+esc(AN_PRESET[i].t)+'</button>';
+  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">✍️</span>물어볼 말 만들기</div>'+
+   '<div class="card-desc">기준을 안 붙이고 물으면 <b>답할 때마다 숫자가 달라집니다</b>. 여기서 채워 만든 질문을 그대로 붙여 넣으세요. (키 불필요 · 이 화면은 답을 만들지 않습니다)</div></div>'+
+   '<div class="card-body">'+
+   '<div class="btn-row" style="margin-bottom:11px">'+pre+'</div>'+
+   '<div class="frm cols2">'+
+   '<div class="fld"><label>무엇을 묻나</label><select id="an_kind">'+kinds+'</select></div>'+
+   '<div class="fld"><label>상품 <span style="color:var(--ink-5)">(필수)</span></label><input id="an_prod" placeholder="예: 단기납 종신보험"></div>'+
+   '<div class="fld"><label>조건</label><input id="an_cond" placeholder="예: 5년납·7년납"></div>'+
+   '<div class="fld"><label>시점</label><input id="an_when" placeholder="예: 10년 시점"></div>'+
+   '<div class="fld"><label>비교 기준</label><input id="an_base" placeholder="예: 40세 남자"></div>'+
+   '<div class="fld"><label>심사</label><select id="an_sim"><option value="both">일반·간편 나눠서</option><option>일반심사형</option><option>간편심사형</option></select></div>'+
+   '</div>'+
+   '<div class="btn-row"><button class="btn btn-primary" onclick="anMake()">질문 만들기</button>'+
+   '<button class="btn btn-ghost" onclick="anStaffCopy()">🙋 상담원에게 파일 요청 문구 복사</button></div>'+
+   '<div class="calc-res" id="an_res"></div>'+
+   '</div></div>';
+}},
 {tab:'blog',render:function(){return blogFactoryLink();}},
 {tab:'blog',render:function(){return blogSeoKit();}},
 {tab:'cs_feedback',render:function(){return osAudioCard('cs_feedback');}},
