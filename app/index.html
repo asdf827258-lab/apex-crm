@@ -1345,7 +1345,13 @@ body.apexmap-mode #apexMapScreen{display:block;}
 .mcal-d.sel{border-color:#0F172A;background:#fff;box-shadow:0 0 0 2px rgba(15,23,42,.12)}
 .mcal-d .dots{display:flex;gap:2px;flex-wrap:wrap;justify-content:center}
 .mcal-d .dots i{width:5px;height:5px;border-radius:50%}
+.mcal-d .mline{display:flex;align-items:center;gap:3px;flex-wrap:wrap;justify-content:center;line-height:1}
 .mcal-d .cnt{font-size:var(--t6);font-weight:800;color:var(--ink-4)}
+/* 📋 매일 하는 일 — <b>칸 안에서 글자로</b> 보여야 한 달치가 보입니다.
+   앞날은 흐리게(아직 안 한 것) · 다 한 날은 초록. 13px 아래로는 안 내립니다. */
+.mcal-d .rt{font-size:var(--t6);font-weight:800;color:#1B64DA;letter-spacing:-.04em}
+.mcal-d .rt.ok{color:#047857}
+.mcal-d .rt.soon{color:var(--ink-5);font-weight:700}
 .mcal-lg{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
 .mcal-lg span{display:inline-flex;align-items:center;gap:4px;font-size:var(--t6);color:var(--ink-4);font-weight:600}
 .mcal-lg i{width:7px;height:7px;border-radius:50%}
@@ -14865,9 +14871,17 @@ var MRT={open:''};
 function mrtOpenIs(ds){ return MRT.open===ds; }
 function mrtOpenSet(ds){ MRT.open=(MRT.open===ds)?'':ds; try{ mcalPaint(); }catch(e){} }
 /* 고른 날의 열한 줄 — 달력 아래에 편다 */
+/* ⚠ <b>남의 날을 내 체크로 그리면 안 됩니다</b> (1번·3번). 팀원을 고르고
+   날짜를 누르면, 이 칸은 <b>이 브라우저</b>(localStorage)의 체크를 읽어
+   그 팀원 것처럼 보여 주고 있었습니다. 게다가 오늘 자리에서는 눌러
+   <b>내 기록이 바뀌는데</b> 화면은 그 팀원 것처럼 보였습니다.
+   그 사람 것은 <b>몇 개 했는지</b>만 알 수 있습니다(daily_checks 에 그
+   수만 남습니다). 그래서 어느 것을 했는지는 <b>안다고 하지 않습니다.</b> */
 function mrtPanelHtml(ds){
   var L=mrtItems();
   if(!L.length)return '';
+  var who=mcalRtWho(), mine=mcalRtIsMe(who);
+  if(!mine)return mrtOtherHtml(ds,who,L.length);
   var m=mrtLoad(ds),n=mrtDone(ds),today=mrtToday(ds),ms=mrtMs(ds),i,x,on,h,mi;
   var ahead=ds>mcalToday();
   mrtCss();
@@ -14902,6 +14916,24 @@ function mrtPanelHtml(ds){
   }
   return h+'<div class="mrt-ft">🌅 가 붙은 다섯은 <b>홈 아침 미션</b>입니다 — 홈에서 켠 것이 여기에도 켜집니다. '+
     '체크판과 <b>같은 자리</b>에 담기므로 실행 체크판에도 그대로 있습니다.</div></div>';
+}
+/* 팀원 것 — <b>몇 개 했는지만</b> 적습니다. 체크는 안 보여 드립니다 */
+function mrtOtherHtml(ds,who,tot){
+  mrtCss();
+  var n=mcalRtN(who,ds),nm='';
+  try{ nm=(typeof arRowOf==='function'&&arRowOf(who))?(arRowOf(who).name||''):''; }catch(e){ nm=''; }
+  var ahead=ds>mcalToday();
+  var say;
+  if(ahead)say='<span class="mrt-n">하루 '+tot+'가지</span><span class="mrt-ro">아직 오지 않은 날입니다</span>';
+  else if(n==null)
+    /* <b>안 읽은 날</b>을 0 으로 적으면 「안 했다」가 됩니다 (1번) */
+    say='<span class="mrt-n">하루 '+tot+'가지</span>'+
+        '<span class="mrt-ro"><b>아직 못 읽은 날</b>입니다 — 서버에서 받아 둔 것은 최근 30일뿐입니다</span>';
+  else say='<span class="mrt-n'+(n>=tot?' all':'')+'">'+n+' / '+tot+(n>=tot?' ✓':'')+'</span>';
+  return '<div class="mrt"><div class="mrt-hd" style="cursor:default">'+
+    '📋 <b>매일 하는 일</b>'+(nm?(' · '+osEsc(nm)+'님'):'')+say+'</div>'+
+    '<div class="mrt-ft"><b>몇 개 했는지</b>만 남아 있어, 어느 것을 하셨는지는 여기서 못 봅니다. '+
+    '체크는 <b>그분 화면</b>에서만 켜집니다.</div></div>';
 }
 function mrtCss(){
   if(document.getElementById('mrtCss'))return;
@@ -15012,22 +15044,33 @@ function mcalItems(){
        0 으로 적으면 「못 했다」 로 읽힌다 (1번).                         */
   var RT=(typeof mrtItems==='function')?mrtItems():[];
   if(RT.length){
-    var meR='';
-    try{ meR=(typeof arMyId==='function')?(arMyId()||''):''; }catch(eR){ meR=''; }
+    /* <b>보고 계신 그 사람</b>의 것을 그립니다 — 팀원을 고르시면 그 팀원 것.
+       여태는 늘 내 것이라, 팀원을 고르는 순간 이 줄이 사라졌습니다. */
+    var meR=mcalRtWho();
+    var mineR=mcalRtIsMe(meR);
     var ymR=(typeof mcalYm==='function')?mcalYm():TD.slice(0,7);
     var lastR=new Date(Date.UTC(+ymR.slice(0,4),+ymR.slice(5,7),0)).getUTCDate(),dR,dsR;
     var putR=function(dsx){
-      var done=mrtDone(dsx),past=(dsx<=TD),ms=mrtMs(dsx);
+      var done=mcalRtN(meR,dsx),past=(dsx<=TD),ms=mineR?mrtMs(dsx):null;
+      /* <b>모르는 날</b>은 세지 않습니다 — 0 으로 적으면 「안 했다」입니다 (1번) */
+      if(done==null){
+        (out[dsx]=out[dsx]||[]).push({k:'rt',who:meR,t:'매일 하는 일',
+          rt:dsx,n:null,tot:RT.length,ms:null,mstot:0,mine:mineR,
+          s:past?('하루 '+RT.length+'가지 — <b>아직 못 읽은 날</b>입니다')
+                :('하루 '+RT.length+'가지')});
+        return;
+      }
+      if(!ms)ms={n:0,tot:0};
       /* <b>아침 미션 다섯을 앞에 적습니다</b> — 하루 열한 가지 가운데 아침에
          꼭 끝내야 하는 것이 그 다섯입니다. 뒤에 하루치를 같이 적어 둡니다.
          앞날은 <b>「0 / 5」 가 아니라 몇 가지인지만</b> 적습니다 — 아직 안 한
          것을 0 으로 적으면 「못 했다」 로 읽힙니다 (1번). */
       (out[dsx]=out[dsx]||[]).push({k:'rt',who:meR,t:'매일 하는 일',
-        rt:dsx,n:done,tot:RT.length,ms:ms.n,mstot:ms.tot,
+        rt:dsx,n:done,tot:RT.length,ms:ms.n,mstot:ms.tot,mine:mineR,
         s:past
-          ?('🌅 아침 미션 '+ms.n+' / '+ms.tot+' · 하루 '+done+' / '+RT.length+
+          ?((mineR?('🌅 아침 미션 '+ms.n+' / '+ms.tot+' · '):'')+'하루 '+done+' / '+RT.length+
             (done>=RT.length?' · 다 했습니다':''))
-          :('🌅 아침 미션 '+ms.tot+'가지 · 하루 '+RT.length+'가지')});
+          :((mineR?('🌅 아침 미션 '+ms.tot+'가지 · '):'')+'하루 '+RT.length+'가지')});
     };
     for(dR=1;dR<=lastR;dR++){
       dsR=ymR+'-'+('0'+dR).slice(-2);
@@ -15206,11 +15249,21 @@ function icsEsc(t){
   return (''+(t||'')).replace(/\\/g,'\\\\').replace(/;/g,'\\;')
     .replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
 }
+/* ⚠ <b>이모지에서 터지던 자리입니다.</b> 한 칸씩(charAt) 끊어 재면 이모지는
+   두 칸(서러게이트 쌍)이라 <b>반쪽</b>이 넘어가고, encodeURIComponent 가
+   그 반쪽에서 <code>URI malformed</code> 로 던집니다. 그러면 내보내기가
+   통째로 죽는데 <b>아무 말도 없이</b> 죽습니다 — 단추를 눌러도 아무 일이
+   안 일어납니다. 「💬 카톡·문자」 가 들어간 날이 그랬습니다.
+   그래서 <b>이모지는 두 칸을 한 글자로</b> 세고, 그래도 못 재면 글자 수로
+   물러섭니다 — 줄 길이가 조금 틀리는 것이 통째로 안 나가는 것보다 낫습니다. */
 function icsFold(line){
-  var b=[],n=0,out='',i,ch,len;
+  var b=[],n=0,out='',i,ch,cp,len;
   for(i=0;i<line.length;i++){
     ch=line.charAt(i);
-    len=encodeURIComponent(ch).replace(/%[0-9A-F]{2}/g,'x').length;  /* 바이트 수 */
+    cp=line.charCodeAt(i);
+    if(cp>=0xD800&&cp<=0xDBFF&&i+1<line.length){ ch=line.substr(i,2); i++; }
+    try{ len=encodeURIComponent(ch).replace(/%[0-9A-F]{2}/g,'x').length; }  /* 바이트 수 */
+    catch(e){ len=ch.length; }
     if(n+len>73){b.push(out);out=' ';n=1;}
     out+=ch;n+=len;
   }
@@ -15303,6 +15356,64 @@ function mcalTodayEvents(){
   }
   return evs;
 }
+/* ══ 📆 <b>이번 달 통째로</b> 폰 달력에 넣기 ════════════════════════
+   사장님 말씀 (2026-09-23) — 「아이폰이든 Galaxy든 <b>바탕화면에 네이버
+   캘린더처럼</b> 사용할 수 있게 만들어졌니?」
+
+   ★ <b>바탕화면 위젯은 못 만듭니다.</b> 이 앱은 웹앱이고, iOS·안드로이드
+     위젯은 네이티브 앱만 그릴 수 있습니다. 「됩니다」 라고 적으면 거짓말이
+     됩니다 (1번).
+   ★ 대신 <b>폰이 이미 가진 달력 위젯</b>을 씁니다. 이번 달 일정을 통째로
+     폰 기본 달력에 넣어 드리면, <b>그 위젯이 바탕화면에 그려 줍니다.</b>
+     아이폰 달력 위젯 · 갤럭시 캘린더 위젯 — 둘 다 그대로 뜹니다.
+
+   ── 무엇을 담나 ──────────────────────────────────────────────────
+   달력이 이미 세워 둔 그 줄(mcalItems)을 <b>그대로</b> 씁니다 (5번) —
+   여기서 다시 고르면 앱 화면과 폰 달력이 다른 말을 합니다.
+   <b>「매일 하는 일」은 안 담습니다</b> — 서른 줄이 날마다 찍혀 폰 달력이
+   글자밭이 되고, 그 줄은 앱에서 체크하는 것이라 폰에 있어 봐야 못 누릅니다.
+   ★ 이름은 <b>가려서</b> 나갑니다 (3번) — mcalOutName 한 곳이 정합니다.  */
+function mcalMonthEvents(){
+  var c=mcalCfg(),ym=(typeof mcalYm==='function')?mcalYm():mcalToday().slice(0,7);
+  var items=mcalItems(),evs=[],ds,L,i,x,by,k;
+  var last=new Date(Date.UTC(+ym.slice(0,4),+ym.slice(5,7),0)).getUTCDate(),d;
+  for(d=1;d<=last;d++){
+    ds=ym+'-'+('0'+d).slice(-2);
+    L=mcalDay(items,ds);
+    if(!L.length)continue;
+    /* 약속은 <b>시간이 있으니 한 줄씩</b>, 나머지는 갈래별로 묶어 한 줄 */
+    by={};
+    for(i=0;i<L.length;i++){
+      x=L[i];
+      if(x.k==='rt')continue;                       /* 매일 하는 일은 안 담는다 */
+      if(x.k==='appt'){
+        var hm=(''+(x.s||'')).slice(0,5),hh=c.h,mm=0;
+        if(/^\d{2}:\d{2}$/.test(hm)){ hh=+hm.slice(0,2); mm=+hm.slice(3,5); }
+        evs.push({ds:ds,h:hh,m:mm,dur:60,go:'crm',
+          title:'📌 약속 — '+(x.t||'고객'),
+          body:'DB 통합 CRM 에 잡아 두신 약속입니다.'+(x.s?('\n'+x.s):'')});
+        continue;
+      }
+      if(x.k==='my'){
+        var mh=c.h,mm2=0;
+        if(/^\d{2}:\d{2}$/.test(x.s||'')){ mh=+x.s.slice(0,2); mm2=+x.s.slice(3,5); }
+        evs.push({ds:ds,h:mh,m:mm2,dur:30,go:'mycal',
+          title:'✏️ '+(x.t||'내 일정'),body:'앱 달력에 직접 넣으신 일정입니다.'});
+        continue;
+      }
+      (by[x.k]=by[x.k]||[]).push(x.t||'');
+    }
+    for(k in by){
+      if(!by.hasOwnProperty(k)||!by[k].length)continue;
+      var K=(typeof MCAL_KIND!=='undefined'&&MCAL_KIND[k])||{e:'•',t:'할 일'};
+      evs.push({ds:ds,h:c.h,m:c.m,dur:30,go:(k==='bd'?'clients':'airep'),
+        title:(K.e||'•')+' '+(K.t||'할 일')+' '+by[k].length+'건',
+        body:'· '+by[k].slice(0,20).join('\n· ')+
+             (by[k].length>20?('\n… 외 '+(by[k].length-20)+'건'):'')});
+    }
+  }
+  return evs;
+}
 /* 매일 아침 — 앱을 열게 만드는 한 줄. 내용은 그날 앱에서 본다. */
 function mcalDailyEvent(){
   var c=mcalCfg();
@@ -15313,20 +15424,23 @@ function mcalDailyEvent(){
          'TFA 업무관리: '+pwaUrlOf('airep')+'\n'+
          '고객 365일: '+pwaUrlOf('clients')}];
 }
+var MCAL_DL={daily:{f:mcalDailyEvent,n:'APEX 매일 알림',f2:'apex-매일알림'},
+             today:{f:mcalTodayEvents,n:'APEX 오늘 할 일',f2:'apex-오늘'},
+             month:{f:mcalMonthEvents,n:'APEX 이번 달',f2:'apex-이번달'}};
 function mcalDownload(kind){
-  var evs,name;
-  if(kind==='daily'){evs=mcalDailyEvent();name='APEX 매일 알림';}
-  else{evs=mcalTodayEvents();name='APEX 오늘 할 일';}
+  /* 갈래를 삼항 사슬로 늘어놓지 않습니다 — 늘릴 때 한 자리를 빠뜨립니다 (5번) */
+  var M=MCAL_DL[kind]||MCAL_DL.today;
+  var evs=M.f(),name=M.n;
   if(!evs.length){toast('달력에 넣을 것이 아직 없습니다');return;}
   var txt=icsBuild(name,evs);
   try{
     var b=new Blob([txt],{type:'text/calendar;charset=utf-8'});
     var a=document.createElement('a');
     a.href=URL.createObjectURL(b);
-    a.download=(kind==='daily'?'apex-매일알림':'apex-오늘')+'.ics';
+    a.download=M.f2+'.ics';
     document.body.appendChild(a);a.click();
     setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);
-    toast('달력 파일을 내려받았습니다 — 열면 폰 달력이 받아 갑니다',6000);
+    toast(evs.length+'건을 담은 달력 파일을 내려받았습니다 — 열면 폰 달력이 받아 갑니다',6000);
   }catch(e){
     if(typeof copyText==='function')copyText(txt);
     else toast('내려받지 못했습니다');
@@ -15343,17 +15457,66 @@ function mcalCnt(list){
   for(i=0;i<(list||[]).length;i++)if(list[i].k!=='rt')n++;
   return n;
 }
-/* 이 날 매일 하는 일을 <b>다 했나</b> — 칸에 ✓ 를 찍을지 정한다 */
-function mcalRtDone(list){
-  var i,x;
-  for(i=0;i<(list||[]).length;i++){
-    x=list[i];
-    if(x.k!=='rt')continue;
-    /* 앞날에는 ✓ 를 안 찍는다 — 아직 안 한 것을 했다고 적는 것이다 (1번) */
-    if(x.rt&&x.rt>mcalToday())return false;
-    return (x.tot>0&&x.n>=x.tot);
-  }
-  return false;
+/* ══ <b>누구의 「매일 하는 일」을 그릴 것인가</b> ═══════════════════
+   사장님 말씀 (2026-09-23) — 「다른 사람들은 월간 캘린더에 한 달 해야 될
+   일이 모두 입력되어 있니?」
+
+   여태는 <b>늘 내 것</b>만 그렸습니다(who=arMyId). 그래서 사장님이 팀원을
+   고르시면 그 줄이 통째로 사라져, <b>팀원이 며칠 했는지 볼 길이 없었습니다.</b>
+
+   ★ <b>서버를 더 부르지 않습니다</b> (7번). gbLoad 가 이미 30일치를 읽고
+     있었고, 합계만 내고 날짜별로는 버리던 것을 GB.ckDay 에 남겼습니다.
+   ★ <b>안 읽은 날은 「모른다」</b> 입니다 (1번). 30일 앞의 날을 0 으로
+     적으면 「그 날 아무것도 안 했다」 가 되어 버립니다 — 사장님이 팀원을
+     그 숫자로 평가하십니다.                                          */
+function mcalRtWho(){
+  var p='';
+  try{ p=(typeof hwhoPick==='function')?hwhoPick():''; }catch(e){ p=''; }
+  if(!p){ try{ p=(typeof arMyId==='function')?(arMyId()||''):''; }catch(e2){ p=''; } }
+  return p;
+}
+function mcalRtIsMe(who){
+  var me='';
+  try{ me=(typeof arMyId==='function')?(arMyId()||''):''; }catch(e){ me=''; }
+  return !!who&&who===me;
+}
+/* 그 사람이 그 날 몇 개 했나 — <b>모르면 null</b>. 답하는 자리는 여기 하나다 (5번) */
+function mcalRtN(who,ds){
+  if(mcalRtIsMe(who))return mrtDone(ds);              /* 내 것은 이 브라우저가 안다 */
+  var G=(typeof GB!=='undefined')?GB:null;
+  if(!G||!G.loaded||!G.ckDay)return null;
+  if(G.ckFrom&&ds<G.ckFrom)return null;               /* 안 읽은 날 — 0 이 아니다 (1번) */
+  var m=G.ckDay[who];
+  if(!m)return null;
+  return (m[ds]==null)?0:m[ds];                       /* 읽었는데 없으면 그 날은 0 이다 */
+}
+/* 그 날의 <b>매일 하는 일 줄</b>을 꺼낸다 — 꺼내는 자리는 여기 하나다 (5번) */
+function mcalRtOf(list){
+  var i,L=list||[];
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].k==='rt')return L[i];
+  return null;
+}
+/* ══ 달력 칸에 <b>한 달치가 들어 있는 것이 보이게</b> ══════════════
+   사장님 말씀 (2026-09-23) — 「캘린더에 <b>한달치 입력 안되어있어</b>」.
+
+   재 보니 <b>값은 서른 날 다 들어 있었습니다.</b> 안 보였을 뿐입니다 —
+   칸에는 <b>파란 점 하나</b>만 찍히고, mcalCnt 가 매일 하는 일을 <b>일부러
+   숫자에서 빼고</b> 있었습니다. 그래서 약속이 있는 날만 「1」 이 뜨고
+   나머지 스물아홉 날은 점 하나라, 아무것도 안 들어 있는 것처럼 보였습니다.
+
+   이제 칸에 <b>글자로</b> 적습니다 — 네이버 캘린더가 칸 안에 글자를
+   보여 주는 것과 같은 뜻입니다.
+
+     지난 날 · 오늘   <b>3/11</b>   다 했으면 초록 ✓11
+     앞날            <b>11</b>     — 아직 안 한 것을 「0/11」 로 적으면
+                                    「못 했다」 로 읽힙니다 (1번)          */
+function mcalRtTxt(x){
+  if(!x||!x.tot)return '';
+  if(x.rt&&x.rt>mcalToday())return ''+x.tot;          /* 앞날 — 가짓수만 */
+  /* <b>안 읽은 날</b>은 숫자를 안 적습니다 — 0 으로 적으면 「안 했다」입니다 (1번) */
+  if(x.n==null)return '·'+x.tot;
+  if(x.n>=x.tot)return '✓'+x.tot;
+  return x.n+'/'+x.tot;
 }
 function mcalDot(list){
   var seen={},h='',i,k;
@@ -15419,12 +15582,19 @@ function mcalGridHtml(){
   for(i=1;i<=last;i++){
     ds=ym+'-'+('0'+i).slice(-2);
     n=mcalDay(items,ds);
-    var cn=mcalCnt(n),rd=mcalRtDone(n);
+    var cn=mcalCnt(n),rt=mcalRtOf(n),rtx=mcalRtTxt(rt);
+    var rdone=!!(rt&&rt.tot&&rt.rt&&rt.rt<=today&&rt.n>=rt.tot);
+    var soon=!!(rt&&rt.rt&&rt.rt>today);
     h+='<button type="button" class="mcal-d'+(ds===today?' now':'')+(ds===MCAL.sel?' sel':'')+
-       (cn?' has':'')+'" onclick="mcalPick(\''+ds+'\')">'+
+       ((cn||rtx)?' has':'')+'" onclick="mcalPick(\''+ds+'\')">'+
        '<span class="n">'+i+'</span>'+
        (n.length?('<span class="dots">'+mcalDot(n)+'</span>'):'')+
-       (cn?('<span class="cnt">'+cn+'</span>'):(rd?'<span class="cnt ok">✓</span>':''))+
+       '<span class="mline">'+
+         /* <b>매일 하는 일</b> — 이것이 안 보여 「한달치가 없다」 고 보였습니다 */
+         (rtx?('<span class="rt'+(rdone?' ok':(soon?' soon':''))+'">'+rtx+'</span>'):'')+
+         /* 그 밖의 것(약속·연락·생일…)은 <b>몇 건</b>인지 그대로 */
+         (cn?('<span class="cnt">'+cn+'</span>'):'')+
+       '</span>'+
        '</button>';
   }
   h+='</div>';
@@ -15692,12 +15862,41 @@ function renderMyCal(){
     '<div class="card"><div class="card-hd"><div class="card-title">'+
       '<span class="ci">📲</span>폰 기본 달력에 넣기</div>'+
     '<div class="card-desc">받은 파일을 열면 아이폰·안드로이드 달력이 그대로 받아 갑니다. '+
-      '일정을 누르면 <b>그 화면부터</b> 앱이 열립니다.</div></div>'+
+      '일정을 누르면 <b>그 화면부터</b> 앱이 열립니다. '+
+      '<b>바탕화면에서 보시려면 이 길입니다</b> — 아래 설명을 읽어 주세요.</div></div>'+
     '<div class="card-body">'+
+    /* ★ <b>날마다 쓰는 것만 펴 둡니다.</b> 이 칸은 한 달에 한 번 누르는
+       자리인데 677px 를 차지해, 정작 날마다 보는 달력을 밀어냈습니다
+       (check-toss 가 2.5 → 2.7화면으로 잡았습니다). 주 단추 하나만
+       남기고 나머지는 접습니다 — <b>지우는 것이 아닙니다.</b> */
     '<div class="btn-row">'+
-      '<button class="btn btn-primary" onclick="mcalDownload(\'daily\')">🔔 매일 아침 알림 받기</button>'+
-      '<button class="btn btn-ghost" onclick="mcalDownload(\'today\')">📅 오늘 것 넣기</button>'+
+      '<button class="btn btn-primary" onclick="mcalDownload(\'month\')">📆 이번 달 통째로 넣기</button>'+
     '</div>'+
+    '<details style="margin-top:10px">'+
+      '<summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;'+
+        'font-size:var(--t6);font-weight:800;color:var(--ink-4)">⚙️ 매일 알림 · 오늘 것만 · 울릴 시각 · 실명 설정</summary>'+
+      '<div class="btn-row" style="margin-top:8px">'+
+        '<button class="btn btn-ghost" onclick="mcalDownload(\'daily\')">🔔 매일 아침 알림</button>'+
+        '<button class="btn btn-ghost" onclick="mcalDownload(\'today\')">📅 오늘 것만</button>'+
+      '</div>'+
+    /* ⚠ <b>못 하는 것을 못 한다고 적습니다</b> (1번). 「바탕화면 위젯을
+       만들어 드립니다」 라고 적으면 사장님이 폰에서 찾으시다 못 찾습니다.
+       ★ 다만 <b>접어 둡니다</b> — 한 번 읽고 마는 글인데 펴 두었더니 내
+         캘린더가 2.5 → 2.9화면이 됐습니다(check-toss 가 잡았습니다).
+         날마다 보는 자리에 설명서를 세워 두면 정작 달력이 밀립니다. */
+    '<details class="notice" style="margin-top:12px;background:#F0F9FF;border-color:#BAE6FD;color:#075985">'+
+      '<summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;'+
+        'font-weight:800;font-size:var(--t6)">📱 바탕화면에 달력처럼 띄우는 법 — 한 번만 읽으시면 됩니다</summary>'+
+      '<div style="margin-top:8px">'+
+      '이 앱은 웹앱이라 <b>위젯을 직접 만들 수는 없습니다</b>'+
+      '(iOS·안드로이드 위젯은 앱스토어 앱만 그립니다). 대신 <b>폰이 이미 가진 '+
+      '달력 위젯</b>을 씁니다.<br>'+
+      '① 위 <b>「📆 이번 달 통째로 넣기」</b> 를 누릅니다<br>'+
+      '② 받은 파일을 열면 폰 달력이 이번 달 일정을 받아 갑니다<br>'+
+      '③ 바탕화면을 길게 눌러 <b>달력 위젯</b>을 올리면 거기 그대로 보입니다<br>'+
+      '④ 일정을 누르면 <b>앱의 그 화면</b>이 열립니다<br>'+
+      '달이 바뀌면 <b>①을 한 번 더</b> 눌러 주세요 — 앱이 폰 달력을 대신 고쳐 줄 권한은 없습니다.'+
+      '</div></details>'+
     '<div class="mcal-cfg">'+
       '<label>울릴 시각 '+
         '<input type="number" min="0" max="23" value="'+c.h+'" '+
@@ -15716,6 +15915,7 @@ function renderMyCal(){
     '<div class="osc-note" style="margin-top:10px">'+
       '「매일 아침 알림」은 <b>날마다 되풀이되는 일정</b> 하나입니다 — 한 번만 받으시면 됩니다. '+
       '「오늘 것 넣기」는 <b>지금 이 순간</b>의 연락할 분·할 일을 그대로 담습니다.</div>'+
+    '</details>'+
     '</div></div>';
   return h;
 }
@@ -16606,8 +16806,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-23 11:05';
-var APP_BUILD_NOTE="<b>한 분 = 한 퀘스트</b> 로 아침을 새로 짰습니다.　—　<b>오늘 챙길 것 + 아침 미션이 한 카드</b>입니다. 아침에 두 곳을 안 보십니다. 뽑힌 분이 없는 조용한 아침에도 미션은 그대로 섭니다 — 전에는 통째로 사라졌습니다.　—　<b>한 분마다 퀘스트 띠</b> — 「오늘 8분 중 3번째 ●●○○○」 와 <b>왜 이분인가</b>가 맨 위에 섭니다. <b>「✅ 이분 끝 → 다음 분으로」</b> 를 누르면 다음 분 카드가 올라옵니다 — 하루가 첫 분에서 안 멈춥니다. 이것은 <b>기록이 아닙니다</b> — 전화·카톡·단계는 저마다 제 자리에 남고, 「오늘 봤다」는 표시일 뿐이라 <b>「오늘 관리한 분」으로는 안 셉니다</b>.　—　<b>이번 주 상담 가시는 동네</b>를 앞으로 올립니다. 같은 단계끼리일 때만입니다 — 동네가 <b>급한 단계를 밀어내지 않습니다</b>. 약속이 없으면 없다고 적습니다.　—　<b>① 오늘의 알림</b>이 한 줄에 네 가지를 답합니다 — 📞 전화/💬 카톡만(어떻게 접촉할지) · 🗂 DB종류 · 📍 지역 · ⏳ 며칠째 · 🎯 무엇을 할지 · 📰 어떤 소식을 드릴지. 머리에 <b>「오늘 8분 중 순천 5분」</b> 이 적힙니다 — 그 동네 분이 없으면 <b>없다고</b> 적고 억지로 안 채웁니다. 줄을 누르면 ②③④ 가 그 분으로 따라오고, <b>차례는 「오늘 챙길 것」 과 같습니다</b>.　—　<b>TFA 업무관리</b> — 왼쪽 목록을 위 띠로 올려 본문이 <b>834 → 1,120px</b> 입니다. 좌우가 한눈에 듭니다.　—　한 분 카드가 <b>1,401 → 1,237px</b>, 홈이 <b>3.14 → 2.95화면</b>. 도구 여섯을 두 개씩 눕혔습니다 — 지운 것이 아니라 눕힌 것이라 여섯이 그대로 있습니다. 「✅ 이분 끝」과 「다음 분 →」은 같은 물음이라 한 줄로 모았습니다.　—　<b>「만남로」</b> 라고 찍히던 것을 고쳤습니다 — 받침이 있으면 「으로」 입니다.";
+var APP_BUILD='2026-09-23 16:20';
+var APP_BUILD_NOTE="📅 <b>달력에 한 달치가 안 들어 있는 것처럼 보이던 것</b>을 고쳤습니다.　—　재 보니 <b>값은 서른 날 다 들어 있었습니다.</b> 안 보였을 뿐입니다 — 칸에는 <b>파란 점 하나</b>만 찍히고, 세는 자리가 「매일 하는 일」을 일부러 숫자에서 빼고 있었습니다. 그래서 약속이 있는 날만 「1」 이 뜨고 나머지 스물아홉 날은 점 하나였습니다.　—　이제 칸에 <b>글자로</b> 적습니다 — 지난 날·오늘은 <b>3/11</b>, 다 하신 날은 초록 <b>✓11</b>, 앞날은 흐린 <b>11</b>. 앞날을 「0/11」 로 적으면 「못 했다」 로 읽히기 때문입니다.　—　👥 <b>팀원을 고르시면 그 팀원 달력</b>이 뜹니다. 여태는 늘 사장님 것이라, 팀원을 고르는 순간 그 줄이 통째로 사라져 <b>팀원이 며칠 했는지 볼 길이 없었습니다.</b> 서버는 <b>더 안 부릅니다</b> — 이미 읽어 둔 30일치를 쓰기만 합니다. 30일 앞의 날은 <b>「·11」</b> 입니다 — 안 읽은 날을 0 으로 적으면 「그 날 아무것도 안 했다」 가 됩니다.　—　⚠ <b>남의 날에 사장님 체크가 보이던 구멍</b>을 막았습니다. 팀원을 고르고 날짜를 누르면 이 폰의 체크를 그 팀원 것처럼 보여 주고, 오늘 자리에서는 눌러 <b>사장님 기록이 바뀌는데</b> 화면은 그 팀원 것처럼 보였습니다. 이제 <b>몇 개 했는지만</b> 적습니다.　—　📆 <b>「이번 달 통째로 넣기」</b> 를 넣었습니다. 여태 폰 달력 내보내기가 <b>오늘 것 하나</b>뿐이라 한 달이 안 들어갔습니다. <b>바탕화면 위젯은 못 만듭니다</b> — 웹앱이라 iOS·안드로이드 위젯은 앱스토어 앱만 그립니다. 대신 <b>폰이 이미 가진 달력 위젯</b>이 그려 줍니다. 화면에 네 줄로 적어 두었습니다.　—　📲 홈 아이콘을 길게 누르면 <b>「이번 달 달력」</b> 이 맨 앞에 뜹니다 — 여태 다섯 개 중에 매일 여는 달력만 빠져 있었습니다.　—　🔴 그러다 진짜를 하나 찾았습니다 — 달력 내보내기가 <b>이모지 한 자에서 조용히 죽고</b> 있었습니다. 글자를 한 칸씩 끊어 재는데 이모지는 두 칸이라 <b>반쪽</b>에서 터지고, <b>아무 말도 없이</b> 아무 일도 안 일어났습니다. 「💬 카톡·문자」 가 있는 날의 「오늘 것 넣기」 가 그랬습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -19201,6 +19401,13 @@ function vaCss(){
 var GB={loaded:false,busy:false,err:'',warn:[],
   rows:[],teams:[],teamOf:{},team:'',face:'',open:'',
   orgFill:0,orgNoTeam:[],          /* 조직도에서 메운 사람 수 · 설정에 없는 팀 이름 */
+  /* <b>사람 × 날짜 → 그 날 몇 개 했나.</b> 서버를 더 부르지 않습니다 (7번) —
+     아래 gbLoad 가 이미 30일치를 읽고 있었는데, 합계만 내고 <b>날짜별로는
+     버리고</b> 있었습니다. 그래서 사장님이 팀원을 고르셔도 달력에는
+     그 사람이 며칠 했는지 뜰 자료가 없었습니다.
+     ★ ckFrom <b>앞의 날은 「모른다」</b> 입니다 — 0 으로 적으면 「안 했다」가
+       되어 버립니다 (1번). 읽은 첫날을 같이 들고 있습니다.            */
+  ckDay:{},ckFrom:'',
   notes:[],pass:{},many:false,at:''};
 
 var GB_AX=[
@@ -19526,6 +19733,7 @@ function gbLoad(){
   if(!sb){GB.err='서버에 연결되어 있지 않습니다.';GB.loaded=true;gbPaint();return;}
   GB.busy=true;GB.err='';gbPaint();
   var d30=gbDay(29);
+  GB.ckFrom=d30;          /* 이 날 <b>앞</b>은 안 읽었다 — 「모른다」 이지 0 이 아니다 (1번) */
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
   Promise.all([
     q(sb.from('profiles').select('id,name,role,active,workspace').order('name')),
@@ -19609,11 +19817,14 @@ function gbCalc(profs,att,calls,cli,rep,chk){
   cli.forEach(function(c){bump(c.advisor_id,'cli',c.created_at);});
   rep.forEach(function(c){bump(c.advisor_id,'rep',c.created_at);});
   var sum={},cnt={};
+  GB.ckDay={};
   chk.forEach(function(row){
     if(row.scope!=='day')return;
     var r=by[row.member_id];if(!r)return;
     var n=0,kk;
     for(kk in (row.items||{}))if(row.items[kk]&&dayIds[kk])n++;
+    /* 날짜별로도 <b>남긴다</b> — 달력이 팀원 것을 그릴 때 쓴다 (5번) */
+    (GB.ckDay[row.member_id]=GB.ckDay[row.member_id]||{})[row.check_date]=n;
     sum[row.member_id]=(sum[row.member_id]||0)+n;
     cnt[row.member_id]=(cnt[row.member_id]||0)+1;
     r.any=true;
@@ -37144,8 +37355,17 @@ var HX_SQL={
   "create trigger team_feedback_touch before update on public.team_feedback",
   "  for each row execute function public.touch_updated_at();",
   "",
+  "/* ── 41) 공지 사진 크기 — 앱이 받기 전에 얼마나 큰지 알게 한다 ──────",
+  "   공지 한 줄의 사진이 12.4MB 라 서버가 내보내다 스스로 끊었고, 홈을 한 번",
+  "   열 때마다 17.6MB 가 나갔다. 사진 자체는 건드리지 않는다 — 크기만 알려 준다.",
+  "   되돌리려면: alter table public.os_notices drop column img_len;            */",
+  "alter table public.os_notices",
+  "  add column if not exists img_len integer",
+  "  generated always as (length(coalesce(img,''))) stored;",
+  "grant select (img_len) on public.os_notices to authenticated, anon;",
+  "",
   "insert into public.app_config(key, value)",
-  "values ('schema_version', '40')",
+  "values ('schema_version', '41')",
   "on conflict (key) do update set value = excluded.value, updated_at = now();",
   "",
   "notify pgrst, 'reload schema';",
@@ -37297,6 +37517,40 @@ var HX_SQL={
   "",
   "/* 완료. 이후 앱 상단 \"관리 중 사업자\" 바에서 ☁ 저장 / ⬇ 불러오기 버튼이 활성화됩니다. */",
   "/* (로그인 + config.js의 anon 키/URL 설정이 되어 있어야 합니다.) */"
+ ]},
+ '41':{label:"공지 사진 크기를 앱이 미리 알게",need:[],repair:true,when:"공지 사진이 안 뜨거나 홈이 느릴 때. 앱이 사진을 받기 전에 크기를 먼저 알아, 너무 큰 것은 아예 안 받습니다.",lines:[
+  "/* ════════════════════════════════════════════════════════════════════════",
+  "   41) 공지 사진 크기 칸 — 받기 전에 얼마나 큰지 알게 한다",
+  "",
+  "   2026-09-23 서버에서 직접 잰 값이다.",
+  "     공지 한 줄의 사진(img)이 12,442,133 글자 = 12.4MB 였다.",
+  "     그 줄을 달라고 하면 서버가 내보내지 못하고 500 으로 끊는다.",
+  "     5.8MB · 2.8MB 짜리는 내보내지기는 하지만, 홈을 한 번 열 때마다",
+  "     8.6MB 가 나간다. 하루 백 번이면 860MB 다.",
+  "",
+  "   앱은 지금 그 줄이 얼마나 큰지 모르는 채로 달라고 한다. 그래서",
+  "   크기를 미리 알려 주는 칸을 하나 만든다. 사진을 담을 때 자동으로",
+  "   채워지므로 손댈 것이 없다.",
+  "",
+  "   ⚠️ 사진 자체는 건드리지 않는다. 지우지도, 줄이지도 않는다.",
+  "      줄이는 것은 앱에서 사장님이 누르실 때만 한다.",
+  "   ════════════════════════════════════════════════════════════════════════ */",
+  "set search_path = public;",
+  "",
+  "/* 재실행해도 안전 — 이미 있으면 건너뛴다 */",
+  "alter table public.os_notices",
+  "  add column if not exists img_len integer",
+  "  generated always as (length(coalesce(img,''))) stored;",
+  "",
+  "/* 앱이 이 칸을 읽을 수 있게 한다. 사진(img)은 그대로 두고 크기만 읽는다. */",
+  "grant select (img_len) on public.os_notices to authenticated, anon;",
+  "",
+  "/* 잘 들어갔는지 — 큰 것부터 보여 준다 */",
+  "select id, active, img_len,",
+  "       round(img_len/1048576.0, 1) as mb",
+  "  from public.os_notices",
+  " where coalesce(img_len,0) > 0",
+  " order by img_len desc;"
  ]},
  '07':{label:"출근 현황 · 성장 점수",need:["attendance"],lines:[
   "/* 출근(접속) 기록 테이블 — 팀원별 일자별 접속 기록 (#4 출근 달력) */",
@@ -38849,7 +39103,7 @@ function hxSqlDone(k){
   return true;
 }
 function hxSqlCardHtml(){
-  var ks=['00','06','07','09','10','11','12','13','17','18','23','24','25','26','27','28','33','39'],h='';
+  var ks=['00','06','07','09','10','11','12','13','17','18','23','24','25','26','27','28','33','39','41'],h='';
   h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🗂️</span>필요한 SQL</div>'+
     '<div class="card-desc">눌러서 복사하고 Supabase 에 붙여넣으면 됩니다. 파일을 따로 열지 않아도 됩니다. '+
     '몇 번을 다시 실행해도 안전합니다. <b>맨 위 하나만 실행하면 전부 끝납니다.</b></div></div><div class="card-body">'+
@@ -39170,7 +39424,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    지금까지는 시스템 점검을 찾아 들어가 맨 아래까지 내려야 SQL 이 있었다.
    홈 맨 위에 띄우고, 버튼 하나로 복사와 Supabase 열기를 같이 한다.
    SQL 마지막 줄이 서버에 표시를 남기므로, 다 됐는지도 앱이 스스로 안다. */
-var SETUP_VER=40;   /* 40: 알람 열쇠(push_keys) — 서버만 읽는다. Netlify 없이 앱에서 담는다 */
+var SETUP_VER=41;   /* 41: 공지 사진 크기 칸(img_len) — 받기 전에 얼마나 큰지 알게 한다 */
 var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false,split:false,more:false,got:{}};
 
 /* ══ 준비 SQL 을 <b>나눠서</b> 돌린다 ══════════════════════════════════
@@ -54341,6 +54595,9 @@ function osNtcRow(row){
   if(!row)return null;
   return {id:row.id||'',text:row.text||'',img:row.img||'',on:row.active!==false,
           ts:row.created_at||'',by:row.author||'',
+          /* 사진이 <b>얼마나 큰지</b> — 준비 SQL 41 을 안 돌리셨으면 <b>null</b> 이다.
+             0 으로 채우면 「사진 없음」이 되어 버린다 (1번). */
+          len:(row.img_len==null?null:(+row.img_len||0)),
           targets:osAckArr(row.targets),mustAck:!!row.must_ack};
 }
 /* ══ 공지 사진은 <b>따로</b> 받는다 — 목록에 딸려 오면 공지가 통째로 죽는다 (7번) ══
@@ -54369,10 +54626,37 @@ function osNtcRow(row){
 var OS_NIMG={};      /* 공지 id → wait|busy|ok|none|fail */
 var OS_NIMG_OB=null; /* 눈에 들어오나 보는 눈 */
 function osNtcImgSt(id){ return (id&&OS_NIMG[id])||'wait'; }
-function osNtcImgGet(id){
+/* ══ <b>너무 큰 사진은 아예 안 받는다</b> (7번) ═══════════════════════
+   2026-09-23 배포된 앱을 열어 그대로 셌습니다 — 로그인도 하기 전에
+
+     os_notices?select=img&id=eq.6dac80ac…  →  <b>500</b>   (12.4MB)
+     os_notices?select=img&id=eq.204c2dfc…  →  200          (5.8MB)
+     os_notices?select=img&id=eq.7d09733a…  →  200          (2.8MB)
+
+   12.4MB 짜리는 서버가 <b>내보내지 못하고 끊습니다.</b> 나머지 둘은
+   나오기는 하지만, 홈을 한 번 열 때마다 <b>8.6MB</b> 가 나갑니다.
+   이것이 「무료 한도를 세 배로 넘겨 로그인까지 막힌」 그 자리입니다.
+
+   ★ 담는 쪽은 <b>이미 고쳐져 있습니다</b> — 한 장 400KB · 모두 1.2MB 로
+     줄여 담습니다(osNtcShrink). 지금 터지는 세 줄은 그 고치기 <b>전</b>
+     (8월 2~3일)에 담긴 옛 자료입니다. 그래서 <b>읽는 쪽</b>을 막습니다.
+   ★ <b>크기를 모르면 막지 않습니다</b> (1번). 준비 SQL 41 을 안 돌리셨으면
+     img_len 이 null 이라, 여태처럼 받아 봅니다 — 모르는 것을 「크다」고
+     단정해서 멀쩡한 공지를 숨기면 그게 더 나쁩니다.                    */
+var OS_NIMG_CAP=1500*1024;       /* 이 이상이면 안 받는다 — 1.5MB */
+function osNtcLenOf(id){
+  var L=(OS_NTC.list||[]),i;
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].id===id)return (L[i].len==null?null:L[i].len);
+  return null;
+}
+function osNtcMb(n){ return (Math.round((n/1048576)*10)/10)+'MB'; }
+function osNtcImgGet(id,force){
   if(!id)return;
   var st=osNtcImgSt(id);
   if(st==='busy'||st==='ok'||st==='none')return;   /* 되풀이해서 부르지 않는다 (7번) */
+  if(!force&&st==='big')return;
+  var len=osNtcLenOf(id);
+  if(!force&&len!=null&&len>OS_NIMG_CAP){OS_NIMG[id]='big';osNtcPaint();return;}
   var sb=(typeof osClient==='function')?osClient():null;
   if(!sb){OS_NIMG[id]='fail';return;}
   OS_NIMG[id]='busy';
@@ -54389,6 +54673,14 @@ function osNtcImgGet(id){
   }catch(e){OS_NIMG[id]='fail';}
 }
 function osNtcImgAgain(id){ if(id&&OS_NIMG[id]==='fail'){OS_NIMG[id]='wait';osNtcImgGet(id);} }
+/* 「<b>그래도 한 번 받아 보기</b>」 — 사장님이 누르실 때만 상한을 넘깁니다.
+   한 번 받아 두면 아래 「줄여서 다시 담기」로 <b>영영</b> 줄일 수 있습니다. */
+function osNtcImgForce(id){
+  if(!id)return;
+  if(typeof toast==='function')
+    toast('사진 '+osNtcMb(osNtcLenOf(id)||0)+' 를 한 번 받습니다 — 시간이 걸립니다');
+  OS_NIMG[id]='wait'; osNtcImgGet(id,true);
+}
 /* 그 칸이 <b>눈에 들어올 때</b> 한 번만 부른다 (7번). 그리고 나서 눈을 뗀다. */
 function osNtcImgWatch(){
   var els=document.querySelectorAll('[data-ntc-img]'),i;
@@ -54495,11 +54787,19 @@ function osNoticeLoad(force){
 
        <b>사진(img)은 여기서 안 받는다.</b> 아래 osNtcImgGet 이 그 칸이 눈에
        들어올 때 한 줄씩 받는다 — 까닭은 거기 적어 두었다. */
-    var pick=function(cols,rich){
+    /* 물러서는 차례를 <b>한 곳</b>에 적는다 (5번). 여태는 「풍성한 것 →
+       맨 기본」 두 칸이라, img_len 이 없는 서버에서는 targets·must_ack 까지
+       한꺼번에 잃었습니다 — 준비 SQL 을 한 단계만 덜 돌리신 분이 확인
+       대상 공지를 못 보게 됩니다. 그래서 <b>한 칸씩</b> 물러섭니다. */
+    var COLS=['id,text,active,created_at,author,targets,must_ack,img_len',
+              'id,text,active,created_at,author,targets,must_ack',
+              'id,text,active,created_at,author'];
+    var pick=function(ci){
+      var cols=COLS[ci];
       sb.from('os_notices').select(cols).order('created_at',{ascending:false}).limit(OS_NTC.max)
         .then(function(r){
         if(r&&r.error){
-          if(rich){pick('id,text,active,created_at,author',false);return;}
+          if(ci+1<COLS.length){pick(ci+1);return;}
           OS_NTC.busy=false;OS_NTC.err=r.error.message||'공지를 못 읽었습니다';
           if(!OS_NOTICE)OS_NOTICE=osNoticeLocalGet();
           osNoticeApply();return;
@@ -54521,7 +54821,7 @@ function osNoticeLoad(force){
       },function(){OS_NTC.busy=false;OS_NTC.err='공지를 못 읽었습니다';
                    OS_NOTICE=osNoticeLocalGet();osNoticeApply();});
     };
-    pick('id,text,active,created_at,author,targets,must_ack',true);
+    pick(0);
   }catch(e){OS_NTC.busy=false;OS_NOTICE=osNoticeLocalGet();osNoticeApply();}
 }
 function osNoticeStyleOnce(){
@@ -54545,10 +54845,32 @@ function osNtcImgHtml(n,k){
     /* 사진이 「없다」와 「아직 모른다」는 <b>다른 말</b>이다 (1번) */
     var id=(n&&n.id)||'', st=osNtcImgSt(id);
     if(!id||st==='none')return '';
+    var box=function(bd,bg,fg,inner){
+      return '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:11px;padding:11px 13px;margin:0 0 '+
+        (n.text?'14px':'0')+';font-size:var(--t6);color:'+fg+';line-height:1.7">'+inner+'</div>'; };
+    var link=function(fn,t){
+      return '<span style="cursor:pointer;text-decoration:underline;font-weight:800" onclick="'+fn+'">'+t+'</span>'; };
     if(st==='fail')
-      return '<div style="border:1px solid #FDE68A;background:#FFFBEB;border-radius:11px;padding:11px 13px;margin:0 0 '+(n.text?'14px':'0')+';font-size:var(--t6);color:#92400E;line-height:1.7">'+
+      return box('#FDE68A','#FFFBEB','#92400E',
         '📷 <b>사진을 못 받았습니다</b> — 글은 그대로입니다. '+
-        '<span style="cursor:pointer;text-decoration:underline;font-weight:800" onclick="osNtcImgAgain(\''+osEsc(id)+'\')">다시 받기</span></div>';
+        link('osNtcImgAgain(\''+osEsc(id)+'\')','다시 받기'));
+    /* <b>너무 커서 안 받은</b> 자리 — 몇 MB 인지 그대로 적습니다. 「사진 없음」
+       으로 뭉개면 사장님은 사진을 안 올리신 줄 아십니다 (1번). */
+    if(st==='big'){
+      var mb=osNtcMb(osNtcLenOf(id)||0);
+      return box('#FECACA','#FEF2F2','#991B1B',
+        '📷 <b>사진이 '+mb+' 라 안 받았습니다.</b> 홈을 열 때마다 이만큼이 나가고, '+
+        '더 큰 것은 서버가 아예 내보내지 못합니다. 글은 그대로입니다.'+
+        '<div style="margin-top:7px">'+
+          (osNtcCanFix()
+            ? (link('osNtcImgFix(\''+osEsc(id)+'\')','🗜 줄여서 다시 담기')+' · ')
+            : '')+
+          link('osNtcImgForce(\''+osEsc(id)+'\')','그래도 한 번 받아 보기')+
+        '</div>'+
+        (osNtcCanFix()
+          ? '<div style="margin-top:5px;opacity:.8">「줄여서 다시 담기」는 <b>한 번 받은 뒤에</b> 됩니다 — 받은 사진을 줄여 서버에 되담습니다.</div>'
+          : '<div style="margin-top:5px;opacity:.8">줄여 담는 것은 <b>대표·관리자</b>가 합니다.</div>'));
+    }
     /* wait · busy — 자리만 잡아 둔다. 눈에 들어오면 osNtcImgWatch 가 받아 온다. */
     return '<div data-ntc-img="'+osEsc(id)+'" style="min-height:112px;display:flex;align-items:center;justify-content:center;gap:8px;'+
       'background:linear-gradient(100deg,#F1F5F9 30%,#E2E8F0 50%,#F1F5F9 70%);border-radius:13px;margin:0 0 '+(n.text?'14px':'0')+';'+
@@ -54747,28 +55069,90 @@ var OS_NIMG_ONE=400*1024, OS_NIMG_ALL=1200*1024, OS_NIMG_SIDE=1400;
 function osNtcImgBytes(){var t=0,i;for(i=0;i<OS_NOTICE_IMGS.length;i++)t+=((OS_NOTICE_IMGS[i]||{}).s||'').length;return t;}
 function osNtcKb(b){return Math.round(b/1024)+'KB';}
 /* 한 장을 줄인다. 됐으면 ok(글자), 안 되면 bad(까닭) — <b>조용히 넘기지 않는다</b> */
+/* 줄이는 자리는 <b>여기 하나</b>다 (5번). 파일에서 고른 것도, 서버에 이미
+   담겨 있던 글자(data URL)도 같은 길로 지나간다 — 두 벌로 두면 한쪽만
+   고쳐져 「새로 올린 것은 작은데 줄인 것은 그대로」가 된다. */
+function osNtcShrinkUrl(url,ok,bad){
+  var im=new Image();
+  im.onerror=function(){bad('사진이 아니거나 열 수 없습니다');};
+  im.onload=function(){
+    var w=im.naturalWidth||im.width, h=im.naturalHeight||im.height;
+    if(!w||!h){bad('사진 크기를 못 읽었습니다');return;}
+    var sc=Math.min(1,OS_NIMG_SIDE/Math.max(w,h));
+    var cw=Math.max(1,Math.round(w*sc)), ch=Math.max(1,Math.round(h*sc));
+    var cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+    var cx=cv.getContext&&cv.getContext('2d');
+    if(!cx){bad('이 브라우저에서는 사진을 못 줄입니다');return;}
+    cx.drawImage(im,0,0,cw,ch);
+    var q=[0.82,0.7,0.6,0.5,0.4], out='', i;
+    for(i=0;i<q.length;i++){ out=cv.toDataURL('image/jpeg',q[i]); if(out.length<=OS_NIMG_ONE)break; }
+    ok(out);
+  };
+  im.src=''+url;
+}
 function osNtcShrink(f,ok,bad){
   var rd=new FileReader();
   rd.onerror=function(){bad('파일을 못 읽었습니다');};
-  rd.onload=function(){
-    var im=new Image();
-    im.onerror=function(){bad('사진이 아니거나 열 수 없는 파일입니다');};
-    im.onload=function(){
-      var w=im.naturalWidth||im.width, h=im.naturalHeight||im.height;
-      if(!w||!h){bad('사진 크기를 못 읽었습니다');return;}
-      var sc=Math.min(1,OS_NIMG_SIDE/Math.max(w,h));
-      var cw=Math.max(1,Math.round(w*sc)), ch=Math.max(1,Math.round(h*sc));
-      var cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
-      var cx=cv.getContext&&cv.getContext('2d');
-      if(!cx){bad('이 브라우저에서는 사진을 못 줄입니다');return;}
-      cx.drawImage(im,0,0,cw,ch);
-      var q=[0.82,0.7,0.6,0.5,0.4], out='', i;
-      for(i=0;i<q.length;i++){ out=cv.toDataURL('image/jpeg',q[i]); if(out.length<=OS_NIMG_ONE)break; }
-      ok(out);
-    };
-    im.src=''+rd.result;
-  };
+  rd.onload=function(){ osNtcShrinkUrl(''+rd.result,ok,bad); };
   rd.readAsDataURL(f);
+}
+/* ══ 🗜 <b>줄여서 다시 담기</b> — 옛 공지 사진을 그 자리에서 ═══════════
+   이미 담긴 12MB·5.8MB 는 서버가 줄여 줄 수 없습니다(SQL 로는 사진을 못
+   폅니다). 그래서 <b>앱이 받아서 줄여 되담습니다</b> — 한 번만 하면 됩니다.
+
+   ★ <b>받아 둔 것이 있어야</b> 줄입니다. 서버가 못 내보내는 12.4MB 짜리는
+     「그래도 한 번 받아 보기」가 실패하므로, 그때는 <b>다시 올려 달라고</b>
+     말합니다 — 없는 재주를 있는 척하지 않습니다 (1번).
+   ★ 글(text)·확인 여부는 <b>안 건드립니다</b> — 사진 칸만 바꿉니다.     */
+/* <b>누가 줄여 담을 수 있나</b> — 한 곳에서만 답합니다 (5번).
+   서버 규칙(os_notices_admin_write)은 <b>is_admin() 또는 is_owner()</b> 입니다.
+   팀원에게 단추를 보여 주고 눌렀을 때 막히면 「눌렀는데 안 된다」가 됩니다. */
+function osNtcCanFix(){
+  try{ return (typeof osIsOwner==='function'&&osIsOwner())||
+              (typeof osRoleNorm==='function'&&osRoleNorm()==='branch_manager'); }
+  catch(e){ return false; }
+}
+function osNtcImgFix(id){
+  if(!id)return;
+  if(!osNtcCanFix()){
+    if(typeof toast==='function')toast('공지 사진은 <b>대표·관리자</b>만 줄여 담을 수 있습니다',6000);
+    return;
+  }
+  var st=osNtcImgSt(id);
+  if(st!=='ok'){
+    if(typeof toast==='function')
+      toast('먼저 「그래도 한 번 받아 보기」로 사진을 받아야 줄일 수 있습니다',7000);
+    return;
+  }
+  var L=(OS_NTC.list||[]),i,n=null;
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].id===id)n=L[i];
+  var arr=osNoticeImgsOf(n);
+  if(!arr.length){ if(typeof toast==='function')toast('줄일 사진이 없습니다'); return; }
+  var was=((n&&n.img)||'').length, out=[], why=[];
+  var save=function(){
+    var sb=(typeof osClient==='function')?osClient():null;
+    if(!sb){ if(typeof toast==='function')toast('서버에 연결되어 있지 않습니다'); return; }
+    var v=JSON.stringify(out);
+    sb.from('os_notices').update({img:v}).eq('id',id).then(function(r){
+      if(r&&r.error){ if(typeof toast==='function')toast('되담기 실패 — '+(r.error.message||'')); return; }
+      if(n){n.img=v;n.len=v.length;}
+      OS_NIMG[id]='ok';
+      if(typeof toast==='function')
+        toast('🗜 '+osNtcMb(was)+' → <b>'+osNtcMb(v.length)+'</b> 로 줄여 담았습니다'+
+              (why.length?(' · '+why.length+'장은 그대로 뒀습니다'):''),8000);
+      osNtcPaint();
+    },function(){ if(typeof toast==='function')toast('되담기 실패'); });
+  };
+  var step=function(k){
+    if(k>=arr.length){save();return;}
+    osNtcShrinkUrl(arr[k].s,function(u){
+      /* 줄인 것이 <b>더 크면</b> 원래 것을 둡니다 — 이미 작은 사진입니다 */
+      out.push({s:(u.length<arr[k].s.length?u:arr[k].s),c:arr[k].c||''});
+      step(k+1);
+    },function(w){ why.push(w); out.push(arr[k]); step(k+1); });
+  };
+  if(typeof toast==='function')toast('사진 '+arr.length+'장을 줄이는 중…');
+  step(0);
 }
 function osNoticeImgFile(input){
   var fs=input&&input.files;if(!fs||!fs.length)return;
