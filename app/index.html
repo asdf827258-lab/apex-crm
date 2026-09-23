@@ -1912,9 +1912,19 @@ body.dzguide-mode #dzGuideScreen{display:block;}
 .hm-fold.on .hm-fold-h{border-bottom:1px solid var(--ink-8)}
 .hm-fold-b{padding:12px 12px 2px}
 .hm-fold-b>div>.card{margin-bottom:0}
+/* 🧑 <b>고객 한 칸</b> — 찾기 · 오늘 연락할 분 · 최근 보신 분이 한 테두리 안에.
+   안에 든 접는 줄(내 고객)은 테두리를 벗고 줄 하나로 선다 (겹 테두리 금지). */
+.hm-cus-h{display:flex;align-items:center;gap:10px;padding:12px 14px 0}
+.hm-cus-h .e{font-size:var(--t3);line-height:1;flex:none}
+.hm-cus-h .t{flex:1;min-width:0;font-size:var(--t4);font-weight:800;color:var(--ink-1);letter-spacing:-.02em}
+.hm-cus-h .t span{display:block;font-size:var(--t6);font-weight:600;color:var(--ink-4);margin-top:2px}
+.hm-cus-h button{flex:none;border:1px solid var(--ink-7);background:var(--bg-1);border-radius:var(--r-pill);
+  padding:6px 12px;font-family:inherit;font-size:var(--t6);font-weight:800;color:var(--primary);cursor:pointer}
+.hm-cus-b{padding:0 14px 12px}
+.hm-cus .hm-fold{margin:0;border:0;border-top:1px solid var(--ink-8);border-radius:0}
 .tabbar{display:none}
 @media(max-width:640px){
-  .tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;
+  .tabbar{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;position:fixed;left:0;right:0;bottom:0;
     z-index:150;background:var(--white);border-top:1px solid var(--ink-7);
     box-shadow:var(--shadow-sm);padding-bottom:env(safe-area-inset-bottom,0px)}
   .tb-b{appearance:none;border:0;background:none;font-family:inherit;cursor:pointer;
@@ -12980,7 +12990,13 @@ var TABS=[
  {group:'내 고객',items:[
    {id:'clients',icon:'🗂️',title:'고객 365일',cnt:'',ak:'고객'},
    {id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:'',ak:'고객'},
-   {id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:'',ak:'DB CRM'}
+   /* <b>한 문</b> — 사장님 말씀 (2026-09-23) 「DB통합CRM 도 정보가 흩어져 있어서
+      하나로 합치고 싶어」. 배정 DB 분은 이제 <b>고객 365일 목록</b>에 같이 서고,
+      CRM 화면은 거기 「🗄️ DB 배정·통화」 단추로 엽니다. 그래서 고객 365일을
+      <b>열 수 있는 분께는</b> 메뉴 줄에서 뺍니다(fold). 못 여는 분께는
+      그대로 섭니다 — 문을 하나 줄이려다 <b>유일한 문</b>을 없애면 안 됩니다.
+      찾기·음성·?go=crm 주소로는 누구에게나 그대로 열립니다(hide 와 같음). */
+   {id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:'',ak:'DB CRM',fold:'clients'}
  ]},
  {group:'증권 분석',items:[
    {id:'bojang',icon:'📑',title:'AI 보장분석',cnt:'',ak:'보장분석'},
@@ -13191,6 +13207,18 @@ function navTone(h,s,y){
 /* 메뉴에 <b>실제로 서는 갈래</b> 목록 — 서랍도 위 띠도 이것을 센다.
    색(navRamp)이 이 목록의 <b>순서와 개수</b>로 정해지므로, 두 곳이 각자
    세면 같은 칸이 위·옆에서 다른 색이 된다. 실제로 그렇게 어긋났다 (5번). */
+/* 메뉴 줄 하나를 <b>눈에서 빼는가</b> — 답하는 곳은 여기 하나다 (5번).
+   hide  : 언제나 뺀다(찾기·음성·주소로는 열린다).
+   fold  : 그 화면에 <b>한 문으로 합쳐 두었으니</b>, 그 화면을 열 수 있으면 뺀다.
+           못 열면 그대로 세운다 — 유일한 문을 없애지 않는다. */
+function navItemHid(it){
+  if(!it)return true;
+  if(it.hide)return true;
+  if(it.fold){
+    try{ return (typeof osTabAllowed!=='function')||osTabAllowed(it.fold); }catch(e){ return false; }
+  }
+  return false;
+}
 function navVisGroups(){
   var g=(typeof visibleTabs==='function')?visibleTabs():TABS,vis=[],i;
   for(i=0;i<g.length;i++)if(!g[i].hide)vis.push(g[i]);   /* 한 칸에 모은 것은 메뉴에 두 번 안 세운다 */
@@ -13281,6 +13309,9 @@ function ezGroups(){
   for(i=0;i<g.length;i++)for(j=0;j<g[i].items.length;j++){
     it=g[i].items[j];
     if(EZ_PICK.indexOf(it.id)<0)continue;
+    /* 한 문으로 합친 줄(fold)은 간편 버전에서도 뺀다 — 전체에서는 안 서는데
+       간편에서만 서면 두 판이 다른 말을 한다 (5번) */
+    if(it.fold&&navItemHid(it))continue;
     k=NAV_WHEN[it.id]||'run';
     (by[k]=by[k]||[]).push(it);
   }
@@ -13299,7 +13330,7 @@ function ezBarHtml(){
   /* <b>navVisGroups 가 세는 것과 똑같이</b> 센다 — 한 칸에 모은 묶음(hide)도
      빼고, 그 안의 hide 줄도 뺀다. 세는 규칙이 둘이면 숫자가 어긋난다 (5번). */
   var on=ezOn(),g=navVisGroups(),i,j,full=0,shown=0;
-  for(i=0;i<g.length;i++)for(j=0;j<g[i].items.length;j++)if(!g[i].items[j].hide)full++;
+  for(i=0;i<g.length;i++)for(j=0;j<g[i].items.length;j++)if(!navItemHid(g[i].items[j]))full++;
   if(on){ var E=ezGroups(); for(i=0;i<E.length;i++)shown+=E[i].items.length; }
   else shown=full;
   return '<div class="nav-ez">'+
@@ -13414,7 +13445,8 @@ function navMark(tab){
 var TB=[
  {id:'home',    e:'🏠',t:'홈'},
  {id:'clients', e:'📇',t:'고객'},
- {id:'crm',     e:'🗂',t:'DB'},
+ /* 한 문 — 고객 365일을 열 수 있으면 「고객」 칸 하나로 (navItemHid · 메뉴와 같은 규칙) */
+ {id:'crm',     e:'🗂',t:'DB',fold:'clients'},
  {id:'mycal',   e:'📅',t:'달력'},
  {id:'__more',  e:'☰', t:'더보기'}
 ];
@@ -13427,6 +13459,7 @@ function tbHtml(cur){
   for(i=0;i<TB.length;i++){
     x=TB[i];
     if(!tbCan(x.id))continue;
+    if(x.fold&&typeof navItemHid==='function'&&navItemHid(x))continue;
     h+='<button type="button" class="tb-b'+((cur&&cur===x.id)?' on':'')+'" '+
        'onclick="tbGo(\''+x.id+'\')" aria-label="'+osEsc(x.t)+'">'+
        '<span class="e">'+x.e+'</span><span>'+osEsc(x.t)+'</span></button>';
@@ -16231,7 +16264,7 @@ function navPaintBody(){
        평소에는 hide 가 달린 칸을 뺀다 — 지운 게 아니라 <b>눈에서만</b> 뺀 것이라
        찾기·음성·주소로는 그대로 열린다. */
     var items=NAV_Q?g.items.filter(function(it){return navHit(it,NAV_Q,NAV_LOOSE);})
-                   :g.items.filter(function(it){return !it.hide;});
+                   :g.items.filter(function(it){return !navItemHid(it);});
     if(NAV_Q&&!items.length)return;
     found+=items.length;
     var ic=g.icon||NAVG_ICON[name]||'•';   /* 간편 버전의 묶음은 제 그림글자를 들고 온다 */
@@ -16913,8 +16946,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-24 00:30';
-var APP_BUILD_NOTE="🗺️ <b>화면 목록이 두 벌이라 밖에 세운 것과 어긋나 있었습니다.</b> 사장님 말씀 — 「APEX 쉬운판 하고 본 세션이 <b>안 맞아, 계속</b>」. 세어 보니 <b>여섯 군데</b>였습니다 — 쉬운 판에 <b>없는 화면 둘</b>(🩺 질병 보험가이드 · 📮 증권 전달), <b>옛 이름</b> 하나(「재무설계 상담자료」 → <b>재무&amp;보장 상담자료</b>), 그리고 셋(실행 체크판 · 내 코칭 · APEX 본인 점검란)이 <b>본 앱에 없는 갈래</b>「업무매뉴얼 도구」에 서 있었습니다.　—　까닭은 하나입니다. <b>같은 표를 두 곳에서 손으로 고치고 있었습니다.</b> git 은 이것을 충돌 없이 지나가서 아무도 못 봅니다.　—　이제 <b>한 벌</b>입니다. 본 앱의 메뉴에서 그대로 뽑아 <b>docs/화면목록.json</b> 에 두고, 밖에 세우는 것(쉬운 판 · 지도 · 안내서)은 <b>그것을 베낍니다</b>. 메뉴를 고치고 다시 안 뽑으면 <b>CI 가 빨간불</b>을 켜고 <b>무엇이 달라졌는지 이름까지</b> 찍어 줍니다 — 이름을 바꿔 보고 · 화면을 넣어 보고 · id 를 겹쳐 보고 <b>셋 다 울리는 것</b>을 확인했습니다.　—　<b>사장님 화면은 오늘 달라진 것이 없습니다.</b> 앱 안쪽은 한 줄도 안 고쳤습니다.　—　지금 본 앱은 화면 <b>96개 · 16갈래</b>이고, 그중 <b>88개</b>가 메뉴에 섭니다. 나머지 여덟은 메뉴에만 안 서고 🔎 찾기 · 음성 · 주소로는 그대로 열립니다."
+var APP_BUILD='2026-09-24 01:30';
+var APP_BUILD_NOTE="🧑 <b>고객 문이 하나가 됐습니다.</b> 사장님 말씀 — 「고객 365가 너무 복잡해 · DB통합CRM 도 정보가 흩어져 있어서 <b>하나로 합치고 싶어</b>」. ① <b>고객 365일</b>을 열면 찾기 칸이 <b>맨 위</b>에 서고, 내 고객 아래에 <b>아직 고객 카드가 없는 배정 DB 분</b>이 같은 찾기에 걸려 섭니다. CRM 화면은 옆 <b>🗄️ DB 배정·통화</b> 단추로 그대로 열립니다. ② 미션·마스터·이번 달 달력은 <b>접어서 아래로</b> 내렸습니다(지운 것 아님). ③ 메뉴와 아래 탭바의 <b>DB 통합 CRM 줄은 뺐습니다</b> — 찾기·음성·주소로는 그대로 열리고, 고객 365일을 못 여는 분께는 그대로 섭니다. ④ 홈의 고객 찾기 · 오늘 연락할 분 · 최근 보신 분을 <b>🧑 고객 한 칸</b>에 모았습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -25311,8 +25344,9 @@ function hmTeamCss(){
   document.head.appendChild(st);
 }
 var HM_CLI_DOOR=[
- ['clients','🗂️','고객 365일','한 분씩 깊게'],
- ['crm','📇','DB 통합 CRM','받은 DB 를 한 판에'],
+ ['clients','🗂️','고객 365일','내 고객 · 배정 DB 한 문'],
+ /* 다섯째 자리 — 한 문으로 합친 화면(fold). 메뉴와 같은 규칙(navItemHid)으로 뺀다 */
+ ['crm','📇','DB 통합 CRM','받은 DB 를 한 판에','clients'],
  ['frmake','📑','보장 전·후 만들기','증권을 끌어다 놓으면 됩니다']
 ];
 function hmCliHtml(){
@@ -25337,10 +25371,12 @@ function hmCliHtml(){
        '한 분을 여시면 여기 맨 위에 올라옵니다.</div>';
   }
   h+='<div class="hmc-doors">';
-  for(i=0;i<HM_CLI_DOOR.length;i++)
+  for(i=0;i<HM_CLI_DOOR.length;i++){
+    if(HM_CLI_DOOR[i][4]&&typeof navItemHid==='function'&&navItemHid({fold:HM_CLI_DOOR[i][4]}))continue;
     h+='<button type="button" class="hmc-door" onclick="go(\''+HM_CLI_DOOR[i][0]+'\')">'+
        '<span class="e">'+HM_CLI_DOOR[i][1]+'</span>'+
        '<b>'+esc(HM_CLI_DOOR[i][2])+'</b><span>'+esc(HM_CLI_DOOR[i][3])+'</span></button>';
+  }
   return h+'</div></div></div>';
 }
 function hmPaint(){
@@ -25980,6 +26016,18 @@ function hmIgCss(){
 function hmFoldCalSub(){
   try{ return '오늘 '+mcalCnt(mcalDay(mcalItems(),mcalToday()))+'건'; }catch(e){ return ''; }
 }
+function hmCusOneHtml(){
+  /* 찾기 결과 줄(.cus-frow)이 여기 선다 — 옷을 쓰는 화면에서 부른다 (5번) */
+  try{ if(typeof cusCss==='function')cusCss(); }catch(eU){}
+  return '<div class="hm-fold hm-cus" id="hmCusOne">'+
+    '<div class="hm-cus-h"><span class="e">🧑</span>'+
+      '<span class="t">고객<span>내 고객과 배정 DB 를 한 칸에서 찾습니다</span></span>'+
+      '<button type="button" onclick="go(\'clients\')">전체 보기 →</button></div>'+
+    '<div class="hm-cus-b">'+cusFindHtml()+'<div id="ccHomeLine"></div></div>'+
+    hmFoldWrap('cli','🕘','최근 보신 분',hmFoldCliSub(),
+        '<div id="hmCliHost">'+hmCliHtml()+'</div>')+
+  '</div>';
+}
 function hmFoldCliSub(){
   try{
     var L=(typeof OSC!=='undefined'&&OSC.list)?OSC.list:null;
@@ -26150,7 +26198,12 @@ function renderHome(){
        자리는 <b>접은 것들 바로 위</b>입니다 — 위의 줄들은 「오늘 챙길 것
        바로 밑」이라야 뜻이 통하고(#394), 찾기는 접힌 카드를 펴기 전에
        손이 먼저 가는 자리이기 때문입니다. */
-    (OS.profile?cusFindHtml():'')+
+    /* 🧑 <b>고객 한 칸</b> — 사장님 말씀 (2026-09-23) 「하나로 합치고 싶어」.
+       여태 홈에 고객 자리가 셋이었습니다 — 찾기 한 줄 · 접힌 「내 고객」 ·
+       「오늘 연락할 분」 한 줄. 셋이 서로 떨어져 있어 한 사람을 두고
+       어디를 봐야 할지 몰랐습니다. 이제 <b>한 테두리</b> 안입니다.
+       안의 것은 <b>하나도 새로 짜지 않았습니다</b> — 자리만 모았습니다 (5번). */
+    (OS.profile?hmCusOneHtml():'')+
     /* ── <b>큰 것 셋은 접어 둡니다</b> ─────────────────────────────────
        달력 916px · 내 고객 487px · TFA 1,290px — 셋이 홈의 절반입니다.
        셋 다 <b>아래 탭바에서 한 번에</b> 열립니다. 홈에서는 제목과 숫자만
@@ -26158,9 +26211,6 @@ function renderHome(){
        펴져 있습니다. <b>지운 것이 아닙니다.</b>                          */
     (OS.profile?hmFoldWrap('cal','📅','이번 주 · 이번 달',hmFoldCalSub(),
         '<div id="hmCalHost">'+hmCalHtml()+'</div>'):'')+
-    (OS.profile?hmFoldWrap('cli','🧑','내 고객',hmFoldCliSub(),
-        '<div id="hmCliHost">'+hmCliHtml()+'</div>'):'')+
-    (OS.profile?'<div id="ccHomeLine"></div>':'')+
     /* ⑤ TFA 업무관리 — 같은 판을 그대로 (5번). 여기서 하루가 다 끝납니다 */
     (OS.profile?hmFoldWrap('tfa','🧭','TFA 업무관리',hmFoldTfaSub(),
         '<div id="hmTfaHost">'+hmTfaHtml()+'</div>'):'')+
@@ -58977,31 +59027,52 @@ function renderClientsPage(){
     '</div></div>';
   }
   cmCss();
+  /* 배정 DB 줄(.cus-frow)도 이 화면에 선다 — 옷을 쓰는 화면에서 부른다 (5번) */
+  try{ if(typeof cusCss==='function')cusCss(); }catch(eU){}
   if(OSC.view==='detail'&&OSC.current)return osClientDetailHtml(OSC.current);
   return '<div class="osc-wrap">'+
     /* 제일 먼저 — 지금 누구 고객을 보고 있나 */
     '<div id="cliWho">'+((typeof cmWhoChipsHtml==='function')
       ? cmWhoChipsHtml((typeof OSC!=='undefined'&&OSC.list)?OSC.list:[]) : '')+'</div>'+
-    '<div id="cli365Top">'+cliMissionHtml()+mstCardHtml()+
-      (typeof mcalCardHtml==='function'
-        ? mcalCardHtml({title:'이번 달 고객 관리',
-            desc:'<b>연락할 분 · 다음 할 일 · 생일</b>과 <b>약속</b>이 날짜에 찍힙니다. '+
-                 '날짜를 누르면 그날 것만 아래에 펴집니다. 폰 달력으로 내보내는 것은 '+
-                 '<b>설정 → 내 캘린더</b>에 있습니다.'})
-        : '')+'</div>'+
+    /* <b>찾기가 맨 위</b> — 사장님 말씀 「고객 365가 너무 복잡해」.
+       여태 찾기 칸 위에 미션·마스터·이번 달 달력이 두 화면 넘게 서 있어,
+       한 분을 찾으러 와서 먼저 굴려 내려야 했습니다. 찾는 칸 하나가
+       <b>내 고객과 배정 DB 를 함께</b> 훑습니다 (한 문 · cusSplit). */
     '<div class="osc-bar">'+
-      '<input class="osc-search" id="oscSearch" placeholder="이름·초성(ㄱㅊㅅ)·연락처 뒷자리·가족 이름으로 찾기" oninput="osClientsFilter(this.value)" value="'+osEsc(OSC.q)+'"/>'+
+      '<input class="osc-search" id="oscSearch" placeholder="이름·초성(ㄱㅊㅅ)·연락처 뒷자리·가족 이름·지역으로 찾기 — 배정 DB 까지" oninput="osClientsFilter(this.value)" value="'+osEsc(OSC.q)+'"/>'+
       '<button class="os-btn" style="width:auto;padding:9px 16px" onclick="osNewClient()">+ 새 고객</button>'+
+      (cusDbCan()
+        ?'<button class="os-btn" style="width:auto;padding:9px 16px;background:#fff;color:#B45309;border:1px solid #FDBA74" onclick="go(\'crm\')">🗄️ DB 배정·통화</button>'
+        :'')+
     '</div>'+
     /* <b>기다림도 화면입니다.</b> 「불러오는 중…」 한 줄을 세우면 목록이
        올 때 화면이 통째로 튀어, 누르려던 자리가 손가락 아래에서 사라집니다.
        올 것과 같은 모양의 뼈대를 세워 두면 안 튑니다. */
     '<div id="oscList" class="osc-list">'+holdSayOr('wait',{what:'고객 목록',n:5})+'</div>'+
+    '<div id="oscDbList">'+cusDbListHtml()+'</div>'+
+    /* 미션·마스터·이번 달 달력은 <b>접어서 아래로</b> — 지운 것이 아닙니다.
+       머리를 누르면 그 자리에서 펴지고, 편 채로 두면 다음에도 펴져 있습니다
+       (홈의 접는 줄과 <b>같은 것</b>을 씁니다 · 5번). 달력은 홈에도 있습니다. */
+    '<div style="margin-top:18px">'+
+      hmFoldWrap('c365','📅','오늘의 미션 · 이번 달 고객 관리','',
+        '<div id="cli365Top">'+cliMissionHtml()+mstCardHtml()+
+        (typeof mcalCardHtml==='function'
+          ? mcalCardHtml({title:'이번 달 고객 관리',
+              desc:'<b>연락할 분 · 다음 할 일 · 생일</b>과 <b>약속</b>이 날짜에 찍힙니다. '+
+                   '날짜를 누르면 그날 것만 아래에 펴집니다. 폰 달력으로 내보내는 것은 '+
+                   '<b>설정 → 내 캘린더</b>에 있습니다.'})
+          : '')+'</div>')+
+    '</div>'+
   '</div>';
 }
 function osClientsAfterRender(){
   if(!OS.profile)return;
-  if(OSC.view==='list'){osLoadClients();return;}
+  if(OSC.view==='list'){
+    osLoadClients();
+    /* 배정 DB 는 <b>한 번만</b> — 이미 읽었으면 cusFindLoadDbs 가 스스로 멈춘다 (7번) */
+    if(cusDbCan()){cusFindLoadDbs();cusDbListPaint();}
+    return;
+  }
   if(OSC.view==='detail'&&OSC.current){
     if(typeof cusCss==='function')cusCss();
     osBindDrop();osLoadDocs();osLoadAnalysis();osCliInfoLoad();osRepListLoad();cusCrmLoad();frLoad();
@@ -59130,7 +59201,12 @@ function osRenderList(){
      저쪽에 안 비친다 (5번) */
   try{ cliWhoPaint(); }catch(eW){}
 }
-function osSetList(html){var el=document.getElementById('oscList');if(el)el.innerHTML=html;}
+function osSetList(html){
+  var el=document.getElementById('oscList');if(el)el.innerHTML=html;
+  /* 내 고객을 다시 세울 때 <b>배정 DB 줄도 같이</b> — 한쪽만 그리면 같은
+     찾기 칸이 두 목록에 다른 말을 한다 (5번) */
+  try{ if(typeof cusDbListPaint==='function')cusDbListPaint(); }catch(e){}
+}
 function osClientsFilter(v){OSC.q=v;osRenderList();}
 function osConsentLabel(cs){return {none:'동의 전',requested:'동의 요청',granted:'동의 완료',revoked:'동의 철회'}[cs]||cs;}
 /* 이름 가리기도 apex-cusone.js 한 벌을 부른다 — CRM(crmMask)과 다르게
@@ -59549,7 +59625,7 @@ function cusAppView(c){
      부르지 않습니다(7번). 한 번 읽으면 담아 두고 다시 안 부릅니다.
    ■ 글자를 칠 때 <b>결과 줄만</b> 갈아 끼웁니다. 홈을 통째로 다시
      그리면 커서를 잃어 한 글자마다 다시 눌러야 합니다.              */
-var CUSF={q:'',dbs:null,busy:false,want:''};
+var CUSF={q:'',dbs:null,busy:false,want:'',err:''};
 function cusFindHtml(){
   /* <b>카드가 아니라 한 줄입니다.</b> 폰 홈에서 찾기 칸에 제목과 설명을
      달면 그것만 115px 을 먹고, 홈이 그만큼 길어집니다 (#394 · check-toss).
@@ -59571,6 +59647,55 @@ function cusFindSet(v){
 function cusFindRepaint(){
   var el=document.getElementById('cusFindRows');
   if(el)el.innerHTML=cusFindRowsHtml();
+  cusDbListPaint();
+}
+/* ══ 고객 365일 한 문 — <b>배정 DB 도 같은 목록에</b> ══════════════════
+   사장님 말씀 (2026-09-23) — 「고객 365가 너무 복잡해 · DB통합CRM 도 정보가
+   흩어져 있어서 <b>하나로 합치고 싶어</b>」.
+
+   전화를 건 분은 CRM 에만, 계약한 분은 고객 365일에만 있어 <b>두 문을
+   번갈아</b> 열어야 했습니다. 이제 고객 365일 한 문으로 들어오면 내 고객
+   아래에 <b>아직 고객 카드가 없는 배정 DB 분</b>이 같은 찾기 칸에 걸려
+   섭니다. 통화·배정을 만지는 CRM 화면은 지우지 않았습니다 — 위 찾기 줄
+   옆 「🗄️ DB 배정·통화」 단추로 그대로 열립니다.
+
+   ■ 가르는 셈은 <b>홈 찾기와 같은 한 벌</b>(cusSplit)입니다 (5번).
+   ■ 배정 DB 는 <b>이 화면을 열 때 한 번만</b> 읽습니다 — 홈 찾기가 이미
+     읽었으면 다시 안 부릅니다 (7번 · CUSF.dbs).
+   ■ 이름은 <b>가려서</b> 세웁니다 (3번). 번호만 단추에 넘깁니다.
+   ■ CRM 을 못 여는 분께는 세우지 않습니다 — 눌러도 못 가는 줄입니다 (8번). */
+var CUS_DB_SHOW=8;
+function cusDbCan(){
+  try{ return (typeof osTabAllowed!=='function')||osTabAllowed('crm'); }catch(e){ return false; }
+}
+function cusDbListHtml(){
+  if(!cusDbCan())return '';
+  var q=(typeof OSC!=='undefined'&&OSC.q)?(''+OSC.q).replace(/^\s+|\s+$/g,''):'';
+  var h='<div class="cm-lab" style="margin:18px 0 6px">🗄️ 배정 DB — 아직 고객 카드가 없는 분';
+  /* <b>못 읽은 것과 없는 것을 가른다</b> (1번). 읽기 전에 「0명」 이라고
+     적으면 「받은 DB 가 없다」 는 뜻이 되어 버린다. */
+  if(CUSF.dbs===null)
+    return h+'</div><div class="cm-none">'+(CUSF.busy
+      ?'배정 DB 를 읽는 중입니다…'
+      :'배정 DB 는 <b>아직 안 읽었습니다.</b> <button type="button" class="btn btn-ghost" onclick="cusFindLoadDbs()">읽어 오기</button>')+'</div>';
+  if(CUSF.err)
+    return h+'</div><div class="cm-none">배정 DB 를 <b>못 읽었습니다</b> — '+osEsc(CUSF.err)+
+      '. <button type="button" class="btn btn-ghost" onclick="CUSF.dbs=null;CUSF.err=\'\';cusFindLoadDbs()">다시 읽기</button></div>';
+  var db=cusSplit(q).db,i,out='';
+  h+=' <span style="font-weight:400">'+db.length+'명'+(q?' 찾았습니다':'')+'</span></div>';
+  if(!db.length)
+    return h+'<div class="cm-none">'+(q
+      ?('「'+osEsc(q)+'」 로 찾은 배정 DB 분이 없습니다.')
+      :'받은 DB 분은 모두 고객 카드가 있습니다.')+'</div>';
+  for(i=0;i<db.length&&i<CUS_DB_SHOW;i++)out+=cusDbRowHtml(db[i]);
+  if(db.length>CUS_DB_SHOW)
+    out+='<button type="button" class="ccp-more" onclick="CUS_DB_SHOW+=20;cusDbListPaint()">'+
+         '더 보기 — 남은 '+(db.length-CUS_DB_SHOW)+'명</button>';
+  return h+out;
+}
+function cusDbListPaint(){
+  var el=document.getElementById('oscDbList');
+  if(el)el.innerHTML=cusDbListHtml();
 }
 /* 배정 DB 를 <b>한 번만</b> 읽는다 — 내가 맡은 것만, 찾는 데 쓸 칸만 */
 function cusFindLoadDbs(){
@@ -59581,27 +59706,50 @@ function cusFindLoadDbs(){
     .eq('assigned_to',uid).order('assigned_date',{ascending:false}).limit(400).then(function(r){
     CUSF.busy=false;
     CUSF.dbs=(r&&!r.error&&r.data)?r.data:[];
+    /* 못 받은 것을 「없다」로 적지 않게 까닭을 담아 둔다 (1번) */
+    CUSF.err=(r&&r.error)?(r.error.message||'읽기 실패'):'';
     cusFindRepaint();
-  },function(){CUSF.busy=false;CUSF.dbs=[];cusFindRepaint();});
+  },function(e){CUSF.busy=false;CUSF.dbs=[];CUSF.err=(e&&e.message)||'네트워크 오류';cusFindRepaint();});
 }
-function cusFindRowsHtml(){
-  var q=(CUSF.q||'').replace(/^\s+|\s+$/g,'');
-  if(!q)return '';
+/* 두 곳을 <b>한 번에</b> 가른다 — 고객 365일에 있는 분(cli)과 배정 DB 에만
+   있는 분(db). 홈 찾기와 고객 365일 목록이 <b>이 한 벌</b>을 부른다 (5번).
+   따로 세면 홈에서는 「DB 에만 있다」던 분이 목록에서는 안 보이게 된다.
+   q 가 비면 전부 — 목록 화면은 치기 전에도 DB 분들을 세운다. */
+function cusSplit(q){
   var list=(typeof OSC!=='undefined'&&OSC.list)||[],cli=[],db=[],i,c,d,seen={};
   for(i=0;i<list.length;i++){
     c=list[i];
-    if(typeof cmHit==='function'&&cmHit(c,q)){cli.push(c);seen[(c.name_masked||'')]=1;}
+    seen[(c.name_masked||'')]=1;
+    if(!q||(typeof cmHit==='function'&&cmHit(c,q)))cli.push(c);
   }
   var D=CUSF.dbs||[];
   for(i=0;i<D.length;i++){
     d=D[i];
     if(typeof cusHit!=='function')break;
-    if(!cusHit([d.customer_name||'',d.region||'',d.sigungu||''],q,d.phone))continue;
+    if(q&&!cusHit([d.customer_name||'',d.region||'',d.sigungu||''],q,d.phone))continue;
     /* 365 로 이미 넘어간 사람은 한 번만 세운다 — 같은 사람이 두 줄로 서면
        어느 것을 눌러야 할지 그 자리에서 멈칫한다 */
     if(seen[osMaskName((''+(d.customer_name||'')).replace(/\s/g,''))])continue;
     db.push(d);
   }
+  return {cli:cli,db:db};
+}
+/* 배정 DB 한 줄 — 홈 찾기와 고객 365일 목록이 <b>같은 줄</b>을 세운다 (5번) */
+function cusDbRowHtml(d){
+  return '<button type="button" class="cus-frow" style="width:100%;text-align:left;cursor:pointer;margin-bottom:5px;background:#fff" '+
+    /* <b>이름을 단추에 박지 않는다.</b> 화면 글자는 가려 놓고 onclick 에
+       실명을 적으면, 가린 뜻이 없다 — 번호만 넘기고 이름은 담아 둔 것에서
+       찾아 쓴다(규칙 ③). */
+    'onclick="cusFindCrm(\''+osEsc(d.id)+'\')">'+
+    '<span class="rel" style="color:#B45309">DB</span>'+
+    '<span><b>'+osEsc(osMaskName(d.customer_name||''))+'</b></span>'+
+    '<span style="color:#64748B;font-size:var(--t6)">'+osEsc(d.region||'')+(d.stage?(' · '+osEsc(d.stage)):'')+'</span>'+
+    '<span style="margin-left:auto;color:#B45309;font-weight:800;font-size:var(--t6)">CRM 에서 열기 →</span></button>';
+}
+function cusFindRowsHtml(){
+  var q=(CUSF.q||'').replace(/^\s+|\s+$/g,'');
+  if(!q)return '';
+  var S=cusSplit(q),cli=S.cli,db=S.db,i,c;
   var h='',n=cli.length+db.length;
   if(!n){
     return '<div class="cm-none" style="margin-top:8px">「'+osEsc(q)+'」 로 찾은 고객이 없습니다.'+
@@ -59620,18 +59768,7 @@ function cusFindRowsHtml(){
       '<span style="color:#64748B;font-size:var(--t6)">'+osEsc((typeof cmWhoName==='function'?cmWhoName(c):'')||'')+'</span>'+
       '<span style="margin-left:auto;color:#1D4ED8;font-weight:800;font-size:var(--t6)">한 장 열기 →</span></button>';
   }
-  for(i=0;i<db.length&&i<8;i++){
-    d=db[i];
-    h+='<button type="button" class="cus-frow" style="width:100%;text-align:left;cursor:pointer;margin-bottom:5px;background:#fff" '+
-      /* <b>이름을 단추에 박지 않는다.</b> 화면 글자는 가려 놓고 onclick 에
-         실명을 적으면, 가린 뜻이 없다 — 번호만 넘기고 이름은 담아 둔 것에서
-         찾아 쓴다(규칙 ③). */
-      'onclick="cusFindCrm(\''+osEsc(d.id)+'\')">'+
-      '<span class="rel" style="color:#B45309">DB</span>'+
-      '<span><b>'+osEsc(osMaskName(d.customer_name||''))+'</b></span>'+
-      '<span style="color:#64748B;font-size:var(--t6)">'+osEsc(d.region||'')+(d.stage?(' · '+osEsc(d.stage)):'')+'</span>'+
-      '<span style="margin-left:auto;color:#B45309;font-weight:800;font-size:var(--t6)">CRM 에서 열기 →</span></button>';
-  }
+  for(i=0;i<db.length&&i<8;i++)h+=cusDbRowHtml(db[i]);
   if(cli.length>8||db.length>8)h+='<div class="cm-none">여덟 명씩만 보여 드립니다 — 더 치시면 좁혀집니다.</div>';
   return h;
 }
