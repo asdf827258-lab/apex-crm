@@ -19,6 +19,11 @@
          하십니다. 그러면 화면을 안 믿게 됩니다.
      [3] <b>두 벌로 세지 않나</b> (5번) — 세는 자리는 CHKS 하나이고,
          <b>사람이 아닌 줄</b>(할 일·내 일정)에는 안 붙는다
+     [4] <b>그 분을 들고 들어가나</b> — 사장님 말씀 「고객 365일 → 거기에
+         인식 되도록」. 단추를 누르면 고객 365일에 <b>그 분</b>이 서고, 전·후
+         만들기가 <b>그 분을 들고</b> 열려야 합니다. 빈 채로 열면 사장님이
+         읽어 넣으신 증권이 <b>아무에게도 안 붙습니다</b> (1번).
+         맨 위 <b>파랑 히어로는 안 세웁니다</b> — 「맨위에 띄우지말고」
 
    견본 이름은 <b>홍길동</b> 집안입니다 (3번).
    ══════════════════════════════════════════════════════════════════ */
@@ -134,6 +139,63 @@ const LOOK = () => {
   is(o.msHi > 0 && o.msHi <= 844,
      '  미션 칸이 <b>' + o.msHi + 'px</b> — 한 화면(844) 이하 (줄을 새로 안 만들고 🎯 줄에 얹었습니다)');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
+
+  console.log('\n[4] <b>그 분을 들고</b> 들어간다 — 고객 365일에 붙는다');
+  /* 고객 365일 목록(OSC.list)에도 그 분들을 세워 둡니다 — osOpenClient 가
+     거기서 찾습니다. 전·후 만들기 <b>틀(iframe)</b>은 여기서 안 싣습니다:
+     app/ba.html 은 제 화면이 따로 있어, 여기서 재는 것은 「<b>그 분을 들고
+     갔는가</b>」 입니다. mountBa 를 막아 두고 BA.cid 를 봅니다.        */
+  const go1 = await p.evaluate(() => {
+    OSC.list = AR.cliRows.map(c => ({ id: c.id, name: c.name, name_masked: c.nm }));
+    window.__mount = 0; window.mountBa = function () { window.__mount++; };
+    CHKS.rows = [{}]; CHKS.by = {}; hmMsPaint();
+    const b = document.querySelector('.hm-ms-b .btn');
+    return { 글: b ? b.textContent : '(없음)', 먼저: (OSC.current || {}).id || '', cid: BA.cid || '' };
+  });
+  is(/보장분석 넣기/.test(go1.글), '  안 넣으신 분이면 <b>「📄 보장분석 넣기」</b> 가 선다 — 「' + go1.글 + '」');
+  const after = await p.evaluate(() => {
+    const want = hmBaOf(hmMsWho()).cid;
+    document.querySelector('.hm-ms-b .btn').click();
+    return new Promise(r => setTimeout(() => r({
+      want: want, cur: (OSC.current || {}).id || '', ba: BA.cid || '', mount: window.__mount
+    }), 260));
+  });
+  is(!!after.want && after.cur === after.want,
+     '  누르면 <b>고객 365일에 그 분</b>이 선다 — ' + (after.cur || '(안 섬)'));
+  is(after.ba === after.want,
+     '  전·후 만들기가 <b>그 분을 들고</b> 열린다 — BA.cid ' + (after.ba || '(빈 채)'));
+  is(after.mount === 1, '  <b>한 번만</b> 연다 — ' + after.mount + '번');
+  /* 못 세우는 판 — 고객 365일을 아직 못 읽었을 때는 <b>안 엽니다</b> */
+  const blind = await p.evaluate(() => {
+    OSC.list = []; OSC.current = null; BA.cid = ''; window.__mount = 0;
+    window.__T = ''; window.toast = function (m) { window.__T = m; };
+    hmBaGo('c0');
+    return new Promise(r => setTimeout(() => r({ ba: BA.cid || '', mount: window.__mount, t: window.__T }), 220));
+  });
+  is(blind.mount === 0 && !blind.ba,
+     '  그 분을 <b>못 세우면 안 연다</b> — 빈 채로 열면 증권이 아무에게도 안 붙는다 (1번)');
+  is(/못 읽었|열어 주십/.test(blind.t || ''), '  <b>왜 안 되는지</b> 말한다 — 「' + (blind.t || '(말 없음)') + '」');
+  /* 앞 시험이 고객 365일로 보냈으니 <b>홈으로 돌아와</b> 봅니다 */
+  await p.evaluate(() => { go('home'); hmPaint(); });
+  await p.waitForTimeout(320);
+  const top = await p.evaluate(() => {
+    const tz = document.querySelector('.tz');
+    return { tz: !!tz, hero: !!document.querySelector('.tz-hero'),
+      first: (tz && tz.children[0]) ? (tz.children[0].className || tz.children[0].tagName) : '(없음)' };
+  });
+  is(top.tz, '  홈 토스판이 선다');
+  /* 띠의 📑 도 <b>진짜 단추</b>여야 합니다 — 누를 수 있게 해 놓고 손가락
+     크기(44px)를 안 지키면 폰에서 옆을 누릅니다. 그러면 안 누르게 됩니다. */
+  const qb = await p.evaluate(() => {
+    const e = document.querySelector('.hm-q .hm-q-t.ba');
+    if (!e) return null;
+    return { tag: e.tagName, h: Math.round(e.getBoundingClientRect().height),
+      누름: /hmBaGo|hmBaAdd/.test(e.getAttribute('onclick') || ''), 글: e.textContent };
+  });
+  is(!!qb && qb.tag === 'BUTTON' && qb.누름,
+     '  띠의 📑 가 <b>진짜 눌리는 단추</b>다 — ' + (qb ? (qb.tag + ' 「' + qb.글 + '」') : '(없음)'));
+  is(!!qb && qb.h >= 44, '  손가락 크기 <b>44px</b> 를 지킨다 — ' + (qb ? qb.h : 0) + 'px');
+  is(!top.hero, '  <b>맨 위에 파랑 히어로를 안 세운다</b> — 「맨위에 띄우지말고」 (지금 맨 위 · ' + (top.first || '(없음)') + ')');
 
   console.log('\n──────────────────────────────');
   if (bad) { console.log('✗ 보장분석 체크 — 고칠 자리 ' + bad + '곳'); await b.close(); srv.close(); process.exit(1); }
