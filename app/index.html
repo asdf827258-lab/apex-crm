@@ -14871,9 +14871,17 @@ var MRT={open:''};
 function mrtOpenIs(ds){ return MRT.open===ds; }
 function mrtOpenSet(ds){ MRT.open=(MRT.open===ds)?'':ds; try{ mcalPaint(); }catch(e){} }
 /* 고른 날의 열한 줄 — 달력 아래에 편다 */
+/* ⚠ <b>남의 날을 내 체크로 그리면 안 됩니다</b> (1번·3번). 팀원을 고르고
+   날짜를 누르면, 이 칸은 <b>이 브라우저</b>(localStorage)의 체크를 읽어
+   그 팀원 것처럼 보여 주고 있었습니다. 게다가 오늘 자리에서는 눌러
+   <b>내 기록이 바뀌는데</b> 화면은 그 팀원 것처럼 보였습니다.
+   그 사람 것은 <b>몇 개 했는지</b>만 알 수 있습니다(daily_checks 에 그
+   수만 남습니다). 그래서 어느 것을 했는지는 <b>안다고 하지 않습니다.</b> */
 function mrtPanelHtml(ds){
   var L=mrtItems();
   if(!L.length)return '';
+  var who=mcalRtWho(), mine=mcalRtIsMe(who);
+  if(!mine)return mrtOtherHtml(ds,who,L.length);
   var m=mrtLoad(ds),n=mrtDone(ds),today=mrtToday(ds),ms=mrtMs(ds),i,x,on,h,mi;
   var ahead=ds>mcalToday();
   mrtCss();
@@ -14908,6 +14916,24 @@ function mrtPanelHtml(ds){
   }
   return h+'<div class="mrt-ft">🌅 가 붙은 다섯은 <b>홈 아침 미션</b>입니다 — 홈에서 켠 것이 여기에도 켜집니다. '+
     '체크판과 <b>같은 자리</b>에 담기므로 실행 체크판에도 그대로 있습니다.</div></div>';
+}
+/* 팀원 것 — <b>몇 개 했는지만</b> 적습니다. 체크는 안 보여 드립니다 */
+function mrtOtherHtml(ds,who,tot){
+  mrtCss();
+  var n=mcalRtN(who,ds),nm='';
+  try{ nm=(typeof arRowOf==='function'&&arRowOf(who))?(arRowOf(who).name||''):''; }catch(e){ nm=''; }
+  var ahead=ds>mcalToday();
+  var say;
+  if(ahead)say='<span class="mrt-n">하루 '+tot+'가지</span><span class="mrt-ro">아직 오지 않은 날입니다</span>';
+  else if(n==null)
+    /* <b>안 읽은 날</b>을 0 으로 적으면 「안 했다」가 됩니다 (1번) */
+    say='<span class="mrt-n">하루 '+tot+'가지</span>'+
+        '<span class="mrt-ro"><b>아직 못 읽은 날</b>입니다 — 서버에서 받아 둔 것은 최근 30일뿐입니다</span>';
+  else say='<span class="mrt-n'+(n>=tot?' all':'')+'">'+n+' / '+tot+(n>=tot?' ✓':'')+'</span>';
+  return '<div class="mrt"><div class="mrt-hd" style="cursor:default">'+
+    '📋 <b>매일 하는 일</b>'+(nm?(' · '+osEsc(nm)+'님'):'')+say+'</div>'+
+    '<div class="mrt-ft"><b>몇 개 했는지</b>만 남아 있어, 어느 것을 하셨는지는 여기서 못 봅니다. '+
+    '체크는 <b>그분 화면</b>에서만 켜집니다.</div></div>';
 }
 function mrtCss(){
   if(document.getElementById('mrtCss'))return;
@@ -15018,22 +15044,33 @@ function mcalItems(){
        0 으로 적으면 「못 했다」 로 읽힌다 (1번).                         */
   var RT=(typeof mrtItems==='function')?mrtItems():[];
   if(RT.length){
-    var meR='';
-    try{ meR=(typeof arMyId==='function')?(arMyId()||''):''; }catch(eR){ meR=''; }
+    /* <b>보고 계신 그 사람</b>의 것을 그립니다 — 팀원을 고르시면 그 팀원 것.
+       여태는 늘 내 것이라, 팀원을 고르는 순간 이 줄이 사라졌습니다. */
+    var meR=mcalRtWho();
+    var mineR=mcalRtIsMe(meR);
     var ymR=(typeof mcalYm==='function')?mcalYm():TD.slice(0,7);
     var lastR=new Date(Date.UTC(+ymR.slice(0,4),+ymR.slice(5,7),0)).getUTCDate(),dR,dsR;
     var putR=function(dsx){
-      var done=mrtDone(dsx),past=(dsx<=TD),ms=mrtMs(dsx);
+      var done=mcalRtN(meR,dsx),past=(dsx<=TD),ms=mineR?mrtMs(dsx):null;
+      /* <b>모르는 날</b>은 세지 않습니다 — 0 으로 적으면 「안 했다」입니다 (1번) */
+      if(done==null){
+        (out[dsx]=out[dsx]||[]).push({k:'rt',who:meR,t:'매일 하는 일',
+          rt:dsx,n:null,tot:RT.length,ms:null,mstot:0,mine:mineR,
+          s:past?('하루 '+RT.length+'가지 — <b>아직 못 읽은 날</b>입니다')
+                :('하루 '+RT.length+'가지')});
+        return;
+      }
+      if(!ms)ms={n:0,tot:0};
       /* <b>아침 미션 다섯을 앞에 적습니다</b> — 하루 열한 가지 가운데 아침에
          꼭 끝내야 하는 것이 그 다섯입니다. 뒤에 하루치를 같이 적어 둡니다.
          앞날은 <b>「0 / 5」 가 아니라 몇 가지인지만</b> 적습니다 — 아직 안 한
          것을 0 으로 적으면 「못 했다」 로 읽힙니다 (1번). */
       (out[dsx]=out[dsx]||[]).push({k:'rt',who:meR,t:'매일 하는 일',
-        rt:dsx,n:done,tot:RT.length,ms:ms.n,mstot:ms.tot,
+        rt:dsx,n:done,tot:RT.length,ms:ms.n,mstot:ms.tot,mine:mineR,
         s:past
-          ?('🌅 아침 미션 '+ms.n+' / '+ms.tot+' · 하루 '+done+' / '+RT.length+
+          ?((mineR?('🌅 아침 미션 '+ms.n+' / '+ms.tot+' · '):'')+'하루 '+done+' / '+RT.length+
             (done>=RT.length?' · 다 했습니다':''))
-          :('🌅 아침 미션 '+ms.tot+'가지 · 하루 '+RT.length+'가지')});
+          :((mineR?('🌅 아침 미션 '+ms.tot+'가지 · '):'')+'하루 '+RT.length+'가지')});
     };
     for(dR=1;dR<=lastR;dR++){
       dsR=ymR+'-'+('0'+dR).slice(-2);
@@ -15212,11 +15249,21 @@ function icsEsc(t){
   return (''+(t||'')).replace(/\\/g,'\\\\').replace(/;/g,'\\;')
     .replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
 }
+/* ⚠ <b>이모지에서 터지던 자리입니다.</b> 한 칸씩(charAt) 끊어 재면 이모지는
+   두 칸(서러게이트 쌍)이라 <b>반쪽</b>이 넘어가고, encodeURIComponent 가
+   그 반쪽에서 <code>URI malformed</code> 로 던집니다. 그러면 내보내기가
+   통째로 죽는데 <b>아무 말도 없이</b> 죽습니다 — 단추를 눌러도 아무 일이
+   안 일어납니다. 「💬 카톡·문자」 가 들어간 날이 그랬습니다.
+   그래서 <b>이모지는 두 칸을 한 글자로</b> 세고, 그래도 못 재면 글자 수로
+   물러섭니다 — 줄 길이가 조금 틀리는 것이 통째로 안 나가는 것보다 낫습니다. */
 function icsFold(line){
-  var b=[],n=0,out='',i,ch,len;
+  var b=[],n=0,out='',i,ch,cp,len;
   for(i=0;i<line.length;i++){
     ch=line.charAt(i);
-    len=encodeURIComponent(ch).replace(/%[0-9A-F]{2}/g,'x').length;  /* 바이트 수 */
+    cp=line.charCodeAt(i);
+    if(cp>=0xD800&&cp<=0xDBFF&&i+1<line.length){ ch=line.substr(i,2); i++; }
+    try{ len=encodeURIComponent(ch).replace(/%[0-9A-F]{2}/g,'x').length; }  /* 바이트 수 */
+    catch(e){ len=ch.length; }
     if(n+len>73){b.push(out);out=' ';n=1;}
     out+=ch;n+=len;
   }
@@ -15309,6 +15356,64 @@ function mcalTodayEvents(){
   }
   return evs;
 }
+/* ══ 📆 <b>이번 달 통째로</b> 폰 달력에 넣기 ════════════════════════
+   사장님 말씀 (2026-09-23) — 「아이폰이든 Galaxy든 <b>바탕화면에 네이버
+   캘린더처럼</b> 사용할 수 있게 만들어졌니?」
+
+   ★ <b>바탕화면 위젯은 못 만듭니다.</b> 이 앱은 웹앱이고, iOS·안드로이드
+     위젯은 네이티브 앱만 그릴 수 있습니다. 「됩니다」 라고 적으면 거짓말이
+     됩니다 (1번).
+   ★ 대신 <b>폰이 이미 가진 달력 위젯</b>을 씁니다. 이번 달 일정을 통째로
+     폰 기본 달력에 넣어 드리면, <b>그 위젯이 바탕화면에 그려 줍니다.</b>
+     아이폰 달력 위젯 · 갤럭시 캘린더 위젯 — 둘 다 그대로 뜹니다.
+
+   ── 무엇을 담나 ──────────────────────────────────────────────────
+   달력이 이미 세워 둔 그 줄(mcalItems)을 <b>그대로</b> 씁니다 (5번) —
+   여기서 다시 고르면 앱 화면과 폰 달력이 다른 말을 합니다.
+   <b>「매일 하는 일」은 안 담습니다</b> — 서른 줄이 날마다 찍혀 폰 달력이
+   글자밭이 되고, 그 줄은 앱에서 체크하는 것이라 폰에 있어 봐야 못 누릅니다.
+   ★ 이름은 <b>가려서</b> 나갑니다 (3번) — mcalOutName 한 곳이 정합니다.  */
+function mcalMonthEvents(){
+  var c=mcalCfg(),ym=(typeof mcalYm==='function')?mcalYm():mcalToday().slice(0,7);
+  var items=mcalItems(),evs=[],ds,L,i,x,by,k;
+  var last=new Date(Date.UTC(+ym.slice(0,4),+ym.slice(5,7),0)).getUTCDate(),d;
+  for(d=1;d<=last;d++){
+    ds=ym+'-'+('0'+d).slice(-2);
+    L=mcalDay(items,ds);
+    if(!L.length)continue;
+    /* 약속은 <b>시간이 있으니 한 줄씩</b>, 나머지는 갈래별로 묶어 한 줄 */
+    by={};
+    for(i=0;i<L.length;i++){
+      x=L[i];
+      if(x.k==='rt')continue;                       /* 매일 하는 일은 안 담는다 */
+      if(x.k==='appt'){
+        var hm=(''+(x.s||'')).slice(0,5),hh=c.h,mm=0;
+        if(/^\d{2}:\d{2}$/.test(hm)){ hh=+hm.slice(0,2); mm=+hm.slice(3,5); }
+        evs.push({ds:ds,h:hh,m:mm,dur:60,go:'crm',
+          title:'📌 약속 — '+(x.t||'고객'),
+          body:'DB 통합 CRM 에 잡아 두신 약속입니다.'+(x.s?('\n'+x.s):'')});
+        continue;
+      }
+      if(x.k==='my'){
+        var mh=c.h,mm2=0;
+        if(/^\d{2}:\d{2}$/.test(x.s||'')){ mh=+x.s.slice(0,2); mm2=+x.s.slice(3,5); }
+        evs.push({ds:ds,h:mh,m:mm2,dur:30,go:'mycal',
+          title:'✏️ '+(x.t||'내 일정'),body:'앱 달력에 직접 넣으신 일정입니다.'});
+        continue;
+      }
+      (by[x.k]=by[x.k]||[]).push(x.t||'');
+    }
+    for(k in by){
+      if(!by.hasOwnProperty(k)||!by[k].length)continue;
+      var K=(typeof MCAL_KIND!=='undefined'&&MCAL_KIND[k])||{e:'•',t:'할 일'};
+      evs.push({ds:ds,h:c.h,m:c.m,dur:30,go:(k==='bd'?'clients':'airep'),
+        title:(K.e||'•')+' '+(K.t||'할 일')+' '+by[k].length+'건',
+        body:'· '+by[k].slice(0,20).join('\n· ')+
+             (by[k].length>20?('\n… 외 '+(by[k].length-20)+'건'):'')});
+    }
+  }
+  return evs;
+}
 /* 매일 아침 — 앱을 열게 만드는 한 줄. 내용은 그날 앱에서 본다. */
 function mcalDailyEvent(){
   var c=mcalCfg();
@@ -15319,20 +15424,23 @@ function mcalDailyEvent(){
          'TFA 업무관리: '+pwaUrlOf('airep')+'\n'+
          '고객 365일: '+pwaUrlOf('clients')}];
 }
+var MCAL_DL={daily:{f:mcalDailyEvent,n:'APEX 매일 알림',f2:'apex-매일알림'},
+             today:{f:mcalTodayEvents,n:'APEX 오늘 할 일',f2:'apex-오늘'},
+             month:{f:mcalMonthEvents,n:'APEX 이번 달',f2:'apex-이번달'}};
 function mcalDownload(kind){
-  var evs,name;
-  if(kind==='daily'){evs=mcalDailyEvent();name='APEX 매일 알림';}
-  else{evs=mcalTodayEvents();name='APEX 오늘 할 일';}
+  /* 갈래를 삼항 사슬로 늘어놓지 않습니다 — 늘릴 때 한 자리를 빠뜨립니다 (5번) */
+  var M=MCAL_DL[kind]||MCAL_DL.today;
+  var evs=M.f(),name=M.n;
   if(!evs.length){toast('달력에 넣을 것이 아직 없습니다');return;}
   var txt=icsBuild(name,evs);
   try{
     var b=new Blob([txt],{type:'text/calendar;charset=utf-8'});
     var a=document.createElement('a');
     a.href=URL.createObjectURL(b);
-    a.download=(kind==='daily'?'apex-매일알림':'apex-오늘')+'.ics';
+    a.download=M.f2+'.ics';
     document.body.appendChild(a);a.click();
     setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);
-    toast('달력 파일을 내려받았습니다 — 열면 폰 달력이 받아 갑니다',6000);
+    toast(evs.length+'건을 담은 달력 파일을 내려받았습니다 — 열면 폰 달력이 받아 갑니다',6000);
   }catch(e){
     if(typeof copyText==='function')copyText(txt);
     else toast('내려받지 못했습니다');
@@ -15348,6 +15456,39 @@ function mcalCnt(list){
   var n=0,i;
   for(i=0;i<(list||[]).length;i++)if(list[i].k!=='rt')n++;
   return n;
+}
+/* ══ <b>누구의 「매일 하는 일」을 그릴 것인가</b> ═══════════════════
+   사장님 말씀 (2026-09-23) — 「다른 사람들은 월간 캘린더에 한 달 해야 될
+   일이 모두 입력되어 있니?」
+
+   여태는 <b>늘 내 것</b>만 그렸습니다(who=arMyId). 그래서 사장님이 팀원을
+   고르시면 그 줄이 통째로 사라져, <b>팀원이 며칠 했는지 볼 길이 없었습니다.</b>
+
+   ★ <b>서버를 더 부르지 않습니다</b> (7번). gbLoad 가 이미 30일치를 읽고
+     있었고, 합계만 내고 날짜별로는 버리던 것을 GB.ckDay 에 남겼습니다.
+   ★ <b>안 읽은 날은 「모른다」</b> 입니다 (1번). 30일 앞의 날을 0 으로
+     적으면 「그 날 아무것도 안 했다」 가 되어 버립니다 — 사장님이 팀원을
+     그 숫자로 평가하십니다.                                          */
+function mcalRtWho(){
+  var p='';
+  try{ p=(typeof hwhoPick==='function')?hwhoPick():''; }catch(e){ p=''; }
+  if(!p){ try{ p=(typeof arMyId==='function')?(arMyId()||''):''; }catch(e2){ p=''; } }
+  return p;
+}
+function mcalRtIsMe(who){
+  var me='';
+  try{ me=(typeof arMyId==='function')?(arMyId()||''):''; }catch(e){ me=''; }
+  return !!who&&who===me;
+}
+/* 그 사람이 그 날 몇 개 했나 — <b>모르면 null</b>. 답하는 자리는 여기 하나다 (5번) */
+function mcalRtN(who,ds){
+  if(mcalRtIsMe(who))return mrtDone(ds);              /* 내 것은 이 브라우저가 안다 */
+  var G=(typeof GB!=='undefined')?GB:null;
+  if(!G||!G.loaded||!G.ckDay)return null;
+  if(G.ckFrom&&ds<G.ckFrom)return null;               /* 안 읽은 날 — 0 이 아니다 (1번) */
+  var m=G.ckDay[who];
+  if(!m)return null;
+  return (m[ds]==null)?0:m[ds];                       /* 읽었는데 없으면 그 날은 0 이다 */
 }
 /* 그 날의 <b>매일 하는 일 줄</b>을 꺼낸다 — 꺼내는 자리는 여기 하나다 (5번) */
 function mcalRtOf(list){
@@ -15372,20 +15513,10 @@ function mcalRtOf(list){
 function mcalRtTxt(x){
   if(!x||!x.tot)return '';
   if(x.rt&&x.rt>mcalToday())return ''+x.tot;          /* 앞날 — 가짓수만 */
+  /* <b>안 읽은 날</b>은 숫자를 안 적습니다 — 0 으로 적으면 「안 했다」입니다 (1번) */
+  if(x.n==null)return '·'+x.tot;
   if(x.n>=x.tot)return '✓'+x.tot;
   return x.n+'/'+x.tot;
-}
-/* 이 날 매일 하는 일을 <b>다 했나</b> — 칸에 ✓ 를 찍을지 정한다 */
-function mcalRtDone(list){
-  var i,x;
-  for(i=0;i<(list||[]).length;i++){
-    x=list[i];
-    if(x.k!=='rt')continue;
-    /* 앞날에는 ✓ 를 안 찍는다 — 아직 안 한 것을 했다고 적는 것이다 (1번) */
-    if(x.rt&&x.rt>mcalToday())return false;
-    return (x.tot>0&&x.n>=x.tot);
-  }
-  return false;
 }
 function mcalDot(list){
   var seen={},h='',i,k;
@@ -15731,12 +15862,25 @@ function renderMyCal(){
     '<div class="card"><div class="card-hd"><div class="card-title">'+
       '<span class="ci">📲</span>폰 기본 달력에 넣기</div>'+
     '<div class="card-desc">받은 파일을 열면 아이폰·안드로이드 달력이 그대로 받아 갑니다. '+
-      '일정을 누르면 <b>그 화면부터</b> 앱이 열립니다.</div></div>'+
+      '일정을 누르면 <b>그 화면부터</b> 앱이 열립니다. '+
+      '<b>바탕화면에서 보시려면 이 길입니다</b> — 아래 설명을 읽어 주세요.</div></div>'+
     '<div class="card-body">'+
     '<div class="btn-row">'+
-      '<button class="btn btn-primary" onclick="mcalDownload(\'daily\')">🔔 매일 아침 알림 받기</button>'+
-      '<button class="btn btn-ghost" onclick="mcalDownload(\'today\')">📅 오늘 것 넣기</button>'+
+      '<button class="btn btn-primary" onclick="mcalDownload(\'month\')">📆 이번 달 통째로 넣기</button>'+
+      '<button class="btn btn-ghost" onclick="mcalDownload(\'daily\')">🔔 매일 아침 알림</button>'+
+      '<button class="btn btn-ghost" onclick="mcalDownload(\'today\')">📅 오늘 것만</button>'+
     '</div>'+
+    /* ⚠ <b>못 하는 것을 못 한다고 적습니다</b> (1번). 「바탕화면 위젯을
+       만들어 드립니다」 라고 적으면 사장님이 폰에서 찾으시다 못 찾습니다. */
+    '<div class="notice" style="margin-top:12px;background:#F0F9FF;border-color:#BAE6FD;color:#075985">'+
+      '📱 <b>바탕화면에 달력처럼 띄우는 법</b> — 이 앱은 웹앱이라 <b>위젯을 직접 만들 수는 '+
+      '없습니다</b>(iOS·안드로이드 위젯은 앱스토어 앱만 그립니다). 대신 <b>폰이 이미 가진 '+
+      '달력 위젯</b>을 씁니다.<br>'+
+      '① 위 <b>「📆 이번 달 통째로 넣기」</b> 를 누릅니다<br>'+
+      '② 받은 파일을 열면 폰 달력이 이번 달 일정을 받아 갑니다<br>'+
+      '③ 바탕화면을 길게 눌러 <b>달력 위젯</b>을 올리면 거기 그대로 보입니다<br>'+
+      '④ 일정을 누르면 <b>앱의 그 화면</b>이 열립니다<br>'+
+      '달이 바뀌면 <b>①을 한 번 더</b> 눌러 주세요 — 앱이 폰 달력을 대신 고쳐 줄 권한은 없습니다.</div>'+
     '<div class="mcal-cfg">'+
       '<label>울릴 시각 '+
         '<input type="number" min="0" max="23" value="'+c.h+'" '+
@@ -19240,6 +19384,13 @@ function vaCss(){
 var GB={loaded:false,busy:false,err:'',warn:[],
   rows:[],teams:[],teamOf:{},team:'',face:'',open:'',
   orgFill:0,orgNoTeam:[],          /* 조직도에서 메운 사람 수 · 설정에 없는 팀 이름 */
+  /* <b>사람 × 날짜 → 그 날 몇 개 했나.</b> 서버를 더 부르지 않습니다 (7번) —
+     아래 gbLoad 가 이미 30일치를 읽고 있었는데, 합계만 내고 <b>날짜별로는
+     버리고</b> 있었습니다. 그래서 사장님이 팀원을 고르셔도 달력에는
+     그 사람이 며칠 했는지 뜰 자료가 없었습니다.
+     ★ ckFrom <b>앞의 날은 「모른다」</b> 입니다 — 0 으로 적으면 「안 했다」가
+       되어 버립니다 (1번). 읽은 첫날을 같이 들고 있습니다.            */
+  ckDay:{},ckFrom:'',
   notes:[],pass:{},many:false,at:''};
 
 var GB_AX=[
@@ -19565,6 +19716,7 @@ function gbLoad(){
   if(!sb){GB.err='서버에 연결되어 있지 않습니다.';GB.loaded=true;gbPaint();return;}
   GB.busy=true;GB.err='';gbPaint();
   var d30=gbDay(29);
+  GB.ckFrom=d30;          /* 이 날 <b>앞</b>은 안 읽었다 — 「모른다」 이지 0 이 아니다 (1번) */
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
   Promise.all([
     q(sb.from('profiles').select('id,name,role,active,workspace').order('name')),
@@ -19648,11 +19800,14 @@ function gbCalc(profs,att,calls,cli,rep,chk){
   cli.forEach(function(c){bump(c.advisor_id,'cli',c.created_at);});
   rep.forEach(function(c){bump(c.advisor_id,'rep',c.created_at);});
   var sum={},cnt={};
+  GB.ckDay={};
   chk.forEach(function(row){
     if(row.scope!=='day')return;
     var r=by[row.member_id];if(!r)return;
     var n=0,kk;
     for(kk in (row.items||{}))if(row.items[kk]&&dayIds[kk])n++;
+    /* 날짜별로도 <b>남긴다</b> — 달력이 팀원 것을 그릴 때 쓴다 (5번) */
+    (GB.ckDay[row.member_id]=GB.ckDay[row.member_id]||{})[row.check_date]=n;
     sum[row.member_id]=(sum[row.member_id]||0)+n;
     cnt[row.member_id]=(cnt[row.member_id]||0)+1;
     r.any=true;
