@@ -118,8 +118,29 @@ const LOOK = () => {
   is(!o.rows.some(r => r.red), '  <b>붉게도 안 칠한다</b> — 모르는 것은 손 쓸 일이 아니다');
 
   console.log('\n[3] <b>두 벌로 세지 않는다</b> (5번)');
-  await set(() => { window.chkLoad = function () {}; CHKS.rows = [{}];
-    CHKS.by = { c0: { at: '2026-09-01', sum: {} } }; hmMsPaint(); hmPaint(); });
+  /* ⚠ 2026-09-23 · 여태 <b>c0 이 늘 줄에 선다</b>고 보고 그 분께 심었습니다.
+     홈이 줄을 <b>점수 차례</b>로 세우게 되면서 오늘 서는 분이 달라졌고,
+     아무도 「있음」 이 안 돼 빨간불이 켜졌습니다 — 보장분석은 멀쩡했습니다.
+     이제 <b>실제로 선 첫 분</b>께 심습니다. 묻는 것은 그대로입니다 —
+     「한 분만 넣어 두면 한 분만 있음인가」 (5번·8번). */
+  await set(() => {
+    window.chkLoad = function () {};
+    /* ★ <b>먼저 「읽어 왔다」 로 돌려놓습니다.</b> 바로 앞 [2] 가 CHKS.rows 를
+       null(아직 못 읽음) 로 두고 갔는데, 그 상태에서는 hmBaOf 가 누구든
+       「확인 중」 이라 답하며 <b>고객 id 를 안 줍니다.</b> 그대로 물으면
+       심을 분을 못 찾아, 멀쩡한 앱을 두고 빨간불이 켜집니다.           */
+    CHKS.rows = [{}]; CHKS.by = {};
+    /* ★ <b>화면에 서는 그 목록</b>에서 고릅니다. hmSteps() 는 홈 전체의
+       차례라 아침 미션에 안 오르는 분도 들어 있습니다 — 그 분께 심으면
+       줄에는 아무도 「있음」 이 안 되어, 멀쩡한 앱을 두고 빨간불이 켜집니다. */
+    var L = hmMsPeople(), i, cid = '';
+    for (i = 0; i < L.length; i++) {
+      var q = (typeof hmBaOf === 'function') ? hmBaOf(L[i]) : null;
+      if (q && q.cid) { cid = q.cid; break; }
+    }
+    if (cid) CHKS.by[cid] = { at: '2026-09-01', sum: {} };
+    hmMsPaint(); hmPaint();
+  });
   o = await p.evaluate(LOOK);
   const have = o.rows.filter(r => /있음/.test(r.ba)).length;
   is(have === 1, '  <b>CHKS 한 곳</b>이 답한다 — 한 분만 넣어 두면 한 분만 「있음」 (' + have + '분)');

@@ -148,9 +148,106 @@
     return { k: 'ok', d: d, cy: cy, at: at, sc: 0 };
   }
 
+  /* ══ 신호 — <b>오늘 이 분께 걸 구실</b> ════════════════════════════
+     명세서(docs/토스판_사본.html 의 signals()) 에서 <b>점수와 말을 그대로</b>
+     옮겼습니다. 여기서 숫자를 새로 짓지 않습니다.
+
+     ★ <b>두 갈래입니다.</b>
+       when:'day'  <b>날짜가 와서</b> 오늘 서는 것 — 생일 · 계약 주년.
+                   오늘 자리에 <b>줄을 세웁니다.</b>
+       when:'any'  <b>늘 참인 것</b> — 자녀 나이 · 보험료 비중. 줄을 세우면
+                   해가 바뀔 때까지 <b>매일 같은 분</b>이 서서 큐가 영영
+                   안 줄어듭니다. 그래서 줄은 안 세우고, 이미 선 분의
+                   <b>「왜 오늘 이분인가」</b> 로만 씁니다.
+     ★ 못 받은 값은 <b>안 세웁니다</b> — 0 으로 적으면 「없다」가 됩니다 (1번).
+     ★ 2월 29일 생일은 윤년이 아닌 해에 <b>안 울립니다</b>. 3월 1일로
+       옮겨 적으면 그것은 <b>우리가 고른 날</b>이지 그분 생일이 아닙니다.  */
+  /* 올해(또는 내년) 의 그 MM-DD — 오늘보다 이르면 내년으로 넘깁니다 */
+  function nextMmdd(mmdd, today) {
+    var m = ('' + (mmdd == null ? '' : mmdd)).match(/(\d{1,2})\D+(\d{1,2})/);
+    var t = ('' + (today == null ? '' : today)).slice(0, 10);
+    if (!m || !/^\d{4}-\d{2}-\d{2}$/.test(t)) return '';
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    var s = p(+m[1]) + '-' + p(+m[2]), y = +t.slice(0, 4);
+    var d = y + '-' + s;
+    return (d < t) ? ((y + 1) + '-' + s) : d;
+  }
+  function signalsOf(o) {
+    o = o || {};
+    var today = ('' + (o.today || '')).slice(0, 10), S = [], d, i;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) return S;
+
+    /* 🎂 생일 — <b>D-7 부터 D-1 까지</b>.
+       D-0(오늘) 은 달력의 생일 갈래가 이미 세웁니다. 여기서 또 세우면
+       같은 생일을 <b>두 곳</b>이 답하게 됩니다 (5번). 여기는 그 앞날만 봅니다. */
+    if (o.bd) {
+      d = dayGap(today, nextMmdd(o.bd, today));
+      if (d !== null && d >= 1 && d <= 7)
+        S.push({ id: 'bd', when: 'day', emo: '🎂', t: '생일 D-' + d, ch: '문자',
+          aim: '<b>축하만</b> 전한다',
+          way: '계약 이야기를 오늘 붙이지 않는다. 그것이 다음 자리를 만든다',
+          why: '생일이 ' + d + '일 남았습니다', sc: 700 + (8 - d) * 8 });
+    }
+
+    /* 🎗️ 계약 주년 — <b>2년차부터</b>.
+       1년차(12개월) 는 MST_STEPS 의 마디가 이미 세웁니다. 여기서 또 세우면
+       한 해에 두 번 같은 말을 하게 됩니다 (5번). */
+    var cd = ('' + (o.cd || '')).slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cd)) {
+      var ann = nextMmdd(cd.slice(5), today);
+      d = dayGap(today, ann);
+      var yr = ann ? ((+ann.slice(0, 4)) - (+cd.slice(0, 4))) : 0;
+      if (d !== null && d >= 0 && d <= 7 && yr >= 2)
+        S.push({ id: 'ann', when: 'day', emo: '🎗️',
+          t: '계약 ' + yr + '주년 ' + (d ? 'D-' + d : '오늘'), ch: '전화',
+          aim: '<b>잘 쓰고 계신지</b> 여쭙는다',
+          way: '새 이야기를 붙이지 않는다. 그 해에 달라진 것만 알려 드린다',
+          why: '계약하신 지 ' + yr + '년이 됩니다', sc: 640 + (8 - d) * 5 });
+    }
+
+    /* 🎒 자녀가 돈이 바뀌는 나이 — 태어난 해만 알면 셈이 섭니다.
+       <b>늘 참</b>이라 줄은 안 세웁니다(when:'any'). */
+    var K = (o.kids && o.kids.push) ? o.kids : [];
+    var got = {};
+    for (i = 0; i < K.length; i++) {
+      var by = parseInt(('' + K[i]).replace(/[^0-9]/g, ''), 10);
+      if (!by || by < 1900 || by > 2200) continue;          /* 모르면 안 센다 (1번) */
+      var age = (+today.slice(0, 4)) - by;
+      if ([7, 13, 16, 19].indexOf(age) < 0) continue;
+      if (got[age]) continue;
+      got[age] = 1;
+      S.push({ id: 'kid' + age, when: 'any', emo: '🎒', t: '자녀 ' + age + '세', ch: '전화',
+        aim: '교육자금 이야기를 <b>꺼낼 자리</b>다',
+        way: '상품을 말하지 않는다. 언제 얼마가 드는지부터 같이 센다',
+        why: '자녀가 ' + age + '세 — 돈이 바뀌는 길목입니다', sc: 520 });
+    }
+
+    /* ⚖️🕳️ 보험료 비중 — <b>둘 다 적혀 있을 때만</b>.
+       한쪽만 있으면 나누지 않습니다. 0 으로 채우면 없는 비중이 생깁니다 (1번).
+       두 값은 <b>같은 단위(월 만원)</b> 라야 합니다 (4번). */
+    var inc = parseFloat(o.finc), ins = parseFloat(o.fins);
+    if (isFinite(inc) && isFinite(ins) && inc > 0 && ins > 0) {
+      var r = ins / inc * 100;
+      if (r >= 8)
+        S.push({ id: 'hi', when: 'any', emo: '⚖️', t: '보험료 비중 ' + r.toFixed(0) + '%', ch: '전화',
+          aim: '무엇이 들어 있는지 <b>같이 본다</b>',
+          way: '줄이자고 먼저 말하지 않는다. 비중을 보여 드리고 판단은 그분이 한다',
+          why: '월 소득 ' + inc + '만원에 보험료 ' + ins + '만원입니다', sc: 480 });
+      else if (r < 3)
+        S.push({ id: 'lo', when: 'any', emo: '🕳️', t: '보험료 비중 ' + r.toFixed(0) + '%', ch: '전화',
+          aim: '비어 있는 자리를 <b>확인만</b> 한다',
+          way: '부족하다고 단정하지 않는다. 어디가 비었는지 같이 본다',
+          why: '월 소득 ' + inc + '만원에 보험료 ' + ins + '만원입니다', sc: 460 });
+    }
+
+    S.sort(function (a, b) { return b.sc - a.sc; });
+    return S;
+  }
+
   return {
     nextOf: nextOf, due: due, weightOf: weightOf, rank: rank,
     isKeep: isKeep, keepAt: keepAt, dayGap: dayGap, promiseOf: promiseOf,
+    nextMmdd: nextMmdd, signalsOf: signalsOf,
     KEEP_HOW: KEEP_HOW
   };
 });

@@ -26,6 +26,15 @@ const srv=http.createServer((rq,rs)=>{let f=path.join(ROOT,decodeURIComponent(ur
  if(!f.startsWith(ROOT)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){rs.writeHead(404);rs.end();return;}
  rs.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'text/html; charset=utf-8'});fs.createReadStream(f).pipe(rs);});
 const out=[]; const ok=(n,v,e)=>out.push({n,v:!!v,e:String(e==null?'':e).slice(0,110)});
+/* ⚠ 2026-09-23 · 여기서 묻는 것은 <b>누구 것이 섰나</b> 이지 <b>어느 것이
+   먼저냐</b> 가 아닙니다. 여태 join() 으로 이어 붙여 견줬더니, 홈이 줄을
+   <b>점수 차례</b>로 세우게 된 날 남의 고객이 하나도 안 섞였는데도 빨간불이
+   켜졌습니다. 차례를 재는 자리는 check-homeday 한 곳입니다 (5번·8번).
+   ★ 느슨해진 것이 아닙니다 — 하나라도 더 있거나 빠지면 그대로 걸립니다. */
+const sameSet=(a,b)=>{
+  const x=(a||[]).slice().sort(), y=(b||[]).slice().sort();
+  return x.length===y.length&&x.every((v,i)=>v===y[i]);
+};
 const SEED=(role)=>`
  window.__W=[];
  OS.session={user:{id:'me'}};OS.profile={id:'me',name:'홍길동',role:'${role}',active:true,plan:'vip'};
@@ -151,9 +160,9 @@ const SEED=(role)=>`
     const a=await rd();
     if(role==='member'){
       ok('③ 설계사 — 고르개가 안 선다',!a.bar,'띠 '+a.bar);
-      ok('③ 설계사 — 자기 것만',a.steps.join()==='홍길동A,홍○동',a.steps.join(' · '));
+      ok('③ 설계사 — 자기 것만',sameSet(a.steps,['홍길동A','홍○동']),a.steps.join(' · '));
     }else{
-      ok('③ '+role+' — 처음엔 내 것만',a.steps.join()==='홍길동A,홍○동',a.steps.join(' · '));
+      ok('③ '+role+' — 처음엔 내 것만',sameSet(a.steps,['홍길동A','홍○동']),a.steps.join(' · '));
       ok('④ '+role+' — 팀원 고르개가 선다',a.bar&&a.chips.length>=2,a.chips.join(' | '));
       if(role==='leader')
         ok('④ 지점장 — 남의 팀(홍갑돌)은 안 뜬다',!a.chips.some(x=>/홍갑돌/.test(x)),a.chips.join(' | '));
@@ -161,11 +170,11 @@ const SEED=(role)=>`
         ok('④ 본부장 — 팀 밖(홍갑돌)도 보인다',a.chips.some(x=>/홍갑돌/.test(x)),a.chips.join(' | '));
       await p.evaluate(()=>hwhoSet('u2'));await p.waitForTimeout(600);
       const s=await rd();
-      ok('④ '+role+' — 그 팀원 것으로 바뀐다',s.steps.join()==='홍길순B,홍○순',s.steps.join(' · '));
+      ok('④ '+role+' — 그 팀원 것으로 바뀐다',sameSet(s.steps,['홍길순B','홍○순']),s.steps.join(' · '));
       ok('④ '+role+' — 내 것이 아니라고 적는다',s.other&&s.back&&/내 것이 아닙니다/.test(s.say),s.say.slice(0,52));
       await p.evaluate(()=>hwhoMe());await p.waitForTimeout(500);
       const t=await rd();
-      ok('④ '+role+' — 한 번에 내 화면으로',t.steps.join()==='홍길동A,홍○동'&&!t.other,t.steps.join(' · '));
+      ok('④ '+role+' — 한 번에 내 화면으로',sameSet(t.steps,['홍길동A','홍○동'])&&!t.other,t.steps.join(' · '));
     }
     await ctx.close();
   }
@@ -204,7 +213,7 @@ const SEED=(role)=>`
     await p.evaluate(()=>hwhoSet('u2'));await p.waitForTimeout(700);
     const z2=await p.evaluate(()=>({steps:hmSteps().map(x=>x.t),
       back:!!document.querySelector('.hwho-back')}));
-    ok('④ 0건이어도 <b>팀원 화면으로 건너간다</b>',z2.steps.join()==='홍길순B,홍○순'&&z2.back,z2.steps.join(' · '));
+    ok('④ 0건이어도 <b>팀원 화면으로 건너간다</b>',sameSet(z2.steps,['홍길순B','홍○순'])&&z2.back,z2.steps.join(' · '));
     await ctx.close();
   }
   /* ── ⑤ 비포&애프터 → 전&후 만들기 ── */
@@ -232,9 +241,24 @@ const SEED=(role)=>`
     const {ctx,p}=await mk('member');
     const W=()=>p.evaluate(()=>{const w=window.__W.slice();window.__W=[];return w;});
     await W();
-    const strip=await p.evaluate(()=>{const e=document.querySelector('.hdb');
-      return e?[...e.querySelectorAll('.hdb-b')].map(x=>x.innerText.trim()):null;});
+    /* ⚠ 2026-09-23 · 단계 줄은 <b>배정 DB 에서 온 줄</b>에만 섭니다. 여태는
+       「맨 위 카드가 늘 DB 줄」 이라 그냥 읽었는데, 홈이 줄을 <b>점수 차례</b>로
+       세우게 되면서 한 번도 못 뵌 고객(560)이 단계 줄(520) 보다 위로 옵니다.
+       그건 맞는 동작입니다. 그래서 사장님이 하시는 대로 <b>앞 분들을 끝내며</b>
+       DB 줄까지 내려가서 봅니다 — 「단계를 바꿀 수 있나」 를 그대로 잽니다. */
+    const strip=await p.evaluate(()=>{
+      for(var n=0;n<20;n++){
+        var r=hmNext(); if(!r||!r.x)break;
+        var e=document.querySelector('.hdb');
+        if(e)return [].slice.call(e.querySelectorAll('.hdb-b')).map(function(x){return x.innerText.trim();});
+        if(r.x.k==='db')break;                  /* DB 줄인데도 안 섰으면 그대로 빨간불 */
+        hmQdoneSet(r.x.key); hmPaint();
+      }
+      var e2=document.querySelector('.hdb');
+      return e2?[].slice.call(e2.querySelectorAll('.hdb-b')).map(function(x){return x.innerText.trim();}):null;
+    });
     ok('⑥ 홈에 단계 줄이 선다',!!strip&&strip.length>=4,(strip||[]).join(' | '));
+    await p.evaluate(()=>{hmQdoneClear();hmPaint();});
     await p.evaluate(()=>hdbUp('d1'));await p.waitForTimeout(450);
     const w1=await W();
     ok('⑥ 단계가 dbs 에 저장된다 (CRM 이 읽는 표)',

@@ -47,9 +47,15 @@ is(new Set(ids).size === ids.length,
 is((q[0] || {}).w === 100,
    '  남는 것은 <b>가장 높은 하나</b>다 — ' + ((q[0] || {}).w) + '점 (오늘 약속)');
 is(ids.indexOf('h3') < 0, '  증권전달은 오늘 자리에 <b>안 선다</b> — 옮기기 전과 같다');
-/* 홈도 같은 규칙을 씁니다 — 세우는 자리(hmSteps)가 id 로 접는지 글자로 봅니다 */
-is(/seen\[dk\]!==undefined/.test(IDX) && /hmQPromise/.test(IDX),
-   '  홈(hmSteps)도 <b>id 로 접는다</b> — 달력과 30일 약속에 같은 분이 서도 한 줄');
+/* ⚠ 2026-09-23 · 여기서 <b>글자 모양</b>(seen[dk]!==undefined)을 봤습니다.
+   접는 방식을 「먼저 온 것」 에서 「<b>점수가 높은 것</b>」 으로 고치자, 접는
+   일은 그대로 잘 되는데 점검만 빨간불이 켜졌습니다. 헛것을 잡는 점검은 안
+   잡는 점검보다 나쁩니다 (8번).
+   그래서 <b>실제로 접히는지</b>는 브라우저를 띄우는 check-homeday 가 재고
+   (「같은 분이 두 줄로 안 선다」), 여기 글자 점검은 <b>홈이 이 규칙 파일을
+   쓰는지</b> 만 봅니다 — 그것이 브라우저 없이 정직하게 말할 수 있는 전부입니다. */
+is(/hmQPromise\(\)/.test(IDX) && /hmQSignal\(\)/.test(IDX) && /DAYRANK\.promiseOf/.test(IDX),
+   '  홈이 <b>같은 규칙 파일</b>을 쓴다 — 30일 약속도 신호도 day-rank 가 셈한다');
 
 console.log('\n[2] <b>순위 규칙이 day-rank.js 에만 있다</b> (5번)');
 const RULE = [
@@ -99,6 +105,38 @@ is(!/if\(!ap\.length\)return\s*''/.test(rt),
 is(/hm-rt-none/.test(rt) && /갈 데가 없습니다/.test(rt),
    '  <b>무엇을 하면 되는지</b> 적는다 — 「지역을 묶어 하루를 잡으시면」');
 is(/hm-rt-none\{/.test(IDX), '  그 줄의 <b>옷</b>도 있다 — 없으면 글자만 덩그러니 남는다');
+
+console.log('\n[5] <b>신호 — 오늘 이 분께 걸 구실</b> (명세서의 signals())');
+/* 생일 — D-7 부터 D-1 까지. D-0 은 달력이 이미 세웁니다 (한 곳만 답한다 · 5번) */
+const sBd = R.signalsOf({ today: T, bd: '09-27' });      /* T=2026-09-23 → D-4 */
+is((sBd[0] || {}).id === 'bd' && sBd[0].sc === 700 + (8 - 4) * 8,
+   '  생일 <b>D-4</b> 가 선다 — ' + (sBd[0] || {}).t + ' · ' + (sBd[0] || {}).sc + '점');
+is(R.signalsOf({ today: T, bd: '09-23' }).length === 0,
+   '  생일 <b>당일은 여기서 안 센다</b> — 달력의 생일 갈래가 이미 세운다 (5번)');
+is(R.signalsOf({ today: T, bd: '11-30' }).length === 0,
+   '  <b>여드레 뒤는 아직</b> 안 센다 — 오늘 걸 구실이 아니다');
+/* 계약 주년 — 2년차부터. 1년차는 계약 마디(12개월)가 이미 셉니다 */
+const sAnn = R.signalsOf({ today: T, cd: '2022-09-25' });
+is((sAnn[0] || {}).id === 'ann' && /4주년/.test((sAnn[0] || {}).t || ''),
+   '  계약 <b>4주년 D-2</b> 가 선다 — ' + (sAnn[0] || {}).t);
+is(R.signalsOf({ today: T, cd: '2025-09-25' }).length === 0,
+   '  <b>1주년은 여기서 안 센다</b> — 계약 마디(12개월)가 이미 세운다 (5번)');
+/* 자녀·보험료 비중 — <b>늘 참</b>이라 줄을 안 세운다 */
+const sKid = R.signalsOf({ today: T, kids: [2019, 2007] });
+is(sKid.length === 2 && sKid.every(s => s.when === 'any'),
+   '  자녀 7세·19세는 <b>줄을 안 세운다</b>(when:any) — 해가 바뀔 때까지 매일 서면 큐가 안 줄어든다');
+is(R.signalsOf({ today: T, kids: [2018, ''] }).length === 0,
+   '  <b>8세는 안 센다</b> · 태어난 해를 모르면 안 센다 (1번)');
+const sHi = R.signalsOf({ today: T, finc: '400', fins: '40' });
+is((sHi[0] || {}).id === 'hi' && (sHi[0] || {}).sc === 480,
+   '  보험료 비중 <b>10%</b> 가 잡힌다 — ' + (sHi[0] || {}).t);
+is(R.signalsOf({ today: T, finc: '400', fins: '' }).length === 0,
+   '  <b>한쪽만 적혀 있으면 안 나눈다</b> — 0 으로 채우면 없는 비중이 생긴다 (1번)');
+/* 홈이 그 규칙을 <b>그대로</b> 쓰는가 — 여기에 숫자를 베껴 적으면 두 벌이다 */
+is(/DAYRANK\.signalsOf/.test(IDX) && !/700\s*\+\s*\(8\s*-/.test(IDX),
+   '  홈은 <b>부르기만</b> 한다 — 점수를 index.html 에 베껴 적지 않았다 (5번)');
+is(/when!=='day'/.test(IDX),
+   '  홈이 <b>날짜 신호만</b> 줄로 세운다 — 늘 참인 것은 「왜 이분인가」 로만 쓴다');
 
 console.log('\n──────────────────────────────');
 if (bad) { console.log('✗ 오늘 큐 — 고칠 자리 ' + bad + '곳'); process.exit(1); }
