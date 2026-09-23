@@ -29,7 +29,11 @@ const SRC = fs.readFileSync('app/index.html', 'utf8');
 const TOKENS = ['--t-ink', '--t-sub', '--t-sub2', '--t-line', '--t-bg', '--t-card',
                 '--t-point', '--t-point-l', '--t-pos', '--t-warn', '--t-neg',
                 '--t-r', '--t-r-btn', '--t-r-sm'];
-const CLASSES = ['t-card', 't-btn', 't-h1', 't-sub', 't-row', 't-chip', 't-sheet', 't-pad'];
+/* ⚠ <b>.tz- 를 빠뜨렸다가 되돌리기에서 걸렸습니다.</b> 홈 카드 스택의
+   옷은 .tz- 라, 여기 안 적으면 거기에 hex 를 적어도 조용했습니다 —
+   안 울리는 알람은 알람이 아닙니다 (8번).                             */
+const CLASSES = ['t-card', 't-btn', 't-h1', 't-sub', 't-row', 't-chip', 't-sheet', 't-pad',
+                 'tz', 'tz-greet', 'tz-hero', 'tz-hc', 'tz-done'];
 
 console.log('\n[1] --t- 토큰이 <b>한 곳에만</b> 있나 (5번)');
 /* <b>정의</b>만 셉니다 — 「--t-ink:」 처럼 뒤에 콜론이 오는 자리.
@@ -97,15 +101,22 @@ console.log('\n[3] 홈에 <b>새 저장 호출</b>이 생겼나');
    함수를 부르기만 하십시오. <b>두 벌이 되는 순간 데이터가 깨집니다</b>」.
    ★ <b>renderHome 안</b>만 봅니다. 홈에서 부르는 기존 함수(hdbSave 등)는
      제 자리에 그대로 있어야 하고, 그것까지 잡으면 헛것입니다 (8번). */
+/* ⚠ <b>renderHome 만 보다가 되돌리기에서 걸렸습니다.</b> 홈 카드를
+   hmToss* 함수로 빼는 순간 거기 넣은 저장 호출이 <b>조용히 지나갔습니다</b>.
+   홈을 그리는 함수는 <b>renderHome 하나가 아닙니다</b> — 이름으로 모읍니다 (8번). */
+const HOME_FN = ['renderHome'];
+(SRC.match(/function\s+(hmToss[A-Za-z0-9_]*)\s*\(/g) || [])
+  .forEach(m => HOME_FN.push(m.replace(/function\s+/, '').replace(/\s*\($/, '')));
+const cut = (name) => {
+  const i = SRC.indexOf('function ' + name + '(');
+  if (i < 0) return '';
+  const rest = SRC.slice(i), e = rest.search(/\n\}/);
+  return e > 0 ? rest.slice(0, e) : rest;
+};
 const i0 = SRC.indexOf('function renderHome(');
-is(i0 >= 0, '  renderHome 을 찾았다');
-let home = '';
-if (i0 >= 0) {
-  /* 함수 끝 — 줄 맨 앞의 } 까지 */
-  const rest = SRC.slice(i0);
-  const end = rest.search(/\n\}/);
-  home = end > 0 ? rest.slice(0, end) : rest;
-}
+is(i0 >= 0 && HOME_FN.length >= 5,
+   '  홈을 그리는 함수 <b>' + HOME_FN.length + '개</b>를 다 본다 — ' + HOME_FN.join(' '));
+let home = HOME_FN.map(cut).join('\n');
 const SAVE = /\.(insert|update|upsert|delete)\s*\(/g;
 const hits = home.match(SAVE) || [];
 is(hits.length === 0, '  홈이 <b>스스로 저장하지 않는다</b>' +
