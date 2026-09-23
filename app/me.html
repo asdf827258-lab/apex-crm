@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>내 보장 · 보장분석 동의</title>
+<!-- 고객 폰에서 여는 화면입니다. 폰 홈 화면에 담으면 앱처럼 열립니다(day.html 과 같은 방식).
+     ★ 이 화면은 <b>서버를 한 번도 부르지 않습니다.</b> 동의 확인서와 자료는 고객이
+       카카오톡으로 설계사에게 직접 보냅니다. check-cportal 이 이것을 지킵니다.
+     ★ 동의서 문구·주소 꾸리기는 apex-consent.js 한 곳에 있습니다 (5번). -->
+<link rel="manifest" href="me.webmanifest"/>
+<meta name="theme-color" content="#1A56DB"/>
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png"/>
+<link rel="apple-touch-icon" href="icons/icon-180.png"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="내 보장"/>
+<meta name="format-detection" content="telephone=no"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --bg:#F2F5FA; --card:#FFFFFF; --ink:#191F28; --sub:#4E5968; --mute:#8B95A1;
+  --line:#E5E8EB; --blue:#1A56DB; --blue-l:#E8F0FE; --ok:#0F766E; --ok-l:#ECFDF5;
+  --warn:#B45309; --warn-l:#FFFBEB; --bad:#B91C1C; --bad-l:#FEF2F2;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#070C16; --card:#111827; --ink:#F3F4F6; --sub:#C3CAD5; --mute:#8B95A1;
+    --line:#263041; --blue:#6EA8FE; --blue-l:#15233D; --ok:#5EEAD4; --ok-l:#0B2A26;
+    --warn:#FBBF24; --warn-l:#2A2110; --bad:#FCA5A5; --bad-l:#2B1414;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:Pretendard,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  font-size:16px;line-height:1.6;letter-spacing:-.01em;
+  padding:max(16px,env(safe-area-inset-top)) 16px max(32px,env(safe-area-inset-bottom))}
+main{max-width:560px;margin:0 auto}
+h1{font-size:22px;font-weight:800;margin:6px 0 4px}
+h2{font-size:17px;font-weight:800;margin:0 0 8px}
+p{margin:6px 0}
+.sub{color:var(--sub);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:12px 0}
+.who{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:14px;color:var(--sub)}
+.who b{color:var(--ink);font-size:15px}
+.who a{color:var(--blue);text-decoration:none;font-weight:700}
+.tag{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:2px}
+.tag.need{background:var(--blue-l);color:var(--blue)}
+.tag.sep{background:var(--warn-l);color:var(--warn)}
+.tag.opt{background:var(--line);color:var(--sub)}
+dl{margin:10px 0 4px;font-size:14px}
+dt{color:var(--mute);font-weight:700;margin-top:8px}
+dd{color:var(--ink)}
+.pick{display:flex;gap:8px;margin-top:12px}
+.pick label{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:48px;
+  border:1.5px solid var(--line);border-radius:12px;font-weight:700;cursor:pointer;background:var(--card)}
+.pick input{width:20px;height:20px}
+.pick label.on-yes{border-color:var(--ok);background:var(--ok-l);color:var(--ok)}
+.pick label.on-no{border-color:var(--mute);background:var(--line)}
+ul.note{padding-left:18px;font-size:14px;color:var(--sub)}
+ul.note li{margin:4px 0}
+.fld{display:block;margin-top:6px}
+.fld span{display:block;font-size:14px;font-weight:700;margin-bottom:4px}
+.fld em{font-style:normal;color:var(--mute);font-weight:500}
+.fld input{width:100%;min-height:48px;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;
+  font-size:16px;background:var(--card);color:var(--ink)}
+.btn{display:block;width:100%;min-height:52px;border:0;border-radius:14px;font-size:16px;font-weight:800;
+  cursor:pointer;margin-top:12px;background:var(--blue);color:#fff}
+.btn.ghost{background:transparent;color:var(--blue);border:1.5px solid var(--line)}
+.btn.bad{background:transparent;color:var(--bad);border:1.5px solid var(--line)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.msg{border-radius:12px;padding:10px 12px;font-size:14px;margin-top:10px}
+.msg.bad{background:var(--bad-l);color:var(--bad)}
+.msg.ok{background:var(--ok-l);color:var(--ok)}
+.msg.warn{background:var(--warn-l);color:var(--warn)}
+.step{display:flex;gap:10px;align-items:flex-start}
+.step .n{flex:none;width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;
+  display:grid;place-items:center;font-weight:800;font-size:14px}
+.files{list-style:none;margin-top:8px;font-size:14px}
+.files li{padding:6px 0;border-bottom:1px solid var(--line);color:var(--sub);word-break:break-all}
+textarea.copy{width:100%;min-height:96px;margin-top:8px;border:1px solid var(--line);border-radius:10px;
+  padding:8px;font-size:13px;background:var(--bg);color:var(--ink)}
+.foot{font-size:12px;color:var(--mute);text-align:center;margin-top:18px}
+</style>
+</head>
+<body>
+<main id="meApp" aria-live="polite"></main>
+<script src="apex-cusone.js?v=1"></script>
+<script src="apex-consent.js"></script>
+<script>
+/* ════════════════════════════════════════════════════════════════
+   내 보장 — 고객이 <b>자기 폰에서</b> 여는 화면
+
+   하는 일은 셋뿐입니다.
+     ① 동의  — 필수(개인정보)와 <b>별도</b>(건강정보)를 따로 받는다.
+               아무것도 미리 골라 두지 않는다.
+     ② 확인서 — 동의한 내용을 주소 한 줄로 만들어 고객이 카톡으로 보낸다.
+     ③ 자료  — 고객이 가진 보장분석·증권 파일을 카톡으로 보낸다.
+               <b>우리 서버를 거치지 않는다.</b> 이 화면은 파일을 읽지도 않는다.
+
+   보장분석 자체는 설계사 화면(보장분석 전·후 만들기) 한 곳에서 합니다.
+   고객 폰에 분석기를 한 벌 더 두면 쌍둥이가 됩니다 (5번).
+
+   이 폰에 남기는 것 — 받은 링크와 동의 기록. 성함은 <b>안 남깁니다</b>
+   (가린 이름 cusMask 와 지문만).
+   ════════════════════════════════════════════════════════════════ */
+var ME_KEY='apex_me';
+var ME={inv:null,rec:null,ans:{},files:[],msg:'',copy:''};
+
+function meEsc(s){return (''+(s==null?'':s)).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function meGet(){ try{ var s=localStorage.getItem(ME_KEY); return s?(JSON.parse(s)||{}):{}; }catch(e){ return {}; } }
+function mePut(o){ try{ localStorage.setItem(ME_KEY,JSON.stringify(o)); }catch(e){} }
+/* 링크 번호마다 <b>따로</b> 둔다. 한 칸에 두면 새 링크를 여는 순간 앞서 한
+   동의 기록이 지워진다 — 점검이 실제로 그렇게 잡았다. */
+function meKeep(){
+  var s=meGet(); s.by=s.by||{};
+  s.by[ME.inv.id]={inv:ME.inv,rec:ME.rec}; s.last=ME.inv.id;
+  mePut(s);
+}
+function meBase(){ return location.origin+location.pathname; }
+function meDate(iso){ var d=new Date(iso); if(isNaN(d))return ''; return d.getFullYear()+'. '+(d.getMonth()+1)+'. '+d.getDate()+'.'; }
+function meAsked(k){ return k==='base'||((ME.inv&&ME.inv.ask)||[]).indexOf(k)>=0; }
+
+/* 링크가 제대로 된 것인가 — 모자라면 <b>세우지 않는다</b> (1번).
+   보유 기간·수집하는 곳이 빈 동의서는 동의서가 아니다. */
+function meInvOk(x){
+  return !!(x&&x.v===1&&x.id&&x.adv&&x.org&&x.keep);
+}
+
+/* ── 화면 ─────────────────────────────────────────────────────── */
+function meWhoHtml(){
+  var x=ME.inv;
+  return '<div class="who"><b>담당 설계사 '+meEsc(x.adv)+'</b><span>'+meEsc(x.org)+'</span>'+
+    (x.ph?'<a href="tel:'+meEsc(x.ph)+'">📞 '+meEsc(x.ph)+'</a>':'')+'</div>';
+}
+function meTermHtml(t){
+  var a=ME.ans[t.k]||'';
+  return '<section class="card" data-term="'+t.k+'">'+
+    '<h2>'+meEsc(t.t)+(t.sep?'<span class="tag sep">별도 동의</span>':'')+
+      (t.need?'<span class="tag need">필수</span>':'<span class="tag opt">선택</span>')+'</h2>'+
+    '<dl>'+
+      '<dt>무엇에 쓰나요</dt><dd>'+meEsc(t.why)+'</dd>'+
+      '<dt>무엇을 받나요</dt><dd>'+meEsc(t.what)+'</dd>'+
+      '<dt>얼마 동안 두나요</dt><dd>'+meEsc(ME.inv.keep)+'</dd>'+
+      '<dt>누가 받나요</dt><dd>'+meEsc(ME.inv.org)+' · 담당 설계사 '+meEsc(ME.inv.adv)+'</dd>'+
+      '<dt>동의하지 않으시면</dt><dd>'+meEsc(t.no)+'</dd>'+
+    '</dl>'+
+    '<div class="pick" role="radiogroup" aria-label="'+meEsc(t.t)+'">'+
+      '<label class="'+(a==='yes'?'on-yes':'')+'"><input type="radio" name="cp_'+t.k+'" value="yes" onchange="meAns(\''+t.k+'\',\'yes\')"'+(a==='yes'?' checked':'')+'>동의합니다</label>'+
+      '<label class="'+(a==='no'?'on-no':'')+'"><input type="radio" name="cp_'+t.k+'" value="no" onchange="meAns(\''+t.k+'\',\'no\')"'+(a==='no'?' checked':'')+'>동의하지 않습니다</label>'+
+    '</div></section>';
+}
+function meAskHtml(){
+  var h='<h1>보장분석 동의</h1>'+
+    '<p class="sub">보장분석을 맡기시기 전에 동의를 받습니다. 항목마다 <b>따로</b> 골라 주세요.</p>'+
+    '<div class="card">'+meWhoHtml()+
+    '<p class="sub" style="margin-top:8px">이 화면은 고객님 폰에서만 돌고, <b>어디에도 올리지 않습니다.</b> '+
+    '동의하시면 확인서와 자료를 <b>카카오톡으로 설계사에게 직접</b> 보내시게 됩니다.</p></div>';
+  for(var i=0;i<CP_TERMS.length;i++)if(meAsked(CP_TERMS[i].k))h+=meTermHtml(CP_TERMS[i]);
+  h+='<div class="card"><ul class="note">';
+  for(var j=0;j<CP_NOTE.length;j++)h+='<li>'+meEsc(CP_NOTE[j])+'</li>';
+  h+='</ul>'+
+    '<label class="fld"><span>성함 <em>— 본인 확인용입니다. 설계사에게는 가려서 갑니다</em></span>'+
+    '<input id="meName" autocomplete="name" maxlength="20" placeholder="예) 홍길동"></label>'+
+    (ME.msg?'<div class="msg bad">'+meEsc(ME.msg)+'</div>':'')+
+    '<button class="btn" id="meGoBtn" onclick="meSubmit()">확인했습니다</button></div>'+
+    '<p class="foot">동의서 판 '+meEsc(CP_VER)+'</p>';
+  return h;
+}
+function meAns(k,v){
+  var nm=document.getElementById('meName'), keep=nm?nm.value:'';
+  ME.ans[k]=v; ME.msg='';
+  mePaint();
+  var n2=document.getElementById('meName'); if(n2)n2.value=keep;
+}
+
+/* 이름 지문 — 나중에 「그 분이 맞나」를 되짚어 볼 수 있게. 이름 자체는 안 보낸다.
+   https 가 아니면(crypto.subtle 없음) 지문 없이 간다 — 만들어 넣지 않는다. */
+function meHash(s){
+  try{
+    if(!(window.crypto&&crypto.subtle&&window.TextEncoder))return Promise.resolve('');
+    return crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)).then(function(b){
+      var a=new Uint8Array(b),o='',i;
+      for(i=0;i<8;i++)o+=('0'+a[i].toString(16)).slice(-2);
+      return o;
+    },function(){return '';});
+  }catch(e){ return Promise.resolve(''); }
+}
+function meSubmit(){
+  var nmEl=document.getElementById('meName'),nm=(nmEl&&nmEl.value||'').replace(/\s+/g,'');
+  if(ME.ans.base!=='yes'){
+    ME.msg=ME.ans.base==='no'
+      ?'필수 동의를 하지 않으시면 보장분석을 해 드릴 수 없습니다. 궁금하신 점은 담당 설계사에게 물어봐 주세요.'
+      :'「'+cpTerm('base').t+'」에서 하나를 골라 주세요.';
+    mePaint(); if(nmEl){var e=document.getElementById('meName'); if(e)e.value=nm;} return;
+  }
+  if(meAsked('health')&&!ME.ans.health){
+    ME.msg='「'+cpTerm('health').t+'」에서 동의하시는지, 안 하시는지 골라 주세요.';
+    mePaint(); var e2=document.getElementById('meName'); if(e2)e2.value=nm; return;
+  }
+  if(!nm){ ME.msg='성함을 적어 주세요.'; mePaint(); return; }
+  meHash(ME.inv.id+':'+nm).then(function(nh){
+    var now=new Date().toISOString();
+    ME.rec={k:'a',v:1,id:ME.inv.id,ver:CP_VER,at:now,
+      base:{ok:true},
+      health:{asked:meAsked('health'),ok:meAsked('health')&&ME.ans.health==='yes'},
+      nm:cusMask(nm),nh:nh,adv:ME.inv.adv,org:ME.inv.org,keep:ME.inv.keep};
+    ME.msg='';
+    meKeep();
+    mePaint();
+    try{ window.scrollTo(0,0); }catch(e){}
+  });
+}
+
+function meDoneHtml(){
+  var r=ME.rec,h=r.health&&r.health.ok,w='';
+  if(r.gone)w='<div class="msg warn">동의를 모두 거두셨습니다('+meEsc(meDate(r.gone))+'). 아래 「거둔 것 알리기」로 설계사에게 알려 주세요.</div>';
+  var out='<h1>'+(r.gone?'동의를 거두셨습니다':'동의해 주셨습니다')+'</h1>'+
+    '<div class="card">'+meWhoHtml()+
+    '<p style="margin-top:8px"><b>'+meEsc(cpSummary(r))+'</b></p>'+
+    '<p class="sub">'+meEsc(meDate(r.at))+' · 동의서 판 '+meEsc(r.ver)+'</p>'+w+'</div>';
+  if(!r.gone){
+    out+='<div class="card"><div class="step"><span class="n">1</span><div><h2>설계사에게 확인서 보내기</h2>'+
+      '<p class="sub">동의하신 내용을 한 줄로 만들어 카카오톡으로 보냅니다. 성함은 가려서 들어갑니다.</p></div></div>'+
+      '<button class="btn" onclick="meSendRec()">📨 확인서 보내기</button></div>';
+    out+='<div class="card"><div class="step"><span class="n">2</span><div><h2>보험 자료 보내기</h2>'+
+      '<p class="sub">가지고 계신 <b>보장분석 PDF · 보험증권 · 보험 조회 화면을 찍은 사진</b>을 보내 주세요. '+
+      '파일은 <b>카카오톡으로 설계사에게 바로</b> 갑니다 — 이 화면은 파일을 열어 보지도, 어디에 올리지도 않습니다.</p>'+
+      (h?'':'<div class="msg warn">건강정보에는 동의하지 않으셨습니다. <b>진료·청구 기록이 적힌 쪽은 빼고</b> 보내 주세요. '+
+        '가입 내역만으로 분석해 드립니다.</div>')+
+      '</div></div>'+
+      '<label class="btn ghost" style="display:flex;align-items:center;justify-content:center">📎 파일 고르기'+
+      '<input type="file" id="meFiles" accept="application/pdf,image/*" multiple style="display:none" onchange="mePick(this)"></label>'+
+      meFilesHtml()+
+      (ME.files.length?'<button class="btn" onclick="meSendFiles()">📨 고른 파일 보내기</button>':'')+
+      '</div>';
+    out+='<div class="card"><div class="step"><span class="n">3</span><div><h2>설계사가 분석해 드립니다</h2>'+
+      '<p class="sub">보내 주신 자료로 지금 보장과 빠진 보장을 정리해 설명드립니다. '+
+      '보험 가입 여부와 보험료는 보험사 심사 결과에 따릅니다.</p></div></div></div>';
+  }
+  out+=(ME.msg?'<div class="msg ok">'+meEsc(ME.msg)+'</div>':'')+
+    (ME.copy?'<div class="card"><p class="sub">이 폰에서는 바로 보내기가 안 됩니다. 아래 글을 길게 눌러 복사한 뒤 카카오톡에 붙여 넣어 주세요.</p>'+
+      '<textarea class="copy" readonly onclick="this.select()">'+meEsc(ME.copy)+'</textarea></div>':'');
+  out+='<div class="card"><h2>동의 거두기</h2>'+
+    '<p class="sub">언제든 거두실 수 있습니다. 거두신 뒤 「거둔 것 알리기」로 설계사에게 알려 주세요.</p>'+
+    (!r.gone&&h?'<button class="btn bad" onclick="meWithdraw([\'health\'])">건강정보 동의만 거두기</button>':'')+
+    (!r.gone?'<button class="btn bad" onclick="meWithdraw([\'base\',\'health\'])">동의 모두 거두기</button>':'')+
+    (r.wd?'<button class="btn ghost" onclick="meSendWd()">📨 거둔 것 알리기</button>':'')+
+    '</div><p class="foot">이 화면은 우리 서버에 아무것도 올리지 않습니다.</p>';
+  return out;
+}
+function meFilesHtml(){
+  if(!ME.files.length)return '';
+  var h='<ul class="files">',i,f;
+  for(i=0;i<ME.files.length;i++){ f=ME.files[i]; h+='<li>'+meEsc(f.name)+' · '+(Math.round(f.size/1024/102.4)/10)+'MB</li>'; }
+  return h+'</ul>';
+}
+function mePick(inp){ ME.files=[].slice.call(inp.files||[]); ME.msg=''; ME.copy=''; mePaint(); }
+
+/* ── 보내기 — 폰의 「공유」로. 안 되면 복사할 글을 보여 준다 ────────── */
+function meShareText(txt){
+  ME.copy=''; ME.msg='';
+  if(navigator.share){
+    navigator.share({text:txt}).then(function(){ ME.msg='보냈습니다.'; mePaint(); },
+      function(e){ if(e&&e.name==='AbortError')return; ME.copy=txt; mePaint(); });
+    return;
+  }
+  ME.copy=txt;
+  try{ if(navigator.clipboard)navigator.clipboard.writeText(txt).then(function(){ ME.msg='복사했습니다. 카카오톡에 붙여 넣어 주세요.'; mePaint(); },function(){}); }catch(e){}
+  mePaint();
+}
+function meRecText(){
+  var r=ME.rec;
+  return '[보장분석 동의 확인서] '+r.nm+' · '+cpSummary(r)+'\n'+meBase()+'#a='+cpEnc(r);
+}
+function meSendRec(){ meShareText(meRecText()); }
+function meSendFiles(){
+  var fs=ME.files;
+  ME.copy=''; ME.msg='';
+  if(navigator.canShare&&navigator.share&&navigator.canShare({files:fs})){
+    navigator.share({files:fs,title:'보험 자료'}).then(function(){ ME.msg='보냈습니다.'; mePaint(); },
+      function(e){ if(e&&e.name==='AbortError')return; ME.msg='보내지 못했습니다. 카카오톡 대화방의 ＋ → 파일에서 골라 보내 주세요.'; mePaint(); });
+    return;
+  }
+  ME.msg='이 폰에서는 여기서 바로 보낼 수 없습니다. 카카오톡 대화방의 ＋ → 파일(또는 앨범)에서 골라 보내 주세요.';
+  mePaint();
+}
+function meWithdraw(what){
+  var all=what.indexOf('base')>=0;
+  if(!confirm(all?'동의를 모두 거두시겠습니까? 보장분석을 더 진행할 수 없습니다.':'건강정보 동의를 거두시겠습니까?'))return;
+  var now=new Date().toISOString(), r=ME.rec;
+  r.wd={k:'w',v:1,id:r.id,ver:r.ver,at:now,what:what,nm:r.nm,nh:r.nh};
+  if(all)r.gone=now; else r.health.ok=false;
+  meKeep();
+  mePaint();
+}
+function meSendWd(){
+  var w=ME.rec.wd;
+  meShareText('[보장분석 동의 거둠] '+w.nm+' · '+cpSummary(w)+'\n'+meBase()+'#w='+cpEnc(w));
+}
+
+/* ── 설계사가 받은 확인서를 눌렀을 때 — 보여 주기만 한다(이 폰에 안 남긴다) ── */
+function meReceiptHtml(r,kind){
+  if(!r||r.v!==1||!r.id)return '<h1>확인서를 읽지 못했습니다</h1><div class="card"><p class="sub">주소가 잘렸을 수 있습니다. 받은 글 전체를 다시 복사해 주세요.</p></div>';
+  return '<h1>'+(kind==='w'?'동의 거둠 알림':'보장분석 동의 확인서')+'</h1>'+
+    '<div class="card"><p><b>'+meEsc(r.nm||'')+'</b> · '+meEsc(cpSummary(r))+'</p>'+
+    '<p class="sub">'+meEsc(meDate(r.at))+' · 동의서 판 '+meEsc(r.ver||'')+'</p></div>'+
+    '<div class="card"><h2>설계사님께</h2><p class="sub">이 글 전체를 복사해 <b>APEX → 고객 365일 → 그 분 카드 → 🤝 고객 동의 → 회신 붙여넣기</b>에 넣어 주세요. '+
+    '그 분 기록에 남습니다. 이 폰에는 아무것도 저장하지 않았습니다.</p></div>';
+}
+
+function mePaint(){
+  var el=document.getElementById('meApp'),h;
+  var ha=(location.hash||'');
+  if(/^#a=/.test(ha))h=meReceiptHtml(cpFind(ha,'a'),'a');
+  else if(/^#w=/.test(ha))h=meReceiptHtml(cpFind(ha,'w'),'w');
+  else if(!ME.inv)h='<h1>내 보장</h1><div class="card"><p>담당 설계사에게 받은 링크로 열어 주세요.</p>'+
+    '<p class="sub">이 화면은 링크에 담긴 설계사 정보로만 열립니다.</p></div>';
+  else if(!meInvOk(ME.inv))h='<h1>링크가 온전하지 않습니다</h1><div class="card"><p class="sub">'+
+    '동의서에 들어가야 할 내용(수집하는 곳·보유 기간)이 빠져 있어 <b>화면을 세우지 않았습니다.</b> '+
+    '담당 설계사에게 링크를 다시 받아 주세요.</p></div>';
+  else if(ME.rec&&ME.rec.id===ME.inv.id)h=meDoneHtml();
+  else h=meAskHtml();
+  el.innerHTML=h;
+}
+function meBoot(){
+  var ha=location.hash||'', s=meGet(), inv=null;
+  if(/^#i=/.test(ha))inv=cpFind(ha,'i');
+  var by=s.by||{},e;
+  if(inv){
+    ME.inv=inv;
+    /* 같은 링크를 다시 열면 한 동의를 그대로 보여 준다. 새 링크면 새로 받는다. */
+    e=inv.id&&by[inv.id];
+    ME.rec=(e&&e.rec)||null;
+    if(meInvOk(inv))meKeep();
+  } else if(!/^#[aw]=/.test(ha)&&s.last&&by[s.last]){
+    ME.inv=by[s.last].inv; ME.rec=by[s.last].rec||null;
+  }
+  mePaint();
+}
+window.addEventListener('hashchange',meBoot);
+meBoot();
+</script>
+</body>
+</html>

@@ -203,7 +203,9 @@ var EXTERNAL = ['supabase', 'PENSION', 'html2canvas', 'PptxGenJS', 'pdfjsLib', '
      ※ apex-stage.js 의 APEX_STAGE 는 부르는 쪽이 typeof 로 감싸서 여기 없습니다. */
   'holdReady', 'holdOf', 'holdAll', 'holdSkel', 'holdSay', 'holdCss',
   'holdJong', 'holdEul', 'holdIga', 'holdRo', 'HOLD_VIEW', 'HOLD_RANK',
-  'nextCss', 'nextSheet', 'nextSheetHide'];
+  'nextCss', 'nextSheet', 'nextSheetHide',
+  /*   apex-consent.js  고객 동의서 문구·주소 꾸리기 — 고객 폰(me.html)과 한 벌 */
+  'CP_VER', 'CP_DRAFT', 'CP_TERMS', 'CP_NOTE', 'cpTerm', 'cpEnc', 'cpDec', 'cpFind', 'cpId', 'cpSummary'];
 
 function scriptsOf(src) {
   var out = [], re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi, m;
