@@ -122,8 +122,19 @@ async function waitBridge(page, ms) {
   await page.evaluate(() => go('finance'));
   const fin = await waitInFrame(page, 'finFrame', () => !!document.getElementById('s_name'));
   is(!!fin, '계산기가 다 떴다');
-  await sleep(2400);        /* 「준비됐다」 를 듣고 값이 들어갈 짬 */
-  const got = await readSide(page, ['s_name', 's_age', 's_job', 's_gross', 's_rage', 's_target', 's_nps']);
+  /* ⏱ 2026-09-23 · <b>시계가 아니라 값을 기다립니다.</b> 여기는
+     `sleep(2400)` 한 줄이었는데, CI 가 붐비는 판에서는 2.4초 안에 값이
+     안 건너와 <b>기본값(고객님·35·6000)을 읽고</b> 일곱 자리가 한꺼번에
+     빨간불이었습니다. 화면은 멀쩡한데 점검만 운 것이라 — 그런 점검이
+     제일 나쁩니다 (8번). 시계를 늘리는 대신 <b>값이 오기를</b> 기다립니다.
+     ★ <b>영영 안 오면 그대로 빨간불</b>입니다 — 15초까지만 봅니다.
+       (다리를 끊어 보고 15초 뒤 일곱 자리가 다 우는 것을 확인했습니다) */
+  let got = null;
+  for (let t = 0; t < 38; t++) {          /* 0.4초 × 38 ≈ 15초 */
+    got = await readSide(page, ['s_name', 's_age', 's_job', 's_gross', 's_rage', 's_target', 's_nps']);
+    if (got && got.s_name === '홍길동') break;
+    await sleep(400);
+  }
   is(!!got, '계산기 사이드바를 읽었다');
   if (got) {
     is(got.s_name === '홍길동', '이름이 넘어왔다 — ' + got.s_name);

@@ -997,6 +997,44 @@ async function gongsiList(coNm, q) {
   return { rows: rows.slice(0, 60), total: total, matched: q ? rows.length : null, q: q || '', co: coNm };
 }
 
+/* ══ 📑 <b>뉴스 꼬리표</b> — 이 기사가 여덟 통장 중 어디 이야기인가 ══
+   사장님 말씀 (2026-09-23) — 「APEX YUN PRO 에 <b>뉴스 꼬리표</b>를 답니다.
+   제목에 걸리면 확실, 본문만 걸리면 보조. <b>최대 두 개</b>까지. 하나도 안
+   걸리면 조용히 버리지 말고 <b>「판단 못 함」</b> 으로 세어 화면에 밝힙니다」.
+
+   ★ <b>낱말은 여기 안 적습니다.</b> config/sources.json 의
+     「키워드_통장1_…」 ~ 「키워드_통장8_…」 여덟 칸 <b>한 곳</b>에만 둡니다.
+     미끼 레이더가 「키워드_정책자금」 을 그렇게 쓰고 있고, 예전에 두 벌이
+     되었을 때 늘어난 쪽은 sources.json 뿐이라 그 차이만큼의 기사가 아무
+     말도 없이 버려졌습니다 (CLAUDE.md 5번).
+   ★ 꼬리표 <b>이름</b>도 여기 안 적습니다 — 칸 이름에서 그대로 떼어 옵니다.
+     app/index.html 의 WALLETS 통장 이름과 글자가 같아야 고객의 「비어 있는
+     통장」 과 맞는데, 한 글자만 어긋나도 매칭이 <b>조용히 0건</b>이 되고
+     아무 오류도 안 납니다. check-newstag 가 그것을 봅니다 (8번).         */
+const WTAG_KEYS = Object.keys(SOURCES)
+  .filter(k => /^키워드_통장\d+_/.test(k))
+  .sort((a, b) => (+a.match(/\d+/)[0]) - (+b.match(/\d+/)[0]));
+const WTAG_NAMES = WTAG_KEYS.map(k => k.replace(/^키워드_통장\d+_/, ''));
+function wtagsOf(title, desc) {
+  const t = String(title || ''), d = String(desc || '');
+  const sure = [], soft = [];
+  WTAG_KEYS.forEach((k, i) => {
+    const words = SOURCES[k] || [];
+    let inT = false, inD = false;
+    for (let j = 0; j < words.length; j++) {
+      if (!inT && t.indexOf(words[j]) >= 0) inT = true;
+      if (!inD && d.indexOf(words[j]) >= 0) inD = true;
+      if (inT) break;                       /* 제목에 걸리면 더 볼 것 없다 */
+    }
+    if (inT) sure.push(WTAG_NAMES[i]);
+    else if (inD) soft.push(WTAG_NAMES[i]);
+  });
+  /* 제목이 먼저, 그다음 본문. <b>최대 둘</b> — 셋을 달면 어느 통장 이야기인지
+     흐려져 「무엇이든 조금씩」 이 됩니다.                                */
+  const tags = sure.concat(soft).slice(0, 2);
+  return { tags: tags, sure: sure.length > 0 };
+}
+
 /* config/sources.json 에서 진짜 피드 칸만 (「_」 메모와 「키워드_」 낱말 목록은 뺀다) */
 function feedCats() {
   return Object.keys(SOURCES).filter(k => k[0] !== '_' && k.indexOf('키워드_') !== 0
@@ -1035,7 +1073,13 @@ async function news(cat) {
   items.forEach(it => {
     const hay = it.title + ' ' + it.desc;
     it.hits = kws.filter(w => hay.indexOf(w) >= 0);
+    /* 📑 <b>뉴스 꼬리표</b> — 이 기사가 여덟 통장 중 어디 이야기인가 */
+    const w = wtagsOf(it.title, it.desc);
+    it.wtags = w.tags; it.wsure = w.sure;
   });
+  /* <b>못 단 것을 조용히 버리지 않습니다</b> — 세어서 그대로 내보냅니다 (1번).
+     0 건으로 적으면 「전부 걸렸다」 로 읽힙니다.                        */
+  const wUntag = items.filter(it => !it.wtags.length).length;
   items.sort((a, b) => {
     if (b.hits.length !== a.hits.length) return b.hits.length - a.hits.length;
     const ta = Date.parse(a.date) || 0, tb = Date.parse(b.date) || 0;
@@ -1045,7 +1089,8 @@ async function news(cat) {
   /* 한 칸만 부르면 30건, 여러 칸을 부르면 칸마다 그만큼 — 칸을 나눠 놓고
      보여 줄 때 한 칸이 다른 칸 자리를 다 먹지 않게 한다.            */
   const cap = Math.max(nc.max_items || 30, cats.length * (nc.max_per_cat || 25));
-  return cSet(k, { items: items.slice(0, cap), keywords: kws, cats: known }, TTL.news);
+  return cSet(k, { items: items.slice(0, cap), keywords: kws, cats: known,
+                   wtag: { all: items.length, none: wUntag, names: WTAG_NAMES } }, TTL.news);
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -1470,4 +1515,7 @@ exports.handler = async function (event) {
 /* 검사에서만 쓰는 통로 — 공개 지연 시세의 판정과 계산을 밖에서 확인한다.
    node scripts/check-public-quote.js */
 exports._pub = { looksReal: pubLooksReal, shape: pubShape };
+/* 점검이 <b>같은 함수</b>를 그대로 불러 재도록 내보냅니다 — 점검이 제 나름의
+   짝퉁을 만들면 여기가 바뀌어도 점검은 옛것을 재고 초록만 켭니다 (5번·8번). */
+exports._wtag = { tagsOf: wtagsOf, keys: WTAG_KEYS, names: WTAG_NAMES };
 exports._relay = { ageMin: relayAgeMin, shape: relayShape, freshMin: RELAY_FRESH_MIN };
