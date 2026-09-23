@@ -24030,6 +24030,29 @@ function hmMsAlmCat(x){
   c=APEX_FIT.catOf(f.cat);
   return c?{ic:c.ic||'📰',t:c.t||f.cat}:null;
 }
+/* 오늘 뽑힌 분 중 <b>그 동네가 몇 분</b>인가 — 사장님 말씀 「이번 주 상담
+   AP·PC 를 찾아내서 <b>그 지역의 열 분</b>을 매일 추천해」.
+   ★ <b>모자라면 모자란 대로</b> 적습니다 (1번). 그 동네에 세 분밖에 없는데
+     열 분을 채우려고 딴 동네를 그 동네라고 적으면, 사장님이 헛걸음하십니다.
+   ★ 여기서 <b>다시 고르지 않습니다</b> (5번) — hmMsPeople 이 세운 그 차례
+     그대로 세고, 몇 분이 그 동네인지만 말합니다. */
+function hmMsHotLine(P){
+  var H=hmHotOf(),i,n=0,rg={};
+  if(!H.list.length)return '';
+  for(i=0;i<P.length;i++){
+    var h=hmHotHit(P[i].sub);
+    if(h){ n++; rg[h.rg]=1; }
+  }
+  var L=[],k;
+  for(k in rg)if(rg.hasOwnProperty(k))L.push(k);
+  if(!n)
+    return '<div class="hm-ms-hot none">📍 이번 주 상담 동네(<b>'+
+      osEsc(H.list.map(function(z){return z.rg;}).join(' · '))+
+      '</b>)에는 <b>오늘 뽑힌 분이 없습니다</b> — 사람을 지어내 채우지 않습니다.</div>';
+  return '<div class="hm-ms-hot">📍 오늘 <b>'+P.length+'분</b> 중 <b>'+
+    osEsc(L.join(' · '))+' '+n+'분</b>이 이번 주 상담 가시는 동네입니다 — '+
+    '<b>가는 김에</b> 약속을 잡으십시오.</div>';
+}
 function hmMsAlmRow(x,i){
   var R=(typeof HM_MS_POOL!=='undefined'&&HM_MS_POOL[x.k])||{},
       m=(typeof TDO!=='undefined'&&TDO[x.k])||null,
@@ -24077,7 +24100,8 @@ var HM_MS_BODY={
        '<button type="button" class="btn btn-ghost" onclick="hdbNew()">➕ 고객 넣기</button></div></div>');
    var h='',i;
    for(i=0;i<P.length;i++)h+=hmMsAlmRow(P[i],i);
-   return '<div class="hm-ms-list"><div class="hm-ms-lh">오늘 뽑힌 <b>'+P.length+'분</b>입니다 — '+
+   return hmMsHotLine(P)+
+     '<div class="hm-ms-list"><div class="hm-ms-lh">오늘 뽑힌 <b>'+P.length+'분</b>입니다 — '+
      '누르시면 <b>그 분으로</b> ②③④ 가 따라옵니다. '+hmHotSay()+'</div>'+h+'</div>'+
      '<div class="hm-ms-b"><button type="button" class="btn btn-ghost" onclick="go(\'crm\')">🔔 DB 통합 CRM 에서 보기</button></div>';
  },
@@ -24431,6 +24455,12 @@ function hmMsCss(){
    '.hm-ma-a{display:block;margin-top:3px;font-size:var(--t7);line-height:1.45;color:var(--ink-3)}'+
    '.hm-ma-n{display:block;margin-top:2px;font-size:var(--t7);line-height:1.45;color:var(--ink-5)}'+
    '.hm-ma-n b{color:var(--ink-3);font-weight:800}'+
+   /* 📍 이번 주 상담 가시는 동네 — <b>가는 김에</b> */
+   '.hm-ms-hot{margin-top:10px;border:1px solid #A7F3D0;background:#ECFDF5;border-radius:var(--r-sm);'+
+     'padding:9px 11px;font-size:var(--t6);line-height:1.6;color:#065F46}'+
+   '.hm-ms-hot b{color:#047857;font-weight:900}'+
+   '.hm-ms-hot.none{border-color:#FDE68A;background:#FFFBEB;color:#92400E}'+
+   '.hm-ms-hot.none b{color:#B45309}'+
    '.hm-ms-none{margin-top:10px;border:1px solid #FDE68A;background:#FFFBEB;border-radius:var(--r-sm);'+
      'padding:11px 13px;font-size:var(--t6);line-height:1.7;color:#92400E}'+
    /* 했습니다 */

@@ -44,9 +44,10 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
    ── 일부러 이렇게 짰습니다 ──────────────────────────────────────
    · <b>순천</b>에 이번 주 AP 약속이 하나 잡혀 있습니다(q1). 그래서 같은
      자리끼리일 때 순천 분이 앞섭니다.
-   · <b>TA 가 둘</b>(순천 q3 · 광양 q4)입니다 — 같은 단계·같은 대기일이라
-     <b>동네만으로</b> 갈립니다. 이것이 없으면 「지역 우선」을 안 해도
-     초록이 됩니다 (8번).
+   · <b>TA 가 둘</b>(광양 q4 · 순천 q3)입니다 — 같은 단계·같은 대기일이라
+     <b>동네만으로</b> 갈립니다. ★ <b>광양을 먼저 적어 둡니다.</b> 순천을
+     먼저 적어 두었더니 정렬이 안정정렬이라, 동네 저울을 <b>빼도</b> 순천이
+     앞서 <b>알람이 안 울렸습니다</b> — 되돌려 보고 알았습니다 (8번).
    · <b>부재</b>(q5)가 한 분 있습니다 — TDO 차례가 TA 보다 <b>뒤</b>라,
      지역이 맞아도 TA 를 밀어내면 안 됩니다. 뒤엎기를 잡는 자입니다. */
 const SEED = (o) => `
@@ -64,9 +65,9 @@ const SEED = (o) => `
  AR.db=${o.none ? '[]' : `[
   {id:'q1',who:'me',name:'홍길동A',region:'순천',src:'보장분석3DB',stage:'AP',days:3,n:2,res:'상담',
    appt:'${o.appt || 'TOMORROW'} 14:00',cAt:'',pAt:''},
-  {id:'q3',who:'me',name:'홍길동C',region:'순천',src:'보장분석3DB',stage:'TA',days:9,n:1,res:'부재',cAt:'',pAt:''},
   {id:'q4',who:'me',name:'홍길동D',region:'광양',src:'개척',stage:'TA',days:9,n:1,res:'부재',cAt:'',pAt:''},
-  {id:'q5',who:'me',name:'홍길동E',region:'순천',src:'개척',stage:'부재',days:9,n:1,res:'부재',cAt:'',pAt:''}]`};
+  {id:'q3',who:'me',name:'홍길동C',region:'${o.far ? '광양' : '순천'}',src:'보장분석3DB',stage:'TA',days:9,n:1,res:'부재',cAt:'',pAt:''},
+  {id:'q5',who:'me',name:'홍길동E',region:'${o.far ? '광양' : '순천'}',src:'개척',stage:'부재',days:9,n:1,res:'부재',cAt:'',pAt:''}]`};
  AR.cliRows=[];AR.calls=[];CM.loaded=true;CM.who={me:'홍길동'};
  OSC.loaded=true;OSC.busy=false;OSC.err='';OSC.list=[];
  window.cmLoadAll=function(cb){if(cb)cb();};
@@ -135,18 +136,34 @@ const SEED = (o) => `
     return e ? e.innerText.replace(/\s+/g, ' ') : '';
   });
   is(/이분 끝/.test(btn) && /다음 분/.test(btn), '  단추가 <b>한 자리</b>에 있다 — 「' + btn + '」');
-  await A.p.evaluate(() => document.querySelector('.hm-now .hm-nx-f').click());
+  /* 단추가 없어도 <b>다음 줄이 제대로 재지게</b> 눌러 봅니다 — 여기서
+     그냥 click() 을 부르면 단추를 뺐을 때 점검이 터져, 무엇이 깨졌는지
+     알려 주지 못하고 멈춥니다 (8번). */
+  const tap = (p) => p.evaluate(() => {
+    const e = document.querySelector('.hm-now .hm-nx-f');
+    if (e) { e.click(); return true; } return false;
+  });
+  await tap(A.p);
   await A.p.waitForTimeout(420);
   const w1 = await who(A.p);
   is(w0 && w1 && w0 !== w1, '  누르면 <b>다음 분</b>이 온다 — ' + w0.split('|')[0] + ' → ' + w1.split('|')[0]);
   const q2 = await now(A.p);
   is(/2번째/.test(q2), '  띠도 <b>2번째</b> 로 넘어간다');
-  /* ⚠ <b>기록이 아니다.</b> 「끝」 을 눌렀다고 전화한 것이 아니다 — 앱이
-     그렇게 적으면 사장님은 오늘 열 분을 관리한 줄 아신다 (1번). */
   const sayT = await A.p.evaluate(() => window.__T || '');
   is(/남았습니다|다 보셨습니다/.test(sayT), '  <b>몇 분 남았는지</b> 말해 준다 — 「' + sayT + '」');
-  const care = await A.p.evaluate(() => hmMsCare());
-  is(care.done === 0, '  그래도 <b>「관리한 분」 으로는 안 센다</b> (1번) — 전화·카톡 기록이 따로 남아야 센다');
+  /* ⚠ <b>기록이 아니다.</b> 「끝」 을 눌렀다고 전화한 것이 아니다 — 앱이
+     그렇게 적으면 단추 몇 번에 「오늘 열 분 관리 완성」이 됩니다 (1번).
+     ★ <b>아침 미션에 뽑히는 분</b>(미접촉·TA·부재·기고객·거절)을 끝내야
+       이것이 재집니다. 첫 분은 AP 라 미션에 안 뽑혀, 한 번만 누르고 재면
+       무엇을 해도 0 이라 <b>알람이 안 울렸습니다</b> — 되돌려 보고 알았습니다. */
+  const mine = await A.p.evaluate(() => hmMsPeople().map(x => x.nm).join(','));
+  await tap(A.p); await A.p.waitForTimeout(400);
+  const care = await A.p.evaluate(() => ({ c: hmMsCare(), fin: hmQdoneAll().length,
+    hit: hmQdoneAll().filter(k => hmMsPeople().some(x => k.indexOf(':' + x.id + ':') >= 0)).length }));
+  is(care.hit > 0, '  <b>미션에 뽑힌 분</b>을 끝낸 뒤에 잰다 — ' + mine + ' 중 ' + care.hit + '분');
+  is(care.c.done === 0,
+     '  그래도 <b>「관리한 분」 으로는 안 센다</b> (1번) — ' + care.c.done + '/' + care.c.all +
+     ' · 전화·카톡 기록이 따로 남아야 센다');
 
   console.log('\n[3] 이번 주 AP·PC 가 잡힌 <b>동네</b>를 앞으로 — 다만 차례는 안 뒤엎는다');
   const H = await A.p.evaluate(() => hmHotOf());
@@ -185,6 +202,26 @@ const SEED = (o) => `
   is(/🎯/.test(L.first), '  ③ <b>어떻게 관리할지</b> — ' + (L.first.match(/🎯 [^🗂📍⏳📰]+/) || [''])[0].trim());
   is(/📰/.test(L.all), '  ④ <b>어떤 연락 드릴지</b> — ' + (L.all.match(/📰 [^~]+/) || [''])[0].trim().slice(0, 40));
   is(L.small === 0, '  줄이 <b>손가락으로 누를 만하다</b> — 44px 아래면 폰에서 빗나간다');
+  /* 사장님 말씀 — 「이번주 상담 AP/PC 를 찾아내서 <b>그 지역의 10명</b>을
+     매일 추천해서 약속 잡을수 있게」. 몇 분이 그 동네인지 <b>세어</b> 준다. */
+  const hot = await B.p.evaluate(() => {
+    const e = document.querySelector('.hm-ms-hot');
+    return { txt: e ? e.innerText.replace(/\s+/g, ' ') : '', none: !!(e && e.classList.contains('none')) };
+  });
+  is(/순천/.test(hot.txt) && /\d+분/.test(hot.txt) && !hot.none,
+     '  그 동네 분이 <b>오늘 몇 분</b>인지 센다 — ' + hot.txt);
+  /* ⚠ <b>모자라면 모자란 대로.</b> 그 동네에 뽑힌 분이 없는데 있는 척하면
+     사장님이 헛걸음하십니다 (1번). 순천 약속만 두고 <b>다른 동네 분</b>만
+     뽑히는 판을 따로 세워 봅니다. */
+  const G = await open({ far: true });
+  await G.p.evaluate(() => { if (!hmFoldOpen('ms')) hmFoldToggle('ms'); hmMsJump(0); hmMsPaint(); });
+  await G.p.waitForTimeout(300);
+  const g = await G.p.evaluate(() => {
+    const e = document.querySelector('.hm-ms-hot');
+    return { txt: e ? e.innerText.replace(/\s+/g, ' ') : '', none: !!(e && e.classList.contains('none')) };
+  });
+  is(g.none && /지어내/.test(g.txt),
+     '  그 동네 분이 <b>없으면 없다</b>고 적는다 — ' + g.txt);
   /* <b>거절하신 분께는 전화를 안 겁니다</b> — 말하는 자리가 HM_MS_POOL 한 곳 (5번) */
   const way = await B.p.evaluate(() => {
     const P = hmMsPeople();
@@ -207,11 +244,17 @@ const SEED = (o) => `
   is(jump.body.indexOf(jump.nm) >= 0, '  ② 도 <b>그 분</b>을 편다 — ' + jump.nm);
 
   console.log('\n[5] 아침 미션이 <b>「오늘 챙길 것」 안</b>에 있다 · 없어도 안 사라진다');
+  /* ★ <b>#hmToday 안인지만 보면 안 됩니다.</b> #hmToday 는 카드를 감싸는
+     껍데기라, 미션을 카드 <b>밖</b>으로 도로 빼내도 그 안에는 그대로 있어
+     <b>알람이 안 울렸습니다</b> — 되돌려 보고 알았습니다 (8번). 사장님
+     말씀은 「오늘 챙길것 + 아침 미션을 <b>하나로</b>」 였으니, 재야 할 것은
+     <b>같은 카드 안</b>인가 입니다. */
   const inside = await B.p.evaluate(() => {
-    const box = document.getElementById('hmFold_ms'), today = document.getElementById('hmToday');
-    return !!(box && today && today.contains(box));
+    const box = document.getElementById('hmFold_ms');
+    const card = document.querySelector('#hmToday .hm-card');
+    return { card: !!card, in: !!(box && card && card.contains(box)) };
   });
-  is(inside, '  <b>한 자리</b>다 — 아침에 두 곳을 안 본다');
+  is(inside.card && inside.in, '  <b>같은 카드 안</b>이다 — 아침에 두 곳을 안 본다');
   /* ⚠ <b>여기가 실제로 깨졌던 자리입니다.</b> 「오늘 뽑힌 분이 없다」 에서
      그냥 return 하는 바람에 조용한 아침에는 미션이 통째로 사라졌습니다. */
   const Z = await open({ none: true });

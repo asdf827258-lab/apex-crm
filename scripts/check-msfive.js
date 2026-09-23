@@ -158,8 +158,11 @@ const SEED = (o) => `
       has: !!box, open: box ? box.classList.contains('on') : false,
       sts, head: head ? head.innerText.replace(/\s+/g, ' ') : '',
       /* <b>「오늘 챙길 것」 카드 안</b>인가 — 둘이 한 자리다(사장님 말씀).
-         전에는 「바로 위」였습니다. 따로 서 있으면 아침에 두 곳을 봐야 합니다. */
-      inside: (box && today) ? today.contains(box) : false,
+         전에는 「바로 위」였습니다. 따로 서 있으면 아침에 두 곳을 봐야 합니다.
+         ★ today(#hmToday)는 <b>껍데기</b>라 카드 밖으로 빼내도 그 안입니다 —
+           <b>카드</b>로 재야 합니다 (check-quest 에서 되돌려 보고 알았습니다). */
+      inside: (box && today && today.querySelector('.hm-card'))
+        ? today.querySelector('.hm-card').contains(box) : false,
       hostH: host ? Math.round(host.getBoundingClientRect().height) : 0
     };
   });
