@@ -210,6 +210,18 @@ const SEED = (o) => `
   });
   is(/순천/.test(hot.txt) && /\d+분/.test(hot.txt) && !hot.none,
      '  그 동네 분이 <b>오늘 몇 분</b>인지 센다 — ' + hot.txt);
+  /* ⚠ <b>차례가 두 곳에서 갈리던 자리입니다</b> (5번). 「오늘 챙길 것」은
+     이번 주 상담 동네를 앞으로 올리는데 ① 목록은 안 올려, <b>한 분 카드의
+     1번과 ① 의 1번이 다른 사람</b>이었습니다. 어느 쪽을 따라야 할지 알 수
+     없게 됩니다. 화면에서 실제로 보고 잡았습니다.                       */
+  const same = await B.p.evaluate(() => {
+    const ms = hmMsPeople().map(x => x.id);
+    const st = hmSteps().filter(s => s.k === 'db' && HM_MS_POOL[s.tk]).map(s => s.id);
+    const only = st.filter(i => ms.indexOf(i) >= 0);
+    return { ms: ms, st: only, ok: ms.join(',') === only.slice(0, ms.length).join(',') };
+  });
+  is(same.ok, '  ① 의 차례가 <b>「오늘 챙길 것」 과 같다</b> (5번) — ①[' +
+     same.ms.join(' ') + '] · 오늘[' + same.st.join(' ') + ']');
   /* ⚠ <b>모자라면 모자란 대로.</b> 그 동네에 뽑힌 분이 없는데 있는 척하면
      사장님이 헛걸음하십니다 (1번). 순천 약속만 두고 <b>다른 동네 분</b>만
      뽑히는 판을 따로 세워 봅니다. */

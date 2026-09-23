@@ -23661,6 +23661,20 @@ function hmMsPeople(){
   var L=[],out=[],i;
   try{ if(typeof arTouch==='function')L=arTouch((typeof hwhoFor==='function')?hwhoFor():'')||[]; }
   catch(e){ return []; }
+  /* ★ <b>차례는 「오늘 챙길 것」 이 세운 그대로</b> 따릅니다 (5번).
+     여태는 arTouch 가 준 차례를 그냥 썼는데, 그 뒤에 「오늘 챙길 것」이
+     <b>이번 주 상담 동네를 앞으로</b> 올리게 되면서 둘이 갈렸습니다 —
+     한 분 카드의 1번은 순천 분인데 ① 목록의 1번은 광양 분이었습니다.
+     화면 두 곳이 다른 1번을 말하면 어느 쪽을 따라야 할지 알 수 없습니다.
+     세는 자리는 hmSteps 한 곳입니다.                                   */
+  var rank={},S=[],ra,rb;
+  try{ S=hmSteps(); }catch(e2){ S=[]; }
+  for(i=0;i<S.length;i++)if(S[i].k==='db'&&S[i].id&&rank[S[i].id]===undefined)rank[S[i].id]=i;
+  L=L.slice().sort(function(a,b){
+    ra=(rank[a.id]===undefined)?9999:rank[a.id];
+    rb=(rank[b.id]===undefined)?9999:rank[b.id];
+    return ra-rb;
+  });
   for(i=0;i<L.length&&out.length<HM_MS_N;i++)if(HM_MS_POOL[L[i].k])out.push(L[i]);
   return out;
 }
@@ -24038,7 +24052,9 @@ function hmMsAlmCat(x){
      그대로 세고, 몇 분이 그 동네인지만 말합니다. */
 function hmMsHotLine(P){
   var H=hmHotOf(),i,n=0,rg={};
-  if(!H.list.length)return '';
+  /* 이번 주 상담이 <b>아무 데도</b> 안 잡혔으면 — 그 말은 hmHotSay 한 곳이
+     합니다 (5번). 여기서 또 적으면 두 줄이 같은 말을 합니다. */
+  if(!H.list.length)return '<div class="hm-ms-hot none">📍 '+hmHotSay()+'</div>';
   for(i=0;i<P.length;i++){
     var h=hmHotHit(P[i].sub);
     if(h){ n++; rg[h.rg]=1; }
@@ -24046,6 +24062,7 @@ function hmMsHotLine(P){
   var L=[],k;
   for(k in rg)if(rg.hasOwnProperty(k))L.push(k);
   if(!n)
+    /* 그 동네 분이 <b>하나도 안 뽑혔을</b> 때 — 억지로 채우지 않습니다 (1번) */
     return '<div class="hm-ms-hot none">📍 이번 주 상담 동네(<b>'+
       osEsc(H.list.map(function(z){return z.rg;}).join(' · '))+
       '</b>)에는 <b>오늘 뽑힌 분이 없습니다</b> — 사람을 지어내 채우지 않습니다.</div>';
@@ -24101,8 +24118,9 @@ var HM_MS_BODY={
    var h='',i;
    for(i=0;i<P.length;i++)h+=hmMsAlmRow(P[i],i);
    return hmMsHotLine(P)+
-     '<div class="hm-ms-list"><div class="hm-ms-lh">오늘 뽑힌 <b>'+P.length+'분</b>입니다 — '+
-     '누르시면 <b>그 분으로</b> ②③④ 가 따라옵니다. '+hmHotSay()+'</div>'+h+'</div>'+
+     /* 「누르시면 ②③④ 가 따라옵니다」 는 <b>바로 위 미션 머리</b>가 이미
+        적었습니다 — 두 번 적으면 같은 말을 두 줄 읽습니다 (5번). */
+     '<div class="hm-ms-list">'+h+'</div>'+
      '<div class="hm-ms-b"><button type="button" class="btn btn-ghost" onclick="go(\'crm\')">🔔 DB 통합 CRM 에서 보기</button></div>';
  },
  /* ② 어떻게 연락할지 — 소식과 첫 마디를 <b>한 자리</b>에 */
