@@ -1,0 +1,1704 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>APEX 사본 · 오늘 · 고객 · 콘텐츠</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard-dynamic-subset.css">
+<style>
+:root{
+  --t-ink:#191F28; --t-sub:#6B7684; --t-sub2:#8B95A1; --t-line:#E5E8EB;
+  --t-bg:#F2F4F6; --t-card:#FFFFFF;
+  --t-point:#1A56DB; --t-point-l:#EBF3FF; --t-point-d:#123A96;
+  --t-pos:#059669; --t-pos-l:#ECFDF5; --t-warn:#D97706; --t-warn-l:#FFF7ED;
+  --t-neg:#DC2626; --t-neg-l:#FEF2F2; --t-pur:#7C3AED; --t-pur-l:#F5F3FF;
+  --t-seal:#FFF9EC; --t-sealk:#8A6A2F;
+  --t-r:20px; --t-r-btn:15px; --t-r-sm:13px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'Pretendard','Malgun Gothic',-apple-system,sans-serif;color:var(--t-ink);background:#DFE3E8}
+button,input,textarea,select{font-family:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer}
+input,textarea{border:0;background:none}
+
+/* ── 겉틀 ── */
+#shell{height:100%;display:flex;justify-content:center;padding:18px}
+#app{width:100%;max-width:1360px;height:100%;background:var(--t-bg);border-radius:22px;overflow:hidden;
+  display:flex;box-shadow:0 10px 40px rgba(0,0,0,.09)}
+body.phone #shell{padding:22px}
+body.phone #app{max-width:390px;border-radius:34px;border:9px solid #0B0D10}
+
+/* ── 사이드바 ── */
+.side{width:244px;flex:0 0 244px;background:#fff;border-right:1px solid #EEF1F4;display:flex;flex-direction:column}
+body.phone .side,body.narrow .side{display:none}
+.logo{height:62px;flex:0 0 62px;display:flex;align-items:center;gap:10px;padding:0 18px}
+.logo .m{width:30px;height:30px;border-radius:9px;background:var(--t-point);color:#fff;font-size:12.5px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;letter-spacing:-.05em}
+.logo .n{font-size:15px;font-weight:800;letter-spacing:-.03em}
+.logo .n small{display:block;font-size:10.5px;color:var(--t-sub2);font-weight:600;letter-spacing:0}
+.snav{flex:1;padding:4px 10px;overflow-y:auto}
+.glab{font-size:11px;font-weight:800;color:#AEB6BE;padding:13px 10px 5px}
+.it{display:flex;align-items:center;gap:9px;height:38px;padding:0 10px;border-radius:11px;font-size:13.5px;
+  font-weight:600;color:#4E5968;letter-spacing:-.02em;width:100%;text-align:left}
+.it .e{width:18px;text-align:center;font-size:13px}
+.it .c{margin-left:auto;font-size:11px;font-weight:800;background:#F2F4F6;color:var(--t-sub2);border-radius:6px;padding:2px 7px}
+.it.on{background:var(--t-point-l);color:var(--t-point);font-weight:700}
+.it.on .c{background:var(--t-point);color:#fff}
+.sfoot{flex:0 0 58px;border-top:1px solid #F1F3F5;display:flex;align-items:center;gap:9px;padding:0 15px}
+.sfoot .av{width:28px;height:28px;border-radius:9px;background:#E8EDF3;color:#5B6572;font-size:11.5px;font-weight:800;
+  display:flex;align-items:center;justify-content:center}
+.sfoot .t{font-size:12.5px;font-weight:700;letter-spacing:-.02em}
+.sfoot .t small{display:block;font-size:10.5px;color:var(--t-sub2);font-weight:600}
+
+/* ── 본문 ── */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative}
+.top{height:58px;flex:0 0 58px;display:flex;align-items:center;padding:0 22px;gap:10px}
+body.phone .top{height:50px;flex:0 0 50px;padding:0 16px}
+.top .bk{font-size:20px;color:var(--t-sub2);width:28px;text-align:left}
+.top .d{font-size:13.5px;color:var(--t-sub);font-weight:600}
+.top .r{margin-left:auto;display:flex;gap:7px;align-items:center}
+.pil{height:32px;border-radius:10px;background:#fff;display:flex;align-items:center;padding:0 12px;
+  font-size:12.5px;font-weight:700;color:var(--t-sub);white-space:nowrap}
+.pil.b{background:var(--t-point);color:#fff}
+.pil.w{background:var(--t-warn-l);color:var(--t-warn)}
+.scr{flex:1;overflow-y:auto;padding:0 22px 26px}
+body.phone .scr{padding:0 16px 20px}
+.scr::-webkit-scrollbar{width:7px}.scr::-webkit-scrollbar-thumb{background:#D7DCE2;border-radius:7px}
+.tabbar{display:none;height:64px;flex:0 0 64px;background:#fff;border-top:1px solid #F1F3F5;padding-bottom:8px}
+body.phone .tabbar,body.narrow .tabbar{display:flex}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  font-size:10.5px;font-weight:700;color:#C4CBD2}
+.tabbar button.on{color:var(--t-point)}
+.tabbar .i{width:20px;height:20px;border-radius:7px;background:currentColor;opacity:.9}
+
+/* ── 공용 ── */
+.h1{font-size:24px;font-weight:800;letter-spacing:-.035em;line-height:1.3;padding-top:2px}
+.h1 span{color:var(--t-sub2)}
+body.phone .h1{font-size:21px}
+.sub{margin-top:8px;font-size:13.5px;color:var(--t-sub);line-height:1.6;letter-spacing:-.01em}
+.t-card{background:var(--t-card);border-radius:var(--t-r);padding:20px 22px}
+.t-card+.t-card{margin-top:12px}
+.lab{font-size:11.5px;font-weight:800;color:var(--t-point);letter-spacing:.01em}
+.t-btn{height:52px;border-radius:var(--t-r-btn);background:var(--t-point);color:#fff;font-size:16px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;width:100%;letter-spacing:-.02em}
+.t-btn.g{background:#F2F4F6;color:#4E5968}
+.t-btn.sm{height:42px;font-size:14px;border-radius:12px}
+.row2{display:flex;gap:8px}
+.t-chip{height:36px;padding:0 14px;border-radius:11px;background:#fff;color:var(--t-sub);font-size:13px;font-weight:700;
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.t-chip.on{background:var(--t-ink);color:#fff}
+.t-chip b{color:var(--t-point)}.t-chip.on b{color:#8FB4FF}
+.chips{display:flex;gap:7px;margin-top:14px;flex-wrap:wrap}
+.pbar{height:6px;border-radius:6px;background:#E3E7EB;overflow:hidden;margin-top:11px}
+.pbar i{display:block;height:100%;background:var(--t-point);border-radius:6px;transition:.3s}
+.empty{padding:40px 10px;text-align:center;color:var(--t-sub2);font-size:14px;font-weight:600;line-height:1.7}
+.note{background:var(--t-warn-l);border-radius:14px;padding:13px 16px;font-size:12.5px;line-height:1.6;
+  color:#8A5A12;font-weight:600;margin-top:12px}
+.note b{color:#7A4E0A}
+
+/* 사람 줄 */
+.t-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #F3F5F7;width:100%;text-align:left}
+.t-row:last-child{border-bottom:0}
+.av{width:40px;height:40px;border-radius:14px;background:var(--t-point-l);color:var(--t-point);font-weight:800;
+  font-size:15px;display:flex;align-items:center;justify-content:center;flex:0 0 40px}
+.nm{font-size:15px;font-weight:700;letter-spacing:-.025em;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.mt{font-size:12px;color:var(--t-sub2);margin-top:4px;font-weight:600;line-height:1.45}
+.stg{font-size:10.5px;font-weight:800;padding:3px 7px;border-radius:7px;background:#F2F4F6;color:var(--t-sub)}
+.stg.due{background:var(--t-warn-l);color:var(--t-warn)}
+.rt{margin-left:auto;display:flex;gap:6px;align-items:center;flex:0 0 auto}
+.gb{height:34px;padding:0 12px;border-radius:10px;background:#F5F7F9;color:#4E5968;font-size:12.5px;font-weight:700}
+.gb.b{background:var(--t-point);color:#fff}
+
+/* 오늘 한 분 */
+.one .hd{display:flex;align-items:center;gap:12px}
+.one .nm2{font-size:21px;font-weight:800;letter-spacing:-.035em}
+.one .why{margin-top:13px;font-size:12.5px;color:var(--t-sub2);font-weight:600;background:#F7F9FA;border-radius:11px;
+  padding:10px 13px;line-height:1.5}
+.one .aim{margin-top:15px;font-size:19px;font-weight:700;letter-spacing:-.03em;line-height:1.45}
+.one .way{margin-top:9px;font-size:13px;color:var(--t-sub);line-height:1.6}
+.one .tools{display:flex;gap:6px;margin-top:13px;flex-wrap:wrap}
+.one .tools span{font-size:11.5px;font-weight:700;color:#4E5968;background:#F5F7F9;border-radius:9px;padding:6px 10px}
+
+/* 타임라인 */
+.ev{display:flex;gap:11px;padding:12px 0;border-bottom:1px solid #F3F5F7}
+.ev:last-child{border-bottom:0}
+.ev .d{width:9px;height:9px;border-radius:9px;background:var(--t-point);margin-top:6px;flex:0 0 9px}
+.ev .d.g{background:#D7DCE2}
+.ev .t{font-size:13.5px;font-weight:700;letter-spacing:-.025em}
+.ev .s{font-size:11.5px;color:var(--t-sub2);margin-top:3px;font-weight:600;line-height:1.5}
+.ev .u{margin-left:auto;font-size:11px;font-weight:700;color:var(--t-point);background:var(--t-point-l);
+  border-radius:8px;padding:5px 8px;align-self:flex-start;flex:0 0 auto}
+
+/* 입력 */
+.fld{margin-top:14px}
+.fld .l{font-size:12px;font-weight:800;color:var(--t-sub2)}
+.fld input,.fld textarea{width:100%;border-bottom:2px solid var(--t-line);font-size:18px;font-weight:700;
+  letter-spacing:-.03em;padding:12px 0 10px;margin-top:2px}
+.fld textarea{font-size:15px;font-weight:600;letter-spacing:-.01em;min-height:76px;resize:vertical;line-height:1.6;
+  border:1.5px solid var(--t-line);border-radius:12px;padding:12px 14px;margin-top:6px}
+.fld input:focus,.fld textarea:focus{outline:0;border-color:var(--t-point)}
+.dupw{margin-top:13px;background:var(--t-warn-l);border-radius:14px;padding:14px 16px;display:none}
+.dupw.on{display:block}
+.quick3{display:flex;gap:7px;margin-top:16px}
+.quick3 button{flex:1;background:#fff;border-radius:14px;padding:13px 8px;text-align:center}
+.quick3 .e{font-size:18px}
+.quick3 .t{margin-top:6px;font-size:11.5px;font-weight:700;letter-spacing:-.02em}
+
+/* 캐러셀 */
+.slides{display:flex;gap:8px;margin-top:13px;overflow-x:auto;padding-bottom:6px}
+.slides::-webkit-scrollbar{height:5px}.slides::-webkit-scrollbar-thumb{background:#D7DCE2;border-radius:5px}
+.sl{flex:0 0 146px;height:183px;border-radius:12px;background:#0F2A52;color:#fff;padding:13px 12px;
+  display:flex;flex-direction:column;overflow:hidden}
+.sl .no{font-size:9.5px;font-weight:800;opacity:.55}
+.sl .tx{margin-top:8px;font-size:13px;font-weight:800;line-height:1.45;letter-spacing:-.03em}
+.sl .sm{margin-top:7px;font-size:10px;line-height:1.5;opacity:.78;font-weight:600}
+.sl.w{background:#fff;color:var(--t-ink);border:1px solid var(--t-line)}
+.sl.w .sm{opacity:1;color:var(--t-sub2)}
+.sl.seal{background:var(--t-seal);color:var(--t-sealk);border:1px solid #EFE0BE}
+.sl.seal .tx{font-size:10.5px;line-height:1.55}
+.sl.seal .sm{font-size:9px;color:var(--t-sealk);opacity:.92}
+.chk .r{display:flex;gap:8px;align-items:flex-start;padding:6px 0;font-size:12px;line-height:1.5;font-weight:600}
+.chk .r .i{width:16px;height:16px;border-radius:6px;flex:0 0 16px;display:flex;align-items:center;justify-content:center;
+  font-size:9.5px;font-weight:800;color:#fff;margin-top:1px}
+.chk .r.ok .i{background:var(--t-pos)}.chk .r.ok{color:#3F4A57}
+.chk .r.no .i{background:var(--t-warn)}.chk .r.no{color:var(--t-warn)}
+.newsit{background:#fff;border-radius:14px;padding:13px 15px;margin-bottom:8px;width:100%;text-align:left;
+  border:2px solid transparent}
+.newsit.on{border-color:var(--t-point)}
+.newsit .t{font-size:13.5px;font-weight:700;letter-spacing:-.025em;line-height:1.45}
+.newsit .m{margin-top:6px;font-size:11px;color:var(--t-sub2);font-weight:600}
+
+/* 달력 */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dh{font-size:11px;font-weight:800;color:var(--t-sub2);text-align:center;padding:5px 0}
+.cd{min-height:76px;background:#F7F9FA;border-radius:10px;padding:5px}
+body.phone .cd{min-height:58px;padding:3px}
+.cd.out{background:transparent}
+.cd.now{background:var(--t-point-l);box-shadow:inset 0 0 0 2px var(--t-point)}
+.dn{font-size:11px;font-weight:800;color:var(--t-sub2)}
+.dt{margin-top:3px;font-size:9.5px;font-weight:700;border-radius:5px;padding:2px 4px;line-height:1.3;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.phone .dt{font-size:8px;padding:1px 3px}
+.dt.sns{background:var(--t-pur-l);color:var(--t-pur)}
+.dt.bd{background:var(--t-pos-l);color:var(--t-pos)}
+.dt.end{background:var(--t-warn-l);color:var(--t-warn)}
+.dt.region{background:var(--t-point-l);color:var(--t-point)}
+.dt.more{color:#B0B8C1}
+/* 요일 리듬 */
+.rhy{display:flex;gap:8px;margin-top:13px}
+.rhy div{flex:1;background:#fff;border-radius:16px;padding:15px 13px;border:2px solid transparent}
+.rhy div.on{border-color:var(--t-point);background:var(--t-point-l)}
+.rhy .w{font-size:12px;font-weight:800;color:var(--t-sub2)}
+.rhy div.on .w{color:var(--t-point)}
+.rhy .t{margin-top:7px;font-size:15px;font-weight:700;letter-spacing:-.025em}
+.rhy .d{margin-top:5px;font-size:11.5px;color:var(--t-sub2);line-height:1.5;font-weight:600}
+.scriptbox{background:#F7F9FA;border-radius:14px;padding:15px 17px;margin-top:10px}
+.scriptbox .sh{font-size:11.5px;font-weight:800;color:var(--t-pur)}
+.scriptbox .sl2{display:flex;gap:10px;padding:7px 0;font-size:13px;line-height:1.6}
+.scriptbox .sl2 b{flex:0 0 52px;color:var(--t-sub2);font-size:11.5px;font-weight:800;padding-top:2px}
+
+/* 시트 */
+#dim{position:fixed;inset:0;background:rgba(10,14,20,.42);display:none;z-index:40}
+#dim.on{display:block}
+#sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,105%);width:100%;max-width:480px;background:#fff;
+  border-radius:24px 24px 0 0;padding:24px 20px 26px;transition:.25s cubic-bezier(.4,0,.2,1);z-index:41}
+#sheet.on{transform:translate(-50%,0)}
+#sheet .q{font-size:20px;font-weight:800;letter-spacing:-.03em;line-height:1.4}
+#sheet .qs{margin-top:8px;font-size:13px;color:var(--t-sub2);font-weight:600}
+#sheet .opts{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+#sheet .opts button{flex:1;min-width:92px;height:50px;border-radius:13px;background:#F5F7F9;color:#4E5968;
+  font-size:14.5px;font-weight:700}
+#sheet .opts button.p{background:var(--t-point);color:#fff}
+#sheet .cl{margin-top:12px;width:100%;height:48px;border-radius:13px;background:#F2F4F6;color:var(--t-sub);
+  font-size:14.5px;font-weight:700}
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,16px);opacity:0;background:#191F28;color:#fff;
+  padding:12px 20px;border-radius:12px;font-size:14px;font-weight:700;transition:.2s;z-index:60;pointer-events:none;
+  max-width:88vw;text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.viewsw{position:fixed;right:16px;bottom:16px;z-index:50;display:flex;gap:6px;background:#fff;border-radius:12px;
+  padding:5px;box-shadow:0 4px 16px rgba(0,0,0,.14)}
+.viewsw button{height:32px;padding:0 12px;border-radius:9px;font-size:12.5px;font-weight:700;color:var(--t-sub)}
+.viewsw button.on{background:var(--t-ink);color:#fff}
+@media (max-width:900px){
+  .side{display:none} .tabbar{display:flex} #shell{padding:0} #app{border-radius:0}
+  /* 좁은 폭에서 위 띠가 안 밀리게 — 넘치면 옆으로 넘깁니다 */
+  .top{overflow-x:auto;scrollbar-width:none} .top::-webkit-scrollbar{height:0}
+  /* 아래 탭바를 가리지 않게 */
+  .viewsw{bottom:76px}
+}
+/* 어떤 폭에서도 본문이 창을 밀지 않습니다 */
+.main{overflow:hidden}
+.top{min-width:0}
+</style></head>
+<body>
+
+<div id="shell"><div id="app">
+  <aside class="side">
+    <div class="logo"><div class="m">A</div><div class="n">APEX 사본<small id="who">윤시현 단장</small></div></div>
+    <div class="snav" id="snav"></div>
+    <div class="sfoot"><div class="av">윤</div><div class="t">윤시현<small>온탑본부 · 단장</small></div></div>
+  </aside>
+  <div class="main">
+    <div class="top" id="top"></div>
+    <div class="scr" id="scr"></div>
+    <div class="tabbar" id="tabbar"></div>
+  </div>
+</div></div>
+
+<div id="dim"></div><div id="sheet"></div><div id="toast"></div>
+<div class="viewsw"><button id="vpc" class="on">PC</button><button id="vph">폰</button></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   APEX 사본 — 저장은 이 브라우저(localStorage)에만 합니다.
+   서버도 부르지 않고 아무것도 내보내지 않습니다.
+   그릇 규칙은 「고객그릇」 설계안 그대로입니다:
+     · 열쇠는 숫자만 남긴 전화번호
+     · 사건은 쌓기만 한다(지우지 않고 되돌림 표시만)
+     · 지금 단계·마지막 접촉은 쌓인 것에서 계산한다
+     · 이름은 가린 것이 기본, 실명은 이 브라우저에만
+   ══════════════════════════════════════════════════════════════ */
+var KEY='apex_copy_v1';
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(m){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});}
+function toast(m){var t=$('toast');t.innerHTML=m;t.classList.add('on');clearTimeout(t._h);
+  t._h=setTimeout(function(){t.classList.remove('on');},2100);}
+function pk(s){return String(s||'').replace(/\D/g,'');}
+function mask(n){n=String(n||'');return n?n.charAt(0)+Array(n.length).join('○'):'';}
+function d0(d){d=d||new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
+function ymd(d){d=d||new Date();function p(x){return (x<10?'0':'')+x;}
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
+function ago(n){var d=new Date();d.setDate(d.getDate()-n);return d.toISOString();}
+function days(a,b){return Math.round((d0(new Date(b))-d0(new Date(a)))/864e5);}
+function fmt(iso){var d=new Date(iso),t=days(iso,new Date());
+  return t===0?'오늘':t===1?'어제':t===2?'그저께':(d.getMonth()+1)+'월 '+d.getDate()+'일';}
+
+/* ── 규칙: 단계 열 개. apex-stage.js 의 문장을 그대로 옮겼습니다 ── */
+var ORDER=['미접촉','부재','거절','TA','AP','PC','CS','계약완료','증권전달','소개완료'];
+var EMO={'미접촉':'🆕','부재':'📵','거절':'🚫','TA':'☎️','AP':'🤝','PC':'📞','CS':'✍️',
+         '계약완료':'🏆','증권전달':'📜','소개완료':'🙌'};
+var WAIT={'미접촉':3,'부재':3,'거절':14,'TA':3,'AP':1,'PC':1,'CS':1,'계약완료':1,'증권전달':15,'소개완료':30};
+var GO={'미접촉':'TA','부재':'TA','거절':'','TA':'AP','AP':'PC','PC':'CS','CS':'계약완료',
+        '계약완료':'증권전달','증권전달':'소개완료','소개완료':''};
+var MAP={
+ '미접촉':{ch:'전화',aim:'<b>첫 통화</b> — 30초 안에 약속만',
+   way:'누구인지 먼저 밝힌다. 설명은 만나서, 전화로는 날짜만',
+   tools:['📰 정책·상품 뉴스','💬 AI 상담 어시스턴트']},
+ '부재':{ch:'전화',aim:'<b>한 번은 받으시게</b> 한다',
+   way:'안 받은 시간에 또 걸지 않는다 — 시간대를 바꾸고, 그 전에 문자 한 줄',
+   tools:['💬 AI 상담 어시스턴트','🌐 고객에게 전할 뉴스']},
+ '거절':{ch:'문자',aim:'<b>문을 닫지 않게</b> 한다',
+   way:'팔지 않는다. 그분께 쓸모 있는 소식 하나만 보내고 기다린다',
+   tools:['🌐 고객에게 전할 뉴스','🎣 미끼상품&접촉전략']},
+ 'TA':{ch:'전화',aim:'<b>만날 날짜</b>를 잡는다',
+   way:'상품 설명을 전화로 하지 않는다. 날짜 두 개를 드리고 고르시게 한다',
+   tools:['💬 AI 상담 어시스턴트','📋 보장분석 상담자료']},
+ 'AP':{ch:'만남',aim:'약속을 지키고 <b>다음 자리</b>를 잡는다',
+   way:'오늘 자리에서 결론을 재촉하지 않는다. 듣고, 다음에 볼 날을 받아 온다',
+   tools:['📋 보장분석 상담자료','🗣️ 재무설계 실전화법서']},
+ 'PC':{ch:'전화',aim:'제안서에 <b>걸리는 것 한 가지</b>를 받아 낸다',
+   way:'「어떠셨어요」 가 아니라 「어느 쪽이 제일 걸리셨어요」 로 묻는다',
+   tools:['🔀 보장분석 전&후 만들기','📊 재무설계 계산기']},
+ 'CS':{ch:'만남',aim:'청약 서류와 <b>날짜</b>를 잡는다',
+   way:'설명을 다시 하지 않는다. 언제 어디서 쓸지만 정한다',
+   tools:['🔀 보장분석 전&후 만들기']},
+ '계약완료':{ch:'만남',aim:'<b>증권을 직접</b> 전할 자리를 잡는다',
+   way:'우편으로 보내지 않는다. 그 자리가 소개를 받는 유일한 자리다',
+   tools:['📜 증권전달 세트']},
+ '증권전달':{ch:'전화',aim:'잘 받으셨는지 확인하고 <b>소개 한 분</b>을 여쭙는다',
+   way:'보험 이야기를 더 하지 않는다. 고마움과 청구 방법, 그리고 가족',
+   tools:['📜 증권전달 세트','🌐 고객에게 전할 뉴스']},
+ '소개완료':{ch:'전화',aim:'소개해 주신 분께 <b>어떻게 됐는지</b> 알려 드린다',
+   way:'소개받은 분 이야기를 먼저 한다. 새 부탁을 오늘 붙이지 않는다',
+   tools:['🗂️ 고객 365일','🌐 고객에게 전할 뉴스']}
+};
+
+/* ══ 아는 것 — 묻는 칸은 반드시 터치 거리로 돌아온다 ══════════════════
+   쓸 데 없는 칸은 묻지 않습니다. 아래 열두 칸은 <b>전부</b> 어딘가에서
+   카드가 되어 돌아옵니다. 그래서 채울 이유가 생깁니다.              */
+var INFO=[
+ {k:'birth', g:'기본', t:'생일', ph:'03-14 (월-일)', cm:'bd',
+  hint:'생일 이레 전에 「축하만 전하기」 카드가 섭니다'},
+ {k:'cd', g:'기본', t:'계약일', ph:'2024-10-02', cm:'cd',
+  hint:'해마다 그 날 「n주년」 카드가 섭니다 — 마디 접점'},
+ {k:'bestTime',g:'기본',t:'연락 잘 되는 때',ph:'오전 10~11시', hint:'전화 카드에 그 시간이 같이 적힙니다'},
+ {k:'job',  g:'일',  t:'하시는 일', ph:'자영업 · 식당', hint:'직업이 바뀌면 보장도 바뀝니다 — 점검 카드가 섭니다'},
+ {k:'income',g:'일', t:'월 소득', ph:'400', unit:'만원', hint:'보험료 비중을 보고 「같이 보실 때」 카드가 섭니다'},
+ {k:'spouse',g:'식구',t:'배우자', ph:'있음 / 없음', hint:'가족 이야기의 첫 문장이 달라집니다'},
+ {k:'kids', g:'식구',t:'자녀 나이', ph:'8, 13', unit:'세', hint:'7·13·16·19세 길목에서 「교육자금」 카드가 섭니다'},
+ {k:'insurer',g:'보험',t:'보험사 · 건수', ph:'KB 외 2곳 · 4건', ba:1, hint:'보장분석을 넣으면 저절로 채워집니다'},
+ {k:'premium',g:'보험',t:'월 보험료 합계', ph:'31', unit:'만원', ba:1, hint:'줄을 더하면 나옵니다 — 소득 대비 비중 카드가 섭니다'},
+ {k:'policyEnd',g:'보험',t:'보장 만기 · 갱신', ph:'2026-10-24', ba:1,
+  hint:'서른 날 전에 「만기 안내」 카드가 섭니다 · policies.expire_at'},
+ {k:'payEnd',g:'보험',t:'납입 만기', ph:'2044-10-02', ba:1,
+  hint:'다 내시기 서른 날 전에 「이제 안 내셔도 됩니다」 카드가 섭니다 · policies.pay_end_at'},
+ {k:'gaps', g:'보험',t:'비어 있는 통장', ph:'치료비, 간병', ba:1,
+  hint:'8통장 진단이 채웁니다 — 이 통장 이름으로 뉴스도 골라 옵니다'},
+ {k:'hook', g:'사람',t:'걸리는 것 한 가지', ph:'자녀 교육비', hint:'다음 통화 첫 문장에 그대로 붙습니다'},
+ {k:'interest',g:'사람',t:'관심사', ph:'낚시', hint:'뉴스를 고를 때 이 분께 맞는 것을 먼저 올립니다'},
+ {k:'referrer',g:'사람',t:'소개해 주신 분', ph:'향단이', hint:'그분께 「어떻게 됐는지 알려 드리기」 카드가 섭니다'}
+];
+function infoOf(p){return (p&&p.info)||{};}
+function filled(p){var I=infoOf(p);return INFO.filter(function(f){return String(I[f.k]||'').trim();}).length;}
+
+/* ══ 30일 약속 — 밀착관리의 뼈대 ═══════════════════════════════════
+   실제 앱의 ccCfg() 값을 그대로 씁니다 — days 30 · vipDays 14 · vipMan 100만원.
+   「30일 안에 모든 고객에게」 가 이 앱이 지키자고 만든 약속입니다.
+   단계(진행 중)와는 <b>다른 축</b>입니다. 계약이 끝난 분도 약속은 살아 있습니다. */
+var CC={days:30,vipDays:14,vipMan:100};
+function isVip(p){return num(infoOf(p).premium)>=CC.vipMan;}
+function cycleOf(p){return isVip(p)?CC.vipDays:CC.days;}
+/* 접촉은 <b>통화·만남</b>만 셉니다 — 단계를 옮긴 것은 접촉이 아닙니다 */
+function lastTouch(p){
+  var e=DB.events.filter(function(x){return x.key===p.key&&!x.undone&&
+    (x.kind==='call'||x.kind==='meet');}).sort(function(a,b){return new Date(b.at)-new Date(a.at);});
+  return e.length?e[0].at:null;
+}
+function band(p){
+  var l=lastTouch(p), cy=cycleOf(p);
+  if(!l)return {k:'never',col:'#6B7684',d:days(p.since,new Date()),cy:cy,
+    t:'한 번도 연락 안 함 · 등록 '+days(p.since,new Date())+'일'};
+  var d=days(l,new Date());
+  if(d>=cy)return {k:'over',col:'#FF9500',d:d,cy:cy,t:d+'일째 — '+cy+'일 약속을 넘겼습니다'};
+  if(d>=Math.max(1,Math.round(cy*5/6)))return {k:'soon',col:'#D97706',d:d,cy:cy,t:d+'일째 — 곧 넘깁니다'};
+  return {k:'ok',col:'#8B95A1',d:d,cy:cy,t:(d===0?'오늘 연락함':d+'일 전에 연락함')};
+}
+/* 이번 주기 안에 몇 분을 뵈었나 — 0 은 전원이 목표라는 뜻 */
+function promise(){
+  var all=people(), kept=all.filter(function(p){var b=band(p);return b.k==='ok'||b.k==='soon';});
+  return {all:all.length,kept:kept.length,over:all.filter(function(p){return band(p).k==='over';}).length,
+          never:all.filter(function(p){return band(p).k==='never';}).length};
+}
+/* 만난 뒤 한 줄 — 안 남기면 다음 계산이 전부 틀어집니다 */
+function noteRate(){
+  var m=0,n=0;
+  DB.events.forEach(function(e){
+    if(e.undone||e.kind!=='call')return;
+    m++;
+    var has=DB.events.some(function(x){return x.key===e.key&&!x.undone&&x.kind==='memo'&&
+      Math.abs(new Date(x.at)-new Date(e.at))<6*3600*1000;});
+    if(has)n++;
+  });
+  return {all:m,with:n,pct:m?Math.round(n/m*100):null};
+}
+
+/* 신호 — 아는 것을 읽어 오늘 터치할 거리를 만든다 */
+function nextBirth(mmdd){
+  var m=String(mmdd).match(/(\d{1,2})\D+(\d{1,2})/); if(!m)return null;
+  var now=new Date(), y=now.getFullYear();
+  var d=new Date(y,+m[1]-1,+m[2]); if(d0(d)<d0(now))d=new Date(y+1,+m[1]-1,+m[2]);
+  return d;
+}
+function num(v){var n=parseFloat(String(v).replace(/[^\d.]/g,''));return isNaN(n)?0:n;}
+function signals(p){
+  var I=infoOf(p), S=[], t=new Date();
+  /* 계약일 마디 — 실제 앱의 client_meta.cd 가 이 자리입니다 */
+  if(I.cd){var c=new Date(I.cd);
+    if(!isNaN(c)){var ann=new Date(t.getFullYear(),c.getMonth(),c.getDate());
+      if(d0(ann)<d0(t))ann=new Date(t.getFullYear()+1,c.getMonth(),c.getDate());
+      var ad=days(t,ann), yr=ann.getFullYear()-c.getFullYear();
+      if(ad>=0&&ad<=7&&yr>=1)S.push({id:'ann',emo:'🎗️',t:'계약 '+yr+'주년 '+(ad?'D-'+ad:'오늘'),ch:'전화',
+        aim:'<b>잘 쓰고 계신지</b> 여쭙는다', way:'새 이야기를 붙이지 않는다. 그 해에 달라진 것만 알려 드린다',
+        why:'계약하신 지 '+yr+'년이 됩니다', sc:640+(8-ad)*5});}}
+  if(I.birth){var b=nextBirth(I.birth); if(b){var dd=days(t,b);
+    if(dd>=0&&dd<=7)S.push({id:'bd',emo:'🎂',t:'생일 '+(dd?'D-'+dd:'오늘'),ch:'문자',
+      aim:'<b>축하만</b> 전한다', way:'계약 이야기를 오늘 붙이지 않는다. 그것이 다음 자리를 만든다',
+      why:'생일이 '+(dd?dd+'일 남았습니다':'오늘입니다'), sc:700+(8-dd)*8});}}
+  /* 납입 만기 — 고객이 제일 반기는 연락입니다. 새 상품을 붙이지 않습니다 */
+  if(I.payEnd){var pe=new Date(I.payEnd); if(!isNaN(pe)){var pd2=days(t,pe);
+    if(pd2>=0&&pd2<=30)S.push({id:'payend',emo:'🎉',t:'납입 만기 D-'+pd2,ch:'전화',
+      aim:'<b>이제 다 내셨다</b>고 알려 드린다', way:'새 상품을 오늘 붙이지 않는다. 축하가 먼저다 — 그 자리에서 소개가 나온다',
+      why:'보험료를 다 내시는 날이 '+pd2+'일 남았습니다', sc:690+(31-pd2)*2});}}
+  if(I.policyEnd){var e=new Date(I.policyEnd); if(!isNaN(e)){var dd2=days(t,e);
+    if(dd2>=0&&dd2<=30)S.push({id:'end',emo:'📅',t:'만기 D-'+dd2,ch:'전화',
+      aim:'만기 전에 <b>한 번 같이 본다</b>', way:'바꾸자고 먼저 말하지 않는다. 지금 것을 정확히 알려 드리는 자리다',
+      why:'가장 가까운 만기·갱신이 '+dd2+'일 남았습니다', sc:660+(31-dd2)*3});}}
+  (String(I.kids||'').split(/[,\s]+/).filter(Boolean)).forEach(function(a){
+    var n=num(a); if([7,13,16,19].indexOf(n)>=0)
+      S.push({id:'kid'+n,emo:'🎒',t:'자녀 '+n+'세',ch:'전화',
+        aim:'교육자금 이야기를 <b>꺼낼 자리</b>다', way:'상품을 말하지 않는다. 언제 얼마가 드는지부터 같이 센다',
+        why:'자녀가 '+n+'세 — 돈이 바뀌는 길목입니다', sc:520});});
+  if(num(I.income)&&num(I.premium)){var r=num(I.premium)/num(I.income)*100;
+    if(r>=8)S.push({id:'hi',emo:'⚖️',t:'보험료 비중 '+r.toFixed(0)+'%',ch:'전화',
+      aim:'무엇이 들어 있는지 <b>같이 본다</b>', way:'줄이자고 먼저 말하지 않는다. 비중을 보여 드리고 판단은 그분이 한다',
+      why:'월 소득 '+num(I.income)+'만원에 보험료 '+num(I.premium)+'만원입니다', sc:480});
+    else if(r<3)S.push({id:'lo',emo:'🕳️',t:'보험료 비중 '+r.toFixed(0)+'%',ch:'전화',
+      aim:'비어 있는 자리를 <b>확인만</b> 한다', way:'부족하다고 단정하지 않는다. 어디가 비었는지 같이 본다',
+      why:'월 소득 '+num(I.income)+'만원에 보험료 '+num(I.premium)+'만원입니다', sc:460});}
+  if(String(I.gaps||'').trim())S.push({id:'gap',emo:'🗺️',t:'비어 있는 통장',ch:'만남',
+    aim:'8통장 진단으로 <b>빈 통장</b>을 보여 드린다', way:'없는 것부터 말하지 않는다. 있는 것을 먼저 정리해 드린다',
+    why:esc(I.gaps)+' 이(가) 비어 있습니다', sc:450});
+  if(String(I.referrer||'').trim())S.push({id:'ref',emo:'🙌',t:'소개해 주신 분께',ch:'전화',
+    aim:esc(I.referrer)+'님께 <b>어떻게 됐는지</b> 알려 드린다', way:'새 부탁을 오늘 붙이지 않는다',
+    why:'소개로 오신 분입니다 — 결과를 알려 드리면 다음 소개가 옵니다', sc:490});
+  var q=days(lastAt(p.key),new Date());
+  if(q>=90)S.push({id:'far',emo:'❄️',t:'오래 못 뵀습니다',ch:'전화',
+    aim:'<b>안부</b>를 묻고 다음에 할 일을 적어 둔다', way:'오래 못 뵌 것을 먼저 말한다. 용건부터 꺼내면 그것이 용건이 된다',
+    why:'마지막 기록이 '+q+'일 전입니다', sc:420});
+  return S;
+}
+
+/* ── 자료 ── */
+var DB={people:{},events:[],seen:{},seal:{no:'',at:''}};
+function save(){try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){}}
+function load(){try{var r=JSON.parse(localStorage.getItem(KEY)||'null');if(r&&r.people){DB=r;return true;}}catch(e){}
+  return false;}
+
+/* 견본 — 실제 고객 이름을 쓰지 않습니다 (CLAUDE.md 3번) */
+function seed(){
+  DB={people:{},events:[],seen:{},seal:{no:'',at:''}};
+  function mmdd(n){var d=new Date();d.setDate(d.getDate()+n);
+    function p(x){return (x<10?'0':'')+x;}return p(d.getMonth()+1)+'-'+p(d.getDate());}
+  function ahead(n){var d=new Date();d.setDate(d.getDate()+n);return ymd(d);}
+  /* 계약일 — y년 전 +d일. 주년 카드가 이 날짜로 섭니다 */
+  function cdy(y,d){var t=new Date();t.setFullYear(t.getFullYear()-y);t.setDate(t.getDate()+(d||0));return ymd(t);}
+  /* 견본 이름은 실제 고객 이름을 쓰지 않습니다 (CLAUDE.md 3번) */
+  var P=[
+   /* ── 오늘 약속 셋 — 강남 둘이라 「가는 김에」가 섭니다 ── */
+   ['성춘향','010-1000-0003','db','강남','AP',     1,'10:00',{bestTime:'오전 10~11시',hook:'부모님 간병',job:'공무원'}],
+   ['옥단춘','010-1000-0011','db','강남','CS',     2,'14:00',{premium:'28',income:'420',hook:'수술 이력이 걸림'}],
+   ['양소유','010-1000-0012','cli','분당','PC',    3,'16:30',{policyEnd:ahead(40),income:'700',premium:'33'}],
+
+   /* ── 손으로 적어 둔 다음 할 일 ── */
+   ['심청이','010-1000-0004','db','수원','PC',     3,null,{policyEnd:ahead(18),premium:'12',income:'500'},
+     {what:'배우자와 같이 한 번 더 뵙기',due:-2}],
+   ['진채봉','010-1000-0013','cli','성남','AP',    5,null,{hook:'아버지 간병 겪는 중'},
+     {what:'증권 가져가서 담보 하나씩 설명',due:0}],
+
+   /* ── 생일 ── */
+   ['콩쥐님','010-1000-0014','cli','강남','소개완료',40,null,{birth:mmdd(0),interest:'등산',cd:cdy(4,-10)}],
+   ['이몽룡','010-1000-0002','db','분당','TA',     4,null,{birth:mmdd(3),spouse:'있음'}],
+   ['장화님','010-1000-0015','cli','일산','증권전달',10,null,{birth:mmdd(6),referrer:'홍련님'}],
+
+   /* ── 만기 · 납입 만기 ── */
+   ['홍련님','010-1000-0016','cli','수원','계약완료',2,null,{policyEnd:ahead(12),cd:cdy(2,3),premium:'22',income:'380'}],
+   ['별주부','010-1000-0017','cli','안양','증권전달',8,null,{payEnd:ahead(5),premium:'44',income:'380',gaps:'소득공백'}],
+   ['옹고집','010-1000-0018','cli','용인','소개완료',35,null,{policyEnd:ahead(28),premium:'180',income:'1200',job:'법인 대표'}],
+
+   /* ── 계약 주년 ── */
+   ['변학도','010-1000-0006','db','용인','계약완료',2,null,{gaps:'치료비, 간병',cd:cdy(1,2)}],
+   ['숙향이','010-1000-0019','cli','강남','증권전달',12,null,{cd:cdy(5,0),interest:'여행'}],
+
+   /* ── 자녀 길목 · 보험료 비중 ── */
+   ['홍길동','010-1000-0001','db','강남','부재',   4,null,
+     {hook:'자녀 교육비',kids:'8, 13',income:'400',premium:'36',bestTime:'오전 10~11시',job:'자영업 · 식당'}],
+   ['운영이','010-1000-0020','db','분당','AP',     6,null,{kids:'7, 11',income:'550',premium:'25'}],
+   ['춘풍이','010-1000-0021','db','성남','PC',     5,null,{income:'600',premium:'12',job:'직장인'}],
+
+   /* ── 비어 있는 통장 · 소개자 ── */
+   ['팥쥐님','010-1000-0022','cli','일산','계약완료',3,null,{gaps:'간병, 상속',premium:'60',income:'800'}],
+   ['방자돌','010-1000-0007','cli','성남','증권전달',16,null,{referrer:'향단이',premium:'150',income:'900'}],
+   ['향단이','010-1000-0008','cli','강남','소개완료',33,null,{interest:'낚시'}],
+
+   /* ── 한 번도 연락 안 한 분 ── */
+   ['흥부놀','010-1000-0005','db','강남','미접촉', 5,null,{}],
+   ['배비장','010-1000-0010','db','일산','미접촉', 1,null,{}],
+   ['뺑덕이','010-1000-0023','db','수원','미접촉', 8,null,{}],
+
+   /* ── 오래 못 뵌 분 ── */
+   ['심봉사','010-1000-0024','cli','안양','소개완료',95,null,{interest:'서예'}],
+   ['월매님','010-1000-0009','cli','안양','거절',  20,null,{}]
+  ];
+  P.forEach(function(p){
+    var k=pk(p[1]);
+    var base=(p[4]==='미접촉')?p[5]:(p[5]+20);   /* 미접촉이면 배정이 곧 마지막 기록이다 */
+    DB.people[k]={key:k,name:p[0],phone:p[1],src:p[2],region:p[3],since:ago(base),
+                  info:p[7]||{},extra:{},appt:p[6]};
+    DB.events.push({id:'e'+k+'a',at:ago(base),key:k,kind:'stage',stage:'미접촉',body:'배정'});
+    if(p[4]!=='미접촉'){
+      DB.events.push({id:'e'+k+'b',at:ago(p[5]),key:k,kind:'stage',stage:p[4],body:''});
+      /* 단계가 바뀐 그날 통화·만남이 있었던 것입니다 — 30일 약속은 이 기록으로 셉니다 */
+      DB.events.push({id:'e'+k+'c',at:ago(p[5]),key:k,
+        kind:(['AP','CS','계약완료'].indexOf(p[4])>=0?'meet':'call'),
+        result:(p[4]==='부재'?'부재':'통화됨'),body:''});
+    }
+  });
+  /* 손으로 적어 둔 다음 할 일 — 규칙이 만든 카드보다 앞섭니다 */
+  P.forEach(function(p){
+    if(!p[8])return;
+    var d=new Date(); d.setDate(d.getDate()+p[8].due);
+    DB.people[pk(p[1])].next={what:p[8].what,due:ymd(d)};
+  });
+  /* 적어 둔 메모 — 카드의 「첫 문장에 붙일 것」이 여기서 나옵니다 */
+  [[ '010-1000-0001',6,'자녀 교육비가 제일 걸린다고 하심'],
+   [ '010-1000-0004',4,'배우자와 상의 후 답 주신다고 함'],
+   [ '010-1000-0013',5,'아버지 간병을 직접 하고 계심 — 그 이야기부터'],
+   [ '010-1000-0011',2,'예전 수술 이력이 걸린다고 하심'],
+   [ '010-1000-0024',95,'서예 전시 하신다고 했는데 그 뒤로 못 뵘']
+  ].forEach(function(m,i){
+    DB.events.push({id:'m'+i,at:ago(m[1]),key:pk(m[0]),kind:'memo',body:m[2]});
+  });
+  /* 오늘 아침에 이미 두 통 하셨습니다 — 활동량이 0 에서 시작하지 않습니다 */
+  ['010-1000-0016','010-1000-0022'].forEach(function(ph,i){
+    var k=pk(ph);
+    DB.events.unshift({id:'t'+i,at:new Date(Date.now()-(i+1)*40*60000).toISOString(),key:k,
+      kind:'call',result:'통화됨',body:''});
+  });
+  DB.events.unshift({id:'tm0',at:new Date(Date.now()-35*60000).toISOString(),key:pk('010-1000-0016'),
+    kind:'memo',body:'만기 안내 드렸고 다음 주에 뵙기로'});
+  save();
+}
+
+/* ── 계산: 쌓인 것에서 지금을 구한다 ── */
+function evs(k){return DB.events.filter(function(e){return e.key===k&&!e.undone;})
+  .sort(function(a,b){return new Date(b.at)-new Date(a.at);});}
+function stageOf(k){var s=evs(k).filter(function(e){return e.kind==='stage'&&e.stage;});
+  return s.length?s[0].stage:'미접촉';}
+function lastAt(k){var e=evs(k);return e.length?e[0].at:DB.people[k].since;}
+function dueDays(k){ /* 0 이면 오늘, 양수면 며칠 지났나, 음수면 아직 */
+  var st=stageOf(k), w=WAIT[st]==null?7:WAIT[st];
+  return days(lastAt(k),new Date())-w;
+}
+function people(){return Object.keys(DB.people).map(function(k){return DB.people[k];});}
+function touchedToday(k){var t=ymd();
+  return DB.events.some(function(e){return e.key===k&&!e.undone&&ymd(new Date(e.at))===t;});}
+/* 한 분에 거리가 여럿이어도 <b>오늘 자리에는 하나만</b> 세운다.
+   나머지는 그분 화면에 모여 있다 — 「한 분 = 한 퀘스트」 */
+function queue(){
+  var out=[];
+  people().forEach(function(p){
+    if(touchedToday(p.key))return;
+    var cs=[];
+    if(p.appt)cs.push({type:'appt',sc:1000});
+    /* ★ 사람이 손으로 적어 둔 「다음 할 일」 — 규칙이 만든 것보다 앞섭니다.
+       실제 앱의 client_meta.next{what,due} 가 이 자리입니다. */
+    if(p.next&&p.next.what&&p.next.due&&p.next.due<=ymd())
+      cs.push({type:'next',sc:900});
+    var d=dueDays(p.key); if(d>=0)cs.push({type:'stage',sc:520+Math.min(d,30)*3});
+    signals(p).forEach(function(s){cs.push({type:'sig',s:s,sc:s.sc});});
+    /* 30일 약속을 넘긴 분 — 단계와 상관없이 오늘 자리에 선다 */
+    var b=band(p);
+    if(b.k==='over')cs.push({type:'cycle',b:b,sc:500+Math.min(b.d-b.cy,60)*2});
+    else if(b.k==='never')cs.push({type:'cycle',b:b,sc:560});
+    if(!cs.length)return;
+    cs.sort(function(a,b){return b.sc-a.sc;});
+    cs[0].p=p; cs[0].more=cs.length-1; out.push(cs[0]);
+  });
+  out.sort(function(a,b){return b.sc-a.sc;});
+  return out;
+}
+function doneToday(){
+  var t=ymd();
+  var ks={};DB.events.forEach(function(e){
+    if(!e.undone&&ymd(new Date(e.at))===t&&e.kind!=='memo'&&e.at)ks[e.key]=1;});
+  return Object.keys(ks).length;
+}
+function push(k,o){
+  o.id='e'+Date.now()+Math.random().toString(36).slice(2,6);o.at=new Date().toISOString();o.key=k;
+  DB.events.unshift(o);save();
+}
+
+/* ── 화면 ── */
+var VIEW='today', ARG=null;
+var NAV=[['today','🏠','오늘'],['clients','🗂️','고객'],['tools','🧰','도구'],
+         ['content','📰','콘텐츠'],['me','📈','나']];
+
+/* ══ 도구 배치 — 「무엇인가」가 아니라 「언제 쓰는가」로 묶습니다 ══════
+   지금 메뉴는 증권분석 10 · 상담도구 13 · 자료조회 6 … 처럼 <종류>로 묶여
+   있습니다. 종류로 묶으면 <b>언제 열지</b>를 사람이 외워야 합니다.
+   단계로 묶으면 그 분 카드에서 바로 따라옵니다 —
+   apex-stage.js 의 tools 배열이 이미 그 매핑을 반쯤 갖고 있습니다.
+   ⚠ 하나도 빼지 않았습니다. 옮긴 것이지 지운 것이 아닙니다. */
+var TOOLS=[
+ {when:'미접촉 · 부재 · 거절', sub:'아직 못 만난 분', st:['미접촉','부재','거절'], items:[
+   ['mikki_talk','🎣','미끼상품&접촉전략'],['news_live','🌐','고객에게 전할 뉴스'],
+   ['cs_assist','💬','AI 상담 어시스턴트'],['mikki','🎣','미끼 레이더']]},
+ {when:'TA', sub:'날짜를 잡는 자리', st:['TA'], items:[
+   ['cs_assist','💬','AI 상담 어시스턴트'],['sangdam','📋','보장분석 상담자료'],
+   ['voiceasst','🎙️','음성 비서']]},
+ {when:'AP', sub:'만나서 펴 놓는 것', st:['AP'], items:[
+   ['sangdam','📋','보장분석 상담자료'],['fp_deck','📊','재무&보장 상담자료'],
+   ['fp_talk','🗣️','재무설계 실전화법서'],['brain','🧠','윤시현의 두뇌'],
+   ['cs_needs','⚡','니즈 시뮬레이터'],['utphoto','📸','비대면 상담사진·멘트'],
+   ['dz_guide','🩺','질병 보험가이드'],['wallets','🗺️','8통장 진단지도'],
+   ['fact_find','📝','상담카드·팩트파인딩']]},
+ {when:'PC', sub:'제안서를 들고 다시 묻는 자리', st:['PC'], items:[
+   ['frmake','🔀','보장분석 전&후 만들기'],['baba','🔄','비포&애프터'],
+   ['bojang','📑','AI 보장분석'],['compare','📊','제안서 비교'],
+   ['onecmp','💯','한장 보험료 비교'],['ai_prop','🧾','AI 제안서 생성'],
+   ['katalk','💬','제안서 카톡설명'],['finance','📊','재무설계 계산기'],
+   ['interpret','🧠','보험 해석'],['ins_asst','🩺','보험 비서']]},
+ {when:'CS', sub:'청약 — 걸릴 것을 먼저 본다', st:['CS'], items:[
+   ['med_disclosure','📋','알릴의무 필터'],['ref_underwrite','⚠️','예외질환 인수확인'],
+   ['med_checkup','🩺','AI 건강검진'],['cs_gso','🤖','금소법 AI']]},
+ {when:'계약완료 · 증권전달', sub:'소개가 나오는 유일한 자리', st:['계약완료','증권전달','소개완료'], items:[
+   ['pdel','📮','증권 전달'],['contracts','📜','계약관리 판단'],['endorse','✍️','배서 안내서']]},
+ {when:'그 뒤 — 사후관리', sub:'이때 챙기면 다시 옵니다', st:[], items:[
+   ['claims','🧾','청구·사후관리'],['med_silbi','🧮','AI 실비계산기'],
+   ['treatpay','💉','치료비 지급지도'],['ref_hidden','💰','숨은보험금찾기'],
+   ['car_fault','🚗','자동차사고 과실·보상']]},
+ {when:'언제나 — 찾아보는 것', sub:'외울 필요 없습니다', st:[], items:[
+   ['calc','🧮','실무 계산기'],['ref_kcd','📕','질병코드·특약'],
+   ['ref_surgery','🔪','수술명 검색'],['ref_hira','🔗','건강보험심사평가원'],
+   ['ref_jeonsan','🏢','보험사 전산'],['bohum','📕','보험 마스터 아카데미']]},
+ {when:'법인 고객', sub:'사업자 · 법인만', st:[], items:[
+   ['biz_diag','🧭','사업자 진단'],['biz_fund','🏦','정책자금'],['biz_tax','🧾','세금컨설팅'],
+   ['biz_ins','☂️','보험 솔루션'],['biz_retire','🪙','퇴직금 관리'],['biz_staff','👥','직원관리']]},
+ {when:'투자 · 경제', sub:'자산 이야기를 하는 분께', st:[], items:[
+   ['inv_stock','📈','주식관리'],['inv_fund','💠','펀드관리'],
+   ['inv_perf','📐','성과·자산배분'],['inv_econ','🌡️','경제동향 실시간']]}
+];
+/* 찾을 낱말 — 이름과 다르게 부르는 것들. 실제 앱의 검색 별칭표(ak)와 같은 자리입니다.
+   ⚠ 별칭은 여기 한 곳에만 적습니다 — 화면에 또 적으면 한쪽만 늘어납니다 */
+var TALIAS={
+ '재무설계 계산기':'연금 노후 은퇴 저축 목돈 현금흐름 상속',
+ '한장 보험료 비교':'보험료 견적 33개 제휴 비교',
+ 'AI 실비계산기':'실손 실비 병원비 청구 얼마',
+ '알릴의무 필터':'고지 병력 수술 이력 심사',
+ '예외질환 인수확인':'유병자 인수 거절 병력',
+ '치료비 지급지도':'암 뇌 심장 진단금 얼마 나오나',
+ '8통장 진단지도':'빈 통장 공백 진단 보장분석',
+ '증권 전달':'속지 안내장 전달 소개',
+ '청구·사후관리':'보험금 청구 서류 사후',
+ '숨은보험금찾기':'미청구 잠자는 보험금 시효',
+ '질병 보험가이드':'병명 질병 증상 코드',
+ '미끼상품&접촉전략':'화법 물꼬 접촉 첫통화',
+ '보장분석 상담자료':'상담자료 덱 발표 설명',
+ '퇴직금 관리':'퇴직 연금 IRP 사업자',
+ '사업자 진단':'법인 대표 절세 진단'
+};
+function tmatch(t,q){
+  if(!q)return true;
+  return t[2].indexOf(q)>=0 || t[0].indexOf(q)>=0 || String(TALIAS[t[2]]||'').indexOf(q)>=0;
+}
+/* ══ 전체 지도 — 녹였어도 「어디 갔지」를 답할 수 있어야 합니다 ═══════
+   실제 앱의 「APEX 전체 지도」(build_map.py 가 SVG 로 뽑는 것)와 같은 자리입니다.
+   잎에 화면 id 를 달아 두면 #해시로 그 화면에 바로 갑니다. */
+var MAPDATA=[
+ {g:'🏠 오늘', d:'카드가 되는 것 — 화면으로 남지 않습니다', items:[
+   ['home','홈'],['assistant','오늘의 AI 비서'],['ckboard','실행 체크판'],
+   ['apex-route.js','지역 동선'],['touch','오늘의 알림 (DB CRM)']]},
+ {g:'🗂️ 고객', d:'사람에 붙는 것 — 배정 DB 와 고객 365일이 한 벌', items:[
+   ['clients','고객 365일'],['crm','DB 통합 CRM'],['fact_find','상담카드·팩트파인딩'],
+   ['wallets','8통장 진단지도'],['db','DB 관리 (DB CRM)'],['absence','부재 이력 (DB CRM)'],
+   ['recordings','녹음 전달 (DB CRM)']]},
+ {g:'📰 콘텐츠', d:'밖으로 나가는 것 — 월·수·금', items:[
+   ['news_live','고객에게 전할 뉴스'],['biz_news','정책·상품 뉴스'],['insta','인스타그램'],
+   ['blog','블로그'],['video','유튜브&릴스'],['threads','Threads'],['simui','외부글 심의필터'],
+   ['mkt_meta','메타 광고 가이드'],['mkt_volume','키워드 검색량'],['mkt_combine','키워드 조합기'],
+   ['mkt_landing','리드 랜딩페이지'],['ext_reply','소상공인 AI 답글'],
+   ['ext_thread','스레드 반자동발행'],['ext_naver','네이버 광고 대량등록기'],['calendar','콘텐츠 캘린더']]},
+ {g:'📈 나', d:'기간의 것 — 하루에 안 끝납니다', items:[
+   ['airep','TFA 업무관리'],['growboard','성장판'],['attend','출근 현황'],['mycoach','내 코칭'],
+   ['academy','APEX 본인 점검란'],['mkt_card','디지털 명함'],['voice','건의함'],
+   ['dashboard','통합 대시보드 (DB CRM)'],['kpi','KPI·타율 분석 (DB CRM)'],['ai','AI 피드백 (DB CRM)'],
+   ['manual','APEX 사용가이드'],['apexmap','APEX 전체 지도'],['apexmaster','APEX 마스터 과정'],
+   ['academy_notion','APEX ACADEMY 노션'],['settings','설정'],['ready','출발 점검'],
+   ['phone_app','내 폰에 설치'],['health','시스템 점검'],['pricing','요금제·구독'],['terms','약관·개인정보']]},
+ {g:'👥 나 › 팀', d:'직책이 있는 분께만 — DB 배정은 화면 그대로 둡니다', items:[
+   ['team','담당자·팀 관리 · DB 배정 (DB CRM)'],['stats','담당자·팀 통계 (DB CRM)'],
+   ['teamhub','TEAM 총괄 관리'],['branch_coach','팀 코칭'],['daily','매일 취합'],
+   ['report','대표 브리핑'],['org','조직도'],['hq','승인·규칙'],['audit','감사로그']]},
+ {g:'📅 달력', d:'옆줄 — 매일 누르는 것이 아닙니다', items:[['mycal','내 캘린더']]}
+];
+/* 도구까지 합친 전체 찾기 — 「어디 갔지」에 답합니다 */
+function allIndex(){
+  var out=[];
+  TOOLS.forEach(function(g){g.items.forEach(function(t){
+    out.push({id:t[0],name:t[2],emo:t[1],where:'🧰 도구 · '+g.when});});});
+  MAPDATA.forEach(function(g){g.items.forEach(function(t){
+    out.push({id:t[0],name:t[1],emo:g.g.slice(0,2),where:g.g});});});
+  return out;
+}
+/* 오늘 카드의 단계에 맞는 도구 — 카드에서 바로 따라옵니다 */
+function toolsFor(st){
+  var out=[]; TOOLS.forEach(function(g){ if(g.st.indexOf(st)>=0)out=out.concat(g.items); });
+  return out;
+}
+
+/* ── 오늘 동선 — 약속 + 「가는 김에」 ────────────────────────────────
+   실제 앱에는 apex-route.js 가 있고 카카오 길찾기로 구간 거리를 잽니다.
+   여기서는 같은 짜임만 보여 드립니다 — 약속이 선 지역에 사는 분을 붙입니다. */
+function rKey(s){return String(s||'').replace(/\s+/g,'');}
+function todayRoute(){
+  var ap=people().filter(function(p){return p.appt;})
+    .sort(function(a,b){return a.appt<b.appt?-1:1;});
+  var rg={}; ap.forEach(function(p){if(p.region)rg[rKey(p.region)]=1;});
+  var seen={}; ap.forEach(function(p){seen[p.key]=1;});
+  var near=queue().map(function(c){return c.p;}).filter(function(p){
+    return !seen[p.key] && p.region && rg[rKey(p.region)];});
+  return {ap:ap,near:near,regions:Object.keys(rg)};
+}
+/* ── 오늘 활동량 ── */
+var GOAL={call:5,meet:2,note:3};
+function activity(){
+  var t=ymd(), a={call:0,meet:0,note:0};
+  DB.events.forEach(function(e){
+    if(e.undone||ymd(new Date(e.at))!==t)return;
+    if(e.kind==='call')a.call++;
+    else if(e.kind==='meet'||(e.kind==='call'&&e.result==='만남'))a.meet++;
+    else if(e.kind==='memo'||e.kind==='photo')a.note++;
+  });
+  a.done=Math.min(1,(a.call/GOAL.call+a.meet/GOAL.meet+a.note/GOAL.note)/3);
+  return a;
+}
+function go(v,a){VIEW=v;ARG=a||null;paint();try{$('scr').scrollTop=0;}catch(e){}}
+
+function paint(){
+  $('snav').innerHTML='<div class="glab">오늘 하루</div>'+NAV.map(function(n){
+    var c=n[0]==='today'?queue().length:(n[0]==='clients'?people().length:'');
+    return '<button class="it'+(VIEW===n[0]||(VIEW==='person'&&n[0]==='clients')?' on':'')+'" data-go="'+n[0]+'">'+
+      '<span class="e">'+n[1]+'</span>'+n[2]+(c!==''?'<span class="c">'+c+'</span>':'')+'</button>';}).join('')+
+    '<div class="glab">넣기</div>'+
+    '<button class="it" data-go="add"><span class="e">＋</span>고객 넣기</button>'+
+    '<div class="glab">그 밖</div>'+
+    '<button class="it'+(VIEW==='cal'?' on':'')+'" data-go="cal"><span class="e">📅</span>달력</button>'+
+    '<button class="it'+(VIEW==='map'?' on':'')+'" data-go="map"><span class="e">🗺️</span>APEX 전체 지도</button>'+
+    '<button class="it'+(VIEW==='rules'?' on':'')+'" data-go="rules"><span class="e">📐</span>그릇 · 규칙</button>'+
+    '<div style="padding:14px 10px 6px">'+
+    '<button class="t-btn sm" data-go="help" style="background:'+(VIEW==='help'?'var(--t-point)':'var(--t-point-l)')+
+    ';color:'+(VIEW==='help'?'#fff':'var(--t-point)')+'">무엇을 할지 모르겠다면</button></div>';
+  $('tabbar').innerHTML=NAV.map(function(n){
+    return '<button data-go="'+n[0]+'" class="'+(VIEW===n[0]||(VIEW==='person'&&n[0]==='clients')?'on':'')+'">'+
+      '<span class="i"></span>'+n[2]+'</button>';}).join('');
+  ({today:vToday,clients:vClients,person:vPerson,add:vAdd,cal:vCal,tools:vTools,
+    map:vMap,help:vHelp,content:vContent,me:vMe,rules:vRules}[VIEW]||vToday)();
+}
+
+/* 오늘 */
+function vToday(){
+  var q=queue(), dn=doneToday(), tot=q.length+dn;
+  $('top').innerHTML='<div class="d">'+(new Date().getMonth()+1)+'월 '+new Date().getDate()+'일</div>'+
+    '<div class="r"><div class="pil">연속 12일</div><div class="pil w">알람 4개</div></div>';
+  var h='<div class="h1">윤 단장님, <span>'+(q.length?('오늘 '+q.length+'분'):'오늘 끝났어요')+'</span></div>'+
+    '<div class="pbar"><i style="width:'+(tot?Math.round(dn/tot*100):100)+'%"></i></div>'+
+    '<div class="sub" style="margin-top:8px">'+dn+' / '+tot+' · 위에서부터 하시면 오늘이 끝납니다</div>';
+  if(!q.length){
+    h+='<div class="t-card" style="margin-top:14px;text-align:center;padding:40px 20px">'+
+      '<div style="font-size:40px">✅</div><div style="margin-top:14px;font-size:22px;font-weight:800;letter-spacing:-.03em">오늘 끝났습니다</div>'+
+      '<div class="sub">'+dn+'분 챙기셨어요. 내일 다시 세워 드립니다.</div></div>';
+  }else{
+    var c=q[0], p=c.p, st=stageOf(p.key), m=MAP[st]||{};
+    var ttl,aim,way,ch,why,emo,tools;
+    if(c.type==='sig'){ var s=c.s;
+      emo=s.emo; ttl=s.t; aim=s.aim; way=s.way; ch=s.ch; why=s.why;
+      tools=(MAP[st]||{}).tools||[];
+    }else if(c.type==='next'){
+      emo='📌'; ttl='내가 적어 둔 것'; ch=(MAP[st]||{}).ch||'전화';
+      aim='<b>'+esc(p.next.what)+'</b>';
+      way='규칙이 만든 것이 아니라 사장님이 그날 적어 두신 것입니다';
+      why='기한 '+esc(p.next.due)+(p.next.due<ymd()?(' · '+days(p.next.due,new Date())+'일 지났습니다'):' · 오늘까지');
+      tools=(MAP[st]||{}).tools||[];
+    }else if(c.type==='cycle'){
+      emo=(c.b.k==='never'?'🌱':'⏰'); ch='전화';
+      ttl=(c.b.k==='never'?'한 번도 연락 안 함':'30일 약속을 넘겼습니다');
+      aim=(c.b.k==='never'?'<b>첫 통화</b> — 오래 두면 영영 못 겁니다':'<b>안부</b>를 묻고 다음에 할 일을 적어 둔다');
+      way='오래 못 뵌 것을 먼저 말한다. 용건부터 꺼내면 그것이 용건이 된다';
+      why=c.b.t+(isVip(p)?' · VIP 라 '+CC.vipDays+'일 주기입니다':'');
+      tools=['🌐 고객에게 전할 뉴스','📋 보장분석 상담자료'];
+    }else{
+      emo=EMO[st]; ttl=st+' · '+(m.ch||''); aim=m.aim; way=m.way; ch=m.ch;
+      why=whyText(p); tools=m.tools||[];
+    }
+    h+='<div class="t-card one" style="margin-top:14px">'+
+      '<div class="hd"><div class="av">'+esc(p.name.charAt(0))+'</div>'+
+      '<div><div class="nm2">'+esc(mask(p.name))+'님</div>'+
+      '<div class="mt">'+emo+' '+esc(ttl)+(p.appt?' · 오늘 '+esc(p.appt):'')+
+      (infoOf(p).bestTime?' · '+esc(infoOf(p).bestTime)+'에 받으심':'')+'</div></div></div>'+
+      '<div class="why">왜 오늘인가 — '+(c.type==='sig'?esc(why):why)+
+      (c.more?(' · <b>이분께 거리가 '+(c.more+1)+'가지</b>'):'')+'</div>'+
+      '<div class="aim">'+(aim||'')+'</div><div class="way">'+esc(way||'')+'</div>'+
+      (infoOf(p).hook?'<div class="note" style="background:var(--t-point-l);color:var(--t-point)">첫 문장에 붙일 것 — <b>'+
+        esc(infoOf(p).hook)+'</b></div>':'')+
+      '<div class="tools">'+tools.map(function(t){return '<span>'+esc(t)+'</span>';}).join('')+'</div>'+
+      '<button class="t-btn" style="margin-top:16px" data-do="'+p.key+'">'+
+        esc(ch==='만남'?'만나러 갑니다':(ch==='문자'?'문자 보내기':'전화 걸기'))+'</button>'+
+      '<div class="row2" style="margin-top:8px">'+
+      '<button class="t-btn g sm" style="flex:1" data-skip="'+p.key+'">오늘은 접어요</button>'+
+      '<button class="t-btn g sm" style="flex:1" data-open="'+p.key+'">이분 자세히</button></div></div>';
+    if(q.length>1){
+      h+='<div class="t-card" style="padding:6px 22px"><div class="lab" style="padding:14px 0 4px">다음 분</div>'+
+        q.slice(1,4).map(function(x){
+          var e2=x.type==='sig'?x.s.emo:(x.type==='cycle'?(x.b.k==='never'?'🌱':'⏰')
+            :(x.type==='appt'?'📍':(x.type==='next'?'📌':EMO[stageOf(x.p.key)])));
+          var l2;
+          if(x.type==='sig')       l2=x.s.t;
+          else if(x.type==='cycle')l2=x.b.t;
+          else if(x.type==='appt') l2='오늘 '+x.p.appt+' 약속 · '+stageOf(x.p.key);
+          else if(x.type==='next') l2='내가 적어 둔 것 — '+((x.p.next||{}).what||'');
+          else                     l2=stageOf(x.p.key)+' · '+((MAP[stageOf(x.p.key)]||{}).ch||'');
+          return '<button class="t-row" data-open="'+x.p.key+'"><div class="av" style="width:32px;height:32px;'+
+          'border-radius:11px;font-size:12px;flex:0 0 32px">'+e2+'</div><div><div class="nm">'+esc(mask(x.p.name))+'님</div>'+
+          '<div class="mt">'+esc(l2)+'</div></div>'+
+          '<div class="rt"><span class="stg due">'+(x.type==='sig'?'신호':(x.type==='cycle'?'주기':
+            (x.type==='appt'?x.p.appt:(x.type==='next'?'적어 둠':
+            (dueDays(x.p.key)===0?'오늘':dueDays(x.p.key)+'일 지남')))))+
+          '</span></div></button>';}).join('')+
+        (q.length>4?'<div class="mt" style="padding:10px 0 14px">＋ '+(q.length-4)+'분 더 — 끝내시면 차례로 올라옵니다</div>':'<div style="height:8px"></div>')+
+        '</div>';
+    }
+  }
+  /* ── 오늘 동선 — 자리는 약속이 없어도 그대로 둡니다 ── */
+  var R=todayRoute();
+  h+='<div class="t-card"><div class="lab">오늘 동선'+
+    (R.regions.length?' · '+esc(R.regions.join(' · ')):'')+'</div>';
+  if(R.ap.length){
+    h+=R.ap.map(function(p,i){
+      return '<button class="t-row" data-open="'+p.key+'"><div class="av" style="width:34px;height:34px;'+
+      'border-radius:11px;font-size:12.5px;flex:0 0 34px;background:var(--t-pur-l);color:var(--t-pur)">'+
+      esc(p.appt)+'</div><div><div class="nm">'+esc(mask(p.name))+'님</div>'+
+      '<div class="mt">'+esc(p.region||'지역 모름')+' · '+esc(stageOf(p.key))+
+      (i?' · 앞 곳에서 이어서':'')+'</div></div>'+
+      '<div class="rt"><span class="gb">자료</span></div></button>';}).join('');
+    if(R.near.length){
+      h+='<div class="note" style="background:var(--t-pos-l);color:#065F46">'+
+        '<b>가는 김에</b> — '+esc(R.regions.join('·'))+' 에 오늘 걸 분이 <b>'+R.near.length+'명</b> 있습니다. '+
+        '한 번 가는 길에 한 명만 만나고 오는 것이 제일 아깝습니다.</div>'+
+        '<div class="chips">'+R.near.slice(0,6).map(function(p){
+          return '<button class="t-chip" data-open="'+p.key+'">'+esc(mask(p.name))+' <b>'+
+          esc(stageOf(p.key))+'</b></button>';}).join('')+'</div>'+
+        '<div class="row2" style="margin-top:12px">'+
+        '<button class="t-btn sm" style="flex:1" data-route="go">🗺️ 이 순서로 돌기</button>'+
+        '<button class="t-btn g sm" style="flex:1" data-route="near">가는 김에 '+R.near.length+'명 한 번에 걸기</button></div>';
+    }else{
+      h+='<div class="row2" style="margin-top:12px"><button class="t-btn sm" data-route="go">🗺️ 이 순서로 돌기</button></div>';
+    }
+  }else{
+    var byR={}; queue().forEach(function(c){var r=rKey(c.p.region);if(r)byR[r]=(byR[r]||0)+1;});
+    var top=Object.keys(byR).sort(function(a,b){return byR[b]-byR[a];}).slice(0,3);
+    h+='<div class="mt" style="margin-top:8px">오늘 갈 데가 없습니다. <b>지역을 묶어 하루를 잡으시면</b> 길에서 버리는 시간이 줄어듭니다.</div>'+
+      (top.length?('<div class="chips">'+top.map(function(r){
+        return '<button class="t-chip" data-region="'+esc(r)+'">'+esc(r)+' <b>'+byR[r]+'명</b></button>';}).join('')+'</div>'):'');
+  }
+  h+='</div>';
+
+  /* ── 30일 약속 ── */
+  var PR=promise(), pct=PR.all?Math.round(PR.kept/PR.all*100):0;
+  h+='<div class="t-card"><div class="lab">30일 약속</div>'+
+    '<div class="big" style="margin-top:8px;font-size:18px;font-weight:700;letter-spacing:-.03em">'+
+    PR.kept+' / '+PR.all+'명 — 약속을 지키고 있습니다</div>'+
+    '<div class="pbar"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="row2" style="margin-top:12px">'+
+    '<button class="t-chip" data-goc="over" style="flex:1;justify-content:center;height:42px;'+
+      (PR.over?'background:#FFF4E5;color:#B26A00':'')+'">넘긴 분 <b>'+PR.over+'</b></button>'+
+    '<button class="t-chip" data-goc="never" style="flex:1;justify-content:center;height:42px;'+
+      (PR.never?'background:#F2F4F6;color:#4E5968':'')+'">한 번도 <b>'+PR.never+'</b></button>'+
+    '</div>'+
+    '<div class="mt" style="margin-top:10px">모든 고객에게 <b>'+CC.days+'일 안에</b> 한 번. '+
+    '월 보험료 '+CC.vipMan+'만원 넘는 분은 <b>'+CC.vipDays+'일마다</b>입니다.</div></div>';
+
+  /* ── 오늘 활동량 ── */
+  var A=activity();
+  var left=[['call','전화',A.call,GOAL.call],['meet','만남',A.meet,GOAL.meet],['note','기록',A.note,GOAL.note]];
+  var short=left.filter(function(x){return x[2]<x[3];});
+  h+='<div class="t-card"><div class="lab">오늘 활동량</div>'+
+    '<div class="row2" style="margin-top:12px">'+left.map(function(x){
+      var ok=x[2]>=x[3];
+      return '<div style="flex:1;background:'+(ok?'var(--t-pos-l)':'#F7F9FA')+';border-radius:14px;padding:14px 10px;text-align:center">'+
+      '<div style="font-size:21px;font-weight:800;letter-spacing:-.035em;color:'+(ok?'var(--t-pos)':'var(--t-ink)')+'">'+
+      x[2]+'<span style="font-size:13px;color:#B0B8C1"> / '+x[3]+'</span></div>'+
+      '<div class="mt" style="margin-top:4px">'+x[1]+'</div></div>';}).join('')+'</div>'+
+    '<div class="pbar"><i style="width:'+Math.round(A.done*100)+'%"></i></div>'+
+    '<div class="mt" style="margin-top:9px">'+
+    (short.length?('오늘 최고 활동량까지 '+short.map(function(x){return x[1]+' '+(x[3]-x[2]);}).join(' · ')+' 남았습니다')
+      :'<b style="color:var(--t-pos)">오늘 최고 활동량입니다.</b> 여기서 더 하시면 내일이 무너집니다')+'</div></div>';
+  $('scr').innerHTML=h;
+}
+function whyText(p){
+  var st=stageOf(p.key), d=dueDays(p.key), last=fmt(lastAt(p.key));
+  if(p.appt)return '오늘 '+esc(p.appt)+' 에 만납니다';
+  var base={'미접촉':'배정만 되고 아직 첫 통화 전입니다','부재':'안 받으셨습니다','거절':'기다리기로 한 날이 됐습니다',
+    'TA':'통화는 됐고 날짜만 남았습니다','AP':'만나 뵌 뒤 다음 자리를 잡을 때입니다',
+    'PC':'제안서를 드린 뒤입니다','CS':'서류와 날짜를 정할 때입니다','계약완료':'증권이 나왔습니다',
+    '증권전달':'전해 드린 뒤 여쭐 때가 됐습니다','소개완료':'결과를 알려 드릴 때입니다'}[st]||'';
+  return esc(base)+' · 마지막 기록 '+esc(last)+(d>0?(' · <b>'+d+'일 지났습니다</b>'):' · 오늘이 그날입니다');
+}
+
+/* 고객 */
+var F='today';
+function vClients(){
+  $('top').innerHTML='<div class="d">고객 '+people().length+'명</div>'+
+    '<div class="r"><button class="pil b" data-go="add">＋ 넣기</button></div>';
+  var q=queue().length;
+  var PR2=promise();
+  var F_DEF=[['today','오늘',q],['over','약속 넘김',PR2.over],['never','한 번도',PR2.never],
+             ['noplan','다음 할 일 없음',people().filter(function(p){return !(p.next&&p.next.what);}).length],['run','진행 중',null],['won','계약·증권',null],
+             ['thin','아는 게 적음',people().filter(function(p){return filled(p)<4;}).length],
+             ['all','전체',people().length]];
+  var qk={}; queue().forEach(function(c){qk[c.p.key]=1;});
+  var list=people().filter(function(p){
+    var s=stageOf(p.key);
+    if(F==='today')return !!qk[p.key];
+    if(F==='over')return band(p).k==='over';
+    if(F==='never')return band(p).k==='never';
+    if(F==='noplan')return !(p.next&&p.next.what);
+    if(F==='thin')return filled(p)<4;
+    if(F==='run')return ['TA','AP','PC','CS'].indexOf(s)>=0;
+    if(F==='won')return ['계약완료','증권전달','소개완료'].indexOf(s)>=0;
+    return true;
+  }).sort(function(a,b){return dueDays(b.key)-dueDays(a.key);});
+  var h='<div class="h1">고객 <span>한 벌로</span></div>'+
+    '<div class="sub">배정 DB 와 고객 365일을 한 줄로 세웠습니다. 어디서 왔는지는 작게만 적습니다.</div>'+
+    '<div class="chips">'+F_DEF.map(function(f){
+      var n=f[2]!=null?f[2]:people().filter(function(p){var s=stageOf(p.key);
+        return f[0]==='run'?['TA','AP','PC','CS'].indexOf(s)>=0
+          :(f[0]==='won'?['계약완료','증권전달','소개완료'].indexOf(s)>=0:true);}).length;
+      return '<button class="t-chip'+(F===f[0]?' on':'')+'" data-f="'+f[0]+'">'+f[1]+' <b>'+n+'</b></button>';}).join('')+'</div>'+
+    '<div class="t-card" style="margin-top:13px;padding:6px 22px">'+
+    (list.length?list.map(function(p){var s=stageOf(p.key),d=dueDays(p.key);
+      return '<button class="t-row" data-open="'+p.key+'"><div class="av">'+esc(p.name.charAt(0))+'</div>'+
+      '<div style="min-width:0"><div class="nm">'+esc(mask(p.name))+'님 <span class="stg'+(d>=0?' due':'')+'">'+
+      EMO[s]+' '+esc(s)+'</span>'+(signals(p).length?'<span class="stg" style="background:var(--t-pos-l);color:var(--t-pos)">신호 '+
+      signals(p).length+'</span>':'')+'</div><div class="mt">'+esc(p.src==='db'?'배정 DB':'고객 365일')+' · '+esc(p.region)+
+      ' · 아는 것 '+filled(p)+'/'+INFO.length+'</div>'+
+      '<div class="mt" style="color:'+band(p).col+';font-weight:700">'+
+      (isVip(p)?'★ VIP · ':'')+esc(band(p).t)+'</div></div>'+
+      '<div class="rt"><span class="stg'+(d>=0?' due':'')+'">'+(d>=0?(d===0?'오늘':d+'일'):'—')+'</span></div></button>';}).join('')
+      :'<div class="empty">이 칸에는 아무도 없습니다</div>')+'</div>';
+  $('scr').innerHTML=h;
+}
+
+/* 한 사람 */
+var REAL={};
+function infoHtml(p){
+  var I=infoOf(p), gs=[], seen={};
+  INFO.forEach(function(f){if(!seen[f.g]){seen[f.g]=1;gs.push(f.g);}});
+  return gs.map(function(g){
+    var isBa=(g==='보험');
+    return '<div class="lab" style="color:#AEB6BE;padding:15px 0 0">'+esc(g)+
+      (isBa?' <span style="color:var(--t-point)">· 보장분석이 채웁니다</span>':'')+'</div>'+
+      (isBa?('<div style="padding:8px 0 2px"><button class="t-btn sm" data-ba="'+p.key+'" '+
+        'style="background:var(--t-point-l);color:var(--t-point)">📑 KB 보장분석 넣고 읽어오기</button></div>'):'')+
+      INFO.filter(function(f){return f.g===g;}).map(function(f){
+        var v=String(I[f.k]||'').trim();
+        return '<button class="t-row" data-info="'+f.k+'|'+p.key+'">'+
+          '<div style="min-width:0"><div class="nm">'+esc(f.t)+
+            (v?' <span class="stg" style="background:var(--t-point-l);color:var(--t-point)">'+esc(v)+esc(f.unit||'')+'</span>':'')+
+          '</div><div class="mt">'+esc(f.hint)+'</div></div>'+
+          '<div class="rt"><span class="gb'+(v?'':' b')+'">'+(v?'고치기':'＋ 채우기')+'</span></div></button>';
+      }).join('');
+  }).join('');
+}
+function sigHtml(p){
+  var S=signals(p);
+  if(!S.length)return '<div class="t-card"><div class="lab">아직 거리가 없습니다</div>'+
+    '<div class="mt" style="margin-top:8px">위 칸을 채우시면 <b>여기에 거리가 생깁니다.</b> '+
+    '생일·만기·자녀 나이·보험료 비중·빈 담보·소개자 — 채운 것만큼 나옵니다.</div></div>';
+  return '<div class="t-card" style="padding:6px 22px"><div class="lab" style="padding:15px 0 2px">'+
+    '이 입력이 만든 거리 — '+S.length+'가지</div>'+
+    S.map(function(s){return '<div class="t-row" style="align-items:flex-start">'+
+      '<div class="av" style="width:34px;height:34px;border-radius:11px;font-size:14px;flex:0 0 34px;'+
+      'background:var(--t-pos-l)">'+s.emo+'</div>'+
+      '<div style="min-width:0"><div class="nm">'+esc(s.t)+' <span class="stg">'+esc(s.ch)+'</span></div>'+
+      '<div class="mt">'+s.why+'</div>'+
+      '<div class="mt" style="color:#4E5968;margin-top:6px">'+s.aim+'</div></div></div>';}).join('')+
+    '<div style="height:10px"></div></div>';
+}
+function vPerson(){
+  var p=DB.people[ARG]; if(!p){go('clients');return;}
+  var st=stageOf(p.key), m=MAP[st]||{}, d=dueDays(p.key), show=REAL[p.key];
+  $('top').innerHTML='<button class="bk" data-go="clients">‹</button><div class="d">고객</div>';
+  var list=evs(p.key).concat(DB.events.filter(function(e){return e.key===p.key&&e.undone;}))
+    .sort(function(a,b){return new Date(b.at)-new Date(a.at);});
+  var h='<div class="t-card">'+
+    '<div style="display:flex;align-items:center;gap:13px">'+
+    '<div class="av" style="width:52px;height:52px;border-radius:17px;font-size:19px;flex:0 0 52px">'+esc(p.name.charAt(0))+'</div>'+
+    '<div><div style="font-size:21px;font-weight:800;letter-spacing:-.035em;display:flex;align-items:center;gap:8px">'+
+    esc(show?p.name:mask(p.name))+'님 <button data-eye="'+p.key+'" style="width:28px;height:28px;border-radius:9px;'+
+    'background:#F2F4F6;font-size:13px">👁</button></div>'+
+    '<div class="mt">'+(show?'이 브라우저에서만 보입니다 · 서버에는 '+esc(mask(p.name)):
+      esc(p.src==='db'?'배정 DB':'고객 365일')+' · '+esc(p.region)+' · '+esc(p.phone))+'</div>'+
+    '<div class="mt" style="color:'+band(p).col+';font-weight:700">'+
+      (isVip(p)?'★ VIP · '+CC.vipDays+'일 주기 · ':CC.days+'일 주기 · ')+esc(band(p).t)+'</div>'+
+    '</div></div>'+
+    '<div class="row2" style="margin-top:15px">'+
+    '<button class="t-btn sm" style="flex:1" data-call="'+p.key+'">📞 전화</button>'+
+    '<button class="t-btn g sm" style="flex:1" data-add="memo|'+p.key+'">📝 메모</button>'+
+    '<button class="t-btn g sm" style="flex:1" data-add="photo|'+p.key+'">📷 사진</button></div></div>'+
+    /* ★ 다음 할 일 — 「마지막으로 언제 만났고, 다음에 무엇을 하기로 했는지가 남아야 관리다」 */
+    '<div class="t-card"><div class="lab">다음 할 일</div>'+
+    (p.next&&p.next.what
+      ? ('<div class="big" style="margin-top:8px;font-size:18px;font-weight:700;letter-spacing:-.03em">'+
+         esc(p.next.what)+'<small style="color:'+(p.next.due&&p.next.due<=ymd()?'var(--t-warn)':'var(--t-sub2)')+'">'+
+         '기한 '+esc(p.next.due||'없음')+
+         (p.next.due&&p.next.due<ymd()?(' · '+days(p.next.due,new Date())+'일 지났습니다'):'')+'</small></div>'+
+         '<div class="row2" style="margin-top:13px">'+
+         '<button class="t-btn sm" style="flex:1" data-nextdone="'+p.key+'">했습니다</button>'+
+         '<button class="t-btn g sm" style="flex:1" data-next="'+p.key+'">고치기</button></div>')
+      : ('<div class="mt" style="margin-top:8px">아직 없습니다. <b>다음에 무엇을 할지가 없으면 관리가 아닙니다.</b></div>'+
+         '<button class="t-btn sm" style="margin-top:13px" data-next="'+p.key+'">＋ 적어 두기</button>'))+
+    '</div>'+
+    '<div class="t-card"><div class="lab">지금 단계 — 누르면 바꿉니다</div>'+
+    '<div class="chips" style="overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px">'+
+    ORDER.map(function(s){return '<button class="t-chip'+(s===st?' on':'')+'" data-stage="'+s+'|'+p.key+'">'+
+      EMO[s]+' '+s+'</button>';}).join('')+'</div>'+
+    '<div class="note" style="background:#F7F9FA;color:#4E5968">'+(m.aim||'')+'<br><span style="font-weight:600;color:#8B95A1">'+
+    esc(m.way||'')+'</span></div>'+
+    '<div class="mt" style="margin-top:10px">다음에 뜨는 때 — <b style="color:var(--t-ink)">'+
+    (WAIT[st]||'—')+'일 뒤</b>'+(d>=0?(' · 지금은 '+(d===0?'오늘':(d+'일 지남'))):'')+(GO[st]?(' · 다음 단계는 '+GO[st]):'')+'</div></div>'+
+    '<div class="t-card" style="padding:6px 22px"><div class="lab" style="padding:15px 0 2px;display:flex">아는 것'+
+    '<span style="margin-left:auto;color:#C4CBD2;font-weight:700">'+filled(p)+' / '+INFO.length+'</span></div>'+
+    '<div class="pbar" style="margin-bottom:4px"><i style="width:'+Math.round(filled(p)/INFO.length*100)+'%"></i></div>'+
+    infoHtml(p)+'<div style="height:10px"></div></div>'+
+    sigHtml(p)+
+    (function(){var N=newsFor(p); if(!N.length)return '';
+      return '<div class="t-card" style="padding:6px 22px"><div class="lab" style="padding:15px 0 2px">'+
+        '이분께 보낼 것 — 뉴스 '+N.length+'건</div>'+
+        N.map(function(n){return '<button class="t-row" data-news2="'+n.id+'">'+
+          '<div class="av" style="width:34px;height:34px;border-radius:11px;font-size:14px;flex:0 0 34px;'+
+          'background:var(--t-pur-l)">📰</div><div style="min-width:0"><div class="nm">'+esc(n.t)+'</div>'+
+          '<div class="mt">'+esc((n.tag||[]).join(' · '))+' — '+
+          (String(infoOf(p).gaps||'').indexOf((n.tag||[])[0])>=0?'비어 있는 통장과 맞습니다':'관심사와 맞습니다')+
+          '</div></div><div class="rt"><span class="gb b">캐러셀</span></div></button>';}).join('')+
+        '<div style="height:10px"></div></div>';})()+
+    '<div class="t-card" style="padding:6px 22px"><div class="lab" style="padding:14px 0 2px;display:flex">쌓인 기록'+
+    '<span style="margin-left:auto;color:#C4CBD2;font-weight:700">'+list.length+'줄 · 지워진 것 없음</span></div>'+
+    list.map(function(e,i){
+      var t=e.kind==='stage'?('단계 — '+e.stage):(e.kind==='call'?('통화 — '+(e.result||'')):
+        e.kind==='meet'?'만남':e.kind==='memo'?'메모':e.kind==='photo'?('사진 — '+(e.body||'')):e.kind);
+      var isNew=days(e.at,new Date())===0;
+      return '<div class="ev"><div class="d'+(i?' g':'')+'"></div><div style="min-width:0"><div class="t">'+esc(t)+
+        (e.undone?' <span style="color:#8B95A1;font-weight:600">· 되돌림</span>':'')+'</div>'+
+        '<div class="s">'+esc(fmt(e.at))+(e.body?' · '+esc(e.body):'')+'</div></div>'+
+        (isNew&&!e.undone?'<button class="u" data-undo="'+e.id+'">되돌리기</button>':'')+'</div>';}).join('')+
+    '<div style="height:10px"></div></div>';
+  $('scr').innerHTML=h;
+}
+
+/* 넣기 */
+function vAdd(){
+  $('top').innerHTML='<button class="bk" data-go="clients">‹</button><div class="d">고객 넣기</div>';
+  $('scr').innerHTML='<div class="h1">두 칸이면 <span>끝납니다</span></div>'+
+    '<div class="sub">나머지는 첫 통화 뒤에 한 칸씩 묻습니다 — 지금 열 칸을 채우려다 안 넣게 됩니다.</div>'+
+    '<div class="t-card" style="margin-top:14px">'+
+    '<div class="fld"><div class="l">이름</div><input id="an" placeholder="홍길동" autocomplete="off"></div>'+
+    '<div class="fld"><div class="l">전화</div><input id="ap" placeholder="010-0000-0000" inputmode="numeric" autocomplete="off"></div>'+
+    '<div class="dupw" id="adup"></div>'+
+    '<button class="t-btn" style="margin-top:20px" id="ago">넣기</button>'+
+    '<div class="note">서버에 올라갈 때는 <b>가린 이름</b>으로 갑니다. 실명은 이 브라우저에만 남습니다.</div></div>'+
+    '<div class="quick3">'+
+    '<button data-q="명함"><div class="e">📷</div><div class="t">명함 찍기</div></button>'+
+    '<button data-q="붙여넣기"><div class="e">📋</div><div class="t">여럿 붙여넣기</div></button>'+
+    '<button data-q="말로"><div class="e">🎙️</div><div class="t">말로 넣기</div></button></div>';
+  var f=function(){
+    var k=pk($('ap').value), hit=null;
+    Object.keys(DB.people).forEach(function(x){if(k.length>=7&&x.indexOf(k)===0)hit=DB.people[x];});
+    var e=$('adup');
+    if(hit){e.classList.add('on');e.innerHTML='<div style="font-size:13.5px;font-weight:800;color:#8A5A12">이미 있는 분 같습니다</div>'+
+      '<div style="margin-top:6px;font-size:12px;color:#8A5A12;font-weight:600">'+esc(mask(hit.name))+'님 · '+
+      esc(stageOf(hit.key))+' · '+esc(hit.src==='db'?'배정 DB':'고객 365일')+'</div>'+
+      '<div class="row2" style="margin-top:10px"><button class="t-btn sm" style="flex:1;background:var(--t-warn)" '+
+      'data-open="'+hit.key+'">그분 열기</button></div>';}
+    else e.classList.remove('on');
+  };
+  $('ap').addEventListener('input',f);$('an').addEventListener('input',f);
+  $('ago').addEventListener('click',function(){
+    var n=($('an').value||'').trim(), k=pk($('ap').value);
+    if(!n||k.length<10){toast('이름과 전화를 채워 주세요');return;}
+    if(DB.people[k]){toast('이미 있는 번호입니다');return;}
+    DB.people[k]={key:k,name:n,phone:$('ap').value,src:'db',region:'',since:new Date().toISOString(),extra:{},appt:null};
+    push(k,{kind:'stage',stage:'미접촉',body:'손으로 넣음'});
+    toast('넣었습니다 — 서버에는 <b>'+esc(mask(n))+'</b> 로 갑니다');go('person',k);
+  });
+}
+
+/* ── 달력 — 한 달을 미리 짜 둔다 ────────────────────────────────────
+   영업만 하시게 하려면 「오늘 뭐 하지」를 매일 새로 정하지 않아야 합니다.
+   월·수·금은 나를 알리는 날, 화·목은 지역을 묶어 도는 날로 리듬을 고정합니다. */
+var DOW=['일','월','화','수','목','금','토'];
+var SNSDAY={1:['카드뉴스','뉴스 하나를 캐러셀 다섯 장으로'],
+            3:['블로그','한 편 — 기계가 먼저 걸릴 자리를 봅니다'],
+            5:['릴스 대본','나를 알리는 30초 — 주 1회면 충분합니다']};
+function monthDays(y,m){return new Date(y,m+1,0).getDate();}
+function monthPlan(y,m){
+  var P={}, add=function(d,k,t){var s=ymd(new Date(y,m,d));(P[s]=P[s]||[]).push({k:k,t:t});};
+  var last=monthDays(y,m), i, w;
+  for(i=1;i<=last;i++){ w=new Date(y,m,i).getDay();
+    if(SNSDAY[w])add(i,'sns',SNSDAY[w][0]); }
+  people().forEach(function(p){
+    var I=infoOf(p);
+    if(I.birth){var b=nextBirth(I.birth);
+      if(b&&b.getFullYear()===y&&b.getMonth()===m){
+        var d=b.getDate()-7; if(d<1)d=1; add(d,'bd',mask(p.name)+'님 생일 준비');}}
+    if(I.policyEnd){var e=new Date(I.policyEnd);
+      if(!isNaN(e)){var pre=new Date(e); pre.setDate(pre.getDate()-30);
+        if(pre.getFullYear()===y&&pre.getMonth()===m)
+          add(pre.getDate(),'end',mask(p.name)+'님 만기 안내');}}
+  });
+  /* 지역의 날 — 같은 지역에 세 분 넘으면 화·목 빈 날에 몰아 둡니다 */
+  var byR={}; people().forEach(function(p){var r=rKey(p.region);if(r)byR[r]=(byR[r]||0)+1;});
+  var hot=Object.keys(byR).filter(function(r){return byR[r]>=3;})
+    .sort(function(a,b){return byR[b]-byR[a];});
+  var slot=[]; for(i=1;i<=last;i++){w=new Date(y,m,i).getDay(); if(w===2||w===4)slot.push(i);}
+  hot.forEach(function(r,j){ if(slot[j*2])add(slot[j*2],'region',r+' 도는 날 · '+byR[r]+'명'); });
+  return P;
+}
+var CALM=null;
+function vCal(){
+  var now=new Date(), y=now.getFullYear(), m=(CALM==null?now.getMonth():CALM);
+  var P=monthPlan(y,m), last=monthDays(y,m), first=new Date(y,m,1).getDay(), i;
+  $('top').innerHTML='<div class="d">'+(m+1)+'월</div><div class="r">'+
+    '<button class="pil" data-cal="'+(m-1)+'">‹ 지난달</button>'+
+    '<button class="pil" data-cal="'+(m+1)+'">다음달 ›</button></div>';
+  var cells='';
+  for(i=0;i<first;i++)cells+='<div class="cd out"></div>';
+  for(i=1;i<=last;i++){
+    var s=ymd(new Date(y,m,i)), it=P[s]||[], today=(s===ymd());
+    cells+='<div class="cd'+(today?' now':'')+'"><div class="dn">'+i+'</div>'+
+      it.slice(0,3).map(function(x){return '<div class="dt '+x.k+'">'+esc(x.t)+'</div>';}).join('')+
+      (it.length>3?'<div class="dt more">＋'+(it.length-3)+'</div>':'')+'</div>';
+  }
+  var cnt={sns:0,bd:0,end:0,region:0};
+  Object.keys(P).forEach(function(k){P[k].forEach(function(x){cnt[x.k]++;});});
+  $('scr').innerHTML='<div class="h1">'+(m+1)+'월 <span>미리 짜 두었습니다</span></div>'+
+    '<div class="sub">월·수·금은 <b>나를 알리는 날</b>, 화·목은 <b>지역을 묶어 도는 날</b>. '+
+    '생일과 만기는 날짜에서 거꾸로 세어 저절로 놓입니다.</div>'+
+    '<div class="row2" style="margin-top:14px;flex-wrap:wrap">'+
+    [['sns','나를 알리기',cnt.sns],['region','지역의 날',cnt.region],
+     ['bd','생일 준비',cnt.bd],['end','만기 안내',cnt.end]].map(function(x){
+      return '<div style="flex:1;min-width:88px;background:#fff;border-radius:14px;padding:13px 10px;text-align:center">'+
+      '<div style="font-size:19px;font-weight:800;letter-spacing:-.035em">'+x[2]+'</div>'+
+      '<div class="mt" style="margin-top:3px">'+x[1]+'</div></div>';}).join('')+'</div>'+
+    '<div class="t-card" style="padding:16px"><div class="cal">'+
+    DOW.map(function(d){return '<div class="dh">'+d+'</div>';}).join('')+cells+'</div></div>'+
+    '<div class="note">이 달력은 <b>규칙이 짠 것</b>입니다 — 손으로 옮기시면 그 날만 손댄 것으로 남고 '+
+    '나머지 규칙은 그대로 돕니다. 실제 앱에는 이미 주/월 달력(<code>mcalCardHtml</code>)이 있으니 '+
+    '거기에 이 편성만 얹으면 됩니다.</div>';
+}
+
+/* 콘텐츠 */
+/* 도구 — 때에 맞춰 나옵니다 */
+var TQ='';
+function vTools(){
+  var n=0; TOOLS.forEach(function(g){n+=g.items.length;});
+  $('top').innerHTML='<div class="d">도구</div><div class="r"><div class="pil">'+n+'개</div></div>';
+  var q=TQ.trim();
+  var now=queue()[0], nowSt=now?stageOf(now.p.key):'';
+  var h='<div class="h1">무엇을 <span>하실 건가요?</span></div>'+
+    '<div class="sub">종류가 아니라 <b>언제 쓰는지</b>로 묶었습니다. 그 분 카드에서 바로 따라옵니다.</div>'+
+    '<div class="t-card" style="margin-top:14px;padding:0">'+
+    '<input id="tq" value="'+esc(TQ)+'" placeholder="🔎 하려는 것을 그냥 적으세요 — 연금 · 알릴의무 · 실비" '+
+    'style="width:100%;height:56px;padding:0 20px;font-size:15.5px;font-weight:600"></div>';
+  if(!q&&now){
+    var ts=toolsFor(nowSt);
+    if(ts.length)h+='<div class="t-card"><div class="lab">지금 '+esc(mask(now.p.name))+'님께 — '+esc(nowSt)+'</div>'+
+      '<div class="chips">'+ts.slice(0,6).map(function(t){
+        return '<button class="t-chip" data-tool="'+esc(t[2])+'">'+t[1]+' '+esc(t[2])+'</button>';}).join('')+'</div></div>';
+  }
+  var hit=0;
+  TOOLS.forEach(function(g){
+    var items=g.items.filter(function(t){return tmatch(t,q);});
+    if(!items.length)return; hit+=items.length;
+    h+='<div class="t-card" style="padding:6px 22px">'+
+      '<div class="lab" style="padding:15px 0 2px">'+esc(g.when)+
+      '<span style="color:var(--t-sub2);font-weight:600"> · '+esc(g.sub)+'</span></div>'+
+      items.map(function(t){
+        return '<button class="t-row" data-tool="'+esc(t[2])+'">'+
+        '<div class="av" style="width:34px;height:34px;border-radius:11px;font-size:15px;flex:0 0 34px">'+t[1]+'</div>'+
+        '<div><div class="nm">'+esc(t[2])+'</div><div class="mt">'+esc(t[0])+'</div></div>'+
+        '<div class="rt"><span class="gb">열기</span></div></button>';}).join('')+
+      '<div style="height:10px"></div></div>';
+  });
+  if(q&&!hit)h+='<div class="empty">그런 이름은 없습니다.<br>다른 말로 찾아보세요.</div>';
+  h+='<div class="note">여기 없는 것은 <b>옮긴 것</b>입니다 — 달력·출근·성장판·설정은 「나」로, '+
+     '뉴스·블로그·SNS·광고는 「콘텐츠」로, 고객365일·DB통합CRM·팩트파인딩·8통장은 「고객」 안으로 갔습니다. '+
+     '<b>지운 것은 하나도 없습니다.</b></div>';
+  $('scr').innerHTML=h;
+  var el=$('tq');
+  if(el)el.addEventListener('input',function(){TQ=this.value;paint();
+    var e2=$('tq'); if(e2){e2.focus();try{e2.setSelectionRange(e2.value.length,e2.value.length);}catch(x){}}});
+}
+
+/* 전체 지도 — 녹였어도 찾을 수 있어야 합니다 */
+var MQ='';
+function vMap(){
+  var all=allIndex(), q=MQ.trim();
+  $('top').innerHTML='<div class="d">APEX 전체 지도</div><div class="r"><div class="pil">'+all.length+'개</div></div>';
+  var h='<div class="h1">APEX <span>전체 지도</span></div>'+
+    '<div class="sub">녹였다고 없어진 것이 아닙니다. <b>여기서 다 찾을 수 있습니다.</b> '+
+    '옛 이름으로 찾아도 나옵니다.</div>'+
+    '<div class="t-card" style="margin-top:14px;padding:0">'+
+    '<input id="mq" value="'+esc(MQ)+'" placeholder="🔎 이름이나 옛 메뉴 이름으로 — 보장분석 · treatpay · 출근" '+
+    'style="width:100%;height:56px;padding:0 20px;font-size:15.5px;font-weight:600"></div>';
+  if(q){
+    var hits=all.filter(function(x){
+      return x.name.indexOf(q)>=0||x.id.indexOf(q)>=0||String(TALIAS[x.name]||'').indexOf(q)>=0;});
+    h+='<div class="t-card" style="padding:6px 22px"><div class="lab" style="padding:15px 0 2px">'+
+      '찾은 것 '+hits.length+'개</div>'+
+      (hits.length?hits.map(function(x){
+        return '<button class="t-row" data-tool="'+esc(x.name)+'">'+
+        '<div class="av" style="width:32px;height:32px;border-radius:11px;font-size:14px;flex:0 0 32px">'+x.emo+'</div>'+
+        '<div><div class="nm">'+esc(x.name)+'</div><div class="mt">'+esc(x.where)+' · '+esc(x.id)+'</div></div>'+
+        '<div class="rt"><span class="gb">열기</span></div></button>';}).join('')
+        :'<div class="empty">그런 이름은 없습니다.<br>다른 말로 찾아보세요.</div>')+
+      '<div style="height:10px"></div></div>';
+  }else{
+    h+='<div class="t-card" style="padding:6px 22px"><div class="lab" style="padding:15px 0 2px">'+
+      '🧰 도구 <span style="color:var(--t-sub2);font-weight:600">· 때로 묶여 있습니다</span></div>'+
+      TOOLS.map(function(g){
+        return '<div class="t-row" style="align-items:flex-start"><div class="av" style="width:30px;height:30px;'+
+        'border-radius:10px;font-size:12px;flex:0 0 30px">'+g.items.length+'</div>'+
+        '<div><div class="nm">'+esc(g.when)+'</div><div class="mt">'+
+        g.items.map(function(t){return esc(t[2]);}).join(' · ')+'</div></div></div>';}).join('')+
+      '<div style="height:10px"></div></div>';
+    MAPDATA.forEach(function(g){
+      h+='<div class="t-card" style="padding:6px 22px"><div class="lab" style="padding:15px 0 2px">'+
+        esc(g.g)+' <span style="color:var(--t-sub2);font-weight:600">· '+esc(g.d)+'</span></div>'+
+        g.items.map(function(t){
+          return '<button class="t-row" data-tool="'+esc(t[1])+'">'+
+          '<div class="av" style="width:30px;height:30px;border-radius:10px;font-size:12px;flex:0 0 30px;'+
+          'background:#F2F4F6;color:#8B95A1">·</div>'+
+          '<div><div class="nm">'+esc(t[1])+'</div><div class="mt">'+esc(t[0])+'</div></div>'+
+          '<div class="rt"><span class="gb">열기</span></div></button>';}).join('')+
+        '<div style="height:10px"></div></div>';
+    });
+  }
+  $('scr').innerHTML=h;
+  var el=$('mq');
+  if(el)el.addEventListener('input',function(){MQ=this.value;paint();
+    var e2=$('mq'); if(e2){e2.focus();try{e2.setSelectionRange(e2.value.length,e2.value.length);}catch(x){}}});
+}
+
+/* 무엇을 할지 모른다면 — 물어보면 그 자리에서 답합니다 */
+function vHelp(){
+  $('top').innerHTML='<button class="bk" data-go="today">‹</button><div class="d">무엇을 할지 모른다면</div>';
+  var Q=queue(), PR=promise(), A=activity(), R=todayRoute();
+  var thin=people().filter(function(p){return filled(p)<4;}).length;
+  var noplan=people().filter(function(p){return !(p.next&&p.next.what);}).length;
+  var w=new Date().getDay();
+  var rows=[
+   {q:'지금 자리에 앉아 계세요?', n:Q.filter(function(c){return !c.p.appt;}).length, u:'분',
+    a:'오늘 걸 분이 있습니다. 위에서부터 하시면 됩니다.', go:'today', b:'오늘 열기'},
+   {q:'밖에 나와 계세요?', n:R.near.length, u:'분',
+    a:R.regions.length?(R.regions.join('·')+' 에 오늘 걸 분이 있습니다. 가는 김에.')
+      :'오늘 약속이 없습니다. 지역을 묶어 하루를 잡으시면 길에서 버리는 시간이 줄어듭니다.',
+    go:'today', b:'동선 보기'},
+   {q:'고객 앞이세요?', n:null, u:'',
+    a:'그 분 단계에 맞는 도구가 이미 골라져 있습니다. 새로 찾지 않으셔도 됩니다.',
+    go:'tools', b:'도구 열기'},
+   {q:'약속을 지키고 계신가요?', n:PR.over+PR.never, u:'분',
+    a:PR.over+PR.never?('30일 약속을 넘긴 분 '+PR.over+'명, 한 번도 연락 안 한 분 '+PR.never+'명입니다.')
+      :'다 지키고 계십니다. 여기는 지금 볼 것이 없습니다.',
+    go:'clients', f:'over', b:'그 분들 보기'},
+   {q:'아는 게 적은 분이 있나요?', n:thin, u:'분',
+    a:'아는 것이 넷도 안 되는 분입니다. 한 칸만 채워도 거리가 생깁니다.',
+    go:'clients', f:'thin', b:'채우러 가기'},
+   {q:'다음에 할 일이 비어 있나요?', n:noplan, u:'분',
+    a:'다음에 무엇을 할지가 없으면 관리가 아닙니다. 한 줄만 적어 두시면 됩니다.',
+    go:'clients', f:'noplan', b:'적으러 가기'},
+   {q:'오늘 나를 알릴 차례인가요?', n:SNSDAY[w]?1:0, u:'건',
+    a:SNSDAY[w]?('오늘은 '+DOW[w]+'요일 — '+SNSDAY[w][0]+' 하는 날입니다.')
+      :'오늘은 올리는 날이 아닙니다. 월·수·금에만 올립니다 — 쉬는 날도 리듬입니다.',
+    go:'content', b:'콘텐츠 열기'},
+   {q:'오늘 활동량을 다 채우셨나요?', n:(GOAL.call-A.call)+(GOAL.meet-A.meet)+(GOAL.note-A.note), u:'개',
+    a:'전화 '+A.call+'/'+GOAL.call+' · 만남 '+A.meet+'/'+GOAL.meet+' · 기록 '+A.note+'/'+GOAL.note+' 입니다.',
+    go:'today', b:'오늘 열기'},
+   {q:'이름이 기억나는 분이 있나요?', n:null, u:'',
+    a:'옛 메뉴 이름으로 찾아도 나옵니다. 지운 것은 하나도 없습니다.',
+    go:'map', b:'전체 지도 열기'}
+  ];
+  $('scr').innerHTML='<div class="h1">무엇을 <span>할지 모르겠다면</span></div>'+
+    '<div class="sub">아홉 개를 위에서부터 보시면 됩니다. <b>숫자가 0 이면 그건 지금 볼 것이 아닙니다.</b></div>'+
+    rows.map(function(r){
+      var none=(r.n===0);
+      return '<div class="t-card"'+(none?' style="opacity:.5"':'')+'>'+
+        '<div class="lab">'+esc(r.q)+'</div>'+
+        '<div class="big" style="margin-top:8px;font-size:18px">'+
+        (r.n===null?'':('<b style="font-size:24px;letter-spacing:-.04em">'+r.n+'</b>'+esc(r.u)+' — '))+
+        esc(r.a)+'</div>'+
+        (none?'':'<button class="t-btn sm" style="margin-top:13px" data-help="'+esc(r.go)+'|'+esc(r.f||'')+'">'+
+          esc(r.b)+'</button>')+'</div>';}).join('')+
+    '<div class="note">여기까지 다 0 이면 <b>오늘은 끝난 것</b>입니다. 더 하시면 내일이 무너집니다.</div>';
+}
+
+/* 꼬리표는 <b>8통장 이름</b>을 씁니다 — 고객의 「비어 있는 통장」과 같은 말이라야 맞습니다.
+   실제로는 config/sources.json 의 「키워드_통장1~8」 이 기사에 이 꼬리표를 답니다. */
+var WALLET=['생활','병원비','치료비','소득공백','가족보호','은퇴연금','간병','상속'];
+var NEWS=[
+ {id:1,t:'실손의료보험 청구 전산화 2단계 시행',src:'정책·상품 뉴스',d:'오늘',key:'청구 전산화',
+  l1:'서류를 떼러 가지 않아도 됩니다',l2:'병원에서 바로 보험사로 자료가 갑니다',
+  look:'내 실손이 <b>몇 세대</b>인지, 자동청구가 되는 병원인지',tag:['병원비']},
+ {id:2,t:'고령자 대상 간편심사 상품 인수기준 변경',src:'정책·상품 뉴스',d:'오늘',key:'간편심사',
+  l1:'묻는 항목이 줄어든 상품이 나왔습니다',l2:'다만 회사마다 묻는 기간이 다릅니다',
+  look:'최근 <b>몇 년</b>을 묻는지 · 어떤 병력이 걸리는지',tag:['치료비']},
+ {id:3,t:'국민건강보험 본인부담상한제 기준액 조정',src:'정책·상품 뉴스',d:'어제',key:'본인부담상한제',
+  l1:'돌려받는 금액 기준이 달라집니다',l2:'소득 구간에 따라 상한액이 다릅니다',
+  look:'내 소득 구간과 <b>올해 상한액</b>',tag:['병원비','생활']},
+ {id:4,t:'연금계좌 세액공제 한도 관련 안내',src:'정책·상품 뉴스',d:'어제',key:'연금계좌',
+  l1:'공제 한도와 요건을 다시 볼 때입니다',l2:'요건을 못 채우면 혜택이 빠집니다',
+  look:'올해 넣은 금액과 <b>남은 한도</b>',tag:['은퇴연금']},
+ {id:5,t:'중증질환 산정특례 대상 질환 조정',src:'정책·상품 뉴스',d:'2일 전',key:'산정특례',
+  l1:'본인 부담이 줄어드는 질환 목록이 바뀝니다',l2:'줄어든 만큼 어디가 남는지가 중요합니다',
+  look:'내 진단금이 <b>어느 질환</b>까지 닿는지',tag:['치료비','병원비']},
+ {id:6,t:'장기요양 등급 판정 기준 개편',src:'정책·상품 뉴스',d:'3일 전',key:'장기요양',
+  l1:'등급을 받는 기준이 달라집니다',l2:'등급 밖에 남는 몫이 어디인지 보셔야 합니다',
+  look:'등급 판정 기준과 <b>본인 부담</b>',tag:['간병']},
+ {id:7,t:'상속세 공제 한도 관련 논의',src:'정책·상품 뉴스',d:'3일 전',key:'상속 공제',
+  l1:'물려줄 때 세금 기준이 달라질 수 있습니다',l2:'세금 낼 현금이 있느냐가 늘 문제입니다',
+  look:'집 말고 <b>낼 돈</b>이 준비돼 있는지',tag:['상속']},
+ {id:8,t:'가계부채 관리 방안 발표',src:'경제 뉴스',d:'오늘',key:'가계부채',
+  l1:'빌리는 문이 좁아집니다',l2:'매달 나가는 돈부터 다시 세야 합니다',
+  look:'월 고정지출 중 <b>보험료 비중</b>',tag:['생활']}
+];
+/* 이분께 보낼 것 — <b>비어 있는 통장</b>과 관심사를 뉴스 꼬리표에 맞춥니다.
+   꼬리표도 통장 이름, 빈 칸도 통장 이름 — 같은 말이라 매칭표가 따로 없습니다. */
+function newsFor(p){
+  var I=infoOf(p), want=[];
+  String(I.gaps||'').split(/[,\s·]+/).filter(Boolean).forEach(function(x){want.push(x);});
+  String(I.interest||'').split(/[,\s·]+/).filter(Boolean).forEach(function(x){want.push(x);});
+  if(!want.length)return [];
+  return NEWS.filter(function(n){
+    return (n.tag||[]).some(function(t){return want.indexOf(t)>=0;});});
+}
+/* 거꾸로 — 이 기사를 받을 분은 누구인가 */
+function peopleForNews(n){
+  return people().filter(function(p){
+    return newsFor(p).some(function(x){return x.id===n.id;});});
+}
+var NSEL=null;
+/* 릴스 대본 — 상품이 아니라 사람을 말합니다. 그래야 걸릴 자리가 적습니다 */
+var REELS=[
+ {t:'제가 아침마다 하는 일', hook:'보험 하는 사람은 아침에 뭘 할까요?',
+  body:['어제 만난 분 기록부터 정리합니다','오늘 연락드릴 분을 순서대로 세웁니다','한 분 한 분 무슨 이야기를 할지 적어 둡니다'],
+  end:'그래서 제가 전화드리면, 용건이 있습니다'},
+ {t:'증권 한 장 읽는 법', hook:'증권 받으시면 세 줄만 보세요',
+  body:['맨 위 — 누가 계약자이고 누가 피보험자인지','가운데 — 언제까지 내고 언제까지 보장되는지','맨 아래 — 갱신인지 아닌지'],
+  end:'이 세 줄이면 절반은 아신 겁니다'},
+ {t:'제일 많이 받는 질문', hook:'「지금 든 게 잘 든 건가요?」',
+  body:['좋고 나쁨은 상품이 정하지 않습니다','같은 상품도 누구에겐 맞고 누구에겐 안 맞습니다','그분 상황이 정합니다'],
+  end:'그래서 저는 상품보다 먼저 여쭙습니다'}
+];
+var BAN=[['1위','순위·우열 표현'],['최고','순위·우열 표현'],['압도적','과장 표현'],
+  ['누구나','단정 표현 — 인수기준에 따라 거절될 수 있음'],['전액','실손 전액보상 오인'],
+  ['절감','객관적 기준 없는 보험료 절감 오인'],['모든 보험사','「생·손보 33개 제휴」로']];
+function plus1y(s){var m=String(s).match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);if(!m)return '';
+  var d=new Date(+m[1]+1,+m[2]-1,+m[3]);d.setDate(d.getDate()-1);function p(x){return (x<10?'0':'')+x;}
+  return d.getFullYear()+'.'+p(d.getMonth()+1)+'.'+p(d.getDate());}
+function vContent(){
+  $('top').innerHTML='<div class="d">콘텐츠</div><div class="r"><div class="pil">뉴스 '+NEWS.length+'건</div></div>';
+  var n=NSEL, no=DB.seal.no, at=DB.seal.at, to=plus1y(at);
+  var w=new Date().getDay();
+  var h='<div class="h1">나를 알리는 <span>월 · 수 · 금</span></div>'+
+    '<div class="sub">매일 하지 않습니다. <b>일주일에 세 번</b>이면 충분하고, 그래야 이어집니다.</div>'+
+    '<div class="rhy">'+[1,3,5].map(function(d){
+      return '<div'+(w===d?' class="on"':'')+'><div class="w">'+DOW[d]+'요일'+(w===d?' · 오늘':'')+'</div>'+
+        '<div class="t">'+SNSDAY[d][0]+'</div><div class="d">'+SNSDAY[d][1]+'</div></div>';}).join('')+'</div>'+
+    (SNSDAY[w]?('<div class="note" style="background:var(--t-pur-l);color:var(--t-pur)">오늘은 '+DOW[w]+
+      '요일 — <b>'+SNSDAY[w][0]+'</b> 하는 날입니다.</div>')
+      :'<div class="note">오늘은 올리는 날이 아닙니다. 월·수·금에만 올립니다 — 쉬는 날도 리듬입니다.</div>')+
+    '<div class="h1" style="margin-top:22px">뉴스에서 <span>올리기까지</span></div>'+
+    '<div class="sub">고르면 캐러셀 다섯 장이 섭니다. <b>막지 않습니다</b> — 걸릴 자리만 알려 드립니다.</div>'+
+    '<div class="t-card" style="margin-top:14px;padding:16px 18px"><div class="lab">오늘 들어온 뉴스</div>'+
+    '<div style="margin-top:11px">'+NEWS.map(function(x){
+      var who=peopleForNews(x);
+      return '<button class="newsit'+(n&&n.id===x.id?' on':'')+'" data-n="'+x.id+'">'+
+        '<div class="t">'+esc(x.t)+'</div>'+
+        '<div class="chips" style="margin-top:8px">'+(x.tag||[]).map(function(t){
+          return '<span class="t-chip" style="height:26px;padding:0 9px;font-size:11px;background:var(--t-pur-l);'+
+          'color:var(--t-pur)">'+esc(t)+' 통장</span>';}).join('')+
+          (who.length?('<span class="t-chip" style="height:26px;padding:0 9px;font-size:11px;'+
+          'background:var(--t-pos-l);color:var(--t-pos)">받을 분 '+who.length+'명</span>'):'')+'</div>'+
+        '<div class="m">'+esc(x.src)+' · '+esc(x.d)+'</div></button>';}).join('')+'</div></div>'+
+    '<div class="t-card" style="padding:16px 18px"><div class="lab">꼬리표</div>'+
+    '<div class="mt" style="margin-top:7px">기사에 <b>통장 이름</b>을 답니다. 고객의 <b>비어 있는 통장</b>과 같은 말이라 '+
+    '매칭표가 따로 없습니다. 낱말은 <code>config/sources.json</code> 의 「키워드_통장1~8」 <b>한 곳에만</b> 적습니다.</div></div>';
+  if(n){
+    var S=[
+     ['',    '1 / 5 · 표지', esc(n.key)+', 무엇이 달라지나요?','보험을 모르셔도 되는 이야기부터'],
+     ['w',   '2 / 5 · 무엇이', esc(n.l1),'※ 상기 내용은 모집종사자의 개인적인 의견으로, 계약 체결에 따른 이익 또는 손실은 보험 계약자 및 피보험자에게 귀속됩니다.'],
+     ['w',   '3 / 5 · 그래서', esc(n.l2),'&lt;출처 : [확인]발표기관_[확인]자료명_[확인]통계기준([확인]연도)&gt;'],
+     ['w',   '4 / 5 · 보실 것', n.look,'※ 보험사 및 상품별로 상이할 수 있으므로, 관련한 세부사항은 반드시 해당 약관을 참조하시기 바랍니다.'],
+     ['seal','5 / 5 · 필수안내사항',
+      '모집종사자 윤시현 TFA<br>에이플러스에셋 대리점등록번호 : 2007078002<br>설계사등록번호 : 제 20170591090013호',
+      '에이플러스에셋 준법감시필 '+(no||'00-0000-0000')+' ('+(at&&to?at+' ~ '+to:'0000.00.00 ~ 0000.00.00')+')<br>'+
+      '본 광고는 광고심의기준을 준수하였으며, 유효기간은 심의일로부터 1년입니다.<br><br>'+
+      '보험계약자가 기존 보험계약을 해지하고 새로운 보험계약을 체결하는 과정에서 ① 질병이력, 연령증가 등으로 '+
+      '가입이 거절되거나 보험료가 인상될 수 있습니다. ② 가입 상품에 따라 새로운 면책기간 적용 및 보장 제한 등 '+
+      '기타 불이익이 발생할 수 있습니다.']
+    ];
+    var hits=BAN.filter(function(b){return n.t.indexOf(b[0])>=0;});
+    var rows=[[!!no,'심의필 번호가 있는가'],[!!(at&&to),'심의일이 있는가 — 끝날은 자동으로 채웁니다'],
+      [true,'필수안내사항 3종이 마지막 장에 들어갔는가'],
+      [true,'유의사항을 본문과 다른 색(베이지)으로 넣었는가'],
+      [hits.length===0,hits.length?('금지 표현 — '+hits[0][0]+' ('+hits[0][1]+')'):'단정 · 과장 · 순위 표현이 없는가'],
+      [true,'보험회사명 · 상품명 · 이니셜이 없는가'],
+      [true,'이름 · 연락처를 받는 입력칸이 없는가']];
+    var warn=rows.filter(function(r){return !r[0];}).length;
+    h+='<div class="t-card"><div class="lab">캐러셀 다섯 장 · 1080 × 1350</div>'+
+      '<div style="margin-top:7px;font-size:16px;font-weight:700;letter-spacing:-.03em">'+esc(n.t)+'</div>'+
+      '<div class="slides">'+S.map(function(s){return '<div class="sl '+s[0]+'"><div class="no">'+s[1]+'</div>'+
+        '<div class="tx">'+s[2]+'</div><div class="sm">'+s[3]+'</div></div>';}).join('')+'</div>'+
+      '<div class="mt">숫자와 통계는 원문에서 가져옵니다. 없으면 <b>[확인]</b> 빈칸으로 둡니다 — 지어내지 않습니다.</div></div>'+
+      (function(){var W=peopleForNews(n); if(!W.length)
+        return '<div class="t-card"><div class="lab">이 기사를 받을 분</div>'+
+          '<div class="mt" style="margin-top:8px">아직 없습니다. 고객의 <b>비어 있는 통장</b>이 채워지면 여기에 섭니다 — '+
+          '보장분석을 넣으면 저절로 채워집니다.</div></div>';
+        return '<div class="t-card" style="padding:6px 22px"><div class="lab" style="padding:15px 0 2px">'+
+          '이 기사를 받을 분 — '+W.length+'명</div>'+
+          W.map(function(p){return '<div class="t-row"><div class="av">'+esc(p.name.charAt(0))+'</div>'+
+            '<div style="min-width:0"><div class="nm">'+esc(mask(p.name))+'님</div>'+
+            '<div class="mt">비어 있는 통장 — '+esc(infoOf(p).gaps||'')+'</div></div>'+
+            '<div class="rt"><button class="gb" data-open="'+p.key+'">열기</button>'+
+            '<button class="gb b" data-up="카톡으로 보내기">카톡</button></div></div>';}).join('')+
+          '<div class="note" style="margin:0 0 14px">한 분에게 보내는 것도 <b>광고물이면 심의 대상</b>입니다. '+
+          '아래 주의를 보시고 판단하십시오.</div></div>';})()+
+      '<div class="t-card"><div class="lab">'+(warn?'⚠️ 주의 '+warn+'가지':'✅ 다 갖췄습니다')+'</div>'+
+      '<div class="row2" style="margin-top:12px">'+
+      '<input class="fld" id="sno" placeholder="준법감시필 번호" value="'+esc(no)+'" style="flex:1;border:1.5px solid var(--t-line);'+
+      'border-radius:12px;padding:0 13px;height:46px;font-size:14px;font-weight:600">'+
+      '<input id="sat" placeholder="심의일 2026.09.25" value="'+esc(at)+'" style="flex:1;border:1.5px solid var(--t-line);'+
+      'border-radius:12px;padding:0 13px;height:46px;font-size:14px;font-weight:600"></div>'+
+      '<div class="chk" style="margin-top:12px">'+rows.map(function(r){
+        return '<div class="r '+(r[0]?'ok':'no')+'"><span class="i">'+(r[0]?'✓':'!')+'</span><span>'+r[1]+'</span></div>';}).join('')+'</div>'+
+      '<div class="row2" style="margin-top:14px;flex-wrap:wrap">'+
+      ['📸 인스타','🧵 스레드','📝 블로그','💬 카톡'].map(function(t){
+        return '<button class="t-btn sm" style="flex:1;min-width:110px" data-up="'+esc(t)+'">'+t+'</button>';}).join('')+'</div>'+
+      '<div class="note">'+(warn?'주의가 남아 있어도 <b>올리실 수 있습니다.</b> 다만 심의필 전 게시는 제재 대상입니다.'
+        :'다 갖췄습니다. 폰이면 이미지와 캡션을 한 번에 공유로 넘깁니다.')+'</div></div>';
+  }
+  /* ── 릴스 대본 — 나를 알리는 것. 금요일 칸입니다 ── */
+  h+='<div class="h1" style="margin-top:24px">릴스 대본 <span>— 나를 알립니다</span></div>'+
+    '<div class="sub">상품 이야기가 아니라 <b>사람 이야기</b>입니다. 30초 · 훅 3초 · 본문 20초 · 마무리 7초.</div>'+
+    REELS.map(function(r,i){
+      return '<div class="t-card"><div class="lab">'+(i+1)+'번 · '+esc(r.t)+'</div>'+
+        '<div class="scriptbox"><div class="sh">훅 · 0~3초</div>'+
+        '<div class="sl2"><b>말</b><span>'+esc(r.hook)+'</span></div></div>'+
+        '<div class="scriptbox"><div class="sh">본문 · 3~23초</div>'+
+        r.body.map(function(b,j){return '<div class="sl2"><b>'+(j+1)+'컷</b><span>'+esc(b)+'</span></div>';}).join('')+
+        '</div>'+
+        '<div class="scriptbox"><div class="sh">마무리 · 23~30초</div>'+
+        '<div class="sl2"><b>말</b><span>'+esc(r.end)+'</span></div></div>'+
+        '<div class="row2" style="margin-top:12px">'+
+        '<button class="t-btn g sm" style="flex:1" data-up="대본 복사">대본 복사</button>'+
+        '<button class="t-btn g sm" style="flex:1" data-up="자막 파일">자막으로 내보내기</button></div></div>';}).join('')+
+    '<div class="note"><b>영상은 한 단계 더 있습니다.</b> 보험 이야기가 들어간 영상은 회사 심의뿐 아니라 '+
+    '<b>협회 사전심의</b>까지 받습니다. 그리고 유의문구 글자 크기는 <b>영상 세로 길이의 1/40 이상</b>이어야 합니다. '+
+    '위 세 대본은 상품·보험료를 말하지 않아 걸릴 자리가 적지만, 올리기 전에 한 번 넣으십시오.</div>';
+
+  $('scr').innerHTML=h;
+  if(n){
+    $('sno').addEventListener('input',function(){DB.seal.no=this.value.trim();save();});
+    $('sno').addEventListener('change',function(){paint();});
+    $('sat').addEventListener('input',function(){DB.seal.at=this.value.trim();save();});
+    $('sat').addEventListener('change',function(){paint();});
+  }
+}
+
+/* 나 */
+function vMe(){
+  $('top').innerHTML='<div class="d">나</div>';
+  var t=ymd(), cnt={call:0,stage:0,memo:0};
+  DB.events.forEach(function(e){if(!e.undone&&ymd(new Date(e.at))===t&&cnt[e.kind]!=null)cnt[e.kind]++;});
+  $('scr').innerHTML='<div class="h1">오늘 <span>한 일</span></div>'+
+    '<div class="t-card" style="margin-top:14px"><div class="row2">'+
+    [['통화',cnt.call],['단계 옮김',cnt.stage],['메모',cnt.memo]].map(function(x){
+      return '<div style="flex:1;background:#F7F9FA;border-radius:14px;padding:16px 10px;text-align:center">'+
+      '<div style="font-size:22px;font-weight:800;letter-spacing:-.035em">'+x[1]+'</div>'+
+      '<div class="mt" style="margin-top:4px">'+x[0]+'</div></div>';}).join('')+'</div></div>'+
+    (function(){var PR=promise(),NR=noteRate();
+      return '<div class="t-card"><div class="lab">밀착관리 — 지키고 있는가</div>'+
+      '<div class="row2" style="margin-top:12px">'+
+      [['30일 약속',PR.kept+' / '+PR.all,PR.over?('넘긴 분 '+PR.over+'명'):'다 지켰습니다'],
+       ['한 번도 연락 안 함',PR.never+'명',PR.never?'오래 두면 영영 못 겁니다':'없습니다'],
+       ['만난 뒤 한 줄',(NR.pct==null?'—':NR.pct+'%'),(NR.pct==null?'아직 통화 기록이 없습니다':NR.with+' / '+NR.all+'건')]
+      ].map(function(x){
+        return '<div style="flex:1;background:#F7F9FA;border-radius:14px;padding:14px 11px">'+
+        '<div class="mt" style="margin:0">'+x[0]+'</div>'+
+        '<div style="margin-top:6px;font-size:19px;font-weight:800;letter-spacing:-.035em">'+x[1]+'</div>'+
+        '<div class="mt" style="margin-top:4px">'+x[2]+'</div></div>';}).join('')+'</div>'+
+      '<div class="note">기록을 안 남기면 <b>다음 계산이 전부 틀어집니다.</b> '+
+      '마지막 접촉도, 다음에 뜰 날짜도, 30일 약속도 전부 기록에서 셉니다.</div></div>';})()+
+    '<div class="t-card"><div class="lab">알람 — 하루 네 번</div>'+
+    ['09:00 오늘 걸 사람','13:00 오전 결과','17:00 예상업적','21:00 내일 약속'].map(function(x,i){
+      return '<div class="t-row"><div class="nm">'+esc(x)+'</div><div class="rt"><span class="stg" style="background:'+
+      (i<3?'var(--t-pos-l);color:var(--t-pos)':'#F2F4F6;color:#8B95A1')+'">'+(i<3?'켜짐':'꺼짐')+'</span></div></div>';}).join('')+
+    '<div class="note">넣을 게 없는 날은 <b>울리지 않습니다.</b> 헛알람은 안 잡는 알람보다 나쁘니까요.</div></div>'+
+    /* DB 통합 CRM 에서 넘어온 것들 — 매일 쓰는 것은 오늘·고객으로, 나머지는 여기로 */
+    '<div class="t-card" style="padding:6px 22px"><div class="lab" style="padding:15px 0 2px">'+
+    '내 숫자 <span style="color:var(--t-sub2);font-weight:600">· DB 통합 CRM 에서 옮겨 왔습니다</span></div>'+
+    [['📊','통합 대시보드','dashboard'],['📈','KPI · 타율 분석','kpi'],['🤖','AI 피드백','ai'],
+     ['🗓','출근 현황','attendance'],['🧭','TFA 업무관리','airep'],['📈','성장판','growboard']
+    ].map(function(x){return '<button class="t-row" data-tool="'+esc(x[1])+'">'+
+      '<div class="av" style="width:32px;height:32px;border-radius:11px;font-size:14px;flex:0 0 32px">'+x[0]+'</div>'+
+      '<div><div class="nm">'+esc(x[1])+'</div><div class="mt">'+esc(x[2])+'</div></div>'+
+      '<div class="rt"><span class="gb">열기</span></div></button>';}).join('')+
+    '<div style="height:10px"></div></div>'+
+    '<div class="t-card" style="padding:6px 22px"><div class="lab" style="padding:15px 0 2px">'+
+    '팀 <span style="color:var(--t-sub2);font-weight:600">· 직책이 있는 분께만 보입니다</span></div>'+
+    [['👥','DB 배정 · 담당자 관리','db-crm.html 그대로 열립니다'],
+     ['🏆','담당자 · 팀 통계','stats'],['🧑‍🏫','팀 코칭','branch_coach'],
+     ['📒','매일 취합','daily'],['📊','대표 브리핑','report'],['🏛️','승인 · 규칙','hq']
+    ].map(function(x){return '<button class="t-row" data-tool="'+esc(x[1])+'">'+
+      '<div class="av" style="width:32px;height:32px;border-radius:11px;font-size:14px;flex:0 0 32px;'+
+      'background:#F2F4F6;color:#8B95A1">'+x[0]+'</div>'+
+      '<div><div class="nm">'+esc(x[1])+'</div><div class="mt">'+esc(x[2])+'</div></div>'+
+      '<div class="rt"><span class="gb">열기</span></div></button>';}).join('')+
+    '<div class="note" style="margin:0 0 14px">⚠ <b>DB 배정은 녹이지 않습니다.</b> 배정 한도(일반 20 · 변액 +30)가 '+
+    '걸려 있어 설계사 화면과 섞으면 한도를 넘겨 배정하는 사고가 납니다. 그 화면 그대로 엽니다.</div></div>'+
+    '<div class="t-card"><div class="lab">자료</div>'+
+    '<div class="mt" style="margin-top:8px">이 사본은 <b>이 브라우저에만</b> 저장합니다. 서버를 부르지 않습니다.<br>'+
+    '사람 '+people().length+'명 · 기록 '+DB.events.length+'줄</div>'+
+    '<div class="row2" style="margin-top:14px">'+
+    '<button class="t-btn g sm" style="flex:1" id="expt">내보내기</button>'+
+    '<button class="t-btn g sm" style="flex:1" id="rst">견본으로 되돌리기</button></div></div>';
+  $('expt').addEventListener('click',function(){
+    var b=new Blob([JSON.stringify(DB,null,1)],{type:'application/json'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='apex-사본-'+ymd()+'.json';a.click();
+    toast('내려받았습니다 — 실명이 들어 있으니 밖으로 보내지 마십시오');});
+  $('rst').addEventListener('click',function(){seed();toast('견본으로 되돌렸습니다');go('today');});
+}
+
+/* 규칙 */
+function vRules(){
+  $('top').innerHTML='<div class="d">그릇 · 규칙</div>';
+  var R=[['두 표를 합치지 않습니다','읽기용 뷰 하나만 얹습니다. 저장은 원래 표로 그대로 갑니다.'],
+   ['열쇠는 전화번호 하나','숫자만 남긴 번호로 같은 분인지 봅니다. 이름은 갈리지만 번호는 안 갈립니다.'],
+   ['지우지 않고 쌓기만','고치거나 지우지 않습니다. 「되돌림」 표시만 붙고 계산에서 빠집니다.'],
+   ['고정 칸은 적게','새 항목은 자유 칸(extra)에 넣습니다. 표를 안 고치니 깨질 일이 없습니다.'],
+   ['단계는 열 개뿐','목록 밖 값은 못 들어갑니다. 오타 하나가 통계를 갈라놓지 않게.'],
+   ['이름은 가린 것이 기본','서버에는 홍○○. 실명은 이 브라우저에만. 보려면 한 번 더 누릅니다.']];
+  $('scr').innerHTML='<div class="h1">깨지지 않게 <span>하는 여섯</span></div>'+
+    '<div class="sub">이 사본이 실제로 그렇게 돌고 있습니다 — 단계를 바꿔 보시면 줄이 쌓이고, 지우는 단추는 없습니다.</div>'+
+    '<div class="t-card" style="margin-top:14px;padding:6px 22px">'+R.map(function(r,i){
+      return '<div class="t-row" style="align-items:flex-start"><div class="av" style="width:30px;height:30px;'+
+      'border-radius:10px;font-size:12px;flex:0 0 30px;margin-top:2px">'+(i+1)+'</div>'+
+      '<div><div class="nm">'+esc(r[0])+'</div><div class="mt">'+esc(r[1])+'</div></div></div>';}).join('')+'</div>'+
+    '<div class="note">이 사본은 서버를 부르지 않습니다. 실제로 붙일 때는 <code>person_events</code> 한 표와 '+
+    '읽기용 뷰 <code>v_people</code> 하나면 됩니다 — 「고객그릇」 설계안의 SQL 그대로입니다.</div>';
+}
+
+/* ── 시트 ── */
+function sheet(html){$('sheet').innerHTML=html;$('sheet').classList.add('on');$('dim').classList.add('on');}
+function unsheet(){$('sheet').classList.remove('on');$('dim').classList.remove('on');}
+$('dim').addEventListener('click',unsheet);
+function askResult(k){
+  var p=DB.people[k];
+  sheet('<div class="q">'+esc(mask(p.name))+'님,<br>어떻게 됐나요?</div>'+
+    '<div class="qs">누르면 바로 쌓이고, 다음에 뜰 날짜도 규칙이 정합니다</div>'+
+    '<div class="opts"><button class="p" data-r="통화됨|'+k+'">통화됐어요</button>'+
+    '<button data-r="부재|'+k+'">부재</button><button data-r="거절|'+k+'">거절</button></div>'+
+    '<div class="opts"><button data-r="만남|'+k+'">만났어요</button>'+
+    '<button data-r="다음에|'+k+'">다음에</button></div>'+
+    '<button class="cl" data-r="|">닫기</button>');
+}
+
+/* ── 클릭 한 곳에서 ── */
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-go],[data-open],[data-f],[data-stage],[data-undo],[data-eye],[data-do],[data-skip],'+
+    '[data-call],[data-add],[data-n],[data-up],[data-r],[data-q],[data-info],[data-ba],'+
+    '[data-cal],[data-route],[data-region],[data-news2],[data-goc],[data-next],[data-nextdone],[data-tool],[data-help]');
+  if(!b)return;
+  var D=b.dataset;
+  if(D.go){ if(D.go==='add')go('add'); else go(D.go); return; }
+  if(D.open){ go('person',D.open); return; }
+  if(D.f){ F=D.f; paint(); return; }
+  if(D.goc){ F=D.goc; go('clients'); return; }
+  if(D.tool){ toast(esc(D.tool)+' — 실제 앱에서는 그 화면이 열립니다'); return; }
+  if(D.help){ var hp=D.help.split('|');
+    if(hp[1]){F=hp[1];go('clients');} else go(hp[0]); return; }
+  if(D.next){ var pn=DB.people[D.next]; if(!pn)return;
+    var nx=pn.next||{}, dflt=(function(){var d=new Date();d.setDate(d.getDate()+7);return ymd(d);})();
+    sheet('<div class="q">다음에 무엇을 하기로<br>하셨나요?</div>'+
+      '<div class="qs">이게 남아야 관리입니다 — 규칙이 만든 카드보다 앞에 섭니다</div>'+
+      '<input id="nw" value="'+esc(nx.what||'')+'" placeholder="예) 배우자와 같이 한 번 더 뵙기" '+
+      'style="width:100%;height:54px;border-bottom:2px solid var(--t-line);font-size:18px;font-weight:700;margin-top:16px">'+
+      '<input id="nd" value="'+esc(nx.due||dflt)+'" placeholder="2026-10-01" '+
+      'style="width:100%;height:50px;border-bottom:2px solid var(--t-line);font-size:16px;font-weight:700;margin-top:10px">'+
+      '<div class="opts"><button class="p" data-r="다음저장|'+D.next+'">넣기</button>'+
+      (nx.what?'<button data-r="다음지움|'+D.next+'">지우기</button>':'')+'</div>'+
+      '<button class="cl" data-r="|">닫기</button>');
+    setTimeout(function(){try{$('nw').focus();}catch(e){}},90); return; }
+  if(D.nextdone){ var pd=DB.people[D.nextdone]; if(!pd)return;
+    push(D.nextdone,{kind:'memo',body:'다음 할 일 끝 — '+((pd.next||{}).what||'')});
+    pd.next=null; save(); paint(); toast('끝냈습니다 — 다음 할 일을 새로 적어 두세요'); return; }
+  if(D.eye){ REAL[D.eye]=!REAL[D.eye]; paint(); return; }
+  if(D.stage){ var a=D.stage.split('|'); if(a[0]===stageOf(a[1])){toast('이미 그 단계입니다');return;}
+    push(a[1],{kind:'stage',stage:a[0],body:''}); paint();
+    toast('줄 하나가 쌓였습니다 — 다음엔 '+(WAIT[a[0]]||'—')+'일 뒤'); return; }
+  if(D.undo){ DB.events.forEach(function(x){if(x.id===D.undo)x.undone=true;}); save(); paint();
+    toast('되돌렸습니다 — 기록은 남습니다'); return; }
+  if(D.do){ askResult(D.do); return; }
+  if(D.call){ askResult(D.call); return; }
+  /* 접는 것도 줄 하나다 — 같은 단계를 다시 찍어 「마지막 기록」만 오늘로 옮긴다 */
+  if(D.skip){ push(D.skip,{kind:'stage',stage:stageOf(D.skip),body:'오늘은 접음'}); paint();
+    toast('오늘은 접었습니다 — 규칙대로 다시 올라옵니다'); return; }
+  if(D.add){ var c=D.add.split('|');
+    if(c[0]==='memo'){ sheet('<div class="q">한 줄만 적어 주세요</div>'+
+      '<textarea id="mb" style="width:100%;min-height:86px;border:1.5px solid var(--t-line);border-radius:12px;'+
+      'padding:12px 14px;font-size:14px;margin-top:14px;line-height:1.6" placeholder="예) 배우자와 상의 후 답 주신다고 함"></textarea>'+
+      '<div class="opts"><button class="p" data-r="메모저장|'+c[1]+'">넣기</button></div>'+
+      '<button class="cl" data-r="|">닫기</button>'); }
+    else { sheet('<div class="q">무엇을 찍으시겠어요?</div>'+
+      '<div class="opts"><button class="p" data-r="사진증권|'+c[1]+'">증권</button>'+
+      '<button data-r="사진명함|'+c[1]+'">명함</button><button data-r="사진그밖|'+c[1]+'">그 밖</button></div>'+
+      '<button class="cl" data-r="|">닫기</button>'); }
+    return; }
+  /* 보장분석 읽어오기 — 실제로는 app/ba.html 의 읽기 엔진이 policies·coverages 에 넣습니다.
+     여기서는 「넣으면 이렇게 채워진다」를 보여 드리는 것뿐입니다. */
+  if(D.ba){ var pb=DB.people[D.ba]; if(!pb)return;
+    var e2=new Date(); e2.setDate(e2.getDate()+22);
+    pb.info=pb.info||{};
+    pb.info.insurer='KB 외 2곳 · 4건';
+    pb.info.premium=pb.info.premium||'31';
+    pb.info.policyEnd=ymd(e2);
+    /* 납입 만기는 계약일 + payment_term 으로 셉니다 — 실제로는 apex_term_years() 가 읽습니다 */
+    var e3=new Date(); e3.setDate(e3.getDate()+11);
+    pb.info.payEnd=ymd(e3);
+    pb.info.cd=pb.info.cd||(function(){var d=new Date();d.setFullYear(d.getFullYear()-3);return ymd(d);})();
+    pb.info.gaps='치료비, 간병';
+    push(D.ba,{kind:'photo',body:'보장분석 PDF 읽음 — 계약 4건 · 담보 37개 · 납입/보장 만기 계산됨'});
+    paint();
+    toast('읽었습니다 — 네 칸이 채워지고 거리가 <b>'+signals(pb).length+'가지</b> 생겼습니다');
+    return; }
+  if(D.info){ var ai=D.info.split('|'), f=null;
+    INFO.forEach(function(x){if(x.k===ai[0])f=x;});
+    var pi=DB.people[ai[1]]; if(!f||!pi)return;
+    sheet('<div class="q">'+esc(f.t)+'</div><div class="qs">'+esc(f.hint)+'</div>'+
+      '<input id="iv" value="'+esc(infoOf(pi)[f.k]||'')+'" placeholder="'+esc(f.ph||'')+'" '+
+      'style="width:100%;height:56px;border-bottom:2px solid var(--t-line);font-size:20px;font-weight:700;'+
+      'letter-spacing:-.03em;margin-top:16px" autocomplete="off">'+
+      '<div class="opts"><button class="p" data-r="정보|'+f.k+'|'+ai[1]+'">넣기</button></div>'+
+      '<button class="cl" data-r="|">닫기</button>');
+    setTimeout(function(){try{$('iv').focus();}catch(e){}},90); return; }
+  if(D.n){ NSEL=NEWS.filter(function(x){return x.id==D.n;})[0]; paint(); return; }
+  if(D.news2){ NSEL=NEWS.filter(function(x){return x.id==D.news2;})[0]; go('content');
+    toast('이 뉴스로 캐러셀을 세웠습니다'); return; }
+  if(D.cal){ CALM=parseInt(D.cal,10); paint(); return; }
+  if(D.route){ toast(D.route==='near'
+    ? '가는 김에 걸 분들을 오늘 맨 위로 올립니다 — 실제로는 한 번에 통화 목록이 뜹니다'
+    : '카카오 길찾기로 구간 거리를 재서 순서를 세웁니다 (apex-route.js · route-km)'); return; }
+  if(D.region){ toast(esc(D.region)+' 에 오늘 걸 분들을 하루로 묶습니다 — 달력의 「지역의 날」로 갑니다'); return; }
+  if(D.up){ toast(esc(D.up)+' — 사본이라 실제로 올라가지는 않습니다'); return; }
+  if(D.q){ toast(D.q+' 는 사본에 아직 없습니다 — 구성만 잡아 두었습니다'); return; }
+  if(D.r!=null){
+    var a2=D.r.split('|'), what=a2[0], k=a2[1]; unsheet(); if(!what)return;
+    if(what==='다음저장'){ var pn2=DB.people[a2[1]]; if(!pn2)return;
+      var w2=($('nw')&&$('nw').value||'').trim(), d2=($('nd')&&$('nd').value||'').trim();
+      if(!w2){toast('무엇을 할지 적어 주세요');return;}
+      pn2.next={what:w2,due:d2}; save(); paint(); toast('적어 두었습니다'); return; }
+    if(what==='다음지움'){ var pn3=DB.people[a2[1]]; if(pn3){pn3.next=null;save();paint();toast('지웠습니다');} return; }
+    if(what==='정보'){ var pp=DB.people[a2[2]]; if(!pp)return;
+      var v=($('iv')&&$('iv').value||'').trim();
+      pp.info=pp.info||{}; if(v)pp.info[a2[1]]=v; else delete pp.info[a2[1]];
+      save(); paint();
+      var n=signals(pp).length;
+      toast(v?('넣었습니다'+(n?' — 이분께 거리가 <b>'+n+'가지</b>':'')):'비웠습니다'); return; }
+    if(what==='메모저장'){ var v=($('mb')&&$('mb').value||'').trim();
+      if(v){push(k,{kind:'memo',body:v});toast('쌓았습니다');} paint(); return; }
+    if(what.indexOf('사진')===0){ push(k,{kind:'photo',body:what.slice(2)});toast('쌓았습니다');paint();return; }
+    var mapr={'통화됨':'TA','부재':'부재','거절':'거절','만남':'PC','다음에':null};
+    push(k,{kind:'call',result:what,body:''});
+    var ns=mapr[what];
+    if(ns&&ns!==stageOf(k))push(k,{kind:'stage',stage:ns,body:'통화 결과로'});
+    paint(); toast(mask(DB.people[k].name)+'님 — '+what+' 로 남겼습니다'); return; }
+});
+
+/* 폰 보기 */
+$('vpc').addEventListener('click',function(){document.body.classList.remove('phone');
+  this.classList.add('on');$('vph').classList.remove('on');});
+$('vph').addEventListener('click',function(){document.body.classList.add('phone');
+  this.classList.add('on');$('vpc').classList.remove('on');});
+
+if(!load())seed();
+paint();
+/* 주소 끝에 #clients · #content · #p=01012345678 을 붙이면 그 화면으로 바로 갑니다.
+   알람을 눌렀을 때 한 번에 그 자리로 보내는 것과 같은 길입니다. */
+(function(){
+  var hsh=String(location.hash||'').replace('#','');
+  if(!hsh)return;
+  var m=hsh.match(/^p=(\d+)$/);
+  if(m){ if(DB.people[m[1]])go('person',m[1]); return; }
+  if(['today','clients','cal','tools','map','help','content','me','rules','add'].indexOf(hsh)>=0)go(hsh);
+})();
+</script>
+</body></html>

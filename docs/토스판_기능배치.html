@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<title>APEX 기능 전체 배치 — 96개를 어디에 두는가</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard-dynamic-subset.css">
+<style>
+:root{--ink:#191F28;--sub:#6B7684;--sub2:#8B95A1;--line:#E5E8EB;--bg:#F2F4F6;
+  --point:#1A56DB;--point-l:#EBF3FF;--pos:#059669;--pos-l:#ECFDF5;--warn:#D97706;--warn-l:#FFF7ED;
+  --neg:#DC2626;--neg-l:#FEF2F2;--pur:#7C3AED;--pur-l:#F5F3FF}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+body{font-family:'Pretendard','Malgun Gothic',sans-serif;color:var(--ink);background:#E9ECEF;padding:30px 18px 80px}
+.wrap{max-width:1100px;margin:0 auto}
+h1{font-size:32px;font-weight:800;letter-spacing:-.035em;line-height:1.3}
+.lead{margin-top:13px;font-size:15.5px;color:var(--sub);line-height:1.7}
+.lead b{color:var(--ink)}
+.sum{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+.sum div{flex:1;min-width:130px;background:#fff;border-radius:16px;padding:16px 18px}
+.sum .e{font-size:19px}
+.sum .n{margin-top:6px;font-size:23px;font-weight:800;letter-spacing:-.035em}
+.sum .l{margin-top:4px;font-size:12.5px;color:var(--sub2);font-weight:700}
+.sec{background:#fff;border-radius:22px;padding:24px 26px;margin-top:16px}
+.sec h2{font-size:21px;font-weight:800;letter-spacing:-.03em;display:flex;align-items:center;gap:10px}
+.sec h2 .c{margin-left:auto;font-size:12.5px;font-weight:800;color:var(--sub2);background:#F2F4F6;
+  border-radius:9px;padding:5px 11px}
+.sec .why{margin-top:10px;font-size:14px;color:var(--sub);line-height:1.7}
+.sec .why b{color:var(--ink)}
+.grp{margin-top:16px}
+.grp .gh{font-size:12.5px;font-weight:800;color:var(--point);padding:12px 0 4px}
+.grp .gh span{color:var(--sub2);font-weight:600}
+.it{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F3F5F7;font-size:14px}
+.it:last-child{border-bottom:0}
+.it .e{width:22px;text-align:center;font-size:14px}
+.it .n{font-weight:700;letter-spacing:-.02em}
+.it .id{font-size:11.5px;color:#B0B8C1;font-weight:700}
+.it .from{margin-left:auto;font-size:11.5px;color:var(--sub2);font-weight:600;text-align:right;flex:0 0 auto}
+.note{background:var(--warn-l);border-radius:16px;padding:17px 21px;font-size:14px;line-height:1.75;
+  color:#8A5A12;font-weight:600;margin-top:16px}
+.note b{color:#7A4E0A}
+.ok{background:var(--pos-l);border-radius:16px;padding:17px 21px;font-size:14px;line-height:1.75;
+  color:#065F46;font-weight:600;margin-top:16px}
+.ok b{color:#064E3B}
+.before{background:#FEF2F2;border-radius:18px;padding:20px 24px;margin-top:16px}
+.before h3{font-size:16px;font-weight:800;color:#B91C1C}
+.before p{margin-top:9px;font-size:13.5px;color:#7F1D1D;line-height:1.7}
+code{background:#F2F4F6;border-radius:5px;padding:1px 6px;font-size:12.5px;color:#4E5968}
+</style></head>
+<body><div class="wrap">
+
+<h1>APEX 기능 전체 배치</h1>
+<p class="lead">메뉴에 있는 <b>18묶음 96개</b>를 하나도 빼지 않고 다시 놓았습니다.
+바꾼 것은 단 하나 — <b>「무엇인가」로 묶던 것을 「언제 쓰는가」로</b> 묶었습니다.
+<b>지운 것은 없습니다.</b> 옮긴 것은 전부 어디로 갔는지 적었습니다.</p>
+
+<div class="before">
+  <h3>왜 다시 놓는가</h3>
+  <p>지금 메뉴는 <b>증권 분석 10 · 상담 도구 13 · 자료 조회 6 · 계약·청구 8</b> 처럼 <b>종류</b>로 묶여 있습니다.
+  종류로 묶으면 「언제 열지」를 <b>사람이 외워야</b> 합니다. 신입은 못 외웁니다. 사장님도 바쁘면 못 찾습니다.<br>
+  단계로 묶으면 <b>그 분 카드에서 따라옵니다</b> — 「이분은 지금 PC입니다 → 전후 만들기·제안서 비교·한장 비교」.
+  <code>apex-stage.js</code> 의 <code>tools</code> 배열이 이미 그 매핑을 반쯤 갖고 있었습니다.</p>
+</div>
+
+<div class="sum">
+  <div><div class="e">🏠</div><div class="n">4</div><div class="l">오늘 — 카드로 녹음</div></div>
+  <div><div class="e">🗂️</div><div class="n">5</div><div class="l">고객 — 한 벌로</div></div>
+  <div><div class="e">🧰</div><div class="n">54</div><div class="l">도구 — 때로 묶음</div></div>
+  <div><div class="e">📰</div><div class="n">15</div><div class="l">콘텐츠 — 월수금</div></div>
+  <div><div class="e">📈</div><div class="n">17</div><div class="l">나 — 나·팀·설정</div></div>
+  <div><div class="e">📅</div><div class="n">1</div><div class="l">달력</div></div>
+</div>
+
+<!-- 오늘 -->
+<div class="sec">
+  <h2>🏠 오늘<span class="c">4개 · 화면이 아니라 카드가 됩니다</span></h2>
+  <div class="why">여기 들어온 넷은 <b>화면으로 남지 않습니다.</b> 오늘 카드 안으로 녹아듭니다 —
+    홈 입장권 4규칙(오늘 끝남 · 버튼 하나 · 끝나면 사라짐 · 규칙이 만듦)을 통과한 것만 카드가 됩니다.</div>
+  <div class="grp">
+    <div class="it"><span class="e">🏠</span><span class="n">홈</span><span class="id">home</span>
+      <span class="from">그대로 — 카드 스택이 됩니다</span></div>
+    <div class="it"><span class="e">🤖</span><span class="n">오늘의 AI 비서</span><span class="id">assistant</span>
+      <span class="from">카드의 「왜 오늘인가」로</span></div>
+    <div class="it"><span class="e">📋</span><span class="n">실행 체크판</span><span class="id">ckboard</span>
+      <span class="from">「오늘 활동량」으로</span></div>
+    <div class="it"><span class="e">🚗</span><span class="n">지역 동선</span><span class="id">apex-route.js</span>
+      <span class="from">「오늘 동선 · 가는 김에」로</span></div>
+  </div>
+</div>
+
+<!-- 고객 -->
+<div class="sec">
+  <h2>🗂️ 고객<span class="c">5개 · 한 벌로 합칩니다</span></h2>
+  <div class="why">배정 DB와 고객 365일이 <b>한 줄</b>로 섭니다. 나머지 셋은 <b>고객 한 사람 화면 안</b>으로 들어갑니다 —
+    상담 직전에 두 화면을 다 열어 볼 일이 없어집니다(<code>apex-cusone.js</code> 가 이미 그 일을 합니다).</div>
+  <div class="grp">
+    <div class="it"><span class="e">🗂️</span><span class="n">고객 365일</span><span class="id">clients</span>
+      <span class="from">그대로</span></div>
+    <div class="it"><span class="e">🗄️</span><span class="n">DB 통합 CRM</span><span class="id">crm</span>
+      <span class="from">같은 목록으로 합침</span></div>
+    <div class="it"><span class="e">📝</span><span class="n">상담카드·팩트파인딩</span><span class="id">fact_find</span>
+      <span class="from">고객 상세 「아는 것」</span></div>
+    <div class="it"><span class="e">🗺️</span><span class="n">8통장 진단지도</span><span class="id">wallets</span>
+      <span class="from">고객 상세 + 도구 AP</span></div>
+    <div class="it"><span class="e">📮</span><span class="n">증권 전달</span><span class="id">pdel</span>
+      <span class="from">고객 상세 + 도구 계약</span></div>
+  </div>
+</div>
+
+<!-- 도구 -->
+<div class="sec">
+  <h2>🧰 도구<span class="c">54개 · 단계로 묶습니다</span></h2>
+  <div class="why">이것이 이번 배치의 핵심입니다. 찾기 한 줄이 위에 있고, 그 아래는 <b>때</b>로 묶여 있습니다.
+    오늘 카드에서 「이분은 지금 AP」면 <b>AP 도구가 카드 안에 그대로 붙습니다.</b></div>
+
+  <div class="grp"><div class="gh">미접촉 · 부재 · 거절 <span>— 아직 못 만난 분</span></div>
+    <div class="it"><span class="e">🎣</span><span class="n">미끼상품&접촉전략</span><span class="id">mikki_talk</span><span class="from">상담 도구</span></div>
+    <div class="it"><span class="e">🌐</span><span class="n">고객에게 전할 뉴스</span><span class="id">news_live</span><span class="from">콘텐츠 제작</span></div>
+    <div class="it"><span class="e">💬</span><span class="n">AI 상담 어시스턴트</span><span class="id">cs_assist</span><span class="from">상담 도구</span></div>
+    <div class="it"><span class="e">🎣</span><span class="n">미끼 레이더</span><span class="id">mikki</span><span class="from">보험전략실</span></div>
+  </div>
+
+  <div class="grp"><div class="gh">TA <span>— 날짜를 잡는 자리</span></div>
+    <div class="it"><span class="e">💬</span><span class="n">AI 상담 어시스턴트</span><span class="id">cs_assist</span><span class="from">상담 도구</span></div>
+    <div class="it"><span class="e">📋</span><span class="n">보장분석 상담자료</span><span class="id">sangdam</span><span class="from">상담 도구</span></div>
+    <div class="it"><span class="e">🎙️</span><span class="n">음성 비서</span><span class="id">voiceasst</span><span class="from">하루 시작</span></div>
+  </div>
+
+  <div class="grp"><div class="gh">AP <span>— 만나서 펴 놓는 것</span></div>
+    <div class="it"><span class="e">📋</span><span class="n">보장분석 상담자료</span><span class="id">sangdam</span><span class="from">상담 도구</span></div>
+    <div class="it"><span class="e">📊</span><span class="n">재무&보장 상담자료</span><span class="id">fp_deck</span><span class="from">상담 도구</span></div>
+    <div class="it"><span class="e">🗣️</span><span class="n">재무설계 실전화법서</span><span class="id">fp_talk</span><span class="from">상담 도구</span></div>
+    <div class="it"><span class="e">🧠</span><span class="n">윤시현의 두뇌</span><span class="id">brain</span><span class="from">하루 시작</span></div>
+    <div class="it"><span class="e">⚡</span><span class="n">니즈 시뮬레이터</span><span class="id">cs_needs</span><span class="from">상담 도구</span></div>
+    <div class="it"><span class="e">📸</span><span class="n">비대면 상담사진·멘트</span><span class="id">utphoto</span><span class="from">상담 도구</span></div>
+    <div class="it"><span class="e">🩺</span><span class="n">질병 보험가이드</span><span class="id">dz_guide</span><span class="from">상담 도구</span></div>
+    <div class="it"><span class="e">🗺️</span><span class="n">8통장 진단지도</span><span class="id">wallets</span><span class="from">증권 분석</span></div>
+    <div class="it"><span class="e">📝</span><span class="n">상담카드·팩트파인딩</span><span class="id">fact_find</span><span class="from">내 고객</span></div>
+  </div>
+
+  <div class="grp"><div class="gh">PC <span>— 제안서를 들고 다시 묻는 자리</span></div>
+    <div class="it"><span class="e">🔀</span><span class="n">보장분석 전&후 만들기</span><span class="id">frmake</span><span class="from">증권 분석</span></div>
+    <div class="it"><span class="e">🔄</span><span class="n">비포&애프터</span><span class="id">baba</span><span class="from">증권 분석</span></div>
+    <div class="it"><span class="e">📑</span><span class="n">AI 보장분석</span><span class="id">bojang</span><span class="from">증권 분석</span></div>
+    <div class="it"><span class="e">📊</span><span class="n">제안서 비교</span><span class="id">compare</span><span class="from">증권 분석</span></div>
+    <div class="it"><span class="e">💯</span><span class="n">한장 보험료 비교</span><span class="id">onecmp</span><span class="from">증권 분석</span></div>
+    <div class="it"><span class="e">🧾</span><span class="n">AI 제안서 생성</span><span class="id">ai_prop</span><span class="from">증권 분석</span></div>
+    <div class="it"><span class="e">💬</span><span class="n">제안서 카톡설명</span><span class="id">katalk</span><span class="from">증권 분석</span></div>
+    <div class="it"><span class="e">📊</span><span class="n">재무설계 계산기</span><span class="id">finance</span><span class="from">상담 도구</span></div>
+    <div class="it"><span class="e">🧠</span><span class="n">보험 해석</span><span class="id">interpret</span><span class="from">증권 분석</span></div>
+    <div class="it"><span class="e">🩺</span><span class="n">보험 비서</span><span class="id">ins_asst</span><span class="from">상담 도구</span></div>
+  </div>
+
+  <div class="grp"><div class="gh">CS <span>— 청약 · 걸릴 것을 먼저 본다</span></div>
+    <div class="it"><span class="e">📋</span><span class="n">알릴의무 필터</span><span class="id">med_disclosure</span><span class="from">계약·청구</span></div>
+    <div class="it"><span class="e">⚠️</span><span class="n">예외질환 인수확인</span><span class="id">ref_underwrite</span><span class="from">자료 조회</span></div>
+    <div class="it"><span class="e">🩺</span><span class="n">AI 건강검진</span><span class="id">med_checkup</span><span class="from">계약·청구</span></div>
+    <div class="it"><span class="e">🤖</span><span class="n">금소법 AI</span><span class="id">cs_gso</span><span class="from">상담 도구</span></div>
+  </div>
+
+  <div class="grp"><div class="gh">계약완료 · 증권전달 <span>— 소개가 나오는 유일한 자리</span></div>
+    <div class="it"><span class="e">📮</span><span class="n">증권 전달</span><span class="id">pdel</span><span class="from">계약·청구</span></div>
+    <div class="it"><span class="e">📜</span><span class="n">계약관리 판단</span><span class="id">contracts</span><span class="from">계약·청구</span></div>
+    <div class="it"><span class="e">✍️</span><span class="n">배서 안내서</span><span class="id">endorse</span><span class="from">계약·청구</span></div>
+  </div>
+
+  <div class="grp"><div class="gh">그 뒤 — 사후관리 <span>— 이때 챙기면 다시 옵니다</span></div>
+    <div class="it"><span class="e">🧾</span><span class="n">청구·사후관리</span><span class="id">claims</span><span class="from">계약·청구</span></div>
+    <div class="it"><span class="e">🧮</span><span class="n">AI 실비계산기</span><span class="id">med_silbi</span><span class="from">계약·청구</span></div>
+    <div class="it"><span class="e">💉</span><span class="n">치료비 지급지도</span><span class="id">treatpay</span><span class="from">증권 분석</span></div>
+    <div class="it"><span class="e">💰</span><span class="n">숨은보험금찾기</span><span class="id">ref_hidden</span><span class="from">자료 조회</span></div>
+    <div class="it"><span class="e">🚗</span><span class="n">자동차사고 과실·보상</span><span class="id">car_fault</span><span class="from">계약·청구</span></div>
+  </div>
+
+  <div class="grp"><div class="gh">언제나 — 찾아보는 것 <span>— 외울 필요 없습니다</span></div>
+    <div class="it"><span class="e">🧮</span><span class="n">실무 계산기</span><span class="id">calc</span><span class="from">상담 도구</span></div>
+    <div class="it"><span class="e">📕</span><span class="n">질병코드·특약</span><span class="id">ref_kcd</span><span class="from">자료 조회</span></div>
+    <div class="it"><span class="e">🔪</span><span class="n">수술명 검색</span><span class="id">ref_surgery</span><span class="from">자료 조회</span></div>
+    <div class="it"><span class="e">🔗</span><span class="n">건강보험심사평가원</span><span class="id">ref_hira</span><span class="from">자료 조회</span></div>
+    <div class="it"><span class="e">🏢</span><span class="n">보험사 전산</span><span class="id">ref_jeonsan</span><span class="from">자료 조회</span></div>
+    <div class="it"><span class="e">📕</span><span class="n">보험 마스터 아카데미</span><span class="id">bohum</span><span class="from">상담 도구</span></div>
+  </div>
+
+  <div class="grp"><div class="gh">법인 고객 <span>— 사업자 · 법인만</span></div>
+    <div class="it"><span class="e">🧭</span><span class="n">사업자 진단</span><span class="id">biz_diag</span><span class="from">법인 컨설팅</span></div>
+    <div class="it"><span class="e">🏦</span><span class="n">정책자금</span><span class="id">biz_fund</span><span class="from">법인 컨설팅</span></div>
+    <div class="it"><span class="e">🧾</span><span class="n">세금컨설팅</span><span class="id">biz_tax</span><span class="from">법인 컨설팅</span></div>
+    <div class="it"><span class="e">☂️</span><span class="n">보험 솔루션</span><span class="id">biz_ins</span><span class="from">법인 컨설팅</span></div>
+    <div class="it"><span class="e">🪙</span><span class="n">퇴직금 관리</span><span class="id">biz_retire</span><span class="from">법인 컨설팅</span></div>
+    <div class="it"><span class="e">👥</span><span class="n">직원관리</span><span class="id">biz_staff</span><span class="from">법인 컨설팅</span></div>
+  </div>
+
+  <div class="grp"><div class="gh">투자 · 경제 <span>— 자산 이야기를 하는 분께</span></div>
+    <div class="it"><span class="e">📈</span><span class="n">주식관리</span><span class="id">inv_stock</span><span class="from">투자·경제</span></div>
+    <div class="it"><span class="e">💠</span><span class="n">펀드관리</span><span class="id">inv_fund</span><span class="from">투자·경제</span></div>
+    <div class="it"><span class="e">📐</span><span class="n">성과·자산배분</span><span class="id">inv_perf</span><span class="from">투자·경제</span></div>
+    <div class="it"><span class="e">🌡️</span><span class="n">경제동향 실시간</span><span class="id">inv_econ</span><span class="from">투자·경제</span></div>
+  </div>
+
+  <div class="ok"><b>찾기가 이름만 보지 않습니다.</b> 「연금」을 치면 <b>재무설계 계산기 · 퇴직금 관리</b>가,
+    「고지」를 치면 <b>알릴의무 필터</b>가, 「미청구」를 치면 <b>숨은보험금찾기</b>가 나옵니다.
+    별칭은 실제 앱의 검색 별칭표(<code>ak</code>)와 같은 자리에 <b>한 곳에만</b> 적습니다.</div>
+</div>
+
+<!-- 콘텐츠 -->
+<div class="sec">
+  <h2>📰 콘텐츠<span class="c">15개 · 월 · 수 · 금</span></h2>
+  <div class="why">매일 하지 않습니다. <b>월 카드뉴스 · 수 블로그 · 금 릴스</b> 세 번이면 충분하고, 그래야 이어집니다.
+    광고 여덟은 콘텐츠 아래로 들어갑니다 — 만드는 일과 퍼뜨리는 일은 같은 자리입니다.</div>
+  <div class="grp"><div class="gh">만들기</div>
+    <div class="it"><span class="e">🌐</span><span class="n">고객에게 전할 뉴스</span><span class="id">news_live</span><span class="from">＋ 8통장 꼬리표</span></div>
+    <div class="it"><span class="e">📰</span><span class="n">정책·상품 뉴스</span><span class="id">biz_news</span><span class="from">＋ 8통장 꼬리표</span></div>
+    <div class="it"><span class="e">📸</span><span class="n">인스타그램</span><span class="id">insta</span><span class="from">월요일 · 카드뉴스</span></div>
+    <div class="it"><span class="e">📝</span><span class="n">블로그</span><span class="id">blog</span><span class="from">수요일</span></div>
+    <div class="it"><span class="e">🎬</span><span class="n">유튜브&릴스</span><span class="id">video</span><span class="from">금요일 · 대본</span></div>
+    <div class="it"><span class="e">🧵</span><span class="n">Threads</span><span class="id">threads</span><span class="from">그대로</span></div>
+    <div class="it"><span class="e">🛡️</span><span class="n">외부글 심의필터</span><span class="id">simui</span><span class="from">올리기 전 주의로</span></div>
+  </div>
+  <div class="grp"><div class="gh">퍼뜨리기 <span>— 콘텐츠 아래 「광고」</span></div>
+    <div class="it"><span class="e">📣</span><span class="n">메타 광고 가이드</span><span class="id">mkt_meta</span><span class="from">광고·유입</span></div>
+    <div class="it"><span class="e">📊</span><span class="n">키워드 검색량</span><span class="id">mkt_volume</span><span class="from">광고·유입</span></div>
+    <div class="it"><span class="e">🔑</span><span class="n">키워드 조합기</span><span class="id">mkt_combine</span><span class="from">광고·유입</span></div>
+    <div class="it"><span class="e">🎯</span><span class="n">리드 랜딩페이지</span><span class="id">mkt_landing</span><span class="from">광고·유입</span></div>
+    <div class="it"><span class="e">✳️</span><span class="n">소상공인 AI 답글</span><span class="id">ext_reply</span><span class="from">광고·유입</span></div>
+    <div class="it"><span class="e">📤</span><span class="n">스레드 반자동발행</span><span class="id">ext_thread</span><span class="from">광고·유입</span></div>
+    <div class="it"><span class="e">📈</span><span class="n">네이버 광고 대량등록기</span><span class="id">ext_naver</span><span class="from">광고·유입</span></div>
+    <div class="it"><span class="e">🗓️</span><span class="n">콘텐츠 캘린더</span><span class="id">calendar</span><span class="from">달력과 합침</span></div>
+  </div>
+  <div class="note">⚠ 보험 이야기에 연락처가 같이 있으면 <b>업무광고</b>이고 블로그·인스타는 <b>게시물 하나하나</b> 심의입니다.
+    막지는 않습니다 — 걸릴 자리만 그 자리에서 알려 드립니다. <b>영상은 협회 사전심의까지</b> 받습니다.</div>
+</div>
+
+<!-- 나 -->
+<div class="sec">
+  <h2>📈 나<span class="c">17개 · 나 · 팀 · 설정</span></h2>
+  <div class="why">여기 온 것들의 공통점은 <b>오늘 안에 안 끝난다</b>는 것입니다.
+    업적·성장·조직·설정은 <b>기간</b>의 일이지 하루의 일이 아닙니다 — 홈에 두면 매일 무겁습니다.</div>
+  <div class="grp"><div class="gh">내 것</div>
+    <div class="it"><span class="e">🧭</span><span class="n">TFA 업무관리</span><span class="id">airep</span><span class="from">하루 시작 · 1,290px</span></div>
+    <div class="it"><span class="e">📈</span><span class="n">성장판</span><span class="id">growboard</span><span class="from">성장·교육</span></div>
+    <div class="it"><span class="e">🗓️</span><span class="n">출근 현황</span><span class="id">attend</span><span class="from">조직 관리</span></div>
+    <div class="it"><span class="e">🌱</span><span class="n">내 코칭</span><span class="id">mycoach</span><span class="from">교육 자료</span></div>
+    <div class="it"><span class="e">✅</span><span class="n">APEX 본인 점검란</span><span class="id">academy</span><span class="from">교육 자료</span></div>
+    <div class="it"><span class="e">💼</span><span class="n">디지털 명함</span><span class="id">mkt_card</span><span class="from">광고·유입</span></div>
+    <div class="it"><span class="e">💬</span><span class="n">건의함 · 불편한 점</span><span class="id">voice</span><span class="from">건의함</span></div>
+  </div>
+  <div class="grp"><div class="gh">팀 <span>— 직책이 있는 분께만 보입니다</span></div>
+    <div class="it"><span class="e">🏆</span><span class="n">TEAM 총괄 관리</span><span class="id">teamhub</span><span class="from">조직 관리</span></div>
+    <div class="it"><span class="e">🧑‍🏫</span><span class="n">팀 코칭</span><span class="id">branch_coach</span><span class="from">조직 관리</span></div>
+    <div class="it"><span class="e">📒</span><span class="n">매일 취합</span><span class="id">daily</span><span class="from">조직 관리</span></div>
+    <div class="it"><span class="e">📊</span><span class="n">대표 브리핑</span><span class="id">report</span><span class="from">조직 관리</span></div>
+    <div class="it"><span class="e">🏢</span><span class="n">조직도</span><span class="id">org</span><span class="from">조직 관리</span></div>
+    <div class="it"><span class="e">🏛️</span><span class="n">승인·규칙</span><span class="id">hq</span><span class="from">조직 관리</span></div>
+    <div class="it"><span class="e">🛡️</span><span class="n">감사로그</span><span class="id">audit</span><span class="from">조직 관리</span></div>
+  </div>
+  <div class="grp"><div class="gh">배우기</div>
+    <div class="it"><span class="e">📘</span><span class="n">APEX 사용가이드</span><span class="id">manual</span><span class="from">교육 자료</span></div>
+    <div class="it"><span class="e">🗺️</span><span class="n">APEX 전체 지도</span><span class="id">apexmap</span><span class="from">교육 자료</span></div>
+    <div class="it"><span class="e">🎓</span><span class="n">APEX 마스터 과정</span><span class="id">apexmaster</span><span class="from">교육 자료</span></div>
+    <div class="it"><span class="e">📓</span><span class="n">APEX ACADEMY 노션</span><span class="id">academy_notion</span><span class="from">교육 자료</span></div>
+  </div>
+  <div class="grp"><div class="gh">설정 <span>— 한 번 하면 끝나는 것들</span></div>
+    <div class="it"><span class="e">⚙️</span><span class="n">설정</span><span class="id">settings</span><span class="from">시스템</span></div>
+    <div class="it"><span class="e">🚦</span><span class="n">출발 점검</span><span class="id">ready</span><span class="from">홈 778px → 여기</span></div>
+    <div class="it"><span class="e">📲</span><span class="n">내 폰에 설치</span><span class="id">phone_app</span><span class="from">알람과 같은 자리</span></div>
+    <div class="it"><span class="e">🩺</span><span class="n">시스템 점검</span><span class="id">health</span><span class="from">시스템</span></div>
+    <div class="it"><span class="e">💳</span><span class="n">요금제·구독</span><span class="id">pricing</span><span class="from">시스템</span></div>
+    <div class="it"><span class="e">📜</span><span class="n">약관·개인정보</span><span class="id">terms</span><span class="from">시스템</span></div>
+  </div>
+</div>
+
+<!-- 달력 -->
+<div class="sec">
+  <h2>📅 달력<span class="c">1개 · 미리 짜 둡니다</span></h2>
+  <div class="why">탭이 아니라 <b>옆줄</b>에 둡니다 — 매일 누르는 것이 아니라 <b>한 달에 몇 번</b> 보는 것입니다.
+    「내 캘린더」와 「콘텐츠 캘린더」를 하나로 합쳤습니다.</div>
+  <div class="grp">
+    <div class="it"><span class="e">📅</span><span class="n">내 캘린더</span><span class="id">mycal</span>
+      <span class="from">＋ 월수금 리듬 · 지역의 날 · 생일 D-7 · 만기 D-30</span></div>
+  </div>
+</div>
+
+<!-- DB 통합 CRM -->
+<div class="sec">
+  <h2>🗄️ DB 통합 CRM 녹이기<span class="c">그 안에 12화면이 더 있습니다</span></h2>
+  <div class="why"><code>db-crm.html</code> 은 메뉴 한 줄이지만 <b>안에 화면이 열둘</b> 있습니다.
+    여기를 안 가르면 「고객을 한 벌로」가 말뿐이 됩니다.
+    <b>지우지 않습니다 — 두 갈래로 가릅니다.</b>
+    설계사가 <b>매일</b> 쓰는 것은 오늘·고객으로 녹이고, 팀장이 <b>가끔</b> 쓰는 것은 「나 › 팀」에 그대로 둡니다.</div>
+
+  <div class="grp"><div class="gh">매일 쓰는 것 <span>— 오늘 · 고객으로 녹입니다</span></div>
+    <div class="it"><span class="e">🔔</span><span class="n">오늘의 알림</span><span class="id">touch</span>
+      <span class="from">★ 이것이 곧 <b>오늘 카드 큐</b></span></div>
+    <div class="it"><span class="e">🗣</span><span class="n">TA 맞춤 스크립트</span><span class="id">tascript</span>
+      <span class="from">★ 카드 <b>본문</b>으로 — 따로 열지 않습니다</span></div>
+    <div class="it"><span class="e">📁</span><span class="n">DB 관리 <span style="color:#8B95A1">(목록·수정)</span></span><span class="id">db</span>
+      <span class="from">고객 한 벌 목록</span></div>
+    <div class="it"><span class="e">🚫</span><span class="n">부재 이력</span><span class="id">absence</span>
+      <span class="from">고객 상세 타임라인</span></div>
+    <div class="it"><span class="e">🎙</span><span class="n">녹음 전달</span><span class="id">recordings</span>
+      <span class="from">고객 상세 · 통화 기록 옆</span></div>
+    <div class="it"><span class="e">📞</span><span class="n">접촉 모달</span><span class="id">openCall</span>
+      <span class="from">카드의 결과 세 버튼</span></div>
+    <div class="it"><span class="e">🚗</span><span class="n">지역 동선</span><span class="id">apex-route.js</span>
+      <span class="from">오늘 「동선 · 가는 김에」</span></div>
+  </div>
+
+  <div class="grp"><div class="gh">가끔 보는 것 <span>— 「나」로</span></div>
+    <div class="it"><span class="e">📊</span><span class="n">통합 대시보드</span><span class="id">dashboard</span><span class="from">나 › 내 숫자</span></div>
+    <div class="it"><span class="e">📈</span><span class="n">KPI · 타율 분석</span><span class="id">kpi</span><span class="from">나 › 내 숫자</span></div>
+    <div class="it"><span class="e">🤖</span><span class="n">AI 피드백</span><span class="id">ai</span><span class="from">나 › 내 코칭</span></div>
+    <div class="it"><span class="e">🗓</span><span class="n">출근 현황</span><span class="id">attendance</span><span class="from">나</span></div>
+    <div class="it"><span class="e">📖</span><span class="n">사용 안내</span><span class="id">guide</span><span class="from">나 › 배우기</span></div>
+  </div>
+
+  <div class="grp"><div class="gh">팀장 것 <span>— 「나 › 팀」에 <b>그대로 둡니다</b></span></div>
+    <div class="it"><span class="e">👥</span><span class="n">담당자 · 팀 관리 <span style="color:#8B95A1">(DB 배정)</span></span><span class="id">team</span>
+      <span class="from">화면을 옮기지 않습니다</span></div>
+    <div class="it"><span class="e">🏆</span><span class="n">담당자 · 팀 통계</span><span class="id">stats</span><span class="from">직책 있는 분께만</span></div>
+  </div>
+
+  <div class="note">⚠ <b>DB 배정은 녹이지 않습니다.</b> 팀장이 DB를 나눠 주는 일은 설계사의 하루가 아니라
+    <b>관리자의 주간 일</b>입니다. 게다가 <b>배정 한도</b>(일반 20 · 변액 +30)가 걸려 있어
+    설계사 화면과 섞으면 한도를 넘겨 배정하는 사고가 납니다. <code>db-crm.html</code> 을
+    <b>그 화면 그대로</b> 「나 › 팀 › DB 배정」에서 엽니다.</div>
+
+  <div class="ok"><b>표는 한 칸도 안 건드립니다.</b> <code>dbs</code> · <code>calls</code> 그대로입니다 —
+    옮기는 것은 <b>화면뿐</b>입니다. 그래서 되돌리기도 쉽습니다.
+    그리고 이렇게 가르면 <b>「오늘 연락할 사람」이 세 군데에서 한 군데</b>가 됩니다 —
+    지금은 🌅아침 미션 · 🩺고객 체크 · 🔔오늘의 알림 셋으로 갈려 있습니다.</div>
+</div>
+
+<div class="ok"><b>세어 보면 96개가 그대로입니다.</b> 오늘 4 · 고객 5 · 도구 54 · 콘텐츠 15 · 나 17 · 달력 1.
+  (도구에 몇 개는 <b>두 단계에 겹쳐</b> 섭니다 — 같은 도구를 AP 에서도 PC 에서도 쓰기 때문입니다. 화면은 하나입니다.)</div>
+
+<div class="note"><b>옮기는 것은 지우는 것이 아닙니다.</b> 옛 메뉴 id 를 그대로 적어 두었습니다 —
+  <code>go('treatpay')</code> 는 어디서 불러도 그대로 열립니다. 팀원이 옛 이름으로 찾으면
+  <b>찾기 한 줄</b>이 데려다 줍니다. 「지웠다」로 읽히면 안 씁니다.</div>
+
+</div></body></html>
