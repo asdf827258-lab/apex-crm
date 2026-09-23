@@ -186,13 +186,20 @@ const SEED = () => `
      ' — 반쪽에서 죽으면 단추를 눌러도 아무 일이 안 일어난다');
 
   console.log('\n[7] 위젯을 <b>만들어 준다고 말하지 않는다</b> (1번) · 바로가기에 달력');
+  /* ⚠ 이 안내는 <b>접힌 채로</b> 섭니다(날마다 보는 자리가 밀리지 않게).
+     접힌 글은 innerText 에 안 잡히므로 <b>펴서</b> 잽니다 — 사장님이 실제로
+     열어 읽을 수 있는지를 재는 것이 맞습니다 (8번). */
   const F = await p.evaluate(() => {
     const el = document.getElementById('dynPane') || document.body;
-    return (el.innerText || '').replace(/\s+/g, ' ');
+    const ds = [...el.querySelectorAll('details')];
+    ds.forEach(d => { d.open = true; });
+    const t = (el.innerText || '').replace(/\s+/g, ' ');
+    return { t, folds: ds.length };
   });
-  is(/위젯을 직접 만들 수는 없습니다|위젯은 못/.test(F),
-     '  <b>못 만든다고</b> 적는다 — 「만들어 드립니다」 라고 적으면 폰에서 찾으시다 못 찾는다');
-  is(/달력 위젯/.test(F) && /통째로 넣기/.test(F),
+  is(F.folds > 0, '  <b>접어 두었다</b> — 한 번 읽고 마는 글이 날마다 보는 달력을 밀어내면 안 된다 (' + F.folds + '칸)');
+  is(/위젯을 직접 만들 수는 없습니다|위젯은 못/.test(F.t),
+     '  펴면 <b>못 만든다고</b> 적혀 있다 — 「만들어 드립니다」 라고 적으면 폰에서 찾으시다 못 찾는다');
+  is(/달력 위젯/.test(F.t) && /통째로 넣기/.test(F.t),
      '  대신 <b>폰이 가진 달력 위젯</b>으로 가는 길을 적는다');
   const mf = JSON.parse(fs.readFileSync('app/manifest.webmanifest', 'utf8'));
   const sc = (mf.shortcuts || []).map(x => x.url);
