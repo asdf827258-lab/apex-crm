@@ -128,7 +128,9 @@ const SEED=(role)=>`
        여기서는 읽기를 막아 두었으니 그 마지막 한 걸음만 손으로 밟는다. */
     await p.evaluate(()=>osRenderList());await p.waitForTimeout(400);
     const a=await p.evaluate(()=>{
-      const w=document.querySelector('.cm-whos'),bd=document.getElementById('cli365Top');
+      /* 미션·달력은 이제 목록 아래 <b>접는 줄</b>(hmFold_c365) 안이다 — 접혀 있으면
+         속 칸은 높이가 0 이라, 그 줄의 머리로 잰다 (사장님 말씀 2026-09-23 「하나로」) */
+      const w=document.querySelector('.cm-whos'),bd=document.getElementById('hmFold_c365')||document.getElementById('cli365Top');
       const nw=document.querySelector('.cm-wnow');
       return {has:!!w,n:document.querySelectorAll('.cm-whos').length,top:w?Math.round(w.getBoundingClientRect().top+scrollY):null,
         other:bd?Math.round(bd.getBoundingClientRect().top+scrollY):null,

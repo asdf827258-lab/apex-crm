@@ -59005,8 +59005,23 @@ function cliWhoPaint(){
   e.innerHTML=(typeof cmWhoChipsHtml==='function')
     ? cmWhoChipsHtml((typeof OSC!=='undefined'&&OSC.list)?OSC.list:[]) : '';
 }
+/* 접힌 머리에 적을 것 — 「오늘 N건」. 못 읽었으면 <b>읽는 중 · 못 받음</b>
+   이라 적는다(mcalTdyLabel 한 벌 · 1번·5번). 접어 두어도 오늘 몇 건인지는 보인다. */
+function cliFoldSub(){
+  try{ return mcalTdyLabel(mcalCnt(mcalDay(mcalItems(),mcalToday()))).replace(/<[^>]+>/g,''); }
+  catch(e){ return ''; }
+}
+function cliFoldPaint(){
+  var box=document.getElementById('hmFold_c365'); if(!box)return;
+  var t=box.querySelector('.hm-fold-h .t'); if(!t)return;
+  var sub=cliFoldSub(),sp=t.querySelector('span');
+  if(!sub){ if(sp)sp.remove(); return; }
+  if(!sp){ sp=document.createElement('span'); t.appendChild(sp); }
+  sp.textContent=sub;
+}
 function cli365TopPaint(){
   cliWhoPaint();
+  cliFoldPaint();
   var e=document.getElementById('cli365Top');
   if(!e)return;
   e.innerHTML=cliMissionHtml()+mstCardHtml()+
@@ -59054,7 +59069,7 @@ function renderClientsPage(){
        머리를 누르면 그 자리에서 펴지고, 편 채로 두면 다음에도 펴져 있습니다
        (홈의 접는 줄과 <b>같은 것</b>을 씁니다 · 5번). 달력은 홈에도 있습니다. */
     '<div style="margin-top:18px">'+
-      hmFoldWrap('c365','📅','오늘의 미션 · 이번 달 고객 관리','',
+      hmFoldWrap('c365','📅','오늘의 미션 · 이번 달 고객 관리',cliFoldSub(),
         '<div id="cli365Top">'+cliMissionHtml()+mstCardHtml()+
         (typeof mcalCardHtml==='function'
           ? mcalCardHtml({title:'이번 달 고객 관리',
@@ -59206,6 +59221,8 @@ function osSetList(html){
   /* 내 고객을 다시 세울 때 <b>배정 DB 줄도 같이</b> — 한쪽만 그리면 같은
      찾기 칸이 두 목록에 다른 말을 한다 (5번) */
   try{ if(typeof cusDbListPaint==='function')cusDbListPaint(); }catch(e){}
+  /* 못 받음·다 옴이 바뀌는 자리도 여기다 — 접힌 머리의 「오늘 N건」 도 같이 */
+  try{ if(typeof cliFoldPaint==='function')cliFoldPaint(); }catch(e2){}
 }
 function osClientsFilter(v){OSC.q=v;osRenderList();}
 function osConsentLabel(cs){return {none:'동의 전',requested:'동의 요청',granted:'동의 완료',revoked:'동의 철회'}[cs]||cs;}

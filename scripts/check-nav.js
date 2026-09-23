@@ -120,11 +120,15 @@ async function boot(page) {
   console.log('\n[1] 카테고리가 다 나오는가');
   const groups = await page.evaluate(() => {
     var want = (typeof visibleTabs === 'function' ? visibleTabs() : TABS).filter(function (g) { return !g.hide; });
+    /* 눈에서 빼는가 — <b>앱이 답하는 한 곳</b>(navItemHid)에 묻는다. hide 에 더해
+       한 문으로 합친 줄(fold · 2026-09-23 고객 365일 ← DB 통합 CRM)도 있다.
+       여기서 따로 세면 앱과 점검이 다른 규칙을 갖게 된다 (5번). */
+    var HID = function (it) { return (typeof navItemHid === 'function') ? navItemHid(it) : !!it.hide; };
     var got = [].slice.call(document.querySelectorAll('#navHost .nav-group'));
     return {
       /* 눈에서 뺀(hide) 칸은 세지 않는다 — 일부러 안 보이게 한 것이다 */
       want: want.map(function (g) {
-        return { name: g.group, n: g.items.filter(function (it) { return !it.hide; }).length };
+        return { name: g.group, n: g.items.filter(function (it) { return !HID(it); }).length };
       }),
       got: got.map(function (el) {
         var t = el.querySelector('.ngl-t'), n = el.querySelector('.ngl-n'), ic = el.querySelector('.ngl-ic');
@@ -153,10 +157,14 @@ async function boot(page) {
      단, hide 를 단 칸은 <b>일부러</b> 눈에서 뺀 것이다. 그건 아래에서 따로 본다. */
   const lost = await page.evaluate(() => {
     var want = (typeof visibleTabs === 'function' ? visibleTabs() : TABS).filter(function (g) { return !g.hide; });
+    /* 눈에서 빼는가 — <b>앱이 답하는 한 곳</b>(navItemHid)에 묻는다. hide 에 더해
+       한 문으로 합친 줄(fold · 2026-09-23 고객 365일 ← DB 통합 CRM)도 있다.
+       여기서 따로 세면 앱과 점검이 다른 규칙을 갖게 된다 (5번). */
+    var HID = function (it) { return (typeof navItemHid === 'function') ? navItemHid(it) : !!it.hide; };
     var ids = {}, miss = [];
     [].slice.call(document.querySelectorAll('#navHost .tab-btn')).forEach(function (b) { ids[b.getAttribute('data-tab')] = 1; });
     want.forEach(function (g) {
-      g.items.forEach(function (it) { if (!it.hide && !ids[it.id]) miss.push(g.group + '/' + it.id); });
+      g.items.forEach(function (it) { if (!HID(it) && !ids[it.id]) miss.push(g.group + '/' + it.id); });
     });
     return miss;
   });
@@ -166,8 +174,12 @@ async function boot(page) {
      안 나오면 그건 숨긴 게 아니라 <b>없앤 것</b>이다. */
   const hid = await page.evaluate(() => {
     var all = (typeof visibleTabs === 'function' ? visibleTabs() : TABS).filter(function (g) { return !g.hide; });
+    /* 눈에서 빼는가 — <b>앱이 답하는 한 곳</b>(navItemHid)에 묻는다. hide 에 더해
+       한 문으로 합친 줄(fold · 2026-09-23 고객 365일 ← DB 통합 CRM)도 있다.
+       여기서 따로 세면 앱과 점검이 다른 규칙을 갖게 된다 (5번). */
+    var HID = function (it) { return (typeof navItemHid === 'function') ? navItemHid(it) : !!it.hide; };
     var want = [];
-    all.forEach(function (g) { g.items.forEach(function (it) { if (it.hide) want.push(it); }); });
+    all.forEach(function (g) { g.items.forEach(function (it) { if (HID(it)) want.push(it); }); });
     NAV_Q = ''; renderNav();
     var shown = {};
     [].slice.call(document.querySelectorAll('#navHost .tab-btn')).forEach(function (b) { shown[b.getAttribute('data-tab')] = 1; });

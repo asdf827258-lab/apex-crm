@@ -165,18 +165,25 @@ const SEED = `
   is(C.due === 0 && C.ok, '  「오늘 챙길 분이 없습니다」 라고 말한다');
   is(C.quota === 0 && C.month, '  이번 달 몫도 <b>다 채웠다</b>고 말한다');
 
-  console.log('\n[4] 이번 달 달력이 고객 365일 맨 위에 선다 — 그리고 한 벌이다');
+  /* 사장님 말씀 (2026-09-23) 「고객 365가 너무 복잡해 · 하나로 합치고 싶어」 —
+     미션·달력이 찾기 칸 위에 두 화면 넘게 서 있었다. 이제 <b>찾기 → 목록</b>이
+     먼저 서고, 미션·달력은 <b>지우지 않고</b> 목록 아래 접는 줄(c365) 안에 선다. */
+  console.log('\n[4] 이번 달 달력이 고객 365일에 선다 — 한 벌이고, 찾기·목록 아래 접혀 있다');
   const D = await page.evaluate(new Function(SEED + `
     const html = renderClientsPage();
     return { top: html.indexOf('cli365Top') >= 0,
              cal: (html.match(/mcal-hd/g) || []).length,
              mission: html.indexOf('오늘의 미션') >= 0,
              order: html.indexOf('오늘의 미션') < html.indexOf('이번 달 고객 관리'),
-             beforeList: html.indexOf('cli365Top') < html.indexOf('oscList'),
+             afterList: html.indexOf('oscSearch') < html.indexOf('oscList') &&
+                        html.indexOf('oscList') < html.indexOf('cli365Top'),
+             folded: html.indexOf('hmFold_c365') >= 0 &&
+                     html.indexOf('hmFold_c365') < html.indexOf('cli365Top'),
              phone: html.indexOf('폰 기본 달력에 넣기') >= 0 };
   `));
   is(D.top && D.cal === 1, '  달력이 <b>한 벌</b> 선다');
-  is(D.mission && D.order && D.beforeList, '  미션 → 달력 → 목록 차례로, <b>목록보다 위</b>에');
+  is(D.mission && D.order, '  미션 → 달력 차례로 <b>그대로 있다</b> — 지운 것이 아니다');
+  is(D.afterList && D.folded, '  <b>찾기 → 목록</b>이 먼저, 미션·달력은 그 아래 <b>접는 줄 안</b>에');
   is(!D.phone, '  폰 내보내기 칸은 <b>여기 또 안 붙인다</b> — 설정 → 내 캘린더 자리다');
 
   console.log('\n[5] 날짜를 누르면 실제로 바뀐다');

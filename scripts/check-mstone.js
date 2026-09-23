@@ -200,6 +200,10 @@ const clearOvl = pg => pg.evaluate(sel => {
   head('[6] 고객 365일에서 <b>실제로 보인다</b>');
   /* 주소 뒤의 #clients 만으로는 그 화면이 안 열립니다 — 실제로 갑니다 */
   await pg.evaluate(() => { OSC.view = 'list'; go('clients'); });
+  /* 미션·마스터·달력은 이제 목록 아래 <b>접는 줄</b>(c365) 안에 섭니다 — 사장님
+     말씀 (2026-09-23) 「고객 365가 너무 복잡해」. 사람이 하듯 <b>펴고</b> 잽니다. */
+  await pg.waitForSelector('#hmFold_c365', { timeout: 20000 });
+  await pg.evaluate(() => { if (!hmFoldOpen('c365')) hmFoldToggle('c365'); });
   await pg.waitForSelector('#cli365Top', { timeout: 20000 });
   await clearOvl(pg);
   /* 고객 목록은 서버에서 오는데 견본 서버는 빈 배열을 줍니다 — 우리가 넣은
