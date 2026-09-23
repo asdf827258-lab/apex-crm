@@ -255,6 +255,39 @@ const SEED = `(function(){
      '<b>같은 단계 안에서는 오래 밀린 분</b>부터 — 40일째 → 3일째');
 
   /* ─────────────────────────────────────────────────────────── */
+  /* ★ 2026-09-24 · <b>「몇 분 남았나」 는 한 곳에서만 나온다</b>
+     (사장님 말씀 — 「세 자리를 하나로 · 몇 분 남았나 가 한 곳에서만」).
+     여태 셋이 따로 셌습니다 —
+       · 퀘스트 띠   r.n = hmSteps() 전체 (사람 아닌 줄 · 끝낸 분까지)
+       · ① 목록      hmMsPeople().length
+       · 「다음 분으로」 알림  그 자리에서 또 훑어 세기
+     수가 달라도 화면은 멀쩡해 보여서 아무도 못 봅니다. 여기서 <b>같은
+     수를 말하는지</b> 재고, 세는 자리가 hmLeft <b>하나</b>인지 글자로 봅니다. */
+  head('[2-3] <b>「몇 분 남았나」 는 한 곳에서만</b> (5번)');
+  const qn = await pg.evaluate(() => {
+    const Q = hmLeft();
+    const band = ((document.querySelector('#hmToday .hm-q-n') || {}).textContent || '');
+    const m = band.match(/오늘\s*(\d+)\s*분\s*중\s*(\d+)\s*번째/);
+    return { all: Q.all, n: Q.n, done: Q.done, band: band.replace(/\s+/g, ' ').trim(),
+      bn: m ? +m[1] : -1, bi: m ? +m[2] : -1,
+      ms: hmMsPeople().length,
+      onlyPeople: hmLeft().list.every(x => !!(HM_ACT[x.k] && HM_ACT[x.k].ba)) };
+  });
+  is(qn.bn === qn.all,
+     '  띠의 <b>전체 수</b>가 hmLeft 와 같다 — 띠 ' + qn.bn + ' · hmLeft ' + qn.all +
+     ' 「' + qn.band + '」');
+  is(qn.bi === qn.done + 1,
+     '  띠의 <b>몇 번째</b>가 끝낸 수에서 이어진다 — ' + qn.bi + '번째 · 끝낸 ' + qn.done + '분');
+  is(qn.onlyPeople,
+     '  <b>사람인 줄만</b> 센다 — 할 일·도와줄 것·내 일정은 「분」 이 아니다 (HM_ACT 한 곳이 안다)');
+  is(qn.ms <= qn.n,
+     '  ① 목록이 <b>남은 분을 넘지 않는다</b> — ① ' + qn.ms + '명 · 남은 ' + qn.n + '분');
+  /* 세는 자리가 <b>하나</b>인가 — 글자로 본다 */
+  is((SRC.match(/function hmLeft\s*\(/g) || []).length === 1, '  hmLeft() 가 <b>한 곳</b>에 있다');
+  is(!/for\s*\([^)]*\)\s*if\s*\(\s*!hmQdone\([^)]*\)\s*&&\s*!hmIsDone\(/.test(SRC),
+     '  <b>남은 수를 또 훑어 세는 자리가 없다</b> — 있으면 띠와 알림이 다른 수를 말한다');
+
+  /* ─────────────────────────────────────────────────────────── */
   head('[3] 숫자를 <b>새로 세지 않는다</b> (5번)');
   is((SRC.match(/function hmCount\s*\(/g) || []).length === 1, 'hmCount() 가 한 곳에 있다');
   const cnt = SRC.slice(SRC.indexOf('function hmCount('), SRC.indexOf('function hmCount(') + 900);
