@@ -35,9 +35,18 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 
 console.log('\n[1] <b>뽑아 둔 목록이 본 앱 그대로인가</b>');
 const now = mk.build();
-const want = mk.TEXT(now);
-const have = fs.existsSync(mk.OUT) ? fs.readFileSync(mk.OUT, 'utf8') : '';
-is(!!have, '  `docs/화면목록.json` 이 있다');
+/* ⚠ <b>판 번호(뽑은판)는 빼고 견줍니다.</b> 처음엔 파일을 통째로 견줬는데,
+   APP_BUILD 는 <b>PR 마다</b> 바뀌는 줄이라(CLAUDE.md 6번) 메뉴를 한 글자도
+   안 건드린 판에서도 빨간불이 켜졌습니다. 그건 <b>헛것</b>입니다 — 헛것을
+   잡는 점검은 안 잡는 점검보다 나쁩니다 (8번).
+   여기서 잡으려는 것은 <b>화면이 늘고 줄고 이름이 바뀌는 것</b>입니다.
+   판 번호는 「언제 뽑았나」 를 적어 두는 쪽지라 낡아도 거짓이 아닙니다.  */
+const drop = (o) => { const c = JSON.parse(JSON.stringify(o)); delete c.뽑은판; return c; };
+const want = mk.TEXT(drop(now));
+const raw = fs.existsSync(mk.OUT) ? fs.readFileSync(mk.OUT, 'utf8') : '';
+let have = '';
+try { have = raw ? mk.TEXT(drop(JSON.parse(raw))) : ''; } catch (e) { have = raw; }
+is(!!raw, '  `docs/화면목록.json` 이 있다');
 if (have && have !== want) {
   /* <b>어디가 다른지 그대로 적습니다.</b> 「다릅니다」 만 적으면 사람이
      파일을 통째로 열어 96줄을 눈으로 견줘야 합니다 (8번).            */
