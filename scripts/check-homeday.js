@@ -126,8 +126,29 @@ const SEED = `(function(){
      '번호가 <b>1부터 빠짐없이</b> 붙는다 — ' + rows.map(r => r.no).join(''));
   is(rows[0] && rows[0].t === '약속', '<b>약속이 맨 위</b>다 — 시간이 정해진 것부터 (' + (rows[0] || {}).t + ')');
   is(rows[1] && rows[1].t === '계약 마디', '그다음이 <b>계약 마디</b> — ' + (rows[1] || {}).t);
-  const big = await pg.evaluate(() => (document.querySelector('#hmToday .hm-big') || {}).textContent || '');
-  is(/8건/.test(big), '맨 위 큰 글이 <b>모두 더한 수</b>를 말한다 — 「' + big.trim() + '」');
+  /* ⚠ 2026-09-23 · <b>어느 칸인지 박지 않는다.</b> 여태 `#hmToday .hm-big`
+     하나를 집어 봤는데, 토스판이 들어오면서 그 수를 말하는 자리가 <b>맨 위
+     인사</b>(.tz-greet)로 옮겨졌습니다. 두 곳에서 같은 말을 하지 않으려고
+     아래 큰 글을 뺀 것이라(5번) 점검도 <b>칸이 아니라 화면 맨 위</b>를 봐야
+     맞습니다. 여기서 못 박는 것은 「홈을 열면 <b>맨 위에서</b> 오늘 몇 건인지
+     보인다」 이지 「그 글이 .hm-big 이다」 가 아닙니다.
+     ★ 그래도 <b>맨 위</b>는 지킵니다 — 홈 맨 위 <b>400px 안</b>(폰 첫 눈)에
+       그 수가 있어야 합니다. 아래로 밀려나면 그대로 빨간불입니다.
+     ★ 「8건」 이든 「8개」 든 봅니다 — 토스 말투는 「개」 입니다. */
+  const big = await pg.evaluate(() => {
+    const pane = document.querySelector('.tab-pane.on'); if (!pane) return '';
+    const top = pane.getBoundingClientRect().top;
+    const out = [];
+    pane.querySelectorAll('*').forEach(e => {
+      if (e.children.length) return;                 /* 잎만 — 부모를 또 세지 않는다 */
+      const r = e.getBoundingClientRect();
+      if (r.height > 0 && r.top - top < 400) out.push(e.textContent || '');
+    });
+    return out.join(' ');
+  });
+  is(/8\s*[건개]/.test(big),
+     '홈 <b>맨 위</b>(첫 400px)가 <b>모두 더한 수</b>를 말한다 — 「' +
+     (big.replace(/\s+/g, ' ').trim().slice(0, 40)) + '」');
   const touch = rows.filter(r => r.t === '연락할 분')[0];
   is(touch && touch.n === '2', '갈래마다 <b>제 수</b>를 적는다 — 연락할 분 ' + (touch || {}).n);
 
