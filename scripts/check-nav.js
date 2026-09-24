@@ -90,6 +90,12 @@ async function boot(page) {
     OS.profile = { id: 'nav', name: '점검', role: 'owner', plan: 'vip' };
     OS.session = { user: { id: 'nav', email: 'nav@test' } };
     window.toast = function () {};
+    /* ⚠ 2026-09-24 · 서랍이 <b>간편으로 기본</b>이 됐습니다. 이 점검은
+       <b>전체 메뉴</b>(열네 묶음)를 재는 자리라, 어느 쪽을 재는지
+       <b>말해 두고</b> 잽니다. 재는 것을 줄인 것이 아닙니다 — 간편 쪽은
+       check-navez 가 따로 잽니다. 안 적어 두면 기본값이 바뀔 때마다
+       이 점검이 엉뚱하게 빨간불이 납니다 (8번). */
+    if (typeof ezSet === 'function') ezSet(false);
     renderNav();
   });
   await page.waitForTimeout(200);
