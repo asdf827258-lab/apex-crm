@@ -21,7 +21,8 @@
      [3] <b>빈 갈래가 없다</b> — 여섯이 다 선다 (대표 기준)
      [4] 뽑아 둔 것이 <b>실제로 다 선다</b> — 조용히 빠진 것이 없다
      [5] ★ <b>아무것도 안 지운다</b> — 찾기로 나오고 · 「전체」 로 다 돌아온다
-     [6] 조용히 터지지 않았나
+     [6] ★ <b>지금 열려 있는 화면은 간편에도 선다</b> — 안 그러면 길을 잃는다
+     [7] 조용히 터지지 않았나
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -144,7 +145,40 @@ const SEED = `
   is(K.back > K.few && K.few > 0,
      '  「전체」 한 번이면 <b>다 돌아온다</b> — 간편 ' + K.few + '개 → 전체 ' + K.back + '개');
 
-  console.log('\n[6] 조용히 터지지 않았나');
+  /* ── ★ <b>내가 어디 있는지</b> ─────────────────────────────────────
+     간편은 매일 여는 것만 세웁니다. 그 밖의 화면을 열면 서랍에 <b>켤 칸이
+     아예 없어</b>, 서랍을 봐도 내가 어디 있는지 모릅니다. 묶음을 접을 때
+     이미 겪은 일이고(navGrpReveal) 같은 규칙입니다 — 지금 열려 있는
+     화면은 <b>끼워서라도</b> 세웁니다. 실제로 check-carfault 가 이것을
+     잡았습니다.                                                        */
+  console.log('\n[6] ★ <b>지금 열려 있는 화면은 간편에도 선다</b>');
+  const M = await page.evaluate(async () => {
+    ezSet(true); renderNav(); await new Promise(r => setTimeout(r, 400));
+    const out = {};
+    /* 간편에 <b>안 뽑힌</b> 화면을 고른다 — 뽑힌 것으로 재면 늘 통과한다 (8번) */
+    const off = ['car_fault', 'blog', 'org'].filter(id => EZ_PICK.indexOf(id) < 0);
+    out.tried = off;
+    out.marked = [];
+    for (const id of off) {
+      go(id); await new Promise(r => setTimeout(r, 500));
+      const b = document.querySelector('#navBody .tab-btn[data-tab="' + id + '"]');
+      out.marked.push(id + ':' + (!b ? '(칸 없음)' : (b.classList.contains('on') ? '켜짐' : '안 켜짐')));
+    }
+    /* 끼워 넣어도 <b>간편이 길어지지 않는다</b> — 한 칸이다 */
+    go('home'); await new Promise(r => setTimeout(r, 400));
+    out.base = document.querySelectorAll('#navBody .tab-btn').length;
+    go('blog'); await new Promise(r => setTimeout(r, 500));
+    out.plus = document.querySelectorAll('#navBody .tab-btn').length;
+    go('home'); await new Promise(r => setTimeout(r, 300));
+    return out;
+  });
+  is(M.tried.length >= 2, '  간편에 <b>안 뽑힌</b> 화면으로 잰다 — ' + M.tried.join(' · ') + ' (뽑힌 것으로 재면 늘 통과한다)');
+  is(M.marked.every(x => /켜짐$/.test(x) && !/안 켜짐/.test(x)),
+     '  열면 <b>그 칸이 서고 켜진다</b> — ' + M.marked.join(' · '));
+  is(M.plus - M.base <= 1,
+     '  끼워 넣어도 <b>한 칸</b>이다 — ' + M.base + '개 → ' + M.plus + '개 (간편이 길어지면 간편이 아니다)');
+
+  console.log('\n[7] 조용히 터지지 않았나');
   const real = errs.filter(x => !/favicon|net::ERR|Failed to load resource/i.test(x));
   is(real.length === 0, '  콘솔 오류 없음' + (real.length ? (' ← ' + real[0]) : ''));
 

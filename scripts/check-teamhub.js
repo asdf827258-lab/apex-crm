@@ -160,6 +160,12 @@ window.supabase={createClient:function(){
     var t = []; TABS.forEach(g => (g.items || []).forEach(i => t.push(g.group + '|' + i.id)));
     return t;
   });
+  /* ⚠ 2026-09-24 · 서랍이 <b>간편으로 기본</b>이 됐습니다. 여기서 묻는 것은
+     「이 둘을 <b>열 길이 있는가</b>」 이고, 그 답은 <b>전체 서랍</b>입니다
+     (간편에서는 찾기·「전체」 한 번으로 열립니다 — 칸 안에 그렇게 적혀
+     있습니다). 어느 쪽을 재는지 말해 두고 잽니다 (8번).                */
+  await page.evaluate(() => { if (typeof ezSet === 'function') ezSet(false); });
+  await page.waitForTimeout(300);
   const nav = await page.evaluate(() => {
     renderNav();
     return Array.prototype.map.call(document.querySelectorAll('#navHost .tab-btn'), e => e.getAttribute('data-tab'));
