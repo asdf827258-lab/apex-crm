@@ -288,6 +288,39 @@ const SEED = `(function(){
      '  <b>남은 수를 또 훑어 세는 자리가 없다</b> — 있으면 띠와 알림이 다른 수를 말한다');
 
   /* ─────────────────────────────────────────────────────────── */
+  /* ★ 2026-09-25 · <b>활동량 한 줄이 화면에 실제로 서는가</b>
+     (사장님 말씀 — 「활동량(전화·만남·기록)」). check-queue 는 <b>셈</b>을
+     재고, 여기서는 <b>화면</b>을 봅니다 — 셈이 맞아도 안 그려지면 소용없습니다.
+     ★ <b>0 이라고 안 세우지는 않습니다.</b> 「오늘 아직 한 건도 안 하셨다」 는
+       아침에 꼭 보셔야 할 수입니다. 다만 <b>못 읽었을 때</b>는 안 세웁니다 —
+       그때의 0 은 「안 하셨다」 가 아니라 「모른다」 이기 때문입니다 (1번). */
+  head('[2-4] <b>오늘 활동량 한 줄</b> (전화 · 만남 · 기록)');
+  const act = await pg.evaluate(() => {
+    /* 오늘 전화 하나 · 만남 하나 · 카톡 하나를 심습니다 */
+    const t = mcalToday();
+    OSC.loaded = true; CM.loaded = true;
+    cmOf('c1').touch = [{ at: t, how: '전화' }, { at: t, how: '만남' }, { at: t, how: '카톡' },
+                        { at: '2000-01-01', how: '전화' }];
+    hmActPaint();
+    const e = document.querySelector('#hmActHost .hm-act');
+    return { txt: e ? (e.innerText || '').replace(/\s+/g, ' ').trim() : '',
+      h: e ? Math.round(e.getBoundingClientRect().height) : 0,
+      o: hmActOf() };
+  });
+  is(!!act.txt, '<b>홈에 선다</b> — 「' + act.txt + '」');
+  is(act.o && act.o.call === 1 && act.o.meet === 1 && act.o.all === 3,
+     '<b>오늘 것만</b> 센다 — 전화 ' + (act.o || {}).call + ' · 만남 ' + (act.o || {}).meet +
+     ' · 기록 ' + (act.o || {}).all + ' (2000년 것은 안 셉니다)');
+  is(act.h > 0 && act.h <= 60,
+     '<b>한 줄</b>이다 — ' + act.h + 'px (접히면 122px 이 되어 홈이 0.15화면 길어진다)');
+  const actWait = await pg.evaluate(() => {
+    const k = CM.loaded; CM.loaded = false;                 /* 아직 못 읽은 판 */
+    const h = hmActHtml(); CM.loaded = k;
+    return h;
+  });
+  is(actWait === '', '<b>아직 못 읽었으면 안 세운다</b> — 그때의 0 은 「모른다」 다 (1번)');
+
+  /* ─────────────────────────────────────────────────────────── */
   head('[3] 숫자를 <b>새로 세지 않는다</b> (5번)');
   is((SRC.match(/function hmCount\s*\(/g) || []).length === 1, 'hmCount() 가 한 곳에 있다');
   const cnt = SRC.slice(SRC.indexOf('function hmCount('), SRC.indexOf('function hmCount(') + 900);

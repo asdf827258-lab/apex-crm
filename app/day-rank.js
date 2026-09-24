@@ -104,7 +104,22 @@
      ★ 그래서 화면의 「마지막으로 닿은 날」(cmLastTouch)과 <b>일부러 다릅니다.</b>
        그쪽은 「무엇으로든 닿은 날」 이고 이쪽은 「약속을 지킨 날」 입니다.
        두 물음이 다르므로 두 답이 있는 것이지, 두 벌이 아닙니다.        */
-  var KEEP_HOW = ['전화', '통화', '만남', '방문', '대면', 'call', 'meet'];
+  /* ⚠ 2026-09-25 · <b>둘로 갈랐습니다 — 합친 것은 그대로입니다.</b>
+     「오늘 몇 통 걸고 몇 분 만났나」 를 세려면 통화와 만남을 갈라야 합니다.
+     그렇다고 여기 말고 <b>다른 곳</b>에 또 적으면 두 벌이 됩니다 (5번).
+     그래서 갈래 둘을 두고 KEEP_HOW 는 <b>그 둘을 합친 것</b>으로 둡니다 —
+     30일 약속 셈(promiseOf)은 한 글자도 안 바뀝니다. 차례만 달라지는데
+     isKeep 은 <b>하나라도 걸리면</b> 참이라 차례는 상관없습니다. */
+  var CALL_HOW = ['전화', '통화', 'call'];
+  var MEET_HOW = ['만남', '방문', '대면', 'meet'];
+  var KEEP_HOW = CALL_HOW.concat(MEET_HOW);
+  function hasHow(how, LIST) {
+    var h = ('' + (how == null ? '' : how)).replace(/\s/g, ''), i;
+    for (i = 0; i < LIST.length; i++) if (h.indexOf(LIST[i]) >= 0) return true;
+    return false;
+  }
+  function isCall(how) { return hasHow(how, CALL_HOW); }
+  function isMeet(how) { return hasHow(how, MEET_HOW); }
   function isKeep(how) {
     var h = ('' + (how == null ? '' : how)).replace(/\s/g, '');
     for (var i = 0; i < KEEP_HOW.length; i++) if (h.indexOf(KEEP_HOW[i]) >= 0) return true;
@@ -282,10 +297,36 @@
     return S;
   }
 
+  /* ══ 📊 <b>오늘 얼마나 움직이셨나</b> ═══════════════════════════════
+     사장님 말씀 — 「활동량(전화·만남·기록)」.
+
+     ★ <b>「했다고 누른 것」이 아니라 「기록이 남은 것」</b>을 셉니다 (1번).
+       daily_checks 의 체크는 <b>다른 물음</b>입니다 — 앉아서 단추만 눌러도
+       열한 칸이 다 차기 때문입니다. 두 수는 서로 다른 것을 재므로 둘 다
+       있는 것이 맞고, 여기서 세는 것은 <b>기록</b> 쪽입니다.
+     ★ 무엇이 통화이고 무엇이 만남인지는 <b>위 표 한 곳</b>이 압니다 —
+       30일 약속을 세는 자와 같은 자입니다 (5번).
+     ★ <b>기록</b>은 카톡·문자·메일까지 <b>전부</b> 셉니다. 「오늘 손을
+       몇 번 댔나」 라서, 통화·만남만 세면 카톡만 돌린 날이 0 이 됩니다.
+     ★ 날짜를 못 읽는 줄은 <b>안 셉니다</b> — 오늘 것인지 모르니까요.    */
+  function actOf(rows, today) {
+    var t = ('' + (today || '')).slice(0, 10), i, r, o = { call: 0, meet: 0, all: 0 };
+    rows = rows || [];
+    for (i = 0; i < rows.length; i++) {
+      r = rows[i];
+      if (!r || !r.at || ('' + r.at).slice(0, 10) !== t) continue;
+      o.all++;
+      if (isCall(r.how)) o.call++;
+      else if (isMeet(r.how)) o.meet++;          /* 한 줄이 둘로 세지 않게 */
+    }
+    return o;
+  }
+
   return {
     nextOf: nextOf, due: due, weightOf: weightOf, rank: rank,
-    isKeep: isKeep, keepAt: keepAt, dayGap: dayGap, promiseOf: promiseOf,
-    nextMmdd: nextMmdd, signalsOf: signalsOf,
-    KEEP_HOW: KEEP_HOW
+    isKeep: isKeep, isCall: isCall, isMeet: isMeet,
+    keepAt: keepAt, dayGap: dayGap, promiseOf: promiseOf,
+    nextMmdd: nextMmdd, signalsOf: signalsOf, actOf: actOf,
+    KEEP_HOW: KEEP_HOW, CALL_HOW: CALL_HOW, MEET_HOW: MEET_HOW
   };
 });

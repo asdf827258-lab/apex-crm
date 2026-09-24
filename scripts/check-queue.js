@@ -174,6 +174,41 @@ is(/CHKS\.by/.test(IDX.slice(IDX.indexOf('function hmSigEnd'), IDX.indexOf('func
    app/ba.html 을 실제로 띄워 baEndOf() 를 재는 왕복 시험은
    <b>scripts/check-baend.js</b> (web) 에 있습니다. check-cilist 가 이 규칙을
    지킵니다 — 실제로 여기 넣었다가 그 자리에서 걸렸습니다 (8번).          */
+console.log('\n[7] <b>활동량 — 「눌렀나」 가 아니라 「기록이 남았나」</b> (1번)');
+/* 사장님 말씀 — 「활동량(전화·만남·기록)」. */
+const A = (rows, t) => R.actOf(rows, t || T);
+const a1 = A([{ at: T, how: '전화' }, { at: T, how: '만남' }, { at: T, how: '카톡' },
+              { at: T, how: '문자' }, { at: '2026-09-22', how: '전화' }, { at: '', how: '전화' }]);
+is(a1.call === 1 && a1.meet === 1 && a1.all === 4,
+   '  <b>전화 · 만남 · 기록</b>을 갈라 센다 — 전화 ' + a1.call + ' · 만남 ' + a1.meet + ' · 기록 ' + a1.all);
+/* ⚠ 「전화」 만 넣고 재면 <b>else 를 빼도 답이 같아</b> 안 울립니다 — 되돌려
+   보고 알았습니다 (8번). <b>낱말이 둘 다 든 줄</b>을 넣어야 물립니다. */
+const both = A([{ at: T, how: '전화로 만남 약속' }]);
+is(both.call + both.meet === 1 && both.all === 1,
+   '  <b>한 줄이 둘로 안 세진다</b> — 「전화로 만남 약속」 → 전화 ' + both.call +
+   ' · 만남 ' + both.meet + ' · 기록 ' + both.all + ' (합이 기록을 넘으면 안 된다)');
+is(a1.all === 4, '  <b>기록은 카톡·문자까지</b> 센다 — 카톡만 돌린 날이 0 이 되면 안 된다');
+is(A([{ at: '', how: '전화' }, { how: '전화' }]).all === 0,
+   '  <b>날짜를 모르는 줄은 안 센다</b> — 오늘 것인지 모른다 (1번)');
+is(A([{ at: '2026-09-22', how: '전화' }]).call === 0, '  <b>어제 것은 안 센다</b>');
+/* 세는 자가 <b>30일 약속과 같은 자</b>인가 — 갈래 둘을 합친 것이 KEEP_HOW 다 */
+is(R.KEEP_HOW.length === R.CALL_HOW.length + R.MEET_HOW.length &&
+   R.CALL_HOW.every(w => R.KEEP_HOW.indexOf(w) >= 0) &&
+   R.MEET_HOW.every(w => R.KEEP_HOW.indexOf(w) >= 0),
+   '  통화·만남을 합친 것이 <b>그대로 KEEP_HOW</b> 다 (5번) — 30일 약속 셈이 안 바뀐다');
+is(R.promiseOf({ today: T, cycle: 30, since: '2026-01-01', touch: [{ at: '2026-09-20', how: '만남' }] }).k === 'ok' &&
+   R.promiseOf({ today: T, cycle: 30, since: '2026-01-01', touch: [{ at: '2026-09-20', how: '카톡' }] }).k === 'never',
+   '  <b>30일 약속은 한 글자도 안 바뀌었다</b> — 만남은 지킨 것 · 카톡은 아니다');
+/* 홈이 그 자를 부르는가 · 여기서 또 세지 않는가 */
+is(/DAYRANK\.actOf/.test(IDX) && !/['"]대면['"]/.test(IDX.slice(IDX.indexOf('function hmActOf'), IDX.indexOf('function hmActOf') + 1600)),
+   '  홈은 <b>부르기만</b> 한다 — 「전화·만남」 낱말을 index.html 에 베껴 적지 않았다 (5번)');
+is(/CM\.loaded/.test(IDX.slice(IDX.indexOf('function hmActOf'), IDX.indexOf('function hmActOf') + 600)),
+   '  <b>아직 못 읽었으면 줄을 안 세운다</b> — 「0건」 은 「아무것도 안 하셨다」 로 읽힌다 (1번)');
+is(/mcalMine/.test(IDX.slice(IDX.indexOf('function hmActOf'), IDX.indexOf('function hmActOf') + 1200)),
+   '  <b>누구 것인가</b> 는 달력이 쓰는 한 곳에 묻는다 (3번·5번)');
+is(/flex-wrap:nowrap/.test(IDX.slice(IDX.indexOf('function hmActCss'), IDX.indexOf('function hmActCss') + 1200)),
+   '  칩이 <b>한 줄</b>로 선다 — 접히면 122px 이 되어 홈이 0.15화면 길어진다');
+
 console.log('\n──────────────────────────────');
 if (bad) { console.log('✗ 오늘 큐 — 고칠 자리 ' + bad + '곳'); process.exit(1); }
 console.log('✓ 한 분은 한 번만 서고, 규칙은 한 파일에 있고, 약속은 통화·만남만 셉니다.');
