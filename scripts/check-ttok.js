@@ -152,6 +152,78 @@ is(hits.length === 0, '  홈이 <b>스스로 저장하지 않는다</b>' +
 is(!/osClient\s*\(\s*\)\s*\./.test(home),
    '  홈이 <b>서버를 직접 잡지 않는다</b> — 잡는 순간 저장 자리가 두 벌이 된다');
 
+/* ══════════════════════════════════════════════════════════════════
+   [4] <b>새로 여는 인쇄 창도 같은 옷을 입나</b>
+   ──────────────────────────────────────────────────────────────────
+   인쇄는 window.open('','_blank') 로 <b>빈 창</b>을 열고 document.write
+   로 글을 써 넣습니다. 그 창의 주소는 <b>about:blank</b> 라, 상대 경로
+   href="ui.css" 가 <b>안 잡힙니다</b>.
+
+   ⚠ <b>여기서 실제로 났던 일</b> — 법인 덱 인쇄(bizDeckPrint)가
+     var(--t4)·var(--t3)·var(--t5)·var(--t6) 을 쓰고 있었는데, 그 창에는
+     글자 계단이 <b>없습니다</b>(app/index.html 의 :root 에만 있습니다).
+     값이 없으면 font-size 는 <b>물려받은 크기</b>가 됩니다 — 재어 보니
+     꼬리말이 13px 이어야 하는데 <b>16px</b> 로 나갔습니다. A4 한 장
+     높이가 고정(209mm)이고 넘치면 잘라 내므로, <b>맨 아래 줄이 종이에서
+     사라질 수 있습니다.</b> 고객에게 드리는 종이입니다.
+   ★ 그래서 인쇄 창은 모두 <b>printHeadCss()</b> 한 곳을 지납니다.       */
+console.log('\n[4] <b>새로 여는 인쇄 창도 같은 옷을 입나</b>');
+const OPENS = (SRC.match(/window\.open\(''\s*,\s*'_blank'\)/g) || []).length;
+is(OPENS >= 5, '  빈 창을 여는 자리를 <b>' + OPENS + '군데</b> 찾았다');
+/* 창을 여는 자리마다, 그 뒤 document.write 까지 사이에 printHeadCss 가 있나 */
+const miss = [];
+let at = 0;
+for (;;) {
+  const i = SRC.indexOf("window.open('','_blank')", at);
+  if (i < 0) break;
+  at = i + 10;
+  const seg = SRC.slice(i, i + 4000);
+  const w = seg.indexOf('document.write');
+  if (w < 0) continue;                       /* 글을 안 쓰는 창은 옷도 필요 없다 */
+  const head = seg.slice(0, seg.indexOf('</head>') > 0 ? seg.indexOf('</head>') : w + 3000);
+  if (head.indexOf('printHeadCss()') < 0) {
+    /* 어느 함수인지 이름으로 말한다 — 줄 번호는 금방 낡는다 */
+    const before = SRC.slice(0, i), m = before.match(/function\s+(\w+)\s*\([^)]*\)\s*\{(?![\s\S]*function\s+\w+\s*\()/);
+    miss.push((m ? m[1] : ('줄 ' + (before.split('\n').length))));
+  }
+}
+is(miss.length === 0, '  글을 써 넣는 창이 <b>모두 printHeadCss() 를 지난다</b>' +
+   (miss.length ? (' ← 안 지나감: ' + miss.join(' ')) : ''));
+is((SRC.match(/function\s+printHeadCss\s*\(/g) || []).length === 1,
+   '  그 옷을 입히는 곳이 <b>한 곳</b>이다 — 두 곳이면 한쪽만 고쳐진다 (5번)');
+/* 계단 값을 <b>숫자로 적어 두지 않았나</b> — 적으면 계단을 고칠 때 여기만 늙는다 */
+const ph = (SRC.split('function printHeadCss(')[1] || '').slice(0, 900);
+is(/getPropertyValue\('--t'/.test(ph),
+   '  계단을 <b>살아 있는 값에서 읽는다</b> — 숫자를 적어 두면 이 창만 옛 값으로 남는다 (5번)');
+is(!/--t[1-6]\s*:\s*\d/.test(ph),
+   '  계단 숫자를 <b>여기 적어 두지 않았다</b>');
+
+/* ══════════════════════════════════════════════════════════════════
+   [5] <b>누르는 것이 44px 이상인가</b> (철칙)
+   ──────────────────────────────────────────────────────────────────
+   사장님은 폰에서 쓰십니다. 44px 아래는 손가락이 빗나갑니다.
+   ★ 넓게 잡지 않습니다 — <b>실제로 누르는 클래스만</b> 셉니다. 글자
+     조각(.t-row .av 같은 것)까지 세면 헛것이 됩니다 (8번).            */
+console.log('\n[5] <b>누르는 것이 44px 이상인가</b> (철칙)');
+const TAP = ['t-btn', 't-gb', 't-chip', 't-row', 't-tabbar'];
+const small = [];
+TAP.forEach(c => {
+  /* 그 클래스로 <b>시작하는</b> 규칙만 본다 — 안쪽 조각은 누르는 것이 아니다 */
+  /* 규칙은 줄 <b>맨 앞</b>에서 시작합니다. 앞 규칙의 } 만 찾으면 주석
+     뒤에 오는 규칙을 통째로 놓칩니다 — 실제로 다섯 중 넷을 놓쳤습니다. */
+  const re = new RegExp('^\\.' + c + '(\\.[a-z-]+)?\\s*\\{([^}]*)\\}', 'gm');
+  let m, seen = false;
+  while ((m = re.exec(CSS))) {
+    const body = m[2], h = /(?:^|;|\s)(?:min-)?height\s*:\s*(\d+(?:\.\d+)?)px/.exec(body);
+    if (!h) continue;
+    seen = true;
+    if (parseFloat(h[1]) < 44) small.push('.' + c + (m[1] || '') + ' ' + h[1] + 'px');
+  }
+  if (!seen) small.push('.' + c + ' (높이를 안 정했다)');
+});
+is(small.length === 0, '  누르는 <b>' + TAP.length + '가지</b>가 모두 44px 이상이다' +
+   (small.length ? (' ← ' + small.join(' · ')) : ''));
+
 console.log('\n──────────────────────────────');
-console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 토큰은 한 곳에 · 색은 토큰으로 · 홈은 스스로 저장하지 않습니다.');
+console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 토큰은 한 곳에 · 색은 토큰으로 · 인쇄 창도 같은 옷 · 손가락은 44px.');
 process.exit(bad ? 1 : 0);
