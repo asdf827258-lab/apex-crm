@@ -393,7 +393,9 @@ const SEED = `
     out.onHome = btns.filter(e => e.classList.contains('on')).map(e => e.textContent.trim());
     const by = t => btns.filter(e => e.textContent.indexOf(t) >= 0)[0];
     if (by('고객')) { by('고객').click(); out.went = lastTab; out.onCli = btns.filter(e => e.classList.contains('on')).length; }
-    if (by('더보기')) { by('더보기').click(); out.drawer = document.getElementById('sidebar').classList.contains('open'); by('더보기').click(); }
+    /* ⚠ 2026-09-24 · 「더보기 ☰」 가 <b>「도구 🧰」</b> 로 바뀌었습니다(명세서 이름).
+       하는 일은 그대로 서랍 열기입니다. */
+    if (by('도구')) { by('도구').click(); out.drawer = document.getElementById('sidebar').classList.contains('open'); by('도구').click(); }
     try { go('home'); } catch (e) {}
     out.pad = parseInt(getComputedStyle(document.getElementById('main')).paddingBottom, 10) || 0;
     return out;
@@ -401,11 +403,11 @@ const SEED = `
   is(TBR.has && TBR.shown, '폰에서 <b>아래 탭바가 선다</b>' + (TBR.h ? (' — 높이 ' + TBR.h + 'px') : ''));
   is(TBR.n >= 4, '칸이 <b>넷 이상</b> 있다 — ' + (TBR.labels || []).join(' | '));
   is(TBR.small === 0, '탭바 칸도 <b>44px 아래가 없다</b>' + (TBR.small ? (' ← ' + TBR.small + '개') : ''));
-  is((TBR.onHome || []).length === 1 && /홈/.test((TBR.onHome || [''])[0]),
+  is((TBR.onHome || []).length === 1 && /오늘/.test((TBR.onHome || [''])[0]),
     '<b>지금 화면</b>이 켜져 있다 — ' + (TBR.onHome || []).join(','));
   is(TBR.went === 'clients' && TBR.onCli === 1,
     '누르면 <b>그 화면으로</b> 가고 켜진 칸도 따라온다 — ' + TBR.went);
-  is(TBR.drawer === true, '「더보기」 가 <b>원래 있던 서랍</b>을 연다 — 새 메뉴를 또 만들지 않았다 (5번)');
+  is(TBR.drawer === true, '「도구」 가 <b>원래 있던 서랍</b>을 연다 — 새 메뉴를 또 만들지 않았다 (5번)');
   is(TBR.pad >= TBR.h, '탭바가 <b>글을 안 덮는다</b> — 바닥 여백 ' + TBR.pad + 'px / 탭바 ' + TBR.h + 'px');
   /* 넓은 화면에서는 <b>안 선다</b> — 왼쪽 기둥이 그대로 있어 두 곳이 된다 */
   const wide = await b.newContext({ viewport: { width: 1280, height: 900 } });
