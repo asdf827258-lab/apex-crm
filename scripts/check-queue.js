@@ -138,6 +138,42 @@ is(/DAYRANK\.signalsOf/.test(IDX) && !/700\s*\+\s*\(8\s*-/.test(IDX),
 is(/when!=='day'/.test(IDX),
    '  홈이 <b>날짜 신호만</b> 줄로 세운다 — 늘 참인 것은 「왜 이분인가」 로만 쓴다');
 
+console.log('\n[6] <b>만기 — 아는 만큼만 말한다</b> (1번)');
+/* 사장님 말씀 (2026-09-24) — 「<b>「D-30」 이라고 쓰지 마십시오.</b> 달까지밖에
+   모르는 값으로 일 단위 D-30 을 만들면 없는 정밀도를 지어내는 것입니다」. */
+const BA = fs.readFileSync(path.join(ROOT, 'app/ba.html'), 'utf8');
+const E = (o) => R.signalsOf(Object.assign({ today: T }, o));
+/* T = 2026-09-23 */
+const eNow = E({ end: { pay: { ym: '2026-09', nm: 'KB 무배당' }, src: '보장분석에서 셈' } });
+const eNext = E({ end: { pay: { ym: '2026-10' }, src: '보장분석에서 셈' } });
+const eFar = E({ end: { pay: { ym: '2039-04' }, cov: { y: 2059 }, src: '보장분석에서 셈' } });
+is((eNow[0] || {}).id === 'payend' && eNow[0].sc === 750,
+   '  납입 만기가 <b>이번 달</b>이면 선다 — ' + (eNow[0] || {}).t + ' · ' + (eNow[0] || {}).sc + '점');
+is((eNext[0] || {}).id === 'payend' && eNext[0].sc === 690,
+   '  <b>다음 달</b>이면 점수가 낮다 — ' + (eNext[0] || {}).t + ' · ' + (eNext[0] || {}).sc + '점 (명세서의 먼 쪽)');
+is(eFar.length === 0, '  <b>열세 해 뒤는 안 세운다</b> — 오늘 걸 구실이 아니다');
+is(!eNow.some(s => /D-\d/.test(s.t + s.why)),
+   '  <b>「D-30」 처럼 날짜를 지어내지 않는다</b> (1번) — 「' + (eNow[0] || {}).t + '」');
+is(/보장분석에서 셈/.test((eNow[0] || {}).why || ''),
+   '  <b>어디서 셈한 것인지</b> 같이 적는다 — 증권 날짜가 생기면 그쪽이 이긴다');
+const eCov = E({ end: { cov: { y: 2026, age: 80, nm: '삼성 실손' }, src: '보장분석에서 셈' } });
+is((eCov[0] || {}).id === 'end' && eCov[0].sc === 663,
+   '  보장 만기는 <b>올해</b>일 때만 · 명세서의 먼 쪽 점수 — ' + (eCov[0] || {}).t + ' · ' + (eCov[0] || {}).sc);
+is(E({ end: null }).length === 0 && E({}).length === 0,
+   '  <b>보장분석을 안 넣으셨으면 아무 말도 안 한다</b> — 「만기가 없다」 가 아니라 「모른다」 (1번)');
+/* 만기를 세는 자리가 <b>한 곳</b>인가 — 홈이 증권을 다시 읽지 않는가 */
+is(/function baEndOf\s*\(/.test(BA) && !/function baEndOf\s*\(/.test(IDX),
+   '  만기를 세는 자리는 <b>app/ba.html 한 곳</b>이다 (5번) — 홈은 적어 둔 줄을 꺼내 쓴다');
+is(/9999|120/.test(BA.slice(BA.indexOf('function baEndAge'), BA.indexOf('function baEndAge') + 700)),
+   '  <b>9999세만기(종신)</b>를 만기로 안 읽는다 — 그대로 빼면 9,959년이 된다');
+is(/CHKS\.by/.test(IDX.slice(IDX.indexOf('function hmSigEnd'), IDX.indexOf('function hmSigEnd') + 400)),
+   '  홈은 <b>이미 받아 둔 요약</b>에서 꺼낸다 — 고객마다 증권을 또 받으면 요금이 샌다 (7번)');
+
+/* ⚠ <b>브라우저를 띄우는 시험은 여기 두지 않습니다.</b> 이 판은 fast 갈래라
+   몇 초 만에 빨간불이 떠야 합니다 — 문법이 깨졌을 때 제일 먼저 우는 자리입니다.
+   app/ba.html 을 실제로 띄워 baEndOf() 를 재는 왕복 시험은
+   <b>scripts/check-baend.js</b> (web) 에 있습니다. check-cilist 가 이 규칙을
+   지킵니다 — 실제로 여기 넣었다가 그 자리에서 걸렸습니다 (8번).          */
 console.log('\n──────────────────────────────');
 if (bad) { console.log('✗ 오늘 큐 — 고칠 자리 ' + bad + '곳'); process.exit(1); }
 console.log('✓ 한 분은 한 번만 서고, 규칙은 한 파일에 있고, 약속은 통화·만남만 셉니다.');

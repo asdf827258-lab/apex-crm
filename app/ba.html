@@ -6191,6 +6191,74 @@ function baTopCov(D){
   };
   return {gain:pick(D.gain),loss:pick(D.loss)};
 }
+/* ══ 📅 <b>만기 한 줄</b> — 요약에 같이 담아 보냅니다 ═══════════════
+   사장님 말씀 (2026-09-24) — 「보장분석이 돌 때 <b>다음 만기일 한 줄</b>을
+   적어 두게 하는 것이 다음 판입니다」.
+
+   ■ 왜 여기서 세는가
+   만기를 아는 값(start·years·term)은 <b>이 화면</b>에만 있습니다. 홈이
+   고객 수백 분의 증권을 다 읽어 세면 그것이 무료 한도를 세 배로 넘긴 그
+   자리입니다 (7번). 그래서 <b>여기서 한 줄로 적어</b> sum 에 실어 보냅니다 —
+   담보 이름(baTopCov)을 여기서 적어 보내는 것과 같은 까닭입니다 (5번).
+
+   ■ ⚠ <b>「D-30」 이라고 쓰지 않습니다</b> (1번)
+   가입 시기(p.start)가 <b>"2019-04" 처럼 달까지만</b> 있습니다. 일(日)이
+   없는 값으로 일 단위 D-30 을 만들면 <b>없는 정밀도를 지어내는 것</b>입니다.
+     · 납입 만기 = start + years  →  <b>달까지</b>  (2039-04)
+     · 보장 만기 = 만기 나이 + 지금 나이  →  <b>해까지</b>  (2059년)
+   그래서 화면에도 「다음 달에 납입이 끝납니다」 처럼 <b>아는 만큼만</b> 적습니다.
+
+   ■ ⚠ <b>9999세만기</b>
+   KB 는 종신을 「9999세만기」로 적습니다. 그대로 빼면 9,959년이 됩니다 —
+   그 자를 <b>이미 kbYears 가 들고 있으므로</b> 여기서 다시 짜지 않고 같은
+   기준(1~60년)을 씁니다 (5번). 넘으면 <b>모름</b>으로 두고 안 셉니다.
+
+   ■ ⚠ <b>어느 쪽이 이기는가</b>
+   언젠가 policies 표에 증권을 보고 적은 날짜(일까지)가 들어오면 <b>그쪽이
+   원본</b>이고 이 줄은 추정입니다. 지금 policies 에는 payment_term ·
+   coverage_term 이 <b>글자</b>로만 있어 날짜 칸이 없습니다. 그래서 이 줄에
+   <b>출처(src)를 같이 적습니다</b> — 안 적으면 나중에 어느 쪽이 맞는지
+   아무도 모릅니다.
+   ★ 해지(cancel)한 계약은 안 셉니다 — 없어질 보험의 만기입니다.        */
+function baEndAge(termStr){
+  /* 「70세납 100세만기」 처럼 <b>세</b>가 둘일 수 있습니다. 만기는 납입보다
+     늦으므로 <b>큰 쪽</b>을 만기로 봅니다. 120 을 넘으면(9999세=종신)
+     <b>모름</b>입니다 — 종신은 만기가 없는 것이지 9999년이 아닙니다. */
+  var t=(''+(termStr||'')).replace(/\s/g,''),m,best=null;
+  var re=/(\d{1,4})세/g;
+  while((m=re.exec(t))!==null){ var v=+m[1]; if(v>0&&v<=120&&(best===null||v>best))best=v; }
+  return best;
+}
+function baEndOf(){
+  var today=new Date(), ty=today.getFullYear(), tm=today.getMonth()+1;
+  var age=parseInt((''+((S.who&&S.who.age)||'')).replace(/[^0-9]/g,''),10);
+  if(!age||age<=0||age>120)age=null;
+  var pay=null,cov=null,i,p,nm;
+  for(i=0;i<S.before.length;i++){
+    p=S.before[i];
+    if(!p||p.act==='cancel')continue;                 /* 없어질 보험은 안 셉니다 */
+    nm=((p.co||'')+' '+(p.nm||'')).replace(/^\s+|\s+$/g,'');
+    /* ① 납입 만기 — 가입 달 + 납입 햇수 (달까지) */
+    var st=(''+(p.start||'')).match(/^(\d{4})-(\d{2})$/);
+    var yr=parseInt((''+(p.years||'')).replace(/[^0-9]/g,''),10);
+    if(st&&yr>0&&yr<=60){                              /* kbYears 와 같은 자 (5번) */
+      var em=(+st[2])+0, ey=(+st[1])+yr;
+      var key=ey*12+em;
+      if(key>=ty*12+tm&&(pay===null||key<pay.key))
+        pay={key:key,ym:ey+'-'+((em<10?'0':'')+em),nm:nm};
+    }
+    /* ② 보장 만기 — 만기 나이 − 지금 나이 (해까지) */
+    var ea=baEndAge(p.term);
+    if(ea&&age&&ea>age){
+      var y2=ty+(ea-age);
+      if(cov===null||y2<cov.y)cov={y:y2,nm:nm,age:ea};
+    }
+  }
+  if(!pay&&!cov)return null;
+  return {pay:pay?{ym:pay.ym,nm:pay.nm}:null,
+          cov:cov?{y:cov.y,age:cov.age,nm:cov.nm}:null,
+          src:'보장분석에서 셈'};
+}
 function baSaveToClient(){
   if(!INFRAME){toast('워크스페이스 안에서 여셨을 때만 고객 365일에 저장됩니다 — 지금은 「💾 파일로 저장」을 쓰십시오');return;}
   var C=calc(),D=diff(C),P=premCalc();
@@ -6210,6 +6278,9 @@ function baSaveToClient(){
             담보 이름을 아는 곳은 여기 하나이므로, <b>여기서</b> 적어 보낸다.
             앞의 셋만 — 고객 앞에서 꺼내는 것은 한 가지다.               */
          top:baTopCov(D),
+         /* 📅 <b>만기 한 줄</b> — 홈이 증권을 다시 안 읽고도 압니다 (7번).
+            아는 만큼만 적습니다: 납입은 <b>달</b>까지, 보장은 <b>해</b>까지 (1번). */
+         end:baEndOf(),
          cov:(function(){var n=0,k;for(k in C.a)n++;return n;})()}});
 }
 function baLoadFromHost(st){
