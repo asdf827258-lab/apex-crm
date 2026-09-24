@@ -364,34 +364,38 @@ const SEED = `(function(){
      아니라 <b>안 편 것</b>입니다. 그러니 <b>펴고</b> 잽니다.
      여기서 「펴진다」 는 것 자체도 한 줄로 잽니다 — 안 펴지면 그 안의
      것은 영영 못 봅니다 (1번).                                        */
+  /* ⚠ 2026-09-26 · <b>달력은 홈에서 「달력」(mycal)으로 갔습니다.</b>
+     사장님 말씀 — 「홈을 「오늘 카드」만 남기고 나머지를 옮깁니다.
+     📅 이번 주·이번 달(hmCal 916px) → 옆줄 「달력」」.
+     ★ <b>지운 것이 아닙니다.</b> renderMyCal() 이 홈이 쓰던 그 부품을
+       그대로 부릅니다 — mcalCardHtml({picks:true}). 그래서 여기서 재는
+       것도 그대로이고, <b>보는 자리만</b> #mycalHost → #mycalHost 로
+       옮깁니다. 재는 것을 줄이면 옮긴 것이 아니라 지운 것이 됩니다 (8번).  */
   const opened = await pg.evaluate(() => {
-    const box = document.getElementById('hmFold_cal');
-    if (!box) return 'noFold';
-    const h = box.querySelector('.hm-fold-h');
-    if (box.querySelector('.hm-fold-b').hidden) h.click();
-    return box.querySelector('.hm-fold-b').hidden ? 'stuck' : 'open';
+    go('mycal');
+    return document.querySelector('#mycalHost .mcal-seg') ? 'open' : 'stuck';
   });
-  is(opened !== 'stuck', '접힌 <b>달력이 펴진다</b> — ' +
-     (opened === 'noFold' ? '접기 상자가 없습니다(예전 판)' : '머리를 누르니 열렸습니다'));
+  is(opened !== 'stuck', '달력이 <b>「달력」에서 선다</b> — ' +
+     (opened === 'open' ? '옮긴 자리에서 그대로 열립니다' : '못 찾았습니다'));
   await pg.waitForTimeout(150);
   const seg = await pg.evaluate(() => {
-    const s = document.querySelector('#hmCalHost .mcal-seg');
+    const s = document.querySelector('#mycalHost .mcal-seg');
     return { there: !!s, txt: s ? s.textContent.replace(/\s+/g, '') : '',
-             month: !!document.querySelector('#hmCalHost .mcal-grid'),
-             week: !!document.querySelector('#hmCalHost .mcal-wgrid') };
+             month: !!document.querySelector('#mycalHost .mcal-grid'),
+             week: !!document.querySelector('#mycalHost .mcal-wgrid') };
   });
-  is(seg.there && /주/.test(seg.txt) && /월/.test(seg.txt), '홈 달력에 <b>주 / 월</b> 고르개가 있다');
+  is(seg.there && /주/.test(seg.txt) && /월/.test(seg.txt), '달력에 <b>주 / 월</b> 고르개가 있다');
   is(seg.month && !seg.week, '처음에는 <b>월</b>이 선다');
 
   await pg.evaluate(() => mcalSetView('week'));
   await pg.waitForTimeout(200);
   const wk = await pg.evaluate(() => {
-    const cells = Array.from(document.querySelectorAll('#hmCalHost .mcal-wd'));
+    const cells = Array.from(document.querySelectorAll('#mycalHost .mcal-wd'));
     const busy = cells.filter(c => c.querySelectorAll('.wi').length);
     return { n: cells.length, busy: busy.length,
              txt: busy.length ? busy[0].textContent.replace(/\s+/g, ' ').trim() : '',
              h: cells.length ? Math.round(cells[0].getBoundingClientRect().height) : 0,
-             title: (document.querySelector('#hmCalHost .mcal-hd b') || {}).textContent || '' };
+             title: (document.querySelector('#mycalHost .mcal-hd b') || {}).textContent || '' };
   });
   is(wk.n === 7, '주간은 <b>이레</b>가 선다 — ' + wk.n + '칸');
   is(wk.h > 80, '칸이 <b>넓다</b> — ' + wk.h + 'px (점만 찍는 달력보다 높아야 글자가 들어간다)');
@@ -416,14 +420,14 @@ const SEED = `(function(){
   is(cross, '홈에서 <b>주</b>로 바꾸면 내 캘린더도 <b>주</b>로 서 있다 — 한 벌이라서');
 
   /* ─────────────────────────────────────────────────────────── */
-  head('[6] 홈에서 <b>날짜를 누르면 실제로 바뀐다</b>');
+  head('[6] <b>날짜를 누르면 실제로 바뀐다</b> (「달력」에서)');
   const paint = SRC.slice(SRC.indexOf('function mcalPaint('), SRC.indexOf('function mcalPaint(') + 700);
-  is(/hmCalHost/.test(paint), 'mcalPaint 가 <b>홈 자리를 안다</b> — 모르면 눌려도 아무 일이 없다');
-  await pg.evaluate(() => { mcalSetView('week'); });
+  is(/mycalHost/.test(paint), 'mcalPaint 가 <b>달력 자리를 안다</b> — 모르면 눌려도 아무 일이 없다');
+  await pg.evaluate(() => { go('mycal'); mcalSetView('week'); });
   await pg.waitForTimeout(200);
   await clearOvl(pg);
   const picked = await pg.evaluate(() => {
-    const cells = Array.from(document.querySelectorAll('#hmCalHost .mcal-wd'));
+    const cells = Array.from(document.querySelectorAll('#mycalHost .mcal-wd'));
     const target = cells[3];
     if (!target) return { ok: false };
     target.click();
@@ -432,8 +436,8 @@ const SEED = `(function(){
   await pg.waitForTimeout(250);
   const after = await pg.evaluate(() => ({
     sel: MCAL.sel,
-    marked: !!document.querySelector('#hmCalHost .mcal-wd.sel'),
-    day: (document.querySelector('#hmCalHost .mcal-day .h') || {}).textContent || ''
+    marked: !!document.querySelector('#mycalHost .mcal-wd.sel'),
+    day: (document.querySelector('#mycalHost .mcal-day .h') || {}).textContent || ''
   }));
   is(picked.ok && !!after.sel, '날짜를 누르면 <b>고른 날이 기억된다</b> — ' + after.sel);
   is(after.marked, '고른 칸에 <b>표시가 남는다</b>');
@@ -549,12 +553,18 @@ const SEED = `(function(){
      TFA 에서. 아침에 홈을 보고 또 건너가야 했습니다. 이제 홈에서 끝납니다.
      ★ <b>새로 만들지 않았는가</b>가 제일 중요합니다 (5번). 따로 그리면
        한쪽만 고쳐져 두 화면이 서로 다른 말을 하게 됩니다.            */
-  head('[8] TFA 업무관리가 <b>홈에서</b> 돈다');
-  await pg.evaluate(() => { go('home'); });
+  /* ⚠ 2026-09-26 · <b>TFA 는 홈에서 「나」(airep)로 갔습니다.</b>
+     사장님 말씀 — 「🧭 TFA 업무관리(hmTfa 1,290px) → 「나」」.
+     ★ <b>지운 것이 아닙니다.</b> hmTfaHtml() 도 arInnerHtml() 도 그대로
+       있고, 재는 것도 그대로입니다 — <b>보는 자리만</b> 홈 → airep 으로
+       옮깁니다. 칸이 다 서는지, 본문이 따라오는지, 서버를 되풀이해 안
+       부르는지 — 하나도 안 줄였습니다 (8번).                            */
+  head('[8] TFA 업무관리가 <b>「나」에서</b> 돈다');
+  await pg.evaluate(() => { go('airep'); });
   await pg.waitForTimeout(900);
   await clearOvl(pg);
   const tfa = await pg.evaluate(() => {
-    const host = document.getElementById('hmTfaHost');
+    const host = document.getElementById('arPane') ? document.getElementById('arPane').parentNode : null;
     const pane = document.getElementById('arPane');
     return { host: !!host, pane: !!(host && host.querySelector('#arPane')),
              cats: pane ? pane.querySelectorAll('.ar-cat').length : 0,
@@ -565,19 +575,30 @@ const SEED = `(function(){
              go: !!document.querySelector('.hm-tfa-go'),
              body: !!(pane && pane.querySelector('.ar-main')) };
   });
-  is(tfa.host && tfa.pane, 'TFA 판이 <b>홈 안에</b> 서 있다 — 같은 칸 이름(#arPane)이라 다시 그리기가 그대로 된다');
+  is(tfa.host && tfa.pane, 'TFA 판이 <b>「나」 안에</b> 서 있다 — 칸 이름(#arPane)이 그대로라 다시 그리기가 그대로 된다');
   is(tfa.cats === tfa.want && tfa.want > 0,
      '칸이 <b>하나도 안 빠지고</b> 선다 — ' + tfa.cats + ' / AR_CAT ' + tfa.want + '개'
      + (tfa.hid.length ? ' (눈에서 뺀 칸 ' + tfa.hid.join(', ') + ' 은 뺀 수)' : ''));
-  is(tfa.body, '고른 칸의 <b>본문까지</b> 홈에 선다 — 이름만 늘어놓지 않는다');
-  is(tfa.go, '<b>「전체 화면으로」</b> 가 있다 — 넓게 보고 싶으실 때');
+  is(tfa.body, '고른 칸의 <b>본문까지</b> 선다 — 이름만 늘어놓지 않는다');
+  /* 「전체 화면으로」 는 <b>홈 안에 있을 때</b> 필요하던 단추입니다 — 이제
+     그 화면 자체라 없는 것이 맞습니다. 대신 <b>홈에서 여기로 오는 길</b>이
+     있는지를 봅니다 (「지웠다」 로 읽히면 팀원이 안 씁니다 · 사장님 ④). */
+  const tfaWay = await pg.evaluate(() => {
+    go('home');
+    const e = document.querySelector('.hm-mv');
+    return !!(e && /TFA/.test(e.innerText || ''));
+  });
+  await pg.waitForTimeout(300);
+  is(tfaWay, '<b>홈에서 오는 길</b>이 있다 — 「📦 여기로 옮겼습니다」 에 TFA 가 적혀 있다');
   /* 새로 그리지 않았는가 — 소스로 못 박는다 (5번) */
   const tfaSrc = SRC.slice(SRC.indexOf('function hmTfaHtml('), SRC.indexOf('function hmTfaHtml(') + 900);
   is(/arInnerHtml\(\)/.test(tfaSrc), 'TFA 가 쓰던 판(arInnerHtml)을 <b>그대로</b> 부른다 — 제 몸통을 안 갖는다 (5번)');
   is((SRC.match(/function hmTfaHtml\s*\(/g) || []).length === 1, 'hmTfaHtml() 이 한 곳에 있다');
 
-  head('[8-1] 칸을 누르면 <b>홈에 머문 채</b> 바뀐다');
+  head('[8-1] 칸을 누르면 <b>그 화면에 머문 채</b> 바뀐다');
   const sw = await pg.evaluate(async () => {
+    go('airep');
+    await new Promise(r => setTimeout(r, 600));
     const btns = [...document.querySelectorAll('#arPane .ar-cat')];
     const before = (document.querySelector('#arPane .ar-main') || {}).textContent || '';
     const t = btns.find(x => /팀원 관리/.test(x.textContent));
@@ -586,12 +607,17 @@ const SEED = `(function(){
     const after = (document.querySelector('#arPane .ar-main') || {}).textContent || '';
     return { cat: AR.cat, tab: (typeof lastTab !== 'undefined') ? lastTab : '?',
              changed: before.slice(0, 150) !== after.slice(0, 150),
-             stillHome: !!document.getElementById('hmToday') };
+             stay: !!document.getElementById('arPane') };
   });
   is(sw.changed && sw.cat === 'team', '눌린 칸으로 <b>본문이 바뀐다</b> — 지금 「' + sw.cat + '」');
-  is(sw.tab === 'home' && sw.stillHome, '<b>홈을 안 떠난다</b> — 오늘 챙길 것도 그대로 있다');
+  is(sw.tab === 'airep' && sw.stay, '<b>그 화면을 안 떠난다</b> — 판이 그대로 서 있다');
 
   head('[8-2] TFA 판이 <b>서버를 되풀이해 안 부른다</b> (7번)');
+  /* ★ 2026-09-26 · <b>홈은 이제 TFA 를 아예 안 깨웁니다.</b> TFA 가 홈에
+     있던 동안 hmArm 이 osAiRepAfterRender() 를 불렀고, 그것이 arLoad()·
+     gbLoad() 로 <b>홈을 열 때마다 서버까지</b> 갔습니다. 판을 「나」로 옮겼으니
+     그 부름도 같이 옮겨야 합니다 — 안 옮기면 <b>보이지도 않는 칸 때문에</b>
+     요금이 나갑니다 (7번). 여기서 그것을 못 박습니다.                    */
   /* ★ 여기서 재는 것은 <b>이 판이 더한 몫</b>뿐입니다. 홈이 원래 부르던
      것(고객·공지 등)까지 싸잡아 세면, 제가 건드리지도 않은 자리 때문에
      빨간불이 켜져 사람이 점검을 안 믿게 됩니다 (8번).
@@ -605,27 +631,42 @@ const SEED = `(function(){
       if (!was || force) window.__arN++;
       return real.apply(this, arguments);
     };
+    /* ① 홈을 세 번 여닫는다 — <b>한 번도</b> 안 불러야 한다 */
     for (let i = 0; i < 3; i++) {
       go('clients'); await new Promise(r => setTimeout(r, 250));
       go('home');    await new Promise(r => setTimeout(r, 450));
     }
+    const homeN = window.__arN;
+    /* ② 「나」를 세 번 여닫는다 — arLoad 가 스스로 막아 <b>처음 한 번만</b> */
+    for (let i = 0; i < 3; i++) {
+      go('clients'); await new Promise(r => setTimeout(r, 250));
+      go('airep');   await new Promise(r => setTimeout(r, 450));
+    }
+    const allN = window.__arN;
     window.arLoad = real;
-    return { n: window.__arN, pane: !!document.getElementById('arPane') };
+    return { homeN: homeN, allN: allN, pane: !!document.getElementById('arPane') };
   });
-  is(armed.n === 0 && armed.pane,
-     '홈을 세 번 더 열어도 TFA 는 <b>다시 안 읽는다</b> — ' + armed.n + '번 ' +
-     '(arLoad 가 스스로 막는다. 여기서 새면 하루 수십 번이 그대로 요금이 된다)');
-  /* 코드로도 못 박는다 — 홈이 <b>TFA 가 아는 한 곳</b>을 부르는가 (5번) */
-  const arm = SRC.slice(SRC.indexOf('function hmArm('), SRC.indexOf('function hmArm(') + 900);
-  is(/osAiRepAfterRender\(\)/.test(arm),
-     '깨우는 일은 <b>TFA 가 아는 한 곳</b>에 맡긴다 — 홈에서 따로 적으면 한쪽만 고쳐진다 (5번)');
+  is(armed.homeN === 0,
+     '<b>홈을 세 번 열어도 TFA 를 아예 안 읽는다</b> — ' + armed.homeN + '번 ' +
+     '(홈에 없는 칸 때문에 서버에 가면 그것이 요금이다 · 7번)');
+  is(armed.allN <= 1 && armed.pane,
+     '「나」를 세 번 더 열어도 TFA 는 <b>다시 안 읽는다</b> — ' + armed.allN + '번 ' +
+     '(arLoad 가 스스로 막는다)');
+  /* 코드로도 못 박는다 — 홈이 <b>안 보이는 칸을 안 깨우는가</b> (7번) */
+  const arm = SRC.slice(SRC.indexOf('function hmArm('), SRC.indexOf('function hmArm(') + 1600);
+  is(!/^\s*try\{[^\n]*osAiRepAfterRender\(\)/m.test(arm),
+     '홈이 <b>TFA 를 안 깨운다</b> — 판을 「나」로 옮겼으니 부르는 자리도 같이 옮긴다 (7번)');
+  is(!/^\s*try\{[^\n]*rdLoad\(\)/m.test(arm),
+     '홈이 <b>출발 점검을 안 읽는다</b> — 「출발 점검」 으로 옮겼습니다 (7번)');
+  is(/setupPaint\(\)/.test(arm),
+     '<b>준비 SQL 은 그대로 부른다</b> — 홈 맨 위에 남아 있습니다 (사장님 ★)');
 
   head('[8-3] 달력이 둘이어도 <b>둘 다</b> 바뀐다');
   /* 홈 달력과 「스케줄 관리」 칸의 달력이 같이 섭니다. 예전에는 첫 자리를
      그리고 그대로 나가(return) 나머지가 안 바뀌었습니다 — 눌리는데 안
      바뀌면 고장 난 것으로 보입니다. */
   const two = await pg.evaluate(async () => {
-    arGoCat('sched');
+    go('airep'); arGoCat('sched');
     await new Promise(r => setTimeout(r, 600));
     const cals = document.querySelectorAll('.mcal-grid, .mcal-wk').length;
     const before = MCAL.ym;
@@ -635,8 +676,9 @@ const SEED = `(function(){
     mcalMove(-1);
     return { cals, before, titles, same: titles.length > 1 && titles.every(x => x === titles[0]) };
   });
-  is(two.titles.length >= 2, '홈과 스케줄 관리에 <b>달력이 둘</b> 섰다 — ' + two.titles.length + '개');
-  is(two.same, '달을 넘기면 <b>둘 다</b> 따라 넘어간다 — ' + two.titles.join(' · '));
+  is(two.titles.length >= 1, '스케줄 관리에 <b>달력이 선다</b> — ' + two.titles.length + '개');
+  is(two.titles.length < 2 || two.same,
+     '달력이 여럿이면 <b>다 따라 넘어간다</b> — ' + (two.titles.join(' · ') || '(한 벌)'));
 
   head('[7] 이 판을 그리는 동안 <b>터진 곳이 없다</b>');
   const real = errs.filter(x => !/favicon|net::ERR|Failed to load resource|ERR_FAILED/i.test(x));

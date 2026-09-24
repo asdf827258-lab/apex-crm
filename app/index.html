@@ -12898,9 +12898,21 @@ function renderTeamHub(){
   return osPage('총괄','실행 체크판',
     ds+' · 오늘 · 이번 주 · 업무 루트를 순서대로 체크합니다. '+
     '점수 · 코칭 · 팀원 관리는 <b>TFA 업무관리</b>에서 봅니다.',
-    '<div id="thPane">'+thInnerHtml()+'</div>');
+    /* ── 👥 <b>오늘 팀 전체</b> — 홈에서 여기로 옮겼습니다 ────────────
+       사장님 말씀 (2026-09-26) — 「👥 팀(hmTeam 270px) → 「나 › 팀」」.
+       ★ <b>지운 것이 아닙니다.</b> 홈이 쓰던 칸(hmTeamHtml)을 그대로 여기
+         세웁니다 — 리더에게만 뜨는 것도, 서버를 아껴 쓰는 것도 그 함수가
+         그대로 합니다 (5번). 홈에는 「📦 여기로 옮겼습니다 · 👥 팀」 한 줄이
+         남고, 누르면 이 화면으로 옵니다.                                */
+    '<div id="hmTeamHost"></div><div id="thPane">'+thInnerHtml()+'</div>');
 }
-function osTeamHubAfterRender(){thAfter();}
+function osTeamHubAfterRender(){
+  thAfter();
+  /* 옷과 내용은 <b>홈이 쓰던 그대로</b> — 여기서 새로 만들지 않습니다 (5번) */
+  try{ if(typeof hmTeamCss==='function')hmTeamCss();
+       var t=document.getElementById('hmTeamHost');
+       if(t&&typeof hmTeamHtml==='function')t.innerHTML=hmTeamHtml(); }catch(e){}
+}
 function thCss(){
   if(document.getElementById('thCss'))return;
   var s=document.createElement('style');s.id='thCss';
@@ -16006,8 +16018,10 @@ function mcalRealAsk(el){
 function mcalPaint(){
   var e=document.getElementById('mycalHost');
   if(e)e.innerHTML=renderMyCal();
-  /* 홈 — 오늘 한 장과 달력을 함께 다시 그린다 */
-  if(document.getElementById('hmCalHost')&&typeof hmPaint==='function'){ try{hmPaint();}catch(e1){} }
+  /* ⚠ 2026-09-26 · <b>홈에는 달력이 없습니다.</b> 「달력」(mycal)으로 옮겼습니다.
+     여기서 hmCalHost 를 찾던 줄은 이제 <b>영영 안 맞는 줄</b>이라 지웁니다 —
+     남겨 두면 다음 사람이 「홈에도 달력이 있나 보다」 하고 읽습니다.
+     hmCalHtml() 함수 자체는 <b>그대로 둡니다</b>(지운 것이 아닙니다). */
   /* 고객 365일 — 미션과 달력을 함께 다시 그린다 */
   if(document.getElementById('cli365Top')&&typeof cli365TopPaint==='function'){
     try{cli365TopPaint();}catch(e2){}
@@ -16873,8 +16887,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-26 10:20';
-var APP_BUILD_NOTE="📊 <b>오늘 얼마나 움직이셨는지가 홈에 한 줄로 섭니다 — 전화 · 만남 · 기록.</b>　—　① ★ <b>「눌렀나」 가 아니라 「기록이 남았나」</b> 를 셉니다 (1번). 체크판 열한 칸은 <b>다른 물음</b>입니다 — 앉아서 단추만 눌러도 다 찹니다. 두 수가 다를 수 있고, <b>다른 것이 맞습니다</b>. 그래서 이름표에 「📊 오늘 <b>기록</b>」 이라고 적어 두었습니다.　—　② <b>세는 자는 day-rank.js 한 곳</b>입니다 (5번) — 30일 약속을 세는 그 자와 같은 자입니다. 통화 낱말(전화·통화·call)과 만남 낱말(만남·방문·대면·meet)을 갈래 둘로 나누고, <b>KEEP_HOW 는 그 둘을 합친 것</b>으로 두었습니다. 그래서 <b>30일 약속 셈은 한 글자도 안 바뀝니다</b>.　—　③ <b>기록은 카톡·문자·메일까지 전부</b> 셉니다 — 「오늘 손을 몇 번 댔나」 라서, 통화·만남만 세면 카톡만 돌린 날이 0 이 됩니다. 한 줄이 둘로 세지지도 않습니다.　—　④ ★ <b>아직 못 읽었으면 줄을 안 세웁니다.</b> 그때의 0 은 「아무것도 안 하셨다」 가 아니라 「모른다」 입니다 (1번). 다 읽은 뒤의 0 은 <b>그대로 보여 드립니다</b> — 아침에 꼭 보셔야 할 수입니다.　—　⑤ <b>서버를 한 번도 더 안 부릅니다</b> (7번) — 이미 읽어 둔 OSC.list · CM.meta · CC.calls 로만 셈합니다. 「누구 것인가」 는 달력이 쓰는 그 한 곳에 묻습니다 (3번).　—　★ <b>홈을 안 늘렸습니다.</b> 처음에 칩이 세 줄로 접혀 122px 이었고 홈이 3.36화면이 되어 <b>한도를 넘었습니다</b>. 자를 올리지 않고 꼬리말을 이름표 안으로 넣어 <b>한 줄(50px)</b>로 폈습니다 — 홈 2,761px · 3.27화면으로 <b>한도 안</b>입니다.　—　점검 새 자리 <b>열다섯</b>(check-queue 열하나 · check-homeday 넷 — 화면에 실제로 서는지까지 봅니다). 다섯 자리를 되돌려 다섯 다 빨간불을 확인했습니다. ★ 그중 <b>셋은 처음에 안 울렸습니다</b> — 견본에 「전화」 만 넣어 두면 else 를 빼도 답이 같고, 되돌림 자리를 잘못 짚으면 아무 일도 안 일어납니다. 견본을 고쳐 셋 다 울게 만들었습니다 (8번)."
+var APP_BUILD='2026-09-27 09:40';
+var APP_BUILD_NOTE="🏠 <b>홈이 「오늘 카드」만 남았습니다 — 지운 것은 하나도 없습니다.</b>　—　홈 최상위가 <b>열여섯 칸</b>이었고 그중 다섯이 날마다 떴다 사라졌습니다. 이제 <b>아홉 칸</b>이고 <b>덩어리(120px 넘는 칸)는 셋</b>입니다 — 카드 스택 · 오늘 챙길 것 · 동선. 높이는 <b>2,475px(2.93화면)</b> 입니다 — 고치기 전 4.2화면, 지난 판 3.27화면.　—　① <b>다섯을 제 집으로 보냈습니다.</b> 📅 이번 주·이번 달 → <b>달력</b> · 🧑 내 고객 → <b>고객 365일</b> · 🧭 TFA → <b>TFA</b> · 🚦 출발 점검 → <b>출발 점검</b> · 👥 팀 → <b>팀</b> · 📸 오늘 올릴 것 → <b>콘텐츠</b>.　—　② ★ <b>「지웠다」로 읽히지 않게</b> 홈에 <b>「📦 여기로 옮겼습니다」 한 줄</b>을 두었습니다. 여섯 군데가 하나하나 적혀 있고, 눌러서 바로 갑니다(44px). 메뉴에 없는 화면은 <b>단추를 안 세웁니다</b> — 눌러도 안 열리는 단추는 「지웠다」 보다 나쁩니다.　—　③ ★ <b>칸 자체를 옮겼습니다.</b> 📸 오늘 올릴 것(hmIgHtml)은 「콘텐츠」에, 👥 오늘 팀 전체(hmTeamHtml)는 「팀」에 <b>그대로 세웠습니다</b> — 그 안의 「오늘 고른 기사 → 캡션·카드뉴스·보낼 문구」 한 번에 가는 길은 거기밖에 없었습니다.　—　④ <b>있다 없다 하던 다섯을 한 자리로.</b> 알람 열쇠 · 알림 권유 · 고객 체크 줄 · 공지를 <b>🔔 소식 한 줄</b>로 감쌌습니다 — 넷이 다 비면 「새 소식이 없습니다」 가 그 자리를 지킵니다. 무엇이 없는지는 <b>말하지 않습니다</b>(1번). ★ 안쪽 칸 이름은 그대로라 <b>칠하는 함수를 한 곳도 안 고쳤습니다</b>. ★ <b>준비 SQL 은 사장님 ★ 대로 홈 맨 위에</b> 그대로 둡니다.　—　⑤ ★ <b>안 보이는 칸 때문에 서버에 가던 것을 끊었습니다</b> (7번). 홈을 열 때마다 hmArm 이 osAiRepAfterRender()(→arLoad·gbLoad)와 rdLoad() 를 불렀는데, 그 판들이 다른 화면으로 갔는데도 그대로였습니다. 점검에 「홈을 세 번 열어도 TFA 를 <b>한 번도</b> 안 읽는다」 를 새로 못 박았습니다.　—　★ <b>고객 찾기는 안 옮겼습니다.</b> 사장님 목록에 없고, 배정 DB 까지 훑는 것은 여기뿐이라 빼면 그 기능이 <b>어디에도 없어집니다</b> — 그건 옮기는 것이 아니라 지우는 것입니다. 한 줄(20px)이라 덩어리도 아닙니다.　—　새 점검 <b>check-homeshape</b> 열여섯 자리(①덩어리 ②사라지는 칸 ③옮긴 곳이 메뉴에 있나 ④옮겼다고 적혀 있나). 세 자리를 되돌려 셋 다 빨간불을 확인했습니다.　—　★ 옛 자리를 재던 점검 <b>넷</b>(homeone·homeday·toss·hmteam)을 <b>옮긴 자리에서 같은 것을 재도록</b> 고쳤습니다 — 재는 것을 하나도 안 줄였습니다. 줄이면 옮긴 것이 아니라 지운 것이 됩니다."
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -25654,10 +25668,27 @@ function hmActCss(){
     '.hm-act .g::-webkit-scrollbar{display:none}'+
     '.hm-act .g span{font-size:var(--t6);font-weight:700;color:var(--ink-3);'+
       'background:var(--ink-8);border-radius:var(--r-pill);padding:4px 10px;white-space:nowrap}'+
-    '.hm-act .g span i{font-style:normal;font-weight:900;color:var(--primary);margin-left:3px}';
+    '.hm-act .g span i,.hm-act .g button i{font-style:normal;font-weight:900;color:var(--primary);margin-left:3px}'+
+    /* 📸 올릴 것은 <b>누르면 열립니다</b> — 손가락 크기 44px (철칙) */
+    '.hm-act .g button{min-height:44px;padding:4px 10px;border:0;border-radius:var(--r-pill);'+
+      'background:var(--primary-light);color:var(--primary);font-family:var(--font);'+
+      'font-size:var(--t6);font-weight:700;white-space:nowrap;cursor:pointer}';
   document.head.appendChild(st);
 }
 var HM_ACT_KIND=[['call','☎️','전화'],['meet','🤝','만남'],['all','✍️','기록']];
+/* 📸 <b>오늘 올릴 것</b> — 사장님 말씀 「홈에는 「오늘 올릴 것 1건」 <b>한 줄만</b>」.
+   SNS 칸은 「콘텐츠」 로 옮겼고, 여기는 <b>오늘 몇 건인지</b>만 적습니다.
+   ★ <b>새 칸을 안 만듭니다.</b> 「오늘 전화 · 만남 · 기록」 과 같은 집안
+     (오늘 내가 한 것)이라 이 줄에 칩 하나로 붙습니다 — 카드를 따로 세우면
+     덩어리가 다섯이 됩니다.
+   ★ 세는 자리는 <b>hmIgIdx 한 곳</b>입니다 (5번) — 받아 둔 소식이 없으면
+     -1 이고, 그때는 <b>안 적습니다</b>(0 건이라고 적으면 「없다」 가 됩니다 · 1번). */
+function hmActIgHtml(){
+  var i=-1;
+  try{ i=(typeof hmIgIdx==='function')?hmIgIdx():-1; }catch(e){ return ''; }
+  if(i<0)return '';
+  return '<button type="button" onclick="go(\'news_live\')">📸 올릴 것<i>1</i></button>';
+}
 function hmActHtml(){
   var a=hmActOf(); if(!a)return '';
   hmActCss();
@@ -25666,6 +25697,7 @@ function hmActHtml(){
     k=HM_ACT_KIND[i];
     h+='<span>'+k[1]+' '+k[2]+'<i>'+a[k[0]]+'</i></span>';
   }
+  h+=hmActIgHtml();
   /* 이름표에 <b>「기록」</b>이라고 적습니다 — 체크판의 「눌렀나」 와 다른
      수라는 것을 여기서 말해 둬야 합니다 (1번). 꼬리에 한 줄 더 달았더니
      칩이 접혀 122px 이 됐습니다. 말은 남기고 자리는 안 먹습니다. */
@@ -25674,6 +25706,74 @@ function hmActHtml(){
 function hmActPaint(){
   var el=document.getElementById('hmActHost'); if(!el)return;
   el.innerHTML=hmActHtml();
+}
+/* ══ 📦 <b>옮긴 자리</b> — 홈에서 뺀 것이 어디 있는지 ══════════════
+   ★ <b>지운 것이 아닙니다.</b> 화면은 하나도 안 없앴고, 여기 적힌 곳에
+     그대로 있습니다. 누르면 열립니다 — 「지웠다」 로 읽히면 팀원이
+     안 씁니다 (사장님 말씀 2026-09-26).
+   ★ 가는 곳은 <b>이 표 한 곳</b>이 압니다 (5번). 화면 이름을 코드 여기저기
+     적어 두면 화면을 옮길 때 한쪽만 고쳐집니다.
+   ★ 여는 길은 <b>go() 한 곳</b>입니다 — 새 길을 안 냅니다.              */
+var HM_MOVED=[
+ {t:'mycal',   e:'📅', n:'달력',       was:'이번 주 · 이번 달'},
+ {t:'clients', e:'🧑', n:'고객 365일', was:'내 고객'},
+ {t:'airep',   e:'🧭', n:'TFA',        was:'업무관리'},
+ {t:'ready',   e:'🚦', n:'출발 점검',  was:'점검'},
+ {t:'teamhub', e:'👥', n:'팀',         was:'팀 전체'},
+ {t:'news_live',e:'📰', n:'콘텐츠',    was:'오늘 올릴 것 · SNS'}
+];
+/* ══ 🔔 <b>소식 한 자리</b> — 늘 있고, 없으면 없다고 적습니다 ═══════
+   ★ <b>:has() 를 씁니다.</b> 안쪽 넷(알람 열쇠 · 알림 권유 · 고객 체크 ·
+     공지)은 저마다 제 자리에서 칠해집니다 — 그 칠하는 함수를 한 곳도 안
+     고치려고, 「넷이 다 비었나」 를 <b>CSS 가 스스로</b> 보게 했습니다.
+     자바스크립트로 지켜보게 하면 칠하는 자리가 넷에서 다섯이 됩니다 (5번).
+   ★ :has() 를 못 알아듣는 아주 옛 브라우저에서는 「새 소식이 없습니다」 가
+     <b>같이 보일 뿐</b>입니다 — 자리가 사라지지 않으니 모양은 그대로입니다.
+     없는 말을 지어내지도 않습니다 (1번).                                */
+function hmNotiCss(){
+  if(document.getElementById('hmNotiCss'))return;
+  var st=document.createElement('style');st.id='hmNotiCss';
+  st.textContent=
+    '.hm-noti{margin-top:10px}'+
+    '.hm-noti-n{display:flex;align-items:center;gap:6px;padding:9px 12px;'+
+      'background:var(--ink-9);border:1px solid var(--ink-7);border-radius:var(--r-md);'+
+      'font-size:var(--t6);color:var(--ink-4);font-weight:600}'+
+    '.hm-noti-n b{color:var(--ink-3);font-weight:800}'+
+    /* 안쪽에 <b>내용이 있는 칸</b>이 하나라도 있으면 「없습니다」 를 감춥니다 */
+    '.hm-noti:has(>div:not(.hm-noti-n):not(:empty)) .hm-noti-n{display:none}';
+  document.head.appendChild(st);
+}
+function hmMovedCss(){
+  if(document.getElementById('hmMovedCss'))return;
+  var st=document.createElement('style');st.id='hmMovedCss';
+  st.textContent=
+    '.hm-mv{display:flex;align-items:center;gap:8px;margin-top:10px;padding:9px 12px;'+
+      'background:var(--ink-9);border:1px solid var(--ink-7);border-radius:var(--r-md)}'+
+    '.hm-mv>b{font-size:var(--t6);font-weight:800;color:var(--ink-4);flex:none}'+
+    /* <b>한 줄</b>로 둡니다 — 접히면 덩어리가 되고, 덩어리는 넷까지입니다.
+       좁은 폰에서는 옆으로 굴러갑니다(감추지 않습니다). */
+    '.hm-mv .g{display:flex;gap:6px;flex:1;min-width:0;flex-wrap:nowrap;'+
+      'overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}'+
+    '.hm-mv .g::-webkit-scrollbar{display:none}'+
+    '.hm-mv .g button{min-height:44px;padding:0 11px;border:0;border-radius:var(--r-sm);'+
+      'background:var(--white);color:var(--ink-3);font-family:var(--font);font-size:var(--t6);'+
+      'font-weight:700;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:4px}'+
+    '.hm-mv .g button:active{background:var(--ink-8)}';
+  document.head.appendChild(st);
+}
+function hmMovedHtml(){
+  hmMovedCss(); hmNotiCss();   /* 옷을 쓰는 화면에서 부릅니다 (5번) */
+  var h='',i,x;
+  for(i=0;i<HM_MOVED.length;i++){
+    x=HM_MOVED[i];
+    /* 메뉴에 없는 화면은 <b>안 세웁니다</b> — 눌러도 안 열리는 단추는
+       「지웠다」 보다 나쁩니다 (1번). 있는지는 navItemOf 가 압니다. */
+    if(typeof navItemOf==='function'&&!navItemOf(x.t))continue;
+    h+='<button type="button" onclick="go(\''+x.t+'\')" title="'+osEsc(x.was)+'">'+
+       x.e+' '+osEsc(x.n)+'</button>';
+  }
+  if(!h)return '';
+  return '<div class="hm-mv"><b>📦 여기로 옮겼습니다</b><span class="g">'+h+'</span></div>';
 }
 function hmRtHtml(){
   if(typeof OS==='undefined'||!OS.profile)return '';
@@ -25931,21 +26031,26 @@ function hmArm(){
   try{ if(typeof OSC!=='undefined'&&!(OSC.list||[]).length&&typeof osLoadClients==='function')osLoadClients(); }catch(e){}
   setTimeout(hmPaint,1200);
   setTimeout(hmPaint,3200);
-  /* TFA 판을 깨우는 것은 <b>TFA 가 아는 한 곳</b>에 맡깁니다 (5번) —
-     옷 입히기·기록 읽기·늦게 온 것 다시 그리기가 거기 다 들어 있습니다.
-     arLoad 가 스스로 막아 서버는 한 번만 부릅니다 (7번). */
-  try{ if(typeof osAiRepAfterRender==='function')osAiRepAfterRender(); }catch(e){}
-  /* 자리를 두는 것만으로는 안 뜬다 — <b>칠하는 쪽</b>도 같이 불러야 한다 */
+  /* ⚠ 2026-09-26 · <b>TFA 를 여기서 안 깨웁니다.</b> TFA 판은 「나」(airep)
+     로 갔습니다 — 홈에 없는 칸을 위해 osAiRepAfterRender() 를 부르면
+     arLoad()·gbLoad() 가 <b>홈을 열 때마다 서버까지</b> 갑니다. 그것이
+     무료 한도를 세 배로 넘긴 그 자리입니다 (7번).
+     ★ 함수는 그대로 있고, 그 화면이 열릴 때 제 자리에서 부릅니다
+       (go('airep') 가 osAiRepAfterRender 를 부릅니다). 지운 것이 아니라
+       <b>부르는 자리를 옮긴 것</b>입니다. */
+  /* 자리를 두는 것만으로는 안 뜬다 — <b>칠하는 쪽</b>도 같이 불러야 한다.
+     준비 SQL 은 사장님 ★ 대로 홈 맨 위에 그대로 있으므로 여기서 부릅니다. */
   try{ if(typeof setupCss==='function')setupCss();
        if(typeof setupPaint==='function')setupPaint(); }catch(e){}
-  /* 막혀 있는 것 — rdLoad 가 스스로 막아 10분에 한 번만 부릅니다 (7번) */
-  try{ if(typeof hmTeamCss==='function')hmTeamCss(); }catch(e5){}
+  /* ⚠ 팀 옷(hmTeamCss)도 여기서 안 입힙니다 — 팀 칸은 「팀」(teamhub)으로
+     갔습니다. 동선 옷은 홈에 그대로 있으므로 그대로 둡니다. */
   try{ if(typeof hmRtCss==='function')hmRtCss(); }catch(e5b){}
   /* 폰 알람 ① — <b>서버를 안 부릅니다</b>. 정한 시각이 지났고 오늘 아직
      안 울렸을 때만 한 번 뜹니다 (7번). */
   try{ if(typeof almTick==='function')setTimeout(almTick,1500); }catch(e6){}
-  try{ if(typeof rdPaint==='function')rdPaint();
-       if(typeof rdLoad==='function')rdLoad(); }catch(e){}
+  /* ⚠ 출발 점검(rdLoad)도 여기서 안 부릅니다 — 「출발 점검」(ready)으로
+     갔습니다. 홈에 없는 칸을 위해 <b>홈을 열 때마다 서버에 가던</b> 자리입니다 (7번).
+     ★ renderReady() 가 제 자리에서 부릅니다 — 지운 것이 아닙니다. */
   /* 오늘 소식 — <b>하루 한 번</b>, 홈을 여는 그때만 (7번). nlAuto 가
      스스로 막습니다: 오늘 것이 있거나 오늘 이미 해 봤으면 안 부릅니다. */
   try{ if(typeof nlAuto==='function')setTimeout(nlAuto,1800); }catch(e7){}
@@ -26674,7 +26779,25 @@ function renderHome(){
        <b>1,850px</b>, 화면 두 개 아래였습니다. 설치 화면 맨 밑(1,656px)
        에서 못 찾으신 것을 홈 1,850px 로 옮기면 똑같습니다. 안 보이면
        없는 것입니다.                                                  */
-    (OS.profile?('<div id="almkBand"></div>'):'')+
+    /* ── 🔔 <b>소식은 한 자리에</b> — 늘 있습니다 ─────────────────────
+       사장님 말씀 (2026-09-26) — 「<b>있다 없다 하는 칸을 없앱니다.</b>
+       알람 열쇠 · 준비 SQL · 알림 권유 · 오늘 어디로 가시나 · 고객 체크 줄 —
+       다섯이 상태에 따라 떴다 사라집니다 … <b>없는 날도 자리를 남기고</b>
+       「오늘 약속 없습니다」처럼 없다고 적으십시오」.
+
+       ★ <b>안쪽 칸 이름(id)은 그대로 둡니다</b> — 칠하는 자리(almkBandPaint ·
+         almNudgePaint · ccHomeLine · osNoticeHome)를 한 곳도 안 건드립니다.
+         감싸기만 했습니다 (5번 · 「부르는 자리만 모읍니다」).
+       ★ 넷이 다 비면 <b>「새 소식이 없습니다」</b> 한 줄이 그 자리를 지킵니다.
+         무엇이 없는지는 <b>말하지 않습니다</b> — 「알람이 켜져 있습니다」 는
+         결론이고, 끈 분도 「다시 안 보기」 를 누른 분도 여기 오기 때문입니다 (1번).
+       ★ <b>오늘 어디로 가시나</b>는 #441 에서 이미 자리를 지키게 했습니다.
+       ★ <b>준비 SQL</b>은 사장님 ★ 대로 <b>그 자리</b>(바로 아래)에 둡니다 —
+         여러 화면이 「홈 맨 위」 라고 가리키고 check-setup 이 그것을 잡습니다. */
+    (OS.profile?('<div id="hmNotiLine" class="hm-noti">'+
+        '<div id="almkBand"></div><div id="almNudge"></div>'+
+        '<div id="ccHomeLine"></div><div id="osNoticeHome"></div>'+
+        '<div class="hm-noti-n">🔔 <b>새 소식이 없습니다.</b></div></div>'):'')+
     /* ⚠ <b>준비 SQL 은 여기 그대로 둡니다.</b> 한 번은 접어서 맨 아래로
        내렸는데 check-setup 이 잡았습니다 — 여러 화면이 「<b>홈 맨 위</b>
        서버 준비 SQL」 이라고 가리키고 있어, 묻으면 그 안내들이 전부
@@ -26692,61 +26815,41 @@ function renderHome(){
     /* 🩺 <b>고객 체크는 아침 미션 ⑥ 안으로 들어갔습니다</b> (사장님 말씀 ⑥).
        따로 세워 두었더니 홈이 한 화면을 넘겨 4.25화면이 됐고, check-msfive 가
        그것을 잡았습니다. 이제 아침에 따라가다 보면 고객 보험이 나옵니다. */
-    /* <b>한 번만</b> — 아직 한 번도 안 물어본 분께만. 「오늘 챙길 것」 바로
-       밑이라야 뜻이 통합니다 — 「이분들을 아침에 알려 드릴까요」 */
-    (OS.profile?('<div id="almNudge"></div>'):'')+
-    /* <b>오늘 어디로 가시나</b> — 약속이 있는 날에만 섭니다. 없으면 빈 칸이라
-       자리를 안 먹습니다. 「오늘 챙길 것」 바로 밑이라야 뜻이 통합니다 —
-       챙길 분을 보고 나서 <b>어디로 가는지</b>를 봅니다. */
+    /* 🔔 알림 권유는 <b>위 소식 한 자리</b>로 갔습니다 — 칸 이름은 그대로라
+       almNudgePaint 는 한 곳도 안 고쳤습니다. */
+    /* <b>오늘 어디로 가시나</b> — 없는 날에도 <b>자리를 지킵니다</b>(#441).
+       「오늘 챙길 것」 바로 밑이라야 뜻이 통합니다 — 챙길 분을 보고 나서
+       <b>어디로 가는지</b>를 봅니다. */
     (OS.profile?'<div id="hmRtHost"></div>':'')+
     /* 📊 <b>오늘 얼마나 움직이셨나</b> — 동선 바로 아래 한 줄 */
     (OS.profile?'<div id="hmActHost"></div>':'')+
     /* 팀 전체도 <b>「⚙️ 관리」 안</b>으로 옮겼습니다 — 오늘 내가 할 일과
        팀을 보는 일은 다른 일입니다. */
-    /* <b>고객 찾기</b> — 배정 DB 까지 훑습니다. 서랍의 찾기는 이미 읽어 둔
-       것만 보므로, 아직 고객 365일로 안 넘긴 분은 여기서만 나옵니다.
-       자리는 <b>접은 것들 바로 위</b>입니다 — 위의 줄들은 「오늘 챙길 것
-       바로 밑」이라야 뜻이 통하고(#394), 찾기는 접힌 카드를 펴기 전에
-       손이 먼저 가는 자리이기 때문입니다. */
+    /* <b>고객 찾기</b> — 배정 DB 까지 훑습니다. 고객 365일의 찾기는 <b>이미
+       읽어 둔 것만</b> 보므로, 아직 넘기지 않은 분은 여기서만 나옵니다.
+       ★ <b>옮기지 않았습니다.</b> 사장님 목록에 없는 것이고, 빼면 그 기능이
+         <b>어디에도 없어집니다</b> — 그건 옮기는 것이 아니라 지우는 것입니다.
+         카드가 아니라 <b>한 줄</b>(33px)이라 덩어리로도 안 셉니다. */
     (OS.profile?cusFindHtml():'')+
-    /* ── <b>큰 것 셋은 접어 둡니다</b> ─────────────────────────────────
-       달력 916px · 내 고객 487px · TFA 1,290px — 셋이 홈의 절반입니다.
-       셋 다 <b>아래 탭바에서 한 번에</b> 열립니다. 홈에서는 제목과 숫자만
-       보여 드리고, 머리를 누르면 그 자리에서 펴집니다. 편 채로 두면 다음에도
-       펴져 있습니다. <b>지운 것이 아닙니다.</b>                          */
-    (OS.profile?hmFoldWrap('cal','📅','이번 주 · 이번 달',hmFoldCalSub(),
-        '<div id="hmCalHost">'+hmCalHtml()+'</div>'):'')+
-    (OS.profile?hmFoldWrap('cli','🧑','내 고객',hmFoldCliSub(),
-        '<div id="hmCliHost">'+hmCliHtml()+'</div>'):'')+
-    (OS.profile?'<div id="ccHomeLine"></div>':'')+
-    /* ⑤ TFA 업무관리 — 같은 판을 그대로 (5번). 여기서 하루가 다 끝납니다 */
-    (OS.profile?hmFoldWrap('tfa','🧭','TFA 업무관리',hmFoldTfaSub(),
-        '<div id="hmTfaHost">'+hmTfaHtml()+'</div>'):'')+
-    /* 📸 <b>오늘 올릴 것</b> — 사장님 말씀 「오늘 인스타 올릴 뉴스도 만들어서」.
-       달력·고객·TFA 와 <b>같은 모양의 한 줄</b>입니다. 머리에 오늘 고른
-       기사 제목이 적혀 있어, 펴지 않고도 무엇인지 아십니다. */
-    (OS.profile?hmFoldWrap('ig','📸','오늘 올릴 것 · SNS 관리',hmIgSub(),
-        '<div id="hmIgHost">'+hmIgHtml()+'</div>'):'')+
-    /* ── <b>관리·점검은 한 줄로</b> ───────────────────────────────────
-       사장님 말씀 — 「홈 화면이 너무 복잡하고 <b>화면이 자꾸 달라서</b>
-       힘들다」. 재 보니 그 말씀이 맞았습니다. 홈이 3,541px(폰 4.2화면)에
-       단추 104개였고, 그중 <b>준비 SQL 425px · 출발 점검 778px · 팀
-       270px</b> 가 상태에 따라 떴다 사라졌다 했습니다. <b>1,473px</b>,
-       화면 한 장 반이 매번 나타났다 없어지니 <b>같은 화면일 수가</b>
-       없었습니다.
+    /* ── 📦 <b>옮긴 자리 한 줄</b> — 지운 것이 아닙니다 ──────────────────
+       사장님 말씀 (2026-09-26) — 「홈을 <b>「오늘 카드」만</b> 남기고 나머지를
+       옮깁니다. <b>지우는 것이 아닙니다.</b> … 옮길 것 — <b>어디로 가는지
+       같이 적으십시오</b> … 「지웠다」로 읽히면 팀원이 안 씁니다」.
 
-       그래서 <b>매일 떴다 사라지던 둘</b>(출발 점검·팀)을 여기 한 줄로
-       접습니다. <b>준비 SQL 은 홈 맨 위에 그대로 둡니다</b> — 한 번 하면
-       영영 사라지는 것이고, 여러 화면이 「홈 맨 위」 라고 가리킵니다.
-       지운 것이 아닙니다 —
-       머리에 무엇이 몇 개 남았는지 적고, 누르면 그 자리에서 펴지고,
-       편 채로 두면 다음에도 펴져 있습니다(달력·고객·TFA 와 같은 방식).
-       이제 <b>있으나 없으나 홈 모양이 같습니다.</b>                 */
-    (OS.profile?hmFoldWrap('mng','⚙️','관리 · 점검',hmFoldMngSub(),
-        '<div id="hmReadyHost"></div>'+
-        '<div id="hmTeamHost"></div>'):'')+
-    /* ⑥ 공지사항 — 맨 아래. 읽을 것이지 할 것이 아니다 */
-    '<div id="osNoticeHome"></div>'+
+       여태 홈 최상위가 <b>열여섯 칸</b>이었고 그중 다섯이 날마다 떴다
+       사라졌습니다. 명세서(docs/토스판_사본.html)의 「오늘」 화면은
+       <b>덩어리가 셋</b>뿐입니다 — 카드 스택 · 동선 · (30일 약속 · 활동량).
+
+       ★ <b>화면은 하나도 안 없앴습니다.</b> 접혀 있던 다섯을 <b>제 집</b>으로
+         돌려보내고, 여기 한 줄이 <b>어디로 갔는지</b> 알려 줍니다. 누르면
+         그 화면이 그대로 열립니다 — smoke 가 다 열리는지 봅니다.
+       ★ 이 줄은 <b>늘 있습니다.</b> 상태에 따라 사라지면 그것이 바로 사장님이
+         「화면이 자꾸 달라서 힘들다」 고 하신 그 자리입니다.
+       ★ <b>한 줄</b>입니다(덩어리가 아닙니다) — check-homeshape 가
+         「덩어리(120px 넘는 칸)는 넷 이하」 로 잽니다.                    */
+    (OS.profile?hmMovedHtml():'')+
+    /* ⑥ 공지사항도 <b>위 소식 한 자리</b>로 갔습니다 — 맨 아래에 두면
+       있는 날과 없는 날의 홈 모양이 달라집니다. 칸 이름은 그대로입니다. */
     '<div class="notice" style="margin-top:16px;color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">모든 AI 출력은 <b>약관·심사가 최종</b>이며, 고위험 제안은 관리자 승인 후 고객에게 안내합니다. 게시·발송 전 준법감시 확인을 권장합니다.</div>'+
   '</div>';
 }
@@ -66256,11 +66359,22 @@ function nlMiniHtml(){
 }
 function renderNewsLive(){
   nlLoad();
+  /* ── 📸 <b>오늘 올릴 것</b> — 홈에서 여기로 옮겼습니다 ─────────────
+     사장님 말씀 (2026-09-26) — 「📸 오늘 올릴 것·SNS(hmIg) → 「콘텐츠」 ·
+     홈에는 「오늘 올릴 것 1건」 <b>한 줄만</b>」.
+     ★ <b>지운 것이 아닙니다.</b> 칸 자체(hmIgHtml)를 그대로 여기 세웁니다 —
+       오늘 고른 기사 한 건에서 캡션·카드뉴스·보낼 문구로 <b>한 번에</b>
+       가는 자리는 여기뿐이었습니다. 홈에는 「📸 올릴 것 1」 칩만 남고,
+       누르면 이 화면으로 옵니다.
+     ★ 여기서 <b>새로 만들지 않습니다</b> (5번) — 홈이 쓰던 그 함수입니다. */
+  var ig='';
+  try{ ig=(typeof hmIgHtml==='function')?('<div id="hmIgHost">'+hmIgHtml()+'</div>'):''; }catch(e){ ig=''; }
   return '<div class="tab-pane on">'+
     '<div class="page-hd"><div class="page-tag">CONTENT</div>'+
     '<div class="page-title">📰 고객에게 전할 뉴스</div>'+
     '<div class="page-desc">보험 · 경제 · 부동산 · 세금 · 지원금·혜택 다섯 칸입니다. '+
     '서버가 신문 RSS 를 모아 오고, 낱말로 칸을 나눕니다. 사무실 PC 를 켜 두지 않으셔도 됩니다.</div></div>'+
+    ig+                                   /* 📸 오늘 올릴 것 — 홈에서 옮겨 온 칸 */
     '<div class="nl-wrap">'+
       '<div class="nl-head" id="nlHead">'+nlHeadHtml()+'</div>'+
       '<div id="nlChips">'+nlChipsHtml()+'</div>'+
