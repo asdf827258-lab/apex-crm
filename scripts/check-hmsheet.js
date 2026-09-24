@@ -58,10 +58,13 @@ const look = (page) => page.evaluate(() => {
   const bar = document.getElementById('hmBack');
   const now = document.querySelector('#dynPane .hm-now');
   const opts = [...document.querySelectorAll('#dynPane .hm-now .hm-ask-o')];
-  /* 🧰 갈래에 못 담은 나머지는 <b>칩 한 줄</b>로 섭니다. 여는 길은 갈래와
-     똑같이 hmSheetOpen 이라, 「홈에서 다 열리나」를 볼 때는 <b>둘을 함께</b>
-     세야 합니다. 번호 갈래만 세면 카드를 다섯 줄로 줄인 순간 빨간불이
-     켜지는데, 화면에는 멀쩡히 다 서 있습니다 — 헛것입니다 (8번). */
+  /* 🧰 갈래에 못 담은 나머지는 <b>칩 한 줄</b>로 섭니다(옆으로 밉니다).
+     여는 길은 갈래와 똑같이 hmSheetOpen 이라, 「홈에서 다 열리나」를 볼
+     때는 <b>둘을 함께</b> 세야 합니다. 번호 갈래만 세면 카드를 다섯 줄로
+     줄인 순간 빨간불이 켜지는데, 화면에는 멀쩡히 다 서 있습니다 (8번).
+     ★ 「눈에 다 보이나」 가 아니라 <b>「홈에서 다 열리나」</b> 를 잽니다 —
+       칩 줄은 옆으로 밀어 보는 것이라 화면 밖에 있는 것도 한 번에
+       열립니다. 안 그러면 없는 것을 잰다고 적는 셈입니다 (1번). */
   const chips = [...document.querySelectorAll('#dynPane .hm-now .hm-box-b')];
   return {
     sheetOn: !!(sh && sh.classList.contains('on')),
@@ -72,6 +75,10 @@ const look = (page) => page.evaluate(() => {
     head: now ? (now.querySelector('.hm-now-k') || {}).textContent || '' : '',
     opts: opts.map(b => (b.textContent || '').replace(/\s+/g, ' ').trim()),
     chips: chips.map(b => (b.textContent || '').replace(/\s+/g, ' ').trim()),
+    /* 칩 줄이 <b>정말로 한 줄</b>인지 — 감기면 카드가 통째로 자란다 */
+    boxH: (() => { const d = document.querySelector('#dynPane .hm-now .hm-box-s');
+                   return d ? Math.round(d.getBoundingClientRect().height) : 0; })(),
+    chipH: chips.length ? Math.round(chips[0].getBoundingClientRect().height) : 0,
     shHead: sh ? (sh.textContent || '').replace(/\s+/g, ' ').trim() : ''
   };
 });
@@ -124,12 +131,21 @@ const look = (page) => page.evaluate(() => {
   const all = A.opts.concat(A.chips);
   const miss = want.filter(t => !all.some(o => o.indexOf(t) >= 0));
   is(want.length > 0 && miss.length === 0,
-     '  AP 에서 <b>' + want.length + '가지</b>가 다 보인다 — 번호 ' + A.opts.length +
-     ' · 칩 ' + A.chips.length + (miss.length ? (' ← 빠진 것 ' + miss.join(' / ')) : ''));
+     '  AP 에서 <b>' + want.length + '가지</b>를 홈에서 다 연다 — 번호 ' + A.opts.length +
+     ' · 칩 ' + A.chips.length + '(옆으로 밉니다)' + (miss.length ? (' ← 빠진 것 ' + miss.join(' / ')) : ''));
   /* <b>같은 것이 두 줄에 서지 않는다</b> (5번) — 번호로 세운 것을 칩에도
      또 적으면 사장님이 두 번 누르실 자리가 생깁니다. */
   const dup = A.chips.filter(c => A.opts.some(o => o && c && o.indexOf(c.replace(/^\S+\s/, '')) >= 0));
   is(dup.length === 0, '  갈래에 선 것을 <b>칩에 또 안 적는다</b>' + (dup.length ? (' ← ' + dup.join(' / ')) : ''));
+  /* ⚠ <b>실제로 여기서 났던 일</b> — 칩을 flex-wrap 으로 두었더니 일곱 개가
+     폰에서 <b>네 줄</b>로 감겨 카드가 200px 자랐습니다. 그러자 홈의 칸 수가
+     소식 한 줄이 있고 없고에 따라 달라져 check-homeone 이 잡았습니다.
+     「칩 한 줄」 이라고 적었으면 <b>한 줄</b>이어야 합니다 — 몇 개가 되든
+     높이가 안 변해야 카드가 따라가집니다. 칸 수를 못 박지 않고 <b>칩
+     하나보다 얼마나 높은가</b>로 잽니다 — 글자 크기를 바꿔도 안 낡습니다. */
+  is(A.chipH > 0 && A.boxH > 0 && A.boxH < A.chipH * 1.8,
+     '  칩이 <b>한 줄로만</b> 선다 — ' + A.boxH + 'px (칩 하나 ' + A.chipH + 'px · ' +
+     A.chips.length + '개인데 안 감긴다)');
 
   /* ── [2][3][4] 덮개 ── */
   console.log('\n[2] 도구를 누르면 <b>덮개</b>가 뜨고 <b>그 파일</b>을 문다');
