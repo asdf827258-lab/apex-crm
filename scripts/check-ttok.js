@@ -14,16 +14,41 @@
    사고(check-tofin.js 를 덮어써 기존 점검을 지웠다) 그대로입니다.
    그래서 <b>새 이름</b>으로 두고 둘 다 돌립니다.
 
-   ── 보는 것 <b>세 가지만</b> ──────────────────────────────────────
+   ── 보는 것 ───────────────────────────────────────────────────────
    (넓게 잡지 않습니다 — 헛것을 잡는 점검은 안 잡는 점검보다 나쁩니다 · 8번)
-     ① --t- 토큰 블록이 파일에 <b>한 번만</b> 나오나
-     ② .t- 클래스 규칙 안에 <b>하드코딩 hex</b> 가 섞였나
+     ⓪ <b>다섯 화면이 app/ui.css 를 부르나</b>
+     ① --t- 토큰이 <b>두 파일을 통틀어 한 번만</b> 적혀 있나
+     ② .t- · .tz- 규칙 안에 <b>하드코딩 hex</b> 가 섞였나
      ③ 홈 코드에 <b>새 저장 호출</b>(.insert/.update/.upsert/.delete)이 생겼나
-   ══════════════════════════════════════════════════════════════════ */
+
+   ── ⚠ 2026-09-24 · <b>보는 파일이 둘이 되었습니다</b> ──────────────
+   여태 app/index.html 한 파일만 읽었습니다. 그런데 토큰과 .t- 클래스는
+   <b>app/ui.css</b> 로 옮겼습니다(#439 로 그 파일이 들어온 지 세 판이
+   지나도록 아무도 안 불러 두 벌인 채였습니다).
+   ★ <b>느슨해진 것이 아니라 조여졌습니다.</b> 예전에는 「index.html 안에
+     두 번 적혔나」 만 봤는데, 이제 <b>두 파일을 통틀어</b> 봅니다 —
+     ui.css 에 있는데 index.html 에 또 적으면 그 자리에서 걸립니다.
+   ★ <b>.tz- 다섯</b>은 index.html 에 남습니다. 홈 카드 스택 전용이고
+     var(--shadow-blue)·var(--t2) 처럼 그 파일의 변수를 쓰기 때문입니다.
+     ui.css 로 옮기면 ui.css 가 제 힘으로 못 섭니다. 그래서 <b>.t- 는
+     ui.css 에서, .tz- 는 index.html 에서</b> 찾습니다.                  */
 const fs = require('fs');
 let bad = 0;
 const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
 const SRC = fs.readFileSync('app/index.html', 'utf8');
+const CSS = fs.readFileSync('app/ui.css', 'utf8');
+const BOTH = SRC + '\n' + CSS;
+
+console.log('\n[0] <b>다섯 화면이 app/ui.css 를 부르나</b>');
+/* 옷을 파일로 빼 놓고 아무도 안 부르면, 그 파일은 <b>있으나 마나</b>입니다.
+   실제로 #439 로 들어온 뒤 세 판 동안 다섯 파일 모두 0 이었습니다.       */
+const PAGES = [['app/index.html', 'ui.css'], ['app/day.html', 'ui.css'],
+               ['app/finance.html', 'ui.css'], ['app/ba.html', 'ui.css'],
+               ['db-crm.html', 'app/ui.css']];
+const noLink = PAGES.filter(([f, href]) =>
+  !new RegExp('<link[^>]+href=["\']' + href.replace('.', '\\.') + '["\']').test(fs.readFileSync(f, 'utf8')));
+is(noLink.length === 0, '  다섯 화면이 <b>모두</b> ui.css 를 부른다' +
+   (noLink.length ? (' ← 안 부른다: ' + noLink.map(x => x[0]).join(' ')) : ''));
 
 /* 토큰 열둘 — 사장님이 주신 그대로. <b>여기 적어 두는 것이 자(尺)</b>입니다 */
 const TOKENS = ['--t-ink', '--t-sub', '--t-sub2', '--t-line', '--t-bg', '--t-card',
@@ -41,7 +66,7 @@ console.log('\n[1] --t- 토큰이 <b>한 곳에만</b> 있나 (5번)');
 const defs = {};
 TOKENS.forEach(t => {
   const re = new RegExp(t.replace(/-/g, '\\-') + '\\s*:', 'g');
-  defs[t] = (SRC.match(re) || []).length;
+  defs[t] = (BOTH.match(re) || []).length;      /* 두 파일을 <b>통틀어</b> 센다 */
 });
 const missing = TOKENS.filter(t => defs[t] === 0);
 const twice = TOKENS.filter(t => defs[t] > 1);
@@ -51,7 +76,7 @@ is(twice.length === 0, '  <b>두 번 적힌 토큰이 없다</b>' +
    (twice.length ? (' ← ' + twice.map(t => t + '(' + defs[t] + '번)').join(' ')) : '') +
    ' — 두 곳에 있으면 한쪽만 고쳐져 화면마다 다른 파랑이 된다');
 /* 블록 자체가 하나인가 — :root 가 여럿이어도 --t- 를 담은 것은 하나여야 한다 */
-const roots = (SRC.match(/:root\s*\{[^}]*--t-ink\s*:/g) || []).length;
+const roots = (BOTH.match(/:root\s*\{[^}]*--t-ink\s*:/g) || []).length;
 is(roots === 1, '  --t- 를 담은 <b>:root 블록이 하나</b>다 — ' + roots + '개');
 
 console.log('\n[2] .t- 클래스 안에 <b>하드코딩 hex</b> 가 섞였나');
@@ -59,11 +84,13 @@ console.log('\n[2] .t- 클래스 안에 <b>하드코딩 hex</b> 가 섞였나');
    수백 개가 나옵니다 — 그건 이 점검이 볼 자리가 아닙니다. <b>.t- 로
    시작하는 규칙 안</b>만 봅니다. 그림자의 rgba 는 색 토큰이 아니라
    <b>그림자</b>라 셈에서 뺍니다 — 토큰에 그림자가 없습니다.         */
+/* .t- 는 <b>ui.css</b> 에서, .tz- 는 <b>index.html</b> 에서 찾습니다 */
 const rules = [];
 CLASSES.forEach(c => {
+  const where = /^tz/.test(c) ? SRC : CSS;
   const re = new RegExp('^\\.' + c + '(?![a-z0-9-])[^{]*\\{([^}]*)\\}', 'gm');
   let m;
-  while ((m = re.exec(SRC)) !== null) rules.push({ c: c, body: m[1] });
+  while ((m = re.exec(where)) !== null) rules.push({ c: c, body: m[1] });
 });
 is(rules.length >= CLASSES.length,
    '  여덟 클래스 규칙을 <b>' + rules.length + '개</b> 찾았다');
