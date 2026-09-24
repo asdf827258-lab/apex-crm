@@ -101,6 +101,15 @@ const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
     OS.session = { user: { id: 'me' } };
     window.__toast = []; window.toast = m => window.__toast.push('' + m);
     try { localStorage.clear(); } catch (e) { }
+    /* ⚠ 2026-09-24 · 서랍이 <b>간편으로 기본</b>이 됐습니다(localStorage 를
+       비웠으니 여기도 간편으로 열립니다). 이 점검이 세는 것은 「칸마다
+       <b>별표</b>가 붙는가」 · 「찾기를 지우면 <b>다 돌아오는가</b>」 라
+       <b>전체 목록</b> 이야기입니다. 어느 쪽을 재는지 말해 두고 잽니다 —
+       간편 쪽은 check-navez 가 따로 잽니다 (8번).
+       ★ ezSet 이 아니라 <b>ezOn 을 덮습니다.</b> ezSet 은 저장소에 한 줄을
+         남기는데, 이 점검은 바로 아래에서 <b>저장소에 무엇이 남았는지</b>를
+         세고 있습니다 — 점검이 제가 잴 것을 흔들면 안 됩니다 (8번). */
+    window.ezOn = function () { return false; };
     renderNav();
   });
 
