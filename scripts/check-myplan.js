@@ -190,14 +190,29 @@ const open = async (pg) => {
   is(/넣지 못했습니다/.test(fail.said), '<b>왜 안 됐는지</b> 말한다 — 「' + fail.said.slice(0, 40) + '」');
 
   head('[6] 달력은 <b>한 벌</b>이다 (5번)');
+  /* ⚠ 2026-09-24 · 홈 달력(hmCalHost)은 「달력」 화면으로 옮겼습니다. 그래서
+     묻는 말이 뒤집혔습니다 — 예전에는 「홈에도 있나」, 이제는 「홈에 두 벌째가
+     안 남았나」 입니다. <b>재는 것은 그대로</b>입니다: 달력을 아는 곳이
+     하나인가. 옛 자리가 없어졌다고 이 자리를 지우면, 두 벌이 되는 날 아무도
+     못 봅니다 (8번).                                                     */
   const cross = await pg.evaluate(() => {
     go('home');
     return new Promise(r => setTimeout(() => r({
-      host: !!document.getElementById('hmCalHost'),
+      twin: !!document.getElementById('hmCalHost'),
       n: (mcalItems()[mcalToday()] || []).filter(x => x.k === 'my').length
     }), 900));
   });
-  is(cross.host && cross.n === 1, '내 캘린더에서 넣은 것이 <b>홈 달력에도</b> 있다 — ' + cross.n + '건');
+  const back = await pg.evaluate(() => {
+    go('mycal');
+    return new Promise(r => setTimeout(() => {
+      const el = document.getElementById('mycalHost');
+      r({ host: !!el, seen: ((el || {}).innerText || '').indexOf('지점 회의') >= 0 });
+    }, 1200));
+  });
+  is(!cross.twin, '홈에 <b>두 벌째 달력이 없다</b> — 달력을 아는 곳은 「달력」 하나다');
+  is(cross.n === 1, '홈에서 봐도 <b>같은 한 벌</b>이다 — ' + cross.n + '건');
+  is(back.host && back.seen,
+     '<b>나갔다 돌아와도</b> 넣은 줄이 그대로 있다 — ' + (back.host ? '달력 자리 있음' : '달력 자리 없음'));
 
   head('[7] 지우면 <b>서버에서도</b> 빠진다');
   const del = await pg.evaluate(async () => {

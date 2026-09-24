@@ -19,8 +19,11 @@
          안 그러면 서버가 안 될 때 홈을 열 때마다 두드린다
      [5] 다른 탭에 가 있으면 <b>쉰다</b> (document.hidden)
      [6] 로그인 전에는 <b>안 부른다</b>
-     [7] 받아 오면 <b>홈이 그 자리에서 채워진다</b> — 📸 오늘 올릴 것과
-         🌅 아침 미션이 같이 다시 칠해진다
+     [7] 받아 오면 <b>그 자리에서 채워진다</b> — 🌅 아침 미션(홈)과
+         📸 오늘 올릴 것(<b>콘텐츠</b>)이 같이 다시 칠해진다.
+         ⚠ 2026-09-24 · 📸 칸은 홈에서 「콘텐츠」 로 옮겼습니다. 재는 것을
+           줄이지 않고 <b>옮긴 자리에서 그대로</b> 잽니다 — 홈에는 몇 건인지
+           한 줄(📸 올릴 것 1)만 남았으므로 그것도 같이 봅니다.
      [8] 못 받아도 <b>지어내지 않는다</b> (1·9번) — 못 받았다고 적고
          손으로 받는 단추를 세운다
    ══════════════════════════════════════════════════════════════════ */
@@ -126,18 +129,36 @@ const SEED = (o) => `
   const got = await A.p.evaluate(() => ({ n: NLIVE.items.length, at: NLIVE.at, t: (NLIVE.items[0] || {}).t || '' }));
   is(got.n > 0 && got.t === NEWS[0].title, '  받아 온 것이 <b>그 기사</b>다 — ' + got.t.slice(0, 20) + '…');
 
-  console.log('\n[7] 받아 오면 <b>홈이 그 자리에서</b> 채워진다');
-  const paint = await A.p.evaluate(() => {
-    const ig = document.getElementById('hmIgHost');
+  console.log('\n[7] 받아 오면 <b>그 자리에서</b> 채워진다');
+  /* 홈에 남은 것은 <b>몇 건인지 한 줄</b>이다 — 먼저 그것부터 본다 */
+  const homeIg = await A.p.evaluate(() => {
     const box = document.getElementById('hmFold_ms');
-    if (box && !hmFoldOpen('ms')) hmFoldToggle('ms');
+    if (box && typeof hmFoldOpen === 'function' && !hmFoldOpen('ms')) hmFoldToggle('ms');
     hmMsJump(1);
-    return { ig: ig ? ig.innerText : '', head: document.querySelector('#hmFold_ig .hm-fold-h').innerText.replace(/\s+/g, ' ') };
+    return {
+      chip: ((document.getElementById('hmActHost') || {}).innerText || '').replace(/\s+/g, ' '),
+      /* 홈에 <b>옛 칸이 남아 있지 않은가</b> — 남으면 두 벌이다 (5번).
+         ⚠ 홈은 <b>#dynPane</b> 안에서 굴러간다. #hmPane 이라고 적었다가
+            늘 null 이라 <b>무엇도 안 잡는 알람</b>이 될 뻔했다 (8번). */
+      old: !!document.querySelector('#dynPane #hmIgHost')
+    };
   });
   await A.p.waitForTimeout(300);
   const ms = await A.p.evaluate(() => (document.getElementById('hmMsHost') || {}).innerText || '');
-  is(paint.ig.indexOf(NEWS[0].title) >= 0, '  📸 오늘 올릴 것이 <b>다시 칠해졌다</b>');
-  is(paint.head.indexOf('실손보험') >= 0, '  접힌 머리도 <b>그 제목</b>을 안다 — ' + paint.head);
+  /* 📸 칸 자체는 <b>콘텐츠</b>에 있다 — 거기서 같은 것을 잰다 */
+  const paint = await A.p.evaluate(async () => {
+    go('news_live');
+    for (let t = 0; t < 60 && !document.getElementById('hmIgHost'); t++)
+      await new Promise(r => setTimeout(r, 50));
+    await new Promise(r => setTimeout(r, 200));
+    const ig = document.getElementById('hmIgHost');
+    return { ig: ig ? ig.innerText : '', fold: !!document.getElementById('hmFold_ig') };
+  });
+  is(paint.ig.indexOf(NEWS[0].title) >= 0, '  📸 오늘 올릴 것이 <b>콘텐츠에서 다시 칠해졌다</b>');
+  is(paint.ig.indexOf(NEWS[0].title) >= 0 && !paint.fold,
+     '  <b>펴지 않아도 제목이 보인다</b> — 접는 장치가 없다 (예전엔 접힌 머리에 적어 줘야 했다)');
+  is(/📸 올릴 것/.test(homeIg.chip), '  홈에는 <b>몇 건인지 한 줄</b>만 남았다 — ' + homeIg.chip.slice(0, 60));
+  is(!homeIg.old, '  옛 📸 칸이 <b>홈에 안 남았다</b> — 남으면 두 벌이다 (5번)');
   is(ms.indexOf(NEWS[0].title) >= 0, '  🌅 아침 미션 ② 에도 <b>그 소식</b>이 섰다');
   /* 그 소식이 <b>왜</b> 이 분께 가는지도 같이 적혀야 한다 — 사장님이 그
      자리에서 맞는지 보셔야 한다 (1번 · check-newsfit 과 같은 잣대). */
