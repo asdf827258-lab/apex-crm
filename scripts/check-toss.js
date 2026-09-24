@@ -341,31 +341,40 @@ const SEED = `
     const out = { closed: H(), nowTop: now ? Math.round(now.getBoundingClientRect().top) : -1,
                   vh: window.innerHeight };
     const folds = [].slice.call(document.querySelectorAll('.hm-fold'));
-    out.n = folds.length;
+    /* ★ <b>최상위 접이만</b> 셉니다. 「오늘 챙길 것」 안의 🌅 아침 미션은
+       그 칸의 일부라 그대로 있고, 그것까지 세면 옮기고도 빨간불입니다 (8번). */
+    const hmPane = document.querySelector('.tab-pane.on');
+    out.n = hmPane ? hmPane.querySelectorAll(':scope > .hm-fold').length : folds.length;
     out.heads = folds.map(f => (f.querySelector('.hm-fold-h') || {}).textContent
       ? f.querySelector('.hm-fold-h').textContent.replace(/\s+/g, ' ').trim() : '');
     out.allClosed = folds.every(f => (f.querySelector('.hm-fold-b') || {}).hidden === true);
-    const cal = document.getElementById('hmFold_cal');
-    if (cal) {
-      cal.querySelector('.hm-fold-h').click();
-      out.open = H();
-      const d = document.querySelector('#hmCalHost .mcal-d');
-      out.shown = !!(d && d.offsetParent);
-      try { go('clients'); go('home'); } catch (e) {}
-      out.remembered = !document.querySelector('#hmFold_cal .hm-fold-b').hidden;
-      document.querySelector('#hmFold_cal .hm-fold-h').click();
-      out.reclosed = H();
+    /* ⚠ 2026-09-26 · <b>홈의 큰 접이는 없어졌습니다.</b> 사장님 말씀대로
+       달력·내 고객·TFA·SNS·관리를 <b>제 화면</b>으로 옮겼습니다. 접을 것이
+       없으니 「접혀 있나」 를 여기서 재면 헛것입니다 (8번).
+       ★ <b>지운 것이 아닙니다</b> — 대신 「📦 여기로 옮겼습니다」 한 줄이
+         있고, 눌러서 가지는지·손가락에 닿는지를 여기서 봅니다.
+         「거기서 실제로 서나」 는 check-homeshape 와 smoke 가 봅니다. */
+    const mv = document.querySelector('.hm-mv');
+    out.mv = !!mv;
+    out.mvH = mv ? Math.round(mv.getBoundingClientRect().height) : 0;
+    const bs = mv ? [].slice.call(mv.querySelectorAll('button')) : [];
+    out.mvN = bs.length;
+    out.mvSmall = bs.filter(e => e.getBoundingClientRect().height < 44).length;
+    if (bs.length) {
+      bs[0].click();
+      out.mvWent = (typeof lastTab !== 'undefined') ? lastTab : '';
+      try { go('home'); } catch (e) {}
     }
     return out;
   }, SEED);
   is(HM.nowTop >= 0 && HM.nowTop < HM.vh,
     '<b>「오늘 할 일」 이 첫 화면 안</b>에 있다 — 위에서 ' + HM.nowTop + 'px (화면 ' + HM.vh + 'px)');
-  is(HM.n >= 3, '큰 카드가 <b>접혀</b> 있다 — ' + HM.n + '개');
-  is(HM.allClosed === true, '처음에는 <b>다 접힌 채</b>로 연다');
-  is(HM.open > HM.closed, '머리를 누르면 <b>그 자리에서 펴진다</b> — ' + HM.closed + 'px → ' + HM.open + 'px');
-  is(HM.shown === true, '펴면 <b>안에 있던 것이 그대로</b> 보인다 — 지운 것이 아니다');
-  is(HM.remembered === true, '<b>편 것을 기억한다</b> — 다시 그려도 펴져 있다');
-  is(HM.reclosed === HM.closed, '도로 접으면 <b>원래대로</b> — ' + HM.reclosed + 'px');
+  is(HM.n === 0, '홈에 <b>접을 큰 카드가 없다</b> — ' + HM.n + '개 (제 화면으로 옮겼습니다)');
+  is(HM.mv === true, '<b>「여기로 옮겼습니다」 한 줄</b>이 있다 — ' + HM.mvH + 'px');
+  is(HM.mvN >= 5, '<b>어디로 갔는지</b> 하나하나 적는다 — ' + HM.mvN + '군데');
+  is(HM.mvSmall === 0, '옮긴 자리 단추도 <b>44px 아래가 없다</b>' + (HM.mvSmall ? (' ← ' + HM.mvSmall + '개') : ''));
+  is(!!HM.mvWent && HM.mvWent !== 'home', '누르면 <b>그 화면으로 간다</b> — ' + HM.mvWent);
+  is(HM.mvH <= 120, '안내는 <b>한 줄</b>이다 — ' + HM.mvH + 'px');
   is((HM.heads || []).every(h => !/NaN|undefined|null/.test(h)),
     '접힌 머리에 <b>부서진 숫자가 없다</b> — ' + (HM.heads || []).join(' / '));
 

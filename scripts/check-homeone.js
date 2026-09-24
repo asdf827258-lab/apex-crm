@@ -213,40 +213,57 @@ const tall = (p) => p.evaluate(() => {
   is(hA > 0 && hA <= 844 * 3.3,
      '  홈 높이 <b>' + hA + 'px</b> = 화면 ' + (hA / 844).toFixed(2) + '개 (3.3개 이하 · 고치기 전 4.2개)');
 
-  console.log('\n[3] ⚙️ 관리 — 접혀 있고, 머리가 말해 주고, 펴면 다 있다');
+  /* ── ⚠ 2026-09-26 · <b>⚙️ 관리 접이는 없어졌습니다</b> ──────────────
+     사장님 말씀 — 「🚦 출발 점검 → 「나 › 설정」 · 👥 팀 → 「나 › 팀」」.
+     접이 안에 있던 둘이 <b>제 화면</b>으로 갔으니 접을 것이 없습니다.
+     ★ <b>지운 것이 아닙니다.</b> 그래서 여기서 재는 것도 「접혀 있나」 가
+       아니라 <b>「가는 길이 있나 · 거기서 실제로 서나」</b> 로 바뀝니다 —
+       자리를 없애면 옮긴 것이 아니라 지운 것이 됩니다 (8번).           */
+  console.log('\n[3] 🚦 출발 점검 · 👥 팀 — 옮겼고, <b>가는 길</b>이 있다');
   const m1 = await A.p.evaluate(() => {
-    const box = document.getElementById('hmFold_ig');
-    const mng = document.getElementById('hmFold_mng');
-    return { ig: !!box, mng: !!mng,
-      접힘: !!(document.getElementById('hmFoldB_mng') || {}).hidden,
-      머리: ((mng || {}).innerText || '').replace(/\s+/g, ' ').trim(),
-      높이: mng ? Math.round(mng.getBoundingClientRect().height) : 0 };
+    const e = document.querySelector('.hm-mv');
+    return { 있다: !!e, 머리: ((e || {}).innerText || '').replace(/\s+/g, ' ').trim(),
+      높이: e ? Math.round(e.getBoundingClientRect().height) : 0 };
   });
-  is(m1.mng && m1.접힘, '  접힌 채로 뜬다 — ' + m1.높이 + 'px');
-  is(/안 된 것|서버 준비|팀/.test(m1.머리),
-     '  머리가 <b>무엇이 남았는지</b> 말한다 — 「' + m1.머리.slice(0, 44) + '」');
-  await A.p.evaluate(() => hmFoldToggle('mng')); await A.p.waitForTimeout(500);
-  const m2 = await A.p.evaluate(() => {
-    const b2 = document.getElementById('hmFoldB_mng');
-    return { 펴짐: !b2.hidden, 안에: [...b2.children].map(e => e.id),
-      높이: Math.round(b2.getBoundingClientRect().height) };
+  is(m1.있다, '  <b>옮긴 자리 한 줄</b>이 있다 — ' + m1.높이 + 'px');
+  is(/출발 점검/.test(m1.머리) && /팀/.test(m1.머리),
+     '  <b>출발 점검 · 팀</b>이 적혀 있다 — 「' + m1.머리.slice(0, 48) + '」');
+  const m2 = await A.p.evaluate(async () => {
+    const out = {};
+    go('ready'); await new Promise(r => setTimeout(r, 700));
+    out.ready = !!document.querySelector('.tab-pane.on');
+    out.readyTxt = (document.querySelector('.tab-pane.on') || {}).innerText || '';
+    go('home'); await new Promise(r => setTimeout(r, 500));
+    return out;
   });
-  is(m2.펴짐 && m2.안에.indexOf('hmReadyHost') >= 0 &&
-     m2.안에.indexOf('hmTeamHost') >= 0 && m2.높이 > 300,
-     '  펴면 <b>둘이 다 있다</b> — 지운 것이 아니다 · ' + m2.높이 + 'px');
-  /* ★ 준비 SQL 은 <b>이 안에 있으면 안 된다</b> — 여러 화면이 「홈 맨 위」
-     라고 가리킨다. 한 번 여기 넣었다가 check-setup 이 잡았다 (1번). */
-  is(m2.안에.indexOf('osSetupHome') < 0,
-     '  <b>준비 SQL 은 여기 없다</b> — 홈 맨 위에 있어야 안내가 거짓이 안 된다');
+  is(m2.ready && m2.readyTxt.length > 50,
+     '  <b>출발 점검이 제 화면에서 선다</b> — 지운 것이 아니다 · ' + m2.readyTxt.length + '자');
   is(await A.p.evaluate(() => {
        const st = document.getElementById('osSetupHome'), t = document.getElementById('hmToday');
        return !!(st && t && (st.compareDocumentPosition(t) & Node.DOCUMENT_POSITION_FOLLOWING));
      }), '  준비 SQL 자리가 <b>오늘 챙길 것보다 위</b>에 있다');
 
-  console.log('\n[4] 📸 오늘 올릴 것 — <b>받아 둔 진짜 기사</b>만');
-  await A.p.evaluate(() => hmFoldToggle('ig')); await A.p.waitForTimeout(500);
+  /* ⚠ 2026-09-26 · 📸 <b>오늘 올릴 것은 「콘텐츠」(news_live)로 갔습니다.</b>
+     사장님 말씀 — 「홈에는 「오늘 올릴 것 1건」 <b>한 줄만</b>」.
+     ★ 칸(hmIgHtml)을 <b>통째로 그대로</b> 옮겼습니다 — 재는 것도 그대로이고
+       <b>보는 자리만</b> 홈 → news_live 로 옮깁니다. 홈에는 칩 한 줄이 남고
+       그것도 여기서 같이 봅니다.                                        */
+  console.log('\n[4] 📸 오늘 올릴 것 — <b>받아 둔 진짜 기사</b>만 (「콘텐츠」에서)');
+  /* 활동량 줄은 <b>기록이 실려 온 뒤</b>에 그려집니다(hmArm 이 1.2초 뒤 다시
+     그립니다 — 동선과 같습니다). 여기서는 기다리지 않고 그 자리를 직접
+     깨웁니다 — 늦게 그려지는 것이 이 점검이 볼 자리는 아닙니다. */
+  await A.p.evaluate(() => { try { hmPaint(); } catch (e) {} });
+  await A.p.waitForTimeout(300);
+  const igChip = await A.p.evaluate(() => {
+    const e = document.querySelector('.hm-act .g button');
+    return { txt: e ? (e.innerText || '').replace(/\s+/g, ' ').trim() : '', has: !!e };
+  });
+  is(igChip.has && /올릴 것/.test(igChip.txt),
+     '  홈에는 <b>한 줄만</b> 남는다 — 「' + igChip.txt + '」');
+  await A.p.evaluate(() => go('news_live')); await A.p.waitForTimeout(700);
   const g = await A.p.evaluate(() => ({
-    머리: ((document.querySelector('#hmFold_ig .t') || {}).innerText || '').replace(/\s+/g, ' '),
+    머리: ((document.querySelector('#hmIgHost .hm-ig-h') || {}).innerText || '').replace(/\s+/g, ' ') ||
+          ((document.getElementById('hmIgHost') || {}).innerText || '').replace(/\s+/g, ' ').slice(0, 60),
     속: (document.getElementById('hmIgHost') || {}).innerText || '',
     링크: (document.querySelector('#hmIgHost a') || {}).href || '',
     단추: [...document.querySelectorAll('#hmIgHost button')].map(x => x.innerText.trim())
@@ -255,7 +272,7 @@ const tall = (p) => p.evaluate(() => {
   is(g.속.indexOf(NEWS[0].s) >= 0 && g.속.indexOf(NEWS[0].d) >= 0,
      '  <b>언론사·날짜</b>도 그대로 — ' + NEWS[0].s + ' · ' + NEWS[0].d);
   is(g.링크 === NEWS[0].u, '  <b>원문 링크</b>가 그 기사로 간다');
-  is(g.머리.indexOf(NEWS[0].t.slice(0, 10)) >= 0, '  펴지 않아도 <b>머리에 제목</b>이 있다');
+  is(g.머리.indexOf(NEWS[0].t.slice(0, 10)) >= 0, '  <b>머리에 제목</b>이 있다 — 무엇인지 바로 압니다');
   is(g.단추.some(x => /캡션/.test(x)) && g.단추.some(x => /카드뉴스/.test(x)) &&
      g.단추.some(x => /보낼 문구/.test(x)),
      '  <b>만들 자리</b>가 그 자리에 있다 — ' + g.단추.join(' · '));
@@ -266,7 +283,7 @@ const tall = (p) => p.evaluate(() => {
      '  카드뉴스·보낼 문구는 <b>이미 있는 것</b>을 부른다 — 두 벌로 안 만든다 (5번)');
 
   console.log('\n[5] <b>기사를 지어내지 않는다</b> (9번)');
-  await C.p.evaluate(() => hmFoldToggle('ig')); await C.p.waitForTimeout(500);
+  await C.p.evaluate(() => go('news_live')); await C.p.waitForTimeout(700);
   const z = await C.p.evaluate(() => ({
     속: (document.getElementById('hmIgHost') || {}).innerText || '',
     /* ★ <b>소식 자리만</b> 따로 재다. 같은 칸 안에 📣 SNS 관리가 같이 서서,
@@ -274,7 +291,9 @@ const tall = (p) => p.evaluate(() => {
        헛것을 잡는 점검은 안 잡는 점검보다 나쁘다 (8번). */
     소식: ((document.querySelector('#hmIgHost .hm-ig-no') ||
             document.querySelector('#hmIgHost .hm-ig-t') || {}).innerText || ''),
-    머리: ((document.querySelector('#hmFold_ig .t') || {}).innerText || '').replace(/\s+/g, ' ')
+    /* 접이 머리가 없어졌으니 <b>칸 머리</b>를 봅니다 — 같은 말이 적혀야 합니다 */
+    머리: ((document.querySelector('#hmIgHost .hm-ig-h') || document.getElementById('hmIgHost') || {}).innerText || '')
+            .replace(/\s+/g, ' ').slice(0, 80)
   }));
   /* ⚠ 「안 받았습니다」(아직 안 가져옴)와 「못 받았습니다」(가져오려다 실패)는
      다른 말이다. 앱은 앞엣것을 쓴다 — 여기서 뒤엣것만 찾다가 헛빨간불이
@@ -287,17 +306,20 @@ const tall = (p) => p.evaluate(() => {
   is(/받아 오기/.test(z.속), '  <b>어디서 받아 오는지</b> 길을 준다 (1번)');
   is(/안 받았습니다/.test(z.머리), '  머리도 <b>그대로</b> 말한다 — 「' + z.머리.replace(/\n/g,' ').slice(0, 40) + '」');
 
-  console.log('\n[6] <b>오늘 고른 기사는 다시 열어도 같다</b>');
-  const first = await A.p.evaluate(() => (document.getElementById('hmIgHost') || {}).innerText.split('\n')[0]);
+  console.log('\n[6] <b>오늘 고른 기사는 다시 열어도 같다</b> (「콘텐츠」에서)');
+  const head1 = () => A.p.evaluate(() => {
+    const e = document.getElementById('hmIgHost');
+    return e ? ((e.innerText || '').split('\n')[0] || '') : '';
+  });
+  await A.p.evaluate(() => { go('news_live'); }); await A.p.waitForTimeout(700);
+  const first = await head1();
   await A.p.evaluate(() => { go('clients'); }); await A.p.waitForTimeout(700);
-  await A.p.evaluate(() => { go('home'); }); await A.p.waitForTimeout(1600);
-  await A.p.evaluate(() => { if ((document.getElementById('hmFoldB_ig') || {}).hidden) hmFoldToggle('ig'); });
-  await A.p.waitForTimeout(500);
-  const again = await A.p.evaluate(() => (document.getElementById('hmIgHost') || {}).innerText.split('\n')[0]);
+  await A.p.evaluate(() => { go('news_live'); }); await A.p.waitForTimeout(900);
+  const again = await head1();
   is(!!first && first === again, '  다시 열어도 <b>같은 기사</b> — 「' + (again || '').slice(0, 30) + '」');
   /* 그런데 <b>일부러 바꾸면</b> 바뀌어야 한다 — 못 바꾸면 그것도 고장이다 */
   await A.p.evaluate(() => hmIgNext()); await A.p.waitForTimeout(600);
-  const next = await A.p.evaluate(() => (document.getElementById('hmIgHost') || {}).innerText.split('\n')[0]);
+  const next = await head1();
   is(!!next && next !== again, '  「다른 기사로」 를 누르면 <b>바뀐다</b> — ' + (next || '').slice(0, 26));
 
   console.log('\n[7] <b>따라만 하면 된다</b> — 소식 한 줄 · 다음 분');
@@ -306,13 +328,26 @@ const tall = (p) => p.evaluate(() => {
      여태 뉴스는 거절·기고객·증권전달의 도구 목록에만 있어 TA·AP·PC·CS 에는
      <b>연락할 구실</b>이 없었고, 오늘 못 닿는 분이 맨 위에 그대로 서 있으면
      그 다음 분으로 갈 길이 없었다.                                     */
+  /* [6] 이 「콘텐츠」에서 끝났으니 <b>홈으로 돌아와서</b> 봅니다 */
+  await A.p.evaluate(() => { go('home'); }); await A.p.waitForTimeout(900);
+  /* 홈으로 돌아온 <b>바로 그때</b>의 카드는 소식이 실리기 전 것일 수
+     있습니다(hmArm 이 1.2초 뒤 다시 그립니다). 여기서 깨워 두고 봅니다. */
+  await A.p.evaluate(() => { try { hmPaint(); } catch (e) {} });
+  await A.p.waitForTimeout(400);
   const nw = await A.p.evaluate(() => {
     const e = document.querySelector('.hm-nw');
-    return { 있나: !!e, 글: e ? e.innerText.replace(/\s+/g, ' ') : '',
+    /* ⚠ <b>어느 기사인지 못 박지 않습니다.</b> 「다른 기사로」 를 누르면
+       고른 기사가 바뀌는 것이 맞고(위 [6] 이 그것을 잽니다), 여기서
+       NEWS[0] 을 기다리면 그 정상 동작 때문에 빨간불이 켜집니다 (8번).
+       묻는 것은 <b>「지금 고른 그 기사를 그대로 쓰나」</b> 입니다 (5번). */
+    const i = (typeof hmIgIdx === 'function') ? hmIgIdx() : -1;
+    const want = (i >= 0 && NLIVE.items[i]) ? (NLIVE.items[i].t || '') : '';
+    return { 있나: !!e, 글: e ? e.innerText.replace(/\s+/g, ' ') : '', 고른것: want,
       복사: !!document.querySelector('.hm-nw [onclick^="nlCopy"]') };
   });
-  is(nw.있나 && nw.글.indexOf(NEWS[0].t) >= 0,
-     '  한 분 카드에 <b>오늘 보낼 소식</b>이 단계와 상관없이 선다');
+  is(nw.있나 && !!nw.고른것 && nw.글.indexOf(nw.고른것) >= 0,
+     '  한 분 카드에 <b>오늘 고른 그 기사</b>가 단계와 상관없이 선다 — 「' +
+     nw.고른것.slice(0, 28) + '」');
   is(nw.복사, '  <b>보낼 문구</b>는 뉴스 화면과 같은 것을 부른다 (5번)');
   /* 소식을 못 받았으면 <b>빈 줄을 안 세운다</b> — 「없음」 은 자리만 먹는다 */
   is(await C.p.evaluate(() => !document.querySelector('.hm-nw')),
