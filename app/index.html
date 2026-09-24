@@ -13087,7 +13087,7 @@ var TABS=[
    /* 🧭 <b>길잡이</b> — 문은 <b>옆줄 맨 아래 단추</b>입니다(renderNav).
       여기서는 hide 로 눈에서만 뺍니다 — 지도·설치와 같은 방식이라,
       🔎 찾기·음성·?go=helpme 주소로 그대로 열립니다 (1번). */
-   {id:'helpme',icon:'🧭',title:'무엇을 할지 모르겠다면',cnt:'9',hide:true,
+   {id:'helpme',icon:'🧭',title:'무엇을 할지 모르겠다면',cnt:'9',hide:true,tk:'업무매뉴얼',
     ak:'업무매뉴얼 길잡이 도움 모르겠다 뭐부터 무엇부터 시작 헤맬 때'},
    {id:'apexmaster',icon:'🎓',title:'APEX 마스터 과정',cnt:'14',ak:'업무매뉴얼 마스터 과정 신입 교육 따라하기 익히기 하루한장'},
    {id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:'',ak:'업무매뉴얼'},
@@ -23699,7 +23699,12 @@ function hdbSgPick(id,to){
 /* AP 한 자리에만 도구가 <b>여섯</b>이다 — 상담자료 둘 · 화법 · 컨셉 둘 · 전·후.
    셋에서 자르면 사장님이 말씀하신 것 중 절반이 <b>안 보인다.</b> 번호가 붙어
    있으니 늘어도 고르기 어렵지 않다. */
-var HM_PICK_TOOLS=6;
+/* ★ <b>카드에 세우는 도구는 셋까지</b>입니다. 사장님 말씀대로 카드는
+   「할 일 하나 + 도구 셋 + 했습니다」 <b>다섯 갈래</b>라야 따라가집니다
+   (check-tdo 가 지킵니다). 단계 도구가 열 가지까지 늘어난 지금, 다 세우면
+   갈래가 여덟이 되어 <b>고르는 것이 일</b>이 됩니다. 나머지는 없어진 것이
+   아니라 서랍·도구에 그대로 있습니다 (1번). */
+var HM_PICK_TOOLS=3;
 /* <b>「만남로」</b> 라고 찍혔습니다 — 받침이 있으면 「으로」 입니다.
    수단(ch)은 만남·전화·문자 셋이지만 <b>표로 적지 않습니다</b> — 수단을
    늘릴 때 그 표만 안 고쳐져 또 「…로」 가 찍힙니다 (5번). 받침으로 가립니다.
@@ -24207,6 +24212,51 @@ function hmPick(key,i){
   if(p.act==='did'){ hmDid(key); return; }
   hmOpen(key);
 }
+
+/* ══ 🧰 <b>이 단계에서 쥘 것</b> — 갈래에 못 담은 나머지 ═══════════════
+   단계 도구가 열 가지까지 늘었습니다(AP 10 · PC 10). 그런데 카드는 사장님
+   말씀대로 <b>다섯 갈래</b>라야 따라가집니다 — 「할 일 하나 + 도구 셋 +
+   했습니다」. 열 가지를 번호로 세우면 <b>고르는 것이 일</b>이 됩니다.
+
+   그렇다고 나머지를 안 세우면 <b>홈에서 못 엽니다</b> — 새 명세가 「그 분
+   카드에서 바로 따라오게」 하라고 한 것이 바로 이것입니다. 그래서 번호
+   갈래 아래 <b>한 줄 칩</b>으로 답니다. 누르면 갈래와 <b>똑같이</b>
+   덮개로 열립니다(hmSheetOpen) — 홈에서 안 벗어납니다 (7번).
+   ★ 갈래에 이미 선 것은 <b>여기 또 안 적습니다</b> (5번).             */
+function hmBoxRest(x){
+  var k=(x&&x.k==='db')?x.tk:(x&&x.k),
+      L=(typeof tdoTools==='function')?tdoTools(k):[],
+      out=[],i;
+  for(i=HM_PICK_TOOLS;i<L.length;i++)out.push(L[i]);
+  return out;
+}
+function hmBoxCss(){
+  if(document.getElementById('hmBoxCss'))return;
+  var st=document.createElement('style');st.id='hmBoxCss';
+  st.textContent='.hm-box{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:10px}'+
+    '.hm-box>b{font-size:var(--t6);font-weight:800;color:var(--ink-4);flex:none}'+
+    '.hm-box-b{min-height:44px;padding:8px 12px;border-radius:var(--r-pill);'+
+      'border:1px solid var(--ink-7);background:var(--white);font-family:inherit;'+
+      'font-size:var(--t6);font-weight:700;color:var(--ink-2);cursor:pointer;'+
+      'white-space:nowrap}'+
+    '.hm-box-b:hover{background:var(--bg-1)}';
+  document.head.appendChild(st);
+}
+function hmBoxHtml(x){
+  var L=hmBoxRest(x),h='',i;
+  if(!L.length)return '';
+  hmBoxCss();
+  for(i=0;i<L.length;i++)
+    h+='<button type="button" class="hm-box-b" onclick="hmBoxGo(\''+L[i].id+'\',\''+
+       ((x&&x.key)||'')+'\')">'+(L[i].icon||'🧰')+' '+osEsc(L[i].title||L[i].id)+'</button>';
+  return '<div class="hm-box"><b>🧰 이 단계에서 쥘 것</b>'+h+'</div>';
+}
+/* 갈래와 <b>똑같이</b> 엽니다 — 여는 길이 둘이면 한쪽만 고쳐집니다 (5번) */
+function hmBoxGo(id,key){
+  var it=(typeof navItemOf==='function')?navItemOf(id):null;
+  hmSheetOpen(id,key,(it&&it.title)||id);
+}
+
 function hmNowHtml(){
   try{ hmKtCss(); hmTaCss(); hmPdCss(); }catch(e){}   /* 옷을 쓰는 화면에서 부른다 (5번) */
   var r=hmNext();
@@ -24228,7 +24278,7 @@ function hmNowHtml(){
     /* <b>묻고 고르게</b> 합니다 — 번호가 붙은 갈래를 세우고, 누르면
        그 자리에서 그 일이 벌어집니다. 여태는 도구 단추만 한 줄로
        늘어놓아, 읽고 나서 다시 고르는 두 동작이 됐습니다. */
-    hmTaHtml(x)+hmPdHtml(x)+hmPicksHtml(x)+hmKtHtml(x.key)+
+    hmTaHtml(x)+hmPdHtml(x)+hmPicksHtml(x)+hmBoxHtml(x)+hmKtHtml(x.key)+
     /* <b>단계를 그 자리에서</b> 옮긴다 — DB 통합 CRM 까지 안 가도 된다.
        배정 DB 에서 올라온 줄에만 선다(hdbStripHtml 이 스스로 가린다). */
     hdbStripHtml(x)+

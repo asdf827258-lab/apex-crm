@@ -54,11 +54,15 @@ var GO={'미접촉':'TA','부재':'TA','거절':'','TA':'AP','AP':'PC','PC':'CS'
      check-toolmap 이 어긋나면 빨간불을 켭니다 (8번).                   */
 var BOX=[
  {when:'미접촉 · 부재 · 거절', sub:'아직 못 만난 분', st:['미접촉','부재','거절'],
-  items:['mikki_talk','news_live','cs_assist','mikki']},
+  /* ★ biz_news 는 <b>사장님이 못 박으신 것</b>입니다(2026-09-18 · check-tdo).
+     새 명세가 빼라고 한 적은 없으므로 <b>더해서</b> 둘 다 지킵니다 —
+     묶음은 「반드시 들어 있어야 할 것」 이지 「이것만」 이 아닙니다. */
+  items:['mikki_talk','news_live','cs_assist','mikki','biz_news']},
  {when:'TA', sub:'날짜를 잡는 자리', st:['TA'],
   items:['cs_assist','sangdam','voiceasst']},
  {when:'AP', sub:'만나서 펴 놓는 것', st:['AP'],
-  items:['sangdam','fp_deck','fp_talk','brain','cs_needs','utphoto','dz_guide','wallets','fact_find']},
+  /* ★ frmake(전&후 만들기)도 사장님이 AP 에 못 박으신 것입니다 */
+  items:['sangdam','fp_deck','fp_talk','brain','cs_needs','frmake','utphoto','dz_guide','wallets','fact_find']},
  {when:'PC', sub:'제안서를 들고 다시 묻는 자리', st:['PC'],
   items:['frmake','baba','bojang','compare','onecmp','ai_prop','katalk','finance','interpret','ins_asst']},
  {when:'CS', sub:'청약 — 걸릴 것을 먼저 본다', st:['CS'],

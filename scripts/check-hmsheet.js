@@ -58,6 +58,11 @@ const look = (page) => page.evaluate(() => {
   const bar = document.getElementById('hmBack');
   const now = document.querySelector('#dynPane .hm-now');
   const opts = [...document.querySelectorAll('#dynPane .hm-now .hm-ask-o')];
+  /* 🧰 갈래에 못 담은 나머지는 <b>칩 한 줄</b>로 섭니다. 여는 길은 갈래와
+     똑같이 hmSheetOpen 이라, 「홈에서 다 열리나」를 볼 때는 <b>둘을 함께</b>
+     세야 합니다. 번호 갈래만 세면 카드를 다섯 줄로 줄인 순간 빨간불이
+     켜지는데, 화면에는 멀쩡히 다 서 있습니다 — 헛것입니다 (8번). */
+  const chips = [...document.querySelectorAll('#dynPane .hm-now .hm-box-b')];
   return {
     sheetOn: !!(sh && sh.classList.contains('on')),
     src: fr ? (fr.getAttribute('src') || '') : '',
@@ -66,6 +71,7 @@ const look = (page) => page.evaluate(() => {
     homeAlive: !!now,
     head: now ? (now.querySelector('.hm-now-k') || {}).textContent || '' : '',
     opts: opts.map(b => (b.textContent || '').replace(/\s+/g, ' ').trim()),
+    chips: chips.map(b => (b.textContent || '').replace(/\s+/g, ' ').trim()),
     shHead: sh ? (sh.textContent || '').replace(/\s+/g, ' ').trim() : ''
   };
 });
@@ -105,17 +111,25 @@ const look = (page) => page.evaluate(() => {
      <b>그 이름이 무엇인지는 메뉴</b>(navItemOf)에 묻는다. 둘 다 앱이
      실제로 쓰는 곳이라, 이름을 바꾸면 이 점검도 저절로 따라온다 (5번). */
   const want = await page.evaluate(() => {
-    const ids = (window.APEX_STAGE && APEX_STAGE.map && APEX_STAGE.map['AP'])
-      ? (APEX_STAGE.map['AP'].tools || []) : [];
+    /* ⚠ 2026-09-28 · 단계별 도구가 <b>BOX 한 표</b>로 모였습니다.
+       예전에는 map['AP'].tools 에 손으로 적혀 있었는데, 「도구」 묶음표와
+       두 벌이라 한쪽만 늙었습니다 (5번). 이제 표에 직접 묻습니다. */
+    const ids = (window.APEX_STAGE && APEX_STAGE.toolIds) ? (APEX_STAGE.toolIds('AP') || []) : [];
     return ids.map(id => {
       const it = (typeof navItemOf === 'function') ? navItemOf(id) : null;
       return it ? (it.title || '') : '';
     }).filter(Boolean);
   });
   is(want.length >= 5, '  AP 가 쥘 도구를 <b>표에서 읽었다</b> — ' + want.length + '가지 · ' + want.join(' / '));
-  const miss = want.filter(t => !A.opts.some(o => o.indexOf(t) >= 0));
+  const all = A.opts.concat(A.chips);
+  const miss = want.filter(t => !all.some(o => o.indexOf(t) >= 0));
   is(want.length > 0 && miss.length === 0,
-     '  AP 에서 <b>' + want.length + '가지</b>가 다 보인다' + (miss.length ? (' ← 빠진 것 ' + miss.join(' / ')) : ''));
+     '  AP 에서 <b>' + want.length + '가지</b>가 다 보인다 — 번호 ' + A.opts.length +
+     ' · 칩 ' + A.chips.length + (miss.length ? (' ← 빠진 것 ' + miss.join(' / ')) : ''));
+  /* <b>같은 것이 두 줄에 서지 않는다</b> (5번) — 번호로 세운 것을 칩에도
+     또 적으면 사장님이 두 번 누르실 자리가 생깁니다. */
+  const dup = A.chips.filter(c => A.opts.some(o => o && c && o.indexOf(c.replace(/^\S+\s/, '')) >= 0));
+  is(dup.length === 0, '  갈래에 선 것을 <b>칩에 또 안 적는다</b>' + (dup.length ? (' ← ' + dup.join(' / ')) : ''));
 
   /* ── [2][3][4] 덮개 ── */
   console.log('\n[2] 도구를 누르면 <b>덮개</b>가 뜨고 <b>그 파일</b>을 문다');

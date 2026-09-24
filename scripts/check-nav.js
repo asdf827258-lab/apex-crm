@@ -193,16 +193,25 @@ async function boot(page) {
   is(hid.stillSeen.length === 0, '평소 목록에는 안 보인다' + (hid.stillSeen.length ? ' — 아직 보임: ' + hid.stillSeen.join(', ') : ''));
   is(hid.notFound.length === 0, '이름으로 찾으면 나온다 — 지운 게 아니다' + (hid.notFound.length ? ' — 못 찾음: ' + hid.notFound.join(', ') : ''));
 
-  /* 메뉴를 다른 칸으로 옮길 때 ak 를 안 달고 가면 요금제 문이 조용히 따라 움직인다.
-     화면으로는 절대 안 보이는 사고라, 여기서 못을 박아 둔다. */
+  /* 메뉴를 다른 칸으로 옮길 때 열쇠를 안 달고 가면 요금제 문이 조용히 따라 움직인다.
+     화면으로는 절대 안 보이는 사고라, 여기서 못을 박아 둔다.
+
+     ⚠ 2026-09-28 · <b>열쇠는 ak 가 아니라 osItemKey(g,it) 입니다.</b>
+       찾기 낱말(ak)과 등급 열쇠(tk)를 갈라 놓았습니다 — ak 는 「연금 노후
+       은퇴…」 처럼 <b>찾으라고 늘리는 말</b>이고, 문을 여는 것은 tk 입니다.
+       여기서 ak 를 읽으면, 찾기 낱말을 한 줄 늘릴 때마다 「설정 표에서
+       빠졌다」 고 빨간불이 켜집니다 — 문은 멀쩡한데 말입니다 (8번).
+       앱이 실제로 문을 열 때 쓰는 함수에 그대로 묻습니다 (5번).        */
   const gate = await page.evaluate(() => {
     var known = {}, noAk = [], badAk = [], mixed = [];
     /* 문 열쇠로 쓸 수 있는 이름 = 등급표·직급표에 등록돼 있거나 무료(기본) */
     TABS.forEach(function (g) {
       (g.items || []).forEach(function (it) {
-        if (!it.ak) { noAk.push(it.id); return; }
-        if (!known[it.ak]) known[it.ak] = [];
-        known[it.ak].push(it.id);
+        /* <b>자기 열쇠</b>를 들고 있어야 한다 — 칸에서 물려받으면 옮길 때 딸려 간다 */
+        if (!it.tk && !it.ak) { noAk.push(it.id); return; }
+        var key = osItemKey(g, it);
+        if (!known[key]) known[key] = [];
+        known[key].push(it.id);
       });
     });
     /* 같은 열쇠를 단 것들은 등급 판정이 반드시 같아야 한다 */
@@ -222,7 +231,7 @@ async function boot(page) {
       items: rows.length ? Object.keys(known).length : 0 };
   });
   is(gate.noAk.length === 0,
-    '메뉴마다 원래 구분(ak)이 붙어 있다' + (gate.noAk.length ? ' — 없는 것: ' + gate.noAk.slice(0, 6).join(', ') : ''));
+    '메뉴마다 <b>자기 열쇠</b>(tk 또는 ak)가 붙어 있다' + (gate.noAk.length ? ' — 없는 것: ' + gate.noAk.slice(0, 6).join(', ') : ''));
   is(gate.mixed.length === 0,
     '같은 구분끼리는 등급 판정이 같다' + (gate.mixed.length ? ' — 어긋남: ' + gate.mixed.join(', ') : ''));
   is(gate.badAk.length === 0,
