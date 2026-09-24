@@ -2012,7 +2012,10 @@ body.dzguide-mode #dzGuideScreen{display:block;}
     <button class="ff-back" onclick="exitApexMap()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadApexMap()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openApexMapNewTab()" title="새 탭에서 열기">↗</button>
+    <!-- 지도에 아직 안 올라온 화면이 있으면 여기서 말해 줍니다 (없으면 안 섭니다) -->
+    <button class="ff-back" id="amissBtn" hidden onclick="amissToggle()"></button>
   </div>
+  <div id="amissPane"></div>
 </div>
 
 <!-- 미끼 레이더 전용 화면 -->
@@ -6046,6 +6049,7 @@ function osTabProbe(tab){
   if(tab==='fin_ins')return renderFinIns();
   if(tab==='ai_prop')return renderAiProposal();
   if(tab==='interpret')return renderInterpret();
+  if(tab==='helpme')return renderHelpMe();
   if(tab==='wallets')return renderWallets();
   if(tab==='treatpay')return renderTreatPay();
   if(tab==='endorse')return renderEndorse();
@@ -9188,7 +9192,14 @@ var TDO_NOTABLE=0;
   for(i=0;i<S.order.length;i++){
     k=S.order[i]; m=S.map[k];
     if(!TDO[k]||!m)continue;
-    TDO[k].ch=m.ch; TDO[k].aim=m.aim; TDO[k].way=m.way; TDO[k].tools=m.tools;
+    TDO[k].ch=m.ch; TDO[k].aim=m.aim; TDO[k].way=m.way;
+    /* ★ 도구는 <b>BOX 한 표</b>에서 뽑아 옵니다 (2026-09-28 · 5번).
+       예전에는 apex-stage 의 MAP 에 손으로 적은 목록을 그대로 베껴 왔는데,
+       「도구」 화면이 쓰는 표와 두 벌이 되어 한쪽만 늙었습니다.
+       ★ 이름표에 매이지 않는 toolIds 를 씁니다 — 본체는 이름을 메뉴에서
+         가져오므로(tdoTools → navItemOf), 이름표가 한 줄 빠져도 도구가
+         화면에서 사라지지 않습니다 (1번). */
+    TDO[k].tools=(typeof S.toolIds==='function')?S.toolIds(k):[];
   }
 })();
 
@@ -12976,26 +12987,26 @@ var TABS=[
       증권 분석 칸에 서 있다고 남의 권한을 쓰면 못 여는 사람에게 단추만 보인다. */
    {id:'frmake',icon:'🔀',title:'보장분석 전&후 만들기',cnt:'',ak:'고객'},
    {id:'compare',icon:'📊',title:'제안서 비교',cnt:'',ak:'보장분석'},
-   {id:'onecmp',icon:'💯',title:'한장 보험료 비교',cnt:'',ak:'보험료 비교 담보 설계 한장 보험사'},
+   {id:'onecmp',tk:'보험료 비교 담보 설계 한장 보험사',icon:'💯',title:'한장 보험료 비교',cnt:'',ak:'보험료 비교 담보 설계 한장 보험사 견적 33개 제휴'},
    {id:'ai_prop',icon:'🧾',title:'AI 제안서 생성',cnt:'',ak:'보장분석'},
    {id:'katalk',icon:'💬',title:'제안서 카톡설명',cnt:'',ak:'보장분석'},
    {id:'interpret',icon:'🧠',title:'보험 해석',cnt:'',ak:'보험 해석'},
-   {id:'treatpay',icon:'💉',title:'치료비 지급지도',cnt:'',ak:'보장분석'},
-   {id:'wallets',icon:'🗺️',title:'8통장 진단지도',cnt:'8',ak:'8통장 지도'}
+   {id:'treatpay',tk:'보장분석',icon:'💉',title:'치료비 지급지도',cnt:'',ak:'보장분석 암 뇌 심장 진단금 얼마 나오나'},
+   {id:'wallets',tk:'8통장 지도',icon:'🗺️',title:'8통장 진단지도',cnt:'8',ak:'8통장 지도 빈 공백 진단 보장분석'}
  ]},
  {group:'상담 도구',items:[
    {id:'cs_assist',icon:'💬',title:'AI 상담 어시스턴트',cnt:'',ak:'상담 AI 코치'},
    {id:'cs_needs',icon:'⚡',title:'니즈 시뮬레이터',cnt:'',ak:'상담 AI 코치'},
    {id:'ins_asst',icon:'🩺',title:'보험 비서',cnt:'',ak:'상담 AI 코치'},
    {id:'cs_gso',icon:'🤖',title:'금소법 AI',cnt:'',ak:'상담 AI 코치'},
-   {id:'sangdam',icon:'📋',title:'보장분석 상담자료',cnt:'',ak:'고객'},
+   {id:'sangdam',tk:'고객',icon:'📋',title:'보장분석 상담자료',cnt:'',ak:'고객 상담자료 덱 발표 설명'},
    {id:'utphoto',icon:'📸',title:'비대면 상담사진·멘트',cnt:'',ak:'고객'},
    {id:'bohum',icon:'📕',title:'보험 마스터 아카데미',cnt:'11',ak:'교재 신입 교육 자가학습 아카데미 보험마스터 질병백과 수술분류 치료비 테스트 화법'},
    {id:'fp_deck',icon:'📊',title:'재무&보장 상담자료',cnt:'',ak:'고객'},
    {id:'fp_talk',icon:'🗣️',title:'재무설계 실전화법서',cnt:'',ak:'고객'},
-   {id:'dz_guide',icon:'🩺',title:'질병 보험가이드',cnt:'',ak:'고객'},
-   {id:'mikki_talk',icon:'🎣',title:'미끼상품&접촉전략',cnt:'27',ak:'고객'},
-   {id:'finance',icon:'📊',title:'재무설계 계산기',cnt:'',ak:'재무설계'},
+   {id:'dz_guide',tk:'고객',icon:'🩺',title:'질병 보험가이드',cnt:'',ak:'고객 병명 질병 증상 코드'},
+   {id:'mikki_talk',tk:'고객',icon:'🎣',title:'미끼상품&접촉전략',cnt:'27',ak:'고객 화법 물꼬 접촉 첫통화'},
+   {id:'finance',tk:'재무설계',icon:'📊',title:'재무설계 계산기',cnt:'',ak:'재무설계 연금 노후 은퇴 저축 목돈 현금흐름 상속'},
    {id:'calc',icon:'🧮',title:'실무 계산기',cnt:'7',ak:'재무설계'}
  ]},
  {group:'투자·경제',items:[
@@ -13005,29 +13016,29 @@ var TABS=[
    {id:'inv_econ',icon:'🌡️',title:'경제동향 실시간',cnt:'',ak:'투자·경제'}
  ]},
  {group:'계약·청구',items:[
-   {id:'pdel',icon:'📮',title:'증권 전달',cnt:'',ak:'계약관리 증권전달 속지 안내장 담보풀이 보험사연락처 전달화법 사후관리'},
+   {id:'pdel',tk:'계약관리',icon:'📮',title:'증권 전달',cnt:'',ak:'계약관리 증권전달 속지 안내장 담보풀이 보험사연락처 전달화법 사후관리 소개'},
    {id:'contracts',icon:'📜',title:'계약관리 판단',cnt:'17',ak:'계약관리'},
    {id:'endorse',icon:'✍️',title:'배서 안내서',cnt:'',ak:'계약관리'},
-   {id:'claims',icon:'🧾',title:'청구·사후관리',cnt:'',ak:'청구·사후관리'},
-   {id:'med_silbi',icon:'🧮',title:'AI 실비계산기',cnt:'',ak:'청구·사후관리'},
+   {id:'claims',tk:'청구·사후관리',icon:'🧾',title:'청구·사후관리',cnt:'',ak:'청구·사후관리 보험금 서류'},
+   {id:'med_silbi',tk:'청구·사후관리',icon:'🧮',title:'AI 실비계산기',cnt:'',ak:'청구·사후관리 실손 실비 병원비 얼마'},
    {id:'med_checkup',icon:'🩺',title:'AI 건강검진',cnt:'',ak:'청구·사후관리'},
-   {id:'med_disclosure',icon:'📋',title:'알릴의무 필터',cnt:'',ak:'청구·사후관리'},
+   {id:'med_disclosure',tk:'청구·사후관리',icon:'📋',title:'알릴의무 필터',cnt:'',ak:'청구·사후관리 고지 병력 수술 이력 심사'},
    {id:'car_fault',icon:'🚗',title:'자동차사고 과실·보상',cnt:'',ak:'청구·사후관리'}
  ]},
  {group:'자료 조회',items:[
    {id:'ref_jeonsan',icon:'🏢',title:'보험사 전산',cnt:'',ak:'보험 레퍼런스'},
-   {id:'ref_underwrite',icon:'⚠️',title:'예외질환 인수확인',cnt:'',ak:'보험 레퍼런스'},
+   {id:'ref_underwrite',tk:'보험 레퍼런스',icon:'⚠️',title:'예외질환 인수확인',cnt:'',ak:'보험 레퍼런스 유병자 인수 거절 병력'},
    {id:'ref_kcd',icon:'📕',title:'질병코드·특약',cnt:'',ak:'계약관리'},
    {id:'ref_surgery',icon:'🔪',title:'수술명 검색',cnt:'',ak:'계약관리'},
    {id:'ref_hira',icon:'🔗',title:'건강보험심사평가원',cnt:'',ak:'보험 레퍼런스'},
-   {id:'ref_hidden',icon:'💰',title:'숨은보험금찾기',cnt:'',ak:'보험 레퍼런스'}
+   {id:'ref_hidden',tk:'보험 레퍼런스',icon:'💰',title:'숨은보험금찾기',cnt:'',ak:'보험 레퍼런스 미청구 잠자는 보험금 시효'}
  ]},
  {group:'법인 컨설팅',items:[
-   {id:'biz_diag',icon:'🧭',title:'사업자 진단',cnt:'',ak:'법인·사업자 컨설팅'},
+   {id:'biz_diag',tk:'법인·사업자 컨설팅',icon:'🧭',title:'사업자 진단',cnt:'',ak:'법인·사업자 컨설팅 대표 절세 진단'},
    {id:'biz_fund',icon:'🏦',title:'정책자금',cnt:'',ak:'법인·사업자 컨설팅'},
    {id:'biz_tax',icon:'🧾',title:'세금컨설팅',cnt:'',ak:'법인·사업자 컨설팅'},
    {id:'biz_ins',icon:'☂️',title:'보험 솔루션',cnt:'',ak:'법인·사업자 컨설팅'},
-   {id:'biz_retire',icon:'🪙',title:'퇴직금 관리',cnt:'',ak:'법인·사업자 컨설팅'},
+   {id:'biz_retire',tk:'법인·사업자 컨설팅',icon:'🪙',title:'퇴직금 관리',cnt:'',ak:'법인·사업자 컨설팅 퇴직 연금 IRP'},
    {id:'biz_staff',icon:'👥',title:'직원관리',cnt:'',ak:'법인·사업자 컨설팅'}
  ]},
  {group:'콘텐츠 제작',items:[
@@ -13072,7 +13083,12 @@ var TABS=[
    /* 지도는 맨 왼쪽 위 「APEX 사용가이드」 바로 밑에 단추로 세워 두었다(renderNav).
       여기서는 hide 로 눈에서만 뺀다 — 두 번 서면 어수선하다. 지우지 않는 이유는
       숨긴 다른 것들과 같다: 🔎 메뉴 찾기·음성·?go=apexmap 주소로 그대로 열린다. */
-   {id:'apexmap',icon:'🗺️',title:'APEX 전체 지도',cnt:'89',hide:true,ak:'업무매뉴얼 지도 자비스 전체'},
+   {id:'apexmap',icon:'🗺️',title:'APEX 전체 지도',cnt:'',hide:true,ak:'업무매뉴얼 지도 자비스 전체'},
+   /* 🧭 <b>길잡이</b> — 문은 <b>옆줄 맨 아래 단추</b>입니다(renderNav).
+      여기서는 hide 로 눈에서만 뺍니다 — 지도·설치와 같은 방식이라,
+      🔎 찾기·음성·?go=helpme 주소로 그대로 열립니다 (1번). */
+   {id:'helpme',icon:'🧭',title:'무엇을 할지 모르겠다면',cnt:'9',hide:true,tk:'업무매뉴얼',
+    ak:'업무매뉴얼 길잡이 도움 모르겠다 뭐부터 무엇부터 시작 헤맬 때'},
    {id:'apexmaster',icon:'🎓',title:'APEX 마스터 과정',cnt:'14',ak:'업무매뉴얼 마스터 과정 신입 교육 따라하기 익히기 하루한장'},
    {id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:'',ak:'업무매뉴얼'},
    /* ── <b>TFA 에서 뺀 둘을 여기에 세웁니다</b> (2026-09-21) ─────────
@@ -13229,7 +13245,7 @@ var NAV_WHEN={
  biz_diag:'know', biz_fund:'know', biz_tax:'know', biz_ins:'know',
  biz_retire:'know', biz_staff:'know',
  inv_stock:'know', inv_fund:'know', inv_perf:'know', inv_econ:'know',
- bohum:'know', manual:'know', apexmap:'know', apexmaster:'know',
+ bohum:'know', manual:'know', apexmap:'know', apexmaster:'know', helpme:'know',
  academy_notion:'know', academy:'know', mycoach:'know', growboard:'know',
  /* ⚙️ 팀 · 설정 */
  org:'run', attend:'run', audit:'run', teamhub:'run', daily:'run',
@@ -13884,7 +13900,16 @@ function navFixHtml(){
       '<span class="sbg-go">처음이시면 여기부터</span></button>'+
     '<button type="button" class="sb-guide map" onclick="go(\'apexmap\')">'+
       '<span class="sbg-ic">🗺️</span><span class="sbg-t">APEX 전체 지도</span>'+
-      '<span class="sbg-go">화면 89개 · 자비스</span></button>'+
+      /* ⚠ 여기 <b>개수를 안 적습니다.</b> 「89개」 라고 박아 두었는데 화면이
+         늘어 거짓말이 됐습니다 — 지도에 빠진 것은 지도 화면이 그 자리에서
+         세어 말합니다(amissPaint · 1번).                               */
+      '<span class="sbg-go">한눈에 · 옛 이름으로도 찾힘</span></button>'+
+    /* 🧭 <b>맨 아래 한 단추</b> — 사장님 말씀 「옆줄 맨 아래 단추 하나」.
+       메뉴를 다 훑어도 무엇부터 할지 모를 때가 있습니다. 그때 찾는 자리라
+       <b>찾기 칸 바로 위</b>, 지도 밑에 둡니다.                        */
+    '<button type="button" class="sb-guide hlp" onclick="go(\'helpme\')">'+
+      '<span class="sbg-ic">🧭</span><span class="sbg-t">무엇을 할지 모르겠다면</span>'+
+      '<span class="sbg-go">아홉 가지를 위에서부터</span></button>'+
     '<div class="nav-find"><span class="nf-ic">🔎</span>'+
       '<input id="navFind" placeholder="찾기 — 화면 · 고객 · 팀원 (초성도 됩니다)" autocomplete="off">'+
       '<button type="button" class="nf-x" id="navFindX" hidden '+
@@ -16470,6 +16495,7 @@ function go(tab){
   }
   if(tab==='apexmap'){
     mountApexMap();
+    try{ amissPaint(); }catch(e){}
     osFullMode('apexmap-mode');
     navMark('apexmap');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
@@ -16607,6 +16633,7 @@ function go(tab){
   else if(tab==='branch_coach'){dyn.innerHTML=renderBranchCoach();if(typeof osBranchCoachAfterRender==='function')osBranchCoachAfterRender();}
   else if(tab==='hq'){dyn.innerHTML=renderHQ();if(typeof osHqAfterRender==='function')osHqAfterRender();}
   else if(tab==='audit'){dyn.innerHTML=renderAudit();if(typeof osAuditAfterRender==='function')osAuditAfterRender();}
+  else if(tab==='helpme')dyn.innerHTML=renderHelpMe();
   else if(tab==='manual')dyn.innerHTML=renderManual();
   else if(tab==='apexmaster')dyn.innerHTML=renderApexMaster();
   else if(tab==='brain'){dyn.innerHTML=renderBrain();if(typeof osBrainAfterRender==='function')osBrainAfterRender();}
@@ -16964,8 +16991,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-28 02:10';
-var APP_BUILD_NOTE="📏 <b>「한 줄」 이라고 적었는데 폰에서는 두 줄이었습니다 — 말과 화면을 맞췄습니다.</b>　—　준비 SQL 을 「나중에」 로 닫으면 그 자리에 남는 줄을 <b>「한 줄 48px」</b> 이라고 적어 두었습니다. 그런데 그건 <b>넓은 화면에서 잰 값</b>이었습니다. 폰에서 열어 보니 <b>두 줄 91px</b> 입니다 — 한 줄에 드는 너비가 <b>512px</b> 인데 폰은 320~430px 입니다. 없는 것을 적은 것입니다 (1번).　—　① <b>모양을 다잡았습니다.</b> 단추 둘(📋 복사하고 Supabase 열기 · 펴기 ▾)이 따로 있어 폰에서 <b>서로 다른 줄로 갈라져</b> 세 줄(115px)이 되기도 했습니다. 둘을 한 덩어리로 묶어 <b>320px 부터 430px 까지 어디서나 두 줄(91px)</b> 로 똑같이 섭니다. 넓은 화면에서는 한 줄(48px).　—　② <b>점검이 이제 폰에서 잽니다.</b> 여태 1280px 에서만 재어 「48px」 만 보고 있었습니다 — 사장님은 폰에서 보십니다. 자리를 넷 더했습니다: 폰에서도 그 줄이 서나 · <b>펼친 배너의 절반 아래</b>인가(91px / 299px) · 단추 둘이 <b>같은 줄</b>에 붙어 있나 · 단추 덩어리가 <b>제일 좁은 폰(320px)</b> 에도 드나(252px).　—　★ <b>px 를 박아 두지 않았습니다.</b> 「펼친 배너보다 훨씬 작은가」 를 묻습니다 — 그것이 「닫았다」 의 뜻입니다. 숫자를 박아 두면 글자 크기를 바꿀 때마다 그 줄이 낡습니다.　—　되돌려 빨간불을 확인했습니다 — 감싸개를 없애기(2자리) · 접어도 배너만큼 크게(2자리).　—　⚠ <b>이것은 제가 잘못 잰 것을 고친 판입니다.</b> 기능은 처음부터 제대로 돌아가고 있었습니다. 다만 <b>넓은 화면에서만 재고 폰에서 안 쟀습니다</b> — 그래서 점검을 폰까지 넓혔습니다. 한 화면에서만 재는 자는 그 화면만 지킵니다 (8번).";
+var APP_BUILD='2026-09-28 10:40';
+var APP_BUILD_NOTE="🧰 <b>도구를 「언제 쓰는가」로 묶고, 길잡이를 놓았습니다.</b>　—　① <b>도구 묶음 열</b> — 미접촉·부재·거절 / TA / AP / PC / CS / 계약·증권전달 / 사후관리 / 언제나 / 법인 / 투자. ★ <b>표 하나</b>(apex-stage.js 의 BOX)에서만 옵니다 — 단계별 도구를 손으로 또 적던 자리를 지웠습니다(두 벌이었습니다 · 5번). 그 분 단계에 맞는 도구가 <b>오늘 카드에 그대로</b> 따라옵니다 — AP 면 열 가지, PC 면 열 가지. 다만 카드는 <b>다섯 갈래</b>(할 일 하나 + 도구 셋 + 했습니다)라야 따라가집니다 — 열 가지를 번호로 세우면 <b>고르는 것이 일</b>이 됩니다. 그래서 넘치는 도구는 그 아래 <b>칩 한 줄</b>(🧰 이 단계에서 쥘 것)로 답니다 — <b>옆으로 밀어</b> 봅니다. 누르면 갈래와 <b>똑같이 덮개</b>로 열려 홈을 안 벗어납니다. 갈래에 이미 선 것은 칩에 또 안 적습니다 (5번). 이름표 마흔 개는 <b>메뉴에서 그대로 뽑아</b> 채웠습니다(손으로 적으면 어긋납니다).　—　② <b>다르게 부르는 말</b>을 열다섯 칸에 얹었습니다 — 연금 → 재무설계 계산기 · 고지 → 알릴의무 필터 · 미청구 → 숨은보험금찾기 · 유병자 → 예외질환 인수확인 … ★ <b>별칭표를 새로 만들지 않았습니다</b> — 메뉴 한 줄(ak)에만 적습니다.　—　③ ★★ <b>ak 하나가 두 가지를 답하고 있었습니다</b> — 찾기 낱말이면서 동시에 <b>등급 열쇠</b>였습니다. 그래서 찾기 낱말을 늘리면 등급 열쇠가 표에서 빠져 <b>문이 소리 없이 열렸습니다.</b> 실제로 <b>「증권 전달」 이 basic 에서 free 로 떨어져</b> 있었습니다 — 같은 칸의 「계약관리 판단」 은 basic 인데 말입니다. 이제 <b>tk</b> 가 등급 열쇠입니다. 되돌려 보니 tk 가 없으면 이번에 낱말을 늘린 <b>열넷이 전부 free 로</b> 떨어집니다. ★ <b>main 과 등급표를 화면마다 한 칸씩 견줘</b> 보았습니다 — 내려간 문 <b>없음</b>, 올라간 것은 증권 전달(free→basic) 하나뿐입니다.　—　④ <b>전체 지도</b>는 이미 옆줄에 있고 잎을 누르면 그 화면으로 갑니다. 그런데 지도 그림은 따로 뽑아 두는 것이라 <b>새 화면이 빠져 있었습니다</b>(일곱 개 · 증권 전달·전&후 만들기 포함). 「전체 지도」 라고 적어 놓고 빠지면 <b>사라진 줄 압니다</b> — 그래서 <b>빠진 것을 세어 그 자리에서 열 수 있게</b> 했습니다. 다음에 지도를 다시 뽑으면 그 줄은 스스로 사라집니다. 옆줄의 「89개」 도 지웠습니다 — 낡아서 거짓말이 되는 숫자입니다.　—　⑤ 🧭 <b>「무엇을 할지 모르겠다면」</b> — 옆줄 맨 아래 단추 하나, 누르면 아홉 줄. <b>0 이면 흐리게 하고 단추를 없앱니다</b>. ★ <b>모르면 0 이라 하지 않습니다</b>(1번) — 고객 목록을 아직 못 읽었으면 숫자를 안 적습니다. 0 으로 적으면 「오늘은 끝난 것」 이 되어 <b>하루를 통째로</b> 놓치십니다. 실제로 그렇게 만들었다가 점검이 잡았습니다. ★ 하루 활동 <b>목표가 없어서</b> 「활동량을 다 채우셨나요」 는 센 것만 적고 판정은 안 합니다 — 없는 잣대를 지어내지 않습니다. 지도에도 실었습니다 — <b>옮겼는데 못 찾으면 지운 것과 같습니다.</b>　—　새 점검 <b>check-toolmap</b> 스물여덟 자리. 네 자리를 되돌려 빨간불을 확인했습니다 — 옛 id 를 찾기에서 빼기(3) · 등급 열쇠를 ak 로 되돌리기(3) · 단계 도구를 손으로 또 적기(1) · 못 읽었어도 끝났다고 말하기(1).　—　⑥ <b>낡은 점검 셋을 제자리로</b> (8번 — 헛것을 잡는 점검은 안 잡는 점검보다 나쁩니다). 도구가 셋에서 열로 늘자 <b>화면은 멀쩡한데</b> 셋이 울렸습니다: check-hmsheet 는 「열 가지가 다 보인다」 를 <b>번호 갈래에서만</b> 셌고, check-tdo 는 남는 개수를 <b>2 라고 손으로</b> 적어 두었고, check-nav 는 열쇠를 <b>ak 로</b> 읽고 있었습니다. 셋 다 앱이 실제로 쓰는 곳에 묻도록 고치고, 되돌려 빨간불을 확인했습니다.　—　⑦ ⚠ <b>제가 「칩 한 줄」 이라고 적어 놓고 네 줄을 세웠습니다.</b> 감기게 두었더니 일곱 개가 폰에서 네 줄로 감겨 카드가 <b>200px</b> 자랐고, 그 바람에 홈의 칸 수가 <b>소식 한 줄이 있고 없고에 따라 달라졌습니다</b> — check-homeone 이 잡았습니다. 이제 정말로 한 줄입니다(2,710px → <b>2,484px</b>). 점검에도 <b>「칩이 한 줄로만 선다」</b> 를 못 박았습니다 — 칸 수를 적지 않고 <b>칩 하나보다 얼마나 높은가</b>로 재서 글자 크기를 바꿔도 안 낡습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -17461,6 +17488,65 @@ function exitBohum(){go(prevTab||'home');}
    (지도 쪽에서 parent.go 를 부른다 — 같은 주소라서 된다).
    키는 이 앱 설정에 넣어 둔 것을 그대로 쓴다(같은 저장칸을 본다). */
 var APEXMAP_URL='apex-map.html';
+
+/* ══ 🗺️ <b>지도에 아직 안 올라온 화면</b> ═══════════════════════════
+   전체 지도는 build_map.py 가 뽑아 둔 것(app/apex-map-data.js)을 그립니다.
+   그 파일은 <b>손으로 고치지 말라</b>고 머리에 적혀 있습니다 — 고쳐 봐야
+   다음에 다시 뽑을 때 조용히 지워지기 때문입니다.
+
+   그런데 앱에 화면을 더하면 그 파일은 <b>그대로</b>입니다. 그래서 지도에
+   없는 화면이 생깁니다. 「전체 지도」 라고 적어 놓고 빠진 것이 있으면,
+   거기서 못 찾은 사람은 <b>그 화면이 없어졌다</b>고 여깁니다.
+
+   ★ 그래서 <b>없는 것을 없다고 적습니다</b> (1번). 지도를 고치지 않고,
+     빠진 것을 세어 그 자리에서 열 수 있게만 합니다. 다음에 지도를 다시
+     뽑으면 이 줄은 <b>스스로 사라집니다</b>(0개가 되므로).
+   ★ 찾기로는 <b>이미 다 열립니다</b> — 옛 id 로도 걸립니다(navHit 가
+     id 를 같이 봅니다). 여기는 「지도에서」 안 보이는 것만 말합니다.   */
+function amissList(){
+  var out=[],seen={},i,j,it,nm;
+  try{ nm=(typeof APEX_MAP!=='undefined'&&APEX_MAP.names)?APEX_MAP.names:null; }catch(e){ nm=null; }
+  if(!nm)return out;                    /* 지도를 못 읽었으면 <b>모른다</b> (1번) */
+  var G=(typeof visibleTabs==='function')?visibleTabs():TABS;
+  for(i=0;i<G.length;i++)for(j=0;j<G[i].items.length;j++){
+    it=G[i].items[j];
+    if(!it||!it.id||nm[it.id]||seen[it.id])continue;
+    seen[it.id]=1; out.push(it);
+  }
+  return out;
+}
+function amissCss(){
+  if(document.getElementById('amissCss'))return;
+  var st=document.createElement('style');st.id='amissCss';
+  st.textContent='#amissPane{position:fixed;left:14px;right:14px;bottom:76px;z-index:60;max-width:520px;'+
+      'background:var(--white);border:1px solid var(--ink-7);border-radius:var(--r);'+
+      'box-shadow:var(--shadow-lg);padding:14px 16px;display:none}'+
+    '#amissPane.on{display:block}'+
+    '#amissPane h4{font-size:var(--t5);font-weight:800;color:var(--ink-1);margin-bottom:5px}'+
+    '#amissPane p{font-size:var(--t6);color:var(--ink-4);line-height:1.65;margin-bottom:10px}'+
+    '#amissPane .g{display:flex;gap:7px;flex-wrap:wrap}'+
+    '#amissPane .g button{min-height:44px;padding:8px 13px;border-radius:var(--r-pill);'+
+      'border:1px solid var(--ink-7);background:var(--bg-1);font-family:inherit;'+
+      'font-size:var(--t6);font-weight:700;color:var(--ink-2);cursor:pointer}';
+  document.head.appendChild(st);
+}
+function amissPaint(){
+  amissCss();
+  var L=amissList(),b=document.getElementById('amissBtn'),p=document.getElementById('amissPane'),h='',i;
+  if(!b||!p)return;
+  /* 빠진 것이 없으면 <b>단추를 안 세웁니다</b> — 0개라고 적을 일이 아닙니다 */
+  if(!L.length){ b.hidden=true; p.classList.remove('on'); return; }
+  b.hidden=false; b.textContent='지도에 없는 '+L.length+'개';
+  for(i=0;i<L.length;i++)
+    h+='<button type="button" onclick="amissGo(\''+L[i].id+'\')">'+(L[i].icon||'•')+' '+osEsc(L[i].title||L[i].id)+'</button>';
+  p.innerHTML='<h4>🗺️ 지도에 아직 안 올라온 화면 '+L.length+'개</h4>'+
+    '<p><b>없어진 것이 아닙니다.</b> 지도 그림은 따로 뽑아 두는 것이라 새 화면이 늦게 올라옵니다. '+
+    '찾기 칸에 이름이나 옛 id 를 치시면 <b>지금도 그대로 열립니다.</b> 여기서 바로 여셔도 됩니다.</p>'+
+    '<div class="g">'+h+'</div>';
+}
+function amissToggle(){ var p=document.getElementById('amissPane'); if(p)p.classList.toggle('on'); }
+function amissGo(id){ var p=document.getElementById('amissPane'); if(p)p.classList.remove('on'); go(id); }
+
 function mountApexMap(){var f=$('apexMapFrame');if(!f||f._mounted)return;f.src=APEXMAP_URL;f._mounted=true;}
 function reloadApexMap(){var f=$('apexMapFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountApexMap,30);toast('전체 지도 새로고침');}}
 function openApexMapNewTab(){var w=window.open(APEXMAP_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
@@ -23613,7 +23699,12 @@ function hdbSgPick(id,to){
 /* AP 한 자리에만 도구가 <b>여섯</b>이다 — 상담자료 둘 · 화법 · 컨셉 둘 · 전·후.
    셋에서 자르면 사장님이 말씀하신 것 중 절반이 <b>안 보인다.</b> 번호가 붙어
    있으니 늘어도 고르기 어렵지 않다. */
-var HM_PICK_TOOLS=6;
+/* ★ <b>카드에 세우는 도구는 셋까지</b>입니다. 사장님 말씀대로 카드는
+   「할 일 하나 + 도구 셋 + 했습니다」 <b>다섯 갈래</b>라야 따라가집니다
+   (check-tdo 가 지킵니다). 단계 도구가 열 가지까지 늘어난 지금, 다 세우면
+   갈래가 여덟이 되어 <b>고르는 것이 일</b>이 됩니다. 나머지는 없어진 것이
+   아니라 서랍·도구에 그대로 있습니다 (1번). */
+var HM_PICK_TOOLS=3;
 /* <b>「만남로」</b> 라고 찍혔습니다 — 받침이 있으면 「으로」 입니다.
    수단(ch)은 만남·전화·문자 셋이지만 <b>표로 적지 않습니다</b> — 수단을
    늘릴 때 그 표만 안 고쳐져 또 「…로」 가 찍힙니다 (5번). 받침으로 가립니다.
@@ -24121,6 +24212,62 @@ function hmPick(key,i){
   if(p.act==='did'){ hmDid(key); return; }
   hmOpen(key);
 }
+
+/* ══ 🧰 <b>이 단계에서 쥘 것</b> — 갈래에 못 담은 나머지 ═══════════════
+   단계 도구가 열 가지까지 늘었습니다(AP 10 · PC 10). 그런데 카드는 사장님
+   말씀대로 <b>다섯 갈래</b>라야 따라가집니다 — 「할 일 하나 + 도구 셋 +
+   했습니다」. 열 가지를 번호로 세우면 <b>고르는 것이 일</b>이 됩니다.
+
+   그렇다고 나머지를 안 세우면 <b>홈에서 못 엽니다</b> — 새 명세가 「그 분
+   카드에서 바로 따라오게」 하라고 한 것이 바로 이것입니다. 그래서 번호
+   갈래 아래 <b>한 줄 칩</b>으로 답니다. 누르면 갈래와 <b>똑같이</b>
+   덮개로 열립니다(hmSheetOpen) — 홈에서 안 벗어납니다 (7번).
+   ★ 갈래에 이미 선 것은 <b>여기 또 안 적습니다</b> (5번).             */
+function hmBoxRest(x){
+  var k=(x&&x.k==='db')?x.tk:(x&&x.k),
+      L=(typeof tdoTools==='function')?tdoTools(k):[],
+      out=[],i;
+  for(i=HM_PICK_TOOLS;i<L.length;i++)out.push(L[i]);
+  return out;
+}
+/* ⚠ <b>감기게 두면 안 됩니다.</b> 처음에는 flex-wrap 으로 두었는데, 일곱
+   개가 폰에서 <b>네 줄</b>로 감겨 카드가 200px 자랐습니다. 그러자 홈의
+   칸 수가 <b>소식 한 줄이 있고 없고에 따라 달라져</b> check-homeone 이
+   잡았습니다 — 카드가 400px 눈금 위에 딱 걸린 것입니다.
+   이제 <b>정말로 한 줄</b>입니다 — 옆으로 밀어 봅니다. 몇 개가 되든
+   높이가 안 변합니다. 「칩 한 줄」 이라고 적었으면 한 줄이어야 합니다. */
+function hmBoxCss(){
+  if(document.getElementById('hmBoxCss'))return;
+  var st=document.createElement('style');st.id='hmBoxCss';
+  st.textContent='.hm-box{margin-top:10px}'+
+    '.hm-box>b{display:block;font-size:var(--t6);font-weight:800;color:var(--ink-4);'+
+      'margin-bottom:6px}'+
+    '.hm-box-s{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;'+
+      'scrollbar-width:none;-webkit-overflow-scrolling:touch}'+
+    '.hm-box-s::-webkit-scrollbar{display:none}'+
+    '.hm-box-b{flex:none;min-height:44px;padding:8px 12px;border-radius:var(--r-pill);'+
+      'border:1px solid var(--ink-7);background:var(--white);font-family:inherit;'+
+      'font-size:var(--t6);font-weight:700;color:var(--ink-2);cursor:pointer;'+
+      'white-space:nowrap}'+
+    '.hm-box-b:hover{background:var(--bg-1)}';
+  document.head.appendChild(st);
+}
+function hmBoxHtml(x){
+  var L=hmBoxRest(x),h='',i;
+  if(!L.length)return '';
+  hmBoxCss();
+  for(i=0;i<L.length;i++)
+    h+='<button type="button" class="hm-box-b" onclick="hmBoxGo(\''+L[i].id+'\',\''+
+       ((x&&x.key)||'')+'\')">'+(L[i].icon||'🧰')+' '+osEsc(L[i].title||L[i].id)+'</button>';
+  return '<div class="hm-box"><b>🧰 이 단계에서 쥘 것 '+L.length+'가지 — 옆으로 밀어 보세요</b>'+
+    '<div class="hm-box-s">'+h+'</div></div>';
+}
+/* 갈래와 <b>똑같이</b> 엽니다 — 여는 길이 둘이면 한쪽만 고쳐집니다 (5번) */
+function hmBoxGo(id,key){
+  var it=(typeof navItemOf==='function')?navItemOf(id):null;
+  hmSheetOpen(id,key,(it&&it.title)||id);
+}
+
 function hmNowHtml(){
   try{ hmKtCss(); hmTaCss(); hmPdCss(); }catch(e){}   /* 옷을 쓰는 화면에서 부른다 (5번) */
   var r=hmNext();
@@ -24142,7 +24289,7 @@ function hmNowHtml(){
     /* <b>묻고 고르게</b> 합니다 — 번호가 붙은 갈래를 세우고, 누르면
        그 자리에서 그 일이 벌어집니다. 여태는 도구 단추만 한 줄로
        늘어놓아, 읽고 나서 다시 고르는 두 동작이 됐습니다. */
-    hmTaHtml(x)+hmPdHtml(x)+hmPicksHtml(x)+hmKtHtml(x.key)+
+    hmTaHtml(x)+hmPdHtml(x)+hmPicksHtml(x)+hmBoxHtml(x)+hmKtHtml(x.key)+
     /* <b>단계를 그 자리에서</b> 옮긴다 — DB 통합 CRM 까지 안 가도 된다.
        배정 DB 에서 올라온 줄에만 선다(hdbStripHtml 이 스스로 가린다). */
     hdbStripHtml(x)+
@@ -31466,6 +31613,135 @@ function waWhoHtml(){
     '<button type="button" onclick="waAttach()">💾 다시 붙이기</button>'+
     '<button type="button" class="off" onclick="waDetach()">떼기</button></div>';
 }
+
+/* ══ 🧭 <b>무엇을 할지 모르겠다면</b> ═══════════════════════════════
+   사장님 말씀 — 「옆줄 맨 아래 단추 하나. 누르면 아홉 줄이 섭니다.
+   ★ 각 줄에 숫자를 답니다. <b>0 이면 흐리게 하고 단추를 없앱니다</b> —
+     「지금 볼 것이 아니다」를 말해야 아홉 줄이 부담이 되지 않습니다.
+     아홉이 다 0 이면 「오늘은 끝난 것」이라고 적습니다」.
+
+   ★ <b>숫자를 여기서 새로 세지 않습니다</b> (5번). 몇 분 남았나는 hmLeft,
+     동선은 hmRtNear, 30일 약속은 hmQPromise, 팩트파인딩 칸은 cmFfCount —
+     이미 답하는 곳이 있습니다. 여기서 또 세면 홈과 다른 말을 합니다.
+   ★ <b>모르면 숫자를 안 답니다</b> (1번). 고객 목록·고객 칸을 아직 못
+     읽었으면 0 이 아니라 <b>null</b> 입니다 — 0 으로 적으면 「할 것이
+     없다」 가 되어, 사장님이 오늘 할 일을 통째로 놓치십니다.
+   ★ <b>없는 잣대를 지어내지 않습니다</b> (1번). 명세서의 「활동량을 다
+     채우셨나요」 는 <b>목표 건수</b>가 있어야 0 인지 알 수 있는데, 이 앱에는
+     하루 활동 목표가 없습니다. 그래서 <b>센 것만 적고 판정은 안 합니다.</b>
+     「오늘 나를 알릴 차례인가」 도 같은 이유로 요일표 대신 <b>받아 둔
+     소식이 있나</b>로 셉니다.                                          */
+/* ⚠ <b>아직 못 읽었으면 숫자를 안 답니다</b> (1번). 홈의 세는 함수들은
+   고객 목록이 비어 있으면 <b>0</b> 을 돌려줍니다 — 그것은 「없다」 가 아니라
+   「아직 모른다」 입니다. 0 으로 적으면 아래에서 「오늘은 끝난 것」 이라고
+   말해 버려, 사장님이 <b>하루를 통째로</b> 놓치십니다. 실제로 그렇게
+   만들었다가 check-toolmap 이 잡았습니다 (8번). */
+function hlpNum(fn,needCli){
+  if(needCli&&!hlpCliReady())return null;
+  try{ var v=fn(); return (typeof v==='number'&&isFinite(v))?v:null; }catch(e){ return null; }
+}
+/* 고객 쪽 줄은 <b>목록과 칸을 둘 다 읽은 뒤에만</b> 셉니다 */
+function hlpCliReady(){
+  try{ return !!(typeof OSC!=='undefined'&&OSC.loaded&&OSC.list&&
+                 typeof CM!=='undefined'&&CM.loaded); }catch(e){ return false; }
+}
+function hlpCount(test){
+  if(!hlpCliReady())return null;
+  var n=0,i,c;
+  for(i=0;i<OSC.list.length;i++){ c=OSC.list[i]; if(c&&c.id&&test(c))n++; }
+  return n;
+}
+function hlpRows(){
+  var R=[];
+  R.push({q:'지금 자리에 앉아 계세요?', u:'분',
+    n:hlpNum(function(){ return hmLeft(); },true),
+    a:'오늘 걸 분이 있습니다. 위에서부터 하시면 됩니다.',
+    z:'오늘 챙길 분이 없습니다.', go:'home', b:'오늘 열기'});
+  R.push({q:'밖에 나와 계세요?', u:'분',
+    n:hlpNum(function(){ return (hmRtNear()||[]).length; },true),
+    a:'가는 김에 들를 수 있는 분입니다. 지역을 묶으면 길에서 버리는 시간이 줍니다.',
+    z:'오늘 약속이 없습니다 — 묶어 다닐 것도 없습니다.', go:'home', b:'동선 보기'});
+  R.push({q:'고객 앞이세요?', u:'', n:null,
+    a:'그 분 <b>단계에 맞는 도구</b>가 오늘 카드에 이미 골라져 있습니다. 새로 찾지 않으셔도 됩니다.',
+    go:'home', b:'오늘 카드 열기'});
+  R.push({q:'약속을 지키고 계신가요?', u:'분',
+    n:hlpNum(function(){ return (hmQPromise()||[]).length; },true),
+    a:'30일 약속이 밀린 분입니다.',
+    z:'다 지키고 계십니다. 여기는 지금 볼 것이 없습니다.', go:'clients', b:'그 분들 보기'});
+  R.push({q:'아는 게 적은 분이 있나요?', u:'분',
+    n:hlpCount(function(c){ return cmFfCount(c.id)<4; }),
+    a:'아는 것이 넷도 안 되는 분입니다. 한 칸만 채워도 거리가 생깁니다.',
+    z:'다 채워 두셨습니다.', go:'clients', b:'채우러 가기'});
+  R.push({q:'다음에 할 일이 비어 있나요?', u:'분',
+    n:hlpCount(function(c){ var m=cmOf(c.id); return !(m&&m.next&&m.next.what); }),
+    a:'다음에 무엇을 할지가 없으면 관리가 아닙니다. 한 줄만 적어 두시면 됩니다.',
+    z:'모든 분께 다음 할 일이 잡혀 있습니다.', go:'clients', b:'적으러 가기'});
+  R.push({q:'오늘 나를 알릴 차례인가요?', u:'건',
+    n:hlpNum(function(){ return (hmIgIdx()>=0)?1:0; }),
+    a:'오늘 올릴 것이 골라져 있습니다.',
+    z:'아직 받아 둔 소식이 없습니다 — 콘텐츠에서 받아 오시면 섭니다.',
+    go:'news_live', b:'콘텐츠 열기'});
+  /* ⚠ <b>판정을 안 하는 줄</b> — 하루 활동 목표가 이 앱에 없습니다.
+     목표 없이 「다 채우셨나요」 에 답하려면 숫자를 지어내야 합니다 (1번). */
+  R.push({q:'오늘 활동량은 어떻습니까?', u:'', n:null,
+    a:(function(){ try{ var A=hmActOf();
+        return A?('전화 <b>'+A.call+'</b> · 만남 <b>'+A.meet+'</b> · 기록 <b>'+A.all+'</b> 입니다. '+
+                  '<span style="color:var(--ink-5)">하루 목표를 정해 두지 않아 「다 채웠다」 는 말은 안 합니다.</span>')
+                :'아직 오늘 기록을 못 읽었습니다.'; }catch(e){ return '아직 오늘 기록을 못 읽었습니다.'; } })(),
+    go:'home', b:'오늘 열기'});
+  R.push({q:'이름이 기억나는 분이 있나요?', u:'', n:null,
+    a:'<b>옛 메뉴 이름으로 찾아도 나옵니다</b> — treatpay 라고 치셔도 「치료비 지급지도」 가 섭니다. 지운 것은 하나도 없습니다.',
+    go:'apexmap', b:'전체 지도 열기'});
+  return R;
+}
+function hlpCss(){
+  if(document.getElementById('hlpCss'))return;
+  var st=document.createElement('style');st.id='hlpCss';
+  st.textContent='.hlp-r{border:1px solid var(--ink-7);border-radius:var(--r);padding:15px 17px;'+
+      'margin-bottom:11px;background:var(--white)}'+
+    '.hlp-r.off{opacity:.5}'+
+    '.hlp-q{font-size:var(--t5);font-weight:800;color:var(--ink-2);letter-spacing:-.02em}'+
+    '.hlp-a{font-size:var(--t5);color:var(--ink-3);line-height:1.65;margin-top:8px}'+
+    '.hlp-a b{color:var(--ink-1);font-weight:900}'+
+    '.hlp-n{font-size:var(--t2);font-weight:900;color:var(--primary);letter-spacing:-.04em;'+
+      'font-variant-numeric:tabular-nums}'+
+    '.hlp-r.off .hlp-n{color:var(--ink-4)}'+
+    '.hlp-b{margin-top:12px;min-height:44px;padding:9px 16px;border-radius:var(--r-pill);'+
+      'border:1px solid var(--primary);background:var(--primary);color:#fff;font-family:inherit;'+
+      'font-size:var(--t6);font-weight:800;cursor:pointer}'+
+    '.hlp-end{margin-top:14px;padding:15px 17px;border-radius:var(--r);background:var(--bg-1);'+
+      'font-size:var(--t5);line-height:1.7;color:var(--ink-3)}';
+  document.head.appendChild(st);
+}
+function renderHelpMe(){
+  hlpCss();
+  var R=hlpRows(),h='',i,r,none,know=0,zero=0;
+  for(i=0;i<R.length;i++){
+    r=R[i];
+    none=(r.n===0);
+    if(typeof r.n==='number'){ know++; if(r.n===0)zero++; }
+    h+='<div class="hlp-r'+(none?' off':'')+'">'+
+      '<div class="hlp-q">'+osEsc(r.q)+'</div>'+
+      '<div class="hlp-a">'+
+        (r.n===null?'':('<span class="hlp-n">'+r.n+'</span>'+osEsc(r.u)+' — '))+
+        (none?osEsc(r.z||'지금 볼 것이 없습니다.'):r.a)+'</div>'+
+      (none?'':('<button type="button" class="hlp-b" onclick="go(\''+r.go+'\')">'+osEsc(r.b)+'</button>'))+
+      '</div>';
+  }
+  /* ★ <b>셀 수 있었던 줄만</b> 가지고 판정합니다. 못 읽어 null 인 줄을
+     0 으로 치면 「오늘은 끝났다」 고 거짓말을 하게 됩니다 (1번). */
+  /* ★ <b>다 읽은 뒤에만</b> 「끝났다」 고 말합니다 — 못 읽은 것을 0 으로
+     치면 그 말이 거짓이 됩니다 (1번). */
+  h+=(hlpCliReady()&&know&&zero===know)
+    ? '<div class="hlp-end">✅ <b>오늘은 끝난 것입니다.</b> 더 하시면 내일이 무너집니다.</div>'
+    : '<div class="hlp-end">아홉 개를 <b>위에서부터</b> 보시면 됩니다. '+
+      '<b>숫자가 0 이면 그건 지금 볼 것이 아닙니다.</b>'+
+      (know<R.length?(' <span style="color:var(--ink-5)">아직 못 읽어 숫자를 못 적은 줄이 있습니다 — 새로고침하면 채워집니다.</span>'):'')+
+      '</div>';
+  return osPage('길잡이','무엇을 할지 모르겠다면',
+    '아홉 가지를 위에서부터 보시면 됩니다. 숫자가 0 이면 지금 볼 것이 아닙니다.', h);
+}
+
 function renderWallets(){
   waLoad();waWhoCss();
   return osPage('8통장','8통장 진단지도 — 상담의 전체 지도','상품이 아니라 삶의 목적에서 출발합니다. 8개 통장별로 충족도를 진단해 약한 곳을 먼저 봅니다. (진단은 이 기기에 저장 · 참고용이며 지급·수익을 보장하지 않습니다)',
@@ -51922,9 +52198,17 @@ var OS_GROUP_TIER_DEFAULT={
 };
 var OS_GROUP_TIER=null; /* {groupKey: tierId} — 그룹별 요구 카테고리(없으면 free=개방) */
 function osAccessKey(g){return g.key||g.group;}
-/* 문은 메뉴 한 개마다 자기 ak(원래 속해 있던 칸)로 판정한다.
-   메뉴를 다른 칸으로 옮겨도 열려 있던 문이 따라 움직이지 않는다. */
-function osItemKey(g,it){return (it&&it.ak)||osAccessKey(g);}
+/* 문은 메뉴 한 개마다 자기 열쇠(원래 속해 있던 칸)로 판정한다.
+   메뉴를 다른 칸으로 옮겨도 열려 있던 문이 따라 움직이지 않는다.
+
+   ★ <b>찾기 낱말(ak)과 등급 열쇠(tk)를 갈라 놓았습니다</b> (2026-09-28).
+     여태 ak 하나가 <b>둘을 같이</b> 답했습니다 — 그래서 찾기 낱말을 늘리면
+     등급 열쇠가 표에서 빠져 <b>문이 소리 없이 열렸습니다.</b>
+     실제로 <b>증권 전달(pdel)</b> 이 그렇게 basic 에서 free 로 떨어져
+     있었습니다 — 같은 칸의 「계약관리 판단」 은 basic 인데 말입니다.
+     이제 tk 가 있으면 <b>그것</b>이 등급 열쇠입니다. ak 는 마음껏 늘려도
+     문이 안 움직입니다. check-toolmap 이 그것을 지킵니다 (8번).        */
+function osItemKey(g,it){return (it&&(it.tk||it.ak))||osAccessKey(g);}
 function osGroupReqTier(g){var k=osAccessKey(g);if(OS_GROUP_TIER&&OS_GROUP_TIER[k])return OS_GROUP_TIER[k];if(OS_GROUP_TIER_DEFAULT&&OS_GROUP_TIER_DEFAULT[k])return OS_GROUP_TIER_DEFAULT[k];return 'free';}
 function osGroupTierOk(g,tierId){return osTierRank(tierId)>=osTierRank(osGroupReqTier(g));}
 function osKeyReqTier(k){

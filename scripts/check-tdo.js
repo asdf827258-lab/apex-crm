@@ -265,8 +265,12 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     out.none=K.filter(k=>!tdoTools(k).length);
     /* 표에 이름·아이콘을 또 적어 두지 않았나 (5번) */
     out.dupName=K.filter(k=>TDO[k].title||TDO[k].icon||TDO[k].toolName);
-    /* 메뉴에서 빠지면(등급·권한) 단추도 같이 빠지나 */
+    /* 메뉴에서 빠지면(등급·권한) 단추도 같이 빠지나
+       ⚠ <b>몇 개 남는지를 손으로 적지 않는다.</b> 예전에 '2' 라고 적어
+       뒀다가, PC 단계 도구가 셋에서 열로 늘자 화면은 멀쩡한데 이 점검만
+       빨간불이 켜졌다 — 헛것이다 (8번). 「하나만 빠진다」를 잰다. */
     const real=window.navItemOf;
+    out.all=tdoTools('PC').map(it=>it.id);
     window.navItemOf=function(id){ return id==='frmake'?null:real(id); };
     out.gone=tdoTools('PC').map(it=>it.id);
     window.navItemOf=real;
@@ -345,9 +349,9 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(G.none.length===0, '<b>'+Object.keys(G.listed).length+'가지 상태 모두</b> 손에 쥘 것이 있다'+
      (G.none.length?(' ← '+G.none.join(',')):''));
   is(G.dupName.length===0, '표에 <b>이름·아이콘을 또 안 적는다</b> — 메뉴에서 가져온다 (5번)');
-  is(G.gone.length===2&&G.gone.indexOf('frmake')<0,
-     '메뉴에 없는 사람에게는 <b>그 단추가 안 선다</b> — '+G.gone.join(',')+
-     ' (못 여는 단추를 세우면 눌렀는데 아무 일도 안 난다)');
+  is(G.all.indexOf('frmake')>=0&&G.gone.length===G.all.length-1&&G.gone.indexOf('frmake')<0,
+     '메뉴에 없는 사람에게는 <b>그 단추가 안 선다</b> — '+G.all.length+'가지 중 frmake 만 빠져 '+
+     G.gone.length+'가지 (못 여는 단추를 세우면 눌렀는데 아무 일도 안 난다)');
   /* 사장님 말씀 — 「클로드 내게 권한 물어보는것처럼 <b>선택해서</b> 할수
      있도록」. 도구 단추만 늘어놓는 것이 아니라 <b>묻고 고르게</b> 한다. */
   is(/무엇을 할까요/.test(G.ask), '<b>「무엇을 할까요?」</b> 하고 묻는다 — '+(G.ask||'안 묻는다'));
