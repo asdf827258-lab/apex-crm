@@ -305,10 +305,66 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(rd.sql, '  준비 SQL 도 <b>그 목록에</b> 있다 — 홈 배너를 닫아 두셔도 여기서 보인다');
   is(rd.readRead >= 1, '  출발 점검을 열면 <b>그때 읽는다</b> — ' + rd.readRead + '번');
   is(rd.afterLater,
-     '  배너를 <b>「나중에」 로 닫아도 홈 맨 위에 한 줄이 남는다</b> — 어디에도 안 뜨면 돌릴 길이 사라진다');
+     '  배너를 <b>「나중에」 로 닫아도 홈 맨 위에 그 자리가 남는다</b> — 어디에도 안 뜨면 돌릴 길이 사라진다');
   is(rd.laterAct, '  그때 <b>복사하고 Supabase 열기</b> 가 그 줄에 그대로 있다');
-  is(rd.laterH > 0 && rd.laterH <= 90,
-     '  남는 것은 <b>한 줄</b>이다 — ' + rd.laterH + 'px (닫았는데 또 덩어리면 닫은 것이 아니다)');
+  is(rd.laterH > 0 && rd.laterH <= 60,
+     '  넓은 화면에서는 <b>한 줄</b>이다 — ' + rd.laterH + 'px');
+  /* ── ★ <b>폰에서도 재 본다</b> ─────────────────────────────────────
+     여기까지는 <b>넓은 화면</b>(1280px)에서만 쟀습니다. 그래서 「한 줄
+     48px」 이라고 적었는데, 폰에서 열어 보니 <b>두 줄 91px</b> 이었습니다 —
+     한 줄에 드는 너비가 500px 가 넘는데 폰은 320~430px 입니다. 없는 것을
+     적은 것입니다 (1번). 사장님은 <b>폰에서</b> 보십니다.
+
+     ★ <b>px 를 박아 두지 않습니다.</b> 「펼친 배너보다 훨씬 작은가」 를
+       묻습니다 — 그것이 「닫았다」 의 뜻입니다. 박아 두면 글자 크기를
+       바꿀 때마다 이 줄이 낡습니다.
+     ★ <b>단추가 갈라지지 않는가</b>도 봅니다. 둘을 따로 두었더니 폰에서
+       서로 다른 줄로 갈라져 세 줄(115px)이 됐습니다.                  */
+  const ph = await b.newContext({ viewport: { width: 390, height: 844 } });
+  const pp = await ph.newPage();
+  await pp.goto('http://127.0.0.1:' + srv.address().port + '/app/index.html', { waitUntil: 'domcontentloaded' });
+  await pp.waitForTimeout(2200);
+  const PH = await pp.evaluate(async () => {
+    document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());
+    OS.session = { user: { id: 'u1' } };
+    OS.profile = { id: 'u1', name: '홍길동', role: 'owner', active: true, plan: 'vip' };
+    window.osLoadProfile = function () {}; window.osProfileApply = function () {};
+    window.osShowLoginGate = function () {}; window.arLoad = function () {};
+    window.osLoadClients = function () {}; window.cmLoadAll = function (cb) { if (cb) cb(); };
+    OSC.loaded = true; OSC.list = []; CM.loaded = true; AR.loaded = true; AR.db = [];
+    const real = window.osCfgGet;
+    window.osCfgGet = function (k, d) { return k === 'schema_version' ? '0' : real(k, d); };
+    /* ① 펼친 배너 */
+    SETUP.hide = false; go('home'); await new Promise(r => setTimeout(r, 700));
+    const open = document.querySelector('#osSetupHome .stp');
+    const openH = open ? Math.round(open.getBoundingClientRect().height) : 0;
+    /* ② 접은 줄 */
+    SETUP.hide = true; go('home'); await new Promise(r => setTimeout(r, 700));
+    const one = document.querySelector('#osSetupHome .stp-one');
+    const grp = document.querySelector('#osSetupHome .stp-one-b');
+    const btn = grp ? [].slice.call(grp.querySelectorAll('.btn')) : [];
+    window.osCfgGet = real;
+    return {
+      openH, foldH: one ? Math.round(one.getBoundingClientRect().height) : 0,
+      said: !!(one && /서버 준비 SQL/.test(one.textContent)),
+      act: !!(one && /setupGo\(\)/.test(one.innerHTML)),
+      /* 단추 둘이 <b>같은 줄</b>에 있나 — 갈라지면 한 줄이 더 생긴다 */
+      sameRow: btn.length === 2 &&
+        Math.abs(btn[0].getBoundingClientRect().top - btn[1].getBoundingClientRect().top) < 4,
+      small: btn.filter(e => e.getBoundingClientRect().height < 30).length,
+      wide: grp ? Math.round(grp.getBoundingClientRect().width) : 0
+    };
+  });
+  await ph.close();
+  is(PH.said && PH.act,
+     '  <b>폰에서도</b> 그 줄이 서고 거기서 바로 돌릴 수 있다 — ' + PH.foldH + 'px');
+  is(PH.foldH > 0 && PH.foldH <= PH.openH / 2,
+     '  접으면 <b>펼친 배너의 절반 아래</b>다 — ' + PH.foldH + 'px / 펼치면 ' + PH.openH +
+     'px (닫았는데 또 덩어리면 닫은 것이 아니다)');
+  is(PH.sameRow,
+     '  단추 둘이 <b>같은 줄</b>에 붙어 있다 — 따로 두면 폰에서 갈라져 한 줄이 더 생긴다');
+  is(PH.wide > 0 && PH.wide <= 300,
+     '  단추 덩어리가 <b>제일 좁은 폰(320px)에도</b> 든다 — ' + PH.wide + 'px');
   is(!rd.member, '  팀원에게는 <b>안 뜬다</b> — 못 고칠 일을 매일 아침 보여 드리지 않는다');
   /* ── <b>고치신 직후에 옛말을 하지 않는가</b> ─────────────────────────
      홈에 막이를 걸면서 <b>출발 점검까지</b> 막아 버린 적이 있습니다.
