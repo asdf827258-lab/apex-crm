@@ -336,7 +336,7 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
      빨간불이 새 값을 그대로 적어 줍니다.
      ★ 지문은 <b>사람이 손으로 옮기는 값</b>입니다. 자동으로 맞추면
        「고쳤는데 안 올렸다」 를 영영 못 잡습니다 (8번).               */
-  const SQL_SIG = '7e80d4a14092';      /* SETUP_VER 42 · push_subs.hours 를 더한 판 */
+  const SQL_SIG = '5b035988872a';      /* SETUP_VER 43 · 판이 뒤로 못 가게 문지기를 더한 판 */
   const sqlAll = await page.evaluate(() => {
     const o = {}; for (const k in HX_SQL) if (HX_SQL[k] && HX_SQL[k].lines) o[k] = HX_SQL[k].lines.join('\n');
     return Object.keys(o).sort().map(k => k + '\n' + o[k]).join('\n');
