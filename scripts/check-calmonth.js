@@ -237,6 +237,38 @@ const SEED = () => `
   is(V.chose === 'month' && V.chose2 === 'week',
      '  <b>한 번 고르시면 그것이 이긴다</b> — 월 고름 ' + V.chose + ' · 주 고름 ' + V.chose2);
 
+  /* ══════════════════════════════════════════════════════════════════
+     <b>달을 넘는 주에도 미리 세워져 있나</b> (2026-09-25)
+     ──────────────────────────────────────────────────────────────────
+     사장님 말씀 — 「캘린더에 오늘뿐만 아니라 <b>미리 스케줄을 다 세워
+     놓아</b> 실시간으로 반영되게」.
+     ⚠ 여기서 실제로 났던 일 — 매일 하는 일이 「보고 있는 <b>달</b>」 만
+       채웠습니다. 달력이 「이번 주」 로 열리게 되면서 <b>9/28~10/4</b> 처럼
+       달을 넘는 주에서는 10/1~10/4 가 <b>빈 칸</b>이 됐습니다.
+       화면에 서는 날을 mcalShownDays() 한 곳에서 답하도록 고쳤습니다.   */
+  console.log('\n[주] <b>달을 넘는 주에도 미리 세워져 있나</b>');
+  const W = await p.evaluate(() => {
+    const t = mcalToday();
+    /* 이 달 말을 품는 주로 옮깁니다 — 어느 달이든 통하게 오늘에서 셉니다 */
+    const ym = t.slice(0, 7);
+    const last = new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 0)).getUTCDate();
+    const eom = ym + '-' + ('0' + last).slice(-2);
+    mcalSetView('week');
+    MCAL.wk = mcalWkStart(eom);
+    const days = mcalShownDays();
+    const it = mcalItems();
+    const nxt = days.filter(d => d.slice(0, 7) !== ym);
+    return { days, nxt, empty: nxt.filter(d => !(it[d] || []).length),
+             wk: MCAL.wk, n: days.length };
+  });
+  is(W.n === 7, '  주 보기가 <b>이레</b>를 센다 — ' + W.n + '일 (' + W.wk + '부터)');
+  is(W.nxt.length > 0,
+     '  이 주가 <b>달을 넘는다</b> — 다음 달 ' + W.nxt.length + '일 (' + (W.nxt[0] || '') + '…)');
+  is(W.empty.length === 0,
+     '  달을 넘어도 <b>빈 날이 없다</b>' +
+     (W.empty.length ? (' ← 빈 날 ' + W.empty.join(' ')) : '') +
+     ' — 「매일 하는 일」 이 사라진 것처럼 보이면 안 됩니다');
+
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 한 달치가 달력에 보이고, 이번 주로 열리고, 폰 달력으로 통째로 나갑니다.');
   await b.close(); srv.close();

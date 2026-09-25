@@ -15267,6 +15267,21 @@ function mrtCss(){
    '.mrt-ft{font-size:var(--t6);color:var(--ink-5);line-height:1.6;margin-top:7px}';
   document.head.appendChild(st);
 }
+/* ══ <b>지금 화면에 서는 날들</b> — 한 곳만 안다 (5번) ═══════════════
+   달 보기면 그 달 1일~말일, 주 보기면 <b>그 주 이레</b>입니다.
+   주 보기는 달을 넘어갑니다(9/28~10/4) — 그때 달만 채우면 뒷날이
+   빈 칸이 되어 「매일 하는 일이 없어졌다」 로 보입니다.               */
+function mcalShownDays(){
+  var out=[],i;
+  if(mcalView()==='week'){
+    var w=mcalWk();
+    for(i=0;i<7;i++)out.push(mcalShift(w,i));
+    return out;
+  }
+  var ym=mcalYm(),last=new Date(Date.UTC(+ym.slice(0,4),+ym.slice(5,7),0)).getUTCDate();
+  for(i=1;i<=last;i++)out.push(ym+'-'+('0'+i).slice(-2));
+  return out;
+}
 function mcalItems(){
   /* 날이 이미 지난 것은 <b>오늘</b> 자리로 끌어온다. 지난 날에 그대로 두면
      달력에서는 안 보이는데 「오늘의 터치」 에는 서 있어서 두 화면이 어긋난다.
@@ -15367,12 +15382,17 @@ function mcalItems(){
             (done>=RT.length?' · 다 했습니다':''))
           :((mineR?('🌅 아침 미션 '+ms.tot+'가지 · '):'')+'하루 '+RT.length+'가지')});
     };
-    for(dR=1;dR<=lastR;dR++){
-      dsR=ymR+'-'+('0'+dR).slice(-2);
-      putR(dsR);
-    }
-    /* 보고 있는 달이 이번 달이 아니어도 <b>오늘</b>은 늘 선다 — 홈은 오늘만 읽는다 */
-    if(TD.slice(0,7)!==ymR)putR(TD);
+    /* ⚠ 2026-09-25 · <b>달을 넘는 주가 통째로 비었습니다.</b>
+       여기는 「보고 있는 <b>달</b>」 1일부터 말일까지만 채웠습니다. 달력이
+       「이번 주」 로 열리게 되면서(사장님 「매주를 기본으로」), 9/28~10/4
+       처럼 <b>달을 넘는 주</b>에서는 10/1~10/4 가 빈 칸이 됐습니다 —
+       매일 하는 일이 없어진 것처럼 보입니다. 재어 보고 찾았습니다.
+       ★ 이제 <b>화면에 실제로 서는 날</b>을 채웁니다 — 그 목록은
+         mcalShownDays() 한 곳만 압니다 (5번).                          */
+    var LD=mcalShownDays(),iR;
+    for(iR=0;iR<LD.length;iR++)putR(LD[iR]);
+    /* 보고 있는 때가 오늘을 안 품어도 <b>오늘</b>은 늘 선다 — 홈은 오늘만 읽는다 */
+    if(LD.indexOf(TD)<0)putR(TD);
   }
   return out;
 }
