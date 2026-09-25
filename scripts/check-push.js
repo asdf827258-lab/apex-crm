@@ -446,6 +446,65 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   is(!/거절/.test(S.log), '  거절당하는 길로 <b>안 들어간다</b> — 떼고 나서 맺는다');
   is(!S.err, '  <b>오류 없이</b> 끝난다 · ' + (S.err || '없음'));
 
+  /* ══ [4-4] 👩‍⚕️ <b>살펴보기가 걸린 자리를 그대로 말한다</b> ═══════════════
+     사장님이 폰과 컴퓨터에서 눌렀는데도 서버가 0줄이었습니다. 서버 쪽은
+     성했는데(RLS 도 지나고 owner_id 도 붙었습니다) 기기 안을 볼 수가
+     없었습니다 — <b>안 보이면 못 고칩니다</b> (8번). 그래서 앱이 스스로
+     한 걸음씩 밟아 보고 말하게 했고, 그것이 <b>참말인지</b>를 잽니다.
+     ★ 일부러 <b>로그인을 끊어</b> 놓고, 살펴보기가 그것을 집어내는지 봅니다.
+     ★ <b>지어내지 않는지</b>도 봅니다 — 모르면 모른다고 적어야 합니다 (1번). */
+  console.log('\n[4-4] 👩‍⚕️ 살펴보기 — <b>걸린 자리를 그대로</b> 말한다');
+  const V = await page.evaluate(async () => {
+    const keepClient = window.osClient, keepSave = window.almSave, keepReg = ALM.reg, keepSub = ALM.sub;
+    /* 진짜 끝점은 이만큼 깁니다 — 짧은 것으로 재면 「잘리는지」 를 못 재었습니다 */
+    const EP_LONG = 'https://fcm.googleapis.test/fcm/send/AAAA-BBBB-CCCC-DDDD-EEEE-FFFF-끝자리';
+    const out = {};
+    const run = async () => { ALM.diag = null; ALM.diagBusy = false; almDiagRun();
+      for (let i = 0; i < 60 && !ALM.diag; i++) await new Promise(r => setTimeout(r, 100));
+      const m = {}; (ALM.diag || []).forEach(r => { m[r[0]] = ('' + r[1]).replace(/<[^>]*>/g, ''); }); return m; };
+
+    /* ⓐ 로그인이 끊긴 기기 — 여기가 제일 흔한 자리다 */
+    window.osClient = () => ({
+      auth: { getUser: () => Promise.resolve({ data: { user: null }, error: { message: 'Auth session missing!' } }) },
+      from: () => ({ select: () => Promise.resolve({ data: null, error: { message: 'JWT expired' } }) })
+    });
+    ALM.sub = null;
+    out.a = await run();
+
+    /* ⓑ 다 성한 기기 — 구독도 있고 로그인도 있고 서버도 받는다 */
+    let saved = 0;
+    window.osClient = () => ({
+      auth: { getUser: () => Promise.resolve({ data: { user: { id: '11111111-2222-3333-4444-555555555555' } } }) },
+      from: () => ({ select: () => Promise.resolve({ data: [{ endpoint: 'https://a.test/1' }], error: null }) })
+    });
+    ALM.reg = { pushManager: { getSubscription: () => Promise.resolve({ endpoint: EP_LONG }) } };
+    window.almSave = () => { saved++; ALM.saveSay = '담았습니다 · 9시 · 13시 · 17시 · 21시'; };
+    out.b = await run();
+    out.saved = saved;
+    out.text = almDiagText();
+
+    window.osClient = keepClient; window.almSave = keepSave; ALM.reg = keepReg; ALM.sub = keepSub;
+    ALM.diag = null; ALM.saveSay = '';
+    return out;
+  });
+  is(/없습니다/.test(V.a['로그인'] || '') && /Auth session missing/.test(V.a['로그인'] || ''),
+     '  <b>로그인이 끊겼으면 끊겼다고</b> 말한다 · ' + (V.a['로그인'] || '안 적음'));
+  is(/JWT expired/.test(V.a['서버 읽기'] || ''),
+     '  서버가 거절하면 <b>그 말을 그대로</b> 옮긴다 — 삼키지 않는다 (1번)');
+  is(/구독이 없어/.test(V.a['담아 보기'] || ''),
+     '  담을 것이 없으면 <b>없다고</b> 하고, 담은 척하지 않는다 (1번)');
+  is(V.saved === 1 && /담았습니다/.test(V.b['담아 보기'] || ''),
+     '  마지막에 <b>진짜로 담아 본다</b> — almSave 그 함수로 (5번) · ' + (V.b['담아 보기'] || ''));
+  is(/1대가 담겨 있습니다/.test(V.b['서버 읽기'] || ''),
+     '  서버에 <b>몇 대</b> 있는지 세어 말한다');
+  is(!!V.b['서버 열쇠'] && !!V.b['일꾼'] && !!V.b['이 브라우저'],
+     '  <b>걸음을 빠뜨리지 않는다</b> — 브라우저·일꾼·열쇠·구독·로그인·읽기·담기');
+  /* 10번 — 열쇠 글자도, 주소 전부도 나가면 안 된다 */
+  is(!/끝자리/.test(V.text) && /fcm\.googleapis\.test/.test(V.text),
+     '  주소는 <b>앞머리만</b> 적는다 (10번) — 통째로 안 적는다');
+  is(!/[A-Za-z0-9_-]{60,}/.test(V.text),
+     '  <b>긴 열쇠 글자가 안 섞인다</b> (10번)');
+
   console.log('\n[5] 준비 SQL — push_subs 가 있고 나만 본다');
   const Q=await page.evaluate(()=>{
     const m=HX_SQL['00'], t=m?m.lines.join('\n'):'';
