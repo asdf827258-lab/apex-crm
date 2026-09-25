@@ -133,15 +133,10 @@ const INKS = (sel) => {
       if (e.children.length || !(e.textContent || '').trim()) return;
       o[getComputedStyle(e).color] = 1;
     });
-    /* ⚠ <b>어두운 바탕 위의 글자는 안 견줍니다.</b> 퀘스트 띠(.hm-q)는
-       남색(#0F172A) 바탕이라 목업의 글자색을 그대로 올리면 <b>안 읽힙니다</b>.
-       목업 홈에는 어두운 칸이 아예 없어 <b>견줄 짝이 없습니다</b> — 짝이
-       없는 것을 「틀렸다」 고 적으면 헛것입니다 (8번·1번).
-       ui.css 가 --t-point-on 을 따로 둔 것과 같은 까닭입니다.        */
-    document.querySelectorAll('.hm-toss .hm-q *').forEach(e => {
-      if (e.children.length || !(e.textContent || '').trim()) return;
-      o[getComputedStyle(e).color] = 1;
-    });
+    /* ⚠ 2026-09-25 — 여기에 <b>퀘스트 띠(.hm-q) 예외</b>가 있었습니다.
+       남색(#0F172A) 바탕이라 목업의 글자색을 올리면 안 읽혀서였습니다.
+       그 띠가 <b>밝아졌습니다</b>(--t-bg-3) — 이제 견줄 짝이 있으므로
+       예외를 <b>걷어냅니다</b>. 안 울리는 알람은 알람이 아닙니다 (8번).  */
     o['rgb(255, 255, 255)'] = 1;                    /* 단추 위 흰 글자 */
     return Object.keys(o);
   });
