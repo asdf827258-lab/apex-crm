@@ -321,6 +321,34 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   is(!/^\s*--/m.test(SRC.slice(SRC.indexOf('var OS_PUSH_SQL=['),SRC.indexOf('var OS_PUSH_SQL=[')+2600)),
      'SQL 주석에 <b>-- 를 안 쓴다</b> (9번)');
 
+  /* ══ <b>SQL 을 고쳤으면 판 번호도 올렸는가</b> ═══════════════════════
+     ⚠ 2026-09-25 · 여기가 <b>비어 있었습니다.</b> 위의 자는 「SQL 이 적는
+     번호」와 「앱이 아는 번호」가 <b>서로</b> 같은지만 봅니다 — 둘 다 옛
+     번호면 조용합니다. 그날 제가 push_subs 에 hours 칸을 더하고 SETUP_VER
+     을 안 올렸는데 <b>초록이었고</b>, 이미 준비를 마치신 사장님 화면에는
+     「서버 준비가 아직 남았습니다」 칸이 아예 안 떴습니다. 사장님이
+     「SQL이 어딨어?」 하고 물으셔서야 알았습니다.
+     <b>넣는 것과 알리는 것은 다른 일입니다</b> (1번).
+
+     그래서 SQL 글 전체의 <b>지문</b>을 여기 적어 둡니다. 한 글자라도
+     고치면 지문이 달라지고, 그때 <b>판 번호를 같이 올리라</b>고 이 자가
+     말합니다. 올린 뒤에는 이 줄의 지문을 새 값으로 바꾸십시오 — 아래
+     빨간불이 새 값을 그대로 적어 줍니다.
+     ★ 지문은 <b>사람이 손으로 옮기는 값</b>입니다. 자동으로 맞추면
+       「고쳤는데 안 올렸다」 를 영영 못 잡습니다 (8번).               */
+  const SQL_SIG = '7e80d4a14092';      /* SETUP_VER 42 · push_subs.hours 를 더한 판 */
+  const sqlAll = await page.evaluate(() => {
+    const o = {}; for (const k in HX_SQL) if (HX_SQL[k] && HX_SQL[k].lines) o[k] = HX_SQL[k].lines.join('\n');
+    return Object.keys(o).sort().map(k => k + '\n' + o[k]).join('\n');
+  });
+  const sig = crypto.createHash('sha256').update(sqlAll, 'utf8').digest('hex').slice(0, 12);
+  is(sig === SQL_SIG,
+     '준비 SQL 을 고쳤으면 <b>판 번호도 올렸다</b> — 지문 ' + sig +
+     (sig === SQL_SIG ? ' (SETUP_VER ' + Q.ver + ')'
+       : ' ← SQL 이 바뀌었습니다. ① SETUP_VER 과 SQL 안의 schema_version 을 <b>같이</b> 올리고' +
+         ' ② 이 점검의 SQL_SIG 를 <b>' + sig + '</b> 로 바꾸십시오.' +
+         ' 안 올리면 이미 준비를 마치신 분 화면에 <b>새 SQL 이 안 뜹니다</b>'));
+
   console.log('\n[6] 서버 — 봉한 것이 그 폰에서만 풀린다');
   /* 시험용 VAPID 한 쌍 — <b>여기서 만들고 여기서 버린다</b>. 진짜 열쇠는 서버에만 있다 (10번) */
   const kp=crypto.generateKeyPairSync('ec',{namedCurve:'prime256v1'});
