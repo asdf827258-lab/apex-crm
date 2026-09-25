@@ -217,13 +217,23 @@ const open = async (pg) => {
   head('[7] 지우면 <b>서버에서도</b> 빠진다');
   const del = await pg.evaluate(async () => {
     const t = mcalToday();
-    const first = (mcalItems()[t] || []).filter(x => x.k === 'my')[0];
+    /* ⚠ 2026-09-25 — 느린 기계(CI)에서는 앞 자리에서 넣은 줄이 <b>아직 안 서
+       있을</b> 때가 있습니다. 그때 first.my 를 그냥 읽어 TypeError 로 터졌고,
+       <b>화면은 멀쩡한데 빨간불</b>이 켜졌습니다 — 헛것입니다 (8번).
+       ★ 줄이 설 때까지 <b>기다렸다가</b> 재고, 끝내 안 서면 <b>터지지 않고</b>
+         「안 섰습니다」 라고 적습니다. 기다리는 데에는 반드시 <b>끝이</b>
+         있어야 합니다 — 안 그러면 영영 멈춥니다.                          */
+    const mine = () => (mcalItems()[t] || []).filter(x => x.k === 'my');
+    let first = mine()[0], i = 0;
+    while (!first && i++ < 20) { await new Promise(r => setTimeout(r, 100)); first = mine()[0]; }
+    if (!first) return { no: true, n: mine().length, srv: window.__plan.rows.length, del: window.__plan.del };
     mcalMyDel(first.my);
     await new Promise(r => setTimeout(r, 400));
-    return { n: (mcalItems()[t] || []).filter(x => x.k === 'my').length,
-             srv: window.__plan.rows.length, del: window.__plan.del };
+    return { n: mine().length, srv: window.__plan.rows.length, del: window.__plan.del };
   });
-  is(del.n === 0 && del.srv === 0 && del.del === 1, '달력에서도 서버에서도 빠진다 — 화면 ' + del.n + ' · 서버 ' + del.srv);
+  is(!del.no && del.n === 0 && del.srv === 0 && del.del === 1,
+     '달력에서도 서버에서도 빠진다 — 화면 ' + del.n + ' · 서버 ' + del.srv +
+     (del.no ? ' ← 지울 줄이 2초를 기다려도 안 섰습니다' : ''));
 
   head('[8] <b>서버를 아껴 부른다</b> (7번)');
   const thrift = await pg.evaluate(async () => {
