@@ -4901,6 +4901,36 @@ function factAnalyze(){
     var r=$('factRes');if(r){r._raw=out;r.innerHTML=reportResultBox('factRes','factAnalyze()','고객 니즈분석 · 상담 설계',(o.name||'고객')+' 님',out);}
   }).catch(function(e){FACT.busy=false;var r=$('factRes');if(r)r.innerHTML='<div class="result-body"><div class="err-box">⚠️ '+esc((e&&e.message)||'오류')+' — 잠시 후 다시 시도하거나 <a style="color:#1A56DB;font-weight:800;text-decoration:underline;cursor:pointer" onclick="go(\'settings\')">설정</a>에서 연결을 확인하세요.<div style="margin-top:10px"><button class="btn btn-ghost" onclick="factAnalyze()">🔄 다시 시도</button></div></div></div>';});
 }
+/* ══ 🎨 <b>새로 여는 창에도 같은 옷을</b> — 인쇄용 창 일곱 곳이 씁니다 ══
+   인쇄는 window.open('','_blank') 로 <b>빈 창</b>을 열고 document.write 로
+   글을 써 넣습니다. 그 창의 주소는 <b>about:blank</b> 입니다 — 그래서
+   상대 경로 href="ui.css" 가 <b>안 잡힙니다.</b> 그 창에서 Pretendard 만
+   되던 것은 그것이 절대 주소였기 때문입니다. 여기서 <b>절대 주소로</b>
+   만들어 넘깁니다(pwaUrlOf 와 같은 방식).
+
+   ★ 그리고 <b>글자 계단(--t1~--t6)</b>은 app/index.html 의 :root 에 있어
+     새 창에는 <b>없습니다.</b> 실제로 법인 덱 인쇄(bizDeckPrint)가
+     var(--t4)·var(--t3)·var(--t5)·var(--t6) 을 쓰고 있었고, 값이 없어
+     그 자리가 전부 <b>물려받은 크기</b>로 나갔습니다 — 꼬리말 13px 이
+     16px 로 커집니다. A4 한 장 높이가 고정(209mm)이고 넘치면 잘라 내므로
+     <b>맨 아래 줄이 종이에서 사라질 수 있습니다.</b>
+   ★ 숫자를 여기 적어 두지 않습니다 — <b>지금 살아 있는 값을 읽어</b>
+     실어 보냅니다. 적어 두면 계단을 고칠 때 이 창만 옛 값으로 남습니다 (5번).
+   ★ 계단은 <b>인라인 style</b> 로 나갑니다. link 는 늦게 올 수 있는데
+     인쇄는 400ms 뒤에 시작하기 때문입니다 — 늦으면 그대로 종이가 됩니다. */
+function printHeadCss(){
+  var out='';
+  try{
+    var b=location.origin+location.pathname.replace(/[^\/]*$/,'');
+    out+='<link rel="stylesheet" href="'+b+'ui.css">';
+  }catch(e){}
+  try{
+    var cs=getComputedStyle(document.documentElement),v,i,t='';
+    for(i=1;i<=6;i++){ v=(cs.getPropertyValue('--t'+i)||'').trim(); if(v)t+='--t'+i+':'+v+';'; }
+    if(t)out+='<style>:root{'+t+'}</style>';
+  }catch(e){}
+  return out;
+}
 function factPrint(){
   var o=factReadForm();
   var w=window.open('','_blank');if(!w){toast('팝업이 차단되었습니다');return;}
@@ -4915,7 +4945,7 @@ function factPrint(){
     'table{width:100%;border-collapse:collapse;margin-bottom:12px}th,td{border:1px solid #E2E8F0;padding:8px 11px;font-size:13px;text-align:left;vertical-align:top}'+
     'th{background:#F5F9FF;color:#0F172A;width:32%;font-weight:800}.muted{color:#CBD5E1}.sec{font-size:15px;margin:18px 0 8px;color:#0F172A;border-left:4px solid #1A56DB;padding-left:9px}'+
     '.ai{font-size:12.5px;line-height:1.6;color:#334155}.ai table{margin:8px 0}.ai th{width:auto;background:#0F172A;color:#fff}.foot{margin-top:18px;font-size:10.5px;color:#94A3B8;border-top:1px solid #E2E8F0;padding-top:8px;line-height:1.5}';
-  w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>'+(osEsc(o.name||'고객')+' 상담카드')+'</title><style>'+css+'</style></head><body>'+
+  w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>'+(osEsc(o.name||'고객')+' 상담카드')+'</title>'+printHeadCss()+'<style>'+css+'</style></head><body>'+
     '<h1>'+osEsc(o.name||'고객')+' 님 상담카드</h1><div class="sub">APEX YUN PRO · 팩트파인딩 상담자료'+(dt?' · '+dt:'')+'</div>'+
     '<div class="cats">관심분야: '+catLabels+'</div><table>'+rows+'</table>'+aiHtml+
     '<div class="foot">'+osEsc(FACT_DISC)+'</div></body></html>');
@@ -10521,7 +10551,7 @@ function arPrint(which){
   var w=window.open('','_blank');
   if(!w){toast('창을 열지 못했습니다. 브라우저의 팝업 차단을 풀어 주세요.',6000);return;}
   w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8">'+
-    '<title>AI 보고</title><style>'+css+'</style></head><body>'+
+    '<title>AI 보고</title>'+printHeadCss()+'<style>'+css+'</style></head><body>'+
     '<h1>AI 보고</h1><div class="sub">에이플러스에셋 온탑본부 · '+
     esc(new Date().toLocaleDateString('ko-KR'))+'</div>'+body+
     '<div class="sub" style="margin-top:24px">앱에 남은 기록만 보고 쓴 참고 자료입니다. '+
@@ -16991,8 +17021,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-28 10:40';
-var APP_BUILD_NOTE="🧰 <b>도구를 「언제 쓰는가」로 묶고, 길잡이를 놓았습니다.</b>　—　① <b>도구 묶음 열</b> — 미접촉·부재·거절 / TA / AP / PC / CS / 계약·증권전달 / 사후관리 / 언제나 / 법인 / 투자. ★ <b>표 하나</b>(apex-stage.js 의 BOX)에서만 옵니다 — 단계별 도구를 손으로 또 적던 자리를 지웠습니다(두 벌이었습니다 · 5번). 그 분 단계에 맞는 도구가 <b>오늘 카드에 그대로</b> 따라옵니다 — AP 면 열 가지, PC 면 열 가지. 다만 카드는 <b>다섯 갈래</b>(할 일 하나 + 도구 셋 + 했습니다)라야 따라가집니다 — 열 가지를 번호로 세우면 <b>고르는 것이 일</b>이 됩니다. 그래서 넘치는 도구는 그 아래 <b>칩 한 줄</b>(🧰 이 단계에서 쥘 것)로 답니다 — <b>옆으로 밀어</b> 봅니다. 누르면 갈래와 <b>똑같이 덮개</b>로 열려 홈을 안 벗어납니다. 갈래에 이미 선 것은 칩에 또 안 적습니다 (5번). 이름표 마흔 개는 <b>메뉴에서 그대로 뽑아</b> 채웠습니다(손으로 적으면 어긋납니다).　—　② <b>다르게 부르는 말</b>을 열다섯 칸에 얹었습니다 — 연금 → 재무설계 계산기 · 고지 → 알릴의무 필터 · 미청구 → 숨은보험금찾기 · 유병자 → 예외질환 인수확인 … ★ <b>별칭표를 새로 만들지 않았습니다</b> — 메뉴 한 줄(ak)에만 적습니다.　—　③ ★★ <b>ak 하나가 두 가지를 답하고 있었습니다</b> — 찾기 낱말이면서 동시에 <b>등급 열쇠</b>였습니다. 그래서 찾기 낱말을 늘리면 등급 열쇠가 표에서 빠져 <b>문이 소리 없이 열렸습니다.</b> 실제로 <b>「증권 전달」 이 basic 에서 free 로 떨어져</b> 있었습니다 — 같은 칸의 「계약관리 판단」 은 basic 인데 말입니다. 이제 <b>tk</b> 가 등급 열쇠입니다. 되돌려 보니 tk 가 없으면 이번에 낱말을 늘린 <b>열넷이 전부 free 로</b> 떨어집니다. ★ <b>main 과 등급표를 화면마다 한 칸씩 견줘</b> 보았습니다 — 내려간 문 <b>없음</b>, 올라간 것은 증권 전달(free→basic) 하나뿐입니다.　—　④ <b>전체 지도</b>는 이미 옆줄에 있고 잎을 누르면 그 화면으로 갑니다. 그런데 지도 그림은 따로 뽑아 두는 것이라 <b>새 화면이 빠져 있었습니다</b>(일곱 개 · 증권 전달·전&후 만들기 포함). 「전체 지도」 라고 적어 놓고 빠지면 <b>사라진 줄 압니다</b> — 그래서 <b>빠진 것을 세어 그 자리에서 열 수 있게</b> 했습니다. 다음에 지도를 다시 뽑으면 그 줄은 스스로 사라집니다. 옆줄의 「89개」 도 지웠습니다 — 낡아서 거짓말이 되는 숫자입니다.　—　⑤ 🧭 <b>「무엇을 할지 모르겠다면」</b> — 옆줄 맨 아래 단추 하나, 누르면 아홉 줄. <b>0 이면 흐리게 하고 단추를 없앱니다</b>. ★ <b>모르면 0 이라 하지 않습니다</b>(1번) — 고객 목록을 아직 못 읽었으면 숫자를 안 적습니다. 0 으로 적으면 「오늘은 끝난 것」 이 되어 <b>하루를 통째로</b> 놓치십니다. 실제로 그렇게 만들었다가 점검이 잡았습니다. ★ 하루 활동 <b>목표가 없어서</b> 「활동량을 다 채우셨나요」 는 센 것만 적고 판정은 안 합니다 — 없는 잣대를 지어내지 않습니다. 지도에도 실었습니다 — <b>옮겼는데 못 찾으면 지운 것과 같습니다.</b>　—　새 점검 <b>check-toolmap</b> 스물여덟 자리. 네 자리를 되돌려 빨간불을 확인했습니다 — 옛 id 를 찾기에서 빼기(3) · 등급 열쇠를 ak 로 되돌리기(3) · 단계 도구를 손으로 또 적기(1) · 못 읽었어도 끝났다고 말하기(1).　—　⑥ <b>낡은 점검 셋을 제자리로</b> (8번 — 헛것을 잡는 점검은 안 잡는 점검보다 나쁩니다). 도구가 셋에서 열로 늘자 <b>화면은 멀쩡한데</b> 셋이 울렸습니다: check-hmsheet 는 「열 가지가 다 보인다」 를 <b>번호 갈래에서만</b> 셌고, check-tdo 는 남는 개수를 <b>2 라고 손으로</b> 적어 두었고, check-nav 는 열쇠를 <b>ak 로</b> 읽고 있었습니다. 셋 다 앱이 실제로 쓰는 곳에 묻도록 고치고, 되돌려 빨간불을 확인했습니다.　—　⑦ ⚠ <b>제가 「칩 한 줄」 이라고 적어 놓고 네 줄을 세웠습니다.</b> 감기게 두었더니 일곱 개가 폰에서 네 줄로 감겨 카드가 <b>200px</b> 자랐고, 그 바람에 홈의 칸 수가 <b>소식 한 줄이 있고 없고에 따라 달라졌습니다</b> — check-homeone 이 잡았습니다. 이제 정말로 한 줄입니다(2,710px → <b>2,484px</b>). 점검에도 <b>「칩이 한 줄로만 선다」</b> 를 못 박았습니다 — 칸 수를 적지 않고 <b>칩 하나보다 얼마나 높은가</b>로 재서 글자 크기를 바꿔도 안 낡습니다.";
+var APP_BUILD='2026-09-28 13:05';
+var APP_BUILD_NOTE="🎨 <b>새로 여는 인쇄 창에도 같은 옷을 입혔습니다 — 법인 덱 종이가 어긋나 있었습니다.</b>　—　사장님 말씀 「토스판 디자인을 <b>파일 하나로</b> 빼고, <b>모든 화면</b>이 그것을 쓰게 합니다」.　—　① 열어 보니 <b>①③ 은 이미 되어 있었습니다</b> — app/ui.css 가 #439 로 들어와 있고, index·day·finance·ba·db-crm 다섯이 이미 그것을 부르고, 인라인 토큰 블록도 이미 지워져 있었습니다. <b>다시 만들지 않았습니다</b> — 만들면 두 벌이 됩니다 (5번).　—　② <b>남아 있던 것은 인쇄 창이었습니다.</b> 인쇄는 window.open('','_blank') 로 <b>빈 창</b>을 열고 글을 써 넣습니다. 그 창 주소는 <b>about:blank</b> 라 상대 경로 href=\"ui.css\" 가 <b>안 잡힙니다</b> — 그 창에서 Pretendard 만 되던 것은 그것이 절대 주소였기 때문입니다. 여덟 군데를 다 찾아 <b>printHeadCss() 한 곳</b>을 지나게 했습니다.　—　③ ★ <b>그 자리에서 진짜 고장을 찾았습니다.</b> 법인 컨설팅 덱 인쇄가 var(--t4)·var(--t3)·var(--t5)·var(--t6) 을 쓰는데 <b>그 창에는 글자 계단이 없었습니다</b>(계단은 app/index.html 의 :root 에만 있습니다). 값이 없으면 font-size 가 <b>물려받은 크기</b>가 됩니다 — 재어 보니 머리말 15px 이 <b>16px</b>, 꼬리말·참고 줄 13px 이 <b>16px</b> 로 나가고 있었습니다. A4 한 장 높이가 고정(209mm)이고 넘치면 <b>잘라 냅니다</b> — 맨 아래 줄이 종이에서 사라질 수 있었습니다. <b>고객에게 드리는 종이입니다.</b> 이제 <b>지금 살아 있는 값을 읽어</b> 실어 보냅니다 — 숫자를 적어 두면 계단을 고칠 때 그 창만 옛 값으로 남습니다 (5번). 계단은 <b>인라인</b>으로 나갑니다 — link 는 늦게 올 수 있는데 인쇄는 350ms 뒤에 시작하기 때문입니다.　—　④ 점검 — <b>check-ttok</b> 에 두 갈래를 더했습니다: 「글을 써 넣는 창이 모두 printHeadCss() 를 지나는가(어느 함수인지 이름으로 말합니다)」 · 「누르는 것이 44px 이상인가」(철칙). 그리고 <b>check-uiprint</b> 를 새로 만들었습니다 — <b>진짜 창을 열어 px 를 잽니다</b>. 정적 점검은 「부르나」 까지만 보므로, 그 함수가 조용히 빈 글자를 돌려줘도 초록입니다. ★ px 를 못 박지 않고 <b>앱이 정한 계단과 같은가</b>를 봅니다 — 계단을 고쳐도 안 낡습니다.　—　되돌려 빨간불을 확인했습니다 — 인쇄 창에서 옷을 빼기(1) · 계단 숫자를 손으로 적기(1) · 칩을 40px 로 줄이기(1) · 도우미를 두 벌로 만들기(2). 그리고 <b>고치기 전 index.html</b> 로 check-uiprint 를 돌려 <b>여섯 자리가 울리는 것</b>을 봤습니다.　—　⚠ <b>한 번 속았습니다.</b> 시험에서 바깥을 route 로 막았더니 about:blank 창의 하위 파일이 안 내려와 「ui.css 가 안 실린다」 로 보였습니다. 차단 없이 다시 재어 보니 <b>멀쩡했습니다</b>. 새 점검 주석에 적어 두었습니다 — 헛것을 잡는 점검은 안 잡는 점검보다 나쁩니다 (8번).";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -30663,7 +30693,7 @@ function prPrint(){
   var host=document.createElement('div');host.innerHTML=prCss()+prDocHtml();
   PR.view=v;
   w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+osEsc(p.title||'제안서')+
-    '</title><style>body{font-family:Pretendard,-apple-system,"Malgun Gothic",sans-serif;margin:0;padding:28px;color:#101828;background:#fff}'+
+    '</title>'+printHeadCss()+'<style>body{font-family:Pretendard,-apple-system,"Malgun Gothic",sans-serif;margin:0;padding:28px;color:#101828;background:#fff}'+
     '.card{border:none}.card-body{padding:0}</style></head><body>'+host.innerHTML+'</body></html>');
   w.document.close();
   setTimeout(function(){try{w.focus();w.print();}catch(e){}},400);
@@ -45732,6 +45762,7 @@ function babaBodyPrint(){
   w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8">'+
     '<title>주요 보장 요약 — 전·후</title>'+
     '<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">'+
+    printHeadCss()+
     '<style>@page{size:A4;margin:10mm}'+
     'body{font-family:Pretendard,-apple-system,sans-serif;margin:0;padding:14px;color:#191F28;background:#fff;'+
     '-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
@@ -46217,6 +46248,7 @@ function babaChartPrint(){
   w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8">'+
     '<title>보장 전·후 비교</title>'+
     '<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">'+
+    printHeadCss()+
     '<style>body{font-family:Pretendard,-apple-system,sans-serif;background:#F2F4F6;margin:0;padding:26px;'+
     'color:#191F28;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
     '.card{background:#fff;border-radius:20px;box-shadow:0 4px 20px rgba(17,24,39,.06);max-width:760px;margin:0 auto;overflow:hidden}'+
@@ -47294,6 +47326,7 @@ function babaPropPrint(){
   w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8">'+
     '<title>보장분석 제안서'+(p.who?(' — '+p.who):'')+'</title>'+
     '<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">'+
+    printHeadCss()+
     '<style>'+babaPropCss()+
     /* 종이 여백은 @page 가 잡는다. 여기에 padding 을 더 주면 A4 안쪽이
        그만큼 좁아져 표가 한 쪽에 안 앉는다 — 화면에서만 준다. */
@@ -66135,7 +66168,7 @@ function bizDeckPrint(){
    '.bd-table{width:100%;border-collapse:collapse;margin:22px 0 0;font-size:var(--t3)}.bd-table th,.bd-table td{border:1px solid #E2E8F0;padding:10px 12px;text-align:center;color:#334155}.bd-table th{background:#0F172A;color:#fff;font-weight:800}.bd-table th.hot{background:#1A56DB}.bd-table td.k{background:#F8FAFC;font-weight:800;color:#0F172A;text-align:left}.bd-table td.hot{background:#EFF5FF;font-weight:800;color:#1A56DB}'+
    '.pgfoot{position:absolute;left:24mm;right:24mm;bottom:12mm;display:flex;justify-content:space-between;font-size:var(--t6);color:#94A3B8;font-weight:700}'+
    '.pg.cover{background:linear-gradient(135deg,#0F172A,#1A56DB 72%,#38BDF8);justify-content:center}.pg.cover .kick{color:#93C5FD}.pg.cover h2{color:#fff;font-size:40px}.pg.cover .bizslide-ul li{color:rgba(255,255,255,.92)}.pg.cover .pgfoot{color:rgba(255,255,255,.75)}.pg.cover .bizslide-note{background:rgba(255,255,255,.12);color:#E0F2FE;border-left-color:#93C5FD}';
-  w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>'+osEsc(BIZ_DECK.title)+' 상담 진단 슬라이드</title><style>'+css+'</style></head><body>'+pages+'</body></html>');
+  w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>'+osEsc(BIZ_DECK.title)+' 상담 진단 슬라이드</title>'+printHeadCss()+'<style>'+css+'</style></head><body>'+pages+'</body></html>');
   w.document.close();setTimeout(function(){try{w.print();}catch(e){}},350);
 }
 (function bizDeckInjectStyle(){
