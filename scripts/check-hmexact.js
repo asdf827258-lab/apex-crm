@@ -123,7 +123,29 @@ const INKS = (sel) => {
   await p.evaluate(SEED);
   await p.waitForTimeout(2200);
 
-  console.log('\n[1] 홈이 <b>목업의 글자색만</b> 쓴다');
+  /* ⚠ 2026-09-25 — 여기는 <b>홈만</b> 보고 있었습니다. 사장님이 「아래 띠
+     네 화면도 목업 옷으로」 하셔서 옷을 입는 화면이 늘었습니다. 늘어난 것을
+     여기서 안 보면, 오늘은 맞아도 내일 누가 그 화면에 손으로 색을 적어도
+     <b>조용합니다</b> (8번).
+     ★ <b>화면 목록을 여기 손으로 안 적습니다</b> — 앱의 T_SKIN 표를 그대로
+       읽습니다. 여기 또 적으면 두 벌이 되어, 화면이 늘 때 한쪽만 늘어납니다 (5번). */
+  const SKIN = await p.evaluate(() => Object.keys(typeof T_SKIN !== 'undefined' ? T_SKIN : {}));
+  is(SKIN.length >= 2, '  앱에서 <b>옷 입는 화면 목록</b>을 읽었다 — ' + SKIN.join(' · '));
+  /* ⚠ <b>목록을 앱에서 읽기만 하면, 목록이 줄 때 점검도 같이 줍니다.</b>
+     일부러 달력을 빼 봤더니 <b>조용했습니다</b> — 그 화면을 안 돌 뿐이니까요.
+     안 울리는 알람은 알람이 아닙니다 (8번). 그래서 <b>다른 자</b>를 댑니다:
+     사장님이 시키신 것은 <b>아래 띠</b>였으므로, 아래 띠(TB)에 선 화면은
+     「도구」(☰ 서랍을 여는 단추라 화면이 아닙니다)만 빼고 <b>다 옷을 입어야</b>
+     합니다. 아래 띠도 앱에서 읽으니 여기에 화면 이름을 손으로 안 적습니다 (5번). */
+  const BAND = await p.evaluate(() =>
+    (typeof TB !== 'undefined' ? TB : []).map(x => x.id).filter(id => id && id.indexOf('__') !== 0));
+  const bandMiss = BAND.filter(id => SKIN.indexOf(id) < 0);
+  is(BAND.length >= 4, '  <b>아래 띠</b>도 앱에서 읽었다 — ' + BAND.join(' · '));
+  is(bandMiss.length === 0,
+     '  아래 띠에 선 화면이 <b>하나도 안 빠졌다</b>' +
+     (bandMiss.length ? (' ← 옷을 안 입는 칸: ' + bandMiss.join(' · ')) : ''));
+
+  console.log('\n[1] 옷 입은 화면이 <b>목업의 글자색만</b> 쓴다');
   const AP = await p.evaluate((f) => (new Function('return (' + f + ')(".hm-toss")'))(), INKS.toString());
   /* 목업에 없는 색 — 흰 글자(단추 위)와 <b>약관·공지</b> 줄은 뺍니다.
      그 둘은 <b>목업에 아예 없는 칸</b>이라 견줄 짝이 없습니다 (1번). */
@@ -162,22 +184,56 @@ const INKS = (sel) => {
   is(rs.length === 1 && rs[0] === MK.r,
      '  홈 카드가 <b>' + MK.r + '</b>(목업)이다 — ' + rs.map(k => k + '×' + R[k]).join(' · '));
 
-  console.log('\n[3] <b>홈에만</b> 걸었다 — 다른 화면은 제 옷 그대로다');
+  /* ── 옷 입은 화면마다 <b>실제로 열어</b> 색을 떠 본다 ────────────────
+     선언만 보면 「입혔다」 까지만 압니다. 그 화면에 <b>손으로 적힌 hex</b> 가
+     남아 있으면 잉크 표를 갈아끼워도 그대로 나옵니다 — 실제로 콘텐츠 화면이
+     그랬고(글자의 85%), 자리를 하나씩 떠서 찾아 고쳤습니다.            */
+  console.log('\n[1-2] 옷 입은 화면을 <b>하나씩 열어</b> 떠 본다');
+  for (const t of SKIN) {
+    if (t === 'dashboard') continue;                 /* 홈이 없을 때의 대타라 따로 안 연다 */
+    const R2 = await p.evaluate(async (args) => {
+      const [tab, f] = args;
+      try { go(tab); } catch (e) {}
+      await new Promise(r => setTimeout(r, 1800));
+      const on = document.getElementById('dynPane').classList.contains('t-skin');
+      return { on: on, inks: (new Function('return (' + f + ')("#dynPane")'))() };
+    }, [t, INKS.toString()]);
+    const cs = Object.keys(R2.inks), n = cs.reduce((a, c) => a + R2.inks[c], 0);
+    const bad2 = cs.filter(c => mkInks.indexOf(c) < 0 && SKIP.indexOf(c) < 0);
+    const badN = bad2.reduce((a, c) => a + R2.inks[c], 0);
+    is(R2.on, '  [' + t + '] <b>옷을 입는다</b> (#dynPane 에 t-skin)');
+    is(n > 0, '  [' + t + '] 글자가 <b>실제로 떠졌다</b> — ' + n + '개');
+    is(bad2.length === 0, '  [' + t + '] 글자색이 <b>전부 목업 것</b>이다' +
+       (bad2.length ? (' ← 목업에 없는 색 ' + bad2.length + '가지 · 글자 ' + badN + '개 · ' + bad2.slice(0, 4).join(' ')) : ''));
+  }
+
+  console.log('\n[3] <b>표에 적힌 화면에만</b> 걸었다 — 나머지는 제 옷 그대로다');
+  /* ★ <b>전체화면으로 빠져나가는 화면</b>으로 잽니다. 한 번은 옷 입히는 줄을
+     그 화면들 <b>뒤</b>에 두어, DB 통합 CRM 이 앞 화면의 옷을 그대로 입고
+     있었습니다. TFA 로 재면 그것을 못 봅니다 — TFA 는 그 줄에 닿거든요.
+     일부러 줄을 뒤로 옮겨 보고 <b>여기서 울리는 것</b>을 확인했습니다 (8번). */
   const other = await p.evaluate(async () => {
-    go('clients'); await new Promise(r => setTimeout(r, 700));
-    const e = document.querySelector('.tab-pane.on');
-    return { toss: !!(e && e.classList.contains('hm-toss')),
+    go('home'); await new Promise(r => setTimeout(r, 700));      /* 먼저 옷을 입혀 두고 */
+    const before = document.getElementById('dynPane').classList.contains('t-skin');
+    go('crm'); await new Promise(r => setTimeout(r, 1200));      /* 전체화면으로 빠져나간다 */
+    const skin = document.getElementById('dynPane').classList.contains('t-skin');
+    go('airep'); await new Promise(r => setTimeout(r, 900));     /* 표에 없는 보통 화면 */
+    return { before: before, skin: skin,
+             skin2: document.getElementById('dynPane').classList.contains('t-skin'),
              ink: getComputedStyle(document.documentElement).getPropertyValue('--ink-1').trim() };
   });
-  is(!other.toss, '  다른 화면에는 <b>hm-toss 가 안 붙는다</b>');
+  is(other.before, '  먼저 홈에서 <b>옷을 입혀 두었다</b>');
+  is(!other.skin, '  <b>전체화면으로 빠져나가도 옷이 벗겨진다</b> (DB 통합 CRM)' +
+     (other.skin ? ' ← 앞 화면의 옷을 그대로 입고 있습니다' : ''));
+  is(!other.skin2, '  표에 없는 보통 화면에도 <b>t-skin 이 안 붙는다</b> (TFA 업무관리)'),
   is(other.ink && other.ink !== MK.ink,
-     '  앱의 잉크 표는 <b>안 건드렸다</b> — ' + other.ink + ' (홈에서만 덮어씁니다)');
+     '  앱의 잉크 표는 <b>안 건드렸다</b> — ' + other.ink + ' (옷 입은 화면에서만 덮어씁니다)');
 
   console.log('\n[4] 조용히 터지지 않았나');
   is(errs.length === 0, '  콘솔 오류 없음' + (errs.length ? (' ← ' + errs.slice(0, 2).join(' | ')) : ''));
 
   console.log('\n──────────────────────────────');
-  console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 홈이 목업과 같은 색·같은 둥글기입니다.');
+  console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 옷 입은 화면이 목업과 같은 색·같은 둥글기입니다.');
   await b.close(); srv.close();
   process.exit(bad ? 1 : 0);
 })();
