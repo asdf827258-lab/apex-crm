@@ -392,7 +392,13 @@ const SEED = `(function(){
              week: !!document.querySelector('#mycalHost .mcal-wgrid') };
   });
   is(seg.there && /주/.test(seg.txt) && /월/.test(seg.txt), '달력에 <b>주 / 월</b> 고르개가 있다');
-  is(seg.month && !seg.week, '처음에는 <b>월</b>이 선다');
+  /* ⚠ 2026-09-25 · <b>처음에는 「주」 입니다.</b> 사장님 말씀 — 「달력은
+     유지해 매월 매주 스케줄 볼 수 있게 <b>매주를 기본</b>으로 해서
+     <b>이번 주에 집중</b>하게 하고」. 여기 적어 둔 「월」 은 그전 기준이라
+     그대로 두면 이 점검이 <b>사장님 말씀과 반대</b>를 지키게 됩니다.
+     ★ 월이 <b>없어진 것이 아닙니다</b> — 고르개가 있고(바로 위에서 봅니다)
+       월 격자는 check-calmonth 가 따로 잽니다.                        */
+  is(seg.week && !seg.month, '처음에는 <b>이번 주</b>가 선다 — 사장님 「이번 주에 집중하게」');
 
   await pg.evaluate(() => mcalSetView('week'));
   await pg.waitForTimeout(200);
