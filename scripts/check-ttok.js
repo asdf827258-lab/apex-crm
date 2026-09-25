@@ -224,6 +224,64 @@ TAP.forEach(c => {
 is(small.length === 0, '  누르는 <b>' + TAP.length + '가지</b>가 모두 44px 이상이다' +
    (small.length ? (' ← ' + small.join(' · ')) : ''));
 
+/* ══ [6] 폰 껍데기 — <b>화면 밖의 색도 토큰과 같아야 한다</b> ═══════════
+   2026-09-25 · 사장님이 폰에서 「디자인이 다른데 색상도」 하셨습니다.
+   제 자(430px 헤드리스)로는 홈이 목업과 95% 맞는데도요.
+
+   <b>화면 밖이었습니다.</b> 폰은 CSS 말고도 색을 세 군데서 읽습니다 —
+
+     ① `<meta name="theme-color">`  안드로이드가 <b>주소창·상태바</b>를 칠한다
+     ② webmanifest `theme_color`     아이콘으로 열었을 때 같은 자리
+     ③ webmanifest `background_color` 앱이 뜨기 <b>전</b> 첫 판(splash)
+
+   띠를 밝게 바꾼 뒤에도 ①②에 <b>옛 파랑 #1b64da</b> 가 남아 있었습니다 —
+   #455 에서 33군데를 토큰으로 모으며 걷어낸 그 파랑입니다. CSS 가 아니라
+   못 보고 지나갔습니다. ③은 <b>#0D1117</b>(거의 검정)이라, 아이콘을 누르면
+   까만 판이 한 번 번쩍이고 밝은 앱이 떴습니다.
+
+   ★ 여기는 <b>hex 를 적을 수밖에 없는 자리</b>입니다 — meta 와 JSON 은
+     var(--t-card) 를 못 읽습니다. 그래서 <b>두 벌이 되는 것을 막는 대신,
+     두 벌이 어긋나는 것을 잡습니다</b>: ui.css 의 토큰에서 값을 읽어 와
+     견줍니다. 토큰을 바꾸면 여기가 울립니다 (5번).
+   ★ <b>아이폰 상태바</b>도 같이 봅니다. black-translucent 는 화면이 상태바
+     밑까지 올라가고 시계·배터리가 <b>흰 글씨</b>로 뜹니다 — 흰 띠 위에서는
+     시계가 안 보입니다.                                                  */
+console.log('\n[6] <b>폰 껍데기</b>(주소창 · splash · 상태바)가 화면과 같은 색인가');
+const tok = (n) => { const m = new RegExp('--' + n + '\\s*:\\s*([#A-Za-z0-9]+)').exec(CSS); return m ? m[1].toUpperCase() : ''; };
+const CARD = tok('t-card'), BG = tok('t-bg');
+const MF = JSON.parse(fs.readFileSync('app/manifest.webmanifest', 'utf8'));
+const meta = (n) => { const m = new RegExp('<meta name="' + n + '" content="([^"]*)"').exec(SRC); return m ? m[1] : ''; };
+const themeMeta = (meta('theme-color') || '').toUpperCase();
+const themeMf = (MF.theme_color || '').toUpperCase();
+const bgMf = (MF.background_color || '').toUpperCase();
+const bar = meta('apple-mobile-web-app-status-bar-style');
+is(!!CARD && !!BG, '  ui.css 에서 자를 읽었다 — 카드 ' + CARD + ' · 바탕 ' + BG);
+is(themeMeta === CARD,
+   '  <b>주소창 색</b>(meta theme-color)이 맨 위 띠와 같다 — ' + themeMeta + ' = ' + CARD +
+   (themeMeta === CARD ? '' : ' ← 폰에서 띠 위에 다른 색 줄이 하나 더 생깁니다'));
+is(themeMf === CARD,
+   '  <b>아이콘으로 열 때</b>도 같은 색이다 (webmanifest theme_color) — ' + themeMf +
+   (themeMf === CARD ? '' : ' ← manifest 만 옛 색으로 남기 쉽습니다'));
+is(bgMf === BG,
+   '  <b>뜨기 전 첫 판</b>(splash)이 앱 바탕과 같다 — ' + bgMf + ' = ' + BG +
+   (bgMf === BG ? '' : ' ← 어두우면 아이콘을 누를 때마다 까만 판이 번쩍입니다'));
+is(bar !== 'black-translucent',
+   '  <b>아이폰 상태바</b>가 흰 글씨로 안 뜬다 — 「' + bar + '」' +
+   (bar === 'black-translucent' ? ' ← 흰 띠 위에 흰 시계라 안 보입니다' : ''));
+/* 걷어낸 파랑이 <b>어디에도</b> 안 남았는가 — CSS 가 아닌 파일까지.
+   ⚠ <b>주석은 빼고 봅니다.</b> 안 그러면 「옛 파랑 #1b64da 를 걷어냈다」 고
+     적어 둔 <b>그 글</b>을 제가 잡습니다 — 실제로 그렇게 울렸습니다.
+     점검은 글이 아니라 <b>사는 코드</b>를 봐야 합니다 (8번).            */
+/* 주석과 <b>APP_BUILD_NOTE</b>(사장님께 보여 드리는 쪽지)를 뺍니다 — 둘 다
+   <b>글</b>이지 색을 정하는 자리가 아닙니다. 쪽지에 「걷어낸 파랑」 을
+   설명하려고 그 값을 적으면 여기가 울렸습니다. */
+const noCmt = (t) => t.replace(/<!--[\s\S]*?-->/g, ' ').replace(/\/\*[\s\S]*?\*\//g, ' ')
+                      .replace(/^var APP_BUILD_NOTE=.*$/m, ' ');
+const oldBlue = ['app/index.html', 'app/manifest.webmanifest', 'app/day.webmanifest', 'app/team.webmanifest']
+  .filter(f => { try { return /#1b64da/i.test(noCmt(fs.readFileSync(f, 'utf8'))); } catch (e) { return false; } });
+is(oldBlue.length === 0, '  걷어낸 파랑 <b>#1B64DA</b> 가 한 자리도 안 남았다' +
+   (oldBlue.length ? ' ← ' + oldBlue.join(' · ') : ''));
+
 console.log('\n──────────────────────────────');
-console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 토큰은 한 곳에 · 색은 토큰으로 · 인쇄 창도 같은 옷 · 손가락은 44px.');
+console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 토큰은 한 곳에 · 색은 토큰으로 · 인쇄 창도 같은 옷 · 손가락은 44px · 폰 껍데기도 같은 색.');
 process.exit(bad ? 1 : 0);
