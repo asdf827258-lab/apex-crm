@@ -284,6 +284,16 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     const opts=[].slice.call(document.querySelectorAll('#dynPane .hm-now .hm-ask-o'));
     out.btnTxt=opts.map(b=>b.textContent.replace(/\s+/g,' ').trim());
     out.nos=opts.map(b=>(b.querySelector('.no')||{}).textContent||'');
+    /* ⚠ 2026-09-25 — 카드가 <b>목업의 짜임새</b>로 바뀌었습니다 (사장님 말씀
+       「카드 짜임새를 목업처럼」). 「무엇을 / 어떻게」 는 번호 목록 ①번이
+       아니라 <b>큰 글씨 두 줄</b>(.hm-aim/.hm-way)이고, 하러 가는 것은
+       <b>큰 파란 단추</b>(.hm-do) 입니다. 재려던 것은 그대로입니다 —
+       「상태마다 무엇을 하라고 말하나」 (8번). */
+    out.aim=(document.querySelector('#dynPane .hm-now .hm-aim')||{}).textContent||'';
+    out.way=(document.querySelector('#dynPane .hm-now .hm-way')||{}).textContent||'';
+    out.doTxt=((document.querySelector('#dynPane .hm-now .hm-do')||{}).textContent||'').trim();
+    out.doH=(()=>{const b=document.querySelector('#dynPane .hm-now .hm-do');
+                  return b?Math.round(b.getBoundingClientRect().height):0;})();
     /* 머리줄에 <b>같은 말이 두 번</b> 안 적히는가 */
     out.head=(document.querySelector('#dynPane .hm-now .hm-now-k')||{}).textContent||'';
     /* 손가락으로 누를 만한가 */
@@ -293,13 +303,14 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
        만들기·계산기·상담자료…). 그때는 go() 가 안 불린다 — 그것을 「아무
        데도 안 갔다」 로 읽으면, 더 잘 고쳐 놓고 빨간불이 켜진다 (8번). */
     let went=''; const g=window.go; window.go=function(t){went=t;};
-    if(opts[1])opts[1].click();          /* ②번 = 첫 도구 */
+    if(opts[0])opts[0].click();          /* ①번 = 첫 도구 (할 일은 큰 단추로 갔다) */
     await new Promise(r=>setTimeout(r,300));
     out.went=went||((typeof HMS!=='undefined'&&HMS.sheet&&HMS.id)?HMS.id:'');
     out.asSheet=!went&&!!(typeof HMS!=='undefined'&&HMS.sheet);
     try{ if(typeof hmSheetClose==='function')hmSheetClose(); }catch(e){}
-    /* ①번은 <b>그 사람 자리</b>로 보낸다 */
-    went=''; if(opts[0])opts[0].click();
+    /* <b>큰 단추</b>는 그 사람 자리로 보낸다 */
+    went=''; const dob=document.querySelector('#dynPane .hm-now .hm-do');
+    if(dob)dob.click();
     out.first=went;
     window.go=g;
     /* 마지막 갈래는 <b>「이미 했습니다」</b> — 눌러 보고 실제로 표시되는가 */
@@ -355,11 +366,18 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   /* 사장님 말씀 — 「클로드 내게 권한 물어보는것처럼 <b>선택해서</b> 할수
      있도록」. 도구 단추만 늘어놓는 것이 아니라 <b>묻고 고르게</b> 한다. */
   is(/무엇을 할까요/.test(G.ask), '<b>「무엇을 할까요?」</b> 하고 묻는다 — '+(G.ask||'안 묻는다'));
-  is(G.nos.join('')==='12345', '갈래마다 <b>번호</b>가 붙는다 — '+G.nos.join('·'));
-  is(G.btnTxt.length===5,
-     'PC 는 <b>다섯 갈래</b>가 선다 — 할 일 하나 + 도구 셋 + 했습니다 ('+G.btnTxt.length+')');
-  is(/전화로/.test(G.btnTxt[0]||'')&&/걸리셨어요/.test(G.btnTxt[0]||''),
-     '①번은 <b>무엇을 어떻게</b> 할지 그대로 적는다 — 「'+(G.btnTxt[0]||'').slice(0,40)+'…」');
+  is(G.nos.join('')==='1234', '갈래마다 <b>번호</b>가 붙는다 — '+G.nos.join('·'));
+  is(G.btnTxt.length===4,
+     'PC 는 <b>큰 단추 하나 + 네 갈래</b>다 — 도구 셋 + 했습니다 ('+G.btnTxt.length+')');
+  /* 사장님이 apex-stage.js 에 적어 두신 <b>그 문장 그대로</b> 서는가 —
+     여태는 평문으로 눌려 번호 갈래 ①번에 끼어 있었다 */
+  is(/걸리는 것 한 가지/.test(G.aim)&&/걸리셨어요/.test(G.way),
+     '무엇을 / 어떻게 가 <b>큰 두 줄</b>로 선다 — 「'+G.aim.trim().slice(0,34)+'」');
+  is(/전화/.test(G.doTxt)&&G.doH>=44,
+     '<b>큰 단추 한 방</b>이 선다 — 「'+(G.doTxt||'없다')+'」 · '+G.doH+'px');
+  /* 큰 두 줄로 옮겼으니 <b>번호 갈래에는 또 없어야</b> 한다 (5번) */
+  is(!/받아 낸다/.test(G.btnTxt.join(' ')),
+     '그 문장을 <b>번호 갈래에 또 안 적는다</b> — 같은 말이 두 번이면 눈이 미끄러진다');
   is(/전&후 만들기|윤시현|계산기/.test(G.btnTxt.join(' ')),
      '도구 갈래에 <b>메뉴에 적힌 이름</b>이 그대로 뜬다');
   is(!/받아 낸다/.test(G.head),
@@ -368,7 +386,7 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(G.went==='frmake', '도구 갈래를 누르니 <b>그 도구가 열린다</b> — '+
      (G.went?(G.went+(G.asSheet?' (덮개로 — 홈을 안 벗어난다)':' (화면으로)')):'아무 데도'));
   is(G.first==='crm'||G.first==='clients',
-     '①번을 누르니 <b>그 사람 자리로</b> 간다 — '+(G.first||'아무 데도'));
+     '<b>큰 단추</b>를 누르니 그 사람 자리로 간다 — '+(G.first||'아무 데도'));
   is(G.didWorks, '<b>「이미 했습니다」</b> 를 고르면 정말로 표시된다 — 고르기만 하고 안 되면 헛것이다');
 
   /* ══ [9] <b>팀별 · 개인별</b>로 나눠 보는가 ═════════════════════
