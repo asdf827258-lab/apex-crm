@@ -2314,6 +2314,10 @@ body.dzguide-mode #dzGuideScreen{display:block;}
 <!-- 「오늘 누구부터」 규칙은 <b>day-rank.js 한 곳</b>에 있습니다 — day.html 과
      같은 파일입니다. 여기 또 적으면 두 화면이 다른 「오늘 그 분」 을 말합니다. -->
 <script src="day-rank.js"></script>
+<!-- 알람 네 번(시각·문구)은 <b>alm-slots.js 한 곳</b>에 있습니다 — 서버도
+     netlify.toml 의 included_files 로 <b>같은 파일</b>을 읽습니다. 여기 또
+     적으면 화면과 알람이 다른 말을 합니다 (5번). -->
+<script src="alm-slots.js"></script>
 <script src="apex-map-data.js"></script>
 <!-- 고객 한 장 — 고객 365일과 DB 통합 CRM 이 <b>같은 카드</b>를 세운다.
      초성 표·이름 가리기·연락기록 섞기도 여기 한 벌만 둔다(5번).
@@ -13324,6 +13328,9 @@ var TABS=[
    {id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:'',ak:'업무매뉴얼 점검'}
  ]},
  {group:'시스템',items:[
+   /* 🙋 <b>나</b> — 2026-09-25 사장님 말씀 「「나」 화면 도구 안에 넣어줘」.
+      「도구」 는 ☰ 서랍을 여는 단추라, 서랍의 이 갈래에 세웁니다. */
+   {id:'me',icon:'🙋',title:'나 — 알람 · 내 숫자',cnt:'',ak:'나 알람 내숫자 지표 성장판 출근'},
    {id:'settings',icon:'⚙️',title:'설정',cnt:'',ak:'시스템 설정'},
    {id:'pricing',icon:'💳',title:'요금제·구독',cnt:'',ak:'구독·요금제'},
    {id:'terms',icon:'📜',title:'약관·개인정보',cnt:'',ak:'구독·요금제'},
@@ -13460,7 +13467,9 @@ var NAV_WHEN={
  org:'run', attend:'run', audit:'run', teamhub:'run', daily:'run',
  report:'run', branch_coach:'run', hq:'run',
  settings:'run', pricing:'run', terms:'run', ready:'run', health:'run',
- phone_app:'run', voice:'run'
+ phone_app:'run', voice:'run',
+ /* 🙋 나 — 알람과 내 숫자. 「내 설정」 쪽이라 여기에 둡니다 (2026-09-25) */
+ me:'run'
 };
 /* 간편 버전에 세울 것 — <b>매일 여는 것</b>만. 나머지는 「전체」 에 있다.
    사장님이 짚어 주신 다섯(홈 · TFA · 전&후 만들기 · DB CRM · 아카데미)이
@@ -14349,6 +14358,74 @@ function almWhy(){
 /* 몇 시에 받을지 — <b>이 폰에만</b> 담는다. 사람마다 아침이 다르다.
    서버 줄(push_subs.hour)은 서버가 쓰려고 받아 적는 사본이고,
    <b>묻는 곳은 여기 하나</b>다 (5번). */
+/* ══ 알람 <b>네 번</b> — 슬롯마다 켜기·끄기와 시각 ═══════════════════
+   사장님 말씀 (2026-09-25) — 「알람 하루 네 번 만들고」.
+   ★ <b>무엇이 몇 시인지는 alm-slots.js 한 곳</b>이 압니다 (5번). 여기는
+     사장님이 바꾸신 것만 이 브라우저에 담아 둡니다.
+   ★ 켜고 끈 것은 <b>이 브라우저</b>에 남고, 서버 줄(push_subs.hours)에는
+     <b>켜 둔 시각만</b> 올라갑니다 — 서버는 그 시각에 깨워 주기만 하면
+     되고, 무엇을 껐는지까지 알 까닭이 없습니다 (3번·7번).            */
+var ALM_SLOT_KEY='apex_alm_slots_v1';
+function almSlotsLoad(){
+  try{ var o=JSON.parse(localStorage.getItem(ALM_SLOT_KEY)); return (o&&typeof o==='object')?o:{}; }
+  catch(e){ return {}; }
+}
+function almSlotsSave(o){
+  try{ localStorage.setItem(ALM_SLOT_KEY,JSON.stringify(o||{})); }catch(e){}
+}
+/* 켜져 있나 — 사장님이 안 건드리셨으면 <b>표의 기본값</b>입니다 */
+function almSlotOn(k){
+  var s=almSlotOf(k); if(!s)return false;
+  var o=almSlotsLoad();
+  return (o[k]&&typeof o[k].on==='boolean')?o[k].on:!!s.on;
+}
+/* 몇 시인가 — 안 바꾸셨으면 표의 기본값. 잘못 적힌 값을 0시로 쓰지 않습니다 (1번) */
+function almSlotHour(k){
+  var s=almSlotOf(k); if(!s)return -1;
+  var o=almSlotsLoad(),v=(o[k]||{}).h;
+  if(typeof v!=='number'||isNaN(v)||v<0||v>23)return s.h;
+  return v;
+}
+function almSlotSet(k,on){
+  var s=almSlotOf(k); if(!s)return;
+  var o=almSlotsLoad(); o[k]=o[k]||{}; o[k].on=!!on; almSlotsSave(o);
+  try{ localStorage.removeItem(ALM_DAY_KEY+'_'+k); }catch(e){}   /* 켜셨으면 오늘 다시 울릴 수 있게 */
+  almHoursPush(); almPaint();
+  toast(s.t+' 알람을 '+(on?('켰습니다 — '+almSlotHour(k)+'시'):'껐습니다'));
+}
+function almSlotHourSet(k,v){
+  var s=almSlotOf(k); if(!s)return;
+  var n=parseInt(v,10);
+  if(isNaN(n)||n<0||n>23){toast('0 시부터 23 시 사이로 적어 주세요');return;}
+  var o=almSlotsLoad(); o[k]=o[k]||{}; o[k].h=n; almSlotsSave(o);
+  try{ localStorage.removeItem(ALM_DAY_KEY+'_'+k); }catch(e){}
+  almHoursPush(); almPaint();
+  toast(s.t+' — '+n+'시에 알려 드립니다');
+}
+/* 켜 둔 시각들 — <b>세는 곳은 여기 하나</b>입니다 (5번) */
+function almHoursOn(){
+  var out=[],i,k;
+  for(i=0;i<ALM_SLOTS.length;i++){ k=ALM_SLOTS[i].k; if(almSlotOn(k))out.push(almSlotHour(k)); }
+  out.sort(function(a,b){return a-b;});
+  return out;
+}
+/* 서버 줄에도 같은 시각을 적어 둔다 — 켜 둔 폰이 없으면 아무것도 안 한다.
+   ⚠ hours 칸은 <b>준비 SQL 을 한 번 돌리셔야</b> 생깁니다. 없으면 서버가
+     거절하는데, 그때도 <b>옛 hour 한 칸</b>이 그대로 살아 있어 아침 알람은
+     계속 옵니다 — 조용히 망가지지 않습니다 (1번). */
+function almHoursPush(){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb||!ALM.sub||!ALM.sub.endpoint)return;
+  var hs=almHoursOn();
+  try{
+    sb.from('push_subs').update({hours:hs,hour:(hs.length?hs[0]:almHour())})
+      .eq('endpoint',ALM.sub.endpoint).then(function(r){
+        if(r&&r.error)ALM.hoursErr=(r.error.message||'').slice(0,120);
+        else ALM.hoursErr='';
+        try{almPaint();}catch(e){}
+      },function(){});
+  }catch(e){}
+}
 function almHour(){
   var v=null;
   try{ v=localStorage.getItem(ALM_HOUR_KEY); }catch(e){ v=null; }
@@ -14397,6 +14474,44 @@ function almLine(){
   return {n:todo.length, title:'오늘 챙길 분 '+todo.length+'명',
           body:p.join(' · ')};
 }
+/* ══ 슬롯마다 <b>무엇을 셀까</b> ═══════════════════════════════════════
+   ★ <b>여기서 새로 세지 않습니다</b> (5번). 이미 세고 있는 자리를 그대로
+     부릅니다 — 오늘 걸 사람은 almLine(hmSteps), 내일 약속은 달력(mcalItems),
+     오전 결과는 통화 장부(AR.calls). 여기서 또 세면 화면과 알람이 다른
+     숫자를 말합니다.
+   ★ <b>이름은 한 글자도 안 담습니다</b> (3번) — 건수와 갈래뿐입니다.
+   ★ <b>0 이면 null</b> 을 돌려줍니다. 부르는 쪽이 안 울립니다 —
+     「0건」 알람은 알람이 아니라 방해입니다.
+   ★ <b>못 세는 것은 못 센다고 합니다</b> (1번). 예상업적(expect_premium)은
+     「DB · 업적관리」(edu-pipeline.html)에 있어 본체가 못 읽습니다. 그래서
+     숫자 없이 <b>알려만</b> 줍니다 — 표의 cnt:false 가 그 뜻입니다.      */
+function almLineFor(k){
+  var s=almSlotOf(k); if(!s)return null;
+  if(k==='call')return almLine();                    /* 여태 쓰던 그것 */
+  if(!s.cnt)return {n:null,title:'APEX YUN PRO',body:s.body};   /* 못 세는 것 */
+  if(k==='am'){
+    /* 오전에 걸었는데 <b>결과가 빈</b> 줄. 장부를 아직 못 읽었으면
+       <b>0 이 아니라 모름</b>이라 안 울립니다 (1번). */
+    if(!AR.loaded||!AR.calls)return null;
+    var t=(typeof arToday==='function')?arToday():'',i,n=0;
+    if(!t)return null;
+    for(i=0;i<AR.calls.length;i++){
+      var c=AR.calls[i];
+      if(c.d===t&&c.h<12&&!(''+(c.r||'')).replace(/^\s+|\s+$/g,''))n++;
+    }
+    if(!n)return null;
+    return {n:n,title:'오전에 건 '+n+'건',body:'결과를 아직 안 남기셨습니다 — 지금 남기면 다음 계산이 맞습니다.'};
+  }
+  if(k==='tmr'){
+    /* 내일 약속 — <b>달력이 이미 세워 둔 줄</b>에서 셉니다 (5번) */
+    var it,ds,L,j,m=0;
+    try{ it=mcalItems(); ds=mcalShift(mcalToday(),1); L=mcalDay(it,ds)||[]; }catch(e){ return null; }
+    for(j=0;j<L.length;j++)if(L[j]&&L[j].k==='appt')m++;
+    if(!m)return null;
+    return {n:m,title:'내일 약속 '+m+'건',body:'오늘 안에 확인해 두시면 내일 아침이 편합니다.'};
+  }
+  return null;
+}
 /* 띄우기 — 서비스워커가 있으면 그쪽으로(아이폰은 그 길로만 뜹니다) */
 function almShow(d){
   if(!d||!d.title)return false;
@@ -14426,13 +14541,26 @@ function almTick(){
     almSync();
     var t=(typeof arToday==='function')?arToday():'';
     if(!t)return;
-    var last='';
-    try{ last=localStorage.getItem(ALM_DAY_KEY)||''; }catch(e){}
-    if(last===t)return;
     var h=new Date(Date.now()+9*3600000).getUTCHours();   /* 한국 시각 */
-    if(h<almHour())return;
-    if(!almRing())return;                 /* 안 울렸으면 표시도 안 남긴다 — 내일 또 걸러진다 */
-    try{ localStorage.setItem(ALM_DAY_KEY,t); }catch(e){}
+    /* ⚠ 2026-09-25 · <b>네 번</b>이 되면서 「오늘 울렸나」 를 슬롯마다 따로
+       적습니다. 한 칸에 적으면 아침에 한 번 울린 뒤 <b>낮·저녁이 통째로
+       막힙니다</b>. 옛 칸(ALM_DAY_KEY)은 그대로 두어, 판이 바뀌는 날
+       아침 알람이 두 번 울리지 않게 합니다.
+       ★ 슬롯을 여기 손으로 안 적습니다 — ALM_SLOTS 를 훑습니다 (5번). */
+    var i,s,kk,last,d;
+    for(i=0;i<ALM_SLOTS.length;i++){
+      s=ALM_SLOTS[i]; kk=s.k;
+      if(!almSlotOn(kk))continue;
+      if(h<almSlotHour(kk))continue;
+      last='';
+      try{ last=localStorage.getItem(ALM_DAY_KEY+'_'+kk)||''; }catch(e2){}
+      if(last===t)continue;
+      d=almLineFor(kk);
+      if(!d)continue;                     /* 셀 수 있는데 0 이면 <b>안 울립니다</b> */
+      if(!almShow(d))continue;            /* 안 울렸으면 표시도 안 남긴다 */
+      try{ localStorage.setItem(ALM_DAY_KEY+'_'+kk,t); }catch(e3){}
+      if(kk==='call'){ try{ localStorage.setItem(ALM_DAY_KEY,t); }catch(e4){} }
+    }
   }catch(e){}
 }
 /* 지금 한 번 — <b>이 폰에서 뜨는지만</b> 봅니다. 서버는 안 거칩니다 */
@@ -14637,11 +14765,47 @@ function almGoMain(){ try{ location.href=location.pathname; }catch(e){} }
 function almOn(){ return almCan().perm==='granted'; }
 function almPhoneOn(){ return !!(ALM.sub&&ALM.sub.endpoint); }
 function almPaint(){
+  /* 「내 폰에 설치」 는 #almHost, 「나」 는 .alm-host — <b>칠하는 함수는
+     하나</b>입니다 (5번). 둘을 따로 칠하면 한쪽만 옛 모양으로 남습니다. */
   var el=document.getElementById('almHost'); if(el)el.innerHTML=almCardHtml();
+  try{
+    var hs=document.querySelectorAll('.alm-host'),hi;
+    for(hi=0;hi<hs.length;hi++)hs[hi].innerHTML=almCardHtml();
+  }catch(e){}
   /* 열쇠 칸(설치 화면 맨 위)·홈 한 줄도 <b>여기서</b> 같이 그린다 — 따로
      그리면 열쇠를 담은 뒤에도 한쪽이 남아 「아직 안 됐다」 고 거짓말한다 (5번) */
   try{ almkCardPaint(); }catch(e){}
   try{ almkBandPaint(); }catch(e){}
+}
+/* ══ 알람 <b>네 번</b> 줄 — 목업 「나」 화면의 그 칸 ═══════════════════
+   ★ <b>무엇이 몇 시인지는 alm-slots.js 한 곳</b>이 압니다 — 여기서 늘어놓지
+     않습니다. 슬롯이 늘어도 이 함수는 안 고칩니다 (5번).
+   ★ <b>못 세는 것은 못 센다고 적습니다</b> (1번). 목업은 「넣을 게 없는 날은
+     울리지 않습니다」 라고 한 줄로 적었지만, 그것이 <b>참인 슬롯과 아닌
+     슬롯</b>이 있습니다 — 참이 아닌 곳에 그렇게 적으면 사장님이 「안 울렸으니
+     없구나」 하십니다. 그래서 줄마다 나눠 적습니다.
+   ★ 누르는 것은 44px (철칙).                                          */
+function almSlotsHtml(){
+  almSlCss();                       /* 옷을 쓰는 자리에서 부른다 (5번) */
+  var h='<div class="alm-sl"><div class="alm-sl-h">알람 — 하루 <b>'+ALM_SLOTS.length+'번</b></div>',i,s,k,on;
+  for(i=0;i<ALM_SLOTS.length;i++){
+    s=ALM_SLOTS[i]; k=s.k; on=almSlotOn(k);
+    h+='<div class="alm-sl-r'+(on?' on':'')+'">'+
+       '<input type="number" class="alm-sl-t" min="0" max="23" value="'+almSlotHour(k)+'" '+
+         'aria-label="'+osEsc(s.t)+' 시각" onchange="almSlotHourSet(\''+k+'\',this.value)"/>'+
+       '<div class="alm-sl-m"><b>'+osEsc(s.t)+'</b>'+
+         '<span>'+(s.cnt?'없는 날은 <b>안 울립니다</b>'
+                        :'숫자 없이 <b>알려만</b> 줍니다 — 예상업적은 「DB · 업적관리」 가 셉니다')+'</span></div>'+
+       '<button type="button" class="alm-sl-b'+(on?' on':'')+'" '+
+         'onclick="almSlotSet(\''+k+'\','+(on?'false':'true')+')">'+(on?'켜짐':'꺼짐')+'</button>'+
+       '</div>';
+  }
+  /* 서버 줄에 못 적었으면 <b>말합니다</b> — 조용히 넘기면 앱이 닫혔을 때만 안 옵니다 (1번) */
+  if(ALM.hoursErr)
+    h+='<div class="alm-sl-e">앱이 닫혀 있을 때 쓰는 <b>서버 줄에 시각을 못 적었습니다</b> — '+
+       osEsc(ALM.hoursErr)+'<br>홈 맨 위 <b>준비 SQL</b> 을 한 번 돌려 주십시오. '+
+       '그때까지 <b>앱이 열려 있을 때는 네 번 다 울립니다.</b></div>';
+  return h+'</div>';
 }
 function almCardHtml(){
   var c=almCan(),w=almWhy(),d=almLine(),on=almOn(),ph=almPhoneOn();
@@ -14656,12 +14820,19 @@ function almCardHtml(){
       '<div class="card-body"><div class="btn-row">'+
       '<button class="btn btn-primary" onclick="almGoMain()">APEX 본 앱 열기 →</button>'+
       '</div></div></div>';
+  /* ⚠ 2026-09-25 · 알람이 <b>네 번</b>이 되면서 머리글을 고쳤습니다.
+     ① 「아침 알람」 이 아닙니다 — 몇 번인지는 <b>표에서 셉니다</b>(손으로 안 적습니다).
+     ② 「없는 날은 안 울립니다」 를 <b>여기서 뭉뚱그려 말하지 않습니다</b> —
+        셀 수 있는 슬롯만 참이고, 예상업적은 못 셉니다. 그 말은 <b>줄마다</b>
+        적습니다(almSlotsHtml). 여기서 한 번에 말하면, 안 울린 날 사장님이
+        「없구나」 하시는데 실은 못 센 것일 수 있습니다 (1번).            */
+  var nOn=almHoursOn().length;
   var h='<div class="card"><div class="card-hd"><div class="card-title">'+
-      '<span class="ci">🔔</span>아침 알람 — 오늘 챙길 분'+
-      (on?'<span class="badge green">켜짐</span>':'<span class="badge">꺼짐</span>')+'</div>'+
-    '<div class="card-desc">앱을 안 열어도 <b>아침에 폰이 울립니다.</b> '+
+      '<span class="ci">🔔</span>폰 알람 — 하루 '+ALM_SLOTS.length+'번'+
+      (on?('<span class="badge green">'+nOn+'개 켜짐</span>'):'<span class="badge">꺼짐</span>')+'</div>'+
+    '<div class="card-desc">앱을 안 열어도 <b>정한 시각에 폰이 울립니다.</b> '+
       '<b>고객 이름은 알람에 안 담습니다</b> — 잠금화면은 남이 봅니다. '+
-      '오늘 챙길 분이 없는 날은 <b>안 울립니다</b>.</div></div><div class="card-body">';
+      '무엇이 언제 울리는지는 <b>아래 네 줄</b>에 있습니다.</div></div><div class="card-body">';
   if(w)h+='<div class="alm-why">'+w+'</div>';
   h+='<div class="btn-row">'+
      (on?('<button class="btn btn-ghost" onclick="almTest()">🔔 지금 한 번 울려 보기</button>'+
@@ -14670,10 +14841,7 @@ function almCardHtml(){
         :('<button class="btn btn-primary"'+(w?' disabled':'')+' onclick="almAsk()">'+
           (ALM.busy?'켜는 중…':'🔔 이 폰에 알람 켜기')+'</button>'))+
      '</div>';
-  h+='<div class="alm-hr"><label>몇 시에</label>'+
-     '<input type="number" id="almHourIn" min="0" max="23" value="'+almHour()+'"/>'+
-     '<span>시</span><button type="button" class="btn btn-ghost" '+
-     'onclick="almHourSet(osVal(\'almHourIn\'))">이 시각으로</button></div>';
+  h+=almSlotsHtml();
   /* <b>지금 무엇이 되고 무엇이 안 되는지</b> 그대로 적습니다 (1번) */
   h+='<div class="alm-st">'+
      '<div class="alm-r"><b>① 앱이 열려 있을 때</b><span class="'+(on?'y':'n')+'">'+
@@ -14992,6 +15160,78 @@ function almkHtml(){
      '<span style="color:var(--ink-5)">※ Netlify 환경변수(<code>VAPID_*</code>)에 이미 넣어 두셨다면 '+
      '그쪽이 먼저입니다 — 여기서 담은 것이 그것을 덮지 않습니다.</span></div>';
   return h+'</div>';
+}
+/* 알람 네 번 줄 — 목업 .t-row 결 */
+function almSlCss(){
+  if(document.getElementById('almSlCss'))return;
+  var st=document.createElement('style');st.id='almSlCss';
+  st.textContent=
+    '.alm-sl{margin-top:12px}'+
+    '.alm-sl-h{font-size:var(--t6);font-weight:800;color:var(--ink-4);margin-bottom:6px}'+
+    '.alm-sl-h b{color:var(--ink-1)}'+
+    '.alm-sl-r{display:flex;align-items:center;gap:11px;min-height:44px;padding:9px 0;'+
+      'border-bottom:1px solid var(--ink-8)}'+
+    '.alm-sl-r:last-child{border-bottom:0}'+
+    '.alm-sl-t{flex:0 0 58px;width:58px;min-height:44px;text-align:center;font-family:inherit;'+
+      'font-size:var(--t6);font-weight:800;border:1px solid var(--ink-7);border-radius:var(--r-sm);'+
+      'background:#fff;color:var(--ink-1)}'+
+    '.alm-sl-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}'+
+    '.alm-sl-m>b{font-size:var(--t6);font-weight:700;color:var(--ink-1)}'+
+    '.alm-sl-m>span{font-size:var(--t6);color:var(--ink-5);line-height:1.5;word-break:keep-all}'+
+    '.alm-sl-b{flex:0 0 auto;min-height:44px;padding:0 14px;border-radius:var(--r-sm);'+
+      'border:1px solid var(--ink-7);background:var(--ink-9);color:var(--ink-4);'+
+      'font-family:inherit;font-size:var(--t6);font-weight:800;cursor:pointer}'+
+    /* ⚠ 처음엔 #047857 을 썼다가 check-hmexact 가 잡았습니다 — 목업에 없는
+       초록입니다. 목업이 정한 짝(--t-pos-l 위 --t-pos)으로 바꿨습니다. */
+    '.alm-sl-b.on{background:var(--t-pos-l);border-color:var(--t-pos-l);color:var(--t-pos)}'+
+    '.alm-sl-e{margin-top:10px;font-size:var(--t6);line-height:1.6;color:var(--t-warn);'+
+      'background:var(--t-warn-l);border-radius:var(--r-sm);padding:10px 12px}';
+  document.head.appendChild(st);
+}
+/* ══ 🙋 <b>나</b> — 알람 네 번 · 내 숫자 ═══════════════════════════════
+   2026-09-25 사장님 말씀 — 「알람 하루 네 번 만들고 <b>「나」 화면 도구 안에
+   넣어줘</b>」. 목업(docs/토스판_사본.html)의 「나」 화면 그 자리입니다.
+
+   ★ <b>알람 카드를 여기서 다시 짓지 않습니다</b> (5번) — 「내 폰에 설치」
+     화면과 <b>같은 almCardHtml()</b> 을 부릅니다. 두 벌이 되면 한쪽만
+     고쳐져, 켰는데 저쪽은 꺼진 것처럼 보입니다.
+
+   ★ <b>내 숫자는 없는 데로 안 보냅니다</b> (1번). 목업은 여섯을 적었는데
+     그중 <b>통합 대시보드 · KPI · 타율 분석 · AI 피드백</b> 은 앱에 그런
+     화면이 <b>없습니다</b> — DB 통합 CRM 안에 들어 있습니다. 목업대로
+     단추를 세우면 눌러도 아무 일이 없습니다. 그래서 <b>navItemOf 로 있는지
+     물어보고</b>, 있는 것만 세웁니다. 이름·아이콘도 거기서 받습니다 (5번) —
+     여기 또 적으면 메뉴와 다른 이름이 됩니다.
+   ★ 등급으로 가려진 칸은 navItemOf 가 <b>없다고</b> 답하므로 저절로 빠집니다. */
+var ME_NUM=['airep','attend','growboard','crm'];
+function meRowHtml(id){
+  var it=(typeof navItemOf==='function')?navItemOf(id):null;
+  if(!it)return '';                    /* 없는 화면·가려진 화면은 안 세운다 */
+  return '<button type="button" class="t-row" onclick="go(\''+esc(id)+'\')">'+
+    '<span class="av">'+(it.icon||'•')+'</span>'+
+    '<span class="m"><b>'+esc(it.title||id)+'</b></span>'+
+    '<span class="r">›</span></button>';
+}
+function renderMe(){
+  var nm=(OS.profile&&OS.profile.name)||'',rows='',i,n=0;
+  for(i=0;i<ME_NUM.length;i++){ var r=meRowHtml(ME_NUM[i]); if(r){rows+=r;n++;} }
+  return '<div class="tab-pane on">'+
+    '<div class="page-hd"><div class="page-tag">나</div>'+
+    '<div class="page-title">🙋 '+(nm?esc(nm)+' 님':'나')+'</div>'+
+    '<div class="page-desc">알람과 내 숫자를 한 자리에.</div></div>'+
+    /* 알람 — <b>같은 카드</b>입니다 */
+    '<div class="alm-host"></div>'+
+    '<div class="card" style="margin-top:12px"><div class="card-hd"><div class="card-title">'+
+      '<span class="ci">📊</span>내 숫자</div>'+
+      '<div class="card-desc">눌러서 그 화면으로 갑니다.</div></div>'+
+    '<div class="card-body">'+
+      (n?rows:'<div class="t-empty">아직 열 수 있는 칸이 없습니다 — 등급에 따라 갈립니다.</div>')+
+      /* 목업에 있는데 <b>앱에 없는 것</b>은 없다고 적습니다 (1번) */
+      '<div class="notice" style="margin-top:12px">'+
+        '📊 <b>통합 대시보드 · KPI · 타율 분석</b> 은 따로 화면이 없고 '+
+        '<b>DB 통합 CRM</b> 안에 있습니다 — 위 줄로 가시면 됩니다.</div>'+
+    '</div></div>'+
+  '</div>';
 }
 function almCss(){
   if(document.getElementById('almCss'))return;
@@ -16694,7 +16934,7 @@ function osFullMode(on){
      <b>셋</b>이 늘었습니다 — 홈까지 넷입니다. 서랍은 아직 검은 기둥이고,
      그것을 밝게 하려면 check-nav 의 명암비 자(어두운 바탕 기준)도 같이
      옮겨야 해서 이 판에서는 안 했습니다.                               */
-var T_SKIN={home:1,dashboard:1,clients:1,news_live:1,mycal:1};
+var T_SKIN={home:1,dashboard:1,clients:1,news_live:1,mycal:1,me:1};
 function go(tab){
   /* 홈으로 돌아오면 <b>돌아가는 띠</b>는 제 할 일을 다 했다. 메뉴로 돌아오셔도
      사라져야 한다 — 「← 홈」 을 누르셨을 때만 지우면, 메뉴로 오신 뒤에도
@@ -16877,6 +17117,10 @@ function go(tab){
     /* ① 오늘 챙길 것 — 고객·기록이 늦게 실려 오면 그때 다시 그린다 */
     try{ if(typeof hmArm==='function')hmArm(); }catch(e){}
     }
+  else if(tab==='me'){dyn.innerHTML=renderMe();
+    try{ almSync(); }catch(e){}
+    try{ almPaint(); }catch(e){}
+  }
   else if(tab==='phone_app'){dyn.innerHTML=renderPhoneApp();
     /* ⚠ 열쇠가 있는지 <b>화면을 열 때</b> 묻습니다. 여태는 「알람 켜기」 를
        눌러야 물어봤고, 그제서야 「열쇠가 없습니다」 와 만들기 단추가 떴습니다.
@@ -17289,8 +17533,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-29 08:05';
-var APP_BUILD_NOTE="🎨 <b>아래 띠 화면도 목업 옷을 입었습니다</b> — 고객 · 콘텐츠 · 달력.　—　사장님이 고르신 것이 그것입니다. 430px 에서 화면마다 글자 색을 떠서 목업 색표와 맞춰 봤습니다 — <b>전 → 후</b>: 오늘 5%→<b>0%</b> · 고객 13%→<b>0%</b> · 콘텐츠 85%→<b>0%</b> · 달력 23%→<b>0%</b> (목업에 없는 색으로 찍힌 글자의 비율).　—　★ <b>「도구」 는 화면이 아니었습니다.</b> 아래 띠 다섯 중 「도구」 는 ☰ 서랍을 여는 단추 (toggleNav)라, 넷이 아니라 <b>셋</b>이 늘었습니다. 서랍은 아직 검은 기둥입니다 — 그것을 밝게 하려면 check-nav 의 명암비 자(어두운 바탕 기준)도 같이 옮겨야 해서 이 판에서는 안 했습니다.　—　① <b>옷을 .t-skin 으로 떼어냈습니다.</b> 잉크 표를 갈아끼우는 부분이 .hm-toss(홈) 안에 있었는데, <b>홈이라는 이름의 클래스</b>를 다른 화면에 붙이면 이름이 거짓말합니다. 옮긴 것이지 두 벌이 된 것이 아닙니다 — .hm-toss 에는 홈 전용 자리 지정만 남았습니다 (5번).　—　② <b>누가 입나는 T_SKIN 표 한 곳</b>이 압니다. 화면을 그리는 자리(dyn.innerHTML)가 <b>쉰네 군데</b>라 거기마다 붙이면 반드시 빠뜨립니다 — 트랙을 삼항 사슬로 늘어놓다 쿠폰만 빠뜨린 적이 두 번 있습니다. 늘릴 때는 <b>한 줄</b>입니다.　—　⚠ <b>옷 입히는 줄의 자리를 한 번 틀렸습니다.</b> 처음엔 화면을 그리기 직전에 두었는데, 그 위에서 <b>DB 통합 CRM · 계산기 · 지도 등 열한 화면</b>이 전체화면으로 먼저 빠져나갑니다. 그래서 <b>DB 통합 CRM 이 앞 화면의 옷을 그대로 입고</b> 있었습니다. 모든 화면이 지나가는 줄 (lastTab — 「지금 어느 화면인가」 를 적는 그 자리)로 옮겼습니다.　—　③ 잉크 표만 갈아서는 <b>손으로 적힌 hex</b> 가 안 잡힙니다(콘텐츠가 그래서 85%→52% 에서 멈췄습니다). <b>열네 자리</b>를 콕 집어 목업 색으로 바꿨습니다. ⚠ 처음 넷은 <b>짐작으로 골랐다가 안 먹었습니다</b> — 그 색을 쓰는 규칙이 백 군데 넘어서요(#92400E 122 · #64748B 104 · #9CA3AF 94). 화면에서 <b>조상 줄기를 떠서</b> 자리를 확인한 뒤 다시 적었습니다. 재지 않고 고치면 고친 줄 알고 넘어갑니다.　—　★ <b>전역으로는 안 바꿉니다</b> — 그 색들은 앱 전체에서 백 군데 넘게 쓰입니다. 시키신 화면에서만 바꿉니다. 다만 인라인 style 둘(고객 화면의 「오늘 몫 N명」)은 규칙으로 못 이겨 그 자리 값을 토큰으로 바꿨습니다.　—　점검은 <b>check-hmexact 를 넓혔습니다</b> — 「홈이 목업 색인가」 를 이미 그 점검이 보고 있어, 늘어난 화면도 <b>같은 자리</b>에서 봐야 합니다 (5번). 화면 목록은 앱의 T_SKIN 을 그대로 읽습니다.　—　⚠ <b>되돌려 보니 셋 다 안 울렸습니다.</b> 그중 하나는 진짜 구멍이었습니다 — 목록을 앱에서 읽기만 하니, 달력을 목록에서 빼도 <b>그 화면을 안 돌 뿐</b>이라 조용했습니다. 그래서 <b>다른 자</b>를 댔습니다: 아래 띠(TB)에 선 화면은 「도구」만 빼고 다 옷을 입어야 합니다. 그리고 「옷이 벗겨지나」 는 TFA 가 아니라 <b>전체화면으로 빠져나가는 DB 통합 CRM</b> 으로 재야 했습니다. 고친 뒤 셋 다 울립니다.";
+var APP_BUILD='2026-09-29 10:10';
+var APP_BUILD_NOTE="🔔 <b>알람이 하루 네 번이 되고, 「나」 화면이 도구 안에 생겼습니다.</b>　—　사장님 말씀 「알람 하루 네 번 만들고 「나」 화면 도구 안에 넣어줘」. 목업의 그 칸 그대로입니다 — <b>09시 오늘 걸 사람 · 13시 오전 결과 · 17시 예상업적 · 21시 내일 약속</b>, 각각 켜기·끄기, 시각도 바꾸실 수 있습니다.　—　① <b>무엇이 몇 시에 무슨 말을 하는지는 app/alm-slots.js 한 곳</b>에 있습니다. 앱은 script 로, <b>서버는 netlify.toml 의 included_files</b> 로 같은 파일을 읽습니다 — day-rank.js 와 같은 방식입니다. 두 벌이 되면 화면과 알람이 다른 말을 합니다 (5번).　—　② ★ <b>넷 중 셋만 셀 수 있습니다.</b> 오늘 걸 사람은 hmSteps, 오전 결과는 통화 장부(AR.calls 에서 오전에 걸었는데 결과가 빈 줄), 내일 약속은 달력 — <b>이미 세고 있는 자리를 그대로 부릅니다</b> (5번). <b>예상업적은 못 셉니다</b> — expect_premium 은 「DB · 업적관리」 에 있고 본체가 못 읽습니다. 그래서 그 줄만 <b>숫자 없이 알려만</b> 주고, 화면에도 그렇게 적었습니다. 목업은 「없는 날은 안 울립니다」 를 한 줄로 적었지만 그것이 <b>참인 슬롯과 아닌 슬롯</b>이 있어, 뭉뚱그리지 않고 <b>줄마다</b> 적습니다 (1번).　—　③ 서버도 <b>아무것도 안 셉니다</b>(여태 그랬던 그대로). 「확인할 시간입니다」 까지고 건수는 앱을 열면 셉니다.　—　④ ⚠ <b>준비 SQL 을 한 번 돌려 주십시오.</b> 장부에 시각을 여러 개 담을 칸(push_subs.hours)이 필요합니다. <b>안 돌리셔도 조용히 망가지지 않습니다</b> — 서버가 옛 hour 한 칸으로 골라 아침 알람은 그대로 옵니다. 그때는 앱이 열려 있을 때만 네 번 다 울리고, 화면이 그 사실을 적어 줍니다.　—　⑤ 🙋 <b>「나」 화면</b> — 도구(☰ 서랍) 의 시스템 갈래에 섰습니다. 알람 네 줄과 내 숫자가 있습니다. ★ 알람 카드를 <b>다시 짓지 않았습니다</b> — 「내 폰에 설치」 와 같은 almCardHtml() 을 부릅니다 (5번). ★ 목업의 내 숫자 여섯 중 <b>통합 대시보드 · KPI · 타율 분석 · AI 피드백</b> 은 앱에 그런 화면이 <b>없습니다</b>(DB 통합 CRM 안에 있습니다). 없는 데로 가는 단추를 세우지 않고, navItemOf 로 <b>있는지 물어보고 있는 것만</b> 세웁니다. 없는 것은 없다고 적어 두었습니다 (1번).　—　점검은 <b>check-push 를 고쳤습니다</b>. ⚠ 그 점검의 지렛대가 낡아 있었습니다 — 울릴지 말지를 정하는 것이 apex_alm_hour 에서 <b>슬롯 시각</b>으로 바뀌었는데 옛 지렛대로 재고 있었습니다. 슬롯을 쥐고 재게 고쳤고, 장부를 고르는 조건도 두 모양(hours 칸 · 옛 hour 칸)을 다 봅니다. ⚠ 그리고 <b>제가 쓴 자 하나가 거저 통과</b>하고 있었습니다 — 알람 본문을 .body 로 읽었는데 그 자리는 <b>.b</b> 라 늘 빈 글이었고, 빈 글에는 숫자가 없으니 「숫자가 없다」 가 언제나 초록이었습니다. 고친 뒤 되돌려 확인했습니다.⚠ <b>둘째 슬롯 시험도 헛집었습니다</b> — 내일 약속으로 쟀는데 견본에 내일 약속이 없어 <b>안 울리는 것이 정답</b>이었습니다. 언제나 울리는 슬롯(예상업적)으로 바꿨습니다.　—　되돌려 빨간불을 확인했습니다 — 「오늘 울렸다」 를 한 칸에 적기(낮·저녁이 통째로 막힘) · 못 세는 슬롯이 0 을 말하기 · 옛 장부를 안 부르기.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -38304,6 +38548,12 @@ var OS_PUSH_SQL=[
   ");",
   "alter table public.push_subs enable row level security;",
   "create index if not exists push_subs_owner on public.push_subs(owner_id);",
+  "",
+  "/* 알람 네 번 — 켜 둔 시각들. 2026-09-25 에 더한 칸입니다.",
+  "   이미 쓰고 계신 장부에도 이 한 줄이면 붙습니다(있으면 아무 일도 안 합니다).",
+  "   ★ 옛 hour 한 칸은 그대로 둡니다 — 이 칸이 비어 있으면 서버가 hour 로",
+  "     고릅니다. 그래서 이 SQL 을 아직 안 돌리셨어도 아침 알람은 그대로 옵니다. */",
+  "alter table public.push_subs add column if not exists hours int[];",
   "",
   "/* 알람 열쇠 — 서버만 읽습니다. 앱에서 만들어 담으면 여기 들어옵니다.",
   "   RLS 를 켜고 정책을 하나도 두지 않으면 anon·authenticated 는 한 줄도",

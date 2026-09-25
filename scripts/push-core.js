@@ -280,9 +280,34 @@ function morning() {
   return { title: 'APEX YUN PRO', body: '오늘 챙길 분을 확인할 시간입니다.', go: '/app/index.html' };
 }
 
+/* ══ 그 시각에 <b>무슨 말을 보낼까</b> ═══════════════════════════════
+   2026-09-25 · 사장님 말씀 「알람 하루 네 번」.
+   ★ 시각과 문구는 <b>app/alm-slots.js 한 곳</b>에 있습니다 — 앱도 같은
+     파일을 읽습니다 (5번). 여기 또 적으면 화면과 알람이 다른 말을 합니다.
+   ★ <b>여기서도 아무것도 안 셉니다</b> (1번·5번). 「확인할 시간입니다」
+     까지고, 건수는 앱을 열면 그 자리에서 셉니다.
+   ★ 표에 없는 시각이면 <b>여태 쓰던 아침 말</b>을 그대로 씁니다 — 사장님이
+     시각을 옮기셨을 때 <b>말없이 안 보내는 것</b>보다 낫습니다.        */
+function slotMsg(h) {
+  let S = null;
+  try { S = require('../app/alm-slots.js'); } catch (e) { S = null; }
+  const s = S && S.almSlotAt ? S.almSlotAt(h) : null;
+  if (!s) return morning();
+  return { title: 'APEX YUN PRO', body: s.body, go: '/app/index.html' };
+}
+
+/* 이 시각에 <b>깨워야 할 폰</b>을 고르는 조건.
+   hours(새 칸)에 그 시각이 들어 있거나, 아직 준비 SQL 을 안 돌리셔서
+   hours 가 비어 있으면 <b>옛 hour 한 칸</b>으로 고릅니다 — 칸이 생기기
+   전에도 아침 알람이 그대로 옵니다 (조용히 망가지지 않습니다). */
+function pickAt(h) {
+  return 'or=(hours.cs.{' + h + '},and(hours.is.null,hour.eq.' + h + '))';
+}
+
 module.exports = {
   JSON_HEAD, TABLE, TTL, TEST_GAP_MS, MAX_PER_RUN, SB_KEY, SB_ANON,
   whoIs, isKeyFault, keyDiag, keyShape,
   keys, keysForget,
-  b64u, unb64u, seal, vapidAuth, sendOne, sb, drop, touch, ready, kstHour, morning, onePerDevice
+  b64u, unb64u, seal, vapidAuth, sendOne, sb, drop, touch, ready, kstHour, morning, onePerDevice,
+  slotMsg, pickAt
 };

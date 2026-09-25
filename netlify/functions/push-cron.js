@@ -10,6 +10,10 @@
  *   두면 앱이 열쇠를 못 받아 폰 알람이 <b>조용히 안 켜집니다</b> — 실제로
  *   그렇게 배포한 적이 있습니다.
  *
+ * ★ <b>하루 네 번</b>입니다 (2026-09-25 · 사장님 말씀). 무엇이 몇 시이고
+ *   무슨 말인지는 <b>app/alm-slots.js 한 곳</b>에 있고, 앱도 같은 파일을
+ *   읽습니다(netlify.toml 의 included_files). 여기 또 적지 마십시오 (5번).
+ *
  * ★ <b>여기서 오늘 할 일을 세지 않습니다</b> (5번). 세려면 TDO 표를 서버에도
  *   또 적어야 하고, 그러면 사장님이 앱에서 기준을 고치셨을 때 알람만 옛
  *   기준으로 말합니다 — 화면과 알람이 다른 말을 합니다. 그래서 「확인할
@@ -27,7 +31,7 @@ exports.handler = async function () {
     body: JSON.stringify({ ok: false, sent: 0, reason: bad }) };
 
   const h = P.kstHour();
-  const g = await P.sb(P.TABLE + '?hour=eq.' + h + '&select=*&limit=' + P.MAX_PER_RUN);
+  const g = await P.sb(P.TABLE + '?' + P.pickAt(h) + '&select=*&limit=' + P.MAX_PER_RUN);
   if (!g.ok) return { statusCode: 200, headers: P.JSON_HEAD,
     body: JSON.stringify({ ok: false, sent: 0, reason: '장부를 못 읽었습니다 — ' + g.text.slice(0, 160) }) };
 
@@ -35,7 +39,7 @@ exports.handler = async function () {
      각각 다른 웹앱으로 보아 구독이 여러 개 생깁니다. 그대로 두면 아침에
      그 수만큼 울립니다. */
   const rows = P.onePerDevice(g.json || []);
-  const msg = P.morning();
+  const msg = P.slotMsg(h);          /* 그 시각의 말 — 표에 없으면 아침 말 */
   let sent = 0, gone = 0, failed = 0;
   for (const row of rows) {
     let r;
