@@ -303,6 +303,58 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   is(!/VAPID_(PRIVATE|PUBLIC|SUBJECT)\s*[:=]\s*['"][^'"]{12,}/.test(SRC),
      '앱 안에 <b>열쇠 값이 안 적혀 있다</b> — 이름만 적어 어디 넣으실지 알려 드린다 (10번)');
 
+  /* ══ [4-1] <b>서버가 아는 것만 「됩니다」 라고 적는다</b> ═══════════════
+     ⚠ 2026-09-25 에 실제로 난 일입니다. 사장님이 폰에서 알람을 켜셨는데
+     서버의 push_subs 는 <b>0줄</b>이었습니다. 그런데 카드는
+     「② 앱이 닫혀 있을 때 — <b>됩니다</b>」 라고 적고 있었습니다 —
+     almPhoneOn() 이 <b>이 브라우저의 구독만</b> 보았기 때문입니다.
+     <b>브라우저가 켜진 것과 서버가 아는 것은 다른 일입니다</b> (1번).
+     그래서 카드가 무엇을 근거로 적는지를 여기서 잽니다.
+     ★ 카드는 상태만 보고 글을 짓는 함수라, <b>상태를 손으로 놓고</b>
+       almCardHtml() 을 불러 봅니다 — 서버를 안 불러도 잴 수 있습니다.   */
+  console.log('\n[4-1] 서버에 <b>안 담겼으면 안 담겼다고</b> 적는다 (1번)');
+  const D = await page.evaluate(() => {
+    const out = {};
+    const set = (devs, sub) => { ALM.devs = devs; ALM.devAt = Date.now(); ALM.devErr = '';
+                                 ALM.sub = sub; ALM.key = 'x'; ALM.keyErr = ''; };
+    const EP = 'https://example.test/ep-here';
+    /* ⓐ 이 브라우저는 켜졌는데 <b>서버는 0줄</b> — 여기가 거짓말하던 자리 */
+    set([], { endpoint: EP });
+    out.a = almCardHtml();
+    /* ⓑ 아직 안 물어봤다 — 「없습니다」 가 아니라 <b>모른다</b> */
+    ALM.devs = null; out.b = almCardHtml();
+    /* ⓒ 서버에 두 대 — 폰 하나, 컴퓨터 하나. 이 기기는 그중 하나 */
+    set([{ endpoint: EP, ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Safari/605.1', hours: [9, 13, 17, 21] },
+         { endpoint: 'https://example.test/ep-pc', ua: 'Mozilla/5.0 (Windows NT 10.0) Chrome/128 Safari/537', hour: 9 }],
+        { endpoint: EP });
+    out.c = almCardHtml();
+    /* ⓓ 서버에는 있는데 <b>이 기기가 아닌</b> 것만 — 「이 기기는 여기 없습니다」 */
+    set([{ endpoint: 'https://example.test/ep-pc', ua: 'Mozilla/5.0 (Windows NT 10.0) Chrome/128', hour: 9 }],
+        { endpoint: EP });
+    out.d = almCardHtml();
+    out.name = [almDevName('Mozilla/5.0 (iPhone) Safari/605.1'),
+                almDevName('Mozilla/5.0 (Windows NT 10.0) Chrome/128'),
+                almDevName('아무 말이나')].join(' | ');
+    return out;
+  });
+  const plain = (s) => (s || '').replace(/<[^>]*>/g, '');
+  is(!/앱이 닫혀 있을 때[^①②]*?됩니다 —/.test(plain(D.a)),
+     '  서버가 <b>0줄</b>이면 ②를 「됩니다」 라고 <b>안 적는다</b>');
+  is(/아직 한 대도 없습니다/.test(plain(D.a)),
+     '  <b>한 대도 없다고</b> 적는다 — 0 을 「됐다」 로 읽히게 두지 않는다');
+  is(/확인하는 중/.test(plain(D.b)) && !/아직 한 대도 없습니다/.test(plain(D.b)),
+     '  아직 안 물어봤으면 <b>「확인하는 중」</b> — 「없습니다」 가 아니다 (1번)');
+  is(/아이폰/.test(plain(D.c)) && /윈도우 컴퓨터/.test(plain(D.c)),
+     '  서버에 담긴 기기를 <b>그대로</b> 적는다 — 폰과 컴퓨터를 가려서');
+  is(/이 기기/.test(plain(D.c)) && /9시 · 13시 · 17시 · 21시/.test(plain(D.c)),
+     '  <b>어느 것이 이 기기</b>인지와 <b>몇 시에</b> 가는지를 적는다');
+  is(/지금 보고 계신 기기는 여기 없습니다/.test(plain(D.d)),
+     '  서버에 있어도 <b>이 기기가 아니면</b> 그렇다고 적는다');
+  is(/컴퓨터/.test(plain(D.c)) && /기기마다 한 번씩/.test(plain(D.c)),
+     '  <b>폰만이 아니라 컴퓨터도</b> 된다고, 기기마다 켜야 한다고 적는다');
+  is(D.name === '아이폰 · 사파리 | 윈도우 컴퓨터 · 크롬 | 모르는 기기',
+     '  못 알아보는 기기는 <b>「모르는 기기」</b> — 지어내지 않는다 (1번) · ' + D.name);
+
   console.log('\n[5] 준비 SQL — push_subs 가 있고 나만 본다');
   const Q=await page.evaluate(()=>{
     const m=HX_SQL['00'], t=m?m.lines.join('\n'):'';
