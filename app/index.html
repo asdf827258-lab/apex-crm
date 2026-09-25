@@ -1436,7 +1436,7 @@ button.hm-q-t.ba.go:active{transform:translateY(1px)}
 /* 목업 <b>.one .hd</b> */
 .hm-now-m{display:flex;align-items:center;gap:12px;margin-top:2px}
 /* 목업 <b>.av</b> — 사람인 줄은 이름 첫 글자, 아닌 줄(할 일·내 일정)은 이모지 */
-.hm-now-m .e{flex:0 0 44px;width:44px;height:44px;border-radius:15px;
+.hm-now-m .e{flex:0 0 44px;width:44px;height:44px;border-radius:var(--t-r-btn);
   display:flex;align-items:center;justify-content:center;
   background:var(--t-point-l);color:var(--t-point);
   font-size:var(--t4);font-weight:800;letter-spacing:-.03em}
@@ -1450,7 +1450,7 @@ button.hm-q-t.ba.go:active{transform:translateY(1px)}
      줄로 접으면서 x.more 에 세어 두는데 <b>여태 어디에도 안 적혔습니다</b> —
      「조용히 버리지 않습니다」 라고 적어 놓고 화면에는 없었습니다 (1번).  */
 .hm-why{margin-top:13px;font-size:var(--t6);font-weight:600;line-height:1.5;
-  color:var(--t-sub2);background:var(--t-bg-3);border-radius:11px;
+  color:var(--t-sub2);background:var(--t-bg-3);border-radius:var(--t-r-sm);
   padding:10px 13px;word-break:keep-all}
 .hm-why b{color:var(--t-point)}
 /* 목업 <b>.one .aim / .way</b> — 오늘 할 일을 <b>큰 한 문장</b>으로.
@@ -22404,11 +22404,16 @@ var HM_ORD=[
 /* 이 줄은 몇 점인가 — 줄이 <b>제 점수를 들고 오면</b>(sc) 그것을 쓰고,
    아니면 갈래 기본값을 씁니다. 표에 없는 갈래(내 일정)는 0 — 맨 뒤입니다.
    앱이 시킨 것이 내가 적어 둔 일정보다 먼저입니다.                     */
+/* 이 갈래가 <b>무엇이라 말하는가</b> — 표에서 그 줄을 찾는 곳은 한 곳입니다 (5번) */
+function hmOrdOf(k){
+  var i; for(i=0;i<HM_ORD.length;i++)if(HM_ORD[i].k===k)return HM_ORD[i];
+  return null;
+}
 function hmW(z){
   if(!z)return 0;
   if(typeof z.sc==='number')return z.sc;
-  var i; for(i=0;i<HM_ORD.length;i++)if(HM_ORD[i].k===z.k)return HM_ORD[i].w;
-  return 0;
+  var o=hmOrdOf(z.k);
+  return o?o.w:0;
 }
 /* 오늘 몫을 <b>한 번만</b> 셉니다 — 카드도 띠도 이것을 봅니다 */
 function hmCount(){
@@ -24950,7 +24955,13 @@ function hmAimOf(x){
      「조용히 버리지 않습니다」 라고 적어 놓고 안 적고 있었습니다 (1번).   */
 function hmWhyHtml(x){
   if(!x)return '';
-  var w=hmWhy(x)||(x.s?osEsc(x.s):'');
+  /* ★ 셋째 자리까지 봅니다. 달력에서 올라온 줄은 <b>제 한 줄(s)이 비어</b>
+     있어서, 「왜 오늘인가 —」 뒤에 아무 말도 안 서던 때가 있었습니다.
+     그 갈래가 무엇이라 말하는지는 <b>HM_ORD 표</b>에 이미 적혀 있습니다
+     (「주기가 돌아왔습니다」) — 지어내는 것이 아니라 <b>있는 말을 꺼내</b>
+     쓰는 것입니다 (1번 · 5번). */
+  var o=hmOrdOf(x.k);
+  var w=hmWhy(x)||(x.s?osEsc(x.s):'')||((o&&o.s)?osEsc(o.s):'');
   if(x.more)w+=(w?' · ':'')+'<b>이분께 거리가 '+(x.more+1)+'가지</b>';
   return w?('<div class="hm-why">왜 오늘인가 — '+w+'</div>'):'';
 }
@@ -25010,8 +25021,13 @@ function hmNowHtml(){
     hmDoHtml(x)+
     /* <b>묻고 고르게</b> 합니다 — 번호가 붙은 갈래를 세우고, 누르면
        그 자리에서 그 일이 벌어집니다. 여태는 도구 단추만 한 줄로
-       늘어놓아, 읽고 나서 다시 고르는 두 동작이 됐습니다. */
-    hmPdHtml(x)+hmPicksHtml(x)+hmKtHtml(x.key)+
+       늘어놓아, 읽고 나서 다시 고르는 두 동작이 됐습니다.
+       ★ <b>접으면 같이 접힙니다</b> (2026-09-25). 목업의 카드는 「무엇을 /
+         어떻게 / 단추 한 방」 까지고, 번호 갈래는 그 <b>나머지</b>입니다.
+         펴 둔 채가 기본이라 <b>평소에는 하나도 안 가려집니다</b> — 접으셨을
+         때만 목업 크기(한 화면)가 됩니다. 이것을 안 접으면 접어도 851px 이라
+         화면(844px)을 넘어, 「접으면 한 화면에 든다」 가 거짓말이 됩니다.  */
+    (HM_MORE?(hmPdHtml(x)+hmPicksHtml(x)):'')+hmKtHtml(x.key)+
     /* <b>단계와 상관없이</b> 오늘 소식 한 줄 — 사장님 말씀 「상황에 맞게
        뉴스 읽어주면서 전달드리고」. 여태는 거절·기고객·증권전달에만 뉴스가
        붙어서, TA·AP·PC·CS 에는 <b>연락할 구실</b>이 없었습니다. */
