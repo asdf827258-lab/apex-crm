@@ -355,6 +355,97 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   is(D.name === '아이폰 · 사파리 | 윈도우 컴퓨터 · 크롬 | 모르는 기기',
      '  못 알아보는 기기는 <b>「모르는 기기」</b> — 지어내지 않는다 (1번) · ' + D.name);
 
+  /* ══ [4-2] <b>출발 점검도 같은 대답을 한다</b> (5번) ══════════
+     카드를 #466 에서 고쳐 놓고도, 출발 점검(rdAuto)의 알람 줄은
+     Notification.permission 하나만 보고 <b>「켜짐」</b> 이라고 적고
+     있었습니다. <b>같은 물음에 두 곳이 다르게 대답하던 자리</b>입니다 (5번).
+     ★ 단추 이름도 <b>카드에서 긁어다</b> 비교합니다 — 여기에 또 적어
+       두면 단추 이름을 바꾸는 날 <b>없는 단추를 가리키게</b> 됩니다.  */
+  console.log('\n[4-2] 출발 점검의 알람 줄 — <b>허락</b>과 <b>담김</b> 을 가려서 적는다');
+  const HR = await page.evaluate(() => {
+    const row = () => { const L = rdAuto(); for (let i=0;i<L.length;i++) if (L[i].k==='alarm') return L[i]; return null; };
+    /* 단추 이름은 카드가 지은 그 글자를 그대로 들고 온다 — 여기 또 적지 않는다 (5번) */
+    const btn = () => { const m = /<button class="btn btn-primary"[^>]*onclick="almAsk\(\)"[^>]*>([^<]*)<\/button>/
+                          .exec(almCardHtml() || ''); return m ? m[1] : ''; };
+    const keep = window.almCan, out = {};
+    const EP = 'https://example.test/ep-here';
+    const can = (p) => ({ sw:true, notif:true, push:true, ios:false, stand:false, perm:p });
+    ALM.devAt = Date.now(); ALM.devErr = ''; ALM.key = 'x'; ALM.keyErr = ''; ALM.busy = '';
+
+    /* ⓐ 아직 허락도 안 하셨다 */
+    window.almCan = () => can('default'); ALM.sub = null; ALM.devs = [];
+    out.off = row();  out.offBtn = btn();
+    /* ⓑ 허락도 받았고 이 브라우저는 구독했는데 <b>서버는 0줄</b> — 사장님 폰이 이 자리였다 */
+    window.almCan = () => can('granted'); ALM.sub = { endpoint: EP }; ALM.devs = [];
+    out.zero = row(); out.zeroBtn = btn();
+    /* ⓒ 아직 서버에 안 물어봤다 */
+    ALM.devs = null;
+    out.unk = row();  out.unkBtn = btn();
+    /* ⓓ 서버가 이 기기를 안다 — 다 된 자리 */
+    ALM.devs = [{ endpoint: EP, ua: 'x', hours: [9] }];
+    out.on = row();   out.onBtn = btn();
+    /* ⓔ 차단해 두셨다 */
+    window.almCan = () => can('denied'); ALM.devs = [];
+    out.no = row();
+    window.almCan = keep;
+    return out;
+  });
+  is(HR.zero && HR.zero.st !== 'ok',
+     '  허락만 받고 <b>서버에 안 담겼으면</b> 「켜짐」 이라고 안 적는다 (1번)');
+  /* ★ 안 물어봤으면 「켜짐」 도 「남음」 도 아니다 — <b>줄을 안 세운다</b>.
+     모르는 것을 「남았다」 고 적으면 홈의 「안 된 것 n」 이 헛수를 셎니다 (1번).
+     check-ready 의 「전부 채우면 0개」 가 이것을 잡아 주었습니다 (8번). */
+  is(HR.unk === null,
+     '  안 물어봤으면 <b>줄을 안 세운다</b> — 모르는 것을 「남았다」 고 안 적는다 (1번)');
+  is(HR.on && HR.on.st === 'ok', '  서버에 <b>담겼으면</b> 담겼다고 적는다');
+  is(HR.no && HR.no.st === 'no', '  차단해 두셨으면 <b>빨간불</b>');
+  /* ★ 여기가 사장님 폰이 막혀 있던 자리다 — 허락을 받은 기기에는 단추가
+     아예 안 서서 <b>다시 담을 길이 없었다</b>. */
+  is(!!HR.zeroBtn,
+     '  <b>허락받은 기기에도 담을 단추가 선다</b> — 안 서면 다시 담을 길이 없다 · ' + (HR.zeroBtn || '없음'));
+  is(!!HR.zeroBtn && !!HR.zero && (HR.zero.how || '').indexOf(HR.zeroBtn) >= 0,
+     '  출발 점검이 <b>그 단추 이름 그대로</b> 가리킨다 · ' + (HR.zeroBtn || '—'));
+  is(!!HR.offBtn && !!HR.off && (HR.off.how || '').indexOf(HR.offBtn) >= 0,
+     '  아직 안 켠 기기에도 <b>맞는 단추 이름</b>을 가리킨다 · ' + (HR.offBtn || '—'));
+  is(HR.onBtn === '' && HR.unkBtn === '',
+     '  <b>다 된 기기와 모르는 때는 재촉하지 않는다</b> — 없는 일을 시키지 않는다');
+  is(HR.zero && /기기마다 한 번씩/.test(HR.zero.how || ''),
+     '  <b>기기마다 한 번씩</b> 켜야 한다고 알려 준다 — 폰에서 켜도 컴퓨터는 안 울립니다');
+
+  /* ══ [4-3] <b>옛 구독이 막고 있어도 끝내 담긴다</b> ═════════════════════
+     브라우저는 <b>다른 열쇠로 이미 맺힌 구독</b>이 남아 있으면 subscribe 를
+     거절합니다. 그 상태에서는 켜기를 몇 번 눌러도 <b>영영 안 담깁니다</b> —
+     화면은 「켜짐」 인데 push_subs 는 0줄. 떼고 다시 맺는지 여기서 잽니다.
+     ★ 진짜 pushManager 는 머리 없는 브라우저에 없으므로 <b>가짜를 세워</b>
+       무엇을 부르는지 봅니다 — 코드를 읽어 짐작하지 않습니다.          */
+  console.log('\n[4-3] 옛 구독이 막고 있어도 <b>떼고 다시 맺어</b> 담는다');
+  const S = await page.evaluate(async () => {
+    const log = [], saved = [];
+    const keepSave = window.almSave, keepReg = ALM.reg, keepSub = ALM.sub;
+    let live = { endpoint: 'https://old.test/ep',
+                 unsubscribe(){ log.push('뗌'); live = null; return Promise.resolve(true); } };
+    const fresh = { endpoint: 'https://new.test/ep', toJSON(){ return { keys:{ p256dh:'p', auth:'a' } }; } };
+    ALM.reg = { pushManager: {
+      getSubscription(){ log.push('물음'); return Promise.resolve(live); },
+      subscribe(){
+        if (live) { log.push('거절');
+          return Promise.reject(new Error('A subscription with a different applicationServerKey already exists.')); }
+        log.push('맺음'); live = fresh; return Promise.resolve(fresh); } } };
+    ALM.key = 'BIwKRGOaPpaNpK9tgzhCLJTCDHu0d11LaVGhbADHAR-OvfZExQM1uuKOpEsGLTVLNHavYs4rGhw2Ba1NpuffOO0';
+    ALM.keyAt = Date.now(); ALM.keyErr = ''; ALM.err = '';
+    window.almSave = (x) => { saved.push(x && x.endpoint); };
+    almSubscribe();
+    await new Promise(r => setTimeout(r, 600));
+    const out = { log: log.join('→'), saved: saved.join(','), err: ALM.err, sub: ALM.sub && ALM.sub.endpoint };
+    window.almSave = keepSave; ALM.reg = keepReg; ALM.sub = keepSub; ALM.err = '';
+    return out;
+  });
+  is(/뗌/.test(S.log), '  이미 맺힌 구독이 있으면 <b>뗀다</b> · ' + S.log);
+  is(S.saved === 'https://new.test/ep',
+     '  <b>다시 맺어 서버에 담는다</b> — 거절당한 채로 안 끝난다 · ' + (S.saved || '안 담김'));
+  is(!/거절/.test(S.log), '  거절당하는 길로 <b>안 들어간다</b> — 떼고 나서 맺는다');
+  is(!S.err, '  <b>오류 없이</b> 끝난다 · ' + (S.err || '없음'));
+
   console.log('\n[5] 준비 SQL — push_subs 가 있고 나만 본다');
   const Q=await page.evaluate(()=>{
     const m=HX_SQL['00'], t=m?m.lines.join('\n'):'';
