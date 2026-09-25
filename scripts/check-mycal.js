@@ -163,7 +163,12 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(nm.on.indexOf('홍길동') >= 0, '  실명으로 켜면 그때만 실명이 나간다');
 
   console.log('\n[5] 화면이 선다');
-  const html = await page.evaluate(() => renderMyCal());
+  /* ⚠ 2026-09-25 · <b>달력은 이제 「이번 주」로 엽니다</b> (사장님 말씀
+     「매주를 기본으로 해서 이번 주에 집중하게」). 여기 [5] 는 <b>달 격자</b>
+     와 <b>달 넘기기</b>를 재는 자리라, 월로 켜고 잽니다 — 월은 그대로 볼 수
+     있어야 하고(「매월 매주 스케줄 볼 수 있게」) 그것을 여기서 지킵니다.
+     ★ 「처음에 주로 여나」 는 check-calmonth 가 따로 못 박습니다.      */
+  const html = await page.evaluate(() => { try{ mcalSetView('month'); }catch(e){} return renderMyCal(); });
   is(/내 캘린더/.test(html), '  칸 이름이 「내 캘린더」 다');
   /* 함수 <b>이름</b>을 박아 두면, 이름만 바뀌어도 빨간불이 뜬다 — 실제로는
      멀쩡한데 사람이 점검을 안 믿게 된다. 홈에도 같은 달력을 세우면서 앞뒤

@@ -66,7 +66,14 @@ const SEED = () => `
   localStorage.setItem('apex_ck_day_'+mcalToday(),JSON.stringify({d2:1,d3:1,d4:1}));
   localStorage.setItem('apex_ck_day_'+mcalShift(mcalToday(),-1),JSON.stringify(all));
  }catch(e){}
- HWHO.id='';CM.pick='';CM.picked=true;go('mycal');`;
+ HWHO.id='';CM.pick='';CM.picked=true;
+ /* ⚠ 2026-09-25 · <b>달력은 이제 「이번 주」로 엽니다</b> (사장님 말씀
+    「매주를 기본으로 해서 이번 주에 집중하게」). 이 점검은 <b>월 보기</b>를
+    재는 자리라, 여기서 <b>월로 켜고</b> 잽니다 — 월은 그대로 볼 수 있어야
+    하고(사장님 「매월 매주 스케줄 볼 수 있게」) 그것을 여기서 지킵니다.
+    ★ <b>기본이 주인가</b> 는 아래에서 따로 못 박습니다.               */
+ try{ mcalSetView('month'); }catch(e){}
+ go('mycal');`;
 
 (async () => {
   await new Promise(r => srv.listen(PORT, r));
@@ -206,8 +213,32 @@ const SEED = () => `
   is(sc.some(u => /go=mycal/.test(u)),
      '  홈 아이콘 바로가기에 <b>달력</b>이 있다 — ' + sc.join(' · '));
 
+  /* ══════════════════════════════════════════════════════════════════
+     <b>아직 안 고르셨으면 「이번 주」로 연다</b> (2026-09-25)
+     ──────────────────────────────────────────────────────────────────
+     사장님 말씀 — 「달력은 유지해 <b>매월 매주</b> 스케줄 볼 수 있게
+     <b>매주를 기본</b>으로 해서 <b>이번 주에 집중</b>하게 하고」.
+     ★ 「week 가 아니면 month」 로 두면 <b>사장님이 고르신 월</b>과
+       <b>아직 안 고르신 것</b>을 구별할 수 없습니다 — 서랍의 「간편」(ezOn)
+       에서 똑같은 자리를 이미 겪었습니다.                              */
+  console.log('\n[' + '주' + '] <b>아직 안 고르셨으면 「이번 주」로 연다</b>');
+  const V = await p.evaluate(() => {
+    const out = {};
+    try { localStorage.removeItem('apex_mcal_view'); } catch (e) {}
+    out.first = mcalViewSaved();                       /* 안 고르셨을 때 */
+    try { localStorage.setItem('apex_mcal_view', 'month'); } catch (e) {}
+    out.chose = mcalViewSaved();                       /* 「월」 을 고르셨을 때 */
+    try { localStorage.setItem('apex_mcal_view', 'week'); } catch (e) {}
+    out.chose2 = mcalViewSaved();
+    try { localStorage.removeItem('apex_mcal_view'); } catch (e) {}
+    return out;
+  });
+  is(V.first === 'week', '  처음 여시면 <b>이번 주</b>다 — ' + V.first);
+  is(V.chose === 'month' && V.chose2 === 'week',
+     '  <b>한 번 고르시면 그것이 이긴다</b> — 월 고름 ' + V.chose + ' · 주 고름 ' + V.chose2);
+
   console.log('\n──────────────────────────────');
-  console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 한 달치가 달력에 보이고, 폰 달력으로 통째로 나갑니다.');
+  console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 한 달치가 달력에 보이고, 이번 주로 열리고, 폰 달력으로 통째로 나갑니다.');
   await b.close(); srv.close();
   process.exit(bad ? 1 : 0);
 })();

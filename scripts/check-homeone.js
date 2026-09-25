@@ -109,15 +109,34 @@ const bones = (p) => p.evaluate(() => {
     const r = e.getBoundingClientRect();
     if (r.height <= 8) return null;
     const id = e.id || (e.className.toString().split(/\s+/)[0] || e.tagName.toLowerCase());
-    /* 높이는 <b>400px(반 화면) 자리</b>로 뭉뚱그린다. 100px 로 쟀더니
-       카드 <b>안</b>에 소식 한 줄(90px)이 늘어난 것까지 「다른 화면」으로
-       쳤다 — 그건 칸이 생긴 것이 아니라 <b>안에서 말이 달라진 것</b>이고,
-       이 점검이 스스로 그렇게 적어 두었다. 잡으려는 것은 준비 SQL 425px ·
-       출발 점검 778px 처럼 <b>화면 한 장 반이 통째로</b> 생겼다 없어지는
-       것이다. 헛것을 잡는 점검은 안 잡는 점검보다 나쁘다 (8번).         */
-    return id + '~' + Math.round(r.height / 400);
+    /* 잡으려는 것은 준비 SQL 425px · 출발 점검 778px 처럼 <b>화면 한 장
+       반이 통째로</b> 생겼다 없어지는 것이다. 카드 <b>안</b>에 소식 한 줄
+       (90px)이 늘어난 것은 칸이 생긴 것이 아니라 <b>안에서 말이 달라진
+       것</b>이라 잡지 않는다 — 헛것을 잡는 점검은 안 잡는 점검보다 나쁘다 (8번).
+
+       ⚠ 2026-09-25 · <b>눈금으로 뭉뚱그리지 않는다.</b> 여태 height/400 을
+         반올림해 견줬는데, 카드가 그 <b>눈금 경계에 걸리면</b> 90px 차이가
+         눈금 하나를 넘어 「다른 화면」 이 됐다 — 실제로 두 번 그렇게 울렸고
+         두 번 다 화면은 멀쩡했다. 이제 <b>키를 그대로 들고</b> 나가서
+         아래 sameBones 가 <b>차이로</b> 견준다. 뜻은 그대로고 경계만 없앴다. */
+    return id + '~' + Math.round(r.height);
   }).filter(Boolean);
 });
+/* 두 뼈대가 <b>같은 화면</b>인가 — 칸 이름과 차례가 같고, 높이 차이가
+   <b>반 화면(400px) 안</b>이면 같은 화면이다. 칸이 통째로 생겼다 없어지면
+   이름이 어긋나거나 차이가 그보다 크다.                                */
+const BONE_GAP = 400;
+const sameBones = (a, b) => {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i].split('~'), y = b[i].split('~');
+    if (x[0] !== y[0]) return false;
+    if (Math.abs((+x[1] || 0) - (+y[1] || 0)) >= BONE_GAP) return false;
+  }
+  return true;
+};
+/* 사람이 읽을 수 있게 — 이름만 이어 적는다 (숫자는 매번 달라 눈만 어지럽다) */
+const boneNames = (a) => a.map(x => x.split('~')[0]).join(' → ');
 const tall = (p) => p.evaluate(() => {
   const pane = document.querySelector('.tab-pane.on'); if (!pane) return 0;
   const L = [...pane.children].map(e => e.getBoundingClientRect());
@@ -148,15 +167,18 @@ const tall = (p) => p.evaluate(() => {
   const A = await open({ setup: false, news: true });
   const B = await open({ setup: false, news: true, ready: false });
   const ba = await bones(A.p), bb = await bones(B.p);
-  is(ba.length > 0 && ba.join('|') === bb.join('|'),
+  is(ba.length > 0 && sameBones(ba, bb),
      '  <b>출발 점검이 있을 때와 없을 때가 같은 화면</b>이다');
-  if (ba.join('|') !== bb.join('|')) {
+  if (!sameBones(ba, bb)) {
     console.log('     있을 때 · ' + ba.join(' → '));
     console.log('     없을 때 · ' + bb.join(' → '));
-  } else console.log('     ' + ba.join(' → '));
+  } else console.log('     ' + boneNames(ba));
   const C = await open({ setup: false, news: false });
-  is((await bones(C.p)).join('|') === ba.join('|'),
-     '  소식을 못 받았을 때도 <b>뼈대가 같다</b> — 칸은 서고 안에서만 말이 달라진다');
+  const bc = await bones(C.p);
+  is(sameBones(bc, ba),
+     '  소식을 못 받았을 때도 <b>뼈대가 같다</b> — 칸은 서고 안에서만 말이 달라진다' +
+     (sameBones(bc, ba) ? '' : ('\n     받았을 때 · ' + ba.join(' → ') +
+                               '\n     못 받았을 때 · ' + bc.join(' → '))));
 
   console.log('\n[2] <b>짧아졌다</b> — 폰에서 3.3화면 이하');
   /* ── 기준선 · 왜 3.0 인가 ─────────────────────────────────────────

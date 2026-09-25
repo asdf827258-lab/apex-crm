@@ -206,7 +206,17 @@ is(/CM\.loaded/.test(IDX.slice(IDX.indexOf('function hmActOf'), IDX.indexOf('fun
    '  <b>아직 못 읽었으면 줄을 안 세운다</b> — 「0건」 은 「아무것도 안 하셨다」 로 읽힌다 (1번)');
 is(/mcalMine/.test(IDX.slice(IDX.indexOf('function hmActOf'), IDX.indexOf('function hmActOf') + 1200)),
    '  <b>누구 것인가</b> 는 달력이 쓰는 한 곳에 묻는다 (3번·5번)');
-is(/flex-wrap:nowrap/.test(IDX.slice(IDX.indexOf('function hmActCss'), IDX.indexOf('function hmActCss') + 1200)),
+/* ⚠ <b>1,200자로 잘라 보지 않습니다.</b> 그 창으로 보다가, 같은 칸에
+   ☎️ 30일 약속 한 줄이 붙자 flex-wrap:nowrap 이 창 <b>밖으로</b> 밀려나
+   빨간불이 켰습니다 — 규칙은 멀쩡히 그 자리에 있었습니다. 헛것입니다 (8번).
+   이제 <b>함수 끝까지</b> 봅니다. */
+const hmActCssSrc = (() => {
+  const i = IDX.indexOf('function hmActCss');
+  if (i < 0) return '';
+  const r = IDX.slice(i), e = r.indexOf('document.head.appendChild(st);');
+  return e > 0 ? r.slice(0, e) : r.slice(0, 4000);
+})();
+is(/flex-wrap:nowrap/.test(hmActCssSrc),
    '  칩이 <b>한 줄</b>로 선다 — 접히면 122px 이 되어 홈이 0.15화면 길어진다');
 
 console.log('\n──────────────────────────────');

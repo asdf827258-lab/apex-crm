@@ -303,8 +303,14 @@ const SEED = `(function(){
                         { at: '2000-01-01', how: '전화' }];
     hmActPaint();
     const e = document.querySelector('#hmActHost .hm-act');
+    /* ⚠ <b>칸 전체가 아니라 칩 줄을 잽니다.</b> 이 칸에 ☎️ 30일 약속 한 줄이
+       같이 들어왔습니다(사장님이 목업을 「(30일 약속 · 활동량)」 한 묶음으로
+       세셨습니다). 칸 전체를 재면 그 줄 때문에 빨간불이 켜지는데, 여기서
+       보려던 것은 <b>칩이 접혔나</b> 입니다 — 그것은 .hm-act-r 입니다 (8번). */
+    const row = document.querySelector('#hmActHost .hm-act-r') || e;
     return { txt: e ? (e.innerText || '').replace(/\s+/g, ' ').trim() : '',
-      h: e ? Math.round(e.getBoundingClientRect().height) : 0,
+      h: row ? Math.round(row.getBoundingClientRect().height) : 0,
+      all: e ? Math.round(e.getBoundingClientRect().height) : 0,
       o: hmActOf() };
   });
   is(!!act.txt, '<b>홈에 선다</b> — 「' + act.txt + '」');
@@ -312,7 +318,8 @@ const SEED = `(function(){
      '<b>오늘 것만</b> 센다 — 전화 ' + (act.o || {}).call + ' · 만남 ' + (act.o || {}).meet +
      ' · 기록 ' + (act.o || {}).all + ' (2000년 것은 안 셉니다)');
   is(act.h > 0 && act.h <= 60,
-     '<b>한 줄</b>이다 — ' + act.h + 'px (접히면 122px 이 되어 홈이 0.15화면 길어진다)');
+     '칩이 <b>한 줄</b>이다 — ' + act.h + 'px (접히면 122px 이 되어 홈이 0.15화면 길어진다)' +
+     ' · 칸 전체 ' + act.all + 'px');
   const actWait = await pg.evaluate(() => {
     const k = CM.loaded; CM.loaded = false;                 /* 아직 못 읽은 판 */
     const h = hmActHtml(); CM.loaded = k;
@@ -385,7 +392,13 @@ const SEED = `(function(){
              week: !!document.querySelector('#mycalHost .mcal-wgrid') };
   });
   is(seg.there && /주/.test(seg.txt) && /월/.test(seg.txt), '달력에 <b>주 / 월</b> 고르개가 있다');
-  is(seg.month && !seg.week, '처음에는 <b>월</b>이 선다');
+  /* ⚠ 2026-09-25 · <b>처음에는 「주」 입니다.</b> 사장님 말씀 — 「달력은
+     유지해 매월 매주 스케줄 볼 수 있게 <b>매주를 기본</b>으로 해서
+     <b>이번 주에 집중</b>하게 하고」. 여기 적어 둔 「월」 은 그전 기준이라
+     그대로 두면 이 점검이 <b>사장님 말씀과 반대</b>를 지키게 됩니다.
+     ★ 월이 <b>없어진 것이 아닙니다</b> — 고르개가 있고(바로 위에서 봅니다)
+       월 격자는 check-calmonth 가 따로 잽니다.                        */
+  is(seg.week && !seg.month, '처음에는 <b>이번 주</b>가 선다 — 사장님 「이번 주에 집중하게」');
 
   await pg.evaluate(() => mcalSetView('week'));
   await pg.waitForTimeout(200);

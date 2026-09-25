@@ -13482,12 +13482,20 @@ function navMark(tab){
      「이용할 수 없습니다」 만 뜹니다 (8번).
    ★ <b>새 화면을 만들지 않았습니다.</b> 네 칸은 이미 있는 화면으로 가고,
      「더보기」 는 원래 있던 서랍(toggleNav)을 그대로 엽니다.            */
+/* ⚠ 2026-09-25 · <b>목업 다섯으로 바꾸되 달력은 남깁니다.</b>
+   사장님 말씀 — 「<b>목업대로 바꾸고 달력은 유지해</b> 매월 매주 스케줄
+   볼 수 있게 <b>매주를 기본</b>으로 해서 이번 주에 집중하게 하고」.
+   목업(docs/토스판_사본.html 593줄)은 오늘·고객·도구·<b>콘텐츠</b>·<b>나</b>
+   입니다. 그중 <b>「나」 자리에 달력</b>을 넣었습니다 — 「나」 는 앱에 그대로
+   맞는 화면이 없고, 달력은 사장님이 남기라고 하신 것입니다.
+   ★ 빠진 <b>DB(crm)</b> 는 서랍에 있고, <b>「📦 여기로 옮겼습니다」</b> 줄에
+     적어 길을 남겼습니다 — 못 찾으면 지운 것과 같습니다 (1번).        */
 var TB=[
- {id:'home',    e:'🏠',t:'오늘', w:['today']},
- {id:'clients', e:'📇',t:'고객', pin:['clients','fact_find']},
- {id:'crm',     e:'🗂',t:'DB',   pin:['crm']},
- {id:'mycal',   e:'📅',t:'달력', pin:['mycal']},
- {id:'__more',  e:'🧰',t:'도구', w:['meet','after','grow','know','run']}
+ {id:'home',    e:'🏠',t:'오늘',  w:['today']},
+ {id:'clients', e:'📇',t:'고객',  pin:['clients','fact_find','crm']},
+ {id:'__more',  e:'🧰',t:'도구',  w:['meet','after','know','run']},
+ {id:'news_live',e:'📰',t:'콘텐츠',w:['grow']},
+ {id:'mycal',   e:'📅',t:'달력',  pin:['mycal']}
 ];
 /* ── <b>지금 어느 칸이 켜지나</b> — 한 곳만 답한다 (5번) ─────────────
    여태 이 띠는 <b>제 칸 다섯</b>만 알았습니다. 화면이 96개인데 나머지
@@ -14876,11 +14884,22 @@ function almCss(){
    홈</b> 네 곳이 같이 바뀝니다 (5번).                                  */
 /* 주로 볼지 달로 볼지는 <b>이 브라우저에 적어 둡니다.</b> 안 적어 두면
    바탕화면 아이콘으로 열 때마다 「월」 로 되돌아갑니다 — 아이콘은 하루에도
-   몇 번씩 여는 자리라, 매번 「주」 를 다시 누르셔야 했습니다. */
+   몇 번씩 여는 자리라, 매번 「주」 를 다시 누르셔야 했습니다.
+
+   ⚠ 2026-09-25 · <b>아직 안 고르셨으면 「주」 로 엽니다.</b>
+     사장님 말씀 — 「달력은 유지해 <b>매월 매주</b> 스케줄 볼 수 있게
+     <b>매주를 기본</b>으로 해서 <b>이번 주에 집중</b>하게 하고」.
+     달은 그대로 볼 수 있고, 처음 여는 자리만 주로 옮겼습니다.
+   ★ <b>한 번 고르시면 그것이 이깁니다</b> — 「월」 을 고르시면 월로 남습니다.
+     서랍의 「간편」(ezOn)과 같은 규칙입니다: 안 고르신 것(null)과
+     고르신 것을 <b>가려서</b> 봅니다. 「week 가 아니면 month」 로 두면
+     사장님이 고르신 월과 아직 안 고르신 것을 구별할 수 없습니다.       */
 var MCAL_VIEW_KEY='apex_mcal_view';
 function mcalViewSaved(){
-  try{ return localStorage.getItem(MCAL_VIEW_KEY)==='week'?'week':'month'; }
-  catch(e){ return 'month'; }
+  try{ var v=localStorage.getItem(MCAL_VIEW_KEY);
+       if(v===null)return 'week';                 /* 아직 안 고르셨다 */
+       return v==='week'?'week':'month'; }
+  catch(e){ return 'week'; }
 }
 var MCAL={ym:'',sel:'',shown:false,view:mcalViewSaved(),wk:''};
 var MCAL_KEY='apex_mycal_cfg';
@@ -17021,8 +17040,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-28 13:05';
-var APP_BUILD_NOTE="🎨 <b>새로 여는 인쇄 창에도 같은 옷을 입혔습니다 — 법인 덱 종이가 어긋나 있었습니다.</b>　—　사장님 말씀 「토스판 디자인을 <b>파일 하나로</b> 빼고, <b>모든 화면</b>이 그것을 쓰게 합니다」.　—　① 열어 보니 <b>①③ 은 이미 되어 있었습니다</b> — app/ui.css 가 #439 로 들어와 있고, index·day·finance·ba·db-crm 다섯이 이미 그것을 부르고, 인라인 토큰 블록도 이미 지워져 있었습니다. <b>다시 만들지 않았습니다</b> — 만들면 두 벌이 됩니다 (5번).　—　② <b>남아 있던 것은 인쇄 창이었습니다.</b> 인쇄는 window.open('','_blank') 로 <b>빈 창</b>을 열고 글을 써 넣습니다. 그 창 주소는 <b>about:blank</b> 라 상대 경로 href=\"ui.css\" 가 <b>안 잡힙니다</b> — 그 창에서 Pretendard 만 되던 것은 그것이 절대 주소였기 때문입니다. 여덟 군데를 다 찾아 <b>printHeadCss() 한 곳</b>을 지나게 했습니다.　—　③ ★ <b>그 자리에서 진짜 고장을 찾았습니다.</b> 법인 컨설팅 덱 인쇄가 var(--t4)·var(--t3)·var(--t5)·var(--t6) 을 쓰는데 <b>그 창에는 글자 계단이 없었습니다</b>(계단은 app/index.html 의 :root 에만 있습니다). 값이 없으면 font-size 가 <b>물려받은 크기</b>가 됩니다 — 재어 보니 머리말 15px 이 <b>16px</b>, 꼬리말·참고 줄 13px 이 <b>16px</b> 로 나가고 있었습니다. A4 한 장 높이가 고정(209mm)이고 넘치면 <b>잘라 냅니다</b> — 맨 아래 줄이 종이에서 사라질 수 있었습니다. <b>고객에게 드리는 종이입니다.</b> 이제 <b>지금 살아 있는 값을 읽어</b> 실어 보냅니다 — 숫자를 적어 두면 계단을 고칠 때 그 창만 옛 값으로 남습니다 (5번). 계단은 <b>인라인</b>으로 나갑니다 — link 는 늦게 올 수 있는데 인쇄는 350ms 뒤에 시작하기 때문입니다.　—　④ 점검 — <b>check-ttok</b> 에 두 갈래를 더했습니다: 「글을 써 넣는 창이 모두 printHeadCss() 를 지나는가(어느 함수인지 이름으로 말합니다)」 · 「누르는 것이 44px 이상인가」(철칙). 그리고 <b>check-uiprint</b> 를 새로 만들었습니다 — <b>진짜 창을 열어 px 를 잽니다</b>. 정적 점검은 「부르나」 까지만 보므로, 그 함수가 조용히 빈 글자를 돌려줘도 초록입니다. ★ px 를 못 박지 않고 <b>앱이 정한 계단과 같은가</b>를 봅니다 — 계단을 고쳐도 안 낡습니다.　—　되돌려 빨간불을 확인했습니다 — 인쇄 창에서 옷을 빼기(1) · 계단 숫자를 손으로 적기(1) · 칩을 40px 로 줄이기(1) · 도우미를 두 벌로 만들기(2). 그리고 <b>고치기 전 index.html</b> 로 check-uiprint 를 돌려 <b>여섯 자리가 울리는 것</b>을 봤습니다.　—　⚠ <b>한 번 속았습니다.</b> 시험에서 바깥을 route 로 막았더니 about:blank 창의 하위 파일이 안 내려와 「ui.css 가 안 실린다」 로 보였습니다. 차단 없이 다시 재어 보니 <b>멀쩡했습니다</b>. 새 점검 주석에 적어 두었습니다 — 헛것을 잡는 점검은 안 잡는 점검보다 나쁩니다 (8번).";
+var APP_BUILD='2026-09-28 18:20';
+var APP_BUILD_NOTE="🏠 <b>홈과 아래 띠를 목업 모양으로 — 달력은 남기고 「이번 주」로 엽니다.</b>　—　사장님 말씀 「내가 다른 세션에서 보낸 디자인하고 <b>아직 너무 다른데</b>」. 폰 430px 에서 목업(docs/토스판_사본.html)과 <b>나란히 재어</b> 보고 고쳤습니다.　—　① ▬ <b>진행 막대와 「몇 / 몇」</b> · 👥 <b>다음 분</b> · ☎️ <b>30일 약속</b> — 목업에 있는데 홈에 없던 셋입니다. ★ <b>새로 세지 않습니다</b>(5번) — 막대는 hmNext(), 30일 약속은 hmQPromise(), 다음 분은 hmSteps() 에 묻습니다. 또 세면 카드와 숫자가 갈립니다. ★ <b>못 읽었으면 안 적습니다</b>(1번) — 0 으로 적으면 「다 지켰다」 가 됩니다. ★ <b>덩어리를 안 늘립니다</b> — 30일 약속은 「오늘 기록」과 한 칸, 다음 분은 오늘 카드 안입니다.　—　② 🔎 <b>「이분 자세히」</b> — 목업 카드는 469px 인데 앱은 1,066px 이라 한 분을 보려고 스크롤을 해야 했습니다. 접으면 <b>806px</b>(한 화면 844px 안)로 줄어듭니다. ⚠ <b>기본은 펴 둡니다.</b> 접힌 채로 두었더니 점검 넷이 울렸습니다 — 「홈에서 <b>단계를 바로바로</b>」(#6 · 9자리) 등 전부 사장님이 <b>바로</b> 되라고 하신 것입니다. 목업 모양을 얻자고 그것을 한 번 더 누르게 만들면 먼저 하신 말씀을 뒤집는 것이라, <b>접을 수 있게만</b> 해 두었습니다. 한 번 접으시면 그 상태가 유지됩니다.　—　③ 🧰 <b>아래 띠를 목업 다섯으로</b> — 🏠 오늘 · 📇 고객 · 🧰 도구 · 📰 콘텐츠 · 📅 달력. 목업은 「나」 인데 앱에 그대로 맞는 화면이 없어 <b>그 자리에 달력</b>을 넣었습니다(사장님 「달력은 유지해」). 빠진 <b>DB</b> 는 「고객」 칸이 켜 주고, 서랍과 「📦 여기로 옮겼습니다」 줄에서 열립니다 — 못 찾으면 지운 것과 같습니다 (1번).　—　④ 📅 <b>달력이 「이번 주」로 열립니다</b> — 사장님 말씀 「매주를 기본으로 해서 <b>이번 주에 집중</b>하게」. 달은 그대로 볼 수 있고 처음 여는 자리만 주로 옮겼습니다. ★ <b>한 번 고르시면 그것이 이깁니다</b> — 서랍의 「간편」과 같은 규칙입니다.　—　⑤ ⚠ <b>제가 드린 프롬프트 중 셋은 안 했습니다 — 하면 안 되는 것이었습니다.</b> 「서버 준비를 출발 점검으로」 — check-setup 이 「오늘 챙길 것보다 <b>위</b>」를 못 박아 놨고 앱 여러 화면이 「홈 맨 위」 라고 가리킵니다(게다가 접히고, 한 번 돌리면 영영 사라집니다). 「여기로 옮겼습니다 를 없애라」 — check-homeshape 가 그 줄을 <b>있으라고</b> 요구합니다. 「약관 고지를 설정으로」 — <b>금소법 문구</b>입니다. ★ 준비 SQL 을 끝낸 뒤 홈은 <b>이미 1,771px</b> 로 목업(1,824px)보다 짧았습니다.　—　점검 — <b>check-homeshape</b> 에 열한 자리, <b>check-bband</b> 를 새 다섯 칸에 맞췄습니다(칸 이름을 손으로 안 적고 <b>앱의 표에서 읽습니다</b>). 그리고 <b>check-homeone</b> 의 뼈대 견주기를 <b>눈금에서 차이로</b> 바꿨습니다 — height/400 반올림이라 카드가 눈금 경계에 걸리면 90px 차이가 「다른 화면」 이 됐습니다(두 번 그렇게 울렸고 두 번 다 화면은 멀쩡했습니다). 되돌려 확인했습니다 — 칸이 사라지면 울리고(사라진 칸 이름까지 적습니다), 「준비 SQL 425px」 만큼 부풀려도 울립니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -24298,6 +24317,56 @@ function hmBoxGo(id,key){
   hmSheetOpen(id,key,(it&&it.title)||id);
 }
 
+/* ══ 🔎 <b>이분 자세히</b> — 목업(docs/토스판_사본.html)의 그 단추 ══════
+   사장님 말씀 — 「내가 다른 세션에서 보낸 디자인하고 아직 너무 다른데」.
+   폰 430px 에서 나란히 재어 보았습니다:
+
+     목업 「오늘 한 분」 카드 <b>469px</b>  ·  앱 <b>1,066px</b>
+
+   목업은 <b>읽을 것 다섯 줄 + 단추 셋</b>입니다 — 왜 오늘인가 / 무엇을 /
+   어떻게 / 첫 문장에 붙일 것 / 도구 칩, 그리고 「만나러 갑니다」·
+   「오늘은 접어요」·<b>「이분 자세히」</b>. 한 화면(844px)에 딱 듭니다.
+
+   앱에는 같은 내용이 다 있는데 <b>기계가 389px 더</b> 붙어 있었습니다 —
+   상황 바꾸기(44) · 도구 칩(72) · 단계·기록 판(230) · 안내 한 줄(43).
+   전부 사장님이 앞서 시키신 것들이라 <b>하나도 안 지웁니다.</b>
+   목업이 시킨 대로 <b>「이분 자세히」 뒤로 접습니다</b> — 한 번 누르면
+   그 자리에서 펴집니다. 접어도 홈을 안 벗어납니다.
+
+   ⚠ <b>기본은 펴 둡니다.</b> 처음에 접힌 채로 두었더니 점검 넷이 울렸습니다 —
+     「홈에서 <b>단계를 바로바로</b>」(#6 · 9자리) · 「홈에서 안 벗어나고 도구가
+     열리나」 · 「TA 첫 마디」 · 「홈 한 장」. 전부 사장님이 <b>바로</b> 되라고
+     하신 것들입니다. 목업의 모양을 얻자고 그것을 한 번 더 누르게 만들면
+     <b>먼저 하신 말씀을 뒤집는</b> 것입니다.
+     그래서 <b>접을 수 있게만</b> 해 둡니다 — 한 번 접으시면 카드가 806px 로
+     줄어 한 화면에 들고, 그 상태가 <b>그대로 유지</b>됩니다.
+   ★ 접거나 펴 두신 것은 <b>그대로 둡니다</b> — 사장님 말씀 「내가 킨 화면이
+     내가 끄지 않는 이상 처음으로 돌아가지 않도록」. 다음 분으로 넘어가도
+     그대로입니다.                                                      */
+var HM_MORE=true;
+function hmMoreToggle(){ HM_MORE=!HM_MORE; try{hmPaint();}catch(e){} }
+function hmMoreCss(){
+  if(document.getElementById('hmMoreCss'))return;
+  var st=document.createElement('style');st.id='hmMoreCss';
+  st.textContent='.hm-more{margin-top:10px}'+
+    '.hm-more-b{display:flex;align-items:center;justify-content:center;gap:6px;'+
+      'width:100%;min-height:44px;border-radius:var(--t-r-sm,13px);border:0;'+
+      'background:var(--t-bg,#F2F4F6);color:var(--t-sub,#6B7684);'+
+      'font-family:inherit;font-size:var(--t6);font-weight:800;cursor:pointer}'+
+    '.hm-more-b:hover{background:var(--ink-7,#E5E8EB)}'+
+    '.hm-more-in{margin-top:10px}';
+  document.head.appendChild(st);
+}
+function hmMoreHtml(x,note){
+  var inner=hmTaHtml(x)+hmBoxHtml(x)+hdbStripHtml(x)+(note||'');
+  if(!inner)return '';
+  hmMoreCss();
+  return '<div class="hm-more">'+
+    '<button type="button" class="hm-more-b" onclick="hmMoreToggle()">'+
+      (HM_MORE?'접기 ▴':'이분 자세히 ▾')+'</button>'+
+    (HM_MORE?('<div class="hm-more-in">'+inner+'</div>'):'')+
+  '</div>';
+}
 function hmNowHtml(){
   try{ hmKtCss(); hmTaCss(); hmPdCss(); }catch(e){}   /* 옷을 쓰는 화면에서 부른다 (5번) */
   var r=hmNext();
@@ -24319,10 +24388,7 @@ function hmNowHtml(){
     /* <b>묻고 고르게</b> 합니다 — 번호가 붙은 갈래를 세우고, 누르면
        그 자리에서 그 일이 벌어집니다. 여태는 도구 단추만 한 줄로
        늘어놓아, 읽고 나서 다시 고르는 두 동작이 됐습니다. */
-    hmTaHtml(x)+hmPdHtml(x)+hmPicksHtml(x)+hmBoxHtml(x)+hmKtHtml(x.key)+
-    /* <b>단계를 그 자리에서</b> 옮긴다 — DB 통합 CRM 까지 안 가도 된다.
-       배정 DB 에서 올라온 줄에만 선다(hdbStripHtml 이 스스로 가린다). */
-    hdbStripHtml(x)+
+    hmPdHtml(x)+hmPicksHtml(x)+hmKtHtml(x.key)+
     /* <b>단계와 상관없이</b> 오늘 소식 한 줄 — 사장님 말씀 「상황에 맞게
        뉴스 읽어주면서 전달드리고」. 여태는 거절·기고객·증권전달에만 뉴스가
        붙어서, TA·AP·PC·CS 에는 <b>연락할 구실</b>이 없었습니다. */
@@ -24332,9 +24398,11 @@ function hmNowHtml(){
        이것은 <b>기록이 아닙니다</b> — 전화·카톡·단계는 저마다 제 자리에 남고,
        여기는 「이 분은 오늘 봤다」는 표시입니다. 그게 없으면 하루가 첫 분에서 멈춥니다. */
     hmSkipHtml(r)+
-    '<div class="hm-now-n">'+(A.real
+    /* 🔎 <b>이분 자세히</b> — 상황 바꾸기 · 도구 칩 · 단계·기록 판 · 안내 한 줄.
+       목업이 그 넷을 이 단추 뒤에 두었습니다. 지운 것이 아닙니다 (1번). */
+    hmMoreHtml(x, '<div class="hm-now-n">'+(A.real
       ? '누르면 <b>기록으로 남습니다</b> — 그래서 이 분은 주기가 오늘부터 다시 셉니다.'
-      : '누르면 <b>오늘 하루 표시</b>만 됩니다 — 앱이 실제로 하셨는지는 알 수 없습니다.')+'</div>'+
+      : '누르면 <b>오늘 하루 표시</b>만 됩니다 — 앱이 실제로 하셨는지는 알 수 없습니다.')+'</div>')+
     '</div>';
 }
 /* ── 홈이 <b>기대고 있는 통</b> ─────────────────────────────────────
@@ -25596,7 +25664,57 @@ function hmTodayHtml(){
      한 건씩 따라가셔도 되고, 전체를 훑어보셔도 됩니다.
      한 분씩 퀘스트가 <b>먼저</b> 서고, 사람과 상관없는 것(SNS·고객 보험)은
      그 아래 <b>접혀</b> 있습니다 — 펴 두면 한 분 카드가 밀립니다. */
-  return head+hmNowHtml()+'<div class="hm-rows">'+rows+'</div>'+ms+'</div></div>';
+  return head+hmNowHtml()+hmNxsHtml()+'<div class="hm-rows">'+rows+'</div>'+ms+'</div></div>';
+}
+/* ══ 👥 <b>다음 분</b> — 목업에 있는데 홈에 없던 칸 ═══════════════════
+   목업(docs/토스판_사본.html)은 「오늘 한 분」 바로 밑에 <b>다음 분</b>을
+   세 줄까지 미리 보여 주고 꼬리에 「＋ 18분 더」 라고 적습니다.
+   지금 몇 번째인지, 뒤에 누가 남았는지가 <b>한 눈에</b> 보입니다.
+
+   ★ <b>줄을 새로 만들지 않습니다</b> (5번) — hmSteps() 가 이미 오늘 줄을
+     차례대로 쥐고 있고, hmNext() 가 「지금 몇 번째」 를 압니다. 그 뒤를
+     그대로 꺼내 씁니다. 여기서 다시 고르면 카드와 차례가 갈립니다.
+   ★ <b>덩어리를 늘리지 않습니다</b> — 오늘 카드(#hmToday) <b>안</b>에
+     답니다. 밖에 세우면 check-homeshape 의 「덩어리 넷」 을 넘깁니다.
+   ★ 이름은 <b>씻어서</b> 적습니다 (3번).                                */
+var HM_NXS=3;
+function hmNxsCss(){
+  if(document.getElementById('hmNxsCss'))return;
+  var st=document.createElement('style');st.id='hmNxsCss';
+  st.textContent='.hm-nxs{margin-top:12px;padding-top:12px;border-top:1px solid var(--ink-8)}'+
+    '.hm-nxs>b{display:block;font-size:var(--t6);font-weight:800;color:var(--ink-4)}'+
+    '.hm-nxs-r{display:flex;align-items:center;gap:11px;width:100%;min-height:44px;'+
+      'padding:7px 0;border:0;background:none;font-family:inherit;text-align:left;cursor:pointer}'+
+    '.hm-nxs-r .e{flex:none;width:32px;height:32px;border-radius:var(--r-sm);'+
+      'background:var(--ink-8);display:flex;align-items:center;justify-content:center;font-size:15px}'+
+    '.hm-nxs-r .m{flex:1;min-width:0}'+
+    '.hm-nxs-r .m b{display:block;font-size:var(--t5);font-weight:800;color:var(--ink-1);'+
+      'overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+    '.hm-nxs-r .m span{display:block;font-size:var(--t6);color:var(--ink-3);font-weight:600;'+
+      'overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+    '.hm-nxs-m{margin-top:4px;font-size:var(--t6);font-weight:700;color:var(--t-sub2)}';
+  document.head.appendChild(st);
+}
+function hmNxsHtml(){
+  var r=null; try{ r=hmNext(); }catch(e){ return ''; }
+  if(!r||!r.x||!r.n)return '';
+  var L=[]; try{ L=hmSteps()||[]; }catch(e2){ return ''; }
+  var rest=L.slice((r.i||0)+1);
+  if(!rest.length)return '';
+  hmNxsCss();
+  var h='',i,x,A;
+  for(i=0;i<rest.length&&i<HM_NXS;i++){
+    x=rest[i]; A=HM_ACT[x.k]||{e:'•'};
+    h+='<button type="button" class="hm-nxs-r" onclick="hmOpen(\''+
+       String(x.key).replace(/'/g,'')+'\')">'+
+       '<span class="e">'+(x.e||A.e||'•')+'</span>'+
+       '<span class="m"><b>'+osEsc(x.t||'')+'</b>'+
+       (x.s?('<span>'+osEsc(x.s)+'</span>'):'')+'</span></button>';
+  }
+  var more=rest.length-HM_NXS;
+  return '<div class="hm-nxs"><b>👥 다음 분</b>'+h+
+    (more>0?('<div class="hm-nxs-m">＋ '+more+'분 더 — 끝내시면 차례로 올라옵니다</div>'):'')+
+  '</div>';
 }
 /* ── 홈에서 <b>TFA 업무관리까지</b> ─────────────────────────────────
    하루 일을 두 화면에서 했습니다 — 고객은 홈에서, 내 일과 팀 일은 TFA 에서.
@@ -25927,9 +26045,23 @@ function hmActCss(){
   if(document.getElementById('hmActCss'))return;
   var st=document.createElement('style');st.id='hmActCss';
   st.textContent=
-    '.hm-act{display:flex;align-items:center;gap:10px;padding:10px 14px;margin-top:10px;'+
+    /* ⚠ 한 칸 안에 <b>줄이 둘</b>이 되었습니다 — 위는 ☎️ 30일 약속,
+       아래는 📊 오늘 기록. 그래서 바깥은 <b>세로</b>로 쌓고, 예전 가로
+       규칙은 <b>.hm-act-r</b> 로 옮겼습니다. 덩어리는 그대로 하나입니다. */
+    '.hm-act{padding:10px 14px;margin-top:10px;'+
       'background:var(--white);border:1px solid var(--ink-7);border-radius:var(--r-md)}'+
-    '.hm-act>b{font-size:var(--t6);font-weight:800;color:var(--ink-4);flex:none}'+
+    '.hm-act-r{display:flex;align-items:center;gap:10px}'+
+    '.hm-act-r>b{font-size:var(--t6);font-weight:800;color:var(--ink-4);flex:none}'+
+    /* ☎️ 30일 약속 한 줄 — 목업 .kpi 자리 */
+    '.hm-act-p{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;'+
+      'padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid var(--ink-8)}'+
+    '.hm-act-p>b{font-size:var(--t6);font-weight:800;color:var(--ink-4);flex:none}'+
+    /* ⚠ <b>새 글자 크기를 만들지 않습니다.</b> --t4(15px)를 썼더니 이 화면의
+       글자 계단이 셋에서 넷으로 늘어 check-toss 가 잡았습니다 — 「새 크기를
+       만들지 말고 있는 것을 쓰십시오」. 이미 쓰는 --t3 으로 바꿉니다. */
+    '.hm-act-p .n{font-size:var(--t3);font-weight:900;color:var(--primary);'+
+      'letter-spacing:-.02em}'+
+    '.hm-act-p .s{font-size:var(--t6);font-weight:700;color:var(--ink-3)}'+
     /* ⚠ <b>접히면 안 됩니다.</b> wrap 으로 두었더니 좁은 폰에서 칩 셋이
        세 줄이 되어 122px 이었습니다 — 홈이 0.15화면 길어집니다. 한 줄로
        두고 넘치면 <b>옆으로 굴러가게</b> 합니다(감추지 않습니다). */
@@ -25959,6 +26091,38 @@ function hmActIgHtml(){
   if(i<0)return '';
   return '<button type="button" onclick="go(\'news_live\')">📸 올릴 것<i>1</i></button>';
 }
+/* ══ ☎️ <b>30일 약속</b> — 목업에 있는데 홈에 없던 칸 ══════════════════
+   사장님 말씀 — 「내가 다른 세션에서 보낸 디자인하고 아직 너무 다른데」.
+   목업(docs/토스판_사본.html)을 폰 430px 로 재어 보니 <b>「30일 약속
+   16 / 24명」</b> 칸이 있는데 앱 홈에는 없었습니다.
+
+   ★ <b>새로 세지 않습니다</b> (5번). 이미 hmQPromise() 가 넘긴 분·한 번도
+     없던 분을 가려내고 있습니다 — 그것을 그대로 씁니다. 여기서 또 세면
+     같은 숫자가 두 벌이 되고, 한쪽만 고쳐집니다.
+   ★ <b>덩어리를 늘리지 않습니다.</b> 사장님이 #447 에서 목업을 세실 때
+     <b>「(30일 약속 · 활동량)」을 한 묶음</b>으로 세셨습니다. 그래서 따로
+     세우지 않고 <b>「오늘 기록」과 같은 칸</b>에 답니다 — check-homeshape
+     의 「덩어리 넷」 도 그대로입니다.
+   ★ <b>못 읽었으면 안 적습니다</b> (1번). 고객 목록이나 접촉 기록을 아직
+     못 읽었으면 「0명」 이 아니라 <b>줄을 안 세웁니다</b> — 0 으로 적으면
+     「다 지켰다」 는 거짓말이 됩니다.                                   */
+function hmPrmCount(){
+  if(typeof OSC==='undefined'||!OSC.loaded||!OSC.list)return null;
+  if(typeof CM==='undefined'||!CM.loaded)return null;
+  var L=[]; try{ L=hmQPromise()||[]; }catch(e){ return null; }
+  var over=0,never=0,i;
+  for(i=0;i<L.length;i++){ if(L[i].pk==='never')never++; else over++; }
+  var all=OSC.list.length;
+  return {all:all, miss:L.length, over:over, never:never, ok:Math.max(0,all-L.length)};
+}
+function hmPrmHtml(){
+  var c=hmPrmCount(); if(!c||!c.all)return '';
+  return '<div class="hm-act-p"><b>☎️ 30일 약속</b>'+
+    '<span class="n">'+c.ok+' / '+c.all+'명</span>'+
+    '<span class="s">'+(c.miss===0
+      ? '약속을 지키고 있습니다'
+      : ('넘긴 분 '+c.over+' · 한 번도 '+c.never))+'</span></div>';
+}
 function hmActHtml(){
   var a=hmActOf(); if(!a)return '';
   hmActCss();
@@ -25971,7 +26135,8 @@ function hmActHtml(){
   /* 이름표에 <b>「기록」</b>이라고 적습니다 — 체크판의 「눌렀나」 와 다른
      수라는 것을 여기서 말해 둬야 합니다 (1번). 꼬리에 한 줄 더 달았더니
      칩이 접혀 122px 이 됐습니다. 말은 남기고 자리는 안 먹습니다. */
-  return '<div class="hm-act"><b>📊 오늘 기록</b><span class="g">'+h+'</span></div>';
+  return '<div class="hm-act">'+hmPrmHtml()+
+    '<div class="hm-act-r"><b>📊 오늘 기록</b><span class="g">'+h+'</span></div></div>';
 }
 function hmActPaint(){
   var el=document.getElementById('hmActHost'); if(!el)return;
@@ -25990,7 +26155,9 @@ var HM_MOVED=[
  {t:'airep',   e:'🧭', n:'TFA',        was:'업무관리'},
  {t:'ready',   e:'🚦', n:'출발 점검',  was:'점검'},
  {t:'teamhub', e:'👥', n:'팀',         was:'팀 전체'},
- {t:'news_live',e:'📰', n:'콘텐츠',    was:'오늘 올릴 것 · SNS'}
+ {t:'news_live',e:'📰', n:'콘텐츠',    was:'오늘 올릴 것 · SNS'},
+ /* 아래 띠를 목업 다섯으로 바꾸며 제 칸이 없어졌습니다 — 길을 남깁니다 */
+ {t:'crm',     e:'🗂', n:'DB 통합 CRM', was:'아래 띠'}
 ];
 /* ══ 🔔 <b>소식 한 자리</b> — 늘 있고, 없으면 없다고 적습니다 ═══════
    ★ <b>:has() 를 씁니다.</b> 안쪽 넷(알람 열쇠 · 알림 권유 · 고객 체크 ·
@@ -26931,6 +27098,34 @@ function hmTossGreet(){
   return '<div class="tz-greet">'+osEsc(nm||'설계사')+'님, '+
     '<span>'+(n?('오늘 '+n+'개예요'):'오늘 챙길 것이 없어요')+'</span></div>';
 }
+/* ══ ▬ <b>진행 막대와 「몇 / 몇」</b> — 목업에 있는데 없던 것 ═══════════
+   목업(docs/토스판_사본.html)은 인사 바로 밑에 <b>6px 짜리 막대</b>와
+   「<b>1 / 24 · 위에서부터 하시면 오늘이 끝납니다</b>」 한 줄이 있습니다.
+   오늘이 얼마나 남았는지를 <b>한 눈에</b> 말해 주는 자리입니다.
+
+   ★ <b>새로 세지 않습니다</b> (5번). hmNext() 가 이미 「몇 번째(i) / 몇 건(n)」
+     을 답하고 있습니다 — 카드 머리의 「오늘 3분 중 1번째」 가 그 값입니다.
+     여기서 또 세면 <b>막대와 카드가 다른 숫자</b>를 말하게 됩니다.
+   ★ <b>0 건이면 안 세웁니다</b> — 아직 못 읽었을 수도 있고, 그때 막대를
+     100% 로 채우면 「다 했다」 는 거짓말이 됩니다 (1번).                */
+function hmTossBarHtml(){
+  var r=null; try{ r=hmNext(); }catch(e){ return ''; }
+  if(!r||!r.n)return '';
+  var dn=r.i||0, tot=r.n, pct=tot?Math.round(dn/tot*100):0;
+  hmTossBarCss();
+  return '<div class="tz-pbar"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="tz-psub">'+dn+' / '+tot+' · 위에서부터 하시면 오늘이 끝납니다</div>';
+}
+function hmTossBarCss(){
+  if(document.getElementById('hmTossBarCss'))return;
+  var st=document.createElement('style');st.id='hmTossBarCss';
+  st.textContent='.tz-pbar{height:6px;border-radius:6px;background:var(--ink-7);'+
+      'overflow:hidden;margin-top:2px}'+                       /* 목업 .pbar */
+    '.tz-pbar>i{display:block;height:100%;border-radius:6px;background:var(--t-point);'+
+      'transition:width .3s var(--ease)}'+
+    '.tz-psub{margin-top:8px;font-size:var(--t6);font-weight:700;color:var(--t-sub2)}';
+  document.head.appendChild(st);
+}
 function hmTossHero(){
   /* 목업 ⑧ 의 히어로 — 글자 그대로 */
   return '<div class="tz-hero">'+
@@ -27011,7 +27206,7 @@ function hmTossHtml(){
      hmBaGo 가 osOpenClient 로 고객 365일에 그 분을 세운 뒤 전·후 만들기를
      엽니다. 저장은 saved_reports(client_id) 라 <b>그 분께 붙습니다</b>.
      hmTossHero 는 지우지 않고 둡니다 — 자리를 되돌리실 때 그대로 씁니다. */
-  return '<div class="tz">'+hmTossGreet()+
+  return '<div class="tz">'+hmTossGreet()+hmTossBarHtml()+
     ((now||ap||wk)?(now+ap+wk):hmTossDone())+'</div>';
 }
 function renderHome(){

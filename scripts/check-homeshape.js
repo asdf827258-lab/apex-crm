@@ -241,11 +241,82 @@ const tall = (p) => p.evaluate(() => {
   is(!mv.no && mv.tap >= 44, '  눌러서 <b>바로 간다</b> · 손가락 크기 44px — ' + mv.tap + 'px');
   is(!mv.no && mv.h <= 120, '  안내는 <b>한 줄</b>이다 — ' + mv.h + 'px (덩어리가 되면 넷을 넘긴다)');
 
-  console.log('\n[5] 홈을 그리는 동안 <b>터진 곳이 없다</b>');
+  /* ══════════════════════════════════════════════════════════════════
+     [5] <b>목업과 같은 모양인가</b> (2026-09-25)
+     ──────────────────────────────────────────────────────────────────
+     사장님 말씀 — 「내가 다른 세션에서 보낸 디자인하고 <b>아직 너무
+     다른데</b>」. 폰 430px 에서 목업(docs/토스판_사본.html)과 나란히
+     재어 보니 이랬습니다:
+
+       · 목업 「오늘 한 분」 카드 <b>469px</b> · 앱 <b>1,066px</b>
+         → 한 분을 보려고 <b>스크롤</b>을 해야 했습니다.
+       · 목업에 있는데 앱에 없던 칸 셋 — <b>진행 막대</b> ·
+         <b>다음 분</b> · <b>30일 약속</b>.
+
+     ★ px 를 여기 못 박지 않습니다 — <b>「한 화면에 드는가」</b> 를 묻습니다.
+       폰 높이는 기계마다 다르고, 글자 크기를 키우면 그 숫자가 낡습니다 (8번).
+     ★ 접었다고 <b>없어지면 안 됩니다</b> — 펴서 넷이 돌아오는지 봅니다.
+       「지운 것이 아니다」 가 이 판의 뼈대입니다 (사장님 ④).           */
+  console.log('\n[5] <b>목업과 같은 모양인가</b> — 카드가 한 화면에 드나');
+  const M = await A.p.evaluate(async () => {
+    const q = s => document.querySelector('#dynPane ' + s);
+    const hh = e => e ? Math.round(e.getBoundingClientRect().height) : 0;
+    const out = { vh: window.innerHeight };
+    /* ⚠ <b>기본은 펴진 채</b>입니다 — 사장님이 「바로바로」 하라고 하신
+       것들(상황·단계·기록·도구)을 한 번 더 누르게 만들 수 없어서입니다.
+       그래서 여기서는 <b>접어 보고</b> 재고, 다시 펴서 돌아오는지 봅니다. */
+    const seen = () => ({ tap: !!q('.hm-tap'), box: !!q('.hm-box'),
+                          hdb: !!q('.hdb'), note: !!q('.hm-now-n') });
+    out.open = seen();
+    out.openCard = hh(q('.hm-now'));
+    out.btn = ((q('.hm-more-b') || {}).textContent || '').trim();
+    const b = q('.hm-more-b'); if (b) { b.click(); await new Promise(r => setTimeout(r, 500)); }
+    out.shut = seen();
+    out.card = hh(q('.hm-now'));
+    out.btnShut = ((q('.hm-more-b') || {}).textContent || '').trim();
+    const b2 = q('.hm-more-b'); if (b2) { b2.click(); await new Promise(r => setTimeout(r, 500)); }
+    out.again = hh(q('.hm-now'));
+    /* 목업에 있던 셋 — 값이 없으면 안 서는 것이 맞습니다 (1번) */
+    out.bar = !!q('.tz-pbar');
+    out.barTxt = ((q('.tz-psub') || {}).textContent || '').trim();
+    out.nxs = !!q('.hm-nxs');
+    out.prmFn = (typeof hmPrmCount === 'function');
+    return out;
+  });
+  is(M.card > 0 && M.card <= M.vh,
+     '  접으면 「오늘 한 분」 카드가 <b>한 화면에 든다</b> — ' + M.card + 'px / 화면 ' + M.vh + 'px');
+  is(/접기/.test(M.btn) && /자세히/.test(M.btnShut || ''),
+     '  <b>접고 펴는 단추</b>가 말을 바꾼다 — 펴짐 「' + (M.btn || '없다') +
+     '」 · 접힘 「' + (M.btnShut || '없다') + '」');
+  const shutN = Object.keys(M.shut).filter(k => M.shut[k]).length;
+  const openN = Object.keys(M.open).filter(k => M.open[k]).length;
+  is(shutN === 0 && openN === 4,
+     '  처음엔 <b>넷이 다 보이고</b>, 접으면 <b>숨는다</b> — 펴짐 ' + openN + '개 · 접힘 ' + shutN + '개');
+  is(M.openCard > M.card && M.again === M.openCard,
+     '  다시 펴면 <b>제자리</b>다 — ' + M.openCard + ' → ' + M.card + ' → ' + M.again + 'px');
+  /* ★ <b>처음에는 펴져 있어야</b> 합니다 — 접힌 채로 두면 「바로바로」 가 아닙니다 */
+  is(/var HM_MORE=true;/.test(fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8')),
+     '  <b>처음에는 펴져 있다</b> — 상황·단계·도구를 한 번 더 누르게 하지 않는다 (#6)');
+  is(M.bar && /\d+\s*\/\s*\d+/.test(M.barTxt),
+     '  <b>진행 막대와 「몇 / 몇」</b> 이 선다 — 「' + (M.barTxt || '안 섬') + '」');
+  is(M.nxs, '  <b>「다음 분」</b> 이 선다 — 뒤에 누가 남았는지 보인다');
+  is(M.prmFn, '  <b>「30일 약속」</b> 을 세는 자리가 있다 (hmPrmCount)');
+  /* <b>새로 세지 않았는가</b> (5번) — 이미 있는 자리에 물어야 두 숫자가 안 갈립니다 */
+  const SRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  const cut = (n) => { const i = SRC.indexOf('function ' + n + '('); if (i < 0) return '';
+                       const r = SRC.slice(i), e = r.search(/\n\}/); return e > 0 ? r.slice(0, e) : r; };
+  is(/hmNext\s*\(/.test(cut('hmTossBarHtml')),
+     '  막대가 <b>hmNext() 에 묻는다</b> — 또 세면 카드와 숫자가 갈린다 (5번)');
+  is(/hmQPromise\s*\(/.test(cut('hmPrmCount')),
+     '  30일 약속이 <b>hmQPromise() 에 묻는다</b> — 또 세면 두 벌이 된다 (5번)');
+  is(/OSC\.loaded/.test(cut('hmPrmCount')) && /return null/.test(cut('hmPrmCount')),
+     '  <b>못 읽었으면 안 적는다</b> — 0 으로 적으면 「다 지켰다」 가 된다 (1번)');
+
+  console.log('\n[6] 홈을 그리는 동안 <b>터진 곳이 없다</b>');
   is(A.errs.length === 0, '  콘솔 에러 ' + A.errs.length + '건' + (A.errs.length ? (' ← ' + A.errs[0]) : ''));
 
   await b.close(); srv.close();
   console.log('\n──────────────────────────────');
   if (bad) { console.log('✗ 홈 모양 — 고칠 자리 ' + bad + '곳'); process.exit(1); }
-  console.log('✓ 홈은 「오늘 카드」만 남았고, 나머지는 옮겼다고 적혀 있습니다.');
+  console.log('✓ 홈은 「오늘 카드」만 남았고, 카드는 한 화면에 들고, 목업의 셋이 다 섭니다.');
 })();
