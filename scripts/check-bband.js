@@ -2,8 +2,19 @@
    check-bband.js — <b>아래 띠가 엄지에 닿고, 어디 있는지 말해 주는가.</b>
 
    사장님 말씀 — 「아래 <b>다섯 갈래 띠</b>」(모형 docs/토스판_사본.html
-   593줄 NAV · 66~71줄 .tabbar). 다섯 칸은 <b>매일 누르는 것</b>으로
-   정하셨습니다 — 🏠 오늘 · 📇 고객 · 🗂 DB · 📅 달력 · 🧰 도구.
+   593줄 NAV · 66~71줄 .tabbar).
+
+   ── ⚠ 2026-09-25 · <b>다섯 칸이 바뀌었습니다</b> ──────────────────
+   처음에는 <b>매일 누르는 것</b>으로 정하셨습니다 — 오늘·고객·DB·달력·도구.
+   그 뒤 사장님 말씀 — 「<b>목업대로 바꾸고 달력은 유지해</b> 매월 매주
+   스케줄 볼 수 있게 매주를 기본으로 해서 이번 주에 집중하게 하고」.
+   목업은 오늘·고객·도구·<b>콘텐츠</b>·<b>나</b> 인데, 「나」 는 앱에 그대로
+   맞는 화면이 없어 <b>그 자리에 달력</b>을 넣었습니다:
+     🏠 오늘 · 📇 고객 · 🧰 도구 · 📰 콘텐츠 · 📅 달력
+   ★ 빠진 <b>DB(crm)</b> 는 「고객」 칸이 켜 주고, 서랍과 「📦 여기로
+     옮겼습니다」 줄에서 열립니다 — 아래에서 그것까지 확인합니다.
+   ★ 칸 이름을 <b>여기 손으로 적지 않습니다</b> — 앱의 TB 표에서 읽습니다.
+     적어 두면 칸을 바꿀 때마다 이 줄이 낡아 헛것이 됩니다 (8번).
 
    ── 이 자리에서 실제로 났던 두 가지 ──────────────────────────────
    ① <b>띠가 「지금 어디」 를 말하지 못했습니다.</b> 제 칸 다섯만 알아서,
@@ -115,16 +126,23 @@ const look = (p) => p.evaluate(() => {
   const A = await open(b, 390, 900);
   const T = await look(A.p);
   is(T.n === 5, '  칸이 <b>다섯</b>이다 — ' + T.labels.join(' | '));
-  ['오늘', '고객', 'DB', '달력', '도구'].forEach(t => {
+  /* 이름은 <b>앱의 표(TB)</b> 에서 읽습니다 — 손으로 적으면 바꿀 때마다 낡습니다 */
+  const TBT = await A.p.evaluate(() => TB.map(x => x.t));
+  TBT.forEach(t => {
     is(T.labels.some(x => x.indexOf(t) >= 0), '  「' + t + '」 칸이 있다');
   });
+  /* 목업 다섯 중 넷은 <b>글자 그대로</b> 같아야 합니다 (달력은 사장님이 남기신 것) */
+  ['오늘', '고객', '도구', '콘텐츠'].forEach(t => {
+    is(TBT.indexOf(t) >= 0, '  목업의 「' + t + '」 가 그대로 있다');
+  });
+  is(TBT.indexOf('달력') >= 0, '  <b>달력은 남겼다</b> — 사장님이 「달력은 유지해」 하셨다');
   is(T.small === 0, '  칸도 <b>44px 아래가 없다</b>' + (T.small ? (' ← ' + T.small + '개') : ''));
   /* 네 칸은 <b>그 화면으로</b> 가고, 도구는 <b>원래 있던 서랍</b>을 연다 */
   const went = await A.p.evaluate(async () => {
     const bar = document.getElementById('tabBar');
     const by = t => [].slice.call(bar.querySelectorAll('.tb-b')).filter(e => e.textContent.indexOf(t) >= 0)[0];
     const out = {};
-    for (const [t, want] of [['고객', 'clients'], ['DB', 'crm'], ['달력', 'mycal'], ['오늘', 'home']]) {
+    for (const [t, want] of [['고객', 'clients'], ['콘텐츠', 'news_live'], ['달력', 'mycal'], ['오늘', 'home']]) {
       const el = by(t); if (!el) { out[t] = '(칸 없음)'; continue; }
       el.click(); await new Promise(r => setTimeout(r, 600));
       out[t] = lastTab + (lastTab === want ? '' : ' ← ' + want + ' 이어야 함');
@@ -136,7 +154,7 @@ const look = (p) => p.evaluate(() => {
     try { go('home'); } catch (e) {}
     return out;
   });
-  ['오늘', '고객', 'DB', '달력'].forEach(t => {
+  ['오늘', '고객', '콘텐츠', '달력'].forEach(t => {
     is((went[t] || '').indexOf('←') < 0, '  「' + t + '」 를 누르면 <b>그 화면으로</b> 간다 — ' + went[t]);
   });
   is(went.drawer === true, '  「도구」 는 <b>원래 있던 서랍</b>을 연다 — 새 메뉴를 또 만들지 않았다 (5번)');
@@ -153,9 +171,9 @@ const look = (p) => p.evaluate(() => {
     });
     /* 칸마다 <b>제 화면</b>을 켜는가 — pin 이 갈래보다 먼저여야 한다 */
     const own = { home: 'home', clients: 'clients', fact_find: 'clients',
-                  crm: 'crm', mycal: 'mycal', airep: 'home',
-                  blog: '__more', news_live: '__more', settings: '__more',
-                  finance: '__more', pdel: '__more', org: '__more' };
+                  crm: 'clients', mycal: 'mycal', airep: 'home',
+                  news_live: 'news_live', blog: 'news_live',
+                  settings: '__more', finance: '__more', pdel: '__more', org: '__more' };
     const wrong = Object.keys(own).filter(k => tbOnOf(k) !== own[k])
                         .map(k => k + '→' + (tbOnOf(k) || '(없음)') + '(' + own[k] + ' 이어야)');
     return { n: ids.length, dark: dark, twin: twin, wrong: wrong };
@@ -166,7 +184,7 @@ const look = (p) => p.evaluate(() => {
   is(L.twin.length === 0,
      '  켜지는 칸이 <b>꼭 하나</b>다' + (L.twin.length ? (' ← ' + L.twin.slice(0, 6).join(' ')) : ''));
   is(L.wrong.length === 0,
-     '  <b>제 칸이 있는 화면은 제 칸</b>이 켜진다 (DB · 달력 · 고객)' +
+     '  <b>제 칸이 있는 화면은 제 칸</b>이 켜진다 (고객 · 콘텐츠 · 달력)' +
      (L.wrong.length ? (' ← ' + L.wrong.join(' · ')) : ''));
   /* 실제로 열어 보고도 켜지는가 — 함수만 맞고 화면이 안 따라가면 소용없다 */
   const live = await A.p.evaluate(async () => {
