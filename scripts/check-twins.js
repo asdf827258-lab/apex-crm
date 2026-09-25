@@ -203,7 +203,11 @@ var EXTERNAL = ['supabase', 'PENSION', 'html2canvas', 'PptxGenJS', 'pdfjsLib', '
      ※ apex-stage.js 의 APEX_STAGE 는 부르는 쪽이 typeof 로 감싸서 여기 없습니다. */
   'holdReady', 'holdOf', 'holdAll', 'holdSkel', 'holdSay', 'holdCss',
   'holdJong', 'holdEul', 'holdIga', 'holdRo', 'HOLD_VIEW', 'HOLD_RANK',
-  'nextCss', 'nextSheet', 'nextSheetHide'];
+  'nextCss', 'nextSheet', 'nextSheetHide',
+  /* alm-slots.js — 알람 네 번(시각·문구) 한 벌. 앱은 <script> 로, <b>서버는
+     netlify.toml 의 included_files</b> 로 같은 파일을 읽습니다. 시각이나
+     문구를 index.html 에 또 적으면 화면과 알람이 다른 말을 합니다 (5번). */
+  'ALM_SLOTS', 'almSlotOf', 'almSlotAt'];
 
 function scriptsOf(src) {
   var out = [], re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi, m;

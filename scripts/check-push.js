@@ -168,24 +168,67 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
       Date.now=function(){return fixed;};
     })();
     out.fixedKst=new Date(Date.now()+9*3600000).getUTCHours();
-    /* 아직 안 된 시각 — 고정한 시각보다 뒤 */
-    localStorage.setItem('apex_alm_hour','11');
-    localStorage.removeItem('apex_alm_day');
+    /* ⚠ 2026-09-25 · <b>지렛대가 바뀌었습니다.</b> 알람이 네 번이 되면서
+       울릴지 말지를 정하는 것은 apex_alm_hour 가 아니라 <b>슬롯마다의
+       시각</b>입니다. 옛 지렛대로 재면 「정한 시각 전에는 안 울린다」 가
+       늘 빨개집니다 — 자가 낡은 것이지 앱이 깨진 것이 아닙니다.
+       그래서 여기서도 <b>슬롯을 쥐고</b> 잽니다.
+       ★ 슬롯 이름을 손으로 안 적습니다 — ALM_SLOTS 에서 받습니다 (5번). */
+    const only=(k,h)=>{                      /* 그 하나만 켜고 시각을 정한다 */
+      const o={};
+      ALM_SLOTS.forEach(s=>{ o[s.k]={on:s.k===k,h:(s.k===k?h:s.h)}; });
+      localStorage.setItem('apex_alm_slots_v1',JSON.stringify(o));
+      ALM_SLOTS.forEach(s=>localStorage.removeItem('apex_alm_day_'+s.k));
+      localStorage.removeItem('apex_alm_day');
+    };
+    out.slots=ALM_SLOTS.map(s=>s.k).join(',');
+    out.slotN=ALM_SLOTS.length;
+    /* 아직 안 된 시각 — 고정한 시각(10시)보다 뒤 */
+    only('call',11);
     window.__rang.length=0; almTick(); out.early=window.__rang.length;
     /* 이미 지난 시각 */
-    localStorage.setItem('apex_alm_hour','9');
+    only('call',9);
     window.__rang.length=0; window.__net.length=0;
     almTick(); out.first=window.__rang.length; out.net=window.__net.length;
-    out.stamp=localStorage.getItem('apex_alm_day')||'';
+    out.stamp=localStorage.getItem('apex_alm_day_call')||'';
     out.today=arToday();
     /* 같은 날 또 부르면 */
     window.__rang.length=0; almTick(); out.again=window.__rang.length;
+    /* ── 네 번이 <b>서로 안 막는가</b> — 하나가 울려도 나머지는 제 시각에 ──
+       한 칸에 「오늘 울렸다」 를 적으면 아침에 한 번 울린 뒤 낮·저녁이
+       통째로 막힙니다. 실제로 그렇게 짰다가 여기서 잡았습니다. */
+    only('call',9);
+    window.__rang.length=0; almTick();                /* call 이 울린다 */
+    const o2=JSON.parse(localStorage.getItem('apex_alm_slots_v1'));
+    /* ⚠ 둘째로 <b>예상업적</b>을 씁니다. 처음엔 「내일 약속」 으로 쟀는데
+       견본에 내일 약속이 없어 <b>안 울리는 것이 정답</b>이었고, 그러면
+       이 자를 못 댑니다 — 자가 빨개도 앱은 맞은 것입니다. 예상업적은
+       못 세는 슬롯이라 <b>언제나 울립니다</b>. 여기서 재려는 것은
+       「하나가 울려도 다른 것이 막히지 않나」 하나뿐입니다 (8번).     */
+    o2.perf={on:true,h:9};
+    localStorage.setItem('apex_alm_slots_v1',JSON.stringify(o2));
+    window.__rang.length=0; almTick(); out.second=window.__rang.length;
     /* 오늘 챙길 분이 없으면 <b>표시를 안 남긴다</b> — 내일 또 걸러진다 */
-    localStorage.removeItem('apex_alm_day');
+    only('call',9);
     AR.db=[]; AR.cliRows=[];
     window.__rang.length=0; almTick();
-    out.emptyRang=window.__rang.length; out.emptyStamp=localStorage.getItem('apex_alm_day')||'';
-    /* 잘못 적은 값 */
+    out.emptyRang=window.__rang.length; out.emptyStamp=localStorage.getItem('apex_alm_day_call')||'';
+    /* <b>못 세는 슬롯</b>(예상업적)은 숫자 없이 울린다 — 0 이라고 적지 않는다 (1번) */
+    only('perf',9);
+    window.__rang.length=0; almTick();
+    out.perfRang=window.__rang.length;
+    /* ⚠ <b>__rang 은 본문을 b 에 담습니다</b>(t·b·via). 처음엔 .body 를
+       읽어 빈 값이 나왔고, 그래서 「숫자가 없다」 가 <b>거저 통과</b>했습니다 —
+       빈 글에는 숫자가 없으니까요. 안 울리는 알람이었습니다 (8번). */
+    out.perfBody=(window.__rang[0]||{}).b||'';
+    out.perfN=(typeof almLineFor==='function')?(almLineFor('perf')||{}).n:'?';
+    /* 잘못 적은 값 — 슬롯 시각도 기본값으로 돌아가야 한다 */
+    [-3,99,NaN].forEach((v,i)=>{
+      const o={}; o.call={on:true,h:v};
+      localStorage.setItem('apex_alm_slots_v1',JSON.stringify(o));
+      out['sh'+i]=almSlotHour('call');
+    });
+    localStorage.removeItem('apex_alm_slots_v1'); out.sdef=almSlotHour('call');
     ['','abc','-3','99'].forEach((v,i)=>{localStorage.setItem('apex_alm_hour',v);out['h'+i]=almHour();});
     localStorage.removeItem('apex_alm_hour'); out.def=almHour();
     Date.now=realNow;                      /* 시계를 돌려 놓는다 */
@@ -201,6 +244,16 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   is(T.again===0, '같은 날 <b>또 안 울린다</b> — 홈을 열 때마다 울리면 끄십니다');
   is(T.emptyRang===0&&T.emptyStamp==='',
      '안 울렸으면 <b>날짜 표시도 안 남긴다</b> — 남기면 오후에 생긴 일이 내일까지 안 울린다');
+  is(T.slotN===4, '알람이 <b>네 번</b>이다 — '+T.slots+' (표는 app/alm-slots.js 한 곳)');
+  is(T.second===1,
+     '하나가 울려도 <b>나머지는 제 시각에 울린다</b> — '+T.second+'번 ← 「오늘 울렸다」 를 한 칸에 적으면 낮·저녁이 통째로 막힙니다');
+  is(T.perfRang===1&&T.perfN===null,
+     '<b>못 세는 슬롯</b>(예상업적)은 숫자 없이 울린다 — 「'+T.perfBody.slice(0,24)+'」 ← 0 이라고 적으면 「없다」 는 뜻이 됩니다 (1번)');
+  is(T.perfBody.length>6&&!/\d/.test(T.perfBody),
+     '그 글에 <b>숫자가 없다</b> — 못 세는 것을 센 척하지 않는다 (1번) · 「'+T.perfBody+'」' +
+     (T.perfBody.length>6?'':' ← 글이 비었습니다. 빈 글에는 숫자가 없으니 이 자가 거저 통과합니다'));
+  is(T.sh0===9&&T.sh1===9&&T.sh2===9&&T.sdef===9,
+     '슬롯도 잘못 적은 시각은 <b>표의 기본값</b>으로 — 0시로 읽으면 새벽에 울린다 (1번)');
   is(T.h0===8&&T.h1===8&&T.h2===8&&T.h3===8&&T.def===8,
      '잘못 적은 시각은 <b>기본값 8시</b> — 0시로 읽으면 새벽에 울린다 (1번)');
 
@@ -369,8 +422,19 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   const kh=new Date(Date.now()+9*3600000).getUTCHours();
   const r4=JSON.parse((await sched.cron()).body);
   global.fetch=realFetch;
-  const q=calls.filter(c=>/push_subs\?hour=eq\./.test(c.u))[0];
-  is(!!q&&q.u.indexOf('hour=eq.'+kh)>=0, '<b>그 시각으로 정해 둔 폰만</b> 부른다 — 한국 '+kh+'시');
+  /* 장부를 고르는 그 한 번. 옛 모양(?hour=eq.)만 찾다가 네 번이 되면서
+     <b>아무것도 안 잡혔고</b>, 그러면 아래 자들이 통째로 빨개집니다 —
+     앱이 아니라 자가 낡은 것입니다 (8번). 두 모양을 다 받습니다. */
+  const q=calls.filter(c=>/push_subs\?(hour=eq\.|or=)/.test(c.u))[0];
+  /* ⚠ 2026-09-25 · <b>고르는 조건이 바뀌었습니다.</b> 알람이 네 번이 되면서
+     한 폰이 여러 시각을 가질 수 있어(hours 칸), 그 시각이 들어 있는 폰을
+     고릅니다. ★ 옛 hour 한 칸도 <b>같이</b> 봅니다 — 준비 SQL 을 아직 안
+     돌리신 장부에서는 hours 가 비어 있고, 그때도 아침 알람은 와야 합니다.
+     둘 중 하나라도 빠지면 그 자리에서 알람이 조용히 끊깁니다.          */
+  is(!!q&&q.u.indexOf('hours.cs.{'+kh+'}')>=0,
+     '<b>그 시각을 켜 둔 폰</b>을 부른다 — 한국 '+kh+'시 (hours 칸)');
+  is(!!q&&q.u.indexOf('hour.eq.'+kh)>=0&&q.u.indexOf('hours.is.null')>=0,
+     '<b>옛 장부(hours 가 빈 폰)도 같이</b> 부른다 — 준비 SQL 전에도 아침 알람이 온다');
   is(r4.sent===1&&r4.gone===1,
      '살아 있는 곳엔 보내고 <b>죽은 주소(410)는 그 자리에서 지운다</b> — 보냄 '+r4.sent+' · 지움 '+r4.gone);
   is(calls.some(c=>c.m==='DELETE'&&/dead/.test(c.u)), '지우는 것을 <b>서버에도 지운다</b> — 안 지우면 매시간 없는 폰을 두드린다 (7번)');
