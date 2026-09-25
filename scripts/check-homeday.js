@@ -303,8 +303,14 @@ const SEED = `(function(){
                         { at: '2000-01-01', how: '전화' }];
     hmActPaint();
     const e = document.querySelector('#hmActHost .hm-act');
+    /* ⚠ <b>칸 전체가 아니라 칩 줄을 잽니다.</b> 이 칸에 ☎️ 30일 약속 한 줄이
+       같이 들어왔습니다(사장님이 목업을 「(30일 약속 · 활동량)」 한 묶음으로
+       세셨습니다). 칸 전체를 재면 그 줄 때문에 빨간불이 켜지는데, 여기서
+       보려던 것은 <b>칩이 접혔나</b> 입니다 — 그것은 .hm-act-r 입니다 (8번). */
+    const row = document.querySelector('#hmActHost .hm-act-r') || e;
     return { txt: e ? (e.innerText || '').replace(/\s+/g, ' ').trim() : '',
-      h: e ? Math.round(e.getBoundingClientRect().height) : 0,
+      h: row ? Math.round(row.getBoundingClientRect().height) : 0,
+      all: e ? Math.round(e.getBoundingClientRect().height) : 0,
       o: hmActOf() };
   });
   is(!!act.txt, '<b>홈에 선다</b> — 「' + act.txt + '」');
@@ -312,7 +318,8 @@ const SEED = `(function(){
      '<b>오늘 것만</b> 센다 — 전화 ' + (act.o || {}).call + ' · 만남 ' + (act.o || {}).meet +
      ' · 기록 ' + (act.o || {}).all + ' (2000년 것은 안 셉니다)');
   is(act.h > 0 && act.h <= 60,
-     '<b>한 줄</b>이다 — ' + act.h + 'px (접히면 122px 이 되어 홈이 0.15화면 길어진다)');
+     '칩이 <b>한 줄</b>이다 — ' + act.h + 'px (접히면 122px 이 되어 홈이 0.15화면 길어진다)' +
+     ' · 칸 전체 ' + act.all + 'px');
   const actWait = await pg.evaluate(() => {
     const k = CM.loaded; CM.loaded = false;                 /* 아직 못 읽은 판 */
     const h = hmActHtml(); CM.loaded = k;
