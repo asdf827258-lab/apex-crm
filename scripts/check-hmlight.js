@@ -64,6 +64,17 @@ const SEED = () => {
   window.osLoadClients = function () {}; window.cmLoadAll = function (cb) { if (cb) cb(); };
   window.toast = function () {}; window.setupDone = function () { return true; };
   window.setupCanRun = function () { return true; };
+  /* ⚠ <b>공지를 못으로 박습니다.</b> 여기 없으면 앱이 Supabase 에서 <b>진짜
+     공지</b>를 실어 옵니다 — 그러면 이 점검이 <b>인터넷이 되느냐</b>에 따라
+     다른 답을 냅니다. 실제로 그랬습니다: 이 컨테이너(막힘)에서는 초록인데
+     GitHub CI(닿음)에서는 빨간불이었습니다. 자가 흔들리면 점검이 아닙니다 (8번).
+     ★ 여기서 보는 것은 <b>올려 둔 공지가 없을 때</b>의 모양입니다 — 진짜
+       공지가 있으면 사진·확인 단추가 붙은 <b>카드가 맞습니다.</b> 그 카드는
+       check-ntcbox 가 봅니다 (5번). */
+  OS_NTC = { list: [], loaded: true, busy: false, err: '', max: 12, posting: false, at: Date.now(), sig: null };
+  OS_NOTICE = null;
+  window.osNoticeLoad = function () {};
+  window.osNoticeLocalGet = function () { return null; };
   const t = (new Date(Date.now() + 9 * 3600 * 1000)).toISOString().slice(0, 10);
   OSC.loaded = true; OSC.busy = false; OSC.err = '';
   OSC.list = [1, 2, 3, 4, 5, 6].map(i => ({ id: 'c' + i, name_masked: '홍○○', advisor_id: 'me',
@@ -92,6 +103,22 @@ function bgOf(el){
   var i,out=[255,255,255,1];
   for(i=stack.length-1;i>=0;i--){ if(stack[i][3]>0) out=over(stack[i],out); }
   return out;
+}
+/* ⚠ <b>그러데이션 위의 글자는 안 잽니다.</b> CSS 에서 그러데이션은
+   background-<b>image</b> 라, backgroundColor 를 읽으면 <b>투명</b>으로
+   나옵니다. 그러면 위로 계속 올라가 흰 카드를 바탕으로 잡고, 그 위의
+   흰 글씨가 <b>명암비 1.00</b> 으로 찍힙니다 — 실제로 보기에는 남색
+   그러데이션 위라 잘 읽히는데 말입니다. 실제로 GitHub CI 에서 「✏️ 공지
+   관리」 가 그렇게 헛것으로 잡혔습니다.
+   색을 <b>알 수 없으면 모른다고 하고 건너뜁니다</b> (1번) — 대신 몇 개를
+   건너뛰었는지 <b>세어서 적습니다</b>. 조용히 빼면 그 자리가 영영 안 보입니다. */
+function onGrad(el){
+  var e=el;
+  while(e&&e!==document.documentElement){
+    if((getComputedStyle(e).backgroundImage||'none')!=='none')return true;
+    e=e.parentElement;
+  }
+  return false;
 }`;
 
 (async () => {
@@ -123,7 +150,9 @@ function bgOf(el){
       const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0;
     });
     let worst = 99, who = '';
+    let skip = 0;
     leaves.forEach(e => {
+      if (onGrad(e)) { skip++; return; }
       const s = getComputedStyle(e);
       const b = bgOf(e), f = over(px(s.color), b), t = ratio(f, b);
       if (t < worst) { worst = t; who = (e.textContent || '').trim().slice(0, 18); }
@@ -139,13 +168,14 @@ function bgOf(el){
                 chip = { r: ratio(over(px(s.color), bb), bb), tx: (b0.textContent || '').trim().slice(0, 12) }; }
     } catch (e) {}
     const day = (document.getElementById('tnDay') || {}).textContent || '';
-    return { lum: lum(bg), worst: +worst.toFixed(2), who: who, chip: chip,
+    return { lum: lum(bg), worst: +worst.toFixed(2), who: who, chip: chip, skip: skip,
              day: day, want: (typeof calLabel === 'function' && typeof ckDayK === 'function') ? calLabel(ckDayK()) : '',
              burger: !!tn.querySelector('.tn-burger'), logo: !!tn.querySelector('.tn-logo'),
              va: !!tn.querySelector('.tn-va'), fav: !!document.getElementById('tnFav') };
   }, CONTRAST_FNS);
   is(!T.none && T.lum > 0.6, '  띠 바탕이 <b>밝다</b> — 밝기 ' + (T.none ? '(띠 없음)' : T.lum.toFixed(2)) + ' (0.6 넘어야 · 검정은 0.02)');
-  is(T.worst >= 4.5, '  띠 안의 글이 <b>다 읽힌다</b> — 제일 흐린 「' + T.who + '」 명암비 ' + T.worst + ' (4.5 이상)');
+  is(T.worst >= 4.5, '  띠 안의 글이 <b>다 읽힌다</b> — 제일 흐린 「' + T.who + '」 명암비 ' + T.worst + ' (4.5 이상)' +
+     (T.skip ? ' · 그러데이션 위 ' + T.skip + '개는 바탕색을 알 수 없어 건너뜀' : ''));
   is(!!T.chip && T.chip.r >= 4.5,
      '  <b>즐겨찾기 딱지</b>도 읽힌다 — 「' + (T.chip ? T.chip.tx : '(못 담음)') + '」 명암비 ' +
      (T.chip ? T.chip.r.toFixed(2) : '?') + ' ← 어두운 띠용 글씨색(--gt)을 그대로 두면 여기서 걸립니다');
@@ -155,7 +185,7 @@ function bgOf(el){
      '  띠에 <b>오늘 날짜</b>가 적힌다 — 「' + T.day + '」 (calLabel 한 곳에서 · 5번)');
 
   /* ── [2] 소식은 상자가 아니라 한 줄 ───────────────────────────── */
-  console.log('\n[2] 소식은 <b>상자가 아니라 한 줄</b> — 글을 덮는 단추가 없다');
+  console.log('\n[2] <b>올려 둔 것이 없을 때</b> 소식은 상자가 아니라 한 줄 — 글을 덮는 단추가 없다');
   const N = await page.evaluate(() => {
     const rows = [].slice.call(document.querySelectorAll('.hm-noti .hm-noti-r'));
     return { n: rows.length,
@@ -184,7 +214,8 @@ function bgOf(el){
   is(N.tiny === 0, '  <b>13px 아래로 안 내려간다</b> — 경고는 읽혀야 한다 (' + N.tiny + '개)');
   is(N.notBtn === 0, '  <b>줄 통째로</b> 눌린다 — 글 옆을 눌러도 간다 (' + N.notBtn + '개가 단추가 아님)');
   is(N.inner === 0, '  줄 <b>안에 또 단추가 없다</b> — 겹쳐서 글을 덮던 자리다 (' + N.inner + '개)');
-  is(N.box === 0, '  소식 자리에 <b>상자(.notice · .card)가 안 남았다</b> — ' + N.box + '개');
+  is(N.box === 0, '  <b>올려 둔 공지가 없을 때</b> 소식 자리에 상자(.notice · .card)가 안 선다 — ' + N.box + '개' +
+     (N.box ? ' ← 진짜 공지가 있으면 카드가 맞습니다(check-ntcbox). 여기서는 공지를 비워 두고 잽니다' : ''));
 
   /* ── [3] 카드 안 띠 ───────────────────────────────────────────── */
   console.log('\n[3] 카드 안 띠가 <b>밝다</b> · 「모름」 과 「없음」 이 다른 색이다');
@@ -244,7 +275,7 @@ function bgOf(el){
   const A = await page.evaluate((fns) => {
     (0, eval)(fns);
     const pane = document.querySelector('.tab-pane.on');
-    const outs = [];
+    const outs = []; let grad = 0;
     [].slice.call(pane.querySelectorAll('*')).forEach(e => {
       if (e.children.length) return;
       const t = (e.textContent || '').trim(); if (!t) return;
@@ -254,6 +285,7 @@ function bgOf(el){
       /* 이모지만 있는 칸은 <b>제 색으로</b> 그려지는데 computed color 는
          검정이라 헛것이 됩니다 — check-hmexact 와 같은 까닭으로 뺍니다 (8번). */
       if (!/[0-9A-Za-z가-힣]/.test(t)) return;
+      if (onGrad(e)) { grad++; return; }
       const b = bgOf(e), f = over(px(s.color), b), c = ratio(f, b);
       /* ⚠ <b>2.0 입니다 — 4.5 가 아닙니다.</b> 목업이 고른 셋째 잉크
          --t-sub2(#8B95A1)가 흰 바탕에서 <b>2.91</b> 입니다(목업의 「오늘
@@ -265,10 +297,11 @@ function bgOf(el){
          ★ 목업 색표와 맞는지는 <b>check-hmexact</b> 가 따로 봅니다 (5번). */
       if (c < 2) outs.push(c.toFixed(2) + ' 「' + t.slice(0, 16) + '」');
     });
-    return outs;
+    return { outs, grad };
   }, CONTRAST_FNS);
-  is(A.length === 0, '  홈의 글이 <b>전부 제 바탕 위에서 읽힌다</b> — 묻힌 글 ' + A.length + '개' +
-     (A.length ? ' ← ' + A.slice(0, 4).join(' · ') : ''));
+  is(A.outs.length === 0, '  홈의 글이 <b>전부 제 바탕 위에서 읽힌다</b> — 묻힌 글 ' + A.outs.length + '개' +
+     (A.outs.length ? ' ← ' + A.outs.slice(0, 4).join(' · ') : '') +
+     (A.grad ? ' · 그러데이션 위 ' + A.grad + '개는 바탕색을 알 수 없어 건너뜀' : ''));
 
   console.log('\n[6] 조용히 터지지 않았나');
   is(errs.length === 0, '  콘솔 오류 없음' + (errs.length ? ' — ' + errs[0] : ''));
