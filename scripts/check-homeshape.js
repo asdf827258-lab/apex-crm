@@ -262,14 +262,18 @@ const tall = (p) => p.evaluate(() => {
     const q = s => document.querySelector('#dynPane ' + s);
     const hh = e => e ? Math.round(e.getBoundingClientRect().height) : 0;
     const out = { vh: window.innerHeight };
-    out.card = hh(q('.hm-now'));
-    out.btn = ((q('.hm-more-b') || {}).textContent || '').trim();
+    /* ⚠ <b>기본은 펴진 채</b>입니다 — 사장님이 「바로바로」 하라고 하신
+       것들(상황·단계·기록·도구)을 한 번 더 누르게 만들 수 없어서입니다.
+       그래서 여기서는 <b>접어 보고</b> 재고, 다시 펴서 돌아오는지 봅니다. */
     const seen = () => ({ tap: !!q('.hm-tap'), box: !!q('.hm-box'),
                           hdb: !!q('.hdb'), note: !!q('.hm-now-n') });
-    out.shut = seen();
-    const b = q('.hm-more-b'); if (b) { b.click(); await new Promise(r => setTimeout(r, 500)); }
     out.open = seen();
     out.openCard = hh(q('.hm-now'));
+    out.btn = ((q('.hm-more-b') || {}).textContent || '').trim();
+    const b = q('.hm-more-b'); if (b) { b.click(); await new Promise(r => setTimeout(r, 500)); }
+    out.shut = seen();
+    out.card = hh(q('.hm-now'));
+    out.btnShut = ((q('.hm-more-b') || {}).textContent || '').trim();
     const b2 = q('.hm-more-b'); if (b2) { b2.click(); await new Promise(r => setTimeout(r, 500)); }
     out.again = hh(q('.hm-now'));
     /* 목업에 있던 셋 — 값이 없으면 안 서는 것이 맞습니다 (1번) */
@@ -280,14 +284,19 @@ const tall = (p) => p.evaluate(() => {
     return out;
   });
   is(M.card > 0 && M.card <= M.vh,
-     '  「오늘 한 분」 카드가 <b>한 화면에 든다</b> — ' + M.card + 'px / 화면 ' + M.vh + 'px');
-  is(/자세히/.test(M.btn), '  <b>「이분 자세히」</b> 단추가 있다 — 「' + (M.btn || '없다') + '」');
+     '  접으면 「오늘 한 분」 카드가 <b>한 화면에 든다</b> — ' + M.card + 'px / 화면 ' + M.vh + 'px');
+  is(/접기/.test(M.btn) && /자세히/.test(M.btnShut || ''),
+     '  <b>접고 펴는 단추</b>가 말을 바꾼다 — 펴짐 「' + (M.btn || '없다') +
+     '」 · 접힘 「' + (M.btnShut || '없다') + '」');
   const shutN = Object.keys(M.shut).filter(k => M.shut[k]).length;
   const openN = Object.keys(M.open).filter(k => M.open[k]).length;
   is(shutN === 0 && openN === 4,
-     '  접으면 <b>넷이 숨고</b> 펴면 <b>넷이 다 돌아온다</b> — 접힘 ' + shutN + '개 · 펴짐 ' + openN + '개');
-  is(M.openCard > M.card && M.again === M.card,
-     '  다시 접으면 <b>제자리</b>다 — ' + M.card + ' → ' + M.openCard + ' → ' + M.again + 'px');
+     '  처음엔 <b>넷이 다 보이고</b>, 접으면 <b>숨는다</b> — 펴짐 ' + openN + '개 · 접힘 ' + shutN + '개');
+  is(M.openCard > M.card && M.again === M.openCard,
+     '  다시 펴면 <b>제자리</b>다 — ' + M.openCard + ' → ' + M.card + ' → ' + M.again + 'px');
+  /* ★ <b>처음에는 펴져 있어야</b> 합니다 — 접힌 채로 두면 「바로바로」 가 아닙니다 */
+  is(/var HM_MORE=true;/.test(fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8')),
+     '  <b>처음에는 펴져 있다</b> — 상황·단계·도구를 한 번 더 누르게 하지 않는다 (#6)');
   is(M.bar && /\d+\s*\/\s*\d+/.test(M.barTxt),
      '  <b>진행 막대와 「몇 / 몇」</b> 이 선다 — 「' + (M.barTxt || '안 섬') + '」');
   is(M.nxs, '  <b>「다음 분」</b> 이 선다 — 뒤에 누가 남았는지 보인다');
