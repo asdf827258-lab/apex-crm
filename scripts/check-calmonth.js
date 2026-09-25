@@ -245,7 +245,13 @@ const SEED = () => `
      ⚠ 여기서 실제로 났던 일 — 매일 하는 일이 「보고 있는 <b>달</b>」 만
        채웠습니다. 달력이 「이번 주」 로 열리게 되면서 <b>9/28~10/4</b> 처럼
        달을 넘는 주에서는 10/1~10/4 가 <b>빈 칸</b>이 됐습니다.
-       화면에 서는 날을 mcalShownDays() 한 곳에서 답하도록 고쳤습니다.   */
+       화면에 서는 날을 mcalShownDays() 한 곳에서 답하도록 고쳤습니다.
+     ⚠ 그리고 <b>고치다 한 번 더 틀렸습니다</b> (2026-09-25 · check-mrt 가
+       잡았습니다). 「이 달」 을 「보고 있는 날」 로 <b>바꿔</b> 버려서, 주를
+       보는 중에는 달의 나머지 스무사흘이 안 섰습니다. 답은 <b>둘 다</b>
+       입니다 — 이 달 전부 <b>더하기</b> 보고 있는 주. 그래서 여기서도
+       「이레인가」 가 아니라 <b>「이 주의 이레가 다 들어 있나」</b> 를 봅니다.
+       화면 모양이 자료를 바꾸면 안 됩니다.                              */
   console.log('\n[주] <b>달을 넘는 주에도 미리 세워져 있나</b>');
   const W = await p.evaluate(() => {
     const t = mcalToday();
@@ -258,10 +264,20 @@ const SEED = () => `
     const days = mcalShownDays();
     const it = mcalItems();
     const nxt = days.filter(d => d.slice(0, 7) !== ym);
+    /* 이 주의 이레가 <b>다 들어 있나</b> — 달을 넘어간 며칠까지 */
+    const wk7 = [0, 1, 2, 3, 4, 5, 6].map(i => mcalShift(MCAL.wk, i));
+    const miss = wk7.filter(d => days.indexOf(d) < 0);
+    /* 달의 날도 <b>그대로 있나</b> — 주만 남기면 달로 바꿨을 때 빕니다 */
+    const mo = [];
+    for (let i = 1; i <= last; i++) mo.push(ym + '-' + ('0' + i).slice(-2));
+    const missMo = mo.filter(d => days.indexOf(d) < 0);
     return { days, nxt, empty: nxt.filter(d => !(it[d] || []).length),
-             wk: MCAL.wk, n: days.length };
+             wk: MCAL.wk, n: days.length, miss, missMo, mo: mo.length };
   });
-  is(W.n === 7, '  주 보기가 <b>이레</b>를 센다 — ' + W.n + '일 (' + W.wk + '부터)');
+  is(W.miss.length === 0, '  <b>보고 있는 주의 이레</b>가 다 들어 있다 (' + W.wk + '부터)' +
+     (W.miss.length ? ' ← 빠진 날 ' + W.miss.join(' ') : ''));
+  is(W.missMo.length === 0, '  <b>이 달 ' + W.mo + '일</b> 도 그대로 있다 — 주를 보는 중이라고 달이 비면 안 된다' +
+     (W.missMo.length ? ' ← 빠진 날 ' + W.missMo.slice(0, 5).join(' ') : ''));
   is(W.nxt.length > 0,
      '  이 주가 <b>달을 넘는다</b> — 다음 달 ' + W.nxt.length + '일 (' + (W.nxt[0] || '') + '…)');
   is(W.empty.length === 0,
