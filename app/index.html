@@ -25638,7 +25638,57 @@ function hmTodayHtml(){
      한 건씩 따라가셔도 되고, 전체를 훑어보셔도 됩니다.
      한 분씩 퀘스트가 <b>먼저</b> 서고, 사람과 상관없는 것(SNS·고객 보험)은
      그 아래 <b>접혀</b> 있습니다 — 펴 두면 한 분 카드가 밀립니다. */
-  return head+hmNowHtml()+'<div class="hm-rows">'+rows+'</div>'+ms+'</div></div>';
+  return head+hmNowHtml()+hmNxsHtml()+'<div class="hm-rows">'+rows+'</div>'+ms+'</div></div>';
+}
+/* ══ 👥 <b>다음 분</b> — 목업에 있는데 홈에 없던 칸 ═══════════════════
+   목업(docs/토스판_사본.html)은 「오늘 한 분」 바로 밑에 <b>다음 분</b>을
+   세 줄까지 미리 보여 주고 꼬리에 「＋ 18분 더」 라고 적습니다.
+   지금 몇 번째인지, 뒤에 누가 남았는지가 <b>한 눈에</b> 보입니다.
+
+   ★ <b>줄을 새로 만들지 않습니다</b> (5번) — hmSteps() 가 이미 오늘 줄을
+     차례대로 쥐고 있고, hmNext() 가 「지금 몇 번째」 를 압니다. 그 뒤를
+     그대로 꺼내 씁니다. 여기서 다시 고르면 카드와 차례가 갈립니다.
+   ★ <b>덩어리를 늘리지 않습니다</b> — 오늘 카드(#hmToday) <b>안</b>에
+     답니다. 밖에 세우면 check-homeshape 의 「덩어리 넷」 을 넘깁니다.
+   ★ 이름은 <b>씻어서</b> 적습니다 (3번).                                */
+var HM_NXS=3;
+function hmNxsCss(){
+  if(document.getElementById('hmNxsCss'))return;
+  var st=document.createElement('style');st.id='hmNxsCss';
+  st.textContent='.hm-nxs{margin-top:12px;padding-top:12px;border-top:1px solid var(--ink-8)}'+
+    '.hm-nxs>b{display:block;font-size:var(--t6);font-weight:800;color:var(--ink-4)}'+
+    '.hm-nxs-r{display:flex;align-items:center;gap:11px;width:100%;min-height:44px;'+
+      'padding:7px 0;border:0;background:none;font-family:inherit;text-align:left;cursor:pointer}'+
+    '.hm-nxs-r .e{flex:none;width:32px;height:32px;border-radius:var(--r-sm);'+
+      'background:var(--ink-8);display:flex;align-items:center;justify-content:center;font-size:15px}'+
+    '.hm-nxs-r .m{flex:1;min-width:0}'+
+    '.hm-nxs-r .m b{display:block;font-size:var(--t5);font-weight:800;color:var(--ink-1);'+
+      'overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+    '.hm-nxs-r .m span{display:block;font-size:var(--t6);color:var(--ink-3);font-weight:600;'+
+      'overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+    '.hm-nxs-m{margin-top:4px;font-size:var(--t6);font-weight:700;color:var(--t-sub2)}';
+  document.head.appendChild(st);
+}
+function hmNxsHtml(){
+  var r=null; try{ r=hmNext(); }catch(e){ return ''; }
+  if(!r||!r.x||!r.n)return '';
+  var L=[]; try{ L=hmSteps()||[]; }catch(e2){ return ''; }
+  var rest=L.slice((r.i||0)+1);
+  if(!rest.length)return '';
+  hmNxsCss();
+  var h='',i,x,A;
+  for(i=0;i<rest.length&&i<HM_NXS;i++){
+    x=rest[i]; A=HM_ACT[x.k]||{e:'•'};
+    h+='<button type="button" class="hm-nxs-r" onclick="hmOpen(\''+
+       String(x.key).replace(/'/g,'')+'\')">'+
+       '<span class="e">'+(x.e||A.e||'•')+'</span>'+
+       '<span class="m"><b>'+osEsc(x.t||'')+'</b>'+
+       (x.s?('<span>'+osEsc(x.s)+'</span>'):'')+'</span></button>';
+  }
+  var more=rest.length-HM_NXS;
+  return '<div class="hm-nxs"><b>👥 다음 분</b>'+h+
+    (more>0?('<div class="hm-nxs-m">＋ '+more+'분 더 — 끝내시면 차례로 올라옵니다</div>'):'')+
+  '</div>';
 }
 /* ── 홈에서 <b>TFA 업무관리까지</b> ─────────────────────────────────
    하루 일을 두 화면에서 했습니다 — 고객은 홈에서, 내 일과 팀 일은 TFA 에서.
@@ -25969,9 +26019,20 @@ function hmActCss(){
   if(document.getElementById('hmActCss'))return;
   var st=document.createElement('style');st.id='hmActCss';
   st.textContent=
-    '.hm-act{display:flex;align-items:center;gap:10px;padding:10px 14px;margin-top:10px;'+
+    /* ⚠ 한 칸 안에 <b>줄이 둘</b>이 되었습니다 — 위는 ☎️ 30일 약속,
+       아래는 📊 오늘 기록. 그래서 바깥은 <b>세로</b>로 쌓고, 예전 가로
+       규칙은 <b>.hm-act-r</b> 로 옮겼습니다. 덩어리는 그대로 하나입니다. */
+    '.hm-act{padding:10px 14px;margin-top:10px;'+
       'background:var(--white);border:1px solid var(--ink-7);border-radius:var(--r-md)}'+
-    '.hm-act>b{font-size:var(--t6);font-weight:800;color:var(--ink-4);flex:none}'+
+    '.hm-act-r{display:flex;align-items:center;gap:10px}'+
+    '.hm-act-r>b{font-size:var(--t6);font-weight:800;color:var(--ink-4);flex:none}'+
+    /* ☎️ 30일 약속 한 줄 — 목업 .kpi 자리 */
+    '.hm-act-p{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;'+
+      'padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid var(--ink-8)}'+
+    '.hm-act-p>b{font-size:var(--t6);font-weight:800;color:var(--ink-4);flex:none}'+
+    '.hm-act-p .n{font-size:var(--t4);font-weight:900;color:var(--primary);'+
+      'letter-spacing:-.02em}'+
+    '.hm-act-p .s{font-size:var(--t6);font-weight:700;color:var(--ink-3)}'+
     /* ⚠ <b>접히면 안 됩니다.</b> wrap 으로 두었더니 좁은 폰에서 칩 셋이
        세 줄이 되어 122px 이었습니다 — 홈이 0.15화면 길어집니다. 한 줄로
        두고 넘치면 <b>옆으로 굴러가게</b> 합니다(감추지 않습니다). */
@@ -26001,6 +26062,38 @@ function hmActIgHtml(){
   if(i<0)return '';
   return '<button type="button" onclick="go(\'news_live\')">📸 올릴 것<i>1</i></button>';
 }
+/* ══ ☎️ <b>30일 약속</b> — 목업에 있는데 홈에 없던 칸 ══════════════════
+   사장님 말씀 — 「내가 다른 세션에서 보낸 디자인하고 아직 너무 다른데」.
+   목업(docs/토스판_사본.html)을 폰 430px 로 재어 보니 <b>「30일 약속
+   16 / 24명」</b> 칸이 있는데 앱 홈에는 없었습니다.
+
+   ★ <b>새로 세지 않습니다</b> (5번). 이미 hmQPromise() 가 넘긴 분·한 번도
+     없던 분을 가려내고 있습니다 — 그것을 그대로 씁니다. 여기서 또 세면
+     같은 숫자가 두 벌이 되고, 한쪽만 고쳐집니다.
+   ★ <b>덩어리를 늘리지 않습니다.</b> 사장님이 #447 에서 목업을 세실 때
+     <b>「(30일 약속 · 활동량)」을 한 묶음</b>으로 세셨습니다. 그래서 따로
+     세우지 않고 <b>「오늘 기록」과 같은 칸</b>에 답니다 — check-homeshape
+     의 「덩어리 넷」 도 그대로입니다.
+   ★ <b>못 읽었으면 안 적습니다</b> (1번). 고객 목록이나 접촉 기록을 아직
+     못 읽었으면 「0명」 이 아니라 <b>줄을 안 세웁니다</b> — 0 으로 적으면
+     「다 지켰다」 는 거짓말이 됩니다.                                   */
+function hmPrmCount(){
+  if(typeof OSC==='undefined'||!OSC.loaded||!OSC.list)return null;
+  if(typeof CM==='undefined'||!CM.loaded)return null;
+  var L=[]; try{ L=hmQPromise()||[]; }catch(e){ return null; }
+  var over=0,never=0,i;
+  for(i=0;i<L.length;i++){ if(L[i].pk==='never')never++; else over++; }
+  var all=OSC.list.length;
+  return {all:all, miss:L.length, over:over, never:never, ok:Math.max(0,all-L.length)};
+}
+function hmPrmHtml(){
+  var c=hmPrmCount(); if(!c||!c.all)return '';
+  return '<div class="hm-act-p"><b>☎️ 30일 약속</b>'+
+    '<span class="n">'+c.ok+' / '+c.all+'명</span>'+
+    '<span class="s">'+(c.miss===0
+      ? '약속을 지키고 있습니다'
+      : ('넘긴 분 '+c.over+' · 한 번도 '+c.never))+'</span></div>';
+}
 function hmActHtml(){
   var a=hmActOf(); if(!a)return '';
   hmActCss();
@@ -26013,7 +26106,8 @@ function hmActHtml(){
   /* 이름표에 <b>「기록」</b>이라고 적습니다 — 체크판의 「눌렀나」 와 다른
      수라는 것을 여기서 말해 둬야 합니다 (1번). 꼬리에 한 줄 더 달았더니
      칩이 접혀 122px 이 됐습니다. 말은 남기고 자리는 안 먹습니다. */
-  return '<div class="hm-act"><b>📊 오늘 기록</b><span class="g">'+h+'</span></div>';
+  return '<div class="hm-act">'+hmPrmHtml()+
+    '<div class="hm-act-r"><b>📊 오늘 기록</b><span class="g">'+h+'</span></div></div>';
 }
 function hmActPaint(){
   var el=document.getElementById('hmActHost'); if(!el)return;
@@ -26973,6 +27067,34 @@ function hmTossGreet(){
   return '<div class="tz-greet">'+osEsc(nm||'설계사')+'님, '+
     '<span>'+(n?('오늘 '+n+'개예요'):'오늘 챙길 것이 없어요')+'</span></div>';
 }
+/* ══ ▬ <b>진행 막대와 「몇 / 몇」</b> — 목업에 있는데 없던 것 ═══════════
+   목업(docs/토스판_사본.html)은 인사 바로 밑에 <b>6px 짜리 막대</b>와
+   「<b>1 / 24 · 위에서부터 하시면 오늘이 끝납니다</b>」 한 줄이 있습니다.
+   오늘이 얼마나 남았는지를 <b>한 눈에</b> 말해 주는 자리입니다.
+
+   ★ <b>새로 세지 않습니다</b> (5번). hmNext() 가 이미 「몇 번째(i) / 몇 건(n)」
+     을 답하고 있습니다 — 카드 머리의 「오늘 3분 중 1번째」 가 그 값입니다.
+     여기서 또 세면 <b>막대와 카드가 다른 숫자</b>를 말하게 됩니다.
+   ★ <b>0 건이면 안 세웁니다</b> — 아직 못 읽었을 수도 있고, 그때 막대를
+     100% 로 채우면 「다 했다」 는 거짓말이 됩니다 (1번).                */
+function hmTossBarHtml(){
+  var r=null; try{ r=hmNext(); }catch(e){ return ''; }
+  if(!r||!r.n)return '';
+  var dn=r.i||0, tot=r.n, pct=tot?Math.round(dn/tot*100):0;
+  hmTossBarCss();
+  return '<div class="tz-pbar"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="tz-psub">'+dn+' / '+tot+' · 위에서부터 하시면 오늘이 끝납니다</div>';
+}
+function hmTossBarCss(){
+  if(document.getElementById('hmTossBarCss'))return;
+  var st=document.createElement('style');st.id='hmTossBarCss';
+  st.textContent='.tz-pbar{height:6px;border-radius:6px;background:var(--ink-7);'+
+      'overflow:hidden;margin-top:2px}'+                       /* 목업 .pbar */
+    '.tz-pbar>i{display:block;height:100%;border-radius:6px;background:var(--t-point);'+
+      'transition:width .3s var(--ease)}'+
+    '.tz-psub{margin-top:8px;font-size:var(--t6);font-weight:700;color:var(--t-sub2)}';
+  document.head.appendChild(st);
+}
 function hmTossHero(){
   /* 목업 ⑧ 의 히어로 — 글자 그대로 */
   return '<div class="tz-hero">'+
@@ -27053,7 +27175,7 @@ function hmTossHtml(){
      hmBaGo 가 osOpenClient 로 고객 365일에 그 분을 세운 뒤 전·후 만들기를
      엽니다. 저장은 saved_reports(client_id) 라 <b>그 분께 붙습니다</b>.
      hmTossHero 는 지우지 않고 둡니다 — 자리를 되돌리실 때 그대로 씁니다. */
-  return '<div class="tz">'+hmTossGreet()+
+  return '<div class="tz">'+hmTossGreet()+hmTossBarHtml()+
     ((now||ap||wk)?(now+ap+wk):hmTossDone())+'</div>';
 }
 function renderHome(){
