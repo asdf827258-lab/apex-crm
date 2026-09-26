@@ -271,7 +271,7 @@ async function boot(page) {
       return .2126 * r[0] + .7152 * r[1] + .0722 * r[2]; }
     function ratio(a, b) { var x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); }
     var page = px(getComputedStyle(document.querySelector('.sidebar')).backgroundColor);
-    var worstT = 99, worstB = 99, worstName = '', tints = [];
+    var worstT = 99, worstB = 99, worstName = '', tints = [], tintOk = 0;
     [].slice.call(document.querySelectorAll('#navHost .nav-group')).forEach(function (g) {
       var lab = g.querySelector('.nav-group-label'), s = getComputedStyle(lab);
       var bg = over(px(s.backgroundColor), page), fg = over(px(s.color), bg);
@@ -281,27 +281,44 @@ async function boot(page) {
       if (chip) { var cs = getComputedStyle(chip), cbg = over(px(cs.backgroundColor), bg);
         worstB = Math.min(worstB, ratio(over(px(cs.color), cbg), cbg)); }
       tints.push(ratio(bg, page));
+      /* ⚠ 2026-09-26 · 밝은 서랍. 색 차이 하나로만 보면 <b>어두운 서랍의
+         자</b>입니다 — 검은 바탕에서는 작은 차이도 비율이 크고, 흰 바탕에서는
+         같은 차이가 작게 나옵니다. 목업의 카드가 그렇듯 <b>테두리로도</b>
+         구분되므로, 둘 중 하나면 구분된 것으로 봅니다.                   */
+      var gs = getComputedStyle(g), bw = parseFloat(gs.borderTopWidth) || 0;
+      var bc = px(gs.borderTopColor);
+      if (bw >= 1 && bc[3] > 0 && ratio(over(bc, page), page) >= 1.08) tintOk++;
     });
     /* 「아래에서 위로 갈수록 진해진다」 — 눈이 아니라 숫자로 확인한다.
        이제 칸은 다 같은 상태(늘 펴짐)라 전부 견줄 수 있다. */
+    /* ⚠ 2026-09-26 · 예전에는 <b>바탕 밝기(lum)</b>로 쟀습니다. 그것은
+       어두운 서랍을 전제한 자라, 서랍이 밝아지면 <b>거꾸로</b> 읽힙니다
+       (흰 바탕 위 옅은 색은 아래로 갈수록 밝기가 커집니다).
+       ★ 그런데 「한 줄기로 흐른다」 를 실제로 보여 주는 것은 바탕이 아니라
+         <b>왼쪽 색 띠</b>입니다 — navRamp 의 --gb 가 .94 에서 .32 로
+         내려갑니다. 바탕이 밝든 어둡든 <b>바탕에서 얼마나 멀어졌나</b>로
+         재면 같은 뜻이 됩니다. 자를 지운 것이 아니라 옮긴 것입니다.     */
     var depth = [];
     [].slice.call(document.querySelectorAll('#navHost .nav-group')).forEach(function (g) {
-      depth.push(lum(over(px(getComputedStyle(g.querySelector('.nav-group-label')).backgroundColor), page)));
+      var bl = px(getComputedStyle(g.querySelector('.nav-group-label')).borderLeftColor);
+      depth.push(ratio(over(bl, page), page));
     });
     var back = 0, i;
-    for (i = 1; i < depth.length; i++) if (depth[i] > depth[i - 1] + 0.0002) back++;
+    for (i = 1; i < depth.length; i++) if (depth[i] > depth[i - 1] + 0.002) back++;
     return { t: +worstT.toFixed(2), badge: +worstB.toFixed(2), name: worstName,
-      tintMin: +Math.min.apply(null, tints).toFixed(3),
+      tintMin: +Math.min.apply(null, tints).toFixed(3), tintOk: tintOk, n: tints.length,
       back: back, span: depth.length ? +(depth[0] / depth[depth.length - 1]).toFixed(2) : 0,
       steps: depth.length };
   });
   is(contrast.t >= 4.5, '가장 흐린 칸도 글씨가 읽힌다 — 「' + contrast.name + '」 명암비 ' + contrast.t + ' (4.5 이상)');
   is(contrast.badge >= 3, '개수 표시도 읽힌다 (명암비 ' + contrast.badge + ')');
-  is(contrast.tintMin >= 1.15, '배경이 사이드바와 구분된다 (차이 ' + contrast.tintMin + ')');
+  is(contrast.tintMin >= 1.15 || contrast.tintOk === contrast.n,
+    '칸이 사이드바와 구분된다 — 색 차이 ' + contrast.tintMin +
+    ' · 테두리로 구분된 칸 ' + contrast.tintOk + '/' + contrast.n);
   is(contrast.back === 0,
-    '아래로 갈수록 옅어진다 — 거꾸로 간 칸 ' + contrast.back + '개 / ' + contrast.steps + '칸');
+    '아래로 갈수록 옅어진다 (왼쪽 색 띠) — 거꾸로 간 칸 ' + contrast.back + '개 / ' + contrast.steps + '칸');
   is(contrast.span >= 1.8,
-    '맨 위와 맨 아래가 뚜렷이 다르다 (' + contrast.span + '배)');
+    '맨 위와 맨 아래가 뚜렷이 다르다 (왼쪽 색 띠 ' + contrast.span + '배)');
 
   /* ── 3) 왼쪽 메뉴는 <b>늘 펴져 있다</b> ────────────────────────────
      예전에는 칸 이름을 눌러 접었다 폈다 했다. 그런데 접힌 칸은 <b>없어진
