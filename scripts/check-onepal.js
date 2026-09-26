@@ -49,7 +49,7 @@ const srv = http.createServer((q, s) => {
      189 · CI 194 로 갈렸습니다 — 공지 줄이 몇 개 떠 있느냐에 따라 움직여서
      고친 것이 없는데도 빨간불이 켜집니다. <b>색이 문제이니 색 짝으로</b>
      셉니다 (8번).                                                        */
-const BASE = { 묻힌상자: 0, 거의같은색: 173 };
+const BASE = { 묻힌상자: 0, 거의같은색: 172 };
 /* ── 대비가 모자란 <b>색 짝</b> — 이름으로 적어 둡니다 ──────────────
    ★ <b>수로 세지 않습니다.</b> 처음에 수로 셌더니 제 컨테이너 189 · CI 194
      로 갈렸습니다 — 공지 줄이 몇 개 떠 있느냐 같은 <b>자료 양</b>에 따라
@@ -69,7 +69,6 @@ const 봐주는색짝 = [
   '#6B7684 on #F2F4F6 (4.5)',   /* --t-sub  on 판 — 목업도 여기가 4.19 */
   '#6B7684 on #F5F3FF (4.5)',
   '#6B7684 on #F7F9FA (4.5)',
-  '#6B7684 on #FFFBF5 (4.5)',
   '#8B95A1 on #F2F4F6 (3)',     /* --t-sub2 큰 글씨 — 목업 .h1 span */
   '#8B95A1 on #F2F4F6 (4.5)',
   '#8B95A1 on #F5F7F9 (4.5)',
@@ -273,6 +272,26 @@ const SCAN = ([tab, page]) => {
      BASE.거의같은색 + '. 늘면 색표가 다시 두 벌이 됩니다 (5번)');
   if (near.length < BASE.거의같은색)
     console.log('      · 기준선보다 ' + (BASE.거의같은색 - near.length) + '가지 적습니다 — BASE 를 ' + near.length + ' 로 내려 주십시오');
+
+  console.log('\n[5-1] ★ <b>알람 자리에 손으로 박은 색이 없다</b>');
+  /* 사장님 말씀 「알람 색상 … 전부 다 다르다」. 재 보니 알람 한 자리에서
+     <b>색이 26가지</b>였습니다 — 연한 크림 넷(#FFF1E2·#FFFBF5·#FFFBEB·
+     #FFFDF5) · 진한 호박 넷(#B45309·#A16207·#92400E·#9A3412) · 파랑 셋.
+     전부 같은 뜻인데 값만 달랐습니다. 이제 <b>토큰만</b> 씁니다.
+     ★ 여기만 따로 보는 까닭 — 앱 전체에는 아직 손으로 박은 색이 172가지
+       남아 있어 전체로는 「0 이어야 한다」 고 못 겁니다. 다 치운 자리는
+       <b>다시 더러워지지 않게</b> 0 으로 못 박습니다 (8번).            */
+  const A0 = SRC.indexOf("'.almk{margin-top:10px;");
+  const A1 = SRC.indexOf('document.head.appendChild(st);', A0);
+  const ALM = (A0 >= 0 && A1 > A0) ? SRC.slice(A0, A1) : '';
+  is(ALM.length > 1500, '  알람 옷 덩어리를 찾았다 — ' + ALM.length + '자');
+  const 박은색 = ALM.match(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g) || [];
+  is(박은색.length === 0,
+     '  ★ 알람 옷에 <b>손으로 박은 색이 한 가지도 없다</b>' +
+     (박은색.length ? ('\n      ✗ ' + [...new Set(박은색)].join(' · ') +
+       '\n      → 뜻이 있으면 토큰을 쓰십시오(--t-warn-d · --t-pos-d 가 그래서 있습니다)') : ''));
+  is(!/\.t-skin\s+\.almk-diag/.test(SRC) && !/\.t-skin\s+\.alm-why/.test(SRC),
+     '  ★ 같은 글자가 <b>화면마다 다른 색이 되지 않는다</b> — 옷 입은 화면만 덮는 자리가 없다 (5번)');
 
   console.log('\n[6] 조용히 터지지 않았나');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? (' ← ' + errs.slice(0,2).join(' | ')) : ''));
