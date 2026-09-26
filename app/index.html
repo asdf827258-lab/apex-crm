@@ -15758,6 +15758,104 @@ function meRowHtml(id){
     '<span class="m"><b>'+esc(it.title||id)+'</b></span>'+
     '<span class="r">›</span></button>';
 }
+/* ══ 📊 <b>「나」 의 숫자 두 칸</b> — 오늘 한 일 · 밀착관리 (mnu*) ═══════
+   2026-09-26 · 목업(docs/토스판_사본.html vMe)의 「나」 에는 숫자 두 칸이
+   있습니다 — <b>「오늘 한 일」</b> 과 <b>「밀착관리 — 지키고 있는가」</b>.
+   앱의 「나」 는 알람 카드 하나가 화면을 다 먹고 있었습니다.
+
+   ★ <b>세는 자를 새로 만들지 않았습니다</b> (5번). 밀착관리 숫자는
+     <b>고객 365일이 이미 세고 있습니다</b> — ccScope · ccRate ·
+     ccOverList · ccNeverList. 여기서는 <b>그것을 그대로 부릅니다.</b>
+     다시 세면 두 화면이 다른 숫자를 말하게 됩니다.
+   ★ <b>없는 값을 지어내지 않습니다</b> (1번). 목업은 「통화 · 단계 옮김 ·
+     메모」 라고 적었지만 우리 기록(cmOf().touch)이 남기는 갈래는
+     <b>전화 · 문자 · 만남</b> 입니다. <b>있는 이름 그대로</b> 적습니다 —
+     「단계 옮김」 이라고 적어 두고 실제로는 만남을 세면 그것이 거짓말입니다.
+   ★ 고객이 아직 안 실렸으면 <b>숫자를 0 으로 적지 않습니다</b> — 0 은
+     「하나도 안 했다」 는 뜻이 되어 버립니다. 「아직 못 읽었습니다」 라고
+     적습니다 (1번 · 모름과 0 을 구분한다).
+   ★ 서버를 안 부릅니다 (7번) — 이미 손에 있는 것만 읽습니다.
+   ★ 고객 이름은 여기 안 나옵니다 (3번) — 숫자만 적습니다.            */
+/* 오늘 남긴 기록을 갈래별로 — <b>기록 한 곳</b>(cmOf().touch)만 읽는다 */
+function mnuToday(){
+  if(typeof OSC==='undefined'||!OSC.list||!OSC.list.length)return null;
+  if(typeof ccScope!=='function'||typeof cmOf!=='function'||typeof ccToday!=='function')return null;
+  var mine=ccScope(OSC.list),t=ccToday(),o={전화:0,문자:0,만남:0,합:0},i,j,L,e;
+  for(i=0;i<mine.length;i++){
+    L=(cmOf(mine[i].id).touch)||[];
+    for(j=0;j<L.length;j++){
+      e=L[j]; if(!e||e.at!==t)continue;
+      o.합++;
+      if(o[e.how]!==undefined)o[e.how]++;
+    }
+  }
+  return o;
+}
+/* 밀착관리 — <b>고객 365일이 세는 그 숫자</b>를 그대로 가져온다 (5번) */
+function mnuCare(){
+  if(typeof OSC==='undefined'||!OSC.list||!OSC.list.length)return null;
+  if(typeof ccScope!=='function'||typeof ccRate!=='function')return null;
+  var mine=ccScope(OSC.list);
+  if(!mine.length)return null;
+  return { n:mine.length,
+           rate:ccRate(mine),
+           over:((typeof ccOverList==='function')?ccOverList(mine).length:null),
+           never:((typeof ccNeverList==='function')?ccNeverList(mine).length:null) };
+}
+function mnuCss(){
+  if(document.getElementById('mnuCss'))return;
+  var st=document.createElement('style');st.id='mnuCss';
+  st.textContent=
+   '.mnu-g{display:flex;gap:9px;margin-top:11px}'+
+   '.mnu-t{flex:1;min-width:0;background:var(--t-bg-3);border-radius:var(--t-r-sm);padding:13px 11px;text-align:center}'+
+   '.mnu-t b{display:block;font-size:var(--t2);font-weight:800;letter-spacing:-.03em;color:var(--t-ink);line-height:1.2}'+
+   '.mnu-t span{display:block;margin-top:5px;font-size:var(--t6);font-weight:700;color:var(--t-sub)}'+
+   '.mnu-t i{display:block;margin-top:3px;font-style:normal;font-size:var(--t6);color:var(--t-sub2);font-weight:600}'+
+   '.mnu-t.hot b{color:var(--t-neg)}'+
+   '.mnu-non{margin-top:11px;font-size:var(--t6);font-weight:700;line-height:1.6;color:var(--t-sub);'+
+     'background:var(--t-bg-3);border-radius:var(--t-r-sm);padding:12px 13px;word-break:keep-all}';
+  document.head.appendChild(st);
+}
+function mnuTile(v,lab,sub,hot){
+  return '<div class="mnu-t'+(hot?' hot':'')+'"><b>'+v+'</b><span>'+lab+'</span>'+
+         (sub?('<i>'+sub+'</i>'):'')+'</div>';
+}
+function mnuTodayHtml(){
+  mnuCss();
+  var o=mnuToday();
+  var h='<div class="card" style="margin-top:12px"><div class="card-hd"><div class="card-title">'+
+    '<span class="ci">📋</span>오늘 한 일</div>'+
+    '<div class="card-desc">고객에게 남긴 기록만 셉니다 — 갈래는 <b>기록에 적힌 그대로</b>입니다.</div>'+
+    '</div><div class="card-body">';
+  if(!o)
+    return h+'<div class="mnu-non">고객을 <b>아직 못 읽었습니다</b> — 그래서 숫자를 0 으로 적지 않습니다. '+
+      '「🗂 고객」 을 한 번 여시면 그때부터 셉니다.</div></div></div>';
+  h+='<div class="mnu-g">'+
+     mnuTile(o.전화,'☎️ 전화')+mnuTile(o.문자,'💬 문자')+mnuTile(o.만남,'🤝 만남')+
+     '</div>';
+  if(!o.합)h+='<div class="mnu-non">오늘은 <b>아직 기록이 없습니다.</b> '+
+     '홈의 「오늘 챙길 것」 에서 한 분씩 하시면 여기 쌓입니다.</div>';
+  return h+'</div></div>';
+}
+function mnuCareHtml(){
+  mnuCss();
+  var c=mnuCare();
+  var h='<div class="card" style="margin-top:12px"><div class="card-hd"><div class="card-title">'+
+    '<span class="ci">🎯</span>밀착관리 — 지키고 있는가</div>'+
+    '<div class="card-desc"><b>고객 365일</b>이 세는 숫자를 그대로 가져옵니다 — 두 곳이 다른 말을 하지 않습니다.</div>'+
+    '</div><div class="card-body">';
+  if(!c||c.rate===null)
+    return h+'<div class="mnu-non">고객이 <b>아직 없습니다</b> — 잴 것이 없어 숫자를 안 적습니다.</div>'+
+      '</div></div>';
+  h+='<div class="mnu-g">'+
+     mnuTile(c.rate+'%','30일 주기 안', (c.n-(c.over||0))+' / '+c.n+'명')+
+     mnuTile((c.over===null?'—':c.over),'주기 넘김', c.over?'지금 연락해야 합니다':'없습니다', !!c.over)+
+     mnuTile((c.never===null?'—':c.never),'한 번도 연락 안 함', c.never?'오래 두면 영영 못 겁니다':'없습니다', !!c.never)+
+     '</div>'+
+     '<div class="btn-row" style="margin-top:11px">'+
+       '<button type="button" class="btn btn-ghost" onclick="go(\'clients\')">🗂 고객 365일로</button></div>';
+  return h+'</div></div>';
+}
 function renderMe(){
   var nm=(OS.profile&&OS.profile.name)||'',rows='',i,n=0;
   for(i=0;i<ME_NUM.length;i++){ var r=meRowHtml(ME_NUM[i]); if(r){rows+=r;n++;} }
@@ -15765,6 +15863,10 @@ function renderMe(){
     '<div class="page-hd"><div class="page-tag">나</div>'+
     '<div class="page-title">🙋 '+(nm?esc(nm)+' 님':'나')+'</div>'+
     '<div class="page-desc">알람과 내 숫자를 한 자리에.</div></div>'+
+    /* ⚠ 2026-09-26 · 목업의 <b>숫자 두 칸</b>이 여기 없었습니다 —
+       「오늘 한 일」 과 「밀착관리」. 알람 카드 하나가 화면을 다 먹고
+       있었습니다. 세는 자는 <b>고객 365일 것을 그대로</b> 씁니다 (5번). */
+    mnuTodayHtml()+mnuCareHtml()+
     /* 알람 — <b>같은 카드</b>입니다 */
     '<div class="alm-host"></div>'+
     '<div class="card" style="margin-top:12px"><div class="card-hd"><div class="card-title">'+
@@ -18088,8 +18190,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-29 19:45';
-var APP_BUILD_NOTE="🧰 <b>「도구」 가 검은 서랍이 아니라 밝은 화면이 됐습니다.</b>　—　목업(docs/토스판_사본.html vTools)의 「도구」 는 <b>화면</b>입니다 — 무엇을 할지 묻고, 찾기 칸이 있고, <b>지금 그 분 단계에 맞는 것</b>을 먼저 내밀고, 나머지를 <b>언제 쓰는지</b>로 묶습니다. 그런데 앱의 「도구」 는 화면이 아니라 <b>☰ 검은 서랍을 여는 단추</b>였습니다.　—　① 이제 <b>「무엇을 하실 건가요?」</b> 가 섭니다. 찾기 칸(이름·초성) · <b>「지금 홍○○님께 — AP」</b> 칩 줄 · 여섯 묶음(🌅 오늘 · 🤝 고객 만나기 · 📮 계약하고 나서 · 📣 고객 늘리기 · 📚 찾아보고 배우기 · ⚙️ 팀·설정)에 <b>화면 98개가 전부</b> 섭니다.　—　② ★ <b>표를 하나도 새로 안 만들었습니다</b> (5번). 목업이 말한 「언제 쓰는지로 묶었다」 는 분류가 <b>이미 앱에 있었습니다</b> — NAV_WHEN_G(여섯 묶음) · NAV_WHEN(96화면 전부) · navItemOf(이름·아이콘) · navHit(초성 찾기) · tdoTools(그 단계 도구). 여기서는 <b>그것을 그대로 가리킵니다.</b> 새 표를 만들면 화면을 하나 늘릴 때 한쪽만 고쳐집니다.　—　③ ★ <b>아무것도 안 없어졌습니다</b> (1번). 서랍은 그대로 있고, 이 화면 맨 아래 <b>「☰ 메뉴 전체」</b> 로 엽니다. 위 ☰ 도 그대로입니다. 못 찾으면 지운 것과 같습니다.　—　④ 고객 이름은 <b>가려서</b> 적습니다 (3번 · osMaskName). 서버는 <b>안 부릅니다</b> (7번) — 이미 손에 있는 표만 읽습니다.　—　점검은 <b>check-toolspage 열여덟 줄</b>. 되돌림 네 가지 모두 <b>문법은 성한 채로</b> 울렸습니다 (8번) — 예전처럼 서랍을 열면 · <b>서랍 길을 지우면</b> · 이름을 날것으로 적으면 · 찾아서 없을 때 아무 말도 안 하면.　—　⚠ 옷 입은 화면이 하나 늘어 check-skinmap 도 손봤습니다. tools 는 <b>메뉴에 없는 화면</b>입니다 — 이 화면이 메뉴 화면들을 늘어놓는 자리라, 저를 메뉴에 넣으면 <b>제가 저를 세웁니다.</b> 그래서 「띠에서만 여는 화면」 으로 두되, <b>go() 와 아래 띠 둘 다에 있는지</b> 확인합니다 — 둘 중 하나라도 없어지면 아무 데서도 못 엽니다.";
+var APP_BUILD='2026-09-29 20:00';
+var APP_BUILD_NOTE="📊 <b>「나」 에 오늘 한 일과 밀착관리가 섭니다.</b>　—　목업의 「나」 에는 숫자 두 칸이 있습니다 — <b>「오늘 한 일」</b> 과 <b>「밀착관리 — 지키고 있는가」</b>. 앱의 「나」 는 알람 카드 하나가 화면을 다 먹고 있었습니다.　—　① <b>오늘 한 일</b> — ☎️ 전화 · 💬 문자 · 🤝 만남. 고객에게 남긴 기록(cmOf().touch)에서 오늘 것만 셉니다.　—　② <b>밀착관리</b> — 30일 주기 안 비율 · 주기 넘긴 분 · 한 번도 연락 안 한 분. ★ <b>여기서 다시 세지 않습니다</b> (5번) — 고객 365일이 쓰는 그 자(ccRate · ccOverList · ccNeverList)를 <b>그대로 부릅니다.</b> 다시 세면 두 화면이 다른 숫자를 말하게 됩니다.　—　③ ★ <b>없는 값을 지어내지 않습니다</b> (1번). 목업은 「통화 · 단계 옮김 · 메모」 라고 적었지만 우리 기록이 남기는 갈래는 <b>전화 · 문자 · 만남</b> 입니다. <b>있는 이름 그대로</b> 적습니다 — 「단계 옮김」 이라 써 놓고 실제로는 만남을 세면 그것이 거짓말입니다.　—　④ ★ 고객을 아직 못 읽었으면 <b>0 으로 적지 않습니다</b> — 0 은 「하나도 안 했다」 는 뜻이 되어 버립니다. <b>「아직 못 읽었습니다」</b> 라고 적습니다 (1번 · 모름과 0 을 구분한다).　—　⑤ 고객 이름은 <b>여기 안 나옵니다</b> (3번) — 숫자만 적습니다. 서버도 <b>안 부릅니다</b> (7번).　—　점검은 <b>check-menum 열일곱 줄</b>. 되돌림 네 가지 모두 <b>문법은 성한 채로</b> 울렸습니다 (8번) — 못 읽었는데 0 이라 적으면 · <b>여기서 다시 세면</b> · 목업 이름을 그대로 베끼면 · 알람 카드를 밀어내면. 특히 <b>다시 세는</b> 되돌림에서 「고객 365일의 자를 그대로 부른다」 가 울린 것이 이 판의 핵심입니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
