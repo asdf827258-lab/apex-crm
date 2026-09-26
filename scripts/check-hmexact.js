@@ -104,16 +104,41 @@ const INKS = (sel) => {
         }
       }
     }
+    /* ⚠ 2026-09-26 — <b>여기가 좁았습니다.</b> 위 두 가지는 「목업 색표(:root)」 와
+       「목업이 <b>지금 화면에 그린</b> 색」 뿐입니다. 그런데 목업은 .note 처럼
+       <b>그 화면에 안 뜨는 규칙</b>에도 색을 적어 둡니다 — .note 의 진한 호박색
+       #8A5A12 가 그것입니다. 그 색을 앱이 쓰자 「목업에 없는 색」 이라고
+       울렸습니다. <b>목업에 있는데 자가 못 본 것</b>이었습니다 (8번).
+       그래서 목업 CSS 의 <b>글자색 선언</b>도 같이 읽습니다 — 이름을 손으로
+       적지 않는다는 규칙은 그대로입니다.                                  */
+    const inkPal = [];
+    for (const sh of document.styleSheets) {
+      let rules = []; try { rules = sh.cssRules || []; } catch (e) {}
+      for (const r of rules) {
+        if (!r.style) continue;
+        /* ⚠ 크로미움은 규칙 안의 #8A5A12 를 <b>rgb(138, 90, 18) 로 바꿔</b>
+           돌려줍니다. 처음에 # 만 찾다가 한 가지도 못 읽었습니다 — 자가
+           <b>아무것도 안 읽고도 조용했으면</b> 더 나빴을 것입니다. 그래서
+           읽은 수가 3가지 아래면 그 자체로 빨간불입니다 (8번).          */
+        const v = (r.style.getPropertyValue('color') || '').trim();
+        if (/^#[0-9a-f]{3,8}$/i.test(v) || /^rgba?\(/i.test(v)) inkPal.push(v);
+      }
+    }
     return { ink: g('--t-ink'), sub: g('--t-sub'), sub2: g('--t-sub2'), point: g('--t-point'),
              r: card ? getComputedStyle(card).borderRadius.split(' ')[0] : '',
-             pal: [...new Set(pal)],
+             pal: [...new Set(pal)], inkPal: [...new Set(inkPal)],
              inks: (new Function('return (' + f + ')("#scr")'))() };
   }, INKS.toString());
-  /* 자 = 목업이 그린 색 + 목업 색표 전체 */
-  const mkInks = [...new Set(Object.keys(MK.inks).concat(MK.pal.map(hex2rgb)))];
+  /* 자 = 목업이 <b>그린</b> 색 + 목업 <b>색표</b> + 목업 CSS 가 적어 둔 <b>글자색</b> */
+  const mkInks = [...new Set(Object.keys(MK.inks)
+    .concat(MK.pal.map(hex2rgb))
+    .concat((MK.inkPal || []).map(hex2rgb)))];
   console.log('\n[0] 목업에서 <b>자를 읽습니다</b>');
   is(!!MK.ink && !!MK.r, '  목업의 글자색·둥글기를 읽었다 — 글자 ' + MK.ink + ' · 둥글기 ' + MK.r);
   is(MK.pal.length >= 10, '  목업의 <b>색표</b>를 통째로 읽었다 — ' + MK.pal.length + '가지');
+  is((MK.inkPal || []).length >= 3,
+     '  목업 CSS 가 <b>적어 둔 글자색</b>도 읽었다 — ' + (MK.inkPal || []).length +
+     '가지 (그 화면에 안 떠도 목업의 색입니다)');
   is(mkInks.length >= 3, '  자로 삼을 색 ' + mkInks.length + '가지 (그린 색 + 색표)');
 
   const p = await ctx.newPage();
