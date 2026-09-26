@@ -38,6 +38,12 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
    대신 <b>그 별칭이 정말 살아 있는지</b>를 코드에서 확인합니다 — 별칭이
    없어지면 그때는 T_SKIN 의 그 줄이 진짜 죽은 줄이므로 울려야 합니다.  */
 const 별칭 = { dashboard: 'home' };
+/* ★ <b>띠에서만 여는 화면</b> — 메뉴(TABS)에 없어 화면목록에도 없습니다.
+   tools(🧰 도구)가 그렇습니다. 이 화면은 <b>메뉴에 있는 화면들을 늘어놓는
+   자리</b>라, 저를 메뉴에 넣으면 <b>제가 저를 세웁니다.</b> 그래서 안 넣습니다.
+   ★ 그래도 <b>정말 열리는지</b>는 별칭과 똑같이 확인합니다 — go() 에서
+     보내는 곳이 없어지면 T_SKIN 의 그 줄은 죽은 줄이므로 울려야 합니다.  */
+const 띠만 = { tools: '아래 띠 🧰 도구' };
 /* ⚠ 2026-09-25 기준선. <b>줄이라고만 있는 수</b>입니다.
      안입음 93 — 메뉴에 선 화면 98개 중 다섯만 입었습니다
                  (dashboard 는 home 의 별칭이라 따로 안 셉니다)
@@ -55,7 +61,7 @@ const skin = m[1].split(',').map(s => s.split(':')[0].trim().replace(/['"]/g, ''
 const j = JSON.parse(fs.readFileSync(MAP, 'utf8'));
 const all = [];
 (j['갈래'] || []).forEach(g => (g.items || []).forEach(it => { if (it && it.id) all.push(it.id); }));
-const 없는이름 = skin.filter(s => all.indexOf(s) < 0 && !별칭[s]);
+const 없는이름 = skin.filter(s => all.indexOf(s) < 0 && !별칭[s] && !띠만[s]);
 is(없는이름.length === 0,
   '  옷을 입히기로 한 ' + skin.length + '개가 다 있는 화면이다' +
   (없는이름.length ? (' ← ' + 없는이름.join(' · ') + ' 는 화면목록에 없습니다') : ''));
@@ -65,12 +71,22 @@ const 죽은별칭 = Object.keys(별칭).filter(a =>
 is(죽은별칭.length === 0,
   '  별칭 ' + Object.keys(별칭).map(a => a + '→' + 별칭[a]).join(' · ') + ' 이 go() 에 살아 있다' +
   (죽은별칭.length ? (' ← ' + 죽은별칭.join(' · ') + ' 로 보내는 곳이 없습니다 — T_SKIN 에서 빼십시오') : ''));
+/* 띠에서만 여는 화면도 <b>정말 열리는가</b> — go() 와 아래 띠(TB) 둘 다 본다.
+   둘 중 하나라도 없어지면 그 화면은 <b>아무 데서도 못 엽니다</b> (1번). */
+const 못여는띠 = Object.keys(띠만).filter(a =>
+  skin.indexOf(a) >= 0 &&
+  (src.indexOf("tab==='" + a + "'") < 0 || src.indexOf("id:'" + a + "'") < 0));
+is(못여는띠.length === 0,
+  '  띠에서만 여는 화면 ' + Object.keys(띠만).map(a => a + '(' + 띠만[a] + ')').join(' · ') +
+  ' 을 <b>정말 열 수 있다</b>' +
+  (못여는띠.length ? (' ← ' + 못여는띠.join(' · ') + ' 은 go() 나 아래 띠에 없습니다') : ''));
 
 console.log('\n[2] <b>목업 옷을 안 입은 화면</b>이 몇 개인가');
 const 안입음 = all.filter(id => skin.indexOf(id) < 0).length;
 const 진짜입음 = skin.filter(s => all.indexOf(s) >= 0);
 console.log('      입음 ' + 진짜입음.length + ' — ' + 진짜입음.join(' · ') +
-  '  (별칭 ' + skin.filter(s => 별칭[s]).join(' · ') + ')');
+  '  (별칭 ' + skin.filter(s => 별칭[s]).join(' · ') +
+  ' · 띠만 ' + skin.filter(s => 띠만[s]).join(' · ') + ')');
 is(안입음 <= BASE.안입음,
   '  안 입은 화면 <b>' + 안입음 + '개</b> / 모두 ' + all.length + '개 — 기준선 ' + BASE.안입음 +
   (안입음 > BASE.안입음 ? ' ← 늘었습니다. 화면을 새로 만드시면 T_SKIN 에도 넣어 주십시오'

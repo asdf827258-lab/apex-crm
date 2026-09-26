@@ -13775,7 +13775,13 @@ function navMark(tab){
 var TB=[
  {id:'home',    e:'🏠',t:'오늘',  w:['today']},
  {id:'clients', e:'📇',t:'고객',  pin:['clients','fact_find','crm']},
- {id:'__more',  e:'🧰',t:'도구',  w:['meet','after','know','run']},
+ /* ⚠ 2026-09-26 · 여기는 <b>서랍을 여는 단추</b>였습니다(__more). 목업의
+    「도구」 는 <b>밝은 화면</b>이라 화면으로 바꿉니다 — renderToolsPage.
+    ★ 서랍은 <b>그대로 있습니다</b> — 위 ☰ 와 도구 화면 맨 아래
+      「☰ 메뉴 전체」 로 엽니다. 길을 지우지 않았습니다 (1번).
+    ★ w 는 그대로 둡니다 — 그 갈래 화면에 서 있으면 이 칸이 켜져
+      「이건 도구에 있습니다」 를 가리킵니다. pin 으로 제 화면도 켭니다. */
+ {id:'tools',   e:'🧰',t:'도구',  w:['meet','after','know','run'],pin:['tools']},
  {id:'news_live',e:'📰',t:'콘텐츠',w:['grow']},
  {id:'mycal',   e:'📅',t:'달력',  pin:['mycal']}
 ];
@@ -13881,6 +13887,156 @@ function navRecAdd(id){
   try{ localStorage.setItem(navRecKey(),JSON.stringify(L.slice(0,8))); }catch(e){}
 }
 /* 칸 하나를 번호로 찾는다 */
+/* ══ 🧰 <b>도구</b> — 「무엇을 하실 건가요?」 (tlp*) ════════════════════
+   2026-09-26 · 목업(docs/토스판_사본.html vTools)을 재 보니 「도구」 는
+   <b>밝은 화면</b>이었습니다 — 무엇을 할지 묻고, 찾기 칸이 있고, <b>지금
+   그 분 단계에 맞는 것</b>을 먼저 내밀고, 나머지를 <b>언제 쓰는지</b>로
+   묶어 보여 줍니다. 그런데 앱의 「도구」 는 화면이 아니라 <b>검은 서랍</b>
+   을 여는 단추였습니다(toggleNav).
+
+   ★ <b>표를 새로 만들지 않았습니다</b> (5번). 목업이 말한 「언제 쓰는지로
+     묶었다」 는 분류가 <b>이미 앱에 있습니다</b> —
+       · NAV_WHEN_G   여섯 묶음
+       · NAV_WHEN     96개 화면이 <b>하나도 안 빠지고</b> 어느 묶음인지
+       · navItemOf    이름·아이콘  ·  navHit  찾기(초성까지)
+       · tdoTools     그 단계에서 쥘 것 (홈 카드가 쓰는 그것)
+     여기서는 <b>그것을 그대로 가리킵니다.</b> 새 표를 만들면 화면을 하나
+     늘릴 때 한쪽만 고쳐집니다.
+   ★ <b>아무것도 안 없어집니다</b> (1번). 서랍은 그대로 있고, 이 화면
+     맨 아래에 <b>「☰ 메뉴 전체」</b> 로 길을 남깁니다. 못 찾으면 지운
+     것과 같습니다.
+   ★ <b>고객 이름은 가려서</b> 적습니다 (3번) — osMaskName.
+   ★ <b>서버를 안 부릅니다</b> (7번) — 이미 손에 있는 표만 읽습니다.  */
+var TLP_Q='';
+function tlpSetQ(v){ TLP_Q=(''+(v||'')); tlpPaint(); }
+/* 지금 <b>맨 앞에 선 분</b> — 홈 카드가 세우는 그 줄을 그대로 본다 (5번) */
+function tlpNow(){
+  try{
+    var L=(typeof hmSteps==='function')?hmSteps():[];
+    return (L&&L.length)?L[0]:null;
+  }catch(e){ return null; }
+}
+/* 그 분 단계에서 쥘 것 — tdoTools 한 곳이 안다 (5번) */
+function tlpNowTools(x){
+  if(!x)return [];
+  var k=(x.k==='db')?x.tk:x.k;
+  try{ return (typeof tdoTools==='function')?tdoTools(k):[]; }catch(e){ return []; }
+}
+/* 여섯 묶음 — <b>열 수 있는 것만</b> 세운다. 등급에 막힌 화면을 세우면
+   눌러도 「이용할 수 없습니다」 만 뜬다 (8번). */
+function tlpGroups(){
+  var q=TLP_Q.replace(/^\s+|\s+$/g,''),out=[],gi,id,it,g,rows;
+  for(gi=0;gi<NAV_WHEN_G.length;gi++){
+    g=NAV_WHEN_G[gi]; rows=[];
+    for(id in NAV_WHEN){
+      if(!Object.prototype.hasOwnProperty.call(NAV_WHEN,id))continue;
+      if(NAV_WHEN[id]!==g.k)continue;
+      it=(typeof navItemOf==='function')?navItemOf(id):null;
+      if(!it||!it.id)continue;                    /* 못 여는 화면은 안 세운다 */
+      if(q&&!(typeof navHit==='function'&&navHit(it,q,false)))continue;
+      rows.push(it);
+    }
+    if(rows.length)out.push({g:g,rows:rows});
+  }
+  return out;
+}
+function tlpCount(){
+  var L=tlpGroups(),n=0,i;
+  for(i=0;i<L.length;i++)n+=L[i].rows.length;
+  return n;
+}
+function tlpCss(){
+  if(document.getElementById('tlpCss'))return;
+  var st=document.createElement('style');st.id='tlpCss';
+  st.textContent=
+   '.tlp-h{font-size:var(--t1);font-weight:800;letter-spacing:-.035em;line-height:1.3;color:var(--t-ink)}'+
+   '.tlp-h span{color:var(--t-sub2)}'+
+   '.tlp-s{margin-top:7px;font-size:var(--t5);line-height:1.6;color:var(--t-sub);word-break:keep-all}'+
+   '.tlp-q{width:100%;height:54px;margin-top:13px;padding:0 17px;border:1px solid var(--t-line);'+
+     'border-radius:var(--t-r-btn);background:var(--t-card);font-family:inherit;'+
+     'font-size:var(--t4);font-weight:600;color:var(--t-ink)}'+
+   '.tlp-q::placeholder{color:var(--t-sub3);font-weight:600}'+
+   '.tlp-c{margin-top:13px;border:1px solid var(--t-line);border-radius:var(--t-r);'+
+     'background:var(--t-card);padding:13px 15px}'+
+   '.tlp-lab{font-size:var(--t6);font-weight:800;color:var(--t-point);letter-spacing:-.01em}'+
+   '.tlp-lab i{font-style:normal;color:var(--t-sub2);font-weight:600}'+
+   '.tlp-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}'+
+   '.tlp-chip{border:1px solid var(--t-line);background:var(--t-bg-2);border-radius:var(--t-r-sm);'+
+     'padding:8px 12px;font-family:inherit;font-size:var(--t6);font-weight:700;color:var(--t-ink);cursor:pointer}'+
+   '.tlp-row{display:flex;align-items:center;gap:11px;width:100%;padding:11px 0;border:0;'+
+     'border-top:1px solid var(--t-line-2);background:none;font-family:inherit;text-align:left;cursor:pointer}'+
+   '.tlp-row:first-of-type{border-top:0}'+
+   '.tlp-row .e{flex:0 0 34px;width:34px;height:34px;border-radius:11px;background:var(--t-point-l);'+
+     'display:flex;align-items:center;justify-content:center;font-size:var(--t4)}'+
+   '.tlp-row .n{flex:1;min-width:0;font-size:var(--t5);font-weight:700;color:var(--t-ink);'+
+     'overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+   '.tlp-row .o{flex:0 0 auto;font-size:var(--t6);font-weight:700;color:var(--t-sub2);'+
+     'background:var(--t-bg-2);border-radius:9px;padding:5px 10px}'+
+   '.tlp-none{margin-top:13px;padding:22px 15px;text-align:center;font-size:var(--t5);'+
+     'font-weight:700;color:var(--t-sub);background:var(--t-bg-3);border-radius:var(--t-r)}'+
+   '.tlp-note{margin-top:13px;font-size:var(--t6);line-height:1.7;color:var(--t-sub);'+
+     'background:var(--t-bg-3);border-radius:var(--t-r-sm);padding:12px 14px;word-break:keep-all}'+
+   '.tlp-more{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:48px;'+
+     'margin-top:11px;border:1px solid var(--t-line);border-radius:var(--t-r-btn);background:var(--t-card);'+
+     'font-family:inherit;font-size:var(--t5);font-weight:700;color:var(--t-ink);cursor:pointer}';
+  document.head.appendChild(st);
+}
+/* 「지금 ○○님께」 — <b>이름은 가려서</b> (3번) */
+function tlpNowHtml(){
+  if(TLP_Q.replace(/^\s+|\s+$/g,''))return '';     /* 찾는 중에는 안 세운다 */
+  var x=tlpNow(); if(!x)return '';
+  var T=tlpNowTools(x); if(!T.length)return '';
+  var nm=x.t||'', st=(x.k==='db')?(x.tk||''):(x.k||'');
+  var who=nm?((typeof osMaskName==='function')?osMaskName(nm):nm):'';
+  var h='<div class="tlp-c"><div class="tlp-lab">지금 '+
+    (who?(osEsc(who)+'님께'):'이 분께')+(st?(' <i>— '+osEsc(st)+'</i>'):'')+'</div><div class="tlp-chips">';
+  var i;
+  for(i=0;i<T.length&&i<6;i++)
+    h+='<button type="button" class="tlp-chip" onclick="go(\''+osEsc(T[i].id)+'\')">'+
+       (T[i].icon||'🧰')+' '+osEsc(T[i].title||T[i].id)+'</button>';
+  return h+'</div></div>';
+}
+function renderToolsPage(){
+  tlpCss();
+  var q=TLP_Q.replace(/^\s+|\s+$/g,''),L=tlpGroups(),h='',i,j,it,g;
+  h+='<div class="tlp-h">무엇을 <span>하실 건가요?</span></div>'+
+     '<div class="tlp-s">종류가 아니라 <b>언제 쓰는지</b>로 묶었습니다. '+
+     '그 분 카드에서 바로 따라옵니다.</div>'+
+     '<input class="tlp-q" id="tlpQ" value="'+osEsc(TLP_Q)+'" '+
+       'oninput="tlpSetQ(this.value)" placeholder="🔎 하려는 것을 그냥 적으세요 — 연금 · 알릴의무 · 실비">';
+  h+=tlpNowHtml();
+  for(i=0;i<L.length;i++){
+    g=L[i].g;
+    h+='<div class="tlp-c"><div class="tlp-lab">'+g.e+' '+osEsc(g.t)+
+       ' <i>· '+osEsc(g.s)+'</i></div>';
+    for(j=0;j<L[i].rows.length;j++){
+      it=L[i].rows[j];
+      h+='<button type="button" class="tlp-row" onclick="go(\''+osEsc(it.id)+'\')">'+
+         '<span class="e">'+(it.icon||'🧰')+'</span>'+
+         '<span class="n">'+osEsc(it.title||it.id)+'</span>'+
+         '<span class="o">열기</span></button>';
+    }
+    h+='</div>';
+  }
+  if(q&&!L.length)
+    h+='<div class="tlp-none">그런 이름은 없습니다.<br>다른 말로 찾아보세요.</div>';
+  /* ★ <b>길을 남깁니다</b> — 서랍은 그대로 있습니다 (1번) */
+  h+='<div class="tlp-note">여기 있는 것이 <b>전부</b>입니다 — <b>지운 것은 하나도 없습니다.</b> '+
+     '등급에 막힌 화면만 안 섭니다(눌러도 안 열리기 때문입니다). '+
+     '옛 이름으로 찾으시려면 아래 <b>메뉴 전체</b>를 여세요.</div>'+
+     '<button type="button" class="tlp-more" onclick="toggleNav()">☰ 메뉴 전체</button>';
+  return h;
+}
+function tlpPaint(){
+  var el=document.getElementById('dynPane');
+  /* 이 화면이 지금 떠 있을 때만 다시 그린다 — 찾기 칸이 그 표시다.
+     다른 화면에서 부르면 남의 화면을 도구로 덮어 버린다 (5번). */
+  if(!el||!document.getElementById('tlpQ'))return;
+  var f=document.activeElement,keep=(f&&f.id==='tlpQ');
+  el.innerHTML=renderToolsPage();
+  if(keep){ var e2=document.getElementById('tlpQ');
+    if(e2){ e2.focus(); try{ e2.setSelectionRange(e2.value.length,e2.value.length); }catch(x){} } }
+}
 function navItemOf(id){
   var groups=(typeof visibleTabs==='function')?visibleTabs():TABS,i,j;
   for(i=0;i<groups.length;i++)for(j=0;j<groups[i].items.length;j++)
@@ -17332,7 +17488,7 @@ function osFullMode(on){
      <b>셋</b>이 늘었습니다 — 홈까지 넷입니다. 서랍은 아직 검은 기둥이고,
      그것을 밝게 하려면 check-nav 의 명암비 자(어두운 바탕 기준)도 같이
      옮겨야 해서 이 판에서는 안 했습니다.                               */
-var T_SKIN={home:1,dashboard:1,clients:1,news_live:1,mycal:1,me:1};
+var T_SKIN={home:1,dashboard:1,clients:1,news_live:1,mycal:1,me:1,tools:1};
 function go(tab){
   /* 홈으로 돌아오면 <b>돌아가는 띠</b>는 제 할 일을 다 했다. 메뉴로 돌아오셔도
      사라져야 한다 — 「← 홈」 을 누르셨을 때만 지우면, 메뉴로 오신 뒤에도
@@ -17582,6 +17738,7 @@ function go(tab){
   else if(tab==='pricing'){dyn.innerHTML=renderPricing();if(typeof osPricingAfterRender==='function')osPricingAfterRender();}
   else if(tab==='terms'){dyn.innerHTML=renderTerms();if(typeof osTermsAfterRender==='function')osTermsAfterRender();}
   else if(tab.indexOf('inv_')===0){dyn.innerHTML=(typeof invRender==='function')?invRender(tab):'';if(typeof invAfterRender==='function')invAfterRender(tab);}
+  else if(tab==='tools'){dyn.innerHTML=renderToolsPage();}
   else if(tab==='news_live'){dyn.innerHTML=renderNewsLive();if(typeof osNewsLiveAfterRender==='function')osNewsLiveAfterRender();}
   else if(tab.indexOf('biz_')===0){dyn.innerHTML=(typeof renderBiz==='function')?renderBiz(tab):'';if(tab==='biz_news'&&typeof osBizNewsAfterRender==='function')osBizNewsAfterRender();}
   else dyn.innerHTML=renderToolPage(tab);
@@ -17931,8 +18088,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-29 19:25';
-var APP_BUILD_NOTE="🤝 <b>「만나러 갑니다」 를 누르면 바로 그 자리로 갑니다.</b>　—　설계사처럼 몰아 보다 잡은 두 번째입니다. 홈 카드의 제일 큰 파란 단추 「🤝 만나러 갑니다」 를 누르면 DB 통합 CRM 으로 가는데, 거기서 <b>「👋 고객 관리부터 시작하시죠?」</b> 덮개가 떠서 <b>한 번 더</b> 눌러야 했습니다. 만나러 가는 것과 상관없는 이야기이고, <b>한 번 누를 일이 두 번</b>이 됩니다.　—　★ 그렇다고 <b>덮개를 지우지 않았습니다.</b> 그것은 사장님 말씀 ⑦(2026-09-22) 「DB CRM 들어가면 고객 관리부터 시작하시죠? 하고」 바로 그것입니다. <b>서랍·메뉴로 들어가실 때는 그대로 묻습니다.</b>　—　① 홈 카드에서 여는 자리(hmOpen)가 <b>「여기서 왔다」 는 자국</b>을 남기고, 묻는 자리(crqEnter)가 그 자국을 보면 <b>안 묻습니다</b>. 그리고 <b>「시작했다」 로 적습니다</b> — 그래야 나가실 때 「언제 하실까요」 도 안 뜹니다. 답은 <b>한 곳</b>(crqGet().did)에만 둡니다 (5번).　—　② ★ 자국은 <b>4초만</b> 삽니다. 영영 살려 두면 한참 뒤에 서랍으로 들어오셔도 「이미 왔던 것」 으로 쳐서 <b>영영 안 묻게</b> 되고, 그러면 사장님 말씀 ⑦ 이 <b>조용히 죽습니다</b> (1번).　—　점검은 <b>새 파일을 안 만들고</b> 이미 있는 check-crmask 에 <b>[9] 다섯 줄</b>을 붙였습니다 — 같은 것을 묻는 자를 두 벌로 만들지 않습니다 (5번). 홈에서 오면 안 묻나 · 「시작했다」 로 적히나 · 나갈 때도 안 묻나 · <b>서랍으로 오면 그대로 묻나(⑦ 이 안 죽었나)</b> · 자국이 낡으면 다시 묻나.　—　되돌림 네 가지 모두 <b>문법은 성한 채로</b> 울렸습니다 (8번). 그중 <b>자국을 영영 살려 두는</b> 되돌림에서 「낡으면 다시 묻는다」 가 울린 것이 이 판의 핵심입니다 — 고치다 ⑦ 을 죽이는 길을 막습니다.";
+var APP_BUILD='2026-09-29 19:45';
+var APP_BUILD_NOTE="🧰 <b>「도구」 가 검은 서랍이 아니라 밝은 화면이 됐습니다.</b>　—　목업(docs/토스판_사본.html vTools)의 「도구」 는 <b>화면</b>입니다 — 무엇을 할지 묻고, 찾기 칸이 있고, <b>지금 그 분 단계에 맞는 것</b>을 먼저 내밀고, 나머지를 <b>언제 쓰는지</b>로 묶습니다. 그런데 앱의 「도구」 는 화면이 아니라 <b>☰ 검은 서랍을 여는 단추</b>였습니다.　—　① 이제 <b>「무엇을 하실 건가요?」</b> 가 섭니다. 찾기 칸(이름·초성) · <b>「지금 홍○○님께 — AP」</b> 칩 줄 · 여섯 묶음(🌅 오늘 · 🤝 고객 만나기 · 📮 계약하고 나서 · 📣 고객 늘리기 · 📚 찾아보고 배우기 · ⚙️ 팀·설정)에 <b>화면 98개가 전부</b> 섭니다.　—　② ★ <b>표를 하나도 새로 안 만들었습니다</b> (5번). 목업이 말한 「언제 쓰는지로 묶었다」 는 분류가 <b>이미 앱에 있었습니다</b> — NAV_WHEN_G(여섯 묶음) · NAV_WHEN(96화면 전부) · navItemOf(이름·아이콘) · navHit(초성 찾기) · tdoTools(그 단계 도구). 여기서는 <b>그것을 그대로 가리킵니다.</b> 새 표를 만들면 화면을 하나 늘릴 때 한쪽만 고쳐집니다.　—　③ ★ <b>아무것도 안 없어졌습니다</b> (1번). 서랍은 그대로 있고, 이 화면 맨 아래 <b>「☰ 메뉴 전체」</b> 로 엽니다. 위 ☰ 도 그대로입니다. 못 찾으면 지운 것과 같습니다.　—　④ 고객 이름은 <b>가려서</b> 적습니다 (3번 · osMaskName). 서버는 <b>안 부릅니다</b> (7번) — 이미 손에 있는 표만 읽습니다.　—　점검은 <b>check-toolspage 열여덟 줄</b>. 되돌림 네 가지 모두 <b>문법은 성한 채로</b> 울렸습니다 (8번) — 예전처럼 서랍을 열면 · <b>서랍 길을 지우면</b> · 이름을 날것으로 적으면 · 찾아서 없을 때 아무 말도 안 하면.　—　⚠ 옷 입은 화면이 하나 늘어 check-skinmap 도 손봤습니다. tools 는 <b>메뉴에 없는 화면</b>입니다 — 이 화면이 메뉴 화면들을 늘어놓는 자리라, 저를 메뉴에 넣으면 <b>제가 저를 세웁니다.</b> 그래서 「띠에서만 여는 화면」 으로 두되, <b>go() 와 아래 띠 둘 다에 있는지</b> 확인합니다 — 둘 중 하나라도 없어지면 아무 데서도 못 엽니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.

@@ -353,7 +353,7 @@ const SEED = `
        · 폰에서 <b>선다</b> · 넓은 화면에서는 <b>안 선다</b>(두 곳이 되면 안 됨)
        · 누르면 <b>정말로 그 화면</b>으로 간다
        · <b>지금 화면</b>이 켜져 있다 (navMark 한 곳이 정한다)
-       · 「더보기」 가 <b>원래 있던 서랍</b>을 연다
+       · 「도구」 가 <b>화면</b>을 열고, ★ <b>서랍 길도 그대로</b> 살아 있다
        · 탭바가 <b>글을 안 덮는다</b>                                    */
   /* ══ <b>홈은 한 화면 한 가지</b> ═══════════════════════════════════
      매일 제일 먼저 봐야 할 것이 <b>첫 화면 안</b>에 있어야 합니다. 재 보니
@@ -435,8 +435,15 @@ const SEED = `
     const by = t => btns.filter(e => e.textContent.indexOf(t) >= 0)[0];
     if (by('고객')) { by('고객').click(); out.went = lastTab; out.onCli = btns.filter(e => e.classList.contains('on')).length; }
     /* ⚠ 2026-09-24 · 「더보기 ☰」 가 <b>「도구 🧰」</b> 로 바뀌었습니다(명세서 이름).
-       하는 일은 그대로 서랍 열기입니다. */
-    if (by('도구')) { by('도구').click(); out.drawer = document.getElementById('sidebar').classList.contains('open'); by('도구').click(); }
+       ⚠ 2026-09-26 · 그리고 이제 <b>서랍이 아니라 화면</b>을 엽니다 — 목업의
+          「도구」 는 밝은 화면입니다. ★ <b>서랍 길은 안 지웠습니다</b> — 그 화면
+          맨 아래 「☰ 메뉴 전체」 로 그대로 엽니다. 그래서 여기서는 둘을 같이
+          봅니다 — 화면이 서는가, 그리고 <b>길이 살아 있는가</b> (1번).      */
+    if (by('도구')) {
+      by('도구').click();
+      out.tools = lastTab;
+      out.moreBtn = !!document.querySelector('#dynPane .tlp-more');
+    }
     try { go('home'); } catch (e) {}
     out.pad = parseInt(getComputedStyle(document.getElementById('main')).paddingBottom, 10) || 0;
     return out;
@@ -448,7 +455,10 @@ const SEED = `
     '<b>지금 화면</b>이 켜져 있다 — ' + (TBR.onHome || []).join(','));
   is(TBR.went === 'clients' && TBR.onCli === 1,
     '누르면 <b>그 화면으로</b> 가고 켜진 칸도 따라온다 — ' + TBR.went);
-  is(TBR.drawer === true, '「도구」 가 <b>원래 있던 서랍</b>을 연다 — 새 메뉴를 또 만들지 않았다 (5번)');
+  is(TBR.tools === 'tools' && TBR.moreBtn === true,
+    '「도구」 가 <b>밝은 화면</b>을 열고 ★ <b>서랍 길도 그대로</b>다 (1번) — ' +
+    (TBR.tools || '(안 갔습니다)') +
+    (TBR.moreBtn ? ' · ☰ 메뉴 전체 있음' : ' ← ☰ 메뉴 전체가 없습니다'));
   is(TBR.pad >= TBR.h, '탭바가 <b>글을 안 덮는다</b> — 바닥 여백 ' + TBR.pad + 'px / 탭바 ' + TBR.h + 'px');
   /* 넓은 화면에서는 <b>안 선다</b> — 왼쪽 기둥이 그대로 있어 두 곳이 된다 */
   const wide = await b.newContext({ viewport: { width: 1280, height: 900 } });

@@ -147,17 +147,35 @@ const look = (p) => p.evaluate(() => {
       el.click(); await new Promise(r => setTimeout(r, 600));
       out[t] = lastTab + (lastTab === want ? '' : ' ← ' + want + ' 이어야 함');
     }
+    /* ⚠ 2026-09-26 · 이 칸은 <b>서랍을 여는 단추</b>였습니다. 목업의 「도구」 는
+       <b>밝은 화면</b>이라 화면으로 바뀌었고, 그래서 재는 법도 여기서 옮깁니다.
+       ★ <b>뜻은 그대로</b>입니다 — 원래 지키려던 「새 메뉴를 또 만들지
+         않았다(5번)」 는 check-toolspage 가 소스에서 잽니다. 여기서는 띠 자답게
+         <b>그 칸이 무엇을 여나</b>를 재되, 예전보다 <b>하나 더</b> 봅니다 —
+         화면이 서고, ★ <b>서랍 길도 그대로 살아 있나</b>. 길이 없어지면
+         지운 것과 같습니다 (1번).                                        */
     const d = by('도구');
-    if (d) { d.click(); await new Promise(r => setTimeout(r, 300));
-             out.drawer = document.getElementById('sidebar').classList.contains('open');
-             d.click(); }
+    if (d) {
+      d.click(); await new Promise(r => setTimeout(r, 700));
+      out.tools = lastTab;
+      const more = document.querySelector('#dynPane .tlp-more');
+      out.moreBtn = !!more;
+      if (more) { more.click(); await new Promise(r => setTimeout(r, 400));
+                  out.drawer = document.getElementById('sidebar').classList.contains('open');
+                  try { toggleNav(); } catch (e) {} }
+    }
     try { go('home'); } catch (e) {}
     return out;
   });
   ['오늘', '고객', '콘텐츠', '달력'].forEach(t => {
     is((went[t] || '').indexOf('←') < 0, '  「' + t + '」 를 누르면 <b>그 화면으로</b> 간다 — ' + went[t]);
   });
-  is(went.drawer === true, '  「도구」 는 <b>원래 있던 서랍</b>을 연다 — 새 메뉴를 또 만들지 않았다 (5번)');
+  is(went.tools === 'tools',
+     '  「도구」 를 누르면 <b>도구 화면</b>이 선다 — ' + (went.tools || '(안 갔습니다)'));
+  is(went.moreBtn === true && went.drawer === true,
+     '  ★ 그 화면에서 <b>서랍도 그대로 열린다</b> — 길을 지우지 않았다 (1번)' +
+     (went.moreBtn ? '' : ' ← ☰ 메뉴 전체 단추가 없습니다') +
+     ((went.moreBtn && went.drawer !== true) ? ' ← 눌러도 서랍이 안 열립니다' : ''));
 
   console.log('\n[3] <b>96개 화면 전부</b>에서 한 칸이 켜진다 — 그리고 꼭 하나만');
   const L = await A.p.evaluate(() => {
@@ -173,7 +191,11 @@ const look = (p) => p.evaluate(() => {
     const own = { home: 'home', clients: 'clients', fact_find: 'clients',
                   crm: 'clients', mycal: 'mycal', airep: 'home',
                   news_live: 'news_live', blog: 'news_live',
-                  settings: '__more', finance: '__more', pdel: '__more', org: '__more' };
+    /* ⚠ 2026-09-26 · 이 칸의 id 가 <b>__more → tools</b> 로 바뀌었습니다.
+       서랍을 여는 단추가 <b>화면</b>이 되면서 이름도 따라 바뀐 것이고,
+       <b>켜지는 칸은 그대로 🧰 도구</b>입니다 — pdel·org 를 실제로 열어
+       확인했습니다. 화면이 달라진 것이 아니라 <b>이름이 바뀐 것</b>입니다. */
+                  settings: 'tools', finance: 'tools', pdel: 'tools', org: 'tools' };
     const wrong = Object.keys(own).filter(k => tbOnOf(k) !== own[k])
                         .map(k => k + '→' + (tbOnOf(k) || '(없음)') + '(' + own[k] + ' 이어야)');
     return { n: ids.length, dark: dark, twin: twin, wrong: wrong };
