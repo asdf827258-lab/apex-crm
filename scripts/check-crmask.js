@@ -190,6 +190,53 @@ const SEED = `
      '  화면이 <b>뒤로 가 있으면 쉰다</b> — 안 보는 화면에서 돌지 않는다 (7번)');
   is(errs.length === 0, '  화면이 터지지 않았다' + (errs.length ? ' — ' + errs[0] : ''));
 
+  /* ══ [9] <b>홈 카드에서 오시면 안 묻는다</b> ═══════════════════════════
+     2026-09-26 에 설계사처럼 몰아 보다 잡았습니다. 홈 카드의 큰 단추
+     「🤝 만나러 갑니다」 를 누르면 DB 통합 CRM 으로 가는데, 거기서 이
+     덮개가 떠서 <b>한 번 더</b> 눌러야 했습니다. 이미 그 사람과 그 일을
+     고르신 뒤인데 또 묻는 것은 권유가 아니라 <b>한 번 누를 일을 두 번</b>
+     으로 만드는 것입니다.
+     ★ 그렇다고 <b>덮개를 지우면 안 됩니다</b> — 사장님 말씀 ⑦ 입니다.
+       서랍·메뉴로 들어가실 때는 그대로 물어야 합니다. 그것도 여기서 같이
+       잽니다. 한쪽만 재면 고치다 저쪽을 죽입니다 (1번).
+     ★ 자국이 <b>낡으면 다시 묻는지</b>도 잽니다 — 영영 안 묻게 되면
+       ⑦ 이 조용히 죽습니다.                                          */
+  console.log('\n[9] <b>홈 카드에서 오시면 안 묻는다</b> — 이미 고르셨다 (⑦ 은 그대로)');
+  /* ⓐ 홈 카드의 큰 단추가 가는 그 길로 — hmOpen 을 진짜로 부른다 */
+  await p.evaluate(() => {
+    try { localStorage.removeItem('apex_crm_when'); } catch (e) {}
+    crqClose(); go('home');
+    window.hmSteps = () => [{ key: 'k1', k: 'db', gox: 'crm', id: '' }];
+    CRQ.viaHome = 0;
+  });
+  await p.waitForTimeout(350);
+  await p.evaluate(() => hmOpen('k1'));
+  await p.waitForTimeout(450);
+  const H1 = await sheet();
+  is(H1.on === false, '  홈 카드에서 오면 <b>덮개가 안 뜬다</b>' + (H1.on ? (' ← 「' + H1.t.slice(0, 34) + '…」') : ''));
+  const kept8 = await p.evaluate(() => { try { return JSON.parse(localStorage.getItem('apex_crm_when') || '{}'); } catch (e) { return {}; } });
+  is(!!kept8.did, '  <b>「시작했다」 로 적힌다</b> — 그래야 나갈 때도 안 묻는다 · ' + JSON.stringify(kept8));
+  await p.evaluate(() => go('home')); await p.waitForTimeout(400);
+  is((await sheet()).on === false, '  <b>나갈 때도 안 묻는다</b> — 답이 한 곳에 있다 (5번)');
+
+  /* ⓑ 서랍·메뉴로 들어가면 <b>그대로 묻는다</b> — ⑦ 이 안 죽었나 */
+  await p.evaluate(() => { try { localStorage.removeItem('apex_crm_when'); } catch (e) {} crqClose(); CRQ.viaHome = 0; go('home'); });
+  await p.waitForTimeout(300);
+  await p.evaluate(() => go('crm')); await p.waitForTimeout(400);
+  const H2 = await sheet();
+  is(H2.on && /고객 관리부터 시작하시죠/.test(H2.t),
+     '  <b>서랍으로 들어가면 그대로 묻는다</b> — 사장님 말씀 ⑦ 이 안 죽었다');
+
+  /* ⓒ 자국이 <b>낡았으면</b> 다시 묻는다 — 영영 안 묻는 것이 아니다 */
+  await p.evaluate(() => { try { localStorage.removeItem('apex_crm_when'); } catch (e) {} crqClose(); go('home'); });
+  await p.waitForTimeout(300);
+  await p.evaluate(() => { CRQ.viaHome = Date.now() - 999999; go('crm'); });
+  await p.waitForTimeout(400);
+  const H3 = await sheet();
+  is(H3.on && /고객 관리부터 시작하시죠/.test(H3.t),
+     '  자국이 <b>낡았으면 다시 묻는다</b> — 한 번 홈에서 왔다고 영영 안 묻지 않는다');
+  await p.evaluate(() => { crqClose(); go('home'); }); await p.waitForTimeout(350);
+
   await ctx.close(); await br.close(); srv.close();
   console.log('\n' + (bad ? '✗ CRM 묻기 — 고칠 자리 ' + bad + '곳'
     : '✓ CRM — 들어가면 시작을 권하고, 나가면 언제 할지 묻고, 그 시각에 한 번 알려 드립니다'));
