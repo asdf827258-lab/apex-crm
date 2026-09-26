@@ -615,11 +615,34 @@ window.APEX_SB = window.APEX_SB || {
    디자인 시스템 — APEX YUN PRO v3 호환
 ════════════════════════════════════════════ */
 :root{
-  --primary:#1A56DB; --primary-hover:#1447B6; --primary-light:#EBF3FF; --primary-pale:#F0F5FF;
-  --ink-1:#0D1117; --ink-2:#1C2434; --ink-3:#374151; --ink-4:#6B7280; --ink-5:#9CA3AF;
-  --ink-6:#D1D5DB; --ink-7:#E9EAEC; --ink-8:#F3F4F6; --ink-9:#F9FAFB; --white:#FFFFFF;
-  --pos:#059669; --pos-l:#ECFDF5; --warn:#D97706; --warn-l:#FFFBEB; --neg:#DC2626; --neg-l:#FEF2F2;
-  --pur:#7C3AED; --pur-l:#F5F3FF; --teal:#0891B2; --teal-l:#ECFEFF;
+  /* ── 색표는 <b>한 벌</b>입니다 — 여기는 ui.css 의 목업 색을 <b>가리키기만</b> 합니다 ──
+     2026-09-26. 사장님 말씀 「색상부터 좀 변경해봐 <b>이거 아니잖아</b>」.
+     재 보니 앱이 <b>색표를 두 벌 겹쳐 입고</b> 있었습니다. 여기 옛 이름들이
+     <b>제 hex 를 따로</b> 들고 있어서, 목업 색표(--t-*)와 나란히 서면
+     회색이 두 가지, 남색이 두 가지로 보였습니다 —
+       --ink-1 #0D1117 ↔ --t-ink  #191F28     --ink-4 #6B7280 ↔ --t-sub  #6B7684
+       --ink-5 #9CA3AF ↔ --t-sub2 #8B95A1     --ink-7 #E9EAEC ↔ --t-line #E5E8EB
+     사람 눈에는 「어딘가 안 맞는다」 로만 보이고 어디인지는 안 보입니다.
+
+     ★ 고치는 법은 <b>값을 옮겨 적는 것이 아니라 가리키는 것</b>입니다 (5번).
+       옮겨 적으면 목업 색을 바꿀 때 <b>여기만 옛 색으로 남습니다.</b>
+     ★ .t-skin 이 이미 똑같은 다리를 놓아 두었는데, 그것은 <b>여섯 화면</b>
+       에만 걸려 있었습니다(98개 중). 그래서 다리를 <b>뿌리로 올립니다</b> —
+       옷을 안 입은 92개 화면과 <b>body 자신</b>도 같은 색을 씁니다.
+     ★ 이미 <b>아홉 가지는 값이 똑같았습니다</b>(--primary·--pos·--pos-l·
+       --warn·--neg·--neg-l·--pur·--pur-l·--primary-light). 애초에 목업에서
+       가져온 표였고 <b>회색만 흘러내린</b> 것입니다.
+     ★ --teal 은 목업에 <b>없는 색</b>이라 그대로 둡니다 — 없는 짝을
+       지어내지 않습니다 (1번).                                            */
+  --primary:var(--t-point); --primary-hover:var(--t-point-d);
+  --primary-light:var(--t-point-l); --primary-pale:var(--t-point-l);
+  --ink-1:var(--t-ink);     --ink-2:var(--t-ink);      --ink-3:var(--t-ink-2);
+  --ink-4:var(--t-sub);     --ink-5:var(--t-sub2);
+  --ink-6:var(--t-line-3);  --ink-7:var(--t-line);     --ink-8:var(--t-line-2);
+  --ink-9:var(--t-bg-3);    --white:var(--t-card);
+  --pos:var(--t-pos); --pos-l:var(--t-pos-l); --warn:var(--t-warn); --warn-l:var(--t-warn-l);
+  --neg:var(--t-neg); --neg-l:var(--t-neg-l); --pur:var(--t-pur); --pur-l:var(--t-pur-l);
+  --teal:#0891B2; --teal-l:#ECFEFF;   /* 목업에 짝이 없는 색 — 그대로 둡니다 */
   --sidebar-w:268px;
   --r-xs:6px; --r-sm:8px; --r:12px; --r-md:16px; --r-lg:20px;
   /* ── <b>글자 계단 일곱</b> ─────────────────────────────────────────
@@ -820,7 +843,11 @@ window.APEX_SB = window.APEX_SB || {
    스크롤은 그대로 되고, <b>당겨서 새로고침만</b> 막습니다.
    일부러 새로 읽고 싶으실 때는 화면마다 있는 「↻ 새로 읽기」 를 쓰십니다. */
 html{height:100%;-webkit-text-size-adjust:100%;overscroll-behavior-y:contain;}
-body{overscroll-behavior-y:contain;font-family:var(--font);background:var(--ink-9);color:var(--ink-1);font-size:var(--t6);line-height:1.55;letter-spacing:-.018em;word-break:keep-all;-webkit-font-smoothing:antialiased;height:100%;}
+/* ★ 판은 <b>--t-bg(#F2F4F6)</b> 입니다. --ink-9 는 <b>카드 안 상자</b> 색이라
+   판에 쓰면 #F7F9FA — 거의 흰색이 되어 <b>흰 카드가 판에서 안 떠 보입니다.</b>
+   목업은 회색 판 위에 흰 카드가 뜨는 것이 전부인데, 그 대비가 통째로
+   없었습니다. 재 보니 목업 판 #F2F4F6 · 앱 판 #F9FAFB 였습니다. */
+body{overscroll-behavior-y:contain;font-family:var(--font);background:var(--t-bg);color:var(--t-ink);font-size:var(--t6);line-height:1.55;letter-spacing:-.018em;word-break:keep-all;-webkit-font-smoothing:antialiased;height:100%;}
 button,input,select,textarea{font-family:var(--font);outline:none;}
 a{color:inherit;text-decoration:none;}
 
@@ -1019,7 +1046,11 @@ a{color:inherit;text-decoration:none;}
 .key-pill.ok .dot{background:#34D399;}
 
 /* ── 메인 ── */
-.main{height:100vh;overflow-y:auto;overscroll-behavior-y:contain;background:var(--ink-9);scrollbar-width:thin;scrollbar-color:var(--ink-6) transparent;}
+/* ★ <b>사장님이 실제로 보시는 판</b>입니다. --ink-9 는 「카드 안 상자」 색
+   (#F7F9FA)이라 여기 쓰면 거의 흰색이 되고, 그러면 <b>흰 카드가 판에서
+   안 떠 보입니다.</b> 목업은 회색 판(#F2F4F6) 위에 흰 카드가 뜨는 것이
+   전부인데 그 대비가 통째로 없었습니다 (2026-09-26 · 「이거 아니잖아」). */
+.main{height:100vh;overflow-y:auto;overscroll-behavior-y:contain;background:var(--t-bg);scrollbar-width:thin;scrollbar-color:var(--ink-6) transparent;}
 .main::-webkit-scrollbar{width:6px;}
 .main::-webkit-scrollbar-thumb{background:var(--ink-6);border-radius:var(--r-pill);}
 .tab-pane{display:none;padding:22px 26px 72px;max-width:1080px;}
@@ -18305,8 +18336,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-29 23:30';
-var APP_BUILD_NOTE="🙋 <b>한 번에 한 가지만 여쭙습니다.</b>　—　사장님 말씀 「고객의 모든걸 컨트롤 할수 있도록 <b>질문을 띄우고</b> 쉽게해 · <b>고객 365일 내용이 읽어내서</b> 불러와야헤」, 그리고 「<b>한 번에 한 가지씩</b>」.　—　고객 365일에 담을 칸은 여덟인데 화면을 열면 스물 몇 개가 한꺼번에 펼쳐져, 정작 <b>무엇부터 적어야 하는지</b>가 안 보였습니다. 그래서 대부분 빈 채로 남았습니다.　—　① 고객 한 분을 여시면 맨 위에 <b>「아는 것 N / 8가지」</b> 와 <b>물음 하나</b>가 섭니다. 급한 것부터입니다 — 다음 할 일 → 접촉 → 생일 → 팩트파인딩 → 가족 → 계약일 → 소개 → 8통장.　—　② 다음 할 일과 접촉은 <b>한 번 누르면</b> 답이 됩니다(내일 전화 · 이번 주 안에 만남 · 오늘 전화…). 나머지는 <b>이미 있는 칸으로 데려가</b> 짚어 줍니다 — 칸을 또 만들지 않습니다 (5번).　—　③ ★ <b>저장 코드를 새로 안 짰습니다</b> (사장님 말씀). 쓰는 자리는 <b>cmSave 하나</b>뿐이고, 이 묶음에는 서버를 직접 부르는 줄이 <b>한 줄도 없습니다</b>. 점검이 그것을 봅니다.　—　④ ★ <b>「안 적혀 있다」 와 「아직 안 읽었다」 를 가릅니다</b> (1번). 못 읽었으면 <b>수를 안 적습니다</b> — 「0/8」 이라고 적으면 다 적어 두신 분께 <b>다 비었다</b>고 거짓말을 하는 것입니다.　—　⑤ 여쭐 말을 따로 표로 만들었다가 <b>check-twins 에게 걸렸습니다</b> — 열쇠가 같은 표가 두 벌이면 칸을 하나 더할 때 여쭙는 것을 빠뜨립니다. 그래서 <b>CM_FIELDS 넷째 칸</b>에 같이 적었습니다 (5번). 칸 표를 늘렸으니 <b>저장이 안 깨졌는지</b>(cmBlank·cmBody 열두 칸·잘리는 줄 수)를 점검이 함께 봅니다.　—　⑥ 카드 안에서 칩이 <b>카드와 같은 흰색</b>이라 글자만 남았습니다 — 누를 수 있는 줄 몰랐습니다. ui.css 한 곳에서 칩 바탕 토큰(--t-bg-2)을 씁니다.　—　아래 칸들은 <b>하나도 안 없어졌습니다</b> (6번).　—　점검 — check-cqa.js 서른두 줄. 되돌림 <b>열 가지</b> 모두 문법은 성한 채로 울렸습니다 (8번).";
+var APP_BUILD='2026-09-30 01:00';
+var APP_BUILD_NOTE="🎨 <b>색표를 한 벌로 했습니다.</b>　—　사장님 말씀 「색상부터 좀 변경해봐 <b>이거 아니잖아</b>」.　—　재 보니 앱이 <b>색표를 두 벌 겹쳐 입고</b> 있었습니다. 목업의 --t-* 와, 그 전부터 있던 --ink-*·--primary·--pos 가 <b>저마다 제 hex</b> 를 들고 있었습니다 — --ink-1 #0D1117 ↔ --t-ink #191F28 · --ink-4 #6B7280 ↔ --t-sub #6B7684 · --ink-5 #9CA3AF ↔ --t-sub2 #8B95A1 · --ink-7 #E9EAEC ↔ --t-line #E5E8EB. 사람 눈에는 「어딘가 안 맞는다」 로만 보이고 어디인지는 안 보입니다.　—　① 옛 이름 <b>스무 가지</b>가 이제 목업 색을 <b>가리킵니다</b>. 값을 옮겨 적지 않았습니다 — 옮겨 적으면 목업 색을 바꿀 때 거기만 옛 색으로 남습니다 (5번). 이미 <b>아홉 가지는 값이 똑같았습니다</b>(--primary·--pos·--warn·--neg·--pur…) — 애초에 목업에서 온 표였고 <b>회색만 흘러내린</b> 것입니다.　—　② ★ <b>판이 거의 흰색(#F9FAFB)이었습니다.</b> 목업은 회색 판(#F2F4F6) 위에 흰 카드가 뜨는 것이 전부인데, 그 대비가 통째로 없어서 <b>카드가 판에서 안 떠 보였습니다.</b> .main 과 body 를 목업 판 색으로 고쳤습니다.　—　③ 다리는 <b>이미 놓여 있었는데(.t-skin) 여섯 화면에만</b> 걸려 있었습니다(98개 중). 다리를 <b>뿌리로 올려</b> 옷을 안 입은 92개 화면과 body 자신도 같은 색을 쓰게 했습니다.　—　④ 판이 회색이 되자 <b>상자 하나가 묻혔습니다</b> — 홈 아래 유의문이 --ink-8(#F1F3F5)이라 판(#F2F4F6)과 차이 3 이었습니다. --t-bg-3 으로 올렸습니다.　—　⑤ 대비 4.5 아래가 186 → <b>189</b> 로 셋 늘었습니다. 카드 없이 <b>판에 바로 놓인</b> 글입니다 — <b>목업이 같은 자리에 쓰는 바로 그 값</b>(#6B7684 · 4.19)이라 색을 지어 덮지 않고 수를 사실대로 적어 두었습니다. 진짜 고칠 길은 그 글을 카드 안으로 넣는 것이고, 그것은 화면 92개가 옷을 못 입은 것과 같은 일입니다(대장 X02).　—　--teal 은 목업에 짝이 없어 <b>그대로 두었습니다</b> — 없는 짝을 지어내지 않습니다 (1번).　—　점검 — check-onepal.js. 되돌림 셋 모두 문법은 성한 채로 울렸습니다 (8번).　—　⑥ CI 가 빨간불을 켜서 <b>두 가지를 더 고쳤습니다.</b> check-hmexact 는 「뿌리 잉크 표를 <b>안 건드렸다</b>」 를 재고 있었습니다 — 옷을 여섯 화면에만 입히던 때의 자입니다. 없애지 않고 <b>옮겼습니다</b> — 이제 「목업 색과 같아졌나」 를 재고, 「무엇이 깨졌나」 는 check-onepal 이 화면을 돌며 봅니다. 그리고 제 새 점검이 <b>글자 수</b>로 세는 바람에 제 컨테이너 189 · CI 194 로 갈렸습니다 — 공지 줄이 몇 개 떠 있느냐 같은 자료 양에 따라 움직이는 자였습니다. <b>색 짝</b>(글자색·바탕색)으로 세도록 고치고, 짝을 <b>이름으로</b> 적어 두었습니다 — 새 짝이 생기면 그 짝이 화면에 찍힙니다.　—　⑦ 그러다 <b>제 자가 헛것을 잡는 것</b>도 찾았습니다. 홈 공지 머리글은 짙은 남색 <b>그라데이션</b> 위의 흰 글씨(잘 보입니다)인데, 제 자가 그라데이션을 못 읽고 그 뒤의 흰 카드를 바탕으로 짚어 「흰 글씨에 흰 바탕」 이라고 할 뻔했습니다. <b>모르면 모른다고 하고 건너뜁니다</b> (1번 · 8번).";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -28757,7 +28788,7 @@ function renderHome(){
     (OS.profile?hmMovedHtml():'')+
     /* ⑥ 공지사항도 <b>위 소식 한 자리</b>로 갔습니다 — 맨 아래에 두면
        있는 날과 없는 날의 홈 모양이 달라집니다. 칸 이름은 그대로입니다. */
-    '<div class="notice" style="margin-top:16px;color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">모든 AI 출력은 <b>약관·심사가 최종</b>이며, 고위험 제안은 관리자 승인 후 고객에게 안내합니다. 게시·발송 전 준법감시 확인을 권장합니다.</div>'+
+    '<div class="notice" style="margin-top:16px;color:var(--ink-4);background:var(--t-bg-3);border-color:var(--ink-7)">모든 AI 출력은 <b>약관·심사가 최종</b>이며, 고위험 제안은 관리자 승인 후 고객에게 안내합니다. 게시·발송 전 준법감시 확인을 권장합니다.</div>'+
   '</div>';
 }
 /* wide — <b>넓은 화면에서 폭을 다 쓰는 화면</b>인가. 안 주면 지금까지와
