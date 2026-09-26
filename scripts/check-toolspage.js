@@ -90,6 +90,36 @@ const SEED = () => {
   is(S.줄수 >= 20, '  화면이 <b>여럿 선다</b> — ' + S.줄수 + '줄 · 묶음 ' + S.묶음수 + '칸');
   is(S.지금 && S.칩 > 0, '  <b>「지금 ○○님께」</b> 가 그 단계 도구를 먼저 내민다 — 칩 ' + S.칩 + '개');
   is(!/홍길동/.test(S.t), '  <b>고객 이름을 가린다</b> (3번) — 날이름이 안 보인다');
+  /* ★ <b>왼쪽 여백</b> — 2026-09-26 에 이 화면만 0px 이라 제목이 화면
+     가장자리에 붙어 있었습니다. 몰아 보다 눈으로 잡았고, 그때까지 아무
+     점검도 이것을 안 봤습니다.
+     ★ 16 이라는 수를 <b>여기 안 적습니다</b> — 목업 여백이 바뀌면 그 수가
+       거짓말이 됩니다. 대신 <b>다른 화면과 견줍니다.</b> 같이 움직이면
+       초록, 이 화면만 어긋나면 빨간불입니다.                          */
+  const G = await p.evaluate(async () => {
+    const big = () => {
+      const el = document.getElementById('dynPane');
+      const x = [].slice.call(el.querySelectorAll('*'))
+        .filter(e => e.offsetParent && e.innerText && e.innerText.trim().length > 2 &&
+                     parseFloat(getComputedStyle(e).fontSize) >= 20)[0];
+      return x ? Math.round(x.getBoundingClientRect().left) : null;
+    };
+    const r = { tools: big(), 남: {} };
+    /* 화면마다 큰 글씨가 <b>늘 있는 것은 아닙니다</b> — 못 잰 화면은
+       건너뜁니다. 억지로 세면 헛것을 잡습니다 (8번).                  */
+    for (const t of ['me', 'mycal', 'news_live', 'clients']) {
+      go(t); await new Promise(x => setTimeout(x, 800));
+      const v = big(); if (v !== null) r.남[t] = v;
+    }
+    go('tools'); await new Promise(x => setTimeout(x, 900));
+    return r;
+  });
+  const 남키 = Object.keys(G.남), 어긋 = 남키.filter(k => G.남[k] !== G.tools);
+  is(G.tools !== null && 남키.length > 0 && 어긋.length === 0,
+     '  ★ 제목이 <b>다른 화면과 같은 자리</b>에서 시작한다 (여백을 따로 안 만들었다) — ' +
+     '도구 ' + G.tools + 'px · ' + (남키.map(k => k + ' ' + G.남[k] + 'px').join(' · ') || '(잰 화면 없음)') +
+     (남키.length === 0 ? ' ← 견줄 화면을 하나도 못 쟀습니다'
+      : (어긋.length ? ' ← 이 화면만 어긋납니다' : '')));
 
   console.log('\n[3] <b>아무것도 안 없어졌다</b> — 서랍으로 가는 길이 남아 있다 (1번)');
   const M = await p.evaluate(() => {
