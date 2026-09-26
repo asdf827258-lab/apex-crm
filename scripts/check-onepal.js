@@ -50,6 +50,10 @@ const srv = http.createServer((q, s) => {
      고친 것이 없는데도 빨간불이 켜집니다. <b>색이 문제이니 색 짝으로</b>
      셉니다 (8번).                                                        */
 const BASE = { 묻힌상자: 0, 거의같은색: 172 };
+/* ⚠ 173 → 172 로 내려온 길을 적어 둡니다. --t-warn-d 라는 <b>이름을 만들자마자</b>
+   이 자가 <b>#8A5A0B</b>(차이 7)를 찾아냈습니다 — 앱 어딘가에 있던 또 하나의
+   진한 호박색입니다. 이름이 없을 때는 아무 토큰과도 안 가까워서 안 보였습니다.
+   기준선을 올리지 않고 <b>그 색도 토큰으로 바꿨습니다.</b>                */
 /* ── 대비가 모자란 <b>색 짝</b> — 이름으로 적어 둡니다 ──────────────
    ★ <b>수로 세지 않습니다.</b> 처음에 수로 셌더니 제 컨테이너 189 · CI 194
      로 갈렸습니다 — 공지 줄이 몇 개 떠 있느냐 같은 <b>자료 양</b>에 따라
@@ -255,11 +259,21 @@ const SCAN = ([tab, page]) => {
   console.log('\n[5] ★ 손으로 박아 둔 <b>「토큰과 거의 같은 색」</b>이 늘지 않았다');
   const TOK = ['#191F28','#6B7684','#8B95A1','#E5E8EB','#F2F4F6','#FFFFFF','#1A56DB','#EBF3FF',
                '#123A96','#059669','#D97706','#DC2626','#F1F3F5','#F5F7F9','#F7F9FA','#B0B8C1',
-               '#D7DCE2','#ECFDF5','#FFF7ED','#FEF2F2','#7C3AED','#F5F3FF','#4E5968'];
+               '#D7DCE2','#ECFDF5','#FFF7ED','#FEF2F2','#7C3AED','#F5F3FF','#4E5968',
+               '#8A5A12','#065F46'];                    /* 진한 짝 — 목업 .note · 진한 초록 */
+  /* ★ <b>주석과 판 안내글은 빼고 셉니다.</b> 처음에는 파일 전체에서 hex 를
+     찾았는데, 그러면 <b>색을 지웠다고 적은 글</b>까지 세어집니다 — 실제로
+     이번 판 안내에 「지운 색 #B45309 …」 라고 적었더니 수가 도로 늘어
+     빨간불이 켜졌습니다. <b>색을 쓰는 것과 색을 글로 적는 것은 다릅니다</b> (8번).
+     ⚠ 이것 때문에 그동안의 기준선(173)도 <b>부풀어 있었습니다</b> — 이 파일은
+       주석이 많아 거기 적힌 색이 다 세어지고 있었습니다.                 */
+  const CODE = SRC
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')                 /* 주석 */
+    .replace(/var APP_BUILD_NOTE=[\s\S]*?;\n/, ' ');    /* 판 안내글 */
   const toRgb = h => { h = h.replace('#',''); if (h.length === 3) h = h.split('').map(c=>c+c).join('');
     return [0,2,4].map(i => parseInt(h.slice(i,i+2),16)); };
   const seen = {};
-  (SRC.match(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g) || []).forEach(h => {
+  (CODE.match(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g) || []).forEach(h => {
     h = h.toUpperCase(); seen[h] = (seen[h]||0) + 1;
   });
   const near = Object.keys(seen).filter(h => TOK.indexOf(h) < 0 && h !== '#FFF' && h !== '#000' &&
@@ -285,7 +299,8 @@ const SCAN = ([tab, page]) => {
   const A1 = SRC.indexOf('document.head.appendChild(st);', A0);
   const ALM = (A0 >= 0 && A1 > A0) ? SRC.slice(A0, A1) : '';
   is(ALM.length > 1500, '  알람 옷 덩어리를 찾았다 — ' + ALM.length + '자');
-  const 박은색 = ALM.match(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g) || [];
+  const 박은색 = ALM.replace(/\/\*[\s\S]*?\*\//g, ' ')
+                    .match(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g) || [];
   is(박은색.length === 0,
      '  ★ 알람 옷에 <b>손으로 박은 색이 한 가지도 없다</b>' +
      (박은색.length ? ('\n      ✗ ' + [...new Set(박은색)].join(' · ') +
