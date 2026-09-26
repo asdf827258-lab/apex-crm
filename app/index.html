@@ -13774,6 +13774,14 @@ function navMark(tab){
   /* 아래 탭바도 <b>여기서</b> 같이 칠한다 — 「지금 어느 화면인가」 를
      두 곳이 따로 세면 한쪽만 늙는다 (5번) */
   try{ tbPaint(tab); }catch(e){}
+  /* 기둥 맨 위 「오늘 하루」 도 <b>같은 자리에서</b> 칠한다. 그리는 쪽에서
+     한 번 칠하고 말면, 화면을 옮겨도 <b>처음 켜진 칸이 그대로</b> 남는다. */
+  try{ navMainMark(tab); }catch(e){}
+}
+function navMainMark(tab){
+  var el=document.getElementById('navMain'); if(!el)return;
+  var L=el.querySelectorAll('.t-nav'),i;
+  for(i=0;i<L.length;i++)L[i].classList.toggle('on',L[i].getAttribute('data-go')===tab);
 }
 
 /* ══ <b>아래 탭바</b> — 엄지가 늘 닿는 자리 ════════════════════════════
@@ -14400,8 +14408,61 @@ function tnDragWire(){
      #navBody — 즐겨찾기·최근·갈래 목록. 찾을 때마다 다시 그린다.
    찾기 칸이 살아 있으니 조합이 안 끊기고 커서도 안 튑니다.
    거기에 더해 <b>조합 중에는 아예 찾지 않습니다</b>(compositionstart/end). */
+/* ══ 🧭 <b>기둥 맨 위</b> — 목업의 「오늘 하루」 (navMain*) ═══════════
+   ⚠ 2026-09-26 · 컴퓨터로 열어 보니 기둥에 <b>메뉴가 하나도 안 보였습니다.</b>
+     큰 카드 넷(내 폰에 설치 · 사용가이드 · 전체 지도 · 무엇을 할지)이 위를
+     다 먹어 메뉴 칸이 <b>화면 밖으로</b> 밀렸습니다 — 메뉴를 보려고 굴려야
+     했습니다. 목업(docs/토스판_사본.html)은 기둥 맨 위가 「오늘 하루」 입니다.
+   ★ <b>아무것도 안 지웠습니다</b> (1번). 큰 카드 넷은 <b>이 아래로</b>
+     내렸을 뿐입니다. 못 찾으면 지운 것과 같습니다.
+   ★ <b>표도 옷도 새로 안 만들었습니다</b> (5번) —
+       칸은 아래 띠가 쓰는 <b>TB</b> 를 그대로 읽습니다. 화면을 하나 늘릴 때
+       한쪽만 고쳐지는 일이 없습니다.
+       옷은 ui.css 의 <b>.t-nav · .t-glab</b> — 목업에서 옮겨 두고 여태
+       아무 데서도 안 쓰던 그 클래스입니다.
+   ★ <b>수는 아는 것만</b> 적습니다 (1번). 못 세면 그 자리를 비웁니다 —
+     0 을 적으면 「없다」 는 뜻이 되어 버립니다.
+   ★ 「지금 어느 화면인가」 는 <b>currentTab() 한 곳</b>에만 묻습니다 (5번). */
+function navMainN(id){
+  try{
+    if(id==='home'&&typeof hmSteps==='function')return hmSteps().length||'';
+    if(id==='clients'&&typeof ccMyList==='function')return ccMyList().length||'';
+  }catch(e){}
+  return '';
+}
+function navMainRow(id,e,t,cur){
+  var n=navMainN(id);
+  return '<button type="button" class="t-nav'+((cur&&cur===id)?' on':'')+'" '+
+    'data-go="'+osEsc(id)+'" onclick="go(\''+id+'\')"><span class="e">'+e+'</span>'+osEsc(t)+
+    (n!==''?('<span class="c">'+n+'</span>'):'')+'</button>';
+}
+function navMainPaint(){
+  var el=document.getElementById('navMain'); if(!el)return;
+  try{ el.innerHTML=navMainHtml(); }catch(e){}
+}
+function navMainHtml(){
+  var cur='',i,x,h='<div class="t-glab">오늘 하루</div>';
+  try{ if(typeof currentTab==='function')cur=currentTab(); }catch(e){}
+  for(i=0;i<TB.length;i++){
+    x=TB[i];
+    if(typeof tbCan==='function'&&!tbCan(x.id))continue;   /* 등급에 막힌 칸은 안 세운다 */
+    h+=navMainRow(x.id,x.e,x.t,cur);
+  }
+  /* 「나」 는 TB 에 없습니다 — 아래 띠 다섯째가 <b>달력</b>이기 때문입니다
+     (사장님 말씀 「달력은 유지해」). 기둥은 자리가 넉넉해 둘 다 세웁니다. */
+  h+=navMainRow('me','🙋','나',cur);
+  h+='<div class="t-glab">넣기</div>'+
+     '<button type="button" class="t-nav" onclick="hdbNew()">'+
+       '<span class="e">＋</span>고객 넣기</button>';
+  return h;
+}
+/* ★ <b>자리만</b> 잡아 둡니다. navFixHtml 은 <b>첫 그리기 때 한 번만</b>
+   불리는데, 메뉴 칸은 <b>등급·지금 화면·건수</b>가 바뀌면 따라가야 합니다.
+   내용은 navMainPaint() 가 매번 채웁니다 — 안 그러면 로그인이 늦게 끝났을 때
+   기둥이 <b>낡은 채로</b> 남고, 지금 화면 강조도 안 따라옵니다.        */
 function navFixHtml(){
   return '<div id="osNoticeNav"></div>'+
+    '<div id="navMain"></div>'+
     '<button type="button" class="sb-guide inst" onclick="go(\'phone_app\')">'+
       '<span class="sbg-ic">📲</span><span class="sbg-t">내 폰에 설치</span>'+
       '<span class="sbg-go">홈 화면에 앱처럼</span></button>'+
@@ -17468,6 +17529,7 @@ function renderNav(){
   /* 지금 열려 있는 화면이 든 묶음은 <b>펴 둔다</b> — 내 자리가 접혀 있으면
      길을 잃는다. 「지금 어느 화면인가」 는 currentTab() 한 곳에서만 묻는다 (5번). */
   try{ if(typeof currentTab==='function')navGrpReveal(currentTab()); }catch(e){}
+  navMainPaint();
   navPaintBody();
   /* 가로 띠도 <b>같은 자리에서</b> 다시 그린다 — 따로 그리면 등급이
      바뀌었을 때 한쪽만 갱신돼 없는 칸이 남는다 (CLAUDE.md 5번) */
@@ -18219,8 +18281,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-29 20:40';
-var APP_BUILD_NOTE="🗂 <b>서랍(☰ 메뉴)이 밝아졌습니다.</b>　—　위 띠도 아래 띠도 도구 화면도 이미 밝은데 <b>서랍만 검게</b> 남아 있었습니다. 도구 화면에서 「☰ 메뉴 전체」 를 누르면 밝은 화면에서 갑자기 검은 서랍이 떴습니다.　—　① ★ <b>색을 새로 만들지 않았습니다.</b> ui.css 의 --t- 색표를 그대로 받습니다(사장님 말씀 — 토큰은 한 곳에만).　—　② ★ <b>갈래색도 새로 안 정했습니다.</b> navRamp() 가 이미 밝은 바탕용 글씨 <b>--gk</b> 를 쥐고 있었습니다 — 2026-09-25 에 위 띠를 밝히며 더한 칸이고, 흰 바탕에서 명암비 5.8 입니다. 서랍도 <b>같은 한 곳에서</b> 받습니다. 그래서 「띠에서 본 색 = 서랍에서 본 그 갈래 색」이 그대로입니다.　—　③ 글자가 <b>더 잘 읽힙니다</b>. 명암비 4.5 아래가 검을 때 <b>7군데</b>였는데 지금은 <b>0</b> 입니다. 「로그인 / 계정」 은 흰 글씨였는데 서랍 바닥에 서는 칸이라 그대로 두면 <b>안 보일 뻔</b>했습니다.　—　④ <b>갈래 한 줄기는 왼쪽 색 띠</b>가 말합니다. 흰 바탕에서는 옅은 바탕색끼리 거의 안 갈려, 띠가 그 몫을 받고 폭도 넓혔습니다(1.0~0.20).　—　점검 — check-nav 의 대비 자 셋을 <b>밝은 바탕 전제로 옮겼습니다</b>(지운 것이 아닙니다). 되돌림 넷 모두 문법은 성한 채로 울렸습니다 — 도로 어둡게 · 글씨를 밝은 색으로 · --gk 를 안 넘기면 · 칸 테두리를 지우면.";
+var APP_BUILD='2026-09-29 21:00';
+var APP_BUILD_NOTE="🧭 <b>왼쪽 기둥 맨 위에 메뉴가 섭니다.</b>　—　사장님 말씀 「목업하고 너무 다른데」 를 <b>컴퓨터 화면으로</b> 나란히 놓고 재었습니다. 왼쪽 기둥에 <b>메뉴가 하나도 안 보였습니다</b> — 큰 카드 넷(내 폰에 설치 · 사용가이드 · 전체 지도 · 무엇을 할지)이 위를 다 먹어 메뉴 칸이 화면 밖으로 밀려 있었습니다. 메뉴를 보려고 굴려야 했습니다.　—　① 이제 맨 위가 <b>「오늘 하루」</b> 입니다 — 🏠오늘 · 🗂고객 · 🧰도구 · 📰콘텐츠 · 📅달력 · 🙋나, 그리고 「넣기 — ＋ 고객 넣기」. 목업 그대로입니다.　—　② ★ <b>아무것도 안 지웠습니다</b> (1번). 큰 카드 넷도 찾기 칸도 <b>이 아래에</b> 그대로 있습니다.　—　③ ★ <b>표도 옷도 새로 안 만들었습니다</b> (5번). 칸은 아래 띠가 쓰는 <b>TB</b> 를 그대로 읽고, 옷은 ui.css 의 <b>.t-nav · .t-glab</b> — 목업에서 옮겨 두고 여태 아무 데서도 안 쓰던 그 클래스입니다.　—　④ ★ 「지금 어느 화면인가」 는 <b>navMark 한 곳</b>이 칠합니다. 화면을 옮기면 기둥 강조도 따라옵니다. 그리는 쪽에서 한 번 칠하고 말면 처음 켜진 칸이 그대로 남습니다.　—　⑤ ★ <b>수는 아는 것만</b> 적습니다 (1번). 오늘 몇 개 · 고객 몇 명은 세어 적고, 못 세면 그 자리를 <b>비웁니다</b> — 0 을 적으면 「없다」 는 뜻이 됩니다.　—　점검 — check-navmain.js 스무 줄. 되돌림 넷 모두 문법은 성한 채로 울렸습니다 (8번).";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
