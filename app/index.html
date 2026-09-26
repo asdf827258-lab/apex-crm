@@ -46,15 +46,15 @@ window.APEX_SB = window.APEX_SB || {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ── APEX OS 로그인 셸 (Phase 1) ── */
-.os-authpill{display:flex;align-items:center;gap:8px;font-size:var(--t6);padding:8px 10px;border-radius:var(--r-sm);background:rgba(255,255,255,.04);color:rgba(255,255,255,.6);cursor:pointer;transition:all .18s;margin-bottom:8px;}
-.os-authpill:hover{background:rgba(255,255,255,.08);color:#fff;}
+.os-authpill{display:flex;align-items:center;gap:8px;font-size:var(--t6);padding:8px 10px;border-radius:var(--r-sm);background:var(--t-bg-2);color:var(--t-ink);cursor:pointer;transition:all .18s;margin-bottom:8px;}
+.os-authpill:hover{background:var(--t-bg);color:var(--t-ink);}
 .os-authpill .dot{width:7px;height:7px;border-radius:50%;background:#9CA3AF;flex-shrink:0;}
 .os-authpill .pw{margin-left:auto;flex:none;font-size:var(--t6);font-weight:800;letter-spacing:-.01em;
-  padding:2px 7px;border-radius:var(--r-pill);background:rgba(255,255,255,.10);color:rgba(255,255,255,.72);white-space:nowrap;}
-.os-authpill:hover .pw{background:rgba(255,255,255,.20);color:#fff;}
+  padding:2px 7px;border-radius:var(--r-pill);background:var(--t-card);color:var(--t-ink-2);white-space:nowrap;}
+.os-authpill:hover .pw{background:var(--t-card);color:var(--t-ink);}
 .os-authpill.on .dot{background:#34D399;box-shadow:0 0 0 3px rgba(52,211,153,.18);}
 .os-authpill .who{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.os-authpill .role{font-size:var(--t6);font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.04em;}
+.os-authpill .role{font-size:var(--t6);font-weight:700;color:var(--t-sub);letter-spacing:.04em;}
 .os-ovl{position:fixed;inset:0;background:rgba(13,17,23,.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px;}
 .os-ovl.on{display:flex;}
 .os-modal{background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow-md);width:100%;max-width:384px;overflow:hidden;position:relative;}
@@ -826,23 +826,33 @@ a{color:inherit;text-decoration:none;}
 
 .app{display:grid;grid-template-columns:var(--sidebar-w) 1fr;height:100vh;overflow:hidden;}
 
-/* ── 사이드바 ── */
-.sidebar{background:var(--ink-2);display:flex;flex-direction:column;height:100vh;overflow:hidden;border-right:1px solid rgba(255,255,255,.04);box-shadow:var(--shadow-md);}
-.sb-top{position:relative;padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;}
+/* ── 사이드바 ────────────────────────────────────────────────────
+   ⚠ 2026-09-26 · <b>밝은 서랍</b>. 예전에는 --ink-2(거의 검정)였습니다.
+   목업은 옆기둥이 <b>흰색</b>이고, 위 띠도 아래 띠도 도구 화면도 이미
+   밝아져 <b>여기만 검게</b> 남아 있었습니다. 도구 화면에서 「☰ 메뉴 전체」
+   를 누르면 밝은 화면에서 갑자기 검은 서랍이 떴습니다.
+   ★ <b>색을 새로 만들지 않았습니다</b> (사장님 말씀 — 토큰은 한 곳에만).
+     ui.css 의 --t- 색표를 그대로 받아 씁니다.
+   ★ 묶음 갈래색도 새로 안 정했습니다 — navRamp() 가 이미 <b>밝은 바탕용
+     글씨 --gk</b> 를 갖고 있습니다(2026-09-25 에 위 띠를 밝히며 더한 칸,
+     흰 바탕에서 명암비 5.8). 그것을 그대로 받습니다. 그래서 「띠에서 본
+     색 = 서랍에서 본 그 갈래 색」이 그대로 유지됩니다 (5번).            */
+.sidebar{background:var(--t-card);display:flex;flex-direction:column;height:100vh;overflow:hidden;border-right:1px solid var(--t-line);box-shadow:var(--shadow-md);}
+.sb-top{position:relative;padding:20px 18px 14px;border-bottom:1px solid var(--t-line-2);flex-shrink:0;}
 /* ── 메뉴 접기 ────────────────────────────────────────────────────
    메뉴는 <b>늘 서 있는 것이 원칙</b>입니다. 예전에 숨겨 뒀더니 있는 화면을
    못 찾았습니다. 다만 자료를 넓게 볼 때가 있어 <b>접을 수 있게만</b> 둡니다.
    접어도 위 띠의 ☰ 가 되살아나므로 <b>돌아올 길이 늘 보입니다.</b> */
 .nav-fold-btn{position:absolute;right:10px;top:14px;width:26px;height:26px;border:0;cursor:pointer;
-  background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);border-radius:var(--r-sm);
+  background:var(--t-bg);color:var(--t-sub);border-radius:var(--r-sm);
   font-size:var(--t6);line-height:1;font-family:inherit;}
-.nav-fold-btn:hover{background:rgba(255,255,255,.16);color:#fff;}
-.sb-logo{font-size:var(--t4);font-weight:800;letter-spacing:-.05em;color:var(--white);}
-.sb-logo span{color:#60A5FA;}
-.sb-sub{font-size:var(--t6);color:rgba(255,255,255,.35);margin-top:3px;letter-spacing:.01em;}
-.sb-scroll{flex:1;overflow-y:auto;padding:12px 12px 16px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.08) transparent;}
+.nav-fold-btn:hover{background:var(--t-line);color:var(--t-ink);}
+.sb-logo{font-size:var(--t4);font-weight:800;letter-spacing:-.05em;color:var(--t-ink);}
+.sb-logo span{color:var(--t-point);}
+.sb-sub{font-size:var(--t6);color:var(--t-sub);margin-top:3px;letter-spacing:.01em;}
+.sb-scroll{flex:1;overflow-y:auto;padding:12px 12px 16px;scrollbar-width:thin;scrollbar-color:var(--t-line-3) transparent;}
 .sb-scroll::-webkit-scrollbar{width:3px;}
-.sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:var(--r-pill);}
+.sb-scroll::-webkit-scrollbar-thumb{background:var(--t-line-3);border-radius:var(--r-pill);}
 /* 메뉴 카테고리 — 화면이 예순 개가 넘는다. 크게 묶어 접어 두고,
    색을 입혀 접힌 채로도 무엇인지 한눈에 보이게 한다.
 
@@ -850,8 +860,15 @@ a{color:inherit;text-decoration:none;}
    한 줄기로 흐른다 — 보라에서 남색·청록·초록을 지나 금빛까지.
    renderNav 가 칸마다 넣어 준다:
      --gc 바탕색  --ge 왼쪽 띠 색  --gt 글씨색  --ga 짙기  --gb 띠 짙기 */
+ /* ⚠ 2026-09-26 · 밝은 서랍이 되면서 <b>짙기를 내렸습니다</b>. 예전 값
+    (.32 / 1.34)은 검은 바탕 위에서 칸을 드러내려던 것이라, 흰 바탕에서는
+    바탕이 너무 진해 글씨가 <b>명암비 2.75</b> 로 묻혔습니다.
+    ★ 위 띠(tn-fi)가 이미 흰 바탕에서 쓰는 옅기(--ga * .13)와 같은 결로
+      맞춥니다 — 같은 한 곳에서 온 값이라 위·옆 색이 안 갈립니다 (5번).
+      <b>갈래를 말해 주는 것은 왼쪽 색 띠</b>이지 바탕이 아닙니다.      */
 .nav-group{margin-bottom:6px;border-radius:var(--r);overflow:hidden;
- background:rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * .32));}
+ border:1px solid var(--t-line);
+ background:rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * .10));}
 /* 칸 이름을 누르면 그 묶음이 <b>접힙니다.</b>
    예전에도 접혀 봤고, 그때 「메뉴가 없어졌다」 는 말이 나왔습니다 —
    접힌 것을 지워진 것으로 보셔서입니다. 그래서 이번엔 접혀도
@@ -860,14 +877,14 @@ a{color:inherit;text-decoration:none;}
    어디에서 그리는지는 navGrp* 에 적어 두었습니다. */
 .nav-group-label{display:flex;align-items:center;gap:8px;width:100%;border:none;text-align:left;font-family:inherit;cursor:pointer;
  font-size:var(--t5);font-weight:800;letter-spacing:-.01em;line-height:1.25;padding:11px 12px;
- color:rgb(var(--gt,190 210 245));
- background:rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * 1.34));
+ color:rgb(var(--gk,40 55 95));
+ background:rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * .34));
  border-left:4px solid rgb(var(--ge,150 180 240) / var(--gb,.8));}
 .ngl-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
 .ngl-ic{font-size:var(--t3);line-height:1;flex:none;filter:saturate(1.2);}
 .ngl-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ngl-n{flex:none;font-size:var(--t6);font-weight:800;padding:2px 7px;border-radius:var(--r-pill);font-variant-numeric:tabular-nums;
- color:rgb(var(--gt,190 210 245));background:rgb(var(--gc,90 120 200) / .62);}
+ color:rgb(var(--gk,40 55 95));background:var(--t-card);}
 /* ── 폰에 담기 ───────────────────────────────────────────────── */
 .pwa-how{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
 .ph-col{border:1px solid var(--ink-7);border-radius:var(--r);padding:12px 13px;background:#fff}
@@ -890,47 +907,50 @@ a{color:inherit;text-decoration:none;}
 /* ── 즐겨찾기 · 메뉴 찾기 · 최근 쓴 것 ─────────────────────────
    메뉴가 88칸이다. 분류는 이미 잘 돼 있으니 모자란 것은 지름길이다. */
 .nav-find{position:relative;display:flex;align-items:center;gap:7px;margin:10px 8px 8px;
-  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:var(--r-sm);padding:7px 9px;}
-.nav-find:focus-within{border-color:rgba(120,170,255,.6);background:rgba(255,255,255,.11);}
+  background:var(--t-bg);border:1px solid var(--t-line);border-radius:var(--r-sm);padding:7px 9px;}
+.nav-find:focus-within{border-color:var(--t-point);background:var(--t-card);}
 .nav-find .nf-ic{font-size:var(--t6);opacity:.75;flex:0 0 auto;}
 .nav-find input{flex:1;min-width:0;border:0;background:transparent;outline:none;color:#fff;
   font-family:inherit;font-size:var(--t6);font-weight:600;letter-spacing:-.01em;}
-.nav-find input::placeholder{color:rgba(255,255,255,.42);font-weight:500;}
-.nav-find .nf-x{flex:0 0 auto;border:0;background:transparent;color:rgba(255,255,255,.55);
+.nav-find input::placeholder{color:var(--t-sub2);font-weight:500;}
+.nav-find .nf-x{flex:0 0 auto;border:0;background:transparent;color:var(--t-sub);
   cursor:pointer;font-size:var(--t6);line-height:1;padding:2px 3px;}
-.nav-find .nf-x:hover{color:#fff;}
+.nav-find .nf-x:hover{color:var(--t-ink);}
 .nav-ez{display:flex;align-items:center;gap:6px;margin:0 8px 8px;padding:5px;
-  border-radius:var(--r);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);}
+  border-radius:var(--r);background:var(--t-bg-2);border:1px solid var(--t-line);}
 .nav-ez-b{flex:1;appearance:none;border:0;border-radius:var(--r-sm);background:transparent;
-  color:rgba(255,255,255,.62);font-family:inherit;font-size:var(--t6);font-weight:800;
+  color:var(--t-ink-2);font-family:inherit;font-size:var(--t6);font-weight:800;
   padding:8px 6px;cursor:pointer;letter-spacing:-.02em;}
-.nav-ez-b.on{background:rgba(255,255,255,.16);color:#fff;}
-.nav-ez-n{flex:none;font-size:var(--t6);font-weight:700;color:rgba(255,255,255,.45);
+.nav-ez-b.on{background:var(--t-card);color:var(--t-ink);box-shadow:var(--shadow-xs);}
+.nav-ez-n{flex:none;font-size:var(--t6);font-weight:700;color:var(--t-ink-2);
   padding:0 7px 0 3px;white-space:nowrap;}
 .nav-ez-note{margin:0 8px 10px;padding:9px 11px;border-radius:var(--r);font-size:var(--t6);
-  line-height:1.7;font-weight:500;color:rgba(255,255,255,.55);
-  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);}
-.nav-ez-note b{color:#FFD666;font-weight:800;}
+  line-height:1.7;font-weight:500;color:var(--t-ink-2);
+  background:var(--t-bg-3);border:1px solid var(--t-line-2);}
+.nav-ez-note b{color:var(--t-ink);font-weight:800;}
 .nav-pin{margin:0 8px 10px;padding:8px 6px 6px;border-radius:var(--r);
-  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);}
-.nav-pin.rec{background:rgba(255,255,255,.03);}
-.nav-pin.empty{font-size:var(--t6);line-height:1.65;color:rgba(255,255,255,.5);padding:10px 11px;font-weight:500;}
-.nav-pin.empty b{color:#FFD666;font-weight:800;}
+  background:var(--t-bg-2);border:1px solid var(--t-line);}
+.nav-pin.rec{background:var(--t-bg-3);}
+.nav-pin.empty{font-size:var(--t6);line-height:1.65;color:var(--t-ink-2);padding:10px 11px;font-weight:500;}
+.nav-pin.empty b{color:var(--t-ink);font-weight:800;}
 .nav-pin-hd{display:flex;align-items:center;gap:6px;font-size:var(--t6);font-weight:800;
-  color:rgba(255,255,255,.6);letter-spacing:.02em;padding:0 5px 6px;}
-.nav-pin-hd span{margin-left:auto;font-size:var(--t6);font-weight:700;color:rgba(255,255,255,.45);
-  background:rgba(255,255,255,.09);border-radius:var(--r-pill);padding:1px 7px;}
+  color:var(--t-ink-2);letter-spacing:.02em;padding:0 5px 6px;}
+.nav-pin-hd span{margin-left:auto;font-size:var(--t6);font-weight:700;color:var(--t-sub);
+  background:var(--t-bg);border-radius:var(--r-pill);padding:1px 7px;}
 /* 메뉴 한 줄 = 단추 + 별표 */
 .nav-row{position:relative;display:flex;align-items:stretch;gap:2px;}
 .nav-row .tab-btn{flex:1;min-width:0;}
-.nav-star{flex:0 0 auto;border:0;background:transparent;color:rgba(255,255,255,.28);
+.nav-star{flex:0 0 auto;border:0;background:transparent;color:var(--t-sub3);
   cursor:pointer;font-size:var(--t6);line-height:1;padding:0 7px;border-radius:var(--r-sm);
   transition:color var(--dur) var(--ease),background var(--dur) var(--ease);}
-.nav-star:hover{color:#FFD666;background:rgba(255,255,255,.09);}
-.nav-star.on{color:#FFC93C;}
-.nav-none{margin:10px 12px;font-size:var(--t6);line-height:1.7;color:rgba(255,255,255,.55);font-weight:500;}
+.nav-star:hover{color:var(--t-warn);background:var(--t-bg);}
+/* ★ 켜진 별은 <b>--t-warn</b> — 예전 #FFC93C 는 검은 바탕에서 읽히라고
+   고른 노랑이라 흰 바탕에서는 거의 안 보입니다. 색표에 이미 있는 주황을
+   씁니다 — 노란 계열 그대로이고 새로 고른 색이 아닙니다.            */
+.nav-star.on{color:var(--t-warn);}
+.nav-none{margin:10px 12px;font-size:var(--t6);line-height:1.7;color:var(--t-sub);font-weight:500;}
 /* 손가락으로 누르는 화면에서는 별표를 늘 보이게 — 마우스가 없으니 hover 가 없다 */
-@media (hover:none){.nav-star{color:rgba(255,255,255,.42);padding:0 10px;}}
+@media (hover:none){.nav-star{color:var(--t-sub2);padding:0 10px;}}
 /* 퍼져 있을 때는 max-height 로 잘라 두지 않는다. 1600px 을 넘는 칸이
    생기면 <b>말없이</b> 아래가 잘리기 때문이다.
    접을 때만 display:none 으로 통째 내린다 — 절반만 보이는 일이 없게. */
@@ -940,64 +960,61 @@ a{color:inherit;text-decoration:none;}
 .nav-group.shut .ngl-ar{transform:rotate(-90deg);}
 /* 접힌 줄은 <b>흐릿하게 만들지 않는다</b> — 흐릿하면 꺼진 것으로 보인다.
    칸 수(.ngl-n)를 오히려 한 톤 진하게 해 「여기 n 개 있다」 를 말해 준다. */
-.nav-group.shut .ngl-n{background:rgb(var(--gc,90 120 200) / .92);}
+.nav-group.shut .ngl-n{background:var(--t-card);box-shadow:0 0 0 1px rgb(var(--ge,150 180 240) / .55);}
 .nav-grp-bar{display:flex;align-items:center;gap:8px;margin:2px 0 8px;padding:8px 10px;
  border-radius:var(--r);font-size:var(--t6);line-height:1.5;
- border:1px solid rgba(147,197,253,.24);background:rgba(96,165,250,.10);color:rgba(219,234,254,.86);}
-.nav-grp-bar.on{border-color:rgba(253,224,71,.34);background:rgba(250,204,21,.13);color:#FDE68A;}
+ border:1px solid var(--t-line);background:var(--t-point-l);color:var(--t-ink-2);}
+.nav-grp-bar.on{border-color:var(--t-warn);background:var(--t-warn-l);color:var(--t-ink);}
 .nav-grp-bar span{flex:1;min-width:0;}
-.nav-grp-bar b{color:#fff;}
+.nav-grp-bar b{color:var(--t-ink);}
 .nav-grp-bar button{flex:none;min-height:32px;padding:6px 11px;border:0;border-radius:var(--r-pill);
  font-family:inherit;font-size:var(--t6);font-weight:800;cursor:pointer;
- background:rgba(255,255,255,.16);color:#fff;}
-.nav-grp-bar button:hover{background:rgba(255,255,255,.28);}
+ background:var(--t-point);color:#fff;}
+.nav-grp-bar button:hover{background:var(--t-point-d);}
 .sb-guide{width:100%;display:flex;align-items:center;gap:8px;font-family:inherit;text-align:left;cursor:pointer;
- margin:2px 0 9px;padding:11px 13px;border:1px solid rgba(147,197,253,.28);border-radius:var(--r);
- background:linear-gradient(135deg,rgba(96,165,250,.20),rgba(129,140,248,.14));
+ margin:2px 0 9px;padding:11px 13px;border:1px solid var(--t-line);border-radius:var(--r);
+ background:var(--t-point-l);
  transition:all .16s var(--ease);}
-.sb-guide:hover{background:linear-gradient(135deg,rgba(96,165,250,.32),rgba(129,140,248,.22));
- border-color:rgba(147,197,253,.5);}
+.sb-guide:hover{background:var(--t-point-l);border-color:var(--t-point);}
 .sbg-ic{font-size:var(--t3);line-height:1;flex:none;}
-.sbg-t{font-size:var(--t6);font-weight:800;color:#DBE9FF;letter-spacing:-.01em;}
-.sbg-go{margin-left:auto;font-size:var(--t6);font-weight:700;color:rgba(219,233,255,.62);white-space:nowrap;}
+.sbg-t{font-size:var(--t6);font-weight:800;color:var(--t-ink);letter-spacing:-.01em;}
+.sbg-go{margin-left:auto;font-size:var(--t6);font-weight:700;color:var(--t-ink-2);white-space:nowrap;}
 /* 사용가이드 바로 밑 — 글로 읽는 설명서 다음은 그림으로 보는 지도다.
    같은 모양이되 초록빛으로 갈라 두 개가 붙어 보이게 한다. */
-.sb-guide.map{margin-top:-5px;border-color:rgba(110,231,183,.28);
- background:linear-gradient(135deg,rgba(52,211,153,.18),rgba(45,212,191,.13));}
-.sb-guide.map:hover{background:linear-gradient(135deg,rgba(52,211,153,.30),rgba(45,212,191,.22));
- border-color:rgba(110,231,183,.5);}
-.sb-guide.map .sbg-t{color:#D7FBEC;}
-.sb-guide.map .sbg-go{color:rgba(215,251,236,.62);}
+.sb-guide.map{margin-top:-5px;border-color:var(--t-line);
+ background:var(--t-pos-l);}
+.sb-guide.map:hover{background:var(--t-pos-l);border-color:var(--t-pos);}
+.sb-guide.map .sbg-t{color:var(--t-ink);}
+.sb-guide.map .sbg-go{color:var(--t-ink-2);}
 /* 맨 위 · 카테고리 없이 — 폰에 담는 길은 「설정」 안에 있으면 아무도 못 찾는다.
    한 번 담으면 다시 안 누를 칸이지만, 그 한 번을 못 찾으면 폰에서 아예 못 쓴다.
    그래서 분류에서 빼서(TABS 에는 hide 로 남겨 둔다 — 찾기·음성·?go= 는 그대로)
    사용가이드보다도 위에 상시 고정한다. 주황빛으로 갈라 셋이 붙어 보이지 않게. */
-.sb-guide.inst{margin-bottom:9px;border-color:rgba(253,186,116,.32);
- background:linear-gradient(135deg,rgba(251,146,60,.22),rgba(249,115,22,.14));}
-.sb-guide.inst:hover{background:linear-gradient(135deg,rgba(251,146,60,.34),rgba(249,115,22,.24));
- border-color:rgba(253,186,116,.56);}
-.sb-guide.inst .sbg-t{color:#FFE7CE;}
-.sb-guide.inst .sbg-go{color:rgba(255,231,206,.66);}
-.tab-btn{position:relative;display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:var(--r-sm);font-size:var(--t6);font-weight:600;color:rgba(255,255,255,.84);cursor:pointer;transition:all var(--dur) var(--ease);border:none;background:transparent;width:100%;text-align:left;letter-spacing:-.01em;margin-bottom:1px;}
-.tab-btn:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.85);}
-.tab-btn.on{background:rgba(96,165,250,.12);color:#93C5FD;font-weight:700;}
-.tab-btn.on::before{content:'';position:absolute;left:0;width:3px;height:22px;background:#60A5FA;border-radius:0 4px 4px 0;}
+.sb-guide.inst{margin-bottom:9px;border-color:var(--t-line);
+ background:var(--t-warn-l);}
+.sb-guide.inst:hover{background:var(--t-warn-l);border-color:var(--t-warn);}
+.sb-guide.inst .sbg-t{color:var(--t-ink);}
+.sb-guide.inst .sbg-go{color:var(--t-ink-2);}
+.tab-btn{position:relative;display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:var(--r-sm);font-size:var(--t6);font-weight:600;color:var(--t-ink);cursor:pointer;transition:all var(--dur) var(--ease);border:none;background:transparent;width:100%;text-align:left;letter-spacing:-.01em;margin-bottom:1px;}
+.tab-btn:hover{background:var(--t-bg-2);color:var(--t-ink);}
+.tab-btn.on{background:var(--t-point-l);color:var(--t-point);font-weight:700;}
+.tab-btn.on::before{content:'';position:absolute;left:0;width:3px;height:22px;background:var(--t-point);border-radius:0 4px 4px 0;}
 .tab-btn .ti{font-size:var(--t4);width:20px;text-align:center;flex-shrink:0;opacity:.75;}
 .tab-btn.on .ti{opacity:1;}
 .tab-btn .tt{flex:1;}
 /* 폰에서 <b>8.5px 는 안 읽힌다.</b> 왼쪽 메뉴의 건수 딱지다 —
    숫자가 0 이면 아예 안 그려서 오래 안 보이다가, 건수가 붙는 날
    check-mobile 이 잡았다(main 이 그날부터 빨간불이었다). 10px 로 올린다. */
-.tab-btn .tc{font-size:var(--t6);font-weight:700;color:rgba(255,255,255,.3);}
-.sb-foot{flex-shrink:0;padding:12px;border-top:1px solid rgba(255,255,255,.06);}
-.key-pill{display:flex;align-items:center;gap:7px;font-size:var(--t6);padding:8px 10px;border-radius:var(--r-sm);background:rgba(255,255,255,.04);color:rgba(255,255,255,.55);cursor:pointer;transition:all var(--dur);}
+.tab-btn .tc{font-size:var(--t6);font-weight:700;color:var(--t-ink-2);}
+.sb-foot{flex-shrink:0;padding:12px;border-top:1px solid var(--t-line-2);}
+.key-pill{display:flex;align-items:center;gap:7px;font-size:var(--t6);padding:8px 10px;border-radius:var(--r-sm);background:var(--t-bg-2);color:var(--t-ink-2);cursor:pointer;transition:all var(--dur);}
 .sb-say{width:100%;margin-top:5px;display:flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;
  font-size:var(--t6);font-weight:700;padding:8px 10px;border:none;border-radius:var(--r-sm);cursor:pointer;
- background:rgba(255,255,255,.05);color:rgba(255,255,255,.55);transition:all .15s var(--ease);}
-.sb-say:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.88);}
-.ver-pill{margin-top:5px;font-size:var(--t6);letter-spacing:.02em;padding:5px 10px;border-radius:var(--r-sm);background:rgba(255,255,255,.03);color:rgba(255,255,255,.38);cursor:pointer;font-variant-numeric:tabular-nums;text-align:center}
-.ver-pill:hover{color:rgba(255,255,255,.72);background:rgba(255,255,255,.07)}
-.key-pill:hover{background:rgba(255,255,255,.07);}
+ background:var(--t-bg-2);color:var(--t-ink-2);transition:all .15s var(--ease);}
+.sb-say:hover{background:var(--t-bg);color:var(--t-ink);}
+.ver-pill{margin-top:5px;font-size:var(--t6);letter-spacing:.02em;padding:5px 10px;border-radius:var(--r-sm);background:var(--t-bg-3);color:var(--t-ink-2);cursor:pointer;font-variant-numeric:tabular-nums;text-align:center}
+.ver-pill:hover{color:var(--t-ink);background:var(--t-bg)}
+.key-pill:hover{background:var(--t-bg);}
 .key-pill .dot{width:7px;height:7px;border-radius:50%;background:#F59E0B;flex-shrink:0;}
 .key-pill.ok .dot{background:#34D399;}
 
@@ -13647,7 +13664,12 @@ function navRamp(i,n){
              rgb(var(--gd) / .5) 가 <b>조용히 사라집니다</b>.               */
           k:navTone(h,s,0.13).join(' '),                   /* 밝은 바탕 위 글씨 */
           a:(0.44-0.32*t).toFixed(3),             /* 짙기 — 위가 진하고 아래로 옅어진다 */
-          b:(0.94-0.62*t).toFixed(3)};            /* 색 띠도 같이 옅어진다 */
+          /* ⚠ 2026-09-26 · 폭을 넓혔습니다(.94~.32 → 1.0~.20). 서랍이 밝아지면서
+             「한 줄기로 흐른다」 를 <b>바탕이 아니라 왼쪽 색 띠</b>가 말하게
+             됐습니다 — 흰 바탕 위에서는 옅은 바탕색끼리 거의 안 갈립니다.
+             띠가 그 몫을 받았으니 폭도 그만큼 넓힙니다(1.0~.20). ★ 색상·채도는 그대로라
+             「띠에서 본 색 = 서랍에서 본 그 갈래 색」이 유지됩니다 (5번).    */
+          b:(1.00-0.80*t).toFixed(3)};            /* 색 띠도 같이 옅어진다 */
 }
 /* ── 메뉴 묶음을 <b>접을 수 있다</b> ────────────────────────────────
    사장님 말씀 — 「메인 메뉴 카테고리도 숨길수 있도록하고 다 펼쳐져있어서
@@ -17496,7 +17518,7 @@ function navPaintBody(){
     var shut=!NAV_Q&&navGrpIs(name);
     /* 이름표를 누르면 그 묶음이 접힌다. 접어도 <b>칸 수는 그대로 남는다</b> —
        숫자가 보여야 「없어진 것」 으로 안 읽으신다. button 인 이유이기도 하다. */
-    h+='<div class="nav-group'+(shut?' shut':'')+'" style="--gc:'+c.c+';--ge:'+c.e+';--gt:'+c.w+';--ga:'+c.a+';--gb:'+c.b+'">'+
+    h+='<div class="nav-group'+(shut?' shut':'')+'" style="--gc:'+c.c+';--gk:'+c.k+';--ge:'+c.e+';--gt:'+c.w+';--ga:'+c.a+';--gb:'+c.b+'">'+
        '<button type="button" class="nav-group-label" data-g="'+esc(name)+'" '+
          'aria-expanded="'+(shut?'false':'true')+'" onclick="navGrpToggle(this)">'+
          '<span class="ngl-ar">▾</span>'+
@@ -18197,8 +18219,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-29 20:20';
-var APP_BUILD_NOTE="📐 <b>「도구」 제목이 화면 가장자리에 붙어 있던 것을 고쳤습니다.</b>　—　설계사처럼 몰아 보다 눈으로 잡았습니다. 「무엇을 하실 건가요?」 가 <b>왼쪽 여백 없이</b> 화면 끝에 붙어, 글자가 잘려 보였습니다. 재어 보니 이 화면만 <b>0px</b> 이고 나머지(나·고객·콘텐츠)는 모두 16px 이었습니다.　—　★ <b>여백을 새로 만들지 않았습니다</b> (5번). 다른 화면이 모두 쓰는 감싸개 <b>.tab-pane</b> 을 그대로 씁니다 — 목업 여백이 바뀌면 다 같이 따라갑니다. 여기에 px 을 적으면 그때 이 화면만 남습니다.　—　점검에 자를 하나 넣었습니다 — <b>16 이라는 수를 안 적고</b> 다른 화면과 견줍니다. 되돌림 둘 다 문법은 성한 채로 울렸습니다 (8번) — 감싸개를 빼면 0px 로, 이 화면에만 여백을 따로 주면 33px 로 빨간불입니다.";
+var APP_BUILD='2026-09-29 20:40';
+var APP_BUILD_NOTE="🗂 <b>서랍(☰ 메뉴)이 밝아졌습니다.</b>　—　위 띠도 아래 띠도 도구 화면도 이미 밝은데 <b>서랍만 검게</b> 남아 있었습니다. 도구 화면에서 「☰ 메뉴 전체」 를 누르면 밝은 화면에서 갑자기 검은 서랍이 떴습니다.　—　① ★ <b>색을 새로 만들지 않았습니다.</b> ui.css 의 --t- 색표를 그대로 받습니다(사장님 말씀 — 토큰은 한 곳에만).　—　② ★ <b>갈래색도 새로 안 정했습니다.</b> navRamp() 가 이미 밝은 바탕용 글씨 <b>--gk</b> 를 쥐고 있었습니다 — 2026-09-25 에 위 띠를 밝히며 더한 칸이고, 흰 바탕에서 명암비 5.8 입니다. 서랍도 <b>같은 한 곳에서</b> 받습니다. 그래서 「띠에서 본 색 = 서랍에서 본 그 갈래 색」이 그대로입니다.　—　③ 글자가 <b>더 잘 읽힙니다</b>. 명암비 4.5 아래가 검을 때 <b>7군데</b>였는데 지금은 <b>0</b> 입니다. 「로그인 / 계정」 은 흰 글씨였는데 서랍 바닥에 서는 칸이라 그대로 두면 <b>안 보일 뻔</b>했습니다.　—　④ <b>갈래 한 줄기는 왼쪽 색 띠</b>가 말합니다. 흰 바탕에서는 옅은 바탕색끼리 거의 안 갈려, 띠가 그 몫을 받고 폭도 넓혔습니다(1.0~0.20).　—　점검 — check-nav 의 대비 자 셋을 <b>밝은 바탕 전제로 옮겼습니다</b>(지운 것이 아닙니다). 되돌림 넷 모두 문법은 성한 채로 울렸습니다 — 도로 어둡게 · 글씨를 밝은 색으로 · --gk 를 안 넘기면 · 칸 테두리를 지우면.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
