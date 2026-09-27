@@ -22,10 +22,12 @@
      [6] ★ AI 로 가는 길이 <b>그대로 막혀 있다</b> (MYP_RRN)
      [7] ★ toast 에 <b>번호가 안 찍힌다</b> — 토스트도 캡처된다
      [8] ★ 고객 칸(CM_FIELDS)에 <b>안 들어가 있다</b> — 들어가면 cmSave 가 올린다
-     [9] ★ 모양이 이상해도 <b>담기는 담는다</b> · <b>검산식을 안 쓴다</b>
+     [9] ★ <b>맞지 않으면 안 담는다</b> · 검산식이 목각과 같은 식인가
+     [9-1] ★★ <b>누르면 보험나이·상령일이 나온다</b> · 계산기와 <b>같은 답</b>인가 (5번)
+     [9-2] ★ 상령일이 곧이면 말해 준다 · <b>금액은 지어내지 않는다</b>
     [10] 지우면 없어진다 · 고치기·지우기를 <b>안 감춘다</b> (6번)
     [11] 새 CSS 0줄 · 새 class 0개 · hex 0개 · <b>.t-note.s 안 씀</b>
-    [12] 누르는 것이 44px 이상 · 조용히 터지지 않았나
+    [12] 누르는 것이 <b>받침을 받는 모양</b>인가 (span onclick 은 못 받습니다) · 안 터졌나
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -42,11 +44,29 @@ const srv = http.createServer((q, s) => {
 });
 
 /* 견본 번호 — <b>실제 사람의 번호가 아닙니다.</b> 이름은 「홍길동」 (3번).
-   달·날 자리는 말이 되게 두고(19900101) 뒤는 1234567 로 둡니다 —
-   검산식으로 보면 <b>틀린</b> 번호입니다. 그것이 [9] 에서 필요합니다.  */
-const RRN = '9001011234567';
-const DASH = '900101-1234567';
-const MASK = '900101-1******';
+   ★ 2026-09-27 에 바꿨습니다. 앱이 이제 <b>검산을 봅니다</b>(목각 그대로)
+     므로, 견본도 <b>검산이 맞는</b> 번호여야 담깁니다.
+   ★ 검산 자리를 <b>자가 스스로 셉니다</b> — 앱 함수를 빌려 오면 앱이 틀렸을
+     때 자도 같이 틀려 안 웁니다 (8번).                                  */
+const 검산 = d12 => {
+  const W = [2,3,4,5,6,7,8,9,2,3,4,5];
+  let t = 0;
+  for (let i = 0; i < 12; i++) t += W[i] * (+d12.charAt(i));
+  return String((11 - t % 11) % 10);
+};
+const 번호 = (yymmdd, g) => { const h = yymmdd + g + '23456'; return h + 검산(h); };
+const RRN = 번호('900101', '1');           /* 1990-01-01 · 남 */
+const DASH = RRN.slice(0, 6) + '-' + RRN.slice(6);
+const MASK = '900101-1●●●●●●';
+const 틀린번호 = RRN.slice(0, 12) + String((+RRN.charAt(12) + 1) % 10);
+/* 상령일이 <b>곧</b> 오는 분 — 오늘에서 거꾸로 만듭니다. 날짜를 박아 두면
+   달이 바뀌는 날 자가 거짓말을 합니다 (8번).                            */
+const 곧상령 = (() => {
+  const t = new Date(); const up = new Date(t.getTime() + 50 * 864e5);
+  const b = new Date(up.getFullYear(), up.getMonth() - 6, up.getDate());
+  const mm = ('0' + (b.getMonth() + 1)).slice(-2), dd = ('0' + b.getDate()).slice(-2);
+  return 번호('90' + mm + dd, '1');
+})();
 
 const SEED = () => {
   try { localStorage.setItem('apex_login_ok','1'); } catch(e){}
@@ -245,28 +265,89 @@ const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, ' ')
      '  ★ 고객 칸에 주민번호가 <b>없다</b> — 거기 넣으면 cmSave 가 서버로 올립니다 (칸 ' +
      J.split(',').length + '개)');
 
-  console.log('\n[9] ★ 모양이 이상해도 <b>담기는 담는다</b> · <b>검산식을 안 쓴다</b>');
-  const K = await p.evaluate(async () => {
-    cmRrnSet('c1', '');
-    cmDetailPaint('c1');
-    await new Promise(r => setTimeout(r, 300));
-    const el = document.getElementById('cmRrnIn');
-    if (el) el.value = '900101123';           /* 아홉 자리 */
-    cmRrnSave('c1');
-    await new Promise(r => setTimeout(r, 400));
-    return { 담김: cmRrnOf('c1'), 말: (document.body.innerText || ''),
-             /* 검산으로 보면 틀린 번호 — 그래도 아무 말 안 해야 한다 */
-             틀린것: cmRrnWhy('9001011234567'), 달이상: cmRrnWhy('9013011234567') };
+  console.log('\n[9] ★ <b>맞지 않으면 안 담는다</b> — 목각 그대로 (2026-09-27 뒤집음)');
+  /* ★ <b>여기 두 줄은 뒤집힌 자였습니다.</b> 처음에 저는 제 판단으로
+       「검산을 안 본다 · 이상해도 담는다」 를 지키게 만들어 두었습니다.
+       사장님 목각(docs/APEX_목각_폰.html)을 눌러 보니 <b>검산이 안 맞으면
+       저장을 막고</b> 「맞지 않는 번호입니다」 라고 말합니다. 설계는
+       사장님 것입니다 — 자를 목각 쪽으로 돌렸습니다.                   */
+  const K = await p.evaluate(async (Z) => {
+    const put = async (val) => {
+      cmRrnSet('c1', ''); cmDetailPaint('c1');
+      await new Promise(r => setTimeout(r, 300));
+      const el = document.getElementById('cmRrnIn');
+      if (el) el.value = val;
+      TOASTS.length = 0;
+      cmRrnSave('c1');
+      await new Promise(r => setTimeout(r, 350));
+      return { 담김: cmRrnOf('c1'), 말: TOASTS.join(' '), 칸: (document.getElementById('cmRrnIn') || {}).value };
+    };
+    return { 짧은것: await put('900101123'), 틀린것: await put(Z.bad), 맞는것: await put(Z.ok) };
+  }, { bad: 틀린번호, ok: RRN });
+  is(K.짧은것.담김 === '' && /열세 자리를 다 적어/.test(K.짧은것.말),
+     '  열세 자리가 아니면 <b>안 담고</b> 그렇게 말한다 — 「' + K.짧은것.말.slice(0, 40) + '」');
+  is(K.틀린것.담김 === '' && /맞지 않는 번호/.test(K.틀린것.말),
+     '  ★ <b>검산이 안 맞으면 안 담는다</b> — 목각과 같은 말 「' + K.틀린것.말.slice(0, 40) + '」');
+  is(K.틀린것.칸 === 틀린번호,
+     '  막았어도 <b>적으신 글자는 칸에 남는다</b> — 열세 자리를 다시 안 치셔도 됩니다');
+  is(K.맞는것.담김 === RRN, '  맞는 번호는 <b>담긴다</b>');
+  is(/cmRrnSum/.test(SRC) && /11\s*-\s*t\s*%\s*11/.test(SRC),
+     '  ★ <b>검산식이 코드에 있다</b> — 목각 rrnOk 와 같은 식 (2,3,4,5,6,7,8,9,2,3,4,5)');
+
+  console.log('\n[9-1] ★★ <b>누르면 보험나이·상령일이 나온다</b> — 목각의 그 자리');
+  /* ★ 사장님 말씀 (2026-09-27) — 「목각 버튼 눌러서 어떻게 바뀌는지 제대로
+       보고 변경하라고」. 목각의 주민번호 칸은 번호를 <b>보관</b>하는 칸이
+       아니라, 거기서 <b>보험나이와 상령일</b>이 나오는 칸이었습니다.
+       저는 가린 번호만 보여 주고 있었습니다.                            */
+  const N = await p.evaluate(() => {
+    const t = document.body.innerText || '';
+    return { t: t,
+             생년: /생년월일/.test(t), 만나이: /만 나이/.test(t),
+             보험나이: /보험나이/.test(t), 상령일: /상령일/.test(t),
+             디데이: /D-\d+/.test(t) };
   });
-  is(K.담김 === '900101123', '  열세 자리가 아니어도 <b>버리지 않는다</b> — 담긴 것 ' + K.담김.length + '자리');
-  is(/다시 보십시오/.test(K.말) && /열세 자리가 아닙니다/.test(K.말),
-     '  <b>「다시 보십시오」 한 줄</b>은 붙는다 — 막지는 않습니다');
-  is(K.틀린것 === '',
-     '  ★ <b>검산식을 안 쓴다</b> — 2020년 10월 뒤 규칙이 바뀌어 확실하지 않습니다. ' +
-     '확실하지 않은 규칙으로 맞는 번호를 틀렸다 하면 청약이 그 자리에서 멈춥니다 (8번)');
-  is(K.달이상 === '달 자리가 01~12 가 아닙니다', '  <b>달 자리</b>처럼 확실한 것만 짚는다');
-  is(!/%\s*11/.test(SRC.slice(SRC.indexOf('function cmRrnWhy'), SRC.indexOf('function cmRrnWhy') + 700)),
-     '  검산 나눗셈이 <b>코드에 없다</b>');
+  is(N.생년 && N.만나이, '  <b>생년월일 · 만 나이</b>가 선다');
+  is(N.보험나이 && N.상령일 && N.디데이, '  ★ <b>보험나이 · 다음 상령일 · D-N</b> 이 선다');
+
+  /* ★★ <b>계산기와 같은 답인가.</b> 앱에는 이미 보험나이 계산기가 있었습니다.
+     두 곳에서 각자 세면 한 화면은 52세, 다른 화면은 53세라고 적는 날이 옵니다 —
+     그 자리에서 보험료가 틀립니다 (5번). <b>두 화면을 실제로 몰아</b> 봅니다. */
+  const S2 = await p.evaluate(async () => {
+    const b = cmRrnBirth(cmRrnOf('c1'));
+    const mine = insAgeOf(b.dt, new Date());
+    /* 계산기 화면을 실제로 열어 같은 생일을 넣고 눌러 본다 */
+    go('calc');
+    await new Promise(r => setTimeout(r, 700));
+    const el = document.getElementById('ca_birth');
+    if (!el) return { 계산기없음: true };
+    el.value = b.y + '-' + ('0' + b.m).slice(-2) + '-' + ('0' + b.d).slice(-2);
+    calcAge();
+    await new Promise(r => setTimeout(r, 300));
+    const res = (document.getElementById('ca_res') || {}).innerText || '';
+    return { 내것: mine.ins, 계산기글: res.replace(/\s+/g, ' ') };
+  });
+  is(!S2.계산기없음, '  계산기 화면을 열었다');
+  is(!S2.계산기없음 && S2.계산기글.indexOf(S2.내것 + '세') >= 0,
+     '  ★★ 고객 한 장과 <b>계산기가 같은 답</b>이다 — 보험나이 ' + S2.내것 + '세' +
+     (S2.계산기없음 ? '' : ('\n      · 계산기: ' + (S2.계산기글 || '(빈 글)').slice(0, 90))));
+  is(/function insAgeOf\(/.test(SRC) && (SRC.match(/insAgeOf\(/g) || []).length >= 3,
+     '  셈하는 곳이 <b>하나</b>이고 두 화면이 그것을 부른다 (5번)');
+
+  console.log('\n[9-2] ★ 상령일이 <b>곧</b>이면 말해 준다 · 금액은 지어내지 않는다');
+  const G2 = await p.evaluate(async (soon) => {
+    /* 홈으로 돌아와 고객을 다시 연다 */
+    osOpenClient('c1');
+    await new Promise(r => setTimeout(r, 700));
+    cmRrnSet('c1', soon); cmDetailPaint('c1');
+    await new Promise(r => setTimeout(r, 400));
+    return document.body.innerText || '';
+  }, 곧상령);
+  is(/상령일이 \d+일 남았습니다/.test(G2),
+     '  상령일이 90일 안이면 <b>한 줄 더</b> 붙는다');
+  is(/보험료가 올라갑니다/.test(G2) && /심사 결과에 따릅니다/.test(G2),
+     '  「올라갑니다」 까지만 말하고 <b>심사 결과에 따른다</b>고 붙인다 (2번)');
+  is(!/보험료가 [\d,]+ *원 (더 )?올라|[\d,]+원 인상/.test(G2),
+     '  ★ <b>얼마 오른다고는 안 적는다</b> (1번) — 상품마다 다릅니다');
 
   console.log('\n[10] 지우면 없어진다 · 고치기·지우기를 <b>안 감춘다</b> (6번)');
   const L = await p.evaluate(async rrn => {
@@ -297,8 +378,12 @@ const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, ' ')
   })();
   is(조각.length > 500, '  잴 조각을 찾았다 (' + 조각.length + '자)');
   const 이름 = [];
+  /* ★ class 값 안에 JS 를 이어 붙인 것(t-tag'+(…?' due':'')+')은 <b>한 이름이
+     아닙니다.</b> 통째로 세면 「ui.css 에 없는 이름」 이라는 헛불이 켜집니다 —
+     실제로 켜졌습니다 (8번). 따옴표·더하기가 든 토막은 건너뜁니다.        */
   (조각.match(/class="([^"]+)"/g) || []).forEach(m => {
-    m.replace(/class="|"/g, '').split(/\s+/).forEach(k => { if (k && 이름.indexOf(k) < 0) 이름.push(k); });
+    m.replace(/class="|"/g, '').split(/\s+/).forEach(k => {
+      if (k && k.indexOf("'") < 0 && k.indexOf('+') < 0 && 이름.indexOf(k) < 0) 이름.push(k); });
   });
   /* ui.css 에 그 이름이 있나 — 홀로 선 것(.t-card)도, 갈래(.t-btn.sm)도,
      아랫것(.t-fld .l)도 같이 찾습니다. 없는 이름이면 <b>새로 만든</b> 것입니다 */
@@ -310,29 +395,37 @@ const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, ' ')
   is(!/#[0-9A-Fa-f]{3,8}\b/.test(조각), '  hex 를 <b>직접 안 적는다</b> (4번·5번 — 색표는 한 곳)');
   is(!/style="[^"]*color:/.test(조각), '  style 로 <b>색을 안 박는다</b>');
 
-  console.log('\n[12] 누르는 것이 44px 이상 · 조용히 터지지 않았나');
+  console.log('\n[12] 누르는 것이 <b>받침을 받는 모양</b>인가 · 조용히 터지지 않았나');
+  /* ★ 여기도 <b>울릴 수 없는 자</b>였습니다. app/index.html 에 이미
+       #dynPane button, #dynPane .btn, #dynPane select{min-height:44px}
+     가 있어 일부러 height:30px 을 박아도 44 로 나옵니다 — check-cusskin 에서
+     같은 자리를 찾아 고쳤고, 여기도 같이 고쳤습니다.
+     그 받침은 button·select·.btn 에만 걸립니다. <span onclick> 으로 만들면
+     받침을 못 받아 손가락으로 못 누를 만큼 작아집니다 — 그것을 봅니다 (8번). */
   const M = await p.evaluate(async rrn => {
     cmRrnSet('c1', rrn); cmDetailPaint('c1');
     await new Promise(r => setTimeout(r, 300));
-    /* ★ <b>숨은 것은 0px 로 재집니다.</b> 「이 기기에만 담기」 는 담긴 뒤
-       접혀 있어 0px 이 나오고, 「0 은 44 보다 작지 않다」 로 빠져나가
-       <b>0px 인데 초록</b>이 됩니다. 이 앱에서 자 다섯이 그렇게 속았습니다.
-       그래서 「고치기」를 눌러 <b>펴 놓고</b> 잽니다.                       */
     cmRrnEdit();
     await new Promise(r => setTimeout(r, 200));
-    const out = [];
     const box = document.getElementById('cmRrnV');
     const card = box ? box.closest('.t-card') : null;
-    if (card) [].slice.call(card.querySelectorAll('button')).forEach(x => {
-      out.push({ t: (x.textContent || '').trim(), h: Math.round(x.getBoundingClientRect().height) });
+    const out = [], 맨몸 = [];
+    if (card) [].slice.call(card.querySelectorAll('[onclick]')).forEach(x => {
+      const tag = x.tagName.toLowerCase(), cls = (x.className || '').toString();
+      const 받침 = (tag === 'button' || tag === 'select' ||
+                    /(^|\s)(btn|t-btn|t-gb|t-chip|t-row)(\s|$)/.test(cls));
+      out.push({ t: (x.textContent || '').trim().slice(0, 12), h: Math.round(x.getBoundingClientRect().height), 받침: 받침 });
+      if (!받침) 맨몸.push(tag + ' 「' + (x.textContent || '').trim().slice(0, 12) + '」');
     });
-    return out;
+    return { all: out, 맨몸: 맨몸 };
   }, RRN);
-  const 작은것 = M.filter(x => x.h < 44);
-  is(M.length >= 6 && !작은것.length,
-     '  단추 ' + M.length + '개가 <b>모두 44px 이상</b> — ' +
-     M.map(x => x.t + ' ' + x.h).join(' · ') +
-     (작은것.length ? ('\n      ✗ 작은 것: ' + 작은것.map(x => x.t + ' ' + x.h + 'px').join(',')) : ''));
+  is(M.all.length >= 6 && !M.맨몸.length,
+     '  누르는 것 ' + M.all.length + '개가 <b>모두 button 이거나 받침 class</b> 를 가졌다' +
+     (M.맨몸.length ? ('\n      ✗ 받침 없는 것: ' + M.맨몸.join(', ')) : ''));
+  const 작은것 = M.all.filter(x => x.h > 0 && x.h < 44);
+  is(!작은것.length, '  그래서 잰 높이도 <b>모두 44px 이상</b> — ' +
+     M.all.map(x => x.t + ' ' + x.h).join(' · ') +
+     (작은것.length ? ('\n      ✗ ' + 작은것.map(x => x.t + ' ' + x.h + 'px').join(', ')) : ''));
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? (' ← ' + errs.slice(0, 2).join(' | ')) : ''));
 
   await b.close(); srv.close();
