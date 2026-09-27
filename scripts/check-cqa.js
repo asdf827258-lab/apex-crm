@@ -268,7 +268,125 @@ const CARD = () => {
      '  「여기에 적기」 가 <b>있는 칸으로</b> 데려간다 — ' + F.간곳 + ' (물음: ' + F.물음 + ')');
   is(F.짚었나, '  데려간 칸을 <b>짚어 준다</b> — 데려다 놓고 말을 안 하면 어느 칸인지 모릅니다');
 
-  console.log('\n[8] 조용히 터지지 않았나');
+  console.log('\n[8] ★ <b>홈에도 선다</b> — 사장님 말씀 X07');
+  /* 대장 X07 「홈 화면에서 고객의 모든걸 컨트롤 할수 있도록 질문을 띄우고
+     쉽게해」. 카드는 먼저 고객 365일에 세웠고(#480), 홈은 다른 세션이
+     고치는 중이라 한 글자도 안 건드렸습니다. 그쪽이 끝나 이제 붙였습니다.
+     ★ <b>카드는 한 곳</b>입니다 — 홈이 cqaHtml 을 그대로 부릅니다 (5번).  */
+  const H = await p.evaluate(async () => {
+    /* ★ 오늘 줄에 <b>사람 하나</b>가 서야 카드가 뜹니다. 계약일을 <b>정확히
+       석 달 전</b>으로 두면 계약 마디가 그 분을 오늘 줄에 올립니다 —
+       견본을 안 깔고 재면 「안 뜬다」 를 <b>없는 것</b>으로 착각합니다. */
+    const d = new Date(); d.setMonth(d.getMonth() - 3);
+    cmOf('c1').cd = d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) +
+                    '-' + ('0'+d.getDate()).slice(-2);
+    cmOf('c1').next = null;
+    go('home');
+    await new Promise(r => setTimeout(r, 900));
+    const card = document.querySelector('#dynPane #cqaCard');
+    const n = document.querySelectorAll('#dynPane #cqaCard').length;
+    /* 물음에 따라 단추 이름이 다릅니다 — 「직접 적기」(누르는 물음) ·
+       「한 줄 적기」(접촉) · 「여기에 적기」(적는 물음). <b>cqaFld 로 가는
+       단추 전부</b>를 봅니다 — 하나만 찾으면 그 물음이 아닐 때 헛것입니다. */
+    const fld = card ? [].slice.call(card.querySelectorAll('.t-chip'))
+                         .filter(b => /cqaFld\(/.test(b.getAttribute('onclick') || '')) : [];
+    return { 있나: !!card, 몇개: n, 칸단추: fld.length,
+             물음: card && card.querySelector('.t-big')
+                   ? card.querySelector('.t-big').innerText.replace(/\s+/g,' ').trim().slice(0,30) : '',
+             데려가나: fld.length > 0 &&
+                       fld.every(b => /cqaFld\('[^']*'\s*,\s*'[^']+'\)/.test(b.getAttribute('onclick') || '')) };
+  });
+  is(H.있나, '  ★ 홈에도 <b>같은 카드</b>가 선다 — ' + (H.물음 || '(물음 없음)'));
+  is(H.몇개 === 1, '  카드가 <b>홈에 하나</b>다 (5번) — ' + H.몇개 + '개');
+  is(H.데려가나,
+     '  ★ 홈에서 <b>적으러 가는 단추</b>가 그 분 번호를 들고 간다 — ' + H.칸단추 + '개\n' +
+     '      홈에는 그 칸이 없어서, 번호가 없으면 쪽지만 뜨고 <b>막다른 길</b>이 됩니다 (1번)');
+
+  /* ★ 홈에서는 <b>물음 한 가지만</b> 섭니다 — 세는 줄·자·꼬리글을 안 그립니다.
+       접힌 홈이 한 화면(844px)에 들어야 해서입니다(X03 · check-homeshape).
+       카드를 그대로 붙였더니 접어도 <b>1027px</b> 이었습니다.
+     ★ 그런데 <b>감춘 것이 아님</b>을 같이 재야 합니다 (6번) — 상세에서는
+       세는 줄이 그대로 서야 합니다. 둘을 <b>한 자리에서</b> 견줍니다.    */
+  const G = await p.evaluate(() => {
+    const card = document.querySelector('#dynPane #cqaCard');
+    const 홈 = card ? { h1:!!card.querySelector('.t-h1'), bar:!!card.querySelector('.t-bar'),
+                        sub:!!card.querySelector('.t-sub'), big:!!card.querySelector('.t-big'),
+                        chip:card.querySelectorAll('.t-chip').length,
+                        cmp:card.getAttribute('data-cmp') } : null;
+    /* 같은 분을 <b>상세 꼴로</b> 그려 봅니다 — 화면을 옮기지 않고 글만 봅니다 */
+    const 상세 = cqaInner('c1');
+    return { 홈: 홈,
+             상세머리: /class="t-h1"/.test(상세), 상세자: /class="t-bar"/.test(상세),
+             상세꼬리: /한 번에 한 가지만/.test(상세) };
+  });
+  is(!!G.홈 && !G.홈.h1 && !G.홈.bar && !G.홈.sub,
+     '  ★ 홈에서는 <b>물음 한 가지만</b> 선다 — 세는 줄 ' + (G.홈 && G.홈.h1 ? '있음' : '없음') +
+     ' · 자 ' + (G.홈 && G.홈.bar ? '있음' : '없음') + ' · 꼬리글 ' +
+     (G.홈 && G.홈.sub ? '있음' : '없음') + ' (접힌 홈이 한 화면에 들어야 합니다)');
+  is(!!G.홈 && G.홈.big && G.홈.chip > 0 && G.홈.cmp === '1',
+     '  홈 카드가 <b>제 몸에 홈이라 적어 둔다</b> — data-cmp=' + (G.홈 ? G.홈.cmp : '?') +
+     ' (다시 그릴 때 또 세지 않습니다 · 5번)');
+  is(G.상세머리 && G.상세자 && G.상세꼬리,
+     '  ★ <b>감춘 것이 아니다</b> (6번) — 상세에서는 세는 줄·자·꼬리글이 <b>그대로</b> 선다');
+
+  /* ★ 여쭐 것이 없으면 <b>홈에 상자를 안 세웁니다</b> (1번).
+     둘 다 봅니다 — <b>못 읽었을 때</b>와 <b>다 알 때</b>. 한쪽만 비우면
+     왜 어떤 날은 빈 상자가 뜨는지 아무도 설명할 수 없습니다.           */
+  const I = await p.evaluate(() => {
+    const 담 = CM.loaded; CM.loaded = false;
+    const 못읽음 = { 홈: cqaInner('c1', 1), 상세: cqaInner('c1') };
+    CM.loaded = 담;
+    return { 못읽음홈: 못읽음.홈, 못읽음상세: /아직 못 읽었/.test(못읽음.상세) };
+  });
+  is(I.못읽음홈 === '',
+     '  ★ 못 읽었으면 홈에 <b>상자를 안 세운다</b> — 「' + I.못읽음홈.slice(0, 30) +
+     '」 (값이 없으면 화면을 세우지 않습니다 · 1번)');
+  is(I.못읽음상세,
+     '  그래도 상세에서는 <b>못 읽었다고 적는다</b> — 홈에서 조용한 것이 「없다」 는 뜻이 아닙니다');
+
+  /* ★ <b>답한 뒤에도 홈 꼴이 유지되나</b> — 여기서 한 번 틀렸습니다.
+     다시 그리는 cqaRepaint 가 「홈이냐」 를 모르면, 답하는 순간 세는 줄이
+     되살아나 카드가 <b>다시 길어집니다</b>. 그래서 카드 제 몸에 적어 둡니다. */
+  const K = await p.evaluate(async () => {
+    /* ★ <b>cqaRepaint 를 직접</b> 부릅니다. 칩을 눌러서 재면 홈 전체가 다시
+       그려져 cqaRepaint 가 한 일을 덮어 버립니다 — 고장을 넣어도 초록인
+       <b>헛 점검</b>이 됩니다. 실제로 그랬습니다 (8번).                  */
+    const 전 = document.querySelector('#dynPane #cqaCard');
+    const 전h = 전 ? Math.round(전.getBoundingClientRect().height) : 0;
+    cmOf('c1').touch = [{ at:'2026-09-02', how:'전화', note:'' }];
+    cqaRepaint('c1');
+    /* ★ <b>기다리지 않고 바로</b> 봅니다. 홈은 잠시 뒤 스스로 다시 그려서
+       cqaRepaint 가 잘못 그린 것을 <b>덮어 버립니다</b> — 300ms 를 기다리고
+       재면 고장을 넣어도 초록인 헛 점검이 됩니다. 실제로 그랬습니다 (8번).
+       덮이더라도 그 사이 카드가 <b>한 번 껑충 뛰었다 앉습니다.</b>          */
+    const c2 = document.querySelector('#dynPane #cqaCard');
+    return { 전: 전h, 후: c2 ? Math.round(c2.getBoundingClientRect().height) : 0,
+             머리: !!(c2 && c2.querySelector('.t-h1')), 있나: !!c2,
+             바뀜: !!(c2 && c2.querySelector('.t-big')) };
+  });
+  is(K.있나 && !K.머리 && K.바뀜,
+     '  ★ <b>다시 그려도 홈 꼴</b>이다 — 세는 줄 ' + (K.머리 ? '되살아남 ✗' : '없음') +
+     ' · ' + K.전 + 'px → ' + K.후 + 'px (cqaRepaint 가 카드 제 몸에 물어야 합니다)');
+
+  /* ★ <b>접으면 같이 접힌다</b> — 번호 갈래와 같은 자리입니다.
+       접어도 카드가 남으면 check-homeshape 가 빨간불입니다.
+     ★ <b>다시 펴면 돌아와야</b> 합니다 — 안 돌아오면 그건 지운 것입니다 (6번). */
+  const J = await p.evaluate(async () => {
+    const n = () => document.querySelectorAll('#dynPane #cqaCard').length;
+    const b = document.querySelector('#dynPane .hm-more-b');
+    if (!b) return { 단추없음:true };
+    const 펴짐 = n();
+    b.click(); await new Promise(r => setTimeout(r, 500));
+    const 접힘 = n();
+    const b2 = document.querySelector('#dynPane .hm-more-b');
+    if (b2) { b2.click(); await new Promise(r => setTimeout(r, 500)); }
+    return { 펴짐: 펴짐, 접힘: 접힘, 다시: n() };
+  });
+  is(!J.단추없음 && J.펴짐 === 1 && J.접힘 === 0 && J.다시 === 1,
+     '  ★ <b>접으면 같이 접히고 펴면 돌아온다</b> — 펴짐 ' + J.펴짐 + ' → 접힘 ' + J.접힘 +
+     ' → 다시 ' + J.다시 + '개 (접어도 남으면 홈이 한 화면을 넘습니다)');
+
+  console.log('\n[9] 조용히 터지지 않았나');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? (' ← ' + errs.slice(0, 2).join(' | ')) : ''));
 
   await b.close(); srv.close();
