@@ -161,9 +161,13 @@ const CARD = () => {
   const 보낸것 = (B.쓴것 && B.쓴것[0] && B.쓴것[0].body && B.쓴것[0].body.content) || {};
   is(!!(보낸것.next && 보낸것.next.what),
      '  ★ <b>cmSave 가 만든 꼴 그대로</b> 서버로 갔다 — content.next 가 있다');
-  is(Object.keys(보낸것).length === 12,
+  /* ★ 수를 <b>여기 박지 않습니다</b> — 칸을 하나 더할 때마다 이 줄을 손으로
+     고쳐야 하면, 고치는 것을 잊은 날 <b>안 울립니다</b>. 칸 표에서 세어
+     견줍니다 (8번). 자가 묻는 것은 그대로입니다 — <b>표만큼 보냈나</b>. */
+  const 칸수 = await p.evaluate(() => CM_FIELDS.length);
+  is(Object.keys(보낸것).length === 칸수,
      '  ★ 다른 칸이 <b>같이 날아가지 않았다</b> — 보낸 칸 ' + Object.keys(보낸것).length +
-     '개 (칸 표가 12개다. 하나라도 빠지면 그 칸이 서버에서 지워집니다)');
+     '개 / 표 ' + 칸수 + '개 (하나라도 빠지면 그 칸이 서버에서 지워집니다)');
   is(B.물음 && B.물음 !== A.물음,
      '  ★ <b>다음 것</b>을 여쭙는다 — ' + B.물음);
   is(/아는 것 1/.test(B.머리), '  아는 것이 <b>하나 늘었다</b> — ' + B.머리);
@@ -221,9 +225,14 @@ const CARD = () => {
              빈것: { fp: JSON.stringify(b.fp), touch: JSON.stringify(b.touch),
                      next: JSON.stringify(b.next), up: JSON.stringify(b.up), bd: JSON.stringify(b.bd) } };
   });
-  const 원래 = 'bd,cd,fam,fams,fp,next,ref,refx,rel,touch,up,wal';
-  is(D.칸 === 원래, '  빈 칸 만들기가 <b>열두 칸 그대로</b>다 — ' + D.칸);
-  is(D.보낼칸 === 원래, '  서버로 보낼 꼴도 <b>열두 칸 그대로</b>다');
+  /* 같은 까닭 — 이름을 손으로 적어 두면 칸을 더할 때마다 낡습니다.
+     <b>칸 표에서 이름을 뽑아</b> 견줍니다 (8번). 2026-09-27 에 「무엇을
+     제일 걱정하시나」(worry) 가 들어와 열셋이 됐고, 이 자는 <b>스스로</b>
+     따라왔습니다 — 손으로 고칠 곳이 없습니다.                         */
+  const 원래 = await p.evaluate(() => CM_FIELDS.map(f => f[0]).sort().join(','));
+  is(D.칸 === 원래, '  빈 칸 만들기가 <b>칸 표 그대로</b>다 (' +
+     원래.split(',').length + '칸) — ' + D.칸);
+  is(D.보낼칸 === 원래, '  서버로 보낼 꼴도 <b>칸 표 그대로</b>다');
   is(D.빈것.fp === '{}' && D.빈것.touch === '[]' && D.빈것.next === 'null' &&
      D.빈것.up === '0' && D.빈것.bd === '""',
      '  빈 값의 <b>갈래가 그대로</b>다 — obj{} · arr[] · any null · num 0 · str ""');
@@ -386,7 +395,56 @@ const CARD = () => {
      '  ★ <b>접으면 같이 접히고 펴면 돌아온다</b> — 펴짐 ' + J.펴짐 + ' → 접힘 ' + J.접힘 +
      ' → 다시 ' + J.다시 + '개 (접어도 남으면 홈이 한 화면을 넘습니다)');
 
-  console.log('\n[9] 조용히 터지지 않았나');
+  /* ══ [9-1] 😟 <b>무엇을 제일 걱정하시나 → 첫 문장에 붙일 것</b> ═══
+     사장님 말씀 (2026-09-27 · 목각 사진 2) 「무엇을 제일 걱정하시나 —
+     첫 문장에 붙일 말」. 사진 1 의 초록 상자가 <b>이 칸에서</b> 옵니다.
+     ★ 여태 이 칸이 없어서 그 상자가 안 섰습니다 — 코드에 「담을 자리가
+       없어 지어 넣지 않습니다」 라고 적혀 있었습니다 (1번).
+     ★ 이 자가 묻는 것 — <b>적으면 서고, 안 적으면 안 서나.</b> 안 적었는데
+       서면 무슨 말을 붙일지 <b>지어내야</b> 합니다.                  */
+  console.log('\n[9-1] 😟 <b>걱정 한 줄이 홈 첫 문장이 되나</b>');
+  const W = await p.evaluate(async () => {
+    const 홈글 = async () => { go('home'); await new Promise(r => setTimeout(r, 800));
+      const e = document.querySelector('#dynPane .hm-now');
+      return e ? e.innerText.replace(/\s+/g,' ') : ''; };
+    cmOf('c1').worry = '';
+    const 빈것 = await 홈글();
+    cmOf('c1').worry = '아이 교육비가 제일 걱정이라고 하셨습니다';
+    const 적은것 = await 홈글();
+    /* 상세에도 적는 칸이 <b>하나</b>인가 */
+    osOpenClient('c1'); await new Promise(r => setTimeout(r, 700));
+    const 칸 = document.querySelectorAll('#cmWorry').length;
+    const 표 = CM_FIELDS.filter(f => f[0] === 'worry')[0];
+    return { 빈것: 빈것, 적은것: 적은것, 칸: 칸,
+             물음: !!(표 && 표[3] && 표[3].ask), 차례: 표 && 표[3] && 표[3].pri };
+  });
+  is(W.빈것.indexOf('첫 문장에 붙일 것') < 0,
+     '  ★ <b>안 적었으면 안 선다</b> (1번) — 없는 말을 지어내지 않습니다');
+  is(W.적은것.indexOf('첫 문장에 붙일 것 — 아이 교육비') >= 0,
+     '  ★ <b>적으면 홈 카드에 그대로 선다</b> — ' +
+     (W.적은것.match(/첫 문장에 붙일 것[^·]{0,34}/) || ['(안 섬)'])[0]);
+  is(W.칸 === 1, '  적는 칸이 <b>하나</b>다 (5번) — ' + W.칸 + '개');
+  is(W.물음 && W.차례 === 2,
+     '  <b>둘째로 여쭙는다</b> — 다음 할 일 다음입니다 (차례 ' + W.차례 + ')');
+  /* 쓰는 곳은 cmSave 하나 — 저장 코드를 새로 안 짰습니다 (사장님 말씀) */
+  is(/function cmWorrySave\(id\)\{[\s\S]{0,140}cmSave\(id,\{worry:/.test(SRC),
+     '  ★ 쓰는 것은 <b>cmSave 하나</b>로만 한다');
+  /* ★ <b>적은 것이 서버로 정말 가나.</b> 여기서 한 번 놓쳤습니다 —
+     칸 표(CM_FIELDS)에서 worry 를 빼 봤더니 <b>화면은 그대로 돌고
+     저장만 조용히 안 됐습니다.</b> 화면이 멀쩡해서 아무도 모릅니다.
+     그것이 제일 나쁜 고장이라 <b>보낸 것을 직접</b> 봅니다 (8번). */
+  const WS = await p.evaluate(async () => {
+    WROTE.length = 0;
+    cmSave('c1', { worry: '서버로 가는지 보는 한 줄' });
+    await new Promise(r => setTimeout(r, 600));
+    const w = WROTE.filter(x => x.tb === 'saved_reports')[0];
+    return w ? Object.keys((w.body && w.body.content) || {}) : [];
+  });
+  is(WS.indexOf('worry') >= 0,
+     '  ★ 적은 것이 <b>서버로 간다</b> — 칸 표에서 빠지면 화면은 그대로인데 ' +
+     '저장만 조용히 안 됩니다 (보낸 칸 ' + WS.length + '개)');
+
+  console.log('\n[10] 조용히 터지지 않았나');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? (' ← ' + errs.slice(0, 2).join(' | ')) : ''));
 
   await b.close(); srv.close();
