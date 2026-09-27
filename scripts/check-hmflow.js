@@ -176,15 +176,31 @@ const CARD = () => {
   const MIN = await p.evaluate(() => HM_FLOW_STUCK);
   is(MIN === 7, '  기준이 <b>이레</b>다 — ' + MIN + '일');
 
-  console.log('\n[7] ★ <b>공지가 홈에서 빠지고</b> 어디로 갔는지 적혀 있나 (6번)');
+  /* ⚠ 2026-09-27 — 여기는 원래 <b>「공지가 홈에서 빠졌나」</b> 를 물었습니다.
+     사장님 말씀 「공지사항 별도로 빼버려」 로 뺐다가 <b>도로 넣었습니다</b> —
+     공지 사진(osNtcImgHtml)이 <b>홈 공지 자리에만</b> 있어서, 빼는 순간
+     앱 어디에서도 공지 사진을 볼 수 없게 됐습니다. check-ntcimg 가 8가지로
+     잡았습니다. 그것은 옮기는 것이 아니라 <b>지우는 것</b>입니다 (6번).
+     ★ 자를 <b>지우지 않고 옮깁니다</b> — 이제 「공지를 홈에서 빼려면 그
+       전에 사진 볼 자리가 있어야 한다」 를 잽니다. 공지가 제 화면을 갖는
+       날 이 자가 그것을 지켜 줍니다.                                    */
+  console.log('\n[7] ★ <b>공지를 홈에서 빼려면 사진 볼 자리가 먼저</b> (6번)');
   const G = await p.evaluate(() => ({
     홈: !!document.querySelector('#dynPane #osNoticeHome'),
-    옮김: ((document.querySelector('#dynPane .hm-mv') || {}).innerText || '').replace(/\s+/g,' '),
-    함수: (typeof osNoticeHomeHtml === 'function')
+    옮김: ((document.querySelector('#dynPane .hm-mv') || {}).innerText || '').replace(/\s+/g,' ')
   }));
-  is(!G.홈, '  공지 칸이 <b>홈에서 빠졌다</b>' + (G.홈 ? ' ← 아직 있습니다' : ''));
-  is(/공지/.test(G.옮김), '  ★ <b>어디로 갔는지 적혀 있다</b> — ' + G.옮김.slice(0, 60));
-  is(G.함수, '  ★ <b>함수는 안 지웠다</b> — 서랍이 같은 것을 부릅니다 (5번)');
+  const NSRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  /* 사진 칸을 그리는 자리가 <b>몇 군데</b>인가 — 한 군데뿐이면 그 한 군데를
+     빼는 순간 사진을 볼 곳이 없어집니다. */
+  const 사진자리 = (NSRC.match(/osNtcImgHtml\(/g) || []).length - 1;   /* 선언 한 줄은 뺍니다 */
+  is(G.홈 || 사진자리 > 0,
+     '  ★ 공지 사진을 <b>볼 자리가 있다</b> — 홈 공지칸 ' + (G.홈 ? '있음' : '없음') +
+     ' · 사진 칸을 그리는 곳 ' + 사진자리 + '군데' +
+     (!G.홈 && 사진자리 === 0 ? ' ← 홈에서 뺐는데 사진 볼 곳이 한 군데도 없습니다' : ''));
+  /* 홈에 있으면 「옮겼다」 고 적으면 <b>거짓말</b>입니다 (1번) */
+  is(!(G.홈 && /공지/.test(G.옮김)),
+     '  ★ 홈에 있는 것을 <b>「옮겼다」 고 안 적는다</b> (1번)' +
+     (G.홈 && /공지/.test(G.옮김) ? ' ← 홈에 있는데 옮겼다고 적혀 있습니다' : ''));
 
   console.log('\n[8] ★ <b>새 CSS·새 class 를 안 만들었다</b> (사장님 계약)');
   const i0 = SRC.indexOf('var HM_FLOW='), i1 = SRC.indexOf('function hmTossHtml(){');
