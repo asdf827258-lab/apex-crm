@@ -8309,13 +8309,29 @@ function arCrmDeepText(who){
    TA 는 많은데 AP 가 안 나오는 사람과, AP 까지는 가는데 CS 에서
    무너지는 사람은 <b>고쳐야 할 것이 완전히 다르다.</b> AI 가 그것을
    보고 말하게 단계별로 나눠서 넘긴다. */
-function arStageText(who){
-  var L=(AR.db||[]),i,r,c={},order=AR_STAGES,tot=0,pol=0,intro=0,done=0,appt=0;
+/* 📊 <b>단계마다 몇 분인가</b> — 세는 곳은 <b>여기 하나</b>입니다 (5번).
+   AI 에게 넘기는 글(arStageText)도, 홈 맨 위 상담현황(hmFlowHtml)도 이것을
+   부릅니다. 두 곳에서 각자 세면 <b>화면과 AI 가 다른 수</b>를 말합니다 —
+   실제로 트랙이 두 곳에서 갈려 쿠폰 상담이 연금으로 기록된 적이 있습니다.
+   ★ <b>아직 못 읽었으면 null</b> 입니다 (1번). 0 으로 돌려주면 「아무도
+     없다」 는 뜻이 되어, 배정 DB 가 늦게 오는 아침마다 거짓말을 합니다. */
+function arStageN(who){
+  var L=AR.db,c={},i,r,tot=0;
+  if(!L)return null;
   for(i=0;i<L.length;i++){
     r=L[i];
     if(who&&r.who!==who)continue;
     tot++;
     c[r.stage||'미접촉']=(c[r.stage||'미접촉']||0)+1;
+  }
+  return {c:c,tot:tot};
+}
+function arStageText(who){
+  var N=arStageN(who),L=(AR.db||[]),i,r,c=(N&&N.c)||{},order=AR_STAGES,tot=(N&&N.tot)||0,
+      pol=0,intro=0,done=0,appt=0;
+  for(i=0;i<L.length;i++){
+    r=L[i];
+    if(who&&r.who!==who)continue;
     if(r.stage==='계약완료')pol++;
     /* 소개를 <b>여쭐 차례</b>인 사람과 <b>이미 받은</b> 사람은 다르다 —
        뭉치면 「소개 몇 건 받았나」 를 셀 수가 없다 (1번) */
@@ -27593,7 +27609,14 @@ var HM_MOVED=[
  {t:'teamhub', e:'👥', n:'팀',         was:'팀 전체'},
  {t:'news_live',e:'📰', n:'콘텐츠',    was:'오늘 올릴 것 · SNS'},
  /* 아래 띠를 목업 다섯으로 바꾸며 제 칸이 없어졌습니다 — 길을 남깁니다 */
- {t:'crm',     e:'🗂', n:'DB 통합 CRM', was:'아래 띠'}
+ {t:'crm',     e:'🗂', n:'DB 통합 CRM', was:'아래 띠'},
+ /* 2026-09-27 사장님 말씀 「공지사항 별도로 빼버려」 — 홈에서 뺐습니다.
+    <b>지운 것이 아닙니다</b>: 서랍에 그대로 서고, 올리고 고치는 곳은
+    「나 › 설정」 입니다. 어디로 갔는지 여기 한 줄이 말합니다 (6번). */
+ /* 가리키는 곳은 <b>메뉴에 있는 화면</b>이라야 합니다 — settings 는
+    메뉴에 없고(navItemOf 가 null), 공지 관리는 「나」 안에 있습니다.
+    없는 곳을 가리키면 hmMovedHtml 이 그 단추를 아예 안 세웁니다. */
+ {t:'me',      e:'📢', n:'공지',        was:'홈 소식 한 자리'}
 ];
 /* ══ 🔔 <b>소식 한 자리</b> — 늘 있고, 없으면 없다고 적습니다 ═══════
    ★ <b>:has() 를 씁니다.</b> 안쪽 넷(알람 열쇠 · 알림 권유 · 고객 체크 ·
@@ -28672,6 +28695,112 @@ function hmTossDone(){
    ★ <b>누가 다음 분인지는 hmNext 하나</b>가 답합니다 (5번). 이 카드와 아래
      「오늘 챙길 것」 이 같은 분을 말하는 것은 그 때문입니다 — 두 곳에서
      따로 세는 것이 아닙니다.                                            */
+/* ══ 📊 <b>상담현황 — 지금 어디에 몇 분</b> ═══════════════════════════
+   사장님 말씀 (2026-09-27 · 목각 사진) — 홈 맨 위에 「TA → AP → PC → CS
+   → 증권전달」 한 줄. 「단계·주기·업적이 <b>세 곳에 흩어져</b> 있던 것을
+   한 줄로 모았습니다」.
+   ★ <b>새로 세지 않습니다</b> (5번) — 단계마다 몇 분인지는 arStageN 한
+     곳이 답하고, 단계의 차례는 apex-stage.js 가 압니다. 여기서 또 세면
+     AI 에게 넘기는 글과 화면이 다른 수를 말하게 됩니다.
+   ★ <b>못 읽었으면 수를 안 적습니다</b> (1번). 「0분」 은 「아무도 없다」
+     는 뜻이라, 배정 DB 가 늦게 오는 아침마다 거짓말이 됩니다.
+   ★ <b>예상업적 금액은 여기 안 적습니다</b> (1번). 그 값(expect_premium)
+     은 app/edu-pipeline.html 이 들고 있고 <b>본체는 못 읽습니다</b>. 못
+     읽는 것을 그럴듯하게 채우면 고객 앞에서 그것이 사실이 됩니다 —
+     <b>건수까지만</b> 세고, 금액은 어디 있는지만 말합니다.
+   ★ <b>새 CSS·새 class 를 한 줄도 안 만들었습니다</b> — ui.css 의
+     t-card · t-lab · t-h1 · t-chips · t-chip · t-note · t-sub · t-row2 ·
+     t-btn 으로만 지었습니다 (사장님 말씀 「새 CSS 를 쓰지 마십시오」). */
+var HM_FLOW=[
+  {k:'TA',     e:'📞'},
+  {k:'AP',     e:'🤝'},
+  {k:'PC',     e:'📄'},
+  {k:'CS',     e:'✍️'},
+  {k:'증권전달', e:'📬'}
+];
+/* <b>막힌 데</b> — PC·CS 에서 가장 오래 서 계신 한 분.
+   ★ 이레가 안 넘으면 <b>줄을 안 그립니다</b>. 이틀 된 분을 「막혔다」 고
+     적으면 날마다 뜨고, 날마다 뜨는 경고는 아무도 안 봅니다 (8번).
+   ★ 이름은 <b>가립니다</b> (3번) — 홈은 고객 앞에서 여는 화면입니다. */
+var HM_FLOW_STUCK=7;
+function hmFlowStuck(who){
+  var L=AR.db,i,r,best=null;
+  if(!L)return null;
+  for(i=0;i<L.length;i++){
+    r=L[i];
+    if(who&&r.who!==who)continue;
+    if(r.stage!=='PC'&&r.stage!=='CS')continue;
+    if(!(r.days>=HM_FLOW_STUCK))continue;
+    if(!best||r.days>best.days)best=r;
+  }
+  return best;
+}
+/* 이번 달 계약 — <b>건수만</b>입니다 (위 ★). 계약일이 안 적힌 줄은
+   안 셉니다 — 날짜를 모르는 것을 이번 달로 밀어 넣지 않습니다 (1번). */
+function hmFlowWon(who){
+  var L=AR.db,i,r,n=0,m=arToday().slice(0,7);
+  if(!L)return null;
+  for(i=0;i<L.length;i++){
+    r=L[i];
+    if(who&&r.who!==who)continue;
+    if(r.cAt&&r.cAt.slice(0,7)===m)n++;
+  }
+  return n;
+}
+function hmFlowMe(){ return (typeof arMyId==='function')?arMyId():null; }
+function hmFlowHtml(){
+  if(!OS.profile)return '';
+  var me=hmFlowMe(),N=arStageN(me),i,x,n,road=0,st,won,h;
+  h='<div class="t-card" id="hmFlow" style="margin-bottom:16px">'+
+    '<div class="t-lab">📊 상담현황 — 지금 어디에 몇 분</div>';
+  /* 못 읽었으면 <b>수를 안 적습니다</b> (1번) */
+  if(!N)
+    return h+'<div class="t-big">배정 DB 를 아직 못 읽었습니다.'+
+      '<small>어느 단계에 몇 분이 계신지는 <b>읽은 뒤에</b> 적습니다 — '+
+      '「0분」 이라고 적지 않습니다.</small></div></div>';
+  /* 목각은 이 줄이 <b>한 줄</b>입니다. t-h1(27px)로 적으면 폰에서 두 줄로
+     넘쳐 화살표가 끊깁니다 — 있는 조각 중 <b>t-big(18px)</b>이 맞습니다.
+     새 크기를 만들지 않았습니다. */
+  h+='<div class="t-big">'+
+     'TA → AP → PC → CS → 증권전달'+
+     '<small>단계·주기·업적이 <b>세 곳에 흩어져</b> 있던 것을 한 줄로 모았습니다. '+
+     '<b>새로 세지 않습니다.</b></small></div>'+
+     '<div class="t-chips">';
+  for(i=0;i<HM_FLOW.length;i++){
+    x=HM_FLOW[i];n=N.c[x.k]||0;road+=n;
+    /* 누르는 것이 아니라 <b>적어 둔 수</b>입니다 — span 입니다 */
+    h+='<span class="t-chip"><b>'+n+'</b> '+x.e+' '+osEsc(x.k)+'</span>';
+  }
+  h+='</div>';
+  st=hmFlowStuck(me);
+  if(st)
+    h+='<div class="t-note" style="margin-top:14px">막힌 데 — <b>'+
+       osEsc(osMaskName(st.name))+'</b>님이 '+osEsc(st.stage)+'에서 <b>'+st.days+
+       '일째</b>입니다. 거기부터 푸시면 이번 달이 채워집니다.</div>';
+  won=hmFlowWon(me);
+  /* 길 위에 아무도 없으면 <b>「0분이 계십니다」 라고 안 적습니다</b> —
+     사람이 0명인데 「계십니다」 는 말이 안 되고, 무엇을 하면 되는지도
+     말해 드려야 합니다 (1번). 읽기 전(N 이 null)과는 위에서 이미 갈랐습니다. */
+  h+='<div class="t-sub">'+(road
+     ? ('모두 <b>'+road+'분</b>이 길 위에 계십니다. ')
+     : ('길 위에 계신 분이 <b>아직 없습니다</b> — 배정 DB 에서 단계를 올리시면 여기 섭니다. '))+
+     '이번 달 계약 <b>'+won+'건</b> · 예상업적은 <b>DB·업적관리</b>에 있습니다 — '+
+     '본체가 못 읽어 <b>건수까지만</b> 셉니다.</div>'+
+     '<div class="t-row2" style="margin-top:14px">'+
+     '<button type="button" class="t-btn g sm" onclick="go(\'crm\')">칸반으로 펴 보기</button>'+
+     '<button type="button" class="t-btn g sm" onclick="hmFlowHere()">이 자리에서 할 것</button>'+
+     '</div></div>';
+  return h;
+}
+/* <b>이 자리에서 할 것</b> — 바로 아래 「지금 할 것」 카드로 모십니다.
+   여기서 또 카드를 그리지 않습니다 (5번). 오늘 챙길 분이 없으면 그렇다고
+   말합니다 — 아무 일도 안 일어나면 고장으로 보입니다 (1번). */
+function hmFlowHere(){
+  var e=document.querySelector('#dynPane .hm-now');
+  if(!e){toast('오늘 챙길 분이 아직 없습니다');return;}
+  try{ e.scrollIntoView({behavior:'smooth',block:'start'}); }
+  catch(x){ try{ e.scrollIntoView(); }catch(x2){} }
+}
 function hmTossHtml(){
   if(!OS.profile)return '';
   var ap=hmTossAppt(),wk=hmTossWeek();
@@ -28750,9 +28879,19 @@ function renderHome(){
        ★ <b>오늘 어디로 가시나</b>는 #441 에서 이미 자리를 지키게 했습니다.
        ★ <b>준비 SQL</b>은 사장님 ★ 대로 <b>그 자리</b>(바로 아래)에 둡니다 —
          여러 화면이 「홈 맨 위」 라고 가리키고 check-setup 이 그것을 잡습니다. */
+    /* 📊 <b>상담현황 한 줄</b> — 사장님 말씀 (2026-09-27 · 목각 사진).
+       인사 바로 밑, 「지금 할 것」 바로 위입니다 — 목각이 그 자리입니다.
+       <b>몇 분인지는 arStageN 한 곳</b>이 답합니다 (5번). */
+    (OS.profile?('<div id="hmFlowHost">'+hmFlowHtml()+'</div>'):'')+
     (OS.profile?('<div id="hmNotiLine" class="hm-noti">'+
         '<div id="almkBand"></div><div id="almNudge"></div>'+
-        '<div id="ccHomeLine"></div><div id="osNoticeHome"></div>'+
+        /* 📢 <b>공지는 홈에서 뺐습니다</b> — 사장님 말씀 (2026-09-27)
+           「공지사항 별도로 빼버려」. <b>지운 것이 아닙니다</b> — 서랍
+           (osNoticeNavHtml)과 「나 › 설정」 의 공지 관리에 그대로 있고,
+           아래 「📦 여기로 옮겼습니다」 줄이 어디로 갔는지 적어 줍니다 (6번).
+           칠하는 함수(osNoticeHomeHtml)는 <b>안 지웠습니다</b> — 서랍이
+           같은 것을 부릅니다. 자리를 못 찾으면 조용히 안 그립니다. */
+        '<div id="ccHomeLine"></div>'+
         '<div class="hm-noti-n">🔔 <b>새 소식이 없습니다.</b></div></div>'):'')+
     /* ⚠ <b>준비 SQL 은 여기 그대로 둡니다.</b> 한 번은 접어서 맨 아래로
        내렸는데 check-setup 이 잡았습니다 — 여러 화면이 「<b>홈 맨 위</b>

@@ -1,219 +1,209 @@
-/* 상담 흐름 — 상담자료에서 계산기로, 계산기 안에서 종합 재무설계까지
+/* ══════════════════════════════════════════════════════════════════
+   check-flow.js — 📊 <b>상담현황 한 줄</b>이 거짓말을 안 하나.
 
-   계산기 탭이 열한 개다. 상담 중에 「다음에 뭘 열지」를 고르는 1초가
-   고객에게는 「준비가 안 됐구나」로 보인다. 그래서 세 곳을 이었다.
+   사장님 말씀 (2026-09-27 · 목각 사진) — 홈 맨 위에 「TA → AP → PC →
+   CS → 증권전달」. 「단계·주기·업적이 <b>세 곳에 흩어져</b> 있던 것을
+   한 줄로 모았습니다」.
 
-     ① 상담자료 sec1 → 계산기   적은 것을 들고 넘어간다
-        (전에는 계산기→통합상담 21곳이 이어져 있는데 이 길만 0개였다)
-     ② 계산기 안 상담 순서       팩트체크 → 대시보드 → 현금흐름 → 아픈 곳 → 종합
-     ③ 마지막 자리              고객 365일 저장 · 아픈 곳에 맞는 발표자료
-
-   하나라도 끊기면 상담이 메뉴에서 헤맨다. 여기서 확인한다.           */
+   ── 재는 것 ──────────────────────────────────────────────────────
+     [1] 칸이 <b>홈에</b> 서고 다섯 단계가 다 있나
+     [2] <b>세는 곳이 하나</b>인가 (5번) — arStageN 이 답하고, AI 에게
+         넘기는 글(arStageText)도 그것을 부르나. 두 곳에서 각자 세면
+         화면과 AI 가 다른 수를 말한다
+     [3] <b>못 읽었으면 수를 안 적나</b> (1번) — 「0분」 은 「아무도
+         없다」 는 뜻이라, 배정 DB 가 늦게 오는 아침마다 거짓말이 된다
+     [4] <b>예상업적 금액을 안 적나</b> (1번) — 그 값은 edu-pipeline 이
+         들고 있고 본체는 못 읽는다. 못 읽는 것을 채우지 않는다
+     [5] <b>이름을 가리나</b> (3번) — 홈은 고객 앞에서 여는 화면이다
+     [6] <b>막힌 데</b>가 이레를 넘을 때만 서나 (8번 · 날마다 뜨는
+         경고는 아무도 안 본다)
+     [7] <b>공지가 홈에서 빠지고</b> 어디로 갔는지 적혀 있나 (6번)
+     [8] <b>새 CSS·새 class 를 안 만들었나</b> (사장님 계약)
+   ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
-const http = require('http'); const fs = require('fs'); const path = require('path');
-const ROOT = process.cwd(), PORT = 8894;
-
+const http = require('http'), fs = require('fs'), path = require('path');
+const ROOT = process.cwd(), PORT = 9028;
+let bad = 0;
+const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
+const MT = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8',
+             '.css':'text/css; charset=utf-8', '.json':'application/json; charset=utf-8' };
 const srv = http.createServer((q, s) => {
-  const f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0]));
-  if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { s.writeHead(404); s.end(); return; }
-  s.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-  fs.createReadStream(f).pipe(s);
-}).listen(PORT);
+  let p = path.join(ROOT, decodeURIComponent(q.url.split('?')[0]));
+  try { if (fs.statSync(p).isDirectory()) p = path.join(p, 'index.html'); } catch (e) {}
+  fs.readFile(p, (e, d) => { if (e) { s.writeHead(404); s.end(''); return; }
+    s.writeHead(200, { 'Content-Type': MT[path.extname(p)] || 'application/octet-stream' }); s.end(d); });
+});
 
-let pass = 0, fail = 0;
-const is = (c, m) => { c ? (pass++, console.log('  ✓ ' + m)) : (fail++, console.log('  ✗ ' + m)); };
-const B = 'http://127.0.0.1:' + PORT;
+/* 견본 — 이름은 「홍길동」 (3번). 단계마다 사람을 심어 수를 확인합니다. */
+const SEED = () => {
+  try { localStorage.setItem('apex_login_ok','1'); } catch(e){}
+  window.osLoadProfile=function(){}; window.osProfileApply=function(){};
+  window.osShowLoginGate=function(){}; window.arLoad=function(){};
+  window.osLoadClients=function(){}; window.cmLoadAll=function(cb){ CM.loaded=true; if(cb)cb(); };
+  window.osCliInfoLoad=function(){}; window.osRepListLoad=function(){};
+  window.setupDone=function(){return true;}; window.setupCanRun=function(){return true;};
+  window.osTabAllowed=function(){return true;};
+  window.TOASTS=[]; window.toast=function(t){ TOASTS.push(''+t); };
+  OS.profile={id:'me',user_id:'me',name:'홍길동',role:'fp',team:'A',active:true};
+  OS.session={user:{id:'me'}};
+  OSC.loaded=true; OSC.busy=false; OSC.err=''; OSC.reps=[]; OSC.list=[];
+  CM.loaded=true; CM.meta={};
+  AR.loaded=true; AR.busy=''; AR.cliRows=[];
+  const ago = n => new Date(Date.now()-n*864e5).toISOString().slice(0,10);
+  const me = (typeof arMyId==='function') ? arMyId() : 'me';
+  /* TA 1 · AP 2 · PC 1 · CS 2 · 증권전달 1 = 길 위 7분 (목각과 같은 수).
+     PC 의 한 분은 <b>9일째</b> — 막힌 데가 그분을 집어야 합니다.        */
+  const row = (id, stage, days, nm, cAt) => ({ id:id, who:me, name:nm, region:'강남구',
+    src:'보장분석10DB', stage:stage, cAt:cAt||'', pAt:'', got:ago(60), n:1,
+    last:ago(days), res:'상담', appt:'', memo:'', days:days });
+  const thisMonth = new Date().toISOString().slice(0,7) + '-01';
+  AR.db=[ row('d1','TA',2,'홍길동A'), row('d2','AP',1,'홍길동B'), row('d3','AP',3,'홍길동C'),
+          row('d4','PC',9,'홍길동D'), row('d5','CS',2,'홍길동E'), row('d6','CS',4,'홍길동F'),
+          row('d7','증권전달',5,'홍길동G'),
+          row('d8','계약완료',6,'홍길동H', thisMonth),
+          row('d9','미접촉',30,'홍길동I') ];
+  try{ osHideLoginGate(); }catch(e){}
+};
+
+const CARD = () => {
+  const el = document.querySelector('#dynPane #hmFlow');
+  if (!el) return { 없음:true };
+  return { t: el.innerText.replace(/\s+/g,' ').trim(),
+           칩: [].slice.call(el.querySelectorAll('.t-chip')).map(x => x.textContent.replace(/\s+/g,' ').trim()),
+           단추: [].slice.call(el.querySelectorAll('.t-btn')).map(x => x.textContent.trim()),
+           h: Math.round(el.getBoundingClientRect().height) };
+};
 
 (async () => {
-  const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 1400, height: 1000 } });
-  await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0
-    ? r.continue() : r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
-  const errs = [];
+  await new Promise(r => srv.listen(PORT, r));
+  const b = await chromium.launch();
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+  const p = await ctx.newPage();
+  const errs = []; p.on('pageerror', e => errs.push('' + (e && e.message)));
+  await p.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
+  await p.waitForFunction(() => typeof renderHome === 'function' && typeof go === 'function', { timeout: 60000 });
+  await p.evaluate(SEED);
+  await p.evaluate(() => { go('home'); });
+  await p.waitForTimeout(900);
 
-  /* ── ① 상담자료 → 계산기 ─────────────────────────────────────── */
-  console.log('\n[1] 상담자료 sec1 에서 계산기로 넘어가는 길이 있는가');
-  const deck = await ctx.newPage();
-  deck.on('pageerror', e => errs.push('상담자료: ' + e.message));
-  await deck.goto(B + '/app/재무설계/상담자료.html', { waitUntil: 'domcontentloaded', timeout: 90000 });
-  await deck.waitForTimeout(2500);
-  await deck.fill('#f_name', '홍길동');
+  console.log('\n[1] 칸이 <b>홈에</b> 서고 다섯 단계가 다 있나');
+  const A = await p.evaluate(CARD);
+  is(!A.없음, '  📊 <b>상담현황</b> 칸이 홈에 <b>선다</b> — ' + (A.없음 ? '없습니다' : (A.h + 'px')));
+  /* ★ 단계 이름을 여기 <b>글자로 안 박습니다</b> — 박으면 표를 고쳐도 이
+     줄이 낡아 새 단계를 <b>재지 않고</b> 초록불을 켭니다 (8번). */
+  const 표 = await p.evaluate(() => HM_FLOW.map(x => x.k));
+  is(표.length === 5 && 표.every(k => (A0 => A0)(true)),
+     '  단계 표가 <b>다섯</b>이다 — ' + 표.join(' → '));
+  const 빠진 = 표.filter(k => !A.칩.some(c => c.indexOf(k) >= 0));
+  is(빠진.length === 0, '  칩이 <b>표를 그대로</b> 세운다' + (빠진.length ? (' ← 빠짐 ' + 빠진.join(' ')) : ''));
+  /* 목각과 같은 수인가 — 견본은 TA1 · AP2 · PC1 · CS2 · 증권전달1 */
+  const 수 = A.칩.map(c => (c.match(/^\d+/) || [''])[0]).join(',');
+  is(수 === '1,2,1,2,1', '  <b>단계마다 제 수</b>를 적는다 — ' + 수 + ' (견본 1,2,1,2,1)');
+  is(/모두 <?b?>?7분|모두 7분/.test(A.t.replace(/<[^>]*>/g,'')),
+     '  <b>길 위에 모두 몇 분</b>인지 적는다 — ' + (A.t.match(/모두 \d+분/) || ['(없음)'])[0]);
+  is(/이번 달 계약 1건/.test(A.t), '  <b>이번 달 계약</b>을 센다 — ' +
+     (A.t.match(/이번 달 계약 \d+건/) || ['(없음)'])[0]);
 
-  is(await deck.locator('#sec1 .tofin').count() === 1, 'sec1 안에 「계산기에서 이어서」 버튼이 있다');
-  is(await deck.evaluate(() => typeof window.apexToFin === 'function'), 'apexToFin 이 열려 있다');
-
-  /* 부모 없이 혼자 열었을 때 조용히 안내만 하고 안 죽는가 */
-  deck.once('dialog', d => d.accept());
-  await deck.click('#sec1 .tofin');
-  await deck.waitForTimeout(500);
-  is(errs.length === 0, '앱 밖에서 열어도 알림만 뜨고 터지지 않는다');
-
-  const sent = await deck.evaluate(() => {
-    let got = null; const real = window.parent;
-    Object.defineProperty(window, 'parent', { configurable: true, value: { postMessage: m => { got = m; } } });
-    try { window.apexToFin(); } finally { Object.defineProperty(window, 'parent', { configurable: true, value: real }); }
-    return got;
+  console.log('\n[2] ★ <b>세는 곳이 하나</b>인가 (5번)');
+  const SRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  is((SRC.match(/function arStageN\(/g) || []).length === 1, '  세는 함수가 <b>한 벌</b>이다 — arStageN');
+  is(/function arStageText\(who\)\{[\s\S]{0,120}arStageN\(who\)/.test(SRC),
+     '  ★ AI 에게 넘기는 글도 <b>arStageN 을 부른다</b> — 두 곳에서 각자 세지 않는다');
+  is(/function hmFlowHtml\(\)\{[\s\S]{0,200}arStageN\(/.test(SRC),
+     '  ★ 홈 칸도 <b>arStageN 을 부른다</b>');
+  /* 진짜 같은 답인가 — 글과 화면의 수를 <b>맞대어</b> 봅니다 */
+  const 맞대 = await p.evaluate(() => {
+    const me = (typeof arMyId==='function') ? arMyId() : 'me';
+    const N = arStageN(me), t = arStageText(me);
+    const out = [];
+    HM_FLOW.forEach(x => { const n = N.c[x.k] || 0;
+      if (n && t.indexOf(x.k + ' ' + n + '건') < 0) out.push(x.k + ' 화면 ' + n); });
+    return out;
   });
-  is(sent && sent.t === 'apex:tofin', 'apex:tofin 쪽지를 보낸다');
-  is(sent && sent.data && sent.data.f && Object.keys(sent.data.f).length > 20,
-    '적은 칸을 통째로 담는다 (' + (sent && sent.data && sent.data.f ? Object.keys(sent.data.f).length : 0) + '칸)');
-  is(sent && typeof sent.pain === 'string',
-    '「가장 먼저 듣고 싶은 것」을 아픈 곳으로 같이 넘긴다 — ' + (sent && sent.pain));
+  is(맞대.length === 0, '  ★ <b>화면과 AI 가 같은 수</b>를 말한다' +
+     (맞대.length ? (' ← 갈림 ' + 맞대.join(' · ')) : ''));
 
-  /* ── ② 부모 앱이 칸을 옮겨 담는가 ────────────────────────────── */
-  console.log('\n[2] 부모 앱이 상담자료 칸을 계산기 칸으로 옮기는가');
-  const app = await ctx.newPage();
-  app.on('pageerror', e => errs.push('앱: ' + e.message));
-  await app.goto(B + '/app/index.html', { waitUntil: 'domcontentloaded', timeout: 90000 });
-  await app.waitForTimeout(6000);
+  console.log('\n[3] ★ <b>못 읽었으면 수를 안 적는다</b> (1번)');
+  const C = await p.evaluate(async () => {
+    const 담 = AR.db; AR.db = null;
+    const h = hmFlowHtml(), n = arStageN('me');
+    AR.db = 담;
+    return { 셈: n, 글: h.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim() };
+  });
+  is(C.셈 === null, '  못 읽었으면 <b>셈이 null</b> 이다 — 0 이 아니다');
+  is(/아직 못 읽었/.test(C.글), '  <b>「아직 못 읽었습니다」</b> 라고 적는다 — ' + C.글.slice(0, 44));
+  /* ★ <b>낫표 안의 「0분」 은 약속이지 수가 아닙니다.</b> 화면이 스스로
+     「「0분」 이라고 적지 않습니다」 라고 적어 두었는데 그것을 세면, 약속을
+     적었다고 빨간불이 켜집니다 — 헛것을 잡는 자는 안 잡는 자보다 나쁩니다 (8번). */
+  const 맨글 = C.글.replace(/「[^」]*」/g, ' ');
+  is(!/\d+분|\d+건/.test(맨글), '  ★ <b>수를 한 자도 안 적는다</b> — 「아무도 없다」 는 뜻이 됩니다' +
+     (/\d+분|\d+건/.test(맨글) ? (' ← ' + (맨글.match(/\d+[분건]/g) || []).join(' ')) : ''));
 
-  const mapped = await app.evaluate(f => window.osToFinMap(f), sent.data.f);
-  const F = sent.data.f;
-  is(mapped.s_name === '홍길동', '고객명이 그대로 간다');
-  is(mapped.s_age === String(parseFloat(F.f_age)), '나이가 간다 (' + mapped.s_age + '세)');
-  is(mapped.s_gross === String(Math.round(parseFloat(F.f_income) * 12)),
-    '월소득 ' + F.f_income + '만 → 연 총급여 ' + mapped.s_gross + '만 (×12 로 바꿔 담는다)');
-  is(mapped.s_target === String(parseFloat(F.f_retspend)), '은퇴 희망 생활비가 간다');
-  is(mapped.s_nps === String(parseFloat(F.f_np)), '국민연금 예상액이 간다');
-  is(mapped.s_realty === String(parseFloat(F.f_home)), '거주 부동산이 간다');
-  is(Object.keys(mapped).length >= 15, Object.keys(mapped).length + '칸이 옮겨진다');
+  console.log('\n[4] ★ <b>예상업적 금액을 안 적는다</b> (1번)');
+  is(/DB·업적관리/.test(A.t), '  금액이 <b>어디 있는지</b>는 말한다 — DB·업적관리');
+  is(/못 읽어/.test(A.t) && /건수까지만/.test(A.t),
+     '  ★ <b>못 읽는다고 밝힌다</b> — 「본체가 못 읽어 건수까지만 셉니다」');
+  const 돈 = (A.t.match(/[\d,]+\s*(원|만원|억)/g) || []);
+  is(돈.length === 0, '  ★ <b>돈 액수를 한 자도 안 적는다</b>' + (돈.length ? (' ← ' + 돈.join(' · ')) : ''));
 
-  const blank = await app.evaluate(() => window.osToFinMap({ f_name: '', f_age: '40' }));
-  is(!('s_name' in blank) && blank.s_age === '40',
-    '빈 칸은 안 넘긴다 — 계산기에 이미 있는 값을 지우지 않는다');
+  console.log('\n[5] ★ <b>이름을 가린다</b> (3번) · 막힌 데');
+  is(/막힌 데/.test(A.t), '  <b>막힌 데</b>가 선다 — ' + (A.t.match(/막힌 데[^·]{0,44}/) || ['(없음)'])[0]);
+  is(/9일째/.test(A.t), '  <b>가장 오래</b> 서 계신 분을 집는다 — 9일째 (견본에서 제일 오래된 PC)');
+  /* 가리는 <b>모양</b>은 앱이 정합니다(cusMask) — 여기서 ○ 인지 * 인지를
+     박아 두면, 마스킹을 고칠 때 이 자가 낡아 거짓 빨간불을 켭니다 (8번).
+     이 자가 묻는 것은 하나입니다 — <b>실명이 그대로 찍혔나.</b>          */
+  const 실명 = A.t.indexOf('홍길동D') >= 0;
+  const 가림 = /[○*]/.test((A.t.match(/막힌 데[^·]{0,30}/) || [''])[0]);
+  is(!실명 && 가림,
+     '  ★ 이름을 <b>가린다</b> — 홈은 고객 앞에서 여는 화면입니다' +
+     (실명 ? ' ← 실명이 그대로 찍혔습니다' : (가림 ? '' : ' ← 가린 자국이 없습니다')));
 
-  /* ── ③ 계산기가 받아서 상담 순서를 켜는가 ────────────────────── */
-  console.log('\n[3] 계산기가 받아서 상담 순서를 켜는가');
-  const fin = await ctx.newPage();
-  fin.on('pageerror', e => errs.push('계산기: ' + e.message));
-  await fin.goto(B + '/app/finance.html', { waitUntil: 'domcontentloaded', timeout: 90000 });
-  await fin.waitForTimeout(3000);
+  console.log('\n[6] ★ <b>막힌 데는 이레를 넘을 때만</b> (8번)');
+  const F = await p.evaluate(() => {
+    const 담 = AR.db.map(r => r.days);
+    AR.db.forEach(r => { r.days = 2; });          /* 다 이틀째로 */
+    const h = hmFlowHtml();
+    AR.db.forEach((r, i) => { r.days = 담[i]; });
+    return h.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ');
+  });
+  is(F.indexOf('막힌 데') < 0,
+     '  ★ 다 이틀째면 <b>줄을 안 그린다</b> — 날마다 뜨는 경고는 아무도 안 봅니다');
+  const MIN = await p.evaluate(() => HM_FLOW_STUCK);
+  is(MIN === 7, '  기준이 <b>이레</b>다 — ' + MIN + '일');
 
-  await fin.evaluate(m => window.postMessage({ type: 'apexFinLoad', inputs: m }, location.origin), mapped);
-  await fin.waitForTimeout(1200);
-  is(await fin.inputValue('#s_name') === '홍길동', '계산기 고객명 칸에 들어갔다');
-  is(await fin.inputValue('#s_gross') === mapped.s_gross, '연 총급여 칸에 들어갔다');
-  is(await fin.inputValue('#s_target') === mapped.s_target, '목표 생활비 칸에 들어갔다');
-
-  await fin.evaluate(pain => window.postMessage({ type: 'apexFinFlow', at: 0, pain }, location.origin), sent.pain);
-  await fin.waitForTimeout(900);
-  const s0 = await fin.evaluate(() => window.apexFlow.state());
-  is(s0.on === true && s0.i === 0, '상담 순서가 팩트체크부터 켜진다');
-  is(s0.pain === sent.pain, '아픈 곳이 상담자료에서 고른 그대로다 (' + s0.pain + ')');
-  is(await fin.isVisible('#tab-factcheck.on'), '팩트체크 탭이 실제로 열렸다');
-
-  /* ── ④ 순서를 끝까지 밟는가 ──────────────────────────────────── */
-  console.log('\n[4] 팩트체크부터 종합 재무설계까지 이어지는가');
-  is((await fin.textContent('.flw-count')).trim() === '1 / 5', '1 / 5 로 시작한다');
-  is(await fin.isDisabled('#flowPrev'), '첫 단계에서 「이전」이 눌리지 않는다');
-  const seen = [];
-  for (let i = 0; i < 4; i++) {
-    await fin.click('#flowNext'); await fin.waitForTimeout(650);
-    seen.push((await fin.textContent('.flw-t')).trim());
-  }
-  is(seen.length === 4, '네 단계가 순서대로 열린다 — ' + seen.join(' → '));
-  is((await fin.textContent('.flw-count')).trim() === '5 / 5', '5 / 5 에 도착한다');
-  is(await fin.isVisible('#tab-total.on'), '마지막이 종합 재무설계 탭이다');
-
-  console.log('\n[5] 아픈 곳을 바꾸면 그 탭으로 옮기는가');
-  await fin.click('#flowPrev'); await fin.waitForTimeout(500);
-  is(await fin.isVisible('#flowPain'), '4단계에서 아픈 곳을 고르는 칸이 나온다');
-  await fin.selectOption('#flowPain', 'edufund'); await fin.waitForTimeout(800);
-  is(await fin.isVisible('#tab-edufund.on'), '교육자금으로 고르니 그 탭이 열린다');
-  await fin.selectOption('#flowPain', 'inherit'); await fin.waitForTimeout(800);
-  is(await fin.isVisible('#tab-inherit.on'), '상속·증여로 바꾸니 따라 옮긴다');
-
-  console.log('\n[6] 손으로 다른 탭을 눌러도 바가 따라오는가');
-  await fin.evaluate(() => window.switchTab('cashflow'));
-  await fin.waitForTimeout(600);
-  is((await fin.textContent('.flw-count')).trim() === '3 / 5',
-    '바가 3 / 5 로 따라온다 — 엉뚱한 자리를 가리키지 않는다');
-
-  console.log('\n[7] 닫히는가 · 기억하는가');
-  await fin.click('.flw-x'); await fin.waitForTimeout(400);
-  /* × 를 눌렀을 때 그 클릭이 위로 올라가 알약을 다시 열어 버린 적이 있다.
-     눌러도 안 닫히는 것처럼 보였다. 그래서 여기서 못 박는다. */
-  is(await fin.isVisible('#flowBar.mini'), '× 를 누르면 닫혀서 작은 알약이 된다');
-  const s1 = await fin.evaluate(() => window.apexFlow.state());
-  is(s1.on === false && s1.i === 2 && s1.pain === 'inherit', '자리와 고른 것을 기억한다');
-  await fin.reload({ waitUntil: 'domcontentloaded' }); await fin.waitForTimeout(2500);
-  const s2 = await fin.evaluate(() => window.apexFlow.state());
-  is(s2.i === 2 && s2.pain === 'inherit', '새로고침해도 기억한다');
-
-  /* ── ⑤ 상담을 닫는 자리 ──────────────────────────────────────── */
-  console.log('\n[8] 마지막 자리에서 상담이 닫히는가');
-  await fin.evaluate(() => window.apexFlow.start(4));
-  await fin.waitForTimeout(900);
-  is(await fin.isVisible('#flowSave'), '「고객 365일에 저장」이 있다');
-  is(await fin.isVisible('#flowDeck'), '「발표자료로」가 있다');
-  is(await fin.isVisible('#flowEnd'), '「상담 끝내기」가 있다');
-  is((await fin.textContent('.flw-done')).indexOf('저장하지 않으면') >= 0,
-    '저장 안 하면 어떻게 되는지 말해 준다');
-
-  const saved = await fin.evaluate(() => new Promise(res => {
-    let got = null; const real = window.parent, oa = window.alert;
-    Object.defineProperty(window, 'parent', { configurable: true, value: { postMessage: m => { got = m; } } });
-    window.alert = function () {};
-    document.getElementById('flowSave').click();
-    setTimeout(() => {
-      Object.defineProperty(window, 'parent', { configurable: true, value: real });
-      window.alert = oa; res(got);
-    }, 400);
+  console.log('\n[7] ★ <b>공지가 홈에서 빠지고</b> 어디로 갔는지 적혀 있나 (6번)');
+  const G = await p.evaluate(() => ({
+    홈: !!document.querySelector('#dynPane #osNoticeHome'),
+    옮김: ((document.querySelector('#dynPane .hm-mv') || {}).innerText || '').replace(/\s+/g,' '),
+    함수: (typeof osNoticeHomeHtml === 'function')
   }));
-  is(saved && saved.type === 'apexFinSave', '저장을 누르면 고객 365일 쪽지를 보낸다');
-  is(saved && /종합 재무설계 보고서/.test(saved.title || ''), '제목이 붙는다');
-  is(saved && saved.md && saved.md.length > 2000,
-    '보고서가 통째로 담긴다 (' + (saved && saved.md ? saved.md.length : 0) + '자)');
-  is(saved && saved.inputs && Object.keys(saved.inputs).length > 40,
-    '입력한 칸도 같이 담긴다 (' + (saved && saved.inputs ? Object.keys(saved.inputs).length : 0) + '칸)');
-  is(saved && /금융소비자 보호에 관한 법률/.test(saved.md || ''), '준법 문구가 보고서 안에 있다');
+  is(!G.홈, '  공지 칸이 <b>홈에서 빠졌다</b>' + (G.홈 ? ' ← 아직 있습니다' : ''));
+  is(/공지/.test(G.옮김), '  ★ <b>어디로 갔는지 적혀 있다</b> — ' + G.옮김.slice(0, 60));
+  is(G.함수, '  ★ <b>함수는 안 지웠다</b> — 서랍이 같은 것을 부릅니다 (5번)');
 
-  console.log('\n[9] 발표자료가 아픈 곳에 맞는 트랙으로 열리는가');
-  /* apexPresent 는 탭 이름이 아니라 트랙 글자를 받는다. 종합 재무설계 탭에서
-     apexTrack() 을 쓰면 늘 연금으로만 열린다 — 그래서 여기서 확인한다. */
-  for (const [pain, track] of [['pension', 'w'], ['invest', 't'], ['edufund', 'e'], ['inherit', 'w']]) {
-    const url = await fin.evaluate(pn => new Promise(res => {
-      window.postMessage({ type: 'apexFinFlow', at: 4, pain: pn }, location.origin);
-      setTimeout(() => {
-        let got = null; const om = window.apexOpenModal;
-        window.apexOpenModal = u => { got = u; };
-        document.getElementById('flowDeck').click();
-        window.apexOpenModal = om;
-        res(got);
-      }, 500);
-    }), pain);
-    const m = /[?&]track=([a-z])/.exec(url || '');
-    is(m && m[1] === track, pain + ' → track=' + (m ? m[1] : '없음') + ' (기대 ' + track + ')');
-  }
+  console.log('\n[8] ★ <b>새 CSS·새 class 를 안 만들었다</b> (사장님 계약)');
+  const i0 = SRC.indexOf('var HM_FLOW='), i1 = SRC.indexOf('function hmTossHtml(){');
+  const BLK = (i0 >= 0 && i1 > i0) ? SRC.slice(i0, i1) : '';
+  is(BLK.length > 1200, '  상담현황 묶음을 찾았다 — ' + BLK.length + '자');
+  is(!/#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}\b/.test(BLK), '  ★ <b>hex 를 한 자도 안 적었다</b>');
+  is(!/style="[^"]*color:/.test(BLK), '  ★ <b>style 로 색을 안 칠했다</b>');
+  /* ui.css 는 <b>t-btn.g · t-btn.sm · t-chip.on</b> 처럼 <b>변형</b>을
+     짧은 이름으로 답니다. 그것까지 「새 이름」 으로 세면 있는 것을 써도
+     빨간불입니다 — 실제로 그랬습니다 (8번). ui.css 에 그 변형이 <b>정말
+     적혀 있는지</b> 파일에서 찾아 봅니다. 없는 이름만 잡습니다. */
+  const UI = fs.readFileSync(path.join(ROOT, 'app/ui.css'), 'utf8');
+  const 새클래스 = (BLK.match(/class="([^"]+)"/g) || []).join(' ')
+    .replace(/class="|"/g,' ').split(/\s+/).filter(Boolean)
+    .filter(c => c.indexOf('t-') !== 0)
+    .filter(c => UI.indexOf('.t-btn.' + c) < 0 && UI.indexOf('.t-chip.' + c) < 0 &&
+                 UI.indexOf('.t-note.' + c) < 0 && UI.indexOf('.t-tag.' + c) < 0);
+  is(새클래스.length === 0, '  ★ <b>ui.css 이름만 썼다</b>' +
+     (새클래스.length ? (' ← 새 이름 ' + [...new Set(새클래스)].join(' ')) : ''));
 
-  /* ── ⑥ 지출 합계 ─────────────────────────────────────────────── */
-  console.log('\n[10] 남는 돈이 부풀려지지 않는가');
-  const src = fs.readFileSync(path.join(ROOT, 'app/finance.html'), 'utf8');
-  is(/expense=gv\('s_housing'\)[^;]*gv\('s_choice_etc'\)/.test(src),
-    '「기타/월」이 지출 합계에 들어간다 — 빠져 있으면 남는 돈이 부풀려지고 그 돈으로 보험료를 제안하게 된다');
-
-  is(errs.length === 0, '세 화면 어디서도 콘솔 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
-  /* ── 탭이 서로 안에 갇히지 않았는가 ──────────────────────────
-     닫는 </div> 하나가 빠지면 그 뒤의 탭들이 전부 앞 탭 안으로 들어간다.
-     그러면 앞 탭을 열지 않는 한 뒤의 탭은 하나도 안 열린다. 실제로 연금
-     탭이 안 닫혀 탭 아홉 개(투자·보험·팩트체크·부동산·교육자금·상속·
-     안내·종합·최종)가 그 안에 갇힌 채로 라이브에 나간 적이 있다.
-     눈에는 안 보이고 문법 검사도 통과한다 — 여기서 잡는다. */
-  console.log('\n[탭 자리] 탭이 서로 안에 갇히지 않았는가');
-  const panes = await fin.evaluate(() => document.querySelectorAll('.tab-pane').length);
-  is(panes >= 10, '계산기 탭을 읽었다 (' + panes + '개)');
-  const nest = await fin.evaluate(() => [...document.querySelectorAll('.tab-pane')]
-    .map(e => { const up = e.parentElement && e.parentElement.closest('.tab-pane');
-                return { id: e.id, inside: up ? up.id : null }; })
-    .filter(x => x.inside));
-  is(nest.length === 0, '모든 탭이 나란히 있다 — 안에 갇힌 탭 없음' +
-    (nest.length ? ' · ' + nest.map(x => x.id + ' ⊂ ' + x.inside).join(' · ') : ''));
-
-  await browser.close(); srv.close();
+  console.log('\n[9] 조용히 터지지 않았나');
+  is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? (' ← ' + errs.slice(0,2).join(' · ')) : ''));
 
   console.log('\n──────────────────────────────');
-  console.log(fail === 0
-    ? '상담 흐름 점검 통과 — ' + pass + '가지 다 맞습니다.'
-    : '상담 흐름 점검 실패 — ' + fail + '가지 어긋납니다 (통과 ' + pass + ').');
-  process.exit(fail === 0 ? 0 : 1);
-})().catch(e => { console.error(e); srv.close(); process.exit(1); });
+  console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 상담현황은 한 곳에서 세고, 모르는 것은 모른다고 적습니다.');
+  await b.close(); srv.close(); process.exit(bad ? 1 : 0);
+})();
