@@ -211,6 +211,31 @@ const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, ' ')
   await p.waitForTimeout(400);
   is(net.length === 0, '  담고 지우는 동안 바깥으로 나간 요청이 <b>없다</b>' +
      (net.length ? (' ← ' + net.slice(0, 2).join(' | ')) : ''));
+  /* ★ 🧾 <b>청구 이력도 같은 자리</b>입니다 (2026-09-27 · 사장님 말씀
+     「만기! 청구 이력은 입력하게 만들고」). 실비를 언제 얼마 청구했는지는
+     <b>병력에 가까운 것</b>이라 이 기기에만 둡니다. 되돌려 보니 청구를
+     cmSave 로 보내도 <b>아무 자도 안 울렸습니다</b> — 그 자리를 만듭니다. */
+  const CLM = await p.evaluate(async () => {
+    WROTE.length = 0;
+    cmClmSet('c1', [{ at: '2026-03-11', won: '320000', what: '입원' }]);
+    cmDetailPaint('c1');
+    await new Promise(r => setTimeout(r, 400));
+    if (typeof cmClmSave === 'function') cmClmSave('c1');
+    await new Promise(r => setTimeout(r, 600));
+    return { 부른횟수: WROTE.length,
+             보낸것: JSON.stringify(WROTE.map(x => x.body || {})),
+             담김: cmClmOf('c1').length };
+  });
+  is(CLM.담김 === 1, '  🧾 청구 이력이 <b>담긴다</b> — ' + CLM.담김 + '줄');
+  is(CLM.부른횟수 === 0,
+     '  ★ 청구 이력을 적을 때 서버를 <b>0번</b> 부른다 — ' + CLM.부른횟수 + '번');
+  is(!/입원|통원|수술|320000/.test(CLM.보낸것),
+     '  ★ 서버로 보낸 것에 <b>청구 내용이 없다</b> (3번 — 병력은 서버로 안 갑니다)' +
+     (/입원|320000/.test(CLM.보낸것) ? ('\n      ✗ ' + CLM.보낸것.slice(0, 90)) : ''));
+  /* 칸 표에 넣으면 cmSave 가 그대로 올립니다 — 주민번호와 같은 자리 */
+  const CF = await p.evaluate(() => CM_FIELDS.map(f => f[0]).join(','));
+  is(!/clm|claim|청구/i.test(CF),
+     '  ★ 고객 칸(CM_FIELDS)에 청구가 <b>없다</b> — 거기 넣으면 cmSave 가 서버로 올립니다');
 
   console.log('\n[5] ★ <b>설정 백업 파일에 안 담긴다</b>');
   const G = await p.evaluate(() => {

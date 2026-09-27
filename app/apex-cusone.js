@@ -254,9 +254,14 @@
     /* 만난 횟수 — <b>연락기록 한 줄기에서</b> 셉니다 (5번). 여기서 또
        기록을 만들지 않습니다. 기록이 없으면 0 이 아니라 <b>모름</b>입니다. */
     for (i = 0; i < (L || []).length; i++) if (/만남|미팅|방문/.test(L[i].kind || '')) met++;
-    var hasBig = (v.polN != null) || (v.policy && v.policy.premiumWon != null);
+    /* 2026-09-27 · 사장님 말씀 「만기! 청구 이력은 입력하게 만들고」 —
+       담을 자리가 생겼으니 목각의 그 둘이 이제 섭니다. <b>적힌 것만</b>
+       섭니다: 안 적으셨으면 null 이라 안 그립니다 (1번).                */
+    var hasBig = (v.polN != null) || (v.policy && v.policy.premiumWon != null) || (v.due != null);
     var rows = [['사는 곳', v.region], ['어디서 왔나', v.src],
-                ['지금 단계', v.stage], ['만난 횟수', (L && L.length) ? (met + '회') : null]];
+                ['지금 단계', v.stage], ['만난 횟수', (L && L.length) ? (met + '회') : null],
+                ['청구', v.clm ? (v.clm.n + '건'
+                   + (v.clm.wonR > 0 ? (' · ' + cusWonR(v.clm.wonR)) : '')) : null]];
     var hasRow = rows.some(function (r) { return r[1] != null && r[1] !== ''; });
     if (!hasBig && !hasRow && !v.wal) return '';
     h += '<div class="t-card" style="margin-bottom:14px">' +
@@ -271,6 +276,16 @@
         h += '<div style="flex:1"><div class="t-num">' +
              cusEsc(cusWonR(v.policy.premiumWon) || '—') + '</div>' +
              '<div class="t-lab">월 보험료</div></div>';
+      /* ★ 만기는 <b>해</b>만 큰 수로 세우고 달·날은 작게 붙입니다 —
+         온 날짜를 44px 로 세우면 폰에서 셋째 칸이 옆으로 삐져나갑니다.
+         ★ 「D-30」 이라고 적지 않습니다 (사장님 말씀) — 며칠 남았는지는
+           보는 날마다 달라지므로, 보여 주는 것도 <b>날짜</b>입니다.      */
+      if (v.due != null) {
+        var d4 = String(v.due).replace(/[^0-9]/g, '');
+        h += '<div style="flex:1"><div class="t-num">' + cusEsc(d4.slice(0, 4)) +
+             (d4.length >= 6 ? ('<span>.' + cusEsc(d4.slice(4, 6)) + '</span>') : '') + '</div>' +
+             '<div class="t-lab">만기</div></div>';
+      }
       h += '</div>';
     }
     /* 네 줄 — 빈 것은 <b>「아직」</b> 이라고 적습니다. 빈칸으로 두면
