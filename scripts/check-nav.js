@@ -238,10 +238,23 @@ async function boot(page) {
     '설정 표가 구분을 하나도 안 빠뜨린다 (' + gate.keys + '개)' + (gate.badAk.length ? ' — 빠짐: ' + gate.badAk.join(', ') : ''));
 
   /* ── 2) 색 ── */
-  console.log('\n[2] 위에서 아래로 한 줄기로 흐르는가');
+  /* ⚠ 2026-09-27 — <b>이 자를 뒤집었습니다.</b> 여기는 「위에서 아래로 한
+     줄기로 흐르는가」, 곧 <b>묶음마다 색이 다른가</b> 를 재고 있었습니다.
+     묶음을 접어도 「한 줄기」 가 보이라고 navRamp 이 보라→금빛 이음새를
+     만들던 것입니다.
+     사장님 말씀 「1번으로 해줘 <b>목각처럼 색 싹 빼</b>」 로 그 결이
+     없어졌습니다 — 목각 서랍에는 갈래색이 아예 없습니다.
+     ★ <b>자를 지우지 않고 뒤집습니다</b> — 이제 「색이 <b>없는가</b>」 를
+       재고, 색이 다시 생기면 빨간불입니다. 지워 버리면 누가 색을 도로
+       넣어도 아무도 모릅니다 (8번).
+     ★ 아래 <b>글씨 크기·굵기·명암비·개수 딱지</b> 는 그대로 둡니다 —
+       색과 상관없이 지켜야 하는 것들입니다.                            */
+  console.log('\n[2] 목각처럼 <b>갈래색이 없는가</b>');
   const tints = groups.got.map(g => (g.tint || '').trim()).filter(Boolean);
-  is(tints.length === groups.got.length, '칸마다 색이 들어 있다 (--gc)');
-  is(new Set(tints).size === tints.length, groups.got.length + '칸이 다 다른 색이다 (' + new Set(tints).size + '가지)');
+  is(tints.length === groups.got.length, '칸마다 --gc 가 들어 있다 (navRamp 이 아직 부릅니다)');
+  is(new Set(tints).size === 1,
+    '★ ' + groups.got.length + '칸이 <b>다 같은 값</b>이다 — 갈래색이 없다 (' +
+    new Set(tints).size + '가지)');
 
   const paint = await page.evaluate(() => {
     var out = [], els = [].slice.call(document.querySelectorAll('#navHost .nav-group-label'));
@@ -254,13 +267,17 @@ async function boot(page) {
   is(paint.length > 0 && paint.every(p => p.size >= 13),
     '카테고리 글씨가 커졌다 (' + (paint[0] ? paint[0].size : 0) + 'px)');
   is(paint.every(p => +p.w >= 700), '카테고리 글씨가 굵다');
-  is(new Set(paint.map(p => p.bg)).size >= paint.length - 1,
-    '배경색이 칸마다 다르다 (' + new Set(paint.map(p => p.bg)).size + '가지)');
-  is(new Set(paint.map(p => p.fg)).size >= paint.length - 1,
-    '글씨색이 칸마다 다르다 (' + new Set(paint.map(p => p.fg)).size + '가지)');
-  /* 투명한 배경이면 파스텔을 입힌 것이 아니다 */
-  is(paint.every(p => p.bg && p.bg !== 'rgba(0, 0, 0, 0)' && p.bg !== 'transparent'),
-    '배경이 실제로 칠해져 있다');
+  is(new Set(paint.map(p => p.bg)).size === 1,
+    '★ 배경이 <b>칸마다 같다</b> (' + new Set(paint.map(p => p.bg)).size + '가지)');
+  is(new Set(paint.map(p => p.fg)).size === 1,
+    '★ 글씨색이 <b>한 가지</b>다 (' + new Set(paint.map(p => p.fg)).size + '가지)');
+  /* 목각 서랍의 묶음에는 <b>바탕이 없습니다</b> — 칠해져 있으면 안 됩니다.
+     ★ 글자로 견주면 안 됩니다 — rgba(26, 86, 219, 0) 도 <b>투명</b>인데
+       'rgba(0, 0, 0, 0)' 과 글자가 달라 헛것을 잡습니다. <b>투명도를</b> 봅니다. */
+  const alpha = v => { const m = (v || '').match(/[\d.]+/g) || []; return m.length > 3 ? +m[3] : (m.length ? 1 : 0); };
+  is(paint.every(p => alpha(p.bg) < 0.02),
+    '★ 묶음 바탕이 <b>안 칠해져 있다</b> — 목각처럼 (가장 짙은 것 ' +
+    Math.max.apply(null, paint.map(p => alpha(p.bg))).toFixed(2) + ')');
 
   /* 색을 입히다 글씨가 배경에 묻으면 가독성을 올린 것이 아니라 내린 것이다.
      눈으로는 알기 어려우니 명암비를 직접 재서 못을 박아 둔다 (WCAG AA 4.5). */
@@ -305,7 +322,11 @@ async function boot(page) {
     });
     var back = 0, i;
     for (i = 1; i < depth.length; i++) if (depth[i] > depth[i - 1] + 0.002) back++;
-    return { t: +worstT.toFixed(2), badge: +worstB.toFixed(2), name: worstName,
+    var wid = 0;
+    [].slice.call(document.querySelectorAll('#navHost .nav-group-label')).forEach(function (l) {
+      wid = Math.max(wid, parseFloat(getComputedStyle(l).borderLeftWidth) || 0);
+    });
+    return { wid: wid, t: +worstT.toFixed(2), badge: +worstB.toFixed(2), name: worstName,
       tintMin: +Math.min.apply(null, tints).toFixed(3), tintOk: tintOk, n: tints.length,
       back: back, span: depth.length ? +(depth[0] / depth[depth.length - 1]).toFixed(2) : 0,
       steps: depth.length };
@@ -315,10 +336,13 @@ async function boot(page) {
   is(contrast.tintMin >= 1.15 || contrast.tintOk === contrast.n,
     '칸이 사이드바와 구분된다 — 색 차이 ' + contrast.tintMin +
     ' · 테두리로 구분된 칸 ' + contrast.tintOk + '/' + contrast.n);
-  is(contrast.back === 0,
-    '아래로 갈수록 옅어진다 (왼쪽 색 띠) — 거꾸로 간 칸 ' + contrast.back + '개 / ' + contrast.steps + '칸');
-  is(contrast.span >= 1.8,
-    '맨 위와 맨 아래가 뚜렷이 다르다 (왼쪽 색 띠 ' + contrast.span + '배)');
+  /* ⚠ 이 둘도 <b>뒤집었습니다.</b> 왼쪽 색 띠가 위에서 아래로 옅어지는지를
+     재던 자입니다 — 띠 자체가 없어졌으므로 이제 <b>띠가 없는지</b> 를 봅니다.
+     띠가 다시 생기면 span 이 1 을 넘어 빨간불이 켜집니다 (8번).        */
+  is(contrast.span <= 1.01,
+    '★ 왼쪽 색 띠가 <b>없다</b> — 맨 위·맨 아래 차이 ' + contrast.span + '배 (목각에는 띠가 없습니다)');
+  is(contrast.wid === 0,
+    '★ 띠가 <b>자리도 안 차지한다</b> — 굵기 ' + contrast.wid + 'px');
 
   /* ── 3) 왼쪽 메뉴는 <b>늘 펴져 있다</b> ────────────────────────────
      예전에는 칸 이름을 눌러 접었다 폈다 했다. 그런데 접힌 칸은 <b>없어진
