@@ -221,7 +221,43 @@ const CARD = () => {
   is(새클래스.length === 0, '  ★ <b>ui.css 이름만 썼다</b>' +
      (새클래스.length ? (' ← 새 이름 ' + [...new Set(새클래스)].join(' ')) : ''));
 
-  console.log('\n[9] 조용히 터지지 않았나');
+  /* ══ [9] ★ <b>접었지 지운 것이 아니다</b> (6번) ═══════════════════
+     사장님 말씀 (2026-09-27) — 「2번으로 해줘 <b>접어</b>」.
+     상담현황을 넣자 홈이 3.8화면이 되어, 준비 SQL·동선·찾기·옮긴 자리·
+     준법 안내를 「🧭 그 밖의 것」 한 줄로 접었습니다.
+     ★ 접기는 <b>누르면 다 돌아와야</b> 접기입니다. 안 돌아오면 그것은
+       지운 것이고, 지운 것을 「접었다」 고 적으면 거짓말입니다 (1번).  */
+  console.log('\n[9] ★ <b>접었지 지운 것이 아니다</b> (6번)');
+  const L = await p.evaluate(async () => {
+    const q = s => document.querySelector('#dynPane ' + s);
+    const 있나 = () => ({ sql:!!q('#osSetupHome'), rt:!!q('#hmRtHost'),
+                          find:!!q('#cusFindBox'), mv:!!q('.hm-mv'), law:!!q('.notice') });
+    const 높이 = () => { const e = q('#hmFold_etc');
+                         return e ? Math.round(e.getBoundingClientRect().height) : 0; };
+    try { hmFoldSet('etc', false); } catch (e) {}
+    go('home'); await new Promise(r => setTimeout(r, 500));
+    const 접힘 = { 것: 있나(), h: 높이(), 머리: (q('.hm-fold-h') || {}).textContent || '' };
+    const b = q('#hmFold_etc .hm-fold-h');
+    if (b) { b.click(); await new Promise(r => setTimeout(r, 500)); }
+    return { 접힘: 접힘, 펴짐: { 것: 있나(), h: 높이() } };
+  });
+  const 접힌수 = Object.keys(L.접힘.것).filter(k => L.접힘.것[k]).length;
+  const 펴진수 = Object.keys(L.펴짐.것).filter(k => L.펴짐.것[k]).length;
+  is(L.접힘.h > 0 && L.접힘.h < 120,
+     '  접으면 <b>한 줄</b>이다 — ' + L.접힘.h + 'px (덩어리가 되면 접은 것이 아닙니다)');
+  is(펴진수 === 5,
+     '  ★ 펴면 <b>다섯이 다 돌아온다</b> — ' + 펴진수 + '/5 (준비 SQL · 동선 · 찾기 · 옮긴 자리 · 준법 안내)' +
+     (펴진수 < 5 ? ('\n      ✗ 없는 것 ' + Object.keys(L.펴짐.것).filter(k => !L.펴짐.것[k]).join(' ')) : ''));
+  is(L.펴짐.h > L.접힘.h,
+     '  펴면 <b>커진다</b> — ' + L.접힘.h + 'px → ' + L.펴짐.h + 'px');
+  /* ★ 준비 SQL 이 아직 남았으면 <b>접힌 머리글이 그렇게 말해야</b> 합니다 —
+     접어 두고 아무 말도 안 하면 대표가 평생 못 보십니다 (6번). */
+  const 준비 = await p.evaluate(() => (typeof setupShow === 'function') ? !!setupShow() : false);
+  is(!준비 || /서버 준비/.test(L.접힘.머리),
+     '  ★ 준비가 남았으면 <b>접힌 머리글이 말한다</b> — 「' +
+     L.접힘.머리.replace(/\s+/g,' ').trim().slice(0, 40) + '」');
+
+  console.log('\n[10] 조용히 터지지 않았나');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? (' ← ' + errs.slice(0,2).join(' · ')) : ''));
 
   console.log('\n──────────────────────────────');
