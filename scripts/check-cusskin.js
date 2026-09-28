@@ -23,6 +23,8 @@
          갈아입히기 <b>전에 적어 둔</b> id·onclick 이 전부 살아 있어야 합니다
      [4] 갈아입힌 칸마다 <b>이름표(.t-lab)</b> 가 있다 — 목각 카드의 머리
      [5] 새 class 0개 · hex 0개 · style 로 색 안 박기
+     [7] ★★ <b>목각 vOne 의 남은 셋</b>(🧭📝💬)이 서나 · 한 단추가 <b>넷을 다 담나</b>
+     [8] ★ 적는 칸이 <b>두 곳에 없나</b> (5번) — 베끼지 않고 옮겼나
      [6] 누르는 것이 <b>받침을 받는 모양</b>인가 (span onclick 은 못 받습니다) · 안 터졌나
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
@@ -57,7 +59,12 @@ const 계약_ID = ['cliPhone','cliBirth','cliGender','cliIncome','cliExp','cliMe
                  'cusFamRows','cmNextWhat','cmNextDue','cmTouchHow','cmTouchAt','cmTouchNote',
                  'cmFam','cmRel','cmBd','cmCd','cmReal','cmRef','cmFamList','cmRefList',
                  'cmPanels','cusCard','oscBaHost','oscPolHost','oscTopBar','oscOld'];
-const 계약_FN = ['osCliInfoSave','cusFamAdd','cusFamSave','cmNextSave','cmTouchAdd',
+/* ★ 2026-09-28 — <b>계약을 고쳤습니다.</b> 목각처럼 「📝 적어 두기」 한
+   단추로 모으면서 cmNextSave·cmTouchAdd 는 <b>단추에서 사라지고</b>
+   cmNoteSave 안에서 불립니다. 그 둘을 그냥 지우면 「정말 저장되나」 를
+   아무도 안 봅니다 — 그래서 <b>더 센 자</b>로 바꿉니다: 한 단추를 눌러
+   셋(상황·걱정·할 일·들은 말)이 <b>실제로</b> 담기는지 [7] 에서 봅니다. */
+const 계약_FN = ['osCliInfoSave','cusFamAdd','cusFamSave','cmNoteSave',
                  'cmFamSave','cmBdSave','cmCdSave','cmRealSaveNow','cmRefSave','waOpenFor'];
 
 const SEED = () => {
@@ -69,19 +76,26 @@ const SEED = () => {
   window.setupDone=function(){return true;}; window.setupCanRun=function(){return true;};
   window.osTabAllowed=function(){return true;};
   window.toast=function(){};
+  /* 서버로 <b>무엇을</b> 보냈는지 봐야 합니다 — 「불렀다」 만 보면 빠진 칸을 못 봅니다 */
+  window.WROTE=[];
   const chain = v => { const o = { then:function(f){ try{ f(v); }catch(e){} return o; }, catch:function(){ return o; } };
     ['eq','neq','select','order','limit','in','gte','lte','is','not','or','filter',
      'ilike','like','range','contains','overlaps'].forEach(k => { o[k]=function(){ return o; }; });
     o.single=function(){ return chain({data:null}); }; o.maybeSingle=function(){ return chain({data:null}); }; return o; };
-  window.osClient=function(){ return { from:function(){ return {
-      select:function(){ return chain({data:[]}); }, update:function(){ return chain({}); },
-      insert:function(){ return chain({}); }, upsert:function(){ return chain({}); },
+  window.osClient=function(){ return { from:function(tb){ return {
+      select:function(){ return chain({data:[]}); },
+      update:function(o){ WROTE.push({op:'update',tb:tb,body:o}); return chain({}); },
+      insert:function(o){ WROTE.push({op:'insert',tb:tb,body:o}); return chain({}); },
+      upsert:function(o){ WROTE.push({op:'upsert',tb:tb,body:o}); return chain({}); },
       delete:function(){ return chain({}); } }; } }; };
   OS.profile={id:'me',user_id:'me',name:'홍길동',role:'fp',team:'A',active:true};
   OS.session={user:{id:'me'}};
   const ago = n => new Date(Date.now()-n*864e5).toISOString().slice(0,10);
   OSC.loaded=true; OSC.busy=false; OSC.err='';
-  OSC.list=[{id:'c1',name:'홍길동',name_masked:'홍○○',advisor_id:'me',stage:'CS',created_at:ago(60)},
+  /* ★ 단계를 <b>AP</b> 로 둡니다 — apex-stage 표에 <b>판단(q)</b> 이 있는
+     단계라 🧭 칸이 무엇을 세우는지 볼 수 있습니다. 보낼 말은 AP 에 표가
+     없어 안 섭니다(그것도 [7] 에서 봅니다 · 1번).                        */
+  OSC.list=[{id:'c1',name:'홍길동',name_masked:'홍○○',advisor_id:'me',stage:'AP',created_at:ago(60)},
             {id:'c2',name:'홍길순',name_masked:'홍○○',advisor_id:'me',stage:'AP',created_at:ago(30)}];
   AR.loaded=true; AR.busy=''; AR.cliRows=[]; AR.db=[];
   /* 자료가 <b>있는</b> 상태로 세웁니다 — 비어 있으면 줄·단추가 안 서서
@@ -181,6 +195,103 @@ const LOOK = () => {
      R.skin.map(x => x.t).join('\n      · ') +
      (이름표없음.length ? ('\n      ✗ 이름표 없는 칸 ' + 이름표없음.length + '개') : ''));
 
+  console.log('\n[7] ★★ <b>목각 vOne 의 남은 셋</b> — 그리고 한 단추가 셋을 정말 담나');
+  /* 사장님 말씀 (2026-09-28) 「남은 목각 다 해줘」 —
+       🧭 지금 이 자리에서(stageCard) · 📝 적어 두기 한 카드 · 💬 보낼 말.
+     ★ 「섰나」 만 보면 안 됩니다. 적어 두기는 <b>한 단추</b>로 넷을 받으므로
+       <b>넷이 다 담기는지</b>를 봐야 합니다 — 하나가 조용히 빠지면 화면은
+       멀쩡하고 사장님은 적힌 줄 아십니다 (8번).                          */
+  const V = await p.evaluate(() => {
+    const host = document.getElementById('cmPanels');
+    const lab = [].slice.call((host || document).querySelectorAll('.t-lab'))
+                  .map(x => x.textContent.replace(/\s+/g, ' ').trim());
+    return { lab: lab, t: (host ? host.innerText : '').replace(/\s+/g, ' ') };
+  });
+  ['🧭 지금 이 자리에서', '📝 적어 두기'].forEach(w => {
+    is(V.lab.some(x => x.indexOf(w) >= 0), '  ' + w + ' 칸이 선다');
+  });
+  is(/AP/.test(V.t) && /판단/.test(V.t),
+     '  🧭 칸이 <b>지금 단계(AP)</b> 를 말하고 판단을 세운다');
+  /* ★★ 💬 보낼 말 — <b>표에 있는 단계에만</b> 섭니다. apex-stage 의 말 표에는
+     미접촉·TA·부재·거절·기고객·입원 만 있습니다. AP 에는 <b>없습니다</b> —
+     그러니 AP 에서 보낼 말이 서면 그것은 <b>지어낸 말</b>입니다 (1번).
+     단계를 TA 로 바꿔 <b>있을 때는 서는지</b>도 같이 봅니다.              */
+  is(!V.lab.some(x => x.indexOf('💬 보낼 말') >= 0),
+     '  ★ AP 에서는 💬 보낼 말이 <b>안 선다</b> — 표에 없는 말을 지어내지 않습니다 (1번)');
+  const SAY = await p.evaluate(async () => {
+    cmCliOf('c1').stage = 'TA';
+    if (typeof CUS !== 'undefined' && CUS.db) CUS.db.stage = 'TA';
+    cmDetailPaint('c1');
+    await new Promise(r => setTimeout(r, 500));
+    const host = document.getElementById('cmPanels');
+    const lab = [].slice.call((host || document).querySelectorAll('.t-lab'))
+                  .map(x => x.textContent.replace(/\s+/g, ' ').trim());
+    const box = host ? host.querySelector('.t-script') : null;
+    const out = { lab: lab, 글: box ? (box.textContent || '').replace(/\s+/g, ' ') : '' };
+    cmCliOf('c1').stage = 'AP';
+    if (typeof CUS !== 'undefined' && CUS.db) CUS.db.stage = 'AP';
+    cmDetailPaint('c1');
+    await new Promise(r => setTimeout(r, 400));
+    return out;
+  });
+  is(SAY.lab.some(x => x.indexOf('💬 보낼 말') >= 0),
+     '  ★ TA 로 바꾸면 💬 보낼 말이 <b>선다</b> — 표에 있는 단계입니다');
+  is(SAY.글.length > 20,
+     '  ★ 보낼 말이 <b>글로</b> 서고 복사할 수 있다 (' + SAY.글.length + '자) — 「' + SAY.글.slice(0, 44) + '…」');
+  is(/여기서 잘되면 다음은/.test(V.t) || /마지막 자리/.test(V.t),
+     '  🧭 칸이 <b>다음 자리</b>를 말한다 (apex-stage 의 차례표)');
+
+  /* ★★ 한 단추 — 넷을 적고 <b>서버로 간 것</b>을 직접 봅니다 */
+  const SAVED = await p.evaluate(async () => {
+    const set = (k, v) => { const e = document.getElementById(k); if (e) e.value = v; };
+    WROTE.length = 0;
+    set('cmCare', '출산 · 육아');
+    set('cmWorry', '아이 교육비가 제일 걱정이라고 하셨습니다');
+    set('cmNextWhat', '만기 안내하고 다음 자리 잡기');
+    set('cmNextDue', '2026-10-15');
+    set('cmTouchNote', '통화에서 들은 말 그대로');
+    cmNoteSave('c1');
+    await new Promise(r => setTimeout(r, 1200));
+    const w = WROTE.filter(x => x.tb === 'saved_reports');
+    const body = w.length ? ((w[w.length - 1].body || {}).content || {}) : {};
+    return { 번: w.length, care: body.care || '', worry: body.worry || '',
+             next: (body.next && body.next.what) || '',
+             touch: ((body.touch || [])[0] || {}).note || '',
+             칸: (document.getElementById('cmCare') || {}).value || '' };
+  });
+  is(SAVED.번 > 0, '  적어 두기가 <b>서버로 간다</b> — ' + SAVED.번 + '번 썼다');
+  is(SAVED.care === '출산 · 육아', '  ★ <b>지금 상황</b>이 담긴다 — 「' + SAVED.care + '」');
+  is(/교육비/.test(SAVED.worry), '  ★ <b>걱정</b>이 담긴다 — 첫 문장에 붙을 말');
+  is(/만기 안내/.test(SAVED.next), '  ★ <b>그날 할 것</b>이 담긴다 (cmNextSave 를 부릅니다 · 5번)');
+  is(/들은 말 그대로/.test(SAVED.touch), '  ★ <b>들은 말</b>이 접촉 기록으로 담긴다 (cmTouchAdd 를 부릅니다 · 5번)');
+  /* 베끼지 않았나 — next 를 여기서 또 적으면 두 곳이 갈립니다.
+     ★ SRC 는 아래 [5] 에서 읽으므로 여기서는 따로 읽습니다.            */
+  const SRC7 = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8')
+                 .replace(/\/\*[\s\S]*?\*\//g, ' ');
+  is(!/function cmNoteSave\(id\)\{[\s\S]{0,900}next:\{what:/.test(SRC7),
+     '  ★ cmNoteSave 가 <b>다음 할 일 저장을 베끼지 않았다</b> — cmNextSave 를 부릅니다 (5번)');
+  is(/cmNextSave\(id,what,due\)/.test(SRC7) && /cmTouchAdd\(id,note,how,at\)/.test(SRC7),
+     '  ★ 값을 <b>먼저 손에 들고</b> 넘긴다 — 앞의 저장이 화면을 다시 그려도 뒤가 빈손이 안 됩니다');
+  /* 고르는 목록이 한 곳인가 */
+  const CARE = await p.evaluate(() => ({
+    표: (typeof CM_CARE !== 'undefined') ? CM_CARE.length : 0,
+    칸: [].slice.call((document.getElementById('cmCare') || { options: [] }).options).length
+  }));
+  is(CARE.표 > 5 && CARE.칸 === CARE.표,
+     '  <b>고르는 목록이 한 곳</b>(CM_CARE)에서 온다 — 표 ' + CARE.표 + '개 · 칸 ' + CARE.칸 + '개 (5번)');
+
+  console.log('\n[8] ★ <b>적는 칸이 두 곳에 없다</b> (5번) — 베끼지 않고 옮겼나');
+  const DUP = await p.evaluate(() => {
+    const host = document.getElementById('cmPanels') || document;
+    const n = k => host.querySelectorAll('#' + k).length;
+    return { cmWorry: n('cmWorry'), cmNextWhat: n('cmNextWhat'),
+             cmNextDue: n('cmNextDue'), cmTouchNote: n('cmTouchNote'),
+             cmCare: n('cmCare') };
+  });
+  Object.keys(DUP).forEach(k => {
+    is(DUP[k] === 1, '  ' + k + ' 가 <b>딱 한 곳</b>에 있다 — ' + DUP[k] + '곳');
+  });
+
   console.log('\n[5] 새 class 0개 · hex 0개 · style 로 색 안 박기');
   /* 주석·APP_BUILD_NOTE 를 먼저 지웁니다 — 무엇에 <b>대해</b> 적은 글은
      그것을 <b>쓴 것</b>이 아닙니다 (이 자리에서 여러 번 헛불이 켜졌습니다) */
@@ -197,8 +308,11 @@ const LOOK = () => {
     if (i < 0) return '';
     const j = SRC.indexOf('\nfunction ', i + 1);
     return SRC.slice(i, j > i ? j : SRC.length); };
+  /* ★ 2026-09-28 — <b>새로 만든 카드 셋을 여기 넣습니다.</b> 목록에 없으면
+     그 카드에 새 class 를 써도 아무도 안 봅니다 — 자가 재는 척만 합니다. */
   const 이름들 = ['cmRelHtml', 'cmFamHtml', 'cmWalRefHtml',
-                  'cusFamPanelHtml', 'cusFamRowsHtml', 'oscBaHtml', 'oscPolHtml'];
+                  'cusFamPanelHtml', 'cusFamRowsHtml', 'oscBaHtml', 'oscPolHtml',
+                  'cmNoteHtml', 'cmStageHtml', 'cmSayHtml', 'cmDueClmHtml', 'cmClmRowsHtml'];
   const 빈것 = 이름들.filter(n => cut(n).length < 200);
   is(!빈것.length, '  잴 조각 ' + 이름들.length + '개를 <b>전부 찾았다</b>' +
      (빈것.length ? ('\n      ✗ 빈 조각(아무것도 안 재게 됩니다): ' + 빈것.join(', ')) : ''));
