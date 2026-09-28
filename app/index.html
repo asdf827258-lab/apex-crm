@@ -12298,9 +12298,18 @@ function chkCliBy(){
      없을 때만 이름으로 견줍니다.                                      */
 /* 이 고객이 어느 배정 DB 에서 왔나 — 모르면 <b>빈 글</b>입니다 (1번) */
 function olDbOf(cid){ try{ return (cmOf(cid).db||''); }catch(e){ return ''; } }
-/* dbs id → 고객 줄. <b>다리가 놓인 것만</b> 담습니다 */
+/* dbs id → 고객 줄. <b>다리가 놓인 것만</b> 담습니다.
+   ★★ <b>아직 안 읽었으면 null 을 돌려줍니다 — 빈 표가 아닙니다</b> (1번).
+     AR.cliRows 의 처음 값은 null 이고(7880행) 채워지는 것은 8110행
+     한 번뿐입니다. 여기서 || [] 로 받아 넘기면 <b>「아직 모른다」 가
+     「다리가 없다」 로</b> 바뀝니다. 그러면 명단을 읽기 전에 「내 고객으로」
+     를 누른 분이 <b>이미 다리가 있는데도 한 줄 더 생기고</b>, 게다가
+     아무 말도 안 나옵니다. 「한 사람 = 한 줄」 이 조용히 깨지는 자리입니다.
+     ★ 제가 처음에 || [] 로 짰고, 옆 세션이 짚어 주어 고쳤습니다.       */
 function olByDb(){
-  var L=(typeof AR!=='undefined'&&AR.cliRows)?AR.cliRows:[],o={},i,d;
+  var L=(typeof AR!=='undefined')?AR.cliRows:null;
+  if(!L)return null;                 /* 모름 — 없음이 아닙니다 */
+  var o={},i,d;
   for(i=0;i<L.length;i++){ d=olDbOf(L[i].id); if(d&&!o[d])o[d]=L[i]; }
   return o;
 }
@@ -12318,10 +12327,18 @@ function olByDb(){
    ★ 만들고 <b>번호를 못 받으면 그렇다고 적습니다</b> (1번) — 조용히
      넘어가면 다리 없는 고객이 하나 생기고 아무도 모릅니다.           */
 function olToMine(dbId){
-  var L=(typeof AR!=='undefined'&&AR.db)||[],r=null,i;
+  /* ★★ <b>아직 안 읽었으면 멈춥니다</b> (1번). 안 읽은 것을 「없다」 로
+     읽으면 이미 내 고객인 분이 <b>한 줄 더</b> 생기고 아무 말도 안 나옵니다. */
+  var bd=olByDb();
+  if(!bd||(typeof AR==='undefined')||!AR.db){
+    toast('아직 명단을 못 읽었습니다 — 잠시 뒤 다시 눌러 주십시오',5000);
+    try{ if(typeof arLoad==='function'&&!AR.loaded)arLoad(); }catch(e0){}
+    return;
+  }
+  var L=AR.db,r=null,i;
   for(i=0;i<L.length;i++)if(L[i].id===dbId){r=L[i];break;}
   if(!r){toast('그 배정 DB 줄을 못 찾았습니다');return;}
-  if(olByDb()[dbId]){toast('이미 내 고객입니다 — 줄은 하나입니다');return;}
+  if(bd[dbId]){toast('이미 내 고객입니다 — 줄은 하나입니다');return;}
   var sb=osClient();
   if(!sb||!OS.session||!OS.session.user){toast('로그인 후 이용하세요');return;}
   var name=r.name||'';
@@ -12343,7 +12360,7 @@ function olToMine(dbId){
    ★ dbId 를 주면 <b>다리를 제일 먼저</b> 봅니다. 다리는 사람이 한 번
      눌러서 놓은 것이라 짐작이 아닙니다.                              */
 function chkFind(by,name,dbId){
-  if(dbId){ var br=olByDb()[dbId]; if(br)return br; }
+  if(dbId){ var bd=olByDb(); var br=bd&&bd[dbId]; if(br)return br; }
   var s=(''+(name==null?'':name)).replace(/\s/g,'');
   if(!s)return null;
   return by['r:'+s]||by['m:'+chkKey(s)]||null;
