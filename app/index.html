@@ -5037,7 +5037,7 @@ var FACT_CATS=[{id:'pension',t:'연금·은퇴',e:'🌴'},{id:'health',t:'건강
 function factStoreKey(){var who='local';try{if(typeof OS!=='undefined'&&OS.profile)who=OS.profile.email||OS.profile.id||'local';}catch(e){}return 'apex_fact_cards_'+who;}
 function factLoad(){if(FACT.list)return FACT.list;var raw='';try{raw=localStorage.getItem(factStoreKey())||'';}catch(e){}var arr;try{arr=raw?JSON.parse(raw):[];}catch(e){arr=[];}FACT.list=(arr&&arr.push)?arr:[];return FACT.list;}
 function factPersist(){try{localStorage.setItem(factStoreKey(),JSON.stringify(FACT.list||[]));}catch(e){toast('저장 공간이 부족합니다 — 오래된 카드를 삭제해 주세요.');}}
-function factNewId(){var t='0';try{t=String(Date.now());}catch(e){}return 'fc_'+t+'_'+Math.floor(Math.random()*100000);}
+function factNewId(){return uidOf('fc_');}
 function factFindCard(id){var L=factLoad();for(var i=0;i<L.length;i++){if(L[i].id===id)return L[i];}return null;}
 function factCatChips(sel){sel=sel||[];return FACT_CATS.map(function(c){var on=sel.indexOf(c.id)>=0?' on':'';return '<button type="button" class="chip-opt'+on+'" data-fcat="'+c.id+'" onclick="this.classList.toggle(\'on\')">'+c.e+' '+c.t+'</button>';}).join('');}
 function factFieldsHtml(card){card=card||{};return FACT_FIELDS.map(function(f){
@@ -16719,7 +16719,7 @@ function mcalMyAdd(ds,hm,t){
     if(!sb){toast('서버에 연결되어 있지 않습니다');return false;}
     /* 넣자마자 화면에 세웁니다 — 서버 대답을 기다리면 눌러도 아무 일이
        없는 것처럼 보입니다. 실패하면 도로 뺍니다 (실패를 성공처럼 X) */
-    var tmp={id:'tmp'+(new Date()).getTime(),d:ds,hm:hm,t:t};
+    var tmp={id:uidOf('tmp'),d:ds,hm:hm,t:t};
     MYP.rows=(MYP.rows||[]).concat([tmp]);
     sb.from('my_plans').insert({d:ds,hm:hm,t:t}).then(function(r){
       if(r&&r.error){
@@ -16737,7 +16737,7 @@ function mcalMyAdd(ds,hm,t){
     return true;
   }
   var L=mypLocal();
-  L.push({id:'m'+(new Date()).getTime()+Math.floor(Math.random()*1000),d:ds,hm:hm,t:t});
+  L.push({id:uidOf('m'),d:ds,hm:hm,t:t});
   mypLocalSet(L);
   return true;
 }
@@ -18372,8 +18372,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-30 15:00';
-var APP_BUILD_NOTE="📝💬🧭 <b>남은 목각 셋 — 적어 두기 한 카드 · 보낼 말 · 지금 이 자리에서.</b>　—　사장님 말씀 (2026-09-28) 「<b>남은 목각 다 해줘</b>」.　—　① 📝 <b>적어 두기 한 카드</b> — 목각은 한 자리에서 <b>지금 상황 · 걱정 · 다음에 할 날 · 그날 할 것 · 들은 말</b>을 받습니다. 앱에서는 세 카드에 흩어져 있었습니다. ★ <b>베끼지 않고 옮겼습니다</b> (5번) — 원래 자리의 적는 칸을 뺐고, 관계 카드에는 <b>쌓인 것</b>만 남습니다. 자가 「적는 칸이 두 곳에 없나」 를 봅니다.　—　② 「지금 상황」 은 앱에 없던 칸이라 만들었습니다 — 고를 목록은 목각 그대로 <b>한 곳</b>(CM_CARE)에 둡니다.　—　③ 💬 <b>보낼 말</b> — apex-stage 의 말 표에서만 가져옵니다 (1번). 표에는 미접촉·TA·부재·거절·기고객·입원만 있어 <b>AP·PC·CS 에서는 안 섭니다</b> — 없는 말을 지어 붙이지 않습니다. 「하지 말 것」·「여기서 멈춤」 도 같이 세우고, 나이대는 <b>알 때만</b> 붙입니다.　—　④ 🧭 <b>지금 이 자리에서</b> — 단계·채널·목표·방법·판단·아는 것·도구·다음 자리를 apex-stage <b>한 곳</b>에서 가져옵니다. 판단은 아직 <b>AP 에만</b> 있어 나머지 아홉 단계는 안 세웁니다. 칩은 navItemOf 로 <b>정말 열리는 화면만</b> 답니다.　—　⑤ ★ <b>제가 순서 버그를 만들었고 자가 잡았습니다.</b> 한 단추가 할 일과 들은 말을 같이 저장하는데, 앞의 저장이 화면을 다시 그려서 뒤가 <b>빈 칸</b>을 읽었습니다 — 들은 말이 조용히 사라졌습니다. 값을 <b>먼저 손에 들고</b> 넘기게 고쳤습니다.　—　⑥ ★ 처음에 next 저장을 <b>베껴</b> 넣었다가 되돌렸습니다 — cmNextSave 를 부릅니다 (5번).　—　⑦ ★ 자가 <b>새 카드 셋을 안 재고</b> 있었습니다(조각 목록에 없었습니다). 넣으니 조각이 10,889 → 18,723자. 되돌림 아홉 가지 전부 울립니다.";
+var APP_BUILD='2026-09-30 18:30';
+var APP_BUILD_NOTE="🚗 <b>약속 없는 분도 동선에 섭니다</b> — 한 판 · 판 ⑤.　—　사장님 말씀 (2026-09-28) 「<b>약속 없는 분도 동선에</b>」.　—　① 홈의 「오늘 어디로 가시나」 는 <b>약속이 잡힌 분</b>과 <b>오늘 걸 분</b>만 세웠습니다. 「그 동네에 사는데 <b>아직 날짜를 못 잡은</b> AP·PC」 가 안 보였습니다 — 못 여쭈면 그 동네에 <b>또 가야 합니다.</b>　—　② 같은 구의 <b>AP·PC·CS·증권전달</b>을 약속 여부와 상관없이 세우고, 약속 없는 분에게 「📅 날짜 여쭙기」 를 답니다. <b>앞으로 약속이 있는 분에게는 단추 대신 날짜 딱지</b>가 섭니다.　—　③ <b>새 CSS 0줄</b>. ui.css 에 있는 이름만 — .t-note.g · .t-row(.m .nm .mt .r) · .t-chip(44px) · .t-tag.ok. 자가 「쓴 t- 이름이 전부 ui.css 에 있나」 를 봅니다.　—　④ 말은 <b>목각 글자 그대로</b> — 「가는 김에 — ○○구에 만나야 할 분이 N분 더 계십니다」. 목각이 사장님 PC 에만 있어 못 읽고 있었는데 저장소로 올라와 <b>열어 보고</b> 맞췄습니다.　—　⑤ ★★ <b>여기서 두 번 틀렸고 자가 두 번 다 잡았습니다.</b> ㉠ 「오늘 걸 분」 을 이 자리에서 뺐더니 AP·PC·CS 가 거의 다 그쪽에 있어 <b>이 자리가 늘 비었습니다</b>(check-hmmeet 열두 줄). ㉡ 반대로 「오늘 걸 분」 쪽에서 뺐더니 <b>사장님이 이미 받으신 답</b> — 「오늘 걸 분 N명」 과 「더 보기」 접기 — <b>가 사라졌습니다</b>(check-hmroute 세 줄). <b>기능을 더하려다 있던 답을 지운 것</b>입니다.　—　⑥ 답은 「<b>빼지 않는다</b>」 였습니다. 두 자리는 <b>묻는 것이 다릅니다</b> — 위는 「오늘 <b>연락</b>할 주기가 돌아왔나」, 아래는 「<b>약속</b>을 잡았나」. 목각도 그렇게 합니다.　—　⑦ 동네를 아는 곳을 <b>hmRtRegions 한 곳</b>으로 뺐습니다 (5번). <b>지역을 모르는 줄은 안 붙입니다</b> (1번) — 오늘 약속이 없는 날에는 이 자리를 아예 안 세웁니다.　—　⑧ ⚠ 목각의 「같은 날로 모으기」·「이 순서로 돌기」 두 단추는 <b>안 달았습니다</b> — 그 둘은 목각에서 한 장의 🗺 만나기 서랍 것입니다. 조용히 빼지 않고 적어 둡니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -20054,7 +20054,7 @@ var VA_ACT=[
    return sb.from('coach_notes').insert({member_id:r.id,body:(''+a.what).slice(0,1000),
      mood:'칭찬',share:true}).then(function(x){
        if(x&&x.error)return '남기지 못했습니다. '+(''+(x.error.message||'')).slice(0,50);
-       if(GB.notes)GB.notes.unshift({id:'va'+GB.notes.length,member_id:r.id,body:a.what,
+       if(GB.notes)GB.notes.unshift({id:uidOf('va'),member_id:r.id,body:a.what,
          mood:'칭찬',share:true,created_at:new Date().toISOString()});
        if(typeof gbPaint==='function')gbPaint();
        return {say:r.name+'님에게 남겼습니다. 팀원 화면에도 보입니다.',go:'growboard'};
@@ -21654,7 +21654,7 @@ function gbNoteSave(id){
   sb.from('coach_notes').insert({member_id:id,body:body.slice(0,1000),mood:mood,share:share}).then(function(r){
     if(btn){btn.disabled=false;btn.textContent='피드백 남기기';}
     if(r&&r.error){toast('남기지 못했습니다 — '+(r.error.message||'').slice(0,60),7000);return;}
-    GB.notes.unshift({id:'tmp'+GB.notes.length,member_id:id,body:body,mood:mood,share:share,
+    GB.notes.unshift({id:uidOf('tmp'),member_id:id,body:body,mood:mood,share:share,
       created_at:new Date().toISOString()});
     var e=document.getElementById('gbNb_'+id);if(e)e.value='';
     toast(share?'남겼습니다 — 팀원 화면에도 보입니다':'남겼습니다 — 나만 봅니다');
@@ -27516,13 +27516,31 @@ function hmRtAppts(){
   out.sort(function(a,b){ return (a.hm||'99:99')<(b.hm||'99:99')?-1:1; });
   return out;
 }
+/* <b>오늘 내가 있는 동네</b> — 묻는 곳을 한 곳으로 둡니다 (5번).
+   아래 두 자리(「오늘 걸 분」 · 「만나야 할 분」)가 각자 세면, 한쪽만 고쳐
+   놓고 두 줄이 서로 다른 동네를 말하게 됩니다.                        */
+function hmRtRegions(){
+  var ap=hmRtAppts(),rg={},i;
+  for(i=0;i<ap.length;i++)if(ap[i].rg)rg[hmRtKey(ap[i].rg)]=1;
+  return rg;
+}
 /* 그 지역에서 <b>오늘 걸 분</b> — 약속 간 김에 같이 도는 사람들.
    지역을 <b>모르는 줄은 안 붙입니다</b> — 0 으로 세면 「없다」가 됩니다 (1번). */
 function hmRtNear(){
-  var ap=hmRtAppts(),rg={},i,x,out=[],seen={},
+  var ap=hmRtAppts(),rg=hmRtRegions(),i,x,out=[],seen={},
       me=hmTmMe(),L=(typeof arTouch==='function')?arTouch(me||''):[];
   if(!ap.length)return [];
-  for(i=0;i<ap.length;i++){ if(ap[i].rg)rg[hmRtKey(ap[i].rg)]=1; seen[ap[i].id]=1; }
+  for(i=0;i<ap.length;i++)seen[ap[i].id]=1;
+  /* ★★ 2026-09-28 — 여기서 「만나야 할 분」 을 <b>빼 봤다가 되돌렸습니다.</b>
+     check-hmroute 가 잡았습니다. AP·PC·CS 가 거의 다 아래 자리로 옮겨 가는
+     바람에, 사장님이 이미 받으신 답 두 가지가 사라졌습니다 —
+     <b>「오늘 걸 분 N명」 이라는 수</b>와 <b>「더 보기」 접기</b>입니다.
+     기능을 더하려다 <b>있던 답을 지우면</b> 안 됩니다.
+     아래 자리와 <b>겹쳐도 됩니다</b> — 묻는 것이 다릅니다.
+       여기  : 「오늘 <b>연락</b>할 주기가 돌아왔나」
+       아래  : 「<b>약속</b>을 잡았나 — 안 잡았으면 날짜를 여쭐까」
+     목각(hansaram.html 815행)도 같은 구 사람을 다른 목록과 상관없이
+     그대로 세웁니다.                                                   */
   for(i=0;i<L.length;i++){
     x=L[i];
     if(seen[x.id])continue;              /* 약속에 이미 선 분은 또 안 센다 */
@@ -27531,6 +27549,60 @@ function hmRtNear(){
     out.push(x);
   }
   return out;
+}
+/* ══ 판 ⑤ · <b>만나야 하는데 약속을 아직 안 잡은 분</b> ══════════════
+   사장님 말씀 (2026-09-28) — 「약속 없는 분도 동선에」.
+
+   여태 이 카드는 <b>약속이 잡힌 분</b>과 <b>오늘 걸 분</b>만 세웠습니다.
+   그래서 「그 동네에 사는데 <b>아직 날짜를 못 잡은</b> AP·PC」 가 안
+   보였습니다 — 간 김에 여쭈면 한 번에 끝나는 분들입니다. 여쭙지 못하면
+   그 동네에 <b>또 가야 합니다.</b>
+
+   ★ <b>주기로 거르지 않습니다.</b> 「오늘 걸 분」(hmRtNear)은 주기가
+     돌아온 분만 세지만, 여기는 <b>만나야 하는 단계면</b> 전부 세웁니다.
+     고객 체크(chkPeople)가 AP·PC·CS 를 빠짐없이 훑는 것과 같은 결입니다.
+   ★ <b>지역을 모르는 줄은 안 붙입니다</b> (1번) — 모르는 것을 「같은
+     동네」 라고 하면 헛걸음을 시킵니다.
+   ★ <b>오늘 약속이 잡힌 분은 건너뜁니다</b> — 바로 위에 시간까지 적혀
+     이미 섰습니다. 그 분께 「날짜 여쭙기」 를 내밀면 안 됩니다.
+   ★ <b>「오늘 걸 분」 과는 겹쳐도 됩니다.</b> 묻는 것이 다릅니다 —
+     위는 「오늘 <b>연락</b>할 주기가 돌아왔나」, 여기는 「<b>약속</b>을
+     잡았나」 입니다. 목각(hansaram.html 815행)도 같은 구 사람을 다른
+     목록과 상관없이 그대로 세웁니다.
+   ★★ <b>여기서 두 번 틀렸고 자가 두 번 다 잡았습니다</b> (8번).
+     ① 처음에 「오늘 걸 분」 을 여기서 뺐습니다 — AP·PC·CS 가 거의 다
+        그쪽에 있어 <b>이 자리가 늘 비었습니다.</b> check-hmmeet 열두 줄.
+     ② 그래서 반대로 hmRtNear 에서 뺐더니, 사장님이 이미 받으신 답
+        <b>「오늘 걸 분 N명」 과 「더 보기」 접기</b>가 사라졌습니다.
+        check-hmroute 세 줄. <b>기능을 더하려다 있던 답을 지웠습니다.</b>
+     답은 「빼지 않는다」 였습니다.
+   ★ 동네는 <b>hmRtRegions 한 곳</b>에서 받습니다 (5번).
+   ★ 약속이 <b>앞으로</b> 잡혀 있으면 그 날짜를 적고 단추를 안 답니다 —
+     이미 잡힌 분께 「날짜 여쭙기」 를 내밀면 안 됩니다.                 */
+var HM_RT_MEET=['AP','PC','CS','증권전달'];
+function hmRtMeet(){
+  var ap=hmRtAppts();
+  if(!ap.length)return [];          /* 갈 동네를 모르면 「그 근처」 도 없다 (1번) */
+  var rg=hmRtRegions(),
+      db=(typeof AR!=='undefined'&&AR.db)||[],me=hmTmMe(),
+      t=(typeof arToday==='function')?arToday():'',seen={},out=[],i,r,d;
+  for(i=0;i<ap.length;i++)seen[ap[i].id]=1;
+  for(i=0;i<db.length;i++){
+    r=db[i];
+    if(me&&r.who&&r.who!==me)continue;
+    if(seen[r.id])continue;
+    if(HM_RT_MEET.indexOf(r.stage)<0)continue;
+    if(!r.region||!rg[hmRtKey(r.region)])continue;
+    d=(''+(r.appt||'')).slice(0,10);
+    out.push({id:r.id,nm:r.name||'',rg:r.region,st:r.stage,ap:(d&&t&&d>=t)?d:''});
+  }
+  return out;
+}
+/* 그 중 <b>아직 약속이 없는</b> 분이 몇인가 — 세는 곳도 한 곳입니다 (5번) */
+function hmRtNoAppt(L){
+  var n=0,i;L=L||[];
+  for(i=0;i<L.length;i++)if(!L[i].ap)n++;
+  return n;
 }
 var HM_RT_SHOW=5;
 /* ══ 📊 <b>오늘 얼마나 움직이셨나</b> — 한 줄 ══════════════════════
@@ -27854,6 +27926,43 @@ function hmRtHtml(){
          ? '약속에 <b>지역이 안 적혀</b> 있어 주변을 못 찾았습니다 — 🗺️ 지역 동선에서 시(市)를 정해 주십시오.'
          : '그 지역에 오늘 <b>더 걸 분은 없습니다.</b> 지어내지 않습니다.')+
        '</div>';
+  }
+  /* ── 판 ⑤ · 약속을 아직 안 잡은 분도 여기 섭니다 ────────────────────
+     ★ <b>새 CSS 를 한 줄도 안 씁니다.</b> ui.css 에 있는 이름만 씁니다 —
+       .t-row(.m .nm .mt .r) · .t-chip(44px) · .t-tag.ok · .t-note.
+     ★ 「날짜 여쭙기」 는 <b>그 고객 자리로 보냅니다</b> (5번) — 여기서
+       약속을 새로 저장하지 않습니다. 약속은 🗺️ 지역 동선·TFA 한 곳에서
+       잡습니다. 여기는 <b>누구에게 여쭤야 하는지</b>만 말합니다.       */
+  var meet=hmRtMeet(),noAp=hmRtNoAppt(meet);
+  if(meet.length){
+    /* 말은 <b>목각 글자 그대로</b> 씁니다 — 「가는 김에」 (hansaram.html 823행) */
+    var rgs=[],rk={};
+    for(i=0;i<meet.length;i++)if(meet[i].rg&&!rk[meet[i].rg]){rk[meet[i].rg]=1;rgs.push(meet[i].rg);}
+    h+='<div class="t-note g"><b>가는 김에</b> — '+osEsc(rgs.join(' · '))+
+       '에 만나야 할 분이 <b>'+meet.length+'분</b> 더 계십니다.</div>';
+    for(i=0;i<meet.length&&i<HM_RT_SHOW;i++)
+      h+='<div class="t-row"><span class="m">'+
+           '<span class="nm">'+osEsc(meet[i].nm||'고객')+'</span>'+
+           '<span class="mt">'+osEsc(meet[i].st)+' · '+osEsc(meet[i].rg)+'</span>'+
+         '</span><span class="r">'+
+           (meet[i].ap
+             ? '<span class="t-tag ok">'+osEsc(meet[i].ap)+' 약속</span>'
+             : '<button type="button" class="t-chip" onclick="hmRtPerson(\''+osEsc(meet[i].id)+'\')">'+
+               '📅 날짜 여쭙기</button>')+
+         '</span></div>';
+    if(meet.length>HM_RT_SHOW)
+      h+='<div class="t-row"><span class="m"><span class="mt">+'+
+         (meet.length-HM_RT_SHOW)+'분 더 계십니다</span></span>'+
+         '<span class="r"><button type="button" class="t-chip" onclick="hmRtOpen()">'+
+         '🗺️ 지역 동선에서 보기</button></span></div>';
+    if(noAp)
+      h+='<div class="t-note">이 중 <b>'+noAp+'분</b>은 <b>아직 약속이 없습니다</b> — '+
+         '간 김에 날짜를 여쭈면 그 동네를 두 번 안 가셔도 됩니다.</div>';
+    /* ⚠ 목각(hansaram.html 835행)에는 「같은 날로 모으기」·「이 순서로 돌기」
+       두 단추가 더 있습니다. <b>안 달았습니다</b> — 그 둘은 목각에서 <b>한 장의
+       🗺 만나기 서랍</b>에 있는 것이고, 여러 날을 한꺼번에 잡는 것은 여기
+       홈 카드가 아니라 🗺 지역 동선이 하는 일입니다. 조용히 빼지 않고
+       적어 둡니다 — 사장님이 여기에도 달라고 하시면 그때 답니다.        */
   }
   h+='<div class="hm-rt-f">길 찾기·동네 찍기는 <b>🗺️ 지역 동선</b> 한 곳에서 합니다 — '+
      '여기서는 오늘 갈 곳만 봅니다.</div>';
@@ -36854,7 +36963,7 @@ function orgSubmit(){
   if(parent===orgEditId)parent='';
   var saved;
   if(cur){cur.name=name;cur.rank=rank;cur.team=team;cur.parent=parent;cur.phone=phone;cur.insta=insta;cur.photo=photo;cur.member_id=memberId;saved=cur;}
-  else{saved={id:'m_'+Date.now()+'_'+Math.floor(Math.random()*1000),name:name,rank:rank,team:team,parent:parent,phone:phone,insta:insta,photo:photo};list.push(saved);}
+  else{saved={id:uidOf('m_'),name:name,rank:rank,team:team,parent:parent,phone:phone,insta:insta,photo:photo};list.push(saved);}
   if(orgSave(list)){
     try{orgPushOne(saved);}catch(e){}
     orgEditId=null;window.__orgPhoto=undefined;go('org');
@@ -47083,16 +47192,56 @@ function babaPlanSave(){
    납니다 — 그래서 여태 「가끔 빨개지는 것」 으로 보였습니다. 가끔 나는
    고장은 흔들림이 아니라 <b>아직 안 걸린 고장</b>입니다.
 
-   ★ 이제 <b>세는 수</b>를 함께 붙입니다 — 같은 밀리초라도 안 겹칩니다.
+   ★ <b>세는 수</b>(UID_N)를 함께 붙입니다 — <b>한 화면 안에서는 절대</b>
+     안 겹칩니다. 몇 개를 얼마나 빨리 만들어도 그렇습니다.
    ★ id 모양을 뜯어 보는 자리는 없습니다(확인했습니다). 이미 담긴 id 는
-     그대로 씁니다 — 새로 만드는 것만 바뜁니다.
-   ⚠ 같은 병이 남은 자리가 <b>넷 더</b> 있습니다 — 팀원(m_) · 65019(s) ·
-     66975(h) · 67134(b). 각각 다른 화면이라 이 판에서 같이 건드리지
-     않았습니다. <b>그 자리들도 uidOf 를 부르게</b> 옮기는 것이 다음 일입니다. */
+     그대로 씁니다 — 새로 만드는 것만 바뀝니다.
+
+   ── 2026-09-28 · 나머지 자리를 여기로 모았습니다 ──────────────────
+   지난 판에 「넷 더 있다」 고 적었는데 <b>세어 보니 열한 자리였습니다.</b>
+   제가 한 가지 모양(Date.now()%1e8 + 난수)만 찾아 셌습니다. 꼴이 셋이고
+   <b>뒤로 갈수록 더 잘 겹칩니다.</b> 열한 자리 전부 여기로 옮겼습니다.
+
+     ① 시각+난수 — 같은 밀리초에 둘이면 난수가 같을 확률만 남는다 (일곱)
+        m(내 일정) · m_(팀원) · u(파일 올리기) · s(시나리오) ·
+        h(손으로 더한 담보) 1/1000 · fc_(상담카드) 1/100,000 ·
+        invId(투자 계좌·종목·거래) 1/168만 — 다만 난수 글자가 드물게
+        짧아져 더 좁아진다(아래 uidRnd 참조)
+     ② 난수가 아예 없다 — 같은 밀리초면 <b>무조건</b> 겹친다 (둘)
+        tmp(내 일정에 잠깐 세우는 줄) 시각만 ·
+        b(비포&애프터에서 가져온 담보) 시각+줄번호 — 줄번호는 한 묶음
+        안에서만 갈라 준다. 같은 밀리초에 두 번 가져오면 <b>전부</b> 겹친다
+     ③ <b>세는 자리</b>로 만든다 — 하나 지우면 다음 것이 그 번호를 다시
+        받는다 (둘) va · tmp(성장보드 피드백)
+
+   ★★ <b>세는 수만으로는 모자랐습니다.</b> 팀원 id 는 <b>서버로 갑니다</b> —
+     두 사람이 각자 제 폰에서 같은 밀리초에 팀원을 넣으면 세는 수가 둘 다
+     1 이라 난수 1/1000 만 남습니다. 난수 칸을 <b>36진법 여섯 글자</b>
+     (21억 가지)로 넓혔습니다.
+
+   ⚠ <b>안 옮긴 두 자리</b>가 있고, 옮기면 안 되는 자리입니다.
+     · bizUuid() — crypto.randomUUID() 를 씁니다. 시각+난수가 아니라
+       진짜 UUID 라 이 병이 없습니다.
+     · icsUid(seed) — <b>일부러 씨앗에서 같은 값</b>을 냅니다. 폰 캘린더가
+       같은 일정을 고쳐 쓰라고 읽는 이름이라, 여기를 유일하게 만들면
+       일정이 <b>두 번 생깁니다.</b>
+   check-uid 가 이 둘만 빼고 나머지 전부를 봅니다.                       */
 var UID_N=0;
+function uidRnd(){
+  /* 한 글자씩 뽑습니다 — <b>길이가 흔들리면 안 됩니다.</b>
+     Math.random().toString(36).slice(2,6) 은 드물게 네 글자보다 짧아집니다
+     (0.5 → "0.i" → "i"). 그만큼 겹칠 자리가 넓어집니다.
+     while 로 이어 붙여 채우는 것도 안 됩니다 — Math.random() 이 0 이면
+     빈 글이 돌아와 <b>영원히 돕니다.</b>                              */
+  var C='0123456789abcdefghijklmnopqrstuvwxyz',s='',i;
+  for(i=0;i<6;i++)s+=C.charAt(Math.floor(Math.random()*36));
+  return s;
+}
 function uidOf(pfx){
-  UID_N++;
-  return pfx+Math.round(Date.now()%1e8)+'_'+UID_N+'_'+Math.round(Math.random()*999);
+  /* UID_N 은 이 줄에서 0 이 됩니다. function 선언만 끌어올려지므로 이 함수가
+     그보다 <b>먼저</b> 불리면 undefined 라 id 에 NaN 이 박힙니다 — 받칩니다. */
+  UID_N=(UID_N||0)+1;
+  return (pfx||'x')+Math.round(Date.now()%1e8)+'_'+UID_N+'_'+uidRnd();
 }
 function babaPlanId(){return uidOf('p');}
 function babaPlanAdd(slot){
@@ -64247,7 +64396,7 @@ function osUpDone(id,ok,msg){var m=document.getElementById('msg_'+id);if(m){m.te
   setTimeout(function(){var r=document.getElementById('up_'+id);if(r&&r.parentNode)r.parentNode.removeChild(r);},ok?1400:4000);}
 function osUploadOne(file,doneCb){
   var sb=osClient();if(!sb){toast('서버 연결이 없습니다.');doneCb();return;}
-  var uid='u'+Date.now()+Math.floor(Math.random()*1000);
+  var uid=uidOf('u');
   osUpRow(uid,file.name);osUpSet(uid,8,'체크섬 계산 중…');
   osSha256Hex(file).then(function(sum){
     osUpSet(uid,22,'중복 확인 중…');
@@ -65364,7 +65513,7 @@ var FR_CANCER_STEPS=[
  {no:'10',name:'간병',        keys:['nur_daily','nur_support','nur_use_sup','nur_integ','nur_hosp','nur_base']}
 ];
 function frScenBlank(){
-  return {id:'s'+Math.round(Date.now()%1e8)+Math.round(Math.random()*999),
+  return {id:uidOf('s'),
     diseaseCategory:'CANCER',diseaseCode:'cancer_general',diseaseName:'',scenarioName:'',
     scenarioLevel:'표준',referenceTreatmentCostWon:null,inpatientDays:null,incomeGapMonths:null,
     purposes:['DIAGNOSIS','SURGERY','TREATMENT'],treatmentSteps:[],
@@ -67320,7 +67469,7 @@ function frCellSet(id,which,v){
 function frAddRow(){
   var st=frState();
   if(!st.add||!st.add.push)st.add=[];
-  st.add.push({id:'h'+Math.round(Date.now()%1e8)+Math.round(Math.random()*999),
+  st.add.push({id:uidOf('h'),
                name:'',key:'',bWon:null,aWon:null,src:'손으로 적음'});
   frSaveState();frPaint();
 }
@@ -67479,7 +67628,7 @@ function frFromBaba(){
     var bWon=frManToWonR((r.b===null||r.b===undefined)?null:r.b);
     var aWon=frManToWonR((r.a===null||r.a===undefined)?null:r.a);
     if(have[nm]){ have[nm].bWon=bWon; have[nm].aWon=aWon; updated++; continue; }
-    st.add.push({id:'b'+Math.round(Date.now()%1e8)+i,name:nm,key:'',
+    st.add.push({id:uidOf('b'),name:nm,key:'',
                  bWon:bWon,aWon:aWon,src:'비포&애프터'});
     added++;
   }
@@ -71327,7 +71476,7 @@ function invLoad(){
   INV.st=s;return s;
 }
 function invSave(){try{localStorage.setItem(INV_LS,JSON.stringify(INV.st));}catch(e){}}
-function invId(p){return p+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function invId(p){return uidOf(p+'_');}
 function invAccById(s,id){for(var i=0;i<s.accounts.length;i++)if(s.accounts[i].id===id)return s.accounts[i];return null;}
 function invCur(){var s=invLoad();return invAccById(s,s.curId)||s.accounts[0];}
 function invHoldById(hid){
