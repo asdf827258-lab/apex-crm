@@ -71,8 +71,18 @@ const SEED = () => {
   AR.loaded=true; AR.busy=''; AR.cliRows=[]; AR.db=[];
   const ago = n => new Date(Date.now()-n*864e5).toISOString().slice(0,10);
   OSC.list=[{id:'c1',name:'홍길동',name_masked:'홍○○',advisor_id:'me',stage:'AP',created_at:ago(60)}];
-  /* 아무것도 안 적힌 분 — 그래도 <b>읽기는 끝났다</b>(loaded) */
-  CM.loaded=true; CM.meta={ c1: (function(){ var m=cmBlank(); m._rid='r1'; return m; })() };
+  /* 아무것도 안 적힌 분 — 그래도 <b>읽기는 끝났다</b>(loaded).
+     ★ 2026-09-28 · 판 ⑥ — <b>상황을 보고 생긴 물음</b>(cqaSitOf) 열한
+       가지가 이 카드보다 <b>먼저</b> 섭니다. 한 번에 하나만 여쭙는
+       규칙이라, 그것이 서 있으면 여기서 재려는 CM_FIELDS 물음은
+       안 보입니다. 그래서 견본에서는 <b>열한 가지에 이미 답한 것으로</b>
+       두고 이 카드를 잽니다. ★ 약하게 만든 것이 아닙니다 — 이 카드에
+       묻는 것은 <b>한 줄도 안 줄였습니다.</b> 「상황 물음이 먼저 서나」
+       는 <b>check-ask11</b> 이 따로 재고, 거기서 답을 비워 정말
+       그러는지 봅니다. 두 자가 안 겹칩니다.                          */
+  CM.loaded=true; CM.meta={ c1: (function(){ var m=cmBlank(); m._rid='r1';
+    m.ask={block:1,due:1,clm:1,when:1,ref:1,hook:1,care:1,kb:1,gap:1,rrn:1,age:1};
+    return m; })() };
   try{ osHideLoginGate(); }catch(e){}
   osOpenClient('c1');
 };

@@ -60322,6 +60322,11 @@ var CM_FIELDS=[
     ★ <b>이름 대조는 그대로 둡니다</b> — 옛 자료를 잇는 길입니다. 다리가
       있으면 다리를 먼저 보고, 없을 때만 이름으로 견줍니다.            */
  ['db',   'str', 0, null],
+ /* ── ❓ <b>여쭤서 알게 된 것</b> — {물음열쇠:고른 답} ────────────────
+    2026-09-28 · 판 ⑥. 이것은 <b>여쭙는 칸이 아닙니다</b>(넷째가 null) —
+    답이 쌓이는 자리입니다. 여기에 ask 를 안 넣으면 cmSave 가 통째로
+    버려서 답이 조용히 사라집니다 (CM_FIELDS 머리말 경고 그대로).    */
+ ['ask',  'obj', 0, null],
  /* 가족을 <b>줄로</b> 적은 것(배우자·자녀…) — fam 과 다른 칸이다 */
  ['fams', 'arr', 12, null],
  /* 이 사람의 자리 — 가족 이름과 <b>같은 단추</b>로 저장되므로 따로 안 여쭙는다 */
@@ -62168,10 +62173,205 @@ function cqaInner(id,cmp){
   return h;
 }
 /* ★ 홈에서도 <b>이 한 줄만</b> 부르면 됩니다 — 카드는 한 곳입니다 (5번) */
+/* ══ ❓ <b>앱이 여쭙는 열한 가지</b> — 미리 적어 둔 것이 아닙니다 ════
+   사장님 말씀 (한 판 · 판 ⑥) — 「질문을 미리 적어 두지 않습니다. 그
+   고객의 상황을 보고 그때 생깁니다.」 목각 asksOf(hansaram.html 1173행).
+
+   ★ <b>이미 있는 cqa 위에 얹습니다</b> (5번) — 「지금 여쭐 한 가지」 를
+     고르는 곳은 여전히 cqaAsk 하나입니다. 여기 열한 가지가 <b>먼저</b>
+     서고, 그것이 없을 때 CM_FIELDS 의 빈 칸을 여쭙습니다.
+   ★ <b>한 번에 하나만</b> 여쭙습니다 — 여러 개를 늘어놓으면 답을
+     안 하십니다.
+   ★ <b>모르면 안 여쭙습니다</b> (1번). 단계는 배정 DB 줄에 붙어 있어
+     다리가 없으면 모릅니다 — 그때 단계로 갈리는 물음(걸리는 것·소개·
+     주민번호)은 <b>안 세웁니다.</b> 지어내서 여쭈면 엉뚱한 것을 묻습니다.
+   ★ 답은 client_meta.ask 한 곳에 쌓이고, 「다시 묻기」 로 되돌립니다.  */
+/* 답이 <b>무엇을 바꾸는지</b> — 목각 1156행 글자 그대로 */
+var ASK_WAY={
+ '돈이 부담':'보험료를 늘리지 않고 <b>자리를 옮기는 쪽</b>으로 다시 폅니다',
+ '필요를 못 느끼심':'빈 통장 하나만 짚어 <b>「여기가 아프면 나올 돈이 없습니다」</b> 로 엽니다',
+ '회사가 마음에 안 드심':'같은 보장을 <b>다른 회사로 짜서</b> 비교표만 보여 드립니다',
+ '아직 모르겠음':'전화로 <b>「어느 쪽이 제일 걸리셨어요」</b> 한 마디만 여쭙습니다',
+ '만기 안내부터':'지금 것이 언제 끊기는지만 말씀드리고 <b>결정은 다음에</b> 받습니다',
+ '새로 제안':'만기를 빌미로 <b>전체를 다시</b> 펴 놓습니다',
+ '청구부터':'<b>청구를 끝내 드리고</b> 보장 이야기는 그 다음에 꺼냅니다',
+ '보장 이야기 먼저':'청구는 짧게 안내하고 <b>비어 있는 자리</b>부터 폅니다',
+ '이번 주':'이번 주 안으로 <b>날짜 두 개</b>를 드리고 고르시게 합니다',
+ '다음 주':'다음 주로 잡고 <b>같은 구 다른 분</b>과 같은 날로 묶습니다',
+ '아직 모름':'날짜를 지금 정하지 않고 <b>「언제가 편하세요」</b> 만 여쭙습니다',
+ '예 · 여쭙겠습니다':'증권을 드린 뒤 <b>가족 한 분</b>만 여쭙습니다',
+ '오늘은 말고':'오늘은 <b>고마움과 청구 방법</b>까지만 하고 끝냅니다'
+};
+var ASK_NM={block:'걸리는 것',due:'만기 쪽',clm:'청구 쪽',when:'뵙는 때',ref:'소개',
+            hook:'제일 걱정',care:'요즘 상황',kb:'증권',gap:'먼저 여쭐 곳',
+            rrn:'주민번호',age:'상령일'};
+/* 이 분의 단계 — <b>배정 DB 줄</b>에 붙어 있습니다. 모르면 빈 글 (1번) */
+function cqaStOf(id){
+  try{
+    var k=(typeof olDbId==='function')?olDbId({id:id}):'';
+    if(!k)return '';
+    var r=(typeof hdbRow==='function')?hdbRow(k):null;
+    return (r&&r.stage)||'';
+  }catch(e){ return ''; }
+}
+function cqaAnsOf(id){ var m=cmOf(id); return (m&&m.ask&&typeof m.ask==='object')?m.ask:{}; }
+/* ── 열한 가지 — <b>지금 이 분에게 서는 것만</b> 돌려줍니다 ──────── */
+function cqaSitOf(id){
+  var a=cqaAnsOf(id),m=cmOf(id),st=cqaStOf(id),L=[],i;
+  function add(qid,q,why,opts,note){ if(a[qid]===undefined)L.push({id:qid,q:q,why:why,opts:opts,note:note}); }
+  var idle=-1; try{ idle=cmTemp(id).d; }catch(e){}
+  /* 1 */
+  if((st==='PC'||st==='CS')&&idle>=7)
+    add('block','무엇이 걸리셨을까요?',st+' 에서 '+idle+'일째 조용해서 여쭙습니다',
+      ['돈이 부담','필요를 못 느끼심','회사가 마음에 안 드심','아직 모르겠음'],
+      '고르시면 다음에 걸 때 그 자리부터 엽니다');
+  /* 2 — 만기는 날짜로 담습니다. 「D-30」 이라고 안 씁니다 (사장님 말씀) */
+  if(m.due)
+    add('due','만기 안내부터 할까요, 새로 제안할까요?','만기가 '+m.due+' 라서 여쭙습니다',
+      ['만기 안내부터','새로 제안'],'이 답이 첫 문장을 바꿉니다');
+  /* 3 — 받은 돈이 아직 안 적힌 청구가 있으면 「아직 안 끝난 것」입니다 */
+  if(cqaClmOpen(id))
+    add('clm','청구부터 도와드릴까요?','아직 받은 돈이 안 적힌 청구가 있어서 여쭙습니다',
+      ['청구부터','보장 이야기 먼저'],'여기서 신뢰가 갈립니다');
+  /* 4 */
+  if(st&&(typeof HM_RT_MEET!=='undefined')&&HM_RT_MEET.indexOf(st)>=0&&!cqaApptOf(id))
+    add('when','언제 뵙는 게 좋을까요?','만나야 하는 자리인데 약속이 아직 없어서 여쭙습니다',
+      ['이번 주','다음 주','아직 모름'],'고르시면 동선에 같이 세웁니다');
+  /* 5 */
+  if(st==='증권전달')
+    add('ref','이 자리에서 소개를 여쭐까요?','증권을 직접 드리는 자리가 소개를 받는 유일한 자리라서 여쭙습니다',
+      ['예 · 여쭙겠습니다','오늘은 말고'],'우편으로 보내면 이 자리가 없어집니다');
+  /* 6 */
+  if(!m.worry)
+    add('hook','이분이 제일 걱정하시는 게 뭔가요?','첫 문장에 붙일 말이 아직 안 적혀 있어서 여쭙습니다',
+      ['아이 교육비','노후 · 은퇴','부모님','병원비'],
+      '적어 두시면 홈 카드 첫 문장이 이 말로 바뀝니다');
+  /* 7 — 고를 것은 CM_CARE 한 곳에서 옵니다 (5번) */
+  if(!m.care)
+    add('care','요즘 이분께 무슨 일이 있나요?','상황 칸이 비어 있어서 여쭙습니다',
+      (typeof CM_CARE!=='undefined')?CM_CARE.slice(1):[],
+      '상황이 적히면 명단에도 그 말이 뜹니다');
+  /* 8 */
+  if(!cmWalOf(id))
+    add('kb','증권을 갖고 계신가요?','8통장 진단을 아직 안 붙여서 여쭙습니다',
+      ['있음 · 넣겠습니다','아직 못 받음','안 갖고 계심'],
+      '넣으시면 빈 통장과 할 말이 바로 나옵니다');
+  /* 9 */
+  if(cmWalOf(id)){
+    var low=cmWalLow(id);
+    if(low.length)add('gap','비어 있는 곳 중 어디부터 여쭐까요?',
+      low.join(' · ')+' 이 비어 있어서 여쭙습니다',low.slice(0,4),
+      '고르신 통장의 「물을 것」이 상담 자리에 올라옵니다');
+  }
+  /* 10 — 적어도 서버로는 안 갑니다 (3번) */
+  if(st&&(st==='CS'||st==='계약완료')&&!cqaRrnOf(id))
+    add('rrn','주민등록번호를 지금 적어 둘까요?','청약 서류를 쓰는 자리라서 여쭙습니다',
+      ['지금 적겠습니다','나중에'],'적어도 서버로는 안 갑니다 — 이 기기에만 둡니다');
+  /* 11 — 상령일은 insAgeOf 한 곳이 셉니다 (5번) */
+  var ia=cqaInsAge(id);
+  if(ia&&ia.dday>=0&&ia.dday<=90)
+    add('age','상령일 이야기를 꺼낼까요?','상령일이 '+ia.dday+'일 남아서 여쭙습니다',
+      ['꺼내겠습니다','말 안 하겠습니다'],'그날이 지나면 같은 보장도 보험료가 올라갑니다');
+  return L;
+}
+/* 아직 안 끝난 청구가 있나 — 받은 돈이 안 적힌 줄 */
+function cqaClmOpen(id){
+  var L=(typeof cmClmOf==='function')?cmClmOf(id):null,i;
+  if(!L||!L.length)return false;
+  for(i=0;i<L.length;i++){ var v=L[i]&&L[i].wonR; if(v===''||v===null||v===undefined)return true; }
+  return false;
+}
+function cqaApptOf(id){
+  try{
+    var k=(typeof olDbId==='function')?olDbId({id:id}):'';
+    if(!k)return '';
+    var r=(typeof hdbRow==='function')?hdbRow(k):null;
+    return (r&&r.appt)||'';
+  }catch(e){ return ''; }
+}
+function cqaRrnOf(id){ try{ return (typeof cmRrnOf==='function')?(cmRrnOf(id)||''):''; }catch(e){ return ''; } }
+/* 보험나이·상령일은 <b>insAgeOf 한 곳</b>이 셉니다 (5번) */
+function cqaInsAge(id){
+  try{
+    var v=cqaRrnOf(id); if(!v)return null;
+    var b=(typeof cmRrnBirth==='function')?cmRrnBirth(v):'';
+    if(!b)return null;
+    return (typeof insAgeOf==='function')?insAgeOf(b):null;
+  }catch(e){ return null; }
+}
+/* 답을 적습니다 — 쓰는 곳은 <b>cmSave 하나</b>입니다 (S04).
+   ★ 두 가지는 <b>진짜 칸에도</b> 적습니다 — 첫 문장(worry)과 상황(care).
+     그래야 홈 카드의 첫 문장이 그 말로 바뀝니다. 답만 쌓아 두면
+     화면은 그대로입니다.                                             */
+function cqaSitSave(id,qid,ans){
+  var a=cqaAnsOf(id),k,patch={},na={};
+  for(k in a)na[k]=a[k];
+  na[qid]=ans;
+  patch.ask=na;
+  if(qid==='hook')patch.worry=ans;
+  if(qid==='care')patch.care=ans;
+  cmSave(id,patch,function(){
+    toast('적어 두었습니다'+(ASK_WAY[ans]?' — 다음엔 그 자리부터 엽니다':''));
+    if(typeof cmDetailPaint==='function')cmDetailPaint(id);
+    if(typeof hmPaint==='function')try{hmPaint();}catch(e){}
+  });
+}
+/* 다시 묻기 — 답을 비웁니다. <b>적어 둔 첫 문장·상황은 안 지웁니다</b>
+   (6번) — 단추 하나로 적어 둔 것을 날리면 되돌릴 길이 없습니다.      */
+function cqaSitClear(id){
+  cmSave(id,{ask:{}},function(){
+    toast('다시 여쭙겠습니다 — 적어 두신 말은 그대로입니다');
+    if(typeof cmDetailPaint==='function')cmDetailPaint(id);
+  });
+}
+/* 그래서 다음엔 — 답 하나가 <b>말하는 방법</b>을 바꿉니다 */
+function cqaWayOf(id){
+  var a=cqaAnsOf(id),ks=['block','due','clm','when','ref'],i;
+  for(i=0;i<ks.length;i++)if(a[ks[i]]&&ASK_WAY[a[ks[i]]])return ASK_WAY[a[ks[i]]];
+  return '';
+}
+/* 지금 여쭐 <b>한 가지</b>를 그립니다 — 고를 것이 붙습니다 */
+function cqaSitHtml(id){
+  var L=cqaSitOf(id),q,i,h='';
+  if(!L.length)return '';
+  q=L[0];
+  h+='<div class="t-lab">❓ 여쭙겠습니다</div>'+
+     '<div class="t-big">'+osEsc(q.q)+
+       '<small>왜 묻나 — '+osEsc(q.why)+'</small></div>'+
+     '<div class="t-chips">';
+  for(i=0;i<q.opts.length;i++)
+    h+='<button type="button" class="t-chip" onclick="cqaSitSave(\''+osEsc(id)+'\',\''+
+       osEsc(q.id)+'\',\''+osEsc(q.opts[i])+'\')">'+osEsc(q.opts[i])+'</button>';
+  h+='</div>';
+  if(q.note)h+='<div class="t-note">'+osEsc(q.note)+'</div>';
+  if(L.length>1)h+='<div class="t-note b">남은 '+(L.length-1)+'가지는 <b>이것부터 답하시면</b> 그때 여쭙겠습니다 — 한 번에 하나씩입니다.</div>';
+  return h;
+}
+/* ✅ 여쭤서 알게 된 것 — 쌓인 답과 「다시 묻기」.
+   ★ 이름이 cqaAnsHtml 이 아닙니다 — 그 이름은 <b>이미 있고</b>(62105행)
+     「물음의 고를 것을 그리는」 다른 일을 합니다. 같은 이름을 쓰면
+     나중 것이 이기고 앞의 것을 부르던 자리가 조용히 망가집니다 (5번).
+     check-html 이 그 자리에서 잡아 주었습니다.                       */
+function cqaKnewHtml(id){
+  var a=cqaAnsOf(id),ks=[],k,h='',way=cqaWayOf(id);
+  for(k in a)if(a[k]!==undefined)ks.push(k);
+  if(!ks.length)return '';
+  h+='<div class="t-lab" style="margin-top:20px">✅ 여쭤서 알게 된 것</div>';
+  for(k=0;k<ks.length;k++)
+    h+='<div class="t-row"><span class="m"><span class="mt">'+
+       osEsc(ASK_NM[ks[k]]||ks[k])+'</span></span>'+
+       '<span class="r"><span class="t-tag ok">'+osEsc(a[ks[k]])+'</span></span></div>';
+  if(way)h+='<div class="t-note b">그래서 다음엔 — '+way+'</div>';
+  h+='<button type="button" class="t-chip" style="margin-top:12px" onclick="cqaSitClear(\''+osEsc(id)+'\')">다시 묻기</button>';
+  return h;
+}
 function cqaHtml(id,cmp){
   if(!id)return '';
-  var h=cqaInner(id,cmp);
-  if(!h)return '';
+  /* ★ 상황을 보고 생긴 물음이 <b>먼저</b>입니다 — 그것이 없을 때
+     CM_FIELDS 의 빈 칸을 여쭙습니다. 고르는 곳은 여전히 한 곳입니다 (5번). */
+  var sit=cqaSitHtml(id),ans=cqaKnewHtml(id);
+  var h=sit?(sit+ans):(cqaInner(id,cmp)+ans);
+  if(!h||!h.replace(/\s/g,''))return '';
   return '<div class="t-card" id="cqaCard"'+(cmp?' data-cmp="1"':'')+
          ' style="margin-bottom:16px">'+h+'</div>';
 }
