@@ -12283,8 +12283,67 @@ function chkCliBy(){
   }
   return o;
 }
-/* 실명이 먼저, 그다음 가린 것 — 못 찾으면 <b>null</b> (1번) */
-function chkFind(by,name){
+/* ══ 🌉 <b>한 사람 = 한 줄</b> — 다리를 먼저, 이름은 나중 (ol*) ══════
+   2026-09-28. 배정 DB(dbs)와 내 고객(clients)을 잇는 것이 <b>이름 글자</b>
+   뿐이었습니다. 바로 위에 「⚠ 동명이인은 못 가립니다」 라고 적어 둔 그
+   자리입니다. 이름으로 붙이면 <b>다른 사람의 증권</b>을 그 분 것이라고
+   말하게 됩니다 — 고객 앞에서 무너지는 자리입니다.
+
+   그래서 <b>다리 한 칸</b>을 놓습니다 — client_meta.db 에 그 고객이 온
+   배정 DB 줄의 id 를 적습니다. 「내 고객으로」 를 누를 때 한 번 적히고,
+   그 뒤로는 <b>짐작하지 않습니다.</b>
+
+   ★ <b>이름 대조는 안 지웁니다</b> — 다리가 없는 옛 자료를 잇는 길입니다.
+     지우면 지난 것이 다 끊깁니다. 다리가 있으면 <b>다리를 먼저</b> 보고,
+     없을 때만 이름으로 견줍니다.                                      */
+/* 이 고객이 어느 배정 DB 에서 왔나 — 모르면 <b>빈 글</b>입니다 (1번) */
+function olDbOf(cid){ try{ return (cmOf(cid).db||''); }catch(e){ return ''; } }
+/* dbs id → 고객 줄. <b>다리가 놓인 것만</b> 담습니다 */
+function olByDb(){
+  var L=(typeof AR!=='undefined'&&AR.cliRows)?AR.cliRows:[],o={},i,d;
+  for(i=0;i<L.length;i++){ d=olDbOf(L[i].id); if(d&&!o[d])o[d]=L[i]; }
+  return o;
+}
+/* ── 「내 고객으로」 — <b>다리가 놓이는 단 한 번</b> ──────────────────
+   여태 본체에는 <b>배정 DB 줄을 내 고객으로 만드는 자리가 없었습니다.</b>
+   clients 에 줄을 넣는 곳은 둘인데(osPickClient · osCreateClient) 둘 다
+   <b>이름을 손으로 칩니다</b>. 그래서 다리를 놓을 순간이 없었습니다.
+
+   ★ <b>이름은 가려서 서버로</b> 갑니다 (3번). 배정 DB 의 customer_name 은
+     팀이 함께 보는 실명이라 그대로 두지만, <b>새 자리에 세울 때는 가립니다.</b>
+     실명은 이 기기에만 둡니다(cmRealSet) — 안 두면 화면에도 김○○ 로만
+     뜨고 나가는 글에서 실명을 골라낼 수도 없습니다.
+   ★ <b>두 번 눌러도 두 줄이 안 됩니다</b> — 이미 다리가 있으면 그렇다고
+     말하고 멈춥니다. 「한 사람 = 한 줄」 이 이 판의 전부입니다.
+   ★ 만들고 <b>번호를 못 받으면 그렇다고 적습니다</b> (1번) — 조용히
+     넘어가면 다리 없는 고객이 하나 생기고 아무도 모릅니다.           */
+function olToMine(dbId){
+  var L=(typeof AR!=='undefined'&&AR.db)||[],r=null,i;
+  for(i=0;i<L.length;i++)if(L[i].id===dbId){r=L[i];break;}
+  if(!r){toast('그 배정 DB 줄을 못 찾았습니다');return;}
+  if(olByDb()[dbId]){toast('이미 내 고객입니다 — 줄은 하나입니다');return;}
+  var sb=osClient();
+  if(!sb||!OS.session||!OS.session.user){toast('로그인 후 이용하세요');return;}
+  var name=r.name||'';
+  sb.from('clients').insert({advisor_id:OS.session.user.id,
+      name_masked:osMaskName(name),consent_status:'none'})
+    .select('id,name_masked').then(function(x){
+    if(x&&x.error){toast('내 고객으로 못 옮겼습니다 — '+(''+(x.error.message||'')).slice(0,60),6000);return;}
+    var c=(x.data&&x.data[0])||{};
+    if(!c.id){toast('만들었지만 번호를 못 받았습니다 — 새로고침해 주십시오',6000);return;}
+    try{ if(typeof cmRealSet==='function')cmRealSet(c.id,name); }catch(e){}
+    /* 다리를 적는 것은 <b>여기 한 번</b>입니다 */
+    cmSave(c.id,{db:dbId},function(){
+      toast(osMaskName(name)+' 님을 내 고객으로 옮겼습니다 — 줄은 하나입니다');
+      try{ osLoadClients(); }catch(e2){}
+    });
+  },function(e){ toast('내 고객으로 못 옮겼습니다 — '+((e&&e.message)||'네트워크 오류'),6000); });
+}
+/* 실명이 먼저, 그다음 가린 것 — 못 찾으면 <b>null</b> (1번).
+   ★ dbId 를 주면 <b>다리를 제일 먼저</b> 봅니다. 다리는 사람이 한 번
+     눌러서 놓은 것이라 짐작이 아닙니다.                              */
+function chkFind(by,name,dbId){
+  if(dbId){ var br=olByDb()[dbId]; if(br)return br; }
   var s=(''+(name==null?'':name)).replace(/\s/g,'');
   if(!s)return null;
   return by['r:'+s]||by['m:'+chkKey(s)]||null;
@@ -12299,7 +12358,7 @@ function chkPeople(){
     var r=db[i];
     if(who&&r.who!==who)continue;
     if(typeof APEX_STAGE==='undefined'||!APEX_STAGE.chkOf(r.stage))continue;
-    var c=chkFind(by,r.name);
+    var c=chkFind(by,r.name,r.id);      /* 다리가 있으면 다리로 (ol*) */
     out.push({id:r.id,nm:r.name,stage:r.stage,region:r.region,src:r.src,
               days:r.days,appt:r.appt,
               /* 고객 365일에서 이어 붙은 줄 — 없으면 null. 지어내지 않습니다 */
@@ -60178,6 +60237,18 @@ var CM_FIELDS=[
  ['due',  'str', 0, {ask:'가장 빠른 만기가 언제인지 적어 둘까요?',
                      why:'만기가 다가오면 그것이 <b>다시 만날 이유</b>가 됩니다.',
                      how:'fld', fld:'cmDue', pri:10}],
+ /* ── 🌉 <b>어느 배정 DB 에서 오셨나</b> — dbs 의 id 한 칸 ────────────
+    2026-09-28. 같은 사람이 두 표에 따로 앉아 있었습니다 — 배정 DB 는 dbs,
+    내 고객은 clients. 이어 주는 것이 <b>이름 글자</b>뿐이라, 코드에도
+    「⚠ 동명이인은 못 가립니다」 라고 적어 두었습니다(12259행). 이름으로
+    붙이면 <b>다른 사람의 증권</b>을 그 분 것이라고 말하게 됩니다.
+    ★ 새 표를 안 만듭니다 (7번) — client_meta 는 saved_reports 안이라
+      SQL 도 마이그레이션도 필요 없습니다.
+    ★ <b>여쭙는 칸이 아닙니다</b>(넷째가 null) — 「내 고객으로」 를 누를 때
+      조용히 적힙니다. 「오늘 이분」 줄을 세우면 안 되는 값입니다.
+    ★ <b>이름 대조는 그대로 둡니다</b> — 옛 자료를 잇는 길입니다. 다리가
+      있으면 다리를 먼저 보고, 없을 때만 이름으로 견줍니다.            */
+ ['db',   'str', 0, null],
  /* 가족을 <b>줄로</b> 적은 것(배우자·자녀…) — fam 과 다른 칸이다 */
  ['fams', 'arr', 12, null],
  /* 이 사람의 자리 — 가족 이름과 <b>같은 단추</b>로 저장되므로 따로 안 여쭙는다 */
