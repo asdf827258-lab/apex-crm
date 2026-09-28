@@ -61858,6 +61858,10 @@ function olDbRowHtml(x){
       '<div class="cm-sub">'+osEsc(sub.join(' · '))+'</div></div>'+
     '<div class="cm-rt">'+olTagHtml(x)+
       (x.stage?('<span class="t-tag b">'+osEsc(x.stage)+'</span>'):'')+
+      /* 📞 — 목각 line() 631행의 그 단추. 창은 cshOpen 한 곳이 엽니다 (5번).
+         배정 DB 줄은 아직 고객 번호가 없으니 <b>그 줄 번호로</b> 엽니다. */
+      '<button type="button" class="t-chip" onclick="event.stopPropagation();cshOpen(\'\',\''+
+        osEsc(x._dbid)+'\')">📞 전화</button>'+
       '<button type="button" class="t-chip" onclick="event.stopPropagation();olToMine(\''+
         osEsc(x._dbid)+'\')">🪪 내 고객으로</button></div>'+
   '</div>';
@@ -61891,6 +61895,9 @@ function cmRowHtml(c){
       '<div class="cm-sub">'+osEsc(sub.join(' · '))+'</div>'+nx+
       ((typeof ccRowActHtml==='function')?ccRowActHtml(c):'')+'</div>'+
     '<div class="cm-rt">'+olTagHtml(c)+
+      /* 📞 — 목각 line() 631행. 창을 여는 곳은 cshOpen 하나입니다 (5번) */
+      '<button type="button" class="t-chip" onclick="event.stopPropagation();cshOpen(\''+
+        osEsc(c.id)+'\')">📞 전화</button>'+
       ((typeof ccRowChip==='function')?ccRowChip(c):'')+
       '<span class="osc-badge '+cs+'">'+osConsentLabel(cs)+'</span>'+
       '<span class="cm-ff">'+cmFfCount(c.id)+'/'+cmFfTotal()+'</span></div>'+
@@ -62353,6 +62360,130 @@ function cmStageHtml(id){
      보낼 말만 떼어 주면 그 자리에서 선을 넘습니다.
    ★ 나이대는 <b>알 때만</b> 넘깁니다. 모르는 것을 기본값으로 채우면
      화면이 그것을 사실로 적습니다 (1번).                                */
+/* ══ 📞 <b>전화 기록 창</b> — 세 층 (csh*) ═══════════════════════════
+   사장님 말씀 (한 판 · 판 ④) — 「전화를 누르면 상황·할 말·결과 세 층」.
+   그림은 docs/mokgak/hansaram.html?call=p1 (vSheet · 1089행).
+
+   ★ <b>전화하면서 알게 된 것을 그 자리에서 못 적으면 안 적게 됩니다.</b>
+     그래서 딴 화면으로 안 보냅니다 — 덮개로 뜹니다.
+   ★ <b>새 저장 코드를 한 줄도 안 짭니다</b> (S04 · 5번). 이미 있는 넷을
+     부르기만 합니다 —
+       통화 결과    hdbCall(id,result)   calls 표. 「다른 데 적으면 CRM 의
+                                         숫자가 안 움직입니다」(24413행)
+       단계         hdbTo(id,to)         단계를 바꾸는 한 곳. 권한까지 봅니다
+       다음에 뜰 날  cmNextSave(id,what,due)
+       접촉 기록    ccMark(id,'전화')
+   ★ 첫 층·둘째 층은 <b>판 ⑩ 에서 만든 카드를 그대로 부릅니다</b> —
+     베끼면 한쪽만 고친 날 두 곳이 갈립니다 (5번).
+   ★ 옷은 ui.css 의 .t-dim · .t-sheet 입니다 — <b>새 CSS 0줄</b>.        */
+/* 결과 다섯 — <b>목각 1058행 글자 그대로</b>. 여기가 유일한 자리입니다 (5번).
+   칸은 [열쇠, 적는 말, 며칠 뒤, calls 에 남길 결과, 단계, 말끝].
+   단계 '' 는 그대로 · '@next' 는 apex-stage 가 아는 다음 단계입니다.
+   ★ <b>사장님께 날짜를 고르게 하지 않습니다</b> — 규칙이 정합니다.     */
+var CSH_RES=[
+ ['call', '통화됐어요', 3,  '상담', '',      '통화가 됐다고'],
+ ['miss', '부재',       1,  '부재', '부재',  '부재라고'],
+ ['no',   '거절',      30,  '거절', '거절',  '거절이라고'],
+ ['met',  '만났어요',   3,  '상담', '@next', '만났다고'],
+ /* 「다음에」 는 <b>calls 에 안 담습니다.</b> 그 표의 결과는 상담·부재·
+    거절 <b>셋뿐</b>이고(8264행이 그 셋만 셉니다) 「다음에 하겠다」 는
+    어디에도 없습니다. 상담으로 적으면 상담 수가 부풀고 arStageOf 가
+    단계를 AP 로 올려 버립니다. 없는 칸을 지어내지 않습니다 (1번) —
+    접촉 기록과 다음 날짜만 남깁니다.                                  */
+ ['later','다음에',     7,  '',     '',      '다음에 하겠다고']
+];
+var CSH={id:'',dbid:''};
+function cshDayPlus(n){
+  var d=new Date((new Date(cmToday()+'T00:00:00+09:00')).getTime()+n*86400000);
+  return d.toISOString().slice(0,10);
+}
+function cshResOf(k){ var i; for(i=0;i<CSH_RES.length;i++)if(CSH_RES[i][0]===k)return CSH_RES[i]; return null; }
+/* 이 분의 배정 DB 줄 — 없으면 빈 글입니다. 단계는 그 줄에 붙어 있습니다 */
+function cshDbOf(id){ try{ return (typeof olDbOf==='function')?olDbOf(id):''; }catch(e){ return ''; } }
+function cshNm(id){ try{ return cmName({id:id,name_masked:''})||'고객'; }catch(e){ return '고객'; } }
+function cshOpen(id,dbid){
+  CSH.id=id||''; CSH.dbid=dbid||cshDbOf(id);
+  var host=document.getElementById('cshHost');
+  if(!host){ host=document.createElement('div'); host.id='cshHost'; document.body.appendChild(host); }
+  host.innerHTML=cshHtml(CSH.id);
+  var d=document.getElementById('cshDim'),sh=document.getElementById('cshSheet');
+  if(d)d.classList.add('on');
+  if(sh)setTimeout(function(){sh.classList.add('on');},10);
+}
+function cshClose(){
+  var d=document.getElementById('cshDim'),sh=document.getElementById('cshSheet');
+  if(sh)sh.classList.remove('on');
+  if(d)d.classList.remove('on');
+  setTimeout(function(){ var h=document.getElementById('cshHost'); if(h)h.innerHTML=''; },220);
+}
+function cshHtml(id){
+  var nm=cshNm(id),dbid=CSH.dbid,i,h='';
+  h+='<div class="t-dim" id="cshDim" onclick="cshClose()"></div>'+
+     '<div class="t-sheet" id="cshSheet" style="max-height:88vh;overflow-y:auto">';
+  h+='<div class="t-lab">🧾 지금 이 분 상황</div>'+
+     '<div class="t-big">여기서 바로 고칩니다<small>전화하면서 알게 된 것을 그 자리에서 적습니다. 딴 화면으로 안 보냅니다.</small></div>';
+  h+=cshStageHtml(id,dbid);
+  h+=(typeof cmNoteHtml==='function')?cmNoteHtml(id):'';
+  h+=(typeof cmFamHtml==='function')?cmFamHtml(id):'';
+  h+=(typeof cmSayHtml==='function')?cmSayHtml(id):'';
+  h+='<div class="t-card"><div class="t-lab">📞 '+osEsc(nm)+'님, 어떻게 됐나요?</div>'+
+     '<div class="t-big">누르면 다음에 뜰 날까지 정해집니다<small>날짜는 <b>규칙이 정합니다</b> — 고르지 않으셔도 됩니다.</small></div>'+
+     '<div class="t-chips">';
+  for(i=0;i<CSH_RES.length;i++)
+    h+='<button type="button" class="t-chip" data-res="'+CSH_RES[i][0]+'" '+
+       'onclick="cshMark(\''+osEsc(id)+'\',\''+CSH_RES[i][0]+'\')">'+
+       osEsc(CSH_RES[i][1])+' <b>'+CSH_RES[i][2]+'일 뒤</b></button>';
+  h+='</div>'+
+     '<button type="button" class="t-btn g sm" style="margin-top:14px" onclick="cshClose()">닫기</button>'+
+  '</div></div>';
+  return h;
+}
+/* 단계 — <b>배정 DB 줄에 붙어 있습니다.</b> 다리가 없으면 바꿀 자리가
+   없으니 <b>그렇다고 적습니다</b> (1번). 빈 고르개를 세워 두면 눌러도
+   아무 일이 안 일어나고 사장님은 고장인 줄 아십니다.                 */
+function cshStageHtml(id,dbid){
+  var i,cur='',L=[],r=null;
+  try{ L=(typeof APEX_STAGE!=='undefined')?(APEX_STAGE.order||[]):[]; }catch(e){}
+  if(!dbid||!L.length)
+    return '<div class="t-note">단계는 <b>배정 DB 줄</b>에 붙어 있습니다. 이 분은 아직 그 줄과 안 이어져 있어 여기서 못 바꿉니다 — 명단에서 <b>「🪪 내 고객으로」</b> 를 누르시면 이어집니다.</div>';
+  try{ r=(typeof hdbRow==='function')?hdbRow(dbid):null; cur=(r&&r.stage)||''; }catch(e2){}
+  var h='<div class="t-card" style="margin-bottom:16px"><div class="t-fld"><span class="l">단계</span>'+
+    '<select id="cshStage">';
+  for(i=0;i<L.length;i++)
+    h+='<option value="'+osEsc(L[i])+'"'+(cur===L[i]?' selected':'')+'>'+osEsc(L[i])+'</option>';
+  h+='</select></div>'+
+    '<button type="button" class="t-btn g sm" onclick="cshStageSave(\''+osEsc(dbid)+'\')">단계만 바꾸기</button></div>';
+  return h;
+}
+/* 단계를 바꾸는 곳은 <b>hdbTo 하나</b>입니다 — 권한·필요 조건까지 거기서 봅니다 (5번) */
+function cshStageSave(dbid){
+  var to=osVal('cshStage')||'';
+  if(!dbid||!to)return;
+  if(typeof hdbTo==='function')hdbTo(dbid,to);
+  else toast('단계를 바꾸는 자리를 못 찾았습니다');
+}
+/* ── 결과 다섯 — 누르면 <b>표대로</b> 단계와 다음 날이 정해집니다 ──
+   쓰는 곳은 전부 <b>이미 있는 함수</b>입니다 (S04).                   */
+function cshMark(id,key){
+  var r=cshResOf(key);
+  if(!r){toast('모르는 결과입니다');return;}
+  var dbid=CSH.dbid,due=cshDayPlus(r[2]),m=cmOf(id),
+      what=(m.next&&m.next.what)||'',to='',from='',row=null;
+  if(dbid){
+    try{ row=(typeof hdbRow==='function')?hdbRow(dbid):null; from=(row&&row.stage)||''; }catch(e){}
+    if(r[4]==='@next'){ try{ to=APEX_STAGE.next(from)||''; }catch(e2){ to=''; } }
+    else if(r[4])to=r[4];
+  }
+  if(dbid&&r[3]&&typeof hdbCall==='function')hdbCall(dbid,r[3]);
+  if(dbid&&to&&to!==from&&typeof hdbTo==='function')hdbTo(dbid,to);
+  if(typeof cmNextSave==='function')cmNextSave(id,what,due);
+  if(typeof ccMark==='function')ccMark(id,'전화');
+  toast(cshNm(id)+'님 — '+r[5]+' 적었습니다. '+
+    (to&&to!==from?('단계가 '+from+' → '+to+' 로 갔고, '):'')+
+    '다음에 뜰 날은 '+due+' 입니다'+
+    (!dbid?' (배정 DB 줄과 안 이어져 있어 단계·통화 기록은 안 남았습니다)':''),6000);
+  cshClose();
+}
 function cmSayHtml(id){
   var c=(typeof cmCliOf==='function')?cmCliOf(id):null,st='',src='',S,h='',by=null,band='';
   if(typeof APEX_STAGE==='undefined'||!APEX_STAGE.script)return '';
