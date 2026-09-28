@@ -68972,9 +68972,214 @@ function frDocTally(docId){
   for(i=0;i<FR.covs.length;i++)if(ids[FR.covs[i].policy_id])t.covs++;
   return t;
 }
+/* ══ 🗺️ <b>읽은 증권을 여덟 통장으로 — 근거와 함께</b> (판 ⑦) ═══════
+   목각 vKb(docs/APEX_목각.html 1145행) 의 ②읽은 담보 · ③여덟 통장 ·
+   ④근거 · ⑤관리 멘트 · ⑥홈에 띄우기 를 본체에 세웁니다.
+
+   ★ <b>새로 읽지 않습니다.</b> 담보는 frMaster() 가 이미 읽어 두었고,
+     「무엇을 하는 돈인가」(pur) 도 frClassify 가 이미 정해 두었습니다.
+     목각의 KBMAP(실손·암·뇌…) 을 그대로 옮겨 오면 담보 사전이 <b>두
+     벌</b>이 됩니다 — 한쪽만 고쳐지는 날 고객 앞에서 두 답이 섭니다 (5번).
+   ★ <b>통장 이름도 안 만듭니다</b> — waShort() 한 곳에서 옵니다.
+   ★ 옮기는 표는 <b>여기 하나</b>입니다. 삼항 사슬로 늘어놓지 않습니다 (5번).
+
+   ⚠ <b>여덟 중 셋은 증권이 답하지 못합니다.</b> 생활(1) · 은퇴·연금(6) ·
+     자산이전·상속(8) 은 담보로 답이 나오는 자리가 아닙니다. 증권에 없다고
+     「비었다」 고 적으면 <b>없는 사실</b>을 만드는 것입니다 (1번). 그 셋은
+     「증권으로는 알 수 없습니다」 라고 적고 8통장 진단지도로 모십니다.
+   ⚠ <b>금액은 목돈만 더합니다.</b> 일당은 며칠 누울지를 모르고 실손은 쓴
+     만큼이라, 더하면 없는 숫자가 생깁니다 — 기존 frPayKind 규칙 그대로
+     입니다. 대신 <b>몇 건인지</b>는 적습니다.
+   ⚠ <b>해지가 확정된 담보는 빼고 셉니다</b> — 지금 갖고 계신 것이
+     아닙니다. 「해지검토」 는 아직 해지가 아니라 남습니다 (24번과 같은 결).
+   ── 새 CSS 0줄 · 새 표 0개 · 담는 자리는 이미 있는 client_meta.wal ── */
+var FRW_W={DIAGNOSIS:3,SURGERY:3,TREATMENT:3,
+           HOSPITAL:2,OUTPATIENT:2,ACTUAL_EXPENSE:2,
+           DISABILITY:4,INCOME:4,DEATH:5,NURSING:7};
+/* 증권이 답할 수 있는 통장 · 답하지 못하는 통장 — 가르는 곳은 여기 하나 */
+var FRW_ASK=[2,3,4,5,7],FRW_UNK=[1,6,8];
+function frwWalOf(m){return (m&&m.pur&&FRW_W[m.pur])?FRW_W[m.pur]:0;}
+function frwName(n){return (typeof waShort==='function')?waShort(n):('통장 '+n);}
+function frwNames(L){return (L||[]).map(frwName).join(' · ');}
+/* 통장 한 칸을 한 줄로 — <b>카드와 멘트가 같은 말</b>을 쓰게 한 곳에 둡니다 */
+function frwBit(b){
+  var t=[];
+  if(b.won)t.push(frWonR(b.won));
+  else if(b.lump)t.push('목돈 '+b.lump+'건 · 금액 확인 필요');
+  if(b.daily)t.push('일당 '+b.daily+'건');
+  if(b.actual)t.push('실손 '+b.actual+'건');
+  return t.length?t.join(' · '):'담보 '+b.n+'건';
+}
+function frwSum(M){
+  var o={all:0,read:0,skip:[],w:{},gap:[],unk:FRW_UNK.slice()},i,m,n,b;
+  for(i=0;i<FRW_ASK.length;i++)o.w[FRW_ASK[i]]={n:0,won:0,lump:0,daily:0,actual:0,rows:[]};
+  if(!M||!M.push)return o;      /* 모름 — 「없음」 이 아닙니다 (1번) */
+  for(i=0;i<M.length;i++){
+    m=M[i];
+    if(m.cact==='CANCEL'||m.pact==='CANCEL')continue;
+    o.all++;
+    n=frwWalOf(m);
+    if(!n){o.skip.push(m);continue;}
+    b=o.w[n];b.n++;b.rows.push(m);o.read++;
+    if(m.pay==='LUMP'){
+      b.lump++;
+      /* 못 읽은 금액을 0 으로 세지 않습니다 (1번) */
+      if(m.bWon!==null&&m.bWon!==undefined)b.won+=m.bWon;
+    }else if(m.pay==='DAILY')b.daily++;
+    else b.actual++;
+  }
+  for(i=0;i<FRW_ASK.length;i++)if(!o.w[FRW_ASK[i]].n)o.gap.push(FRW_ASK[i]);
+  return o;
+}
+/* ④ <b>무엇을 보고 그렇게 읽었나</b> — 지어낸 값이 하나도 없음을 보입니다 */
+function frwWhyHtml(s){
+  var h='',i,j,n,b,m,pol;
+  for(i=0;i<FRW_ASK.length;i++){
+    n=FRW_ASK[i];b=s.w[n];
+    if(!b.n)continue;
+    h+='<div class="fr-src"><b>'+osEsc(frwName(n))+' 통장</b> — 담보 '+b.n+'건';
+    for(j=0;j<b.rows.length;j++){
+      m=b.rows[j];pol=m.pol||{};
+      h+='<div>· '+osEsc((pol.insurer||'보험사 확인 필요')+' '+(pol.product_name||''))+
+        ' 「<i>'+osEsc(m.raw)+'</i>」 '+
+        (m.page?('<b>'+m.page+'쪽</b>'):'<b>쪽 표시 없음</b>')+
+        ' → <i>'+osEsc(m.std)+'</i> 로 읽었고 <i>'+osEsc(frPurLabel(m.pur))+'</i> 라서 이 통장에 넣었습니다. '+
+        (m.pay==='LUMP'
+          ? ('가입금액 '+frAmtText(m.bWon)+' 을 더했습니다.')
+          : ('<b>'+osEsc(frPayLabel(m.pay))+'</b> 이라 금액으로는 안 더했습니다 — 며칠·얼마가 될지는 그때 정해집니다 (1번).'))+
+        (m.man?' <span class="sub">손으로 맞춘 분류입니다</span>':'')+
+        (m.src?('<br><span class="sub">원문 — '+osEsc((''+m.src).slice(0,140))+'</span>')
+              :('<br><span class="fr-na">원문 조각이 저장되어 있지 않습니다 — 「담보 검수」 에서 재추출하면 남습니다.</span>'))+
+        '</div>';
+    }
+    h+='</div>';
+  }
+  if(s.skip.length){
+    h+='<div class="fr-src"><b>통장에 못 넣은 담보 '+s.skip.length+'건</b> — 셈에서 뺐다고 말씀드립니다 (1번)';
+    for(j=0;j<s.skip.length;j++){
+      m=s.skip[j];pol=m.pol||{};
+      h+='<div>· '+osEsc((pol.insurer||'')+' ')+'「<i>'+osEsc(m.raw)+'</i>」 '+
+        (m.page?('<b>'+m.page+'쪽</b>'):'<b>쪽 표시 없음</b>')+' → '+
+        (m.ok?('<i>'+osEsc(frPurLabel(m.pur))+'</i> 는 여덟 통장 어디에도 안 붙습니다')
+             :'<b>어느 담보인지 못 알아봤습니다</b>')+
+        ' — 「계약·담보 조치」 에서 손으로 맞춰 주시면 그때 들어갑니다.</div>';
+    }
+    h+='</div>';
+  }
+  return h;
+}
+/* ⑤ <b>관리 멘트</b> — 읽은 것만으로 만듭니다. 금액을 지어내지 않습니다 */
+function frwTalk(s,nm){
+  var L=[],i,n,b,t=[];
+  L.push((nm||'고객')+'님 증권을 읽어 보니 담보 '+s.read+'개가 여덟 통장 가운데 '+
+         (FRW_ASK.length-s.gap.length)+'자리에 들어 있습니다.');
+  for(i=0;i<FRW_ASK.length;i++){
+    n=FRW_ASK[i];b=s.w[n];
+    if(b.n)t.push(frwName(n)+' '+frwBit(b).replace(/<[^>]*>/g,''));
+  }
+  if(t.length)L.push('채워져 있는 곳 — '+t.join(' · ')+'.');
+  if(s.gap.length){
+    L.push('비어 있는 곳 — '+frwNames(s.gap)+'. 여기가 아프면 이 증권에서 나올 돈이 한 줄도 없습니다.');
+    L.push('보험료를 더 내시라는 말씀이 아니라, 지금 내고 계신 안에서 자리를 옮기는 이야기부터 드리겠습니다.');
+  }else{
+    L.push('증권이 답할 수 있는 다섯 자리는 다 채워져 있습니다. 금액이 지금 상황에 맞는지만 같이 보시죠.');
+  }
+  L.push('');
+  L.push(frwNames(FRW_UNK)+' 세 통장은 증권으로는 알 수 없습니다 — 여쭤 보고 같이 채우겠습니다.');
+  L.push('보장 여부와 금액은 약관과 심사 결과에 따릅니다. 비율·한도·기간 같은 숫자는 바뀌니, 정확한 값은 같이 보면서 확인해 드리겠습니다.');
+  return L.join('\n');
+}
+function frwNm(){
+  var c=FR.client||{};
+  /* <b>가리는 것이 기본</b>입니다 (3번) — 이 글은 복사되어 밖으로 나갑니다 */
+  return c.name_masked||((typeof osMaskName==='function')?osMaskName(c.name||''):'')||'고객';
+}
+/* ★ <b>FR.built 에 기대지 않습니다.</b> 그것은 그릴 때 담아 두는 사본이라
+   아직 안 그린 판에서는 비어 있어 단추가 말없이 안 먹습니다. 셈하는 곳은
+   frMaster() 하나이고, 단추도 그것을 그대로 부릅니다 (5번).            */
+function frwCopy(){
+  var s=frwSum(frMaster());
+  if(!s.all){toast('아직 읽은 담보가 없습니다');return;}
+  if(typeof copyText==='function')copyText(frwTalk(s,frwNm()));
+  toast('관리 멘트를 복사했습니다 — 보내기 전에 한 번 읽어 보십시오');
+}
+/* ⑥ <b>홈에 띄우기</b> — 새 자리를 만들지 않습니다. 「빈 통장」 을 답하는
+   곳은 cmWalOf/cmWalLow 한 곳이라, 그 곳이 읽는 client_meta.wal 에 담습니다.
+   ★ <b>손으로 적어 두신 것을 안 덮습니다.</b> 이미 판정이 있는 칸은 그대로
+     두고 <b>빈 칸만</b> 채웁니다 — 단추 하나로 적어 두신 것을 날리면
+     되돌릴 길이 없습니다.
+   ★ 증권이 답 못 하는 셋(생활·은퇴·연금·자산이전·상속)은 <b>손대지
+     않습니다</b> — 모르는 것을 「빈 통장」 으로 적으면 거짓이 됩니다 (1번). */
+function frwPin(){
+  var cid=FR.cid,s=frwSum(frMaster());
+  if(!cid||!s.all){toast('먼저 담보를 읽어 주십시오');return;}
+  if(typeof cmSave!=='function'){toast('담을 자리를 못 찾았습니다');return;}
+  var old=(typeof cmWalOf==='function')?cmWalOf(cid):null;
+  var lv={},by={},k,i,n,put=0,kept=0;
+  if(old&&old.lv)for(k in old.lv)if(old.lv.hasOwnProperty(k))lv[k]=old.lv[k];
+  if(old&&old.by)for(k in old.by)if(old.by.hasOwnProperty(k))by[k]=old.by[k];
+  for(i=0;i<s.gap.length;i++){
+    n=s.gap[i];
+    if(lv[n]){kept++;continue;}            /* 손으로 적어 두신 것 — 그대로 둡니다 */
+    lv[n]='low';by[n]='증권';put++;
+  }
+  cmSave(cid,{wal:{at:cmToday(),lv:lv,by:by}},function(){
+    toast(put?('빈 통장 '+put+'칸을 홈·고객 카드에 띄웠습니다 — '+frwNames(s.gap)+
+               (kept?(' (손으로 적어 두신 '+kept+'칸은 그대로 두었습니다)'):''))
+             :(s.gap.length?'이미 다 띄워져 있습니다':'이 증권으로는 빈 통장이 없습니다'));
+    if(typeof frPaint==='function')frPaint();
+  });
+}
+function frwCardHtml(M){
+  var s=frwSum(M),i,n,b,h,why;
+  h='<div class="fr-ed"><div class="h">🗺️ 읽은 증권을 여덟 통장으로 — 무엇을 보고 그렇게 넣었나</div>';
+  if(!s.all){
+    /* <b>값이 없으면 화면을 세우지 않습니다</b> (1번) */
+    return h+'<div class="fr-need"><b>아무 숫자도 만들지 않습니다.</b> 담보를 한 건도 못 읽어서 '+
+      '어느 통장이 비었는지 말씀드릴 수 없습니다 — <b>여덟 칸이 다 비었다고 적지 않습니다.</b> '+
+      '아래 문서 칸에서 <b>담보 추출</b>을 먼저 눌러 주십시오.</div></div>';
+  }
+  h+='<div class="s">담보 <b>'+s.read+'건</b>을 여덟 통장 가운데 <b>'+FRW_ASK.length+'자리</b>로 옮겼습니다. '+
+     '새로 읽거나 셈한 것이 아니라 <b>읽어 둔 것을 옮겨 놓은 것</b>입니다.'+
+     (s.skip.length?(' 통장에 못 넣은 <b>'+s.skip.length+'건</b>은 아래 근거에 그대로 적었습니다.'):'')+'</div>';
+  /* ③ 여덟 통장 */
+  h+='<div class="fr-scroll"><table class="fr-tb"><thead><tr>'+
+     '<th>통장</th><th>담보</th><th class="r">읽은 금액</th><th>어떻게 읽었나</th></tr></thead><tbody>';
+  for(i=0;i<FRW_ASK.length;i++){
+    n=FRW_ASK[i];b=s.w[n];
+    h+='<tr><td><b>'+osEsc(frwName(n))+'</b></td>'+
+      '<td>'+(b.n?(b.n+'건'):'<span class="fr-tag" style="color:#B91C1C;background:#FEF2F214">비어 있음</span>')+'</td>'+
+      '<td class="r">'+(b.won?frWonR(b.won):'<span class="fr-na">'+(b.n?'금액으로 안 셉니다':'—')+'</span>')+'</td>'+
+      '<td>'+(b.n?osEsc(frwBit(b)):'이 증권에는 이 통장에 들어갈 담보가 <b>한 줄도 없습니다</b>')+'</td></tr>';
+  }
+  for(i=0;i<FRW_UNK.length;i++)
+    h+='<tr><td>'+osEsc(frwName(FRW_UNK[i]))+'</td><td colspan="3">'+
+       '<span class="fr-na">증권으로는 알 수 없습니다</span> — 「비었다」 가 아닙니다 (1번). '+
+       '8통장 진단지도에서 여쭤 보고 채웁니다.</td></tr>';
+  h+='</tbody></table></div>';
+  if(s.gap.length)
+    h+='<div class="fr-warn">비어 있는 곳 — <b>'+osEsc(frwNames(s.gap))+'</b>. '+
+       '여기가 아프면 이 증권에서 나올 돈이 한 줄도 없습니다.</div>';
+  /* ④ 근거 — 접어 둡니다. 날마다 보는 글이 아니라 <b>따질 때</b> 펴는 글입니다 */
+  why=frwWhyHtml(s);
+  if(why)h+='<details><summary><b>무엇을 보고 그렇게 읽었나 — 근거 '+(s.read+s.skip.length)+'줄</b> '+
+    '(계약 · 원문 그대로 · 몇 쪽 · 어느 담보로)</summary>'+why+'</details>';
+  /* ⑤ 관리 멘트 */
+  h+='<div class="fr-src" style="white-space:pre-wrap">'+osEsc(frwTalk(s,frwNm()))+'</div>'+
+     '<div class="s">이름은 <b>가린 채로</b> 만듭니다 (3번). 비율·한도·기간은 일부러 안 넣었습니다 — '+
+     '시행령에 있고 개정되면 바뀝니다 (2번).</div>'+
+     '<div style="margin-top:10px">'+
+     '<button class="fr-abtn" onclick="frwCopy()">📋 관리 멘트 복사</button> '+
+     '<button class="fr-abtn" onclick="frwPin()">🏠 빈 통장을 홈에 띄우기</button></div>'+
+     '<div class="s">「홈에 띄우기」 는 <b>빈 칸만</b> 채웁니다 — 손으로 적어 두신 판정은 그대로 둡니다.</div>';
+  return h+'</div>';
+}
 function frReadHtml(M,T){
   var h='<div class="fr-wrap">';
   if(FR.readBusy)return h+'<div class="osc-loading">불러오는 중…</div></div>';
+  /* 🗺️ <b>여덟 통장과 근거</b>가 맨 위에 섭니다 (판 ⑦) — 「무엇을 어떻게
+     읽었나」 를 묻는 자리라 여기가 그 자리입니다. */
+  h+=frwCardHtml(M);
   if(FR.readErr)h+='<div class="fr-warn fr-bad">기록을 불러오지 못했습니다 — '+osEsc(FR.readErr)+'</div>';
   var docs=FR.docs||[],i;
 
