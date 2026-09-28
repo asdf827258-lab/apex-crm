@@ -62330,19 +62330,34 @@ function cqaWayOf(id){
   for(i=0;i<ks.length;i++)if(a[ks[i]]&&ASK_WAY[a[ks[i]]])return ASK_WAY[a[ks[i]]];
   return '';
 }
-/* 지금 여쭐 <b>한 가지</b>를 그립니다 — 고를 것이 붙습니다 */
-function cqaSitHtml(id){
+/* 지금 여쭐 <b>한 가지</b>를 그립니다 — 고를 것이 붙습니다.
+
+   ★ <b>홈에서는(cmp) 물음과 고를 것만</b> 세웁니다. 이름표·귀띔·「남은
+     N가지」 는 고객 365일 상세에서만 섭니다. 바로 위 cqaInner 가 이미
+     그렇게 하고 있어 같은 결을 따릅니다.
+     여기서 실제로 겪은 일 (2026-09-29) — 셋을 홈에 같이 세웠더니 카드가
+     <b>254px 에서 448px</b> 로 부풀어 홈이 3.78 → 3.99화면이 됐고,
+     check-homeone · check-msfive · check-toss <b>셋이 한꺼번에</b>
+     울었습니다. 홈에 한 칸을 더하는 값은 이만큼입니다.
+     ★ 「11.5px 이름표」·「12.5px 귀띔」 은 ui.css 가 정한 목각 크기라
+       글자를 키워 피할 수 있는 것이 아닙니다 — <b>홈에서는 안 세우는</b>
+       것이 답입니다. 폰에서 13px 아래 글자를 늘리지 않는 자(check-toss)가
+       그것을 지킵니다.
+   ★ <b>감춘 것이 아닙니다</b> (6번) — 상세에서는 셋이 그대로 서고,
+     check-ask11 이 그것을 지킵니다.                                  */
+function cqaSitHtml(id,cmp){
   var L=cqaSitOf(id),q,i,h='';
   if(!L.length)return '';
   q=L[0];
-  h+='<div class="t-lab">❓ 여쭙겠습니다</div>'+
-     '<div class="t-big">'+osEsc(q.q)+
+  if(!cmp)h+='<div class="t-lab">❓ 여쭙겠습니다</div>';
+  h+='<div class="t-big">'+osEsc(q.q)+
        '<small>왜 묻나 — '+osEsc(q.why)+'</small></div>'+
      '<div class="t-chips">';
   for(i=0;i<q.opts.length;i++)
     h+='<button type="button" class="t-chip" onclick="cqaSitSave(\''+osEsc(id)+'\',\''+
        osEsc(q.id)+'\',\''+osEsc(q.opts[i])+'\')">'+osEsc(q.opts[i])+'</button>';
   h+='</div>';
+  if(cmp)return h;
   if(q.note)h+='<div class="t-note">'+osEsc(q.note)+'</div>';
   if(L.length>1)h+='<div class="t-note b">남은 '+(L.length-1)+'가지는 <b>이것부터 답하시면</b> 그때 여쭙겠습니다 — 한 번에 하나씩입니다.</div>';
   return h;
@@ -62369,7 +62384,11 @@ function cqaHtml(id,cmp){
   if(!id)return '';
   /* ★ 상황을 보고 생긴 물음이 <b>먼저</b>입니다 — 그것이 없을 때
      CM_FIELDS 의 빈 칸을 여쭙습니다. 고르는 곳은 여전히 한 곳입니다 (5번). */
-  var sit=cqaSitHtml(id),ans=cqaKnewHtml(id);
+  /* ★ <b>쌓인 답은 홈에 안 쌓습니다</b> — 열한 가지를 다 답하시면 줄이
+     열하나가 되어 홈이 그만큼 길어집니다. 답이 홈에서 바꾸는 것은
+     <b>카드의 첫 문장과 「그래서 다음엔」</b> 이지 새 칸이 아닙니다.
+     상세에서는 그대로 쌓이고 「다시 묻기」 도 거기 있습니다 (6번). */
+  var sit=cqaSitHtml(id,cmp),ans=cmp?'':cqaKnewHtml(id);
   var h=sit?(sit+ans):(cqaInner(id,cmp)+ans);
   if(!h||!h.replace(/\s/g,''))return '';
   return '<div class="t-card" id="cqaCard"'+(cmp?' data-cmp="1"':'')+
