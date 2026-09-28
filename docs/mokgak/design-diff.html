@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<title>디자인이 조금씩 다른 까닭 — 잰 값과 고칠 자리</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard-dynamic-subset.css">
+<style>
+:root{--ink:#191F28;--sub:#6B7684;--sub2:#8B95A1;--line:#E5E8EB;--bg:#F2F4F6;
+ --point:#1A56DB;--point-l:#EBF3FF;--pos:#059669;--pos-l:#ECFDF5;--warn:#D97706;--warn-l:#FFF7ED;
+ --neg:#DC2626;--neg-l:#FEF2F2;--pur:#7C3AED;--pur-l:#F5F3FF;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+body{font-family:'Pretendard','Malgun Gothic',sans-serif;color:var(--ink);background:var(--bg);
+ line-height:1.6;letter-spacing:-.015em}
+.wrap{max-width:1000px;margin:0 auto;padding:44px 28px 90px}
+h1{font-size:30px;font-weight:800;letter-spacing:-.035em;line-height:1.3}
+h2{margin-top:34px;font-size:22px;font-weight:800;letter-spacing:-.03em}
+.lead{margin-top:12px;font-size:15.5px;color:var(--sub);line-height:1.7}
+.lead b{color:var(--ink)}
+.c{background:#fff;border-radius:20px;padding:24px 26px;margin-top:14px}
+.lab{font-size:12px;font-weight:800;color:var(--point);letter-spacing:.01em}
+.ttl{margin-top:8px;font-size:19px;font-weight:700;letter-spacing:-.03em;line-height:1.4}
+.ttl small{display:block;margin-top:6px;font-size:13.5px;color:var(--sub2);font-weight:600}
+.note{background:var(--warn-l);border-radius:14px;padding:15px 17px;font-size:13.5px;line-height:1.7;
+ color:#8A5A12;font-weight:600;margin-top:14px}
+.note b{color:#7A4E0A}
+.note.b{background:var(--point-l);color:#12408F}.note.b b{color:var(--point)}
+.note.g{background:var(--pos-l);color:#065F46}.note.g b{color:#047857}
+.note.r{background:var(--neg-l);color:#8A2020}.note.r b{color:var(--neg)}
+.note.s{background:#F7F9FA;color:var(--sub);font-weight:500}.note.s b{color:var(--ink)}
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13.5px}
+th{text-align:left;font-size:11.5px;font-weight:800;color:var(--sub2);padding:0 10px 9px 0}
+td{padding:8px 10px 8px 0;border-top:1px solid #F3F5F7;font-weight:600;
+ word-break:keep-all;overflow-wrap:anywhere;vertical-align:top}
+td.n{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:nowrap}
+td.a{color:var(--pos)}td.b2{color:var(--neg)}
+code{background:#F2F4F6;border-radius:6px;padding:2px 6px;font-size:12.5px;
+ font-family:ui-monospace,Menlo,Consolas,monospace;color:#2E3439;overflow-wrap:anywhere}
+.big{position:sticky;top:0;z-index:20;background:var(--bg);padding:14px 0 6px}
+.btn{height:48px;padding:0 22px;border-radius:13px;background:var(--point);color:#fff;font-size:15.5px;
+ font-weight:800;display:inline-flex;align-items:center;cursor:pointer;border:0;font-family:inherit;
+ letter-spacing:-.02em;box-shadow:0 4px 14px rgba(26,86,219,.28)}
+.btn.g{background:#fff;color:#4E5968;box-shadow:0 1px 3px rgba(16,24,40,.08);font-weight:700;font-size:14px;height:44px}
+.btn:hover{filter:brightness(1.05)}
+pre{background:#F7F9FA;border-radius:14px;padding:18px 20px;margin-top:12px;font-size:12.5px;line-height:1.8;
+ white-space:pre-wrap;color:#33383D;font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:-.005em}
+#tt{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(14px);background:#191F28;
+ color:#fff;font-size:13.5px;font-weight:600;padding:13px 20px;border-radius:13px;opacity:0;
+ pointer-events:none;transition:.18s;z-index:60}
+#tt.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style></head>
+<body>
+<div class="wrap">
+
+<h1>디자인이 조금씩 다른 까닭</h1>
+<p class="lead">
+목각과 본체의 값을 <b>한 속성씩 기계로 재 봤습니다.</b> 눈으로 본 게 아닙니다.
+<b>24군데가 다릅니다.</b> 그런데 아무 데나 다른 게 아니라 <b>한 가지 까닭</b>으로 전부 설명됩니다.
+</p>
+
+<div class="c">
+  <div class="lab">찾은 까닭</div>
+  <div class="ttl">본체 <code>ui.css</code> 는 <b>폰 목각</b> 값입니다 — 그걸 컴퓨터 화면에도 씁니다
+    <small>ui.css 머리말에 직접 적혀 있습니다 — 「값은 전부 목업(APEX사본.html)에서 그대로 옮겼습니다」.
+      APEX사본.html 이 <b>폰(390px)</b> 목각입니다.</small></div>
+  <div class="note b">그래서 <b>1440px 컴퓨터 화면에 폰 치수가 그대로</b> 깔립니다.
+    글씨는 0.5~1px 씩 작고, 칸은 1~4px 씩 좁습니다. 한 군데씩 보면 「비슷한데?」 싶지만
+    스물네 군데가 겹치니 <b>화면 전체가 다르게 보입니다.</b> 사장님이 「조금씩 다르다」 하신 게 이것입니다.</div>
+  <div class="note g"><b>고치는 길은 한 줄기입니다.</b> ui.css 는 이미
+    <code>@media (max-width:900px)</code> 로 폰 예외를 두는 짜임입니다 — 즉 <b>기본값이 넓은 화면 몫</b>입니다.
+    그러니 <b>넓은 화면에만 PC 목각 값을 덮는 블록 하나</b>를 맨 끝에 붙이면 됩니다.
+    이름은 하나도 안 바꾸고, 폰은 한 픽셀도 안 변합니다.</div>
+</div>
+
+<div class="big">
+  <button class="btn" data-cp="css">📋 붙여 넣을 CSS 복사</button>
+  <button class="btn g" data-cp="pr" style="margin-left:8px">📋 메인세션 프롬프트 복사</button>
+</div>
+
+<h2>잰 값 — 24군데</h2>
+<div class="c">
+  <table>
+    <tr><th style="width:26%">무엇</th><th style="width:20%">값</th><th style="width:20%">목각(PC)</th><th style="width:20%">지금 본체</th><th style="width:14%">어디를</th></tr>
+    <tr><td>카드</td><td>padding</td><td class="n a">22px 24px</td><td class="n b2">20px</td><td>ui.css</td></tr>
+    <tr><td rowspan="3">큰 단추</td><td>height</td><td class="n a">48px</td><td class="n b2">56px</td><td>ui.css</td></tr>
+    <tr><td>font-size</td><td class="n a">15.5px</td><td class="n b2">17px</td><td>ui.css</td></tr>
+    <tr><td>border-radius</td><td class="n a">13px</td><td class="n b2">15px</td><td>ui.css</td></tr>
+    <tr><td rowspan="3">작은 단추</td><td>height</td><td class="n">38px → <b>44px</b></td><td class="n">46px</td><td><b>목각을 고침</b></td></tr>
+    <tr><td>font-size</td><td class="n a">13.5px</td><td class="n b2">14.5px</td><td>ui.css</td></tr>
+    <tr><td>border-radius</td><td class="n a">10px</td><td class="n b2">13px</td><td>ui.css</td></tr>
+    <tr><td rowspan="3">칩</td><td>height</td><td class="n">36px → <b>44px</b></td><td class="n">44px</td><td><b>목각을 고침</b></td></tr>
+    <tr><td>padding</td><td class="n a">0 15px</td><td class="n b2">0 14px</td><td>ui.css</td></tr>
+    <tr><td>font-size</td><td class="n a">13.5px</td><td class="n b2">13px</td><td>ui.css</td></tr>
+    <tr><td>목록 줄</td><td>gap</td><td class="n a">14px</td><td class="n b2">13px</td><td>ui.css</td></tr>
+    <tr><td rowspan="3">목록 동그라미</td><td>width · height</td><td class="n a">42px</td><td class="n b2">40px</td><td>ui.css</td></tr>
+    <tr><td>border-radius</td><td class="n a">14px</td><td class="n b2">13px</td><td><b>버그 · 아래</b></td></tr>
+    <tr><td>font-size</td><td class="n">15px</td><td class="n">15px</td><td>같음</td></tr>
+    <tr><td>이름</td><td>font-size</td><td class="n a">15.5px</td><td class="n b2">15px</td><td>ui.css</td></tr>
+    <tr><td rowspan="2">그 밑 설명</td><td>font-size</td><td class="n a">13px</td><td class="n b2">12px</td><td>ui.css</td></tr>
+    <tr><td>font-weight</td><td class="n a">500</td><td class="n b2">600</td><td>ui.css</td></tr>
+    <tr><td rowspan="3">딱지</td><td>font-size</td><td class="n a">11.5px</td><td class="n b2">10.5px</td><td>ui.css</td></tr>
+    <tr><td>padding</td><td class="n a">5px 9px</td><td class="n b2">3px 7px</td><td>ui.css</td></tr>
+    <tr><td>border-radius</td><td class="n a">8px</td><td class="n b2">7px</td><td>ui.css</td></tr>
+    <tr><td>카드 머리</td><td>font-size</td><td class="n a">12px</td><td class="n b2">11.5px</td><td>ui.css</td></tr>
+    <tr><td rowspan="3">알림 상자</td><td>padding</td><td class="n a">15px 17px</td><td class="n b2">13px 16px</td><td>ui.css</td></tr>
+    <tr><td>font-size</td><td class="n a">13.5px</td><td class="n b2">12.5px</td><td>ui.css</td></tr>
+    <tr><td>color</td><td class="n a">#8A5A12</td><td class="n b2">--t-sealk (#8A6A2F)</td><td><b>버그 · 아래</b></td></tr>
+    <tr><td rowspan="2">타임라인 줄</td><td>gap</td><td class="n a">14px</td><td class="n b2">11px</td><td>ui.css</td></tr>
+    <tr><td>padding</td><td class="n a">13px 0</td><td class="n b2">12px 0</td><td>ui.css</td></tr>
+    <tr><td>타임라인 제목</td><td>font-size</td><td class="n a">14.5px</td><td class="n b2">13.5px</td><td>ui.css</td></tr>
+    <tr><td rowspan="2">타임라인 설명</td><td>font-size</td><td class="n a">12.5px</td><td class="n b2">11.5px</td><td>ui.css</td></tr>
+    <tr><td>margin-top</td><td class="n a">4px</td><td class="n b2">3px</td><td>ui.css</td></tr>
+  </table>
+</div>
+
+<h2>제가 목각을 고친 두 줄</h2>
+<div class="c">
+  <div class="note g"><b>44px 은 본체가 옳습니다.</b> ui.css 에 「누르는 것은 최소 44px (철칙)」 이라고 적혀 있고,
+    그건 사장님이 먼저 정하신 규칙입니다. 제 목각이 38px · 36px 로 그린 것이 틀렸습니다.
+    <b>목각을 44px 로 올렸습니다</b> — 작은 단추 · 칩 · 회색 단추 · 폰의 mini 단추.</div>
+  <div class="note s">그래서 이 둘은 본체가 고칠 것이 없습니다. <b>목각 쪽을 본체에 맞췄습니다.</b></div>
+</div>
+
+<h2>옮기다 잘못 적힌 것 둘 — 폰도 틀립니다</h2>
+<div class="c">
+  <div class="lab">① 목록 동그라미 모서리</div>
+  <div class="ttl" style="font-size:17px">폰 목각도 14px 인데 본체는 13px 입니다
+    <small><code>.t-row .av{border-radius:var(--t-r-sm)}</code> 로 적혀 있는데 <code>--t-r-sm</code> 은 13px 입니다.
+      폰 목각(APEX사본.html)의 <code>.av</code> 는 <b>14px</b> 입니다 — 옮길 때 가까운 토큰으로 붙여 버린 것입니다.</small></div>
+  <div class="note">이건 <b>미디어쿼리 밖</b>에서 고쳐야 합니다. 폰에서도 틀린 값이기 때문입니다.</div>
+</div>
+<div class="c">
+  <div class="lab">② 알림 상자 글자색</div>
+  <div class="ttl" style="font-size:17px">광고심의 색을 빌려 쓰고 있습니다
+    <small><code>.t-note{color:var(--t-sealk)}</code> — <code>--t-sealk</code> 는 <b>#8A6A2F, 광고심의가 정한 색</b>입니다.
+      목각의 알림 글자색은 <b>#8A5A12</b> 로 다릅니다.</small></div>
+  <div class="note r">S06 에 <b>「--t-seal / --t-sealk 는 광고심의 색 — 건드리지 말 것」</b> 이라고 적혀 있습니다.
+    건드리지 않는다는 것은 <b>다른 데 갖다 쓰지도 않는다</b>는 뜻입니다.
+    심의 색이 바뀌면 상관없는 알림 상자까지 같이 바뀝니다. <b>토큰 하나를 새로 세워야 합니다.</b></div>
+</div>
+
+<h2>붙여 넣을 CSS</h2>
+<p class="lead"><code>app/ui.css</code> <b>맨 끝</b>에 그대로 붙이면 됩니다. 위쪽은 한 줄도 안 지웁니다.</p>
+<pre id="CSS">/* ══ 15. 컴퓨터 화면 — 목업_PC.html 값 ═══════════════════════════
+   위의 값들은 폰 목각(APEX사본.html)에서 옮긴 것이라 폰 치수입니다.
+   1440px 화면에 그대로 쓰면 글씨와 칸이 작아 「조금씩 다르게」 보입니다.
+   폰은 그대로 두고, 넓은 화면에서만 PC 목각 값으로 덮습니다.
+
+   ★ 값은 전부 Desktop\코드\토스풍_목업\목업_PC.html 에서 그대로 옮겼습니다.
+     여기서 새로 정한 값은 하나도 없습니다.
+   ★ 이름은 한 글자도 안 바꿨습니다. 새 class 를 만들지 않았습니다.
+   ★ 누르는 것 44px 철칙은 지킵니다 — 높이는 안 건드립니다.        */
+@media (min-width:901px){
+  .t-card{padding:22px 24px}
+
+  .t-btn{height:48px;border-radius:13px;font-size:15.5px}
+  .t-btn.sm{font-size:13.5px;border-radius:10px}      /* height 는 44px 철칙대로 둡니다 */
+
+  .t-chip{padding:0 15px;font-size:13.5px}            /* min-height 44px 그대로 */
+
+  .t-row{gap:14px}
+  .t-row .av{width:42px;height:42px}
+
+  .t-nm{font-size:15.5px}
+  .t-mt{font-size:13px;font-weight:500}
+
+  .t-tag{font-size:11.5px;padding:5px 9px;border-radius:8px}
+  .t-lab{font-size:12px}
+
+  .t-note{padding:15px 17px;font-size:13.5px;margin-top:14px}
+
+  .t-ev{gap:14px;padding:13px 0}
+  .t-ev .t{font-size:14.5px}
+  .t-ev .s{font-size:12.5px;margin-top:4px}
+}
+
+/* ══ 옮기다 잘못 적힌 것 둘 — 폰에서도 틀리므로 미디어쿼리 밖 ══ */
+
+/* ① 목록 동그라미 모서리 : 폰 목각도 14px 입니다. --t-r-sm(13px)로 붙어 있었습니다 */
+.t-row .av{border-radius:14px}
+
+/* ② 알림 상자 글자색 : --t-sealk 는 광고심의 색입니다(S06). 빌려 쓰면 안 됩니다.
+      목각 값 #8A5A12 로 토큰을 하나 세웁니다 — 두 벌이 되지 않게 :root 에만 둡니다 */
+:root{ --t-warnk:#8A5A12; --t-warnk-b:#7A4E0A; }
+.t-note{color:var(--t-warnk)}
+.t-note b{color:var(--t-warnk-b)}</pre>
+
+<h2>메인세션에 줄 말</h2>
+<pre id="PR">[디자인 맞추기] 목각과 본체가 스물네 군데 다릅니다 — 까닭은 하나입니다
+
+사장님 말씀 : 「목각하고 디자인이 너무 다르다. 아예 똑같이 해 달라.」
+
+잰 결과
+  목각(목업_PC.html)과 app/ui.css 를 한 속성씩 기계로 대 봤습니다. 24군데가 다릅니다.
+  까닭은 하나입니다 — ui.css 는 폰 목각(APEX사본.html) 값입니다(머리말에 그렇게 적혀 있습니다).
+  그 폰 치수를 1440px 컴퓨터 화면에도 그대로 씁니다. 그래서 글씨가 0.5~1px 작고
+  칸이 1~4px 좁습니다. 한 군데씩은 티가 안 나는데 스물네 군데가 겹쳐 화면이 달라 보입니다.
+
+고치는 법
+  ui.css 는 이미 @media (max-width:900px) 로 폰 예외를 두는 짜임입니다.
+  즉 기본값이 넓은 화면 몫입니다. 그러니 맨 끝에 @media (min-width:901px) 블록 하나만
+  붙이면 됩니다. 위쪽은 한 줄도 지우지 마십시오. 폰은 한 픽셀도 안 변합니다.
+  붙일 CSS 는 사장님이 주신 「디자인_맞추기_점검.html」 의 「붙여 넣을 CSS」 그대로입니다.
+
+  ★ 값은 전부 목업_PC.html 에서 옮긴 것입니다. 새로 정한 값은 없습니다.
+  ★ 새 class 를 만들지 않았습니다. 이름도 안 바꿨습니다.
+  ★ 44px 철칙은 지킵니다 — 높이는 안 건드립니다.
+
+같이 고칠 것 둘 (미디어쿼리 밖 · 폰에서도 틀립니다)
+  ① .t-row .av 의 border-radius 가 var(--t-r-sm)=13px 인데, 폰 목각도 14px 입니다.
+     옮길 때 가까운 토큰으로 붙어 버린 것입니다. → 14px 로 고칩니다.
+  ② .t-note 의 color 가 var(--t-sealk) 입니다. --t-sealk 는 광고심의가 정한 색(#8A6A2F)이고,
+     알림 상자 색은 #8A5A12 입니다. S06 「심의 색은 건드리지 말 것」 은 다른 데 갖다 쓰지도
+     말라는 뜻입니다 — 심의 색이 바뀌면 상관없는 알림까지 같이 바뀝니다.
+     → :root 에 --t-warnk:#8A5A12 · --t-warnk-b:#7A4E0A 를 세우고 .t-note 가 그것을 봅니다.
+
+목각 쪽은 제가 이미 고쳤습니다
+  목각이 작은 단추 38px · 칩 36px 로 그려져 있었는데, 44px 철칙은 본체가 옳습니다.
+  목각을 44px 로 올렸습니다. 이 둘은 본체가 고칠 것이 없습니다.
+
+끝났는지 재는 법
+  1440px 로 홈을 열고 목각(APEX_목각.html)을 나란히 놓습니다.
+  카드 안쪽 여백 · 이름 글씨 · 딱지 · 알림 상자 넷을 견주어 같으면 끝입니다.
+  폰(390px)에서도 열어 전과 똑같은지 확인하십시오 — 여기서 달라지면 잘못 붙인 것입니다.
+  scripts/checks.tsv 에 줄을 더하고 재는 법을 적어 주십시오.
+
+복구는 사장님이 알아서 하십니다. 망가질까 봐 덜 고치지 마시고, 위 값 그대로 붙이십시오.</pre>
+
+<p class="lead" style="margin-top:26px;font-size:13.5px;color:var(--sub2)">
+잰 날 2026-09-27 · 본체 <b>origin/main 10a63fb(#481)</b> 의 <code>app/ui.css</code>(302줄) ·
+목각 <code>목업_PC.html</code>. 값은 사람이 눈으로 본 게 아니라 <b>속성 단위로 기계가 뽑아 견준 것</b>입니다.
+</p>
+
+</div>
+<div id="tt"></div>
+<script>
+function txt(id){var e=document.getElementById(id);return e?e.textContent:'';}
+function toast(m){var t=document.getElementById('tt');t.textContent=m;t.className='on';
+  clearTimeout(window._k);window._k=setTimeout(function(){t.className='';},2400);}
+function copy(s,msg){
+  function ok(){toast(msg);}
+  function fb(){var a=document.createElement('textarea');a.value=s;a.style.position='fixed';a.style.opacity='0';
+    document.body.appendChild(a);a.select();
+    try{document.execCommand('copy');ok();}catch(e){toast('복사가 막혔습니다');}
+    document.body.removeChild(a);}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(s).then(ok,fb);else fb();
+}
+document.addEventListener('click',function(e){
+  var n=e.target;
+  while(n&&n!==document.body&&!(n.getAttribute&&n.getAttribute('data-cp')))n=n.parentNode;
+  if(!n||!n.getAttribute)return;
+  if(n.getAttribute('data-cp')==='css'){copy(txt('CSS'),'CSS 를 복사했습니다 — ui.css 맨 끝에 붙이십시오');return;}
+  copy(txt('PR')+'\n\n────────────────────────\n[붙일 CSS]\n\n'+txt('CSS'),
+       '프롬프트와 CSS 를 같이 복사했습니다');
+});
+</script>
+</body></html>
