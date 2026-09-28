@@ -7068,11 +7068,19 @@ function osDownloadAppBackup(){
     toast('✅ 앱 백업 파일을 저장했습니다 — 이 파일 하나로 언제든 복구·재배포할 수 있습니다.');
   }).catch(function(){toast('앱 소스를 읽지 못했습니다(로컬 파일 직접 실행 시 제한). 배포 주소에서 다시 시도하세요.');});
 }
+/* ── 🔒 <b>밖으로 못 나가는 열쇠</b> — 묻는 곳은 <b>한 곳</b>입니다 (5번) ──
+   설정·지식 백업은 <b>파일</b>로 나갑니다 — 메일·드라이브에 올라가고, 한 번
+   올라간 파일은 지워도 어딘가에 남습니다. 여기 걸린 열쇠는 그 파일에
+   <b>안 담습니다.</b>
+   ★ 민감한 열쇠가 새로 생기면 <b>이 한 줄만</b> 고칩니다. 내보내는 자리마다
+     따로 적으면, 새 자리를 만든 날 그 자리만 빠뜨립니다 (5번).           */
+var OS_LS_NEVER=/apikey|api_key|_key$|gemini_key|proxy|^apex_cli_rrn_/i;
+function osLsNever(k){return OS_LS_NEVER.test(''+(k||''));}
 function osExportData(){
   var data={_app:'APEX YUN PRO',_ver:1,_ts:new Date().toISOString(),ls:{}};
   try{
     for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(!k)continue;
-      if(/apikey|api_key|_key$|gemini_key|proxy/i.test(k))continue; /* 비밀키·프록시는 보안상 제외 */
+      if(osLsNever(k))continue; /* 비밀키·프록시·주민등록번호는 파일로 안 나갑니다 */
       if(k.indexOf('apex')!==0&&k.indexOf('APEX')!==0)continue;
       data.ls[k]=localStorage.getItem(k);
     }
@@ -8309,13 +8317,29 @@ function arCrmDeepText(who){
    TA 는 많은데 AP 가 안 나오는 사람과, AP 까지는 가는데 CS 에서
    무너지는 사람은 <b>고쳐야 할 것이 완전히 다르다.</b> AI 가 그것을
    보고 말하게 단계별로 나눠서 넘긴다. */
-function arStageText(who){
-  var L=(AR.db||[]),i,r,c={},order=AR_STAGES,tot=0,pol=0,intro=0,done=0,appt=0;
+/* 📊 <b>단계마다 몇 분인가</b> — 세는 곳은 <b>여기 하나</b>입니다 (5번).
+   AI 에게 넘기는 글(arStageText)도, 홈 맨 위 상담현황(hmFlowHtml)도 이것을
+   부릅니다. 두 곳에서 각자 세면 <b>화면과 AI 가 다른 수</b>를 말합니다 —
+   실제로 트랙이 두 곳에서 갈려 쿠폰 상담이 연금으로 기록된 적이 있습니다.
+   ★ <b>아직 못 읽었으면 null</b> 입니다 (1번). 0 으로 돌려주면 「아무도
+     없다」 는 뜻이 되어, 배정 DB 가 늦게 오는 아침마다 거짓말을 합니다. */
+function arStageN(who){
+  var L=AR.db,c={},i,r,tot=0;
+  if(!L)return null;
   for(i=0;i<L.length;i++){
     r=L[i];
     if(who&&r.who!==who)continue;
     tot++;
     c[r.stage||'미접촉']=(c[r.stage||'미접촉']||0)+1;
+  }
+  return {c:c,tot:tot};
+}
+function arStageText(who){
+  var N=arStageN(who),L=(AR.db||[]),i,r,c=(N&&N.c)||{},order=AR_STAGES,tot=(N&&N.tot)||0,
+      pol=0,intro=0,done=0,appt=0;
+  for(i=0;i<L.length;i++){
+    r=L[i];
+    if(who&&r.who!==who)continue;
     if(r.stage==='계약완료')pol++;
     /* 소개를 <b>여쭐 차례</b>인 사람과 <b>이미 받은</b> 사람은 다르다 —
        뭉치면 「소개 몇 건 받았나」 를 셀 수가 없다 (1번) */
@@ -9558,6 +9582,11 @@ var TDO_NOTABLE=0;
     k=S.order[i]; m=S.map[k];
     if(!TDO[k]||!m)continue;
     TDO[k].ch=m.ch; TDO[k].aim=m.aim; TDO[k].way=m.way;
+    /* 판단(q)·앱이 아는 것(know)도 <b>같은 표</b>에서 옵니다 (판 ④ · 5번).
+       ★ <b>없는 단계에는 안 넣습니다</b> — 거절에 「다음 단계」 를 지어
+         붙이지 않습니다 (사장님 말씀). 있는 것만 옮깁니다 (1번). */
+    if(m.q)TDO[k].q=m.q;
+    if(m.know)TDO[k].know=m.know;
     /* ★ 도구는 <b>BOX 한 표</b>에서 뽑아 옵니다 (2026-09-28 · 5번).
        예전에는 apex-stage 의 MAP 에 손으로 적은 목록을 그대로 베껴 왔는데,
        「도구」 화면이 쓰는 표와 두 벌이 되어 한쪽만 늙었습니다.
@@ -18343,8 +18372,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-30 04:00';
-var APP_BUILD_NOTE="🎨 <b>서랍 갈래색을 뺐습니다 — 목각처럼.</b>　—　사장님 말씀 「1번으로 해줘 <b>목각처럼 색 싹 빼</b>」.　—　서랍 묶음 다섯에 보라 · 파랑 · 청록 · 초록 · 금빛이 붙어 있었습니다. 묶음을 접어도 「한 줄기」 가 보이라고 제가 넣은 것이었는데, 목각 서랍에는 <b>갈래색이 아예 없습니다</b> — 묶음 이름은 회색, 칸 바탕도 왼쪽 띠도 없고 켜진 칸만 파랑입니다.　—　① 색은 <b>navRamp 한 함수</b>에서 나옵니다. 부르는 곳이 둘(서랍 묶음 · 위 즐겨찾기 띠)이라, 거기서 무채색을 돌려주게 하니 <b>두 곳이 같이</b> 빠졌습니다. 「띠에서 본 색 = 서랍에서 본 그 갈래 색」 규칙도 그대로입니다 (5번).　—　② ★ <b>함수는 안 지웠습니다.</b> 부르는 자리가 둘이라 지우면 그 자리가 죽습니다. 되살리려면 navTone 줄기를 다시 켜면 됩니다 — 지운 것이 아니라 <b>꺼 둔 것</b>입니다. 색은 hex 로 적지 않고 <b>색표에서 읽습니다</b>(navRgb).　—　③ 왼쪽 띠는 짙기만 0 으로 하면 <b>빈 4px 이 남아</b> 굵기도 0 으로 했습니다. 접힌 묶음의 개수 딱지 테는 갈래색 대신 줄 색(--t-line)으로.　—　④ 덤 — 묶음 이름 명암비가 <b>4.5 언저리에서 7.11</b> 로 올라갔습니다. 옅은 갈래색 위 글씨였던 것이 흰 바탕 위 --t-ink-2 가 됐기 때문입니다.　—　⑤ ★ 목각 밖의 색이 <b>31 → 22</b> 로 줄었습니다 — 서랍 묶음 다섯과 위 띠가 쓰던 같은 줄기 넷.　—　점검 — check-nav 의 자 <b>넷을 뒤집었습니다</b>(지우지 않았습니다). 「칸마다 색이 다른가」 를 재던 것이 이제 「색이 <b>없는가</b>」 를 잽니다 — 색이 다시 생기면 빨간불입니다. 되돌림 둘 다 울렸습니다 (8번).";
+var APP_BUILD='2026-09-30 15:00';
+var APP_BUILD_NOTE="📝💬🧭 <b>남은 목각 셋 — 적어 두기 한 카드 · 보낼 말 · 지금 이 자리에서.</b>　—　사장님 말씀 (2026-09-28) 「<b>남은 목각 다 해줘</b>」.　—　① 📝 <b>적어 두기 한 카드</b> — 목각은 한 자리에서 <b>지금 상황 · 걱정 · 다음에 할 날 · 그날 할 것 · 들은 말</b>을 받습니다. 앱에서는 세 카드에 흩어져 있었습니다. ★ <b>베끼지 않고 옮겼습니다</b> (5번) — 원래 자리의 적는 칸을 뺐고, 관계 카드에는 <b>쌓인 것</b>만 남습니다. 자가 「적는 칸이 두 곳에 없나」 를 봅니다.　—　② 「지금 상황」 은 앱에 없던 칸이라 만들었습니다 — 고를 목록은 목각 그대로 <b>한 곳</b>(CM_CARE)에 둡니다.　—　③ 💬 <b>보낼 말</b> — apex-stage 의 말 표에서만 가져옵니다 (1번). 표에는 미접촉·TA·부재·거절·기고객·입원만 있어 <b>AP·PC·CS 에서는 안 섭니다</b> — 없는 말을 지어 붙이지 않습니다. 「하지 말 것」·「여기서 멈춤」 도 같이 세우고, 나이대는 <b>알 때만</b> 붙입니다.　—　④ 🧭 <b>지금 이 자리에서</b> — 단계·채널·목표·방법·판단·아는 것·도구·다음 자리를 apex-stage <b>한 곳</b>에서 가져옵니다. 판단은 아직 <b>AP 에만</b> 있어 나머지 아홉 단계는 안 세웁니다. 칩은 navItemOf 로 <b>정말 열리는 화면만</b> 답니다.　—　⑤ ★ <b>제가 순서 버그를 만들었고 자가 잡았습니다.</b> 한 단추가 할 일과 들은 말을 같이 저장하는데, 앞의 저장이 화면을 다시 그려서 뒤가 <b>빈 칸</b>을 읽었습니다 — 들은 말이 조용히 사라졌습니다. 값을 <b>먼저 손에 들고</b> 넘기게 고쳤습니다.　—　⑥ ★ 처음에 next 저장을 <b>베껴</b> 넣었다가 되돌렸습니다 — cmNextSave 를 부릅니다 (5번).　—　⑦ ★ 자가 <b>새 카드 셋을 안 재고</b> 있었습니다(조각 목록에 없었습니다). 넣으니 조각이 10,889 → 18,723자. 되돌림 아홉 가지 전부 울립니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -25761,6 +25790,58 @@ function hmDoHtml(x){
   return '<button type="button" class="hm-do" onclick="hmPick(\''+osEsc((x&&x.key)||'')+'\',0)">'+
          osEsc(t)+'</button>';
 }
+/* ══ 🧭 <b>판단 · 앱이 아는 것</b> — 목각 사진의 그 두 줄 ═══════════
+   사장님 말씀 (2026-09-27 · 목각) — 「판단 — ① 가입이 되는 분인가 ②
+   어느 통장이 비었나 ③ 무엇을 펴 놓나 · 다음 PC」 그리고 「앱이 이미
+   아는 것 — …를 다 갖고 있습니다」.
+   ★ <b>말은 apex-stage.js 한 곳</b>이 쥡니다 (5번) — 여기서 또 적으면
+     DB 통합 CRM 과 다른 말을 하게 됩니다. 표에 없는 단계는 <b>안
+     세웁니다</b>(거절에 다음 단계를 지어 붙이지 않습니다).
+   ★ <b>있는 화면만 가리킵니다</b> (1번). 「갖고 있습니다」 라고 적어 놓고
+     눌러서 안 열리면 고객 앞에서 그것이 드러납니다 — navItemOf 가
+     메뉴에 그 화면이 정말 있는지 봅니다.
+   ★ <b>새 CSS 를 안 만들었습니다</b> — ui.css 의 t-note.b · t-chips ·
+     t-chip 입니다.                                                  */
+function hmWorryHtml(x){
+  var m,v;
+  if(!x||!x.id||typeof cmOf!=='function')return '';
+  m=cmOf(x.id); v=(m&&m.worry)||'';
+  if(!v)return '';
+  return '<div class="t-note g">첫 문장에 붙일 것 — <b>'+osEsc(v)+'</b></div>';
+}
+function hmJudgeHtml(m,x){
+  if(!m)return '';
+  var h='',i,k,go,n=['①','②','③','④','⑤'];
+  /* 판단 — 무엇을 가리는 자리인가. 다음 단계는 APEX_STAGE 가 압니다 */
+  if(m.q&&m.q.length){
+    h+='<div class="t-note b">판단 —';
+    for(i=0;i<m.q.length&&i<5;i++)h+=' <b>'+n[i]+'</b> '+osEsc(m.q[i]);
+    go=(typeof APEX_STAGE!=='undefined'&&APEX_STAGE.next&&x)?APEX_STAGE.next(x.tk||x.k):'';
+    if(go)h+=' · 다음 <b>'+osEsc(go)+'</b>';
+    h+='</div>';
+  }
+  /* 앱이 아는 것 — <b>눌러서 가는</b> 칩. 메뉴에 없으면 안 세웁니다 */
+  if(m.know&&m.know.length){
+    var on=[];
+    for(i=0;i<m.know.length;i++){
+      k=m.know[i];
+      if(typeof navItemOf==='function'&&!navItemOf(k.tab))continue;
+      on.push(k);
+    }
+    if(on.length){
+      /* ★ t-note.g 는 ui.css 에 hex(#065F46)가 박혀 있어 <b>화면에 새 색</b>을
+         들입니다(check-hmexact 가 잡습니다). 이 줄은 상자가 아니라
+         <b>설명</b>이므로 t-sub 로 적습니다 — 새 색이 안 생깁니다. */
+      h+='<div class="t-sub">앱이 이미 아는 것 — 눌러서 바로 보십니다.</div>'+
+         '<div class="t-chips">';
+      for(i=0;i<on.length;i++)
+        h+='<button type="button" class="t-chip" onclick="go(\''+osEsc(on[i].tab)+'\')">'+
+           osEsc(on[i].t)+'</button>';
+      h+='</div>';
+    }
+  }
+  return h;
+}
 function hmNowHtml(){
   try{ hmKtCss(); hmTaCss(); hmPdCss(); }catch(e){}   /* 옷을 쓰는 화면에서 부른다 (5번) */
   var r=hmNext();
@@ -25794,13 +25875,33 @@ function hmNowHtml(){
       '<span class="hm-now-k">'+me+' '+osEsc(kt)+'</span></span></div>'+
     /* 목업 <b>.one .why</b> — 왜 하필 오늘 이분인가 */
     hmWhyHtml(x)+
+    /* 😟 <b>첫 문장에 붙일 것</b> — 목각 사진 1 의 초록 상자.
+       ★ <b>적어 두신 것이 있을 때만</b> 섭니다 (1번). 없는데 세우면
+         무슨 말을 붙일지 지어내야 합니다. 값은 고객 365일의 「무엇을 제일
+         걱정하시나」 한 곳에서 옵니다 (5번).                          */
+    hmWorryHtml(x)+
     /* 목업 <b>.one .aim / .way</b> — 무엇을 / 어떻게. 말은 apex-stage.js
        가 씍니다 — 여태 이 문장이 번호 목록 ①번에 <b>평문으로 눌려</b>
        들어가 굵게 강조한 데가 지워졌습니다 (5번 · 표는 그대로). */
     (am?('<div class="hm-aim">'+am.aim+'</div>'+
-         (am.way?('<div class="hm-way">'+osEsc(am.way)+'</div>'):'')):'')+
+         (am.way?('<div class="hm-way">'+osEsc(am.way)+'</div>'):'')+
+         /* ★ <b>접으면 같이 접힙니다</b> — 판 ① 의 물음 카드와 같은 자리입니다.
+            펴 둔 채가 기본(HM_MORE=true)이라 <b>평소에는 그대로</b> 섭니다.
+            접으셨을 때만 카드가 한 화면에 듭니다(check-homeshape). */
+         (HM_MORE?hmJudgeHtml(am,x):'')):'')+
     /* 목업 <b>.t-btn</b> — 큰 단추 한 방 */
     hmDoHtml(x)+
+    /* 🙋 <b>한 가지만 여쭙기</b> — 사장님 말씀 X07 「홈 화면에서 고객의
+       모든걸 컨트롤 할수 있도록 <b>질문을 띄우고</b> 쉽게해」.
+       ★ <b>카드는 한 곳</b>입니다 (5번) — 고객 365일 상세 화면이 쓰는
+         cqaHtml 을 그대로 부릅니다. 여기서 또 그리면 두 벌이 됩니다.
+       ★ <b>사람인 줄에만</b> 답니다. 어느 갈래가 사람인지는 HM_ACT 한 곳이
+         압니다 — 「할 일」·「내 일정」 에게 생일을 여쭐 수는 없습니다 (1번).
+       ★ <b>접으면 같이 접힙니다</b> — 바로 아래 번호 갈래와 같은 자리입니다.
+         펴 둔 채가 기본(HM_MORE=true)이라 <b>평소에는 그대로 섭니다</b>.
+         접으셨을 때만 목각 크기(한 화면)가 됩니다 — 이것을 안 접으면
+         접어도 1027px 이라 화면(844px)을 넘습니다. */
+    ((HM_MORE&&A.ba&&x.id&&typeof cqaHtml==='function')?cqaHtml(x.id,1):'')+
     /* <b>묻고 고르게</b> 합니다 — 번호가 붙은 갈래를 세우고, 누르면
        그 자리에서 그 일이 벌어집니다. 여태는 도구 단추만 한 줄로
        늘어놓아, 읽고 나서 다시 고르는 두 동작이 됐습니다.
@@ -27582,7 +27683,10 @@ var HM_MOVED=[
  {t:'teamhub', e:'👥', n:'팀',         was:'팀 전체'},
  {t:'news_live',e:'📰', n:'콘텐츠',    was:'오늘 올릴 것 · SNS'},
  /* 아래 띠를 목업 다섯으로 바꾸며 제 칸이 없어졌습니다 — 길을 남깁니다 */
- {t:'crm',     e:'🗂', n:'DB 통합 CRM', was:'아래 띠'}
+ {t:'crm',     e:'🗂', n:'DB 통합 CRM', was:'아래 띠'},
+ /* ⚠ 공지 줄은 <b>도로 뺐습니다</b> — 공지가 아직 홈에 있기 때문입니다.
+    있는 것을 「옮겼다」 고 적으면 그것이 거짓말입니다 (1번). 공지가
+    제 화면으로 가는 날 이 줄을 다시 붙입니다. */
 ];
 /* ══ 🔔 <b>소식 한 자리</b> — 늘 있고, 없으면 없다고 적습니다 ═══════
    ★ <b>:has() 를 씁니다.</b> 안쪽 넷(알람 열쇠 · 알림 권유 · 고객 체크 ·
@@ -27645,6 +27749,45 @@ function hmMovedCss(){
       'font-weight:700;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:4px}'+
     '.hm-mv .g button:active{background:var(--ink-8)}';
   document.head.appendChild(st);
+}
+/* ══ 🧭 <b>그 밖의 것을 한 줄로 접습니다</b> ═══════════════════════
+   사장님 말씀 (2026-09-27) — 「2번으로 해줘 <b>접어</b>」.
+   목각 홈은 덩어리가 <b>셋</b>입니다(인사 띠 · 상담현황 · 지금 할 것).
+   앱 홈은 아홉이라 상담현황을 넣자 폰에서 3.8화면이 됐고, 홈 높이를
+   재는 자 셋이 빨간불이 됐습니다.
+   ★ <b>빼지 않고 접습니다</b> (6번). 동선·찾기·옮긴 자리·준법 안내는
+     <b>홈에만 있는 것</b>이라, 빼면 옮기는 것이 아니라 <b>지우는 것</b>이
+     됩니다. 공지를 뺐다가 공지 사진 볼 데가 없어진 자리에서 배웠습니다.
+   ★ <b>접는 것은 넷뿐</b>입니다. 소식 한 자리(공지·알람)와 준비 SQL 은
+     <b>안 접습니다</b> — 공지 사진은 눈에 들어와야 받아 오고(7번),
+     준비 SQL 은 대표가 못 보면 앱이 반쪽입니다.
+   ★ <b>새 CSS 를 한 줄도 안 만들었습니다</b> — 이미 있는 hmFoldWrap
+     그대로입니다. 접힘은 hmFoldOpen 이 기억합니다.                    */
+function hmEtcHtml(){
+  if(!OS.profile)return '';
+  /* ★ <b>준비 SQL 도 여기 안</b>입니다. 접이가 「오늘 챙길 것」 <b>위</b>에
+     서므로 「홈 맨 위」 라는 말은 그대로 참입니다(check-setup 이 그것을
+     잽니다). 대표가 못 보고 지나치지 않게, 아직 안 하셨으면 <b>머리글이
+     그렇게 말합니다</b> — 접힌 채로도 읽힙니다 (6번 · 1번).          */
+  var need=(typeof setupShow==='function')&&setupShow();
+  var inner='<div id="osSetupHome"></div>'+hmRtEtc()+cusFindHtml()+
+            hmMovedHtml()+hmLawHtml();
+  /* ★ 꼬리글(sub)을 <b>안 답니다</b>. hm-fold-h .t span 이 --t6(12.5px)
+     이라, 홈에 <b>13px 아래 글자</b>가 늘어 check-toss 가 잡습니다.
+     할 말은 <b>제목 한 줄</b>에 다 담습니다 — 제목은 --t4 입니다.     */
+  return hmFoldWrap('etc', need?'⚠':'🧭',
+    need?'서버 준비가 남았습니다 · 오늘 어디로 · 찾기'
+        :'그 밖의 것 — 오늘 어디로 · 찾기 · 옮긴 자리', '', inner);
+}
+/* 동선·활동량이 들어갈 <b>빈 자리</b>만 내어 줍니다 — 칠하는 함수
+   (hmRtPaint · hmActPaint)는 한 곳도 안 건드립니다 (5번). */
+function hmRtEtc(){ return '<div id="hmRtHost"></div><div id="hmActHost"></div>'; }
+/* 준법 안내 한 줄 — <b>글은 그대로</b>입니다. 자리만 접이 안으로 옮겼습니다. */
+function hmLawHtml(){
+  return '<div class="notice" style="margin-top:16px;color:var(--ink-4);'+
+    'background:var(--t-bg-3);border-color:var(--ink-7)">모든 AI 출력은 '+
+    '<b>약관·심사가 최종</b>이며, 고위험 제안은 관리자 승인 후 고객에게 '+
+    '안내합니다. 게시·발송 전 준법감시 확인을 권장합니다.</div>';
 }
 function hmMovedHtml(){
   hmMovedCss(); hmNotiCss();   /* 옷을 쓰는 화면에서 부릅니다 (5번) */
@@ -28661,6 +28804,112 @@ function hmTossDone(){
    ★ <b>누가 다음 분인지는 hmNext 하나</b>가 답합니다 (5번). 이 카드와 아래
      「오늘 챙길 것」 이 같은 분을 말하는 것은 그 때문입니다 — 두 곳에서
      따로 세는 것이 아닙니다.                                            */
+/* ══ 📊 <b>상담현황 — 지금 어디에 몇 분</b> ═══════════════════════════
+   사장님 말씀 (2026-09-27 · 목각 사진) — 홈 맨 위에 「TA → AP → PC → CS
+   → 증권전달」 한 줄. 「단계·주기·업적이 <b>세 곳에 흩어져</b> 있던 것을
+   한 줄로 모았습니다」.
+   ★ <b>새로 세지 않습니다</b> (5번) — 단계마다 몇 분인지는 arStageN 한
+     곳이 답하고, 단계의 차례는 apex-stage.js 가 압니다. 여기서 또 세면
+     AI 에게 넘기는 글과 화면이 다른 수를 말하게 됩니다.
+   ★ <b>못 읽었으면 수를 안 적습니다</b> (1번). 「0분」 은 「아무도 없다」
+     는 뜻이라, 배정 DB 가 늦게 오는 아침마다 거짓말이 됩니다.
+   ★ <b>예상업적 금액은 여기 안 적습니다</b> (1번). 그 값(expect_premium)
+     은 app/edu-pipeline.html 이 들고 있고 <b>본체는 못 읽습니다</b>. 못
+     읽는 것을 그럴듯하게 채우면 고객 앞에서 그것이 사실이 됩니다 —
+     <b>건수까지만</b> 세고, 금액은 어디 있는지만 말합니다.
+   ★ <b>새 CSS·새 class 를 한 줄도 안 만들었습니다</b> — ui.css 의
+     t-card · t-lab · t-h1 · t-chips · t-chip · t-note · t-sub · t-row2 ·
+     t-btn 으로만 지었습니다 (사장님 말씀 「새 CSS 를 쓰지 마십시오」). */
+var HM_FLOW=[
+  {k:'TA',     e:'📞'},
+  {k:'AP',     e:'🤝'},
+  {k:'PC',     e:'📄'},
+  {k:'CS',     e:'✍️'},
+  {k:'증권전달', e:'📬'}
+];
+/* <b>막힌 데</b> — PC·CS 에서 가장 오래 서 계신 한 분.
+   ★ 이레가 안 넘으면 <b>줄을 안 그립니다</b>. 이틀 된 분을 「막혔다」 고
+     적으면 날마다 뜨고, 날마다 뜨는 경고는 아무도 안 봅니다 (8번).
+   ★ 이름은 <b>가립니다</b> (3번) — 홈은 고객 앞에서 여는 화면입니다. */
+var HM_FLOW_STUCK=7;
+function hmFlowStuck(who){
+  var L=AR.db,i,r,best=null;
+  if(!L)return null;
+  for(i=0;i<L.length;i++){
+    r=L[i];
+    if(who&&r.who!==who)continue;
+    if(r.stage!=='PC'&&r.stage!=='CS')continue;
+    if(!(r.days>=HM_FLOW_STUCK))continue;
+    if(!best||r.days>best.days)best=r;
+  }
+  return best;
+}
+/* 이번 달 계약 — <b>건수만</b>입니다 (위 ★). 계약일이 안 적힌 줄은
+   안 셉니다 — 날짜를 모르는 것을 이번 달로 밀어 넣지 않습니다 (1번). */
+function hmFlowWon(who){
+  var L=AR.db,i,r,n=0,m=arToday().slice(0,7);
+  if(!L)return null;
+  for(i=0;i<L.length;i++){
+    r=L[i];
+    if(who&&r.who!==who)continue;
+    if(r.cAt&&r.cAt.slice(0,7)===m)n++;
+  }
+  return n;
+}
+function hmFlowMe(){ return (typeof arMyId==='function')?arMyId():null; }
+function hmFlowHtml(){
+  if(!OS.profile)return '';
+  var me=hmFlowMe(),N=arStageN(me),i,x,n,road=0,st,won,h;
+  h='<div class="t-card" id="hmFlow" style="margin-bottom:16px">'+
+    '<div class="t-lab">📊 상담현황 — 지금 어디에 몇 분</div>';
+  /* 못 읽었으면 <b>수를 안 적습니다</b> (1번) */
+  if(!N)
+    return h+'<div class="t-big">배정 DB 를 아직 못 읽었습니다.'+
+      '<small>어느 단계에 몇 분이 계신지는 <b>읽은 뒤에</b> 적습니다 — '+
+      '「0분」 이라고 적지 않습니다.</small></div></div>';
+  /* 목각은 이 줄이 <b>한 줄</b>입니다. t-h1(27px)로 적으면 폰에서 두 줄로
+     넘쳐 화살표가 끊깁니다 — 있는 조각 중 <b>t-big(18px)</b>이 맞습니다.
+     새 크기를 만들지 않았습니다. */
+  h+='<div class="t-big">'+
+     'TA → AP → PC → CS → 증권전달'+
+     '<small>단계·주기·업적이 <b>세 곳에 흩어져</b> 있던 것을 한 줄로 모았습니다. '+
+     '<b>새로 세지 않습니다.</b></small></div>'+
+     '<div class="t-chips">';
+  for(i=0;i<HM_FLOW.length;i++){
+    x=HM_FLOW[i];n=N.c[x.k]||0;road+=n;
+    /* 누르는 것이 아니라 <b>적어 둔 수</b>입니다 — span 입니다 */
+    h+='<span class="t-chip"><b>'+n+'</b> '+x.e+' '+osEsc(x.k)+'</span>';
+  }
+  h+='</div>';
+  st=hmFlowStuck(me);
+  if(st)
+    h+='<div class="t-note" style="margin-top:14px">막힌 데 — <b>'+
+       osEsc(osMaskName(st.name))+'</b>님이 '+osEsc(st.stage)+'에서 <b>'+st.days+
+       '일째</b>입니다. 거기부터 푸시면 이번 달이 채워집니다.</div>';
+  won=hmFlowWon(me);
+  /* 길 위에 아무도 없으면 <b>「0분이 계십니다」 라고 안 적습니다</b> —
+     사람이 0명인데 「계십니다」 는 말이 안 되고, 무엇을 하면 되는지도
+     말해 드려야 합니다 (1번). 읽기 전(N 이 null)과는 위에서 이미 갈랐습니다. */
+  h+='<div class="t-sub">'+(road
+     ? ('모두 <b>'+road+'분</b>이 길 위에 계십니다. ')
+     : ('길 위에 계신 분이 <b>아직 없습니다</b> — 배정 DB 에서 단계를 올리시면 여기 섭니다. '))+
+     '이번 달 계약 <b>'+won+'건</b> · 예상업적은 <b>DB·업적관리</b>에 있습니다 — '+
+     '본체가 못 읽어 <b>건수까지만</b> 셉니다.</div>'+
+     '<div class="t-row2" style="margin-top:14px">'+
+     '<button type="button" class="t-btn g sm" onclick="go(\'crm\')">칸반으로 펴 보기</button>'+
+     '<button type="button" class="t-btn g sm" onclick="hmFlowHere()">이 자리에서 할 것</button>'+
+     '</div></div>';
+  return h;
+}
+/* <b>이 자리에서 할 것</b> — 바로 아래 「지금 할 것」 카드로 모십니다.
+   여기서 또 카드를 그리지 않습니다 (5번). 오늘 챙길 분이 없으면 그렇다고
+   말합니다 — 아무 일도 안 일어나면 고장으로 보입니다 (1번). */
+function hmFlowHere(){
+  var e=document.querySelector('#dynPane .hm-now');
+  if(!e){toast('오늘 챙길 분이 아직 없습니다');return;}
+  try{ e.scrollIntoView({behavior:'smooth',block:'start'}); }
+  catch(x){ try{ e.scrollIntoView(); }catch(x2){} }
+}
 function hmTossHtml(){
   if(!OS.profile)return '';
   var ap=hmTossAppt(),wk=hmTossWeek();
@@ -28739,8 +28988,21 @@ function renderHome(){
        ★ <b>오늘 어디로 가시나</b>는 #441 에서 이미 자리를 지키게 했습니다.
        ★ <b>준비 SQL</b>은 사장님 ★ 대로 <b>그 자리</b>(바로 아래)에 둡니다 —
          여러 화면이 「홈 맨 위」 라고 가리키고 check-setup 이 그것을 잡습니다. */
+    /* 📊 <b>상담현황 한 줄</b> — 사장님 말씀 (2026-09-27 · 목각 사진).
+       인사 바로 밑, 「지금 할 것」 바로 위입니다 — 목각이 그 자리입니다.
+       <b>몇 분인지는 arStageN 한 곳</b>이 답합니다 (5번). */
+    (OS.profile?('<div id="hmFlowHost">'+hmFlowHtml()+'</div>'):'')+
     (OS.profile?('<div id="hmNotiLine" class="hm-noti">'+
         '<div id="almkBand"></div><div id="almNudge"></div>'+
+        /* 📢 <b>공지는 홈에 그대로 둡니다 — 되돌렸습니다.</b>
+           사장님 말씀 (2026-09-27) 「공지사항 별도로 빼버려」 로 한 번
+           뺐는데, <b>공지 사진(osNtcImgHtml)이 이 자리에만</b> 있어서
+           빼는 순간 앱 어디에서도 공지 사진을 볼 수 없게 됐습니다.
+           check-ntcimg 가 8가지로 그것을 잡았습니다 — 서랍
+           (osNoticeNavHtml)에는 사진 칸이 없습니다.
+           ★ 그것은 <b>옮기는 것이 아니라 지우는 것</b>입니다 (6번).
+             공지가 <b>제 화면</b>을 갖기 전에는 여기서 못 뺍니다 —
+             어디로 옮길지 사장님께 여쭙는 중입니다. */
         '<div id="ccHomeLine"></div><div id="osNoticeHome"></div>'+
         '<div class="hm-noti-n">🔔 <b>새 소식이 없습니다.</b></div></div>'):'')+
     /* ⚠ <b>준비 SQL 은 여기 그대로 둡니다.</b> 한 번은 접어서 맨 아래로
@@ -28749,7 +29011,12 @@ function renderHome(){
        거짓말이 됩니다 (1번). 게다가 이것은 <b>한 번 하면 영영 사라지는</b>
        것이라 「화면이 자꾸 달라지는」 범인이 아닙니다. 매일 떴다 사라지던
        것은 <b>출발 점검</b> 쪽이고, 그것만 접었습니다.                */
-    (OS.profile?'<div id="osSetupHome"></div>':'')+
+    /* 🧭 <b>그 밖의 것</b> — 준비 SQL · 동선 · 찾기 · 옮긴 자리 · 준법 안내를
+       <b>한 줄로 접습니다</b> (사장님 말씀 「2번으로 해줘 접어」).
+       ★ <b>「오늘 챙길 것」 위</b>입니다 — 준비 SQL 이 「홈 맨 위」 라고
+         말하는 곳이 여럿이라, 그 말이 참이려면 여기라야 합니다.
+       ★ <b>지운 것이 아닙니다</b> — 누르면 그 자리에서 다 펴집니다 (6번). */
+    (OS.profile?hmEtcHtml():'')+
     /* ── 🌅 <b>아침 미션은 「오늘 챙길 것」 카드 안으로 들어갔습니다</b> ────
        사장님 말씀 (2026-09-23) — 「오늘 챙길것 + 아침 미션을 <b>하나로</b> 합치는
        거야」. 둘을 따로 두었더니 홈을 열면 칸이 둘이고, 아침 미션은 접힌 한 줄로만
@@ -28765,9 +29032,9 @@ function renderHome(){
     /* <b>오늘 어디로 가시나</b> — 없는 날에도 <b>자리를 지킵니다</b>(#441).
        「오늘 챙길 것」 바로 밑이라야 뜻이 통합니다 — 챙길 분을 보고 나서
        <b>어디로 가는지</b>를 봅니다. */
-    (OS.profile?'<div id="hmRtHost"></div>':'')+
-    /* 📊 <b>오늘 얼마나 움직이셨나</b> — 동선 바로 아래 한 줄 */
-    (OS.profile?'<div id="hmActHost"></div>':'')+
+    /* ↓ 넷은 <b>「🧭 그 밖의 것」 접이 안</b>으로 갔습니다 (아래 hmEtcHtml).
+       동선 · 활동량 · 찾기 · 옮긴 자리 · 준법 안내 — 칠하는 함수는 한 곳도
+       안 건드렸습니다 (5번). 빈 자리(hmRtHost · hmActHost)는 접이가 냅니다. */
     /* 팀 전체도 <b>「⚙️ 관리」 안</b>으로 옮겼습니다 — 오늘 내가 할 일과
        팀을 보는 일은 다른 일입니다. */
     /* <b>고객 찾기</b> — 배정 DB 까지 훑습니다. 고객 365일의 찾기는 <b>이미
@@ -28775,7 +29042,7 @@ function renderHome(){
        ★ <b>옮기지 않았습니다.</b> 사장님 목록에 없는 것이고, 빼면 그 기능이
          <b>어디에도 없어집니다</b> — 그건 옮기는 것이 아니라 지우는 것입니다.
          카드가 아니라 <b>한 줄</b>(33px)이라 덩어리로도 안 셉니다. */
-    (OS.profile?cusFindHtml():'')+
+    /* 찾기도 접이 안입니다 */
     /* ── 📦 <b>옮긴 자리 한 줄</b> — 지운 것이 아닙니다 ──────────────────
        사장님 말씀 (2026-09-26) — 「홈을 <b>「오늘 카드」만</b> 남기고 나머지를
        옮깁니다. <b>지우는 것이 아닙니다.</b> … 옮길 것 — <b>어디로 가는지
@@ -28792,10 +29059,11 @@ function renderHome(){
          「화면이 자꾸 달라서 힘들다」 고 하신 그 자리입니다.
        ★ <b>한 줄</b>입니다(덩어리가 아닙니다) — check-homeshape 가
          「덩어리(120px 넘는 칸)는 넷 이하」 로 잽니다.                    */
-    (OS.profile?hmMovedHtml():'')+
-    /* ⑥ 공지사항도 <b>위 소식 한 자리</b>로 갔습니다 — 맨 아래에 두면
-       있는 날과 없는 날의 홈 모양이 달라집니다. 칸 이름은 그대로입니다. */
-    '<div class="notice" style="margin-top:16px;color:var(--ink-4);background:var(--t-bg-3);border-color:var(--ink-7)">모든 AI 출력은 <b>약관·심사가 최종</b>이며, 고위험 제안은 관리자 승인 후 고객에게 안내합니다. 게시·발송 전 준법감시 확인을 권장합니다.</div>'+
+    /* ⑥ 공지사항은 <b>위 소식 한 자리</b>에 있습니다 (안 접습니다 — 공지
+       사진은 눈에 들어와야 받아 옵니다).
+       🧭 <b>그 밖의 것</b> — 동선 · 찾기 · 옮긴 자리 · 준법 안내를 한 줄로.
+       <b>지운 것이 아닙니다</b> — 누르면 그 자리에서 다 펴집니다 (6번). */
+    (OS.profile?'':hmLawHtml())+
   '</div>';
 }
 /* wide — <b>넓은 화면에서 폭을 다 쓰는 화면</b>인가. 안 주면 지금까지와
@@ -44854,6 +45122,35 @@ function renderCalcPage(){
   '</div>';
 }
 
+/* ── 🎂 <b>보험나이·상령일을 셈하는 곳 — 한 곳입니다</b> (5번) ───────────
+   2026-09-27. 사장님이 목각을 눌러 보라고 하셨습니다. 목각의 주민번호 칸은
+   번호에서 <b>보험나이와 상령일</b>을 뽑아 보여 줍니다. 그것을 본체에
+   넣으려니 <b>이 앱에는 이미 그 셈이 있었습니다</b> — 계산기 화면
+   (calcAge)의 배 속에 UI 와 엉켜 있어서 딴 데서 부를 수 없었습니다.
+
+   그래서 <b>셈만 여기로 빼냈습니다.</b> 계산기도 이것을 부르고, 고객
+   365일의 주민번호 칸도 이것을 부릅니다. 두 곳에서 각자 세면 한 화면은
+   <b>52세</b>, 다른 화면은 <b>53세</b> 라고 적는 날이 옵니다 — 그 자리에서
+   보험료가 틀립니다 (5번).
+   ★ 계산기 화면은 <b>한 글자도 안 바뀝니다.</b> 셈을 옮긴 것뿐입니다.
+   기준은 지금까지 화면에 적어 온 그대로입니다 — <b>6개월 미만 버림 · 이상
+   올림</b>, 다음 상령일은 (생일+6개월) 중 기준일 이후 첫 날짜.         */
+function insAgeOf(b,ref){
+  if(!b)return null;
+  ref=ref||new Date();
+  if(b>ref)return null;
+  var age=ref.getFullYear()-b.getFullYear();
+  if(ref.getMonth()<b.getMonth()||(ref.getMonth()===b.getMonth()&&ref.getDate()<b.getDate()))age--;
+  /* 직전 생일 */
+  var lastB=new Date(ref.getFullYear(),b.getMonth(),b.getDate());
+  if(lastB>ref)lastB=new Date(ref.getFullYear()-1,b.getMonth(),b.getDate());
+  var monPassed=(ref.getFullYear()-lastB.getFullYear())*12+(ref.getMonth()-lastB.getMonth());
+  if(ref.getDate()<lastB.getDate())monPassed--;
+  var ins=age+(monPassed>=6?1:0);
+  var sang=addMonths(new Date(ref.getFullYear(),b.getMonth(),b.getDate()),6);
+  if(sang<=ref)sang=addMonths(new Date(ref.getFullYear()+1,b.getMonth(),b.getDate()),6);
+  return {age:age,ins:ins,sang:sang,dday:daysBetween(ref,sang)};
+}
 /* 보험나이 */
 function calcCardAge(){
   return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🎂</span>보험나이 계산기</div>'+
@@ -44868,18 +45165,10 @@ function calcAge(){
   var b=parseDate($('ca_birth').value);if(!b){toast('생년월일을 입력하세요');return;}
   var ref=parseDate($('ca_ref').value)||new Date();
   if(b>ref){toast('생년월일이 기준일보다 이후입니다');return;}
-  var age=ref.getFullYear()-b.getFullYear();
-  if(ref.getMonth()<b.getMonth()||(ref.getMonth()===b.getMonth()&&ref.getDate()<b.getDate()))age--;
-  // 직전 생일
-  var lastB=new Date(ref.getFullYear(),b.getMonth(),b.getDate());
-  if(lastB>ref)lastB=new Date(ref.getFullYear()-1,b.getMonth(),b.getDate());
-  var monPassed=(ref.getFullYear()-lastB.getFullYear())*12+(ref.getMonth()-lastB.getMonth());
-  if(ref.getDate()<lastB.getDate())monPassed--;
-  var insAge=age+(monPassed>=6?1:0);
-  // 다음 상령일 = (생일+6개월) 중 기준일 이후 첫 날짜
-  var sang=addMonths(new Date(ref.getFullYear(),b.getMonth(),b.getDate()),6);
-  if(sang<=ref)sang=addMonths(new Date(ref.getFullYear()+1,b.getMonth(),b.getDate()),6);
-  var dday=daysBetween(ref,sang);
+  /* ★ 셈은 <b>insAgeOf 한 곳</b>에서 옵니다 (5번) — 여기서 다시 세지 않습니다 */
+  var R=insAgeOf(b,ref);
+  if(!R){toast('계산하지 못했습니다');return;}
+  var age=R.age,insAge=R.ins,sang=R.sang,dday=R.dday;
   setCalcRes('ca_res',[
     {l:'만나이',v:age+'<small>세</small>'},
     {l:'보험나이',v:insAge+'<small>세</small>',c:'b'},
@@ -46783,7 +47072,29 @@ function babaPlanSave(){
   try{localStorage.setItem(BABA_PLAN_KEY,JSON.stringify(babaPlans()));}
   catch(e){ if(typeof insSaveFail==='function')insSaveFail('계약 목록'); }
 }
-function babaPlanId(){return 'p'+Math.round(Date.now()%1e8)+Math.round(Math.random()*999);}
+/* ── 🔑 <b>겹치지 않는 id</b> — 만드는 곳은 <b>한 곳</b>입니다 (5번) ────────
+   2026-09-27. CI 가 잡았습니다 — 「목록에서도 id 로 갈린다 — 2건 · 서로
+   다른 id <b>1개</b>」. 계약 둘이 <b>같은 id</b> 를 받았습니다.
+   같은 id 면 뒤에 온 계약이 앞의 것을 덮습니다 — <b>있는 보험이 화면에서
+   없어집니다.</b> 고객 앞에서 「그 보험 없으시네요」 가 되는 자리입니다.
+
+   예전 식은 Date.now() 와 난수를 이어 붙였습니다. 한 밀리초 안에 둘을
+   만들면 난수가 같을 확률이 <b>1/1000</b> 이라, 로컬에서는 안 나고 CI 에서
+   납니다 — 그래서 여태 「가끔 빨개지는 것」 으로 보였습니다. 가끔 나는
+   고장은 흔들림이 아니라 <b>아직 안 걸린 고장</b>입니다.
+
+   ★ 이제 <b>세는 수</b>를 함께 붙입니다 — 같은 밀리초라도 안 겹칩니다.
+   ★ id 모양을 뜯어 보는 자리는 없습니다(확인했습니다). 이미 담긴 id 는
+     그대로 씁니다 — 새로 만드는 것만 바뜁니다.
+   ⚠ 같은 병이 남은 자리가 <b>넷 더</b> 있습니다 — 팀원(m_) · 65019(s) ·
+     66975(h) · 67134(b). 각각 다른 화면이라 이 판에서 같이 건드리지
+     않았습니다. <b>그 자리들도 uidOf 를 부르게</b> 옮기는 것이 다음 일입니다. */
+var UID_N=0;
+function uidOf(pfx){
+  UID_N++;
+  return pfx+Math.round(Date.now()%1e8)+'_'+UID_N+'_'+Math.round(Math.random()*999);
+}
+function babaPlanId(){return uidOf('p');}
 function babaPlanAdd(slot){
   var L=babaPlans();
   L.push({id:babaPlanId(),co:'',nm:'',prem:null,cov:{},slot:slot||'b',keep:'',memo:''});
@@ -59568,6 +59879,101 @@ function cmRefRealSet(id,v){
   if(v)o[id]=v.slice(0,20);else delete o[id];
   cmLSSet('apex_cli_refreal_'+cmWho(),o);
 }
+/* ── 🔒 <b>주민등록번호</b> — 실명과 <b>똑같이</b> 이 기기에만 (3번) ───────
+   청약서에 넣을 번호라 손에 들고 있어야 합니다. 그런데 이 번호는 <b>한 번
+   새면 되돌릴 수 없는</b> 것이라, 담는 자리를 실명보다 더 좁게 잡습니다.
+
+   · <b>서버로 안 갑니다.</b> cmSave 를 타지 않습니다 — 열쇠가 따로입니다.
+     그래서 고객 칸(CM_FIELDS)에 <b>일부러 안 넣었습니다.</b> 거기 넣으면
+     cmSave 가 그대로 서버로 올립니다.
+   · <b>AI 로 안 갑니다.</b> AI 로 보내는 글은 고객 칸에서 만듭니다 — 여기
+     없으니 실릴 길이 없습니다. 말로 적으시면 MYP_RRN 이 막습니다.
+   · <b>백업 파일에도 안 담깁니다</b> — osLsNever 가 걸러 냅니다.
+   · <b>화면에는 가린 채로</b> 섭니다. 벗기는 것은 사람이 한 번 더 누를 때만
+     이고, 잠깐 뒤 <b>저절로 다시 가립니다</b> (3번).
+   · 브라우저 자료를 지우면 <b>같이 없어집니다.</b> 그것이 이 자리가 치르는
+     값입니다 — 대신 서버 어디에도 사본이 없습니다.                        */
+function cmRrn(){var o=cmLS('apex_cli_rrn_'+cmWho(),{});return (o&&typeof o==='object')?o:{};}
+function cmRrnOf(id){return cmRrn()[id]||'';}
+function cmRrnSet(id,v){
+  var o=cmRrn();
+  v=(''+(v||'')).replace(/[^0-9]/g,'');
+  if(v)o[id]=v.slice(0,13);else delete o[id];
+  cmLSSet('apex_cli_rrn_'+cmWho(),o);
+}
+/* ── 🧾 <b>청구 이력</b> — 이 기기에만 (3번) ─────────────────────────────
+   사장님 말씀 (2026-09-27) 「만기! 청구 이력은 입력하게 만들고」.
+   여태 담는 표가 아예 없어 「한눈에」 에 안 그렸습니다 (1번). 만들었습니다.
+
+   ★ <b>서버로 안 보냅니다.</b> 실비를 언제 얼마 청구했는지는 <b>병력에
+     가까운</b> 것입니다. 이 앱은 이미 「고객 실명·전화번호·<b>병력</b>은
+     AI 로 넘어가지 않습니다」 라고 정해 두었습니다 — 그 결을 따릅니다.
+     그래서 칸 표(CM_FIELDS)에 <b>일부러 안 넣었습니다</b>: 거기 넣으면
+     cmSave 가 그대로 서버로 올립니다.
+   ★ 만기는 서버에 담습니다 — 그것은 계약의 날짜이고 병력이 아닙니다.
+   ★ 설정·지식 백업 파일에는 <b>담습니다</b> — 사장님이 「고객 실명은 그대로
+     담을거야」 라고 하셨고, 이것도 복구할 때 잃으면 다시 못 적습니다.
+     (주민번호만 osLsNever 로 뺍니다 — 그것은 한 번 새면 끝입니다.)      */
+function cmClm(){var o=cmLS('apex_cli_clm_'+cmWho(),{});return (o&&typeof o==='object')?o:{};}
+function cmClmOf(id){var L=cmClm()[id];return (L&&L.push)?L:[];}
+function cmClmSet(id,L){
+  var o=cmClm();
+  if(L&&L.length)o[id]=L.slice(0,40);else delete o[id];
+  cmLSSet('apex_cli_clm_'+cmWho(),o);
+}
+/* 붙임표를 넣은 <b>날번호</b> — 청약 화면에 붙여 넣을 모양입니다 */
+function cmRrnDash(v){
+  var s=(''+(v||'')).replace(/[^0-9]/g,'');
+  return s.length>6?(s.slice(0,6)+'-'+s.slice(6)):s;
+}
+/* 가린 모양 — <b>이 한 곳</b>에서만 정합니다 (5번). 앞 여섯 자리와 성별 한
+   자리만 두고 나머지는 별입니다. 두 곳에서 각자 가리면 한쪽이 덜 가립니다  */
+function cmRrnMask(v){
+  var s=(''+(v||'')).replace(/[^0-9]/g,'');
+  if(!s)return '';
+  if(s.length<7)return s.slice(0,6)+'-';
+  /* 목각이 쓰는 모양 그대로 — 별표가 아니라 <b>●</b> 입니다 (2026-09-27) */
+  return s.slice(0,6)+'-'+s.slice(6,7)+new Array(Math.max(0,s.length-7)+1).join('●');
+}
+/* 「이 번호가 맞나」 를 묻는 곳 — <b>한 곳</b>입니다 (5번).
+   ★ 2026-09-27 에 <b>뒤집었습니다.</b> 처음에는 제 판단으로 검산을 안 보고
+     「이상해도 담는다」 로 만들었습니다. 그런데 사장님 목각(docs/APEX_목각_폰.html)
+     을 눌러 보니 <b>검산이 안 맞으면 저장을 막고</b> 「맞지 않는 번호입니다.
+     한 자리 잘못 치신 것 같습니다」 라고 말합니다. 설계는 사장님 것이고
+     저는 그것을 뒤집을 자리가 아니었습니다. <b>목각 그대로 갑니다.</b>
+   ⚠ 한 가지는 적어 둡니다 — 2020년 10월 뒤 발급분은 뒤 자리 부여 규칙이
+     바뀌었습니다. 맞는 번호가 막히는 일이 한 번이라도 생기면 이 함수에서
+     <b>rrnOk 줄만 빼면</b> 경고만 하고 담게 됩니다.                      */
+function cmRrnSum(s){
+  /* 검산 — 목각 rrnOk 와 <b>같은 식</b>입니다 */
+  var W=[2,3,4,5,6,7,8,9,2,3,4,5],t=0,i;
+  if(s.length!==13)return false;
+  for(i=0;i<12;i++)t+=W[i]*(+s.charAt(i));
+  return ((11-t%11)%10)===(+s.charAt(12));
+}
+function cmRrnWhy(v){
+  var s=(''+(v||'')).replace(/[^0-9]/g,'');
+  if(!s)return '';
+  if(s.length!==13)return '열세 자리를 다 적어 주십시오 — 지금 '+s.length+'자리입니다';
+  if(!cmRrnSum(s))return '맞지 않는 번호입니다. 한 자리 잘못 치신 것 같습니다';
+  if(!cmRrnBirth(s))return '앞자리를 못 읽었습니다';
+  return '';
+}
+/* 앞 일곱 자리에서 <b>생년월일·성별</b>을 읽습니다 — 목각 rrnBirth 그대로.
+   성별 자리가 5~8 이면 외국인등록번호입니다 — <b>그분도 고객입니다</b>.  */
+function cmRrnBirth(v){
+  var s=(''+(v||'')).replace(/[^0-9]/g,''),g,yy,mm,dd,cent;
+  if(s.length<7)return null;
+  g=+s.charAt(6); yy=+s.substr(0,2); mm=+s.substr(2,2); dd=+s.substr(4,2);
+  if(g===1||g===2||g===5||g===6)cent=1900;
+  else if(g===3||g===4||g===7||g===8)cent=2000;
+  else if(g===9||g===0)cent=1800;
+  else return null;
+  if(mm<1||mm>12||dd<1||dd>31)return null;
+  return {y:cent+yy,m:mm,d:dd,sex:(g%2===1?'남':'여'),
+          f:(cent+yy)+'년 '+mm+'월 '+dd+'일',
+          dt:new Date(cent+yy,mm-1,dd)};
+}
 /* 화면에 쓰는 이름 — 실명을 적어 두었으면 그것이 보기 편하다 */
 function cmName(c){
   if(!c)return '';
@@ -59592,15 +59998,37 @@ function cmName(c){
    ★ <b>null 은 「여쭙지 않는다」</b> 입니다 — 사람이 적는 칸이 아니거나(up)
      다른 칸에 딸린 것(fams·rel·refx)입니다. 셋째 칸 0 은 <b>줄 칸이 아니라</b>
      쓰이지 않는 자리입니다(cmBody 는 'arr' 일 때만 읽습니다).            */
+/* ── 🪧 <b>지금 상황</b> — 목각의 그 고르는 칸 (docs/APEX_목각_폰.html CARE) ──
+   사장님 목각에 적힌 열 가지 그대로입니다. <b>여기 한 곳</b>에만 둡니다 (5번) —
+   화면이 저마다 목록을 적으면 한쪽에만 「부모님 일」 이 빠집니다.
+   첫 칸이 빈 글인 것은 「아직 안 고름」 입니다 — 안 고르신 것과 「없음」 을
+   가릅니다 (1번).                                                       */
+var CM_CARE=['','결혼 준비','출산 · 육아','이직 · 퇴사','이사 · 내 집','개업 · 사업',
+             '자녀 진학','건강 문제','부모님 일','은퇴 준비'];
 var CM_FIELDS=[
  /* 재무설계 답 */
  ['fp',   'obj', 0, {ask:'팩트파인딩을 네 칸이라도 채워 볼까요?',
                      why:'숫자가 없으면 계산기도 상담자료도 <b>빈손으로</b> 갑니다.',
-                     how:'fld', fld:'cmFfN', pri:4}],
+                     how:'fld', fld:'cmFfN', pri:5}],
  /* 가족 이름 — 고객끼리 <b>묶는 열쇠</b> */
  ['fam',  'str', 0, {ask:'가족이 누구신지 묶어 둘까요?',
                      why:'한 사람만 보면 보장은 늘 모자라 보입니다.',
-                     how:'fld', fld:'cmFam', pri:5}],
+                     how:'fld', fld:'cmFam', pri:6}],
+ /* 🪧 <b>지금 상황</b> — 목각 적어 두기 카드의 첫 칸. 무슨 일을 겪고 계신가가
+    상담의 문을 엽니다. 고를 것은 CM_CARE 한 곳에서 옵니다 (5번).        */
+ ['care', 'str', 0, {ask:'지금 무슨 일을 겪고 계신지 고르실까요?',
+                     why:'결혼·출산·이사 같은 일이 <b>상담의 문</b>을 엽니다.',
+                     how:'fld', fld:'cmCare', pri:11}],
+ /* ── 📅 <b>만기</b> — 사장님 말씀 (2026-09-27) 「만기! 청구 이력은 입력하게 만들고」 ──
+    여태 이 값은 <b>담는 자리가 없어</b> 「한눈에」 에 안 그렸습니다 (1번).
+    자리를 만들었으니 이제 그립니다.
+    ★ <b>날짜로</b> 담습니다. 「D-30」 이라고 적지 않습니다 (사장님 말씀) —
+      며칠 남았는지는 보는 날마다 달라지므로, 담는 것은 날짜입니다.
+    ★ 여쭙는 차례는 <b>맨 끝(10)</b> 입니다. 앞 차례를 밀면 이미 초록인
+      자 여럿이 같이 흔들립니다 — 값보다 먼저 흔들지 않습니다.          */
+ ['due',  'str', 0, {ask:'가장 빠른 만기가 언제인지 적어 둘까요?',
+                     why:'만기가 다가오면 그것이 <b>다시 만날 이유</b>가 됩니다.',
+                     how:'fld', fld:'cmDue', pri:10}],
  /* 가족을 <b>줄로</b> 적은 것(배우자·자녀…) — fam 과 다른 칸이다 */
  ['fams', 'arr', 12, null],
  /* 이 사람의 자리 — 가족 이름과 <b>같은 단추</b>로 저장되므로 따로 안 여쭙는다 */
@@ -59609,26 +60037,38 @@ var CM_FIELDS=[
  ['next', 'any', 0, {ask:'다음에 무엇을 하실지 잡아 둘까요?',
                      why:'이것이 없으면 이분은 그대로 잊힙니다. 한 줄이면 됩니다.',
                      how:'tap', pri:1}],
+ /* ── 😟 <b>무엇을 제일 걱정하시나</b> — 다음 통화 <b>첫 문장</b>이 됩니다 ──
+    사장님 말씀 (2026-09-27 · 목각 사진 2) 「무엇을 제일 걱정하시나 —
+    <b>첫 문장에 붙일 말</b>」. 사진 1 의 초록 상자 「첫 문장에 붙일 것 —
+    …이라고 하셨습니다」 가 <b>이 칸에서 옵니다.</b>
+    ★ 여태 이 칸이 <b>없어서</b> 홈 카드의 그 상자가 안 섰습니다 — 코드에
+      「목업에는 있는데 이 앱에는 담을 자리가 없습니다. 지어 넣지
+      않습니다」 라고 적혀 있었습니다 (1번). <b>자리를 만들어</b> 세웁니다.
+    ★ 급한 차례를 <b>둘째</b>로 둡니다 — 다음 할 일 다음입니다. 이 한마디가
+      있으면 다음 통화가 「안녕하세요」 로 시작하지 않습니다.           */
+ ['worry','str', 0, {ask:'무엇을 제일 걱정하신다고 하셨나요?',
+                     why:'그 한마디가 <b>다음 통화 첫 문장</b>이 됩니다.',
+                     how:'fld', fld:'cmWorry', pri:2}],
  /* 접촉 기록 — 최근 60건만 */
  ['touch','arr', 60, {ask:'오늘 연락하셨나요?',
                      why:'남겨 두지 않으면 다음에 무슨 이야기를 했는지 모릅니다.',
-                     how:'tap', pri:2}],
+                     how:'tap', pri:3}],
  /* 생일 MM-DD */
  ['bd',   'str', 0, {ask:'생일을 아시나요?',
                      why:'해마다 한 번, <b>팔지 않고</b> 연락할 수 있는 날입니다.',
-                     how:'fld', fld:'cmBd', pri:3}],
+                     how:'fld', fld:'cmBd', pri:4}],
  /* 계약일 YYYY-MM-DD — 마디 접점이 이것으로 선다 */
  ['cd',   'str', 0, {ask:'계약일을 아시나요?',
                      why:'1·3·6·9·12개월 마디 접점이 <b>이 날짜로만</b> 섭니다.',
-                     how:'fld', fld:'cmCd', pri:6}],
+                     how:'fld', fld:'cmCd', pri:7}],
  /* 🗺️ 8통장 진단 결과 — {at:'YYYY-MM-DD', lv:{1:'ok'…}} */
  ['wal',  'obj', 0, {ask:'8통장 진단을 붙여 볼까요?',
                      why:'어디가 비었는지가 다음 상담을 만듭니다.',
-                     how:'wal', pri:8}],
+                     how:'wal', pri:9}],
  /* 🙌 소개해 주신 분 — <b>고객 번호</b>다(이름이 아니다 · 3번) */
  ['ref',  'str', 0, {ask:'누가 소개해 주셨나요?',
                      why:'결과를 알려 드려야 <b>다음 소개</b>가 옵니다.',
-                     how:'fld', fld:'cmRef', pri:7}],
+                     how:'fld', fld:'cmRef', pri:8}],
  /* 고객이 아닌 분 — <b>가린 이름만</b>(김○○). 실명은 이 기기에.
     ref 와 <b>같은 칸·같은 단추</b>로 적히므로 따로 안 여쭙는다 */
  ['refx', 'str', 0, null],
@@ -60726,9 +61166,10 @@ function cmToDeck(id){
 
 /* ── 다음 할 일 · 접촉 기록 ──
    이 두 가지가 고객관리의 전부다. 나머지는 이것을 돕는 것뿐이다. */
-function cmNextSave(id){
-  var what=(osVal('cmNextWhat')||'').replace(/^\s+|\s+$/g,'');
-  var due=osVal('cmNextDue')||'';
+/* ★ 2026-09-28 — cmTouchAdd 와 같은 까닥으로 <b>값을 받을 수 있게</b> 했습니다 */
+function cmNextSave(id,what0,due0){
+  var what=(''+(what0!=null?what0:(osVal('cmNextWhat')||''))).replace(/^\s+|\s+$/g,'');
+  var due=due0||osVal('cmNextDue')||'';
   if(!what){toast('다음에 무엇을 할지 한 줄만 적어 주세요');return;}
   cmSave(id,{next:{what:what.slice(0,120),due:due||cmToday()}},function(){
     toast('다음 할 일을 잡았습니다 — '+(due||cmToday()));
@@ -60747,10 +61188,16 @@ function cmNextDone(id){
   });
 }
 var CM_HOW=['전화','카톡','만남','문자','메일','처리'];
-function cmTouchAdd(id){
-  var how=osVal('cmTouchHow')||'전화';
-  var note=(osVal('cmTouchNote')||'').replace(/^\s+|\s+$/g,'');
-  var at=osVal('cmTouchAt')||cmToday();
+/* ★ 2026-09-28 — <b>값을 받을 수 있게</b> 했습니다. 안 주면 지금까지처럼
+   화면에서 읽습니다(부르던 자리는 그대로 돕니다).
+   왜 필요했나 — 「📝 적어 두기」 한 단추가 <b>할 일과 들은 말을 같이</b>
+   저장합니다. 앞의 저장이 끝나면 화면을 다시 그리는데, 그러면 뒤에 읽는
+   쪽이 <b>이미 비워진 칸</b>을 읽습니다. 실제로 그렇게 들은 말이 조용히
+   사라졌고 자가 잡았습니다. 값을 <b>먼저 손에 들고</b> 넘깁니다.        */
+function cmTouchAdd(id,note0,how0,at0){
+  var how=how0||osVal('cmTouchHow')||'전화';
+  var note=(''+(note0!=null?note0:(osVal('cmTouchNote')||''))).replace(/^\s+|\s+$/g,'');
+  var at=at0||osVal('cmTouchAt')||cmToday();
   var m=cmOf(id),L=(m.touch||[]).slice();
   L.unshift({at:at,how:how,note:note.slice(0,140)});
   cmSave(id,{touch:L},function(){
@@ -61272,9 +61719,21 @@ function cqaTouch(id,i){
 /* ── 적어야 하는 것은 <b>이미 있는 칸으로 데려갑니다</b> ──────────────
    ★ 칸을 또 만들지 않습니다 (5번). 같은 id 가 두 곳에 있으면 저장이
      엉뚱한 칸을 읽습니다. oscTopEdit 이 쓰는 방식 그대로입니다.      */
-function cqaFld(fid){
+/* ⚠ 2026-09-27 — <b>홈에서는 그 칸이 없습니다.</b> 이 카드가 홈에도 서면서
+   「여기에 적기」 가 <b>막다른 길</b>이 됐습니다 — 쪽지만 뜨고 아무 데도 못
+   갑니다. 칸이 없으면 <b>그 분 카드로 데려갑니다</b>(navGoCli 하나를 부릅니다 ·
+   5번). 열리고 나서 한 박자 뒤에 다시 짚습니다 — 그려지기 전에 찾으면
+   또 못 찾습니다.                                                       */
+function cqaFld(fid,id){
   var e=document.getElementById(fid);
-  if(!e){toast('이 칸은 「고객 365일」 상세 화면에서 적습니다');return;}
+  if(!e){
+    if(id&&typeof navGoCli==='function'){
+      navGoCli(id);
+      setTimeout(function(){ try{ cqaFld(fid); }catch(x0){} },700);
+      return;
+    }
+    toast('이 칸은 「고객 365일」 상세 화면에서 적습니다');return;
+  }
   try{ e.scrollIntoView({behavior:'smooth',block:'center'}); }
   catch(x){ try{ e.scrollIntoView(); }catch(x2){} }
   try{ e.focus({preventScroll:true}); }catch(x3){}
@@ -61294,8 +61753,13 @@ function cqaRepaint(id){
   if(document.getElementById('cmPanels')&&typeof cmDetailPaint==='function'){
     cmDetailPaint(id);return;
   }
-  var el=document.getElementById('cqaCard');
-  if(el)el.innerHTML=cqaInner(id);
+  var el=document.getElementById('cqaCard'),h;
+  if(!el)return;
+  /* 홈이냐 상세냐를 <b>다시 세지 않습니다</b> — 카드가 제 몸에 적어 둡니다 (5번) */
+  h=cqaInner(id,el.getAttribute('data-cmp'));
+  /* 홈에서 더 여쭐 것이 없어지면 <b>빈 상자를 남기지 않고</b> 카드를 걷습니다 (1번) */
+  if(!h){ try{ el.parentNode.removeChild(el); }catch(e0){ el.innerHTML=''; } return; }
+  el.innerHTML=h;
 }
 
 /* ── 보이는 것 ──────────────────────────────────────────────────── */
@@ -61306,7 +61770,7 @@ function cqaAnsHtml(id,x){
     for(i=0;i<CQA_NEXT.length;i++)
       h+='<button type="button" class="t-chip" onclick="cqaNextSet(\''+id+'\','+i+')">'+
          osEsc(CQA_NEXT[i][0])+'</button>';
-    h+='<button type="button" class="t-chip" onclick="cqaFld(\'cmNextWhat\')">직접 적기</button></div>';
+    h+='<button type="button" class="t-chip" onclick="cqaFld(\'cmNextWhat\',\''+id+'\')">직접 적기</button></div>';
     return h;
   }
   if(q.how==='tap'&&k==='touch'){
@@ -61315,46 +61779,78 @@ function cqaAnsHtml(id,x){
     for(i=0;i<H.length;i++)
       h+='<button type="button" class="t-chip" onclick="cqaTouch(\''+id+'\','+i+')">오늘 '+
          osEsc(H[i])+'</button>';
-    h+='<button type="button" class="t-chip" onclick="cqaFld(\'cmTouchNote\')">한 줄 적기</button></div>';
+    h+='<button type="button" class="t-chip" onclick="cqaFld(\'cmTouchNote\',\''+id+'\')">한 줄 적기</button></div>';
     return h;
   }
   if(q.how==='wal')
     return '<div class="t-chips"><button type="button" class="t-chip" onclick="cqaWal(\''+id+
            '\')">지도에서 진단하기 →</button></div>';
   return '<div class="t-chips"><button type="button" class="t-chip" onclick="cqaFld(\''+
-         osEsc(q.fld||'')+'\')">여기에 적기 →</button></div>';
+         osEsc(q.fld||'')+'\',\''+id+'\')">여기에 적기 →</button></div>';
 }
-function cqaInner(id){
+/* ★ <b>홈에서는(cmp) 물음 한 가지만</b> 섭니다 — 세는 줄(t-h1)·자(t-bar)·
+     꼬리글(t-sub)을 <b>안 그립니다</b>. 접은 홈이 한 화면에 들어야 해서입니다.
+   ★ <b>감추는 것이 아닙니다</b> (6번) — 똑같은 카드가 고객 365일 상세에서는
+     세는 줄까지 그대로 다 섭니다. 고칠 길이 사라지지 않습니다.
+   ★ <b>새 CSS·새 class 를 한 줄도 안 만들었습니다</b> — 있는 조각을 <b>덜</b>
+     그릴 뿐입니다 (사장님 말씀 「새 CSS 를 쓰지 마십시오. 한 줄도입니다」). */
+function cqaInner(id,cmp){
   var t=cqaTally(id),x,h='';
-  /* ★ 못 읽었으면 <b>수를 안 적습니다</b> (1번) */
+  /* ★ 못 읽었으면 <b>수를 안 적습니다</b> (1번).
+     ★ 홈에서는(cmp) <b>카드를 안 세웁니다</b> — 「값이 없으면 화면을 세우지
+       않는다」(1번). 아래 「다 아십니다」 도 같습니다. <b>여쭐 것이 없는 두
+       자리를 홈에서 똑같이</b> 다룹니다 — 한쪽만 상자를 세우면 왜 어떤 날은
+       노란 상자가 뜨고 어떤 날은 안 뜨는지 아무도 설명할 수 없습니다.
+       ★ <b>감춘 것이 아닙니다</b> (6번) — 고객 365일 상세에서는 아래 그대로
+         「못 읽었습니다」 가 서고, check-cqa 가 그것을 지킵니다. */
   if(!t)
-    return '<div class="t-big">고객 365일을 아직 못 읽었습니다.'+
+    return cmp ? '' :
+      '<div class="t-big">고객 365일을 아직 못 읽었습니다.'+
       '<small>무엇이 적혀 있는지 알기 전에는 여쭐 수가 없습니다 — '+
       '「0가지」 라고 적지 않습니다.</small></div>';
   x=cqaAsk(id);
-  h+='<div class="t-h1">아는 것 <em>'+t.got+'</em><span> / '+t.all+'가지</span></div>';
-  h+='<div class="t-bar"><i style="width:'+Math.round(t.got/t.all*100)+'%"></i></div>';
-  if(t.unk)
-    h+='<div class="t-sub">그 가운데 '+t.unk+'가지는 <b>아직 못 읽었습니다</b> — '+
-       '비었다는 뜻이 아닙니다.</div>';
+  /* 홈에서 <b>더 여쭐 것이 없으면 아무것도 안 세웁니다</b> (1번) — 「다
+     아십니다」 한 줄만 남은 상자는 홈에서 자리만 먹습니다. 상세에서는 그
+     한 줄이 <b>그대로 섭니다</b>(아래). */
+  if(cmp&&!x)return '';
+  if(!cmp){
+    /* 목각 카드는 <b>이름표로 시작</b>합니다 — 고객 365일에서는 이 카드만
+       이름표가 없어 한 장 안에서 혼자 결이 달랐습니다 (2026-09-27) */
+    h+='<div class="t-lab">🙋 한 가지만 여쭙습니다</div>';
+    h+='<div class="t-h1">아는 것 <em>'+t.got+'</em><span> / '+t.all+'가지</span></div>';
+    h+='<div class="t-bar"><i style="width:'+Math.round(t.got/t.all*100)+'%"></i></div>';
+    if(t.unk)
+      h+='<div class="t-sub">그 가운데 '+t.unk+'가지는 <b>아직 못 읽었습니다</b> — '+
+         '비었다는 뜻이 아닙니다.</div>';
+  }
   if(!x)
     return h+'<div class="t-sub">'+t.all+'가지를 <b>다 아십니다.</b> 더 여쭐 것이 없습니다 — '+
            '고치실 것은 아래 칸에서 언제든.</div>';
   h+='<div class="t-big">'+x.q.ask+'<small>'+x.q.why+'</small></div>';
   h+=cqaAnsHtml(id,x);
-  h+='<div class="t-sub" style="margin-top:12px;font-size:13px">한 번에 한 가지만 여쭙니다. '+
-     '답하시면 다음 것을 여쭙니다 — 남은 것 '+t.left.length+'가지.</div>';
+  if(!cmp)
+    h+='<div class="t-sub" style="margin-top:12px;font-size:13px">한 번에 한 가지만 여쭙니다. '+
+       '답하시면 다음 것을 여쭙니다 — 남은 것 '+t.left.length+'가지.</div>';
   return h;
 }
 /* ★ 홈에서도 <b>이 한 줄만</b> 부르면 됩니다 — 카드는 한 곳입니다 (5번) */
-function cqaHtml(id){
+function cqaHtml(id,cmp){
   if(!id)return '';
-  return '<div class="t-card" id="cqaCard" style="margin-bottom:16px">'+cqaInner(id)+'</div>';
+  var h=cqaInner(id,cmp);
+  if(!h)return '';
+  return '<div class="t-card" id="cqaCard"'+(cmp?' data-cmp="1"':'')+
+         ' style="margin-bottom:16px">'+h+'</div>';
 }
 
 function cmPanelsHtml(id){
   /* ★ 맨 위에 <b>한 가지만 여쭙는 카드</b>. 아래 칸들은 그대로입니다 — 감추면 고칠 길이 사라집니다 (6번). */
-  return cqaHtml(id)+cmRelHtml(id)+cmWalRefHtml(id)+cmFamHtml(id)+cmFfPanelHtml(id);
+  /* 차례는 <b>목각 vOne</b> 을 따릅니다 — 물음 → 지금 이 자리에서 →
+     적어 두기 → 쌓인 것 → 통장·소개 → 만기·청구 → 주민번호 → 가족 →
+     보낼 말 → 팩트파인딩.
+     ★ 걱정 카드(cmWorryHtml)는 <b>적어 두기 카드로 옮겨</b> 여기서 안
+       부릅니다 — 함수는 지우지 않았습니다 (부르는 자리만 한 곳으로 · 5번). */
+  return cqaHtml(id)+cmStageHtml(id)+cmNoteHtml(id)+cmRelHtml(id)+cmWalRefHtml(id)+
+         cmDueClmHtml(id)+cmRrnHtml(id)+cmFamHtml(id)+cmSayHtml(id)+cmFfPanelHtml(id);
 }
 /* ══ 🗺️🙌 <b>빈 통장 · 소개</b> — 담을 칸이 생겼으니 보이는 자리도 ══════
    ★ <b>「없다」 와 「아직 안 봤다」 를 갈라 적습니다</b> (1번). 진단을 안
@@ -61364,123 +61860,546 @@ function cmPanelsHtml(id){
      cmRefsOf 를 그대로 부릅니다 (5번).                                 */
 function cmWalRefHtml(id){
   var w=cmWalOf(id),low=cmWalLow(id),rf=cmRefName(id),mine=cmRefsOf(id),h='',i,c;
-  h+='<div class="osc-panel" style="margin-bottom:16px">'+
-    '<h3 style="font-size:var(--t4);font-weight:800;margin-bottom:4px">빈 통장 · 소개</h3>'+
-    '<p style="font-size:var(--t6);color:#6B7280;line-height:1.6;margin-bottom:10px">'+
-      '<b>어디가 비었는지</b>와 <b>누가 보내 주셨는지</b> — 이 둘이 다음 상담을 만듭니다.</p>';
+  /* 목각 옷 — 「없다」 와 「아직 안 봤다」 는 여전히 갈라 적습니다 (1번) */
+  h+='<div class="t-card" style="margin-bottom:16px">'+
+    '<div class="t-lab">🗺️ 빈 통장 · 소개</div>'+
+    '<div class="t-big">어디가 비었는지 · 누가 보내 주셨는지<small>이 둘이 다음 상담을 만듭니다.</small></div>';
   /* 🗺️ 8통장 */
-  h+='<div class="cm-wr"><b>🗺️ 8통장 진단</b>';
-  if(!w){
-    h+='<span class="cm-wr-n">아직 진단을 안 붙였습니다</span>'+
-       '<button type="button" class="btn btn-ghost" onclick="waOpenFor(\''+id+'\')">지도에서 진단하기 →</button>';
-  }else{
-    h+=low.length
-      ? ('<span class="cm-wr-low">비어 있는 통장 '+low.length+'개 — '+osEsc(low.join(' · '))+'</span>')
-      : '<span class="cm-wr-ok">미흡으로 찍힌 칸이 없습니다</span>';
-    h+='<em>'+osEsc(w.at||'')+' 진단</em>'+
-       '<button type="button" class="btn btn-ghost" onclick="waOpenFor(\''+id+'\')">지도에서 열기 →</button>';
-  }
-  h+='</div>';
+  h+='<div class="t-row"><div class="m"><b>8통장 진단</b><span>';
+  if(!w)h+='아직 진단을 안 붙였습니다';
+  else h+=(low.length?('비어 있는 통장 '+low.length+'개 — '+osEsc(low.join(' · '))):'미흡으로 찍힌 칸이 없습니다')+
+          ' · '+osEsc(w.at||'')+' 진단';
+  h+='</span></div><div class="r">'+
+     '<button type="button" class="t-gb" onclick="waOpenFor(\''+id+'\')">'+(w?'지도에서 열기':'지도에서 진단')+'</button>'+
+     '</div></div>';
   /* 🙌 소개 */
-  h+='<div class="cm-wr"><b>🙌 소개해 주신 분</b>';
-  if(!rf)h+='<span class="cm-wr-n">아직 적지 않았습니다 — 아래 칸에 적어 주세요</span>';
+  h+='<div class="t-row"><div class="m"><b>🙌 소개해 주신 분</b><span>';
+  c=null;
+  if(!rf)h+='아직 적지 않았습니다 — 아래 칸에 적어 주십니다';
   else{
     c=cmOf(id).ref?cmCliOf(cmOf(id).ref):null;
-    h+=c?('<button type="button" class="cm-chip" onclick="osOpenClient(\''+c.id+'\')">'+
-          '<span class="e">🙌</span>'+osEsc(rf)+'</button>')
-       :('<span class="cm-wr-low">'+osEsc(rf)+'</span>');
+    h+=osEsc(rf)+(c?' · 고객으로 이어져 있습니다':' · 고객으로는 아직 없습니다');
   }
-  h+='</div>';
+  h+='</span></div>'+(c?('<div class="r"><button type="button" class="t-gb" onclick="osOpenClient(\''+c.id+'\')">열기</button></div>'):'')+'</div>';
   if(mine.length){
-    h+='<div class="cm-wr"><b>🤝 이분이 소개해 주신 분</b><span class="cm-wr-ok">'+mine.length+'명</span></div>'+
-       '<div class="cm-fmem">';
+    h+='<div class="t-row"><div class="m"><b>🤝 이분이 소개해 주신 분</b><span>'+mine.length+'명</span></div></div>'+
+       '<div class="t-chips">';
     for(i=0;i<mine.length&&i<12;i++)
-      h+='<button type="button" class="cm-chip" onclick="osOpenClient(\''+mine[i].id+'\')">'+
-         '<span class="e">'+cmTemp(mine[i].id).e+'</span>'+osEsc(cmName(mine[i]))+'</button>';
+      h+='<button type="button" class="t-chip" onclick="osOpenClient(\''+mine[i].id+'\')">'+
+         cmTemp(mine[i].id).e+' '+osEsc(cmName(mine[i]))+'</button>';
     h+='</div>';
-    if(mine.length>12)h+='<div class="cm-none">그 밖에 '+(mine.length-12)+'분이 더 있습니다.</div>';
+    if(mine.length>12)h+='<div class="t-sub">그 밖에 '+(mine.length-12)+'분이 더 있습니다.</div>';
   }
   h+='</div>';
   return h;
+}
+/* ══ 😟 <b>무엇을 제일 걱정하시나</b> — 적어 두면 첫 문장이 됩니다 ══
+   사장님 말씀 (2026-09-27 · 목각 사진 2) 「무엇을 제일 걱정하시나 —
+   <b>첫 문장에 붙일 말</b>」.
+   ★ 여태 이 칸이 <b>없어서</b> 홈 카드의 초록 상자(사진 1 의 「첫 문장에
+     붙일 것」)가 안 섰습니다. 코드에 「목업에는 있는데 이 앱에는 담을
+     자리가 없습니다 — 지어 넣지 않습니다」 라고 적혀 있었습니다 (1번).
+     <b>자리를 만들었으니</b> 이제 섭니다.
+   ★ <b>저장 코드를 새로 안 짰습니다</b> — cmSave 하나로만 갑니다
+     (사장님 말씀). 칸 표(CM_FIELDS)에 한 줄 더한 것이 전부입니다.
+   ★ <b>새 CSS 0줄</b> — ui.css 의 t-card · t-lab · t-big · t-fld · t-btn. */
+function cmWorryHtml(id){
+  var v=(cmOf(id).worry||'');
+  return '<div class="t-card" style="margin-bottom:16px">'+
+    '<div class="t-lab">😟 무엇을 제일 걱정하시나</div>'+
+    '<div class="t-big">들으신 그대로 한 줄만'+
+      '<small>여기 적으시면 <b>홈 카드 첫 문장</b>에 그대로 섭니다 — '+
+      '다음 통화가 「안녕하세요」 로 시작하지 않습니다.</small></div>'+
+    '<div class="t-fld"><span class="l">고객이 하신 말</span>'+
+      '<textarea id="cmWorry" rows="2" placeholder="아이 교육비가 제일 걱정이라고 하셨습니다">'+
+      osEsc(v)+'</textarea></div>'+
+    '<button type="button" class="t-btn sm" style="margin-top:12px" '+
+      'onclick="cmWorrySave(\''+id+'\')">적어 두기</button>'+
+  '</div>';
+}
+function cmWorrySave(id){
+  /* 쓰는 곳은 <b>cmSave 하나</b>입니다 (5번) */
+  cmSave(id,{worry:(osVal('cmWorry')||'')},function(){
+    toast('적어 두었습니다 — 홈 카드 첫 문장에 섭니다');
+    cmDetailPaint(id);
+  });
+}
+/* ══ 🔒 <b>주민등록번호</b> 칸 — 목각 사진 2 ══════════════════
+   ★ <b>있는 .t-note 로 갑니다</b> (사장님 2026-09-27). 목각 상자는 ui.css 에
+     없는 이름이었습니다 — 모자라도 <b>새 class 를 만들지 않습니다.</b>
+   ★ <b>날번호를 그릴 때 DOM 에 안 넣습니다.</b> 「잠깐 보기」를 누른 순간에만
+     한 칸에 씁니다. 그래서 인쇄·캡처에는 <b>가린 모양만</b> 남습니다.
+   ★ 담긴 뒤에도 고치기·지우기를 <b>안 감춥니다</b> (6번). 번호가 틀리게
+     담긴 채로 단추가 사라지면, 고칠 길이 없어집니다.
+   ★ 고칠 때도 칸을 <b>비워서</b> 엽니다 — 날번호를 value 로 넣으면 그것이
+     다시 DOM 에 들어옵니다. 열세 자리를 다시 적으시는 값을 치릅니다.      */
+var CM_RRN_T=0;
+/* 저절로 가리기까지 <b>스무 초.</b> 이름을 붙여 둡니다 — 자가 이 값을 줄여
+   놓고 <b>타이머가 정말 도는지</b>를 재기 때문입니다. 숫자를 코드 속에
+   박아 두면 자는 「setTimeout 이 적혀 있다」 까지만 보고 끝납니다 (8번). */
+var CM_RRN_MS=20000;
+/* ══ 📅🧾 <b>만기 · 청구 이력</b> — 목각에는 보이는데 담을 자리가 없던 둘 ══
+   사장님 말씀 (2026-09-27) 「<b>만기! 청구 이력은 입력하게 만들고</b>」.
+   ★ 담는 자리가 <b>둘로 갈립니다</b> — 그 이유를 화면에도 적어 둡니다:
+     · 만기 = 계약의 날짜 → <b>서버</b>(cmSave 하나 · 팀도 봅니다)
+     · 청구 이력 = 병력에 가까운 것 → <b>이 기기에만</b> (3번)
+   ★ 적힌 것만 「한눈에」 에 섭니다. 안 적으셨으면 <b>안 섭니다</b> (1번).   */
+/* ══ 📝 <b>적어 두기 — 이 분 상황</b> · 목각의 그 한 카드 ══════════════════
+   사장님 말씀 (2026-09-28) 「남은 목각 다 해줘」. 목각(vOne)의 적어 두기
+   카드는 <b>한 자리에서</b> 다섯을 받습니다 —
+     지금 상황 · 무엇을 제일 걱정하시나 · 다음에 할 날 · 그날 할 것 · 들은 말
+   앱에서는 이것들이 <b>세 카드에 흩어져</b> 있었습니다(걱정 카드 · 관계
+   카드 · 고객 정보). 한 자리로 모읍니다.
+
+   ★ <b>베끼지 않고 옮깁니다</b> (5번). 모으면서 원래 자리의 <b>적는 칸을
+     뺐습니다</b> — 같은 것이 두 곳에 있으면 한쪽에 적고 다른 쪽을 보고
+     「안 적혔네」 하게 됩니다. 관계 카드에는 <b>쌓인 것</b>(온도·다음 할
+     일·접촉 기록 목록)만 남습니다.
+   ★ <b>저장 코드를 새로 안 짰습니다</b> — cmSave 하나와, 접촉 기록은 이미
+     있는 cmTouchAdd 를 부릅니다 (사장님 말씀 · 5번).
+   ★ 들은 말은 <b>접촉 기록으로</b> 들어갑니다 — 목각의 「통화에서 들은 말을
+     그대로 적어 두십시오」 가 이 앱에서는 그 자리입니다. 메모를 따로
+     만들면 「몇 번 연락했나」 가 또 갈립니다 (5번).                      */
+/* ══ 🧭 <b>지금 이 자리에서</b> · 목각 stageCard ═══════════════════════════
+   사장님 말씀 (2026-09-28) 「남은 목각 다 해줘」.
+   ★ 말은 <b>apex-stage.js 한 곳</b>에서 옵니다 (5번) — 여기서 새로 적지
+     않습니다. 홈 카드(hmJudgeHtml)도 같은 표를 봅니다.
+   ★ <b>표에 없는 것은 안 그립니다</b> (1번). 판단(q)과 아는 것(know)은
+     지금 <b>AP 에만</b> 있습니다 — 나머지 아홉 단계는 사장님이 불러
+     주시면 그때 섭니다. 없는 자리에 그럴듯한 말을 지어 넣으면 사장님이
+     고객 앞에서 그것을 사실로 읽으십니다.
+   ★ 도구 칩은 <b>정말 열리는 화면만</b> 답니다 — navItemOf 로 걸러 냅니다.
+     이름표가 없는 화면을 칩으로 세우면 눌러도 아무 일이 안 납니다.      */
+function cmStageHtml(id){
+  var c=(typeof cmCliOf==='function')?cmCliOf(id):null,st='',g,h='',i,k,tl,on=[],nx;
+  var n=['①','②','③','④','⑤'];
+  if(typeof APEX_STAGE==='undefined'||!APEX_STAGE.of)return '';
+  try{ st=(c&&c.stage)||((typeof CUS!=='undefined'&&CUS.db&&CUS.db.stage)||''); }catch(e){}
+  if(!st)return '';
+  g=APEX_STAGE.of(st);
+  if(!g)return '';                      /* 모르는 단계는 <b>안 세웁니다</b> (1번) */
+  h+='<div class="t-card" style="margin-bottom:16px">'+
+     '<div class="t-lab">🧭 지금 이 자리에서 — '+osEsc(st)+' · '+osEsc(g.ch||'')+'로 합니다</div>'+
+     '<div class="t-big">'+(g.aim||'')+'<small>'+osEsc(g.way||'')+'</small></div>';
+  if(g.q&&g.q.length){
+    h+='<div class="t-note b">판단 —';
+    for(i=0;i<g.q.length&&i<5;i++)h+=' <b>'+n[i]+'</b> '+osEsc(g.q[i]);
+    h+='</div>';
+  }
+  if(g.know&&g.know.length){
+    for(i=0;i<g.know.length;i++){
+      k=g.know[i];
+      if(typeof navItemOf==='function'&&!navItemOf(k.tab))continue;
+      on.push(k);
+    }
+    if(on.length){
+      h+='<div class="t-sub">앱이 이미 아는 것 — 눌러서 바로 보십니다.</div><div class="t-chips">';
+      for(i=0;i<on.length;i++)
+        h+='<button type="button" class="t-chip" onclick="go(\''+osEsc(on[i].tab)+'\')">'+osEsc(on[i].t)+'</button>';
+      h+='</div>';
+    }
+  }
+  /* 이 단계에서 쓰는 도구 — 표가 아는 것만, 그리고 정말 열리는 것만 */
+  if(APEX_STAGE.tools){
+    tl=APEX_STAGE.tools(st)||[];
+    var ok=[];
+    for(i=0;i<tl.length;i++)
+      if(typeof navItemOf!=='function'||navItemOf(tl[i].id))ok.push(tl[i]);
+    if(ok.length){
+      h+='<div class="t-sub">이 자리에서 쓰는 것</div><div class="t-chips">';
+      for(i=0;i<ok.length;i++)
+        h+='<button type="button" class="t-chip" onclick="go(\''+osEsc(ok[i].id)+'\')">'+
+           osEsc(ok[i].e||'')+' '+osEsc(ok[i].t||'')+'</button>';
+      h+='</div>';
+    }
+  }
+  nx=APEX_STAGE.next?APEX_STAGE.next(st):'';
+  h+='<div class="t-note">'+(nx?('여기서 잘되면 다음은 <b>'+osEsc(nx)+'</b> 입니다.')
+     :'여기가 마지막 자리입니다 — 다음이 없습니다.')+'</div>';
+  return h+'</div>';
+}
+/* ══ 💬 <b>보낼 말</b> · 목각의 마지막 칸 ═════════════════════════════════
+   ★ 말을 <b>지어내지 않습니다</b> (1번). APEX_STAGE.script(단계, 어디서
+     왔나, 나이대) 가 돌려주는 것만 적습니다 — 홈·미션도 같은 문을 지납니다
+     (5번). 표가 모르는 단계면 <b>칸을 안 세웁니다.</b>
+   ★ 「하지 말 것」·「여기서 멈춤」 이 표에 있으면 <b>같이</b> 세웁니다 —
+     보낼 말만 떼어 주면 그 자리에서 선을 넘습니다.
+   ★ 나이대는 <b>알 때만</b> 넘깁니다. 모르는 것을 기본값으로 채우면
+     화면이 그것을 사실로 적습니다 (1번).                                */
+function cmSayHtml(id){
+  var c=(typeof cmCliOf==='function')?cmCliOf(id):null,st='',src='',S,h='',by=null,band='';
+  if(typeof APEX_STAGE==='undefined'||!APEX_STAGE.script)return '';
+  try{ st=(c&&c.stage)||((typeof CUS!=='undefined'&&CUS.db&&CUS.db.stage)||''); }catch(e){}
+  try{ src=(typeof CUS!=='undefined'&&CUS.db&&CUS.db.source)||''; }catch(e){}
+  if(!st)return '';
+  /* 나이대 — 주민번호를 적어 두셨으면 그것에서, 아니면 <b>안 넘깁니다</b> */
+  try{
+    by=(typeof cmRrnBirth==='function')?cmRrnBirth(cmRrnOf(id)):null;
+    if(by&&APEX_STAGE.ageBand&&typeof insAgeOf==='function'){
+      var R=insAgeOf(by.dt,new Date());
+      if(R)band=APEX_STAGE.ageBand(R.age)||'';
+    }
+  }catch(e){}
+  S=APEX_STAGE.script(st,src,band||undefined);
+  if(!S||!S.say)return '';
+  h+='<div class="t-card" style="margin-bottom:16px">'+
+     '<div class="t-lab">💬 보낼 말 — '+osEsc(st)+'</div>'+
+     '<div class="t-big">'+osEsc(S.t||'')+'<small>보이는 그대로 들어갑니다.'+
+       (S.src?' 어디서 오신 분인가로 첫 마디가 갈립니다.':'')+
+       (band?' 나이대 한마디가 끝에 붙었습니다.':' 나이대는 <b>모르면 안 붙입니다</b>.')+
+       '</small></div>'+
+     '<div class="t-script">'+osEsc(S.say)+'</div>'+
+     '<div class="t-chips">'+
+       '<button type="button" class="t-gb b" onclick="cmSayCopy(\''+id+'\')">📋 복사</button>'+
+     '</div>';
+  if(S.tip)h+='<div class="t-note g">'+osEsc(S.tip)+'</div>';
+  if(S.avoid)h+='<div class="t-note">하지 말 것 — '+osEsc(S.avoid)+'</div>';
+  if(S.stop)h+='<div class="t-note">여기서 멈춤 — '+osEsc(S.stop)+'</div>';
+  return h+'</div>';
+}
+/* 복사 — <b>보이는 그대로</b>. 못 했을 때도 말을 토스트에 쏟지 않습니다 */
+function cmSayCopy(id){
+  var el=document.getElementById('cmPanels'),box=el?el.querySelector('.t-script'):null,
+      t=box?(box.textContent||''):'',no='복사하지 못했습니다 — 글을 손으로 골라 복사해 주십시오';
+  if(!t){toast('보낼 말이 없습니다');return;}
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      navigator.clipboard.writeText(t).then(function(){toast('복사했습니다 — 보이는 그대로 들어갑니다');},function(){toast(no);});
+    else toast(no);
+  }catch(e){toast(no);}
+}
+function cmNoteHtml(id){
+  var m=cmOf(id),nx=(m.next&&m.next.what)?m.next:null,i,h='';
+  if(!id)return '';
+  h+='<div class="t-card" style="margin-bottom:16px">'+
+     '<div class="t-lab">📝 적어 두기 — 이 분 상황</div>'+
+     '<div class="t-big">한 자리에서 다 적습니다<small>흩어져 있던 것을 모았습니다. 적으시면 홈 카드와 「한눈에」 에 그대로 섭니다.</small></div>'+
+     '<div class="t-fld"><span class="l">지금 상황</span><select id="cmCare">';
+  for(i=0;i<CM_CARE.length;i++)
+    h+='<option value="'+osEsc(CM_CARE[i])+'"'+((m.care||'')===CM_CARE[i]?' selected':'')+'>'+
+       (CM_CARE[i]?osEsc(CM_CARE[i]):'— 아직 안 골랐습니다 —')+'</option>';
+  h+='</select></div>'+
+     '<div class="t-fld"><span class="l">무엇을 제일 걱정하시나 — 첫 문장에 붙일 말</span>'+
+       '<textarea id="cmWorry" rows="2" placeholder="아이 교육비가 제일 걱정이라고 하셨습니다">'+osEsc(m.worry||'')+'</textarea></div>'+
+     '<div class="t-row2" style="align-items:flex-end">'+
+     '<div class="t-fld" style="flex:1"><span class="l">다음에 할 날</span>'+
+       '<input id="cmNextDue" type="date" value="'+osEsc(nx&&nx.due?nx.due:cmToday())+'"></div>'+
+     '<div class="t-fld" style="flex:1"><span class="l">그날 할 것</span>'+
+       '<input id="cmNextWhat" type="text" placeholder="만기 안내하고 다음 자리 잡기" value="'+osEsc(nx?nx.what:'')+'"></div>'+
+     '</div>'+
+     '<div class="t-lab" style="margin-top:22px">📞 들은 말 — 접촉 기록으로 남습니다</div>'+
+     '<div class="t-row2" style="align-items:flex-end">'+
+     '<div class="t-fld" style="flex:1"><span class="l">어떻게</span><select id="cmTouchHow">';
+  for(i=0;i<CM_HOW.length;i++)h+='<option>'+osEsc(CM_HOW[i])+'</option>';
+  h+='</select></div>'+
+     '<div class="t-fld" style="flex:1"><span class="l">언제</span>'+
+       '<input id="cmTouchAt" type="date" value="'+cmToday()+'"></div>'+
+     '</div>'+
+     '<div class="t-fld"><span class="l">들은 말 그대로</span>'+
+       '<textarea id="cmTouchNote" rows="2" placeholder="통화에서 들은 말을 그대로 적어 두십시오"></textarea></div>'+
+     '<div class="t-row2" style="margin-top:16px">'+
+       '<button type="button" class="t-btn sm" onclick="cmNoteSave(\''+id+'\')">적어 두기</button>'+
+       '<button type="button" class="t-btn g sm" style="flex:0 0 96px" onclick="cmNoteClear(\''+id+'\')">비우기</button>'+
+     '</div>'+
+     '<div class="t-note">가족은 위 <b>👨‍👩‍👧 가족</b> 칸에서 줄로 적습니다 — 여기 또 두면 두 곳이 갈립니다 (5번).</div>'+
+  '</div>';
+  return h;
+}
+/* 한 단추로 <b>적힌 것만</b> 저장합니다 — 빈 칸은 건드리지 않습니다.
+   ★ 쓰는 곳은 <b>cmSave 하나</b>와, 접촉 기록은 이미 있는 <b>cmTouchAdd</b> (5번). */
+function cmNoteSave(id){
+  var care=(osVal('cmCare')||''),worry=(osVal('cmWorry')||''),
+      what=(osVal('cmNextWhat')||''),note=(osVal('cmTouchNote')||'');
+  /* ★ 다음 할 일은 <b>cmNextSave</b> 가, 들은 말은 <b>cmTouchAdd</b> 가 이미
+     압니다 — 여기서 <b>다시 적지 않습니다</b> (5번). 처음에 제가 next 를
+     베껴 넣었다가 되돌렸습니다: 베끼면 한쪽만 고친 날 두 곳이 갈립니다.
+     셋 다 <b>cmSave 하나</b>를 지나고, 같은 객체를 고쳐 통째로 보내므로
+     어느 순서로 끝나도 다 담깁니다. 할 일이 <b>없는데</b> 날짜만 있으면
+     잡지 않습니다 — 홈에 빈 줄이 섭니다 (cmNextSave 가 그것을 막습니다). */
+  /* ★ 값을 <b>먼저 다 읽어</b> 둡니다. 앞의 저장이 화면을 다시 그리면
+     칸이 비워지므로, 그 뒤에 읽는 쪽은 빈손이 됩니다 (실제로 그랬습니다). */
+  var due=(osVal('cmNextDue')||''),how=(osVal('cmTouchHow')||''),at=(osVal('cmTouchAt')||'');
+  cmSave(id,{care:care,worry:worry},function(){
+    var did=false;
+    if(what&&typeof cmNextSave==='function'){ cmNextSave(id,what,due); did=true; }
+    if(note&&typeof cmTouchAdd==='function'){ cmTouchAdd(id,note,how,at); did=true; }
+    if(!did){
+      toast('적어 두었습니다 — 홈 카드와 「한눈에」 에 섭니다');
+      cmDetailPaint(id);
+    }
+  });
+}
+/* 비우기 — <b>화면의 칸만</b> 비웁니다. 담긴 것은 그대로 둡니다.
+   적어 둔 것을 단추 하나로 날리면 되돌릴 길이 없습니다 (6번).           */
+function cmNoteClear(id){
+  ['cmWorry','cmNextWhat','cmTouchNote'].forEach(function(k){
+    var e=document.getElementById(k); if(e)e.value='';
+  });
+  var c=document.getElementById('cmCare'); if(c)c.value='';
+  toast('칸만 비웠습니다 — 담긴 것은 그대로입니다');
+}
+function cmDueClmHtml(id){
+  var m=cmOf(id),L=cmClmOf(id),h='';
+  if(!id)return '';
+  h+='<div class="t-card" style="margin-bottom:16px">'+
+     '<div class="t-lab">📅 만기 · 🧾 청구 이력</div>'+
+     '<div class="t-big">목각에 있던 두 줄<small>여태 담을 자리가 없어 「한눈에」 에 안 섰습니다. 적으시면 바로 섭니다.</small></div>'+
+     '<div class="t-fld"><span class="l">가장 빠른 만기 — 날짜로</span>'+
+       '<input id="cmDue" type="date" value="'+osEsc(m.due||'')+'"></div>'+
+     '<button type="button" class="t-btn sm" style="margin-top:12px" onclick="cmDueSave(\''+id+'\')">만기 적어 두기</button>'+
+     '<div class="t-lab" style="margin-top:22px">🧾 청구 이력 — 이 기기에만</div>'+
+     '<div id="cmClmRows">'+cmClmRowsHtml(id)+'</div>'+
+     '<div class="t-row2" style="margin-top:14px">'+
+       '<button type="button" class="t-btn g sm" onclick="cmClmAdd(\''+id+'\')">＋ 한 줄 더</button>'+
+       '<button type="button" class="t-btn sm" onclick="cmClmSave(\''+id+'\')">청구 이력 적어 두기</button></div>'+
+     '<div class="t-note">만기는 <b>서버에 담깁니다</b> — 팀도 봅니다. 청구 이력은 <b>이 기기에만</b> 둡니다 — '+
+       '실비를 언제 얼마 청구했는지는 <b>병력에 가까운 것</b>이라, 이 앱이 병력을 다루는 그 결을 따릅니다.</div>'+
+  '</div>';
+  return h;
+}
+function cmClmRowsHtml(id){
+  var L=cmClmOf(id),h='',i,r;
+  if(!L.length)return '<div class="t-empty">아직 적은 청구가 없습니다.<br><b>＋ 한 줄 더</b> 로 시작하십니다.<br>없는 것과 <b>안 적은 것</b>은 다릅니다 — 없으면 「없음」 한 줄만 적어 두십니다.</div>';
+  for(i=0;i<L.length;i++){
+    r=L[i]||{};
+    h+='<div class="t-row2" style="align-items:flex-end">'+
+      '<div class="t-fld" style="flex:1"><span class="l">언제</span>'+
+        '<input id="cmClmAt'+i+'" type="date" value="'+osEsc(r.at||'')+'"></div>'+
+      '<div class="t-fld" style="flex:1"><span class="l">받은 돈 (원)</span>'+
+        '<input id="cmClmWon'+i+'" type="number" placeholder="320000" value="'+osEsc(r.won||'')+'"></div>'+
+      '</div>'+
+      '<div class="t-row2" style="align-items:flex-end">'+
+      '<div class="t-fld" style="flex:1"><span class="l">무엇으로</span>'+
+        '<input id="cmClmWhat'+i+'" type="text" placeholder="입원 · 통원 · 수술 · 없음" value="'+osEsc(r.what||'')+'" maxlength="30"></div>'+
+      '<button type="button" class="t-gb" style="margin-top:14px" onclick="cmClmDel(\''+id+'\','+i+')">이 줄 지우기</button></div>';
+  }
+  return h;
+}
+/* 화면에 떠 있는 것을 읽습니다 — 칸이 없으면 담아 둔 것을 그대로 씁니다.
+   ★ 받은 돈은 <b>원</b>입니다 (4번 — 이름이 단위를 말합니다: won).      */
+function cmClmRead(id){
+  var L=cmClmOf(id),out=[],i,
+      g=function(k,i2){var e=document.getElementById(k+i2);return e?(''+(e.value==null?'':e.value)).replace(/^\s+|\s+$/g,''):null;};
+  for(i=0;i<L.length;i++){
+    var at=g('cmClmAt',i),won=g('cmClmWon',i),what=g('cmClmWhat',i);
+    if(at===null&&won===null&&what===null){out.push(L[i]);continue;}
+    out.push({at:at||'',won:won||'',what:what||''});
+  }
+  return out;
+}
+function cmClmAdd(id){
+  var L=cmClmRead(id);
+  L.push({at:cmToday(),won:'',what:''});
+  cmClmSet(id,L);
+  cmDetailPaint(id);
+}
+function cmClmDel(id,i){
+  var L=cmClmRead(id);
+  L.splice(i,1);
+  cmClmSet(id,L);
+  cmDetailPaint(id);
+}
+function cmClmSave(id){
+  cmClmSet(id,cmClmRead(id));
+  toast('이 기기에만 적어 두었습니다 — 서버로 보내지 않았습니다');
+  cmDetailPaint(id);
+}
+/* 만기는 <b>cmSave 하나</b>로만 갑니다 (5번) */
+function cmDueSave(id){
+  cmSave(id,{due:(osVal('cmDue')||'')},function(){
+    toast('만기를 적어 두었습니다 — 「한눈에」 에 섭니다');
+    cmDetailPaint(id);
+  });
+}
+function cmRrnHtml(id){
+  var v=cmRrnOf(id),why=cmRrnWhy(v),h='';
+  if(!id)return '';
+  h+='<div class="t-card" style="margin-bottom:16px">'+
+     '<div class="t-lab">🔒 주민등록번호</div>';
+  if(v){
+    h+='<div class="t-big"><span id="cmRrnV" data-cid="'+osEsc(id)+'">'+osEsc(cmRrnMask(v))+'</span>'+
+       '<small>이 기기에만 담겨 있습니다 — 서버에는 없습니다.</small></div>'+
+       '<div class="t-chips">'+
+       '<button type="button" class="t-gb" onclick="cmRrnShow(\''+id+'\')">잠깐 보기</button>'+
+       '<button type="button" class="t-gb" onclick="cmRrnHide()">가리기</button>'+
+       '<button type="button" class="t-gb" onclick="cmRrnCopy(\''+id+'\')">복사</button>'+
+       '<button type="button" class="t-gb" onclick="cmRrnEdit()">고치기</button>'+
+       '<button type="button" class="t-gb" onclick="cmRrnDel(\''+id+'\')">지우기</button>'+
+       '</div>';
+    /* ★ <b>목각을 눌러 보고 알았습니다</b> (2026-09-27) — 이 칸의 값은 번호를
+       보관하는 것이 아니라 <b>여기서 보험나이와 상령일이 나오는 것</b>입니다.
+       저는 가린 번호만 보여 주고 있었습니다.
+       셈은 <b>insAgeOf 한 곳</b>에서 옵니다 — 계산기 화면과 같은 답입니다 (5번).
+       못 읽으면 <b>안 적습니다</b> — 지어내지 않습니다 (1번).              */
+    h+=cmRrnAgeHtml(v);
+    if(why)h+='<div class="t-note">'+osEsc(why)+'</div>';
+  }
+  h+='<div id="cmRrnBox"'+(v?' style="display:none"':'')+'>'+
+     '<div class="t-fld"><span class="l">번호 열세 자리</span>'+
+     '<input id="cmRrnIn" type="text" inputmode="numeric" autocomplete="off" maxlength="14" '+
+     'placeholder="'+(v?'열세 자리를 다시 적어 주십시오':'숫자만 적으셔도 됩니다')+'"></div>'+
+     '<button type="button" class="t-btn sm" style="margin-top:12px" onclick="cmRrnSave(\''+id+'\')">이 기기에만 담기</button>'+
+     '</div>'+
+     '<div class="t-note">서버에 <b>안 보냅니다</b> · AI 로 <b>안 보냅니다</b> · 설정 백업 파일에도 <b>안 담깁니다</b>. 이 브라우저에만 있어서 <b>브라우저 자료를 지우면 같이 없어집니다</b> — 사본이 아무 데도 없다는 뜻입니다.</div>'+
+     '</div>';
+  return h;
+}
+/* ── 🎂 <b>번호에서 나오는 것</b> — 목각이 누르면 보여 주는 그 줄 ─────────
+   생년월일 · 성별 · 만 나이 · <b>보험나이</b> · <b>상령일 D-N</b>.
+   상령일이 <b>90일 안</b>이면 한 줄 더 붙입니다 — 그날이 지나면 같은 보장
+   이라도 보험료가 올라가므로, 그것이 지금 이 자리에서 할 말입니다.
+   ★ 셈을 여기서 <b>다시 하지 않습니다</b> — insAgeOf 를 부릅니다 (5번).
+   ★ <b>보험료가 얼마 오른다고는 안 적습니다</b> (1번·2번) — 상품마다 다르고
+     심사 결과에 따릅니다. 「올라갑니다」 까지만 말합니다.                 */
+function cmRrnAgeHtml(v){
+  var b=cmRrnBirth(v),R,h;
+  if(!b)return '<div class="t-note">앞자리를 못 읽었습니다. 다시 적어 주십시오.</div>';
+  R=(typeof insAgeOf==='function')?insAgeOf(b.dt,new Date()):null;
+  if(!R)return '';
+  h='<div class="t-row"><div class="m"><b>생년월일</b></div>'+
+    '<div class="r"><span class="t-tag">'+osEsc(b.f)+' · '+osEsc(b.sex)+'</span></div></div>'+
+    '<div class="t-row"><div class="m"><b>만 나이</b></div>'+
+    '<div class="r"><span class="t-tag">'+R.age+'세</span></div></div>'+
+    '<div class="t-row"><div class="m"><b>보험나이</b><span>청약서에 들어가는 나이입니다</span></div>'+
+    '<div class="r"><span class="t-tag b">'+R.ins+'세</span></div></div>'+
+    '<div class="t-row"><div class="m"><b>다음 상령일</b></div>'+
+    '<div class="r"><span class="t-tag'+(R.dday<=90?' due':'')+'">'+
+      (typeof ymd==='function'?osEsc(ymd(R.sang)):'')+' · D-'+R.dday+'</span></div></div>';
+  if(R.dday<=90)
+    h+='<div class="t-note"><b>상령일이 '+R.dday+'일 남았습니다.</b> 그날이 지나면 보험나이가 '+
+       '한 살 올라 <b>같은 보장이라도 보험료가 올라갑니다.</b> 얼마가 오르는지는 '+
+       '상품마다 다르고 <b>심사 결과에 따릅니다</b> (2번).</div>';
+  return h;
+}
+/* 벗기기 — 사람이 누를 때만, 그리고 <b>스무 초 뒤 저절로</b> 다시 가립니다.
+   펴 둔 채로 자리를 비우면 그 화면이 그대로 캡처됩니다 (3번).             */
+function cmRrnShow(id){
+  var el=document.getElementById('cmRrnV'),v=cmRrnOf(id);
+  if(!el||!v)return;
+  el.textContent=cmRrnDash(v);
+  if(CM_RRN_T)clearTimeout(CM_RRN_T);
+  CM_RRN_T=setTimeout(cmRrnHide,CM_RRN_MS);
+}
+function cmRrnHide(){
+  var el=document.getElementById('cmRrnV');
+  if(CM_RRN_T){clearTimeout(CM_RRN_T);CM_RRN_T=0;}
+  if(!el)return;
+  el.textContent=cmRrnMask(cmRrnOf(el.getAttribute('data-cid')||''));
+}
+function cmRrnEdit(){
+  var b=document.getElementById('cmRrnBox'),i;
+  if(b)b.style.display='';
+  i=document.getElementById('cmRrnIn');
+  if(i)try{i.focus();}catch(e){}
+}
+/* ★ toast 에 <b>번호를 넣지 않습니다.</b> 토스트는 화면에 뜨고, 화면은
+   캡처됩니다. 「무엇이 이상한가」만 말하고 번호는 말하지 않습니다.        */
+function cmRrnSave(id){
+  var v=(''+(osVal('cmRrnIn')||'')).replace(/[^0-9]/g,''),why;
+  if(!v){toast('번호를 적어 주십시오');return;}
+  /* ★ 목각 그대로 — <b>맞지 않으면 안 담습니다.</b> 처음에는 제 판단으로
+     「이상해도 담는다」 로 했는데, 사장님 목각은 막습니다. 틀린 번호가
+     담기면 청약서에 그 틀린 번호가 그대로 들어갑니다.
+     ★ 적으신 글자는 <b>칸에 그대로 남습니다</b> — 다시 다 치지 않으셔도
+       한 자리만 고치시면 됩니다.                                        */
+  why=cmRrnWhy(v);
+  if(why){toast(why);return;}
+  cmRrnSet(id,v);
+  toast('이 기기에만 담았습니다 — 서버로 보내지 않았습니다');
+  cmDetailPaint(id);
+}
+function cmRrnDel(id){
+  if(!confirm('이 기기에서 주민등록번호를 지웁니다. 서버에는 사본이 없으니 지우면 끝입니다.\n\n계속할까요?'))return;
+  cmRrnSet(id,'');
+  toast('지웠습니다');
+  cmDetailPaint(id);
+}
+/* 붙여 넣을 곳은 청약 화면입니다. 못 했을 때도 <b>번호를 글로 띄우지</b>
+   않습니다 — 그러면 토스트에 번호가 찍힙니다 (3번).                      */
+function cmRrnCopy(id){
+  var v=cmRrnDash(cmRrnOf(id)),no='복사하지 못했습니다 — 「잠깐 보기」로 보고 직접 적어 주십시오';
+  if(!v){toast('담긴 번호가 없습니다');return;}
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      navigator.clipboard.writeText(v).then(function(){toast('복사했습니다 — 청약 화면에 붙여 넣으십시오');},function(){toast(no);});
+    else toast(no);
+  }catch(e){toast(no);}
 }
 function cmRelHtml(id){
   var m=cmOf(id),tp=cmTemp(id),L=m.touch||[],h='',i,r;
   var nx=m.next&&m.next.what?m.next:null;
   var d=nx?cmDays(nx.due):-1;
-  h+='<div class="osc-panel" style="margin-bottom:16px">'+
-    '<h3 style="font-size:var(--t4);font-weight:800;margin-bottom:4px">관계 <span class="cm-tp '+tp.k+'">'+
-      tp.e+' 마지막 접촉 '+osEsc(tp.t)+'</span></h3>'+
-    '<p style="font-size:var(--t6);color:#6B7280;line-height:1.6;margin-bottom:10px">'+
-      '고객관리는 <b>다음에 무엇을 할지</b>가 잡혀 있느냐로 갈립니다. 한 줄이면 됩니다.</p>';
+  /* 목각 옷 — id·onclick 은 <b>한 글자도</b> 안 바꿉니다 (2026-09-27 「기능만 맞추어서」).
+     마지막 접촉 온도는 t-tag 로 옮깁니다 — hot 은 초록, cold 는 빨강이 아니라
+     <b>흐린 색</b>입니다. 기록이 없는 것은 잘못이 아니라 <b>모르는 것</b>입니다 (1번) */
+  h+='<div class="t-card" style="margin-bottom:16px">'+
+    '<div class="t-lab">🤝 관계</div>'+
+    '<div class="t-big">다음에 무엇을 할지<small>고객관리는 그것이 잡혀 있느냐로 갈립니다. 한 줄이면 됩니다.</small>'+
+      '</div>'+
+    '<div class="t-chips"><span class="t-tag '+(tp.k==='hot'?'ok':(tp.k==='cold'?'':'b'))+'">'+
+      tp.e+' 마지막 접촉 '+osEsc(tp.t)+'</span></div>';
   if(nx){
-    h+='<div class="cm-next'+(d>=0?' due':'')+'"><div class="w">▶ '+osEsc(nx.what)+'</div>'+
-      '<div class="d">'+osEsc(nx.due||'')+(d>0?(' · '+d+'일 지났습니다'):(d===0?' · 오늘입니다':(d<0?(' · '+(-d)+'일 남았습니다'):'')))+'</div>'+
-      '<button class="btn btn-primary" style="padding:5px 11px;font-size:var(--t6)" onclick="cmNextDone(\''+id+'\')">끝냈습니다</button></div>';
+    h+='<div class="t-note'+(d>=0?'':' b')+'">▶ <b>'+osEsc(nx.what)+'</b><br>'+
+      osEsc(nx.due||'')+(d>0?(' · '+d+'일 지났습니다'):(d===0?' · 오늘입니다':(d<0?(' · '+(-d)+'일 남았습니다'):'')))+'</div>'+
+      '<button type="button" class="t-btn sm" style="margin-top:12px" onclick="cmNextDone(\''+id+'\')">끝냈습니다</button>'+
+      '<div class="t-sub">고치실 때는 위 <b>📝 적어 두기</b> 에서 — 적는 자리는 한 곳입니다 (5번).</div>';
   }
-  h+='<div class="cm-nrow">'+
-    '<input id="cmNextWhat" type="text" placeholder="다음에 할 일 — 예) 증권 받아서 보장분석 돌리기" value="'+
-      osEsc(nx?nx.what:'')+'">'+
-    '<input id="cmNextDue" type="date" value="'+osEsc(nx&&nx.due?nx.due:cmToday())+'">'+
-    '<button class="btn btn-primary" onclick="cmNextSave(\''+id+'\')">📌 잡아 두기</button></div>';
-
-  h+='<div class="cm-lab" style="margin:16px 0 7px">접촉 기록</div>'+
-    '<div class="cm-nrow">'+
-    '<select id="cmTouchHow">';
-  for(i=0;i<CM_HOW.length;i++)h+='<option>'+CM_HOW[i]+'</option>';
-  h+='</select>'+
-    '<input id="cmTouchAt" type="date" value="'+cmToday()+'">'+
-    '<input id="cmTouchNote" type="text" placeholder="무슨 이야기를 했는지 한 줄">'+
-    '<button class="btn btn-ghost" onclick="cmTouchAdd(\''+id+'\')">＋ 남기기</button></div>';
+  /* ★ 2026-09-28 — <b>적는 칸은 여기 없습니다.</b> 목각처럼 「📝 적어 두기」
+     한 카드로 <b>옮겼습니다</b>(베낀 것이 아닙니다 · 5번). 이 카드에는
+     <b>쌓인 것</b>만 남습니다 — 온도 · 다음 할 일 · 접촉 기록 목록.
+     같은 것이 두 곳에 있으면 한쪽에 적고 다른 쪽을 보고 「안 적혔네」
+     하게 됩니다.                                                        */
+  h+='<div class="t-lab" style="margin-top:22px">📞 쌓인 접촉 기록</div>';
   if(!L.length){
-    h+='<div class="cm-none">아직 접촉 기록이 없습니다. 통화 한 번, 카톡 한 번도 남겨 두면 다음에 무슨 말을 할지 알게 됩니다.</div>';
+    h+='<div class="t-empty">아직 접촉 기록이 없습니다.<br>위 <b>📝 적어 두기</b> 의 「들은 말」 에 한 줄 적으시면<br>여기 쌓입니다.</div>';
   }else{
-    h+='<div class="cm-tl">';
+    h+='<div style="margin-top:14px">';
     for(i=0;i<L.length&&i<12;i++){
       r=L[i]||{};
-      h+='<div class="cm-ti"><span class="d">'+osEsc(r.at||'')+'</span>'+
-        '<span class="h">'+osEsc(r.how||'')+'</span>'+
-        '<span class="n">'+osEsc(r.note||'')+'</span>'+
-        '<button type="button" class="x" onclick="cmTouchDel(\''+id+'\','+i+')">&times;</button></div>';
+      h+='<div class="t-ev"><span class="d'+(i?' g':'')+'"></span>'+
+        '<div><div class="t">'+osEsc(r.how||'')+' · '+osEsc(r.at||'')+'</div>'+
+        '<div class="s">'+osEsc(r.note||'')+'</div></div>'+
+        '<button type="button" class="t-gb" style="margin-left:auto" onclick="cmTouchDel(\''+id+'\','+i+')">지우기</button></div>';
     }
     h+='</div>';
-    if(L.length>12)h+='<div class="cm-none">그 밖에 '+(L.length-12)+'건이 더 있습니다.</div>';
+    if(L.length>12)h+='<div class="t-sub">그 밖에 '+(L.length-12)+'건이 더 있습니다.</div>';
   }
   h+='</div>';
   return h;
 }
 function cmFamHtml(id){
   var m=cmOf(id),fam=m.fam||'',mem=fam?cmFamOf(fam):[],h='',i,c;
-  h+='<div class="osc-panel" style="margin-bottom:16px">'+
-    '<h3 style="font-size:var(--t4);font-weight:800;margin-bottom:4px">가족으로 묶기 · 찾기 편한 이름</h3>'+
-    '<p style="font-size:var(--t6);color:#6B7280;line-height:1.6;margin-bottom:10px">'+
-      '한 사람만 보면 보장은 늘 모자라 보입니다. <b>가족을 같은 이름으로 묶어야</b> 무엇이 비었는지 보입니다.</p>';
+  /* 목각 옷 — id 는 <b>한 글자도</b> 안 바꿉니다. cmFamSave 등이 이 이름으로 읽습니다 */
+  h+='<div class="t-card" style="margin-bottom:16px">'+
+    '<div class="t-lab">👪 가족으로 묶기 · 찾기 편한 이름</div>'+
+    '<div class="t-big">한 사람만 보면 보장은 늘 모자라 보입니다<small>가족을 <b>같은 이름으로 묶어야</b> 무엇이 비었는지 보입니다.</small></div>';
   if(mem.length>1){
-    h+='<div class="cm-fmem">';
+    h+='<div class="t-chips">';
     for(i=0;i<mem.length;i++){
       c=mem[i];
       if(c.id===id)continue;
-      h+='<button type="button" class="cm-chip" onclick="osOpenClient(\''+c.id+'\')">'+
-        '<span class="e">'+cmTemp(c.id).e+'</span>'+osEsc(cmName(c))+
-        (cmOf(c.id).rel?('<em>'+osEsc(cmOf(c.id).rel)+'</em>'):'')+'</button>';
+      h+='<button type="button" class="t-chip" onclick="osOpenClient(\''+c.id+'\')">'+
+        cmTemp(c.id).e+' '+osEsc(cmName(c))+
+        (cmOf(c.id).rel?(' · '+osEsc(cmOf(c.id).rel)):'')+'</button>';
     }
     h+='</div>';
   }
-  h+='<div class="frm cols2">'+
-    '<div class="fld"><label>가족 이름 (묶는 열쇠)</label>'+
-      '<input id="cmFam" type="text" value="'+osEsc(fam)+'" placeholder="예) 김○○ 가족" list="cmFamList"></div>'+
-    '<div class="fld"><label>이 사람의 자리</label>'+
-      '<input id="cmRel" type="text" value="'+osEsc(m.rel||'')+'" placeholder="예) 본인 · 배우자 · 자녀"></div>'+
-    '<div class="fld"><label>생일 (MM-DD)</label>'+
+  h+='<div class="t-fld"><span class="l">가족 이름 — 묶는 열쇠</span>'+
+      '<input id="cmFam" type="text" value="'+osEsc(fam)+'" placeholder="김○○ 가족" list="cmFamList"></div>'+
+    '<div class="t-fld"><span class="l">이 사람의 자리</span>'+
+      '<input id="cmRel" type="text" value="'+osEsc(m.rel||'')+'" placeholder="본인 · 배우자 · 자녀"></div>'+
+    '<div class="t-row2" style="align-items:flex-end">'+
+    '<div class="t-fld" style="flex:1"><span class="l">생일 (MM-DD)</span>'+
       '<input id="cmBd" type="text" value="'+osEsc(m.bd||'')+'" placeholder="03-15" maxlength="5"></div>'+
-    '<div class="fld"><label>계약일 (YYYY-MM-DD)</label>'+
+    '<div class="t-fld" style="flex:1"><span class="l">계약일</span>'+
       '<input id="cmCd" type="date" value="'+osEsc(m.cd||'')+'"></div>'+
-    '<div class="fld"><label>실명 <span style="color:#D97706">이 기기에만 저장</span></label>'+
-      '<input id="cmReal" type="text" value="'+osEsc(cmRealOf(id))+'" placeholder="예) 김철수" maxlength="20"></div>'+
+    '</div>'+
+    '<div class="t-fld"><span class="l">실명 — 이 기기에만 저장</span>'+
+      '<input id="cmReal" type="text" value="'+osEsc(cmRealOf(id))+'" placeholder="김철수" maxlength="20"></div>'+
     /* 🙌 <b>소개해 주신 분</b> — 이미 고객이면 그분으로 이어집니다.
        고객이 아니면 서버에는 가린 이름만 갑니다 (3번). */
-    '<div class="fld"><label>소개해 주신 분 <span style="color:#6B7280">고객이면 이어집니다</span></label>'+
-      '<input id="cmRef" type="text" value="'+osEsc(cmRefName(id))+'" placeholder="예) 홍길동" list="cmRefList" maxlength="20"></div>'+
-    '</div>';
+    '<div class="t-fld"><span class="l">소개해 주신 분 — 고객이면 이어집니다</span>'+
+      '<input id="cmRef" type="text" value="'+osEsc(cmRefName(id))+'" placeholder="홍길동" list="cmRefList" maxlength="20"></div>';
   var FL=cmFamList();
   h+='<datalist id="cmFamList">';
   for(i=0;i<FL.length;i++)h+='<option value="'+osEsc(FL[i])+'"></option>';
@@ -61491,13 +62410,13 @@ function cmFamHtml(id){
     for(i=0;i<OSC.list.length;i++)
       if(OSC.list[i]&&OSC.list[i].id!==id)h+='<option value="'+osEsc(cmName(OSC.list[i]))+'"></option>';
   h+='</datalist>';
-  h+='<div class="btn-row" style="margin-top:10px">'+
-    '<button class="btn btn-primary" onclick="cmFamSave(\''+id+'\')">💾 가족·자리 저장</button>'+
-    '<button class="btn btn-ghost" onclick="cmBdSave(\''+id+'\')">🎂 생일 저장</button>'+
-    '<button class="btn btn-ghost" onclick="cmCdSave(\''+id+'\')">📄 계약일 저장</button>'+
-    '<button class="btn btn-ghost" onclick="cmRealSaveNow(\''+id+'\')">🔎 실명 저장</button>'+
-    '<button class="btn btn-ghost" onclick="cmRefSave(\''+id+'\')">🙌 소개해 주신 분 저장</button></div>'+
-    '<div class="osc-note" style="margin-top:10px">서버에는 지금까지처럼 <b>'+osEsc((OSC.current&&OSC.current.name_masked)||'김○○')+
+  h+='<div class="t-chips" style="margin-top:18px">'+
+    '<button type="button" class="t-gb b" onclick="cmFamSave(\''+id+'\')">가족·자리 저장</button>'+
+    '<button type="button" class="t-gb" onclick="cmBdSave(\''+id+'\')">🎂 생일 저장</button>'+
+    '<button type="button" class="t-gb" onclick="cmCdSave(\''+id+'\')">📄 계약일 저장</button>'+
+    '<button type="button" class="t-gb" onclick="cmRealSaveNow(\''+id+'\')">🔎 실명 저장</button>'+
+    '<button type="button" class="t-gb" onclick="cmRefSave(\''+id+'\')">🙌 소개해 주신 분 저장</button></div>'+
+    '<div class="t-note">서버에는 지금까지처럼 <b>'+osEsc((OSC.current&&OSC.current.name_masked)||'김○○')+
       '</b> 형태로만 저장됩니다. 실명은 <b>이 브라우저 안에만</b> 두고 찾기에만 씁니다 — '+
       '다른 기기에서는 다시 적어야 합니다. 가족 이름과 생일은 서버에 저장되니 실명을 넣지 않는 편이 안전합니다.</div>'+
     '</div>';
@@ -62673,26 +63592,24 @@ function oscBaRows(){
 }
 function oscBaHtml(){
   var R=oscBaRows(),i,h;
-  h='<div class="osc-panel osc-ba"><h3 style="font-size:var(--t4);font-weight:800;margin-bottom:6px">'+
-    '🔄 보장분석 전·후 <span style="font-size:var(--t6);font-weight:600;color:#9CA3AF">'+
-    '눌러서 바로 보십니다</span></h3>';
+  /* 목각 옷 — 「아직 없습니다」 와 「찾는 중」 은 여전히 갈라 적습니다 (1번) */
+  h='<div class="t-card" style="margin-bottom:16px">'+
+    '<div class="t-lab">🔄 보장분석 전·후</div>';
   if(!(typeof OSC!=='undefined'&&OSC.repsLoaded))
-    return h+'<div class="osc-loading">전·후 자료를 찾는 중…</div></div>';
+    return h+'<div class="t-empty">전·후 자료를 찾는 중…</div></div>';
   if(!R.length)
-    return h+'<div class="osc-empty">이 고객의 <b>전·후 자료가 아직 없습니다.</b> '+
+    return h+'<div class="t-empty">이 고객의 <b>전·후 자료가 아직 없습니다.</b><br>'+
       '만들어 저장하시면 여기 올라옵니다 — 지어내지 않습니다.</div>'+
-      '<div class="btn-row" style="margin-top:10px">'+
-      '<button class="btn btn-primary" onclick="oscBaGo()">🔀 보장분석 전&후 만들기</button>'+
-      '</div></div>';
-  h+='<div class="osc-ba-list">';
+      '<button type="button" class="t-btn sm" style="margin-top:12px" onclick="oscBaGo()">보장분석 전&후 만들기</button>'+
+      '</div>';
+  h+='<div class="t-big">눌러서 바로 보십니다<small>저장해 두신 전·후 자료입니다.</small></div>';
   for(i=0;i<R.length;i++)
-    h+='<button type="button" class="osc-ba-r" onclick="osRepView('+R[i].i+')">'+
-       '<span class="ic">🔄</span>'+
-       '<span class="tt">'+osEsc(R[i].x.title||'비포&애프터')+'</span>'+
-       '<span class="dt">'+osEsc(osFmtDate(R[i].x.created_at))+'</span>'+
-       '<span class="ar">›</span></button>';
-  h+='</div><div class="btn-row" style="margin-top:10px">'+
-     '<button class="btn btn-ghost" onclick="oscBaGo()">🔀 보장분석 전&후 만들기</button></div>';
+    h+='<button type="button" class="t-row" onclick="osRepView('+R[i].i+')">'+
+       '<span class="av">🔄</span>'+
+       '<div class="m"><b>'+osEsc(R[i].x.title||'비포&애프터')+'</b>'+
+       '<span>'+osEsc(osFmtDate(R[i].x.created_at))+'</span></div>'+
+       '<div class="r"><span class="t-tag b">펴 보기</span></div></button>';
+  h+='<button type="button" class="t-btn g sm" style="margin-top:14px" onclick="oscBaGo()">보장분석 전&후 만들기</button>';
   return h+'</div>';
 }
 function oscBaPaint(){
@@ -62739,38 +63656,34 @@ function oscPolLoad(force){
   },function(e){ OSCP.busy=false; OSCP.err=(e&&e.message)||'네트워크 오류'; oscPolPaint(); });
 }
 function oscPolHtml(){
-  var h='<div class="osc-panel osc-pol"><h3 style="font-size:var(--t4);font-weight:800;margin-bottom:6px">'+
-    '🛡️ 가입한 보험 <span style="font-size:var(--t6);font-weight:600;color:#9CA3AF">'+
-    'PDF 에서 읽어 검수한 계약</span></h3>';
+  /* 목각 옷 — 「못 읽었다」·「찾는 중」·「없다」 셋을 여전히 갈라 적습니다 (1번) */
+  var h='<div class="t-card" style="margin-bottom:16px">'+
+    '<div class="t-lab">🛡️ 가입한 보험</div>';
   if(OSCP.err)
-    return h+'<div class="osc-empty">보험 내용을 <b>못 읽었습니다</b> — '+osEsc(OSCP.err.slice(0,80))+'</div></div>';
+    return h+'<div class="t-empty">보험 내용을 <b>못 읽었습니다</b><br>'+osEsc(OSCP.err.slice(0,80))+'</div></div>';
   if(OSCP.busy||OSCP.rows===null)
-    return h+'<div class="osc-loading">가입한 보험을 찾는 중…</div></div>';
+    return h+'<div class="t-empty">가입한 보험을 찾는 중…</div></div>';
   if(!OSCP.rows.length)
-    return h+'<div class="osc-empty">아직 <b>읽어 둔 계약이 없습니다.</b> '+
+    return h+'<div class="t-empty">아직 <b>읽어 둔 계약이 없습니다.</b><br>'+
       '아래 <b>📂 예전 자료</b> 를 펴서 증권·제안서 PDF 를 올리시면 여기 올라옵니다.</div></div>';
   var i,p,totWon=0,unknown=0,premWon;
   for(i=0;i<OSCP.rows.length;i++){
     premWon=OSCP.rows[i].monthly_premium;
     if(premWon==null||premWon==='')unknown++; else totWon+=Number(premWon)||0;
   }
-  h+='<div class="osc-pol-sum"><b>'+OSCP.rows.length+'건</b>'+
-     ' · 월 <b>'+Math.round(totWon).toLocaleString('ko-KR')+'원</b>'+
-     (unknown?(' <span>('+unknown+'건은 보험료 확인 필요 — 안 더했습니다)</span>'):'')+
-     '</div><div class="osc-pol-list">';
+  h+='<div class="t-big">'+OSCP.rows.length+'건 · 월 '+Math.round(totWon).toLocaleString('ko-KR')+'원'+
+     '<small>'+(unknown?(unknown+'건은 보험료 확인 필요 — <b>안 더했습니다</b> (1번).'):'PDF 에서 읽어 검수한 계약입니다.')+'</small></div>';
   for(i=0;i<OSCP.rows.length;i++){
     p=OSCP.rows[i]; premWon=p.monthly_premium;
-    h+='<div class="osc-pol-r">'+
-       '<span class="co">'+osEsc(p.insurer||'회사 확인 필요')+'</span>'+
-       '<span class="pd">'+osEsc(p.product_name||'상품명 확인 필요')+'</span>'+
-       '<span class="mp">'+((premWon==null||premWon==='')
-          ? '<i>보험료 확인 필요</i>'
-          : (Math.round(Number(premWon)).toLocaleString('ko-KR')+'원/월'))+'</span>'+
-       (p.payment_term?('<span class="tm">'+osEsc(p.payment_term)+'</span>'):'')+
-       '</div>';
+    h+='<div class="t-row"><div class="m"><b>'+osEsc(p.product_name||'상품명 확인 필요')+'</b>'+
+       '<span>'+osEsc(p.insurer||'회사 확인 필요')+
+       (p.payment_term?(' · '+osEsc(p.payment_term)):'')+'</span></div>'+
+       '<div class="r"><span class="t-tag'+((premWon==null||premWon==='')?' due':'')+'">'+
+       ((premWon==null||premWon==='')?'보험료 확인 필요'
+          :(Math.round(Number(premWon)).toLocaleString('ko-KR')+'원/월'))+'</span></div></div>';
   }
-  return h+'</div><div class="osc-note" style="margin-top:9px">보험료·보장은 '+
-    '<b>심사 결과에 따릅니다</b> (2번). 읽어 낸 값이라 실제 증권과 다를 수 있습니다.</div></div>';
+  return h+'<div class="t-note">보험료·보장은 <b>심사 결과에 따릅니다</b> (2번). '+
+    '읽어 낸 값이라 실제 증권과 다를 수 있습니다.</div></div>';
 }
 function oscPolPaint(){
   var e=document.getElementById('oscPolHost');
@@ -62831,8 +63744,13 @@ function osClientDetailHtml(c){
        볼 수 있도록」. 아래로 내려가도 이 줄은 따라옵니다. 칸 전체를 붙이면
        화면 절반을 먹으므로 <b>꼭 필요한 것만</b> 한 줄로 세웁니다. */
     '<div id="oscTopBar" class="osc-top">'+oscTopHtml(c)+'</div>'+
-    '<div class="osc-bar"><div><div class="osc-title" style="font-size:var(--t2);font-weight:800">'+osEsc(nm)+'</div>'+
-      '<div class="osc-sub" style="font-size:var(--t6);color:#6B7280;margin-top:3px">'+osFmtDate(c.created_at)+' 등록 · <span class="osc-badge '+cs+'">'+osConsentLabel(cs)+'</span></div></div>'+
+    /* 목각 옷 — 이름 줄도 카드입니다 (사장님 2026-09-27 「전부 목각 버전으로」) */
+    '<div class="t-card" style="margin-bottom:16px">'+
+      '<div class="t-lab">👤 고객</div>'+
+      '<div class="t-h1">'+osEsc(nm)+'</div>'+
+      '<div class="t-sub">'+osFmtDate(c.created_at)+' 등록 · <span class="t-tag '+
+        (cs==='granted'?'ok':(cs==='revoked'?'no':(cs==='requested'?'due':'')))+'">'+
+        osConsentLabel(cs)+'</span></div>'+
     '</div>'+
     /* ── 고객 한 장 ──
        여기 위에 있던 것들(고객정보·가족·접촉기록·통화이력)은 <b>그대로</b>
@@ -62840,19 +63758,19 @@ function osClientDetailHtml(c){
        보여 줄 뿐이다. 자료는 새로 안 만든다 — 표도 안 고친다. */
     '<div id="cusCard">'+cusAppCardHtml(c)+'</div>'+
     cusFamPanelHtml(c.id)+
-    '<div class="osc-panel" style="margin-bottom:16px">'+
-      '<h3 style="font-size:var(--t4);font-weight:800;margin-bottom:6px">고객 정보 <span style="font-size:var(--t6);font-weight:600;color:#9CA3AF">(내 계정에만 저장)</span></h3>'+
-      '<div class="frm cols2">'+
-        '<div class="fld"><label>연락처</label><input id="cliPhone" type="text" placeholder="010-0000-0000"/></div>'+
-        '<div class="fld"><label>출생년도</label><input id="cliBirth" type="number" placeholder="1980"/></div>'+
-        '<div class="fld"><label>성별</label><select id="cliGender"><option value="">선택</option><option value="M">남</option><option value="F">여</option></select></div>'+
-        '<div class="fld"><label>월 소득(만원)</label><input id="cliIncome" type="number" placeholder="500"/></div>'+
-        /* 생활비를 적어 둘 자리가 없어서, 계산기로 넘어갈 때마다 비어 있었다.
-           여기 적어 두면 팩트파인딩을 안 채운 고객도 생활비가 따라간다. */
-        '<div class="fld"><label>월 생활비(만원)</label><input id="cliExp" type="number" placeholder="300"/></div>'+
-        '<div class="fld span2"><label>메모(가족·니즈·상담 노트)</label><textarea id="cliMemo" style="width:100%;min-height:70px;border:1px solid var(--ink-7);border-radius:9px;padding:9px 11px;font-size:var(--t6);box-sizing:border-box;font-family:inherit"></textarea></div>'+
-      '</div>'+
-      '<button class="btn btn-primary" style="margin-top:10px" onclick="osCliInfoSave()">💾 정보 저장</button>'+
+    /* 목각 옷 — id 와 onclick 은 <b>한 글자도</b> 안 바꿉니다 (기능만 맞춥니다) */
+    '<div class="t-card" style="margin-bottom:16px">'+
+      '<div class="t-lab">📇 고객 정보</div>'+
+      '<div class="t-big">내 계정에만 저장됩니다<small>계산기·팩트파인딩으로 그대로 따라갑니다.</small></div>'+
+      '<div class="t-fld"><span class="l">연락처</span><input id="cliPhone" type="text" placeholder="010-0000-0000"/></div>'+
+      '<div class="t-fld"><span class="l">출생년도</span><input id="cliBirth" type="number" placeholder="1980"/></div>'+
+      '<div class="t-fld"><span class="l">성별</span><select id="cliGender"><option value="">선택</option><option value="M">남</option><option value="F">여</option></select></div>'+
+      '<div class="t-fld"><span class="l">월 소득 (만원)</span><input id="cliIncome" type="number" placeholder="500"/></div>'+
+      /* 생활비를 적어 둘 자리가 없어서, 계산기로 넘어갈 때마다 비어 있었다.
+         여기 적어 두면 팩트파인딩을 안 채운 고객도 생활비가 따라간다. */
+      '<div class="t-fld"><span class="l">월 생활비 (만원)</span><input id="cliExp" type="number" placeholder="300"/></div>'+
+      '<div class="t-fld"><span class="l">메모 — 가족·니즈·상담 노트</span><textarea id="cliMemo" rows="3"></textarea></div>'+
+      '<button type="button" class="t-btn sm" style="margin-top:14px" onclick="osCliInfoSave()">정보 저장</button>'+
     '</div>'+
     '<div id="cmPanels">'+cmPanelsHtml(c.id)+'</div>'+
     /* <b>보장분석 전·후</b> — 사장님이 여기서 바로 여시는 자리 */
@@ -62887,14 +63805,14 @@ function osClientDetailHtml(c){
     '</div>'+
     frPanelHtml()+
     '</details>'+
-    '<div class="osc-panel" style="margin-top:16px">'+
-      '<h3 style="font-size:var(--t4);font-weight:800;margin-bottom:6px">저장된 상담 자료 <span style="font-size:var(--t6);font-weight:600;color:#9CA3AF">AI 보장분석 · 비포&애프터 · 재무설계</span></h3>'+
-      '<div id="oscReps"><div class="osc-loading">저장 자료를 불러오는 중…</div></div>'+
+    '<div class="t-card" style="margin-top:16px;margin-bottom:16px">'+
+      '<div class="t-lab">🗂️ 저장된 상담 자료</div>'+
+      '<div class="t-big">AI 보장분석 · 비포&애프터 · 재무설계<small>여기서 바로 펴 보십니다.</small></div>'+
+      '<div id="oscReps"><div class="t-empty">저장 자료를 불러오는 중…</div></div>'+
     '</div>'+
     /* 여기 있던 「DB 통합 CRM 통화 이력」 칸은 <b>맨 위 한 장</b>으로 옮겼다.
        통화와 접촉을 두 곳에서 따로 세면 「몇 번 연락했나」가 갈린다(규칙 ④). */
-    '<div class="btn-row" style="margin-top:4px">'+
-      '<button class="btn btn-ghost" onclick="go(\'crm\')">🗄️ DB 통합 CRM 에서 보기</button></div>'+
+    '<button type="button" class="t-btn g sm" style="margin-top:4px" onclick="go(\'crm\')">🗄️ DB 통합 CRM 에서 보기</button>'+
   '</div>';
 }
 
@@ -62956,6 +63874,34 @@ function cusAppView(c){
     expenseMan:nul(info.monthly_fixed_expense),
     policy:db?{no:nul(db.policy_no),premiumWon:nul(db.contract_premium),
                contractedAt:nul(db.contracted_at),sentAt:nul(db.policy_sent_at)}:{},
+    /* ── 🔎 <b>한눈에</b> (목각 사진 2 의 머리) ─────────────────────────
+       ★ <b>여기서 세지 않습니다</b> (5번) — 보유 계약은 osLoadAnalysis 가
+         policies 를 읽어 담아 둔 OSA.polCount 를, 8통장은 cmWalOf 를,
+         이름은 waShort 를 <b>그대로</b> 가져옵니다.
+       ★ <b>못 읽었으면 null</b> 입니다 (1번). 0 으로 돌려주면 「계약이
+         없다」 는 뜻이 되어, 보장분석을 아직 안 읽은 분께 거짓말이 됩니다.
+       ★ <b>만기와 청구 이력을 이제 넘깁니다</b> (2026-09-27 · 사장님 말씀
+         「만기! 청구 이력은 입력하게 만들고」). 여태는 담는 자리가 없어
+         안 넘겼습니다 — 자리를 만들었으니 넘깁니다. <b>안 적으셨으면
+         여전히 null</b> 입니다: 없는 것을 그럴듯하게 채우지 않습니다 (1번).
+       ★ 청구는 <b>몇 건인지와 받은 돈 합계</b>만 넘깁니다. 무엇으로
+         받았는지(입원·수술…)는 <b>병력</b>이라 한 장 카드로 안 올립니다 —
+         그 줄은 고객 365일 안에서만 봅니다 (3번).                        */
+    src:db?nul(db.source):null,
+    due:nul(m.due),
+    clm:(function(){
+      var L=(typeof cmClmOf==='function')?cmClmOf(c.id):[],i,w=0,n=0;
+      if(!L||!L.length)return null;
+      for(i=0;i<L.length;i++){ n++; w+=Number(L[i].won)||0; }
+      return {n:n,wonR:w};
+    })(),
+    polN:(typeof OSA!=='undefined'&&OSA.polCount!=null)?OSA.polCount:null,
+    wal:(function(){
+      var w=(typeof cmWalOf==='function')?cmWalOf(c.id):null,o=[],n;
+      if(!w||!w.lv||typeof waShort!=='function')return null;
+      for(n=1;n<=8;n++)o.push({n:waShort(n),lv:w.lv[n]||''});
+      return o;
+    })(),
     fam:{key:m.fam||'',rel:m.rel||'',linked:linked,members:(m.fams||[])},
     log:(typeof cusLog==='function')?cusLog(CUS.calls,m.touch||[]):[],
     docs:{n:CUS.docN,reports:CUS.repN},
@@ -63088,31 +64034,35 @@ function cusFindCrm(id){
    여기 적는 줄은 <b>서버에 저장된다</b>(saved_reports 의 JSON). 그래서
    실명을 적지 말라고 화면에 적어 둔다(CLAUDE.md 3번).               */
 function cusFamPanelHtml(id){
-  return '<div class="osc-panel" style="margin-bottom:16px">'+
-    '<h3 style="font-size:15px;font-weight:800;margin-bottom:4px">가족 — 줄로 적습니다</h3>'+
-    '<p style="font-size:12.5px;color:#6B7280;line-height:1.6;margin-bottom:10px">'+
-      '배우자·자녀처럼 <b>고객으로 등록되지 않은 가족</b>을 여기 적습니다. 위 한 장 카드에 그대로 섭니다. '+
-      '고객으로 등록된 가족은 아래 <b>가족으로 묶기</b>로 묶으면 카드에 같이 뜹니다.</p>'+
+  return '<div class="t-card" style="margin-bottom:16px">'+
+    '<div class="t-lab">👨‍👩‍👧 가족 — 줄로 적습니다</div>'+
+    '<div class="t-big">고객으로 등록되지 않은 가족<small>배우자·자녀를 여기 적으면 위 한 장 카드에 그대로 섭니다. 등록된 가족은 아래 <b>가족으로 묶기</b>로 묶으십시오.</small></div>'+
     '<div id="cusFamRows">'+cusFamRowsHtml(id)+'</div>'+
-    '<div class="btn-row" style="margin-top:10px">'+
-      '<button class="btn btn-ghost" onclick="cusFamAdd(\''+id+'\')">＋ 한 줄 더</button>'+
-      '<button class="btn btn-primary" onclick="cusFamSave(\''+id+'\')">💾 가족 줄 저장</button></div>'+
-    '<div class="osc-note" style="margin-top:10px">이 줄은 <b>서버에 저장</b>됩니다 — '+
-      '<b>실명은 적지 마십시오.</b> 「배우자 · 1985년생」, 「첫째 · 2014년생」처럼 '+
-      '자리와 나이만으로 상담에는 충분합니다.</div>'+
+    '<div class="t-row2" style="margin-top:14px">'+
+      '<button type="button" class="t-btn g sm" onclick="cusFamAdd(\''+id+'\')">＋ 한 줄 더</button>'+
+      '<button type="button" class="t-btn sm" onclick="cusFamSave(\''+id+'\')">가족 줄 저장</button></div>'+
+    '<div class="t-note">이 줄은 <b>서버에 저장</b>됩니다 — <b>실명은 적지 마십시오.</b> '+
+      '「배우자 · 1985년생」, 「첫째 · 2014년생」처럼 자리와 나이만으로 상담에는 충분합니다.</div>'+
   '</div>';
 }
 function cusFamRowsHtml(id){
   var L=(cmOf(id).fams||[]),h='',i,r;
-  if(!L.length)return '<div class="cm-none">아직 적은 가족이 없습니다. <b>＋ 한 줄 더</b> 로 시작하세요.</div>';
+  if(!L.length)return '<div class="t-empty">아직 적은 가족이 없습니다.<br><b>＋ 한 줄 더</b> 로 시작하십니다.</div>';
   for(i=0;i<L.length;i++){
     r=L[i]||{};
-    h+='<div class="cm-nrow" style="margin-bottom:6px">'+
-      '<input id="cusFamRel'+i+'" type="text" style="max-width:110px" placeholder="자리 — 배우자·첫째" value="'+osEsc(r.rel||'')+'" maxlength="10">'+
-      '<input id="cusFamNm'+i+'" type="text" style="max-width:120px" placeholder="부르는 말(선택)" value="'+osEsc(r.name||'')+'" maxlength="12">'+
-      '<input id="cusFamBy'+i+'" type="number" style="max-width:110px" placeholder="출생년도" value="'+osEsc(r.by||'')+'">'+
-      '<input id="cusFamNt'+i+'" type="text" placeholder="한 줄 메모 — 직장인 · 학생" value="'+osEsc(r.note||'')+'" maxlength="30">'+
-      '<button type="button" class="btn btn-ghost" onclick="cusFamDel(\''+id+'\','+i+')">&times;</button></div>';
+    /* 목각 옷 — id 는 <b>한 글자도</b> 안 바꿉니다. cusFamRead 가 이 이름으로 읽습니다 */
+    h+='<div class="t-row2" style="align-items:flex-end">'+
+      '<div class="t-fld" style="flex:1"><span class="l">자리</span>'+
+        '<input id="cusFamRel'+i+'" type="text" placeholder="배우자·첫째" value="'+osEsc(r.rel||'')+'" maxlength="10"></div>'+
+      '<div class="t-fld" style="flex:1"><span class="l">부르는 말</span>'+
+        '<input id="cusFamNm'+i+'" type="text" placeholder="선택" value="'+osEsc(r.name||'')+'" maxlength="12"></div>'+
+      '<div class="t-fld" style="flex:1"><span class="l">출생년도</span>'+
+        '<input id="cusFamBy'+i+'" type="number" placeholder="1985" value="'+osEsc(r.by||'')+'"></div>'+
+      '</div>'+
+      '<div class="t-row2" style="align-items:flex-end">'+
+      '<div class="t-fld" style="flex:1"><span class="l">한 줄 메모</span>'+
+        '<input id="cusFamNt'+i+'" type="text" placeholder="직장인 · 학생" value="'+osEsc(r.note||'')+'" maxlength="30"></div>'+
+      '<button type="button" class="t-gb" style="margin-top:14px" onclick="cusFamDel(\''+id+'\','+i+')">이 줄 지우기</button></div>';
   }
   return h;
 }

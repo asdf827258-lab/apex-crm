@@ -25,6 +25,14 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   const b=await chromium.launch(); const page=await b.newPage();
   await page.goto('http://127.0.0.1:'+srv.address().port+'/app/index.html',{waitUntil:'domcontentloaded'});
   await page.waitForTimeout(2200);
+  /* ⚠ 2026-09-27 — 준비 SQL 이 <b>「🧭 그 밖의 것」 접이 안</b>으로
+     들어갔습니다(사장님 말씀 「2번으로 해줘 접어」). 접힌 채로 재면
+     배너 높이가 <b>0px</b> 이라 「한 줄인가 · 손가락이 닿나」 를 잴 수
+     없습니다 — 그래서 <b>먼저 펴고 잽니다.</b>
+     ★ 자는 <b>그대로</b>입니다. 묻는 것은 바뀌지 않았습니다 —
+       펴 놓고 보면 배너가 제 모습인가. (자를 옮기지 지우지 않습니다) */
+  const 펴기 = `try{ hmFoldSet('etc',true); }catch(e){}`;
+  await page.evaluate(펴기);
   console.log('\n[1] 저장이 안 될 때 무엇을 하라고 하는가');
   const r=await page.evaluate(()=>({
     미설치: pfWhy('사업계획서를 저장하지 못했습니다',{code:'42P01',message:'relation "public.team_plans" does not exist'}),
@@ -185,7 +193,10 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   /* 「홈 맨 위」 라고 <b>말하는</b> 곳이 있으면, 홈에 그 자리가 있어야 한다 (5번) */
   const SRC2 = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
   const says = (SRC2.match(/홈 맨 위/g) || []).length;
-  const home = SRC2.slice(SRC2.indexOf('function renderHome('), SRC2.indexOf('function osPage('));
+  /* ⚠ 자리가 <b>renderHome 안</b>에 있는지만 보면, 접이 함수(hmEtcHtml)로
+     옮기는 순간 「자리가 없다」 고 거짓 빨간불을 켭니다. 홈이 그리는 글은
+     여러 함수에 나뉩니다 — <b>홈을 그리는 묶음 전체</b>에서 찾습니다.  */
+  const home = SRC2.slice(SRC2.indexOf('function hmEtcHtml('), SRC2.indexOf('function osPage('));
   is(says === 0 || /id="osSetupHome"/.test(home),
      '  「홈 맨 위」 라고 <b>말하는 곳이 ' + says + '군데</b>인데, 홈에 그 자리가 실제로 있다 (5번)');
 
@@ -324,6 +335,7 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   const pp = await ph.newPage();
   await pp.goto('http://127.0.0.1:' + srv.address().port + '/app/index.html', { waitUntil: 'domcontentloaded' });
   await pp.waitForTimeout(2200);
+  await pp.evaluate(`try{ hmFoldSet('etc',true); }catch(e){}`);
   const PH = await pp.evaluate(async () => {
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());
     OS.session = { user: { id: 'u1' } };

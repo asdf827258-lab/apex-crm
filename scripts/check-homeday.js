@@ -115,6 +115,13 @@ const SEED = `(function(){
                                  typeof go === 'function', { timeout: 60000 });
   await clearOvl(pg);
   await pg.evaluate(s => { eval(s); }, SEED);
+  /* ⚠ 2026-09-27 — 활동량·동선이 <b>「🧭 그 밖의 것」 접이 안</b>으로
+     들어갔습니다(사장님 말씀 「2번으로 해줘 접어」). 접힌 채로 재면 칩 줄
+     높이가 <b>0px</b> 이라 「한 줄인가」 를 잴 수 없습니다 — 접혀서 0 인
+     것과 칩이 한 줄이라 작은 것은 <b>다른 일</b>입니다. 먼저 펴고 잽니다.
+     ★ 자는 그대로입니다 — 펴 놓고 보면 칩이 한 줄인가. (옮기지 지우지
+       않습니다)                                                       */
+  await pg.evaluate(() => { try { hmFoldSet('etc', true); } catch (e) {} });
   await pg.evaluate(() => { go('home'); });
   await pg.waitForSelector('#hmToday', { timeout: 20000 });
   await pg.evaluate(() => hmPaint());

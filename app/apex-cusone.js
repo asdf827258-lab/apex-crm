@@ -248,6 +248,78 @@
                           예) '고객 365일에 있습니다'. 「모름」과 다르다
        where:'app'|'crm'
        act:{fam:'함수이름(id)'}  버튼은 부르는 화면이 정합니다   */
+  /* 🔎 한눈에 — 위 ★ 참고. 값이 하나도 없으면 <b>칸을 안 세웁니다</b> */
+  function cusGlanceHtml(v, L) {
+    var h = '', i, x, met = 0, low = 0, seen = 0;
+    /* 만난 횟수 — <b>연락기록 한 줄기에서</b> 셉니다 (5번). 여기서 또
+       기록을 만들지 않습니다. 기록이 없으면 0 이 아니라 <b>모름</b>입니다. */
+    for (i = 0; i < (L || []).length; i++) if (/만남|미팅|방문/.test(L[i].kind || '')) met++;
+    /* 2026-09-27 · 사장님 말씀 「만기! 청구 이력은 입력하게 만들고」 —
+       담을 자리가 생겼으니 목각의 그 둘이 이제 섭니다. <b>적힌 것만</b>
+       섭니다: 안 적으셨으면 null 이라 안 그립니다 (1번).                */
+    var hasBig = (v.polN != null) || (v.policy && v.policy.premiumWon != null) || (v.due != null);
+    var rows = [['사는 곳', v.region], ['어디서 왔나', v.src],
+                ['지금 단계', v.stage], ['만난 횟수', (L && L.length) ? (met + '회') : null],
+                ['청구', v.clm ? (v.clm.n + '건'
+                   + (v.clm.wonR > 0 ? (' · ' + cusWonR(v.clm.wonR)) : '')) : null]];
+    var hasRow = rows.some(function (r) { return r[1] != null && r[1] !== ''; });
+    if (!hasBig && !hasRow && !v.wal) return '';
+    h += '<div class="t-card" style="margin-bottom:14px">' +
+         '<div class="t-lab">🔎 한눈에</div>';
+    /* 큰 수 — <b>있는 것만</b> 세웁니다 */
+    if (hasBig) {
+      h += '<div class="t-row2" style="margin-top:10px">';
+      if (v.polN != null)
+        h += '<div style="flex:1"><div class="t-num">' + v.polN + '<span>건</span></div>' +
+             '<div class="t-lab">보유 계약</div></div>';
+      if (v.policy && v.policy.premiumWon != null)
+        h += '<div style="flex:1"><div class="t-num">' +
+             cusEsc(cusWonR(v.policy.premiumWon) || '—') + '</div>' +
+             '<div class="t-lab">월 보험료</div></div>';
+      /* ★ 만기는 <b>해</b>만 큰 수로 세우고 달·날은 작게 붙입니다 —
+         온 날짜를 44px 로 세우면 폰에서 셋째 칸이 옆으로 삐져나갑니다.
+         ★ 「D-30」 이라고 적지 않습니다 (사장님 말씀) — 며칠 남았는지는
+           보는 날마다 달라지므로, 보여 주는 것도 <b>날짜</b>입니다.      */
+      if (v.due != null) {
+        var d4 = String(v.due).replace(/[^0-9]/g, '');
+        h += '<div style="flex:1"><div class="t-num">' + cusEsc(d4.slice(0, 4)) +
+             (d4.length >= 6 ? ('<span>.' + cusEsc(d4.slice(4, 6)) + '</span>') : '') + '</div>' +
+             '<div class="t-lab">만기</div></div>';
+      }
+      h += '</div>';
+    }
+    /* 네 줄 — 빈 것은 <b>「아직」</b> 이라고 적습니다. 빈칸으로 두면
+       안 적은 것인지 없는 것인지 알 수 없습니다 (1번). */
+    if (hasRow) {
+      for (i = 0; i < rows.length; i++) {
+        x = rows[i];
+        h += '<div class="t-row"><span class="m"><b>' + cusEsc(x[0]) + '</b></span>' +
+             '<span class="r">' + (x[1] == null || x[1] === ''
+               ? '<span class="t-tag">아직</span>'
+               : ('<b>' + cusEsc(x[1]) + '</b>')) + '</span></div>';
+      }
+    }
+    /* 8통장 — <b>이름도 등급도 앱이 압니다</b>(waShort · cmWalOf). 여기서
+       또 적으면 지도와 갈립니다 (5번). 진단을 안 붙였으면 안 세웁니다. */
+    if (v.wal) {
+      for (i = 0; i < v.wal.length; i++) {
+        if (v.wal[i].lv === 'low') low++;
+        if (v.wal[i].lv) seen++;
+      }
+      h += '<div class="t-sub">8통장 진단 — ' + (seen
+        ? ('비어 있는 통장 <b>' + low + '개</b>')
+        : '아직 등급을 안 매겼습니다') + '</div><div class="t-chips">';
+      for (i = 0; i < v.wal.length; i++) {
+        x = v.wal[i];
+        h += '<span class="t-chip">' + cusEsc(x.n) + '\u00a0' +
+             (x.lv === 'ok' ? '✓' : (x.lv === 'low' ? '✗' : (x.lv === 'mid' ? '△' : '—'))) +
+             '</span>';
+      }
+      h += '</div>';
+    }
+    h += '</div>';
+    return h;
+  }
   function cusCardHtml(v) {
     v = v || {};
     var h = '', i, r, L = v.log || [], fam = v.fam || {}, po = v.policy || {};
@@ -267,6 +339,19 @@
              (d === null ? '' : (d > 0 ? (' · ' + d + '일 지났습니다') : (d === 0 ? ' · 오늘입니다' : (' · ' + (-d) + '일 남았습니다')))))
           : '잡아 둔 약속이 없습니다') +
       '</div></div><div class="cus-body">';
+
+    /* ══ 🔎 <b>한눈에</b> — 목각 사진 2 의 머리 ═══════════════════════
+       사장님 말씀 (2026-09-27 · 목각 사진 2) — 「이렇게 <b>깔끔하게</b>
+       정리하게 하고」. 큰 수 · 네 줄 · 8통장을 맨 위에 한 번에 보여 줍니다.
+       ★ <b>아래 칸들은 그대로</b>입니다 (6번) — 사람·가족·돈·계약·
+         연락기록·문서. 감추면 고칠 길이 사라집니다.
+       ★ <b>새 CSS 를 한 줄도 안 만들었습니다</b> — ui.css 의 t-card ·
+         t-num · t-lab · t-row2 · t-row · t-chips · t-chip · t-sub 만
+         씁니다 (사장님 계약 「새 CSS 를 쓰지 마십시오」).
+       ★ <b>모르는 것은 안 세웁니다</b> (1번). 목각의 「D-30 만기」 와
+         「실비 청구 없음」 은 <b>앱에 담는 자리가 없어</b> 안 그립니다 —
+         빈 칸을 그려 두면 적으신 것이 어디에도 저장되지 않습니다.      */
+    h += cusGlanceHtml(v, L);
 
     /* 사람 */
     h += '<div class="cus-sec"><div class="cus-st">사람</div><div class="cus-kv">' +

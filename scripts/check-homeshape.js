@@ -145,6 +145,13 @@ const tall = (p) => p.evaluate(() => {
     await p.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded', timeout: 90000 });
     await p.waitForFunction(() => typeof renderHome === 'function' && typeof go === 'function', { timeout: 60000 });
     await p.evaluate(s => { (0, eval)(s); }, SEED(o || {}));
+    /* ⚠ 2026-09-27 — 「📦 여기로 옮겼습니다」 줄이 <b>「🧭 그 밖의 것」
+       접이 안</b>으로 들어갔습니다(사장님 말씀 「2번으로 해줘 접어」).
+       접힌 채로 재면 단추 높이가 <b>0px</b> 이라 「손가락 크기 44px」 을
+       잴 수 없습니다 — <b>먼저 펴고 잽니다.</b>
+       ★ 자는 그대로입니다. 묻는 것은 바뀌지 않았습니다 — 펴 놓고 보면
+         그 줄이 눌러서 갈 만한가. (자를 옮기지 지우지 않습니다)      */
+    await p.evaluate(() => { try { hmFoldSet('etc', true); } catch (e) {} });
     await p.evaluate(() => { go('home'); });
     await p.waitForTimeout(700);
     return { ctx, p, errs };
