@@ -219,11 +219,20 @@ const look = () => ({
      '  가려 둔 이름은 <b>안 기울고 작다</b> — ' + (emk ? (emk.fs + ' · ' + emk.st) : '없음') +
      ' (.cm-nm em 규칙에 선택자를 붙였습니다)');
 
-  console.log('\n[6] <b>새 CSS 0줄</b> · [7] 누르는 것 44px');
+  /* ⚠ <b>이 자는 「CSS 가 안 늘었나」 를 재지 않습니다.</b> 「줄에 쓴 이름이
+     다 정의돼 있나」 를 잽니다. 한 번 [6] 에 「새 CSS 0줄」 이라는 이름을
+     달아 두었다가, 정작 제가 늘린 규칙 한 줄(.t-row .av.n)을 못 보고
+     대장에 「새 규칙 0개」 라고 <b>거짓을 적었습니다</b>. 자 이름이 재지도
+     않는 것을 약속하면 사람이 그것을 믿습니다 (8번). 이름을 사실대로
+     고치고, <b>늘린 규칙이 토큰만 쓰는지</b> 를 아래에서 따로 봅니다.   */
+  console.log('\n[6] <b>쓴 이름이 다 정의돼 있나</b> · 늘린 규칙이 토큰만 쓰나 · [7] 누르는 것 44px');
   const used = [...new Set((a.cls.match(/[a-z][a-z0-9-]*/g) || []))];
   const miss = used.filter(c => UICSS.indexOf('.' + c) < 0 && SRC.indexOf('.' + c) < 0);
-  is(miss.length === 0, '  쓴 이름 ' + used.length + '개가 <b>전부 이미 있는 것</b>이다' +
+  is(miss.length === 0, '  줄에 쓴 이름 ' + used.length + '개가 <b>다 정의된 것</b>이다 — 이름을 지어내지 않았다' +
      (miss.length ? (' ← 없는 것 ' + miss.join(' · ')) : ''));
+  const avn = /\.t-row \.av\.n\{([^}]*)\}/.exec(UICSS);
+  is(!!avn && !/#[0-9a-fA-F]{3,8}/.test(avn[1]),
+     '  「챙길 분만 붉게」 로 늘린 <b>규칙 하나가 토큰만</b> 쓴다 — ' + (avn ? avn[1] : '없음'));
   is(a.taps > 0 && a.small === 0,
      '  누르는 것 ' + a.taps + '개가 <b>44px 이상</b>이다 — 작은 것 ' + a.small + '개');
 
