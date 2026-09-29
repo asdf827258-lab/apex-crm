@@ -242,15 +242,32 @@ const INKS = (sel) => {
     const before = document.getElementById('dynPane').classList.contains('t-skin');
     go('crm'); await new Promise(r => setTimeout(r, 1200));      /* 전체화면으로 빠져나간다 */
     const skin = document.getElementById('dynPane').classList.contains('t-skin');
-    go('airep'); await new Promise(r => setTimeout(r, 900));     /* 표에 없는 보통 화면 */
-    return { before: before, skin: skin,
+    /* ★ 2026-10-01 — 여기 <b>airep 이 박혀 있었습니다.</b> 그런데 airep 이
+       옷을 입자 이 줄이 울렸습니다. 자가 틀린 것이 아니라 <b>사실이 바뀐</b>
+       것입니다. 줄이지 않고 <b>새 사실에 맞춥니다</b> — 다만 이름을 또 박으면
+       그 화면이 옷을 입는 날 똑같이 낡습니다. <b>표에 없는 보통 화면을
+       코드에서 골라</b> 씁니다 (전체화면으로 빠져나가는 화면은 빼고).     */
+    const skinTbl = (typeof T_SKIN === 'object' && T_SKIN) ? T_SKIN : {};
+    const 전체화면 = ['finance','crm','apexmap','onecmp','mikki','car_fault',
+                      'mikki_talk','sangdam','pdel','bohum','frmake'];
+    let 보통 = '';
+    try {
+      (TABS || []).forEach(g => (g.items || []).forEach(it => {
+        if (보통 || !it || !it.id) return;
+        if (skinTbl[it.id] || 전체화면.indexOf(it.id) >= 0) return;
+        보통 = it.id;
+      }));
+    } catch (e) {}
+    if (보통) { go(보통); await new Promise(r => setTimeout(r, 900)); }
+    return { before: before, skin: skin, 보통: 보통,
              skin2: document.getElementById('dynPane').classList.contains('t-skin'),
              ink: getComputedStyle(document.documentElement).getPropertyValue('--ink-1').trim() };
   });
   is(other.before, '  먼저 홈에서 <b>옷을 입혀 두었다</b>');
   is(!other.skin, '  <b>전체화면으로 빠져나가도 옷이 벗겨진다</b> (DB 통합 CRM)' +
      (other.skin ? ' ← 앞 화면의 옷을 그대로 입고 있습니다' : ''));
-  is(!other.skin2, '  표에 없는 보통 화면에도 <b>t-skin 이 안 붙는다</b> (TFA 업무관리)'),
+  is(!!other.보통, '  표에 <b>없는 보통 화면</b>을 코드에서 골랐다 — ' + (other.보통 || '못 골랐습니다'));
+  is(!other.skin2, '  그 화면에는 <b>t-skin 이 안 붙는다</b> (' + (other.보통 || '?') + ')'),
   /* ⚠ 2026-09-26 에 <b>이 자를 옮겼습니다.</b> 여기는 「앱의 잉크 표를
      <b>안 건드렸다</b>」 를 재고 있었습니다 — 옷을 여섯 화면에만 입히던
      때는 맞았습니다. 나머지 92개까지 한 번에 바꾸면 무엇이 깨졌는지
