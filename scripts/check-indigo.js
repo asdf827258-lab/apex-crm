@@ -1,4 +1,5 @@
-/* 🎨 <b>색표 밖에 남아 있던 색을 색표 안으로</b> (판 ⑨ 남색 · 판 ⑩ 파란 선).
+/* 🎨 <b>색표 밖에 남아 있던 색을 색표 안으로</b>
+   (판 ⑨ 남색 · 판 ⑩ 파란 선 · 판 ⑪ 파란 바탕 + 이미 있던 값).
    ★ 파일 이름은 indigo 로 시작하지만 <b>남색만 보지 않습니다</b> —
      판 ⑩ 에서 파르스름한 테두리(--t-line-b)까지 같이 봅니다. 재는 것이
      똑같아서(「색표 밖 hex 0 · 화면 색 그대로」) 자를 둘로 나누지
@@ -58,7 +59,11 @@ const WAS = [
   ['--t-ind-d',  '#3730A3', 'rgb(55, 48, 163)'],
   /* 판 ⑩ — 파르스름한 테두리. 46군데가 <b>전부 테두리</b>였고 글자색으로
      쓰는 자리는 한 군데도 없어 <b>선 계열</b>에 세웠습니다.            */
-  ['--t-line-b', '#C7D2FE', 'rgb(199, 210, 254)']
+  ['--t-line-b', '#C7D2FE', 'rgb(199, 210, 254)'],
+  /* 판 ⑪ — 파르스름한 알림칸 바탕. 다섯 값을 <b>가장 많이 쓰는 이 값</b>으로
+     모았습니다. 앞의 판들과 달리 <b>여기만 화면이 아주 조금 움직입니다</b>
+     (54군데가 최대 5/255) — 알고 한 것입니다.                          */
+  ['--t-bg-b',   '#F5F9FF', 'rgb(245, 249, 255)']
 ];
 
 /* ⚠ <b>주석을 잘라내려고 하지 않습니다.</b> 한 번 해 봤다가 데었습니다 —
@@ -90,10 +95,13 @@ function ratio(a, b) { const x = lum(a), y = lum(b), hi = Math.max(x, y), lo = M
     const c = (UICSS.match(new RegExp(n + '\\s*:', 'g')) || []).length;
     is(c === 1, '  <b>' + n + '</b> 이 한 번만 서 있다 — ' + c + '번');
   });
-  /* 같은 색에 이름이 둘이면 고칠 자리가 둘이 됩니다 */
+  /* 같은 색에 이름이 둘이면 고칠 자리가 둘이 됩니다.
+     ★ <b>글이 아니라 「그 값을 든 이름이 몇인가」</b> 를 셉니다 — 색표
+       주석에 까닭을 적어 두면 날글 세기로는 헛것을 잡습니다. 이 자가
+       세 번 데인 자리입니다 (check-uid · 판 ⑧ · 판 ⑩).              */
   WAS.forEach(([n, hex]) => {
-    const c = (UICSS.match(new RegExp(hex, 'gi')) || []).length;
-    is(c === 1, '  ' + hex + ' 가 색표에 <b>한 번만</b> 적혀 있다 — ' + c + '번 (이름 둘이면 쌍둥이)');
+    const c = (UICSS.match(new RegExp('--t-[a-z0-9-]+\\s*:\\s*' + hex, 'gi')) || []).length;
+    is(c === 1, '  ' + hex + ' 를 든 이름이 <b>하나뿐</b>이다 — ' + c + '개 (둘이면 쌍둥이)');
   });
 
   console.log('\n[2] ★★ <b>색이 그대로다</b> — 이 판의 본업');
@@ -122,12 +130,24 @@ function ratio(a, b) { const x = lum(a), y = lum(b), hi = Math.max(x, y), lo = M
   /* 날글 그대로 셉니다. 남아도 되는 자리는 <b>설명 글 한 곳뿐</b>이고,
      그것까지 수로 못 박습니다 — 「주석은 안 세니까」 로 넘어가면 진짜
      남은 것과 구별이 안 됩니다.                                        */
-  const WANT = { '#3730A3': 0, '#EEF2FF': 0, '#4F46E5': 1, '#C7D2FE': 0 };
+  /* 0 이 목표지만 <b>못 옮긴 것은 그 수를 적습니다</b> (1번).
+     못 옮긴 자리는 전부 <b>JS 가 만드는 색</b>입니다 — 그래프에 넘기는
+     문자열 · SVG 의 fill · canvas 의 fillStyle · 삼항으로 고르는 색.
+     거기에 var() 를 넣으면 <b>색이 통째로 안 나옵니다.</b>             */
+  const WANT = { '#3730A3': 0, '#EEF2FF': 0, '#4F46E5': 1, '#C7D2FE': 0,
+                 '#F5F9FF': 7, '#F8FAFF': 1, '#F7FAFF': 1, '#F5F8FF': 0, '#F0F7FF': 0 };
+  Object.keys(WANT).filter(h => !WAS.some(w => w[1] === h)).forEach(hex => {
+    const c = (SRC.match(new RegExp(hex, 'gi')) || []).length;
+    is(c === WANT[hex], '  ' + hex + ' 가 <b>' + c + '군데</b> 있다 (JS 가 만드는 자리 ' + WANT[hex] + '군데)');
+  });
   WAS.forEach(([n, hex]) => {
     const c = (SRC.match(new RegExp(hex, 'gi')) || []).length;
     const w = WANT[hex];
-    is(c === w, '  ' + hex + ' 가 app/index.html 에 <b>' + c + '군데</b> 있다 (있어도 되는 것 ' + w +
-       (w ? '군데 — 759행 설명 글' : '군데') + ')');
+    /* 왜 남아도 되는지는 <b>hex 마다 다릅니다</b> — 759행은 설명 글이고,
+       파란 바탕 일곱은 JS 가 만드는 색입니다. 뭉뚱그리면 거짓이 됩니다. */
+    const why = w === 0 ? '군데' : (hex.toUpperCase() === '#4F46E5'
+      ? '군데 — 759행 설명 글' : '군데 — JS 가 만드는 색');
+    is(c === w, '  ' + hex + ' 가 app/index.html 에 <b>' + c + '군데</b> 있다 (있어도 되는 것 ' + w + why + ')');
   });
   const note = (SRC.match(/\/\* #4F46E5 \*\//g) || []).length;
   is(note === 1,
@@ -135,7 +155,16 @@ function ratio(a, b) { const x = lum(a), y = lum(b), hi = Math.max(x, y), lo = M
   const uses = (SRC.match(/var\(--t-ind(-l|-d)?\)/g) || []).length;
   is(uses === 41, '  대신 남색 이름으로 <b>' + uses + '군데</b>가 선다 — 옮긴 수 그대로다 (41)');
   const lb = (SRC.match(/var\(--t-line-b\)/g) || []).length;
-  is(lb === 46, '  파란 선 이름으로 <b>' + lb + '군데</b>가 선다 — 옮긴 수 그대로다 (46)');
+  const ib = (SRC.match(/var\(--t-ind-b\)/g) || []).length;
+  is(lb + ib === 46, '  파란 선 <b>' + lb + '</b> + 남색 테두리 별칭 <b>' + ib +
+     '</b> = 46군데 — 판 ⑩ 에서 옮긴 수 그대로다');
+  const bgb = (SRC.match(/var\(--t-bg-b\)/g) || []).length;
+  is(bgb === 110, '  파란 바탕 이름으로 <b>' + bgb + '군데</b>가 선다 — 옮긴 수 그대로다 (110)');
+  const pt = (SRC.match(/var\(--t-point\)/g) || []).length;
+  const raw1a = (SRC.match(/#1A56DB/gi) || []).length;
+  is(pt >= 339 && raw1a === 61,
+     '  --t-point 로 <b>' + pt + '군데</b>가 서고, 생 hex 는 <b>' + raw1a +
+     '군데</b> 남았다 — 그 61군데는 JS 가 만드는 색이라 var() 가 안 풀린다');
 
   console.log('\n[4] <b>대비</b>가 4.5 위다');
   const c1 = ratio('#3730A3', '#EEF2FF'), c2 = ratio('#4F46E5', '#EEF2FF');
@@ -152,8 +181,18 @@ function ratio(a, b) { const x = lum(a), y = lum(b), hi = Math.max(x, y), lo = M
      울렸습니다.</b> 판 ⑧ 에서도(「빈 통장 8칸」), check-uid 에서도 같은
      자리에 데었습니다 — 자는 <b>정의</b>를 보아야 하고, 그래야 글로
      내력을 남길 수 있습니다.                                          */
-  is(!/--t-ind-b\s*:/.test(UICSS) && !/--t-ind[a-z-]*\s*:\s*#C7D2FE/i.test(UICSS),
-     '  색표에 <b>남색 식구로 세우지 않았다</b> — --t-ind-b 라는 이름이 없다');
+  /* ★ 판 ⑪ 에서 <b>뒤집혔습니다</b>. 판 ⑨·⑩ 에서는 「--t-ind-b 를 만들지
+     않았나」 를 봤는데, 사장님이 「별칭으로 해 줘」 로 정하셔서 이제
+     <b>있는 것이 맞습니다.</b> 자를 줄이지 않고 <b>「별칭인가」</b> 로
+     바꿉니다 — 값을 따로 적으면(#C7D2FE) 같은 색에 이름이 둘이 되어
+     고칠 자리가 둘이 됩니다 (5번). 그것이 여기서 막아야 할 것입니다. */
+  const alias = /--t-ind-b\s*:\s*var\(--t-line-b\)/.test(UICSS);
+  is(alias && !/--t-ind-b\s*:\s*#/i.test(UICSS),
+     '  --t-ind-b 가 <b>별칭</b>이다 — 값을 따로 안 적고 파란 선을 가리킨다');
+  const ibLines = SRC.split('\n').filter(l => /var\(--t-ind-b\)/.test(l));
+  is(ibLines.length === 6 && ibLines.every(l => /--t-ind-l/.test(l)),
+     '  그 이름이 <b>남색 바탕과 한 쌍인 여섯</b>에만 붙었다 — ' + ibLines.length + '줄' +
+     (ibLines.every(l => /--t-ind-l/.test(l)) ? '' : ' ← 남색이 아닌 줄이 섞였습니다'));
   is(/--t-line-b\s*:\s*#C7D2FE/i.test(UICSS),
      '  <b>선 계열(--t-line-b)</b>에 세웠다 — 46군데가 전부 테두리였다');
   /* 선 계열 이웃과 <b>같은 색이 아닌가</b> — 같으면 쌍둥이입니다 (5번) */
@@ -170,7 +209,7 @@ function ratio(a, b) { const x = lum(a), y = lum(b), hi = Math.max(x, y), lo = M
 
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '군데 — 이름을 붙이면서 색이 변하면 이 판은 안 하느니만 못합니다.')
-                  : '✓ 남색과 파란 선이 색표 안으로 들어왔고, 화면 색은 한 톨도 안 변했습니다.');
+                  : '✓ 남색·파란 선·파란 바탕이 색표 안으로 들어왔고, 같은 값에 이름이 둘인 곳이 없습니다.');
   await b.close(); srv.close();
   process.exit(bad ? 1 : 0);
 })();
