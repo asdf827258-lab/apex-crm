@@ -139,7 +139,7 @@ const SEED = () => {
       if (!c) { out.push({ f: f, 없음: true }); continue; }
       const 적힌 = parseInt((c.querySelector('b') || {}).textContent || '-1', 10);
       c.click(); await new Promise(r => setTimeout(r, 400));
-      const rows = document.querySelectorAll('#oscList .cm-row, #oscList .osc-row, #oscList [data-cid]');
+      const rows = document.querySelectorAll('#oscList .t-row, #oscList .osc-row, #oscList [data-cid]');
       out.push({ f: f, 적힌: 적힌, 그려진: rows.length,
                  켜짐: (chips().filter(x => x.getAttribute('data-f') === f)[0] || {})
                         .classList.contains('on') });
@@ -174,7 +174,7 @@ const SEED = () => {
     cliFSet('won'); await new Promise(r => setTimeout(r, 400));
     const t = (document.getElementById('oscList') || {}).innerText || '';
     OSC.list = 담; cliFSet('all'); await new Promise(r => setTimeout(r, 300));
-    return { t: t, 돌아옴: (document.querySelectorAll('#oscList .cm-row, #oscList [data-cid]')).length };
+    return { t: t, 돌아옴: (document.querySelectorAll('#oscList .t-row, #oscList [data-cid]')).length };
   });
   is(/이 칸에는 아무도 없습니다/.test(D.t),
      '  <b>「이 칸에는 아무도 없습니다」</b> 라고 한다 — 「고객이 없다」 고 안 한다');
@@ -186,7 +186,7 @@ const SEED = () => {
 
   console.log('\n[6] <b>찾기와 같이</b> 걸린다 (5번)');
   const E = await p.evaluate(async () => {
-    const n = () => document.querySelectorAll('#oscList .cm-row, #oscList [data-cid]').length;
+    const n = () => document.querySelectorAll('#oscList .t-row, #oscList [data-cid]').length;
     cliFSet('run'); await new Promise(r => setTimeout(r, 300));
     const 칩만 = n();
     /* ★ <b>아무도 안 맞는 글자</b>로 찾습니다. 「홍길동」 처럼 맞을 수도
