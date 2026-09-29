@@ -1,4 +1,8 @@
-/* 🎨 <b>색표 밖에 남은 남색을 색표 안으로</b> (판 ⑨).
+/* 🎨 <b>색표 밖에 남아 있던 색을 색표 안으로</b> (판 ⑨ 남색 · 판 ⑩ 파란 선).
+   ★ 파일 이름은 indigo 로 시작하지만 <b>남색만 보지 않습니다</b> —
+     판 ⑩ 에서 파르스름한 테두리(--t-line-b)까지 같이 봅니다. 재는 것이
+     똑같아서(「색표 밖 hex 0 · 화면 색 그대로」) 자를 둘로 나누지
+     않았습니다 (5번). 이름을 바꾸면 checks.tsv 와 git 내력이 끊깁니다.
 
    #483 에서 「앱이 색표 밖의 색을 서른 가지 쓰고 있다」 고 잡은 것의
    남은 자리입니다. app/index.html 안에서만 <b>41군데</b>가 생 hex 로
@@ -49,9 +53,12 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 /* 옮기기 <b>전</b> 그 자리에 있던 색 — 이 표가 이 자의 기준점입니다.
    값을 바꾸면 여기와 어긋나 웁니다.                                   */
 const WAS = [
-  ['--t-ind',   '#4F46E5', 'rgb(79, 70, 229)'],
-  ['--t-ind-l', '#EEF2FF', 'rgb(238, 242, 255)'],
-  ['--t-ind-d', '#3730A3', 'rgb(55, 48, 163)']
+  ['--t-ind',    '#4F46E5', 'rgb(79, 70, 229)'],
+  ['--t-ind-l',  '#EEF2FF', 'rgb(238, 242, 255)'],
+  ['--t-ind-d',  '#3730A3', 'rgb(55, 48, 163)'],
+  /* 판 ⑩ — 파르스름한 테두리. 46군데가 <b>전부 테두리</b>였고 글자색으로
+     쓰는 자리는 한 군데도 없어 <b>선 계열</b>에 세웠습니다.            */
+  ['--t-line-b', '#C7D2FE', 'rgb(199, 210, 254)']
 ];
 
 /* ⚠ <b>주석을 잘라내려고 하지 않습니다.</b> 한 번 해 봤다가 데었습니다 —
@@ -91,17 +98,17 @@ function ratio(a, b) { const x = lum(a), y = lum(b), hi = Math.max(x, y), lo = M
 
   console.log('\n[2] ★★ <b>색이 그대로다</b> — 이 판의 본업');
   const got = await p.evaluate((names) => {
-    const el = document.createElement('div');
-    el.id = 'indProbe';
-    el.style.cssText = 'position:fixed;left:-9999px;color:var(--t-ind-d);' +
-                       'background:var(--t-ind-l);border:1px solid var(--t-ind)';
-    document.body.appendChild(el);
-    const cs = getComputedStyle(el);
-    const out = { '--t-ind-d': cs.color, '--t-ind-l': cs.backgroundColor, '--t-ind': cs.borderTopColor };
-    /* 이름이 안 풀리면 브라우저가 <b>기본값</b>을 씁니다 — 그것도 잡습니다 */
-    out.raw = {};
-    names.forEach(n => { out.raw[n] = getComputedStyle(document.documentElement).getPropertyValue(n).trim(); });
-    el.remove();
+    const out = { raw: {} };
+    names.forEach(n => {
+      /* color 로 재면 어떤 색 이름이든 같은 자로 잴 수 있습니다 */
+      const el = document.createElement('div');
+      el.style.cssText = 'position:fixed;left:-9999px;color:var(' + n + ')';
+      document.body.appendChild(el);
+      out[n] = getComputedStyle(el).color;
+      el.remove();
+      /* 이름이 안 풀리면 브라우저가 <b>기본값</b>을 씁니다 — 그것도 잡습니다 */
+      out.raw[n] = getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    });
     return out;
   }, WAS.map(w => w[0]));
   WAS.forEach(([n, hex, rgb]) => {
@@ -115,7 +122,7 @@ function ratio(a, b) { const x = lum(a), y = lum(b), hi = Math.max(x, y), lo = M
   /* 날글 그대로 셉니다. 남아도 되는 자리는 <b>설명 글 한 곳뿐</b>이고,
      그것까지 수로 못 박습니다 — 「주석은 안 세니까」 로 넘어가면 진짜
      남은 것과 구별이 안 됩니다.                                        */
-  const WANT = { '#3730A3': 0, '#EEF2FF': 0, '#4F46E5': 1 };
+  const WANT = { '#3730A3': 0, '#EEF2FF': 0, '#4F46E5': 1, '#C7D2FE': 0 };
   WAS.forEach(([n, hex]) => {
     const c = (SRC.match(new RegExp(hex, 'gi')) || []).length;
     const w = WANT[hex];
@@ -126,21 +133,34 @@ function ratio(a, b) { const x = lum(a), y = lum(b), hi = Math.max(x, y), lo = M
   is(note === 1,
      '  그 한 군데가 <b>설명 글</b>이다 — 「목각은 이 색이었다」 고 적어 둔 글이지 CSS 가 아니다');
   const uses = (SRC.match(/var\(--t-ind(-l|-d)?\)/g) || []).length;
-  is(uses === 41, '  대신 이름으로 <b>' + uses + '군데</b>가 선다 — 옮긴 수 그대로다 (41)');
+  is(uses === 41, '  대신 남색 이름으로 <b>' + uses + '군데</b>가 선다 — 옮긴 수 그대로다 (41)');
+  const lb = (SRC.match(/var\(--t-line-b\)/g) || []).length;
+  is(lb === 46, '  파란 선 이름으로 <b>' + lb + '군데</b>가 선다 — 옮긴 수 그대로다 (46)');
 
   console.log('\n[4] <b>대비</b>가 4.5 위다');
   const c1 = ratio('#3730A3', '#EEF2FF'), c2 = ratio('#4F46E5', '#EEF2FF');
   is(c1 >= 4.5, '  진한 글씨를 연한 바탕에 — <b>' + c1 + '</b>');
   is(c2 >= 4.5, '  기본 남색을 연한 바탕에 — <b>' + c2 + '</b>');
 
-  console.log('\n[5] ⚠ <b>#C7D2FE 를 남색이라 안 부른다</b> (1번)');
-  const cn = (SRC.match(/#C7D2FE/gi) || []).length;
-  const near = SRC.split('\n').filter(l => /#C7D2FE/i.test(l) &&
-    /(--t-ind|#3730A3|#EEF2FF|#4F46E5)/i.test(l)).length;
-  is(!/--t-ind-b/.test(UICSS) && !/--t-ind[a-z-]*\s*:\s*#C7D2FE/i.test(UICSS),
-     '  색표에 <b>#C7D2FE 를 남색으로 세우지 않았다</b> — ' + cn + '군데 중 남색과 같은 줄은 ' +
-     near + '군데뿐이고 나머지는 다른 바탕 위의 연파랑 테두리다');
-  is(cn > 0, '  그것은 <b>' + cn + '군데</b>로 그대로 있다 — 없는 척하지 않는다 (다음 판)');
+  console.log('\n[5] ⚠ <b>파란 선을 남색이라 안 부른다</b> (1번) · 선 계열에 세웠다');
+  /* 판 ⑨ 에서 「테두리도 남색 식구로 넣자」 는 이야기가 있었는데, 46군데 중
+     남색과 같은 줄은 <b>여섯</b>뿐이고 나머지는 다른 바탕 위의 테두리였습니다.
+     남색 이름을 붙이면 거짓이 됩니다. 판 ⑩ 에서 <b>선 계열</b>로 세웠습니다. */
+  /* ⚠ <b>글이 아니라 「이름이 정의됐나」 를 봅니다.</b> 처음에 「--t-ind-b
+     라는 글자가 파일에 있나」 로 재다가, 색표 주석에 「그때 --t-ind-b 로
+     넣자는 이야기가 있었는데」 라고 적어 둔 <b>제 설명 글이 제 자를
+     울렸습니다.</b> 판 ⑧ 에서도(「빈 통장 8칸」), check-uid 에서도 같은
+     자리에 데었습니다 — 자는 <b>정의</b>를 보아야 하고, 그래야 글로
+     내력을 남길 수 있습니다.                                          */
+  is(!/--t-ind-b\s*:/.test(UICSS) && !/--t-ind[a-z-]*\s*:\s*#C7D2FE/i.test(UICSS),
+     '  색표에 <b>남색 식구로 세우지 않았다</b> — --t-ind-b 라는 이름이 없다');
+  is(/--t-line-b\s*:\s*#C7D2FE/i.test(UICSS),
+     '  <b>선 계열(--t-line-b)</b>에 세웠다 — 46군데가 전부 테두리였다');
+  /* 선 계열 이웃과 <b>같은 색이 아닌가</b> — 같으면 쌍둥이입니다 (5번) */
+  const sib = (UICSS.match(/--t-line[a-z0-9-]*\s*:\s*#[0-9A-Fa-f]{6}/g) || []);
+  const vals = sib.map(x => x.split(':')[1].trim().toLowerCase());
+  is(sib.length >= 4 && new Set(vals).size === vals.length,
+     '  선 계열 ' + sib.length + '개가 <b>서로 다른 색</b>이다 — ' + vals.join(' · '));
 
   console.log('\n[6] 심의색은 <b>안 건드렸다</b> (S06)');
   is(/--t-seal\s*:/.test(UICSS) && /--t-sealk\s*:/.test(UICSS) &&
@@ -150,7 +170,7 @@ function ratio(a, b) { const x = lum(a), y = lum(b), hi = Math.max(x, y), lo = M
 
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '군데 — 이름을 붙이면서 색이 변하면 이 판은 안 하느니만 못합니다.')
-                  : '✓ 남색이 색표 안으로 들어왔고, 화면 색은 한 톨도 안 변했습니다.');
+                  : '✓ 남색과 파란 선이 색표 안으로 들어왔고, 화면 색은 한 톨도 안 변했습니다.');
   await b.close(); srv.close();
   process.exit(bad ? 1 : 0);
 })();
