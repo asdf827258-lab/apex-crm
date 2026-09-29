@@ -108,8 +108,8 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   /* 켜면 「내 고객」 으로 맞춰지는 것은 따로 확인한다(w0). 나머지 검사는 전원을 봐야 하므로 풀어 둔다. */
   const open = async () => { await page.evaluate(() => { OSC.view = 'list'; OSC.q = ''; CM.picked = true; CM.pick = ''; go('clients'); }); await page.waitForTimeout(500); };
   const list = () => page.evaluate(() => ({
-    n: document.querySelectorAll('#oscList .cm-row').length,
-    names: Array.prototype.map.call(document.querySelectorAll('#oscList .cm-nm'),
+    n: document.querySelectorAll('#oscList .t-row').length,
+    names: Array.prototype.map.call(document.querySelectorAll('#oscList .t-row .nm'),
       e => ((e.firstChild && e.firstChild.textContent) || e.textContent || '').trim()),
     txt: (document.getElementById('oscList') || {}).textContent || ''
   }));
@@ -327,7 +327,7 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   await page.waitForTimeout(500);
   const grp = await page.evaluate(() => ({
     heads: Array.prototype.map.call(document.querySelectorAll('.cm-fh'), e => e.textContent.replace(/\s+/g, ' ').trim()),
-    inFam: document.querySelectorAll('.cm-fam .cm-row').length
+    inFam: document.querySelectorAll('.cm-fam .t-row').length
   }));
   ok(grp.heads.length === 1 && /김철수 가족/.test(grp.heads[0]) && /2명/.test(grp.heads[0]),
     '목록이 가족으로 묶여 보인다 — ' + grp.heads[0]);
@@ -389,7 +389,7 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
     await new Promise(r => setTimeout(r, 900));
     return {
       pick: CM.pick,
-      rows: document.querySelectorAll('.cm-row').length,
+      rows: document.querySelectorAll('#oscList .t-row').length,
       txt: ((document.getElementById('oscList') || {}).textContent || '').slice(0, 80)
     };
   });
@@ -402,8 +402,8 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   const w1 = await page.evaluate(() => ({
     chips: Array.prototype.map.call(document.querySelectorAll('.cm-whos .cm-sb'),
       e => e.textContent.replace(/\s+/g, ' ').trim()),
-    tags: Array.prototype.map.call(document.querySelectorAll('.cm-row .cm-wt'), e => e.textContent.trim()),
-    rows: document.querySelectorAll('.cm-row').length,
+    tags: Array.prototype.map.call(document.querySelectorAll('#oscList .t-row .cm-wt'), e => e.textContent.trim()),
+    rows: document.querySelectorAll('#oscList .t-row').length,
     me: !!document.querySelector('.cm-whos .cm-sb.me')
   }));
   ok(w1.chips.length >= 4, '담당자 고르는 단추가 뜬다 — ' + w1.chips.join(' · '));
@@ -417,11 +417,11 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   /* 담당자를 하나 고르면 그 사람 것만 */
   const w2 = await page.evaluate(() => {
     cmWhoSet('p2');
-    const rows = document.querySelectorAll('.cm-row').length;
+    const rows = document.querySelectorAll('#oscList .t-row').length;
     const txt = (document.getElementById('oscList') || {}).textContent || '';
     const on = document.querySelectorAll('.cm-whos .cm-sb.on').length;
     cmWhoSet('p2');   /* 한 번 더 누르면 풀린다 */
-    return { rows, txt, on, back: document.querySelectorAll('.cm-row').length };
+    return { rows, txt, on, back: document.querySelectorAll('#oscList .t-row').length };
   });
   ok(w2.rows === 1, '박서준을 고르면 그 사람 고객 한 명만 남는다 (' + w2.rows + '명)');
   ok(/박서준<\/b> 담당 1명|박서준 담당 1명/.test(w2.txt.replace(/\s+/g, ' ')) || /박서준/.test(w2.txt),
@@ -450,7 +450,7 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
     ['박', '김', 'ㅂ', 'ㅊ', '5678', '박서준'].forEach(q => {
       OSC.q = q; osRenderList();
       r[q] = {
-        n: document.querySelectorAll('.cm-row').length,
+        n: document.querySelectorAll('#oscList .t-row').length,
         txt: ((document.getElementById('oscList') || {}).textContent || '').slice(0, 60)
       };
     });

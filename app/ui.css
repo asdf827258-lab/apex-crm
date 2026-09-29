@@ -202,14 +202,31 @@
   display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800}
 /* #435 가 쓴 이름 (.m b / .m span) 과 목업이 쓴 이름 (.nm / .mt) 을 <b>둘 다</b> 받습니다 —
    이미 머지된 화면을 고치지 않으려는 것입니다. 새로 쓰는 곳은 .nm / .mt 를 쓰십시오. */
-.t-row .m{flex:1;min-width:0}
+/* ★ <b>챙겨야 할 분만 붉게</b> (사장님 2026-09-29). 아바타는 한 색이
+   기본이고, 석 달 넘게 못 뵌 분·기록이 없는 분만 이 갈래로 섭니다.
+   여태 명단은 온도를 <b>네 색</b>으로 말했는데 빨강이 「괜찮은 분」 이고
+   흐린 회색이 「챙겨야 할 분」 이라 <b>거꾸로</b> 였습니다. 색은 여기
+   있는 토큰만 씁니다 — 새 색을 만들지 않습니다 (5번).                */
+.t-row .av.n{background:var(--t-neg-l);color:var(--t-neg)}
+/* ⚠ flex-basis 를 0 으로 두면 <b>오른쪽이 폭을 다 먹고 이름이 사라집니다.</b>
+   390px 에서 재어 보니 .m 이 폭 0 이 되어 줄 높이가 434px 이었습니다.
+   auto 로 두면 이름이 제 몫(127px)을 갖고 줄은 240px 이 됩니다.
+   넓은 화면(1440px)에서는 재어 보니 <b>전과 똑같습니다</b> (566px · 148px). */
+.t-row .m{flex:1 1 auto;min-width:0}
 /* :where() 로 #435 쪽 이름의 우선순위를 낮춰 둡니다 — 안 그러면 .m 안에 쓴
    .nm 이 「.t-row .m span」 에 눌려 작은 회색 글씨로 나옵니다(실제로 그랬습니다). */
 .t-row :where(.m) b, .t-row .nm{display:block;font-size:15px;font-weight:700;
   color:var(--t-ink);letter-spacing:-.025em}
 .t-row :where(.m) span, .t-row .mt{display:block;margin-top:3px;font-size:12.5px;
   color:var(--t-sub2);font-weight:600;line-height:1.45}
-.t-row .r, .t-row .rt{margin-left:auto;flex:none;display:flex;gap:6px;align-items:center}
+/* ⚠ <b>flex:none 이면 오른쪽이 줄 밖으로 나갑니다.</b> 목각의 줄은 오른쪽에
+   한두 가지뿐이라 안 겪던 자리인데, 본체 명단은 꼬리표·📞·마디·동의·
+   팩트파인딩 <b>다섯</b>이 섭니다. 390px 에서 재어 보니 오른쪽이 줄보다
+   35px 넘쳤고, 그만큼 .m 이 <b>폭 0 으로 찌부러져 이름이 통째로</b>
+   사라졌습니다(줄 높이 434px). 넘칠 때만 <b>접어 내리게</b> 합니다 —
+   한두 가지인 줄은 그대로 한 줄에 섭니다 (2026-09-29 · 판 ⑧).      */
+.t-row .r, .t-row .rt{margin-left:auto;flex:0 1 auto;display:flex;gap:6px;
+  align-items:center;flex-wrap:wrap;justify-content:flex-end}
 /* 작은 표시 — 목업 .stg */
 .t-tag{font-size:10.5px;font-weight:800;padding:3px 7px;border-radius:7px;
   background:var(--t-bg);color:var(--t-sub);white-space:nowrap}

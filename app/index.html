@@ -61842,10 +61842,12 @@ function olTagHtml(x){
   return '<span class="t-tag'+(f[2]?(' '+f[2]):'')+'">'+f[0]+' '+osEsc(f[1])+'</span>';
 }
 /* ── 📥 <b>배정 DB 줄</b> — 아직 내 고객이 아닌 분 ────────────────────
-   ★ <b>줄의 옷은 고객 줄과 같습니다</b>(.cm-row). 한 명단인데 옷이 둘이면
-     「한 화면에 옷이 섞였다」 가 됩니다. 이 명단을 통째로 목각 옷(.t-row)
-     으로 갈아입히는 것은 <b>따로 한 판</b>입니다 — 여기서 반만 갈면 그게
-     섞인 것입니다.
+   ★ <b>줄의 옷은 고객 줄과 같습니다</b>(.t-row). 한 명단인데 옷이 둘이면
+     「한 화면에 옷이 섞였다」 가 됩니다. 판 ③ 때는 둘 다 .cm-row 였고,
+     「통째로 갈아입히는 것은 따로 한 판」 이라고 여기 적어 두었습니다 —
+     <b>그 판이 판 ⑧ 이고, 지금 둘 다 .t-row 입니다</b> (2026-09-29).
+   ★ 옛 .cm-row 규칙은 <b>안 지웠습니다</b> — 다른 자리가 씁니다. 이 두 줄이
+     안 쓰게 했을 뿐입니다.
    ★ <b>없는 것을 지어내지 않습니다</b> (1번) — 이 분께는 온도·팩트파인딩·
      동의 같은 것이 아직 없습니다. 빈 값을 0 으로 세우지 않고 <b>안 세웁니다.</b>
    ★ 이름은 <b>가린 것</b>입니다 (3번). 「내 고객으로」 를 누르는 순간
@@ -61857,11 +61859,11 @@ function olDbRowHtml(x){
   if(x.region)sub.push(x.region);
   if(x.src)sub.push(x.src);
   if(!sub.length)sub.push('배정 DB 에서 왔습니다');
-  return '<div class="cm-row" onclick="hmRtPerson(\''+osEsc(x._dbid)+'\')">'+
-    '<div class="cm-av">'+osEsc(hm||(''+nm).charAt(0))+'</div>'+
-    '<div class="cm-mid"><div class="cm-nm">'+osEsc(nm)+'</div>'+
-      '<div class="cm-sub">'+osEsc(sub.join(' · '))+'</div></div>'+
-    '<div class="cm-rt">'+olTagHtml(x)+
+  return '<div class="t-row" onclick="hmRtPerson(\''+osEsc(x._dbid)+'\')">'+
+    '<div class="av">'+osEsc(hm||(''+nm).charAt(0))+'</div>'+
+    '<div class="m"><div class="nm">'+osEsc(nm)+'</div>'+
+      '<div class="mt">'+osEsc(sub.join(' · '))+'</div></div>'+
+    '<div class="rt">'+olTagHtml(x)+
       (x.stage?('<span class="t-tag b">'+osEsc(x.stage)+'</span>'):'')+
       /* 📞 — 목각 line() 631행의 그 단추. 창은 cshOpen 한 곳이 엽니다 (5번).
          배정 DB 줄은 아직 고객 번호가 없으니 <b>그 줄 번호로</b> 엽니다. */
@@ -61891,15 +61893,21 @@ function cmRowHtml(c){
     if(wn)wtag='<i class="cm-wt">'+osEsc(wn)+'</i>';
   }
   var vip=(typeof ccIsVip==='function')&&ccIsVip(c.id);
-  return '<div class="cm-row'+((typeof ccBand==='function'&&ccBand(c).over)?' cc-over':'')+'" '+
+  /* ★ <b>아바타는 한 색</b>입니다 — 챙겨야 할 분만 붉게 (사장님 2026-09-29).
+     여태 온도를 <b>네 색</b>으로 말했는데, 빨강(hot)이 「열나흘 안에 연락한
+     괜찮은 분」 이고 흐린 회색(cold)이 「석 달 넘게 못 본 분」 이었습니다 —
+     눈은 붉은 쪽으로 가는데 그쪽이 안 급한 분이라 <b>색이 거꾸로</b>
+     말하고 있었습니다. 온도 자체는 바로 아래 줄에 「🔥 3일 전」 으로
+     이미 글자로 서 있어 <b>사라지는 말이 없습니다.</b>                 */
+  return '<div class="t-row'+((typeof ccBand==='function'&&ccBand(c).over)?' cc-over':'')+'" '+
     'onclick="osOpenClient(\''+c.id+'\')">'+
-    '<div class="cm-av '+tp.k+'">'+osEsc((''+nm).charAt(0))+'</div>'+
-    '<div class="cm-mid"><div class="cm-nm">'+wtag+
-      (vip?'<b class="cc-vip">👑 VIP</b>':'')+osEsc(nm)+
+    '<div class="av'+(tp.k==='cold'?' n':'')+'">'+osEsc((''+nm).charAt(0))+'</div>'+
+    '<div class="m"><div class="nm">'+wtag+
+      (vip?'<i class="cc-vip">👑 VIP</i>':'')+osEsc(nm)+
       (cmRealOf(c.id)?'<em>'+osEsc(c.name_masked||'')+'</em>':'')+'</div>'+
-      '<div class="cm-sub">'+osEsc(sub.join(' · '))+'</div>'+nx+
+      '<div class="mt">'+osEsc(sub.join(' · '))+'</div>'+nx+
       ((typeof ccRowActHtml==='function')?ccRowActHtml(c):'')+'</div>'+
-    '<div class="cm-rt">'+olTagHtml(c)+
+    '<div class="rt">'+olTagHtml(c)+
       /* 📞 — 목각 line() 631행. 창을 여는 곳은 cshOpen 하나입니다 (5번) */
       '<button type="button" class="t-chip" onclick="event.stopPropagation();cshOpen(\''+
         osEsc(c.id)+'\')">📞 전화</button>'+
@@ -63200,11 +63208,14 @@ function cmCss(){
     '.cm-av.cool{background:#0EA5E9}.cm-av.cold{background:#94A3B8}'+
     '.cm-mid{flex:1;min-width:0}'+
     '.cm-nm{font-size:var(--t5);font-weight:800;color:var(--ink-1);display:flex;align-items:baseline;gap:6px}'+
-    '.cm-nm em{font-style:normal;font-size:var(--t6);font-weight:600;color:var(--ink-6)}'+
+    /* 가려 둔 이름 — 줄이 .t-row 로 갈아입어도 <b>같은 모양</b>이어야 합니다.
+       규칙을 새로 만들지 않고 <b>있는 규칙에 선택자만</b> 붙입니다 (5번).
+       안 붙이면 <em> 이 기울어진 굵은 15px 로 나와 이름과 붙어 버립니다. */
+    '.cm-nm em,.t-row .nm em{font-style:normal;font-size:var(--t6);font-weight:600;color:var(--ink-6)}'+
     /* 남이 맡은 고객 앞에 붙는 담당자 딱지 */
     '.cm-nm .cm-wt{font-style:normal;font-size:var(--t6);font-weight:800;padding:1.5px 6px;border-radius:var(--r-pill);'+
       'background:#EEF2FF;color:#4F46E5;flex:none}'+
-    '.cm-wt{display:inline-block;font-size:var(--t6);font-weight:800;padding:1.5px 7px;border-radius:var(--r-pill);'+
+    '.cm-wt{display:inline-block;font-style:normal;font-size:var(--t6);font-weight:800;padding:1.5px 7px;border-radius:var(--r-pill);'+
       'background:#EEF2FF;color:#4F46E5}'+
     '.cm-call{display:grid;grid-template-columns:78px 52px minmax(0,1fr);gap:9px;align-items:center;'+
       'padding:8px 2px;border-bottom:1px solid #F1F4F8}'+
@@ -63312,8 +63323,10 @@ function cmCss(){
       'font-family:inherit;font-size:var(--t6);font-weight:700;color:var(--ink-3);cursor:pointer}'+
     '.cc-cfg button:hover{border-color:var(--primary);color:var(--primary)}'+
     '.cc-cfg>span{font-size:var(--t6);color:var(--ink-5);margin-left:auto}'+
-    '.cm-row.cc-over{background:#FFFCF7}'+
-    '.cc-vip{display:inline-block;font-size:var(--t6);font-weight:800;color:#3730A3;background:#EEF2FF;'+
+    /* 약속을 넘긴 줄 — 바탕은 그대로 두되 <b>생 hex 를 색표의 토큰</b>으로.
+       줄이 .t-row 가 됐으므로 선택자도 같이 옮깁니다 (사장님 2026-09-29). */
+    '.t-row.cc-over{background:var(--t-warn-l)}'+
+    '.cc-vip{display:inline-block;font-style:normal;font-size:var(--t6);font-weight:800;color:#3730A3;background:#EEF2FF;'+
       'border:1px solid #C7D2FE;border-radius:var(--r-xs);padding:1px 5px;margin-right:5px;vertical-align:1px}'+
     '.cc-dd{display:inline-block;font-size:var(--t6);font-weight:800;border-radius:var(--r-xs);padding:2px 7px;'+
       'color:#64748B;background:#F1F5F9;white-space:nowrap}'+
