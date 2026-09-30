@@ -190,24 +190,51 @@ const SEED2=SEED.split('@TODAY@').join(TODAY);
           0 으로 적으면 「못 했다」로 읽힌다
        ③ 주간에도 <b>「담당자 : 」</b>가 앞에 붙는다
        ④ <b>혼자 보는 화면에는 안 붙는다</b> — 줄마다 제 이름이 서면 글자만 는다 */
-  const M=await page.evaluate(()=>{
-    const all=mcalItems(), ym=mcalYm(), td=mcalToday();
-    const last=new Date(Date.UTC(+ym.slice(0,4),+ym.slice(5,7),0)).getUTCDate();
-    let have=0, miss=[], future='', past='';
-    for(let d=1;d<=last;d++){
-      const ds=ym+'-'+('0'+d).slice(-2);
-      const rt=(all[ds]||[]).filter(x=>x.k==='rt')[0];
-      if(rt){ have++; if(ds>td&&!future)future=rt.s||''; if(ds<=td&&!past)past=rt.s||''; }
-      else miss.push(ds);
-    }
-    return { last, have, miss, future, past };
-  });
+  /* ★★ <b>시간을 얼리고 잽니다.</b> 안 얼리면 이 자가 <b>스스로 터집니다</b> —
+     「앞날」 을 <b>오늘보다 뒤인 날</b>에서만 찾는데, 오늘이 <b>그 달의 마지막
+     날</b>이면 그런 날이 하나도 없어 빈 값이 나옵니다.
+     ⚠ 2026-09-30(9월 말일)에 실제로 그렇게 터졌습니다 — 하루 전까지 초록이던
+       자가 <b>코드 한 줄 안 바뀌었는데</b> 빨간불이 됐습니다.
+       mcalToday() 는 UTC 라 시간대를 바꿔도 안 피해 갑니다.
+     ★ <b>재는 쪽(assertion)이 아니라 씨앗을 고칩니다</b> — 「앞날에 0/n 을 안
+       적는다」 는 지켜야 할 것이 맞습니다. 볼 수 있는 날을 만들어 주는 것이
+       옳지, 못 보니까 안 보겠다고 하는 것이 아닙니다 (8번).
+     check-calmonth 에서 같은 자리를 이미 한 번 고쳤습니다.               */
+  const 재기 = (fake) => page.evaluate((f)=>{
+    const save=window.mcalToday;
+    try{
+      if(f)window.mcalToday=function(){return f;};
+      const all=mcalItems(), ym=mcalYm(), td=mcalToday();
+      const last=new Date(Date.UTC(+ym.slice(0,4),+ym.slice(5,7),0)).getUTCDate();
+      let have=0, miss=[], future='', past='';
+      for(let d=1;d<=last;d++){
+        const ds=ym+'-'+('0'+d).slice(-2);
+        const rt=(all[ds]||[]).filter(x=>x.k==='rt')[0];
+        if(rt){ have++; if(ds>td&&!future)future=rt.s||''; if(ds<=td&&!past)past=rt.s||''; }
+        else miss.push(ds);
+      }
+      return { last, have, miss, future, past, 오늘:td };
+    } finally { window.mcalToday=save; }     /* ★ 반드시 되돌립니다 */
+  }, fake);
+
+  const ym0 = await page.evaluate(()=>mcalYm());
+  const last0 = new Date(Date.UTC(+ym0.slice(0,4),+ym0.slice(5,7),0)).getUTCDate();
+  /* 달 한가운데로 얼립니다 — 앞날도 지난 날도 <b>반드시</b> 있습니다 */
+  const 한가운데 = ym0+'-'+('0'+Math.max(2,Math.min(last0-1,15))).slice(-2);
+  const M = await 재기(한가운데);
+
   is(M.have===M.last, '  이 달 <b>모든 날</b>에 할 일이 세팅돼 있다 — '+M.have+'/'+M.last+'일'+
      (M.miss.length?(' ← 빠진 날 '+M.miss.slice(0,3).join(',')):''));
   is(!!M.future && !/0\s*\/\s*\d/.test(M.future),
-     '  앞날에는 <b>「0 / n」 을 안 적는다</b> (1번) — 「'+M.future+'」');
+     '  앞날에는 <b>「0 / n」 을 안 적는다</b> (1번) — 「'+M.future+'」  (오늘을 '+M.오늘+' 로 얼리고 잼)');
   is(!!M.past && /\d+\s*\/\s*\d+/.test(M.past),
      '  지난 날에는 <b>몇 가지 했는지</b> 적는다 — 「'+M.past+'」');
+
+  /* ★ <b>달끝에도 말이 되나</b> — 마지막 날에는 앞날이 없는 것이 <b>맞습니다.</b>
+     그것을 탈로 세면 달마다 한 번씩 거짓 빨간불이 켜집니다.               */
+  const E = await 재기(ym0+'-'+('0'+last0).slice(-2));
+  is(E.future==='' && !!E.past,
+     '  <b>달의 마지막 날</b>에는 앞날이 없고 지난 날만 있다 — 그것은 탈이 아니다 (앞날 「'+E.future+'」 · 지난 날 「'+E.past+'」)');
 
   const WK=await page.evaluate(()=>{
     mcalSetView('week');
