@@ -129,6 +129,49 @@ const SEED = () => {
      '  ★ 오른쪽이 <b>왼쪽 그늘에 든다</b> — 오른쪽 ' + two.rh + 'px ≤ 왼쪽 ' + two.lh +
      'px (세로는 긴 쪽이 정합니다)');
 
+  /* ── [1-b] 곁기둥이 목각 차례대로 · 못 세는 것은 못 센다고 적는다 ─── */
+  console.log('\n[1-b] ★★ <b>곁기둥이 목각 차례</b>이고, <b>못 세는 것은 못 센다고 적는다</b> (사장님 말씀)');
+  /* 사장님 말씀 (2026-09-30) — <b>「칸은 세우고 「아직 못 셉니다」 라고 적기」</b>.
+     목각 오른쪽은 넷입니다: 이번 주 · 오늘 동선 · 이번 달 고객 관리 · 알람.
+     그중 셋은 <b>앱에 세는 자리가 없습니다</b>. 지어내지도, 비워 두지도
+     않고 <b>화면에 그렇게 적습니다</b> (1번).                            */
+  const side = await PC.evaluate(() => {
+    const c = document.querySelector('.hm-2col'); if (!c) return { no: 1 };
+    const R = c.children[1];
+    const cards = [...R.children].map(e => {
+      const t = (e.innerText || '').replace(/\s+/g, ' ').trim();
+      return { t: t, h: Math.round(e.getBoundingClientRect().height),
+               head: t.split(' ').slice(0, 3).join(' ') };
+    });
+    return { no: 0, cards: cards, txt: (R.innerText || '').replace(/\s+/g, ' ').trim() };
+  });
+  const 있나 = (w) => !side.no && side.cards.some(c => c.t.indexOf(w) >= 0);
+  ['이번 주', '오늘 어디로', '이번 달 고객 관리', '알람'].forEach(w =>
+    is(있나(w), '  목각의 <b>「' + w + '」</b> 자리가 있다'));
+  /* ★ 차례도 목각대로 — 이번 주 → 오늘 동선 → 이번 달 → 알람 */
+  const at = (w) => side.no ? -1 : side.cards.findIndex(c => c.t.indexOf(w) >= 0);
+  is(at('이번 주') >= 0 && at('이번 주') < at('오늘 어디로') &&
+     at('오늘 어디로') < at('이번 달 고객 관리') && at('이번 달 고객 관리') < at('알람'),
+     '  <b>차례가 목각대로</b>다 — 이번 주 → 오늘 동선 → 이번 달 고객 관리 → 알람');
+  /* ★★ 못 세는 셋 — 「아직 세는 자리가 없습니다」 라고 <b>적고</b>,
+         <b>아무 숫자도 안 적는다</b>. 이것이 1번을 지키는 모양입니다.   */
+  ['이번 주', '이번 달 고객 관리', '알람'].forEach(w => {
+    const c = side.no ? null : side.cards.find(x => x.t.indexOf(w) >= 0);
+    is(!!c && /아직 세는 자리가 없습니다/.test(c.t),
+       '  ★ 「' + w + '」 가 <b>「아직 세는 자리가 없습니다」</b> 라고 적는다 (1번)');
+    /* 제목·설명에 든 글자 말고 <b>숫자</b>가 있으면 지어낸 것입니다 */
+    is(!!c && !/\d/.test(c.t),
+       '  ★★ 「' + w + '」 에 <b>아무 숫자도 안 적는다</b> — 없는 수를 지으면 사실로 믿으십니다' +
+       (c && /\d/.test(c.t) ? (' ← 「' + c.t.slice(0, 60) + '」') : ''));
+  });
+  /* ★ 비워 두지도 않는다 — 사장님이 「적기」 라고 하셨습니다 */
+  is(!side.no && side.cards.every(c => c.h > 0),
+     '  <b>빈 칸이 없다</b> — 자리만 잡고 아무 말도 안 하면 고장 난 것으로 보입니다');
+  /* ★ 셀 수 있는 것은 <b>진짜 수</b>로 — 「오늘 동선」 은 이미 셉니다 */
+  const rt = side.no ? null : side.cards.find(c => c.t.indexOf('오늘 어디로') >= 0);
+  is(!!rt && !/아직 세는 자리가 없습니다/.test(rt.t),
+     '  ★ <b>「오늘 동선」 은 진짜 수로</b> 선다 — 셀 수 있는 것을 못 센다고 적지 않는다 (1번)');
+
   /* ── [6] 위의 넷은 안 움직였다 ─────────────────────────────────── */
   console.log('\n[6] ★ <b>위의 넷은 안 움직였다</b> — 먼저 하신 말씀 둘을 같이 지킨다');
   const head = await PC.evaluate(() => {
