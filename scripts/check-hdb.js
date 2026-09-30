@@ -123,7 +123,11 @@ const SEED = `
    };
    return {from:function(t){return mk(t);},rpc:function(){return Promise.resolve({data:null,error:null});}};
  };
- HWHO.id='';CM.pick='';CM.picked=true;go('home');`;
+ HWHO.id='';CM.pick='';CM.picked=true;
+ /* 먼저 펴고 잽니다 — 2026-09-30 부터 「이분 자세히」 가 접힌 채가 기본입니다
+    (사장님 말씀 「그 넷도 접어」). 재는 것은 하나도 안 줄였습니다 (8번). */
+ try{ HM_MORE=true; }catch(e){}
+ go('home');`;
 
 (async () => {
   await new Promise(r => srv.listen(PORT, r));

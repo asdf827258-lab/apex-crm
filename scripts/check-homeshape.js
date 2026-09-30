@@ -317,20 +317,23 @@ const tall = (p) => p.evaluate(() => {
     const q = s => document.querySelector('#dynPane ' + s);
     const hh = e => e ? Math.round(e.getBoundingClientRect().height) : 0;
     const out = { vh: window.innerHeight };
-    /* ⚠ <b>기본은 펴진 채</b>입니다 — 사장님이 「바로바로」 하라고 하신
-       것들(상황·단계·기록·도구)을 한 번 더 누르게 만들 수 없어서입니다.
-       그래서 여기서는 <b>접어 보고</b> 재고, 다시 펴서 돌아오는지 봅니다. */
+    /* ══ ⚠ <b>첫 누름의 방향이 뒤집혔습니다</b> (2026-09-30) ═════════════
+       전에는 <b>펴진 채</b>로 열려서 「접어 보고 · 다시 펴서」 잤습니다.
+       사장님 말씀 <b>「그 넷도 접어」</b> 로 이제 <b>접힌 채</b>로 열립니다.
+       ★ <b>묻는 것은 하나도 안 바뀌었습니다</b> — 단추가 말을 바꾸나 ·
+         넷이 숨었다 돌아오나 · 접힌 카드가 한 화면에 드나 · 다시 접으면
+         제자리인가. <b>방향만</b> 맞췄습니다 (8번).                     */
     const seen = () => ({ tap: !!q('.hm-tap'), box: !!q('.hm-box'),
                           hdb: !!q('.hdb'), note: !!q('.hm-now-n') });
-    out.open = seen();
-    out.openCard = hh(q('.hm-now'));
-    out.btn = ((q('.hm-more-b') || {}).textContent || '').trim();
-    const b = q('.hm-more-b'); if (b) { b.click(); await new Promise(r => setTimeout(r, 500)); }
-    out.shut = seen();
+    out.shut = seen();                       /* 처음 — 접힌 채 */
     out.card = hh(q('.hm-now'));
     out.btnShut = ((q('.hm-more-b') || {}).textContent || '').trim();
+    const b = q('.hm-more-b'); if (b) { b.click(); await new Promise(r => setTimeout(r, 500)); }
+    out.open = seen();                       /* 한 번 누르면 — 펴진다 */
+    out.openCard = hh(q('.hm-now'));
+    out.btn = ((q('.hm-more-b') || {}).textContent || '').trim();
     const b2 = q('.hm-more-b'); if (b2) { b2.click(); await new Promise(r => setTimeout(r, 500)); }
-    out.again = hh(q('.hm-now'));
+    out.again = hh(q('.hm-now'));            /* 다시 접으면 — 제자리 */
     /* 목업에 있던 셋 — 값이 없으면 안 서는 것이 맞습니다 (1번) */
     out.bar = !!q('.tz-pbar');
     out.barTxt = ((q('.tz-psub') || {}).textContent || '').trim();
@@ -346,12 +349,19 @@ const tall = (p) => p.evaluate(() => {
   const shutN = Object.keys(M.shut).filter(k => M.shut[k]).length;
   const openN = Object.keys(M.open).filter(k => M.open[k]).length;
   is(shutN === 0 && openN === 4,
-     '  처음엔 <b>넷이 다 보이고</b>, 접으면 <b>숨는다</b> — 펴짐 ' + openN + '개 · 접힘 ' + shutN + '개');
-  is(M.openCard > M.card && M.again === M.openCard,
-     '  다시 펴면 <b>제자리</b>다 — ' + M.openCard + ' → ' + M.card + ' → ' + M.again + 'px');
-  /* ★ <b>처음에는 펴져 있어야</b> 합니다 — 접힌 채로 두면 「바로바로」 가 아닙니다 */
-  is(/var HM_MORE=true;/.test(fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8')),
-     '  <b>처음에는 펴져 있다</b> — 상황·단계·도구를 한 번 더 누르게 하지 않는다 (#6)');
+     '  처음엔 <b>넷이 다 숨어 있고</b>, 누르면 <b>돌아온다</b> — 접힘 ' + shutN + '개 · 펴짐 ' + openN + '개');
+  is(M.openCard > M.card && M.again === M.card,
+     '  <b>다시 접으면 제자리</b>다 — ' + M.card + ' → ' + M.openCard + ' → ' + M.again + 'px');
+  /* ══ ★ <b>처음에는 접혀 있어야</b> 합니다 (2026-09-30) ═══════════════
+     ⚠ 이 자리는 <b>뒤집힌 자리</b>입니다. 전에는 「처음에는 펴져 있다」 를
+       봤습니다 — 사장님 말씀 「홈에서 <b>단계를 바로바로</b>」(#6) 때문입니다.
+     그 뒤 두 기둥 판에서 카드가 1,411px 인 것을 숫자로 올려 드리고
+     「접으면 한 번씩 더 눌러야 한다」 까지 적어 여쭈었더니, 사장님이
+     <b>「그 넷도 접어」</b> 하셨습니다. <b>이번 말씀이 먼저 말씀을 대신합니다.</b>
+     ★ 그래도 <b>계속 봅니다</b> — 누가 말없이 되돌리면 이 자가 울립니다.
+       기본값을 안 보면 「어느 쪽이 맞나」 를 아무도 안 묻게 됩니다 (8번).  */
+  is(/var HM_MORE=false;/.test(fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8')),
+     '  <b>처음에는 접혀 있다</b> — 사장님 말씀 「그 넷도 접어」 (먼저 하신 #6 을 이 말씀이 대신합니다)');
   is(M.bar && /\d+\s*\/\s*\d+/.test(M.barTxt),
      '  <b>진행 막대와 「몇 / 몇」</b> 이 선다 — 「' + (M.barTxt || '안 섬') + '」');
   is(M.nxs, '  <b>「다음 분」</b> 이 선다 — 뒤에 누가 남았는지 보인다');

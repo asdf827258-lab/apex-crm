@@ -300,6 +300,8 @@ const CARD = () => {
     cmOf('c1').cd = d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) +
                     '-' + ('0'+d.getDate()).slice(-2);
     cmOf('c1').next = null;
+    /* ⚠ 2026-09-30 — 「이분 자세히」 가 <b>접힌 채가 기본</b>이 됐습니다 (사장님 말씀 「그 넷도 접어」). 접힌 채로 재면 여기 보려는 것이 화면에 없습니다 — <b>먼저 펴고 잽니다.</b> check-tdo·check-homeshape 가 이미 쓰는 방법입니다 (5번). ★ <b>재는 것은 하나도 안 줄였습니다</b> — 펴 놓고 보면 그것이 제대로 서나. 자를 옮기지 지우지 않습니다 (8번). ★ <b>접힌 채로 열리는지</b>는 check-hmtwo 가 봅니다. */
+    try{ HM_MORE=true; }catch(e){}
     go('home');
     await new Promise(r => setTimeout(r, 900));
     const card = document.querySelector('#dynPane #cqaCard');

@@ -281,22 +281,16 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     go('home'); await new Promise(r=>setTimeout(r,700));
     /* <b>「무엇을 할까요?」</b> 로 묻고 번호로 고르게 하는가
        ⚠ 2026-09-30 — 이 칸이 <b>접이</b>가 됐습니다(사장님 말씀 「가*나 같이
-         해줘」 · 252px 을 접힌 채로). 접힌 채로 재면 갈래 높이가 <b>0px</b> 이라
+         해줘」 → 「그 넷도 접어」). 접힌 채로 재면 갈래가 아예 안 그려져
          「손가락 크기 44px」 을 잴 수 없습니다 — <b>먼저 펴고 잽니다.</b>
          check-homeshape 가 「그 밖의 것」 접이에서 이미 이렇게 합니다 (5번).
        ★ <b>자는 그대로입니다.</b> 묻는 것은 하나도 안 바뀌었습니다 — 펴 놓고
          보면 묻고 있나 · 번호가 붙나 · 누를 만한가. 자를 옮기지 지우지
          않습니다 (8번).
        ★ <b>접힌 채로 열리는지</b>와 <b>눌러서 펴지는지</b>는 check-hmtwo [5]
-         가 봅니다 — 둘을 한 자에서 보면 서로 발목을 잡습니다.
-       ★ 묻는 말은 이제 <b>접이 머리</b>에 있습니다. 두 곳 다 봅니다 —
-         접이를 도로 없애도 이 자는 그대로 답합니다.                      */
-    (function(){ var f=document.getElementById('hmFold_picks');
-      if(f&&!f.classList.contains('on')){
-        var h=f.querySelector('.hm-fold-h'); if(h)h.click(); } })();
-    out.ask=(document.querySelector('#dynPane .hm-now .hm-ask-t')||
-             document.querySelector('#dynPane .hm-now #hmFold_picks .hm-fold-h .t')||
-             {}).textContent||'';
+         가 봅니다 — 둘을 한 자에서 보면 서로 발목을 잡습니다.            */
+    try{ if(!HM_MORE){ hmMoreToggle(); await new Promise(r=>setTimeout(r,500)); } }catch(e){}
+    out.ask=(document.querySelector('#dynPane .hm-now .hm-ask-t')||{}).textContent||'';
     const opts=[].slice.call(document.querySelectorAll('#dynPane .hm-now .hm-ask-o'));
     out.btnTxt=opts.map(b=>b.textContent.replace(/\s+/g,' ').trim());
     out.nos=opts.map(b=>(b.querySelector('.no')||{}).textContent||'');

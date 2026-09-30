@@ -122,6 +122,15 @@ const SEED = `(function(){
      ★ 자는 그대로입니다 — 펴 놓고 보면 칩이 한 줄인가. (옮기지 지우지
        않습니다)                                                       */
   await pg.evaluate(() => { try { hmFoldSet('etc', true); } catch (e) {} });
+  /* ⚠ 2026-09-30 — 「이분 자세히」 가 <b>접힌 채가 기본</b>이 됐습니다
+     (사장님 말씀 「그 넷도 접어」). 접힌 채로 재면 여기 보려는 갈래·
+     「이미 했습니다」·단계 딱지가 아예 안 그려집니다 — <b>먼저 펴고
+     잽니다.</b> 바로 위 「그 밖의 것」 접이와 <b>같은 방법</b>입니다 (5번).
+     ★ <b>재는 것은 하나도 안 줄였습니다</b> — 펴 놓고 보면 그것이 제대로
+       서나. 자를 옮기지 지우지 않습니다 (8번).
+     ★ <b>접힌 채로 열리는지</b>는 check-hmtwo [5] 가 봅니다.           */
+  await pg.evaluate(() => { try { hmFoldSet('more', true); } catch (e) {}
+                            try { HM_MORE = true; } catch (e) {} });
   await pg.evaluate(() => { go('home'); });
   await pg.waitForSelector('#hmToday', { timeout: 20000 });
   await pg.evaluate(() => hmPaint());

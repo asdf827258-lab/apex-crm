@@ -173,29 +173,49 @@ const SEED = () => {
   is(!fold.no && /찾기/.test(fold.t) && /옮긴 자리/.test(fold.t),
      '  <b>든 것은 그대로 적는다</b> — 찾기 · 옮긴 자리');
 
-  /* ── [5] 「또 무엇을 할까요」 접이 ─────────────────────────────── */
-  console.log('\n[5] ★★ 「또 무엇을 할까요」 가 <b>접힌 채로 열리고 · 눌러서 펴지고 · 기억한다</b> (6번)');
+  /* ── [5] 「이분 자세히」 한 단추 ────────────────────────────────── */
+  console.log('\n[5] ★★ 「이분 자세히」 가 <b>접힌 채로 열리고 · 눌러서 펴지고 · 기억한다</b> (6번)');
+  /* ⚠ <b>접는 자리는 한 곳</b>입니다 (5번). 한 번은 「또 무엇을 할까요」 에
+     속접이를 따로 두었는데, 사장님이 「그 넷도 접어」 하신 뒤에는 그 칸이
+     <b>「이분 자세히」 안에 또</b> 들어가 도구에 닿는 데 두 번 눌러야
+     했습니다. 두 겹은 접는 것이 아니라 <b>묻는 것</b>입니다.           */
   const pk = await PC.evaluate(() => {
-    const f = document.getElementById('hmFold_picks'); if (!f) return { no: 1 };
-    const h = f.querySelector('.hm-fold-h');
-    const opened = f.classList.contains('on');
-    const head = (h ? h.innerText : '').replace(/\s+/g, ' ').trim();
-    const shut = Math.round((f.querySelector('.hm-fold-b') || f).getBoundingClientRect().height);
-    if (h) h.click();
-    const open = Math.round((f.querySelector('.hm-fold-b') || f).getBoundingClientRect().height);
-    const tools = f.querySelectorAll('.hm-ask-o').length;
-    let saved = null; try { saved = JSON.parse(localStorage.getItem('apex_hm_fold_v1') || '{}').picks; } catch (e) {}
-    return { no: 0, opened, head, shut, open, tools, saved,
-             tap: h ? Math.round(h.getBoundingClientRect().height) : 0 };
+    /* ⚠ 누르면 <b>카드를 다시 그립니다</b>(hmPaint). 붙잡아 둔 카드는 떨어져
+       나가 높이가 0px 이 됩니다 — <b>잴 때마다 다시 찾습니다</b>.        */
+    const cnt = () => { const c = document.querySelector('#hmToday .hm-now');
+      return {
+        judge: document.querySelectorAll('#hmToday .hm-now .t-note.b').length,
+        cqa:   document.querySelectorAll('#hmToday .cqaCard').length,
+        tools: document.querySelectorAll('#hmToday .hm-now .hm-ask-o').length,
+        h:     c ? Math.round(c.getBoundingClientRect().height) : 0 }; };
+    const b = document.querySelector('#hmToday .hm-more-b');
+    if (!b) return { no: 1 };
+    const shutTxt = (b.innerText || '').replace(/\s+/g, ' ').trim();
+    const shut = cnt();
+    const tap = Math.round(b.getBoundingClientRect().height);
+    b.click();
+    const b2 = document.querySelector('#hmToday .hm-more-b');
+    const openTxt = (b2 ? b2.innerText : '').replace(/\s+/g, ' ').trim();
+    const open = cnt();
+    let saved = null; try { saved = JSON.parse(localStorage.getItem('apex_hm_fold_v1') || '{}').more; } catch (e) {}
+    return { no: 0, shutTxt, openTxt, shut, open, tap, saved };
   });
-  is(!pk.no, '  접이(#hmFold_picks)가 <b>있다</b>');
-  is(!pk.no && !pk.opened, '  ★ <b>접힌 채로</b> 열린다 — 홈의 규칙 그대로');
-  is(!pk.no && /또 무엇을 할까요/.test(pk.head) && /\d+가지/.test(pk.head),
-     '  ★ 머리에 <b>몇 가지인지</b> 적는다 — 접힌 채로도 무엇이 든지 안다 (1번) · 「' + pk.head + '」');
-  is(!pk.no && pk.open > pk.shut && pk.tools > 0,
-     '  ★ <b>눌렀더니 펴진다</b> — ' + pk.shut + 'px → ' + pk.open + 'px · 도구 ' + pk.tools + '개 (지운 것이 아니다)');
-  is(!pk.no && pk.saved === true, '  ★ <b>편 것을 기억한다</b> — 다음 분으로 넘어가도 그대로');
+  is(!pk.no, '  단추(.hm-more-b)가 <b>늘 서 있다</b> — 감추기만 하고 길이 없으면 안 된다 (6번)');
+  is(!pk.no && pk.shut.tools === 0 && pk.shut.cqa === 0,
+     '  ★ <b>접힌 채로</b> 열린다 (사장님 말씀 「그 넷도 접어」) — 도구 ' +
+     (pk.shut ? pk.shut.tools : '?') + '개 · 물음 ' + (pk.shut ? pk.shut.cqa : '?') + '개');
+  is(!pk.no && /이분 자세히/.test(pk.shutTxt) && /판단/.test(pk.shutTxt) && /단계/.test(pk.shutTxt),
+     '  ★ 단추가 <b>무엇이 들었는지</b> 말한다 (1번) — 「' + pk.shutTxt + '」');
+  is(!pk.no && pk.open.tools > 0 && pk.open.h > pk.shut.h,
+     '  ★ <b>눌렀더니 다 펴진다</b> — 카드 ' + pk.shut.h + 'px → ' + pk.open.h +
+     'px · 도구 ' + pk.open.tools + '개 (지운 것이 아니다)');
+  is(!pk.no && /접기/.test(pk.openTxt), '  펴면 단추가 <b>「접기」</b> 가 된다 — 「' + pk.openTxt + '」');
+  is(!pk.no && pk.saved === true,
+     '  ★ <b>편 것을 기억한다</b> — 사장님 말씀 「내가 킨 화면이 내가 끄지 않는 이상 처음으로 돌아가지 않도록」');
   is(!pk.no && pk.tap >= 44, '  손가락 크기 <b>44px</b> — ' + pk.tap + 'px');
+  /* ★ 두 겹으로 접지 않았나 — 속접이가 생기면 도구까지 두 번 눌러야 한다 */
+  const nest = await PC.evaluate(() => !!document.querySelector('#hmToday .hm-more-in .hm-fold'));
+  is(!nest, '  ★ <b>속에 또 접이가 없다</b> — 두 겹은 접는 것이 아니라 묻는 것이다 (5번)');
 
   /* ── [2] 폰에서는 한 기둥 ──────────────────────────────────────── */
   console.log('\n[2] 폰(390)에서는 <b>한 기둥</b>이다 — 목각에 폰 답이 없다 (1번)');
