@@ -129,6 +129,39 @@ const SEED = () => {
      '  ★ 오른쪽이 <b>왼쪽 그늘에 든다</b> — 오른쪽 ' + two.rh + 'px ≤ 왼쪽 ' + two.lh +
      'px (세로는 긴 쪽이 정합니다)');
 
+  /* ── [1-a] 파란 히어로 — <b>둘 다</b> 있다 ───────────────────────── */
+  console.log('\n[1-a] ★★ <b>파란 히어로가 맨 위에</b> 서고, <b>그 분을 들고 가는 길도 그대로</b> (사장님 말씀 「둘 다」)');
+  /* 사장님 말씀 (2026-09-30) — <b>「둘 다 둡니다 — 맨 위에 세우세요」</b>.
+     ⚠ 이 자리는 2026-09-23 에 <b>「맨위에 띄우지말고」</b> 로 뺐던 곳입니다.
+       빼신 까닭은 맨 위 한 장이 <b>누구의 보장분석인지 모른 채</b> 화면만
+       열어서였고, 그 문제는 <b>「오늘 제안하는 분 줄」(hmBaGo)</b> 이 이미
+       풀었습니다. 뜻이 다릅니다 — 맨 위는 「아무나」, 줄은 「그 분」.
+     ★ 그래서 <b>둘 다</b> 봅니다. 하나만 보면 다른 하나를 잃어도 조용합니다. */
+  const hero = await PC.evaluate(() => {
+    const h = document.querySelector('#hmTossHost .tz-hero');
+    const pane = document.querySelector('.tab-pane.on');
+    const flow = document.getElementById('hmFlowHost');
+    const b = h ? h.querySelector('.b') : null;
+    return { has: !!h,
+      q: h ? (h.querySelector('.q') || {}).innerText || '' : '',
+      btn: b ? (b.innerText || '').trim() : '',
+      tap: b ? Math.round(b.getBoundingClientRect().height) : 0,
+      y: h ? Math.round(h.getBoundingClientRect().top) : 0,
+      flowY: flow ? Math.round(flow.getBoundingClientRect().top) : 0,
+      /* ★ 「그 분을 들고 가는 길」 이 살아 있나 — 함수와 부르는 자리 둘 다 */
+      baGoFn: (typeof hmBaGo === 'function') };
+  });
+  is(hero.has, '  <b>맨 위 히어로</b>가 선다 (목각 ⑧)');
+  is(/KB보장분석/.test(hero.q), '  목업 <b>글자 그대로</b>다 — 「' + hero.q.replace(/\s+/g, ' ').slice(0, 40) + '」');
+  is(!!hero.btn && hero.tap >= 44, '  단추가 <b>손가락 크기</b>다 — 「' + hero.btn + '」 ' + hero.tap + 'px');
+  is(hero.has && hero.flowY > hero.y,
+     '  <b>상담현황보다 위</b>에 있다 (목각 차례) — 히어로 y' + hero.y + ' · 상담현황 y' + hero.flowY);
+  /* ★★ 둘 다 — 줄 쪽 길을 잃지 않았나 (5번 · 「함수를 지우지 않는다」) */
+  is(hero.baGoFn, '  ★★ <b>「그 분을 들고 들어가는 길」(hmBaGo)도 그대로</b> 있다 — 맨 위는 「아무나」, 줄은 「그 분」');
+  const baGoUse = require('fs').readFileSync(require('path').join(ROOT, 'app/index.html'), 'utf8');
+  is((baGoUse.match(/hmBaGo\(/g) || []).length >= 2,
+     '  그 길을 <b>부르는 자리도</b> 남아 있다 — 함수만 있고 안 부르면 죽은 판입니다 (5번)');
+
   /* ── [1-b] 곁기둥이 목각 차례대로 · 못 세는 것은 못 센다고 적는다 ─── */
   console.log('\n[1-b] ★★ <b>곁기둥이 목각 차례</b>이고, <b>못 세는 것은 못 센다고 적는다</b> (사장님 말씀)');
   /* 사장님 말씀 (2026-09-30) — <b>「칸은 세우고 「아직 못 셉니다」 라고 적기」</b>.
