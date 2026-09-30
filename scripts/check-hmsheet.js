@@ -50,6 +50,15 @@ const SEED = `
   window.toast=function(){};
   if(typeof OSC!=='undefined'){OSC.loaded=true;OSC.busy=false;OSC.err='';OSC.list=OSC.list||[];}
   window.osLoadClients=function(){};
+  /* ⚠ 2026-09-30 — 「이분 자세히」 가 <b>접힌 채가 기본</b>이 됐습니다
+     (사장님 말씀 「그 넷도 접어」). 접힌 채로 재면 도구 갈래가 아예 안
+     그려져 「열가지를 홈에서 다 연다」 를 잴 수 없습니다 —
+     <b>먼저 펴고 잽니다.</b> check-tdo·check-homeday 와 같은 방법입니다 (5번).
+     ★ <b>재는 것은 하나도 안 줄였습니다</b> — 펴 놓고 보면 열 가지가 다
+       열리나 · 덮개로 뜨나 · 닫으면 제자리인가 (8번).
+     ★ <b>접힌 채로 열리는지</b>는 check-hmtwo [5] 가 봅니다.          */
+  try{ hmFoldSet('more',true); }catch(e){}
+  try{ HM_MORE=true; }catch(e){}
   go('home');`;
 
 const look = (page) => page.evaluate(() => {

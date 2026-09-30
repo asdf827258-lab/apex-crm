@@ -47,6 +47,8 @@ const SEED = () => {
   AR.db=[{id:'d1',who:me,name:'홍길동A',region:'강남구',src:'보장분석10DB',stage:'AP',
           cAt:'',pAt:'',got:'2026-08-01',n:2,last:'2026-09-25',res:'상담',appt:'',memo:'',days:2}];
   try{ osHideLoginGate(); }catch(e){}
+  /* ⚠ 2026-09-30 — 「이분 자세히」 가 <b>접힌 채가 기본</b>이 됐습니다 (사장님 말씀 「그 넷도 접어」). 접힌 채로 재면 여기 보려는 것이 화면에 없습니다 — <b>먼저 펴고 잽니다.</b> check-tdo·check-homeshape 가 이미 쓰는 방법입니다 (5번). ★ <b>재는 것은 하나도 안 줄였습니다</b> — 펴 놓고 보면 그것이 제대로 서나. 자를 옮기지 지우지 않습니다 (8번). ★ <b>접힌 채로 열리는지</b>는 check-hmtwo 가 봅니다. */
+  try{ HM_MORE=true; }catch(e){}
   go('home');
 };
 const CARD = () => {

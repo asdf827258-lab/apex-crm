@@ -56,7 +56,15 @@ const SEED = (stage, src) => `
  OSC.loaded=true;OSC.busy=false;OSC.err='';OSC.list=[];
  window.cmLoadAll=function(cb){if(cb)cb();};
  try{localStorage.removeItem('apex_hm_done');}catch(e){}
- HWHO.id='';CM.pick='';CM.picked=true;go('home');`;
+ HWHO.id='';CM.pick='';CM.picked=true;
+ /* ⚠ 2026-09-30 — 「이분 자세히」 가 <b>접힌 채가 기본</b>이 됐습니다
+    (사장님 말씀 「그 넷도 접어」). 통화 멘트(부재·거절·기고객)는 그 안이라
+    접힌 채로 재면 <b>칸이 아예 안 섭니다</b> — 먼저 펴고 잽니다.
+    ★ <b>재는 것은 하나도 안 줄였습니다</b> — 고객 앞에서 쓰는 말이라
+      「말이 서는가」 는 그대로 봅니다 (8번).                          */
+ try{ hmFoldSet('more',true); }catch(e){}
+ try{ HM_MORE=true; }catch(e){}
+ go('home');`;
 
 (async () => {
   await new Promise(r => srv.listen(PORT, r));
