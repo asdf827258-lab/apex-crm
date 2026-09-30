@@ -121,6 +121,22 @@ const INKS = (sel) => {
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 430, height: 900 } });
+  /* ══ 🔌 <b>바깥을 막습니다 — 세 번째 흔들림의 뿌리였습니다</b> (2026-09-30) ══
+     ⚠ 이 자는 <b>막는 줄이 없었습니다.</b> 그래서 <b>CI 에서는 진짜 서버가
+       답했습니다</b> — 사장님의 진짜 공지 일곱 칸(게시 중 셋 · 내려짐 넷)과
+       <b>11.9MB 사진</b>까지 그려졌습니다(잎 116개). 제 컨테이너는 그 서버에
+       못 닿아 빈 화면이었습니다(34개). <b>같은 코드가 곳에 따라 다른 화면</b>이
+       된 까닭이 이것입니다 — 색이 아니라 <b>자료</b>가 달랐습니다.
+     ★ 제 씨앗은 사진을 만들지 않습니다. 「11.9MB」 는 <b>진짜 자료</b>라야
+       나올 수 있는 값이고, 그것이 움직일 수 없는 증거입니다.
+     ★ <b>이것은 값을 못 맞춘 탈이 아니라 자가 밖을 봐서 생긴 탈</b>입니다.
+       다른 자들(check-askall · check-airep · check-homeshape …)은 이미 이
+       한 줄을 씁니다 (5번 · 「같은 것을 두 곳에 두지 않는다」).
+     ★ 덤으로 — 점검이 사장님 자료를 읽으면 <b>그 글이 CI 기록에 찍힙니다.</b>
+       공지에 고객 이름이 들어 있으면 그대로 남습니다 (3번). 막아야 할
+       까닭이 하나 더 있습니다.                                          */
+  await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0
+                                  ? r.continue() : r.abort());
   await ctx.addInitScript(PIN, 못박은날);      /* 🕰 날짜가 흘러도 같은 화면을 보게 */
   const errs = [];
 
