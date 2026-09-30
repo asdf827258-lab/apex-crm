@@ -113,7 +113,19 @@ const SEED = (o) => `
    세고, 높이가 크게 달라지면 <b>다른 화면</b>으로 친다 (8번).           */
 const bones = (p) => p.evaluate(() => {
   const pane = document.querySelector('.tab-pane.on'); if (!pane) return [];
-  return [...pane.children].map(e => {
+    /* 🏛 <b>두 기둥은 껍데기다 — 속을 본다</b> (2026-09-30). 홈이 넓은
+       화면에서 두 기둥(.hm-2col)이 되었습니다. 껍데기를 그대로 세면
+       왼쪽에 큰 카드를 <b>넷을 쌓아도</b> 「덩어리 하나」 가 되어 이 자가
+       <b>눈을 감습니다</b>. 자를 약하게 하지 않고 <b>펴서</b> 옛날과
+       똑같이 셉니다 (8번). 폰에서는 두 기둥 규칙이 없지만 껍데기 div 는
+       그대로라, 폭과 상관없이 폅니다.                                  */
+    const TOPS = (h) => { const o = [];
+      for (const e of h.children) {
+        if (e.classList && e.classList.contains('hm-2col')) {
+          for (const col of e.children) for (const c of col.children) o.push(c);
+        } else o.push(e);
+      } return o; };
+  return TOPS(pane).map(e => {
     const r = e.getBoundingClientRect();
     if (r.height <= 8) return null;
     const id = e.id || (e.className.toString().split(/\s+/)[0] || e.tagName.toLowerCase());
@@ -128,7 +140,19 @@ const bones = (p) => p.evaluate(() => {
 });
 const tall = (p) => p.evaluate(() => {
   const pane = document.querySelector('.tab-pane.on'); if (!pane) return 0;
-  const L = [...pane.children].map(e => e.getBoundingClientRect());
+    /* 🏛 <b>두 기둥은 껍데기다 — 속을 본다</b> (2026-09-30). 홈이 넓은
+       화면에서 두 기둥(.hm-2col)이 되었습니다. 껍데기를 그대로 세면
+       왼쪽에 큰 카드를 <b>넷을 쌓아도</b> 「덩어리 하나」 가 되어 이 자가
+       <b>눈을 감습니다</b>. 자를 약하게 하지 않고 <b>펴서</b> 옛날과
+       똑같이 셉니다 (8번). 폰에서는 두 기둥 규칙이 없지만 껍데기 div 는
+       그대로라, 폭과 상관없이 폅니다.                                  */
+    const TOPS = (h) => { const o = [];
+      for (const e of h.children) {
+        if (e.classList && e.classList.contains('hm-2col')) {
+          for (const col of e.children) for (const c of col.children) o.push(c);
+        } else o.push(e);
+      } return o; };
+  const L = TOPS(pane).map(e => e.getBoundingClientRect());
   return Math.round(Math.max.apply(null, L.map(r => r.bottom + scrollY)));
 });
 
@@ -159,7 +183,19 @@ const tall = (p) => p.evaluate(() => {
   /* 홈 최상위 칸을 <b>보이는 것만</b> 이름과 높이로 */
   const shape = (p) => p.evaluate(() => {
     const pane = document.querySelector('.tab-pane.on'); if (!pane) return [];
-    return [...pane.children].map(e => ({
+    /* 🏛 <b>두 기둥은 껍데기다 — 속을 본다</b> (2026-09-30). 홈이 넓은
+       화면에서 두 기둥(.hm-2col)이 되었습니다. 껍데기를 그대로 세면
+       왼쪽에 큰 카드를 <b>넷을 쌓아도</b> 「덩어리 하나」 가 되어 이 자가
+       <b>눈을 감습니다</b>. 자를 약하게 하지 않고 <b>펴서</b> 옛날과
+       똑같이 셉니다 (8번). 폰에서는 두 기둥 규칙이 없지만 껍데기 div 는
+       그대로라, 폭과 상관없이 폅니다.                                  */
+    const TOPS = (h) => { const o = [];
+      for (const e of h.children) {
+        if (e.classList && e.classList.contains('hm-2col')) {
+          for (const col of e.children) for (const c of col.children) o.push(c);
+        } else o.push(e);
+      } return o; };
+    return TOPS(pane).map(e => ({
       id: e.id || ('.' + String(e.className || '').split(' ')[0]),
       h: Math.round(e.getBoundingClientRect().height)
     })).filter(x => x.h > 0);
@@ -184,7 +220,19 @@ const tall = (p) => p.evaluate(() => {
   /* 소식도 없고 공지도 없는 판 vs 둘 다 있는 판 — <b>뼈대가 같아야</b> 한다 */
   const S2 = await A.p.evaluate(() => {
     const pane = document.querySelector('.tab-pane.on');
-    const now = () => [...pane.children].map(e => (e.id || ('.' + String(e.className || '').split(' ')[0])) +
+    /* 🏛 <b>두 기둥은 껍데기다 — 속을 본다</b> (2026-09-30). 홈이 넓은
+       화면에서 두 기둥(.hm-2col)이 되었습니다. 껍데기를 그대로 세면
+       왼쪽에 큰 카드를 <b>넷을 쌓아도</b> 「덩어리 하나」 가 되어 이 자가
+       <b>눈을 감습니다</b>. 자를 약하게 하지 않고 <b>펴서</b> 옛날과
+       똑같이 셉니다 (8번). 폰에서는 두 기둥 규칙이 없지만 껍데기 div 는
+       그대로라, 폭과 상관없이 폅니다.                                  */
+    const TOPS = (h) => { const o = [];
+      for (const e of h.children) {
+        if (e.classList && e.classList.contains('hm-2col')) {
+          for (const col of e.children) for (const c of col.children) o.push(c);
+        } else o.push(e);
+      } return o; };
+    const now = () => TOPS(pane).map(e => (e.id || ('.' + String(e.className || '').split(' ')[0])) +
       ':' + (e.getBoundingClientRect().height > 0 ? 1 : 0)).join('|');
     const before = now();
     /* 공지를 하나 세워 봅니다 — 있으면 자리가 늘어나면 안 됩니다 */
