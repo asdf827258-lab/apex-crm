@@ -88,7 +88,31 @@ const SOLO = [
   { t: '보장 전·후 만들기', url: '/app/ba.html',      tiny: 557 },
   { t: 'DB 통합 CRM',      url: '/db-crm.html',      tiny: 0 }
 ];
+/* ══ 🕰 <b>시계를 못 박습니다</b> ═══════════════════════════════════
+   ⚠ 2026-09-30 에 이 자가 빨간불이 됐습니다 — <b>코드는 한 줄도 안
+     바뀌었는데</b> 고객 365일이 3.1 → 3.2화면이 됐습니다. 씨앗이 고객
+     날짜를 2026-09-01 로 <b>고정</b>해 두고 「오늘」 은 <b>진짜 날짜</b>를
+     쓰기 때문입니다. 날이 갈수록 「며칠 지났다」 가 길어져 화면이 자랍니다.
+   ★ 기준선을 올려서 넘어가면 <b>다음 달에 또 터집니다.</b> 흔들리는 자를
+     붙잡는 것이 맞습니다 — <b>오늘을 한 날로 못 박습니다.</b>
+   ★ 얼리지 않고 <b>옮깁니다</b>(시계는 그대로 갑니다) — 멈춰 세우면
+     setTimeout 을 기다리는 자리가 영영 안 끝납니다.
+   ★ 아래 BASE 의 수는 <b>이 날짜에서 잰 값</b>입니다. 날짜를 바꾸면
+     기준선도 같이 다시 재야 합니다.                                   */
+const 못박은날 = '2026-09-15T09:00:00Z';
+const PIN = (iso) => {
+  const FIX = new Date(iso).getTime();
+  const R = Date;
+  const off = FIX - R.now();
+  function F(...a){ return a.length ? new R(...a) : new R(R.now() + off); }
+  F.now = () => R.now() + off;
+  F.parse = R.parse; F.UTC = R.UTC; F.prototype = R.prototype;
+  window.Date = F;
+};
+
 const BASE = {
+  /* 🕰 아래 수는 모두 <b>못박은날(2026-09-15)</b> 에서 잰 값입니다 —
+     날짜를 바꾸면 여기도 같이 다시 재야 합니다.                        */
   /*          작은 글자   계단    빗나감
      0단계(9/17 09:20) 141·18·50 / 63·11·11 / 50·9·31 / 64·10·34
      1단계(9/17 10:40) <b>글자 계단</b>을 여섯으로 못 박고 앱 CSS 의
@@ -218,7 +242,7 @@ const BASE = {
   /* 2026-09-22 · 2.4 → <b>2.2</b>. 「내 업적 · 월간보고」 와 「30일 고객관리」 를
      뺐다(사장님 말씀). 자를 올린 것이 아니라 <b>실제로 줄어든</b> 값이다 —
      열셋이던 칸이 여덟이 됐다. */
-  airep:   { tiny: 0, size: 4, small: 0, screens: 2.2 },
+  airep:   { tiny: 0, size: 4, small: 0, screens: 1.2 },
   /* 2026-09-26 · 글자 계단 4 → <b>5</b>. 목업의 제목 「고객 한 벌로」 를
      세우면서 .t-h1 의 <b>27px</b> 한 가지가 늘었습니다. 재어 보니
      13×46 · 14×7 · 15×4 · 17×3 · <b>27×2</b> 입니다.
@@ -235,7 +259,7 @@ const BASE = {
        계약 마디 · 이번 달 달력」 이 더 섭니다(목업에는 없습니다). 짧게
        하시려면 거기부터 접는 것이 맞습니다. 목업이 시킨 머리를 도로
        걷어내는 것이 아니라.                                              */
-  clients: { tiny: 0, size: 5, small: 0, screens: 3.1 },
+  clients: { tiny: 0, size: 5, small: 0, screens: 3.0 },
   /* 2026-09-23 · 2.5 → <b>2.2</b>. 달력 칸에 「매일 하는 일」을 <b>글자로</b>
      적고(사장님 말씀 「한달치 입력 안되어있어」 — 값은 있는데 점 하나라
      안 보였다), 「📆 이번 달 통째로 넣기」 와 바탕화면 안내를 더했더니
@@ -259,7 +283,7 @@ const BASE = {
        자리라 그만큼은 치릅니다.
      ★ 달 보기는 <b>그대로</b>입니다 — 고르개가 있고, check-calmonth 가
        달 격자를 따로 잽니다.                                          */
-  mycal:   { tiny: 0, size: 4, small: 0, screens: 2.2 }
+  mycal:   { tiny: 0, size: 4, small: 0, screens: 2.0 }
 };
 
 /* 견본은 <b>홍길동</b> 집안입니다 (3번). 화면마다 같은 것을 심어야
@@ -292,6 +316,7 @@ const SEED = `
   const b = await chromium.launch();
   /* <b>아이폰 크기</b>로 잽니다 — 사장님이 고객 앞에서 여시는 것은 폰입니다 */
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+  await ctx.addInitScript(PIN, 못박은날);      /* 🕰 날짜가 흘러도 안 흔들리게 */
   /* 바깥으로 안 나갑니다 — 재는 것은 글자 크기지 서버가 아닙니다 (8번) */
   await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
   const page = await ctx.newPage();
@@ -513,6 +538,7 @@ const SEED = `
   is(TBR.pad >= TBR.h, '탭바가 <b>글을 안 덮는다</b> — 바닥 여백 ' + TBR.pad + 'px / 탭바 ' + TBR.h + 'px');
   /* 넓은 화면에서는 <b>안 선다</b> — 왼쪽 기둥이 그대로 있어 두 곳이 된다 */
   const wide = await b.newContext({ viewport: { width: 1280, height: 900 } });
+  await wide.addInitScript(PIN, 못박은날);     /* 넓은 쪽도 같은 날로 */
   await wide.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
   const wp = await wide.newPage();
   await wp.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });

@@ -22,6 +22,25 @@
      [3] <b>홈에만</b> 걸었다 — 다른 화면은 제 옷 그대로다
      [4] 조용히 터지지 않았나
    ══════════════════════════════════════════════════════════════════ */
+/* ══ 🕰 <b>시계를 못 박습니다</b> ═══════════════════════════════════
+   ⚠ 2026-09-30 에 이 자가 CI 에서만 빨간불이 됐습니다 — 같은 코드인데
+     로컬은 초록, CI 는 「오늘의 AI 비서」 에 목각 밖 색 하나. 재어 보니
+     그 화면의 <b>잎이 8개(로컬) 대 18개(CI)</b> 였습니다. 날짜에 따라
+     그려지는 칸이 달라지기 때문입니다.
+   ★ 같은 날 같은 것을 봐야 자가 자입니다. check-toss 와 <b>같은 날</b>로
+     못 박습니다. 얼리지 않고 옮깁니다 — 멈추면 기다리는 자리가 안 끝납니다.
+   ★ 날짜를 바꾸면 이 자가 보는 화면도 달라집니다.                     */
+const 못박은날 = '2026-09-15T09:00:00Z';
+const PIN = (iso) => {
+  const FIX = new Date(iso).getTime();
+  const R = Date;
+  const off = FIX - R.now();
+  function F(...a){ return a.length ? new R(...a) : new R(R.now() + off); }
+  F.now = () => R.now() + off;
+  F.parse = R.parse; F.UTC = R.UTC; F.prototype = R.prototype;
+  window.Date = F;
+};
+
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 const ROOT = process.cwd(), PORT = 8967;
@@ -77,6 +96,7 @@ const INKS = (sel) => {
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 430, height: 900 } });
+  await ctx.addInitScript(PIN, 못박은날);      /* 🕰 날짜가 흘러도 같은 화면을 보게 */
   const errs = [];
 
   /* ── 목업을 먼저 읽습니다 — 자(尺)는 사장님 파일입니다 ── */
