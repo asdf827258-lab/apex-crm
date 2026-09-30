@@ -99,7 +99,15 @@ const SEED = (o) => `
    return a;};
   return {from:function(t){return mk(t);},rpc:function(){return Promise.resolve({data:null,error:null});}};};
  OS_NTC.loaded=false;OS_NTC.at=0;OS_NIMG={};
- go('home');
+ /* ★ 2026-09-30 — 여기가 <b>go('home')</b> 이었습니다. 사장님 말씀으로
+    공지가 <b>제 화면</b>으로 옮겨가면서 홈에는 공지 자리가 없어졌고,
+    이 자가 <b>아무것도 안 그려진 홈</b>을 재게 됐습니다.
+    ★ 자가 틀린 것이 아니라 <b>자리가 바뀐</b> 것입니다 — 줄이지 않고
+      <b>새 자리로</b> 보냅니다. 재는 것은 한 가지도 안 줄였습니다.
+    ⚠ 이 자가 2026-09-27 에 <b>홈에서 공지를 빼는 것을 막았습니다</b> —
+      그때는 공지 사진이 홈에만 있어 빼면 앱 어디에서도 못 봤습니다.
+      이번에는 <b>먼저 화면을 만들고</b> 옮겼으므로 여기로 따라옵니다. */
+ go('notice');
  if(typeof osNoticeLoad==='function')osNoticeLoad(true);`;
 
 (async () => {

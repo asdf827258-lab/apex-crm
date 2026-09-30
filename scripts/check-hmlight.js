@@ -203,7 +203,16 @@ function onGrad(el){
              inner: rows.filter(e => e.querySelector('button,a[onclick]')).length,
              box: document.querySelectorAll('.hm-noti .notice,.hm-noti .card').length };
   });
-  is(N.n >= 2, '  한 줄짜리가 <b>' + N.n + '줄</b> 섰다 (경고 · 공지)');
+  /* ★ 2026-09-30 — 여기가 <b>둘(경고 · 공지)</b> 이었습니다. 사장님 말씀
+     「메인에서 공지사항 홈에서는 없애고, 따로 공지사항 칸 들어가면 거기서
+     관리할수 있도록해」 로 <b>공지가 제 화면으로 갔습니다</b>.
+     ★ 자가 틀린 것이 아니라 <b>사실이 바뀐</b> 것입니다 — 줄이지 않고
+       새 사실에 맞춥니다. 이 자가 지키려던 것은 <b>「상자로 되돌아가지
+       않는다」</b> 이고, 그것(tall·box·notBtn)은 한 가지도 안 줄였습니다.
+     ★ 옮겨 간 공지가 <b>제 화면에 제대로 있는지</b>는 check-ntcpage 가
+       봅니다 — 홈에서 빠진 것과 새 화면에 있는 것을 <b>함께</b> 봅니다.
+       여기서 「없어도 된다」 고만 하면 <b>지워도 초록</b>이 됩니다.     */
+  is(N.n >= 1, '  한 줄짜리가 <b>' + N.n + '줄</b> 섰다 (경고 — 공지는 제 화면으로 갔습니다)');
   is(N.tall.length === 0, '  <b>상자가 아니다</b> — 72px 넘는 줄 ' + N.tall.length + '개' +
      (N.tall.length ? ' ← ' + N.tall.join('·') + 'px' : ''));
   /* ⚠ <b>44px 은 여기서 안 잽니다.</b> 처음엔 쟀는데, 일부러 30px 로 못을
