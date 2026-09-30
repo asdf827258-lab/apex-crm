@@ -69,6 +69,24 @@ const SEED = () => {
   window.osLoadClients = function () {}; window.cmLoadAll = function (cb) { if (cb) cb(); };
   window.toast = function () {};
   window.setupDone = function () { return true; }; window.setupCanRun = function () { return true; };
+  /* ★★ <b>서버를 막습니다 — 안 막으면 자가 「그날 망 사정」 을 잽니다.</b>
+     ⚠ 2026-09-30 에 이 자가 CI 에서만 빨간불이었습니다. 「오늘의 AI 비서」 의
+       잎이 <b>로컬 8개 · CI 18개</b> 였습니다. 그 화면은 서버에 세어 달라고
+       물어서 칸을 그리는데, <b>물음이 빨리 실패하면 칸이 서고 느리면 「집계하는
+       중…」 에 머뭅니다.</b> 그래서 같은 코드가 곳에 따라 다른 화면이 됩니다.
+     ★ 시계를 못 박아도 이건 안 고쳐집니다 — 날짜가 아니라 <b>망</b>입니다.
+       빈 답을 <b>곧바로</b> 돌려주어 어디서 돌리든 같은 화면을 보게 합니다.
+       다른 자들(check-cusskin 등)이 이미 이렇게 합니다 (5번).           */
+  const chain = v => { const o = { then: function (f) { try { f(v); } catch (e) {} return o; },
+                                   catch: function () { return o; } };
+    ['eq','neq','select','order','limit','in','gte','lte','is','not','or','filter',
+     'ilike','like','range','contains','overlaps'].forEach(k => { o[k] = function () { return o; }; });
+    o.single = function () { return chain({ data: null }); };
+    o.maybeSingle = function () { return chain({ data: null }); }; return o; };
+  window.osClient = function () { return { from: function () { return {
+      select: function () { return chain({ data: [], count: 0 }); },
+      update: function () { return chain({}); }, insert: function () { return chain({}); },
+      upsert: function () { return chain({}); }, delete: function () { return chain({}); } }; } }; };
   OSC.loaded = true; OSC.busy = false; OSC.err = ''; OSC.list = []; CM.loaded = true; CM.meta = {};
   AR.loaded = true; AR.busy = ''; AR.cliRows = [];
   AR.db = [{ id: 'd1', who: 'me', name: '홍길동A', region: '순천', src: '일반', stage: 'AP', days: 3, n: 2, res: '상담', cAt: '', pAt: '' },
