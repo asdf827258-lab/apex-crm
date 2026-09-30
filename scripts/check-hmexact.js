@@ -105,7 +105,14 @@ const INKS = (sel) => {
        세면 헛것입니다 (8번). 글자가 섞여 있으면 그때는 셉니다. */
     if (!/[0-9A-Za-z가-힣]/.test(t)) return;
     const c = getComputedStyle(e).color;
-    out[c] = (out[c] || 0) + 1;
+    if (!out[c]) out[c] = { n: 0, t: [] };
+    out[c].n++;
+    /* ★ <b>글까지 모읍니다</b> (2026-09-30). 여태는 「색 3가지」 만 알려 주고
+       <b>왜 다른지는 안 알려 줬습니다</b> — 그래서 곳에 따라 갈리는 것을
+       세 번이나 못 찾았습니다. 「갈렸다」 만 알고 <b>무엇이 갈렸는지</b>를
+       안 찍었기 때문입니다. 글 몇 개만 있으면 그 화면에 <b>무엇이
+       그려졌는지</b> 한눈에 보입니다 (8번).                             */
+    if (out[c].t.length < 4) out[c].t.push(t.slice(0, 34));
   });
   return out;
 };
@@ -257,17 +264,49 @@ const INKS = (sel) => {
     const R2 = await p.evaluate(async (args) => {
       const [tab, f] = args;
       try { go(tab); } catch (e) {}
-      await new Promise(r => setTimeout(r, 1800));
-      const on = document.getElementById('dynPane').classList.contains('t-skin');
-      return { on: on, inks: (new Function('return (' + f + ')("#dynPane")'))() };
+      /* ══ ⏳ <b>「1.8초 지났다」 가 아니라 「다 그려졌다」 를 기다립니다</b> ══
+         (2026-09-30) 여태는 <b>시간을 셌습니다.</b> 그러면 곳에 따라 빠르고
+         느릴 때 <b>다른 순간을 재게</b> 됩니다 — 「1.8초로 모자랐다」 도
+         「1.8초는 길었다」 도 다 탈입니다. 잎 수가 <b>두 번 연속 같으면</b>
+         그때 잽니다. 최대 6초까지만 기다립니다(안 멎는 화면도 있으니).
+         ★ 이 하나로 <b>때의 차이</b>는 통째로 없어집니다. 남는 것이 있으면
+           그것은 <b>곳의 차이</b>이고, 아래 쪽지가 그것을 찍습니다.      */
+      const cnt = () => document.querySelectorAll('#dynPane *').length;
+      let last = -1, same = 0, waited = 0;
+      while (waited < 6000) {
+        await new Promise(r => setTimeout(r, 200)); waited += 200;
+        const c = cnt();
+        if (c === last) { same++; if (same >= 2 && waited >= 600) break; } else same = 0;
+        last = c;
+      }
+      const d = document.getElementById('dynPane');
+      /* ★ <b>자가 스스로 말하게</b> — 갈렸을 때 「무엇이」 갈렸는지 (8번) */
+      let admin = null; try { admin = (typeof osIsAppAdmin === 'function') ? !!osIsAppAdmin() : 'x'; } catch (e) { admin = '터짐'; }
+      let ls = 0; try { ls = Object.keys(localStorage).length; } catch (e) {}
+      return { on: d.classList.contains('t-skin'),
+               inks: (new Function('return (' + f + ')("#dynPane")'))(),
+               waited: waited, nodes: last, role: (OS.profile || {}).role, admin: admin, ls: ls,
+               top: [...(d.querySelector('.tab-pane') || d).children]
+                      .map(e => e.id || String(e.className || '').split(' ')[0]).slice(0, 8) };
     }, [t, INKS.toString()]);
-    const cs = Object.keys(R2.inks), n = cs.reduce((a, c) => a + R2.inks[c], 0);
+    const cs = Object.keys(R2.inks), n = cs.reduce((a, c) => a + R2.inks[c].n, 0);
     const bad2 = cs.filter(c => mkInks.indexOf(c) < 0 && SKIP.indexOf(c) < 0);
-    const badN = bad2.reduce((a, c) => a + R2.inks[c], 0);
+    const badN = bad2.reduce((a, c) => a + R2.inks[c].n, 0);
     is(R2.on, '  [' + t + '] <b>옷을 입는다</b> (#dynPane 에 t-skin)');
     is(n > 0, '  [' + t + '] 글자가 <b>실제로 떠졌다</b> — ' + n + '개');
     is(bad2.length === 0, '  [' + t + '] 글자색이 <b>전부 목업 것</b>이다' +
-       (bad2.length ? (' ← 목업에 없는 색 ' + bad2.length + '가지 · 글자 ' + badN + '개 · ' + bad2.slice(0, 4).join(' ')) : ''));
+       (bad2.length ? (' ← 목업에 없는 색 ' + bad2.length + '가지 · 글자 ' + badN + '개') : ''));
+    /* ★★ 빨개지면 <b>왜 다른지</b>를 그 자리에서 적습니다. 로컬과 CI 가
+       갈렸을 때 <b>로그만 견주어도</b> 원인이 보이게 — 세 번을 못 찾은
+       까닭은 「갈렸다」 만 알고 무엇이 갈렸는지 안 찍어서입니다.        */
+    if (bad2.length) {
+      console.log('      ── 왜 다른가 (이 줄을 CI 와 견주십시오)');
+      console.log('         잎 ' + n + '개 · 칸 ' + R2.nodes + '개 · 기다림 ' + R2.waited + 'ms · ' +
+                  'role=' + R2.role + ' admin=' + R2.admin + ' ls=' + R2.ls);
+      console.log('         위칸 ' + R2.top.join(' · '));
+      bad2.slice(0, 6).forEach(c => console.log('         ' + c + ' ×' + R2.inks[c].n +
+                  '  ← 「' + R2.inks[c].t.join('」 「') + '」'));
+    }
   }
 
   console.log('\n[3] <b>표에 적힌 화면에만</b> 걸었다 — 나머지는 제 옷 그대로다');

@@ -58,6 +58,14 @@ const SEED = (`
   window.toast=function(){};
   if(typeof OSC!=='undefined'){OSC.loaded=true;OSC.busy=false;OSC.err='';OSC.list=OSC.list||[];}
   window.osLoadClients=function(){};
+  /* ⚠ 2026-09-30 — 「이분 자세히」 가 <b>접힌 채가 기본</b>이 됐습니다
+     (사장님 말씀 「그 넷도 접어」). 접힌 채로 재면 첫 마디·복사·갈래가
+     아예 안 그려집니다 — <b>먼저 펴고 잽니다.</b>
+     ★ <b>재는 것은 하나도 안 줄였습니다</b> (8번). 「첫 마디가 바로 떠 있다」 는
+       <b>펴면 누르지 않아도</b> 떠 있는가입니다 — 한 번 더 누르게 하지
+       않는가를 봅니다.  ★ 접힌 채로 열리는지는 check-hmtwo [5] 가 봅니다. */
+  try{ hmFoldSet('more',true); }catch(e){}
+  try{ HM_MORE=true; }catch(e){}
   go('home');`).replace('__C__', ago(40)).replace('__P__', ago(3));
 
 /* 그 단계의 줄을 <b>맨 앞으로</b> 끌어다 놓고 본다 — hmNext 는 차례대로만
