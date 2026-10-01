@@ -93,6 +93,17 @@ const SEED = (o) => `
    then:function(o2,n2){if(st.op&&!st.sel)return Promise.resolve({error:null}).then(o2,n2);
      return Promise.resolve({data:st.op?[{id:'x'}]:[],error:null}).then(o2,n2);}};return a;};
    return {from:function(t){return mk(t);},rpc:function(){return Promise.resolve({data:null,error:null});}};};
+ /* ⚠ 2026-10-02 · <b>이 자가 눈을 감고 있던 자리</b>입니다. 연속 가동(ACT)을
+    안 심어 두어 곁기둥 「이번 주」 카드가 늘 <b>「아직 못 읽었습니다」</b> 꼴로
+    섰습니다. 그러면 그 카드에 줄을 더해도 <b>이 자가 못 봅니다</b> — 실제로
+    전화·만남 두 수를 넣었는데 여기서는 3,534px 그대로였고, 사장님 화면에서만
+    17px 길어졌을 것입니다. <b>초록이지만 재지 않은 초록</b>입니다 (8번).
+    그래서 <b>다 읽은 판</b>으로 심어 카드가 제 꼴로 서게 합니다.          */
+ (function(){ var t=(typeof mcalToday==='function')?mcalToday():'';
+   if(t){ ACT.day={}; ACT.day[t]={call:1,cli:0,rep:0,chk:0};
+          ACT.from='2000-01-01'; ACT.at=Date.now(); }
+   window.actLoad=function(){};                  /* 서버는 안 부릅니다 (7번) */
+ })();
  HWHO.id='';CM.pick='';CM.picked=true;go('home');`;
 
 /* 홈의 <b>뼈대</b> — 칸의 차례. 안에 무엇이 들었는지가 아니라

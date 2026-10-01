@@ -338,24 +338,35 @@
      ★ <b>기록</b>은 카톡·문자·메일까지 <b>전부</b> 셉니다. 「오늘 손을
        몇 번 댔나」 라서, 통화·만남만 세면 카톡만 돌린 날이 0 이 됩니다.
      ★ 날짜를 못 읽는 줄은 <b>안 셉니다</b> — 오늘 것인지 모르니까요.    */
-  function actOf(rows, today) {
-    var t = ('' + (today || '')).slice(0, 10), i, r, o = { call: 0, meet: 0, all: 0 };
+  /* <b>날 범위로 셉니다</b> — a 부터 b 까지(둘 다 포함).
+     ★ 하루치(actOf)도 <b>이 자를 부릅니다</b> (5번). 「전화인가 만남인가」 를
+       두 곳에서 각자 가르면 한쪽만 고쳐져 홈의 두 칸이 다른 수를 말합니다.
+     ★ a 가 b 보다 늦으면 <b>바꿔서</b> 셉니다 — 부르는 쪽의 실수로 0 을
+       돌려주면 「아무것도 안 하셨다」 가 되어 버립니다 (1번).            */
+  function actRange(rows, from, to) {
+    var a = ('' + (from || '')).slice(0, 10), b = ('' + (to || '')).slice(0, 10);
+    var i, r, d, t2, o = { call: 0, meet: 0, all: 0 };
+    if (!a || !b) return o;
+    if (a > b) { t2 = a; a = b; b = t2; }
     rows = rows || [];
     for (i = 0; i < rows.length; i++) {
       r = rows[i];
-      if (!r || !r.at || ('' + r.at).slice(0, 10) !== t) continue;
+      if (!r || !r.at) continue;
+      d = ('' + r.at).slice(0, 10);
+      if (d < a || d > b) continue;
       o.all++;
       if (isCall(r.how)) o.call++;
       else if (isMeet(r.how)) o.meet++;          /* 한 줄이 둘로 세지 않게 */
     }
     return o;
   }
+  function actOf(rows, today) { return actRange(rows, today, today); }
 
   return {
     nextOf: nextOf, due: due, weightOf: weightOf, rank: rank,
     isKeep: isKeep, isCall: isCall, isMeet: isMeet,
     keepAt: keepAt, dayGap: dayGap, promiseOf: promiseOf,
-    nextMmdd: nextMmdd, signalsOf: signalsOf, actOf: actOf,
+    nextMmdd: nextMmdd, signalsOf: signalsOf, actOf: actOf, actRange: actRange,
     KEEP_HOW: KEEP_HOW, CALL_HOW: CALL_HOW, MEET_HOW: MEET_HOW
   };
 });

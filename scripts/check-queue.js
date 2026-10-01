@@ -202,10 +202,27 @@ is(R.promiseOf({ today: T, cycle: 30, since: '2026-01-01', touch: [{ at: '2026-0
 /* 홈이 그 자를 부르는가 · 여기서 또 세지 않는가 */
 is(/DAYRANK\.actOf/.test(IDX) && !/['"]대면['"]/.test(IDX.slice(IDX.indexOf('function hmActOf'), IDX.indexOf('function hmActOf') + 1600)),
    '  홈은 <b>부르기만</b> 한다 — 「전화·만남」 낱말을 index.html 에 베껴 적지 않았다 (5번)');
-is(/CM\.loaded/.test(IDX.slice(IDX.indexOf('function hmActOf'), IDX.indexOf('function hmActOf') + 600)),
+/* ⚠ 2026-10-02 · <b>자리가 옮겨졌습니다 — 규칙이 바뀐 것이 아닙니다.</b>
+   「이번 주」 칸이 같은 줄을 쓰게 되면서, 줄을 모으는 글이 <b>hmActRows</b>
+   한 곳으로 빠져나갔습니다(두 곳에서 각자 모으면 한쪽만 고쳐집니다 · 5번).
+   못 읽었는지 보는 자리(CM.loaded)와 「누구 것인가」(mcalMine)도 같이
+   갔습니다. 그래서 <b>hmActRows 를 봅니다</b> — 그리고 hmActOf 가 정말
+   그것을 부르는지까지 봐야, 자리만 옮기고 안 부르는 판을 잡습니다.      */
+const hmActRowsSrc = (() => {
+  const i = IDX.indexOf('function hmActRows');
+  if (i < 0) return '';
+  const r = IDX.slice(i), e = r.indexOf('\nfunction hmActOf');
+  return e > 0 ? r.slice(0, e) : r.slice(0, 2500);
+})();
+is(hmActRowsSrc.length > 0 && /CM\.loaded/.test(hmActRowsSrc),
    '  <b>아직 못 읽었으면 줄을 안 세운다</b> — 「0건」 은 「아무것도 안 하셨다」 로 읽힌다 (1번)');
-is(/mcalMine/.test(IDX.slice(IDX.indexOf('function hmActOf'), IDX.indexOf('function hmActOf') + 1200)),
+is(hmActRowsSrc.length > 0 && /mcalMine/.test(hmActRowsSrc),
    '  <b>누구 것인가</b> 는 달력이 쓰는 한 곳에 묻는다 (3번·5번)');
+is(/function hmActOf\(\)\{\s*var rows=hmActRows\(\);/.test(IDX),
+   '  ★ 오늘치가 <b>그 자리를 정말 부른다</b> — 옮겨 두고 안 부르면 가림막이 없습니다');
+is((IDX.match(/m\.touch&&m\.touch\.push\)rows=rows\.concat/g) || []).length === 1,
+   '  ★★ 줄을 모으는 글이 <b>한 곳</b>뿐이다 (5번) — '
+     + (IDX.match(/m\.touch&&m\.touch\.push\)rows=rows\.concat/g) || []).length + '곳');
 /* ⚠ <b>1,200자로 잘라 보지 않습니다.</b> 그 창으로 보다가, 같은 칸에
    ☎️ 30일 약속 한 줄이 붙자 flex-wrap:nowrap 이 창 <b>밖으로</b> 밀려나
    빨간불이 켰습니다 — 규칙은 멀쩡히 그 자리에 있었습니다. 헛것입니다 (8번).
