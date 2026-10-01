@@ -411,8 +411,11 @@ const SEED = (o) => `
      <b>치른 것</b> — 0.3화면. <b>제일 긴 짝은 여전히 한 화면 안</b>이고,
      접으면 판단도 같이 접힙니다. 자세한 셈은 <b>check-homeone</b> 의 같은
      날 쪽지에 한 곳에만 적어 둡니다 (5번).                            */
-  is(worstHome > 0 && worstHome <= 844 * 4.8,
-     '  그때 홈이 <b>' + worstHome + 'px</b> = 화면 ' + (worstHome / 844).toFixed(2) + '개 (4.8 이하)');
+  /* ── 2026-10-01 · <b>4.8 → 4.9</b> ─────────────────────────────────
+     「📥 읽어 둔 보장분석」 카드 한 장(122px)만큼입니다 — 3,956 → 4,078px.
+     까닭은 check-homeone 쪽지와 같습니다.                              */
+  is(worstHome > 0 && worstHome <= 844 * 4.9,
+     '  그때 홈이 <b>' + worstHome + 'px</b> = 화면 ' + (worstHome / 844).toFixed(2) + '개 (4.9 이하)');
   /* 다섯 마디 틀은 <b>기본으로 접혀</b> 있다 — 매일 같은 줄이 200px 을 먹지 않게 */
   const fr = await B.p.evaluate(() => { hmMsJump(2); return { open: hmMsFrOpen(), head: !!document.querySelector('.hm-ms-fr-h') }; });
   is(fr.head && !fr.open, '  다섯 마디 틀은 <b>접혀</b> 있고 머리는 보인다 — 정형화가 숨지는 않는다');
