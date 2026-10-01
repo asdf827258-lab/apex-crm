@@ -119,11 +119,17 @@ const bones = (p) => p.evaluate(() => {
        <b>눈을 감습니다</b>. 자를 약하게 하지 않고 <b>펴서</b> 옛날과
        똑같이 셉니다 (8번). 폰에서는 두 기둥 규칙이 없지만 껍데기 div 는
        그대로라, 폭과 상관없이 폅니다.                                  */
-    const TOPS = (h) => { const o = [];
+    const TOPS = (h, side) => { const o = [];
+      /* side — 'left' 길이를 정하는 줄(위 통칸 + 왼쪽 기둥) · 'right' 곁기둥만 ·
+         안 주면 둘 다(옛날 그대로). 두 기둥이 되면서 「덩어리 수」 가 길이를
+         안 말하게 되어, 뭉쳐 세면 헛것이 됩니다 (8번).                   */
       for (const e of h.children) {
         if (e.classList && e.classList.contains('hm-2col')) {
-          for (const col of e.children) for (const c of col.children) o.push(c);
-        } else o.push(e);
+          const cols = [...e.children];
+          const pick = side === 'left' ? cols.slice(0, 1)
+                     : side === 'right' ? cols.slice(1) : cols;
+          for (const col of pick) for (const c of col.children) o.push(c);
+        } else if (side !== 'right') o.push(e);
       } return o; };
   return TOPS(pane).map(e => {
     const r = e.getBoundingClientRect();
@@ -146,11 +152,17 @@ const tall = (p) => p.evaluate(() => {
        <b>눈을 감습니다</b>. 자를 약하게 하지 않고 <b>펴서</b> 옛날과
        똑같이 셉니다 (8번). 폰에서는 두 기둥 규칙이 없지만 껍데기 div 는
        그대로라, 폭과 상관없이 폅니다.                                  */
-    const TOPS = (h) => { const o = [];
+    const TOPS = (h, side) => { const o = [];
+      /* side — 'left' 길이를 정하는 줄(위 통칸 + 왼쪽 기둥) · 'right' 곁기둥만 ·
+         안 주면 둘 다(옛날 그대로). 두 기둥이 되면서 「덩어리 수」 가 길이를
+         안 말하게 되어, 뭉쳐 세면 헛것이 됩니다 (8번).                   */
       for (const e of h.children) {
         if (e.classList && e.classList.contains('hm-2col')) {
-          for (const col of e.children) for (const c of col.children) o.push(c);
-        } else o.push(e);
+          const cols = [...e.children];
+          const pick = side === 'left' ? cols.slice(0, 1)
+                     : side === 'right' ? cols.slice(1) : cols;
+          for (const col of pick) for (const c of col.children) o.push(c);
+        } else if (side !== 'right') o.push(e);
       } return o; };
   const L = TOPS(pane).map(e => e.getBoundingClientRect());
   return Math.round(Math.max.apply(null, L.map(r => r.bottom + scrollY)));
@@ -181,7 +193,7 @@ const tall = (p) => p.evaluate(() => {
     return { ctx, p, errs };
   };
   /* 홈 최상위 칸을 <b>보이는 것만</b> 이름과 높이로 */
-  const shape = (p) => p.evaluate(() => {
+  const shape = (p, side) => p.evaluate((side) => {
     const pane = document.querySelector('.tab-pane.on'); if (!pane) return [];
     /* 🏛 <b>두 기둥은 껍데기다 — 속을 본다</b> (2026-09-30). 홈이 넓은
        화면에서 두 기둥(.hm-2col)이 되었습니다. 껍데기를 그대로 세면
@@ -189,25 +201,47 @@ const tall = (p) => p.evaluate(() => {
        <b>눈을 감습니다</b>. 자를 약하게 하지 않고 <b>펴서</b> 옛날과
        똑같이 셉니다 (8번). 폰에서는 두 기둥 규칙이 없지만 껍데기 div 는
        그대로라, 폭과 상관없이 폅니다.                                  */
-    const TOPS = (h) => { const o = [];
+    const TOPS = (h, side) => { const o = [];
+      /* side — 'left' 길이를 정하는 줄(위 통칸 + 왼쪽 기둥) · 'right' 곁기둥만 ·
+         안 주면 둘 다(옛날 그대로). 두 기둥이 되면서 「덩어리 수」 가 길이를
+         안 말하게 되어, 뭉쳐 세면 헛것이 됩니다 (8번).                   */
       for (const e of h.children) {
         if (e.classList && e.classList.contains('hm-2col')) {
-          for (const col of e.children) for (const c of col.children) o.push(c);
-        } else o.push(e);
+          const cols = [...e.children];
+          const pick = side === 'left' ? cols.slice(0, 1)
+                     : side === 'right' ? cols.slice(1) : cols;
+          for (const col of pick) for (const c of col.children) o.push(c);
+        } else if (side !== 'right') o.push(e);
       } return o; };
-    return TOPS(pane).map(e => ({
+    return TOPS(pane, side).map(e => ({
       id: e.id || ('.' + String(e.className || '').split(' ')[0]),
       h: Math.round(e.getBoundingClientRect().height)
     })).filter(x => x.h > 0);
-  });
+  }, side);
 
   const A = await open({});
 
   console.log('\n[1] 홈의 <b>덩어리</b>가 넷을 넘지 않는가');
-  const S1 = await shape(A.p);
+  /* ══ ⚠ <b>두 기둥이 되면서 「덩어리 수」 가 길이를 안 말합니다</b> (2026-09-30) ══
+     이 자가 잡으려던 것은 <b>길이</b>였습니다 — 「홈이 3,541px, 화면 네 장」.
+     그런데 홈이 두 기둥이 되면서 <b>곁기둥은 왼쪽 그늘에 들어</b> 덩어리가
+     늘어도 PC 길이가 안 늘어납니다(실제로 곁기둥 셋을 더해도 1,573px 그대로).
+     둘을 뭉쳐 세면 <b>길이와 상관없는 빨간불</b>이 켜집니다 — 헛것입니다 (8번).
+     ★ 그래서 <b>길이를 정하는 줄</b>(위 통칸 + 왼쪽 기둥)만 넷 이하로 봅니다.
+     ★ 곁기둥은 <b>안 보는 것이 아니라 따로</b> 셉니다 — 늘면 울립니다.
+     ★ 길이 자체는 [5] 와 check-homeone·check-toss 가 그대로 잽니다.       */
+  const S1 = await shape(A.p, 'left');
   const big = S1.filter(x => x.h > 120);
-  is(big.length <= 4, '  덩어리(120px 넘는 칸)가 <b>' + big.length + '개</b> — 넷 이하 (' +
+  is(big.length <= 4, '  <b>길이를 정하는 줄</b>의 덩어리가 <b>' + big.length + '개</b> — 넷 이하 (' +
      big.map(x => x.id + ' ' + x.h).join(' · ') + ')');
+  /* ★ 곁기둥 — 사장님 말씀 「칸은 세우고 「아직 못 셉니다」 라고 적기」 로
+     목각의 넷(이번 주 · 오늘 동선 · 이번 달 고객 관리 · 알람)이 섰습니다.
+     늘면 울립니다 — 줄이면 이 수도 같이 내리십시오.                      */
+  const SIDE_BASE = 5;
+  const R1 = await shape(A.p, 'right');
+  is(R1.length <= SIDE_BASE,
+     '  <b>곁기둥</b>이 ' + R1.length + '칸 — 기준선 ' + SIDE_BASE + ' 이하 (' +
+     R1.map(x => x.id + ' ' + x.h).join(' · ') + ')');
   const small = S1.filter(x => x.h <= 120);
   is(small.length > 0 && small.every(x => x.h <= 120),
      '  나머지는 <b>한 줄</b>이다 — ' + small.map(x => x.id + ' ' + x.h).join(' · '));
@@ -226,11 +260,17 @@ const tall = (p) => p.evaluate(() => {
        <b>눈을 감습니다</b>. 자를 약하게 하지 않고 <b>펴서</b> 옛날과
        똑같이 셉니다 (8번). 폰에서는 두 기둥 규칙이 없지만 껍데기 div 는
        그대로라, 폭과 상관없이 폅니다.                                  */
-    const TOPS = (h) => { const o = [];
+    const TOPS = (h, side) => { const o = [];
+      /* side — 'left' 길이를 정하는 줄(위 통칸 + 왼쪽 기둥) · 'right' 곁기둥만 ·
+         안 주면 둘 다(옛날 그대로). 두 기둥이 되면서 「덩어리 수」 가 길이를
+         안 말하게 되어, 뭉쳐 세면 헛것이 됩니다 (8번).                   */
       for (const e of h.children) {
         if (e.classList && e.classList.contains('hm-2col')) {
-          for (const col of e.children) for (const c of col.children) o.push(c);
-        } else o.push(e);
+          const cols = [...e.children];
+          const pick = side === 'left' ? cols.slice(0, 1)
+                     : side === 'right' ? cols.slice(1) : cols;
+          for (const col of pick) for (const c of col.children) o.push(c);
+        } else if (side !== 'right') o.push(e);
       } return o; };
     const now = () => TOPS(pane).map(e => (e.id || ('.' + String(e.className || '').split(' ')[0])) +
       ':' + (e.getBoundingClientRect().height > 0 ? 1 : 0)).join('|');

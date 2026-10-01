@@ -129,6 +129,82 @@ const SEED = () => {
      '  ★ 오른쪽이 <b>왼쪽 그늘에 든다</b> — 오른쪽 ' + two.rh + 'px ≤ 왼쪽 ' + two.lh +
      'px (세로는 긴 쪽이 정합니다)');
 
+  /* ── [1-a] 파란 히어로 — <b>둘 다</b> 있다 ───────────────────────── */
+  console.log('\n[1-a] ★★ <b>파란 히어로가 맨 위에</b> 서고, <b>그 분을 들고 가는 길도 그대로</b> (사장님 말씀 「둘 다」)');
+  /* 사장님 말씀 (2026-09-30) — <b>「둘 다 둡니다 — 맨 위에 세우세요」</b>.
+     ⚠ 이 자리는 2026-09-23 에 <b>「맨위에 띄우지말고」</b> 로 뺐던 곳입니다.
+       빼신 까닭은 맨 위 한 장이 <b>누구의 보장분석인지 모른 채</b> 화면만
+       열어서였고, 그 문제는 <b>「오늘 제안하는 분 줄」(hmBaGo)</b> 이 이미
+       풀었습니다. 뜻이 다릅니다 — 맨 위는 「아무나」, 줄은 「그 분」.
+     ★ 그래서 <b>둘 다</b> 봅니다. 하나만 보면 다른 하나를 잃어도 조용합니다. */
+  const hero = await PC.evaluate(() => {
+    const h = document.querySelector('#hmTossHost .tz-hero');
+    const pane = document.querySelector('.tab-pane.on');
+    const flow = document.getElementById('hmFlowHost');
+    const b = h ? h.querySelector('.b') : null;
+    return { has: !!h,
+      q: h ? (h.querySelector('.q') || {}).innerText || '' : '',
+      btn: b ? (b.innerText || '').trim() : '',
+      tap: b ? Math.round(b.getBoundingClientRect().height) : 0,
+      y: h ? Math.round(h.getBoundingClientRect().top) : 0,
+      flowY: flow ? Math.round(flow.getBoundingClientRect().top) : 0,
+      /* ★ 「그 분을 들고 가는 길」 이 살아 있나 — 함수와 부르는 자리 둘 다 */
+      baGoFn: (typeof hmBaGo === 'function') };
+  });
+  is(hero.has, '  <b>맨 위 히어로</b>가 선다 (목각 ⑧)');
+  is(/KB보장분석/.test(hero.q), '  목업 <b>글자 그대로</b>다 — 「' + hero.q.replace(/\s+/g, ' ').slice(0, 40) + '」');
+  is(!!hero.btn && hero.tap >= 44, '  단추가 <b>손가락 크기</b>다 — 「' + hero.btn + '」 ' + hero.tap + 'px');
+  is(hero.has && hero.flowY > hero.y,
+     '  <b>상담현황보다 위</b>에 있다 (목각 차례) — 히어로 y' + hero.y + ' · 상담현황 y' + hero.flowY);
+  /* ★★ 둘 다 — 줄 쪽 길을 잃지 않았나 (5번 · 「함수를 지우지 않는다」) */
+  is(hero.baGoFn, '  ★★ <b>「그 분을 들고 들어가는 길」(hmBaGo)도 그대로</b> 있다 — 맨 위는 「아무나」, 줄은 「그 분」');
+  const baGoUse = require('fs').readFileSync(require('path').join(ROOT, 'app/index.html'), 'utf8');
+  is((baGoUse.match(/hmBaGo\(/g) || []).length >= 2,
+     '  그 길을 <b>부르는 자리도</b> 남아 있다 — 함수만 있고 안 부르면 죽은 판입니다 (5번)');
+
+  /* ── [1-b] 곁기둥이 목각 차례대로 · 못 세는 것은 못 센다고 적는다 ─── */
+  console.log('\n[1-b] ★★ <b>곁기둥이 목각 차례</b>이고, <b>못 세는 것은 못 센다고 적는다</b> (사장님 말씀)');
+  /* 사장님 말씀 (2026-09-30) — <b>「칸은 세우고 「아직 못 셉니다」 라고 적기」</b>.
+     목각 오른쪽은 넷입니다: 이번 주 · 오늘 동선 · 이번 달 고객 관리 · 알람.
+     그중 셋은 <b>앱에 세는 자리가 없습니다</b>. 지어내지도, 비워 두지도
+     않고 <b>화면에 그렇게 적습니다</b> (1번).                            */
+  const side = await PC.evaluate(() => {
+    const c = document.querySelector('.hm-2col'); if (!c) return { no: 1 };
+    const R = c.children[1];
+    const cards = [...R.children].map(e => {
+      const t = (e.innerText || '').replace(/\s+/g, ' ').trim();
+      return { t: t, h: Math.round(e.getBoundingClientRect().height),
+               head: t.split(' ').slice(0, 3).join(' ') };
+    });
+    return { no: 0, cards: cards, txt: (R.innerText || '').replace(/\s+/g, ' ').trim() };
+  });
+  const 있나 = (w) => !side.no && side.cards.some(c => c.t.indexOf(w) >= 0);
+  ['이번 주', '오늘 어디로', '이번 달 고객 관리', '알람'].forEach(w =>
+    is(있나(w), '  목각의 <b>「' + w + '」</b> 자리가 있다'));
+  /* ★ 차례도 목각대로 — 이번 주 → 오늘 동선 → 이번 달 → 알람 */
+  const at = (w) => side.no ? -1 : side.cards.findIndex(c => c.t.indexOf(w) >= 0);
+  is(at('이번 주') >= 0 && at('이번 주') < at('오늘 어디로') &&
+     at('오늘 어디로') < at('이번 달 고객 관리') && at('이번 달 고객 관리') < at('알람'),
+     '  <b>차례가 목각대로</b>다 — 이번 주 → 오늘 동선 → 이번 달 고객 관리 → 알람');
+  /* ★★ 못 세는 셋 — 「아직 세는 자리가 없습니다」 라고 <b>적고</b>,
+         <b>아무 숫자도 안 적는다</b>. 이것이 1번을 지키는 모양입니다.   */
+  ['이번 주', '이번 달 고객 관리', '알람'].forEach(w => {
+    const c = side.no ? null : side.cards.find(x => x.t.indexOf(w) >= 0);
+    is(!!c && /아직 세는 자리가 없습니다/.test(c.t),
+       '  ★ 「' + w + '」 가 <b>「아직 세는 자리가 없습니다」</b> 라고 적는다 (1번)');
+    /* 제목·설명에 든 글자 말고 <b>숫자</b>가 있으면 지어낸 것입니다 */
+    is(!!c && !/\d/.test(c.t),
+       '  ★★ 「' + w + '」 에 <b>아무 숫자도 안 적는다</b> — 없는 수를 지으면 사실로 믿으십니다' +
+       (c && /\d/.test(c.t) ? (' ← 「' + c.t.slice(0, 60) + '」') : ''));
+  });
+  /* ★ 비워 두지도 않는다 — 사장님이 「적기」 라고 하셨습니다 */
+  is(!side.no && side.cards.every(c => c.h > 0),
+     '  <b>빈 칸이 없다</b> — 자리만 잡고 아무 말도 안 하면 고장 난 것으로 보입니다');
+  /* ★ 셀 수 있는 것은 <b>진짜 수</b>로 — 「오늘 동선」 은 이미 셉니다 */
+  const rt = side.no ? null : side.cards.find(c => c.t.indexOf('오늘 어디로') >= 0);
+  is(!!rt && !/아직 세는 자리가 없습니다/.test(rt.t),
+     '  ★ <b>「오늘 동선」 은 진짜 수로</b> 선다 — 셀 수 있는 것을 못 센다고 적지 않는다 (1번)');
+
   /* ── [6] 위의 넷은 안 움직였다 ─────────────────────────────────── */
   console.log('\n[6] ★ <b>위의 넷은 안 움직였다</b> — 먼저 하신 말씀 둘을 같이 지킨다');
   const head = await PC.evaluate(() => {
