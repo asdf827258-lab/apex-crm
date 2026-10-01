@@ -290,6 +290,23 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
        ★ <b>접힌 채로 열리는지</b>와 <b>눌러서 펴지는지</b>는 check-hmtwo [5]
          가 봅니다 — 둘을 한 자에서 보면 서로 발목을 잡습니다.            */
     try{ if(!HM_MORE){ hmMoreToggle(); await new Promise(r=>setTimeout(r,500)); } }catch(e){}
+    /* ⚠ 2026-10-02 — 큰 단추 자리가 <b>물음</b>이 되었습니다 (사장님 말씀
+       「<b>전화 걸러 갑니다 에서</b>, 고객의 현재 상황은 무엇인가요? <b>로 묻고</b>」).
+       큰 단추(.hm-do)는 <b>상황을 고르시면</b> 그 자리에 섭니다 — 접이와 똑같이
+       <b>먼저 펴고</b> 잽니다. 재려던 것은 하나도 안 바뀌었습니다 (8번).
+       ★ <b>칸을 모으기 전에</b> 펴야 합니다. 중간에 펴면 hmPaint 가 칸을 다시
+         그려 <b>먼저 모아 둔 것이 떨어져 나가고</b>, 높이가 0 이 되어 「44px
+         아래」 로 세어집니다 — 처음에 그렇게 해서 헛것이 났습니다.
+       ★ 이 자리의 이름은 <b>out.sit</b> 입니다. out.ask 는 접이 안 「무엇을
+         할까요?」 라는 <b>다른 물음</b>이라 건드리지 않습니다 — 처음에 그 이름을
+         덮어써서 멀쩡한 자리가 빨간불이 났습니다.                          */
+    out.sit=((document.querySelector('#dynPane .hm-now .hm-do')||{}).textContent||'').trim();
+    try{
+      const kS=(hmNext().x||{}).key||'';
+      if(kS&&typeof hmStOpen==='function'&&!(typeof HM_ST!=='undefined'&&HM_ST[kS])){
+        hmStOpen(kS); await new Promise(r=>setTimeout(r,400));
+      }
+    }catch(eS){}
     out.ask=(document.querySelector('#dynPane .hm-now .hm-ask-t')||{}).textContent||'';
     const opts=[].slice.call(document.querySelectorAll('#dynPane .hm-now .hm-ask-o'));
     out.btnTxt=opts.map(b=>b.textContent.replace(/\s+/g,' ').trim());
@@ -301,9 +318,13 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
        「상태마다 무엇을 하라고 말하나」 (8번). */
     out.aim=(document.querySelector('#dynPane .hm-now .hm-aim')||{}).textContent||'';
     out.way=(document.querySelector('#dynPane .hm-now .hm-way')||{}).textContent||'';
-    out.doTxt=((document.querySelector('#dynPane .hm-now .hm-do')||{}).textContent||'').trim();
-    out.doH=(()=>{const b=document.querySelector('#dynPane .hm-now .hm-do');
-                  return b?Math.round(b.getBoundingClientRect().height):0;})();
+    /* 펴면 큰 단추가 <b>둘</b>입니다 — 물음과 할 일. 뒤엣것이 할 일입니다 */
+    out.doTxt=(()=>{const L=[].slice.call(document.querySelectorAll('#dynPane .hm-now .hm-do'))
+                      .filter(b=>(b.textContent||'').indexOf('현재 상황은')<0);
+                    return L.length?(L[L.length-1].textContent||'').trim():'';})();
+    out.doH=(()=>{const L=[].slice.call(document.querySelectorAll('#dynPane .hm-now .hm-do'))
+                    .filter(b=>(b.textContent||'').indexOf('현재 상황은')<0);
+                  return L.length?Math.round(L[L.length-1].getBoundingClientRect().height):0;})();
     /* 머리줄에 <b>같은 말이 두 번</b> 안 적히는가 */
     out.head=(document.querySelector('#dynPane .hm-now .hm-now-k')||{}).textContent||'';
     /* 손가락으로 누를 만한가 */
@@ -319,7 +340,10 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     out.asSheet=!went&&!!(typeof HMS!=='undefined'&&HMS.sheet);
     try{ if(typeof hmSheetClose==='function')hmSheetClose(); }catch(e){}
     /* <b>큰 단추</b>는 그 사람 자리로 보낸다 */
-    went=''; const dob=document.querySelector('#dynPane .hm-now .hm-do');
+    went='';
+    const dobL=[].slice.call(document.querySelectorAll('#dynPane .hm-now .hm-do'))
+      .filter(b=>(b.textContent||'').indexOf('현재 상황은')<0);
+    const dob=dobL.length?dobL[dobL.length-1]:null;
     if(dob)dob.click();
     out.first=went;
     window.go=g;
@@ -384,7 +408,10 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(/걸리는 것 한 가지/.test(G.aim)&&/걸리셨어요/.test(G.way),
      '무엇을 / 어떻게 가 <b>큰 두 줄</b>로 선다 — 「'+G.aim.trim().slice(0,34)+'」');
   is(/전화/.test(G.doTxt)&&G.doH>=44,
-     '<b>큰 단추 한 방</b>이 선다 — 「'+(G.doTxt||'없다')+'」 · '+G.doH+'px');
+     '<b>큰 단추 한 방</b>이 선다 — 「'+(G.doTxt||'없다')+'」 · '+G.doH+'px'+
+     ' (물음 뒤입니다 — 「'+(G.sit||'없다')+'」)');
+  is(/현재 상황은 무엇인가요/.test(G.sit||''),
+     '  그 자리에 <b>물음</b>이 있다 — 「'+(G.sit||'없다')+'」 (사장님 말씀 2026-10-02)');
   /* 큰 두 줄로 옮겼으니 <b>번호 갈래에는 또 없어야</b> 한다 (5번) */
   is(!/받아 낸다/.test(G.btnTxt.join(' ')),
      '그 문장을 <b>번호 갈래에 또 안 적는다</b> — 같은 말이 두 번이면 눈이 미끄러진다');
