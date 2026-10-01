@@ -417,8 +417,13 @@ const SEED = (o) => `
   /* ── 2026-10-02 · <b>4.9 → 5.1</b> ─────────────────────────────────
      🔔 알람 칩만큼입니다 — 4,078 → 4,185px · 4.96화면. 까닭은 check-homeone
      쪽지와 같고, 같은 까닭으로 <b>0.1 을 더 둡니다</b>(4.96 은 너무 붙습니다). */
-  is(worstHome > 0 && worstHome <= 844 * 5.1,
-     '  그때 홈이 <b>' + worstHome + 'px</b> = 화면 ' + (worstHome / 844).toFixed(2) + '개 (5.1 이하)');
+  /* ── 2026-10-02 · <b>5.1 → 5.3</b> ─────────────────────────────────
+     📆 이번 주 격자만큼입니다 — 4,185 → 4,400px · 5.21화면. 이 자는 「미션을
+     전부 펴 놓은 가장 긴 판」 을 재므로 check-homeone 보다 느슨합니다.
+     ⚠ 다만 길이의 진짜 선은 <b>check-homeone 의 4.2</b> 입니다 — 거기 쪽지를
+       보십시오. 그쪽이 먼저 울립니다.                                    */
+  is(worstHome > 0 && worstHome <= 844 * 5.3,
+     '  그때 홈이 <b>' + worstHome + 'px</b> = 화면 ' + (worstHome / 844).toFixed(2) + '개 (5.3 이하)');
   /* 다섯 마디 틀은 <b>기본으로 접혀</b> 있다 — 매일 같은 줄이 200px 을 먹지 않게 */
   const fr = await B.p.evaluate(() => { hmMsJump(2); return { open: hmMsFrOpen(), head: !!document.querySelector('.hm-ms-fr-h') }; });
   is(fr.head && !fr.open, '  다섯 마디 틀은 <b>접혀</b> 있고 머리는 보인다 — 정형화가 숨지는 않는다');
