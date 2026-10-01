@@ -94,10 +94,16 @@ const SEED = `(function(){
      것이 아니라 <b>빠져 있던 사실</b>을 채우는 것입니다 (8번). */
   try{ cmOf('c1').touch=[{at:mcalToday(),how:'전화'}]; }catch(e){}
   try{ AR.loaded=true; GB.loaded=true; }catch(e){}
+  /* ⚠ 2026-10-02 · <b>흉내가 진짜 모양과 어긋나 홈을 터뜨렸습니다.</b>
+     mstDueList 가 mon(이번 달 마디)·monLeft 를 같이 돌려주게 되었는데 이
+     흉내는 그것을 안 담아, 홈의 「💌 이번 달 고객 관리」 칸이
+     <b>L.mon.length</b> 에서 터졌습니다 — CI 가 잡았습니다.
+     ★ 흉내는 <b>진짜가 돌려주는 칸을 다 담습니다.</b> 한 칸이라도 빠지면
+       그 자리에서 터지거나, 더 나쁘게는 <b>조용히 다른 수</b>가 섭니다. */
   window.mstDueList=function(){ return {due:[
     {c:{id:'c9',name_masked:'홍○판'},hit:{d:0,step:{m:3,ic:'📮',t:'석 달째 인사'}}},
     {c:{id:'c8',name_masked:'김○돌'},hit:{d:0,step:{m:6,ic:'📮',t:'반년 점검'}}}
-  ],soon:[],none:0,total:2}; };
+  ],soon:[],mon:[],monLeft:0,none:0,total:2}; };
 })();`;
 
 (async () => {
@@ -181,7 +187,7 @@ const SEED = `(function(){
     const keep = window.__seed;
     window.__seed = {};
     const realMadi = window.mstDueList;
-    window.mstDueList = function () { return { due: [], soon: [], none: 0, total: 0 }; };
+    window.mstDueList = function () { return { due: [], soon: [], mon: [], monLeft: 0, none: 0, total: 0 }; };
     const h = hmTodayHtml();
     window.__seed = keep; window.mstDueList = realMadi;
     return h;
@@ -200,7 +206,7 @@ const SEED = `(function(){
   const one = await pg.evaluate(() => {
     const keep = window.__seed, realMadi = window.mstDueList;
     window.__seed = {}; window.__seed[mcalToday()] = [{ k: 'bd', t: '심청' }];
-    window.mstDueList = function () { return { due: [], soon: [], none: 0, total: 0 }; };
+    window.mstDueList = function () { return { due: [], soon: [], mon: [], monLeft: 0, none: 0, total: 0 }; };
     const h = hmTodayHtml();
     window.__seed = keep; window.mstDueList = realMadi;
     return h;
@@ -235,7 +241,7 @@ const SEED = `(function(){
       { k: 'bd',    id: 'dup1', t: '홍갑돌' },                      /* 764 */
       { k: 'next',  id: 'dup1', t: '홍갑돌', s: '증권 전달' }        /* 900 — 나중 */
     ];
-    window.mstDueList = function () { return { due: [], soon: [], none: 0, total: 0 }; };
+    window.mstDueList = function () { return { due: [], soon: [], mon: [], monLeft: 0, none: 0, total: 0 }; };
     const L = hmSteps().filter(r => r.id === 'dup1');   /* 세 자리에 심은 그 분 */
     window.__seed = keep; window.mstDueList = realMadi;
     return { n: L.length, k: (L[0] || {}).k, more: (L[0] || {}).more || 0 };
@@ -258,7 +264,7 @@ const SEED = `(function(){
   const ord = await pg.evaluate(() => {
     const keep = window.__seed, realMadi = window.mstDueList, realTouch = window.arTouch;
     window.__seed = {};
-    window.mstDueList = function () { return { due: [], soon: [], none: 0, total: 0 }; };
+    window.mstDueList = function () { return { due: [], soon: [], mon: [], monLeft: 0, none: 0, total: 0 }; };
     /* 찬 TA 는 <b>마흔 날</b> 밀렸고, 계약 코앞 AP 는 <b>오늘</b> 것입니다.
        ★ 심는 차례가 중요합니다 — <b>덜 밀린 TA 를 먼저</b> 둡니다. 오래 밀린
          쪽을 먼저 두면 들어온 차례가 이미 답이라 「오래 밀린 분부터」 를

@@ -203,6 +203,35 @@ const LOOK = () => {
   is(nul.card.indexOf('아직 못 읽었습니다') >= 0,
     '  <b>「아직 못 읽었습니다」</b> 라고 적는다');
   is(!/\d+건/.test(nul.card), '  ★ <b>「N건」 이 한 번도 안 적힌다</b>');
+  /* ⚠ ★★ <b>이 줄은 CI 가 가르쳐 준 자리입니다.</b> check-homeday 는
+     mstDueList 를 <b>흉내</b> 내는데 그 흉내에 mon 이 없어, 홈이
+     <b>L.mon.length 에서 통째로 터졌습니다.</b> 제 자는 그것을 못 봤습니다 —
+     진짜 mstDueList 로만 재고 있었기 때문입니다. 홈은 제일 많이 여는
+     화면이라 한 줄 때문에 다 죽습니다. 옛 판이 캐시에 남거나 다른 길로
+     불러도 같은 일이 납니다. <b>칸이 빠진 답을 받아도 모른다고 적고
+     넘어가야</b> 합니다 (1번·8번).                                       */
+  const odd = await p.evaluate(({ src }) => {
+    const real = window.mstDueList;
+    /* 바구니(mon)가 <b>없는</b> 답 — 옛 판이 돌려주던 모양입니다 */
+    window.mstDueList = function () { return { due: [], soon: [], none: 0, total: 3 }; };
+    /* ⚠ <b>LOOK 으로 재면 안 됩니다</b> — 그 안의 go('home') 이 try/catch 로
+       <b>삼켜</b> 터진 것을 안 알려 주고, 앞서 그린 카드가 그대로 남아 있어
+       <b>초록으로 보입니다.</b> 실제로 가림막을 떼어 봤는데 안 울렸습니다.
+       그래서 <b>그 함수를 바로 불러</b> 보고, 홈 그리기도 따로 받습니다 (8번). */
+    let err = '';
+    try { hmMadiSideHtml(); } catch (e) { err = String(e && e.message || e); }
+    if (!err) { try { go('home'); } catch (e) { err = String(e && e.message || e); } }
+    let o = null;
+    if (!err) { try { o = (0, eval)('(' + src + ')')(); } catch (e) { err = String(e && e.message || e); } }
+    window.mstDueList = real;
+    try { go('home'); } catch (e) {}                 /* 다음 자리를 위해 되살립니다 */
+    return { o: o, err: err };
+  }, { src: String(LOOK) });
+  is(!odd.err, '  ★★ <b>바구니 없는 답을 받아도 안 터진다</b>'
+    + (odd.err ? (' ← ' + odd.err.slice(0, 70)) : ''));
+  is(!odd.err && odd.o && odd.o.ask.length === 0 && odd.o.card.indexOf('아직 못 읽었습니다') >= 0,
+    '  ★ 그때도 <b>「아직 못 읽었습니다」</b> 라고 적고 수를 안 적는다 — 이름표 '
+      + (odd.o ? odd.o.ask.length : '?') + '개');
 
   console.log('\n[5] ★★ <b>계약일 모르는 분을 적는다</b> (1번)');
   is(w.card.indexOf('계약일 모름') >= 0 && /계약일 모름 1분/.test(w.card.replace(/\s+/g, ' ')),
