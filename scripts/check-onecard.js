@@ -85,9 +85,24 @@ const SEED = (o) => `
 
 /* 카드를 통째로 재 온다 */
 const look = (p) => p.evaluate(() => {
+  /* ⚠ 2026-10-02 — 큰 단추 자리가 <b>물음</b>이 되었습니다 (사장님 말씀
+     「<b>전화 걸러 갑니다 에서</b>, 고객의 현재 상황은 무엇인가요? <b>로 묻고</b>」).
+     할 일 단추(.hm-do)는 <b>상황을 고르시면</b> 그 자리에 섭니다 — 접이에
+     하던 것처럼 <b>먼저 펴고</b> 잽니다. 묻는 것은 하나도 안 바꿨습니다 (8번).
+     ★ 펴면 .hm-do 가 <b>둘</b>입니다(물음 · 할 일). doOf() 가 <b>물음이 아닌
+       쪽</b>을 집습니다 — 첫 번째를 집으면 물음을 할 일로 읽습니다.        */
+  try {
+    const one0 = (typeof hmNext === 'function') ? hmNext() : null;
+    const k0 = (one0 && one0.x && one0.x.key) || '';
+    if (k0 && typeof hmStOpen === 'function'
+        && !(typeof HM_ST !== 'undefined' && HM_ST[k0])) hmStOpen(k0);
+  } catch (eS) {}
   const card = document.querySelector('#dynPane .hm-now');
   if (!card) return null;
   const q = (s) => card.querySelector(s);
+  const doOf = () => { const L = [].slice.call(card.querySelectorAll('.hm-do'))
+      .filter(b => (b.textContent || '').indexOf('현재 상황은') < 0);
+    return L.length ? L[L.length - 1] : null; };
   const at = (s) => { const e = q(s); return e ? [].indexOf.call(card.children, e.closest('.hm-now>*')) : -1; };
   const fs2 = (e) => e ? Math.round(parseFloat(getComputedStyle(e).fontSize)) : 0;
   const one = (typeof hmNext === 'function') ? hmNext() : null;
@@ -98,7 +113,10 @@ const look = (p) => p.evaluate(() => {
   const map = (window.APEX_STAGE && APEX_STAGE.map) ? (APEX_STAGE.map[st] || null) : null;
   return {
     ord: { nm: at('.hm-now-m'), why: at('.hm-why'), aim: at('.hm-aim'),
-           way: at('.hm-way'), go: at('.hm-do') },
+           way: at('.hm-way'),
+           /* 차례도 <b>할 일 단추</b>로 봅니다 — at('.hm-do') 는 물음을 집습니다 */
+           go: (() => { const e = doOf();
+             return e ? [].indexOf.call(card.children, e.closest('.hm-now>*')) : -1; })() },
     nmTxt: (q('.hm-now-m .m b') || {}).textContent || '',
     nmPx: fs2(q('.hm-now-m .m b')),
     ktPx: fs2(q('.hm-now-k')),
@@ -114,8 +132,12 @@ const look = (p) => p.evaluate(() => {
     aimHtml: (q('.hm-aim') || {}).innerHTML || '',
     wayTxt: (q('.hm-way') || {}).textContent || '',
     whyTxt: (q('.hm-why') || {}).textContent || '',
-    doTxt: ((q('.hm-do') || {}).textContent || '').trim(),
-    doAttr: (q('.hm-do') || {}).getAttribute ? (q('.hm-do').getAttribute('onclick') || '') : '',
+    doTxt: ((doOf() || {}).textContent || '').trim(),
+    doAttr: (doOf() && doOf().getAttribute) ? (doOf().getAttribute('onclick') || '') : '',
+    /* 그 자리에 <b>물음</b>이 있는지도 봅니다 — 없어지면 길이 막힙니다 (6번) */
+    sitTxt: (() => { const b = [].slice.call(card.querySelectorAll('.hm-do'))
+        .filter(x2 => (x2.textContent || '').indexOf('현재 상황은') >= 0)[0];
+      return b ? (b.textContent || '').replace(/\s+/g, ' ').trim() : ''; })(),
     askTxt: (q('.hm-ask') || {}).textContent || '',
     mapAim: map ? (map.aim || '') : '',
     mapWay: map ? (map.way || '') : '',
@@ -173,6 +195,8 @@ const look = (p) => p.evaluate(() => {
       '  큰 단추가 <b>hmPick(…,0)</b> 을 부른다 — 「' + (A.doAttr || '없다').slice(0, 38) + '」');
     is(/갑니다|보내기|열기/.test(A.doTxt),
       '  단추가 <b>무엇을 하는 단추인지</b> 말한다 — 「' + (A.doTxt || '없다') + '」');
+    is(/현재 상황은 무엇인가요/.test(A.sitTxt || ''),
+      '  그 자리에 <b>물음</b>이 있다 — 「' + (A.sitTxt || '없다') + '」 (사장님 말씀 2026-10-02)');
   }
 
   /* ── [6] 접은 것을 조용히 안 버린다 ── */
