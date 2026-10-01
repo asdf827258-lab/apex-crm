@@ -27493,7 +27493,12 @@ function hmTodayHtml(){
      한 건씩 따라가셔도 되고, 전체를 훑어보셔도 됩니다.
      한 분씩 퀘스트가 <b>먼저</b> 서고, 사람과 상관없는 것(SNS·고객 보험)은
      그 아래 <b>접혀</b> 있습니다 — 펴 두면 한 분 카드가 밀립니다. */
-  return head+hmNowHtml()+hmNxsHtml()+'<div class="hm-rows">'+rows+'</div>'+ms+'</div></div>';
+  /* 📅 <b>약속은 「지금 할 것」 과 「다음 분」 사이</b> — 목각 차례 그대로.
+     ⚠ 목각은 이 셋이 <b>카드 셋</b>인데 우리는 <b>한 카드</b>입니다 —
+       사장님이 「오늘 챙길것 + 아침 미션을 <b>하나로</b> 합치는 거야」
+       하셨기 때문입니다(#28). 차례는 맞추되 카드는 안 쪼갭니다 —
+       쪼개는 것은 그 말씀을 뒤집는 일이라 <b>여쭙고</b> 합니다.        */
+  return head+hmNowHtml()+hmTossAppt()+hmNxsHtml()+'<div class="hm-rows">'+rows+'</div>'+ms+'</div></div>';
 }
 /* ══ 👥 <b>다음 분</b> — 목업에 있는데 홈에 없던 칸 ═══════════════════
    목업(docs/토스판_사본.html)은 「오늘 한 분」 바로 밑에 <b>다음 분</b>을
@@ -29238,15 +29243,30 @@ function hmTossCard(tag,ttl,sub,btn,act,grey){
    ★ <b>함수는 지웠습니다</b> — 안 부르는 함수를 남겨 두면 다음 사람이 그것을
      보고 카드를 다시 세웁니다 (5번 · 「죽은 판」).                        */
 /* <b>다음 약속</b> — 달력이 이미 세워 둔 줄에서 가져옵니다 (5번) */
+/* ══ 📅 <b>약속 자리는 늘 있습니다</b> (2026-10-01) ═══════════════════
+   목각(vHome)의 왼쪽 기둥에는 「<b>14:00 약속</b>」 카드가 있습니다.
+
+   ⚠ 여태 이 칸은 <b>있다 없다 했습니다</b> — 약속이 없는 날엔 아예 안
+     섰습니다. 그것이 바로 사장님이 말씀하신 자리입니다 (2026-09-26) —
+     「<b>있다 없다 하는 칸을 없앱니다</b> … 없는 날도 자리를 남기고
+     <b>「오늘 약속 없습니다」</b> 처럼 없다고 적으십시오」.
+   ★ 그래서 <b>없는 날에도 한 장</b>을 세우고 없다고 적습니다 (1번).
+     모양은 <b>hmTossCard 한 곳</b>에서만 만듭니다 (5번).
+   ★ 자리는 목각대로 <b>왼쪽 기둥</b>입니다 — 맨 위가 아닙니다.         */
 function hmTossAppt(){
   var it,ds,L,i;
-  try{ it=mcalItems(); ds=mcalToday(); L=mcalDay(it,ds)||[]; }catch(e){ return ''; }
-  for(i=0;i<L.length;i++)if(L[i]&&L[i].k==='appt'){
+  try{ it=mcalItems(); ds=mcalToday(); L=mcalDay(it,ds)||[]; }catch(e){ L=null; }
+  if(L)for(i=0;i<L.length;i++)if(L[i]&&L[i].k==='appt'){
     var hm=(''+(L[i].s||'')).slice(0,5);
     return hmTossCard((hm||'오늘')+' 약속', osEsc(L[i].t||'고객')+'님',
       (''+(L[i].s||'')).slice(8), '자료 열기','go(\'clients\')',true);
   }
-  return '';
+  /* ⚠ <b>달력을 못 읽었으면 「없다」고 말하지 않습니다</b> (1번) —
+     못 읽은 것과 없는 것은 다릅니다.                                   */
+  if(!L)return hmTossCard('오늘 약속','아직 못 읽었습니다',
+    '달력을 읽으면 이 자리에 섭니다','내 캘린더','go(\'mycal\')',true);
+  return hmTossCard('오늘 약속','오늘 약속이 없습니다',
+    '잡으시면 이 자리에 섭니다','내 캘린더','go(\'mycal\')',true);
 }
 /* <b>이번 주 한 줄</b> — 목업에는 「3명만 더 만나면 연속가동 유지돼요」 가
    들어 있습니다. 그런데 앱에 <b>「연속가동」 을 세는 자리가 없습니다</b> —
@@ -29387,7 +29407,10 @@ function hmFlowHere(){
 }
 function hmTossHtml(){
   if(!OS.profile)return '';
-  var ap=hmTossAppt(),wk=hmTossWeek();
+  /* ★ <b>약속 카드는 여기서 안 세웁니다</b> — 목각은 그것을 <b>왼쪽 기둥</b>
+     (「지금 할 것」 아래)에 둡니다. 2026-10-01 부터 hmTodayHtml 이 세웁니다.
+     여기서 또 세우면 <b>두 벌</b>이 됩니다 (5번).                      */
+  var wk=hmTossWeek();
   /* <b>「다 했나」 는 hmNext 한 곳</b>이 답합니다 (5번). 여태는 「카드 셋이
      다 비었나」 로 물었는데, 그러면 <b>아직 못 읽었을 때</b>(r.n===0)도
      「오늘 끝났습니다」 가 떴습니다 — 모르는 것을 끝났다고 적는 것입니다 (1번). */
@@ -29417,7 +29440,7 @@ function hmTossHtml(){
        올려 다시 여쭈어</b> 「둘 다」 로 가려 주신 것입니다. 갈렸던 것까지
        적어 둡니다 — 다음 사람이 「왜 뺐다 넣었나」 를 다시 파지 않게.  */
   return '<div class="tz">'+hmTossGreet()+hmTossBarHtml()+hmTossHero()+
-    ((ap+wk)||(done?hmTossDone():''))+'</div>';
+    (wk||(done?hmTossDone():''))+'</div>';
 }
 function renderHome(){
   var nm=(OS.profile&&OS.profile.name)||'';
