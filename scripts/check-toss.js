@@ -253,8 +253,15 @@ const BASE = {
      「🧭 그 밖의 것」 한 줄로 접었더니 홈이 <b>2,778 → 2,662px</b> 로
      오히려 짧아졌습니다. 덩어리도 아홉에서 <b>셋</b>이 됐습니다.      */
   /* ⬆ 2026-10-01 — 「14:00 약속」 카드(목업 값 12.5·15.5)가 늘 서면서
-     tiny 7→8 · size 12→13. 까닭은 위 ALL_BASE 쪽지에 적었습니다. */
-  home:    { tiny: 8, size: 13, small: 2, screens: 3.4 },
+     tiny 7→8 · size 12→13. 까닭은 위 ALL_BASE 쪽지에 적었습니다.
+     ⬆ 같은 날 screens 3.4 → <b>3.5</b> — 목각이 「지금 할 것」 카드에 둔
+       <b>「한 장으로 보기」</b> 단추를 이었습니다(사장님 말씀 「누르는 것도
+       이어서 해줘」). 2,895 → <b>2,951px</b>, 56px 늘었습니다.
+       ★ 바로 앞서 3.5 → 3.4 로 <b>내렸던</b> 자리입니다 — 그때는 안 올려도
+         됐기 때문입니다(자가 「짧아졌습니다」 라고 알려 주었습니다).
+         <b>필요할 때 올리고 필요 없으면 내립니다</b> — 그래야 이 수가
+         「지금 얼마나 긴가」 를 그대로 말합니다 (8번). */
+  home:    { tiny: 8, size: 13, small: 2, screens: 3.5 },
   /* 2026-09-21 · 2.5 → <b>2.4</b>. 「고객 체크」 칸을 늘리면서 2.6 이 되어
      여기가 잡았고, 기준을 올리는 대신 <b>내 코칭 · 본인 점검란</b>을 왼쪽에서
      뺐습니다(둘 다 ☰ 서랍에 그대로 있습니다). 그래서 오히려 짧아졌습니다 —
@@ -456,8 +463,27 @@ const SEED = `
        할 것)에 있으므로 거기를 봅니다. 없으면 여태처럼 .hm-now 를 봅니다.
        ★ 자를 옮긴 것이지 <b>기준을 낮춘 것이 아닙니다</b> — 첫 화면에
          오늘 할 일이 없으면 여전히 빨간불입니다.                      */
-    const now = document.querySelector('.tz-hc') || document.querySelector('.hm-now');
+    /* ⚠ 2026-10-01 · <b>자가 엉뚱한 칸을 재고 있었습니다.</b>
+       위 2026-09-23 쪽지는 그때 히어로가 <b>.tz-hc</b> 였기 때문입니다.
+       지금 히어로는 <b>.tz-hero</b> 이고, .tz-hc 를 내는 곳은
+       <b>「오늘 약속」 카드 하나</b>뿐입니다 — 그런데 그 카드는 목각 차례대로
+       <b>「지금 할 것」 아래</b>에 섭니다. 그래서 자는 「지금 할 것」 이 아니라
+       <b>그 아래 약속 칸</b>을 재고 「오늘 할 일」 이라고 적고 있었습니다.
+       재 보니 「지금 할 것」 은 <b>1,081px</b>(두 화면 안)인데 약속 칸이
+       <b>1,743px</b> 라 빨간불이었습니다 — <b>헛것</b>입니다 (8번).
+       ★ 더 나쁜 것은 그 앞 판에서 약속 칸이 <b>1,687px</b> 였다는 것입니다 —
+         기준(1,688px)에 <b>1px</b> 모자라 초록이었습니다. 초록도 헛것이었습니다.
+       ★ 그래서 <b>클래스로 찾지 않고 적힌 말로 찾습니다.</b> 「지금 할 것」
+         이라고 <b>제 입으로 말하는</b> 칸을 집습니다 (0-1번과 같은 결).
+         못 찾으면 <b>못 찾았다고 빨간불</b>입니다 — 다음에 또 말없이
+         옆 칸으로 흘러가지 못합니다.                                   */
+    const NOWLAB = '지금할것';
+    const labs = [].slice.call(pane.querySelectorAll('.hm-now-lab, .tz-hc > .t'))
+      .filter(e => (e.textContent || '').replace(/\s+/g, '').indexOf(NOWLAB) >= 0);
+    const now = labs.length ? (labs[0].closest('.hm-now') || labs[0].closest('.tz-hc')) : null;
     const out = { closed: H(), nowTop: now ? Math.round(now.getBoundingClientRect().top) : -1,
+                  nowWhat: now ? (now.className || '') : '',
+                  nowSay: labs.length ? labs[0].textContent.replace(/\s+/g, ' ').trim() : '',
                   vh: window.innerHeight };
     const folds = [].slice.call(document.querySelectorAll('.hm-fold'));
     /* ★ <b>최상위 접이만</b> 셉니다. 「오늘 챙길 것」 안의 🌅 아침 미션은
@@ -502,8 +528,12 @@ const SEED = `
        세 화면 아래로 밀리면 여전히 빨간불입니다.                       */
   is(HM.flowTop >= 0 && HM.flowTop < HM.vh,
     '<b>맨 위 카드(상담현황)가 첫 화면 안</b>에 있다 — 위에서 ' + HM.flowTop + 'px (화면 ' + HM.vh + 'px)');
+  is(!!HM.nowSay,
+    '<b>「지금 할 것」 이라고 적힌 칸</b>을 찾았다 — ' + (HM.nowSay || '못 찾았습니다')
+      + (HM.nowWhat ? (' · ' + HM.nowWhat) : ''));
   is(HM.nowTop >= 0 && HM.nowTop < HM.vh * 2,
-    '<b>「오늘 할 일」 이 두 화면 안</b>에 있다 — 위에서 ' + HM.nowTop + 'px (목각도 상담현황 다음입니다)');
+    '<b>「오늘 할 일」 이 두 화면 안</b>에 있다 — 위에서 ' + HM.nowTop + 'px'
+      + ' / 두 화면 ' + (HM.vh * 2) + 'px (목각도 상담현황 다음입니다)');
   /* 접이는 <b>하나만</b> — 사장님 말씀 「2번으로 해줘 접어」 로 「🧭 그 밖의
      것」 하나를 두었습니다. 둘이 되면 다시 「접이 더미」 가 됩니다.     */
   is(HM.n <= 1, '홈에 <b>접이가 하나뿐</b>이다 — ' + HM.n + '개 (🧭 그 밖의 것)');
