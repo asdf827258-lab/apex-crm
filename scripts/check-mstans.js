@@ -219,8 +219,25 @@ const OPEN = async () => {
   is(empty === 'null', '  ★★ 아무것도 안 적은 것은 <b>null</b> 이다 — 0 도 빈 글도 아닙니다');
 
   console.log('\n[5] ★★ <b>글을 그대로 찍지 않는다</b>');
-  is(!/<b>증권<\/b>은 받았는데/.test(o5.raw) && /&lt;b&gt;증권/.test(o5.raw),
-    '  적으신 글이 <b>글자로</b> 보인다 — 날글이 들어가지 않습니다');
+  /* ⚠ ★★ <b>처음엔 카드 전체의 innerHTML 을 봤고, CI 에서만 울렸습니다.</b>
+     줄 차례가 바뀌거나 다섯 줄에서 잘리면 그 글이 화면에 없을 수 있어,
+     <b>재는 자리가 흔들렸습니다</b> — 제 손에서는 초록, CI 에서는 빨강.
+     그래서 <b>그리는 함수를 바로 불러</b> 글 하나로 잽니다. 흔들릴 자리가
+     없고, 울렸을 때 <b>무엇이 찍혔는지</b>도 적습니다 (8번).            */
+  const esc = await p.evaluate(() => {
+    mstAnsSet('cX', 1, '왔', '<b>증권</b>은 받았다고 하셨습니다');
+    const row = { c: { id: 'cX', name: '홍길동X' }, sAt: '2026-10-02', gap: 0,
+                  hit: { step: mstStep(1) }, ans: mstAnsOf('cX', 1) };
+    const html = mstAnsRowHtml(row, 0);
+    mstAnsSet('cX', 1, '지움');
+    return { raw: /<b>증권<\/b>은 받았다/.test(html),
+             esc: /&lt;b&gt;증권&lt;\/b&gt;은 받았다/.test(html),
+             /* 울렸을 때 <b>무엇이 찍혔는지</b> — 마디 제목에도 「증권」 이 들어
+                있어 그것이 먼저 잡혔습니다. 적은 글 쪽만 잘라 적습니다. */
+             cut: (html.match(/(&lt;b&gt;|<b>증권<\/b>)[^<]{0,44}/) || ['못 찾음'])[0].slice(0, 60) };
+  });
+  is(!esc.raw && esc.esc,
+    '  적으신 글이 <b>글자로</b> 보인다 — 날글이 들어가지 않습니다 (「' + esc.cut + '」)');
 
   console.log('\n[6] ★★ <b>고칠 길을 안 감춘다</b> (6번)');
   is(o5.nIn === 3, '  적은 뒤에도 칸이 <b>그대로 3개</b> 서 있다 — ' + o5.nIn + '개');
