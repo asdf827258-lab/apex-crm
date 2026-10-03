@@ -72,10 +72,18 @@ const SEED=`
      [2] 는 300ms 만 기다려 살아남고 [3] 은 800ms 라 죽었습니다. */
   window.arLoad=function(){};
   AR.loaded=true; AR.busy=false; AR.cliRows=[];
+  /* ★ 2026-10-03 · <b>업적 금액 셋을 견본에 넣습니다.</b> 17시 예상업적이
+     「못 세는 슬롯」 에서 <b>세는 슬롯</b>으로 바뀌었습니다(X05). 금액이
+     없는 견본으로 재면 <b>안 울리는 것이 정답</b>이 되어, 「하나가 울려도
+     나머지는 울린다」 를 이것으로 댈 수 없습니다 (8번).
+     단위는 <b>원</b>입니다 (4번) — expect 90만원 · contract 350만원.      */
   AR.db=[
-   {id:'d2',who:'me',name:'홍길순',region:'광주',src:'일반',stage:'PC',appt:'',days:10,n:3,cAt:'',pAt:''},
-   {id:'d3',who:'me',name:'홍말순',region:'광주',src:'일반',stage:'부재',appt:'',days:9,n:1,cAt:'',pAt:''},
-   {id:'d5',who:'me',name:'홍을돌',region:'광주',src:'일반',stage:'미접촉',appt:'',days:5,n:0,cAt:'',pAt:''}];
+   {id:'d2',who:'me',name:'홍길순',region:'광주',src:'일반',stage:'PC',appt:'',days:10,n:3,cAt:'',pAt:'',
+    expect:900000,contract:0,closed:''},
+   {id:'d3',who:'me',name:'홍말순',region:'광주',src:'일반',stage:'부재',appt:'',days:9,n:1,cAt:'',pAt:'',
+    expect:400000,contract:0,closed:''},
+   {id:'d5',who:'me',name:'홍을돌',region:'광주',src:'일반',stage:'미접촉',appt:'',days:5,n:0,cAt:'',pAt:'',
+    expect:0,contract:0,closed:''}];
   try{ localStorage.removeItem('apex_alm_day'); localStorage.removeItem('apex_alm_hour'); }catch(e){}
   window.toast=function(){};`;
 
@@ -154,6 +162,7 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     /* 재기 <b>직전에</b> 견본이 살아 있는지 같이 적어 둔다 — 나중에 또 지워지면
        「안 울린다」가 아니라 <b>「견본이 날아갔다」</b>고 말해 준다 */
     out.seed=(AR.db||[]).length;
+    const dbKeep=(AR.db||[]).slice();   /* 중간에 비웠다가 되돌립니다 */
     /* ── <b>시계를 손에 쥐고</b> 잰다 ─────────────────────────────────
        여태는 「지금 시각 + 1」 을 <b>아직 안 된 시각</b>으로 썼다. 그런데
        밤 11시에 돌리면 +1 이 24 라 23 으로 깎여 <b>지금</b>이 되고,
@@ -202,9 +211,11 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     const o2=JSON.parse(localStorage.getItem('apex_alm_slots_v1'));
     /* ⚠ 둘째로 <b>예상업적</b>을 씁니다. 처음엔 「내일 약속」 으로 쟀는데
        견본에 내일 약속이 없어 <b>안 울리는 것이 정답</b>이었고, 그러면
-       이 자를 못 댑니다 — 자가 빨개도 앱은 맞은 것입니다. 예상업적은
-       못 세는 슬롯이라 <b>언제나 울립니다</b>. 여기서 재려는 것은
-       「하나가 울려도 다른 것이 막히지 않나」 하나뿐입니다 (8번).     */
+       이 자를 못 댑니다 — 자가 빨개도 앱은 맞은 것입니다.
+       ★ 2026-10-03 · 예상업적은 이제 <b>세는 슬롯</b>입니다(X05). 그래서
+         견본에 <b>금액</b>이 있어야 울립니다 — 위 SEED 에 넣어 두었습니다.
+         여기서 재려는 것은 「하나가 울려도 다른 것이 막히지 않나」
+         하나뿐입니다 (8번).                                           */
     o2.perf={on:true,h:9};
     localStorage.setItem('apex_alm_slots_v1',JSON.stringify(o2));
     window.__rang.length=0; almTick(); out.second=window.__rang.length;
@@ -213,7 +224,13 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     AR.db=[]; AR.cliRows=[];
     window.__rang.length=0; almTick();
     out.emptyRang=window.__rang.length; out.emptyStamp=localStorage.getItem('apex_alm_day_call')||'';
-    /* <b>못 세는 슬롯</b>(예상업적)은 숫자 없이 울린다 — 0 이라고 적지 않는다 (1번) */
+    /* ── 예상업적 — <b>금액이 있으면 숫자가 들고, 못 읽으면 한 자도 없다</b> ──
+       ★ 2026-10-03 (X05). 여태 이 자리는 「못 세는 슬롯이라 숫자 없이
+         울린다」 를 쟀습니다. 그 전제가 거짓이 되었습니다 — 묻는 것을
+         <b>둘로 갈라</b> 둡니다. 1번(모름≠0)의 보호는 아래쪽이 그대로
+         지킵니다.
+       ⚠ 바로 위에서 AR.db 를 비웠으니 <b>되돌려 놓고</b> 잽니다.        */
+    AR.db=dbKeep.slice();
     only('perf',9);
     window.__rang.length=0; almTick();
     out.perfRang=window.__rang.length;
@@ -221,7 +238,22 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
        읽어 빈 값이 나왔고, 그래서 「숫자가 없다」 가 <b>거저 통과</b>했습니다 —
        빈 글에는 숫자가 없으니까요. 안 울리는 알람이었습니다 (8번). */
     out.perfBody=(window.__rang[0]||{}).b||'';
+    out.perfTitle=(window.__rang[0]||{}).t||'';
     out.perfN=(typeof almLineFor==='function')?(almLineFor('perf')||{}).n:'?';
+    /* <b>못 읽었을 때</b> — 금액을 한 자도 안 적고 알려만 준다 (1번)
+       ⚠ 처음에 AR.db=[] 로 쟀다가 <b>안 울려서</b> 빨개졌습니다. 그런데
+         자가 맞았고 <b>제 견본이 틀렸습니다</b> — 빈 목록은 「읽었는데 한
+         건도 없다」 이고, 그때는 금액이 다 0 이라 <b>안 울리는 것이
+         정답</b>입니다. 「<b>못 읽었다</b>」 는 AR.noPex 입니다 — 업적 칸이
+         아직 없는 서버에서 홈이 세우는 그 깃발입니다.                   */
+    AR.noPex=true;
+    only('perf',9);
+    window.__rang.length=0; almTick();
+    out.perfBlindRang=window.__rang.length;
+    out.perfBlindBody=(window.__rang[0]||{}).b||'';
+    const bl=(typeof almLineFor==='function')?almLineFor('perf'):null;
+    out.perfBlindN=bl?bl.n:'?';
+    AR.db=dbKeep.slice();
     /* 잘못 적은 값 — 슬롯 시각도 기본값으로 돌아가야 한다 */
     [-3,99,NaN].forEach((v,i)=>{
       const o={}; o.call={on:true,h:v};
@@ -247,11 +279,18 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   is(T.slotN===4, '알람이 <b>네 번</b>이다 — '+T.slots+' (표는 app/alm-slots.js 한 곳)');
   is(T.second===1,
      '하나가 울려도 <b>나머지는 제 시각에 울린다</b> — '+T.second+'번 ← 「오늘 울렸다」 를 한 칸에 적으면 낮·저녁이 통째로 막힙니다');
-  is(T.perfRang===1&&T.perfN===null,
-     '<b>못 세는 슬롯</b>(예상업적)은 숫자 없이 울린다 — 「'+T.perfBody.slice(0,24)+'」 ← 0 이라고 적으면 「없다」 는 뜻이 됩니다 (1번)');
-  is(T.perfBody.length>6&&!/\d/.test(T.perfBody),
-     '그 글에 <b>숫자가 없다</b> — 못 세는 것을 센 척하지 않는다 (1번) · 「'+T.perfBody+'」' +
-     (T.perfBody.length>6?'':' ← 글이 비었습니다. 빈 글에는 숫자가 없으니 이 자가 거저 통과합니다'));
+  /* ★★ 2026-10-03 · X05 — 예상업적이 <b>세는 슬롯</b>이 되었습니다.
+     여태 이 두 줄은 「못 세는 슬롯이라 숫자 없이 울린다」 를 쟀는데, 그
+     전제가 거짓이 되었습니다. <b>지우지 않고 둘로 갈랐습니다</b> —
+     위는 새 사실(숫자가 든다), 아래는 옛 보호(모름을 0 이라 하지 않는다). */
+  is(T.perfRang===1&&/만원|억/.test(T.perfBody),
+     '예상업적에 <b>금액이 든다</b> (X05) — 「'+T.perfTitle+' / '+T.perfBody.replace(/\n/g,' · ').slice(0,56)+'」');
+  is(T.perfBody.indexOf('진행중 예상')>=0&&T.perfBody.indexOf('지난달')>=0,
+     '★ <b>세 수</b>를 다 적는다 — 진행중 예상 · 이번 달 · 지난달 (사장님 말씀 그대로)');
+  is(!/홍길순|홍말순|홍을돌|홍길동/.test(T.perfTitle+' '+T.perfBody),
+     '★ 그 글에도 <b>이름이 한 글자도 없다</b> — 잠금화면은 남이 봅니다 (3번)');
+  is(T.perfBlindRang===1&&T.perfBlindN===null&&!/[\d,]+\s*(원|만원|억)/.test(T.perfBlindBody),
+     '★★ <b>금액을 못 읽었으면</b> 숫자를 한 자도 안 적고 알려만 준다 (1번) — 「'+T.perfBlindBody.slice(0,30)+'」');
   is(T.sh0===9&&T.sh1===9&&T.sh2===9&&T.sdef===9,
      '슬롯도 잘못 적은 시각은 <b>표의 기본값</b>으로 — 0시로 읽으면 새벽에 울린다 (1번)');
   is(T.h0===8&&T.h1===8&&T.h2===8&&T.h3===8&&T.def===8,
