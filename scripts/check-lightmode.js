@@ -205,18 +205,41 @@ const srv = http.createServer((q, s) => {
   fs.readFile(p, (e, d) => { if (e) { s.writeHead(404); s.end(''); return; }
     s.writeHead(200, { 'Content-Type': MT[path.extname(p)] || 'application/octet-stream' }); s.end(d); });
 });
-/* 재는 화면 — <b>다크를 가졌던 것</b>을 다 넣고 본체·목각도 넣습니다 */
-const 재는것 = ['app/index.html', 'app/day.html', 'app/team.html',
-  'app/상담자료/자동차사고_과실분석.html', 'app/상담자료/미끼레이더/사용안내.html',
-  'docs/guide/index.html', 'docs/manual/index.html',
-  'trading/index.html', 'trading/bot.html', 'trading/todo.html',
-  'brief/index.html', 'analyst/index.html'];
+/* ★★ 2026-10-03 · <b>제 자가 과장해서 말했습니다.</b> 맨 아래에
+   「55개 전부 … 색이 한 톨도 안 바뀝니다」 라고 적으면서, 두 모드로 <b>재어 본
+   것은 12개</b>뿐이었습니다. 나머지 43개는 <b>글자만</b> 보았습니다 — 글자가
+   맞아도 안 먹는 일이 있다는 것이 이 판의 출발점이었는데, 제 결론이 그 구멍을
+   덮고 있었습니다 (CLAUDE.md 1번 · 8번). <b>전부 재고, 전부 말합니다.</b>
+
+   ★ <b>발표 덱은 원래 어두운 디자인입니다</b> — 고객 앞에서 띄우는 발표물이라
+     어둡게 그려 둔 것이고, 사장님이 흰색으로 바꾸라 하신 적이 없습니다.
+     이 자가 묻는 것은 <b>「테마가 바뀌는가」</b> 이므로, 덱도 <b>두 모드가 같아야</b>
+     합니다 — 면제는 <b>「밝아야 한다」 한 줄에만</b> 줍니다. 흰색으로 바꾸라
+     하시면 그때 이 목록을 비웁니다.                                     */
+const 재는것 = 문서.slice();
+const 어두운덱 = {
+  'app/상담자료/intro.html'          : '소개카드 — 검은 바탕에 흰 글씨로 그린 발표물',
+  /* ★ 이 둘은 <b>글자로 훑었을 때 안 보였습니다</b> — 바탕을 body 가 아닌
+     다른 자리에 칠해 두었기 때문입니다. <b>55개를 다 재자 그 자리에서
+     나왔습니다.</b> 재지 않고 세었으면 못 보고 넘어갔습니다 (8번). */
+  'app/상담자료/KB보장분석.html'      : '발표 덱(가로판 대본) — 어둡게 그린 상담자료 · 재어서 찾았습니다',
+  'app/상담자료/demo_curve.html'     : '발표 덱 — 어둡게 그린 상담자료 · 재어서 찾았습니다',
+  'app/상담자료/demo_brain.html'     : '발표 덱 — 어둡게 그린 상담자료',
+  'app/상담자료/demo_cancer.html'    : '발표 덱 — 어둡게 그린 상담자료',
+  'app/상담자료/demo_care.html'      : '발표 덱 — 어둡게 그린 상담자료',
+  'app/상담자료/demo_case4000.html'  : '발표 덱 — 어둡게 그린 상담자료',
+  'app/상담자료/demo_casegallery.html': '발표 덱 — 어둡게 그린 상담자료',
+  'app/상담자료/demo_closing.html'   : '발표 덱 — 어둡게 그린 상담자료',
+  'app/상담자료/demo_heart.html'     : '발표 덱 — 어둡게 그린 상담자료',
+  'app/상담자료/demo_premium.html'   : '발표 덱 — 어둡게 그린 상담자료',
+  'app/상담자료/demo_silbi.html'     : '발표 덱 — 어둡게 그린 상담자료',
+};
 const 밝기 = c => { const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c || ''); if (!m) return null;
   return Math.round(0.299 * +m[1] + 0.587 * +m[2] + 0.114 * +m[3]); };
 
 (async () => {
   console.log('\n[5] ★★★ <b>폰을 다크로 켜 놓고 재어, 밝은 모드와 같은 색인가</b>');
-  console.log('    (' + 재는것.length + '개 화면 · 다크를 가졌던 것을 다 넣었습니다)');
+  console.log('    (HTML <b>' + 재는것.length + '개 전부</b> — 글자만 보고 넘기지 않습니다)');
   await new Promise(r => srv.listen(PORT, r));
   const br = await chromium.launch();
   const 잰것 = {};
@@ -264,13 +287,26 @@ const 밝기 = c => { const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c || ''); 
       + (갈린것.length ? ('\n      ✗ 갈린 것:\n         ' + 갈린것.map(f =>
           f + '  밝은 ' + 잰것[f].light.bg + ' → 다크 ' + 잰것[f].dark.bg).join('\n         ')) : ''));
   /* ★ 그리고 그 색이 <b>밝아야</b> 합니다 — 둘이 같은데 둘 다 어두우면 안 됩니다 */
-  const 어두운것 = 재는것.filter(f => { const b = 잰것[f].dark;
+  const 밝아야 = 재는것.filter(f => !어두운덱[f]);
+  const 어두운것 = 밝아야.filter(f => { const b = 잰것[f].dark;
     if (!b || b.err || !b.bg) return false;
     const v = 밝기(b.bg); return v !== null && v < 200; });
+  const 잰밝기 = 밝아야.map(f => 밝기((잰것[f].dark || {}).bg)).filter(v => v !== null);
   is(어두운것.length === 0,
-    '  ★★ 그 색이 <b>밝다</b>(바탕 200/255 이상)' +
-    (어두운것.length ? (' ← ' + 어두운것.map(f => f + '(' + 밝기(잰것[f].dark.bg) + ')').join(' · '))
-                     : ' — ' + 재는것.map(f => 밝기((잰것[f].dark || {}).bg)).filter(v => v !== null).join(' · ')));
+    '  ★★ 그 색이 <b>밝다</b>(바탕 200/255 이상) — ' + 잰밝기.length + '개를 재어 가장 어두운 것이 '
+      + (잰밝기.length ? Math.min.apply(null, 잰밝기) : '—')
+      + (어두운것.length ? ('\n      ✗ 어두운 것: ' + 어두운것.map(f => f + '(' + 밝기(잰것[f].dark.bg) + ')').join(' · ')) : ''));
+  /* ★ <b>면제가 정말로 어두운가</b> — 덱을 흰색으로 다시 그리시면 이 목록이
+     죽은 면제가 됩니다. 그러면 여기가 울려 목록을 비우게 합니다 (8번).   */
+  const 덱들 = Object.keys(어두운덱);
+  const 안어두운덱 = 덱들.filter(f => { const b = 잰것[f] && 잰것[f].dark;
+    if (!b || b.err || !b.bg) return false; const v = 밝기(b.bg); return v !== null && v >= 200; });
+  is(안어두운덱.length === 0,
+    '  ★ 「밝아야 한다」 를 면제한 <b>발표 덱 ' + 덱들.length + '장</b>이 다 정말로 어둡다 (죽은 면제가 없다)'
+      + (안어두운덱.length ? (' ← 이제 밝습니다, 목록에서 빼십시오: ' + 안어두운덱.join(' · ')) : ''));
+  console.log('  · ★ 발표 덱 ' + 덱들.length + '장은 <b>원래 어두운 디자인</b>입니다 — 폰이 다크여도');
+  console.log('      <b>안 뒤집히게 못만 박았고</b>, 흰색으로 바꾼 것은 아닙니다.');
+  console.log('      사장님이 흰색으로 바꾸라 하시면 그 판을 따로 합니다.');
   /* ⚠ <b>계산된 color-scheme 만 보면 멀쩡한 문서가 울립니다.</b>
      &lt;meta name="color-scheme"&gt; 는 <b>브라우저에게만</b> 하는 말이라
      getComputedStyle 에 안 나옵니다 — 처음에 열한 문서가 그래서 울렸습니다.
@@ -295,6 +331,8 @@ const 밝기 = c => { const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c || ''); 
   console.log('⚠ <b>크롬의 자동 다크</b>(설정에서 켜는 것)는 color-scheme 을 아예 무시하는');
   console.log('  더 센 스위치라 이 자로 막을 수 없습니다 — <b>사장님 폰에서</b> 확인해야 합니다.');
   console.log('  「자가 초록이니 됐다」 로 넘기지 마십시오 (1번).');
-  console.log(bad ? '✗ ' + bad + '개' : '✓ ' + 문서.length + '개 전부 흰색 고정이고, 폰을 다크로 켜도 색이 한 톨도 안 바뀝니다.');
+  console.log(bad ? '✗ ' + bad + '개'
+    : '✓ HTML ' + 문서.length + '개를 <b>두 모드로 다 재었고</b>, 폰을 다크로 켜도 색이 한 톨도 안 바뀝니다'
+      + ' (발표 덱 ' + Object.keys(어두운덱).length + '장은 원래 어두운 디자인이고, 그것도 안 바뀝니다).');
   process.exit(bad ? 1 : 0);
 })();
