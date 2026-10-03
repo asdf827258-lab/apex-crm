@@ -100,15 +100,37 @@
     return L.join(' · ') + (w.length ? ('\n' + w.join(' · ')) : '');
   }
   /* 한 줄로 — 부르는 쪽은 이것만 씁니다. 못 세면 <b>null</b> 입니다. */
+  /* ══ <b>조용한 알람은 고장난 알람으로 보입니다</b> (6번) ══════════════
+     2026-10-03 · 라이브 장부를 재어 보니 <b>1,550건 가운데 예상업적이 적힌
+     것이 0건</b>이었습니다. 그러면 세 수가 다 0 이고, 위 규칙대로 <b>아무
+     말도 안 갑니다</b> — 사장님은 17시에 조용한 폰을 보고 <b>알람이
+     고장났다</b>고 읽으십니다. 「다 됐다」 로 보이는 상태에서 고칠 단추를
+     감추지 않습니다 (6번).
+     ★ 그래서 <b>금액이 0 이고 안 적힌 건이 있으면</b>, 금액 대신 <b>무엇을
+       적어야 하는지</b>를 보냅니다 — 수를 지어내지 않고(1번), 「0원」 도
+       안 적고, 할 일을 알려 줍니다.
+     ★ <b>정말로 아무것도 없을 때</b>(진행중도 체결도 없을 때)만 조용합니다.  */
+  function almPerfTodo(o) {
+    if (!o) return null;
+    var n = o.noAmt || 0;
+    if (!n) return null;
+    return { title: '예상업적을 아직 안 적으셨습니다',
+             body: '금액이 빈 ' + n + '건이 있어 이번 달 업적을 셀 수 없습니다.\n'
+                 + '「DB · 업적관리」 에서 예상업적을 적으면 내일 17시부터 금액이 옵니다.' };
+  }
   function almPerfLine(o) {
-    if (!almPerfWorth(o)) return null;
-    var t = almPerfTitle(o), b = almPerfBody(o);
-    return (t && b) ? { title: t, body: b } : null;
+    if (almPerfWorth(o)) {
+      var t = almPerfTitle(o), b = almPerfBody(o);
+      if (t && b) return { title: t, body: b };
+      return null;
+    }
+    return almPerfTodo(o);          /* 금액이 다 0 — 할 일을 알려 줍니다 */
   }
 
   var API = { ALM_SLOTS: ALM_SLOTS, almSlotOf: almSlotOf, almSlotAt: almSlotAt,
                almPerfLine: almPerfLine, almPerfWorth: almPerfWorth,
-               almPerfTitle: almPerfTitle, almPerfBody: almPerfBody };
+               almPerfTitle: almPerfTitle, almPerfBody: almPerfBody,
+               almPerfTodo: almPerfTodo };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = API;   /* 서버 */
   for (var n in API) if (API.hasOwnProperty(n)) root[n] = API[n];              /* 앱 */
