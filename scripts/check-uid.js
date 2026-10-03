@@ -199,9 +199,30 @@ const srv = http.createServer((rq, rs) => {
     try { RealDate.prototype.getTime = function () { return 1700000000000; }; } catch (e) {}
     const out = {};
     const draw = (f) => { const a = []; for (let i = 0; i < n; i++) a.push(String(f())); return a; };
+    /* ★★ 2026-10-03 · <b>이 줄이 거저 빨개졌습니다.</b> id <b>전체</b>에서
+       「null」 글자를 찾았는데, <b>꼬리의 난수 여섯 글자는 36진법</b>
+       (0-9a-z)이라 <b>우연히 null 이 나옵니다</b> — CI 에서 실제로
+       <b>fc_0_5616_nullwg</b> 가 나와 빨간불이 켜졌습니다. 고칠 것이 하나도
+       없는 빨간불입니다. 3,000개 × 다섯 자리면 <b>서른일곱 판에 한 번쯤</b>
+       이렇게 됩니다. <b>헛것을 잡는 자는 안 잡는 자보다 나쁩니다</b> (8번) —
+       사람이 자를 안 믿게 됩니다.
+       ★ 잡으려던 것은 <b>수 자리에 NaN·undefined 가 박히는 것</b>입니다
+         (uidOf 의 머리글이 그 까닭을 적어 두었습니다 — UID_N 이 끌어올려지기
+         전에 불리면 NaN 이 박힙니다). 그 자리는 <b>머리</b>이고, 난수는
+         <b>맨 끝 한 토막</b>입니다. 그래서 <b>난수를 떼고 머리만</b> 봅니다 —
+         보호는 그대로이고 헛것은 사라집니다.                              */
+    const 머리 = x => { const i = String(x).lastIndexOf('_'); return i < 0 ? String(x) : String(x).slice(0, i); };
     const rep = (a) => ({ n: a.length, uniq: new Set(a).size,
-                          bad: a.filter(x => /NaN|undefined|null/.test(x)).slice(0, 2) });
+                          bad: a.filter(x => /NaN|undefined|null/i.test(머리(x))).slice(0, 2) });
 
+    /* ★★ <b>이 줄이 울릴 수 있나</b> 를 같은 식으로 증명해 내보냅니다 (8번).
+       식을 바깥에 또 적으면 두 벌이 되어, 한쪽만 고쳐질 때 거짓 안심이 됩니다. */
+    out.probe = {
+      머리에NaN:      rep(['fc_NaN_3_abcdef']).bad.length,
+      머리에undefined: rep(['fc_0_undefined_q1w2e3']).bad.length,
+      꼬리에null:      rep(['fc_0_5616_nullwg']).bad.length,
+      꼬리에nan:       rep(['fc_0_5616_nanxyz']).bad.length
+    };
     out.uidOf     = rep(draw(() => uidOf('t')));
     out.fact      = rep(draw(() => factNewId()));
     out.baba      = rep(draw(() => babaPlanId()));
@@ -239,9 +260,18 @@ const srv = http.createServer((rq, rs) => {
    ['투자 invId', R.inv], ['시나리오 frScenBlank', R.scen]].forEach(([nm, r]) => {
     is(r.uniq === r.n, '  ' + nm + ' — ' + r.n + '개 모두 다르다 (다른 id ' + r.uniq + '개)' +
        (r.uniq === r.n ? '' : '\n      ✗ ' + (r.n - r.uniq) + '개가 겹쳤습니다 — 그만큼이 서로를 덮습니다'));
-    is(r.bad.length === 0, '  ' + nm + ' — NaN·undefined 가 안 박혔다' +
+    is(r.bad.length === 0, '  ' + nm + ' — <b>수 자리</b>에 NaN·undefined 가 안 박혔다 (난수 꼬리는 36진법이라 안 봅니다)' +
        (r.bad.length ? ' ✗ ' + r.bad.join(' / ') : ''));
   });
+
+  /* ★★ 2026-10-03 — <b>난수를 떼고 머리만 보게</b> 고친 그 줄이 여전히
+     울리는지 그 자리에서 증명합니다. 안 울리게 되면 보호가 사라진 것입니다. */
+  const PB = R.probe || {};
+  is(PB.머리에NaN === 1 && PB.머리에undefined === 1,
+    '  ★★ <b>수 자리</b>에 NaN·undefined 를 박아 보면 <b>잡힌다</b> — 보호가 살아 있습니다 (NaN '
+      + PB.머리에NaN + ' · undefined ' + PB.머리에undefined + ')');
+  is(PB.꼬리에null === 0 && PB.꼬리에nan === 0,
+    '  ★ <b>난수 꼬리</b>에 null·nan 이 나와도 <b>안 잡는다</b> — 36진법이라 우연히 나오는 글자입니다 (헛것 0)');
 
   console.log('\n[5] ★★ 이 자는 울릴 수 있다 — 옛 식을 그 자리에서 되살려 본다');
   is(R.oldWay.uniq < R.oldWay.n,
