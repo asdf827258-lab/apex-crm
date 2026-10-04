@@ -387,6 +387,32 @@
           <div class="actions" style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="saveSources()">종류 목록 저장</button><button class="btn btn-light btn-sm" onclick="fillSrcAdmin()">되돌리기</button></div>
           <div class="notice" style="margin-top:11px">이미 쓰고 있는 종류를 목록에서 지워도 <b>그 고객 자료는 그대로 남습니다.</b> 앞으로 새로 고를 수만 없게 됩니다.</div>
         </div>
+
+        <!-- 🚦 배정 한도 수 — 종류 목록과 같은 틀(app_config 한 줄)을 씁니다.
+             새 표를 만들지 않으므로 사장님이 SQL 을 또 돌리실 일이 없습니다. -->
+        <div class="card section hidden" id="quotaAdminCard">
+          <div class="section-head"><div><h3>🚦 배정 한도 수</h3><p>담당자 한 사람이 <b>동시에 들고 있을 수 있는 회사 배정</b> 건수입니다. 여기 적으시면 명단 위 🚦 띠가 <b>남은 수·넘은 수</b>를 말해 줍니다. <b>안 적으시면 세기만 하고 견주지 않습니다</b> — 제가 수를 지어내지 않습니다. 한도는 <b>진행중</b>만 셉니다(계약완료·증권전달·소개완료·거절은 뺍니다). <b>개인 고객(소개·지인·개척·개인)은 안 셉니다.</b></p></div></div>
+          <div class="formgrid">
+            <div>
+              <label>모두에게 쓰는 수</label>
+              <input id="quotaBase" type="number" min="0" step="1" inputmode="numeric" placeholder="회사가 정한 수" style="width:100%">
+              <p class="notice" style="margin-top:9px">비우거나 0 으로 두시면 <b>「안 적혀 있음」</b> 입니다 — 0 건이라는 뜻이 아닙니다.</p>
+            </div>
+            <div>
+              <label>이 분만 다르게</label>
+              <div class="actions" style="gap:7px;align-items:center">
+                <select id="quotaWho" style="flex:1"></select>
+                <input id="quotaOne" type="number" min="0" step="1" inputmode="numeric" placeholder="수" style="width:96px">
+                <button class="btn btn-light btn-sm" onclick="quotaOneSet()">적기</button>
+                <button class="btn btn-light btn-sm" onclick="quotaOneDel()">지우기</button>
+              </div>
+              <p class="notice" style="margin-top:9px"><b>변액 자격</b>이 있어 더 받으시는 분처럼, 사람마다 수가 다를 때 여기 적습니다. 앱은 누가 변액인지 <b>모릅니다</b> — 그래서 사장님이 적으십니다.</p>
+              <div id="quotaList" class="findn" style="margin:9px 0 0 2px"></div>
+            </div>
+          </div>
+          <div class="actions" style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="saveQuota()">한도 수 저장</button><button class="btn btn-light btn-sm" onclick="fillQuotaAdmin()">되돌리기</button></div>
+          <div class="notice" style="margin-top:11px"><b>한도는 팀이 같이 씁니다</b> — 여기서 고치면 모든 팀원 화면의 🚦 띠가 같이 바뀝니다. 한도를 적어도 <b>자료가 막히지는 않습니다</b> — 띠가 말해 주기만 합니다.</div>
+        </div>
       </section>
 
       <section class="page" id="page-absence">
@@ -934,7 +960,10 @@ async function loadAll(){
     sb.from("teams").select("id,name,color").order("name"),
     pageAll((x,y)=>sb.from("team_members").select("team_id,member_id")
       .order("member_id",{ascending:true}).range(x,y)),
-    sb.from("app_config").select("key,value").eq("key","db_sources"),
+    /* 종류 목록과 <b>배정 한도</b>를 한 번에 받는다 — 두 번 부르면 화면
+       한 번 여는 데 서버를 또 쓴다 (CLAUDE.md 7번). 줄 차례는 서버가
+       정하므로 <b>key 로 찾아</b> 푼다 — [0] 으로 집으면 둘이 될 때 뒤집힌다 */
+    sb.from("app_config").select("key,value").in("key",["db_sources","db_quota"]),
     pageAll((x,y)=>sb.from("clients").select("advisor_id,name_masked")
       .order("advisor_id",{ascending:true}).range(x,y))
   ]);
@@ -951,8 +980,10 @@ async function loadAll(){
   DBL.busy=false;DBL.loaded=true;DBL.err="";
   profiles=p.data||[];dbs=d.data||[];calls=c.data||[];attendance=(a&&!a.error&&a.data)?a.data:[];attErr=(a&&a.error)?a.error:null;
   crmTeams=(t&&!t.error&&t.data)||[];crmTeamOf={};((tm&&!tm.error&&tm.data)||[]).forEach(m=>crmTeamOf[m.member_id]=m.team_id);
-  const sv=(cf&&!cf.error&&cf.data&&cf.data[0])?(cf.data[0].value||""):"";
+  const cfVal=k=>{const a=(cf&&!cf.error&&cf.data)||[];const r=a.find(x=>x&&x.key===k);return r?(r.value||""):""};
+  const sv=cfVal("db_sources");
   dbSources=sv.split(",").map(x=>x.trim()).filter(Boolean);
+  crm한도풀기(cfVal("db_quota"));
   cliKeys={};((cl&&!cl.error&&cl.data)||[]).forEach(x=>{cliKeys[(x.advisor_id||"")+"|"+(x.name_masked||"")]=1});
   fillProfiles();fillSources();fillStages();renderAll();
   /* 홈 「고객 찾기」에서 이름을 들고 왔으면 <b>한 번만</b> 그 사람을 찾아 세운다.
@@ -1131,11 +1162,92 @@ function fillSources(){
       '<option value="__배정__">🏢 회사 배정만</option>'+list.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");f.value=list.indexOf(v)>=0?v:""}
   const card=$("srcAdminCard");
   if(card){card.classList.remove("hidden");if(!card.dataset.filled)fillSrcAdmin()}
+  /* 한도 칸도 <b>같은 자리에서</b> 세운다 — 두 곳에서 각자 세우면 한쪽만
+     고쳐진다 (5번). 운영자가 아니면 fillQuotaAdmin 이 스스로 감춘다. */
+  if(typeof fillQuotaAdmin==="function")fillQuotaAdmin();
 }
 function fillSrcAdmin(){
   const t=$("srcList");if(!t)return;
   t.value=(dbSources.length?dbSources:SRC_FALLBACK).join("\n");
   const card=$("srcAdminCard");if(card)card.dataset.filled="1";
+}
+/* ══ 🚦 <b>배정 한도 수를 적는 칸</b> — 종류 목록과 같은 틀 ════════════
+   수가 <b>무엇인가</b>를 아는 곳은 crm한도수 하나이고(5번), 이 아래는
+   <b>적고 저장하는</b> 일만 합니다. 저장은 putSources 와 같은 모양으로
+   app_config 한 줄에 올립니다 — 새 표가 없으니 사장님이 SQL 을 또
+   돌리실 일이 없습니다.
+   ★ <b>운영자만 고칩니다</b> — 팀이 같이 쓰는 수라 담당자가 제 한도를
+     스스로 올리면 뜻이 없습니다. 보는 것은 모두 봅니다(🚦 띠).      */
+var QUOTA_DRAFT=null;   /* 저장 전에 손본 것 — 저장하면 서버 값이 된다 */
+function quotaDraft(){
+  if(!QUOTA_DRAFT) QUOTA_DRAFT={기본:CRM_QUOTA.기본,사람:Object.assign({},CRM_QUOTA.사람)};
+  return QUOTA_DRAFT;
+}
+function fillQuotaAdmin(){
+  var card=document.getElementById("quotaAdminCard"); if(!card) return;
+  card.classList.toggle("hidden",!canManage());
+  if(!canManage()) return;
+  QUOTA_DRAFT=null;
+  var d=quotaDraft();
+  var b=document.getElementById("quotaBase"); if(b) b.value=d.기본>0?d.기본:"";
+  var who=document.getElementById("quotaWho");
+  if(who){
+    var keep=who.value;
+    who.innerHTML=profiles.filter(function(p){return p.active!==false})
+      .map(function(p){return '<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>'}).join("");
+    if(keep) who.value=keep;
+  }
+  quotaListDraw();
+}
+/* 사람마다 적힌 수를 <b>몇 분인지와 함께</b> 적는다 — 비면 비었다고 말한다 */
+function quotaListDraw(){
+  var el=document.getElementById("quotaList"); if(!el) return;
+  var d=quotaDraft(), ks=Object.keys(d.사람);
+  if(!ks.length){ el.textContent="따로 적은 분 없습니다 — 모두 위 수를 씁니다."; return; }
+  el.innerHTML="따로 적은 분 <b>"+ks.length+"명</b> · " + ks.map(function(k){
+    return esc(pname(k))+" "+d.사람[k]+"건";
+  }).join(" · ");
+}
+function quotaOneSet(){
+  if(!canManage()){toast("운영자만 고칠 수 있습니다.");return}
+  var who=document.getElementById("quotaWho"), one=document.getElementById("quotaOne");
+  if(!who||!one) return;
+  var id=who.value; if(!id){toast("담당자를 먼저 고르세요.");return}
+  var n=parseInt(one.value,10);
+  if(isNaN(n)||n<=0){toast("1 이상의 수를 적어 주세요. 지우시려면 「지우기」 를 누르십시오.");return}
+  quotaDraft().사람[id]=n; one.value=""; quotaListDraw();
+  toast(pname(id)+" 은 "+n+"건으로 적었습니다. 아래 「한도 수 저장」 을 누르셔야 반영됩니다.");
+}
+function quotaOneDel(){
+  if(!canManage()){toast("운영자만 고칠 수 있습니다.");return}
+  var who=document.getElementById("quotaWho"); if(!who) return;
+  var id=who.value; if(!id) return;
+  if(!(quotaDraft().사람[id]>0)){toast(pname(id)+" 은 따로 적힌 수가 없습니다.");return}
+  delete quotaDraft().사람[id]; quotaListDraw();
+  toast(pname(id)+" 의 따로 적은 수를 지웠습니다. 저장을 누르셔야 반영됩니다.");
+}
+async function saveQuota(){
+  if(!canManage()){toast("운영자만 고칠 수 있습니다.");return}
+  var b=document.getElementById("quotaBase");
+  var bn=parseInt(b?b.value:"",10); if(isNaN(bn)||bn<0) bn=0;
+  var d=quotaDraft();
+  var payload={기본:bn,사람:{}};
+  Object.keys(d.사람).forEach(function(k){ if(d.사람[k]>0) payload.사람[k]=d.사람[k]; });
+  var r=await sb.from("app_config").upsert({key:"db_quota",value:JSON.stringify(payload)},{onConflict:"key"});
+  if(r&&r.error){
+    var m=(r.error.message||"")+"";
+    if(/42501|permission denied|row.level security/i.test(m))
+      wErr(r.error,"한도 수 저장 — 종류 목록과 같은 자리입니다. migration_37_db_source_open.sql 을 한 번 실행하세요");
+    else wErr(r.error,"한도 수 저장");
+    return;
+  }
+  /* 서버에 올린 그 글을 <b>다시 풀어</b> 쓴다 — 화면이 제 손의 값을 믿지
+     않고 담긴 것을 믿게 한다. 두 벌이 되는 자리였다 (5번). */
+  crm한도풀기(JSON.stringify(payload));
+  QUOTA_DRAFT=null;
+  fillQuotaAdmin(); crm한도띠();
+  toast(bn>0 ? ("한도 "+bn+"건으로 저장했습니다. 🚦 띠가 이제 견줍니다.")
+             : "한도 수를 비웠습니다. 🚦 띠는 세기만 하고 견주지 않습니다.");
 }
 /* 등록하다가 새 종류를 만나면 이 자리에서 만든다. 화면을 나갔다 오면 쓰던 내용이 날아간다. */
 function srcPick(){
@@ -1540,28 +1652,90 @@ function dbFindNote(q,n){
     + ` · 🏢 회사 배정 ${배정}건 · 👤 개인 ${개인}건`;
   crm한도띠();
 }
+/* ══ 🚦 <b>배정 한도 수</b> — 묻는 곳을 <b>하나만</b> 둔다 (5번) ═══════
+   사장님이 「일반 20 · 변액 더하기」 라고 말씀하셨습니다. 그런데 앱은
+   <b>누가 변액 자격이 있는지 모릅니다</b> — 어디에도 안 적혀 있습니다.
+   제가 짐작해 넣으면 틀린 수가 고객 앞 화면에 섭니다 (1번).
+
+   그래서 수를 <b>사장님이 설정에 담으시게</b> 하고, 앱은 담긴 것만 봅니다.
+     ⑴ <b>모두에게 쓰는 수</b> 하나
+     ⑵ <b>사람마다 다르게</b> 적는 수 (변액 자격이 있는 분이 여기 들어갑니다)
+   ⑵ 가 적혀 있으면 그것이 이깁니다. 둘 다 안 적혀 있으면 <b>0</b> 이고,
+   0 은 「없음」 이 아니라 <b>「안 적혀 있음」</b> 입니다 — 그때 띠는
+   「견주지 않습니다」 라고 말합니다 (1번 · 모름과 0 은 다릅니다).
+
+   담는 자리는 app_config 의 <b>db_quota</b> 한 줄입니다 — 종류 목록
+   (db_sources)과 <b>같은 틀</b>이라 새 표를 만들지 않습니다. 모양은
+   {"기본":20,"사람":{"<담당자id>":50}} 입니다.                        */
+var CRM_QUOTA={기본:0,사람:{}};
+/* 적힌 글을 푼다. 깨져 있으면 <b>0 으로 둔다</b> — 못 읽은 것을 수로
+   꾸미면 화면이 거짓말한다 (1번). */
+function crm한도풀기(v){
+  CRM_QUOTA={기본:0,사람:{}};
+  if(!v) return;
+  try{
+    var o=JSON.parse(v); if(!o||typeof o!=="object") return;
+    var b=parseInt(o["기본"],10); if(!isNaN(b)&&b>0) CRM_QUOTA.기본=b;
+    var per=o["사람"]||{};
+    Object.keys(per).forEach(function(k){
+      var n=parseInt(per[k],10); if(!isNaN(n)&&n>0) CRM_QUOTA.사람[k]=n;
+    });
+  }catch(e){}
+}
+/* ★ <b>이 사람 한도는 몇인가</b> — 이 물음에 답하는 곳은 여기 하나뿐이다
+   (5번). 띠도, 설정 화면도, 점검도 이것을 부른다. 0 = 안 적혀 있음. */
+function crm한도수(own){
+  if(!own) return 0;
+  if(CRM_QUOTA.사람[own]>0) return CRM_QUOTA.사람[own];
+  return CRM_QUOTA.기본>0 ? CRM_QUOTA.기본 : 0;
+}
+/* 적힌 수가 그 사람만의 것인가 — 화면에 「이분만 따로」 라고 밝히려고 */
+function crm한도따로(own){ return !!(own&&CRM_QUOTA.사람[own]>0); }
 /* ══ 🚦 <b>배정 한도</b> — 사고가 났던 자리 (2026-10-05 · X56) ═══════
    사장님 말씀대로 <b>진행중만</b> 셉니다. 계약완료·증권전달·소개완료는 끝난
    자리이고, 거절은 다시 안 거는 자리입니다. <b>개인 고객은 안 셉니다</b> —
    사장님이 스스로 만드신 분이라 회사 배정 한도와 상관이 없습니다.
-   ★★ <b>한도 수를 제가 지어 적지 않습니다</b> (1번·2번). 「일반 20 · 변액
-     +30」 이라고 들었지만 그것이 지금도 그런지, 사람마다 같은지 저는
-     모릅니다. 그래서 <b>세기만 하고</b>, 한도는 사장님이 설정에 적으시면
-     그때 견줍니다. 모르는 것을 숫자로 적으면 그 수가 사실이 됩니다.
-   ★ 담당자를 고르셨을 때만 세웁니다 — 전체를 합쳐 세면 뜻이 없습니다. */
+   ★★ <b>한도 수를 제가 지어 적지 않습니다</b> (1번·2번). 들은 수가 있지만
+     그것이 지금도 그런지, 사람마다 같은지 저는 모릅니다. 수는 <b>사장님이
+     설정에 담으시고</b>(위 crm한도수), 앱은 담긴 것만 봅니다. 안 담겼으면
+     <b>「견주지 않습니다」</b> 라고 말합니다 — 모르는 것을 숫자로 적으면
+     그 수가 사실이 됩니다.
+   ★ 담당자를 고르셨을 때만 세웁니다 — 전체를 합쳐 세면 뜻이 없습니다.
+   ★ 색은 <b>이미 있는 이름</b>만 씁니다 (badge red/green) — 새 CSS 0줄. */
 function crm한도띠(){
   var el=document.getElementById("crmQuota"); if(!el) return;
   var own=($("ownerFilter")&&$("ownerFilter").value)||"";
-  if(!own){ el.textContent=""; el.classList.add("hidden"); return; }
+  if(!own){ el.innerHTML=""; el.classList.add("hidden"); return; }
   var 내것=dbs.filter(function(d){return d.assigned_to===own;});
   var 진행=내것.filter(crm한도줄).length;
   var 끝남=내것.filter(function(d){return !crm개인(d)&&!crm한도줄(d);}).length;
   var 개인=내것.filter(crm개인).length;
+  var 한도=crm한도수(own);
+  var h="🚦 " + esc(pname(own)) + " — 지금 들고 있는 회사 배정 <b>" + 진행 + "건</b>"
+       + " (끝난 것 " + 끝남 + "건은 뺐습니다 · 개인 고객 " + 개인 + "건은 안 셉니다)";
+  if(!한도){
+    /* 안 적혀 있을 때 — <b>고칠 길을 함께</b> 보여 준다. 「없다」 고만
+       적으면 어디서 적는지 몰라 그대로 둔다 (6번). */
+    h += " · 한도 수가 <b>아직 안 적혀 있어 견주지 않습니다</b>"
+       + (canManage() ? ' <button type="button" class="btn btn-light btn-sm" onclick="goQuotaCard()">한도 수 적기</button>' : "");
+  } else if(진행>한도){
+    h += " · 한도 <b>" + 한도 + "건</b>" + (crm한도따로(own)?" (이분만 따로 적힌 수)":"") + " · "
+       + ' <span class="badge red">' + (진행-한도) + "건 넘었습니다</span>";
+  } else {
+    h += " · 한도 <b>" + 한도 + "건</b>" + (crm한도따로(own)?" (이분만 따로 적힌 수)":"") + " · "
+       + ' <span class="badge green">' + (한도-진행) + "건 더 받을 수 있습니다</span>";
+  }
   el.classList.remove("hidden");
-  el.textContent="🚦 " + pname(own) + " — 지금 들고 있는 회사 배정 " + 진행 + "건"
-    + " (끝난 것 " + 끝남 + "건은 뺐습니다 · 개인 고객 " + 개인 + "건은 안 셉니다)"
-    + " · 한도 수는 아직 안 적혀 있어 견주지 않습니다";
+  el.innerHTML=h;
   crm365띠(own);
+}
+/* 띠에서 「한도 수 적기」 를 누르면 그 칸으로 데려간다 — 화면 안에서
+   찾아 헤매지 않게. 세우는 자리는 fillQuotaAdmin 하나다 (5번). */
+function goQuotaCard(){
+  var c=document.getElementById("quotaAdminCard"); if(!c) return;
+  c.classList.remove("hidden");
+  if(typeof fillQuotaAdmin==="function") fillQuotaAdmin();
+  try{ c.scrollIntoView({behavior:"smooth",block:"center"}); }catch(e){ c.scrollIntoView(); }
 }
 /* ══ 🗂️ <b>고객 365일에만 있는 분</b> — 「하나로」 의 나머지 반쪽 ══════
    사장님 말씀 「고객 365일과 하나로」. 재어 보니 고객 365일 111명이 CRM 에
