@@ -2,7 +2,13 @@
 <html data-theme="light" lang="ko">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<!-- 📱 <b>viewport-fit=cover</b> — 2026-10-05. 이것이 없으면
+     env(safe-area-inset-*) 가 <b>늘 0</b> 입니다. 아래 탭바가
+     padding-bottom:env(safe-area-inset-bottom) 을 쓰고 있었는데(2246줄),
+     그 값이 0 이라 <b>노치 아이폰에서는 홈 막대에 가리고</b> 안드로이드
+     에서는 안 가렸습니다 — 폰마다 다르게 보이던 자리입니다.
+     ★ 쓰는 쪽이 이미 있었고 <b>켜는 스위치만 없었습니다.</b> -->
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>APEX YUN PRO · 통합 워크스페이스</title>
 <!-- 폰 홈 화면에 담으면 주소창 없이 앱처럼 열린다.
      안드로이드는 아래 manifest 를 읽고, 아이폰은 apple- 로 시작하는 줄들을 읽는다.
@@ -40,6 +46,10 @@
 <meta name="apple-mobile-web-app-title" content="APEX"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- 🔤 글꼴은 <b>jsdelivr</b> 에서 옵니다 — 거기에도 미리 손을 내밉니다.
+     늦게 오면 그 사이 아이폰은 Apple SD Gothic, 안드로이드는 Noto Sans KR
+     로 <b>폰마다 다른 글꼴</b>이 보입니다(줄바꿈까지 달라집니다). -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet"/>
 <!-- 🎨 토스판 한 벌 — 토큰과 .t- 클래스는 app/ui.css <b>한 곳</b>에만 있습니다 (CLAUDE.md 5번) -->
 <link rel="stylesheet" href="ui.css">
@@ -625,6 +635,14 @@ window.APEX_SB = window.APEX_SB || {
    디자인 시스템 — APEX YUN PRO v3 호환
 ════════════════════════════════════════════ */
 :root{ color-scheme:light;   /* 🌗 위 meta 와 같은 말 — 브라우저 자동 다크를 막습니다 */
+  /* 🎨 <b>체크칸·날짜칸·막대의 색</b> — 2026-10-05.
+     이것을 안 적으면 브라우저가 <b>그 폰의 OS 색</b>으로 칠합니다 —
+     아이폰은 애플 파랑, 삼성·픽셀은 <b>사장님이 고른 배경화면 색</b>
+     (Material You)까지 따라갑니다. 체크칸 25 · 날짜칸 22 · 막대 2 ·
+     시각칸 1 이 그렇게 폰마다 다른 색이었습니다.
+     ★ <b>새 색이 아닙니다</b> — 앱이 쓰는 그 한 색(--primary → --t-point)
+       을 가리키기만 합니다 (5번 · 색표는 한 벌).                      */
+  accent-color:var(--t-point);
   /* ── 색표는 <b>한 벌</b>입니다 — 여기는 ui.css 의 목업 색을 <b>가리키기만</b> 합니다 ──
      2026-09-26. 사장님 말씀 「색상부터 좀 변경해봐 <b>이거 아니잖아</b>」.
      재 보니 앱이 <b>색표를 두 벌 겹쳐 입고</b> 있었습니다. 여기 옛 이름들이
@@ -18747,8 +18765,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-10-05 02:40';
-var APP_BUILD_NOTE="🧭 <b>「고객의 현재 상황은 무엇인가요?」 를 다시 구분했습니다 — 무엇을 <u>언제</u> 쓰는지까지.</b>　—　① 사장님 말씀대로 단계마다 가리키는 화면을 다시 묶고, <b>칩 44가지</b> 하나하나에 <b>구분</b>과 <b>「쓸 때」 한 줄</b>을 달았습니다.　—　② <b>TA 는 「고객에게 전화하는것」</b> 으로 다시 정해, 전화하면서 쓰는 것만 세웠습니다 — 걸면서 무엇을 말하나(3) · 물으시면 바로 답한다(5) · 만나기로 하면(2).　—　③ <b>AP 7</b>(펴 놓을 것 · 물으시면 답한다 · 가입이 되는 분인가) · <b>PC 4</b> · <b>CS 9</b>(쓰기 전에 · 쓰면서 찾는 것 · 받으신 뒤를 미리 알려 드린다 · 돈 이야기).　—　④ ☎️ <b>TA 스크립트를 메뉴에 세웠습니다.</b> 글은 DB 통합 CRM 이 보는 <b>같은 파일</b>을 그대로 띄웁니다 — 옮겨 적으면 두 화면이 다른 말을 합니다.　—　⑤ <b>비포&애프터는 가리키는 자리에서 뺐습니다</b>(화면은 그대로 둡니다).　—　⑥ ★ 고치다 보니 <b>같은 칸을 두 곳이 각자 그리고</b> 있었습니다 — 홈과 DB 통합 CRM. <b>한 함수로 모았습니다.</b>　—　⑦ ★ 그리고 <b>이름을 표에 또 적고 있었습니다.</b> 그 탓에 메뉴에서는 「치료비 지급지도」 인데 표에서는 「급여·비급여 화법」 이었습니다. 이제 이름은 <b>메뉴 한 곳</b>에서만 옵니다 — 사장님이 부르신 이름 그대로입니다.　—　⑧ <b>새 CSS 0줄 · 새 class 0개 · hex 0개</b>, 누르는 줄은 전부 44px 이상입니다. 되돌림 다섯 다 울립니다.";
+var APP_BUILD='2026-10-05 04:10';
+var APP_BUILD_NOTE="📱 <b>어느 폰에서나 같게 보이게 했습니다 — 그림으로 돌려 보고 셋을 찾았습니다.</b>　—　① 폰 넷(아이폰SE·아이폰14프로·갤럭시S8·픽셀7)을 띄워 그림을 뽑고, 상태 셋(보통·폰 다크·대비 높임)으로 <b>열두 판</b>을 쟀습니다.　—　② ★ 파란 <b>「?」 단추가 아래 띠의 「달력」 칸을 46×38px 덮고</b> 있었습니다 — <b>폰 넷 모두</b>. 다섯째 칸을 못 누르는 자리였습니다. bottom 을 인라인에 박아 둔 탓이라, 자리를 <b>한 곳</b>이 정하게 하고 띠가 서면 그만큼 올렸습니다.　—　③ ★ <b>체크칸·날짜칸이 그 폰의 OS 색</b>으로 칠해지고 있었습니다. 아이폰은 애플 파랑, 삼성·픽셀은 <b>배경화면 색</b>(Material You)까지 따라갑니다. 앱의 그 한 색을 가리키게 했습니다 — <b>새 색이 아닙니다</b>.　—　④ ★ <b>노치 여백이 죽어 있었습니다</b> — 아래 띠가 그 값을 쓰는데 머리글에 켜는 스위치(viewport-fit=cover)가 없어 늘 0 이었습니다.　—　⑤ 글꼴 CDN 에 <b>미리 손을 내미는 줄</b>을 넣었습니다. 늦게 오면 그 사이 아이폰과 안드로이드가 <b>다른 글꼴</b>로 보입니다.　—　⑥ ⚠ <b>글꼴이 폰마다 같은지는 제가 못 쟀습니다</b> — 점검 기계에 한글 글꼴이 없어 어느 이름을 적어도 같게 나옵니다. 받아 오는 길이 깔렸는지만 봤습니다. <b>진짜 폰에서 한 번 보셔야</b> 아는 자리입니다.　—　⑦ 자 하나가 새로 섭니다 — 열두 판을 띄워 색·넘침·겹침을 잽니다. 되돌림 셋 다 울립니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -21302,12 +21320,28 @@ function vaCss(){
   if(document.getElementById('vaStyle'))return;
   var st=document.createElement('style');st.id='vaStyle';
   st.textContent=
+    /* ══ 📱 <b>떠 있는 두 단추가 앉는 자리 — 여기 한 곳</b> (2026-10-05) ══
+       ⚠ 재어 보니 <b>폰 넷 모두</b>에서 「?」 단추가 아래 띠의 <b>마지막 칸
+         (달력)을 46×38px 덮고</b> 있었습니다. 「?」 는 bottom:18px 를 제
+         인라인에 박고 있었고, 띠는 57px + 노치 여백이라 올라앉을 수밖에
+         없었습니다. 「다 됐다」 로 보이는데 다섯째 칸을 못 누르는 자리입니다.
+       ★ <b>띠가 서는 폭(1100px)은 위에서 이미 정했습니다</b> — 여기서 그 수를
+         다시 적지 않고 <b>같은 수</b>를 씁니다 (5번 · 「지금 어느 폭인가는
+         한 곳만 안다」). 올리는 높이도 띠(57px)와 노치 여백에서 옵니다.      */
+    '#osGuideFab{bottom:18px}'+
     '#osVaFab{position:fixed;right:18px;bottom:74px;z-index:9991;width:46px;height:46px;border-radius:50%;'+
       'border:none;background:linear-gradient(135deg,#0F172A,#334155);color:#fff;font-size:var(--t2);cursor:pointer;'+
       'box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:center}'+
     '#osVaFab.on{background:linear-gradient(135deg,#DC2626,#F87171);animation:vaPulse 1.2s infinite}'+
     '#osVaFab.wake{background:linear-gradient(135deg,#059669,#34D399);animation:vaPulse 2s infinite}'+
     '#osVaFab.talk{background:linear-gradient(135deg,var(--t-point),#60A5FA);animation:vaPulse 1.6s infinite}'+
+    /* ★ <b>기본줄 뒤에 둡니다.</b> 앞에 두었더니 같은 힘(#아이디)이라
+       뒤엣 bottom:74px 가 이겨서, 띄운 「?」 와 🎙 가 <b>서로 8px 겹쳤습니다.</b>
+       CSS 는 같은 힘이면 뒤엣것이 이깁니다 — 재어 보고 알았습니다.      */
+    '@media(max-width:1100px){'+
+      '#osGuideFab{bottom:calc(66px + env(safe-area-inset-bottom,0px))}'+
+      '#osVaFab{bottom:calc(122px + env(safe-area-inset-bottom,0px))}'+
+    '}'+
     '@keyframes vaPulse{0%{box-shadow:0 0 0 0 rgba(220,38,38,.45)}70%{box-shadow:0 0 0 12px rgba(220,38,38,0)}100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}}'+
     '@media(prefers-reduced-motion:reduce){#osVaFab.on,#osVaFab.wake{animation:none}}'+
     '#osVaPanel{position:fixed;right:14px;bottom:130px;z-index:9992;width:min(360px,calc(100vw - 28px));'+
@@ -60655,7 +60689,11 @@ function osGuideFab(){
   if(document.getElementById('osGuideFab'))return;
   var b=document.createElement('button');b.id='osGuideFab';b.title='빠른 시작 가이드';b.setAttribute('aria-label','빠른 시작 가이드');
   b.onclick=function(){if(typeof osHelpHere==='function')osHelpHere();else osGuideOpen();};b.textContent='?';
-  b.style.cssText='position:fixed;right:18px;bottom:18px;z-index:9990;width:46px;height:46px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--t-point),#38BDF8);color:#fff;font-size:22px;font-weight:800;cursor:pointer;box-shadow:0 8px 22px rgba(26,86,219,.42)';
+  /* ★ 2026-10-05 · <b>bottom 을 여기서 빼냈습니다.</b> 인라인으로 박아 두면
+     아래 띠가 서는 폭에서도 18px 에 그대로 붙어 <b>「달력」 칸을 덮습니다</b>
+     — 폰 넷에서 재니 넷 다 46×38px 가렸습니다. 떠 있는 단추가 어디 앉는지는
+     <b>vaCss 한 곳</b>이 정합니다 (5번).                                 */
+  b.style.cssText='position:fixed;right:18px;z-index:9990;width:46px;height:46px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--t-point),#38BDF8);color:#fff;font-size:22px;font-weight:800;cursor:pointer;box-shadow:0 8px 22px rgba(26,86,219,.42)';
   document.body.appendChild(b);
 }
 function osGuideMaybeAuto(){if(!osGuideSeen()){try{setTimeout(function(){if(OS.profile)osGuideOpen();},800);}catch(e){}}}
