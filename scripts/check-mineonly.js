@@ -60,12 +60,18 @@ const SEED = (role) => `
     ],error:null});
   };
   window.cmLoadAll=function(cb){ if(typeof cb==='function')cb(); };
-  window.osClient=function(){ return { from:function(){ return {
-      select:function(){ return this; }, order:function(){ return this; }, limit:function(){ return this; },
-      eq:function(){ return this; }, 'in':function(){ return this; },
-      upsert:function(){ return this; }, insert:function(){ return this; },
-      update:function(){ return this; }, 'delete':function(){ return this; },
-      then:function(res){ return Promise.resolve({data:[],error:null}).then(res); } }; },
+  /* 흉내 서버는 <b>이름을 하나하나 적지 않는다.</b> 앞서 eq·in 만 적어
+     두었다가, TFA 가 .neq 를 쓰기 시작한 날 「neq is not a function」 으로
+     터졌습니다 — 앱은 멀쩡한데 <b>점검이 헛것을 잡은 것</b>입니다 (8번).
+     받는 이름을 늘릴 때마다 여기가 낡으므로, 사슬은 <b>다 받아</b> 넘기고
+     실제로 답하는 곳(then)만 우리가 정합니다. */
+  window.osClient=function(){ return { from:function(){ var a={};
+      ['select','order','limit','eq','neq','gt','gte','lt','lte','in','is','not','or','filter',
+       'like','ilike','contains','overlaps','range','single','maybeSingle','match','returns',
+       'abortSignal','csv','explain','upsert','insert','update','delete']
+        .forEach(function(k){ a[k]=function(){ return a; }; });
+      a.then=function(res){ return Promise.resolve({data:[],error:null}).then(res); };
+      return a; },
     rpc:function(){ return Promise.resolve({data:null,error:null}); } }; };
   AR.loaded=true; AR.busy=false; AR.cliRows=[]; AR.db=[];
   OSC.loaded=false; OSC.busy=false; OSC.err=''; OSC.list=[];

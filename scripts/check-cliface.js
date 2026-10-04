@@ -144,9 +144,12 @@ const SEED=(o)=>`
   const B=await page.evaluate(async(seed)=>{
     (0,eval)(seed); await window.__open();
     const host=document.getElementById('oscBaHost');
-    const rows=host?[].slice.call(host.querySelectorAll('.osc-ba-r')):[];
+    /* 2026-09-27 · 판 ⑦ — 이 줄이 목각 옷으로 갈아입어 이름이 바뀌었습니다
+       (.osc-ba-r → .t-row · .tt → .m b). <b>묻는 것은 그대로</b>입니다 —
+       줄이 서는가 · 눌러서 그 자리에서 열리는가. 이름만 새것으로 고쳤습니다. */
+    const rows=host?[].slice.call(host.querySelectorAll('.t-row')):[];
     const out={ has:!!host, n:rows.length,
-                titles:rows.map(e=>(e.querySelector('.tt')||{}).textContent||''),
+                titles:rows.map(e=>(e.querySelector('.m b')||{}).textContent||''),
                 /* 전·후 칸이 <b>저장된 자료 칸보다 위</b>에 있어야 손이 먼저 간다 */
                 above:(function(){
                   const w=document.querySelector('#dynPane .osc-wrap');
@@ -199,7 +202,8 @@ const SEED=(o)=>`
     oscPolPaint();
     const h=document.getElementById('oscPolHost');
     return { txt:h?h.textContent.replace(/\s+/g,' ').trim():'',
-             rows:h?h.querySelectorAll('.osc-pol-r').length:0 };
+             /* 2026-09-27 · 판 ⑦ — .osc-pol-r → .t-row (목각 옷) */
+             rows:h?h.querySelectorAll('.t-row').length:0 };
   },SEED({}));
   is(PL.rows===2, '<b>가입한 보험</b> 칸에 계약이 선다 — '+PL.rows+'건');
   is(/132,000원\/월/.test(PL.txt), '<b>월 보험료가 원 단위</b>로 선다 (4번)');

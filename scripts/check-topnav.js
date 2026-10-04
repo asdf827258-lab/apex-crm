@@ -74,7 +74,13 @@ const OWNER = { id: 'u1', name: '홍길동', role: 'owner', active: true, plan: 
     /* <b>내려 보고 잰다.</b> 맨 위에서만 재면 그냥 첫 요소여도 top=0 이라,
        sticky 를 떼어도 통과한다 — 실제로 그렇게 뚫렸다 (CLAUDE.md 8번). */
     const R = await p.evaluate(async (prof) => {
-      OS.profile = prof; renderNav();
+      OS.profile = prof;
+      /* ⚠ 2026-09-24 · 서랍이 <b>간편으로 기본</b>이 됐습니다. 여기서 보는
+         것은 「위 띠로 옮겨도 <b>서랍 안에 칸이 그대로</b> 있는가」 라,
+         <b>전체</b>로 놓고 세야 뜻이 맞습니다 (간편은 매일 여는 것만
+         세우므로 원래 적습니다). check-navez 가 간편 쪽을 잽니다. */
+      if (typeof ezSet === 'function') ezSet(false);
+      renderNav();
       ['finance', 'clients', 'crm'].forEach(id => { if (!navIsFav(id)) navFavToggle(id); });
       const tn = document.getElementById('topnav');
       const sb = document.getElementById('sidebar');

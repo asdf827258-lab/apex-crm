@@ -104,7 +104,22 @@
      ★ 그래서 화면의 「마지막으로 닿은 날」(cmLastTouch)과 <b>일부러 다릅니다.</b>
        그쪽은 「무엇으로든 닿은 날」 이고 이쪽은 「약속을 지킨 날」 입니다.
        두 물음이 다르므로 두 답이 있는 것이지, 두 벌이 아닙니다.        */
-  var KEEP_HOW = ['전화', '통화', '만남', '방문', '대면', 'call', 'meet'];
+  /* ⚠ 2026-09-25 · <b>둘로 갈랐습니다 — 합친 것은 그대로입니다.</b>
+     「오늘 몇 통 걸고 몇 분 만났나」 를 세려면 통화와 만남을 갈라야 합니다.
+     그렇다고 여기 말고 <b>다른 곳</b>에 또 적으면 두 벌이 됩니다 (5번).
+     그래서 갈래 둘을 두고 KEEP_HOW 는 <b>그 둘을 합친 것</b>으로 둡니다 —
+     30일 약속 셈(promiseOf)은 한 글자도 안 바뀝니다. 차례만 달라지는데
+     isKeep 은 <b>하나라도 걸리면</b> 참이라 차례는 상관없습니다. */
+  var CALL_HOW = ['전화', '통화', 'call'];
+  var MEET_HOW = ['만남', '방문', '대면', 'meet'];
+  var KEEP_HOW = CALL_HOW.concat(MEET_HOW);
+  function hasHow(how, LIST) {
+    var h = ('' + (how == null ? '' : how)).replace(/\s/g, ''), i;
+    for (i = 0; i < LIST.length; i++) if (h.indexOf(LIST[i]) >= 0) return true;
+    return false;
+  }
+  function isCall(how) { return hasHow(how, CALL_HOW); }
+  function isMeet(how) { return hasHow(how, MEET_HOW); }
   function isKeep(how) {
     var h = ('' + (how == null ? '' : how)).replace(/\s/g, '');
     for (var i = 0; i < KEEP_HOW.length; i++) if (h.indexOf(KEEP_HOW[i]) >= 0) return true;
@@ -148,9 +163,210 @@
     return { k: 'ok', d: d, cy: cy, at: at, sc: 0 };
   }
 
+  /* ══ 신호 — <b>오늘 이 분께 걸 구실</b> ════════════════════════════
+     명세서(docs/토스판_사본.html 의 signals()) 에서 <b>점수와 말을 그대로</b>
+     옮겼습니다. 여기서 숫자를 새로 짓지 않습니다.
+
+     ★ <b>두 갈래입니다.</b>
+       when:'day'  <b>날짜가 와서</b> 오늘 서는 것 — 생일 · 계약 주년.
+                   오늘 자리에 <b>줄을 세웁니다.</b>
+       when:'any'  <b>늘 참인 것</b> — 자녀 나이 · 보험료 비중. 줄을 세우면
+                   해가 바뀔 때까지 <b>매일 같은 분</b>이 서서 큐가 영영
+                   안 줄어듭니다. 그래서 줄은 안 세우고, 이미 선 분의
+                   <b>「왜 오늘 이분인가」</b> 로만 씁니다.
+     ★ 못 받은 값은 <b>안 세웁니다</b> — 0 으로 적으면 「없다」가 됩니다 (1번).
+     ★ 2월 29일 생일은 윤년이 아닌 해에 <b>안 울립니다</b>. 3월 1일로
+       옮겨 적으면 그것은 <b>우리가 고른 날</b>이지 그분 생일이 아닙니다.  */
+  /* 올해(또는 내년) 의 그 MM-DD — 오늘보다 이르면 내년으로 넘깁니다 */
+  function nextMmdd(mmdd, today) {
+    var m = ('' + (mmdd == null ? '' : mmdd)).match(/(\d{1,2})\D+(\d{1,2})/);
+    var t = ('' + (today == null ? '' : today)).slice(0, 10);
+    if (!m || !/^\d{4}-\d{2}-\d{2}$/.test(t)) return '';
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    var s = p(+m[1]) + '-' + p(+m[2]), y = +t.slice(0, 4);
+    var d = y + '-' + s;
+    return (d < t) ? ((y + 1) + '-' + s) : d;
+  }
+  function signalsOf(o) {
+    o = o || {};
+    var today = ('' + (o.today || '')).slice(0, 10), S = [], d, i;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) return S;
+
+    /* 🎂 생일 — <b>D-7 부터 D-1 까지</b>.
+       D-0(오늘) 은 달력의 생일 갈래가 이미 세웁니다. 여기서 또 세우면
+       같은 생일을 <b>두 곳</b>이 답하게 됩니다 (5번). 여기는 그 앞날만 봅니다. */
+    if (o.bd) {
+      d = dayGap(today, nextMmdd(o.bd, today));
+      if (d !== null && d >= 1 && d <= 7)
+        S.push({ id: 'bd', when: 'day', emo: '🎂', t: '생일 D-' + d, ch: '문자',
+          aim: '<b>축하만</b> 전한다',
+          way: '계약 이야기를 오늘 붙이지 않는다. 그것이 다음 자리를 만든다',
+          why: '생일이 ' + d + '일 남았습니다', sc: 700 + (8 - d) * 8 });
+    }
+
+    /* 🎗️ 계약 주년 — <b>2년차부터</b>.
+       1년차(12개월) 는 MST_STEPS 의 마디가 이미 세웁니다. 여기서 또 세우면
+       한 해에 두 번 같은 말을 하게 됩니다 (5번). */
+    var cd = ('' + (o.cd || '')).slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cd)) {
+      var ann = nextMmdd(cd.slice(5), today);
+      d = dayGap(today, ann);
+      var yr = ann ? ((+ann.slice(0, 4)) - (+cd.slice(0, 4))) : 0;
+      if (d !== null && d >= 0 && d <= 7 && yr >= 2)
+        S.push({ id: 'ann', when: 'day', emo: '🎗️',
+          t: '계약 ' + yr + '주년 ' + (d ? 'D-' + d : '오늘'), ch: '전화',
+          aim: '<b>잘 쓰고 계신지</b> 여쭙는다',
+          way: '새 이야기를 붙이지 않는다. 그 해에 달라진 것만 알려 드린다',
+          why: '계약하신 지 ' + yr + '년이 됩니다', sc: 640 + (8 - d) * 5 });
+    }
+
+    /* 🎉📅 <b>만기</b> — 보장분석이 적어 둔 한 줄로만 봅니다.
+       ★ <b>「D-30」 이라고 안 씁니다</b> (1번). 가입 시기가 "2019-04" 처럼
+         <b>달까지만</b> 있어, 일 단위 D-day 는 <b>없는 정밀도</b>입니다.
+         납입은 <b>달</b>까지, 보장은 <b>해</b>까지 아는 대로만 말합니다.
+       ★ <b>점수도 지어내지 않습니다.</b> 명세서는 납입만기 690~750(D-30~D-0),
+         보장만기 663~753 이라고 정해 두었습니다. 우리는 며칠 남았는지를
+         모르므로 그 <b>양 끝</b>만 씁니다 — 이번 달이면 가까운 쪽, 다음 달이면
+         먼 쪽. 가운데 값을 지어내면 모르는 것을 아는 척하는 것입니다.
+       ★ 이 줄은 <b>추정</b>입니다. 증권을 보고 적은 날짜가 생기면 그쪽이
+         이깁니다. 그래서 화면에도 <b>출처를 같이</b> 적습니다.          */
+    var E=o.end||null;
+    if(E&&E.pay&&/^\d{4}-\d{2}$/.test(''+E.pay.ym)){
+      var pm=(+(''+E.pay.ym).slice(0,4))*12+(+(''+E.pay.ym).slice(5,7));
+      var nm=(+today.slice(0,4))*12+(+today.slice(5,7));
+      var gap=pm-nm;                                   /* 0 = 이번 달 · 1 = 다음 달 */
+      if(gap===0||gap===1)
+        S.push({id:'payend', when:'day', emo:'🎉',
+          t:'납입 만기 '+(gap?'다음 달':'이번 달'), ch:'전화',
+          aim:'<b>이제 다 내셨다</b>고 알려 드린다',
+          way:'새 상품을 오늘 붙이지 않는다. 축하가 먼저다 — 그 자리에서 소개가 나온다',
+          why:(gap?'다음 달':'이번 달')+'에 보험료 납입이 끝납니다 — '+E.pay.ym+
+              (E.pay.nm?(' · '+E.pay.nm):'')+' ('+(E.src||'보장분석에서 셈')+')',
+          sc:(gap?690:750)});
+    }
+    if(E&&E.cov&&E.cov.y){
+      var dy=(+E.cov.y)-(+today.slice(0,4));
+      /* <b>올해 안</b>일 때만 세웁니다 — 해까지밖에 모르니 그 위로는
+         「가깝다」 고 말할 자격이 없습니다. 점수도 명세서의 <b>먼 쪽</b>입니다. */
+      if(dy===0)
+        S.push({id:'end', when:'day', emo:'📅', t:'보장 만기 올해', ch:'전화',
+          aim:'만기 전에 <b>한 번 같이 본다</b>',
+          way:'바꾸자고 먼저 말하지 않는다. 지금 것을 정확히 알려 드리는 자리다',
+          why:'올해 보장이 끝나는 계약이 있습니다 — '+E.cov.y+'년'+
+              (E.cov.age?(' · '+E.cov.age+'세 만기'):'')+(E.cov.nm?(' · '+E.cov.nm):'')+
+              ' ('+(E.src||'보장분석에서 셈')+')',
+          sc:663});
+    }
+
+    /* 🎒 자녀가 돈이 바뀌는 나이 — 태어난 해만 알면 셈이 섭니다.
+       <b>늘 참</b>이라 줄은 안 세웁니다(when:'any'). */
+    var K = (o.kids && o.kids.push) ? o.kids : [];
+    var got = {};
+    for (i = 0; i < K.length; i++) {
+      var by = parseInt(('' + K[i]).replace(/[^0-9]/g, ''), 10);
+      if (!by || by < 1900 || by > 2200) continue;          /* 모르면 안 센다 (1번) */
+      var age = (+today.slice(0, 4)) - by;
+      if ([7, 13, 16, 19].indexOf(age) < 0) continue;
+      if (got[age]) continue;
+      got[age] = 1;
+      S.push({ id: 'kid' + age, when: 'any', emo: '🎒', t: '자녀 ' + age + '세', ch: '전화',
+        aim: '교육자금 이야기를 <b>꺼낼 자리</b>다',
+        way: '상품을 말하지 않는다. 언제 얼마가 드는지부터 같이 센다',
+        why: '자녀가 ' + age + '세 — 돈이 바뀌는 길목입니다', sc: 520 });
+    }
+
+    /* ⚖️🕳️ 보험료 비중 — <b>둘 다 적혀 있을 때만</b>.
+       한쪽만 있으면 나누지 않습니다. 0 으로 채우면 없는 비중이 생깁니다 (1번).
+       두 값은 <b>같은 단위(월 만원)</b> 라야 합니다 (4번). */
+    var inc = parseFloat(o.finc), ins = parseFloat(o.fins);
+    if (isFinite(inc) && isFinite(ins) && inc > 0 && ins > 0) {
+      var r = ins / inc * 100;
+      if (r >= 8)
+        S.push({ id: 'hi', when: 'any', emo: '⚖️', t: '보험료 비중 ' + r.toFixed(0) + '%', ch: '전화',
+          aim: '무엇이 들어 있는지 <b>같이 본다</b>',
+          way: '줄이자고 먼저 말하지 않는다. 비중을 보여 드리고 판단은 그분이 한다',
+          why: '월 소득 ' + inc + '만원에 보험료 ' + ins + '만원입니다', sc: 480 });
+      else if (r < 3)
+        S.push({ id: 'lo', when: 'any', emo: '🕳️', t: '보험료 비중 ' + r.toFixed(0) + '%', ch: '전화',
+          aim: '비어 있는 자리를 <b>확인만</b> 한다',
+          way: '부족하다고 단정하지 않는다. 어디가 비었는지 같이 본다',
+          why: '월 소득 ' + inc + '만원에 보험료 ' + ins + '만원입니다', sc: 460 });
+    }
+
+    /* 🗺️ <b>비어 있는 통장</b> — 8통장 진단에서 「미흡」 으로 찍힌 칸.
+       ★ <b>지어내지 않습니다</b> (1번). 진단을 안 붙였으면 gaps 가 비어 있고,
+         그때는 <b>아무 말도 안 합니다</b> — 「빈 통장이 없다」 가 아니라
+         「아직 안 봤다」 이기 때문입니다.
+       ★ 문구도 점수(450)도 <b>명세서 그대로</b>입니다 — 여기서 새로 정하면
+         명세서와 두 벌이 됩니다 (5번).
+       ★ <b>when:'any'</b> 입니다. 「보험료 비중」 과 같은 갈래로, 진단을
+         고치기 전까지 <b>늘 참</b>입니다. 줄을 세우면 그분이 매일 서서
+         큐가 영영 안 줄어듭니다 — 자녀 나이에서 겪은 그대로입니다.    */
+    var gaps = ('' + (o.gaps || '')).replace(/^\s+|\s+$/g, '');
+    if (gaps)
+      S.push({ id: 'gap', when: 'any', emo: '🗺️', t: '비어 있는 통장', ch: '만남',
+        aim: '8통장 진단으로 <b>빈 통장</b>을 보여 드린다',
+        way: '없는 것부터 말하지 않는다. 있는 것을 먼저 정리해 드린다',
+        why: gaps + ' 이(가) 비어 있습니다', sc: 450 });
+
+    /* 🙌 <b>소개해 주신 분</b> — 그분께 결과를 알려 드리는 자리.
+       ★ 이름은 <b>부르는 쪽이 풀어서</b> 넘깁니다. 이 파일은 순수해야 해서
+         localStorage(실명이 있는 곳)를 못 봅니다 — 봐서도 안 됩니다 (3번).
+       ★ <b>when:'any'</b> 입니다. 소개는 <b>한 번</b> 있었던 일이라, 줄을
+         세우면 그분이 <b>영영 매일</b> 섭니다. 「왜 오늘 이분인가」 에만
+         붙이고, 실제로 할 일은 사장님이 「다음에 할 일」 로 잡으십니다.  */
+    var rf = ('' + (o.refnm || '')).replace(/^\s+|\s+$/g, '');
+    if (rf)
+      S.push({ id: 'ref', when: 'any', emo: '🙌', t: '소개해 주신 분께', ch: '전화',
+        aim: rf + '님께 <b>어떻게 됐는지</b> 알려 드린다',
+        way: '새 부탁을 오늘 붙이지 않는다',
+        why: '소개로 오신 분입니다 — 결과를 알려 드리면 다음 소개가 옵니다', sc: 490 });
+
+    S.sort(function (a, b) { return b.sc - a.sc; });
+    return S;
+  }
+
+  /* ══ 📊 <b>오늘 얼마나 움직이셨나</b> ═══════════════════════════════
+     사장님 말씀 — 「활동량(전화·만남·기록)」.
+
+     ★ <b>「했다고 누른 것」이 아니라 「기록이 남은 것」</b>을 셉니다 (1번).
+       daily_checks 의 체크는 <b>다른 물음</b>입니다 — 앉아서 단추만 눌러도
+       열한 칸이 다 차기 때문입니다. 두 수는 서로 다른 것을 재므로 둘 다
+       있는 것이 맞고, 여기서 세는 것은 <b>기록</b> 쪽입니다.
+     ★ 무엇이 통화이고 무엇이 만남인지는 <b>위 표 한 곳</b>이 압니다 —
+       30일 약속을 세는 자와 같은 자입니다 (5번).
+     ★ <b>기록</b>은 카톡·문자·메일까지 <b>전부</b> 셉니다. 「오늘 손을
+       몇 번 댔나」 라서, 통화·만남만 세면 카톡만 돌린 날이 0 이 됩니다.
+     ★ 날짜를 못 읽는 줄은 <b>안 셉니다</b> — 오늘 것인지 모르니까요.    */
+  /* <b>날 범위로 셉니다</b> — a 부터 b 까지(둘 다 포함).
+     ★ 하루치(actOf)도 <b>이 자를 부릅니다</b> (5번). 「전화인가 만남인가」 를
+       두 곳에서 각자 가르면 한쪽만 고쳐져 홈의 두 칸이 다른 수를 말합니다.
+     ★ a 가 b 보다 늦으면 <b>바꿔서</b> 셉니다 — 부르는 쪽의 실수로 0 을
+       돌려주면 「아무것도 안 하셨다」 가 되어 버립니다 (1번).            */
+  function actRange(rows, from, to) {
+    var a = ('' + (from || '')).slice(0, 10), b = ('' + (to || '')).slice(0, 10);
+    var i, r, d, t2, o = { call: 0, meet: 0, all: 0 };
+    if (!a || !b) return o;
+    if (a > b) { t2 = a; a = b; b = t2; }
+    rows = rows || [];
+    for (i = 0; i < rows.length; i++) {
+      r = rows[i];
+      if (!r || !r.at) continue;
+      d = ('' + r.at).slice(0, 10);
+      if (d < a || d > b) continue;
+      o.all++;
+      if (isCall(r.how)) o.call++;
+      else if (isMeet(r.how)) o.meet++;          /* 한 줄이 둘로 세지 않게 */
+    }
+    return o;
+  }
+  function actOf(rows, today) { return actRange(rows, today, today); }
+
   return {
     nextOf: nextOf, due: due, weightOf: weightOf, rank: rank,
-    isKeep: isKeep, keepAt: keepAt, dayGap: dayGap, promiseOf: promiseOf,
-    KEEP_HOW: KEEP_HOW
+    isKeep: isKeep, isCall: isCall, isMeet: isMeet,
+    keepAt: keepAt, dayGap: dayGap, promiseOf: promiseOf,
+    nextMmdd: nextMmdd, signalsOf: signalsOf, actOf: actOf, actRange: actRange,
+    KEEP_HOW: KEEP_HOW, CALL_HOW: CALL_HOW, MEET_HOW: MEET_HOW
   };
 });

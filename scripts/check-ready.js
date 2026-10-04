@@ -233,7 +233,14 @@ window.supabase={createClient:function(){
 
   const SECRET = 'eyJhbGciOiJIUzI1NiJ9.SECRET_DO_NOT_LEAK.sig';
   /* 흉내를 갈아 끼우고 <b>그 값이 실제로 올 때까지</b> 기다린다 (시계 금지) */
-  const setDiag = async (body, want) => {
+  /* ⚠ <b>「남음」 다음에 또 「남음」 을 기다리면 그 자리에서 통과한다.</b>
+     2026-09-28 · 실제로 여기서 <b>붐빌 때만</b> 빨간불이 켜졌습니다. 혼자
+     돌리면 세 번 다 초록인데, CI 처럼 서른 가지를 잇달아 돌리면 답이 늦게
+     와서 <b>낡은 줄</b>을 읽습니다. st 만 기다렸기 때문입니다 — 앞 줄이
+     이미 'no' 라 기다림이 <b>즉시</b> 끝나고, 새 답은 아직 안 왔습니다.
+     이제 <b>글까지</b> 기다립니다(re). 때를 못 맞춰 켜지는 빨간불은
+     헛것이고, 사람이 점검을 안 믿게 됩니다 (8번).                      */
+  const setDiag = async (body, want, re) => {
     await page.unroute('**/functions/push**').catch(() => {});
     await page.route('**/functions/push**', r =>
       r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) }));
@@ -243,8 +250,9 @@ window.supabase={createClient:function(){
        아예 못 쟀다. 한 곳이 망가지면 나머지가 눈이 먼다 — 아래 ok() 들이
        제 입으로 무엇이 틀렸는지 말하게 둔다 (8번). */
     await page.waitForFunction(
-      (w) => { const x = rdAuto().filter(r => r.k === 'sbkey')[0]; return !!(x && x.st === w); },
-      want, { timeout: 8000 }).catch(() => {});
+      (o) => { const x = rdAuto().filter(r => r.k === 'sbkey')[0];
+               return !!(x && x.st === o.w && (!o.re || new RegExp(o.re).test(x.now || ''))); },
+      { w: want, re: re || null }, { timeout: 8000 }).catch(() => {});
   };
   const rowOf = (k) => page.evaluate((kk) => {
     const x = rdAuto().filter(r => r.k === kk)[0] || null;
@@ -266,7 +274,7 @@ window.supabase={createClient:function(){
 
   await setDiag({ url: 'miakdhxtqofpndtlyzxa.supabase.co', anon: false,
                   key: { kind: 'jwt', len: 218, role: 'service_role', ref: 'someotherproj', refOk: false },
-                  live: { status: 401, msg: 'Invalid API key' } }, 'no');
+                  live: { status: 401, msg: 'Invalid API key' } }, 'no', '다른 프로젝트');
   K = await rowOf('sbkey');
   ok(!!(K && /다른 프로젝트/.test(K.now)),
      '<b>다른 프로젝트 열쇠</b>를 가려낸다 — 같은 말이 와도 고칠 법이 다르다 · ' + ((K && K.now) || '(줄이 없음)'));

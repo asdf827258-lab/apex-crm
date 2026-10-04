@@ -156,11 +156,24 @@ const SEED = (o) => `
      ★ <b>아침 미션에 뽑히는 분</b>(미접촉·TA·부재·기고객·거절)을 끝내야
        이것이 재집니다. 첫 분은 AP 라 미션에 안 뽑혀, 한 번만 누르고 재면
        무엇을 해도 0 이라 <b>알람이 안 울렸습니다</b> — 되돌려 보고 알았습니다. */
-  const mine = await A.p.evaluate(() => hmMsPeople().map(x => x.nm).join(','));
+  /* ⚠ 2026-09-24 · <b>끝낸 뒤 목록을 보면 안 됩니다.</b> 이제 끝낸 분은 ①
+     에서 <b>사라집니다</b>(사장님 말씀 「끝낸 분은 그 자리에서 사라집니다」).
+     그래서 끝내기 <b>전</b> 목록을 들고 재야 합니다 — 뒤 목록으로 재면
+     기능이 제대로 될수록 0 이 나옵니다. */
+  const before = await A.p.evaluate(() => hmMsPeople().map(x => ({ id: x.id, nm: x.nm })));
+  const mine = before.map(x => x.nm).join(',');
   await tap(A.p); await A.p.waitForTimeout(400);
-  const care = await A.p.evaluate(() => ({ c: hmMsCare(), fin: hmQdoneAll().length,
-    hit: hmQdoneAll().filter(k => hmMsPeople().some(x => k.indexOf(':' + x.id + ':') >= 0)).length }));
+  const care = await A.p.evaluate((B) => ({ c: hmMsCare(), fin: hmQdoneAll().length,
+    hit: hmQdoneAll().filter(k => B.some(x => k.indexOf(':' + x.id + ':') >= 0)).length,
+    after: hmMsPeople().map(x => x.id) }), before);
   is(care.hit > 0, '  <b>미션에 뽑힌 분</b>을 끝낸 뒤에 잰다 — ' + mine + ' 중 ' + care.hit + '분');
+  /* ★ 새 자리 — <b>끝낸 분은 ① 에서 사라진다</b> (사장님 말씀 2026-09-24).
+     안 사라지면 「다 했는데 안 줄어든다」 가 되고, 아침에 같은 분을 두 번
+     대하게 됩니다.                                                      */
+  const gone = before.filter(x => care.after.indexOf(x.id) < 0);
+  is(gone.length > 0,
+     '  <b>끝낸 분은 ① 에서 사라진다</b> — ' + (gone.map(x => x.nm).join(' ') || '(아무도 안 빠짐)') +
+     ' · 남은 ' + care.after.length + '분');
   is(care.c.done === 0,
      '  그래도 <b>「관리한 분」 으로는 안 센다</b> (1번) — ' + care.c.done + '/' + care.c.all +
      ' · 전화·카톡 기록이 따로 남아야 센다');

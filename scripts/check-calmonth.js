@@ -18,6 +18,7 @@
      [5] 📆 <b>이번 달 통째로</b> 폰 달력에 — 매일 하는 일은 안 담는다
      [6] <b>이모지가 있어도 안 터진다</b> — icsFold 가 반쪽에서 죽던 자리
      [7] 위젯을 <b>만들어 준다고 말하지 않는다</b> (1번) · 바로가기에 달력
+     [달끝] <b>달 끝 이틀에도 이 자가 도는가</b> — 씨앗이 다음 달로 새지 않게
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -51,8 +52,22 @@ const SEED = () => `
  var _e={};window.arRowOf=function(i){var m={me:'홍길동',u2:'홍길순'};
    return m[i]?{id:i,name:m[i],sc:_e,raw:_e}:null;};
  AR.rep={};AR.loaded=true;AR.busy='';AR.err='';
- AR.db=[{id:'d1',who:'me',name:'홍길동A',region:'순천',src:'일반',stage:'AP',days:3,n:2,
-         res:'상담',appt:mcalShift(mcalToday(),2)+' 14:00',cAt:'',pAt:''}];
+ /* ⚠ 약속 씨앗은 <b>이번 달 안</b>이어야 합니다. 「오늘+2일」 로 두었더니
+    2026-09-29 에 그 날이 <b>10월 1일</b>, 곧 이번 달 밖이 되어 mcalMonthEvents()
+    가 0건을 돌려주었고 아래 [5] 가 <b>달 끝 이틀에만</b> 빨개졌습니다 —
+    코드가 아니라 <b>자가 스스로 터진</b> 자리입니다.
+    지난 약속은 mcalItems 가 버리므로(지나간 약속을 오늘 자리에 세우면
+    없는 일정을 만드는 것입니다 · 1번) 앞으로도 못 옮깁니다. 그래서
+    「오늘+2일, <b>단 이 달 마지막 날에서 멈춤</b>」 입니다.
+    ★ 셈하는 자리는 <b>한 곳</b>입니다 — 아래 [달끝] 이 이 함수를 그대로
+      부릅니다. 베껴 두면 한쪽만 고쳐져 같은 폭탄이 또 터집니다 (5번). */
+ window.__eom=function(ds){var y=ds.slice(0,7);
+   return y+'-'+('0'+new Date(Date.UTC(+y.slice(0,4),+y.slice(5,7),0)).getUTCDate()).slice(-2);};
+ window.__apptDay=function(t){var d=mcalShift(t,2),e=__eom(t);return d>e?e:d;};
+ window.__dbSeed=function(t,day){return [{id:'d1',who:'me',name:'홍길동A',region:'순천',
+   src:'일반',stage:'AP',days:3,n:2,res:'상담',
+   appt:(day||__apptDay(t))+' 14:00',cAt:'',pAt:''}];};
+ AR.db=__dbSeed(mcalToday());
  AR.cliRows=[];AR.calls=[];CM.loaded=true;CM.who={me:'홍길동',u2:'홍길순'};
  OSC.loaded=true;OSC.busy=false;OSC.err='';OSC.list=[];
  window.cmLoadAll=function(cb){if(cb)cb();};
@@ -66,7 +81,14 @@ const SEED = () => `
   localStorage.setItem('apex_ck_day_'+mcalToday(),JSON.stringify({d2:1,d3:1,d4:1}));
   localStorage.setItem('apex_ck_day_'+mcalShift(mcalToday(),-1),JSON.stringify(all));
  }catch(e){}
- HWHO.id='';CM.pick='';CM.picked=true;go('mycal');`;
+ HWHO.id='';CM.pick='';CM.picked=true;
+ /* ⚠ 2026-09-25 · <b>달력은 이제 「이번 주」로 엽니다</b> (사장님 말씀
+    「매주를 기본으로 해서 이번 주에 집중하게」). 이 점검은 <b>월 보기</b>를
+    재는 자리라, 여기서 <b>월로 켜고</b> 잽니다 — 월은 그대로 볼 수 있어야
+    하고(사장님 「매월 매주 스케줄 볼 수 있게」) 그것을 여기서 지킵니다.
+    ★ <b>기본이 주인가</b> 는 아래에서 따로 못 박습니다.               */
+ try{ mcalSetView('month'); }catch(e){}
+ go('mycal');`;
 
 (async () => {
   await new Promise(r => srv.listen(PORT, r));
@@ -206,8 +228,126 @@ const SEED = () => `
   is(sc.some(u => /go=mycal/.test(u)),
      '  홈 아이콘 바로가기에 <b>달력</b>이 있다 — ' + sc.join(' · '));
 
+  /* ══════════════════════════════════════════════════════════════════
+     <b>아직 안 고르셨으면 「이번 주」로 연다</b> (2026-09-25)
+     ──────────────────────────────────────────────────────────────────
+     사장님 말씀 — 「달력은 유지해 <b>매월 매주</b> 스케줄 볼 수 있게
+     <b>매주를 기본</b>으로 해서 <b>이번 주에 집중</b>하게 하고」.
+     ★ 「week 가 아니면 month」 로 두면 <b>사장님이 고르신 월</b>과
+       <b>아직 안 고르신 것</b>을 구별할 수 없습니다 — 서랍의 「간편」(ezOn)
+       에서 똑같은 자리를 이미 겪었습니다.                              */
+  console.log('\n[' + '주' + '] <b>아직 안 고르셨으면 「이번 주」로 연다</b>');
+  const V = await p.evaluate(() => {
+    const out = {};
+    try { localStorage.removeItem('apex_mcal_view'); } catch (e) {}
+    out.first = mcalViewSaved();                       /* 안 고르셨을 때 */
+    try { localStorage.setItem('apex_mcal_view', 'month'); } catch (e) {}
+    out.chose = mcalViewSaved();                       /* 「월」 을 고르셨을 때 */
+    try { localStorage.setItem('apex_mcal_view', 'week'); } catch (e) {}
+    out.chose2 = mcalViewSaved();
+    try { localStorage.removeItem('apex_mcal_view'); } catch (e) {}
+    return out;
+  });
+  is(V.first === 'week', '  처음 여시면 <b>이번 주</b>다 — ' + V.first);
+  is(V.chose === 'month' && V.chose2 === 'week',
+     '  <b>한 번 고르시면 그것이 이긴다</b> — 월 고름 ' + V.chose + ' · 주 고름 ' + V.chose2);
+
+  /* ══════════════════════════════════════════════════════════════════
+     <b>달을 넘는 주에도 미리 세워져 있나</b> (2026-09-25)
+     ──────────────────────────────────────────────────────────────────
+     사장님 말씀 — 「캘린더에 오늘뿐만 아니라 <b>미리 스케줄을 다 세워
+     놓아</b> 실시간으로 반영되게」.
+     ⚠ 여기서 실제로 났던 일 — 매일 하는 일이 「보고 있는 <b>달</b>」 만
+       채웠습니다. 달력이 「이번 주」 로 열리게 되면서 <b>9/28~10/4</b> 처럼
+       달을 넘는 주에서는 10/1~10/4 가 <b>빈 칸</b>이 됐습니다.
+       화면에 서는 날을 mcalShownDays() 한 곳에서 답하도록 고쳤습니다.
+     ⚠ 그리고 <b>고치다 한 번 더 틀렸습니다</b> (2026-09-25 · check-mrt 가
+       잡았습니다). 「이 달」 을 「보고 있는 날」 로 <b>바꿔</b> 버려서, 주를
+       보는 중에는 달의 나머지 스무사흘이 안 섰습니다. 답은 <b>둘 다</b>
+       입니다 — 이 달 전부 <b>더하기</b> 보고 있는 주. 그래서 여기서도
+       「이레인가」 가 아니라 <b>「이 주의 이레가 다 들어 있나」</b> 를 봅니다.
+       화면 모양이 자료를 바꾸면 안 됩니다.                              */
+  console.log('\n[주] <b>달을 넘는 주에도 미리 세워져 있나</b>');
+  const W = await p.evaluate(() => {
+    const t = mcalToday();
+    /* 이 달 말을 품는 주로 옮깁니다 — 어느 달이든 통하게 오늘에서 셉니다 */
+    const ym = t.slice(0, 7);
+    const last = new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 0)).getUTCDate();
+    const eom = ym + '-' + ('0' + last).slice(-2);
+    mcalSetView('week');
+    MCAL.wk = mcalWkStart(eom);
+    const days = mcalShownDays();
+    const it = mcalItems();
+    const nxt = days.filter(d => d.slice(0, 7) !== ym);
+    /* 이 주의 이레가 <b>다 들어 있나</b> — 달을 넘어간 며칠까지 */
+    const wk7 = [0, 1, 2, 3, 4, 5, 6].map(i => mcalShift(MCAL.wk, i));
+    const miss = wk7.filter(d => days.indexOf(d) < 0);
+    /* 달의 날도 <b>그대로 있나</b> — 주만 남기면 달로 바꿨을 때 빕니다 */
+    const mo = [];
+    for (let i = 1; i <= last; i++) mo.push(ym + '-' + ('0' + i).slice(-2));
+    const missMo = mo.filter(d => days.indexOf(d) < 0);
+    return { days, nxt, empty: nxt.filter(d => !(it[d] || []).length),
+             wk: MCAL.wk, n: days.length, miss, missMo, mo: mo.length };
+  });
+  is(W.miss.length === 0, '  <b>보고 있는 주의 이레</b>가 다 들어 있다 (' + W.wk + '부터)' +
+     (W.miss.length ? ' ← 빠진 날 ' + W.miss.join(' ') : ''));
+  is(W.missMo.length === 0, '  <b>이 달 ' + W.mo + '일</b> 도 그대로 있다 — 주를 보는 중이라고 달이 비면 안 된다' +
+     (W.missMo.length ? ' ← 빠진 날 ' + W.missMo.slice(0, 5).join(' ') : ''));
+  is(W.nxt.length > 0,
+     '  이 주가 <b>달을 넘는다</b> — 다음 달 ' + W.nxt.length + '일 (' + (W.nxt[0] || '') + '…)');
+  is(W.empty.length === 0,
+     '  달을 넘어도 <b>빈 날이 없다</b>' +
+     (W.empty.length ? (' ← 빈 날 ' + W.empty.join(' ')) : '') +
+     ' — 「매일 하는 일」 이 사라진 것처럼 보이면 안 됩니다');
+
+  /* ══════════════════════════════════════════════════════════════════
+     <b>달 끝 이틀에도 이 자가 도는가</b> (2026-09-29)
+     ──────────────────────────────────────────────────────────────────
+     2026-09-29 에 위 [5] 가 <b>0건</b>으로 빨개졌습니다. 코드는 멀쩡했고
+     <b>자가 스스로 터진</b> 것입니다 — 씨앗의 약속을 「오늘+2일」 에 두었는데
+     그 날이 10월 1일, 곧 <b>이번 달 밖</b>이었습니다. 달 끝 이틀에만
+     터지니 스물여드레 동안은 초록이었습니다.
+     ★ <b>자를 무르게 하지 않았습니다.</b> 「0건이어도 넘어가기」 로 바꾸면
+       ICS 가 <b>정말 비어 나가는 날</b>을 아무도 못 보게 됩니다. 고친 것은
+       씨앗입니다.
+     ★ 그리고 <b>다음 달에 또 터지지 않게</b> 여기서 달의 마지막 날과 그
+       전날을 <b>흉내 내어</b> 돌려 봅니다. 끝으로 <b>옛 규칙을 그 자리에서
+       되살려</b> 정말 0건이 되는지 — 이 자가 아직 울 수 있는지 — 스스로
+       증명합니다 (8번). 안 울리는 알람은 알람이 아닙니다.              */
+  console.log('\n[달끝] <b>달 끝 이틀에도 이 자가 도는가</b> — 씨앗이 다음 달로 새면 안 된다');
+  const G = await p.evaluate(() => {
+    const T0 = mcalToday(), db0 = AR.db, save = window.mcalToday;
+    const out = { eom: __eom(T0), day: __apptDay(T0), n: {}, old: {} };
+    out.inMonth = out.day.slice(0, 7) === T0.slice(0, 7);
+    out.notPast = out.day >= T0;
+    /* ⚠ <b>원래 것을 들고 있다 돌려놓습니다</b> — 위 [2] 에서 hwhoPick 으로
+       한 번 데인 자리입니다 (CLAUDE.md 5번). */
+    try {
+      [1, 0].forEach(function (back) {
+        const fake = mcalShift(out.eom, -back);
+        window.mcalToday = function () { return fake; };
+        AR.db = __dbSeed(fake);
+        out.n[fake] = mcalMonthEvents().length;
+        /* 옛 규칙(오늘+2일)을 <b>그 자리에서</b> 되살린다 — 아직 우는가 (8번) */
+        AR.db = __dbSeed(fake, mcalShift(fake, 2));
+        out.old[fake] = mcalMonthEvents().length;
+      });
+    } finally { window.mcalToday = save; AR.db = db0; }
+    return out;
+  });
+  const gd = Object.keys(G.n);
+  is(G.inMonth && G.notPast,
+     '  오늘 쓰는 씨앗이 <b>이번 달 안이고 오늘 이후</b>다 — ' + G.day + ' (달 끝 ' + G.eom + ')');
+  /* ⚠ 빈 배열에 every 를 걸면 <b>묻지도 않고 참</b>이 됩니다 — 개수부터 못박습니다 */
+  is(gd.length === 2 && gd.every(d => G.n[d] > 0),
+     '  <b>달의 마지막 날·그 전날</b>을 흉내 내도 일정이 담긴다 — ' +
+     gd.map(d => d + ' ' + G.n[d] + '건').join(' · '));
+  is(gd.length === 2 && gd.every(d => G.old[d] === 0),
+     '  옛 규칙을 되살리면 <b>그 자리에서 0건</b>이 된다 — 이 자는 아직 운다 (8번) — ' +
+     gd.map(d => d + ' ' + G.old[d] + '건').join(' · '));
+
   console.log('\n──────────────────────────────');
-  console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 한 달치가 달력에 보이고, 폰 달력으로 통째로 나갑니다.');
+  console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 한 달치가 달력에 보이고, 이번 주로 열리고, 폰 달력으로 통째로 나갑니다.');
   await b.close(); srv.close();
   process.exit(bad ? 1 : 0);
 })();

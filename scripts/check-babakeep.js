@@ -325,6 +325,27 @@ const AFTER = [
      '  담보도 각자 제 것을 들고 있다');
   is(dup.uniq === dup.ids.length && dup.ids.length === 2,
      '  목록에서도 <b>id 로</b> 갈린다 — ' + dup.ids.length + '건 · 서로 다른 id ' + dup.uniq + '개');
+  /* ★★ 2026-09-27 — <b>위 줄은 1/1000 확률로만 울리는 자였습니다.</b>
+     예전 id 식(Date.now() + 난수 0~999)은 한 밀리초 안에 둘을 만들 때만
+     겹치므로, 로컬에서는 늘 초록이고 CI 에서 <b>가끔</b> 빨개졌습니다.
+     가끔 나는 고장은 흔들림이 아니라 <b>아직 안 걸린 고장</b>입니다 —
+     같은 id 면 뒤 계약이 앞 계약을 덮어 <b>있는 보험이 없어집니다.</b>
+
+     그래서 <b>반드시 울리게</b> 만듭니다. 한 번에 <b>이백 개</b>를 만들어
+     id 가 다 다른지 봅니다. 난수 칸이 천 개뿐이니 이백 개를 뽑으면
+     예전 식은 <b>거의 반드시</b> 겹칩니다(생일 문제). 고친 식은 세는 수를
+     함께 붙이므로 <b>절대</b> 안 겹칩니다 (8번).                          */
+  const MANY = await page.evaluate(() => {
+    const keep = BABA.plans;
+    BABA.plans = [];
+    const ids = [];
+    for (let i = 0; i < 200; i++) ids.push(babaPlanId());
+    BABA.plans = keep;
+    return { n: ids.length, uniq: new Set(ids).size };
+  });
+  is(MANY.uniq === MANY.n,
+     '  ★★ 한 번에 <b>' + MANY.n + '개</b>를 만들어도 id 가 다 다르다 — 다른 id ' + MANY.uniq + '개' +
+     (MANY.uniq === MANY.n ? '' : ('\n      ✗ ' + (MANY.n - MANY.uniq) + '개가 겹쳤습니다 — 그만큼의 계약이 서로를 덮습니다')));
   is(dup.sameco.length === 2,
      '  같은 회사 상품 두 건도 갈린다 — ' + dup.sameco.join(' / '));
   is(dup.many === 20, '  스무 건이 스무 건으로 선다 — ' + dup.many + '건');

@@ -165,18 +165,28 @@ const SEED = `
   is(C.due === 0 && C.ok, '  「오늘 챙길 분이 없습니다」 라고 말한다');
   is(C.quota === 0 && C.month, '  이번 달 몫도 <b>다 채웠다</b>고 말한다');
 
-  console.log('\n[4] 이번 달 달력이 고객 365일 맨 위에 선다 — 그리고 한 벌이다');
+  /* ⚠ 2026-09-26 · <b>차례가 바뀌었습니다.</b> 여태 이 자는 「미션 → 달력 →
+     목록」 을 재고 있었습니다. 그런데 설계사처럼 몰아 보니 「고객」 을 눌러도
+     <b>찾기 칸이 2,046px · 목록이 2,106px</b> 아래라 두 판 넘게 내려야 사람이
+     나왔습니다. 「고객」 을 누르는 까닭은 사람을 찾으려는 것입니다.
+     그래서 <b>목록을 맨 위로</b> 올렸고(목업도 그렇습니다), 미션·달력은
+     <b>지우지 않고</b> 그 아래로 내렸습니다.
+     ★ 자를 <b>지우지 않습니다</b> — 재는 것을 새 차례로 옮길 뿐입니다.
+       칸이 하나라도 없어지면 여기서 그대로 빨간불입니다 (8번).
+     ★ 「첫 화면 안인가」 는 check-cliorder 가 픽셀로 잽니다.               */
+  console.log('\n[4] 미션·달력은 <b>목록 아래</b>에 그대로 선다 — 그리고 한 벌이다');
   const D = await page.evaluate(new Function(SEED + `
     const html = renderClientsPage();
     return { top: html.indexOf('cli365Top') >= 0,
              cal: (html.match(/mcal-hd/g) || []).length,
              mission: html.indexOf('오늘의 미션') >= 0,
              order: html.indexOf('오늘의 미션') < html.indexOf('이번 달 고객 관리'),
-             beforeList: html.indexOf('cli365Top') < html.indexOf('oscList'),
+             afterList: html.indexOf('oscList') < html.indexOf('cli365Top'),
              phone: html.indexOf('폰 기본 달력에 넣기') >= 0 };
   `));
   is(D.top && D.cal === 1, '  달력이 <b>한 벌</b> 선다');
-  is(D.mission && D.order && D.beforeList, '  미션 → 달력 → 목록 차례로, <b>목록보다 위</b>에');
+  is(D.mission && D.order && D.afterList,
+     '  <b>목록</b> → 미션 → 달력 차례다 — 사람이 먼저, 미션·달력은 그 아래에 그대로');
   is(!D.phone, '  폰 내보내기 칸은 <b>여기 또 안 붙인다</b> — 설정 → 내 캘린더 자리다');
 
   console.log('\n[5] 날짜를 누르면 실제로 바뀐다');

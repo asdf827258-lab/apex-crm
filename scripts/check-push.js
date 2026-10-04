@@ -72,10 +72,18 @@ const SEED=`
      [2] 는 300ms 만 기다려 살아남고 [3] 은 800ms 라 죽었습니다. */
   window.arLoad=function(){};
   AR.loaded=true; AR.busy=false; AR.cliRows=[];
+  /* ★ 2026-10-03 · <b>업적 금액 셋을 견본에 넣습니다.</b> 17시 예상업적이
+     「못 세는 슬롯」 에서 <b>세는 슬롯</b>으로 바뀌었습니다(X05). 금액이
+     없는 견본으로 재면 <b>안 울리는 것이 정답</b>이 되어, 「하나가 울려도
+     나머지는 울린다」 를 이것으로 댈 수 없습니다 (8번).
+     단위는 <b>원</b>입니다 (4번) — expect 90만원 · contract 350만원.      */
   AR.db=[
-   {id:'d2',who:'me',name:'홍길순',region:'광주',src:'일반',stage:'PC',appt:'',days:10,n:3,cAt:'',pAt:''},
-   {id:'d3',who:'me',name:'홍말순',region:'광주',src:'일반',stage:'부재',appt:'',days:9,n:1,cAt:'',pAt:''},
-   {id:'d5',who:'me',name:'홍을돌',region:'광주',src:'일반',stage:'미접촉',appt:'',days:5,n:0,cAt:'',pAt:''}];
+   {id:'d2',who:'me',name:'홍길순',region:'광주',src:'일반',stage:'PC',appt:'',days:10,n:3,cAt:'',pAt:'',
+    expect:900000,contract:0,closed:''},
+   {id:'d3',who:'me',name:'홍말순',region:'광주',src:'일반',stage:'부재',appt:'',days:9,n:1,cAt:'',pAt:'',
+    expect:400000,contract:0,closed:''},
+   {id:'d5',who:'me',name:'홍을돌',region:'광주',src:'일반',stage:'미접촉',appt:'',days:5,n:0,cAt:'',pAt:'',
+    expect:0,contract:0,closed:''}];
   try{ localStorage.removeItem('apex_alm_day'); localStorage.removeItem('apex_alm_hour'); }catch(e){}
   window.toast=function(){};`;
 
@@ -154,6 +162,7 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     /* 재기 <b>직전에</b> 견본이 살아 있는지 같이 적어 둔다 — 나중에 또 지워지면
        「안 울린다」가 아니라 <b>「견본이 날아갔다」</b>고 말해 준다 */
     out.seed=(AR.db||[]).length;
+    const dbKeep=(AR.db||[]).slice();   /* 중간에 비웠다가 되돌립니다 */
     /* ── <b>시계를 손에 쥐고</b> 잰다 ─────────────────────────────────
        여태는 「지금 시각 + 1」 을 <b>아직 안 된 시각</b>으로 썼다. 그런데
        밤 11시에 돌리면 +1 이 24 라 23 으로 깎여 <b>지금</b>이 되고,
@@ -168,24 +177,90 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
       Date.now=function(){return fixed;};
     })();
     out.fixedKst=new Date(Date.now()+9*3600000).getUTCHours();
-    /* 아직 안 된 시각 — 고정한 시각보다 뒤 */
-    localStorage.setItem('apex_alm_hour','11');
-    localStorage.removeItem('apex_alm_day');
+    /* ⚠ 2026-09-25 · <b>지렛대가 바뀌었습니다.</b> 알람이 네 번이 되면서
+       울릴지 말지를 정하는 것은 apex_alm_hour 가 아니라 <b>슬롯마다의
+       시각</b>입니다. 옛 지렛대로 재면 「정한 시각 전에는 안 울린다」 가
+       늘 빨개집니다 — 자가 낡은 것이지 앱이 깨진 것이 아닙니다.
+       그래서 여기서도 <b>슬롯을 쥐고</b> 잽니다.
+       ★ 슬롯 이름을 손으로 안 적습니다 — ALM_SLOTS 에서 받습니다 (5번). */
+    const only=(k,h)=>{                      /* 그 하나만 켜고 시각을 정한다 */
+      const o={};
+      ALM_SLOTS.forEach(s=>{ o[s.k]={on:s.k===k,h:(s.k===k?h:s.h)}; });
+      localStorage.setItem('apex_alm_slots_v1',JSON.stringify(o));
+      ALM_SLOTS.forEach(s=>localStorage.removeItem('apex_alm_day_'+s.k));
+      localStorage.removeItem('apex_alm_day');
+    };
+    out.slots=ALM_SLOTS.map(s=>s.k).join(',');
+    out.slotN=ALM_SLOTS.length;
+    /* 아직 안 된 시각 — 고정한 시각(10시)보다 뒤 */
+    only('call',11);
     window.__rang.length=0; almTick(); out.early=window.__rang.length;
     /* 이미 지난 시각 */
-    localStorage.setItem('apex_alm_hour','9');
+    only('call',9);
     window.__rang.length=0; window.__net.length=0;
     almTick(); out.first=window.__rang.length; out.net=window.__net.length;
-    out.stamp=localStorage.getItem('apex_alm_day')||'';
+    out.stamp=localStorage.getItem('apex_alm_day_call')||'';
     out.today=arToday();
     /* 같은 날 또 부르면 */
     window.__rang.length=0; almTick(); out.again=window.__rang.length;
+    /* ── 네 번이 <b>서로 안 막는가</b> — 하나가 울려도 나머지는 제 시각에 ──
+       한 칸에 「오늘 울렸다」 를 적으면 아침에 한 번 울린 뒤 낮·저녁이
+       통째로 막힙니다. 실제로 그렇게 짰다가 여기서 잡았습니다. */
+    only('call',9);
+    window.__rang.length=0; almTick();                /* call 이 울린다 */
+    const o2=JSON.parse(localStorage.getItem('apex_alm_slots_v1'));
+    /* ⚠ 둘째로 <b>예상업적</b>을 씁니다. 처음엔 「내일 약속」 으로 쟀는데
+       견본에 내일 약속이 없어 <b>안 울리는 것이 정답</b>이었고, 그러면
+       이 자를 못 댑니다 — 자가 빨개도 앱은 맞은 것입니다.
+       ★ 2026-10-03 · 예상업적은 이제 <b>세는 슬롯</b>입니다(X05). 그래서
+         견본에 <b>금액</b>이 있어야 울립니다 — 위 SEED 에 넣어 두었습니다.
+         여기서 재려는 것은 「하나가 울려도 다른 것이 막히지 않나」
+         하나뿐입니다 (8번).                                           */
+    o2.perf={on:true,h:9};
+    localStorage.setItem('apex_alm_slots_v1',JSON.stringify(o2));
+    window.__rang.length=0; almTick(); out.second=window.__rang.length;
     /* 오늘 챙길 분이 없으면 <b>표시를 안 남긴다</b> — 내일 또 걸러진다 */
-    localStorage.removeItem('apex_alm_day');
+    only('call',9);
     AR.db=[]; AR.cliRows=[];
     window.__rang.length=0; almTick();
-    out.emptyRang=window.__rang.length; out.emptyStamp=localStorage.getItem('apex_alm_day')||'';
-    /* 잘못 적은 값 */
+    out.emptyRang=window.__rang.length; out.emptyStamp=localStorage.getItem('apex_alm_day_call')||'';
+    /* ── 예상업적 — <b>금액이 있으면 숫자가 들고, 못 읽으면 한 자도 없다</b> ──
+       ★ 2026-10-03 (X05). 여태 이 자리는 「못 세는 슬롯이라 숫자 없이
+         울린다」 를 쟀습니다. 그 전제가 거짓이 되었습니다 — 묻는 것을
+         <b>둘로 갈라</b> 둡니다. 1번(모름≠0)의 보호는 아래쪽이 그대로
+         지킵니다.
+       ⚠ 바로 위에서 AR.db 를 비웠으니 <b>되돌려 놓고</b> 잽니다.        */
+    AR.db=dbKeep.slice();
+    only('perf',9);
+    window.__rang.length=0; almTick();
+    out.perfRang=window.__rang.length;
+    /* ⚠ <b>__rang 은 본문을 b 에 담습니다</b>(t·b·via). 처음엔 .body 를
+       읽어 빈 값이 나왔고, 그래서 「숫자가 없다」 가 <b>거저 통과</b>했습니다 —
+       빈 글에는 숫자가 없으니까요. 안 울리는 알람이었습니다 (8번). */
+    out.perfBody=(window.__rang[0]||{}).b||'';
+    out.perfTitle=(window.__rang[0]||{}).t||'';
+    out.perfN=(typeof almLineFor==='function')?(almLineFor('perf')||{}).n:'?';
+    /* <b>못 읽었을 때</b> — 금액을 한 자도 안 적고 알려만 준다 (1번)
+       ⚠ 처음에 AR.db=[] 로 쟀다가 <b>안 울려서</b> 빨개졌습니다. 그런데
+         자가 맞았고 <b>제 견본이 틀렸습니다</b> — 빈 목록은 「읽었는데 한
+         건도 없다」 이고, 그때는 금액이 다 0 이라 <b>안 울리는 것이
+         정답</b>입니다. 「<b>못 읽었다</b>」 는 AR.noPex 입니다 — 업적 칸이
+         아직 없는 서버에서 홈이 세우는 그 깃발입니다.                   */
+    AR.noPex=true;
+    only('perf',9);
+    window.__rang.length=0; almTick();
+    out.perfBlindRang=window.__rang.length;
+    out.perfBlindBody=(window.__rang[0]||{}).b||'';
+    const bl=(typeof almLineFor==='function')?almLineFor('perf'):null;
+    out.perfBlindN=bl?bl.n:'?';
+    AR.db=dbKeep.slice();
+    /* 잘못 적은 값 — 슬롯 시각도 기본값으로 돌아가야 한다 */
+    [-3,99,NaN].forEach((v,i)=>{
+      const o={}; o.call={on:true,h:v};
+      localStorage.setItem('apex_alm_slots_v1',JSON.stringify(o));
+      out['sh'+i]=almSlotHour('call');
+    });
+    localStorage.removeItem('apex_alm_slots_v1'); out.sdef=almSlotHour('call');
     ['','abc','-3','99'].forEach((v,i)=>{localStorage.setItem('apex_alm_hour',v);out['h'+i]=almHour();});
     localStorage.removeItem('apex_alm_hour'); out.def=almHour();
     Date.now=realNow;                      /* 시계를 돌려 놓는다 */
@@ -201,6 +276,23 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   is(T.again===0, '같은 날 <b>또 안 울린다</b> — 홈을 열 때마다 울리면 끄십니다');
   is(T.emptyRang===0&&T.emptyStamp==='',
      '안 울렸으면 <b>날짜 표시도 안 남긴다</b> — 남기면 오후에 생긴 일이 내일까지 안 울린다');
+  is(T.slotN===4, '알람이 <b>네 번</b>이다 — '+T.slots+' (표는 app/alm-slots.js 한 곳)');
+  is(T.second===1,
+     '하나가 울려도 <b>나머지는 제 시각에 울린다</b> — '+T.second+'번 ← 「오늘 울렸다」 를 한 칸에 적으면 낮·저녁이 통째로 막힙니다');
+  /* ★★ 2026-10-03 · X05 — 예상업적이 <b>세는 슬롯</b>이 되었습니다.
+     여태 이 두 줄은 「못 세는 슬롯이라 숫자 없이 울린다」 를 쟀는데, 그
+     전제가 거짓이 되었습니다. <b>지우지 않고 둘로 갈랐습니다</b> —
+     위는 새 사실(숫자가 든다), 아래는 옛 보호(모름을 0 이라 하지 않는다). */
+  is(T.perfRang===1&&/만원|억/.test(T.perfBody),
+     '예상업적에 <b>금액이 든다</b> (X05) — 「'+T.perfTitle+' / '+T.perfBody.replace(/\n/g,' · ').slice(0,56)+'」');
+  is(T.perfBody.indexOf('진행중 예상')>=0&&T.perfBody.indexOf('지난달')>=0,
+     '★ <b>세 수</b>를 다 적는다 — 진행중 예상 · 이번 달 · 지난달 (사장님 말씀 그대로)');
+  is(!/홍길순|홍말순|홍을돌|홍길동/.test(T.perfTitle+' '+T.perfBody),
+     '★ 그 글에도 <b>이름이 한 글자도 없다</b> — 잠금화면은 남이 봅니다 (3번)');
+  is(T.perfBlindRang===1&&T.perfBlindN===null&&!/[\d,]+\s*(원|만원|억)/.test(T.perfBlindBody),
+     '★★ <b>금액을 못 읽었으면</b> 숫자를 한 자도 안 적고 알려만 준다 (1번) — 「'+T.perfBlindBody.slice(0,30)+'」');
+  is(T.sh0===9&&T.sh1===9&&T.sh2===9&&T.sdef===9,
+     '슬롯도 잘못 적은 시각은 <b>표의 기본값</b>으로 — 0시로 읽으면 새벽에 울린다 (1번)');
   is(T.h0===8&&T.h1===8&&T.h2===8&&T.h3===8&&T.def===8,
      '잘못 적은 시각은 <b>기본값 8시</b> — 0시로 읽으면 새벽에 울린다 (1번)');
 
@@ -250,6 +342,208 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   is(!/VAPID_(PRIVATE|PUBLIC|SUBJECT)\s*[:=]\s*['"][^'"]{12,}/.test(SRC),
      '앱 안에 <b>열쇠 값이 안 적혀 있다</b> — 이름만 적어 어디 넣으실지 알려 드린다 (10번)');
 
+  /* ══ [4-1] <b>서버가 아는 것만 「됩니다」 라고 적는다</b> ═══════════════
+     ⚠ 2026-09-25 에 실제로 난 일입니다. 사장님이 폰에서 알람을 켜셨는데
+     서버의 push_subs 는 <b>0줄</b>이었습니다. 그런데 카드는
+     「② 앱이 닫혀 있을 때 — <b>됩니다</b>」 라고 적고 있었습니다 —
+     almPhoneOn() 이 <b>이 브라우저의 구독만</b> 보았기 때문입니다.
+     <b>브라우저가 켜진 것과 서버가 아는 것은 다른 일입니다</b> (1번).
+     그래서 카드가 무엇을 근거로 적는지를 여기서 잽니다.
+     ★ 카드는 상태만 보고 글을 짓는 함수라, <b>상태를 손으로 놓고</b>
+       almCardHtml() 을 불러 봅니다 — 서버를 안 불러도 잴 수 있습니다.   */
+  console.log('\n[4-1] 서버에 <b>안 담겼으면 안 담겼다고</b> 적는다 (1번)');
+  const D = await page.evaluate(() => {
+    const out = {};
+    const set = (devs, sub) => { ALM.devs = devs; ALM.devAt = Date.now(); ALM.devErr = '';
+                                 ALM.sub = sub; ALM.key = 'x'; ALM.keyErr = ''; };
+    const EP = 'https://example.test/ep-here';
+    /* ⓐ 이 브라우저는 켜졌는데 <b>서버는 0줄</b> — 여기가 거짓말하던 자리 */
+    set([], { endpoint: EP });
+    out.a = almCardHtml();
+    /* ⓑ 아직 안 물어봤다 — 「없습니다」 가 아니라 <b>모른다</b> */
+    ALM.devs = null; out.b = almCardHtml();
+    /* ⓒ 서버에 두 대 — 폰 하나, 컴퓨터 하나. 이 기기는 그중 하나 */
+    set([{ endpoint: EP, ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Safari/605.1', hours: [9, 13, 17, 21] },
+         { endpoint: 'https://example.test/ep-pc', ua: 'Mozilla/5.0 (Windows NT 10.0) Chrome/128 Safari/537', hour: 9 }],
+        { endpoint: EP });
+    out.c = almCardHtml();
+    /* ⓓ 서버에는 있는데 <b>이 기기가 아닌</b> 것만 — 「이 기기는 여기 없습니다」 */
+    set([{ endpoint: 'https://example.test/ep-pc', ua: 'Mozilla/5.0 (Windows NT 10.0) Chrome/128', hour: 9 }],
+        { endpoint: EP });
+    out.d = almCardHtml();
+    out.name = [almDevName('Mozilla/5.0 (iPhone) Safari/605.1'),
+                almDevName('Mozilla/5.0 (Windows NT 10.0) Chrome/128'),
+                almDevName('아무 말이나')].join(' | ');
+    return out;
+  });
+  const plain = (s) => (s || '').replace(/<[^>]*>/g, '');
+  is(!/앱이 닫혀 있을 때[^①②]*?됩니다 —/.test(plain(D.a)),
+     '  서버가 <b>0줄</b>이면 ②를 「됩니다」 라고 <b>안 적는다</b>');
+  is(/아직 한 대도 없습니다/.test(plain(D.a)),
+     '  <b>한 대도 없다고</b> 적는다 — 0 을 「됐다」 로 읽히게 두지 않는다');
+  is(/확인하는 중/.test(plain(D.b)) && !/아직 한 대도 없습니다/.test(plain(D.b)),
+     '  아직 안 물어봤으면 <b>「확인하는 중」</b> — 「없습니다」 가 아니다 (1번)');
+  is(/아이폰/.test(plain(D.c)) && /윈도우 컴퓨터/.test(plain(D.c)),
+     '  서버에 담긴 기기를 <b>그대로</b> 적는다 — 폰과 컴퓨터를 가려서');
+  is(/이 기기/.test(plain(D.c)) && /9시 · 13시 · 17시 · 21시/.test(plain(D.c)),
+     '  <b>어느 것이 이 기기</b>인지와 <b>몇 시에</b> 가는지를 적는다');
+  is(/지금 보고 계신 기기는 여기 없습니다/.test(plain(D.d)),
+     '  서버에 있어도 <b>이 기기가 아니면</b> 그렇다고 적는다');
+  is(/컴퓨터/.test(plain(D.c)) && /기기마다 한 번씩/.test(plain(D.c)),
+     '  <b>폰만이 아니라 컴퓨터도</b> 된다고, 기기마다 켜야 한다고 적는다');
+  is(D.name === '아이폰 · 사파리 | 윈도우 컴퓨터 · 크롬 | 모르는 기기',
+     '  못 알아보는 기기는 <b>「모르는 기기」</b> — 지어내지 않는다 (1번) · ' + D.name);
+
+  /* ══ [4-2] <b>출발 점검도 같은 대답을 한다</b> (5번) ══════════
+     카드를 #466 에서 고쳐 놓고도, 출발 점검(rdAuto)의 알람 줄은
+     Notification.permission 하나만 보고 <b>「켜짐」</b> 이라고 적고
+     있었습니다. <b>같은 물음에 두 곳이 다르게 대답하던 자리</b>입니다 (5번).
+     ★ 단추 이름도 <b>카드에서 긁어다</b> 비교합니다 — 여기에 또 적어
+       두면 단추 이름을 바꾸는 날 <b>없는 단추를 가리키게</b> 됩니다.  */
+  console.log('\n[4-2] 출발 점검의 알람 줄 — <b>허락</b>과 <b>담김</b> 을 가려서 적는다');
+  const HR = await page.evaluate(() => {
+    const row = () => { const L = rdAuto(); for (let i=0;i<L.length;i++) if (L[i].k==='alarm') return L[i]; return null; };
+    /* 단추 이름은 카드가 지은 그 글자를 그대로 들고 온다 — 여기 또 적지 않는다 (5번) */
+    const btn = () => { const m = /<button class="btn btn-primary"[^>]*onclick="almAsk\(\)"[^>]*>([^<]*)<\/button>/
+                          .exec(almCardHtml() || ''); return m ? m[1] : ''; };
+    const keep = window.almCan, out = {};
+    const EP = 'https://example.test/ep-here';
+    const can = (p) => ({ sw:true, notif:true, push:true, ios:false, stand:false, perm:p });
+    ALM.devAt = Date.now(); ALM.devErr = ''; ALM.key = 'x'; ALM.keyErr = ''; ALM.busy = '';
+
+    /* ⓐ 아직 허락도 안 하셨다 */
+    window.almCan = () => can('default'); ALM.sub = null; ALM.devs = [];
+    out.off = row();  out.offBtn = btn();
+    /* ⓑ 허락도 받았고 이 브라우저는 구독했는데 <b>서버는 0줄</b> — 사장님 폰이 이 자리였다 */
+    window.almCan = () => can('granted'); ALM.sub = { endpoint: EP }; ALM.devs = [];
+    out.zero = row(); out.zeroBtn = btn();
+    /* ⓒ 아직 서버에 안 물어봤다 */
+    ALM.devs = null;
+    out.unk = row();  out.unkBtn = btn();
+    /* ⓓ 서버가 이 기기를 안다 — 다 된 자리 */
+    ALM.devs = [{ endpoint: EP, ua: 'x', hours: [9] }];
+    out.on = row();   out.onBtn = btn();
+    /* ⓔ 차단해 두셨다 */
+    window.almCan = () => can('denied'); ALM.devs = [];
+    out.no = row();
+    window.almCan = keep;
+    return out;
+  });
+  is(HR.zero && HR.zero.st !== 'ok',
+     '  허락만 받고 <b>서버에 안 담겼으면</b> 「켜짐」 이라고 안 적는다 (1번)');
+  /* ★ 안 물어봤으면 「켜짐」 도 「남음」 도 아니다 — <b>줄을 안 세운다</b>.
+     모르는 것을 「남았다」 고 적으면 홈의 「안 된 것 n」 이 헛수를 셎니다 (1번).
+     check-ready 의 「전부 채우면 0개」 가 이것을 잡아 주었습니다 (8번). */
+  is(HR.unk === null,
+     '  안 물어봤으면 <b>줄을 안 세운다</b> — 모르는 것을 「남았다」 고 안 적는다 (1번)');
+  is(HR.on && HR.on.st === 'ok', '  서버에 <b>담겼으면</b> 담겼다고 적는다');
+  is(HR.no && HR.no.st === 'no', '  차단해 두셨으면 <b>빨간불</b>');
+  /* ★ 여기가 사장님 폰이 막혀 있던 자리다 — 허락을 받은 기기에는 단추가
+     아예 안 서서 <b>다시 담을 길이 없었다</b>. */
+  is(!!HR.zeroBtn,
+     '  <b>허락받은 기기에도 담을 단추가 선다</b> — 안 서면 다시 담을 길이 없다 · ' + (HR.zeroBtn || '없음'));
+  is(!!HR.zeroBtn && !!HR.zero && (HR.zero.how || '').indexOf(HR.zeroBtn) >= 0,
+     '  출발 점검이 <b>그 단추 이름 그대로</b> 가리킨다 · ' + (HR.zeroBtn || '—'));
+  is(!!HR.offBtn && !!HR.off && (HR.off.how || '').indexOf(HR.offBtn) >= 0,
+     '  아직 안 켠 기기에도 <b>맞는 단추 이름</b>을 가리킨다 · ' + (HR.offBtn || '—'));
+  is(HR.onBtn === '' && HR.unkBtn === '',
+     '  <b>다 된 기기와 모르는 때는 재촉하지 않는다</b> — 없는 일을 시키지 않는다');
+  is(HR.zero && /기기마다 한 번씩/.test(HR.zero.how || ''),
+     '  <b>기기마다 한 번씩</b> 켜야 한다고 알려 준다 — 폰에서 켜도 컴퓨터는 안 울립니다');
+
+  /* ══ [4-3] <b>옛 구독이 막고 있어도 끝내 담긴다</b> ═════════════════════
+     브라우저는 <b>다른 열쇠로 이미 맺힌 구독</b>이 남아 있으면 subscribe 를
+     거절합니다. 그 상태에서는 켜기를 몇 번 눌러도 <b>영영 안 담깁니다</b> —
+     화면은 「켜짐」 인데 push_subs 는 0줄. 떼고 다시 맺는지 여기서 잽니다.
+     ★ 진짜 pushManager 는 머리 없는 브라우저에 없으므로 <b>가짜를 세워</b>
+       무엇을 부르는지 봅니다 — 코드를 읽어 짐작하지 않습니다.          */
+  console.log('\n[4-3] 옛 구독이 막고 있어도 <b>떼고 다시 맺어</b> 담는다');
+  const S = await page.evaluate(async () => {
+    const log = [], saved = [];
+    const keepSave = window.almSave, keepReg = ALM.reg, keepSub = ALM.sub;
+    let live = { endpoint: 'https://old.test/ep',
+                 unsubscribe(){ log.push('뗌'); live = null; return Promise.resolve(true); } };
+    const fresh = { endpoint: 'https://new.test/ep', toJSON(){ return { keys:{ p256dh:'p', auth:'a' } }; } };
+    ALM.reg = { pushManager: {
+      getSubscription(){ log.push('물음'); return Promise.resolve(live); },
+      subscribe(){
+        if (live) { log.push('거절');
+          return Promise.reject(new Error('A subscription with a different applicationServerKey already exists.')); }
+        log.push('맺음'); live = fresh; return Promise.resolve(fresh); } } };
+    ALM.key = 'BIwKRGOaPpaNpK9tgzhCLJTCDHu0d11LaVGhbADHAR-OvfZExQM1uuKOpEsGLTVLNHavYs4rGhw2Ba1NpuffOO0';
+    ALM.keyAt = Date.now(); ALM.keyErr = ''; ALM.err = '';
+    window.almSave = (x) => { saved.push(x && x.endpoint); };
+    almSubscribe();
+    await new Promise(r => setTimeout(r, 600));
+    const out = { log: log.join('→'), saved: saved.join(','), err: ALM.err, sub: ALM.sub && ALM.sub.endpoint };
+    window.almSave = keepSave; ALM.reg = keepReg; ALM.sub = keepSub; ALM.err = '';
+    return out;
+  });
+  is(/뗌/.test(S.log), '  이미 맺힌 구독이 있으면 <b>뗀다</b> · ' + S.log);
+  is(S.saved === 'https://new.test/ep',
+     '  <b>다시 맺어 서버에 담는다</b> — 거절당한 채로 안 끝난다 · ' + (S.saved || '안 담김'));
+  is(!/거절/.test(S.log), '  거절당하는 길로 <b>안 들어간다</b> — 떼고 나서 맺는다');
+  is(!S.err, '  <b>오류 없이</b> 끝난다 · ' + (S.err || '없음'));
+
+  /* ══ [4-4] 👩‍⚕️ <b>살펴보기가 걸린 자리를 그대로 말한다</b> ═══════════════
+     사장님이 폰과 컴퓨터에서 눌렀는데도 서버가 0줄이었습니다. 서버 쪽은
+     성했는데(RLS 도 지나고 owner_id 도 붙었습니다) 기기 안을 볼 수가
+     없었습니다 — <b>안 보이면 못 고칩니다</b> (8번). 그래서 앱이 스스로
+     한 걸음씩 밟아 보고 말하게 했고, 그것이 <b>참말인지</b>를 잽니다.
+     ★ 일부러 <b>로그인을 끊어</b> 놓고, 살펴보기가 그것을 집어내는지 봅니다.
+     ★ <b>지어내지 않는지</b>도 봅니다 — 모르면 모른다고 적어야 합니다 (1번). */
+  console.log('\n[4-4] 👩‍⚕️ 살펴보기 — <b>걸린 자리를 그대로</b> 말한다');
+  const V = await page.evaluate(async () => {
+    const keepClient = window.osClient, keepSave = window.almSave, keepReg = ALM.reg, keepSub = ALM.sub;
+    /* 진짜 끝점은 이만큼 깁니다 — 짧은 것으로 재면 「잘리는지」 를 못 재었습니다 */
+    const EP_LONG = 'https://fcm.googleapis.test/fcm/send/AAAA-BBBB-CCCC-DDDD-EEEE-FFFF-끝자리';
+    const out = {};
+    const run = async () => { ALM.diag = null; ALM.diagBusy = false; almDiagRun();
+      for (let i = 0; i < 60 && !ALM.diag; i++) await new Promise(r => setTimeout(r, 100));
+      const m = {}; (ALM.diag || []).forEach(r => { m[r[0]] = ('' + r[1]).replace(/<[^>]*>/g, ''); }); return m; };
+
+    /* ⓐ 로그인이 끊긴 기기 — 여기가 제일 흔한 자리다 */
+    window.osClient = () => ({
+      auth: { getUser: () => Promise.resolve({ data: { user: null }, error: { message: 'Auth session missing!' } }) },
+      from: () => ({ select: () => Promise.resolve({ data: null, error: { message: 'JWT expired' } }) })
+    });
+    ALM.sub = null;
+    out.a = await run();
+
+    /* ⓑ 다 성한 기기 — 구독도 있고 로그인도 있고 서버도 받는다 */
+    let saved = 0;
+    window.osClient = () => ({
+      auth: { getUser: () => Promise.resolve({ data: { user: { id: '11111111-2222-3333-4444-555555555555' } } }) },
+      from: () => ({ select: () => Promise.resolve({ data: [{ endpoint: 'https://a.test/1' }], error: null }) })
+    });
+    ALM.reg = { pushManager: { getSubscription: () => Promise.resolve({ endpoint: EP_LONG }) } };
+    window.almSave = () => { saved++; ALM.saveSay = '담았습니다 · 9시 · 13시 · 17시 · 21시'; };
+    out.b = await run();
+    out.saved = saved;
+    out.text = almDiagText();
+
+    window.osClient = keepClient; window.almSave = keepSave; ALM.reg = keepReg; ALM.sub = keepSub;
+    ALM.diag = null; ALM.saveSay = '';
+    return out;
+  });
+  is(/없습니다/.test(V.a['로그인'] || '') && /Auth session missing/.test(V.a['로그인'] || ''),
+     '  <b>로그인이 끊겼으면 끊겼다고</b> 말한다 · ' + (V.a['로그인'] || '안 적음'));
+  is(/JWT expired/.test(V.a['서버 읽기'] || ''),
+     '  서버가 거절하면 <b>그 말을 그대로</b> 옮긴다 — 삼키지 않는다 (1번)');
+  is(/구독이 없어/.test(V.a['담아 보기'] || ''),
+     '  담을 것이 없으면 <b>없다고</b> 하고, 담은 척하지 않는다 (1번)');
+  is(V.saved === 1 && /담았습니다/.test(V.b['담아 보기'] || ''),
+     '  마지막에 <b>진짜로 담아 본다</b> — almSave 그 함수로 (5번) · ' + (V.b['담아 보기'] || ''));
+  is(/1대가 담겨 있습니다/.test(V.b['서버 읽기'] || ''),
+     '  서버에 <b>몇 대</b> 있는지 세어 말한다');
+  is(!!V.b['서버 열쇠'] && !!V.b['일꾼'] && !!V.b['이 브라우저'],
+     '  <b>걸음을 빠뜨리지 않는다</b> — 브라우저·일꾼·열쇠·구독·로그인·읽기·담기');
+  /* 10번 — 열쇠 글자도, 주소 전부도 나가면 안 된다 */
+  is(!/끝자리/.test(V.text) && /fcm\.googleapis\.test/.test(V.text),
+     '  주소는 <b>앞머리만</b> 적는다 (10번) — 통째로 안 적는다');
+  is(!/[A-Za-z0-9_-]{60,}/.test(V.text),
+     '  <b>긴 열쇠 글자가 안 섞인다</b> (10번)');
+
   console.log('\n[5] 준비 SQL — push_subs 가 있고 나만 본다');
   const Q=await page.evaluate(()=>{
     const m=HX_SQL['00'], t=m?m.lines.join('\n'):'';
@@ -267,6 +561,34 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
      (Q.inSql?Q.inSql[1]:'?')+' / '+Q.ver+' (갈리면 「아직입니다」 가 영영 안 없어진다)');
   is(!/^\s*--/m.test(SRC.slice(SRC.indexOf('var OS_PUSH_SQL=['),SRC.indexOf('var OS_PUSH_SQL=[')+2600)),
      'SQL 주석에 <b>-- 를 안 쓴다</b> (9번)');
+
+  /* ══ <b>SQL 을 고쳤으면 판 번호도 올렸는가</b> ═══════════════════════
+     ⚠ 2026-09-25 · 여기가 <b>비어 있었습니다.</b> 위의 자는 「SQL 이 적는
+     번호」와 「앱이 아는 번호」가 <b>서로</b> 같은지만 봅니다 — 둘 다 옛
+     번호면 조용합니다. 그날 제가 push_subs 에 hours 칸을 더하고 SETUP_VER
+     을 안 올렸는데 <b>초록이었고</b>, 이미 준비를 마치신 사장님 화면에는
+     「서버 준비가 아직 남았습니다」 칸이 아예 안 떴습니다. 사장님이
+     「SQL이 어딨어?」 하고 물으셔서야 알았습니다.
+     <b>넣는 것과 알리는 것은 다른 일입니다</b> (1번).
+
+     그래서 SQL 글 전체의 <b>지문</b>을 여기 적어 둡니다. 한 글자라도
+     고치면 지문이 달라지고, 그때 <b>판 번호를 같이 올리라</b>고 이 자가
+     말합니다. 올린 뒤에는 이 줄의 지문을 새 값으로 바꾸십시오 — 아래
+     빨간불이 새 값을 그대로 적어 줍니다.
+     ★ 지문은 <b>사람이 손으로 옮기는 값</b>입니다. 자동으로 맞추면
+       「고쳤는데 안 올렸다」 를 영영 못 잡습니다 (8번).               */
+  const SQL_SIG = '5b035988872a';      /* SETUP_VER 43 · 판이 뒤로 못 가게 문지기를 더한 판 */
+  const sqlAll = await page.evaluate(() => {
+    const o = {}; for (const k in HX_SQL) if (HX_SQL[k] && HX_SQL[k].lines) o[k] = HX_SQL[k].lines.join('\n');
+    return Object.keys(o).sort().map(k => k + '\n' + o[k]).join('\n');
+  });
+  const sig = crypto.createHash('sha256').update(sqlAll, 'utf8').digest('hex').slice(0, 12);
+  is(sig === SQL_SIG,
+     '준비 SQL 을 고쳤으면 <b>판 번호도 올렸다</b> — 지문 ' + sig +
+     (sig === SQL_SIG ? ' (SETUP_VER ' + Q.ver + ')'
+       : ' ← SQL 이 바뀌었습니다. ① SETUP_VER 과 SQL 안의 schema_version 을 <b>같이</b> 올리고' +
+         ' ② 이 점검의 SQL_SIG 를 <b>' + sig + '</b> 로 바꾸십시오.' +
+         ' 안 올리면 이미 준비를 마치신 분 화면에 <b>새 SQL 이 안 뜹니다</b>'));
 
   console.log('\n[6] 서버 — 봉한 것이 그 폰에서만 풀린다');
   /* 시험용 VAPID 한 쌍 — <b>여기서 만들고 여기서 버린다</b>. 진짜 열쇠는 서버에만 있다 (10번) */
@@ -345,41 +667,43 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   const r3=JSON.parse((await loadPush(ENV).handler({httpMethod:'GET',queryStringParameters:{key:'1'}})).body);
   is(r3.key===PUB&&!r3.why, '열쇠가 있으면 <b>공개 열쇠만</b> 돌려준다');
   is(!/VAPID_PRIVATE/.test(JSON.stringify(r3)), '<b>비밀 열쇠는 안 내보낸다</b> (10번)');
-  /* 예약 실행 — 서버를 가짜로 세워 <b>무엇을 보내고 무엇을 지우는지</b> 본다 */
-  const calls=[]; let sentBody=null; const realFetch=global.fetch;
-  global.fetch=async(u,o)=>{
-    calls.push({u:String(u),m:(o&&o.method)||'GET',b:(o&&typeof o.body==='string')?o.body:''});
-    if(String(u).indexOf('/rest/v1/')>=0){
-      const rows=(String(u).indexOf('select=')>=0&&(o||{}).method===undefined)
-        ? [{endpoint:'https://push.example.com/dead',p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0,
-            owner_id:'u1',ua:'Android',created_at:'2026-09-05'},
-           {endpoint:'https://push.example.com/live',p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0,
-            owner_id:'u1',ua:'iPhone', created_at:'2026-09-10'},
-           /* <b>같은 폰의 옛 구독</b> — 홈 화면에 아이콘을 하나 더 담으면 이렇게 생긴다.
-              여기로도 보내면 사장님 폰이 아침에 두 번 울린다. */
-           {endpoint:'https://push.example.com/dup', p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0,
-            owner_id:'u1',ua:'iPhone', created_at:'2026-09-01'}] : [];
-      return {ok:true,status:200,text:async()=>JSON.stringify(rows)};
-    }
-    if(String(u).indexOf('/dead')>=0)return {ok:false,status:410,text:async()=>'gone'};
-    if(String(u).indexOf('/live')>=0&&o&&o.body)sentBody=o.body;
-    return {ok:true,status:201,text:async()=>''};
-  };
-  const sched=loadPush(ENV);
-  const kh=new Date(Date.now()+9*3600000).getUTCHours();
-  const r4=JSON.parse((await sched.cron()).body);
-  global.fetch=realFetch;
-  const q=calls.filter(c=>/push_subs\?hour=eq\./.test(c.u))[0];
-  is(!!q&&q.u.indexOf('hour=eq.'+kh)>=0, '<b>그 시각으로 정해 둔 폰만</b> 부른다 — 한국 '+kh+'시');
-  is(r4.sent===1&&r4.gone===1,
-     '살아 있는 곳엔 보내고 <b>죽은 주소(410)는 그 자리에서 지운다</b> — 보냄 '+r4.sent+' · 지움 '+r4.gone);
-  is(calls.some(c=>c.m==='DELETE'&&/dead/.test(c.u)), '지우는 것을 <b>서버에도 지운다</b> — 안 지우면 매시간 없는 폰을 두드린다 (7번)');
-  is(calls.some(c=>c.m==='PATCH'&&/live/.test(c.u)), '보낸 것은 <b>보냈다고 적어 둔다</b>');
-  /* <b>실제로 나간 글을 풀어</b> 본다 — 코드를 읽어 짐작하지 않는다 */
-  let sent='';
-  if(sentBody){
+  /* ══ 예약 실행 — 서버를 가짜로 세워 <b>무엇을 보내고 무엇을 지우는지</b> 본다.
+
+     ⚠ 2026-10-04 · <b>이 토막이 시계에 매여 있었습니다.</b> 여태 「지금 이
+       순간의 한국 시각」으로 <b>한 판만</b> 돌렸습니다. 그래서 CI 가 16시
+       59분에 돌면 초록, <b>17시 0분에 돌면 빨간불</b>이었습니다 — 고친 것이
+       하나도 없는데 말입니다(#520 에서 실제로 그렇게 났습니다). 하루 24시간
+       중 <b>한 시간에만 우는 자</b>는 나머지 23시간은 아무것도 안 재는
+       자입니다 (8번).
+     ★ 이 교훈은 <b>이 파일 위쪽(170줄)에 이미 적혀</b> 있었습니다 —
+       「시각을 오전 10시 반으로 고정하고 잰다」. 여기만 그 대접을 못
+       받았습니다. 그래서 <b>시계를 못 박고 두 판</b>을 돌립니다 —
+       <b>9시</b>(평범한 아침)와 <b>17시</b>(예상업적). CI 가 몇 시에 돌아도
+       같은 것을 잽니다.
+     ★ 장부도 <b>표마다 갈라</b> 답합니다. 여태 push_subs 든 dbs 든 같은 세
+       줄을 돌려주어 <b>구독 줄이 업적으로 읽혔습니다</b> — 자가 스스로 지어낸
+       「금액이 빈 3건」 이 거기서 나왔습니다 (1번).                        */
+  const 폰줄=[
+    {endpoint:'https://push.example.com/dead',p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0,
+     owner_id:'u1',ua:'Android',created_at:'2026-09-05'},
+    {endpoint:'https://push.example.com/live',p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0,
+     owner_id:'u1',ua:'iPhone', created_at:'2026-09-10'},
+    /* <b>같은 폰의 옛 구독</b> — 홈 화면에 아이콘을 하나 더 담으면 이렇게 생긴다.
+       여기로도 보내면 사장님 폰이 아침에 두 번 울린다. */
+    {endpoint:'https://push.example.com/dup', p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0,
+     owner_id:'u1',ua:'iPhone', created_at:'2026-09-01'}];
+  /* 업적 장부 — 금액이 <b>있는</b> 줄과 <b>안 적힌</b> 줄을 섞어 둔다.
+     진행중 예상 30만원 · 이번 달 체결 50만원 · 금액 안 적힌 1건.
+     이름은 한 칸도 안 넣는다 (3번) — 서버가 그 칸을 안 받아 오기 때문이다. */
+  const 업적줄=[
+    {stage:'PC',      expect_premium:300000,contract_premium:null,  closed_reason:'',contracted_at:null},
+    {stage:'계약완료',expect_premium:null,  contract_premium:500000,closed_reason:'',contracted_at:'2026-10-02'},
+    {stage:'AP',      expect_premium:null,  contract_premium:null,  closed_reason:'',contracted_at:null}];
+  /* 봉한 것을 <b>풀어</b> 본다 — 코드를 읽어 짐작하지 않는다 */
+  const 깐다=(body)=>{
+    if(!body)return '';
     try{
-      const salt=sentBody.subarray(0,16),asPub=sentBody.subarray(21,86),ct=sentBody.subarray(86);
+      const salt=body.subarray(0,16),asPub=body.subarray(21,86),ct=body.subarray(86);
       const hm=(k,d)=>crypto.createHmac('sha256',k).update(d).digest();
       const ikm=hm(hm(uaAuth,ua.computeSecret(asPub)),
         Buffer.concat([Buffer.from('WebPush: info\0'),uaPub,asPub,Buffer.from([1])]));
@@ -389,14 +713,85 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
       const dc=crypto.createDecipheriv('aes-128-gcm',cek,non);
       dc.setAuthTag(ct.subarray(ct.length-16));
       const pt=Buffer.concat([dc.update(ct.subarray(0,ct.length-16)),dc.final()]);
-      sent=pt.subarray(0,pt.length-1).toString('utf8');
-    }catch(e){ sent='('+e.message+')'; }
-  }
+      return pt.subarray(0,pt.length-1).toString('utf8');
+    }catch(e){ return '('+e.message+')'; }
+  };
+  /* 한 판 돌린다 — 2026-10-04 한국 <b>kh시 30분</b>으로 시계를 못 박고 */
+  const 돌려본다=async(kh,업적)=>{
+    const calls=[]; let sentBody=null;
+    const realFetch=global.fetch, realNow=Date.now;
+    const 못박은때=Date.UTC(2026,9,4,kh-9,30,0);
+    Date.now=()=>못박은때;
+    global.fetch=async(u,o)=>{
+      const U=String(u), 읽기=((o||{}).method===undefined&&U.indexOf('select=')>=0);
+      calls.push({u:U,m:(o&&o.method)||'GET',b:(o&&typeof o.body==='string')?o.body:''});
+      if(U.indexOf('/rest/v1/dbs')>=0)
+        return {ok:true,status:200,text:async()=>JSON.stringify(읽기?(업적||[]):[])};
+      if(U.indexOf('/rest/v1/')>=0)
+        return {ok:true,status:200,text:async()=>JSON.stringify(읽기?폰줄:[])};
+      if(U.indexOf('/dead')>=0)return {ok:false,status:410,text:async()=>'gone'};
+      if(U.indexOf('/live')>=0&&o&&o.body)sentBody=o.body;
+      return {ok:true,status:201,text:async()=>''};
+    };
+    let r={};
+    try{ r=JSON.parse((await loadPush(ENV).cron()).body); }
+    finally{ global.fetch=realFetch; Date.now=realNow; }
+    return {r:r,calls:calls,글:깐다(sentBody)};
+  };
+  const 아침=await 돌려본다(9,업적줄), 열일곱=await 돌려본다(17,업적줄);
+  const 푼다=(s)=>{ try{ return JSON.parse(s)||{}; }catch(e){ return {}; } };
+  const 아침글=푼다(아침.글), 열일곱글=푼다(열일곱.글);
+  const kh=9, calls=아침.calls, r4=아침.r, sent=아침.글;
+  is(아침.r.kstHour===9&&열일곱.r.kstHour===17,
+     '★ 이 자는 <b>시계에 안 매였다</b> — 못 박은 '+아침.r.kstHour+'시·'+열일곱.r.kstHour
+     +'시로 돌았다 (CI 가 몇 시에 돌아도 같은 것을 잽니다 · 8번)');
+  /* 장부를 고르는 그 한 번. 옛 모양(?hour=eq.)만 찾다가 네 번이 되면서
+     <b>아무것도 안 잡혔고</b>, 그러면 아래 자들이 통째로 빨개집니다 —
+     앱이 아니라 자가 낡은 것입니다 (8번). 두 모양을 다 받습니다. */
+  const q=calls.filter(c=>/push_subs\?(hour=eq\.|or=)/.test(c.u))[0];
+  /* ⚠ 2026-09-25 · <b>고르는 조건이 바뀌었습니다.</b> 알람이 네 번이 되면서
+     한 폰이 여러 시각을 가질 수 있어(hours 칸), 그 시각이 들어 있는 폰을
+     고릅니다. ★ 옛 hour 한 칸도 <b>같이</b> 봅니다 — 준비 SQL 을 아직 안
+     돌리신 장부에서는 hours 가 비어 있고, 그때도 아침 알람은 와야 합니다.
+     둘 중 하나라도 빠지면 그 자리에서 알람이 조용히 끊깁니다.          */
+  is(!!q&&q.u.indexOf('hours.cs.{'+kh+'}')>=0,
+     '<b>그 시각을 켜 둔 폰</b>을 부른다 — 한국 '+kh+'시 (hours 칸)');
+  is(!!q&&q.u.indexOf('hour.eq.'+kh)>=0&&q.u.indexOf('hours.is.null')>=0,
+     '<b>옛 장부(hours 가 빈 폰)도 같이</b> 부른다 — 준비 SQL 전에도 아침 알람이 온다');
+  is(r4.sent===1&&r4.gone===1,
+     '살아 있는 곳엔 보내고 <b>죽은 주소(410)는 그 자리에서 지운다</b> — 보냄 '+r4.sent+' · 지움 '+r4.gone);
+  is(calls.some(c=>c.m==='DELETE'&&/dead/.test(c.u)), '지우는 것을 <b>서버에도 지운다</b> — 안 지우면 매시간 없는 폰을 두드린다 (7번)');
+  is(calls.some(c=>c.m==='PATCH'&&/live/.test(c.u)), '보낸 것은 <b>보냈다고 적어 둔다</b>');
   is(!!sent&&sent.charAt(0)==='{', '실제로 나간 글을 <b>풀어서</b> 본다 — '+sent.slice(0,64));
-  is(!/[가-힣]{2,4}(님|씨)|홍길|전화|010-/.test(sent),
-     '나간 글에 <b>고객 이야기가 없다</b> (3번)');
-  is(!/\d+\s*(명|건)/.test(sent),
-     '서버는 <b>건수를 말하지 않는다</b> — 「'+((JSON.parse(sent||'{}')||{}).body||'')+'」 (세려면 TDO 표를 서버에 또 적어야 하고, 그러면 화면과 알람이 다른 말을 한다 · 1·5번)');
+  is(!/[가-힣]{2,4}(님|씨)|홍길|전화|010-/.test(아침.글+열일곱.글),
+     '나간 글에 <b>고객 이야기가 없다</b> (3번) — 아침·17시 두 판 다');
+  /* ── 9시 · <b>평범한 아침</b> ─────────────────────────────────────── */
+  is(!!아침글.body&&!/\d/.test(아침글.body),
+     '9시 글에는 <b>숫자가 한 자도 없다</b> — 「'+(아침글.body||'(없음)')+'」 (건수는 앱을 열면 그 자리에서 셉니다)');
+  /* ── 17시 · <b>예상업적</b> ────────────────────────────────────────
+     ⚠ 여기 있던 자는 「서버는 <b>건수를 말하지 않는다</b>」 였습니다. 그
+       까닭은 「세려면 <b>TDO 표를 서버에도 또 적어야</b> 한다」 였고, 두
+       곳이 다른 말을 하는 것을 막으려던 것입니다.
+     ★ 2026-10-03 · 사장님 말씀 X05 로 <b>17시만</b>은 서버도 셉니다. 그런데
+       그 까닭이 <b>업적에는 안 맞습니다</b> — 세는 규칙이 apex-pex.js 한
+       파일이고 적는 글이 alm-slots.js 한 함수라 <b>베낀 자리가 없습니다.</b>
+     ★ 그러니 자를 <b>지우지 않고 고쳐 겨눕니다</b> (8번) — 「건수를 한 자도
+       말하지 마라」 가 아니라 <b>「나간 봉한 글이 그 한 함수가 낸 글과 글자
+       까지 같아야 한다」</b> 입니다. 어디선가 베껴 적으면 그 자리에서
+       빨간불입니다. (앱과 서버가 같은 글인지는 check-almpex 가 봅니다 —
+       여기서 보는 것은 <b>봉해서 실제로 나간 바이트</b>입니다.)          */
+  const PEXm=require('../apex-pex.js'), ALMm=require('../app/alm-slots.js');
+  const 한함수=ALMm.almPerfLine(PEXm.sum(업적줄.map(x=>({stage:x.stage,
+    closed:(''+(x.closed_reason||'')).trim(),expect:x.expect_premium,
+    contract:x.contract_premium,cdate:x.contracted_at})),'2026-10'));
+  is(!!한함수&&열일곱글.title===한함수.title&&열일곱글.body===한함수.body,
+     '17시에 <b>봉해서 나간 글</b>이 그 한 함수가 낸 글과 글자까지 같다 (5번) — 「'
+     +(열일곱글.title||'(없음)')+'」');
+  is(!/\d+\s*명/.test(열일곱.글),
+     '17시에도 <b>사람 수(「N명」)는 말하지 않는다</b> — 그것만은 TDO 표를 서버에 또 적어야 한다 (1번·5번)');
+  is(아침.r.withAmount===0&&열일곱.r.withAmount===열일곱.r.subs,
+     '<b>금액은 17시에만</b> 담긴다 — 아침 '+아침.r.withAmount+'대 · 17시 '
+     +열일곱.r.withAmount+'/'+열일곱.r.subs+'대');
   const NFC=NF.replace(/\/\*[\s\S]*?\*\//g,'');
   is(!/arTouch|AR_STAGES|var TDO|'미접촉'|'부재'|tdoDue/.test(NFC),
      '서버에 <b>상태 표를 베껴 두지 않았다</b> (5번)');

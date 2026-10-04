@@ -94,10 +94,16 @@ const SEED = `(function(){
      것이 아니라 <b>빠져 있던 사실</b>을 채우는 것입니다 (8번). */
   try{ cmOf('c1').touch=[{at:mcalToday(),how:'전화'}]; }catch(e){}
   try{ AR.loaded=true; GB.loaded=true; }catch(e){}
+  /* ⚠ 2026-10-02 · <b>흉내가 진짜 모양과 어긋나 홈을 터뜨렸습니다.</b>
+     mstDueList 가 mon(이번 달 마디)·monLeft 를 같이 돌려주게 되었는데 이
+     흉내는 그것을 안 담아, 홈의 「💌 이번 달 고객 관리」 칸이
+     <b>L.mon.length</b> 에서 터졌습니다 — CI 가 잡았습니다.
+     ★ 흉내는 <b>진짜가 돌려주는 칸을 다 담습니다.</b> 한 칸이라도 빠지면
+       그 자리에서 터지거나, 더 나쁘게는 <b>조용히 다른 수</b>가 섭니다. */
   window.mstDueList=function(){ return {due:[
     {c:{id:'c9',name_masked:'홍○판'},hit:{d:0,step:{m:3,ic:'📮',t:'석 달째 인사'}}},
     {c:{id:'c8',name_masked:'김○돌'},hit:{d:0,step:{m:6,ic:'📮',t:'반년 점검'}}}
-  ],soon:[],none:0,total:2}; };
+  ],soon:[],mon:[],monLeft:0,none:0,total:2}; };
 })();`;
 
 (async () => {
@@ -115,6 +121,22 @@ const SEED = `(function(){
                                  typeof go === 'function', { timeout: 60000 });
   await clearOvl(pg);
   await pg.evaluate(s => { eval(s); }, SEED);
+  /* ⚠ 2026-09-27 — 활동량·동선이 <b>「🧭 그 밖의 것」 접이 안</b>으로
+     들어갔습니다(사장님 말씀 「2번으로 해줘 접어」). 접힌 채로 재면 칩 줄
+     높이가 <b>0px</b> 이라 「한 줄인가」 를 잴 수 없습니다 — 접혀서 0 인
+     것과 칩이 한 줄이라 작은 것은 <b>다른 일</b>입니다. 먼저 펴고 잽니다.
+     ★ 자는 그대로입니다 — 펴 놓고 보면 칩이 한 줄인가. (옮기지 지우지
+       않습니다)                                                       */
+  await pg.evaluate(() => { try { hmFoldSet('etc', true); } catch (e) {} });
+  /* ⚠ 2026-09-30 — 「이분 자세히」 가 <b>접힌 채가 기본</b>이 됐습니다
+     (사장님 말씀 「그 넷도 접어」). 접힌 채로 재면 여기 보려는 갈래·
+     「이미 했습니다」·단계 딱지가 아예 안 그려집니다 — <b>먼저 펴고
+     잽니다.</b> 바로 위 「그 밖의 것」 접이와 <b>같은 방법</b>입니다 (5번).
+     ★ <b>재는 것은 하나도 안 줄였습니다</b> — 펴 놓고 보면 그것이 제대로
+       서나. 자를 옮기지 지우지 않습니다 (8번).
+     ★ <b>접힌 채로 열리는지</b>는 check-hmtwo [5] 가 봅니다.           */
+  await pg.evaluate(() => { try { hmFoldSet('more', true); } catch (e) {}
+                            try { HM_MORE = true; } catch (e) {} });
   await pg.evaluate(() => { go('home'); });
   await pg.waitForSelector('#hmToday', { timeout: 20000 });
   await pg.evaluate(() => hmPaint());
@@ -165,7 +187,7 @@ const SEED = `(function(){
     const keep = window.__seed;
     window.__seed = {};
     const realMadi = window.mstDueList;
-    window.mstDueList = function () { return { due: [], soon: [], none: 0, total: 0 }; };
+    window.mstDueList = function () { return { due: [], soon: [], mon: [], monLeft: 0, none: 0, total: 0 }; };
     const h = hmTodayHtml();
     window.__seed = keep; window.mstDueList = realMadi;
     return h;
@@ -184,14 +206,161 @@ const SEED = `(function(){
   const one = await pg.evaluate(() => {
     const keep = window.__seed, realMadi = window.mstDueList;
     window.__seed = {}; window.__seed[mcalToday()] = [{ k: 'bd', t: '심청' }];
-    window.mstDueList = function () { return { due: [], soon: [], none: 0, total: 0 }; };
+    window.mstDueList = function () { return { due: [], soon: [], mon: [], monLeft: 0, none: 0, total: 0 }; };
     const h = hmTodayHtml();
     window.__seed = keep; window.mstDueList = realMadi;
     return h;
   });
   /* 「hm-rows」 가 「hm-row」 를 품고 있어, 느슨하게 세면 한 줄인데 둘로 셉니다 */
   is((one.match(/class="hm-row"/g) || []).length === 1, '갈래가 하나면 <b>한 줄만</b> 선다');
-  is(/생일/.test(one) && !/약속/.test(one), '<b>있는 갈래만</b> 적는다 — 생일만 있고 약속은 없다');
+  /* ⚠ 2026-09-25 — 여태 <b>홈 날글 전체</b>에서 「약속」 을 찾았습니다. 그러다
+     자리 이름표(data-ask="전화로약속잡을분")가 붙자 그 낱말이 <b>속성 안</b>에
+     들어와, 갈래 줄은 하나뿐인데 빨간불이 켜졌습니다 — <b>헛것</b>입니다 (8번).
+     묻는 것은 「<b>갈래 줄</b>에 없는 갈래가 적히나」 이므로, 이제 hm-row
+     단추 안만 봅니다. 전보다 조인 것입니다.                              */
+  const 줄들 = (one.match(/class="hm-row"[\s\S]*?<\/button>/g) || []).join(' ');
+  is(/생일/.test(줄들) && !/약속/.test(줄들),
+     '<b>있는 갈래만</b> 적는다 — 갈래 줄에 생일만 있고 약속은 없다');
+
+  /* ─────────────────────────────────────────────────────────── */
+  /* ─────────────────────────────────────────────────────────── */
+  /* ★ 2026-09-23 · <b>한 분 = 한 퀘스트</b>를 여기서 <b>실제로</b> 잽니다.
+     여태 check-queue 가 글자(「seen[dk]!==undefined」)로 봤는데, 접는 방식을
+     고치자 접는 일은 잘 되는데 점검만 울렸습니다 (8번). 브라우저가 도는
+     이 자리에서 진짜 줄을 세어 봅니다.
+     ★ 같은 분을 <b>일부러 여러 자리에</b> 심습니다. 심는 차례가 중요합니다 —
+       <b>가벼운 것을 먼저</b>(연락 560), <b>무거운 것을 나중에</b>(할 일 900)
+       둡니다. 순서대로 두면 「먼저 온 것을 남긴다」 로 되돌려도 답이 같아서
+       <b>알람이 안 울립니다.</b> 안 울리는 알람은 알람이 아닙니다 (8번).  */
+  head('[2-1] <b>한 분은 오늘 한 번만</b> 선다 (한 분 = 한 퀘스트)');
+  const dup = await pg.evaluate(() => {
+    const keep = window.__seed, realMadi = window.mstDueList;
+    window.__seed = {};
+    window.__seed[mcalToday()] = [
+      { k: 'touch', id: 'dup1', t: '홍갑돌' },                      /* 560 — 먼저 */
+      { k: 'bd',    id: 'dup1', t: '홍갑돌' },                      /* 764 */
+      { k: 'next',  id: 'dup1', t: '홍갑돌', s: '증권 전달' }        /* 900 — 나중 */
+    ];
+    window.mstDueList = function () { return { due: [], soon: [], mon: [], monLeft: 0, none: 0, total: 0 }; };
+    const L = hmSteps().filter(r => r.id === 'dup1');   /* 세 자리에 심은 그 분 */
+    window.__seed = keep; window.mstDueList = realMadi;
+    return { n: L.length, k: (L[0] || {}).k, more: (L[0] || {}).more || 0 };
+  });
+  is(dup.n === 1, '같은 분을 <b>세 자리에 심어도 한 줄</b>만 선다 — ' + dup.n + '줄');
+  is(dup.k === 'next',
+     '남는 것은 <b>먼저 온 것이 아니라 무거운 것</b> — ' + dup.k +
+     ' (할 일 900 · 생일 764 · 연락 560 — 연락을 먼저 심었습니다)');
+  is(dup.more === 2, '<b>접은 수를 적어 둔다</b> — ' + dup.more + '건 (조용히 버리지 않는다 · 1번)');
+
+  /* ─────────────────────────────────────────────────────────── */
+  /* ★ 2026-09-23 · <b>단계 차례가 점수에 안 밀린다.</b>
+     명세서의 「단계 520+지난일수×3」 을 그대로 옮겼더니 <b>찬 TA 가 계약
+     코앞의 AP 를 밀어냈습니다</b> — 명세서 목업에는 단계라는 것이 아예 없어
+     「며칠 밀렸나」 하나로만 셉니다. 이 앱의 TDO.ord 는 사장님이 정하신
+     영업 차례(AP·PC·CS 먼저)이고, 명세서가 모르는 것이지 틀린 것이
+     아닙니다. 여기서 못 박아 둡니다 — 다시 뒤집히면 홈이 0.3화면 길어지고
+     (TA 에는 화법 칸이 붙습니다) 아침 미션 차례까지 같이 갈립니다.        */
+  head('[2-2] <b>단계 차례가 점수에 안 밀린다</b> (TDO.ord)');
+  const ord = await pg.evaluate(() => {
+    const keep = window.__seed, realMadi = window.mstDueList, realTouch = window.arTouch;
+    window.__seed = {};
+    window.mstDueList = function () { return { due: [], soon: [], mon: [], monLeft: 0, none: 0, total: 0 }; };
+    /* 찬 TA 는 <b>마흔 날</b> 밀렸고, 계약 코앞 AP 는 <b>오늘</b> 것입니다.
+       ★ 심는 차례가 중요합니다 — <b>덜 밀린 TA 를 먼저</b> 둡니다. 오래 밀린
+         쪽을 먼저 두면 들어온 차례가 이미 답이라 「오래 밀린 분부터」 를
+         빼도 답이 같아서 <b>알람이 안 울립니다</b> (8번). */
+    window.arTouch = function () { return [
+      { k: 'TA', id: 'o3', nm: '홍병돌', todo: '전화', d: 3 },
+      { k: 'AP', id: 'o2', nm: '홍을돌', todo: '만남', d: 0 },
+      { k: 'TA', id: 'o1', nm: '홍갑돌', todo: '전화', d: 40 }
+    ]; };
+    const L = hmSteps().filter(r => r.k === 'db').map(r => r.t);
+    window.__seed = keep; window.mstDueList = realMadi; window.arTouch = realTouch;
+    return L;
+  });
+  is(ord[0] === '홍을돌',
+     '<b>계약 코앞(AP)</b>이 마흔 날 밀린 찬 TA 보다 먼저 — ' + ord.join(' · '));
+  is(ord[1] === '홍갑돌' && ord[2] === '홍병돌',
+     '<b>같은 단계 안에서는 오래 밀린 분</b>부터 — 40일째 → 3일째');
+
+  /* ─────────────────────────────────────────────────────────── */
+  /* ★ 2026-09-24 · <b>「몇 분 남았나」 는 한 곳에서만 나온다</b>
+     (사장님 말씀 — 「세 자리를 하나로 · 몇 분 남았나 가 한 곳에서만」).
+     여태 셋이 따로 셌습니다 —
+       · 퀘스트 띠   r.n = hmSteps() 전체 (사람 아닌 줄 · 끝낸 분까지)
+       · ① 목록      hmMsPeople().length
+       · 「다음 분으로」 알림  그 자리에서 또 훑어 세기
+     수가 달라도 화면은 멀쩡해 보여서 아무도 못 봅니다. 여기서 <b>같은
+     수를 말하는지</b> 재고, 세는 자리가 hmLeft <b>하나</b>인지 글자로 봅니다. */
+  head('[2-3] <b>「몇 분 남았나」 는 한 곳에서만</b> (5번)');
+  const qn = await pg.evaluate(() => {
+    const Q = hmLeft();
+    const band = ((document.querySelector('#hmToday .hm-q-n') || {}).textContent || '');
+    /* ★★ 2026-10-04 · <b>이 식이 글자에 너무 바싹 붙어 있었습니다.</b>
+       H17 을 고치며 띠를 「오늘 <b>볼 분</b> 3분 중 1번째」 로 바꾸자 — 목표와
+       센 수를 가르려고 두 글자를 넣은 것인데 — 이 식이 <b>못 읽어</b> -1 이
+       되었고, 자는 「띠 -1 · hmLeft 6」 이라며 <b>고칠 것이 없는 빨간불</b>을
+       켰습니다. 화면 글은 앞으로도 다듬어질 자리이므로, 식이 <b>글자 사이에
+       무엇이 끼어도</b> 읽게 둡니다 — 「오늘 … N분 … 중 … M번째」 (8번).    */
+    const m = band.match(/오늘[^\d]{0,12}(\d+)\s*분[^\d]{0,8}중[^\d]{0,8}(\d+)\s*번째/);
+    return { all: Q.all, n: Q.n, done: Q.done, band: band.replace(/\s+/g, ' ').trim(),
+      bn: m ? +m[1] : -1, bi: m ? +m[2] : -1,
+      ms: hmMsPeople().length,
+      onlyPeople: hmLeft().list.every(x => !!(HM_ACT[x.k] && HM_ACT[x.k].ba)) };
+  });
+  is(qn.bn === qn.all,
+     '  띠의 <b>전체 수</b>가 hmLeft 와 같다 — 띠 ' + qn.bn + ' · hmLeft ' + qn.all +
+     ' 「' + qn.band + '」');
+  is(qn.bi === qn.done + 1,
+     '  띠의 <b>몇 번째</b>가 끝낸 수에서 이어진다 — ' + qn.bi + '번째 · 끝낸 ' + qn.done + '분');
+  is(qn.onlyPeople,
+     '  <b>사람인 줄만</b> 센다 — 할 일·도와줄 것·내 일정은 「분」 이 아니다 (HM_ACT 한 곳이 안다)');
+  is(qn.ms <= qn.n,
+     '  ① 목록이 <b>남은 분을 넘지 않는다</b> — ① ' + qn.ms + '명 · 남은 ' + qn.n + '분');
+  /* 세는 자리가 <b>하나</b>인가 — 글자로 본다 */
+  is((SRC.match(/function hmLeft\s*\(/g) || []).length === 1, '  hmLeft() 가 <b>한 곳</b>에 있다');
+  is(!/for\s*\([^)]*\)\s*if\s*\(\s*!hmQdone\([^)]*\)\s*&&\s*!hmIsDone\(/.test(SRC),
+     '  <b>남은 수를 또 훑어 세는 자리가 없다</b> — 있으면 띠와 알림이 다른 수를 말한다');
+
+  /* ─────────────────────────────────────────────────────────── */
+  /* ★ 2026-09-25 · <b>활동량 한 줄이 화면에 실제로 서는가</b>
+     (사장님 말씀 — 「활동량(전화·만남·기록)」). check-queue 는 <b>셈</b>을
+     재고, 여기서는 <b>화면</b>을 봅니다 — 셈이 맞아도 안 그려지면 소용없습니다.
+     ★ <b>0 이라고 안 세우지는 않습니다.</b> 「오늘 아직 한 건도 안 하셨다」 는
+       아침에 꼭 보셔야 할 수입니다. 다만 <b>못 읽었을 때</b>는 안 세웁니다 —
+       그때의 0 은 「안 하셨다」 가 아니라 「모른다」 이기 때문입니다 (1번). */
+  head('[2-4] <b>오늘 활동량 한 줄</b> (전화 · 만남 · 기록)');
+  const act = await pg.evaluate(() => {
+    /* 오늘 전화 하나 · 만남 하나 · 카톡 하나를 심습니다 */
+    const t = mcalToday();
+    OSC.loaded = true; CM.loaded = true;
+    cmOf('c1').touch = [{ at: t, how: '전화' }, { at: t, how: '만남' }, { at: t, how: '카톡' },
+                        { at: '2000-01-01', how: '전화' }];
+    hmActPaint();
+    const e = document.querySelector('#hmActHost .hm-act');
+    /* ⚠ <b>칸 전체가 아니라 칩 줄을 잽니다.</b> 이 칸에 ☎️ 30일 약속 한 줄이
+       같이 들어왔습니다(사장님이 목업을 「(30일 약속 · 활동량)」 한 묶음으로
+       세셨습니다). 칸 전체를 재면 그 줄 때문에 빨간불이 켜지는데, 여기서
+       보려던 것은 <b>칩이 접혔나</b> 입니다 — 그것은 .hm-act-r 입니다 (8번). */
+    const row = document.querySelector('#hmActHost .hm-act-r') || e;
+    return { txt: e ? (e.innerText || '').replace(/\s+/g, ' ').trim() : '',
+      h: row ? Math.round(row.getBoundingClientRect().height) : 0,
+      all: e ? Math.round(e.getBoundingClientRect().height) : 0,
+      o: hmActOf() };
+  });
+  is(!!act.txt, '<b>홈에 선다</b> — 「' + act.txt + '」');
+  is(act.o && act.o.call === 1 && act.o.meet === 1 && act.o.all === 3,
+     '<b>오늘 것만</b> 센다 — 전화 ' + (act.o || {}).call + ' · 만남 ' + (act.o || {}).meet +
+     ' · 기록 ' + (act.o || {}).all + ' (2000년 것은 안 셉니다)');
+  is(act.h > 0 && act.h <= 60,
+     '칩이 <b>한 줄</b>이다 — ' + act.h + 'px (접히면 122px 이 되어 홈이 0.15화면 길어진다)' +
+     ' · 칸 전체 ' + act.all + 'px');
+  const actWait = await pg.evaluate(() => {
+    const k = CM.loaded; CM.loaded = false;                 /* 아직 못 읽은 판 */
+    const h = hmActHtml(); CM.loaded = k;
+    return h;
+  });
+  is(actWait === '', '<b>아직 못 읽었으면 안 세운다</b> — 그때의 0 은 「모른다」 다 (1번)');
 
   /* ─────────────────────────────────────────────────────────── */
   head('[3] 숫자를 <b>새로 세지 않는다</b> (5번)');
@@ -237,34 +406,44 @@ const SEED = `(function(){
      아니라 <b>안 편 것</b>입니다. 그러니 <b>펴고</b> 잽니다.
      여기서 「펴진다」 는 것 자체도 한 줄로 잽니다 — 안 펴지면 그 안의
      것은 영영 못 봅니다 (1번).                                        */
+  /* ⚠ 2026-09-26 · <b>달력은 홈에서 「달력」(mycal)으로 갔습니다.</b>
+     사장님 말씀 — 「홈을 「오늘 카드」만 남기고 나머지를 옮깁니다.
+     📅 이번 주·이번 달(hmCal 916px) → 옆줄 「달력」」.
+     ★ <b>지운 것이 아닙니다.</b> renderMyCal() 이 홈이 쓰던 그 부품을
+       그대로 부릅니다 — mcalCardHtml({picks:true}). 그래서 여기서 재는
+       것도 그대로이고, <b>보는 자리만</b> #mycalHost → #mycalHost 로
+       옮깁니다. 재는 것을 줄이면 옮긴 것이 아니라 지운 것이 됩니다 (8번).  */
   const opened = await pg.evaluate(() => {
-    const box = document.getElementById('hmFold_cal');
-    if (!box) return 'noFold';
-    const h = box.querySelector('.hm-fold-h');
-    if (box.querySelector('.hm-fold-b').hidden) h.click();
-    return box.querySelector('.hm-fold-b').hidden ? 'stuck' : 'open';
+    go('mycal');
+    return document.querySelector('#mycalHost .mcal-seg') ? 'open' : 'stuck';
   });
-  is(opened !== 'stuck', '접힌 <b>달력이 펴진다</b> — ' +
-     (opened === 'noFold' ? '접기 상자가 없습니다(예전 판)' : '머리를 누르니 열렸습니다'));
+  is(opened !== 'stuck', '달력이 <b>「달력」에서 선다</b> — ' +
+     (opened === 'open' ? '옮긴 자리에서 그대로 열립니다' : '못 찾았습니다'));
   await pg.waitForTimeout(150);
   const seg = await pg.evaluate(() => {
-    const s = document.querySelector('#hmCalHost .mcal-seg');
+    const s = document.querySelector('#mycalHost .mcal-seg');
     return { there: !!s, txt: s ? s.textContent.replace(/\s+/g, '') : '',
-             month: !!document.querySelector('#hmCalHost .mcal-grid'),
-             week: !!document.querySelector('#hmCalHost .mcal-wgrid') };
+             month: !!document.querySelector('#mycalHost .mcal-grid'),
+             week: !!document.querySelector('#mycalHost .mcal-wgrid') };
   });
-  is(seg.there && /주/.test(seg.txt) && /월/.test(seg.txt), '홈 달력에 <b>주 / 월</b> 고르개가 있다');
-  is(seg.month && !seg.week, '처음에는 <b>월</b>이 선다');
+  is(seg.there && /주/.test(seg.txt) && /월/.test(seg.txt), '달력에 <b>주 / 월</b> 고르개가 있다');
+  /* ⚠ 2026-09-25 · <b>처음에는 「주」 입니다.</b> 사장님 말씀 — 「달력은
+     유지해 매월 매주 스케줄 볼 수 있게 <b>매주를 기본</b>으로 해서
+     <b>이번 주에 집중</b>하게 하고」. 여기 적어 둔 「월」 은 그전 기준이라
+     그대로 두면 이 점검이 <b>사장님 말씀과 반대</b>를 지키게 됩니다.
+     ★ 월이 <b>없어진 것이 아닙니다</b> — 고르개가 있고(바로 위에서 봅니다)
+       월 격자는 check-calmonth 가 따로 잽니다.                        */
+  is(seg.week && !seg.month, '처음에는 <b>이번 주</b>가 선다 — 사장님 「이번 주에 집중하게」');
 
   await pg.evaluate(() => mcalSetView('week'));
   await pg.waitForTimeout(200);
   const wk = await pg.evaluate(() => {
-    const cells = Array.from(document.querySelectorAll('#hmCalHost .mcal-wd'));
+    const cells = Array.from(document.querySelectorAll('#mycalHost .mcal-wd'));
     const busy = cells.filter(c => c.querySelectorAll('.wi').length);
     return { n: cells.length, busy: busy.length,
              txt: busy.length ? busy[0].textContent.replace(/\s+/g, ' ').trim() : '',
              h: cells.length ? Math.round(cells[0].getBoundingClientRect().height) : 0,
-             title: (document.querySelector('#hmCalHost .mcal-hd b') || {}).textContent || '' };
+             title: (document.querySelector('#mycalHost .mcal-hd b') || {}).textContent || '' };
   });
   is(wk.n === 7, '주간은 <b>이레</b>가 선다 — ' + wk.n + '칸');
   is(wk.h > 80, '칸이 <b>넓다</b> — ' + wk.h + 'px (점만 찍는 달력보다 높아야 글자가 들어간다)');
@@ -289,14 +468,14 @@ const SEED = `(function(){
   is(cross, '홈에서 <b>주</b>로 바꾸면 내 캘린더도 <b>주</b>로 서 있다 — 한 벌이라서');
 
   /* ─────────────────────────────────────────────────────────── */
-  head('[6] 홈에서 <b>날짜를 누르면 실제로 바뀐다</b>');
+  head('[6] <b>날짜를 누르면 실제로 바뀐다</b> (「달력」에서)');
   const paint = SRC.slice(SRC.indexOf('function mcalPaint('), SRC.indexOf('function mcalPaint(') + 700);
-  is(/hmCalHost/.test(paint), 'mcalPaint 가 <b>홈 자리를 안다</b> — 모르면 눌려도 아무 일이 없다');
-  await pg.evaluate(() => { mcalSetView('week'); });
+  is(/mycalHost/.test(paint), 'mcalPaint 가 <b>달력 자리를 안다</b> — 모르면 눌려도 아무 일이 없다');
+  await pg.evaluate(() => { go('mycal'); mcalSetView('week'); });
   await pg.waitForTimeout(200);
   await clearOvl(pg);
   const picked = await pg.evaluate(() => {
-    const cells = Array.from(document.querySelectorAll('#hmCalHost .mcal-wd'));
+    const cells = Array.from(document.querySelectorAll('#mycalHost .mcal-wd'));
     const target = cells[3];
     if (!target) return { ok: false };
     target.click();
@@ -305,8 +484,8 @@ const SEED = `(function(){
   await pg.waitForTimeout(250);
   const after = await pg.evaluate(() => ({
     sel: MCAL.sel,
-    marked: !!document.querySelector('#hmCalHost .mcal-wd.sel'),
-    day: (document.querySelector('#hmCalHost .mcal-day .h') || {}).textContent || ''
+    marked: !!document.querySelector('#mycalHost .mcal-wd.sel'),
+    day: (document.querySelector('#mycalHost .mcal-day .h') || {}).textContent || ''
   }));
   is(picked.ok && !!after.sel, '날짜를 누르면 <b>고른 날이 기억된다</b> — ' + after.sel);
   is(after.marked, '고른 칸에 <b>표시가 남는다</b>');
@@ -345,6 +524,15 @@ const SEED = `(function(){
                 는 것이니, 갈래가 몇이고 <b>끝냈다고 말할 자리</b>가 있는지
                 를 봅니다. 모양이 바뀌었다고 느슨하게 재면 안 됩니다 (8번). */
              btn: d ? d.querySelectorAll('.hm-ask-o').length : 0,
+             /* ⚠ 2026-09-25 — 카드가 <b>목업의 짜임새</b>로 바뀌었습니다
+                (사장님 말씀 「카드 짜임새를 목업처럼」). 제일 먼저 할 일은
+                번호 목록 ①번이 아니라 <b>큰 파란 단추</b>(.hm-do) 이고,
+                번호 목록에는 그 나머지가 섭니다. 여태 「갈래가 둘 이상」 으로
+                재던 것을 <b>단추 + 갈래</b> 로 셉니다 — 재려던 것(한 건이
+                크게 서고 그 자리에서 된다)은 그대로입니다 (8번). */
+             doTxt: d ? ((d.querySelector('.hm-do') || {}).textContent || '').trim() : '',
+             doH: (() => { const b = d && d.querySelector('.hm-do');
+                           return b ? Math.round(b.getBoundingClientRect().height) : 0; })(),
              ask: !!(d && d.querySelector('.hm-ask-t')),
              /* 끝냈다는 말은 갈래마다 다르다 — 「보냈습니다」 · 「만났습니다」.
                 표(HM_ACT)에 적힌 그대로 쓰므로 <b>「이미 」</b> 로 견준다 */
@@ -353,14 +541,17 @@ const SEED = `(function(){
              first: !!(d && rows && (d.compareDocumentPosition(rows) & Node.DOCUMENT_POSITION_FOLLOWING)),
              n: hmSteps().length };
   });
-  is(now.there && now.btn >= 2 && now.ask,
-     '<b>한 건</b>이 크게 서고 <b>「무엇을 할까요?」</b> 갈래가 선다 — '+now.btn+'가지');
+  is(now.there && now.doTxt && now.doH >= 44 && now.btn >= 1 && now.ask,
+     '<b>한 건</b>이 크게 서고 <b>큰 단추 한 방</b> + 갈래가 선다 — 「'+
+     (now.doTxt || '단추가 없다')+'」('+now.doH+'px) + '+now.btn+'가지');
   is(now.hasDid, '그 갈래 안에 <b>「이미 했습니다」</b> 가 있다 — 끝냈다고 말할 자리가 없으면 목록이 안 줄어든다');
   is(now.first, '갈래별 줄보다 <b>위에</b> 선다 — 제일 먼저 눈에 들어와야 한다');
   is(/1번째/.test(now.txt), '<b>몇 번째인지</b> 적는다 — 「' + (now.txt.match(/\d+건 중 \S+번째[^·]*/) || [''])[0].trim() + '」');
   /* 차례는 <b>HM_ORD 가 정한 그대로</b>입니다 — 시간이 정해진 약속이 맨 위,
      그다음이 계약 마디. 여기서 차례를 따로 적으면 갈라집니다 (5번). */
-  is(now.nm === '홍길동' && /약속/.test(now.txt),
+  /* 이름 자체가 아니라 <b>누가 맨 앞인가</b>를 재는 자리입니다 — 목업처럼
+     「님」 을 붙이면서 글자가 늘었고, 못 박아 두면 그때마다 낡습니다 (8번). */
+  is(/홍길동/.test(now.nm) && /약속/.test(now.txt),
      '차례대로 <b>약속부터</b> 선다 — 시간이 정해진 것이 먼저다 (지금 「' + now.nm + '」)');
 
   head('[6-2] <b>기록으로 남는 것과 아닌 것을 구분해 말한다</b> (1번)');
@@ -422,12 +613,18 @@ const SEED = `(function(){
      TFA 에서. 아침에 홈을 보고 또 건너가야 했습니다. 이제 홈에서 끝납니다.
      ★ <b>새로 만들지 않았는가</b>가 제일 중요합니다 (5번). 따로 그리면
        한쪽만 고쳐져 두 화면이 서로 다른 말을 하게 됩니다.            */
-  head('[8] TFA 업무관리가 <b>홈에서</b> 돈다');
-  await pg.evaluate(() => { go('home'); });
+  /* ⚠ 2026-09-26 · <b>TFA 는 홈에서 「나」(airep)로 갔습니다.</b>
+     사장님 말씀 — 「🧭 TFA 업무관리(hmTfa 1,290px) → 「나」」.
+     ★ <b>지운 것이 아닙니다.</b> hmTfaHtml() 도 arInnerHtml() 도 그대로
+       있고, 재는 것도 그대로입니다 — <b>보는 자리만</b> 홈 → airep 으로
+       옮깁니다. 칸이 다 서는지, 본문이 따라오는지, 서버를 되풀이해 안
+       부르는지 — 하나도 안 줄였습니다 (8번).                            */
+  head('[8] TFA 업무관리가 <b>「나」에서</b> 돈다');
+  await pg.evaluate(() => { go('airep'); });
   await pg.waitForTimeout(900);
   await clearOvl(pg);
   const tfa = await pg.evaluate(() => {
-    const host = document.getElementById('hmTfaHost');
+    const host = document.getElementById('arPane') ? document.getElementById('arPane').parentNode : null;
     const pane = document.getElementById('arPane');
     return { host: !!host, pane: !!(host && host.querySelector('#arPane')),
              cats: pane ? pane.querySelectorAll('.ar-cat').length : 0,
@@ -438,19 +635,30 @@ const SEED = `(function(){
              go: !!document.querySelector('.hm-tfa-go'),
              body: !!(pane && pane.querySelector('.ar-main')) };
   });
-  is(tfa.host && tfa.pane, 'TFA 판이 <b>홈 안에</b> 서 있다 — 같은 칸 이름(#arPane)이라 다시 그리기가 그대로 된다');
+  is(tfa.host && tfa.pane, 'TFA 판이 <b>「나」 안에</b> 서 있다 — 칸 이름(#arPane)이 그대로라 다시 그리기가 그대로 된다');
   is(tfa.cats === tfa.want && tfa.want > 0,
      '칸이 <b>하나도 안 빠지고</b> 선다 — ' + tfa.cats + ' / AR_CAT ' + tfa.want + '개'
      + (tfa.hid.length ? ' (눈에서 뺀 칸 ' + tfa.hid.join(', ') + ' 은 뺀 수)' : ''));
-  is(tfa.body, '고른 칸의 <b>본문까지</b> 홈에 선다 — 이름만 늘어놓지 않는다');
-  is(tfa.go, '<b>「전체 화면으로」</b> 가 있다 — 넓게 보고 싶으실 때');
+  is(tfa.body, '고른 칸의 <b>본문까지</b> 선다 — 이름만 늘어놓지 않는다');
+  /* 「전체 화면으로」 는 <b>홈 안에 있을 때</b> 필요하던 단추입니다 — 이제
+     그 화면 자체라 없는 것이 맞습니다. 대신 <b>홈에서 여기로 오는 길</b>이
+     있는지를 봅니다 (「지웠다」 로 읽히면 팀원이 안 씁니다 · 사장님 ④). */
+  const tfaWay = await pg.evaluate(() => {
+    go('home');
+    const e = document.querySelector('.hm-mv');
+    return !!(e && /TFA/.test(e.innerText || ''));
+  });
+  await pg.waitForTimeout(300);
+  is(tfaWay, '<b>홈에서 오는 길</b>이 있다 — 「📦 여기로 옮겼습니다」 에 TFA 가 적혀 있다');
   /* 새로 그리지 않았는가 — 소스로 못 박는다 (5번) */
   const tfaSrc = SRC.slice(SRC.indexOf('function hmTfaHtml('), SRC.indexOf('function hmTfaHtml(') + 900);
   is(/arInnerHtml\(\)/.test(tfaSrc), 'TFA 가 쓰던 판(arInnerHtml)을 <b>그대로</b> 부른다 — 제 몸통을 안 갖는다 (5번)');
   is((SRC.match(/function hmTfaHtml\s*\(/g) || []).length === 1, 'hmTfaHtml() 이 한 곳에 있다');
 
-  head('[8-1] 칸을 누르면 <b>홈에 머문 채</b> 바뀐다');
+  head('[8-1] 칸을 누르면 <b>그 화면에 머문 채</b> 바뀐다');
   const sw = await pg.evaluate(async () => {
+    go('airep');
+    await new Promise(r => setTimeout(r, 600));
     const btns = [...document.querySelectorAll('#arPane .ar-cat')];
     const before = (document.querySelector('#arPane .ar-main') || {}).textContent || '';
     const t = btns.find(x => /팀원 관리/.test(x.textContent));
@@ -459,12 +667,17 @@ const SEED = `(function(){
     const after = (document.querySelector('#arPane .ar-main') || {}).textContent || '';
     return { cat: AR.cat, tab: (typeof lastTab !== 'undefined') ? lastTab : '?',
              changed: before.slice(0, 150) !== after.slice(0, 150),
-             stillHome: !!document.getElementById('hmToday') };
+             stay: !!document.getElementById('arPane') };
   });
   is(sw.changed && sw.cat === 'team', '눌린 칸으로 <b>본문이 바뀐다</b> — 지금 「' + sw.cat + '」');
-  is(sw.tab === 'home' && sw.stillHome, '<b>홈을 안 떠난다</b> — 오늘 챙길 것도 그대로 있다');
+  is(sw.tab === 'airep' && sw.stay, '<b>그 화면을 안 떠난다</b> — 판이 그대로 서 있다');
 
   head('[8-2] TFA 판이 <b>서버를 되풀이해 안 부른다</b> (7번)');
+  /* ★ 2026-09-26 · <b>홈은 이제 TFA 를 아예 안 깨웁니다.</b> TFA 가 홈에
+     있던 동안 hmArm 이 osAiRepAfterRender() 를 불렀고, 그것이 arLoad()·
+     gbLoad() 로 <b>홈을 열 때마다 서버까지</b> 갔습니다. 판을 「나」로 옮겼으니
+     그 부름도 같이 옮겨야 합니다 — 안 옮기면 <b>보이지도 않는 칸 때문에</b>
+     요금이 나갑니다 (7번). 여기서 그것을 못 박습니다.                    */
   /* ★ 여기서 재는 것은 <b>이 판이 더한 몫</b>뿐입니다. 홈이 원래 부르던
      것(고객·공지 등)까지 싸잡아 세면, 제가 건드리지도 않은 자리 때문에
      빨간불이 켜져 사람이 점검을 안 믿게 됩니다 (8번).
@@ -478,27 +691,42 @@ const SEED = `(function(){
       if (!was || force) window.__arN++;
       return real.apply(this, arguments);
     };
+    /* ① 홈을 세 번 여닫는다 — <b>한 번도</b> 안 불러야 한다 */
     for (let i = 0; i < 3; i++) {
       go('clients'); await new Promise(r => setTimeout(r, 250));
       go('home');    await new Promise(r => setTimeout(r, 450));
     }
+    const homeN = window.__arN;
+    /* ② 「나」를 세 번 여닫는다 — arLoad 가 스스로 막아 <b>처음 한 번만</b> */
+    for (let i = 0; i < 3; i++) {
+      go('clients'); await new Promise(r => setTimeout(r, 250));
+      go('airep');   await new Promise(r => setTimeout(r, 450));
+    }
+    const allN = window.__arN;
     window.arLoad = real;
-    return { n: window.__arN, pane: !!document.getElementById('arPane') };
+    return { homeN: homeN, allN: allN, pane: !!document.getElementById('arPane') };
   });
-  is(armed.n === 0 && armed.pane,
-     '홈을 세 번 더 열어도 TFA 는 <b>다시 안 읽는다</b> — ' + armed.n + '번 ' +
-     '(arLoad 가 스스로 막는다. 여기서 새면 하루 수십 번이 그대로 요금이 된다)');
-  /* 코드로도 못 박는다 — 홈이 <b>TFA 가 아는 한 곳</b>을 부르는가 (5번) */
-  const arm = SRC.slice(SRC.indexOf('function hmArm('), SRC.indexOf('function hmArm(') + 900);
-  is(/osAiRepAfterRender\(\)/.test(arm),
-     '깨우는 일은 <b>TFA 가 아는 한 곳</b>에 맡긴다 — 홈에서 따로 적으면 한쪽만 고쳐진다 (5번)');
+  is(armed.homeN === 0,
+     '<b>홈을 세 번 열어도 TFA 를 아예 안 읽는다</b> — ' + armed.homeN + '번 ' +
+     '(홈에 없는 칸 때문에 서버에 가면 그것이 요금이다 · 7번)');
+  is(armed.allN <= 1 && armed.pane,
+     '「나」를 세 번 더 열어도 TFA 는 <b>다시 안 읽는다</b> — ' + armed.allN + '번 ' +
+     '(arLoad 가 스스로 막는다)');
+  /* 코드로도 못 박는다 — 홈이 <b>안 보이는 칸을 안 깨우는가</b> (7번) */
+  const arm = SRC.slice(SRC.indexOf('function hmArm('), SRC.indexOf('function hmArm(') + 1600);
+  is(!/^\s*try\{[^\n]*osAiRepAfterRender\(\)/m.test(arm),
+     '홈이 <b>TFA 를 안 깨운다</b> — 판을 「나」로 옮겼으니 부르는 자리도 같이 옮긴다 (7번)');
+  is(!/^\s*try\{[^\n]*rdLoad\(\)/m.test(arm),
+     '홈이 <b>출발 점검을 안 읽는다</b> — 「출발 점검」 으로 옮겼습니다 (7번)');
+  is(/setupPaint\(\)/.test(arm),
+     '<b>준비 SQL 은 그대로 부른다</b> — 홈 맨 위에 남아 있습니다 (사장님 ★)');
 
   head('[8-3] 달력이 둘이어도 <b>둘 다</b> 바뀐다');
   /* 홈 달력과 「스케줄 관리」 칸의 달력이 같이 섭니다. 예전에는 첫 자리를
      그리고 그대로 나가(return) 나머지가 안 바뀌었습니다 — 눌리는데 안
      바뀌면 고장 난 것으로 보입니다. */
   const two = await pg.evaluate(async () => {
-    arGoCat('sched');
+    go('airep'); arGoCat('sched');
     await new Promise(r => setTimeout(r, 600));
     const cals = document.querySelectorAll('.mcal-grid, .mcal-wk').length;
     const before = MCAL.ym;
@@ -508,8 +736,9 @@ const SEED = `(function(){
     mcalMove(-1);
     return { cals, before, titles, same: titles.length > 1 && titles.every(x => x === titles[0]) };
   });
-  is(two.titles.length >= 2, '홈과 스케줄 관리에 <b>달력이 둘</b> 섰다 — ' + two.titles.length + '개');
-  is(two.same, '달을 넘기면 <b>둘 다</b> 따라 넘어간다 — ' + two.titles.join(' · '));
+  is(two.titles.length >= 1, '스케줄 관리에 <b>달력이 선다</b> — ' + two.titles.length + '개');
+  is(two.titles.length < 2 || two.same,
+     '달력이 여럿이면 <b>다 따라 넘어간다</b> — ' + (two.titles.join(' · ') || '(한 벌)'));
 
   head('[7] 이 판을 그리는 동안 <b>터진 곳이 없다</b>');
   const real = errs.filter(x => !/favicon|net::ERR|Failed to load resource|ERR_FAILED/i.test(x));

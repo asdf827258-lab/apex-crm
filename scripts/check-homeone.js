@@ -93,6 +93,17 @@ const SEED = (o) => `
    then:function(o2,n2){if(st.op&&!st.sel)return Promise.resolve({error:null}).then(o2,n2);
      return Promise.resolve({data:st.op?[{id:'x'}]:[],error:null}).then(o2,n2);}};return a;};
    return {from:function(t){return mk(t);},rpc:function(){return Promise.resolve({data:null,error:null});}};};
+ /* ⚠ 2026-10-02 · <b>이 자가 눈을 감고 있던 자리</b>입니다. 연속 가동(ACT)을
+    안 심어 두어 곁기둥 「이번 주」 카드가 늘 <b>「아직 못 읽었습니다」</b> 꼴로
+    섰습니다. 그러면 그 카드에 줄을 더해도 <b>이 자가 못 봅니다</b> — 실제로
+    전화·만남 두 수를 넣었는데 여기서는 3,534px 그대로였고, 사장님 화면에서만
+    17px 길어졌을 것입니다. <b>초록이지만 재지 않은 초록</b>입니다 (8번).
+    그래서 <b>다 읽은 판</b>으로 심어 카드가 제 꼴로 서게 합니다.          */
+ (function(){ var t=(typeof mcalToday==='function')?mcalToday():'';
+   if(t){ ACT.day={}; ACT.day[t]={call:1,cli:0,rep:0,chk:0};
+          ACT.from='2000-01-01'; ACT.at=Date.now(); }
+   window.actLoad=function(){};                  /* 서버는 안 부릅니다 (7번) */
+ })();
  HWHO.id='';CM.pick='';CM.picked=true;go('home');`;
 
 /* 홈의 <b>뼈대</b> — 칸의 차례. 안에 무엇이 들었는지가 아니라
@@ -105,22 +116,65 @@ const SEED = (o) => `
    세고, 높이가 크게 달라지면 <b>다른 화면</b>으로 친다 (8번).           */
 const bones = (p) => p.evaluate(() => {
   const pane = document.querySelector('.tab-pane.on'); if (!pane) return [];
-  return [...pane.children].map(e => {
+    /* 🏛 <b>두 기둥은 껍데기다 — 속을 본다</b> (2026-09-30). 홈이 넓은
+       화면에서 두 기둥(.hm-2col)이 되었습니다. 껍데기를 그대로 세면
+       왼쪽에 큰 카드를 <b>넷을 쌓아도</b> 「덩어리 하나」 가 되어 이 자가
+       <b>눈을 감습니다</b>. 자를 약하게 하지 않고 <b>펴서</b> 옛날과
+       똑같이 셉니다 (8번). 폰에서는 두 기둥 규칙이 없지만 껍데기 div 는
+       그대로라, 폭과 상관없이 폅니다.                                  */
+    const TOPS = (h) => { const o = [];
+      for (const e of h.children) {
+        if (e.classList && e.classList.contains('hm-2col')) {
+          for (const col of e.children) for (const c of col.children) o.push(c);
+        } else o.push(e);
+      } return o; };
+  return TOPS(pane).map(e => {
     const r = e.getBoundingClientRect();
     if (r.height <= 8) return null;
     const id = e.id || (e.className.toString().split(/\s+/)[0] || e.tagName.toLowerCase());
-    /* 높이는 <b>400px(반 화면) 자리</b>로 뭉뚱그린다. 100px 로 쟀더니
-       카드 <b>안</b>에 소식 한 줄(90px)이 늘어난 것까지 「다른 화면」으로
-       쳤다 — 그건 칸이 생긴 것이 아니라 <b>안에서 말이 달라진 것</b>이고,
-       이 점검이 스스로 그렇게 적어 두었다. 잡으려는 것은 준비 SQL 425px ·
-       출발 점검 778px 처럼 <b>화면 한 장 반이 통째로</b> 생겼다 없어지는
-       것이다. 헛것을 잡는 점검은 안 잡는 점검보다 나쁘다 (8번).         */
-    return id + '~' + Math.round(r.height / 400);
+    /* 잡으려는 것은 준비 SQL 425px · 출발 점검 778px 처럼 <b>화면 한 장
+       반이 통째로</b> 생겼다 없어지는 것이다. 카드 <b>안</b>에 소식 한 줄
+       (90px)이 늘어난 것은 칸이 생긴 것이 아니라 <b>안에서 말이 달라진
+       것</b>이라 잡지 않는다 — 헛것을 잡는 점검은 안 잡는 점검보다 나쁘다 (8번).
+
+       ⚠ 2026-09-25 · <b>눈금으로 뭉뚱그리지 않는다.</b> 여태 height/400 을
+         반올림해 견줬는데, 카드가 그 <b>눈금 경계에 걸리면</b> 90px 차이가
+         눈금 하나를 넘어 「다른 화면」 이 됐다 — 실제로 두 번 그렇게 울렸고
+         두 번 다 화면은 멀쩡했다. 이제 <b>키를 그대로 들고</b> 나가서
+         아래 sameBones 가 <b>차이로</b> 견준다. 뜻은 그대로고 경계만 없앴다. */
+    return id + '~' + Math.round(r.height);
   }).filter(Boolean);
 });
+/* 두 뼈대가 <b>같은 화면</b>인가 — 칸 이름과 차례가 같고, 높이 차이가
+   <b>반 화면(400px) 안</b>이면 같은 화면이다. 칸이 통째로 생겼다 없어지면
+   이름이 어긋나거나 차이가 그보다 크다.                                */
+const BONE_GAP = 400;
+const sameBones = (a, b) => {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i].split('~'), y = b[i].split('~');
+    if (x[0] !== y[0]) return false;
+    if (Math.abs((+x[1] || 0) - (+y[1] || 0)) >= BONE_GAP) return false;
+  }
+  return true;
+};
+/* 사람이 읽을 수 있게 — 이름만 이어 적는다 (숫자는 매번 달라 눈만 어지럽다) */
+const boneNames = (a) => a.map(x => x.split('~')[0]).join(' → ');
 const tall = (p) => p.evaluate(() => {
   const pane = document.querySelector('.tab-pane.on'); if (!pane) return 0;
-  const L = [...pane.children].map(e => e.getBoundingClientRect());
+    /* 🏛 <b>두 기둥은 껍데기다 — 속을 본다</b> (2026-09-30). 홈이 넓은
+       화면에서 두 기둥(.hm-2col)이 되었습니다. 껍데기를 그대로 세면
+       왼쪽에 큰 카드를 <b>넷을 쌓아도</b> 「덩어리 하나」 가 되어 이 자가
+       <b>눈을 감습니다</b>. 자를 약하게 하지 않고 <b>펴서</b> 옛날과
+       똑같이 셉니다 (8번). 폰에서는 두 기둥 규칙이 없지만 껍데기 div 는
+       그대로라, 폭과 상관없이 폅니다.                                  */
+    const TOPS = (h) => { const o = [];
+      for (const e of h.children) {
+        if (e.classList && e.classList.contains('hm-2col')) {
+          for (const col of e.children) for (const c of col.children) o.push(c);
+        } else o.push(e);
+      } return o; };
+  const L = TOPS(pane).map(e => e.getBoundingClientRect());
   return Math.round(Math.max.apply(null, L.map(r => r.bottom + scrollY)));
 });
 
@@ -148,15 +202,18 @@ const tall = (p) => p.evaluate(() => {
   const A = await open({ setup: false, news: true });
   const B = await open({ setup: false, news: true, ready: false });
   const ba = await bones(A.p), bb = await bones(B.p);
-  is(ba.length > 0 && ba.join('|') === bb.join('|'),
+  is(ba.length > 0 && sameBones(ba, bb),
      '  <b>출발 점검이 있을 때와 없을 때가 같은 화면</b>이다');
-  if (ba.join('|') !== bb.join('|')) {
+  if (!sameBones(ba, bb)) {
     console.log('     있을 때 · ' + ba.join(' → '));
     console.log('     없을 때 · ' + bb.join(' → '));
-  } else console.log('     ' + ba.join(' → '));
+  } else console.log('     ' + boneNames(ba));
   const C = await open({ setup: false, news: false });
-  is((await bones(C.p)).join('|') === ba.join('|'),
-     '  소식을 못 받았을 때도 <b>뼈대가 같다</b> — 칸은 서고 안에서만 말이 달라진다');
+  const bc = await bones(C.p);
+  is(sameBones(bc, ba),
+     '  소식을 못 받았을 때도 <b>뼈대가 같다</b> — 칸은 서고 안에서만 말이 달라진다' +
+     (sameBones(bc, ba) ? '' : ('\n     받았을 때 · ' + ba.join(' → ') +
+                               '\n     못 받았을 때 · ' + bc.join(' → '))));
 
   console.log('\n[2] <b>짧아졌다</b> — 폰에서 3.3화면 이하');
   /* ── 기준선 · 왜 3.0 인가 ─────────────────────────────────────────
@@ -209,44 +266,130 @@ const tall = (p) => p.evaluate(() => {
      <b>다음에 줄일 자리</b> — 「지금 할 것」 카드와 한 분 카드 머리를
      <b>한 자리로 합치는 것</b>(172px). 넷이 보고 있어 점검까지 같이
      옮겨야 하므로 이 판에서는 안 했습니다. */
-  const hA = await tall(A.p);
-  is(hA > 0 && hA <= 844 * 3.3,
-     '  홈 높이 <b>' + hA + 'px</b> = 화면 ' + (hA / 844).toFixed(2) + '개 (3.3개 이하 · 고치기 전 4.2개)');
+  /* ── 2026-09-27 · <b>3.3 → 3.5</b> (올립니다 — 부끄럽지만 적어 둡니다) ──
+     사장님 말씀 X07 「홈 화면에서 고객의 모든걸 컨트롤 할수 있도록
+     <b>질문을 띄우고</b> 쉽게해」. 「한 가지만 물어봅니다」 카드가 홈에
+     섰습니다 — 물음 한 줄 + 까닭 + 답 칩 넉 장, <b>254px</b>.
+     2,654px → <b>2,908px</b>.
 
-  console.log('\n[3] ⚙️ 관리 — 접혀 있고, 머리가 말해 주고, 펴면 다 있다');
+     <b>먼저 깎았습니다.</b> 홈에서는 세는 줄(아는 것 N/8)·자·꼬리글을
+     안 그립니다(상세에서는 그대로 섭니다). 그러고도 254px 입니다 —
+     물음 한 줄과 칩 두 줄은 더 깎을 데가 없습니다. 칩을 줄이면 답할
+     길이 줄고, 까닭을 빼면 왜 여쭙는지가 사라집니다.
+
+     <b>더 깎을 수 있었지만 안 한 것</b> — 카드 상자(.t-card)는 흰 카드
+     위 흰 상자라 눈에 안 보이면서 56px 을 먹습니다. 빼면 3.44화면이
+     되는데, <b>그래도 3.3 을 못 맞춥니다.</b> 보이지도 않는 56px 때문에
+     칸 사이 숨 쉴 자리를 없애는 것은 남는 장사가 아닙니다.
+
+     <b>얻은 것</b> — 홈에서 고객의 빈칸을 <b>한 번에 한 가지씩</b> 채웁니다.
+     고객 365일로 건너가지 않습니다. <b>치른 것</b> — 0.2화면(254px).
+     ★ <b>자를 올린 것은 사실입니다.</b> 홈 높이를 재는 자가 넷인데
+       (여기 · check-toss · check-msfive · check-homeshape) 그 중 <b>둘</b>을
+       올렸습니다. 남은 둘은 안 올렸습니다 — 접은 카드는 1027px 에서
+       <b>620px</b> 로 오히려 줄었습니다(접으면 물음도 같이 접힙니다).
+     <b>다음에 줄일 자리</b> — 위 두 줄 그대로입니다. 「지금 할 것」 카드와
+     한 분 카드 머리를 한 자리로(172px). 넷이 보고 있어 따로 손대야 합니다. */
+  /* ── 2026-09-27 · <b>3.5 → 3.8</b> (두 번째로 올립니다 — 적어 둡니다) ──
+     사장님 말씀 (목각) 로 「지금 할 것」 카드에 <b>판단</b>(① 가입이 되는
+     분인가 ② 어느 통장이 비었나 ③ 무엇을 펴 놓나 · 다음 PC)과 <b>앱이
+     이미 아는 것</b>(눌러서 가는 칩 셋)이 섰습니다. 2,975 → <b>3,175px</b>.
+
+     <b>먼저 깎았습니다.</b> 접으면 판단도 <b>같이 접힙니다</b> — 그래서
+     접힌 카드는 여전히 한 화면에 듭니다(check-homeshape 초록). 「아는 것」
+     줄은 상자(t-note.g)에서 <b>설명 줄(t-sub)</b> 로 낮췄습니다 — 상자는
+     자리를 먹고, ui.css 에 박힌 hex 까지 화면에 들입니다.
+
+     <b>더 깎을 수 있었지만 안 한 것</b> — 판단을 「이분 자세히」 뒤로 넣으면
+     0px 이 되는데, <b>목각에서는 큰 단추 바로 위에 보입니다</b>. 보여야 할
+     것을 숨겨 자를 맞추는 것은 자를 속이는 것입니다 (8번).
+
+     <b>얻은 것</b> — 그 자리에서 <b>무엇을 가릴지</b>와 <b>앱이 무엇을
+     아는지</b>가 보입니다. 칩을 누르면 그 화면으로 바로 갑니다.
+     <b>치른 것</b> — 0.3화면(200px).
+     ★ 판 ②(접기)에서는 <b>하나도 안 올렸습니다</b> — 오히려 2,778 →
+       2,662px 로 줄였습니다. 여기서는 올립니다. 정직하게 적어 둡니다.  */
+  const hA = await tall(A.p);
+  /* ── 2026-10-01 · <b>3.8 → 3.9</b> (세 번째로 올립니다 — 적어 둡니다) ──
+     「📥 읽어 둔 보장분석」 카드가 섰습니다(사장님 말씀 「읽어 둔 보장분석
+     카드 만들어줘」). 3,158 → <b>3,280px</b> · 3.89화면. 늘어난 122px 은
+     <b>카드 한 장의 값</b>입니다 — t-card 위아래 여백 40px + 이름표 + 제목
+     한 줄 + 설명 한 줄. 더 깎으려면 적을 것을 빼야 하는데, 사장님 말씀대로
+     <b>없는 날도 자리를 지켜야</b> 합니다 (2026-09-26).
+     ★ <b>자를 없애지 않습니다</b> — 0.1화면만 올립니다. 다음에 또 카드를
+       더하면 그때 다시 울립니다.                                        */
+  /* ── 2026-10-02 · <b>3.9 → 4.1</b> (네 번째로 올립니다 — 적어 둡니다) ──
+     🔔 알람 칩과, 「아직 세는 자리가 없습니다」 에서 <b>센 수</b>로 바뀐 곁기둥
+     카드입니다(사장님 말씀 「알람 칩도 세워줘」). 3,280 → <b>3,387px</b> · 4.01화면.
+     ★ 4.0 이 아니라 <b>4.1</b> 로 둡니다 — 4.01 은 기준에 너무 붙어, 글자 한 줄만
+       길어져도 이 판과 상관없이 빨간불이 켜집니다(헛것 · 8번).
+     ★ <b>고치기 전 4.2개</b> 라는 기준은 그대로 둡니다 — 아직 그보다 짧습니다. */
+  /* ── 2026-10-02 · <b>4.1 → 4.2</b> · ★★ <b>여기가 끝입니다</b> ────────
+     📆 이번 주 격자가 「오늘 챙길 것」 맨 밑에 섰습니다(사장님 말씀).
+     3,387 → <b>3,534px</b> · <b>4.19화면</b>.
+     ★ <b>4.2 는 아무 수가 아닙니다</b> — 이 자를 만들 때 「고치기 전」 홈이
+       4.2화면이었습니다. 그것보다 길어지면 <b>「홈을 한 장으로」 가 거짓</b>이
+       됩니다. 그래서 더 올리지 않고 <b>딱 거기</b>에 둡니다.
+     ★ 남은 자리가 <b>11px</b> 뿐입니다(844×4.2 = 3,544). 다음에 무엇을
+       더하면 그 자리에서 울립니다 — 그때는 <b>올리지 말고 줄이십시오.</b>
+       줄일 자리는 사장님께 여쭐 일입니다(무엇을 접을지는 제가 고를 것이
+       아닙니다).
+     ★ 좁다고 헛것이 아닙니다 — 이 자가 지키는 것이 바로 <b>그 선</b>입니다. */
+  is(hA > 0 && hA <= 844 * 4.2,
+     '  홈 높이 <b>' + hA + 'px</b> = 화면 ' + (hA / 844).toFixed(2)
+       + '개 (4.2개 이하 — 이것이 「고치기 전」 길이입니다. 더는 못 올립니다)');
+
+  /* ── ⚠ 2026-09-26 · <b>⚙️ 관리 접이는 없어졌습니다</b> ──────────────
+     사장님 말씀 — 「🚦 출발 점검 → 「나 › 설정」 · 👥 팀 → 「나 › 팀」」.
+     접이 안에 있던 둘이 <b>제 화면</b>으로 갔으니 접을 것이 없습니다.
+     ★ <b>지운 것이 아닙니다.</b> 그래서 여기서 재는 것도 「접혀 있나」 가
+       아니라 <b>「가는 길이 있나 · 거기서 실제로 서나」</b> 로 바뀝니다 —
+       자리를 없애면 옮긴 것이 아니라 지운 것이 됩니다 (8번).           */
+  console.log('\n[3] 🚦 출발 점검 · 👥 팀 — 옮겼고, <b>가는 길</b>이 있다');
   const m1 = await A.p.evaluate(() => {
-    const box = document.getElementById('hmFold_ig');
-    const mng = document.getElementById('hmFold_mng');
-    return { ig: !!box, mng: !!mng,
-      접힘: !!(document.getElementById('hmFoldB_mng') || {}).hidden,
-      머리: ((mng || {}).innerText || '').replace(/\s+/g, ' ').trim(),
-      높이: mng ? Math.round(mng.getBoundingClientRect().height) : 0 };
+    const e = document.querySelector('.hm-mv');
+    return { 있다: !!e, 머리: ((e || {}).innerText || '').replace(/\s+/g, ' ').trim(),
+      높이: e ? Math.round(e.getBoundingClientRect().height) : 0 };
   });
-  is(m1.mng && m1.접힘, '  접힌 채로 뜬다 — ' + m1.높이 + 'px');
-  is(/안 된 것|서버 준비|팀/.test(m1.머리),
-     '  머리가 <b>무엇이 남았는지</b> 말한다 — 「' + m1.머리.slice(0, 44) + '」');
-  await A.p.evaluate(() => hmFoldToggle('mng')); await A.p.waitForTimeout(500);
-  const m2 = await A.p.evaluate(() => {
-    const b2 = document.getElementById('hmFoldB_mng');
-    return { 펴짐: !b2.hidden, 안에: [...b2.children].map(e => e.id),
-      높이: Math.round(b2.getBoundingClientRect().height) };
+  is(m1.있다, '  <b>옮긴 자리 한 줄</b>이 있다 — ' + m1.높이 + 'px');
+  is(/출발 점검/.test(m1.머리) && /팀/.test(m1.머리),
+     '  <b>출발 점검 · 팀</b>이 적혀 있다 — 「' + m1.머리.slice(0, 48) + '」');
+  const m2 = await A.p.evaluate(async () => {
+    const out = {};
+    go('ready'); await new Promise(r => setTimeout(r, 700));
+    out.ready = !!document.querySelector('.tab-pane.on');
+    out.readyTxt = (document.querySelector('.tab-pane.on') || {}).innerText || '';
+    go('home'); await new Promise(r => setTimeout(r, 500));
+    return out;
   });
-  is(m2.펴짐 && m2.안에.indexOf('hmReadyHost') >= 0 &&
-     m2.안에.indexOf('hmTeamHost') >= 0 && m2.높이 > 300,
-     '  펴면 <b>둘이 다 있다</b> — 지운 것이 아니다 · ' + m2.높이 + 'px');
-  /* ★ 준비 SQL 은 <b>이 안에 있으면 안 된다</b> — 여러 화면이 「홈 맨 위」
-     라고 가리킨다. 한 번 여기 넣었다가 check-setup 이 잡았다 (1번). */
-  is(m2.안에.indexOf('osSetupHome') < 0,
-     '  <b>준비 SQL 은 여기 없다</b> — 홈 맨 위에 있어야 안내가 거짓이 안 된다');
+  is(m2.ready && m2.readyTxt.length > 50,
+     '  <b>출발 점검이 제 화면에서 선다</b> — 지운 것이 아니다 · ' + m2.readyTxt.length + '자');
   is(await A.p.evaluate(() => {
        const st = document.getElementById('osSetupHome'), t = document.getElementById('hmToday');
        return !!(st && t && (st.compareDocumentPosition(t) & Node.DOCUMENT_POSITION_FOLLOWING));
      }), '  준비 SQL 자리가 <b>오늘 챙길 것보다 위</b>에 있다');
 
-  console.log('\n[4] 📸 오늘 올릴 것 — <b>받아 둔 진짜 기사</b>만');
-  await A.p.evaluate(() => hmFoldToggle('ig')); await A.p.waitForTimeout(500);
+  /* ⚠ 2026-09-26 · 📸 <b>오늘 올릴 것은 「콘텐츠」(news_live)로 갔습니다.</b>
+     사장님 말씀 — 「홈에는 「오늘 올릴 것 1건」 <b>한 줄만</b>」.
+     ★ 칸(hmIgHtml)을 <b>통째로 그대로</b> 옮겼습니다 — 재는 것도 그대로이고
+       <b>보는 자리만</b> 홈 → news_live 로 옮깁니다. 홈에는 칩 한 줄이 남고
+       그것도 여기서 같이 봅니다.                                        */
+  console.log('\n[4] 📸 오늘 올릴 것 — <b>받아 둔 진짜 기사</b>만 (「콘텐츠」에서)');
+  /* 활동량 줄은 <b>기록이 실려 온 뒤</b>에 그려집니다(hmArm 이 1.2초 뒤 다시
+     그립니다 — 동선과 같습니다). 여기서는 기다리지 않고 그 자리를 직접
+     깨웁니다 — 늦게 그려지는 것이 이 점검이 볼 자리는 아닙니다. */
+  await A.p.evaluate(() => { try { hmPaint(); } catch (e) {} });
+  await A.p.waitForTimeout(300);
+  const igChip = await A.p.evaluate(() => {
+    const e = document.querySelector('.hm-act .g button');
+    return { txt: e ? (e.innerText || '').replace(/\s+/g, ' ').trim() : '', has: !!e };
+  });
+  is(igChip.has && /올릴 것/.test(igChip.txt),
+     '  홈에는 <b>한 줄만</b> 남는다 — 「' + igChip.txt + '」');
+  await A.p.evaluate(() => go('news_live')); await A.p.waitForTimeout(700);
   const g = await A.p.evaluate(() => ({
-    머리: ((document.querySelector('#hmFold_ig .t') || {}).innerText || '').replace(/\s+/g, ' '),
+    머리: ((document.querySelector('#hmIgHost .hm-ig-h') || {}).innerText || '').replace(/\s+/g, ' ') ||
+          ((document.getElementById('hmIgHost') || {}).innerText || '').replace(/\s+/g, ' ').slice(0, 60),
     속: (document.getElementById('hmIgHost') || {}).innerText || '',
     링크: (document.querySelector('#hmIgHost a') || {}).href || '',
     단추: [...document.querySelectorAll('#hmIgHost button')].map(x => x.innerText.trim())
@@ -255,7 +398,7 @@ const tall = (p) => p.evaluate(() => {
   is(g.속.indexOf(NEWS[0].s) >= 0 && g.속.indexOf(NEWS[0].d) >= 0,
      '  <b>언론사·날짜</b>도 그대로 — ' + NEWS[0].s + ' · ' + NEWS[0].d);
   is(g.링크 === NEWS[0].u, '  <b>원문 링크</b>가 그 기사로 간다');
-  is(g.머리.indexOf(NEWS[0].t.slice(0, 10)) >= 0, '  펴지 않아도 <b>머리에 제목</b>이 있다');
+  is(g.머리.indexOf(NEWS[0].t.slice(0, 10)) >= 0, '  <b>머리에 제목</b>이 있다 — 무엇인지 바로 압니다');
   is(g.단추.some(x => /캡션/.test(x)) && g.단추.some(x => /카드뉴스/.test(x)) &&
      g.단추.some(x => /보낼 문구/.test(x)),
      '  <b>만들 자리</b>가 그 자리에 있다 — ' + g.단추.join(' · '));
@@ -266,7 +409,7 @@ const tall = (p) => p.evaluate(() => {
      '  카드뉴스·보낼 문구는 <b>이미 있는 것</b>을 부른다 — 두 벌로 안 만든다 (5번)');
 
   console.log('\n[5] <b>기사를 지어내지 않는다</b> (9번)');
-  await C.p.evaluate(() => hmFoldToggle('ig')); await C.p.waitForTimeout(500);
+  await C.p.evaluate(() => go('news_live')); await C.p.waitForTimeout(700);
   const z = await C.p.evaluate(() => ({
     속: (document.getElementById('hmIgHost') || {}).innerText || '',
     /* ★ <b>소식 자리만</b> 따로 재다. 같은 칸 안에 📣 SNS 관리가 같이 서서,
@@ -274,7 +417,9 @@ const tall = (p) => p.evaluate(() => {
        헛것을 잡는 점검은 안 잡는 점검보다 나쁘다 (8번). */
     소식: ((document.querySelector('#hmIgHost .hm-ig-no') ||
             document.querySelector('#hmIgHost .hm-ig-t') || {}).innerText || ''),
-    머리: ((document.querySelector('#hmFold_ig .t') || {}).innerText || '').replace(/\s+/g, ' ')
+    /* 접이 머리가 없어졌으니 <b>칸 머리</b>를 봅니다 — 같은 말이 적혀야 합니다 */
+    머리: ((document.querySelector('#hmIgHost .hm-ig-h') || document.getElementById('hmIgHost') || {}).innerText || '')
+            .replace(/\s+/g, ' ').slice(0, 80)
   }));
   /* ⚠ 「안 받았습니다」(아직 안 가져옴)와 「못 받았습니다」(가져오려다 실패)는
      다른 말이다. 앱은 앞엣것을 쓴다 — 여기서 뒤엣것만 찾다가 헛빨간불이
@@ -287,17 +432,20 @@ const tall = (p) => p.evaluate(() => {
   is(/받아 오기/.test(z.속), '  <b>어디서 받아 오는지</b> 길을 준다 (1번)');
   is(/안 받았습니다/.test(z.머리), '  머리도 <b>그대로</b> 말한다 — 「' + z.머리.replace(/\n/g,' ').slice(0, 40) + '」');
 
-  console.log('\n[6] <b>오늘 고른 기사는 다시 열어도 같다</b>');
-  const first = await A.p.evaluate(() => (document.getElementById('hmIgHost') || {}).innerText.split('\n')[0]);
+  console.log('\n[6] <b>오늘 고른 기사는 다시 열어도 같다</b> (「콘텐츠」에서)');
+  const head1 = () => A.p.evaluate(() => {
+    const e = document.getElementById('hmIgHost');
+    return e ? ((e.innerText || '').split('\n')[0] || '') : '';
+  });
+  await A.p.evaluate(() => { go('news_live'); }); await A.p.waitForTimeout(700);
+  const first = await head1();
   await A.p.evaluate(() => { go('clients'); }); await A.p.waitForTimeout(700);
-  await A.p.evaluate(() => { go('home'); }); await A.p.waitForTimeout(1600);
-  await A.p.evaluate(() => { if ((document.getElementById('hmFoldB_ig') || {}).hidden) hmFoldToggle('ig'); });
-  await A.p.waitForTimeout(500);
-  const again = await A.p.evaluate(() => (document.getElementById('hmIgHost') || {}).innerText.split('\n')[0]);
+  await A.p.evaluate(() => { go('news_live'); }); await A.p.waitForTimeout(900);
+  const again = await head1();
   is(!!first && first === again, '  다시 열어도 <b>같은 기사</b> — 「' + (again || '').slice(0, 30) + '」');
   /* 그런데 <b>일부러 바꾸면</b> 바뀌어야 한다 — 못 바꾸면 그것도 고장이다 */
   await A.p.evaluate(() => hmIgNext()); await A.p.waitForTimeout(600);
-  const next = await A.p.evaluate(() => (document.getElementById('hmIgHost') || {}).innerText.split('\n')[0]);
+  const next = await head1();
   is(!!next && next !== again, '  「다른 기사로」 를 누르면 <b>바뀐다</b> — ' + (next || '').slice(0, 26));
 
   console.log('\n[7] <b>따라만 하면 된다</b> — 소식 한 줄 · 다음 분');
@@ -306,13 +454,26 @@ const tall = (p) => p.evaluate(() => {
      여태 뉴스는 거절·기고객·증권전달의 도구 목록에만 있어 TA·AP·PC·CS 에는
      <b>연락할 구실</b>이 없었고, 오늘 못 닿는 분이 맨 위에 그대로 서 있으면
      그 다음 분으로 갈 길이 없었다.                                     */
+  /* [6] 이 「콘텐츠」에서 끝났으니 <b>홈으로 돌아와서</b> 봅니다 */
+  await A.p.evaluate(() => { go('home'); }); await A.p.waitForTimeout(900);
+  /* 홈으로 돌아온 <b>바로 그때</b>의 카드는 소식이 실리기 전 것일 수
+     있습니다(hmArm 이 1.2초 뒤 다시 그립니다). 여기서 깨워 두고 봅니다. */
+  await A.p.evaluate(() => { try { hmPaint(); } catch (e) {} });
+  await A.p.waitForTimeout(400);
   const nw = await A.p.evaluate(() => {
     const e = document.querySelector('.hm-nw');
-    return { 있나: !!e, 글: e ? e.innerText.replace(/\s+/g, ' ') : '',
+    /* ⚠ <b>어느 기사인지 못 박지 않습니다.</b> 「다른 기사로」 를 누르면
+       고른 기사가 바뀌는 것이 맞고(위 [6] 이 그것을 잽니다), 여기서
+       NEWS[0] 을 기다리면 그 정상 동작 때문에 빨간불이 켜집니다 (8번).
+       묻는 것은 <b>「지금 고른 그 기사를 그대로 쓰나」</b> 입니다 (5번). */
+    const i = (typeof hmIgIdx === 'function') ? hmIgIdx() : -1;
+    const want = (i >= 0 && NLIVE.items[i]) ? (NLIVE.items[i].t || '') : '';
+    return { 있나: !!e, 글: e ? e.innerText.replace(/\s+/g, ' ') : '', 고른것: want,
       복사: !!document.querySelector('.hm-nw [onclick^="nlCopy"]') };
   });
-  is(nw.있나 && nw.글.indexOf(NEWS[0].t) >= 0,
-     '  한 분 카드에 <b>오늘 보낼 소식</b>이 단계와 상관없이 선다');
+  is(nw.있나 && !!nw.고른것 && nw.글.indexOf(nw.고른것) >= 0,
+     '  한 분 카드에 <b>오늘 고른 그 기사</b>가 단계와 상관없이 선다 — 「' +
+     nw.고른것.slice(0, 28) + '」');
   is(nw.복사, '  <b>보낼 문구</b>는 뉴스 화면과 같은 것을 부른다 (5번)');
   /* 소식을 못 받았으면 <b>빈 줄을 안 세운다</b> — 「없음」 은 자리만 먹는다 */
   is(await C.p.evaluate(() => !document.querySelector('.hm-nw')),

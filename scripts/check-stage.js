@@ -403,6 +403,81 @@ const is = (c, m) => c ? ok(m) : no(m);
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();
+  /* ══ <b>아홉 단계의 판단</b> (X14) ═══════════════════════════════════
+     2026-10-04 · 사장님 말씀 「네가 판단해서 여섯 가지 다 해줘」. 여태 목각에
+     AP 뿐이라 AP 에만 판단이 있었고, 대장에 「나머지 아홉을 제가 지어 넣으면
+     거짓말입니다」 라고 적어 두었습니다. 사장님이 맡기셨으니 <b>짓고, 제가
+     지었다고 밝혔습니다.</b> 그 글이 흐트러지지 않게 여기서 봅니다.
+     ★ <b>금액·세금·한도 숫자가 한 자도 없다</b> (2번) — 외운 숫자를 말하는
+       것이 이 자리에서 가장 위험합니다.
+     ★ <b>물음꼴</b>이다 — 「~한다」 로 끝나면 지시가 되고, 판단은 설계사가
+       하는 것입니다.
+     ★ <b>가리키는 화면이 정말 있다</b> (1번) — 「갖고 있습니다」 라고 적어
+       놓고 눌러서 안 열리면 고객 앞에서 드러납니다.
+     ★ <b>거절에는 판단이 없다</b> — 설득하지 않기로 정해 두었으므로 그
+       자리에서 가릴 것이 없습니다 (사장님 말씀).
+     ⚠ 이 글을 넣다가 <b>마지막 줄(소개완료)의 판단이 TOOL 안으로 들어간</b>
+       적이 있습니다 — 끼우는 자리를 「다음 },」 로 찾은 탓입니다. 문법은
+       멀쩡해 아무도 못 봅니다. 그래서 <b>TOOL 에 판단이 없다</b>도 봅니다. */
+  console.log('\n[X14] <b>아홉 단계의 판단</b> — 물음꼴 · 숫자 없음 · 있는 화면만');
+  {
+    const ST = require('../apex-stage.js').APEX_STAGE;
+    const M = ST.map, ORD = ST.order;
+    const 판단있어야 = ORD.filter(k => k !== '거절');
+    const 없는것 = 판단있어야.filter(k => !((M[k] || {}).q || []).length);
+    is(없는것.length === 0,
+      '  <b>' + 판단있어야.length + '단계</b>가 다 판단을 들고 있다 (거절은 뜻대로 비웠습니다)'
+      + (없는것.length ? (' ← 없는 것: ' + 없는것.join(' · ')) : ''));
+    is(!((M['거절'] || {}).q || []).length,
+      '  ★ <b>거절에는 판단이 없다</b> — 설득하지 않기로 정한 자리입니다');
+    /* 숫자 — 금액·세금·한도를 적으면 그 자리에서 빨간불 */
+    const 글 = 판단있어야.map(k => ((M[k].q || []).join(' ') + ' ' + (M[k].note || ''))).join(' ');
+    const 숫자 = 글.match(/\d[\d,]*\s*(원|만원|억|%|세|개월|년|일)/g) || [];
+    is(숫자.length === 0,
+      '  ★★ 판단 글에 <b>금액·세금·한도 숫자가 한 자도 없다</b> (2번)'
+      + (숫자.length ? (' ← ' + 숫자.join(' · ')) : ''));
+    /* 물음꼴 — 「~한다」 로 끝나면 지시입니다 */
+    const 지시 = [];
+    판단있어야.forEach(k => (M[k].q || []).forEach(q => { if (/한다$|하라$|하십시오$/.test(q.trim())) 지시.push(k + ':「' + q + '」'); }));
+    is(지시.length === 0,
+      '  ★ 다 <b>물음꼴</b>이다 — 「~한다」 로 바꾸면 지시가 됩니다'
+      + (지시.length ? ('\n      ✗ ' + 지시.join('\n      ✗ ')) : ''));
+    /* 가리키는 화면이 정말 있나 — 위에서 읽어 둔 본체 메뉴로 봅니다 */
+    /* 본체 메뉴를 <b>이 토막에서 직접</b> 읽습니다 — 위 토막의 byId 는
+       그 안에만 있습니다. 메뉴를 손으로 적으면 그것이 또 두 벌입니다 (5번). */
+    const APPSRC = require('fs').readFileSync(require('path').join(ROOT, 'app/index.html'), 'utf8');
+    const 메뉴있다 = (() => {
+      const m = APPSRC.match(/var TABS=\[[\s\S]*?\n\];/); if (!m) return null;
+      let T = null; try { T = new Function(m[0] + '\nreturn TABS;')(); } catch (e) { return null; }
+      const set = {}; (T || []).forEach(g => (g.items || []).forEach(it => { set[it.id] = 1; }));
+      return set;
+    })();
+    is(!!메뉴있다 && Object.keys(메뉴있다).length > 40,
+      '  ★ 본체 메뉴를 읽었다 — ' + (메뉴있다 ? Object.keys(메뉴있다).length : 0) + '개 (못 읽으면 아래가 거저 통과합니다 · 8번)');
+    const 없는화면 = [];
+    if (메뉴있다) 판단있어야.forEach(k => ((M[k].know || [])).forEach(x => { if (!메뉴있다[x.tab]) 없는화면.push(k + ' → ' + x.tab); }));
+    is(없는화면.length === 0,
+      '  ★★ know 가 가리키는 화면이 <b>다 있다</b> — '
+      + 판단있어야.reduce((n, k) => n + ((M[k].know || []).length), 0) + '곳'
+      + (없는화면.length ? ('\n      ✗ 없는 화면: ' + 없는화면.join(' · ')) : ''));
+    /* 보험료·보장을 입에 올리면 「심사 결과에 따릅니다」 를 빼지 않습니다 (2번) */
+    const 심사빠짐 = 판단있어야.filter(k => /보험료|보장/.test((M[k].q || []).join(' '))
+      && !/심사/.test(M[k].note || ''));
+    is(심사빠짐.length === 0,
+      '  ★★ 보험료·보장을 묻는 자리는 <b>「심사 결과에 따릅니다」</b> 를 달고 있다 (2번)'
+      + (심사빠짐.length ? (' ← ' + 심사빠짐.join(' · ')) : ''));
+    /* ⚠ 끼우기가 엉뚱한 객체로 가지 않았나 */
+    const TOOL = ST.tool || {};
+    const 샌것 = Object.keys(TOOL).filter(k => TOOL[k] && (TOOL[k].q || TOOL[k].know));
+    is(샌것.length === 0,
+      '  ⚠ ★ <b>도구 표(TOOL)에 판단이 섞여 들지 않았다</b> — 한 번 그랬고 문법은 멀쩡했습니다'
+      + (샌것.length ? (' ← ' + 샌것.join(' · ')) : ''));
+    /* 제가 지었다고 밝혀 두었나 */
+    const SRC = require('fs').readFileSync(require('path').join(ROOT, 'apex-stage.js'), 'utf8');
+    is(/아홉 단계의 판단을 제가 지었습니다/.test(SRC),
+      '  ★ <b>제가 지었다고 밝혀</b> 두었다 — 사장님 말씀이 아니라 제 표준 문구입니다 (1번)');
+  }
+
   console.log('\n──────────────────────────────');
   console.log(fail === 0
     ? '단계 · 약속 · 다음 달 점검 통과 — ' + pass + '가지 다 맞습니다.'

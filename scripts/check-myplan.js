@@ -190,25 +190,50 @@ const open = async (pg) => {
   is(/넣지 못했습니다/.test(fail.said), '<b>왜 안 됐는지</b> 말한다 — 「' + fail.said.slice(0, 40) + '」');
 
   head('[6] 달력은 <b>한 벌</b>이다 (5번)');
+  /* ⚠ 2026-09-24 · 홈 달력(hmCalHost)은 「달력」 화면으로 옮겼습니다. 그래서
+     묻는 말이 뒤집혔습니다 — 예전에는 「홈에도 있나」, 이제는 「홈에 두 벌째가
+     안 남았나」 입니다. <b>재는 것은 그대로</b>입니다: 달력을 아는 곳이
+     하나인가. 옛 자리가 없어졌다고 이 자리를 지우면, 두 벌이 되는 날 아무도
+     못 봅니다 (8번).                                                     */
   const cross = await pg.evaluate(() => {
     go('home');
     return new Promise(r => setTimeout(() => r({
-      host: !!document.getElementById('hmCalHost'),
+      twin: !!document.getElementById('hmCalHost'),
       n: (mcalItems()[mcalToday()] || []).filter(x => x.k === 'my').length
     }), 900));
   });
-  is(cross.host && cross.n === 1, '내 캘린더에서 넣은 것이 <b>홈 달력에도</b> 있다 — ' + cross.n + '건');
+  const back = await pg.evaluate(() => {
+    go('mycal');
+    return new Promise(r => setTimeout(() => {
+      const el = document.getElementById('mycalHost');
+      r({ host: !!el, seen: ((el || {}).innerText || '').indexOf('지점 회의') >= 0 });
+    }, 1200));
+  });
+  is(!cross.twin, '홈에 <b>두 벌째 달력이 없다</b> — 달력을 아는 곳은 「달력」 하나다');
+  is(cross.n === 1, '홈에서 봐도 <b>같은 한 벌</b>이다 — ' + cross.n + '건');
+  is(back.host && back.seen,
+     '<b>나갔다 돌아와도</b> 넣은 줄이 그대로 있다 — ' + (back.host ? '달력 자리 있음' : '달력 자리 없음'));
 
   head('[7] 지우면 <b>서버에서도</b> 빠진다');
   const del = await pg.evaluate(async () => {
     const t = mcalToday();
-    const first = (mcalItems()[t] || []).filter(x => x.k === 'my')[0];
+    /* ⚠ 2026-09-25 — 느린 기계(CI)에서는 앞 자리에서 넣은 줄이 <b>아직 안 서
+       있을</b> 때가 있습니다. 그때 first.my 를 그냥 읽어 TypeError 로 터졌고,
+       <b>화면은 멀쩡한데 빨간불</b>이 켜졌습니다 — 헛것입니다 (8번).
+       ★ 줄이 설 때까지 <b>기다렸다가</b> 재고, 끝내 안 서면 <b>터지지 않고</b>
+         「안 섰습니다」 라고 적습니다. 기다리는 데에는 반드시 <b>끝이</b>
+         있어야 합니다 — 안 그러면 영영 멈춥니다.                          */
+    const mine = () => (mcalItems()[t] || []).filter(x => x.k === 'my');
+    let first = mine()[0], i = 0;
+    while (!first && i++ < 20) { await new Promise(r => setTimeout(r, 100)); first = mine()[0]; }
+    if (!first) return { no: true, n: mine().length, srv: window.__plan.rows.length, del: window.__plan.del };
     mcalMyDel(first.my);
     await new Promise(r => setTimeout(r, 400));
-    return { n: (mcalItems()[t] || []).filter(x => x.k === 'my').length,
-             srv: window.__plan.rows.length, del: window.__plan.del };
+    return { n: mine().length, srv: window.__plan.rows.length, del: window.__plan.del };
   });
-  is(del.n === 0 && del.srv === 0 && del.del === 1, '달력에서도 서버에서도 빠진다 — 화면 ' + del.n + ' · 서버 ' + del.srv);
+  is(!del.no && del.n === 0 && del.srv === 0 && del.del === 1,
+     '달력에서도 서버에서도 빠진다 — 화면 ' + del.n + ' · 서버 ' + del.srv +
+     (del.no ? ' ← 지울 줄이 2초를 기다려도 안 섰습니다' : ''));
 
   head('[8] <b>서버를 아껴 부른다</b> (7번)');
   const thrift = await pg.evaluate(async () => {

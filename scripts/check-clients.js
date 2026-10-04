@@ -108,8 +108,8 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   /* 켜면 「내 고객」 으로 맞춰지는 것은 따로 확인한다(w0). 나머지 검사는 전원을 봐야 하므로 풀어 둔다. */
   const open = async () => { await page.evaluate(() => { OSC.view = 'list'; OSC.q = ''; CM.picked = true; CM.pick = ''; go('clients'); }); await page.waitForTimeout(500); };
   const list = () => page.evaluate(() => ({
-    n: document.querySelectorAll('#oscList .cm-row').length,
-    names: Array.prototype.map.call(document.querySelectorAll('#oscList .cm-nm'),
+    n: document.querySelectorAll('#oscList .t-row').length,
+    names: Array.prototype.map.call(document.querySelectorAll('#oscList .t-row .nm'),
       e => ((e.firstChild && e.firstChild.textContent) || e.textContent || '').trim()),
     txt: (document.getElementById('oscList') || {}).textContent || ''
   }));
@@ -191,7 +191,18 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   await page.evaluate(() => osOpenClient('c1'));
   await page.waitForTimeout(500);
   const det = await page.evaluate(() => ({
-    title: (document.querySelector('.osc-title') || {}).textContent || '',
+    /* 2026-09-27 · 판 ⑦ — 이름 줄이 목각 카드가 되어 .osc-title 이 없어졌습니다.
+       <b>👤 고객 이름표가 달린 카드</b>의 큰 글씨를 봅니다 — 다른 카드의
+       .t-h1(물음 카드의 「아는 것 N가지」)을 집어 오면 안 됩니다.        */
+    title: (function(){
+      var cards=[].slice.call(document.querySelectorAll('#dynPane .t-card')),i,lab;
+      for(i=0;i<cards.length;i++){
+        lab=cards[i].querySelector('.t-lab');
+        if(lab&&lab.textContent.indexOf('고객')>=0&&cards[i].querySelector('.t-h1'))
+          return cards[i].querySelector('.t-h1').textContent||'';
+      }
+      return '';
+    })(),
     rel: !!document.getElementById('cmNextWhat'),
     fam: !!document.getElementById('cmFam'),
     ff: document.querySelectorAll('#cmPanels [id^=cmff_]').length,
@@ -209,7 +220,11 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   await page.waitForTimeout(500);
   const nx = await page.evaluate(() => ({
     saved: window.__saved.filter(x => x.kind === 'client_meta'),
-    shown: (document.querySelector('.cm-next .w') || {}).textContent || ''
+    /* 2026-09-27 · 판 ⑦ — 이 칸이 목각 옷으로 갈아입어 이름이 바뀌었습니다
+       (.cm-next .w → 「▶」 가 든 .t-note). <b>묻는 것은 그대로</b>입니다 —
+       저장하면 바로 화면에 뜨는가.                                       */
+    shown: ([].slice.call(document.querySelectorAll('#cmPanels .t-note'))
+              .filter(e => /▶/.test(e.textContent))[0] || {}).textContent || ''
   }));
   ok(nx.saved.length === 1 && nx.saved[0].client_id === 'c1', '다음 할 일이 서버에 저장된다');
   ok(nx.saved.length === 1 && /증권/.test(((nx.saved[0].content || {}).next || {}).what || ''), '적은 내용이 그대로 들어간다');
@@ -231,8 +246,10 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   }, ago(3));
   await page.waitForTimeout(500);
   const tc = await page.evaluate(() => ({
-    n: document.querySelectorAll('.cm-ti').length,
-    temp: (document.querySelector('.cm-tp') || {}).textContent || '',
+    /* 2026-09-27 · 판 ⑦ — .cm-ti → .t-ev · .cm-tp → 「마지막 접촉」 이 든 .t-tag */
+    n: document.querySelectorAll('#cmPanels .t-ev').length,
+    temp: ([].slice.call(document.querySelectorAll('#cmPanels .t-tag'))
+             .filter(e => /마지막 접촉/.test(e.textContent))[0] || {}).textContent || '',
     srv: (window.__saved.filter(x => x.kind === 'client_meta' && x.client_id === 'c1')[0] || {}).content
   }));
   ok(tc.n === 1, '접촉 기록이 한 줄 쌓인다');
@@ -289,17 +306,28 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
     cmFamSave('c2');
   });
   await page.waitForTimeout(500);
-  const fam = await page.evaluate(() => ({
-    mem: document.querySelectorAll('.cm-fmem .cm-chip').length,
-    txt: (document.querySelector('.cm-fmem') || {}).textContent || ''
-  }));
+  /* 2026-09-27 · 판 ⑦ — .cm-fmem .cm-chip 이 목각 칩이 되었습니다.
+     .t-chip 은 이 화면에 여러 곳(물음 카드 답 칩 · 소개 칩)에 있으므로
+     <b>「가족으로 묶기」 이름표가 달린 카드</b> 안에서만 셉니다 — 아무
+     칩이나 세면 헛것을 잡습니다 (8번).                                  */
+  const fam = await page.evaluate(() => {
+    var cards = [].slice.call(document.querySelectorAll('#cmPanels .t-card')), i, lab, c = null;
+    for (i = 0; i < cards.length; i++) {
+      lab = cards[i].querySelector('.t-lab');
+      if (lab && lab.textContent.indexOf('가족으로 묶기') >= 0) { c = cards[i]; break; }
+    }
+    if (!c) return { mem: 0, txt: '' };
+    return { mem: c.querySelectorAll('.t-chip').length,
+             txt: ([].slice.call(c.querySelectorAll('.t-chip'))
+                     .map(e => e.textContent).join(' ')) };
+  });
   ok(fam.mem === 1 && /김철수/.test(fam.txt), '같은 가족이면 상대가 바로가기로 뜬다');
 
   await page.evaluate(() => osBackToList());
   await page.waitForTimeout(500);
   const grp = await page.evaluate(() => ({
     heads: Array.prototype.map.call(document.querySelectorAll('.cm-fh'), e => e.textContent.replace(/\s+/g, ' ').trim()),
-    inFam: document.querySelectorAll('.cm-fam .cm-row').length
+    inFam: document.querySelectorAll('.cm-fam .t-row').length
   }));
   ok(grp.heads.length === 1 && /김철수 가족/.test(grp.heads[0]) && /2명/.test(grp.heads[0]),
     '목록이 가족으로 묶여 보인다 — ' + grp.heads[0]);
@@ -361,7 +389,7 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
     await new Promise(r => setTimeout(r, 900));
     return {
       pick: CM.pick,
-      rows: document.querySelectorAll('.cm-row').length,
+      rows: document.querySelectorAll('#oscList .t-row').length,
       txt: ((document.getElementById('oscList') || {}).textContent || '').slice(0, 80)
     };
   });
@@ -374,8 +402,8 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   const w1 = await page.evaluate(() => ({
     chips: Array.prototype.map.call(document.querySelectorAll('.cm-whos .cm-sb'),
       e => e.textContent.replace(/\s+/g, ' ').trim()),
-    tags: Array.prototype.map.call(document.querySelectorAll('.cm-row .cm-wt'), e => e.textContent.trim()),
-    rows: document.querySelectorAll('.cm-row').length,
+    tags: Array.prototype.map.call(document.querySelectorAll('#oscList .t-row .cm-wt'), e => e.textContent.trim()),
+    rows: document.querySelectorAll('#oscList .t-row').length,
     me: !!document.querySelector('.cm-whos .cm-sb.me')
   }));
   ok(w1.chips.length >= 4, '담당자 고르는 단추가 뜬다 — ' + w1.chips.join(' · '));
@@ -389,11 +417,11 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   /* 담당자를 하나 고르면 그 사람 것만 */
   const w2 = await page.evaluate(() => {
     cmWhoSet('p2');
-    const rows = document.querySelectorAll('.cm-row').length;
+    const rows = document.querySelectorAll('#oscList .t-row').length;
     const txt = (document.getElementById('oscList') || {}).textContent || '';
     const on = document.querySelectorAll('.cm-whos .cm-sb.on').length;
     cmWhoSet('p2');   /* 한 번 더 누르면 풀린다 */
-    return { rows, txt, on, back: document.querySelectorAll('.cm-row').length };
+    return { rows, txt, on, back: document.querySelectorAll('#oscList .t-row').length };
   });
   ok(w2.rows === 1, '박서준을 고르면 그 사람 고객 한 명만 남는다 (' + w2.rows + '명)');
   ok(/박서준<\/b> 담당 1명|박서준 담당 1명/.test(w2.txt.replace(/\s+/g, ' ')) || /박서준/.test(w2.txt),
@@ -422,7 +450,7 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
     ['박', '김', 'ㅂ', 'ㅊ', '5678', '박서준'].forEach(q => {
       OSC.q = q; osRenderList();
       r[q] = {
-        n: document.querySelectorAll('.cm-row').length,
+        n: document.querySelectorAll('#oscList .t-row').length,
         txt: ((document.getElementById('oscList') || {}).textContent || '').slice(0, 60)
       };
     });

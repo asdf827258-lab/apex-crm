@@ -1,0 +1,1841 @@
+<!doctype html>
+<html data-theme="light" lang="ko"><head><meta charset="utf-8">
+<meta name="color-scheme" content="light"/>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>APEX 목각 · 폰 — 맞춰 갈 기준</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard-dynamic-subset.css">
+<style>
+/* ══════════════════════════════════════════════════════════════
+   디자인은 목업.html(s1~s9) 그대로입니다.
+   PC판(APEX_목각.html)과 같은 칸에 저장하므로,
+   폰에서 적으신 것이 PC에서도 그대로 보입니다.
+   ══════════════════════════════════════════════════════════════ */
+:root{ color-scheme:light;  /* 🌗 흰색 고정 (사장님 말씀 2026-10-03) */
+  --ink:#191F28; --sub:#8B95A1; --sub2:#6B7684; --line:#E5E8EB; --bg:#F2F4F6;
+  --point:#1A56DB; --point-l:#EBF3FF; --pos:#059669; --pos-l:#ECFDF5;
+  --warn:#D97706; --warn-l:#FFF7ED; --neg:#DC2626; --neg-l:#FEF2F2;
+  --pur:#7C3AED; --pur-l:#F5F3FF;
+  --font:'Pretendard','Malgun Gothic',-apple-system,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font);background:#fff;color:var(--ink)}
+
+/* ── 화면 고르는 줄 (폰 바깥) ── */
+.head{padding:34px 34px 4px}
+.head h1{font-size:26px;font-weight:800;letter-spacing:-.025em}
+.head p{margin-top:8px;font-size:14.5px;color:var(--sub2);line-height:1.6}
+.pickbar{display:flex;flex-wrap:wrap;gap:7px;padding:16px 34px 0;max-width:980px}
+.pickbar div{height:34px;padding:0 14px;border-radius:11px;background:#F2F4F6;font-size:13px;font-weight:700;
+  color:var(--sub2);display:flex;align-items:center;cursor:pointer;letter-spacing:-.01em}
+.pickbar div.on{background:var(--ink);color:#fff}
+.stage{padding:26px 34px 60px;display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap}
+.cap{font-size:14px;font-weight:700;color:var(--sub2);margin-bottom:12px;letter-spacing:-.01em}
+.cap b{color:var(--ink)}
+.side{flex:1;min-width:300px;max-width:520px}
+.side .box{background:#F7F9FA;border-radius:18px;padding:20px 22px;margin-bottom:12px}
+.side .box h3{font-size:15px;font-weight:800;letter-spacing:-.02em}
+.side .box p{margin-top:8px;font-size:13.5px;color:var(--sub2);line-height:1.7;font-weight:500}
+.side .box p b{color:var(--ink);font-weight:700}
+
+/* ── 폰 ── */
+.phone{position:relative;width:410px;flex:0 0 410px;height:864px;background:#0B0D10;border-radius:46px;padding:10px;
+  box-shadow:0 18px 40px rgba(0,0,0,.14)}
+.scr{width:390px;height:844px;border-radius:38px;overflow:hidden;position:relative;background:var(--bg);
+  display:flex;flex-direction:column}
+
+/* 상태바 */
+.sb{height:46px;flex:0 0 46px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 26px 0 30px;font-size:14px;font-weight:700;letter-spacing:-.01em}
+.sb .r{display:flex;align-items:center;gap:5px}
+.sig{display:flex;align-items:flex-end;gap:2px;height:11px}
+.sig i{width:3px;background:currentColor;border-radius:1px}
+.sig i:nth-child(1){height:4px}.sig i:nth-child(2){height:6px}.sig i:nth-child(3){height:8px}.sig i:nth-child(4){height:11px}
+.bat{width:24px;height:12px;border:1.6px solid currentColor;border-radius:4px;position:relative;opacity:.9}
+.bat::after{content:"";position:absolute;inset:2px;right:7px;background:currentColor;border-radius:2px}
+.bat::before{content:"";position:absolute;right:-4px;top:3.5px;width:2px;height:5px;background:currentColor;border-radius:0 2px 2px 0;opacity:.6}
+
+/* 공통 조각 */
+.body{flex:1;overflow:auto;padding:0 24px}
+.body::-webkit-scrollbar{width:0}
+.h1{font-size:27px;font-weight:800;line-height:1.38;letter-spacing:-.03em}
+.h1 em{font-style:normal;color:var(--point)}
+.sub{margin-top:12px;font-size:15px;color:var(--sub2);line-height:1.55;letter-spacing:-.01em}
+.card{background:#fff;border-radius:20px;padding:20px}
+.btn{height:56px;border-radius:15px;background:var(--point);color:#fff;font-size:17px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;letter-spacing:-.02em;cursor:pointer}
+.btn.g{background:#F2F4F6;color:var(--sub2)}
+.foot{padding:0 24px 30px}
+.ghost{text-align:center;font-size:14px;color:var(--sub);margin-top:16px;font-weight:600;cursor:pointer}
+.topbar{height:56px;flex:0 0 56px;display:flex;align-items:center;justify-content:space-between;padding:0 22px}
+.x{font-size:22px;color:var(--sub);font-weight:400;line-height:1;cursor:pointer}
+.dots{display:flex;gap:6px}
+.dots i{width:7px;height:7px;border-radius:9px;background:#D7DCE2}
+.dots i.on{background:var(--point);width:20px}
+.step{font-size:13px;font-weight:700;color:var(--sub)}
+
+/* 1. 잠금화면 */
+.lock{background:linear-gradient(165deg,#0F2A52 0%,#123A73 45%,#0A1C38 100%);color:#fff}
+.lock .clock{margin-top:44px;text-align:center}
+.lock .clock .t{font-size:82px;font-weight:700;letter-spacing:-.045em;line-height:1}
+.lock .clock .d{margin-top:6px;font-size:16px;opacity:.72;font-weight:600}
+.noti{margin:38px 18px 0;background:rgba(255,255,255,.93);border-radius:22px;padding:16px 18px;color:var(--ink);
+  box-shadow:0 10px 26px rgba(0,0,0,.24);cursor:pointer}
+.noti .nh{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sub2);font-weight:700}
+.noti .ico{width:20px;height:20px;border-radius:6px;background:var(--point);color:#fff;font-size:11px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;letter-spacing:-.04em}
+.noti .nt{margin-top:9px;font-size:16.5px;font-weight:800;letter-spacing:-.022em;line-height:1.35}
+.noti .nb{margin-top:5px;font-size:14.5px;color:var(--sub2);line-height:1.45;letter-spacing:-.01em}
+.noti.small{margin-top:10px;opacity:.55;transform:scale(.965)}
+.lockfoot{position:absolute;bottom:34px;left:0;right:0;text-align:center;color:rgba(255,255,255,.62);font-size:13.5px;font-weight:600}
+.lockbar{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:5px;background:rgba(255,255,255,.5)}
+
+/* 2. 헤드업 배너 */
+.dim{position:absolute;inset:0;background:rgba(10,14,20,.28)}
+.heads{position:absolute;top:56px;left:12px;right:12px;background:#fff;border-radius:22px;padding:16px 18px;
+  box-shadow:0 16px 36px rgba(0,0,0,.26)}
+.heads .acts{display:flex;gap:8px;margin-top:14px}
+.heads .acts div{flex:1;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  font-size:14.5px;font-weight:700;cursor:pointer}
+.heads .acts .p{background:var(--point);color:#fff}
+.heads .acts .s{background:#F2F4F6;color:var(--sub2)}
+
+/* 목록행 */
+.row{display:flex;align-items:center;gap:13px;padding:15px 0;border-bottom:1px solid #F1F3F5}
+.row:last-child{border-bottom:0}
+.av{width:40px;height:40px;border-radius:13px;background:var(--point-l);color:var(--point);font-weight:800;font-size:15px;
+  display:flex;align-items:center;justify-content:center;flex:0 0 40px}
+.av.p{background:var(--pur-l);color:var(--pur);font-size:12.5px;letter-spacing:-.04em}
+.row .nm{font-size:16px;font-weight:700;letter-spacing:-.02em}
+.row .mt{font-size:13px;color:var(--sub);margin-top:3px;font-weight:500}
+.nm{font-size:16px;font-weight:700;letter-spacing:-.02em}
+.mt{font-size:13px;color:var(--sub);margin-top:3px;font-weight:500}
+.row .rt{margin-left:auto;display:flex;align-items:center;gap:8px}
+.chk{width:26px;height:26px;border-radius:26px;border:2px solid #D7DCE2;display:block;cursor:pointer}
+.chk.on{background:var(--point);border-color:var(--point);position:relative}
+.chk.on::after{content:"";position:absolute;left:8px;top:4px;width:6px;height:11px;border:2.5px solid #fff;
+  border-top:0;border-left:0;transform:rotate(42deg)}
+.tag{font-size:12px;font-weight:700;padding:5px 9px;border-radius:8px;background:#FFF7ED;color:var(--warn)}
+.tag.g{background:var(--pos-l);color:var(--pos)}.tag.p{background:var(--pur-l);color:var(--pur)}
+.tag.r{background:var(--neg-l);color:var(--neg)}.tag.b{background:var(--point-l);color:var(--point)}
+.tag.s{background:#F2F4F6;color:var(--sub2)}
+
+/* 3지선다 */
+.pick{display:flex;gap:7px;margin-top:13px}
+.pick div{flex:1;height:46px;border-radius:12px;background:#F5F7F9;color:var(--sub2);font-size:14.5px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;border:1.5px solid transparent;cursor:pointer}
+.pick div.on{background:var(--point);color:#fff}
+.pick div.no{background:#FEF2F2;color:var(--neg)}
+
+/* 금액 */
+.amt{text-align:center;padding:26px 0 8px}
+.amt .v{font-size:44px;font-weight:800;letter-spacing:-.045em}
+.amt .v span{font-size:26px;margin-left:3px;font-weight:700}
+.amt .d{margin-top:10px;font-size:14px;color:var(--pos);font-weight:700}
+.chips{display:flex;gap:8px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.chips div{padding:9px 15px;border-radius:11px;background:#fff;font-size:14px;font-weight:700;color:var(--sub2);cursor:pointer}
+.chips div.on{background:var(--ink);color:#fff}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:20px}
+.pad div{height:56px;display:flex;align-items:center;justify-content:center;font-size:25px;font-weight:600;
+  letter-spacing:-.02em;cursor:pointer}
+.pad div.s{font-size:19px;color:var(--sub)}
+
+/* 시간칩 */
+.tchip{display:flex;gap:7px;margin-top:12px}
+.tchip div{padding:11px 0;flex:1;border-radius:12px;background:#F5F7F9;text-align:center;font-size:15px;
+  font-weight:700;color:var(--sub2);cursor:pointer}
+.tchip div.on{background:var(--point);color:#fff}
+
+/* 완료 */
+.done{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-bottom:40px}
+.ring{width:96px;height:96px;border-radius:96px;background:var(--point);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 12px 30px rgba(26,86,219,.3)}
+.ring::after{content:"";width:26px;height:46px;border:6px solid #fff;border-top:0;border-left:0;
+  transform:rotate(42deg) translate(-3px,-4px);border-radius:2px}
+.done h2{margin-top:28px;font-size:27px;font-weight:800;letter-spacing:-.03em}
+.done p{margin-top:11px;font-size:15.5px;color:var(--sub2);font-weight:600}
+.stats{display:flex;gap:9px;margin-top:34px;width:100%}
+.stats div{flex:1;background:#fff;border-radius:16px;padding:16px 0;text-align:center}
+.stats .n{font-size:22px;font-weight:800;letter-spacing:-.03em}
+.stats .l{font-size:12.5px;color:var(--sub);margin-top:4px;font-weight:600}
+
+/* 홈 */
+.hero{background:linear-gradient(140deg,#1A56DB,#123A96);border-radius:22px;padding:22px;color:#fff;margin-top:6px;
+  box-shadow:0 10px 24px rgba(26,86,219,.24)}
+.hero .q{font-size:20px;font-weight:800;line-height:1.45;letter-spacing:-.03em}
+.hero .s{margin-top:9px;font-size:13.5px;opacity:.82;line-height:1.5}
+.hero .b{margin-top:16px;height:46px;border-radius:13px;background:#fff;color:var(--point);font-size:15.5px;
+  font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.greet{padding:4px 0 14px;font-size:22px;font-weight:800;letter-spacing:-.03em}
+.greet span{color:var(--sub)}
+.hc{background:#fff;border-radius:20px;padding:18px 20px;margin-top:11px}
+.hc .t{font-size:12.5px;font-weight:800;color:var(--point);letter-spacing:.01em}
+.hc .m{margin-top:7px;font-size:17px;font-weight:700;letter-spacing:-.025em;line-height:1.4}
+.hc .m small{color:var(--sub);font-size:13.5px;font-weight:600;display:block;margin-top:5px;letter-spacing:-.01em}
+.go{margin-top:14px;height:48px;border-radius:13px;background:var(--point);color:#fff;font-size:15.5px;
+  font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.go.g{background:#F2F4F6;color:var(--ink)}
+.two{display:flex;gap:8px;margin-top:14px}
+.two .go{flex:1;margin-top:0}
+.bar{height:6px;border-radius:6px;background:#EDF0F3;margin-top:13px;overflow:hidden}
+.bar i{display:block;height:100%;width:25%;background:var(--point);border-radius:6px}
+.tabs{height:70px;flex:0 0 70px;background:#fff;border-top:1px solid #F1F3F5;display:flex;padding-bottom:12px}
+.tabs div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11px;
+  font-weight:700;color:#C4CBD2;cursor:pointer}
+.tabs div.on{color:var(--point)}
+.tabs .i{width:22px;height:22px;border-radius:7px;background:currentColor;opacity:.9}
+
+/* 알림 설정 */
+.srow{display:flex;align-items:center;gap:14px;padding:17px 0;border-bottom:1px solid #F1F3F5}
+.srow:last-child{border-bottom:0}
+.srow .tm{font-size:16px;font-weight:800;width:52px;letter-spacing:-.02em;flex:0 0 52px}
+.srow .ds{font-size:15px;font-weight:700;letter-spacing:-.02em}
+.srow .ds small{display:block;font-size:12.5px;color:var(--sub);font-weight:500;margin-top:3px}
+.sw{margin-left:auto;width:48px;height:28px;border-radius:28px;background:var(--point);position:relative;flex:0 0 48px;cursor:pointer}
+.sw::after{content:"";position:absolute;right:3px;top:3px;width:22px;height:22px;border-radius:22px;background:#fff}
+.sw.off{background:#D7DCE2}
+.sw.off::after{right:auto;left:3px}
+.note{margin-top:16px;background:#FFF7ED;border-radius:16px;padding:16px 18px;font-size:14px;line-height:1.6;
+  color:#8A5A12;font-weight:600;letter-spacing:-.01em}
+.note b{color:#7A4E0A}
+.note.bl{background:var(--point-l);color:#12408F}.note.bl b{color:var(--point)}
+.note.gr{background:var(--pos-l);color:#065F46}.note.gr b{color:#047857}
+.note.gy{background:#F7F9FA;color:var(--sub2);font-weight:500}.note.gy b{color:var(--ink)}
+.nh{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sub2);font-weight:700}
+.ico{width:20px;height:20px;border-radius:6px;background:var(--point);color:#fff;font-size:11px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;letter-spacing:-.04em}
+.nt{margin-top:9px;font-size:16.5px;font-weight:800;letter-spacing:-.022em;line-height:1.35}
+.nb{margin-top:5px;font-size:14.5px;color:var(--sub2);line-height:1.45;letter-spacing:-.01em}
+
+/* 상담현황 한 줄 — 홈에 띄우는 것 */
+.flowbar{display:flex;gap:4px;align-items:center;margin-top:13px}
+.flowbar .st{flex:1;min-width:0;text-align:center;padding:10px 2px;border-radius:12px;background:#F7F9FA;
+  color:var(--sub);cursor:pointer}
+.flowbar .st.on{background:var(--point-l);color:var(--point)}
+.flowbar .st b{display:block;font-size:17px;font-weight:800;letter-spacing:-.04em;line-height:1.1}
+.flowbar .st span{display:block;margin-top:4px;font-size:10px;font-weight:700;white-space:nowrap}
+.flowbar .ar{flex:0 0 auto;color:#C4CBD2;font-size:10px;font-weight:700}
+
+/* 폰 안에서 적는 칸 */
+.fl{margin-top:14px}
+.fl label{display:block;font-size:12px;font-weight:800;color:var(--sub);margin-bottom:6px;letter-spacing:-.01em}
+.inp{width:100%;height:48px;border:1px solid var(--line);border-radius:13px;padding:0 14px;font:inherit;
+  font-size:15px;font-weight:600;color:var(--ink);background:#fff;outline:none;letter-spacing:-.02em}
+.inp:focus{border-color:var(--point);box-shadow:0 0 0 3px var(--point-l)}
+textarea.inp{height:auto;min-height:96px;padding:12px 14px;line-height:1.65;font-weight:500;resize:vertical}
+select.inp{cursor:pointer}
+.kvp{display:flex;align-items:center;padding:11px 0;border-bottom:1px solid #F1F3F5;font-size:14.5px}
+.kvp:last-child{border-bottom:0}
+.kvp .k{color:var(--sub);font-weight:600;flex:0 0 96px;font-size:13.5px}
+.kvp .v{font-weight:700;letter-spacing:-.02em}
+.mini{height:44px;padding:0 12px;border-radius:10px;background:#F2F4F6;color:var(--sub2);font-size:13px;
+  font-weight:700;display:flex;align-items:center;cursor:pointer}
+.mini.b{background:var(--point);color:#fff}
+.lockcard{border:1.5px solid #F3D9A8;background:#FFFDF8}
+.rrnv{font-size:20px;font-weight:800;letter-spacing:.02em;font-variant-numeric:tabular-nums;margin-top:12px}
+.say{background:#F7F9FA;border-radius:14px;padding:14px 16px;margin-top:12px;font-size:14px;line-height:1.8;
+  color:#33383D;white-space:pre-wrap;letter-spacing:-.01em}
+.src{font-size:12.5px;color:var(--sub);font-weight:500;line-height:1.65;padding:9px 0;border-top:1px solid #F1F3F5}
+.src b{color:var(--ink);font-weight:700}.src i{font-style:normal;color:var(--point);font-weight:700}
+.sect{font-size:12.5px;font-weight:800;color:var(--point);letter-spacing:.01em;padding:18px 0 2px}
+
+/* 홈 머리줄 — 사본 사진 */
+/* ── 맨 윗칸 ────────────────────────────────────────────────
+   PC 판과 같은 결입니다. 날짜는 굵게 · 요일은 흐리게,
+   알약에는 작은 아이콘 칸을 두고 숫자만 진하게.            */
+.hrow{display:flex;align-items:flex-start;padding:14px 0 4px}
+.hrow .d{font-size:16px;font-weight:800;letter-spacing:-.035em;color:var(--ink);white-space:nowrap}
+.hrow .d em{font-style:normal;color:var(--sub);font-weight:700;font-size:13px;margin-left:6px}
+.hrow .d i{display:block;font-style:normal;margin-top:3px;font-size:11.5px;font-weight:700;
+  color:var(--point);letter-spacing:-.01em}
+.hrow .r{margin-left:auto;display:flex;gap:6px;padding-top:2px}
+.hp{height:34px;padding:0 11px;border-radius:11px;background:#fff;color:var(--sub);font-size:12px;
+  font-weight:700;display:flex;align-items:center;gap:6px;cursor:pointer;letter-spacing:-.02em;
+  box-shadow:0 1px 2px rgba(16,24,40,.05)}
+.hp .ic{width:20px;height:20px;border-radius:7px;background:#F2F4F6;display:flex;align-items:center;
+  justify-content:center;font-size:11px;flex:0 0 20px}
+.hp b{color:var(--ink);font-weight:800;font-size:13px;letter-spacing:-.03em}
+.hp.w{background:var(--warn-l);color:var(--warn);box-shadow:none}
+.hp.w .ic{background:rgba(217,119,6,.13)}
+.hp.w b{color:var(--warn)}
+.hp.g2{background:var(--pos-l);color:var(--pos);box-shadow:none}
+.hp.g2 .ic{background:rgba(5,150,105,.13)}
+.hp.g2 b{color:var(--pos)}
+
+/* 사본 사진의 한 분 카드 */
+.who2{display:flex;align-items:center;gap:14px;margin-top:14px}
+.who2 .nm2{font-size:20px;font-weight:800;letter-spacing:-.035em}
+.who2 .meta{margin-top:4px;font-size:13px;color:var(--sub2);font-weight:600;letter-spacing:-.01em}
+.aim{margin-top:15px;font-size:19px;font-weight:700;letter-spacing:-.03em;line-height:1.45}
+.wayl{margin-top:9px;font-size:13.5px;color:var(--sub);line-height:1.6;font-weight:500}
+/* 통화 멘트 — 뒤에 숨기지 않고 그대로 폅니다 */
+.ment{background:#F7F9FA;border-radius:15px;padding:14px 16px;margin-top:11px}
+.ment .mh{display:flex;align-items:center;gap:8px}
+.ment .mn{width:24px;height:24px;border-radius:8px;background:var(--point);color:#fff;font-size:11.5px;
+  font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 24px}
+.ment .mt2{font-size:12px;font-weight:800;color:var(--sub);letter-spacing:-.01em}
+.ment .ms{margin-top:8px;font-size:15px;font-weight:700;letter-spacing:-.025em;line-height:1.55;color:var(--ink)}
+.ment .md{margin-top:7px;font-size:12.5px;color:var(--sub);font-weight:500;line-height:1.65}
+.ment.no{background:var(--neg-l)}.ment.no .mt2{color:var(--neg)}
+.ment.no .ms{font-size:13px;font-weight:600;color:#8A2020}
+.ment.ok{background:var(--pos-l)}.ment.ok .mt2{color:var(--pos)}
+.ment.ok .ms{font-size:13px;font-weight:600;color:#065F46}
+.sayh .l{font-size:12.5px;font-weight:800;color:var(--point)}
+.sayh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sayh .rr{margin-left:auto;display:flex;gap:6px}
+
+/* 달력 */
+.cal{margin-top:12px}
+.cal .cw{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal .hd{font-size:10.5px;font-weight:800;color:var(--sub2);text-align:center;padding:4px 0}
+.cal .dy{height:38px;border-radius:10px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;font-size:12.5px;font-weight:700;color:var(--sub);cursor:pointer;gap:1px}
+.cal .dy:hover{background:#F2F4F6}
+.cal .dy.off{color:#E5E8EB;cursor:default}.cal .dy.off:hover{background:none}
+.cal .dy.td{background:var(--point);color:#fff}.cal .dy.td:hover{background:var(--point)}
+.cal .dy.sel{background:var(--ink);color:#fff}.cal .dy.sel:hover{background:var(--ink)}
+.cal .dots{display:flex;gap:2px;height:4px;align-items:center}
+.cal .dots i{width:4px;height:4px;border-radius:4px;display:block;background:var(--sub2)}
+.cal .dots i.appt{background:var(--point)}.cal .dots i.next{background:#B0B8C1}
+.cal .dots i.bd{background:var(--pos)}.cal .dots i.due{background:var(--warn)}
+.cal .dots i.madi{background:var(--pur)}
+.cal .dy.td .dots i,.cal .dy.sel .dots i{background:#fff}
+.cdot{width:9px;height:9px;border-radius:9px;flex:0 0 9px;background:var(--sub2)}
+.cdot.appt{background:var(--point)}.cdot.next{background:#B0B8C1}
+.cdot.bd{background:var(--pos)}.cdot.due{background:var(--warn)}.cdot.madi{background:var(--pur)}
+.clg{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.clg span{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--sub2)}
+
+/* 다섯 마디 — 접은 판. 문장만 한 줄씩 */
+.five{margin-top:12px}
+.mini2{margin-top:16px;font-size:11.5px;font-weight:800;color:var(--sub2);letter-spacing:.01em;
+  padding-top:13px;border-top:1px solid #F1F3F5}
+.fv{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid #F1F3F5}
+.fv:first-child{border-top:0;padding-top:4px}
+.fv .fn{flex:0 0 20px;font-size:12px;font-weight:800;color:var(--point);padding-top:2px}
+.fv .ft{font-size:14px;font-weight:600;line-height:1.55;letter-spacing:-.02em}
+
+/* 여쭙는 칸 */
+.askq{background:#F7F9FA;border-radius:16px;padding:15px 16px;margin-top:12px}
+.askq .qq{font-size:16px;font-weight:700;letter-spacing:-.025em;line-height:1.4}
+.askq .qw{margin-top:6px;font-size:12.5px;color:var(--sub);font-weight:600;line-height:1.5}
+.askq .qn{margin-top:10px;font-size:12px;color:var(--sub);font-weight:500;line-height:1.6}
+.askq .chips{justify-content:flex-start;margin-top:10px}
+.askq .chips div{background:#fff;padding:8px 13px;font-size:13.5px}
+
+/* 결과 시트 — 폰에서는 아래에서 올라옵니다 */
+.sheet{position:absolute;inset:10px;z-index:70;display:flex;align-items:flex-end;
+  border-radius:38px;overflow:hidden}
+.sheet .bg{position:absolute;inset:0;background:rgba(10,14,20,.34)}
+.sheet .bx{position:relative;width:100%;max-height:84%;overflow:auto;background:#fff;
+  border-radius:26px 26px 38px 38px;padding:24px 22px 26px}
+.sheet .bx::-webkit-scrollbar{width:0}
+.sheet .shead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sheet .shead .l{font-size:12.5px;font-weight:800;color:var(--point)}
+.sheet .shead .rr{margin-left:auto;display:flex;gap:6px}
+.sheet .sdiv{height:1px;background:var(--line);margin:20px 0 18px}
+.sheet h3{font-size:22px;font-weight:800;letter-spacing:-.035em;line-height:1.38}
+.sheet .ps{margin-top:9px;font-size:14px;color:var(--sub2);font-weight:600}
+.sheet .g3{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+.sheet .g3 div{flex:1 1 30%;min-width:0;height:52px;border-radius:14px;background:#F5F7F9;color:var(--sub2);
+  font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.sheet .g3 div.p{background:var(--point);color:#fff}
+.sheet .g3 div.n{background:var(--neg-l);color:var(--neg)}
+.sheet .cl{margin-top:8px;height:50px;border-radius:14px;background:#F2F4F6;color:var(--sub2);font-size:15px;
+  font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.sheet .rule{margin-top:14px;background:#F7F9FA;border-radius:14px;padding:12px 14px;font-size:12px;
+  color:var(--sub);font-weight:500;line-height:1.7}
+.sheet .rule b{color:var(--ink);font-weight:700}
+
+/* PC ↔ 폰 */
+.swch{position:fixed;right:22px;bottom:22px;z-index:65;display:flex;background:#fff;border-radius:15px;
+  padding:5px;box-shadow:0 8px 24px rgba(0,0,0,.14)}
+.swch div{height:38px;padding:0 18px;border-radius:11px;font-size:14px;font-weight:800;display:flex;
+  align-items:center;cursor:pointer;color:var(--sub2);letter-spacing:-.02em}
+.swch div.on{background:var(--ink);color:#fff}
+
+/* 알림쪽지 */
+#tt{position:absolute;left:16px;right:16px;bottom:88px;background:#191F28;color:#fff;font-size:13.5px;
+  font-weight:600;padding:13px 16px;border-radius:13px;opacity:0;pointer-events:none;transition:.18s;
+  z-index:80;line-height:1.5;letter-spacing:-.01em}
+#tt.on{opacity:1}
+</style></head>
+<body>
+
+<div class="head">
+  <h1>APEX 목각 · 폰</h1>
+  <p>디자인은 <b>목업.html(s1~s9)</b> 그대로입니다. PC판과 <b>같은 칸에 저장</b>하므로, 폰에서 적으신 주민번호·메모·보장분석이 PC에서도 그대로 보입니다.</p>
+</div>
+<div class="pickbar" id="pb"></div>
+<div class="stage">
+  <div class="phone"><div class="scr" id="scr"></div></div>
+  <div class="side" id="side"></div>
+</div>
+
+<script>
+/* ══ 0. 글자 안전하게 ═════════════════════════════════════════ */
+function E(s){return String(s==null?'':s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function A(act,val){return ' data-a="'+E(act)+'"'+(val!=null?(' data-v="'+E(val)+'"'):'');}
+function $(id){return document.getElementById(id);}
+var _tk;
+function toast(m){var t=$('tt');if(!t)return;t.textContent=m;t.className='on';
+  clearTimeout(_tk);_tk=setTimeout(function(){t.className='';},2600);}
+
+var NOW=new Date(),WD=['일','월','화','수','목','금','토'];
+var TODAY=(NOW.getMonth()+1)+'월 '+NOW.getDate()+'일 '+WD[NOW.getDay()]+'요일';
+function hhmm(){var h=NOW.getHours(),m=NOW.getMinutes();return h+':'+(m<10?'0':'')+m;}
+
+/* ══ 1. 같은 칸에 저장 — PC판과 열쇠가 같습니다 ═══════════════ */
+var KEY='apex_mokgak_v1';
+var DB={rrn:{},memo:{},kb:{},ask:{},home:''};
+try{var _r=localStorage.getItem(KEY);if(_r){var _o=JSON.parse(_r);
+  if(_o&&typeof _o==='object'){DB.rrn=_o.rrn||{};DB.memo=_o.memo||{};DB.kb=_o.kb||{};DB.ask=_o.ask||{};DB.home=_o.home||'';}}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){toast('이 브라우저가 저장을 막고 있습니다');}}
+function memoOf(id){return DB.memo[id]||(DB.memo[id]={});}
+
+/* ── 주민등록번호 ── */
+function rrnDigits(s){return String(s||'').replace(/[^0-9]/g,'');}
+function rrnOk(d){
+  if(d.length!==13)return false;
+  var w=[2,3,4,5,6,7,8,9,2,3,4,5],s=0,i;
+  for(i=0;i<12;i++)s+=parseInt(d.charAt(i),10)*w[i];
+  return ((11-(s%11))%10)===parseInt(d.charAt(12),10);
+}
+function rrnBirth(d){
+  if(d.length<7)return null;
+  var g=parseInt(d.charAt(6),10),yy=parseInt(d.substr(0,2),10),
+      mm=parseInt(d.substr(2,2),10),dd=parseInt(d.substr(4,2),10),cent;
+  if(g===1||g===2||g===5||g===6)cent=1900;
+  else if(g===3||g===4||g===7||g===8)cent=2000;
+  else if(g===9||g===0)cent=1800;
+  else return null;
+  if(mm<1||mm>12||dd<1||dd>31)return null;
+  return {y:cent+yy,m:mm,d:dd,sex:(g%2===1?'남':'여'),f:(cent+yy)+'년 '+mm+'월 '+dd+'일'};
+}
+function ageOf(b){var a=NOW.getFullYear()-b.y;
+  var pass=(NOW.getMonth()+1>b.m)||((NOW.getMonth()+1===b.m)&&(NOW.getDate()>=b.d));
+  if(!pass)a--;return a;}
+function insAge(b){
+  var a=ageOf(b),half=new Date(NOW.getFullYear(),b.m-1,b.d);half.setMonth(half.getMonth()+6);
+  var bday=new Date(NOW.getFullYear(),b.m-1,b.d),up;
+  if(NOW>=half){a=a+1;up=new Date(NOW.getFullYear()+1,b.m-1,b.d);up.setMonth(up.getMonth()+6);}
+  else if(NOW>=bday){up=half;}
+  else{var h0=new Date(NOW.getFullYear()-1,b.m-1,b.d);h0.setMonth(h0.getMonth()+6);
+       if(NOW>=h0){a=a+1;up=half;}else{up=h0;}}
+  var dd=Math.ceil((up-NOW)/86400000);
+  return {a:a,up:(up.getMonth()+1)+'월 '+up.getDate()+'일',d:dd<0?0:dd};
+}
+function rrnMask(d){return d.length<7?d:(d.substr(0,6)+'-'+d.charAt(6)+'●●●●●●');}
+function rrnFull(d){return d.substr(0,6)+'-'+d.substr(6);}
+
+/* ── KB보장분석 읽기 (PC판과 같은 규칙) ── */
+var WALL=['실손','암','뇌','간병','사망','소득보장','은퇴·연금','상속'];
+var KBMAP=[
+ {w:'실손',key:['실손','실비','통원','입원의료비','의료실비']},
+ {w:'암',  key:['암진단','일반암','유사암','소액암','암보장','고액암','재진단암']},
+ {w:'뇌',  key:['뇌졸중','뇌출혈','뇌혈관','급성심근','허혈성','심혈관','심장']},
+ {w:'간병',key:['간병','장기요양','치매','요양']},
+ {w:'사망',key:['사망','종신','상속','유족']},
+ {w:'소득보장',key:['소득','생활비','취업불능','휴업','일당','입원일당']},
+ {w:'은퇴·연금',key:['연금','노후','은퇴']},
+ {w:'상속',key:['증여','상속세']}
+];
+function wonOf(t){
+  var m=/([0-9][0-9,\.]*)\s*억/.exec(t);
+  if(m)return Math.round(parseFloat(m[1].replace(/,/g,''))*10000);
+  m=/([0-9][0-9,\.]*)\s*만/.exec(t);
+  if(m)return Math.round(parseFloat(m[1].replace(/,/g,'')));
+  m=/([0-9]{5,})\s*원/.exec(t);
+  if(m)return Math.round(parseInt(m[1].replace(/,/g,''),10)/10000);
+  return 0;
+}
+function manStr(v){
+  if(!v)return '—';
+  if(v>=10000){var e=v/10000;return (e===Math.floor(e)?e:e.toFixed(1))+'억';}
+  return v.toLocaleString('ko-KR')+'만';
+}
+function termOf(t){
+  var m=/([0-9]{2,3})\s*세\s*(만기|만료|까지)?/.exec(t);if(m)return m[1]+'세';
+  m=/([0-9]{1,2})\s*년\s*만기/.exec(t);if(m)return m[1]+'년';
+  if(/종신/.test(t))return '종신';
+  if(/갱신/.test(t))return '갱신형';
+  return '';
+}
+function kbRead(raw){
+  var lines=String(raw||'').split(/\r?\n/),out=[],skip=[],i,j,k;
+  for(i=0;i<lines.length;i++){
+    var t=lines[i].trim();
+    if(!t)continue;
+    if(/^(담보|보장내역|보장명|구분|합계|총계|계|보험료\s*합계)/.test(t)){
+      skip.push([i+1,t,'머리글이라 셈에서 뺐습니다']);continue;}
+    var won=wonOf(t),w='',hit='';
+    for(j=0;j<KBMAP.length&&!w;j++)
+      for(k=0;k<KBMAP[j].key.length;k++)
+        if(t.indexOf(KBMAP[j].key[k])>-1){w=KBMAP[j].w;hit=KBMAP[j].key[k];break;}
+    if(!w&&!won){skip.push([i+1,t,'담보 이름도 금액도 못 찾았습니다']);continue;}
+    if(!w){skip.push([i+1,t,'금액은 읽었는데 어느 통장인지 모르겠습니다']);continue;}
+    var nm=t.replace(/[0-9][0-9,\.]*\s*(억|만원|만|원)/g,'').replace(/[0-9]{2,3}\s*세\s*(만기|만료|까지)?/g,'')
+            .replace(/[0-9]{1,2}\s*년\s*(납|만기)/g,'').replace(/[|\t]+/g,' ').replace(/\s{2,}/g,' ').trim();
+    if(nm.length>20)nm=nm.slice(0,20);
+    out.push({ln:i+1,raw:t,nm:nm||w,w:w,hit:hit,won:won,term:termOf(t)});
+  }
+  return {rows:out,skip:skip};
+}
+function kbSum(r){
+  var m={},i,gap=[],have=[];
+  for(i=0;i<r.rows.length;i++)m[r.rows[i].w]=(m[r.rows[i].w]||0)+r.rows[i].won;
+  for(i=0;i<WALL.length;i++){
+    if(m[WALL[i]]!==undefined)have.push([WALL[i],m[WALL[i]]]);else gap.push(WALL[i]);}
+  return {m:m,have:have,gap:gap};
+}
+function kbTalk(nm,r,s){
+  var L=[],i,t=[];
+  L.push(nm+'님 증권을 읽어 보니 '+r.rows.length+'개 담보가 들어 있습니다.');
+  if(s.have.length){for(i=0;i<s.have.length;i++)t.push(s.have[i][0]+' '+manStr(s.have[i][1]));
+    L.push('채워져 있는 곳 — '+t.join(' · ')+'.');}
+  if(s.gap.length){
+    L.push('비어 있는 곳 — '+s.gap.join(' · ')+'. 여기가 아프면 나올 돈이 한 곳도 없습니다.');
+    L.push('보험료를 더 내시라는 말씀이 아니라, 지금 내고 계신 안에서 자리를 옮기는 이야기부터 드리겠습니다.');
+  }else L.push('여덟 통장이 다 채워져 있습니다. 금액이 지금 상황에 맞는지만 같이 보시죠.');
+  L.push('');
+  L.push('비율·한도·기간 같은 숫자는 그때그때 바뀌니, 정확한 값은 같이 보면서 확인해 드리겠습니다.');
+  return L.join('\n');
+}
+var KBDEMO=['담보명\t가입금액\t만기',
+ '일반암진단비\t3,000만원\t100세만기 20년납',
+ '유사암진단비\t600만원\t100세만기',
+ '뇌졸중진단비\t2,000만원\t90세만기',
+ '급성심근경색진단비\t2,000만원\t90세만기',
+ '상해입원일당\t3만원\t80세만기 갱신형',
+ '질병사망\t1억\t종신',
+ '실손의료비(급여)\t5,000만원\t갱신형',
+ '간병인사용입원일당\t10만원\t90세만기',
+ '합계 보험료\t312,000원'].join('\n');
+
+/* ══ 2. 사람 — PC판과 같은 가상 인물입니다 ════════════════════ */
+var PPL=[
+ {id:'p1',nm:'김민수',ini:'김',age:'48세 · 남 · 자영업 · 배우자 1 자녀 2',rg:'강남구',src:'보장분석10DB',
+  st:'AP',idle:1,cnt:2,appt:'',tg:['r','만기 D-30'],mt:'어제 부재 · 2회차 · 만기 D-30',
+  why:'만기가 30일 남았습니다 — 놓치면 보장이 끊깁니다',aim:'만기 안내로 다시 걸기',
+  how:'오전 10~11시에 받은 이력이 가장 많습니다.',hook:'아이 교육비',best:'오전 10~11시에 받으심',
+  ins:{n:'4건',fee:'31만',due:'D-30'},clm:'실비 청구 없음 · 8월 정형외과 6회',
+  say:'김민수님, 안녕하세요. 윤시현입니다.\n\n지난번에 아이 교육비가 제일 걱정이라고 하셨던 게 기억납니다.\n\n갖고 계신 보험 중 하나가 다음 달에 만기가 됩니다. 한 번은 같이 보셔야 합니다.\n\n다음 주 중에 15분만 시간 내주실 수 있을까요?'},
+ {id:'p2',nm:'이정우',ini:'이',age:'41세 · 남 · 회사원 · 배우자 1',rg:'강남구',src:'17DB',
+  st:'PC',idle:9,cnt:3,appt:'',tg:['','만기 D-12'],mt:'보장분석 열어봄 3회 · 9일째 그대로',
+  why:'PC에서 9일째 멈춰 있습니다',aim:'열어본 자리를 짚어서 다시 걸기',
+  how:'「어디가 제일 걸리셨어요」로 시작하시면 됩니다.',hook:'보험료 부담',best:'점심 뒤에 받으심',
+  ins:{n:'3건',fee:'19만',due:'D-12'},clm:'청구 이력 없음',
+  say:'이정우님, 안녕하세요. 윤시현입니다.\n\n보내드린 보장분석 보셨지요. 어느 대목이 제일 걸리셨는지 궁금합니다.\n\n보험료를 더 내시라는 이야기가 아니라, 지금 내고 계신 안에서 자리를 옮기는 이야기입니다.\n\n이번 주에 잠깐 통화 가능하실까요?'},
+ {id:'p3',nm:'박서연',ini:'박',age:'35세 · 여 · 프리랜서',rg:'서초구',src:'소개',
+  st:'TA',idle:0,cnt:0,appt:'',tg:['p','소개'],mt:'최도현님 소개 · 아직 첫 통화 전',
+  why:'소개는 사흘 안에 걸어야 합니다',aim:'첫 통화 — 소개해 주신 분 이름부터',
+  how:'「최도현님께서 말씀 주셔서」로 여시면 문이 열립니다.',hook:'최도현님 소개',best:'아직 모름',
+  ins:{n:'0건',fee:'—',due:'—'},clm:'아직 아무것도 없습니다',
+  say:'박서연님, 안녕하세요. 윤시현입니다.\n\n최도현님께서 박서연님 말씀을 주셔서 연락드렸습니다.\n\n권해 드리려고 거는 전화가 아니라, 지금 들고 계신 게 어떤 것인지 정리해 드리려고 합니다.\n\n다음 주 중에 20분만 시간 되실까요?'},
+ {id:'p4',nm:'최도현',ini:'최',age:'52세 · 남 · 법인 임원 · 배우자 1 자녀 1',rg:'강남구',src:'기고객',
+  st:'증권전달',idle:0,cnt:8,appt:'14:00',tg:['b','오늘 약속'],mt:'증권 요청함 · 14:00 강남 카페',
+  why:'오늘 14:00 약속 — 증권을 아직 안 드렸습니다',aim:'약속을 지키고 다음 자리를 잡습니다',
+  how:'증권만 드리고 끝내지 않습니다. 소개 한 분을 여쭙습니다.',hook:'전에 소개해 주신 분',best:'오전 10~11시에 받으심',
+  ins:{n:'6건',fee:'58만',due:'—'},clm:'접수 1건 · 9월 백내장',
+  say:'최도현님, 안녕하세요. 윤시현입니다.\n\n오늘 14시에 뵙겠습니다. 증권 들고 가겠습니다.\n\n받으신 그대로 서랍에 들어가는 일이 많아서, 한 번은 같이 열어 보시는 게 좋습니다. 5분이면 됩니다.\n\n이따 뵙겠습니다.'},
+ {id:'p5',nm:'정하늘',ini:'정',age:'29세 · 여 · 간호사',rg:'분당구',src:'소개',
+  st:'CS',idle:2,cnt:6,appt:'',tg:['g','생일 D-1'],mt:'내일 생일 · 작년에도 축하 보냄',
+  why:'내일이 생일입니다',aim:'생일 축하 — 판매 이야기는 안 합니다',
+  how:'계약 이야기는 이 통화에서 하지 않습니다.',hook:'작년에도 축하',best:'야간 근무라 오후에',
+  ins:{n:'2건',fee:'11만',due:'—'},clm:'청구 이력 없음',
+  say:'정하늘님, 안녕하세요. 윤시현입니다.\n\n내일 생일이시죠. 하루 먼저 축하드리려고 연락드렸습니다.\n\n내일은 좋은 사람들이랑 맛있는 것 드시면서 보내세요.\n\n보험 이야기는 오늘 안 하겠습니다.'},
+ {id:'p6',nm:'한지우',ini:'한',age:'44세 · 여 · 자영업 · 자녀 1',rg:'강남구',src:'8DB',
+  st:'CS',idle:3,cnt:4,appt:'',tg:['','청구'],mt:'실비 청구 문의 남김 · 3일 전',
+  why:'청구 문의를 남기고 사흘이 지났습니다',aim:'청구 도와드리기',
+  how:'서류는 영수증과 세부내역서 두 장이면 됩니다.',hook:'실비 청구',best:'오후 2~4시에 받으심',
+  ins:{n:'3건',fee:'22만',due:'—'},clm:'문의 남김 · 도수치료',
+  say:'한지우님, 안녕하세요. 윤시현입니다.\n\n남겨 주신 실비 청구 건 때문에 연락드렸습니다. 늦어서 죄송합니다.\n\n진료비 영수증과 세부내역서 두 장이면 됩니다. 사진 찍어 보내 주시면 제가 넣어 드리겠습니다.'},
+ {id:'p7',nm:'서준호',ini:'서',age:'47세 · 남 · 법인 대표',rg:'강남구',src:'기고객',
+  st:'AP',idle:1,cnt:5,appt:'',tg:['p','법인'],mt:'법인 대표 · 정책자금 안내 대기',
+  why:'청약 직전 — 월 80만입니다',aim:'정책자금 안내하고 서명 자리 잡기',
+  how:'「20분이면 끝납니다」로 여십시오.',hook:'정책자금',best:'오전 일찍',
+  ins:{n:'2건',fee:'94만',due:'—'},clm:'청구 이력 없음',
+  say:'서준호 대표님, 안녕하세요. 윤시현입니다.\n\n지난번에 말씀드린 정책자금 안내 자료가 준비됐습니다.\n\n대표님 시간 오래 안 뺏겠습니다. 20분이면 끝납니다.\n\n이번 주 중에 사무실로 잠깐 들러도 될까요?'}
+];
+function byId(id){for(var i=0;i<PPL.length;i++)if(PPL[i].id===id)return PPL[i];return null;}
+
+/* ══ 통화 멘트 ════════════════════════════════════════════════
+   apex-stage.js 의 TA_FRAME(전화를 여는 다섯 마디)과
+   SAY(그 상황에서 그대로 말할 것)를 옮겨 온 것입니다.
+   버튼 뒤에 숨기지 않고 화면에 그대로 펴 둡니다.
+   ══════════════════════════════════════════════════════════════ */
+var TAF=[
+ {n:'①',t:'첫 3초 — 밝게',s:'고객님, 안녕하세요!',
+  d:'웃는 얼굴로 말합니다. 얼굴이 웃으면 목소리가 따라 웃습니다. 여기서 목소리가 낮으면 뒤의 말이 다 안 들립니다.'},
+ {n:'②',t:'누구인지',s:'APEX 윤시현입니다.',
+  d:'이름을 먼저 댑니다. 안 대면 모르는 번호가 되고, 그다음 말은 아무리 좋아도 광고로 들립니다.'},
+ {n:'③',t:'용건 한 줄',s:'(그 분께 맞춘 첫 마디 — 아래 「보낼 말」의 첫 줄)',
+  d:'어디서 오신 분인가에 맞춰 갈립니다. 여기서 상품 설명을 시작하지 않습니다.'},
+ {n:'④',t:'망설이시면',s:'이번 주에 화요일 오전하고 목요일 오후가 비는데, 어느 쪽이 편하실까요?',
+  d:'「언제 시간 되세요」에 답을 못 하시면 거절할 자리가 됩니다. 그때 두 개를 드리고 고르시게 합니다.'},
+ {n:'⑤',t:'마무리',s:'네, 그럼 그때 뵙겠습니다. 전화 받아 주셔서 감사합니다!',
+  d:'고맙다는 말로 끊습니다. 약속이 안 잡혀도 똑같이 끊습니다 — 오늘 안 되어도 다음이 있습니다.'}
+];
+var SAYS={
+ '부재':{e:'📵',t:'안 받으신 분 — 다시 걸기 전에',
+  say:'고객님, 안녕하세요. 며칠 전에 연락드렸다가 못 뵈었습니다.\n급한 일은 아니고요, 신청해 주신 건 그대로 있으니\n편하신 시간에 한 번만 짧게 통화하면 됩니다.\n오늘 저녁이 나으실까요, 내일 낮이 나으실까요.',
+  next:'그래도 어려우시면 — 「문자로 먼저 보내 드릴까요? 보시고 편하실 때 연락 주시면 그때 맞춰 드리겠습니다.」',
+  avoid:'「몇 번을 걸었는지 아세요」 · 「왜 안 받으셨어요」 · 같은 시간대에 또 걸기. 안 받으신 것은 거절이 아니라 그 시간에 못 받으신 것입니다.',
+  stop:'세 번째 부재부터는 전화를 멈추고 문자 한 줄만 남깁니다. 계속 걸면 번호가 차단되어 그 뒤로는 아무것도 못 합니다.',
+  tip:'안 받은 시간에 또 걸지 않습니다. 시간대를 바꾸고, 그 전에 문자 한 줄을 먼저 보냅니다.'},
+ '거절':{e:'🚫',t:'거절하신 분 — 문을 닫지 않게',
+  say:'고객님, 알겠습니다. 더 붙잡지 않겠습니다.\n한 가지만 여쭙고 마치겠습니다 — 최근에 이미 정리를 받으셔서 필요 없으신 건지,\n아니면 상담 자체를 원하지 않으시는 건지만 말씀해 주시면 그대로 반영하겠습니다.',
+  next:'상담 자체를 원하지 않는다고 하시면 — 「네, 확인했습니다. 오늘 통화는 여기서 마치겠습니다. 감사합니다.」\n이미 받으셨다고 하시면 — 「그러면 같은 안내가 또 가지 않게 적어 두겠습니다. 혹시 나중에 필요하시면 그때 편하게 연락 주십시오.」',
+  avoid:'「왜 필요 없으세요」 · 「손해 보십니다」 · 「들어 보시면 생각이 바뀝니다」. 불안이나 미안함을 만들어 붙잡는 말은 그 자리에서는 통해도 다음이 없습니다.',
+  stop:'거절 의사가 분명하면 그 통화에서 끝냅니다 — 다시 설득하지 않습니다. 다음은 파는 전화가 아니라 쓸모 있는 소식 하나로 엽니다.',
+  tip:'오늘은 팔지 않습니다. 목소리를 처음과 똑같이 유지하고, 담백하게 끝냅니다.'},
+ '기고객':{e:'🕰',t:'오래 못 뵌 분 — 용건부터 꺼내지 않기',
+  say:'고객님, 안녕하세요. 오랜만에 연락드립니다.\n그동안 자주 못 챙겨 드려 죄송합니다.\n다른 용건이 있어서는 아니고, 잘 지내시는지 안부만 여쭤보려고 전화드렸습니다.',
+  next:'말문이 열리면 — 「그때 정리해 드린 것 이후로 바뀐 것이 있으실까요? 가족이나 직장에 달라진 일이 있으면 그것만 제가 알고 있으면 됩니다.」\n바쁘시면 — 「오늘은 안부만 여쭌 것으로 하고, 제가 다시 연락드릴 때를 적어 두겠습니다.」',
+  avoid:'첫마디에 상품·점검·소개를 꺼내는 것. 용건부터 꺼내면 그것이 용건이 됩니다 — 그다음부터 전화를 안 받으십니다.',
+  stop:'오늘 통화가 안부로 끝나도 된 것입니다. 끊기 전에 다음에 할 일을 한 줄 적어 두면 그날 다시 열립니다.',
+  tip:'오래 못 뵌 것을 먼저 말합니다. 그 한마디가 미안함을 덜어 주어 대화가 이어집니다.'},
+ '입원':{e:'🏥',t:'입원·회복 중인 분 — 오늘은 안부만',
+  say:'고객님, 안녕하세요. 소식 듣고 전화드렸습니다.\n많이 놀라셨을 텐데, 지금은 좀 어떠신지요.\n길게 여쭈려는 건 아니고, 목소리만 듣고 끊겠습니다.',
+  next:'먼저 물어보시면 — 「그 부분은 제가 챙기겠습니다. 필요한 서류가 무엇인지 알아보고 정리해서 말씀드릴 테니, 지금은 치료에만 신경 쓰십시오.」\n아무 말씀 없으시면 — 「나중에 필요하신 게 생기면 그때 편하게 연락 주십시오.」',
+  avoid:'병명·검사 결과·앞으로 어떻게 되는지 캐묻는 것. 먼저 보장이나 청구 이야기를 꺼내는 것. 「그래서 보험이 필요한 겁니다」. 그리고 「나옵니다」 「될 겁니다」 하고 먼저 말해 주는 것 — 지급은 심사 결과에 따릅니다. 확답은 제가 아니라 심사가 합니다.',
+  stop:'목소리가 힘들어 보이시면 그 자리에서 끊습니다 — 「쉬십시오」 한마디면 됩니다. 찾아뵙겠다는 말은 먼저 꺼내지 않습니다. 오시라 하실 때 갑니다.',
+  tip:'짧을수록 좋습니다. 오래 붙잡는 것이 정성이 아니라, 빨리 끊어 드리는 것이 정성입니다.'}
+};
+/* 이 분께 맞는 상황 멘트 — 없으면 안 만듭니다 */
+function sayFor(c){
+  if(c.st==='부재')return '부재';
+  if(c.st==='거절')return '거절';
+  if(String(c.clm&&(c.clm.s||c.clm)).indexOf('입원')>-1)return '입원';
+  if(c.src==='기고객'&&c.idle>=30)return '기고객';
+  return '';
+}
+
+/* ── 이분께 거리가 몇 가지 — 사본의 「거리」 ─────────────────
+   드릴 말씀거리를 셉니다. 지어내지 않고 아는 것만 셉니다.        */
+function geori(c){
+  var L=[],k=DB.kb[c.id],m=memoOf(c.id),i;
+  if(c.ins.due&&c.ins.due.indexOf('D-')===0)L.push('만기 '+c.ins.due);
+  if(c.tg&&c.tg[1]==='생일 D-1')L.push('내일 생일');
+  if(String(c.clm&&(c.clm.s||c.clm)).indexOf('문의')>-1)L.push('청구 문의');
+  if(c.src==='소개')L.push('소개해 주신 분');
+  if(k){var g=kbSum(kbRead(k.raw));if(g.gap.length)L.push('빈 통장 '+g.gap.length+'칸');}
+  if(typeof MADI!=='undefined')
+    for(i=0;i<MADI.length;i++)if(MADI[i].nm===c.nm)L.push('계약 '+MADI[i].mon+'개월 마디');
+  if(m.care)L.push(m.care);
+  return L;
+}
+/* 「🤝 AP · 만남 · 오늘 10:00 · 오전 10~11시에 받으심」 */
+function metaLine(c){
+  var g=STAGE[c.st],p=[g.e+' '+c.st,g.ch];
+  if(c.appt)p.push('오늘 '+c.appt);
+  if(c.best)p.push(c.best);
+  return E(p.join(' · '));
+}
+/* 「오늘 10:00 에 만납니다 · 이분께 거리가 2가지」 */
+function whyLine(c){
+  var G=geori(c),a=[];
+  if(c.appt)a.push('<b>오늘 '+E(c.appt)+'</b> 에 만납니다');
+  else a.push(c.why);
+  if(G.length)a.push('이분께 <b>거리가 '+G.length+'가지</b> — '+E(G.join(' · ')));
+  return a.join(' · ');
+}
+
+function isMeet(st){return st==='AP'||st==='PC'||st==='CS'||st==='증권전달';}
+
+/* ══ 접근에서 계약까지 — PC판과 글자 하나까지 같은 표입니다 ════ */
+var ORDER=['미접촉','부재','거절','TA','AP','PC','CS','계약완료','증권전달','소개완료'];
+var GO={'미접촉':'TA','부재':'TA','거절':'','TA':'AP','AP':'PC','PC':'CS',
+        'CS':'계약완료','계약완료':'증권전달','증권전달':'소개완료','소개완료':''};
+var STAGE={
+ '미접촉':{e:'🌱',ch:'전화',aim:'<b>첫 통화</b> — 30초 안에 약속만',
+   way:'누구인지 먼저 밝힌다. 설명은 만나서, 전화로는 날짜만',
+   q:'이 번호가 지금 살아 있나',
+   know:'어디서 오신 분인지(유입 경로)와 받은 날짜를 알고 있습니다. 경로에 따라 첫 마디가 갈립니다.',
+   tools:['📞 콜시트','🗣 첫 마디 5줄','🚪 거절 대응 16']},
+ '부재':{e:'📵',ch:'전화',aim:'<b>한 번은 받으시게</b> 한다',
+   way:'안 받은 시간에 또 걸지 않는다 — 시간대를 바꾸고, 그 전에 문자 한 줄',
+   q:'언제 거는 게 맞나',
+   know:'지난 통화 기록의 시각이 남아 있습니다. 받으셨던 시간대를 골라 줄 수 있습니다.',
+   tools:['💬 남길 말','📰 보낼 소식']},
+ '거절':{e:'🚪',ch:'문자',aim:'<b>문을 닫지 않게</b> 한다',
+   way:'팔지 않는다. 그분께 쓸모 있는 소식 하나만 보내고 기다린다',
+   q:'무엇이 걸려서 거절이었나',
+   know:'거절 사유 표가 있습니다 — 「비싸다 / 이미 있다 / 생각해 보겠다」 별로 받아치는 말이 적혀 있습니다.',
+   tools:['🚪 거절 대응 16','📰 보낼 소식']},
+ 'TA':{e:'📞',ch:'전화',aim:'<b>만날 날짜</b>를 잡는다',
+   way:'상품 설명을 전화로 하지 않는다. 날짜 두 개를 드리고 고르시게 한다',
+   q:'어디서 만나는 게 맞나',
+   know:'주소와 구를 알고 있습니다. 같은 구에 다른 약속이 있으면 그날로 몰 수 있습니다.',
+   tools:['📞 콜시트','📋 보장분석 상담자료','🗺️ 오늘 동선'],
+   good:'여기가 「활동량」이 올라가는 자리입니다. 날짜를 정할 때 <b>「그 구에 이미 2분 계십니다 — 목요일?」</b> 를 띄우면 하루에 세 곳 도는 일정이 저절로 짜입니다.'},
+ 'AP':{e:'🤝',ch:'만남',aim:'약속을 지키고 <b>다음 자리</b>를 잡는다',
+   way:'오늘 자리에서 결론을 재촉하지 않는다. 듣고, 다음에 볼 날을 받아 온다',
+   q:'① 가입이 되는 분인가 ② 어느 통장이 비었나 ③ 무엇을 펴 놓나',
+   know:'예외질환 인수기준 · 8통장마다 적힌 「물을 것」 · 병원비 이야기가 나왔을 때의 급여·비급여 화법을 다 갖고 있습니다.',
+   tools:['📋 보장분석 상담자료','🗣 재무설계 실전화법서','🧠 두뇌','🪣 8통장 진단','🔄 전·후 만들기'],
+   warn:'AP 를 마치고 8통장을 진단해도 <b>그 사람에게 안 남습니다.</b> 다음 분을 진단하면 덮어씁니다. 이 한 군데만 고쳐도 AP 이후가 전부 살아납니다.'},
+ 'PC':{e:'📄',ch:'전화',aim:'제안서에 <b>걸리는 것 한 가지</b>를 받아 낸다',
+   way:'「어떠셨어요」 가 아니라 「어느 쪽이 제일 걸리셨어요」 로 묻는다',
+   q:'걸리는 것이 돈인가 · 필요를 못 느끼는가 · 회사가 싫은가',
+   know:'전·후 보험료와 줄어든 담보 이름이 이미 저장돼 있습니다. 「○○ 담보가 빠지는 게 제일 걸리셨죠」 로 물을 수 있습니다.',
+   tools:['🔄 전·후 만들기','📊 재무설계','🗣 실전화법서'],
+   warn:'담보 이름은 저장돼 있는데 <b>PC 카드가 그걸 안 읽습니다.</b> 읽기만 하면 됩니다 — 새로 계산하지 않습니다.'},
+ 'CS':{e:'✍️',ch:'만남',aim:'청약 서류와 <b>날짜</b>를 잡는다',
+   way:'설명을 다시 하지 않는다. 언제 어디서 쓸지만 정한다',
+   q:'자료가 손에 다 있나',
+   know:'보류 판정이 기다림 / 실패 / 됨 으로 답합니다. 「실패를 다 왔다로 읽지 않는다」는 규칙이 이미 들어 있습니다.',
+   tools:['📝 청약 서류','🗺️ 그날 동선']},
+ '계약완료':{e:'🎉',ch:'만남',aim:'<b>증권을 직접</b> 전할 자리를 잡는다',
+   way:'우편으로 보내지 않는다. 그 자리가 소개를 받는 유일한 자리다',
+   q:'증권을 보냈나 · 2회차가 빠지나',
+   know:'오늘 순서에서 계약완료에 높은 점수를 줍니다. 1·3·6·12개월 마디가 알림에 뜹니다. 여기는 이미 촘촘합니다.',
+   tools:['📬 증권전달 세트','💌 마디 보낼 말']},
+ '증권전달':{e:'📬',ch:'전화',aim:'잘 받으셨는지 확인하고 <b>소개 한 분</b>을 여쭙는다',
+   way:'보험 이야기를 더 하지 않는다. 고마움과 청구 방법, 그리고 가족',
+   q:'이 자리에서 소개를 여는가',
+   know:'증권전달 세트(전략 · 속지 · 상담도구)가 한 파일로 있습니다. 전달하면 오늘 명단에서 내려갑니다 — 끝나는 자리를 만들어 둔 것입니다.',
+   tools:['📬 증권전달 세트','📄 속지·안내장','🧾 청구 안내'],
+   good:'증권을 드릴 때가 <b>납입만기·보장만기를 적어 넣는 유일한 자리</b>입니다. 증권이 손에 있으니까요. 칸 두 개만 놓으면 그 뒤 10년치 재계약 이야기가 자동으로 열립니다.'},
+ '소개완료':{e:'🙌',ch:'전화',aim:'소개해 주신 분께 <b>어떻게 됐는지</b> 알려 드린다',
+   way:'소개받은 분 이야기를 먼저 한다. 새 부탁을 오늘 붙이지 않는다',
+   q:'누구를 소개해 주실 분인가',
+   know:'적어 두신 가족과 관계를 읽습니다. 배우자·자녀 나이가 적혀 있으면 그것이 다음 명단입니다.',
+   tools:['🙌 소개 카드','👨‍👩‍👧 가족 지도'],
+   good:'여기서 끝이 아닙니다. 소개해 주신 분이 제일 궁금한 것은 <b>그분이 잘 됐는지</b>입니다. 알려 드리면 다음 소개가 오고, 안 알려 드리면 거기서 끊깁니다.'}
+};
+/* 지금 그 단계에 누가 계신가 — 실시간 */
+function atStage(st){var L=[],i;for(i=0;i<PPL.length;i++)if(PPL[i].st===st)L.push(PPL[i]);return L;}
+
+var CARE=['','결혼 준비','출산 · 육아','이직 · 퇴사','이사 · 내 집','개업 · 사업',
+          '자녀 진학','건강 문제','부모님 일','은퇴 준비'];
+
+/* ══ 3. 화면 목록 ═════════════════════════════════════════════ */
+var SCREENS=[
+ ['lock','① 잠금화면 9:00','알람이 이렇게 뜹니다'],
+ ['banner','② 헤드업 13:00','다른 앱 쓰는 중에 내려오는 배너'],
+ ['q1','③ 09:00 — 오늘 걸 사람','알람을 누르면 이 한 장만'],
+ ['q2','④ 13:00 — 오전 결과','버튼만 누르면 저장'],
+ ['q3','⑤ 17:00 — 예상업적','숫자 하나만'],
+ ['q4','⑥ 21:00 — 내일 약속','시간만 찍으면 끝'],
+ ['done','⑦ 오늘 끝','매일 열 이유'],
+ ['home','⑧ 홈 한 장','카드가 다 없어지면 오늘 끝'],
+ ['cli','⑨ 고객','심플하게 — 이름 한 줄, 이유 한 줄'],
+ ['one','⑩ 고객 한 장','주민번호 · 적어 두기까지'],
+ ['kb','⑪ 보장분석 넣기','읽은 근거까지'],
+ ['cal','⑫ 달력','다음 분을 날짜 위에'],
+ ['ask','⑬ 물어볼 것','앱이 사장님께 여쭙습니다'],
+ ['ment','⑭ 통화 멘트','다섯 마디 · 네 상황'],
+ ['flow','⑮ 접근→계약','열 단계를 실시간으로'],
+ ['perf','⑯ 내 업적','무엇을 더 하면 되는가'],
+ ['alm','⑰ 알람 규칙','넣을 게 없으면 안 울립니다']
+];
+var S={s:'lock',cur:'p1',show:'',stg:'TA',sheet:'',cmo:0,day:'',q1:{},q2:{},amt:1200000,tm:{p4:'14:00',p5:''},
+       alm:{a:1,b:1,c:1,d:0},tab:'home'};
+
+/* ══ 4. 조각 ══════════════════════════════════════════════════ */
+function sb(white){
+  return '<div class="sb"'+(white?' style="color:#fff"':'')+'><span>'+hhmm()+'</span>'+
+    '<span class="r"><span class="sig"><i></i><i></i><i></i><i></i></span><span class="bat"></span></span></div>';
+}
+function tabs(on){
+  var T=[['home','홈'],['cli','고객'],['flow','단계'],['kb','보험'],['perf','내 업적']],h='<div class="tabs">',i;
+  for(i=0;i<T.length;i++)h+='<div class="'+(on===T[i][0]?'on':'')+'"'+A('s',T[i][0])+'>'+
+    '<span class="i"></span>'+T[i][1]+'</div>';
+  return h+'</div>';
+}
+function qtop(n){
+  var h='<div class="topbar"><span class="x"'+A('s','home')+'>✕</span><span class="dots">';
+  for(var i=1;i<=4;i++)h+='<i class="'+(i===n?'on':'')+'"></i>';
+  return h+'</span><span class="step">'+n+'/4</span></div>';
+}
+
+/* ══ 5. ① 잠금화면 ════════════════════════════════════════════ */
+function vLock(){
+  return '<div class="scr lock" id="scr">'+sb(1)+
+   '<div class="clock"><div class="t">9:00</div><div class="d">'+E(TODAY)+'</div></div>'+
+   '<div class="noti"'+A('s','q1')+'><div class="nh"><span class="ico">A</span><span>APEX PRO</span><span>· 지금</span></div>'+
+   '<div class="nt">오늘 걸 사람 '+PPL.length+'명, 정해뒀어요</div>'+
+   '<div class="nb">눌러서 확인만 하시면 됩니다 · 30초</div></div>'+
+   '<div class="noti small"><div class="nh"><span class="ico">A</span><span>APEX PRO</span><span>· 어제</span></div>'+
+   '<div class="nt">어제 예상업적 120만원 저장됨</div></div>'+
+   '<div class="lockfoot">알림을 눌러 바로 처리하기</div><div class="lockbar"></div><div id="tt"></div></div>';
+}
+
+/* ══ 6. ② 헤드업 배너 ═════════════════════════════════════════ */
+function vBanner(){
+  return '<div class="scr" id="scr">'+sb()+
+   '<div class="body" style="opacity:.62;overflow:hidden">'+homeInner(1)+'</div>'+
+   '<div style="opacity:.62">'+tabs('home')+'</div>'+
+   '<div class="dim"></div>'+
+   '<div class="heads"><div class="nh"><span class="ico">A</span><span>APEX PRO</span><span>· 지금</span></div>'+
+   '<div class="nt">오전에 만난 3분, 결과만 눌러주세요</div>'+
+   '<div class="nb">버튼 세 번이면 끝납니다</div>'+
+   '<div class="acts"><div class="p"'+A('s','q2')+'>지금 하기</div><div class="s"'+A('say','저녁에 다시 울립니다')+'>저녁에</div></div>'+
+   '</div><div id="tt"></div></div>';
+}
+
+/* ══ 7. ③ 09:00 오늘 걸 사람 ══════════════════════════════════ */
+function vQ1(){
+  var i,n=0;
+  for(i=0;i<PPL.length;i++)if(S.q1[PPL[i].id])n++;
+  var h='<div class="scr" id="scr">'+sb()+qtop(1)+'<div class="body">'+
+   '<div class="h1">오늘 걸 사람<br><em>'+PPL.length+'명</em>이에요</div>'+
+   '<div class="sub">어제 못 건 2명을 앞에 놨습니다</div>'+
+   '<div class="card" style="margin-top:22px;padding:6px 20px">';
+  for(i=0;i<PPL.length;i++){var p=PPL[i];
+    h+='<div class="row"'+A('q1',p.id)+' style="cursor:pointer"><div class="av">'+E(p.ini)+'</div>'+
+      '<div><div class="nm">'+E(p.nm)+'</div><div class="mt">'+E(p.mt)+'</div></div>'+
+      '<div class="rt">'+(p.tg[1]==='생일 D-1'?'<span class="tag">D-1</span>':'')+
+      '<span class="chk'+(S.q1[p.id]?' on':'')+'"></span></div></div>';}
+  h+='</div><div style="height:20px"></div></div>'+
+   '<div class="foot"><div class="btn"'+A('s','home')+'>확인했어요'+(n?(' · '+n+'명'):'')+'</div>'+
+   '<div class="ghost"'+A('say','오늘은 건너뛰었습니다 — 내일 아침에 다시 세워 드립니다')+'>오늘은 건너뛸게요</div></div>'+
+   '<div id="tt"></div></div>';
+  return h;
+}
+
+/* ══ 8. ④ 13:00 오전 결과 ═════════════════════════════════════ */
+var MET=[['p1','10:00 · 카페'],['p2','11:30 · 사무실'],['p3','12:00 · 통화']];
+function vQ2(){
+  var h='<div class="scr" id="scr">'+sb()+qtop(2)+'<div class="body">'+
+   '<div class="h1">오전에 만난 3분,<br>어떻게 됐나요?</div>'+
+   '<div class="sub">누르면 바로 저장돼요</div>';
+  for(var i=0;i<MET.length;i++){var p=byId(MET[i][0]),v=S.q2[p.id]||'';
+    h+='<div class="card" style="margin-top:14px">'+
+      '<div class="row" style="padding:0 0 4px;border:0"><div class="av">'+E(p.ini)+'</div>'+
+      '<div><div class="nm">'+E(p.nm)+'</div><div class="mt">'+E(MET[i][1])+'</div></div></div>'+
+      '<div class="pick">'+
+      '<div class="'+(v==='만'?'on':'')+'"'+A('q2',p.id+'|만')+'>만났어요</div>'+
+      '<div class="'+(v==='부'?'no':'')+'"'+A('q2',p.id+'|부')+'>부재</div>'+
+      '<div class="'+(v==='다'?'on':'')+'"'+A('q2',p.id+'|다')+'>다음에</div></div></div>';}
+  h+='<div style="height:20px"></div></div>'+
+   '<div class="foot"><div class="btn"'+A('s','q3')+'>다음</div></div><div id="tt"></div></div>';
+  return h;
+}
+
+/* ══ 9. ⑤ 17:00 예상업적 ══════════════════════════════════════ */
+function vQ3(){
+  var v=S.amt,d=v-900000;
+  var h='<div class="scr" id="scr">'+sb()+qtop(3)+'<div class="body">'+
+   '<div class="h1">오늘 예상업적,<br>얼마 잡을까요?</div>'+
+   '<div class="amt"><div class="v">'+v.toLocaleString('ko-KR')+'<span>원</span></div>'+
+   '<div class="d">'+(d>=0?'▲ 어제보다 '+Math.round(d/10000)+'만원 많아요':'▼ 어제보다 '+Math.round(-d/10000)+'만원 적어요')+'</div></div>'+
+   '<div class="chips"><div'+A('amt','100000')+'>+10만</div><div'+A('amt','500000')+'>+50만</div>'+
+   '<div'+A('amt','1000000')+'>+100만</div><div'+A('amt','0')+'>지우기</div></div>'+
+   '<div class="pad">';
+  var K=['1','2','3','4','5','6','7','8','9','00','0','←'];
+  for(var i=0;i<K.length;i++)h+='<div class="'+(i>=9?'s':'')+'"'+A('key',K[i])+'>'+K[i]+'</div>';
+  h+='</div></div><div class="foot"><div class="btn"'+A('s','q4')+'>저장</div></div><div id="tt"></div></div>';
+  return h;
+}
+
+/* ══ 10. ⑥ 21:00 내일 약속 ════════════════════════════════════ */
+var TMS={p4:['10:00','14:00','16:00'],p5:['09:00','11:00','18:00']};
+function vQ4(){
+  var h='<div class="scr" id="scr">'+sb()+qtop(4)+'<div class="body">'+
+   '<div class="h1">내일 약속 2개,<br>시간만 정하면 돼요</div>'+
+   '<div class="sub">정하면 내일 아침 알람에 같이 올라갑니다</div>';
+  var L=[['p4','증권 전달 · 강남'],['p5','생일 · 전화']];
+  for(var i=0;i<L.length;i++){var p=byId(L[i][0]),T=TMS[p.id],j;
+    h+='<div class="card" style="margin-top:14px">'+
+      '<div class="row" style="padding:0 0 4px;border:0"><div class="av">'+E(p.ini)+'</div>'+
+      '<div><div class="nm">'+E(p.nm)+'</div><div class="mt">'+E(L[i][1])+'</div></div></div>'+
+      '<div class="tchip">';
+    for(j=0;j<T.length;j++)h+='<div class="'+(S.tm[p.id]===T[j]?'on':'')+'"'+A('tm',p.id+'|'+T[j])+'>'+T[j]+'</div>';
+    h+='<div'+A('say','직접 고르는 달력이 열립니다')+'>직접</div></div></div>';}
+  h+='<div class="note">내일 <b>걸 사람 '+PPL.length+'명</b>도 미리 잡아뒀어요. 아침에 보여드릴게요.</div>'+
+   '<div style="height:20px"></div></div>'+
+   '<div class="foot"><div class="btn"'+A('s','done')+'>확정</div></div><div id="tt"></div></div>';
+  return h;
+}
+
+/* ══ 11. ⑦ 오늘 끝 ════════════════════════════════════════════ */
+function vDone(){
+  return '<div class="scr" id="scr">'+sb()+
+   '<div class="done" style="padding:0 24px 40px"><div class="ring"></div>'+
+   '<h2>오늘 끝났습니다</h2><p>4개 다 하셨어요 · 연속 <b style="color:var(--point)">12일</b></p>'+
+   '<div class="stats"><div><div class="n">5</div><div class="l">전화</div></div>'+
+   '<div><div class="n">3</div><div class="l">만남</div></div>'+
+   '<div><div class="n">120만</div><div class="l">예상업적</div></div></div>'+
+   '<p style="margin-top:26px;text-align:center;line-height:1.6">이번 주 3명만 더 만나면<br>연속가동이 유지됩니다</p></div>'+
+   '<div class="foot"><div class="ghost"'+A('s','home')+'>닫기</div></div><div id="tt"></div></div>';
+}
+
+/* ══ 12. ⑧ 홈 ═════════════════════════════════════════════════ */
+function homeInner(flat){
+  var c=byId(S.cur)||PPL[0],m=memoOf(c.id),i,h='';
+  var dn=0,i0;for(i0=0;i0<PPL.length;i0++)if(PPL[i0].idle===0)dn++;
+  h+='<div class="hrow"><span class="d">'+(NOW.getMonth()+1)+'월 '+NOW.getDate()+'일'+
+   '<em>'+WD[NOW.getDay()]+'요일</em><i>오늘 '+PPL.length+'분 · 아직 '+(PPL.length-dn)+'분 남았습니다</i></span>'+
+   '<span class="r">'+
+   '<span class="hp'+(dn?' g2':'')+'"'+A('s','cli')+'><span class="ic">✅</span><b>'+dn+'/'+PPL.length+'</b></span>'+
+   '<span class="hp w"'+A('s','alm')+'><span class="ic">🔔</span><b>4</b></span></span></div>'+
+   '<div class="greet">윤 단장님, <span>오늘 '+PPL.length+'개예요</span></div>'+
+   '<div class="hero"><div class="q">「KB보장분석 넣어주시면<br>저희가 관리해드릴게요」</div>'+
+   '<div class="s">PDF만 넣으면 신호·소재·화법까지 자동으로</div>'+
+   '<div class="b"'+A('s','kb')+'>보장분석 PDF 넣기</div></div>';
+  if(flat)return h+
+   '<div class="hc"><div class="t">지금 할 것</div>'+
+   '<div class="m">'+E(c.nm)+'님께 전화<small>'+E(c.mt)+'</small></div><div class="go">전화 걸기</div></div>';
+  h+=flowBar();
+
+  /* 홈에 띄워 둔 보장분석 */
+  if(DB.home&&DB.kb[DB.home]){
+    var hc2=byId(DB.home),hk=DB.kb[DB.home],hr=kbRead(hk.raw),hs=kbSum(hr);
+    h+='<div class="hc"><div class="t">📥 읽어 둔 보장분석 · 홈에서 관리 중</div>'+
+     '<div class="m">'+E(hc2.nm)+'님 — '+(hs.gap.length?('빈 통장 '+hs.gap.length+'칸'):'여덟 통장 다 채워짐')+
+     '<small>담보 '+hr.rows.length+'개를 읽었습니다'+(hs.gap.length?(' · '+E(hs.gap.join(' · '))+' 이 비었습니다'):'')+'</small></div>'+
+     '<div class="chips" style="justify-content:flex-start;margin-top:12px">';
+    for(i=0;i<WALL.length;i++){var hv=hs.m[WALL[i]];
+      h+='<div style="padding:7px 11px;font-size:12.5px;'+
+        (hv===undefined?'background:var(--neg-l);color:var(--neg)':'background:var(--pos-l);color:var(--pos)')+'">'+
+        E(WALL[i])+' '+(hv===undefined?'✕':manStr(hv))+'</div>';}
+    h+='</div><div class="two"><div class="go"'+A('kbcp',DB.home)+'>📋 관리 멘트 복사</div>'+
+     '<div class="go g"'+A('open',DB.home)+'>한 장</div></div></div>';
+  }
+
+  var g=STAGE[c.st];
+  h+='<div class="hc"><div class="t">지금 할 것 · 오늘 '+PPL.length+'분 중 1번째</div>'+
+   '<div class="who2"><div class="av">'+E(c.ini)+'</div>'+
+   '<div><div class="nm2">'+E(c.nm)+'님</div>'+
+   '<div class="meta">'+metaLine(c)+'</div></div></div>'+
+   '<div class="note gy" style="margin-top:13px">왜 오늘인가 — '+whyLine(c)+'</div>'+
+   '<div class="aim">'+g.aim+'</div>'+
+   '<div class="wayl">'+E(g.way)+'</div>'+
+   '<div class="note bl">첫 문장에 붙일 것 — <b>'+E(m.hook||c.hook)+'</b></div>'+
+   toolChips(c.st)+
+   (c.next?('<div class="note gy">다음에 뜰 날 — <b>'+E(c.next)+'</b> · 규칙이 정한 날입니다</div>'):'')+
+   '<div class="two"><div class="go"'+A('did',c.id)+'>'+(c.appt?'🤝 만나고':'📞 전화 걸고')+' 기록</div>'+
+   '<div class="go g"'+A('open',c.id)+'>한 장</div></div>'+
+   '<div class="bar"><i style="width:14%"></i></div></div>';
+  /* 할 말은 「전화 걸고 기록」을 누르면 그 창의 맨 위에 먼저 뜹니다.
+     홈에 또 펴 두면 같은 말이 두 곳에서 나옵니다. */
+  h+=askCard(c,1);
+
+  var ap=byId('p4');
+  h+='<div class="hc"><div class="t">'+E(ap.appt)+' 약속</div>'+
+   '<div class="m">'+E(ap.nm)+'님 증권 전달<small>'+E(ap.rg)+' · 전달 속지 준비됨</small></div>'+
+   '<div class="go g"'+A('say','증권 전달 속지와 안내장을 엽니다')+'>자료 열기</div></div>';
+
+  /* 오늘 동선 */
+  var M={},ks=[],p;
+  for(i=0;i<PPL.length;i++){p=PPL[i];if(!isMeet(p.st))continue;
+    if(!M[p.rg]){M[p.rg]=[];ks.push(p.rg);}M[p.rg].push(p);}
+  ks.sort(function(a,b){return M[b].length-M[a].length;});
+  if(ks.length){var L=M[ks[0]];
+    h+='<div class="hc"><div class="t">오늘 동선</div>'+
+     '<div class="m">'+E(ks[0])+'에 '+L.length+'분<small>AP · PC · CS · 증권전달은 얼굴을 뵙는 자리입니다</small></div>'+
+     '<div class="note gr" style="margin-top:12px"><b>가는 김에</b> — 한 번 가는 길에 한 분만 뵙고 오는 것이 제일 아깝습니다.</div>'+
+     '<div class="chips" style="justify-content:flex-start;margin-top:12px">';
+    for(i=0;i<L.length;i++)h+='<div style="background:#F7F9FA;padding:7px 12px;font-size:13px"'+A('open',L[i].id)+'>'+
+      E(L[i].nm)+' <b style="color:var(--point)">'+E(L[i].st)+'</b></div>';
+    h+='</div><div class="go"'+A('bulk',ks[0])+'>🗺️ 같은 날로 모으기</div></div>';}
+
+  h+='<div class="hc"><div class="t">이번 주</div>'+
+   '<div class="m">3명만 더 만나면<br>연속가동 유지돼요</div>'+
+   '<div class="bar"><i style="width:62%"></i></div>'+
+   '<div class="stats" style="margin-top:14px"><div><div class="n">5</div><div class="l">전화</div></div>'+
+   '<div><div class="n">3</div><div class="l">만남</div></div>'+
+   '<div><div class="n">120만</div><div class="l">예상업적</div></div></div></div>';
+
+  h+='<div class="hc"><div class="t">알람</div>'+
+   '<div class="m">오늘 남은 알람 2번<small>17:00 예상업적 · 21:00 내일 약속</small></div>'+
+   '<div class="note" style="margin-top:12px">넣을 게 없는 날은 <b>울리지 않습니다.</b></div>'+
+   '<div class="go g"'+A('s','alm')+'>알람 보기</div></div>';
+  h+='<div style="height:16px"></div>';
+  return h;
+}
+/* ══ 달력 ══════════════════════════════════════════════════════
+   「다음 분」을 줄로 늘어놓지 않고 <b>날짜 위에</b> 얹습니다.
+   약속 · 다시 걸 날 · 생일 · 만기 · 마디가 그날에 점으로 섭니다.
+   날짜를 지어내지 않습니다 — 아는 날만 찍습니다.
+   ══════════════════════════════════════════════════════════════ */
+var KIND={appt:['appt','오늘 약속'],next:['next','다시 걸 날'],bd:['bd','생일'],
+          due:['due','만기'],madi:['madi','마디']};
+function keyOf(dt){return (dt.getMonth()+1)+'-'+dt.getDate();}
+function keyPlus(n){return keyOf(new Date(NOW.getTime()+n*86400000));}
+function calEvents(){
+  var M={},i,m;
+  function add(k,o){ if(!M[k])M[k]=[]; M[k].push(o); }
+  for(i=0;i<PPL.length;i++){var c=PPL[i];
+    if(c.appt)add(keyOf(NOW),{k:'appt',t:c.appt+' · '+c.nm+'님 '+c.st,id:c.id});
+    if(c.nextK)add(c.nextK,{k:'next',t:c.nm+'님 다시 걸 날',id:c.id});
+    if(c.tg&&c.tg[1]==='생일 D-1')add(keyPlus(1),{k:'bd',t:c.nm+'님 생일',id:c.id});
+    m=/D-([0-9]+)/.exec(c.ins.due||'');
+    if(m)add(keyPlus(parseInt(m[1],10)),{k:'due',t:c.nm+'님 만기',id:c.id});
+  }
+  if(typeof MADI!=='undefined')for(i=0;i<MADI.length;i++){
+    var x=MADI[i],mm=/([0-9]+)월[ ]*([0-9]+)일/.exec(x.d||'');
+    if(mm)add(parseInt(mm[1],10)+'-'+parseInt(mm[2],10),{k:'madi',t:x.nm+'님 '+x.mon+'개월 마디',id:''});
+  }
+  return M;
+}
+/* 한 달치 그림 — mo 는 이번 달을 0 으로 센 값 */
+function calGrid(mo,mini){
+  var M=calEvents(),i,j,k;
+  var base=new Date(NOW.getFullYear(),NOW.getMonth()+(mo||0),1);
+  var y=base.getFullYear(),mth=base.getMonth();
+  var first=new Date(y,mth,1).getDay();
+  var last=new Date(y,mth+1,0).getDate();
+  var h='<div class="cal"><div class="cw">';
+  for(i=0;i<7;i++)h+='<div class="hd">'+WD[i]+'</div>';
+  for(i=0;i<first;i++)h+='<div class="dy off"></div>';
+  for(i=1;i<=last;i++){
+    var key=(mth+1)+'-'+i, L=M[key]||[], seen={}, dots='';
+    for(j=0;j<L.length;j++)if(!seen[L[j].k]){seen[L[j].k]=1;dots+='<i class="'+L[j].k+'"></i>';}
+    var isT=(y===NOW.getFullYear()&&mth===NOW.getMonth()&&i===NOW.getDate());
+    h+='<div class="dy'+(isT?' td':'')+(S.day===key?' sel':'')+'"'+A('day',key)+'>'+i+
+      '<span class="dots">'+dots+'</span></div>';
+  }
+  h+='</div></div>';
+  return h;
+}
+/* 고른 날에 무엇이 있나 */
+function calList(key){
+  var M=calEvents(),L=M[key]||[],i,h='';
+  var p=String(key).split('-');
+  h+='<div class="sect">'+p[0]+'월 '+p[1]+'일</div>';
+  if(!L.length)return h+'<div class="note gy">이날은 비어 있습니다.</div>';
+  h+='<div style="margin-top:4px">';
+  for(i=0;i<L.length;i++){var e=L[i],c=e.id?byId(e.id):null;
+    h+='<div class="row"'+(c?(' style="cursor:pointer"'+A('open',c.id)):'')+'>'+
+      '<span class="cdot '+e.k+'"></span>'+
+      '<div style="min-width:0"><div class="nm">'+E(e.t)+'</div>'+
+      '<div class="mt">'+E(KIND[e.k][1])+'</div></div></div>';}
+  return h+'</div>';
+}
+
+/* 달력 화면 — 폰 */
+function vCalS(){
+  var base=new Date(NOW.getFullYear(),NOW.getMonth()+S.cmo,1),lab=(base.getMonth()+1)+'월';
+  var h='<div class="scr" id="scr">'+sb()+
+   '<div class="topbar"><span class="x"'+A('cmo','-1')+'>‹</span>'+
+   '<span style="font-size:15px;font-weight:800;letter-spacing:-.02em">'+E(lab)+'</span>'+
+   '<span class="x"'+A('cmo','1')+'>›</span></div><div class="body">'+
+   '<div class="card">'+calGrid(S.cmo,0)+
+   '<div class="clg">'+
+   '<span><i class="cdot appt"></i>약속</span>'+
+   '<span><i class="cdot next"></i>다시 걸 날</span>'+
+   '<span><i class="cdot bd"></i>생일</span>'+
+   '<span><i class="cdot due"></i>만기</span>'+
+   '<span><i class="cdot madi"></i>마디</span></div></div>'+
+   '<div class="card" style="margin-top:12px">'+calList(S.day||keyOf(NOW))+'</div>'+
+   '<div class="note gy">약속은 그 분 카드에서, <b>다시 걸 날</b>은 결과를 누르실 때 규칙이 정합니다.</div>'+
+   '<div style="height:16px"></div></div>'+tabs('')+'<div id="tt"></div></div>';
+  return h;
+}
+/* 상담현황 한 줄 — PC판과 같은 줄입니다 */
+var BAR=['TA','AP','PC','CS','증권전달'];
+function flowBar(){
+  var i,n,stuck=null,tot=0;
+  for(i=0;i<BAR.length;i++)tot+=atStage(BAR[i]).length;
+  for(i=0;i<PPL.length;i++){var p=PPL[i];
+    if(!stuck&&(p.st==='PC'||p.st==='CS')&&p.idle>=7)stuck=p;}
+  var h='<div class="hc"><div class="t">📊 상담현황 — 지금 어디에 몇 분</div>'+
+   '<div class="m">TA → AP → PC → CS → 증권전달<small>지금 '+tot+'분이 길 위에 계십니다 · '+
+   '이번 달 계약 1건 — 건수까지만 셉니다</small></div><div class="flowbar">';
+  for(i=0;i<BAR.length;i++){n=atStage(BAR[i]).length;
+    h+='<div class="st'+(n?' on':'')+'"'+A('stg',BAR[i])+'><b>'+n+'</b>'+
+      '<span>'+STAGE[BAR[i]].e+' '+E(BAR[i])+'</span></div>'+
+      (i<BAR.length-1?'<span class="ar">›</span>':'');}
+  h+='</div>';
+  if(stuck)h+='<div class="note"><b>막힌 데</b> — '+E(stuck.nm)+'님이 '+E(stuck.st)+'에서 <b>'+
+    stuck.idle+'일째</b>입니다</div>';
+  h+='<div class="two"><div class="go g"'+A('s','flow')+'>이 자리에서 할 것</div></div></div>';
+  return h;
+}
+function vHome(){
+  return '<div class="scr" id="scr">'+sb()+'<div class="body">'+homeInner()+'</div>'+tabs('home')+'<div id="tt"></div></div>';
+}
+
+/* ══ 13. ⑨ 고객 — 심플하게 ════════════════════════════════════ */
+function vCli(){
+  var h='<div class="scr" id="scr">'+sb()+'<div class="body">'+
+   '<div class="greet" style="padding-bottom:6px">오늘 걸 사람 <span>'+PPL.length+'명</span></div>'+
+   '<div class="mt" style="margin-bottom:14px">위에서부터 하시면 끝납니다</div>'+
+   '<div class="card" style="padding:6px 20px">';
+  for(var i=0;i<PPL.length;i++){var p=PPL[i],m=memoOf(p.id);
+    h+='<div class="row" style="cursor:pointer"'+A('open',p.id)+'><div class="av">'+E(p.ini)+'</div>'+
+      '<div style="min-width:0"><div class="nm">'+E(p.nm)+'</div>'+
+      '<div class="mt">'+E(m.care||p.tg[1])+'</div></div>'+
+      '<div class="rt"><div class="mini b"'+A('did',p.id)+'>전화</div></div></div>';}
+  h+='</div><div class="note gy">＋ 나머지 335분은 <b>찾기</b>로 여시면 됩니다 — 목록으로 늘어놓지 않습니다. '+
+   '여기 이름은 모두 가상 인물입니다.</div><div style="height:16px"></div></div>'+
+   tabs('cli')+'<div id="tt"></div></div>';
+  return h;
+}
+
+/* ══ 14. ⑩ 고객 한 장 ═════════════════════════════════════════ */
+function vOne(){
+  var c=byId(S.cur)||PPL[0],m=memoOf(c.id),i;
+  var h='<div class="scr" id="scr">'+sb()+
+   '<div class="topbar"><span class="x"'+A('s','cli')+'>‹</span>'+
+   '<span style="font-size:15px;font-weight:800;letter-spacing:-.02em">'+E(c.nm)+'</span>'+
+   '<span class="mini b"'+A('did',c.id)+'>전화</span></div><div class="body">';
+
+  h+='<div class="card"><div class="row" style="padding:0;border:0">'+
+   '<div class="av" style="width:48px;height:48px;border-radius:15px;flex:0 0 48px;font-size:17px">'+E(c.ini)+'</div>'+
+   '<div><div class="nm" style="font-size:19px">'+E(c.nm)+'</div><div class="mt">'+E(c.age)+'</div></div></div>'+
+   '<div class="stats" style="margin-top:16px">'+
+   '<div><div class="n">'+E(c.ins.n)+'</div><div class="l">보유 계약</div></div>'+
+   '<div><div class="n">'+E(c.ins.fee)+'</div><div class="l">월 보험료</div></div>'+
+   '<div><div class="n">'+E(c.ins.due)+'</div><div class="l">만기</div></div></div>'+
+   '<div style="margin-top:14px">'+
+   '<div class="kvp"><span class="k">사는 곳</span><span class="v">'+E(c.rg)+'</span></div>'+
+   '<div class="kvp"><span class="k">어디서 왔나</span><span class="v">'+E(c.src)+'</span></div>'+
+   '<div class="kvp"><span class="k">지금 단계</span><span class="v">'+E(c.st)+' · '+c.idle+'일째</span></div>'+
+   '<div class="kvp"><span class="k">청구</span><span class="v">'+E(c.clm)+'</span></div></div></div>';
+
+  /* 다음에 할 것 */
+  h+='<div class="hc"><div class="t">다음에 할 것</div>'+
+   '<div class="m">'+E(m.todo||c.aim)+'<small>'+E(c.how)+'</small></div>'+
+   '<div class="note bl" style="margin-top:12px">왜 오늘인가 — <b>'+E(c.why)+'</b></div>'+
+   '<div class="note gr">첫 문장에 붙일 것 — <b>'+E(m.hook||c.hook)+'</b></div>'+
+   '<div class="two"><div class="go"'+A('did',c.id)+'>📞 전화</div>'+
+   '<div class="go g"'+A('kakao',c.id)+'>💬 카톡</div></div></div>';
+
+  /* 할 말은 여기 또 펴지 않습니다 — 「📞 전화」를 누르면 그 창 맨 위에 뜹니다 */
+  h+='<div class="sect">💬 전화에서 할 말</div><div class="card">'+
+   '<div class="nm">「📞 전화」를 누르면 먼저 뜹니다</div>'+
+   '<div class="mt">다섯 마디와 보낼 말이 그 창 맨 위에 있습니다</div>'+
+   '<div class="go g"'+A('s','ment')+'>멘트 규칙 보기</div></div>';
+  h+=askCard(c,0);
+
+  /* 지금 이 자리에서 무엇을 판단하나 */
+  h+='<div class="sect">지금 이 자리에서</div>'+stageCard(c.st);
+
+  /* 주민등록번호 */
+  h+=vRrn(c);
+
+  /* 적어 두기 */
+  h+='<div class="sect">적어 두기 — 이 분 상황</div>'+
+   '<div class="card">'+
+   '<div class="fl" style="margin-top:0"><label>지금 상황</label><select class="inp" id="mo_care">';
+  for(i=0;i<CARE.length;i++)h+='<option value="'+E(CARE[i])+'"'+((m.care||'')===CARE[i]?' selected':'')+'>'+
+    (CARE[i]?E(CARE[i]):'— 고르세요 —')+'</option>';
+  h+='</select></div>'+
+   '<div class="fl"><label>가족</label><input class="inp" id="mo_fam" value="'+E(m.fam||'')+'" placeholder="배우자 1 · 자녀 2"></div>'+
+   '<div class="fl"><label>무엇을 제일 걱정하시나 — 첫 문장에 붙일 말</label>'+
+   '<input class="inp" id="mo_hook" value="'+E(m.hook||'')+'" placeholder="아이 교육비가 제일 걱정이라고 하셨습니다"></div>'+
+   '<div class="fl"><label>다음에 할 날</label><input class="inp" id="mo_day" type="date" value="'+E(m.day||'')+'"></div>'+
+   '<div class="fl"><label>그날 할 것</label><input class="inp" id="mo_do" value="'+E(m.todo||'')+'" placeholder="만기 안내하고 다음 자리 잡기"></div>'+
+   '<div class="fl"><label>들은 말 · 메모</label><textarea class="inp" id="mo_memo" placeholder="통화에서 들은 말을 그대로 적어 두십시오.">'+
+   E(m.memo||'')+'</textarea></div>'+
+   '<div class="two" style="margin-top:14px"><div class="go"'+A('mosave',c.id)+'>적어 두기</div>'+
+   '<div class="go g" style="flex:0 0 96px"'+A('moclear',c.id)+'>비우기</div></div>'+
+   (m.at?('<div class="note gy">'+E(m.at)+'에 적으셨습니다. 이것도 <b>이 기기에만</b> 둡니다.</div>'):
+         '<div class="note gy">적으시면 홈 카드의 첫 문장이 이 말로 바뀝니다. <b>이 기기에만</b> 둡니다.</div>')+
+   '</div>';
+
+  /* 보장분석 */
+  h+=vKbCard(c);
+
+  h+='<div style="height:16px"></div>';
+
+  h+='</div>'+tabs('cli')+'<div id="tt"></div></div>';
+  return h;
+}
+
+/* ── 주민등록번호 칸 ── */
+function vRrn(c){
+  var d=DB.rrn[c.id]||'',open=(S.show===c.id);
+  var h='<div class="sect" style="color:var(--warn)">🔒 주민등록번호 · 이 기기에만</div>'+
+   '<div class="card lockcard">';
+  if(!d){
+    h+='<div class="nm">아직 안 적으셨습니다</div>'+
+      '<div class="mt">청약서에 쓰실 때만 꺼내 보시면 됩니다</div>'+
+      '<div class="fl"><input class="inp" id="rrn_in" maxlength="14" inputmode="numeric" autocomplete="off" '+
+      'placeholder="900101-1234567"></div>'+
+      '<div class="go" style="margin-top:12px"'+A('rrnsave',c.id)+'>이 기기에 저장</div>';
+  }else{
+    var b=rrnBirth(d);
+    h+='<div class="rrnv">'+E(open?rrnFull(d):rrnMask(d))+'</div>'+
+      '<div class="row" style="padding:12px 0 0;border:0;gap:7px">'+
+      '<div class="mini"'+A('rrnshow',c.id)+'>'+(open?'가리기':'보기')+'</div>'+
+      '<div class="mini"'+A('rrncopy',c.id)+'>복사</div>'+
+      '<div class="mini"'+A('rrndel',c.id)+'>지우기</div></div>';
+    if(b){
+      var ia=insAge(b);
+      h+='<div style="margin-top:14px">'+
+        '<div class="kvp"><span class="k">생년월일</span><span class="v">'+E(b.f)+'</span></div>'+
+        '<div class="kvp"><span class="k">성별</span><span class="v">'+E(b.sex)+'</span></div>'+
+        '<div class="kvp"><span class="k">만 나이</span><span class="v">'+ageOf(b)+'세</span></div>'+
+        '<div class="kvp"><span class="k">보험나이</span><span class="v">'+ia.a+'세</span></div>'+
+        '<div class="kvp"><span class="k">상령일</span><span class="v">'+E(ia.up)+' · <b style="color:var(--warn)">D-'+ia.d+'</b></span></div></div>';
+      if(ia.d<=90)h+='<div class="note"><b>상령일이 '+ia.d+'일 남았습니다.</b> 그날이 지나면 보험나이가 한 살 올라 '+
+        '같은 보장이라도 보험료가 올라갑니다.</div>';
+    }else h+='<div class="note">앞자리를 못 읽었습니다. 다시 적어 주십시오.</div>';
+  }
+  h+='<div class="note gy">서버로 <b>안 보냅니다.</b> 이 폰 안에만 있고, 「지우기」를 누르면 바로 없어집니다.</div></div>';
+  return h;
+}
+
+/* ── 읽어 둔 보장분석 요약 ── */
+function vKbCard(c){
+  var k=DB.kb[c.id];
+  if(!k)return '<div class="sect">보장분석</div><div class="card">'+
+    '<div class="nm">아직 안 넣으셨습니다</div>'+
+    '<div class="mt">KB 보장분석 글을 붙여 넣으면 읽어서 정리해 드립니다</div>'+
+    '<div class="go g" style="margin-top:14px"'+A('kbgo',c.id)+'>보장분석 넣기</div></div>';
+  var r=kbRead(k.raw),s=kbSum(r);
+  return '<div class="sect">읽어 둔 보장분석 · '+E(k.at)+'</div><div class="card">'+
+   '<div class="stats" style="margin-top:0">'+
+   '<div><div class="n">'+r.rows.length+'개</div><div class="l">읽은 담보</div></div>'+
+   '<div><div class="n">'+s.have.length+'칸</div><div class="l">채워짐</div></div>'+
+   '<div><div class="n" style="color:var(--neg)">'+s.gap.length+'칸</div><div class="l">빈 통장</div></div></div>'+
+   (s.gap.length?('<div class="note">빈 곳 — <b>'+E(s.gap.join(' · '))+'</b></div>'):
+    '<div class="note gr">여덟 통장이 다 채워져 있습니다.</div>')+
+   '<div class="two"><div class="go g"'+A('kbgo',c.id)+'>근거 보기</div>'+
+   '<div class="go'+(DB.home===c.id?' g':'')+'"'+A('kbhome',c.id)+'>'+
+   (DB.home===c.id?'✓ 홈에 떠 있음':'홈에 띄우기')+'</div></div></div>';
+}
+
+/* ══ 15. ⑪ 보장분석 넣기 ══════════════════════════════════════ */
+function vKb(){
+  var c=byId(S.cur)||PPL[0],k=DB.kb[c.id],i,h;
+  h='<div class="scr" id="scr">'+sb()+
+   '<div class="topbar"><span class="x"'+A('s','home')+'>‹</span>'+
+   '<span style="font-size:15px;font-weight:800;letter-spacing:-.02em">보장분석 넣기</span>'+
+   '<span class="mini b"'+A('kbread',c.id)+'>📥 읽기</span></div><div class="body">';
+  h+='<div class="h1" style="font-size:23px">'+E(c.nm)+'님<br>보장분석을 읽습니다</div>'+
+   '<div class="sub" style="font-size:14px">담보 표를 긁어 그대로 붙여 넣으십시오. 한 줄씩 읽어 여덟 통장으로 나눕니다. '+
+   '못 읽은 줄은 못 읽었다고 말씀드립니다 — 지어내지 않습니다.</div>'+
+   '<div class="chips" style="justify-content:flex-start;margin-top:14px">';
+  for(i=0;i<PPL.length;i++)h+='<div class="'+(PPL[i].id===c.id?'on':'')+'" style="padding:7px 12px;font-size:13px"'+
+    A('open2',PPL[i].id)+'>'+E(PPL[i].nm)+(DB.kb[PPL[i].id]?' ✓':'')+'</div>';
+  h+='</div>';
+
+  h+='<div class="sect">① 여기에 붙여 넣으세요</div><div class="card">'+
+   '<textarea class="inp" id="kb_in" style="min-height:190px;font-size:13px;line-height:1.7" '+
+   'placeholder="일반암진단비  3,000만원  100세만기&#10;뇌졸중진단비  2,000만원  90세만기">'+E(k?k.raw:'')+'</textarea>'+
+   '<div class="two" style="margin-top:12px"><div class="go"'+A('kbread',c.id)+'>📥 읽어서 정리</div>'+
+   '<div class="go g" style="flex:0 0 100px"'+A('kbdemo',c.id)+'>예시</div></div></div>';
+
+  if(!k){
+    h+='<div class="note gy">읽고 나면 여기에 ⓐ 담보 표 ⓑ 여덟 통장 ⓒ 빈 자리 ⓓ <b>어느 줄에서 무엇을 읽었는지</b> '+
+      'ⓔ 그것으로 만든 관리 멘트가 나옵니다.</div>';
+  }else{
+    var r=kbRead(k.raw),s=kbSum(r);
+    h+='<div class="sect">② 읽은 담보 '+r.rows.length+'개</div><div class="card" style="padding:6px 20px">';
+    for(i=0;i<r.rows.length;i++){var x=r.rows[i];
+      h+='<div class="row"><div><div class="nm" style="font-size:14.5px">'+E(x.nm)+'</div>'+
+        '<div class="mt">'+x.ln+'번째 줄 · '+E(x.term||'만기 못 읽음')+'</div></div>'+
+        '<div class="rt"><span class="tag b">'+E(x.w)+'</span>'+
+        '<span style="font-size:14.5px;font-weight:800;letter-spacing:-.03em">'+E(manStr(x.won))+'</span></div></div>';}
+    h+='</div>';
+
+    h+='<div class="sect">③ 여덟 통장으로 나누면</div><div class="card">'+
+     '<div class="nm">채워진 '+s.have.length+'칸 · 빈 '+s.gap.length+'칸</div>'+
+     '<div class="chips" style="justify-content:flex-start;margin-top:12px">';
+    for(i=0;i<WALL.length;i++){var v=s.m[WALL[i]];
+      h+='<div style="padding:7px 12px;font-size:13px;'+
+        (v===undefined?'background:var(--neg-l);color:var(--neg)':'background:var(--pos-l);color:var(--pos)')+'">'+
+        E(WALL[i])+' '+(v===undefined?'✕':manStr(v))+'</div>';}
+    h+='</div>'+(s.gap.length?('<div class="note">빈 곳 — <b>'+E(s.gap.join(' · '))+'</b></div>'):'')+'</div>';
+
+    h+='<div class="sect">④ 무엇을 보고 그렇게 읽었나 — 근거</div><div class="card">'+
+     '<div class="mt" style="margin:0">읽은 줄 '+r.rows.length+'개 · 뺀 줄 '+r.skip.length+'개. 지어낸 값은 없습니다.</div>';
+    for(i=0;i<r.rows.length;i++){var y=r.rows[i];
+      h+='<div class="src"><b>'+y.ln+'번째 줄</b> 「'+E(y.raw)+'」<br>→ 「<i>'+E(y.hit)+'</i>」 라는 말이 있어 '+
+        '<i>'+E(y.w)+'</i> 통장으로 넣었고, 「<i>'+E(y.won?manStr(y.won):'금액 없음')+'</i>」'+
+        (y.term?(' · 「<i>'+E(y.term)+'</i>」'):'')+' 를 읽었습니다.</div>';}
+    for(i=0;i<r.skip.length;i++)
+      h+='<div class="src" style="color:var(--neg)"><b>'+r.skip[i][0]+'번째 줄</b> 「'+E(r.skip[i][1])+'」<br>→ '+
+        E(r.skip[i][2])+'</div>';
+    h+='</div>';
+
+    h+='<div class="sect">⑤ 이걸로 만든 관리 멘트</div><div class="card">'+
+     '<div class="row" style="padding:0;border:0"><div class="mt" style="margin:0">근거가 있는 말만 씁니다</div>'+
+     '<div class="rt"><div class="mini b"'+A('kbcp',c.id)+'>📋 복사</div></div></div>'+
+     '<div class="say">'+E(kbTalk(c.nm,r,s))+'</div>'+
+     '<div class="note gy">비율 · 한도 · 기간 같은 숫자는 일부러 안 넣었습니다. 고시로 바뀌기 때문입니다.</div></div>';
+
+    h+='<div class="sect">⑥ 홈에서 관리하기</div><div class="card">'+
+     '<div class="nm">'+(DB.home===c.id?'홈에 떠 있습니다':'홈에 띄우면 매일 보입니다')+'</div>'+
+     '<div class="mt">홈 위쪽 카드로 올라가서 빈 자리와 다음에 할 것을 계속 보여 드립니다</div>'+
+     '<div class="two" style="margin-top:14px"><div class="go"'+A('kbhome',c.id)+'>'+
+     (DB.home===c.id?'홈에서 내리기':'홈에 띄우기')+'</div>'+
+     '<div class="go g" style="flex:0 0 100px"'+A('kbdel',c.id)+'>지우기</div></div></div>';
+  }
+  h+='<div style="height:16px"></div></div>'+tabs('kb')+'<div id="tt"></div></div>';
+  return h;
+}
+
+/* ══ 15-2. ⑫ 접근에서 계약까지 ════════════════════════════════ */
+function stageCard(st){
+  var g=STAGE[st];if(!g)return '';
+  var h='<div class="card"><div class="t" style="font-size:12.5px;font-weight:800;color:var(--point)">'+
+   g.e+' '+E(st)+' · '+E(g.ch)+'로 합니다</div>'+
+   '<div class="m" style="margin-top:7px;font-size:17px;font-weight:700;line-height:1.4">'+g.aim+
+   '<small style="display:block;margin-top:5px;font-size:13.5px;color:var(--sub);font-weight:600">'+E(g.way)+'</small></div>'+
+   '<div class="note bl" style="margin-top:12px">판단 — <b>'+E(g.q)+'</b></div>'+
+   '<div class="note gy">앱이 이미 아는 것 — '+E(g.know)+'</div>';
+  if(g.good)h+='<div class="note gr">'+g.good+'</div>';
+  if(g.warn)h+='<div class="note">끊긴 데 — '+g.warn+'</div>';
+  h+='<div class="chips" style="justify-content:flex-start;margin-top:12px">';
+  for(var i=0;i<g.tools.length;i++)
+    h+='<div style="background:#F7F9FA;padding:7px 12px;font-size:13px"'+
+      A('say','「'+g.tools[i]+'」 를 엽니다')+'>'+E(g.tools[i])+'</div>';
+  h+='</div>';
+  var nx=GO[st];
+  h+='<div class="note gy">'+(nx?('여기서 잘되면 다음은 <b>'+E(nx)+'</b> 입니다.'):
+    '여기가 마지막 자리입니다 — 다음이 없습니다.')+'</div></div>';
+  return h;
+}
+function vFlow(){
+  var i,sel=S.stg||'TA',L=atStage(sel);
+  var h='<div class="scr" id="scr">'+sb()+
+   '<div class="topbar"><span class="x"'+A('s','home')+'>‹</span>'+
+   '<span style="font-size:15px;font-weight:800;letter-spacing:-.02em">접근에서 계약까지</span>'+
+   '<span class="mini">'+L.length+'분</span></div><div class="body">'+
+   '<div class="h1" style="font-size:23px">'+STAGE[sel].e+' '+E(sel)+'<br>이 자리에서 할 것</div>'+
+   '<div class="sub" style="font-size:14px">단계를 누르시면 그 자리에서 무엇을 판단하고 무엇을 들고 가는지가 섭니다.</div>'+
+   '<div class="chips" style="justify-content:flex-start;margin-top:14px">';
+  for(i=0;i<ORDER.length;i++){var st=ORDER[i],n=atStage(st).length;
+    h+='<div class="'+(sel===st?'on':'')+'" style="padding:7px 12px;font-size:13px"'+A('stg',st)+'>'+
+      STAGE[st].e+' '+E(st)+(n?(' '+n):'')+'</div>';}
+  h+='</div>';
+
+  h+='<div class="sect">이 자리에서</div>'+stageCard(sel);
+
+  h+='<div class="sect">지금 이 자리에 계신 분</div><div class="card" style="padding:6px 20px">';
+  if(!L.length)h+='<div style="padding:16px 0"><div class="nm">지금은 아무도 없습니다</div>'+
+    '<div class="mt">이 자리에 오시면 여기에 섭니다</div></div>';
+  else for(i=0;i<L.length;i++){var p=L[i];
+    h+='<div class="row" style="cursor:pointer"'+A('open',p.id)+'><div class="av">'+E(p.ini)+'</div>'+
+      '<div><div class="nm">'+E(p.nm)+'</div><div class="mt">'+E(p.mt)+'</div></div>'+
+      '<div class="rt"><span class="tag s">'+p.idle+'일째</span></div></div>';}
+  h+='</div>';
+
+  h+='<div class="sect">가는 길</div><div class="card">'+
+   '<div class="mt" style="margin:0">앞으로만 갑니다. 부재·거절은 나아간 것이 아니라 걸었는데 안 받으신 것입니다.</div>'+
+   '<div class="tl" style="margin-top:8px">';
+  var LINE=['TA','AP','PC','CS','계약완료','증권전달','소개완료'];
+  for(i=0;i<LINE.length;i++){var s2=LINE[i],n2=atStage(s2).length;
+    h+='<div style="display:flex;gap:12px;padding:11px 0;cursor:pointer"'+A('stg',s2)+'>'+
+      '<span style="width:9px;height:9px;border-radius:9px;flex:0 0 9px;margin-top:6px;background:'+
+      (sel===s2?'var(--point)':'#D7DCE2')+'"></span>'+
+      '<span><span class="nm" style="font-size:14.5px">'+STAGE[s2].e+' '+E(s2)+(n2?(' · '+n2+'분'):'')+'</span>'+
+      '<span class="mt" style="display:block">'+E(STAGE[s2].aim.replace(/<[^>]+>/g,''))+'</span></span></div>';}
+  h+='</div></div>';
+
+  h+='<div class="sect">소개가 끊기는 자리</div><div class="card">'+
+   '<div class="nm">증권전달 → 소개완료</div>'+
+   '<div class="mt">증권을 직접 드리는 자리가 소개를 받는 유일한 자리입니다</div>'+
+   '<div class="note">우편으로 보내면 그 자리가 없어집니다. 그래서 「우편으로 보내지 않는다」 가 규칙입니다.</div>'+
+   '<div class="go g"'+A('stg','증권전달')+'>증권전달 자리 보기</div></div>'+
+   '<div style="height:16px"></div>';
+
+  h+='</div>'+tabs('flow')+'<div id="tt"></div></div>';
+  return h;
+}
+
+/* ══ 16. ⑬ 내 업적 ════════════════════════════════════════════ */
+function vPerf(){
+  return '<div class="scr" id="scr">'+sb()+'<div class="body">'+
+   '<div class="greet" style="padding-bottom:6px">9월 <span>남은 근무일 3일</span></div>'+
+   '<div class="hc" style="margin-top:8px"><div class="t">이번 달 예상업적</div>'+
+   '<div class="amt" style="padding:14px 0 4px;text-align:left"><div class="v" style="font-size:38px">3,240,000<span>원</span></div>'+
+   '<div class="d">▲ 지난달 같은 날보다 62만원 많아요</div></div>'+
+   '<div class="bar" style="margin-top:14px"><i style="width:72%"></i></div>'+
+   '<div class="mt" style="margin-top:10px">목표 450만원까지 <b style="color:var(--ink)">126만원</b> 남았습니다</div></div>'+
+   '<div class="hc"><div class="t">그래서 무엇을 하면 되나</div>'+
+   '<div class="m">계약 2건이면 목표가 채워집니다<small>제안 단계에 있는 이정우님(24만)과 서준호님(80만)이 마무리되면 끝납니다</small></div>'+
+   '<div class="two"><div class="go"'+A('open','p2')+'>이정우님</div>'+
+   '<div class="go g"'+A('open','p7')+'>서준호님</div></div></div>'+
+   '<div class="hc"><div class="t">연속가동</div>'+
+   '<div class="m">12주 연속<small>이번 주는 3명만 더 만나면 유지됩니다</small></div>'+
+   '<div class="bar"><i style="width:62%"></i></div></div>'+
+   '<div class="hc"><div class="t">이번 달 한 일</div>'+
+   '<div class="stats" style="margin-top:12px"><div><div class="n">87</div><div class="l">전화</div></div>'+
+   '<div><div class="n">21</div><div class="l">만남</div></div>'+
+   '<div><div class="n">9</div><div class="l">제안</div></div>'+
+   '<div><div class="n">4</div><div class="l">계약</div></div></div>'+
+   '<div class="note">만남 대비 계약이 <b>19%</b> 입니다. 지난달은 11% 였습니다.</div></div>'+
+   '<div class="hc"><div class="t">DB 배정</div>'+
+   '<div class="m">이번 달 DB 12건<small>설계사 화면과 섞지 않습니다 — 건수까지만</small></div></div>'+
+   '<div style="height:16px"></div></div>'+tabs('perf')+'<div id="tt"></div></div>';
+}
+
+/* ══ 17. ⑬ 알람 규칙 ══════════════════════════════════════════ */
+var SLOT=[['a','09:00','오늘 걸 사람','명단 확인 · 30초'],
+          ['b','13:00','오전 결과','만남 / 부재 버튼'],
+          ['c','17:00','예상업적','숫자 한 칸'],
+          ['d','21:00','내일 약속','시간만 확정']];
+function vAlm(){
+  var h='<div class="scr" id="scr">'+sb()+
+   '<div class="topbar"><span class="x"'+A('s','home')+'>‹</span>'+
+   '<span style="font-size:15px;font-weight:800;letter-spacing:-.02em">알람</span><span style="width:18px"></span></div>'+
+   '<div class="body"><div class="h1">하루 네 번,<br>필요할 때만 울려요</div>'+
+   '<div class="card" style="margin-top:22px;padding:6px 20px">';
+  for(var i=0;i<SLOT.length;i++){var s=SLOT[i],k=S.alm[s[0]];
+    h+='<div class="srow"><span class="tm">'+E(s[1])+'</span>'+
+      '<span class="ds">'+E(s[2])+'<small>'+E(s[3])+'</small></span>'+
+      '<span class="sw'+(k?'':' off')+'"'+A('slot',s[0])+'></span></div>';}
+  h+='</div>'+
+   '<div class="note">넣을 게 없는 날은 <b>울리지 않습니다.</b><br>헛알람은 안 잡는 것보다 나쁘니까요.</div>'+
+   '<div class="card" style="margin-top:14px">'+
+   '<div class="row" style="padding:0;border:0"><div class="av" style="background:var(--neg-l);color:var(--neg)">!</div>'+
+   '<div><div class="nm">아직 안 켜져 있습니다</div>'+
+   '<div class="mt">홈 화면에 설치하고, 폰에서 한 번 눌러 주셔야 옵니다</div></div></div>'+
+   '<div class="note" style="margin-top:14px">서버를 봤더니 <b>push_subs 가 0줄</b>이고 hours 칸이 아예 없습니다 — '+
+   '지금 상태로는 네 번 다 <b>한 번도 안 울립니다.</b></div>'+
+   '<div class="note gy">순서 — ① 준비 SQL 한 번 돌리기 ② 폰에서 알람 켜기. 둘 다 해야 울립니다.</div></div>'+
+   '<div style="height:16px"></div></div><div id="tt"></div></div>';
+  return h;
+}
+
+/* 결과 시트 — 누르면 바로 쌓이고, 다음 뜰 날짜도 규칙이 정합니다 */
+var RES={
+ call :{t:'통화됐어요',cls:'p',d:3, w:'통화가 됐다고'},
+ met  :{t:'만났어요',  cls:'',  d:3, w:'만났다고', go:1},
+ miss :{t:'부재',      cls:'',  d:1, w:'부재라고', st:'부재'},
+ no   :{t:'거절',      cls:'',  d:30,w:'거절이라고', st:'거절'},
+ later:{t:'다음에',    cls:'',  d:7, w:'다음에 하겠다고'}
+};
+var RESK=['call','miss','no','met','later'];
+function dplus(n){var d=new Date(NOW.getTime()+n*86400000);return (d.getMonth()+1)+'월 '+d.getDate()+'일';}
+/* ── 전화 기록 창 ─────────────────────────────────────────────
+   ① 위 — 이 말로 시작하세요 (다섯 마디 + 보낼 말)
+   ② 아래 — 어떻게 됐나요 (결과 다섯 개)
+   전화를 걸면서 읽고, 끊고 나서 아래를 누르시면 됩니다.        */
+function vSheet(){
+  var c=byId(S.sheet);if(!c)return '';
+  var i,h='<div class="sheet"><div class="bg"'+A('close')+'></div><div class="bx">';
+  /* ① 할 말이 먼저 */
+  h+='<div class="shead"><span class="l">💬 이 말로 시작하세요</span>'+
+   '<span class="rr"><div class="mini b"'+A('cpta',c.id)+'>📋 다섯 마디</div>'+
+   '<div class="mini"'+A('cpone',c.id)+'>📋 보낼 말</div></span></div>'+
+   '<div class="five">';
+  for(i=0;i<TAF.length;i++){var y=TAF[i];
+    var l2=(y.n==='③')?(String(c.say).split(String.fromCharCode(10))[2]||y.s):y.s;
+    h+='<div class="fv"><span class="fn">'+y.n+'</span><span class="ft">'+E(l2)+'</span></div>';}
+  h+='</div>';
+  var sk=sayFor(c);
+  if(sk)h+='<div class="note">'+SAYS[sk].e+' '+E(sk)+' — 하지 말 것 : '+E(SAYS[sk].avoid.split('.')[0])+'</div>';
+  h+='<div class="mini2">문자·카톡으로 보내실 때</div><div class="say">'+E(c.say)+'</div>';
+  /* ② 결과는 그 밑에 */
+  h+='<div class="sdiv"></div>'+
+   '<h3>'+E(c.nm)+'님,<br>어떻게 됐나요?</h3>'+
+   '<div class="ps">누르면 바로 쌓이고, <b>다음에 뜰 날짜도 규칙이 정합니다</b></div>'+
+   '<div class="g3">';
+  for(i=0;i<RESK.length;i++){var r=RES[RESK[i]];
+    h+='<div class="'+r.cls+'"'+A('res',c.id+'|'+RESK[i])+'>'+E(r.t)+'</div>';}
+  h+='</div><div class="cl"'+A('close')+'>닫기</div></div></div>';
+  return h;
+}
+
+var ANSWAY={
+ '돈이 부담':'보험료를 늘리지 않고 <b>자리를 옮기는 쪽</b>으로 다시 폅니다',
+ '필요를 못 느끼심':'빈 통장 하나만 짚어 <b>「여기가 아프면 나올 돈이 없습니다」</b> 로 엽니다',
+ '회사가 마음에 안 드심':'같은 보장을 <b>다른 회사로 짜서</b> 비교표만 보여 드립니다',
+ '아직 모르겠음':'전화로 <b>「어느 쪽이 제일 걸리셨어요」</b> 한 마디만 여쭙습니다',
+ '만기 안내부터':'지금 것이 언제 끊기는지만 말씀드리고 <b>결정은 다음에</b> 받습니다',
+ '새로 제안':'만기를 빌미로 <b>전체를 다시</b> 펴 놓습니다',
+ '청구부터':'<b>청구를 끝내 드리고</b> 보장 이야기는 그 다음에 꺼냅니다',
+ '보장 이야기 먼저':'청구는 짧게 안내하고 <b>비어 있는 자리</b>부터 폅니다',
+ '이번 주':'이번 주 안으로 <b>날짜 두 개</b>를 드리고 고르시게 합니다',
+ '다음 주':'다음 주로 잡고 <b>같은 구 다른 분</b>과 같은 날로 묶습니다',
+ '아직 모름':'날짜를 지금 정하지 않고 <b>「언제가 편하세요」</b> 만 여쭙습니다',
+ '예 · 여쭙겠습니다':'증권을 드린 뒤 <b>가족 한 분</b>만 여쭙습니다',
+ '오늘은 말고':'오늘은 <b>고마움과 청구 방법</b>까지만 하고 끝냅니다'
+};
+function asksOf(c){
+  var m=memoOf(c.id),a=DB.ask[c.id]||{},k=DB.kb[c.id],L=[],d=DB.rrn[c.id];
+  function add(id,q,why,opts,note){ if(a[id]===undefined)L.push({id:id,q:q,why:why,opts:opts,note:note}); }
+
+  /* 막힌 자리 — 오래 멈춰 있으면 왜 멈췄는지부터 */
+  if((c.st==='PC'||c.st==='CS')&&c.idle>=7)
+    add('block','무엇이 걸리셨을까요?',c.st+'에서 '+c.idle+'일째 조용해서 여쭙습니다',
+      ['돈이 부담','필요를 못 느끼심','회사가 마음에 안 드심','아직 모르겠음'],
+      '고르시면 다음에 걸 때 그 자리부터 엽니다');
+
+  /* 만기가 닥쳤으면 */
+  if(c.ins.due&&c.ins.due.indexOf('D-')===0)
+    add('due','만기 안내부터 할까요, 새로 제안할까요?','만기가 '+c.ins.due+' 라서 여쭙습니다',
+      ['만기 안내부터','새로 제안'],'이 답이 첫 문장을 바꿉니다');
+
+  /* 청구 문의가 떠 있으면 */
+  if(c.clm&&String(c.clm.s||c.clm).indexOf('문의')>-1)
+    add('clm','청구부터 도와드릴까요?','청구 문의를 남기고 사흘이 지나서 여쭙습니다',
+      ['청구부터','보장 이야기 먼저'],'여기서 신뢰가 갈립니다');
+
+  /* 만나는 자리인데 약속이 없으면 */
+  if(isMeet(c.st)&&!c.appt)
+    add('when','언제 뵙는 게 좋을까요?','만나야 하는 자리인데 약속이 아직 없어서 여쭙습니다',
+      ['이번 주','다음 주','아직 모름'],'고르시면 동선에 같이 세웁니다');
+
+  /* 증권을 드리는 자리면 */
+  if(c.st==='증권전달')
+    add('ref','이 자리에서 소개를 여쭐까요?','증권을 직접 드리는 자리가 소개를 받는 유일한 자리라서 여쭙습니다',
+      ['예 · 여쭙겠습니다','오늘은 말고'],'우편으로 보내면 이 자리가 없어집니다');
+
+  /* 첫 문장에 붙일 말이 아직 없으면 */
+  if(!m.hook)
+    add('hook','이분이 제일 걱정하시는 게 뭔가요?','첫 문장에 붙일 말이 아직 안 적혀 있어서 여쭙습니다',
+      ['아이 교육비','노후 · 은퇴','부모님','병원비','직접 적기'],'적어 두시면 홈 카드 첫 문장이 이 말로 바뀝니다');
+
+  /* 요즘 상황이 안 적혀 있으면 */
+  if(!m.care)
+    add('care','요즘 이분께 무슨 일이 있나요?','상황 칸이 비어 있어서 여쭙습니다',
+      ['결혼 준비','출산 · 육아','이직 · 퇴사','이사 · 내 집','자녀 진학','건강 문제','부모님 일','없음'],
+      '상황이 적히면 고객 목록에도 그 말이 뜹니다');
+
+  /* 보장분석을 아직 안 읽었으면 */
+  if(!k)
+    add('kb','증권을 갖고 계신가요?','보장분석을 아직 안 읽어서 여쭙습니다',
+      ['있음 · 넣겠습니다','아직 못 받음','안 갖고 계심'],'넣으시면 빈 통장과 할 말이 바로 나옵니다');
+
+  /* 빈 통장이 있으면 어디부터 여쭐지 */
+  if(k){var s=kbSum(kbRead(k.raw));
+    if(s.gap.length)add('gap','비어 있는 곳 중 어디부터 여쭐까요?',
+      s.gap.join(' · ')+' 이 비어 있어서 여쭙습니다',s.gap.slice(0,4),
+      '고르신 통장의 「물을 것」이 상담 자리에 올라옵니다');}
+
+  /* 청약이 가까운데 주민번호가 없으면 */
+  if(!d&&(c.st==='CS'||c.st==='계약완료'))
+    add('rrn','주민등록번호를 지금 적어 둘까요?','청약 서류를 쓰는 자리라서 여쭙습니다',
+      ['지금 적겠습니다','나중에'],'적어도 서버로는 안 갑니다 — 이 기기에만 둡니다');
+
+  /* 상령일이 가까우면 */
+  if(d){var b=rrnBirth(d);
+    if(b){var ia=insAge(b);
+      if(ia.d<=90)add('age','상령일 이야기를 꺼낼까요?','상령일이 '+ia.d+'일 남아서 여쭙습니다',
+        ['꺼내겠습니다','말 안 하겠습니다'],'그날이 지나면 같은 보장도 보험료가 올라갑니다');}}
+
+  return L;
+}
+function askCount(){var n=0,i;for(i=0;i<PPL.length;i++)n+=asksOf(PPL[i]).length;return n;}
+function answersOf(c){
+  var a=DB.ask[c.id]||{},out=[],ks=Object.keys(a),i;
+  for(i=0;i<ks.length;i++)out.push([ks[i],a[ks[i]]]);
+  return out;
+}
+/* 답에 따라 다음에 할 것이 바뀝니다 */
+function wayOf(c){
+  var a=DB.ask[c.id]||{},ks=['block','due','clm','when','ref'],i;
+  for(i=0;i<ks.length;i++)if(a[ks[i]]&&ANSWAY[a[ks[i]]])return ANSWAY[a[ks[i]]];
+  return '';
+}
+
+/* ── 통화 멘트 ────────────────────────────────────────────────
+   전화를 여는 다섯 마디와, 그 분 상황에서 그대로 말할 것.
+   단추 뒤에 두지 않고 화면에 펴 둡니다.                        */
+/* ── 통화 멘트 ────────────────────────────────────────────────
+   c   — 그 분 (③ 용건 한 줄이 그 분 말로 바뀝니다)
+   sm  — 접은 판. 홈에서는 문장만, 통화 멘트 화면에서는 왜까지.  */
+function taFrame(c,sm){
+  var i,h='<div class="c"><div class="sayh">'+
+   '<span class="l">📞 전화를 여는 다섯 마디</span>'+
+   (sm?'':'<span class="mt" style="margin:0">차례대로 읽으시면 됩니다</span>')+
+   '<span class="rr"><div class="mini b"'+A('cpta',c?c.id:'')+'>📋 복사</div>'+
+   (sm?('<div class="mini"'+A('s','ment')+'>왜 이렇게</div>'):'')+'</span></div>';
+  if(sm){
+    h+='<div class="five">';
+    for(i=0;i<TAF.length;i++){var y=TAF[i];
+      var l2=(y.n==='③'&&c)?(String(c.say).split(String.fromCharCode(10))[2]||y.s):y.s;
+      h+='<div class="fv"><span class="fn">'+y.n+'</span><span class="ft">'+E(l2)+'</span></div>';}
+    return h+'</div></div>';
+  }
+  for(i=0;i<TAF.length;i++){var x=TAF[i];
+    var line=(x.n==='③'&&c)?(String(c.say).split(String.fromCharCode(10))[2]||x.s):x.s;
+    h+='<div class="ment"><div class="mh"><span class="mn">'+x.n+'</span>'+
+      '<span class="mt2">'+E(x.t)+'</span></div>'+
+      '<div class="ms">'+E(line)+'</div>'+
+      '<div class="md">'+E(x.d)+'</div></div>';}
+  return h+'</div>';
+}
+function sayCard(k,sm){
+  var g=SAYS[k];if(!g)return '';
+  var h='<div class="c"><div class="sayh">'+
+   '<span class="l">'+g.e+' '+E(k)+' — 그대로 말할 것</span>'+
+   (sm?'':'<span class="mt" style="margin:0">'+E(g.t)+'</span>')+
+   '<span class="rr"><div class="mini b"'+A('cpsay',k)+'>📋 복사</div>'+
+   (sm?('<div class="mini"'+A('s','ment')+'>더 보기</div>'):'')+'</span></div>'+
+   '<div class="say">'+E(g.say)+'</div>';
+  if(sm)return h+'<div class="note">하지 말 것 — '+E(g.avoid.split('.')[0])+'</div></div>';
+  return h+
+   '<div class="ment"><div class="mt2">그래도 어려우시면</div><div class="ms">'+E(g.next)+'</div></div>'+
+   '<div class="ment no"><div class="mt2">하지 말 것</div><div class="ms">'+E(g.avoid)+'</div></div>'+
+   '<div class="ment no"><div class="mt2">여기서 멈춥니다</div><div class="ms">'+E(g.stop)+'</div></div>'+
+   '<div class="ment ok"><div class="mt2">한마디</div><div class="ms">'+E(g.tip)+'</div></div></div>';
+}
+/* 홈에서 쓰는 한 장짜리 — 「전화에서 할 말」 하나로 묶습니다 */
+function talkCard(c){
+  var i,h='<div class="c"><div class="sayh">'+
+   '<span class="l">💬 전화에서 할 말</span>'+
+   '<span class="rr"><div class="mini b"'+A('cpta',c.id)+'>📋 다섯 마디</div>'+
+   '<div class="mini"'+A('cpone',c.id)+'>📋 보낼 말</div>'+
+   '<div class="mini"'+A('s','ment')+'>왜 이렇게</div></span></div>'+
+   '<div class="five">';
+  for(i=0;i<TAF.length;i++){var y=TAF[i];
+    var l2=(y.n==='③'&&c)?(String(c.say).split(String.fromCharCode(10))[2]||y.s):y.s;
+    h+='<div class="fv"><span class="fn">'+y.n+'</span><span class="ft">'+E(l2)+'</span></div>';}
+  h+='</div><div class="mini2">문자·카톡으로 보내실 때</div>'+
+   '<div class="say">'+E(c.say)+'</div></div>';
+  return h;
+}
+
+/* 통화 멘트 화면 — 네 상황을 다 폅니다 */
+function vMent(){
+  var ks=['부재','거절','기고객','입원'],i;
+  var h=vTop(dtop('전화에서 그대로 읽는 말입니다'),[pill('다섯 마디 + 네 상황','b','say','전화를 여는 다섯 마디와 부재 · 거절 · 기고객 · 입원')]);
+  h+='<div class="cont"><h2 class="pt">통화 멘트 <span>다섯 마디 · 네 상황</span></h2>'+
+   '<div class="psub">단추 뒤에 두지 않았습니다. <b style="color:var(--ink)">전화기를 들고 그대로 읽으시면 됩니다.</b></div>'+
+   '<div class="cols"><div class="col">'+taFrame(byId(S.cur))+'</div><div class="col">';
+  for(i=0;i<ks.length;i++)h+=sayCard(ks[i]);
+  return h+'</div></div></div>';
+}
+
+var ASKN={block:'걸리는 것',due:'만기 쪽',clm:'청구 쪽',when:'뵙는 때',ref:'소개',
+          hook:'제일 걱정',care:'요즘 상황',kb:'증권',gap:'먼저 여쭐 곳',rrn:'주민번호',age:'상령일'};
+
+
+/* 폰 — 여쭙는 카드 */
+function askCard(c,one){
+  var L=asksOf(c),A2=answersOf(c),i,j,h='';
+  if(L.length){
+    var n=one?1:L.length;
+    h+='<div class="sect">❓ 여쭙겠습니다'+(L.length>1?(' · '+L.length+'개 중 '+n+'개'):'')+'</div>'+
+      '<div class="card"><div class="mt" style="margin:0">'+E(c.nm)+'님 상황을 보고 생긴 질문입니다</div>';
+    for(i=0;i<L.length&&i<n;i++){var q=L[i];
+      h+='<div class="askq"><div class="qq">'+E(q.q)+'</div>'+
+        '<div class="qw">왜 묻나 — '+E(q.why)+'</div><div class="chips">';
+      for(j=0;j<q.opts.length;j++)
+        h+='<div'+A('ans',c.id+'|'+q.id+'|'+q.opts[j])+'>'+E(q.opts[j])+'</div>';
+      h+='</div>'+(q.note?('<div class="qn">'+E(q.note)+'</div>'):'')+'</div>';}
+    if(one&&L.length>1)h+='<div class="go g"'+A('s','ask')+'>남은 '+(L.length-1)+'개 마저 답하기</div>';
+    h+='</div>';
+  }
+  if(A2.length){
+    h+='<div class="sect">✅ 여쭤서 알게 된 것</div><div class="card">';
+    for(i=0;i<A2.length;i++)
+      h+='<div class="kvp"><span class="k">'+E(ASKN[A2[i][0]]||A2[i][0])+'</span>'+
+        '<span class="v">'+E(A2[i][1])+'</span></div>';
+    var w=wayOf(c);
+    if(w)h+='<div class="note bl">그래서 다음엔 — '+w+'</div>';
+    h+='<div class="go g"'+A('ansclr',c.id)+'>다시 묻기</div></div>';
+  }
+  return h;
+}
+function vAskS(){
+  var i,tot=askCount();
+  var h='<div class="scr" id="scr">'+sb()+
+   '<div class="topbar"><span class="x"'+A('s','home')+'>‹</span>'+
+   '<span style="font-size:15px;font-weight:800;letter-spacing:-.02em">물어볼 것</span>'+
+   '<span class="mini b">'+tot+'개</span></div><div class="body">'+
+   '<div class="h1" style="font-size:23px">여쭐 것이<br><em>'+tot+'개</em> 있습니다</div>'+
+   '<div class="sub" style="font-size:14px">미리 적어 둔 질문이 아닙니다. <b>그 고객의 상황을 보고</b> 생긴 것입니다.</div>';
+  if(!tot)h+='<div class="card" style="margin-top:20px"><div class="nm">더 여쭐 것이 없습니다</div>'+
+    '<div class="mt">상황이 바뀌면 그때 다시 여쭙겠습니다</div></div>';
+  for(i=0;i<PPL.length;i++){var p=PPL[i],L=asksOf(p);
+    if(!L.length)continue;
+    h+='<div class="sect">'+E(p.nm)+' · '+STAGE[p.st].e+' '+E(p.st)+' · '+L.length+'개</div>'+askCard(p,0);}
+  h+='<div style="height:16px"></div></div>'+tabs('')+'<div id="tt"></div></div>';
+  return h;
+}
+/* 폰 — 통화 멘트 화면 */
+function vMentS(){
+  var ks=['부재','거절','기고객','입원'],i,c=byId(S.cur)||PPL[0];
+  var h='<div class="scr" id="scr">'+sb()+
+   '<div class="topbar"><span class="x"'+A('s','home')+'>‹</span>'+
+   '<span style="font-size:15px;font-weight:800;letter-spacing:-.02em">통화 멘트</span>'+
+   '<span class="mini">다섯 마디</span></div><div class="body">'+
+   '<div class="h1" style="font-size:23px">전화기를 들고<br><em>그대로 읽으시면</em> 됩니다</div>'+
+   '<div class="sub" style="font-size:14px">단추 뒤에 두지 않았습니다.</div>';
+  h+=taFrame(c,0);
+  for(i=0;i<ks.length;i++)h+=sayCard(ks[i],0);
+  h+='<div style="height:16px"></div></div>'+tabs('')+'<div id="tt"></div></div>';
+  return h;
+}
+
+/* 상황에 맞는 기능 — 그 자리에서 쓸 것만 */
+function toolChips(st){
+  var g=STAGE[st];if(!g||!g.tools.length)return '';
+  var h='<div class="t" style="margin-top:14px;font-size:12.5px;font-weight:800;color:var(--point)">'+
+   g.e+' '+E(st)+' 자리에서 쓸 것</div><div class="chips" style="justify-content:flex-start;margin-top:8px">';
+  for(var i=0;i<g.tools.length;i++)
+    h+='<div style="background:#F7F9FA;padding:7px 12px;font-size:13px"'+
+      A('say','「'+g.tools[i]+'」 를 엽니다 — '+st+' 자리라서 올라온 것입니다')+'>'+E(g.tools[i])+'</div>';
+  return h+'</div>';
+}
+function vSwitch(){
+  return '<div class="swch"><div'+A('link','APEX_목각.html')+'>PC</div><div class="on">폰</div></div>';
+}
+
+/* ══ 18. 그리기 ═══════════════════════════════════════════════ */
+var SIDE={
+ lock:['알람이 하는 일','폰이 잠겨 있어도 옵니다. 앱을 열어 두실 필요가 없습니다.<br><b>「오늘 걸 사람 N명, 정해뒀어요」</b> — 누가 급한지는 이미 세워 두었으니 사장님은 확인만 하시면 됩니다.'],
+ banner:['왜 13시인가','오전에 만난 분들이 아직 기억에 남아 있을 때 여쭙는 것입니다. 저녁에 물으면 기억이 흐려져 기록이 부정확해집니다.'],
+ q1:['30초 안에 끝','고르는 것이 아니라 <b>확인</b>입니다. 이미 세워 둔 명단을 보고 「예」만 하시면 됩니다.'],
+ q2:['버튼 세 번','만났어요 / 부재 / 다음에. 세 번 누르면 CRM에 그대로 들어갑니다. 글로 적으실 일이 없습니다.'],
+ q3:['숫자 하나','오늘 예상업적만 적습니다. 더 물어보지 않습니다.'],
+ q4:['내일 준비','시간만 찍으면 내일 아침 알람에 같이 올라갑니다.'],
+ done:['매일 열 이유','네 번 다 하시면 이 화면이 나옵니다. 연속 일수가 쌓입니다.'],
+ home:['홈 하나로 끝','아침 미션표는 없앴습니다 — 무엇을 할지는 카드가 이미 말합니다.<br>읽어 둔 보장분석을 <b>홈에 띄우면</b> 맨 위 카드로 올라가 매일 보입니다.'],
+ cli:['심플하게','거르는 칸 셋, 줄마다 <b>이름 한 줄 · 이유 한 줄 · 단추 하나</b>. 딱지 두 개와 단추 두 개를 걷어냈습니다.'],
+ one:['한 장에 다','사람 · 다음에 할 것 · <b>주민등록번호</b> · <b>적어 두기</b> · 보장분석 · 보낼 말이 한 장에 있습니다.<br>주민번호와 메모는 <b>서버로 안 갑니다.</b> 이 기기에만 둡니다.'],
+ kb:['근거까지 보여 드립니다','읽은 줄 번호와 읽은 글자를 그대로 남깁니다. <b>지어낸 값은 하나도 없습니다.</b> 못 읽은 줄은 못 읽었다고 말씀드립니다.'],
+ cal:['다음 분을 날짜 위에','줄로 늘어놓지 않고 <b>날짜에 점</b>으로 얹었습니다. 약속(파랑) · 다시 걸 날(회색) · 생일(초록) · 만기(주황) · 마디(보라).<br>날짜를 지어내지 않습니다 — <b>아는 날만</b> 찍습니다.'],
+ ask:['상황을 보고 질문이 생깁니다','미리 적어 둔 질문이 아닙니다. <b>막혀 있으면 왜 막혔는지</b>, 빈칸이 있으면 그 빈칸을, 만기가 닥쳤으면 만기를 여쭙습니다.<br>답하시면 그 답이 <b>홈 카드의 첫 문장과 다음에 할 것</b>을 바꿉니다.'],
+ ment:['전화기 들고 그대로','단추 뒤에 두지 않았습니다. <b>전화를 여는 다섯 마디</b>와 부재·거절·기고객·입원에서 <b>그대로 말할 것</b>을 화면에 펴 뒀습니다.'],
+ flow:['열 단계를 실시간으로','미접촉·부재·거절 → TA → AP → PC → CS → 계약완료 → <b>증권전달 → 소개완료</b>.<br>단계마다 <b>무엇을 판단하고 무엇을 들고 가는지</b>가 적혀 있고, 지금 누가 그 자리에 계신지도 같이 섭니다.'],
+ perf:['숫자가 아니라 할 일','「2건이면 목표가 채워집니다」까지 말해 줍니다.'],
+ alm:['헛알람 금지','넣을 게 없는 날은 안 울립니다. 지금은 <b>push_subs 가 비어 있어 한 번도 안 울립니다.</b>']
+};
+function draw(){
+  var V={lock:vLock,banner:vBanner,q1:vQ1,q2:vQ2,q3:vQ3,q4:vQ4,done:vDone,
+         home:vHome,cli:vCli,cal:vCalS,one:vOne,kb:vKb,ask:vAskS,ment:vMentS,flow:vFlow,perf:vPerf,alm:vAlm};
+  var i,h='';
+  for(i=0;i<SCREENS.length;i++)h+='<div class="'+(S.s===SCREENS[i][0]?'on':'')+'"'+A('s',SCREENS[i][0])+'>'+
+    E(SCREENS[i][1])+'</div>';
+  $('pb').innerHTML=h;
+  document.querySelector('.phone').innerHTML=(V[S.s]||vHome)()+(S.sheet?vSheet():'');
+  var sw=document.getElementById('sw');if(!sw){sw=document.createElement('div');sw.id='sw';document.body.appendChild(sw);}
+  sw.innerHTML=vSwitch();
+  var cap='',k=(S.s==='one'?'one':S.s),sd=SIDE[k]||SIDE.home;
+  for(i=0;i<SCREENS.length;i++)if(SCREENS[i][0]===S.s)cap='<b>'+E(SCREENS[i][1])+'</b> · '+E(SCREENS[i][2]);
+  $('side').innerHTML='<div class="cap">'+cap+'</div>'+
+    '<div class="box"><h3>'+E(sd[0])+'</h3><p>'+sd[1]+'</p></div>'+
+    '<div class="box"><h3>PC판과 같은 칸에 저장합니다</h3><p>여기서 적으신 <b>주민등록번호 · 메모 · 보장분석</b>은 '+
+    'APEX_목각.html 에서도 그대로 보입니다. 같은 브라우저 안에서만입니다 — <b>서버로는 안 갑니다.</b></p></div>'+
+    '<div class="box" style="cursor:pointer"'+A('link','APEX_목각.html')+'><h3 style="color:var(--point)">🖥️ PC 화면 보기</h3>'+
+    '<p>APEX_목각.html 로 넘어갑니다. 적어 두신 것은 그대로 보입니다.</p></div>'+
+    '<div class="box"><h3>여기 이름은 모두 가상 인물입니다</h3><p>실제 고객이 아닙니다. '+
+    '주민등록번호도 체크섬만 맞는 가짜 번호로 시험해 보십시오.</p></div>';
+}
+
+/* ══ 19. 누르면 ═══════════════════════════════════════════════ */
+function copy(t,okmsg){
+  function ok(){toast(okmsg);}
+  function fb(){var a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';
+    document.body.appendChild(a);a.select();
+    try{document.execCommand('copy');ok();}catch(e){toast('복사가 막혔습니다');}
+    document.body.removeChild(a);}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,fb);else fb();
+}
+var ACT={
+ s:function(v){S.s=v;draw();},
+ link:function(v){location.href=v;},
+ stg:function(v){S.stg=v;S.s='flow';draw();},
+ day:function(v){S.day=(S.day===v?'':v);draw();},
+ cmo:function(v){S.cmo+=parseInt(v,10);S.day='';draw();},
+ ans:function(v){
+   var i=v.indexOf('|'),j=v.indexOf('|',i+1);
+   var id=v.slice(0,i),q=v.slice(i+1,j),val=v.slice(j+1);
+   var c=byId(id);if(!c)return;
+   if(!DB.ask[id])DB.ask[id]={};
+   DB.ask[id][q]=val;
+   var m=memoOf(id);
+   if(q==='hook'&&val!=='직접 적기')m.hook=val;
+   if(q==='care'&&val!=='없음')m.care=val;
+   save();draw();
+   toast(c.nm+'님 — 「'+val+'」 로 적었습니다'+(ANSWAY[val]?('. 다음엔 '+ANSWAY[val].replace(/<[^>]+>/g,'')):''));},
+ ansclr:function(v){delete DB.ask[v];save();draw();toast('답을 지웠습니다 — 다시 여쭙겠습니다');},
+ cpta:function(v){var c=byId(v),i,L=[];
+   for(i=0;i<TAF.length;i++){var x=TAF[i];
+     L.push(x.n+' '+x.t+String.fromCharCode(10)+((x.n==='③'&&c)?(String(c.say).split(String.fromCharCode(10))[2]||x.s):x.s));}
+   copy(L.join(String.fromCharCode(10,10)),'다섯 마디를 복사했습니다');},
+ cpsay:function(v){var g=SAYS[v];if(!g)return;copy(g.say,'「'+v+'」 멘트를 복사했습니다');},
+ say:function(v){toast(v);},
+ open:function(v){S.cur=v;S.s='one';draw();},
+ open2:function(v){S.cur=v;draw();},
+ q1:function(v){S.q1[v]=!S.q1[v];draw();},
+ q2:function(v){var a=v.split('|');S.q2[a[0]]=a[1];draw();
+   var c=byId(a[0]);toast(c.nm+'님 — '+(a[1]==='만'?'만났다고':(a[1]==='부'?'부재라고':'다음에 하겠다고'))+' 적었습니다');},
+ amt:function(v){var n=parseInt(v,10);S.amt=(n===0?0:S.amt+n);draw();},
+ key:function(v){
+   if(v==='←'){S.amt=Math.floor(S.amt/10);}
+   else if(v==='00'){S.amt=S.amt*100;}
+   else {S.amt=S.amt*10+parseInt(v,10);}
+   if(S.amt>99999999)S.amt=99999999;
+   draw();},
+ tm:function(v){var a=v.split('|');S.tm[a[0]]=a[1];draw();
+   toast(byId(a[0]).nm+'님 '+a[1]+' 로 잡았습니다');},
+ slot:function(v){S.alm[v]=S.alm[v]?0:1;draw();
+   toast(S.alm[v]?'켰습니다 — 넣을 게 있는 날만 울립니다':'껐습니다');},
+ did:function(v){S.sheet=v;draw();},
+ close:function(){S.sheet='';draw();},
+ res:function(v){
+   var a=v.split('|'),c=byId(a[0]),r=RES[a[1]];if(!c||!r)return;
+   var was=c.st,moved='';
+   c.cnt++;
+   if(a[1]==='call'||a[1]==='met')c.idle=0;
+   if(r.go&&GO[c.st]){c.st=GO[c.st];moved=was+' → '+c.st;}
+   if(r.st){c.st=r.st;moved=was+' → '+c.st;}
+   c.next=dplus(r.d);c.nextK=keyPlus(r.d);
+   S.sheet='';draw();
+   toast(c.nm+'님 — '+r.w+' 적었습니다.'+(moved?(' 단계가 '+moved+' 로 갔고,'):'')+
+     ' 다음에 뜰 날은 '+c.next+' 입니다');},
+ kakao:function(v){var c=byId(v);if(!c)return;copy(c.say,c.nm+'님께 보낼 말을 복사했습니다');},
+ cpone:function(v){var c=byId(v);if(!c)return;copy(c.say,'복사했습니다 — 보이는 그대로 들어갔습니다');},
+ bulk:function(v){var L=[],i;
+   for(i=0;i<PPL.length;i++){var p=PPL[i];if(p.rg===v&&!p.appt&&isMeet(p.st))L.push(p);}
+   if(!L.length){toast('그 구는 이미 다 잡혀 있습니다');return;}
+   for(i=0;i<L.length;i++)L[i].appt=(10+i*2)+':00';
+   draw();toast(v+' '+L.length+'분을 같은 날로 모았습니다');},
+
+ rrnsave:function(v){
+   var el=$('rrn_in');if(!el)return;
+   var d=rrnDigits(el.value);
+   if(d.length!==13){toast('열세 자리를 다 적어 주십시오 — 지금 '+d.length+'자리입니다');return;}
+   if(!rrnOk(d)){toast('맞지 않는 번호입니다. 한 자리 잘못 치신 것 같습니다');return;}
+   if(!rrnBirth(d)){toast('앞자리를 못 읽었습니다');return;}
+   DB.rrn[v]=d;save();S.show='';draw();
+   toast(byId(v).nm+'님 번호를 이 기기에만 저장했습니다 — 서버로 안 갑니다');},
+ rrnshow:function(v){S.show=(S.show===v?'':v);draw();
+   if(S.show===v)toast('펴 두었습니다 — 다 쓰시면 「가리기」를 눌러 주십시오');},
+ rrncopy:function(v){var d=DB.rrn[v];if(!d)return;
+   copy(rrnFull(d),'복사했습니다 — 붙여 넣으신 뒤에는 그 칸도 비워 주십시오');},
+ rrndel:function(v){if(!DB.rrn[v])return;delete DB.rrn[v];save();S.show='';draw();
+   toast('지웠습니다. 이 기기에서 완전히 없어졌습니다');},
+
+ mosave:function(v){
+   var m=memoOf(v),g=function(id){var e=$(id);return e?e.value:'';};
+   m.care=g('mo_care');m.fam=g('mo_fam');m.hook=g('mo_hook');
+   m.day=g('mo_day');m.todo=g('mo_do');m.memo=g('mo_memo');
+   m.at=(NOW.getMonth()+1)+'/'+NOW.getDate();
+   save();draw();toast('적어 두었습니다 — 홈 카드의 첫 문장이 이 말로 바뀝니다');},
+ moclear:function(v){DB.memo[v]={};save();draw();toast('비웠습니다');},
+
+ kbgo:function(v){S.cur=v;S.s='kb';draw();},
+ kbdemo:function(v){var e=$('kb_in');
+   if(e){e.value=KBDEMO;toast('예시를 넣었습니다 — 「읽어서 정리」를 눌러 보십시오');}},
+ kbread:function(v){
+   var e=$('kb_in');if(!e){S.cur=v;S.s='kb';draw();return;}
+   var raw=e.value;
+   if(!raw.trim()){toast('붙여 넣으신 글이 없습니다');return;}
+   var r=kbRead(raw);
+   if(!r.rows.length){toast('담보를 한 줄도 못 읽었습니다 — 담보명과 금액이 같은 줄에 있어야 합니다');return;}
+   DB.kb[v]={raw:raw,at:(NOW.getMonth()+1)+'/'+NOW.getDate()};save();draw();
+   toast('담보 '+r.rows.length+'개를 읽었습니다'+(r.skip.length?(' · 못 읽은 줄 '+r.skip.length+'개는 아래에'):''));},
+ kbdel:function(v){delete DB.kb[v];if(DB.home===v)DB.home='';save();draw();toast('읽은 것을 지웠습니다');},
+ kbhome:function(v){
+   if(DB.home===v){DB.home='';save();draw();toast('홈에서 내렸습니다');return;}
+   DB.home=v;save();draw();toast(byId(v).nm+'님 보장분석을 홈에 띄웠습니다');},
+ kbcp:function(v){var k=DB.kb[v],c=byId(v);if(!k||!c)return;
+   var r=kbRead(k.raw);copy(kbTalk(c.nm,r,kbSum(r)),'관리 멘트를 복사했습니다');}
+};
+function fire(el,ev){
+  var n=el;
+  while(n&&n!==document.body){
+    if(n.getAttribute&&n.getAttribute('data-a'))break;
+    n=n.parentNode;
+  }
+  if(!n||n===document.body||!n.getAttribute)return;
+  var a=n.getAttribute('data-a'),v=n.getAttribute('data-v');
+  if(ACT[a]){if(ev)ev.stopPropagation();ACT[a](v,n);}
+}
+document.addEventListener('click',function(e){
+  var tn=e.target&&e.target.tagName;
+  if(tn==='TEXTAREA'||tn==='SELECT'||tn==='INPUT'||tn==='OPTION')return;
+  fire(e.target,e);
+});
+/* 주소 뒤에 ?v=kb 처럼 붙이면 그 화면으로 바로 열립니다 */
+(function(){var q=/[?&]v=([a-z0-9]+)/i.exec(location.search);if(q)S.s=q[1];})();
+(function(){var q=/[?&]call=([a-z0-9]+)/i.exec(location.search);if(q)S.sheet=q[1];})();
+draw();
+</script>
+</body></html>

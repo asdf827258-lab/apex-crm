@@ -65,7 +65,7 @@ function allowed(u) {
 }
 
 function page(title, body, go) {
-  return '<!doctype html><html lang="ko"><head><meta charset="utf-8">' +
+  return '<!doctype html><html lang="ko" data-theme="light"><head><meta charset="utf-8"><meta name="color-scheme" content="light">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<meta name="robots" content="noindex,nofollow"><title>' + esc(title) + '</title>' +
     '<style>html,body{margin:0;height:100%;background:#F2F4F6;' +

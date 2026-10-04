@@ -265,8 +265,12 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     out.none=K.filter(k=>!tdoTools(k).length);
     /* 표에 이름·아이콘을 또 적어 두지 않았나 (5번) */
     out.dupName=K.filter(k=>TDO[k].title||TDO[k].icon||TDO[k].toolName);
-    /* 메뉴에서 빠지면(등급·권한) 단추도 같이 빠지나 */
+    /* 메뉴에서 빠지면(등급·권한) 단추도 같이 빠지나
+       ⚠ <b>몇 개 남는지를 손으로 적지 않는다.</b> 예전에 '2' 라고 적어
+       뒀다가, PC 단계 도구가 셋에서 열로 늘자 화면은 멀쩡한데 이 점검만
+       빨간불이 켜졌다 — 헛것이다 (8번). 「하나만 빠진다」를 잰다. */
     const real=window.navItemOf;
+    out.all=tdoTools('PC').map(it=>it.id);
     window.navItemOf=function(id){ return id==='frmake'?null:real(id); };
     out.gone=tdoTools('PC').map(it=>it.id);
     window.navItemOf=real;
@@ -275,11 +279,52 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
             appt:'',days:10,n:3,cAt:'',pAt:''}];
     AR.cliRows=[];
     go('home'); await new Promise(r=>setTimeout(r,700));
-    /* <b>「무엇을 할까요?」</b> 로 묻고 번호로 고르게 하는가 */
+    /* <b>「무엇을 할까요?」</b> 로 묻고 번호로 고르게 하는가
+       ⚠ 2026-09-30 — 이 칸이 <b>접이</b>가 됐습니다(사장님 말씀 「가*나 같이
+         해줘」 → 「그 넷도 접어」). 접힌 채로 재면 갈래가 아예 안 그려져
+         「손가락 크기 44px」 을 잴 수 없습니다 — <b>먼저 펴고 잽니다.</b>
+         check-homeshape 가 「그 밖의 것」 접이에서 이미 이렇게 합니다 (5번).
+       ★ <b>자는 그대로입니다.</b> 묻는 것은 하나도 안 바뀌었습니다 — 펴 놓고
+         보면 묻고 있나 · 번호가 붙나 · 누를 만한가. 자를 옮기지 지우지
+         않습니다 (8번).
+       ★ <b>접힌 채로 열리는지</b>와 <b>눌러서 펴지는지</b>는 check-hmtwo [5]
+         가 봅니다 — 둘을 한 자에서 보면 서로 발목을 잡습니다.            */
+    try{ if(!HM_MORE){ hmMoreToggle(); await new Promise(r=>setTimeout(r,500)); } }catch(e){}
+    /* ⚠ 2026-10-02 — 큰 단추 자리가 <b>물음</b>이 되었습니다 (사장님 말씀
+       「<b>전화 걸러 갑니다 에서</b>, 고객의 현재 상황은 무엇인가요? <b>로 묻고</b>」).
+       큰 단추(.hm-do)는 <b>상황을 고르시면</b> 그 자리에 섭니다 — 접이와 똑같이
+       <b>먼저 펴고</b> 잽니다. 재려던 것은 하나도 안 바뀌었습니다 (8번).
+       ★ <b>칸을 모으기 전에</b> 펴야 합니다. 중간에 펴면 hmPaint 가 칸을 다시
+         그려 <b>먼저 모아 둔 것이 떨어져 나가고</b>, 높이가 0 이 되어 「44px
+         아래」 로 세어집니다 — 처음에 그렇게 해서 헛것이 났습니다.
+       ★ 이 자리의 이름은 <b>out.sit</b> 입니다. out.ask 는 접이 안 「무엇을
+         할까요?」 라는 <b>다른 물음</b>이라 건드리지 않습니다 — 처음에 그 이름을
+         덮어써서 멀쩡한 자리가 빨간불이 났습니다.                          */
+    out.sit=((document.querySelector('#dynPane .hm-now .hm-do')||{}).textContent||'').trim();
+    try{
+      const kS=(hmNext().x||{}).key||'';
+      if(kS&&typeof hmStOpen==='function'&&!(typeof HM_ST!=='undefined'&&HM_ST[kS])){
+        hmStOpen(kS); await new Promise(r=>setTimeout(r,400));
+      }
+    }catch(eS){}
     out.ask=(document.querySelector('#dynPane .hm-now .hm-ask-t')||{}).textContent||'';
     const opts=[].slice.call(document.querySelectorAll('#dynPane .hm-now .hm-ask-o'));
     out.btnTxt=opts.map(b=>b.textContent.replace(/\s+/g,' ').trim());
     out.nos=opts.map(b=>(b.querySelector('.no')||{}).textContent||'');
+    /* ⚠ 2026-09-25 — 카드가 <b>목업의 짜임새</b>로 바뀌었습니다 (사장님 말씀
+       「카드 짜임새를 목업처럼」). 「무엇을 / 어떻게」 는 번호 목록 ①번이
+       아니라 <b>큰 글씨 두 줄</b>(.hm-aim/.hm-way)이고, 하러 가는 것은
+       <b>큰 파란 단추</b>(.hm-do) 입니다. 재려던 것은 그대로입니다 —
+       「상태마다 무엇을 하라고 말하나」 (8번). */
+    out.aim=(document.querySelector('#dynPane .hm-now .hm-aim')||{}).textContent||'';
+    out.way=(document.querySelector('#dynPane .hm-now .hm-way')||{}).textContent||'';
+    /* 펴면 큰 단추가 <b>둘</b>입니다 — 물음과 할 일. 뒤엣것이 할 일입니다 */
+    out.doTxt=(()=>{const L=[].slice.call(document.querySelectorAll('#dynPane .hm-now .hm-do'))
+                      .filter(b=>(b.textContent||'').indexOf('현재 상황은')<0);
+                    return L.length?(L[L.length-1].textContent||'').trim():'';})();
+    out.doH=(()=>{const L=[].slice.call(document.querySelectorAll('#dynPane .hm-now .hm-do'))
+                    .filter(b=>(b.textContent||'').indexOf('현재 상황은')<0);
+                  return L.length?Math.round(L[L.length-1].getBoundingClientRect().height):0;})();
     /* 머리줄에 <b>같은 말이 두 번</b> 안 적히는가 */
     out.head=(document.querySelector('#dynPane .hm-now .hm-now-k')||{}).textContent||'';
     /* 손가락으로 누를 만한가 */
@@ -289,13 +334,17 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
        만들기·계산기·상담자료…). 그때는 go() 가 안 불린다 — 그것을 「아무
        데도 안 갔다」 로 읽으면, 더 잘 고쳐 놓고 빨간불이 켜진다 (8번). */
     let went=''; const g=window.go; window.go=function(t){went=t;};
-    if(opts[1])opts[1].click();          /* ②번 = 첫 도구 */
+    if(opts[0])opts[0].click();          /* ①번 = 첫 도구 (할 일은 큰 단추로 갔다) */
     await new Promise(r=>setTimeout(r,300));
     out.went=went||((typeof HMS!=='undefined'&&HMS.sheet&&HMS.id)?HMS.id:'');
     out.asSheet=!went&&!!(typeof HMS!=='undefined'&&HMS.sheet);
     try{ if(typeof hmSheetClose==='function')hmSheetClose(); }catch(e){}
-    /* ①번은 <b>그 사람 자리</b>로 보낸다 */
-    went=''; if(opts[0])opts[0].click();
+    /* <b>큰 단추</b>는 그 사람 자리로 보낸다 */
+    went='';
+    const dobL=[].slice.call(document.querySelectorAll('#dynPane .hm-now .hm-do'))
+      .filter(b=>(b.textContent||'').indexOf('현재 상황은')<0);
+    const dob=dobL.length?dobL[dobL.length-1]:null;
+    if(dob)dob.click();
     out.first=went;
     window.go=g;
     /* 마지막 갈래는 <b>「이미 했습니다」</b> — 눌러 보고 실제로 표시되는가 */
@@ -345,17 +394,27 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(G.none.length===0, '<b>'+Object.keys(G.listed).length+'가지 상태 모두</b> 손에 쥘 것이 있다'+
      (G.none.length?(' ← '+G.none.join(',')):''));
   is(G.dupName.length===0, '표에 <b>이름·아이콘을 또 안 적는다</b> — 메뉴에서 가져온다 (5번)');
-  is(G.gone.length===2&&G.gone.indexOf('frmake')<0,
-     '메뉴에 없는 사람에게는 <b>그 단추가 안 선다</b> — '+G.gone.join(',')+
-     ' (못 여는 단추를 세우면 눌렀는데 아무 일도 안 난다)');
+  is(G.all.indexOf('frmake')>=0&&G.gone.length===G.all.length-1&&G.gone.indexOf('frmake')<0,
+     '메뉴에 없는 사람에게는 <b>그 단추가 안 선다</b> — '+G.all.length+'가지 중 frmake 만 빠져 '+
+     G.gone.length+'가지 (못 여는 단추를 세우면 눌렀는데 아무 일도 안 난다)');
   /* 사장님 말씀 — 「클로드 내게 권한 물어보는것처럼 <b>선택해서</b> 할수
      있도록」. 도구 단추만 늘어놓는 것이 아니라 <b>묻고 고르게</b> 한다. */
   is(/무엇을 할까요/.test(G.ask), '<b>「무엇을 할까요?」</b> 하고 묻는다 — '+(G.ask||'안 묻는다'));
-  is(G.nos.join('')==='12345', '갈래마다 <b>번호</b>가 붙는다 — '+G.nos.join('·'));
-  is(G.btnTxt.length===5,
-     'PC 는 <b>다섯 갈래</b>가 선다 — 할 일 하나 + 도구 셋 + 했습니다 ('+G.btnTxt.length+')');
-  is(/전화로/.test(G.btnTxt[0]||'')&&/걸리셨어요/.test(G.btnTxt[0]||''),
-     '①번은 <b>무엇을 어떻게</b> 할지 그대로 적는다 — 「'+(G.btnTxt[0]||'').slice(0,40)+'…」');
+  is(G.nos.join('')==='1234', '갈래마다 <b>번호</b>가 붙는다 — '+G.nos.join('·'));
+  is(G.btnTxt.length===4,
+     'PC 는 <b>큰 단추 하나 + 네 갈래</b>다 — 도구 셋 + 했습니다 ('+G.btnTxt.length+')');
+  /* 사장님이 apex-stage.js 에 적어 두신 <b>그 문장 그대로</b> 서는가 —
+     여태는 평문으로 눌려 번호 갈래 ①번에 끼어 있었다 */
+  is(/걸리는 것 한 가지/.test(G.aim)&&/걸리셨어요/.test(G.way),
+     '무엇을 / 어떻게 가 <b>큰 두 줄</b>로 선다 — 「'+G.aim.trim().slice(0,34)+'」');
+  is(/전화/.test(G.doTxt)&&G.doH>=44,
+     '<b>큰 단추 한 방</b>이 선다 — 「'+(G.doTxt||'없다')+'」 · '+G.doH+'px'+
+     ' (물음 뒤입니다 — 「'+(G.sit||'없다')+'」)');
+  is(/현재 상황은 무엇인가요/.test(G.sit||''),
+     '  그 자리에 <b>물음</b>이 있다 — 「'+(G.sit||'없다')+'」 (사장님 말씀 2026-10-02)');
+  /* 큰 두 줄로 옮겼으니 <b>번호 갈래에는 또 없어야</b> 한다 (5번) */
+  is(!/받아 낸다/.test(G.btnTxt.join(' ')),
+     '그 문장을 <b>번호 갈래에 또 안 적는다</b> — 같은 말이 두 번이면 눈이 미끄러진다');
   is(/전&후 만들기|윤시현|계산기/.test(G.btnTxt.join(' ')),
      '도구 갈래에 <b>메뉴에 적힌 이름</b>이 그대로 뜬다');
   is(!/받아 낸다/.test(G.head),
@@ -364,7 +423,7 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(G.went==='frmake', '도구 갈래를 누르니 <b>그 도구가 열린다</b> — '+
      (G.went?(G.went+(G.asSheet?' (덮개로 — 홈을 안 벗어난다)':' (화면으로)')):'아무 데도'));
   is(G.first==='crm'||G.first==='clients',
-     '①번을 누르니 <b>그 사람 자리로</b> 간다 — '+(G.first||'아무 데도'));
+     '<b>큰 단추</b>를 누르니 그 사람 자리로 간다 — '+(G.first||'아무 데도'));
   is(G.didWorks, '<b>「이미 했습니다」</b> 를 고르면 정말로 표시된다 — 고르기만 하고 안 되면 헛것이다');
 
   /* ══ [9] <b>팀별 · 개인별</b>로 나눠 보는가 ═════════════════════

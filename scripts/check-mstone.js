@@ -228,17 +228,28 @@ const clearOvl = pg => pg.evaluate(sel => {
   is(seen.copy && /복사/.test(seen.copyTxt), '<b>보낼 말 복사</b> 단추가 그 자리에 있다');
 
   /* 「보냈습니다」 를 누르면 그 마디는 <b>다음 마디로 넘어간다</b> */
-  const before = await pg.evaluate(() => document.querySelectorAll('#cli365Top .mst-row').length);
+  /* ⚠ 2026-10-02 · <b>「할 일」 줄만 셉니다.</b> 「💬 보냈습니다 — 답을
+     적어 주십시오」 토막이 생기면서 보낸 마디가 <b>답 줄로 다시 섭니다</b>
+     (사장님 말씀 「보낸 뒤에 답도 적을 수 있게」). 그 줄도 .mst-row 라
+     수가 안 줄어 이 자가 울렸습니다 — <b>내려간 것은 맞고</b> 세는 자가
+     둘을 못 가른 것입니다. 답 줄에는 data-ans 가 달려 있어 가릅니다.    */
+  const SEL = '#cli365Top .mst-row:not([data-ans])';
+  const before = await pg.evaluate((s) => document.querySelectorAll(s).length, SEL);
   await clearOvl(pg);
   await pg.evaluate(() => { mstToggle('c1', 1); });
   await pg.waitForTimeout(200);
-  const after = await pg.evaluate(() => ({
-    rows: document.querySelectorAll('#cli365Top .mst-row').length,
+  const after = await pg.evaluate((s) => ({
+    rows: document.querySelectorAll(s).length,
+    ans: document.querySelectorAll('#cli365Top .mst-row[data-ans]').length,
     done: mstIsDone('c1', 1)
-  }));
+  }), SEL);
   is(after.done, '「보냈습니다」가 <b>기억된다</b>');
   is(after.rows < before || after.rows === 0,
-     '보낸 마디는 <b>목록에서 내려간다</b> — ' + before + '줄 → ' + after.rows + '줄');
+     '보낸 마디는 <b>할 일 목록에서 내려간다</b> — ' + before + '줄 → ' + after.rows + '줄');
+  /* ★ 내려간 것이 <b>어디로 갔는지</b>까지 봅니다 — 그냥 사라지면 보낸 뒤에
+     답을 적을 자리가 없습니다 (사장님 말씀 2026-10-02).                 */
+  is(after.ans >= 1,
+     '★ 그리고 <b>답을 적는 줄로 다시 선다</b> — 답 줄 ' + after.ans + '개 (사라지지 않습니다)');
 
   head('[7] 이 판을 그리는 동안 <b>터진 곳이 없다</b>');
   const real = errs.filter(x => !/favicon|net::ERR|Failed to load resource|ERR_FAILED/i.test(x));

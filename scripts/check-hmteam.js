@@ -50,10 +50,17 @@ const WAIT=`
   window.__painted=0;
   (function(){var real=window.hmPaint;
     window.hmPaint=function(){var r=real.apply(this,arguments);window.__painted++;return r;};})();
+  /* ⚠ 2026-09-26 · <b>팀 칸은 홈에서 「팀」(teamhub)으로 갔습니다.</b>
+     사장님 말씀 — 「👥 팀(hmTeam 270px) → 「나 › 팀」」.
+     ★ <b>지운 것이 아닙니다</b> — 같은 칸(hmTeamHtml)이 그대로 서고, 여기서
+       재는 것도 그대로입니다(리더에게만 · 서버 아껴 쓰기 · 이름 가리기).
+       <b>여는 자리만</b> 홈 → teamhub 로 옮깁니다. 이름은 그대로 __home 으로
+       둡니다 — 부르는 자리가 열네 곳이라 이름을 바꾸면 그 일이 본론을 덮습니다. */
   window.__home=function(){
     var n=window.__painted;
-    go('home');
-    return window.__wait(function(){ return (window.__painted>n)?true:null; },8000)
+    go('teamhub');
+    return window.__wait(function(){
+      return document.querySelector('#dynPane #thPane')?true:null; },8000)
       .then(function(){
         /* <b>설 자리면 설 때까지</b> 기다린다 — 칠하기가 한 번 더 남아 있을
            수 있습니다. 안 설 자리(설계사)는 이미 한 번 칠해진 뒤라 「없다」

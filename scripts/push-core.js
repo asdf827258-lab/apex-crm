@@ -280,9 +280,85 @@ function morning() {
   return { title: 'APEX YUN PRO', body: '오늘 챙길 분을 확인할 시간입니다.', go: '/app/index.html' };
 }
 
+/* ══ 그 시각에 <b>무슨 말을 보낼까</b> ═══════════════════════════════
+   2026-09-25 · 사장님 말씀 「알람 하루 네 번」.
+   ★ 시각과 문구는 <b>app/alm-slots.js 한 곳</b>에 있습니다 — 앱도 같은
+     파일을 읽습니다 (5번). 여기 또 적으면 화면과 알람이 다른 말을 합니다.
+   ★ <b>여기서도 아무것도 안 셉니다</b> (1번·5번). 「확인할 시간입니다」
+     까지고, 건수는 앱을 열면 그 자리에서 셉니다.
+   ★ 표에 없는 시각이면 <b>여태 쓰던 아침 말</b>을 그대로 씁니다 — 사장님이
+     시각을 옮기셨을 때 <b>말없이 안 보내는 것</b>보다 낫습니다.        */
+function slotMsg(h) {
+  let S = null;
+  try { S = require('../app/alm-slots.js'); } catch (e) { S = null; }
+  const s = S && S.almSlotAt ? S.almSlotAt(h) : null;
+  if (!s) return morning();
+  return { title: 'APEX YUN PRO', body: s.body, go: '/app/index.html' };
+}
+
+/* ══ 17시 <b>예상업적</b>만은 서버도 셉니다 ═══════════════════════════
+   ★ 위의 「여기서도 아무것도 안 셉니다」 는 <b>그대로</b>입니다. 그 까닭은
+     「세려면 앱의 기준을 <b>서버에도 또 적어야</b> 한다」 였습니다. 업적은
+     <b>그 까닭이 안 맞습니다</b> — 세는 규칙이 <b>apex-pex.js 한 파일</b>에
+     있고 앱도 같은 파일을 부릅니다. 적는 글도 <b>alm-slots.js 한 함수</b>
+     입니다. 그래서 베껴 적는 자리가 <b>한 곳도 없습니다</b> (5번).
+   ★ <b>그 분 것만</b> 셉니다 (3번) — push_subs.owner_id 는 auth.uid() 가
+     기본값인 NOT NULL uuid 이고, dbs.assigned_to 도 <b>같은 uuid</b> 입니다
+     (칸 목록으로 확인했습니다). 남의 금액이 섞이면 안 됩니다.
+   ★ <b>한 사람에 한 번만</b> 묻습니다 (7번) — 폰이 둘이어도 장부는 한 번
+     읽습니다. 그리고 <b>17시 그 한 판에서만</b> 묻습니다.
+   ★ <b>못 읽으면 숫자를 한 자도 안 적습니다</b> (1번) — 표의 글을 그대로
+     보냅니다. 지어낸 숫자보다 없는 숫자가 낫습니다.
+   ★ 이름·주민번호 같은 것은 <b>한 칸도 안 받아 옵니다</b> — 세는 데 필요한
+     다섯 칸만 고릅니다 (3번).                                           */
+const PEX_COLS = 'stage,expect_premium,contract_premium,closed_reason,contracted_at';
+async function pexFor(ownerId, cache) {
+  if (!ownerId) return null;
+  if (cache && cache.has(ownerId)) return cache.get(ownerId);
+  let out = null;
+  try {
+    const PEX = require('../apex-pex.js');
+    const g = await sb('dbs?assigned_to=eq.' + encodeURIComponent(ownerId)
+      + '&select=' + PEX_COLS + '&limit=2000');
+    if (g.ok && Array.isArray(g.json)) {
+      const rows = g.json.map(x => ({
+        stage: x.stage, closed: ('' + (x.closed_reason || '')).trim(),
+        expect: x.expect_premium, contract: x.contract_premium, cdate: x.contracted_at }));
+      /* 「이번 달」 은 <b>한국 시각</b>으로 셉니다 — UTC 로 세면 매월 1일
+         아침 9시 전까지 지난달로 잡힙니다.                               */
+      const kst = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 7);
+      out = PEX.sum(rows, kst);
+    }
+  } catch (e) { out = null; }
+  if (cache) cache.set(ownerId, out);
+  return out;
+}
+/* 그 폰에 보낼 글 — 슬롯이 <b>예상업적</b>이고 셀 수 있으면 숫자를 담고,
+   아니면 slotMsg 가 주는 표의 글을 그대로 보냅니다.                      */
+async function slotMsgFor(h, row, cache) {
+  const base = slotMsg(h);
+  let S = null;
+  try { S = require('../app/alm-slots.js'); } catch (e) { S = null; }
+  const slot = S && S.almSlotAt ? S.almSlotAt(h) : null;
+  if (!slot || slot.k !== 'perf' || !S.almPerfLine) return base;
+  const o = await pexFor(row && row.owner_id, cache);
+  const line = o ? S.almPerfLine(o) : null;
+  if (!line) return base;                    /* 못 셌거나 금액이 다 0 */
+  return { title: line.title, body: line.body, go: base.go };
+}
+
+/* 이 시각에 <b>깨워야 할 폰</b>을 고르는 조건.
+   hours(새 칸)에 그 시각이 들어 있거나, 아직 준비 SQL 을 안 돌리셔서
+   hours 가 비어 있으면 <b>옛 hour 한 칸</b>으로 고릅니다 — 칸이 생기기
+   전에도 아침 알람이 그대로 옵니다 (조용히 망가지지 않습니다). */
+function pickAt(h) {
+  return 'or=(hours.cs.{' + h + '},and(hours.is.null,hour.eq.' + h + '))';
+}
+
 module.exports = {
   JSON_HEAD, TABLE, TTL, TEST_GAP_MS, MAX_PER_RUN, SB_KEY, SB_ANON,
   whoIs, isKeyFault, keyDiag, keyShape,
   keys, keysForget,
-  b64u, unb64u, seal, vapidAuth, sendOne, sb, drop, touch, ready, kstHour, morning, onePerDevice
+  b64u, unb64u, seal, vapidAuth, sendOne, sb, drop, touch, ready, kstHour, morning, onePerDevice,
+  slotMsg, pickAt, pexFor, slotMsgFor, PEX_COLS
 };

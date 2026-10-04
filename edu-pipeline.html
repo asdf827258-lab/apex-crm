@@ -1,13 +1,25 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html data-theme="light" lang="ko">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- 🌗 <b>「나는 밝은 화면이다」</b> — 이 말이 없으면 폰이 다크 모드일 때
+     브라우저가 <b>제멋대로 뒤집어</b> 칠합니다. 2026-09-30 사장님이 폰에서
+     「블랙인데」 하신 자리입니다. 색은 한 톨도 안 바뀝니다.
+     ★ 2026-10-03 사장님 말씀 <b>「화면은 무조건 흰색 고정으로 가자」</b> —
+     이제 <b>면제가 없습니다.</b> 다크 한 벌을 갖춘 문서도 CSS 를 지우지 않고
+     <b>가림막</b>(:not([data-theme=light]))으로 껐을 뿐입니다. 재는 자는
+     scripts/check-lightmode.js -->
+<meta name="color-scheme" content="light"/>
 <title>APEX DB · 업적관리</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- 업적을 세는 자 — <b>이 파일 하나</b>입니다. 본체(app/index.html)도 같은
+     파일을 부릅니다. 규칙을 베껴 가면 두 화면이 다른 금액을 말합니다 (5번).
+     사장님 말씀 2026-10-02 「예상업적을 셀 수 있도록」 에 이 자리를 옮겼습니다. -->
+<script src="apex-pex.js"></script>
 <style>
-:root{
+:root{ color-scheme:light;  /* 🌗 흰색 고정 (사장님 말씀 2026-10-03) */
   --blue:#3182F6; --blue-d:#1B64DA; --blue-l:#E8F3FF;
   --tx:#191F28; --tx2:#4E5968; --tx3:#8B95A1; --tx4:#B0B8C1;
   --bg:#F9FAFB; --grey:#F2F4F6; --grey2:#E5E8EB;
@@ -366,8 +378,12 @@ function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('o
 /* ── 판정 ── */
 const isAdmin = () => ADMINS.indexOf(ME.role) >= 0;
 const isLead = () => ME.role === 'leader';
-const isDone = r => !r.closed && (r.stage === '계약완료' || r.stage === '증권전달');
-const isLive = r => !r.closed && !isDone(r);
+/* ⚠ 2026-10-02 · <b>판정과 더하기를 apex-pex.js 로 옮겼습니다.</b> 본체 홈이
+   같은 수를 적게 되면서, 규칙이 두 파일에 있으면 한쪽만 고쳐져 <b>홈과 이
+   화면이 다른 금액</b>을 말합니다 (5번). 여기는 이제 <b>부르기만</b> 합니다 —
+   글자는 그대로이고 자리만 옮겼습니다.                                  */
+const isDone = r => APEX_PEX.isDone(r);
+const isLive = r => APEX_PEX.isLive(r);
 /* AP·PC 는 「지금 만나고 있는 자리」다. 팀장이 카톡으로 받는 표는
    이것만 본다 (사장님 말씀 2026-09-22 · 「카톡보내기에서 TEAM 진행상황
    AP-PC 단계만 보이게 해」). 판정을 두 곳에 적으면 한쪽만 고쳐져 어깋나므로
@@ -593,9 +609,15 @@ function renderKpi() {
   const fam = L.filter(r => r.family && r.family !== '미요청').length;
   const intro = L.reduce((a, r) => a + (+r.introN || 0), 0);
   const appc = L.filter(r => !r.closed && (r.stage === 'AP' || r.stage === 'PC')).length;
-  const cSum = done.reduce((a, r) => a + (+r.contract || +r.expect || 0), 0);
+  /* ⚠ 2026-10-02 · 더하는 자도 <b>apex-pex.js 한 곳</b>입니다 — 계약업적이
+     비면 예상업적을 쓰는 그 규칙까지 그 파일에 있습니다 (5번). 본체 홈이
+     이 두 수를 그대로 비춥니다. ⚠ 이 파일 안에 <b>손으로 적은 더하기가
+     아직 여러 곳</b> 남아 있습니다 — check-pex 가 그 수를 세고, <b>늘면
+     빨간불</b>입니다. 한 번에 다 고치지 않은 까닭은 이 화면을 돌려 볼
+     길이 없어, 머리 두 수부터 옮기고 나머지는 눈금으로 둔 것입니다. */
+  const cSum = APEX_PEX.doneWon(done);
   $('#kpis').innerHTML = `
-    <div class="kpi pri"><div class="l">진행중 예상업적</div><div class="v">${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}<small>원</small></div></div>
+    <div class="kpi pri"><div class="l">진행중 예상업적</div><div class="v">${won(APEX_PEX.liveWon(live))}<small>원</small></div></div>
     <div class="kpi"><div class="l">AP · PC</div><div class="v">${appc}<small>건</small></div></div>
     <div class="kpi"><div class="l">진행중</div><div class="v">${live.length}<small>건</small></div></div>
     <div class="kpi ok"><div class="l">계약업적</div><div class="v">${won(cSum)}<small>원 · ${done.length}건</small></div></div>
