@@ -59,7 +59,14 @@ const CARD = () => {
   const note = [].slice.call(e.querySelectorAll('.t-note')).map(x => x.innerText.replace(/\s+/g,' ').trim());
   return { t: e.innerText.replace(/\s+/g,' ').trim(), 쪽지: note,
            칩: [].slice.call(e.querySelectorAll('.t-chips .t-chip'))
-                 .map(x => ({ t:x.textContent.trim(), go:x.getAttribute('onclick')||'' })) };
+                 .map(x => ({ t:x.textContent.trim(), go:x.getAttribute('onclick')||'' })),
+           /* ⚠ 2026-10-05 · 「앱이 아는 것」 은 더는 칩이 아니라 <b>줄</b>입니다.
+              사장님이 「어떤 상황에 쓸지 설명해주고 구분해주면」 하셔서, 이름
+              한 줄로는 설명이 안 들어가 ui.css 의 .t-row 로 바꿨습니다.      */
+           줄: [].slice.call(e.querySelectorAll('button.t-row'))
+                 .map(x => ({ 이름:(x.querySelector('.nm')||{}).textContent||'',
+                              쓸때:(x.querySelector('.mt')||{}).textContent||'',
+                              go:x.getAttribute('onclick')||'' })) };
 };
 
 (async () => {
@@ -155,8 +162,20 @@ const CARD = () => {
      들입니다(check-hmexact). 카드 <b>글 전체</b>에서 찾습니다. */
   const 아는 = /앱이 이미 아는 것/.test(B.t) ? '있음' : '';
   is(!!아는, '  <b>앱이 이미 아는 것</b> 줄이 선다');
+  /* ══ 2026-10-05 · <b>사장님이 다시 구분하셨습니다</b> ═══════════════
+     「구분 잘 지었는데 <b>다시 재구분</b> 지어야할거 같아 … 어떤 상황에
+     쓸지 <b>설명해주고 구분해주면</b> 좋을거 같아」. AP 는 셋에서 일곱이
+     됐고, 모양도 {t,tab} 에서 <b>{tab,g,w}</b> 로 바뀌었습니다 —
+     <b>이름은 표에 안 적고 메뉴에서 꺼냅니다</b> (5번).
+     ★ 그래서 수를 손으로 적지 않고 <b>표를 따라갑니다</b> — 사장님이
+       더 부르셔도 이 자를 다시 고칠 일이 없습니다.                   */
   const K = await p.evaluate(() => (APEX_STAGE.map.AP || {}).know || []);
-  is(K.length === 3, '  표에 아는 것이 <b>셋</b>이다 — ' + K.map(x => x.t).join(' · '));
+  is(K.length >= 3, '  표에 아는 것이 <b>' + K.length + '가지</b>다 — ' + K.map(x => x.tab).join(' · '));
+  is(K.every(x => x.tab && x.g && x.w),
+     '  ★ 칩마다 <b>구분(g)과 쓸 때(w)</b>가 있다 — 빠진 것 '
+       + K.filter(x => !(x.tab && x.g && x.w)).length + '개 (사장님 말씀 「각 구분별모두」)');
+  is(K.every(x => !x.t),
+     '  ★ <b>이름을 표에 또 안 적었다</b> (5번) — 메뉴(navItemOf)가 들고 있는 것을 꺼내 씁니다');
   /* ★ <b>정말 열리는 화면인가.</b> 「갖고 있습니다」 는 결론이라, 눌러서
      안 열리면 그 자리에서 무너집니다 — 메뉴에 있는지 봅니다 (1번). */
   const 없는화면 = await p.evaluate(() =>
@@ -168,13 +187,23 @@ const CARD = () => {
      답 칩(내일 전화 · 이번 주 안에 만남 …)도 t-chip 이라, 카드 전체에서
      긁으면 그것들이 「go 로 안 간다」 며 빨간불이 켜집니다 — 그 칩들은
      답하는 것이지 화면으로 가는 것이 아닙니다 (8번).                  */
-  const 아는칩 = B.칩.filter(c => /^go\('[a-z_]+'\)$/.test(c.go.trim()));
-  is(아는칩.length === K.length && 아는칩.length > 0,
-     '  <b>아는 것 칩</b>이 표만큼 선다 — ' + 아는칩.length + '/' + K.length +
-     ' (' + 아는칩.map(c => c.t).join(' · ') + ')');
+  const 아는줄 = B.줄.filter(c => /^go\('[a-z_]+'\)$/.test(c.go.trim()));
+  is(아는줄.length === K.length && 아는줄.length > 0,
+     '  <b>아는 것 줄</b>이 표만큼 선다 — ' + 아는줄.length + '/' + K.length +
+     ' (' + 아는줄.map(c => c.이름).join(' · ') + ')');
+  is(아는줄.every(c => c.쓸때 && c.쓸때.length > 4),
+     '  ★ 줄마다 <b>「쓸 때」 한 줄</b>이 화면에 보인다 — 빈 줄 '
+       + 아는줄.filter(c => !c.쓸때).length + '개');
+  /* ★ <b>이름이 메뉴와 글자까지 같은가.</b> 표에 또 적으면 메뉴에서 이름을
+     고쳤을 때 여기만 옛 이름으로 남습니다 — 실제로 treatpay 가 표에서는
+     「급여·비급여 화법」, 메뉴에서는 「치료비 지급지도」 였습니다 (5번). */
+  const 이름같나 = await p.evaluate(() => (APEX_STAGE.map.AP.know || [])
+    .map(x => { const it = navItemOf(x.tab); return it ? it.title : ''; }));
+  is(아는줄.length === 이름같나.length && 아는줄.every((c, i) => c.이름 === 이름같나[i]),
+     '  ★ 줄 이름이 <b>메뉴와 글자까지 같다</b> — ' + 이름같나.join(' · '));
   /* 진짜 열리나 — 하나를 눌러 봅니다 */
   const 갔나 = await p.evaluate(async () => {
-    const c = document.querySelector('#dynPane .hm-now .t-chips .t-chip');
+    const c = document.querySelector('#dynPane .hm-now button.t-row');
     if (!c) return '';
     c.click(); await new Promise(r => setTimeout(r, 600));
     return (typeof lastTab !== 'undefined') ? lastTab : '';
@@ -182,7 +211,10 @@ const CARD = () => {
   is(!!갔나 && 갔나 !== 'home', '  ★ 눌렀더니 <b>그 화면으로 갔다</b> — ' + (갔나 || '(안 감)'));
 
   console.log('\n[5] ★ <b>새 CSS·새 class 를 안 만들었다</b> (사장님 계약)');
-  const i0 = SRC.indexOf('function hmJudgeHtml'), i1 = SRC.indexOf('function hmNowHtml(){');
+  /* ⚠ 2026-10-05 · 그리는 토막이 <b>stKnowHtml</b> 로 옮겨졌습니다 —
+     홈과 DB 통합 CRM <b>두 곳</b>이 각자 그리던 것을 한 곳으로 모았습니다
+     (5번). 그래서 보는 범위를 거기서부터 잡습니다.                    */
+  const i0 = SRC.indexOf('function stKnowHtml'), i1 = SRC.indexOf('function hmNowHtml(){');
   const BLK = (i0 >= 0 && i1 > i0) ? SRC.slice(i0, i1) : '';
   /* 주석은 코드가 아닙니다 — 「t-note.g 에 hex(#065F46)가 박혀 있어 안
      씁니다」 라고 <b>적어 둔 것</b>까지 세면, 왜 안 쓰는지 설명한 것이

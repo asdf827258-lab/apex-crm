@@ -13639,6 +13639,11 @@ var TABS=[
    {id:'fp_deck',icon:'📊',title:'재무&보장 상담자료',cnt:'',ak:'고객'},
    {id:'fp_talk',icon:'🗣️',title:'재무설계 실전화법서',cnt:'',ak:'고객'},
    {id:'dz_guide',tk:'고객',icon:'🩺',title:'질병 보험가이드',cnt:'',ak:'고객 병명 질병 증상 코드'},
+   /* ☎️ <b>TA 스크립트</b> — 2026-10-05 사장님 말씀 「TA - 고객에게 전화하는것 …
+      TA스크립트 … 까지 추가」. 글은 <b>ta-script.html 한 파일</b>에 이미 쌓여
+      있고 DB 통합 CRM 이 그것을 띄워 씁니다 — 본체도 <b>같은 파일</b>을 띄웁니다.
+      옮겨 적으면 두 화면이 다른 말을 합니다 (5번). */
+   {id:'ta_script',tk:'고객',icon:'☎️',title:'TA 스크립트',cnt:'',ak:'고객 전화 TA 멘트 거절처리 스크립트 통화'},
    {id:'mikki_talk',tk:'고객',icon:'🎣',title:'미끼상품&접촉전략',cnt:'27',ak:'고객 화법 물꼬 접촉 첫통화'},
    {id:'finance',tk:'재무설계',icon:'📊',title:'재무설계 계산기',cnt:'',ak:'재무설계 연금 노후 은퇴 저축 목돈 현금흐름 상속'},
    {id:'calc',icon:'🧮',title:'실무 계산기',cnt:'7',ak:'재무설계'}
@@ -13873,6 +13878,7 @@ var NAV_WHEN={
  onecmp:'meet', ai_prop:'meet', katalk:'meet', interpret:'meet', treatpay:'meet',
  wallets:'meet', cs_assist:'meet', cs_needs:'meet', ins_asst:'meet', cs_gso:'meet',
  sangdam:'meet', utphoto:'meet', fp_deck:'meet', fp_talk:'meet', mikki_talk:'meet',
+ ta_script:'meet',
  finance:'meet', calc:'meet', brain:'meet',
  /* 📮 계약하고 나서 */
  pdel:'after', contracts:'after', endorse:'after', claims:'after',
@@ -18082,9 +18088,9 @@ function osFullMode(on){
      ⚠ 다섯을 적어 둔 채로 자를 무르게 하면 「입었다」 가 거짓이 됩니다.
        적은 것을 <b>도로 뺐습니다</b> — 자를 고치지 않았습니다.
 
-   ★★ <b>여기 못 넣는 화면이 열하나 있습니다 — 넣어도 아무 일이 안 납니다.</b>
+   ★★ <b>여기 못 넣는 화면이 열둘 있습니다 — 넣어도 아무 일이 안 납니다.</b>
      finance · crm · apexmap · frmake · onecmp · mikki · car_fault ·
-     mikki_talk · sangdam · pdel · bohum.
+     mikki_talk · sangdam · pdel · bohum · <b>ta_script</b>(2026-10-05).
      이 열하나는 go() 에서 <b>제 전용 화면으로 빠져나가고</b>, 그때
      <b>body.○○-mode .app{display:none}</b> 이 걸립니다. #dynPane 은 .app
      <b>안에</b> 있으므로 옷이 <b>안 보이는 것에</b> 붙습니다. 게다가 그중
@@ -18337,6 +18343,7 @@ function go(tab){
   else if(tab==='clients'){dyn.innerHTML=renderClientsPage();osClientsAfterRender();}
   else if(tab==='report'){dyn.innerHTML=renderReportPage();if(typeof osRepAfterRender==='function')osRepAfterRender();}
   else if(tab==='academy_notion'){dyn.innerHTML=renderNotionPage();if(typeof osNotionAfterRender==='function')osNotionAfterRender();}
+  else if(tab==='ta_script')dyn.innerHTML=renderTaScriptPage();
   else if(tab==='attend'){dyn.innerHTML=renderAttend();if(typeof osAttendLoad==='function')osAttendLoad();}
   else if(tab==='assistant'){dyn.innerHTML=renderAssistant();if(typeof osAssistantAfterRender==='function')osAssistantAfterRender();}
   else if(tab==='growth'){dyn.innerHTML=renderTeamDash();if(typeof osTeamDashAfterRender==='function')osTeamDashAfterRender();}
@@ -18740,8 +18747,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-10-05 01:20';
-var APP_BUILD_NOTE="↩️ <b>「지금 할 것」 을 다시 맨 위로 되돌렸습니다.</b>　—　① 사장님 말씀 그대로입니다. 폰은 다시 <b>원래 차례</b> — 읽어 둔 보장분석 → <b>지금 할 것</b> → 이번 주 → 오늘 동선 → 오늘 기록 → 이번 달 고객 관리 → 알람.　—　② 차례를 바꾸던 줄은 <b>한 줄도 안 남았습니다.</b> 느슨하게 풀었던 자도 같이 조였습니다 — 「오늘 할 일이 <b>두 화면 안</b>」 으로 돌아왔고, 지금 <b>1,205px</b> 입니다.　—　③ ★★ 그때 <b>제가 수를 틀리게 알려 드렸습니다.</b> 「오른쪽 넷이 폰에서 y3,745」 라고 했는데, 제 잣대가 <b>「이분 자세히」 를 펴 놓고</b> 잰 수였습니다. 접힌 기본에서는 <b>y2,659</b> 입니다 — <b>1,086px 부풀려</b> 드렸습니다. 자리를 고르시라고 드린 수가 틀린 수였습니다.　—　④ 그래서 자에 그것도 넣었습니다 — <b>「이분 자세히가 접힌 기본인가」</b> 를 먼저 보고, 펴진 채로 재면 그 자리에서 울립니다. 다시는 부푼 수로 말씀드리지 않습니다.　—　⑤ 되돌리되 <b>지키는 자는 남겼습니다</b> — 오른쪽 넷이 <b>y3,000 아래로 더 멀어지면</b> 빨간불, 「지금 할 것」 위에 <b>한 칸만 끼어들어도</b> 빨간불.　—　⑥ ⚠ 폰에서 오른쪽 넷은 여전히 <b>y2,659</b> 입니다. <b>「이번 주」 한 칸만</b> 위로 올리는 길도 있습니다 — 133px 이라 「지금 할 것」 은 두 화면 안에 그대로 남습니다. 말씀만 주십시오.";
+var APP_BUILD='2026-10-05 02:40';
+var APP_BUILD_NOTE="🧭 <b>「고객의 현재 상황은 무엇인가요?」 를 다시 구분했습니다 — 무엇을 <u>언제</u> 쓰는지까지.</b>　—　① 사장님 말씀대로 단계마다 가리키는 화면을 다시 묶고, <b>칩 44가지</b> 하나하나에 <b>구분</b>과 <b>「쓸 때」 한 줄</b>을 달았습니다.　—　② <b>TA 는 「고객에게 전화하는것」</b> 으로 다시 정해, 전화하면서 쓰는 것만 세웠습니다 — 걸면서 무엇을 말하나(3) · 물으시면 바로 답한다(5) · 만나기로 하면(2).　—　③ <b>AP 7</b>(펴 놓을 것 · 물으시면 답한다 · 가입이 되는 분인가) · <b>PC 4</b> · <b>CS 9</b>(쓰기 전에 · 쓰면서 찾는 것 · 받으신 뒤를 미리 알려 드린다 · 돈 이야기).　—　④ ☎️ <b>TA 스크립트를 메뉴에 세웠습니다.</b> 글은 DB 통합 CRM 이 보는 <b>같은 파일</b>을 그대로 띄웁니다 — 옮겨 적으면 두 화면이 다른 말을 합니다.　—　⑤ <b>비포&애프터는 가리키는 자리에서 뺐습니다</b>(화면은 그대로 둡니다).　—　⑥ ★ 고치다 보니 <b>같은 칸을 두 곳이 각자 그리고</b> 있었습니다 — 홈과 DB 통합 CRM. <b>한 함수로 모았습니다.</b>　—　⑦ ★ 그리고 <b>이름을 표에 또 적고 있었습니다.</b> 그 탓에 메뉴에서는 「치료비 지급지도」 인데 표에서는 「급여·비급여 화법」 이었습니다. 이제 이름은 <b>메뉴 한 곳</b>에서만 옵니다 — 사장님이 부르신 이름 그대로입니다.　—　⑧ <b>새 CSS 0줄 · 새 class 0개 · hex 0개</b>, 누르는 줄은 전부 44px 이상입니다. 되돌림 다섯 다 울립니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -26362,6 +26369,40 @@ function hmWorryHtml(x){
   if(!v)return '';
   return '<div class="t-note g">첫 문장에 붙일 것 — <b>'+osEsc(v)+'</b></div>';
 }
+/* ══ 🧭 <b>앱이 이미 아는 것</b> — 그리는 자리는 <b>여기 하나</b>다 (5번) ══
+   ⚠ 2026-10-05 · 여태 <b>두 곳</b>이 같은 칩을 각자 그리고 있었습니다 —
+     홈의 hmJudgeHtml 과 DB 통합 CRM 쪽 stageCard. 글자까지 같은 토막이
+     둘이라, 한쪽만 고치면 같은 고객에게 <b>다른 것</b>을 보여 줍니다.
+     사장님이 「구분해주고 쓸 때를 적어 달라」 하셔서 손댈 일이 생긴 김에
+     <b>한 곳으로 모읍니다.</b> 함수를 지운 것이 아니라 부르는 자리를
+     모은 것입니다.
+   ★ <b>이름과 아이콘은 메뉴에서</b> 꺼냅니다 (navItemOf) — 표에 또 적으면
+     메뉴에서 이름을 고칠 때 표만 옛 이름으로 남습니다 (5번).
+   ★ <b>없는 화면은 안 세웁니다</b> (1번) — 눌러서 안 열리면 고객 앞에서
+     드러납니다.
+   ★ <b>새 CSS·새 class 를 안 만들었습니다</b> — ui.css 의 t-sub · t-row ·
+     av · m · nm · mt 그대로입니다. t-row 는 이미 단추로 쓰고 있고
+     min-height 44px 입니다 (사장님 계약).                             */
+function stKnowHtml(know){
+  if(!know||!know.length)return '';
+  var i,k,it,on=[],h='',g='';
+  for(i=0;i<know.length;i++){
+    k=know[i];
+    it=(typeof navItemOf==='function')?navItemOf(k.tab):null;
+    if(!it)continue;                       /* 메뉴에 없으면 안 세웁니다 */
+    on.push({tab:k.tab,g:k.g||'',w:k.w||'',t:it.title||k.tab,ic:it.icon||'·'});
+  }
+  if(!on.length)return '';
+  h='<div class="t-sub">앱이 이미 아는 것 — <b>'+on.length+'가지</b>. 눌러서 바로 보십니다.</div>';
+  for(i=0;i<on.length;i++){
+    if(on[i].g&&on[i].g!==g){ g=on[i].g; h+='<div class="t-sub">'+osEsc(g)+'</div>'; }
+    h+='<button type="button" class="t-row" onclick="go(\''+osEsc(on[i].tab)+'\')">'+
+         '<span class="av">'+osEsc(on[i].ic)+'</span>'+
+         '<span class="m"><span class="nm">'+osEsc(on[i].t)+'</span>'+
+         (on[i].w?('<span class="mt">'+osEsc(on[i].w)+'</span>'):'')+'</span></button>';
+  }
+  return h;
+}
 function hmJudgeHtml(m,x){
   if(!m)return '';
   var h='',i,k,go,n=['①','②','③','④','⑤'];
@@ -26373,26 +26414,8 @@ function hmJudgeHtml(m,x){
     if(go)h+=' · 다음 <b>'+osEsc(go)+'</b>';
     h+='</div>';
   }
-  /* 앱이 아는 것 — <b>눌러서 가는</b> 칩. 메뉴에 없으면 안 세웁니다 */
-  if(m.know&&m.know.length){
-    var on=[];
-    for(i=0;i<m.know.length;i++){
-      k=m.know[i];
-      if(typeof navItemOf==='function'&&!navItemOf(k.tab))continue;
-      on.push(k);
-    }
-    if(on.length){
-      /* ★ t-note.g 는 ui.css 에 hex(#065F46)가 박혀 있어 <b>화면에 새 색</b>을
-         들입니다(check-hmexact 가 잡습니다). 이 줄은 상자가 아니라
-         <b>설명</b>이므로 t-sub 로 적습니다 — 새 색이 안 생깁니다. */
-      h+='<div class="t-sub">앱이 이미 아는 것 — 눌러서 바로 보십니다.</div>'+
-         '<div class="t-chips">';
-      for(i=0;i<on.length;i++)
-        h+='<button type="button" class="t-chip" onclick="go(\''+osEsc(on[i].tab)+'\')">'+
-           osEsc(on[i].t)+'</button>';
-      h+='</div>';
-    }
-  }
+  /* 앱이 아는 것 — 그리는 자리는 <b>stKnowHtml 하나</b>입니다 (5번) */
+  h+=stKnowHtml(m.know);
   return h;
 }
 function hmNowHtml(){
@@ -60743,6 +60766,24 @@ function renderNotionPage(){
   return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">APEX ACADEMY</div>'+
     '<div class="page-title">APEX ACADEMY | 노션</div><div class="page-desc">대표가 공개한 분만 볼 수 있는 비공개 교육 자료입니다.</div></div>'+admin+main+'</div>';
 }
+/* ══ ☎️ <b>TA 스크립트</b> — 2026-10-05 ════════════════════════════
+   사장님 말씀 — 「TA - <b>고객에게 전화하는것</b>」. 전화하는 자리에서
+   무엇을 말할지가 ta-script.html 에 쌓여 있는데, 본체 메뉴에는 그 화면이
+   <b>없어서</b> DB 통합 CRM 에 들어가야만 볼 수 있었습니다.
+   ★ <b>글을 옮겨 적지 않습니다</b> (5번) — 같은 파일을 그대로 띄웁니다.
+     옮기면 두 화면이 같은 고객에게 <b>다른 말</b>을 합니다.
+   ★ 띄우는 본은 <b>노션 칸과 같은 것</b>을 씁니다 — 새 옷을 안 만듭니다. */
+function renderTaScriptPage(){
+  return '<div class="tab-pane on"><div class="page-hd">'+
+    '<div class="page-tag">전화하는 자리</div>'+
+    '<div class="page-title">☎️ TA 스크립트</div>'+
+    '<div class="page-desc">전화로 무엇을 말할지 — 첫 마디부터 <b>거절처리</b>까지. '+
+      'DB 통합 CRM 이 보는 것과 <b>같은 글</b>입니다.</div></div>'+
+    '<div class="card"><div class="card-body" style="padding:0">'+
+      '<iframe src="/ta-script.html" title="TA 스크립트" loading="lazy" '+
+        'style="width:100%;height:78vh;border:0;display:block;background:#fff"></iframe>'+
+    '</div></div></div>';
+}
 function osNotionEmbed(){
   var box=$('notionEmbed');if(!box)return;
   if(box.style.display!=='none'){box.style.display='none';box.innerHTML='';return;}
@@ -63956,19 +63997,9 @@ function cmStageHtml(id){
     for(i=0;i<g.q.length&&i<5;i++)h+=' <b>'+n[i]+'</b> '+osEsc(g.q[i]);
     h+='</div>';
   }
-  if(g.know&&g.know.length){
-    for(i=0;i<g.know.length;i++){
-      k=g.know[i];
-      if(typeof navItemOf==='function'&&!navItemOf(k.tab))continue;
-      on.push(k);
-    }
-    if(on.length){
-      h+='<div class="t-sub">앱이 이미 아는 것 — 눌러서 바로 보십니다.</div><div class="t-chips">';
-      for(i=0;i<on.length;i++)
-        h+='<button type="button" class="t-chip" onclick="go(\''+osEsc(on[i].tab)+'\')">'+osEsc(on[i].t)+'</button>';
-      h+='</div>';
-    }
-  }
+  /* 홈과 <b>같은 함수</b>로 그립니다 — 여기서 또 그리면 두 화면이 다른
+     것을 보여 줍니다 (5번). */
+  h+=stKnowHtml(g.know);
   /* 이 단계에서 쓰는 도구 — 표가 아는 것만, 그리고 정말 열리는 것만 */
   if(APEX_STAGE.tools){
     tl=APEX_STAGE.tools(st)||[];
