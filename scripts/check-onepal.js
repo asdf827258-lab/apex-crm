@@ -325,6 +325,77 @@ const SCAN = ([tab, page]) => {
   is(!/\.t-skin\s+\.almk-diag/.test(SRC) && !/\.t-skin\s+\.alm-why/.test(SRC),
      '  ★ 같은 글자가 <b>화면마다 다른 색이 되지 않는다</b> — 옷 입은 화면만 덮는 자리가 없다 (5번)');
 
+  /* ══ [5-2] ★★ <b>뜻은 색이 아니라 글자가 나른다</b> ══════════════════
+     2026-10-04 · 사장님 말씀 「네가 판단해서 여섯 가지 다 해줘」 — 그 가운데
+     하나가 <b>「기둥의 큰 카드 셋이 서로 다른 색인데 목각은 연파랑 하나다.
+     뜻이 있는 색이라 사장님께 여쭙고 정한다」</b> 였습니다.
+     ★ <b>재어 보니 그 셋은 이미 무채색이었습니다</b> — 홈에 색이 남은 곳은
+       ① 파란 히어로(사장님이 「그대로」 하신 것) ② 단추 파랑 ③ 상태 칩
+       하나뿐이고 나머지는 239~249 무채색입니다. 여쭐 것이 없어졌습니다.
+     ★ 그래서 <b>제가 정한 것은 규칙</b>입니다 — <b>색만으로 뜻을 나르지
+       않습니다.</b> 색약이신 분, 흑백 인쇄, 복사기를 지나면 색은 사라지고
+       <b>뜻만 남아야</b> 합니다. 고객 앞에서 종이로 내미는 앱입니다.
+     ★ 그래서 묻는 것은 하나입니다 — <b>바탕색이 흰색이 아닌 칸은 글자도
+       함께 들고 있나.</b> 색이 사라져도 읽을 수 있어야 합니다.             */
+  const IDXP = require('fs').readFileSync(require('path').join(ROOT, 'app/index.html'), 'utf8');
+  console.log('\n[5-2] ★★ <b>뜻은 색이 아니라 글자가 나른다</b> — 색이 사라져도 읽힌다');
+  {
+    /* ⚠ ★★ <b>처음에 이 자가 열어 둔 PC 판(1280)으로 재어 「색 있는 칸
+       0곳」 이 나왔습니다</b> — 아무것도 못 찾고 <b>거저 통과</b>하는
+       <b>안 울리는 알람</b>이었습니다 (8번). 색 칩이 사는 곳은 <b>폰 폭</b>의
+       홈입니다. 그래서 <b>390 으로 따로 엽니다.</b>                      */
+    const pg = await b.newPage({ viewport: { width: 390, height: 844 } });
+    await pg.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
+    await pg.waitForTimeout(2200);
+    await pg.evaluate(SEED);
+    await pg.evaluate(() => { try{ go('home'); }catch(e){} });
+    await pg.waitForTimeout(1600);
+    const R = await pg.evaluate(() => {
+      const 밝기 = c => { const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c || ''); return m ? Math.round(.299 * +m[1] + .587 * +m[2] + .114 * +m[3]) : null; };
+      const pane = document.getElementById('dynPane') || document.body;
+      const out = [];
+      pane.querySelectorAll('*').forEach(e => {
+        /* ⚠ ★★ <b>바닥을 40px 로 두었다가 되돌림이 안 울렸습니다.</b> 칩의
+           글자를 지우면 칸이 <b>패딩만큼</b>(14px쯤)으로 줄어 그물에서
+           빠집니다 — 그런데 <b>색만 있는 작은 점</b>이 바로 이 자가 잡아야
+           하는 것입니다. 바닥을 <b>10px</b> 로 내립니다 (8번).           */
+        if (!e.offsetParent || e.offsetWidth < 10 || e.offsetHeight < 6) return;
+        const cs = getComputedStyle(e), bg = cs.backgroundColor;
+        if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') return;
+        const b = 밝기(bg); if (b === null || b >= 250) return;        /* 흰색은 뜻이 아니다 */
+        const 제글 = [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.nodeValue).join('').replace(/\s+/g, '');
+        const 속글 = (e.textContent || '').replace(/\s+/g, '');
+        out.push({ cls: (e.className || '').toString().slice(0, 36), 밝기: b,
+                   글있다: !!(제글 || 속글), 글: 속글.slice(0, 20) });
+      });
+      return out;
+    });
+    await pg.close();
+    const 색만 = R.filter(x => !x.글있다);
+    /* ★★ <b>여기서 재는 것과 묻는 것을 갈랐습니다.</b> 그린 칸을 훑어
+       「글자가 있나」 를 묻게 두었더니, 글자를 지우는 되돌림이 <b>안 울렸습니다</b> —
+       그 칩이 이 자의 견본에서는 <b>안 서기</b> 때문입니다. 안 울리는 알람은
+       알람이 아닙니다 (8번). 그래서 —
+         ① <b>그린 것은 적어만 둡니다</b>(사람이 눈으로 봅니다).
+         ② <b>묻는 것은 표</b>입니다 — 상태를 색으로 가르는 표마다 <b>글자가
+            함께 있나</b>. 표는 견본과 무관하게 늘 있으므로 <b>되돌리면
+            반드시 울립니다.</b>                                           */
+    is(R.length > 0, '  ★ 색 있는 칸을 <b>찾았다</b> — ' + R.length + '곳 (0곳이면 자가 못 찾은 것입니다 · 8번)');
+    const BA = (() => { const i = IDXP.indexOf('var HM_BA_TAG={'); if (i < 0) return [];
+      const r = IDXP.slice(i, IDXP.indexOf('};', i));
+      return [...r.matchAll(/(\w+)\s*:\{\s*c\s*:\s*'([^']*)'\s*,\s*t\s*:\s*'([^']*)'/g)]
+        .map(m => ({ k: m[1], c: m[2], t: m[3] })); })();
+    const 글없는표 = BA.filter(x => !x.t.replace(/[^\uAC00-\uD7A3A-Za-z0-9]/g, ''));
+    is(BA.length >= 4 && 글없는표.length === 0,
+      '  ★★ 상태를 <b>색으로 가르는 표</b> ' + BA.length + '줄이 다 <b>글자를 함께</b> 들고 있다 — '
+        + BA.map(x => x.c + '=「' + x.t + '」').join(' · ')
+        + (글없는표.length ? ('\n      ✗ 색만 있고 글자가 없는 줄: ' + 글없는표.map(x => x.k).join(' · ')) : ''));
+    if (색만.length) console.log('  · ⚠ 그린 칸 가운데 글자가 안 잡힌 것: ' + 색만.map(x => x.cls || '(이름 없음)').join(' · '));
+    const 어두운 = R.filter(x => x.밝기 < 120).map(x => (x.cls || '(이름 없음)') + '(' + x.밝기 + ')');
+    console.log('  · 홈에 색이 남은 칸 ' + R.length + '곳 — 짙은 것 ' + 어두운.length + '곳: ' + (어두운.join(' · ') || '없음'));
+    console.log('  · ★ 「연노랑·연파랑·연초록 셋」 은 <b>이미 없습니다</b> — 그 자리를 다시 색으로 가르지 마십시오');
+  }
+
   console.log('\n[6] 조용히 터지지 않았나');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? (' ← ' + errs.slice(0,2).join(' | ')) : ''));
 

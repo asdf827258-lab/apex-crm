@@ -667,30 +667,84 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   const r3=JSON.parse((await loadPush(ENV).handler({httpMethod:'GET',queryStringParameters:{key:'1'}})).body);
   is(r3.key===PUB&&!r3.why, '열쇠가 있으면 <b>공개 열쇠만</b> 돌려준다');
   is(!/VAPID_PRIVATE/.test(JSON.stringify(r3)), '<b>비밀 열쇠는 안 내보낸다</b> (10번)');
-  /* 예약 실행 — 서버를 가짜로 세워 <b>무엇을 보내고 무엇을 지우는지</b> 본다 */
-  const calls=[]; let sentBody=null; const realFetch=global.fetch;
-  global.fetch=async(u,o)=>{
-    calls.push({u:String(u),m:(o&&o.method)||'GET',b:(o&&typeof o.body==='string')?o.body:''});
-    if(String(u).indexOf('/rest/v1/')>=0){
-      const rows=(String(u).indexOf('select=')>=0&&(o||{}).method===undefined)
-        ? [{endpoint:'https://push.example.com/dead',p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0,
-            owner_id:'u1',ua:'Android',created_at:'2026-09-05'},
-           {endpoint:'https://push.example.com/live',p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0,
-            owner_id:'u1',ua:'iPhone', created_at:'2026-09-10'},
-           /* <b>같은 폰의 옛 구독</b> — 홈 화면에 아이콘을 하나 더 담으면 이렇게 생긴다.
-              여기로도 보내면 사장님 폰이 아침에 두 번 울린다. */
-           {endpoint:'https://push.example.com/dup', p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0,
-            owner_id:'u1',ua:'iPhone', created_at:'2026-09-01'}] : [];
-      return {ok:true,status:200,text:async()=>JSON.stringify(rows)};
-    }
-    if(String(u).indexOf('/dead')>=0)return {ok:false,status:410,text:async()=>'gone'};
-    if(String(u).indexOf('/live')>=0&&o&&o.body)sentBody=o.body;
-    return {ok:true,status:201,text:async()=>''};
+  /* ══ 예약 실행 — 서버를 가짜로 세워 <b>무엇을 보내고 무엇을 지우는지</b> 본다.
+
+     ⚠ 2026-10-04 · <b>이 토막이 시계에 매여 있었습니다.</b> 여태 「지금 이
+       순간의 한국 시각」으로 <b>한 판만</b> 돌렸습니다. 그래서 CI 가 16시
+       59분에 돌면 초록, <b>17시 0분에 돌면 빨간불</b>이었습니다 — 고친 것이
+       하나도 없는데 말입니다(#520 에서 실제로 그렇게 났습니다). 하루 24시간
+       중 <b>한 시간에만 우는 자</b>는 나머지 23시간은 아무것도 안 재는
+       자입니다 (8번).
+     ★ 이 교훈은 <b>이 파일 위쪽(170줄)에 이미 적혀</b> 있었습니다 —
+       「시각을 오전 10시 반으로 고정하고 잰다」. 여기만 그 대접을 못
+       받았습니다. 그래서 <b>시계를 못 박고 두 판</b>을 돌립니다 —
+       <b>9시</b>(평범한 아침)와 <b>17시</b>(예상업적). CI 가 몇 시에 돌아도
+       같은 것을 잽니다.
+     ★ 장부도 <b>표마다 갈라</b> 답합니다. 여태 push_subs 든 dbs 든 같은 세
+       줄을 돌려주어 <b>구독 줄이 업적으로 읽혔습니다</b> — 자가 스스로 지어낸
+       「금액이 빈 3건」 이 거기서 나왔습니다 (1번).                        */
+  const 폰줄=[
+    {endpoint:'https://push.example.com/dead',p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0,
+     owner_id:'u1',ua:'Android',created_at:'2026-09-05'},
+    {endpoint:'https://push.example.com/live',p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0,
+     owner_id:'u1',ua:'iPhone', created_at:'2026-09-10'},
+    /* <b>같은 폰의 옛 구독</b> — 홈 화면에 아이콘을 하나 더 담으면 이렇게 생긴다.
+       여기로도 보내면 사장님 폰이 아침에 두 번 울린다. */
+    {endpoint:'https://push.example.com/dup', p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0,
+     owner_id:'u1',ua:'iPhone', created_at:'2026-09-01'}];
+  /* 업적 장부 — 금액이 <b>있는</b> 줄과 <b>안 적힌</b> 줄을 섞어 둔다.
+     진행중 예상 30만원 · 이번 달 체결 50만원 · 금액 안 적힌 1건.
+     이름은 한 칸도 안 넣는다 (3번) — 서버가 그 칸을 안 받아 오기 때문이다. */
+  const 업적줄=[
+    {stage:'PC',      expect_premium:300000,contract_premium:null,  closed_reason:'',contracted_at:null},
+    {stage:'계약완료',expect_premium:null,  contract_premium:500000,closed_reason:'',contracted_at:'2026-10-02'},
+    {stage:'AP',      expect_premium:null,  contract_premium:null,  closed_reason:'',contracted_at:null}];
+  /* 봉한 것을 <b>풀어</b> 본다 — 코드를 읽어 짐작하지 않는다 */
+  const 깐다=(body)=>{
+    if(!body)return '';
+    try{
+      const salt=body.subarray(0,16),asPub=body.subarray(21,86),ct=body.subarray(86);
+      const hm=(k,d)=>crypto.createHmac('sha256',k).update(d).digest();
+      const ikm=hm(hm(uaAuth,ua.computeSecret(asPub)),
+        Buffer.concat([Buffer.from('WebPush: info\0'),uaPub,asPub,Buffer.from([1])]));
+      const prk=hm(salt,ikm);
+      const cek=hm(prk,Buffer.concat([Buffer.from('Content-Encoding: aes128gcm\0'),Buffer.from([1])])).subarray(0,16);
+      const non=hm(prk,Buffer.concat([Buffer.from('Content-Encoding: nonce\0'),Buffer.from([1])])).subarray(0,12);
+      const dc=crypto.createDecipheriv('aes-128-gcm',cek,non);
+      dc.setAuthTag(ct.subarray(ct.length-16));
+      const pt=Buffer.concat([dc.update(ct.subarray(0,ct.length-16)),dc.final()]);
+      return pt.subarray(0,pt.length-1).toString('utf8');
+    }catch(e){ return '('+e.message+')'; }
   };
-  const sched=loadPush(ENV);
-  const kh=new Date(Date.now()+9*3600000).getUTCHours();
-  const r4=JSON.parse((await sched.cron()).body);
-  global.fetch=realFetch;
+  /* 한 판 돌린다 — 2026-10-04 한국 <b>kh시 30분</b>으로 시계를 못 박고 */
+  const 돌려본다=async(kh,업적)=>{
+    const calls=[]; let sentBody=null;
+    const realFetch=global.fetch, realNow=Date.now;
+    const 못박은때=Date.UTC(2026,9,4,kh-9,30,0);
+    Date.now=()=>못박은때;
+    global.fetch=async(u,o)=>{
+      const U=String(u), 읽기=((o||{}).method===undefined&&U.indexOf('select=')>=0);
+      calls.push({u:U,m:(o&&o.method)||'GET',b:(o&&typeof o.body==='string')?o.body:''});
+      if(U.indexOf('/rest/v1/dbs')>=0)
+        return {ok:true,status:200,text:async()=>JSON.stringify(읽기?(업적||[]):[])};
+      if(U.indexOf('/rest/v1/')>=0)
+        return {ok:true,status:200,text:async()=>JSON.stringify(읽기?폰줄:[])};
+      if(U.indexOf('/dead')>=0)return {ok:false,status:410,text:async()=>'gone'};
+      if(U.indexOf('/live')>=0&&o&&o.body)sentBody=o.body;
+      return {ok:true,status:201,text:async()=>''};
+    };
+    let r={};
+    try{ r=JSON.parse((await loadPush(ENV).cron()).body); }
+    finally{ global.fetch=realFetch; Date.now=realNow; }
+    return {r:r,calls:calls,글:깐다(sentBody)};
+  };
+  const 아침=await 돌려본다(9,업적줄), 열일곱=await 돌려본다(17,업적줄);
+  const 푼다=(s)=>{ try{ return JSON.parse(s)||{}; }catch(e){ return {}; } };
+  const 아침글=푼다(아침.글), 열일곱글=푼다(열일곱.글);
+  const kh=9, calls=아침.calls, r4=아침.r, sent=아침.글;
+  is(아침.r.kstHour===9&&열일곱.r.kstHour===17,
+     '★ 이 자는 <b>시계에 안 매였다</b> — 못 박은 '+아침.r.kstHour+'시·'+열일곱.r.kstHour
+     +'시로 돌았다 (CI 가 몇 시에 돌아도 같은 것을 잽니다 · 8번)');
   /* 장부를 고르는 그 한 번. 옛 모양(?hour=eq.)만 찾다가 네 번이 되면서
      <b>아무것도 안 잡혔고</b>, 그러면 아래 자들이 통째로 빨개집니다 —
      앱이 아니라 자가 낡은 것입니다 (8번). 두 모양을 다 받습니다. */
@@ -708,28 +762,36 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
      '살아 있는 곳엔 보내고 <b>죽은 주소(410)는 그 자리에서 지운다</b> — 보냄 '+r4.sent+' · 지움 '+r4.gone);
   is(calls.some(c=>c.m==='DELETE'&&/dead/.test(c.u)), '지우는 것을 <b>서버에도 지운다</b> — 안 지우면 매시간 없는 폰을 두드린다 (7번)');
   is(calls.some(c=>c.m==='PATCH'&&/live/.test(c.u)), '보낸 것은 <b>보냈다고 적어 둔다</b>');
-  /* <b>실제로 나간 글을 풀어</b> 본다 — 코드를 읽어 짐작하지 않는다 */
-  let sent='';
-  if(sentBody){
-    try{
-      const salt=sentBody.subarray(0,16),asPub=sentBody.subarray(21,86),ct=sentBody.subarray(86);
-      const hm=(k,d)=>crypto.createHmac('sha256',k).update(d).digest();
-      const ikm=hm(hm(uaAuth,ua.computeSecret(asPub)),
-        Buffer.concat([Buffer.from('WebPush: info\0'),uaPub,asPub,Buffer.from([1])]));
-      const prk=hm(salt,ikm);
-      const cek=hm(prk,Buffer.concat([Buffer.from('Content-Encoding: aes128gcm\0'),Buffer.from([1])])).subarray(0,16);
-      const non=hm(prk,Buffer.concat([Buffer.from('Content-Encoding: nonce\0'),Buffer.from([1])])).subarray(0,12);
-      const dc=crypto.createDecipheriv('aes-128-gcm',cek,non);
-      dc.setAuthTag(ct.subarray(ct.length-16));
-      const pt=Buffer.concat([dc.update(ct.subarray(0,ct.length-16)),dc.final()]);
-      sent=pt.subarray(0,pt.length-1).toString('utf8');
-    }catch(e){ sent='('+e.message+')'; }
-  }
   is(!!sent&&sent.charAt(0)==='{', '실제로 나간 글을 <b>풀어서</b> 본다 — '+sent.slice(0,64));
-  is(!/[가-힣]{2,4}(님|씨)|홍길|전화|010-/.test(sent),
-     '나간 글에 <b>고객 이야기가 없다</b> (3번)');
-  is(!/\d+\s*(명|건)/.test(sent),
-     '서버는 <b>건수를 말하지 않는다</b> — 「'+((JSON.parse(sent||'{}')||{}).body||'')+'」 (세려면 TDO 표를 서버에 또 적어야 하고, 그러면 화면과 알람이 다른 말을 한다 · 1·5번)');
+  is(!/[가-힣]{2,4}(님|씨)|홍길|전화|010-/.test(아침.글+열일곱.글),
+     '나간 글에 <b>고객 이야기가 없다</b> (3번) — 아침·17시 두 판 다');
+  /* ── 9시 · <b>평범한 아침</b> ─────────────────────────────────────── */
+  is(!!아침글.body&&!/\d/.test(아침글.body),
+     '9시 글에는 <b>숫자가 한 자도 없다</b> — 「'+(아침글.body||'(없음)')+'」 (건수는 앱을 열면 그 자리에서 셉니다)');
+  /* ── 17시 · <b>예상업적</b> ────────────────────────────────────────
+     ⚠ 여기 있던 자는 「서버는 <b>건수를 말하지 않는다</b>」 였습니다. 그
+       까닭은 「세려면 <b>TDO 표를 서버에도 또 적어야</b> 한다」 였고, 두
+       곳이 다른 말을 하는 것을 막으려던 것입니다.
+     ★ 2026-10-03 · 사장님 말씀 X05 로 <b>17시만</b>은 서버도 셉니다. 그런데
+       그 까닭이 <b>업적에는 안 맞습니다</b> — 세는 규칙이 apex-pex.js 한
+       파일이고 적는 글이 alm-slots.js 한 함수라 <b>베낀 자리가 없습니다.</b>
+     ★ 그러니 자를 <b>지우지 않고 고쳐 겨눕니다</b> (8번) — 「건수를 한 자도
+       말하지 마라」 가 아니라 <b>「나간 봉한 글이 그 한 함수가 낸 글과 글자
+       까지 같아야 한다」</b> 입니다. 어디선가 베껴 적으면 그 자리에서
+       빨간불입니다. (앱과 서버가 같은 글인지는 check-almpex 가 봅니다 —
+       여기서 보는 것은 <b>봉해서 실제로 나간 바이트</b>입니다.)          */
+  const PEXm=require('../apex-pex.js'), ALMm=require('../app/alm-slots.js');
+  const 한함수=ALMm.almPerfLine(PEXm.sum(업적줄.map(x=>({stage:x.stage,
+    closed:(''+(x.closed_reason||'')).trim(),expect:x.expect_premium,
+    contract:x.contract_premium,cdate:x.contracted_at})),'2026-10'));
+  is(!!한함수&&열일곱글.title===한함수.title&&열일곱글.body===한함수.body,
+     '17시에 <b>봉해서 나간 글</b>이 그 한 함수가 낸 글과 글자까지 같다 (5번) — 「'
+     +(열일곱글.title||'(없음)')+'」');
+  is(!/\d+\s*명/.test(열일곱.글),
+     '17시에도 <b>사람 수(「N명」)는 말하지 않는다</b> — 그것만은 TDO 표를 서버에 또 적어야 한다 (1번·5번)');
+  is(아침.r.withAmount===0&&열일곱.r.withAmount===열일곱.r.subs,
+     '<b>금액은 17시에만</b> 담긴다 — 아침 '+아침.r.withAmount+'대 · 17시 '
+     +열일곱.r.withAmount+'/'+열일곱.r.subs+'대');
   const NFC=NF.replace(/\/\*[\s\S]*?\*\//g,'');
   is(!/arTouch|AR_STAGES|var TDO|'미접촉'|'부재'|tdoDue/.test(NFC),
      '서버에 <b>상태 표를 베껴 두지 않았다</b> (5번)');

@@ -73,20 +73,19 @@ is(dup.length === 0,
    (dup.length ? dup.join(' / ') : htmls.length + '개 파일 모두 깨끗'));
 
 console.log('\n[2] <b>여덟 칸 이름이 WALLETS 와 글자까지 같은가</b>');
-/* WALLETS 를 <b>본체에서 그대로</b> 읽습니다 — 여기 손으로 적으면 그것이
-   바로 두 벌이고, 본체가 바뀌어도 이 점검은 옛 이름으로 초록을 켭니다. */
+/* ★★ 2026-10-04 · <b>이제 표를 바로 읽습니다.</b> 여태 본체의 WALLETS 를
+   <b>글자로</b> 읽었는데(/\{n:(\d),name:'([^']+)'/), 2026-10-04 에 8통장
+   이름을 <b>apex-w8.js 한 표</b>로 모으면서 그 줄이 name:W8N(1) 이 되어
+   <b>못 읽고 0개</b>가 되었습니다 — 자가 빨개졌지만 고칠 것은 자였습니다.
+   ★ 글자로 읽는 것보다 <b>표를 부르는 것</b>이 단단합니다 — 본체가 어떻게
+     적든 이름은 그 표에서 옵니다 (5번). 이제 꼬리표 여덟 칸은 <b>표와</b>
+     견줍니다.                                                            */
 const IDX = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
-const at = IDX.indexOf('var WALLETS=');
-const W = [];
-if (at >= 0) {
-  const re = /\{n:(\d),name:'([^']+)'/g; re.lastIndex = at;
-  let m, guard = 0;
-  while ((m = re.exec(IDX)) && guard++ < 12) {
-    W.push({ n: +m[1], name: m[2] });
-    if (W.length === 8) break;
-  }
-}
-is(W.length === 8, '  본체 WALLETS 에서 통장 <b>여덟</b>을 읽었다 — ' + W.length + '개');
+const W8 = require('../apex-w8.js');
+const W = W8.LIST.map(x => ({ n: x.no, name: x.name }));
+is(W.length === 8, '  <b>apex-w8.js 한 표</b>에서 통장 여덟을 읽었다 — ' + W.length + '개');
+is(/<script src="\.\.\/apex-w8\.js"><\/script>/.test(IDX),
+   '  ★ 본체도 <b>같은 표</b>를 읽어 둔다 — 꼬리표와 화면이 한 이름을 씁니다 (5번)');
 const wrong = [];
 W.forEach((w, i) => {
   const want = '키워드_통장' + w.n + '_' + w.name.replace(/\s*통장$/, '');
