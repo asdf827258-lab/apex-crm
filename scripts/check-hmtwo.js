@@ -334,18 +334,48 @@ const SEED = () => {
   is(!nest, '  ★ <b>속에 또 접이가 없다</b> — 두 겹은 접는 것이 아니라 묻는 것이다 (5번)');
 
   /* ── [2] 폰에서는 한 기둥 ──────────────────────────────────────── */
-  console.log('\n[2] 폰(390)에서는 <b>한 기둥</b>이다 — 목각에 폰 답이 없다 (1번)');
+  /* ══ 2026-10-04 · <b>이 토막의 전제가 바뀌었습니다</b> ═══════════════
+     여태 「오른쪽 기둥이 왼쪽 <b>뒤에</b> 쌓인다(ry > ly)」 를 쟀습니다.
+     그때는 그것이 사실이었고 그것으로 족했습니다.
+     ★ 그런데 <b>재어 보니 그 뒤가 너무 멀었습니다</b> — 폰에서 「이번 주」
+       가 <b>y3,745</b> 였습니다. 「지금 할 것」 카드 하나가 폰에서
+       <b>2,541px</b> 이라, 그 뒤는 사실상 안 보입니다. 사장님이 폰에서
+       오른쪽 넷을 못 보신 까닭이 이것입니다 (사장님 말씀 「핸드폰에도 이
+       디자인 그대로 나올수 있도록 지금 컴퓨터 홈 화면하고 맞추어줘」).
+     ★ 그래서 폰 차례를 바꿨습니다 — 오른쪽 넷이 <b>「읽어 둔 보장분석」
+       바로 밑</b>으로 옵니다(사장님이 고르신 자리). 컴퓨터에서 그 둘이
+       <b>같은 높이(y862)</b> 라, 한 기둥에서 가장 가까운 자리입니다.
+     ★ 그러니 자도 <b>새 사실</b>을 잽니다 — 「뒤에 쌓인다」 가 아니라
+       <b>「읽어 둔 보장분석 다음, 지금 할 것 앞」</b>. 지키려던 것(한 기둥 ·
+       옆으로 안 넘침)은 <b>그대로 둡니다</b> (8번).                     */
+  console.log('\n[2] 폰(390)에서는 <b>한 기둥</b>이다 — 차례는 컴퓨터를 따라간다');
   const PH = await open(390);
   const one = await PH.evaluate(() => {
     const c = document.querySelector('.hm-2col'); if (!c) return { no: 1 };
     const [L, R] = c.children;
-    const rl = L.getBoundingClientRect(), rr = R.getBoundingClientRect();
-    return { no: 0, lx: Math.round(rl.left), rx: Math.round(rr.left),
-             ly: Math.round(rl.top), ry: Math.round(rr.top),
-             over: Math.round(document.documentElement.scrollWidth - window.innerWidth) };
+    const y = (el) => el ? Math.round(el.getBoundingClientRect().top) : -1;
+    /* 상자가 없어도(display:contents) <b>손주</b>는 그대로 섭니다 */
+    const kb = y(document.getElementById('hmKbHost'));
+    const td = y(document.getElementById('hmToday'));
+    const 넷 = [].slice.call(R.children).map(e => ({
+      이름: (e.querySelector('.hm-rt-h b') || {}).textContent || e.id || e.className,
+      y: y(e) }));
+    return { no: 0, kb: kb, td: td, 넷: 넷,
+             lx: Math.round(L.getBoundingClientRect().left || 0),
+             over: Math.round(document.documentElement.scrollWidth - window.innerWidth),
+             가로: [].slice.call(R.children).map(e => Math.round(e.getBoundingClientRect().width)) };
   });
-  is(!one.no && one.lx === one.rx, '  <b>같은 줄에서 시작</b>한다 — 왼쪽 x' + one.lx + ' · 오른쪽 x' + one.rx);
-  is(!one.no && one.ry > one.ly, '  <b>위아래로</b> 쌓인다 — 왼쪽 y' + one.ly + ' · 오른쪽 y' + one.ry);
+  const 첫넷 = one.no ? -1 : Math.min.apply(null, one.넷.map(x => x.y));
+  const 끝넷 = one.no ? -1 : Math.max.apply(null, one.넷.map(x => x.y));
+  is(!one.no && one.kb > 0 && one.td > 0 && one.넷.length >= 3,
+     '  <b>세 덩이를 다 찾았다</b> — 읽어 둔 보장분석 · 오른쪽 ' + (one.no ? 0 : one.넷.length) + '칸 · 지금 할 것');
+  is(!one.no && 첫넷 > one.kb,
+     '  ★ 오른쪽 넷이 <b>「읽어 둔 보장분석」 다음</b>이다 — 보장분석 y' + one.kb + ' · 첫 칸 y' + 첫넷);
+  is(!one.no && 끝넷 < one.td,
+     '  ★ 오른쪽 넷이 <b>「지금 할 것」 앞</b>이다 — 끝 칸 y' + 끝넷 + ' · 지금 할 것 y' + one.td
+     + ' (전에는 「지금 할 것」 뒤라 y3,745 였습니다)');
+  is(!one.no && one.가로.every(w => w > 300 && w <= 390),
+     '  <b>한 기둥으로 넓게</b> 선다 — ' + (one.no ? '' : one.가로.join(' · ')) + 'px');
   is(!one.no && one.over <= 0, '  <b>옆으로 안 넘친다</b> — ' + one.over + 'px');
 
   /* ── [7] 1101px 이 한 곳에서만 ─────────────────────────────────── */
