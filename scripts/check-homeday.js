@@ -296,7 +296,13 @@ const SEED = `(function(){
   const qn = await pg.evaluate(() => {
     const Q = hmLeft();
     const band = ((document.querySelector('#hmToday .hm-q-n') || {}).textContent || '');
-    const m = band.match(/오늘\s*(\d+)\s*분\s*중\s*(\d+)\s*번째/);
+    /* ★★ 2026-10-04 · <b>이 식이 글자에 너무 바싹 붙어 있었습니다.</b>
+       H17 을 고치며 띠를 「오늘 <b>볼 분</b> 3분 중 1번째」 로 바꾸자 — 목표와
+       센 수를 가르려고 두 글자를 넣은 것인데 — 이 식이 <b>못 읽어</b> -1 이
+       되었고, 자는 「띠 -1 · hmLeft 6」 이라며 <b>고칠 것이 없는 빨간불</b>을
+       켰습니다. 화면 글은 앞으로도 다듬어질 자리이므로, 식이 <b>글자 사이에
+       무엇이 끼어도</b> 읽게 둡니다 — 「오늘 … N분 … 중 … M번째」 (8번).    */
+    const m = band.match(/오늘[^\d]{0,12}(\d+)\s*분[^\d]{0,8}중[^\d]{0,8}(\d+)\s*번째/);
     return { all: Q.all, n: Q.n, done: Q.done, band: band.replace(/\s+/g, ' ').trim(),
       bn: m ? +m[1] : -1, bi: m ? +m[2] : -1,
       ms: hmMsPeople().length,
