@@ -258,6 +258,40 @@ const SEED = `
   console.log('\n[8] 콘솔');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? (' ← ' + errs.slice(0, 3).join(' | ')) : ''));
 
+  /* ══ [9] <b>목표와 실제를 글로 가른다</b> (H17) ═════════════════════
+     2026-10-04 · 사장님 말씀 H17 「오늘 누구를 대할까 를 한 곳만 답하게」 의
+     남은 자리. 한 화면에 <b>「전화 열 통」</b>(하루 목표)과 <b>「오늘 볼 분
+     1분」</b>(hmLeft 가 센 실제)이 나란히 서서, 같은 물음에 두 답이 있는 것처럼
+     보였습니다. <b>물음이 둘이었습니다</b> — 셈이 아니라 말을 고쳤습니다.
+     ★ 위 [1]~[4] 는 이 자리를 <b>못 봅니다</b> — 「열」 은 한글 숫자라
+       (\d+)(분|명|개) 에 안 걸리고, 「통」·「건」 도 안 걸립니다. 그래서
+       <b>글로</b> 봅니다.
+     ★ <b>박아 둔 사람 수</b>도 같이 봅니다 — 체크판 d2 에 「5명 중 2명」 이
+       박혀 있었고(이 수가 5 였던 때의 글), 바로 아래 주석이 「여기 또 적으면
+       다른 숫자를 말하게 됩니다」 라고 경고해 둔 그 자리였습니다 (5번).   */
+  console.log('\n[9] <b>목표와 실제를 글로 가른다</b> (H17) — 「열 통」 은 목표, 「1분」 은 센 수');
+  const fs9 = require('fs'), path9 = require('path');
+  const IDX9 = fs9.readFileSync(path9.join(process.cwd(), 'app/index.html'), 'utf8');
+  const 토막 = (a, b) => { const i = IDX9.indexOf(a); if (i < 0) return ''; const j = IDX9.indexOf(b, i);
+    return j < 0 ? IDX9.slice(i, i + 4000) : IDX9.slice(i, j); };
+  const MS9 = 토막('var HM_MS=[', '\n];');
+  const CK9 = 토막('var CK_ITEMS={', "\n    ['d6'");
+  /* 목표 수(msKo·msN)를 쓰는 줄마다 「목표」 가 적혀 있나 */
+  const 목표줄 = (blk) => blk.split('\n').filter(l => /msKo\(\)|msN\(\)/.test(l) && !/^\s*(\/\*|\*)/.test(l));
+  const 안밝힌 = [].concat(목표줄(MS9), 목표줄(CK9)).filter(l => l.indexOf('목표') < 0);
+  is(안밝힌.length === 0,
+    '  목표 수를 적는 줄 ' + (목표줄(MS9).length + 목표줄(CK9).length) + '곳이 다 <b>「목표」 라고 적는다</b>'
+    + (안밝힌.length ? ('\n      ✗ ' + 안밝힌.map(l => l.trim().slice(0, 58)).join('\n      ✗ ')) : ''));
+  /* 실제로 센 수를 적는 카드는 <b>「오늘 볼 분」</b> 이라고 적나 */
+  is(/data-ask="오늘몇분">오늘 볼 분/.test(IDX9),
+    '  센 수를 적는 카드는 <b>「오늘 볼 분」</b> 이라고 적는다 — 목표와 한눈에 갈립니다');
+  /* 사람 수를 <b>박아 둔</b> 자리가 없나 — 한 곳(HM_MS_N)에서만 옵니다 */
+  const 박음 = [].concat(MS9.split('\n'), CK9.split('\n'))
+    .filter(l => !/^\s*(\/\*|\*)/.test(l) && /'[^']*\d+\s*(명|분|통|건)/.test(l));
+  is(박음.length === 0,
+    '  사람 수를 <b>박아 둔 자리가 없다</b> — 전부 HM_MS_N 한 곳에서 옵니다 (5번)'
+    + (박음.length ? ('\n      ✗ ' + 박음.map(l => l.trim().slice(0, 58)).join('\n      ✗ ')) : ''));
+
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '개 — 한 화면이 스스로 다른 말을 합니다')
                   : '✓ 한 물음에 한 답입니다 (어긋난 자리는 기준선 안쪽).');
