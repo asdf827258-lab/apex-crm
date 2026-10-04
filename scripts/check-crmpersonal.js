@@ -90,6 +90,39 @@ is(/function crm365띠\(/.test(CODE), '  세는 함수가 있다');
 is(/고객 365일에만 있고/.test(SRC), '  <b>몇 분인지 화면에 적는다</b>');
 is(/cliKeys/.test(CODE), '  CRM 이 <b>이미 읽어 둔 명단</b>에서 센다 — 서버를 더 안 부릅니다 (7번)');
 
+console.log('\n[7] ★★ <b>한도 수는 설정에 담긴 것만 본다</b> (2026-10-05 · 사장님 말씀)');
+/* 사장님이 「한도 수 설정에 담아서 띠가 견주게 해 줘」 라고 하셨습니다.
+   견주는 <b>모양</b>은 check-crmband 가 브라우저로 띄워 잽니다. 이 자는
+   몇 초 만에 울려야 하는 <b>세 가지</b>만 봅니다 — 수를 코드에 박았나 ·
+   묻는 곳이 하나인가 · 설정에서 읽나.                                  */
+is(/function crm한도수\(own\)/.test(CODE),
+   '  ★ 「이 사람 한도는 몇인가」 를 <b>묻는 곳이 하나</b>다 (crm한도수 · 5번)');
+/* ⚠ 처음에 「CRM_QUOTA 를 읽는 자리가 넷 이하인가」 로 셌습니다 — <b>헛것</b>
+   이었습니다 (8번). 바깥의 둘은 둘 다 정당합니다: quotaDraft 는 「지금 담긴
+   것이 무엇인지」 를 보여 주려고 읽고, crm한도따로 는 <b>다른 물음</b>(그 사람
+   만의 수인가)에 답합니다. 셈으로 잡으면 멀쩡한 코드를 빨간불로 만듭니다.
+   참뜻은 <b>「띠가 한도를 스스로 세지 않는다」</b> 입니다 — 그것을 겨눕니다. */
+const 띠 = (() => { const i = CODE.indexOf('function crm한도띠'); return i < 0 ? '' : CODE.slice(i, CODE.indexOf('crm365띠(own)', i)); })();
+is(/crm한도수\(own\)/.test(띠),
+   '  ★ 띠는 한도를 <b>crm한도수 에게 물어서</b> 쓴다');
+is(!!띠 && !/CRM_QUOTA/.test(띠),
+   '  ★★ 띠가 <b>스스로 세지 않는다</b> — 설정을 직접 들여다보면 규칙이 두 벌이 됩니다 (5번)');
+is(/db_quota/.test(CODE) && /app_config/.test(CODE),
+   '  수를 <b>설정(app_config.db_quota)에서 읽는다</b> — 새 표를 만들지 않습니다');
+is(/\.in\("key",\s*\["db_sources","db_quota"\]\)/.test(CODE),
+   '  ★ 종류 목록과 <b>한 번에</b> 받는다 — 두 번 부르지 않습니다 (7번)');
+/* ⚠ 처음에 「{기본:0,사람:{}} 이 있나」 로만 봤습니다 — <b>안 울렸습니다</b>.
+   그 꼴이 <b>두 곳</b>에 있어(var 선언 · crm한도풀기), 한 곳에 20 을 박아도
+   다른 곳이 <b>알리바이</b>가 됐습니다. 이제 <b>모든 자리</b>를 봅니다 —
+   하나라도 0 이 아니면 빨간불입니다 (8번). */
+const 처음값 = CODE.match(/CRM_QUOTA\s*=\s*\{\s*기본\s*:\s*(\d+)/g) || [];
+is(처음값.length >= 2 && 처음값.every(x => /기본\s*:\s*0$/.test(x)),
+   '  ★★ <b>안 적혔으면 0</b> — 처음값 ' + 처음값.length + '자리가 모두 0 이다 (코드에 수를 박지 않습니다 · 1번)');
+is(/catch\(e\)\{\}/.test(CODE.slice(CODE.indexOf('function crm한도풀기'), CODE.indexOf('function crm한도풀기') + 700)),
+   '  ★ <b>깨진 글에 터지지 않는다</b> — 터지면 띠가 아예 안 섭니다');
+is(/canManage\(\)/.test(CODE.slice(CODE.indexOf('function fillQuotaAdmin'), CODE.indexOf('function fillQuotaAdmin') + 400)),
+   '  ★ 적는 칸은 <b>운영자만</b> — 담당자가 제 한도를 올리면 뜻이 없습니다');
+
 console.log('\n[6] ★ <b>clients 를 옮기거나 지우지 않는다</b>');
 is(!/from\(["']clients["']\)[\s\S]{0,80}\.(delete|update)\(/.test(CODE),
    '  clients 를 <b>지우거나 고치지 않는다</b> — 열두 표가 걸려 있습니다');
