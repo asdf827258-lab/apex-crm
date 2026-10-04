@@ -544,6 +544,31 @@ const SEED = `
        단추 높이가 <b>0px</b> 이라 「44px 아래」 로 세어집니다 — 손가락이
        안 닿는 것이 아니라 <b>안 보이는</b> 것입니다. 먼저 펴고 잽니다. */
     try { hmFoldSet('etc', true); go('home'); } catch (e) {}
+    /* ★ 2026-10-04 · <b>「지금 할 것」 위에 선 덩이를 센다.</b> 아래에서
+       재는 길이(px)는 사장님이 자리를 고치시면 따라 움직입니다. 그러면
+       「새것이 하나 더 끼어들었나」 를 길이로는 못 잡습니다. 그래서
+       <b>덩이 수</b>를 따로 셉니다 — 길이가 늘어난 까닭이 <b>사장님이
+       고르신 것</b>인지 <b>슬그머니 끼어든 것</b>인지 가릅니다.        */
+    (function () {
+      const td = document.getElementById('hmToday');
+      const pane2 = document.querySelector('.tab-pane.on');
+      if (!td || !pane2) { out.wi = -1; out.wiName = []; return; }
+      const 끝 = td.getBoundingClientRect().top;
+      const 덩이 = [];
+      const 훑 = (el) => { [].slice.call(el.children).forEach(c => {
+        /* ⚠ 상자가 <b>없는</b> 칸(display:contents)은 높이가 0 이라 그냥
+           지나칩니다 — 그러면 그 안의 다섯 칸이 안 세어집니다. 폰에서
+           두 기둥이 바로 그 꼴입니다. <b>상자가 없으면 속으로</b> 들어갑니다. */
+        if (getComputedStyle(c).display === 'contents') { 훑(c); return; }
+        const r = c.getBoundingClientRect();
+        if (r.height < 8 || r.top >= 끝) return;
+        if (c.classList.contains('hm-2col')) { 훑(c); return; }
+        if (c.tagName === 'DIV' && !c.id && !c.className) { 훑(c); return; }
+        덩이.push((c.id || (c.className || '').split(' ')[0] || c.tagName));
+      }); };
+      훑(pane2);
+      out.wi = 덩이.length; out.wiName = 덩이;
+    })();
     const mv = document.querySelector('.hm-mv');
     out.mv = !!mv;
     const fl = document.querySelector('#dynPane #hmFlow');
@@ -571,9 +596,32 @@ const SEED = `
   is(!!HM.nowSay,
     '<b>「지금 할 것」 이라고 적힌 칸</b>을 찾았다 — ' + (HM.nowSay || '못 찾았습니다')
       + (HM.nowWhat ? (' · ' + HM.nowWhat) : ''));
-  is(HM.nowTop >= 0 && HM.nowTop < HM.vh * 2,
-    '<b>「오늘 할 일」 이 두 화면 안</b>에 있다 — 위에서 ' + HM.nowTop + 'px'
-      + ' / 두 화면 ' + (HM.vh * 2) + 'px (목각도 상담현황 다음입니다)');
+  /* ══ 2026-10-04 · <b>사장님이 차례를 고르셨습니다</b> ═══════════════
+     폰에서 오른쪽 넷(이번 주 · 오늘 동선 · 이번 달 고객 관리 · 알람)이
+     <b>「지금 할 것」 뒤 y3,745</b> 에 있어 사실상 안 보였습니다. 「지금
+     할 것」 하나가 폰에서 2,541px 이기 때문입니다. 어디로 올릴지 여쭈었고
+     사장님이 <b>「읽어 둔 보장분석 바로 밑」</b> 을 고르셨습니다. 그래서
+     그 넷(717px)이 「지금 할 것」 <b>앞</b>으로 왔고, 하루 일은 1,927px
+     로 내려갔습니다 — <b>두 화면(1,688px)을 239px 넘습니다.</b>
+     ★ 위를 줄이려면 사장님 카드(인사 339 · 상담현황 423 · 소식 40 ·
+       그 밖의 것 47 · 보장분석 195)를 깎아야 해서, 제가 정할 자리가
+       아닙니다. 그래서 <b>이 자가 스스로 적어 둔 빨간 선</b>을 그대로
+       씁니다 — 위 2026-09-27 쪽지에 「<b>세 화면 아래로 밀리면 여전히
+       빨간불</b>」 이라고 적혀 있습니다. 느슨하게 고친 것이 아니라
+       <b>적혀 있던 선을 그대로 적용</b>하는 것입니다.
+     ★ 대신 아래에 <b>덩이 수</b>를 셉니다 — 길이가 늘어난 까닭이 사장님이
+       고르신 것인지, 슬그머니 끼어든 것인지 가립니다 (8번).            */
+  is(HM.nowTop >= 0 && HM.nowTop < HM.vh * 3,
+    '<b>「오늘 할 일」 이 세 화면 안</b>에 있다 — 위에서 ' + HM.nowTop + 'px'
+      + ' / 세 화면 ' + (HM.vh * 3) + 'px (2026-10-04 사장님이 오른쪽 넷을 그 앞으로 고르셨습니다)');
+  /* ★ <b>슬그머니 끼어드는 것을 막는 자.</b> 지금 「지금 할 것」 위에 서는
+     것은 아홉입니다 — 인사 · 상담현황 · 소식 · 그 밖의 것 · 읽어 둔 보장분석
+     + 사장님이 고르신 오른쪽 넷(이번 주 · 오늘 동선 · 오늘 기록 · 이번 달
+     고객 관리 · 알람). <b>기준선은 지금 수 그대로 9</b> 입니다 — 하나만
+     늘어도 울립니다. 줄이시면 이 수도 같이 내려 주십시오.             */
+  is(HM.wi >= 1 && HM.wi <= 9,
+    '  ★ 「지금 할 것」 <b>위에 선 덩이가 아홉뿐</b>이다 (기준선 9) — ' + HM.wi + '개'
+      + (HM.wiName && HM.wiName.length ? (' · ' + HM.wiName.join(' · ')) : ''));
   /* 접이는 <b>하나만</b> — 사장님 말씀 「2번으로 해줘 접어」 로 「🧭 그 밖의
      것」 하나를 두었습니다. 둘이 되면 다시 「접이 더미」 가 됩니다.     */
   is(HM.n <= 1, '홈에 <b>접이가 하나뿐</b>이다 — ' + HM.n + '개 (🧭 그 밖의 것)');
