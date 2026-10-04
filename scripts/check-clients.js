@@ -80,8 +80,18 @@ window.supabase={createClient:function(){
    signOut:function(){return Promise.resolve({})}}};}};
 `;
 
-const ago = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
-const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+/* ══ 날짜를 <b>다시 만들지 않습니다</b> — 앱에 묻습니다 (5번) ═════════
+   2026-10-05 · 여기가 <b>UTC 로</b> 날짜를 만들고 있었습니다 —
+     const ago = n => { const d = new Date(); d.setUTCDate(...); ... }
+   앱의 cmToday() 도 UTC 였던 동안에는 양쪽이 같아 <b>우연히 초록</b>
+   이었습니다. 앱을 고쳐 한국 날짜로 답하게 하자(X61) 이 자가 <b>3일 전을
+   4일 전</b>으로 읽고, <b>오늘 생일</b>을 못 잡아 빨간불이 됐습니다.
+   ★ 자가 날짜를 제 손으로 만들면 <b>앱과 어긋날 수 있습니다.</b> 그래서
+     씨를 뿌릴 때 <b>앱의 cmToday() 에서 세어</b> 나갑니다 — 앱이 「오늘」
+     을 어떻게 세든 자는 따라갑니다. CI 가 몇 시에 돌아도 같습니다.      */
+/* 씨를 뿌리는 네 자리는 모두 <b>화면 안에서</b> cmToday() 로 셉니다 —
+   아래 「앱에 묻는다」 주석이 붙은 곳입니다. 여기 함수로 두면 Node 쪽에서
+   또 세게 되어 <b>두 벌</b>이 됩니다 (5번).                           */
 
 (async () => {
   const browser = await chromium.launch();
@@ -212,11 +222,13 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   ok(det.rel && det.fam, '관계 칸과 가족 칸이 있다');
   ok(det.ff === det.tot && det.ff >= 20, '팩트파인딩이 ' + det.ff + '칸 모두 그려진다');
 
-  await page.evaluate(d => {
+  /* 앱에 묻는다 — cmToday() 에서 세어 나갑니다 (위 쪽지) */
+  await page.evaluate(n => {
+    var d = new Date(cmToday() + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n);
     document.getElementById('cmNextWhat').value = '증권 받아서 보장분석 돌리기';
-    document.getElementById('cmNextDue').value = d;
+    document.getElementById('cmNextDue').value = d.toISOString().slice(0, 10);
     cmNextSave('c1');
-  }, later(3));
+  }, 3);
   await page.waitForTimeout(500);
   const nx = await page.evaluate(() => ({
     saved: window.__saved.filter(x => x.kind === 'client_meta'),
@@ -238,12 +250,14 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   ok(/다시 전화/.test((((dup[0] || {}).content || {}).next || {}).what || ''), '나중에 적은 것으로 덮인다');
 
   /* 접촉 기록 */
-  await page.evaluate(d => {
+  /* 앱에 묻는다 — 3일 전은 <b>앱이 세는 오늘</b>에서 사흘 뺀 날입니다 */
+  await page.evaluate(n => {
+    var d = new Date(cmToday() + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - n);
     document.getElementById('cmTouchHow').value = '만남';
-    document.getElementById('cmTouchAt').value = d;
+    document.getElementById('cmTouchAt').value = d.toISOString().slice(0, 10);
     document.getElementById('cmTouchNote').value = '치료비 통장 설명함';
     cmTouchAdd('c1');
-  }, ago(3));
+  }, 3);
   await page.waitForTimeout(500);
   const tc = await page.evaluate(() => ({
     /* 2026-09-27 · 판 ⑦ — .cm-ti → .t-ev · .cm-tp → 「마지막 접촉」 이 든 .t-tag */
@@ -340,11 +354,15 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   await page.evaluate(() => cmFamToggle());
 
   /* ── 오늘 챙길 고객 ── */
-  await page.evaluate(d => {
-    cmSave('c3', { next: { what: '증권 받기', due: d }, touch: [] });
-  }, ago(2));
+  /* 앱에 묻는다 */
+  await page.evaluate(n => {
+    var d = new Date(cmToday() + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - n);
+    cmSave('c3', { next: { what: '증권 받기', due: d.toISOString().slice(0, 10) }, touch: [] });
+  }, 2);
   await page.waitForTimeout(400);
-  await page.evaluate(() => { cmSave('c4', { bd: (new Date().toISOString().slice(5, 10)) }); });
+  /* 앱에 묻는다 — 「오늘 생일」 은 <b>앱이 세는 오늘</b>의 월·일입니다.
+     UTC 로 뽑으면 밤 0시~아침 9시 사이에 <b>어제 생일</b>이 됩니다. */
+  await page.evaluate(() => { cmSave('c4', { bd: cmToday().slice(5, 10) }); });
   await page.waitForTimeout(400);
   await page.evaluate(() => osRenderList());
   const todo = await page.evaluate(() => ({

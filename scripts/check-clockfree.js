@@ -29,8 +29,11 @@
      [4] ★ 17시 알람을 재는 그 토막은 <b>두 시각을 못 박고</b> 돈다 —
          아침과 17시. 한 판만 돌면 오늘 일이 그대로 되돌아옵니다.
 
-     [5] ★★ 앱에서 <b>「오늘이 며칠인가」 에 UTC 로 답하는 자리가 없다</b>
+     [5] ★★ <b>앱</b>에서 「오늘이 며칠인가」 에 UTC 로 답하는 자리가 없다
          (2026-10-05 · 실제로 샌 자리)
+     [6] ★ <b>자</b>가 날짜를 제 손으로 UTC 로 심지 않는다 — [5] 의 나머지
+         반쪽입니다. 양쪽이 다 UTC 면 <b>우연히 초록</b>이고, 한쪽만
+         고치면 그때 빨개집니다. check-clients 가 그랬습니다.
 
    ⚠★ <b>제가 여기 적어 둔 전제가 틀렸습니다.</b> 처음에는 이렇게 적었습니다 —
      「날짜(오늘)를 씨로 뿌리는 자리는 보지 않습니다. 씨도 재는 쪽도 같은
@@ -164,6 +167,46 @@ is(/function cmToday\(\)\{return ccToday\(\);\}/.test(APP),
   '  ★ cmToday 는 <b>ccToday 를 부른다</b> — +9 를 또 적으면 셋째 벌이 됩니다 (5번)');
 is(/function mstToday\(\)\{ return ccToday\(\); \}/.test(APP),
   '  ★ mstToday 도 <b>ccToday 를 부른다</b>');
+
+console.log('\n[6] ★ 자가 <b>날짜를 제 손으로 UTC 로 심지</b> 않는다 (X61 의 나머지 반쪽)');
+/* [5] 는 <b>앱</b> 쪽을 봅니다. 이 토막은 <b>자</b> 쪽입니다 —
+   2026-10-05 에 check-clients 가 씨를 UTC 로 뿌리고 있었습니다. 앱도 UTC
+   였던 동안에는 양쪽이 같아 <b>우연히 초록</b>이었고, 앱을 한국 날짜로
+   고치자 <b>3일 전을 4일 전</b>으로 읽어 빨간불이 됐습니다. 자가 날짜를
+   제 손으로 만들면 앱과 어긋날 수 있습니다 — <b>앱의 cmToday() 에서
+   세어</b> 나가야 합니다.
+   ★ [1] 과 같은 모양으로 <b>적어 둔 것만</b> 허락합니다. 늘면 빨간불이고,
+     그 뜻은 「지우라」 가 아니라 <b>「견주는 데 쓰는지 한 번 보고 여기
+     적으라」</b> 입니다 (8번 — 헛것을 안 잡으려고).                     */
+const 날짜심기_적어둔것 = [
+  { f: 'check-ready.js',
+    왜: '백업 줄의 ref_date <b>이름표</b>로만 쓰고, 앱의 「오늘」 과 견주지 않습니다' }
+];
+{
+  const 심는자 = [];
+  fs.readdirSync(DIR).filter(n => /^check-.*\.js$/.test(n) && n !== 나).forEach(n => {
+    const t = fs.readFileSync(path.join(DIR, n), 'utf8');
+    /* <b>맨 UTC</b> 로 날짜 글자를 뽑는 꼴 — 시간대를 안 더하고 */
+    if (/new Date\(\s*\)\s*\.toISOString\(\)\s*\.slice\(\s*[05]\s*,\s*10\s*\)/.test(t))
+      심는자.push(n);
+  });
+  const 적힌 = 날짜심기_적어둔것.map(x => x.f);
+  const 새것 = 심는자.filter(n => 적힌.indexOf(n) < 0);
+  const 사라진 = 적힌.filter(n => 심는자.indexOf(n) < 0);
+  is(새것.length === 0,
+    '  ★ UTC 로 날짜를 심는 자가 <b>적어 둔 ' + 적힌.length + '개뿐</b>이다' +
+    (새것.length ? (' ← 늘었습니다: ' + 새것.join(' · ') +
+                    ' · 앱과 견주는 데 쓰면 cmToday() 에서 세십시오') : ''));
+  is(사라진.length === 0,
+    '  적어 둔 것이 <b>살아 있다</b>' +
+    (사라진.length ? (' ← 이제 없습니다: ' + 사라진.join(' · ') + ' · 이 줄을 지우십시오') : ''));
+  /* 고친 그 자가 <b>앱에 묻는지</b> — 되돌리면 울린다 */
+  const CLI = fs.readFileSync(path.join(DIR, 'check-clients.js'), 'utf8');
+  is((CLI.match(/new Date\(cmToday\(\)\s*\+\s*'T00:00:00Z'\)/g) || []).length >= 3,
+    '  ★★ check-clients 가 씨를 <b>앱의 cmToday() 에서</b> 센다 — 세 자리');
+  is(/bd:\s*cmToday\(\)\.slice\(5, 10\)/.test(CLI),
+    '  ★ 「오늘 생일」 도 <b>앱의 오늘</b>에서 뽑는다 — UTC 로 뽑으면 아침에 어제 생일이 됩니다');
+}
 
 console.log('\n──────────────────────────────');
 if (bad) { console.log('✗ ' + bad + '개 — 자가 시계에 매여 있으면 초록이 거짓이 됩니다.'); process.exit(1); }
