@@ -378,7 +378,7 @@
            남는다 — 그때 그 고객들의 단계가 저장하면서 지워졌다. -->
       <select id="stageFilter" onchange="renderDb()"><option value="">전체 단계</option></select></div>
           <div id="sgRail" class="sg-rail"></div>
-          <div id="dbFindN" class="findn"></div><div class="bulkbar" id="bulkBar"><span id="bulkCnt">0건 선택</span><select id="bulkOwner"></select><button class="btn btn-primary btn-sm" onclick="bulkAssign()">선택 담당자 일괄 변경</button><button class="btn btn-light btn-sm" onclick="bulkClear()">선택 해제</button></div>
+          <div id="dbFindN" class="findn"></div><div id="dbFindN2" class="findn hidden"></div><div id="crmQuota" class="findn hidden"></div><div class="bulkbar" id="bulkBar"><span id="bulkCnt">0건 선택</span><select id="bulkOwner"></select><button class="btn btn-primary btn-sm" onclick="bulkAssign()">선택 담당자 일괄 변경</button><button class="btn btn-light btn-sm" onclick="bulkClear()">선택 해제</button></div>
           <div class="table-wrap"><table><thead><tr><th id="bulkTh" class="hidden"></th><th>배정일</th><th>고객</th><th>담당자</th><th>종류</th><th>지역</th><th>결과</th><th>단계</th><th>접촉</th><th>상담 약속</th><th>녹음</th><th>단톡 문구</th><th>관리</th></tr></thead><tbody id="dbBody"></tbody></table></div>
         </div>
         <div class="card section hidden" id="srcAdminCard">
@@ -1126,7 +1126,9 @@ function fillSources(){
       `<option value="${SRC_ADD}">＋ DB 종류 추가</option>`;
     sel.value=(v&&v!==SRC_ADD&&list.indexOf(v)>=0)?v:(list[0]||"")}
   const f=$("srcFilter");
-  if(f){const v=f.value;f.innerHTML='<option value="">전체 종류</option>'+list.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");f.value=list.indexOf(v)>=0?v:""}
+  if(f){const v=f.value;f.innerHTML='<option value="">전체 종류</option>'+
+      '<option value="__개인__">👤 개인 고객만 (소개·지인·개척·개인)</option>'+
+      '<option value="__배정__">🏢 회사 배정만</option>'+list.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");f.value=list.indexOf(v)>=0?v:""}
   const card=$("srcAdminCard");
   if(card){card.classList.remove("hidden");if(!card.dataset.filled)fillSrcAdmin()}
 }
@@ -1277,6 +1279,33 @@ function dbHit(d,q){
      나누어서 봐야지 관리가 되지」. 여태 담당자만 있어서, 팀이 둘 이상이면
      팀장이 「우리 팀 몇 건」 을 이 화면에서 답할 수가 없었다.        */
 function dbTeamOf(id){ return crmTeamOf[id]||""; }
+/* ══ 👤 <b>개인 고객 — 사장님이 스스로 만드신 분</b> (2026-10-05 · X56) ══
+   사장님 말씀 — 「<b>DB통합CRM 에서 개인 고객도 관리</b> — 고객 365일과 하나로」.
+
+   ── 먼저 <b>재어</b> 봤습니다 (1번) ──────────────────────────────
+     · 개인 고객은 <b>이미 CRM 안에 158건</b> 있습니다 — 소개 89 · 지인 63 ·
+       개척 6. 넣는 길(종류 고르기)이 이미 있어 쓰고 계셨습니다.
+     · 고객 365일(clients) 111명은 CRM 에 <b>한 명도 안 겹칩니다.</b>
+     · 앱은 배정 한도를 <b>한 곳에서도 안 셉니다</b> — 손으로 세고 계셨고,
+       그래서 한도를 넘는 사고가 났습니다.
+   ★★ <b>자료를 옮기지 않습니다.</b> clients 를 <b>열두 표가 가리키고</b>
+     있고(보장분석·증권·청구·상담기록·제안서·가구·건강·서류·사후관리·
+     승인·저장리포트), clients 에만 있는 칸이 <b>열하나</b>입니다(월소득·
+     여력한도·은퇴나이·가구메모·직업·성별·출생연도·동의상태…).
+     옮기면 그 연결이 끊기고 재무 칸이 사라집니다. 그래서 <b>제자리에 두고
+     화면에서 가릅니다.</b>
+
+   ★ 어느 종류가 「개인」 인가는 <b>여기 한 곳</b>만 압니다 (5번).
+     종류를 더 만드시면 이 줄에 더하십시오.                            */
+var CRM_개인출처 = ['개인','소개','지인','개척'];
+function crm개인(d){ return CRM_개인출처.indexOf(srcOf(d)) >= 0; }
+/* <b>한도에 드는 줄</b> — 회사가 배정한 것 가운데 <b>지금 들고 있는 분</b>만.
+   사장님이 「진행중만」 으로 정하셨습니다. 계약완료·증권전달·소개완료는
+   끝난 자리이고, 거절은 다시 안 거는 자리입니다 (사장님 말씀).         */
+var CRM_한도끝 = ['계약완료','증권전달','소개완료','거절'];
+function crm한도줄(d){
+  return !crm개인(d) && CRM_한도끝.indexOf(stageOf(d)) < 0;
+}
 function dbRows(withStage){
   const q=($("search")?.value||"").trim(),
         tf=$("teamFilter")?.value||"",
@@ -1286,7 +1315,12 @@ function dbRows(withStage){
   return dbs.filter(d=>dbHit(d,q)&&
     (!tf||dbTeamOf(d.assigned_to)===tf)&&
     (!owner||d.assigned_to===owner)&&
-    (!rf||result(d)===rf)&&(!sf||srcOf(d)===sf)&&
+    (!rf||result(d)===rf)&&
+    /* 종류 거르개에 <b>두 갈래</b>를 더 두었습니다 — 섞여 있으면 「내가 만든
+       분」 과 「회사가 준 분」 을 눈으로 못 가립니다 (사장님 말씀 X56). */
+    (!sf || (sf==="__개인__" ? crm개인(d)
+           : sf==="__배정__" ? !crm개인(d)
+           : srcOf(d)===sf))&&
     (!gf||(gf==="__nopol__"?needPolicy(d):stageOf(d)===gf)));
 }
 function sgRows(){ return dbRows(false); }
@@ -1500,7 +1534,56 @@ function renderDb(){
    사장님은 자료가 사라진 줄 안다 */
 function dbFindNote(q,n){
   const el=$("dbFindN");if(!el)return;
-  el.textContent=q?`「${q}」 로 ${n}건`:`전체 ${n}건`;
+  const rows=dbRows(true);
+  const 개인=rows.filter(crm개인).length, 배정=rows.length-개인;
+  el.textContent=(q?`「${q}」 로 ${n}건`:`전체 ${n}건`)
+    + ` · 🏢 회사 배정 ${배정}건 · 👤 개인 ${개인}건`;
+  crm한도띠();
+}
+/* ══ 🚦 <b>배정 한도</b> — 사고가 났던 자리 (2026-10-05 · X56) ═══════
+   사장님 말씀대로 <b>진행중만</b> 셉니다. 계약완료·증권전달·소개완료는 끝난
+   자리이고, 거절은 다시 안 거는 자리입니다. <b>개인 고객은 안 셉니다</b> —
+   사장님이 스스로 만드신 분이라 회사 배정 한도와 상관이 없습니다.
+   ★★ <b>한도 수를 제가 지어 적지 않습니다</b> (1번·2번). 「일반 20 · 변액
+     +30」 이라고 들었지만 그것이 지금도 그런지, 사람마다 같은지 저는
+     모릅니다. 그래서 <b>세기만 하고</b>, 한도는 사장님이 설정에 적으시면
+     그때 견줍니다. 모르는 것을 숫자로 적으면 그 수가 사실이 됩니다.
+   ★ 담당자를 고르셨을 때만 세웁니다 — 전체를 합쳐 세면 뜻이 없습니다. */
+function crm한도띠(){
+  var el=document.getElementById("crmQuota"); if(!el) return;
+  var own=($("ownerFilter")&&$("ownerFilter").value)||"";
+  if(!own){ el.textContent=""; el.classList.add("hidden"); return; }
+  var 내것=dbs.filter(function(d){return d.assigned_to===own;});
+  var 진행=내것.filter(crm한도줄).length;
+  var 끝남=내것.filter(function(d){return !crm개인(d)&&!crm한도줄(d);}).length;
+  var 개인=내것.filter(crm개인).length;
+  el.classList.remove("hidden");
+  el.textContent="🚦 " + pname(own) + " — 지금 들고 있는 회사 배정 " + 진행 + "건"
+    + " (끝난 것 " + 끝남 + "건은 뺐습니다 · 개인 고객 " + 개인 + "건은 안 셉니다)"
+    + " · 한도 수는 아직 안 적혀 있어 견주지 않습니다";
+  crm365띠(own);
+}
+/* ══ 🗂️ <b>고객 365일에만 있는 분</b> — 「하나로」 의 나머지 반쪽 ══════
+   사장님 말씀 「고객 365일과 하나로」. 재어 보니 고객 365일 111명이 CRM 에
+   <b>한 명도 없습니다.</b> 자료를 옮기면 열두 표의 연결이 끊기므로(위 쪽지),
+   <b>옮기지 않고 몇 분이 그러한지 적어</b> 드립니다 — 그분을 CRM 에서도
+   챙기시려면 「고객 넣기」 에 종류를 <b>개인 갈래</b>로 넣으시면 됩니다.
+   ★ <b>수를 지어내지 않습니다</b> (1번) — cliKeys 는 CRM 이 이미 읽어 둔
+     고객 365일 명단입니다. 거기서 셉니다.                             */
+function crm365띠(own){
+  var el=document.getElementById("dbFindN2"); if(!el) return;
+  var 내dbs={}, n=0;
+  dbs.forEach(function(d){ if(d.assigned_to===own)
+    내dbs[crmMask((d.customer_name||"").trim())]=1; });
+  Object.keys(cliKeys||{}).forEach(function(k){
+    var i=k.indexOf("|"); if(i<0) return;
+    if(k.slice(0,i)!==own) return;
+    if(!내dbs[k.slice(i+1)]) n++;
+  });
+  if(!n){ el.classList.add("hidden"); el.textContent=""; return; }
+  el.classList.remove("hidden");
+  el.textContent="🗂️ 고객 365일에만 있고 여기엔 없는 분 " + n + "명"
+    + " — CRM 에서도 챙기시려면 「고객 넣기」 에서 종류를 개인 갈래(개인·소개·지인·개척)로 넣으십시오";
 }
 function bulkChecked(){return Array.from(document.querySelectorAll(".dbck:checked")).map(x=>x.value)}
 function bulkBarUpd(){
