@@ -334,48 +334,54 @@ const SEED = () => {
   is(!nest, '  ★ <b>속에 또 접이가 없다</b> — 두 겹은 접는 것이 아니라 묻는 것이다 (5번)');
 
   /* ── [2] 폰에서는 한 기둥 ──────────────────────────────────────── */
-  /* ══ 2026-10-04 · <b>이 토막의 전제가 바뀌었습니다</b> ═══════════════
-     여태 「오른쪽 기둥이 왼쪽 <b>뒤에</b> 쌓인다(ry > ly)」 를 쟀습니다.
-     그때는 그것이 사실이었고 그것으로 족했습니다.
-     ★ 그런데 <b>재어 보니 그 뒤가 너무 멀었습니다</b> — 폰에서 「이번 주」
-       가 <b>y3,745</b> 였습니다. 「지금 할 것」 카드 하나가 폰에서
-       <b>2,541px</b> 이라, 그 뒤는 사실상 안 보입니다. 사장님이 폰에서
-       오른쪽 넷을 못 보신 까닭이 이것입니다 (사장님 말씀 「핸드폰에도 이
-       디자인 그대로 나올수 있도록 지금 컴퓨터 홈 화면하고 맞추어줘」).
-     ★ 그래서 폰 차례를 바꿨습니다 — 오른쪽 넷이 <b>「읽어 둔 보장분석」
-       바로 밑</b>으로 옵니다(사장님이 고르신 자리). 컴퓨터에서 그 둘이
-       <b>같은 높이(y862)</b> 라, 한 기둥에서 가장 가까운 자리입니다.
-     ★ 그러니 자도 <b>새 사실</b>을 잽니다 — 「뒤에 쌓인다」 가 아니라
-       <b>「읽어 둔 보장분석 다음, 지금 할 것 앞」</b>. 지키려던 것(한 기둥 ·
-       옆으로 안 넘침)은 <b>그대로 둡니다</b> (8번).                     */
-  console.log('\n[2] 폰(390)에서는 <b>한 기둥</b>이다 — 차례는 컴퓨터를 따라간다');
+  /* ══ 2026-10-04~05 · <b>하루에 두 번 옮겼다가 제자리</b> ═════════════
+     ① 사장님이 「오른쪽 넷을 폰에서도 보이게」 하셔서 그 넷을 「읽어 둔
+        보장분석」 바로 밑으로 올렸습니다.
+     ② 보시고 <b>「지금 할 것 다시 위로 올려줘」</b> 하셔서 되돌렸습니다.
+        폰은 다시 <b>DOM 차례 그대로</b>입니다 — 차례를 바꾸는 CSS 가
+        app/index.html 에 한 줄도 없습니다.
+     ★★ 그때 제가 <b>수를 틀리게 알려 드렸습니다.</b> 「오른쪽 넷이 폰에서
+        y3,745」 라고 적었는데, 그것은 잣대가 <b>「이분 자세히」 를 펴 놓고</b>
+        잰 수였습니다. 펴면 「지금 할 것」 이 2,541px, <b>접힌 기본은
+        1,455px</b> 입니다. 접힌 기본에서 오른쪽 넷은 <b>y2,659</b> 에
+        섭니다 — <b>1,086px 부풀려</b> 말씀드렸고, 사장님은 그 수를 보고
+        자리를 고르셨습니다. <b>실제로 보시는 상태</b>로 안 재면 수가
+        거짓이 됩니다 (1번).
+     ★ 그래서 옛 사실로 돌아가되 <b>지키는 자를 둘 답니다</b> —
+       「다시 멀어지지 않는지」 와 「펴 놓고 재고 있지 않은지」.         */
+  console.log('\n[2] 폰(390)에서는 <b>한 기둥</b>이다 — 차례는 DOM 그대로');
   const PH = await open(390);
   const one = await PH.evaluate(() => {
     const c = document.querySelector('.hm-2col'); if (!c) return { no: 1 };
     const [L, R] = c.children;
+    const rl = L.getBoundingClientRect(), rr = R.getBoundingClientRect();
     const y = (el) => el ? Math.round(el.getBoundingClientRect().top) : -1;
-    /* 상자가 없어도(display:contents) <b>손주</b>는 그대로 섭니다 */
-    const kb = y(document.getElementById('hmKbHost'));
-    const td = y(document.getElementById('hmToday'));
     const 넷 = [].slice.call(R.children).map(e => ({
       이름: (e.querySelector('.hm-rt-h b') || {}).textContent || e.id || e.className,
       y: y(e) }));
-    return { no: 0, kb: kb, td: td, 넷: 넷,
-             lx: Math.round(L.getBoundingClientRect().left || 0),
-             over: Math.round(document.documentElement.scrollWidth - window.innerWidth),
-             가로: [].slice.call(R.children).map(e => Math.round(e.getBoundingClientRect().width)) };
+    return { no: 0, lx: Math.round(rl.left), rx: Math.round(rr.left),
+             ly: Math.round(rl.top), ry: Math.round(rr.top),
+             kb: y(document.getElementById('hmKbHost')),
+             td: y(document.getElementById('hmToday')),
+             넷: 넷, 펴짐: (typeof HM_MORE !== 'undefined') ? !!HM_MORE : null,
+             over: Math.round(document.documentElement.scrollWidth - window.innerWidth) };
   });
   const 첫넷 = one.no ? -1 : Math.min.apply(null, one.넷.map(x => x.y));
-  const 끝넷 = one.no ? -1 : Math.max.apply(null, one.넷.map(x => x.y));
-  is(!one.no && one.kb > 0 && one.td > 0 && one.넷.length >= 3,
-     '  <b>세 덩이를 다 찾았다</b> — 읽어 둔 보장분석 · 오른쪽 ' + (one.no ? 0 : one.넷.length) + '칸 · 지금 할 것');
-  is(!one.no && 첫넷 > one.kb,
-     '  ★ 오른쪽 넷이 <b>「읽어 둔 보장분석」 다음</b>이다 — 보장분석 y' + one.kb + ' · 첫 칸 y' + 첫넷);
-  is(!one.no && 끝넷 < one.td,
-     '  ★ 오른쪽 넷이 <b>「지금 할 것」 앞</b>이다 — 끝 칸 y' + 끝넷 + ' · 지금 할 것 y' + one.td
-     + ' (전에는 「지금 할 것」 뒤라 y3,745 였습니다)');
-  is(!one.no && one.가로.every(w => w > 300 && w <= 390),
-     '  <b>한 기둥으로 넓게</b> 선다 — ' + (one.no ? '' : one.가로.join(' · ')) + 'px');
+  is(!one.no && one.lx === one.rx, '  <b>같은 줄에서 시작</b>한다 — 왼쪽 x' + one.lx + ' · 오른쪽 x' + one.rx);
+  is(!one.no && one.ry > one.ly, '  <b>위아래로</b> 쌓인다 — 왼쪽 y' + one.ly + ' · 오른쪽 y' + one.ry);
+  is(!one.no && one.kb > 0 && one.td > one.kb,
+     '  <b>읽어 둔 보장분석 다음에 지금 할 것</b>이다 — 보장분석 y' + one.kb + ' · 지금 할 것 y' + one.td);
+  /* ★ <b>기준선</b> — 오른쪽 넷의 첫 칸이 지금 y2,516 입니다. 3,000 을
+     넘으면 위가 길어졌다는 뜻이라 빨간불입니다. 사장님이 「안 보인다」 고
+     하신 자리라, <b>더 멀어지는 것</b>만은 자가 막습니다.               */
+  is(!one.no && 첫넷 > one.td && 첫넷 <= 3000,
+     '  ★ 오른쪽 넷이 <b>지금 할 것 뒤에 오되 너무 멀지 않다</b> — 첫 칸 y' + 첫넷
+       + ' (기준선 3,000 · 2026-10-05 사장님이 「지금 할 것 다시 위로」 하셨습니다)');
+  /* ★★ <b>재는 상태를 밝힙니다.</b> 「이분 자세히」 를 펴 놓고 재면 위 수가
+     1,000px 넘게 달라집니다 — 실제로 그렇게 틀린 수를 사장님께 드렸습니다. */
+  is(one.펴짐 !== true,
+     '  ★★ <b>사장님이 보시는 상태로 잰다</b> — 「이분 자세히」 가 '
+       + (one.펴짐 === true ? '<b>펴진 채</b>입니다(수가 부풀려집니다)' : '접힌 기본입니다'));
   is(!one.no && one.over <= 0, '  <b>옆으로 안 넘친다</b> — ' + one.over + 'px');
 
   /* ── [7] 1101px 이 한 곳에서만 ─────────────────────────────────── */
