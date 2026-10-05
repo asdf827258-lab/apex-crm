@@ -31,6 +31,8 @@
 
      [5] ★★ <b>앱</b>에서 「오늘이 며칠인가」 에 UTC 로 답하는 자리가 없다
          (2026-10-05 · 실제로 샌 자리)
+         ★★ 2026-10-05 · [5] 의 겨냥을 <b>이름(*Today())에서 파일 전체로</b>
+         넓혔습니다 — 이름을 안 지킨 자리가 <b>열넷 더</b> 있었습니다 (X62).
      [6] ★ <b>자</b>가 날짜를 제 손으로 UTC 로 심지 않는다 — [5] 의 나머지
          반쪽입니다. 양쪽이 다 UTC 면 <b>우연히 초록</b>이고, 한쪽만
          고치면 그때 빨개집니다. check-clients 가 그랬습니다.
@@ -159,9 +161,62 @@ const 맨UTC = [];
   }
 }
 is(맨UTC.length === 0,
-  '  ★★ <b>UTC 날짜를 돌려주는 자리 ' + 맨UTC.length + '곳</b>' +
+  '  ★★ <b>UTC 날짜를 돌려주는 *Today() 함수 ' + 맨UTC.length + '곳</b>' +
   (맨UTC.length ? (' ← ' + 맨UTC.join(' · ') + ' · 한국 날짜 하나(ccToday)를 부르십시오') :
                   ' — 모두 한국 날짜로 답합니다 (cmToday·mstToday 가 여기 걸렸던 자리입니다)'));
+
+/* ★★ 2026-10-05 · <b>겨냥을 파일 전체로 넓혔습니다</b> (X62).
+   위까지는 <b>이름이 *Today() 인 함수</b>만 봤습니다. 그래서 고친 바로 뒤에
+   넓게 훑어 보니 <b>열넷이 더 남아</b> 있었습니다 — 함수 이름이 안 그랬을
+   뿐입니다. 그 중에는
+     · rdDays() — cmDays 와 <b>같은 「며칠 됐나」 셈</b>
+     · analysisDate — ★ <b>고객이 보는 종이에 찍히는 날짜</b>
+     · db-crm 의 today() — ★ <b>배정일·계약일의 기본값</b>(서버에 담김)
+   이 있었습니다. <b>이름으로 겨누면 이름을 안 지킨 자리를 놓칩니다.</b>
+   이제 네 파일의 <b>글 전체</b>에서 맨 UTC 날짜를 셉니다.
+   ★ 예외는 <b>적어 두고</b> 왜인지 밝힙니다 (8번 — 헛것을 안 잡으려고).  */
+const 날짜파일 = ['app/index.html', 'db-crm.html', 'apex-care.js', 'app/finance.html'];
+const 맨UTC_예외 = [];   /* 지금은 없습니다 — 생기면 왜인지 여기 적습니다 */
+{
+  const 센것 = [];
+  날짜파일.forEach(f => {
+    const t = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    /* 주석은 코드가 아닙니다 — 쪽지에 적은 글이 <b>알리바이</b>가 되면 안 됩니다 */
+    const code = t.replace(/<!--[\s\S]*?-->/g, ' ').replace(/\/\*[\s\S]*?\*\//g, ' ');
+    const n = (code.match(/new Date\(\s*\)\s*\.toISOString\(\)\s*\.slice\(\s*0\s*,\s*10\s*\)/g) || []).length;
+    if (n > 0 && 맨UTC_예외.indexOf(f) < 0) 센것.push(f + ' ' + n + '곳');
+  });
+  is(센것.length === 0,
+    '  ★★ 네 파일 <b>글 전체</b>에서 맨 UTC 날짜 <b>0곳</b>' +
+    (센것.length ? (' ← ' + 센것.join(' · ') + ' · 그 파일의 한국 날짜 함수를 부르십시오')
+                 : ' — 이름이 *Today() 가 아닌 자리 열넷이 여기 걸렸습니다 (X62)'));
+  /* 고친 자리 가운데 <b>가장 아픈 셋</b>은 이름으로 못 박아 둡니다 —
+     누가 되돌리면 그 자리에서 알게 */
+  const APPX = fs.readFileSync(path.join(ROOT, 'app', 'index.html'), 'utf8');
+  is(/var x=new Date\(a\+'T00:00:00Z'\)\.getTime\(\),y=new Date\(ccToday\(\)\+'T00:00:00Z'\)/.test(APPX),
+    '  ★★ rdDays 가 <b>한국 날짜</b>로 센다 — cmDays 와 같은 병이었습니다');
+  is(/d\.client\.analysisDate = ccToday\(\)/.test(APPX),
+    '  ★★ <b>인쇄물에 찍히는 날짜</b>가 한국 날짜다 — 아침에 어제 날짜가 나갔습니다');
+  const DBC = fs.readFileSync(path.join(ROOT, 'db-crm.html'), 'utf8');
+  is(/const today=\(\)=>crmToday\(\);/.test(DBC),
+    '  ★★ db-crm 의 <b>배정일·계약일 기본값</b>이 crmToday 하나를 부른다 — 서버에 하루 이른 날짜가 담겼습니다');
+  /* ★★ db-crm 의 「오늘」 이 <b>기기 시각이 아니라 한국 날짜</b>인가.
+     시계를 못 박아 재어 보니 todayLocal 은 <b>기기 시각</b>이었습니다 —
+     본체는 +9 고정이라 기기 시간대가 다르면 두 화면이 어긋납니다.
+     배정일·계약일은 한국 회사의 하루여야 합니다 (X62).              */
+  is(/function crmToday\(\)\{ return new Date\(Date\.now\(\)\+9\*3600\*1000\)\.toISOString\(\)\.slice\(0,10\); \}/.test(DBC),
+    '  ★★ db-crm 의 「오늘」 이 <b>한국 날짜(+9)</b>다 — 기기 시각이면 본체와 어긋납니다');
+  is(/function todayLocal\(\)\{ return crmToday\(\); \}/.test(DBC),
+    '  ★ 옛 이름 todayLocal 은 <b>가리키기만</b> 한다 — 지우지 않고 한 곳으로 모읍니다 (5번)');
+  is(!/todayLocal\(\)/.test(DBC.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/function todayLocal\(\)\{ return crmToday\(\); \}/, ' ')),
+    '  ★ todayLocal 을 <b>부르는 자리가 없다</b> — 모두 crmToday 로 모았습니다');
+  const CARE = fs.readFileSync(path.join(ROOT, 'apex-care.js'), 'utf8');
+  is(/crmToday\(\)/.test(CARE) && !/new Date\(\s*\)\s*\.toISOString\(\)\s*\.slice\(\s*0\s*,\s*10\s*\)/.test(CARE),
+    '  ★ apex-care 의 <b>「챙긴 날」</b>도 그 하나를 부른다');
+  const FIN = fs.readFileSync(path.join(ROOT, 'app', 'finance.html'), 'utf8');
+  is((FIN.match(/function fxToday\(\)/g) || []).length === 1,
+    '  ★ 계산기도 <b>하나만</b> 둔다 (fxToday) — 따로 열리는 화면이라 ccToday 를 못 부릅니다');
+}
 /* 고친 두 자리가 <b>제 손으로 +9 를 또 적지 않았는지</b> — 그러면 셋째 벌 */
 is(/function cmToday\(\)\{return ccToday\(\);\}/.test(APP),
   '  ★ cmToday 는 <b>ccToday 를 부른다</b> — +9 를 또 적으면 셋째 벌이 됩니다 (5번)');
@@ -180,7 +235,12 @@ console.log('\n[6] ★ 자가 <b>날짜를 제 손으로 UTC 로 심지</b> 않�
      적으라」</b> 입니다 (8번 — 헛것을 안 잡으려고).                     */
 const 날짜심기_적어둔것 = [
   { f: 'check-ready.js',
-    왜: '백업 줄의 ref_date <b>이름표</b>로만 쓰고, 앱의 「오늘」 과 견주지 않습니다' }
+    왜: '백업 줄의 ref_date <b>이름표</b>로만 쓰고, 앱의 「오늘」 과 견주지 않습니다' },
+  /* ★ 이 자는 <b>일부러</b> 맨 UTC 를 읽습니다 — 시계를 못 박은 뒤 「맨 UTC
+     로 뽑으면 어제가 나온다」 를 <b>대조군</b>으로 확인하는 자리입니다.
+     그 한 줄이 없으면 못이 정말 박혔는지 알 수 없습니다 (X62). */
+  { f: 'check-daykst.js',
+    왜: '시계를 못 박은 뒤 <b>대조군</b>으로 맨 UTC 를 읽습니다 — 못이 박혔는지 되짚는 자리입니다' }
 ];
 {
   const 심는자 = [];

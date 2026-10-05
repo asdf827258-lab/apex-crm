@@ -4684,7 +4684,8 @@ function brainStar(i){
   if(!t||!t.a||typeof t.a!=='string'||t.a.indexOf('__ERR__')===0){toast('저장할 답이 없습니다.');return;}
   var L=bxGet(),j;
   for(j=0;j<L.length;j++)if(L[j].q===t.q){L.splice(j,1);break;}
-  L.unshift({q:(''+t.q).slice(0,120),a:(''+t.a).slice(0,BX_CUT),at:new Date().toISOString().slice(0,10)});
+  /* 적은 날짜는 한국 날짜 (X61) — UTC 면 아침에 어제로 찍힙니다 */
+  L.unshift({q:(''+t.q).slice(0,120),a:(''+t.a).slice(0,BX_CUT),at:ccToday()});
   bxSet(L.slice(0,BX_MAX));
   toast('모범 답안으로 저장했습니다 ('+Math.min(L.length,BX_MAX)+'/'+BX_MAX+') — 다음부터 이 결을 따라 씁니다',5500);
   var b=$('brainBxBox');if(b)b.innerHTML=bxListHtml();
@@ -7543,7 +7544,7 @@ function rdDoneKey(){try{return 'apex_ready_'+((OS.profile&&(OS.profile.id||OS.p
 function rdDone(){try{var v=localStorage.getItem(rdDoneKey());return v?(JSON.parse(v)||{}):{};}catch(e){return {};}}
 function rdMark(k){
   var o=rdDone();
-  if(o[k])delete o[k];else o[k]=new Date().toISOString().slice(0,10);
+  if(o[k])delete o[k];else o[k]=ccToday();   /* 한국 날짜 (X61) */
   try{localStorage.setItem(rdDoneKey(),JSON.stringify(o));}catch(e){}
   rdPaint();
 }
@@ -7777,8 +7778,11 @@ function rdSbKeyGo(){
   if(typeof toast==='function')
     toast('Netlify → 사이트 → Site configuration → Environment variables 에서 SUPABASE_SERVICE_ROLE_KEY 를 고치십시오',9000);
 }
+/* ★★ 「며칠 됐나」 는 <b>한국 날짜</b>로 센다 (X61 과 같은 자리 · 5번).
+   toISOString() 은 UTC 라, 한국 시간 아침 9시 전에는 하루가 밀렸습니다 —
+   어제 한 일이 「0일 전」 대신 「-1일」 로 읽혔습니다.                   */
 function rdDays(a){
-  var x=new Date(a+'T00:00:00Z').getTime(),y=new Date(new Date().toISOString().slice(0,10)+'T00:00:00Z').getTime();
+  var x=new Date(a+'T00:00:00Z').getTime(),y=new Date(ccToday()+'T00:00:00Z').getTime();
   if(isNaN(x))return -1;
   return Math.round((y-x)/86400000);
 }
@@ -11547,7 +11551,7 @@ var PF_NEXT=[
 ];
 function pfNextList(who){
   var L=(typeof AR!=='undefined'&&AR.db)||[],out=[],i,r;
-  var t=(typeof arToday==='function')?arToday():new Date().toISOString().slice(0,10);
+  var t=(typeof arToday==='function')?arToday():ccToday();   /* 되돌림도 한국 날짜 (X61) */
   for(i=0;i<L.length;i++){
     r=L[i];
     if(who&&r.who!==who)continue;
@@ -18593,7 +18597,7 @@ function owMarks(){
   return {};
 }
 function owMark(k,on){
-  var m=owMarks();if(on)m[k]=new Date().toISOString().slice(0,10);else delete m[k];
+  var m=owMarks();if(on)m[k]=ccToday();else delete m[k];   /* 한국 날짜 (X61) */
   var j=JSON.stringify(m);
   try{localStorage.setItem(OW_KEY,j);}catch(e){}
   try{if(typeof osCfgSet==='function')osCfgSet(OW_KEY,j);}catch(e){}
@@ -18765,8 +18769,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-10-05 09:30';
-var APP_BUILD_NOTE="🚦 <b>한도 수를 설정에 담으면 띠가 견줍니다</b> · 🕐 <b>아침마다 하루가 밀리던 것을 고쳤습니다.</b>　—　① 🚦 <b>DB 통합 CRM · 배정 한도 수</b> 칸에 적으시면 띠가 <b>남은 수·넘은 수</b>를 말합니다. 적는 칸은 둘 — <b>모두에게 쓰는 수</b> 와 <b>이 분만 다르게</b>(뒤가 앞을 이깁니다).　—　② ★ <b>앱은 누가 변액인지 모릅니다</b> — 어디에도 안 적혀 있습니다. 그래서 규칙을 제가 짜 넣지 않고 <b>그분 수를 직접 적으시게</b> 했습니다. 안 적으시면 「견주지 않습니다」 이고 <b>「한도 수 적기」 단추</b>가 섭니다.　—　③ 한도는 <b>진행중만</b> 셉니다. <b>개인 고객은 안 셉니다.</b> 적는 칸은 <b>운영자만</b>, 띠는 모두 봅니다. <b>적어도 배정이 막히지는 않습니다</b> — 띠가 말해 주기만 합니다.　—　④ ★★ <b>아침마다 하루가 밀리던 것을 고쳤습니다.</b> 앱에서 「오늘이 며칠인가」 에 답하는 자리 열두 곳 중 <b>둘만 UTC 날짜</b>로 답하고 있었습니다. 그래서 <b>밤 0시~아침 9시</b> 사이에는 전화를 걸고 기록해도 고객 365일 명단이 <b>「❄️ 기록 없음」</b> 이라고 적었습니다 — 아침에 일하시면 <b>늘 그 시각</b>입니다. 계약 마디도 하루 늦게 섰습니다. 이제 <b>한 곳만</b> 답합니다.　—　⑤ <b>자가 찾아냈습니다</b> — 제 판과 무관한 갈래가 빨개져 main 에서도 돌려 보고 알았습니다. 여태 안 걸린 까닭은 점검이 <b>시각만 보고 날짜는 안 봤기</b> 때문이고, 그 전제를 제가 그 파일에 적어 뒀습니다. 전제를 고치고 <b>날짜도 한 곳에서</b>를 재는 토막을 더했습니다.";
+var APP_BUILD='2026-10-05 16:20';
+var APP_BUILD_NOTE="🕐 <b>「오늘」 이 아직 열넷 더 UTC 였습니다 — 인쇄물과 배정일까지.</b>　—　① 어제 둘을 고쳤는데(X61), 그것은 <b>이름이 *Today() 인 함수</b>만이었습니다. 이름을 안 지킨 자리가 <b>열넷 더</b> 있었습니다.　—　② ★ 아픈 셋 — <b>「며칠 됐나」 셈(rdDays)</b> · ★ <b>고객이 보는 보장분석 종이에 찍히는 날짜</b> · ★ <b>배정일 · 계약일 · 증권전달일의 기본값</b>(서버에 담기는 값). 아침에 등록하시면 <b>하루 이른 날짜</b>가 담겼습니다.　—　③ 나머지는 발표 슬라이드 날짜 · 날짜계산기 기준일 · 「언제 했나」 도장 일곱입니다. <b>열넷 다 고쳤습니다</b> — 섞인 채 두면 같은 병이 또 돌아옵니다.　—　④ ★★ <b>두 번 고친 자리</b> — DB 통합 CRM 의 날짜를 처음엔 같은 파일의 기기 시각 함수로 보냈는데, <b>시계를 못 박아 재어 보니</b> 본체(+9 고정)와 어긋날 수 있었습니다. <b>한국 날짜 하나</b>로 모았습니다 — 기기를 들고 어디로 가셔도 같습니다.　—　⑤ ★★ 재는 자를 하나 더 지었습니다 — <b>시계를 못 박고 브라우저로 값을 읽습니다.</b> 맨 UTC 면 어제, 한국이면 오늘로 <b>하루 갈리는 틈</b>에서 재므로 어느 쪽인지 숨길 수 없습니다. <b>글이 아니라 값</b>을 봅니다 — 「글은 멀쩡한데 값이 틀린」 일을 이번에 두 번 겪었습니다.　—　⑥ 한국에서 쓰는 기기에서는 <b>보이는 것이 달라지지 않습니다</b> — 밤 0시~아침 9시에 틀렸던 것이 맞아지는 것뿐입니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -21750,7 +21754,7 @@ var AM_DAYS=[
 function amDone(){ try{ var v=JSON.parse(localStorage.getItem(AM_KEY)||'{}'); return (v&&typeof v==='object')?v:{}; }catch(e){ return {}; } }
 function amSet(d,on){
   var v=amDone();
-  if(on)v[d]=new Date().toISOString().slice(0,10); else delete v[d];
+  if(on)v[d]=ccToday(); else delete v[d];   /* 한국 날짜 (X61) */
   try{ localStorage.setItem(AM_KEY,JSON.stringify(v)); }catch(e){}
   amPaint();
 }
@@ -35219,7 +35223,7 @@ function waAttach(){
   }
   if(typeof osPickClient!=='function'){toast('고객 목록을 열 수 없습니다');return;}
   osPickClient(function(id,nm){
-    var at=(typeof mcalToday==='function')?mcalToday():new Date().toISOString().slice(0,10);
+    var at=(typeof mcalToday==='function')?mcalToday():ccToday();   /* 되돌림도 한국 날짜 (X61) */
     /* ★ ══ <b>증권에서 담아 둔 것을 안 날립니다</b> ══ (2026-10-01)
        여기서 wal 을 <b>통째로 새로</b> 쓰면 보장분석(frwPin)이 담아 둔
        <b>근거(by)와 금액(amt)</b>이 사라집니다 — 지도에서 한 번 붙이는
@@ -46937,7 +46941,8 @@ function calcCardDate(){
 }
 function dcPreset(days,months,btn){
   $('dc_days').value=days||'';$('dc_months').value=months||'';
-  if(!$('dc_base').value)$('dc_base').value=new Date().toISOString().slice(0,10);
+  /* ★ 사장님이 <b>이 값에서 계산을 시작</b>하십니다 — 한국 날짜로 (X61) */
+  if(!$('dc_base').value)$('dc_base').value=ccToday();
   var w=btn.parentElement;w.querySelectorAll('.chip-opt').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');
   calcDate();
 }
@@ -54075,7 +54080,9 @@ function bjNorm(d, o) {
   o = o || {};
   d.client = d.client || {};
   d.advisor = d.advisor || {};
-  if (!d.client.analysisDate) d.client.analysisDate = new Date().toISOString().slice(0, 10);
+  /* ★★ <b>고객이 보는 종이에 찍히는 날짜</b>입니다 — 한국 날짜로 (X61).
+     UTC 로 뽑으면 아침에 <b>어제 날짜가 찍힌 제안서</b>가 나갑니다.    */
+  if (!d.client.analysisDate) d.client.analysisDate = ccToday();
   if (!d.advisor.name && typeof OS !== 'undefined' && OS.profile) d.advisor.name = OS.profile.name || '';
   if (!d.advisor.brand) d.advisor.brand = o.brand || '';
   d.slides = bjArr(d.slides).filter(function (s) { return s && typeof s === 'object'; });
@@ -54421,7 +54428,8 @@ function bjLocalDeck(parts, o, why, scan) {
   if (!sc) { try { sc = insScan(text); } catch (e) { sc = null; } }
   /* 양식이 달라 정확히 못 읽었으면, 담보 이름만이라도 긁어 큰 틀로 묶는다 */
   if (!sc) { try { sc = insLoose(text); } catch (e) { sc = null; } }
-  var slides = [], today = new Date().toISOString().slice(0, 10);
+  /* ★ 발표 자료에 찍히는 날짜 — 한국 날짜로 (X61) */
+  var slides = [], today = ccToday();
   var t = sc ? sc.total : { n: 0, fee: 0, unknown: 0, lapsedN: 0, lapsedFee: 0 };
 
   slides.push({ type: 'cover', kicker: '보장분석', title: '보장 현황 정리',
@@ -71166,7 +71174,7 @@ function frScenSet(id,k,v){
   for(i=0;i<L.length;i++)if(L[i].id===id){
     if(k==='referenceTreatmentCostWon'||k==='inpatientDays'||k==='incomeGapMonths')L[i][k]=frNumOrNull(v);
     else L[i][k]=(''+v).slice(0,120);
-    L[i].lastUpdated=new Date().toISOString().slice(0,10);
+    L[i].lastUpdated=ccToday();   /* 한국 날짜 (X61) */
     break;
   }
   frScenWrite(L);
