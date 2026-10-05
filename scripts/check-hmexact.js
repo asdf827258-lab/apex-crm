@@ -190,17 +190,77 @@ const INKS = (sel) => {
              pal: [...new Set(pal)], inkPal: [...new Set(inkPal)],
              inks: (new Function('return (' + f + ')("#scr")'))() };
   }, INKS.toString());
-  /* 자 = 목업이 <b>그린</b> 색 + 목업 <b>색표</b> + 목업 CSS 가 적어 둔 <b>글자색</b> */
+  /* ── ⚠★ 2026-10-05 · <b>여기가 또 좁았습니다</b> (물결 5 · 사장님 ⓒ) ──────
+     자가 <b>목업의 :root</b> 만 색표로 읽습니다. 그런데 우리 색표(app/ui.css)는
+     사장님 허락을 받아 <b>늘어났습니다</b> — 목업 19개 → 우리 35개. 늘린
+     열여섯은 저마다 ui.css 에 까닭이 적혀 있습니다(--t-line-2 는 카드 안쪽
+     줄이 --t-line 이면 너무 진해서, --t-bg-b 는 같은 연파랑이 다섯 값으로
+     갈려 있어서, --t-warn-d 는 --t-warn 이 연한 바탕 위 3.00 이라서…).
+     그래서 옷 입은 화면이 <b>우리 색표의 이름</b>을 쓰면 「목업에 없는 색」
+     이라고 울렸습니다 — <b>자가 낡은 것</b>입니다.
+     실제로 물결 5 에서 다섯 화면(fp_talk · dz_guide · inv_econ · biz_fund ·
+     ready)이 --t-line-3 · --t-pos-d · --t-neg-d 때문에 걸렸습니다.
+
+   ★★ <b>넓히면서 이(齒)를 두 개 심습니다 — 느슨해지지 않게.</b>
+     그냥 「ui.css 에 있으면 통과」 로 두면 아무나 --t-아무거나:#BADBAD 를
+     넣고 지나갈 수 있어 자가 <b>이가 빠집니다</b>. 그래서 아래 [0-1]·[0-2]
+     를 같이 세웁니다 —
+       [0-1] 우리가 <b>늘린 이름 수</b>가 기준선 안쪽인가 — 새 토큰을 넣으면
+             기준선을 올려야 하고, 그것은 <b>눈에 보이는 일</b>이 됩니다
+             (check-skinmap · check-onepal 과 같은 방식 · 0-1번).
+       [0-2] 목업에도 있는 <b>열아홉 이름의 값이 한 자도 안 어긋났나</b> —
+             우리 색표가 목업에서 <b>흘러내리지 않았나</b>. 예전 자는 이것을
+             아예 안 봤습니다. <b>통틀어 조여졌습니다.</b>                 */
+  const UICSS = fs.readFileSync('app/ui.css', 'utf8');
+  const 뜨기 = (t) => { const o = {};
+    (t.match(/:root\s*\{[\s\S]*?\}/g) || []).forEach(b =>
+      /* ⚠★ 처음에 /--t-[a-z0-9-]+/ 로 적었더니, 되돌림 시험으로 넣어 본
+         <b>--t-몰래</b>(한글 이름)를 자가 <b>못 봤습니다.</b> 제 시험이 자에
+         안 닿은 것이라 둘 다 고쳤습니다 — 이름은 <b>쉼표·콜론·공백이 아닌
+         무엇이든</b> 봅니다. 규약은 영문 소문자지만, 규약을 어긴 이름이야말로
+         이 자가 잡아야 하는 것입니다 (8번).                             */
+      (b.match(/--t-[^\s:;{}]+\s*:\s*[^;}]+/g) || []).forEach(x => {
+        const i = x.indexOf(':'); const n = x.slice(0, i).trim(), v = x.slice(i + 1).trim().toUpperCase();
+        if (/^#[0-9A-F]{3,8}$/.test(v)) o[n] = v; }));
+    return o; };
+  const 우리색 = 뜨기(UICSS);
+  const 목업색 = 뜨기(fs.readFileSync('docs/토스판_사본.html', 'utf8'));
+  const 늘린이름 = Object.keys(우리색).filter(k => !(k in 목업색));
+  const 어긋난이름 = Object.keys(우리색).filter(k => k in 목업색 && 목업색[k] !== 우리색[k]);
+  /* 자 = 목업이 <b>그린</b> 색 + 목업 <b>색표</b> + 목업 CSS 가 적어 둔 <b>글자색</b>
+         + <b>우리가 까닭을 적고 늘린 이름</b> (아래 두 이가 지킵니다) */
   const mkInks = [...new Set(Object.keys(MK.inks)
     .concat(MK.pal.map(hex2rgb))
-    .concat((MK.inkPal || []).map(hex2rgb)))];
+    .concat((MK.inkPal || []).map(hex2rgb))
+    .concat(Object.values(우리색).map(hex2rgb)))];
   console.log('\n[0] 목업에서 <b>자를 읽습니다</b>');
   is(!!MK.ink && !!MK.r, '  목업의 글자색·둥글기를 읽었다 — 글자 ' + MK.ink + ' · 둥글기 ' + MK.r);
   is(MK.pal.length >= 10, '  목업의 <b>색표</b>를 통째로 읽었다 — ' + MK.pal.length + '가지');
   is((MK.inkPal || []).length >= 3,
      '  목업 CSS 가 <b>적어 둔 글자색</b>도 읽었다 — ' + (MK.inkPal || []).length +
      '가지 (그 화면에 안 떠도 목업의 색입니다)');
-  is(mkInks.length >= 3, '  자로 삼을 색 ' + mkInks.length + '가지 (그린 색 + 색표)');
+  is(mkInks.length >= 3, '  자로 삼을 색 ' + mkInks.length + '가지 (그린 색 + 색표 + 우리가 늘린 이름)');
+
+  console.log('\n[0-1] ★★ 우리 색표가 목업보다 <b>늘린 이름</b>이 기준선 안쪽인가');
+  /* ⚠ 16 은 <b>세어서 적은 수</b>입니다 (2026-10-05). 토큰을 하나 세우면 이 자가
+     울리고, 기준선을 올리는 것이 <b>그 토큰을 세웠다는 기록</b>이 됩니다 (0-1번).
+     ★ 줄이면 같이 내립니다. 늘면 <b>까닭을 ui.css 에 적고</b> 올리십시오.    */
+  const 늘린기준 = 16;
+  is(늘린이름.length <= 늘린기준,
+     '  우리가 늘린 이름 <b>' + 늘린이름.length + '개</b> — 기준선 ' + 늘린기준 +
+     (늘린이름.length > 늘린기준
+       ? ' ← ★ <b>늘었습니다.</b> ' + 늘린이름.slice(-3).join(' · ') +
+         ' — ui.css 에 까닭을 적고 이 기준선을 올리십시오 (색표는 한 벌 · 5번)'
+       : (늘린이름.length < 늘린기준 ? ' ← 줄었습니다. 기준선을 ' + 늘린이름.length + ' 로 내려 주십시오' : '')));
+
+  console.log('\n[0-2] ★★ 목업에도 있는 이름의 값이 <b>한 자도 안 어긋났나</b> (5번)');
+  is(어긋난이름.length === 0,
+     '  목업과 겹치는 이름 ' + (Object.keys(우리색).length - 늘린이름.length) +
+     '개가 <b>값까지 같다</b>' +
+     (어긋난이름.length
+       ? ' ← ★ <b>흘러내렸습니다:</b> ' +
+         어긋난이름.map(k => k + ' 목업 ' + 목업색[k] + ' / 우리 ' + 우리색[k]).join(' · ')
+       : ''));
 
   const p = await ctx.newPage();
   p.on('pageerror', e => errs.push(String(e.message || e).slice(0, 130)));

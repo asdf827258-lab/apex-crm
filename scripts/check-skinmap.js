@@ -125,7 +125,15 @@ const 띠만 = { tools: '아래 띠 🧰 도구' };
      .t-skin{color:…} 이 닿지 않던 것입니다.
      <b>.t-skin select,input,textarea,button{color:inherit} 한 줄</b>로 닿게
      했습니다. <b>짐작을 적기 전에 재었더라면</b> 한 판 빨랐습니다 (1번).  */
-const BASE = { 안입음: 38, 서랍: 0 };
+const BASE = { 안입음: 22, 서랍: 0 };
+/* ★ 38 → 22 · 2026-10-05 <b>물결 5</b>(사장님 ⓒ). 짙은 토큰(--t-warn-d ·
+   --t-warn-d2 · --t-pos-d · 새로 세운 --t-neg-d)으로 641곳을 옮기니 열여섯이
+   한꺼번에 입었습니다 — ai_prop · endorse · manual · utphoto · fp_talk ·
+   dz_guide · inv_stock · inv_fund · inv_econ · ckboard · treatpay · inv_perf ·
+   biz_fund · mycoach · ready · phone_app. 화면 100개 중 <b>78개</b>.
+   ⚠ 남은 22 중 아홉은 까닭을 적어 두었습니다(index.html 의 T_SKIN 쪽지) —
+     반투명 바탕 · 글자 잇기 안의 색 · 목업에 짝 없는 청록·보라 · 못 연 화면.
+     나머지 열셋은 넣어도 아무 일이 안 납니다.                          */
 
 const src = fs.readFileSync(APP, 'utf8');
 
