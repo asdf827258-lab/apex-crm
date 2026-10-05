@@ -114,7 +114,12 @@ function doneMap(d){
   return LOCAL[d.id]||{};
 }
 function markDone(d,mid){
-  var now=new Date().toISOString().slice(0,10), me=myId();
+  /* 「챙긴 날」 — <b>db-crm.html 의 crmToday() 하나</b>만 압니다 (5번).
+     이 파일은 db-crm.html 에서만 실립니다. toISOString() 은 UTC 라
+     아침 9시 전에는 <b>어제 챙긴 것</b>으로 적혔습니다 (X61·X62).
+     ★ 없으면 <b>날짜를 지어내지 않고 비웁니다</b> — 모름과 어제는
+       다릅니다 (1번). */
+  var now=(typeof crmToday==="function")?crmToday():"", me=myId();
   if(!HAS_CARE){
     LOCAL[d.id]=LOCAL[d.id]||{}; LOCAL[d.id][mid]={at:now,by:me};
     try{ localStorage.setItem("apexCareLocalV1",JSON.stringify(LOCAL)) }catch(e){}

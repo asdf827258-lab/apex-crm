@@ -1997,11 +1997,19 @@ function fxNow(){ var o=fxGet(); return (o&&+o.now>0)?+o.now:FX_SEED.now; }
 function fxTgt(){ var o=fxGet(); return (o&&+o.tgt>0)?+o.tgt:FX_SEED.tgt; }
 function fxSeeded(){ return !fxGet(); }              /* 아직 사장님이 안 넣었나 */
 function fxWhen(){ var o=fxGet(); return (o&&o.at)?o.at:''; }
+/* ══ 「오늘이 며칠인가」 — 이 파일은 <b>여기 하나</b>만 안다 (5번) ═════
+   <b>toISOString() 을 그대로 쓰지 마십시오.</b> 그것은 UTC 날짜라, 한국
+   시간 <b>아침 9시 전</b>에는 <b>어제</b>가 나옵니다. 환율을 적은 날이
+   어제로 찍히면 「지금 환율」 이 하루 묵은 것처럼 보입니다 (X61·X62).
+   ※ 본체(app/index.html)에는 ccToday() 가 있지만 이 파일은 따로 열리는
+     화면이라 그것을 못 부릅니다. 그래서 이 파일 안에 하나만 둡니다 —
+     <b>늘리지 마십시오.</b> 재는 법 — check-clockfree [5].          */
+function fxToday(){ return new Date(Date.now()+9*3600*1000).toISOString().slice(0,10); }
 function fxSet(now,tgt){
   var o=fxGet()||{}, n=parseFloat(now), t=parseFloat(tgt);
   if(isFinite(n)&&n>0)o.now=n;
   if(isFinite(t)&&t>0)o.tgt=t;
-  o.at=new Date().toISOString().slice(0,10);
+  o.at=fxToday();   /* 적은 날 — 한국 날짜 (X62). 아래 fxToday 쪽지 참조 */
   try{ localStorage.setItem(FX_KEY,JSON.stringify(o)); }catch(e){}
   try{ if(window.VC){ VC.usd=fxNow(); VC.usdt=fxTgt(); } }catch(e){}
   return o;

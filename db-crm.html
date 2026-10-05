@@ -575,7 +575,10 @@ let attMonth=null;
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
-const today=()=>new Date().toISOString().slice(0,10);
+/* <b>배정일 · 계약일 · 증권전달일</b>의 기본값입니다. 「오늘」 을 아는 곳은
+   crmToday 하나입니다 (아래 쪽지 · 5번). 여기가 UTC 날짜를 돌려주어 아침에
+   하루 이른 날짜가 서버에 담겼습니다 (X62).                        */
+const today=()=>crmToday();
 function dtLocal(d=new Date()){const p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`}
 /* 표 안에서 쓰는 <b>짧은 날짜</b> — 「2026. 09. 01.」 은 빈칸까지 열두 자라
    칸 하나를 90px 먹는다. 칸이 열셋인 표에서는 그 값이 너무 비싸다.
@@ -921,9 +924,9 @@ async function startApp(){
   $("teamNav").classList.toggle("hidden",!canViewAll());$("newDbBtn").classList.remove("hidden");$("ownerFilter").classList.toggle("hidden",!canViewAll());
   $("dashboardTitle").textContent=canViewAll()?"전체 배정 DB 현황":`${profile.name} 담당 DB 현황`;
   $("dbScopeText").textContent=canViewAll()?"전체 담당자의 배정·TA 현황입니다.":"본인에게 배정된 DB만 조회됩니다.";
-  try{await sb.from("attendance").upsert({member_id:profile.id,att_date:todayLocal()},{onConflict:"member_id,att_date"});}catch(e){}
+  try{await sb.from("attendance").upsert({member_id:profile.id,att_date:crmToday()},{onConflict:"member_id,att_date"});}catch(e){}
   /* 최근 접속시각 갱신(베스트에포트) — last_seen 컬럼이 있으면 기록, 없으면 조용히 무시(출근 기록엔 영향 없음) */
-  try{await sb.from("attendance").update({last_seen:new Date().toISOString()}).eq("member_id",profile.id).eq("att_date",todayLocal());}catch(e){}
+  try{await sb.from("attendance").update({last_seen:new Date().toISOString()}).eq("member_id",profile.id).eq("att_date",crmToday());}catch(e){}
   await loadAll();
 }
 let crmTeams=[],crmTeamOf={};
@@ -1329,7 +1332,7 @@ function renderDashAttendance(){
   }
   const p2=n=>String(n).padStart(2,"0");
   const hm=t=>{if(!t)return "-";const d=new Date(t);return p2(d.getHours())+":"+p2(d.getMinutes())};
-  const tkey=todayLocal(),mem=profiles.filter(p=>p.active!==false),byId={};
+  const tkey=crmToday(),mem=profiles.filter(p=>p.active!==false),byId={};
   attendance.forEach(a=>{if(a.att_date===tkey)byId[a.member_id]=a;});
   let present=0;
   body.innerHTML=mem.map(p=>{
@@ -1806,7 +1809,24 @@ async function setMemberRole(id,role){
   if(!wRows(res,"권한 변경"))return;
   toast("권한을 "+roleLabel(role)+"(으)로 변경했습니다.");await loadAll();
 }
-function todayLocal(){const d=new Date(),p=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())}
+/* ══ 「오늘이 며칠인가」 — 이 파일은 <b>여기 하나</b>만 안다 (5번) ═════
+   ★★ 2026-10-05 · <b>두 번 고친 자리입니다.</b>
+   ⑴ 처음에는 today() 가 toISOString() 으로 <b>UTC 날짜</b>를 돌려주고
+      있었습니다. 그 함수가 <b>배정일 · 계약일 · 증권전달일</b>의 기본값이라,
+      한국 시간 아침 9시 전에 등록하시면 <b>하루 이른 날짜가 서버에</b>
+      담겼습니다.
+   ⑵ 그래서 todayLocal() 을 부르게 했는데, <b>시계를 못 박아 재어 보니</b>
+      그쪽은 <b>기기 시각</b>이었습니다. 본체(app/index.html)는 <b>+9 고정</b>
+      이라, 기기 시간대가 한국이 아니면 <b>두 화면이 「오늘」 을 다르게</b>
+      답합니다. 배정일·계약일은 <b>한국 날짜</b>여야 합니다 — 한국 회사의
+      하루이고, 기기를 들고 어디로 가셔도 같아야 합니다.
+   ★ 그래서 <b>한국 날짜 하나</b>로 모았습니다. 출근 기록도 같은 것을
+     씁니다 — 「한국의 오늘 출근했나」 가 맞는 물음입니다.
+   재는 법 — check-clockfree [5] (시계를 못 박고 잽니다).            */
+function crmToday(){ return new Date(Date.now()+9*3600*1000).toISOString().slice(0,10); }
+/* 옛 이름입니다. 부르는 자리는 모두 crmToday 로 모았고, 이 줄은 <b>가리키기만</b>
+   합니다 — 함수를 지우지 않는 것이 이 저장소 규칙입니다 (CLAUDE.md 5번). */
+function todayLocal(){ return crmToday(); }
 function attShift(dir){const base=attMonth||new Date();attMonth=dir===0?new Date():new Date(base.getFullYear(),base.getMonth()+dir,1);renderAttendance()}
 function renderAttendance(){
   const head=$("attHead"),body=$("attBody");if(!head||!body)return;
