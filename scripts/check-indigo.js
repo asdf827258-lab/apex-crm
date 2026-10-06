@@ -162,8 +162,12 @@ function ratio(a, b) { const x = lum(a), y = lum(b), hi = Math.max(x, y), lo = M
   is(uses === 42, '  대신 남색 이름으로 <b>' + uses + '군데</b>가 선다 — 옮긴 수 그대로다 (42)');
   const lb = (SRC.match(/var\(--t-line-b\)/g) || []).length;
   const ib = (SRC.match(/var\(--t-ind-b\)/g) || []).length;
-  is(lb + ib === 46, '  파란 선 <b>' + lb + '</b> + 남색 테두리 별칭 <b>' + ib +
-     '</b> = 46군데 — 판 ⑩ 에서 옮긴 수 그대로다');
+  /* ★ 2026-10-06 · 46 → <b>47</b>. 「오늘 칸 고르개」 에서 <b>오늘 0건인 팀원</b>
+     칩의 테두리를 이 선으로 세웠습니다(.hwho-c.z) — 사람은 있고 오늘 할 것만
+     없다는 뜻이라, 연한 선이 맞는 자리입니다. <b>일부러 늘린 하나</b>라서
+     이 수도 하나 올립니다. == 는 그대로 둡니다 (0-1번).                 */
+  is(lb + ib === 47, '  파란 선 <b>' + lb + '</b> + 남색 테두리 별칭 <b>' + ib +
+     '</b> = 47군데 — 판 ⑩ 에서 옮긴 수 + X63 에서 하나');
   const bgb = (SRC.match(/var\(--t-bg-b\)/g) || []).length;
   is(bgb === 110, '  파란 바탕 이름으로 <b>' + bgb + '군데</b>가 선다 — 옮긴 수 그대로다 (110)');
   const pt = (SRC.match(/var\(--t-point\)/g) || []).length;
