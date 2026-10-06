@@ -41,8 +41,8 @@ const TOK = {};
 (CSS.match(/--t-[a-z0-9-]+\s*:\s*#[0-9A-Fa-f]{6}/g) || []).forEach(x => {
   const i = x.indexOf(':'); TOK[x.slice(0, i).trim()] = x.slice(i + 1).trim().toUpperCase();
 });
-const teal = (SRC.match(/--teal\s*:\s*(#[0-9A-Fa-f]{6})/) || [])[1];
-if (teal) TOK['--teal'] = teal.toUpperCase();
+/* ★ 2026-10-06 · <b>--t-teal 이 색표(ui.css)로 들어왔습니다</b> — 더 이상 본체
+   :root 를 더듬지 않습니다. 떠돌던 청록에 제자리를 준 판입니다 (5번).      */
 
 console.log('[1] 표가 <b>본체 한 곳</b>에 있나');
 const 표 = (SRC.match(/var\s+CLM_TAGCOL\s*=\s*\[([\s\S]*?)\];/) || [])[1] || '';
