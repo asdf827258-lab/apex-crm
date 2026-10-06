@@ -77,8 +77,15 @@ const LOOK = () => {
   const pane = document.getElementById('dynPane');
   const chip = [].slice.call(pane.querySelectorAll('.t-chip'))
     .filter(e => (e.textContent || '').indexOf('알람') >= 0)[0];
-  const two = pane.querySelector('.hm-2col');
-  const R = two ? two.children[1] : null;
+  /* ★ <b>곁칸 넷은 자리를 옮깁니다</b> (2026-10-06 · 사장님 「끌어올려」) —
+     컴퓨터는 오른쪽 기둥(#hmSideHost), 폰은 오늘 카드 안 「지금 할 것」
+     바로 아래(#hmSideUp)입니다. 그래서 <b>「두 기둥의 둘째 칸」 으로 찾지
+     않습니다</b> — 그렇게 찾으면 폰에서 못 찾아 헛된 빨간불이 켜집니다 (8번).
+     세울 자리를 정하는 곳은 app 쪽 hmSidePlace 하나입니다 (5번).        */
+  const 곁칸 = [].concat(
+    [].slice.call(document.querySelectorAll('#hmSideUp>*')),
+    [].slice.call(document.querySelectorAll('#hmSideHost>*')));
+  const R = 곁칸.length ? { children: 곁칸 } : null;
   const card = R ? [].slice.call(R.children)
     .filter(e => (e.innerText || '').indexOf('알람') >= 0)[0] : null;
   const ask = [].slice.call(pane.querySelectorAll('[data-ask="오늘남은알람"]'))

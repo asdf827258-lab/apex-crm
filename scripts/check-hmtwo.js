@@ -350,33 +350,61 @@ const SEED = () => {
      ★ 그래서 옛 사실로 돌아가되 <b>지키는 자를 둘 답니다</b> —
        「다시 멀어지지 않는지」 와 「펴 놓고 재고 있지 않은지」.         */
   console.log('\n[2] 폰(390)에서는 <b>한 기둥</b>이다 — 차례는 DOM 그대로');
+  /* ══ 2026-10-06 · <b>세 번째이자 마지막 자리</b> (사장님 「끌어올려」) ═════
+     ①②(위 쪽지) 뒤에 사장님이 <b>「끌어올려」</b> 하셨습니다. 재서 자리를
+     골랐습니다 — 폰에서 「지금 할 것」 이 <b>y2,138</b> 에서 끝나므로,
+     그것을 위에 두는 한 넷은 <b>그보다 위로 못 갑니다</b>. 그래서 넷은
+     <b>오늘 카드 안 · 「지금 할 것」 바로 아래</b>(#hmSideUp)에 섭니다 —
+     y2,612 → <b>y2,138</b>, 474px 올랐습니다. 두 말씀이 둘 다 참입니다.
+     ★ 컴퓨터(1101px 위)에서는 <b>그대로 오른쪽 기둥</b>입니다.
+     ★ 두 자리에 <b>같이</b> 세우면 hmRtHost·hmActHost id 가 겹쳐 앞엣것이
+       빈 칸으로 남습니다 — 그래서 <b>한쪽은 반드시 비어 있어야</b> 합니다.  */
   const PH = await open(390);
   const one = await PH.evaluate(() => {
     const c = document.querySelector('.hm-2col'); if (!c) return { no: 1 };
     const [L, R] = c.children;
     const rl = L.getBoundingClientRect(), rr = R.getBoundingClientRect();
     const y = (el) => el ? Math.round(el.getBoundingClientRect().top) : -1;
-    const 넷 = [].slice.call(R.children).map(e => ({
+    const hh = (el) => el ? Math.round(el.getBoundingClientRect().height) : -1;
+    const up = document.getElementById('hmSideUp');
+    const 넷 = up ? [].slice.call(up.children).map(e => ({
       이름: (e.querySelector('.hm-rt-h b') || {}).textContent || e.id || e.className,
-      y: y(e) }));
+      y: y(e) })) : [];
+    const now = document.querySelector('.hm-now');
     return { no: 0, lx: Math.round(rl.left), rx: Math.round(rr.left),
              ly: Math.round(rl.top), ry: Math.round(rr.top),
              kb: y(document.getElementById('hmKbHost')),
              td: y(document.getElementById('hmToday')),
-             넷: 넷, 펴짐: (typeof HM_MORE !== 'undefined') ? !!HM_MORE : null,
+             nowEnd: now ? y(now) + hh(now) : -1,
+             넷: 넷, 위칸: !!up, 오른빔: !!(R.textContent || '').trim() === false,
+             오른글: (R.textContent || '').trim().length,
+             rt: document.querySelectorAll('#hmRtHost').length,
+             act: document.querySelectorAll('#hmActHost').length,
+             머리: document.querySelectorAll('#hmSideUp .hm-rt-h').length,
+             펴짐: (typeof HM_MORE !== 'undefined') ? !!HM_MORE : null,
              over: Math.round(document.documentElement.scrollWidth - window.innerWidth) };
   });
-  const 첫넷 = one.no ? -1 : Math.min.apply(null, one.넷.map(x => x.y));
+  const 첫넷 = (one.no || !one.넷.length) ? -1 : Math.min.apply(null, one.넷.map(x => x.y));
   is(!one.no && one.lx === one.rx, '  <b>같은 줄에서 시작</b>한다 — 왼쪽 x' + one.lx + ' · 오른쪽 x' + one.rx);
-  is(!one.no && one.ry > one.ly, '  <b>위아래로</b> 쌓인다 — 왼쪽 y' + one.ly + ' · 오른쪽 y' + one.ry);
   is(!one.no && one.kb > 0 && one.td > one.kb,
      '  <b>읽어 둔 보장분석 다음에 지금 할 것</b>이다 — 보장분석 y' + one.kb + ' · 지금 할 것 y' + one.td);
-  /* ★ <b>기준선</b> — 오른쪽 넷의 첫 칸이 지금 y2,516 입니다. 3,000 을
-     넘으면 위가 길어졌다는 뜻이라 빨간불입니다. 사장님이 「안 보인다」 고
-     하신 자리라, <b>더 멀어지는 것</b>만은 자가 막습니다.               */
-  is(!one.no && 첫넷 > one.td && 첫넷 <= 3000,
-     '  ★ 오른쪽 넷이 <b>지금 할 것 뒤에 오되 너무 멀지 않다</b> — 첫 칸 y' + 첫넷
-       + ' (기준선 3,000 · 2026-10-05 사장님이 「지금 할 것 다시 위로」 하셨습니다)');
+  /* ── ★★ 넷이 <b>폰에서 「지금 할 것」 바로 아래</b>에 선다 ───────── */
+  is(!one.no && one.위칸 && one.넷.length >= 4,
+     '  ★★ 폰에서 넷이 <b>오늘 카드 안(#hmSideUp)</b>에 선다 — ' + one.넷.length + '칸' +
+     ((one.위칸 && one.넷.length >= 4) ? '' : ' ← 자리를 못 찾았거나 비었습니다'));
+  is(!one.no && one.머리 >= 3,
+     '  ★ 머리글(.hm-rt-h)이 <b>' + one.머리 + '개</b> 선다 — 목각 차례 그대로');
+  /* ★ <b>기준선</b> — 첫 칸이 「지금 할 것」 이 끝나는 자리에서 <b>120px 안</b>.
+     전에는 3,000 이었고 실제로 y2,612 였습니다. 이제 바로 붙어 섭니다.    */
+  is(!one.no && 첫넷 > 0 && one.nowEnd > 0 && 첫넷 >= one.nowEnd - 8 && 첫넷 <= one.nowEnd + 120,
+     '  ★★ 첫 칸이 <b>「지금 할 것」 바로 아래</b>다 — 지금 할 것 끝 y' + one.nowEnd +
+     ' · 첫 칸 y' + 첫넷 + ' (틈 120px 안 · 2026-10-06 사장님 「끌어올려」)');
+  /* ★★ <b>두 자리에 같이 세우지 않는다</b> — id 가 겹치면 앞엣것이 빈 칸이다 */
+  is(!one.no && one.오른글 === 0,
+     '  ★★ 폰에서 <b>오른쪽 기둥은 비어 있다</b> — 글자 ' + one.오른글 + '자' +
+     (one.오른글 ? ' ← 두 벌입니다. id 가 겹쳐 한쪽이 빈 칸으로 남습니다 (5번)' : ''));
+  is(!one.no && one.rt === 1 && one.act === 1,
+     '  ★ 빈 자리(hmRtHost · hmActHost)가 <b>하나씩</b>이다 — ' + one.rt + ' · ' + one.act);
   /* ★★ <b>재는 상태를 밝힙니다.</b> 「이분 자세히」 를 펴 놓고 재면 위 수가
      1,000px 넘게 달라집니다 — 실제로 그렇게 틀린 수를 사장님께 드렸습니다. */
   is(one.펴짐 !== true,
