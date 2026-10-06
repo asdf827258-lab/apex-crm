@@ -477,7 +477,7 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     const bar = () => document.querySelector('#dynPane .stp');
     /* ⚠ 뒷길 다섯(복사만·주소만·나눠서·글로 보기·나중에)은 <b>「안 될 때 ▾」</b>
        뒤에 접혀 있다 — 2026-09-21 · 배너가 425px 라 홈에서 「오늘 할 일」 이
-       883px 로 밀려 첫 화면을 벗어났고 check-toss 가 잡았다. <b>지운 것이
+       883px 로 밀려 첫 화면을 벗어났고 check-phonefit 가 잡았다. <b>지운 것이
        아니라</b> 한 번 뒤이므로, 점검도 그 길을 그대로 밟는다 (8번). */
     const more = Array.from(bar().querySelectorAll('button'))
                       .filter(b => /안 될 때/.test(b.textContent))[0];

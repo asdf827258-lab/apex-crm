@@ -144,7 +144,7 @@ const SEED = (o) => `
     await p.evaluate(SEED(o || {})); await p.waitForTimeout(2400);
     return { ctx, p, errs };
   };
-  /* ⚠ 미션 칸은 <b>접힌 채로</b> 섭니다(홈의 규칙 · check-toss 가 지킵니다).
+  /* ⚠ 미션 칸은 <b>접힌 채로</b> 섭니다(홈의 규칙 · check-phonefit 가 지킵니다).
      그래서 속을 보려면 먼저 <b>펴야</b> 합니다 — 안 펴고 재면 높이가 0 입니다. */
   const openMs = async (p) => { await p.evaluate(() => { if (!hmFoldOpen('ms')) hmFoldToggle('ms'); }); await p.waitForTimeout(240); };
   const jump = async (p, i) => { await p.evaluate(j => hmMsJump(j), i); await p.waitForTimeout(260); };
@@ -176,7 +176,7 @@ const SEED = (o) => `
     };
   });
   /* ⚠ 홈에는 「<b>처음에는 다 접힌 채로 연다</b>」 는 규칙이 있습니다 —
-     사장님 말씀 「홈 화면이 너무 복잡하다」 에서 나온 규칙이고 check-toss 가
+     사장님 말씀 「홈 화면이 너무 복잡하다」 에서 나온 규칙이고 check-phonefit 가
      지킵니다. 한 번 펴 두었다가 「오늘 할 일」 이 1,173px 로 밀려 첫 화면
      밖으로 나갔습니다. 그래서 여기서는 <b>접혀 있는지</b>를 봅니다. */
   is(s1.has && !s1.open, '  미션 칸이 서고 <b>처음에는 접혀</b> 있다 — 홈의 규칙 그대로');

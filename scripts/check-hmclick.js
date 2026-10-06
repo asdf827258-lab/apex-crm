@@ -121,7 +121,7 @@ const SEED = () => {
   go('home');
   /* <b>접힌 것은 먼저 펴고 잽니다.</b> 접힌 단추는 높이가 0px 이라
      「손가락이 안 닿는다」 로 세어집니다 — 안 닿는 것이 아니라
-     <b>안 보이는</b> 것입니다 (check-toss 에서 배운 것). */
+     <b>안 보이는</b> 것입니다 (check-phonefit 에서 배운 것). */
   try { hmFoldSet('etc', true); hmFoldSet('more', true); } catch (e) {}
   go('home');
 };

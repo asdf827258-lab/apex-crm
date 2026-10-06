@@ -229,7 +229,7 @@ const tall = (p) => p.evaluate(() => {
      둘을 뭉쳐 세면 <b>길이와 상관없는 빨간불</b>이 켜집니다 — 헛것입니다 (8번).
      ★ 그래서 <b>길이를 정하는 줄</b>(위 통칸 + 왼쪽 기둥)만 넷 이하로 봅니다.
      ★ 곁기둥은 <b>안 보는 것이 아니라 따로</b> 셉니다 — 늘면 울립니다.
-     ★ 길이 자체는 [5] 와 check-homeone·check-toss 가 그대로 잽니다.       */
+     ★ 길이 자체는 [5] 와 check-homeone·check-phonefit 가 그대로 잽니다.       */
   const S1 = await shape(A.p, 'left');
   const big = S1.filter(x => x.h > 120);
   /* ── 2026-10-01 · <b>넷 → 다섯</b> ─────────────────────────────────
