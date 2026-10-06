@@ -259,11 +259,19 @@ const SEED = (o) => `
   is(/var head=pick\+/.test(SRC), '고객 체크가 <b>고르개를 먼저</b> 세운다');
   is(/pick=hwhoBarHtml\(\)/.test(SRC),
      '  <b>홈이 쓰는 그 고르개</b>를 그대로 쓴다 — 권한 규칙을 두 곳에 안 적는다 (5번)');
-  const hset = (SRC.split('function hwhoSet(')[1] || '').slice(0, 900);
+  /* ★★ <b>글자 수로 자르지 않습니다</b> (2026-10-06). 앞 900자만 읽었더니,
+     hwhoSet 앞에 주석 여덟 줄이 붙은 날 <b>부르는 코드가 그대로 있는데도
+     빨간불</b>이 켜졌습니다 — 헛것을 잡는 자는 안 잡는 자보다 나쁩니다 (8번).
+     이제 <b>함수 한 몸</b>을 읽습니다. 범위가 넓어진 것이 아니라 <b>제자리</b>가
+     된 것입니다 — 다음 선언 앞까지만 봅니다.                            */
+  const 몸통 = (nm) => { const a = SRC.indexOf('function ' + nm + '(');
+    if (a < 0) return ''; const b = SRC.indexOf('\nfunction ', a + 1);
+    return SRC.slice(a, b > a ? b : a + 4000); };
+  const hset = 몸통('hwhoSet');
   is(/chkPaint\(\)/.test(hset),
      '  고르면 <b>고객 체크도 다시 그린다</b> — 안 그리면 눌러도 그대로라 고장으로 보인다');
   is(/hmChkPaint\(\)/.test(hset), '  <b>홈 칸도</b> 같이 바뀐다');
-  const hme = (SRC.split('function hwhoMe(')[1] || '').slice(0, 900);
+  const hme = 몸통('hwhoMe');
   is(/chkPaint\(\)/.test(hme), '  <b>「내 화면으로」</b> 로 돌아올 때도 같이 바뀐다');
 
   console.log('\n[11] 한 분도 없으면 <b>사람을 지어내지 않는다</b> (1번)');
