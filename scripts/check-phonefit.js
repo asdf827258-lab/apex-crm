@@ -1,5 +1,29 @@
 /* ══════════════════════════════════════════════════════════════════
-   check-toss.js — <b>토스처럼 되어 가고 있나.</b> 자(尺)입니다.
+   check-phonefit.js — <b>폰에 맞나.</b> 자(尺)입니다.
+
+   ── ★ 2026-10-06 · <b>이름을 바꿨습니다 (S09)</b> ──────────────────
+   여태 <b>check-toss.js</b> 였습니다. 사장님 말씀 (2026-09-24) —
+   「<b>브랜치·파일 이름에 toss 를 쓰지 마십시오(토스페이먼츠와 부딪힙니다)</b>」.
+   재어 보니 이 저장소에서 <b>toss 한 낱말이 세 가지 뜻</b>으로 쓰이고 있었습니다 —
+     ① <b>토스페이먼츠</b>(결제) : netlify/functions/toss-billing · toss-confirm ·
+        TOSS_SECRET_KEY · TossPayments · getTossKey · TOSS_PLANS
+     ② <b>토스증권</b>(주식)     : scripts/toss-agent · check-toss-relay ·
+        .tossinvest · invTossUrl
+     ③ <b>토스판</b>(목업·디자인) : 이 파일 · .hm-toss · hmTossCard · BABA_TOSS
+   ①②는 <b>진짜 그 회사 이름</b>이라 맞습니다. 사장님이 부딪힌다고 하신 것은
+   <b>③</b> 입니다 — 결제 열쇠를 찾아 toss 를 그러면 <b>디자인 자가 걸립니다.</b>
+   그래서 ③ 중 <b>파일 이름</b>인 이 하나를 바꿨습니다.
+
+   ★ <b>재는 것은 한 자도 안 바뀌었습니다</b> — 기준선도 그대로입니다.
+     이름만 바뀌었습니다. 부르는 자리 서른두 곳(자 열한 개 · checks.tsv ·
+     말씀대장 다섯 줄)을 같이 고쳤습니다. <b>check-toss-relay 는 안 건드렸습니다</b>
+     (토스증권 것이라 그 이름이 맞습니다).
+   ⚠ <b>.hm-toss · hmTossCard · BABA_TOSS 는 그대로 둡니다</b> — 사장님 말씀은
+     <b>「브랜치·파일 이름」</b> 이었고, 클래스 이름을 바꾸면 화면이 걸린 자리를
+     전부 찾아야 해서 이 판에서 잴 수 없습니다. <b>늘지 않게</b> check-namerule
+     이 지킵니다 (1번 — 못 한 것은 수와 까닭을 적습니다).
+   ★ 새 이름은 이 자가 <b>실제로 재는 것</b>에서 왔습니다 — 아래 넷은 전부
+     「폰에서 맞나」 입니다. 「토스처럼」 은 잴 수 없는 말이었습니다 (8번).
 
    사장님 말씀 — 「토스어플처럼 만들 계획과 프로젝트를 짜보자」.
 
@@ -807,6 +831,6 @@ const SEED = `
   console.log(bad
     ? ('✗ ' + bad + '개 — 폰에서 전보다 나빠진 자리가 있습니다')
     : '✓ 폰에서 읽히고 · 손이 닿고 · 옆으로 안 샙니다 (기준선 안쪽)');
-  console.log('  기준선은 scripts/check-toss.js 의 BASE 입니다 — 좋아지면 손으로 내려 주십시오.');
+  console.log('  기준선은 scripts/check-phonefit.js 의 BASE 입니다 — 좋아지면 손으로 내려 주십시오.');
   process.exit(bad ? 1 : 0);
 })().catch(e => { console.log('✗ 점검 자체가 터졌습니다: ' + e.message); srv.close(); process.exit(1); });
