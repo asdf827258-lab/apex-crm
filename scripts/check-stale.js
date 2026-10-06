@@ -62,8 +62,13 @@ const 줄 = LEDGER.split('\n').map(l => l.split('\t')).filter(r => r.length === 
 const 증인 = [
   { 키: 'X02-설정',  뜻: '설정 화면을 점검 껍데기에서 못 열어 안 쟀다',
     옷입음: ['settings'] },
-  { 키: 'X02-잇기',  뜻: '색이 글자 잇기(ternary) 안에 박혀 못 옮겼다',
-    옷입음: ['contracts', 'org', 'claims'] },
+  /* ★ 2026-10-06 · <b>셋 중 둘을 했으니 증인을 좁힙니다</b> — org · contracts 는
+     orgRankColor · ctaRisk 를 토큰으로 옮겨 입었습니다(물결 6). 남은 것은
+     claims 하나이고, 칩 색이 CLAIM_SCENARIOS 의 payout 배열에서 와 아직 못
+     짚었습니다. 좁히지 않고 두면 <b>둘을 했는데도 「아직 못 한다」 가 참</b>으로
+     남아 자가 아무것도 안 잡습니다 (0-1번).                              */
+  { 키: 'X02-잇기',  뜻: '청구 칩 색이 CLAIM_SCENARIOS payout 배열 안에 박혀 못 옮겼다',
+    옷입음: ['claims'] },
   { 키: 'X02-유리',  뜻: '반투명(rgba) 유리칸 바탕이라 대비를 못 쟀다',
     옷입음: ['pricing', 'wallets', 'teamhub'] },
   { 키: 'X41-칩',    뜻: '위 칩 둘(연속 N일 · 알람 N개)을 세는 자리',

@@ -18222,6 +18222,26 @@ function osFullMode(on){
        biz_news       <b>보라 #6D28D9</b> — --t-pur 로 가면 6.5 → 5.7 로
                       떨어지고, 보라는 「약속·SNS」 자리라 뜻이 다를 수 있습니다
    ★ 되돌림 — 이 열여섯을 빼면 check-skinmap 이 22 → 38 로 빨간불입니다.  */
+/* ══ 🧥 <b>물결 6 — 글자 잇기·표 안에 박힌 색을 꺼냈습니다</b> (2026-10-06 · X02-잇기) ══
+   ★ 대장에 <b>⛔[아직:X02-잇기]</b> 이름표를 달아 둔 자리입니다 — 「색이 글자
+     잇기(ternary) 안에 박혀 color: 규칙이 아니라 못 옮겼다」. 그 둘을 꺼냈습니다.
+   ★★ <b>짐작하지 않고 브라우저에게 물었습니다</b> — 세 화면을 떠서 색이 안 맞는
+     글자마다 <b>어느 칸이고 무슨 인라인 style 을 달고 있나</b>를 찍게 했습니다.
+     정적으로 hex 를 쫓다 보니 <b>차트 색·바탕색이 섞여</b> 짐작하면 틀렸습니다.
+     찍어 보니 셋 다 <b>인라인 style</b> 이고 만드는 자리가 함수 하나씩이었습니다.
+       org       .ogv-r  style="color:#0F172A"       ← orgRankColor
+       contracts span    style="…color:#B45309;…"    ← ctaRisk
+       claims    .clm-dref-cov style="border-color:#0891B2;color:#0891B2"
+   ★ <b>org · contracts</b> 를 입혔습니다 — 재어 보니 둘 다 우리 색표 밖 색이
+     <b>0가지</b>입니다(org 0개 · contracts 셋 다 짙은 단: --t-pos-d · --t-warn-d ·
+     --t-neg-d). 78 → <b>80</b>.
+   ⚠ <b>claims 는 못 했습니다</b> — 칩 색이 CLAIM_SCENARIOS 의 payout 배열에서
+     오는데, 그 자료에서 색을 적는 자리를 <b>아직 못 짚었습니다</b>(#0891B2 6개 ·
+     #10B981 1개 · #BE123C 1개). 짚지 못한 것을 짚었다고 적지 않습니다 (1번).
+     이름표 <b>⛔[아직:X02-잇기]</b> 는 claims 하나로 좁혀 남겨 둡니다.
+   ⚠ <b>바탕·테두리는 안 건드렸습니다</b> — 이 판은 글자가 목업 색을 쓰게 하는
+     판입니다. 바탕까지 같이 바꾸면 무엇이 바뀌었는지 알 수 없게 됩니다.
+   ★ 되돌림 — 이 둘을 빼면 check-skinmap 이 20 → 22 로 빨간불입니다.        */
 var T_SKIN={home:1,dashboard:1,clients:1,news_live:1,mycal:1,me:1,tools:1,
             voiceasst:1,growboard:1,assistant:1,airep:1,brain:1,notice:1,
             academy_notion:1,apexmaster:1,baba:1,bojang:1,branch_coach:1,calc:1,calendar:1,
@@ -18232,7 +18252,8 @@ var T_SKIN={home:1,dashboard:1,clients:1,news_live:1,mycal:1,me:1,tools:1,
             threads:1,video:1,voice:1,
             interpret:1,blog:1,attend:1,audit:1,report:1,hq:1,academy:1,
             biz_diag:1,biz_tax:1,biz_ins:1,biz_retire:1,biz_staff:1,daily:1,
-            ai_prop:1,endorse:1,manual:1,utphoto:1,fp_talk:1,dz_guide:1,inv_stock:1,inv_fund:1,inv_econ:1,ckboard:1,treatpay:1,inv_perf:1,biz_fund:1,mycoach:1,ready:1,phone_app:1};
+            ai_prop:1,endorse:1,manual:1,utphoto:1,fp_talk:1,dz_guide:1,inv_stock:1,inv_fund:1,inv_econ:1,ckboard:1,treatpay:1,inv_perf:1,biz_fund:1,mycoach:1,ready:1,phone_app:1,
+            org:1,contracts:1};
 /* ══ 🔦 <b>공지사항(notice)이 옷을 도로 입었습니다</b> (2026-09-30) ══════
    ★ 여기는 <b>한 번 넣었다 뺐다 다시 넣은</b> 자리입니다. 까닭을 남깁니다.
 
@@ -35189,7 +35210,25 @@ var CONTRACT_ACTS=[
 ];
 var CTA={cat:'all',open:'',sel:'',busy:false,aiout:'',appr:false,prod:'',fig:'',sit:''};
 function ctaCatLabel(c){return c==='change'?'계약 변경':c==='tidy'?'축소·정리':c==='keep'?'유지·연결':c==='convert'?'전환·활용':c==='end'?'종료':c==='right'?'소비자 권리':'전체';}
-function ctaRisk(r){if(r==='high')return {c:'#DC2626',bg:'#FEF2F2',bd:'#FECACA',t:'고위험 · 승인 필요'};if(r==='mid')return {c:'#B45309',bg:'#FFFBEB',bd:'#FDE68A',t:'주의'};return {c:'#047857',bg:'#ECFDF5',bd:'#A7F3D0',t:'일반'};}
+/* ── ⚖️ 위험 등급 색 — <b>표 하나</b>로 (2026-10-06 · X02-잇기) ──────────
+   ★ 여태 <b>삼항 사슬</b>(if high … if mid … return)이었습니다. CLAUDE.md 5번이
+     「탭·트랙을 삼항 사슬로 나열하지 않는다. 표 하나로 두면 늘어도 빠뜨릴
+     자리가 없다」 고 적어 둔 그 꼴입니다 — 등급이 하나 늘면 <b>빠뜨리기</b>
+     쉽습니다. 표로 바꿨습니다.
+   ★ <b>글자색(c)만</b> 토큰으로 옮깁니다 — bg·bd(바탕·테두리)는 그대로입니다.
+     이 판은 <b>글자가 목업 색을 쓰게</b> 하는 판이고, 바탕을 건드리면 무엇이
+     바뀌었는지 알 수 없게 됩니다.
+       #DC2626 → --t-neg-d   연한 바탕(#FEF2F2) 위 4.55 → <b>5.91</b> ↑
+       #B45309 → --t-warn-d  연한 바탕(#FFFBEB) 위 4.84 → <b>5.70</b> ↑
+       #047857 → --t-pos-d   연한 바탕(#ECFDF5) 위 5.21 → <b>7.29</b> ↑
+     <b>셋 다 읽기가 좋아집니다</b> — 짙은 단(ⓒ)으로 가기 때문입니다.
+   ★ 계약관리가 목업 옷을 못 입던 까닭이 이 자리였습니다.             */
+var CTA_RISK = {
+  high: {c:'var(--t-neg-d)',  bg:'#FEF2F2', bd:'#FECACA', t:'고위험 · 승인 필요'},
+  mid:  {c:'var(--t-warn-d)', bg:'#FFFBEB', bd:'#FDE68A', t:'주의'},
+  low:  {c:'var(--t-pos-d)',  bg:'#ECFDF5', bd:'#A7F3D0', t:'일반'}
+};
+function ctaRisk(r){return CTA_RISK[r]||CTA_RISK.low;}
 function ctaActById(id){for(var i=0;i<CONTRACT_ACTS.length;i++)if(CONTRACT_ACTS[i].id===id)return CONTRACT_ACTS[i];return null;}
 function ctaCapture(){var p=$('ctaProd'),f=$('ctaFig'),s=$('ctaSit');if(p)CTA.prod=p.value;if(f)CTA.fig=f.value;if(s)CTA.sit=s.value;}
 function ctaRerender(){var b=$('ctaBody');if(b)b.innerHTML=ctaBody();}
@@ -38576,9 +38615,26 @@ function orgSave(list){
 }
 function orgVal(id){var e=document.getElementById(id);return e?(''+e.value).replace(/^\s+|\s+$/g,''):'';}
 function orgInsta(v){return (''+v).replace(/^@/,'').replace(/https?:\/\/(www\.)?instagram\.com\//i,'').replace(/[\/?#].*$/,'').replace(/^\s+|\s+$/g,'');}
+/* ── 🏷️ 직함 색 — <b>색표에서 가져옵니다</b> (2026-10-06 · X02-잇기) ──────
+   ⚠ 이 함수는 <b>바탕과 글자에 둘 다</b> 쓰입니다 — 배지 바탕(.badge) · 점
+     (.ogv-b · .ogv-dot) · <b>글자</b>(.ogv-mr · .ogv-r). 그래서 색이 바뀌면
+     네 자리가 함께 움직입니다. 값은 거의 안 움직입니다 —
+       #0F172A → --t-ink      흰 위 17.85 → 16.56
+       #1E3A8A → --t-point-d  흰 위 10.36 → 10.14
+       #1A56DB → --t-point    <b>값이 똑같습니다</b>
+       #7C3AED → --t-pur      <b>값이 똑같습니다</b>
+       #0891B2 → --teal       <b>값이 똑같습니다</b>
+       #059669 → --t-pos      <b>값이 똑같습니다</b>
+       #6B7280 → --t-sub      흰 위 4.83 → 4.62
+     <b>넷은 이름만 붙인 것</b>이고 셋만 조금 움직입니다.
+   ★ 조직도가 목업 옷을 못 입던 까닭이 바로 이 표였습니다 — 색이 <b>글자
+     잇기·표 안</b>에 박혀 있어 color: 규칙을 찾는 자가 못 봤습니다.
+   ⚠ <b>삼항 사슬로 늘어놓지 않습니다</b> — 표 하나로 두면 직함이 늘어도
+     빠뜨릴 자리가 없습니다 (CLAUDE.md 5번).                             */
 function orgRankColor(r){
-  var m={'본부장':'#0F172A','사업단장':'#1E3A8A','지점장':'#1A56DB','팀장':'#7C3AED','설계사':'#0891B2','신입':'#059669'};
-  return m[r]||'#6B7280';
+  var m={'본부장':'var(--t-ink)','사업단장':'var(--t-point-d)','지점장':'var(--t-point)',
+         '팀장':'var(--t-pur)','설계사':'var(--teal)','신입':'var(--t-pos)'};
+  return m[r]||'var(--t-sub)';
 }
 function orgPhotoPick(input){
   var f=input&&input.files&&input.files[0];if(!f)return;

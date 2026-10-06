@@ -125,7 +125,12 @@ const 띠만 = { tools: '아래 띠 🧰 도구' };
      .t-skin{color:…} 이 닿지 않던 것입니다.
      <b>.t-skin select,input,textarea,button{color:inherit} 한 줄</b>로 닿게
      했습니다. <b>짐작을 적기 전에 재었더라면</b> 한 판 빨랐습니다 (1번).  */
-const BASE = { 안입음: 22, 서랍: 0 };
+const BASE = { 안입음: 20, 서랍: 0 };
+/* ★ 22 → 20 · 2026-10-06 <b>물결 6</b>(X02-잇기). <b>글자 잇기·표 안에 박힌 색</b>
+   을 꺼내 org(조직도) · contracts(계약관리 판단) 둘이 입었습니다 — 화면 100개 중
+   <b>80개</b>. 브라우저로 떠서 둘 다 우리 색표 밖 색이 0가지임을 확인했습니다.
+   ⚠ claims(청구)는 칩 색이 CLAIM_SCENARIOS 의 payout 배열에서 와 아직 못 짚었습니다 —
+     대장에 ⛔[아직:X02-잇기] 이름표로 남겨 두었고 check-stale 이 봅니다.      */
 /* ★ 38 → 22 · 2026-10-05 <b>물결 5</b>(사장님 ⓒ). 짙은 토큰(--t-warn-d ·
    --t-warn-d2 · --t-pos-d · 새로 세운 --t-neg-d)으로 641곳을 옮기니 열여섯이
    한꺼번에 입었습니다 — ai_prop · endorse · manual · utphoto · fp_talk ·
