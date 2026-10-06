@@ -81,6 +81,16 @@ is(!!홈 && !/\barLoad\s*\(/.test(홈) && !/\bgbLoad\s*\(/.test(홈),
    '  ★ 홈이 <b>arLoad·gbLoad 를 스스로 안 부른다</b> (7번 — 무료 한도 사고)' );
 is(/function\s+hwhoReload\s*\(/.test(SRC) && /onclick="hwhoReload\(\)"/.test(B몸),
    '  ★ 읽기는 <b>눌렀을 때만</b> — ↻ 단추가 서 있다 (7번·6번)');
+/* ★ 고르셨을 때 <b>한 번</b> 읽는 자리(hwhoArm)가 두 고르개에 다 붙었나.
+     안 붙으면 골라도 아래가 비어 「고장」 으로 보입니다.
+   ★ 그 한 번도 <b>손에 자료가 있으면 안 읽습니다</b> — 깃발만 보고 읽으면
+     들고 있던 줄을 빈 것으로 덮어씁니다 (1번). 실제로 그렇게 깨 봤습니다. */
+const A몸 = 코드만(몸('hwhoArm'));
+is(!!A몸 && /AR\.db\s*&&\s*AR\.db\.length\s*\)\s*return/.test(A몸),
+   '  ★ 한 번 읽기가 <b>손에 있는 자료를 덮지 않는다</b>' +
+   (A몸 ? '' : ' ← hwhoArm 을 못 찾았습니다'));
+['hwhoSet', 'hwhoMe'].forEach(nm => is(/hwhoArm\(\)/.test(코드만(몸(nm))),
+   '  ★ ' + nm + ' 가 <b>hwhoArm 을 부른다</b> — 고르면 그분 줄이 실제로 선다'));
 
 (async () => {
   console.log('\n[2]~[5] <b>브라우저로 재 봅니다</b> — 홈 창고만 채워 놓고');
