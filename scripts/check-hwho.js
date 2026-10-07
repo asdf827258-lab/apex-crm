@@ -76,21 +76,38 @@ is(!!B몸 && /hwhoMore\(\)/.test(B몸) && /function\s+hwhoMore\s*\(/.test(SRC),
    '  ★ 넘치면 <b>「＋N명 더」</b> 로 접는다 — 접힌 것은 펼 수 있다 (6번)');
 /* ★ 이 판의 <b>전제</b> — 홈은 서버를 스스로 안 부릅니다 (7번).
      전제가 깨지면 이 자가 지키는 설계도 뜻이 없어지므로 같이 봅니다. */
-const 홈 = 코드만(몸('hmArm') + 몸('hmTodayHtml'));
-is(!!홈 && !/\barLoad\s*\(/.test(홈) && !/\bgbLoad\s*\(/.test(홈),
-   '  ★ 홈이 <b>arLoad·gbLoad 를 스스로 안 부른다</b> (7번 — 무료 한도 사고)' );
+/* ⚠ 2026-10-07 · <b>이 자를 다시 겨눴습니다.</b> 전에는 「홈이 arLoad 를
+   한 번도 안 부른다」 였는데, 그래서 <b>오늘 칸이 하루 종일 비었습니다</b>
+   (그날 두 번째로 켜면 읽는 자리가 없었습니다). 7번이 막는 것은
+   「<b>되풀이해서</b> 부르는 것」 이지 「한 번 읽는 것」 이 아닙니다 —
+   7번 자신이 「화면이 눈에 들어올 때 <b>한 번만</b>」 이라고 적습니다.
+   그래서 <b>그리는 자리(hmTodayHtml)에서는 여전히 한 번도 안 부르고</b>,
+   깨우는 자리(hmArm)에서만 <b>막힌 한 번</b>을 부릅니다.              */
+const 그리기 = 코드만(몸('hmTodayHtml'));
+is(!!그리기 && !/\barLoad\s*\(/.test(그리기) && !/\bgbLoad\s*\(/.test(그리기),
+   '  ★ <b>그리는 자리는 서버를 안 부른다</b> — hmTodayHtml 은 글만 짓는다 (7번)');
 is(/function\s+hwhoReload\s*\(/.test(SRC) && /onclick="hwhoReload\(\)"/.test(B몸),
    '  ★ 읽기는 <b>눌렀을 때만</b> — ↻ 단추가 서 있다 (7번·6번)');
-/* ★ 고르셨을 때 <b>한 번</b> 읽는 자리(hwhoArm)가 두 고르개에 다 붙었나.
-     안 붙으면 골라도 아래가 비어 「고장」 으로 보입니다.
-   ★ 그 한 번도 <b>손에 자료가 있으면 안 읽습니다</b> — 깃발만 보고 읽으면
-     들고 있던 줄을 빈 것으로 덮어씁니다 (1번). 실제로 그렇게 깨 봤습니다. */
-const A몸 = 코드만(몸('hwhoArm'));
+/* ★★ <b>오늘 자료를 한 번 읽는 자리(hmTodayArm)</b> — 2026-10-07.
+     홈이 그리는 줄은 전부 AR.db 에서 옵니다. 그런데 그것을 읽는 자리가
+     arBriefMaybe 하나였고, 그 앞에 「아침 보고를 이미 봤으면 멈춘다」 가
+     걸려 있어 <b>그날 두 번째로 켜면 오늘 칸이 통째로 비었습니다.</b>
+   ★ 겹으로 막혀 있나 — 손에 있으면 · 읽었거나 읽는 중이면 · 숨어 있으면
+     안 읽습니다 (7번·1번).                                             */
+const A몸 = 코드만(몸('hmTodayArm'));
 is(!!A몸 && /AR\.db\s*&&\s*AR\.db\.length\s*\)\s*return/.test(A몸),
    '  ★ 한 번 읽기가 <b>손에 있는 자료를 덮지 않는다</b>' +
-   (A몸 ? '' : ' ← hwhoArm 을 못 찾았습니다'));
-['hwhoSet', 'hwhoMe'].forEach(nm => is(/hwhoArm\(\)/.test(코드만(몸(nm))),
-   '  ★ ' + nm + ' 가 <b>hwhoArm 을 부른다</b> — 고르면 그분 줄이 실제로 선다'));
+   (A몸 ? '' : ' ← hmTodayArm 을 못 찾았습니다'));
+is(!!A몸 && /AR\.loaded\s*\|\|\s*AR\.busy/.test(A몸),
+   '  ★ <b>읽었거나 읽는 중이면 안 읽는다</b>');
+is(!!A몸 && /document\.hidden\s*\)\s*return/.test(A몸),
+   '  ★ <b>안 보는 화면에서는 안 부른다</b> (7번)');
+['hwhoSet', 'hwhoMe', 'hmArm'].forEach(nm => is(/hmTodayArm\(\)/.test(코드만(몸(nm))),
+   '  ★ ' + nm + ' 가 <b>hmTodayArm 을 부른다</b>'));
+/* ★ <b>되풀이해서 부르지 않는다</b> — 7번이 막는 것은 그것입니다 */
+const 홈코드 = 코드만(몸('hmArm') + 몸('hmPaint') + A몸);
+is(!/setInterval\s*\(/.test(홈코드),
+   '  ★★ 홈이 <b>되풀이해서 부르지 않는다</b> — setInterval 이 없다 (7번)');
 
 (async () => {
   console.log('\n[2]~[5] <b>브라우저로 재 봅니다</b> — 홈 창고만 채워 놓고');
@@ -109,6 +126,10 @@ is(!!A몸 && /AR\.db\s*&&\s*AR\.db\.length\s*\)\s*return/.test(A몸),
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());
     ['osLoadProfile','osProfileApply','osShowLoginGate','arLoad','osLoadClients','osCliInfoLoad',
      'osRepListLoad','osLoadAnalysis','nlLoad','gbLoad'].forEach(k => { window[k] = function () {}; });
+    /* ★ arLoad 를 <b>세는 장치</b>로 바꿔 답니다 — 진짜 arLoad 처럼
+         부르자마자 AR.busy 를 세워, 되풀이가 막히는지까지 봅니다. */
+    window.__ar = 0;
+    window.arLoad = function () { window.__ar++; AR.busy = 'load'; };
     window.toast = function () {};
     window.cmLoadAll = function (cb) { if (cb) cb(); };
     window.osTabAllowed = function () { return true; };
@@ -247,6 +268,30 @@ is(!!A몸 && /AR\.db\s*&&\s*AR\.db\.length\s*\)\s*return/.test(A몸),
       const r = await 본다(pg);
       is(r.can === false && !r.띠,
          '  [5] <b>설계사에게는 안 선다</b> — 못 보시는 분께 세워 봐야 눌러도 아무 일이 없습니다 (8번)');
+      await ctx.close();
+    }
+    /* ── ★★ [6] <b>홈을 열면 오늘 자료를 한 번 읽는다</b> (2026-10-07) ──
+         사장님 말씀 — 「껐다 켰는데 오늘 칸에 표기가 전부 안 되어 있어」.
+         읽는 자리가 arBriefMaybe 하나였고 「아침 보고를 이미 봤으면 멈춘다」
+         가 걸려 있어, <b>그날 두 번째로 켜면 한 번도 안 읽었습니다.</b>    */
+    console.log('\n[6] ★★ <b>홈을 열면 오늘 자료를 한 번 읽나</b> (7번 — 되풀이는 안 된다)');
+    {
+      const { ctx, pg } = await 열기({ role:'owner', n:12, ar:false, gb:false }, 390);
+      const n1 = await pg.evaluate(() => window.__ar);
+      is(n1 === 1, '  ★★ 홈을 열면 <b>한 번</b> 읽는다 — ' + n1 + '번' +
+         (n1 ? '' : ' ← 안 읽으면 오늘 칸이 하루 종일 「읽는 중」 으로 남습니다'));
+      /* 다시 열어도 한 번뿐 — 되풀이가 막히나 */
+      await pg.evaluate(() => { go('clients'); go('home'); });
+      await pg.waitForTimeout(500);
+      const n2 = await pg.evaluate(() => window.__ar);
+      is(n2 === 1, '  ★★ 홈을 <b>다시 열어도 그대로 한 번</b> — ' + n2 + '번 (7번)');
+      /* 손에 자료가 있으면 아예 안 읽나 */
+      const n3 = await pg.evaluate(() => {
+        window.__ar = 0; AR.busy = ''; AR.loaded = false;
+        AR.db = [{ id:'d1', who:'me', name:'홍길동', stage:'AP', days:1, region:'서울', src:'db' }];
+        hmTodayArm(); return window.__ar;
+      });
+      is(n3 === 0, '  ★ 손에 자료가 있으면 <b>안 읽는다</b> — ' + n3 + '번 (1번)');
       await ctx.close();
     }
   } catch (e) {
