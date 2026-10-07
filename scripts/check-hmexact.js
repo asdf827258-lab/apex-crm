@@ -339,10 +339,39 @@ const INKS = (sel) => {
      남아 있으면 잉크 표를 갈아끼워도 그대로 나옵니다 — 실제로 콘텐츠 화면이
      그랬고(글자의 85%), 자리를 하나씩 떠서 찾아 고쳤습니다.            */
   console.log('\n[1-2] 옷 입은 화면을 <b>하나씩 열어</b> 떠 본다');
+  /* ★ 고리를 잇습니다 — <b>마지막 화면</b>을 먼저 열어 두면 그것이 첫 화면의
+     바닥이 됩니다. 이 한 줄이 없으면 첫 화면은 홈과 견주게 되어, 첫 화면이
+     홈일 때 <b>헛것</b>으로 울립니다.                                     */
+  let 바닥 = await p.evaluate(async (last) => {
+    try { go(last); } catch (e) {}
+    await new Promise(r => setTimeout(r, 1200));
+    const d = document.getElementById('dynPane');
+    return { n: d ? d.querySelectorAll('*').length : -1,
+             t: d ? (d.innerText || '').slice(0, 120) : '' };
+  }, SKIN[SKIN.length - 1]);
   for (const t of SKIN) {
     if (t === 'dashboard') continue;                 /* 홈이 없을 때의 대타라 따로 안 연다 */
     const R2 = await p.evaluate(async (args) => {
-      const [tab, f] = args;
+      const [tab, f, 바닥] = args;
+      /* ══ ★★ <b>그 화면을 정말 쟀는지 먼저 확인합니다</b> (2026-10-07) ══
+         여태는 go(tab) 뒤에 #dynPane 을 그냥 떴습니다. 그런데 어떤 화면은
+         <b>#dynPane 에 아예 안 그려집니다</b> — 전체화면으로 빠져나가(.app 이
+         display:none) 제 껍데기에 그리거나, #baScreen 처럼 <b>덮어쓰기만</b>
+         합니다. 그때 #dynPane 에는 <b>앞 화면이 그대로</b> 남아 있고, 아래
+         「글자가 실제로 떠졌다」 는 <b>n &gt; 0</b> 만 보므로 <b>초록이 됩니다</b> —
+         남의 글자색을 그 화면 것이라고 적는 <b>거짓 초록</b>입니다.
+         실제로 여섯(frmake·onecmp·sangdam·mikki_talk·pdel·car_fault)을 적었을 때
+         이 자가 <b>전부 ✓</b> 를 찍었습니다. 글자 수가 75·75·75 / 4·4·4 /
+         55·55 로 <b>똑같은</b> 것을 보고 알았습니다 — 안 갈렸던 것입니다.
+         그래서 go(tab) <b>앞의 #dynPane</b> 을 바닥으로 떠 두고, 그 뒤 ⑴ 갈렸고
+         ⑵ 눈에 보이는지를 봅니다. 아니면 <b>못 쟀다고 빨간불</b>입니다 —
+         말없이 남의 색을 그 화면 것이라 적지 않습니다 (1번·8번).
+         ⚠ <b>바닥을 「홈으로 돌려서」 뜨지 마십시오.</b> 처음에 그렇게 했다가
+           <b>홈 자신이 빨간불</b>이 됐습니다 — 홈은 홈과 같으니까요. 헛것을
+           잡는 자는 안 잡는 자보다 나쁩니다 (8번). <b>앞 화면</b>을 바닥으로
+           쓰면 홈도 저절로 풀리고, 화면마다 go('home') 을 한 번 더 하지 않아
+           <b>자도 빨라집니다</b>. 그래서 아래 for 앞에서 <b>마지막 화면</b>을
+           먼저 열어 둡니다 — 첫 화면의 바닥이 되게(고리로 잇습니다).      */
       try { go(tab); } catch (e) {}
       /* ══ ⏳ <b>「1.8초 지났다」 가 아니라 「다 그려졌다」 를 기다립니다</b> ══
          (2026-09-30) 여태는 <b>시간을 셌습니다.</b> 그러면 곳에 따라 빠르고
@@ -363,16 +392,32 @@ const INKS = (sel) => {
       /* ★ <b>자가 스스로 말하게</b> — 갈렸을 때 「무엇이」 갈렸는지 (8번) */
       let admin = null; try { admin = (typeof osIsAppAdmin === 'function') ? !!osIsAppAdmin() : 'x'; } catch (e) { admin = '터짐'; }
       let ls = 0; try { ls = Object.keys(localStorage).length; } catch (e) {}
+      const 이제 = { n: d.querySelectorAll('*').length, t: (d.innerText || '').slice(0, 120) };
+      const r0 = d.getBoundingClientRect();
+      const 몸 = [].slice.call(document.body.classList).filter(c => /-mode$/.test(c));
+      let app = ''; try { app = getComputedStyle(document.querySelector('.app')).display; } catch (e) {}
       return { on: d.classList.contains('t-skin'),
+               갈림: (이제.n !== 바닥.n) || (이제.t !== 바닥.t),
+               보임: r0.width > 1 && r0.height > 1 && app !== 'none',
+               몸: 몸.join(','), app: app, 잎: 이제.n, 바닥잎: 바닥.n, 본문: 이제.t,
                inks: (new Function('return (' + f + ')("#dynPane")'))(),
                waited: waited, nodes: last, role: (OS.profile || {}).role, admin: admin, ls: ls,
                top: [...(d.querySelector('.tab-pane') || d).children]
                       .map(e => e.id || String(e.className || '').split(' ')[0]).slice(0, 8) };
-    }, [t, INKS.toString()]);
+    }, [t, INKS.toString(), 바닥]);
+    바닥 = { n: R2.잎, t: R2.본문 };          /* 다음 화면의 바닥은 이 화면이다 */
     const cs = Object.keys(R2.inks), n = cs.reduce((a, c) => a + R2.inks[c].n, 0);
     const bad2 = cs.filter(c => mkInks.indexOf(c) < 0 && SKIP.indexOf(c) < 0);
     const badN = bad2.reduce((a, c) => a + R2.inks[c].n, 0);
     is(R2.on, '  [' + t + '] <b>옷을 입는다</b> (#dynPane 에 t-skin)');
+    /* ★ <b>n &gt; 0 으로는 모릅니다</b> — 앞 화면이 남아 있어도 n 은 큽니다.
+       「이 화면이 #dynPane 에 그려졌고 눈에 보이는가」 를 따로 묻습니다.  */
+    const 쟀나 = R2.갈림 && R2.보임;
+    is(쟀나, '  [' + t + '] <b>이 화면을 정말 쟀다</b> — #dynPane 이 갈리고 눈에 보인다' +
+       (쟀나 ? (' · 잎 ' + R2.바닥잎 + '→' + R2.잎)
+             : (' ← ' + (!R2.갈림 ? '#dynPane 이 앞 화면에서 안 갈렸습니다(잎 ' + R2.바닥잎 + '→' + R2.잎 + ')' : '')
+                     + (!R2.보임 ? ' #dynPane 이 안 보입니다(.app ' + R2.app + (R2.몸 ? ' · 몸[' + R2.몸 + ']' : '') + ')' : '')
+                     + ' — 이 화면은 제 껍데기에 그립니다. T_SKIN 에 적어도 화면이 안 바뀝니다(check-skin2 [2])')));
     is(n > 0, '  [' + t + '] 글자가 <b>실제로 떠졌다</b> — ' + n + '개');
     is(bad2.length === 0, '  [' + t + '] 글자색이 <b>전부 목업 것</b>이다' +
        (bad2.length ? (' ← 목업에 없는 색 ' + bad2.length + '가지 · 글자 ' + badN + '개') : ''));
