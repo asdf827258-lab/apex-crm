@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="color-scheme" content="light"/>
+<title>거절 근육 훈련 · APEX</title>
+<link rel="stylesheet" href="ui.css">
+<!-- ══ 🥊 <b>거절 근육 훈련</b> — 2026-10-07 ══════════════════════════════
+     사장님 말씀 — 「(유튜브 강의) 이걸 토대로 <b>고객의 거절에 익숙해지는
+     교육과 프로그램</b>을 만들어줘」.
+     바탕 강의 : 「절대 물러서지 않는 거절처리의 원리와 비밀 '고객의 거절을
+     다루는 방법'」 · 보험저널TV · https://www.youtube.com/watch?v=CO56FQ4JE_A
+     (12분 46초 · 두 편 중 <b>1편 — 태도·해석·두려움</b>. 구체 스킬은 2편이라
+      이 영상에 <b>없습니다</b> — 없는 2편을 지어 적지 않습니다 · 1번·9번)
+
+     ★ <b>강의 글은 자막을 듣고 요지만 옮겼습니다.</b> 강사가 쓴 비유
+       (「계약과 거절은 패키지」 · 「거절은 청신호」 · 「감정의 노예」 ·
+       「거절할 권리 / 제안할 의무」)는 그대로 살렸고, 강의에 없는 숫자·
+       통계는 하나도 넣지 않았습니다.
+     ★ <b>역할극의 고객 대사와 멘트는 새로 쓰지 않았습니다</b> (5번) —
+       TA 스크립트와 오늘 챙길 것이 읽는 거절처리 표 <b>apex-stage.js 한 곳</b>을
+       그대로 읽습니다. 여기에 옮겨 적으면 같은 거절에 두 화면이 다른 말을 합니다.
+     ★ 기록은 <b>이 브라우저(localStorage)에만</b> 남고 서버로 안 갑니다 (3번·7번).
+       거절 일기에는 <b>고객 이름 칸을 두지 않았습니다</b> — 상황만 적습니다.
+     ★ 목표 수(하루 몇 통)는 <b>제가 정하지 않습니다</b> — 설계사가 적습니다 (1번).
+     점검 : scripts/check-rejgym.js                                         -->
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--t-bg);color:var(--t-ink);
+  font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Noto Sans KR",system-ui,-apple-system,sans-serif;
+  letter-spacing:-.02em;-webkit-font-smoothing:antialiased;line-height:1.6}
+button,input,select,textarea{font:inherit;color:inherit}
+.rg-wrap{max-width:860px;margin:0 auto;padding:16px 16px 60px}
+.rg-hd{background:var(--t-card);border:1px solid var(--t-line);border-radius:var(--t-r);padding:18px}
+.rg-hd h1{margin:0 0 4px;font-size:22px;font-weight:900}
+.rg-hd p{margin:0;color:var(--t-sub);font-size:14px}
+.rg-src{display:block;margin-top:8px;font-size:12.5px;color:var(--t-sub)}
+.rg-src a{color:var(--t-point)}
+.rg-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+.rg-tabs button{flex:1 1 auto;min-height:44px;padding:0 12px;border:1px solid var(--t-line);
+  border-radius:var(--t-r-btn);background:var(--t-card);font-weight:800;font-size:14px;cursor:pointer}
+.rg-tabs button.on{background:var(--t-point);border-color:var(--t-point);color:var(--t-card)}
+.rg-card{background:var(--t-card);border:1px solid var(--t-line);border-radius:var(--t-r);padding:18px;margin-bottom:12px}
+.rg-card h2{margin:0 0 6px;font-size:18px;font-weight:900}
+.rg-card h3{margin:14px 0 4px;font-size:15.5px;font-weight:900}
+.rg-card p,.rg-card li{font-size:14.5px}
+.rg-card ul{margin:6px 0;padding-left:20px}
+.rg-sub{color:var(--t-sub);font-size:13.5px}
+.rg-q{border-left:4px solid var(--t-point);background:var(--t-point-l);border-radius:0 var(--t-r-sm) var(--t-r-sm) 0;
+  padding:10px 12px;margin:8px 0;font-weight:700}
+.rg-pt{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;margin:10px 0}
+.rg-no{width:34px;height:34px;border-radius:50%;background:var(--t-point);color:var(--t-card);
+  display:flex;align-items:center;justify-content:center;font-weight:900}
+.rg-btn{min-height:44px;padding:0 16px;border:1px solid var(--t-line);border-radius:var(--t-r-btn);
+  background:var(--t-bg);font-weight:800;cursor:pointer}
+.rg-btn.pri{background:var(--t-point);border-color:var(--t-point);color:var(--t-card)}
+.rg-btn.ok{background:var(--t-pos);border-color:var(--t-pos);color:var(--t-card)}
+.rg-btn.ng{background:var(--t-card);border-color:var(--t-neg);color:var(--t-neg)}
+.rg-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.rg-row .rg-btn{flex:1 1 140px}
+.rg-in,.rg-ta{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--t-line);border-radius:var(--t-r-sm);background:var(--t-card)}
+.rg-ta{min-height:80px;resize:vertical}
+.rg-lb{display:block;font-size:13px;font-weight:800;color:var(--t-sub);margin:10px 0 4px}
+.rg-chips{display:flex;gap:6px;flex-wrap:wrap}
+.rg-chip{min-height:44px;padding:0 14px;border:1px solid var(--t-line);border-radius:999px;background:var(--t-card);
+  font-weight:700;cursor:pointer}
+.rg-chip.on{background:var(--t-point-l);border-color:var(--t-point);color:var(--t-point-d)}
+.rg-days{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}
+.rg-day{min-height:56px;border:1px solid var(--t-line);border-radius:var(--t-r-sm);background:var(--t-card);
+  font-weight:800;font-size:13px;cursor:pointer;line-height:1.3}
+.rg-day.done{background:var(--t-pos);border-color:var(--t-pos);color:var(--t-card)}
+.rg-day.now{border:2px solid var(--t-point)}
+.rg-stat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rg-stat div{background:var(--t-bg);border-radius:var(--t-r-sm);padding:10px;text-align:center}
+.rg-stat b{display:block;font-size:22px}
+.rg-stat span{font-size:12.5px;color:var(--t-sub)}
+.rg-cust{font-size:20px;font-weight:900;background:var(--t-bg);border-radius:var(--t-r-sm);padding:14px;margin:8px 0}
+.rg-ans{white-space:pre-wrap;background:var(--t-point-l);border-radius:var(--t-r-sm);padding:12px;margin:6px 0;font-size:15px}
+.rg-warn{white-space:pre-wrap;border:1px solid var(--t-neg);border-radius:var(--t-r-sm);padding:10px;margin:6px 0;font-size:14px}
+.rg-timer{font-size:28px;font-weight:900;color:var(--t-point);text-align:center}
+.rg-log{border-top:1px solid var(--t-line);padding:10px 0;font-size:14px}
+.rg-log:first-child{border-top:0}
+.rg-ox{display:flex;gap:8px;margin-top:6px}
+.rg-ox .rg-btn{flex:1}
+.rg-fb{margin-top:6px;font-size:14px;font-weight:700}
+.rg-hide{display:none}
+@media print{.rg-tabs,.rg-row{display:none}}
+</style>
+</head>
+<body>
+<div class="rg-wrap">
+  <div class="rg-hd">
+    <h1>🥊 거절 근육 훈련</h1>
+    <p>거절은 없어지지 않습니다. <b>익숙해지고, 다룰 수 있게</b> 될 뿐입니다 — 배우고(교육) · 매일 하고(10일) · 미리 말해 보고(연습) · 적어 둡니다(일기).</p>
+    <span class="rg-src">바탕 강의 — <a href="https://www.youtube.com/watch?v=CO56FQ4JE_A" target="_blank" rel="noopener">「절대 물러서지 않는 거절처리의 원리와 비밀 '고객의 거절을 다루는 방법'」</a> · 보험저널TV (1편 · 태도와 해석). 요지만 옮겼습니다.</span>
+  </div>
+
+  <div class="rg-tabs" id="rgTabs">
+    <button data-t="edu" class="on">📖 교육</button>
+    <button data-t="prog">🗓️ 10일 프로그램</button>
+    <button data-t="drill">🎭 거절 연습</button>
+    <button data-t="diary">📓 거절 일기</button>
+    <button data-t="goal">🎯 내 목표</button>
+  </div>
+
+  <!-- ── 📖 교육 ─────────────────────────────────────────────── -->
+  <section id="rg-edu">
+    <div class="rg-card">
+      <h2>왜 화법만 외우면 안 되나</h2>
+      <p>거절 처리는 상담이라는 큰 흐름 안의 한 부분이고, <b>화법은 그 안의 또 한 부분</b>일 뿐입니다. 외운 화법이 현장에서 늘 먹히지 않는 까닭입니다.
+      거절을 <b>어떻게 해석하고 어떤 태도로 맞는지</b>가 먼저 서야 화법이 힘을 씁니다 — 그것이 안 서면 스킬은 「사상누각」입니다.</p>
+      <p class="rg-sub">신입이든 15~20년 차든 거절에 대한 트라우마는 누구나 있습니다. 경력이 쌓인다고 저절로 풀리는 문제가 아닙니다.</p>
+    </div>
+
+    <div class="rg-card">
+      <h2>① 우리는 왜 거절이 싫은가</h2>
+      <p>거절 없는 영업은 없습니다. 거절이 없다는 것은 <b>영업을 떠났다</b>는 뜻입니다. 그런데도 싫은 까닭은 —</p>
+      <ul>
+        <li>고객의 <b>냉대와 냉소</b></li>
+        <li>상대의 <b>불편한 기색</b></li>
+        <li><b>부담스러워하는 표정</b>과 그 느낌</li>
+      </ul>
+      <p>경력이 아무리 많아도 「거절이 완벽하게 괜찮다」는 사람은 거의 없습니다. <b>없앨 수는 없고, 어떻게 다루느냐</b>가 중요합니다.</p>
+    </div>
+
+    <div class="rg-card">
+      <h2>② 거절을 어떻게 해석하고, 어떤 태도로 맞나</h2>
+      <p class="rg-sub">사람은 생각한 대로 행동합니다. 해석이 틀어져 있으면 클로징이 될 수 없습니다.</p>
+      <div class="rg-pt"><div class="rg-no">1</div><div>
+        <h3>거절은 받아들인다 — 계약과 거절은 「패키지」</h3>
+        <p>머리로는 당연하다 해도 막상 거절을 받으면 당황하고 몸이 얼고 표정 관리가 안 됩니다. 그래서 다시 정리합니다 — <b>반드시 겪는 일이고, 단지 지금 왔을 뿐</b>입니다. 거절은 청약으로 가는 길의 <b>중간 과정이자 열고 들어가야 할 문</b>입니다.</p>
+      </div></div>
+      <div class="rg-pt"><div class="rg-no">2</div><div>
+        <h3>고객의 거절은 내 영역이 아니다 — 감정은 내 몫이다</h3>
+        <p>고객이 거절하는 것은 내가 어떻게 할 수 없습니다. 다만 거기서 생기는 <b>불편함·자존심 상함·두려움</b>은 내가 다스릴 수 있고, 다스려야 합니다.</p>
+      </div></div>
+      <div class="rg-pt"><div class="rg-no">3</div><div>
+        <h3>지인의 거절을 확대해석하지 않는다</h3>
+        <p>오히려 경력자가 아는 사람·소개받은 사람의 거절에 더 안절부절합니다. 하지만 <b>지인에게는 내 제안을 받아들일 의무가 없습니다.</b> 서운해하는 순간 스스로 <b>감정의 노예</b>가 되고, 그 감정이 다음 걸음의 발목을 잡습니다.</p>
+      </div></div>
+      <div class="rg-pt"><div class="rg-no">4</div><div>
+        <h3>거절은 청신호다</h3>
+        <p>가장 어려운 고객은 제안에 <b>아무 반응이 없는</b> 고객입니다 — 묵묵부답은 누가 가도 안 됩니다. 거절이 나왔다는 것은 <b>반응이 나왔다</b>는 것이고, 공략할 자리가 보인다는 뜻입니다.</p>
+        <div class="rg-q">거절 = 「필요는 한데, 이런저런 이유로 망설여져요. <b>저에게 확신을 주세요.</b>」</div>
+        <p>그래서 거절이 나오면 「드디어 기회가 왔다」고 받는 것이 정석입니다. 클로징 전에 <b>나올 법한 거절을 미리 충분히 연습</b>하고, 그래도 청약이 안 되면 — <b>다음에 또 만날지는 내가 정합니다.</b></p>
+      </div></div>
+    </div>
+
+    <div class="rg-card">
+      <h2>③ 두려움은 사라지지 않는다 — 극복될 뿐이다</h2>
+      <p>노련한 사람이 다르게 보이는 것은 두려움이 없어서가 아니라, <b>자신감</b>이 두려움을 덜 느끼게 하기 때문입니다. 그러니 할 일은 자신감을 키우는 것입니다. 쉬운 방법 셋 —</p>
+      <div class="rg-pt"><div class="rg-no">1</div><div>
+        <h3>크고 작은 성공을 「연속선 위에」 놓는다</h3>
+        <p>성과가 없을 때 아무것도 안 하면 자신감은 절대 오르지 않습니다. 이때는 청약을 목표로 삼지 말고 <b>과정을 목표로</b> 만들어 <b>연속 달성</b>합니다 — 예) 하루 전화 몇 통 · 하루 한 명은 반드시 상담 → <b>10일 연속</b>. 그리고 한 달로 이어 갑니다.</p>
+        <p>과거의 성공 경험을 하나씩 꺼내 <b>지금의 감정</b>으로 잇고, 그 감정을 <b>앞날의 기대</b>로 잇습니다.</p>
+      </div></div>
+      <div class="rg-pt"><div class="rg-no">2</div><div>
+        <h3>선명한 목표를 세운다</h3>
+        <p>바람과 희망이 목표의 얼굴을 하고 있는 경우가 많습니다. 그건 바람일 뿐입니다. <b>진짜 목표</b>가 있으면 거절로 인한 상심과 두려움이 상쇄됩니다. 세우고, 매 순간 새기고, 떠올립니다.</p>
+      </div></div>
+      <div class="rg-pt"><div class="rg-no">3</div><div>
+        <h3>고객은 거절할 권리가, 나는 제안할 의무가 있다</h3>
+        <p>고객은 거절할 수 있습니다. 대신 나는 <b>할 말은 하고 나와야</b> 합니다. 「하나만 들어 줘」라고 부탁하는 사람에게는 클로징이 오지 않습니다 — 결국 <b>내 역할과 직업의식</b>으로 돌아옵니다.</p>
+        <div class="rg-q">아프거나 다쳤을 때의 위험, 너무 오래 사는 위험까지 — 그 리스크를 대비시켜 드리는 일. 나라가 다 해 주지 못하는 일에 솔루션을 드리는 일입니다.</div>
+        <p>생각이 행동이 되고, 행동이 결과가 됩니다. 「고객에게 반드시 도움이 된다」는 확신이 반복될 때 힘이 납니다.</p>
+      </div></div>
+    </div>
+
+    <div class="rg-card">
+      <h2>✅ 스스로 점검 — 나는 거절을 어떻게 보고 있나</h2>
+      <p class="rg-sub">맞으면 O, 틀리면 X. 누르면 바로 까닭이 나옵니다.</p>
+      <div id="rgQuiz"></div>
+      <p class="rg-sub" id="rgQuizScore"></p>
+    </div>
+
+    <div class="rg-card">
+      <h2>📞 걸기 전 30초</h2>
+      <p class="rg-sub">전화 버튼 누르기 전에 소리 내어 한 번.</p>
+      <ol>
+        <li>거절과 계약은 <b>한 꾸러미</b>다. 거절이 오면 계약도 가까이 왔다.</li>
+        <li>거절은 고객의 몫, <b>내 감정은 내 몫</b>이다.</li>
+        <li>거절은 <b>「확신을 주세요」</b>라는 신호다. 묵묵부답보다 낫다.</li>
+        <li>고객은 거절할 권리가, 나는 <b>제안할 의무</b>가 있다. 할 말은 하고 끊는다.</li>
+      </ol>
+      <p class="rg-sub">※ 구체적인 거절처리 화법(무엇을 말할지)은 바탕 강의 2편의 몫이라 이 영상에는 없습니다. 지금 쓰는 멘트는 <b>☎️ TA 스크립트</b>와 이 화면의 <b>🎭 거절 연습</b>이 같은 표에서 읽습니다.</p>
+    </div>
+  </section>
+
+  <!-- ── 🗓️ 10일 프로그램 ──────────────────────────────────────── -->
+  <section id="rg-prog" class="rg-hide">
+    <div class="rg-card">
+      <h2>🗓️ 10일 연속 — 과정 목표로 자신감 쌓기</h2>
+      <p class="rg-sub">강의의 처방 그대로 — 청약이 아니라 <b>과정</b>을 목표로, <b>10일 연속</b>. 하루 하나씩 마음 공부 · 과정 목표 · 거절 연습 셋을 하면 그날이 채워집니다.</p>
+      <div class="rg-stat">
+        <div><b id="rgStDone">0</b><span>채운 날 / 10</span></div>
+        <div><b id="rgStStreak">0</b><span>연속 일수</span></div>
+        <div><b id="rgStDrill">0</b><span>오늘 연습</span></div>
+      </div>
+      <div class="rg-days" id="rgDays"></div>
+      <p class="rg-sub" id="rgStreakNote"></p>
+    </div>
+    <div class="rg-card" id="rgToday"></div>
+  </section>
+
+  <!-- ── 🎭 거절 연습 ──────────────────────────────────────────── -->
+  <section id="rg-drill" class="rg-hide">
+    <div class="rg-card">
+      <h2>🎭 거절 연습 — 고객이 이렇게 말합니다</h2>
+      <p class="rg-sub">① 고객의 말을 읽고 ② <b>소리 내어 먼저 답해 봅니다</b>(15초) ③ 멘트를 펴서 견주고 ④ 스스로 매깁니다. 막혔던 거절은 더 자주 나옵니다.</p>
+      <div id="rgDrill"></div>
+    </div>
+    <div class="rg-card">
+      <h2>내 약한 거절</h2>
+      <div id="rgWeak" class="rg-sub"></div>
+    </div>
+  </section>
+
+  <!-- ── 📓 거절 일기 ──────────────────────────────────────────── -->
+  <section id="rg-diary" class="rg-hide">
+    <div class="rg-card">
+      <h2>📓 거절 일기 — 감정을 다스리는 칸</h2>
+      <p class="rg-sub">거절은 내 영역이 아니지만 감정은 내 몫입니다. 받은 그날 적으면 다음 통화가 가벼워집니다. <b>고객 이름은 적지 마십시오</b> — 상황만 적습니다(이 기기에만 남습니다).</p>
+      <label class="rg-lb">어떤 거절이었나 (고객이 한 말)</label>
+      <input class="rg-in" id="rgDyWhat" placeholder="예: 「생각해 볼게요」 / 지인이 「요즘 어렵다」며 끊음">
+      <label class="rg-lb">누구에게서</label>
+      <div class="rg-chips" id="rgDyWho"></div>
+      <label class="rg-lb">그때 내 마음</label>
+      <div class="rg-chips" id="rgDyFeel"></div>
+      <label class="rg-lb">다시 해석하면 (하나 고르기)</label>
+      <div class="rg-chips" id="rgDyRe"></div>
+      <label class="rg-lb">고객이 망설인 까닭으로 보이는 것 — 다음에 줄 「확신」</label>
+      <input class="rg-in" id="rgDyWhy" placeholder="예: 보험료 부담 → 다음엔 줄일 수 있는 안을 먼저">
+      <label class="rg-lb">다음에 또 만날지는 내가 정한다</label>
+      <div class="rg-chips" id="rgDyNext"></div>
+      <div class="rg-row"><button class="rg-btn pri" id="rgDySave">적어 두기</button></div>
+      <p class="rg-fb" id="rgDyMsg"></p>
+    </div>
+    <div class="rg-card">
+      <h2>쌓인 거절</h2>
+      <div class="rg-stat" id="rgDyStat"></div>
+      <div id="rgDyList" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <!-- ── 🎯 내 목표 ────────────────────────────────────────────── -->
+  <section id="rg-goal" class="rg-hide">
+    <div class="rg-card">
+      <h2>🎯 선명한 목표</h2>
+      <p class="rg-sub">「잘됐으면 좋겠다」는 바람입니다. 언제까지 · 무엇을 · 얼마나 — 적을 수 있어야 목표입니다.</p>
+      <label class="rg-lb">나의 목표</label>
+      <textarea class="rg-ta" id="rgGoalMain" placeholder="예: 12월 말까지 신규 상담 ○○건 · 월 ○건 청약"></textarea>
+      <label class="rg-lb">10일 동안 매일 지킬 과정 목표 (프로그램이 이것을 매일 묻습니다)</label>
+      <input class="rg-in" id="rgGoalProc" placeholder="예: 하루 전화 20통 / 하루 1명은 반드시 상담">
+    </div>
+    <div class="rg-card">
+      <h2>🏆 내 성공 경험 셋</h2>
+      <p class="rg-sub">과거의 성공을 꺼내 지금의 감정으로, 지금의 감정을 앞날의 기대로 잇습니다. 크기는 상관없습니다.</p>
+      <input class="rg-in" id="rgWin1" placeholder="① 예: 세 번 거절한 분이 네 번째에 소개까지 해 주셨다" style="margin-bottom:6px">
+      <input class="rg-in" id="rgWin2" placeholder="②" style="margin-bottom:6px">
+      <input class="rg-in" id="rgWin3" placeholder="③">
+    </div>
+    <div class="rg-card">
+      <h2>🪪 나의 직업 선언</h2>
+      <p class="rg-sub">고객은 거절할 권리가, 나는 제안할 의무가 있습니다. 내가 하는 일을 내 말로 한 줄.</p>
+      <textarea class="rg-ta" id="rgVow" placeholder="예: 나는 아프거나 다치거나 너무 오래 살 때의 위험을 미리 대비시켜 드리는 사람이다."></textarea>
+      <div class="rg-row"><button class="rg-btn pri" id="rgGoalSave">저장</button></div>
+      <p class="rg-fb" id="rgGoalMsg"></p>
+    </div>
+  </section>
+</div>
+
+<script src="../apex-stage.js"></script>
+<script>
+/* ES5 로 씁니다 — 본체와 같은 손버릇. 기록은 이 기기에만(try/catch 로 감쌉니다). */
+var RG_KEY='apex_rejgym_v1';
+
+/* ── 10일의 마음 공부 — 강의 1편의 요지를 하루 하나씩 ──
+   lesson = 강의가 한 말 · act = 오늘 손으로 할 것.
+   강의에 없는 말은 act 에 「해 보기」로만 둡니다(강의 말처럼 적지 않습니다). */
+var RG_DAYS=[
+ {t:'거절 없는 영업은 없다',
+  lesson:'거절이 없다는 것은 영업을 떠났다는 뜻입니다. 영업을 하는 한 거절은 반드시 옵니다.',
+  act:'내가 거절이 싫은 까닭을 하나 적어 봅니다 (냉대·불편한 기색·부담스러운 표정 중 무엇이 제일 아픈가).'},
+ {t:'계약과 거절은 패키지',
+  lesson:'거절은 반드시 겪는 일이고 단지 지금 왔을 뿐입니다. 청약으로 가는 중간 과정이자 열고 들어갈 문입니다.',
+  act:'오늘 거절을 받으면 속으로 「문 하나 열었다」라고 말하고 다음 번호를 누릅니다.'},
+ {t:'거절은 고객의 몫, 감정은 내 몫',
+  lesson:'고객의 거절은 내가 어쩔 수 없습니다. 거기서 생긴 불편함·자존심·두려움은 내가 다스립니다.',
+  act:'오늘 받은 거절 하나를 📓 거절 일기에 적고 「그때 내 마음」을 고릅니다.'},
+ {t:'지인의 거절을 키우지 않는다',
+  lesson:'지인에게는 내 제안을 받아들일 의무가 없습니다. 서운해하면 감정의 노예가 되어 다음 걸음이 묶입니다.',
+  act:'마음에 걸려 있는 지인의 거절 하나를 떠올리고, 「그분은 받아들일 의무가 없었다」고 소리 내어 말합니다.'},
+ {t:'거절은 청신호다',
+  lesson:'가장 어려운 고객은 묵묵부답입니다. 거절은 반응이고, 「확신을 주세요」라는 신호입니다.',
+  act:'오늘 받은 거절마다 「이분이 원한 확신은 무엇이었나」를 한 줄씩 적습니다.'},
+ {t:'미리 연습하고, 다음은 내가 정한다',
+  lesson:'클로징 전에 나올 법한 거절을 충분히 연습합니다. 그래도 안 되면 다시 만날지는 내가 정합니다.',
+  act:'🎭 거절 연습에서 「막혔다」가 나온 거절을 한 번 더 소리 내어 연습합니다.'},
+ {t:'두려움은 극복될 뿐이다',
+  lesson:'두려움은 사라지지 않습니다. 노련한 사람은 자신감이 두려움을 덜 느끼게 할 뿐입니다.',
+  act:'오늘 가장 걸기 싫은 한 통을 제일 먼저 겁니다.'},
+ {t:'성공의 연속선',
+  lesson:'과거의 성공을 꺼내 지금의 감정으로 잇고, 그 감정을 앞날의 기대로 잇습니다.',
+  act:'🎯 내 목표에 「내 성공 경험 셋」을 채웁니다.'},
+ {t:'바람이 아니라 목표',
+  lesson:'바람과 희망은 목표가 아닙니다. 선명한 목표가 있으면 거절의 상심이 상쇄됩니다.',
+  act:'🎯 내 목표에 언제까지·무엇을·얼마나를 넣어 목표를 다시 적습니다.'},
+ {t:'거절할 권리, 제안할 의무',
+  lesson:'고객은 거절할 수 있고, 나는 할 말은 하고 나와야 합니다. 부탁하는 사람에게 클로징은 오지 않습니다.',
+  act:'🎯 내 목표에 「나의 직업 선언」을 적고, 오늘 첫 통화 전에 읽습니다.'}
+];
+
+/* ── 스스로 점검 (강의 내용에서만) ── */
+var RG_QUIZ=[
+ {q:'경력이 10년 넘으면 거절이 더는 두렵지 않다.',a:false,
+  w:'강의는 거절의 트라우마는 경력이 쌓인다고 해결되지 않는다고 말합니다. 두려움은 사라지지 않고 극복될 뿐입니다.'},
+ {q:'거절 처리는 좋은 화법만 외우면 해결된다.',a:false,
+  w:'화법은 거절 처리의 한 부분입니다. 해석과 태도가 먼저 서지 않으면 스킬은 사상누각입니다.'},
+ {q:'고객이 아무 반응이 없는 것보다 거절하는 편이 낫다.',a:true,
+  w:'묵묵부답이 가장 어렵습니다. 거절은 반응이고, 공략할 자리가 보인다는 신호입니다.'},
+ {q:'지인이 내 제안을 거절하면 서운해하는 것이 자연스럽고 괜찮다.',a:false,
+  w:'지인은 받아들일 의무가 없습니다. 서운함에 머물면 감정의 노예가 되어 다음 걸음이 묶입니다.'},
+ {q:'고객의 거절은 통제할 수 없지만, 그로 생긴 내 감정은 다스릴 수 있다.',a:true,
+  w:'거절은 고객의 영역, 불편함·자존심·두려움은 내 몫입니다.'},
+ {q:'성과가 없을 때는 청약 목표보다 과정 목표를 연속으로 달성하는 것이 낫다.',a:true,
+  w:'하루 몇 통·하루 한 명 상담 같은 과정 목표를 10일 연속 달성하면 자신감이 배가됩니다.'}
+];
+
+var RG_WHO=['처음 고객','기존 고객','지인','소개받은 분'];
+var RG_FEEL=['당황','자존심 상함','두려움','서운함','화남','담담함'];
+var RG_RE=['계약과 한 꾸러미 — 문 하나 열었다','고객의 몫 — 내 감정은 내가 다스린다',
+           '받아들일 의무는 없었다','반응이 왔다 — 확신을 달라는 신호'];
+var RG_NEXT=['다시 연락','때를 두고 보류','여기서 정리'];
+
+/* ── 저장 ── */
+function rgLoad(){
+  var d=null;
+  try{ d=JSON.parse(localStorage.getItem(RG_KEY)||'null'); }catch(e){ d=null; }
+  if(!d||typeof d!=='object')d={};
+  if(!d.days||typeof d.days!=='object')d.days={};   /* 'YYYY-MM-DD' → {lesson:1,proc:1,drill:n,idx:k} */
+  if(!d.diary||!d.diary.length)d.diary=[];
+  if(!d.stat||typeof d.stat!=='object')d.stat={};   /* 거절 제목 → {ok:n,ng:n} */
+  if(!d.goal||typeof d.goal!=='object')d.goal={};
+  if(!d.quiz||typeof d.quiz!=='object')d.quiz={};
+  return d;
+}
+var RG=rgLoad();
+function rgSave(){ try{ localStorage.setItem(RG_KEY,JSON.stringify(RG)); return true; }catch(e){ return false; } }
+function rgEsc(s){ return (''+(s==null?'':s)).replace(/[&<>"']/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function rgPad(n){ return (n<10?'0':'')+n; }
+function rgDay(dt){ dt=dt||new Date(); return dt.getFullYear()+'-'+rgPad(dt.getMonth()+1)+'-'+rgPad(dt.getDate()); }
+function rgToday(){ return rgDay(new Date()); }
+function $r(id){ return document.getElementById(id); }
+
+/* ── 하루가 「채워졌나」 — 묻는 곳은 여기 하나 (5번) ── */
+var RG_NEED_DRILL=3;
+function rgDayDone(rec){ return !!(rec&&rec.lesson&&rec.proc&&(rec.drill||0)>=RG_NEED_DRILL); }
+function rgTodayRec(){
+  var k=rgToday(); if(!RG.days[k])RG.days[k]={lesson:0,proc:0,drill:0,idx:-1};
+  return RG.days[k];
+}
+/* 채운 날 수 — 이것이 1~10일차를 정합니다 */
+function rgDoneCount(){ var n=0,k; for(k in RG.days)if(rgDayDone(RG.days[k]))n++; return n; }
+/* 연속 일수 — 오늘이 아직 안 채워졌으면 어제부터 셉니다(오늘은 아직 기회가 있으니 끊긴 것이 아닙니다) */
+function rgStreak(){
+  var d=new Date(),n=0;
+  if(!rgDayDone(RG.days[rgDay(d)]))d.setDate(d.getDate()-1);
+  while(rgDayDone(RG.days[rgDay(d)])){ n++; d.setDate(d.getDate()-1); }
+  return n;
+}
+/* 오늘의 마음 공부 — 오늘 이미 정해졌으면 그대로, 아니면 채운 날 수 다음 칸 */
+function rgTodayIdx(){
+  var r=rgTodayRec();
+  if(r.idx<0){ var n=rgDoneCount(); r.idx=Math.min(n,RG_DAYS.length-1); }
+  return r.idx;
+}
+
+/* ── 탭 ── */
+var RG_TAB='edu';
+function rgTab(t){
+  RG_TAB=t;
+  var bs=$r('rgTabs').getElementsByTagName('button'),i;
+  for(i=0;i<bs.length;i++){ if(bs[i].getAttribute('data-t')===t)bs[i].classList.add('on'); else bs[i].classList.remove('on'); }
+  var ss=['edu','prog','drill','diary','goal'];
+  for(i=0;i<ss.length;i++){ var s=$r('rg-'+ss[i]); if(ss[i]===t)s.classList.remove('rg-hide'); else s.classList.add('rg-hide'); }
+  if(t==='prog')rgProg();
+  if(t==='drill'){ if(!DR.cur)rgDrillNext(); else rgDrillDraw(); rgWeak(); }
+  if(t==='diary')rgDiaryList();
+  if(t==='goal')rgGoalFill();
+  try{ window.scrollTo(0,0); }catch(e){}
+}
+
+/* ── 📖 점검 문제 ── */
+function rgQuiz(){
+  var h='',i;
+  for(i=0;i<RG_QUIZ.length;i++){
+    var q=RG_QUIZ[i],my=RG.quiz[i];
+    h+='<div class="rg-log"><b>'+(i+1)+'. '+rgEsc(q.q)+'</b>'+
+      '<div class="rg-ox"><button class="rg-btn'+(my===true?' pri':'')+'" onclick="rgAns('+i+',true)">O</button>'+
+      '<button class="rg-btn'+(my===false?' pri':'')+'" onclick="rgAns('+i+',false)">X</button></div>';
+    if(my===true||my===false){
+      var ok=(my===q.a);
+      h+='<div class="rg-fb" style="color:var('+(ok?'--t-pos':'--t-neg')+')">'+(ok?'맞습니다':'다시 보십시오')+
+        ' — 정답 '+(q.a?'O':'X')+'</div><div class="rg-sub">'+rgEsc(q.w)+'</div>';
+    }
+    h+='</div>';
+  }
+  $r('rgQuiz').innerHTML=h;
+  var n=0,c=0; for(i=0;i<RG_QUIZ.length;i++){ if(RG.quiz[i]===true||RG.quiz[i]===false){n++; if(RG.quiz[i]===RG_QUIZ[i].a)c++;} }
+  $r('rgQuizScore').textContent=n?('푼 문제 '+n+' / '+RG_QUIZ.length+' · 맞은 것 '+c):'';
+}
+function rgAns(i,v){ RG.quiz[i]=v; rgSave(); rgQuiz(); }
+
+/* ── 🗓️ 10일 프로그램 ── */
+function rgProg(){
+  var done=rgDoneCount(),st=rgStreak(),rec=rgTodayRec(),idx=rgTodayIdx(),i,h='';
+  $r('rgStDone').textContent=Math.min(done,10);
+  $r('rgStStreak').textContent=st;
+  $r('rgStDrill').textContent=(rec.drill||0)+' / '+RG_NEED_DRILL;
+  for(i=0;i<RG_DAYS.length;i++){
+    var cls='rg-day'+(i<done?' done':'')+(i===idx&&!rgDayDone(rec)?' now':'');
+    h+='<button class="'+cls+'" onclick="rgPeek('+i+')">'+(i+1)+'일차<br>'+(i<done?'✓':'')+'</button>';
+  }
+  $r('rgDays').innerHTML=h;
+  var note='';
+  if(done>=10)note='🎉 10일을 다 채웠습니다. 강의는 「다시 10일, 한 달로 이어 가라」고 합니다 — 오늘도 그대로 채우면 됩니다.';
+  else if(done>0&&st===0)note='연속이 끊겼습니다. 괜찮습니다 — 채운 날은 그대로 남고, 오늘부터 다시 잇습니다.';
+  else if(st>0)note=st+'일째 이어지고 있습니다. 오늘을 채우면 '+(st+(rgDayDone(rec)?0:1))+'일입니다.';
+  $r('rgStreakNote').textContent=note;
+  rgTodayCard(idx);
+}
+function rgPeek(i){ rgTodayCard(i,true); }
+function rgTodayCard(i,peek){
+  var d=RG_DAYS[i],rec=rgTodayRec(),proc=(RG.goal.proc||'').replace(/^\s+|\s+$/g,'');
+  var h='<h2>'+(i+1)+'일차 · '+rgEsc(d.t)+(peek&&i!==rgTodayIdx()?' <span class="rg-sub">(미리 보기)</span>':'')+'</h2>'+
+    '<div class="rg-q">'+rgEsc(d.lesson)+'</div>'+
+    '<p><b>오늘 해 보기</b> — '+rgEsc(d.act)+'</p>';
+  if(peek&&i!==rgTodayIdx()){ $r('rgToday').innerHTML=h+'<div class="rg-row"><button class="rg-btn" onclick="rgProg()">오늘 칸으로</button></div>'; return; }
+  h+='<h3>오늘 채울 셋</h3>'+
+    rgCk('lesson',rec.lesson,'① 오늘의 마음 공부를 읽고 「해 보기」를 했다')+
+    rgCk('proc',rec.proc,'② 과정 목표를 지켰다 — '+(proc?('<b>'+rgEsc(proc)+'</b>'):'<span style="color:var(--t-neg)">아직 안 정하셨습니다 · 🎯 내 목표에서 적어 주십시오</span>'))+
+    '<div class="rg-log">'+((rec.drill||0)>=RG_NEED_DRILL?'✅':'⬜')+' ③ 거절 연습 '+RG_NEED_DRILL+'번 — 지금 '+(rec.drill||0)+'번 '+
+      '<button class="rg-btn" style="margin-left:6px" onclick="rgTab(\'drill\')">🎭 연습하러</button></div>';
+  if(rgDayDone(rec))h+='<p class="rg-fb" style="color:var(--t-pos)">오늘이 채워졌습니다. 성공 하나가 연속선 위에 놓였습니다.</p>';
+  $r('rgToday').innerHTML=h;
+}
+function rgCk(k,on,label){
+  return '<div class="rg-log"><label style="display:flex;gap:10px;align-items:center;min-height:44px;cursor:pointer">'+
+    '<input type="checkbox" style="width:22px;height:22px"'+(on?' checked':'')+' onchange="rgSet(\''+k+'\',this.checked)">'+
+    '<span>'+label+'</span></label></div>';
+}
+function rgSet(k,v){
+  if(k==='proc'&&v&&!(RG.goal.proc||'').replace(/\s/g,'')){ alert('과정 목표를 먼저 적어 주십시오 — 무엇을 지켰는지 모르면 체크할 수 없습니다.'); rgProg(); return; }
+  var r=rgTodayRec(); r[k]=v?1:0; rgSave(); rgProg();
+}
+
+/* ── 🎭 거절 연습 — 표는 apex-stage.js 한 곳 (5번) ── */
+var DR={cur:null,open:0,t:0,tm:null};
+function rgObjs(){
+  try{ return (window.APEX_STAGE&&APEX_STAGE.objList)?APEX_STAGE.objList():[]; }catch(e){ return []; }
+}
+function rgFill(t){
+  try{ return (window.APEX_STAGE&&APEX_STAGE.objFill)?APEX_STAGE.objFill(t,'○○○'):(''+(t||'')); }catch(e){ return ''+(t||''); }
+}
+/* 막혔던 거절일수록 자주 — 무게 = 1 + 막힘×2 − 잘함(최소 1) */
+function rgPick(){
+  var L=rgObjs(); if(!L.length)return null;
+  var w=[],sum=0,i,prev=DR.cur?DR.cur.title:'';
+  for(i=0;i<L.length;i++){
+    var s=RG.stat[L[i].title]||{ok:0,ng:0},x=Math.max(1,1+s.ng*2-s.ok);
+    if(L.length>1&&L[i].title===prev)x=0;
+    w.push(x); sum+=x;
+  }
+  var r=Math.random()*sum;
+  for(i=0;i<L.length;i++){ r-=w[i]; if(r<0)return L[i]; }
+  return L[L.length-1];
+}
+function rgDrillNext(){ rgStop(); DR.cur=rgPick(); DR.open=0; rgDrillDraw(); }
+function rgStop(){ if(DR.tm){ clearInterval(DR.tm); DR.tm=null; } }
+function rgGo15(){
+  rgStop(); DR.t=15; rgTick();
+  DR.tm=setInterval(function(){ DR.t--; rgTick(); if(DR.t<=0){ rgStop(); rgOpen(); } },1000);
+}
+function rgTick(){ var e=$r('rgTimer'); if(e)e.textContent=DR.t>0?(DR.t+'초'):''; }
+function rgOpen(){ rgStop(); DR.open=1; rgDrillDraw(); }
+function rgDrillDraw(){
+  var box=$r('rgDrill'),o=DR.cur;
+  if(!o){ box.innerHTML='<p style="color:var(--t-neg)">거절처리 표(apex-stage.js)를 읽지 못했습니다. 연습할 말을 지어 넣지 않습니다 — 화면을 새로 열어 주십시오.</p>'; return; }
+  var h='<div class="rg-sub">고객이 말합니다</div><div class="rg-cust">「'+rgEsc(o.title)+'」</div>';
+  if(!DR.open){
+    h+='<p class="rg-sub">속으로 먼저 — <b>「반응이 왔다. 확신을 주자.」</b> 그리고 소리 내어 답해 봅니다.</p>'+
+      '<div class="rg-timer" id="rgTimer"></div>'+
+      '<div class="rg-row"><button class="rg-btn pri" onclick="rgGo15()">⏱ 15초 말해 보기</button>'+
+      '<button class="rg-btn" onclick="rgOpen()">멘트 펴기</button></div>';
+  }else{
+    h+='<div class="rg-sub">결 — '+rgEsc(o.tone||'')+'</div>'+
+      '<h3>바로 말할 멘트</h3><div class="rg-ans">'+rgEsc(rgFill(o.text))+'</div>'+
+      (o.follow?'<h3>다음 한마디</h3><div class="rg-ans">'+rgEsc(rgFill(o.follow))+'</div>':'')+
+      (o.tip?'<p class="rg-sub">💡 '+rgEsc(o.tip)+'</p>':'')+
+      (o.avoid?'<h3>하지 말 말</h3><div class="rg-warn">'+rgEsc(o.avoid)+'</div>':'')+
+      (o.stop?'<h3>여기서 멈춘다</h3><div class="rg-sub">'+rgEsc(o.stop)+'</div>':'')+
+      '<p class="rg-sub">※ 멘트는 ☎️ TA 스크립트와 같은 표에서 읽습니다.</p>'+
+      '<div class="rg-row"><button class="rg-btn ok" onclick="rgRate(1)">👍 막힘없이 말했다</button>'+
+      '<button class="rg-btn ng" onclick="rgRate(0)">😵 막혔다</button></div>';
+  }
+  box.innerHTML=h;
+}
+function rgRate(ok){
+  var o=DR.cur; if(!o)return;
+  var s=RG.stat[o.title]||{ok:0,ng:0}; if(ok)s.ok++; else s.ng++; RG.stat[o.title]=s;
+  var r=rgTodayRec(); r.drill=(r.drill||0)+1;
+  rgSave(); rgWeak(); rgDrillNext();
+}
+function rgWeak(){
+  var a=[],k;
+  for(k in RG.stat){ var s=RG.stat[k]; if(s.ng>0)a.push({t:k,ng:s.ng,ok:s.ok}); }
+  a.sort(function(x,y){ return (y.ng-y.ok)-(x.ng-x.ok); });
+  var r=rgTodayRec();
+  var h='<p>오늘 연습 <b>'+(r.drill||0)+'</b>번 · 하루 '+RG_NEED_DRILL+'번이면 10일 프로그램의 ③이 채워집니다.</p>';
+  if(!a.length)h+='<p>아직 막힌 거절이 없습니다.</p>';
+  else{ h+='<p>막혔던 거절 — 이것들이 더 자주 나옵니다.</p>';
+    for(var i=0;i<a.length&&i<6;i++)h+='<div class="rg-log">「'+rgEsc(a[i].t)+'」 · 막힘 '+a[i].ng+' · 잘함 '+a[i].ok+'</div>'; }
+  $r('rgWeak').innerHTML=h;
+}
+
+/* ── 📓 거절 일기 ── */
+var DY={who:'',feel:'',re:'',next:''};
+function rgChips(id,list,key){
+  var h='',i;
+  for(i=0;i<list.length;i++)h+='<button type="button" class="rg-chip'+(DY[key]===list[i]?' on':'')+'" onclick="rgPickChip(\''+id+'\',\''+key+'\','+i+')">'+rgEsc(list[i])+'</button>';
+  $r(id).innerHTML=h;
+}
+var RG_CHIPSRC={who:RG_WHO,feel:RG_FEEL,re:RG_RE,next:RG_NEXT};
+var RG_CHIPID={who:'rgDyWho',feel:'rgDyFeel',re:'rgDyRe',next:'rgDyNext'};
+function rgPickChip(id,key,i){ var v=RG_CHIPSRC[key][i]; DY[key]=(DY[key]===v)?'':v; rgChips(id,RG_CHIPSRC[key],key); }
+function rgDiaryForm(){ var k; for(k in RG_CHIPSRC)rgChips(RG_CHIPID[k],RG_CHIPSRC[k],k); }
+function rgDiarySave(){
+  var what=($r('rgDyWhat').value||'').replace(/^\s+|\s+$/g,'');
+  var msg=$r('rgDyMsg');
+  if(!what){ msg.style.color='var(--t-neg)'; msg.textContent='어떤 거절이었는지 한 줄만 적어 주십시오.'; return; }
+  if(!DY.re){ msg.style.color='var(--t-neg)'; msg.textContent='「다시 해석하면」을 하나 골라 주십시오 — 이 일기의 몫이 그것입니다.'; return; }
+  RG.diary.unshift({d:rgToday(),what:what,who:DY.who,feel:DY.feel,re:DY.re,why:($r('rgDyWhy').value||'').replace(/^\s+|\s+$/g,''),next:DY.next});
+  if(RG.diary.length>300)RG.diary.length=300;
+  var ok=rgSave();
+  $r('rgDyWhat').value=''; $r('rgDyWhy').value=''; DY={who:'',feel:'',re:'',next:''}; rgDiaryForm();
+  msg.style.color='var(--t-pos)';
+  msg.textContent=ok?'적어 두었습니다. 반응 하나가 왔고, 감정 하나를 다스렸습니다.':'이 브라우저가 저장을 막고 있어 화면을 닫으면 사라집니다(사생활 보호 창일 수 있습니다).';
+  rgDiaryList();
+}
+function rgDiaryList(){
+  var L=RG.diary,i,n=L.length,ret=0,today=0,t=rgToday();
+  for(i=0;i<n;i++){ if(L[i].next==='다시 연락')ret++; if(L[i].d===t)today++; }
+  $r('rgDyStat').innerHTML='<div><b>'+n+'</b><span>쌓인 거절 = 받은 반응</span></div>'+
+    '<div><b>'+today+'</b><span>오늘</span></div><div><b>'+ret+'</b><span>다시 연락하기로</span></div>';
+  var h='';
+  if(!n)h='<p class="rg-sub">아직 적은 거절이 없습니다.</p>';
+  for(i=0;i<n&&i<30;i++){ var e=L[i];
+    h+='<div class="rg-log"><b>'+rgEsc(e.d)+'</b> · 「'+rgEsc(e.what)+'」'+(e.who?' · '+rgEsc(e.who):'')+
+      (e.feel?'<br><span class="rg-sub">내 마음 — '+rgEsc(e.feel)+'</span>':'')+
+      '<br>→ '+rgEsc(e.re)+(e.why?'<br><span class="rg-sub">다음 확신 — '+rgEsc(e.why)+'</span>':'')+
+      (e.next?'<br><span class="rg-sub">다음 — '+rgEsc(e.next)+'</span>':'')+'</div>'; }
+  $r('rgDyList').innerHTML=h;
+}
+
+/* ── 🎯 내 목표 ── */
+var RG_GF={main:'rgGoalMain',proc:'rgGoalProc',w1:'rgWin1',w2:'rgWin2',w3:'rgWin3',vow:'rgVow'};
+function rgGoalFill(){ var k; for(k in RG_GF)$r(RG_GF[k]).value=RG.goal[k]||''; }
+function rgGoalSave(){
+  var k; for(k in RG_GF)RG.goal[k]=($r(RG_GF[k]).value||'').replace(/^\s+|\s+$/g,'');
+  var ok=rgSave(),m=$r('rgGoalMsg');
+  m.style.color=ok?'var(--t-pos)':'var(--t-neg)';
+  m.textContent=ok?'저장했습니다. 10일 프로그램이 과정 목표를 매일 묻습니다.':'이 브라우저가 저장을 막고 있습니다(사생활 보호 창일 수 있습니다).';
+}
+
+/* ── 시작 ── */
+(function(){
+  var bs=$r('rgTabs').getElementsByTagName('button'),i;
+  for(i=0;i<bs.length;i++)bs[i].onclick=(function(t){ return function(){ rgTab(t); }; })(bs[i].getAttribute('data-t'));
+  $r('rgDySave').onclick=rgDiarySave;
+  $r('rgGoalSave').onclick=rgGoalSave;
+  rgQuiz(); rgDiaryForm();
+  var m=/[?&#]t=(edu|prog|drill|diary|goal)/.exec(location.search+location.hash);
+  if(m)rgTab(m[1]);
+})();
+</script>
+</body>
+</html>
