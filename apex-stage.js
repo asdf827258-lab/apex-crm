@@ -64,7 +64,7 @@ var BOX=[
   /* ★ frmake(전&후 만들기)도 사장님이 AP 에 못 박으신 것입니다 */
   items:['sangdam','fp_deck','fp_talk','brain','cs_needs','frmake','utphoto','dz_guide','wallets','fact_find']},
  {when:'PC', sub:'제안서를 들고 다시 묻는 자리', st:['PC'],
-  items:['frmake','baba','bojang','compare','onecmp','ai_prop','katalk','finance','interpret','ins_asst']},
+  items:['frmake','bojang','compare','onecmp','ai_prop','katalk','finance','interpret','ins_asst']},
  {when:'CS', sub:'청약 — 걸릴 것을 먼저 본다', st:['CS'],
   items:['med_disclosure','ref_underwrite','med_checkup','cs_gso']},
  {when:'계약완료 · 증권전달', sub:'소개가 나오는 유일한 자리', st:['계약완료','증권전달','소개완료'],
@@ -260,13 +260,14 @@ var TOOL={
  sangdam   :{e:'📋',t:'보장분석 상담자료'},
  fp_talk   :{e:'🗣️',t:'재무설계 실전화법서'},
  frmake    :{e:'🔀',t:'보장분석 전&후 만들기'},
- /* <b>비포&애프터(baba)는 단계 도구에서 뺐다</b> (2026-09-20).
-    사장님 말씀 — 「비포&애프터는 삭제해버리고, 보장분석 전&후 만들기가
-    여기에 고정되어 있어야 한다」. 전·후를 만드는 화면이 둘이면 만든 자료가
-    두 자리로 갈려, 같은 고객인데 한쪽에만 전·후가 있다 (5번).
-    이름표는 <b>남겨 둔다</b> — 예전에 적어 둔 자리가 이 표를 찾으면 그때
-    이름 없는 단추가 서는 것보다 낫다. 화면 자체는 그대로 열린다 (1번). */
- baba      :{e:'🔄',t:'비포&애프터'},
+ /* ══ 🔄 <b>비포&애프터(baba)는 이제 이 표에 없다</b> ═════════════════
+    2026-09-20 에 「단계 도구에서 뺐다」 고 <b>적어 두고는 PC 줄에 그대로
+    남겨 두었습니다</b> — 쪽지가 거짓이었고, check-tdo 가 오늘 그것을
+    잡았습니다. 글이 아니라 <b>표</b>를 고쳐야 참이 됩니다 (0-1번).
+    2026-10-07 · 사장님 말씀 「비포 애프터는 아예 삭제해줘」 — PC 줄에서
+    빼고 <b>이름표도 거뒀습니다</b>. 이제 이 표에 없는 이름이라, 남겨 두면
+    메뉴(TABS)에 없는 이름이 표에만 있는 <b>두 벌</b>이 됩니다 (5번).
+    ★ 화면 코드는 본체에 그대로 있습니다 — 길만 거뒀습니다.          */
  brain     :{e:'🧠',t:'윤시현의 두뇌'},
  finance   :{e:'📊',t:'재무설계 계산기'},
  /* ★ 이름표는 <b>메뉴(TABS)와 같아야</b> 한다. 본체는 메뉴에서 이름을

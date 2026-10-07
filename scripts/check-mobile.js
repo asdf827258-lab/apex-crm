@@ -31,7 +31,7 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 
 const W = 390;
 /* 폰에서 자주 여는 칸부터 */
-const TABS = ['home', 'clients', 'crm', 'ckboard', 'growboard', 'bojang', 'baba',
+const TABS = ['home', 'clients', 'crm', 'ckboard', 'growboard', 'bojang',
               'news_live', 'insta', 'airep', 'voiceasst', 'settings', 'phone_app',
               'teamhub', 'org', 'fact_find', 'sangdam', 'finance', 'mikki'];
 

@@ -235,9 +235,14 @@ const SEED=(role)=>`
     ok('⑤ 고객 카드에서 여는 곳',a.oscBaGo==='frmake',a.oscBaGo);
     ok('⑤ 풀리포트에서 여는 곳',a.frOpenBaba==='frmake',a.frOpenBaba);
     ok('⑤ 단계 도구에 비포&애프터가 없다',a.anyBaba.length===0,'PC '+a.PC.join(',')+' · CS '+a.CS.join(',')+' · 계약완료 '+a.won.join(','));
-    const alive=await p.evaluate(()=>{let w='';const g=window.go;window.go=function(t){w=t;};
-      try{go('baba');}catch(e){}window.go=g;return typeof navItemOf==='function'&&!!navItemOf('baba');});
-    ok('⑤ 그래도 baba 화면은 살아 있다 (옛 자료)',alive,'navItemOf(baba) 있음');
+    /* ⚠ 2026-10-07 · <b>이 자리를 뒤집었습니다.</b> 전에는 「그래도 baba 화면은
+       살아 있다(옛 자료)」 였습니다 — 메뉴에 hide 로 남겨 두는 것이 맞다고
+       보았기 때문입니다. 사장님이 <b>「비포 애프터는 아예 삭제해줘」</b> 하셨고,
+       지우기 전에 재 보니 <b>서버에 kind='baba' 로 저장된 자료가 0건</b>이라
+       잃을 옛 자료가 없었습니다. 그래서 길을 다 막았습니다 — 코드는 남습니다.
+       길이 하나도 없는지는 <b>check-babagone</b> 이 브라우저로 훑어 봅니다. */
+    const gone=await p.evaluate(()=>typeof navItemOf==='function'&&!navItemOf('baba'));
+    ok('⑤ 비포&애프터는 <b>길이 하나도 없다</b> (사장님 「아예 삭제해줘」)',gone,'navItemOf(baba) 없음');
     await ctx.close();
   }
   /* ── ⑥⑦ 홈에서 단계 · 고객 넣고 고치고 지우기 ── */
