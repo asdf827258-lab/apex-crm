@@ -33,7 +33,7 @@
          (cName) 는 고객 앞에서 부를 이름이라 실명이다
      [3] ★ <b>묻는 자리는 하나</b> (5번) — 어느 칸이냐·어느 이름이냐를
          표 하나(CS_NM)가 알고, 삼항 사슬이 없다
-     [4] ★ <b>go() 의 머리</b>에서 부른다 — sangdam·frmake 는 아래에서
+     [4] ★ <b>빠른 return 보다 앞</b>에서 부른다 — sangdam·frmake 는 아래에서
          먼저 return 하므로 꼬리에 걸면 안 걸립니다
      [5] ★ <b>손으로 적어 두신 것을 안 덮는다</b> · 이름을 <b>모르면
          안 채운다</b> (1번) — 「고객님」 이 이름으로 저장됩니다
@@ -172,15 +172,24 @@ const 읽기 = async (p, tab, id) => await p.evaluate(async a => {
     is(부름 === 2, '  부르는 자리가 <b>하나</b>다 (선언 1 + 호출 1 = 2) — 지금 ' + 부름);
   }
 
-  console.log('\n[4] ★ <b>go() 의 머리</b>에서 부른다');
+  console.log('\n[4] ★ <b>빠른 return 보다 앞</b>에서 부른다');
   {
     const i = src.indexOf('function go(tab){');
-    const 머리 = src.slice(i, i + 1400).split('\n').slice(0, 14).join('\n');
-    is(/csFillNm\(tab\)/.test(머리), '  function go(tab){ 다음 열네 줄 안에 있다');
-    /* ★ 왜 머리냐 — 꼬리에 걸면 <b>안 걸리는 화면</b>이 있기 때문입니다 */
     const 몸 = src.slice(i, i + 190000);
     const 끝 = 몸.indexOf('\n}');
     const g = 몸.slice(0, 끝 > 0 ? 끝 : 190000);
+    /* ★ <b>자리를 「머리에서 몇째 줄」 로 재지 않습니다.</b> 처음에는 그렇게
+       쟀는데, go() 머리에 여섯 줄을 보태자 <b>check-stay</b> 가 빨개졌습니다 —
+       그 자는 「주소를 적는 줄」 이 go() 앞 3,000글자 안에 있나를 보고 있어서,
+       제 쪽지가 그 줄을 창 밖으로 밀어냈습니다. 쪽지 길이로 빨간불이 켜지는
+       자는 헛것을 잡는 자입니다 (8번). 그래서 <b>뜻으로</b> 잽니다 —
+       「지금 어디」 를 적은 뒤이고, <b>첫 빠른 return 앞</b>이면 맞습니다.   */
+    const a = g.indexOf('csFillNm(tab)');
+    const b = g.indexOf("replaceState(null,''");
+    const c = g.indexOf('if(!_ok){');
+    is(a > 0, '  go() 안에서 부른다');
+    is(b > 0 && a > b, '  「지금 어디」(주소·lastTab)를 적은 <b>뒤</b>다 — 그 줄을 밀어내지 않는다');
+    is(c > 0 && a < c, '  <b>첫 빠른 return 앞</b>이다 — 꼬리에 걸면 안 걸리는 화면이 있다');
     const 먼저 = /tab\s*===\s*'sangdam'[\s\S]{0,400}?return/.test(g);
     is(먼저, '  sangdam 이 go() 안에서 <b>먼저 return</b> 한다 — 그래서 꼬리에 걸 수 없다');
   }
