@@ -1457,12 +1457,19 @@ body.presenting .show:not(.deck){border:0;box-shadow:none}
     (#baPageCss). @media print 안에 두었더니 인쇄가 도는 사이에 안 먹는
     자리가 있었다 — 22장이 통째로 세로 문서로 나왔다. 넣고 빼는 자리가
     하나라 헷갈릴 일도 없다. */}
+.bar .who{font-size:13px;font-weight:800;color:var(--gy);background:var(--bg);
+  border:1px solid var(--ln);border-radius:999px;padding:4px 11px;white-space:nowrap}
+.bar .who b{color:var(--bl)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="bar noprint">
     <div class="lg">보장 <em>전 · 후</em> 만들기</div>
+    <!-- 🧑 누구 상담인지 — 들고 들어온 가린 이름이 있을 때만 섭니다 (1번·3번).
+         혼자 열었을 때는 보내 주는 데가 없어 빈 채로 숨습니다.
+         채우는 자리는 renderIn 한 곳입니다 (5번). -->
+    <span id="baWho" class="who" style="display:none"></span>
     <button class="tab on" id="tabEdit" onclick="go('edit')">✍ 만들기</button>
     <button class="tab" id="tabShow" onclick="go('show')">👤 고객에게 보여주기</button>
     <button class="tab" id="tabReq" onclick="go('req')">📋 가입설계 요청서</button>
@@ -2097,6 +2104,27 @@ function renderIn(){
   document.getElementById('tabEdit').className='tab'+(S.mode==='edit'?' on':'');
   document.getElementById('tabShow').className='tab'+(S.mode==='show'?' on':'');
   document.getElementById('tabReq').className='tab'+(S.mode==='req'?' on':'');
+  /* ── 🧑 <b>누구 상담인지</b>를 적는다 (2026-10-09 · 판 X76) ────────────
+     낮을 걸어 보니 이 화면이 7,212자를 세우는데 <b>그 분 이름이 한 군데도
+     없었습니다.</b> 재 보니 이름은 <b>이미 와 있었습니다</b> —
+     openBa 가 OSC.current.name_masked 를 실어 apexBaHello 로 내려 주고,
+     여기서 HOST.name 에 담습니다. 그런데 <b>그것을 쓰는 자리가 0곳</b>
+     이었습니다. 받아서 넣어 두고 안 보여 준 것입니다.
+     ★ <b>가린 이름</b>입니다 — 보내는 쪽이 name_masked 를 싣습니다 (3번).
+       여기서 실명으로 되돌릴 길도 없고, 되돌리면 안 됩니다.
+     ★ <b>없으면 아무것도 안 세웁니다</b> (1번). 혼자 열었을 때(앱 밖)는
+       보내 주는 데가 없어 빈 글입니다 — 「고객님」 으로 메우지 않습니다.
+     ★ 띠를 <b>새로 만들지 않습니다</b> — 이미 있는 머리 띠(.bar)에 한
+       줄만 넣습니다.                                                    */
+  try{
+    var _w=document.getElementById('baWho');
+    if(_w){
+      _w.innerHTML=HOST.name
+        ? ('🧑 <b>'+esc(HOST.name)+'</b> 님 상담')
+        : '';
+      _w.style.display=HOST.name?'':'none';
+    }
+  }catch(eW){}
   document.getElementById('app').innerHTML=
     (S.mode==='show')?showHtml():((S.mode==='req')?reqHtml():editHtml());
   /* 목차·넘기는 띠는 <b>다 그린 뒤</b>에 센다 — 실제로 선 장만 세기 위해서다 */
