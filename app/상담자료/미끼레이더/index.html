@@ -4081,6 +4081,17 @@ function covCat(name){
   let nm=''; try{ nm=decodeURIComponent((m[1]||'').replace(/\+/g,' ')); }catch(e){ nm=m[1]||''; }
   nm=nm.trim();
   if(!nm)return;
+  /* 👤 <b>그 분이 누구인지도 받습니다</b> (2026-10-09 · 사장님 말써 ㉣).
+     여팅가는 담보 이름만 와서, 홈에서 한 분을 고라 누른 것인듬 여기에
+     오면 <b>그분이 누구었는지 사라지</b>고, 상담 중에 「아 이게 누구 것이지」 하게
+     됩니다.
+     ★ <b>가린 이름만</b> 옵니다 (CLAUDE.md 3번) — 보내는 쪽(hmOutNm)이 osMaskName 으로
+       가려서 주고, 주소에 실리는 것이니 여기서도 <b>받은 그대로</b> 쏰니다.
+     ★ <b>없으면 지어내지 않습니다</b> (1번) — 「고객님」 으로 두면 그게 이름인
+       줄 알게 됩니다. 이름 칸을 아예 안 세우고 담보만 적습니다.             */
+  let who=''; const w=/[?&]nm=([^&]*)/.exec(location.search);
+  if(w){ try{ who=decodeURIComponent((w[1]||'').replace(/\+/g,' ')); }catch(e){ who=w[1]||''; } }
+  who=who.trim();
   const go=()=>{
     const t=$$('.tab').find(x=>x.dataset.t==='best');
     if(t)t.click();
@@ -4089,8 +4100,9 @@ function covCat(name){
     const box=document.createElement('div');
     box.className='card';
     box.style.cssText='border:2px solid #2B5FD9;background:#F5F9FF;margin-bottom:14px';
-    box.innerHTML='<h3>🏠 홈에서 넘어온 담보</h3>'+
+    box.innerHTML='<h3>🏠 홈에서 넘어온 담보'+(who?(' — <b>'+esc(who)+'</b> 님'):'')+'</h3>'+
       '<p class="desc" style="font-size:15px;line-height:1.7">'+
+        (who?('<b>'+esc(who)+'</b> 님의 '):'')+
         '고객 체크에서 읽은 담보는 <b style="color:#1D4ED8">'+esc(nm)+'</b> 입니다. '+
         (c?('아래 <b>'+esc(c)+'</b> 줄을 보십시오 — 그 담보로 어느 약관이 앞서는지 줄을 세워 드립니다.')
           :'<b>어느 갈래인지 못 가렸습니다</b> — 아래에서 직접 골라 주세요. 비슷한 갈래를 찍어 드리지 않습니다.')+
@@ -4098,7 +4110,8 @@ function covCat(name){
       '<p class="desc">서재를 읽는 일은 <b>🏆 서재 전체 판정</b> 을 누르실 때 시작합니다 — 저절로 돌리지 않습니다.</p>';
     out.parentNode.insertBefore(box,out);
     const st=$('#bestState');
-    if(st&&!st.textContent.trim())st.textContent='「'+nm+'」 로 왔습니다 — 🏆 서재 전체 판정을 눌러 주세요';
+    if(st&&!st.textContent.trim())
+      st.textContent=(who?('「'+who+' 님 · '+nm+'」'):('「'+nm+'」'))+' 로 왔습니다 — 🏆 서재 전체 판정을 눌러 주세요';
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',go);
   else setTimeout(go,0);
