@@ -86,6 +86,15 @@ button:focus-visible{outline:2px solid var(--b);outline-offset:2px}
 .seg button{width:auto;padding:7px 14px;background:var(--card);color:var(--ink2);
   border:1px solid var(--line);font-size:13px;font-weight:600}
 .seg button.on{background:var(--b);color:#fff;border-color:var(--b)}
+.inq{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:11px}
+.inq label{display:flex;flex-direction:column;gap:5px;font-size:12px;
+  font-weight:700;color:var(--ink2);min-width:0}
+.inq .muted{font-weight:400}
+.inq select,.inq input{width:100%;padding:10px 11px;border:1px solid var(--line);
+  border-radius:9px;background:var(--bg);color:var(--ink);font-size:14px;
+  font-family:inherit;margin:0}
+.inq button{padding:11px;font-size:14px}
+.ok{color:var(--ok);font-size:13px;margin-top:11px}
 .foot{color:var(--mute);font-size:12px;border-top:1px solid var(--line);
   padding-top:15px;margin-top:28px}
 .muted{color:var(--mute)}
@@ -119,6 +128,31 @@ button:focus-visible{outline:2px solid var(--b);outline-offset:2px}
     <p class="sub">광고비는 매일 아침 보고가 넣습니다. 보통 하루 전까지 들어와 있습니다.</p>
     <div class="kpi" id="kpi"></div>
     <div id="verdict"></div>
+  </div>
+
+  <div class="card" id="inqCard">
+    <h2>카톡이 오면 여기에</h2>
+    <p class="sub">한 줄 넣으면 위 <b>문의</b> 숫자에 바로 들어갑니다.
+      안 넣으면 계속 0으로 남고 판정도 틀리게 나옵니다.
+      <b>이름·연락처는 넣지 마세요</b> — 고객 정보는 CRM 본 화면에 둡니다.</p>
+    <div class="inq">
+      <label>소재 <span class="muted">고객이 말한 화면</span>
+        <select id="iCre"><option value="">— 모름 —</option></select></label>
+      <label>들어온 곳
+        <select id="iCh">
+          <option>카카오채널</option><option>전화</option>
+          <option>오픈카톡</option><option>소개</option><option>기타</option>
+        </select></label>
+      <label>메모 <span class="muted">무엇을 물어봤는지</span>
+        <input id="iMemo" placeholder="갱신형 보험료가 왜 오르는지"></label>
+      <label>&nbsp;<button id="iAdd">문의 기록</button></label>
+    </div>
+    <div id="inqMsg"></div>
+    <div class="adv a-wn" style="margin-top:14px"><span class="ic">💬</span><div>
+      <b>소재는 이렇게 알아냅니다</b><p>채널 첫인사가
+      <b>「어떤 화면을 보고 오셨는지 한 줄만」</b> 이라고 묻습니다.
+      고객이 「갱신형 보험료」처럼 답하면 그대로 고르시면 됩니다.
+      안 답하면 <b>모름</b>으로 두셔도 건수는 집계됩니다.</p></div></div>
   </div>
 
   <div class="card">
@@ -157,11 +191,21 @@ const usd = (v) => "$" + Number(v || 0).toFixed(2);
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-/* 소재 번호 → 사람이 아는 이름. 모르면 번호 그대로 */
-const NAME = { "1524":"자가진단", "1525":"유사암", "1526":"잊은계약",
-               "1528":"갱신형", "1514":"비교표지", "1515":"담보고르기",
-               "1518":"직접비교", "1549":"재무3", "1550":"재무4", "1552":"재무1" };
+/* 소재 이름은 ad_creatives 에서 읽는다 — 새 광고를 올려도 코드를 안 고친다 */
+let NAME = {};
 const label = (c) => c ? (NAME[c] ? c + " " + NAME[c] : c) : "(출처 모름)";
+
+async function loadCreatives() {
+  const { data, error } = await sb.from("ad_v_creative_pick").select("*");
+  if (error || !data) return;
+  NAME = {};
+  data.forEach((r) => { if (r.title && r.title !== "(목록에 없음)") NAME[r.code] = r.title; });
+  const sel = document.getElementById("iCre");
+  sel.innerHTML = '<option value="">— 모름 —</option>' +
+    data.map((r) => '<option value="' + esc(r.code) + '">' +
+      esc(r.code + " " + (r.title || "")) + (r["돌고있음"] ? " · 돌고 있음" : "") +
+      "</option>").join("");
+}
 
 async function load() {
   const since = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10);
@@ -237,9 +281,36 @@ function bar(v, mx) {
   return '<span class="bar"><i style="width:' + (100 * v / mx).toFixed(1) + '%"></i></span>';
 }
 
+/* 소재 → 랜딩. 모르면 비워 둔다(건수는 그대로 집계된다) */
+const LAND = { "1514":"dbcompare", "1515":"dbcompare", "1516":"dbcompare",
+               "1517":"dbcompare", "1518":"dbcompare", "1519":"dbcompare",
+               "1548":"selfcheck", "1549":"selfcheck", "1550":"selfcheck",
+               "1551":"selfcheck", "1552":"selfcheck" };
+
+$("#iAdd").onclick = async () => {
+  const btn = $("#iAdd"), cre = $("#iCre").value;
+  btn.disabled = true;
+  const row = {
+    creative_code: cre || null,
+    landing: cre ? (LAND[cre] || "bojang") : null,
+    channel: $("#iCh").value || null,
+    medium: "meta",
+    memo: $("#iMemo").value.trim() || null,
+    matched: false
+  };
+  const { error } = await sb.from("ad_inquiries").insert([row]);
+  btn.disabled = false;
+  if (error) { $("#inqMsg").innerHTML = adv("a-bad", "⚠️", "기록하지 못했습니다", esc(error.message)); return; }
+  $("#iMemo").value = ""; $("#iCre").value = "";
+  $("#inqMsg").innerHTML = '<div class="ok">✅ 기록했습니다. 위 숫자에 반영됩니다.</div>';
+  setTimeout(() => { $("#inqMsg").innerHTML = ""; }, 4000);
+  await load();
+};
+
 async function start() {
   $("#gate").hidden = true;
   $("#app").hidden = false;
+  await loadCreatives();
   await load();
 }
 
