@@ -59,12 +59,29 @@ var BOX=[
      묶음은 「반드시 들어 있어야 할 것」 이지 「이것만」 이 아닙니다. */
   items:['mikki_talk','news_live','cs_assist','mikki','biz_news']},
  {when:'TA', sub:'날짜를 잡는 자리', st:['TA'],
-  items:['cs_assist','sangdam','voiceasst']},
+  /* ★ 2026-10-09 · 사장님 말씀 — 「TA 모드에서 <b>TA 스크립트가 빠져 있어</b>
+     넣어 줘」. <b>맨 앞</b>에 둡니다 — 오늘 카드가 번호로 세우는 것은 앞의
+     <b>셋</b>이고(HM_PICK_TOOLS), 전화를 걸면서 보고 읽는 것이 이것입니다
+     (사장님이 TA 를 「고객에게 전화하는것」 으로 정하셨습니다 · 2026-10-05).
+     밀려난 음성 비서는 <b>없어진 것이 아니라</b> 바로 아래 칩 한 줄에 섭니다.
+     ⚠ 아래 「앱이 아는 것(know)」 에는 <b>이미 있었습니다.</b> 손에 쥘 도구
+       표(여기)에만 없어서 카드에서 안 보였습니다 — 두 목록은 뜻이 달라
+       쌍둥이가 아닙니다(know 는 「무엇을 가리나」, 여기는 「무엇을 쥐나」). */
+  items:['ta_script','cs_assist','sangdam','voiceasst']},
  {when:'AP', sub:'만나서 펴 놓는 것', st:['AP'],
   /* ★ frmake(전&후 만들기)도 사장님이 AP 에 못 박으신 것입니다 */
   items:['sangdam','fp_deck','fp_talk','brain','cs_needs','frmake','utphoto','dz_guide','wallets','fact_find']},
  {when:'PC', sub:'제안서를 들고 다시 묻는 자리', st:['PC'],
-  items:['frmake','bojang','compare','onecmp','ai_prop','katalk','finance','interpret','ins_asst']},
+  /* ★ 2026-10-09 · 사장님 말씀 — 「PC 에서 <b>예외질환도 넣어 줘</b>」.
+     <b>넷째</b>에 둡니다 — 앞의 셋(전&후·보장분석·제안서 비교)은 사장님이
+     2026-09-18 에 못 박으신 자리라 밀지 않고, 넷째는 <b>칩 한 줄의 첫
+     자리</b>라 밀지 않아도 바로 보입니다.
+     ★ 제안서를 들고 다시 묻는 자리에서 「나 이런 병 있는데」 가 나오면
+       그 자리에서 받아 주는 회사가 있는지 봐야 합니다. CS 에도 같은
+       화면이 있지만 그때는 <b>청약서를 쓰는 중</b>이라 늦습니다.
+     ★ 아래 know 에도 같이 적습니다 — CS 가 이미 그렇게 두 곳에 있습니다
+       (도구는 「쥘 것」, know 는 「가릴 것과 쓸 때」 라 뜻이 다릅니다). */
+  items:['frmake','bojang','compare','ref_underwrite','onecmp','ai_prop','katalk','finance','interpret','ins_asst']},
  {when:'CS', sub:'청약 — 걸릴 것을 먼저 본다', st:['CS'],
   items:['med_disclosure','ref_underwrite','med_checkup','cs_gso']},
  {when:'계약완료 · 증권전달', sub:'소개가 나오는 유일한 자리', st:['계약완료','증권전달','소개완료'],
@@ -200,7 +217,9 @@ var MAP={
      {tab:'onecmp',    g:'걸리는 것을 푼다',   w:'보험료가 걸리시면 — 같은 보장을 다른 회사와 견줍니다'},
      {tab:'treatpay',  g:'걸리는 것을 푼다',   w:'보장이 걸리시면 — 그 병에 무엇이 나오는지로 답합니다'},
      {tab:'bohum',     g:'내가 먼저 알아야 할 때', w:'설명이 막히면 — 그 담보를 처음부터 다시 배웁니다'},
-     {tab:'contracts', g:'계약을 어떻게 가져갈까', w:'지금 든 것을 살릴지 갈아탈지 — 판단을 받아 봅니다'}]},
+     {tab:'contracts', g:'계약을 어떻게 가져갈까', w:'지금 든 것을 살릴지 갈아탈지 — 판단을 받아 봅니다'},
+     /* ★ 2026-10-09 · 사장님 말씀 「PC 에서 예외질환도 넣어 줘」 */
+     {tab:'ref_underwrite',g:'가입이 되는 분인가', w:'앓으신 것을 말씀하시면 — 받아 주는 회사가 있는지 먼저 봅니다'}]},
  'CS'   :{ch:'만남',aim:'청약 서류와 <b>날짜</b>를 잡는다',
    way:'설명을 다시 하지 않는다. 언제 어디서 쓸지만 정한다',
    q:['서류가 다 있나','심사에서 걸릴 것이 있나','언제 어디서 쓰나'],
@@ -255,6 +274,10 @@ var MAP={
 var TOOL={
  biz_news  :{e:'📰',t:'정책·상품 뉴스'},
  cs_assist :{e:'💬',t:'AI 상담 어시스턴트'},
+ /* ★ 2026-10-09 — TA 묶음에 넣으면서 이름표도 같이 답니다. 본체는 메뉴에서
+    가져오지만(navItemOf) db-crm.html 은 메뉴가 없어 이 표를 봅니다. 글자는
+    <b>메뉴와 같아야</b> 하고 check-toolmap 이 그것을 견줍니다 (5번·8번). */
+ ta_script :{e:'☎️',t:'TA 스크립트'},
  mikki_talk:{e:'🎣',t:'미끼상품&접촉전략'},
  news_live :{e:'🌐',t:'고객에게 전할 뉴스'},
  sangdam   :{e:'📋',t:'보장분석 상담자료'},
