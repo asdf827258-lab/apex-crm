@@ -18500,6 +18500,96 @@ function csFillNm(tab){
     if(tries<16)setTimeout(put,500);                       /* 8초까지 기다린다 */
   })();
 }
+/* ══ 🧑 <b>이름 칸이 아예 없는 화면</b> — 머리에 한 줄 (csBar*) ═══════
+   사장님 말씀 (2026-10-09) — 「<b>B</b> 해줘」. 판 X76 에서 이름 칸이
+   <b>있는</b> 넷을 채웠고, 여기는 칸이 <b>아예 없는</b> 넷입니다 —
+   치료비 지급지도 · 재무&보장 상담자료 · 한장 보험료 비교 · 미끼 레이더.
+
+   ── 자리를 새로 만들지 않습니다 ───────────────────────────────────
+   재어 보니 넷의 성격이 갈렸습니다 —
+     · 치료비 지급지도 · 재무&보장 상담자료 → <b>본체 화면</b>이고
+       머리(.page-hd)가 이미 있습니다. 거기 한 줄을 답니다.
+     · 한장 보험료 비교 · 미끼 레이더 → <b>전체화면 틀</b>이라 #dynPane 은
+       앞 화면 그대로입니다. 우리 것은 <b>떠 있는 띠(.fin-float)</b> 하나뿐
+       이고, 거기 칩을 답니다.
+   ★ 둘 다 <b>이미 있는 가구</b>입니다 — 새 띠를 세우지 않습니다.
+
+   ── 어느 이름인가 ─────────────────────────────────────────────────
+   ★★ 넷 다 <b>실명</b>입니다. 이 띠는 <b>우리 화면</b>이고 밖으로 나가는
+     자리가 아닙니다 — 가리는 까닭은 밖으로 나갈 때이지 이 브라우저 화면이
+     아닙니다(check-calface 가 한 번 잡은 그 자리 · 3번).
+   ★ <b>틀 안으로는 아무것도 새로 안 보냅니다.</b> 한장 보험료 비교는
+     <b>딴 회사 주소</b>(apex-hb-onecompare)라 그 안에 칸을 만들 수도,
+     이름을 넣을 수도 없습니다. 미끼 레이더는 홈 ⑥ 에서 올 때 이미
+     가린 이름을 주소로 받고 있어(판 X74), 메뉴에서 또 다른 길을 만들면
+     두 벌이 됩니다 (5번).
+   ★ <b>모르면 안 답니다</b> (1번) — 고른 분이 없으면 띠를 아예 지웁니다.
+     「고객님」 으로 메우지 않습니다.
+   ★ 화면을 떠나면 <b>지웁니다</b> — 떠 있는 띠는 #dynPane 밖이라 그냥
+     두면 다음 화면에도 남아 「누구 상담인지」 가 거짓이 됩니다.          */
+var CS_BAR={
+  treatpay:{ at:'hd' },
+  fp_deck :{ at:'hd' },
+  onecmp  :{ at:'float', scr:'onecmpScreen' },
+  mikki   :{ at:'float', scr:'mikkiScreen' }
+};
+/* 옷은 <b>여기 한 곳</b>입니다 (5번). 떠 있는 띠는 짙은 알약이라 흰 잉크,
+   머리는 흰 바탕이라 짙은 잉크 — 같은 칩의 두 결입니다.                */
+function csBarCss(){
+  if(document.getElementById('csBarCss'))return;
+  var st=document.createElement('style');st.id='csBarCss';
+  st.textContent=
+    '.cs-who{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;'+
+      'font-size:var(--t6);font-weight:800;letter-spacing:-.02em}'+
+    '.cs-who.hd{margin-top:7px;color:var(--ink-2);background:var(--bg-1);'+
+      'border:1px solid var(--ink-7);border-radius:var(--r-pill);padding:5px 12px}'+
+    '.cs-who.hd b{color:var(--primary)}'+
+    '.fin-float .cs-who{color:var(--white);padding:0 4px 0 7px;'+
+      'border-right:1px solid rgba(255,255,255,.18);margin-right:3px}'+
+    '.fin-float .cs-who b{color:var(--white)}';
+  document.head.appendChild(st);
+}
+/* 띠 하나를 짓는다 — 이름은 <b>반드시 씻어서</b> 넣습니다(메모가 섞입니다) */
+function csBarOne(v,hd){
+  return '<span class="cs-who'+(hd?' hd':'')+'" id="csWhoBar">🧑 <b>'+
+         ((typeof osEsc==='function')?osEsc(v):v)+'</b> 님 상담</span>';
+}
+/* 먼저 <b>다 지우고</b> 나서, 그 화면이 표에 있으면 답니다 */
+function csBarWipe(){
+  try{ var L=document.querySelectorAll('#csWhoBar'),i;
+       for(i=0;i<L.length;i++)if(L[i].parentNode)L[i].parentNode.removeChild(L[i]); }catch(e){}
+}
+function csBarPaint(tab){
+  csBarWipe();
+  var m=CS_BAR[tab]; if(!m)return;
+  var v=''; try{ v=(typeof csNm==='function')?csNm():''; }catch(e){ v=''; }
+  if(!v)return;                                  /* 모르면 안 답니다 (1번) */
+  csBarCss();
+  var tries=0;
+  (function put(){
+    tries++;
+    var host=null;
+    try{
+      host=(m.at==='float')
+        ? ((document.getElementById(m.scr)||{}).querySelector
+            ? document.getElementById(m.scr).querySelector('.fin-float') : null)
+        : (document.getElementById('dynPane')||{querySelector:function(){return null;}}).querySelector('.page-hd');
+    }catch(e){ host=null; }
+    /* 그 사이에 다른 화면으로 가셨으면 <b>그만둡니다</b> — 늦게 와서 엉뚱한
+       화면에 이름을 달면 그것이 더 나쁩니다 (1번). */
+    try{ if(typeof currentTab==='function'&&currentTab()!==tab)return; }catch(e2){}
+    if(host&&!document.getElementById('csWhoBar')){
+      if(m.at==='float')host.insertAdjacentHTML('afterbegin',csBarOne(v,false));
+      else host.insertAdjacentHTML('beforeend',csBarOne(v,true));
+    }
+    /* ★★ <b>넣었다고 끝내지 않습니다.</b> go() 가 아직 #dynPane 을 안 바꿨을
+       때 넣으면 <b>앞 화면의 머리</b>에 꽂히고, 바로 뒤에 화면이 통째로
+       덮여 띠가 사라집니다 — 재무&보장 상담자료에서 실제로 그랬습니다
+       (띠가 아예 안 섰습니다). 그래서 <b>붙어 있나</b>를 끝까지 봅니다.
+       이미 붙어 있으면 위 if 가 걸러 두 번 안 답니다. 서버는 안 부릅니다 (7번). */
+    if(tries<16)setTimeout(put,500);              /* 8초까지 지켜봅니다 */
+  })();
+}
 function go(tab){
   /* 홈으로 돌아오면 <b>돌아가는 띠</b>는 제 할 일을 다 했다. 메뉴로 돌아오셔도
      사라져야 한다 — 「← 홈」 을 누르셨을 때만 지우면, 메뉴로 오신 뒤에도
@@ -18575,6 +18665,10 @@ function go(tab){
        이 줄줄이 섭니다(sangdam·frmake 도 그 안입니다). 꼬리에 걸면 그
        화면들은 닿지 못합니다. 「지금 어디」 를 적은 <b>바로 뒤</b>입니다. */
   try{ csFillNm(tab); }catch(eCs){}
+  /* 🧑 이름 칸이 <b>아예 없는</b> 화면은 머리·띠에 한 줄로 (판 X79 · B).
+     표(CS_BAR)에 없는 화면에서는 먼저 <b>지웁니다</b> — 떠 있는 띠는
+     #dynPane 밖이라 그냥 두면 다음 화면에도 남습니다.            */
+  try{ csBarPaint(tab); }catch(eCb){}
   if(!_ok){
     osFullMode('');
     var dynB=$('dynPane');if(dynB)dynB.innerHTML=osBlockedPageHtml(tab);
@@ -19113,8 +19207,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-10-10 06:10';
-var APP_BUILD_NOTE="☎️ <b>전화하는 자리에 TA 스크립트가, 묻는 자리에 예외질환이 섭니다.</b>　—　사장님 말씀 「Ta 모드에서 ta 스크립트가 빠져있어 넣어줘 · Pc 에서 예외질환도 넣어줘 · <b>오늘에 있어</b>」.　—　① 재어 보니 말씀 둘 다 그대로였습니다. 「오늘」 카드가 단계마다 손에 주는 것은 <b>표 하나</b>에서 나오는데, TA 묶음에는 <b>TA 스크립트가 없었고</b> PC 묶음에는 <b>예외질환이 없었습니다.</b>　—　② ★ TA 스크립트는 「앱이 아는 것」 에는 <b>이미 있었습니다.</b> 두 목록은 뜻이 달라(하나는 「무엇을 가리나」, 하나는 「무엇을 쥐나」) 쌍둥이가 아니고, <b>쥐는 쪽</b>에만 빠져 카드에서 안 보였습니다.　—　③ ★ TA 는 <b>맨 앞</b>에 넣었습니다 — 카드가 번호로 세우는 것은 앞의 <b>셋</b>이고, 전화를 걸면서 보고 읽는 글이 이것입니다. 밀려난 음성 비서는 <b>없어진 것이 아니라</b> 바로 아래 칩에 그대로 섭니다.　—　④ ★ PC 는 <b>넷째</b>입니다 — 앞의 셋(전&후 만들기 · AI 보장분석 · 제안서 비교)은 사장님이 2026-09-18 에 못 박으신 자리라 밀지 않았고, 넷째는 <b>칩 한 줄의 첫 자리</b>라 밀지 않아도 바로 보입니다.　—　⑤ ★★ 누르면 <b>덮개로</b> 열립니다 — 홈은 아래 그대로 있고 머리에 「2건 중 1번째 · 그 분」 이 적힙니다. 전화 중에 홈을 떠나면 돌아올 때 <b>몇 번째였는지를 다시 찾게</b> 됩니다 (7번). 주소는 <b>한 곳</b>에만 적고 화면과 덮개가 같은 줄을 봅니다 (5번).　—　⑥ 이름표도 같이 달았습니다 — DB 통합 CRM 은 메뉴가 없어 그 표를 봅니다. PC 의 「앱이 아는 것」 에도 <b>쓸 때 한 줄</b>과 함께 적었습니다(「앓으신 것을 말씀하시면 — 받아 주는 회사가 있는지 먼저 봅니다」).　—　⑦ ⚠★ 재는 동안 제 걸음자가 「도구 열 가지가 <b>메뉴에 없다</b>」 고 앱을 모함했습니다 — 메뉴를 묻는 자가 <b>프로필이 있어야</b> 찹니다. 프로필을 안 심고 쟀습니다. 이 판에서 <b>일곱 번째</b>라, 새 자는 맨 앞에서 <b>제 눈이 떠 있는지</b>부터 확인합니다.　—　⑧ <b>자</b> — 20가지. 되돌림 여섯(빼기·뒤로 밀기 둘 · 덮개 끊기 · 주소 두 벌)을 다 해 보니 그 자리마다 빨간불이 떴습니다.";
+var APP_BUILD='2026-10-10 08:40';
+var APP_BUILD_NOTE="🧑 <b>이름 칸이 아예 없던 넷도 「누구 상담인지」 를 적습니다.</b>　—　사장님 말씀 「<b>B</b> 해줘」. 판 X76 이 칸이 <b>있는</b> 넷을 채웠고, 여기는 칸이 <b>아예 없던</b> 넷입니다 — 치료비 지급지도 · 재무&보장 상담자료 · 한장 보험료 비교 · 미끼 레이더.　—　① ★ <b>자리를 새로 만들지 않았습니다.</b> 재어 보니 둘은 <b>본체 화면</b>이라 머리가 이미 있고, 둘은 <b>전체화면 틀</b>이라 우리 것은 <b>떠 있는 띠</b>(「← 워크스페이스」 가 있는 그 알약) 하나뿐이었습니다. 그래서 <b>이미 있는 가구</b>에 칩 한 줄만 답니다.　—　② ★★ 넷 다 <b>실명</b>입니다. 이 띠는 <b>우리 화면</b>이고 밖으로 나가는 자리가 아닙니다 — 가리는 까닭은 밖으로 나갈 때이지 이 브라우저 화면이 아닙니다.　—　③ ★ <b>틀 안으로는 아무것도 새로 안 보냅니다.</b> 한장 보험료 비교는 <b>딴 회사 주소</b>라 그 안에 칸을 만들 수도 이름을 넣을 수도 없습니다. 미끼 레이더는 홈 ⑥ 에서 올 때 <b>이미</b> 가린 이름을 받고 있어(판 X74), 메뉴에서 또 다른 길을 만들면 두 벌이 됩니다.　—　④ ★ <b>떠나면 지웁니다.</b> 떠 있는 띠는 화면 바깥에 붙어 있어, 그냥 두면 다음 화면에도 「홍보배 님 상담」 이 남아 <b>거짓말</b>이 됩니다.　—　⑤ ★ <b>모르면 아예 안 세웁니다.</b> 고른 분이 없으면 띠가 없습니다 — 「고객님」 으로 메우지 않습니다.　—　⑥ ⚠★ 재는 동안 <b>재무&보장 상담자료에만 띠가 안 섰습니다.</b> 까닭은 화면이 아직 안 바뀌었을 때 <b>앞 화면 머리</b>에 꽂고 끝낸 것이었습니다 — 바로 뒤에 화면이 통째로 덮여 사라졌습니다. 「넣었다」 로 끝내지 않고 <b>붙어 있나를 끝까지 지켜보게</b> 고쳤습니다.　—　⑦ <b>자</b> — 27가지. 되돌림 여덟(안 지우기 · 넣고 끝내기 · 표에서 빼기 · 「고객님」 으로 메우기 · 가린 이름으로 적기 · 안 씻고 넣기 · 지킴 빼기 · 틀 주소에 싣기)을 다 해 보았습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
