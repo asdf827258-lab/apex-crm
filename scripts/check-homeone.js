@@ -26,6 +26,9 @@
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
+/* ⏰ 시계를 못 박는 자리는 <b>한 곳</b>입니다 (5번) — scripts/lib-clock.js.
+   네 자(여기 · check-phonefit · check-msfive · check-homeshape)가 같이 씁니다. */
+const CLK = require('./lib-clock.js');
 const ROOT = process.cwd(), PORT = 8897;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json' };
 const srv = http.createServer((rq, rs) => {
@@ -181,8 +184,12 @@ const tall = (p) => p.evaluate(() => {
 (async () => {
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
-  const open = async (o) => {
-    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+  /* ★ h 를 안 주면 <b>낮(14시)</b>입니다 — 여태 CI 가 돌던 때라, 위에 적어 둔
+     옛 눈금(3,534px 따위)이 <b>그 때의 것</b>이기 때문입니다. 아래 [1-b] 가
+     세 때를 따로 돕니다. */
+  const open = async (o, h) => {
+    const ctx = await b.newContext(CLK.ctxOpt());
+    await CLK.pin(ctx, (h === undefined) ? 14 : h);
     await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
     const p = await ctx.newPage();
     const errs = []; p.on('pageerror', e => errs.push(String(e).slice(0, 130)));
@@ -199,7 +206,12 @@ const tall = (p) => p.evaluate(() => {
      <b>한 번 하면 영영 사라지는</b> 것이라 「자꾸 달라지는」 범인이 아닙니다.
      범인은 <b>매일 떴다 사라지던</b> 출발 점검(778px)·팀(270px) 이었고,
      여기서 재는 것도 그것입니다. 「홈 맨 위에 있나」 는 check-setup 이 봅니다. */
-  const A = await open({ setup: false, news: true });
+  /* ★ <b>씨를 한 번만 적습니다</b> (5번) — 아래 [1-b] 가 세 때를 돌 때
+     <b>같은 씨</b>를 써야 같은 홈을 잽니다. 처음에 빈 씨로 돌렸다가
+     3,398px(소식 칸이 없는 홈)을 재고 「4.03화면」 이라고 적었습니다 —
+     4.2 선은 <b>이 씨의 홈</b>에 맞춰 둔 것이라 견줄 수 없는 수였습니다. */
+  const SEED_A = { setup: false, news: true };
+  const A = await open(SEED_A);
   const B = await open({ setup: false, news: true, ready: false });
   const ba = await bones(A.p), bb = await bones(B.p);
   is(ba.length > 0 && sameBones(ba, bb),
@@ -338,6 +350,31 @@ const tall = (p) => p.evaluate(() => {
   is(hA > 0 && hA <= 844 * 4.2,
      '  홈 높이 <b>' + hA + 'px</b> = 화면 ' + (hA / 844).toFixed(2)
        + '개 (4.2개 이하 — 이것이 「고치기 전」 길이입니다. 더는 못 올립니다)');
+
+  /* ── ⏰ 2026-10-10 · <b>세 때를 다 잽니다</b> (판 X78 · 사장님 말씀) ────
+     사장님 말씀 — 「홈 높이 자에 <b>시계 못 박는</b> 다음판 해줘」.
+
+     ★★ <b>여기가 세 판을 그냥 통과시켰습니다.</b> 홈은 때에 따라 길이가
+       다른데(아침·낮·저녁으로 카드와 글이 갈립니다) 이 자가 <b>그냥
+       「지금」 을 쟀습니다.</b> 그래서 —
+         아침 3,560px · 4.22  ✗      낮 3,540px · 4.19  ✓      저녁 3,586px · 4.25  ✗
+       인데 CI 가 14~15시에 돌아 <b>늘 초록</b>이었고, #548·#549·#550 이
+       사장님 선(4.2)을 넘긴 채로 들어갔습니다 (판 X77 에서 재어 알았습니다).
+     ★ 이제 <b>시계를 못 박고 세 때를 따로</b> 돕니다. 언제 돌려도 같은
+       수가 나오고, <b>한 때라도</b> 넘으면 그 자리에서 빨간불입니다.
+     ★ 창은 저마다 <b>새로 열고 닫습니다</b> — 못 박은 시계를 되돌릴 일이
+       없고, 앞 때의 창고(localStorage)가 뒤 때에 안 섞입니다.
+     ⚠ <b>자 넷이 다 못 박아야</b> 합니다. 하나만 박으면 나머지 셋이 때마다
+       들쭉날쭉합니다 — check-clockhome 이 그것을 봅니다 (8번).         */
+  console.log('\n[1-b] ⏰ <b>세 때를 다 재다</b> — 시계를 못 박고 (' + CLK.TZ + ')');
+  for (const w of CLK.WHEN) {
+    const C = await open(SEED_A, w.h);
+    const h3 = await tall(C.p);
+    is(h3 > 0 && h3 <= 844 * 4.2,
+       '  ' + CLK.label(w) + ' 홈 <b>' + h3 + 'px</b> = 화면 ' + (h3 / 844).toFixed(2) +
+       '개 — ' + w.왜);
+    await C.ctx.close();
+  }
 
   /* ── ⚠ 2026-09-26 · <b>⚙️ 관리 접이는 없어졌습니다</b> ──────────────
      사장님 말씀 — 「🚦 출발 점검 → 「나 › 설정」 · 👥 팀 → 「나 › 팀」」.
