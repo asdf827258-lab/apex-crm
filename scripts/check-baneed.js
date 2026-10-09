@@ -201,7 +201,15 @@ const LOOK = () => {
   await p.waitForTimeout(320);
   const top = await p.evaluate(() => {
     const tz = document.querySelector('.tz');
-    return { tz: !!tz, hero: !!document.querySelector('.tz-hero'),
+    /* ⚠ 2026-10-09 · 판 X81 — <b>맨 위 한 장의 생김새가 바뀌었습니다</b>.
+       파란 히어로(.tz-hero) 자리를 <b>두 칸(.hm-two)</b> 과 그 아래
+       <b>📄 보장분석 한 줄(.hm-pdf)</b> 이 썼습니다. 아래 쪽지 참고.      */
+    const pdf = document.querySelector('.hm-pdf');
+    return { tz: !!tz,
+      맨위한장: !!document.querySelector('.hm-two'),
+      옛히어로: document.querySelectorAll('.tz-hero').length,
+      맨위길: pdf ? (pdf.getAttribute('onclick') || '') : '',
+      맨위글: pdf ? (pdf.innerText || '').replace(/\s+/g, ' ').trim() : '',
       first: (tz && tz.children[0]) ? (tz.children[0].className || tz.children[0].tagName) : '(없음)' };
   });
   is(top.tz, '  홈 토스판이 선다');
@@ -229,8 +237,27 @@ const LOOK = () => {
        「맨 위에 <b>선다</b>」 를 봅니다. 누가 말없이 도로 빼면 울립니다.
        안 보면 「어느 쪽이 맞나」 를 아무도 안 묻게 됩니다 (8번).
      ★ 「맨 위는 아무나 · 띠는 그 분」 <b>둘 다</b>인지는 check-hmtwo [1-a]
-       가 함께 봅니다.                                                  */
-  is(top.hero, '  <b>맨 위에 파랑 히어로가 선다</b> — 사장님 말씀 「둘 다 둡니다」 (2026-09-23 「맨위에 띄우지말고」 를 이 말씀이 대신합니다)');
+       가 함께 봅니다.
+
+     ── ⚠ 2026-10-09 · 판 X81 · <b>한 번 더 뒤집힌 자리입니다</b> ──────
+     사장님 말씀 — 「<b>맨 위에</b> 보장분석을 입력하세요 하면 ai 제안서가
+     나오는데 <b>그 칸을 반으로 쪼개서</b> 왼쪽에 DB통합CRM 요약, 오른쪽에
+     무엇을 도울까요? 사용설명서」. 고르신 꼴은 <b>「두 칸으로 바꾸고
+     보장분석은 바로 아래 한 줄 단추로」</b> 입니다.
+
+     ★ 그래서 <b>파란 히어로(.tz-hero)는 걷혔습니다.</b> 되살리지 마십시오 —
+       <b>잃은 것이 아니라 사장님이 바꾸신 것</b>입니다.
+     ★ 그러나 이 자가 지키던 <b>진짜 약속은 그대로</b>입니다 —
+       「맨 위에서 <b>아무나</b>의 보장분석으로 들어가는 길이 있다」.
+       지금은 <b>📄 한 줄(.hm-pdf → go('bojang'))</b> 이 그 길입니다.
+       <b>맨 위는 「아무나」 · 띠는 「그 분」</b> 이라는 가름은 안 바뀌었습니다.
+     ⚠ 같은 약속을 <b>이 자와 check-hmtwo 둘이</b> 보고 있었고, 판 X81 에서
+       한쪽만 고쳐 CI 가 잡았습니다 — <b>같은 것을 두 곳에서 보면 이렇게
+       됩니다</b> (5번). 깊이 재는 것은 <b>check-hmsum</b> 한 곳으로 모았고,
+       여기와 check-hmtwo 는 「맨 위에 길이 있나」 만 봅니다.            */
+  is(top.맨위한장 && top.옛히어로 === 0 && /go\('bojang'\)/.test(top.맨위길),
+     '  <b>맨 위에서 보장분석으로 들어가는 길이 있다</b> — 「' + (top.맨위글 || '(없음)') +
+     '」 · 옛 히어로 ' + top.옛히어로 + '개 (사장님께서 2026-10-09 에 두 칸 + 한 줄로 바꾸셨습니다)');
   is(!!qb && qb.누름, '  ★ 그러면서도 <b>띠의 📑 로 「그 분을 들고」</b> 갈 수 있다 — 맨 위는 「아무나」, 띠는 「그 분」');
 
   console.log('\n──────────────────────────────');
