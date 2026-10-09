@@ -14893,6 +14893,95 @@ function navMainHtml(){
    불리는데, 메뉴 칸은 <b>등급·지금 화면·건수</b>가 바뀌면 따라가야 합니다.
    내용은 navMainPaint() 가 매번 채웁니다 — 안 그러면 로그인이 늦게 끝났을 때
    기둥이 <b>낡은 채로</b> 남고, 지금 화면 강조도 안 따라옵니다.        */
+/* ══ 🗂️🗺️ <b>홈 맨 위의 두 칸</b> — 왼쪽 CRM 요약 · 오른쪽 전체 지도 (hmSum*) ══
+   사장님 말씀 (2026-10-09) — 「<b>맨 위에</b> 보장분석을 입력하세요 하면 ai
+   제안서가 나오는데 <b>그 칸을 반으로 쪼개서</b> 왼쪽인 그 칸에 <b>DB통합CRM
+   요약</b> 만들어 주고, 오른쪽엔 <b>무엇을 도울까요? 사용설명서</b> 넣어 줘 —
+   내꺼 <b>마인드맵으로 펼쳐놨던 것</b>」.
+
+   ⚠ <b>판 X80 에서 엉뚱한 칸에 넣었습니다.</b> 「찾기 칸」 으로 알아듣고 ☰ 서랍
+     아래에 세웠는데, 사장님이 가리키신 것은 <b>홈 맨 위의 히어로</b>
+     (hmTossHero · 「KB보장분석 넣어주시면…」 193px) 였습니다. 사장님께서
+     <b>「아직 변경 안되었는데 위에」</b> 라고 하셔서 알았습니다. 판 X81 에서
+     이 자리로 옮기고 <b>서랍은 원래대로 되돌렸습니다</b>(🗺️ 단추 복구).
+     ★ 그래서 이름도 nav* → <b>hm*</b> 로 바꿨습니다 — 서랍이 아니라 홈입니다.
+       이름이 거짓말하면 부르는 쪽이 틀립니다 (4번).
+
+   ★ <b>보장분석 길을 없애지 않았습니다</b> (6번). 히어로 자리를 두 칸이 쓰고,
+     <b>바로 아래 한 줄 단추</b>로 「📄 보장분석 PDF 넣기」 가 그대로 섭니다 —
+     사장님께서 그렇게 고르셨습니다. 「다 됐다」로 보이는 상태에서 길을 감추지
+     않습니다.
+   ★ <b>세는 자리를 새로 만들지 않습니다</b> (5번). 단계별 건수는
+     arTkCount() 하나가 세고, 「진행중」 은 arTkRun() 이 AP·PC·CS 를 더합니다 —
+     여기서 또 더하면 한 곳을 빠뜨립니다.
+   ★ <b>서버를 안 부릅니다</b> (7번). 손에 있는 AR.db 만 셉니다.
+   ★ <b>모름과 0 을 가립니다</b> (1번). 아직 못 읽었으면 수를 한 자도 안
+     적습니다 — 0 이라고 적으면 「배정이 없다」 는 뜻이 되어 버립니다.
+   ★ <b>이름을 한 자도 안 적습니다</b> (3번) — 수만 적습니다. 홈은 고객 앞에서
+     열립니다.                                                        */
+function hmSumCnt(){
+  /* 읽었나 — AR.db 가 null 이면 <b>모릅니다</b>(0 이 아닙니다) */
+  var 읽었나=false;
+  try{ 읽었나=(typeof AR!=='undefined'&&AR.db!==null&&AR.db!==undefined); }catch(e){ 읽었나=false; }
+  if(!읽었나)return {읽었나:false};
+  var c=null;
+  try{ c=arTkCount(hwhoFor()); }catch(e2){ return {읽었나:false}; }
+  if(!c)return {읽었나:false};
+  var run=0; try{ run=arTkRun(c); }catch(e3){ run=0; }
+  return {읽었나:true, all:c.all||0, run:run, pol:c['계약완료']||0};
+}
+function hmSumCss(){
+  if(document.getElementById('hmSumCss'))return;
+  var st=document.createElement('style');st.id='hmSumCss';
+  st.textContent=
+    /* 히어로가 섰던 자리라 바깥 여백은 .tz-hero 와 같게 둡니다 */
+    '.hm-two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}'+
+    '.hm-two>button{display:block;width:100%;text-align:left;min-height:86px;'+
+      'padding:14px 13px;border:1px solid var(--ink-7);border-radius:var(--t-r);'+
+      'background:var(--t-card);font-family:inherit;cursor:pointer}'+
+    '.hm-two>button:hover{background:var(--bg-1)}'+
+    '.hm2-t{display:block;font-size:var(--t5);font-weight:800;color:var(--t-ink);'+
+      'letter-spacing:-.025em;line-height:1.3}'+
+    /* ⚠ <b>13px(--t6) 입니다.</b> 서랍 것을 베껴 11px 을 썼다가 폰 자에 걸렸습니다 —
+       <b>「--t7」 은 없는 토큰</b>이라 「var(--t7,11px)」 이 11px 로 떨어지고, 앱이 정해 둔
+       바닥 13px 아래에 <b>새 계단</b>이 하나 생겼습니다. 홈 칸은 서랍보다 넓어
+       작게 쓸 까닭도 없습니다. <b>있는 사다리에서만 고릅니다</b> (5번).      */
+    '.hm2-s{display:block;font-size:var(--t6);font-weight:700;color:var(--t-sub2);'+
+      'margin-top:5px;line-height:1.45}'+
+    '.hm2-n{display:block;font-size:var(--t3);font-weight:800;color:var(--t-point);'+
+      'margin-top:5px;letter-spacing:-.03em}'+
+    '.hm2-n em{font-style:normal;color:var(--t-sub2);font-weight:700;font-size:var(--t6)}'+
+    /* 📄 보장분석 한 줄 — 히어로의 단추 결을 그대로 씁니다 */
+    '.hm-pdf{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;'+
+      'margin-top:8px;height:46px;border-radius:var(--t-r-sm);border:0;'+
+      'background:var(--t-point);color:var(--t-card);font-family:inherit;'+
+      'font-size:15.5px;font-weight:800;cursor:pointer}';
+  document.head.appendChild(st);
+}
+/* 왼쪽 칸의 <b>속</b>만 다시 그린다 — 늦게 실려 와도 채워지게 hmPaint 가 부릅니다 */
+function hmSumPaint(){
+  var el=document.getElementById('hmSumBox'); if(!el)return;
+  var k=hmSumCnt();
+  if(!k.읽었나){
+    el.innerHTML='<span class="hm2-t">🗂️ DB통합CRM</span>'+
+      '<span class="hm2-s">아직 못 읽었습니다<br>눌러서 엽니다</span>';
+    return;
+  }
+  el.innerHTML='<span class="hm2-t">🗂️ DB통합CRM</span>'+
+    '<span class="hm2-n">'+k.all+'<em>명</em></span>'+
+    '<span class="hm2-s">진행중 '+k.run+' · 증권 미전달 '+k.pol+'</span>';
+}
+function hmSumHtml(){
+  hmSumCss();
+  return '<div class="hm-two">'+
+    '<button type="button" id="hmSumBox" onclick="go(\'crm\')" '+
+      'title="DB 통합 CRM — 배정받은 분들을 단계별로"></button>'+
+    '<button type="button" onclick="go(\'apexmap\')" '+
+      'title="APEX 전체 지도 — 무엇을 도울까요">'+
+      '<span class="hm2-t">🗺️ 무엇을 도울까요?</span>'+
+      '<span class="hm2-s">사용설명서 · 전체 지도<br>갈래가 펼쳐집니다</span>'+
+    '</button></div>';
+}
 function navFixHtml(){
   return '<div id="osNoticeNav"></div>'+
     '<div id="navMain"></div>'+
@@ -14902,6 +14991,10 @@ function navFixHtml(){
     '<button type="button" class="sb-guide" onclick="go(\'manual\')">'+
       '<span class="sbg-ic">📘</span><span class="sbg-t">APEX 사용가이드</span>'+
       '<span class="sbg-go">처음이시면 여기부터</span></button>'+
+    /* 🗺️ <b>되돌렸습니다</b> (2026-10-09 · 판 X81). 판 X80 에서 이 단추를 거두고
+       서랍 아래에 두 칸을 넣었는데, 사장님께서 가리키신 칸은 <b>서랍이 아니라
+       홈 맨 위의 히어로</b>였습니다. 두 칸은 거기로 옮겼으니 서랍은 <b>원래대로</b>
+       둡니다 — 지도로 가는 길은 다시 <b>여기 하나</b>입니다 (5번). */
     '<button type="button" class="sb-guide map" onclick="go(\'apexmap\')">'+
       '<span class="sbg-ic">🗺️</span><span class="sbg-t">APEX 전체 지도</span>'+
       /* ⚠ 여기 <b>개수를 안 적습니다.</b> 「89개」 라고 박아 두었는데 화면이
@@ -18669,6 +18762,11 @@ function go(tab){
      표(CS_BAR)에 없는 화면에서는 먼저 <b>지웁니다</b> — 떠 있는 띠는
      #dynPane 밖이라 그냥 두면 다음 화면에도 남습니다.            */
   try{ csBarPaint(tab); }catch(eCb){}
+  /* ⚠ 🗂️ 두 칸의 수는 <b>여기서 안 그립니다</b> (판 X81). 판 X80 에서는 그 칸이
+     서랍(#navFix)에 있어 #dynPane 밖이라 여기서 그려도 됐습니다. 지금은
+     <b>홈 안</b>에 있고, 홈 글은 이 아래 한참 뒤에 dyn.innerHTML 로 들어갑니다 —
+     여기서 부르면 <b>아직 없는 칸</b>을 찾다 조용히 돌아섭니다. 그려 주는
+     자리는 ⓐ 홈을 그린 바로 뒤 ⓑ hmPaint() 둘입니다.                */
   if(!_ok){
     osFullMode('');
     var dynB=$('dynPane');if(dynB)dynB.innerHTML=osBlockedPageHtml(tab);
@@ -18768,6 +18866,10 @@ function go(tab){
   navMark(tab);
   var dyn=$('dynPane');
   if(tab==='home'||tab==='dashboard'){dyn.innerHTML=(typeof osRole==='function'&&typeof osEsc==='function'&&typeof renderHome==='function')?renderHome():renderDashboard();
+    /* 🗂️ 맨 위 왼쪽 칸의 수 — <b>홈 글이 들어간 바로 뒤</b>입니다. 손에 있는
+       AR.db 만 세고 서버는 안 부릅니다 (7번). 아직 안 실렸으면 hmPaint 가
+       다시 그립니다 — 거기서도 서버에 안 갑니다.                      */
+    try{ hmSumPaint(); }catch(eSm){}
     if(typeof osNoticeApply==='function')osNoticeApply();
     if(typeof osNoticeLoad==='function')osNoticeLoad();
     /* 오늘 안에 연락해야 할 분이 있으면 첫 화면에서 바로 보인다.
@@ -19207,8 +19309,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-10-10 08:40';
-var APP_BUILD_NOTE="🧑 <b>이름 칸이 아예 없던 넷도 「누구 상담인지」 를 적습니다.</b>　—　사장님 말씀 「<b>B</b> 해줘」. 판 X76 이 칸이 <b>있는</b> 넷을 채웠고, 여기는 칸이 <b>아예 없던</b> 넷입니다 — 치료비 지급지도 · 재무&보장 상담자료 · 한장 보험료 비교 · 미끼 레이더.　—　① ★ <b>자리를 새로 만들지 않았습니다.</b> 재어 보니 둘은 <b>본체 화면</b>이라 머리가 이미 있고, 둘은 <b>전체화면 틀</b>이라 우리 것은 <b>떠 있는 띠</b>(「← 워크스페이스」 가 있는 그 알약) 하나뿐이었습니다. 그래서 <b>이미 있는 가구</b>에 칩 한 줄만 답니다.　—　② ★★ 넷 다 <b>실명</b>입니다. 이 띠는 <b>우리 화면</b>이고 밖으로 나가는 자리가 아닙니다 — 가리는 까닭은 밖으로 나갈 때이지 이 브라우저 화면이 아닙니다.　—　③ ★ <b>틀 안으로는 아무것도 새로 안 보냅니다.</b> 한장 보험료 비교는 <b>딴 회사 주소</b>라 그 안에 칸을 만들 수도 이름을 넣을 수도 없습니다. 미끼 레이더는 홈 ⑥ 에서 올 때 <b>이미</b> 가린 이름을 받고 있어(판 X74), 메뉴에서 또 다른 길을 만들면 두 벌이 됩니다.　—　④ ★ <b>떠나면 지웁니다.</b> 떠 있는 띠는 화면 바깥에 붙어 있어, 그냥 두면 다음 화면에도 「홍보배 님 상담」 이 남아 <b>거짓말</b>이 됩니다.　—　⑤ ★ <b>모르면 아예 안 세웁니다.</b> 고른 분이 없으면 띠가 없습니다 — 「고객님」 으로 메우지 않습니다.　—　⑥ ⚠★ 재는 동안 <b>재무&보장 상담자료에만 띠가 안 섰습니다.</b> 까닭은 화면이 아직 안 바뀌었을 때 <b>앞 화면 머리</b>에 꽂고 끝낸 것이었습니다 — 바로 뒤에 화면이 통째로 덮여 사라졌습니다. 「넣었다」 로 끝내지 않고 <b>붙어 있나를 끝까지 지켜보게</b> 고쳤습니다.　—　⑦ <b>자</b> — 27가지. 되돌림 여덟(안 지우기 · 넣고 끝내기 · 표에서 빼기 · 「고객님」 으로 메우기 · 가린 이름으로 적기 · 안 씻고 넣기 · 지킴 빼기 · 틀 주소에 싣기)을 다 해 보았습니다.";
+var APP_BUILD='2026-10-10 12:40';
+var APP_BUILD_NOTE="🗂️🗺️ <b>두 칸을 홈 맨 위로 옮겼습니다 — 사장님께서 가리키신 그 칸입니다.</b>　—　사장님 말씀 <b>「아직 변경 안되었는데 위에」</b>.　—　① ⚠★ <b>지난 판은 자리를 틀렸습니다.</b> 「그 칸」 을 ☰ 서랍의 <b>찾기 칸</b>으로 알아듣고 거기에 세웠는데, 가리키신 것은 <b>홈 맨 위의 히어로</b> (「KB보장분석 넣어주시면 저희가 관리해드릴게요」) 였습니다. 자는 그때 <b>초록이었습니다</b> — 엉뚱한 자리를 바르게 재고 있었기 때문입니다.　—　② 지금 서는 꼴 — 홈 맨 위에 <b>🗂️ DB통합CRM(전체 N명 · 진행중 N · 증권 미전달 N)</b> 과 <b>🗺️ 무엇을 도울까요?(사용설명서 · 전체 지도)</b> 가 반반, 그 <b>바로 아래</b> <b>📄 보장분석 PDF 넣기</b> 한 줄.　—　③ ★★ <b>보장분석 길을 안 없앴습니다.</b> 같은 자리로 가고 홈 안에 <b>딱 하나</b>입니다 — 단추를 감춘 것이 아니라 <b>얇게</b> 만든 것입니다. 아직 못 읽은 상태에서도 그 길은 그대로 섭니다.　—　④ ★ <b>서랍을 원래대로 되돌렸습니다</b> — 지난 판에서 거둔 <b>🗺️ APEX 전체 지도</b> 단추가 하나 되살고, 서랍에는 두 칸이 없습니다. 같은 것을 두 곳에 두지 않습니다.　—　⑤ ★ <b>이름도 함께 바꿨습니다</b>(서랍 꼴 → 홈 꼴). 서랍이 아니라 홈이므로, 이름이 거짓말하면 부르는 쪽이 틀립니다.　—　⑥ ⚠ <b>그리는 시점이 달라졌습니다.</b> 서랍은 바뀌는 칸 밖이라 화면을 고르는 자리에서 그려도 됐지만, 홈 칸은 그 안이라 거기서는 <b>아직 없는 칸</b>을 찾습니다. 홈을 그린 바로 뒤와 다시 그리는 자리 둘로 옮겼습니다.　—　⑦ ⚠ <b>작은 글자 11px 을 썼다가 폰 자에 걸렸습니다.</b> 서랍 것을 베꼈는데 <b>없는 토큰의 되돌림값</b>이라 앱이 정해 둔 바닥 13px 아래였습니다 — 13px 로 고쳤고, 자가 그것도 봅니다.　—　⑧ <b>홈이 79px 짧아졌습니다</b>(4.2 → 4.1화면). 좋아졌으니 폰 자의 기준선도 같이 내렸습니다.　—　⑨ ★ <b>세는 자리를 새로 안 만들었습니다.</b> 단계별 건수는 세는 자 하나가 세고 「진행중」 은 그 자가 AP·PC·CS 를 더합니다 — 여기서 또 더하면 홈과 CRM 화면이 <b>다른 수</b>를 말합니다.　—　⑩ ★ <b>두 칸에 이름을 한 자도 안 적습니다</b>(수만 적습니다). 다만 홈 <b>다른 자리</b>에는 그 분 이름이 섭니다 — 가리는 까닭은 밖으로 나갈 때이지 이 브라우저 화면이 아닙니다.　—　⑪ ★ <b>그리는 동안 서버를 한 번도 안 부릅니다.</b>　—　⑫ <b>자</b> — 33가지. 자리가 홈 맨 위인지 · 보장분석 길이 살아 있는지 · 서랍이 돌아왔는지를 함께 잽니다. 되돌림 아홉(한 줄 지우기 · 두 칸 빼기 · 또 세기 · 모름을 0 으로 · 이름 적기 · 11px 로 되돌리기 · 옛 히어로 남기기 · 🗺️ 다시 거두기 · 홈 늘이기)에서 8·14·4·3·2·2·3·3·4곳에 빨간불이 떴습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -30434,6 +30536,9 @@ function hmPaint(){
   if(a)a.innerHTML=hmTodayHtml();
   /* 🌙 저녁 칸의 머리줄도 같이 — 미션을 체크하면 그 수가 바로 바뀝니다 */
   try{ hmNightPaint(); }catch(eNp){}
+  /* 🗂️ 맨 위 두 칸의 왼쪽 — 배정 DB 가 <b>늦게 실려 와도</b> 여기서 채워집니다.
+     hmPaint 는 #hmToday 만 갈아 끼우므로 이 칸은 안 지워집니다 (5번).     */
+  try{ hmSumPaint(); }catch(eSm2){}
   /* 📍 <b>곁칸 넷을 어디에 세울지</b> — 오늘 카드를 다시 그리면 그 안의 자리도
      새로 생기므로, 바로 뒤에서 정합니다 (hmSidePlace 한 곳 · 5번). */
   try{ hmSidePlace(); }catch(eSp){}
@@ -31281,12 +31386,21 @@ function hmTossBarCss(){
   document.head.appendChild(st);
 }
 function hmTossHero(){
-  /* 목업 ⑧ 의 히어로 — 글자 그대로 */
-  return '<div class="tz-hero">'+
-    '<div class="q">「KB보장분석 넣어주시면<br>저희가 관리해드릴게요」</div>'+
-    '<div class="s">PDF만 넣으면 신호·소재·화법까지 자동으로</div>'+
-    '<button type="button" class="b" onclick="go(\'bojang\')">보장분석 PDF 넣기</button>'+
-  '</div>';
+  /* ⚠ <b>목업 ⑧ 의 히어로를 여기서 걷었습니다</b> (2026-10-09 · 판 X81).
+     사장님 말씀 — 「맨 위에 보장분석을 입력하세요 하면 ai 제안서가 나오는데
+     <b>그 칸을 반으로 쪼개서</b> 왼쪽에 DB통합CRM 요약, 오른쪽에 무엇을
+     도울까요? 사용설명서」. 고르신 꼴은 <b>「두 칸으로 바꾸고 보장분석은
+     바로 아래 한 줄 단추로」</b> 입니다.
+
+     ★ <b>보장분석 길은 그대로 있습니다</b> (6번) — 아래 .hm-pdf 한 줄이
+       같은 go('bojang') 로 갑니다. 단추를 감춘 것이 아니라 <b>얇게</b>
+       만든 것입니다.
+     ★ 짓는 자리는 여기 <b>하나</b>입니다 — 두 칸의 속은 hmSumHtml() 이
+       만들고, 수는 hmSumPaint() 가 채웁니다 (5번).                   */
+  return hmSumHtml()+
+    '<button type="button" class="hm-pdf" onclick="go(\'bojang\')" '+
+      'title="KB보장분석 PDF 를 넣으면 신호·소재·화법까지 자동으로">'+
+      '<span>📄</span><span>보장분석 PDF 넣기</span></button>';
 }
 /* 카드 한 장 — 모양은 한 곳에서만 만듭니다 (5번) */
 function hmTossCard(tag,ttl,sub,btn,act,grey){
