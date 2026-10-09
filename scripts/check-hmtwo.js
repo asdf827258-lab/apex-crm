@@ -129,33 +129,55 @@ const SEED = () => {
      '  ★ 오른쪽이 <b>왼쪽 그늘에 든다</b> — 오른쪽 ' + two.rh + 'px ≤ 왼쪽 ' + two.lh +
      'px (세로는 긴 쪽이 정합니다)');
 
-  /* ── [1-a] 파란 히어로 — <b>둘 다</b> 있다 ───────────────────────── */
-  console.log('\n[1-a] ★★ <b>파란 히어로가 맨 위에</b> 서고, <b>그 분을 들고 가는 길도 그대로</b> (사장님 말씀 「둘 다」)');
+  /* ── [1-a] 맨 위 한 장 — <b>둘 다</b> 있다 ───────────────────────── */
+  console.log('\n[1-a] ★★ <b>맨 위 한 장이 서고</b>, <b>그 분을 들고 가는 길도 그대로</b> (사장님 말씀 「둘 다」)');
   /* 사장님 말씀 (2026-09-30) — <b>「둘 다 둡니다 — 맨 위에 세우세요」</b>.
      ⚠ 이 자리는 2026-09-23 에 <b>「맨위에 띄우지말고」</b> 로 뺐던 곳입니다.
        빼신 까닭은 맨 위 한 장이 <b>누구의 보장분석인지 모른 채</b> 화면만
        열어서였고, 그 문제는 <b>「오늘 제안하는 분 줄」(hmBaGo)</b> 이 이미
        풀었습니다. 뜻이 다릅니다 — 맨 위는 「아무나」, 줄은 「그 분」.
-     ★ 그래서 <b>둘 다</b> 봅니다. 하나만 보면 다른 하나를 잃어도 조용합니다. */
+     ★ 그래서 <b>둘 다</b> 봅니다. 하나만 보면 다른 하나를 잃어도 조용합니다.
+
+     ── ⚠ 2026-10-09 · 판 X81 · <b>맨 위 한 장의 생김새가 바뀌었습니다</b> ──
+     사장님 말씀 — 「<b>맨 위에</b> 보장분석을 입력하세요 하면 ai 제안서가
+     나오는데 <b>그 칸을 반으로 쪼개서</b> 왼쪽에 DB통합CRM 요약, 오른쪽에
+     무엇을 도울까요? 사용설명서」. 고르신 꼴은 <b>「두 칸으로 바꾸고
+     보장분석은 바로 아래 한 줄 단추로」</b> 입니다.
+
+     그래서 <b>목각 ⑧ 의 파란 히어로(.tz-hero)는 여기서 걷혔습니다.</b>
+     ★★ <b>되살리지 마십시오.</b> 잃은 것이 아니라 <b>사장님이 바꾸신 것</b>입니다.
+        옛 글(「KB보장분석 넣어주시면 저희가 관리해드릴게요」)을 그리워해
+        다시 세우면 <b>같은 자리에 두 벌</b>이 섭니다 (5번).
+     ★ 다만 이 자가 지키던 <b>진짜 약속 셋은 그대로 지킵니다</b> —
+       ⓐ 맨 위에 <b>무엇인가 선다</b>(지금은 두 칸)
+       ⓑ <b>보장분석으로 가는 길</b>이 거기 있고 손가락 크기다(지금은 📄 한 줄)
+       ⓒ 그것이 <b>상담현황보다 위</b>다
+       바뀐 것은 <b>글자</b>뿐이고, 약속은 하나도 안 놓았습니다.
+     ★ 자리와 수는 <b>check-hmsum</b> 이 따로 깊이 잽니다 — 여기서는
+       「맨 위에 있나」 만 봅니다 (두 자가 같은 것을 두 번 세지 않게 · 5번). */
   const hero = await PC.evaluate(() => {
-    const h = document.querySelector('#hmTossHost .tz-hero');
-    const pane = document.querySelector('.tab-pane.on');
+    const host = document.getElementById('hmTossHost');
+    const two  = host ? host.querySelector('.hm-two') : null;
+    const pdf  = host ? host.querySelector('.hm-pdf') : null;
     const flow = document.getElementById('hmFlowHost');
-    const b = h ? h.querySelector('.b') : null;
-    return { has: !!h,
-      q: h ? (h.querySelector('.q') || {}).innerText || '' : '',
-      btn: b ? (b.innerText || '').trim() : '',
-      tap: b ? Math.round(b.getBoundingClientRect().height) : 0,
-      y: h ? Math.round(h.getBoundingClientRect().top) : 0,
+    return { has: !!two,
+      옛히어로: host ? host.querySelectorAll('.tz-hero').length : 0,
+      btn: pdf ? (pdf.innerText || '').replace(/\s+/g, ' ').trim() : '',
+      tap: pdf ? Math.round(pdf.getBoundingClientRect().height) : 0,
+      길: pdf ? (pdf.getAttribute('onclick') || '') : '',
+      y: two ? Math.round(two.getBoundingClientRect().top) : 0,
       flowY: flow ? Math.round(flow.getBoundingClientRect().top) : 0,
       /* ★ 「그 분을 들고 가는 길」 이 살아 있나 — 함수와 부르는 자리 둘 다 */
       baGoFn: (typeof hmBaGo === 'function') };
   });
-  is(hero.has, '  <b>맨 위 히어로</b>가 선다 (목각 ⑧)');
-  is(/KB보장분석/.test(hero.q), '  목업 <b>글자 그대로</b>다 — 「' + hero.q.replace(/\s+/g, ' ').slice(0, 40) + '」');
+  is(hero.has, '  <b>맨 위 한 장</b>이 선다 — 지금은 두 칸(사장님께서 2026-10-09 에 바꾸셨습니다)');
+  is(hero.옛히어로 === 0,
+     '  <b>옛 파란 히어로가 안 남았다</b> — .tz-hero ' + hero.옛히어로 + '개 (되살리면 두 벌입니다 · 5번)');
+  is(/보장분석/.test(hero.btn) && /go\('bojang'\)/.test(hero.길),
+     '  ★★ <b>보장분석으로 가는 길</b>이 거기 있다 — 「' + hero.btn + '」');
   is(!!hero.btn && hero.tap >= 44, '  단추가 <b>손가락 크기</b>다 — 「' + hero.btn + '」 ' + hero.tap + 'px');
   is(hero.has && hero.flowY > hero.y,
-     '  <b>상담현황보다 위</b>에 있다 (목각 차례) — 히어로 y' + hero.y + ' · 상담현황 y' + hero.flowY);
+     '  <b>상담현황보다 위</b>에 있다 (목각 차례) — 맨 위 한 장 y' + hero.y + ' · 상담현황 y' + hero.flowY);
   /* ★★ 둘 다 — 줄 쪽 길을 잃지 않았나 (5번 · 「함수를 지우지 않는다」) */
   is(hero.baGoFn, '  ★★ <b>「그 분을 들고 들어가는 길」(hmBaGo)도 그대로</b> 있다 — 맨 위는 「아무나」, 줄은 「그 분」');
   const baGoUse = require('fs').readFileSync(require('path').join(ROOT, 'app/index.html'), 'utf8');
