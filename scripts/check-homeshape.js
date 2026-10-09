@@ -34,6 +34,14 @@
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
+/* ⏰ 시계를 못 박습니다 — 자리는 <b>한 곳</b>(scripts/lib-clock.js)입니다 (5번).
+   ★ 홈은 때에 따라 길이가 다릅니다. 이 자는 <b>눈금(스냅샷)</b>을 지키는
+     자라, 때마다 들쭉날쭉하면 그 눈금이 거짓이 됩니다 — 그래서 <b>낮
+     (14시) 한 때로</b> 못 박습니다. 여태 CI 가 돌던 때라 적어 둔 옛
+     눈금이 그 때의 것이고, 그것을 고칠 일이 없습니다.
+   ★ <b>세 때를 다 도는 것은 check-homeone</b> 한 자리입니다 — 여기서
+     또 돌면 같은 것을 네 번 재게 됩니다 (5번·7번).                  */
+const CLK = require('./lib-clock.js');
 const ROOT = process.cwd(), PORT = 8934;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json' };
 const srv = http.createServer((rq, rs) => {
@@ -173,7 +181,8 @@ const tall = (p) => p.evaluate(() => {
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
   const open = async (o) => {
-    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+    const ctx = await b.newContext(CLK.ctxOpt());
+  await CLK.pin(ctx, 14);                      /* 낮 — 못 박은 그 한 때 */
     await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
     const p = await ctx.newPage();
     const errs = []; p.on('pageerror', e => errs.push(String(e).slice(0, 140)));

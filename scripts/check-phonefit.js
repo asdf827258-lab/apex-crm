@@ -59,6 +59,14 @@
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
+/* ⏰ 시계를 못 박습니다 — 자리는 <b>한 곳</b>(scripts/lib-clock.js)입니다 (5번).
+   ★ 홈은 때에 따라 길이가 다릅니다. 이 자는 <b>눈금(스냅샷)</b>을 지키는
+     자라, 때마다 들쭉날쭉하면 그 눈금이 거짓이 됩니다 — 그래서 <b>낮
+     (14시) 한 때로</b> 못 박습니다. 여태 CI 가 돌던 때라 적어 둔 옛
+     눈금이 그 때의 것이고, 그것을 고칠 일이 없습니다.
+   ★ <b>세 때를 다 도는 것은 check-homeone</b> 한 자리입니다 — 여기서
+     또 돌면 같은 것을 네 번 재게 됩니다 (5번·7번).                  */
+const CLK = require('./lib-clock.js');
 const ROOT = process.cwd(), PORT = 8983;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css' };
 const srv = http.createServer((rq, rs) => {
@@ -146,15 +154,11 @@ const SOLO = [
    ★ 아래 BASE 의 수는 <b>이 날짜에서 잰 값</b>입니다. 날짜를 바꾸면
      기준선도 같이 다시 재야 합니다.                                   */
 const 못박은날 = '2026-09-15T09:00:00Z';
-const PIN = (iso) => {
-  const FIX = new Date(iso).getTime();
-  const R = Date;
-  const off = FIX - R.now();
-  function F(...a){ return a.length ? new R(...a) : new R(R.now() + off); }
-  F.now = () => R.now() + off;
-  F.parse = R.parse; F.UTC = R.UTC; F.prototype = R.prototype;
-  window.Date = F;
-};
+/* ★ 2026-10-10 · 판 X78 — <b>박는 코드를 여기 두지 않습니다</b> (5번).
+   예전에는 이 파일이 제 손으로 Date 를 바꿨습니다. 홈 높이를 재는 자가
+   넷인데 저마다 제 코드를 들고 있으면 한쪽만 늙습니다 — 그래서
+   scripts/lib-clock.js 한 곳으로 모았습니다. <b>날(못박은날)은 그대로</b>
+   둡니다: 아래 BASE 의 수가 그 날 09:00Z 에서 잰 것이기 때문입니다.    */
 
 const BASE = {
   /* 🕰 아래 수는 모두 <b>못박은날(2026-09-15)</b> 에서 잰 값입니다 —
@@ -422,8 +426,8 @@ const SEED = `
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
   /* <b>아이폰 크기</b>로 잽니다 — 사장님이 고객 앞에서 여시는 것은 폰입니다 */
-  const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
-  await ctx.addInitScript(PIN, 못박은날);      /* 🕰 날짜가 흘러도 안 흔들리게 */
+  const ctx = await b.newContext(CLK.ctxOpt());
+  await CLK.pinIso(ctx, 못박은날);             /* 🕰 날짜가 흘러도 안 흔들리게 */
   /* 바깥으로 안 나갑니다 — 재는 것은 글자 크기지 서버가 아닙니다 (8번) */
   await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
   const page = await ctx.newPage();
@@ -712,8 +716,8 @@ const SEED = `
     (TBR.moreBtn ? ' · ☰ 메뉴 전체 있음' : ' ← ☰ 메뉴 전체가 없습니다'));
   is(TBR.pad >= TBR.h, '탭바가 <b>글을 안 덮는다</b> — 바닥 여백 ' + TBR.pad + 'px / 탭바 ' + TBR.h + 'px');
   /* 넓은 화면에서는 <b>안 선다</b> — 왼쪽 기둥이 그대로 있어 두 곳이 된다 */
-  const wide = await b.newContext({ viewport: { width: 1280, height: 900 } });
-  await wide.addInitScript(PIN, 못박은날);     /* 넓은 쪽도 같은 날로 */
+  const wide = await b.newContext(CLK.ctxOpt({ viewport: { width: 1280, height: 900 } }));
+  await CLK.pinIso(wide, 못박은날);            /* 넓은 쪽도 같은 날로 */
   await wide.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
   const wp = await wide.newPage();
   await wp.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
