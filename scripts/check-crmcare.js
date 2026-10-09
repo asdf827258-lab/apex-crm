@@ -602,31 +602,79 @@ window.supabase={createClient:function(){
     ];
     /* 홍대장은 이미 고객 365일에 있다 — 서버에는 가린 모양으로만 있다 */
     const clients = [{ id: 'c1', advisor_id: 'u1', name_masked: osMaskName('홍대장') }];
+    /* ⚠ 2026-10-09 · 판 X82 — <b>약속의 뜻이 달라졌습니다</b>.
+       전에는 「이미 고객 365일에 있는 분」 을 <b>가린 이름끼리</b> 견줘 <b>목록에서
+       빼</b> 버렸습니다. 그런데 서버에서 세어 보니 고객 113줄 중 <b>22줄(11덩이)</b>
+       이 가린 이름이 같아, 다섯 명에 한 명꼴로 <b>다른 분까지 조용히 빠지고</b>
+       있었습니다 — 챙겨야 할 분이 영영 안 뜨는 것입니다.
+       ★ 이제 「같은 사람인가」 는 <b>client_id 한 곳</b>만 봅니다.
+         · <b>이어져 있으면</b> 안 띄웁니다(아래 이어진경우) — 확실하니까요.
+         · <b>아직 안 이어졌으면 띄우되</b>, 「＋ 새로 올리기」 가 아니라
+           <b>「🔗 이어 붙이기」 를 먼저</b> 내고 올리기 단추는 흐립니다.
+         지키려던 약속 — <b>같은 분을 새로 올리라고 권하지 않는다</b> — 는
+         그대로이고, 오히려 <b>왜 같은 분인지 까닭까지</b> 적어 줍니다.
+       ★ OSC.list 도 심습니다 — 짝을 찾는 자리가 그것을 봅니다.              */
+    OSC.loaded = true; OSC.busy = false; OSC.err = ''; OSC.list = clients;
     const out = arRecoCalc(dbs, calls, clients);
+    /* 이어 놓으면 사라지는가 — 같은 씨에 client_id 만 넣어 다시 셉니다 */
+    const 이어진경우 = arRecoCalc(
+      dbs.map(x => (x.id === 'd1' ? Object.assign({}, x, { client_id: 'c1' }) : x)),
+      calls, clients).map(x => x.name);
     AR.reco = [
       { dbId: 'd1', who: 'u1', name: '홍대장', mask: '홍○○', region: '서울', n: 3, at: '2026-08-20', res: '상담', appt: true },
       { dbId: 'd2', who: 'u1', name: '홍서방', mask: '홍○○', region: '', n: 1, at: '2026-08-10', res: '부재', appt: false }
-    ];
+    ].map(function (r) {
+      /* 🔗 <b>짝은 손으로 적지 않습니다</b> — arRecoCalc 가 찾은 것을 그대로 얹습니다.
+         손으로 적으면 자가 <b>거짓 초록</b>을 찍습니다 (8번). 보이는 값(통화 3번 등)은
+         그리는 것을 재려고 손으로 둔 것이라 그대로 둡니다.                   */
+      const c = out.filter(function (x) { return x.dbId === r.dbId; })[0];
+      return c ? Object.assign({}, r, { cliId: c.cliId || '', cliNm: c.cliNm || '',
+                                        why: c.why || '', sure: !!c.sure }) : r;
+    });
     window.__seed();
     const host = document.getElementById('dynPane') || document.getElementById('main');
     host.innerHTML = ccTeamHtml();
     const cards = document.querySelectorAll('.cc-rc').length;
     const hot = document.querySelectorAll('.cc-rc.hot').length;
     const txt = (document.querySelector('.cc-reco') || {}).textContent || '';
+    const 혼글 = host.innerHTML;
     try { localStorage.removeItem('apex_cc_reco'); } catch (e) {}
     let said = ''; const t = window.toast; window.toast = function (m) { said = m; };
-    document.querySelector('.cc-rc .go').click();
+    /* ⚠ <b>「올리기」 단추를 글로 집어</b> 누릅니다. 판 X82 에서 그 앞에
+       「🔗 이어 붙이기」 가 서므로, 첫 .go 를 누르면 <b>다른 단추</b>를 누릅니다. */
+    const 올리기 = [].slice.call(document.querySelectorAll('.cc-rc .go'))
+      .filter(function (b) { return /올리기/.test(b.textContent || ''); })[0];
+    if (올리기) 올리기.click();
     window.toast = t;
     let saved = null; try { saved = JSON.parse(localStorage.getItem('apex_cc_reco') || 'null'); } catch (e) {}
     /* 추천이 없으면 카드를 아예 안 세운다 — 빈 카드는 화면만 먹는다 */
     AR.reco = []; window.__seed(); host.innerHTML = ccTeamHtml();
     const emptyCard = /CRM 에서 만났는데/.test(host.textContent);
+    /* 🔗 홍대장 줄이 「이어 붙일까요」 로 바뀌었나 — 짝·까닭·단추 모양 */
+    const 대장 = out.filter(x => x.name === '홍대장')[0] || null;
     return { names: out.map(x => x.name), cards, hot, txt, saved, said, emptyCard,
+             이어진경우: 이어진경우,
+             대장짝: 대장 ? (대장.cliId || '') : '',
+             대장까닭: 대장 ? (대장.why || '') : '',
+             대장센짝: 대장 ? !!대장.sure : false,
+             링크단추: (혼글.match(/이어 붙이기/g) || []).length,
+             흐린올리기: (혼글.match(/class="go g"/g) || []).length,
              tab: (typeof lastTab !== 'undefined') ? lastTab : '' };
   });
   ok(RECO.names.indexOf('홍참판') < 0, '한 번도 안 건 사람은 안 띄운다 — 추천이 아니라 잡음이 된다');
-  ok(RECO.names.indexOf('홍대장') < 0, '이미 고객 365일에 있는 분은 안 띄운다 (가린 모양끼리 견줘서)');
-  ok(RECO.names.length === 1, '남는 것은 ' + RECO.names.join(' · ') + ' 뿐이다');
+  /* ⚠ 판 X82 에서 <b>약속의 뜻이 달라졌습니다</b> — 위 씨 쪽지에 까닭을 적었습니다.
+     지키려던 것(<b>같은 분을 새로 올리라고 권하지 않는다</b>)은 그대로입니다. */
+  ok(RECO.이어진경우.indexOf('홍대장') < 0,
+     '★ <b>이어 놓으면 안 띄운다</b> — client_id 가 있으면 이미 그 분입니다 (남는 것 ' +
+     RECO.이어진경우.join(' · ') + ')');
+  ok(RECO.대장짝 === 'c1' && !!RECO.대장까닭,
+     '★ 아직 안 이어졌으면 <b>짝과 까닭을 적어</b> 띄운다 — 「' + (RECO.대장까닭 || '(없음)') + '」');
+  ok(RECO.대장센짝 === false,
+     '★ 가린 이름으로 찾은 짝은 <b>약한 짝</b>이라고 밝힌다 — 가린 이름이 겹치는 분이 실제로 계십니다');
+  ok(RECO.링크단추 >= 1, '★ 화면에 <b>🔗 이어 붙이기</b> 단추가 선다 (' + RECO.링크단추 + '개)');
+  ok(RECO.흐린올리기 >= 1,
+     '★★ <b>「＋ 새로 올리기」 는 흐려 둔다</b> (' + RECO.흐린올리기 + '개) — 같은 분을 새로 올리라고 권하지 않습니다');
+  ok(RECO.names.length === 2, '띄우는 것은 ' + RECO.names.join(' · ') + ' 둘이다 (하나는 이어 붙일 분)');
   ok(RECO.cards === 2, '접촉한 분이 카드로 뜬다 (' + RECO.cards + '명)');
   ok(RECO.hot === 1, '상담까지 간 분이 갈려 보인다 (' + RECO.hot + '명)');
   ok(/통화 3번/.test(RECO.txt), '언제 · 몇 번 통화했는지 CRM 에 있는 그대로 적는다');
