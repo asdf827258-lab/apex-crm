@@ -14,7 +14,14 @@
      ⑤ 하루가 채워지는 셈이 맞다 — 마음 공부 · 과정 목표 · 연습 셋. 과정 목표를
         안 적었으면 「지켰다」 를 못 누른다(무엇을 지켰는지 모르므로 · 1번)
      ⑥ 거절 일기는 「다시 해석」 없이는 안 적힌다 — 그것이 이 칸의 몫이다
-     ⑦ 막혔던 거절이 더 자주 나온다                                        */
+     ⑦ 막혔던 거절이 더 자주 나온다
+     ⑧ 🛠️ 스킬 편 (2026-10-10 · X83) — 1편 강사의 2편은 공개되지 않아, 사장님이
+        고르신 같은 채널 「설득박사 김효석의 신나는 거절처리」(4부작 중 1회)로 세웠다.
+        · 그 영상을 <b>주소 그대로</b> 밝히고 <b>1편과 다른 강사</b>라고 적는다 (9번)
+        · 「100명 중 20명」 은 <b>강사의 경험</b>이지 통계가 아니라고 적는다 (1번)
+        · 시연의 가격(3,000원·1,000원·850원 …)을 옮기지 않는다
+        · 100번 거절 도전은 <b>거절 일기 한 곳</b>에서 센다 — 따로 세지 않는다 (5번)
+        · 「어떨까」 로 안 바꿔 쓰면 안 적힌다 · OBM 다섯 걸음은 다 서야 저장된다  */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9137;
@@ -40,6 +47,14 @@ console.log('\n[2] 바탕 강의를 밝히나 (9번)');
 is(PAGE.indexOf('https://www.youtube.com/watch?v=CO56FQ4JE_A') >= 0, '영상 주소를 그대로 적었다');
 is(PAGE.indexOf('절대 물러서지 않는 거절처리의 원리와 비밀') >= 0 && PAGE.indexOf('보험저널TV') >= 0, '제목과 채널을 그대로 적었다');
 is(/2편/.test(PAGE) && /이 영상에는 없습니다|이 영상에 <b>없습니다/.test(PAGE), '2편(구체 스킬)은 이 영상에 없다고 밝힌다 — 지어 적지 않는다');
+
+console.log('\n[2-2] 🛠️ 스킬 편 — 무엇을 바탕으로 했는지 밝히나');
+is(PAGE.indexOf('https://www.youtube.com/watch?v=kDTNuKy6omE') >= 0 && /설득박사 김효석의 신나는 거절처리/.test(PAGE),
+   '스킬 편 영상의 제목·주소를 그대로 적었다');
+is(/1편과 <b>다른 강사<\/b>/.test(CODE) && /2편은 공개된 곳에 없/.test(CODE), '1편과 다른 강사이고 2편은 공개되지 않았다고 화면에 밝힌다');
+is(/강사 본인의 경험 — 100명쯤이면 20명쯤이 산다/.test(CODE) && /이 수는 <b>강사의 경험<\/b>이지 조사된 통계가 아닙니다/.test(CODE), '「100명 중 20명」 을 강사의 경험이라고 밝힌다 — 통계처럼 안 적는다');
+is(!/3,?000\s*원|1,?000\s*원|850\s*원|13,?500/.test(CODE), '시연의 가격을 옮기지 않았다');
+is(/function rg100Count\(\)\{ return RG\.diary\.length; \}/.test(CODE), '100번 거절 도전은 거절 일기 한 곳에서 센다 (5번)');
 
 console.log('\n[3] 멘트는 apex-stage.js 한 곳에서 (5번)');
 is(/<script src="\.\.\/apex-stage\.js"><\/script>/.test(PAGE), 'apex-stage.js 를 읽는다');
@@ -80,7 +95,7 @@ const srv = http.createServer((q, s) => {
     await p.reload({ waitUntil: 'load' });
 
     console.log('\n[5] 교육 칸');
-    is(await p.$$eval('#rgQuiz .rg-log', a => a.length) === 6, '스스로 점검 여섯 문제가 선다');
+    is(await p.$$eval('#rgQuiz .rg-log', a => a.length) === 9, '스스로 점검 아홉 문제가 선다 (1편 여섯 · 스킬 편 셋)');
     await p.click('#rgQuiz .rg-log:nth-child(3) .rg-ox button:first-child');
     is(/맞습니다/.test(await p.textContent('#rgQuiz .rg-log:nth-child(3)')), 'O 를 누르면 바로 까닭이 나온다');
 
@@ -147,6 +162,24 @@ const srv = http.createServer((q, s) => {
     await p.reload({ waitUntil: 'load' });
     is(await p.evaluate(() => RG.diary.length === 1 && rgTodayRec().drill === 3 && RG.goal.proc === '하루 전화 20통'),
       '다시 열어도 일기·연습·목표가 남아 있다 (이 기기)');
+
+    console.log('\n[8-2] 🛠️ 스킬 편');
+    await p.click('#rgTabs button[data-t="skill"]');
+    is(/^1/.test(await p.textContent('#rg100 div:first-child b')), '100번 거절 도전이 거절 일기 수(1)를 그대로 센다');
+    await p.fill('#rgWoA', '소개받은 분이 또 거절하면 어쩌지?');
+    await p.fill('#rgWoB', '그냥 해 보자');
+    await p.click('#rgWoSave');
+    is(await p.evaluate(() => RG.wo.length) === 0, '「어떨까」 로 바꿔 쓰지 않으면 안 적힌다');
+    await p.fill('#rgWoB', '이분이 가족 보장을 다 갖추시면 어떨까?');
+    await p.click('#rgWoSave');
+    is(await p.evaluate(() => RG.wo.length) === 1 && /어떨까/.test(await p.textContent('#rgWoList')), '바꿔 쓰면 적히고 목록에 선다');
+    await p.fill('#rgObT', '40대 가장 · 보장 점검');
+    for (const k of [1, 2, 3, 4]) await p.fill('#rgOb' + k, '걸음 ' + k);
+    await p.click('#rgObSave');
+    is(await p.evaluate(() => RG.obm.length) === 0 && /⑤/.test(await p.textContent('#rgObMsg')), 'OBM 다섯 걸음 중 하나라도 비면 저장 안 하고 빈 걸음을 말한다');
+    await p.fill('#rgOb5', '걸음 5');
+    await p.click('#rgObSave');
+    is(await p.evaluate(() => RG.obm.length === 1 && RG.obm[0].s.length === 5), '다섯 걸음이 다 서면 저장된다');
 
     is(errs.length === 0, '스크립트 오류 0' + (errs.length ? ' ← ' + errs.slice(0, 3).join(' | ') : ''));
 
