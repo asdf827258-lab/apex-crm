@@ -8214,7 +8214,19 @@ function arLoad(force){
          못 읽었으면 <b>AR.noPex</b> 로 적어 두고, 화면은 수를 한 자도
          안 적습니다 (1번).                                              */
     var pexCols=',expect_premium,contract_premium,closed_reason';
-    return read(cols+',source,stage,next_appt,contracted_at,policy_sent_at'+pexCols).then(function(r0){
+    /* 🔗 <b>잇는 칸</b>(client_id) — SETUP_VER 44 를 돌린 서버에만 있습니다.
+       없으면 <b>한 단 내려가고 AR.noLink 로 적어 둡니다</b> — 화면은 「아직
+       안 담겼습니다」 라고 말하고, 이어졌는지 <b>모른다고</b> 합니다 (1번).
+       ★ 아래 단들은 어차피 이 칸을 안 부르므로, 한 번 내려가면 noLink 입니다 —
+         적는 자리를 한 곳에 둡니다 (5번).                               */
+    var full=cols+',source,stage,next_appt,contracted_at,policy_sent_at'+pexCols;
+    AR.noLink=false;
+    return read(full+',client_id').then(function(rL){
+      if(!rL||!rL.error)return rL;
+      if(!down((rL.error||{}).message))return rL;
+      AR.noLink=true;
+      return read(full);
+    }).then(function(r0){
       if(!r0||!r0.error)return r0;
       if(!down((r0.error||{}).message))return r0;
       AR.noPex=true;
@@ -8403,8 +8415,89 @@ function arCliRows(clients,metas,last){
    <b>고객 정보는 만들지 않는다</b>(CLAUDE.md 1번). CRM 에 적힌 것만 그대로
    옮기고, 없는 칸은 비워 둔 채 넘긴다. 이름은 서버에 가린 모양(김○○)으로만
    있으므로 그것끼리 견준다 (3번).                                       */
+/* ══ 🔗 <b>같은 사람인가</b> — 묻는 곳은 한 곳입니다 (crmLink*) ═══════════
+   사장님 말씀 (2026-10-09) — 「고객DB통합CRM 에 고객 정보와, 고객 365를
+   <b>하나로</b> 만들 방법을 찾아」 → 「<b>가</b> 해줘」(안전한 분은 바로 잇고,
+   나머지는 눌러서).
+
+   ★★ <b>표를 합치지 않았습니다.</b> 배정 한도(일반 20 · 변액 +30)는 여전히
+      배정 DB 만 셉니다 — 섞었다가 한도가 깨진 사고가 있었습니다.
+      「하나로」 는 <b>보이는 것이 하나</b>라는 뜻입니다.
+   ★ 전에는 <b>가린 이름끼리</b> 견줬습니다(담긴 꼴은 <b>김*수</b> — 첫 자와
+     <b>끝 자</b>를 남깁니다). 서버에서 세어 보니 고객
+     113명 중 <b>22줄(11덩이)</b>이 가려진 이름이 같아, 다섯 명에 한 명꼴로
+     누가 누구인지 구별이 안 됐습니다. 이제 <b>client_id 하나</b>만 봅니다.
+   ★ <b>모를 때는 모른다고</b> 합니다 (1번) — 서버에 그 칸이 아직 안 담겼으면
+     crmLinkOn() 이 false 이고, 「안 이어졌다」 가 아니라 「모른다」 입니다.   */
+function crmLinkOn(){
+  try{ return !(typeof AR!=='undefined'&&AR.noLink); }catch(e){ return false; }
+}
+function crmLinkOf(db){
+  return (db&&db.client_id)?(''+db.client_id):'';
+}
+/* 이어진 그 분의 고객 365일 줄 — 손에 없으면 <b>null</b>(지어내지 않습니다) */
+function crmCliOf(db){
+  var id=crmLinkOf(db); if(!id)return null;
+  var L=[]; try{ L=(typeof OSC!=='undefined'&&OSC.list)?OSC.list:[]; }catch(e){ return null; }
+  for(var i=0;i<L.length;i++)if((''+L[i].id)===id)return L[i];
+  return null;
+}
+function crmNum(v){ return (''+(v||'')).replace(/[^0-9]/g,''); }
+/* 🔎 아직 안 이어진 줄에 <b>짝이 될 만한 분</b> — 까닭을 같이 돌려줍니다.
+   ★★ <b>짐작으로 잇지 않습니다</b> (1번). 짝이 둘 이상이면 아무것도 안
+      돌려줍니다 — 사람이 직접 고르게 합니다.
+   ★ <b>같은 담당자 안에서만</b> 봅니다 (3번) — 남의 고객으로 새면 안 됩니다.
+     실제로 한 분이 고객 365일과 배정 DB 의 담당자가 서로 다릅니다.
+   ★ 번호가 같은 것만 「거의 틀림없다」(sure)입니다. 가려진 이름이 같은 것은
+     <b>약한 짝</b>이라 화면에 그렇다고 적습니다.                          */
+function crmGuess(db){
+  if(!db||crmLinkOf(db))return null;
+  var L=[]; try{ L=(typeof OSC!=='undefined'&&OSC.list)?OSC.list:[]; }catch(e){ return null; }
+  var who=''+(db.assigned_to||db.who||''),p=crmNum(db.phone),i,c;
+  if(p.length>=9){
+    var byP=[];
+    for(i=0;i<L.length;i++){ c=L[i];
+      if((''+(c.advisor_id||''))!==who)continue;
+      if(crmNum(c.phone)===p)byP.push(c); }
+    if(byP.length===1)return {cli:byP[0],why:'번호가 같습니다',sure:true};
+    if(byP.length>1)return null;                 /* 둘 이상 — 안 고릅니다 */
+  }
+  var raw=(''+(db.customer_name||db.name||'')).replace(/\s/g,'');
+  var mk=''; try{ mk=(raw&&typeof osMaskName==='function')?osMaskName(raw):''; }catch(e2){ mk=''; }
+  if(!mk)return null;
+  var byN=[];
+  for(i=0;i<L.length;i++){ c=L[i];
+    if((''+(c.advisor_id||''))!==who)continue;
+    if((''+(c.name_masked||'')).replace(/\s/g,'')===mk)byN.push(c); }
+  if(byN.length===1)
+    return {cli:byN[0],why:'가린 이름이 같습니다 — 번호로 한 번 더 보십시오',sure:false};
+  return null;
+}
+/* ✍ <b>이어 붙입니다</b> — 사람이 누른 그때만, 서버에 한 줄 (7번) */
+function crmLinkSet(dbId,cliId,done){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){ toast('서버에 연결되어 있지 않습니다'); return; }
+  if(!crmLinkOn()){
+    toast('서버 준비가 아직 남았습니다 — ⚙️ 관리의 <b>준비 SQL</b> 을 먼저 돌려 주십시오');
+    return; }
+  sb.from('dbs').update({client_id:cliId}).eq('id',dbId).then(function(r){
+    if(r&&r.error){ toast('이어 붙이지 못했습니다 — '+osEsc(r.error.message||'')); return; }
+    /* 손에 있는 것도 같이 고칩니다 — 다시 받아 오지 않습니다 (7번) */
+    try{ var L=(typeof AR!=='undefined'&&AR.db)||[],i;
+      for(i=0;i<L.length;i++)if((''+L[i].id)===(''+dbId))L[i].client_id=cliId; }catch(e){}
+    if(typeof done==='function')done();
+  },function(){ toast('이어 붙이지 못했습니다'); });
+}
 function arRecoCalc(dbs,calls,clients){
-  var have={},i,k,out=[];
+  /* ⚠ <b>가려진 이름 견주기를 걷었습니다</b> (2026-10-09 · 판 X82).
+     여기서 실명을 가려 clients 의 가려진 이름과 견줬는데, 서버에서 세어 보니
+     고객 113명 중 <b>22줄(11덩이)</b>이 가려진 이름이 같았습니다 — 다섯 명에
+     한 명꼴로 누가 누구인지 구별이 안 됐습니다. 이제 <b>client_id</b> 하나만
+     봅니다 (crmLinkOf · 5번).
+     ★ 그 칸이 아직 안 담긴 서버에서는 <b>예전처럼</b> 가려진 이름으로 견줍니다 —
+       안 담겼다고 이 화면이 통째로 비면 안 됩니다. 그때는 화면이 「아직 안
+       담겼습니다」 라고 함께 적습니다 (1번).                             */
+  var have={},i,k,out=[],링크있나=(typeof crmLinkOn==='function')?crmLinkOn():false;
   for(i=0;i<clients.length;i++){k=(''+(clients[i].name_masked||'')).replace(/\s/g,'');if(k)have[k]=1;}
   /* 언제 · 몇 번 · 어떻게 됐는지 — DB 줄마다 모은다 */
   var byDb={};
@@ -8422,10 +8515,17 @@ function arRecoCalc(dbs,calls,clients){
     var nm=(''+(db.customer_name||'')).replace(/\s/g,'');
     if(!nm)continue;
     var mk=(typeof osMaskName==='function')?osMaskName(nm):nm;
-    if(have[mk])continue;                      /* 이미 고객 365일에 있다 */
+    if(링크있나){
+      if(crmLinkOf(db))continue;               /* 이어져 있다 — 이미 그 분입니다 */
+    }else if(have[mk])continue;                /* 칸이 안 담긴 서버 — 옛 방식 */
+    /* 🔗 이어 붙일 만한 분이 있나 — <b>까닭까지</b> 들고 갑니다.
+       없으면 null 이고, 화면은 「새로 올리기」 만 냅니다 (1번).         */
+    var g=null; try{ g=(링크있나&&typeof crmGuess==='function')?crmGuess(db):null; }catch(eG){ g=null; }
     out.push({dbId:db.id,who:db.assigned_to||'',name:nm,mask:mk,
               region:db.region||'',n:t.n,at:t.at,res:t.res,appt:!!t.appt,
-              stage:db.stage||'',src:db.source||''});
+              stage:db.stage||'',src:db.source||'',
+              cliId:g?(''+g.cli.id):'',cliNm:g?(''+(g.cli.name_masked||'')):'',
+              why:g?g.why:'',sure:g?!!g.sure:false});
   }
   /* 상담까지 간 분 먼저, 그다음 최근에 통화한 분 */
   out.sort(function(a,b){return (b.appt?1:0)-(a.appt?1:0)||(b.at<a.at?-1:(b.at>a.at?1:0));});
@@ -8923,6 +9023,10 @@ function arDbCalc(dbs,calls){
       cAt:(''+(x.contracted_at||'')).slice(0,10),
       pAt:(''+(x.policy_sent_at||'')).slice(0,10),
       got:(''+(x.assigned_date||'')).slice(0,10),n:a.n,last:a.last,res:a.res||'미진행',
+      /* 🔗 <b>이름을 그대로</b> 실어 보냅니다 — 같은 것을 두 이름으로 부르지
+         않습니다 (4번·5번). 안 담긴 서버에서는 undefined 이고, 그것은
+         「안 이어졌다」 가 아니라 <b>「모른다」</b> 입니다 (AR.noLink · 1번). */
+      client_id:x.client_id,
       appt:ap,memo:a.memo,days:base?arDaysAgo(base):9999});
   }
   return out;
@@ -9214,7 +9318,16 @@ function ccRecoHtml(){
       '<div class="s">'+osEsc(r.at||'날짜 없음')+' · 통화 '+r.n+'번'+
         (r.res?' · '+osEsc(r.res):'')+
         (lead&&typeof arNameOf==='function'?(' · '+osEsc(arNameOf(r.who))):'')+'</div>'+
-      '<button type="button" class="go" onclick="ccRecoAdd(\''+osEsc(r.dbId)+'\')">'+
+      /* 🔗 <b>짝이 있으면 이어 붙이기를 먼저</b> 냅니다 (판 X82). 새로 올리면
+         같은 분이 두 줄이 됩니다 — 그것이 사장님께서 「하나로」 라고 하신
+         까닭입니다. 까닭(번호가 같습니다 / 가린 이름이 같습니다)을 <b>그 자리에
+         적어</b> 사장님이 보고 누르십니다 — 짐작으로 합치지 않습니다 (1번). */
+      (r.cliId?('<div class="s" style="color:var(--primary);font-weight:800">'+
+        '🔗 고객 365일의 <b>'+osEsc(r.cliNm||'그 분')+'</b> 님 같습니다 — '+osEsc(r.why)+
+        (r.sure?'':' <em style="font-style:normal;color:var(--ink-5)">(약한 짝)</em>')+'</div>'+
+        '<button type="button" class="go" onclick="ccRecoLink(\''+osEsc(r.dbId)+'\')">'+
+        '🔗 그 분에게 이어 붙이기</button>'):'')+
+      '<button type="button" class="go'+(r.cliId?' g':'')+'" onclick="ccRecoAdd(\''+osEsc(r.dbId)+'\')">'+
         '＋ 고객 365일에 올리기</button></div>';
   }
   h+='</div>';
@@ -9224,8 +9337,32 @@ function ccRecoHtml(){
     rows.length+'명 — 이 중 <b>'+appt+'명</b>은 상담까지 갔습니다. 여기 없으면 30일 주기에서 <b>통째로 빠집니다</b>',
     h,
     '<div class="ar-none" style="margin-top:10px">DB 통합 CRM 에 <b>통화 기록이 하나라도 있는 분</b>만 띄웁니다. '+
-    '이름은 서버에 <b>가린 모양(김○○)</b>으로만 있어 그것끼리 견줍니다 — 실명은 이 브라우저에만 있습니다. '+
-    '<b>없는 정보는 만들지 않습니다</b>: CRM 에 적힌 것만 그대로 옮기고 빈 칸은 비운 채 넘깁니다.</div>');
+    ((typeof crmLinkOn==='function'&&crmLinkOn())
+      ? ('같은 분인지는 <b>이어 둔 칸(한 곳)</b>으로 봅니다. 🔗 가 붙은 줄은 고객 365일에 <b>이미 계신 것 같은 분</b>이라 '+
+         '<b>이어 붙이시면 한 분</b>이 됩니다 — 새로 올리면 두 줄이 됩니다. '+
+         '번호가 같은 것만 거의 틀림없고, <b>가린 이름이 같은 것은 약한 짝</b>입니다(가린 이름이 겹치는 분이 실제로 계십니다). ')
+      : ('⚠ <b>서버 준비가 아직 남았습니다</b> — 잇는 칸이 안 담겨서, 지금은 <b>가린 이름끼리</b> 견주고 있습니다. '+
+         '가린 이름이 겹치는 분이 있어 <b>헷갈릴 수 있습니다.</b> ⚙️ 관리의 <b>준비 SQL</b> 을 돌리시면 이 자리가 정확해집니다. '))+
+    '<b>없는 정보는 만들지 않습니다</b>: CRM 에 적힌 것만 그대로 옮기고 빈 칸은 비운 채 넘깁니다. '+
+    '★ 배정 한도는 <b>여전히 배정 DB 만</b> 셉니다 — 이어 붙여도 한도 셈은 한 자도 안 바뀝니다.</div>');
+}
+/* 🔗 <b>이어 붙입니다</b> — 사장님이 보고 누르신 그때만 (판 X82).
+   ★ 짝은 arRecoCalc 가 이미 찾아 줄에 적어 두었습니다 — 여기서 <b>다시
+     찾지 않습니다</b> (5번). 두 곳에서 각자 찾으면 화면에 적힌 분과 실제로
+     이어지는 분이 달라질 수 있습니다.                                    */
+function ccRecoLink(dbId){
+  var all=(typeof AR!=='undefined'&&AR.reco)?AR.reco:[],i,r=null;
+  for(i=0;i<all.length;i++)if(all[i].dbId===dbId){r=all[i];break;}
+  if(!r){toast('그 줄을 못 찾았습니다 — 화면을 새로고침해 주세요');return;}
+  if(!r.cliId){toast('이어 붙일 분을 못 찾았습니다 — 「＋ 고객 365일에 올리기」 로 새로 올려 주십시오');return;}
+  crmLinkSet(dbId,r.cliId,function(){
+    toast('🔗 「'+osEsc(r.name)+'」 — 고객 365일의 <b>'+osEsc(r.cliNm||'그 분')+'</b> 님에게 이어 붙였습니다');
+    /* 손에 있는 것만 고치고 다시 그립니다 — 서버에 또 안 갑니다 (7번) */
+    try{ for(i=0;i<all.length;i++)if(all[i].dbId===dbId){all[i].cliId='';all[i].이었음=1;}
+         AR.reco=all.filter(function(x){return !x.이었음;}); }catch(e){}
+    try{ if(typeof ccHomePaint==='function')ccHomePaint(); }catch(e2){}
+    try{ if(typeof hmPaint==='function')hmPaint(); }catch(e3){}
+  });
 }
 /* 누르면 고객 365일로 넘어가 <b>CRM 에 적힌 것만</b> 채운 채 새 고객 칸을 연다 */
 function ccRecoAdd(dbId){
@@ -43636,7 +43773,7 @@ var HX_SQL={
   "  for each row execute function public.app_config_no_back();",
   "",
   "insert into public.app_config(key, value)",
-  "values ('schema_version', '43')",
+  "values ('schema_version', '44')",
   "on conflict (key) do update set value = excluded.value, updated_at = now();",
   "",
   "notify pgrst, 'reload schema';",
@@ -44325,6 +44462,48 @@ var HX_SQL={
   "     표는 있는데 칸이 없는 자리를 배지가 못 본 것이다. 칸을 더하는",
   "     줄은 언제나 뜨는 보정 칸에 둔다. */",
   "alter table public.dbs add column if not exists touch_count integer;",
+  "",
+  "/* 🔗 고객 365일(clients)과 DB 통합 CRM(dbs)을 <b>한 사람</b>으로.",
+  "   사장님 말씀 (2026-10-09) 「고객DB통합CRM 에 고객 정보와, 고객 365를",
+  "   하나로 만들 방법을 찾아」 · 「가 해줘」(안전한 분은 바로 잇고 나머지는",
+  "   눌러서).",
+  "   ★★ <b>표를 합치지 않습니다.</b> 배정 한도(일반 20 · 변액 +30)는 여전히",
+  "      dbs 만 셉니다 — 섞었다가 한도가 깨진 사고가 있었습니다. 「하나로」 는",
+  "      <b>보이는 것이 하나</b>라는 뜻입니다.",
+  "   ★ 이 칸이 생기기 전에는 앱이 <b>가린 이름끼리</b> 견줬습니다. 담긴 가림 꼴은",
+  "      <b>김*수</b>(첫 자와 끝 자를 남김)이고, 113줄 중 112줄이 그 꼴입니다.",
+  "      실제로 고객 113명 중 22줄(11덩이)이 가려진 이름이 같아, 다섯 명에",
+  "      한 명꼴로 누가 누구인지 구별이 안 됐습니다. */",
+  "alter table public.dbs add column if not exists client_id uuid references public.clients(id) on delete set null;",
+  "create index if not exists dbs_client_id_idx on public.dbs(client_id);",
+  "",
+  "/* 🔗 <b>안전한 것만</b> 한 번 잇습니다 — 번호가 같고 · 담당자도 같고 ·",
+  "   그 번호에 이름이 하나뿐일 때만. 가족이 집 번호를 같이 쓰는 덩이가",
+  "   11개 있어, 번호만 보고 이으면 <b>부부를 한 사람으로 합쳐 버립니다</b>.",
+  "   ★ 짝이 둘 이상이면 <b>안 잇습니다</b>(n = 1). 이미 이어진 줄도 건드리지",
+  "     않습니다. 나머지는 비워 둔 채 화면에서 사람이 한 번 누릅니다 —",
+  "     <b>짐작으로 합치지 않습니다</b>. */",
+  "with d as (",
+  "  select id, assigned_to,",
+  "         regexp_replace(coalesce(phone,''), '[^0-9]', '', 'g') as p,",
+  "         replace(coalesce(customer_name,''), ' ', '') as nm",
+  "    from public.dbs",
+  "), c as (",
+  "  select id, advisor_id,",
+  "         regexp_replace(coalesce(phone,''), '[^0-9]', '', 'g') as p",
+  "    from public.clients",
+  "), one_nm as (",
+  "  select p from d where length(p) >= 9 group by p having count(distinct nm) = 1",
+  "), pair as (",
+  "  select d.id as db_id, min(c.id::text)::uuid as cli_id, count(distinct c.id) as n",
+  "    from d join c on c.p = d.p and c.advisor_id = d.assigned_to",
+  "   where length(d.p) >= 9 and d.p in (select p from one_nm)",
+  "   group by d.id",
+  ")",
+  "update public.dbs t",
+  "   set client_id = pair.cli_id",
+  "  from pair",
+  " where t.id = pair.db_id and pair.n = 1 and t.client_id is null;",
   "",
   "alter table public.teams add column if not exists color text default '#1A56DB';",
   "alter table public.teams add column if not exists leader_id uuid references public.profiles(id) on delete set null;",
@@ -45702,7 +45881,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    실제로 2026-09-25 에 제가 hours 칸을 더하고 이 줄을 안 올려,
    사장님이 「SQL이 어딨어?」 하고 물으셨습니다. 넣는 것과 알리는 것은
    <b>다른 일</b>입니다 (1번).                                        */
-var SETUP_VER=43;   /* 42: 알람 네 번 — 켜 둔 시각들(push_subs.hours) */
+var SETUP_VER=44;   /* 44: 고객 365일 ↔ DB 통합 CRM 을 잇는 칸(dbs.client_id) · 43: 알람 네 번(push_subs.hours) */
 var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false,split:false,more:false,got:{}};
 
 /* ══ 준비 SQL 을 <b>나눠서</b> 돌린다 ══════════════════════════════════

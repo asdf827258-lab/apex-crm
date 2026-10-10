@@ -64,7 +64,21 @@ const SEED = `
 (async () => {
   await new Promise(r => srv.listen(PORT, r));
   const br = await chromium.launch();
-  const ctx = await br.newContext({ viewport: { width: 390, height: 844 } });
+  /* ══ 🕰 <b>시계를 못 박습니다</b> (2026-10-09 · 한 곳에서 · lib-clock.js) ══
+     ⚠ 이 자가 <b>CI 가 도는 시각에 따라 초록·빨간불이 갈렸습니다.</b>
+       「나가면 언제 할지 묻는다」 의 <b>고를 시각</b>은 지금 몇 시냐에 따라
+       달라집니다 — 낮 두 시에는 「30분 뒤 · 1시간 뒤 · 2시간 뒤 · 오후 5시 ·
+       오후 8시 · 오늘은 안 합니다」 여섯이 서고, <b>밤 11시 반에는 오늘
+       남은 시각이 없어 「오늘은 안 합니다」 하나만</b> 섭니다.
+       그때 이 자는 「고를 시각을 안 내민다」 고 울지만 <b>앱은 맞습니다.</b>
+       실제로 2026-10-09 23:35 에 그래서 빨간불이 떴습니다.
+     ★ 판 X78 에서 홈 높이 자 넷에 시계를 박으며 만든 <b>그 한 곳</b>을
+       그대로 씁니다 — 제 손으로 Date 를 바꾸지 않습니다 (5번).
+     ★ <b>낮 두 시</b>로 박습니다 — 고를 시각이 넉넉히 서는 때라야
+       「여섯을 내미는가」 를 잴 수 있습니다.                              */
+  const CLK = require('./lib-clock.js');
+  const ctx = await br.newContext(CLK.ctxOpt({ viewport: { width: 390, height: 844 } }));
+  await CLK.pin(ctx, 14);
   await ctx.route('**://**', r => {
     const u = r.request().url();
     if (u.indexOf('127.0.0.1:' + PORT) >= 0) { if (!/\.(html|js|css)(\?|$)/.test(u)) { srvHits++; hitUrls.push(u.slice(-70)); } return r.continue(); }
