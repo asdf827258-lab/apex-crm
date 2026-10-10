@@ -17,6 +17,15 @@
 
    서버에 붙지 않은 상태로 본다. 그래야 매번 같은 답이 나온다.        */
 const { chromium } = require('playwright');
+/* 🕰 <b>시계를 못 박습니다</b> — 한 곳에서 (lib-clock.js · 판 X83).
+   CI 가 <b>몇 시에 돌아도 같은 것을 재야</b> 합니다. 판 X78 에서 홈 높이 자
+   넷을 박고, 판 X82 에서 check-crmask 가 <b>밤 11시 반에만</b> 빨간불을
+   켜는 것을 보고 이 갈래를 끝까지 박기로 했습니다.
+   ★ <b>창이 둘</b>이라 둘 다 박습니다 — 하나만 박으면 그 창만 같습니다. */
+const CLK = require('./lib-clock.js');
+/* 박는 때 — 아래에서 「오늘」 을 셀 때도 <b>이 한 수</b>를 씁니다.
+   두 곳에 적으면 한쪽만 늙습니다 (5번).                           */
+const 박는때 = 14;
 const { SB_STUB } = require('./lib-sbstub.js');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd(), PORT = 8897;
@@ -37,7 +46,8 @@ const srv = http.createServer((req, res) => {
   const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
 
   /* 폰 크기로 본다 — 이 화면은 폰에서만 쓴다 */
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const ctx = await browser.newContext(CLK.ctxOpt({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }));
+  await CLK.pin(ctx, 박는때);
   /* 밖으로 나가는 것은 전부 막는다. supabase 도 안 붙는다 → 미리보기 자료로 돈다 */
   await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0
     ? r.continue() : r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
@@ -184,7 +194,10 @@ const srv = http.createServer((req, res) => {
 
   /* 아홉 · 팀장이 보낸 말이 폰에도 컴퓨터에도 뜨는가 */
   console.log('\n팀장이 보낸 한 마디');
-  const TODAY = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+  /* ★ 「오늘」 을 <b>Node 에서 또 셈하지 않습니다</b> — 창은 못 박은 날이고
+     Node 는 CI 가 도는 진짜 날이라, 제 손으로 세면 <b>하루 갈립니다</b>
+     (판 X83). 씨를 뿌리는 자리도 창과 같은 날이어야 「오늘 배정」 입니다. */
+  const TODAY = CLK.kstDay(박는때);
   const p3 = await ctx.newPage();
   await p3.addInitScript(SB_STUB({
     __me: 'me-1',
@@ -223,6 +236,9 @@ const srv = http.createServer((req, res) => {
   console.log('\n시간대가 달라도 시각이 맞는가 (뉴욕 시간으로 맞춘 폰)');
   const ny = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true,
     hasTouch: true, timezoneId: 'America/New_York' });
+  /* ★ <b>시간대는 그대로</b> 둡니다 — 이 창은 뉴욕 시간대를 <b>일부러</b> 쓰는
+     자리입니다(시간대가 달라도 같은 하루를 보나). 시각(순간)만 박습니다.   */
+  await CLK.pin(ny, 박는때);
   await ny.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0
     ? r.continue() : r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   const pz = await ny.newPage();
@@ -235,7 +251,10 @@ const srv = http.createServer((req, res) => {
   }));
   await pz.goto('http://127.0.0.1:' + PORT + '/app/day.html', { waitUntil: 'domcontentloaded' });
   await pz.waitForTimeout(1800);
-  const t0 = Date.now();
+  /* ★ <b>그 창이 아는 지금</b>을 묻습니다 — Node 의 시계로 재면 못 박은
+     창과 어긋나, 「9시간 틀어졌다」 가 아니라 <b>며칠 틀어졌다</b>가
+     나옵니다 (판 X83 에서 38,389초로 나왔습니다).                      */
+  const t0 = await pz.evaluate(() => Date.now());
   await pz.evaluate(() => { window.dCall(); window.dRes('상담'); });
   await pz.waitForTimeout(200);
   const apD = await pz.evaluate(() => {
@@ -289,7 +308,7 @@ const srv = http.createServer((req, res) => {
   ok(!!meta && !!meta.content, '고객 365일 줄을 고친다 (새로 만들지 않는다)');
   const cn = (meta || {}).content || {};
   ok(cn.next && cn.next.what === '증권 전달하고 소개 요청', '다음 할 일이 들어간다');
-  ok(cn.next && cn.next.due === new Date(Date.now() + 9 * 3600000 + 7 * 86400000).toISOString().slice(0, 10),
+  ok(cn.next && cn.next.due === CLK.kstDay(박는때, 7),   /* 창의 시계로 센 이레 뒤 (판 X83) */
      '「1주 뒤」 가 그 날짜로 들어간다');
   ok(cn.bd === '03-15', '생일이 MM-DD 로 들어간다 — 앱이 읽는 그 모양');
   ok(cn.fp && cn.fp.f_job === '자영업', '컴퓨터에서 적은 팩트파인딩이 그대로 남는다');

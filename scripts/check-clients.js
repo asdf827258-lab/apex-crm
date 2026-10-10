@@ -8,6 +8,11 @@
    서버는 가짜로 붙이되, 들어온 것을 그대로 돌려주도록 만들어
    저장한 것이 다시 화면에 살아나는지까지 본다.                       */
 const { chromium } = require('playwright');
+/* 🕰 <b>시계를 못 박습니다</b> — 한 곳에서 (lib-clock.js · 판 X83).
+   CI 가 <b>몇 시에 돌아도 같은 것을 재야</b> 합니다. 판 X78 에서 홈 높이 자
+   넷을 박고, 판 X82 에서 check-crmask 가 <b>밤 11시 반에만</b> 빨간불을
+   켜는 것을 보고 이 갈래를 끝까지 박기로 했습니다.                 */
+const CLK = require('./lib-clock.js');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd(), PORT = 8823;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css' };
@@ -95,7 +100,8 @@ window.supabase={createClient:function(){
 
 (async () => {
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 1240, height: 1200 } });
+  const ctx = await browser.newContext(CLK.ctxOpt({ viewport: { width: 1240, height: 1200 } }));
+  await CLK.pin(ctx, 14);
   await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0
     ? r.continue() : r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   const page = await ctx.newPage();

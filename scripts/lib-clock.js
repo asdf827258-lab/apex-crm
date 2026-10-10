@@ -78,7 +78,25 @@ async function pin(ctx, h) { return pinAt(ctx, msOf(h)); }
 /* 날짜 글자로 박는다 — 옛 눈금이 매여 있는 날을 지킬 때 */
 async function pinIso(ctx, iso) { return pinAt(ctx, new Date(iso).getTime()); }
 
+/* ★ <b>Node 쪽에서도 같은 시계를 본다.</b>
+   자가 Node 에서 「오늘」 을 제 손으로 또 셈하면 창의 시계와 <b>하루가
+   갈립니다</b> — 창은 못 박은 날이고 Node 는 CI 가 도는 진짜 날입니다.
+   판 X83 에서 <b>check-day·check-team</b> 이 그래서 헛 빨간불을 켰습니다 :
+     · 「1주 뒤」 가 그 날짜로 들어간다      ← 하루 어긋남
+     · 걸린 시각이 진짜 그 순간이다          ← 38,389초 어긋남
+     · 오늘 몫으로 들어간다 — 하루 한 줄    ← fb_date 가 하루 어긋남
+   check-clients 가 2026-10-05 에 같은 자리에서 배운 것과 같습니다 —
+   「자가 날짜를 제 손으로 만들면 앱과 어긋날 수 있습니다」.
+     · kstDay(h)     → 그 때의 <b>한국 날짜</b> 글자 (앱이 그렇게 적습니다)
+     · kstDay(h, 7)  → 이레 뒤
+   ★ <b>창이 아는 지금</b>(ms)이 필요하면 msOf(h) 를 쓰거나, 더 좋게는
+     그 창에 직접 물으십시오 — 여기서 또 셈하지 마십시오.              */
+function kstDay(h, plus) {
+  return new Date(msOf(h) + 9 * 3600000 + (plus || 0) * 86400000)
+    .toISOString().slice(0, 10);
+}
+
 /* 그 때를 사람이 읽는 글로 — 적을 때 손으로 또 쓰지 않게 */
 function label(w) { return w.k + '(' + w.h + '시)'; }
 
-module.exports = { DAY, WHEN, TZ, msOf, ctxOpt, pinAt, pin, pinIso, label };
+module.exports = { DAY, WHEN, TZ, msOf, ctxOpt, pinAt, pin, pinIso, kstDay, label };

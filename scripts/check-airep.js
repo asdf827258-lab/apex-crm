@@ -6,6 +6,11 @@
    AI 에게 넘어가는 글에 우리가 실제로 가진 숫자만 들어 있는지까지 본다.
    숫자를 지어내면 보고가 아니라 소설이 된다.                                   */
 const { chromium } = require('playwright');
+/* 🕰 <b>시계를 못 박습니다</b> — 한 곳에서 (lib-clock.js · 판 X83).
+   CI 가 <b>몇 시에 돌아도 같은 것을 재야</b> 합니다. 판 X78 에서 홈 높이 자
+   넷을 박고, 판 X82 에서 check-crmask 가 <b>밤 11시 반에만</b> 빨간불을
+   켜는 것을 보고 이 갈래를 끝까지 박기로 했습니다.                 */
+const CLK = require('./lib-clock.js');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd(), PORT = 8829;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css' };
@@ -153,7 +158,8 @@ const AI_OK = `## 활동 보고
 
 (async () => {
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 1240, height: 1400 } });
+  const ctx = await browser.newContext(CLK.ctxOpt({ viewport: { width: 1240, height: 1400 } }));
+  await CLK.pin(ctx, 14);
   await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0
     ? r.continue() : r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   const page = await ctx.newPage();
