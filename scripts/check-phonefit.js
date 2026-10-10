@@ -59,6 +59,14 @@
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
+/* ⏰ 시계를 못 박습니다 — 자리는 <b>한 곳</b>(scripts/lib-clock.js)입니다 (5번).
+   ★ 홈은 때에 따라 길이가 다릅니다. 이 자는 <b>눈금(스냅샷)</b>을 지키는
+     자라, 때마다 들쭉날쭉하면 그 눈금이 거짓이 됩니다 — 그래서 <b>낮
+     (14시) 한 때로</b> 못 박습니다. 여태 CI 가 돌던 때라 적어 둔 옛
+     눈금이 그 때의 것이고, 그것을 고칠 일이 없습니다.
+   ★ <b>세 때를 다 도는 것은 check-homeone</b> 한 자리입니다 — 여기서
+     또 돌면 같은 것을 네 번 재게 됩니다 (5번·7번).                  */
+const CLK = require('./lib-clock.js');
 const ROOT = process.cwd(), PORT = 8983;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css' };
 const srv = http.createServer((rq, rs) => {
@@ -146,15 +154,11 @@ const SOLO = [
    ★ 아래 BASE 의 수는 <b>이 날짜에서 잰 값</b>입니다. 날짜를 바꾸면
      기준선도 같이 다시 재야 합니다.                                   */
 const 못박은날 = '2026-09-15T09:00:00Z';
-const PIN = (iso) => {
-  const FIX = new Date(iso).getTime();
-  const R = Date;
-  const off = FIX - R.now();
-  function F(...a){ return a.length ? new R(...a) : new R(R.now() + off); }
-  F.now = () => R.now() + off;
-  F.parse = R.parse; F.UTC = R.UTC; F.prototype = R.prototype;
-  window.Date = F;
-};
+/* ★ 2026-10-10 · 판 X78 — <b>박는 코드를 여기 두지 않습니다</b> (5번).
+   예전에는 이 파일이 제 손으로 Date 를 바꿨습니다. 홈 높이를 재는 자가
+   넷인데 저마다 제 코드를 들고 있으면 한쪽만 늙습니다 — 그래서
+   scripts/lib-clock.js 한 곳으로 모았습니다. <b>날(못박은날)은 그대로</b>
+   둡니다: 아래 BASE 의 수가 그 날 09:00Z 에서 잰 것이기 때문입니다.    */
 
 const BASE = {
   /* 🕰 아래 수는 모두 <b>못박은날(2026-09-15)</b> 에서 잰 값입니다 —
@@ -325,6 +329,29 @@ const BASE = {
        단추는 상황을 고르셨을 때만 섭니다. 접힌 채가 기본입니다.
      ⚠ <b>이제 홈이 「고치기 전」 길이에 닿았습니다</b> — check-homeone 쪽지를
        보십시오. 다음에 무엇을 더하면 <b>올리지 말고 줄여야</b> 합니다.   */
+     /* ── 2026-10-09 · <b>4.1 → 4.2</b> ────────────────────────────────
+        🌙 <b>오늘 돌아보기</b> 칸 하나만큼입니다 — 3,460 → <b>3,508px</b> (48px ·
+        접힌 머리 한 줄). 사장님이 지도에서 고르신 ㉠ 입니다.
+        <b>얻은 것</b> — 하루가 끝났을 때 오늘 몇 분께 닿았고 · 미션 몇 걸음을
+        했고 · 그래서 무엇이 남았나를 한 자리에서 봅니다. 여태 아침만 있고
+        하루를 닫아 주는 자리가 없었습니다.
+        <b>치른 것</b> — 0.1화면. 접힌 채로 서고, 접어 두셔도 머리에
+        「오늘 닿은 분 N명」 이 적힙니다.
+        <b>먼저 깎은 것</b> — ㉢ 줄의 「아래는 AP·PC·CS 입니다」 한 줄(38px)을
+        걷어냈습니다. 바로 아래 칸 머리가 이미 그렇게 적고 있었습니다 (5번).
+        ★ <b>진짜 선은 check-homeone 의 4.2</b> 이고, 거기는 지금 <b>4.19</b>
+          입니다 — <b>8px</b> 밖에 안 남았습니다. 홈에 칸을 또 더하려면
+          <b>무엇을 걷어낼지 먼저 정해야</b> 합니다. 그 자는 「더는 못
+          올립니다」 라고 적혀 있고, 그것이 사장님 말씀(「홈 화면이 너무
+          복잡하다」)에서 나온 선입니다 — 이 자를 올리는 것으로 그 선을
+          넘기지 않습니다. */
+  /* 2026-10-09 · 판 X81 · 세로 <b>4.2 → 4.1</b>(3,466px). 홈 맨 위의 히어로
+     (193px · 「KB보장분석 넣어주시면…」)를 <b>두 칸(94px) + 보장분석 한 줄(46px)</b>
+     로 바꾸면서 <b>79px 짧아졌습니다</b>. 좋아졌으니 기준선도 같이 내립니다
+     (CLAUDE.md 0-1 — 「줄이면 기준선도 같이 내립니다」).
+     ★ check-homeone 의 <b>4.2 는 안 내립니다</b> — 그것은 기준선이 아니라
+       「고치기 전」 홈 길이라는 <b>뜻이 있는 수</b>이고, 그 자 안에 「여기가
+       끝입니다」 라고 적혀 있습니다. 이쪽만 잰 값으로 내립니다.          */
   home:    { tiny: 9, size: 13, small: 2, screens: 4.1 },
   /* 2026-09-21 · 2.5 → <b>2.4</b>. 「고객 체크」 칸을 늘리면서 2.6 이 되어
      여기가 잡았고, 기준을 올리는 대신 <b>내 코칭 · 본인 점검란</b>을 왼쪽에서
@@ -406,8 +433,8 @@ const SEED = `
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
   /* <b>아이폰 크기</b>로 잽니다 — 사장님이 고객 앞에서 여시는 것은 폰입니다 */
-  const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
-  await ctx.addInitScript(PIN, 못박은날);      /* 🕰 날짜가 흘러도 안 흔들리게 */
+  const ctx = await b.newContext(CLK.ctxOpt());
+  await CLK.pinIso(ctx, 못박은날);             /* 🕰 날짜가 흘러도 안 흔들리게 */
   /* 바깥으로 안 나갑니다 — 재는 것은 글자 크기지 서버가 아닙니다 (8번) */
   await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
   const page = await ctx.newPage();
@@ -696,8 +723,8 @@ const SEED = `
     (TBR.moreBtn ? ' · ☰ 메뉴 전체 있음' : ' ← ☰ 메뉴 전체가 없습니다'));
   is(TBR.pad >= TBR.h, '탭바가 <b>글을 안 덮는다</b> — 바닥 여백 ' + TBR.pad + 'px / 탭바 ' + TBR.h + 'px');
   /* 넓은 화면에서는 <b>안 선다</b> — 왼쪽 기둥이 그대로 있어 두 곳이 된다 */
-  const wide = await b.newContext({ viewport: { width: 1280, height: 900 } });
-  await wide.addInitScript(PIN, 못박은날);     /* 넓은 쪽도 같은 날로 */
+  const wide = await b.newContext(CLK.ctxOpt({ viewport: { width: 1280, height: 900 } }));
+  await CLK.pinIso(wide, 못박은날);            /* 넓은 쪽도 같은 날로 */
   await wide.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
   const wp = await wide.newPage();
   await wp.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });

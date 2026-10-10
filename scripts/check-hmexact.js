@@ -105,8 +105,82 @@ const INKS = (sel) => {
        세면 헛것입니다 (8번). 글자가 섞여 있으면 그때는 셉니다. */
     if (!/[0-9A-Za-z가-힣]/.test(t)) return;
     const c = getComputedStyle(e).color;
-    if (!out[c]) out[c] = { n: 0, t: [] };
+    if (!out[c]) out[c] = { n: 0, t: [], 대비: null, 뒤: '' };
     out[c].n++;
+    /* ══ ★★ <b>「뒤를 못 재서 모른다」 를 숫자로 바꿉니다</b> (2026-10-08) ══
+       옷을 못 입힌 화면마다 코드에 <b>「반투명 유리칸이라 뒤를 못 재면 대비를
+       모릅니다」</b> 라고 적어 두었습니다. 그런데 그 말은 <b>한 번도 재 보지
+       않고</b> 적은 것이었습니다 — 재어 보니 거짓이었습니다(teamhub 은
+       7.75 로 성합니다). 「모른다」 는 <b>재기 전에는 쓸 수 없는 말</b>입니다 (1번).
+       재는 법 — 뒤를 조상으로 겹쳐 내리고, 그라데이션이 있으면 <b>그 안의
+       색 멈춤을 전부</b> 후보로 삼아 <b>가장 나쁜 것</b>을 적습니다. 글자가
+       어느 자리에 앉든 그중 하나 위에 앉기 때문입니다. 사진(url)이 뒤에
+       있으면 그때는 <b>못 쟀다고</b> 적습니다 — 지어내지 않습니다.        */
+    try {
+      const px = v => { const m = String(v).match(/-?[\d.]+/g); if (!m) return null;
+        return { r:+m[0], g:+m[1], b:+m[2], a: m.length>3 ? +m[3] : 1 }; };
+      const over = (f,b) => ({ r: f.r*f.a+b.r*(1-f.a), g: f.g*f.a+b.g*(1-f.a),
+                               b: f.b*f.a+b.b*(1-f.a), a: 1 });
+      const lum = k => { const g = v => { v/=255;
+          return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); };
+        return 0.2126*g(k.r)+0.7152*g(k.g)+0.0722*g(k.b); };
+      const 비 = (a,b) => { const x=lum(a), y=lum(b);
+        return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); };
+      let acc = null, 후보 = [], 사진 = false, 칸 = null, q = e;
+      while (q && q.nodeType === 1) {
+        const st = getComputedStyle(q), bi = st.backgroundImage;
+        if (bi && bi !== 'none') {
+          if (/url\(/.test(bi)) 사진 = true;
+          else if (!칸) {
+            const stops = (bi.match(/rgba?\([^)]*\)/g) || [])
+              .map(v => px(v)).filter(k => k && k.a > 0.5);
+            if (stops.length) {
+              후보 = stops;
+              const dm = bi.match(/(-?[\d.]+)deg/);
+              /* 각도를 안 적으면 CSS 기본은 <b>위에서 아래</b>(180deg) */
+              칸 = { el: q, deg: dm ? +dm[1] : 180 };
+            }
+          }
+        }
+        const bg = px(st.backgroundColor);
+        if (bg && bg.a > 0) acc = acc ? over(acc, bg) : bg;
+        if (acc && acc.a >= 0.999) break;
+        q = q.parentElement;
+      }
+      if (!acc) acc = { r:255,g:255,b:255,a:1 };
+      if (acc.a < 0.999) acc = over(acc, { r:255,g:255,b:255,a:1 });
+      /* ★★ <b>최악값이 아니라 「정말 그 자리의 색」</b>을 씁니다.
+         그라데이션의 색 멈춤 중 가장 나쁜 것을 쓰면 <b>글자가 앉지도 않는
+         자리</b>로 「안 읽힌다」 고 적게 됩니다 — 그것도 거짓입니다 (8번).
+         글자 가운데를 <b>그라데이션 축에 투영</b>해 그 지점 색을 뽑습니다.
+         각도는 CSS 규약대로 <b>0deg 가 위쪽</b>이고 시계 방향입니다.     */
+      if (칸 && 후보.length >= 2) {
+        const r1 = e.getBoundingClientRect(), r2 = 칸.el.getBoundingClientRect();
+        if (r2.width > 0 && r2.height > 0) {
+          const 각 = 칸.deg * Math.PI / 180;
+          const ux = Math.sin(각), uy = -Math.cos(각);
+          const L = Math.abs(r2.width * ux) + Math.abs(r2.height * uy);
+          const cx = (r1.left + r1.right) / 2 - (r2.left + r2.right) / 2;
+          const cy = (r1.top + r1.bottom) / 2 - (r2.top + r2.bottom) / 2;
+          let t = L > 0 ? (cx * ux + cy * uy) / L + 0.5 : 0.5;
+          t = Math.max(0, Math.min(1, t));
+          const n = 후보.length - 1, seg = Math.min(n - 1, Math.floor(t * n));
+          const f2 = t * n - seg, A = 후보[seg], B = 후보[seg + 1];
+          acc = { r: A.r + (B.r - A.r) * f2, g: A.g + (B.g - A.g) * f2,
+                  b: A.b + (B.b - A.b) * f2, a: 1 };
+        }
+      } else if (후보.length === 1 && 칸) { acc = 후보[0]; }
+      const fg0 = px(c);
+      if (사진) { out[c].대비 = -1; out[c].뒤 = '사진뒤'; }
+      else if (fg0) {
+        const f = fg0.a < 0.999 ? over(fg0, acc) : fg0;
+        const 값 = Math.round(비(f, acc) * 100) / 100;
+        if (out[c].대비 === null || 값 < out[c].대비) {
+          out[c].대비 = 값;
+          out[c].뒤 = 'rgb(' + [acc.r, acc.g, acc.b].map(v => Math.round(v)).join(',') + ')';
+        }
+      }
+    } catch (e9) {}
     /* ★ <b>글까지 모읍니다</b> (2026-09-30). 여태는 「색 3가지」 만 알려 주고
        <b>왜 다른지는 안 알려 줬습니다</b> — 그래서 곳에 따라 갈리는 것을
        세 번이나 못 찾았습니다. 「갈렸다」 만 알고 <b>무엇이 갈렸는지</b>를
@@ -249,7 +323,34 @@ const INKS = (sel) => {
      세 파일에 따로 있고 이름이 --t- 가 아니어서 <b>이 자가 아예 못 봤습니다</b>.
      색표에 제자리를 주니 자가 보게 되었고, 그래서 이 수도 하나 올립니다 —
      <b>토큰을 세웠다는 기록</b>입니다 (0-1번).                              */
-  const 늘린기준 = 17;
+  /* ★ 17 → 28 · 2026-10-08 <b>물결 11</b> — <b>열하나를 한 번에 세웠습니다.</b>
+       ⚠ 이것은 <b>늘어난 눈금</b>입니다. 줄이는 것이 아니라 늘리는 것이니
+         까닭을 또렷이 적습니다 (0-1번).
+       ① <b>짙은 칸 위 글자 여섯</b>(--t-on · -2 · -3 · -pt · -neg · -pos) —
+          목업에 <b>짙은 칸이 아예 없어</b> 이 사다리가 통째로 없었고, 그 한
+          가지 까닭으로 다섯 화면이 옷을 못 입고 있었습니다. 사장님께
+          여쭈어 <b>「짙은 칸용 잉크를 새로 더한다」</b> 를 받았습니다.
+          값은 지어내지 않고 <b>앱이 이미 쓰던 색</b>을 가까운 것끼리 모았습니다.
+       ② <b>요금제 등급 다섯</b>(--t-tier-*) — 사장님 답 <b>「지금 색을 그대로
+          쓴다」</b>. 색은 <b>한 칸도 안 바꾸고</b> 이름만 주었습니다. 표(OS_TIERS)가
+          hex 를 들고 있던 것을 이 이름으로 바꿔 <b>값이 한 곳</b>이 됐습니다 (5번).
+       ★ 값을 치른 대신 — <b>옷 안 입은 화면 17 → 12</b>, 그리고 박혀 있던
+         hex <b>71곳</b>이 이름으로 바뀌었습니다.                            */
+  /* ⚠★★ <b>이 수가 유일한 문지기입니다 — 되돌려 보고 알았습니다.</b>
+       (2026-10-08) 새로 세운 --t-on-pt 를 되돌림으로 시험했는데 <b>두 번 다
+       안 울렸습니다</b>:
+         ① 이름을 바꿔 보기 → 값이 그대로라 자가 못 봅니다.
+         ② 줄을 지워 보기 → var() 가 무효가 되어 <b>잉크를 물려받아</b>
+            오히려 성한 색이 됩니다.
+         ③ 값을 <b>#FF00FF</b> 로 바꿔 보기 → <b>이것도 안 울렸습니다.</b>
+       까닭은 위 mkInks 가 <b>우리색(ui.css)의 값을 통째로 허락</b>하기
+       때문입니다. 즉 <b>ui.css 에 적기만 하면 어떤 색이든 통과</b>합니다.
+     ★ 그러므로 아래 ✓ 는 <b>「목업과 같다」 가 아니라 「등록했다」</b> 는 뜻입니다.
+       값을 지키는 것은 자가 아니라 <b>이 수와 그 옆에 적은 까닭</b>뿐입니다.
+       올릴 때는 <b>사람이 한 번 더 보라는 뜻</b>으로 올리십시오 (0-1번·8번).
+     ⚠ 다음 판 감 — 새 이름에 <b>까닭(주석)이 붙어 있나</b>를 자가 보게 하면
+       이 구멍이 조금 좁아집니다. 지금은 안 봅니다.                       */
+  const 늘린기준 = 28;
   is(늘린이름.length <= 늘린기준,
      '  우리가 늘린 이름 <b>' + 늘린이름.length + '개</b> — 기준선 ' + 늘린기준 +
      (늘린이름.length > 늘린기준
@@ -429,8 +530,15 @@ const INKS = (sel) => {
       console.log('         잎 ' + n + '개 · 칸 ' + R2.nodes + '개 · 기다림 ' + R2.waited + 'ms · ' +
                   'role=' + R2.role + ' admin=' + R2.admin + ' ls=' + R2.ls);
       console.log('         위칸 ' + R2.top.join(' · '));
-      bad2.slice(0, 6).forEach(c => console.log('         ' + c + ' ×' + R2.inks[c].n +
-                  '  ← 「' + R2.inks[c].t.join('」 「') + '」'));
+      /* ★ 색마다 <b>최악 대비</b>를 같이 찍습니다 — 「목업에 없는 색」 이라는
+         말만으로는 <b>읽히기는 하나</b> 를 알 수 없습니다. 그 둘은 다른
+         물음이고, 다음 판에 무엇을 해야 하는지가 거기서 갈립니다 (1번).  */
+      bad2.slice(0, 6).forEach(c => { const k = R2.inks[c];
+        const 비 = (k.대비 === null || k.대비 === undefined) ? '대비 못 쟀습니다'
+                 : (k.대비 < 0 ? '사진뒤라 대비 못 쟀습니다'
+                 : '대비 ' + k.대비 + (k.대비 >= 4.5 ? ' ✓읽힘' : ' ✗안읽힘') + ' (뒤 ' + k.뒤 + ')');
+        console.log('         ' + c + ' ×' + k.n + '  ' + 비 +
+                  '  ← 「' + k.t.join('」 「') + '」'); });
     }
   }
 

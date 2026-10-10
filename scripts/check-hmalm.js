@@ -191,6 +191,30 @@ const LOOK = () => {
   is(errs.length === 0, '  재는 동안 <b>터진 곳이 없다</b>'
     + (errs.length ? (' ← ' + errs.slice(0, 2).join(' / ')) : ''));
 
+  console.log('\n[8] ★★ <b>네 상태가 같은 높이로 적힌다</b> (2026-10-10 · 판 X76)');
+  {
+    /* ⚠ <b>여기가 홈을 사장님 선(4.2화면) 밖으로 밀어냈습니다.</b>
+       이 곁칸은 네 상태로 적는데, 그중 셋이 <b>회색 상자</b>(.hm-rt-none ·
+       padding 12px + margin 9px)를 쓰고 하나만 맨 줄(.hm-rt-n)이었습니다.
+       그래서 <b>때에 따라 24px 이 늘었다 줄었다</b> 했습니다 —
+         아침(남은 알람 있음 · 맨 줄) 3,540px · 4.19 ✓
+         저녁(다 지났음 · 회색 상자)   3,564px · 4.22 ✗
+       홈 높이 자는 <b>시계를 안 봅니다.</b> CI 가 낮에 돌면 초록, 저녁에
+       돌면 빨간불이어서 PR 셋이 그대로 들어갔습니다.
+       ★ 그래서 네 상태를 <b>모두 맨 줄</b>로 맞췄고, 이 자가 그것을 지킵니다.
+         상자를 다시 쓰면 홈이 때에 따라 선을 넘습니다.
+       ★ <b>다른 칸의 .hm-rt-none 은 안 셉니다</b> — 달력·업적·동선 칸은
+         정말 「빈 자리」 를 적는 곳이라 상자가 맞습니다 (헛것 금지 · 8번). */
+    const src = fs.readFileSync('app/index.html', 'utf8');
+    const i = src.indexOf('function hmAlmSideHtml(){');
+    const j = src.indexOf('\n}', i);
+    const 몸 = src.slice(i, j > 0 ? j : i + 4000).replace(/\/\*[\s\S]*?\*\//g, '');
+    const 상자 = (몸.match(/class="hm-rt-none"/g) || []).length;
+    const 맨줄 = (몸.match(/class="hm-rt-n"/g) || []).length;
+    is(상자 === 0, '  회색 상자(.hm-rt-none)를 <b>안 쓴다</b> — 지금 ' + 상자 + '곳');
+    is(맨줄 === 4, '  네 상태를 <b>맨 줄 하나</b>로 적는다 — 지금 ' + 맨줄 + '곳 (못 읽음·다 꺼짐·다 지남·남음)');
+  }
+
   await b.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '개 — 알람 칩에 구멍이 있습니다')

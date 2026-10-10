@@ -1,0 +1,344 @@
+<!doctype html>
+<html data-theme="light" lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="light"/>
+<title>광고 성과 · APEX</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{ color-scheme:light;  /* 🌗 흰색 고정 (사장님 말씀 2026-10-03) */
+  --bg:#f2f4f6; --card:#fff; --ink:#191f28; --ink2:#4e5968; --mute:#8b95a1;
+  --line:#e5e8eb; --b:#3182f6; --bl:#e8f3ff;
+  --ok:#0f8a5f; --okbg:#e7f7f0; --wn:#b06f00; --wnbg:#fff6e5;
+  --bad:#d94a4a; --badbg:#fdeceb;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#14171a; --card:#1d2125; --ink:#e8ecef; --ink2:#b0b8bf; --mute:#7c858d;
+    --line:#2c3238; --b:#5a9cf8; --bl:#17283d;
+    --ok:#4cc08a; --okbg:#10291f; --wn:#d9ab54; --wnbg:#2c2416;
+    --bad:#ef8273; --badbg:#321c19;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14171a; --card:#1d2125; --ink:#e8ecef; --ink2:#b0b8bf; --mute:#7c858d;
+  --line:#2c3238; --b:#5a9cf8; --bl:#17283d;
+  --ok:#4cc08a; --okbg:#10291f; --wn:#d9ab54; --wnbg:#2c2416;
+  --bad:#ef8273; --badbg:#321c19;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.6;
+  font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Malgun Gothic",sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:900px;margin:0 auto;padding-inline:16px;padding-block:26px 60px}
+h1{font-size:22px;font-weight:800;margin:0 0 3px;letter-spacing:-.4px}
+.when{color:var(--mute);font-size:12.5px;margin:0 0 22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:20px 20px 22px;margin-bottom:14px}
+h2{font-size:15px;font-weight:800;margin:0 0 3px;letter-spacing:-.3px}
+.sub{color:var(--mute);font-size:12.5px;margin:0 0 15px}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:11px}
+.kpi>div{background:var(--bg);border-radius:12px;padding:13px 14px;min-width:0}
+.kpi .k{font-size:11.5px;color:var(--mute);font-weight:600}
+.kpi .v{font-size:21px;font-weight:800;letter-spacing:-.5px;margin-top:2px;
+  font-variant-numeric:tabular-nums}
+.kpi .n{font-size:11.5px;color:var(--mute)}
+.kpi .v.bad{color:var(--bad)}
+.tw{overflow-x:auto;margin:0 -4px}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-size:11.5px;color:var(--mute);font-weight:700}
+th:first-child,td:first-child{text-align:left}
+tbody tr:last-child td{border-bottom:0}
+.adv{display:flex;gap:12px;padding:15px 17px;border-radius:14px;margin-top:16px;align-items:flex-start}
+.adv .ic{font-size:19px;line-height:1.3}
+.adv b{display:block;margin-bottom:3px;font-size:14px}
+.adv p{margin:0;font-size:13px}
+.a-bad{background:var(--badbg);color:#8f2f2f}
+.a-wn{background:var(--wnbg);color:#7a4d00}
+.a-ok{background:var(--okbg);color:#0a5c40}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .a-bad{color:var(--bad)}
+  :root:not([data-theme="light"]) .a-wn{color:var(--wn)}
+  :root:not([data-theme="light"]) .a-ok{color:var(--ok)}
+}
+:root[data-theme="dark"] .a-bad{color:var(--bad)}
+:root[data-theme="dark"] .a-wn{color:var(--wn)}
+:root[data-theme="dark"] .a-ok{color:var(--ok)}
+.bar{display:inline-block;width:46px;height:6px;background:var(--line);border-radius:3px;
+  overflow:hidden;vertical-align:middle;margin-right:7px}
+.bar i{display:block;height:100%;background:var(--b)}
+.gate{max-width:330px;margin:60px auto;background:var(--card);border:1px solid var(--line);
+  border-radius:18px;padding:28px 26px}
+.gate h1{font-size:18px;margin-bottom:4px}
+.gate p{color:var(--mute);font-size:12.5px;margin:0 0 16px}
+input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;
+  background:var(--bg);color:var(--ink);font-size:14px;font-family:inherit;margin-bottom:9px}
+button{width:100%;padding:12px;border:0;border-radius:10px;background:var(--b);color:#fff;
+  font-size:14.5px;font-weight:700;cursor:pointer;font-family:inherit}
+button:focus-visible{outline:2px solid var(--b);outline-offset:2px}
+.er{color:var(--bad);font-size:12.5px;min-height:18px;margin-top:8px}
+.seg{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.seg button{width:auto;padding:7px 14px;background:var(--card);color:var(--ink2);
+  border:1px solid var(--line);font-size:13px;font-weight:600}
+.seg button.on{background:var(--b);color:#fff;border-color:var(--b)}
+.inq{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:11px}
+.inq label{display:flex;flex-direction:column;gap:5px;font-size:12px;
+  font-weight:700;color:var(--ink2);min-width:0}
+.inq .muted{font-weight:400}
+.inq select,.inq input{width:100%;padding:10px 11px;border:1px solid var(--line);
+  border-radius:9px;background:var(--bg);color:var(--ink);font-size:14px;
+  font-family:inherit;margin:0}
+.inq button{padding:11px;font-size:14px}
+.ok{color:var(--ok);font-size:13px;margin-top:11px}
+.foot{color:var(--mute);font-size:12px;border-top:1px solid var(--line);
+  padding-top:15px;margin-top:28px}
+.muted{color:var(--mute)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate">
+  <h1>광고 성과</h1>
+  <p>APEX CRM 계정으로 들어옵니다.</p>
+  <input id="em" type="email" placeholder="이메일" autocomplete="username">
+  <input id="pw" type="password" placeholder="비밀번호" autocomplete="current-password">
+  <button id="go">들어가기</button>
+  <div id="er" class="er"></div>
+</div>
+
+<div id="app" class="wrap" hidden>
+  <h1>광고 성과</h1>
+  <div class="when" id="stamp"></div>
+
+  <div class="seg" id="seg">
+    <button data-d="7" class="on">7일</button>
+    <button data-d="14">14일</button>
+    <button data-d="30">30일</button>
+    <button data-d="90">90일</button>
+  </div>
+
+  <div class="card">
+    <h2>쓴 돈과 받은 것</h2>
+    <p class="sub">광고비는 매일 아침 보고가 넣습니다. 보통 하루 전까지 들어와 있습니다.</p>
+    <div class="kpi" id="kpi"></div>
+    <div id="verdict"></div>
+  </div>
+
+  <div class="card" id="inqCard">
+    <h2>카톡이 오면 여기에</h2>
+    <p class="sub">한 줄 넣으면 위 <b>문의</b> 숫자에 바로 들어갑니다.
+      안 넣으면 계속 0으로 남고 판정도 틀리게 나옵니다.
+      <b>이름·연락처는 넣지 마세요</b> — 고객 정보는 CRM 본 화면에 둡니다.</p>
+    <div class="inq">
+      <label>소재 <span class="muted">고객이 말한 화면</span>
+        <select id="iCre"><option value="">— 모름 —</option></select></label>
+      <label>들어온 곳
+        <select id="iCh">
+          <option>카카오채널</option><option>전화</option>
+          <option>오픈카톡</option><option>소개</option><option>기타</option>
+        </select></label>
+      <label>메모 <span class="muted">무엇을 물어봤는지</span>
+        <input id="iMemo" placeholder="갱신형 보험료가 왜 오르는지"></label>
+      <label>&nbsp;<button id="iAdd">문의 기록</button></label>
+    </div>
+    <div id="inqMsg"></div>
+    <div class="adv a-wn" style="margin-top:14px"><span class="ic">💬</span><div>
+      <b>소재는 이렇게 알아냅니다</b><p>채널 첫인사가
+      <b>「어떤 화면을 보고 오셨는지 한 줄만」</b> 이라고 묻습니다.
+      고객이 「갱신형 보험료」처럼 답하면 그대로 고르시면 됩니다.
+      안 답하면 <b>모름</b>으로 두셔도 건수는 집계됩니다.</p></div></div>
+  </div>
+
+  <div class="card">
+    <h2>소재별</h2>
+    <p class="sub">지출이 큰 순서입니다. <b>카톡율</b>이 실질 성적표입니다.</p>
+    <div class="tw"><table>
+      <thead><tr><th>소재</th><th>지출</th><th>노출</th><th>클릭</th>
+        <th>방문</th><th>읽음</th><th>카톡</th><th>카톡율</th><th>문의</th></tr></thead>
+      <tbody id="byAd"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <h2>날짜별</h2>
+    <div class="tw"><table>
+      <thead><tr><th>날짜</th><th>지출</th><th>클릭</th><th>방문</th>
+        <th>카톡</th><th>문의</th></tr></thead>
+      <tbody id="byDay"></tbody>
+    </table></div>
+  </div>
+
+  <div class="foot">
+    숫자는 <b>ad_v_board</b> 에서 바로 읽습니다. 광고비는 매일 아침 보고가 채우고,
+    방문·카톡은 랜딩이 실시간으로 보냅니다. <b>문의는 사람이 콘솔에 적어야</b> 들어옵니다.
+  </div>
+</div>
+
+<script>
+const SB = { url: "https://miakdhxtqofpndtlyzxa.supabase.co",
+  key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pYWtkaHh0cW9mcG5kdGx5enhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzA5NDIsImV4cCI6MjA5OTc0Njk0Mn0.Rodj7B8brXLiIP3g4kLJl4oCzMKlbYzy1SgwSAFhzOU" };
+const $ = (s) => document.querySelector(s);
+let sb = null, days = 7;
+
+const n0 = (v) => Number(v || 0).toLocaleString();
+const usd = (v) => "$" + Number(v || 0).toFixed(2);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g,
+  (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* 소재 이름은 ad_creatives 에서 읽는다 — 새 광고를 올려도 코드를 안 고친다 */
+let NAME = {};
+const label = (c) => c ? (NAME[c] ? c + " " + NAME[c] : c) : "(출처 모름)";
+
+async function loadCreatives() {
+  const { data, error } = await sb.from("ad_v_creative_pick").select("*");
+  if (error || !data) return;
+  NAME = {};
+  data.forEach((r) => { if (r.title && r.title !== "(목록에 없음)") NAME[r.code] = r.title; });
+  const sel = document.getElementById("iCre");
+  sel.innerHTML = '<option value="">— 모름 —</option>' +
+    data.map((r) => '<option value="' + esc(r.code) + '">' +
+      esc(r.code + " " + (r.title || "")) + (r["돌고있음"] ? " · 돌고 있음" : "") +
+      "</option>").join("");
+}
+
+async function load() {
+  const since = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10);
+  const { data, error } = await sb.from("ad_v_board").select("*").gte("d", since);
+  if (error) { $("#verdict").innerHTML = adv("a-bad", "⚠️", "불러오지 못했습니다", esc(error.message)); return; }
+  draw(data || []);
+}
+
+function adv(cls, ic, t, d) {
+  return '<div class="adv ' + cls + '"><span class="ic">' + ic + '</span><div><b>' + t + '</b><p>' + d + '</p></div></div>';
+}
+
+function draw(rows) {
+  const sum = (k) => rows.reduce((a, r) => a + Number(r[k] || 0), 0);
+  const sp = sum("지출"), ck = sum("클릭"), vis = sum("방문"),
+        cta = sum("카톡"), inq = sum("문의"), im = sum("노출");
+
+  $("#kpi").innerHTML =
+    box("쓴 돈", usd(sp), "하루 평균 " + usd(sp / Math.max(days, 1))) +
+    box("방문", n0(vis), ck ? "클릭 " + n0(ck) + " 중" : "") +
+    box("카톡 클릭", n0(cta), vis ? (100 * cta / vis).toFixed(1) + "%" : "") +
+    box("문의", n0(inq), inq ? usd(sp / inq) + " / 건" : "아직 없음", !inq);
+
+  // 판정 — 운영시스템의 중단 기준 그대로
+  let v = "";
+  if (!rows.length) v = adv("a-wn", "⏸", "이 기간에 숫자가 없습니다", "광고가 꺼져 있었거나 아직 안 쌓였습니다.");
+  else if (inq === 0 && sp >= 300) v = adv("a-bad", "🛑", "멈출 때입니다", "지출 " + usd(sp) + " 에 문의 0건입니다. 랜딩·소재를 고치고 다시 켜는 것이 약속된 수순입니다.");
+  else if (inq === 0) v = adv("a-wn", "⚠️", "아직 문의가 없습니다", "지출 " + usd(sp) + ". <b>$300 · 문의 0</b> 이 되면 멈추고 고칩니다. 남은 여유 " + usd(Math.max(0, 300 - sp)) + ".");
+  else if (sp / inq <= 60) v = adv("a-ok", "✅", "문의당 " + usd(sp / inq), "기준(60달러) 안입니다. 증액을 검토할 수 있습니다.");
+  else v = adv("a-wn", "📊", "문의당 " + usd(sp / inq), "기준은 60달러입니다. 소재를 좁히는 편이 낫습니다.");
+  $("#verdict").innerHTML = v;
+
+  // 소재별
+  const byAd = {};
+  rows.forEach((r) => {
+    const k = r["소재"] || "";
+    const o = byAd[k] || (byAd[k] = { 지출:0, 노출:0, 클릭:0, 방문:0, 읽음:0, 카톡:0, 문의:0 });
+    ["지출","노출","클릭","방문","읽음","카톡","문의"].forEach((f) => o[f] += Number(r[f] || 0));
+  });
+  const ads = Object.entries(byAd).sort((a, b) => b[1].지출 - a[1].지출);
+  const mx = Math.max(1, ...ads.map((a) => a[1].지출));
+  $("#byAd").innerHTML = ads.length ? ads.map(([c, o]) =>
+    "<tr><td>" + bar(o.지출, mx) + esc(label(c)) + "</td>" +
+    "<td>" + usd(o.지출) + "</td><td>" + n0(o.노출) + "</td><td>" + n0(o.클릭) + "</td>" +
+    "<td>" + n0(o.방문) + "</td><td>" + n0(o.읽음) + "</td><td>" + n0(o.카톡) + "</td>" +
+    "<td>" + (o.방문 ? (100 * o.카톡 / o.방문).toFixed(1) + "%" : "—") + "</td>" +
+    "<td>" + n0(o.문의) + "</td></tr>").join("")
+    : '<tr><td colspan="9" class="muted">기간 안에 숫자가 없습니다.</td></tr>';
+
+  // 날짜별
+  const byDay = {};
+  rows.forEach((r) => {
+    const o = byDay[r.d] || (byDay[r.d] = { 지출:0, 클릭:0, 방문:0, 카톡:0, 문의:0 });
+    ["지출","클릭","방문","카톡","문의"].forEach((f) => o[f] += Number(r[f] || 0));
+  });
+  const ds = Object.entries(byDay).sort((a, b) => b[0].localeCompare(a[0]));
+  const mxd = Math.max(1, ...ds.map((d) => d[1].지출));
+  $("#byDay").innerHTML = ds.length ? ds.map(([d, o]) =>
+    "<tr><td>" + bar(o.지출, mxd) + d + "</td><td>" + usd(o.지출) + "</td>" +
+    "<td>" + n0(o.클릭) + "</td><td>" + n0(o.방문) + "</td>" +
+    "<td>" + n0(o.카톡) + "</td><td>" + n0(o.문의) + "</td></tr>").join("")
+    : '<tr><td colspan="6" class="muted">—</td></tr>';
+
+  $("#stamp").textContent = "최근 " + days + "일 · " +
+    new Date().toLocaleString("ko-KR", { dateStyle: "short", timeStyle: "short" }) + " 기준";
+}
+
+function box(k, v, n, bad) {
+  return "<div><div class='k'>" + k + "</div><div class='v" + (bad ? " bad" : "") +
+    "'>" + v + "</div><div class='n'>" + (n || "") + "</div></div>";
+}
+function bar(v, mx) {
+  return '<span class="bar"><i style="width:' + (100 * v / mx).toFixed(1) + '%"></i></span>';
+}
+
+/* 소재 → 랜딩. 모르면 비워 둔다(건수는 그대로 집계된다) */
+const LAND = { "1514":"dbcompare", "1515":"dbcompare", "1516":"dbcompare",
+               "1517":"dbcompare", "1518":"dbcompare", "1519":"dbcompare",
+               "1548":"selfcheck", "1549":"selfcheck", "1550":"selfcheck",
+               "1551":"selfcheck", "1552":"selfcheck" };
+
+$("#iAdd").onclick = async () => {
+  const btn = $("#iAdd"), cre = $("#iCre").value;
+  btn.disabled = true;
+  const row = {
+    creative_code: cre || null,
+    landing: cre ? (LAND[cre] || "bojang") : null,
+    channel: $("#iCh").value || null,
+    medium: "meta",
+    memo: $("#iMemo").value.trim() || null,
+    matched: false
+  };
+  const { error } = await sb.from("ad_inquiries").insert([row]);
+  btn.disabled = false;
+  if (error) { $("#inqMsg").innerHTML = adv("a-bad", "⚠️", "기록하지 못했습니다", esc(error.message)); return; }
+  $("#iMemo").value = ""; $("#iCre").value = "";
+  $("#inqMsg").innerHTML = '<div class="ok">✅ 기록했습니다. 위 숫자에 반영됩니다.</div>';
+  setTimeout(() => { $("#inqMsg").innerHTML = ""; }, 4000);
+  await load();
+};
+
+async function start() {
+  $("#gate").hidden = true;
+  $("#app").hidden = false;
+  await loadCreatives();
+  await load();
+}
+
+$("#go").onclick = async () => {
+  $("#er").textContent = "";
+  try {
+    sb = sb || supabase.createClient(SB.url, SB.key);
+    const { error } = await sb.auth.signInWithPassword({
+      email: $("#em").value.trim(), password: $("#pw").value });
+    if (error) throw error;
+    start();
+  } catch (e) { $("#er").textContent = e.message || "들어가지 못했습니다"; }
+};
+$("#pw").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#go").click(); });
+
+document.querySelectorAll("#seg button").forEach((b) => b.onclick = () => {
+  days = +b.dataset.d;
+  document.querySelectorAll("#seg button").forEach((x) => x.classList.toggle("on", x === b));
+  load();
+});
+
+(async function boot() {
+  try {
+    sb = supabase.createClient(SB.url, SB.key);
+    const { data } = await sb.auth.getSession();
+    if (data && data.session) start();
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>

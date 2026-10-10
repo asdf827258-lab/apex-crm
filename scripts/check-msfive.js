@@ -55,6 +55,14 @@
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
+/* ⏰ 시계를 못 박습니다 — 자리는 <b>한 곳</b>(scripts/lib-clock.js)입니다 (5번).
+   ★ 홈은 때에 따라 길이가 다릅니다. 이 자는 <b>눈금(스냅샷)</b>을 지키는
+     자라, 때마다 들쭉날쭉하면 그 눈금이 거짓이 됩니다 — 그래서 <b>낮
+     (14시) 한 때로</b> 못 박습니다. 여태 CI 가 돌던 때라 적어 둔 옛
+     눈금이 그 때의 것이고, 그것을 고칠 일이 없습니다.
+   ★ <b>세 때를 다 도는 것은 check-homeone</b> 한 자리입니다 — 여기서
+     또 돌면 같은 것을 네 번 재게 됩니다 (5번·7번).                  */
+const CLK = require('./lib-clock.js');
 const ROOT = process.cwd(), PORT = 8935;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json' };
 const srv = http.createServer((rq, rs) => {
@@ -135,7 +143,8 @@ const SEED = (o) => `
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
   const open = async (o) => {
-    const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+    const ctx = await b.newContext(CLK.ctxOpt());
+  await CLK.pin(ctx, 14);                      /* 낮 — 못 박은 그 한 때 */
     await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
     const p = await ctx.newPage();
     const errs = []; p.on('pageerror', e => errs.push(String(e).slice(0, 140)));
@@ -422,8 +431,14 @@ const SEED = (o) => `
      전부 펴 놓은 가장 긴 판」 을 재므로 check-homeone 보다 느슨합니다.
      ⚠ 다만 길이의 진짜 선은 <b>check-homeone 의 4.2</b> 입니다 — 거기 쪽지를
        보십시오. 그쪽이 먼저 울립니다.                                    */
-  is(worstHome > 0 && worstHome <= 844 * 5.3,
-     '  그때 홈이 <b>' + worstHome + 'px</b> = 화면 ' + (worstHome / 844).toFixed(2) + '개 (5.3 이하)');
+  /* ── 2026-10-09 · <b>5.3 → 5.35</b> ───────────────────────────────
+     🌙 오늘 돌아보기 칸 하나만큼입니다 — 4,400 → <b>4,486px</b> · 5.32화면.
+     까닭과 「먼저 무엇을 깎았나」 는 <b>check-phonefit</b> 의 같은 날 쪽지에
+     한 곳에만 적어 둡니다 (5번 · 같은 말을 두 곳에 두지 않는다).
+     ⚠ 이 자는 「미션을 전부 펴 놓은 가장 긴 판」 이라 느슨합니다 —
+       진짜 선은 <b>check-homeone 의 4.2</b> 이고 지금 4.19 입니다. */
+  is(worstHome > 0 && worstHome <= 844 * 5.35,
+     '  그때 홈이 <b>' + worstHome + 'px</b> = 화면 ' + (worstHome / 844).toFixed(2) + '개 (5.35 이하)');
   /* 다섯 마디 틀은 <b>기본으로 접혀</b> 있다 — 매일 같은 줄이 200px 을 먹지 않게 */
   const fr = await B.p.evaluate(() => { hmMsJump(2); return { open: hmMsFrOpen(), head: !!document.querySelector('.hm-ms-fr-h') }; });
   is(fr.head && !fr.open, '  다섯 마디 틀은 <b>접혀</b> 있고 머리는 보인다 — 정형화가 숨지는 않는다');
@@ -557,7 +572,12 @@ const SEED = (o) => `
   is(NINE.after.done === NINE.before.done + 1,
      '  한 분을 대하면 <b>세는 수가 하나 오른다</b> — ' +
      NINE.before.done + '/' + NINE.before.all + ' → ' + NINE.after.done + '/' + NINE.after.all);
-  is(/오늘 관리 \d+\/\d+명/.test(NINE.head),
+  /* ⚠ 2026-10-09 — 여태 「오늘 관리 N/M명」 이었습니다. 그 줄에는 이름표
+     전화로약속잡을분 이 달려 있는데 글에 그 물음을 가려 주는 낱말이 없어,
+     check-onesay [4] 가 「무엇을 세는지 화면에 안 적혔다」 고 세고 있었습니다.
+     <b>셈은 그대로이고 말만</b> 「약속 잡을 분」 으로 고쳤습니다 — 그래서
+     그 자의 기준선이 1 에서 0 으로 내려갔습니다. 여기 자도 새 말을 봅니다. */
+  is(/약속 잡을 분 \d+\/\d+명/.test(NINE.head),
      '  <b>접어 두셔도</b> 몇 분을 대했는지 보인다 — ' + NINE.head.replace(/\s+/g, ' '));
   await b.close(); srv.close();
   console.log('\n' + '─'.repeat(30));

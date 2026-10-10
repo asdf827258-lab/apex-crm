@@ -577,7 +577,13 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
      빨간불이 새 값을 그대로 적어 줍니다.
      ★ 지문은 <b>사람이 손으로 옮기는 값</b>입니다. 자동으로 맞추면
        「고쳤는데 안 올렸다」 를 영영 못 잡습니다 (8번).               */
-  const SQL_SIG = '5b035988872a';      /* SETUP_VER 43 · 판이 뒤로 못 가게 문지기를 더한 판 */
+  const SQL_SIG = '85a73ba38994';      /* SETUP_VER 44 · 고객 365일 ↔ DB 통합 CRM 을 잇는 칸
+                                          (dbs.client_id)과 안전한 것만 잇는 한 번짜리 UPDATE 를
+                                          더한 판. SETUP_VER·schema_version 을 둘 다 43 → 44 로
+                                          올렸고, 이 지문도 손으로 옮겼습니다 — 이 자가 그러라고
+                                          시켰고, 그 말이 맞습니다.
+                                        · 앞 판 5b035988872a = SETUP_VER 43 (판이 뒤로 못 가게
+                                          문지기를 더한 판) */
   const sqlAll = await page.evaluate(() => {
     const o = {}; for (const k in HX_SQL) if (HX_SQL[k] && HX_SQL[k].lines) o[k] = HX_SQL[k].lines.join('\n');
     return Object.keys(o).sort().map(k => k + '\n' + o[k]).join('\n');
