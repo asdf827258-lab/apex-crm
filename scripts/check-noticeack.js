@@ -29,6 +29,11 @@
         이 기기에 담긴 것으로 「게시 중」 이라 답하지 않는다 (1번)         */
 
 const { chromium } = require('playwright');
+/* 🕰 <b>시계를 못 박습니다</b> — 한 곳에서 (lib-clock.js · 판 X83).
+   CI 가 <b>몇 시에 돌아도 같은 것을 재야</b> 합니다. 판 X78 에서 홈 높이 자
+   넷을 박고, 판 X82 에서 check-crmask 가 <b>밤 11시 반에만</b> 빨간불을
+   켜는 것을 보고 이 갈래를 끝까지 박기로 했습니다.                 */
+const CLK = require('./lib-clock.js');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 
 let bad = 0;
@@ -116,7 +121,8 @@ const api = http.createServer((rq, rs) => {
   const API = 'http://127.0.0.1:' + api.address().port;
   const browser = await chromium.launch();
   /* 폰에서 공지를 보는 사람이 대부분이다 */
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 820 } });
+  const ctx = await browser.newContext(CLK.ctxOpt({ viewport: { width: 390, height: 820 } }));
+  await CLK.pin(ctx, 14);
   /* ── <b>바깥을 막는다.</b> 이 점검만 안 막고 있었다 ──────────────────
      CI 에는 네트워크가 있어 <b>부팅 때 나간 진짜 공지 읽기</b>가 늦게 돌아온다.
      그때 osNoticeApply → osAckScan 이 돌고, osAckScan 은 os_notice_acks 를

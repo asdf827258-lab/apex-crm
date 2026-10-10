@@ -33,6 +33,11 @@
    ══════════════════════════════════════════════════════════════════ */
 
 const { chromium } = require('playwright');
+/* 🕰 <b>시계를 못 박습니다</b> — 한 곳에서 (lib-clock.js · 판 X83).
+   CI 가 <b>몇 시에 돌아도 같은 것을 재야</b> 합니다. 판 X78 에서 홈 높이 자
+   넷을 박고, 판 X82 에서 check-crmask 가 <b>밤 11시 반에만</b> 빨간불을
+   켜는 것을 보고 이 갈래를 끝까지 박기로 했습니다.                 */
+const CLK = require('./lib-clock.js');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 const ROOT = process.cwd(), PORT = 8977;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript',
@@ -104,7 +109,8 @@ const LOOK = () => {
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
   const errs = [];
-  const ctx = await b.newContext({ viewport: { width: 1280, height: 900 } });
+  const ctx = await b.newContext(CLK.ctxOpt({ viewport: { width: 1280, height: 900 } }));
+  await CLK.pin(ctx, 14);
   /* ★ 바깥을 막고 <b>센다</b> — 홈이 칩 때문에 서버를 부르면 그 자리에서 보입니다 */
   await ctx.route('**://**', r => {
     const u = r.request().url();
