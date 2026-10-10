@@ -81,10 +81,14 @@ const STUB = `window.supabase={createClient:function(){return {
 
   const 열 = async (어디) => {
     const kctx = await br.newContext(CLK.ctxOpt());
-    await CLK.pin(kctx, 14);
+    /* ★ 시계를 못 박는다 — 이 한 줄이 이 자의 뼈대다.
+       ★ <b>박는 자리는 lib-clock 한 곳</b>입니다 (5번) — 이 자만 <b>날짜가
+         다릅니다</b>(한국과 UTC 가 하루 갈리는 틈). 판 X83 까지는 여기서
+         <b>playwright 의 clock</b> 을 따로 썼습니다. 박는 코드가 두 벌이면
+         한쪽만 늙고, 실제로 판 X83 에서 두 벌이 서로 덮어 이 자가 헛
+         빨간불을 켰습니다. 그래서 <b>날짜만 다르고 방법은 하나</b>입니다. */
+    await CLK.pinIso(kctx, 못박은때.toISOString());
     const pg = await kctx.newPage();
-    /* ★ 시계를 못 박는다 — 이 한 줄이 이 자의 뼈대다 */
-    await pg.clock.setFixedTime(못박은때);
     /* ★ <b>바깥을 막는다</b> — 이 꼴('**://**')이 이 저장소의 규약입니다.
        안 막으면 CI 에서 <b>사장님 진짜 서버</b>를 읽습니다 (check-netblock). */
     await pg.route('**://**', async r => {

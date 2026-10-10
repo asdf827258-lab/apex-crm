@@ -36,6 +36,8 @@ const { chromium } = require('playwright');
    넷을 박고, 판 X82 에서 check-crmask 가 <b>밤 11시 반에만</b> 빨간불을
    켜는 것을 보고 이 갈래를 끝까지 박기로 했습니다.                 */
 const CLK = require('./lib-clock.js');
+/* 박는 때 — 이 자는 쪽을 <b>셋</b> 엽니다. 셋 다 이 한 수로 박습니다 (5번). */
+const 박는때 = 14;
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 
 let bad = 0;
@@ -189,7 +191,7 @@ const SITE = 'http://127.0.0.1:' + srv.address().port;
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ timezoneId: CLK.TZ });
-await CLK.pin(page, 14);
+await CLK.pin(page, 박는때);
 const errs = [];
 page.on('pageerror', e => errs.push(String(e).slice(0, 180)));
 await page.goto(SITE + '/' + DIR + '/sync.js', { waitUntil: 'domcontentloaded' });
@@ -257,7 +259,8 @@ is(!!prog && /"owner_id":"u1"/.test(prog.body || ''), '  진도에도 owner_id �
    안 채웠다. 다른 화면을 거쳐 오면 되고 바로 열면 안 되는 화면이었다.
    그래서 여기서는 <b>주소로 바로 여는 쪽</b>을 본다 — 안 되던 쪽이다. */
 console.log('\n[7-1] 가이드를 주소로 바로 열어도 SQL 이 칸에 들어온다');
-const g = await browser.newPage();
+const g = await browser.newPage({ timezoneId: CLK.TZ });
+await CLK.pin(g, 박는때);          /* ★ 쪽마다 박는다 — 하나만 박으면 그 쪽만 같아집니다 (판 X83) */
 const gerr = [];
 g.on('pageerror', e => gerr.push(String(e).slice(0, 140)));
 await g.goto(SITE + '/' + DIR + '/index.html#GUIDE', { waitUntil: 'domcontentloaded' });
@@ -321,7 +324,8 @@ const VWANT = {
 let vtok = 0;
 for (const m of ['nomig', 'open', 'shut', 'down']) {
   VMODE = m; vseen = [];
-  const vp = await browser.newPage();
+  const vp = await browser.newPage({ timezoneId: CLK.TZ });
+  await CLK.pin(vp, 박는때);        /* ★ 쪽마다 박는다 (판 X83) */
   await vp.goto(SITE + '/' + DIR + '/index.html#GUIDE', { waitUntil: 'domcontentloaded' });
   await vp.waitForTimeout(2200);
   await vp.evaluate((api) => {
