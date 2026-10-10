@@ -411,6 +411,22 @@ const SEED = `
   window.toast=function(){};
   OS.session={user:{id:'u1'}};
   OS.profile={id:'u1',name:'윤시현',role:'owner',active:true,plan:'vip'};
+  /* ★★ <b>준비가 끝난 서버</b>로 잽니다 (판 X84).
+     홈 맨 위의 🚀 서버 준비 SQL 배너는 <b>한 번 돌리면 영영 사라지는</b>
+     것입니다. 판 X84 에서 그것을 접이 밖으로 꺼냈더니(사장님 말씀
+     2026-10-10 「<b>준비 SQL 안보인다</b>」) 이 자가 홈을 4.1 →
+     <b>4.5화면</b>이라고 울렸습니다. 여태는 <b>접힌 접이 안</b>에 있어
+     0px 였습니다 — 자리를 옮기자 제 높이가 드러난 것입니다.
+     ★ 사장님께서 「4.2화면이 끝」 이라고 못 박으신 것은 <b>매일 여는 홈</b>
+       입니다. 한 번 보고 사라지는 설치 배너를 그 선에 넣으면 <b>배너를
+       없애야 초록이 되는 꼴</b>이 되고, 그러면 돌릴 길을 또 숨기게
+       됩니다 (6번). 그래서 <b>끝난 서버</b>를 씨로 뿌립니다.
+     ★ 배너 자체는 <b>check-setup</b> 이 따로 잽니다 — 접이 밖인가 ·
+       한 줄인가 · 손가락이 닿나. 둘이 같은 것을 두 번 재지 않습니다 (5번). */
+  (function(){ var real=window.osCfgGet;
+    if(typeof real!=='function')return;
+    window.osCfgGet=function(k,d){
+      return k==='schema_version' ? String(SETUP_VER) : real(k,d); }; })();
   window.arLoad=function(){};
   /* ★ <b>자료가 손에 있는 화면</b>을 잽니다. 여태 OSC(고객 목록)를 안 심어서
      이 자는 <b>아직 읽는 중인</b> 화면을 재고 있었습니다 — 그때는 「읽는 중」과

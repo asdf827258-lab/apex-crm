@@ -120,20 +120,62 @@ const SEED = (o) => `
 
   console.log('\n[2] 🗄 <b>서버 준비 SQL</b> 이 그 칸을 담고, 안전한 것만 잇는다');
   {
-    is(/add column if not exists client_id uuid references public\.clients\(id\)/.test(src),
-      '  잇는 칸을 담는 줄이 있다 (dbs.client_id → clients.id)');
-    is(/create index if not exists dbs_client_id_idx/.test(src), '  찾기 쉽게 색인도 담는다');
-    is(/count\(distinct nm\) = 1/.test(src),
+    /* ⚠⚠ <b>판 X84 에서 이 토막을 다시 지었습니다.</b> 여태 글 <b>전체</b>에서
+       글자만 찾았습니다. 그런데 app/index.html 에는 HX_SQL 조각이 서른 몇
+       개 있고, <b>홈의 준비 SQL 단추는 조각 '00' 하나만 복사</b>합니다
+       (setupGo → HX_SQL['00'].lines). 판 X82 에서 제가 이 줄들을 조각
+       <b>'18'</b>(DB CRM 칸 보정 · repair:true)에 넣었는데, 이 자가
+       <b>초록</b>을 줬습니다 — <b>헛 초록</b>입니다 (8번).
+       그대로 돌리면 판 번호만 44 가 되고 칸은 안 생겨, setupDone() 이 참이
+       되어 <b>단추가 영영 사라집니다</b>(6번). 사장님께서 「준비 SQL
+       안보인다」 라고 하셔서 글을 꺼내 보고 알았습니다.
+       ★ 그래서 이제 <b>조각을 잘라</b> 봅니다 — 「어디에 있나」 까지 잽니다. */
+    const 조각 = (nm) => {
+      const i = src.indexOf("'" + nm + "':{");
+      if (i < 0) return '';
+      const rest = src.slice(i + 1);
+      const m = rest.match(/\n\s*'\d\d'\s*:\s*\{/);
+      return rest.slice(0, m ? m.index : rest.length);
+    };
+    const S00 = 조각('00'), S18 = 조각('18');
+    is(S00.length > 1000 && S18.length > 1000,
+      '  조각을 잘라냈다 — <b>\'00\'</b> ' + S00.length + '자 · <b>\'18\'</b> ' + S18.length + '자');
+
+    /* ★★ 단추가 복사하는 그 조각 안인가 — 이 한 줄이 이 토막의 뼈대다 */
+    is(/add column if not exists client_id uuid references public\.clients\(id\)/.test(S00),
+      '  ★★ 잇는 칸을 담는 줄이 <b>조각 \'00\' 안</b>에 있다 — 단추는 \'00\' 만 복사합니다');
+    is(/create index if not exists dbs_client_id_idx/.test(S00), '  찾기 쉽게 색인도 \'00\' 안에 담는다');
+    is(/count\(distinct nm\) = 1/.test(S00),
       '  ★★ <b>그 번호에 이름이 하나뿐</b>일 때만 잇는다 — 가족이 번호를 같이 쓰면 부부를 합칩니다');
-    is(/c\.advisor_id = d\.assigned_to/.test(src), '  ★ <b>담당자가 같을 때만</b> 잇는다 (3번)');
-    is(/pair\.n = 1/.test(src), '  ★★ 짝이 <b>둘 이상이면 안 잇는다</b>');
-    is(/t\.client_id is null/.test(src), '  ★ <b>이미 이어진 줄은 안 건드린다</b>');
-    is(!/^\s*"?\s*--/m.test((src.match(/with d as \([\s\S]{0,1800}?pair\.n = 1[^"]*/) || [''])[0]),
+    is(/c\.advisor_id = d\.assigned_to/.test(S00), '  ★ <b>담당자가 같을 때만</b> 잇는다 (3번)');
+    is(/pair\.n = 1/.test(S00), '  ★★ 짝이 <b>둘 이상이면 안 잇는다</b>');
+    is(/t\.client_id is null/.test(S00), '  ★ <b>이미 이어진 줄은 안 건드린다</b>');
+    is(!/^\s*"?\s*--/m.test((S00.match(/with d as \([\s\S]{0,1800}?pair\.n = 1[^"]*/) || [''])[0]),
       '  SQL 주석에 <b>「-」 두 개를 안 쓴다</b> (9번)');
+
+    /* ★★ <b>차례</b> — 칸이 먼저 생기고 나서 판 번호가 적혀야 한다.
+       거꾸로면 번호만 오르고 칸은 없는 서버가 생기고, 그때는 단추가
+       사라져 되돌릴 길이 없습니다 (6번).                              */
+    const i칸 = S00.indexOf('add column if not exists client_id');
+    const i번 = S00.indexOf("values ('schema_version'");
+    is(i칸 >= 0 && i번 >= 0 && i칸 < i번,
+      '  ★★ <b>칸 만들기가 판 번호보다 앞</b>이다 — 칸 ' + i칸 + '자 · 번호 ' + i번 + '자');
+
+    /* ★ 두 곳에 베껴 둔 것은 <b>같아야</b> 한다 — 안 보면 한쪽만 늙습니다 (5번).
+       조각 '18' 은 「칸이 빠졌을 때」 고치는 길이라 그쪽도 살려 둡니다.   */
+    const 잇는글 = (t) => {
+      const m = t.match(/with d as \([\s\S]*?t\.client_id is null;/);
+      return m ? m[0].replace(/\s+/g, ' ') : '';
+    };
+    is(/add column if not exists client_id uuid references public\.clients\(id\)/.test(S18),
+      '  ★ 조각 <b>\'18\'</b>(칸이 빠졌을 때 고치는 길)에도 그대로 있다 — 빼면 그 길이 끊깁니다');
+    is(잇는글(S00).length > 200 && 잇는글(S00) === 잇는글(S18),
+      '  ★ <b>두 곳이 같다</b> — 베껴 두고 안 보면 한쪽만 늙습니다 (5번)');
+
     const v = (src.match(/var SETUP_VER=(\d+)/) || [])[1];
-    const vs = (src.match(/values \('schema_version', '(\d+)'\)/) || [])[1];
+    const vs = (S00.match(/values \('schema_version', '(\d+)'\)/) || [])[1];
     is(v === vs && Number(v) >= 44,
-      '  ★ <b>판 번호와 서버 번호가 같다</b> — SETUP_VER ' + v + ' · schema_version ' + vs +
+      '  ★ <b>판 번호와 서버 번호가 같다</b> — SETUP_VER ' + v + ' · \'00\' 의 schema_version ' + vs +
       ' (안 올리면 「서버 준비가 남았습니다」 칸이 아예 안 뜹니다)');
   }
 
