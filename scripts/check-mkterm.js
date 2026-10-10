@@ -25,6 +25,11 @@
      6. 판정하는 곳이 <b>하나</b>인가 — 죽은 판이 없는가 (CLAUDE.md 5번)     */
 
 const { chromium } = require('playwright');
+/* 🕰 <b>시계를 못 박습니다</b> — 한 곳에서 (lib-clock.js · 판 X83).
+   CI 가 <b>몇 시에 돌아도 같은 것을 재야</b> 합니다. 판 X78 에서 홈 높이 자
+   넷을 박고, 판 X82 에서 check-crmask 가 <b>밤 11시 반에만</b> 빨간불을
+   켜는 것을 보고 이 갈래를 끝까지 박기로 했습니다.                 */
+const CLK = require('./lib-clock.js');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 
 const ROOT = process.cwd();
@@ -81,7 +86,8 @@ const JUNK = '오늘 회사 회의에서 3분기 매출을 검토했습니다. �
   const base = 'http://127.0.0.1:' + srv.address().port +
     '/app/' + encodeURIComponent('상담자료') + '/' + encodeURIComponent('미끼레이더') + '/index.html';
   const browser = await chromium.launch();
-  const page = await browser.newPage();
+  const page = await browser.newPage({ timezoneId: CLK.TZ });
+  await CLK.pin(page, 14);
   const errs = [];
   page.on('pageerror', e => errs.push(String(e).slice(0, 180)));
   await page.goto(base, { waitUntil: 'domcontentloaded' });

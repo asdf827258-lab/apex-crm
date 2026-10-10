@@ -35,6 +35,11 @@
      [5] ★ 두 화면이 <b>같은 날</b>이라고 답하나 (본체 ↔ CRM)
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
+/* 🕰 <b>시계를 못 박습니다</b> — 한 곳에서 (lib-clock.js · 판 X83).
+   CI 가 <b>몇 시에 돌아도 같은 것을 재야</b> 합니다. 판 X78 에서 홈 높이 자
+   넷을 박고, 판 X82 에서 check-crmask 가 <b>밤 11시 반에만</b> 빨간불을
+   켜는 것을 보고 이 갈래를 끝까지 박기로 했습니다.                 */
+const CLK = require('./lib-clock.js');
 const http = require('http'), fs = require('fs'), path = require('path');
 
 const ROOT = process.cwd();
@@ -75,7 +80,9 @@ const STUB = `window.supabase={createClient:function(){return {
   const br = await chromium.launch();
 
   const 열 = async (어디) => {
-    const pg = await (await br.newContext()).newPage();
+    const kctx = await br.newContext(CLK.ctxOpt());
+    await CLK.pin(kctx, 14);
+    const pg = await kctx.newPage();
     /* ★ 시계를 못 박는다 — 이 한 줄이 이 자의 뼈대다 */
     await pg.clock.setFixedTime(못박은때);
     /* ★ <b>바깥을 막는다</b> — 이 꼴('**://**')이 이 저장소의 규약입니다.

@@ -17,6 +17,12 @@
 
    서버에 붙지 않은 상태로 본다. 그래야 매번 같은 답이 나온다.        */
 const { chromium } = require('playwright');
+/* 🕰 <b>시계를 못 박습니다</b> — 한 곳에서 (lib-clock.js · 판 X83).
+   CI 가 <b>몇 시에 돌아도 같은 것을 재야</b> 합니다. 판 X78 에서 홈 높이 자
+   넷을 박고, 판 X82 에서 check-crmask 가 <b>밤 11시 반에만</b> 빨간불을
+   켜는 것을 보고 이 갈래를 끝까지 박기로 했습니다.
+   ★ <b>창이 둘</b>이라 둘 다 박습니다 — 하나만 박으면 그 창만 같습니다. */
+const CLK = require('./lib-clock.js');
 const { SB_STUB } = require('./lib-sbstub.js');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd(), PORT = 8897;
@@ -37,7 +43,8 @@ const srv = http.createServer((req, res) => {
   const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
 
   /* 폰 크기로 본다 — 이 화면은 폰에서만 쓴다 */
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const ctx = await browser.newContext(CLK.ctxOpt({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }));
+  await CLK.pin(ctx, 14);
   /* 밖으로 나가는 것은 전부 막는다. supabase 도 안 붙는다 → 미리보기 자료로 돈다 */
   await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0
     ? r.continue() : r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
@@ -223,6 +230,9 @@ const srv = http.createServer((req, res) => {
   console.log('\n시간대가 달라도 시각이 맞는가 (뉴욕 시간으로 맞춘 폰)');
   const ny = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true,
     hasTouch: true, timezoneId: 'America/New_York' });
+  /* ★ <b>시간대는 그대로</b> 둡니다 — 이 창은 뉴욕 시간대를 <b>일부러</b> 쓰는
+     자리입니다(시간대가 달라도 같은 하루를 보나). 시각(순간)만 박습니다.   */
+  await CLK.pin(ny, 14);
   await ny.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0
     ? r.continue() : r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   const pz = await ny.newPage();

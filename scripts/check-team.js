@@ -14,6 +14,11 @@
      다섯 · 리더가 읽고 <b>복사해서</b> 보내는가 — AI 가 직접 보내지 않는다
      여섯 · 「팀원에게 보내기」 가 team_feedback 에 올바른 줄을 만드는가        */
 const { chromium } = require('playwright');
+/* 🕰 <b>시계를 못 박습니다</b> — 한 곳에서 (lib-clock.js · 판 X83).
+   CI 가 <b>몇 시에 돌아도 같은 것을 재야</b> 합니다. 판 X78 에서 홈 높이 자
+   넷을 박고, 판 X82 에서 check-crmask 가 <b>밤 11시 반에만</b> 빨간불을
+   켜는 것을 보고 이 갈래를 끝까지 박기로 했습니다.                 */
+const CLK = require('./lib-clock.js');
 const { SB_STUB } = require('./lib-sbstub.js');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd(), PORT = 8898;
@@ -56,7 +61,8 @@ const ai = http.createServer((req, res) => {
   const fail = [];
   const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
 
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const ctx = await browser.newContext(CLK.ctxOpt({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }));
+  await CLK.pin(ctx, 14);
   await ctx.route('**://**', r => {
     const u = r.request().url();
     if (u.indexOf('127.0.0.1:' + PORT) >= 0 || u.indexOf('127.0.0.1:8899') >= 0) return r.continue();
