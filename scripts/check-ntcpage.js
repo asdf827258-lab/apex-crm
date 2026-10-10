@@ -23,6 +23,11 @@
      [6] <b>팀원에게는 관리 칸이 안 보인다</b> (사장님 답 「모두 보고 · 대표만 관리」)
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
+/* 🕰 <b>시계를 못 박습니다</b> — 한 곳에서 (lib-clock.js · 판 X83).
+   CI 가 <b>몇 시에 돌아도 같은 것을 재야</b> 합니다. 판 X78 에서 홈 높이 자
+   넷을 박고, 판 X82 에서 check-crmask 가 <b>밤 11시 반에만</b> 빨간불을
+   켜는 것을 보고 이 갈래를 끝까지 박기로 했습니다.                 */
+const CLK = require('./lib-clock.js');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9123;
 let bad = 0;
@@ -98,7 +103,8 @@ const 본다 = (sel) => { const h=document.getElementById('dynPane');
   await new Promise(r => srv.listen(PORT, r));
   const br = await chromium.launch();
   const 열기 = async (role) => {
-    const ctx = await br.newContext({ viewport: { width: 430, height: 900 } });
+    const ctx = await br.newContext(CLK.ctxOpt({ viewport: { width: 430, height: 900 } }));
+    await CLK.pin(ctx, 14);
     await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
     const pg = await ctx.newPage();
     const errs = []; pg.on('pageerror', e => errs.push(String(e.message || e).slice(0, 120)));

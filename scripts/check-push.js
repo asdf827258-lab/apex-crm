@@ -21,6 +21,12 @@
      대신 Notification 을 가짜로 바꿔 <b>우리가 무엇을 어떻게 띄우려 했는지</b>
      를 그대로 받아 적습니다. 재는 것은 우리 코드이지 크롬이 아닙니다.      */
 const { chromium } = require('playwright');
+/* 🕰 <b>시계를 못 박습니다</b> — 한 곳에서 (lib-clock.js · 판 X83).
+   CI 가 <b>몇 시에 돌아도 같은 것을 재야</b> 합니다. 판 X78 에서 홈 높이 자
+   넷을 박고, 판 X82 에서 check-crmask 가 <b>밤 11시 반에만</b> 빨간불을
+   켜는 것을 보고 이 갈래를 끝까지 박기로 했습니다.
+   ★ <b>창이 둘</b>이라 둘 다 박습니다 — 하나만 박으면 그 창만 같습니다. */
+const CLK = require('./lib-clock.js');
 const http=require('http'),fs=require('fs'),path=require('path'),url=require('url'),crypto=require('crypto');
 const ROOT=process.cwd(),PORT=8903;
 let KEYROW=null;                       /* [9] 가 담으면 여기 들어온다 */
@@ -108,7 +114,8 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
 (async()=>{
   await new Promise(r=>srv.listen(PORT,r));
   const b=await chromium.launch();
-  const ctx=await b.newContext({viewport:{width:430,height:1000}});
+  const ctx=await b.newContext(CLK.ctxOpt({viewport:{width:430,height:1000}}));
+  await CLK.pin(ctx, 14);
   const page=await ctx.newPage();
   const errs=[]; page.on('pageerror',e=>errs.push(String(e).slice(0,140)));
   await page.addInitScript(()=>{
@@ -1000,7 +1007,8 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
      한 화면이 156px 더 길어 「보인다」 가 나옵니다 — 헛것을 잡는 점검보다
      <b>안 잡는 점검</b>이 딱 이 모양입니다 (8번). */
   const VW=390, VH=844;
-  const kkCtx = await b.newContext({ viewport:{width:VW,height:VH} });
+  const kkCtx = await b.newContext(CLK.ctxOpt({ viewport:{width:VW,height:VH} }));
+  await CLK.pin(kkCtx, 14);
   await kkCtx.route('**://**', r => r.request().url().indexOf('127.0.0.1:'+PORT)>=0 ? r.continue() : r.abort());
   const kkPage = await kkCtx.newPage();
   const kkErr=[]; kkPage.on('pageerror',e=>kkErr.push(String(e).slice(0,140)));
