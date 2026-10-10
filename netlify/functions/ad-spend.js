@@ -24,6 +24,13 @@
       씁니다. 없으면 지어 넣지 않고 빈 칸으로 두어 화면에 「(출처 모름)」
       으로 세우고, 어떤 광고 이름이었는지 로그에 남깁니다. 잘못 뽑은 번호가
       그럴듯하게 들어가면 소재별 표가 <b>조용히</b> 틀립니다.
+   ⑤ <b>열쇠 없이 주소로 부르면 한 줄도 안 씁니다 — 「재 보기」 로 돕니다.</b>
+      메타에 물어 「이러면 몇 줄 들어갑니다」 까지만 알려 주고 멈춥니다.
+      예약 실행과, 열쇠(CRON_SECRET)를 쥔 호출만 실제로 적습니다. 그래서
+      CRON_SECRET 을 안 넣어도 모르는 사람이 <b>DB 를 건드릴 수 없습니다.</b>
+      ⚠ 예전에는 CRON_SECRET 이 없으면 검사를 <b>건너뛰었습니다</b> — 곧
+        토큰을 넣는 순간 주소를 아는 누구나 쓸 수 있었습니다. 뒤집었습니다.
+
    ④ <b>같은 날 같은 소재를 두 번 쌓지 않습니다.</b> ad_spend_uniq
       (d·medium·campaign·adset·creative_code) 위로 upsert 합니다 —
       며칠을 다시 받아도 덮어쓰기만 됩니다(5-1번). 그래서 기본 7일을
@@ -37,14 +44,27 @@
      양쪽 다 'meta_api' 로 둡니다 — 그 칸은 「어디서 돌았나」 가 아니라
      「무슨 자료인가」 를 말하는 칸이라 새 낱말을 만들지 않습니다(5번).
 
+   ── 사장님 손이 가야 하는 것은 <b>하나뿐입니다</b> ────────────────────
+
+   META_ADS_TOKEN 만 Netlify 환경변수에 넣으시면 됩니다. 나머지는 안 넣어도
+   안전하게 돕니다 — 손이 갈 자리를 셋에서 하나로 줄인 까닭입니다.
+
+   ★ <b>이 저장소는 공개입니다.</b> 그래서 토큰도, 계정 번호도 코드에 적지
+     않습니다. 적으면 누구나 읽습니다. 환경변수만이 그 값을 둘 자리입니다.
+
    필요한 환경변수 (Netlify → Site configuration → Environment variables):
      META_ADS_TOKEN             (필수) 메타 마케팅 API 토큰
-     META_AD_ACCOUNT_ID         (필수) 광고 계정 — act_ 가 있어도 없어도 됩니다
-     SUPABASE_SERVICE_ROLE_KEY  (필수)
+     SUPABASE_SERVICE_ROLE_KEY  (필수 · 이미 있습니다)
+     META_AD_ACCOUNT_ID         (선택) 안 넣으면 토큰에게 「네가 볼 수 있는
+                                광고계정이 뭐냐」 물어 <b>하나뿐일 때만</b>
+                                그것을 씁니다. 여럿이면 지어 고르지 않고
+                                목록을 돌려 드립니다(1번).
      SUPABASE_URL               (선택)
      META_API_VER               (선택) 기본 v23.0 — 메타가 버전을 올리면
                                 이것만 바꿉니다. 코드를 안 고칩니다.
-     CRON_SECRET                (선택) 사람이 주소로 부를 때의 열쇠
+     CRON_SECRET                (선택) 안 넣어도 <b>새지 않습니다</b> —
+                                열쇠 없이 주소로 부르면 「재 보기만」 으로
+                                돌아 한 줄도 안 씁니다(문지기 ⑤).
    ════════════════════════════════════════════════════════════════════════ */
 
 const SB_URL = process.env.SUPABASE_URL || 'https://miakdhxtqofpndtlyzxa.supabase.co';
@@ -91,10 +111,20 @@ async function graph(path, params) {
   return j;
 }
 
-/* act_ 접두사를 사장님이 넣으셨든 안 넣으셨든 같게 만든다 */
-function acctId() {
+/* ── 어느 광고 계정인가 ────────────────────────────────────────────────
+   META_AD_ACCOUNT_ID 를 넣으셨으면 그것을 씁니다(act_ 접두사는 있든 없든
+   같게 만듭니다). 안 넣으셨으면 <b>토큰에게 묻습니다</b> — 볼 수 있는 계정이
+   딱 하나면 그것입니다. 둘 이상이거나 하나도 없으면 <b>고르지 않습니다</b>
+   (1번) — 엉뚱한 계정의 지출을 사장님 화면에 적는 것이 제일 나쁩니다.    */
+async function resolveAcct() {
   const s = String(ACCT).trim();
-  return /^act_/.test(s) ? s : ('act_' + s);
+  if (s) return { id: /^act_/.test(s) ? s : ('act_' + s), how: 'META_AD_ACCOUNT_ID 로 지정' };
+  const j = await graph('me/adaccounts', { fields: 'id,name', limit: '50' });
+  const list = (j.data || []).filter(x => x && x.id);
+  if (list.length === 1) {
+    return { id: list[0].id, how: '토큰이 볼 수 있는 계정이 하나뿐이라 그것으로' , name: list[0].name };
+  }
+  return { id: null, list: list };
 }
 
 /* ── 소재 번호 뽑기 — 대장에 있는 번호만 받는다 (문지기 ③) ────────────
@@ -118,27 +148,30 @@ exports.handler = async (event) => {
       ok: false, reason: 'SUPABASE_SERVICE_ROLE_KEY 환경변수가 없습니다.' }) };
   }
 
-  /* 예약 실행이 아니라 사람이 주소로 부른 경우엔 열쇠를 확인한다
-     (night-work.js 와 같은 규칙) */
+  /* ── 문지기 ⑤ 누가 불렀나 — 적을 자격이 있나 ──────────────────────
+     예약 실행이거나 열쇠를 쥔 호출만 <b>실제로 적습니다.</b> 그 밖에는
+     「재 보기」(dry) 로 돌아 메타에 묻고 결과만 알려 주고 멈춥니다.
+     열쇠를 <b>틀리게</b> 보냈을 때만 401 — 그건 실수를 알려 줘야 합니다. */
   const body = (event && event.body) || '';
+  const qs = (event && event.queryStringParameters) || {};
+  const h = (event && event.headers) || {};
+  const given = h['x-cron-secret'] || h['X-Cron-Secret'] || '';
   const scheduled = body.indexOf('next_run') >= 0;
-  if (!scheduled && SECRET) {
-    const h = (event && event.headers) || {};
-    const given = h['x-cron-secret'] || h['X-Cron-Secret'] || '';
-    if (given !== SECRET) {
-      return { statusCode: 401, body: JSON.stringify({ ok: false, reason: '권한 없음' }) };
+  let authed = scheduled;
+  if (!scheduled && given) {
+    if (!SECRET || given !== SECRET) {
+      return { statusCode: 401, body: JSON.stringify({ ok: false, reason: '권한 없음 — 열쇠가 다릅니다' }) };
     }
+    authed = true;
   }
+  const dry = !authed || qs.dry === '1';
 
   /* ── 문지기 ① 토큰이 없으면 아무 숫자도 만들지 않는다 ──────────────── */
-  if (!TOKEN || !ACCT) {
-    const need = [];
-    if (!TOKEN) need.push('META_ADS_TOKEN');
-    if (!ACCT) need.push('META_AD_ACCOUNT_ID');
+  if (!TOKEN) {
     return { statusCode: 200, body: JSON.stringify({
       ok: false,
-      need: need,
-      reason: '아무 숫자도 만들지 않습니다 — ' + need.join(' · ') + ' 가 없습니다. ' +
+      need: ['META_ADS_TOKEN'],
+      reason: '아무 숫자도 만들지 않습니다 — META_ADS_TOKEN 이 없습니다. ' +
               'Netlify → Site configuration → Environment variables 에 넣으면 ' +
               '다음 배포부터 읽습니다. (0 을 적으면 화면이 「안 썼다」 로 읽어 ' +
               '$300·$500 판정이 틀립니다)'
@@ -151,8 +184,26 @@ exports.handler = async (event) => {
   const until = kstAgo(0);
 
   try {
+    log.push(dry ? '※ 재 보기 — 한 줄도 쓰지 않습니다' : '적습니다');
+
+    /* ── 어느 계정인가 — 못 고르면 아무것도 안 합니다 (1번) ─────────── */
+    const A = await resolveAcct();
+    if (!A.id) {
+      return { statusCode: 200, body: JSON.stringify({
+        ok: false, dry: dry, log: log,
+        accounts: (A.list || []).map(x => ({ id: x.id, name: x.name })),
+        reason: (A.list || []).length
+          ? '한 줄도 쓰지 않았습니다 — 토큰이 볼 수 있는 광고계정이 ' + A.list.length +
+            '개입니다. 어느 것인지 제가 고르지 않습니다(엉뚱한 계정 지출을 적는 것이 ' +
+            '제일 나쁩니다). 위 목록에서 고르셔서 META_AD_ACCOUNT_ID 에 넣어 주십시오.'
+          : '한 줄도 쓰지 않았습니다 — 이 토큰으로는 광고계정이 하나도 안 보입니다. ' +
+            '토큰 권한(ads_read)이나 계정 연결을 확인해 주십시오.'
+      }) };
+    }
+    log.push('계정 ' + A.id + (A.name ? (' (' + A.name + ')') : '') + ' — ' + A.how);
+
     /* ── 문지기 ② 통화 확인 — 화면이 $ 로 찍는다 ────────────────────── */
-    const acc = await graph(acctId(), { fields: 'currency,timezone_name,name' });
+    const acc = await graph(A.id, { fields: 'currency,timezone_name,name' });
     if (acc.currency !== CURRENCY_OK) {
       return { statusCode: 200, body: JSON.stringify({
         ok: false,
@@ -162,7 +213,7 @@ exports.handler = async (event) => {
                 '정해져야 합니다 — 제가 고를 일이 아닙니다).'
       }) };
     }
-    log.push('계정 ' + (acc.name || acctId()) + ' · ' + acc.currency + ' · ' + (acc.timezone_name || '시간대 모름'));
+    log.push('통화 ' + acc.currency + ' · ' + (acc.timezone_name || '시간대 모름'));
     if (acc.timezone_name && acc.timezone_name !== 'Asia/Seoul') {
       log.push('⚠ 계정 시간대가 Asia/Seoul 이 아닙니다 — 하루 경계가 화면(서울 기준)과 어긋날 수 있습니다');
     }
@@ -185,7 +236,7 @@ exports.handler = async (event) => {
     /* ── 메타에서 하루 × 광고 단위로 받는다 ──────────────────────────── */
     let rows = [], pages = 0;
     let next = null;
-    let j = await graph(acctId() + '/insights', {
+    let j = await graph(A.id + '/insights', {
       level: 'ad',
       fields: 'date_start,campaign_name,adset_name,ad_name,ad_id,impressions,clicks,reach,spend',
       time_increment: '1',
@@ -206,7 +257,7 @@ exports.handler = async (event) => {
 
     if (!rows.length) {
       log.push('받은 줄이 없습니다 — 그 기간에 집행이 없었거나 계정이 꺼져 있었습니다. 아무 것도 쓰지 않았습니다.');
-      return { statusCode: 200, body: JSON.stringify({ ok: true, wrote: 0, log: log }) };
+      return { statusCode: 200, body: JSON.stringify({ ok: true, dry: dry, wrote: 0, log: log }) };
     }
 
     /* ── ad_spend 로 옮긴다 ─────────────────────────────────────────── */
@@ -248,15 +299,20 @@ exports.handler = async (event) => {
       log.push('열쇠가 겹친 ' + (out.length - merged.length) + '줄을 합쳤습니다(번호를 못 뽑은 광고들)');
     }
 
-    /* 쪼개 보낸다 — 한 번에 너무 많으면 요청이 길어진다 */
+    /* ── 문지기 ⑤ 재 보기면 여기서 멈춘다 — 한 줄도 안 씁니다 ───────── */
     let wrote = 0;
-    for (let i = 0; i < merged.length; i += 100) {
-      const chunk = merged.slice(i, i + 100);
-      await sb('ad_spend?on_conflict=d,medium,campaign,adset,creative_code',
-        { method: 'POST', body: JSON.stringify(chunk) });
-      wrote += chunk.length;
+    if (dry) {
+      log.push('재 보기라 ad_spend 에 보내지 않았습니다 — 적는다면 ' + merged.length + '줄입니다');
+    } else {
+      /* 쪼개 보낸다 — 한 번에 너무 많으면 요청이 길어진다 */
+      for (let i = 0; i < merged.length; i += 100) {
+        const chunk = merged.slice(i, i + 100);
+        await sb('ad_spend?on_conflict=d,medium,campaign,adset,creative_code',
+          { method: 'POST', body: JSON.stringify(chunk) });
+        wrote += chunk.length;
+      }
+      log.push('ad_spend ' + wrote + '줄 upsert');
     }
-    log.push('ad_spend ' + wrote + '줄 upsert');
 
     if (unknown.length) {
       const uniq = [...new Set(unknown)];
@@ -269,7 +325,9 @@ exports.handler = async (event) => {
     log.push('소요 ' + Math.round((Date.now() - started) / 1000) + '초');
 
     return { statusCode: 200, body: JSON.stringify({
-      ok: true, since: since, until: until, wrote: wrote,
+      ok: true, dry: dry, since: since, until: until,
+      wrote: wrote, would_write: merged.length,
+      codes: [...new Set(merged.map(r => r.creative_code || '(빈 칸)'))].sort(),
       unknown: [...new Set(unknown)], log: log }) };
 
   } catch (e) {

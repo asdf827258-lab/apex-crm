@@ -15,10 +15,16 @@
          틀립니다. 네 자리가 둘 걸려 애매할 때도 빈 칸이어야 합니다.
      [4] upsert 열쇠가 <b>적어 둔 unique 와 글자까지 같나</b> (5번)
          어긋나면 같은 날 같은 소재가 두 줄로 쌓입니다(5-1번).
-     [5] 예약은 <b>-cron 껍데기</b>에 걸려 있고 본체에는 안 걸렸나
+     [5] 열쇠 없이 주소로 부르면 <b>한 줄도 안 쓰나</b>(재 보기)
+         예전에는 CRON_SECRET 이 없으면 검사를 건너뛰어, 토큰을 넣는 순간
+         주소를 아는 누구나 DB 를 건드릴 수 있었습니다. 뒤집은 자리입니다.
+     [6] META_AD_ACCOUNT_ID 가 없을 때 <b>계정을 지어 고르지 않나</b>
+         토큰이 보는 계정이 하나면 그것, 여럿·없음이면 한 줄도 안 씁니다.
+         엉뚱한 계정 지출을 사장님 화면에 적는 것이 제일 나쁩니다(1번).
+     [7] 예약은 <b>-cron 껍데기</b>에 걸려 있고 본체에는 안 걸렸나
          Netlify 는 예약 등록한 함수를 HTTP 로 못 부르게 막습니다(403).
          이 저장소가 ai-daily·push 에서 두 번 겪은 자리입니다.
-     [6] 껍데기가 <b>일을 또 안 적나</b> (5번)
+     [8] 껍데기가 <b>일을 또 안 적나</b> (5번)
 
    ⚠ 실제 메타·Supabase 로는 한 번도 안 나갑니다. fetch 를 갈아 끼우고,
      나가려 한 주소를 모아 둡니다 — 진짜 서버를 찌르는 점검은 두지 않습니다. */
@@ -53,6 +59,7 @@ function stub(cfg) {
     });
     if (u.indexOf('graph.facebook.com') >= 0) {
       if (u.indexOf('/insights') >= 0) return J({ data: cfg.insights || [] });
+      if (u.indexOf('me/adaccounts') >= 0) return J({ data: cfg.adaccounts || [] });
       return J(cfg.account || { currency: 'USD', timezone_name: 'Asia/Seoul', name: '시험계정' });
     }
     if (u.indexOf('/rest/v1/ad_creatives') >= 0) return J((cfg.codes || []).map(c => ({ code: c })));
@@ -154,15 +161,80 @@ const call = async (h) => JSON.parse((await h(EV)).body);
       '열쇠가 같다 — 보냄 [' + sent.join(',') + '] · 적힘 [' + want.join(',') + ']');
   }
 
-  /* ── [5][6] 예약은 껍데기에, 일은 본체에 ────────────────────────── */
-  console.log('\n[5] 예약은 -cron 껍데기에 걸려 있나 (Netlify 403 함정)');
+  /* ── [5] 열쇠 없이 부르면 재 보기 — 한 줄도 안 쓴다 ─────────────── */
+  console.log('\n[5] 열쇠 없이 주소로 부르면 한 줄도 안 쓰나 (재 보기)');
+  {
+    const cfg = {
+      codes: ['1525'],
+      insights: [{ date_start: '2026-10-09', campaign_name: 'C', adset_name: 'A', ad_name: '1525', impressions: '9', clicks: '1', reach: '9', spend: '7.5' }]
+    };
+    /* 열쇠가 아예 안 걸린 사이트에서 — 사람이 그냥 주소로 부른다 */
+    let hh = load({ SUPABASE_SERVICE_ROLE_KEY: 'x', META_ADS_TOKEN: 't', META_AD_ACCOUNT_ID: '1' });
+    let seen = stub(cfg);
+    let r = JSON.parse((await hh({ body: '', headers: {}, queryStringParameters: null })).body);
+    ok(r.dry === true, '재 보기로 돌았다고 밝힌다 (dry=true)');
+    ok(seen.posted.length === 0, 'ad_spend 에 한 줄도 안 보낸다 (보낸 묶음 ' + seen.posted.length + '개)');
+    ok(r.wrote === 0 && r.would_write === 1, '적는다면 몇 줄인지는 알려 준다 (wrote 0 · would_write ' + r.would_write + ')');
+
+    /* 열쇠를 틀리게 보내면 — 실수는 알려 줘야 한다 */
+    hh = load({ SUPABASE_SERVICE_ROLE_KEY: 'x', META_ADS_TOKEN: 't', META_AD_ACCOUNT_ID: '1', CRON_SECRET: 'bbb' });
+    seen = stub(cfg);
+    const bad = await hh({ body: '', headers: { 'x-cron-secret': 'aaa' }, queryStringParameters: null });
+    ok(bad.statusCode === 401, '열쇠를 틀리면 401 로 알려 준다 (지금 ' + bad.statusCode + ')');
+    ok(seen.posted.length === 0, '그때도 한 줄도 안 보낸다');
+
+    /* 열쇠가 맞으면 실제로 적는다 — 막기만 하면 쓸모가 없다 */
+    hh = load({ SUPABASE_SERVICE_ROLE_KEY: 'x', META_ADS_TOKEN: 't', META_AD_ACCOUNT_ID: '1', CRON_SECRET: 'bbb' });
+    seen = stub(cfg);
+    r = JSON.parse((await hh({ body: '', headers: { 'x-cron-secret': 'bbb' }, queryStringParameters: null })).body);
+    ok(r.dry === false && seen.posted.length === 1 && r.wrote === 1,
+      '열쇠가 맞으면 실제로 적는다 (dry=' + r.dry + ' · 보낸 묶음 ' + seen.posted.length + ' · ' + r.wrote + '줄)');
+
+    /* 예약 실행은 열쇠 없이도 적는다 — 그래야 매일 아침이 돈다 */
+    hh = load({ SUPABASE_SERVICE_ROLE_KEY: 'x', META_ADS_TOKEN: 't', META_AD_ACCOUNT_ID: '1', CRON_SECRET: 'bbb' });
+    seen = stub(cfg);
+    r = JSON.parse((await hh(EV)).body);
+    ok(r.dry === false && r.wrote === 1, '예약 실행은 열쇠 없이도 적는다 (매일 아침이 도는 길)');
+  }
+
+  /* ── [6] 계정을 지어 고르지 않는다 ──────────────────────────────── */
+  console.log('\n[6] META_AD_ACCOUNT_ID 가 없을 때 계정을 지어 고르지 않나 (1번)');
+  {
+    const ins = [{ date_start: '2026-10-09', campaign_name: 'C', adset_name: 'A', ad_name: '1525', impressions: '1', clicks: '1', reach: '1', spend: '1' }];
+    /* 하나뿐이면 그것으로 — 사장님이 안 넣어도 돈다 */
+    let hh = load({ SUPABASE_SERVICE_ROLE_KEY: 'x', META_ADS_TOKEN: 't' });
+    let seen = stub({ codes: ['1525'], insights: ins, adaccounts: [{ id: 'act_111', name: '하나' }] });
+    let r = JSON.parse((await hh(EV)).body);
+    ok(r.ok === true && r.wrote === 1, '계정이 하나뿐이면 그것으로 돈다 (안 넣어도 됩니다)');
+    ok(seen.urls.some(u => u.indexOf('act_111/insights') >= 0), '그 계정에 물어본다 — act_111');
+
+    /* 둘이면 고르지 않는다 */
+    hh = load({ SUPABASE_SERVICE_ROLE_KEY: 'x', META_ADS_TOKEN: 't' });
+    seen = stub({ codes: ['1525'], insights: ins, adaccounts: [{ id: 'act_111', name: '하나' }, { id: 'act_222', name: '둘' }] });
+    r = JSON.parse((await hh(EV)).body);
+    ok(r.ok === false, '계정이 둘이면 됐다고 하지 않는다');
+    ok(seen.posted.length === 0, '한 줄도 안 쓴다 (보낸 묶음 ' + seen.posted.length + '개)');
+    ok((r.accounts || []).length === 2, '어느 것들인지 목록으로 알려 준다 — 사장님이 고르시게');
+    ok(!seen.urls.some(u => /act_(111|222)\/insights/.test(u)), '짐작한 계정에 물어보지도 않는다');
+
+    /* 하나도 없으면 까닭을 말한다 */
+    hh = load({ SUPABASE_SERVICE_ROLE_KEY: 'x', META_ADS_TOKEN: 't' });
+    seen = stub({ codes: ['1525'], insights: ins, adaccounts: [] });
+    r = JSON.parse((await hh(EV)).body);
+    ok(r.ok === false && /ads_read|권한|안 보입니다/.test(r.reason || ''),
+      '계정이 하나도 없으면 무엇을 확인할지 말한다');
+    ok(seen.posted.length === 0, '그때도 한 줄도 안 쓴다');
+  }
+
+  /* ── [7][8] 예약은 껍데기에, 일은 본체에 ────────────────────────── */
+  console.log('\n[7] 예약은 -cron 껍데기에 걸려 있나 (Netlify 403 함정)');
   const toml = fs.readFileSync(TOML, 'utf8');
   ok(/\[functions\."ad-spend-cron"\]\s*\n\s*schedule\s*=/.test(toml),
     'ad-spend-cron 에 schedule 이 걸려 있다');
   ok(!/\[functions\."ad-spend"\]\s*\n\s*schedule\s*=/.test(toml),
     'ad-spend(본체)에는 schedule 이 안 걸려 있다 — 걸면 사람이 못 부릅니다(403)');
   const cronSrc = fs.readFileSync(CRON, 'utf8');
-  console.log('\n[6] 껍데기가 일을 또 안 적나 (5번)');
+  console.log('\n[8] 껍데기가 일을 또 안 적나 (5번)');
   ok(/require\(['"]\.\/ad-spend\.js['"]\)\.handler/.test(cronSrc),
     '껍데기는 본체의 handler 를 그대로 가리킨다');
   const codeLines = cronSrc.split('\n')
