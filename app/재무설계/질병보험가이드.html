@@ -246,6 +246,18 @@
   .obj .oq{font-size:12.8px;font-weight:800;color:var(--ink2);background:#FAFBFC;padding:9px 13px;border-bottom:1px solid var(--line2);}
   .obj .oq:before{content:'“';}.obj .oq:after{content:'”';}
   .obj .oa{font-size:12.8px;color:var(--ink3);padding:10px 13px;}
+  /* 🛡 거절이 나오면 */
+  .rj-mind{font-size:12.6px;color:#374151;background:#F0F6FF;border-left:3px solid #2B5FD9;border-radius:0 9px 9px 0;padding:10px 13px;margin-bottom:12px;line-height:1.75;}
+  .rj-mind .rj-src{margin-top:6px;font-size:11.8px;color:#6B7280;}
+  .rj-mind a{color:#2B5FD9;font-weight:700;}
+  .rj-hd{font-size:12.5px;font-weight:800;color:#0D1117;margin:14px 0 8px;}
+  .obj .rj .oa{display:grid;gap:6px;}
+  .rj-say{color:var(--ink2);}
+  .rj-next{font-size:12.3px;color:#374151;}
+  .rj-avoid{font-size:12.1px;color:#B91C1C;}
+  .rj-stop{font-size:12.1px;color:#6B7280;}
+  .rj-dz{margin:12px 0;}
+  .rj-dz .pay{margin-bottom:6px;}
 
   /* 근거 */
   .src{list-style:none;}
@@ -792,6 +804,7 @@
   <button class="btn" onclick="costOpen()">💰 얼마 듭니까</button>
   <button class="btn" onclick="kcdOpen()">🔍 코드로 찾기</button>
   <button class="btn" onclick="navAll()">📜 약관 어디를 보나</button>
+  <button class="btn" onclick="rejAll()">🛡 거절 대응</button>
   <button class="btn" onclick="printAll()">📚 전부 펼쳐 인쇄</button>
   <button class="btn" onclick="window.print()">🖨 인쇄</button>
 </div></div>
@@ -970,6 +983,67 @@ function detailHtml(d){
     detailBody(d) + discHtml();
 }
 
+/* ══ 🛡 거절이 나오면 ══════════════════════════════════════════
+   ① 마음가짐 셋(거절 근육 훈련 1편 요지) ② <b>이 병에서</b> 나오는 말(d.talk.obj — 원래 있던 글)
+   ③ <b>어느 병에서나</b> 나오는 말(D.rej.all — {병} 자리에 이 병 이름).
+   글은 자료 파일 한 곳에만 있습니다 (5번). 질병 화면 · 전부 인쇄 · 모아 보기가 <b>같은 함수</b>를 씁니다. */
+function rejFill(t, d){ return String(t || '').split('{병}').join(d ? d.name : '이 병'); }
+function rejCommonHtml(d){
+  var R = D.rej || {};
+  return (R.all || []).map(function(o){
+    return '<div class="o rj"><div class="oq">' + esc(o.q) + '</div><div class="oa">' +
+      '<div class="rj-say">' + rich(rejFill(o.say, d)) + '</div>' +
+      (o.next ? '<div class="rj-next"><b>다음 한마디 · </b>' + rich(rejFill(o.next, d)) + '</div>' : '') +
+      '<div class="rj-avoid"><b>하지 말 말 · </b>' + rich(o.avoid) + '</div>' +
+      '<div class="rj-stop"><b>여기서 멈춥니다 · </b>' + rich(o.stop) + '</div>' +
+      '</div></div>';
+  }).join('');
+}
+function rejMindHtml(){
+  var R = D.rej || {};
+  if (!(R.mind || []).length) return '';
+  return '<div class="rj-mind">' + R.mind.map(function(t){ return '<div>· ' + rich(t) + '</div>'; }).join('') +
+    '<div class="rj-src noprint">마음가짐은 「🥊 거절 근육 훈련」 1편 강의의 요지입니다 — ' +
+    '<a href="../reject-gym.html?t=drill" target="_blank" rel="noopener">거절 연습하러 가기 ↗</a></div></div>';
+}
+function rejHtml(d){
+  var own = (d.talk && d.talk.obj) || [];
+  var h = '<div class="sec"><h3><em>🛡</em>거절이 나오면</h3>' + rejMindHtml();
+  h += '<div class="rj-hd">' + esc(d.name) + '을(를) 이야기할 때 자주 나오는 말</div>';
+  h += own.length ? '<div class="obj">' + own.map(function(o){
+      return '<div class="o"><div class="oq">' + esc(o[0]) + '</div><div class="oa">' + rich(o[1]) + '</div></div>';
+    }).join('') + '</div>'
+    : '<div class="none">이 병에만 나오는 말은 아직 적어 두지 않았습니다 — 지어내지 않습니다. 아래 공통 대답을 쓰십시오.</div>';
+  h += '<div class="rj-hd">어느 병을 이야기해도 나오는 말</div><div class="obj">' + rejCommonHtml(d) + '</div>';
+  return h + '</div>';
+}
+/* 모아 보기 — 질병 40개의 「이 병에서 나오는 말」 을 한 화면에. 위 검색칸 글자로 거른다 */
+function rejAll(){
+  var q = (document.getElementById('q').value || '').replace(/^\s+|\s+$/g, '');
+  var h = '<div class="backrow noprint">' +
+    '<button class="btn" onclick="close_()">← 질병 목록</button>' +
+    '<button class="btn" onclick="window.print()">🖨 인쇄</button></div>';
+  h += '<div class="sec"><h3><em>🛡</em>거절 대응 — 한 화면에</h3>' + rejMindHtml();
+  h += '<div class="rj-hd">어느 병을 이야기해도 나오는 말</div><div class="obj">' + rejCommonHtml(null) + '</div>';
+  var n = 0, body = '';
+  D.list.forEach(function(d){
+    var own = ((d.talk && d.talk.obj) || []).filter(function(o){
+      return !q || (d.name + ' ' + o[0] + ' ' + o[1]).indexOf(q) >= 0;
+    });
+    if (!own.length) return;
+    n += own.length;
+    body += '<div class="rj-dz"><button class="pay" onclick="open_(\'' + esc(d.id) + '\')">' + d.ic + ' ' + esc(d.name) + ' ↗</button>' +
+      '<div class="obj">' + own.map(function(o){
+        return '<div class="o"><div class="oq">' + esc(o[0]) + '</div><div class="oa">' + rich(o[1]) + '</div></div>';
+      }).join('') + '</div></div>';
+  });
+  h += '<div class="rj-hd">병마다 나오는 말 · ' + n + '가지' + (q ? ' (「' + esc(q) + '」 로 거름)' : '') + '</div>';
+  h += body || '<div class="none">찾는 말이 없습니다. 다른 낱말로 해 보세요 — 예: 실손, 국가, 젊어요.</div>';
+  h += '</div>' + discHtml();
+  showDetail(h);
+  try { location.hash = 'rej'; } catch (e) {}
+}
+
 /* 한 질병의 몸통 — 화면에서 여는 것과 전부 인쇄가 <b>같은 글</b>을 쓴다 */
 function detailBody(d){
   var h = '';
@@ -1062,10 +1136,11 @@ function detailBody(d){
     '<div class="spin">' + (d.talk.spin || []).map(function(s){
       return '<div class="row"><div class="lb">' + esc(s[0]) + '</div><div class="tx">' + rich(s[1]) + '</div></div>';
     }).join('') + '</div>' +
-    (d.talk.bi ? '<div class="bi">' + rich(d.talk.bi) + '</div>' : '') +
-    '<div class="obj">' + (d.talk.obj || []).map(function(o){
-      return '<div class="o"><div class="oq">' + esc(o[0]) + '</div><div class="oa">' + rich(o[1]) + '</div></div>';
-    }).join('') + '</div></div>';
+    (d.talk.bi ? '<div class="bi">' + rich(d.talk.bi) + '</div>' : '') + '</div>';
+
+  /* 🛡 거절이 나오면 — 반론은 「어떻게 말합니까」 끝에 한두 줄로 묻혀 있었습니다.
+     사장님 말씀(2026-10-11)으로 <b>따로 서는 칸</b>으로 옮겼습니다. 글은 옮기기만 했습니다. */
+  h += rejHtml(d);
 
   /* ⑦ 근거 */
   h += '<div class="sec"><h3><em>' + sn() + '</em>근거</h3>';
@@ -2576,6 +2651,7 @@ var GOTO = {
   cost:  function(){ costOpen(); },
   kcd:   function(){ kcdOpen(''); },
   nav:   function(){ navAll(); },
+  rej:   function(){ rejAll(); },
   cov:   function(){ covAll(); },
   terms: function(){ termsAll(); }
 };
