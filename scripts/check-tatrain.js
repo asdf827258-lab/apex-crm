@@ -14,7 +14,15 @@
      ⑥ 가까워지는 질문은 <b>바탕 글에 없다고</b> 밝힌다 (1번)
      ⑦ 거절 멘트를 옮겨 적지 않는다 — apex-stage.js 표의 글이 여기 없다 (5번)
      ⑧ 서버를 부르지 않고 localStorage 는 try 로 감쌌다 (7번) · tnum 을 안 켠다 (4-1번)
-     ⑨ 전화로 약속하면 안 되는 말(할인율 약속 · 소급 · 대상 확정)을 점검이 X 로 가르친다 */
+     ⑨ 전화로 약속하면 안 되는 말(할인율 약속 · 소급 · 대상 확정)을 점검이 X 로 가르친다
+     ⑩ 🛡 스크립트 옆 바로 응대 (같은 날 사장님 말씀 「상담 안 받으면 손해이고,
+        왜 다른지가 중요」)
+        · 여섯 단계 모두에 「이 단계에서 나오는 말」 단추가 서고, 누르면 그 자리에서 뜬다
+        · 거절마다 <b>왜 다른가</b> 가 있다 · <b>손해</b> 는 늘 조건부(「대상이…」)이고
+          「할인됩니다·대상이십니다·무조건」 · 퍼센트가 없다 (2번·1번)
+        · 받는 말이 표에 있는 거절은 <b>표의 글 그대로</b>(objFill) — 제목이 표에 없으면 빨간불 (5번)
+        · 표를 못 읽으면 받는 말을 지어내지 않고 못 읽었다고 적는다 (1번)
+        · 폰에서는 아래서 올라오는 판으로 뜨고 답이 고르는 단추보다 먼저 보인다 */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9141;
@@ -144,6 +152,35 @@ const srv = http.createServer((q, s) => {
     is(/맞습니다/.test(await p.textContent('#ttQuiz .tt-log:nth-child(1)')), 'X 를 누르면 바로 까닭이 나온다');
     await p.reload({ waitUntil: 'load' });
     is(await p.evaluate(() => TT.quiz[0] === false), '점검 답이 이 기기에 남는다');
+
+    console.log('\n[11] 🛡 스크립트 옆 바로 응대');
+    await p.click('#ttTabs button[data-t="script"]');
+    const OB = await p.evaluate(() => TT_OBJ);
+    for (let st = 1; st <= 6; st++)
+      is(await p.$$eval('#ttStep' + st + ' .tt-ob', a => a.length) > 0, st + '단계에 「이 단계에서 나오는 말」 단추가 선다');
+    is(OB.every(o => o.diff && o.diff.length > 10), '거절마다 「왜 이 전화는 다른가」 가 있다 (' + OB.length + '개)');
+    const losses = OB.filter(o => o.loss);
+    is(losses.length >= 8 && losses.every(o => /대상이|대상일/.test(o.loss)), '「손해」 줄은 늘 조건부다 — 대상이시면 (' + losses.length + '줄)');
+    const BAN = /할인됩니다|대상입니다|대상이십니다|무조건 할인|\d+(\.\d+)?\s*%/;
+    const banned = OB.filter(o => BAN.test([o.first, o.diff, o.loss, o.ask, o.bye].join(' ')));
+    is(banned.length === 0, '응대 글에 단정(할인됩니다·대상이십니다)과 퍼센트가 없다' + (banned.length ? ' ← ' + banned.map(o => o.k).join(',') : ''));
+    const refs = OB.filter(o => o.ref).map(o => o.ref);
+    const known = await p.evaluate(() => APEX_STAGE.objList().map(o => o.title));
+    is(refs.every(r => known.indexOf(r) >= 0), '받는 말을 빌리는 제목이 다 거절처리 표에 있다 (' + refs.length + '개)');
+    const same = await p.evaluate(() => TT_OBJ.filter(o => o.ref).every(o => {
+      const v = ttObjView(o), st = APEX_STAGE.objList().filter(x => x.title === o.ref)[0];
+      return v.first === APEX_STAGE.objFill(st.text, '○○○') && v.stop === st.stop; }));
+    is(same, '빌린 받는 말·멈출 자리가 표의 글과 한 글자도 안 다르다');
+    await p.click('#ttStep1 .tt-ob[data-ob="busy"]');
+    const body = await p.textContent('#ttObjBody');
+    is(/먼저 받는다/.test(body) && /왜 이 전화는 다른가/.test(body) && /안 받으시면 손해/.test(body), '누르면 받는 말 · 왜 다른가 · 손해가 한 자리에 뜬다');
+    is(await p.evaluate(() => document.getElementById('ttObjPane').classList.contains('open')), '폰에서는 아래서 올라오는 판이 열린다');
+    is(await p.$eval('#ttObjList', e => getComputedStyle(e).display === 'none'), '답이 떠 있는 동안은 고르는 단추를 접어 답이 먼저 보인다');
+    const fss = await p.evaluate(() => ttObjView(ttObjOf('fss')));
+    is(/^아닙니다/.test(fss.first) && /할인은 가입하신 보험사/.test(fss.diff), '「금감원에서 전화했냐」 에는 아니라고, 할인은 보험사라고 답한다');
+    await p.evaluate(() => { window.__S = window.APEX_STAGE; window.APEX_STAGE = undefined; ttObjShow('busy'); });
+    is(/거절처리 표를 못 읽었습니다/.test(await p.textContent('#ttObjBody')), '표를 못 읽으면 받는 말을 지어내지 않고 못 읽었다고 적는다');
+    await p.evaluate(() => { window.APEX_STAGE = window.__S; });
 
     console.log('\n[10] 본체에서 열기');
     /* 본체 여는 법은 smoke.js · check-rejgym 과 같은 판 (로그인 막 걷기) */

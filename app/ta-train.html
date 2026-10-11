@@ -29,8 +29,10 @@
        대부분 해당 없다」 까지만 말하고 확정은 언제나 보험사입니다 (카드 ⑥ · 2번).
      ★ 원문 5단계의 「신입분들은 주민번호 수집하지 말고 현장에 가서 받을 것」 을
        이 화면의 규칙으로 세웠습니다. 질문지에 <b>주민번호 칸 · 고객 이름 칸이 없습니다</b> (3번).
-     ★ 거절에 대한 말은 여기 새로 적지 않습니다 — TA 스크립트·거절 근육 훈련이 읽는
-       apex-stage.js 한 표가 있습니다. 거기로 보냅니다 (5번).
+     ★ 🛡 <b>스크립트 옆 바로 응대</b> (같은 날 사장님 말씀 「상담 안 받으면 손해이고,
+       왜 다른지가 중요」) — 거절 하나를 받는 말 · <b>왜 다른가</b> · <b>손해</b> · 이어서
+       묻는 말로 세웁니다. 받는 말은 TA 스크립트·거절 근육 훈련이 읽는 <b>apex-stage.js
+       한 표</b>에서 그대로 꺼내고, 여기는 <b>이 전화만의 두 줄</b>만 보탭니다 (5번).
      ★ 서버를 부르지 않습니다. 점검 답만 이 기기에 남깁니다 (7번).
      점검 : scripts/check-tatrain.js                                         -->
 <style>
@@ -113,7 +115,48 @@ button,input,select,textarea{font:inherit;color:inherit}
 .tt-ox .tt-btn{flex:1}
 .tt-fb{margin-top:6px;font-size:14px;font-weight:700}
 .tt-hide{display:none}
-@media print{.tt-tabs,.tt-row,.tt-ox{display:none}.tt-hide{display:block}}
+/* ── 🛡 스크립트 옆 바로 응대 — 넓으면 오른쪽에 붙어 따라오고, 좁으면 아래서 올라온다 ── */
+.tt-core ol{margin:4px 0 0;padding-left:20px}
+.tt-core li{font-size:14.5px;margin:3px 0}
+.tt-core h3{margin:6px 0 2px}
+.tt-duo{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;align-items:start}
+.tt-objp{position:sticky;top:8px;max-height:calc(100vh - 16px);overflow:auto;background:var(--t-card);
+  border:2px solid var(--t-point);border-radius:var(--t-r);padding:12px}
+.tt-objp-hd{display:flex;align-items:center;justify-content:space-between;font-size:16px;margin-bottom:6px}
+.tt-objp-x{display:none;min-width:44px;min-height:44px;border:0;background:none;font-size:18px;cursor:pointer}
+.tt-objp-list{display:flex;flex-wrap:wrap;gap:5px}
+.tt-ob{min-height:36px;padding:0 10px;border:1px solid var(--t-line);border-radius:999px;background:var(--t-card);
+  font-weight:700;font-size:13px;cursor:pointer;text-align:left}
+.tt-ob.on{background:var(--t-point);border-color:var(--t-point);color:var(--t-card)}
+.tt-objp-body:empty{display:none}
+.tt-objp-body{margin-bottom:10px;border-bottom:1px solid var(--t-line);padding-bottom:10px}
+.tt-objp-hint{font-size:12.5px;font-weight:800;color:var(--t-sub);margin-bottom:4px}
+.tt-objp-more{display:none;width:100%;min-height:44px;border:1px solid var(--t-line);border-radius:var(--t-r-btn);
+  background:var(--t-bg);font-weight:800;cursor:pointer}
+.tt-ob-t{font-size:17px;font-weight:900;margin-bottom:4px}
+.tt-ob-k{display:block;font-size:12px;font-weight:900;margin:8px 0 2px;color:var(--t-sub)}
+.tt-ob-first{background:var(--t-bg);border-radius:var(--t-r-sm);padding:8px 10px;font-size:14px;white-space:pre-wrap}
+.tt-ob-diff{background:var(--t-point-l);border-left:4px solid var(--t-point);border-radius:0 var(--t-r-sm) var(--t-r-sm) 0;padding:8px 10px;font-size:15px;font-weight:700}
+.tt-ob-loss{background:var(--t-warn-l);border-left:4px solid var(--t-warn);border-radius:0 var(--t-r-sm) var(--t-r-sm) 0;padding:8px 10px;font-size:15px;font-weight:700}
+.tt-ob-ask{background:var(--t-pos-l);border-radius:var(--t-r-sm);padding:8px 10px;font-size:14.5px;white-space:pre-wrap}
+.tt-ob-avoid{margin-top:8px;font-size:13.5px;background:var(--t-neg-l);border-radius:var(--t-r-sm);padding:6px 10px}
+.tt-ob-stop{margin-top:6px;font-size:13.5px;background:var(--t-bg);border-radius:var(--t-r-sm);padding:6px 10px}
+.tt-ob-src{margin-top:6px;font-size:12px;color:var(--t-sub)}
+.tt-stepob{margin-top:10px;padding-top:8px;border-top:1px dashed var(--t-line)}
+.tt-stepob .tt-lb{margin-top:0}
+.tt-fab{display:none}
+@media (max-width:900px){
+  .tt-duo{grid-template-columns:1fr}
+  .tt-objp{position:fixed;left:0;right:0;bottom:0;top:auto;max-height:72vh;z-index:20;border-radius:var(--t-r) var(--t-r) 0 0;
+    border-width:2px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.18);transform:translateY(105%);transition:transform .2s}
+  .tt-objp.open{transform:none}
+  .tt-objp-x{display:block}
+  .tt-objp.has .tt-objp-list,.tt-objp.has .tt-objp-hint{display:none}
+  .tt-objp.has .tt-objp-more{display:block}
+  #tt-script:not(.tt-hide) .tt-fab{display:block;position:fixed;right:16px;bottom:16px;z-index:19;min-height:48px;padding:0 18px;
+    border:0;border-radius:999px;background:var(--t-point);color:var(--t-card);font-weight:900;font-size:15px;box-shadow:0 6px 16px rgba(0,0,0,.2)}
+}
+@media print{.tt-tabs,.tt-row,.tt-ox,.tt-fab,.tt-objp{display:none}.tt-hide{display:block}.tt-duo{display:block}}
 </style>
 </head>
 <body>
@@ -223,13 +266,25 @@ button,input,select,textarea{font:inherit;color:inherit}
       <p class="tt-sub">파란 칸은 <b>원문 그대로</b>입니다(A+에셋 미라클지점). 아래 「왜」·「조심」은 교육용으로 붙인 코칭입니다.
       ○○○ 자리는 DB 에 적힌 것으로 채웁니다. 질문 뒤에는 고객이 답할 때까지 <b>먼저 말하지 않습니다.</b></p>
     </div>
-    <div id="ttSteps"></div>
-    <div class="tt-card">
-      <h2>고객이 거절하면</h2>
-      <p>거절에 하는 말은 여기 새로 적지 않았습니다 — 같은 거절에 두 화면이 다른 말을 하면 안 되기 때문입니다.
-      앱의 <b>☎️ TA 스크립트</b>(디테일 거절처리)와 <b>🥊 거절 근육 훈련</b>(거절 연습)이 <b>같은 한 표</b>를 씁니다. 거기서 연습하세요.</p>
-      <p class="tt-sub">기본 순서 — 먼저 인정 → 목적 한 문장 → 선택 질문 → 두 번째 거절이면 존중하며 끝내기.</p>
+    <div class="tt-card tt-core">
+      <h2>🛡 거절이 나오면 — 이 전화의 무기 둘</h2>
+      <div class="tt-two">
+        <div><h3>왜 이 전화는 다른가</h3><ol id="ttCoreDiff"></ol></div>
+        <div><h3>안 받으시면 손해 <span class="tt-tag">늘 「대상이시면」</span></h3><ol id="ttCoreLoss"></ol></div>
+      </div>
+      <p class="tt-sub">순서 — 먼저 받고(인정) → <b>다른 점</b> 한 문장 → <b>손해</b> 한 문장 → 고르게 묻는다. 두 번째 거절이면 붙잡지 않고, <b>보험사에 물어볼 말 한 줄</b>은 드리고 마칩니다.</p>
     </div>
+    <div class="tt-duo">
+      <div id="ttSteps"></div>
+      <aside class="tt-objp" id="ttObjPane" aria-label="거절 바로 응대">
+        <div class="tt-objp-hd"><b>🛡 바로 응대</b><button class="tt-objp-x" id="ttObjClose" aria-label="닫기">✕</button></div>
+        <div class="tt-objp-body" id="ttObjBody"></div>
+        <button class="tt-objp-more" id="ttObjMore">↩ 다른 말 고르기</button>
+        <div class="tt-objp-hint">고객이 한 말을 고르세요</div>
+        <div class="tt-objp-list" id="ttObjList"></div>
+      </aside>
+    </div>
+    <button class="tt-fab" id="ttObjFab">🛡 거절 나왔다</button>
   </section>
 
   <!-- ── 📝 질문지 ─────────────────────────────────────────── -->
@@ -284,6 +339,7 @@ button,input,select,textarea{font:inherit;color:inherit}
   </section>
 </div>
 
+<script src="../apex-stage.js"></script>
 <script>
 /* ES5 로 씁니다 — 본체와 같은 손버릇. 점검 답만 이 기기에 남깁니다(try/catch). */
 var TT_KEY='apex_tatrain_v1';
@@ -379,18 +435,190 @@ var TT_STEPS=[
   warn:'명함 문자에 「그날 확인할 것」을 한 줄 붙이면(🤝 가까워지는 질문의 마지막 칸) 고객이 약속을 잊지 않습니다. 끊기 전에 질문지의 빈칸을 한 번 봅니다.'}
 ];
 function ttStepsDraw(){
-  var h='',f='',i,s;
+  var h='',f='',i,j,s,obs;
   for(i=0;i<TT_STEPS.length;i++){
-    s=TT_STEPS[i];
+    s=TT_STEPS[i]; obs=ttObjAt(i+1);
     f+='<span>'+(i+1)+' '+ttEsc(s.t)+'</span>';
     h+='<div class="tt-step" id="ttStep'+(i+1)+'"><h2><span class="tt-no">'+(i+1)+'</span>'+ttEsc(s.t)+'</h2>'+
       '<span class="tt-lb">원문 — 이대로 말합니다</span><div class="tt-orig">'+s.say+'</div>'+
       (s.rule?'<div class="tt-rule">📌 원문의 규칙 — '+ttEsc(s.rule)+'</div>':'')+
       (s.extra?'<div class="tt-orig" style="margin-top:8px;font-size:14.5px">'+ttEsc(s.extra)+'</div>':'')+
       '<span class="tt-lb">왜 이 말을 하나 (코칭)</span><p class="tt-why">'+s.why+'</p>'+
-      '<div class="tt-warn">⚠ 조심 — '+s.warn+'</div></div>';
+      '<div class="tt-warn">⚠ 조심 — '+s.warn+'</div>';
+    if(obs.length){
+      h+='<div class="tt-stepob"><span class="tt-lb">🛡 이 단계에서 나오는 말 — 누르면 바로 응대</span><div class="tt-objp-list">';
+      for(j=0;j<obs.length;j++)h+='<button class="tt-ob" data-ob="'+obs[j].k+'">「'+ttEsc(obs[j].t)+'」</button>';
+      h+='</div></div>';
+    }
+    h+='</div>';
   }
   $t('ttSteps').innerHTML=h; $t('ttFlow').innerHTML=f;
+}
+
+/* ══ 🛡 <b>바로 응대</b> — 스크립트 옆에서 그 자리에서 (2026-10-11 사장님 말씀
+   「스크립트 옆에 거절처리 바로 응대할 수 있도록 하는 게 중요해. 상담 안 받으면
+   손해이고, 왜 다른지가 중요하거든」).
+
+   ★ 한 거절은 네 칸으로 섭니다 — ① 받는 말 → ② <b>왜 이 전화는 다른가</b> →
+     ③ <b>안 받으시면 손해</b> → ④ 이어서 물을 말. 그리고 피할 말 · 멈출 자리.
+   ★ ① 받는 말이 이미 있는 거절(바빠요 · 보험 있어요 …)은 <b>apex-stage.js 한 표</b>
+     에서 그대로 꺼냅니다 — 여기 옮겨 적지 않습니다 (5번). 이 칸이 보태는 것은
+     <b>이 전화만의</b> ②③ 두 줄뿐입니다. 표를 못 읽으면 ①을 지어내지 않고 못
+     읽었다고 적습니다 (1번).
+   ★ 이 전화에서만 나오는 말(광고죠? · 금감원이에요? · 병원 다녔는데 …)은 표에
+     없어 여기에만 있습니다(ref:null).
+   ★ ③ 손해는 <b>늘 조건부</b>입니다 — 대상인지는 보험사가 정합니다(카드 ⑥ · 2번).
+     「할인됩니다」「대상이십니다」「무조건」, 퍼센트 숫자는 쓰지 않습니다.
+     숫자는 기사로 확인한 것(657만 건 · 116만 건)만 씁니다 (1번·9번).        */
+var TT_CORE_DIFF=[
+ '<b>새 보험 가입 권유가 아닙니다</b> — 지금 내고 계신 건강보험의 할인을 확인하는 전화입니다.',
+ '<b>보장은 그대로</b> 두고 보험료만 낮추는 제도(무사고 계약전환)입니다.',
+ '<b>확정은 보험사</b>가 합니다 — 고객이 보험사에 직접 물어봐도 된다고 말할 수 있는 전화입니다.',
+ '보험사 안내는 전후 비교 없는 문자 한 통이라 광고처럼 보였습니다 — 우리는 <b>전후를 종이로 나란히</b> 보여 드립니다.'
+];
+var TT_CORE_LOSS=[
+ '할인은 <b>신청한 날 이후 보험료부터</b> — 지난 달은 <b>소급되지 않습니다.</b>',
+ '약관에 <b>전환할 수 있는 기한</b>이 있어, 넘기면 기회가 사라질 수 있습니다(상품마다 다름).',
+ '대상 <b>657만 건</b> 중 할인받는 건 <b>116만 건</b> — 몰라서 그대로 내는 분이 훨씬 많습니다(금감원 발표 · 기사).'
+];
+/* k 열쇠 · t 고객의 말 · at 주로 나오는 단계 · ref 거절처리 표의 제목(있으면 ①·다시 반응·피할 말·멈출 자리는 표에서)
+   first/ask/avoid/stop 은 표에 없는 말일 때만 · bye = 마치더라도 남기는 한마디 */
+var TT_OBJ=[
+ {k:'ad',t:'광고 전화죠? 보험 들라는 거잖아요',at:[1],ref:null,
+  first:'네, 요즘 그런 전화 많으시죠. 그렇게 생각하실 수 있습니다.',
+  diff:'새 보험을 드시라는 전화가 아닙니다. 지금 내고 계신 건강보험에 붙어 있는 무사고 할인을 받으실 수 있는지 확인해 드리는 거예요. 보장은 그대로 두고 보험료만 낮추는 제도라 새로 가입하실 건 없습니다.',
+  loss:'대상이시면 할인은 신청한 날부터 붙고, 지난 보험료는 돌려받지 못하세요. 모르고 지나가시는 달만큼은 그대로 내시는 거예요.',
+  ask:'지금 건강보험은 손해보험사 거예요, 생명보험사 거예요?',
+  avoid:'「금감원에서 하는 거예요」 · 「무조건 할인돼요」 · 「안 하시면 손해 보세요」(대상인지 모르는데 단정하는 말)',
+  stop:'두 번째도 광고라 하시면 붙잡지 않습니다.',
+  bye:'「가입하신 보험사에 무사고 계약전환 되는지만 한 번 물어보세요.」'},
+ {k:'fss',t:'금감원에서 전화한 거예요?',at:[1],ref:null,
+  first:'아닙니다, 정확히 말씀드릴게요.',
+  diff:'저는 에이플러스에셋 ○○○입니다. 금감원은 10월 5일에 이 제도를 고객이 받기 쉽게 고치겠다고 발표한 곳이고, 할인은 가입하신 보험사가 해 줍니다. 저는 그 확인과 신청을 도와드리는 사람이에요.',
+  loss:'',
+  ask:'그래서 지금 내고 계신 건강보험부터 같이 확인해 보려고요 — 어느 보험사 거예요?',
+  avoid:'「금감원 안내입니다」 · 「정부에서 해 주는 할인이에요」 — 기관에서 전화한 것처럼 들리는 말',
+  stop:'소속을 듣고도 불안해하시면 진행하지 않습니다.',
+  bye:'「보험사 고객센터에 직접 확인해 보셔도 됩니다.」'},
+ {k:'auto',t:'보험사에서 알아서 해 주겠죠',at:[1,3],ref:null,
+  first:'그러면 제일 좋죠.',
+  diff:'그동안은 고객이 직접 신청하셔야 했어요. 그래서 금감원 발표로는 대상 계약 657만 건 가운데 할인받는 건 116만 건뿐이었습니다. 보험사 안내는 문자 한 통이라 광고인 줄 알고 지우신 분이 많았고요.',
+  loss:'보험사도 안내를 늘리고 있지만, 대상이시면 신청하시기 전 달은 소급이 안 돼요. 먼저 아시는 만큼 덜 내십니다.',
+  ask:'어느 보험사에 무엇을 물어보시면 되는지 정리해 드릴까요, 만나서 신청까지 같이 봐 드릴까요?',
+  avoid:'「보험사는 절대 안 알려 줘요」 — 보험사도 전화·우편으로 안내를 늘리고 있습니다',
+  stop:'직접 하시겠다면 그대로 존중합니다.',
+  bye:'「보험사에 \'무사고 계약전환 되나요\' 이 한마디만 물어보시면 됩니다.」'},
+ {k:'busy',t:'지금 바빠요',at:[1],ref:'지금 바빠요',
+  diff:'새 보험 이야기가 아니라, 지금 보험에 할인이 붙는지 확인해 드리는 전화예요.',
+  loss:'대상이시면 신청 전 달은 소급이 안 돼서, 시간만 정해 두셔도 그만큼 빨라집니다.'},
+ {k:'have',t:'보험 이미 있어요',at:[1],ref:'보험 이미 있어요',
+  diff:'그래서 연락드렸어요 — 새로 드시는 게 아니라, 이미 있는 그 건강보험에 할인이 붙는지 보는 거라서요.',
+  loss:'있는 보험이 대상이시면, 신청하시기 전까지는 할인 없이 그대로 내고 계신 거예요.'},
+ {k:'agent',t:'담당자 있어요',at:[1],ref:'담당자 있어요',
+  diff:'담당자분께 「무사고 계약전환 됐나요」 한 번 물어보셔도 됩니다. 이미 하셨으면 다행이고요.',
+  loss:'아직이시면, 대상일 때 그 사이 달은 소급이 안 돼요. 오늘 한 번 확인해 보시는 게 좋습니다.'},
+ {k:'noneed',t:'필요 없어요',at:[1],ref:'필요 없어요',
+  diff:'혹시 「새 보험이 필요 없다」는 말씀이시면 — 이건 새 보험이 아니라 지금 보험의 할인 확인이에요.',
+  loss:'',
+  bye:'「가입하신 보험사에 무사고 계약전환만 한 번 물어보세요.」'},
+ {k:'where',t:'어디서 전화했어요?',at:[1],ref:'어디서 전화했어요?',
+  diff:'새 보험 영업이 아니라, 상담사분과 통화하실 때 말씀하신 보험료 부분을 이어서 확인해 드리려는 거예요.',
+  loss:''},
+ {k:'scam',t:'사기 아닌가요?',at:[1,5],ref:'사기 아닌가요?',
+  diff:'그래서 오늘은 번호를 하나도 여쭙지 않습니다. 가입하신 보험사 고객센터에 「무사고 계약전환」이 되는지 물어보시면, 제 말이 맞는지 바로 아실 수 있어요.',
+  loss:'',
+  bye:'「보험사에 직접 물어보셔도 됩니다.」'},
+ {k:'gen5',t:'5세대 실비는 안 바꿀래요',at:[2],ref:null,
+  first:'네, 바꾸시라는 말씀 드리려는 게 아니에요.',
+  diff:'대상이신지, 바꾸면 보험료와 보장이 무엇이 달라지는지를 같이 보여 드리는 거예요. 보험료만 보지 않고 보장도 같이 봅니다. 판단은 고객님이 하세요.',
+  loss:'',
+  ask:'실비는 두고, 건강보험 무사고 할인 확인만 먼저 해 드려도 괜찮을까요?',
+  avoid:'「5세대로 바꾸면 무조건 싸져요」 · 「지금 실비는 곧 없어져요」 — 모르는 것을 단정하는 말',
+  stop:'실비 이야기는 접고 무사고 할인 확인으로만 갑니다. 그것도 원치 않으시면 마칩니다.'},
+ {k:'money',t:'돈 여유 없어요',at:[2],ref:'돈 여유 없어요',
+  diff:'돈이 드는 이야기가 아니에요. 지금 보장은 그대로 두고 보험료만 낮아지는지 보는 거예요.',
+  loss:'대상이시면, 확인을 미루시는 동안은 할인 없이 내시게 됩니다.'},
+ {k:'howmuch',t:'얼마 할인되는지 전화로 말해 주세요',at:[2,3],ref:'문자로 보내주세요',
+  diff:'할인율은 보험사가 계약마다 따로 정해서, 제가 전화로 숫자를 말씀드리면 틀릴 수 있어요. 기사에 나온 숫자도 한 사람의 예일 뿐이고요. 그날은 보험사가 확인한 숫자로 전후를 나란히 보여 드립니다.',
+  loss:'숫자만 듣고 넘기시면 보장이 그대로인지, 언제부터 붙는지를 못 보세요. 대상이시면 신청한 날부터라 그 확인이 먼저예요.'},
+ {k:'hosp',t:'병원 다녔는데 저는 해당 없겠네요',at:[3],ref:null,
+  first:'그럴 수도 있고, 아닐 수도 있어요.',
+  diff:'무사고로 보는 기준과 기간은 상품마다 다르고, 정하는 건 보험사예요. 그래서 전화로 「된다·안 된다」를 말씀드리지 않습니다.',
+  loss:'미리 안 된다고 접어 두시면, 대상이셨을 때 그만큼 그대로 내시게 됩니다. 확인만 해 보시고 아니면 그때 접으셔도 돼요.',
+  ask:'그날 증권만 꺼내 두시면, 보험사에 무엇을 물어보면 되는지 같이 봐 드릴게요.',
+  avoid:'「입원 얘기는 안 하셔도 돼요」 — 사실대로 안 알리면 전환이 무효가 되고 할인분을 돌려내야 할 수 있습니다',
+  stop:'확인도 원치 않으시면 마칩니다.',
+  bye:'「보험사에 사실대로 말씀하시고 물어보세요.」'},
+ {k:'later',t:'생각해 볼게요',at:[3,6],ref:'생각해 볼게요',
+  diff:'결정하시는 자리가 아니라, 해당되시는지 확인만 하는 자리예요.',
+  loss:'다만 대상이시면 할인은 신청한 날부터라, 미루시는 달만큼은 돌려받지 못하세요. 약관에 전환할 수 있는 기한도 있어서 넘기면 기회가 없어질 수 있고요.'},
+ {k:'visit',t:'방문이 부담돼요',at:[3,4],ref:'방문이 부담돼요',
+  diff:'보험사 안내가 할인 전후 비교 없이 문자로만 와서 다들 그냥 넘기셨어요. 그날은 전후를 종이로 나란히 보여 드리는 게 다예요.',
+  loss:''},
+ {k:'addr',t:'주소를 어떻게 알았어요?',at:[4],ref:'주소를 어떻게 알았어요?',
+  diff:'방문을 원치 않으시면, 보험사에 무엇을 물어보시면 되는지 전화로만 알려 드려도 됩니다.',
+  loss:''},
+ {k:'family',t:'가족과 상의할게요',at:[4,6],ref:'가족과 상의할게요',
+  diff:'가족분 건강보험도 같이 확인해 드릴 수 있어요. 그날 같이 보시면 한 번에 끝납니다.',
+  loss:''},
+ {k:'jumin',t:'주민번호가 불안해요',at:[5],ref:'주민번호가 불안해요',
+  diff:'번호는 오늘 전화로 여쭙지 않을게요. 만나 뵙고 회사 절차로만 확인합니다.',
+  loss:''}
+];
+/* 표(apex-stage.js)에서 제목으로 찾는다 — 못 찾으면 null (지어내지 않는다) */
+function ttStageObj(title){
+  try{
+    var L=window.APEX_STAGE&&APEX_STAGE.objList?APEX_STAGE.objList():[],i;
+    for(i=0;i<L.length;i++)if(L[i].title===title)return L[i];
+  }catch(e){}
+  return null;
+}
+function ttObjAt(step){ var r=[],i; for(i=0;i<TT_OBJ.length;i++)if(TT_OBJ[i].at.indexOf(step)>=0)r.push(TT_OBJ[i]); return r; }
+function ttObjOf(k){ var i; for(i=0;i<TT_OBJ.length;i++)if(TT_OBJ[i].k===k)return TT_OBJ[i]; return null; }
+/* 한 거절의 응대를 네 칸으로 — 화면과 점검이 같이 부른다 */
+function ttObjView(o){
+  if(!o)return null;
+  var st=o.ref?ttStageObj(o.ref):null,fill=function(s){ return st&&window.APEX_STAGE?APEX_STAGE.objFill(s,'○○○'):s; };
+  return {
+    t:o.t, ref:o.ref,
+    first:o.ref?(st?fill(st.text):''):o.first,
+    missing:!!(o.ref&&!st),
+    diff:o.diff, loss:o.loss||'',
+    ask:o.ref?(st?fill(st.follow):''):o.ask,
+    avoid:o.ref?(st?st.avoid:''):o.avoid,
+    stop:o.ref?(st?st.stop:''):o.stop,
+    bye:o.bye||''
+  };
+}
+var TT_OB_CUR='';
+function ttObjShow(k){
+  var o=ttObjOf(k),v=ttObjView(o),h='';
+  TT_OB_CUR=o?k:'';
+  var bs=document.querySelectorAll('.tt-ob'),i;
+  for(i=0;i<bs.length;i++){ if(bs[i].getAttribute('data-ob')===TT_OB_CUR)bs[i].classList.add('on'); else bs[i].classList.remove('on'); }
+  if(!v){ $t('ttObjBody').innerHTML=''; $t('ttObjPane').classList.remove('has'); return; }
+  h+='<div class="tt-ob-t">「'+ttEsc(v.t)+'」</div>';
+  h+='<span class="tt-ob-k">① 먼저 받는다'+(v.ref?' · TA 스크립트와 같은 글':'')+'</span>';
+  h+=v.missing?'<div class="tt-ob-first">⚠ 거절처리 표를 못 읽었습니다 — 지어 적지 않습니다. ☎️ TA 스크립트의 「'+ttEsc(v.ref)+'」를 보세요.</div>'
+              :'<div class="tt-ob-first">'+ttEsc(v.first)+'</div>';
+  h+='<span class="tt-ob-k">② 왜 이 전화는 다른가</span><div class="tt-ob-diff">'+ttEsc(v.diff)+'</div>';
+  if(v.loss)h+='<span class="tt-ob-k">③ 안 받으시면 손해 (늘 「대상이시면」)</span><div class="tt-ob-loss">'+ttEsc(v.loss)+'</div>';
+  if(v.ask)h+='<span class="tt-ob-k">'+(v.loss?'④':'③')+' 이어서 묻는다</span><div class="tt-ob-ask">'+ttEsc(v.ask)+'</div>';
+  if(v.avoid)h+='<div class="tt-ob-avoid"><b>✕ 피할 말</b> '+ttEsc(v.avoid)+'</div>';
+  if(v.stop||v.bye)h+='<div class="tt-ob-stop"><b>■ 여기서 멈춘다</b> '+ttEsc(v.stop)+(v.bye?' 마치더라도 이 한마디는 — '+ttEsc(v.bye):'')+'</div>';
+  $t('ttObjBody').innerHTML=h;
+  $t('ttObjPane').classList.add('has');
+  $t('ttObjPane').classList.add('open');
+  try{ $t('ttObjPane').scrollTop=0; }catch(e){}
+}
+function ttObjPaneDraw(){
+  var h='',i;
+  for(i=0;i<TT_OBJ.length;i++)h+='<button class="tt-ob" data-ob="'+TT_OBJ[i].k+'">'+ttEsc(TT_OBJ[i].t)+'</button>';
+  $t('ttObjList').innerHTML=h;
+  var d='',l='';
+  for(i=0;i<TT_CORE_DIFF.length;i++)d+='<li>'+TT_CORE_DIFF[i]+'</li>';
+  for(i=0;i<TT_CORE_LOSS.length;i++)l+='<li>'+TT_CORE_LOSS[i]+'</li>';
+  $t('ttCoreDiff').innerHTML=d; $t('ttCoreLoss').innerHTML=l;
 }
 
 /* ── 통화 질문지 — 스크립트 단계 순서. 고객 이름·주민번호·약 이름 칸은 두지 않는다 (3번) ── */
@@ -522,7 +750,12 @@ function ttTab(t){
 
 function ttInit(){
   TT=ttLoad();
-  ttCoDraw(); ttStepsDraw(); ttSheetDraw(); ttNearDraw(); ttQuiz();
+  ttCoDraw(); ttStepsDraw(); ttObjPaneDraw(); ttSheetDraw(); ttNearDraw(); ttQuiz();
+  /* 🛡 단계 안의 단추든 옆 칸의 단추든 같은 한 자리(ttObjShow)로 */
+  $t('tt-script').addEventListener('click',function(e){ var b=e.target.closest('.tt-ob'); if(b)ttObjShow(b.getAttribute('data-ob')); });
+  $t('ttObjFab').onclick=function(){ $t('ttObjPane').classList.add('open'); };
+  $t('ttObjClose').onclick=function(){ $t('ttObjPane').classList.remove('open'); };
+  $t('ttObjMore').onclick=function(){ ttObjShow(''); };
   $t('ttTabs').onclick=function(e){ var b=e.target.closest('button'); if(b&&b.getAttribute('data-t'))ttTab(b.getAttribute('data-t')); };
   $t('ttCo').onchange=ttCoRun; $t('ttYm').onchange=ttCoRun; $t('ttYm').oninput=ttCoRun;
   $t('ttSheet').onclick=function(e){ var b=e.target.closest('.tt-chip'); if(b)ttSheetPick(b.getAttribute('data-k'),b.getAttribute('data-v')); };
