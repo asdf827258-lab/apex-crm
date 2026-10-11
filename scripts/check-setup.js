@@ -25,14 +25,27 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   const b=await chromium.launch(); const page=await b.newPage();
   await page.goto('http://127.0.0.1:'+srv.address().port+'/app/index.html',{waitUntil:'domcontentloaded'});
   await page.waitForTimeout(2200);
-  /* ⚠ 2026-09-27 — 준비 SQL 이 <b>「🧭 그 밖의 것」 접이 안</b>으로
-     들어갔습니다(사장님 말씀 「2번으로 해줘 접어」). 접힌 채로 재면
-     배너 높이가 <b>0px</b> 이라 「한 줄인가 · 손가락이 닿나」 를 잴 수
-     없습니다 — 그래서 <b>먼저 펴고 잽니다.</b>
-     ★ 자는 <b>그대로</b>입니다. 묻는 것은 바뀌지 않았습니다 —
-       펴 놓고 보면 배너가 제 모습인가. (자를 옮기지 지우지 않습니다) */
-  const 펴기 = `try{ hmFoldSet('etc',true); }catch(e){}`;
-  await page.evaluate(펴기);
+  /* ⚠⚠ <b>접이를 펴지 않습니다 (판 X84).</b>
+     2026-09-27 부터 2026-10-10 까지 이 자는 재기 전에 <b>제 손으로 접이를
+     폈습니다</b> — `hmFoldSet('etc',true)`. 준비 SQL 이 「🧭 그 밖의 것」
+     접이 안으로 들어갔고(사장님 말씀 「2번으로 해줘 접어」), 접힌 채로는
+     높이가 0px 이라 「한 줄인가」 를 잴 수 없어서였습니다.
+
+     그런데 <b>그 한 줄이 이 자를 눈먼 자로 만들었습니다.</b> 접이는 기본이
+     접힌 채이므로(hmFoldOpen 은 켜 둔 적이 있을 때만 참), 처음 켠 분에게
+     준비 SQL 은 <b>보이지 않습니다.</b> 그런데 이 자는 <b>늘 초록</b>이었고,
+     2026-10-10 사장님께서 「<b>준비 SQL 안보인다</b>」 라고 하셔서 알았습니다.
+     ★ <b>사장님이 한 번도 가지지 않는 상태를 재면, 재는 값이 맞아도
+       거짓말입니다</b> (판 X80 에서 엉뚱한 자리를 바르게 재다 데인 자리와
+       같습니다 · 8번).
+     ★ 그래서 <b>아무것도 안 건드리고</b> 잽니다 — 접이를 펴지도, 담아 둔
+       접힘을 지우지도 않습니다. 갓 켠 브라우저 그대로입니다.
+     ★ 판 X84 에서 준비 SQL 을 <b>접이 밖</b>으로 꺼냈으므로, 이제 안 펴고도
+       보여야 맞습니다. 다시 접이 안으로 들어가면 여기가 울립니다.      */
+  const 접힘 = await page.evaluate(() => {
+    try { return hmFoldOpen('etc'); } catch (e) { return null; }
+  });
+  is(접힘 === false, '  🧭 접이는 <b>접힌 채</b>다 — 갓 켠 브라우저 그대로 잽니다 (지금 ' + 접힘 + ')');
   console.log('\n[1] 저장이 안 될 때 무엇을 하라고 하는가');
   const r=await page.evaluate(()=>({
     미설치: pfWhy('사업계획서를 저장하지 못했습니다',{code:'42P01',message:'relation "public.team_plans" does not exist'}),
@@ -170,7 +183,15 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
       text: bar ? bar.textContent.replace(/\s+/g, ' ').trim() : '',
       /* 오늘 챙길 것보다 <b>위</b>에 있어야 「맨 위」 다 */
       aboveCli: !!(bar && cli && (bar.compareDocumentPosition(cli) & Node.DOCUMENT_POSITION_FOLLOWING)),
-      btn: bar ? Array.from(bar.querySelectorAll('button')).map(x => x.textContent.trim()) : []
+      btn: bar ? Array.from(bar.querySelectorAll('button')).map(x => x.textContent.trim()) : [],
+      /* ★★ 재는 동안 접이가 <b>접힌 채</b>였나 — 펴 놓고 재면 거짓 초록 (판 X84) */
+      접힌채: (function () { try { return hmFoldOpen('etc'); } catch (e) { return null; } })(),
+      /* ★ 배너가 <b>접이 밖</b>인가 — 안이면 처음 켠 분은 못 봅니다 */
+      접이밖: (function () {
+        if (!bar) return null;
+        var box = document.getElementById('hmFold_etc');
+        return box ? !box.contains(bar) : true;   /* 접이가 아예 없으면 밖인 셈 */
+      })()
     };
     /* ② 다 돌린 대표 — 안 떠야 한다 */
     window.osCfgGet = function (k, d) { return k === 'schema_version' ? String(SETUP_VER) : realCfg(k, d); };
@@ -184,8 +205,11 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     OS.profile.role = 'owner'; window.osCfgGet = realCfg;
     return O;
   });
-  is(sb.shown, '  아직 안 돌리셨으면 홈에 <b>실제로 뜬다</b> — 앱이 띄우려 해도 자리가 없으면 안 뜬다');
+  is(sb.shown, '  ★★ 아직 안 돌리셨으면 홈에 <b>실제로 뜬다 — 접이를 펴지 않고도</b>'
+    + ' (자리가 없거나 접혀 있으면 안 뜹니다 · 판 X84)');
+  is(sb.접힌채 === false, '  ★★ 재는 동안 🧭 접이는 <b>줄곧 접힌 채</b>였다 — 펴 놓고 재면 거짓 초록입니다');
   is(sb.aboveCli, '  <b>오늘 챙길 것보다 위</b>에 있다 — 「홈 맨 위」 라고 말하는 곳이 여럿이다');
+  is(sb.접이밖 === true, '  ★ 배너가 <b>🧭 접이 밖</b>에 있다 — 접이 안이면 처음 켠 분은 못 봅니다 (6번)');
   is(sb.btn.some(t => /Supabase/.test(t)), '  <b>복사하고 Supabase 열기</b> 단추가 있다 — ' + sb.btn.join(' · '));
   is(sb.btn.some(t => /확인/.test(t)), '  <b>다 됐는지 확인</b> 단추가 있다 — 돌린 뒤 배너가 스스로 사라지는 길');
   is(!sb.afterDone, '  다 돌리신 뒤에는 <b>안 뜬다</b> — 끝난 일이 고객 관리를 가리면 안 된다');
