@@ -205,6 +205,19 @@
     .objection-head h2{margin:0;font-size:21px;font-weight:850}
     .objection-head p{margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.5}
     .objection-tabs{display:flex;gap:8px;flex-wrap:wrap}
+    /* 🔥 첫 화제 — 2026-10-11 「요즘 트렌드로 먼저 던져줘」 · 글은 ta-trend.js 한 곳 */
+    .trend{margin-bottom:16px;padding:20px 22px}
+    .trend-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+    .trend-head h2{margin:0;font-size:18px}.trend-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
+    .trend-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .trend-tab{border:1px solid var(--line);background:#fff;color:var(--ink-2);border-radius:999px;padding:8px 12px;font-weight:750;font-size:13px;min-height:40px;cursor:pointer}
+    .trend-tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+    .trend-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:720px){.trend-grid{grid-template-columns:1fr}}
+    .trend-src{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:10px}
+    .trend-src a{color:var(--blue);font-weight:700}
+    .trend-stale{display:none;margin-bottom:10px;padding:10px 12px;border-radius:12px;background:var(--orange-soft);color:#9A3412;font-size:13px;font-weight:700}
+    .trend-stale.show{display:block}
     .objection-tab{border:1px solid var(--line);background:#fff;color:var(--ink-2);border-radius:999px;padding:8px 11px;font-weight:750;font-size:13px}
     .objection-tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
     .objection-body{margin-top:15px;border:1px solid var(--line);border-radius:20px;padding:20px;background:#FCFCFD}
@@ -250,13 +263,13 @@
     }
     @media(max-width:760px){
       .topbar-inner{padding:12px 14px;align-items:flex-start;flex-direction:column}.top-actions{width:100%}.top-actions .btn{flex:1;padding:9px 8px;font-size:12px}
-      .layout{padding:12px;gap:12px}.controls,.hero,.coach-card,.script-card,.rule-card,.objections,.inputbar{padding:16px;border-radius:20px}
+      .layout{padding:12px;gap:12px}.controls,.hero,.coach-card,.script-card,.rule-card,.objections,.inputbar,.trend{padding:16px;border-radius:20px}
       .inputrow{grid-template-columns:1fr 1fr}.inputrow .field.span2,.inputrow .field.span3{grid-column:span 2}
       .hero h1{font-size:25px}.continuous-script{padding:18px;font-size:18px;line-height:1.9}.grid2,.grid3{grid-template-columns:1fr}.coach-grid,.rule-flow,.objection-grid{grid-template-columns:1fr}
       .focus-script{font-size:25px;padding:6vh 22px 35vh}.focus-toolbar{align-items:flex-start;flex-direction:column}.focus-actions{width:100%}.focus-actions .btn{flex:1}
     }
     @media print{
-      body{background:#fff}.topbar,.controls,.coach-card,.rule-card,.quickbar,.objections{display:none!important}.layout{display:block;padding:0}.panel{box-shadow:none;border:0}.hero{padding:7mm 10mm}.hero-chip{display:none}.script-card{padding:0 10mm 10mm}.continuous-script{border:0;padding:0;font-size:15pt;line-height:1.72;min-height:auto}.cue{display:none!important}
+      body{background:#fff}.topbar,.controls,.coach-card,.rule-card,.quickbar,.objections,.trend{display:none!important}.layout{display:block;padding:0}.panel{box-shadow:none;border:0}.hero{padding:7mm 10mm}.hero-chip{display:none}.script-card{padding:0 10mm 10mm}.continuous-script{border:0;padding:0;font-size:15pt;line-height:1.72;min-height:auto}.cue{display:none!important}
     }
   </style>
 </head>
@@ -315,6 +328,17 @@
         </div>
         <div class="privacy">민감정보는 저장하지 않습니다. 주민번호 뒷자리는 고객의 명확한 동의를 받은 뒤, 회사가 승인한 보안 본인확인 절차에서만 확인하세요. 메모·녹취·메신저에 별도로 남기지 마세요.</div>
       </div>
+    </section>
+
+    <!-- 🔥 첫 화제 — 고르면 인사 바로 다음에 그 한마디가 들어갑니다 -->
+    <section class="panel trend" id="trendPanel">
+      <div class="trend-head">
+        <div><h2>🔥 요즘 화제로 먼저 열기</h2><p>인사 다음에 고객이 관심 있을 이야기 한마디 → 자연스럽게 보장 확인으로 넘어갑니다. 고르면 오른쪽 멘트에 바로 들어갑니다.</p></div>
+        <button class="btn btn-soft" id="copyTrend" type="button">첫 마디 복사</button>
+      </div>
+      <div class="trend-stale" id="trendStale"></div>
+      <div class="trend-tabs" id="trendTabs"></div>
+      <div id="trendBody"></div>
     </section>
 
     <!-- 작업 영역: 왼쪽 거절처리 · 오른쪽 연속 멘트 -->
@@ -391,6 +415,7 @@
 </div>
 <div class="toast" id="toast">복사되었습니다.</div>
 
+<script src="ta-trend.js"></script>
 <script src="apex-stage.js"></script>
 <script>
   const DB_SOURCES = [
@@ -423,6 +448,13 @@
   const $ = id => document.getElementById(id);
   const fields = ['customer','agent','region','address','dong','slot1','slot2','birthYear','birthMonth','birthDay','front6','sourceText'];
   let selectedObjection = 0;
+  /* 🔥 첫 화제 — 표는 ta-trend.js 한 곳. 못 실었으면 칸을 비우고 지어내지 않습니다 (1번) */
+  const TREND = (window.TA_TREND && TA_TREND.list) ? TA_TREND : null;
+  let selectedTrend = '';
+  try { selectedTrend = localStorage.getItem('apex_ta_trend') || ''; } catch (e) {}
+  if (TREND && selectedTrend !== 'none' && !TREND.find(selectedTrend)) selectedTrend = TREND.list[0].key;
+  function trendNow(){ return (TREND && selectedTrend !== 'none') ? TREND.find(selectedTrend) : null; }
+  function trendLine(t){ return t ? `${t.open} ${t.bridge}` : ''; }
   let scriptFont = 21;
   let focusFont = 34;
   let scrollTimer = null;
@@ -463,16 +495,23 @@
         `네, 일정 등록과 정확한 자료 확인을 위해 본인확인만 도와드리겠습니다. 고객님 생년월일은 ${year}년 ${month}월 ${day}일이고, 주민등록번호 앞자리는 ${front6}으로 확인됩니다. 고객님 동의하에 회사가 승인한 보안 본인확인 절차에서 뒷번호 7자리를 불러주세요.`
       ];
     }
-    return {dbKey,customer,agent,region,source,address,dong,slot1,slot2,year,month,day,front6,paragraphs,plain:paragraphs.join('\n\n')};
+    const trend = dbKey==='ns' ? null : trendNow();
+    if (trend) paragraphs.splice(1, 0, trendLine(trend));
+    return {dbKey,customer,agent,region,source,address,dong,slot1,slot2,year,month,day,front6,trend,paragraphs,plain:paragraphs.join('\n\n')};
   }
 
   function buildCoachedPlain(p){
+    const out = buildCoachedLines(p);
+    if (p.trend) out.splice(1, 0, `[가볍게·공감] ${p.trend.open} [고객 답 듣기] ${p.trend.bridge}`);
+    return out.join('\n\n');
+  }
+  function buildCoachedLines(p){
     if(p.dbKey==='ns'){
       return [
         `[미소·밝게] ${p.customer} 고객님, 안녕하세요. [0.5초 쉼] NS홈쇼핑을 통해 화재보험 문의 남겨주셔서 연락드렸습니다. [신뢰감 있게] 저는 사은품 신청과 상담 안내 도와드릴 ${p.agent} 팀장입니다.`,
         `[핵심 단어 강조] 화재 보장은 물론이고, 아랫집 물 새는 누수 사고나 비싼 가전제품 수리비까지 보장되다 보니 요즘 고객님들 관심이 정말 많으신데요. [0.5초 쉼] 마침 알뜰한 플랜으로 방송되어서 합리적인 조건으로 설계해 드리겠습니다.`,
         `[천천히·개인정보 동의 확인] 기존 가입내역을 꼼꼼하게 확인하여 중복되는 부분 없이 진행해드릴 건데요. 현재 생년월일 ${p.front6}, 뒷번호 7자리 불러주세요.`
-      ].join('\n\n');
+      ];
     }
     return [
       `[미소·밝게] ${p.customer}고객님 안녕하세요! [0.5초 쉼] (${p.source}) 진행해드리고자 연락드렸습니다. 저는 ${p.region} 지역 담당자 ${p.agent}입니다.`,
@@ -481,7 +520,7 @@
       `[천천히] 확인된 주소는 ${p.address}로 되어 있는데, 방문 가능한 주소가 맞으실까요? [고객 답변 기다리기]`,
       `[양자택일·두 시간 강조] ${p.dong} 방문은 ${p.slot1}와 ${p.slot2} 가능합니다. 두 시간 중 언제가 더 편하세요? [고객 답변 기다리기]`,
       `[천천히·숫자 끊어 읽기] 네, 일정 등록과 정확한 자료 확인을 위해 본인확인만 도와드리겠습니다. 고객님 생년월일은 ${p.year}년 ${p.month}월 ${p.day}일이고, 주민등록번호 앞자리는 ${p.front6}으로 확인됩니다. 고객님 동의하에 회사가 승인한 보안 본인확인 절차에서 뒷번호 7자리를 불러주세요.`
-    ].join('\n\n');
+    ];
   }
 
   function renderScript(){
@@ -501,7 +540,9 @@
         `${cue('천천히','cue-slow')} 확인된 주소는 <span class="stress">${escapeHTML(p.address)}</span>로 되어 있는데, 방문 가능한 주소가 맞으실까요? ${cue('답변 기다리기','cue-listen')}`,
         `${cue('양자택일','cue-pause')} <span class="stress">${escapeHTML(p.dong)}</span> 방문은 <span class="choice">${escapeHTML(p.slot1)}</span>와 <span class="choice">${escapeHTML(p.slot2)}</span> 가능합니다. <span class="stress">두 시간 중 언제가 더 편하세요?</span> ${cue('답변 기다리기','cue-listen')}`,
         `${cue('숫자 끊어 읽기','cue-slow')} 네, 일정 등록과 정확한 자료 확인을 위해 본인확인만 도와드리겠습니다. 고객님 생년월일은 <span class="stress">${escapeHTML(p.year)}년 ${escapeHTML(p.month)}월 ${escapeHTML(p.day)}일</span>이고, 주민등록번호 앞자리는 <span class="stress">${escapeHTML(p.front6)}</span>으로 확인됩니다. 고객님 동의하에 회사가 승인한 보안 본인확인 절차에서 뒷번호 7자리를 불러주세요.`
-      ].join('\n\n');
+      ];
+      if (p.trend) html.splice(1, 0, `${cue('가볍게·공감','cue-smile')} <span class="warm">${escapeHTML(p.trend.open)}</span> ${cue('답 듣기','cue-listen')} ${escapeHTML(p.trend.bridge)}`);
+      html=html.join('\n\n');
     }
     $('scriptOutput').innerHTML=html;
     $('focusScript').innerHTML=html;
@@ -537,6 +578,36 @@
       .replaceAll('“유입 경로”',`“${p.source}”`);
   }
 
+  function renderTrend(){
+    if (!TREND) {
+      $('trendTabs').innerHTML='';
+      $('trendBody').innerHTML='<div class="detail-text">화제 자료(ta-trend.js)를 읽지 못했습니다. 화제를 지어 넣지 않습니다 — 기본 대본으로 진행하세요.</div>';
+      return;
+    }
+    const age=TREND.age();
+    $('trendStale').classList.toggle('show', age>TREND.stale);
+    $('trendStale').textContent = age>TREND.stale ? `⚠ 이 화제들은 ${TREND.asOf} 기준이라 ${age}일 지났습니다. 낡은 이야기로 열면 오히려 신뢰를 잃습니다 — 새 기사로 바꾸기 전까지는 「화제 없이」 를 권합니다.` : '';
+    $('trendTabs').innerHTML = TREND.list.map(t=>`<button type="button" class="trend-tab ${t.key===selectedTrend?'active':''}" data-key="${t.key}">${t.ic} ${escapeHTML(t.t)}</button>`).join('') +
+      `<button type="button" class="trend-tab ${selectedTrend==='none'?'active':''}" data-key="none">화제 없이</button>`;
+    const t=trendNow();
+    if (!t) {
+      $('trendBody').innerHTML='<div class="detail-text" style="font-size:14px;color:var(--muted)">화제 없이 바로 연락 목적으로 들어갑니다.</div>';
+    } else {
+      $('trendBody').innerHTML =
+        `<div class="trend-grid">
+          <div class="detail-box"><div class="detail-label"><span class="detail-dot"></span>첫 마디 · ${escapeHTML(t.st)}</div><div class="detail-text primary">${escapeHTML(t.open)}</div></div>
+          <div class="detail-box"><div class="detail-label"><span class="detail-dot"></span>보장 확인으로 잇는 말</div><div class="detail-text">${escapeHTML(t.bridge)}</div></div>
+        </div>
+        <div class="detail-box" style="margin-top:10px"><div class="detail-label"><span class="detail-dot"></span>피해야 할 표현</div><div class="detail-text" style="font-size:14px">${escapeHTML(t.avoid)}</div></div>
+        <div class="trend-src">출처 — ${t.src.map(x=>`${escapeHTML(x.o)} · ${escapeHTML(x.d)} · 「${escapeHTML(x.t)}」 <a href="${escapeHTML(x.u)}" target="_blank" rel="noopener">원문 ↗</a>`).join('<br>')}<br>숫자(할인율·한도·나이)는 첫 마디에 넣지 않았습니다 — 물으시면 「자료로 정확히 보여 드리겠습니다」.</div>`;
+    }
+    document.querySelectorAll('.trend-tab').forEach(btn=>btn.addEventListener('click',()=>{
+      selectedTrend=btn.dataset.key;
+      try { localStorage.setItem('apex_ta_trend', selectedTrend); } catch (e) {}
+      renderTrend(); renderScript();
+    }));
+  }
+
   function renderObjections(){
     $('objectionTabs').innerHTML=OBJECTIONS.map((o,i)=>`<button class="objection-tab ${i===selectedObjection?'active':''}" data-index="${i}">${i+1}. ${escapeHTML(o.title)}</button>`).join('');
     const o=OBJECTIONS[selectedObjection];
@@ -570,7 +641,8 @@
   function toggleInputbar(){const bar=$('inputbar');bar.classList.toggle('collapsed');$('inputbarCaret').textContent=bar.classList.contains('collapsed')?'펼치기 ▸':'접기 ▾';}
   window.toggleInputbar=toggleInputbar;
 
-  populateDB();renderScript();renderObjections();
+  populateDB();renderTrend();renderScript();renderObjections();
+  $('copyTrend').addEventListener('click',()=>{const t=trendNow();if(!t){showToast('화제 없이 진행합니다.');return;}copyText(trendLine(t),'첫 마디를 복사했습니다.');});
   $('dbType').addEventListener('change',()=>setDB($('dbType').value));
   fields.forEach(id=>$(id).addEventListener('input',()=>{renderScript();renderObjections();}));
   $('cueToggle').addEventListener('change',e=>document.body.classList.toggle('hide-cues',!e.target.checked));
