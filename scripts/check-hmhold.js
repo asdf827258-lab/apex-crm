@@ -44,16 +44,22 @@ let bad = 0, n = 0;
 const is = (ok, m) => { n++; console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
 const head = t => console.log('\n' + t);
 
-/* <b>늘 서야 하는 칸</b> — 글자는 그 칸이 제 입으로 말하는 것만 씁니다 */
+/* <b>늘 서야 하는 칸</b> — ⚠ <b>글자로 찾지 않습니다.</b>
+   판 X88 에서 「이번 주」 를 글자로 찾았더니 날글에 <b>세 번</b> 나왔습니다 —
+   📅 달력 단추의 title · 📈 다른 칸 머리 · 그리고 진짜 📆 칸. 그래서 그 칸을
+   <b>이른 길에서 빼도 초록</b>이었습니다(되돌림 ③ 이 안 울렸습니다).
+   ★ 칸은 <b>제 이름(id)</b>으로 찾습니다 — 이름은 그 칸 하나만 가집니다.
+   ★ 「오늘 약속」 은 id 가 없어 <b>그 함수가 낸 글</b>과 견줍니다 — 글을
+     손으로 베끼지 않으니 칸이 바뀌어도 안 늙습니다 (5번).              */
 const 늘서는것 = [
-  { k: '📅 오늘 약속', 글: '오늘 약속',
-    왜: '사장님 말씀 2026-09-26 으로 만든 칸입니다 (판 X43)' },
-  { k: '🌅 아침 미션', 글: '아침 미션',
+  { k: '🌅 아침 미션',     꼴: 'id="hmFold_ms"',
     왜: '사람이 없어도 할 것(SNS·고객 보험)이 있습니다' },
-  { k: '🌙 오늘 돌아보기', 글: '오늘 돌아보기',
+  { k: '🌙 오늘 돌아보기', 꼴: 'id="hmFold_night"',
     왜: '저녁에 하루를 닫는 자리입니다 (판 X73)' },
-  { k: '📆 이번 주', 글: '이번 주',
-    왜: '못 읽었으면 「달력을 아직 못 읽었습니다」 라고 적는 칸입니다' }
+  { k: '📆 이번 주',       꼴: 'id="hmWkHost"',
+    왜: '못 읽었으면 「달력을 아직 못 읽었습니다」 라고 적는 칸입니다' },
+  { k: '📍 곁칸 넷',       꼴: 'id="hmSideUp"',
+    왜: '자리를 안 내면 그 날만 넷이 통째로 사라집니다 (6번 · 두 번째 고침)' }
 ];
 
 (async () => {
@@ -92,38 +98,73 @@ const 늘서는것 = [
       const d = document.getElementById('dynPane'); return d ? d.innerHTML : ''; };
     const 씨 = (id, st) => ({ id: id, who: 'u1', name: '홍길동' + id, region: '순천', src: '일반',
       stage: st, cAt: '', pAt: '', got: '2026-09-01', n: 1, last: '', res: '부재', appt: '', memo: '', days: 9 });
+    /* ★★ <b>hmHold() 는 OSC 와 AR 을 둘 다</b> 봅니다. 판 X88 에서 AR 만
+       심고 「정말 빈」 을 잰다고 적었는데, OSC 가 안 와서 내내 <b>「읽는 중」</b>
+       을 재고 있었습니다 — 상태를 못 만들고 상태를 잰 셈입니다.          */
+    const 통 = (loaded, err, db) => {
+      try { OSC.loaded = loaded; OSC.busy = !loaded; OSC.err = err; if (!OSC.list) OSC.list = []; } catch (e) { }
+      try { AR.loaded = loaded; AR.busy = !loaded; AR.err = err; AR.db = db; AR.cliRows = []; } catch (e) { }
+    };
 
-    /* ① 아직 안 온 홈 — AR 을 비워 둡니다 */
-    AR.loaded = false; AR.busy = true; AR.db = null; AR.cliRows = [];
-    o.아직 = 세워();
-    /* ② 자료가 와서 정말 빈 홈 */
-    AR.loaded = true; AR.busy = false; AR.db = []; AR.cliRows = [];
-    o.빈 = 세워();
-    /* ③ 자료가 있는 홈 — 대조군 */
-    AR.loaded = true; AR.busy = false; AR.db = [씨('a', '부재'), 씨('b', 'TA'), 씨('c', 'PC')];
-    AR.cat = 'touch'; AR.tk = 'all';
-    o.있음 = 세워();
+    /* ① 아직 안 온 홈 (wait) */
+    통(false, '', null);                       o.아직 = 세워(); o.아직H = String(hmHold());
+    /* ② 못 받은 홈 (fail) — 서버가 준 말을 그대로 적어야 합니다 */
+    통(true, '서버에 닿지 못했습니다', null);   o.못받음 = 세워(); o.못받음H = String(hmHold());
+    /* ③ 자료가 와서 정말 빈 홈 (none) */
+    통(true, '', []);                          o.빈 = 세워(); o.빈H = String(hmHold());
+    /* ④ 자료가 있는 홈 (ok · 대조군) */
+    통(true, '', [씨('a', '부재'), 씨('b', 'TA'), 씨('c', 'PC')]);
+    try { AR.cat = 'touch'; AR.tk = 'all'; } catch (e) { }
+    o.있음 = 세워(); o.있음H = String(hmHold());
+
+    /* 📅 「오늘 약속」 은 <b>그 함수가 낸 글</b>과 견줍니다 — 글을 베끼지 않습니다 */
+    try { const a = hmTossAppt();
+      o.약속글 = a; o.약속꼴 = a.replace(/\s+/g, ' ').slice(0, 60); } catch (e) { o.약속글 = ''; }
+    /* 머리줄 셋이 <b>서로 다른 말</b>인가 (1번) */
+    try { o.머리 = { wait: HM_BIG.wait, fail: HM_BIG.fail, none: HM_BIG.none }; } catch (e) { o.머리 = {}; }
     return o;
   });
 
   console.log('  날글 길이 — 아직 ' + R.아직.length + '자 · 빈 ' + R.빈.length +
               '자 · 있음 ' + R.있음.length + '자');
 
-  const 길 = [['[1] 자료가 <b>아직 안 온</b> 홈', R.아직],
-              ['[2] 자료가 와서 <b>정말 빈</b> 홈', R.빈],
-              ['[3] 자료가 <b>있는</b> 홈 (대조군)', R.있음]];
-  길.forEach(([제목, 글]) => {
+  /* ★★ <b>어느 길로 갔는지</b>를 먼저 못 박습니다.
+     처음에는 넷째 길에서 hmHold() 가 'ok' 이기를 바랐는데, 코드를 보니
+     <b>hmHold 는 ok 를 절대 안 돌려줍니다</b> — `(w==='ok')?'none':w` 라서
+     둘 다 왔으면 'none' 입니다(그 함수는 <b>이른 길에서만</b> 불립니다).
+     바란 값이 처음부터 없는 값이었습니다 — <b>자가 제 씨를 바로 잡아
+     줬습니다.</b> 그래서 길은 <b>온전한 길에만 있는 칸</b>으로 가립니다 —
+     `class="hm-rows"`(한 건씩 줄을 늘어놓는 자리)입니다.               */
+  const 온전 = 'class="hm-rows"';
+  const 길 = [
+    ['[1] <b>아직 안 온</b> 홈',  R.아직,   R.아직H,   'wait', false],
+    ['[2] <b>못 받은</b> 홈',     R.못받음, R.못받음H, 'fail', false],
+    ['[3] <b>정말 빈</b> 홈',     R.빈,     R.빈H,     'none', false],
+    ['[4] <b>자료가 있는</b> 홈 (대조군)', R.있음, R.있음H, 'none', true]
+  ];
+  길.forEach(([제목, 글, 본것, 바란것, 온전길]) => {
     head(제목);
-    is(글.length > 500, '  홈이 세워졌다 — ' + 글.length + '자 (안 세워지면 아래가 다 헛 초록입니다)');
-    늘서는것.forEach(c => is(글.indexOf(c.글) >= 0,
-      '  <b>' + c.k + '</b> 가 선다 — ' + c.왜));
+    is(본것 === 바란것,
+      '  ★ <b>그 상태를 정말 만들었다</b> — hmHold() = ' + 본것 + ' (바란 것 ' + 바란것 + ')');
+    is((글.indexOf(온전) >= 0) === 온전길,
+      '  ★★ <b>' + (온전길 ? '온전한' : '이른') + ' 길로 갔다</b> — 못 만들고 재면 아래가 다 헛 초록입니다');
+    is(글.length > 500, '  홈이 세워졌다 — ' + 글.length + '자');
+    늘서는것.forEach(c => is(글.indexOf(c.꼴) >= 0,
+      '  <b>' + c.k + '</b> 가 선다 (' + c.꼴 + ') — ' + c.왜));
+    is(!!R.약속글 && 글.indexOf(R.약속글.slice(0, 60)) >= 0,
+      '  <b>📅 오늘 약속</b> 이 선다 — 사장님 말씀 2026-09-26 으로 만든 칸입니다 (판 X43)');
   });
 
-  head('[4] <b>「아직」 과 「없음」 을 가른다</b> (1번)');
-  is(/아직|읽는 중|불러오/.test(R.아직),
-    '  아직 안 왔을 때는 <b>「아직」 이라고</b> 말한다 — 0 이나 「없습니다」 로 적으면 거짓입니다');
-  is(R.빈.indexOf('오늘 약속이 없습니다') >= 0 || R.빈.indexOf('오늘 약속') >= 0,
-    '  정말 빈 날에는 <b>「오늘 약속이 없습니다」</b> 라고 적는다 — 칸을 지우지 않습니다');
+  head('[5] <b>세 자리를 갈라 놓는다</b> — 「아직」 과 「못 받음」 과 「없음」 (1번)');
+  const M = R.머리 || {};
+  is(!!M.wait && !!M.fail && !!M.none, '  머리줄 셋이 다 적혀 있다');
+  is(M.wait !== M.fail && M.fail !== M.none && M.wait !== M.none,
+    '  ★★ 셋이 <b>서로 다른 말</b>이다 — 같으면 「아직」 을 「없다」 로 적는 거짓말입니다');
+  is(R.아직.indexOf(M.wait) >= 0,   '  아직 안 온 홈에 <b>그 말</b>이 찍힌다 — 「' + (M.wait || '').replace(/<[^>]*>/g, '') + '」');
+  is(R.못받음.indexOf(M.fail) >= 0, '  못 받은 홈에 <b>그 말</b>이 찍힌다 — 「' + (M.fail || '').replace(/<[^>]*>/g, '') + '」');
+  is(R.빈.indexOf(M.none) >= 0,     '  정말 빈 홈에 <b>그 말</b>이 찍힌다 — 「' + (M.none || '').replace(/<[^>]*>/g, '') + '」');
+  is(R.못받음.indexOf('서버에 닿지 못했습니다') >= 0,
+    '  ★ 못 받은 까닭을 <b>서버가 준 말 그대로</b> 적는다 — 지어내지 않습니다 (1번)');
 
   await br.close(); srv.close();
   console.log('\n──────────────────────────────');
