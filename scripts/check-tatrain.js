@@ -22,7 +22,13 @@
           「할인됩니다·대상이십니다·무조건」 · 퍼센트가 없다 (2번·1번)
         · 받는 말이 표에 있는 거절은 <b>표의 글 그대로</b>(objFill) — 제목이 표에 없으면 빨간불 (5번)
         · 표를 못 읽으면 받는 말을 지어내지 않고 못 읽었다고 적는다 (1번)
-        · 폰에서는 아래서 올라오는 판으로 뜨고 답이 고르는 단추보다 먼저 보인다 */
+        · 폰에서는 아래서 올라오는 판으로 뜨고 답이 고르는 단추보다 먼저 보인다
+     ⑪ 🌉 신청을 기억 못 하는 고객 (같은 날 말씀 「대부분 자기가 신청한지도 모르는데,
+        그 부분을 자연스럽게 넘어가면서」)
+        · 1단계에 「기억 못 하시는 게 보통」 다리가 서고, 다듬은 말은 <b>원문 아님</b>이라 밝힌다
+        · 「기억 안 나요」 · 「신청한 적 없어요」 두 응대가 1단계에서 바로 뜬다
+        · 어느 응대도 기억을 다투지 않는다 — 「신청하셨잖아요·분명히 접수」 는 <b>피할 말</b>에만 있다
+        · 「신청한 적 없어요」 는 표의 「어디서 전화했어요?」(「접수하신」 이라 말함)를 빌리지 않는다 */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9141;
@@ -181,6 +187,19 @@ const srv = http.createServer((q, s) => {
     await p.evaluate(() => { window.__S = window.APEX_STAGE; window.APEX_STAGE = undefined; ttObjShow('busy'); });
     is(/거절처리 표를 못 읽었습니다/.test(await p.textContent('#ttObjBody')), '표를 못 읽으면 받는 말을 지어내지 않고 못 읽었다고 적는다');
     await p.evaluate(() => { window.APEX_STAGE = window.__S; });
+
+    console.log('\n[12] 🌉 신청을 기억 못 하는 고객');
+    await p.evaluate(() => ttObjShow(''));
+    const br = await p.textContent('#ttBridge1');
+    is(/기억 못 하십니다/.test(br) && /원문 아님/.test(br) && /확인받지 않습니다/.test(br), '1단계에 「기억 못 하시는 게 보통」 다리가 서고 다듬은 말은 원문 아님이라 밝힌다');
+    is(await p.$$eval('#ttBridge1 .tt-ob', a => a.map(x => x.getAttribute('data-ob')).join(',')) === 'forgot,never', '다리 안에서 「기억 안 나요」 · 「신청한 적 없어요」 응대로 바로 간다');
+    is(await p.$$eval('#ttStep1 .tt-stepob .tt-ob[data-ob="forgot"], #ttStep1 .tt-stepob .tt-ob[data-ob="never"]', a => a.length) === 2, '1단계 「이 단계에서 나오는 말」 에도 둘이 선다');
+    const ARGUE = /신청하셨잖아요|분명(히)? (신청|접수)|기록에 다 있어요/;
+    const argue = OB.filter(o => ARGUE.test([o.first, o.diff, o.loss, o.ask, o.stop, o.bye].join(' ')));
+    is(argue.length === 0, '어느 응대도 기억을 다투지 않는다 (그 말은 피할 말에만)' + (argue.length ? ' ← ' + argue.map(o => o.k).join(',') : ''));
+    is(OB.filter(o => o.k === 'forgot' || o.k === 'never').every(o => ARGUE.test(o.avoid) && !o.ref), '두 응대는 다투는 말을 피할 말로 가르치고, 「접수하신」 이라 말하는 표 글을 빌리지 않는다');
+    await p.click('#ttBridge1 .tt-ob[data-ob="forgot"]');
+    is(/신청하셨는지는 중요하지 않아요/.test(await p.textContent('#ttObjBody')), '누르면 「신청 여부는 중요하지 않다 → 할인 확인」 으로 넘어가는 응대가 뜬다');
 
     console.log('\n[10] 본체에서 열기');
     /* 본체 여는 법은 smoke.js · check-rejgym 과 같은 판 (로그인 막 걷기) */

@@ -143,6 +143,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 .tt-ob-stop{margin-top:6px;font-size:13.5px;background:var(--t-bg);border-radius:var(--t-r-sm);padding:6px 10px}
 .tt-ob-src{margin-top:6px;font-size:12px;color:var(--t-sub)}
 .tt-stepob{margin-top:10px;padding-top:8px;border-top:1px dashed var(--t-line)}
+.tt-bridge{margin-top:10px;border:1px solid var(--t-pos);background:var(--t-pos-l);border-radius:var(--t-r-sm);padding:10px 12px;font-size:14px}
+.tt-bridge ul{margin:4px 0 0;padding-left:18px}
+.tt-bridge li{margin:2px 0}
+.tt-bridge-say{background:var(--t-card);border-radius:var(--t-r-sm);padding:8px 10px;font-size:15px;font-weight:700}
 .tt-stepob .tt-lb{margin-top:0}
 .tt-fab{display:none}
 @media (max-width:900px){
@@ -410,6 +414,14 @@ var TT_STEPS=[
  {t:'첫 인사 및 담당자 소개',
   say:'안녕하세요 ~ ○○○님 맞으시죠?\n상담사분이랑 통화하시고 ~ 배정된 에이플러스에셋에 ○○○입니다.\n보험료 얼마이상씩 납부하신다고 말씀하셨는데 도움드릴내용은 ~\n<em>10월5일부터 금융감독원에서 시행하는 보험료 할인제도</em> 적용이 가능한지\n확인해드리려고 연락드렸습니다.',
   why:'누가(에이플러스에셋 ○○○) · 왜(할인 적용이 되는지 확인) 전화했는지를 첫 숨에 말합니다. 상담사와 이미 통화한 이야기를 꺼내 「낯선 전화」가 아니게 합니다.',
+  bridge:{
+    head:'고객은 대부분 신청한 걸 기억 못 하십니다 — 그게 보통입니다',
+    tips:['「신청하셨죠?」 로 <b>확인받지 않습니다.</b> 기억을 다투는 순간 통화가 거기서 멈춥니다.',
+          '「통화하셨던」 정도로 <b>가볍게 스치고</b>, 곧바로 오늘의 목적(<b>할인 확인</b>)으로 넘어갑니다. 신청했는지는 이 전화의 조건이 아닙니다.',
+          '기억의 실마리는 <b>그때 고객이 한 말</b>입니다 — DB 에 적힌 「보험료 ○○ 정도」를 꺼내 드립니다.',
+          '「신청한 적 없다」 고 단호하시면 다투지 않고, 넘겨받은 경로를 그대로 말하고 고객이 고르게 합니다.'],
+    say:'기억 안 나셔도 괜찮습니다. 그때 보험료 이야기를 잠깐 하셨던 걸로 저한테 넘어왔는데요 —\n오늘은 뭘 하시라는 게 아니라, 지금 내고 계신 건강보험에 무사고 할인이 붙는지 확인만 해 드리려고 연락드렸어요.',
+    obs:['forgot','never']},
   warn:'할인을 주는 곳은 <b>보험회사</b>이고, 금감원은 10월 5일 이미 있던 제도를 <b>개선</b>한다고 발표한 곳입니다. 금감원에서 전화한 것처럼 들리지 않게 소속을 또렷이 말합니다. 「적용이 <b>가능한지 확인</b>」 — 이 말을 「적용됩니다」로 바꾸지 않습니다.'},
  {t:'5세대 실비 대상 확인',
   say:'그리고 한 가지 더 필수로 체크해드릴 부분이 있는데요.\n기존 고객님들 중 <em>5세대 실비로 변경대상이신분들이 있어서,</em>\n고객님도 대상자이시면 보험료가 얼마나 할인되는지\n같이 확인해드리겠습니다.',
@@ -445,6 +457,14 @@ function ttStepsDraw(){
       (s.extra?'<div class="tt-orig" style="margin-top:8px;font-size:14.5px">'+ttEsc(s.extra)+'</div>':'')+
       '<span class="tt-lb">왜 이 말을 하나 (코칭)</span><p class="tt-why">'+s.why+'</p>'+
       '<div class="tt-warn">⚠ 조심 — '+s.warn+'</div>';
+    if(s.bridge){
+      h+='<div class="tt-bridge" id="ttBridge'+(i+1)+'"><b>🌉 '+ttEsc(s.bridge.head)+'</b><ul>';
+      for(j=0;j<s.bridge.tips.length;j++)h+='<li>'+s.bridge.tips[j]+'</li>';
+      h+='</ul><span class="tt-lb">이렇게 넘어갑니다 — 교육용으로 다듬은 말 (원문 아님)</span><div class="tt-bridge-say">'+ttEsc(s.bridge.say).replace(/\n/g,'<br>')+'</div>'+
+        '<div class="tt-objp-list" style="margin-top:6px">';
+      for(j=0;j<s.bridge.obs.length;j++){ var bo=ttObjOf(s.bridge.obs[j]); if(bo)h+='<button class="tt-ob" data-ob="'+bo.k+'">「'+ttEsc(bo.t)+'」</button>'; }
+      h+='</div></div>';
+    }
     if(obs.length){
       h+='<div class="tt-stepob"><span class="tt-lb">🛡 이 단계에서 나오는 말 — 누르면 바로 응대</span><div class="tt-objp-list">';
       for(j=0;j<obs.length;j++)h+='<button class="tt-ob" data-ob="'+obs[j].k+'">「'+ttEsc(obs[j].t)+'」</button>';
@@ -471,6 +491,7 @@ function ttStepsDraw(){
      「할인됩니다」「대상이십니다」「무조건」, 퍼센트 숫자는 쓰지 않습니다.
      숫자는 기사로 확인한 것(657만 건 · 116만 건)만 씁니다 (1번·9번).        */
 var TT_CORE_DIFF=[
+ '<b>신청을 기억 못 하셔도 됩니다</b> — 이 전화는 신청 확인이 아니라 <b>할인 확인</b>입니다.',
  '<b>새 보험 가입 권유가 아닙니다</b> — 지금 내고 계신 건강보험의 할인을 확인하는 전화입니다.',
  '<b>보장은 그대로</b> 두고 보험료만 낮추는 제도(무사고 계약전환)입니다.',
  '<b>확정은 보험사</b>가 합니다 — 고객이 보험사에 직접 물어봐도 된다고 말할 수 있는 전화입니다.',
@@ -484,6 +505,21 @@ var TT_CORE_LOSS=[
 /* k 열쇠 · t 고객의 말 · at 주로 나오는 단계 · ref 거절처리 표의 제목(있으면 ①·다시 반응·피할 말·멈출 자리는 표에서)
    first/ask/avoid/stop 은 표에 없는 말일 때만 · bye = 마치더라도 남기는 한마디 */
 var TT_OBJ=[
+ {k:'forgot',t:'제가 신청했어요? 기억이 안 나는데요',at:[1],ref:null,
+  first:'네, 기억 안 나실 수 있어요. 보험료 이야기로 상담사분과 잠깐 통화하셨던 걸로 저한테 넘어왔거든요.',
+  diff:'신청하셨는지는 중요하지 않아요. 오늘은 뭘 하시라는 게 아니라, 지금 내고 계신 건강보험에 무사고 할인이 붙는지 확인해 드리려는 거예요.',
+  loss:'대상이시면 할인은 신청한 날부터라, 모르고 지나가시는 달만큼은 그대로 내시게 됩니다.',
+  ask:'그때 보험료가 ○○ 정도 나간다고 하셨던데, 지금도 비슷하세요?',
+  avoid:'「신청하셨잖아요」 · 「분명히 접수돼 있어요」 — 기억을 다투면 통화가 거기서 끝납니다',
+  stop:'기억이 안 나도 들어 보시겠다면 그대로 2단계로 갑니다. 불쾌해하시면 「신청한 적 없어요」 응대로.'},
+ {k:'never',t:'저는 신청한 적 없어요',at:[1],ref:null,
+  first:'아, 그러셨군요. 불편하셨다면 죄송합니다.',
+  diff:'저는 보험료 상담으로 상담사분과 통화하신 내용을 넘겨받아 연락드렸어요. 무언가를 파는 전화가 아니라, 건강보험에 무사고 할인이 붙는지 확인해 드리는 전화예요.',
+  loss:'들어 보실 생각이 있으시면 — 대상이시면 할인은 신청한 날부터라 확인은 빠를수록 좋습니다.',
+  ask:'1분만 말씀드려 볼까요, 아니면 여기서 마칠까요?',
+  avoid:'「분명 신청하셨어요」 · 「기록에 다 있어요」 — 다투지 않습니다. 넘겨받은 경로를 숨기지도 않습니다',
+  stop:'원치 않으시면 바로 마치고, 다시 연락하지 않도록 기록에 남깁니다.',
+  bye:'「가입하신 보험사에 무사고 계약전환 되는지는 한 번 물어보세요.」'},
  {k:'ad',t:'광고 전화죠? 보험 들라는 거잖아요',at:[1],ref:null,
   first:'네, 요즘 그런 전화 많으시죠. 그렇게 생각하실 수 있습니다.',
   diff:'새 보험을 드시라는 전화가 아닙니다. 지금 내고 계신 건강보험에 붙어 있는 무사고 할인을 받으실 수 있는지 확인해 드리는 거예요. 보장은 그대로 두고 보험료만 낮추는 제도라 새로 가입하실 건 없습니다.',
@@ -624,6 +660,7 @@ function ttObjPaneDraw(){
 /* ── 통화 질문지 — 스크립트 단계 순서. 고객 이름·주민번호·약 이름 칸은 두지 않는다 (3번) ── */
 var TT_SHEET=[
  {k:'me',s:1,t:'본인 맞으신가요?',o:['본인 맞음','본인 아님 — 정리']},
+ {k:'recall',s:1,t:'상담 신청을 기억하시나',h:'기억 못 하셔도 다투지 않고 넘어갑니다.',o:['기억하심','기억 못 하심 — 넘어감','신청 안 했다 하심']},
  {k:'why',s:1,t:'전화한 까닭을 말했나 (할인 적용 「확인」)',o:['말했음']},
  {k:'co',s:1,t:'건강보험을 낸다고 하신 회사',h:'DB 에 적힌 것 · 고객이 말한 것. 모르면 「모름」 — 짐작하지 않습니다.',o:['손해보험사','생명보험사','둘 다','모름']},
  {k:'when',s:1,t:'가입 시기',h:'🏢 누구에게 칸에서 견줘 봅니다 — 결론은 보험사.',o:['2022년 7월 이후','그 전','모름']},
