@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="color-scheme" content="light"/>
+<title>신입 TA 교육 · APEX</title>
+<link rel="stylesheet" href="ui.css">
+<!-- ══ 🎓 <b>신입 TA 교육 — 건강보험 무사고 할인 전환</b> — 2026-10-11 ═════════
+     사장님 말씀 — 「(온탑HB본부 카페 글) 이 내용을 읽고, 스크립트 / 질문지 /
+     고객과 가까워지고 이해할 수 있는 질문들 구성해서 신입 교육 TA 로 만들어보자」.
+
+     바탕 글 : 에이플러스에셋 온탑HB본부 카페 글 269 (회원 전용 — 서버가 못 읽어
+               사장님이 그림 셋으로 주셨습니다)
+       ① 「내 고객 중 누구에게 보낼까 — 2022년 7월 이후 가입분부터」 회사별 최초 판매 표
+       ② 「보장분석디비 스크립트」 (A+에셋 미라클지점) 6단계
+       ③ 카드뉴스 여섯 장 (할인 못 받는 계약 541만건 …)
+     대조한 기사 (9번 — 제목·언론사·날짜·주소 그대로) :
+       · 데일리안 「건강보험 무사고 할인 쉬워진다…전화 한 번으로 신청」 2026.10.05 · 김민환
+         https://www.dailian.co.kr/news/view/1697867/
+       · SBS Biz 「건강보험 '무사고 할인' 더 손쉽게…전화·모바일로 신청」 2026.10.05 · 안지혜
+         https://biz.sbs.co.kr/amp/article/20000338289
+
+     ★ <b>스크립트는 원문 그대로</b> 옮겼습니다. 코칭(왜 · 조심)은 제가 붙인 것이라
+       화면에서 <b>원문과 칸을 갈랐습니다</b>.
+     ★ <b>「가까워지는 질문」 은 바탕 글에 없습니다</b> — 교육용으로 새로 썼고 화면에도
+       그렇게 밝힙니다. 숫자·세금·보장 약속은 하나도 넣지 않았습니다 (1번·2번).
+     ★ 회사표 견주기는 <b>결론을 내지 않습니다</b> — 「보험사에 확인해 볼 만하다 /
+       대부분 해당 없다」 까지만 말하고 확정은 언제나 보험사입니다 (카드 ⑥ · 2번).
+     ★ 원문 5단계의 「신입분들은 주민번호 수집하지 말고 현장에 가서 받을 것」 을
+       이 화면의 규칙으로 세웠습니다. 질문지에 <b>주민번호 칸 · 고객 이름 칸이 없습니다</b> (3번).
+     ★ 거절에 대한 말은 여기 새로 적지 않습니다 — TA 스크립트·거절 근육 훈련이 읽는
+       apex-stage.js 한 표가 있습니다. 거기로 보냅니다 (5번).
+     ★ 서버를 부르지 않습니다. 점검 답만 이 기기에 남깁니다 (7번).
+     점검 : scripts/check-tatrain.js                                         -->
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--t-bg);color:var(--t-ink);
+  font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Noto Sans KR",system-ui,-apple-system,sans-serif;
+  letter-spacing:-.02em;-webkit-font-smoothing:antialiased;line-height:1.6}
+button,input,select,textarea{font:inherit;color:inherit}
+.tt-wrap{max-width:860px;margin:0 auto;padding:16px 16px 60px}
+.tt-hd{background:var(--t-card);border:1px solid var(--t-line);border-radius:var(--t-r);padding:18px}
+.tt-hd h1{margin:0 0 4px;font-size:22px;font-weight:900}
+.tt-hd p{margin:0;color:var(--t-sub);font-size:14px}
+.tt-src{display:block;margin-top:8px;font-size:12.5px;color:var(--t-sub)}
+.tt-src a{color:var(--t-point)}
+.tt-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+.tt-tabs button{flex:1 1 auto;min-height:44px;padding:0 12px;border:1px solid var(--t-line);
+  border-radius:var(--t-r-btn);background:var(--t-card);font-weight:800;font-size:14px;cursor:pointer}
+.tt-tabs button.on{background:var(--t-point);border-color:var(--t-point);color:var(--t-card)}
+.tt-card{background:var(--t-card);border:1px solid var(--t-line);border-radius:var(--t-r);padding:18px;margin-bottom:12px}
+.tt-card h2{margin:0 0 6px;font-size:18px;font-weight:900}
+.tt-card h3{margin:14px 0 4px;font-size:15.5px;font-weight:900}
+.tt-card p,.tt-card li{font-size:14.5px}
+.tt-card ul{margin:6px 0;padding-left:20px}
+.tt-sub{color:var(--t-sub);font-size:13.5px}
+.tt-tag{display:inline-block;font-size:11.5px;font-weight:800;padding:1px 8px;border-radius:999px;
+  background:var(--t-bg);border:1px solid var(--t-line);color:var(--t-sub);margin-left:4px;vertical-align:2px}
+.tt-tag.news{background:var(--t-pos-l);border-color:var(--t-pos);color:var(--t-pos-d)}
+.tt-big{font-size:17px;font-weight:900}
+.tt-bars{margin:10px 0}
+.tt-bar{display:grid;grid-template-columns:96px 1fr 70px;gap:8px;align-items:center;font-size:13px;margin:4px 0}
+.tt-bar i{display:block;height:12px;border-radius:6px;background:var(--t-line)}
+.tt-bar i.hit{background:var(--t-point)}
+.tt-bar b{text-align:right}
+.tt-flow{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}
+.tt-flow span{font-size:13px;font-weight:800;padding:4px 10px;border-radius:999px;background:var(--t-point-l);color:var(--t-point-d)}
+.tt-step{border:1px solid var(--t-line);border-radius:var(--t-r);padding:16px;margin-bottom:12px;background:var(--t-card)}
+.tt-step h2{display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:17px;font-weight:900}
+.tt-no{flex:0 0 34px;width:34px;height:34px;border-radius:50%;background:var(--t-point);color:var(--t-card);
+  display:flex;align-items:center;justify-content:center;font-weight:900}
+.tt-orig{border-left:4px solid var(--t-point);background:var(--t-point-l);border-radius:0 var(--t-r-sm) var(--t-r-sm) 0;
+  padding:10px 12px;font-size:16px;white-space:pre-wrap}
+.tt-orig em{font-style:normal;font-weight:900;color:var(--t-neg)}
+.tt-lb{display:block;font-size:12.5px;font-weight:800;color:var(--t-sub);margin:10px 0 2px}
+.tt-why{font-size:14.5px;margin:0}
+.tt-warn{border:1px solid var(--t-warn);background:var(--t-warn-l);border-radius:var(--t-r-sm);padding:8px 12px;margin-top:8px;font-size:14px}
+.tt-rule{border:2px solid var(--t-neg);background:var(--t-neg-l);border-radius:var(--t-r-sm);padding:10px 12px;margin-top:8px;font-size:14.5px;font-weight:700}
+.tt-tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tt-tbl th,.tt-tbl td{padding:7px 6px;border-bottom:1px solid var(--t-line);text-align:left}
+.tt-tbl th{font-size:12.5px;color:var(--t-sub);font-weight:800}
+.tt-tbl td:last-child{white-space:nowrap}
+.tt-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:640px){.tt-two{grid-template-columns:1fr}}
+.tt-in,.tt-sel{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--t-line);border-radius:var(--t-r-sm);background:var(--t-card)}
+.tt-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.tt-row>*{flex:1 1 180px}
+.tt-res{margin-top:10px;padding:12px;border-radius:var(--t-r-sm);background:var(--t-bg);font-size:14.5px;min-height:20px}
+.tt-res.go{background:var(--t-pos-l)}
+.tt-res.no{background:var(--t-warn-l)}
+.tt-btn{min-height:44px;padding:0 16px;border:1px solid var(--t-line);border-radius:var(--t-r-btn);
+  background:var(--t-bg);font-weight:800;cursor:pointer}
+.tt-btn.pri{background:var(--t-point);border-color:var(--t-point);color:var(--t-card)}
+.tt-q{border-top:1px solid var(--t-line);padding:12px 0}
+.tt-q:first-of-type{border-top:0}
+.tt-q-say{font-size:16px;font-weight:800}
+.tt-q-why,.tt-q-next{font-size:14px;margin:4px 0 0}
+.tt-q-why b,.tt-q-next b{color:var(--t-point-d)}
+.tt-ck{border-top:1px solid var(--t-line);padding:10px 0}
+.tt-ck:first-of-type{border-top:0}
+.tt-ck-t{font-weight:800;font-size:15px}
+.tt-ck-h{font-size:13px;color:var(--t-sub)}
+.tt-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.tt-chip{min-height:40px;padding:0 14px;border:1px solid var(--t-line);border-radius:999px;background:var(--t-card);
+  font-weight:700;cursor:pointer;font-size:14px}
+.tt-chip.on{background:var(--t-point-l);border-color:var(--t-point);color:var(--t-point-d)}
+.tt-out{white-space:pre-wrap;background:var(--t-bg);border-radius:var(--t-r-sm);padding:12px;font-size:14px;margin-top:8px}
+.tt-log{border-top:1px solid var(--t-line);padding:10px 0;font-size:14.5px}
+.tt-log:first-child{border-top:0}
+.tt-ox{display:flex;gap:8px;margin-top:6px}
+.tt-ox .tt-btn{flex:1}
+.tt-fb{margin-top:6px;font-size:14px;font-weight:700}
+.tt-hide{display:none}
+@media print{.tt-tabs,.tt-row,.tt-ox{display:none}.tt-hide{display:block}}
+</style>
+</head>
+<body>
+<div class="tt-wrap">
+  <div class="tt-hd">
+    <h1>🎓 신입 TA 교육 — 건강보험 무사고 할인 전환</h1>
+    <p>왜 지금 전화하나 → 누구에게 거나 → 무엇을 말하나(6단계) → 통화하며 무엇을 적나 → 어떻게 가까워지나 → 스스로 점검. 한 화면에서 차례로 익힙니다.</p>
+    <span class="tt-src">바탕 글 — <a href="https://cafe.naver.com/hdga/269" target="_blank" rel="noopener">에이플러스에셋 온탑HB본부 카페 글</a> (회원 전용) · 회사별 최초 판매 표 · 「보장분석디비 스크립트」(A+에셋 미라클지점) · 카드뉴스 여섯 장.</span>
+    <span class="tt-src">대조한 기사 — <a href="https://www.dailian.co.kr/news/view/1697867/" target="_blank" rel="noopener">데일리안 「건강보험 무사고 할인 쉬워진다…전화 한 번으로 신청」</a> 2026.10.05 · <a href="https://biz.sbs.co.kr/amp/article/20000338289" target="_blank" rel="noopener">SBS Biz 「건강보험 '무사고 할인' 더 손쉽게…전화·모바일로 신청」</a> 2026.10.05</span>
+  </div>
+
+  <div class="tt-tabs" id="ttTabs">
+    <button data-t="why" class="on">📰 왜 지금</button>
+    <button data-t="who">🏢 누구에게</button>
+    <button data-t="script">☎️ 스크립트</button>
+    <button data-t="sheet">📝 질문지</button>
+    <button data-t="near">🤝 가까워지는 질문</button>
+    <button data-t="quiz">✅ 스스로 점검</button>
+  </div>
+
+  <!-- ── 📰 왜 지금 ─────────────────────────────────────────── -->
+  <section id="tt-why">
+    <div class="tt-card">
+      <h2>한 줄로 — 「몰라서 못 받은 할인을 먼저 알려 드리는 전화」</h2>
+      <p>건강보험 <b>무사고 계약전환</b>은 일정 기간 입원·수술이 없으면 보장은 그대로 두고 보험료만 낮추는 제도입니다.
+      2026년 10월 5일 금융감독원이 이 제도를 <b>계약자 중심으로 개선</b>했다고 밝혔습니다. <span class="tt-tag news">기사 확인</span></p>
+      <p class="tt-sub">☝ 할인을 주는 곳은 <b>보험회사</b>입니다. 금감원은 제도를 고치라고 한 곳입니다 — 전화에서 이 둘을 섞지 않습니다.</p>
+    </div>
+
+    <div class="tt-card">
+      <h2>① 대상 657만건 중 할인받는 건 116만건 (17.6%)</h2>
+      <div class="tt-bars" aria-label="2026년 5월 말 기준 계약 건수">
+        <div class="tt-bar"><span>제도가 붙은 계약</span><i style="width:100%"></i><b>1,081만건</b></div>
+        <div class="tt-bar"><span>1년 넘어 대상</span><i style="width:60.8%"></i><b>657만건</b></div>
+        <div class="tt-bar"><span>실제 할인</span><i class="hit" style="width:10.7%"></i><b>116만건</b></div>
+      </div>
+      <p>2026년 5월 말 기준입니다. 그러니 대상 가운데 <b>541만건</b>은 지금도 할인 없이 그대로 내고 있습니다(657만 − 116만). <span class="tt-tag news">기사 확인</span></p>
+      <p class="tt-sub">2022년 7월 이후 건강보험을 많이 판 설계사일수록 내 고객 중에도 있을 수 있습니다. <span class="tt-tag">카페 카드</span></p>
+    </div>
+
+    <div class="tt-card">
+      <h2>② 왜 못 받았나 — 알려 주는 사람이 없었다</h2>
+      <ul>
+        <li>1년에 한 번 <b>알림톡 한 통</b> — 할인 전후 보험료 비교도 없어 <b>광고 문자인 줄 알고</b> 지웠습니다.</li>
+        <li>신청하려면 <b>지점에 가야</b> 했습니다.</li>
+        <li>할인 유형을 <b>직접 고르다</b> 2년 무사고인데 1년 할인만 받은 고객도 있었습니다.</li>
+      </ul>
+      <p class="tt-sub">고객은 몰라서 못 받았습니다. 옆에서 한마디 해 주는 사람이 없었을 뿐입니다. <span class="tt-tag">카페 카드</span></p>
+    </div>
+
+    <div class="tt-card">
+      <h2>③ 할인은 신청한 날부터 — 늦으면 그만큼 손해</h2>
+      <p>할인은 <b>전환 신청 이후 보험료부터</b> 적용되고, 지난 보험료는 <b>소급해서 돌려주지 않습니다.</b> <span class="tt-tag news">기사 확인</span></p>
+      <p>약관에 <b>전환 가능 기한</b>이 정해져 있어 그 기간을 넘기면 기회 자체가 사라집니다. 기한은 상품마다 다르니 보험사에 확인합니다. <span class="tt-tag">카페 카드</span></p>
+      <p class="tt-sub">「오늘 연락하는 데 더 좋은 명분은 없다」 — 바탕 글의 말입니다.</p>
+    </div>
+
+    <div class="tt-card">
+      <h2>④ 보험사가 곧 먼저 연락한다 — 그 전에 내가</h2>
+      <p>보험사들은 문자뿐 아니라 <b>전화·우편</b> 등으로 계속 안내하고 신청했는지 주기적으로 다시 확인합니다. 전산과 약관 정비는 <b>2027년 1월</b>까지 마칩니다(기사는 「내년 1월」). <span class="tt-tag news">기사 확인</span></p>
+      <p>보험사 연락을 먼저 받은 고객은 「내 설계사는 왜 말 안 해 줬지」가 되고, 설계사가 먼저 알려 드린 고객은 「우리 설계사 말이 맞았네」가 됩니다. <b>순서가 신뢰를 가릅니다.</b> <span class="tt-tag">카페 카드</span></p>
+    </div>
+
+    <div class="tt-card">
+      <h2>⑤ 확정해 줄 필요 없다 — 「보험사에 확인해 보세요」면 된다</h2>
+      <p>같은 회사라도 상품·유형·가입 시점에 따라 적용이 다르고, <b>확인과 심사는 보험회사</b>가 합니다. 설계사가 대상 여부나 할인율을 알아낼 필요가 없습니다.
+      고객이 「확인해 볼게요」라고 하면 <b>어느 보험사에 무엇을 물을지</b> 알려 드리고, 원하시면 신청까지 같이 도와 드립니다. <span class="tt-tag">카페 카드</span></p>
+      <p>바뀐 것 — 이제는 계약자가 <b>전환 의사만 밝히면</b> 보험사가 사고 내역과 고지 내용을 확인해 <b>가장 유리한 조건</b>으로 전환합니다. <b>모바일·전화</b>로 비대면 신청도 됩니다. <span class="tt-tag news">기사 확인</span></p>
+    </div>
+
+    <div class="tt-card">
+      <h2>⚠ 꼭 같이 말할 것 — 사실대로 알려야 한다</h2>
+      <p>신청할 때 사고(입원·수술) 여부를 <b>사실대로</b> 알려야 합니다. 제대로 알리지 않으면 <b>전환이 무효</b>가 되고 할인받은 보험료를 <b>돌려내야</b> 할 수 있습니다. <span class="tt-tag news">기사 확인</span></p>
+      <p class="tt-sub">할인율 예시(1년 무사고 6.5% · 10년 무사고 45.9%)는 기사에 실린 <b>40대 남성 가입자 한 사람의 예</b>입니다. 고객에게 「몇 % 깎입니다」로 약속하지 않습니다 — 보험료는 <b>보험사 확인·심사 결과에 따릅니다.</b></p>
+    </div>
+  </section>
+
+  <!-- ── 🏢 누구에게 ─────────────────────────────────────────── -->
+  <section id="tt-who" class="tt-hide">
+    <div class="tt-card">
+      <h2>내 고객 중 누구에게 거나 — 2022년 7월 이후 가입분부터</h2>
+      <p class="tt-sub">회사마다 무사고 전환이 붙은 상품을 <b>처음 판 날</b>입니다. <span class="tt-tag">카페 표</span> 보험사 공식 자료가 아니라 바탕 글의 표를 옮긴 것입니다.</p>
+      <div class="tt-two" id="ttCoTbl"></div>
+      <ul class="tt-sub">
+        <li>2022년 7월 이전 가입 계약은 <b>대부분 해당 없음</b></li>
+        <li>같은 회사라도 상품명·유형·개정 시점에 따라 부가 여부가 다름 → <b>반드시 보험사 확인</b></li>
+        <li>할인은 신청일 이후부터 적용, <b>소급 없음</b></li>
+      </ul>
+    </div>
+
+    <div class="tt-card">
+      <h2>가입한 달로 견줘 보기</h2>
+      <p class="tt-sub">전화 전에 DB 에 적힌 회사·가입 시기로 <b>누구에게 먼저 걸지</b> 고를 때 씁니다. 결론(대상이다·아니다)은 <b>내지 않습니다.</b></p>
+      <div class="tt-row">
+        <select class="tt-sel" id="ttCo" aria-label="보험회사"></select>
+        <input class="tt-in" id="ttYm" type="month" aria-label="가입한 달"/>
+      </div>
+      <div class="tt-res" id="ttCoRes">회사와 가입한 달을 고르면 여기에 나옵니다.</div>
+    </div>
+  </section>
+
+  <!-- ── ☎️ 스크립트 ─────────────────────────────────────────── -->
+  <section id="tt-script" class="tt-hide">
+    <div class="tt-card">
+      <h2>보장분석 DB 스크립트 — 6단계</h2>
+      <div class="tt-flow" id="ttFlow"></div>
+      <p class="tt-sub">파란 칸은 <b>원문 그대로</b>입니다(A+에셋 미라클지점). 아래 「왜」·「조심」은 교육용으로 붙인 코칭입니다.
+      ○○○ 자리는 DB 에 적힌 것으로 채웁니다. 질문 뒤에는 고객이 답할 때까지 <b>먼저 말하지 않습니다.</b></p>
+    </div>
+    <div id="ttSteps"></div>
+    <div class="tt-card">
+      <h2>고객이 거절하면</h2>
+      <p>거절에 하는 말은 여기 새로 적지 않았습니다 — 같은 거절에 두 화면이 다른 말을 하면 안 되기 때문입니다.
+      앱의 <b>☎️ TA 스크립트</b>(디테일 거절처리)와 <b>🥊 거절 근육 훈련</b>(거절 연습)이 <b>같은 한 표</b>를 씁니다. 거기서 연습하세요.</p>
+      <p class="tt-sub">기본 순서 — 먼저 인정 → 목적 한 문장 → 선택 질문 → 두 번째 거절이면 존중하며 끝내기.</p>
+    </div>
+  </section>
+
+  <!-- ── 📝 질문지 ─────────────────────────────────────────── -->
+  <section id="tt-sheet" class="tt-hide">
+    <div class="tt-card">
+      <h2>통화 질문지 — 통화하며 하나씩 짚기</h2>
+      <p class="tt-sub">스크립트 순서대로 놓았습니다. 고른 것은 <b>이 화면에만</b> 있고 저장되지 않습니다.
+      <b>고객 이름·주민번호·약 이름·병명은 적지 않습니다</b> — 칸도 없습니다.</p>
+      <div id="ttSheet"></div>
+      <div class="tt-row">
+        <button class="tt-btn pri" id="ttSheetCopy">통화 정리 복사</button>
+        <button class="tt-btn" id="ttSheetReset">처음부터</button>
+      </div>
+      <div class="tt-out" id="ttSheetOut"></div>
+    </div>
+  </section>
+
+  <!-- ── 🤝 가까워지는 질문 ─────────────────────────────────── -->
+  <section id="tt-near" class="tt-hide">
+    <div class="tt-card">
+      <h2>고객과 가까워지고, 고객을 이해하는 질문</h2>
+      <p>스크립트는 <b>할 말</b>이고, 이 질문들은 <b>들을 자리</b>입니다. 단계 사이사이에 하나씩 넣습니다 — 다 묻지 않습니다.</p>
+      <p class="tt-sub">⚠ 이 질문들은 바탕 글에 <b>없습니다</b>. 교육용으로 새로 썼습니다. 보장·보험료·세금에 대한 약속은 넣지 않았습니다.</p>
+      <h3>듣는 법 세 가지</h3>
+      <ul>
+        <li><b>묻고 기다린다</b> — 질문 뒤 침묵은 고객 몫입니다. 먼저 채우지 않습니다.</li>
+        <li><b>고객의 말을 그대로 되받는다</b> — 「아, 부담되셨군요」. 내 말로 바꾸지 않습니다.</li>
+        <li><b>판단하지 않고 넘긴다</b> — 「그건 보험사에서 확인해 드려요」. 대상·할인율·가입 가능을 전화로 정하지 않습니다.</li>
+      </ul>
+    </div>
+    <div id="ttNear"></div>
+  </section>
+
+  <!-- ── ✅ 스스로 점검 ─────────────────────────────────────── -->
+  <section id="tt-quiz" class="tt-hide">
+    <div class="tt-card">
+      <h2>이 말, 전화로 해도 될까요?</h2>
+      <p class="tt-sub">O·X 를 누르면 바로 까닭이 나옵니다. 답은 이 기기에만 남습니다.</p>
+      <div id="ttQuiz"></div>
+      <p class="tt-sub" id="ttQuizScore"></p>
+      <div class="tt-row"><button class="tt-btn" id="ttQuizReset">다시 풀기</button></div>
+    </div>
+    <div class="tt-card">
+      <h2>둘이 짝지어 연습하기</h2>
+      <ul>
+        <li>한 사람은 설계사, 한 사람은 고객. <b>☎️ 스크립트</b> 1~6단계를 소리 내어 끝까지 갑니다.</li>
+        <li>고객 역은 단계마다 <b>🤝 가까워지는 질문</b>에 진짜처럼 답합니다. 설계사 역은 그 답을 되받고 다음 단계로 잇습니다.</li>
+        <li>설계사 역은 통화하며 <b>📝 질문지</b>를 채우고, 끝나면 「통화 정리」를 짝에게 보여 줍니다.</li>
+        <li>역할을 바꿔 한 번 더. 거절이 막히면 <b>🥊 거절 근육 훈련</b>의 거절 연습으로 갑니다.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ES5 로 씁니다 — 본체와 같은 손버릇. 점검 답만 이 기기에 남깁니다(try/catch). */
+var TT_KEY='apex_tatrain_v1';
+function $t(id){ return document.getElementById(id); }
+function ttEsc(s){ return (''+(s==null?'':s)).replace(/[&<>"']/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+/* ── 회사별 최초 판매일 — 바탕 글의 표 그대로 (보험사 공식 자료 아님) ── */
+var TT_CO=[
+ {g:'손해보험사',n:'DB손해보험',d:'2022-07-01'},
+ {g:'손해보험사',n:'한화손해보험',d:'2023-02-15'},
+ {g:'손해보험사',n:'롯데손해보험',d:'2023-03-28'},
+ {g:'손해보험사',n:'KB손해보험',d:'2023-04-01'},
+ {g:'손해보험사',n:'현대해상',d:'2024-06-01'},
+ {g:'손해보험사',n:'흥국화재',d:'2024-06-13'},
+ {g:'손해보험사',n:'메리츠화재',d:'2024-07-08'},
+ {g:'손해보험사',n:'삼성화재',d:'2024-07-24'},
+ {g:'손해보험사',n:'하나손해보험',d:'2025-10-01'},
+ {g:'손해보험사',n:'NH농협손해보험',d:'2026-06-01'},
+ {g:'생명보험사',n:'한화생명',d:'2023-04-01'},
+ {g:'생명보험사',n:'DB생명',d:'2023-07-01'},
+ {g:'생명보험사',n:'동양생명',d:'2023-07-12'},
+ {g:'생명보험사',n:'ABL생명',d:'2023-07-12'},
+ {g:'생명보험사',n:'미래에셋생명',d:'2023-09-01'},
+ {g:'생명보험사',n:'교보생명',d:'2024-06-17'},
+ {g:'생명보험사',n:'흥국생명',d:'2024-07-01'},
+ {g:'생명보험사',n:'삼성생명',d:'2024-10-17'},
+ {g:'생명보험사',n:'신한라이프',d:'2025-01-01'}
+];
+function ttDot(d){ var p=d.split('-'); return p[0]+'. '+(+p[1])+'. '+(+p[2]); }
+
+/* 가입한 달(YYYY-MM)과 그 회사의 최초 판매일을 견준다.
+   ★ 결론을 내지 않는다 — 'after' 도 「대상입니다」 가 아니라 「확인해 볼 만하다」 다. */
+var TT_ALWAYS='확정은 언제나 보험사입니다 — 같은 회사라도 상품명·유형·개정 시점에 따라 다릅니다.';
+function ttCoJudge(co,ym){
+  if(!co||!/^\d{4}-\d{2}$/.test(ym||''))return null;
+  var first=co.d.slice(0,7);
+  if(ym<first)return {k:'before',t:co.n+' — 무사고 전환 상품 최초 판매 '+ttDot(co.d)+' 보다 <b>앞선 가입</b>입니다 — 대부분 해당이 없습니다. '+TT_ALWAYS};
+  if(ym===first)return {k:'edge',t:co.n+' — 최초 판매 '+ttDot(co.d)+' 와 <b>같은 달</b>입니다 — 날짜·상품에 따라 갈립니다. 보험사에 확인해 볼 만합니다. '+TT_ALWAYS};
+  return {k:'after',t:co.n+' — 최초 판매 '+ttDot(co.d)+' 보다 <b>뒤의 가입</b>입니다 — 보험사에 확인해 볼 만한 고객입니다. '+TT_ALWAYS};
+}
+function ttCoDraw(){
+  var gs=['손해보험사','생명보험사'],h='',i,j;
+  for(j=0;j<gs.length;j++){
+    h+='<table class="tt-tbl"><thead><tr><th>'+gs[j]+'</th><th>최초 판매</th></tr></thead><tbody>';
+    for(i=0;i<TT_CO.length;i++)if(TT_CO[i].g===gs[j])h+='<tr><td>'+ttEsc(TT_CO[i].n)+'</td><td>'+ttDot(TT_CO[i].d)+'</td></tr>';
+    h+='</tbody></table>';
+  }
+  $t('ttCoTbl').innerHTML=h;
+  var o='<option value="">보험회사 고르기</option>';
+  for(i=0;i<TT_CO.length;i++)o+='<option value="'+i+'">'+ttEsc(TT_CO[i].n)+'</option>';
+  o+='<option value="x">표에 없는 회사 · 모름</option>';
+  $t('ttCo').innerHTML=o;
+}
+function ttCoRun(){
+  var v=$t('ttCo').value,ym=$t('ttYm').value,box=$t('ttCoRes');
+  box.classList.remove('go'); box.classList.remove('no');
+  if(v==='x'){ box.innerHTML='이 표에 없는 회사입니다 — <b>보험사에 직접 확인</b>합니다. 아무것도 짐작하지 않습니다.'; return; }
+  var r=ttCoJudge(TT_CO[+v],ym);
+  if(!v||!ym||!r){ box.innerHTML='회사와 가입한 달을 고르면 여기에 나옵니다.'; return; }
+  box.classList.add(r.k==='before'?'no':'go');
+  box.innerHTML=r.t;
+}
+
+/* ── 6단계 스크립트 — say 는 원문 그대로(줄바꿈까지), em 은 원문에서 빨간 글씨였던 곳 ──
+   why·warn 은 교육용으로 붙인 코칭입니다(원문 아님). rule 은 원문에 있던 규칙입니다. */
+var TT_STEPS=[
+ {t:'첫 인사 및 담당자 소개',
+  say:'안녕하세요 ~ ○○○님 맞으시죠?\n상담사분이랑 통화하시고 ~ 배정된 에이플러스에셋에 ○○○입니다.\n보험료 얼마이상씩 납부하신다고 말씀하셨는데 도움드릴내용은 ~\n<em>10월5일부터 금융감독원에서 시행하는 보험료 할인제도</em> 적용이 가능한지\n확인해드리려고 연락드렸습니다.',
+  why:'누가(에이플러스에셋 ○○○) · 왜(할인 적용이 되는지 확인) 전화했는지를 첫 숨에 말합니다. 상담사와 이미 통화한 이야기를 꺼내 「낯선 전화」가 아니게 합니다.',
+  warn:'할인을 주는 곳은 <b>보험회사</b>이고, 금감원은 10월 5일 이미 있던 제도를 <b>개선</b>한다고 발표한 곳입니다. 금감원에서 전화한 것처럼 들리지 않게 소속을 또렷이 말합니다. 「적용이 <b>가능한지 확인</b>」 — 이 말을 「적용됩니다」로 바꾸지 않습니다.'},
+ {t:'5세대 실비 대상 확인',
+  say:'그리고 한 가지 더 필수로 체크해드릴 부분이 있는데요.\n기존 고객님들 중 <em>5세대 실비로 변경대상이신분들이 있어서,</em>\n고객님도 대상자이시면 보험료가 얼마나 할인되는지\n같이 확인해드리겠습니다.',
+  why:'만나야 할 이유를 하나 더 얹습니다. 「같이 확인」 — 고객이 할 일이 아니라 내가 해 드리는 일로 들리게 합니다.',
+  warn:'「얼마나」의 <b>숫자는 전화로 말하지 않습니다</b> — 보험사 확인 뒤, 만나서 보험료와 보장을 <b>같이</b> 봅니다. 바꾸는 일은 보장도 달라질 수 있어 「무조건 이득」처럼 말하지 않습니다. 보험료·보장은 <b>심사 결과에 따릅니다.</b>'},
+ {t:'방문 전 확인',
+  say:'현재 보험료 할인제도로인해 상담 예약이 많이 밀려있다보니 ~\n순차적으로 방문해서 안내를 도와드리고 있는데요.\n방문 전에 몇 가지만 확인하고 찾아뵙겠습니다.\n<em>현재 고혈압 고지혈증 당뇨약 중에 복용하시는게 있으실까요?</em>',
+  why:'「찾아뵙는다」를 전제로 말을 잇습니다 — 만날지 말지가 아니라 <b>만나기 전 준비</b>로 넘어갑니다. 복용약은 만나서 어떤 자료를 펼칠지 미리 가늠하려고 묻습니다.',
+  warn:'「예약이 많이 밀려 있다」는 <b>사실일 때만</b> 말합니다. 복용약은 건강 정보입니다 — 왜 묻는지 먼저 말하고, 답하기 싫다 하시면 그냥 넘어갑니다. 약 이름·병명은 메모·메신저에 남기지 않습니다.'},
+ {t:'방문 일정 및 주소 확인',
+  say:'방문 전에 등록된 정보가 맞는지만 간단하게 확인하겠습니다.\n<em>방문시간은 언제가편하시다고 말씀하셨는데 이때가편하신가요?</em>\n전달받은 주소지는 어디시 어디구 어디동으로 맞으실까요?\n(맞을경우) 그이하 주소지 확인부탁드리겠습니다.',
+  why:'새로 묻는 것이 아니라 <b>이미 받은 것을 확인</b>하는 꼴이라 부담이 적습니다. 시간도 고객이 말했던 것을 되짚어 「예」로 답하게 합니다.',
+  warn:'주소는 시·구·동까지만 내가 말하고, 그 아래는 <b>고객 입으로</b> 듣습니다. 시간을 바꾸자 하시면 두 가지 중 고르게 묻습니다.'},
+ {t:'본인 확인 및 인증 안내',
+  say:'생년월일은 ○○년 ○○월 ○○일로 확인되는데,\n본인 확인을 위해서 <em>뒷 번호 7자리</em> 확인 부탁드리겠습니다.\n거부시-> (직접 입력하실수있는 kb에서 셀프인증 하나 카카오톡으로\n보내드렸는데 직접확인부탁드리겠습니다.)',
+  rule:'신입분들은 주민번호 수집하지말고 현장에가서 받을것',
+  extra:'(간편반론- 방문해서 노트북으로 설명도와드릴수있는데\n대부분의 고객님들이 종이로 되어있는 자료를 선호하십니다)',
+  why:'신입은 여기서 <b>생년월일 확인까지만</b> 합니다. 뒷번호는 만나서, 회사가 정한 본인확인 절차로 받습니다.',
+  warn:'고객이 출처를 의심하면 밀어붙이지 않습니다 — 소속·유입 경로·확인 목적을 그대로 말하고 고객의 선택을 따릅니다. 주민번호는 메모·녹취·메신저 어디에도 남기지 않습니다.'},
+ {t:'명함 및 방문 안내',
+  say:'통화종료후 제 이름이랑 명함을 문자나 카카오톡으로 보내드리겠습니다.\n예약제로 상담이 진행되다 보니 당일취소가 어렵습니다\n혹시 일정 변경이 필요하시면 미리 연락 부탁드리겠습니다\n그럼 ○월○일 ○요일 ○시에 ○○에서 뵙겠습니다. 감사합니다',
+  why:'약속을 <b>글로 남겨</b> 고객 손에 쥐여 드립니다. 마지막에 날짜·요일·시간·장소를 한 번 더 또박또박 말해 약속을 굳힙니다.',
+  warn:'명함 문자에 「그날 확인할 것」을 한 줄 붙이면(🤝 가까워지는 질문의 마지막 칸) 고객이 약속을 잊지 않습니다. 끊기 전에 질문지의 빈칸을 한 번 봅니다.'}
+];
+function ttStepsDraw(){
+  var h='',f='',i,s;
+  for(i=0;i<TT_STEPS.length;i++){
+    s=TT_STEPS[i];
+    f+='<span>'+(i+1)+' '+ttEsc(s.t)+'</span>';
+    h+='<div class="tt-step" id="ttStep'+(i+1)+'"><h2><span class="tt-no">'+(i+1)+'</span>'+ttEsc(s.t)+'</h2>'+
+      '<span class="tt-lb">원문 — 이대로 말합니다</span><div class="tt-orig">'+s.say+'</div>'+
+      (s.rule?'<div class="tt-rule">📌 원문의 규칙 — '+ttEsc(s.rule)+'</div>':'')+
+      (s.extra?'<div class="tt-orig" style="margin-top:8px;font-size:14.5px">'+ttEsc(s.extra)+'</div>':'')+
+      '<span class="tt-lb">왜 이 말을 하나 (코칭)</span><p class="tt-why">'+s.why+'</p>'+
+      '<div class="tt-warn">⚠ 조심 — '+s.warn+'</div></div>';
+  }
+  $t('ttSteps').innerHTML=h; $t('ttFlow').innerHTML=f;
+}
+
+/* ── 통화 질문지 — 스크립트 단계 순서. 고객 이름·주민번호·약 이름 칸은 두지 않는다 (3번) ── */
+var TT_SHEET=[
+ {k:'me',s:1,t:'본인 맞으신가요?',o:['본인 맞음','본인 아님 — 정리']},
+ {k:'why',s:1,t:'전화한 까닭을 말했나 (할인 적용 「확인」)',o:['말했음']},
+ {k:'co',s:1,t:'건강보험을 낸다고 하신 회사',h:'DB 에 적힌 것 · 고객이 말한 것. 모르면 「모름」 — 짐작하지 않습니다.',o:['손해보험사','생명보험사','둘 다','모름']},
+ {k:'when',s:1,t:'가입 시기',h:'🏢 누구에게 칸에서 견줘 봅니다 — 결론은 보험사.',o:['2022년 7월 이후','그 전','모름']},
+ {k:'msg',s:1,t:'보험사 할인 안내를 받아 본 적',o:['받았음','못 받았음','기억 안 남']},
+ {k:'gen5',s:2,t:'5세대 실비 확인도 같이 한다고 말했나',o:['말했음']},
+ {k:'med',s:3,t:'고혈압·고지혈증·당뇨약 복용',h:'있다·없다만. 약 이름·병명은 적지 않습니다.',o:['있음','없음','답하기 싫어하심']},
+ {k:'time',s:4,t:'방문 시간',o:['말씀하신 시간 그대로','다른 시간으로 정함']},
+ {k:'addr',s:4,t:'주소',o:['시·구·동 맞음 · 나머지 받음','주소 다름 — 새로 받음']},
+ {k:'birth',s:5,t:'생년월일 확인',o:['확인함']},
+ {k:'jumin',s:5,t:'주민번호 뒷자리',h:'신입은 전화로 받지 않습니다.',o:['현장에서 받기로 함']},
+ {k:'paper',s:5,t:'자료는 어떻게 보실지',o:['종이','노트북 화면']},
+ {k:'card',s:6,t:'명함 문자 · 당일취소 안내 · 일시 장소 복창',o:['다 했음']}
+];
+var TT_ANS={};
+function ttSheetDraw(){
+  var h='',i,j,q;
+  for(i=0;i<TT_SHEET.length;i++){
+    q=TT_SHEET[i];
+    h+='<div class="tt-ck"><div class="tt-ck-t">'+q.s+'단계 · '+ttEsc(q.t)+'</div>'+(q.h?'<div class="tt-ck-h">'+ttEsc(q.h)+'</div>':'')+'<div class="tt-chips">';
+    for(j=0;j<q.o.length;j++)h+='<button class="tt-chip'+(TT_ANS[q.k]===q.o[j]?' on':'')+'" data-k="'+q.k+'" data-v="'+ttEsc(q.o[j])+'">'+ttEsc(q.o[j])+'</button>';
+    h+='</div></div>';
+  }
+  $t('ttSheet').innerHTML=h;
+  $t('ttSheetOut').textContent=ttSheetText();
+}
+function ttSheetPick(k,v){ if(TT_ANS[k]===v)delete TT_ANS[k]; else TT_ANS[k]=v; ttSheetDraw(); }
+/* 통화 정리 — 고른 것만. 안 고른 칸은 「빈칸」 으로 남겨 무엇을 놓쳤는지 보이게 한다 */
+function ttSheetText(){
+  var out=['TA 통화 정리'],miss=[],i,q;
+  for(i=0;i<TT_SHEET.length;i++){
+    q=TT_SHEET[i];
+    if(TT_ANS[q.k])out.push('· '+q.t+' — '+TT_ANS[q.k]); else miss.push(q.s+'단계 '+q.t);
+  }
+  if(miss.length)out.push('','빈칸 '+miss.length+'곳 — '+miss.join(' / '));
+  else out.push('','빈칸 없음');
+  return out.join('\n');
+}
+
+/* ── 가까워지는 질문 — 교육용으로 새로 쓴 것 (바탕 글에 없음) ── */
+var TT_NEAR=[
+ {g:'문 열기 — 긴장을 푼다',at:'1단계 앞뒤',qs:[
+   {say:'잠깐 통화 괜찮으세요?',why:'시간을 먼저 묻는 것만으로 존중이 전해집니다. 바쁜 사람에게 끝까지 읽어 내려가면 남는 것은 「귀찮은 전화」뿐입니다.',next:'바쁘다 하시면 「그럼 오늘 저녁이 편하세요, 내일 오전이 편하세요?」 — 두 가지 중에 고르시게.'},
+   {say:'상담사분이랑 통화하실 때, 어떤 게 제일 궁금하셨어요?',why:'DB 로 들어온 까닭을 <b>고객 입으로</b> 다시 듣습니다. 내가 짐작한 까닭과 다를 때가 많습니다.',next:'고객이 쓴 낱말을 그대로 되받습니다 — 「보험료가 많이 나가서요」 → 「네, 보험료가 많이 나가셔서요.」'},
+   {say:'혹시 보험사에서 할인 안내 문자 받아 보신 적 있으세요?',why:'광고 문자인 줄 알고 지운 분이 많았습니다(📰 왜 지금 ②). 「받았다」·「못 받았다」 어느 쪽이든 전화한 까닭이 됩니다.',next:'받았다 → 「그게 광고가 아니었을 수 있어요, 그래서 같이 보려고요.」 · 못 받았다 → 「그래서 제가 먼저 연락드렸어요.」'}
+ ]},
+ {g:'지금 보험을 이해한다',at:'2~3단계',qs:[
+   {say:'건강보험은 언제쯤, 어떤 계기로 드셨어요?',why:'가입 시기(2022년 7월 앞인가 뒤인가)가 자연스럽게 나오고, 그 보험에 얽힌 사연도 나옵니다.',next:'회사 이름이 나오면 🏢 누구에게 칸에서 견줘 봅니다 — 그 자리에서 「대상이세요」라고 말하지 않습니다.'},
+   {say:'처음 들어 주신 분이 지금도 챙겨 주세요?',why:'담당이 끊긴 계약일수록 안내를 못 받았을 수 있습니다. 「내 설계사는 왜 말 안 해 줬지」가 생기는 자리입니다(📰 ④).',next:'아니라고 하시면 탓하지 않고 — 「그러셨으면 이런 안내를 못 받으셨을 수 있어요.」'},
+   {say:'매달 나가는 보험료, 부담되시는 편이세요?',why:'금액보다 <b>느낌</b>을 듣습니다. 금액은 DB 에 이미 있습니다.',next:'「부담된다」 → 그 말을 받아 방문의 까닭으로 — 「그래서 줄일 수 있는 게 있는지 같이 보려고요.」'},
+   {say:'보험 보실 때 보험료랑 보장 중에 뭐가 더 마음에 걸리세요?',why:'만나서 무엇부터 펼칠지 정해 줍니다. 보험료만 말하는 분에게 보장 이야기부터 꺼내면 어긋납니다.',next:'고른 쪽을 질문지 메모처럼 기억해 두고 6단계 문자에 한 줄로 씁니다.'}
+ ]},
+ {g:'마음을 듣는다 — 가족과 걱정',at:'3단계 무렵',qs:[
+   {say:'보험은 본인 것만 챙기세요, 가족 것도 같이 보세요?',why:'결정하는 분이 누구인지, 만나서 같이 볼 계약이 몇 개인지 압니다.',next:'가족 것도 → 「그럼 그날 가족분 증권도 같이 보실까요?」'},
+   {say:'보험 들어 두고 「이건 좀 아깝다」 싶었던 적 있으세요?',why:'불만은 숨은 숙제입니다. 만나서 그것부터 풀면 이야기가 빨라집니다.',next:'고객의 말을 되받고 — 「그 부분도 그날 같이 봐 드릴게요.」 판단은 그날, 자료를 보고 합니다.'},
+   {say:'보험금 청구해 보신 적 있으세요? 그때 어떠셨어요?',why:'청구 경험(쉬웠다·힘들었다)이 그분이 보험을 대하는 마음입니다.',next:'청구했다고 하셔도 무사고 전환이 되는지 안 되는지 <b>말하지 않습니다</b> — 「그건 보험사가 확인해요.」'}
+ ]},
+ {g:'약속을 굳힌다',at:'4~6단계',qs:[
+   {say:'만나시면 제일 먼저 뭘 확인하고 싶으세요?',why:'방문의 목적을 <b>고객이</b> 정하면 약속이 잘 안 깨집니다.',next:'그 답을 6단계 명함 문자에 한 줄로 — 「○일에 보험료 할인 되는지부터 확인해 드릴게요.」'},
+   {say:'자료는 종이로 보시는 게 편하세요, 화면으로 보시는 게 편하세요?',why:'원문 5단계의 간편반론과 같은 물음입니다 — 대부분 종이를 고르십니다. 고르게 하면 만남이 이미 정해진 일이 됩니다.',next:'질문지의 「자료는 어떻게 보실지」에 바로 표시합니다.'},
+   {say:'그날 같이 들으실 분 계세요?',why:'함께 결정하는 분이 있으면 그분도 같은 이야기를 듣는 편이 낫습니다.',next:'있다 → 「그럼 두 분 다 편하신 시간으로 맞춰 볼게요.」'}
+ ]}
+];
+function ttNearDraw(){
+  var h='',i,j,g,q;
+  for(i=0;i<TT_NEAR.length;i++){
+    g=TT_NEAR[i];
+    h+='<div class="tt-card"><h2>'+ttEsc(g.g)+' <span class="tt-tag">'+ttEsc(g.at)+'</span></h2>';
+    for(j=0;j<g.qs.length;j++){
+      q=g.qs[j];
+      h+='<div class="tt-q"><div class="tt-q-say">「'+ttEsc(q.say)+'」</div>'+
+        '<p class="tt-q-why"><b>왜</b> — '+q.why+'</p><p class="tt-q-next"><b>답을 들으면</b> — '+ttEsc(q.next)+'</p></div>';
+    }
+    h+='</div>';
+  }
+  $t('ttNear').innerHTML=h;
+}
+
+/* ── 스스로 점검 — 바탕 글과 기사에 있는 것에서만 ── */
+var TT_QUIZ=[
+ {q:'「고객님은 할인 대상이십니다」 라고 전화로 알려 드린다.',a:false,w:'대상 여부와 할인율은 보험사가 확인·심사합니다. 「보험사에 확인해 보세요」면 됩니다(📰 ⑤).'},
+ {q:'「보험사에 확인해 보시고, 원하시면 신청까지 같이 도와 드릴게요.」',a:true,w:'바탕 글이 권하는 말 그대로입니다. 확정하지 않고, 어디에 무엇을 물을지 알려 드립니다.'},
+ {q:'「지금 신청하시면 그동안 더 내신 보험료도 돌려받으세요.」',a:false,w:'할인은 신청 이후 보험료부터이고 소급하지 않습니다(📰 ③).'},
+ {q:'2022년 7월 전에 가입한 계약은 대부분 해당이 없다 — 그래도 확정은 보험사가 한다.',a:true,w:'회사표의 첫 줄 주석입니다. 「대부분」이지 「전부」가 아닙니다.'},
+ {q:'같은 회사 건강보험이면 상품이 달라도 똑같이 적용된다.',a:false,w:'같은 회사라도 상품명·유형·개정 시점에 따라 부가 여부가 다릅니다 — 반드시 보험사 확인.'},
+ {q:'신입은 전화로 주민번호 뒷자리 7자리를 받는다.',a:false,w:'원문 5단계 — 「신입분들은 주민번호 수집하지말고 현장에가서 받을것」.'},
+ {q:'「10년 무사고면 45.9% 깎여요」 라고 말해 드린다.',a:false,w:'기사에 실린 40대 남성 가입자 한 사람의 예입니다. 보험료는 보험사 확인·심사 결과에 따릅니다.'},
+ {q:'입원·수술 사실은 굳이 말하지 않는 편이 할인에 유리하다.',a:false,w:'사실대로 알리지 않으면 전환이 무효가 되고 할인받은 보험료를 돌려내야 할 수 있습니다(데일리안).'},
+ {q:'보험사가 먼저 연락하기 전에 내가 알려 드리는 것이 신뢰가 된다.',a:true,w:'「순서가 신뢰를 가른다」 — 바탕 글 카드 ⑤ 입니다.'}
+];
+var TT={quiz:{}};
+function ttLoad(){
+  var d=null;
+  try{ d=JSON.parse(localStorage.getItem(TT_KEY)||'null'); }catch(e){ d=null; }
+  if(!d||typeof d!=='object')d={};
+  if(!d.quiz||typeof d.quiz!=='object')d.quiz={};
+  return d;
+}
+function ttSave(){ try{ localStorage.setItem(TT_KEY,JSON.stringify(TT)); return true; }catch(e){ return false; } }
+function ttQuiz(){
+  var h='',i,q,my,n=0,c=0;
+  for(i=0;i<TT_QUIZ.length;i++){
+    q=TT_QUIZ[i]; my=TT.quiz[i];
+    h+='<div class="tt-log"><div>'+(i+1)+'. '+ttEsc(q.q)+'</div>'+
+      '<div class="tt-ox"><button class="tt-btn'+(my===true?' pri':'')+'" data-i="'+i+'" data-v="1">O</button>'+
+      '<button class="tt-btn'+(my===false?' pri':'')+'" data-i="'+i+'" data-v="0">X</button></div>';
+    if(my===true||my===false){
+      n++; if(my===q.a)c++;
+      h+='<div class="tt-fb">'+(my===q.a?'✅ 맞습니다':'❌ 다시 보세요')+' — 답은 '+(q.a?'O':'X')+'. '+ttEsc(q.w)+'</div>';
+    }
+    h+='</div>';
+  }
+  $t('ttQuiz').innerHTML=h;
+  $t('ttQuizScore').textContent=n?('푼 문제 '+n+' / '+TT_QUIZ.length+' · 맞은 것 '+c):'';
+}
+
+/* ── 탭 ── */
+var TT_TABS=['why','who','script','sheet','near','quiz'];
+function ttTab(t){
+  var bs=$t('ttTabs').getElementsByTagName('button'),i;
+  for(i=0;i<bs.length;i++){ if(bs[i].getAttribute('data-t')===t)bs[i].classList.add('on'); else bs[i].classList.remove('on'); }
+  for(i=0;i<TT_TABS.length;i++){ var s=$t('tt-'+TT_TABS[i]); if(TT_TABS[i]===t)s.classList.remove('tt-hide'); else s.classList.add('tt-hide'); }
+  try{ window.scrollTo(0,0); }catch(e){}
+}
+
+function ttInit(){
+  TT=ttLoad();
+  ttCoDraw(); ttStepsDraw(); ttSheetDraw(); ttNearDraw(); ttQuiz();
+  $t('ttTabs').onclick=function(e){ var b=e.target.closest('button'); if(b&&b.getAttribute('data-t'))ttTab(b.getAttribute('data-t')); };
+  $t('ttCo').onchange=ttCoRun; $t('ttYm').onchange=ttCoRun; $t('ttYm').oninput=ttCoRun;
+  $t('ttSheet').onclick=function(e){ var b=e.target.closest('.tt-chip'); if(b)ttSheetPick(b.getAttribute('data-k'),b.getAttribute('data-v')); };
+  $t('ttSheetReset').onclick=function(){ TT_ANS={}; ttSheetDraw(); };
+  $t('ttSheetCopy').onclick=function(){
+    var s=ttSheetText(),done=function(){ $t('ttSheetCopy').textContent='복사했습니다'; };
+    try{ navigator.clipboard.writeText(s).then(done,function(){}); }catch(e){}
+  };
+  $t('ttQuiz').onclick=function(e){ var b=e.target.closest('button'); if(!b)return;
+    TT.quiz[+b.getAttribute('data-i')]=(b.getAttribute('data-v')==='1'); ttSave(); ttQuiz(); };
+  $t('ttQuizReset').onclick=function(){ TT.quiz={}; ttSave(); ttQuiz(); };
+}
+ttInit();
+</script>
+</body>
+</html>
