@@ -118,12 +118,21 @@ const 목록보기 = () => {
   try { go('clients'); } catch (e) {}
   try { osRenderList(); } catch (e) {}
   const rows = [].slice.call(document.querySelectorAll('#oscList .t-row'));
+  /* ★ <b>아래 줄(.mt) 의 글자</b>에서 읽습니다 — 두 수는 칸(span)이 아니라
+     글자로 섭니다(그래야 ui.css 의 「.t-row :where(.m) span{display:block}」 에
+     안 걸립니다 · cmRowHtml 의 쪽지).                                     */
+  const 아랫줄 = (e) => { const x = e.querySelector('.mt');
+    return x ? (x.textContent || '').replace(/\s+/g, ' ') : ''; };
+  const 꺼내 = (s, 이름) => { const m = s.match(new RegExp(이름 + '\\s(\\d+\\/\\d+)'));
+    return m ? m[1] : ''; };
   return { 줄수: rows.length,
            높이: rows[0] ? Math.round(rows[0].getBoundingClientRect().height) : 0,
-           아는칸: rows.map(e => { const k = e.querySelector('.cm-kn');
-             return k ? (k.textContent || '').replace(/\s+/g, ' ') : ''; }),
-           팩트칸: rows.map(e => { const k = e.querySelector('.cm-ff');
-             return k ? (k.textContent || '').replace(/\s+/g, ' ') : ''; }),
+           글: rows.map(아랫줄),
+           아는칸: rows.map(e => 꺼내(아랫줄(e), '아는 것')),
+           팩트칸: rows.map(e => 꺼내(아랫줄(e), '팩트')),
+           이름폭: rows.map(e => { const m = e.querySelector('.m');
+             return m ? Math.round(m.getBoundingClientRect().width) : 0; }),
+           오른쪽: rows[0] ? rows[0].querySelector('.rt').children.length : 0,
            셈: (typeof cqaTally === 'function')
                  ? OSC.list.map(c => { const t = cqaTally(c.id);
                      return t ? (t.got + '/' + t.all) : null; }) : undefined,
@@ -215,26 +224,52 @@ const 목록보기 = () => {
   await p.waitForTimeout(500);
   const D = await p.evaluate(목록보기);
   is(D.줄수 === 2, '  줄이 <b>둘</b> 선다 — ' + D.줄수);
-  is(D.아는칸.every(x => /^아는 것 \d+\/\d+$/.test(x)),
-     '  두 줄에 다 <b>「아는 것 N/M」</b> 이 있다 — ' + JSON.stringify(D.아는칸));
-  is(JSON.stringify(D.아는칸.map(x => x.replace('아는 것 ', ''))) === JSON.stringify(D.셈),
+  is(D.아는칸.every(x => /^\d+\/\d+$/.test(x)),
+     '  두 줄에 다 <b>「아는 것 N/M」</b> 이 있다 — ' + JSON.stringify(D.글));
+  is(JSON.stringify(D.아는칸) === JSON.stringify(D.셈),
      '  ★★ <b>cqaTally 와 같은 수</b>다 (5번) — 줄 ' +
-     JSON.stringify(D.아는칸.map(x => x.replace('아는 것 ', ''))) + ' · 셈 ' + JSON.stringify(D.셈));
+     JSON.stringify(D.아는칸) + ' · 셈 ' + JSON.stringify(D.셈));
+  /* ★ 온도가 <b>맨 앞</b>에 남아 있나 — check-rowskin 이 「온도는 글자로 남는다」
+     를 아래 줄 앞 24자에서 봅니다. 두 수를 앞에 끼우면 그 자가 울립니다.   */
+  is(D.글.every(s => /^[^·]*일 전|^[^·]*기록 없음/.test(s)),
+     '  ★ <b>온도가 맨 앞</b>에 그대로다 — 「' + (D.글[0] || '').slice(0, 30) + '」');
 
   /* ══ [6] ③ 분모를 박아 두지 않는다 (1번) ════════════════════ */
   console.log('\n[6] 🙋 <b>분모를 박아 두지 않는다</b> (1번)');
   is(D.아는칸.every(x => x.split('/')[1] === String(D.물음수)),
      '  ★★ 분모가 <b>cqaQs() 그대로</b>다 — 지금 ' + D.물음수 + '가지 · 줄 ' +
      JSON.stringify(D.아는칸.map(x => x.split('/')[1])));
-  /* ⚠ <b>좁게 찾습니다.</b> 처음 판에서 「아는 것」 뒤로 아무 글자나 지나
-     숫자·슬래시를 찾게 두었더니, 바로 위에 제가 적은 <b>쪽지 자체</b>가
-     걸렸습니다(쪽지에 「여태 「0/25」」 라고 적혀 있습니다). 판 X83 에서
-     check-clockfree 를 제 쪽지로 울린 것과 <b>같은 덫</b>입니다. 지금은
-     「아는 것」 <b>바로 뒤에 숫자</b>인 것만 봅니다 — 박아 둔 분모는 그 꼴로만
-     나타납니다 (8번 · 헛것을 잡는 자는 안 잡는 자보다 나쁘다).            */
-  const 박힌 = (src.match(/아는 것\s*\d+\s*\//g) || []);
-  is(박힌.length === 0, '  ★ app 에 <b>「아는 것 N/」 숫자가 박혀 있지 않다</b> — ' +
-     JSON.stringify(박힌));
+  /* ⚠ <b>적는 그 한 줄만 봅니다.</b> 여기서 <b>세 번</b> 데었습니다 —
+     ① 「아는 것」 뒤로 아무 글자나 지나게 두니 쪽지의 「여태 「0/25」」 가 걸렸고
+     ② 좁혀서 「아는 것」 바로 뒤 숫자만 보게 했는데도, 쪽지에 적어 둔 보기
+        「🔥 0일 전 · <b>아는 것 1/11</b> · 팩트 0/25」 가 걸렸고
+     ③ 쪽지를 걷어 내게 했더니 이번에는 <b>APP_BUILD_NOTE</b> 의 같은 보기가
+        걸렸습니다 — 그것은 쪽지가 아니라 <b>글자(문자열)</b>라 안 걷힙니다.
+     판 X83 에서 check-clockfree 를 제 쪽지로 울린 것과 <b>같은 덫</b>이고, 제 글이
+     제 자를 울린 것이 이 판에서 <b>네 번째</b>입니다. 넓게 찾기를 그만두고
+     <b>적는 그 한 줄</b>만 봅니다 (8번 · 헛것을 잡는 자는 안 잡는 자보다 나쁘다).
+     쪽지의 보기에서는 지어낸 수(1/11)를 빼고 <b>N/M</b> 으로 적었습니다 — 쪽지에
+     그럴듯한 수를 적는 것 자체가 좋은 일이 아닙니다 (1번).
+     ★ 이 찾기는 <b>덧방</b>입니다 — 「분모가 정말 읽어 온 수인가」 는 바로 아래
+       <b>여쭐 칸을 늘려 보는 수</b>가 봅니다.                              */
+  const 걷기줄 = (s) => {
+    const out = []; let 안에 = false;
+    s.split('\n').forEach(line => {
+      let x = line;
+      if (안에) {
+        if (x.indexOf('*/') >= 0) { x = x.slice(x.indexOf('*/') + 2); 안에 = false; }
+        else x = '';
+      }
+      x = x.replace(/\/\*[\s\S]*?\*\//g, '');
+      if (x.indexOf('/*') >= 0) { x = x.slice(0, x.indexOf('/*')); 안에 = true; }
+      out.push(x);
+    });
+    return out;
+  };
+  const 적는줄 = 걷기줄(src).filter(l => l.indexOf("sub.push('아는 것") >= 0);
+  is(적는줄.length === 1, '  적는 자리가 <b>한 줄</b>이다 (5번) — ' + 적는줄.length + '곳');
+  is(적는줄.length === 1 && !/아는 것\s*\d/.test(적는줄[0]),
+     '  ★ 그 줄에 <b>숫자가 박혀 있지 않다</b> — 「' + (적는줄[0] || '').trim() + '」');
   is(D.물음수 !== 8, '  ⚠ 대장의 <b>「N/8」 은 이미 낡았다</b> — 지금 ' + D.물음수 + '가지다');
   /* ★★ <b>여기가 이 토막의 심장입니다.</b> 위의 글자 찾기만으로는
      「'+t.got+'/11」 처럼 <b>이어 붙인 분모</b>를 못 봅니다 — 되돌려 보니
@@ -264,60 +299,64 @@ const 목록보기 = () => {
     CM.loaded = true;
     return r;
   }, String(목록보기));
-  is(E.아는칸.every(x => x === ''),
-     '  ★★ 못 읽었으면 <b>칸이 아예 없다</b> — 0/11 이라고 안 적습니다 (' +
-     JSON.stringify(E.아는칸) + ')');
+  is(E.아는칸.every(x => x === '') && E.글.every(s => s.indexOf('아는 것') < 0),
+     '  ★★ 못 읽었으면 <b>글자가 아예 없다</b> — 0/11 이라고 안 적습니다 (「' +
+     (E.글[0] || '') + '」)');
+  is(E.팩트칸.every(x => /^\d+\/\d+$/.test(x)),
+     '  ⚠ 그래도 <b>팩트파인딩은 남는다</b> — 그것은 칸을 세어 아는 수입니다 (' +
+     JSON.stringify(E.팩트칸) + ')');
   const F = await p.evaluate(() => {
     const h = cmRowHtml({ id: 'd1', _db: true, _dbid: 'd1', name_masked: '홍*동',
                           region: '순천', src: '일반', stage: 'TA' });
-    return { kn: /cm-kn/.test(h), ff: /cm-ff/.test(h), len: h.length };
+    return { kn: h.indexOf('아는 것') >= 0, ff: h.indexOf('팩트') >= 0, len: h.length };
   });
   is(!F.kn && !F.ff,
-     '  ★ <b>배정 DB 줄</b>에는 두 칸이 다 없다 — 그 분께는 아직 없는 것입니다 (1번)');
+     '  ★ <b>배정 DB 줄</b>에는 두 수가 다 없다 — 그 분께는 아직 없는 것입니다 (1번)');
 
   /* ══ [8] ③ 줄이 안 불어난다 ════════════════════════════════ */
   console.log('\n[8] 🙋 <b>줄이 안 불어난다</b> — 폰에서');
   /* ★ <b>절대 높이로 안 잽니다.</b> 한 줄의 키는 그 분 상태마다 다릅니다 —
      재어 보니 같은 390px 에서 <b>160px 에서 223px 까지</b> 벌어집니다(「오늘
      연락함」 을 누르신 분은 줄 안에 「되돌리기」 가 서고, 지난 기록이 많은
-     분은 더 깁니다). 거기에 고정 바닥을 걸면 <b>제 칸과 상관없는 것</b> 때문에
-     빨간불이 켜집니다 (8번).
-     그래서 <b>내 칸을 떼고 다시 재어 견줍니다</b> — 「내가 보탠 것 때문에
-     벌어졌나」 를 바로 묻습니다.
-     ── 2026-10-11 에 잰 값 ──
-       390px  · 지난 기록만 있는 분 221 → <b>223</b> (+2)
-       390px  · 오늘 「연락함」 누르신 분 160 → <b>178</b> (+18 · 한 줄 접힘)
-       1440px · 109·113 → <b>그대로</b> (컴퓨터에서는 안 벌어집니다)
-     +18 은 접이 한 줄 몫입니다. 여기서 더 벌어지면 칸이 <b>줄</b>이 된 것이고,
-     그러면 폰 한 화면에 드는 고객이 줄어듭니다.                        */
+     분은 더 깁니다). 거기에 고정 바닥을 걸면 <b>제 글과 상관없는 것</b> 때문에
+     빨간불이 켜집니다 (8번). 그래서 <b>내 글을 떼고 다시 재어 견줍니다.</b>
+
+     ── ⚠ <b>처음에 오른쪽(.rt)에 칸으로 두었습니다</b> ──────────────────
+     390px 에서 줄 높이는 +18px 뿐이라 제 자는 초록이었는데, <b>check-rowskin 이
+     울렸습니다</b> — 이름 칸이 104 → <b>86px</b> 로 찌부러졌습니다(바닥 90px).
+     오른쪽에 이미 다섯이 서 있어 더 들어갈 자리가 없었습니다. 글자를 줄이거나
+     한 칸으로 합쳐도 85~93px 이라 바닥에 붙습니다 — 다섯 꼴을 다 재어 봤습니다.
+     <b>아래 줄로 내리니 팩트파인딩까지 같이 내려가</b> 오른쪽이 넷이 되고 이름
+     칸이 104 → <b>116px</b> 로 <b>전보다 넓어졌습니다.</b>
+     ★ 그래서 이 토막은 <b>높이만 보지 않고 이름 칸 폭과 오른쪽 수</b>도 봅니다 —
+       높이만 보던 자가 그 사고를 못 봤기 때문입니다.                      */
   const 더늘어도 = 20;
+  const 이름바닥 = 90;      /* check-rowskin 과 <b>같은 바닥</b>입니다 (5번) */
   const G = await p.evaluate(() => {
     const 원 = window.cmRowHtml;
     const 재기 = () => { osRenderList();
       return [].slice.call(document.querySelectorAll('#oscList .t-row'))
         .map(e => Math.round(e.getBoundingClientRect().height)); };
     const 지금 = 재기();
-    /* 내가 보탠 것만 떼어 냅니다 — 「아는 것」 칸과 「팩트」 라는 이름표 */
+    /* 내가 보탠 글만 떼어 냅니다 — 아래 줄의 두 수 */
     window.cmRowHtml = function (c) {
-      return 원(c).replace(/<span class="cm-kn">[^<]*<\/span>/, '').replace('팩트 ', ''); };
+      return 원(c).replace(/ · 아는 것 \d+\/\d+/, '').replace(/ · 팩트 \d+\/\d+/, ''); };
     const 전 = 재기();
     window.cmRowHtml = 원; osRenderList();
     return { 전: 전, 지금: 지금 };
   });
   const 늘어난 = G.지금.map((h, i) => h - G.전[i]);
   is(늘어난.every(d => d >= 0 && d <= 더늘어도),
-     '  ★ 내 칸 때문에 벌어진 몫이 <b>' + JSON.stringify(늘어난) + 'px</b> 다 — ' +
+     '  ★ 내 글 때문에 벌어진 몫이 <b>' + JSON.stringify(늘어난) + 'px</b> 다 — ' +
      더늘어도 + 'px 까지 (전 ' + JSON.stringify(G.전) + ' → 지금 ' + JSON.stringify(G.지금) + ')');
-  /* ⚠ 위 견줌은 <b>내 칸만</b> 떼고 잽니다. 두 칸이 같이 커지면 차이가 그대로라
-     못 보므로, <b>달아난 높이</b>로 한 번 더 막습니다.
-     ── 되돌려 본 것 (2026-10-11) ──
-       · 칸 글을 <b>길게</b> 늘여 봤습니다 → 높이는 <b>그대로</b>였고 (접이 안에서
-         남는 자리에 들어갑니다) [5]의 <b>꼴 검사</b>가 울렸습니다
-       · 칸을 <b>flex:0 0 100% 줄</b>로 만들어 봤습니다 → 높이가 <b>그대로</b>입니다.
-         .rt 가 이미 접혀 있어 그 칸은 이미 제 줄에 서 있었습니다 — <b>망가진 것이
-         아니라 아무 일도 안 일어난 것</b>입니다. 안 울리는 것이 맞습니다 (8번)
-       · 칸을 <b>30px 글씨</b>로 키워 봤습니다 → [78,40]px · 261px 로 <b>둘 다</b>
-         울렸습니다. 정말 벌어지는 자리는 잡습니다
+  is(D.이름폭.every(w => w >= 이름바닥),
+     '  ★★ <b>이름 칸이 안 찌부러진다</b> (390px · ' + 이름바닥 + 'px 이상) — ' +
+     D.이름폭.join(' · ') + 'px');
+  is(D.오른쪽 === 4,
+     '  ★ 오른쪽에 선 것이 <b>넷</b>이다 — 두 수를 아래 줄로 내린 자리입니다 (' +
+     D.오른쪽 + '개)');
+  /* ⚠ 위 견줌은 <b>내 글만</b> 떼고 잽니다. 그래서 줄 전체가 커지는 일(옷을
+     건드리는 경우)은 차이가 그대로라 못 봅니다 — <b>달아난 높이</b>로 막습니다.
      ★ 이것은 <b>정밀한 자가 아니라 달아남을 막는 울타리</b>입니다. 지금 가장 긴
        줄이 223px 이고, 폰 한 화면(844px)에 <b>세 줄</b>은 들어야 명단입니다.  */
   const 울타리 = 260;
@@ -326,11 +365,16 @@ const 목록보기 = () => {
 
   /* ══ [9] ③ 두 수에 이름이 붙었다 ═══════════════════════════ */
   console.log('\n[9] 🙋 <b>두 수에 이름이 붙었다</b>');
-  is(D.팩트칸.every(x => /^팩트 \d+\/\d+$/.test(x)),
-     '  ★ 옆 칸도 <b>이름이 있다</b> — ' + JSON.stringify(D.팩트칸) +
-     ' (여태 「0/25」 뿐이었습니다)');
-  is(/\.cm-ff,\.cm-kn\{/.test(src) || /\.cm-kn,\.cm-ff\{/.test(src),
-     '  ★ 두 칸이 <b>같은 옷</b>이다 — 규칙 한 줄 (5번)');
+  is(D.팩트칸.every(x => /^\d+\/\d+$/.test(x)),
+     '  ★ 옆 수도 <b>이름이 있다</b> — 「팩트 ' + D.팩트칸.join(' · ') +
+     '」 (여태 오른쪽에 「0/25」 라고만 섰습니다)');
+  is(D.글.every(s => s.indexOf('아는 것') < s.indexOf('팩트')),
+     '  두 수가 <b>한 줄에 차례로</b> 선다 — 「' + (D.글[0] || '').slice(0, 44) + '」');
+  /* ★ <b>새 CSS 를 안 만들었나</b> (5번) — 글자로만 들어가므로 .cm-kn 을 쓰는
+     자리가 명단에 없어야 합니다. 칸(span)으로 되돌리면 ui.css 의
+     「.t-row :where(.m) span{display:block}」 에 걸려 한 줄을 통째로 먹습니다. */
+  is(!/class="cm-kn"/.test(src),
+     '  ★ 명단 줄이 <b>칸(span)을 안 쓴다</b> — 글자로만 섭니다');
 
   /* ══ 끝 ════════════════════════════════════════════════════ */
   is(hits === hits0, '  🌐 <b>서버를 안 부른다</b> (7번) — 밖으로 ' + (hits - hits0) + '번');
