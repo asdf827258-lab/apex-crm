@@ -341,6 +341,18 @@
       <div id="trendBody"></div>
     </section>
 
+    <!-- 🎙 화제별 전체 대본 — 글은 ta-trend.js 한 곳 (판 X93) -->
+    <section class="panel trend" id="sayPanel">
+      <div class="trend-head">
+        <div>
+          <h2>🎙 전체 대본 — 여는 말부터 거절처리까지</h2>
+          <p>고른 화제 그대로 <b>다섯 마디</b>로 섭니다. 되묻지 않고 <b>알려 드리는 말</b>로 적혀 있습니다.</p>
+        </div>
+        <button type="button" class="btn btn-blue" id="copySay">대본 전체 복사</button>
+      </div>
+      <div id="sayBody"></div>
+    </section>
+
     <!-- 작업 영역: 왼쪽 거절처리 · 오른쪽 연속 멘트 -->
     <div class="workspace">
       <!-- 왼쪽: 거절처리 (한눈에) -->
@@ -571,11 +583,93 @@
     $('sourceText').value=DB_SOURCES.find(x=>x.key==='ns').text;
   }
 
+  /* ── 끼워 넣는 자리는 <b>여기 한 곳</b>에서 채웁니다 (5번 · 판 X93) ──────
+     거절처리와 🎙 전체 대본이 <b>같은 자</b>를 부릅니다. 따로 채우면 한쪽만
+     이름이 비는 날이 옵니다.
+       [고객] 고객명 · [나] 담당자명 · [①] [②] 양자택일 두 자리
+       OOO  — 예전부터 쓰던 자리(거절처리 열일곱)라 <b>그대로</b> 둡니다.
+     ★ 못 받은 값은 <b>빈 칸으로 두지 않고</b> 기본값(OOO)이 그대로 섭니다 —
+       읽다가 이름이 사라지면 그 자리에서 말이 끊깁니다.                    */
+  /* ── 끝소리를 보고 <b>와/과</b>를 고릅니다 — 묻는 곳은 여기 하나입니다 (5번) ──
+     사장님이 <b>소리 내어 읽으시는 글</b>입니다. 「10시과」 라고 적혀 있으면 그
+     한 글자에서 말이 걸립니다. 자리 이름은 설계사가 직접 치시므로 「오전」 처럼
+     받침이 있는 날도 「3시」 처럼 없는 날도 옵니다.
+     ★ <b>한글 음절만</b> 봅니다. 숫자·영문으로 끝나면 읽는 법이 사람마다 달라
+       (10시 → 십시 · 텐시) 지어 고르지 않고 <b>「와」</b> 로 둡니다 (1번).    */
+  function josaWaGwa(word){
+    const w=String(word==null?'':word).replace(/\s+$/,'');
+    const ch=w.charCodeAt(w.length-1);
+    if(!(ch>=0xAC00&&ch<=0xD7A3))return '와';
+    return ((ch-0xAC00)%28)?'과':'와';
+  }
   function dynamicObjectionText(text){
     const p=buildScriptParts();
-    return text
+    return String(text==null?'':text)
+      .replaceAll('[①][와과]',p.slot1+josaWaGwa(p.slot1))
+      .replaceAll('[고객]',p.customer)
+      .replaceAll('[나]',p.agent)
+      .replaceAll('[①]',p.slot1)
+      .replaceAll('[②]',p.slot2)
       .replaceAll('OOO',p.agent)
       .replaceAll('“유입 경로”',`“${p.source}”`);
+  }
+
+  /* ── 🎙 <b>전체 대본</b> — 글은 ta-trend.js 한 곳, 그리는 곳은 여기 하나 (5번) ──
+     ★ <b>지어내지 않습니다</b> (1번) — 대본이 없으면 비워 두고 그렇게 적습니다.
+     ★ 다섯 마디의 <b>차례를 바꾸지 않습니다</b>. ② 이득이 ④ 양자택일보다 먼저
+       와야 「왜 만나야 하는지」 가 선 뒤에 날짜가 나옵니다.                 */
+  const SAY_STEP = [
+    { k:'open', n:'①', t:'여는 말',   d:'십 초. 누구인지 밝히고 화제를 얹습니다.' },
+    { k:'gain', n:'②', t:'이득',      d:'나로 인해 생기는 것. <b>「있으면」</b> 을 빼지 마십시오 — 확인 전에는 그것이 사실입니다.' },
+    { k:'act',  n:'③', t:'내가 할 일', d:'확신은 여기에만 둡니다. 고객이 받을 것은 장담하지 않습니다.' },
+    { k:'pick', n:'④', t:'양자택일',   d:'묻지 않고 <b>비워 두었다고 알립니다.</b> 두 자리는 위 입력칸에서 옵니다.' },
+    { k:'hold', n:'⑤', t:'못 정하실 때', d:'한 번만 더. 두 번째 거절에는 붙잡지 않습니다.' }
+  ];
+  function sayNow(){
+    if(!TREND) return null;
+    if(selectedTrend==='none') return TREND.bare || null;
+    const t=trendNow();
+    return (t && t.say) ? t : (TREND.bare || null);
+  }
+  function renderSay(){
+    const host=$('sayBody'); if(!host) return;
+    const t=sayNow();
+    if(!t || !t.say){
+      host.innerHTML='<div class="detail-text">대본을 읽지 못했습니다(ta-trend.js). <b>말을 지어 넣지 않습니다</b> — 위 첫 마디와 아래 거절처리로 진행하세요.</div>';
+      return;
+    }
+    let h='<div class="trend-grid">';
+    SAY_STEP.forEach(st=>{
+      const v=t.say[st.k]; if(!v) return;
+      h+=`<div class="detail-box"><div class="detail-label"><span class="detail-dot"></span>${st.n} ${escapeHTML(st.t)}</div>`+
+         `<div class="detail-text ${st.k==='gain'?'primary':''}">${escapeHTML(dynamicObjectionText(v))}</div>`+
+         `<div class="detail-text" style="font-size:12.5px;color:var(--muted);margin-top:6px">${st.d}</div></div>`;
+    });
+    h+='</div>';
+    const O=t.obj||[];
+    if(O.length){
+      h+='<div class="trend-src" style="margin-top:14px"><b>이 화제에서만 나오는 거절</b> — 아래 <b>디테일 거절처리</b> 열일곱 가지는 화제와 상관없이 그대로 씁니다.</div>';
+      h+='<div class="trend-grid" style="margin-top:8px">';
+      O.forEach(o=>{
+        h+=`<div class="detail-box"><div class="detail-label"><span class="detail-dot"></span>「${escapeHTML(o.title)}」</div>`+
+           `<div class="detail-text">${escapeHTML(dynamicObjectionText(o.text))}</div>`+
+           (o.follow?`<div class="detail-text" style="margin-top:6px"><b>다음 한마디</b> · ${escapeHTML(dynamicObjectionText(o.follow))}</div>`:'')+
+           (o.avoid?`<div class="detail-text" style="font-size:12.5px;color:#9A3412;margin-top:6px"><b>쓰지 않는 말</b> · ${escapeHTML(o.avoid)}</div>`:'')+
+           '</div>';
+      });
+      h+='</div>';
+    }
+    host.innerHTML=h;
+  }
+  function sayPlain(){
+    const t=sayNow(); if(!t||!t.say) return '';
+    const L=[];
+    SAY_STEP.forEach(st=>{ const v=t.say[st.k]; if(v) L.push(st.n+' '+st.t+'\n'+dynamicObjectionText(v)); });
+    (t.obj||[]).forEach(o=>{
+      L.push('거절 — 「'+o.title+'」\n'+dynamicObjectionText(o.text)+
+        (o.follow?('\n다음 한마디 · '+dynamicObjectionText(o.follow)):''));
+    });
+    return L.join('\n\n');
   }
 
   function renderTrend(){
@@ -604,7 +698,7 @@
     document.querySelectorAll('.trend-tab').forEach(btn=>btn.addEventListener('click',()=>{
       selectedTrend=btn.dataset.key;
       TREND.setPick(selectedTrend);
-      renderTrend(); renderScript();
+      renderTrend(); renderSay(); renderScript();
     }));
   }
 
@@ -641,14 +735,21 @@
   function toggleInputbar(){const bar=$('inputbar');bar.classList.toggle('collapsed');$('inputbarCaret').textContent=bar.classList.contains('collapsed')?'펼치기 ▸':'접기 ▾';}
   window.toggleInputbar=toggleInputbar;
 
-  populateDB();renderTrend();renderScript();renderObjections();
+  populateDB();renderTrend();renderSay();renderScript();renderObjections();
   $('copyTrend').addEventListener('click',()=>{const t=trendNow();if(!t){showToast('화제 없이 진행합니다.');return;}copyText(trendLine(t),'첫 마디를 복사했습니다.');});
   $('dbType').addEventListener('change',()=>setDB($('dbType').value));
-  fields.forEach(id=>$(id).addEventListener('input',()=>{renderScript();renderObjections();}));
+  /* 칸을 고치면 <b>대본도 같이</b> 다시 그립니다 (판 X93) — 이름과 두 자리가
+     대본 안에 들어가므로, 안 다시 그리면 복사할 때 옛 이름이 따라갑니다. */
+  fields.forEach(id=>$(id).addEventListener('input',()=>{renderScript();renderObjections();renderSay();}));
   $('cueToggle').addEventListener('change',e=>document.body.classList.toggle('hide-cues',!e.target.checked));
   $('copyBtn').addEventListener('click',()=>copyText($('scriptOutput').dataset.plain,'깨끗한 멘트를 복사했습니다.'));
   $('copyCoachBtn').addEventListener('click',()=>copyText($('scriptOutput').dataset.coached,'코칭 포함 멘트를 복사했습니다.'));
   $('copySourceBtn').addEventListener('click',()=>copyText(buildScriptParts().paragraphs[0],'도입부를 복사했습니다.'));
+  $('copySay').addEventListener('click',()=>{
+    const t=sayPlain();
+    if(!t){toast('대본을 읽지 못해 복사할 것이 없습니다.');return;}
+    copyText(t,'전체 대본을 복사했습니다.');
+  });
   $('copyObjection').addEventListener('click',()=>{const o=OBJECTIONS[selectedObjection];copyText(`${dynamicObjectionText(o.text)}\n\n다음 한마디\n${dynamicObjectionText(o.follow)}`,'거절 대응 멘트를 복사했습니다.');});
   $('fontDown').addEventListener('click',()=>setScriptFont(-1));$('fontUp').addEventListener('click',()=>setScriptFont(1));
   $('printBtn').addEventListener('click',()=>window.print());$('focusBtn').addEventListener('click',openFocus);$('closeFocus').addEventListener('click',closeFocus);$('autoScrollBtn').addEventListener('click',startAutoScroll);
