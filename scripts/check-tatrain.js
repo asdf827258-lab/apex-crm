@@ -36,7 +36,12 @@
         · 거절마다 「한 숨 응대」 가 맨 위에 서고(170자 안), 단정·퍼센트·다투는 말이 없고,
           손해(소급·그대로 내·돌려받지)를 말하면 반드시 「대상」 조건이 붙는다 (2번)
         · 응대 뒤 「다시 끌고 오기」 가 <b>누른 단계 다음 원문</b>으로 잇는다
-        · 가까워지는 질문은 「전화에서는 하나까지」 라고 밝히고, 질문지의 회사·시기·안내는 「묻지 않습니다」 */
+        · 가까워지는 질문은 「전화에서는 하나까지」 라고 밝히고, 질문지의 회사·시기·안내는 「묻지 않습니다」
+     ⑬ 「스크립트가 없던데」 (2026-10-12) — 두 자리가 원문을 가렸다
+        · 앱: 스크립트 탭을 누르면 <b>첫 화면 안에</b> 1단계 원문이 선다(앱 안 칸 크기 356×658).
+          흐름·무기 카드는 접혀 있고, 폰에서 탭은 한 줄이다
+        · 공유본(scripts/mk-tashare.js): <b>자바스크립트가 꺼진 곳</b>(파일·메신저 미리보기)에서도
+          세 칸이 다 서고, 단계의 🛡 단추가 그 거절 응대로 건너뛴다. 켜진 곳에서는 탭 · 옆 칸 */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9141;
@@ -233,6 +238,46 @@ const srv = http.createServer((q, s) => {
     is(/전화에서는 하나까지/.test(await p.textContent('#tt-near')), '가까워지는 질문은 「전화에서는 하나까지」 라고 밝힌다');
     is(await p.evaluate(() => ['co', 'when', 'msg'].every(k => /묻지 않습니다/.test(TT_SHEET.filter(q => q.k === k)[0].h))), '질문지의 회사·가입 시기·안내 칸은 「묻지 않습니다 — 들리면 표시」');
     is(await p.evaluate(() => TT_QUIZ.some(q => /질문을 많이/.test(q.q) && q.a === false)), '「처음부터 질문을 많이」 를 X 로 가르친다');
+
+    console.log('\n[14] 스크립트가 먼저 보이나 — 앱 · 공유본');
+    {
+      const pa = await (await b.newContext({ viewport: { width: 356, height: 658 } })).newPage();
+      await pa.goto('http://127.0.0.1:' + PORT + '/app/ta-train.html', { waitUntil: 'load' });
+      await pa.click('#ttTabs button[data-t="script"]');
+      const m = await pa.evaluate(() => ({ s1: document.getElementById('ttStep1').getBoundingClientRect().top, vh: innerHeight,
+        fold: [...document.querySelectorAll('#tt-script details.tt-fold')].map(d => d.open), tabsH: document.getElementById('ttTabs').offsetHeight }));
+      is(m.s1 > 0 && m.s1 < m.vh - 120, '앱: 스크립트 탭을 누르면 첫 화면 안에 1단계 원문이 선다 (위에서 ' + Math.round(m.s1) + 'px · 화면 ' + m.vh + ')');
+      is(m.fold.length === 2 && m.fold.every(o => !o), '앱: 흐름·무기 카드는 접혀 있어 원문을 밀어내지 않는다');
+      is(m.tabsH < 60, '앱: 폰에서 탭이 한 줄이다 (' + m.tabsH + 'px)');
+      await pa.context().close();
+      const os = require('os'), cp = require('child_process');
+      const out = path.join(os.tmpdir(), 'tashare-' + process.pid + '.html');
+      cp.execFileSync(process.execPath, [path.join(ROOT, 'scripts/mk-tashare.js'), out], { stdio: 'pipe' });
+      const SH = fs.readFileSync(out, 'utf8');
+      is(OB.every(o => SH.indexOf('id="ob-' + o.k + '"') >= 0), '공유본: 거절 ' + OB.length + '개가 저마다 건너뛸 자리(id)를 가진다');
+      for (const js of [false, true]) {
+        const ps = await (await b.newContext({ viewport: { width: 390, height: 844 }, javaScriptEnabled: js })).newPage();
+        const er = []; ps.on('pageerror', e => er.push(e.message));
+        await ps.goto('file://' + out);
+        const tag = js ? '공유본(스크립트 켜짐)' : '공유본(스크립트 꺼짐)';
+        await ps.click('#tabs [data-t="s"]'); await ps.waitForTimeout(200);
+        const nSteps = await ps.evaluate(() => [...document.querySelectorAll('#s .step')].filter(e => e.offsetParent).length);
+        is(nSteps === 6, tag + ': 스크립트 탭에서 6단계가 다 보인다');
+        if (!js) {
+          is(await ps.evaluate(() => ['q', 's', 'o'].every(id => getComputedStyle(document.getElementById(id)).display !== 'none')), tag + ': 질문지 · 스크립트 · 거절처리 세 칸이 다 선다');
+          await ps.click('.step[data-st="3"] .stepob .ob[data-ob="later"]'); await ps.waitForTimeout(200);
+          const j = await ps.evaluate(() => { const d = document.getElementById('ob-later'); return { h: location.hash, open: d.open, top: d.getBoundingClientRect().top, q: /한 숨에/.test(d.textContent) }; });
+          is(j.h === '#ob-later' && j.open && j.top < 200 && j.q, tag + ': 단계의 🛡 단추가 그 거절의 한 숨 응대로 건너뛴다');
+        } else {
+          await ps.click('.step[data-st="3"] .stepob .ob[data-ob="later"]'); await ps.waitForTimeout(200);
+          is(await ps.evaluate(() => document.getElementById('objp').classList.contains('open') && /4단계 원문으로/.test(document.getElementById('objpBody').textContent)),
+            tag + ': 🛡 단추가 옆 칸(아래 판)에 응대와 다시 끌고 오기를 띄운다');
+        }
+        is(er.length === 0, tag + ': 오류가 없다' + (er.length ? ' ← ' + er[0] : ''));
+        await ps.context().close();
+      }
+      try { fs.unlinkSync(out); } catch (e) {}
+    }
 
     console.log('\n[10] 본체에서 열기');
     /* 본체 여는 법은 smoke.js · check-rejgym 과 같은 판 (로그인 막 걷기) */

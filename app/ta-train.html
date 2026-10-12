@@ -52,6 +52,15 @@ button,input,select,textarea{font:inherit;color:inherit}
 .tt-tabs button{flex:1 1 auto;min-height:44px;padding:0 12px;border:1px solid var(--t-line);
   border-radius:var(--t-r-btn);background:var(--t-card);font-weight:800;font-size:14px;cursor:pointer}
 .tt-tabs button.on{background:var(--t-point);border-color:var(--t-point);color:var(--t-card)}
+/* 폰에서는 탭을 <b>한 줄</b>로 — 세 줄로 접히면 그 칸의 몸이 화면 밖으로 밀린다 */
+@media (max-width:640px){
+  .tt-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tt-tabs::-webkit-scrollbar{display:none}
+  .tt-tabs button{flex:0 0 auto;font-size:13.5px;padding:0 10px}
+  .tt-shd{padding:12px 14px}
+  .tt-shd .tt-flow{display:none}
+  .tt-shd h2{font-size:16.5px;margin:0 0 2px}
+}
 .tt-card{background:var(--t-card);border:1px solid var(--t-line);border-radius:var(--t-r);padding:18px;margin-bottom:12px}
 .tt-card h2{margin:0 0 6px;font-size:18px;font-weight:900}
 .tt-card h3{margin:14px 0 4px;font-size:15.5px;font-weight:900}
@@ -143,6 +152,14 @@ button,input,select,textarea{font:inherit;color:inherit}
 .tt-ob-stop{margin-top:6px;font-size:13.5px;background:var(--t-bg);border-radius:var(--t-r-sm);padding:6px 10px}
 .tt-ob-src{margin-top:6px;font-size:12px;color:var(--t-sub)}
 .tt-stepob{margin-top:10px;padding-top:8px;border-top:1px dashed var(--t-line)}
+/* 스크립트 칸에서는 <b>원문이 먼저</b> 보여야 한다 — 흐름·무기 카드는 한 줄로 접어 둔다
+   (2026-10-12 사장님 말씀 「스크립트가 없던데」 — 두 카드가 원문을 화면 몇 장 아래로 밀어냈다) */
+.tt-fold{padding:12px 18px}
+.tt-fold>summary{cursor:pointer;list-style:none;min-height:44px;display:flex;align-items:center}
+.tt-fold>summary::-webkit-details-marker{display:none}
+.tt-fold>summary h2{margin:0;font-size:16px}
+.tt-fold-hint{font-size:12.5px;font-weight:700;color:var(--t-sub)}
+.tt-fold[open]>summary{margin-bottom:6px}
 .tt-rules{margin:6px 0;padding-left:20px}
 .tt-rules li{font-size:14.5px;margin:4px 0}
 .tt-qmap{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:6px 0}
@@ -281,14 +298,13 @@ button,input,select,textarea{font:inherit;color:inherit}
 
   <!-- ── ☎️ 스크립트 ─────────────────────────────────────────── -->
   <section id="tt-script" class="tt-hide">
-    <div class="tt-card">
+    <div class="tt-card tt-shd">
       <h2>보장분석 DB 스크립트 — 6단계</h2>
       <div class="tt-flow" id="ttFlow"></div>
-      <p class="tt-sub">파란 칸은 <b>원문 그대로</b>입니다(A+에셋 미라클지점). 아래 「왜」·「조심」은 교육용으로 붙인 코칭입니다.
-      ○○○ 자리는 DB 에 적힌 것으로 채웁니다. 질문 뒤에는 고객이 답할 때까지 <b>먼저 말하지 않습니다.</b></p>
+      <p class="tt-sub">파란 칸은 <b>원문 그대로</b>(A+에셋 미라클지점) · ○○○ 은 DB 에 적힌 것으로 · 거절이 나오면 단계 밑 <b>🛡 단추</b>.</p>
     </div>
-    <div class="tt-card tt-flowc" id="ttFlowCard">
-      <h2>🧭 말의 흐름은 내가 끌고 간다</h2>
+    <details class="tt-card tt-fold tt-flowc" id="ttFlowCard">
+      <summary><h2>🧭 말의 흐름은 내가 끌고 간다 <span class="tt-fold-hint">— 새 질문은 하나뿐 · 눌러서 펼치기</span></h2></summary>
       <p>처음에 질문을 많이 하면 고객은 <b>조사받는다</b>고 느끼고 끊습니다. 처음 30초는 <b>내가 말합니다.</b> 아래 다섯 가지만 지키면 원문을 그대로 따라가도 흐름이 내 손에 있습니다.</p>
       <ol class="tt-rules">
         <li><b>첫 30초는 내가 말한다</b> — 누가 · 왜 · 「확인만」 세 마디를 쉬지 않고. 1단계 원문이 그렇게 짜여 있습니다.</li>
@@ -302,15 +318,15 @@ button,input,select,textarea{font:inherit;color:inherit}
       <p class="tt-sub" id="ttQsum"></p>
       <h3>되돌리는 말 — 옆길에서 제자리로</h3>
       <ul id="ttPark"></ul>
-    </div>
-    <div class="tt-card tt-core">
-      <h2>🛡 거절이 나오면 — 이 전화의 무기 둘</h2>
+    </details>
+    <details class="tt-card tt-fold tt-core">
+      <summary><h2>🛡 거절이 나오면 — 이 전화의 무기 둘 <span class="tt-fold-hint">— 왜 다른가 · 손해 · 눌러서 펼치기</span></h2></summary>
       <div class="tt-two">
         <div><h3>왜 이 전화는 다른가</h3><ol id="ttCoreDiff"></ol></div>
         <div><h3>안 받으시면 손해 <span class="tt-tag">늘 「대상이시면」</span></h3><ol id="ttCoreLoss"></ol></div>
       </div>
       <p class="tt-sub">순서 — 먼저 받고(인정) → <b>다른 점</b> 한 문장 → <b>손해</b> 한 문장 → 고르게 묻는다. 두 번째 거절이면 붙잡지 않고, <b>보험사에 물어볼 말 한 줄</b>은 드리고 마칩니다.</p>
-    </div>
+    </details>
     <div class="tt-duo">
       <div id="ttSteps"></div>
       <aside class="tt-objp" id="ttObjPane" aria-label="거절 바로 응대">
@@ -895,7 +911,8 @@ function ttTab(t){
   var bs=$t('ttTabs').getElementsByTagName('button'),i;
   for(i=0;i<bs.length;i++){ if(bs[i].getAttribute('data-t')===t)bs[i].classList.add('on'); else bs[i].classList.remove('on'); }
   for(i=0;i<TT_TABS.length;i++){ var s=$t('tt-'+TT_TABS[i]); if(TT_TABS[i]===t)s.classList.remove('tt-hide'); else s.classList.add('tt-hide'); }
-  try{ window.scrollTo(0,0); }catch(e){}
+  /* 탭 바로 아래로 — 맨 위로 올리면 머리글만 보이고 그 칸의 몸이 안 보인다 */
+  try{ var y=$t('ttTabs').getBoundingClientRect().top+(window.pageYOffset||0)-4; window.scrollTo(0,y>0?y:0); }catch(e){}
 }
 
 function ttInit(){
@@ -907,6 +924,8 @@ function ttInit(){
   $t('ttObjFab').onclick=function(){ $t('ttObjPane').classList.add('open'); };
   $t('ttObjClose').onclick=function(){ $t('ttObjPane').classList.remove('open'); };
   $t('ttObjMore').onclick=function(){ ttObjShow(''); };
+  /* 인쇄할 때는 접어 둔 카드도 다 편다 */
+  window.addEventListener('beforeprint',function(){ var d=document.querySelectorAll('details.tt-fold,details.tt-ob-more'),i; for(i=0;i<d.length;i++)d[i].open=true; });
   $t('ttTabs').onclick=function(e){ var b=e.target.closest('button'); if(b&&b.getAttribute('data-t'))ttTab(b.getAttribute('data-t')); };
   $t('ttCo').onchange=ttCoRun; $t('ttYm').onchange=ttCoRun; $t('ttYm').oninput=ttCoRun;
   $t('ttSheet').onclick=function(e){ var b=e.target.closest('.tt-chip'); if(b)ttSheetPick(b.getAttribute('data-k'),b.getAttribute('data-v')); };
