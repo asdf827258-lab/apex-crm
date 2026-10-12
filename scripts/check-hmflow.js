@@ -119,7 +119,15 @@ const CARD = () => {
   is((SRC.match(/function arStageN\(/g) || []).length === 1, '  세는 함수가 <b>한 벌</b>이다 — arStageN');
   is(/function arStageText\(who\)\{[\s\S]{0,120}arStageN\(who\)/.test(SRC),
      '  ★ AI 에게 넘기는 글도 <b>arStageN 을 부른다</b> — 두 곳에서 각자 세지 않는다');
-  is(/function hmFlowHtml\(\)\{[\s\S]{0,200}arStageN\(/.test(SRC),
+  /* ⚠ 2026-10-12 · 판 X91 — <b>거리로 재지 않습니다.</b> 여태 「함수 시작
+     200자 안에 arStageN(」 으로 찾았는데, 그 토막에 쪽지 한 덩어리가 붙자
+     <b>부르고 있는데도 빨간불</b>이 켜졌습니다. 우리가 보려는 것은 「가까이
+     있나」 가 아니라 <b>「그 토막이 그 자를 부르나」</b> 입니다. 토막을 잘라
+     그 안에서 찾습니다 (8번 · 헛것을 잡는 자는 안 잡는 자보다 나쁘다).   */
+  const 토막 = (이름) => { const i = SRC.indexOf('function ' + 이름 + '(');
+    if (i < 0) return ''; const j = SRC.indexOf('\nfunction ', i + 10);
+    return SRC.slice(i, j < 0 ? SRC.length : j); };
+  is(/arStageN\(/.test(토막('hmFlowHtml')),
      '  ★ 홈 칸도 <b>arStageN 을 부른다</b>');
   /* 진짜 같은 답인가 — 글과 화면의 수를 <b>맞대어</b> 봅니다 */
   const 맞대 = await p.evaluate(() => {
