@@ -67,10 +67,16 @@ const SEED = (o) => `
  AR.rep={};AR.loaded=true;AR.busy='';AR.err='';
  /* 내 고객을 <b>둘 이상</b> 둔다 — 한 분뿐이면 「다음 분」 이 설 이유가
     없어서, 그 단추를 안 만들어도 점검이 초록이 된다 (8번) */
- AR.db=[{id:'d1',who:'me',name:'홍길동A',region:'순천',src:'일반',stage:'TA',days:9,n:1,res:'부재',cAt:'',pAt:''},
-        {id:'d3',who:'me',name:'홍길동C',region:'순천',src:'일반',stage:'AP',days:3,n:2,res:'상담',cAt:'',pAt:''},
-        {id:'d4',who:'me',name:'홍길동D',region:'순천',src:'일반',stage:'PC',days:6,n:3,res:'상담',cAt:'',pAt:''},
-        {id:'d2',who:'u2',name:'홍길순B',region:'천안',src:'일반',stage:'AP',days:3,n:2,res:'상담',cAt:'',pAt:''}];
+ /* ★★ <b>약속 날짜(appt)를 심습니다</b> (2026-10-12 · 판 X90) — 그전에는 한
+    줄도 없었습니다. 그래서 「🕗 약속지남」 칸이 <b>안 서는 상태</b>만 재고
+    있었는데, <b>사장님 서버에는 142건이 있습니다.</b> 없는 상태를 재어 초록이
+    되면 사장님 폰에서만 선을 넘습니다 (8번 · 판 X80·X84 에서 데인 그 자리).
+    ★ <b>지난 것 둘 · 앞으로 하나</b>를 섞습니다 — 칸이 서는 판과 그 칸이
+      셈을 바르게 하는 판을 한 씨에서 봅니다. 못 박은 날은 2026-10-09 입니다. */
+ AR.db=[{id:'d1',who:'me',name:'홍길동A',region:'순천',src:'일반',stage:'TA',days:9,n:1,res:'부재',cAt:'',pAt:'',appt:''},
+        {id:'d3',who:'me',name:'홍길동C',region:'순천',src:'일반',stage:'AP',days:3,n:2,res:'상담',cAt:'',pAt:'',appt:'2026-08-20T10:00:00Z'},
+        {id:'d4',who:'me',name:'홍길동D',region:'순천',src:'일반',stage:'PC',days:6,n:3,res:'상담',cAt:'',pAt:'',appt:'2026-09-25T10:00:00Z'},
+        {id:'d2',who:'u2',name:'홍길순B',region:'천안',src:'일반',stage:'AP',days:3,n:2,res:'상담',cAt:'',pAt:'',appt:'2026-10-20T10:00:00Z'}];
  AR.cliRows=[];AR.calls=[];CM.loaded=true;CM.who={me:'홍길동',u2:'홍길순'};
  OSC.loaded=true;OSC.busy=false;OSC.err='';OSC.list=[];
  window.cmLoadAll=function(cb){if(cb)cb();};
