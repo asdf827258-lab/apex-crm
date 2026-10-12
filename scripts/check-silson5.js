@@ -1,20 +1,19 @@
-/* 📞 <b>한 장 TA — 할인 · 5세대 · 보험금 찾기</b> (2026-10-12 사장님 말씀 「5세대 실비와, 할인 전용 RP …
-   못받은 보험금 찾아줌 … 나이대와 비슷한 지역에 찾아준 사례로 니즈환기 … 거절처리 … 5세대 실비를 한장으로
-   요약하고 대상자들 정리」 → 같은 날 「아니야 복잡해 html로 만들고 한장으로 한번에 할수 있도록 … 내가 전에
-   이미지 첨부한 자료를 기반으로 … ta스크립트가 이정도로 어떻게 고객이 날 만나주냐고」)
+/* 📞 <b>30초 TA — 무사고 할인 · 못 받은 보험금</b>
+   사장님 말씀 (2026-10-12, 세 번에 걸쳐) —
+     「5세대 실비와, 할인 전용 RP … 못받은 보험금 찾아줌 … 또래 사례로 니즈환기 … 거절처리 … 5세대 한장 요약」
+     「아니야 복잡해 … 한장으로 한번에 … 이미지 첨부한 자료를 기반으로 … 어떻게 고객이 날 만나주냐고」
+     「2026년 10월부터 보험료할인 제도는 뭐야? 그리고 시간이 너무 오래걸린다 … 너가 고객이라고 생각하고 …
+      그리고 거절처리 바로 볼수 있도록 해야하는데 안되어 있네」
 
    못 박는 것 —
-     ① <b>한 장</b>이다 — 탭이 없고, 대본 · 거절 · 5세대 한 장이 한 화면에 차례로 선다
-     ② 뼈대는 사장님 이미지의 「보장분석디비 스크립트」 — 원문이라 적은 줄은 🎓 신입 TA 교육
-        (ta-train.html TT_STEPS)과 <b>한 글자씩 같다</b>. 한쪽만 고치면 빨간불 (5번)
-     ③ 만날 이유 셋(할인 · 5세대 · 못 받은 보험금)을 첫 마디에 · 약속은 둘 중 하나 ·
-        거절마다 <b>다시 약속으로</b> 돌아온다
-     ④ 숫자는 금융위 원문에 있는 것뿐 (1번·9번) — ORIG 는 2026-10-12 에 원문에서 옮긴 글
-     ⑤ 11월 제도는 「예정」 · 할인율은 「예시·예상」 · 「갈아타세요·무조건·반값 확정」 없음
-     ⑥ 할인을 주는 곳은 보험회사 — 「금융감독원에서 시행하는」 이라고 말하지 않는다
-     ⑦ 또래·근처 사례는 <b>적어 둔 것만</b> — 없거나 안 겹치면 그 줄이 안 선다 · 빈 금액은 0원이
-        아니라 말 안 함 · 이름 안 받음 (1번·3번) · 이 기기에만 · 서버 안 부름 (7번)
-     ⑧ 「심사 결과에 따릅니다」 · tnum 없음 (4-1번) · 인쇄는 대본·거절·한 장만               */
+     ① <b>짧다</b> — 대본은 네 마디, 한 마디 130자 · 모두 합쳐 420자 안쪽(소리 내어 30초 남짓)
+     ② <b>거절이 늘 보인다</b> — 화면 아래에 떠 있고, 맨 아래로 내려도 보이고, 누르면 답이 <b>화면 안</b>에 뜬다
+     ③ 거절의 답은 <b>다시 약속(둘 중 하나)</b>으로 — 「번호 어떻게 알았냐」 만 빼고
+     ④ 사장님 이미지의 원문 6단계는 그대로 접어 둔다 — 🎓 신입 TA 교육 TT_STEPS 와 한 글자씩 같다 (5번)
+     ⑤ 숫자는 원문(금융위 보도자료 · 10월 5일 기사 둘)에 있는 것뿐 (1번·9번)
+     ⑥ 대본·거절에서 「금감원에서 시행하는 할인」 이라고 하지 않는다 · 고객이 직접 신청할 수 있다고 말한다
+     ⑦ 또래·근처 사례는 적어 둔 것이 겹칠 때만 · 빈 금액은 0원이 아님 · 이름 안 받음 (1번·3번)
+     ⑧ 「심사 결과에 따릅니다」 · 11월 제도는 예정·예시·예상 · tnum 없음 · 서버 안 부름                */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = process.cwd(), PORT = 9147;
@@ -25,65 +24,67 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 const HTML = fs.readFileSync(path.join(ROOT, 'app/silson5.html'), 'utf8');
 const dataJs = (HTML.match(/<script>([\s\S]*?)<\/script>/) || [])[1] || '';
 const box = {}; vm.createContext(box); vm.runInContext(dataJs.replace(/^var /gm, 'this.'), box);
-const { S5_SRC, S5_SCRIPT, S5_OBJ, S5_ONE, S5_WHO } = box;
+const { S5_SRC, S5_BEATS, S5_OBJ, S5_WHAT, S5_ORIG, S5_ONE, S5_WHO } = box;
+const plain = t => String(t).replace(/<[^>]+>/g, '');
 
-/* ta-train 의 원문 단계 — 같은 표를 꺼내 견줍니다 */
 const TT = fs.readFileSync(path.join(ROOT, 'app/ta-train.html'), 'utf8');
 const ttBlk = TT.slice(TT.indexOf('var TT_STEPS=['), TT.indexOf('\n];', TT.indexOf('var TT_STEPS=[')));
 const ttSay = {};
 ttBlk.replace(/\{t:'([^']*)',\s*\n?\s*say:'((?:[^'\\]|\\.)*)'/g, (m, t, s) => { ttSay[t] = s.replace(/\\n/g, '\n').replace(/\\'/g, "'"); });
 
-/* 2026-10-12 에 금융위 원문에서 옮겨 적은 글 */
+/* 2026-10-12 에 원문에서 옮긴 글 — 금융위 보도자료 둘 · 데일리안·SBS Biz 2026-10-05 */
 const ORIG = [
-  '보상한도 연간 5천만원 통원 회당 20만원 입원 한도 없음 좌동 연간 1천만원 통원 일당 20만원 입원 (병·의원) 회당 300만원',
-  '자기부담률 입원 30% 통원 Max[ 30%, 3만원 ] 좌동 입원 50% 통원 Max[ 50%, 5만원 ] 자기부담 한도 없음 입원 (상종·종병) 500만원 신설',
+  '보상한도 연간 5천만원 연간 1천만원 입원 30% 입원 50% 입원 (상종·종병) 500만원 신설',
   '5세대 실손보험료는 현행 4세대 대비 약 30% 저렴하며, 1·2세대 상품보다는 최소 50% 이상 저렴한 가격에 판매된다.',
-  '5월 6일부터 16개 보험회사 6개월 이내에 전환을 철회 2013년 3월 이전 26년 11월부터 6개월간 시행',
-  '2025년 약 3조 2,470억원 (80만건) 청구건당 평균 404만원'
-].join(' ').replace(/\s+/g, '');
-/* 연도(2026년 등)는 날짜라 따로 둡니다 · 단위가 붙은 숫자는 글자째로만 대조 (맨숫자 예외가 넓으면 「2천만원」 의 2 가 통과합니다 · 8번) */
-const nums = t => (String(t).replace(/<[^>]+>/g, '').replace(/20[0-9]{2}년/g, '').match(/[0-9][0-9,.·]*\s*(만원|천만원|억원|조|%|만건|개월|월|일|년|개사)?/g) || []).map(x => x.replace(/\s+/g, ''));
+  '6개월 이내에 전환을 철회 2013년 3월 이전 26년 11월부터',
+  '2025년 약 3조 2,470억원 (80만건) 청구건당 평균 404만원',
+  '금융감독원은 5일 건강보험 무사고 계약전환 제도를 계약자 중심으로 개선했다고 밝혔다. 현재 손해보험사 9곳과 생명보험사 9곳이 운영하고 있다.',
+  '40대 남성 가입자는 1년 무사고 시 보험료가 6.5% 할인되고 10년 무사고 시 할인율이 45.9%까지 높아진다.',
+  '지난 5월 말 기준 무사고 전환제도가 적용되는 계약은 총 1081만건이다. 1년 이상 지난 657만건 중 보험료 할인을 받고 있는 계약은 116만건으로 17.6%에 그쳤다.',
+  '내년 1월까지 전산시스템과 보험약관 정비를 마칠 예정이다.'
+].join(' ').replace(/[\s,]+/g, '');
+const nums = t => (plain(t).replace(/20[0-9]{2}년/g, '').match(/[0-9][0-9,.·]*\s*(만원|천만원|억원|조|%|만건|개월|월|일|년|곳|개사)?/g) || []).map(x => x.replace(/[\s,]+/g, ''));
 const inOrig = n => ORIG.indexOf(n) >= 0;
-/* 원문이 아닌 숫자 중 허용 — 세대 이름 · 「20분」 「1분」 (내가 하는 약속) · 「7자리」 */
-const ALLOW = /[0-9]세대|1~4세대|1·2세대|20분|1분|7자리/g;
+/* 원문 아닌 숫자 중 허용 — 내가 하는 약속(30초 · 20분) · 세대 이름 · 「10월」(이번 달) · 「7자리」 */
+const ALLOW = /30초|20분|[0-9]세대|1~4세대|1·2세대|10월|7자리/g;
 
-console.log('\n[1] 한 장이다');
-is(!/data-t="|class="s5-tabs|s5Tab\(/.test(HTML), '탭이 없다 — 한 화면에 차례로');
-is(/id="script"/.test(HTML) && /id="objs"/.test(HTML) && /id="one"/.test(HTML), '대본 · 거절 · 5세대 한 장이 한 화면에 선다');
+console.log('\n[1] 짧다 — 30초');
+const lens = S5_BEATS.map(b => plain(b.say).replace(/\{[^}]+\}/g, '○○').length);
+const total = lens.reduce((a, b) => a + b, 0);
+is(S5_BEATS.length === 4, '대본은 네 마디');
+is(lens.every(n => n <= 130) && total <= 420, '한 마디 130자 · 모두 ' + total + '자 (420자 안쪽 — 소리 내어 30초 남짓) · ' + lens.join('/'));
+is(!/복용|고혈압|주민|뒷 ?번호|3조|404/.test(S5_BEATS.map(b => b.say).join('')), '대본 네 마디에 복용약·주민번호·통계가 없다 — 물으실 때만 꺼낸다');
+is(/둘 중 하나|\{d1\}이 편하세요, \{d2\}가 편하세요\?/.test(S5_BEATS[2].say), '셋째 마디가 둘 중 하나로 약속을 잡는다');
 
-console.log('\n[2] 사장님 이미지의 원문 (5번)');
-const orig = S5_SCRIPT.filter(s => s.kind === 'o');
-const diff = orig.filter(s => ttSay[s.t] !== s.say).map(s => s.t);
-is(orig.length >= 5 && diff.length === 0, '원문이라 적은 ' + orig.length + '단계가 신입 TA 교육과 한 글자씩 같다' + (diff.length ? ' ← ' + diff.join(',') : ''));
-const miss = Object.keys(ttSay).filter(t => !S5_SCRIPT.some(s => s.t === t) && t !== '첫 인사 및 담당자 소개');
-is(Object.keys(ttSay).length >= 6 && miss.length === 0, '원문 단계가 빠짐없이 있다 (첫 인사는 만날 이유 셋을 얹어 고침)' + (miss.length ? ' ← ' + miss.join(',') : ''));
-
-console.log('\n[3] 만나게 하는 말');
-const first = S5_SCRIPT[0].say;
-is(/무사고 할인/.test(first) && /5세대/.test(first) && /못 받으신 보험금/.test(first), '첫 마디에 만날 이유 셋 — 할인 · 5세대 · 못 받은 보험금');
-is(S5_SCRIPT.some(s => /\{d1\}[\s\S]*\{d2\}/.test(s.say) && /편하세요\?/.test(s.say)), '약속은 둘 중 하나로 묻는다');
-const noBack = S5_OBJ.filter(o => !(/\{d1\}/.test(o.a) && /\{d2\}/.test(o.a))).map(o => o.q);
-is(S5_OBJ.length >= 8 && noBack.length === 0, '거절 ' + S5_OBJ.length + '가지 모두 다시 약속(둘 중 하나)으로 돌아온다' + (noBack.length ? ' ← ' + noBack.join(',') : ''));
+console.log('\n[3] 거절의 답은 다시 약속으로');
+const noBack = S5_OBJ.filter(o => o.k !== 'who' && !(/\{d1\}[\s\S]*\{d2\}/.test(o.b) || /나으세요[\s\S]*나으세요/.test(o.b))).map(o => o.q);
+is(S5_OBJ.length >= 9 && noBack.length === 0, '거절 ' + S5_OBJ.length + '가지 — 「번호」 를 빼고 모두 둘 중 하나로 돌아온다' + (noBack.length ? ' ← ' + noBack.join(',') : ''));
 is(S5_OBJ.every(o => o.s), '거절마다 멈출 자리가 있다');
+const who = S5_OBJ.filter(o => o.k === 'who')[0];
+is(!!who && /지워 드릴게요/.test(who.a) && !who.b, '「번호 어떻게」 — 지워 드린다고 하고 약속을 밀지 않는다');
 
-console.log('\n[4] 숫자는 원문에만 (1번·9번)');
-const added = S5_SCRIPT.filter(s => s.kind === 'a').map(s => s.say).concat(S5_SCRIPT.filter(s => s.plus).map(s => s.plus), S5_OBJ.map(o => o.a));
+console.log('\n[4] 사장님 이미지의 원문 (5번)');
+const diff = S5_ORIG.filter(o => ttSay[o.t] !== o.say).map(o => o.t);
+is(S5_ORIG.length === Object.keys(ttSay).length && S5_ORIG.length >= 6 && diff.length === 0, '원문 ' + S5_ORIG.length + '단계가 신입 TA 교육과 한 글자씩 같다' + (diff.length ? ' ← ' + diff.join(',') : ''));
+
+console.log('\n[5] 숫자는 원문에만 (1번·9번)');
+const said = S5_BEATS.map(b => b.say).concat(S5_OBJ.map(o => o.a + ' ' + (o.b || '')), S5_WHAT, S5_WHO);
 const badN = [];
-added.forEach(t => nums(t.replace(ALLOW, '')).forEach(n => { if (!inOrig(n)) badN.push(n); }));
+said.forEach(t => nums(String(t).replace(ALLOW, '')).forEach(n => { if (!inOrig(n)) badN.push(n); }));
 S5_ONE.forEach(r => [r[1], r[2]].forEach(t => nums(t).forEach(n => { if (!inOrig(n)) badN.push(r[0] + ':' + n); })));
-S5_WHO.forEach(t => nums(t.replace(ALLOW, '')).forEach(n => { if (!inOrig(n)) badN.push('대상:' + n); }));
-is(badN.length === 0, '더한 줄 · 거절 · 한 장 · 대상자의 숫자가 모두 원문에 있다' + (badN.length ? ' ← ' + badN.slice(0, 6).join(', ') : ''));
+is(badN.length === 0, '대본 · 거절 · 「10월 할인이 뭐냐」 · 한 장의 숫자가 모두 원문에 있다' + (badN.length ? ' ← ' + badN.slice(0, 6).join(', ') : ''));
 const srcBad = Object.keys(S5_SRC).filter(k => { const s = S5_SRC[k]; return !s.t || !s.o || !/^\d{4}-\d{2}-\d{2}$/.test(s.d) || !/^https:\/\//.test(s.u) || /blog|tistory|cafe\.naver/i.test(s.u); });
-is(srcBad.length === 0 && /86831/.test(S5_SRC.f5.u) && /87270/.test(S5_SRC.hb.u), '출처는 금융위원회 보도자료 · 제목·날짜·주소가 다 있다');
+is(srcBad.length === 0, '출처마다 제목·낸 곳·날짜·주소 · 블로그 아님');
 
-console.log('\n[5]·[6] 말의 선');
+console.log('\n[6] 말의 선');
+const talk = S5_BEATS.map(b => b.say).concat(S5_OBJ.map(o => o.a + (o.b || ''))).join('\n');
+is(!/금융감독원에서 시행|금감원에서 시행/.test(talk), '대본·거절에서 「금감원에서 시행하는 할인」 이라고 하지 않는다');
+is(/직접 신청/.test((S5_OBJ.filter(o => o.k === 'self')[0] || {}).a || ''), '「보험사가 해 준다던데」 — 고객이 직접 신청해도 된다고 말한다 (1번)');
+is(/소급되지 않습니다/.test(S5_WHAT.join('')) && /보험회사/.test(S5_WHAT.join('')), '「10월 할인이 뭐냐」 — 소급 안 됨 · 할인은 보험회사가');
+is(!/갈아타세요|바꾸세요|무조건|반값\s*확정/.test(talk), '「갈아타세요 · 무조건 · 반값 확정」 이 없다');
 const nov = S5_WHO.filter(t => /11월/.test(t));
 is(nov.length > 0 && nov.every(t => /예정/.test(t) && /예시/.test(t) && /예상/.test(t)), '11월 제도는 「예정」 · 할인율은 「예시·예상」');
-const all = S5_SCRIPT.map(s => s.say + (s.plus || '')).concat(S5_OBJ.map(o => o.a)).join('\n');
-is(!/갈아타세요|바꾸세요|무조건|반값\s*확정/.test(all), '「갈아타세요 · 무조건 · 반값 확정」 이 없다');
-is(!/금융감독원에서 시행/.test(S5_SCRIPT.filter(s => s.kind === 'a').map(s => s.say).join('')) && /할인을 주는 곳은 보험회사/.test(HTML), '할인을 주는 곳은 보험회사 — 「금융감독원에서 시행」 이라고 안 한다');
-is((HTML.match(/심사 결과에 따릅니다/g) || []).length >= 2, '「심사 결과에 따릅니다」 를 단다');
-is(!/font-feature-settings\s*:\s*["']?tnum/.test(HTML) && !/fetch\(|XMLHttpRequest|supabase/i.test(HTML), 'tnum 없음 · 서버를 부르지 않는다');
+is((HTML.match(/심사 결과에 따릅니다/g) || []).length >= 2 && !/font-feature-settings\s*:\s*["']?tnum/.test(HTML) && !/fetch\(|XMLHttpRequest|supabase/i.test(HTML), '「심사 결과에 따릅니다」 · tnum 없음 · 서버 안 부름');
 
 console.log('\n[메뉴]');
 const IX = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
@@ -109,20 +110,34 @@ const srv = http.createServer((q, s) => {
     await p.goto(U, { waitUntil: 'load' }); await p.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
     await p.reload({ waitUntil: 'load' }); await p.waitForTimeout(300);
 
-    console.log('\n[화면]');
-    const t0 = await p.evaluate(() => ({ st: document.querySelectorAll('#script .st').length, ob: document.querySelectorAll('#objs .ob').length,
-      rows: document.querySelectorAll('#one tbody tr').length, wide: document.documentElement.scrollWidth, cl: !!document.getElementById('caseLine') }));
-    is(t0.st === S5_SCRIPT.length && t0.ob === S5_OBJ.length && t0.rows === S5_ONE.length, '대본 ' + t0.st + '단계 · 거절 ' + t0.ob + ' · 한 장 ' + t0.rows + '줄이 한 화면에');
-    is(t0.wide <= 392, '폰(390px)에서 옆으로 넘치지 않는다 (' + t0.wide + 'px)');
+    console.log('\n[2] 거절이 늘 보인다');
+    const vis = () => p.evaluate(() => { const r = document.getElementById('obar').getBoundingClientRect(); return { top: r.top, bottom: r.bottom, h: innerHeight, pos: getComputedStyle(document.getElementById('obar')).position }; });
+    let v = await vis();
+    is(v.pos === 'fixed' && v.bottom <= v.h + 1 && v.top < v.h, '처음 열었을 때 화면 아래에 거절 단추가 떠 있다');
+    await p.evaluate(() => { document.getElementById('mOne').open = true; document.getElementById('mOrig').open = true; scrollTo(0, document.body.scrollHeight); });
+    v = await vis();
+    is(v.bottom <= v.h + 1 && v.top < v.h, '맨 아래까지 내려도 그대로 보인다');
+    await p.evaluate(() => scrollTo(0, 0));
+    const a1 = await p.evaluate(() => { document.querySelector('#ochips [data-k="busy"]').click(); const a = document.getElementById('oans'); const r = a.getBoundingClientRect();
+      return { on: a.classList.contains('on'), top: r.top, bottom: r.bottom, h: innerHeight, sy: scrollY, t: a.textContent }; });
+    is(a1.on && a1.top >= 0 && a1.bottom <= a1.h + 1 && a1.sy === 0, '누르면 답이 <b>스크롤 없이</b> 화면 안에 뜬다');
+    const chips = await p.evaluate(() => document.querySelectorAll('#ochips button').length);
+    is(chips === S5_OBJ.length, '거절 ' + chips + '가지 단추가 한 줄로');
+    const a2 = await p.evaluate(() => { document.querySelector('#oans .x').click(); return document.getElementById('oans').classList.contains('on'); });
+    is(!a2, '✕ 로 닫힌다');
+
+    console.log('\n[화면] 대본');
+    const t0 = await p.evaluate(() => ({ n: document.querySelectorAll('#beats .beat').length, wide: document.documentElement.scrollWidth, cl: !!document.getElementById('caseLine') }));
+    is(t0.n === 4 && t0.wide <= 392, '대본 네 마디 · 폰(390px)에서 옆으로 안 넘친다 (' + t0.wide + 'px)');
     is(!t0.cl, '적어 둔 사례가 없으면 사례 줄이 안 선다 — 지어내지 않는다');
-
-    const fill = (id, v) => p.evaluate(a => { const el = document.getElementById(a[0]); el.value = a[1]; el.dispatchEvent(new Event('input')); }, [id, v]);
+    const fill = (id, val) => p.evaluate(a => { const el = document.getElementById(a[0]); el.value = a[1]; el.dispatchEvent(new Event('input')); }, [id, val]);
     await fill('fAgent', '홍길동'); await fill('fD1', '화요일 오전 11시'); await fill('fD2', '목요일 오후 2시');
-    const f1 = await p.evaluate(() => ({ s5: document.querySelector('#script .st[data-n="⑤"]').textContent, ob: document.getElementById('objs').textContent, s1: document.querySelector('#script .st').textContent }));
-    is(/화요일 오전 11시/.test(f1.s5) && /목요일 오후 2시/.test(f1.s5), '약속 둘을 적으면 ⑤ 대본에 그대로 들어간다');
-    is((f1.ob.match(/화요일 오전 11시/g) || []).length === S5_OBJ.length, '거절 받는 말에도 같은 두 시간이 들어간다');
-    is(/홍길동입니다/.test(f1.s1), '내 이름이 첫 인사에 들어간다');
+    const f1 = await p.evaluate(() => ({ b: document.getElementById('beats').textContent,
+      ob: (document.querySelector('#ochips [data-k="phone"]').click(), document.getElementById('oans').textContent) }));
+    is(/홍길동입니다/.test(f1.b) && /화요일 오전 11시이 편하세요, 목요일 오후 2시가 편하세요/.test(f1.b), '이름 · 약속 둘이 대본에 들어간다');
+    is(/화요일 오전 11시/.test(f1.ob) && /목요일 오후 2시/.test(f1.ob), '거절 답에도 같은 두 시간이 들어간다');
 
+    console.log('\n[7] 사례');
     const add = (age, area, kind, man, ym) => p.evaluate(a => {
       document.getElementById('csBox').open = true;
       document.getElementById('cAge').value = a[0]; document.getElementById('cArea').value = a[1];
@@ -136,26 +151,29 @@ const srv = http.createServer((q, s) => {
     const st = await p.evaluate(() => JSON.parse(localStorage.getItem('apex_s5_cases_v1')));
     is(st.every(c => !('name' in c)) && st[1].man === null, '이 기기에만 · 이름 없이 · 비운 금액은 0 이 아니라 null');
     const cl = async (age, area) => { await fill('fAge', age); await fill('fArea', area);
-      return p.evaluate(() => ({ cl: (document.getElementById('caseLine') || {}).textContent || '', list: document.getElementById('cList').textContent })); };
+      return p.evaluate(() => ({ cl: (document.getElementById('caseLine') || {}).textContent || '', list: document.getElementById('cList').textContent,
+        ob: (document.querySelector('#ochips [data-k="nomoney"]').click(), document.getElementById('oans').textContent) })); };
     let r = await cl('40대', '순천 조례동');
-    is(/고객님 또래, 순천 연향동 사시는 분께/.test(r.cl) && /120만원/.test(r.cl), '같은 나이대 · 같은 시 사례가 ③ 에 붙는다 — 「' + r.cl.slice(0, 44) + '…」');
+    is(/고객님 또래, 순천 연향동 사시는 분께/.test(r.cl) && /120만원/.test(r.cl), '같은 나이대 · 같은 시 사례가 ② 에 붙는다 — 「' + r.cl.slice(0, 40) + '…」');
+    is(/순천 연향동/.test(r.ob), '「받을 보험금 없어요」 답에도 그 사례가 붙는다');
     r = await cl('60대', '');
     is(/또래 분께/.test(r.cl) && !/만원/.test(r.cl), '금액을 비운 사례는 금액을 말하지 않는다');
     is(/금액 안 적음/.test(r.list) && !/· 0만원|· 0원/.test(r.list), '목록에도 「금액 안 적음」 — 0 으로 적지 않는다');
     r = await cl('30대', '부산 해운대');
-    is(!r.cl, '겹치는 사례가 없으면 「비슷하다」 고 말하지 않는다 — 줄이 안 선다');
-    await cl('40대', '순천');
+    is(!r.cl && !/찾아 드렸어요/.test(r.ob), '겹치는 사례가 없으면 대본에도 거절 답에도 사례가 안 선다');
+
+    await fill('fAge', '40대'); await fill('fArea', '순천');
     const cp = await p.evaluate(() => { document.getElementById('bCopy').click(); return window.__copied || ''; });
-    is(/^① /.test(cp) && /⑧ /.test(cp) && /또래/.test(cp) && !/<em>|<b>/.test(cp), '「대본 전체 복사」 — ①~⑧ 과 사례 줄까지, 태그 없이');
+    is(/^1\. /.test(cp) && /4\. /.test(cp) && /또래/.test(cp) && !/<em>|<b>/.test(cp), '「대본 복사」 — 네 마디와 사례 줄까지, 태그 없이');
 
     await p.emulateMedia({ media: 'print' });
-    const pr = await p.evaluate(() => ({ fill: getComputedStyle(document.querySelector('.fill')).display, sc: getComputedStyle(document.getElementById('script')).display, cs: getComputedStyle(document.getElementById('csBox').closest('.sec')).display }));
-    is(pr.fill === 'none' && pr.cs === 'none' && pr.sc !== 'none', '인쇄는 입력 칸 없이 대본 · 거절 · 한 장만');
+    const pr = await p.evaluate(() => ({ bar: getComputedStyle(document.getElementById('obar')).display, beats: getComputedStyle(document.getElementById('beats')).display }));
+    is(pr.bar === 'none' && pr.beats !== 'none', '인쇄에는 떠 있는 거절 줄이 안 찍힌다');
     await p.emulateMedia({ media: 'screen' });
     is(errs.length === 0, '스크립트 오류 0' + (errs.length ? ' ← ' + errs.slice(0, 2).join(' | ') : ''));
     const ext = out.filter(u => !/fonts\.googleapis|fonts\.gstatic/.test(u));
     is(ext.length === 0, '바깥 서버를 부르지 않는다' + (ext.length ? ' ← ' + ext[0] : ''));
   } finally { await b.close(); srv.close(); }
-  console.log(bad ? '\n✗ 한 장 TA — 고칠 자리 ' + bad + '곳' : '\n✓ 한 장 TA — 모두 통과');
+  console.log(bad ? '\n✗ 30초 TA — 고칠 자리 ' + bad + '곳' : '\n✓ 30초 TA — 모두 통과');
   process.exit(bad ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
