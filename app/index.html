@@ -2614,6 +2614,9 @@ body.dzguide-mode #dzGuideScreen{display:block;}
      흩어져 있어, CRM 에서 단계를 눌러도 아무 말이 없었다 (5번).
      저장소 뿌리에 있으므로 이 파일에서는 한 칸 위다. -->
 <script src="../apex-stage.js"></script>
+<!-- 🔥 TA 첫 화제 — <b>ta-trend.js 한 곳</b>. ☎️ TA 스크립트가 쓰는 그 파일을 홈 「오늘」 의
+     TA 칸도 그대로 읽습니다. 고른 화제도 그 파일이 쥡니다 (5번). -->
+<script src="../ta-trend.js"></script>
 <!-- 업적을 세는 자 — <b>이 파일 하나</b>입니다. 「DB · 업적관리」 도 같은
      파일을 부릅니다. 규칙을 베껴 가면 두 화면이 다른 금액을 말합니다 (5번). -->
 <script src="../apex-won.js"></script>
@@ -19593,8 +19596,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-12 18:10';
-var APP_BUILD_NOTE="👤 <b>📊 상담현황 카드가 「한 사람 것」만 말합니다</b>. 여태 이 카드는 <b>누구 것인가를 두 곳에 따로</b> 물었습니다 — 단계 칩·길 위·막힌 데·🕗 지남은 <b>사장님 것</b>, 업적 세 수는 <b>고르신 분 것</b>. 그래서 팀원을 누르시면 <b>업적만 그 팀원 것으로 바뀌고 나머지는 사장님 것으로 남아</b>, 한 카드가 두 사람 것을 나란히 적었습니다. 🏢 <b>팀 전체</b>를 고르시면 업적마저 사장님 것으로 떨어졌습니다. ⚠ 바로 위 띠는 <b>「팀 전체를 보고 있습니다 — 내 것이 아닙니다」</b> 라고 적어 두는데, <b>그 약속을 이 카드만 어기고</b> 있었습니다. 이제 <b>한 자리(hwhoFor)</b> 에만 묻습니다 — 안 고르면 사장님 것 · 팀원을 고르면 <b>네 수가 다</b> 그 팀원 것 · 팀 전체면 <b>네 수가 다 합</b>입니다. 새 자 <b>check-hmwho</b>(23가지)가 셋을 다 지키고, <b>설계사 막이</b>(고르개가 없는 분에게 남의 고객이 섞이지 않는 한 줄)도 함께 봅니다 — 여태 홈 카드 쪽에서 그것을 재는 자가 없었습니다.";
+var APP_BUILD='2026-10-12 18:30';
+var APP_BUILD_NOTE="🔥 <b>홈 「오늘」 의 TA 칸에 요즘 화제가 바로 섭니다</b>　—　TA·미접촉 분의 첫 마디 밑에 <b>「인사 다음 한마디」</b> 로 고른 화제(독감 · 병원비 환급 · 도수치료 · 5세대 실손 …)와 피할 말이 섭니다. ☎️ TA 스크립트에서 고른 화제가 그대로 따라오고, 「화제 없이」 면 안 섭니다. 부재·거절 자리와 화재보험 문의 DB 에는 안 끼웁니다. 칸 아래 <b>「☎️ 전체 대본 · 거절처리」</b> 단추로 TA 스크립트가 바로 열립니다. (판 2026-10-12 18:10 「👤 상담현황 카드가 한 사람 것만 말합니다」 도 함께 들어 있습니다)";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -27129,12 +27132,38 @@ function hmTaHtml(x){
   return '<div class="hm-ta">'+
     '<div class="hm-ta-h">☎️ <b>'+osEsc(S.t)+'</b>'+(src?('<span>'+src+'</span>'):'')+'</div>'+
     '<div class="hm-ta-t">'+osEsc(S.say)+'</div>'+
-    '<div class="hm-ta-b"><button type="button" onclick="hmTaCopy(\''+osEsc((x&&x.key)||'')+'\')">📋 복사</button></div>'+
+    hmTaTrendHtml(S,x)+
+    '<div class="hm-ta-b"><button type="button" onclick="hmTaCopy(\''+osEsc((x&&x.key)||'')+'\')">📋 복사</button>'+
+      '<button type="button" class="hm-ta-go" onclick="go(\'ta_script\')">☎️ 전체 대본 · 거절처리</button></div>'+
     part('nx','다음 한마디 ',osEsc(S.next))+
     part('no','이 말은 안 합니다 ',S.avoid)+
     part('st','여기서 그만둡니다 ',S.stop)+
     '<div class="hm-ta-n">'+S.tip+'</div>'+
     '</div>'+hmTaPickHtml(x);
+}
+/* 🔥 <b>인사 다음 한마디 — 요즘 화제</b> (2026-10-12 사장님 말씀 「오늘에서 TA 상태에서
+   이걸 바로 띄울 수 있게」).
+   글도, 「어느 화제를 골랐나」 도 <b>ta-trend.js 한 곳</b>에 묻습니다 — ☎️ TA 스크립트에서
+   고르면 여기도 그 화제가 서고, 「화제 없이」 를 고르면 여기도 안 섭니다 (5번).
+   ★ <b>첫 마디일 때만</b> 섭니다(S.src) — 부재·거절·입원 자리에서 독감 이야기를 꺼내면
+     안 됩니다. 화재보험 문의 DB 에도 안 섭니다(TA_TREND.off).
+   ★ 파일을 못 실었으면 <b>아무것도 안 세웁니다</b> — 지어 채우지 않습니다 (1번).
+   ★ 낡았으면 낡았다고 말합니다 — 낡은 이야기로 열면 오히려 신뢰를 잃습니다. */
+function hmTaTrend(S,x){
+  if(!S||!S.src||typeof TA_TREND==='undefined'||!TA_TREND.pick)return null;
+  if(TA_TREND.off(x&&x.src))return null;
+  return TA_TREND.pick();
+}
+function hmTaTrendHtml(S,x){
+  var t=hmTaTrend(S,x),age,old;
+  if(!t)return '';
+  age=TA_TREND.age(); old=age>TA_TREND.stale;
+  return '<div class="hm-ta-p tr"><span class="lb">🔥 인사 다음 한마디 · '+osEsc(t.t)+'</span>'+
+    osEsc(t.open)+' '+osEsc(t.bridge)+
+    '<div class="hm-ta-tr-n">'+(old
+      ?('⚠ '+osEsc(TA_TREND.asOf)+' 기준 화제라 '+age+'일 지났습니다 — 새 기사로 바꾸기 전에는 빼고 거십시오.')
+      :('피할 말 · '+osEsc(t.avoid)+' — 화제 바꾸기는 ☎️ 전체 대본에서'))+
+    '</div></div>';
 }
 function hmTaCopy(key){
   var x=hmStepOf(key),k=hmTaKind(x);
@@ -27143,7 +27172,9 @@ function hmTaCopy(key){
   if(!S){toast('할 말을 못 찾았습니다');return;}
   /* <b>다음 한마디까지</b> 같이 복사합니다 — 첫 마디만 들고 가면 그다음에
      막힙니다. 금지·종료는 제가 보는 것이라 안 담습니다. */
-  copyText(S.say+(S.next?('\n\n다음 한마디\n'+S.next.replace(/<[^>]*>/g,'')):''));
+  var T=hmTaTrend(S,x);
+  copyText(S.say+(T?('\n\n'+T.open+' '+T.bridge):'')+
+    (S.next?('\n\n다음 한마디\n'+S.next.replace(/<[^>]*>/g,'')):''));
 }
 function hmTaCss(){
   if(document.getElementById('hmTaCss'))return;
@@ -27174,7 +27205,11 @@ function hmTaCss(){
     '.hm-ta-h span{background:#DBEAFE;color:#1E40AF;border-radius:999px;padding:2px 8px;font-size:var(--t6,13px);font-weight:800}'+
     '.hm-ta-t{margin-top:8px;background:#fff;border-radius:10px;padding:11px 12px;white-space:pre-wrap;'+
       'font-size:var(--t5,14px);line-height:1.85;font-weight:600;color:#191F28}'+
-    '.hm-ta-b{display:flex;gap:7px;margin-top:8px}'+
+    '.hm-ta-b{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap}'+
+    '.hm-ta-p.tr{margin-top:8px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:10px;padding:9px 11px;'+
+      'font-size:var(--t5,14px);line-height:1.75;font-weight:600;color:#191F28}'+
+    '.hm-ta-p.tr .lb{display:block;color:#C2410C;font-size:var(--t6,13px);font-weight:800;margin-bottom:3px}'+
+    '.hm-ta-tr-n{margin-top:5px;font-size:var(--t6,13px);font-weight:600;color:var(--ink-5);line-height:1.6}'+
     '.hm-ta-b button{border:0;border-radius:9px;padding:9px 13px;font-weight:800;font-size:var(--t6,13px);'+
       'background:var(--t-point);color:#fff;cursor:pointer}'+
     '.hm-ta-n{margin-top:8px;font-size:var(--t6,13px);line-height:1.65;color:var(--t-ink);font-weight:700}'+

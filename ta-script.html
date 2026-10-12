@@ -450,9 +450,8 @@
   let selectedObjection = 0;
   /* 🔥 첫 화제 — 표는 ta-trend.js 한 곳. 못 실었으면 칸을 비우고 지어내지 않습니다 (1번) */
   const TREND = (window.TA_TREND && TA_TREND.list) ? TA_TREND : null;
-  let selectedTrend = '';
-  try { selectedTrend = localStorage.getItem('apex_ta_trend') || ''; } catch (e) {}
-  if (TREND && selectedTrend !== 'none' && !TREND.find(selectedTrend)) selectedTrend = TREND.list[0].key;
+  /* 고른 화제는 ta-trend.js 가 쥡니다 — 홈 「오늘」 의 TA 칸도 같은 것을 묻습니다 (5번) */
+  let selectedTrend = TREND ? TREND.pickKey() : '';
   function trendNow(){ return (TREND && selectedTrend !== 'none') ? TREND.find(selectedTrend) : null; }
   function trendLine(t){ return t ? `${t.open} ${t.bridge}` : ''; }
   let scriptFont = 21;
@@ -495,7 +494,8 @@
         `네, 일정 등록과 정확한 자료 확인을 위해 본인확인만 도와드리겠습니다. 고객님 생년월일은 ${year}년 ${month}월 ${day}일이고, 주민등록번호 앞자리는 ${front6}으로 확인됩니다. 고객님 동의하에 회사가 승인한 보안 본인확인 절차에서 뒷번호 7자리를 불러주세요.`
       ];
     }
-    const trend = dbKey==='ns' ? null : trendNow();
+    const dbLabel = (DB_SOURCES.find(x=>x.key===dbKey)||{}).label;
+    const trend = (TREND && TREND.off(dbLabel)) ? null : trendNow();
     if (trend) paragraphs.splice(1, 0, trendLine(trend));
     return {dbKey,customer,agent,region,source,address,dong,slot1,slot2,year,month,day,front6,trend,paragraphs,plain:paragraphs.join('\n\n')};
   }
@@ -603,7 +603,7 @@
     }
     document.querySelectorAll('.trend-tab').forEach(btn=>btn.addEventListener('click',()=>{
       selectedTrend=btn.dataset.key;
-      try { localStorage.setItem('apex_ta_trend', selectedTrend); } catch (e) {}
+      TREND.setPick(selectedTrend);
       renderTrend(); renderScript();
     }));
   }
