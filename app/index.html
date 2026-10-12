@@ -16594,6 +16594,51 @@ function mnuToday(){
   }
   return o;
 }
+/* ── ✍️ <b>만난 뒤 한 줄</b> — 적고 계신가 (판 X89) ────────────────────
+   사장님 말씀 X06 (2026-09-26) — 목각의 「나」 에는 숫자가 셋인데 우리는
+   둘이었습니다. <b>셋째가 「만난 뒤 한 줄 %」</b> 이고, 대장에 열사흘 동안
+   「아직」 으로 남아 있었습니다.
+
+   ── <b>무엇을 「한 줄」 로 세는가</b> ───────────────────────────────────
+   세는 자리는 <b>cmOf().touch 하나</b>입니다 — 바로 위 mnuToday 가 보는 그
+   기록입니다 (5번). 그 기록을 남기는 길이 <b>셋</b>이고, 셋이 남기는 것이
+   서로 다릅니다 :
+     · <b>cmTouchAdd</b> — 사장님이 손으로 치신 말이 note 에 담깁니다
+     · <b>ccMark</b>     — 「오늘 연락함」 한 단추. note 에 <b>앱이 적은</b>
+                           「30일 관리」 가 들어가고 <b>cc 표</b>가 붙습니다
+     · <b>cqaTouch</b>   — 「오늘 만남」 한 단추. note 는 <b>빈 글자</b>입니다
+   그래서 「한 줄」 은 <b>note 가 있고 cc 표가 없는</b> 것입니다.
+   ⚠ 「30일 관리」 라는 <b>글자를 찾아 가르지 않습니다.</b> 그 글자를 여기 또
+     적으면 저쪽을 고칠 때 한쪽만 늙습니다 (5번). cc 표가 이미 「앱이 찍은
+     것」 이라는 뜻으로 거기 있습니다.
+
+   ★ <b>모르면 숫자를 안 적습니다</b> (1번) — 고객을 못 읽었거나 만남 기록이
+     아예 없으면 null 입니다. 그 자리에 0% 를 적으면 「만나고도 한 줄도 안
+     적으셨다」 는 <b>없는 사실</b>이 화면에 섭니다.
+   ★ 창은 <b>기록에 남은 전부</b>입니다. 「오늘」 로 좁히면 만남이 하루에
+     0~2건이라 % 가 0 아니면 100 으로만 튀어 습관을 못 말합니다. 오늘 몫은
+     꼬리에 <b>건수로</b> 따로 적습니다 — %로 두 번 적지 않습니다.
+   ★ 서버를 안 부릅니다 (7번) — 이미 손에 있는 것만 읽습니다.
+   ★ 고객 이름은 여기 안 나옵니다 (3번) — 숫자만 적습니다.              */
+function mnuLine(){
+  if(typeof OSC==='undefined'||!OSC.list||!OSC.list.length)return null;
+  if(typeof CM==='undefined'||!CM.loaded)return null;        /* 아직 안 읽었다 */
+  if(typeof ccScope!=='function'||typeof cmOf!=='function')return null;
+  var mine=ccScope(OSC.list),t=(typeof ccToday==='function')?ccToday():'',
+      o={만남:0,한줄:0,오늘만남:0,오늘한줄:0},i,j,L,e,one;
+  for(i=0;i<mine.length;i++){
+    L=(cmOf(mine[i].id).touch)||[];
+    for(j=0;j<L.length;j++){
+      e=L[j]; if(!e||e.how!=='만남')continue;
+      one=!!(e.note&&(''+e.note).replace(/^\s+|\s+$/g,'')&&!e.cc);
+      o.만남++; if(one)o.한줄++;
+      if(t&&e.at===t){o.오늘만남++; if(one)o.오늘한줄++;}
+    }
+  }
+  if(!o.만남)return null;                                    /* 잴 것이 없다 */
+  o.pct=Math.round(o.한줄/o.만남*100);
+  return o;
+}
 /* 밀착관리 — <b>고객 365일이 세는 그 숫자</b>를 그대로 가져온다 (5번) */
 function mnuCare(){
   if(typeof OSC==='undefined'||!OSC.list||!OSC.list.length)return null;
@@ -16640,6 +16685,44 @@ function mnuTodayHtml(){
      '홈의 「오늘 챙길 것」 에서 한 분씩 하시면 여기 쌓입니다.</div>';
   return h+'</div></div>';
 }
+/* ✍️ <b>셋째 숫자</b> — 세는 곳은 mnuLine 하나입니다 (5번).
+   ★ 이 수는 <b>이 카드에만</b> 섭니다. 그래서 data-ask 이름표를 안 달았습니다 —
+     check-onesay 는 <b>홈만</b> 걸으므로 여기 이름표를 달아도 아무도 안 읽고,
+     낯선 이름표만 대장에 쌓입니다 (8번 · 헛것을 잡는 자는 안 잡는 자보다 나쁘다).
+     「두 곳에서 각자 세지 않나」 는 <b>check-mnuline</b> 이 봅니다.               */
+function mnuLineHtml(){
+  mnuCss();
+  var o=mnuLine(),h='<div class="card" style="margin-top:12px"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">✍️</span>만난 뒤 한 줄 — 적고 계신가</div>'+
+    '<div class="card-desc">만남 기록에 <b>직접 치신 말</b>이 남아 있는 비율입니다 — '+
+    '단추 한 번으로 남긴 기록은 <b>안 셉니다</b>.</div></div><div class="card-body">';
+  /* 모름과 0 을 구분합니다 (1번) — 둘은 아주 다른 말입니다 */
+  if(!o)
+    /* ⚠ 여기에 <b>「0%」 라는 글자를 적지 않습니다.</b> 처음 판에서 「0% 라고
+       적으면 … 뜻이 되어 버립니다」 라고 <b>까닭을 설명하다</b> 그 글자를 넣었고,
+       자가 「카드에 % 가 있다」 며 빨간불을 켰습니다 — 자가 맞았습니다. 카드에
+       「0%」 가 적혀 있으면 사장님 눈에는 그것이 <b>이 분의 수</b>입니다.    */
+    h+='<div class="mnu-non">만난 기록이 <b>아직 없습니다</b> — 잴 것이 없어 '+
+       '숫자를 안 적습니다. 없는 것을 영이라고 적으면 「만나고도 한 줄도 안 '+
+       '적으셨다」 는 뜻이 되어 버립니다.</div>';
+  else{
+    var 빈=o.만남-o.한줄;
+    h+='<div class="mnu-g">'+
+       mnuTile(o.pct+'%','한 줄 적음',o.한줄+' / '+o.만남+'건')+
+       mnuTile(o.만남,'만난 기록','기록에 남은 전부')+
+       mnuTile(빈,'한 줄 없음',빈?'만난 내용이 안 남았습니다':'없습니다',!!빈)+
+       '</div>'+
+       '<div class="mnu-non">'+(o.오늘만남
+         ?('오늘은 <b>'+o.오늘만남+'건 중 '+o.오늘한줄+'건</b>에 한 줄이 남았습니다.')
+         :'오늘은 <b>아직 만난 기록이 없습니다.</b>')+
+       ' 한 줄은 그 분 카드의 <b>「📝 적어 두기」</b> 에서 적힙니다 — '+
+       '다음에 그 분을 열면 <b>지난번에 들은 말</b>이 거기 있습니다.</div>';
+  }
+  /* 「다 됐다」 로 보여도 단추를 안 감춥니다 (6번) — 적으러 가는 길은 늘 열어 둡니다 */
+  return h+'<div class="btn-row" style="margin-top:11px">'+
+    '<button type="button" class="btn btn-ghost" onclick="go(\'clients\')">🗂 고객 365일로</button>'+
+    '</div></div></div>';
+}
 function mnuCareHtml(){
   mnuCss();
   var c=mnuCare();
@@ -16669,7 +16752,8 @@ function renderMe(){
     /* ⚠ 2026-09-26 · 목업의 <b>숫자 두 칸</b>이 여기 없었습니다 —
        「오늘 한 일」 과 「밀착관리」. 알람 카드 하나가 화면을 다 먹고
        있었습니다. 세는 자는 <b>고객 365일 것을 그대로</b> 씁니다 (5번). */
-    mnuTodayHtml()+mnuCareHtml()+
+    /* ✍️ <b>셋째</b> — 목각의 세 번째 숫자입니다 (판 X89 · 말씀 X06) */
+    mnuTodayHtml()+mnuCareHtml()+mnuLineHtml()+
     /* 알람 — <b>같은 카드</b>입니다 */
     '<div class="alm-host"></div>'+
     '<div class="card" style="margin-top:12px"><div class="card-hd"><div class="card-title">'+
@@ -19480,8 +19564,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-11 23:23';
-var APP_BUILD_NOTE="🎓 <b>신입 TA 교육을 세웠습니다 — 스크립트 옆에서 거절에 바로 응대합니다</b> — 상담 도구 → 🎓 신입 TA 교육. 건강보험 <b>무사고 할인 전환</b> 전화를 6단계 원문 스크립트로 배우고, 단계마다 「이 단계에서 나오는 말」 을 누르면 옆 칸(폰은 아래 판)에 <b>받는 말 → 왜 이 전화는 다른가 → 안 받으시면 손해(늘 「대상이시면」) → 이어서 묻는 말</b>이 바로 뜹니다. 1단계에는 🌉 신청을 기억 못 하시는 고객을 「신청하셨죠?」 없이 할인 확인으로 넘기는 다리. 질문지 · 가까워지는 질문 · 스스로 점검도 함께. (같이 실려 나가는 것 — 빈 날에도 홈의 칸 셋이 안 사라짐 판 X88 · 질병 보험가이드 거절 대응 · TA 요즘 화제 판 X86·X87)";
+var APP_BUILD='2026-10-12 12:13';
+var APP_BUILD_NOTE="🎓 <b>신입 TA 교육 — 말의 흐름은 내가 끌고 가고, 거절은 한 숨에 받습니다</b> — 상담 도구 → 🎓 신입 TA 교육 → ☎️ 스크립트. 🧭 다섯 규칙과 <b>질문 수 지도</b>(원문을 세면 새 질문은 복용약 하나뿐 · 나머지는 내가 말하고 확인받기), 단계마다 원문의 이음말. 거절이 나오면 옆 칸(폰은 아래 판)에 <b>🗣 한 숨 응대</b> → <b>↩ 다시 끌고 오기</b>(다음 단계 원문으로). 손해는 늘 「대상이시면」. 🌉 신청을 기억 못 하시는 고객도 그대로 넘어갑니다. (같이 실려 나가는 것 — 「나」 셋째 숫자 · 아는 것 N/M 판 X89 · 홈 칸 셋 판 X88 · 질병 보험가이드 거절 대응 · TA 요즘 화제 판 X86·X87)";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -65054,6 +65138,30 @@ function cmRowHtml(c){
   sub.push(tp.e+' '+tp.t);
   if(m.rel)sub.push(m.rel);
   if(bd>=0&&bd<=30)sub.push('🎂 '+(bd===0?'오늘':('D-'+bd)));
+  /* ── 🙋 <b>아는 것 N/M</b> · 📋 <b>팩트파인딩</b> — 두 수는 <b>아래 줄</b>에
+     섭니다 (판 X89 · 말씀 X06) ───────────────────────────────────────────
+   ★ <b>세는 곳은 cqaTally 하나</b>입니다 (5번) — 그 분 화면의 「🙋 한 가지만
+     여쭙습니다」 카드가 적는 그 수입니다. 여기서 다시 세면 한 분에게 두 수가 섭니다.
+   ★ <b>분모를 적어 두지 않습니다.</b> 대장에는 2026-09-26 에 「N/8」 이라고 적혀
+     있었는데 재어 보니 지금은 <b>열하나</b>입니다 — 여쭐 칸이 그동안 셋 늘었습니다.
+     여기 8 을 박아 두면 그날부터 거짓말이 됩니다 (1번).
+   ★ <b>모르면 아예 안 적습니다</b> (1번) — cqaTally 는 하나도 못 읽었으면 null 을
+     줍니다. 0/11 로 적으면 「아무것도 모르는 분」 이 되어 버립니다.
+   ★ 배정 DB 줄에는 <b>안 붙습니다</b> — 위 olDbRowHtml 로 먼저 빠집니다.
+   ⚠ <b>오른쪽(.rt)에 두었다가 내렸습니다.</b> 거기 두니 390px 에서 <b>이름 칸이
+     86px</b> 로 찌부러져 check-rowskin 이 울렸습니다(바닥 90px). ui.css 의 그
+     자리에 「오른쪽이 폭을 다 먹고 이름이 사라집니다」 라고 적혀 있고, 오른쪽은
+     이미 다섯이 서 있어 <b>더 들어갈 자리가 없었습니다.</b> 칸 글자를 줄이거나
+     한 칸으로 합쳐도 85~93px 이라 바닥에 붙습니다 — 재어 보고 알았습니다.
+     ★ 아래 줄로 내리니 팩트파인딩까지 같이 내려가 오른쪽이 <b>넷</b>이 되고,
+       이름 칸은 <b>전보다 넓어집니다.</b> 「🔥 0일 전 · 아는 것 1/11 · 팩트 0/25」
+       로 읽혀 두 수에 <b>이름도 붙습니다</b>(여태 「0/25」 뿐이었습니다).
+     ★ <b>새 CSS 를 한 줄도 안 만듭니다</b> (5번) — 글자로만 들어갑니다. span 을
+       쓰면 ui.css 의 「.t-row :where(.m) span{display:block}」 에 걸려 한 줄을
+       통째로 먹습니다(check-rowskin 이 지키는 그 자리입니다).              */
+  var kn=(typeof cqaTally==='function')?cqaTally(c.id):null;
+  if(kn)sub.push('아는 것 '+kn.got+'/'+kn.all);
+  sub.push('팩트 '+cmFfCount(c.id)+'/'+cmFfTotal());
   var nx='';
   if(m.next&&m.next.what){
     var d=cmDays(m.next.due);
@@ -65087,7 +65195,7 @@ function cmRowHtml(c){
         osEsc(c.id)+'\')">📞 전화</button>'+
       ((typeof ccRowChip==='function')?ccRowChip(c):'')+
       '<span class="osc-badge '+cs+'">'+osConsentLabel(cs)+'</span>'+
-      '<span class="cm-ff">'+cmFfCount(c.id)+'/'+cmFfTotal()+'</span></div>'+
+      '</div>'+
   '</div>';
 }
 function cmRowsHtml(rows){
@@ -66407,7 +66515,10 @@ function cmCss(){
     '.cm-nx.due{background:#FEF2F2;color:var(--neg)}'+
     '.cm-nx.due span{color:var(--neg)}'+
     '.cm-rt{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}'+
-    '.cm-ff{font-size:var(--t6);font-weight:700;color:var(--ink-6)}'+
+    /* ⚠ 2026-10-11 · 판 X89 — <b>명단 줄은 이제 이 옷을 안 씁니다.</b> 팩트파인딩
+       수가 오른쪽 칸에서 <b>아래 줄 글자</b>로 내려갔습니다(cmRowHtml 의 쪽지).
+       규칙은 <b>안 지웁니다</b> — 다른 자리가 .cm-ff 로 서면 그대로 입습니다. */
+    '.cm-ff,.cm-kn{font-size:var(--t6);font-weight:700;color:var(--ink-6)}'+
     '.cm-fam{border:1px solid #DCE7FA;border-radius:var(--r);padding:10px;margin-bottom:10px;background:#FAFCFF}'+
     '.cm-fh{font-size:var(--t6);font-weight:800;color:var(--primary);padding:2px 4px 8px;display:flex;gap:7px;align-items:center}'+
     '.cm-fh span{font-size:var(--t6);font-weight:700;color:var(--ink-5);margin-left:auto}'+
