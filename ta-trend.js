@@ -73,6 +73,29 @@
     find: function (key) {
       for (var i = 0; i < TA_TREND.list.length; i++) if (TA_TREND.list[i].key === key) return TA_TREND.list[i];
       return null;
+    },
+    /* ── 「지금 어느 화제를 골랐나」 는 <b>여기 한 곳만</b> 압니다 (5번) ──
+       TA 스크립트 화면과 홈 「오늘」 의 TA 칸이 같이 묻습니다. 따로 세면
+       한쪽에서 「화제 없이」 를 골라도 다른 쪽은 화제를 들고 있게 됩니다.
+       고른 것이 없거나 지금 목록에 없는 열쇠면 첫 화제로 갑니다. 'none' 은 「화제 없이」. */
+    KEY: 'apex_ta_trend',
+    pickKey: function () {
+      var k = '';
+      try { k = root.localStorage.getItem(TA_TREND.KEY) || ''; } catch (e) {}
+      if (k === 'none') return 'none';
+      return TA_TREND.find(k) ? k : (TA_TREND.list[0] ? TA_TREND.list[0].key : 'none');
+    },
+    pick: function () {
+      var k = TA_TREND.pickKey();
+      return k === 'none' ? null : TA_TREND.find(k);
+    },
+    setPick: function (key) {
+      try { root.localStorage.setItem(TA_TREND.KEY, key); } catch (e) {}
+    },
+    /* 화재보험 문의 전화에는 화제를 끼우지 않습니다 — 상품을 물어 온 분께 독감
+       이야기부터 꺼내면 어색합니다. 이 판단도 <b>여기 한 곳</b>입니다 (5번). */
+    off: function (dbLabel) {
+      return /화재|NS홈쇼핑/i.test(String(dbLabel == null ? '' : dbLabel));
     }
   };
   root.TA_TREND = TA_TREND;
