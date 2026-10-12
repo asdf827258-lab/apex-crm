@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="color-scheme" content="light"/>
+<title>5세대 실비 · 할인 RP · 못 받은 보험금</title>
+<link rel="stylesheet" href="ui.css">
+<!-- ══ 🏥 <b>5세대 실비 · 할인 RP · 못 받은 보험금 찾아드림</b> — 2026-10-12 ═══════════
+     사장님 말씀 — 「5세대 실비와, 할인 전용 RP 만 HTML 로 따로 만들어줘 / 그리고
+     만나면 못받은 보험금 찾아줌과, 그 고객의 나이대와 비슷한 지역에 찾아준 사례로
+     니즈환기 / 거절처리용도 만들어줘 / 그리고 5세대 실비를 한장으로 요약하고
+     대상자들 정리해줘」.
+
+     ★ <b>숫자는 원문에서만</b> (1번·9번). 5세대 표의 숫자는 모두 금융위원회
+       2026-05-06 보도자료의 「현행(4세대)·5세대 비교」 표에서 옮겼고, 2026-10-12 에
+       원문을 다시 열어 한 칸씩 대조했습니다. 출처는 S5_SRC 한 곳에 있고 칸마다
+       그 열쇠를 답니다.
+     ★ <b>11월 제도는 「예정」</b> 입니다. 공식 문서도 할인율을 「(예시)」·「예상」 으로
+       적었습니다 — 이 화면은 그 말을 그대로 씁니다. 확정처럼 말하지 않습니다.
+     ★ 「할인 전용 RP」 의 할인은 🎓 신입 TA 교육이 다루는 <b>건강보험 무사고 할인
+       전환</b> 입니다. 제도 설명·숫자는 그 화면(ta-train.html)이 쥐고, 여기는
+       역할극 대사만 둡니다 (5번).
+     ★ <b>찾아드린 사례는 지어내지 않습니다</b> (1번). 사장님이 실제로 찾아 드린 것을
+       적어 두시면, 만나는 고객과 나이대·지역이 가까운 것부터 꺼내 씁니다. 하나도
+       없으면 「적어 둔 사례가 없습니다」 라고 말하고 금융위 공식 통계만 씁니다.
+       고객 이름 칸은 아예 없습니다 (3번). 이 기기에만 남고 서버를 부르지 않습니다 (7번).
+     ★ 보험료·보장은 「심사 결과에 따릅니다」. 「무조건 갈아타세요」 는 이 화면 어디에도
+       없습니다 — 금융당국이 갈아타기 판매를 점검하는 자리입니다.
+     점검 : scripts/check-silson5.js                                              -->
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--t-bg);color:var(--t-ink);
+  font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Noto Sans KR",system-ui,-apple-system,sans-serif;
+  letter-spacing:-.02em;-webkit-font-smoothing:antialiased;line-height:1.6}
+button,input,select,textarea{font:inherit;color:inherit}
+.s5-wrap{max-width:900px;margin:0 auto;padding:16px 16px 60px}
+.s5-hd{background:var(--t-card);border:1px solid var(--t-line);border-radius:var(--t-r);padding:18px}
+.s5-hd h1{margin:0 0 4px;font-size:22px;font-weight:900}
+.s5-hd p{margin:0;color:var(--t-sub);font-size:14px}
+.s5-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+.s5-tabs button{flex:1 1 auto;min-height:44px;padding:0 12px;border:1px solid var(--t-line);
+  border-radius:var(--t-r-btn);background:var(--t-card);font-weight:800;font-size:14px;cursor:pointer}
+.s5-tabs button.on{background:var(--t-point);border-color:var(--t-point);color:var(--t-card)}
+.s5-pane{display:none}
+.s5-pane.on{display:block}
+.s5-card{background:var(--t-card);border:1px solid var(--t-line);border-radius:var(--t-r);padding:18px;margin-bottom:12px}
+.s5-card h2{margin:0 0 6px;font-size:18px;font-weight:900}
+.s5-card h3{margin:14px 0 4px;font-size:15.5px;font-weight:900}
+.s5-card p,.s5-card li{font-size:14.5px}
+.s5-card ul{margin:6px 0;padding-left:20px}
+.s5-sub{color:var(--t-sub);font-size:13.5px}
+.s5-tbl{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+.s5-tbl th,.s5-tbl td{border:1px solid var(--t-line);padding:7px 8px;vertical-align:top;text-align:left}
+.s5-tbl th{background:var(--t-bg);font-weight:800;white-space:nowrap}
+.s5-tbl td.new{background:var(--t-point-l);font-weight:700}
+.s5-tbl sup,.s5-src-k{font-size:11px;color:var(--t-point);font-weight:800;margin-left:2px}
+.s5-plan{display:inline-block;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:800;
+  background:#FEF3C7;color:#92400E;margin-right:4px}
+.s5-warn{border:1px solid var(--t-neg);border-radius:var(--t-r-sm);padding:10px 12px;margin:8px 0;font-size:14px}
+.s5-note{background:var(--t-bg);border-radius:var(--t-r-sm);padding:10px 12px;margin:8px 0;font-size:14px}
+.s5-src{font-size:12.5px;color:var(--t-sub);margin-top:8px}
+.s5-src li{font-size:12.5px;margin:2px 0}
+.s5-src a{color:var(--t-point)}
+.s5-who{border:1px solid var(--t-line);border-left:5px solid var(--t-point);border-radius:var(--t-r-sm);padding:12px 14px;margin:10px 0}
+.s5-who b.t{display:block;font-size:15.5px;margin-bottom:4px}
+.s5-who.keep{border-left-color:var(--t-pos)}
+.s5-who.plan{border-left-color:#D97706}
+.s5-who.hit{outline:3px solid var(--t-point);outline-offset:1px}
+.s5-chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.s5-chip{min-height:44px;padding:0 14px;border:1px solid var(--t-line);border-radius:999px;background:var(--t-card);
+  font-weight:700;cursor:pointer}
+.s5-chip.on{background:var(--t-point-l);border-color:var(--t-point);color:var(--t-point-d)}
+.s5-lb{display:block;font-size:13px;font-weight:800;color:var(--t-sub);margin:10px 0 4px}
+.s5-in{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--t-line);border-radius:var(--t-r-sm);background:var(--t-card)}
+.s5-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.s5-row > *{flex:1 1 140px}
+.s5-btn{min-height:44px;padding:0 16px;border:1px solid var(--t-line);border-radius:var(--t-r-btn);
+  background:var(--t-bg);font-weight:800;cursor:pointer}
+.s5-btn.pri{background:var(--t-point);border-color:var(--t-point);color:var(--t-card)}
+.s5-btn.ng{background:var(--t-card);border-color:var(--t-neg);color:var(--t-neg)}
+/* 역할극 */
+.s5-scn{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.s5-line{display:grid;grid-template-columns:52px 1fr;gap:8px;margin:8px 0;align-items:start}
+.s5-line .w{font-size:12.5px;font-weight:900;border-radius:8px;padding:4px 0;text-align:center}
+.s5-line.c .w{background:var(--t-bg);color:var(--t-sub)}
+.s5-line.m .w{background:var(--t-point);color:var(--t-card)}
+.s5-line .x{white-space:pre-wrap;font-size:15px;border-radius:10px;padding:9px 12px;background:var(--t-bg)}
+.s5-line.m .x{background:var(--t-point-l);font-weight:600}
+.s5-line.m.hide .x{color:transparent;text-shadow:none;background:repeating-linear-gradient(45deg,var(--t-point-l),var(--t-point-l) 6px,#fff 6px,#fff 12px);cursor:pointer}
+.s5-line.m.hide .x::after{content:'눌러서 보기';color:var(--t-point-d);font-size:13px;font-weight:800}
+.s5-line.later{display:none}
+.s5-coach{border-top:1px dashed var(--t-line);margin-top:10px;padding-top:8px}
+.s5-coach li{font-size:14px}
+.s5-no{color:var(--t-neg);font-weight:800}
+/* 거절 */
+.s5-ob{border:1px solid var(--t-line);border-radius:var(--t-r-sm);margin:8px 0;overflow:hidden}
+.s5-ob .q{font-weight:900;padding:10px 12px;background:var(--t-bg)}
+.s5-ob .q span{font-size:12px;font-weight:800;color:var(--t-point);margin-left:6px}
+.s5-ob .a{padding:10px 12px;font-size:14.5px}
+.s5-ob .p{margin:6px 0}
+.s5-ob .p .lb{font-weight:900;margin-right:4px}
+.s5-ob .nx .lb{color:var(--t-point)}
+.s5-ob .no .lb{color:var(--t-neg)}
+.s5-ob .st .lb{color:var(--t-sub)}
+/* 찾아드린 사례 */
+.s5-case{border:1px solid var(--t-line);border-radius:var(--t-r-sm);padding:10px 12px;margin:6px 0;font-size:14.5px}
+.s5-case .m{font-size:12.5px;font-weight:800;color:var(--t-point);margin-right:6px}
+.s5-case button{float:right;min-height:36px;border:0;background:none;color:var(--t-neg);font-weight:800;cursor:pointer}
+.s5-say{white-space:pre-wrap;background:var(--t-point-l);border-radius:var(--t-r-sm);padding:12px;font-size:15px;font-weight:600}
+.s5-step{display:grid;grid-template-columns:30px 1fr;gap:10px;margin:8px 0}
+.s5-step i{font-style:normal;width:30px;height:30px;border-radius:50%;background:var(--t-point);color:var(--t-card);
+  display:flex;align-items:center;justify-content:center;font-weight:900}
+@media (max-width:560px){.s5-tbl{font-size:12.5px}.s5-tbl th,.s5-tbl td{padding:5px}}
+@media print{
+  .s5-tabs,.s5-row,.s5-noprint,.s5-hd{display:none!important}
+  body{background:#fff}
+  .s5-wrap{padding:0;max-width:none}
+  .s5-card{border:0;padding:0}
+  .s5-pane{display:none!important}
+  .s5-pane.on{display:block!important}
+  .s5-line.later{display:grid!important}
+  .s5-line.m.hide .x{color:inherit;background:var(--t-point-l)}
+  .s5-line.m.hide .x::after{content:''}
+}
+</style>
+</head>
+<body>
+<div class="s5-wrap">
+  <div class="s5-hd">
+    <h1>🏥 5세대 실비 · 할인 RP · 못 받은 보험금</h1>
+    <p>5세대 실손을 <b>한 장</b>으로 보고 · 누가 <b>대상</b>인지 가르고 · <b>역할극(RP)</b>으로 미리 말해 보고 · 만나면 <b>못 받은 보험금</b>부터 찾아 드립니다. 숫자는 금융위원회 발표 원문에서만 옮겼습니다.</p>
+  </div>
+
+  <div class="s5-tabs" id="s5Tabs">
+    <button data-t="one" class="on">📄 한 장 요약</button>
+    <button data-t="who">👥 대상자</button>
+    <button data-t="rp5">🎭 RP · 5세대</button>
+    <button data-t="rpnd">🎭 RP · 무사고 할인</button>
+    <button data-t="find">💰 못 받은 보험금</button>
+    <button data-t="obj">🛡 거절처리</button>
+  </div>
+
+  <section class="s5-pane on" id="s5-one"><div class="s5-card" id="s5One"></div></section>
+  <section class="s5-pane" id="s5-who"><div class="s5-card" id="s5Who"></div></section>
+  <section class="s5-pane" id="s5-rp5"><div class="s5-card" id="s5Rp5"></div></section>
+  <section class="s5-pane" id="s5-rpnd"><div class="s5-card" id="s5Rpnd"></div></section>
+  <section class="s5-pane" id="s5-find"><div class="s5-card" id="s5Find"></div></section>
+  <section class="s5-pane" id="s5-obj"><div class="s5-card" id="s5Obj"></div></section>
+</div>
+
+<script>
+/* ── 출처 — <b>여기 한 곳</b> (9번). 칸마다 이 열쇠를 답니다. 2026-10-12 에 원문을 열어 대조. ── */
+var S5_SRC={
+  f5:{t:'5월 6일부터 치료비 부담이 큰 중증질환의 보장을 강화하고, 보험료는 낮춘 5세대 실손의료보험이 새롭게 출시·판매됩니다.',
+      o:'금융위원회 보도자료',d:'2026-05-06',u:'https://www.fsc.go.kr/no010101/86831'},
+  fv:{t:'\'5세대 실손보험\' 출시···중증 보장 높이고 보험료 낮춰',o:'금융위원회 정책영상',d:'2026-05-11',
+      u:'https://fsc.go.kr/no010107/86856'},
+  f4:{t:'7.1일부터 제4세대 실손의료보험이 출시됩니다.',o:'금융위원회 보도자료',d:'2021-06-29',
+      u:'https://www.fsc.go.kr/no010101/76157'},
+  dt:{t:'"1세대로 돌아가볼까"…실손보험 전환 철회는 6개월 안으로',o:'디지털타임스',d:'2026-05-19',
+      u:'https://www.dt.co.kr/article/12063209'},
+  hd:{t:'1·2세대 실손, 기존 주계약 유지한 채 5세대 전환 가능해진다',o:'헤럴드경제',d:'2026-09-11',
+      u:'https://biz.heraldcorp.com/article/10870508'},
+  np:{t:'1·2세대 실손, 5세대 전환 때 \'특약\' 허용…GA 승환계약 관리 강화',o:'뉴스핌',d:'2026-09-11',
+      u:'https://www.newspim.com/news/view/20260911000783'},
+  hb:{t:'잠자고 있는 보험금 10조 3천억원, 적지 않은 숨은보험금(\'25년 청구건당 평균 404만원 환급)을 보험계약자들께 찾아드립니다.',
+      o:'금융위원회 보도자료',d:'2026-07-07',u:'https://www.fsc.go.kr/no010101/87270'},
+  hz:{t:'\'21년 숨은 보험금 약 3.8조원을 찾아드렸습니다.',o:'금융위원회 보도자료',d:'2022-06-15',
+      u:'https://fsc.go.kr/no010101/77923'},
+  s24:{t:'실손보험 청구 전산화가 의원·약국을 포함하여 확대 시행됩니다.',o:'금융위원회',d:'2025-10-23',
+      u:'https://fsc.go.kr/po010101/85456'},
+  nd1:{t:'건강보험 무사고 할인 쉬워진다…전화 한 번으로 신청',o:'데일리안',d:'2026-10-05',
+      u:'https://www.dailian.co.kr/news/view/1697867/'},
+  nd2:{t:'건강보험 \'무사고 할인\' 더 손쉽게…전화·모바일로 신청',o:'SBS Biz',d:'2026-10-05',
+      u:'https://biz.sbs.co.kr/amp/article/20000338289'}
+};
+var S5_KEY='apex_s5_cases_v1';
+
+/* ── 📄 한 장 — 4세대 · 5세대 (금융위 2026-05-06 「현행(4세대)·5세대 비교」 표 그대로) ──
+   r : [구분, 4세대, 5세대, 출처, 새로 생긴 칸이면 true] */
+var S5_ONE=[
+ ['급여 입원 자기부담','20%','20% (같음)','f5'],
+ ['급여 통원 자기부담','Max[20%, 1·2만원]','Max[건보 본인부담률, 20%, 1·2만원] — 건강보험 본인부담률과 연동','f5',true],
+ ['임신·출산·발달장애 급여','보장대상 아님','급여 의료비 새로 보장 (가입 시점 조건 있음)','f5',true],
+ ['비급여 나누기','특약 하나','중증(특약1) · 비중증(특약2)','f5',true],
+ ['중증 비급여 (특약1)','연간 5천만원 · 입원 30% · 통원 Max[30%, 3만원]','좌동 + 상급·종합병원 입원 연간 자기부담 500만원 넘는 부분은 실손이 보장 (신설)','f5',true],
+ ['비중증 비급여 (특약2)','연간 5천만원 · 입원 30% · 통원 Max[30%, 3만원]','연간 1천만원 · 입원 50% · 통원 Max[50%, 5만원] · 통원 일당 20만원 · 입원(병·의원) 회당 300만원','f5',true],
+ ['보장 안 하는 것','미용·성형 등','좌동 + 미등재 신의료기술 + 도수치료·체외충격파·비급여 주사제 등','f5'],
+ ['비급여 할인·할증','—','특약2 갱신 보험료를 직전 1년 특약2 보험금에 따라 1~5단계 할인·할증','f5'],
+ ['보험료 (발표)','—','4세대 대비 약 30% 저렴 · 1·2세대 대비 최소 50% 이상 저렴 · 기본계약+특약1만이면 4세대의 약 50% 수준','f5']
+];
+var S5_ONE_NOTE=[
+ ['f5','<b>중증</b>이란 건강보험 <b>산정특례 대상 질환</b>(암 · 뇌혈관·심장질환 · 희귀난치성질환 등)입니다. 보건당국이 대상 질환을 바꾸면 실손도 따라갑니다.'],
+ ['f5','<b>2026년 5월 6일</b>부터 <b>16개 보험회사</b>(생명 7 · 손해 9)가 판매합니다. 신한EZ손보는 6월 1일로 출시일이 달랐습니다.'],
+ ['f5','기존 <b>1~4세대</b> 가입자는 <b>본인이 가입한 보험회사의 5세대</b>로 전환할 수 있고, 전환은 <b>별도 심사 없이</b> 됩니다(보장을 넓히거나 철회 뒤 다시 전환하면 심사).'],
+ ['f5','전환 뒤 <b>보험금을 안 받았다면 6개월 안에</b> 철회하고 기존 상품으로 돌아갈 수 있습니다.'],
+ ['dt','기사(금감원 안내 전언) — 보험금을 받았어도 <b>전환 청약일로부터 3개월 안</b>이면 돌아갈 수 있고, 철회는 <b>계약자별 최초 1회</b>, 보험료 차액은 정산합니다.'],
+ ['f5','<span class="s5-plan">예정</span> <b>2013년 3월 이전</b> 가입·재가입 조건 없는 초기 실손은 <b>2026년 11월부터</b> 「선택형 할인 특약」 · 「계약전환 할인」 대상입니다. 할인율은 공식 문서도 <b>예시·예상</b>으로만 적었습니다 — 대상자 탭에서 봅니다.'],
+ ['fv','가입은 보험사 방문 · 보험설계사 · 콜센터로 합니다.']
+];
+
+/* ── 👥 대상자 — 누구에게 무엇을 말하나. 결론은 고객 의료 이용과 보험사 확인으로 ── */
+var S5_GEN=[
+ ['1세대','2009년 9월 이전','f4'],
+ ['2세대','2009년 10월 ~ 2017년 3월','f4'],
+ ['3세대','2017년 4월 ~ 2021년 6월','f4'],
+ ['4세대','2021년 7월 출시','f4'],
+ ['5세대','2026년 5월 6일 출시','f5']
+];
+var S5_WHO=[
+ {k:'none',c:'',t:'① 실손이 아직 없는 분',
+  d:'5세대로 <b>새로 가입</b>합니다. 급여 · 중증 비급여(특약1)만 골라도 됩니다 — 금융위는 그렇게 가입하면 4세대의 약 50% 수준 보험료라고 발표했습니다.',
+  say:'「실손이 없으시면 지금 나온 5세대로 시작하시는 게 자연스럽습니다. 큰 병 치료비를 막는 쪽부터 보시죠.」',
+  src:'f5'},
+ {k:'old13',c:'plan',t:'② 2013년 3월 이전 가입 · 재가입 조건 없는 1·2세대',
+  d:'<span class="s5-plan">2026년 11월 예정</span> 두 길이 생깁니다. ⓐ <b>선택형 할인 특약</b> — 지금 계약은 <b>그대로 두고</b> 도수치료 등 · 비급여 MRI 면책 · 자기부담 20% 중 골라 빼고 보험료를 할인(공식 문서 「1세대 약 40%대, 2세대 30%대로 <b>예상</b> · 상품·회사별 차이 · 변동 가능」). ⓑ <b>계약전환 할인</b> — 5세대로 옮기면 5세대 보험료를 일정 기간 할인(공식 문서는 「3년간 50%」 를 <b>예시</b>로 적음 · 6개월 시행 후 연장 검토).',
+  say:'「11월부터 초기 실손 가지신 분들께 길이 두 개 생긴다고 금융위원회가 발표했어요. 지금 걸 지키면서 깎는 길도 있고요. 확정되면 고객님 계약에 맞는 쪽을 같이 보시죠.」',
+  src:'f5'},
+ {k:'cheap',c:'',t:'③ 병원을 거의 안 가는데 보험료가 부담인 분 (1~4세대)',
+  d:'5세대 <b>전환을 검토</b>할 만한 분입니다. 전환은 심사 없이 되고, 보험금을 안 받았으면 <b>6개월 안에 되돌릴</b> 수 있습니다. 그래도 최근 의료 이용부터 같이 봅니다.',
+  say:'「병원을 거의 안 가시면 보험료를 줄이는 쪽이 맞을 수 있어요. 바꿔도 6개월 안이면 돌아갈 수 있는 장치가 있으니, 최근 진료 내역부터 같이 보시죠.」',
+  src:'f5'},
+ {k:'dosu',c:'keep',t:'④ 도수치료 · 체외충격파 · 비급여 주사 · 비급여 MRI 를 자주 받는 분',
+  d:'5세대에서는 이 항목들이 <b>보장에서 빠지거나</b> 비중증 한도가 연간 1천만원으로 줄고 자기부담이 50%가 됩니다. <b>지금 계약을 지키는 쪽</b>이 나을 수 있습니다 — 이 말을 먼저 하는 설계사가 신뢰를 얻습니다.',
+  say:'「고객님은 바꾸시면 안 될 수도 있어요. 자주 받으시는 치료가 5세대에서는 빠지는 항목이라서요. 지금 걸 잘 지키시는 게 먼저입니다.」',
+  src:'f5'},
+ {k:'heavy',c:'',t:'⑤ 암 등 중증 치료 중이거나 가족력이 걱정인 분',
+  d:'5세대 중증(특약1)은 한도·자기부담을 4세대와 같게 두고, 상급·종합병원 입원 <b>연간 자기부담 500만원 상한</b>을 새로 뒀습니다. 다만 1·2세대는 자기부담이 원래 낮을 수 있어 <b>내 계약과 견줘 본 뒤</b>에만 말합니다.',
+  say:'「큰 병 치료비 쪽은 5세대가 연간 본인 부담에 상한을 새로 뒀어요. 고객님 지금 계약과 나란히 놓고 어느 쪽이 나은지 보여 드릴게요.」',
+  src:'f5'},
+ {k:'baby',c:'',t:'⑥ 임신 계획이 있거나 아이를 기다리는 가정',
+  d:'5세대는 <b>임신·출산 · 발달장애 급여 의료비</b>를 새로 보장합니다. 가입 시점 조건이 있어(산모는 분만예정일 280일 이전 가입 · 태아 가입 시 18세까지) <b>미리 확인</b>이 필요합니다.',
+  say:'「5세대는 임신·출산 관련 급여 의료비를 새로 보장해요. 가입 시점 조건이 있어서, 계획이 있으시면 미리 확인해 드릴게요.」',
+  src:'f5'}
+];
+/* 1분 판별 — 가입 시기 · 병원 이용으로 어느 칸을 먼저 볼지 */
+var S5_WHEN=[['unk','모름'],['g1','2009.9 이전'],['g2a','2009.10~2013.3'],['g2b','2013.4~2017.3'],['g3','2017.4~2021.6'],['g4','2021.7 이후'],['none','실손 없음']];
+var S5_USE=[['rare','거의 안 감'],['some','가끔'],['dosu','도수·주사·MRI 자주'],['heavy','중증 치료 중'],['baby','임신 계획']];
+
+/* ── 🎭 RP — c 고객 · m 나. 숫자는 위 표에서 확인한 것만 「발표」 라고 밝혀서 씁니다 ── */
+var S5_RP5=[
+ {k:'cheap40',t:'A · 병원 거의 안 가는 40대 (4세대 · 보험료 부담)',
+  who:'40대 직장인. 4세대 실손. 「보험료가 계속 올라서 실비 해지할까 봐요.」',
+  goal:'해지를 막고, 전환은 <b>의료 이용을 본 뒤</b> 고르게 한다.',
+  L:[['c','실비 보험료가 자꾸 올라서 그냥 해지할까 생각 중이에요.'],
+     ['m','해지는 잠깐만 미뤄 주세요. 실손은 한 번 없애면 다시 들 때 그때 건강으로 심사를 받아요. 줄이는 방법부터 같이 보시죠.'],
+     ['c','줄이는 방법이 있어요?'],
+     ['m','올해 5월에 5세대 실손이 나왔어요. 금융위원회 발표로는 4세대보다 약 30% 저렴하다고 해요. 다만 나이·성별마다 달라서 고객님 숫자는 설계를 뽑아 보여 드릴게요.'],
+     ['c','그럼 바꾸면 되는 거죠?'],
+     ['m','그 전에 하나만요. 최근에 도수치료나 비급여 주사 맞으신 적 있으세요? 5세대는 그런 치료를 보장에서 빼고, 비급여는 본인 부담이 절반이에요.'],
+     ['c','아뇨, 병원은 거의 안 가요.'],
+     ['m','그럼 고객님은 바꾸는 쪽을 검토하실 만해요. 전환은 심사 없이 되고, 보험금을 안 받으셨다면 6개월 안에 원래 걸로 돌아갈 수도 있어요. 다음에 뵐 때 지금 것과 5세대를 종이에 나란히 놓고 보시죠.']],
+  coach:['해지를 먼저 막는다 — 다시 들 때는 심사가 있다.','「바꾸세요」 가 아니라 <b>의료 이용을 묻고</b> 고객이 고르게 한다.','30%는 <b>금융위 발표</b>라고 밝히고, 고객 숫자는 설계서로만.'],
+  no:'「무조건 싸지니까 바꾸세요」 · 「해지하셔도 언제든 다시 들 수 있어요」'},
+ {k:'dosu50',t:'B · 도수치료 자주 받는 50대 — 「바꾸지 마세요」 장면',
+  who:'50대 자영업. 3세대 실손. 허리가 안 좋아 도수치료를 자주 받음.',
+  goal:'5세대가 맞지 않는 분께 <b>유지</b>를 권해 신뢰를 얻고, 다른 빈자리로 넘어간다.',
+  L:[['c','5세대가 싸다던데 저도 바꿔야 하나요?'],
+     ['m','고객님은 바꾸시면 안 될 수도 있어요. 혹시 도수치료나 체외충격파 자주 받으세요?'],
+     ['c','네, 허리 때문에 거의 매주 가요.'],
+     ['m','그 치료들이 5세대에서는 보장에서 빠지는 항목이에요. 비급여 본인 부담도 절반으로 올라가고요. 지금 실손은 잘 지키시는 게 맞습니다.'],
+     ['c','다들 바꾸라던데 의외네요.'],
+     ['m','사람마다 달라요. 대신 실손은 영수증을 돌려주는 보험이라, 치료받느라 일을 쉬는 동안의 생활비는 안 나와요. 그 빈자리가 있는지만 같이 보시죠.']],
+  coach:['「바꾸지 마세요」 를 <b>먼저</b> 말하는 설계사가 다음 이야기를 할 자격을 얻는다.','유지를 권한 뒤 <b>실손 밖</b>(소득·간병)의 빈자리로 넘어간다.'],
+  no:'「5세대가 더 좋으니 갈아타세요」 (화법서도 금지한 말입니다)'},
+ {k:'g1_60',t:'C · 1세대 60대 — 11월 예정 제도 안내',
+  who:'60대 여성. 2008년 가입 1세대 실손. 「보험료가 너무 비싸요.」',
+  goal:'11월 <b>예정</b> 제도를 확정처럼 말하지 않고, <b>지키는 길</b>도 같이 보여 준다.',
+  L:[['c','실비 보험료가 너무 비싸요. 이거 계속 내야 하나 싶어요.'],
+     ['m','오래전에 드신 실손이시죠? 그 시절 실손은 보장이 넓은 대신 보험료가 많이 올랐어요. 마침 11월부터 초기 실손 가지신 분들께 길이 두 개 생긴다고 금융위원회가 발표했어요.'],
+     ['c','어떤 길이요?'],
+     ['m','하나는 지금 계약을 그대로 두고, 잘 안 쓰시는 보장 몇 가지를 빼서 보험료를 깎는 길이에요. 다른 하나는 5세대로 옮기면 한동안 5세대 보험료를 할인해 주는 길이고요.'],
+     ['c','얼마나 깎아 줘요?'],
+     ['m','아직 시행 전이라 정확한 할인율은 확정이 아니에요. 발표 자료에도 예시로만 나와 있어요. 시행되면 고객님 계약으로 보험사에서 실제 숫자를 받아 나란히 보여 드릴게요.'],
+     ['c','그럼 그때까지 기다리면 되겠네요.'],
+     ['m','네, 그 전까지는 지금 걸 해지하지 마시고요. 대신 오늘은 그동안 못 받으신 보험금이 없는지부터 찾아 드릴게요.']],
+  coach:['「예정」 · 「예시」 를 고객 앞에서 그대로 말한다.','기다리는 동안 <b>해지하지 않게</b> 붙잡는다.','오늘 할 일로 <b>못 받은 보험금 찾기</b>를 건넨다.'],
+  no:'「11월에 반값 됩니다」 (확정이 아닙니다) · 「지금 바꿔 두세요」'},
+ {k:'new30',t:'D · 실손이 없는 30대 — 신규',
+  who:'30대 신혼. 회사 단체보험만 있음. 개인 실손 없음.',
+  goal:'5세대 구조를 <b>세 칸</b>으로 쉽게 말하고, 심사 결과를 미리 말한다.',
+  L:[['c','실비는 회사 단체보험으로 되는 거 아니에요?'],
+     ['m','회사에 다니시는 동안은 그렇죠. 퇴사하시면 끝나서, 개인 실손이 하나는 있어야 해요. 지금은 5세대가 판매 중이에요.'],
+     ['c','5세대는 뭐가 달라요?'],
+     ['m','세 칸이라고 보시면 돼요. 건강보험이 되는 진료, 암처럼 큰 병의 비급여, 그 밖의 비급여요. 큰 병 칸은 지키고, 자잘한 비급여 칸은 본인 부담을 올린 대신 보험료를 낮췄어요.'],
+     ['c','임신 계획도 있는데요.'],
+     ['m','5세대는 임신·출산 관련 급여 의료비를 새로 보장해요. 가입 시점 조건이 있어서 미리 드시는 게 좋아요. 가입과 보험료는 심사 결과에 따릅니다.']],
+  coach:['구조는 <b>세 칸</b>으로만 말한다 — 표는 한 장 요약을 보여 준다.','「심사 결과에 따릅니다」 를 빼지 않는다.'],
+  no:'「누구나 바로 가입돼요」'}
+];
+var S5_RPND=[
+ {k:'call',t:'A · 전화 — 신청을 기억 못 하시는 분',
+  who:'40대. 건강보험(장기 건강보험) 가입. 예전에 보험료 상담을 남긴 기록만 있음.',
+  goal:'할인 <b>확인</b> 전화로 열고, 만날 이유를 하나 얹는다. 할인 숫자는 전화로 말하지 않는다.',
+  L:[['m','안녕하세요, ○○ 소속 ○○○입니다. 예전에 보험료 이야기 잠깐 하셨던 걸로 저한테 넘어왔어요.'],
+     ['c','제가요? 기억이 안 나는데요.'],
+     ['m','기억 안 나셔도 괜찮아요. 오늘은 뭘 하시라는 게 아니라, 지금 내고 계신 건강보험에 무사고 할인이 붙는지 확인만 해 드리려고 연락드렸어요.'],
+     ['c','무사고 할인이요?'],
+     ['m','일정 기간 입원이나 수술이 없으셨으면, 보장은 그대로 두고 보험료만 낮추는 제도예요. 몰라서 못 받으시는 분이 많아요. 할인은 신청한 날 이후 보험료부터라, 늦으면 그만큼 그냥 내시는 거고요.'],
+     ['c','그거 보험사에 물어보면 되는 거 아니에요?'],
+     ['m','맞아요, 확정은 보험사가 해요. 고객님이 직접 물어보셔도 됩니다. 저는 할인 전후 보험료를 종이에 나란히 뽑아서, 만나서 그것과 같이 못 받으신 보험금도 찾아 드리려는 거예요. 화요일 오전이 편하세요, 목요일 오후가 편하세요?']],
+  coach:['소속을 또렷이 — 금감원이나 보험사에서 건 전화처럼 들리지 않게.','할인을 주는 곳은 <b>보험회사</b>, 확정도 보험회사.','숫자는 만나서 <b>전후를 종이로</b>. 제도 근거는 🎓 신입 TA 교육 「왜 지금」.'],
+  no:'「금감원에서 할인해 준대요」 · 「무조건 할인됩니다」'},
+ {k:'meet',t:'B · 만남 — 전후 보험료를 종이로',
+  who:'A 의 고객. 보험사 확인 결과 무사고 계약전환 대상.',
+  goal:'할인 신청을 돕고, 그 자리에서 <b>못 받은 보험금 찾기</b>로 이어 간다.',
+  L:[['m','보험사에 확인해 보니 대상이세요. 왼쪽이 지금 보험료, 오른쪽이 할인 뒤 보험료예요. 보장은 그대로입니다.'],
+     ['c','이걸 왜 아무도 안 알려 줬죠?'],
+     ['m','보험사 안내가 문자 한 통이라 광고인 줄 알고 지나치신 분이 많아요. 신청은 고객님 이름으로, 보험사에 바로 하시면 돼요. 옆에서 같이 해 드릴게요.'],
+     ['c','고마워요.'],
+     ['m','하나 더 해 드릴게요. 「내보험찾아줌」이라고, 생명·손해보험협회가 운영하는 조회가 있어요. 고객님 폰으로 본인인증만 하시면 잠자고 있는 보험금이 있는지 바로 나와요. 지금 같이 보실래요?']],
+  coach:['신청은 <b>고객 이름으로</b> — 대신 신청하지 않는다.','할인 다음 이야기는 <b>새 보험이 아니라</b> 못 받은 보험금.'],
+  no:'「이참에 새로 하나 드시죠」'},
+ {k:'already',t:'C · 이미 할인받고 있는 분',
+  who:'50대. 무사고 할인 이미 적용.',
+  goal:'헛걸음이 아니게 — <b>못 받은 보험금</b>과 <b>5세대 대상</b> 확인으로 바꾼다.',
+  L:[['c','그거 이미 받고 있어요.'],
+     ['m','잘 챙기셨네요. 그럼 할인은 된 거고요, 오늘은 다른 두 가지만 봐 드릴게요. 못 받으신 보험금이 없는지, 그리고 실손이 몇 세대인지요.'],
+     ['c','실손 세대는 왜요?'],
+     ['m','가입 시기에 따라 올해 나온 5세대와 견줘 볼 분도 있고, 지금 걸 꼭 지키셔야 할 분도 있어서요. 증권에 가입일만 보면 바로 알아요.']],
+  coach:['「이미 했어요」 는 거절이 아니라 <b>다음 확인</b>으로 가는 문.'],
+  no:'「그럼 다른 상품 보시죠」'}
+];
+
+/* ── 🛡 거절 — 받는 말 · 다음 한마디 · 하지 말 말 · 멈출 자리 ── */
+var S5_OBJ=[
+ {q:'실비 이미 있어요.',tag:'5세대',say:'잘 갖고 계세요. 오늘은 새로 드시라는 게 아니라, 갖고 계신 실손이 몇 세대인지만 확인해 드리려는 거예요.',
+  nx:'증권 가입일만 보면 바로 알아요. 세대에 따라 꼭 지키셔야 할 분도 있거든요.',no:'「그거론 부족해요」 — 고객의 판단을 깎는 말.',st:'세대 확인도 싫다 하시면 거기서 멈춥니다.'},
+ {q:'갈아타라는 거죠? 바꾸면 손해라던데요.',tag:'5세대',say:'맞는 말씀이에요. 바꾸면 손해인 분도 있어요. 그래서 바꾸시라는 말은 안 드려요.',
+  nx:'최근에 도수치료나 비급여 주사 자주 받으셨으면 지금 걸 지키시는 게 맞고, 병원을 거의 안 가시면 보험료 줄이는 쪽을 볼 만해요. 어느 쪽이세요?',no:'「무조건 이득이에요」 · 「다들 바꿔요」',st:'지키시겠다 하시면 그대로 존중하고 끝냅니다.'},
+ {q:'보험료가 너무 올라서 그냥 해지할래요.',tag:'5세대',say:'그 마음 이해해요. 그래도 해지는 마지막에 하세요. 실손은 다시 드실 때 그때 건강으로 심사를 받아요.',
+  nx:'줄이는 방법부터 볼게요 — 5세대 전환, 그리고 초기 실손이면 11월 예정 제도도 있어요.',no:'「해지해도 언제든 다시 들 수 있어요」',st:'이미 해지를 정하셨다면 해지 전에 확인할 것만 알려 드리고 멈춥니다.'},
+ {q:'11월에 반값 된다던데, 그때 할게요.',tag:'5세대',say:'정보 빠르시네요. 다만 할인율은 아직 확정이 아니고, 발표 자료에도 예시로만 나와 있어요.',
+  nx:'시행되면 고객님 계약으로 실제 숫자를 받아 드릴게요. 그때까지 지금 걸 해지하지 않으시는 게 제일 중요해요.',no:'「11월에 반값 확정이에요」',st:'기다리겠다 하시면 시행 뒤 연락드리겠다는 약속만 남깁니다.'},
+ {q:'받을 보험금 없어요.',tag:'보험금 찾기',say:'대부분 그렇게 말씀하세요. 그런데 금융위원회 발표로 작년 한 해 숨은보험금 3조 2,470억원이 주인을 찾아갔어요.',
+  nx:'고객님 폰으로 「내보험찾아줌」 본인인증만 하시면 1분이면 나와요. 없으면 없는 대로 마음 편하시잖아요.',no:'「분명히 있을 거예요」 — 확인 안 한 돈을 장담하지 않는다.',st:'조회가 싫다 하시면 사이트 이름만 남기고 멈춥니다.'},
+ {q:'개인정보 주기 싫어요. 주민번호는 안 돼요.',tag:'공통',say:'당연해요. 주민번호는 저한테 주시지 마세요.',
+  nx:'조회는 고객님 폰으로 고객님이 직접 본인인증하시는 거라, 저는 옆에서 보기만 해요.',no:'「잠깐이면 돼요, 불러 주세요」',st:'그래도 불편하시면 멈춥니다.'},
+ {q:'그냥 전화로 알려 주세요.',tag:'공통',say:'간단한 건 전화로 바로 말씀드릴게요.',
+  nx:'다만 보험료 전후나 세대 비교는 종이에 나란히 놓고 보셔야 정확해요. 20분이면 돼요. 화요일 오전이 편하세요, 목요일 오후가 편하세요?',no:'「전화로는 안 돼요」',st:'끝내 전화만 원하시면 전화로 할 수 있는 만큼만 하고 멈춥니다.'},
+ {q:'보험사가 알아서 해 주겠죠.',tag:'무사고 할인',say:'보험사도 안내는 해요. 그런데 문자 한 통이라 지나치신 분이 많아요.',
+  nx:'할인은 신청한 날 이후부터라, 늦은 만큼은 돌려받지 못해요. 확정은 보험사가 하니 직접 물어보셔도 되고, 같이 하셔도 돼요.',no:'「보험사는 일부러 안 알려 줘요」',st:'직접 하시겠다 하시면 물어볼 말만 알려 드리고 멈춥니다.'},
+ {q:'생각해 볼게요.',tag:'공통',say:'네, 그러셔도 돼요. 생각하실 때 보실 수 있게 오늘 본 걸 한 장으로 남겨 드릴게요.',
+  nx:'혹시 어느 부분이 걸리세요? 보험료인지, 바꾸는 게 불안하신 건지요.',no:'「오늘 안 하시면 손해예요」',st:'걸리는 게 없다 하시면 한 장을 드리고 멈춥니다.'}
+];
+
+/* ── 💰 못 받은 보험금 — 공식 숫자 (금융위 2026-07-07) ── */
+var S5_HIDE={
+ def:'보험금 지급금액이 확정되었으나 청구되지 않은 보험금',
+ left:'2025년 말 약 10조 3천억원 (2022년 말 12.4조 → 2023년 말 12.1조 → 2024년 말 11.2조)',
+ kind:'중도보험금 7조 7,667억원 · 만기보험금 1조 9,235억원 · 휴면보험금 6,237억원',
+ back:'2025년 한 해 약 3조 2,470억원(80만건) 환급 · 청구건당 평균 404만원',
+ where:'「내보험찾아줌」 cont.insure.or.kr (생명·손해보험협회 운영)',
+ src:'hb'
+};
+var S5_AGES=['20대','30대','40대','50대','60대','70대 이상'];
+var S5_FOUNDK=['실손 미청구','진단금·수술비 미청구','중도보험금','만기보험금','휴면보험금','기타'];
+</script>
+<script>
+function s5Esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function s5$(id){return document.getElementById(id);}
+function s5Sup(k){return '<sup class="s5-src-k">['+s5Esc(k)+']</sup>';}
+function s5SrcList(keys){
+  var h='<ul class="s5-src">',seen={};
+  keys.forEach(function(k){ if(seen[k]||!S5_SRC[k])return; seen[k]=1; var s=S5_SRC[k];
+    h+='<li>['+s5Esc(k)+'] '+s5Esc(s.o)+' · '+s5Esc(s.d)+' · 「'+s5Esc(s.t)+'」 <a href="'+s5Esc(s.u)+'" target="_blank" rel="noopener">원문 ↗</a></li>'; });
+  return h+'</ul>';
+}
+/* 「만원」 을 받는 함수입니다 (4번) — 1만 이상은 억으로 */
+function s5ManWon(v){
+  if(v==null||v==='')return '';
+  var n=Number(v); if(!isFinite(n)||n<0)return '';
+  if(n>=10000){var e=Math.floor(n/10000),r=Math.round(n%10000);return e+'억'+(r?(' '+r.toLocaleString('ko-KR')+'만원'):'원');}
+  return n.toLocaleString('ko-KR')+'만원';
+}
+
+/* ── 📄 한 장 ── */
+function s5RenderOne(){
+  var h='<h2>📄 5세대 실손의료보험 — 한 장 요약</h2>'+
+    '<div class="s5-sub">기준 — 금융위원회 보도자료 2026-05-06 「현행(4세대)·5세대 비교」 표. 보험료·보장은 <b>심사 결과에 따릅니다</b> · 상품·회사마다 다를 수 있습니다.</div>'+
+    '<table class="s5-tbl"><thead><tr><th>구분</th><th>4세대 (현행)</th><th>5세대 (2026.5.6~)</th></tr></thead><tbody>';
+  S5_ONE.forEach(function(r){
+    h+='<tr><th>'+s5Esc(r[0])+'</th><td>'+s5Esc(r[1])+'</td><td'+(r[4]?' class="new"':'')+'>'+s5Esc(r[2])+s5Sup(r[3])+'</td></tr>';
+  });
+  h+='</tbody></table><ul>';
+  S5_ONE_NOTE.forEach(function(n){ h+='<li>'+n[1]+s5Sup(n[0])+'</li>'; });
+  h+='</ul><div class="s5-warn">고객 앞에서 — ① <b>세대부터</b> 확인(증권 가입일) ② <b>최근 의료 이용</b>(도수치료·주사·MRI)을 묻고 ③ 「무조건 갈아타세요」 는 하지 않습니다. 보험료 30%·50%는 <b>발표 수치</b>이고 나이·성별 기준이 적혀 있지 않습니다 — 고객 숫자는 설계서로만 보여 드립니다.</div>';
+  h+=s5SrcList(['f5','fv','dt','f4']);
+  h+='<div class="s5-row s5-noprint"><button class="s5-btn pri" onclick="window.print()">🖨 이 한 장 인쇄</button></div>';
+  s5$('s5One').innerHTML=h;
+}
+
+/* ── 👥 대상자 ── */
+var S5_PICK={when:'',use:''};
+function s5Hits(){
+  var w=S5_PICK.when,u=S5_PICK.use,hit={};
+  if(w==='none')hit.none=1;
+  if(w==='g1'||w==='g2a')hit.old13=1;
+  if(w&&w!=='none'&&(u==='rare'||u==='some'))hit.cheap=1;
+  if(u==='dosu')hit.dosu=1;
+  if(u==='heavy')hit.heavy=1;
+  if(u==='baby')hit.baby=1;
+  return hit;
+}
+function s5RenderWho(){
+  var hit=s5Hits(),h='<h2>👥 5세대 실손 — 누구에게 무엇을</h2>'+
+    '<div class="s5-sub">결론은 <b>고객의 의료 이용</b>과 <b>보험사 확인</b>으로 냅니다. 이 칸은 어디서부터 볼지를 정할 뿐입니다.</div>'+
+    '<h3>내 실손은 몇 세대? — 가입 시기로</h3><table class="s5-tbl"><tbody>';
+  S5_GEN.forEach(function(g){ h+='<tr><th>'+s5Esc(g[0])+'</th><td>'+s5Esc(g[1])+s5Sup(g[2])+'</td></tr>'; });
+  h+='</tbody></table><div class="s5-sub">가입일은 증권에서 봅니다. 「2013년 3월 이전」 은 11월 예정 제도의 대상 기준이라 2세대를 둘로 나눠 고릅니다.</div>'+
+    '<div class="s5-noprint"><h3>1분 판별</h3><span class="s5-lb">가입 시기</span><div class="s5-chips" id="s5When">';
+  S5_WHEN.forEach(function(x){ h+='<button class="s5-chip'+(S5_PICK.when===x[0]?' on':'')+'" data-k="'+x[0]+'">'+s5Esc(x[1])+'</button>'; });
+  h+='</div><span class="s5-lb">병원 이용</span><div class="s5-chips" id="s5Use">';
+  S5_USE.forEach(function(x){ h+='<button class="s5-chip'+(S5_PICK.use===x[0]?' on':'')+'" data-k="'+x[0]+'">'+s5Esc(x[1])+'</button>'; });
+  h+='</div>'+(S5_PICK.when==='unk'?'<div class="s5-note">가입 시기를 모르면 판별하지 않습니다 — 증권 가입일부터 같이 확인합니다.</div>':'')+'</div>';
+  S5_WHO.forEach(function(w){
+    h+='<div class="s5-who '+w.c+(hit[w.k]?' hit':'')+'" data-k="'+w.k+'"><b class="t">'+s5Esc(w.t)+'</b>'+w.d+s5Sup(w.src)+
+       '<div class="s5-note">'+s5Esc(w.say)+'</div></div>';
+  });
+  h+='<div class="s5-warn">어느 칸이든 보험료·보장은 <b>심사 결과에 따릅니다</b>(전환 자체는 심사 없음 · 신규 가입은 심사). 11월 제도는 <b>예정</b>이고 할인율은 공식 문서상 <b>예시·예상</b>입니다.</div>';
+  h+=s5SrcList(['f5','f4','hd','np']);
+  s5$('s5Who').innerHTML=h;
+  [].forEach.call(document.querySelectorAll('#s5When .s5-chip'),function(b){b.onclick=function(){S5_PICK.when=S5_PICK.when===b.dataset.k?'':b.dataset.k;s5RenderWho();};});
+  [].forEach.call(document.querySelectorAll('#s5Use .s5-chip'),function(b){b.onclick=function(){S5_PICK.use=S5_PICK.use===b.dataset.k?'':b.dataset.k;s5RenderWho();};});
+}
+
+/* ── 🎭 역할극 ── */
+var S5_RP={rp5:{k:'cheap40',hide:false,step:0},rpnd:{k:'call',hide:false,step:0}};
+function s5RenderRp(pane){
+  var list=pane==='rp5'?S5_RP5:S5_RPND, st=S5_RP[pane], box=s5$(pane==='rp5'?'s5Rp5':'s5Rpnd');
+  var cur=list.filter(function(x){return x.k===st.k;})[0]||list[0];
+  var h='<h2>'+(pane==='rp5'?'🎭 RP · 5세대 실비':'🎭 RP · 건강보험 무사고 할인')+'</h2>'+
+    '<div class="s5-sub">'+(pane==='rp5'
+      ?'고객 · 나 두 사람이 번갈아 읽습니다. 「내 대사 가리기」 로 혼자 연습합니다. 숫자는 한 장 요약에서 확인한 것만 「발표」 라고 밝혀서 씁니다.'
+      :'제도 설명과 숫자는 🎓 신입 TA 교육 「왜 지금」 에 있습니다 — 여기는 말만 연습합니다. 할인을 주는 곳·확정하는 곳은 <b>보험회사</b>입니다.')+'</div>'+
+    '<div class="s5-scn s5-noprint">';
+  list.forEach(function(x){ h+='<button class="s5-chip'+(x.k===cur.k?' on':'')+'" data-k="'+x.k+'">'+s5Esc(x.t)+'</button>'; });
+  h+='</div><div class="s5-note"><b>고객</b> · '+s5Esc(cur.who)+'<br><b>목표</b> · '+cur.goal+'</div>'+
+    '<div class="s5-row s5-noprint"><button class="s5-btn" data-a="hide">'+(st.hide?'🙈 내 대사 보이기':'🙈 내 대사 가리기')+'</button>'+
+    '<button class="s5-btn" data-a="step">'+(st.step?'▶ 다음 줄 ('+Math.min(st.step,cur.L.length)+'/'+cur.L.length+')':'▶ 한 줄씩')+'</button>'+
+    '<button class="s5-btn" data-a="reset">↺ 처음부터</button></div>';
+  cur.L.forEach(function(l,i){
+    var later=st.step&&i>=st.step;
+    h+='<div class="s5-line '+l[0]+(l[0]==='m'&&st.hide?' hide':'')+(later?' later':'')+'"><span class="w">'+(l[0]==='m'?'나':'고객')+'</span>'+
+       '<div class="x">'+s5Esc(l[1])+'</div></div>';
+  });
+  h+='<div class="s5-coach"><b>코칭</b><ul>';
+  cur.coach.forEach(function(c){h+='<li>'+c+'</li>';});
+  h+='</ul><div><span class="s5-no">하지 말 말 · </span>'+s5Esc(cur.no)+'</div></div>';
+  h+=s5SrcList(pane==='rp5'?['f5']:['nd1','nd2','hb']);
+  box.innerHTML=h;
+  [].forEach.call(box.querySelectorAll('.s5-scn .s5-chip'),function(b){b.onclick=function(){st.k=b.dataset.k;st.step=0;s5RenderRp(pane);};});
+  [].forEach.call(box.querySelectorAll('[data-a]'),function(b){b.onclick=function(){
+    var a=b.dataset.a;
+    if(a==='hide')st.hide=!st.hide;
+    else if(a==='step')st.step=st.step?Math.min(st.step+1,cur.L.length):1;
+    else {st.step=0;st.hide=false;}
+    s5RenderRp(pane);
+  };});
+  [].forEach.call(box.querySelectorAll('.s5-line.m.hide .x'),function(x){x.onclick=function(){x.parentNode.classList.remove('hide');};});
+}
+
+/* ── 💰 못 받은 보험금 · 찾아드린 사례 ── */
+function s5Cases(){ try{ var v=JSON.parse(localStorage.getItem(S5_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
+function s5SaveCases(L){ try{ localStorage.setItem(S5_KEY,JSON.stringify(L)); return true; }catch(e){ return false; } }
+/* 가까운 순서 — 나이대·지역 둘 다 같으면 먼저, 하나만 같으면 그다음. 둘 다 다르면 안 꺼냅니다. */
+function s5Near(age,area){
+  var a=String(area||'').replace(/\s+/g,'');
+  return s5Cases().map(function(c){
+    var sa=age&&c.age===age?2:0, ca=String(c.area||'').replace(/\s+/g,'');
+    var sr=a&&ca&&(ca.indexOf(a)>=0||a.indexOf(ca)>=0)?1:0;
+    return {c:c,s:sa+sr};
+  }).filter(function(x){return x.s>0;}).sort(function(x,y){return y.s-x.s||String(y.c.ym).localeCompare(String(x.c.ym));});
+}
+/* 사례 한 줄을 말로 — 금액을 안 적었으면 금액을 말하지 않습니다 (null 과 0 은 다릅니다 · 1번) */
+function s5CaseSay(c){
+  var amt=s5ManWon(c.man);
+  var what={'실손 미청구':'청구 안 하신 실손 보험금','진단금·수술비 미청구':'청구 안 하신 진단금·수술비'}[c.kind]||(c.kind==='기타'?'못 받으신 보험금':c.kind);
+  return (c.ym?(c.ym.replace('-','년 ').replace(/년 0/,'년 ')+'월에 '):'')+c.age+', '+c.area+'에 사시는 분께 '+what+(amt?(' '+amt+'을'):'을')+' 찾아 드렸어요.';
+}
+var S5_FIND={age:'',area:''};
+function s5RenderFind(){
+  var H=S5_HIDE,L=s5Cases(),near=s5Near(S5_FIND.age,S5_FIND.area),h='';
+  h+='<h2>💰 만나면 — 못 받은 보험금부터 찾아 드립니다</h2>'+
+    '<div class="s5-sub">새 보험 이야기보다 <b>고객 돈을 먼저 찾아 드리는 사람</b>이 다음 이야기를 할 자리를 얻습니다.</div>'+
+    '<h3>공식 숫자 — 금융위원회 2026-07-07'+s5Sup(H.src)+'</h3><ul>'+
+    '<li><b>숨은보험금</b> — '+s5Esc(H.def)+'</li>'+
+    '<li>잠자는 금액(잔액) — '+s5Esc(H.left)+'</li>'+
+    '<li>그 안의 종류 — '+s5Esc(H.kind)+'</li>'+
+    '<li>찾아간 금액(환급) — '+s5Esc(H.back)+'</li>'+
+    '<li>조회 — '+s5Esc(H.where)+'</li></ul>'+
+    '<div class="s5-note">⚠ <b>잔액</b>(10조 3천억원)과 <b>한 해 환급</b>(3조 2,470억원)은 다른 숫자입니다. 섞어 말하지 않습니다. 연령대·지역별 공식 통계는 발표에 없습니다 — 그래서 아래 사례는 <b>사장님이 직접 찾아 드린 것</b>만 씁니다.</div>'+
+    '<h3>만나서 하는 순서</h3>'+
+    '<div class="s5-step"><i>1</i><div><b>「내보험찾아줌」 같이 조회</b> — 고객 폰으로, <b>고객이 직접</b> 본인인증. 주민번호는 받지 않습니다.'+s5Sup('hb')+'</div></div>'+
+    '<div class="s5-step"><i>2</i><div><b>최근 진료 중 청구 안 한 것</b> — 영수증·진료 내역으로 실손·진단금·수술비를 같이 봅니다. 의원·약국까지 실손 청구 전산화(실손24)가 2025-10-25 확대됐습니다.'+s5Sup('s24')+'</div></div>'+
+    '<div class="s5-step"><i>3</i><div><b>청구는 고객 이름으로</b> — 보험사 앱·실손24 로 옆에서 같이. 대신 받지 않고, 얼마 나온다고 장담하지 않습니다.</div></div>';
+  /* 사례로 니즈 환기 */
+  h+='<h3>이 고객과 가까운 사례로 — 니즈 환기</h3><div class="s5-row s5-noprint">'+
+    '<select class="s5-in" id="s5FAge"><option value="">고객 나이대</option>'+S5_AGES.map(function(a){return '<option'+(S5_FIND.age===a?' selected':'')+'>'+a+'</option>';}).join('')+'</select>'+
+    '<input class="s5-in" id="s5FArea" placeholder="고객 지역 (예: 순천 · 광주 북구)" value="'+s5Esc(S5_FIND.area)+'"></div>';
+  if(!L.length){
+    h+='<div class="s5-warn" id="s5NoCase">적어 둔 사례가 아직 없습니다 — <b>사례를 지어내지 않습니다.</b> 아래에서 실제로 찾아 드린 것을 적어 두시면 여기서 꺼내 씁니다. 그 전까지는 공식 숫자로 말합니다.</div>'+
+       '<div class="s5-say" id="s5Say">「작년 한 해에만 숨은보험금 3조 2,470억원이 주인을 찾아갔다고 금융위원회가 발표했어요. 청구 한 건에 평균 404만원이었고요. 만나 뵈면 고객님 것부터 제일 먼저 찾아 드릴게요.」</div>';
+  } else if(!S5_FIND.age&&!S5_FIND.area){
+    h+='<div class="s5-note">고객 나이대나 지역을 고르면 가까운 사례부터 꺼냅니다.</div>';
+  } else if(!near.length){
+    h+='<div class="s5-warn" id="s5NoCase">이 고객과 나이대·지역이 겹치는 사례가 없습니다 — 다른 사례를 「비슷하다」 고 말하지 않습니다. 공식 숫자로 말합니다.</div>'+
+       '<div class="s5-say" id="s5Say">「작년 한 해에만 숨은보험금 3조 2,470억원이 주인을 찾아갔다고 금융위원회가 발표했어요. 만나 뵈면 고객님 것부터 찾아 드릴게요.」</div>';
+  } else {
+    var top=near[0].c, both=near[0].s===3;
+    h+='<div class="s5-say" id="s5Say">「'+s5Esc((both?'고객님 또래시고 가까이 사시는 분이 계셨는데요, ':(near[0].s===2?'고객님 또래 분이 계셨는데요, ':'고객님 근처에 사시는 분이 계셨는데요, '))+s5CaseSay(top))+
+       ' 본인은 받을 게 없다고 하셨던 분이에요. 고객님도 만나 뵈면 그것부터 찾아 드릴게요.」</div>'+
+       '<div class="s5-sub">가까운 순서 — '+near.slice(0,3).map(function(x){return s5Esc(x.c.age+' · '+x.c.area);}).join(' / ')+' · 이름은 말하지 않습니다.</div>';
+  }
+  /* 사례 적기 */
+  h+='<div class="s5-noprint"><h3>찾아 드린 사례 적기 — 이 기기에만</h3>'+
+    '<div class="s5-sub">고객 이름 칸은 없습니다. 금액을 모르면 비워 두세요 — 비우면 「금액」 을 말하지 않습니다(0원으로 적지 않습니다).</div>'+
+    '<div class="s5-row"><select class="s5-in" id="s5CAge"><option value="">나이대</option>'+S5_AGES.map(function(a){return '<option>'+a+'</option>';}).join('')+'</select>'+
+    '<input class="s5-in" id="s5CArea" placeholder="지역 (시·구까지)"></div>'+
+    '<div class="s5-row"><select class="s5-in" id="s5CKind"><option value="">찾은 것</option>'+S5_FOUNDK.map(function(a){return '<option>'+a+'</option>';}).join('')+'</select>'+
+    '<input class="s5-in" id="s5CMan" inputmode="numeric" placeholder="금액 (만원 · 모르면 비움)">'+
+    '<input class="s5-in" id="s5CYm" type="month"></div>'+
+    '<div class="s5-row"><button class="s5-btn pri" id="s5CAdd">＋ 사례 적기</button></div><div id="s5CMsg" class="s5-sub"></div>';
+  L.slice().reverse().forEach(function(c,ri){
+    var i=L.length-1-ri;
+    h+='<div class="s5-case" data-i="'+i+'"><button data-del="'+i+'">지우기</button><span class="m">'+s5Esc(c.age)+' · '+s5Esc(c.area)+'</span>'+
+       s5Esc(c.kind)+(s5ManWon(c.man)?(' · '+s5ManWon(c.man)):' · 금액 안 적음')+(c.ym?(' · '+s5Esc(c.ym)):'')+'</div>';
+  });
+  h+='</div>'+s5SrcList(['hb','s24','hz']);
+  s5$('s5Find').innerHTML=h;
+  s5$('s5FAge').onchange=function(){S5_FIND.age=this.value;s5RenderFind();};
+  s5$('s5FArea').onchange=function(){S5_FIND.area=this.value.trim();s5RenderFind();};
+  s5$('s5CAdd').onclick=s5AddCase;
+  [].forEach.call(document.querySelectorAll('[data-del]'),function(b){b.onclick=function(){
+    var L2=s5Cases();L2.splice(Number(b.dataset.del),1);s5SaveCases(L2);s5RenderFind();};});
+}
+function s5AddCase(){
+  var age=s5$('s5CAge').value,area=s5$('s5CArea').value.trim(),kind=s5$('s5CKind').value,
+      man=s5$('s5CMan').value.replace(/[^0-9]/g,''),ym=s5$('s5CYm').value,msg=s5$('s5CMsg');
+  if(!age||!area||!kind){msg.textContent='나이대 · 지역 · 찾은 것은 꼭 적어 주세요.';return;}
+  /* 이름을 적으면 안 받습니다 (3번) — 「○○님」·「○씨」 꼴 */
+  if(/님|씨|[가-힣]○○|[가-힣]{2,3}\s*고객/.test(area)){msg.textContent='지역 칸에 이름은 적지 않습니다.';return;}
+  var L=s5Cases();L.push({age:age,area:area,kind:kind,man:man===''?null:Number(man),ym:ym||''});
+  if(!s5SaveCases(L)){msg.textContent='이 기기에 저장하지 못했습니다(개인 정보 보호 모드 등).';return;}
+  s5RenderFind();
+}
+
+/* ── 🛡 거절처리 ── */
+function s5RenderObj(){
+  var h='<h2>🛡 거절처리 — 5세대 · 무사고 할인 · 보험금 찾기</h2>'+
+    '<div class="s5-sub">받는 말 → 다음 한마디. <b>하지 말 말</b>과 <b>멈출 자리</b>를 같이 봅니다 — 붙잡다 그 고객을 영영 잃지 않게. 공통 거절(「바빠요」 등)은 ☎️ TA 스크립트 · 🥊 거절 근육 훈련에 있습니다.</div>';
+  S5_OBJ.forEach(function(o){
+    h+='<div class="s5-ob"><div class="q">「'+s5Esc(o.q)+'」<span>'+s5Esc(o.tag)+'</span></div><div class="a">'+
+       '<div class="p">'+s5Esc(o.say)+'</div>'+
+       '<div class="p nx"><span class="lb">다음 한마디 ·</span>'+s5Esc(o.nx)+'</div>'+
+       '<div class="p no"><span class="lb">하지 말 말 ·</span>'+s5Esc(o.no)+'</div>'+
+       '<div class="p st"><span class="lb">여기서 멈춥니다 ·</span>'+s5Esc(o.st)+'</div></div></div>';
+  });
+  h+=s5SrcList(['f5','hb','nd1']);
+  s5$('s5Obj').innerHTML=h;
+}
+
+/* ── 탭 ── */
+var S5_TABS=['one','who','rp5','rpnd','find','obj'];
+function s5Tab(t){
+  if(S5_TABS.indexOf(t)<0)t='one';
+  [].forEach.call(document.querySelectorAll('#s5Tabs button'),function(b){b.classList.toggle('on',b.dataset.t===t);});
+  S5_TABS.forEach(function(k){s5$('s5-'+k).classList.toggle('on',k===t);});
+  try{ if(location.hash!=='#'+t)history.replaceState(null,'','#'+t); }catch(e){}
+}
+[].forEach.call(document.querySelectorAll('#s5Tabs button'),function(b){b.onclick=function(){s5Tab(b.dataset.t);window.scrollTo(0,0);};});
+s5RenderOne();s5RenderWho();s5RenderRp('rp5');s5RenderRp('rpnd');s5RenderFind();s5RenderObj();
+s5Tab((location.hash||'').replace('#',''));
+window.addEventListener('hashchange',function(){s5Tab((location.hash||'').replace('#',''));});
+</script>
+</body>
+</html>
