@@ -28,7 +28,15 @@
         · 1단계에 「기억 못 하시는 게 보통」 다리가 서고, 다듬은 말은 <b>원문 아님</b>이라 밝힌다
         · 「기억 안 나요」 · 「신청한 적 없어요」 두 응대가 1단계에서 바로 뜬다
         · 어느 응대도 기억을 다투지 않는다 — 「신청하셨잖아요·분명히 접수」 는 <b>피할 말</b>에만 있다
-        · 「신청한 적 없어요」 는 표의 「어디서 전화했어요?」(「접수하신」 이라 말함)를 빌리지 않는다 */
+        · 「신청한 적 없어요」 는 표의 「어디서 전화했어요?」(「접수하신」 이라 말함)를 빌리지 않는다
+     ⑫ 🧭 흐름은 내가 끌고 간다 (같은 날 말씀 「거절처리가 원활하게 바로 가능해야 하고, 처음에
+        질문을 많이 하면 끊기기 때문에 내가 말 흐름을 끌어오는 부분도 티칭해줘야 따라할 수 있어」)
+        · 단계마다 질문 수(새 질문 · 확인)와 이음말이 서고, 이음말은 <b>원문 안에 그대로</b> 있다
+        · 통화 전체의 새 질문이 1개(복용약) — 질문 수 지도가 그 셈을 화면에 적는다
+        · 거절마다 「한 숨 응대」 가 맨 위에 서고(170자 안), 단정·퍼센트·다투는 말이 없고,
+          손해(소급·그대로 내·돌려받지)를 말하면 반드시 「대상」 조건이 붙는다 (2번)
+        · 응대 뒤 「다시 끌고 오기」 가 <b>누른 단계 다음 원문</b>으로 잇는다
+        · 가까워지는 질문은 「전화에서는 하나까지」 라고 밝히고, 질문지의 회사·시기·안내는 「묻지 않습니다」 */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9141;
@@ -200,6 +208,31 @@ const srv = http.createServer((q, s) => {
     is(OB.filter(o => o.k === 'forgot' || o.k === 'never').every(o => ARGUE.test(o.avoid) && !o.ref), '두 응대는 다투는 말을 피할 말로 가르치고, 「접수하신」 이라 말하는 표 글을 빌리지 않는다');
     await p.click('#ttBridge1 .tt-ob[data-ob="forgot"]');
     is(/신청하셨는지는 중요하지 않아요/.test(await p.textContent('#ttObjBody')), '누르면 「신청 여부는 중요하지 않다 → 할인 확인」 으로 넘어가는 응대가 뜬다');
+
+    console.log('\n[13] 🧭 흐름은 내가 끌고 간다');
+    const ST = await p.evaluate(() => TT_STEPS);
+    is(ST.every(s => s.lead && typeof s.lead.n === 'number' && s.lead.how), '여섯 단계 모두 질문 수와 끌고 가는 법이 있다');
+    const plain = t => t.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ');
+    const badLink = ST.filter(s => plain(s.say).indexOf(s.lead.link) < 0);
+    is(badLink.length === 0, '이음말이 원문 안에 그대로 있다' + (badLink.length ? ' ← ' + badLink.map(s => s.t).join(',') : ''));
+    is(await p.evaluate(() => ttNewQ()) === 1 && ST[2].lead.n === 1, '통화 전체에서 새로 묻는 질문은 하나(3단계 복용약)다');
+    is(/새로 묻는 질문은 1개/.test(await p.textContent('#ttQsum')) && await p.$$eval('#ttQmap .tt-qmap-c', a => a.length) === 6, '질문 수 지도가 여섯 칸과 그 셈을 화면에 적는다');
+    is(await p.$$eval('.tt-lead', a => a.length) === 6, '단계 카드마다 🧭 흐름 줄이 선다');
+    is(OB.every(o => o.quick && o.quick.length <= 170), '거절마다 「한 숨 응대」 가 있고 170자 안이다 (가장 긴 것 ' + Math.max.apply(null, OB.map(o => (o.quick || '').length)) + '자)');
+    const qBad = OB.filter(o => BAN.test(o.quick) || ARGUE.test(o.quick) || (/소급|그대로 내|돌려받지/.test(o.quick) && !/대상/.test(o.quick)));
+    is(qBad.length === 0, '한 숨 응대에 단정·퍼센트·다투는 말이 없고, 손해를 말하면 「대상」 조건이 붙는다' + (qBad.length ? ' ← ' + qBad.map(o => o.k).join(',') : ''));
+    await p.evaluate(() => { ttObjShow(''); document.getElementById('ttObjPane').classList.remove('open'); });
+    await p.click('#ttStep3 .tt-stepob .tt-ob[data-ob="later"]');
+    const first = await p.$eval('#ttObjBody', e => [...e.children].map(c => c.className).slice(0, 3).join(' '));
+    is(/tt-ob-t tt-ob-k tt-ob-quick/.test(first), '누르면 한 숨 응대가 맨 위에 선다');
+    is(/다시 끌고 오기[\s\S]*4단계 원문으로/.test(await p.textContent('#ttObjBody')), '3단계에서 누르면 「다시 끌고 오기」 가 4단계 원문으로 잇는다');
+    await p.evaluate(() => { ttObjShow(''); document.getElementById('ttObjPane').classList.remove('open'); });
+    await p.click('#ttStep6 .tt-stepob .tt-ob[data-ob="later"]');
+    is(/약속 복창으로 마무리/.test(await p.textContent('#ttObjBody')), '같은 거절도 6단계에서 누르면 마무리로 잇는다');
+    is(await p.$$eval('#ttObjList .tt-ob.top', a => a.map(x => x.getAttribute('data-ob')).join(',')) === 'busy,forgot,ad,have,later,noneed', '옆 칸 목록 맨 앞에 자주 나오는 말 여섯');
+    is(/전화에서는 하나까지/.test(await p.textContent('#tt-near')), '가까워지는 질문은 「전화에서는 하나까지」 라고 밝힌다');
+    is(await p.evaluate(() => ['co', 'when', 'msg'].every(k => /묻지 않습니다/.test(TT_SHEET.filter(q => q.k === k)[0].h))), '질문지의 회사·가입 시기·안내 칸은 「묻지 않습니다 — 들리면 표시」');
+    is(await p.evaluate(() => TT_QUIZ.some(q => /질문을 많이/.test(q.q) && q.a === false)), '「처음부터 질문을 많이」 를 X 로 가르친다');
 
     console.log('\n[10] 본체에서 열기');
     /* 본체 여는 법은 smoke.js · check-rejgym 과 같은 판 (로그인 막 걷기) */
