@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════
-   check-hmpoint.js — 🚗 <b>동선 추천 · 활동 독려 · 🎯 접촉포인트</b> (판 X96)
+   check-hmpoint.js — 🚗 <b>동선 추천 · 활동 독려 · 🎯 접촉포인트</b> (판 X97)
 
    사장님 말씀 (2026-10-13) — 「지역 동선 추천 · <b>활동량을 독려하는 멘트</b>와
    접촉 노하우도 오늘에다 써주면 어떨까. 그리고 개별로, 팀원들 고객 대상과
@@ -90,7 +90,7 @@ const SEED = () => {
 };
 
 (async () => {
-  console.log('🚗 동선 추천 · 🤝 활동 독려 · 🎯 접촉포인트 (판 X96)');
+  console.log('🚗 동선 추천 · 🤝 활동 독려 · 🎯 접촉포인트 (판 X97)');
 
   sec('[0] 말은 <b>한 곳에만</b> 적혀 있나 (5번)');
   is(/pt:'카톡 먼저'/.test(STG) && /pt:'종이로 찾아뵙기'/.test(STG),
@@ -209,6 +209,10 @@ const SEED = () => {
   const P0 = await pg.evaluate(() => {
     AR.cliRows = AR.cliRows.map(r => ({ ...r, by: null }));
     go('home');
+    /* ⚠ 칩을 칠하는 자(hmActPaint)는 <b>나중에</b> 돕니다 (7번 — 눈에 들어올 때).
+       그래서 go('home') 바로 뒤에 읽으면 <b>앞서 칠해진 칩</b>을 읽습니다.
+       칠하는 자를 직접 불러 <b>지금 상태</b>를 읽습니다. */
+    try { hmActPaint(); } catch (e) {}
     const c = [].slice.call(document.querySelectorAll('#dynPane .hm-act button, #dynPane .hm-act .t-chip'))
       .filter(x => /🎯/.test(x.textContent))[0];
     return c ? (c.textContent + ' | ' + (c.getAttribute('aria-label')||'')).replace(/\s+/g, ' ') : '';
@@ -219,6 +223,10 @@ const SEED = () => {
   const PN = await pg.evaluate(() => {
     AR.loaded = false;
     go('home');
+    /* ⚠ 칩을 칠하는 자(hmActPaint)는 <b>나중에</b> 돕니다 (7번 — 눈에 들어올 때).
+       그래서 go('home') 바로 뒤에 읽으면 <b>앞서 칠해진 칩</b>을 읽습니다.
+       칠하는 자를 직접 불러 <b>지금 상태</b>를 읽습니다. */
+    try { hmActPaint(); } catch (e) {}
     const c = [].slice.call(document.querySelectorAll('#dynPane .hm-act button, #dynPane .hm-act .t-chip'))
       .filter(x => /🎯/.test(x.textContent))[0];
     AR.loaded = true;

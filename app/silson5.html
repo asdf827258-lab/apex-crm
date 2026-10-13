@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="color-scheme" content="light"/>
+<title>30초 TA — 무사고 할인 · 못 받은 보험금</title>
+<link rel="stylesheet" href="ui.css">
+<!-- ══ 📞 <b>30초 TA</b> — 2026-10-12 ═══════════════════════════════════════════
+     사장님 말씀 차례 —
+       ① 「5세대 실비와, 할인 전용 RP … 못받은 보험금 찾아줌 … 또래 사례로 니즈환기 … 거절처리 …
+          5세대 실비를 한장으로 요약하고 대상자들 정리」 → 탭 여섯으로 만듦
+       ② 「아니야 복잡해 … 한장으로 한번에 … 이미지 첨부한 자료를 기반으로 … ta스크립트가 이정도로
+          어떻게 고객이 날 만나주냐고」 → 이미지 6단계로 한 장을 만듦
+       ③ 「2026년 10월부터 보험료할인 제도는 뭐야? 그리고 <b>시간이 너무 오래걸린다</b>. 실제 이걸
+          너가 고객이라고 생각하고 이렇게 스크립트대로 전화하면 되겠니? 그리고 <b>거절처리 바로 볼수
+          있도록</b> 해야하는데 안되어 있네」 → 지금 이 판
+     고객 자리에서 다시 들어 보니 ② 는 안 됐습니다 — 만날 이유 셋을 한숨에 늘어놓고, 통계를 읽고,
+     약 이름을 묻고, 주민번호까지 가는 데 2분이 넘었습니다. 고객은 첫 15초에 끊습니다.
+     그래서 —
+     ★ <b>대본은 네 마디 · 30초</b>. 이득은 하나로 묶고(무사고 할인 + 못 받은 보험금 = 「몰라서 못 받는
+       돈 확인」), 곧바로 <b>둘 중 하나</b>로 약속. 5세대·통계·복용약은 고객이 물을 때 꺼냅니다.
+     ★ <b>거절은 화면 아래에 늘 떠 있습니다</b> — 단추 하나 누르면 그 자리에 답이 뜨고, 답은 다시 약속으로.
+     ★ 사장님 이미지의 「보장분석디비 스크립트」 6단계 원문은 접어 둡니다(만남이 잡힌 뒤 주소·본인확인
+       때 씀). 원문 줄은 점검이 🎓 신입 TA 교육과 한 글자씩 견줍니다 (5번).
+     ★ 10월 할인 제도 = 금감원이 2026-10-05 발표한 <b>건강보험 무사고 계약전환 제도 개선</b>(새 할인이
+       아니라 있던 할인을 받기 쉽게). 원문의 「10월5일부터 금융감독원에서 시행하는 보험료 할인제도」 는
+       할인을 주는 곳이 보험회사라 대본에서 그렇게 말하지 않습니다. 고객이 직접 전화로 신청할 수 있게
+       된 제도라, 「저만 해 드릴 수 있다」 고 말하지 않습니다 (1번).
+     ★ 숫자는 원문에서만 (1번·9번) · 사례는 사장님이 적은 것이 겹칠 때만 · 이름 칸 없음 (3번)
+     점검 : scripts/check-silson5.js                                                -->
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--t-bg);color:var(--t-ink);
+  font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Noto Sans KR",system-ui,-apple-system,sans-serif;
+  letter-spacing:-.02em;-webkit-font-smoothing:antialiased;line-height:1.6;overflow-wrap:anywhere}
+button,input,select{font:inherit;color:inherit}
+.w{max-width:760px;margin:0 auto;padding:12px 14px 150px}
+.hd{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.hd h1{margin:0;font-size:20px;font-weight:900}
+.hd span{font-size:13px;color:var(--t-sub);font-weight:700}
+.fill{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:10px 0}
+.fill input,.fill select{width:100%;min-height:44px;padding:8px 10px;border:1px solid var(--t-line);border-radius:10px;background:var(--t-card)}
+.beat{background:var(--t-card);border:1px solid var(--t-line);border-radius:14px;padding:12px 14px;margin-top:8px;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px}
+.beat i{font-style:normal;width:28px;height:28px;border-radius:50%;background:var(--t-point);color:var(--t-card);display:flex;align-items:center;justify-content:center;font-weight:900}
+.beat .k{font-size:12.5px;font-weight:800;color:var(--t-sub)}
+.beat .say{font-size:18px;line-height:1.65;font-weight:700;white-space:pre-wrap}
+.beat .say em{font-style:normal;background:linear-gradient(transparent 58%,#FDE68A 58%)}
+.beat .tip{font-size:12.5px;color:var(--t-sub);margin-top:2px}
+.case{display:block;margin-top:4px;color:#9A3412}
+.more{background:var(--t-card);border:1px solid var(--t-line);border-radius:14px;padding:4px 14px;margin-top:10px}
+.more summary{min-height:48px;display:flex;align-items:center;font-weight:900;cursor:pointer}
+.more p,.more li{font-size:14px}
+.say2{white-space:pre-wrap;font-size:14.5px;background:var(--t-bg);border-radius:10px;padding:8px 10px;margin:6px 0}
+.say2 em{font-style:normal;font-weight:800}
+.tbl{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;margin:6px 0}
+.tbl th,.tbl td{border:1px solid var(--t-line);padding:5px 6px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+.tbl th{background:var(--t-bg)}
+.tbl td.n{background:var(--t-point-l);font-weight:700}
+.plan{display:inline-block;border-radius:999px;padding:0 7px;font-size:11.5px;font-weight:800;background:#FEF3C7;color:#92400E}
+.src{font-size:11.5px;color:var(--t-sub);line-height:1.5;margin:6px 0 10px}
+.src a{color:var(--t-point)}
+.btns{display:flex;gap:8px;margin-top:10px}
+.btns button{flex:1;min-height:44px;border:1px solid var(--t-line);border-radius:12px;background:var(--t-card);font-weight:800;cursor:pointer}
+.cs-row{font-size:13.5px;border-top:1px solid var(--t-line);padding:6px 0}
+.cs-row button{float:right;border:0;background:none;color:var(--t-neg);font-weight:800;min-height:32px;cursor:pointer}
+.msg{font-size:12.5px;color:var(--t-neg);min-height:1em}
+/* 🛡 거절 — 화면 아래에 늘 떠 있습니다 */
+.obar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--t-card);border-top:2px solid var(--t-neg);
+  box-shadow:0 -6px 18px rgba(0,0,0,.08);padding:8px 10px calc(8px + env(safe-area-inset-bottom))}
+.obar .lb{font-size:12px;font-weight:900;color:var(--t-neg);margin:0 2px 4px}
+.ochips{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.ochips::-webkit-scrollbar{display:none}
+.ochips button{flex:0 0 auto;min-height:44px;padding:0 13px;border:1px solid var(--t-line);border-radius:999px;background:var(--t-card);font-weight:800;white-space:nowrap;cursor:pointer}
+.ochips button.on{background:var(--t-neg);border-color:var(--t-neg);color:#fff}
+.oans{display:none;margin-top:8px;border-radius:12px;background:#FEF2F2;padding:10px 12px;max-height:46vh;overflow:auto}
+.oans.on{display:block}
+.oans .a{font-size:17px;font-weight:800;line-height:1.6;white-space:pre-wrap}
+.oans .b{font-size:16px;font-weight:800;color:var(--t-point);margin-top:4px;white-space:pre-wrap}
+.oans .s{font-size:12.5px;color:var(--t-sub);margin-top:4px}
+.oans .x{float:right;border:0;background:none;font-size:20px;min-width:40px;min-height:40px;cursor:pointer;color:var(--t-sub)}
+@media print{.fill,.btns,.obar,.noprint{display:none!important}body{background:#fff}.w{padding:0}}
+</style>
+</head>
+<body>
+<div class="w">
+  <div class="hd"><h1>📞 30초 TA</h1><span>무사고 할인 · 못 받은 보험금 → 둘 중 하나로 약속</span></div>
+  <div class="fill noprint">
+    <input id="fAgent" placeholder="내 이름">
+    <select id="fAge"><option value="">고객 나이대</option></select>
+    <input id="fArea" placeholder="고객 동네 (예: 순천 연향동)">
+    <input id="fD1" placeholder="약속 ① 화요일 오전 11시">
+    <input id="fD2" placeholder="약속 ② 목요일 오후 2시" style="grid-column:span 2">
+  </div>
+
+  <div id="beats"></div>
+  <div class="btns noprint"><button id="bCopy">📋 대본 복사</button><button id="bPrint">🖨 인쇄</button></div>
+
+  <details class="more" id="mWhat"><summary>❓ 「10월 할인 제도가 뭐예요?」 물으시면</summary><div id="what"></div></details>
+  <details class="more" id="mOrig"><summary>📋 약속 잡힌 뒤 — 원문 6단계 (주소 · 본인확인 · 명함)</summary><div id="orig"></div></details>
+  <details class="more" id="mOne"><summary>📄 만나서 펼칠 한 장 — 5세대 실손</summary><div id="one"></div></details>
+  <details class="more noprint" id="csBox"><summary>💰 찾아 드린 사례 적기 — ② 에 또래·근처 사례로 붙습니다</summary>
+    <p class="beat-tip" style="font-size:12.5px;color:var(--t-sub)">실제로 찾아 드린 것만 적으세요. 고객 이름 칸은 없습니다. 금액을 모르면 비우세요 — 0원으로 적지 않고 금액을 말하지 않습니다. 이 기기에만 남습니다.</p>
+    <div class="fill">
+      <select id="cAge"><option value="">나이대</option></select>
+      <input id="cArea" placeholder="동네 (시·구·동까지)">
+      <select id="cKind"><option value="">찾은 것</option></select>
+      <input id="cMan" inputmode="numeric" placeholder="금액 (만원 · 모르면 비움)">
+      <input id="cYm" type="month">
+      <button id="cAdd" style="min-height:44px;border:0;border-radius:10px;background:var(--t-point);color:var(--t-card);font-weight:800">＋ 적기</button>
+    </div>
+    <div class="msg" id="cMsg"></div><div id="cList"></div>
+  </details>
+</div>
+
+<div class="obar noprint" id="obar">
+  <div class="lb">🛡 거절이 나오면 — 누르세요</div>
+  <div class="ochips" id="ochips"></div>
+  <div class="oans" id="oans"></div>
+</div>
+
+<script>
+/* ── 출처 — 여기 한 곳 (9번) · 2026-10-12 에 원문을 열어 대조 ── */
+var S5_SRC={
+  nd1:{t:'건강보험 무사고 할인 쉬워진다…전화 한 번으로 신청',o:'데일리안',d:'2026-10-05',u:'https://www.dailian.co.kr/news/view/1697867/'},
+  nd2:{t:'건강보험 \'무사고 할인\' 더 손쉽게…전화·모바일로 신청',o:'SBS Biz',d:'2026-10-05',u:'https://biz.sbs.co.kr/amp/article/20000338289'},
+  hb:{t:'잠자고 있는 보험금 10조 3천억원, 적지 않은 숨은보험금(\'25년 청구건당 평균 404만원 환급)을 보험계약자들께 찾아드립니다.',o:'금융위원회 보도자료',d:'2026-07-07',u:'https://www.fsc.go.kr/no010101/87270'},
+  f5:{t:'5월 6일부터 치료비 부담이 큰 중증질환의 보장을 강화하고, 보험료는 낮춘 5세대 실손의료보험이 새롭게 출시·판매됩니다.',o:'금융위원회 보도자료',d:'2026-05-06',u:'https://www.fsc.go.kr/no010101/86831'}
+};
+var S5_KEY='apex_s5_cases_v1';
+var S5_AGES=['20대','30대','40대','50대','60대','70대 이상'];
+var S5_FOUNDK=['실손 미청구','진단금·수술비 미청구','중도보험금','만기보험금','휴면보험금','기타'];
+
+/* ── 30초 대본 — 네 마디. {담당}{d1}{d2} 는 위 칸에서. ② 끝에 사례 한 줄이 붙을 수 있음 ── */
+var S5_BEATS=[
+ {k:'인사 · 왜 거는지',say:'안녕하세요, ○○○님 맞으시죠? 에이플러스에셋 {담당}입니다.\n예전에 보험료 상담 남겨 주셔서 연락드렸어요!',tip:'소속과 「왜 나에게」 를 첫 5초에. 고객이 「누구세요?」 를 묻기 전에 답합니다.'},
+ {k:'이득 하나',say:'지금 내고 계신 건강보험에 <em>무사고 할인</em>이 붙는지, 그동안 <em>못 받으신 보험금</em>은 없는지 확인해 드리려고요.\n몰라서 못 받는 분이 대부분이세요!',tip:'이득은 하나로 — 「몰라서 못 받는 돈 확인」. 숫자·5세대는 고객이 물을 때만(아래 거절 단추).',case:true},
+ {k:'둘 중 하나로 약속',say:'뵙고 종이로 <em>할인 전후</em>를 나란히 보여 드리면 20분이면 끝나요.\n<em>{d1}이 편하세요, {d2}가 편하세요?</em>',tip:'「만나실래요?」 가 아니라 둘 중 하나. 고르시면 바로 ④.'},
+ {k:'마무리',say:'네, 그럼 {d1}에 뵙겠습니다! ○○동 맞으시죠?\n끊고 바로 제 명함 문자로 보내 드릴게요.',tip:'주소는 동까지만 내가 말하고 그 아래는 고객 입으로. 자세한 확인은 아래 「원문 6단계」.'}
+];
+
+/* ── 🛡 거절 — 화면 아래에 늘. a 받는 말 · b 다시 약속(둘 중 하나) · s 멈출 자리 ── */
+var S5_OBJ=[
+ {k:'busy',q:'바빠요',a:'30초면 됩니다! 할인 붙는지만 확인해 드리려고요.',b:'아니면 언제 다시 걸까요? 오늘 저녁이 나으세요, 내일 낮이 나으세요?',s:'두 번째도 바쁘다 하시면 명함 문자만 남기고 끊습니다.'},
+ {k:'noneed',q:'필요 없어요',a:'새 보험 아니에요! 지금 있는 보험에서 할인이랑 못 받으신 돈 찾아 드리는 거예요.',b:'{d1}이 편하세요, {d2}가 편하세요?',s:'「가입 권유 아니냐」 고 단호하시면 멈춥니다.'},
+ {k:'who',q:'제 번호 어떻게 아셨어요?',a:'예전에 보험료 상담 남기신 걸로 저한테 배정됐어요. 원치 않으시면 바로 지워 드릴게요.',b:'',s:'원치 않으신다면 「지워 드리겠습니다, 죄송합니다」 하고 끊습니다.'},
+ {k:'self',q:'보험사가 알아서 해 준다던데',a:'맞아요, 이번에 바뀌어서 고객님이 보험사에 전화로 직접 신청하셔도 돼요. 저는 할인 전후랑 못 받으신 보험금까지 한 번에 봐 드리는 거예요.',b:'20분이면 돼요. {d1}, {d2} 중에 언제가 편하세요?',s:'직접 하시겠다 하시면 「계약전환 무사고 할인 되나요?」 한 마디만 알려 드리고 멈춥니다.'},
+ {k:'phone',q:'전화로 해 주세요',a:'할인 전후 보험료는 종이로 나란히 보셔야 정확해요.',b:'20분이면 됩니다! {d1}이 편하세요, {d2}가 편하세요?',s:'끝내 전화만 원하시면 전화로 할 수 있는 만큼만 하고 멈춥니다.'},
+ {k:'nomoney',q:'받을 보험금 없어요',a:'다들 그렇게 말씀하세요. 작년에만 숨은 보험금 3조 2,470억원이 주인을 찾아갔다고 금융위원회가 발표했어요.',b:'없으면 없는 대로 확인만 해 드릴게요! {d1}, {d2} 중에요.',s:'확인도 싫다 하시면 「내보험찾아줌」 이름만 알려 드리고 멈춥니다.',caseOk:true},
+ {k:'later',q:'생각해 볼게요',a:'할인은 신청한 날부터라, 늦은 만큼은 그냥 내시게 돼요. 확인만 먼저 해 드릴게요!',b:'{d1}, {d2} 중에 언제가 편하세요?',s:'걸리는 게 없다 하시면 명함 문자를 보내 드리고 멈춥니다.'},
+ {k:'jumin',q:'주민번호는 못 줘요',a:'주시지 마세요! 전화로는 안 여쭤요. 뵐 때 고객님 폰으로 직접 확인하시면 돼요.',b:'{d1}, {d2} 중에 언제가 편하세요?',s:'만남도 싫다 하시면 멈춥니다.'},
+ {k:'gen5',q:'5세대로 바꾸라는 거죠?',a:'아니요! 바꾸면 손해인 분도 있어요. 병원을 자주 가시면 지금 걸 지키시는 게 맞고요. 그걸 확인해 드리는 거예요.',b:'{d1}, {d2} 중에 언제가 편하세요?',s:'지키시겠다 하시면 그대로 존중합니다.'},
+ {k:'what',q:'10월 할인 제도가 뭐예요?',a:'건강보험에 입원·수술 없이 지내신 분은 보장은 그대로 두고 보험료를 깎아 주는 제도가 원래 있었어요. 신청이 번거로워서 못 받는 분이 많았는데, 이번 달부터 전화로도 신청되게 바뀌었어요.',b:'고객님 보험이 대상인지 같이 보시죠. {d1}, {d2} 중에 언제가 편하세요?',s:'숫자(할인율)는 전화로 말하지 않습니다 — 상품·기간마다 다릅니다.'}
+];
+
+/* ── 「10월 할인 제도가 뭐예요?」 — 기사 두 건에서만 (데일리안·SBS Biz 2026-10-05) ── */
+var S5_WHAT=[
+ '<b>새 할인이 아니라 있던 할인을 받기 쉽게</b> 한 것입니다 — 금융감독원이 2026년 10월 5일 「건강보험 무사고 계약전환 제도」 를 계약자 중심으로 개선했다고 밝혔습니다.',
+ '<b>무엇</b> — 건강보험 가입 뒤 일정 기간 입원·수술 등이 없으면 <b>보장은 그대로</b> 두고 보험료를 할인해 주는 제도. 손해보험사 9곳 · 생명보험사 9곳이 운영합니다.',
+ '<b>왜 고쳤나</b> — 2026년 5월 말 기준 제도가 붙은 계약 1,081만건 중, 1년 넘은 657만건 가운데 할인을 받는 건 116만건(17.6%)뿐이었습니다.',
+ '<b>바뀐 것</b> — 전화·모바일로 신청 가능(지점 방문 필요 없음) · 할인 유형을 고객이 고르지 않아도 <b>보험사가 가장 유리한 조건</b>을 적용 · 안내를 문자뿐 아니라 전화·우편으로, 할인 전후 보험료를 적어서 · 전산·약관 정비는 내년(2027년) 1월까지.',
+ '<b>주의</b> — 할인은 <b>신청한 뒤부터</b>이고 지난 기간은 <b>소급되지 않습니다</b>. 할인율은 무사고 기간·상품마다 다릅니다(기사 예: 40대 남성 1년 무사고 6.5% · 10년 45.9%) — 고객 숫자는 보험사 확인 뒤에만.',
+ '<b>말할 때</b> — 할인을 주는 곳은 <b>보험회사</b>입니다. 「금감원에서 시행하는 할인」 이라고 하면 금감원 전화로 오해합니다. 고객이 직접 신청할 수도 있으니 「저만 해 드릴 수 있다」 고 하지 않습니다.'
+];
+
+/* ── 원문 6단계 — 사장님 이미지 「보장분석디비 스크립트」. 🎓 신입 TA 교육 TT_STEPS 와 한 글자씩 같아야 함 ── */
+var S5_ORIG=[
+ {t:'첫 인사 및 담당자 소개',say:'안녕하세요 ~ ○○○님 맞으시죠?\n상담사분이랑 통화하시고 ~ 배정된 에이플러스에셋에 ○○○입니다.\n보험료 얼마이상씩 납부하신다고 말씀하셨는데 도움드릴내용은 ~\n<em>10월5일부터 금융감독원에서 시행하는 보험료 할인제도</em> 적용이 가능한지\n확인해드리려고 연락드렸습니다.',
+  fix:'⚠ 「금융감독원에서 시행하는 할인제도」 → 할인을 주는 곳은 보험회사입니다(금감원은 10월 5일 개선을 발표). 위 30초 대본은 그렇게 말하지 않습니다.'},
+ {t:'5세대 실비 대상 확인',say:'그리고 한 가지 더 필수로 체크해드릴 부분이 있는데요.\n기존 고객님들 중 <em>5세대 실비로 변경대상이신분들이 있어서,</em>\n고객님도 대상자이시면 보험료가 얼마나 할인되는지\n같이 확인해드리겠습니다.'},
+ {t:'방문 전 확인',say:'현재 보험료 할인제도로인해 상담 예약이 많이 밀려있다보니 ~\n순차적으로 방문해서 안내를 도와드리고 있는데요.\n방문 전에 몇 가지만 확인하고 찾아뵙겠습니다.\n<em>현재 고혈압 고지혈증 당뇨약 중에 복용하시는게 있으실까요?</em>',
+  fix:'「예약이 밀려 있다」 는 사실일 때만.'},
+ {t:'방문 일정 및 주소 확인',say:'방문 전에 등록된 정보가 맞는지만 간단하게 확인하겠습니다.\n<em>방문시간은 언제가편하시다고 말씀하셨는데 이때가편하신가요?</em>\n전달받은 주소지는 어디시 어디구 어디동으로 맞으실까요?\n(맞을경우) 그이하 주소지 확인부탁드리겠습니다.'},
+ {t:'본인 확인 및 인증 안내',say:'생년월일은 ○○년 ○○월 ○○일로 확인되는데,\n본인 확인을 위해서 <em>뒷 번호 7자리</em> 확인 부탁드리겠습니다.\n거부시-> (직접 입력하실수있는 kb에서 셀프인증 하나 카카오톡으로\n보내드렸는데 직접확인부탁드리겠습니다.)',
+  fix:'신입분들은 주민번호 수집하지말고 현장에가서 받을것 (원문 규칙).'},
+ {t:'명함 및 방문 안내',say:'통화종료후 제 이름이랑 명함을 문자나 카카오톡으로 보내드리겠습니다.\n예약제로 상담이 진행되다 보니 당일취소가 어렵습니다\n혹시 일정 변경이 필요하시면 미리 연락 부탁드리겠습니다\n그럼 ○월○일 ○요일 ○시에 ○○에서 뵙겠습니다. 감사합니다'}
+];
+
+/* ── 만나서 펼칠 한 장 — 금융위 2026-05-06 「현행(4세대)·5세대 비교」 표에서만 ── */
+var S5_ONE=[
+ ['비중증 비급여 자기부담','입원 30%','입원 50%'],
+ ['비중증 비급여 한도','연간 5천만원','연간 1천만원'],
+ ['중증 비급여 (암·뇌·심장 등 산정특례)','연간 5천만원 · 30%','좌동 + 상급·종합병원 입원 연간 자기부담 500만원 넘는 부분 보장(신설)'],
+ ['보장 빠지는 것','미용·성형 등','+ 도수치료·체외충격파·비급여 주사제 등'],
+ ['보험료 (발표)','—','4세대 대비 약 30% 저렴 · 1·2세대 대비 최소 50% 이상 저렴']
+];
+var S5_WHO=[
+ '<b>지키실 분</b> — 도수치료·체외충격파·비급여 주사를 자주 받는 분. 5세대에서는 빠지는 항목입니다.',
+ '<b>바꿀 만한 분</b> — 병원을 거의 안 가는데 보험료가 부담인 1~4세대. 전환은 별도 심사 없이, 보험금을 안 받았으면 6개월 안에 되돌릴 수 있습니다.',
+ '<b>11월 대상</b> <span class="plan">예정</span> — 2013년 3월 이전 가입·재가입 조건 없는 1·2세대. 「선택형 할인 특약」 · 「계약전환 할인」. 할인율은 공식 문서도 예시·예상입니다.',
+ '<b>새로 드실 분</b> — 실손이 없는 분. 보험료·보장은 심사 결과에 따릅니다.'
+];
+</script>
+<script>
+function e(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function $(id){return document.getElementById(id);}
+/* 「만원」 을 받습니다 (4번) */
+function s5ManWon(v){
+  if(v==null||v==='')return '';
+  var n=Number(v); if(!isFinite(n)||n<0)return '';
+  if(n>=10000){var a=Math.floor(n/10000),r=Math.round(n%10000);return a+'억'+(r?(' '+r.toLocaleString('ko-KR')+'만원'):'원');}
+  return n.toLocaleString('ko-KR')+'만원';
+}
+function s5Cases(){ try{ var v=JSON.parse(localStorage.getItem(S5_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(x){ return []; } }
+function s5SaveCases(L){ try{ localStorage.setItem(S5_KEY,JSON.stringify(L)); return true; }catch(x){ return false; } }
+var F={agent:'',age:'',area:'',d1:'',d2:''},OB='';
+try{ var sv=JSON.parse(localStorage.getItem('apex_s5_fill_v1')||'{}'); if(sv&&sv.agent)F.agent=sv.agent; }catch(x){}
+/* 가까운 사례 — 나이대·동네(앞 두 글자 = 같은 시)가 겹치는 것만. 하나도 안 겹치면 빈손 (1번) */
+function s5Near(){
+  var a=String(F.area||'').replace(/\s+/g,'');
+  return s5Cases().map(function(c){
+    var ca=String(c.area||'').replace(/\s+/g,''),sa=F.age&&c.age===F.age?2:0;
+    var sr=a.length>=2&&ca.length>=2&&(ca.indexOf(a)>=0||a.indexOf(ca)>=0||ca.slice(0,2)===a.slice(0,2))?1:0;
+    return {c:c,s:sa+sr};
+  }).filter(function(x){return x.s>0;}).sort(function(x,y){return y.s-x.s||String(y.c.ym).localeCompare(String(x.c.ym));});
+}
+function s5CaseLine(){
+  if(!F.age&&!F.area)return '';
+  var n=s5Near(); if(!n.length)return '';
+  var c=n[0].c,amt=s5ManWon(c.man),s=n[0].s;
+  var what={'실손 미청구':'청구 안 하신 실손 보험금','진단금·수술비 미청구':'청구 안 하신 진단금·수술비'}[c.kind]||(c.kind==='기타'?'못 받으신 보험금':c.kind);
+  var when=c.ym?(String(c.ym).replace(/^(\d{4})-0?(\d+)$/,'$1년 $2월')+'에도 '):'얼마 전에도 ';
+  var who=s===3?('고객님 또래, '+c.area+' 사시는 분께'):(s===2?'고객님 또래 분께':(c.area+' 사시는 분께'));
+  return when+who+' '+what+(amt?(' '+amt+'을'):'을')+' 찾아 드렸어요!';
+}
+function s5Fill(t){
+  return String(t).replace(/\{담당\}/g,e(F.agent||'○○○')).replace(/\{d1\}/g,e(F.d1||'○요일 오전')).replace(/\{d2\}/g,e(F.d2||'○요일 오후'));
+}
+function s5Plain(h){return String(h).replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");}
+function s5ScriptText(){
+  var cl=s5CaseLine();
+  return S5_BEATS.map(function(b,i){return (i+1)+'. '+b.k+'\n'+s5Plain(s5Fill(b.say))+(b.case&&cl?('\n'+cl):'');}).join('\n\n');
+}
+function s5RenderBeats(){
+  var cl=s5CaseLine();
+  $('beats').innerHTML=S5_BEATS.map(function(b,i){
+    return '<div class="beat" data-i="'+i+'"><i>'+(i+1)+'</i><div><div class="k">'+e(b.k)+'</div>'+
+      '<div class="say">'+s5Fill(b.say)+(b.case&&cl?('<span class="case" id="caseLine">'+e(cl)+'</span>'):'')+'</div>'+
+      '<div class="tip">'+b.tip+'</div></div></div>';
+  }).join('');
+}
+function s5RenderObj(){
+  $('ochips').innerHTML=S5_OBJ.map(function(o){return '<button type="button" data-k="'+o.k+'"'+(OB===o.k?' class="on"':'')+'>'+e(o.q)+'</button>';}).join('');
+  var o=S5_OBJ.filter(function(x){return x.k===OB;})[0],box=$('oans');
+  if(!o){box.classList.remove('on');box.innerHTML='';}
+  else{
+    var cl=o.caseOk?s5CaseLine():'';
+    box.innerHTML='<button class="x" type="button" aria-label="닫기">✕</button><div class="a">'+e(o.a)+(cl?('\n'+e(cl)):'')+'</div>'+
+      (o.b?('<div class="b">'+s5Fill(e(o.b))+'</div>'):'')+'<div class="s">여기서 멈춥니다 · '+e(o.s)+'</div>';
+    box.classList.add('on');
+    box.querySelector('.x').onclick=function(){OB='';s5RenderObj();};
+  }
+  [].forEach.call($('ochips').querySelectorAll('button'),function(b){b.onclick=function(){OB=OB===b.dataset.k?'':b.dataset.k;s5RenderObj();};});
+}
+function s5RenderStatic(){
+  $('what').innerHTML='<ul>'+S5_WHAT.map(function(w){return '<li>'+w+'</li>';}).join('')+'</ul>'+
+    '<div class="src">출처 — '+['nd1','nd2'].map(function(k){var s=S5_SRC[k];return e(s.o)+' '+e(s.d)+' 「'+e(s.t)+'」 <a href="'+e(s.u)+'" target="_blank" rel="noopener">원문</a>';}).join(' · ')+'</div>';
+  $('orig').innerHTML='<p style="font-size:12.5px;color:var(--t-sub)">사장님이 주신 「보장분석디비 스크립트」(A+에셋 미라클지점) 원문 그대로입니다. 약속이 잡힌 뒤 주소·본인확인·명함 때 씁니다.</p>'+
+    S5_ORIG.map(function(o,i){return '<div><b>'+(i+1)+'. '+e(o.t)+'</b><div class="say2">'+o.say+'</div>'+(o.fix?('<div style="font-size:12.5px;color:var(--t-neg)">'+e(o.fix)+'</div>'):'')+'</div>';}).join('');
+  var t='<div style="font-size:12.5px;color:var(--t-sub)">금융위원회 2026-05-06 발표 기준 · 보험료·보장은 <b>심사 결과에 따릅니다</b> · 상품·회사마다 다를 수 있습니다.</div>'+
+    '<table class="tbl"><thead><tr><th>구분</th><th>4세대</th><th>5세대 (2026.5.6~)</th></tr></thead><tbody>';
+  S5_ONE.forEach(function(r){t+='<tr><th>'+e(r[0])+'</th><td>'+e(r[1])+'</td><td class="n">'+e(r[2])+'</td></tr>';});
+  t+='</tbody></table><ul>'+S5_WHO.map(function(w){return '<li>'+w+'</li>';}).join('')+'</ul>'+
+    '<div class="src">출처 — '+['f5','hb'].map(function(k){var s=S5_SRC[k];return e(s.o)+' '+e(s.d)+' 「'+e(s.t)+'」 <a href="'+e(s.u)+'" target="_blank" rel="noopener">원문</a>';}).join(' · ')+'</div>';
+  $('one').innerHTML=t;
+}
+function s5RenderCases(){
+  var L=s5Cases();
+  $('cList').innerHTML=L.length?L.map(function(c,i){
+    return '<div class="cs-row"><button data-del="'+i+'">지우기</button>'+e(c.age)+' · '+e(c.area)+' · '+e(c.kind)+' · '+(s5ManWon(c.man)||'금액 안 적음')+(c.ym?(' · '+e(c.ym)):'')+'</div>';
+  }).join(''):'<div style="font-size:12.5px;color:var(--t-sub)">아직 적어 둔 사례가 없습니다 — 그래서 ② 에 사례 줄이 안 붙습니다.</div>';
+  [].forEach.call(document.querySelectorAll('[data-del]'),function(b){b.onclick=function(){var L2=s5Cases();L2.splice(Number(b.dataset.del),1);s5SaveCases(L2);s5All();};});
+}
+function s5All(){s5RenderBeats();s5RenderObj();s5RenderCases();}
+function s5AddCase(){
+  var age=$('cAge').value,area=$('cArea').value.trim(),kind=$('cKind').value,man=$('cMan').value.replace(/[^0-9]/g,''),ym=$('cYm').value;
+  if(!age||!area||!kind){$('cMsg').textContent='나이대 · 동네 · 찾은 것은 꼭 적어 주세요.';return;}
+  /* 이름을 적으면 안 받습니다 (3번) — 「○○님」·「○씨」 꼴 */
+  if(/님|씨|○○|[가-힣]{2,3}\s*고객/.test(area)){$('cMsg').textContent='동네 칸에 이름은 적지 않습니다.';return;}
+  var L=s5Cases();L.push({age:age,area:area,kind:kind,man:man===''?null:Number(man),ym:ym||''});
+  if(!s5SaveCases(L)){$('cMsg').textContent='이 기기에 저장하지 못했습니다.';return;}
+  $('cMsg').textContent='';$('cArea').value='';$('cMan').value='';s5All();
+}
+(function init(){
+  var ag=S5_AGES.map(function(a){return '<option>'+a+'</option>';}).join('');
+  $('fAge').innerHTML+=ag;$('cAge').innerHTML+=ag;
+  $('cKind').innerHTML+=S5_FOUNDK.map(function(a){return '<option>'+a+'</option>';}).join('');
+  $('fAgent').value=F.agent;
+  function sync(){
+    F.agent=$('fAgent').value.trim();F.age=$('fAge').value;F.area=$('fArea').value.trim();F.d1=$('fD1').value.trim();F.d2=$('fD2').value.trim();
+    try{localStorage.setItem('apex_s5_fill_v1',JSON.stringify({agent:F.agent}));}catch(x){}
+    s5All();
+  }
+  ['fAgent','fAge','fArea','fD1','fD2'].forEach(function(id){$(id).addEventListener('input',sync);$(id).addEventListener('change',sync);});
+  $('cAdd').onclick=s5AddCase;
+  /* 클립보드 권한이 없는 폰에서는 writeText 가 나중에 거절됩니다 — 거절되면 예전 방식으로 한 번 더 */
+  function oldCopy(t){var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();var ok=false;try{ok=document.execCommand('copy');}catch(x){}document.body.removeChild(ta);return ok;}
+  function done(ok){$('bCopy').textContent=ok?'✓ 복사했습니다':'복사하지 못했습니다';setTimeout(function(){$('bCopy').textContent='📋 대본 복사';},1800);}
+  $('bCopy').onclick=function(){var t=s5ScriptText();window.__copied=t;
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){done(true);},function(){done(oldCopy(t));});}
+    else done(oldCopy(t));};
+  $('bPrint').onclick=function(){window.print();};
+  s5RenderStatic();s5All();
+})();
+</script>
+</body>
+</html>
