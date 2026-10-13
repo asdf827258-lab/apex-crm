@@ -144,7 +144,8 @@ const SEED = () => {
   const R = await pg.evaluate(() => {
     const t = hmRtRgTop(2), all = hmRtRgTop(99);
     const el = document.querySelector('#dynPane .hm-rt .hm-rt-none')   /* ⚠ .hm-rt-none 은 여러 카드가 빌려 쓰는 옷 이름이라 동선 카드 안으로 좁힌다 */;
-    return { top: t, all: all, txt: el ? el.innerText.replace(/\s+/g, ' ').trim() : '(줄이 없다)',
+    return { top: t, all: all, html: el ? el.innerHTML : '',
+             txt: el ? el.innerText.replace(/\s+/g, ' ').trim() : '(줄이 없다)',
              h: el ? Math.round(el.getBoundingClientRect().height) : 0 };
   });
   const t0 = R.top[0] || {}, t1 = R.top[1] || {};
@@ -159,7 +160,10 @@ const SEED = () => {
      '<b>지역이 안 적힌 분</b>은 안 센다 (1번) — 둘을 심어 두었고, 센 사람은 여덟이다' +
      ' ← ' + JSON.stringify(R.all));
   is(t0.n === 5, '<b>남의 분</b>은 안 센다 — 순천시에 남의 것 넷을 심어 두었다');
-  is(/순천시 5분/.test(R.txt) && /여수시 3분/.test(R.txt), '그 수가 <b>화면에 그대로</b> 적힌다 ← ' + R.txt.slice(0, 80));
+  is(/순천시/.test(R.txt) && /여수시/.test(R.txt) && /8분/.test(R.txt),
+     '지역 이름과 <b>합계</b>가 화면에 적힌다 — 수는 하나만(이름표 묶이는동네몇분 · 0-1번) ← ' + R.txt.slice(0, 80));
+  is(/data-ask="묶이는동네몇분"/.test(R.html || ''),
+     '그 수에 <b>이름표</b>가 달려 있다 — check-onesay 가 견줄 수 있다');
   is(/오가는 시간이 줄어듭니다/.test(R.txt), '여태 적던 말이 <b>안 사라졌다</b>');
 
   sec('[2] 🤝 독려 — 셈으로만 · 칩 하나');

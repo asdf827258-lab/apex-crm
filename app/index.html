@@ -29591,9 +29591,13 @@ function hmRtRgTxt(){
   var t=[];
   try{ t=hmRtRgTop(2); }catch(e){ t=[]; }
   if(!t.length)return '지역을 묶어 하루를 잡으시면 오가는 시간이 줄어듭니다.';
-  var i,p=[];
-  for(i=0;i<t.length;i++)p.push('<b>'+osEsc(t[i].rg)+' '+t[i].n+'분</b>');
-  return p.join(' · ')+'이 묶여 있습니다 — 하루로 잡으시면 오가는 시간이 줄어듭니다.';
+  /* ★ 수는 <b>하나(합계)</b>만 적고 이름표를 답니다 — 지역마다 적으면 한
+     이름표에 수가 둘이 되어 check-onesay 가 「갈렸다」 고 봅니다 (0-1번).
+     지역 이름은 그대로 둡니다 — 어디로 갈지가 이 줄의 쓸모입니다. */
+  var i,p=[],n=0;
+  for(i=0;i<t.length;i++){ p.push('<b>'+osEsc(t[i].rg)+'</b>'); n+=t[i].n; }
+  return p.join(' · ')+' <b data-ask="묶이는동네몇분">'+n+'분</b>을 하루로 묶으시면 '+
+         '오가는 시간이 줄어듭니다.';
 }
 function hmRtPush(){
   var a=null;
