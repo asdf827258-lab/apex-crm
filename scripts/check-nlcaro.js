@@ -143,8 +143,14 @@ const ROW = () => {
   const NAME = await pg.evaluate(() => nlCardName());
   is(!!NAME && NAME.length > 2 && !/undefined/.test(NAME),
      '앱이 내놓는 이름이 <b>온전하다</b> — 「' + NAME + '」');
-  is(SRC.split(NAME).length - 1 === 1,
-     '그 이름 글자가 본체에 <b>한 번만</b> 있다 — 옮겨 적은 자리가 없다');
+  /* ⚠ 쪽지(APP_BUILD_NOTE)는 <b>이번 판에 무엇이 바뀌었나</b>를 사장님께 알리는
+     글이라 단추 이름을 그대로 적는 것이 맞습니다 — 두 번째 임자가 아닙니다.
+     쪽지 줄은 <b>걷어 내고</b> 셉니다. (판 X97 에서도 제 쪽지가 제 자의
+     「옮겨 적지 않았나」 가정을 걸어 같은 자리를 걷었습니다. 쪽지는 PR 마다
+     새로 쓰므로 낡을 자리가 아닙니다 · CLAUDE.md 6번)                      */
+  const 걷은본체 = SRC.split('\n').filter(l => !/^var APP_BUILD/.test(l)).join('\n');
+  is(걷은본체.split(NAME).length - 1 === 1,
+     '그 이름 글자가 <b>코드에 한 번만</b> 있다 — 옮겨 적은 자리가 없다');
   /* ★ 이름을 내놓는 자리도 하나 — nlCardBtn 만 nlCardName() 을 찍는다 */
   const btnFn = SRC.slice(SRC.indexOf('function nlCardBtn('), SRC.indexOf('function nlCardBtn(') + 500);
   is((btnFn.match(/nlCardName\(\)/g) || []).length === 1,
