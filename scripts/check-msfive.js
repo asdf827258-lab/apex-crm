@@ -329,7 +329,13 @@ const SEED = (o) => `
   is(/뉴스 받아 오기/.test(n2), '  <b>받아 오는 자리</b>로 모신다');
   await jump(N.p, 4);
   const n5 = await txt(N.p);
-  is(/지어내지 않습니다/.test(n5) && !/캐러셀 만들기/.test(n5),
+  /* ⚠ 2026-10-13 · 단추 이름을 <b>여기 박아 두지 않습니다</b> — 「캐러셀 만들기」 로
+     박아 두었더니 이름이 「캐러셀로 제작하기」 로 바뀌는 순간 이 줄이 조용히
+     <b>아무것도 재지 않는 줄</b>이 되었습니다(없는 글자를 「없다」 고 확인하니 늘 초록).
+     앱에 물어서 씁니다 — 이름을 아는 곳은 nlCardName() 하나입니다 (5번·8번). */
+  const CARD_T = await N.p.evaluate(() => (typeof nlCardName === 'function') ? nlCardName() : '');
+  is(!!CARD_T, '  단추 이름을 <b>앱에 물어</b> 쓴다 — 「' + CARD_T + '」');
+  is(/지어내지 않습니다/.test(n5) && n5.indexOf(CARD_T) < 0,
      '  ⑤ 도 제목을 만들지 않고 <b>못 받았다</b>고 적는다');
   await jump(N.p, 3);
   const n4 = await txt(N.p);
@@ -342,7 +348,7 @@ const SEED = (o) => `
   is(/정책·상품 뉴스/.test(t7b) && /1건/.test(t7b), '  올려 둔 소식 <b>건수</b>를 적고 길을 낸다');
   /* ⚠ <b>앱이 몰래 바꾸지 않는다</b> — 오늘 고른 기사는 그대로 서 있어야 한다.
      저쪽 것으로 슬쩍 갈아 끼우면 사장님이 고른 것이 사라진다 (1번). */
-  is(t7b.indexOf(NEWS[0].t) >= 0 && /캐러셀 만들기/.test(t7b),
+  is(t7b.indexOf(NEWS[0].t) >= 0 && t7b.indexOf(CARD_T) >= 0,
      '  <b>오늘 고른 기사</b>는 그대로 서 있다 — 몰래 갈아 끼우지 않는다');
   /* 제목을 여기 옮겨 적지 않았다 — 저쪽을 고치면 한쪽만 갈린다 (5번) */
   const bizSrc = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');

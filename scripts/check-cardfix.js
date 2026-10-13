@@ -165,7 +165,7 @@ const S = f => fs.readFileSync(f, 'utf8');
     let saved = ''; try { saved = sessionStorage.getItem('apex_nl_topic') || ''; } catch (e) { }
     return { html: html, went: window.__went, topic: saved, fill: ('' + nlFillTopic) };
   });
-  ok(/nlToCard\(0\)/.test(r.html), '뉴스 줄에 「이 소식으로 카드뉴스」 단추가 있다');
+  ok(/nlToCard\(0\)/.test(r.html), '뉴스 줄에 <b>캐러셀로 가는 단추</b>가 있다');
   ok(r.went === 'insta', '누르면 인스타 디자인 스튜디오로 넘어간다');
   ok(/실손보험 개편안 발표/.test(r.topic), '기사 제목이 주제로 넘어간다');
   ok(/출처 매경/.test(r.topic), '출처도 같이 넘어간다');
