@@ -128,14 +128,20 @@ const SEED = () => {
 
   /* ─────────────────────────────────────────────────────────── */
   head('[3] 넘기는 것은 <b>제목 · 갈래 · 출처</b>뿐이다 (9번)');
+  /* ⚠ 2026-10-13 · 재는 법을 옮겼습니다. 여태는 <b>담아 둔 것</b>(sessionStorage)을
+     읽었는데, 이제 캐러셀이 <b>같은 화면</b>(정책·상품 뉴스 맨 위)이라 넘기는 즉시
+     칸에 담기고 담아 둔 것은 <b>지워집니다</b> — 그래서 빈손으로 읽혔습니다.
+     <b>칸에 든 값</b>을 봅니다(그쪽이 사장님이 실제로 보시는 것입니다).      */
   const topic = await pg.evaluate(() => {
     let went = '';
     const realGo = window.go;
     window.go = function (t) { went = t; };            /* 화면은 안 옮기고 무엇을 담는지만 본다 */
+    try { sessionStorage.removeItem('apex_nl_topic'); } catch (e) {}
+    const el0 = document.getElementById('cnAiTopic'); if (el0) el0.value = '';
     bizNewsToCard(0);
     window.go = realGo;
-    let t = '';
-    try { t = sessionStorage.getItem('apex_nl_topic') || ''; } catch (e) {}
+    let t = (document.getElementById('cnAiTopic') || {}).value || '';
+    if (!t) { try { t = sessionStorage.getItem('apex_nl_topic') || ''; } catch (e) {} }
     return { t: t, went: went };
   });
   is(/실손보험 청구 절차 간소화 시행/.test(topic.t), '<b>제목이 그대로</b> 실린다');
@@ -143,7 +149,9 @@ const SEED = () => {
   is(/금융·보험/.test(topic.t), '<b>갈래 이름</b>이 붙는다 — desc 의 「출처:」 에서 되찾아 온다');
   is(!/원문에서 숫자와 시행일을 확인하고/.test(topic.t),
      '거들어 둔 안내 문구는 <b>안 따라간다</b> — 주제가 아니라 우리 메모다');
-  is(topic.went === 'insta', '누르면 <b>인스타 칸으로</b> 간다 — ' + topic.went);
+  /* ★ 2026-10-13 · 사장님 바로잡음 — 캐러셀은 「📅 오늘의 카드뉴스」(정책·상품
+     뉴스 맨 위) 입니다. 판 X100 까지는 인스타 디자인 스튜디오로 갔습니다. */
+  is(topic.went === 'biz_news', '누르면 <b>오늘의 카드뉴스로</b> 간다 — ' + topic.went);
 
   /* ─────────────────────────────────────────────────────────── */
   head('[4] 올리면 <b>그 화면으로 데려간다</b>');
@@ -159,12 +167,12 @@ const SEED = () => {
   await pg.evaluate(() => { try { sessionStorage.removeItem('apex_nl_topic'); } catch (e) {} });
   await clearOvl(pg);
   await pg.evaluate(() => bizNewsToCard(0));
-  await pg.waitForSelector('#istudio_topic', { timeout: 20000 });
+  await pg.waitForSelector('#cnAiTopic', { timeout: 20000 });
   await pg.waitForFunction(() => {
-    const el = document.getElementById('istudio_topic');
+    const el = document.getElementById('cnAiTopic');
     return !!(el && el.value && el.value.length > 5);
   }, { timeout: 20000 });
-  const filled = await pg.evaluate(() => (document.getElementById('istudio_topic') || {}).value || '');
+  const filled = await pg.evaluate(() => (document.getElementById('cnAiTopic') || {}).value || '');
   is(/실손보험 청구 절차 간소화 시행/.test(filled),
      '인스타 <b>주제 칸이 저절로 채워졌다</b> — 「' + filled.slice(0, 32) + '…」');
   is(filled.length > 20, '손으로 다시 적을 것이 <b>없다</b>');

@@ -224,7 +224,8 @@ const ROW = () => {
     let topic = ''; try { topic = sessionStorage.getItem('apex_nl_topic') || ''; } catch (e) {}
     return { went: went, topic: topic };
   });
-  is(go1.went === 'insta', '  누르면 <b>인스타 칸</b>으로 간다 — ' + go1.went);
+  /* ★ 2026-10-13 · 캐러셀은 「📅 오늘의 카드뉴스」 입니다 (사장님 바로잡음) */
+  is(go1.went === 'biz_news', '  누르면 <b>오늘의 카드뉴스</b>로 간다 — ' + go1.went);
   is(/실손보험 청구 절차 간소화 시행/.test(go1.topic), '  <b>기사 제목</b>이 주제로 들어간다');
   is(/견본신문/.test(go1.topic), '  <b>출처</b>도 같이 간다 — 원문을 확인할 수 있어야 한다');
 
