@@ -424,11 +424,17 @@ const tall = (p) => p.evaluate(() => {
   await A.p.evaluate(() => { try { hmPaint(); } catch (e) {} });
   await A.p.waitForTimeout(300);
   const igChip = await A.p.evaluate(() => {
-    const e = document.querySelector('.hm-act .g button');
-    return { txt: e ? (e.innerText || '').replace(/\s+/g, ' ').trim() : '', has: !!e };
+    /* ⚠ 2026-10-13 (판 X96) — 칩 줄에 <b>단추가 여럿</b>이 되었습니다
+       (🤝 더 · 🎯 접촉포인트 · 📸 올릴 것). 「첫 단추」 로 찾으면 엉뚱한 칩을
+       집어 이 자가 울립니다 — 찾는 것은 <b>올릴 것</b> 칩입니다. 자를 약하게
+       한 것이 아니라 <b>이름으로</b> 찾습니다 (8번). */
+    const bs = [].slice.call(document.querySelectorAll('.hm-act .g button'));
+    const e = bs.filter(b => /올릴 것/.test(b.innerText || ''))[0] || null;
+    return { txt: e ? (e.innerText || '').replace(/\s+/g, ' ').trim() : '', has: !!e,
+             단추수: bs.length };
   });
   is(igChip.has && /올릴 것/.test(igChip.txt),
-     '  홈에는 <b>한 줄만</b> 남는다 — 「' + igChip.txt + '」');
+     '  홈에는 <b>한 줄만</b> 남는다 — 「' + igChip.txt + '」 (칩 줄의 단추 ' + igChip.단추수 + '개 중)');
   await A.p.evaluate(() => go('news_live')); await A.p.waitForTimeout(700);
   const g = await A.p.evaluate(() => ({
     머리: ((document.querySelector('#hmIgHost .hm-ig-h') || {}).innerText || '').replace(/\s+/g, ' ') ||
