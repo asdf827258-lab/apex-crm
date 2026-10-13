@@ -166,7 +166,7 @@ const SEED = () => {
   const A1 = await pg.evaluate(() => {
     const el = document.querySelector('#dynPane .hm-act');
     return { t: el ? el.innerText.replace(/\s+/g, ' ') : '(없다)',
-             more: /한 분 더면/.test(el ? el.innerText : ''),
+             more: /🤝 더/.test(el ? el.innerText : ''),
              act: (typeof hmActOf === 'function') ? hmActOf() : null };
   });
   is(!A1.act ? !A1.more : A1.more,
@@ -180,11 +180,13 @@ const SEED = () => {
     const el = document.querySelector('#dynPane .hm-act');
     return { t: el ? el.innerText.replace(/\s+/g, ' ') : '', h: el ? Math.round(el.getBoundingClientRect().height) : 0 };
   });
-  is(/한 분 더면\s*2/.test(A2.t), '만남 1 이면 칩이 <b>2</b> 라고 적는다 — 셈으로만 독려한다 ← ' + A2.t.slice(0, 70));
+  is(/더\s*2/.test(A2.t), '만남 1 이면 칩이 <b>2</b> 라고 적는다 — 셈으로만 독려한다 ← ' + A2.t.slice(0, 70));
   const 지어낸말 = /잘 받히|잘 받습니다|가장 잘|확률|평균적으로|이 시간에|오후가|성공률/;
   const HOME = await pg.evaluate(() => (document.querySelector('.tab-pane.on') || {}).innerText || '');
   is(!지어낸말.test(HOME), '홈에 <b>지어낸 주장</b>이 없다 (1번) — 「잘 받힙니다」·확률·시간대 주장 0');
 
+  /* ⚠ 앞 토막이 씨를 흔들어 둡니다 — <b>다시 심고</b> 잽니다 */
+  await pg.evaluate(SEED); await pg.evaluate(() => { go('home'); }); await pg.waitForTimeout(500);
   sec('[3] 🎯 접촉포인트 — 아는 만큼만');
   const P = await pg.evaluate(() => {
     const o = hmPtOf((typeof hwhoFor === 'function') ? hwhoFor() : '');
@@ -197,8 +199,8 @@ const SEED = () => {
   is(P.o && P.o.all === 6 && P.o.known === 4 && P.o.unknown === 2,
      '내 고객만 센다 — <b>여섯 분 중 나이 아는 넷</b> ← ' + JSON.stringify(P.o && {all:P.o.all,known:P.o.known,unknown:P.o.unknown}));
   is(P.o && P.o.top === '2030' && P.o.b['2030'] === 2, '많은 묶음이 <b>20·30대 둘</b>이다');
-  is(/카톡 먼저/.test(P.t) && /카톡 먼저/.test(P.t) && /2/.test(P.t),
-     '칩에 <b>묶음·접촉포인트·수</b>가 적힌다 ← ' + P.t);
+  is(/카톡 먼저/.test(P.t),
+     '칩에 <b>접촉포인트</b>가 그대로 적힌다 — 수·묶음은 올려 보는 말에 ← ' + P.t);
   is(/나이를 아는 4분/.test(P.lab),
      '긴 말은 <b>aria-label</b> 에 그대로 있다 — 눈으로도 소리로도 읽힌다 ← ' + P.lab.slice(0, 60));
   is(/2분은 생년이 안 적혀/.test(P.lab), '<b>모르는 분 수를 밝힌다</b> (1번) — 숨기지 않는다');
@@ -224,6 +226,8 @@ const SEED = () => {
   });
   is(!/🎯/.test(PN), '아직 <b>못 읽었으면 토막이 아예 없다</b> (1번) — 「0분」 이 아니다');
 
+  /* ⚠ 앞 토막이 씨를 흔들어 둡니다 — <b>다시 심고</b> 잽니다 */
+  await pg.evaluate(SEED); await pg.evaluate(() => { go('home'); }); await pg.waitForTimeout(500);
   sec('[4] ★★ 내 글이 몇 px 먹나 — 남은 자리는 <b>18px</b> (844×4.2 − 3,526)');
   /* 총 높이의 주인은 <b>check-homeone</b> 입니다. 여기서는 <b>차</b>만 잽니다. */
   const D = await pg.evaluate(() => {
@@ -246,6 +250,8 @@ const SEED = () => {
   is(늘 <= 18, '세 토막을 다 넣어도 <b>' + 늘 + 'px</b> — 남은 자리(18px) 안이다' +
      (늘 > 18 ? ' ← 넘었습니다. <b>올리지 말고 줄이십시오</b> (check-homeone 의 그 말)' : ''));
 
+  /* ⚠ 앞 토막이 씨를 흔들어 둡니다 — <b>다시 심고</b> 잽니다 */
+  await pg.evaluate(SEED); await pg.evaluate(() => { go('home'); }); await pg.waitForTimeout(500);
   sec('[4-1] 칩이 <b>눈에 보이는 자리</b>에 있나 — 칩 줄은 옆으로 미는 줄이다');
   /* ⚠ 칩 글자가 길어도 <b>높이는 안 늘어납니다</b> — .hm-act .g 가
      flex-wrap:nowrap · overflow-x:auto 이기 때문입니다. 대신 <b>오른쪽
@@ -258,14 +264,27 @@ const SEED = () => {
     const it = [].slice.call(row.children).map(e => {
       const b = e.getBoundingClientRect();
       return { t: e.textContent.replace(/\s+/g, ' ').trim(),
+               시작: Math.round(b.left - r.left),
                보임: (b.left >= r.left - 1 && b.right <= r.right + 1) };
     });
     return { 줄폭: Math.round(r.width), 속폭: row.scrollWidth, it: it };
   });
-  const 새칩 = (C.it || []).filter(x => /🤝 한 분 더면|🎯/.test(x.t));
+  const 새칩 = (C.it || []).filter(x => /🤝 더|🎯/.test(x.t));
   console.log('  · 줄 폭 ' + C.줄폭 + 'px · 칩이 차지한 폭 ' + C.속폭 + 'px' +
               (C.속폭 > C.줄폭 ? ' (옆으로 밀어야 끝까지 보입니다)' : ''));
-  is(새칩.length === 2, '새 칩 <b>둘이 선다</b> — 🤝 한 분 더면 · 🎯 접촉포인트');
+  is(새칩.length === 2, '새 칩 <b>둘이 선다</b> — 🤝 더(한 분 더) · 🎯 접촉포인트');
+  /* ★★ <b>손으로 밀지 않고 보이나</b> — 사장님 고르심(2026-10-13 「새 칩 둘을
+     앞으로」). 맨 뒤에 두었을 때 x=238·348 로 줄 폭(251px) 밖이었습니다.
+     「만남」 바로 뒤라야 처음부터 보입니다. */
+  /* ★★ <b>왼쪽 끝이 줄 안에 드나</b> — 한 줄에 보이는 자리는 93px 뿐이어서
+     (전화 72 · 만남 70 · 이름표 65) 둘을 <b>온전히</b> 세울 수는 없습니다.
+     그래서 「보이기 시작하는가」 를 잽니다 — 끝에 두었을 때는 x=268·380 으로
+     아예 밖이었습니다. 긴 말은 눌러서·올려서(title) 봅니다. */
+  is(새칩.length === 2 && 새칩.every(x => x.시작 < C.줄폭),
+     '새 칩 둘이 <b>보이기 시작한다</b> — 「만남」 바로 뒤 (줄 폭 ' + C.줄폭 + 'px)' +
+     ' ← ' + (C.it || []).map(x => x.t + '@' + x.시작).join(' / '));
+  is(새칩.length === 2 && 새칩[0].보임,
+     '앞엣것(🤝 더)은 <b>온전히 보인다</b> — 뒤엣것(🎯)은 보이기 시작한다');
   is(새칩.every(x => x.t.replace(/[^가-힣A-Za-z0-9·]/g, '').length <= 12),
      '새 칩 글자가 <b>짧다</b> — 길면 뒤엣것을 화면 밖으로 밀어냅니다' +
      ' ← ' + 새칩.map(x => x.t).join(' / '));

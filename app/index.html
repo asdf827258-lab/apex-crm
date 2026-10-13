@@ -29604,9 +29604,14 @@ function hmActMoreHtml(){
   var a=null;
   try{ a=(typeof hmActOf==='function')?hmActOf():null; }catch(e){ return ''; }
   if(!a||typeof a.meet!=='number')return '';
-  return '<button type="button" onclick="hmRtOpen()" '+
-         'aria-label="한 분 더 뵈면 오늘 만남 '+(a.meet+1)+'건 — 지역 동선 열기">'+
-         '🤝 한 분 더면<i>'+(a.meet+1)+'</i></button>';
+  var m='한 분 더 뵈면 오늘 만남 '+(a.meet+1)+'건이 됩니다 — 눌러서 지역 동선을 봅니다';
+  return '<button type="button" onclick="hmRtOpen()" title="'+m+'" '+
+         'aria-label="'+m+'">'+
+         '🤝 더<i>'+(a.meet+1)+'</i></button>';
+  /* ⚠ 글자를 「한 분 더면」 으로 쓰니 101px 이라, 바로 뒤 🎯 칩이 줄(251px)
+     <b>밖에서 시작</b>했습니다 — 2px 차였습니다. 「더」 로 줄여 둘 다 줄 안에서
+     시작합니다. 무슨 뜻인지는 바로 앞 「🤝 만남 N」 칩과 올려 보는 말이 말해
+     줍니다 (6번 — 뜻을 숨기지 않습니다). */
 }
 /* 약속이 없는 날 — <b>그래도 묶여 있는 동네</b>를 알려 준다.
    ★ hmRtMeet 은 약속이 없으면 빈손입니다(「갈 동네를 모르면 그 근처도 없다」).
@@ -29812,17 +29817,23 @@ function hmActHtml(){
   var a=hmActOf(); if(!a)return '';
   hmActCss();
   var h='',i,k;
-  for(i=0;i<HM_ACT_KIND.length;i++){
-    k=HM_ACT_KIND[i];
-    h+='<span>'+k[1]+' '+k[2]+'<i>'+a[k[0]]+'</i></span>';
-  }
   /* 🤝 한 분 더 · 🎯 접촉포인트 — <b>같은 칩 줄</b>에 둡니다 (판 X96).
      재어 보니 글로 붙이면 22~51px 을 먹고(홈에 남은 자리 18px), 칩 줄은
      <b>한 번 접히면 그 뒤는 공짜</b>입니다. 그래서 둘을 여기 모읍니다.
+     ★★ 자리는 <b>「만남」 바로 뒤</b>입니다 — 사장님 고르심(2026-10-13).
+       칩 줄은 <b>옆으로 미는 줄</b>(.hm-act .g 는 nowrap · overflow-x:auto)이라
+       맨 뒤에 두면 줄 폭 251px 밖(x=238·348)에 서서 <b>손으로 밀어야</b>
+       보였습니다. 매일 보는 둘이라 앞으로 옮기고, ✍️ 기록·📸 올릴 것이
+       여훈으로 밀립니다(지운 것이 아닙니다 · 6번).
      ★ 접촉포인트는 「오늘 한 것」 이 아니지만, <b>오늘 누구에게 어떻게</b> 를
        말하는 자리라 같은 집안입니다. 긴 말은 aria-label 에 있습니다. */
-  h+=hmActIgHtml()+hmActMoreHtml()+
-     hmPtChip((typeof hwhoFor==='function')?hwhoFor():'');
+  for(i=0;i<HM_ACT_KIND.length;i++){
+    k=HM_ACT_KIND[i];
+    h+='<span>'+k[1]+' '+k[2]+'<i>'+a[k[0]]+'</i></span>';
+    if(k[0]==='meet')
+      h+=hmActMoreHtml()+hmPtChip((typeof hwhoFor==='function')?hwhoFor():'');
+  }
+  h+=hmActIgHtml();
   /* 이름표에 <b>「기록」</b>이라고 적습니다 — 체크판의 「눌렀나」 와 다른
      수라는 것을 여기서 말해 둬야 합니다 (1번). 꼬리에 한 줄 더 달았더니
      칩이 접혀 122px 이 됐습니다. 말은 남기고 자리는 안 먹습니다. */
@@ -32104,7 +32115,7 @@ function pexNoteHtml(){
    ★ <b>새 줄을 안 세웁니다</b> — 있는 t-sub 줄 안에 토막으로 들어갑니다
      (홈에 남은 자리가 열몇 px 입니다).                                   */
 function hmPtOf(who){
-  if(typeof AR==='undefined'||!AR.loaded||!AR.cliRows)return null;   /* 아직 못 읽었다 */
+  if(typeof AR==='undefined'||!AR.cliRows)return null;   /* 아직 못 읽었다 */
   if(typeof APEX_STAGE==='undefined'||!APEX_STAGE.ageBand)return null;
   var L=AR.cliRows,o={all:0,known:0,unknown:0,b:{},top:null},i,r,k;
   for(i=0;i<L.length;i++){
@@ -32128,16 +32139,21 @@ function hmPtOf(who){
    ★ 누르면 <b>고객 365일</b> 로 갑니다 — 생년을 적는 자리가 거기입니다 (6번). */
 function hmPtChip(who){
   var o=hmPtOf(who); if(!o)return '';
-  if(!o.known)
-    return '<button type="button" class="t-chip" onclick="go(\'clients\')" '+
-      'aria-label="고객 '+o.all+'분 모두 생년이 안 적혀 있어 나이로는 접촉포인트를 고르지 않습니다. '+
-      '고객 365일에서 그 분 카드의 출생년도를 적으시면 그 분부터 붙습니다.">'+
+  if(!o.known){
+    /* ⚠ 중괄호 — 안 치면 return 이 <b>늘</b> 돌아 모든 경우에 이 칩이 섭니다.
+       실제로 그랬고(title 이 undefined), check-hmpoint 가 잡았습니다. */
+    var m0='고객 '+o.all+'분 모두 생년이 안 적혀 있어 나이로는 접촉포인트를 고르지 않습니다. '+
+      '고객 365일에서 그 분 카드의 출생년도를 적으시면 그 분부터 붙습니다.';
+    return '<button type="button" class="t-chip" onclick="go(\'clients\')" title="'+m0+'" '+
+      'aria-label="'+m0+'">'+
       '🎯 생년을 적으면<i>'+o.all+'</i></button>';
+  }
   var a=(APEX_STAGE.ageOf?APEX_STAGE.ageOf(o.top):null); if(!a)return '';
-  return '<button type="button" class="t-chip" onclick="go(\'clients\')" '+
-    'aria-label="나이를 아는 '+o.known+'분 중 '+a.chip+'가 '+o.b[o.top]+'분으로 가장 많습니다. '+
-    a.pt+'. '+(o.unknown?(o.unknown+'분은 생년이 안 적혀 있어 세지 않았습니다.'):'')+'">'+
-    '🎯 '+a.pt+'<i>'+o.b[o.top]+'</i></button>';
+  var m='나이를 아는 '+o.known+'분 중 '+a.chip+'가 '+o.b[o.top]+'분으로 가장 많습니다. '+
+    a.pt+'. '+(o.unknown?(o.unknown+'분은 생년이 안 적혀 있어 세지 않았습니다.'):'');
+  return '<button type="button" class="t-chip" onclick="go(\'clients\')" title="'+m+'" '+
+    'aria-label="'+m+'">'+
+    '🎯 '+a.pt+'</button>';   /* 수는 title·aria 에 — 칩에 넣으면 14px 가 늘어 줄 밖으로 밀립니다 */
 }
 /* 한 토막으로 — <b>아는 만큼만</b> 적는다 (칩에 자리가 없을 때 쓰려고 남겨 둡니다) */
 function hmPtClause(who){
