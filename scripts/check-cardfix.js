@@ -163,15 +163,15 @@ const S = f => fs.readFileSync(f, 'utf8');
     nlToCard(0);
     window.go = go0;
     let saved = ''; try { saved = sessionStorage.getItem('apex_nl_topic') || ''; } catch (e) { }
-    return { html: html, went: window.__went, topic: saved, fill: ('' + nlFillTopic) };
+    return { html: html, went: window.__went, topic: saved, fill: ('' + cnFillTopic) };
   });
   ok(/nlToCard\(0\)/.test(r.html), '뉴스 줄에 <b>캐러셀로 가는 단추</b>가 있다');
-  ok(r.went === 'insta', '누르면 인스타 디자인 스튜디오로 넘어간다');
+  ok(r.went === 'biz_news', '누르면 오늘의 카드뉴스(진짜 캐러셀)로 넘어간다');
   ok(/실손보험 개편안 발표/.test(r.topic), '기사 제목이 주제로 넘어간다');
   ok(/출처 매경/.test(r.topic), '출처도 같이 넘어간다');
-  ok(/istudio_topic/.test(r.fill), '주제 칸을 실제로 채운다');
+  ok(/cnAiTopic/.test(r.fill), '캐러셀 주제 칸을 실제로 채운다');
   ok(/aiReady/.test(r.fill), 'AI 가 안 붙어 있으면 눌러 보게 하지 않고 말해 준다');
-  ok(/setTimeout\(function\(\)\{nlFillTopic\(n\+1\)/.test(r.fill),
+  ok(/setTimeout\(function\(\)\{cnFillTopic\(n\+1\)/.test(r.fill),
     '칸이 늦게 그려져도 다시 본다 — 조용히 아무 일도 안 일어나면 안 된다');
 
   console.log('\n[6] 카드뉴스 — 실패해도 단추가 죽지 않는다');

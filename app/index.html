@@ -2823,6 +2823,73 @@ function aiDeadMsg(){
     'Netlify → 환경변수에서 ANTHROPIC_API_KEY(클로드) 와 GEMINI_API_KEY(제미나이) 를 다시 넣으면 바로 됩니다.\n'+
     '설정 → AI 연결 화면의 「환경변수 열기」 단추로 갈 수 있습니다.';
 }
+/* ── <b>왜 실패했나</b>를 아는 곳은 여기 하나 ──
+   2026-10-13 · 사장님께 보여 드린 글이 「생성 실패: no」 였습니다. 서버가 준
+   <b>날글을 그대로</b> 찍은 것인데, 「no」 는 사장님께 아무 뜻이 없고
+   <b>다음에 뭘 해야 하는지</b>가 없습니다.
+   ★★ 그리고 판정이 <b>404 하나로 결론</b>을 내고 있었습니다 — 404 면
+   「모델명 오류」 라고 단정했는데, 404 는 <b>창구(프록시)가 내려가도</b> 납니다.
+   모델 이름이 멀쩡한데 「모델명 오류」 라고 적으면 사장님은 멀쩡한 이름을
+   고치러 가십니다. <b>모를 때는 모른다고</b> 합니다 (1번) —
+   글에 「모델명이나 창구 주소」 둘을 같이 적고 어느 쪽인지 단정하지 않습니다.
+   ⚠ 글 증거(not_found · does not exist · no such model)가 있을 때만
+   「모델명 오류」 라고 단정합니다.                                        */
+/* ⚠ 이름을 aiWhy 로 지으려다 <b>check-html 이 잡았습니다</b> — 그 이름은
+   이미 있습니다(날글을 사람 말로 바꾸는 자 · 발표 덱도 그것을 부릅니다).
+   하는 일이 달라 이름을 가르고, <b>겹치는 자리는 그 자를 부릅니다</b> (5번).
+     aiFailWhy(e)  — status·낱말로 <b>까닭을 가른다</b> (짧은 판정)
+     aiWhy(글)     — 남은 날글을 <b>사람 말로</b> 바꾼다 (이미 있던 자)      */
+function aiFailWhy(e){
+  var m=((e&&e.message)||'')+'';
+  if(e&&e.overLimit)return '하루 사용 한도 초과';
+  if(/credit|billing|insufficient|balance|too low/i.test(m))return '크레딧 부족(결제 필요)';
+  /* ★ 글 증거가 있을 때만 모델명이라고 단정합니다 */
+  if(/not[_ ]?found|does not exist|no such model/i.test(m))return '모델명 오류';
+  if((e&&(e.status===401||e.status===403))||
+     /unauthorized|authentication|api key|invalid x-api-key|no_key/i.test(m))return '키 인증 실패';
+  /* ★★ 맨 404 는 창구가 내려가도 납니다 — 어느 쪽인지 단정하지 않습니다 (1번) */
+  if(e&&e.status===404)return '창구가 404 — 모델명이나 프록시 주소 확인';
+  if((e&&e.status===429)||/rate.?limit|too many requests/i.test(m))return '잠깐 너무 많이 불렀습니다';
+  if((e&&(e.status===500||e.status===502||e.status===503||e.status===529))||
+     /overloaded|unavailable|temporarily/i.test(m))return '서버가 바쁩니다';
+  if(/failed to fetch|networkerror|load failed/i.test(m))return '인터넷이 끊겼거나 창구에 못 닿았습니다';
+  return '';
+}
+/* <b>다음 걸음</b>도 표로 둡니다 — 까닭마다 할 일이 다릅니다. 처음에는 전부
+   「설정 → AI 연결을 확인하세요」 로 적었는데, <b>한도 초과</b>에는 고칠 설정이
+   없고(내일이나 무료 제미나이) <b>크레딧 부족</b>은 결제입니다. 엉뚱한 데로
+   보내면 사장님이 멀쩡한 설정을 고치러 가십니다 (1번).                   */
+var AI_FAIL_NEXT={
+  '하루 사용 한도 초과':'오늘은 여기까지입니다 — 무료 제미나이가 연결돼 있으면 그쪽으로 돌아갑니다.',
+  '크레딧 부족(결제 필요)':'클로드 크레딧을 채우시거나, 무료 제미나이 키를 넣어 두시면 자동으로 대체됩니다.',
+  '모델명 오류':'설정 → AI 연결에서 「모델 이름」 을 확인해 주세요.',
+  '키 인증 실패':'설정 → AI 연결에서 「키」 를 다시 넣어 주세요.',
+  '창구가 404 — 모델명이나 프록시 주소 확인':'설정 → AI 연결에서 「모델 이름」 과 「창구(프록시) 주소」 둘을 확인해 주세요.',
+  '잠깐 너무 많이 불렀습니다':'1~2분 뒤 다시 눌러 주세요.',
+  '서버가 바쁩니다':'잠시 뒤 다시 눌러 주세요.',
+  '인터넷이 끊겼거나 창구에 못 닿았습니다':'인터넷을 확인하고 다시 눌러 주세요.'
+};
+/* 사장님께 보여 드리는 글 — <b>까닭 + 다음 걸음</b>. 날글만 찍지 않습니다.
+   ★★ 돌려주는 것은 <b>꾸밈표가 없는 글</b>입니다 — toast 는 textContent 로
+   찍고(태그가 글자 그대로 보입니다) 스튜디오 쪽은 esc() 를 지납니다. 처음에
+   다음 걸음에 <b>태그를 넣었더니</b> 두 자리 다 「&lt;b&gt;모델 이름&lt;/b&gt;」 로
+   보일 판이었습니다. 이미 있는 aiWhy 는 태그를 쓰는 자라(발표 덱이 그대로
+   그립니다) 여기서 한 번 걷어 냅니다 — 저쪽은 안 건드립니다 (5번).      */
+function aiFailText(e){
+  var 날글=function(t){return (''+t).replace(/<[^>]*>/g,'').replace(/\s+/g,' ').replace(/^\s+|\s+$/g,'');};
+  var why=aiFailWhy(e);
+  if(why)return 날글(why+' — '+(AI_FAIL_NEXT[why]||'설정 → AI 연결을 확인해 주세요.'));
+  /* 가를 낱말이 없으면 <b>이미 있는 자</b>가 날글을 사람 말로 바꿔 줍니다 */
+  var raw=((e&&e.message)||e||'')+'';
+  var say=날글((typeof aiWhy==='function')?aiWhy(raw):raw);
+  /* ★ 그래도 <b>뜻이 없는 날글</b>이면(짧고 한국말이 한 자도 없음) 그것만 찍지
+     않습니다 — 「생성 실패: no」 가 그래서 나왔습니다. 증거는 남기고 할 일을 적습니다. */
+  if(!say)return '까닭을 알 수 없습니다 — 잠시 뒤 다시 눌러 주세요.';
+  if(say.length<12&&!/[\uac00-\ud7a3]/.test(say))
+    return '까닭을 알 수 없습니다(서버가 「'+say+'」 라고만 답했습니다) — '+
+           '잠시 뒤 다시 누르시고, 그래도 안 되면 설정 → AI 연결을 확인해 주세요.';
+  return say;
+}
 function claudeReady(){return AI_DEAD.claude?false:(getConn()==='proxy'?!!getProxy():!!getKey());}
 function geminiReady(){return (!!getGeminiKey()&&!AI_DEAD.gkey)||(!!getGeminiProxy()&&!AI_DEAD.gproxy);}   /* 개인 키 또는 공용 프록시 중 하나면 사용 가능 */
 /* 어느 한쪽이라도 연결되면 AI 사용 가능 */
@@ -4365,7 +4432,9 @@ function callAI(system,user,maxTokens,genId,images){
     /* 키 자체가 거절이면 이번 접속 동안 Claude 를 다시 부르지 않는다 */
     if(aiKeyBad(e))AI_DEAD.claude=true;
     if(claudeDown&&geminiReady()){
-      var why=(e&&e.overLimit)?'하루 사용 한도 초과':/credit|billing|insufficient|balance|too low/i.test(m)?'크레딧 부족(결제 필요)':(((e&&e.status===404)||/not[_ ]?found|does not exist|no such model/i.test(m))?'모델명 오류':(((e&&(e.status===401||e.status===403))||/unauthorized|authentication|api key|invalid x-api-key|no_key/i.test(m))?'키 인증 실패':'호출 실패'));
+      /* 삼항 사슬을 치웠습니다 — 묻는 곳은 aiFailWhy 하나입니다 (5번).
+         404 를 「모델명 오류」 라고 단정하던 자리가 여기였습니다 (1번). */
+      var why=aiFailWhy(e)||'호출 실패';
       try{toast('Claude '+why+' → 무료 Gemini로 대체합니다. (Claude를 쓰려면 크레딧/키 확인 필요)');}catch(_){}
       return aiWithRetry(function(){return callGeminiSmart(system,user,maxTokens,images,genId);},'Gemini').then(function(txt){AI_LAST.fellback=true;AI_LAST.note='Claude '+why+' → Gemini 대체';return txt;})
         .catch(function(e2){
@@ -19736,8 +19805,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-13 11:05';
-var APP_BUILD_NOTE="🎨 <b>캐러셀 단추가 맨 왼쪽으로 올라왔습니다</b> — <b>고객에게 전할 뉴스</b> 에서 기사 하나를 고르시면 <b>[🎨 캐러셀로 제작하기]</b> 가 <b>맨 왼쪽 · 강조</b>로 섭니다. 누르면 그 기사 제목·출처를 들고 <b>인스타 칸</b>으로 바로 들어갑니다. ★ <b>길은 하나도 안 없앴습니다</b> — 💬 보낼 문구 복사 · 원문 ↗ · 📰 정책·상품 뉴스에 올리기 셋이 그대로 있고, 올리기는 여전히 대표만 누르십니다. ★ 여태 <b>같은 단추가 네 화면에서 세 이름</b>이었습니다(「이 소식으로 카드뉴스」 · 「카드뉴스로」 · 「캐러셀 만들기」). 이제 <b>네 화면 모두 같은 이름</b>이고, 이름을 정하는 곳은 코드에 <b>한 곳</b>입니다 — 다음에 이름을 바꾸실 때 한 곳만 고치면 네 화면이 같이 바뀝니다. 새 자 <b>check-nlcaro</b> 가 이것을 지킵니다 — 맨 왼쪽인지, 강조가 하나인지, 눌러서 정말 인스타로 가는지까지 재어 봅니다.";
+var APP_BUILD='2026-10-13 12:40';
+var APP_BUILD_NOTE="🎯 <b>캐러셀 단추가 이제 진짜 캐러셀로 갑니다</b> — 사장님이 잡아 주신 자리입니다. 어제 올린 판에서 <b>[🎨 캐러셀로 제작하기]</b> 가 <b>인스타 디자인 스튜디오</b>로 가고 있었습니다. 이제 <b>📰 정책·상품 뉴스 맨 위</b>의 <b>📅 오늘의 카드뉴스</b> 로 가서 기사 제목·출처를 칸에 담고 바로 만들기 시작합니다. ★ 기사 <b>본문은 안 옮깁니다</b>(남의 글입니다) — 그래서 「제목과 출처만 옮겼습니다」 라고 말씀드리고, 더 정확히 하시려면 원문을 붙여넣고 다시 누르시면 됩니다. ★ <b>📸 인스타 화면</b>이 한 화면에 「생성하기」 를 <b>셋</b> 세우고 있었습니다. 만드는 자리를 맨 위 하나로 두고 <b>글만 뽑는 둘은 접었습니다</b>(없애지 않았습니다) — 화면이 <b>2,534px → 1,392px</b> 로 줄었고, 맨 위에서 <b>캐러셀은 저기서 만든다</b>고 알려 드립니다. ★ 실패했을 때 <b>「생성 실패: no」</b> 같은 서버 날글이 보이던 것을 고쳤습니다 — 이제 <b>까닭과 다음에 하실 일</b>을 적습니다. 한도 초과에 「설정을 고치세요」 라고 하지 않습니다. ★ <b>404</b> 를 무조건 「모델명 오류」 라고 단정하던 것도 고쳤습니다 — 창구가 내려가도 404 라서, 모르면 둘 다 말씀드립니다. 새 자 <b>check-caroway</b> 가 38자리를 지킵니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -47688,10 +47757,36 @@ function renderOrg(){
   return osPage('조직','조직도','본부·지점·팀 구성원을 계층으로 한눈에. 연락처·인스타그램·사진 포함. 로그인하면 서버에 저장되어 어느 컴퓨터에서나 같은 조직도를 봅니다.',body);
 }
 
+/* ── 한 화면에 「생성하기」가 셋 서던 자리 ──
+   2026-10-13 · 📸 인스타 화면을 재어 보니 「슬라이드 수」를 묻는 칸이 <b>둘</b>,
+   「생성하기」가 <b>셋</b>이었습니다(스튜디오 · 캡션+해시태그 · 카드뉴스 기획).
+   높이 2,534px 이라 셋째는 한참 내려가야 보이고, 넘어온 주제가 <b>어느 칸에</b>
+   들어갔는지 화면이 말해 주지 않았습니다.
+   ★ <b>길은 안 지웁니다</b> (6번) — 둘째·셋째를 접어 두기만 합니다.
+   ★ 어느 화면을 접을지는 <b>표</b>로 둡니다 — 삼항 사슬로 늘어놓지 않습니다 (5번).
+   값은 접은 칸 위에 적는 한 줄입니다.                                      */
+var TOOL_FOLD={insta:'만드는 자리는 <b>맨 위 하나</b>입니다 — 아래 둘은 <b>글만</b> 뽑는 자리라 접어 두었습니다'};
+/* ── 「그건 여기가 아닙니다」 를 적는 표 ──
+   2026-10-13 · 사장님 바로잡음 — 「캐러셀은 저거랑 다르다. 정책상품뉴스
+   맨위에 있던게 캐러셀이야」. 화면이 <b>어디로 가야 하는지</b> 말해 주지
+   않으면 다음 사람도 저처럼 틀립니다. 길을 내 줍니다 (6번).                */
+var TAB_ELSEWHERE={insta:{
+  t:'🎨 캐러셀은 <b>📅 오늘의 카드뉴스</b> 에서 만듭니다',
+  d:'📰 <b>정책·상품 뉴스 맨 위</b>입니다 — 8~10장을 한 번에 기획하고, 장별 사진을 넣어 '+
+    '1080×1350 으로 저장합니다. 이 화면은 <b>그와 다른 자리</b>로, 한 세트(5·7·9장)를 '+
+    '간단히 뽑고 <b>캡션·해시태그</b>를 만드는 곳입니다.',
+  go:'biz_news', b:'📅 오늘의 카드뉴스로'}};
+function tabElsewhereHtml(tab){
+  var e=TAB_ELSEWHERE[tab]; if(!e)return '';
+  return '<div class="notice" style="margin:0 0 14px"><b>'+e.t+'</b><br>'+e.d+
+    '<div class="btn-row" style="margin-top:9px"><button type="button" class="btn btn-primary" '+
+    'style="padding:6px 12px;font-size:var(--t6)" onclick="go(\''+e.go+'\')">'+e.b+'</button></div></div>';
+}
 function renderToolPage(tab){
   var meta=TAB_META[tab]||{tag:'TOOL',title:navTitle(tab),desc:''};
   var body='<div class="tab-pane on"><div class="page-hd"><div class="page-tag">'+esc(meta.tag)+'</div>'+
-    '<div class="page-title">'+esc(meta.title)+'</div>'+(meta.desc?'<div class="page-desc">'+esc(meta.desc)+'</div>':'')+'</div>';
+    '<div class="page-title">'+esc(meta.title)+'</div>'+(meta.desc?'<div class="page-desc">'+esc(meta.desc)+'</div>':'')+'</div>'+
+    tabElsewhereHtml(tab);
   var any=false;
   // 1) PDF 분석 도구
   if(typeof PDF_TOOLS!=='undefined')PDF_TOOLS.forEach(function(p){if(p.tab===tab){body+=renderPdfTool(p);any=true;}});
@@ -47699,8 +47794,17 @@ function renderToolPage(tab){
   if(typeof CUSTOM!=='undefined')CUSTOM.forEach(function(c){if(c.tab===tab){body+=c.render();any=true;}});
   // 3) 링크 보드(외부 시스템)
   if(typeof LINKS!=='undefined')LINKS.forEach(function(l){if(l.tab===tab){body+=renderLinkCard(l);any=true;}});
-  // 4) AI 생성기
-  GEN.forEach(function(g){if(g.tab===tab){body+=renderTool(g);any=true;}});
+  // 4) AI 생성기 — 접는 화면이면 둘째부터 접는다 (길은 안 지운다 · 6번)
+  var fold=TOOL_FOLD[tab],fn=0;
+  GEN.forEach(function(g){if(g.tab===tab){
+    var one=renderTool(g);
+    if(fold){
+      if(fn===0)body+='<div class="notice" style="margin:0 0 12px;color:var(--ink-4)">'+fold+'</div>';
+      one='<details class="tool-fold"><summary>'+esc((g.icon||'')+' '+(g.title||''))+
+          '<span>'+esc(g.desc||'')+'</span></summary>'+one+'</details>';
+      fn++;
+    }
+    body+=one;any=true;}});
   if(!any)body+='<div class="card"><div class="card-body"><div class="notice" style="color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">이 도구는 곧 추가됩니다. 빌드 키트(CLAUDE.md·SPEC.md)에 명세가 있습니다.</div></div></div>';
   body+='</div>';
   return body;
@@ -57589,7 +57693,7 @@ function instaRun(){
     INSTA_LAST={data:data,opt:opt};
     instaRenderResult(data,opt);
   }).catch(function(e){
-    res.innerHTML='<div class="result-body"><div class="err-box">생성 실패: '+esc((e&&e.message)||'')+'</div></div>';
+    res.innerHTML='<div class="result-body"><div class="err-box">⚠️ 카드를 못 만들었습니다 — '+esc(aiFailText(e))+'</div></div>';
   });
 }
 function instaCardInner(sl,idx,total,opt){
@@ -74930,14 +75034,22 @@ function newsToCard(o){
   var title=(''+(o.t||'')).replace(/^\s+|\s+$/g,'');
   if(!title){toast('그 소식을 찾지 못했습니다');return;}
   var catName=o.cat||'';
-  var topic=title+(catName?(' — '+catName+' 소식'):'')+'을 우리 고객 눈높이로 풀어 주세요'+
-            (o.s?(' (출처 '+o.s+')'):'');
+  /* ★★ 2026-10-13 · 사장님 바로잡음 — 「캐러셀은 저거랑 다르다. 정책상품뉴스
+     맨위에 있던게 캐러셀이야」. 판 X100 에서 제가 <b>인스타 디자인 스튜디오</b>로
+     보내고 있었습니다. 캐러셀은 <b>정책·상품 뉴스 맨 위</b> #cnHost 의
+     「📅 오늘의 카드뉴스」 입니다 — 8~10장 · 1080×1350 저장 · 장별 사진까지.
+     단추 이름이 「캐러셀」 인데 캐러셀이 아닌 데로 갔으니 <b>이름이 거짓말</b>을
+     하고 있었습니다 (1번).
+     ⚠ 옮기는 것은 <b>제목 · 갈래 · 출처</b>뿐입니다. 기사 본문은 안 옮깁니다 —
+     남의 글입니다 (9번). 그래서 「본문을 붙여넣으면 더 정확합니다」 라고
+     화면이 한 번 말해 줍니다 — 적게 보낸 것을 많이 보낸 척하지 않습니다. */
+  var topic=title+(catName?(' — '+catName+' 소식'):'')+(o.s?(' (출처 '+o.s+')'):'');
   try{ sessionStorage.setItem('apex_nl_topic',topic); }catch(e){}
   if(typeof NLIVE!=='undefined')NLIVE.toCard=topic;
-  go('insta');
-  /* 인스타 칸이 그려진 뒤에 채웁니다. 한 번에 안 되면 몇 번 더 봅니다 —
+  go('biz_news');
+  /* 칸이 그려진 뒤에 채웁니다. 한 번에 안 되면 몇 번 더 봅니다 —
      칸이 늦게 그려지면 조용히 아무 일도 안 일어나는 것이 제일 나쁩니다. */
-  nlFillTopic(0);
+  cnFillTopic(0);
 }
 function nlToCard(i){
   var it=(NLIVE.items||[])[i];
@@ -74957,6 +75069,36 @@ function bizNewsToCard(i){
 /* 칸 이름은 표에서 읽습니다 — 삼항 사슬로 늘어놓지 않습니다 (5번) */
 var BIZ_CAT_NAME={finance:'금융·보험',saving:'저축·세금',welfare:'정부지원',health:'건강·의료'};
 function bizNewsCatName(c){ return BIZ_CAT_NAME[c]||''; }
+/* ── 넘어온 주제를 <b>진짜 캐러셀 칸</b>에 담는다 ──
+   아래 nlFillTopic 과 쌍입니다 — 저쪽은 인스타 디자인 스튜디오의
+   #istudio_topic, 이쪽은 오늘의 카드뉴스의 #cnAiTopic 을 채웁니다.
+   담는 자리(sessionStorage 'apex_nl_topic' · NLIVE.toCard)는 <b>한 벌</b>입니다
+   — 둘이 같은 곳에서 꺼냅니다 (5번).                                      */
+function cnFillTopic(n){
+  var t=(typeof NLIVE!=='undefined'&&NLIVE.toCard)?NLIVE.toCard:'';
+  if(!t){try{t=sessionStorage.getItem('apex_nl_topic')||'';}catch(e){}}
+  if(!t)return;
+  var el=document.getElementById('cnAiTopic');
+  if(!el){
+    if(n<25)setTimeout(function(){cnFillTopic(n+1);},200);
+    else toast('오늘의 카드뉴스 칸을 못 찾았습니다 — 주제는 담아 두었으니 붙여넣어 주세요',6000);
+    return;
+  }
+  el.value=t;
+  if(typeof CN!=='undefined')CN.aiTopic=t;
+  if(typeof NLIVE!=='undefined')NLIVE.toCard='';
+  try{ sessionStorage.removeItem('apex_nl_topic'); }catch(e){}
+  if(el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'center'});
+  el.focus();
+  /* AI 가 안 붙어 있으면 눌러 봐야 오류만 봅니다. 그때는 담아만 두고 말해 줍니다. */
+  if(typeof aiReady==='function'&&!aiReady()){
+    toast('주제를 담았습니다 — AI 연결 뒤 「'+cnCaroBtnName()+'」를 눌러 주세요',7000);
+    return;
+  }
+  toast('제목과 출처만 옮겼습니다(기사 본문은 남의 글이라 안 옮깁니다) — '+
+        '더 정확히 하시려면 원문을 붙여넣고 다시 눌러 주세요',8000);
+  setTimeout(function(){ if(typeof cnAiGen==='function')cnAiGen(); },250);
+}
 function nlFillTopic(n){
   var t=NLIVE.toCard;
   if(!t){try{t=sessionStorage.getItem('apex_nl_topic')||'';}catch(e){}}
@@ -75423,6 +75565,13 @@ function cnAiSys(){
 }
 function cnAiParse(txt){try{var t=''+txt,s=t.indexOf('{'),e=t.lastIndexOf('}');if(s<0||e<0)return null;return JSON.parse(t.slice(s,e+1));}catch(x){return null;}}
 function cnAiToSlides(arr){var out=[];for(var i=0;i<arr.length;i++){var a=arr[i]||{};var lay=a.layout||(i===0?'cover':(i===arr.length-1?'cta':'point'));if(i===0)lay='cover';if(i===arr.length-1&&arr.length>1)lay='cta';var tp=(lay==='cover'?'cover':(lay==='cta'?'cta':'point'));out.push({t:tp,layout:lay,mk:(a.kicker||''),mt:(a.title||''),ms:(a.sub||''),big:(a.big||''),stat:(a.stat||''),items:(a.items||[]),img:(a.img||''),n:i});}return out;}
+/* ── 캐러셀 만드는 단추의 <b>이름을 아는 곳은 여기 하나</b> ──
+   2026-10-13 · 실패하면 단추 글자가 <b>딴 이름</b>으로 바뀌고 있었습니다 —
+   섰을 때는 「AI로 캐러셀 만들기」 인데, 실패 뒤 되돌릴 때는
+   「AI로 8~10장 만들기」 였습니다. 이름이 두 곳에 있으면 한 곳만 고치고
+   나머지가 낡습니다 (5번). 함수로 둡니다 — var 는 그 줄이 돌기 전에
+   그리는 자리가 있으면 undefined 가 찍힙니다 (판 X99).              */
+function cnCaroBtnName(){ return '🤖 AI로 캐러셀 만들기'; }
 function cnAiGen(){
   var topic=(osVal('cnAiTopic')||'').replace(/^\s+|\s+$/g,'');
   if(!topic){toast('뉴스 원문·키워드를 입력하세요');return;}
@@ -75433,11 +75582,11 @@ function cnAiGen(){
   var user='[입력값]\n기준 날짜: '+cnDateStr()+'\n뉴스 원문/URL/키워드: '+topic+'\n핵심 타깃: (미입력 — 기본 타깃 적용)\n캐러셀 장수: '+CN.aiCount+'\n콘텐츠 목적: '+CN.aiPurpose+'\n브랜드명: APEX YUN PRO\n말투: '+CN.aiTone+'\n디자인 스타일: 네이비 경제신문(다크 매거진)\n\n위 입력으로 캐러셀을 만들어 JSON으로만 출력해줘.';
   callAI(cnAiSys(),user,6000,'cardnews').then(function(txt){
     var plan=cnAiParse(txt);
-    if(!plan||!plan.slides||!plan.slides.length){toast('결과 해석 실패 — 다시 시도해 주세요.');if(btn){btn.disabled=false;btn.textContent='🤖 AI로 8~10장 만들기';}return;}
+    if(!plan||!plan.slides||!plan.slides.length){toast('결과 해석 실패 — 다시 시도해 주세요.');if(btn){btn.disabled=false;btn.textContent=cnCaroBtnName();}return;}
     CN.aiPlan=plan;CN.ai=cnAiToSlides(plan.slides);CN.i=0;CN.imgs={};
     var h=$('cnHost');if(h)h.innerHTML=renderTodayCard();
     toast('AI가 '+CN.ai.length+'장 캐러셀을 만들었습니다.');
-  }).catch(function(e){toast('생성 실패: '+((e&&e.message)||e));if(btn){btn.disabled=false;btn.textContent='🤖 AI로 8~10장 만들기';}});
+  }).catch(function(e){toast('캐러셀을 못 만들었습니다 — '+aiFailText(e),8000);if(btn){btn.disabled=false;btn.textContent=cnCaroBtnName();}});
 }
 function cnAiClear(){CN.ai=null;CN.aiPlan=null;CN.imgs={};CN.i=0;var h=$('cnHost');if(h)h.innerHTML=renderTodayCard();}
 function cnAiCopyPlan(){var p=CN.aiPlan;if(!p)return;var t='[기준 날짜] '+(p.baseDate||'')+'\n[뉴스 선정] '+(p.newsPick||'')+'\n[핵심 타깃] '+(p.target||'')+'\n[핵이득] '+(p.benefit||'')+'\n\n[제목 후보]\n'+((p.titles||[]).map(function(x,i){return (i+1)+'. '+x;}).join('\n'))+'\n\n[추천 제목] '+(p.pickTitle||'')+'\n → '+(p.pickWhy||'')+'\n\n[페이지 문구]\n'+((CN.ai||[]).map(function(s,i){return (i+1)+'. ['+(s.mk||'')+'] '+(s.mt||'')+' — '+(s.ms||'')+((s.items&&s.items.length)?(' / '+s.items.join(' · ')):'');}).join('\n'))+'\n\n[장별 이미지 프롬프트]\n'+((CN.ai||[]).map(function(s,i){return s.img?((i+1)+'. '+s.img):'';}).filter(Boolean).join('\n'))+'\n\n[캡션]\n'+(p.caption||'')+'\n\n[CTA] '+(p.cta||'')+'\n[출처] '+(p.sources||'')+'\n\n[자체 점검] '+(p.selfcheck||'')+'\n\n※ 본 콘텐츠는 일반적인 정보 제공 목적이며, 투자·의료·보험 계약의 최종 판단은 개인 상황과 공식 자료 확인 후 결정해야 합니다.';copyText(t);}
@@ -75471,7 +75620,7 @@ function renderTodayCard(){
     '<div class="cn-ai-row"><label>목적</label>'+cnSel('cnAiPurpose',['저장','댓글','팔로우','상담 전 점검'],CN.aiPurpose||'저장')+
     '<label>말투</label>'+cnSel('cnAiTone',['친근한 전문가','차분한 뉴스','공감형 상담가'],CN.aiTone||'친근한 전문가')+
     '<label>장수</label>'+cnSel('cnAiCount',['10장','9장','8장'],CN.aiCount||'10장')+'</div>'+
-    '<div class="btn-row" style="margin-top:9px"><button class="btn btn-primary" id="cnAiBtn" onclick="cnAiGen()">🤖 AI로 캐러셀 만들기</button>'+(isAi?'<button class="btn btn-ghost" onclick="cnAiClear()">기본 주제로</button>':'')+'</div></div>';
+    '<div class="btn-row" style="margin-top:9px"><button class="btn btn-primary" id="cnAiBtn" onclick="cnAiGen()">'+cnCaroBtnName()+'</button>'+(isAi?'<button class="btn btn-ghost" onclick="cnAiClear()">기본 주제로</button>':'')+'</div></div>';
   var badge=(CN.style==='frost')?(n+'장 · 흐린 칸 · 사진은 그대로'):((CN.style==='full')?(n+'장 · 사진 전체 · 그라데이션'):(isAi?(n+'장 · AI 기획 · 매거진'):'뉴스 카드 스타일'));
   var intro=isAi
     ? '<div class="cn2-intro"><b>AI가 만든 캐러셀</b>입니다. 아래 기획안을 확인하고, 각 장에 <b>이 카드에 이미지</b>로 사진을 넣은 뒤 저장하세요. 문구를 바꾸려면 주제를 다듬어 다시 생성하면 됩니다.</div>'
@@ -75945,6 +76094,14 @@ function renderBizNews(){
    '.biz-news-item .ds{font-size:var(--t6);color:var(--t-ink);line-height:1.6;margin-bottom:8px}',
    '.biz-news-item .btn{padding:6px 12px;font-size:var(--t6);margin-right:6px}',
    '.biz-news-card{white-space:nowrap}',
+   /* 접은 도구 칸 — 2026-10-13 · 한 화면에 「생성하기」가 셋 서던 자리 */
+   '.tool-fold{border:1px solid var(--ink-7);border-radius:var(--r-md);background:var(--ink-9);margin:0 0 12px;overflow:hidden}',
+   '.tool-fold>summary{cursor:pointer;padding:12px 14px;font-size:var(--t6);font-weight:800;color:var(--ink-3);list-style:none;display:flex;flex-direction:column;gap:3px}',
+   '.tool-fold>summary::-webkit-details-marker{display:none}',
+   '.tool-fold>summary::before{content:"▸ ";color:var(--ink-5)}',
+   '.tool-fold[open]>summary::before{content:"▾ "}',
+   '.tool-fold>summary>span{font-weight:600;color:var(--ink-5);font-size:var(--t6)}',
+   '.tool-fold>.card{margin:0;border:0;border-radius:0;box-shadow:none}',
    '.biz-news-tag{font-size:var(--t6);font-weight:800;border-radius:var(--r-xs);padding:2px 7px;white-space:nowrap}',
    '.biz-news-tag.r{background:#FEF2F2;color:var(--t-neg-d)}.biz-news-tag.a{background:#FFFBEB;color:var(--t-warn-d)}.biz-news-tag.g{background:var(--t-pos-l);color:var(--t-pos-d)}.biz-news-tag.n{background:#F1F5F9;color:var(--t-ink)}'
   ].join('');
