@@ -142,7 +142,13 @@ const look = (p) => p.evaluate(() => {
     const bar = document.getElementById('tabBar');
     const by = t => [].slice.call(bar.querySelectorAll('.tb-b')).filter(e => e.textContent.indexOf(t) >= 0)[0];
     const out = {};
-    for (const [t, want] of [['고객', 'clients'], ['콘텐츠', 'news_live'], ['달력', 'mycal'], ['오늘', 'home']]) {
+    /* ⚠ 2026-10-13 (판 X99) — 「콘텐츠」 가 가는 곳이 <b>바뀌었습니다</b>.
+       사장님 말씀 「콘텐츠 들어가면 한번에 보이게」 로, 여태 news_live
+       한 화면으로 가던 것이 <b>허브(content)</b> 로 갑니다. 세 가지가 거기서
+       한 화면에 섭니다(check-conthub 가 그 화면을 잽니다).
+       ★ 이 자가 지키려던 뜻은 그대로입니다 — <b>그 칸이 정말 그 화면을
+         여나</b>. 가는 곳만 새 답으로 고칩니다. */
+    for (const [t, want] of [['고객', 'clients'], ['콘텐츠', 'content'], ['달력', 'mycal'], ['오늘', 'home']]) {
       const el = by(t); if (!el) { out[t] = '(칸 없음)'; continue; }
       el.click(); await new Promise(r => setTimeout(r, 600));
       out[t] = lastTab + (lastTab === want ? '' : ' ← ' + want + ' 이어야 함');
@@ -190,7 +196,10 @@ const look = (p) => p.evaluate(() => {
     /* 칸마다 <b>제 화면</b>을 켜는가 — pin 이 갈래보다 먼저여야 한다 */
     const own = { home: 'home', clients: 'clients', fact_find: 'clients',
                   crm: 'clients', mycal: 'mycal', airep: 'home',
-                  news_live: 'news_live', blog: 'news_live',
+    /* 2026-10-13 (판 X99) — 콘텐츠 칸의 id 가 news_live → <b>content</b> 로
+       바뀌었습니다. 켜지는 칸은 그대로 <b>✍️ 콘텐츠</b> 입니다 — 이름이
+       바뀐 것이고, news_live·blog 에 서 있으면 여전히 그 칸이 켜집니다. */
+                  content: 'content', news_live: 'content', blog: 'content',
     /* ⚠ 2026-09-26 · 이 칸의 id 가 <b>__more → tools</b> 로 바뀌었습니다.
        서랍을 여는 단추가 <b>화면</b>이 되면서 이름도 따라 바뀐 것이고,
        <b>켜지는 칸은 그대로 🧰 도구</b>입니다 — pdel·org 를 실제로 열어

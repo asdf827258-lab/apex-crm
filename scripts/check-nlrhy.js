@@ -121,7 +121,14 @@ const 요일로 = d => `(function(){
   console.log('\n[5] 꼬리표가 <b>한글</b>이고 아래 띠 이름과 같다');
   const D = await p.evaluate(() => {
     const tag = document.querySelector('#dynPane .page-tag');
-    const tb = (typeof TB !== 'undefined') ? (TB.filter(x => x.id === 'news_live')[0] || {}).t : '';
+    /* ⚠ 2026-10-13 (판 X99) — 띠 칸의 <b>id 로 찾지 않습니다</b>. 여태
+       TB 에서 id==='news_live' 를 찾았는데, 사장님 말씀으로 그 칸이
+       <b>허브(content)</b> 로 바뀌자 빈손이 되어 이 자가 울렸습니다.
+       묻는 법을 바꿉니다 — <b>「이 화면에서 켜지는 칸」</b>(tbOnOf)에게
+       묻고 그 이름을 씁니다. 그러면 칸이 또 바뀌어도 안 깨집니다 (5번). */
+    const onId = (typeof tbOnOf === 'function') ? tbOnOf('news_live') : '';
+    const tb = (typeof TB !== 'undefined' && onId)
+      ? ((TB.filter(x => x.id === onId)[0] || {}).t || '') : '';
     return { tag: tag ? tag.textContent.trim() : '', tb: tb || '' };
   });
   is(!/^[A-Za-z]+$/.test(D.tag), '  꼬리표가 <b>영문만</b>이 아니다 — ' + D.tag);

@@ -13965,6 +13965,7 @@ var TABS=[
    {id:'biz_staff',icon:'👥',title:'직원관리',cnt:'',ak:'법인·사업자 컨설팅'}
  ]},
  {group:'콘텐츠 제작',items:[
+   {id:'content',icon:'✍️',title:'콘텐츠 제작',cnt:'3',ak:'콘텐츠 제작 한자리 정책 상품 뉴스 인스타 카드 블로그 모아보기 허브'},
    {id:'news_live',icon:'🌐',title:'고객에게 전할 뉴스',cnt:'5',ak:'콘텐츠·마케팅'},
    {id:'biz_news',icon:'📰',title:'정책·상품 뉴스',cnt:'',ak:'콘텐츠·마케팅'},
    {id:'blog',icon:'📝',title:'블로그',cnt:'',ak:'콘텐츠·마케팅'},
@@ -14167,7 +14168,7 @@ var NAV_WHEN={
  pdel:'after', contracts:'after', endorse:'after', claims:'after',
  med_silbi:'after', med_checkup:'after', med_disclosure:'after', car_fault:'after',
  /* 📣 고객 늘리기 */
- mikki:'grow', news_live:'grow', biz_news:'grow', blog:'grow', threads:'grow',
+ mikki:'grow', content:'grow', news_live:'grow', biz_news:'grow', blog:'grow', threads:'grow',
  insta:'grow', video:'grow', calendar:'grow', simui:'grow',
  mkt_meta:'grow', mkt_volume:'grow', mkt_combine:'grow', mkt_landing:'grow',
  mkt_card:'grow', ext_reply:'grow', ext_thread:'grow', ext_naver:'grow',
@@ -14443,7 +14444,10 @@ var TB=[
     ★ w 는 그대로 둡니다 — 그 갈래 화면에 서 있으면 이 칸이 켜져
       「이건 도구에 있습니다」 를 가리킵니다. pin 으로 제 화면도 켭니다. */
  {id:'tools',   e:'🧰',t:'도구',  w:['meet','after','know','run'],pin:['tools']},
- {id:'news_live',e:'📰',t:'콘텐츠',w:['grow']},
+ /* ✍️ 콘텐츠 — 사장님 말씀 2026-10-13 「콘텐츠 들어가면 한번에 보이게」.
+    여태 이 칸은 news_live(고객에게 전할 뉴스) <b>한 화면</b>으로 갔습니다.
+    이제 <b>허브</b>로 갑니다 — 셋이 한 자리에 섭니다 (판 X99). */
+ {id:'content',e:'✍️',t:'콘텐츠',w:['grow'],pin:['content']},
  {id:'mycal',   e:'📅',t:'달력',  pin:['mycal']}
 ];
 /* ── <b>지금 어느 칸이 켜지나</b> — 한 곳만 답한다 (5번) ─────────────
@@ -14505,6 +14509,122 @@ function tbPaint(cur){
 function tbGo(id){
   if(id==='__more'){ try{ toggleNav(); }catch(e){} return; }
   try{ go(id); }catch(e){}
+}
+
+/* ══ ✍️ <b>콘텐츠 제작</b> — 셋을 한 자리에 (판 X99) ═══════════════════
+   사장님 말씀 (2026-10-13) — 「정책상품뉴스 / 인스타카드만들기 / 블로그
+   이걸 하나에 컨텐츠 제작 [인스타 로고, 블로그로고] 이렇게 넣어서 하나로
+   만들자. 홈 메뉴에서는 콘텐츠 들어가면 <b>한번에 보이게</b>」.
+
+   ★ <b>세 화면을 지우지 않습니다</b> (6번). 이 화면은 <b>문</b>입니다 —
+     각 화면은 그대로 있고 여기서 한 번에 보고 들어갑니다. 글 쓰는 자리를
+     여기로 옮기면 같은 것이 두 벌이 됩니다 (5번).
+   ★ <b>이름과 설명을 여기 옮겨 적지 않습니다</b> — 이름은 메뉴 표(TABS),
+     설명은 TAB_META 한 곳에서 꺼냅니다. 옮겨 적으면 저쪽을 고칠 때 이
+     화면만 낡습니다. <b>설명이 없는 화면은 빈손</b>으로 둡니다 — 없는 말을
+     지어 적지 않습니다 (1번).
+   ★ 표가 <b>로고를 그립니다</b> — 남의 삽화를 복제하지 않고 직접 SVG 로
+     그립니다 (9번). 회사 상표(인스타그램의 그 로고)를 베끼지 않고
+     <b>사진기·연필·종이</b> 같은 흔한 그림으로 그립니다.
+   ★ 같은 갈래의 <b>나머지 다섯</b>도 칩으로 남깁니다 — 길을 지우지
+     않습니다 (6번).
+   ★ 이 화면은 <b>서버를 안 부릅니다</b> (7번) — 손에 있는 표만 봅니다.  */
+var CT_BIG=[
+ {id:'biz_news', mk:'news'},     /* 📰 정책·상품 뉴스 */
+ {id:'insta',    mk:'insta'},    /* 📸 인스타 — 카드·캡션 */
+ {id:'blog',     mk:'blog'}      /* 📝 블로그 */
+];
+/* 같은 갈래의 나머지 — 차례는 메뉴 표 그대로 */
+var CT_MORE=['news_live','threads','video','calendar','simui'];
+/* 이름은 <b>메뉴 표 한 곳</b>에 묻습니다 (5번) */
+function ctName(id){
+  var i,j,g;
+  if(typeof TABS==='undefined')return id;
+  for(i=0;i<TABS.length;i++){ g=TABS[i].items||[];
+    for(j=0;j<g.length;j++)if(g[j].id===id)return g[j].title||id; }
+  return id;
+}
+function ctIcon(id){
+  var i,j,g;
+  if(typeof TABS==='undefined')return '';
+  for(i=0;i<TABS.length;i++){ g=TABS[i].items||[];
+    for(j=0;j<g.length;j++)if(g[j].id===id)return g[j].icon||''; }
+  return '';
+}
+/* 설명은 <b>TAB_META 한 곳</b>에서. 없으면 <b>빈손</b> (1번) */
+function ctDesc(id){
+  if(typeof TAB_META==='undefined'||!TAB_META[id])return '';
+  return String(TAB_META[id].desc||'');
+}
+/* 직접 그린 표 — 24px · 지금 글자색을 따릅니다 (9번) */
+function ctMark(k){
+  var o='stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';
+  if(k==='insta')   /* 사진기 — 상표를 베끼지 않습니다 */
+    return '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">'+
+      '<rect x="3" y="6" width="18" height="14" rx="3" '+o+'/>'+
+      '<circle cx="12" cy="13" r="3.6" '+o+'/>'+
+      '<path d="M8.5 6 L10 3.5 h4 L15.5 6" '+o+'/></svg>';
+  if(k==='blog')    /* 연필과 종이 */
+    return '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">'+
+      '<path d="M5 3h9l5 5v13H5z" '+o+'/>'+
+      '<path d="M14 3v5h5" '+o+'/>'+
+      '<path d="M8.5 17.5 16 10l1.8 1.8L10.3 19.3l-2.3.5z" '+o+'/></svg>';
+  /* 신문 — 접힌 종이에 줄 셋.
+     ⚠ return 뒤에 줄을 바꾸면 <b>자동 세미콜론</b>이 끼어 undefined 가
+       돌아옵니다. 실제로 그래서 화면에 「undefined」 가 찍혔습니다. */
+  return '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">'+
+    '<path d="M4 5h13v15H6a2 2 0 0 1-2-2z" '+o+'/>'+
+    '<path d="M17 8h3v10a2 2 0 0 1-2 2h-1z" '+o+'/>'+
+    '<path d="M7 9h7M7 12h7M7 15h4" '+o+'/></svg>';
+}
+function ctCss(){
+  if(document.getElementById('ctCss'))return;
+  var st=document.createElement('style'); st.id='ctCss';
+  /* 새 옷을 거의 안 만듭니다 — ui.css 의 t-card·t-lab·t-row·t-chip 을 쓰고,
+     표 자리만 한 줄 보탭니다 */
+  /* ⚠ 카드 이름표 옷(.t-lab)은 <b>11.5px</b> 입니다 — 폰 바닥(13px)보다
+     작아 check-phonefit 이 울렸습니다(기준선 9 → 11). .t-lab 을 전역에서
+     키우면 앱의 <b>모든 카드</b>가 바뀌므로, 이 화면에만 쓰는 이름표를
+     13px(--t6)로 둡니다. 기준선은 <b>올리지 않습니다</b>. */
+  st.textContent='.ct-hd{font-size:var(--t6);font-weight:800;color:var(--ink-4);'+
+    'letter-spacing:.02em;margin:0 0 8px}'+
+    '.ct-r{display:flex;align-items:center;gap:12px;padding:12px 0;'+
+    'border-bottom:1px solid var(--ink-8)}'+
+    '.ct-r:last-child{border-bottom:0}'+
+    '.ct-mk{flex:none;width:44px;height:44px;border-radius:var(--r-sm);display:flex;'+
+    'align-items:center;justify-content:center;background:var(--ink-8);color:var(--ink-2)}'+
+    '.ct-t{flex:1;min-width:0}'+
+    '.ct-t b{display:block;font-size:var(--t5);font-weight:800;color:var(--ink-1)}'+
+    '.ct-t span{display:block;font-size:var(--t6);color:var(--ink-3);line-height:1.5;margin-top:2px}';
+  document.head.appendChild(st);
+}
+function renderContentHub(){
+  ctCss();
+  var h='<div class="tab-pane on"><div class="page-hd">'+
+    '<div class="page-tag">콘텐츠</div>'+
+    '<div class="page-title">✍️ 콘텐츠 제작</div>'+
+    '<div class="page-desc">정책·상품 뉴스 · 인스타 · 블로그를 <b>한 자리</b>에서 엽니다. '+
+      '화면은 그대로 있고, 여기서 바로 들어갑니다.</div></div>'+
+    '<div class="t-card"><div class="ct-hd">세 가지</div>';
+  var i,x,d;
+  for(i=0;i<CT_BIG.length;i++){
+    x=CT_BIG[i]; d=ctDesc(x.id);
+    h+='<button type="button" class="ct-r" style="width:100%;background:none;border:0;text-align:left;cursor:pointer" '+
+       'onclick="go(\''+x.id+'\')" aria-label="'+osEsc(ctName(x.id))+' 열기">'+
+       '<span class="ct-mk">'+ctMark(x.mk)+'</span>'+
+       '<span class="ct-t"><b>'+osEsc(ctIcon(x.id))+' '+osEsc(ctName(x.id))+'</b>'+
+       (d?('<span>'+d+'</span>'):'')+'</span>'+
+       '<span style="flex:none;color:var(--ink-4);font-size:var(--t5)">›</span></button>';
+  }
+  h+='</div>';
+  /* 같은 갈래의 나머지 — 길을 지우지 않습니다 (6번) */
+  h+='<div class="t-card" style="margin-top:14px"><div class="ct-hd">같은 갈래에 더 있습니다</div>'+
+     '<div class="t-chips">';
+  for(i=0;i<CT_MORE.length;i++)
+    h+='<button type="button" class="t-chip" onclick="go(\''+CT_MORE[i]+'\')">'+
+       osEsc(ctIcon(CT_MORE[i]))+' '+osEsc(ctName(CT_MORE[i]))+'</button>';
+  h+='</div></div></div>';
+  return h;
 }
 /* ══════════════════════════════════════════════════════════════════
    즐겨찾기 · 메뉴 찾기 · 최근 쓴 것
@@ -18763,7 +18883,7 @@ var T_SKIN={home:1,dashboard:1,clients:1,news_live:1,mycal:1,me:1,tools:1,
             biz_diag:1,biz_tax:1,biz_ins:1,biz_retire:1,biz_staff:1,daily:1,
             ai_prop:1,endorse:1,manual:1,utphoto:1,fp_talk:1,dz_guide:1,inv_stock:1,inv_fund:1,inv_econ:1,ckboard:1,treatpay:1,inv_perf:1,biz_fund:1,mycoach:1,ready:1,phone_app:1,
             org:1,contracts:1,claims:1,
-            ta_script:1,ta_say:1,med_disclosure:1,
+            ta_script:1,ta_say:1,content:1,med_disclosure:1,
             pricing:1,wallets:1,teamhub:1,biz_news:1,settings:1,
             rej_gym:1,ta_train:1,silson5:1};
 /* ══ 🔦 <b>공지사항(notice)이 옷을 도로 입었습니다</b> (2026-09-30) ══════
@@ -19191,6 +19311,7 @@ function go(tab){
   else if(tab==='ta_script')dyn.innerHTML=renderTaScriptPage();
   /* 🎙 전체 대본 — 같은 파일을 대본 칸으로 띄웁니다 (판 X93 · 5번) */
   else if(tab==='ta_say')dyn.innerHTML=renderTaSayPage();
+  else if(tab==='content')dyn.innerHTML=renderContentHub();
   else if(tab==='rej_gym')dyn.innerHTML=renderRejGymPage();
   else if(tab==='ta_train')dyn.innerHTML=renderTaTrainPage();
   else if(tab==='silson5')dyn.innerHTML=renderSilson5Page();
@@ -19615,8 +19736,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-13 06:40';
-var APP_BUILD_NOTE="🚗 <b>오늘에 세 가지가 붙었습니다</b> — ① 약속이 없는 날에도 <b>묶여 있는 동네</b>를 적습니다(「순천시 5분 · 여수시 3분이 묶여 있습니다 — 하루로 잡으시면 오가는 시간이 줄어듭니다」). ② 🤝 <b>한 분 더면</b> 칩 — 오늘 만남이 1이면 2라고 적어 드립니다. <b>독려는 셈으로만</b> 합니다 — 「오후에 잘 받힙니다」 같은 말은 저희가 재어 본 자료가 없어 적지 않습니다. ③ 🎯 <b>접촉포인트</b> 칩 — 그 분(또는 고르신 팀원) 고객 중 <b>나이를 아는 분</b>이 어느 묶음에 많은지와 그 묶음의 한마디(카톡 먼저 · 가족과 함께 보는 자리 · 종이로 찾아뵙기)를 답니다. 눌러 보시면 긴 말이 나옵니다. ★ <b>나이는 대부분 모릅니다</b> — 고객 162분 중 생년이 적힌 분이 33분이고, 배정 DB 에는 생년 칸이 아예 없습니다. 그래서 <b>아는 분만</b> 세고 <b>모르는 수를 같이 적습니다</b>. 하나도 없으면 「🎯 생년을 적으면」 으로 바뀌고, 누르면 고객 365일로 갑니다 — 그 분 카드 📇 <b>출생년도</b>를 적으시면 그 분부터 붙습니다. ★ <b>홈 길이는 그대로입니다</b> — 글로 붙이면 22~51px 을 먹어 선(4.2화면)을 넘기에, 칩 줄 한 자리에 모아 16px 로 끝냈습니다. 새 카드·새 CSS 는 0줄입니다. 새 자 <b>check-hmpoint</b> 가 이것을 지킵니다. (같이 실려 나갑니다 — 📞 <b>30초 TA · 무사고 할인</b> 판 X96, 다른 세션이 만든 것입니다)";
+var APP_BUILD='2026-10-13 09:10';
+var APP_BUILD_NOTE="✍️ <b>콘텐츠는 이제 한 자리에서 엽니다</b> — 아래 띠 <b>✍️ 콘텐츠</b> 를 누르시면 세 가지가 <b>한 화면에</b> 섭니다: 📰 <b>정책·상품 뉴스</b> · 📸 <b>인스타</b> · 📝 <b>블로그</b>. 칸을 누르면 그 화면으로 바로 들어갑니다. ★ <b>화면은 하나도 안 없앴습니다</b> — 글 쓰는 자리는 그대로이고, 여기는 <b>문</b>입니다. 같은 갈래의 나머지 다섯(고객에게 전할 뉴스 · Threads · 유튜브&릴스 · 콘텐츠 캘린더 · 외부글 심의필터)도 아래에 칩으로 그대로 있습니다. ★ 표(로고)는 <b>직접 그렸습니다</b> — 회사 상표를 베끼지 않고 사진기·연필·종이로 그렸습니다. ★ 폰에서 <b>한 화면</b>에 들어옵니다(765px). 새 자 <b>check-conthub</b> 가 이것을 지킵니다 — 단추가 정말 그 화면을 여는지까지 눌러 봅니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
