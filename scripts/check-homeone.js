@@ -448,14 +448,17 @@ const tall = (p) => p.evaluate(() => {
      '  <b>언론사·날짜</b>도 그대로 — ' + NEWS[0].s + ' · ' + NEWS[0].d);
   is(g.링크 === NEWS[0].u, '  <b>원문 링크</b>가 그 기사로 간다');
   is(g.머리.indexOf(NEWS[0].t.slice(0, 10)) >= 0, '  <b>머리에 제목</b>이 있다 — 무엇인지 바로 압니다');
-  is(g.단추.some(x => /캡션/.test(x)) && g.단추.some(x => /카드뉴스/.test(x)) &&
+  /* ⚠ 2026-10-13 · 단추 이름을 박아 두지 않고 <b>앱에 묻습니다</b> — 「카드뉴스」 로
+     박아 두었더니 이름이 「캐러셀로 제작하기」 로 바뀌며 거짓 빨간불이 떴습니다 (5번) */
+  const CARD_T = await C.p.evaluate(() => (typeof nlCardName === 'function') ? nlCardName() : '');
+  is(g.단추.some(x => /캡션/.test(x)) && g.단추.some(x => x.indexOf(CARD_T) >= 0) &&
      g.단추.some(x => /보낼 문구/.test(x)),
      '  <b>만들 자리</b>가 그 자리에 있다 — ' + g.단추.join(' · '));
   /* 만드는 도구를 <b>또 만들지 않았는가</b> (5번) — 이미 있는 것을 부른다 */
   const src = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
   const igBlk = (src.split('function hmIgHtml(')[1] || '').slice(0, 2600);
-  is(/nlToCard\(/.test(igBlk) && /nlCopy\(/.test(igBlk),
-     '  카드뉴스·보낼 문구는 <b>이미 있는 것</b>을 부른다 — 두 벌로 안 만든다 (5번)');
+  is(/nlToCard\(|nlCardBtn\(\s*'nlToCard'/.test(igBlk) && /nlCopy\(/.test(igBlk),
+     '  캐러셀·보낼 문구는 <b>이미 있는 것</b>을 부른다 — 두 벌로 안 만든다 (5번)');
 
   console.log('\n[5] <b>기사를 지어내지 않는다</b> (9번)');
   await C.p.evaluate(() => go('news_live')); await C.p.waitForTimeout(700);
