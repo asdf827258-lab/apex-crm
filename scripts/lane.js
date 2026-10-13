@@ -89,6 +89,25 @@ console.log('');
 console.log('  갈래 — ' + git('rev-parse --abbrev-ref HEAD') + '  (견주는 곳: ' + BASE + ')');
 console.log('  ' + '─'.repeat(64));
 
+/* ── <b>판 번호</b> — 적기 전에 임자를 봅니다 (판 X98) ──────────────────
+   이틀에 두 번, 다른 세션과 같은 번호를 썼습니다 (X91 · X96). 번호는 대장
+   줄과 「줄 없이 번호만 쓴 판」 두 곳에 흩어져 있어, 대장만 보면 알 수
+   없습니다. 내주는 자는 <b>plan-no.js 한 곳</b>입니다 (5번).
+   ★ 자리는 <b>맨 앞</b>입니다 — 담은 것이 없으면 lane 은 아래에서 끝나는데,
+     번호는 <b>판을 시작할 때</b> 가장 쓸모 있습니다. 뒤에 두었다가 안 찍혀
+     옮겼습니다.
+   ★ 여기서는 <b>원격을 안 봅니다</b>(local) — lane 은 몇 초여야 합니다.
+     다른 세션이 쥔 번호까지 보려면 그 자를 그냥 부르십시오.            */
+try {
+  const 번호 = require('./plan-no.js').다음('X', { local: true });
+  console.log('');
+  console.log('  판 번호 — 이 저장소만 보면 다음은 ' + 번호.다음 + ' 입니다 (가장 큰 것 ' + 번호.큰 + ').');
+  console.log('      다른 세션이 쥔 번호까지 보려면  node scripts/plan-no.js');
+} catch (e) {
+  console.log('');
+  console.log('  판 번호를 못 세어 봤습니다 — node scripts/plan-no.js 를 손으로 도십시오.');
+}
+
 if (dirty.length) {
   console.log('  아직 담지 않은 것이 ' + dirty.length + '개 있습니다 — 담은 것만 견줍니다.');
   console.log('  git add -A && git commit  뒤에 다시 부르십시오.');
