@@ -95,7 +95,9 @@ const 죽은이름 = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash',
   죽은이름.forEach(m => {
     is(옮김[m] && 옮김[m] !== m, '  ' + m + ' → ' + 옮김[m]);
   });
-  is(옮김['담아둔 품질'] === 'gemini-pro-latest', '  기기에 담긴 옛 품질 이름이 <b>열면 옮겨진다</b> — ' + 옮김['담아둔 품질']);
+  is(옮김['담아둔 품질'] === 'gemini-flash-latest',
+     '  기기에 담긴 옛 품질 이름이 <b>열면 옮겨진다</b> — ' + 옮김['담아둔 품질'] +
+     ' (창구가 30초에 끊어 pro 는 기본이 아닙니다)');
   is(옮김['담아둔 일반'] === 'gemini-flash-latest', '  기기에 담긴 옛 일반 이름도 옮겨진다 — ' + 옮김['담아둔 일반']);
 
   /* ─────────────────────────────────────────────────────────── */
@@ -105,6 +107,30 @@ const 죽은이름 = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash',
   is(죽은고르개.length === 0, '  고를 수 있는 것이 다 살아 있다 — ' +
      [].concat(고르개).filter((v, i, a) => a.indexOf(v) === i).join(' · ') +
      (죽은고르개.length ? '\n      ← 죽은 것: ' + 죽은고르개.join(' · ') : ''));
+
+  /* ─────────────────────────────────────────────────────────── */
+  head('[4-2] 느려서 <b>끊겨도</b> 물러난다 (판 X109 에서 데인 자리)');
+  /* ⚠ 판 X108 에서 품질 기본을 gemini-pro-latest 로 두었다가 캐러셀이 아예
+     안 만들어졌습니다. 창구(Netlify 함수)가 <b>~30초</b>에 끊는데 pro 가 그보다
+     느려 <b>504</b> 가 납니다. 전에는 pro 가 즉시 404 라 곧장 flash 로 가서
+     돌아갔던 것인데, 제가 404 를 없애며 그 <b>우연한 안전장치</b>를 같이
+     없앴습니다. 재어 본 것: pro 큰 요청 504(31.3초) · flash 작은 요청 200(12.1초). */
+  /* ⚠ LS.set(…,'') 로는 못 잽니다 — 칸이 있으면 빈 글자를 돌려주지 기본값으로
+     안 갑니다(처음에 그래서 빈칸이 나왔습니다). <b>날글의 기본값</b>을 봅니다. */
+  const 기본줄 = SRC.slice(SRC.indexOf('function getGeminiProModel('), SRC.indexOf('function getGeminiProModel(') + 140);
+  const 기본 = (기본줄.match(/LS\.get\('gpromodel','([^']*)'\)/) || [])[1] || '';
+  is(기본 === 'gemini-flash-latest',
+     '  품질 <b>기본</b>이 창구가 버티는 것이다 — ' + (기본 || '(못 읽음)') + ' (pro 는 고를 수는 있습니다)');
+  const smart = SRC.slice(SRC.indexOf('function callGeminiSmart('), SRC.indexOf('function callGeminiSmart(') + 1400);
+  is(/st===504/.test(smart) && /timedOut/.test(smart),
+     '  <b>504·시간 초과</b>면 기본 모델로 물러난다 — 그대로 죽지 않는다');
+  const 말504 = await pg.evaluate(() => {
+    const e = new Error('gateway timeout'); e.status = 504;
+    return { why: aiFailWhy(e), say: aiFailText(e) };
+  });
+  is(/제한 시간|30초/.test(말504.why), '  504 를 <b>사람 말</b>로 가른다 — ' + 말504.why);
+  is(/장수를 줄이|짧게/.test(말504.say), '  <b>할 수 있는 일</b>을 알려 준다 — ' + 말504.say.slice(-34));
+  is(말504.say.indexOf('<') < 0, '  그 말에 꺾쇠가 없다');
 
   /* ─────────────────────────────────────────────────────────── */
   head('[5] 클로드를 <b>이번 접속에 한 번만</b> 접는다 (사장님 말씀)');

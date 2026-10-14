@@ -2814,13 +2814,22 @@ var GEM_MOVED={
   'gemini-2.0-flash':'gemini-flash-latest',
   'gemini-1.5-flash':'gemini-flash-latest',
   'gemini-2.5-flash':'gemini-flash-latest',
-  'gemini-2.5-pro':'gemini-pro-latest',
-  'gemini-1.5-pro':'gemini-pro-latest',
+  /* ⚠ 2026-10-14 · 판 X108 에서 여기를 gemini-pro-latest 로 두었다가
+     <b>캐러셀이 아예 안 만들어졌습니다</b>. 창구(Netlify 함수)가 <b>~30초</b>에
+     끊는데 pro 가 그보다 느려 <b>504</b> 가 납니다 — 재어 본 것:
+         gemini-pro-latest   큰 요청  504  31.3초
+         gemini-flash-latest 큰 요청  504  30.6초   ← 아슬아슬합니다
+         gemini-flash-latest 작은 요청 200  12.1초
+     전에는 pro 가 <b>즉시 404</b> 라 곧장 flash 로 가서 돌아갔던 것입니다.
+     제가 404 를 없애면서 그 <b>우연한 안전장치</b>를 같이 없앴습니다.
+     ★ 그래서 담아 둔 pro 이름은 <b>flash 로</b> 옮깁니다 — 되는 길로. */
+  'gemini-2.5-pro':'gemini-flash-latest',
+  'gemini-1.5-pro':'gemini-flash-latest',
   'gemini-2.0-flash-preview-image-generation':'gemini-2.5-flash-image'
 };
 function gemLive(m){ m=''+(m||''); return GEM_MOVED[m]||m; }
 function getGeminiModel(){return gemLive(LS.get('gmodel','gemini-flash-latest'));}
-function getGeminiProModel(){return gemLive(LS.get('gpromodel','gemini-pro-latest'));}
+function getGeminiProModel(){return gemLive(LS.get('gpromodel','gemini-flash-latest'));}
 /* 콘텐츠·마케팅 도구의 기본 공급자 선택: 'claude' | 'gemini' (고객정보 도구는 항상 Claude 강제) */
 function getProvider(){return LS.get('provider','claude');}
 /* 실제로 어떤 엔진이 응답했는지 추적(결과 배지·진단용). 리프 호출이 성공하면 채운다. */
@@ -2889,6 +2898,8 @@ function aiFailWhy(e){
   /* ★★ 맨 404 는 창구가 내려가도 납니다 — 어느 쪽인지 단정하지 않습니다 (1번) */
   if(e&&e.status===404)return '창구가 404 — 모델명이나 프록시 주소 확인';
   if((e&&e.status===429)||/rate.?limit|too many requests/i.test(m))return '잠깐 너무 많이 불렀습니다';
+  /* ⚠ 504 가 빠져 있었습니다 — 창구가 30초에 끊는 바로 그 번호입니다 */
+  if((e&&e.status===504)||/timed? ?out|gateway ?time/i.test(m))return '창구가 제한 시간(30초) 안에 못 끝냈습니다';
   if((e&&(e.status===500||e.status===502||e.status===503||e.status===529))||
      /overloaded|unavailable|temporarily/i.test(m))return '서버가 바쁩니다';
   if(/failed to fetch|networkerror|load failed/i.test(m))return '인터넷이 끊겼거나 창구에 못 닿았습니다';
@@ -2906,7 +2917,8 @@ var AI_FAIL_NEXT={
   '창구가 404 — 모델명이나 프록시 주소 확인':'설정 → AI 연결에서 「모델 이름」 과 「창구(프록시) 주소」 둘을 확인해 주세요.',
   '잠깐 너무 많이 불렀습니다':'1~2분 뒤 다시 눌러 주세요.',
   '서버가 바쁩니다':'잠시 뒤 다시 눌러 주세요.',
-  '인터넷이 끊겼거나 창구에 못 닿았습니다':'인터넷을 확인하고 다시 눌러 주세요.'
+  '인터넷이 끊겼거나 창구에 못 닿았습니다':'인터넷을 확인하고 다시 눌러 주세요.',
+  '창구가 제한 시간(30초) 안에 못 끝냈습니다':'장수를 줄이거나(8장) 주제를 짧게 하고 다시 눌러 주세요.'
 };
 /* 사장님께 보여 드리는 글 — <b>까닭 + 다음 걸음</b>. 날글만 찍지 않습니다.
    ★★ 돌려주는 것은 <b>꾸밈표가 없는 글</b>입니다 — toast 는 textContent 로
@@ -4307,7 +4319,10 @@ function callGeminiSmart(system,user,maxTokens,images,genId){
   if(!wantQ||!pro||pro===base)return callGemini(system,user,maxTokens,images,null,co);
   return callGemini(system,user,maxTokens,images,pro,co).catch(function(e){
     var m=((e&&e.message)||'')+'',st=e&&e.status;
-    var fb=/not found|not supported|unsupported|404|quota|rate limit|429|exceeded|resource has been exhausted|overloaded|unavailable|503/i.test(m)||st===404||st===429||st===503;
+    /* ⚠ 504(창구가 30초에 끊음)와 시간 초과가 빠져 있었습니다 — 품질 모델이
+       느려서 끊기면 <b>물러나지 못하고 그대로 죽었습니다</b>(판 X108 에서 실제로). */
+    var fb=/not found|not supported|unsupported|404|quota|rate limit|429|exceeded|resource has been exhausted|overloaded|unavailable|timed? ?out|504|503/i.test(m)||
+           st===404||st===429||st===503||st===504||!!(e&&e.timedOut);
     if(fb&&base)return callGemini(system,user,maxTokens,images,base,co);
     throw e;
   });
@@ -19911,8 +19926,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-14 18:05';
-var APP_BUILD_NOTE="🧬 <b>제미나이가 빨라지고, 「크레딧 없다」 가 그만 뜹니다</b> — ★ <b>창구는 멀쩡했습니다.</b> 두 번씩 두드려 재어 보니 한결같았고, 들쭉날쭉해 보인 까닭은 앱이 <b>구글이 내린 모델</b>(gemini-2.5-pro · 2.5-flash)을 매번 먼저 불러 404 를 받고 물러났기 때문입니다. 글 하나 만들 때마다 <b>헛걸음 한두 번</b>이 있었습니다 — 이제 살아 있는 이름(<b>gemini-pro-latest</b>)으로 바로 갑니다. 설정에 담겨 있던 옛 이름도 <b>여실 때 저절로 옮겨집니다</b>. ★ <b>「크레딧 부족」 이 글마다 뜨던 것</b>을 고쳤습니다. 클로드 크레딧이 비어 있어 매번 다시 부르고 매번 그 말을 띄웠습니다. 이제 <b>이번 접속에 한 번만</b> 말씀드리고 그다음부터는 <b>바로 무료 제미나이</b>로 갑니다 — 더 빠르고 조용합니다. 글도 바꿨습니다: 「클로드는 크레딧 부족 — 이번 접속 동안 <b>무료 제미나이</b> 로 씁니다. <b>그대로 쓰시면 됩니다.</b>」 ★ <b>AI 사진 생성은 멀쩡했습니다</b> — 첫 모델이 살아 있어서요(뒤로 물러나던 이름만 죽어 있어 갈아 끼웠습니다). 새 자 <b>check-gemmodel</b> 이 28자리를 지킵니다.";
+var APP_BUILD='2026-10-14 19:30';
+var APP_BUILD_NOTE="🚨 <b>캐러셀이 다시 됩니다</b> — 바로 앞 판에서 <b>제가 끊어 놓았습니다.</b> 죽은 모델을 살아 있는 이름으로 바꿨는데, 그 새 이름이 <b>느려서</b> 창구가 30초에 끊어 버렸습니다(504). 한 장도 안 나왔습니다. ★ <b>빠른 모델로 되돌렸습니다</b> — 전에 잘 돌던 그 길입니다. 품질 모델은 <b>고르실 수는 있게</b> 두되 「품질은 높지만 느립니다(긴 글은 시간 초과)」 라고 적어 두었습니다. ★ <b>느려서 끊겨도 이제는 물러납니다</b> — 여태 그 자리가 빠져 있어 그대로 죽었습니다. ★ 끊겼을 때 <b>무엇을 하실지</b>도 적습니다: 「창구가 제한 시간(30초) 안에 못 끝냈습니다 — 장수를 줄이거나(8장) 주제를 짧게 하고 다시 눌러 주세요.」 ⚠ <b>배운 것</b> — 헛걸음을 없앨 때는 그것이 무엇을 막고 있었는지 먼저 봐야 했습니다. 점검은 다 초록이었고, <b>라이브에서 실제로 만들어 보고</b> 알았습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -48484,7 +48499,7 @@ function renderSettings(){
       gopt('gemini-flash-lite-latest','Gemini Flash Lite — 가장 빠름')+
       '</select></div>'+
       '<div class="fld" style="margin-top:12px"><label>품질 모델 (리포트·보장분석·제안서 판독)</label><select id="setGProModel" onchange="saveGProModel()">'+
-      gpopt('gemini-pro-latest','Gemini Pro (최신) — 최고 품질(리포트용·추천)')+
+      gpopt('gemini-pro-latest','Gemini Pro (최신) — 품질은 높지만 느립니다(긴 글은 시간 초과)')+
       gpopt('gemini-flash-latest','일반 모델과 동일(품질 강화 끄기)')+
       '</select><span class="hint" style="font-size:var(--t6);color:var(--ink-5)">리포트·보장분석·이미지형 제안서는 이 모델을 우선 사용하고, 쿼터 초과 시 위 일반 모델로 자동 전환합니다. ※ Gemini 2.5 Pro는 결제(유료) 연결이 있어야 작동합니다 — 무료로 쓰신다면 Gemini 2.5 Flash를 고르세요.</span></div>'+
       '<div style="margin-top:14px"><button class="btn btn-ghost" style="font-size:var(--t6)" onclick="toggleGQuota()">❓ 무료인데 왜 "한도 초과·모두 사용"이 뜨나요?</button>'+
@@ -48539,7 +48554,7 @@ function renderSettings(){
     '</select></div>'+
     '<div class="fld" style="margin-top:9px"><label style="font-size:var(--t6)">품질 (리포트·보장분석)</label>'+
     '<select id="setGProModel2" onchange="saveGProModel2()">'+
-    gpopt('gemini-pro-latest','Gemini Pro (최신) — 최고 품질')+
+    gpopt('gemini-pro-latest','Gemini Pro (최신) — 품질은 높지만 느립니다(긴 글은 시간 초과)')+
     gpopt('gemini-flash-latest','일반 모델과 동일 (품질 강화 끄기)')+
     '</select></div>'+
 
