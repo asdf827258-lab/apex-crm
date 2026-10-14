@@ -6,7 +6,7 @@
      ② 화제마다 출처(제목·낸 곳·날짜·주소)가 있다 — 블로그·광고 글이 아니다 (9번)
      ③ 첫 마디 · 잇는 말에 <b>숫자가 없다</b> — 할인율·한도·나이를 외워 말하지 않는다 (1번·2번)
      ④ 첫 마디 · 잇는 말에 「갈아타세요」 같은 권유가 없다 · 피해야 할 표현이 같이 선다
-     ⑤ 고르면 대본의 <b>인사 바로 다음</b>에 그 한마디가 들어간다 (깨끗한 멘트 · 코칭 포함 둘 다)
+     ⑤ 고르면 대본의 <b>자기소개 바로 앞</b>(② 첫 줄)에 그 한마디가 들어간다 — 2026-10-14 새 TA 스크립트
      ⑥ 「화제 없이」 를 고르면 안 들어가고, 다시 열어도 그 선택이 남는다
      ⑦ 화재보험(NS) 문의 대본에는 넣지 않는다 — 상품 문의 전화라 화제가 끼면 어색하다
      ⑧ 화제가 낡으면(asOf 에서 stale 일 지남) 화면이 그렇게 말한다
@@ -70,52 +70,57 @@ const srv = http.createServer((q, s) => {
     await p.reload({ waitUntil: 'load' }); await p.waitForTimeout(300);
 
     console.log('\n[4] 대본에 들어가나');
-    const r1 = await p.evaluate(() => {
-      setDB('analysis1'); renderScript();
-      const t = TA_TREND.list[0], el = document.getElementById('scriptOutput');
-      const plain = el.dataset.plain.split('\n\n'), coached = el.dataset.coached.split('\n\n');
-      return { want: t.open + ' ' + t.bridge, p1: plain[1], p0: plain[0], c1: coached[1], html: el.innerHTML, open: t.open,
-               tabs: document.querySelectorAll('.trend-tab').length, n: TA_TREND.list.length };
-    });
+    /* 2026-10-14 — TA 스크립트를 새 화면(5단계 연속 대본)으로 바꿨습니다. 화제는 ② 자기소개 바로 앞 첫 줄에 섭니다.
+       고르는 단추는 그대로 .trend-tab[data-key] (홈 점검 check-hmtrend 도 이 단추를 누릅니다). */
+    const 둘째 = () => { const e = document.querySelector('#script .st.c2 .me'); return e ? e.textContent : ''; };
+    const 대본 = () => document.getElementById('script').textContent;
+    const r1 = await p.evaluate((둘째src) => {
+      const 둘째 = eval(둘째src);
+      TA_APP.setDB('analysis1');
+      const t = TA_TREND.list[0];
+      document.querySelector('.trend-tab[data-key="' + t.key + '"]').click();
+      return { s2: 둘째(), all: document.getElementById('script').textContent, open: t.open, bridge: t.bridge,
+               tabs: document.querySelectorAll('.trend-tab').length, n: TA_TREND.list.length,
+               intro: document.getElementById('script').textContent.indexOf('지역 담당') };
+    }, '(' + 둘째.toString() + ')');
     is(r1.tabs === r1.n + 1, '화제 ' + r1.n + '가지 + 「화제 없이」 단추가 선다');
-    is(/안녕하세요/.test(r1.p0) && r1.p1 === r1.want, '깨끗한 멘트 — 인사 바로 다음 줄이 그 화제의 첫 마디 + 잇는 말이다');
-    is(r1.c1.indexOf(r1.open) >= 0, '코칭 포함 멘트에도 같은 자리에 들어간다');
-    is(r1.html.indexOf(r1.open) >= 0, '화면 대본(눈으로 보는 것)에도 들어간다');
+    is(r1.s2.indexOf(r1.open) >= 0 && r1.s2.indexOf(r1.bridge) >= 0, '② 첫 줄이 그 화제의 첫 마디 + 잇는 말이다');
+    is(r1.all.indexOf(r1.open) >= 0 && r1.all.indexOf(r1.open) < r1.intro, '자기소개보다 <b>앞</b>에 선다 (인사 다음 한마디)');
 
-    const r2 = await p.evaluate(() => {
+    const r2 = await p.evaluate((src) => {
       document.querySelector('.trend-tab[data-key="' + TA_TREND.list[2].key + '"]').click();
-      return { p1: document.getElementById('scriptOutput').dataset.plain.split('\n\n')[1], want: TA_TREND.list[2].open };
+      const a = document.getElementById('script').textContent;
+      return { has2: a.indexOf(TA_TREND.list[2].open) >= 0, has0: a.indexOf(TA_TREND.list[0].open) >= 0 };
     });
-    is(r2.p1.indexOf(r2.want) === 0, '다른 화제를 누르면 대본도 그 화제로 바뀐다');
+    is(r2.has2 && !r2.has0, '다른 화제를 누르면 대본도 그 화제로 바뀐다');
 
     const r3 = await p.evaluate(() => {
       document.querySelector('.trend-tab[data-key="none"]').click();
-      const plain = document.getElementById('scriptOutput').dataset.plain;
-      return TA_TREND.list.some(t => plain.indexOf(t.open) >= 0);
+      const a = document.getElementById('script').textContent;
+      return TA_TREND.list.some(t => a.indexOf(t.open) >= 0);
     });
     is(r3 === false, '「화제 없이」 면 대본에 화제가 안 들어간다');
     await p.reload({ waitUntil: 'load' }); await p.waitForTimeout(300);
-    const r4 = await p.evaluate(() => { setDB('analysis1'); renderScript();
-      return { on: (document.querySelector('.trend-tab.active') || {}).dataset.key,
-               has: TA_TREND.list.some(t => document.getElementById('scriptOutput').dataset.plain.indexOf(t.open) >= 0) }; });
+    const r4 = await p.evaluate(() => { TA_APP.setDB('analysis1');
+      const a = document.getElementById('script').textContent;
+      return { on: (document.querySelector('.trend-tab.active') || {}).dataset.key, has: TA_TREND.list.some(t => a.indexOf(t.open) >= 0) }; });
     is(r4.on === 'none' && !r4.has, '다시 열어도 「화제 없이」 선택이 남는다');
 
     console.log('\n[5] 화재보험 대본 · 낡음');
     const r5 = await p.evaluate(() => {
       document.querySelector('.trend-tab[data-key="' + TA_TREND.list[0].key + '"]').click();
-      setDB('ns'); renderScript();
-      const plain = document.getElementById('scriptOutput').dataset.plain;
-      return TA_TREND.list.some(t => plain.indexOf(t.open) >= 0);
+      TA_APP.setDB('ns');
+      const a = document.getElementById('script').textContent;
+      return TA_TREND.list.some(t => a.indexOf(t.open) >= 0);
     });
     is(r5 === false, '화재보험(NS) 문의 대본에는 화제를 넣지 않는다');
     const r6 = await p.evaluate(() => {
       const keep = TA_TREND.asOf;
-      const fresh = document.getElementById('trendStale').classList.contains('show');
       const d = new Date(); d.setDate(d.getDate() - TA_TREND.stale - 5);
-      TA_TREND.asOf = d.toISOString().slice(0, 10); renderTrend();
+      TA_TREND.asOf = d.toISOString().slice(0, 10); TA_APP.render();
       const stale = document.getElementById('trendStale');
-      const out = { on: stale.classList.contains('show'), t: stale.textContent, fresh };
-      TA_TREND.asOf = keep; renderTrend();
+      const out = { on: stale.classList.contains('show'), t: stale.textContent };
+      TA_TREND.asOf = keep; TA_APP.render();
       return out;
     });
     is(r6.on && /지났습니다/.test(r6.t), '기준일에서 ' + T.stale + '일이 넘으면 「낡았다」 고 말한다');
@@ -128,9 +133,9 @@ const srv = http.createServer((q, s) => {
     await ctx2.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.fallback() : r.fulfill({ status: 200, body: '' }));
     const p2 = await ctx2.newPage(); const e2 = []; p2.on('pageerror', e => e2.push(e.message));
     await p2.goto(U, { waitUntil: 'load' }); await p2.waitForTimeout(300);
-    const r7 = await p2.evaluate(() => { setDB('analysis1'); renderScript();
-      return { t: document.getElementById('trendBody').textContent, p1: document.getElementById('scriptOutput').dataset.plain.split('\n\n')[1] }; });
-    is(/읽지 못했습니다/.test(r7.t) && /보장분석표/.test(r7.p1), '못 읽었다고 말하고, 대본은 화제 없이 원래대로 선다');
+    const r7 = await p2.evaluate(() => { TA_APP.setDB('analysis1');
+      return { t: document.getElementById('trendBody').textContent, a: document.getElementById('script').textContent }; });
+    is(/읽지 못했습니다/.test(r7.t) && /쉽게 말씀드리면/.test(r7.a), '못 읽었다고 말하고, 대본은 화제 없이 원래대로 선다');
     is(e2.length === 0, '그때도 오류가 안 난다' + (e2.length ? ' ← ' + e2[0] : ''));
   } finally { await b.close(); srv.close(); }
   console.log(bad ? '\n✗ TA 첫 화제 — 고칠 자리 ' + bad + '곳' : '\n✓ TA 첫 화제 — 모두 통과');
