@@ -147,17 +147,28 @@ const SEED = () => {
   is(/cnSrcOf\(\)/.test(SRC.slice(SRC.indexOf("if(lay==='cta'){\n    return '<div class=\"cnw\">"), SRC.indexOf("if(lay==='cta'){\n    return '<div class=\"cnw\">") + 1200)) ||
      (SRC.match(/cnSrcOf\(\)/g) || []).length >= 3,
      '  <b>화면 미리보기</b>도 그것을 찍는다 — 두 곳이 같은 데 묻는다 (5번)');
+  /* ⚠ 처음에는 그 자리의 점을 세기만 했는데, 되돌림 ⑤(출처를 빼기)가
+     <b>안 울렸습니다</b> — 세던 칸에 아래 남색 띠가 걸쳐 있어 출처가 없어도
+     늘 칠해져 있었습니다. <b>있을 때와 없을 때를 견줍니다</b> — 그림이
+     달라져야 「찍혔다」 입니다 (8번).                                       */
   const 찍힘 = await pg.evaluate(() => {
-    const s = cardnewsSlides(); const i = s.length - 1;
-    const c = cnDrawSlide(s[i], i, s.length);
-    /* 캔버스 아래쪽 띠를 글자가 있는지로만 본다 — 글은 못 읽으니 픽셀로 */
-    const x = c.getContext('2d');
-    const d = x.getImageData(70, 1130, 500, 40).data;
-    let 칠해진 = 0;
-    for (let k = 0; k < d.length; k += 4) if (d[k] < 200 || d[k + 1] < 200 || d[k + 2] < 200) 칠해진++;
-    return 칠해진;
+    const 뜨기 = () => {
+      const s = cardnewsSlides(); const i = s.length - 1;
+      const c = cnDrawSlide(s[i], i, s.length);
+      const d = c.getContext('2d').getImageData(0, 1120, 1080, 38).data;
+      let 합 = 0;
+      for (let k = 0; k < d.length; k += 4) if (d[k] < 220 || d[k + 1] < 220 || d[k + 2] < 220) 합++;
+      return 합;
+    };
+    const 있을때 = 뜨기();
+    const 본래 = window.cnSrcOf; window.cnSrcOf = function () { return ''; };
+    const 없을때 = 뜨기();
+    window.cnSrcOf = 본래;
+    return { 있을때: 있을때, 없을때: 없을때 };
   });
-  is(찍힘 > 50, '  그 자리에 <b>실제로 글자가 찍혔다</b> — 칠해진 점 ' + 찍힘 + '개');
+  is(찍힘.있을때 > 찍힘.없을때 + 50,
+     '  그 자리에 <b>실제로 글자가 찍혔다</b> — 출처 있을 때 ' + 찍힘.있을때 +
+     '점 · 없을 때 ' + 찍힘.없을때 + '점');
   /* 출처가 없으면 빈손 — 지어내지 않는다 (1번) */
   const 빈손 = await pg.evaluate(() => {
     const 본래 = window.cardnewsPick;
