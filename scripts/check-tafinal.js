@@ -86,5 +86,13 @@ is(베낌.length === 0, '  거절 제목을 또 적지 않았다 — ' + (베낌
 is(TA.indexOf('내 CRM 원본 대본') < 0, '  옛 대본 보기를 지웠다 (사장님 말씀)');
 is(/id="printSheet"/.test(TA) && /function buildPrint\(/.test(TA), '  인쇄하면 A4 한 장 스크립트가 나온다');
 
+console.log('\n[7] 깔끔하게 · 글씨 크기 (판 X105 · 사장님 말씀 2026-10-14 「글씨도 단정하게 · 글씨 키우는 것도」)');
+/* 단계 안 거절은 <b>제목 단추 한 줄</b>이고, 멘트 미리보기를 또 늘어놓지 않는다 — 할 말은 누르면 팝업 하나에서 */
+is(/function brO\(id\)\{[^\n]*class="br" data-ob="'\+id\+'">'\+esc\(o\.title\)\+'<\/button>'/.test(TA) && TA.indexOf('멘트·평가 보기 ›') < 0,
+   '  단계 안 거절은 <b>제목 단추</b>만 — 멘트 미리보기 카드를 늘어놓지 않는다');
+is(/class="qall"/.test(TA) && /id="qfind"/.test(TA), '  오른쪽 거절 목록은 <b>자주 나오는 것만 펼치고</b> 나머지는 접기 · 찾기 칸이 있다');
+is(/id="fsz"/.test(TA) && /'ta_fsz'/.test(TA) && /\.app,#shB\{zoom:var\(--z,1\)\}/.test(TA), '  <b>글씨 크기</b> 단추(가- 가+)가 있고 이 기기에 기억한다');
+is(/\.cols\{grid-template-columns:minmax\(0,1fr\)\}/.test(TA), '  폰에서 대본 칸이 화면 밖으로 <b>안 밀린다</b> (가로 줄이 칸을 넓히지 않게)');
+
 console.log(bad ? '\n✗ TA 스크립트 새 판 — 고칠 자리 ' + bad + '곳' : '\n✓ TA 스크립트 새 판 — 표는 한 곳, 공감부터, 문을 열어 두고 마무리합니다');
 process.exit(bad ? 1 : 0);
