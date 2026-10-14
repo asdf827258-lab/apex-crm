@@ -161,36 +161,42 @@ const 글모음 = (t) => 마디.map(k => (t.say || {})[k] || '')
   p.on('pageerror', e => errs.push(String(e).slice(0, 160)));
   await p.goto('http://127.0.0.1:' + PORT + '/ta-script.html',
     { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await p.waitForFunction(() => !!document.getElementById('sayBody'), { timeout: 30000 });
-  await p.waitForTimeout(600);
+  /* 2026-10-14 — TA 스크립트를 새 화면으로 바꿨습니다. 메뉴 「🎙 TA 전체 대본」 은 그대로 #sayPanel 로 열고,
+     그러면 화제 대본(다섯 마디 + 그 화제 거절 둘)이 섭니다. 이름·두 자리는 상담 정보 칸이 채웁니다. */
+  await p.goto('http://127.0.0.1:' + PORT + '/ta-script.html#sayPanel', { waitUntil: 'load', timeout: 60000 });
+  await p.waitForFunction(() => !!document.getElementById('script') && !!window.TA_APP, { timeout: 30000 });
+  await p.waitForTimeout(1500);
   const hits0 = hits;
 
   console.log('\n[8] 🖥 화면에 <b>다섯 마디가 차례대로</b> 서고 칸이 채워진다');
   const V = await p.evaluate(() => {
     const set = (id, v) => { const e = document.getElementById(id); e.value = v;
       e.dispatchEvent(new Event('input', { bubbles: true })); };
-    set('customer', '홍길동'); set('agent', '홍길순');
-    set('slot1', '목요일 오전 10시'); set('slot2', '토요일 오후 3시');
-    const t = (document.getElementById('sayBody').innerText || '').replace(/\s+/g, ' ');
-    return { 글: t, 칸: document.querySelectorAll('#sayBody .detail-box').length,
-             물음: (t.match(/\?/g) || []).length,
-             차례: ['① 여는 말', '② 이득', '③ 내가 할 일', '④ 양자택일', '⑤ 못 정하실 때']
-               .map(x => t.indexOf(x)), 단추: !!document.getElementById('copySay') };
+    if (TA_APP.state.trend === 'none') TA_APP.setTrend(TA_TREND.list[0].key);
+    set('i_c', '홍길동'); set('i_me', '홍길순');
+    set('i_s1', '목요일 오전 10시'); set('i_s2', '토요일 오후 3시');
+    const box = document.getElementById('script');
+    const t = (box.innerText || '').replace(/\s+/g, ' ');
+    const 마디글 = [...box.querySelectorAll('.st .me')].map(e => e.textContent).join(' ');
+    return { 글: t, 칸: box.querySelectorAll('.st').length + box.querySelectorAll('.br').length,
+             물음: (마디글.match(/\?/g) || []).length,
+             차례: ['여는 말', '이득', '할 일', '양자택일', '못 정하실 때'].map(x => t.indexOf(x)),
+             단추: !!document.getElementById('copyScript'), 화제: TA_APP.state.view };
   });
+  is(V.화제 === 'trend', '  메뉴 주소(#sayPanel)로 열면 <b>화제 대본</b>이 선다');
   is(V.칸 >= 7, '  칸이 <b>다섯 마디 + 거절 둘</b>이다 — ' + V.칸 + '개');
   is(V.차례.every((n, i) => n >= 0 && (i === 0 || n > V.차례[i - 1])),
      '  ★ 다섯 마디가 <b>차례대로</b> 선다 — ' + JSON.stringify(V.차례));
   is(/홍길동님/.test(V.글) && /홍길순입니다/.test(V.글),
      '  ★ <b>고객 이름과 내 이름이 따로</b> 채워진다 (한 자가 채웁니다 · 5번)');
   is(/목요일 오전 10시와 토요일 오후 3시/.test(V.글),
-     '  ★ 두 자리가 <b>와/과까지 맞게</b> 들어간다 — ' +
-     ((V.글.match(/목요일[^,]*,/) || [''])[0]));
-  is(V.물음 === 0, '  ★★ 화면에도 물음표가 <b>없다</b> — ' + V.물음 + '개');
-  is(V.단추, '  <b>대본 전체 복사</b> 단추가 있다');
+     '  ★ 두 자리가 <b>와/과까지 맞게</b> 들어간다 — ' + ((V.글.match(/목요일[^,]*,/) || [''])[0]));
+  is(V.물음 === 0, '  ★★ 다섯 마디에 물음표가 <b>없다</b> — ' + V.물음 + '개');
+  is(V.단추, '  <b>멘트 복사</b> 단추가 있다');
   const W = await p.evaluate(() => {
-    const i = document.getElementById('slot1'); i.value = '내일 오전';
+    const i = document.getElementById('i_s1'); i.value = '내일 오전';
     i.dispatchEvent(new Event('input', { bubbles: true }));
-    return (document.getElementById('sayBody').innerText || '').match(/내일 오전[와과]/)[0];
+    return ((document.getElementById('script').innerText || '').match(/내일 오전[와과]/) || [''])[0];
   });
   is(W === '내일 오전과', '  ★ 받침이 있으면 <b>과</b>로 읽힌다 — ' + W);
 
