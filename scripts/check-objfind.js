@@ -276,8 +276,17 @@ const 보이는수 = (p, sel) => p.evaluate(s => [].slice.call(document.querySel
   is(!!꼴 && 꼴.제목 >= 꼴.몸글 * 2,
      '  ★★ <b>고객의 거절이 크게</b> 보인다 — 제목 ' + (꼴?꼴.제목:0) + 'px · 몸글 ' + (꼴?꼴.몸글:0) + 'px (사장님 말씀)');
   is(!!꼴 && 꼴.제목짙나, '  ★ 제목에 <b>짙은 띠</b>가 깔려 종이를 넘기며 찾힌다 — ' + (꼴?꼴.제목바탕:'-'));
-  is(!!꼴 && 꼴.안잘림 === 'avoid',
-     '  ★★ 한 거절이 <b>단 사이에서 안 잘린다</b> — 꼬리만 남으면 어느 거절 것인지 모릅니다');
+  /* ⚠ ★★ 판 X118 에서 <b>통째로</b>(avoid) 두었다가 X119 에서 되돌렸습니다 —
+     뽑아 보니 머리글 뒤 첫 칸이 밀려 <b>2쪽이 거의 백지</b>였고 31 → 35쪽이
+     되었습니다. 「칸이 맞나」 는 꼴로 묻지 않고 <b>쪽수를 직접 세어</b> 묻습니다. */
+  const 쪽수 = await (async () => {
+    await p3.emulateMedia({ media: 'print' });
+    const buf = await p3.pdf({ format: 'A4', margin: { top:'6mm', bottom:'6mm', left:'7mm', right:'7mm' }, printBackground: true });
+    await p3.emulateMedia({ media: 'screen' });
+    return (buf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+  })();
+  is(쪽수 >= 20 && 쪽수 <= 33,
+     '  ★★ 뽑으면 <b>' + 쪽수 + '쪽</b>이다 — 20~33쪽 (칸을 통째로 묶으면 빈 쪽이 생겨 35쪽이 됩니다 · 줄어들면 글이 빠진 것입니다)');
   is(!!꼴 && 꼴.세칸 === 2, '  ★ 코칭·피해야 할 표현이 <b>두 칸</b>이다 — 좁은 단에 셋은 안 들어갑니다 (지금 ' + (꼴?꼴.세칸:0) + '칸)');
   is(!!꼴 && 꼴.마무리한줄, '  ★ 마무리 기준은 <b>한 줄 통째</b>로 깔린다');
   is(안읽힘.수 === 0,
