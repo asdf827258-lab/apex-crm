@@ -172,13 +172,83 @@ const 보이는수 = (p, sel) => p.evaluate(s => [].slice.call(document.querySel
     const 글 = ps.innerText || ps.textContent || '';
     const names = (window.APEX_STAGE && APEX_STAGE.objList) ? APEX_STAGE.objList().map(o => o.title) : [];
     const 빠진 = names.filter(x => x && 글.indexOf(x) < 0);
-    return { 칸: ps.querySelectorAll('.po').length, 표: names.length, 빠진: 빠진.length, 빠진것: 빠진.slice(0, 4),
+    return { 칸: ps.querySelectorAll('.pobj').length,   /* 판 X116 — 칸 이름이 .po → .pobj (화면 칸을 통째로 씁니다) */ 표: names.length, 빠진: 빠진.length, 빠진것: 빠진.slice(0, 4),
              앞장: /보장분석 TA 연속 스크립트/.test(글), 머리: /거절처리 전부/.test(글) };
   });
   is(pr.빠진 === 0,
      '  ★★ 표에 있는 거절 <b>' + pr.표 + '가지가 모두</b> 인쇄에 나간다 — 빠진 것 ' + pr.빠진 + '가지' +
      (pr.빠진 ? ('\n      ✗ ' + pr.빠진것.join(' · ')) : '') + ' (전에는 ' + 전.인쇄거절 + '가지만 나갔습니다)');
   is(pr.칸 >= pr.표, '  거절 칸이 <b>' + pr.칸 + '개</b> 짜였다 (화제를 고르면 그 둘도 같이)');
+
+  /* ── 판 X116 — 사장님 말씀 「거절처리를 순서대로 쫙 해줬는데 … 인쇄만 하면
+     <b>단축</b>되는데 … <b>인쇄 버전 똑같이</b> 나오게 체크해」 ─────────────
+     ⚠ 제가 인쇄를 <b>네 줄</b>(제목 · 첫 한마디 · 넘기는 말 · 멈출 자리)로 줄여
+       찍고 있었습니다 — 속마음 · 이어가기 · 4단 멘트 · 재반응별 대답 · 다음
+       타이밍 · 코칭 · 피해야 할 표현 · 평가가 통째로 빠졌습니다.
+     ★★ 이제 <b>화면의 글이 종이에 한 조각도 안 빠지는지</b> 를 묻습니다 —
+       화면에서 그 거절을 열어 글을 받아, 인쇄본 글에 <b>전부 들어 있는지</b>
+       낱말 단위로 맞춰 봅니다. 줄여서 찍으면 그 자리에서 빨간불입니다. */
+  const 같나 = await p3.evaluate(() => {
+    const ids = (window.APEX_STAGE && APEX_STAGE.objList) ? APEX_STAGE.objList().map(o => 'k_' + o.key) : [];
+    const 뽑기 = [ids[0], ids[Math.floor(ids.length/2)], ids[ids.length-1]].filter(Boolean);
+    const ps = document.getElementById('printSheet');
+    const 종이 = (ps.innerText || ps.textContent || '').replace(/\s+/g, '');
+    const out = [];
+    뽑기.forEach(id => {
+      const box = document.createElement('div');
+      box.innerHTML = (typeof objDetail === 'function') ? '' : '';
+      /* 화면 칸을 그대로 쓴다 — 거절처리 탭의 자리에 그려 본다 */
+      const d = document.getElementById('objDetail');
+      const keep = d.innerHTML;
+      const b = document.querySelector('[data-ob2="' + id + '"]');
+      if (b) b.click();
+      [].slice.call(d.querySelectorAll('details')).forEach(x => x.open = true);
+      const 화면 = (d.innerText || '').replace(/\s+/g, '');
+      d.innerHTML = keep;
+      /* 낱말(6자 이상)로 견준다 — 짧은 토막은 우연히 맞을 수 있습니다 */
+      const 조각 = (d0 => d0)(화면).match(/[가-힣]{6,}/g) || [];
+      const 안든 = 조각.filter(w => 종이.indexOf(w) < 0);
+      out.push({ id: id, 조각: 조각.length, 안든: 안든.length, 보기: 안든.slice(0, 3) });
+    });
+    return out;
+  });
+  같나.forEach(r => {
+    is(r.조각 >= 10 && r.안든 === 0,
+       '  ★★ <b>' + r.id + '</b> — 화면 글 ' + r.조각 + '조각이 <b>종이에 전부</b> 있다 (안 든 것 ' + r.안든 + ')' +
+       (r.안든 ? ('\n      ✗ ' + r.보기.join(' · ')) : ''));
+  });
+  const 접힘 = await p3.evaluate(() => {
+    const ps = document.getElementById('printSheet');
+    const d = ps.querySelectorAll('details');
+    return { 수: d.length, 닫힌것: [].slice.call(d).filter(x => !x.open).length };
+  });
+  is(접힘.수 > 0 && 접힘.닫힌것 === 0,
+     '  ★ 종이에서는 <b>접힌 칸이 없다</b> — 누를 수가 없으니 펴서 찍습니다 (' + 접힘.수 + '칸)');
+  /* ⚠ ★ 처음에 열쇠를 <b>ta_script_v3</b> 로 적었는데 이 화면은 <b>ta_final_v1</b>
+     을 씁니다 — 둘 다 없는 값(null)이라 <b>null === null</b> 로 늘 통과하는
+     <b>안 울리는 알람</b>이었습니다(되돌림 C 가 안 울려서 알았습니다 · 8번).
+     열쇠를 <b>화면에게 물어</b> 쓰고, 값을 <b>먼저 심어</b> 둡니다. */
+  const 안덮나 = await p3.evaluate(() => {
+    const K = (typeof KEY !== 'undefined') ? KEY : 'ta_final_v1';
+    const 읽기 = () => { try { return JSON.parse(localStorage.getItem(K) || '{}').obj || null; } catch(e){ return null; } };
+    /* 「지금 보고 있는 거절」 을 분명히 하나 심는다 */
+    const 첫 = document.querySelector('#objGrid [data-ob2]');
+    if (첫) 첫.click();
+    const 전 = 읽기();
+    /* ⚠ ★ buildPrint() 를 그냥 부르면 <b>봉투(IIFE) 안이라 안 보여</b> 조용히
+       넘어갑니다(try/catch 가 삼킵니다) — 되돌림이 또 안 울렸습니다. 브라우저가
+       인쇄할 때와 <b>같은 길</b>로, beforeprint 를 실제로 쏩니다 (8번). */
+    const ps = document.getElementById('printSheet');
+    ps.innerHTML = '';
+    window.dispatchEvent(new Event('beforeprint'));
+    const 짜였나 = ps.innerHTML.length > 1000;
+    const 후 = 읽기();
+    return { 같나: 전 === 후 && !!전, 전: 전, 후: 후, 짜였나: 짜였나 };
+  });
+  is(안덮나.짜였나, '  ★ 인쇄 직전(beforeprint)에 <b>인쇄본이 다시 짜인다</b> — 빈 채로 나가지 않습니다');
+  is(안덮나.같나,
+     '  ★★ 인쇄본을 짜도 <b>보고 계시던 거절을 안 덮는다</b> — ' + 안덮나.전 + ' → ' + 안덮나.후 +
+     ' (30가지를 차례로 그립니다 · objDetail 의 quiet)');
   is(pr.머리, '  <b>「거절처리 전부」</b> 머리글이 있다');
   is(pr.앞장, '  ★ <b>앞장(A4 한 장)은 그대로</b>다 — 뒤에 붙였을 뿐입니다 (6번)');
   is(/\.ps-objs\{break-before:page/.test(SRC), '  거절은 <b>새 쪽에서</b> 시작한다');
