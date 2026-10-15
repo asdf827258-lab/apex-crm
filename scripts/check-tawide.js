@@ -238,6 +238,24 @@ const 열기 = async (ctx, tab) => {
      '  ★★ <b>메뉴를 접으면 틀도 확 넓어진다</b> — ' + 펴짐.틀폭 + ' → <b>' + 접힘.틀폭 +
      'px</b> (전에는 ' + 전.틀폭 + ' → ' + 전.틀폭 + ' 으로 <b>아무 일도 안 일어났습니다</b>)');
 
+  /* ★ 사장님 말씀 (2026-10-15) 「<b>펴둬</b>」 — 메뉴를 접으면 <b>글 화면도</b>
+     넓어지나 (판 X113). 지금은 메뉴가 접힌 채입니다. */
+  const 글판 = async () => { await 본.evaluate(() => { try { go('home'); } catch(e){} });
+    await 본.waitForTimeout(1000);
+    return 본.evaluate(() => { const pane = document.querySelector('#dynPane .tab-pane');
+      return { 폭: pane ? Math.round(pane.getBoundingClientRect().width) : 0,
+               wide: !!(pane && pane.classList.contains('wide')),
+               넘침: document.documentElement.scrollWidth }; }); };
+  const 글접힘 = await 글판();
+  await 본.evaluate(() => { try { navFoldToggle(); } catch(e){} });
+  await 본.waitForTimeout(1200);
+  const 글펴짐 = await 글판();
+  is(!글접힘.wide && !글펴짐.wide,
+     '  글 화면은 <b>wide 를 안 입는다</b> — 평소에는 1,080px 로 묶습니다(글만 있는 화면은 줄이 길면 못 읽습니다)');
+  is(글접힘.폭 >= 글펴짐.폭 + 200,
+     '  ★★ <b>메뉴를 접으면 글 화면도 넓어진다</b> (사장님 말씀 「펴둬」) — ' + 글펴짐.폭 + ' → <b>' + 글접힘.폭 + 'px</b>');
+  is(글접힘.넘침 <= 1440, '  넓어져도 <b>가로로 안 샌다</b> — ' + 글접힘.넘침 + 'px');
+
   head('[7] <b>폭을 아는 자리가 하나</b>이고, 거절 목록이 처음부터 펴져 있다');
   const IDX = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
   const 날 = IDX.replace(/\/\*[\s\S]*?\*\//g, '');     /* 쪽지는 뺍니다 */
