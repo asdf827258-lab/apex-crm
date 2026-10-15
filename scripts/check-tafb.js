@@ -56,7 +56,12 @@ const 날 = SRC.replace(/\/\*[\s\S]*?\*\//g, '');     /* 쪽지는 뺍니다 */
     return { 화면: +(document.body.scrollHeight / 900).toFixed(2),
              코치: 봄('.coach'), 속마음: 봄('.heart'), 타이밍: 봄('.timing'),
              읽는말: 봄('.st'), 거절줄: 봄('.objrow'),
-             이름: b ? b.textContent.trim() : '(단추 없음)',
+             /* ⚠ 판 X115 에서 단추가 <i>아이콘</i>+<span>글자</span> 로 나뉘었습니다 —
+                폰에서 글자를 접어도 무엇인지 보이게 하려고입니다. 그래서
+                <b>글자 칸</b>을 읽습니다(아이콘은 따로 묻습니다). */
+             이름: (document.getElementById('fbTxt') || b || {}).textContent ?
+                   (document.getElementById('fbTxt') || b).textContent.trim() : '(단추 없음)',
+             아이콘: !!(b && b.querySelector('i')),
              어둡나: !!(b && b.classList.contains('off')),
              /* ★ 클래스만 보면 <b>안 울리는 알람</b>입니다 — 어두운 꼴을 지워도
                 클래스는 그대로 붙습니다(되돌림 D 가 그래서 안 울렸습니다 · 8번).
@@ -71,11 +76,24 @@ const 날 = SRC.replace(/\/\*[\s\S]*?\*\//g, '');     /* 쪽지는 뺍니다 */
   head('[1] 위 띠에 단추 <b>둘</b>이 선다 — 🖨 인쇄 · 💬 피드백');
   const A = await 재기();
   is(A.보이나, '  💬 피드백 단추가 <b>눈에 보인다</b> — 「' + A.이름 + '」');
-  is(A.이름 === '💬 피드백 끄기', '  처음에는 <b>켜져</b> 있고 단추는 <b>끄기</b>를 가리킨다 — 「' + A.이름 + '」');
+  is(A.이름 === '피드백 끄기', '  처음에는 <b>켜져</b> 있고 단추는 <b>끄기</b>를 가리킨다 — 「' + A.이름 + '」');
+  is(A.아이콘, '  ★ 단추에 <b>아이콘</b>이 남아 있다 — 폰에서는 글자를 접고 아이콘만 섭니다 (판 X115)');
   is(A.인쇄자리 === 2, '  🖨 인쇄를 <b>누를 자리가 둘</b>이다(위 띠 · 상담 정보 칸) — ' + A.인쇄자리 + '곳');
   const 띠 = SRC.slice(SRC.indexOf('<header class="top">'), SRC.indexOf('</header>'));
   is(/id="fbBtn"/.test(띠) && /data-act="print"/.test(띠), '  둘이 <b>위 띠 안</b>에 있다 — 화면을 옮겨도 늘 보인다');
-  is((띠.match(/class="tbtn noprint"/g) || []).length === 2, '  둘 다 <b>인쇄에는 안 나간다</b>(noprint)');
+  /* ⚠ 전에는 class 글자에 noprint 가 붙었나로 물었습니다 — 판 X115 에서 단추를
+     noprint 묶음(.tools) 안으로 옮기자 글자가 사라져 빨간불이 켜졌습니다.
+     <b>묻는 것은 꼴이 아니라 「인쇄에서 안 보이나」</b> 입니다 — 그렇게 잽니다 (8번). */
+  await p.emulateMedia({ media: 'print' });
+  await p.waitForTimeout(300);
+  const 인쇄에 = await p.evaluate(() => {
+    const b = document.getElementById('fbBtn'), pr = document.querySelector('[data-act="print"]');
+    const 숨 = e => !e || e.getClientRects().length === 0;
+    return 숨(b) && 숨(pr);
+  });
+  await p.emulateMedia({ media: 'screen' });
+  await p.waitForTimeout(200);
+  is(인쇄에, '  ★ 둘 다 <b>인쇄에는 안 나온다</b> — 인쇄 판으로 바꿔 놓고 재었습니다');
 
   head('[2] 인쇄는 <b>하는 일이 한 곳</b>이다 (5번)');
   is((날.match(/window\.print\(\)/g) || []).length === 1,
@@ -104,7 +122,7 @@ const 날 = SRC.replace(/\/\*[\s\S]*?\*\//g, '');     /* 쪽지는 뺍니다 */
      '  ★ <b>한눈에 더 들어온다</b> — 통화 탭 ' + A.화면 + ' → <b>' + B.화면 + ' 화면</b>');
 
   head('[4] <b>끈 것이 보이고</b>, 되돌릴 길이 있다 (6번)');
-  is(B.이름 === '💬 피드백 켜기', '  단추 이름이 <b>켜기</b>로 바뀐다 — 「' + B.이름 + '」');
+  is(B.이름 === '피드백 켜기', '  단추 이름이 <b>켜기</b>로 바뀐다 — 「' + B.이름 + '」');
   is(B.어둡나 && B.단추색 !== A.단추색,
      '  ★ 단추가 <b>눈에 다르게</b> 서서 접혀 있다는 것이 보인다 — ' + A.단추색 + ' → ' + B.단추색);
   await p.click('#fbBtn');
@@ -124,7 +142,7 @@ const 날 = SRC.replace(/\/\*[\s\S]*?\*\//g, '');     /* 쪽지는 뺍니다 */
   await p.reload({ waitUntil: 'domcontentloaded' });
   await p.waitForTimeout(1600);
   const D = await 재기();
-  is(D.이름 === '💬 피드백 켜기' && D.코치 === 0, '  다시 열어도 <b>접힌 채</b>다 — 「' + D.이름 + '」 · 코치 ' + D.코치);
+  is(D.이름 === '피드백 켜기' && D.코치 === 0, '  다시 열어도 <b>접힌 채</b>다 — 「' + D.이름 + '」 · 코치 ' + D.코치);
   is(/S\.fb/.test(날) && /persist\(\)/.test(날), '  이 기기(localStorage)에만 담는다 — 서버를 안 부른다 (3번·7번)');
 
   head('[6] <b>묻는 곳이 하나</b>다 (5번)');

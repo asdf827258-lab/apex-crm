@@ -112,8 +112,12 @@ const 보이는수 = (p, sel) => p.evaluate(s => [].slice.call(document.querySel
   head('[3] 폰 — 아래 띠 <b>쪽지</b>에서도 바로 찾는다');
   await p1.evaluate(() => document.querySelector('#tabs .tab[data-t="call"]').click());
   await p1.waitForTimeout(600);
-  const 띠 = await 보이는수(p1, '#qbar [data-qb]');
-  is(띠 === 3, '  아래 띠가 <b>서 있다</b> — 단추 ' + 띠 + '개');
+  /* ⚠ 판 X115 에서 아래 띠가 바뀌었습니다 — 자주 나오는 거절 여섯이 <b>한 번에</b>
+     눌리도록 띠에 직접 섰습니다(전에는 「거절 나왔어요」 → 쪽지 → 고르기 두 번). */
+  const 띠전부 = await 보이는수(p1, '#qbar button');
+  const 띠거절 = await 보이는수(p1, '#qbar [data-ob]');
+  is(띠전부 >= 8, '  아래 띠가 <b>서 있다</b> — 단추 ' + 띠전부 + '개');
+  is(띠거절 >= 6, '  ★★ 자주 나오는 거절 <b>' + 띠거절 + '가지가 띠에서 바로</b> 눌린다 (판 X115)');
   await p1.evaluate(() => document.querySelector('[data-qb="obj"]').click());
   await p1.waitForTimeout(700);
   const s1 = await p1.evaluate(() => ({ 찾는칸: !!document.getElementById('shFind'),
