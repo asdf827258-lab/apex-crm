@@ -69,7 +69,13 @@ const 초록꼴 = 'background:var(--t-pos-l);border-color:#BBF7D0;color:var(--t-
 (async () => {
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
-  const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
+  const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+  /* ★ <b>바깥을 막습니다</b> — 점검이 사장님 진짜 서버를 읽지 않습니다.
+     막은 것은 <b>끊습니다</b>(abort) — 기다리게 두면 돌릴 때마다 다른
+     순간을 재게 됩니다. check-netblock 이 이 자리를 봅니다. */
+  await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0
+                                  ? r.continue() : r.abort());
+  const p = await ctx.newPage();
   const errs = []; p.on('pageerror', e => errs.push('' + (e && e.message)));
   await p.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
   await p.waitForTimeout(2200);
