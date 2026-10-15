@@ -410,6 +410,13 @@ details.why3 .gi{background:#fff}
   .one .tx{font-size:20px}
   .emerg{grid-template-columns:1fr 1fr}
   .endcall{grid-template-columns:1fr}
+  /* ⚠ ★★ 폰에서 위 띠가 <b>가로로 삐져나왔습니다</b> — 390px 화면에서 문서가
+     448px 이 되었습니다(판 X113 에서 단추 둘을 넣은 탓입니다. 자가 잡아
+     주었습니다 · 8번). 띠를 <b>두 줄로 접고</b> 단추를 한 치 줄입니다 —
+     지우지 않습니다 (6번). */
+  .brand{flex-wrap:wrap;row-gap:8px}
+  .brand .sp{flex:1 0 100%;height:0}
+  .tbtn{padding:8px 10px;font-size:12.5px}
 }
 /* ── 11차: 깔끔하게 (2026-10-14) ── */
 body{letter-spacing:-.2px}
@@ -468,6 +475,19 @@ body{letter-spacing:-.2px}
 .fsz button:hover{background:var(--g100)}
 .fsz button[data-z="-"]{font-size:13px} .fsz button[data-z="+"]{font-size:17px}
 .fsz span{min-width:46px;text-align:center;font-size:12px;font-weight:700;color:var(--g500)}
+/* ── 위 띠 단추 — 🖨 인쇄 · 💬 피드백 (판 X113) ────────────────────────
+   사장님 말씀 (2026-10-15) — 「인쇄 버튼과, <b>피드백 off 버튼</b> 만들어서
+     꺼서 <b>한눈에</b> 들어오게 만들어」.
+   꼴은 글씨 크기(.fsz)와 <b>같은 옷</b>입니다 — 새 옷을 안 만듭니다 (5번). */
+.tbtn{white-space:nowrap;border:0;background:#fff;border-radius:12px;padding:9px 12px;cursor:pointer;
+      font:inherit;font-size:13px;font-weight:800;color:var(--g700);box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.tbtn:hover{background:var(--g100)}
+/* 끈 동안은 단추가 <b>어둡게</b> 섭니다 — 무언가 접혀 있다는 것이 보여야 합니다 (1번·6번) */
+.tbtn.off{background:var(--g900);color:#fff}
+/* ★★ 피드백을 끄면 <b>저에게 하는 말</b>만 접습니다 — 코치 한마디 · 고객
+   속마음 · 넘어가는 타이밍. <b>고객에게 읽는 말은 한 줄도 안 접습니다.</b>
+   지우는 것이 아니라 접는 것이고, 다시 켜면 그대로 섭니다 (6번). */
+body.fb-off .coach,body.fb-off .heart,body.fb-off .timing{display:none!important}
 .app,#shB{zoom:var(--z,1)}
 .sticky{top:calc(132px / var(--z,1))}
 @media (min-width:901px){ .qbar{display:none} }
@@ -528,6 +548,8 @@ body{letter-spacing:-.2px}
       <div><h1>☎️ TA 스크립트</h1><p>스크립트 · 거절처리 · 문자/카톡 · 평가를 한 곳에서</p></div>
       <span class="sp"></span>
       <div class="fsz noprint" id="fsz" title="글씨 크기"><button data-z="-" aria-label="글씨 작게">가-</button><span id="fszV">보통</span><button data-z="+" aria-label="글씨 크게">가+</button></div>
+      <button class="tbtn noprint" id="fbBtn" type="button" data-act="fb">💬 피드백 끄기</button>
+      <button class="tbtn noprint" type="button" data-act="print" title="A4 한 장으로 인쇄합니다 — 통화 대본이 나갑니다">🖨 인쇄</button>
     </div>
     <div class="ctx">
       <button class="pick" id="pkDb"><small>DB</small><b id="pkDbV"></b></button>
@@ -581,7 +603,7 @@ body{letter-spacing:-.2px}
           </div>
           <div class="row noprint">
             <button class="btn gray sm" id="copyScript">멘트 복사</button>
-            <button class="btn gray sm" onclick="window.print()">A4 한 장 인쇄</button>
+            <button class="btn gray sm" data-act="print">A4 한 장 인쇄</button>
           </div>
         </div>
         <div class="trow" id="trendTabs"></div><div class="tstale" id="trendStale"></div><div id="trendBody" class="small muted"></div>
@@ -1391,6 +1413,12 @@ document.addEventListener('click', function(e){
       var ps=m.querySelectorAll('.sl'); copy(ps.length ? Array.prototype.map.call(ps, function(x){ return x.textContent.trim(); }).join('\n') : m.textContent, b); return; }
   if((b=t.closest('[data-copygain]'))){ var gp=b.closest('.gp'); copy(Array.prototype.map.call(gp.querySelectorAll('.gi span, .empbox, .fact p, .pick2'), function(x){ return x.textContent.replace(/^예를 들면 · /,''); }).join('\n\n'), b); return; }
   if((b=t.closest('[data-fatal]'))){ S.fatal[b.dataset.fatal]=b.checked; persist(); scoreEval(); return; }
+  /* 🖨 인쇄 · 💬 피드백 (판 X113) — onclick 을 안 씁니다. 이 파일의 JS 는
+     봉투(IIFE) 안에 있어 밖에서 안 보입니다(실제로 「taFbToggle is not
+     defined」 로 터졌습니다). 이 파일이 쓰던 방식 그대로 <b>여기 한 곳</b>에서
+     받아 가릅니다 (5번). */
+  if((b=t.closest('[data-act="print"]'))){ taPrint(); return; }
+  if((b=t.closest('[data-act="fb"]'))){ taFbToggle(); return; }
   if((b=t.closest('[data-msg]'))){ S.msg=b.dataset.msg; persist(); renderMsg(); return; }
   if((b=t.closest('[data-go]'))){ S.msg=b.dataset.go==='no'?'soft':b.dataset.go; persist(); go('msg'); renderMsg(); return; }
   if((b=t.closest('[data-setdb]'))){ S.db=b.dataset.setdb; persist(); closeSheet(); renderAllPages(); toast(DB().label+'로 바꿨어요'); return; }
@@ -1476,6 +1504,27 @@ function applyFsz(){ document.documentElement.style.setProperty('--z', FSZ[fszI]
 $('fsz').addEventListener('click', function(e){ var b=e.target.closest('[data-z]'); if(!b) return;
   fszI = Math.max(0, Math.min(FSZ.length-1, fszI + (b.dataset.z==='+'?1:-1))); applyFsz(); });
 applyFsz();
+/* ══ 🖨 인쇄 · 💬 피드백 (판 X113 · 사장님 말씀 2026-10-15) ═══════════════
+   ★ 인쇄는 <b>하는 일이 한 곳</b>입니다 — 누르는 자리는 둘(위 띠 · 상담 정보
+     칸)이지만 둘 다 taPrint() 를 부릅니다 (5번). 나가는 것은 A4 한 장
+     대본이고, 피드백을 끈 것과 <b>무관</b>합니다(인쇄본은 따로 짭니다).
+   ★ 「지금 켜져 있나」 를 <b>묻는 곳도 하나</b>입니다 — taFbOn(). 두 곳에서
+     각자 세면 단추와 화면이 다른 말을 합니다 (5번의 그 알람 사고).
+   ★ 재어 본 것 — 통화 탭 4.86 → <b>3.87 화면</b>(1440×900). 접히는 것은
+     코치 9 · 속마음 5 · 타이밍 4 조각입니다.                              */
+function taPrint(){ window.print(); }
+function taFbOn(){ return S.fb !== false; }
+function taFbName(){ return taFbOn() ? '💬 피드백 끄기' : '💬 피드백 켜기'; }
+function taFbApply(){
+  document.body.classList.toggle('fb-off', !taFbOn());
+  var b = $('fbBtn'); if(!b) return;
+  b.textContent = taFbName();
+  b.classList.toggle('off', !taFbOn());
+  b.title = taFbOn() ? '코치 한마디 · 고객 속마음 · 넘어가는 타이밍을 접습니다 — 고객에게 읽는 말만 남습니다'
+                     : '접어 둔 코치 한마디 · 고객 속마음 · 넘어가는 타이밍을 다시 폅니다';
+}
+function taFbToggle(){ S.fb = !taFbOn(); persist(); taFbApply(); toast(taFbOn()?'피드백을 폈어요':'피드백을 접었어요 — 고객에게 읽는 말만 남습니다'); }
+taFbApply();
 function qFilter(){ var q=(($('qfind')||{}).value||'').replace(/\s+/g,''); var box=$('qobj'); if(!box) return;
   Array.prototype.forEach.call(box.querySelectorAll('button[data-ob]'), function(b){ b.classList.toggle('hide', !!q && b.textContent.replace(/\s+/g,'').indexOf(q)<0); });
   var d=box.querySelector('.qall'); if(d && q) d.open=true; }
