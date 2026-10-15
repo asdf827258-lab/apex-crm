@@ -22,6 +22,22 @@
      ③ 가로를 넓혀도 <b>글줄은 안 늘어난다</b> — 말풍선이 읽기 좋은 폭에서 멈춘다
      ④ <b>폰에서 안 깨진다</b> — 가로로 삐져나오지 않는다
      ⑤ <b>글·가짓수가 그대로</b>다 — 「디자인만」 이라는 말씀을 지킨다
+
+   ── 판 X112 (2026-10-15) 에서 늘렸습니다 ───────────────────────────
+   사장님 말씀 — 「펴 둬 그리고 <b>가로 버전 되었는지 확인해</b> 왼쪽 카테고리
+     메뉴 접어두면 <b>확 늘어나야 되는데, 안된다</b>」.
+
+   ★★ 재어 보니 <b>말씀이 맞았습니다</b>. 판 X110 은 <b>홀로 선 화면</b>에서만
+     넓어졌습니다 — 본체 안에서는 이 화면이 <b>틀(iframe)</b> 로 열리는데,
+     .tab-pane 이 <b>1,080px</b> 로 묶여 있어 틀이 <b>1,026px</b> 였고
+     <b>메뉴를 접어도 1,026px 그대로</b> 였습니다(본문은 1,172 → 1,440 으로
+     넓어지는데 판이 안 늘어납니다). 게다가 X110 의 넓은 판은 중단점
+     <b>min-width:1240px</b> 에 걸려 있어 1,026px 틀 안에서는 <b>아예 안 섰고</b>,
+     거절이 <b>4열</b>이었습니다 — 홀로 선 화면의 7열을 사장님은 못 보신 것입니다.
+
+     ⑥ ★★ <b>본체 안에서도</b> 넓다 — 틀 폭 · 메뉴를 접으면 늘어난다
+     ⑦ ★★ 넓은 판이 <b>중단점에 안 매달린다</b> — 틀 폭에서도 선다
+     ⑧ 「나머지 N가지 보기」가 <b>처음부터 펴져</b> 있다 (「펴 둬」)
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -40,7 +56,11 @@ function serve() {
   }).listen(PORT);
 }
 /* 손대기 전 눈금 — 이보다 나빠지면 빨간불입니다 (0-1번) */
-const 전 = { 빈가로: 320, 통화: 5.40, 거절탭: 3.26, 거절열: 5 };
+const 전 = { 빈가로: 320, 통화: 5.40, 거절탭: 3.26, 거절열: 5,
+  /* 판 X112 · 2026-10-15 에 <b>본체 안에서</b> 재어 본 것 — 홀로 선 화면과
+     다릅니다. 틀이 1,026px 에 묶여 거절이 4열이었고, 메뉴를 접어도
+     틀 폭이 <b>1,026 그대로</b> 였습니다. */
+  틀폭: 1026, 틀거절열: 4 };
 
 const 열기 = async (ctx, tab) => {
   const pg = await ctx.newPage();
@@ -92,6 +112,16 @@ const 열기 = async (ctx, tab) => {
   is(o.열 > 전.거절열, '  한 줄에 <b>' + o.열 + '개</b> 선다 — 전에는 ' + 전.거절열 + '개');
   is(o.다보이나, '  <b>스크롤 없이 전부</b> 보인다 — 맨 아래 칸이 ' + o.맨아래 + 'px (화면 900px)');
   is(o.탭높이 < 전.거절탭, '  거절처리 탭도 짧아졌다 — ' + o.탭높이 + ' 화면 (전 ' + 전.거절탭 + ')');
+  /* ⚠ ★★ <b>값을 직접 잽니다</b> — 판 X110 에서 촘촘한 칸 규칙(.ob)을 미디어
+     칸에 넣었는데 <b>그 뒤에 오는 기본 .ob 가 덮어</b> 죽은 규칙이었습니다.
+     「넣었다」 가 「먹는다」 는 아닙니다 — 재지 않으면 못 봅니다 (8번). */
+  const 칸 = await p2.evaluate(() => { const b = document.querySelector('#objGrid .ob');
+    const cs = getComputedStyle(b);
+    return { 최소높이: parseFloat(cs.minHeight) || 0, 패딩: parseFloat(cs.paddingTop) || 0,
+             높이: Math.round(b.getBoundingClientRect().height) }; });
+  is(칸.최소높이 > 0 && 칸.최소높이 <= 70,
+     '  ★★ 촘촘한 칸이 <b>정말 선다</b> — 최소높이 ' + 칸.최소높이 + 'px · 실제 ' + 칸.높이 +
+     'px (86px 이면 <b>죽은 규칙</b>입니다 · 판 X110 에서 그랬습니다)');
   const 눌림 = await p2.evaluate(() => {
     const b = document.querySelectorAll('#objGrid .ob')[7];
     if (!b) return '(없음)';
@@ -149,7 +179,91 @@ const 열기 = async (ctx, tab) => {
   is(탭 === 'call,obj,msg,eval,all,prac', '  탭 여섯이 <b>그대로</b>다 — ' + 탭);
 
   /* ─────────────────────────────────────────────────────────── */
-  head('[6] 조용한가');
+  head('[6] ★★ <b>본체 안에서도</b> 넓다 — 틀 폭 · 메뉴를 접으면 늘어난다 (판 X112)');
+  /* ⚠ 홀로 선 화면만 재면 <b>사장님이 보시는 화면을 안 잰 것</b>입니다 —
+     본체에서는 이 화면이 틀(iframe)로 열립니다. 그 틀을 직접 잽니다 (8번). */
+  const 본 = await 랩.newPage();
+  본.on('pageerror', e => errs.push(String(e.message || e)));
+  await 본.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded', timeout: 90000 });
+  await 본.waitForTimeout(2200);
+  await 본.evaluate(() => {
+    try { localStorage.setItem('apex_login_ok','1'); } catch(e){}
+    ['osLoadProfile','osProfileApply','osShowLoginGate','arLoad','osLoadClients','toast'].forEach(k => { window[k] = function(){}; });
+    try { OS.profile = {id:'me',user_id:'me',name:'홍길동',role:'fp',team:'A',active:true}; } catch(e){}
+    try { osHideLoginGate(); } catch(e){}
+    try { go('ta_script'); } catch(e){}
+  });
+  await 본.waitForTimeout(2600);
+  const 밖재기 = () => 본.evaluate(() => {
+    const f = document.querySelector('#dynPane iframe'), pane = document.querySelector('#dynPane .tab-pane');
+    return { 틀폭: f ? Math.round(f.getBoundingClientRect().width) : 0,
+             판폭: pane ? Math.round(pane.getBoundingClientRect().width) : 0,
+             판이넓나: !!(pane && pane.classList.contains('wide')),
+             본문폭: Math.round(document.querySelector('.main').getBoundingClientRect().width) };
+  });
+  const 안틀 = () => 본.frames().find(f => f.url().indexOf('ta-script') >= 0);
+  const 펴짐 = await 밖재기();
+  is(펴짐.판이넓나, '  본체의 그 판이 <b>폭을 다 쓴다</b>(.tab-pane wide) — 1,080px 에 묶이지 않는다');
+  is(펴짐.틀폭 > 전.틀폭 + 60, '  틀이 <b>' + 펴짐.틀폭 + 'px</b> 다 — 전에는 ' + 전.틀폭 + 'px 였습니다 (본문 ' + 펴짐.본문폭 + 'px)');
+  /* 거절처리 탭으로 — 틀 폭에서도 넓은 판이 서는지 */
+  { const fr = 안틀(); if (fr) { try { await fr.evaluate(() => document.querySelector('#tabs .tab[data-t="obj"]').click()); } catch(e){} } }
+  await 본.waitForTimeout(800);
+  const 틀거절 = await (async () => { const fr = 안틀(); if (!fr) return { 열:0, 수:0 };
+    return fr.evaluate(() => {
+      const 보임 = e => e.checkVisibility ? e.checkVisibility({ checkVisibilityCSS: true }) : (e.offsetParent !== null);
+      const g = document.querySelector('#objGrid'); if (!g) return { 열:0, 수:0 };
+      const k = [].slice.call(g.children).filter(보임); if (!k.length) return { 열:0, 수:0 };
+      const t0 = k[0].getBoundingClientRect().top;
+      return { 열: k.filter(c => Math.abs(c.getBoundingClientRect().top - t0) < 3).length, 수: k.length,
+               창폭: window.innerWidth }; }); })();
+  is(틀거절.수 >= 30, '  틀 안에서도 거절이 <b>' + 틀거절.수 + '가지</b> 보인다');
+  const 틀칸 = await (async () => { const fr = 안틀(); if (!fr) return { 최소높이: 0, 높이: 0, 맨아래: 0 };
+    return fr.evaluate(() => { const b = document.querySelector('#objGrid .ob');
+      const g = document.querySelector('#objGrid'), k = [].slice.call(g.children);
+      return { 최소높이: parseFloat(getComputedStyle(b).minHeight) || 0,
+               높이: Math.round(b.getBoundingClientRect().height),
+               맨아래: Math.round(Math.max.apply(null, k.map(c => c.getBoundingClientRect().bottom))) }; }); })();
+  is(틀칸.최소높이 > 0 && 틀칸.최소높이 <= 70,
+     '  ★★ <b>틀 안에서도 촘촘한 칸이 선다</b> — 최소높이 ' + 틀칸.최소높이 + 'px · 실제 ' + 틀칸.높이 +
+     'px · 맨 아래 ' + 틀칸.맨아래 + 'px (중단점을 창에 걸거나 순서가 뒤면 86px 입니다)');
+  is(틀거절.열 > 전.틀거절열,
+     '  ★★ <b>틀 폭(' + 틀거절.창폭 + 'px)에서도 넓은 판이 선다</b> — 한 줄에 ' + 틀거절.열 +
+     '개 (전에는 중단점 1240 에 걸려 ' + 전.틀거절열 + '개였습니다)');
+  /* ★★ 메뉴를 접으면 — 사장님이 바로 이것을 물으셨습니다 */
+  await 본.evaluate(() => { try { navFoldToggle(); } catch(e){} });
+  await 본.waitForTimeout(1300);
+  const 접힘 = await 밖재기();
+  is(접힘.본문폭 > 펴짐.본문폭, '  메뉴를 접으면 본문이 넓어진다 — ' + 펴짐.본문폭 + ' → ' + 접힘.본문폭 + 'px');
+  is(접힘.틀폭 >= 펴짐.틀폭 + 200,
+     '  ★★ <b>메뉴를 접으면 틀도 확 넓어진다</b> — ' + 펴짐.틀폭 + ' → <b>' + 접힘.틀폭 +
+     'px</b> (전에는 ' + 전.틀폭 + ' → ' + 전.틀폭 + ' 으로 <b>아무 일도 안 일어났습니다</b>)');
+
+  head('[7] <b>폭을 아는 자리가 하나</b>이고, 거절 목록이 처음부터 펴져 있다');
+  const IDX = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  const 날 = IDX.replace(/\/\*[\s\S]*?\*\//g, '');     /* 쪽지는 뺍니다 */
+  is((날.match(/osFrameOpen\(\)/g) || []).length >= 6,
+     '  틀 화면 다섯이 <b>osFrameOpen() 하나</b>를 부른다 — ' + ((날.match(/osFrameOpen\(\)/g) || []).length - 1) + '곳');
+  is((날.match(/tab-pane on wide/g) || []).length === 1,
+     '  ★ 손으로 적은 \'tab-pane on wide\' 가 <b>그 한 곳뿐</b>이다 (5번) — 지금 ' +
+       (날.match(/tab-pane on wide/g) || []).length + '곳');
+  ['renderTaScriptPage','renderTaSayPage','renderRejGymPage','renderTaTrainPage','renderSilson5Page'].forEach(fn => {
+    const i = 날.indexOf('function ' + fn + '(){');
+    is(i > 0 && 날.slice(i, i + 300).indexOf('osFrameOpen()') > 0, '    ' + fn + ' 가 그것을 부른다');
+  });
+  const 옷2 = SRC.slice(SRC.indexOf('<style>'), SRC.indexOf('</style>'));
+  is(!/min-width:1240px/.test(옷2),
+     '  ★★ 옷에 <b>중단점 1240px 이 남아 있지 않다</b> — 틀 안에서는 창 폭을 물으면 틀립니다');
+  is(/@container\s*\(min-width/.test(옷2) && /container-type:inline-size/.test(옷2),
+     '  ★ 오른쪽 거절 두 줄은 <b>창이 아니라 그 칸</b>을 묻는다 (@container)');
+  const 펴둠 = await p1.evaluate(() => {
+    const d = document.querySelector('.qall');
+    return { 있나: !!d, 펴짐: !!(d && d.open), 접는길: !!(d && d.querySelector('summary')) };
+  });
+  is(펴둠.있나 && 펴둠.펴짐, '  ★★ 「나머지 N가지 보기」가 <b>처음부터 펴져</b> 있다 (사장님 말씀 「펴 둬」)');
+  is(펴둠.접는길, '  ★ <b>접는 길은 그대로</b>다 — 누르면 접히고 그대로 기억합니다 (6번)');
+
+  /* ─────────────────────────────────────────────────────────── */
+  head('[8] 조용한가');
   const 시끄 = errs.filter(e => !/favicon|net::ERR|Failed to fetch|abort/i.test(e));
   is(시끄.length === 0, '콘솔 에러 ' + 시끄.length + '건' + (시끄.length ? ' ← ' + 시끄[0] : ''));
 
