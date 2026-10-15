@@ -222,6 +222,43 @@ const 보이는수 = (p, sel) => p.evaluate(s => [].slice.call(document.querySel
     const d = ps.querySelectorAll('details');
     return { 수: d.length, 닫힌것: [].slice.call(d).filter(x => !x.open).length };
   });
+  /* ── 판 X117 — <b>종이에서 읽히나</b> ───────────────────────────────────
+     ⚠ 화면과 같은 칸을 종이 크기로 줄이면서 <b>바탕만</b> 바꾸고 글자색을 그대로
+       둔 자리가 있었습니다 — 「마무리 기준」 이 <b>#E6EDF6 on #F7F9FC · 대비 1.12</b>
+       로 30곳 전부 <b>흰 종이에 흰 글씨</b>였습니다. 글이 종이에 「있다」 고 세어도
+       <b>안 보이면 없는 것</b>입니다 (1번 · 8번). 그래서 <b>대비를 직접</b> 잽니다.
+     ★ 2.2 아래만 봅니다 — 목각의 칩 색(#FFF on #FE9800 · 2.16)은 화면과 같은
+       것이라 그 짝만 봐줍니다. 새로 안 읽히는 짝이 생기면 빨간불입니다. */
+  /* ⚠ ★★ <b>인쇄 판으로 바꿔 놓고</b> 재야 합니다 — 화면 판에서 재면 @media print
+     규칙이 아예 안 걸려 <b>늘 초록</b>이 됩니다(되돌림이 두 번 안 울려서 알았습니다 · 8번). */
+  await p3.emulateMedia({ media: 'print' });
+  await p3.waitForTimeout(300);
+  const 안읽힘 = await p3.evaluate(() => {
+    const num = s => ((s||'').match(/[\d.]+/g) || [0,0,0]).slice(0,3).map(Number);
+    const lum = c => { const f = x => { x/=255; return x<=.03928 ? x/12.92 : Math.pow((x+.055)/1.055,2.4); };
+      return .2126*f(c[0]) + .7152*f(c[1]) + .0722*f(c[2]); };
+    const cr = (a,b) => { const L=lum(a), M=lum(b); return Math.round(((Math.max(L,M)+.05)/(Math.min(L,M)+.05))*100)/100; };
+    const hex = c => '#'+c.map(x=>Math.round(x).toString(16).padStart(2,'0')).join('').toUpperCase();
+    const bgOf = el => { let e=el; while(e){ const n=(getComputedStyle(e).backgroundColor||'').match(/[\d.]+/g);
+      if(n && (n.length<4 || +n[3]>.5)) return num(getComputedStyle(e).backgroundColor); e=e.parentElement; } return [255,255,255]; };
+    const 봐줌 = ['#FFFFFF on #FE9800'];
+    const 나쁜 = [];
+    document.querySelectorAll('#printSheet *').forEach(el => {
+      const t = [].slice.call(el.childNodes).filter(x=>x.nodeType===3).map(x=>x.textContent).join('').trim();
+      if (t.length < 2 || !/[가-힣A-Za-z0-9]/.test(t)) return;
+      const fg = num(getComputedStyle(el).color), bg = bgOf(el), v = cr(fg,bg);
+      const 짝 = hex(fg)+' on '+hex(bg);
+      if (v < 2.2 && 봐줌.indexOf(짝) < 0) 나쁜.push({ 짝: 짝, 대비: v, 글: t.slice(0,16), 칸: (el.className||el.tagName).toString().slice(0,20) });
+    });
+    const 모음 = {}; 나쁜.forEach(x => { 모음[x.짝] = (모음[x.짝]||0)+1; });
+    return { 수: 나쁜.length, 짝: Object.keys(모음).map(k => k+' ×'+모음[k]), 보기: 나쁜.slice(0,3) };
+  });
+  await p3.emulateMedia({ media: 'screen' });
+  await p3.waitForTimeout(200);
+  is(안읽힘.수 === 0,
+     '  ★★ 종이에 <b>안 읽히는 글이 없다</b>(대비 2.2 아래) — 지금 ' + 안읽힘.수 + '곳' +
+     (안읽힘.수 ? ('\n      ✗ ' + 안읽힘.짝.join(' · ') + '\n      ✗ 예: 「' + 안읽힘.보기[0].글 + '」 (' + 안읽힘.보기[0].칸 + ')') : ''));
+
   is(접힘.수 > 0 && 접힘.닫힌것 === 0,
      '  ★ 종이에서는 <b>접힌 칸이 없다</b> — 누를 수가 없으니 펴서 찍습니다 (' + 접힘.수 + '칸)');
   /* ⚠ ★ 처음에 열쇠를 <b>ta_script_v3</b> 로 적었는데 이 화면은 <b>ta_final_v1</b>
