@@ -77,7 +77,10 @@ const 열기 = async (ctx, tab) => {
   const p2 = await 열기(랩, 'obj');
   p2.on('pageerror', e => errs.push(String(e.message || e)));
   const o = await p2.evaluate(() => {
-    const g = document.querySelector('#objGrid'), k = [].slice.call(g.children);
+    /* ⚠ DOM 수가 아니라 <b>보이는 것</b>을 셉니다 — 처음에 children.length 를
+       셌더니 옷으로 숨겨도 그대로 통과했습니다(되돌림 ③ 이 안 울렸습니다 · 8번). */
+    const 보임 = e => e.checkVisibility ? e.checkVisibility({ checkVisibilityCSS: true }) : (e.offsetParent !== null);
+    const g = document.querySelector('#objGrid'), k = [].slice.call(g.children).filter(보임);
     const t0 = k[0].getBoundingClientRect().top;
     const 열 = k.filter(c => Math.abs(c.getBoundingClientRect().top - t0) < 3).length;
     const 아래 = Math.max.apply(null, k.map(c => c.getBoundingClientRect().bottom));
@@ -85,7 +88,7 @@ const 열기 = async (ctx, tab) => {
              탭높이: +(document.body.scrollHeight / 900).toFixed(2),
              다보이나: k.every(c => c.getBoundingClientRect().bottom <= 900) };
   });
-  is(o.가짓수 >= 30, '  거절이 <b>' + o.가짓수 + '가지</b> 다 있다 — 지운 것이 없다');
+  is(o.가짓수 >= 30, '  거절이 <b>' + o.가짓수 + '가지</b> <b>보인다</b> — 숨기거나 지운 것이 없다');
   is(o.열 > 전.거절열, '  한 줄에 <b>' + o.열 + '개</b> 선다 — 전에는 ' + 전.거절열 + '개');
   is(o.다보이나, '  <b>스크롤 없이 전부</b> 보인다 — 맨 아래 칸이 ' + o.맨아래 + 'px (화면 900px)');
   is(o.탭높이 < 전.거절탭, '  거절처리 탭도 짧아졌다 — ' + o.탭높이 + ' 화면 (전 ' + 전.거절탭 + ')');
