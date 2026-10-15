@@ -253,8 +253,33 @@ const 보이는수 = (p, sel) => p.evaluate(s => [].slice.call(document.querySel
     const 모음 = {}; 나쁜.forEach(x => { 모음[x.짝] = (모음[x.짝]||0)+1; });
     return { 수: 나쁜.length, 짝: Object.keys(모음).map(k => k+' ×'+모음[k]), 보기: 나쁜.slice(0,3) };
   });
+  /* ── 판 X118 — <b>칸이 맞나 · 고객의 거절이 크게 보이나</b> (사장님 말씀) ──
+     ⚠ 한 거절을 <b>단 사이에서 잘리게</b> 두었더니 코칭·평가 꼬리만 다음 단
+       꼭대기에 남아 어느 거절 것인지 알 수 없었고, 좁은 단(95mm)에 <b>세 칸</b>을
+       넣어 「하면 / 문자만 / 남기고 / 종료.」 처럼 두세 글자씩 끊겼습니다. */
+  const 꼴 = await p3.evaluate(() => {
+    const o = document.querySelector('#printSheet .pobj');
+    if (!o) return null;
+    const h = o.querySelector('h4'), oc = o.querySelector('.oc'), tri = o.querySelector('.tri');
+    const num = s => ((s||'').match(/[\d.]+/g) || [0]).map(Number);
+    const bg = h ? getComputedStyle(h).backgroundColor : '';
+    return { 제목: h ? parseFloat(getComputedStyle(h).fontSize) : 0,
+             몸글: oc ? parseFloat(getComputedStyle(oc).fontSize) : 0,
+             제목바탕: bg, 제목짙나: (num(bg)[0] < 120 && (num(bg).length < 4 || num(bg)[3] > .5)),
+             안잘림: o ? getComputedStyle(o).breakInside : '',
+             세칸: tri ? getComputedStyle(tri).gridTemplateColumns.split(' ').length : 0,
+             마무리한줄: (() => { const st = o.querySelector('.tri > .stopb'); if (!st || !tri) return false;
+               return Math.round(st.getBoundingClientRect().width) > Math.round(tri.getBoundingClientRect().width) * 0.9; })() };
+  });
   await p3.emulateMedia({ media: 'screen' });
   await p3.waitForTimeout(200);
+  is(!!꼴 && 꼴.제목 >= 꼴.몸글 * 2,
+     '  ★★ <b>고객의 거절이 크게</b> 보인다 — 제목 ' + (꼴?꼴.제목:0) + 'px · 몸글 ' + (꼴?꼴.몸글:0) + 'px (사장님 말씀)');
+  is(!!꼴 && 꼴.제목짙나, '  ★ 제목에 <b>짙은 띠</b>가 깔려 종이를 넘기며 찾힌다 — ' + (꼴?꼴.제목바탕:'-'));
+  is(!!꼴 && 꼴.안잘림 === 'avoid',
+     '  ★★ 한 거절이 <b>단 사이에서 안 잘린다</b> — 꼬리만 남으면 어느 거절 것인지 모릅니다');
+  is(!!꼴 && 꼴.세칸 === 2, '  ★ 코칭·피해야 할 표현이 <b>두 칸</b>이다 — 좁은 단에 셋은 안 들어갑니다 (지금 ' + (꼴?꼴.세칸:0) + '칸)');
+  is(!!꼴 && 꼴.마무리한줄, '  ★ 마무리 기준은 <b>한 줄 통째</b>로 깔린다');
   is(안읽힘.수 === 0,
      '  ★★ 종이에 <b>안 읽히는 글이 없다</b>(대비 2.2 아래) — 지금 ' + 안읽힘.수 + '곳' +
      (안읽힘.수 ? ('\n      ✗ ' + 안읽힘.짝.join(' · ') + '\n      ✗ 예: 「' + 안읽힘.보기[0].글 + '」 (' + 안읽힘.보기[0].칸 + ')') : ''));
