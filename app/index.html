@@ -2667,7 +2667,31 @@ var LS={
 /* 알림 칸이 없으면 <b>조용히 물러난다.</b> 예전에는 여기서 터졌고, 알림
    하나 때문에 부르던 쪽 일이 통째로 멈췄다 — 저장이 됐는데 안 됐다고
    보이는 자리가 그것이다. 알림은 곁다리다. 곁다리가 본일을 죽이면 안 된다. */
-function toast(msg,ms){var t=$('toast');if(!t)return;t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('on');},ms||1900);}
+/* ── 알림 줄은 <b>굵게</b>를 굵게 찍는다 (2026-10-17) ─────────────────
+   여태 toast 는 textContent 로 넣었다. 그런데 부르는 자리 열 곳 넘게가
+   <b>…</b> 를 넘긴다 — 아침 보고의 「<b>1명 중 0명</b> 준비됐습니다」 가
+   태그째 글자로 찍혔다. 부르는 쪽을 하나씩 고치면 다음 자리가 또 샌다.
+   그래서 <b>받는 곳 하나</b>에서 고친다 (5번).
+   그렇다고 innerHTML 로 넣지 않는다 — 고객 이름이 날글로 섞여 오는 자리가
+   있다. 실행되지 않는 template 안에서 한 번 풀고, 글자와 b·strong·i·em·br
+   만 다시 세운다. 다른 태그는 속 글자만 남기고, 속성은 하나도 옮기지 않는다. */
+var TOAST_KEEP={B:1,STRONG:1,I:1,EM:1,BR:1},TOAST_DROP={SCRIPT:1,STYLE:1,TEMPLATE:1};
+function toastFill(t,msg){
+  msg=(msg==null)?'':String(msg);
+  if(msg.indexOf('<')<0&&msg.indexOf('&')<0){t.textContent=msg;return;}
+  var tp=document.createElement('template');tp.innerHTML=msg;
+  t.textContent='';
+  (function put(from,to){
+    for(var n=from.firstChild;n;n=n.nextSibling){
+      if(n.nodeType===3)to.appendChild(document.createTextNode(n.nodeValue));
+      else if(n.nodeType===1){
+        if(TOAST_KEEP[n.tagName]){var k=document.createElement(n.tagName.toLowerCase());to.appendChild(k);put(n,k);}
+        else if(!TOAST_DROP[n.tagName])put(n,to);
+      }
+    }
+  })(tp.content,t);
+}
+function toast(msg,ms){var t=$('toast');if(!t)return;toastFill(t,msg);t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('on');},ms||1900);}
 /* 복사는 생각보다 자주 실패한다. 특히 태블릿에서, 그리고 새 창이 떠서
    이 화면이 초점을 잃었을 때. 전에는 실패해도 '복사되었습니다' 라고
    말해서, 붙여넣으면 엉뚱한 옛날 내용이 나왔다. 이제는 확인하고 말한다. */
@@ -19946,8 +19970,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-16 09:00';
-var APP_BUILD_NOTE="🧾 <b>인쇄본에 생긴 빈 쪽을 없앴습니다</b> — 「칸이 안맞고」 를 고치다 제가 칸을 <b>통째로</b> 묶었더니, 뽑아 보니 <b>2쪽이 거의 백지</b>였고 31 → <b>35쪽</b>이 되었습니다. 칸을 맞추려다 종이를 버린 것이라 <b>되돌렸습니다</b>(31쪽 · 빈 쪽 없음). ★ 칸이 어긋나 보이던 진짜 까닭 둘은 <b>그대로</b> 고쳐져 있습니다 — 거절 제목의 <b>짙은 띠(15.5px)</b> 와 코칭·피해야 할 표현 <b>두 칸</b>(세 칸 아님) · 마무리 기준 한 줄 통째. ★ 자가 이제 <b>뽑아서 쪽수를 셉니다</b>(20~33쪽) — 다시 묶으면 35쪽으로 빨간불, 글이 빠져 줄어도 빨간불입니다.";
+var APP_BUILD='2026-10-17 09:52';
+var APP_BUILD_NOTE="🔔 <b>알림 줄에 태그가 글자로 찍히던 것을 고쳤습니다</b> — 아침 보고에서 한 명이 빠지면 「&lt;b&gt;1명 중 0명&lt;/b&gt; 준비됐습니다」 처럼 <b>태그째</b> 찍혔습니다. 굵게 쓰려고 태그를 넘기는 자리가 열 곳 넘게였는데, 알림 줄이 그것을 글자로 넣고 있었습니다. <b>받는 곳 하나</b>를 고쳐 이제 <b>굵게는 굵게</b> 섭니다. ★ 고객 이름이 섞여 오는 자리가 있어 태그를 그대로 믿지는 않습니다 — <b>굵게·기울임·줄바꿈만</b> 살리고 나머지는 글자만 남깁니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
