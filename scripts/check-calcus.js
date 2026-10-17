@@ -99,6 +99,20 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(form.n === 2, '  고르개에 기존 고객이 전부 선다 — ' + form.n + '명');
   is(form.names.join(',') === '이○룡,홍○동', '  이름순으로 선다 — ' + form.names.join(' · '));
 
+  console.log('\n[1-2] 안 고른 날에는 칸이 안 선다 — 폰이 길어지면 안 된다');
+  /* ★ 늘 펴 두었더니 폰에서 248px 늘어 고객 365일 3.0→3.4 · 내 캘린더 2.0→2.3
+     화면이 되었습니다(check-phonefit 가 잡았습니다). 사장님 말씀도 「달력을
+     클릭해서」 였습니다 — 안 고른 날에는 0px 이어야 합니다. */
+  const 안고름 = await page.evaluate(() => {
+    MCAL.sel = ''; mcalPaint();
+    const h = mcalDayHtml();
+    return { 칸: /mcalCusId/.test(h),
+             내일정: /mcalMyT/.test(h),
+             화면칸: !!document.querySelector('.mcal-day .mcal-cus') };
+  });
+  is(!안고름.칸 && !안고름.화면칸, '  날을 안 고르면 고객 적기 칸이 <b>안 선다</b>');
+  is(안고름.내일정, '  그래도 「내 일정」 칸은 그대로 선다 — 치운 길이 없다 (6번)');
+
   console.log('\n[2] 상태 목록은 CM_HOW 한 곳에서 온다 (5번)');
   const how = await page.evaluate(() => (typeof CM_HOW !== 'undefined') ? CM_HOW.slice() : null);
   is(!!how, '  CM_HOW 가 있다 — ' + (how || []).join(' · '));
