@@ -241,11 +241,16 @@ window.supabase={createClient:function(){
     /* 2026-09-27 · 판 ⑦ — 이 칸이 목각 옷으로 갈아입어 이름이 바뀌었습니다
        (.cm-next .w → 「▶」 가 든 .t-note). <b>묻는 것은 그대로</b>입니다 —
        저장하면 바로 화면에 뜨는가.                                       */
-    shown: ([].slice.call(document.querySelectorAll('#cmPanels .t-note'))
-              .filter(e => /▶/.test(e.textContent))[0] || {}).textContent || ''
+    /* ★ 판 X122 — 쌓인 줄은 .cm-nxrow 로 섭니다(여태 .t-note 한 줄).
+       묻는 것은 그대로입니다 — <b>저장하면 바로 화면에 뜨는가</b>. */
+    shown: [].slice.call(document.querySelectorAll('#cmPanels .cm-nxrow, #cmPanels .t-note'))
+             .filter(e => /▶/.test(e.textContent)).map(e => e.textContent).join(' | ')
   }));
   ok(nx.saved.length === 1 && nx.saved[0].client_id === 'c1', '다음 할 일이 서버에 저장된다');
-  ok(nx.saved.length === 1 && /증권/.test(((nx.saved[0].content || {}).next || {}).what || ''), '적은 내용이 그대로 들어간다');
+  /* ★ 판 X122 — 다음 할 일은 <b>쌓입니다</b>(content.nx 배열). 옛 한 칸도 같이 봅니다 (1번) */
+  const nxTxt = (c) => ((c || {}).nx || []).map(x => (x && x.what) || '').join(' / ')
+                       + ' ' + (((c || {}).next || {}).what || '');
+  ok(nx.saved.length === 1 && /증권/.test(nxTxt(nx.saved[0].content)), '적은 내용이 그대로 들어간다');
   ok(/증권/.test(nx.shown), '저장하면 바로 화면에 뜬다');
 
   /* 두 번 저장해도 줄이 두 개가 되면 안 된다 */
@@ -253,7 +258,13 @@ window.supabase={createClient:function(){
   await page.waitForTimeout(500);
   const dup = await page.evaluate(() => window.__saved.filter(x => x.kind === 'client_meta' && x.client_id === 'c1'));
   ok(dup.length === 1, '두 번 저장해도 줄은 하나다 (' + dup.length + ')');
-  ok(/다시 전화/.test((((dup[0] || {}).content || {}).next || {}).what || ''), '나중에 적은 것으로 덮인다');
+  /* ★ 판 X122 · 사장님 말씀 「다음 할일 여러개 쌓이게 해줘」 —
+     여기서 재던 것은 <b>「덮인다」</b> 였습니다. 이제 <b>쌓입니다.</b>
+     자를 무르게 한 것이 아닙니다: <b>줄(saved_reports)은 그대로 하나</b>인지를
+     바로 위 255 줄이 지키고, 여기서는 <b>앞의 것이 안 사라지는가</b> 를 봅니다. */
+  const 담긴것 = nxTxt((dup[0] || {}).content);
+  ok(/다시 전화/.test(담긴것), '나중에 적은 것이 들어간다 — ' + 담긴것.trim());
+  ok(/증권/.test(담긴것), '★ 먼저 적은 것이 안 사라진다 — 쌓인다 (판 X122)');
 
   /* 접촉 기록 */
   /* 앱에 묻는다 — 3일 전은 <b>앱이 세는 오늘</b>에서 사흘 뺀 날입니다 */
