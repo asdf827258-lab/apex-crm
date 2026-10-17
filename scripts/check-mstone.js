@@ -90,7 +90,13 @@ const clearOvl = pg => pg.evaluate(sel => {
     yr:  mstAdd('2026-12-20', 3),          /* 해를 넘긴다 */
     junk: mstAdd('', 1),
     junk2: mstAdd('아무거나', 3),
-    steps: MST_STEPS.map(s => s.m)
+    steps: MST_STEPS.map(s => s.m),
+    calls: MST_STEPS.filter(s => s.kind === 'call').map(s => s.m),
+    callBare: MST_STEPS.filter(s => s.kind === 'call' && (!(s.check || []).length || !(s.tell || []).length)).map(s => s.m),
+    bare: MST_STEPS.filter(s => !s.say || !s.why || !s.t || !s.cat || !s.ic).map(s => s.m),
+    kinds: MST_STEPS.filter(s => s.kind !== 'call' && s.kind !== 'touch').map(s => s.m),
+    say5: [1, 3, 6, 9, 12].map(m => (MST_STEPS.filter(s => s.m === m)[0] || {}).say || ''),
+    sayAll: MST_STEPS.map(s => s.say).join('\n')
   }));
   is(d.m1 === '2026-04-15', '1개월 — 2026-03-15 → ' + d.m1);
   is(d.m3 === '2026-06-15', '3개월 — ' + d.m3);
@@ -100,8 +106,31 @@ const clearOvl = pg => pg.evaluate(sel => {
   is(d.leap === '2028-02-29', '윤년은 29일까지 — ' + d.leap);
   is(d.yr === '2027-03-20', '12월 + 3개월 = ' + d.yr);
   is(d.junk === '' && d.junk2 === '', '날짜가 아니면 <b>빈 값</b>을 준다 — 아무 날이나 만들지 않는다');
-  is(JSON.stringify(d.steps) === JSON.stringify([1, 3, 6, 9, 12]),
-     '마디는 <b>1 · 3 · 6 · 9 · 12개월</b> — ' + d.steps.join(' · '));
+  /* ★ 2026-10-17 (판 X123) — 사장님 말씀 「4년 분급제 관리 … 매월 터치하고 몇개월에
+     한번은 전화로 무엇을 확인하고 전달할지까지」. 여태 이 줄은 마디를
+     <b>1·3·6·9·12</b> 로 못 박았습니다. 이제 <b>48개월 매달</b>입니다 — 기준선을
+     말씀대로 옮기되, 지켜야 할 것을 <b>더</b> 잡습니다 (8번). */
+  const want = []; for (let m = 1; m <= 48; m++) want.push(m);
+  is(JSON.stringify(d.steps) === JSON.stringify(want),
+     '마디는 <b>1개월부터 48개월까지 빈 달 없이</b> — ' + d.steps.length + '개');
+  const wantCall = [1]; for (let m = 3; m <= 48; m += 3) wantCall.push(m);
+  is(JSON.stringify(d.calls) === JSON.stringify(wantCall),
+     '📞 <b>전화하는 달은 1개월째와 석 달마다</b> — ' + d.calls.join(' · '));
+  is(d.callBare.length === 0,
+     '  ★ 전화하는 달마다 <b>확인할 것 · 전달할 것</b>이 둘 다 적혀 있다' + (d.callBare.length ? ' — 빈 달: ' + d.callBare.join(', ') : ''));
+  is(d.bare.length === 0 && d.kinds.length === 0,
+     '  마디마다 제목·까닭·보낼 말·기사 칸·그림이 있고, 갈래는 전화(call)·문자(touch) 둘뿐' +
+     ((d.bare.length || d.kinds.length) ? ' — ' + d.bare.concat(d.kinds).join(', ') : ''));
+  /* 있던 다섯 마디의 보낼 말은 <b>한 자도 안 바꿨다</b> — 첫머리로 견줍니다 */
+  const head5 = ['고객님, 안녕하세요. 지난달 준비해 드린 보험 증권은 잘 받아 보셨는지요',
+                 '고객님, 안녕하세요. 보험료 빠져나가는 날짜는 불편하지 않으신지요.',
+                 '고객님, 안녕하세요. 가입하신 지 반년이 되었습니다.',
+                 '고객님, 안녕하세요. 연말정산 준비하실 때가 다가옵니다.',
+                 '고객님, 안녕하세요. 함께한 지 벌써 일 년이 되었습니다. 늘 감사드립니'];
+  is(d.say5.every((t, i) => t.indexOf(head5[i]) === 0),
+     '  있던 <b>1·3·6·9·12개월</b>의 보낼 말이 <b>옛 글 그대로</b>다');
+  is(!/수수료|환수|분급/.test(d.sayAll),
+     '  ★★ 고객에게 나가는 말에 <b>수수료·환수·분급</b> 이야기가 없다 — 그것은 설계사 사정입니다');
 
   /* ─────────────────────────────────────────────────────────────
      [2] 계약일이 없으면 <b>안 세운다</b> · 몇 분인지 적는다             */
