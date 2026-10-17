@@ -75,7 +75,7 @@ head('[1] 표가 <b>하나</b>인가 — 4년 화면이 자기 줄을 따로 세
   is((CODE.match(/var MST_STEPS\s*=/g) || []).length === 1, '마디 표(MST_STEPS)는 <b>한 번만</b> 선다');
   const k = /function renderKeep4\(\)\{([\s\S]*?)\n\}/.exec(CODE), kp = /function kp4CardInner\(\)\{([\s\S]*?)\n\}/.exec(CODE);
   is(!!k && !!kp, '4년 화면(renderKeep4 · kp4CardInner)이 있다');
-  is(!!kp && /mstCardHtml\(\)/.test(kp[1]), '  ★ 4년 화면의 판은 <b>mstCardHtml 을 부른다</b> — 고객 365일과 같은 판');
+  is(!!kp && /mstCardHtml\(true\)/.test(kp[1]), '  ★ 4년 화면의 판은 <b>mstCardHtml 을 부른다</b> — 고객 365일과 같은 판 (펴는 정도만 full)');
   is(!!k && !/mstOf\(|mstAdd\(|\.cd\b|MST_FIXED|MST_TOUCH/.test((k ? k[1] : '') + (kp ? kp[1] : '')),
      '  ★ 4년 화면이 <b>제 손으로 날짜·마디를 세지 않는다</b> (mstOf·mstAdd·계약일을 안 만진다)');
   is(!/function k4[A-Z]|\bK4\s*=\s*\{|apex-keep4\.js/.test(CODE) && !fs.existsSync(path.join(ROOT, 'apex-keep4.js')),
@@ -147,6 +147,11 @@ head('[1] 표가 <b>하나</b>인가 — 4년 화면이 자기 줄을 따로 세
   is(rows.length === 2, '  계약 하나에 <b>지금 마디 하나</b>만 선다 — ' + rows.length + '줄 (밀린 달을 쏟지 않는다)');
   is(!/홍길동|임꺽정/.test(rows.map(r => r.t).join('')), '  이름은 가린 모양(홍○동)으로만 선다 (3번)');
 
+  /* 고객 365일 맨 위 판은 <b>짧게</b> 둡니다 — 폰에서 3화면 기준선(check-phonefit)이
+     실제로 3.1 로 넘어 울렸습니다. 같은 판, 펴는 정도만 다릅니다. */
+  const short = await pg.evaluate(() => mstCardHtml());
+  is(/전화하는 달/.test(short) && !/확인할 것/.test(short),
+     '  ★ 고객 365일 판은 <b>짧게</b> — 「전화하는 달」 표시만 서고 목록은 4년 화면에서 편다');
   head('[4] ★ 4년 화면에서 누른 것이 <b>고객 365일과 같은 자리</b>에 적히나');
   await pg.evaluate(() => {
     const b = [].slice.call(document.querySelectorAll('#kp4Card .mst-row:not([data-ans])'))

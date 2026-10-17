@@ -68019,7 +68019,11 @@ function mstListHtml(h,L){
     '<ul style="margin:2px 0 0;padding-left:18px;font-size:var(--t6);color:var(--t-ink);line-height:1.7">'+
     L.map(function(t){return '<li>'+osEsc(t)+'</li>';}).join('')+'</ul>';
 }
-function mstRowHtml(x,over){
+/* full — <b>4년 유지관리</b> 화면에서만 켭니다. 확인할 것·전달할 것·지난 전화를
+   다 폅니다. 고객 365일 맨 위 판은 <b>그대로 짧게</b> 둡니다 — 폰에서 3화면을
+   넘기면 안 보인다고 하신 화면입니다(check-phonefit). 판은 하나이고 펴는
+   정도만 다릅니다 (5번). */
+function mstRowHtml(x,over,full){
   var c=x.c,st=x.hit.step,nm=(typeof cmName==='function'?cmName(c):'')||c.name_masked||'고객';
   return '<div class="mst-row">'+
     '<div class="mst-rh">'+
@@ -68031,8 +68035,8 @@ function mstRowHtml(x,over){
     '</div>'+
     '<div class="mst-t">'+(st.kind==='call'?'📞 전화하는 달 · ':'💬 문자 한 통 · ')+osEsc(st.t)+'</div>'+
     '<div class="mst-why">'+osEsc(st.why)+'</div>'+
-    mstListHtml('☑ 확인할 것',st.check)+mstListHtml('📣 전달할 것',st.tell)+
-    (x.miss?('<div class="mst-no">⚠ 지난 전화('+x.miss.step.m+'개월 · '+osEsc(x.miss.at)+')를 아직 안 챙기셨습니다 — 이번에 같이 여쭤 보십시오.</div>'):'')+
+    (full?(mstListHtml('☑ 확인할 것',st.check)+mstListHtml('📣 전달할 것',st.tell)):'')+
+    (full&&x.miss?('<div class="mst-no">⚠ 지난 전화('+x.miss.step.m+'개월 · '+osEsc(x.miss.at)+')를 아직 안 챙기셨습니다 — 이번에 같이 여쭤 보십시오.</div>'):'')+
     '<div class="mst-btns">'+
       '<button type="button" class="mst-b p" onclick="mstCopy(\''+c.id+'\','+st.m+')">📋 보낼 말 복사</button>'+
       '<button type="button" class="mst-b" onclick="mstToggle(\''+c.id+'\','+st.m+')">'+(st.kind==='call'?'✅ 통화 · 보냈습니다':'✅ 보냈습니다')+'</button>'+
@@ -68106,7 +68110,7 @@ function mstAnsPaint(id){
   if(typeof cmDetailPaint==='function'&&typeof OSC!=='undefined'&&OSC.view==='detail')
     try{cmDetailPaint(id);}catch(e){}
 }
-function mstCardHtml(){
+function mstCardHtml(full){
   mstCss();
   var L=mstDueList(),i,h='';
   /* id — 홈의 「보낼 말 보기」 가 <b>이 자리로</b> 모십니다(hmMadiGo).
@@ -68114,9 +68118,10 @@ function mstCardHtml(){
   var head='<div class="card" id="mstCard"><div class="card-hd"><div class="card-title">'+
     '<span class="ci">📆</span>계약 마디 접점'+
     '<span class="ar-n">4년 · '+MST_MONTHS+'개월</span></div>'+
-    '<div class="card-desc">계약하고 <b>매달</b> 한 번 먼저 연락합니다 — <b>1개월째와 석 달마다</b>는 📞 전화로 '+
-    '확인할 것·전달할 것을 챙기고, 나머지 달은 💬 문자 한 통입니다. 보낼 말은 그대로 복사되고, 기사는 '+
-    '<b>「고객에게 전할 뉴스」에서 실제로 받아 둔 것</b>만 붙습니다.</div></div><div class="card-body">';
+    /* ⚠ 설명글은 <b>예전 길이</b>로 둡니다 — 한 번 늘려 적었더니 폰에서 고객 365일이
+       3 → 3.1화면이 되어 check-phonefit 이 울렸습니다. 자세한 것은 4년 유지관리 화면에. */
+    '<div class="card-desc"><b>4년 동안 매달</b> 먼저 연락하는 자리입니다 — 1개월째와 <b>석 달마다</b>는 📞 전화, '+
+    '나머지 달은 💬 문자. 기사는 <b>「고객에게 전할 뉴스」에서 받아 둔 것</b>만 붙습니다.</div></div><div class="card-body">';
   /* 계약일이 없으면 이 판은 아직 설 수 없다 — 그렇다고 조용히 숨지 않는다 */
   if(!L.total)return '';
   if(L.none===L.total)
@@ -68128,10 +68133,10 @@ function mstCardHtml(){
   if(!L.due.length&&!L.soon.length)
     h='<div class="notice" style="background:var(--t-pos-l);border-color:#BBF7D0;color:var(--t-pos-d)">'+
       '✅ <b>지금 돌아온 마디가 없습니다.</b> 다음 마디가 오면 여기 뜹니다.</div>';
-  for(i=0;i<L.due.length&&i<8;i++)h+=mstRowHtml(L.due[i],true);
+  for(i=0;i<L.due.length&&i<8;i++)h+=mstRowHtml(L.due[i],true,full);
   if(L.soon.length){
     h+='<div class="mst-sep">곧 돌아옵니다 — 2주 안</div>';
-    for(i=0;i<L.soon.length&&i<5;i++)h+=mstRowHtml(L.soon[i],false);
+    for(i=0;i<L.soon.length&&i<5;i++)h+=mstRowHtml(L.soon[i],false,full);
   }
   /* 💬 <b>보냈습니다 — 답을 적어 주십시오</b>
      ⚠ <b>바구니가 없으면 이 토막을 안 세웁니다</b> — 흉내 낸 답이나 옛 판이
@@ -68167,7 +68172,7 @@ function kp4CardInner(){
   if(typeof OSC==='undefined'||!OSC.loaded)return '<div class="notice">고객 목록을 읽는 중입니다…</div>';
   if(OSC.err)return '<div class="notice">고객 목록을 못 받아 왔습니다 — <b>몇 분인지 적지 않습니다.</b> '+osEsc(OSC.err)+'</div>';
   if(typeof CM==='undefined'||!CM.loaded)return '<div class="notice">고객 기록(계약일)을 읽는 중입니다…</div>';
-  var h=mstCardHtml();
+  var h=mstCardHtml(true);
   return h||'<div class="notice">아직 넣은 고객이 없습니다 — 고객 365일에서 고객을 넣고 <b>계약일</b>을 적으시면 여기 섭니다.</div>';
 }
 function kp4Paint(){ var k=document.getElementById('kp4Card'); if(k)k.innerHTML=kp4CardInner(); }
