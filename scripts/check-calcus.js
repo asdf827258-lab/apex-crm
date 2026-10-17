@@ -174,11 +174,16 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     const seen = [].slice.call(document.querySelectorAll('.mcal-day .mcal-it'))
       .some(e => /보장분석 설명/.test(e.textContent || ''));
     return { key: s[0] ? Object.keys(s[0].patch).join(',') : '',
-             due: cmOf('c2').next && cmOf('c2').next.due,
-             what: cmOf('c2').next && cmOf('c2').next.what,
+             /* ★ 판 X122 부터 다음 할 일은 <b>쌓입니다</b> — 묻는 곳은 cmNextAll 하나 (5번).
+                옛 m.next 를 직접 보던 자리를 그대로 옮깁니다. 무르게 한 것이 아니라,
+                재는 대상이 한 칸에서 목록으로 바뀐 것입니다. */
+             due: (cmNextTop('c2') || {}).due,
+             what: (cmNextTop('c2') || {}).what,
+             쌓임: cmNextAll('c2').length,
              onCal: !!row, calTxt: row ? (row.s || '') : '', seen: seen };
   }, ahead(4));
-  is(fut.key === 'next', '  다음 할 일(next)로 들어간다 — ' + fut.key);
+  is(/\bnx\b/.test(fut.key), '  다음 할 일 목록(nx)으로 들어간다 — ' + fut.key);
+  is(fut.쌓임 === 1, '  이 고객의 첫 건이다 — ' + fut.쌓임 + '건');
   is(fut.due === ahead(4), '  기한이 <b>고른 날</b>이다 — ' + fut.due);
   is(fut.what === '전화 — 보장분석 설명', '  무엇을 할지가 적힌다 — ' + fut.what);
   is(fut.onCal, '  ★ <b>달력 그 날에 ▶ 할 일로 선다</b> — 등록이 실제로 됩니다');

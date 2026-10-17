@@ -255,7 +255,12 @@ const LOOK = () => {
     const w = WROTE.filter(x => x.tb === 'saved_reports');
     const body = w.length ? ((w[w.length - 1].body || {}).content || {}) : {};
     return { 번: w.length, care: body.care || '', worry: body.worry || '',
-             next: (body.next && body.next.what) || '',
+             /* ★ 판 X122 — 다음 할 일은 <b>쌓입니다</b>(body.nx 배열).
+                옛 body.next 한 칸을 보던 자리를 그대로 옮깁니다 — 무르게 한 것이
+                아니라 재는 대상이 한 칸에서 목록으로 바뀐 것입니다 (5번).
+                ★ 옛 칸도 같이 봅니다 — 아직 안 옮겨진 분이 있습니다 (1번). */
+             next: ((body.nx || []).map(x => (x && x.what) || '').join(' / ')
+                    || (body.next && body.next.what) || ''),
              touch: ((body.touch || [])[0] || {}).note || '',
              칸: (document.getElementById('cmCare') || {}).value || '' };
   });

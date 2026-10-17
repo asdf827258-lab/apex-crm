@@ -1882,6 +1882,11 @@ button.hm-q-t.ba.go:active{transform:translateY(1px)}
 .mcal-cus-w{font-size:var(--t6);color:var(--ink-5);line-height:1.65;margin-top:7px}
 .mcal-cus-w b{color:var(--ink-3)}
 .mcal-cus-w .go{color:var(--t-warn-d2)}
+/* ▶ 잡아 둔 다음 할 일 — 줄마다 「끝」·「✕」 (판 X122) */
+/* ▶ 잡아 둔 다음 할 일 줄의 옷은 <b>app/ui.css</b>(목각) 에 있습니다 —
+   이 카드(cmRelHtml)가 쓰는 class 는 거기 있어야 합니다(check-cusskin).
+   여기 또 적으면 두 곳이 갈립니다 (5번).                              */
+
 .mcal-it:hover{background:var(--t-bg-b)}
 .mcal-it .e{font-size:var(--t4);flex:0 0 auto}
 .mcal-it .m{flex:1;min-width:0}
@@ -8569,9 +8574,11 @@ function arCliCalc(clients,metas){
     m=byId[c.id]||{};
     var o=out[c.advisor_id]||(out[c.advisor_id]={n:0,plan:0,due:0,cold:0});
     o.n++;
-    if(m.next&&m.next.what){
+    /* ▶ 다음 할 일은 <b>여러 개</b>입니다 — 묻는 곳은 cmNextAll 하나 (판 X122 · 5번) */
+    var NXa=(typeof cmNextAll==='function')?cmNextAll(c.id):[];
+    if(NXa.length){
       o.plan++;
-      if(m.next.due&&m.next.due<=today)o.due++;
+      for(var nq=0;nq<NXa.length;nq++)if(NXa[nq].due&&NXa[nq].due<=today){o.due++;break;}
     }
     /* 접촉 기록은 {at:'2026-08-19'} 로 적힌다. 예전에 여기서 .d 를 보는 바람에
        기록이 하나도 안 잡혔고 모든 고객이 「한 번도 안 만난 사람」이 됐다.
@@ -8600,6 +8607,12 @@ function arManOf(m){
   return (v!==''&&v!=null&&isFinite(n)&&n>0)?n:null;
 }
 /* 고객 한 사람 한 사람 — 언제 마지막으로 손댔고 다음에 뭘 하기로 했는지 */
+/* 맨 앞 한 줄 — 묻는 곳은 cmNextAll 하나 (판 X122 · 5번).
+   <b>못 읽었으면 빈 줄</b>을 준다 — 지어내지 않는다 (1번). */
+function arNxTop(id){
+  if(typeof cmNextTop!=='function')return {};
+  return cmNextTop(id)||{};
+}
 function arCliRows(clients,metas,last){
   var byId={},out=[],i,c,m,lt,j,tc,d;
   for(i=0;i<metas.length;i++)byId[metas[i].client_id]=metas[i].content||{};
@@ -8624,8 +8637,10 @@ function arCliRows(clients,metas,last){
       /* 가린 이름 — 배정 DB 와 이어 붙일 때 씁니다. 실명은 안 싣습니다 (3번) */
       nm:c.name_masked||'',
       name:((typeof cmRealOf==='function'&&cmRealOf(c.id))||c.name_masked||'(이름 없음)'),
-      plan:(m.next&&m.next.what)?m.next.what:'',
-      due:(m.next&&m.next.due)?m.next.due:'',
+      /* 맨 앞 하나를 그대로 싣고, <b>몇 건인지</b>도 같이 싣는다 (판 X122) */
+      plan:(arNxTop(c.id).what||''),
+      due:(arNxTop(c.id).due||''),
+      plans:((typeof cmNextAll==='function')?cmNextAll(c.id):[]),
       bd:m.bd||'',
       man:arManOf(m),
       ever:ever,at:ever?lt:'',
@@ -9409,10 +9424,18 @@ function arCatN(k){
 function arTodoList(){
   var me=arMyId(),out=[],i,l,t=arToday();
   l=AR.cliRows||[];
-  for(i=0;i<l.length;i++)
-    if(l[i].who===me&&l[i].plan&&l[i].due&&l[i].due<=t)
+  /* 쌓인 것 <b>저마다</b> 한 줄 (판 X122) */
+  for(i=0;i<l.length;i++){
+    if(l[i].who!==me)continue;
+    var NP=l[i].plans||[],pj;
+    if(NP.length){
+      for(pj=0;pj<NP.length;pj++)if(NP[pj].due&&NP[pj].due<=t)
+        out.push({k:'due',e:'⏰',t:l[i].name+' — '+NP[pj].what,s:'기한 '+NP[pj].due,go:'clients',
+                  bad:true,d:arDaysAgo(NP[pj].due)});
+    }else if(l[i].plan&&l[i].due&&l[i].due<=t)
       out.push({k:'due',e:'⏰',t:l[i].name+' — '+l[i].plan,s:'기한 '+l[i].due,go:'clients',
                 bad:true,d:arDaysAgo(l[i].due)});
+  }
   if(typeof CK_ITEMS!=='undefined'){
     var u=arUndone('day',CK_ITEMS.day);
     for(i=0;i<u.length;i++)
@@ -9674,9 +9697,16 @@ function arSchedHtml(){
     rows.push(arLine('📌',osEsc(ap[i].name),(d===t?'오늘':d)+' '+hm,
       osEsc(ap[i].region||''),d===t,"go('crm')"));
   }
-  var due=[],l=AR.cliRows||[];
-  for(i=0;i<l.length;i++)if(l[i].who===me&&l[i].plan&&l[i].due)
-    due.push({n:l[i].name,p:l[i].plan,d:l[i].due});
+  /* ▶ 쌓인 것을 <b>저마다 한 줄씩</b> 세운다 (판 X122). 여태 고객당 하나만
+     서서, 둘째부터는 이 목록에 아예 안 보였습니다. */
+  var due=[],l=AR.cliRows||[],np,nj;
+  for(i=0;i<l.length;i++){
+    if(l[i].who!==me)continue;
+    np=l[i].plans||[];
+    if(np.length){ for(nj=0;nj<np.length;nj++)if(np[nj].due)
+        due.push({n:l[i].name,p:np[nj].what,d:np[nj].due}); }
+    else if(l[i].plan&&l[i].due)due.push({n:l[i].name,p:l[i].plan,d:l[i].due});
+  }
   due.sort(function(a,b){return a.d<b.d?-1:1;});
   var drows=[];
   for(i=0;i<due.length&&i<12;i++)
@@ -11170,7 +11200,12 @@ function arNudgeBump(){try{localStorage.setItem(arNudgeKey(),''+(arNudgeN()+1));
 function arNudge(){
   if(arBriefIsOff()||arNudgeN()>=3||!OS.profile||!AR.loaded)return;
   var me=arMyId(),c14=arCold(me,14).length,old=arOld(me).length,due=0,i,l=AR.cliRows||[],t=arToday();
-  for(i=0;i<l.length;i++)if(l[i].who===me&&l[i].plan&&l[i].due&&l[i].due<=t)due++;
+  for(i=0;i<l.length;i++){
+    if(l[i].who!==me)continue;
+    var NU=l[i].plans||[],uj;
+    if(NU.length){ for(uj=0;uj<NU.length;uj++)if(NU[uj].due&&NU[uj].due<=t)due++; }
+    else if(l[i].plan&&l[i].due&&l[i].due<=t)due++;
+  }
   var msg='';
   if(c14)msg='2주 넘게 손 안 댄 DB 가 '+c14+'건 있습니다. 오늘 세 명만 다시 걸어 보세요.';
   else if(due)msg='기한이 지난 고객 할 일이 '+due+'건 있습니다.';
@@ -17630,8 +17665,12 @@ function mcalItems(){
           {k:'touch',id:c.id,t:nm,who:c.advisor_id||'',mk:mk,
            vip:(typeof ccIsVip==='function')&&ccIsVip(c.id)});
     }
-    if(m&&m.next&&m.next.what&&m.next.due)
-      add(m.next.due,{k:'next',id:c.id,t:nm,who:c.advisor_id||'',mk:mk,s:m.next.what});
+    /* ▶ 다음 할 일 — <b>쌓인 것을 전부</b> 저마다의 날에 찍는다 (판 X122).
+       여태 하나만 찍어, 둘째부터는 달력에 아예 안 섰습니다. */
+    var NX=(typeof cmNextAll==='function')?cmNextAll(c.id):[],nz;
+    for(nz=0;nz<NX.length;nz++)if(NX[nz].due)
+      add(NX[nz].due,{k:'next',id:c.id,t:nm,who:c.advisor_id||'',mk:mk,
+                      s:NX[nz].what,nk:NX[nz].k});
     if(m&&m.bd)add(mcalBdDate(m.bd),{k:'bd',id:c.id,t:nm,who:c.advisor_id||'',mk:mk});
   }
   var H=(typeof hpLive==='function')?hpLive():[];
@@ -18403,7 +18442,7 @@ function mcalCusFormHtml(ds){
     '<div class="mcal-cus-w">'+
       (ahead
         ? '이 날은 <b class="go">앞날</b>이라 <b>다음 할 일</b>로 잡힙니다 — 달력에 <b>▶ 할 일</b>로 섭니다. '+
-          '고객 한 분께 다음 할 일은 <b>하나만</b> 잡힙니다 — 이미 잡아 둔 것이 있으면 <b>그것이 바뀝니다.</b>'
+          '이미 잡아 둔 것이 있어도 <b>지우지 않고 쌓입니다</b> — 날짜가 다르면 그 날마다 따로 섭니다.'
         : '이 날은 <b>지났거나 오늘</b>이라 <b>접촉 기록</b>으로 남습니다 — 고객 365일의 그분 기록에 그 날짜로 들어가고, '+
           '연락 주기가 거기서부터 다시 셉니다.')+
       ' 적은 것은 <b>고객 365일과 같은 자리</b>에 담깁니다 — 여기서만 보이는 것이 아닙니다.'+
@@ -20053,8 +20092,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-17 11:05';
-var APP_BUILD_NOTE="📇 <b>달력에서 고객의 상태를 바로 적습니다</b> — 내 캘린더·홈·고객 365일의 달력에서 <b>날짜를 누르면</b> 고객 고르개·상태·한 줄 메모가 섭니다. <b>지난 날·오늘</b>에 넣으면 그분 <b>접촉 기록</b>으로 그 날짜에 들어가고(연락 주기가 거기서부터 다시 셉니다), <b>앞날</b>에 넣으면 <b>다음 할 일</b>이 되어 달력 그 날에 <b>▶</b> 로 섭니다 — 넣자마자 눈에 보입니다. 여태 달력에서 적을 수 있는 것은 <b>글 한 줄</b>뿐이라 어느 고객인지 알 수 없었고 이 브라우저에만 남았습니다. ★ 저장은 <b>새로 안 짰습니다</b> — 고객 365일이 쓰던 <b>cmTouchAdd·cmNextSave</b> 를 부르기만 합니다(5번). ★ <b>날을 누르셨을 때만</b> 섭니다 — 늘 펴 두었더니 폰에서 248px 늘어 고객 365일이 3.0→3.4화면이 되었습니다. 사장님이 「폰에서 안 보인다」 하신 자리라 기준선을 올리지 않고 <b>안 고른 날에는 0px</b> 로 두었습니다. 자 <b>check-calcus</b> 가 진짜 화면에서 진짜로 눌러 재고, 일부러 되돌려 다섯 가지 모두 빨간불이 켜지는 것을 보았습니다(8번). (판 X121)";
+var APP_BUILD='2026-10-17 14:30';
+var APP_BUILD_NOTE="▶ <b>다음 할 일이 여러 개 쌓입니다</b> — 여태 한 분께 <b>하나</b>뿐이라 둘째를 잡으면 앞의 것이 <b>말없이 사라졌습니다.</b> 이제 지우지 않고 쌓이고, <b>달력에 저마다의 날</b>에 다 섭니다(여태 하나만 섰습니다). 홈의 「오늘 할 것」·「다음에 할 일 — 날짜순」 도 줄마다 섭니다. 고객 상세 <b>🤝 관계</b> 칸에서 줄마다 <b>「끝」</b>(접촉 기록에 남김)·<b>「✕」</b>(그냥 지움)를 누르실 수 있습니다. ★ 이미 잡아 두신 옛 한 줄은 <b>그대로 읽습니다</b> — 하나도 안 사라집니다. ★ 묻는 곳을 <b>cmNextAll 하나</b>로 모아 읽던 자리 열넷을 전부 그리로 보냈습니다(5번). 자 <b>check-nextmany</b> 가 지키고, 되돌림 여덟 가지 중 둘이 안 울어 <b>자를 고쳤습니다</b>(8번). (판 X122)";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -37596,7 +37635,7 @@ function hlpRows(){
     a:'아는 것이 넷도 안 되는 분입니다. 한 칸만 채워도 거리가 생깁니다.',
     z:'다 채워 두셨습니다.', go:'clients', b:'채우러 가기'});
   R.push({q:'다음에 할 일이 비어 있나요?', u:'분',
-    n:hlpCount(function(c){ var m=cmOf(c.id); return !(m&&m.next&&m.next.what); }),
+    n:hlpCount(function(c){ return (typeof cmNextN==='function')?cmNextN(c.id)===0:false; }),
     a:'다음에 무엇을 할지가 없으면 관리가 아닙니다. 한 줄만 적어 두시면 됩니다.',
     z:'모든 분께 다음 할 일이 잡혀 있습니다.', go:'clients', b:'적으러 가기'});
   R.push({q:'오늘 나를 알릴 차례인가요?', u:'건',
@@ -64457,6 +64496,16 @@ var CM_FIELDS=[
  ['next', 'any', 0, {ask:'다음에 무엇을 하실지 잡아 둘까요?',
                      why:'이것이 없으면 이분은 그대로 잊힙니다. 한 줄이면 됩니다.',
                      how:'tap', pri:1}],
+ /* ▶ <b>쌓인 다음 할 일</b> (판 X122 · 사장님 말씀 「다음 할일 여러개 쌓이게 해줘」).
+    ★★ 이 줄이 <b>없으면 서버로 안 실립니다</b> — cmBody 는 이 표에 적힌 칸만
+      싣습니다. 처음에 이 줄을 빠뜨렸고, 새로고침하면 쌓아 둔 것이 통째로
+      사라지는 자리였습니다. check-cqa 의 「표만큼 보냈나」 가 잡아 주었습니다 (8번).
+    ★ 위 'next' 는 <b>옛 한 줄</b>입니다 — 지우지 않습니다. 이미 서버에 쌓여
+      있어서, 빼면 그분들의 다음 할 일이 사라집니다 (1번). cmNextAll 이
+      둘을 한 줄기로 읽고, 쓸 때 이리로 옮깁니다.
+    ★ 여쭙는 말(ask/why)은 <b>위 한 곳</b>에만 둡니다 — 둘 다 물으면 같은 것을
+      두 번 여쭙습니다 (5번).                                               */
+ ['nx',   'arr', 60, null],
  /* ── 😟 <b>무엇을 제일 걱정하시나</b> — 다음 통화 <b>첫 문장</b>이 됩니다 ──
     사장님 말씀 (2026-09-27 · 목각 사진 2) 「무엇을 제일 걱정하시나 —
     <b>첫 문장에 붙일 말</b>」. 사진 1 의 초록 상자 「첫 문장에 붙일 것 —
@@ -64647,7 +64696,9 @@ function cmTodo(list){
   var due=[],bd=[],cold=[],i,c,m,d;
   for(i=0;i<list.length;i++){
     c=list[i];m=cmOf(c.id);
-    if(m.next&&m.next.what&&m.next.due&&m.next.due<=cmToday())due.push(c);
+    /* 쌓인 것 <b>가운데 하나라도</b> 날이 됐으면 오늘 할 것이다 (판 X122) */
+    var NT=(typeof cmNextAll==='function')?cmNextAll(c.id):[],nt;
+    for(nt=0;nt<NT.length;nt++)if(NT[nt].due&&NT[nt].due<=cmToday()){due.push(c);break;}
     d=cmBdIn(m.bd);
     if(d>=0&&d<=7)bd.push(c);
     if(cmTemp(c.id).d>=60||(cmTemp(c.id).d<0&&cmDays((c.created_at||'').slice(0,10))>=60))cold.push(c);
@@ -64959,7 +65010,7 @@ function ccBriefOf(id){
   var db=null,L=(typeof AR!=='undefined'&&AR.db)?AR.db:[];
   for(i=0;i<L.length;i++)if(L[i]&&L[i].id===id){db=L[i];break;}
   return APEX_FIT.brief({fp:(m&&m.fp)||{},hn:hn,touch:(m&&m.touch)||[],db:db,
-    next:(m&&m.next)||{},notes:ccFitNotes(id),band:ccBandOf(id),names:nm});
+    next:((typeof cmNextTop==='function')&&cmNextTop(id))||{},notes:ccFitNotes(id),band:ccBandOf(id),names:nm});
 }
 /* 갈래 하나만 돌려주던 옛 이름 — 부르던 자리를 그대로 둔다 (5번).
    <b>못 읽으면 빈 글자</b>를 돌려준다. 예전처럼 「보험」으로 채우지 않는다. */
@@ -65598,23 +65649,116 @@ function cmToDeck(id){
 /* ── 다음 할 일 · 접촉 기록 ──
    이 두 가지가 고객관리의 전부다. 나머지는 이것을 돕는 것뿐이다. */
 /* ★ 2026-09-28 — cmTouchAdd 와 같은 까닥으로 <b>값을 받을 수 있게</b> 했습니다 */
+/* ══ ▶ 다음 할 일 — <b>여러 개가 쌓입니다</b> (판 X122) ═════════════════
+   사장님 말씀 (2026-10-17) — 「다음 할일 여러개 쌓이게 해줘」.
+
+   여태 한 분께 <b>하나</b>였습니다(m.next = {what,due}). 둘째를 잡으면
+   앞의 것이 <b>말없이 사라졌습니다</b> — 판 X121 에서 그 사실을 칸 위에
+   적어 두기만 했습니다. 이제 실제로 쌓습니다.
+
+   ★ 담는 자리는 <b>m.nx 배열 하나</b>입니다. 옛 <b>m.next</b> 는 이미
+     서버에 쌓여 있으므로 <b>그대로 읽습니다</b> — 안 읽으면 그 고객의
+     다음 할 일이 하루아침에 사라집니다 (1번). 담는 자리가 둘인 것이
+     아니라, <b>읽는 자리가 하나</b>(cmNextAll)이고 그 자가 옛 줄까지
+     챙기는 것입니다. 쓸 때 옛 줄을 배열로 옮기고 m.next 를 비웁니다.
+   ★ <b>묻는 곳은 하나</b>입니다 (5번) — 화면은 .next 를 직접 안 봅니다.
+       cmNextAll(id)  … 쌓인 것 전부 · 날짜순
+       cmNextTop(id)  … 맨 앞 하나 (옛 m.next 를 보던 자리가 쓰던 것)
+       cmNextN(id)    … 몇 개
+     check-nextmany 가 「.next 를 직접 보는 자리가 늘지 않았나」 를 봅니다.  */
+/* 열쇠를 만드는 자는 <b>uidOf 하나</b>입니다 (5번) — 제 손으로 또 지으면
+   시각·난수를 얼린 자리에서 겹칩니다. check-uid 가 그것을 보고 울었습니다. */
+function cmNextKey(){ return (typeof uidOf==='function')?uidOf('nx'):('nx'+(UID_N=(UID_N||0)+1)); }
+/* 한 줄을 <b>같은 꼴</b>로 만든다 — 옛 줄이든 새 줄이든 부르는 쪽은 모른다 */
+function cmNextRow(x,k){
+  if(!x||!x.what)return null;
+  return {k:k||x.k||'',what:''+x.what,due:x.due||'',at:x.at||''};
+}
+function cmNextAll(id){
+  var m=(typeof cmOf==='function')?cmOf(id):null;
+  if(!m)return [];
+  var out=[],seen={},i,r;
+  var L=(m.nx&&m.nx.length)?m.nx:[];
+  for(i=0;i<L.length;i++){
+    r=cmNextRow(L[i]);
+    if(!r)continue;
+    if(seen[r.what+'|'+r.due])continue;
+    seen[r.what+'|'+r.due]=1; out.push(r);
+  }
+  /* 옛 한 줄 — 아직 안 옮겨진 분은 여기서 챙긴다. 같은 것이면 두 번 안 센다. */
+  r=cmNextRow(m.next,'old');
+  if(r&&!seen[r.what+'|'+r.due]){ r.old=true; out.push(r); }
+  out.sort(function(a,b){
+    var x=a.due||'9999-99-99',y=b.due||'9999-99-99';
+    return x<y?-1:(x>y?1:0);
+  });
+  return out;
+}
+function cmNextTop(id){ return cmNextAll(id)[0]||null; }
+/* AI·내보내기에 실을 글 — <b>쌓인 것을 다</b> 싣는다. 하나만 실으면
+   AI 가 「이 분은 할 일이 하나뿐」 으로 읽는다 (1번). */
+function cmNextTxt(id){
+  var A=cmNextAll(id),i,o='';
+  if(!A.length)return '';
+  o='\n다음 할 일'+(A.length>1?(' '+A.length+'건'):'')+':';
+  for(i=0;i<A.length;i++)o+='\n · '+A[i].what+' ('+(A[i].due||'날짜 없음')+')';
+  return o;
+}
+function cmNextN(id){ return cmNextAll(id).length; }
+/* 담을 모양을 만든다 — <b>쓰는 자리 둘(저장·끝냄)이 같은 것을 쓴다</b> (5번).
+   옛 m.next 를 배열로 옮기고 비우는 것도 여기 한 곳에서 합니다. */
+function cmNextPatch(id,list){
+  return {nx:list,next:null};
+}
 function cmNextSave(id,what0,due0){
   var what=(''+(what0!=null?what0:(osVal('cmNextWhat')||''))).replace(/^\s+|\s+$/g,'');
   var due=due0||osVal('cmNextDue')||'';
   if(!what){toast('다음에 무엇을 할지 한 줄만 적어 주세요');return;}
-  cmSave(id,{next:{what:what.slice(0,120),due:due||cmToday()}},function(){
-    toast('다음 할 일을 잡았습니다 — '+(due||cmToday()));
+  what=what.slice(0,120); due=due||cmToday();
+  /* ★ <b>덮지 않고 쌓습니다</b> (판 X122 · 사장님 말씀 「다음 할일 여러개
+     쌓이게 해줘」). 옛 줄은 cmNextAll 이 이미 목록에 넣어 주므로, 그것을
+     그대로 담으면 <b>옮기기까지 한 번에</b> 됩니다. */
+  var L=cmNextAll(id),i;
+  for(i=0;i<L.length;i++)if(L[i].what===what&&L[i].due===due){
+    toast('같은 것이 이미 그 날에 잡혀 있습니다');return;
+  }
+  L.push({k:cmNextKey(),what:what,due:due,at:cmToday()});
+  cmSave(id,cmNextPatch(id,L),function(){
+    toast('다음 할 일을 잡았습니다 — '+due+(L.length>1?(' · 모두 '+L.length+'건'):''));
     cmDetailPaint(id);
   });
 }
-function cmNextDone(id){
-  var m=cmOf(id);
-  if(!m.next||!m.next.what){toast('잡아 둔 다음 할 일이 없습니다');return;}
-  var did=m.next.what;
-  var L=(m.touch||[]).slice();
-  L.unshift({at:cmToday(),how:'처리',note:did});
-  cmSave(id,{next:null,touch:L},function(){
-    toast('끝냈다고 표시하고 접촉 기록에 남겼습니다');
+/* ★ <b>그 한 줄만</b> 끝냅니다 (판 X122). 열쇠를 안 주면 맨 앞 하나 —
+   여태 부르던 자리(cmNextDone(id))가 그대로 돕니다. */
+function cmNextDone(id,k){
+  var A=cmNextAll(id);
+  if(!A.length){toast('잡아 둔 다음 할 일이 없습니다');return;}
+  var hit=null,rest=[],i;
+  for(i=0;i<A.length;i++){
+    if(hit===null&&(k?(A[i].k===k):true)){ hit=A[i]; continue; }
+    rest.push(A[i]);
+  }
+  if(!hit){toast('그 줄을 못 찾았습니다');return;}
+  var T=(cmOf(id).touch||[]).slice();
+  T.unshift({at:cmToday(),how:'처리',note:hit.what});
+  var pat=cmNextPatch(id,rest); pat.touch=T;
+  cmSave(id,pat,function(){
+    toast('끝냈다고 표시하고 접촉 기록에 남겼습니다'+(rest.length?(' — '+rest.length+'건 남았습니다'):''));
+    cmDetailPaint(id);
+  });
+}
+/* 잘못 적은 줄은 <b>지울 수 있어야</b> 합니다 — 넣기만 되고 못 지우면
+   틀린 줄이 영영 달력에 남습니다 (6번). 끝낸 것과 달리 접촉 기록에
+   남기지 않습니다 — 안 한 일을 했다고 적으면 안 됩니다 (1번). */
+function cmNextDel(id,k){
+  var A=cmNextAll(id),rest=[],hit=null,i;
+  for(i=0;i<A.length;i++){
+    if(hit===null&&A[i].k===k){ hit=A[i]; continue; }
+    rest.push(A[i]);
+  }
+  if(!hit){toast('그 줄을 못 찾았습니다');return;}
+  cmSave(id,cmNextPatch(id,rest),function(){
+    toast('지웠습니다 — 접촉 기록에는 안 남깁니다');
     cmDetailPaint(id);
   });
 }
@@ -66038,10 +66182,12 @@ function cmRowHtml(c){
   if(kn)sub.push('아는 것 '+kn.got+'/'+kn.all);
   sub.push('팩트 '+cmFfCount(c.id)+'/'+cmFfTotal());
   var nx='';
-  if(m.next&&m.next.what){
-    var d=cmDays(m.next.due);
-    nx='<div class="cm-nx'+(d>=0?' due':'')+'">▶ '+osEsc(vaCut(m.next.what,30))+
-      '<span>'+osEsc(m.next.due||'')+(d>0?(' · '+d+'일 지남'):(d===0?' · 오늘':''))+'</span></div>';
+  var NXr=(typeof cmNextAll==='function')?cmNextAll(c.id):[];
+  if(NXr.length){
+    var n0=NXr[0],d=cmDays(n0.due);
+    nx='<div class="cm-nx'+(d>=0?' due':'')+'">▶ '+osEsc(vaCut(n0.what,30))+
+      '<span>'+osEsc(n0.due||'')+(d>0?(' · '+d+'일 지남'):(d===0?' · 오늘':''))+
+      (NXr.length>1?(' · 외 '+(NXr.length-1)+'건'):'')+'</span></div>';
   }
   /* 남이 맡은 고객이면 누구 것인지 앞에 붙인다. 내 것에는 안 붙인다 — 전부 내 것이면 시끄럽다 */
   var wtag='';
@@ -66156,7 +66302,7 @@ function cqaHas(id,k){
   if(typeof CM==='undefined'||!CM.loaded)return null;   /* 아직 안 읽었다 */
   var m=(typeof cmOf==='function')?cmOf(id):null;
   if(!m)return null;
-  if(k==='next') return !!(m.next&&m.next.what);
+  if(k==='next') return (typeof cmNextN==='function')?(cmNextN(id)>0):false;
   if(k==='touch')return ((m.touch||[]).length>0);
   if(k==='bd')   return !!m.bd;
   if(k==='cd')   return !!m.cd;
@@ -66198,10 +66344,11 @@ function cqaNextSet(id,i){
   var x=CQA_NEXT[i],due;
   if(!x||typeof cmSave!=='function')return;
   due=cqaDay(x[1]);
-  cmSave(id,{next:{what:x[2],due:due}},function(){
-    toast('다음 할 일을 잡았습니다 — '+x[2]+' · '+due);
-    cqaRepaint(id);
-  });
+  /* ★ 여기도 <b>쌓습니다</b> — 쓰는 자리는 cmNextSave 하나입니다 (5번).
+     여태 제 손으로 cmSave 를 불러 덮었습니다. */
+  if(typeof cmNextSave!=='function'){toast('고객 365일을 먼저 여세요');return;}
+  cmNextSave(id,x[2],due);
+  setTimeout(function(){ if(typeof cqaRepaint==='function')cqaRepaint(id); },350);
 }
 /* 연락 방법은 <b>CM_HOW 한 곳</b>에서 옵니다 — 여기서 또 적으면 방법을
    하나 더할 때 한쪽만 늘어납니다 (5번). 앞 셋만 단추로 세웁니다.   */
@@ -66842,7 +66989,7 @@ function cshMark(id,key){
   var r=cshResOf(key);
   if(!r){toast('모르는 결과입니다');return;}
   var dbid=CSH.dbid,due=cshDayPlus(r[2]),m=cmOf(id),
-      what=(m.next&&m.next.what)||'',to='',from='',row=null;
+      what=(((typeof cmNextTop==='function')&&cmNextTop(id))||{}).what||'',to='',from='',row=null;
   if(dbid){
     try{ row=(typeof hdbRow==='function')?hdbRow(dbid):null; from=(row&&row.stage)||''; }catch(e){}
     if(r[4]==='@next'){ try{ to=APEX_STAGE.next(from)||''; }catch(e2){ to=''; } }
@@ -66901,7 +67048,7 @@ function cmSayCopy(id){
   }catch(e){toast(no);}
 }
 function cmNoteHtml(id){
-  var m=cmOf(id),nx=(m.next&&m.next.what)?m.next:null,i,h='';
+  var m=cmOf(id),i,h='';
   if(!id)return '';
   h+='<div class="t-card" style="margin-bottom:16px">'+
      '<div class="t-lab">📝 적어 두기 — 이 분 상황</div>'+
@@ -66915,9 +67062,15 @@ function cmNoteHtml(id){
        '<textarea id="cmWorry" rows="2" placeholder="아이 교육비가 제일 걱정이라고 하셨습니다">'+osEsc(m.worry||'')+'</textarea></div>'+
      '<div class="t-row2" style="align-items:flex-end">'+
      '<div class="t-fld" style="flex:1"><span class="l">다음에 할 날</span>'+
-       '<input id="cmNextDue" type="date" value="'+osEsc(nx&&nx.due?nx.due:cmToday())+'"></div>'+
+       '<input id="cmNextDue" type="date" value="'+osEsc(cmToday())+'"></div>'+
      '<div class="t-fld" style="flex:1"><span class="l">그날 할 것</span>'+
-       '<input id="cmNextWhat" type="text" placeholder="만기 안내하고 다음 자리 잡기" value="'+osEsc(nx?nx.what:'')+'"></div>'+
+       '<input id="cmNextWhat" type="text" placeholder="만기 안내하고 다음 자리 잡기"></div>'+
+     '</div>'+
+     /* ★ 판 X122 — <b>쌓입니다.</b> 그래서 칸을 <b>비워 둡니다</b> — 잡아 둔 것을
+        미리 채워 두면 「고치는 칸」 으로 보이는데, 적으면 <b>한 건이 더</b>
+        생깁니다. 보이는 것과 하는 일이 다르면 그것이 거짓말입니다 (1번). */
+     '<div class="t-note">적으시면 <b>지우지 않고 쌓입니다</b>'+
+       ((typeof cmNextN==='function'&&cmNextN(id))?(' — 지금 <b>'+cmNextN(id)+'건</b> 잡혀 있습니다. 아래 <b>🤝 관계</b> 에서 보고 끝내거나 지우십시오.'):'.')+
      '</div>'+
      '<div class="t-lab" style="margin-top:22px">📞 들은 말 — 접촉 기록으로 남습니다</div>'+
      '<div class="t-row2" style="align-items:flex-end">'+
@@ -67159,8 +67312,8 @@ function cmRrnCopy(id){
 }
 function cmRelHtml(id){
   var m=cmOf(id),tp=cmTemp(id),L=m.touch||[],h='',i,r;
-  var nx=m.next&&m.next.what?m.next:null;
-  var d=nx?cmDays(nx.due):-1;
+  /* ▶ 다음 할 일 — <b>쌓인 것 전부</b> (판 X122). 묻는 곳은 cmNextAll 하나 (5번) */
+  var NX=(typeof cmNextAll==='function')?cmNextAll(id):[];
   /* 목각 옷 — id·onclick 은 <b>한 글자도</b> 안 바꿉니다 (2026-09-27 「기능만 맞추어서」).
      마지막 접촉 온도는 t-tag 로 옮깁니다 — hot 은 초록, cold 는 빨강이 아니라
      <b>흐린 색</b>입니다. 기록이 없는 것은 잘못이 아니라 <b>모르는 것</b>입니다 (1번) */
@@ -67170,11 +67323,20 @@ function cmRelHtml(id){
       '</div>'+
     '<div class="t-chips"><span class="t-tag '+(tp.k==='hot'?'ok':(tp.k==='cold'?'':'b'))+'">'+
       tp.e+' 마지막 접촉 '+osEsc(tp.t)+'</span></div>';
-  if(nx){
-    h+='<div class="t-note'+(d>=0?'':' b')+'">▶ <b>'+osEsc(nx.what)+'</b><br>'+
-      osEsc(nx.due||'')+(d>0?(' · '+d+'일 지났습니다'):(d===0?' · 오늘입니다':(d<0?(' · '+(-d)+'일 남았습니다'):'')))+'</div>'+
-      '<button type="button" class="t-btn sm" style="margin-top:12px" onclick="cmNextDone(\''+id+'\')">끝냈습니다</button>'+
-      '<div class="t-sub">고치실 때는 위 <b>📝 적어 두기</b> 에서 — 적는 자리는 한 곳입니다 (5번).</div>';
+  if(NX.length){
+    h+='<div class="t-lab" style="margin-top:16px">▶ 잡아 둔 다음 할 일 '+NX.length+'건</div>';
+    for(i=0;i<NX.length;i++){
+      var x=NX[i],d=cmDays(x.due);
+      h+='<div class="cm-nxrow'+(d>=0?' due':'')+'">'+
+        '<span class="cm-nxt">▶ <b>'+osEsc(x.what)+'</b><i>'+osEsc(x.due||'날짜 없음')+
+          (d>0?(' · '+d+'일 지났습니다'):(d===0?' · 오늘입니다':(d<0?(' · '+(-d)+'일 남았습니다'):'')))+'</i></span>'+
+        '<button type="button" class="cm-nxdo" onclick="cmNextDone(\''+id+'\',\''+osEsc(x.k)+'\')">끝</button>'+
+        '<button type="button" class="cm-nxx" title="이 줄 지우기" aria-label="이 줄 지우기" '+
+          'onclick="cmNextDel(\''+id+'\',\''+osEsc(x.k)+'\')">✕</button>'+
+      '</div>';
+    }
+    h+='<div class="t-sub">위 <b>📝 적어 두기</b> 에 또 적으시면 <b>지우지 않고 쌓입니다</b> — '+
+       '달력에도 저마다의 날에 섭니다. 「끝」 은 접촉 기록으로 남고, 「✕」 는 잘못 적은 줄을 그냥 지웁니다 (기록에 안 남습니다).</div>';
   }
   /* ★ 2026-09-28 — <b>적는 칸은 여기 없습니다.</b> 목각처럼 「📝 적어 두기」
      한 카드로 <b>옮겼습니다</b>(베낀 것이 아닙니다 · 5번). 이 카드에는
@@ -67296,7 +67458,7 @@ function cmFfAsk(id){
   var last=cmLastTouch(id),tp=cmTemp(id);
   var user='[이 고객의 팩트파인딩]\n'+lines.join('\n')+famTxt+
     '\n\n[관계]\n마지막 접촉: '+(last?(last+' ('+tp.t+')'):'기록 없음')+
-    (m.next&&m.next.what?('\n다음 할 일: '+m.next.what+' ('+(m.next.due||'')+')'):'')+
+    cmNextTxt(id)+
     '\n\n이 고객에게 지금 무엇을 도울지 정리해 줘. 아래 순서로, 말로 바로 쓸 수 있게.\n\n'+
     '> **한 줄 진단** — 지금 이 사람에게 가장 시급한 것 하나.\n\n'+
     '## 1. 숫자로 본 지금\n채워진 값만으로 계산되는 것(소득 대비 지출·보장 공백·은퇴 부족액 등)을 표로. '+
@@ -68426,8 +68588,7 @@ function cliFHit(c,f,tod){
     return false;
   }
   if(f==='noplan'){
-    var m=(typeof cmOf==='function')?cmOf(c.id):null;
-    return !(m&&m.next&&m.next.what);
+    return (typeof cmNextN==='function')?(cmNextN(c.id)===0):false;
   }
   if(f==='run')return CLI_RUN.indexOf(cliFStage(c))>=0;
   if(f==='won')return CLI_WON.indexOf(cliFStage(c))>=0;
