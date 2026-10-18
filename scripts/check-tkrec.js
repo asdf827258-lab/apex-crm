@@ -160,6 +160,24 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(!/다음에 무엇을 할지 한 줄만/.test(empty.토스트),
      '  엉뚱한 말(「한 줄만 적어 주세요」)이 안 뜬다');
 
+  console.log('\n[5-2] 창 머리에 <b>아는 이름</b>을 적는다 (1번)');
+  /* ★ 고객 번호 없는 DB 줄을 열면 「(이름 없음)님, 어떻게 됐나요?」 라고
+     물었습니다 — 그 줄에는 이름이 있습니다. ★★ 그렇다고 고객 줄에서
+     못 찾았을 때 DB 줄 이름을 갖다 쓰면 <b>남의 이름</b>이 붙습니다.
+     처음에 그렇게 짰다가 되돌렸습니다 — 이름을 틀리는 것은 모르는 것보다
+     나쁩니다 (1번). 세 경우를 다 잽니다. */
+  const nm = await page.evaluate(() => {
+    const keep = { id: CSH.id, db: CSH.dbid };
+    CSH.id = ''; CSH.dbid = 'db2'; const a = cshNm('');
+    CSH.dbid = ''; const b = cshNm('');
+    CSH.dbid = 'db2'; const c = cshNm('c1');
+    CSH.id = keep.id; CSH.dbid = keep.db;
+    return { DB줄: a, 둘다없음: b, 고객줄: c };
+  });
+  is(nm.DB줄 === '이○룡', '  DB 줄은 <b>그 줄의 이름</b>을 적는다 — ' + nm.DB줄);
+  is(nm.고객줄 === '성○향', '  고객 줄은 <b>그 고객</b>의 이름을 적는다 (남의 이름이 안 붙는다) — ' + nm.고객줄);
+  is(nm.둘다없음 === '고객', '  둘 다 모르면 <b>지어내지 않는다</b> — ' + nm.둘다없음);
+
   console.log('\n[6] 폰에서 「→」 가 첫 줄에 선다');
   await page.evaluate(() => { if (typeof cshClose === 'function') cshClose(); });
   await page.waitForTimeout(400);

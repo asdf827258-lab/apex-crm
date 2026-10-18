@@ -20130,8 +20130,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-18 10:40';
-var APP_BUILD_NOTE="☎️ <b>「오늘 터치할 사람」 을 눌러서 바로 기록합니다</b> — 여태 줄을 누르면 <b>딴 화면으로</b> 갔습니다. 이제 그 자리에서 <b>기록 창</b>이 뜹니다(단계 · 적어 두기 · 들은 말 · 「어떻게 됐나요?」 결과 다섯). 여태 가던 화면은 오른쪽 <b>「→」</b> 로 그대로 갑니다. ★ 창을 <b>새로 안 만들었습니다</b> — 고객 365일·명단이 쓰던 <b>cshOpen</b> 한 곳을 부릅니다 (5번). ★★ 재 보다가 옛 버그를 찾아 같이 고쳤습니다 — 아직 <b>내 고객이 아닌</b> 배정 DB 줄에서 결과를 누르면 <b>고객 번호가 빈 줄</b>이 서버에 들어가고 엉뚱한 말이 떴습니다. 이제 고객 쪽은 안 건드리고 <b>무엇이 안 남았는지</b> 말합니다. 자 <b>check-tkrec</b> 가 지키고, 되돌림 다섯 가지 모두 빨간불을 보았습니다(8번). (판 X123)";
+var APP_BUILD='2026-10-18 13:20';
+var APP_BUILD_NOTE="☎️ <b>「오늘 터치할 사람」 을 눌러서 바로 기록합니다</b> — 여태 줄을 누르면 <b>딴 화면으로</b> 갔습니다. 이제 그 자리에서 <b>기록 창</b>이 뜹니다(단계 · 적어 두기 · 들은 말 · 「어떻게 됐나요?」 결과 다섯). 여태 가던 화면은 오른쪽 <b>「→」</b> 로 그대로 갑니다. ★ 창을 <b>새로 안 만들었습니다</b> — 고객 365일·명단이 쓰던 <b>cshOpen</b> 한 곳을 부릅니다 (5번). ★★ 재 보다가 옛 버그를 찾아 같이 고쳤습니다 — 아직 <b>내 고객이 아닌</b> 배정 DB 줄에서 결과를 누르면 <b>고객 번호가 빈 줄</b>이 서버에 들어가고 엉뚱한 말이 떴습니다. 이제 고객 쪽은 안 건드리고 <b>무엇이 안 남았는지</b> 말합니다. 자 <b>check-tkrec</b> 가 지키고, 되돌림 다섯 가지 모두 빨간불을 보았습니다(8번). ★ 폰에서 찍어 보고 하나 더 고쳤습니다 — 창 머리가 「<b>(이름 없음)</b>님, 어떻게 됐나요?」 였습니다. 이제 <b>아는 이름</b>을 적습니다(배정 DB 줄은 그 줄 이름 · 고객 줄은 그 고객 이름 · 둘 다 모르면 「고객」). (판 X123)";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -66959,7 +66959,27 @@ function cshDayPlus(n){
 function cshResOf(k){ var i; for(i=0;i<CSH_RES.length;i++)if(CSH_RES[i][0]===k)return CSH_RES[i]; return null; }
 /* 이 분의 배정 DB 줄 — 없으면 빈 글입니다. 단계는 그 줄에 붙어 있습니다 */
 function cshDbOf(id){ try{ return (typeof olDbOf==='function')?olDbOf(id):''; }catch(e){ return ''; } }
-function cshNm(id){ try{ return cmName({id:id,name_masked:''})||'고객'; }catch(e){ return '고객'; } }
+/* 창 머리에 쓸 이름 — <b>아는 대로</b> 적습니다 (판 X123).
+   고객 번호가 없는 <b>배정 DB 줄</b>에서 열면 cmName 이 「(이름 없음)」 을
+   돌려주어, 이름을 뻔히 아는데도 「(이름 없음)님, 어떻게 됐나요?」 라고
+   물었습니다. 그 줄에는 이름이 있습니다 — CSH.dbid 로 찾아 씁니다 (1번).
+   ★ 줄을 찾는 자리는 <b>hdbRow 하나</b>입니다 (5번).                    */
+function cshNm(id){
+  try{
+    /* ★ 고객 번호가 있으면 <b>그 고객</b>만 봅니다. 못 찾았다고 배정 DB 줄
+       이름을 갖다 쓰면 <b>남의 이름</b>이 붙습니다 — 처음에 그렇게 짰다가
+       「c1 을 열었는데 이○룡」 이 나와 되돌렸습니다. 이름을 틀리는 것은
+       모르는 것보다 나쁩니다 (1번).
+       ★ 고객 줄은 cmCliOf·cmName 한 곳에서, 배정 DB 줄은 hdbRow 한 곳에서
+         가져옵니다 (5번). */
+    if(id){
+      var c=(typeof cmCliOf==='function')?cmCliOf(id):null;
+      return cmName({id:id,name_masked:(c&&c.name_masked)||''})||'고객';
+    }
+    var r=(CSH.dbid&&typeof hdbRow==='function')?hdbRow(CSH.dbid):null;
+    return (r&&r.name)||'고객';
+  }catch(e){ return '고객'; }
+}
 function cshOpen(id,dbid){
   CSH.id=id||''; CSH.dbid=dbid||cshDbOf(id);
   var host=document.getElementById('cshHost');
