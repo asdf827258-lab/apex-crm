@@ -283,7 +283,11 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   const G = await page.evaluate(() => {
     const t = s => guard(s);
     return { ban:t('이 상품은 무조건 됩니다. 확정 수익 보장.'), top:t('업계 1위 설계사입니다.'),
-      tax:t('이 상품은 비과세입니다.'), name:t('김철수님 사례입니다. 보험료는 심사 결과에 따릅니다.'),
+      tax:t('이 상품은 비과세입니다.'), /* ★ 여기만은 <b>홍길동을 쓰면 안 됩니다</b> — 홍길동은 블로그 게이트의
+   NOTNAME 에 들어 있어 <b>일부러 안 잡는</b> 이름입니다(견본으로 허락한 이름).
+   그것으로 시험하면 「이름을 잡나」 가 영영 초록이 됩니다. 가짜 이름
+   식구 중 NOTNAME 에 없는 <b>홍갑돌</b>로 잽니다 (판 X125 · 8번). */
+      name:t('홍갑돌님 사례입니다. 보험료는 심사 결과에 따릅니다.'),
       hole:t('진단비는 [[확인 필요: 상품설명서에서 확인]] 입니다.'),
       needTax:t('세액공제를 받을 수 있습니다.'), needUw:t('보험료는 나이에 따라 다릅니다.'),
       pay:t('우리와 함께하면 수입을 보장합니다.'), pay2:t('억대 연봉 설계사가 되실 수 있습니다.'),
@@ -293,7 +297,9 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(G.ban.hits.some(h => /확정\s*수익/.test(h.w)), '  「확정 수익」 을 잡는다');
   is(G.top.hits.some(h => /1위/.test(h.w)), '  「업계 1위」 를 잡는다');
   is(G.tax.hits.some(h => /비과세/.test(h.w)), '  「비과세입니다」 라는 결론을 잡는다 (CLAUDE.md 2)');
-  is(G.name.hits.some(h => /김철수님/.test(h.w)), '  사람 이름처럼 보이는 말을 잡는다 (CLAUDE.md 3)');
+  is(G.name.hits.some(h => /홍갑돌님/.test(h.w)), '  사람 이름처럼 보이는 말을 잡는다 (CLAUDE.md 3)');
+  is(!G.tax.hits.some(h => /홍길동/.test(h.w)) && typeof NOTNAME_OK === 'undefined',
+     '  ★ 허락한 견본 이름(홍길동)은 <b>안 잡는다</b> — NOTNAME 에 있습니다');
   is(G.hole.holes.length === 1 && !G.hole.ok, '  못 채운 [[확인 필요]] 가 남으면 통과시키지 않는다');
   is(G.needTax.miss.length > 0, '  세금 글에 「요건 충족 시」 가 없으면 잡는다');
   is(G.needUw.miss.length > 0, '  보험료 글에 「심사 결과에 따릅니다」 가 없으면 잡는다');

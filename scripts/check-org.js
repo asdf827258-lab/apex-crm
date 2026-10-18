@@ -30,22 +30,22 @@ window.__wrote=[];
 window.__db={
   org:[
     {id:'o1',name:'윤시현',rank:'사업단장',team:'온탑본부',parent:'',member_id:'u1'},
-    {id:'o2',name:'김지점',rank:'지점장',team:'온탑1팀',parent:'o1',member_id:'u2'},
-    {id:'o3',name:'이지점',rank:'지점장',team:'온탑2팀',parent:'o1',member_id:'u3'},
-    {id:'o4',name:'박서준',rank:'설계사',team:'온탑1팀',parent:'o2',member_id:'u4'},
-    {id:'o5',name:'최민아',rank:'설계사',team:'온탑1팀',parent:'o2',member_id:'u5'},
-    {id:'o6',name:'정하늘',rank:'신입',team:'온탑2팀',parent:'o3',member_id:'u6'},
+    {id:'o2',name:'홍지점',rank:'지점장',team:'온탑1팀',parent:'o1',member_id:'u2'},
+    {id:'o3',name:'임지점',rank:'지점장',team:'온탑2팀',parent:'o1',member_id:'u3'},
+    {id:'o4',name:'변학도',rank:'설계사',team:'온탑1팀',parent:'o2',member_id:'u4'},
+    {id:'o5',name:'성춘향',rank:'설계사',team:'온탑1팀',parent:'o2',member_id:'u5'},
+    {id:'o6',name:'홍기동',rank:'신입',team:'온탑2팀',parent:'o3',member_id:'u6'},
     {id:'o7',name:'미연결',rank:'설계사',team:'온탑2팀',parent:'o3',member_id:null}
   ],
   teams:[{id:'t1',name:'온탑1팀',leader_id:null}],   /* 온탑본부·온탑2팀은 아직 없다 */
   team_members:[],
   profiles:[
     {id:'u1',name:'윤시현',role:'owner',active:true},
-    {id:'u2',name:'김지점',role:'member',active:true},
-    {id:'u3',name:'이지점',role:'member',active:true},
-    {id:'u4',name:'박서준',role:'member',active:true},
-    {id:'u5',name:'최민아',role:'admin',active:true},   /* 운영자 — 낮추면 안 된다 */
-    {id:'u6',name:'정하늘',role:'member',active:true}
+    {id:'u2',name:'홍지점',role:'member',active:true},
+    {id:'u3',name:'임지점',role:'member',active:true},
+    {id:'u4',name:'변학도',role:'member',active:true},
+    {id:'u5',name:'성춘향',role:'admin',active:true},   /* 운영자 — 낮추면 안 된다 */
+    {id:'u6',name:'홍기동',role:'member',active:true}
   ]
 };
 window.supabase={createClient:function(){
@@ -193,8 +193,8 @@ window.supabase={createClient:function(){
   /* 대표·운영자는 계획에서부터 빠져 있어야 한다 */
   const who = plan.P.roles.map(x => x.nm);
   ok(who.indexOf('윤시현') < 0, '대표(나) 는 권한 변경 대상이 아니다');
-  ok(who.indexOf('최민아') < 0, '운영자는 낮추지 않는다 — 스스로를 잠그면 안 된다');
-  ok(who.indexOf('김지점') >= 0 && who.indexOf('이지점') >= 0,
+  ok(who.indexOf('성춘향') < 0, '운영자는 낮추지 않는다 — 스스로를 잠그면 안 된다');
+  ok(who.indexOf('홍지점') >= 0 && who.indexOf('임지점') >= 0,
     '지점장 둘은 리더 권한으로 올린다 — ' + who.join(', '));
   ok(plan.P.roles.every(x => x.to !== 'owner' && x.to !== 'admin'), '조직도가 대표·운영자를 만들어 내지는 않는다');
 
@@ -217,9 +217,9 @@ window.supabase={createClient:function(){
   const tj = done.teams.join(', ');
   ok(/온탑본부/.test(tj) && /온탑2팀/.test(tj), '팀이 실제로 생겼다 — ' + tj);
   ok(done.members === 6, '소속이 실제로 배정됐다 (' + done.members + '명)');
-  ok(done.roles.indexOf('김지점:leader') >= 0 && done.roles.indexOf('이지점:leader') >= 0,
+  ok(done.roles.indexOf('홍지점:leader') >= 0 && done.roles.indexOf('임지점:leader') >= 0,
     '지점장 권한이 실제로 바뀌었다');
-  ok(done.roles.indexOf('윤시현:owner') >= 0 && done.roles.indexOf('최민아:admin') >= 0,
+  ok(done.roles.indexOf('윤시현:owner') >= 0 && done.roles.indexOf('성춘향:admin') >= 0,
     '대표·운영자 권한은 그대로다 — ' + done.roles.join(' '));
   ok(done.wrote.filter(w => w.t === 'teams' && w.op === 'update').length === 2,
     '팀마다 리더를 지정했다');
@@ -258,7 +258,7 @@ window.supabase={createClient:function(){
   ok(pulled.before === 7, '조직도를 열면 서버 것을 스스로 가져와 바로 보여 준다 (' + pulled.before + '명)');
   ok(pulled.after === 7, '「↻ 새로고침」 을 눌러도 그대로 7명 (' + pulled.after + '명)');
   ok(pulled.saved === 7, '이 기기에도 저장돼 다음에 열면 그대로 있다');
-  ok(pulled.names.indexOf('박서준') >= 0, '서버에 있던 사람이 실제로 보인다 — ' + pulled.names.join(' · '));
+  ok(pulled.names.indexOf('변학도') >= 0, '서버에 있던 사람이 실제로 보인다 — ' + pulled.names.join(' · '));
 
   /* ── 이 기기에 내 것이 있으면 말없이 덮어쓰지 않는다 ── */
   const keep = await page.evaluate(async () => {
@@ -282,7 +282,7 @@ window.supabase={createClient:function(){
      이 기기에만 있는 사람이 서버 것에 덮여 사라지는 일이 없어야 한다. */
   ok(keep.names.indexOf('내가적은사람') >= 0,
     '이 기기에 적어 둔 사람이 서버 것에 덮여 사라지지 않는다 — ' + keep.names.join(' · '));
-  ok(keep.names.indexOf('박서준') >= 0, '서버에 있던 사람도 같이 보인다');
+  ok(keep.names.indexOf('변학도') >= 0, '서버에 있던 사람도 같이 보인다');
   ok(keep.saved === 10, '기기 예비본에 합쳐서 남는다 (' + keep.saved + '명)');
   ok(/이 기기에만 있는/.test(keep.bar) && /다른 컴퓨터에서는 안 보입니다/.test(keep.bar),
     '올려야 남들이 본다고 알려 준다 — ' + keep.bar.slice(0, 50));
@@ -338,11 +338,11 @@ window.supabase={createClient:function(){
     ];
     window.__db.profiles = [
       { id: 'u1', name: '윤시현', role: 'owner', active: true },
-      { id: 'u2', name: '김지점', role: 'leader', active: true },
-      { id: 'u3', name: '이지점', role: 'leader', active: true },
-      { id: 'u4', name: '박서준', role: 'member', active: true },
-      { id: 'u5', name: '최민아', role: 'member', active: true },
-      { id: 'u6', name: '정하늘', role: 'member', active: true },
+      { id: 'u2', name: '홍지점', role: 'leader', active: true },
+      { id: 'u3', name: '임지점', role: 'leader', active: true },
+      { id: 'u4', name: '변학도', role: 'member', active: true },
+      { id: 'u5', name: '성춘향', role: 'member', active: true },
+      { id: 'u6', name: '홍기동', role: 'member', active: true },
       { id: 'u7', name: '퇴사자', role: 'member', active: false }
     ];
     ORGS.pulled = false; ORGS.srv = null; ORGF.plan = null;
@@ -358,7 +358,7 @@ window.supabase={createClient:function(){
     '앱에 있는 팀원 5명을 넣겠다고 한다 (' + (solo.plan ? solo.plan.add.length : 0) + '명)');
   ok(solo.plan && solo.plan.already.length === 1, '이미 있는 나는 그대로 둔다');
   ok(solo.plan && !solo.plan.add.some(x => x.name === '퇴사자'), '그만둔 사람은 안 넣는다');
-  ok(/김지점\(지점장/.test(solo.txt) && /박서준\(설계사/.test(solo.txt),
+  ok(/홍지점\(지점장/.test(solo.txt) && /변학도\(설계사/.test(solo.txt),
     '직급은 지금 권한에서 가져온다 — ' + solo.txt.slice(0, 90));
   ok(/온탑1팀/.test(solo.txt) && /온탑2팀/.test(solo.txt), '소속은 지금 팀에서 가져온다');
 
@@ -380,11 +380,11 @@ window.supabase={createClient:function(){
   });
   ok(filled.n === 6, '조직도가 6명이 됐다 (' + filled.n + '명)');
   ok(filled.cards === 6, '가로 도표에 6명이 다 뜬다 (' + filled.cards + '명)');
-  ok(filled.names.indexOf('박서준') >= 0 && filled.names.indexOf('정하늘') >= 0,
+  ok(filled.names.indexOf('변학도') >= 0 && filled.names.indexOf('홍기동') >= 0,
     '팀원이 실제로 보인다 — ' + filled.names.join(' · '));
-  ok(filled.parents.indexOf('박서준→김지점') >= 0 && filled.parents.indexOf('정하늘→이지점') >= 0,
+  ok(filled.parents.indexOf('변학도→홍지점') >= 0 && filled.parents.indexOf('홍기동→임지점') >= 0,
     '팀원이 그 팀 리더 밑으로 들어간다 — ' + filled.parents.join(', '));
-  ok(filled.parents.indexOf('김지점→윤시현') >= 0, '리더는 맨 위 사람 밑으로 들어간다');
+  ok(filled.parents.indexOf('홍지점→윤시현') >= 0, '리더는 맨 위 사람 밑으로 들어간다');
   ok(filled.parents.filter(x => /최상위$/.test(x)).length === 1, '떠도는 사람 없이 하나로 이어진다');
   ok(filled.pushed > 0, '서버에도 같이 올라간다 — 다른 컴퓨터에서도 보인다');
   ok(/조직도에 넣고 서버에도 올렸습니다/.test(filled.msg), '무엇이 됐는지 말해 준다 — ' + filled.msg.slice(0, 50));
@@ -409,8 +409,8 @@ window.supabase={createClient:function(){
     /* 다른 컴퓨터에서 두 명을 더 넣었다고 치자 */
     window.__db.org = [
       { id: 'p_u1', name: '윤시현', rank: '사업단장', team: '온탑본부', parent: '', member_id: 'u1' },
-      { id: 'p_u2', name: '김지점', rank: '지점장', team: '온탑1팀', parent: 'p_u1', member_id: 'u2' },
-      { id: 'p_u4', name: '박서준', rank: '설계사', team: '온탑1팀', parent: 'p_u2', member_id: 'u4' }
+      { id: 'p_u2', name: '홍지점', rank: '지점장', team: '온탑1팀', parent: 'p_u1', member_id: 'u2' },
+      { id: 'p_u4', name: '변학도', rank: '설계사', team: '온탑1팀', parent: 'p_u2', member_id: 'u4' }
     ];
     ORGS.pulled = false; ORGS.srv = null; ORGF.plan = null;
     go('org');
@@ -423,7 +423,7 @@ window.supabase={createClient:function(){
     };
   });
   ok(other.cards === 3, '다른 컴퓨터에서 고친 것이 열자마자 넘어온다 (' + other.cards + '명)');
-  ok(other.names.indexOf('박서준') >= 0, '그 사람이 실제로 보인다 — ' + other.names.join(' · '));
+  ok(other.names.indexOf('변학도') >= 0, '그 사람이 실제로 보인다 — ' + other.names.join(' · '));
   ok(other.dev === 3, '받은 것을 이 기기에도 남긴다 — 다음에 인터넷이 끊겨도 보인다');
   ok(/서버에 저장돼 있습니다/.test(other.bar), '서버에 있다고 분명히 적는다 — ' + other.bar.slice(0, 46));
 
@@ -438,7 +438,7 @@ window.supabase={createClient:function(){
     };
   });
   ok(off.cards === 3, '서버가 안 닿아도 빈 화면이 아니라 마지막 것이 그대로 뜬다 (' + off.cards + '명)');
-  ok(off.names.indexOf('박서준') >= 0, '한 명도 안 사라진다 — ' + off.names.join(' · '));
+  ok(off.names.indexOf('변학도') >= 0, '한 명도 안 사라진다 — ' + off.names.join(' · '));
 
   /* ③ 이 기기에만 있는 사람을 서버 것으로 덮어 지우지 않는다 — 제일 위험한 자리 */
   const mine = await page.evaluate(async () => {
@@ -473,7 +473,7 @@ window.supabase={createClient:function(){
     orgEditId = 'p_u4';
     go('org');
     await new Promise(r => setTimeout(r, 400));
-    document.getElementById('org_f_name').value = '박서준2';
+    document.getElementById('org_f_name').value = '변학도2';
     orgSubmit();
     await new Promise(r => setTimeout(r, 700));
     return {
@@ -483,8 +483,8 @@ window.supabase={createClient:function(){
     };
   });
   ok(edit.pushed > 0, '고치면 곧바로 서버로 나간다 — 다른 컴퓨터에서도 보인다');
-  ok(edit.names.indexOf('박서준2') >= 0, '고친 이름이 화면에 그대로 남는다 — ' + edit.names.join(' · '));
-  ok(edit.srv.indexOf('박서준2') >= 0, '서버 기준값도 같이 움직인다 — 되돌아가 보이지 않는다');
+  ok(edit.names.indexOf('변학도2') >= 0, '고친 이름이 화면에 그대로 남는다 — ' + edit.names.join(' · '));
+  ok(edit.srv.indexOf('변학도2') >= 0, '서버 기준값도 같이 움직인다 — 되돌아가 보이지 않는다');
 
   ok(errs.length === 0, '자바스크립트 오류 없음' + (errs.length ? ' — ' + errs[0] : ''));
 

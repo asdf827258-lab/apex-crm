@@ -200,14 +200,14 @@ window.supabase={createClient:function(){
   ok(r.ai === 0, '이건 AI 없이 앱이 답한다');
 
   /* ── 4. 도와줄 것 적기 ── */
-  r = await say('도와줄 것 김민수 심사 걸린 거 확인');
+  r = await say('도와줄 것 홍길순 심사 걸린 거 확인');
   const help = await page.evaluate(() => ({
     n: (typeof hpLive === 'function' ? hpLive().length : -1),
     last: (typeof hpLive === 'function' && hpLive().length ? hpLive()[hpLive().length - 1].what : ''),
     due: (typeof hpLive === 'function' && hpLive().length ? hpLive()[hpLive().length - 1].due : '')
   }));
   ok(help.n === 1, '도와줄 것이 한 건 적혔다');
-  ok(/김민수/.test(help.last), '말한 내용이 그대로 적힌다 — ' + help.last);
+  ok(/홍길순/.test(help.last), '말한 내용이 그대로 적힌다 — ' + help.last);
   ok(help.due === (await page.evaluate(() => ckDayK())), '오늘까지로 잡힌다');
   ok(/적었습니다/.test(r.spoke), '적었다고 말해 준다');
 
@@ -226,7 +226,7 @@ window.supabase={createClient:function(){
   await page.waitForTimeout(200);
 
   /* ── 6. 고객 정보를 막는지 — 여기가 가장 중요하다 ── */
-  r = await say('김철수 고객 번호가 공일공 일이삼사 오륙칠팔인데 어떻게 할까요');
+  r = await say('홍길동 고객 번호가 공일공 일이삼사 오륙칠팔인데 어떻게 할까요');
   ok(r.ai === 0 || !/1234/.test(r.aiUser), '한글로 읽은 번호는 그대로는 못 막지만 AI 프롬프트에 남지 않게 확인');
 
   r = await say('고객 전화번호가 01012345678 인데 이거 어떻게 정리하죠');

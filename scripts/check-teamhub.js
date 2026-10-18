@@ -23,9 +23,9 @@ window.__ins=[];window.__neq=[];window.__aiCalls=[];
 window.__T=(function(){var d=new Date();return function(n){var x=new Date(d.getTime()-n*86400000);return x.toISOString().slice(0,10);};})();
 window.__profiles=[
  {id:'p1',name:'윤시현',role:'owner',active:true,workspace:null},
- {id:'p2',name:'박서준',role:'member',active:true,workspace:null},
- {id:'p3',name:'최민아',role:'member',active:true,workspace:null},
- {id:'p4',name:'이지훈',role:'member',active:true,workspace:null}
+ {id:'p2',name:'변학도',role:'member',active:true,workspace:null},
+ {id:'p3',name:'성춘향',role:'member',active:true,workspace:null},
+ {id:'p4',name:'이몽룡',role:'member',active:true,workspace:null}
 ];
 window.__teams=[{id:'t1',name:'온탑1팀',leader_id:'p1'},{id:'t2',name:'온탑2팀',leader_id:'p3'}];
 window.__team_members=[{team_id:'t1',member_id:'p1'},{team_id:'t1',member_id:'p2'},
@@ -135,7 +135,7 @@ window.supabase={createClient:function(){
   const seat = async (role) => {
     await page.evaluate((ro) => {
       document.querySelectorAll('#osLoginGate,#osGuideOvl,#osHelpOvl,#arBriefOvl,#osOvl').forEach(x => x.remove());
-      OS.profile = { id: ro === 'member' ? 'p2' : 'p1', name: ro === 'member' ? '박서준' : '윤시현', role: ro, plan: 'vip' };
+      OS.profile = { id: ro === 'member' ? 'p2' : 'p1', name: ro === 'member' ? '변학도' : '윤시현', role: ro, plan: 'vip' };
       OS.session = { user: { id: ro === 'member' ? 'p2' : 'p1', email: 'o@t' } };
       window.__toast = []; window.toast = m => window.__toast.push('' + m);
       window.callAI = () => Promise.resolve('## 활동 보고\n가\n## 활동 격려\n나\n## 공부할 부분\n다\n## 상담 컨셉\n라\n## 다음 7일\n마');
@@ -259,7 +259,7 @@ window.supabase={createClient:function(){
     txt: (document.getElementById('thPane') || {}).textContent || ''
   }));
   ok(/온탑2팀/.test(t2.txt), '온탑2팀만 골라 볼 수 있다');
-  ok(!/이지훈/.test(t2.txt.split('우리 팀 오늘')[1] || ''), '다른 팀 사람은 안 섞인다');
+  ok(!/이몽룡/.test(t2.txt.split('우리 팀 오늘')[1] || ''), '다른 팀 사람은 안 섞인다');
   await page.evaluate(() => ckTeam(''));
   await page.waitForTimeout(600);
 

@@ -42,10 +42,10 @@ const STUB = fs.readFileSync('scripts/check-airep.js', 'utf8').split('const STUB
   await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2600);
 
-  /* 박서준으로 앉는다 — 배정 DB 가 가장 많은 사람이다 */
+  /* 변학도으로 앉는다 — 배정 DB 가 가장 많은 사람이다 */
   await page.evaluate(() => {
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osHelpOvl,#osOvl,#osGuide').forEach(x => x.remove());
-    OS.profile = { id: 'p2', name: '박서준', role: 'member', plan: 'vip' };
+    OS.profile = { id: 'p2', name: '변학도', role: 'member', plan: 'vip' };
     OS.session = { user: { id: 'p2', email: 'm@t' } };
     window.__toast = []; window.toast = m => window.__toast.push('' + m);
     window.__AI_OUT = '## 지금 걸 세 통\n부재부터 겁니다.';

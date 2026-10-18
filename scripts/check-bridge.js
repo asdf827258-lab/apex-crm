@@ -140,10 +140,10 @@ const is = (c, m) => c ? ok(m) : no(m);
     advSet({ name: '윤시현', title: '사업단장', org: '온탑본부' });
     var mine = advGet();
     /* 다른 팀원이 같은 컴퓨터로 로그인 */
-    OS.profile = { id: 'u2', name: '김팀장', role: 'member' };
+    OS.profile = { id: 'u2', name: '홍팀장', role: 'member' };
     var k2 = advKey();
     var theirs = advGet();
-    advSet({ name: '김팀장', title: '팀장', org: '온탑1팀' });
+    advSet({ name: '홍팀장', title: '팀장', org: '온탑1팀' });
     /* 다시 대표로 */
     OS.profile = { id: 'u1', name: '윤시현', role: 'owner' };
     var back = advGet();
@@ -152,7 +152,7 @@ const is = (c, m) => c ? ok(m) : no(m);
   });
   is(A.k1 !== A.k2, '사람마다 저장칸이 다르다 (' + A.k1 + ' / ' + A.k2 + ')');
   is(A.mineName === '윤시현', '내 소개가 저장된다');
-  is(A.theirsName === '김팀장', '다른 사람은 자기 이름으로 시작한다 — 내 것이 안 새어 나간다');
+  is(A.theirsName === '홍팀장', '다른 사람은 자기 이름으로 시작한다 — 내 것이 안 새어 나간다');
   is(A.backName === '윤시현' && A.backTitle === '사업단장',
     '다른 사람이 저장해도 내 것은 그대로다 (' + A.backName + ' · ' + A.backTitle + ')');
 

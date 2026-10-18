@@ -318,7 +318,7 @@ const api = http.createServer((rq, rs) => {
   console.log('\n[8] 대표는 칸마다 누가 확인했는지 이름으로 본다');
   const W = await page.evaluate(() => {
     OS.profile = { id: 'u1', name: '윤시현', role: 'owner', active: true, plan: 'pro' };
-    OSMT.rows = [{ id: 'u1', name: '홍길동' }, { id: 'u2', name: '김철수' }];
+    OSMT.rows = [{ id: 'u1', name: '홍길동' }, { id: 'u2', name: '홍길동' }];
     /* <b>이 칸이 쓸 공지를 여기서 세운다.</b> 앞 칸이 남긴 것을 그냥 읽으면
        앞 칸을 고칠 때마다 여기가 같이 무너진다 — 실제로 그랬다. */
     OS_NTC.list = [{ id: 'n1', text: '확인해 주세요', img: '', on: true, ts: '2026-09-02',
@@ -337,7 +337,7 @@ const api = http.createServer((rq, rs) => {
   });
   is(/2명 중 1명/.test(W.t), '  <b>몇 명 중 몇 명</b>인지 센다 — 「' + W.t.slice(0, 30) + '…」');
   is(W.ok === 1 && W.no === 1, '  확인한 사람과 <b>안 한 사람</b>이 갈려 보인다 — ✓' + W.ok + ' · ·' + W.no);
-  is(/홍길동/.test(W.t) && /김철수/.test(W.t),
+  is(/홍길동/.test(W.t) && /홍길동/.test(W.t),
      '  <b>이름으로</b> 보인다 — id 만 보면 누군지 모른다');
   is(W.hide, '  칸마다 <b>「이 칸만 내리기」</b> 가 있다 — 나머지는 그대로 둔다');
 

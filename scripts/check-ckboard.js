@@ -163,7 +163,7 @@ window.supabase={createClient:function(){
   /* ── 오늘 도와줄 것 ── */
   const before = await page.evaluate(() => document.querySelectorAll('#hpPane .hp-r').length);
   await page.evaluate(() => {
-    document.getElementById('hpWho').value = '김민수';
+    document.getElementById('hpWho').value = '홍길순';
     document.getElementById('hpWhat').value = '심사 걸린 건 대신 확인';
     hpAdd();
   });
@@ -195,7 +195,7 @@ window.supabase={createClient:function(){
     savedN: (window.__helpRow && window.__helpRow.items && window.__helpRow.items.list || []).length
   }));
   ok(hp.rows === before + 2, '도와줄 것 2건이 추가됐다 (' + hp.rows + '줄)');
-  ok(hp.txt.indexOf('김민수') >= 0 && hp.txt.indexOf('박지현') >= 0, '적은 이름이 그대로 보인다');
+  ok(hp.txt.indexOf('홍길순') >= 0 && hp.txt.indexOf('박지현') >= 0, '적은 이름이 그대로 보인다');
   ok(hp.late, '날짜가 지난 건에 경고가 뜬다');
   ok(hp.n === '0 / 2', '숫자판 ' + hp.n);
   ok(hp.saved && hp.savedN === 2, '서버로 2건이 올라갔다');
