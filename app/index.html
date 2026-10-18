@@ -8574,8 +8574,10 @@ function arCliCalc(clients,metas){
     m=byId[c.id]||{};
     var o=out[c.advisor_id]||(out[c.advisor_id]={n:0,plan:0,due:0,cold:0});
     o.n++;
-    /* ▶ 다음 할 일은 <b>여러 개</b>입니다 — 묻는 곳은 cmNextAll 하나 (판 X122 · 5번) */
-    var NXa=(typeof cmNextAll==='function')?cmNextAll(c.id):[];
+    /* ▶ 다음 할 일은 <b>여러 개</b>입니다 — 읽는 곳은 cmNextOf 하나 (판 X122 · 5번).
+       ★ <b>서버가 준 줄(m)을 같이 넘깁니다</b> (판 X126). 안 넘기면 이 기기에
+         없는 분 — 곧 <b>팀원의 고객 전부</b> — 이 언제나 0 이 됩니다 (1번). */
+    var NXa=(typeof cmNextAllOf==='function')?cmNextAllOf(c.id,m):[];
     if(NXa.length){
       o.plan++;
       for(var nq=0;nq<NXa.length;nq++)if(NXa[nq].due&&NXa[nq].due<=today){o.due++;break;}
@@ -8609,7 +8611,9 @@ function arManOf(m){
 /* 고객 한 사람 한 사람 — 언제 마지막으로 손댔고 다음에 뭘 하기로 했는지 */
 /* 맨 앞 한 줄 — 묻는 곳은 cmNextAll 하나 (판 X122 · 5번).
    <b>못 읽었으면 빈 줄</b>을 준다 — 지어내지 않는다 (1번). */
-function arNxTop(id){
+/* ★ 서버가 준 줄(srv)을 같이 받습니다 — 팀원의 고객은 이 기기에 없습니다 (판 X126) */
+function arNxTop(id,srv){
+  if(typeof cmNextTopOf==='function')return cmNextTopOf(id,srv)||{};
   if(typeof cmNextTop!=='function')return {};
   return cmNextTop(id)||{};
 }
@@ -8637,10 +8641,11 @@ function arCliRows(clients,metas,last){
       /* 가린 이름 — 배정 DB 와 이어 붙일 때 씁니다. 실명은 안 싣습니다 (3번) */
       nm:c.name_masked||'',
       name:((typeof cmRealOf==='function'&&cmRealOf(c.id))||c.name_masked||'(이름 없음)'),
-      /* 맨 앞 하나를 그대로 싣고, <b>몇 건인지</b>도 같이 싣는다 (판 X122) */
-      plan:(arNxTop(c.id).what||''),
-      due:(arNxTop(c.id).due||''),
-      plans:((typeof cmNextAll==='function')?cmNextAll(c.id):[]),
+      /* 맨 앞 하나를 그대로 싣고, <b>몇 건인지</b>도 같이 싣는다 (판 X122).
+         ★ 서버가 준 줄(m)을 넘깁니다 — 팀원의 고객은 이 기기에 없습니다 (판 X126) */
+      plan:(arNxTop(c.id,m).what||''),
+      due:(arNxTop(c.id,m).due||''),
+      plans:((typeof cmNextAllOf==='function')?cmNextAllOf(c.id,m):[]),
       bd:m.bd||'',
       man:arManOf(m),
       ever:ever,at:ever?lt:'',
@@ -11445,10 +11450,15 @@ function arTeamRowsHtml(){
 /* 「몇 명 보고했나 · 다시 읽는 중인가」를 세는 자리는 <b>여기 하나</b>다.
    판을 통째로 세울 때와 줄만 갈아 끼울 때가 따로 세면, 치는 동안에는
    <b>옛 숫자가 조용히 남는다</b> — 다 읽은 줄 알고 넘어가게 된다 (5번). */
+/* 「다시 읽는 중」 을 붙이는 자리도 <b>하나</b>입니다 (판 X126 · 5번).
+   칸이 둘이 되면서 한쪽만 말하는 일이 실제로 났습니다 — 새 칸이 명단을
+   다시 읽는 동안 <b>옛 숫자를 조용히</b> 보여 주었고, check-teamfind 가
+   울었습니다. 두 칸이 같은 자에게 묻습니다. */
+function arReadingNote(){ return ((typeof GB!=='undefined')&&GB.loaded)?'':' · 다시 읽는 중'; }
 function arDoneNote(){
-  var all=arScope(),i,done=0,ready=(typeof GB!=='undefined')&&GB.loaded;
+  var all=arScope(),i,done=0;
   for(i=0;i<all.length;i++)if(AR.rep[all[i].id])done++;
-  return done+' / '+all.length+'명'+(ready?'':' · 다시 읽는 중');
+  return done+' / '+all.length+'명'+arReadingNote();
 }
 function arTeamHtml(){
   /* <b>다시 읽는 중이라고 이미 세워 둔 목록을 지우지 않는다.</b> 지우면
@@ -11461,7 +11471,7 @@ function arTeamHtml(){
     return '<div class="card"><div class="card-body"><div class="ar-none">'+
       (ready?'팀원이 없습니다.<br>설정 → 팀원 권한 관리에서 소속 팀을 지정해 주세요.'
             :'팀 기록을 불러오는 중입니다. 잠시만요.')+'</div></div></div>';
-  return arTopHtml()+
+  return arTopHtml()+arTodayTeamHtml()+
     '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">👥</span>팀 전체 보고'+
     '<span class="ar-n" id="arDoneN">'+arDoneNote()+'</span></div>'+
     '<div class="card-desc">팀별로 묶어 보여 줍니다. 점수가 낮은 사람이 위에 옵니다. '+
@@ -11541,6 +11551,115 @@ function arSumHtml(l){
     row('⏰','팀 전체 기한 지난 할 일',due?(due+'건'):'없음',due>0)+
     '<div class="notice" style="margin-top:11px">숫자만 보고 다그치지 않습니다. '+
     '한 사람에게 한 가지만 말합니다. 오늘 고를 사람은 <b>한 명</b>이면 충분합니다.</div>'+
+    '</div></div>';
+}
+/* ══ 👥 <b>오늘, 팀원 저마다</b> — 판 X126 ══════════════════════════════
+   사장님 말씀 (2026-10-18) — 「오늘의 모든 시스템, <b>다른 팀원들까지</b>
+   모두 파악해서 해봐」.
+
+   여태 「오늘」 은 <b>한 사람 것</b>이었습니다. 홈의 오늘 할 일·오늘 터치할
+   사람·달력은 모두 <b>나</b>를 봅니다(arMyId). 팀은 바로 위 arSumHtml 이
+   네 줄로 묶어 말해 주는데, 그것은 <b>이름을 모아 적은 줄</b>이라 「누가
+   오늘 몇 건인가」 는 알 수 없었습니다 — 한 사람씩 눌러 봐야 했습니다.
+
+   ★ <b>새로 세지 않습니다</b> (5번). 네 수는 모두 이미 세는 자에게 묻습니다 —
+       오늘 터치   arTouch(who)        (「오늘 터치할 사람」 과 <b>같은 샘</b>)
+       기한 지난   AR.cli[who].due     (arCliCalc 가 센 것)
+       지난 약속   arApptPast(who)     (AP·PC·CS 인데 약속 날이 지난 분)
+       마지막 기록 GB.rows[].last      (성장판이 읽어 둔 것)
+     check-teamtoday 가 「적힌 수가 그 자들과 같은가」 를 재 봅니다.
+   ★ <b>모르면 모른다고</b> 합니다 (1번). 아직 안 읽었으면 0 을 적지 않고
+     「아직 모릅니다」 라고 적습니다. arApptPast 는 못 읽었을 때 null 을
+     돌려주므로 그때는 그 칸만 「—」 입니다.
+   ★ 누르면 <b>그 사람의 「오늘 터치할 사람」</b> 으로 갑니다 — 그 화면에
+     담당자 고르개가 이미 있습니다. 화면을 새로 만들지 않습니다 (5번).   */
+function arTtNums(id){
+  var tk=(typeof arTouch==='function')?arTouch(id):[];
+  var cl=(AR.cli||{})[id]||null;
+  var lp=(typeof arApptPast==='function')?arApptPast(id):null;
+  var r=arRowOf(id);
+  return { tk:tk.length,
+           /* AR.cli 를 아직 못 읽었으면 <b>null</b> — 0 이 아니다 (1번) */
+           due:(AR.cli?((cl&&cl.due)||0):null),
+           late:(lp?lp.length:null),
+           idle:(r&&r.last)?arDaysAgo(r.last):null,
+           rep:!!AR.rep[id] };
+}
+/* 머리글을 적는 자리도 <b>하나</b>입니다 — 판을 세울 때와 줄만 갈아
+   끼울 때가 따로 적으면 한쪽에 옛 말이 남습니다 (5번).
+   ⚠ 이 칸은 <b>찾는 글자를 안 따릅니다</b>. 찾기는 아래 「팀 전체 보고」
+     의 것이고(한 사람을 찾으려고 칩니다), 이 칸은 <b>팀 전부</b>의 오늘을
+     한눈에 보려고 있는 자리입니다. 같이 좁히면 보러 온 것이 사라집니다.
+     그래서 arList() 가 아니라 arScope() 로 셉니다. */
+function arTtHeadNote(){ return arScope().length+'명'+arReadingNote(); }
+/* 급한 사람이 위로 — 기한 지난 것과 지난 약속을 먼저 본다 */
+function arTtRank(o){ return (o.due||0)*2+(o.late||0)*2+(o.tk||0); }
+function arTtGo(id){
+  /* 팀으로 좁혀 둔 것이 있으면 <b>풉니다</b> — 안 풀면 다른 팀 사람을
+     골랐을 때 「0명」 이 되고, 왜 0명인지 화면이 말해 주지 않습니다.
+     푸는 자리도 고르는 자리도 <b>원래 있던 자</b>를 부릅니다 (5번). */
+  if(typeof arTkTeamSet==='function'&&arTkTeam())arTkTeamSet('');
+  if(typeof arTkWhoSet==='function'&&AR.tkWho!==id)arTkWhoSet(id);
+  arGoCat('touch');
+}
+/* ★ <b>이름표를 같이 적습니다.</b> 처음엔 그림글자만 넣었는데, 찍어 보니
+   ☎️ 와 🕗 와 💤 를 외우고 있어야 읽히는 줄이었습니다 — 폰에서는 손을
+   올릴 수도 없어 title 이 아무 소용이 없습니다. 숫자에 이름이 없으면
+   아무도 모릅니다 (4번과 같은 까닭).
+   ★ <b>0 은 흐리게</b> — 다 같은 굵기로 적으면 눈이 어디로 갈지 모릅니다. */
+function arTtCell(e,k,v,warn,zero){
+  return '<span class="ar-ttc'+(warn?' warn':'')+(zero?' zero':'')+'">'+e+
+    '<span class="k">'+osEsc(k)+'</span><b>'+osEsc(v)+'</b></span>';
+}
+/* 마지막 기록 — 「0일」 은 사람 말이 아닙니다 */
+function arTtIdle(d){
+  /* 이름표가 「기록」 이라 여기서 또 「기록 없음」 이라 적으면 「기록 기록 없음」
+     이 됩니다 — 찍어 보고 알았습니다 */
+  if(d==null)return '없음';
+  if(d<=0)return '오늘';
+  if(d===1)return '어제';
+  return d+'일째';
+}
+function arTodayTeamHtml(){
+  var l=arScope(),i,h='',rows=[];
+  if(!l.length)return '';
+  /* 아직 못 읽었으면 <b>숫자를 한 톨도 안 적습니다</b> (1번) */
+  if(!AR.loaded||!AR.cli)
+    return '<div class="card"><div class="card-hd"><div class="card-title">'+
+      '<span class="ci">👥</span>오늘, 팀원 저마다</div></div><div class="card-body">'+
+      '<div class="ar-none">팀 기록을 아직 모릅니다 — 불러오는 중입니다.<br>'+
+      '<b>숫자가 선 뒤에</b> 보시는 것이 맞습니다.</div></div></div>';
+  for(i=0;i<l.length;i++)rows.push({r:l[i],o:arTtNums(l[i].id)});
+  rows.sort(function(a,b){
+    return arTtRank(b.o)-arTtRank(a.o)||(''+a.r.name).localeCompare(''+b.r.name,'ko');
+  });
+  var me=arMyId(),tot={tk:0,due:0,late:0};
+  for(i=0;i<rows.length;i++){
+    tot.tk+=rows[i].o.tk; tot.due+=rows[i].o.due||0; tot.late+=rows[i].o.late||0;
+  }
+  for(i=0;i<rows.length;i++){
+    var r=rows[i].r,o=rows[i].o;
+    h+='<div class="ar-tt" data-who="'+osEsc(r.id)+'" data-tk="'+o.tk+'" '+
+         'data-due="'+(o.due==null?-1:o.due)+'" data-late="'+(o.late==null?-1:o.late)+'" '+
+         'onclick="arTtGo(\''+r.id+'\')" title="누르면 이분의 오늘 터치할 사람으로 갑니다">'+
+      '<span class="ar-ttn">'+osEsc(r.name)+(r.id===me?' (나)':'')+'</span>'+
+      arTtCell('☎️','터치',  o.tk+'명', false, !o.tk)+
+      arTtCell('⏰','기한',  (o.due==null?'—':(o.due+'건')),  o.due>0,  !o.due)+
+      arTtCell('🕗','지난약속',(o.late==null?'—':(o.late+'건')),o.late>0, !o.late)+
+      arTtCell('💤','기록',  arTtIdle(o.idle), (o.idle==null||o.idle>=3), (o.idle!=null&&o.idle<3))+
+      '<span class="ar-ttr">'+(o.rep?'🧾 보고 있음':'<b class="ar-no">보고 없음</b>')+'</span>'+
+      '</div>';
+  }
+  return '<div class="card"><div class="card-hd"><div class="card-title">'+
+    '<span class="ci">👥</span>오늘, 팀원 저마다'+
+    '<span class="ar-n" id="arTtN">'+arTtHeadNote()+'</span></div>'+
+    '<div class="card-desc">급한 사람이 위에 옵니다. 이름을 누르면 '+
+    '<b>그분의 「오늘 터치할 사람」</b> 으로 갑니다</div></div>'+
+    '<div class="card-body"><div class="ar-tts">'+h+'</div>'+
+    '<div class="ar-sm"><span class="e">합</span><span class="t">팀 전체</span>'+
+    '<span class="v">☎️ 터치 '+tot.tk+'명 · ⏰ 기한 '+tot.due+'건 · 🕗 지난약속 '+tot.late+'건</span></div>'+
+    '<div class="notice" style="margin-top:11px">숫자만 보고 다그치지 않습니다. '+
+    '한 사람에게 한 가지만 말합니다 — <b>오늘 고를 사람은 한 명</b>이면 충분합니다.</div>'+
     '</div></div>';
 }
 /* 종이로 내는 길 — 회의 자리에 그대로 들고 간다 */
@@ -11921,6 +12040,21 @@ function arCss(){
    '.ar-no{color:#DC2626}'+
    '.ar-tkm{font-size:var(--t6);font-weight:900;color:var(--t-warn-d);background:#FFFBEB;border-radius:var(--r-lg);padding:2px 8px;white-space:nowrap}'+
    '.ar-rb{padding:14px;border-top:1px solid var(--t-line-2);background:#FCFDFE}'+
+   /* 판 X126 — 👥 오늘, 팀원 저마다. 폰에서는 이름이 윗줄로 올라가고
+      네 칸이 아랫줄에 나란히 섭니다 — 가로로 밀리지 않게 합니다. */
+   '.ar-tts{display:flex;flex-direction:column}'+
+   '.ar-tt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 4px;'+
+     'border-bottom:1px solid var(--t-line);cursor:pointer}'+
+   '.ar-tt:hover{background:var(--t-bg-3)}'+
+   '.ar-ttn{font-size:var(--t6);font-weight:900;color:var(--t-ink);min-width:72px}'+
+   '.ar-ttc{font-size:var(--t7);font-weight:700;color:var(--t-sub);white-space:nowrap}'+
+   '.ar-ttc .k{margin-left:3px;font-weight:700;color:var(--t-sub2)}'+
+   '.ar-ttc b{font-weight:900;color:var(--t-ink-2);margin-left:3px}'+
+   '.ar-ttc.warn b{color:var(--t-neg-d)}'+
+   /* 0 은 흐리게 — 다 같은 굵기면 눈이 어디로 갈지 모릅니다 */
+   '.ar-ttc.zero{opacity:.45}.ar-ttc.zero b{font-weight:700;color:var(--t-sub)}'+
+   '.ar-ttr{margin-left:auto;font-size:var(--t7);font-weight:800;color:var(--t-sub2)}'+
+   '@media(max-width:560px){.ar-ttn{width:100%;min-width:0}.ar-ttr{margin-left:0}}'+
    '.ar-sm{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F1F5F9}'+
    '.ar-sm .e{font-size:var(--t4)}'+
    '.ar-sm .t{font-size:var(--t6);font-weight:800;color:var(--t-ink)}'+
@@ -13428,6 +13562,13 @@ function arRowsSwap(){
   var f=document.getElementById('arFilterRow'); if(f)f.innerHTML=arFilterChips();
   var n=document.getElementById('arFindN');     if(n)n.textContent=arFindNote();
   var d=document.getElementById('arDoneN');     if(d)d.textContent=arDoneNote();
+  /* ★ 위에 선 「오늘, 팀원 저마다」 의 머리글도 여기서 같이 갈아 끼웁니다
+     (판 X126). 이 길은 <b>판을 안 다시 세우는</b> 길이라, 여기 안 적으면
+     그 칸만 옛 말을 합니다 — 명단을 다시 읽는 중인데 「6명」 이라고만
+     적고 있었고 check-teamfind 가 그것을 잡았습니다 (5번).
+     ⚠ 줄(사람마다 오늘)은 안 건드립니다 — 이 길로 오는 것은 <b>찾는
+       글자</b>가 바뀐 때이고, 그 칸은 찾기를 안 따릅니다(아래 글 참고). */
+  var tn=document.getElementById('arTtN');      if(tn)tn.textContent=arTtHeadNote();
   var x=document.getElementById('arFindX');     if(x)x.hidden=!AR.q;
   return true;
 }
@@ -17691,7 +17832,13 @@ function mcalItems(){
   var i,c,m,last,cy;
   for(i=0;i<mine.length;i++){
     c=mine[i];
-    m=(typeof cmOf==='function')?cmOf(c.id):null;
+    /* ★ <b>cmOf 를 안 부릅니다</b> (판 X126). cmOf 는 없으면 빈 쪽지를
+       <b>만들어 넣습니다.</b> 이 목록에는 대표·지점장에게 <b>남의 고객이
+       전부</b> 들어 있어, 달력을 한 번 열면 그만큼 빈 쪽지가 쌓였습니다
+       (견본 셋 중 둘). 그 빈 쪽지는 출발 점검의 「고객 직업 한 줄 N/M분」
+       분모를 늘리고, 리더 화면에서 서버가 준 줄을 덮었습니다. 여기서는
+       <b>읽기만</b> 하므로 안 만드는 자로 묻습니다. */
+    m=(typeof cmMetaOf==='function')?cmMetaOf(c.id,null):null;
     /* 이름은 <b>한 번만</b> 찾는다. 못 찾았으면 그 줄에 표시를 달아 둔다 —
        아래에서 「몇 분이 아직 가려져 있는지」 를 세어 적는다 */
     var nm=mcalName(c),mk=!mcalRealOf(c);
@@ -18655,8 +18802,32 @@ function mcalCardHtml(opt){
     '<div class="mcal-lg">'+Object.keys(MCAL_KIND).map(function(k){
       return '<span><i style="background:'+MCAL_KIND[k].c+'"></i>'+MCAL_KIND[k].e+' '+MCAL_KIND[k].t+'</span>';
     }).join('')+'</div>'+
+    mcalNotMineHtml()+
     mcalDayHtml()+
     '</div></div>';
+}
+/* ── ⚠ <b>남의 것을 보고 계실 때는 그렇다고 적습니다</b> (판 X126 · 1번) ──
+   대표·지점장이 담당자를 바꿔 고르시면 그분 고객의 <b>연락 주기</b>와
+   <b>약속</b>은 달력에 찍힙니다. 그런데 <b>다음 할 일</b>과 <b>생일</b>은
+   그분 쪽지에 적혀 있고, 이 화면은 <b>내 쪽지만</b> 불러옵니다
+   (cmLoadAll 이 advisor_id = 나 로만 읽습니다). 여기서 서버를 한 번 더
+   부르면 7번에 어긋나므로 <b>안 부르고, 대신 말합니다.</b> 비어 있는 것을
+   「없다」 로 읽으시면 안 됩니다.
+   ★ 내 것을 보고 계실 때는 <b>한 줄도 안 세웁니다</b> — 날마다 보는 화면에
+     늘 서 있는 안내는 높이만 먹습니다 (판 X121 에서 248px 로 데인 자리). */
+function mcalNotMineHtml(){
+  var p='',me='';
+  try{ p=(typeof hwhoPick==='function')?hwhoPick():''; }catch(e){ p=''; }
+  try{ me=(OS.profile&&OS.profile.id)||''; }catch(e2){ me=''; }
+  if(!p||!me||p===me)return '';
+  var nm=(typeof mcalWhoName==='function')?mcalWhoName(p):'';
+  return '<div class="notice" style="margin-top:10px">'+
+    (nm?('<b>'+osEsc(nm)+'</b>님 것을 보고 계십니다. '):'')+
+    '연락 주기와 약속은 그대로 찍히지만, <b>다음 할 일과 생일은 여기 안 뜹니다</b> — '+
+    '그 두 가지는 그분 기기에 적힌 것이라 이 화면이 읽지 않습니다. '+
+    '<b>비어 있다고 없는 것이 아닙니다.</b> '+
+    '팀 전체는 <b>TFA 업무관리 › 👀 팀원 관리</b> 의 「오늘, 팀원 저마다」 에서 보십니다.'+
+    '</div>';
 }
 function renderMyCal(){
   var c=mcalCfg();
@@ -20130,8 +20301,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-18 19:40';
-var APP_BUILD_NOTE="🙎 <b>견본 이름 정리를 끝냈습니다</b> — 판 X124 에서 화면(app/) 36곳을 바꾸고 점검 쪽 25개는 막아만 두었는데, 이번에 <b>171곳</b>을 다 정리했습니다. 이제 저장소 어디에도 진짜 사람 이름 같은 견본이 없습니다 — <b>app/ 0 · 점검 0</b>. ★ 이름이 점검의 <b>뜻을 지고 있던 네 자리</b>는 손으로 맞췄습니다(가린 꼴이 겹쳐야 서는 시험 · 서로 달라야 서는 시험 · 초성이 ㅊ 이어야 하는 시험 · 일부러 안 잡는 이름으로는 못 재는 시험). 초성 시험 둘도 같이 맞췄습니다. ★ <b>기준선을 없앴습니다</b> — 0 이 되었으니 남겨 두면 그 수를 올리는 것만으로 느슨해집니다(되돌려 보고 알았습니다 · 8번). 화면이 달라지는 것은 없습니다. (판 X125)";
+var APP_BUILD='2026-10-18 23:50';
+var APP_BUILD_NOTE="👥 <b>「오늘」 이 팀원 전부에게도 맞는 말을 합니다</b> — 리더 화면의 팀원 숫자가 <b>거짓말</b>을 하고 있었습니다. <b>판 X122 에서 제가 낸 어긋남</b>입니다 — 「다음 할 일」 을 쌓게 만들면서 묻는 자리를 하나로 모았는데, 그 자가 <b>이 기기</b>만 보았습니다. 거기엔 <b>내 고객</b>만 있습니다. 그래서 ① 「팀 전체 기한 지난 할 일」 이 <b>언제나 없음</b> 이었고 (모르는 것을 0 으로 적은 것입니다) ② 거꾸로 「오늘 터치할 사람」 에는 팀원의 고객이 <b>전원</b> 섰습니다(할 일이 빈 칸이면 「아무도 안 챙긴다」 로 읽는 규칙 때문입니다). 이제 <b>서버가 준 줄</b>을 같이 봅니다. ★ 덤으로, 달력을 한 번 열면 남의 고객 수만큼 <b>빈 쪽지</b>가 이 기기에 쌓이던 것도 고쳤습니다 — 그 빈 쪽지가 출발 점검의 「고객 직업 한 줄 N/M분」 분모를 늘리고 팀 숫자를 덮고 있었습니다. ★ <b>새 칸</b> — TFA 업무관리 › 👀 팀원 관리 맨 위에 <b>「오늘, 팀원 저마다」</b> 가 섭니다. 사람마다 ☎️ 오늘 터치 · ⏰ 기한 지난 할 일 · 🕗 지난 약속 · 💤 마지막 기록 · 🧾 보고 를 한 줄로 놓고, 급한 사람이 위에 옵니다. 이름을 누르면 <b>그분의 「오늘 터치할 사람」</b> 으로 갑니다. 네 숫자는 <b>이미 세는 자에게 물어서</b> 적습니다 — 새로 세지 않습니다(5번). ★ <b>내 캘린더</b> — 대표·지점장이 담당자를 바꿔 고르시면 그분 고객의 <b>다음 할 일과 생일은 안 뜹니다</b>(그 쪽지는 이 화면이 안 읽습니다). 서버를 한 번 더 부르는 대신 <b>그렇다고 적습니다</b> — 「비어 있다고 없는 것이 아닙니다」. 내 것을 볼 때는 한 줄도 안 섭니다. (판 X126)";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -64709,8 +64880,12 @@ function cmDays(a,b){
   if(isNaN(x)||isNaN(y))return -1;
   return Math.round((y-x)/86400000);
 }
+/* ★ <b>읽기만 하므로 cmOf 를 안 부릅니다</b> (판 X126) — cmOf 는 없으면
+   빈 쪽지를 만들어 넣습니다. 이 자는 달력·30일 주기가 <b>고객 전원</b>을
+   돌면서 부르는 자리라, 대표·지점장 화면에서 남의 고객 수만큼 빈 쪽지가
+   쌓였습니다. */
 function cmLastTouch(id){
-  var m=cmOf(id),L=m.touch||[],i,best='';
+  var m=(typeof cmMetaOf==='function')?cmMetaOf(id,null):null,L=(m&&m.touch)||[],i,best='';
   for(i=0;i<L.length;i++)if(L[i]&&L[i].at&&L[i].at>best)best=L[i].at;
   return best;
 }
@@ -64802,8 +64977,9 @@ function ccMoney(v){
   return (isFinite(n)&&n>0)?n:null;
 }
 /* 월납 보험료(만원) — 팩트파인딩의 「보험료」 칸에서 온다 */
+/* ★ 여기도 읽기만 합니다 — 빈 쪽지를 만들지 않습니다 (판 X126) */
 function ccMan(id){
-  var m=(typeof cmOf==='function')?cmOf(id):null;
+  var m=(typeof cmMetaOf==='function')?cmMetaOf(id,null):null;
   return ccMoney(m&&m.fp?m.fp.f_ins:null);
 }
 function ccIsVip(id){var w=ccMan(id);return w!==null&&w>=ccCfg().vipMan;}
@@ -65712,8 +65888,31 @@ function cmNextRow(x,k){
   if(!x||!x.what)return null;
   return {k:k||x.k||'',what:''+x.what,due:x.due||'',at:x.at||''};
 }
-function cmNextAll(id){
-  var m=(typeof cmOf==='function')?cmOf(id):null;
+/* ══ 쪽지를 <b>어디서</b> 가져오나 — 고르는 자리도 하나입니다 (판 X126 · 5번) ══
+   판 X122 에서 「읽는 자리를 하나로」 하면서 cmNextAll(id) 로 모았습니다.
+   그런데 그 자는 <b>이 기기(CM.meta)</b> 만 봅니다 — 거기엔 <b>내 고객</b>만
+   있습니다. 리더 화면(arCliCalc·arCliRows)은 서버가 준 줄(client_meta)을
+   손에 들고 있으면서 그것을 버리고 제 기기를 물었고, 그래서 팀원의
+   「기한 지난 할 일」이 <b>언제나 0</b> 이었습니다. 모르는 것을 0 으로 적은
+   것이고, 화면에서는 「없다」 로 읽힙니다 (1번).
+
+   ★ 읽는 알맹이는 <b>cmNextOf(쪽지) 하나</b>입니다. 쪽지를 어디서
+     가져왔는지는 부르는 쪽이 압니다 — 내 기기일 수도, 서버가 준 줄일 수도.
+   ★ <b>cmOf 를 안 부릅니다.</b> cmOf 는 없으면 <b>빈 쪽지를 만들어 넣습니다</b>
+     — 남의 고객 수백 번호로 부르면 내 기기에 빈 쪽지가 그만큼 쌓입니다.
+     재어 보니 실제로 그랬습니다(견본 넷 중 넷).
+   ★ 둘 다 있으면 <b>이 기기 것</b>이 이깁니다 — 아직 서버에 안 올라간
+     것까지 들고 있어 가장 새 것입니다.
+   check-teamtoday 가 이 셋을 봅니다.                                   */
+function cmHas(id){
+  try{ return !!(id&&typeof CM!=='undefined'&&CM.meta&&CM.meta[id]); }catch(e){ return false; }
+}
+function cmMetaOf(id,srv){
+  try{ if(cmHas(id))return CM.meta[id]; }catch(e){}
+  return srv||null;
+}
+/* 쌓인 것을 읽는 알맹이 — 쪽지 하나를 받아 날짜순으로 돌려준다 */
+function cmNextOf(m){
   if(!m)return [];
   var out=[],seen={},i,r;
   var L=(m.nx&&m.nx.length)?m.nx:[];
@@ -65732,7 +65931,21 @@ function cmNextAll(id){
   });
   return out;
 }
+/* 이 기기에 있는 분 — 여태 쓰던 이름 그대로입니다 (고객 365일·달력·AI) */
+function cmNextAll(id){ return cmNextOf(cmMetaOf(id,null)); }
+/* 서버가 준 줄까지 보는 길 — <b>남의 고객</b>이 그렇습니다 (리더 화면).
+   ★ 이 기기 쪽지가 <b>빈 쪽지</b>면 서버가 준 줄을 한 번 더 봅니다. 다른
+     화면(내 캘린더 같은 곳)이 cmOf 로 남의 고객 번호를 부르면 <b>빈 쪽지가
+     만들어져</b> 남습니다. 그것이 서버 것을 덮으면 팀 숫자가 <b>다시 0</b> 이
+     됩니다 — 재어 보고 알았습니다. 빈 쪽지를 만드는 자리도 따로 고쳤지만,
+     여기서도 막습니다. 잃을 것이 없는 쪽으로만 기웁니다 (1번).         */
+function cmNextAllOf(id,srv){
+  var A=cmNextOf(cmMetaOf(id,srv));
+  if(A.length||!srv)return A;
+  return cmNextOf(srv);
+}
 function cmNextTop(id){ return cmNextAll(id)[0]||null; }
+function cmNextTopOf(id,srv){ return cmNextAllOf(id,srv)[0]||null; }
 /* AI·내보내기에 실을 글 — <b>쌓인 것을 다</b> 싣는다. 하나만 실으면
    AI 가 「이 분은 할 일이 하나뿐」 으로 읽는다 (1번). */
 function cmNextTxt(id){
