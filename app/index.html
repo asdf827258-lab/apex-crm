@@ -11590,9 +11590,23 @@ function arTtGo(id){
   if(typeof arTkWhoSet==='function'&&AR.tkWho!==id)arTkWhoSet(id);
   arGoCat('touch');
 }
-function arTtCell(e,v,t,warn){
-  return '<span class="ar-ttc'+(warn?' warn':'')+'" title="'+osEsc(t)+'">'+e+
-    '<b>'+osEsc(v)+'</b></span>';
+/* ★ <b>이름표를 같이 적습니다.</b> 처음엔 그림글자만 넣었는데, 찍어 보니
+   ☎️ 와 🕗 와 💤 를 외우고 있어야 읽히는 줄이었습니다 — 폰에서는 손을
+   올릴 수도 없어 title 이 아무 소용이 없습니다. 숫자에 이름이 없으면
+   아무도 모릅니다 (4번과 같은 까닭).
+   ★ <b>0 은 흐리게</b> — 다 같은 굵기로 적으면 눈이 어디로 갈지 모릅니다. */
+function arTtCell(e,k,v,warn,zero){
+  return '<span class="ar-ttc'+(warn?' warn':'')+(zero?' zero':'')+'">'+e+
+    '<span class="k">'+osEsc(k)+'</span><b>'+osEsc(v)+'</b></span>';
+}
+/* 마지막 기록 — 「0일」 은 사람 말이 아닙니다 */
+function arTtIdle(d){
+  /* 이름표가 「기록」 이라 여기서 또 「기록 없음」 이라 적으면 「기록 기록 없음」
+     이 됩니다 — 찍어 보고 알았습니다 */
+  if(d==null)return '없음';
+  if(d<=0)return '오늘';
+  if(d===1)return '어제';
+  return d+'일째';
 }
 function arTodayTeamHtml(){
   var l=arScope(),i,h='',rows=[];
@@ -11617,11 +11631,11 @@ function arTodayTeamHtml(){
          'data-due="'+(o.due==null?-1:o.due)+'" data-late="'+(o.late==null?-1:o.late)+'" '+
          'onclick="arTtGo(\''+r.id+'\')" title="누르면 이분의 오늘 터치할 사람으로 갑니다">'+
       '<span class="ar-ttn">'+osEsc(r.name)+(r.id===me?' (나)':'')+'</span>'+
-      arTtCell('☎️',o.tk+'명',    '오늘 터치할 사람',  false)+
-      arTtCell('⏰',(o.due==null?'—':(o.due+'건')),  '기한이 지난 다음 할 일', o.due>0)+
-      arTtCell('🕗',(o.late==null?'—':(o.late+'건')),'약속 날이 지난 AP·PC·CS', o.late>0)+
-      arTtCell('💤',(o.idle==null?'기록 없음':(o.idle+'일')),'마지막 활동 기록', (o.idle==null||o.idle>=3))+
-      '<span class="ar-ttr">'+(o.rep?'🧾':'<b class="ar-no">보고 없음</b>')+'</span>'+
+      arTtCell('☎️','터치',  o.tk+'명', false, !o.tk)+
+      arTtCell('⏰','기한',  (o.due==null?'—':(o.due+'건')),  o.due>0,  !o.due)+
+      arTtCell('🕗','지난약속',(o.late==null?'—':(o.late+'건')),o.late>0, !o.late)+
+      arTtCell('💤','기록',  arTtIdle(o.idle), (o.idle==null||o.idle>=3), (o.idle!=null&&o.idle<3))+
+      '<span class="ar-ttr">'+(o.rep?'🧾 보고 있음':'<b class="ar-no">보고 없음</b>')+'</span>'+
       '</div>';
   }
   return '<div class="card"><div class="card-hd"><div class="card-title">'+
@@ -11631,7 +11645,7 @@ function arTodayTeamHtml(){
     '<b>그분의 「오늘 터치할 사람」</b> 으로 갑니다</div></div>'+
     '<div class="card-body"><div class="ar-tts">'+h+'</div>'+
     '<div class="ar-sm"><span class="e">합</span><span class="t">팀 전체</span>'+
-    '<span class="v">☎️ '+tot.tk+'명 · ⏰ '+tot.due+'건 · 🕗 '+tot.late+'건</span></div>'+
+    '<span class="v">☎️ 터치 '+tot.tk+'명 · ⏰ 기한 '+tot.due+'건 · 🕗 지난약속 '+tot.late+'건</span></div>'+
     '<div class="notice" style="margin-top:11px">숫자만 보고 다그치지 않습니다. '+
     '한 사람에게 한 가지만 말합니다 — <b>오늘 고를 사람은 한 명</b>이면 충분합니다.</div>'+
     '</div></div>';
@@ -12019,11 +12033,14 @@ function arCss(){
    '.ar-tts{display:flex;flex-direction:column}'+
    '.ar-tt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 4px;'+
      'border-bottom:1px solid var(--t-line);cursor:pointer}'+
-   '.ar-tt:hover{background:var(--t-bg-b)}'+
+   '.ar-tt:hover{background:var(--t-bg-3)}'+
    '.ar-ttn{font-size:var(--t6);font-weight:900;color:var(--t-ink);min-width:72px}'+
    '.ar-ttc{font-size:var(--t7);font-weight:700;color:var(--t-sub);white-space:nowrap}'+
+   '.ar-ttc .k{margin-left:3px;font-weight:700;color:var(--t-sub2)}'+
    '.ar-ttc b{font-weight:900;color:var(--t-ink-2);margin-left:3px}'+
    '.ar-ttc.warn b{color:var(--t-neg-d)}'+
+   /* 0 은 흐리게 — 다 같은 굵기면 눈이 어디로 갈지 모릅니다 */
+   '.ar-ttc.zero{opacity:.45}.ar-ttc.zero b{font-weight:700;color:var(--t-sub)}'+
    '.ar-ttr{margin-left:auto;font-size:var(--t7);font-weight:800;color:var(--t-sub2)}'+
    '@media(max-width:560px){.ar-ttn{width:100%;min-width:0}.ar-ttr{margin-left:0}}'+
    '.ar-sm{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F1F5F9}'+
