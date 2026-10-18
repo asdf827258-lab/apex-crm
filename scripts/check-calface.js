@@ -4,7 +4,7 @@
    해야 팀별 관리가 쉽고, 이거 <b>이름 그대로 다 표기</b>는 안 되니?」
 
    ★ 여기서 <b>제 실수 하나</b>를 찾았습니다. 이 달력은 <b>화면에서도</b>
-     가린 이름을 먼저 썼습니다 — 「김*호 · 연락」 이 114줄 섰습니다. 가리는
+     가린 이름을 먼저 썼습니다 — 「홍*돌 · 연락」 이 114줄 섰습니다. 가리는
      까닭은 <b>밖으로 나갈 때</b>(iCloud·구글 달력)이지 이 브라우저 화면이
      아닙니다 (3번). 고객 365일은 이미 아는 이름을 그대로 보여 주고 있어,
      <b>같은 사람을 두 화면이 다르게 부르고</b> 있었습니다.
@@ -34,14 +34,14 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
    · 홍*동 — 배정 DB 에 <b>같은 담당자</b>의 홍길동이 있다 → 되찾는다
    · 임*정 — 배정 DB 에 있지만 <b>담당자가 다르다</b> → 되찾는다(제 담당자로)
    · 장*수 — 어디에도 없다 → <b>가린 채로</b> 둔다
-   · 최*수 — 배정 DB 에 <b>같은 가린 이름이 둘</b> → 누구인지 못 가린다 */
+   · 홍*돌 — 배정 DB 에 <b>같은 가린 이름이 둘</b> → 누구인지 못 가린다 */
 const SEED=`
   OS.session={user:{id:'me'}};
   OS.profile={id:'me',name:'윤시현',role:'owner',active:true,plan:'vip'};
   window.osLoadProfile=function(){};window.osProfileApply=function(){};
   window.osShowLoginGate=function(){};window.toast=function(){};window.arLoad=function(){};
   try{osHideLoginGate();}catch(e){}
-  CM.who={me:'윤시현',u2:'박서준'};CM.pick='';
+  CM.who={me:'윤시현',u2:'변학도'};CM.pick='';
   AR.loaded=true;AR.busy=false;AR.cliRows=[];
   /* 오늘 약속 둘 — <b>담당자가 다르다</b>. 여태 이 줄은 아무도 안 걸러
      담당자를 고르셔도 남의 약속이 그대로 섞여 나왔다. */
@@ -53,14 +53,14 @@ const SEED=`
           appt:'',days:9,n:1,cAt:'',pAt:''},
          {id:'b2',who:'u2',name:'임꺽정',region:'여수',src:'일반',stage:'TA',
           appt:'',days:4,n:1,cAt:'',pAt:''},
-         {id:'b3',who:'me',name:'최민수',region:'광양',src:'일반',stage:'TA',
+         {id:'b3',who:'me',name:'홍갑돌',region:'광양',src:'일반',stage:'TA',
           appt:'',days:4,n:1,cAt:'',pAt:''},
-         {id:'b4',who:'me',name:'최영수',region:'광양',src:'일반',stage:'TA',
+         {id:'b4',who:'me',name:'홍정돌',region:'광양',src:'일반',stage:'TA',
           appt:'',days:4,n:1,cAt:'',pAt:''}];
   OSC.list=[{id:'c1',advisor_id:'me',name_masked:'홍*동',created_at:'2026-01-02'},
             {id:'c2',advisor_id:'u2',name_masked:'임*정',created_at:'2026-01-02'},
             {id:'c3',advisor_id:'me',name_masked:'장*수',created_at:'2026-01-02'},
-            {id:'c4',advisor_id:'me',name_masked:'최*수',created_at:'2026-01-02'}];`;
+            {id:'c4',advisor_id:'me',name_masked:'홍*돌',created_at:'2026-01-02'}];`;
 
 /* 앱이 쓰는 <b>한국 날짜</b>로 맞춘다 — UTC 로 심으면 밤에 하루가 어긋난다 */
 const TODAY=new Date(Date.now()+9*3600*1000).toISOString().slice(0,10);
@@ -92,11 +92,14 @@ const SEED2=SEED.split('@TODAY@').join(TODAY);
 
   console.log('\n[2] 못 찾은 이름은 <b>가린 채로</b> 둔다 (1번)');
   is(A.none==='장*수', '어디에도 없으면 <b>그대로 둔다</b> — '+A.none+' (그럴듯한 이름을 지어내지 않는다)');
-  /* ↓ 이것이 제일 위험한 자리다 — 「최*수」 가 최민수인지 최영수인지 모른다.
+  /* ↓ 이것이 제일 위험한 자리다 — 「홍*돌」 이 홍갑돌인지 홍정돌인지 모른다.
+       ★ 두 이름은 <b>가린 꼴이 겹쳐야</b> 이 시험이 뜻을 가집니다 (판 X125).
+         옛 이름 둘은 가린 꼴이 같았습니다(최*수) — 가짜 이름으로 바꾸면서
+         겹침이 풀려 자가 울었고, 겹치는 짝(홍갑돌·홍정돌)으로 다시 맞췄습니다.
        아무거나 붙이면 사장님이 고객 앞에서 <b>다른 이름</b>으로 부르신다. */
-  is(A.twin==='최*수',
+  is(A.twin==='홍*돌',
      '같은 담당자에게 <b>같은 가린 이름이 둘</b>이면 아무 이름도 안 붙인다 — '+A.twin+
-     ' (최민수·최영수 중 누구인지 모른다)');
+     ' (홍갑돌·홍정돌 중 누구인지 모른다)');
 
   console.log('\n[3] 폰 달력으로 <b>나가는</b> 이름은 가린다 (3번)');
   is(A.out1==='홍*동', 'iCloud·구글로 나갈 때는 <b>가린 채</b>다 — '+A.out1);
@@ -129,7 +132,7 @@ const SEED2=SEED.split('@TODAY@').join(TODAY);
   is(/ccPlan\(/.test(body)&&!/한 번도 연락한 적이 없습니다/.test(body),
      '무엇을 할지는 <b>고객 365일 규칙 한 곳</b>에서 가져온다 (5번) — 여기 또 안 적었다');
   is(B.whoN===B.n, '줄마다 <b>「담당자 : 」</b>가 앞에 붙는다 — '+B.whoN+'/'+B.n+'줄 (약속 줄에도)');
-  is(B.whos.indexOf('박서준')>=0&&B.whos.indexOf('윤시현')>=0,
+  is(B.whos.indexOf('변학도')>=0&&B.whos.indexOf('윤시현')>=0,
      '<b>누가 맡은 분인지</b> 그대로 — '+B.whos.filter(Boolean).join(' · '));
   is(B.picks.length>=3, '<b>담당자 고르개</b>가 달력 위에 선다 — '+B.picks.join(' / '));
   is(/가려진/.test(B.mask)&&/2분/.test(B.mask),

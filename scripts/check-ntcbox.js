@@ -89,8 +89,8 @@ window.supabase = { createClient: function () {
    앱이 제 손으로 다시 읽는 순간 지워져, 무엇을 쟀는지 알 수 없게 된다. */
 const SEED = `
   OS.session = { user: { id: 'u2', email: 'k@t' } };
-  OS.profile = { id: 'u2', name: '김철수', role: 'owner', active: true, plan: 'vip' };
-  OSMT.rows = [{ id: 'u1', name: '홍길동' }, { id: 'u2', name: '김철수' }];
+  OS.profile = { id: 'u2', name: '홍길동', role: 'owner', active: true, plan: 'vip' };
+  OSMT.rows = [{ id: 'u1', name: '홍길동' }, { id: 'u2', name: '홍길동' }];
   window.__rows = {
     os_notices: [
       { id: 'n1', text: '수당표를 확인해 주세요', img: '', active: true,
@@ -166,7 +166,7 @@ const SEED = `
       tags: d.querySelectorAll('.ntc-tag').length
     };
   });
-  is(/홍길동/.test(B.oneT) && /김철수/.test(B.oneT),
+  is(/홍길동/.test(B.oneT) && /홍길동/.test(B.oneT),
      '  담당자가 <b>이름으로</b> 보인다 — id 만 보면 누군지 모른다');
   is(B.oneOk === 1 && B.oneNo === 1,
      '  <b>찍은 사람과 안 찍은 사람</b>이 갈려 보인다 — ✓' + B.oneOk + ' · ·' + B.oneNo);
@@ -372,7 +372,7 @@ const SEED = `
     d.innerHTML = osNoticeHomeHtml();
     const t = d.textContent.replace(/\s+/g, ' ');
     OSMT.rows = keep; d.innerHTML = osNoticeHomeHtml();
-    return { t: t, fake: /홍길동|김철수/.test(t), said: /이름 불러오는 중/.test(t),
+    return { t: t, fake: /홍길동|홍길동/.test(t), said: /이름 불러오는 중/.test(t),
              raw: /u1|u2/.test(t) };
   });
   is(!I.fake, '  없는 이름을 <b>안 만든다</b>');

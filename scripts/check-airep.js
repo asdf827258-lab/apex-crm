@@ -29,9 +29,9 @@ window.__ins=[];window.__neq=[];window.__aiCalls=[];
 window.__T=(function(){var d=new Date();return function(n){var x=new Date(d.getTime()-n*86400000);return x.toISOString().slice(0,10);};})();
 window.__profiles=[
  {id:'p1',name:'윤시현',role:'owner',active:true,workspace:null},
- {id:'p2',name:'박서준',role:'member',active:true,workspace:null},
- {id:'p3',name:'최민아',role:'member',active:true,workspace:null},
- {id:'p4',name:'이지훈',role:'member',active:true,workspace:null}
+ {id:'p2',name:'변학도',role:'member',active:true,workspace:null},
+ {id:'p3',name:'성춘향',role:'member',active:true,workspace:null},
+ {id:'p4',name:'이몽룡',role:'member',active:true,workspace:null}
 ];
 window.__teams=[{id:'t1',name:'온탑1팀',leader_id:'p1'},{id:'t2',name:'온탑2팀',leader_id:'p3'}];
 window.__team_members=[{team_id:'t1',member_id:'p1'},{team_id:'t1',member_id:'p2'},
@@ -172,7 +172,7 @@ const AI_OK = `## 활동 보고
   const seat = async (role) => {
     await page.evaluate((ro) => {
       document.querySelectorAll('#osLoginGate,#osGuideOvl,#osHelpOvl,#osOvl,#osGuide').forEach(x => x.remove());
-      OS.profile = { id: ro === 'member' ? 'p2' : 'p1', name: ro === 'member' ? '박서준' : '윤시현', role: ro, plan: 'vip' };
+      OS.profile = { id: ro === 'member' ? 'p2' : 'p1', name: ro === 'member' ? '변학도' : '윤시현', role: ro, plan: 'vip' };
       OS.session = { user: { id: ro === 'member' ? 'p2' : 'p1', email: 'o@t' } };
       window.__toast = []; window.toast = m => window.__toast.push('' + m);
       window.callAI = function (sys, user) {
@@ -332,7 +332,7 @@ const AI_OK = `## 활동 보고
   ok(heads.join('|') === '내 관리|팀 관리', '내 관리 / 팀 관리로 나뉜다 — ' + heads.join(' · '));
   const badges = await page.evaluate(() => document.querySelectorAll('#arPane .ar-cat .n').length);
   ok(badges >= 3, '남은 건수가 붉은 숫자로 붙는다 (' + badges + '곳)');
-  ok(/박서준 님의 보고|윤시현 님의 보고/.test(txt), '처음 열면 피드백 칸이 보인다');
+  ok(/변학도 님의 보고|윤시현 님의 보고/.test(txt), '처음 열면 피드백 칸이 보인다');
 
   await page.evaluate(() => arGoCat('team'));
   await page.waitForTimeout(400);
@@ -374,7 +374,7 @@ const AI_OK = `## 활동 보고
   }));
   ok(only.rows === 2, '온탑1팀만 두 명 (' + only.rows + ')');
   ok(only.grp === 1, '묶음도 하나만 (' + only.grp + ')');
-  ok(/온탑1팀/.test(only.txt) && !/최민아/.test(only.txt), '다른 팀 사람은 안 보인다');
+  ok(/온탑1팀/.test(only.txt) && !/성춘향/.test(only.txt), '다른 팀 사람은 안 보인다');
 
   /* 소속 없는 사람만 따로 */
   await page.evaluate(() => arTeam('__none'));
@@ -393,7 +393,7 @@ const AI_OK = `## 활동 보고
   const rows = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-row .ar-nmx'), e => e.textContent.trim()));
   ok(rows.length === 4, '전체를 고르면 네 명이 다 나온다 (' + rows.length + ')');
-  ok(/윤시현/.test(rows[0]) && /박서준/.test(rows[1]),
+  ok(/윤시현/.test(rows[0]) && /변학도/.test(rows[1]),
     '팀 안에서 점수가 낮은 사람이 위에 온다 — ' + rows.slice(0, 2).join(' → '));
 
   /* ── 팀원 한 사람을 펼치면 그 사람의 모든 것이 한 화면에 ── */
@@ -566,7 +566,7 @@ const AI_OK = `## 활동 보고
   await seat('member');
   await open('feed');
   txt = await pane();
-  ok(/박서준 님의 보고/.test(txt), '자기 이름으로 자기 칸이 열린다');
+  ok(/변학도 님의 보고/.test(txt), '자기 이름으로 자기 칸이 열린다');
   ok(/AI 보고 받기/.test(txt), '스스로 받을 수 있는 단추가 있다');
   await page.evaluate(() => arGen('p2'));
   await page.waitForTimeout(700);

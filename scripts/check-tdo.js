@@ -451,7 +451,7 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     GB.teams=[{id:'t1',name:'온탑1팀'},{id:'t2',name:'온탑2팀'}];
     GB.teamOf={u1:'t1',u2:'t1',u3:'t2',u4:'t2'};
     GB.rows=[{id:'u1',name:'윤시현'},{id:'u2',name:'홍판서'},
-             {id:'u3',name:'박서준'},{id:'u4',name:'조혜인'}];
+             {id:'u3',name:'변학도'},{id:'u4',name:'홍병돌'}];
     window.arLoad=function(){};
     /* 견본은 <b>홍길동</b> 집안입니다 (3번) */
     const mk=(id,who,st,src)=>({id:id,who:who,name:'홍길동'+id,region:'순천',src:src,
@@ -513,9 +513,9 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(P.team2.src.length===4&&/개척/.test(txt(P.team2.src)),
      '<b>종류 칸도 그 팀 것을 센다</b> — '+txt(P.team2.src)+
      ' (「모든 DB 분류에서 개인별·팀별로」 가 이 뜻이다)');
-  is(P.who3.rows===2&&/박서준/.test(onOf(P.who3.who)),
+  is(P.who3.rows===2&&/변학도/.test(onOf(P.who3.who)),
      '팀 <b>안에서 한 사람</b>을 다시 고른다 — '+P.who3.rows+'명 ('+onOf(P.who3.who)+')');
-  is(/온탑2팀 · 박서준/.test(P.who3.note),
+  is(/온탑2팀 · 변학도/.test(P.who3.note),
      '<b>지금 무엇을 세고 있는지</b> 한 줄로 적는다 — 「'+(P.who3.note||'').trim().slice(0,40)+'…」');
   is(P.back.rows===6&&/팀 전체/.test(onOf(P.back.team)),
      '같은 칸을 <b>다시 누르면 전체</b>로 — '+P.back.rows+'명');
