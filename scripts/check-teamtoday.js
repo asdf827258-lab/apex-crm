@@ -278,7 +278,34 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
      '안 읽었을 때 모른다고 적는다 (받음 「' + unk.txt.replace(/\s+/g, ' ').slice(0, 60) + '」)');
   is(!unk.zero, '안 읽었는데 「0건」 이라고 적지 않는다');
 
-  console.log('\n[7] 화면이 안 터진다');
+  console.log('\n[7] 남의 달력을 볼 때는 「비어 있다고 없는 것이 아니다」 라고 적는다');
+  /* 대표가 담당자를 바꿔 고르면 그분 고객의 연락 주기·약속은 찍히지만
+     <b>다음 할 일과 생일</b>은 안 뜹니다 — 그 쪽지는 이 화면이 안 읽습니다.
+     서버를 한 번 더 부르는 대신(7번) <b>말로 합니다</b>(1번).
+     ★ 내 것을 볼 때는 한 줄도 안 세웁니다 — 날마다 보는 화면에 늘 서 있는
+       안내는 높이만 먹습니다 (판 X121 에서 248px 로 데인 자리). */
+  const nm = await page.evaluate(() => {
+    const keep = (typeof HWHO !== 'undefined') ? HWHO.id : null;
+    const get = () => (typeof mcalNotMineHtml === 'function') ? mcalNotMineHtml() : null;
+    let mine = null, other = null, all = null;
+    try {
+      if (typeof HWHO !== 'undefined') {
+        HWHO.id = 'me';  mine  = get();
+        HWHO.id = 'u2';  other = get();
+        HWHO.id = (typeof HWHO_ALL !== 'undefined') ? HWHO_ALL : '*'; all = get();
+        HWHO.id = keep;
+      }
+    } catch (e) { return { err: String(e).slice(0, 80) }; }
+    return { mine: mine, other: other, all: all };
+  });
+  is(nm.mine === '', '내 것을 볼 때는 한 줄도 안 선다 (높이를 안 먹는다)');
+  is(typeof nm.other === 'string' && /없는 것이 아닙니다/.test(nm.other),
+     '남의 것을 볼 때는 「비어 있다고 없는 것이 아닙니다」 라고 적는다');
+  is(typeof nm.other === 'string' && /다음 할 일|생일/.test(nm.other),
+     '무엇이 안 뜨는지 이름을 대고 말한다 (1번)');
+  is(nm.all === '', '「팀 전체」 일 때도 안 선다 — 거르지 않는 자리라 남의 것이 아니다');
+
+  console.log('\n[8] 화면이 안 터진다');
   is(errs.length === 0, '터진 것 없음' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();
