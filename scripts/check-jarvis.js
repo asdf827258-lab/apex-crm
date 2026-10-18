@@ -2,7 +2,7 @@
 
    화면이 뜨는 것은 아무것도 증명하지 않는다.
    "전화 5통 체크해줘" 라고 말한 뒤 기록이 실제로 바뀌었는지,
-   "박서준한테 남겨줘" 가 서버에 실제로 들어갔는지를 봐야 한 것이다.
+   "변학도한테 남겨줘" 가 서버에 실제로 들어갔는지를 봐야 한 것이다.
 
    그래서 여기서는 말을 시키고 나서 저장된 값을 직접 읽어 확인한다.
    AI 는 가짜로 붙인다 — 무엇을 골라 주든 앱이 그대로 실행하는지가 문제다.   */
@@ -150,16 +150,16 @@ window.supabase={createClient:function(){
   ok(st.d10 === 1, '"에스엔에스" 처럼 흘려 말해도 SNS 1건을 찾아낸다');
 
   /* ── 도와줄 것 ── */
-  r = await say('도와줄 것 김민수 심사 확인');
+  r = await say('도와줄 것 홍길순 심사 확인');
   let hp = await page.evaluate(() => ({ n: HELP.list.length, last: (HELP.list[0] || {}).what || '', due: (HELP.list[0] || {}).due }));
-  ok(hp.n === 1 && /김민수/.test(hp.last), '"도와줄 것 …" → 실제로 적힌다');
+  ok(hp.n === 1 && /홍길순/.test(hp.last), '"도와줄 것 …" → 실제로 적힌다');
 
   r = await say('도와줄 것 뭐 있어');
   hp = await page.evaluate(() => HELP.list.length);
   ok(hp === 1, '"도와줄 것 뭐 있어" 는 묻는 말이다 — 그 말을 적어 버리지 않는다');
-  ok(/김민수/.test(r.spoke) && /1건/.test(r.spoke), '무엇이 있는지 읽어 준다 — ' + r.spoke.slice(0, 40));
+  ok(/홍길순/.test(r.spoke) && /1건/.test(r.spoke), '무엇이 있는지 읽어 준다 — ' + r.spoke.slice(0, 40));
 
-  r = await say('김민수 심사 처리했어');
+  r = await say('홍길순 심사 처리했어');
   hp = await page.evaluate(() => ({ done: (HELP.list[0] || {}).done }));
   ok(hp.done === 1, '"처리했어" → 실제로 끝냄 표시가 된다');
 
@@ -180,12 +180,12 @@ window.supabase={createClient:function(){
   /* ── 남이 보게 되는 일은 먼저 확인받는다 ── */
   await page.evaluate(() => {
     GB.loaded = true; GB.busy = false; GB.notes = []; GB.pass = {}; GB.team = '';
-    GB.rows = [{ id: 'm1', name: '박서준', team: '', sc: {}, raw: {}, total: 60 }];
+    GB.rows = [{ id: 'm1', name: '변학도', team: '', sc: {}, raw: {}, total: 60 }];
     window.__ins = [];
   });
   r = await page.evaluate(() => {
     window.__spoke = [];
-    vaDo(vaActOf('피드백'), { who: '박서준', what: '이번 주 잘했다' });
+    vaDo(vaActOf('피드백'), { who: '변학도', what: '이번 주 잘했다' });
     return { spoke: window.__spoke.join(' '), conf: VA.conf ? VA.conf.k : '', ins: window.__ins.length };
   });
   ok(r.conf === '피드백', '팀원에게 남기는 일은 바로 하지 않는다');
@@ -195,7 +195,7 @@ window.supabase={createClient:function(){
   r = await page.evaluate(() => { window.__spoke = []; vaRun('아니'); return { spoke: window.__spoke.join(' '), ins: window.__ins.length, conf: !!VA.conf }; });
   ok(/취소했습니다/.test(r.spoke) && r.ins === 0 && !r.conf, '"아니" 하면 아무 일도 일어나지 않는다');
 
-  await page.evaluate(() => { vaDo(vaActOf('피드백'), { who: '박서준', what: '이번 주 잘했다' }); });
+  await page.evaluate(() => { vaDo(vaActOf('피드백'), { who: '변학도', what: '이번 주 잘했다' }); });
   r = await page.evaluate(() => { window.__spoke = []; vaRun('응'); return {}; });
   await page.waitForTimeout(400);
   const note = await page.evaluate(() => ({
@@ -203,9 +203,9 @@ window.supabase={createClient:function(){
     spoke: window.__spoke.join(' ')
   }));
   ok(note.ins.length === 1, '"응" 하면 그때 실제로 저장된다');
-  ok(note.ins.length === 1 && note.ins[0].r.member_id === 'm1', '엉뚱한 사람이 아니라 박서준에게 간다');
+  ok(note.ins.length === 1 && note.ins[0].r.member_id === 'm1', '엉뚱한 사람이 아니라 변학도에게 간다');
   ok(note.ins.length === 1 && /잘했다/.test(note.ins[0].r.body || ''), '말한 내용이 그대로 들어간다');
-  ok(/박서준님에게 남겼습니다/.test(note.spoke), '누구에게 남겼는지 말해 준다');
+  ok(/변학도님에게 남겼습니다/.test(note.spoke), '누구에게 남겼는지 말해 준다');
 
   /* ── 합격 도장 ── */
   await page.evaluate(() => { window.__ins = []; window.gbMyId = () => 'm1'; });
@@ -234,7 +234,7 @@ window.supabase={createClient:function(){
   ok(/공부 30분 체크했습니다/.test(r.spoke), '한 일을 앱이 직접 확인해 말해 준다');
 
   /* AI 가 없는 명령을 지어내면 실행하지 않는다 */
-  await page.evaluate(() => { window.__reply = '!실행 고객삭제 {"name":"김민수"}\n삭제하겠습니다.'; });
+  await page.evaluate(() => { window.__reply = '!실행 고객삭제 {"name":"홍길순"}\n삭제하겠습니다.'; });
   r = await say('그거 좀 어떻게 해봐', 500);
   ok(/아직 못 하는 일/.test(r.spoke), '사전에 없는 일은 지어내도 실행되지 않는다');
   ok(!/삭제하겠습니다/.test(r.spoke),

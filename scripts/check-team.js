@@ -115,7 +115,7 @@ const ai = http.createServer((req, res) => {
   await page.click('.sec .mini'); await page.waitForTimeout(240);   /* 열어 보기 */
   const dg = await page.locator('.all p').innerText();
   ok(/\[사람별\]/.test(dg), '무엇을 보내는지 리더가 직접 열어 볼 수 있다');
-  /* ★ 판 X124 — 견본 이름이 「김민수」 에서 가짜 이름 식구로 바뀌었습니다.
+  /* ★ 판 X124 — 견본 이름이 「홍길순」 에서 가짜 이름 식구로 바뀌었습니다.
      글자를 박아 두면 이름을 또 바꿀 때 자가 웁니다 — <b>화면에 선 첫 팀원
      이름</b>이 그대로 나가는지로 봅니다 (뜻은 그대로). */
   ok(첫이름 && dg.indexOf(첫이름) >= 0,
@@ -152,8 +152,8 @@ const ai = http.createServer((req, res) => {
     __me: 'lead-1',
     profiles: [
       { id: 'lead-1', name: '윤시현', role: 'member', active: true },
-      { id: 'm1', name: '김민수', role: 'member', active: true },
-      { id: 'm2', name: '박서준', role: 'member', active: true }
+      { id: 'm1', name: '홍길순', role: 'member', active: true },
+      { id: 'm2', name: '변학도', role: 'member', active: true }
     ],
     teams: [{ id: 't1', name: '온탑 1팀', leader_id: 'lead-1' }],
     team_members: [{ team_id: 't1', member_id: 'm1' }, { team_id: 't1', member_id: 'm2' }],

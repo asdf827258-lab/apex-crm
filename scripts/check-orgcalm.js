@@ -32,9 +32,9 @@ const STUB = `
 window.__pulls=0;
 window.__db={org:[
   {id:'o1',name:'윤시현',rank:'사업단장',team:'온탑본부',parent:'',member_id:'u1'},
-  {id:'o2',name:'김지점',rank:'지점장',team:'온탑1팀',parent:'o1',member_id:'u2'},
-  {id:'o3',name:'박서준',rank:'설계사',team:'온탑1팀',parent:'o2',member_id:'u3'},
-  {id:'o4',name:'최민아',rank:'신입',team:'온탑1팀',parent:'o2',member_id:'u4'}
+  {id:'o2',name:'홍지점',rank:'지점장',team:'온탑1팀',parent:'o1',member_id:'u2'},
+  {id:'o3',name:'변학도',rank:'설계사',team:'온탑1팀',parent:'o2',member_id:'u3'},
+  {id:'o4',name:'성춘향',rank:'신입',team:'온탑1팀',parent:'o2',member_id:'u4'}
 ]};
 window.supabase={createClient:function(){
  function mk(tbl){

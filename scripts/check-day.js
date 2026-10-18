@@ -164,7 +164,7 @@ const srv = http.createServer((req, res) => {
   /* 넷 · 폰 명단 → 내 배정 DB */
   console.log('\n등록 — 폰 명단에서 고른 사람만 내 배정 DB 로');
   await page.click('#tbReg'); await page.waitForTimeout(300);
-  await page.fill('#rgTxt', '홍길동 010-1234-5678\n김영희 010-2345-6789\n박철수 010-3456-7890');
+  await page.fill('#rgTxt', '홍길동 010-1234-5678\n홍말순 010-2345-6789\n박철수 010-3456-7890');
   await page.click('.pastebox .mini'); await page.waitForTimeout(320);
   ok(await page.locator('.rgi').count() === 3, '세 사람을 읽어 들였다');
   await page.evaluate(() => window.rgAll(false)); await page.waitForTimeout(200);
@@ -201,7 +201,7 @@ const srv = http.createServer((req, res) => {
   const p3 = await ctx.newPage();
   await p3.addInitScript(SB_STUB({
     __me: 'me-1',
-    profiles: [{ name: '김민수' }],
+    profiles: [{ name: '홍길순' }],
     dbs: [{ id: 'x1', assigned_to: 'me-1', customer_name: '홍길동', phone: '010-1111-2222',
             region: '서울', assigned_date: TODAY, source: '방송' }],
     calls: [], clients: [], saved_reports: [],
@@ -244,7 +244,7 @@ const srv = http.createServer((req, res) => {
   const pz = await ny.newPage();
   pz.on('pageerror', e => errs.push('[tz] ' + e.message));
   await pz.addInitScript(SB_STUB({
-    __me: 'me-1', profiles: [{ name: '박서준' }],
+    __me: 'me-1', profiles: [{ name: '변학도' }],
     dbs: [{ id: 'z1', assigned_to: 'me-1', customer_name: '권도윤', phone: '010-2222-3333',
             region: '경기', assigned_date: TODAY, source: '보장분석' }],
     calls: [], clients: [], saved_reports: [], team_feedback: [], app_config: []
@@ -277,7 +277,7 @@ const srv = http.createServer((req, res) => {
   const p5 = await ctx.newPage();
   p5.on('pageerror', e => errs.push('[365] ' + e.message));
   await p5.addInitScript(SB_STUB({
-    __me: 'me-1', profiles: [{ name: '박서준' }],
+    __me: 'me-1', profiles: [{ name: '변학도' }],
     dbs: [{ id: 'z1', assigned_to: 'me-1', customer_name: '권도윤', phone: '010-2222-3333',
             region: '경기', assigned_date: TODAY, source: '보장분석' }],
     calls: [], team_feedback: [], app_config: [],
@@ -321,7 +321,7 @@ const srv = http.createServer((req, res) => {
   const p6 = await ctx.newPage();
   p6.on('pageerror', e => errs.push('[done] ' + e.message));
   await p6.addInitScript(SB_STUB({
-    __me: 'me-1', profiles: [{ name: '박서준' }],
+    __me: 'me-1', profiles: [{ name: '변학도' }],
     dbs: [{ id: 'z1', assigned_to: 'me-1', customer_name: '권도윤', phone: '010-2222-3333',
             region: '경기', assigned_date: TODAY, source: '보장분석' }],
     calls: [], team_feedback: [],
@@ -361,7 +361,7 @@ const srv = http.createServer((req, res) => {
   const p7 = await ctx.newPage();
   p7.on('pageerror', e => errs.push('[people] ' + e.message));
   await p7.addInitScript(SB_STUB({
-    __me: 'me-1', profiles: [{ name: '박서준' }], calls: [], team_feedback: [], app_config: [],
+    __me: 'me-1', profiles: [{ name: '변학도' }], calls: [], team_feedback: [], app_config: [],
     dbs: [
       { id: 'a1', assigned_to: 'me-1', customer_name: '권도윤', phone: '010-1111-1111', region: '경기', assigned_date: TODAY },
       { id: 'a2', assigned_to: 'me-1', customer_name: '나신규', phone: '010-2222-2222', region: '서울', assigned_date: TODAY }

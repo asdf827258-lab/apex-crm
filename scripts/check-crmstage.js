@@ -332,8 +332,8 @@ const SEED=`
     /* 팀을 둘로 갈라 심는다 — 견본은 홍길동 집안 (3번) */
     profiles=[{id:'u1',name:'윤시현',role:'admin',active:true},
               {id:'u2',name:'홍판서',role:'member',active:true},
-              {id:'u3',name:'박서준',role:'member',active:true},
-              {id:'u4',name:'조혜인',role:'member',active:true}];
+              {id:'u3',name:'변학도',role:'member',active:true},
+              {id:'u4',name:'홍병돌',role:'member',active:true}];
     profile=profiles[0];
     crmTeams=[{id:'t1',name:'온탑1팀'},{id:'t2',name:'온탑2팀'}];
     crmTeamOf={u1:'t1',u2:'t1',u3:'t2',u4:'t2'};

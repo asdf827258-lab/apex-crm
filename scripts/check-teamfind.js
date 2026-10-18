@@ -66,7 +66,7 @@ const SEED = `(function(){
   GB.teams=[{id:'t1',name:'순천지점'},{id:'t2',name:'광양지점'}];
   GB.rows=[mk('u1','홍길동','leader','t1',80,'2026-09-09'),
            mk('u2','홍길순','member','t1',40,'2026-09-08'),
-           mk('u3','박서준','member','t1',30,''),
+           mk('u3','변학도','member','t1',30,''),
            mk('u4','홍판서','member','t2',60,'2026-09-01'),
            mk('u5','임꺽정','member','t2',20,''),
            mk('u6','장길산','manager','t2',50,'2026-09-09')];
@@ -154,12 +154,12 @@ const type = async (pg, txt) => {
   head('[2] 이름 · 초성 · 팀 이름 · 직책 <b>넷 다</b> 걸린다');
   await type(pg, '홍');
   let got = await names(pg);
-  is(got.length === 3 && got.indexOf('박서준') < 0,
+  is(got.length === 3 && got.indexOf('변학도') < 0,
      '이름 — 「홍」 으로 세 명 (' + got.join(', ') + ')');
 
-  await type(pg, 'ㅂㅅㅈ');
+  await type(pg, 'ㅂㅎㄷ');
   got = await names(pg);
-  is(got.length === 1 && got[0] === '박서준', '초성 — 「ㅂㅅㅈ」 으로 박서준 하나');
+  is(got.length === 1 && got[0] === '변학도', '초성 — 「ㅂㅎㄷ」 으로 변학도 하나');
 
   await type(pg, '광양');
   got = await names(pg);

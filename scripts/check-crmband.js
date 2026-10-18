@@ -61,7 +61,7 @@ for(i=0;i<4;i++)DBS.push(D('c'+i,'홍길동C'+i,'u1','소개','PC'));          /
 DBS.push(D('d0','홍길동D0','u1','지인','TA'));
 DBS.push(D('e0','임꺽정','u2','일반','AP'));                               /* 남의 것 */
 var T={profiles:[{id:'u1',name:'홍길동',role:'${ROLE || 'admin'}',active:true},
-                 {id:'u2',name:'박서준',role:'member',active:true}],
+                 {id:'u2',name:'변학도',role:'member',active:true}],
        dbs:DBS,calls:[],attendance:[],teams:[],team_members:[],
        app_config:[{key:'db_sources',value:'일반,소개,지인,개척'}]
          .concat(${QUOTA==null?'[]':"[{key:'db_quota',value:"+JSON.stringify(QUOTA)+"}]"}),
@@ -260,11 +260,11 @@ window.supabase={createClient:function(){return {
   is(/이분만 따로 적힌 수/.test(q3.글), '  ★ <b>따로 적힌 수라고 밝힌다</b> — 왜 남과 다른지 모르면 의심합니다');
   is(/43건 더 받을 수 있습니다/.test(q3.글), '  남은 수도 그 수로 센다 — 50 − 7 = 43');
 
-  /* ⑸ 남의 것이 안 섞인다 — 박서준은 제 것만 */
+  /* ⑸ 남의 것이 안 섞인다 — 변학도은 제 것만 */
   const q4 = await 본다(JSON.stringify({ 기본: 5, 사람: { u1: 50 } }), 'u2');
   console.log('      ' + q4.글);
-  is(/박서준/.test(q4.글) && /한도 5건/.test(q4.글),
-     '  ★ 박서준에게는 <b>기본 5</b> 가 쓰인다 — 홍길동의 50 이 안 새어 옵니다');
+  is(/변학도/.test(q4.글) && /한도 5건/.test(q4.글),
+     '  ★ 변학도에게는 <b>기본 5</b> 가 쓰인다 — 홍길동의 50 이 안 새어 옵니다');
   is(!/이분만 따로 적힌 수/.test(q4.글), '  따로 안 적힌 분에게는 <b>그 말을 안 한다</b>');
 
   /* ⑹ ★ 적힌 글이 깨졌을 때 — <b>0 으로 둔다</b>. 꾸미면 화면이 거짓말한다 */
