@@ -11450,10 +11450,15 @@ function arTeamRowsHtml(){
 /* 「몇 명 보고했나 · 다시 읽는 중인가」를 세는 자리는 <b>여기 하나</b>다.
    판을 통째로 세울 때와 줄만 갈아 끼울 때가 따로 세면, 치는 동안에는
    <b>옛 숫자가 조용히 남는다</b> — 다 읽은 줄 알고 넘어가게 된다 (5번). */
+/* 「다시 읽는 중」 을 붙이는 자리도 <b>하나</b>입니다 (판 X126 · 5번).
+   칸이 둘이 되면서 한쪽만 말하는 일이 실제로 났습니다 — 새 칸이 명단을
+   다시 읽는 동안 <b>옛 숫자를 조용히</b> 보여 주었고, check-teamfind 가
+   울었습니다. 두 칸이 같은 자에게 묻습니다. */
+function arReadingNote(){ return ((typeof GB!=='undefined')&&GB.loaded)?'':' · 다시 읽는 중'; }
 function arDoneNote(){
-  var all=arScope(),i,done=0,ready=(typeof GB!=='undefined')&&GB.loaded;
+  var all=arScope(),i,done=0;
   for(i=0;i<all.length;i++)if(AR.rep[all[i].id])done++;
-  return done+' / '+all.length+'명'+(ready?'':' · 다시 읽는 중');
+  return done+' / '+all.length+'명'+arReadingNote();
 }
 function arTeamHtml(){
   /* <b>다시 읽는 중이라고 이미 세워 둔 목록을 지우지 않는다.</b> 지우면
@@ -11580,6 +11585,13 @@ function arTtNums(id){
            idle:(r&&r.last)?arDaysAgo(r.last):null,
            rep:!!AR.rep[id] };
 }
+/* 머리글을 적는 자리도 <b>하나</b>입니다 — 판을 세울 때와 줄만 갈아
+   끼울 때가 따로 적으면 한쪽에 옛 말이 남습니다 (5번).
+   ⚠ 이 칸은 <b>찾는 글자를 안 따릅니다</b>. 찾기는 아래 「팀 전체 보고」
+     의 것이고(한 사람을 찾으려고 칩니다), 이 칸은 <b>팀 전부</b>의 오늘을
+     한눈에 보려고 있는 자리입니다. 같이 좁히면 보러 온 것이 사라집니다.
+     그래서 arList() 가 아니라 arScope() 로 셉니다. */
+function arTtHeadNote(){ return arScope().length+'명'+arReadingNote(); }
 /* 급한 사람이 위로 — 기한 지난 것과 지난 약속을 먼저 본다 */
 function arTtRank(o){ return (o.due||0)*2+(o.late||0)*2+(o.tk||0); }
 function arTtGo(id){
@@ -11640,7 +11652,7 @@ function arTodayTeamHtml(){
   }
   return '<div class="card"><div class="card-hd"><div class="card-title">'+
     '<span class="ci">👥</span>오늘, 팀원 저마다'+
-    '<span class="ar-n">'+rows.length+'명</span></div>'+
+    '<span class="ar-n" id="arTtN">'+arTtHeadNote()+'</span></div>'+
     '<div class="card-desc">급한 사람이 위에 옵니다. 이름을 누르면 '+
     '<b>그분의 「오늘 터치할 사람」</b> 으로 갑니다</div></div>'+
     '<div class="card-body"><div class="ar-tts">'+h+'</div>'+
@@ -13550,6 +13562,13 @@ function arRowsSwap(){
   var f=document.getElementById('arFilterRow'); if(f)f.innerHTML=arFilterChips();
   var n=document.getElementById('arFindN');     if(n)n.textContent=arFindNote();
   var d=document.getElementById('arDoneN');     if(d)d.textContent=arDoneNote();
+  /* ★ 위에 선 「오늘, 팀원 저마다」 의 머리글도 여기서 같이 갈아 끼웁니다
+     (판 X126). 이 길은 <b>판을 안 다시 세우는</b> 길이라, 여기 안 적으면
+     그 칸만 옛 말을 합니다 — 명단을 다시 읽는 중인데 「6명」 이라고만
+     적고 있었고 check-teamfind 가 그것을 잡았습니다 (5번).
+     ⚠ 줄(사람마다 오늘)은 안 건드립니다 — 이 길로 오는 것은 <b>찾는
+       글자</b>가 바뀐 때이고, 그 칸은 찾기를 안 따릅니다(아래 글 참고). */
+  var tn=document.getElementById('arTtN');      if(tn)tn.textContent=arTtHeadNote();
   var x=document.getElementById('arFindX');     if(x)x.hidden=!AR.q;
   return true;
 }
@@ -20282,7 +20301,7 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-18 23:05';
+var APP_BUILD='2026-10-18 23:50';
 var APP_BUILD_NOTE="👥 <b>「오늘」 이 팀원 전부에게도 맞는 말을 합니다</b> — 리더 화면의 팀원 숫자가 <b>거짓말</b>을 하고 있었습니다. <b>판 X122 에서 제가 낸 어긋남</b>입니다 — 「다음 할 일」 을 쌓게 만들면서 묻는 자리를 하나로 모았는데, 그 자가 <b>이 기기</b>만 보았습니다. 거기엔 <b>내 고객</b>만 있습니다. 그래서 ① 「팀 전체 기한 지난 할 일」 이 <b>언제나 없음</b> 이었고 (모르는 것을 0 으로 적은 것입니다) ② 거꾸로 「오늘 터치할 사람」 에는 팀원의 고객이 <b>전원</b> 섰습니다(할 일이 빈 칸이면 「아무도 안 챙긴다」 로 읽는 규칙 때문입니다). 이제 <b>서버가 준 줄</b>을 같이 봅니다. ★ 덤으로, 달력을 한 번 열면 남의 고객 수만큼 <b>빈 쪽지</b>가 이 기기에 쌓이던 것도 고쳤습니다 — 그 빈 쪽지가 출발 점검의 「고객 직업 한 줄 N/M분」 분모를 늘리고 팀 숫자를 덮고 있었습니다. ★ <b>새 칸</b> — TFA 업무관리 › 👀 팀원 관리 맨 위에 <b>「오늘, 팀원 저마다」</b> 가 섭니다. 사람마다 ☎️ 오늘 터치 · ⏰ 기한 지난 할 일 · 🕗 지난 약속 · 💤 마지막 기록 · 🧾 보고 를 한 줄로 놓고, 급한 사람이 위에 옵니다. 이름을 누르면 <b>그분의 「오늘 터치할 사람」</b> 으로 갑니다. 네 숫자는 <b>이미 세는 자에게 물어서</b> 적습니다 — 새로 세지 않습니다(5번). ★ <b>내 캘린더</b> — 대표·지점장이 담당자를 바꿔 고르시면 그분 고객의 <b>다음 할 일과 생일은 안 뜹니다</b>(그 쪽지는 이 화면이 안 읽습니다). 서버를 한 번 더 부르는 대신 <b>그렇다고 적습니다</b> — 「비어 있다고 없는 것이 아닙니다」. 내 것을 볼 때는 한 줄도 안 섭니다. (판 X126)";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────

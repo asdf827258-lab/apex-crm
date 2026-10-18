@@ -297,7 +297,12 @@ const type = async (pg, txt) => {
     const out = { box: !!f, v: f ? f.value : '', q: AR.q,
                   x: !!(x && !x.hidden && x.getBoundingClientRect().width > 0),
                   rows: document.querySelectorAll('#arTeamList .ar-nmx').length,
-                  note: (document.querySelector('.ar-n') || {}).textContent || '' };
+                  /* ★ 「팀 전체 보고」 의 그 칸을 <b>번호로</b> 집습니다 (판 X126).
+                     .ar-n 은 이 화면에 여럿이라 「맨 앞의 것」 으로 집으면,
+                     위에 칸이 하나 서는 순간 다른 것을 재게 됩니다 —
+                     실제로 그렇게 헛 빨간불이 떴습니다. */
+                  note: (document.getElementById('arDoneN') || {}).textContent || '',
+                  note2: (document.getElementById('arTtN') || {}).textContent || '' };
     GB.loaded = true; arPaint();
     return out;
   });
@@ -307,6 +312,10 @@ const type = async (pg, txt) => {
   is(reread.x, '지우는 단추도 <b>그대로 있다</b>');
   is(/다시 읽는 중/.test(reread.note),
      '다시 읽는 중이라고 <b>말은 한다</b> — 옛 숫자를 조용히 보여 주지 않는다');
+  /* 위에 선 「오늘, 팀원 저마다」 도 같은 말을 해야 합니다 — 한 화면이
+     두 말을 하면 어느 쪽이 맞는지 알 수 없습니다 (5번) */
+  is(!reread.note2 || /다시 읽는 중/.test(reread.note2),
+     '위 칸(오늘, 팀원 저마다)도 <b>같은 말을 한다</b> — 「' + reread.note2 + '」');
   await pg.evaluate(() => { arQClear(); });
   await pg.waitForTimeout(80);
 
