@@ -48,6 +48,13 @@ const 훑기 = (뿌리) => {
       if (f === 'node_modules' || f.startsWith('.')) continue;
       if (/^docs\/(mokgak|APEX_목각)/.test(rel)) continue;   /* 목각은 안 본다 */
       /* ★ <b>자기 자신</b>은 안 센다 — 규약 밖 목록이 이 파일 안에 있어서,
+         안 빼면 자가 스스로를 고발하고 기준선이 영영 한 칸 부풀어 있습니다.
+         ⚠ 되돌림 시험에서 이 줄을 지운 채 git checkout 으로 되돌리려 했는데,
+           그때 이 파일은 아직 <b>담기지 않은 새 파일</b>이라 되돌아오지 않았고
+           그대로 담겨 CI 가 울었습니다. 되돌림 뒤에는 <b>제 자를 다시 돌려</b>
+           봐야 합니다 (8번). */
+      if (/check-fakename\.js$/.test(rel)) continue;
+      /* ★ <b>자기 자신</b>은 안 센다 — 규약 밖 목록이 이 파일 안에 있어서,
          안 빼면 자가 스스로를 고발하고 기준선이 영영 한 칸 부풀어 있습니다. */
 
       if (fs.statSync(p).isDirectory()) { go(p); continue; }
