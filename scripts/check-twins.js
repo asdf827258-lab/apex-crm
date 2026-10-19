@@ -184,7 +184,7 @@ var BROWSER = ('window document location navigator history screen console alert 
   'NaN Infinity undefined globalThis self top parent frames escape unescape btoa atob structuredClone ' +
   'AbortController TextEncoder TextDecoder Intl getComputedStyle matchMedia print open close scrollTo ' +
   /* 📁 엑셀(.xlsx)은 zip 묶음이라 지퍼를 직접 엽니다 — 바깥 셈틀을 안 들여오려고
-     브라우저가 이미 가진 것만 씁니다 (판 X134 · CLAUDE.md 10번) */
+     브라우저가 이미 가진 것만 씁니다 (판 X135 · CLAUDE.md 10번) */
   'DecompressionStream CompressionStream ' +
   'Uint8Array Int8Array Uint16Array Int32Array Float32Array Float64Array ArrayBuffer DataView ' +
   'speechSynthesis SpeechSynthesisUtterance webkitSpeechRecognition SpeechRecognition ' +
