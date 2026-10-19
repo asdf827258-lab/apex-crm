@@ -142,7 +142,8 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     const t = document.querySelector('table.cc-team');
     const ths = [].slice.call(document.querySelectorAll('.cc-team thead th')).map(x => x.textContent.trim());
     const tr = document.querySelector('.cc-team tbody tr');
-    return { has: !!t, ths: ths,
+    const dsc=document.querySelector('.card-desc');
+    return { has: !!t, ths: ths, desc: dsc ? dsc.textContent.replace(/\s+/g,' ') : '',
              /* ★ <b>줄마다</b> 봅니다. 맨 앞 한 줄만 보면 「나」 줄이 첫째가
                 아닐 때 지나갑니다 — 되돌림 ⑦⑧ 이 조용해서 알았습니다 (8번). */
              go: (function(){ var L=[].slice.call(document.querySelectorAll('.cc-team tbody tr'));
@@ -153,6 +154,11 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   });
   await page.waitForTimeout(500);
   is(dom.has, '표가 그려진다');
+  /* ★★ <b>꾸밈표가 글자 그대로 안 찍히나</b> — 이 칸(arCard 의 셋째 인자)은
+     osEsc 를 지납니다. 폰으로 찍어 보니 「&lt;b&gt;몇 번&lt;/b&gt;」 이 그대로
+     보였습니다. 자가 아니라 <b>사진</b>이 잡은 자리라, 여기 줄을 답니다 (8번). */
+  is(!/<\/?b>/.test(dom.desc) && !/&lt;/.test(dom.desc),
+     '머리글에 꾸밈표가 글자 그대로 안 찍힌다 — 「' + dom.desc.slice(0, 46) + '」');
   is(dom.ths.indexOf('이번 달 몇 번') >= 0, '「이번 달 몇 번」 칸이 있다');
   /* ★ 이름이 거짓말하지 않는가 (4번) — 찍어 보니 「만난 분」 이라 적어 두고
      전화·카톡까지 세고 있었습니다. 「연락한 분」 이 맞는 이름입니다. */
