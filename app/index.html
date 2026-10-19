@@ -8596,6 +8596,16 @@ function arCrmCalc(dbs,calls){
   }
   return out;
 }
+/* 「이번 달」·「지난 달」 을 묻는 자리는 <b>여기 하나</b>입니다 (5번 · 판 X132).
+   두 곳에서 각자 세면 달이 바뀌는 날 한쪽만 옛 달을 말합니다. */
+function arMo(){ return arToday().slice(0,7); }
+function arMoPrev(){
+  var y=+arToday().slice(0,4),m=+arToday().slice(5,7)-1;
+  if(m<1){m=12;y--;}
+  return y+'-'+(m<10?'0':'')+m;
+}
+/* 지난달은 <b>오늘과 같은 날짜까지만</b> — 이번 달이 아직 안 끝났기 때문입니다 (1번) */
+function arMoPrevCut(){ return arMoPrev()+arToday().slice(7); }
 function arCliCalc(clients,metas){
   var byId={},out={},i,c,m,lt,j,tc;
   for(i=0;i<metas.length;i++)byId[metas[i].client_id]=metas[i].content||{};
@@ -8619,6 +8629,34 @@ function arCliCalc(clients,metas){
     lt=arTouchLast(m);
     if(!lt)lt=(''+(c.created_at||'')).slice(0,10);
     if(arDaysAgo(lt)>=90)o.cold++;
+    /* ══ 🎯 <b>이번 달 몇 번 만났나</b> — 판 X132 ════════════════════════
+       사장님 말씀 (2026-10-19) — 「이번달 고객관리 [<b>디테일하게 더
+       전문적으로</b> 만들고]」.
+
+       30일 고객관리는 「이번 달 연락 <b>12명</b>」 까지만 말했습니다.
+       <b>몇 번</b> 걸었는지, <b>어떻게</b>(전화·만남·카톡) 했는지, <b>지난
+       달보다 나아졌는지</b> 는 한 자도 없었습니다. 사람 수만 보면 한 분께
+       열 번 건 날과 열 분께 한 번씩 건 날이 같아 보입니다.
+
+       ★ <b>서버를 더 안 부릅니다</b> (7번) — 접촉 기록(m.touch)은 이 고리가
+         <b>이미 손에 들고 있습니다</b>. 여기서 한 번에 세어 싣습니다.
+       ★ <b>지난달은 같은 날짜까지만</b> 셉니다 (1번) — 달 초에 「지난달보다
+         줄었다」 고 적으면 거짓말입니다. 판 X130 에서 쓴 그 규칙 그대로입니다.
+       ★ 갈래 이름은 <b>적으신 그대로</b> 담습니다 — 묶는 것은 보여 줄 때
+         하고, 여기서 뭉개면 되돌릴 수 없습니다 (1번).                   */
+    var TC=(m&&m.touch)||[],ti,td,th;
+    for(ti=0;ti<TC.length;ti++){
+      if(!TC[ti])continue;
+      td=(''+(TC[ti].at||TC[ti].d||'')).slice(0,10);
+      if(!td)continue;
+      th=TC[ti].how||'전화';
+      if(td.slice(0,7)===arMo()){
+        o.mN=(o.mN||0)+1;
+        o.mBy=o.mBy||{}; o.mBy[th]=(o.mBy[th]||0)+1;
+      }else if(td.slice(0,7)===arMoPrev()&&td<=arMoPrevCut()){
+        o.pN=(o.pN||0)+1;
+      }
+    }
   }
   return out;
 }
@@ -9532,7 +9570,9 @@ function ccTeamRows(){
   var by={},i,c,k,o,cy,vip;
   for(i=0;i<l.length;i++){
     c=l[i];k=c.who||'';if(!k)continue;
-    o=by[k]||(by[k]={id:k,n:0,over:0,mon:0,never:0,vip:0,vipOver:0,unk:0});
+    o=by[k]||(by[k]={id:k,n:0,over:0,mon:0,never:0,vip:0,vipOver:0,unk:0,
+                     /* 판 X132 — 사람 수만이 아니라 <b>몇 번·어떻게</b> (1번) */
+                     mN:null,pN:null,mBy:null});
     o.n++;
     vip=(c.man!==null&&c.man!==undefined&&c.man>=cfg.vipMan);
     if(c.man===null||c.man===undefined)o.unk++;
@@ -9542,16 +9582,67 @@ function ccTeamRows(){
     if(!c.ever)o.never++;
     if(c.ever&&(''+(c.at||'')).slice(0,7)===mo)o.mon++;
   }
+  /* ══ 🎯 <b>몇 번 · 어떻게 · 지난달보다</b> — 판 X132 ════════════════════
+     사장님 말씀 (2026-10-19) — 「이번달 고객관리 [디테일하게 더 전문적으로]」.
+     ★ <b>여기서 세지 않습니다</b> (5번) — 세는 자는 arCliCalc 하나이고
+       그 자가 이미 접촉 기록을 손에 들고 셉니다. 여기서는 <b>받아 싣기만</b>
+       합니다. 두 곳에서 세면 표와 홈이 다른 말을 합니다.
+     ★ <b>못 읽었으면 null</b> 입니다 (1번) — 0 으로 두면 「한 번도 안 했다」
+       가 되어 버립니다. 화면이 「—」 로 적습니다.                        */
+  var CL=(typeof AR!=='undefined'&&AR.cli)?AR.cli:null;
   var out=[],who;
   for(k in by)if(by.hasOwnProperty(k)){
     o=by[k];
     o.rate=o.n?Math.round(((o.n-o.over)/o.n)*1000)/10:null;
     o.name=(typeof arNameOf==='function')?arNameOf(k):'팀원';
+    var cc=CL?(CL[k]||null):null;
+    o.mN =cc?(cc.mN||0):null;          /* 이번 달 몇 번 */
+    o.pN =cc?(cc.pN||0):null;          /* 지난달 같은 날까지 몇 번 */
+    o.mBy=cc?(cc.mBy||{}):null;        /* 갈래별 */
     out.push(o);
   }
   /* 달성률이 낮은 사람이 위로 — 도와야 할 사람이 먼저 보여야 한다 */
   out.sort(function(a,b){return (a.rate===null?101:a.rate)-(b.rate===null?101:b.rate)||b.n-a.n;});
   return out;
+}
+/* ══ 🎯 <b>몇 번 · 어떻게 · 지난달보다</b> — 적는 자리 (판 X132) ═════════
+   ★ <b>세는 자는 arCliCalc 하나</b>입니다 (5번). 여기는 <b>적기만</b> 합니다.
+   ★ <b>못 읽었으면 「—」</b> 입니다 (1번) — 0 으로 적으면 「한 번도 안 했다」
+     가 되어 버립니다. 안 하신 것과 아직 모르는 것은 다릅니다.          */
+var CC_HOWE={'전화':'☎️','만남':'🤝','상담':'🤝','카톡':'💬','문자':'✉️'};
+function ccTeamN(r){
+  /* ★ 「모름」 을 적는 글은 <b>osNoVal 한 곳</b>에서 옵니다 (5번).
+     제 손으로 「—」 를 적었다가 check-line 이 잡았습니다 — 선 토큰을
+     글자색으로 쓰는 자리가 늘지 않게 그 자가 지키고 있었습니다. */
+  if(!r||r.mN==null)return osNoVal();
+  if(!r.mN)return '0';
+  var by=r.mBy||{},k,p=[],seen={};
+  /* 「상담」(CRM 말)과 「만남」(365일 말)은 <b>묶어 셉니다</b> — 한 화면이
+     같은 것을 두 이름으로 부르지 않습니다 (5번 · 판 X130 과 같은 규칙). */
+  var g={};
+  for(k in by)if(by.hasOwnProperty(k)){
+    var gk=(k==='상담')?'만남':k;
+    g[gk]=(g[gk]||0)+by[k];
+  }
+  for(k in g)if(g.hasOwnProperty(k)&&!seen[k]){seen[k]=1;p.push((CC_HOWE[k]||'')+g[k]);}
+  return '<b>'+r.mN+'</b>'+(p.length?('<span style="font-size:var(--t7);color:var(--t-sub2)"> '+
+         p.join(' ')+'</span>'):'');
+}
+function ccTeamVs(r){
+  if(!r||r.mN==null||r.pN==null)return osNoVal();
+  var d=r.mN-r.pN;
+  /* 지난달은 <b>오늘과 같은 날짜까지</b>만 셌습니다 — 달 초에 「줄었다」 고
+     적으면 거짓말입니다 (1번 · arMoPrevCut). 그 뜻을 title 로 밝힙니다. */
+  return '<span title="지난달 같은 날짜까지 '+r.pN+'번과 견준 것입니다"'+
+         (d<0?' class="warn"':'')+'>'+(d>0?('+'+d):d)+
+         '<span style="font-size:var(--t7);color:var(--t-sub2)"> (지난달 '+r.pN+')</span></span>';
+}
+/* 줄을 누르면 그 사람의 「오늘 터치할 사람」 으로 — 보내는 자리는
+   판 X126 의 arTtGo 하나입니다 (5번). 없으면 아무것도 안 합니다 (1번). */
+function ccTeamGo(id){
+  if(!id)return;
+  if(typeof arTtGo==='function'){ arTtGo(id); return; }
+  if(typeof toast==='function')toast('오늘 터치할 사람 화면을 아직 못 읽었습니다 — 새로고침해 주세요');
 }
 function ccTeamHtml(){
   var me=(typeof arMyId==='function')?arMyId():null;
@@ -9573,20 +9664,36 @@ function ccTeamHtml(){
   }else{
     var tot={n:0,over:0,mon:0,never:0,vip:0,unk:0};
     var h='<div style="overflow-x:auto"><table class="cc-team"><thead><tr>'+
-      '<th>팀원</th><th>고객</th><th>'+cfg.days+'일 넘음</th><th>👑 VIP</th>'+
-      '<th>한 번도 없음</th><th>이번 달 연락</th><th>달성률</th></tr></thead><tbody>';
+      '<th>팀원</th><th>고객</th><th>'+cfg.days+'일 넘음</th><th>👑 VIP 넘음</th>'+
+      '<th>한 번도 없음</th><th>이번 달 연락한 분</th>'+
+      /* 판 X132 — <b>몇 번·어떻게·지난달보다</b>. 사람 수만 보면 한 분께 열 번
+         건 날과 열 분께 한 번씩 건 날이 같아 보입니다. */
+      '<th>이번 달 몇 번</th><th>지난달 대비</th><th>달성률</th></tr></thead><tbody>';
     for(i=0;i<out.length;i++){
       r=out[i];
       tot.n+=r.n;tot.over+=r.over;tot.mon+=r.mon;tot.never+=r.never;tot.vip+=r.vip;tot.unk+=r.unk;
+      if(r.mN!=null){tot.mN=(tot.mN||0)+r.mN;}
+      if(r.pN!=null){tot.pN=(tot.pN||0)+r.pN;}
       /* data-k = 좁은 화면에서 각 줄 앞에 붙는 칸 이름. 머리글이 접히므로
          이것이 없으면 숫자만 줄줄이 뜬다 (위 CSS 의 td:before). */
-      h+='<tr'+(r.id===me?' class="me"':'')+'>'+
+      /* ★ 줄을 누르면 <b>그 사람의 「오늘 터치할 사람」</b> 으로 갑니다 (판 X132).
+         여태 「30일 넘음 7」 을 보고도 <b>누구인지</b> 알 길이 없었습니다.
+         보내는 자리는 판 X126 에서 만든 arTtGo 하나를 그대로 부릅니다 (5번). */
+      /* ⚠ class 를 <b>한 번만</b> 적습니다. 처음에 두 번 적었다가 브라우저가
+         앞의 것만 쓰는 바람에 「나」 줄 표시가 사라질 뻔했습니다. */
+      h+='<tr class="cc-go'+(r.id===me?' me':'')+'"'+
+        ' onclick="ccTeamGo(\''+osEsc(r.id)+'\')" title="누르면 이분의 오늘 터치할 사람으로 갑니다">'+
         '<td>'+osEsc(r.name)+(r.id===me?' <b class="cm-mytag">나</b>':'')+'</td>'+
         '<td data-k="고객">'+r.n+'</td>'+
-        '<td data-k="'+cfg.days+'일 넘음"'+(r.over?' class="warn"':'')+'>'+r.over+(r.vipOver?(' <span style="font-size:var(--t6)">(VIP '+r.vipOver+')</span>'):'')+'</td>'+
-        '<td data-k="👑 VIP">'+r.vip+'</td>'+
+        /* ⚠ VIP 는 주기가 다릅니다(14일 / 30일). 한 칸에 괄호로 묻어 두면
+           「30일 넘음」 안에 14일 기준이 섞여 있는 것이 안 보입니다 — 갈라 세웁니다 */
+        '<td data-k="'+cfg.days+'일 넘음"'+(r.over-r.vipOver?' class="warn"':'')+'>'+(r.over-r.vipOver)+'</td>'+
+        '<td data-k="👑 VIP 넘음"'+(r.vipOver?' class="warn"':'')+'>'+r.vipOver+
+          '<span style="font-size:var(--t7);color:var(--t-sub2)"> / '+r.vip+'</span></td>'+
         '<td data-k="한 번도 없음"'+(r.never?' class="warn"':'')+'>'+r.never+'</td>'+
-        '<td data-k="이번 달 연락">'+r.mon+'</td>'+
+        '<td data-k="이번 달 연락한 분">'+r.mon+'</td>'+
+        '<td data-k="이번 달 몇 번">'+ccTeamN(r)+'</td>'+
+        '<td data-k="지난달 대비">'+ccTeamVs(r)+'</td>'+
         '<td data-k="달성률" class="'+(r.rate===null?'':(r.rate>=90?'good':(r.rate>=70?'':'warn')))+'">'+
           (r.rate===null?'-':(r.rate+'%'))+'</td></tr>';
     }
@@ -9594,8 +9701,10 @@ function ccTeamHtml(){
     h+='</tbody><tfoot><tr style="font-weight:800">'+
       '<td>합계</td><td data-k="고객">'+tot.n+'</td>'+
       '<td data-k="'+cfg.days+'일 넘음"'+(tot.over?' class="warn"':'')+'>'+tot.over+'</td>'+
-      '<td data-k="👑 VIP">'+tot.vip+'</td><td data-k="한 번도 없음">'+tot.never+'</td>'+
-      '<td data-k="이번 달 연락">'+tot.mon+'</td>'+
+      '<td data-k="👑 VIP 넘음">'+tot.vip+'</td><td data-k="한 번도 없음">'+tot.never+'</td>'+
+      '<td data-k="이번 달 연락한 분">'+tot.mon+'</td>'+
+      '<td data-k="이번 달 몇 번">'+ccTeamN(tot)+'</td>'+
+      '<td data-k="지난달 대비">'+ccTeamVs(tot)+'</td>'+
       '<td data-k="달성률" class="'+(trate===null?'':(trate>=90?'good':'warn'))+'">'+
         (trate===null?'-':(trate+'%'))+'</td></tr></tfoot></table></div>';
     /* 조용히 세지 않는다 — 못 읽은 사람이 있으면 몇 명인지 적는다 */
@@ -9606,7 +9715,14 @@ function ccTeamHtml(){
     body=h;
   }
   return arCard('🎯','30일 고객관리 — 팀원별',
-      '달성률 = (전체 − 주기 넘긴 사람) ÷ 전체. 일반 '+cfg.days+'일 · VIP '+cfg.vipDays+'일(월 '+cfg.vipMan+'만원 이상) 기준입니다',
+      '달성률 = (전체 − 주기 넘긴 사람) ÷ 전체. 일반 '+cfg.days+'일 · VIP '+cfg.vipDays+'일(월 '+cfg.vipMan+'만원 이상) 기준입니다. '+
+      /* ⚠ 두 칸이 세는 것이 다릅니다 — 이름이 거짓말하지 않게 적어 둡니다 (4번).
+         찍어 보니 「만난 분」 이라고 적어 두었는데 전화·카톡까지 센 수였습니다.
+         ★★ 이 칸은 <b>osEsc 를 지납니다</b>(arCard 의 셋째 인자) — 꾸밈표를
+            넣으면 「&lt;b&gt;」 가 <b>글자 그대로</b> 찍힙니다. 폰으로 찍어 보고
+            알았습니다. 날글로만 적습니다 (CLAUDE.md 0-1 의 그 자리). */
+      '「연락한 분」은 사람 수, 「몇 번」은 횟수입니다 — 한 분께 열 번 건 것과 열 분께 한 번씩 건 것은 다릅니다. '+
+      '「지난달 대비」는 지난달 같은 날짜까지와 견준 것입니다',
       body,
       '<div class="ar-none" style="margin-top:10px">마지막 연락일은 <b>고객 365일 접촉 기록</b>과 '+
       '<b>DB 통합 CRM 통화 기록</b> 중 더 최근 것으로 셉니다. 한 번도 연락한 적이 없으면 '+
@@ -20538,8 +20654,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-19 16:20';
-var APP_BUILD_NOTE="📄 <b>읽어 둔 보장분석이 오늘로 옵니다</b> — 증권을 읽어 그 분께 붙이는 것까지는 이미 됐는데, 거기 담긴 <b>납입 만기 · 보장 만기 · 담보 이름</b>을 <b>날짜로 챙기는 자리가 한 곳도</b> 없었습니다. 「🩺 고객 체크」 안에 <b>📄 읽어 둔 보장분석에서</b> 가 섭니다 — <b>① 만들어 두고 안 보여드린 분 ② 납입 만기가 6달 안인 분 ③ 보장 만기가 2해 안인 분 ④ 청구를 한 번도 안 여쭤 본 분.</b> 여태 이 칸은 배정 DB 의 AP·PC·CS 인 분만 봐서 <b>계약을 끝내신 분과 고객 365일에만 있는 분</b>이 통째로 빠져 있었습니다. ★ <b>알람 칸을 하나 더 두었습니다</b>(11시) — <b>기본은 꺼져 있습니다.</b> 설정에서 켜시면 울립니다. 알람 글에는 <b>이름도 금액도 한 자도</b> 안 싣습니다 — 잠긴 폰 화면에 뜨기 때문입니다. ⚠ <b>못 하는 것 둘을 화면에 적었습니다</b> — <b>갱신일</b>은 보장분석이 그 칸을 안 들고 있어 못 셉니다(날짜를 지어내지 않습니다). <b>청구가 된다고 단정하지도 않습니다</b> — 병원 기록이 있어야 아는 일이라, 적을 수 있는 것은 「한 번도 여쭤 본 적이 없다」 까지입니다. (판 X131)";
+var APP_BUILD='2026-10-19 18:30';
+var APP_BUILD_NOTE="🎯 <b>30일 고객관리가 디테일해졌습니다</b> — 여태 표는 「이번 달 연락 <b>12명</b>」 까지만 말했습니다. <b>몇 번</b> 걸었는지, <b>어떻게</b> 했는지, <b>지난달보다 나아졌는지</b> 는 한 자도 없었습니다 — 사람 수만 보면 <b>한 분께 열 번 건 날과 열 분께 한 번씩 건 날이 같아 보입니다.</b> 칸 넷을 보탰습니다 — <b>이번 달 몇 번</b>(☎️2 🤝2 💬1 처럼 갈래까지) · <b>지난달 대비</b>(지난달 <b>같은 날짜까지</b>와 견줍니다 — 달 초에 「줄었다」 고 적으면 거짓말입니다) · <b>👑 VIP 넘음을 따로</b>(주기가 14일로 다릅니다) · 그리고 <b>줄을 누르면 그분의 「오늘 터치할 사람」</b> 으로 갑니다(여태 「30일 넘음 7」 을 보고도 누구인지 알 길이 없었습니다). ★ <b>서버를 한 번도 더 안 부릅니다</b> — 접촉 기록은 이미 읽어 둔 것입니다. ★ 못 읽었으면 0 이 아니라 <b>「—」</b> 입니다. (판 X132)";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -68878,6 +68994,10 @@ function cmCss(){
     '.cc-team{width:100%;border-collapse:collapse;font-size:var(--t6)}'+
     '.cc-team th:first-child,.cc-team td:first-child{position:sticky;left:0;background:#fff;z-index:1}'+
     '.cc-team tr.me td:first-child{background:var(--t-bg-b)}'+
+    /* 판 X132 — 줄을 누르면 그 사람의 오늘로 갑니다 */
+    '.cc-team tr.cc-go{cursor:pointer}'+
+    '.cc-team tr.cc-go:hover td{background:var(--t-bg-3)}'+
+    '.cc-team tr.cc-go:hover td:first-child{background:var(--t-bg-3)}'+
     '.cc-team tfoot td{background:var(--t-bg-3)}'+
     '@media(max-width:640px){'+
       '.cc-team{display:block;font-size:var(--t5)}'+
