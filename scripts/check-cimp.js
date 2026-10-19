@@ -100,12 +100,17 @@ function zip(files) {
      7줄 홍판서  이미 내 고객인 분과 번호가 같음
      8줄 홍갑돌  이미 내 고객인 분과 <b>이름만</b> 같음 (번호는 다름)         */
 const SS = ['고객명', '휴대폰', '생년월일', '성별', '지역', '유입경로', '월소득', '주민번호', '나이',
+  '담당', '비고',
   '홍길동', '010-1111-2222', '남', '서울 강남', '소개', '첫 상담 전',
   '홍길순', '010-3333-4444', '여', '부산 해운대', '방송', '850312-1234567',
   '홍말순', '경기 수원', '지인', '900101',
   '서울 송파',
   '홍판서', '010-7777-8888', '소개',
-  '홍갑돌', '010-9999-0000', '방송'];
+  '홍갑돌', '010-9999-0000', '방송',
+  /* ★★ 실제로 샌 자리 둘 — 진짜 엑셀을 넣어 보고 찾았습니다
+       ① 「담당」 열에 팀원 실명 → 메모로 자동으로 잡혀 서버에 올라갔습니다
+       ② 「비고」 에 적힌 다른 고객 이름 → 그 글이 그대로 서버로 갑니다      */
+  '윤시현', '홍길순 소개로 오심'];
 const six = SS.indexOf('850312-1234567');
 const ix = (v) => { const i = SS.indexOf(v); if (i < 0) throw new Error('견본에 없는 글: ' + v); return i; };
 const C = (ref, v) => '<c r="' + ref + '" t="s"><v>' + ix(v) + '</v></c>';
@@ -113,10 +118,12 @@ const N = (ref, v) => '<c r="' + ref + '"><v>' + v + '</v></c>';
 const SHEET1 = '<?xml version="1.0" encoding="UTF-8"?>' +
   '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>' +
   '<row r="1">' + C('A1', '고객명') + C('B1', '휴대폰') + C('C1', '생년월일') + C('D1', '성별') +
-    C('E1', '지역') + C('F1', '유입경로') + C('G1', '월소득') + C('H1', '주민번호') + C('I1', '나이') + '</row>' +
+    C('E1', '지역') + C('F1', '유입경로') + C('G1', '월소득') + C('H1', '주민번호') + C('I1', '나이') +
+    C('J1', '담당') + C('K1', '비고') + '</row>' +
   /* 소득 5,000,000 — 「원」 으로 적힌 칸입니다 */
   '<row r="2">' + C('A2', '홍길동') + C('B2', '010-1111-2222') + N('C2', 1985) + C('D2', '남') +
-    C('E2', '서울 강남') + C('F2', '소개') + N('G2', 5000000) + '</row>' +
+    C('E2', '서울 강남') + C('F2', '소개') + N('G2', 5000000) +
+    C('J2', '윤시현') + C('K2', '홍길순 소개로 오심') + '</row>' +
   /* 31234 = 엑셀 날짜 → 1985년 */
   '<row r="3">' + C('A3', '홍길순') + C('B3', '010-3333-4444') + N('C3', 31234) + C('D3', '여') +
     C('E3', '부산 해운대') + C('F3', '방송') + '<c r="H3" t="s"><v>' + six + '</v></c>' + '</row>' +
@@ -299,6 +306,32 @@ const CSVTXT = '고객명,연락처,성별\n홍길동,010-1111-2222,남\n홍길�
     out.keepTel = cimpRrnOut('010-1111-2222');
     return out;
   });
+  /* ★★ 「이렇게 읽습니다」 — 엑셀의 날값이 아니라 <b>읽은 결과</b>를 적는가.
+     진짜 엑셀을 넣어 보니 생년월일 줄에 엑셀 속값 <b>31118</b> 이 떴습니다.
+     앱은 1985년으로 잘 읽고 있었는데 화면이 그 말을 안 했습니다 (1번·8번).  */
+  const SHOW = await p.evaluate(() => {
+    let jb=-1,jg=-1,ji=-1,jn=-1;
+    for (let k = 0; k < CIMP.head.length; k++) {
+      if (CIMP.head[k] === '생년월일') jb = k;
+      if (CIMP.head[k] === '성별') jg = k;
+      if (CIMP.head[k] === '월소득') ji = k;
+      if (CIMP.head[k] === '고객명') jn = k;
+    }
+    CIMP.map[ji] = 'inc'; CIMP.unit = { inc: '원' };
+    const out = { by: cimpShow(jb), gd: cimpShow(jg), inc: cimpShow(ji), nm: cimpShow(jn) };
+    CIMP.step = 'map'; cimpPaint();
+    out.head = /이렇게 읽습니다/.test((document.querySelector('.cimp-box')||{}).innerText||'');
+    CIMP.unit = {};
+    return out;
+  });
+  is(SHOW.head, '표의 셋째 칸 이름이 <b>「이렇게 읽습니다」</b> 다 — 날값이 아니라 읽은 결과');
+  is(SHOW.by.t === '1985년', '생년을 <b>1985년</b> 이라고 적는다 (받음 ' + SHOW.by.t + ')');
+  is(SHOW.gd.t === '남' && !SHOW.gd.raw,
+     '성별을 <b>남</b> 이라 적고 <b>같은 말을 두 번 안 적는다</b> (받음 ' + SHOW.gd.t +
+     (SHOW.gd.raw ? (' / 엑셀: ' + SHOW.gd.raw) : '') + ')');
+  is(/500만원/.test(SHOW.inc.t), '돈을 <b>사람이 읽는 꼴</b>로 적는다 (받음 ' + SHOW.inc.t + ')');
+  is(SHOW.nm.t === '홍길동' && !SHOW.nm.raw, '그대로인 칸에는 <b>날값을 또 안 적는다</b>');
+
   is(R.lock === 7, '주민번호 칸을 찾았다');
   is(R.locked, '주민·주민등록번호·RRN 을 다 잠근다');
   is(R.pick === '안 가져옴', '그 칸은 <b>안 가져옴</b>으로 고정 (받음 ' + R.pick + ')');
@@ -470,6 +503,49 @@ const CSVTXT = '고객명,연락처,성별\n홍길동,010-1111-2222,남\n홍길�
   is(PH.over <= 0, '가로로 안 밀린다 (받음 ' + PH.over + 'px)');
   is(PH.small.length === 0, '누르는 것이 모두 44px 이상 (작은 것 ' + PH.small.length + '개' +
      (PH.small.length ? ': ' + PH.small.slice(0, 4).join(', ') : '') + ')');
+
+  console.log('\n[13] 🙍 메모로 실명이 새지 않는다 (판 X137 — 진짜 엑셀을 넣어 보고 찾았습니다)');
+  /* ★★ 손으로 만든 견본으로는 안 보였습니다. openpyxl·LibreOffice 가 쓴 진짜
+     엑셀을 라이브 화면에 넣어 보니, 「담당」 열이 <b>「메모에 적어 두기」 로
+     자동으로 잡혀</b> 팀원 실명이 서버 글에 그대로 실렸습니다. 메모는
+     household_notes 로 서버에 갑니다. 손으로 적으신 메모는 사장님이 보고
+     적으신 것이지만, <b>엑셀에서 긁어 담는 것은 보실 틈이 없습니다</b> (3번). */
+  await p.evaluate(() => { CIMP.unit = {}; CIMP.maybe = false; CIMP.off = {}; CIMP.sort = null; });
+  const NM = await p.evaluate(() => {
+    const H = CIMP.head, out = { dam: -1, bigo: -1 };
+    for (let j = 0; j < H.length; j++) { if (H[j] === '담당') out.dam = j; if (H[j] === '비고') out.bigo = j; }
+    out.damTo = CIMP.map[out.dam];
+    out.bigoTo = CIMP.map[out.bigo];
+    out.namey = cimpNamey('담당') && cimpNamey('담당자') && cimpNamey('소개자') && cimpNamey('계약자');
+    out.notNamey = !cimpNamey('유입경로') && !cimpNamey('지역') && !cimpNamey('고객명') && !cimpNamey('메모');
+    CIMP.step = 'map'; cimpPaint();
+    const box = (document.querySelector('.cimp-box') || {}).innerText || '';
+    out.saysWhy = /사람 이름이 드는 칸/.test(box);
+    out.saysServer = /메모에 적어 두기.{0,30}서버에 그대로 올라갑니다/.test(box.replace(/\s+/g, ' '));
+    /* 메모 안의 <b>이 파일 고객 이름</b>도 가려지나 */
+    out.safe = cimpMemoSafe('홍길순 소개로 오심');
+    out.keepsRest = /소개로 오심/.test(out.safe);
+    return out;
+  });
+  is(NM.namey, '담당 · 담당자 · 소개자 · 계약자 를 <b>사람 이름 칸</b>으로 안다');
+  is(NM.notNamey, '유입경로 · 지역 · 고객명 · 메모 는 <b>안 걸린다</b> — 헛것을 안 잡는다 (8번)');
+  is(NM.damTo === '', '「담당」 은 <b>기본이 안 가져옴</b>이다 (받음 ' + JSON.stringify(NM.damTo) + ')');
+  is(NM.bigoTo === 'memo', '「비고」 는 그대로 메모다 — 길을 안 막는다 (받음 ' + JSON.stringify(NM.bigoTo) + ')');
+  is(NM.saysWhy, '그 줄에 <b>왜 안 담는지</b> 적는다 — 담으실 수도 있게 (6번)');
+  is(NM.saysServer, '<b>「메모는 서버로 올라갑니다」</b> 를 화면에 적는다');
+  is(!/홍길순/.test(NM.safe) && /[*○]/.test(NM.safe) && NM.keepsRest,
+     '메모 안의 <b>이 파일 고객 이름</b>도 가린다 — 「' + NM.safe + '」');
+  /* 실제로 넣어 보고 서버 글을 봅니다 — 글자만 보면 「보는 척」 하는 자가 통과합니다 */
+  const LEAK = await p.evaluate(async () => {
+    CIMP.sort = cimpSort(); CIMP.step = 'sort'; CIMP.busy = ''; window.__W = [];
+    await new Promise(r => { const t0 = Date.now(); cimpGo();
+      (function w() { if (CIMP.step === 'done' || Date.now() - t0 > 6000) return r(); setTimeout(w, 120); })(); });
+    const rows = []; window.__W.forEach(x => [].concat(x.pay || []).forEach(y => rows.push(y)));
+    return JSON.stringify(rows);
+  });
+  is(!/윤시현/.test(LEAK), '서버로 간 글에 <b>담당자 실명이 없다</b>');
+  is(!/홍길순|홍길동|홍말순/.test(LEAK), '서버로 간 글에 <b>고객 실명이 없다</b> — 메모 안까지');
+  is(/소개로 오심/.test(LEAK), '메모 <b>알맹이는 그대로 담긴다</b> — 가린다고 글을 버리지 않는다');
 
   console.log('\n[12] 서버에 아직 없는 칸이어도 이름은 담는다');
   const CD = await p.evaluate(async () => {
