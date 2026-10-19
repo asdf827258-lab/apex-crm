@@ -164,7 +164,7 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   console.log('\n[4] 못 읽었으면 「모릅니다」 — 0 으로 적지 않는다');
   const unk = await page.evaluate(() => {
     const k = CM.loaded; CM.loaded = false;
-    const r = mlogRows(), s = mlogSum(), h = mlogCardHtml();
+    const r = mlogRows(), s = mlogSum(), h = mlogBodyHtml();
     CM.loaded = k;
     const d = document.createElement('div'); d.innerHTML = h;
     return { rows: r, sum: s, txt: d.textContent };
@@ -175,31 +175,35 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
      '화면이 모른다고 적는다 (받음 「' + unk.txt.replace(/\s+/g, ' ').slice(0, 50) + '」)');
   is(!/(^|[^\d])0번/.test(unk.txt), '「0번」 이라고 적지 않는다');
 
-  console.log('\n[10] 홈에 실제로 선다');
-  await page.evaluate(() => { mlogGoNow(); MLOG.open = true; mlogPaint(); });
-  await page.waitForTimeout(700);
+  console.log('\n[10] 홈의 「📈 이번 달 어떻게 하셨나」 접이 안에 선다');
+  /* ★★ <b>제 접이를 따로 안 만듭니다</b> (5번). 홈에는 이미 이번 달을
+     묻는 접이가 있고, 그 안에 들어갑니다 — 같은 물음에 답하는 자리가
+     둘이면 한쪽만 고쳐 놓고 두 말을 합니다.
+     ⚠ 따로 세웠더니 홈이 4.2 → 4.25화면이 되어 자 넷이 울었습니다.
+       눈금을 올리는 대신 자리를 옮겼습니다 (8번). */
+  const shut = await page.evaluate(() => {
+    mlogGoNow();
+    HM_MSEV.open = false; hmMsPaint();
+    return { rows: document.querySelectorAll('.mlog-r').length,
+             head: (document.querySelector('.hm-ev-h .n') || {}).textContent || '',
+             mine: document.querySelectorAll('.mlog-h, #mlogHost').length };
+  });
+  is(shut.mine === 0, '제 접이·제 자리를 따로 안 만든다 (받음 ' + shut.mine + '개)');
+  is(shut.rows === 0, '접혀 있으면 줄이 안 그려진다 — 홈이 안 길어진다');
+  is(/📒\s*5번/.test(shut.head),
+     '접힌 채로도 머리에 「📒 5번」 이 보인다 (받음 「' + shut.head + '」)');
+
   const dom = await page.evaluate(() => {
-    const host = document.getElementById('mlogHost');
-    return { has: !!host,
-             card: !!(host && host.querySelector('.mlog')),
+    HM_MSEV.open = true; hmMsPaint();
+    const b = document.querySelector('.hm-ev-b');
+    return { inFold: !!(b && b.querySelector('.mlog-b')),
+             first: !!(b && b.firstElementChild && b.firstElementChild.className === 'mlog-b'),
              rows: document.querySelectorAll('.mlog-r').length,
              chips: document.querySelectorAll('.mlog-c').length,
-             txt: (host ? host.textContent : '').replace(/\s+/g, ' ') };
+             txt: (b ? b.textContent : '').replace(/\s+/g, ' ') };
   });
-  is(dom.has && dom.card, '홈 왼쪽 기둥에 칸이 선다');
-  /* ★ <b>접힌 채가 기본</b>인가 — 펴 두면 홈이 4.47화면이 됩니다 (8번) */
-  const shut = await page.evaluate(() => {
-    MLOG.open = false; mlogPaint();
-    const h = document.querySelector('#mlogHost .mlog');
-    const o = { px: h ? Math.round(h.getBoundingClientRect().height) : -1,
-                rows: document.querySelectorAll('.mlog-r').length,
-                head: (document.querySelector('.mlog-h .n') || {}).textContent || '' };
-    MLOG.open = true; mlogPaint();
-    return o;
-  });
-  is(shut.px > 0 && shut.px <= 60, '접으면 한 줄이다 — ' + shut.px + 'px (60px 이하)');
-  is(shut.rows === 0, '접으면 줄이 안 그려진다');
-  is(/5.*번/.test(shut.head), '접힌 채로도 「몇 번」 이 보인다 (받음 「' + shut.head + '」)');
+  is(dom.inFold, '펴면 그 접이 <b>안</b>에 선다');
+  is(dom.first, '펴면 「내가 한 일」 이 <b>먼저</b> 온다 — 미션 완수율은 그 다음');
   is(dom.rows === 5, '줄 다섯이 그려진다 (받음 ' + dom.rows + ')');
   is(dom.chips >= 4, '갈래 칩이 선다 (받음 ' + dom.chips + ')');
   is(/지어낸 줄은 한 줄도 없습니다/.test(dom.txt), '지어내지 않았다고 적는다 (1번)');
