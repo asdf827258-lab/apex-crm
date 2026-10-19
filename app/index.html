@@ -13432,7 +13432,7 @@ function chkWon(v){
 function chkAmt(c){ return '<span class="chk-ba">'+chkWon(c.b)+' → '+chkWon(c.a)+'</span>'; }
 function chkHtml(){
   if(!OS.profile)return '<div class="ar-none">로그인 후 볼 수 있습니다.</div>';
-  chkCss();
+  chkCss(); baxCss();          /* 옷은 <b>쓰는 화면에서</b> 부릅니다 (5번) */
   if(CHKS.rows===null&&!CHKS.busy)setTimeout(function(){chkLoad();},20);
   var P=chkPeople(),i,rows='';
   for(i=0;i<P.length;i++)rows+=chkRowHtml(P[i]);
@@ -13456,11 +13456,192 @@ function chkHtml(){
     (CHKS.err?('<div class="chk-err">'+osEsc(CHKS.err)+'</div>'):'')+
     '</div>';
   if(!P.length)
+    /* ★ AP·PC·CS 가 비어도 <b>보장분석 줄은 섭니다</b> (판 X131) — 계약을
+       끝내신 분과 고객 365일에만 있는 분이 거기 있습니다. 여기서 끊으면
+       읽어 둔 증권이 통째로 안 보입니다. */
     return head+'<div class="ar-none">AP · PC · CS 에 있는 분이 <b>없습니다.</b> '+
-      '사람을 지어내지 않습니다 — 상담이 잡히면 여기에 섭니다.</div>';
-  return head+rows+
+      '사람을 지어내지 않습니다 — 상담이 잡히면 여기에 섭니다.</div>'+baxHtml();
+  return head+rows+baxHtml()+
     '<div class="chk-note">이름은 <b>가린 모양</b>으로 이어 붙입니다 — '+
     '같은 이름이 둘이면 앱이 못 가립니다. 이상하면 고객 카드에서 확인해 주세요.</div>';
+}
+/* ══ 📄 <b>읽어 둔 보장분석을 오늘로</b> — 판 X131 (bax*) ═══════════════
+   사장님 말씀 (2026-10-19) — 「보장분석PDF넣기 누르면 AI보장분석 뜨는데,
+   이게 <b>어떻게 적용되서 고객의 보험내용을 저장하고 알람 뜰것들을
+   만들건지</b>」 → 고르신 것: 「새로운 담보 점검 / 보험금찾기 /
+   전-후에 입력되신 분, 만들어두고 안 보여드린분」.
+
+   ── 재어 보니 끊긴 자리가 또렷했습니다 ──────────────────────────────
+   증권을 읽어 <b>그 분께 붙이는 것까지는 이미 됩니다</b>
+   (saved_reports · kind='ba_state'). 거기에는 쓸 만한 것이 꽤 담겨
+   있습니다 — 담보 이름(sum.top) · <b>납입 만기(sum.end.pay.ym)</b> ·
+   <b>보장 만기(sum.end.cov.y)</b> · 담보 수 · 보험료 전후.
+   그런데 <b>그것을 날짜로 챙기는 자리가 한 곳도 없었습니다.</b>
+   「🩺 고객 체크」 는 <b>배정 DB 의 AP·PC·CS 인 분만</b> 봅니다 — 계약을
+   끝내신 분도, 고객 365일에만 있는 분도 여기 안 섰습니다.
+
+   ★★ <b>새로 세지 않습니다</b> (5번). 이미 손에 든 것만 읽습니다 —
+       CHKS.by      읽어 둔 보장분석(sum) · chkLoad 가 한 번만 받아 옵니다 (7번)
+       cmMetaOf()   접촉 기록 · <b>빈 쪽지를 안 만드는 자</b>로 묻습니다
+       cmClmOf()    청구 기록 (이 기기)
+   ★★ <b>못 하는 것은 못 한다고 적습니다</b> (1번) —
+       · <b>갱신일</b>은 <b>못 합니다.</b> 보장분석이 들고 있는 보험 한 줄에
+         갱신주기 칸이 아예 없습니다(co·nm·start·years·term·act·prem 뿐).
+         날짜를 지어내면 고객 앞에서 틀립니다.
+       · <b>「보험금 받으실 수 있습니다」 라고 안 적습니다.</b> 청구가 되는지는
+         병원 기록이 있어야 아는 일이고 앱에 없습니다. 적을 수 있는 것은
+         「<b>한 번도 여쭤 본 적이 없다</b>」 까지입니다 — 그것은 잰 사실입니다.
+       · <b>「보장이 모자랍니다」 도 안 적습니다</b> — 결론이고, 기준이 상품마다
+         다릅니다 (2번).
+   ★ 알람에는 <b>금액도 이름도 한 자도</b> 안 싣습니다 (3번) — 잠긴 폰
+     화면에 뜹니다. 건수와 갈래까지만 적고 누르면 앱에서 보십니다.
+   check-baxtoday 가 이 전부를 지킵니다.                                */
+var BAX_SOON_M=6;      /* 납입 만기 — 몇 달 앞까지 챙기나 */
+var BAX_SOON_Y=2;      /* 보장 만기 — 몇 해 앞까지 챙기나 */
+var BAX_K={
+  show:{e:'📄',t:'만들어 두고 안 보여드림',ord:1,
+        why:'전·후를 만들어 두고 그 뒤로 연락 기록이 없습니다'},
+  pay :{e:'📅',t:'납입 만기 가까움',ord:2,
+        why:'납입이 끝나는 달이 다가옵니다 — 그때 보험료가 바뀝니다'},
+  cov :{e:'🛡️',t:'보장 만기 가까움',ord:3,
+        why:'보장이 끝나는 해가 다가옵니다'},
+  clm :{e:'💰',t:'보험금 여쭤 본 적 없음',ord:4,
+        why:'보장은 읽어 두었는데 청구 기록이 한 건도 없습니다'}
+};
+function baxKe(k){ return (BAX_K[k]&&BAX_K[k].e)||'•'; }
+function baxKt(k){ return (BAX_K[k]&&BAX_K[k].t)||k; }
+function baxKo(k){ return (BAX_K[k]&&BAX_K[k].ord)||9; }
+function baxToday(){ return (typeof ccToday==='function')?ccToday()
+  :(new Date(Date.now()+9*3600e3)).toISOString().slice(0,10); }
+/* 「YYYY-MM」 이 오늘부터 몇 달 뒤인가 — 지난 것은 음수 */
+function baxMonthsTo(ym){
+  var m=(''+(ym||'')).match(/^(\d{4})-(\d{2})$/); if(!m)return null;
+  var t=baxToday();
+  return (+m[1])*12+(+m[2]) - ((+t.slice(0,4))*12+(+t.slice(5,7)));
+}
+/* 그 분 마지막 접촉일 — <b>빈 쪽지를 안 만드는 자</b>로 묻습니다 (판 X126) */
+function baxLastTouch(cid){
+  var m=(typeof cmMetaOf==='function')?cmMetaOf(cid,null):null;
+  var L=(m&&m.touch)||[],i,best='';
+  for(i=0;i<L.length;i++){ var d=(''+((L[i]&&(L[i].at||L[i].d))||'')).slice(0,10);
+                           if(d>best)best=d; }
+  return best;
+}
+/* ── 오늘 챙길 줄 — <b>못 읽었으면 null</b> 입니다 (1번) ─────────────── */
+function baxRows(){
+  if(typeof CHKS==='undefined'||CHKS.rows===null)return null;   /* 모른다 */
+  var by=CHKS.by||{},out=[],cid;
+  for(cid in by){
+    if(!Object.prototype.hasOwnProperty.call(by,cid))continue;
+    var r=by[cid]; if(!r)continue;
+    var sum=r.sum||{}, at=(''+(r.at||'')).slice(0,10);
+    var nm=(typeof cmRealOf==='function'&&cmRealOf(cid))||(sum.name||'')||'고객';
+    var last=baxLastTouch(cid);
+    var add=function(k,s,d){ out.push({k:k,cid:cid,nm:nm,s:s,d:(d==null?9999:d),at:at}); };
+    /* ① 만들어 두고 안 보여드림 — 만든 날 뒤로 연락 기록이 없다 */
+    if(at&&(!last||last<at))
+      add('show','만든 날 '+at+' — 그 뒤 연락 기록이 없습니다',0);
+    /* ② 납입 만기 — 몇 달 남았나 */
+    var pm=(sum.end&&sum.end.pay)?baxMonthsTo(sum.end.pay.ym):null;
+    if(pm!==null&&pm>=0&&pm<=BAX_SOON_M)
+      add('pay',(sum.end.pay.nm?(sum.end.pay.nm+' · '):'')+sum.end.pay.ym+
+                ' 납입 끝 — '+(pm===0?'이번 달':(pm+'달 뒤')),pm);
+    /* ③ 보장 만기 — 몇 해 남았나 */
+    var cy=(sum.end&&sum.end.cov&&sum.end.cov.y)?(sum.end.cov.y-(+baxToday().slice(0,4))):null;
+    if(cy!==null&&cy>=0&&cy<=BAX_SOON_Y)
+      add('cov',(sum.end.cov.nm?(sum.end.cov.nm+' · '):'')+sum.end.cov.y+'년 보장 끝'+
+                (sum.end.cov.age?(' ('+sum.end.cov.age+'세)'):''),cy);
+    /* ④ 보험금을 한 번도 안 여쭤 봤다 — <b>받을 수 있다고 안 적습니다</b> (1번) */
+    var clm=(typeof cmClmOf==='function')?cmClmOf(cid):[];
+    if(!clm.length)
+      add('clm','청구 기록이 한 건도 없습니다 — 최근 치료받으신 것 없는지 여쭤 보기',8888);
+  }
+  /* 「누구 것인가」 는 다시 세어 답하지 않습니다 — mcalMine 한 곳 (5번·3번).
+     ba_state 줄에는 임자가 안 적혀 있어 거를 칸이 없습니다. 고객 365일이
+     이미 제 것만 싣고 있으므로 그 목록에 있는 분만 둡니다. */
+  var mine={},L=(typeof OSC!=='undefined'&&OSC.list)?OSC.list:[],i;
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].id)mine[L[i].id]=1;
+  if(L.length){ var o2=[]; for(i=0;i<out.length;i++)if(mine[out[i].cid])o2.push(out[i]); out=o2; }
+  out.sort(function(a,b){ return baxKo(a.k)-baxKo(b.k)||a.d-b.d; });
+  return out;
+}
+/* 갈래별 수 — <b>여기서 또 세지 않습니다</b>, baxRows 하나를 셉니다 (5번) */
+function baxCount(){
+  var L=baxRows(); if(L===null)return null;
+  var c={all:L.length},k;
+  for(k in BAX_K)if(BAX_K.hasOwnProperty(k))c[k]=0;
+  for(var i=0;i<L.length;i++)c[L[i].k]=(c[L[i].k]||0)+1;
+  return c;
+}
+/* ── 화면 — 「🩺 고객 체크」 안에 한 묶음 ───────────────────────────────
+   ★ <b>새 화면을 안 만듭니다</b> (5번). 「읽은 증권으로 무엇을 터치할지」
+     를 말하는 자리가 이미 그 칸입니다. 거기에 <b>AP·PC·CS 밖의 분</b>을
+     더하는 것입니다 — 계약을 끝내신 분도, 고객 365일에만 있는 분도. */
+var BAX={open:false,n:12};
+function baxToggle(){ BAX.open=!BAX.open; if(typeof chkPaint==='function')chkPaint(); }
+function baxMore(){ BAX.n+=12; if(typeof chkPaint==='function')chkPaint(); }
+function baxGo(cid){
+  /* 그 분 카드를 엽니다 — 여는 자리는 <b>원래 있던 자</b>입니다 (5번) */
+  if(typeof chkOpenCli==='function'){ chkOpenCli(cid); return; }
+  if(typeof osOpenClient==='function'){ osOpenClient(cid); }
+}
+function baxHtml(){
+  var C=baxCount();
+  /* 아직 못 읽었으면 <b>숫자를 한 톨도 안 적습니다</b> (1번) */
+  if(C===null)return '';
+  if(!C.all)return '';
+  var h='<div class="bax'+(BAX.open?' on':'')+'">'+
+    '<button type="button" class="bax-h" aria-expanded="'+(BAX.open?'true':'false')+
+      '" onclick="baxToggle()"><span class="ar">▾</span>'+
+      '📄 <b>읽어 둔 보장분석에서</b>'+
+      '<span class="n">'+C.all+'건</span></button>';
+  if(!BAX.open)return h+'</div>';
+  var L=baxRows(),i,cur='',rows='';
+  for(i=0;i<L.length&&i<BAX.n;i++){
+    var x=L[i];
+    if(x.k!==cur){ cur=x.k;
+      rows+='<div class="bax-g">'+baxKe(cur)+' <b>'+osEsc(baxKt(cur))+'</b>'+
+            '<span>'+osEsc(BAX_K[cur].why)+'</span></div>'; }
+    rows+='<div class="bax-r" onclick="baxGo(\''+osEsc(x.cid)+'\')" '+
+      'title="누르면 그 분 카드를 엽니다">'+
+      '<span class="nm">'+osEsc(x.nm)+'</span>'+
+      '<span class="s">'+osEsc(x.s)+'</span></div>';
+  }
+  h+='<div class="bax-b">'+rows;
+  if(L.length>BAX.n)
+    h+='<button type="button" class="btn btn-ghost" onclick="baxMore()">더 보기 — 남은 '+
+       (L.length-BAX.n)+'건</button>';
+  /* <b>못 하는 것을 못 한다고 적습니다</b> (1번) */
+  h+='<div class="notice" style="margin-top:11px"><b>여기 없는 것 둘.</b> '+
+     '<b>갱신일</b>은 보장분석이 그 칸을 안 들고 있어 못 셉니다 — 날짜를 지어내지 '+
+     '않습니다. <b>청구가 된다고 단정하지도 않습니다.</b> 청구가 되는지는 '+
+     '병원 기록이 있어야 아는 일이고 앱에 없습니다 — 적을 수 있는 것은 '+
+     '「<b>한 번도 여쭤 본 적이 없다</b>」 까지입니다.</div>';
+  return h+'</div></div>';
+}
+function baxCss(){
+  if(document.getElementById('baxCss'))return;
+  var st=document.createElement('style');st.id='baxCss';
+  st.textContent=
+   '.bax{margin:11px 0;border:1px solid var(--t-line);border-radius:var(--r-sm);background:#fff}'+
+   '.bax-h{display:flex;align-items:center;gap:7px;width:100%;min-height:44px;border:0;'+
+     'background:none;padding:0 12px;font-family:inherit;font-size:var(--t6);font-weight:800;'+
+     'color:var(--t-ink);text-align:left;cursor:pointer}'+
+   '.bax-h .ar{color:var(--t-sub2);transition:transform .15s}'+
+   '.bax-h[aria-expanded="true"] .ar{transform:rotate(180deg)}'+
+   '.bax-h .n{margin-left:auto;font-weight:900;color:var(--t-point);white-space:nowrap}'+
+   '.bax-b{padding:2px 12px 12px}'+
+   '.bax-g{margin:12px 0 4px;font-size:var(--t7);font-weight:900;color:var(--t-ink)}'+
+   '.bax-g:first-child{margin-top:2px}'+
+   '.bax-g span{display:block;margin-top:2px;font-weight:700;color:var(--t-sub2)}'+
+   '.bax-r{display:flex;align-items:baseline;gap:8px;padding:7px 2px;'+
+     'border-bottom:1px solid var(--t-line);font-size:var(--t6);cursor:pointer}'+
+   '.bax-r:hover{background:var(--t-bg-3)}'+
+   '.bax-r .nm{flex:0 0 5.6em;font-weight:900;color:var(--t-ink);overflow:hidden;'+
+     'text-overflow:ellipsis;white-space:nowrap}'+
+   '.bax-r .s{flex:1 1 auto;min-width:0;color:var(--t-sub)}'+
+   '@media(max-width:560px){.bax-r{flex-wrap:wrap}.bax-r .nm{flex:0 0 100%}}';
+  document.head.appendChild(st);
 }
 function chkPaint(){
   var el=document.getElementById('chkPane');
@@ -16191,6 +16372,16 @@ function almLineFor(k){
     if(!PS)return {n:null,title:'APEX YUN PRO',body:s.body};
     if(!PL)return null;                 /* 금액이 다 0 이면 안 울립니다 */
     return {n:PS.live.n,title:PL.title,body:PL.body};
+  }
+  if(k==='bax'){
+    /* 📄 읽어 둔 보장분석 — <b>세는 자는 baxCount 하나</b>입니다 (5번).
+       아직 못 읽었으면 <b>안 울립니다</b> — 0 이 아니라 모르는 것입니다 (1번).
+       ★ 이름도 금액도 한 자도 안 싣습니다 (3번). */
+    var BC=(typeof baxCount==='function')?baxCount():null;
+    if(!BC||!BC.all)return null;
+    var bp=[],bk;
+    for(bk in BAX_K)if(BAX_K.hasOwnProperty(bk)&&BC[bk])bp.push(baxKt(bk)+' '+BC[bk]);
+    return {n:BC.all,title:'보장분석에서 챙길 것 '+BC.all+'건',body:bp.join(' · ')};
   }
   if(k==='tmr'){
     /* 내일 약속 — <b>달력이 이미 세워 둔 줄</b>에서 셉니다 (5번) */
@@ -20347,8 +20538,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-19 13:40';
-var APP_BUILD_NOTE="📒 <b>이번 달 내가 한 일</b> 이 오늘 안에 섭니다 — 여태 이 앱은 <b>오늘</b>만 말했습니다. 기록은 이미 두 곳에 쌓여 있는데(고객 365일 접촉 기록 · DB 통합 CRM 통화 장부) <b>한 달치를 읽는 자리가 한 곳도</b> 없었습니다. 홈의 <b>「📈 이번 달 어떻게 하셨나」</b> 를 누르면 그 안에 <b>월 기준</b>으로 섭니다 — 몇 번 · 몇 분께 · 며칠, 갈래별 몇 번, <b>날짜별 줄</b>까지. 달은 ‹ › 로 넘깁니다(<b>앞날로는 안 갑니다</b>). 지난달과는 <b>같은 날짜까지만</b> 견줍니다 — 달 초에 「지난달보다 줄었다」 고 적으면 거짓말입니다. <b>새로 적는 것이 아니라 적어 두신 것</b>이고, 못 읽었으면 0 이 아니라 <b>「모릅니다」</b> 라고 합니다. ★ <b>💬 보낼 글을 다시 썼습니다</b> — 여태 누구에게 보내도 똑같았고, 소식이 없으면 「곧 다시 연락드리겠습니다」 라는 <b>안 지킬 약속</b>을 적었습니다. 이제 앱이 이미 아는 것으로 고릅니다 — <b>생일 · 약속한 일 · 못 뵌 날수 · 맞는 소식</b>, 아무것도 모르면 <b>짧은 안부</b>로 끝냅니다. 이름과 금액은 여전히 한 자도 안 넣습니다. ★ 덤 — 홈을 한 번 열 때마다 <b>고객도 아닌 배정 DB 줄 번호</b>로 빈 쪽지가 이 기기에 쌓이던 것을 고쳤습니다. ⚠ <b>이 판에는 옆 세션 것도 같이 실려 나갑니다</b> — 📰 거절 고객 소식(X129) · 📆 4년 유지관리(X128) · 🔔 알림 줄 태그. 라이브에 무엇이 들어 있는지 쪽지가 거짓말하면 안 됩니다. (판 X130)";
+var APP_BUILD='2026-10-19 16:20';
+var APP_BUILD_NOTE="📄 <b>읽어 둔 보장분석이 오늘로 옵니다</b> — 증권을 읽어 그 분께 붙이는 것까지는 이미 됐는데, 거기 담긴 <b>납입 만기 · 보장 만기 · 담보 이름</b>을 <b>날짜로 챙기는 자리가 한 곳도</b> 없었습니다. 「🩺 고객 체크」 안에 <b>📄 읽어 둔 보장분석에서</b> 가 섭니다 — <b>① 만들어 두고 안 보여드린 분 ② 납입 만기가 6달 안인 분 ③ 보장 만기가 2해 안인 분 ④ 청구를 한 번도 안 여쭤 본 분.</b> 여태 이 칸은 배정 DB 의 AP·PC·CS 인 분만 봐서 <b>계약을 끝내신 분과 고객 365일에만 있는 분</b>이 통째로 빠져 있었습니다. ★ <b>알람 칸을 하나 더 두었습니다</b>(11시) — <b>기본은 꺼져 있습니다.</b> 설정에서 켜시면 울립니다. 알람 글에는 <b>이름도 금액도 한 자도</b> 안 싣습니다 — 잠긴 폰 화면에 뜨기 때문입니다. ⚠ <b>못 하는 것 둘을 화면에 적었습니다</b> — <b>갱신일</b>은 보장분석이 그 칸을 안 들고 있어 못 셉니다(날짜를 지어내지 않습니다). <b>청구가 된다고 단정하지도 않습니다</b> — 병원 기록이 있어야 아는 일이라, 적을 수 있는 것은 「한 번도 여쭤 본 적이 없다」 까지입니다. (판 X131)";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
