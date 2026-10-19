@@ -29562,7 +29562,7 @@ function mlogCss(){
   var st=document.createElement('style');st.id='mlogCss';
   st.textContent=
    /* 달 넘기개 — 손가락이 닿게 36px, 가운데 글은 안 흔들리게 폭을 못 박습니다 */
-   '.mlog-mv{display:inline-flex;align-items:center;gap:4px;margin-left:auto;font-size:var(--t6)}'+
+   '.mlog-mv{display:flex;align-items:center;gap:4px;font-size:var(--t6)}'+
    '.mlog-mv button{min-width:36px;min-height:36px;border:1px solid var(--t-line);background:#fff;'+
      'border-radius:var(--r-sm);font-family:inherit;font-size:var(--t5);font-weight:900;'+
      'color:var(--t-ink-2);cursor:pointer}'+
@@ -29585,12 +29585,18 @@ function mlogCss(){
      'border-radius:var(--r-sm);background:var(--t-bg-3);font-size:var(--t6);'+
      'font-weight:700;color:var(--t-ink-2)}'+
    '.mlog-vs span{display:block;margin-top:3px;font-size:var(--t7);font-weight:700;color:var(--t-sub2)}'+
-   /* 펴 보기 */
-   '.mlog-op{display:block;width:100%;min-height:44px;margin-top:11px;border:1px solid var(--t-line);'+
-     'background:#fff;border-radius:var(--r-sm);font-family:inherit;font-size:var(--t6);'+
-     'font-weight:800;color:var(--t-ink-2);text-align:left;padding:0 11px;cursor:pointer}'+
-   '.mlog-op .ar{display:inline-block;margin-right:7px;color:var(--t-sub2);transition:transform .15s}'+
-   '.mlog-op[aria-expanded="true"] .ar{transform:rotate(180deg)}'+
+   /* 접은 한 줄 — 홈에서는 이것만 섭니다 */
+   '.mlog{margin-top:11px;border:1px solid var(--t-line);border-radius:var(--r-sm);background:#fff}'+
+   '.mlog-h{display:flex;align-items:center;gap:7px;width:100%;min-height:44px;border:0;'+
+     'background:none;padding:0 12px;font-family:inherit;font-size:var(--t6);font-weight:800;'+
+     'color:var(--t-ink);text-align:left;cursor:pointer}'+
+   '.mlog-h .ar{color:var(--t-sub2);transition:transform .15s}'+
+   '.mlog-h[aria-expanded="true"] .ar{transform:rotate(180deg)}'+
+   '.mlog-h .n{margin-left:auto;font-weight:800;color:var(--t-point);white-space:nowrap}'+
+   '.mlog-h .n b{font-weight:900}'+
+   '.mlog-h .n.none{color:var(--t-sub2);font-weight:700}'+
+   '.mlog-b{padding:2px 12px 12px}'+
+   '.mlog-sub{margin:7px 0 9px;font-size:var(--t7);line-height:1.6;color:var(--t-sub)}'+
    /* 날짜 머리와 줄 */
    '.mlog-l{margin-top:8px}'+
    '.mlog-d{margin:11px 0 4px;font-size:var(--t7);font-weight:900;color:var(--t-point);'+
@@ -29607,30 +29613,44 @@ function mlogCss(){
    '.mlog-r.db .n{color:var(--t-ink-2)}'+
    /* 폰에서는 달 넘기개를 <b>아랫줄로</b> 내립니다 — 머리글과 한 줄에
       두면 제목이 「이번 달 내가 한 / 일」 로 끊깁니다. 찍어 보고 알았습니다. */
-   '@media(max-width:560px){.mlog-mv{width:100%;margin:7px 0 0;justify-content:space-between}'+
-     '.mlog-mv b{min-width:0;flex:1 1 auto}.mlog-r .n{flex:0 0 4.6em}}';
+   '@media(max-width:560px){.mlog-mv b{min-width:0;flex:1 1 auto}.mlog-r .n{flex:0 0 4.6em}}';
   document.head.appendChild(st);
+}
+/* ★ <b>접은 한 줄</b>이 기본입니다. 처음에 펴 둔 칸으로 만들었더니 홈이
+   4.2화면에서 <b>4.47화면</b>으로 길어져 check-homeone·phonefit·msfive·
+   homeshape 넷이 울었습니다. 홈은 <b>오늘</b>을 보는 자리고, 이번 달
+   돌아보기는 <b>눌러서 보는 것</b>입니다 — 접힌 채로도 「몇 번 · 몇 분께」
+   가 머리에 적혀 있어 한눈에 들어옵니다 (판 X113 「펴둬」 와 같은 규칙).
+   ⚠ <b>자를 무르게 하지 않고 실제로 줄였습니다</b> — 눈금을 올리는 것이
+     아니라 칸을 접었습니다 (8번). */
+function mlogHead(S){
+  if(S===null)return '<span class="n none">아직 못 읽었습니다</span>';
+  if(!S.n)return '<span class="n none">담긴 기록이 없습니다</span>';
+  return '<span class="n"><b>'+S.n+'</b>번 · '+S.who+'분께</span>';
 }
 function mlogCardHtml(){
   if(typeof OS==='undefined'||!OS.profile)return '';
   mlogCss();
-  var hd='<div class="card"><div class="card-hd"><div class="card-title">'+
-    '<span class="ci">📒</span>이번 달 내가 한 일'+
-    '<span class="mlog-mv">'+
+  var S=mlogSum(),op=MLOG.open;
+  var hd='<div class="mlog'+(op?' on':'')+'">'+
+    '<button type="button" class="mlog-h" aria-expanded="'+(op?'true':'false')+
+      '" onclick="mlogToggle()"><span class="ar">▾</span>'+
+      '📒 <b>이번 달 내가 한 일</b>'+mlogHead(S)+'</button>';
+  if(!op)return hd+'</div>';
+  hd+='<div class="mlog-b">'+
+    '<div class="mlog-mv">'+
       '<button type="button" onclick="mlogMove(-1)" aria-label="지난 달">‹</button>'+
       '<b>'+osEsc(mlogTitle())+'</b>'+
       '<button type="button" onclick="mlogMove(1)"'+(mlogIsNow()?' disabled':'')+
         ' aria-label="다음 달">›</button>'+
       (mlogIsNow()?'':'<button type="button" class="now" onclick="mlogGoNow()">이번 달로</button>')+
-    '</span></div>'+
-    '<div class="card-desc">고객 365일에 남기신 접촉 기록과 DB 통합 CRM 통화를 '+
-    '<b>한 줄기로</b> 모았습니다 — 여기서 새로 적는 것이 아니라 <b>적어 두신 것</b>입니다</div>'+
-    '</div><div class="card-body">';
-  var S=mlogSum();
+    '</div>'+
+    '<div class="mlog-sub">고객 365일에 남기신 접촉 기록과 DB 통합 CRM 통화를 '+
+    '<b>한 줄기로</b> 모았습니다 — 여기서 새로 적는 것이 아니라 <b>적어 두신 것</b>입니다</div>';
   /* 아직 못 읽었으면 <b>숫자를 한 톨도 안 적습니다</b> (1번) */
   if(S===null)
     return hd+'<div class="ar-none">기록을 아직 <b>못 읽었습니다</b> — 불러오는 중입니다.<br>'+
-      '「0건」 이라고 적지 않습니다. <b>안 하신 것과 아직 모르는 것은 다릅니다.</b></div></div></div>';
+      '「0번」 이라고 적지 않습니다. <b>안 하신 것과 아직 모르는 것은 다릅니다.</b></div></div></div>';
   if(!S.n)
     return hd+'<div class="ar-none"><b>'+osEsc(mlogTitle())+'</b> 에 담긴 기록이 없습니다.<br>'+
       '고객 365일에서 <b>접촉 기록</b>을 남기시거나, DB 통합 CRM 에서 통화 결과를 '+
@@ -29647,26 +29667,21 @@ function mlogCardHtml(){
        ' · 이번 달 <b>'+(V.diff>0?('+'+V.diff):V.diff)+'</b>'+
        '<span>둘 다 <b>잰 수</b>입니다 — 이번 달은 아직 안 끝나서 '+
        (V.cut?'같은 날짜까지만':'달 전체를')+' 견줍니다</span></div>';
-  h+='<button type="button" class="mlog-op" aria-expanded="'+(MLOG.open?'true':'false')+
-     '" onclick="mlogToggle()"><span class="ar">▾</span>'+
-     (MLOG.open?'기록 '+S.n+'줄 접기':'기록 '+S.n+'줄 펴 보기')+'</button>';
-  if(MLOG.open){
-    var L=mlogRows(),i,cur='',rows='';
-    for(i=0;i<L.length&&i<MLOG.n;i++){
-      var x=L[i];
-      if(x.d!==cur){ cur=x.d; rows+='<div class="mlog-d">'+osEsc(mlogDayKo(cur))+'</div>'; }
-      rows+='<div class="mlog-r'+(x.src==='db'?' db':'')+'">'+
-        '<span class="e">'+mlogKe(x.how)+'</span>'+
-        '<span class="n">'+osEsc(x.nm)+'</span>'+
-        '<span class="h">'+osEsc(x.how)+'</span>'+
-        '<span class="m">'+osEsc(x.note)+'</span>'+
-        '</div>';
-    }
-    h+='<div class="mlog-l">'+rows+'</div>';
-    if(L.length>MLOG.n)
-      h+='<button type="button" class="btn btn-ghost" onclick="mlogMore()">더 보기 — 남은 '+
-         (L.length-MLOG.n)+'줄</button>';
+  var L=mlogRows(),i,cur='',rows='';
+  for(i=0;i<L.length&&i<MLOG.n;i++){
+    var x=L[i];
+    if(x.d!==cur){ cur=x.d; rows+='<div class="mlog-d">'+osEsc(mlogDayKo(cur))+'</div>'; }
+    rows+='<div class="mlog-r'+(x.src==='db'?' db':'')+'">'+
+      '<span class="e">'+mlogKe(x.how)+'</span>'+
+      '<span class="n">'+osEsc(x.nm)+'</span>'+
+      '<span class="h">'+osEsc(x.how)+'</span>'+
+      '<span class="m">'+osEsc(x.note)+'</span>'+
+      '</div>';
   }
+  h+='<div class="mlog-l">'+rows+'</div>';
+  if(L.length>MLOG.n)
+    h+='<button type="button" class="btn btn-ghost" onclick="mlogMore()">더 보기 — 남은 '+
+       (L.length-MLOG.n)+'줄</button>';
   h+='<div class="notice" style="margin-top:11px">이름은 <b>이 기기에만</b> 있습니다 — '+
      '서버에는 가린 이름만 올라갑니다. 여기 적힌 것은 <b>사장님이 남기신 기록 그대로</b>이고, '+
      '앱이 지어낸 줄은 한 줄도 없습니다.</div>';

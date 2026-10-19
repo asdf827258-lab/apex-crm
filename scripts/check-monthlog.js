@@ -181,12 +181,25 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   const dom = await page.evaluate(() => {
     const host = document.getElementById('mlogHost');
     return { has: !!host,
-             card: !!(host && host.querySelector('.card')),
+             card: !!(host && host.querySelector('.mlog')),
              rows: document.querySelectorAll('.mlog-r').length,
              chips: document.querySelectorAll('.mlog-c').length,
              txt: (host ? host.textContent : '').replace(/\s+/g, ' ') };
   });
   is(dom.has && dom.card, '홈 왼쪽 기둥에 칸이 선다');
+  /* ★ <b>접힌 채가 기본</b>인가 — 펴 두면 홈이 4.47화면이 됩니다 (8번) */
+  const shut = await page.evaluate(() => {
+    MLOG.open = false; mlogPaint();
+    const h = document.querySelector('#mlogHost .mlog');
+    const o = { px: h ? Math.round(h.getBoundingClientRect().height) : -1,
+                rows: document.querySelectorAll('.mlog-r').length,
+                head: (document.querySelector('.mlog-h .n') || {}).textContent || '' };
+    MLOG.open = true; mlogPaint();
+    return o;
+  });
+  is(shut.px > 0 && shut.px <= 60, '접으면 한 줄이다 — ' + shut.px + 'px (60px 이하)');
+  is(shut.rows === 0, '접으면 줄이 안 그려진다');
+  is(/5.*번/.test(shut.head), '접힌 채로도 「몇 번」 이 보인다 (받음 「' + shut.head + '」)');
   is(dom.rows === 5, '줄 다섯이 그려진다 (받음 ' + dom.rows + ')');
   is(dom.chips >= 4, '갈래 칩이 선다 (받음 ' + dom.chips + ')');
   is(/지어낸 줄은 한 줄도 없습니다/.test(dom.txt), '지어내지 않았다고 적는다 (1번)');
