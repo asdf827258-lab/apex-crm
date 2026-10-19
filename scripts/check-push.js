@@ -199,6 +199,8 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     };
     out.slots=ALM_SLOTS.map(s=>s.k).join(',');
     out.slotN=ALM_SLOTS.length;
+    /* 켜져 있는 것이 몇인가 — 사장님께 드린 약속은 <b>울리는 수</b>입니다 (판 X131) */
+    out.slotOnN=ALM_SLOTS.filter(function(x){return x.on;}).length;
     /* 아직 안 된 시각 — 고정한 시각(10시)보다 뒤 */
     only('call',11);
     window.__rang.length=0; almTick(); out.early=window.__rang.length;
@@ -283,7 +285,22 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   is(T.again===0, '같은 날 <b>또 안 울린다</b> — 홈을 열 때마다 울리면 끄십니다');
   is(T.emptyRang===0&&T.emptyStamp==='',
      '안 울렸으면 <b>날짜 표시도 안 남긴다</b> — 남기면 오후에 생긴 일이 내일까지 안 울린다');
-  is(T.slotN===4, '알람이 <b>네 번</b>이다 — '+T.slots+' (표는 app/alm-slots.js 한 곳)');
+  /* ══ 알람이 <b>몇 번</b>인가 — 판 X131 에서 뜻이 또렷해졌습니다 ════════
+     여태 이 줄은 「표에 넷이 있다」 만 봤습니다(사장님 말씀 2026-09-25
+     「알람 하루 네 번 만들고」). 그런데 2026-10-19 에 <b>보장분석도 알람으로</b>
+     받겠다고 하셨습니다. 「네 번」 은 <b>하루에 몇 번 울리나</b> 라는 약속이지
+     「표에 몇 줄이 있나」 가 아닙니다 — 꺼 둔 줄은 울리지 않습니다.
+     ★ 그래서 자를 <b>무르게 하지 않고 또렷하게</b> 합니다 (8번) —
+       ① 열쇠를 <b>글자까지</b> 못 박습니다. 수만 세면 하나를 슬쩍 더
+          넣어도 수만 고치면 지나갑니다.
+       ② <b>켜져 있는 것이 넷을 안 넘는지</b> 를 봅니다. 이것이 사장님께
+          드린 진짜 약속입니다.
+     새 줄을 넣는 쪽은 <b>여기 열쇠도 같이</b> 적어야 합니다 — 그래야
+     「나도 모르게 늘었다」 가 안 됩니다.                                */
+  is(T.slots==='call,am,perf,tmr,bax',
+     '알람 칸이 <b>적어 둔 그대로</b>다 — '+T.slots+' (표는 app/alm-slots.js 한 곳)');
+  is(T.slotOnN<=4,
+     '<b>켜져 있는 것이 넷을 안 넘는다</b> — '+T.slotOnN+'개 ← 사장님 말씀 「알람 하루 네 번」');
   is(T.second===1,
      '하나가 울려도 <b>나머지는 제 시각에 울린다</b> — '+T.second+'번 ← 「오늘 울렸다」 를 한 칸에 적으면 낮·저녁이 통째로 막힙니다');
   /* ★★ 2026-10-03 · X05 — 예상업적이 <b>세는 슬롯</b>이 되었습니다.
