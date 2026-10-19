@@ -2685,7 +2685,31 @@ var LS={
 /* 알림 칸이 없으면 <b>조용히 물러난다.</b> 예전에는 여기서 터졌고, 알림
    하나 때문에 부르던 쪽 일이 통째로 멈췄다 — 저장이 됐는데 안 됐다고
    보이는 자리가 그것이다. 알림은 곁다리다. 곁다리가 본일을 죽이면 안 된다. */
-function toast(msg,ms){var t=$('toast');if(!t)return;t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('on');},ms||1900);}
+/* ── 알림 줄은 <b>굵게</b>를 굵게 찍는다 (2026-10-17) ─────────────────
+   여태 toast 는 textContent 로 넣었다. 그런데 부르는 자리 열 곳 넘게가
+   <b>…</b> 를 넘긴다 — 아침 보고의 「<b>1명 중 0명</b> 준비됐습니다」 가
+   태그째 글자로 찍혔다. 부르는 쪽을 하나씩 고치면 다음 자리가 또 샌다.
+   그래서 <b>받는 곳 하나</b>에서 고친다 (5번).
+   그렇다고 innerHTML 로 넣지 않는다 — 고객 이름이 날글로 섞여 오는 자리가
+   있다. 실행되지 않는 template 안에서 한 번 풀고, 글자와 b·strong·i·em·br
+   만 다시 세운다. 다른 태그는 속 글자만 남기고, 속성은 하나도 옮기지 않는다. */
+var TOAST_KEEP={B:1,STRONG:1,I:1,EM:1,BR:1},TOAST_DROP={SCRIPT:1,STYLE:1,TEMPLATE:1};
+function toastFill(t,msg){
+  msg=(msg==null)?'':String(msg);
+  if(msg.indexOf('<')<0&&msg.indexOf('&')<0){t.textContent=msg;return;}
+  var tp=document.createElement('template');tp.innerHTML=msg;
+  t.textContent='';
+  (function put(from,to){
+    for(var n=from.firstChild;n;n=n.nextSibling){
+      if(n.nodeType===3)to.appendChild(document.createTextNode(n.nodeValue));
+      else if(n.nodeType===1){
+        if(TOAST_KEEP[n.tagName]){var k=document.createElement(n.tagName.toLowerCase());to.appendChild(k);put(n,k);}
+        else if(!TOAST_DROP[n.tagName])put(n,to);
+      }
+    }
+  })(tp.content,t);
+}
+function toast(msg,ms){var t=$('toast');if(!t)return;toastFill(t,msg);t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('on');},ms||1900);}
 /* 복사는 생각보다 자주 실패한다. 특히 태블릿에서, 그리고 새 창이 떠서
    이 화면이 초점을 잃었을 때. 전에는 실패해도 '복사되었습니다' 라고
    말해서, 붙여넣으면 엉뚱한 옛날 내용이 나왔다. 이제는 확인하고 말한다. */
@@ -6794,6 +6818,8 @@ function osTabProbe(tab){
   if(tab==='fp_talk')return renderFpTalk();
   if(tab==='dz_guide')return renderDzGuide();
   if(tab==='utphoto')return renderUtPhoto();
+  if(tab==='keep4')return renderKeep4();
+  if(tab==='rjnews')return renderRjNews();
   if(tab==='fp_deck')return renderFpDeck();
   if(tab==='ckteam')return renderCkTeam();
   if(tab==='teamx')return renderTeamX();
@@ -8499,7 +8525,10 @@ function arLoad(force){
          .order('id',{ascending:true}).range(a,b));
     }),
     q(sb.from('saved_reports').select('id,title,content,created_at').eq('kind',AR_KIND)
-       .order('created_at',{ascending:false}).limit(300))
+       .order('created_at',{ascending:false}).limit(300)),
+    /* 📰 거절 고객 소식 — 보낸 날 · 그만 받기 (설계사 한 사람에 한 줄 · 판 X129).
+       <b>같은 때 한 번</b>만 부릅니다 (7번) */
+    q(sb.from('saved_reports').select('id,advisor_id,content').eq('kind',RJN_KIND).limit(300))
   ]).then(function(r){
     AR.busy='';AR.loaded=true;AR.at=new Date().toLocaleTimeString('ko-KR');
     /* 통화를 4,000통에서 끊었으면 <b>끊었다고</b> 적어 둔다 — 화면이
@@ -8543,7 +8572,9 @@ function arLoad(force){
       if(!c.mid)continue;
       if(!AR.rep[c.mid]){c._rid=rows[i].id;AR.rep[c.mid]=c;}
     }
+    try{ if(typeof rjnTake==='function')rjnTake(r[5],(typeof cmUid==='function')?cmUid():null); }catch(eR){}
     arPaint();
+    try{ if(typeof rjnPaint==='function')rjnPaint(); }catch(eP){}
   },function(e){
     AR.busy='';AR.loaded=true;AR.err=(e&&e.message)||'네트워크 오류';arPaint();
   });
@@ -10059,6 +10090,13 @@ function arTouch(who){
     /* 소개완료도 마지막으로 뵌 날이 <b>증권 전달일</b>이다. 배정일부터 세면
        반년 전에 배정된 분이 단계를 올리는 그날 바로 「30일 지났다」로 뜬다 */
     if((st==='증권전달'||st==='소개완료')&&r.pAt)d=arDaysAgo(r.pAt);
+    /* 📰 거절하신 분 — 그만 받으신 분은 <b>다시 안 세웁니다</b>. 소식을 보냈으면
+       <b>그날부터</b> 셉니다 (판 X129 · 거절 고객 소식과 같은 말 · 5번) */
+    if(st==='거절'&&typeof rjnOf==='function'){
+      var rj=rjnOf(r.id);
+      if(rj.stop)continue;
+      if(rj.sent){ var sd=arDaysAgo(rj.sent); if(sd<d)d=sd; }
+    }
     if(!tdoDue(st,d))continue;
     /* 오늘 약속이 잡혀 있으면 시간까지 들고 올라간다 */
     var ap=(r.appt&&(''+r.appt).slice(0,10)>=t)
@@ -14308,6 +14346,12 @@ var TABS=[
  ]},
  {group:'내 고객',items:[
    {id:'clients',icon:'🗂️',title:'고객 365일',cnt:'',ak:'고객'},
+   /* 📆 <b>4년 유지관리</b> — 2026-10-17 사장님 말씀 「4년 분급제 관리 새로 만들고
+      매월 터치하고 몇개월에 한번은 전화로 무엇을 확인하고 전달할지까지」.
+      달마다 할 일은 <b>MST_STEPS 한 곳</b>이 압니다 — 고객 365일의 계약 마디와 같은 판입니다 (5번 · 판 X123). */
+   {id:'keep4',tk:'고객',icon:'📆',title:'4년 유지관리',cnt:'48',ak:'고객 4년 분급 유지관리 계약 후 사후관리 매달 터치 석 달 전화 확인 전달 환수'},
+   /* 📰 거절 고객 소식 — 사장님 말씀 「거절 고객들에게도 보험 점검, 경제뉴스, 연금뉴스등 … 매일」 (판 X129) */
+   {id:'rjnews',tk:'고객',icon:'📰',title:'거절 고객 소식',cnt:'',ak:'고객 거절 소식 뉴스 경제 연금 보험 점검 매일 카톡 문자 그만 받기'},
    {id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:'',ak:'고객'},
    {id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:'',ak:'DB CRM'}
  ]},
@@ -14592,7 +14636,7 @@ var NAV_WHEN_G=[
 /* 화면 <b>하나하나</b>가 어느 때 것인가 — <b>전부</b> (하나라도 빠지면 check-nav 가 웁니다) */
 var NAV_WHEN={
  /* 🌅 오늘 — 매일 여는 것 */
- home:'today', airep:'today', crm:'today', clients:'today', mycal:'today',
+ home:'today', airep:'today', crm:'today', clients:'today', mycal:'today', rjnews:'today',
  assistant:'today', voiceasst:'today', ckboard:'today',
  /* 🤝 고객 만나기 — 준비하고, 앞에서 쓰는 것 */
  fact_find:'meet', bojang:'meet', frmake:'meet', compare:'meet',
@@ -14602,7 +14646,7 @@ var NAV_WHEN={
  ta_script:'meet', ta_say:'meet', ta_train:'meet', silson5:'meet', rej_gym:'meet',
  finance:'meet', calc:'meet', brain:'meet',
  /* 📮 계약하고 나서 */
- pdel:'after', contracts:'after', endorse:'after', claims:'after',
+ pdel:'after', contracts:'after', endorse:'after', claims:'after', keep4:'after',
  med_silbi:'after', med_checkup:'after', med_disclosure:'after', car_fault:'after',
  /* 📣 고객 늘리기 */
  mikki:'grow', content:'grow', news_live:'grow', biz_news:'grow', blog:'grow', threads:'grow',
@@ -14873,7 +14917,7 @@ function navMainMark(tab){
      적어 길을 남겼습니다 — 못 찾으면 지운 것과 같습니다 (1번).        */
 var TB=[
  {id:'home',    e:'🏠',t:'오늘',  w:['today']},
- {id:'clients', e:'📇',t:'고객',  pin:['clients','fact_find','crm']},
+ {id:'clients', e:'📇',t:'고객',  pin:['clients','fact_find','crm','keep4']},   /* keep4 — 내 고객 칸의 📆 4년 유지관리 (판 X123) */
  /* ⚠ 2026-09-26 · 여기는 <b>서랍을 여는 단추</b>였습니다(__more). 목업의
     「도구」 는 <b>밝은 화면</b>이라 화면으로 바꿉니다 — renderToolsPage.
     ★ 서랍은 <b>그대로 있습니다</b> — 위 ☰ 와 도구 화면 맨 아래
@@ -19436,7 +19480,7 @@ function osFullMode(on){
    ⚠ <b>이 쪽지를 표 안에 두지 마십시오.</b> check-skinmap 이 표를 쉼표로
      잘라 읽어서, 주석이 안에 있으면 그것을 <b>이름 하나로 셉니다</b> — 실제로
      한 번 그렇게 빨간불이 켜졌습니다 (8번).                               */
-var T_SKIN={home:1,dashboard:1,clients:1,news_live:1,mycal:1,me:1,tools:1,
+var T_SKIN={home:1,dashboard:1,clients:1,keep4:1,rjnews:1,news_live:1,mycal:1,me:1,tools:1,
             voiceasst:1,growboard:1,assistant:1,airep:1,brain:1,notice:1,
             academy_notion:1,apexmaster:1,bojang:1,branch_coach:1,calc:1,calendar:1,
             compare:1,cs_assist:1,cs_gso:1,cs_needs:1,ext_naver:1,ext_reply:1,ext_thread:1,
@@ -19900,6 +19944,8 @@ function go(tab){
   else if(tab==='fp_talk'){dyn.innerHTML=renderFpTalk();if(typeof osFpTalkAfterRender==='function')osFpTalkAfterRender();}
   else if(tab==='dz_guide'){dyn.innerHTML=renderDzGuide();if(typeof osDzGuideAfterRender==='function')osDzGuideAfterRender();}
   else if(tab==='utphoto'){dyn.innerHTML=renderUtPhoto();if(typeof utpAfterRender==='function')utpAfterRender();}
+  else if(tab==='keep4'){dyn.innerHTML=renderKeep4();}
+  else if(tab==='rjnews'){dyn.innerHTML=renderRjNews();}
   else if(tab==='fp_deck'){dyn.innerHTML=renderFpDeck();if(typeof osFpDeckAfterRender==='function')osFpDeckAfterRender();}
   else if(tab==='ckteam'){dyn.innerHTML=renderCkTeam();if(typeof osCkTeamAfterRender==='function')osCkTeamAfterRender();}
   else if(tab==='teamx'){dyn.innerHTML=renderTeamX();if(typeof osTeamXAfterRender==='function')osTeamXAfterRender();}
@@ -20301,8 +20347,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-19 13:05';
-var APP_BUILD_NOTE="📒 <b>이번 달 내가 한 일</b> 이 오늘 안에 섭니다 — 여태 이 앱은 <b>오늘</b>만 말했습니다. 기록은 두 곳에 쌓여 있는데(고객 365일 접촉 기록 · DB 통합 CRM 통화 장부) <b>한 달치를 읽는 자리가 한 곳도</b> 없었습니다. 홈의 <b>「📈 이번 달 어떻게 하셨나」</b> 를 누르면 그 안에 <b>월 기준</b>으로 섭니다 — 몇 번 · 몇 분께 · 며칠 기록했는지, 갈래별로 몇 번인지, <b>날짜별 줄</b>까지. 달은 ‹ › 로 넘깁니다(<b>앞날로는 안 갑니다</b>). 지난달과는 <b>같은 날짜까지만</b> 견줍니다 — 달 초에 「지난달보다 줄었다」 고 적으면 거짓말입니다. <b>새로 적는 것이 아니라 적어 두신 것</b>이고, 못 읽었으면 0 이 아니라 <b>「모릅니다」</b> 라고 합니다. ★ <b>💬 보낼 글을 다시 썼습니다</b> — 여태 누구에게 보내도 똑같았고, 소식이 없으면 「곧 다시 연락드리겠습니다」 라는 <b>안 지킬 약속</b>을 적었습니다. 이제 앱이 이미 아는 것으로 고릅니다 — <b>생일 · 약속한 일 · 못 뵌 날수 · 맞는 소식</b>, 아무것도 모르면 <b>짧은 안부</b>로 끝냅니다. 이름과 금액은 여전히 한 자도 안 넣습니다(3번). ★ 덤 — 홈을 한 번 열 때마다 <b>고객도 아닌 배정 DB 줄 번호</b>로 빈 쪽지가 이 기기에 쌓이던 것을 고쳤습니다(새 자가 찾아냈습니다). (판 X127)";
+var APP_BUILD='2026-10-19 13:40';
+var APP_BUILD_NOTE="📒 <b>이번 달 내가 한 일</b> 이 오늘 안에 섭니다 — 여태 이 앱은 <b>오늘</b>만 말했습니다. 기록은 이미 두 곳에 쌓여 있는데(고객 365일 접촉 기록 · DB 통합 CRM 통화 장부) <b>한 달치를 읽는 자리가 한 곳도</b> 없었습니다. 홈의 <b>「📈 이번 달 어떻게 하셨나」</b> 를 누르면 그 안에 <b>월 기준</b>으로 섭니다 — 몇 번 · 몇 분께 · 며칠, 갈래별 몇 번, <b>날짜별 줄</b>까지. 달은 ‹ › 로 넘깁니다(<b>앞날로는 안 갑니다</b>). 지난달과는 <b>같은 날짜까지만</b> 견줍니다 — 달 초에 「지난달보다 줄었다」 고 적으면 거짓말입니다. <b>새로 적는 것이 아니라 적어 두신 것</b>이고, 못 읽었으면 0 이 아니라 <b>「모릅니다」</b> 라고 합니다. ★ <b>💬 보낼 글을 다시 썼습니다</b> — 여태 누구에게 보내도 똑같았고, 소식이 없으면 「곧 다시 연락드리겠습니다」 라는 <b>안 지킬 약속</b>을 적었습니다. 이제 앱이 이미 아는 것으로 고릅니다 — <b>생일 · 약속한 일 · 못 뵌 날수 · 맞는 소식</b>, 아무것도 모르면 <b>짧은 안부</b>로 끝냅니다. 이름과 금액은 여전히 한 자도 안 넣습니다. ★ 덤 — 홈을 한 번 열 때마다 <b>고객도 아닌 배정 DB 줄 번호</b>로 빈 쪽지가 이 기기에 쌓이던 것을 고쳤습니다. ⚠ <b>이 판에는 옆 세션 것도 같이 실려 나갑니다</b> — 📰 거절 고객 소식(X129) · 📆 4년 유지관리(X128) · 🔔 알림 줄 태그. 라이브에 무엇이 들어 있는지 쪽지가 거짓말하면 안 됩니다. (판 X130)";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -25933,7 +25979,7 @@ function hmQPromise(){
   var mine=OSC.list;
   for(i=0;i<mine.length;i++){
     c=mine[i]; if(!c||!c.id)continue;
-    /* ★ <b>cmOf 를 안 부릅니다</b> (판 X127 · X126 과 같은 자리). cmOf 는
+    /* ★ <b>cmOf 를 안 부릅니다</b> (판 X130 · X126 과 같은 자리). cmOf 는
        없으면 빈 쪽지를 <b>만들어 넣습니다.</b> 이 고리는 고객 전원을 도는
        자리라, 홈을 한 번 열 때마다 이 기기에 빈 쪽지가 그만큼 쌓였습니다.
        여기서는 <b>읽기만</b> 하므로 안 만드는 자로 묻습니다. */
@@ -28147,7 +28193,7 @@ function hmDoHtml(x){
      메뉴에 그 화면이 정말 있는지 봅니다.
    ★ <b>새 CSS 를 안 만들었습니다</b> — ui.css 의 t-note.b · t-chips ·
      t-chip 입니다.                                                  */
-/* ★ <b>cmOf 를 안 부릅니다</b> (판 X127). 여기 오는 x 는 고객 줄일 수도,
+/* ★ <b>cmOf 를 안 부릅니다</b> (판 X130). 여기 오는 x 는 고객 줄일 수도,
    <b>배정 DB 줄</b>일 수도 있습니다. cmOf 는 없으면 빈 쪽지를 만들어 넣으므로,
    홈을 한 번 열 때마다 <b>고객도 아닌 DB 줄 번호</b>로 쪽지가 생겼습니다 —
    자(check-monthlog)가 CM.meta 에 「db1」 이 끼어 있는 것을 보고 알았습니다.
@@ -28578,6 +28624,296 @@ function hmMsSayCopy(){
   if(!S){ if(typeof toast==='function')toast('할 말을 못 찾았습니다'); return; }
   if(typeof copyText==='function')copyText(S.say);
 }
+/* ══ 📰 <b>거절 고객 소식</b> — 팔지 않고, 소식만 (판 X129) ══════════════
+   사장님 말씀 (2026-10-18) — 「거절 고객들에게도 보험 점검, 경제뉴스,
+   연금뉴스등 전달할 수 있도록 만들고 매일 · 뉴스는 지금 불러오고 있는거
+   알고 있어서 활용잘하도록」.
+
+   여태 거절하신 분은 「오늘 터치할 사람」 에 14일 뒤 다시 섰는데, 카톡
+   글에 <b>소식이 한 줄도 안 들어갔습니다</b>. 소식은 그 분을 <b>읽어서</b>
+   고르는데(apex-newsfit), 배정 DB 에서 온 거절 고객은 적힌 것이 거의 없어
+   「아직 읽을 것이 없습니다」 로 끝났습니다. 그래서 인사와 「전화 드려도
+   될까요」 만 나갔습니다.
+
+   ★ <b>읽어서 고른 척하지 않습니다</b> (1번). 그 분을 읽었으면 그 분 갈래
+     기사가 갑니다(여태 그대로). 못 읽었으면 <b>오늘 거절하신 분 모두께 같은
+     소식</b>이 가고, 화면이 그렇다고 밝힙니다.
+   ★ <b>매일 바뀝니다</b> — 보험 점검 · 경제 · 연금 · 보험 · 지원금 차례로
+     하루에 하나. 손으로 바꾸실 수도 있습니다(오늘만).
+   ★ 기사는 <b>받아 둔 것(NLIVE)</b>에서만 고릅니다 — 새로 부르지 않습니다(7번).
+     없으면 없다고 하고 소식을 지어내지 않습니다. 「보험 점검」 만 기사 없이
+     서는 글입니다(숫자를 한 자도 안 적습니다 · 2번).
+   ★ 누구에게 보내나는 <b>arTouch 한 곳</b>이 정합니다(5번) — 여기서 다시
+     세지 않습니다. 「보냈습니다」 를 누르면 그날부터 다시 세어, 「오늘 터치할
+     사람」 과 이 화면이 같은 말을 합니다.
+   ★ 「그만 받기」 는 <b>서버에</b> 적습니다 — 기기를 바꿔도 다시 안 섭니다.
+     받지 않겠다고 하신 분께 또 보내면 안 됩니다.
+   ★ 이름은 가린 모양으로만 세웁니다(3번). 보내는 글에도 이름이 없습니다 — 「고객님」.
+   ★ 기록은 saved_reports 의 <b>설계사 한 사람에 한 줄</b>(kind rj_news)입니다 —
+     배정 DB 번호와 날짜만 담습니다. 통화 기록(calls)에 적지 않습니다 — 그 표의
+     결과는 상담·부재·거절 셋뿐이라, 소식 문자를 「거절」 로 적으면 거절 수가
+     부풀고, 빈칸으로 적으면 단계가 미접촉으로 내려갑니다(arStageOf).        */
+var RJN_KIND='rj_news';
+var RJN={loaded:false,err:'',sent:{},stop:{},mine:null,busy:false};
+/* 소식 갈래 — <b>표 하나</b> (5번). cat 은 apex-newsfit 의 갈래 이름 그대로,
+   kw 는 그 갈래가 없는 주제(연금)를 기사 제목에서 찾는 낱말입니다.
+   say 가 있는 것은 기사 없이 서는 글입니다 — 숫자를 넣지 않습니다(2번). */
+var RJN_TOPICS=[
+ {k:'check', ic:'🩺', t:'보험 점검',
+  say:'요즘 보험을 한 번도 안 들여다보셨다면, 가입하신 것이 지금 생활에 맞는지 증권만 보고 정리해 드릴 수 있습니다.\n'+
+      '새로 드시라는 말씀이 아니라, 겹치거나 빈 곳이 있는지만 보는 것입니다. 원하실 때만 말씀 주세요.'},
+ {k:'econ',  ic:'📈', t:'경제 소식',  cat:'econ'},
+ {k:'pen',   ic:'🏦', t:'연금 소식',  kw:/연금/},
+ {k:'ins',   ic:'🛡️', t:'보험 소식',  cat:'ins'},
+ {k:'help',  ic:'🎁', t:'지원금·혜택', cat:'help'}
+];
+var RJN_STOP='원치 않으시면 「그만」 이라고만 답 주세요. 더는 보내지 않겠습니다.';
+function rjnToday(){ return (typeof arToday==='function')?arToday():(new Date(Date.now()+9*3600*1000)).toISOString().slice(0,10); }
+function rjnTopicOf(k){ var i; for(i=0;i<RJN_TOPICS.length;i++)if(RJN_TOPICS[i].k===k)return RJN_TOPICS[i]; return null; }
+/* 오늘의 차례 — 날짜에서 셉니다. 따로 들고 있지 않습니다 */
+function rjnTopicToday(){
+  var n=Math.floor(Date.parse(rjnToday()+'T00:00:00Z')/86400000),L=RJN_TOPICS.length;
+  if(!isFinite(n))n=0;
+  return RJN_TOPICS[((n%L)+L)%L];
+}
+/* 손으로 바꾼 것은 <b>오늘만</b> — 내일은 다시 차례대로 (이 기기에만 · 보는 사람 편의) */
+function rjnPickGet(){
+  try{ var v=JSON.parse(localStorage.getItem('apex_rjn_pick')||'null'); return (v&&v.d===rjnToday())?v.k:''; }catch(e){ return ''; }
+}
+function rjnPick(k){
+  if(!rjnTopicOf(k))return;
+  try{ localStorage.setItem('apex_rjn_pick',JSON.stringify({d:rjnToday(),k:k})); }catch(e){}
+  rjnPaint();
+}
+function rjnTopic(){ return rjnTopicOf(rjnPickGet())||rjnTopicToday(); }
+/* 그 갈래의 기사 한 건 — <b>받아 둔 것</b>에서. 제목·언론사·링크가 다 있는 것만 (9번) */
+function rjnIdx(T){
+  T=T||rjnTopic();
+  if(!T||(!T.cat&&!T.kw))return -1;
+  if(typeof nlLoad==='function'&&typeof NLIVE!=='undefined'&&!NLIVE.items.length)nlLoad();
+  var L=(typeof NLIVE!=='undefined'&&NLIVE.items)?NLIVE.items:[],t=rjnToday(),i,it;
+  for(i=0;i<L.length;i++){
+    it=L[i];
+    if(typeof APEX_FIT!=='undefined'&&!APEX_FIT.goodItem(it,t))continue;
+    if(T.cat&&(it.cats||[]).indexOf(T.cat)<0)continue;
+    if(T.kw&&!T.kw.test(''+(it.t||'')))continue;
+    return i;
+  }
+  return -1;
+}
+/* 오늘 갈래가 <b>설 수 있나</b> — 글로 서는 것(say)이거나 기사가 있거나 */
+function rjnHas(T){ return !!(T&&(T.say||rjnIdx(T)>=0)); }
+/* 카톡 가운데 소식 — 못 서면 <b>빈 글자</b> (지어내지 않음 · 1번) */
+function rjnBody(){
+  var T=rjnTopic();
+  if(!T)return '';
+  if(T.say)return T.say;
+  var i=rjnIdx(T);
+  return (i>=0&&typeof hmMsNlBody==='function')?hmMsNlBody(i):'';
+}
+/* 이 분 글에 들어가는 소식이 <b>이 분을 읽어 고른 것</b>인가 */
+function rjnOwn(id){
+  try{ return !!(id&&typeof ccNewsIdx==='function'&&ccNewsIdx(id)>=0); }catch(e){ return false; }
+}
+/* ── 기록 — 읽기는 arLoad 가 <b>같은 때</b> 한 번 (7번) ── */
+function rjnTake(res,uid){
+  RJN.loaded=true; RJN.err=''; RJN.sent={}; RJN.stop={}; RJN.mine=null;
+  if(!res||res.error){ RJN.err=(res&&res.error&&res.error.message)||'못 읽었습니다'; return; }
+  var rows=res.data||[],i,c,k;
+  RJN_ROWS=rows;
+  for(i=0;i<rows.length;i++){
+    c=rows[i].content||{};
+    if(uid&&rows[i].advisor_id===uid&&!RJN.mine)
+      RJN.mine={rid:rows[i].id,sent:c.sent||{},stop:c.stop||{}};
+    for(k in (c.sent||{}))if(c.sent.hasOwnProperty(k)&&(!RJN.sent[k]||c.sent[k]>RJN.sent[k]))RJN.sent[k]=c.sent[k];
+    for(k in (c.stop||{}))if(c.stop.hasOwnProperty(k)&&!RJN.stop[k])RJN.stop[k]=c.stop[k];
+  }
+}
+function rjnOf(id){ return {sent:(id&&RJN.sent[id])||'',stop:(id&&RJN.stop[id])||''}; }
+function rjnSave(fix,said){
+  var sb=(typeof osClient==='function')?osClient():null,uid=(typeof cmUid==='function')?cmUid():null;
+  if(!sb||!uid){toast('로그인 후 적을 수 있습니다');return;}
+  if(!RJN.loaded){toast('보낸 기록을 아직 못 읽었습니다 — 잠시 뒤 다시 눌러 주세요');return;}
+  if(RJN.busy)return;
+  var m=RJN.mine||{rid:null,sent:{},stop:{}};
+  var nx={rid:m.rid,sent:JSON.parse(JSON.stringify(m.sent||{})),stop:JSON.parse(JSON.stringify(m.stop||{}))};
+  fix(nx);
+  var body={sent:nx.sent,stop:nx.stop};
+  var done=function(r){
+    RJN.busy=false;
+    if(r&&r.error){toast('적지 못했습니다 — '+((r.error.message||'')+'').slice(0,60),6000);rjnPaint();return;}
+    if(!nx.rid&&r&&r.data&&r.data[0])nx.rid=r.data[0].id;
+    RJN.mine=nx;
+    rjnTake({data:[{id:nx.rid,advisor_id:uid,content:body}].concat(rjnOthers(uid))},uid);
+    toast(said);
+    rjnPaint();
+    try{ if(typeof arPaint==='function')arPaint(); }catch(e){}
+    try{ if(typeof hmMsPaint==='function')hmMsPaint(); }catch(e2){}
+  };
+  RJN.busy=true;
+  if(nx.rid)sb.from('saved_reports').update({content:body}).eq('id',nx.rid).then(done,function(e){done({error:e||{message:'네트워크 오류'}});});
+  else sb.from('saved_reports').insert({advisor_id:uid,client_id:null,kind:RJN_KIND,title:'거절 고객 소식',content:body})
+        .select('id').then(done,function(e){done({error:e||{message:'네트워크 오류'}});});
+}
+/* 다른 분(팀원) 줄은 그대로 둡니다 — 다시 부르지 않고 손에 든 것으로 */
+var RJN_ROWS=[];
+function rjnOthers(uid){ var o=[],i; for(i=0;i<RJN_ROWS.length;i++)if(RJN_ROWS[i].advisor_id!==uid)o.push(RJN_ROWS[i]); return o; }
+function rjnSent(id){
+  if(!id)return;
+  rjnSave(function(m){ m.sent[id]=rjnToday(); },'보냈다고 적었습니다 — 거절 '+tdoWait('거절')+'일이 지나면 다시 섭니다');
+}
+function rjnStop(id){
+  if(!id)return;
+  if(!confirm('이 분께는 더 보내지 않습니다.\n「오늘 터치할 사람」 과 이 목록에서 다시는 안 섭니다. 그렇게 할까요?'))return;
+  rjnSave(function(m){ m.stop[id]=rjnToday(); },'그만 받으신다고 적었습니다 — 다시 안 섭니다');
+}
+function rjnUnstop(id){
+  var m=RJN.mine;
+  if(!m||!m.stop||!m.stop[id]){toast('제가 적은 것이 아니라 여기서 못 되돌립니다 — 적은 분이 되돌려야 합니다');return;}
+  rjnSave(function(n){ delete n.stop[id]; },'되돌렸습니다');
+}
+/* ── 누구에게 — <b>arTouch 한 곳</b>이 정한 거절 줄 (5번) ── */
+function rjnPeople(){
+  var L=[],out=[],i;
+  try{ L=(typeof arTouch==='function')?(arTouch((typeof hwhoFor==='function')?hwhoFor():'')||[]):[]; }catch(e){ L=[]; }
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].k==='거절')out.push(L[i]);
+  return out;
+}
+/* 오늘 보낸 분 · 그만 받으신 분 — 단계가 거절인 줄에서 셉니다 */
+function rjnTally(){
+  var L=(typeof AR!=='undefined'&&AR.db)?AR.db:[],who=(typeof hwhoFor==='function')?hwhoFor():'',t=rjnToday(),i,o={sent:0,stop:[]};
+  for(i=0;i<L.length;i++){
+    if(!L[i]||L[i].stage!=='거절')continue;
+    if(who&&L[i].who!==who)continue;
+    if(RJN.sent[L[i].id]===t)o.sent++;
+    if(RJN.stop[L[i].id])o.stop.push(L[i]);
+  }
+  return o;
+}
+function rjnMsg(id){ return (typeof hmMsKt==='function')?hmMsKt({k:'거절',id:id||''}):''; }
+function rjnCopy(id){
+  var t=rjnMsg(id);
+  if(!t){toast('보낼 글을 못 만들었습니다');return;}
+  if(typeof copyText==='function')copyText(t); else toast('복사를 못 했습니다');
+}
+function rjnPull(){
+  if(typeof nlPull!=='function'){toast('뉴스 받는 자리를 못 찾았습니다');return;}
+  nlPull(function(){ rjnPaint(); });
+}
+/* ── 화면 ── */
+function rjnTopicsHtml(){
+  var cur=rjnTopic(),h='',i,T,has;
+  for(i=0;i<RJN_TOPICS.length;i++){
+    T=RJN_TOPICS[i]; has=rjnHas(T);
+    h+='<button type="button" class="rjn-tp'+(T.k===cur.k?' on':'')+(has?'':' none')+'" onclick="rjnPick(\''+T.k+'\')">'+
+       T.ic+' '+osEsc(T.t)+(has?'':' <i>기사 없음</i>')+'</button>';
+  }
+  return '<div class="rjn-tps">'+h+'</div>';
+}
+function rjnTodayHtml(){
+  var T=rjnTopic(),i=rjnIdx(T),body=rjnBody(),auto=!rjnPickGet();
+  var L=(typeof NLIVE!=='undefined'&&NLIVE.items)?NLIVE.items:[];
+  var h='<div class="rjn-h">📰 오늘 보낼 소식 — '+T.ic+' <b>'+osEsc(T.t)+'</b>'+
+        (auto?' <span class="rjn-auto">오늘의 차례</span>':' <span class="rjn-auto own">고르신 것 · 오늘만</span>')+'</div>'+
+        rjnTopicsHtml();
+  if(!body)
+    h+='<div class="rjn-miss">「'+osEsc(T.t)+'」 기사를 <b>아직 못 받았습니다</b> — 소식을 지어내지 않습니다. '+
+       '받아 오시거나 다른 갈래를 고르십시오. 🩺 보험 점검은 기사 없이 섭니다.'+
+       '<button type="button" class="rjn-b" onclick="rjnPull()">🌐 오늘 뉴스 받아 오기</button></div>';
+  else if(i>=0&&L[i])
+    h+='<div class="rjn-src">'+osEsc(L[i].s||'')+(L[i].d?(' · '+osEsc((''+L[i].d).slice(0,16))):'')+
+       ' — 기사 제목과 주소만 옮깁니다. 숫자와 시행일은 <b>원문에서 한 번 더</b> 보십시오.</div>';
+  h+='<div class="rjn-say">'+osEsc(rjnMsg(''))+'</div>'+
+     '<div class="rjn-bs"><button type="button" class="btn btn-primary" onclick="rjnCopy(\'\')">📋 이 글 복사</button></div>';
+  return h;
+}
+function rjnRowHtml(x){
+  var nm=(typeof osMaskName==='function')?osMaskName(x.nm):'',own=rjnOwn(x.id);
+  return '<div class="rjn-row">'+
+    '<div class="rjn-rh"><b>'+osEsc(nm||'고객')+'</b>'+(x.src?('<i>'+osEsc(x.src)+'</i>'):'')+
+      '<span class="rjn-d">'+osEsc(tdoDays(x))+'째 연락 없음</span></div>'+
+    '<div class="rjn-own">'+(own?'📌 이 분은 <b>적힌 것을 읽어</b> 그 분 갈래 기사가 들어갑니다'
+                              :'오늘의 소식이 들어갑니다 — 이 분을 읽어 고른 것이 아닙니다')+'</div>'+
+    '<div class="rjn-bs">'+
+      '<button type="button" class="rjn-b" onclick="rjnCopy(\''+osEsc(x.id)+'\')">📋 글 복사</button>'+
+      '<button type="button" class="rjn-b ok" onclick="rjnSent(\''+osEsc(x.id)+'\')">✅ 보냈습니다</button>'+
+      '<button type="button" class="rjn-b" onclick="arTkRec(\''+osEsc(x.id)+'\',1)">📇 기록</button>'+
+      '<button type="button" class="rjn-b no" onclick="rjnStop(\''+osEsc(x.id)+'\')">🔕 그만 받기</button>'+
+    '</div></div>';
+}
+function rjnInner(){
+  var w=tdoWait('거절'),h='';
+  h+='<div class="t-card"><div class="rjn-why">💡 거절하신 분께는 <b>팔지 않습니다.</b> 쓸모 있는 소식 한 통만 보내고 기다립니다. '+
+     '소식은 <b>매일 바뀝니다</b> — 보험 점검 · 경제 · 연금 · 보험 · 지원금 차례로 하루에 하나. '+
+     '보낸 분은 거절 기준(<b>'+w+'일</b> · 설정의 「오늘 터치할 사람」)이 지나면 다시 섭니다.</div>'+
+     '<div class="rjn-law">⚠ 광고성 문자는 <b>받을 뜻을 미리 밝힌 분께만</b> 보낼 수 있습니다 — 회사 준법 기준을 따르십시오. '+
+     '글 끝에 그만 받는 길이 붙어 있습니다. 「그만」 하시면 <b>🔕 그만 받기</b>를 눌러 주세요 — 기기를 바꿔도 다시 안 섭니다.</div></div>';
+  h+='<div class="t-card" style="margin-top:12px">'+rjnTodayHtml()+'</div>';
+  var P=null,busy=(typeof AR==='undefined')||!AR.loaded;
+  if(!busy)P=rjnPeople();
+  h+='<div class="t-card" style="margin-top:12px"><div class="rjn-h">🚫 오늘 소식 보낼 분'+(P?(' — <b>'+P.length+'분</b>'):'')+'</div>';
+  if(busy)h+='<div class="rjn-miss">배정 DB 를 불러오는 중입니다…</div>';
+  else if(AR.err)h+='<div class="rjn-miss">배정 DB 를 못 읽었습니다 — '+osEsc(AR.err)+'</div>';
+  else{
+    if(RJN.err)h+='<div class="rjn-miss">⚠ <b>보낸 기록을 못 읽었습니다</b>('+osEsc(RJN.err)+') — 오늘 보낸 분이 다시 설 수 있고, 「보냈습니다」 도 지금은 안 적힙니다.</div>';
+    var y=rjnTally();
+    h+='<div class="rjn-tally">오늘 보낸 분 <b>'+y.sent+'</b> · 그만 받으신 분 <b>'+y.stop.length+'</b></div>';
+    if(!P.length)h+='<div class="rjn-miss">오늘 소식 보낼 거절 고객이 없습니다 — 거절하신 지 <b>'+w+'일</b>이 지난 분이 여기 섭니다.</div>';
+    for(var i=0;i<P.length;i++)h+=rjnRowHtml(P[i]);
+    if(y.stop.length){
+      h+='<details class="rjn-stops"><summary>🔕 그만 받으신 분 '+y.stop.length+'</summary>';
+      for(var j=0;j<y.stop.length;j++)
+        h+='<div class="rjn-st">'+osEsc((typeof osMaskName==='function')?osMaskName(y.stop[j].name):'')+
+           ' <span>'+osEsc(RJN.stop[y.stop[j].id]||'')+'</span>'+
+           '<button type="button" class="rjn-b" onclick="rjnUnstop(\''+osEsc(y.stop[j].id)+'\')">↩ 되돌리기</button></div>';
+      h+='</details>';
+    }
+  }
+  return h+'</div>';
+}
+function rjnPaint(){ var el=document.getElementById('rjnBox'); if(el)el.innerHTML=rjnInner(); }
+function renderRjNews(){
+  if(!OS.profile)return osLoginGate('거절 고객 소식은 설계사 계정으로 로그인해야 열립니다.');
+  rjnCss();
+  try{ if(typeof AR!=='undefined'&&!AR.loaded&&AR.busy!=='load'&&typeof arLoad==='function')arLoad(); }catch(e){}
+  return osPage('팔지 않고, 소식만','📰 거절 고객 소식',
+    '거절하신 분께 매일 바뀌는 소식 한 통 — 보험 점검 · 경제 · 연금 · 보험 · 지원금. 받아 둔 뉴스에서만 고르고, 이름은 넣지 않습니다.',
+    '<div id="rjnBox">'+rjnInner()+'</div>');
+}
+function rjnCss(){
+  if(document.getElementById('rjnCss'))return;
+  var s=document.createElement('style');s.id='rjnCss';
+  /* 색은 <b>우리 색표 이름</b>만 씁니다 — 직접 적은 색은 check-hmexact 가 「목업에 없는 색」 으로 웁니다 */
+  s.textContent=
+   /* 칸 머리 — t-lab(11.5px)은 폰에서 바닥 13px 아래라 안 씁니다(check-phonefit) */
+   '.rjn-h{font-size:var(--t5);font-weight:800;color:var(--t-ink);margin-bottom:4px}'+
+   '.rjn-why,.rjn-law{font-size:var(--t6);color:var(--t-sub);line-height:1.65}'+
+   '.rjn-law{margin-top:8px;background:var(--t-warn-l);color:var(--t-warn-d);border-radius:var(--r-sm);padding:9px 12px}'+
+   '.rjn-auto{white-space:nowrap;display:inline-block;font-size:var(--t6);font-weight:800;background:var(--t-point-l);color:var(--t-point);border-radius:var(--r-pill);padding:2px 8px}'+
+   '.rjn-auto.own{background:var(--t-warn-l);color:var(--t-warn-d)}'+
+   '.rjn-tps{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}'+
+   '.rjn-tp{border:1.5px solid var(--t-line);background:#fff;border-radius:var(--r-pill);padding:6px 12px;font-family:inherit;'+
+     'font-size:var(--t6);font-weight:700;color:var(--t-ink);cursor:pointer}'+
+   '.rjn-tp.on{border-color:var(--t-point);background:var(--t-point);color:#fff}'+
+   '.rjn-tp.none{color:var(--t-sub2)}.rjn-tp i{font-style:normal;font-size:var(--t6)}'+
+   '.rjn-src{font-size:var(--t6);color:var(--t-sub);margin-bottom:6px}'+
+   '.rjn-say{white-space:pre-wrap;word-break:break-all;background:var(--t-bg);border-radius:var(--r-sm);padding:12px 14px;'+
+     'font-size:var(--t6);line-height:1.7;color:var(--t-ink)}'+
+   '.rjn-miss{font-size:var(--t6);color:var(--t-sub);line-height:1.6;margin:6px 0}'+
+   '.rjn-bs{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}'+
+   '.rjn-b{border:1.5px solid var(--t-line);background:#fff;border-radius:var(--r-sm);padding:7px 12px;font-family:inherit;'+
+     'font-size:var(--t6);font-weight:700;color:var(--t-ink);cursor:pointer}'+
+   '.rjn-b.ok{border-color:var(--t-point);color:var(--t-point)}.rjn-b.no{color:var(--t-neg-d)}'+
+   '.rjn-tally{font-size:var(--t6);color:var(--t-sub);margin:4px 0 10px}'+
+   '.rjn-row{border:1.5px solid var(--t-line);border-radius:var(--r);padding:12px 14px;margin-bottom:9px;background:#fff}'+
+   '.rjn-rh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.rjn-rh b{font-size:var(--t5)}'+
+   '.rjn-rh i{font-style:normal;font-size:var(--t6);background:var(--t-bg);border-radius:var(--r-pill);padding:2px 8px;color:var(--t-sub)}'+
+   '.rjn-d{margin-left:auto;font-size:var(--t6);color:var(--t-sub)}'+
+   '.rjn-own{font-size:var(--t6);color:var(--t-sub);margin-top:4px}'+
+   '.rjn-stops{margin-top:10px;font-size:var(--t6)}.rjn-stops summary{cursor:pointer;font-weight:700;color:var(--t-sub)}'+
+   '.rjn-st{display:flex;align-items:center;gap:8px;margin-top:6px}.rjn-st span{color:var(--t-sub2);font-size:var(--t6)}';
+  document.head.appendChild(s);
+}
 /* ── <b>카톡 글</b> — 안부 + 소식 + 「전화 드려도 될까요」 ────────────
    첫 줄과 끝 줄은 apex-stage 가, 가운데 소식은 nlMsg 가 만듭니다.
    <b>받아 둔 소식이 없으면 소식 자리를 비웁니다</b> — 빈말을 지어 넣지
@@ -28593,15 +28929,22 @@ function hmMsKtIdx(x){
 function hmMsKt(x){
   if(typeof APEX_STAGE==='undefined'||!APEX_STAGE.ktOpen)return '';
   var head=APEX_STAGE.ktOpen(x?x.k:''),body='';
-  var i=hmMsKtIdx(x);
-  if(i>=0&&typeof nlMsg==='function'){
-    /* nlMsg 의 <b>첫 인사 줄만</b> 덜어 냅니다 — 인사는 위에서 이미 했습니다.
-       기사 제목과 링크는 <b>그대로</b> 둡니다 (9번). */
-    var m=(''+nlMsg(i)).split('\n');
-    while(m.length&&(!m[0]||/^고객님,/.test(m[0])))m.shift();
-    body=m.join('\n').replace(/^\n+/,'');
-  }
-  return head+(body?('\n\n'+body):'')+'\n\n'+APEX_STAGE.ktEnd;
+  var i=hmMsKtIdx(x),rj=!!(x&&x.k==='거절');
+  if(i>=0)body=hmMsNlBody(i);
+  /* 거절하신 분을 <b>못 읽었으면</b> 오늘의 소식(rjnBody)으로 — 판 X129.
+     읽은 분은 여태처럼 그 분 갈래 기사가 갑니다. 그만 받는 길을 끝에 붙입니다. */
+  else if(rj&&typeof rjnBody==='function')body=rjnBody();
+  return head+(body?('\n\n'+body):'')+'\n\n'+APEX_STAGE.ktEnd+
+    ((rj&&typeof RJN_STOP!=='undefined')?('\n'+RJN_STOP):'');
+}
+/* 기사 한 건을 카톡 가운데 글로 — nlMsg 의 <b>첫 인사 줄만</b> 덜어 냅니다.
+   인사는 위에서 이미 했습니다. 기사 제목과 링크는 <b>그대로</b> 둡니다 (9번).
+   거절 고객 소식(rjnBody)도 이것을 부릅니다 — 덜어 내는 곳은 여기 하나 (5번). */
+function hmMsNlBody(i){
+  if(typeof nlMsg!=='function')return '';
+  var m=(''+nlMsg(i)).split('\n');
+  while(m.length&&(!m[0]||/^고객님,/.test(m[0])))m.shift();
+  return m.join('\n').replace(/^\n+/,'');
 }
 /* 카톡 글 안에 <b>기사가 들어갔나</b> — 묻는 곳은 한 곳이다 (5번) */
 /* ⑤ 의 <b>또 하나의 자리</b> — 사장님 말씀 「오늘 올릴 SNS 캐러셀 만들기
@@ -28621,7 +28964,20 @@ function hmMsBizHtml(){
     '거기서 고르셔도 됩니다.'+
     '<button type="button" onclick="go(\'biz_news\')">거기서 고르기 →</button></div>';
 }
-function hmMsKtHasNews(x){ return hmMsKtIdx(x)>=0; }
+function hmMsKtHasNews(x){
+  if(hmMsKtIdx(x)>=0)return true;
+  /* 거절하신 분은 오늘의 소식이 서면 <b>들어간 것</b>입니다 — 판 X129 */
+  return !!(x&&x.k==='거절'&&typeof rjnBody==='function'&&rjnBody());
+}
+/* 거절하신 분 카톡 — 오늘의 소식이면 <b>그렇다고</b> 밝힙니다 (1번) · 보냈습니다 */
+function hmMsRjnHtml(x){
+  if(!x||x.k!=='거절'||typeof rjnTopic!=='function')return '';
+  var own=rjnOwn(x.id),T=rjnTopic();
+  return '<div class="hm-ms-n">'+(own?'📌 적힌 것을 읽어 <b>이 분 갈래 기사</b>입니다.'
+      :('📰 오늘의 <b>「'+osEsc(T.t)+'」</b> — 이 분을 읽어 고른 것이 아닙니다.'))+
+    ' <button type="button" onclick="rjnSent(\''+osEsc(x.id)+'\')">✅ 보냈습니다</button>'+
+    ' <button type="button" onclick="go(\'rjnews\')">전체 →</button></div>';
+}
 function hmMsKtCopy(){
   var t=hmMsKt(hmMsWho());
   if(!t){ if(typeof toast==='function')toast('보낼 글을 못 만들었습니다'); return; }
@@ -29277,8 +29633,10 @@ var HM_MS_BODY={
      '<div class="hm-ms-b">'+
        '<button type="button" class="btn btn-primary" onclick="hmMsKtCopy()">📋 복사해서 카톡으로</button>'+
        hmMsNextHtml(P.length)+'</div>'+
-     '<div class="hm-ms-n">통화가 안 된 분께도 보냅니다 — <b>오늘 파는 글이 아니라</b> '+
-       '다음 전화를 받으시게 하는 글입니다.</div>';
+     /* 거절하신 분은 아래 한 줄을 <b>그 자리에</b> 바꿔 세웁니다 — 줄을 더하면
+        폰에서 칸이 한 화면을 넘습니다(check-msfive · 908px 로 울었습니다) */
+     (hmMsRjnHtml(x)||('<div class="hm-ms-n">통화가 안 된 분께도 보냅니다 — <b>오늘 파는 글이 아니라</b> '+
+       '다음 전화를 받으시게 하는 글입니다.</div>'));
  },
  /* ⑤ SNS 캐러셀 — <b>이미 있는 도구</b>가 만듭니다 (5번) */
  sns:function(){
@@ -29373,7 +29731,7 @@ function hmMsEvSub(){
   var v=hmMsEvStat(),p=[];
   if(v.kept)p.push('이번 달 '+v.full+'일 다 함');
   /* 📒 내가 한 일도 같이 — 한 접이가 두 가지를 품으므로 머리글도 둘을
-     말합니다. 못 읽었으면 한 자도 안 적습니다 (1번 · 판 X127). */
+     말합니다. 못 읽었으면 한 자도 안 적습니다 (1번 · 판 X130). */
   try{ var S=(typeof mlogSum==='function')?mlogSum():null;
        if(S&&S.n)p.push('기록 '+S.n+'번'); }catch(e){}
   return p.join(' · ');
@@ -29386,7 +29744,7 @@ function hmMsEvHtml(){
      '<button type="button" class="hm-ev-h" aria-expanded="'+(op?'true':'false')+'" onclick="hmMsEvToggle()">'+
      '<span class="ar">▾</span>📈 <b>이번 달 어떻게 하셨나</b>'+
      (function(){
-        /* 미션 완수와 <b>내가 한 일</b> 둘을 같이 적습니다 (판 X127).
+        /* 미션 완수와 <b>내가 한 일</b> 둘을 같이 적습니다 (판 X130).
            둘 다 모르면 그때만 「아직 기록이 없습니다」 입니다 (1번). */
         var S=null; try{ S=(typeof mlogSum==='function')?mlogSum():null; }catch(e){}
         var p=[];
@@ -29396,7 +29754,7 @@ function hmMsEvHtml(){
                        :'<span class="n none">아직 기록이 없습니다</span>';
       })()+'</button>';
   if(!op)return h+'</div>';
-  /* 📒 <b>내가 한 일</b>이 먼저입니다 (판 X127) — 사장님이 찾으시는 것이
+  /* 📒 <b>내가 한 일</b>이 먼저입니다 (판 X130) — 사장님이 찾으시는 것이
      「내가 한 달 동안 무엇을 했나」 이고, 미션 완수율은 그 다음입니다. */
   /* 차례를 정하는 자리는 <b>여기 한 줄</b>입니다 (5번) — 두 갈래가 각자
      붙이면 한쪽만 고쳐 놓고 「폈을 때마다 차례가 다르다」 가 됩니다.
@@ -29429,7 +29787,7 @@ function hmMsEvHtml(){
   h+='<div class="hm-ev-n">이 셈은 <b>실행 체크판에 담긴 그 기록</b>입니다 — 달력에서 보시는 것과 같습니다.</div>';
   return h+'</div></div>';
 }
-/* ══ 📒 <b>이번 달 내가 한 일</b> — 월 기준 기록 (판 X127 · mlog*) ═══════
+/* ══ 📒 <b>이번 달 내가 한 일</b> — 월 기준 기록 (판 X130 · mlog*) ═══════
    사장님 말씀 (2026-10-19) — 「이번주 / 오늘어디로 가시나 / 30일 약속
    [<b>내가 한달동안 진행했던 기록들 여기에 다 표기되게끔 / 월 기준으로</b>]」.
 
@@ -29546,7 +29904,7 @@ function mlogSum(ym){
   }
   /* ⚠ 이름을 <b>ks 로 두지 않습니다</b>. check-nofile 은 파일에서 맨 처음
      나오는 `var ks=[…]` 를 「시스템 점검의 SQL 칸 목록」 으로 집는데, 이
-     자가 그보다 앞에 있어 빈 목록을 집어 자가 울었습니다 (판 X127).
+     자가 그보다 앞에 있어 빈 목록을 집어 자가 울었습니다 (판 X130).
      자 쪽도 그 자리를 못 박았지만, 이름도 안 겹치게 둡니다 (5번). */
   var kin=[],k;
   for(k in by)if(by.hasOwnProperty(k))kin.push(k);
@@ -31988,7 +32346,7 @@ function hmPaint(){
   /* 🗂️ 맨 위 두 칸의 왼쪽 — 배정 DB 가 <b>늦게 실려 와도</b> 여기서 채워집니다.
      hmPaint 는 #hmToday 만 갈아 끼우므로 이 칸은 안 지워집니다 (5번).     */
   try{ hmSumPaint(); }catch(eSm2){}
-  /* 📒 이번 달 기록도 같이 — 접촉을 하나 남기면 그 수가 바로 바뀝니다 (판 X127) */
+  /* 📒 이번 달 기록도 같이 — 접촉을 하나 남기면 그 수가 바로 바뀝니다 (판 X130) */
   try{ mlogPaint(); }catch(eMl){}
   /* 📍 <b>곁칸 넷을 어디에 세울지</b> — 오늘 카드를 다시 그리면 그 안의 자리도
      새로 생기므로, 바로 뒤에서 정합니다 (hmSidePlace 한 곳 · 5번). */
@@ -33465,7 +33823,7 @@ function renderHome(){
            것은 그대로입니다. 위의 넷은 <b>안 건드립니다</b>(check-hmtwo [6]). */
         '<div id="hmKbHost">'+hmKbHtml()+'</div>'+
         '<div id="hmToday">'+hmTodayHtml()+'</div>'+
-        /* 📒 <b>이번 달 내가 한 일</b> 은 여기 따로 안 세웁니다 (판 X127) —
+        /* 📒 <b>이번 달 내가 한 일</b> 은 여기 따로 안 세웁니다 (판 X130) —
            홈에 이미 있는 「📈 이번 달 어떻게 하셨나」 접이 <b>안</b>에
            들어갔습니다. 같은 물음에 답하는 자리를 둘로 두지 않습니다 (5번)
            ⚠ 따로 세웠더니 홈이 4.2 → 4.25화면이 되어 자 넷이 울었습니다. */
@@ -65727,7 +66085,7 @@ function ccSms(id){
   try{ location.href='sms:'+t+(body?('?&body='+encodeURIComponent(body)):''); }catch(e){}
   ccMark(id,'문자');
 }
-/* ══ 💬 <b>보낼 글 한 통</b> — 판 X127 에서 다시 썼습니다 ══════════════
+/* ══ 💬 <b>보낼 글 한 통</b> — 판 X130 에서 다시 썼습니다 ══════════════
    사장님 말씀 (2026-10-19) — 「<b>보낼 글 복사 이것도 너무 형편없고</b>」.
 
    여태 이 글은 <b>누구에게 보내도 똑같았습니다</b> —
@@ -68543,36 +68901,148 @@ function cliMission(){
      ④ 이름은 넣지 않습니다 — 문구는 「고객님」으로 나갑니다 (3번).      */
 var MST_KEY='apex_mst_done';
 /* 마디 표 — <b>여기 한 곳</b>에만 적는다. 삼항 사슬로 늘어놓지 않는다 (5번).
-   cat 은 「고객에게 전할 뉴스」의 칸 이름과 <b>같은 글자</b>를 쓴다. */
-var MST_STEPS=[
- {m:1, ic:'📄', t:'증권 전달 · 첫 확인', cat:'ins',
+   cat 은 「고객에게 전할 뉴스」의 칸 이름과 <b>같은 글자</b>를 쓴다.
+
+   ── 📆 <b>4년(48개월)으로 늘렸습니다</b> (판 X123 · 2026-10-17) ──────────
+   사장님 말씀 — 「4년 분급제 관리 새로 만들고 매월 터치하고 몇개월에 한번은
+   전화로 무엇을 확인하고 전달할지까지 만들어줘」.
+     · 수수료를 여러 해에 나눠 받는 구조에서는 <b>계약이 4년 버티는 것</b>이 곧
+       소득입니다. 여태 마디는 <b>12개월에서 끝났습니다.</b>
+     · 이제 <b>매달</b> 마디가 섭니다 — 1개월째와 <b>석 달마다</b>는 📞 전화하는
+       달(kind:'call')이고, 「확인할 것(check) · 전달할 것(tell)」 을 같이 적습니다.
+       나머지 달은 💬 문자 한 통(kind:'touch')입니다.
+     · ★ 있던 다섯 마디(1·3·6·9·12)의 <b>글은 한 자도 안 바꿨습니다</b> —
+       check · tell 만 덧붙였습니다.
+     · ★ 환수 기준(몇 회차에 얼마)은 회사·상품마다 다르고 바뀝니다 — 숫자를
+       적지 않습니다. 「4년 유지관리」 화면이 회사 규정을 보라고 말합니다 (2번).
+     · ★ 표는 <b>MST_STEPS 하나</b>입니다. 아래 셋(MST_FIXED · MST_QUARTER ·
+       MST_TOUCH)은 그 표를 짓는 재료이고, 화면은 MST_STEPS 만 읽습니다 (5번). */
+var MST_MONTHS=48, MST_CALL_EVERY=3;
+var MST_FIXED=[
+ {m:1, ic:'📄', t:'증권 전달 · 첫 확인', cat:'ins', kind:'call',
+  check:['증권을 받으셨는지 — 같이 한 번 열어 보셨는지','첫 회 보험료가 정상으로 빠졌는지',
+         '해피콜에서 들으신 설명과 제가 드린 설명이 어긋난 데가 없는지'],
+  tell:['보험금 청구할 일이 생기면 저에게 먼저 연락 주시면 된다는 것','보험사 앱과 청구하는 길을 한 번 알려 드리기'],
   why:'받으신 증권을 한 번 같이 열어 보는 자리입니다. 이때 안 하면 서랍에 그대로 들어갑니다.',
   say:'고객님, 안녕하세요. 지난달 준비해 드린 보험 증권은 잘 받아 보셨는지요.\n' +
       '내용 중에 다시 짚어 드릴 부분이 있으면 편하게 말씀해 주세요.\n' +
       '보험금 청구하실 일이 생기면 저에게 먼저 연락 주시면 제가 챙기겠습니다.'},
- {m:3, ic:'💬', t:'석 달 — 빠져나가는 날 확인', cat:'econ',
+ {m:3, ic:'💬', t:'석 달 — 빠져나가는 날 확인', cat:'econ', kind:'call',
+  check:['보험료 빠져나가는 날짜·계좌가 불편하지 않은지','그동안 보험료가 거르지 않고 빠졌는지',
+         '이사·직업·가족에 달라진 일이 있는지'],
+  tell:['날짜나 계좌는 말씀만 주시면 바꿔 드린다는 것'],
   why:'첫 자동이체가 두세 번 돌았을 때입니다. 날짜가 불편하면 지금 바꾸는 것이 쉽습니다.',
   say:'고객님, 안녕하세요. 보험료 빠져나가는 날짜는 불편하지 않으신지요.\n' +
       '날짜나 계좌를 바꾸고 싶으시면 말씀만 주시면 제가 처리해 드리겠습니다.\n' +
       '그동안 달라진 일(이사·직업·가족)이 있으면 그것도 같이 알려 주세요.'},
- {m:6, ic:'🩺', t:'반년 — 바뀐 것이 있는지', cat:'ins',
+ {m:6, ic:'🩺', t:'반년 — 바뀐 것이 있는지', cat:'ins', kind:'call',
+  check:['직업·가족·건강에 달라진 점이 있는지','그사이 병원 다녀오시거나 약 처방받으신 일이 있는지 → 있으면 청구를 대신 살피기'],
+  tell:['달라진 것에 맞춰 챙겨 드릴 것이 있는지 확인해 드린다는 것','보장 내용이나 보험료는 회사의 심사 결과에 따른다는 것'],
   why:'반년이면 가족·직업·건강이 바뀝니다. 바뀐 것을 늦게 알면 보장이 어긋납니다.',
   say:'고객님, 안녕하세요. 가입하신 지 반년이 되었습니다.\n' +
       '그사이 직업이나 가족, 건강에 달라진 점이 있으면 알려 주세요.\n' +
       '달라진 내용에 따라 챙겨 드릴 것이 있는지 제가 확인해 보겠습니다.\n' +
       '보장 내용이나 보험료는 회사의 심사 결과에 따릅니다.'},
- {m:9, ic:'🧾', t:'아홉 달 — 연말 채비', cat:'tax',
+ {m:9, ic:'🧾', t:'아홉 달 — 연말 채비', cat:'tax', kind:'call',
+  check:['연말정산에 보험료 납입증명서가 필요하신지'],
+  tell:['납입증명서를 미리 챙겨 보내 드린다는 것','공제가 되는지와 얼마인지는 요건과 그해 세법에 따라 다르니 세무 전문가나 국세청에 확인하시라는 것'],
   why:'연말정산 서류를 그때 찾으면 늦습니다. 미리 챙겨 드리면 그 자체가 접점입니다.',
   say:'고객님, 안녕하세요. 연말정산 준비하실 때가 다가옵니다.\n' +
       '보험료 납입증명서가 필요하시면 제가 미리 챙겨서 보내 드리겠습니다.\n' +
       '공제가 되는지와 얼마나 되는지는 요건과 그해 세법에 따라 달라지므로,\n' +
       '정확한 것은 세무 전문가나 국세청에 확인하시는 것이 좋습니다.'},
- {m:12,ic:'🎉', t:'한 해 — 보장 점검 · 소개', cat:'help',
+ {m:12,ic:'🎉', t:'한 해 — 보장 점검 · 소개', cat:'help', kind:'call',
+  check:['한 해 동안 달라진 것(건강·가족·일)','보험사에서 갱신 안내를 받으신 것이 있는지'],
+  tell:['함께해 주셔서 감사하다는 인사','달라진 것을 기준으로 보장을 같이 살펴보자는 제안','주변에 같이 봐 드릴 분이 계시면 편하게 소개해 주십사 하는 부탁'],
   why:'일 년이 채워진 자리입니다. 고맙다는 말이 가장 자연스럽게 나가고, 소개도 여기서 나옵니다.',
   say:'고객님, 안녕하세요. 함께한 지 벌써 일 년이 되었습니다. 늘 감사드립니다.\n' +
       '한 해 동안 달라진 것들을 기준으로 보장을 한 번 같이 살펴보면 좋겠습니다.\n' +
-      '편하신 때에 잠깐 시간 내주시면 정리해서 보여 드리겠습니다.'}
+      '편하신 때에 잠깐 시간 내주시면 정리해서 보여 드리겠습니다.'},
+ /* ── 여기부터 새로 적은 마디 — 2·3·4년이 되는 달의 전화 (판 X123) ── */
+ {m:24,ic:'🧭', t:'두 해 — 반환점', cat:'ins', kind:'call',
+  why:'4년의 반을 왔습니다. 여기서 흔들리면 남은 두 해를 못 갑니다. 「바꿀 것이 없다」 도 알려 드릴 소식입니다.',
+  check:['보험료가 거르지 않고 빠지고 있는지','보험사에서 갱신 안내를 받으신 것이 있는지',
+         '그사이 병원 다녀오신 일이 있는지 → 있으면 청구를 대신 살피기'],
+  tell:['두 해 동안의 보장을 한 장으로 다시 보여 드리기 — 「보장분석 전&후 만들기」','바꿀 것이 없으면 없다고 분명히 말씀드리기',
+        '주변에 같이 봐 드릴 분이 계시면 편하게 소개해 주십사 하는 부탁'],
+  say:'고객님, 안녕하세요. 가입하신 지 벌써 두 해가 되었습니다.\n' +
+      '그동안 보장이 잘 지켜지고 있는지 한 번 정리해서 보여 드리고 싶어 연락드렸습니다.\n' +
+      '바꾸실 것이 없으면 없다고 말씀드리겠습니다. 편하신 때 알려 주세요.'},
+ {m:36,ic:'🏠', t:'세 해 — 생활이 바뀌는 때', cat:'help', kind:'call',
+  why:'세 해면 이직·출산·이사·자녀 진학처럼 생활이 바뀝니다. 바뀐 생활에 안 맞는 보험이 해지됩니다.',
+  check:['직장·소득·가족·집에 바뀐 것이 있는지','최근 건강검진 결과에 걸리는 것이 있는지'],
+  tell:['바뀐 생활에 맞춰 「8통장 진단지도」로 한 번 더 같이 보자는 제안','배우자·자녀 보장도 봐 드릴 수 있다는 것',
+        '보장 내용이나 보험료는 회사의 심사 결과에 따른다는 것'],
+  say:'고객님, 안녕하세요. 함께한 지 세 해가 되었습니다.\n' +
+      '그사이 생활이 조금씩 바뀌셨을 텐데, 지금 보장이 그대로 맞는지 한 번 같이 보고 싶습니다.\n' +
+      '편하신 때 잠깐 시간 내주시면 정리해서 보여 드리겠습니다.'},
+ {m:48,ic:'🤝', t:'네 해 — 다음 4년을 약속하는 날', cat:'help', kind:'call',
+  why:'네 해를 채우는 달입니다. 끝이 아니라 오래 가는 고객으로 넘어가는 자리입니다. ★ 고객에게 수수료 이야기는 하지 않습니다.',
+  check:['보험료가 거르지 않고 빠지고 있는지','네 해 동안 바뀐 것(건강·가족·소득·집)'],
+  tell:['네 해 동안 믿고 맡겨 주셔서 감사하다는 인사','앞으로도 같은 담당이 계속 챙긴다는 약속',
+        '전체 보장을 다시 점검해 다음 계획을 같이 세우자는 제안','주변에 같이 봐 드릴 분이 계시면 편하게 소개해 주십사 하는 부탁'],
+  say:'고객님, 안녕하세요. 처음 뵙고 벌써 네 해가 되었습니다. 그동안 믿고 맡겨 주셔서 감사합니다.\n' +
+      '앞으로도 제가 계속 챙겨 드리겠습니다.\n' +
+      '네 해가 된 김에 전체 보장을 한 번 다시 보고 다음 계획을 같이 세워 드리고 싶습니다. 편하신 때 알려 주세요.'}
 ];
+/* 석 달마다 거는 전화 — 위에 따로 적은 달이 아닐 때 (15 · 18 · 21 · 27 …) */
+var MST_QUARTER={ic:'📞', t:'석 달 점검 전화', cat:'ins', kind:'call',
+  why:'석 달이면 출금 계좌가 바뀌고, 병원에 다녀오고, 연락처가 바뀝니다. 셋 다 그냥 두면 계약이 깨집니다.',
+  check:['보험료가 거르지 않고 빠지고 있는지 — 미납·연체가 없는지','그사이 병원 다녀오시거나 약 처방받으신 일이 있는지 → 있으면 청구를 대신 살피기',
+         '연락처·주소·직장·가족에 바뀐 것이 있는지','다른 보험(자동차·실손 등)의 만기나 갱신이 다가오는지'],
+  tell:['청구는 영수증·진료비 세부내역 사진만 보내 주시면 된다는 것','다음 연락은 석 달 뒤쯤 드린다는 것'],
+  say:'고객님, 안녕하세요. 석 달에 한 번 인사드리는 날이라 연락드렸습니다.\n' +
+      '보험료는 잘 빠지고 있는지, 그사이 병원 다녀오신 일은 없으셨는지 여쭙고 싶습니다.\n' +
+      '다녀오신 일이 있으면 청구되는 것이 있는지 제가 대신 살펴보겠습니다.'};
+/* 전화 없는 달 — 짧은 문자 한 통. 주제는 <b>차례로 돌립니다</b> — 같은 말을
+   석 달 내리 보내면 읽지 않습니다. 기사는 mstNews 가 cat 으로 붙입니다(9번). */
+var MST_TOUCH=[
+ {ic:'🧾', t:'청구는 사진 한 장으로', cat:'ins',
+  why:'받을 돈을 놓친 고객은 보험이 쓸모없다고 느낍니다. 청구를 도와 드린 고객이 오래 갑니다.',
+  say:'고객님, 안녕하세요. 혹시 그사이 병원 다녀오신 일 있으시면 영수증이나 진료비 세부내역 사진만 보내 주세요.\n' +
+      '청구되는 것이 있는지 제가 대신 살펴보겠습니다.'},
+ {ic:'💳', t:'보험료 잘 빠지는지', cat:'econ',
+  why:'통장·카드를 바꾸고 자동이체를 안 옮기면 미납이 쌓여 계약이 끊깁니다.',
+  say:'고객님, 안녕하세요. 이번 달도 보험료가 정상으로 빠졌는지 한 번만 봐 주세요.\n' +
+      '통장이나 카드를 바꾸셨으면 말씀만 주시면 제가 같이 바꿔 드리겠습니다.'},
+ {ic:'📰', t:'전할 소식 하나', cat:'econ',
+  why:'용건 없는 연락이 관계를 잇습니다. 붙일 기사는 「고객에게 전할 뉴스」에서 실제로 받아 둔 것만 붙습니다.',
+  say:'고객님, 안녕하세요. 요즘 알아 두시면 좋을 소식이 있어 인사 겸 보내 드립니다.\n' +
+      '궁금하신 점 있으시면 편하게 물어봐 주세요.'},
+ {ic:'🩺', t:'건강검진 받으셨는지', cat:'ins',
+  why:'검진 결과는 보장을 다시 볼 가장 자연스러운 계기입니다.',
+  say:'고객님, 안녕하세요. 올해 건강검진은 받으셨는지요.\n' +
+      '결과지에 마음 쓰이는 것이 있으면 사진으로 보내 주세요. 지금 보장으로 대비가 되는지 같이 살펴보겠습니다.'},
+ {ic:'👨‍👩‍👧', t:'가족 안부', cat:'help',
+  why:'가족 보장 이야기는 안부에서 시작됩니다. 권하지 말고 「봐 드릴 수 있다」 까지만.',
+  say:'고객님, 안녕하세요. 가족분들도 다 평안하시지요.\n' +
+      '배우자분이나 자녀분 보장이 궁금하시면 언제든 편하게 물어봐 주세요. 보기만 해 드려도 됩니다.'},
+ {ic:'📮', t:'연락처·주소 확인', cat:'help',
+  why:'안내문이 엉뚱한 곳으로 가면 갱신·미납 안내를 놓치십니다.',
+  say:'고객님, 안녕하세요. 혹시 이사하셨거나 연락처가 바뀌신 것은 없으시지요.\n' +
+      '보험사 안내문이 다른 곳으로 가면 중요한 안내를 놓치실 수 있어 여쭙습니다.'},
+ {ic:'🔎', t:'숨은 보험금 한 번', cat:'ins',
+  why:'예전 보험의 안 찾아간 돈을 찾아 드리면, 지금 보험을 지킬 까닭이 하나 더 생깁니다.',
+  say:'고객님, 안녕하세요. 예전에 드신 보험 중에 안 찾아가신 돈이 있는지 한 번 확인해 보시겠어요.\n' +
+      '내보험찾아줌에서 조회되는데, 어려우시면 제가 같이 봐 드리겠습니다.'},
+ {ic:'🍂', t:'계절 안부', cat:'help',
+  why:'아무 용건 없는 한 줄이 「이 사람은 계속 챙긴다」 를 남깁니다.',
+  say:'고객님, 안녕하세요. 날씨가 바뀌는 때라 건강 잘 챙기시라고 연락드렸습니다.\n' +
+      '필요하신 것 있으시면 언제든 편하게 연락 주세요.'}
+];
+/* 48개월 표를 <b>한 번</b> 짓습니다 — 화면은 이 표만 읽습니다 */
+var MST_STEPS=(function(){
+  var fx={},out=[],m,i,n=0,src,o,k;
+  for(i=0;i<MST_FIXED.length;i++)fx[MST_FIXED[i].m]=MST_FIXED[i];
+  for(m=1;m<=MST_MONTHS;m++){
+    if(fx[m]){out.push(fx[m]);continue;}
+    src=(m%MST_CALL_EVERY===0)?MST_QUARTER:MST_TOUCH[(n++)%MST_TOUCH.length];
+    o={m:m,kind:src.kind||'touch',check:src.check||[],tell:src.tell||[]};
+    for(k in src)if(Object.prototype.hasOwnProperty.call(src,k)&&!(k in o))o[k]=src[k];
+    out.push(o);
+  }
+  return out;
+})();
 /* 같은 자리였습니다 — UTC 로 답하던 둘 중 하나 (위 cmToday 쪽지 참조).
    계약 마디(1개월·3·6·9·12)를 세는 자라, 하루가 밀리면 <b>마디가 하루
    늦게</b> 섭니다. ccToday() 하나를 부릅니다 (5번).                  */
@@ -68658,12 +69128,26 @@ function mstOf(c){
     out.push({step:MST_STEPS[i],at:at,d:d,done:mstIsDone(c.id,MST_STEPS[i].m)});
   }
   var due=null,next=null;
-  for(i=0;i<out.length;i++){
+  /* 📆 <b>뒤 달을 챙겼으면 앞 달은 지나간 것</b> (판 X123) — 마디가 달마다 서면서,
+     3개월째를 챙기자 그 앞 2개월째가 <b>다시 올라왔습니다</b>. 같은 분께 하루에
+     두 번 연락하게 됩니다. 챙긴 것 가운데 <b>가장 뒤</b>의 마디 앞은 보지 않습니다. */
+  var from=0;
+  for(i=0;i<out.length;i++)if(out[i].done)from=i+1;
+  for(i=from;i<out.length;i++){
     if(out[i].done)continue;
     if(out[i].d<=0){ if(!due||out[i].d>due.d)due=out[i]; }   /* 지난 것 중 가장 최근 */
     else if(!next||out[i].d<next.d)next=out[i];              /* 아직 안 온 것 중 가장 가까운 */
   }
-  return {cd:cd,all:out,due:due,next:next};
+  /* 📆 <b>지난 전화를 안 챙겼나</b> (판 X123) — 마디가 달마다 서면서, 지금 마디
+     하나만 세우면 그 앞의 <b>전화하는 달</b>을 놓친 것이 조용히 묻힙니다.
+     줄을 더 세우지 않고 <b>그 줄 안에 한 줄로</b>만 알립니다 — 켜는 날 밀린
+     마디가 고객마다 수십 장 쏟아지면 아무도 안 봅니다. */
+  var miss=null;
+  for(i=from;i<out.length;i++){
+    if(out[i].done||out[i]===due||out[i].d>0||out[i].step.kind!=='call')continue;
+    if(!miss||out[i].d>miss.d)miss=out[i];
+  }
+  return {cd:cd,all:out,due:due,next:next,miss:miss};
 }
 
 /* ── 이 마디에 붙일 <b>실제</b> 기사 ──
@@ -68769,7 +69253,7 @@ function mstDueList(){
       sent.push({c:c,hit:a,sAt:sAt,gap:gap,ans:an});
       if(!an)ansNo++;
     }
-    if(r.due)due.push({c:c,hit:r.due});
+    if(r.due)due.push({c:c,hit:r.due,miss:r.miss});
     else if(r.next&&r.next.d<=14)soon.push({c:c,hit:r.next});
   }
   due.sort(function(a,b){return a.hit.d-b.hit.d;});
@@ -68785,7 +69269,18 @@ function mstDueList(){
   return {due:due,soon:soon,mon:mon,monLeft:monLeft,
           sent:sent,ansNo:ansNo,none:none,total:all.length};
 }
-function mstRowHtml(x,over){
+/* 전화하는 달의 「확인할 것 · 전달할 것」 — 없으면 아무것도 안 세웁니다 */
+function mstListHtml(h,L){
+  if(!L||!L.length)return '';
+  return '<div class="mst-why" style="margin-top:8px"><b>'+osEsc(h)+'</b></div>'+
+    '<ul style="margin:2px 0 0;padding-left:18px;font-size:var(--t6);color:var(--t-ink);line-height:1.7">'+
+    L.map(function(t){return '<li>'+osEsc(t)+'</li>';}).join('')+'</ul>';
+}
+/* full — <b>4년 유지관리</b> 화면에서만 켭니다. 확인할 것·전달할 것·지난 전화를
+   다 폅니다. 고객 365일 맨 위 판은 <b>그대로 짧게</b> 둡니다 — 폰에서 3화면을
+   넘기면 안 보인다고 하신 화면입니다(check-phonefit). 판은 하나이고 펴는
+   정도만 다릅니다 (5번). */
+function mstRowHtml(x,over,full){
   var c=x.c,st=x.hit.step,nm=(typeof cmName==='function'?cmName(c):'')||c.name_masked||'고객';
   return '<div class="mst-row">'+
     '<div class="mst-rh">'+
@@ -68793,13 +69288,15 @@ function mstRowHtml(x,over){
       '<button type="button" class="mst-nm" onclick="osOpenClient(\''+c.id+'\')">'+osEsc(nm)+'</button>'+
       '<span class="mst-tag">'+st.m+'개월</span>'+
       '<span class="mst-when'+(over?' over':'')+'">'+osEsc(x.hit.at)+' · '+
-        (over?((-x.hit.d)+'일 지났습니다'):('D-'+x.hit.d))+'</span>'+
+        (over?(x.hit.d===0?'오늘입니다':((-x.hit.d)+'일 지났습니다')):('D-'+x.hit.d))+'</span>'+
     '</div>'+
-    '<div class="mst-t">'+osEsc(st.t)+'</div>'+
+    '<div class="mst-t">'+(st.kind==='call'?'📞 전화하는 달 · ':'💬 문자 한 통 · ')+osEsc(st.t)+'</div>'+
     '<div class="mst-why">'+osEsc(st.why)+'</div>'+
+    (full?(mstListHtml('☑ 확인할 것',st.check)+mstListHtml('📣 전달할 것',st.tell)):'')+
+    (full&&x.miss?('<div class="mst-no">⚠ 지난 전화('+x.miss.step.m+'개월 · '+osEsc(x.miss.at)+')를 아직 안 챙기셨습니다 — 이번에 같이 여쭤 보십시오.</div>'):'')+
     '<div class="mst-btns">'+
       '<button type="button" class="mst-b p" onclick="mstCopy(\''+c.id+'\','+st.m+')">📋 보낼 말 복사</button>'+
-      '<button type="button" class="mst-b" onclick="mstToggle(\''+c.id+'\','+st.m+')">✅ 보냈습니다</button>'+
+      '<button type="button" class="mst-b" onclick="mstToggle(\''+c.id+'\','+st.m+')">'+(st.kind==='call'?'✅ 통화 · 보냈습니다':'✅ 보냈습니다')+'</button>'+
     '</div>'+
     mstNewsHtml(st.cat)+
     '</div>';
@@ -68870,32 +69367,33 @@ function mstAnsPaint(id){
   if(typeof cmDetailPaint==='function'&&typeof OSC!=='undefined'&&OSC.view==='detail')
     try{cmDetailPaint(id);}catch(e){}
 }
-function mstCardHtml(){
+function mstCardHtml(full){
   mstCss();
   var L=mstDueList(),i,h='';
   /* id — 홈의 「보낼 말 보기」 가 <b>이 자리로</b> 모십니다(hmMadiGo).
      그릴 때마다 #cli365Top 을 통째로 바꾸므로 둘이 같이 서지 않습니다. */
   var head='<div class="card" id="mstCard"><div class="card-hd"><div class="card-title">'+
     '<span class="ci">📆</span>계약 마디 접점'+
-    '<span class="ar-n">'+MST_STEPS.map(function(s){return s.m;}).join(' · ')+'개월</span></div>'+
-    '<div class="card-desc">계약하고 <b>한 달</b> 뒤, 그 뒤로는 <b>석 달마다</b> 한 번씩 '+
-    '먼저 연락하는 자리입니다. 보낼 말은 그대로 복사되고, 기사는 '+
-    '<b>「고객에게 전할 뉴스」에서 실제로 받아 둔 것</b>만 붙습니다.</div></div><div class="card-body">';
+    '<span class="ar-n">4년 · '+MST_MONTHS+'개월</span></div>'+
+    /* ⚠ 설명글은 <b>예전 길이</b>로 둡니다 — 한 번 늘려 적었더니 폰에서 고객 365일이
+       3 → 3.1화면이 되어 check-phonefit 이 울렸습니다. 자세한 것은 4년 유지관리 화면에. */
+    '<div class="card-desc"><b>4년 동안 매달</b> 먼저 연락하는 자리입니다 — 1개월째와 <b>석 달마다</b>는 📞 전화, '+
+    '나머지 달은 💬 문자. 기사는 <b>「고객에게 전할 뉴스」에서 받아 둔 것</b>만 붙습니다.</div></div><div class="card-body">';
   /* 계약일이 없으면 이 판은 아직 설 수 없다 — 그렇다고 조용히 숨지 않는다 */
   if(!L.total)return '';
   if(L.none===L.total)
     return head+'<div class="ar-none"><b>계약일을 아직 아무에게도 안 넣으셨습니다.</b><br>'+
       '고객 이름을 누르고 <b>계약일</b> 칸에 날짜를 넣으시면, 그날부터 '+
-      MST_STEPS.map(function(s){return s.m+'개월';}).join(' · ')+' 마디가 여기 섭니다.<br>'+
+      '1개월에서 '+MST_MONTHS+'개월까지 달마다 마디가 여기 섭니다.<br>'+
       '<span class="mst-no">날짜를 짐작해서 채우지 않습니다 — 틀린 날짜로 연락하면 고객이 먼저 압니다.</span>'+
       '</div></div></div>';
   if(!L.due.length&&!L.soon.length)
     h='<div class="notice" style="background:var(--t-pos-l);border-color:#BBF7D0;color:var(--t-pos-d)">'+
       '✅ <b>지금 돌아온 마디가 없습니다.</b> 다음 마디가 오면 여기 뜹니다.</div>';
-  for(i=0;i<L.due.length&&i<8;i++)h+=mstRowHtml(L.due[i],true);
+  for(i=0;i<L.due.length&&i<8;i++)h+=mstRowHtml(L.due[i],true,full);
   if(L.soon.length){
     h+='<div class="mst-sep">곧 돌아옵니다 — 2주 안</div>';
-    for(i=0;i<L.soon.length&&i<5;i++)h+=mstRowHtml(L.soon[i],false);
+    for(i=0;i<L.soon.length&&i<5;i++)h+=mstRowHtml(L.soon[i],false,full);
   }
   /* 💬 <b>보냈습니다 — 답을 적어 주십시오</b>
      ⚠ <b>바구니가 없으면 이 토막을 안 세웁니다</b> — 흉내 낸 답이나 옛 판이
@@ -68917,6 +69415,50 @@ function mstCardHtml(){
        '그분들은 이 판에 안 섭니다. 이름을 눌러 <b>계약일</b> 칸을 채워 주시면 같이 섭니다. '+
        '날짜를 짐작해서 채우지 않습니다.</div>';
   return head+h+'</div></div>';
+}
+/* ══ 📆 <b>4년 유지관리</b> (kp4*) — 판 X123 · 2026-10-17 ══════════════════
+   사장님 말씀 「4년 분급제 관리 새로 만들고 매월 터치하고 몇개월에 한번은
+   전화로 무엇을 확인하고 전달할지까지 만들어줘」.
+   ★ <b>새 판을 만들지 않았습니다.</b> 고객 365일 맨 위의 「📆 계약 마디 접점」
+     (mstCardHtml)을 <b>그대로</b> 세우는 창입니다. 마디 표는 MST_STEPS 하나,
+     세는 자는 mstDueList 하나, 「보냈습니다」 는 mstMark 하나입니다 (5번).
+     따로 세었다면 「이번 달 몇 분」 에 두 화면이 다른 답을 했을 것입니다.
+   ★ 여기 더한 것은 <b>설계사에게 하는 말</b>(왜 4년인가)과 48개월 차례표뿐입니다. */
+var KP4={plan:false};
+function kp4CardInner(){
+  if(typeof OSC==='undefined'||!OSC.loaded)return '<div class="notice">고객 목록을 읽는 중입니다…</div>';
+  if(OSC.err)return '<div class="notice">고객 목록을 못 받아 왔습니다 — <b>몇 분인지 적지 않습니다.</b> '+osEsc(OSC.err)+'</div>';
+  if(typeof CM==='undefined'||!CM.loaded)return '<div class="notice">고객 기록(계약일)을 읽는 중입니다…</div>';
+  var h=mstCardHtml(true);
+  return h||'<div class="notice">아직 넣은 고객이 없습니다 — 고객 365일에서 고객을 넣고 <b>계약일</b>을 적으시면 여기 섭니다.</div>';
+}
+function kp4Paint(){ var k=document.getElementById('kp4Card'); if(k)k.innerHTML=kp4CardInner(); }
+function kp4PlanToggle(){ KP4.plan=!KP4.plan; var p=document.getElementById('kp4Plan'); if(p)p.innerHTML=kp4PlanHtml(); }
+/* 48개월 차례표 — 고객 이름 없이 차례만. 글은 MST_STEPS 그대로 */
+function kp4PlanHtml(){
+  var h='<button type="button" class="btn btn-ghost" style="width:100%;min-height:44px" onclick="kp4PlanToggle()">'+
+    (KP4.plan?'▴ 48개월 차례 접기':'▾ 48개월 차례 전체 보기 — 달마다 무엇을 하나')+'</button>';
+  if(!KP4.plan)return h;
+  return h+'<div style="margin-top:8px">'+MST_STEPS.map(function(st){
+    return '<div class="mst-row"><div class="mst-rh"><span class="mst-ic">'+st.ic+'</span>'+
+      '<span class="mst-tag">'+st.m+'개월</span></div>'+
+      '<div class="mst-t">'+(st.kind==='call'?'📞 전화하는 달 · ':'💬 문자 한 통 · ')+osEsc(st.t)+'</div>'+
+      mstListHtml('☑ 확인할 것',st.check)+mstListHtml('📣 전달할 것',st.tell)+'</div>';
+  }).join('')+'</div>';
+}
+function renderKeep4(){
+  if(!OS.profile)return osLoginGate('4년 유지관리는 설계사 계정으로 로그인해야 열립니다.');
+  mstCss();
+  /* 고객 365일부터 안 거치고 바로 오셨으면 여기서 부릅니다 — osLoadClients 가 두 번은 안 부릅니다 (7번) */
+  try{ if(!OSC.loaded&&!OSC.busy)osLoadClients(); }catch(eL){}
+  return osPage('계약 뒤 4년','📆 4년 유지관리',
+    '계약일부터 48개월 — 매달 한 번 연락하고, 1개월째와 석 달마다 전화로 확인할 것과 전달할 것을 챙깁니다. '+
+    '고객 365일의 「계약 마디 접점」 과 같은 판입니다.',
+    '<div class="t-card"><div class="mst-why">💡 <b>왜 4년인가</b> — 수수료를 여러 해에 나눠 받는 구조에서는 '+
+      '계약이 4년 버티는 것이 곧 소득입니다. 환수 기준(몇 회차에 얼마)은 <b>회사 수수료 규정</b>을 확인하십시오 — '+
+      '회사·상품마다 다르고 바뀌어서 여기에 숫자를 적지 않습니다. ★ 고객에게 수수료 이야기는 하지 않습니다.</div></div>'+
+    '<div id="kp4Card" style="margin-top:12px">'+kp4CardInner()+'</div>'+
+    '<div class="t-card" id="kp4Plan" style="margin-top:12px">'+kp4PlanHtml()+'</div>');
 }
 function mstCss(){
   if(document.getElementById('mstCss'))return;
@@ -69017,6 +69559,9 @@ function cliWhoPaint(){
     ? cmWhoChipsHtml((typeof OSC!=='undefined'&&OSC.list)?OSC.list:[]) : '';
 }
 function cli365TopPaint(){
+  /* 📆 4년 유지관리 화면도 <b>같은 판</b>(mstCardHtml)이라 여기서 같이 칠합니다 —
+     고객 목록·계약일이 늦게 와도, 「보냈습니다」 를 눌러도 이 한 곳을 지납니다 (5번) */
+  try{ kp4Paint(); }catch(eK){}
   cliWhoPaint();
   var e=document.getElementById('cli365Top');
   if(!e)return;

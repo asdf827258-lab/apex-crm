@@ -60,7 +60,7 @@ ok(/function sqlGo\(k\)/.test(app), 'sqlGo — 복사하고 Supabase 를 연다'
 ok(/function sqlNeedHtml\(k,what\)/.test(app), 'sqlNeedHtml — 화면 안에 알림 상자를 세운다');
 ok(/function sqlNeedText\(what\)/.test(app), 'sqlNeedText — toast 한 줄');
 ok(/onclick="sqlGo\(/.test(app) || /sqlGo\(\\'/.test(app), '단추가 실제로 sqlGo 를 부른다');
-/* ★ <b>그 자리를 못 박습니다</b> (판 X127). 여태 파일에서 맨 처음 나오는
+/* ★ <b>그 자리를 못 박습니다</b> (판 X130). 여태 파일에서 맨 처음 나오는
    `var ks=[…]` 를 집었는데, 다른 자리에 같은 이름의 지역 변수가 하나
    생기자 <b>빈 목록</b>을 집어 SQL 칸 19개가 통째로 「빠짐」 이 됐습니다 —
    앱은 멀쩡한데 자가 운 것입니다 (8번). 이제 <b>따옴표 친 칸 이름이
