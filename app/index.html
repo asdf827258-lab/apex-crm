@@ -15981,7 +15981,7 @@ function navMainHtml(){
      (사장님 말씀 「달력은 유지해」). 기둥은 자리가 넉넉해 둘 다 세웁니다. */
   h+=navMainRow('me','🙋','나',cur);
   h+='<div class="t-glab">넣기</div>'+
-     '<button type="button" class="t-nav" onclick="hdbNew()">'+
+     '<button type="button" class="t-nav" onclick="cregOpen()">'+
        '<span class="e">＋</span>고객 넣기</button>';
   return h;
 }
@@ -20654,8 +20654,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-19 18:30';
-var APP_BUILD_NOTE="🎯 <b>30일 고객관리가 디테일해졌습니다</b> — 여태 표는 「이번 달 연락 <b>12명</b>」 까지만 말했습니다. <b>몇 번</b> 걸었는지, <b>어떻게</b> 했는지, <b>지난달보다 나아졌는지</b> 는 한 자도 없었습니다 — 사람 수만 보면 <b>한 분께 열 번 건 날과 열 분께 한 번씩 건 날이 같아 보입니다.</b> 칸 넷을 보탰습니다 — <b>이번 달 몇 번</b>(☎️2 🤝2 💬1 처럼 갈래까지) · <b>지난달 대비</b>(지난달 <b>같은 날짜까지</b>와 견줍니다 — 달 초에 「줄었다」 고 적으면 거짓말입니다) · <b>👑 VIP 넘음을 따로</b>(주기가 14일로 다릅니다) · 그리고 <b>줄을 누르면 그분의 「오늘 터치할 사람」</b> 으로 갑니다(여태 「30일 넘음 7」 을 보고도 누구인지 알 길이 없었습니다). ★ <b>서버를 한 번도 더 안 부릅니다</b> — 접촉 기록은 이미 읽어 둔 것입니다. ★ 못 읽었으면 0 이 아니라 <b>「—」</b> 입니다. (판 X132)";
+var APP_BUILD='2026-10-19 20:10';
+var APP_BUILD_NOTE="➕ <b>고객 넣기가 어느 쪽인지 먼저 묻습니다</b> — 사장님이 「고객 365 / DB 구분을 잘 못하겠다」 하셔서 재어 보니 <b>앱 탓</b>이었습니다. 홈 「오늘 챙길 것」 머리의 <b>「➕ 고객 넣기」 단추가 묻지도 않고 배정 DB 등록 창</b>을 열고 있었습니다 — 이름은 「고객 넣기」 인데 여는 것은 배정 DB 라, 내 고객을 넣으려 해도 거기로 갑니다. 같은 단추가 <b>세 군데</b>(홈 · 아침 미션 · 서랍 메뉴)에 똑같이 달려 있었습니다. 이제 누르면 <b>묻습니다</b> — <b>👤 내 고객</b>(고객 365일 · 30일 주기 · 보장분석 · <b>배정 한도에 안 셉니다</b>) 와 <b>📇 배정 DB</b>(DB 통합 CRM · 미접촉→TA→AP→PC→CS · <b>배정 한도에 셉니다</b> 일반 20 · 변액 +30). 둘을 잇는 길도 적어 두었습니다. ★ <b>저장 코드는 한 줄도 새로 안 짰습니다</b> — 고르시면 이미 있는 두 창이 그대로 뜨고, 둘 다 <b>화면을 안 옮깁니다</b>(오늘에서 바로). ★ <b>표는 안 합칩니다</b> — 배정 한도를 세는 자가 배정 DB 만 봐야 합니다. ★ 홈 높이는 <b>0px</b> — 새 단추를 안 세우고 있던 단추가 가는 곳만 바꿨습니다. (판 X133)";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -27109,6 +27109,103 @@ function hdbWhoList(){
 }
 /* 새로 넣기 — id 가 없으면 새 줄 */
 function hdbNew(){ hdbOpen('',''); }
+/* ══ ➕ <b>고객 넣기</b> — 어느 쪽인지 먼저 묻습니다 (판 X133 · creg*) ══
+   사장님 말씀 (2026-10-19) — 「등록은 <b>오늘에서 바로</b> 할 수 있도록
+   만들자. 그리고 <b>고객 365 / DB 이걸 구분을 잘 못하는 거 같아서</b>」.
+
+   ── 재어 보니 앱 탓이었습니다 ──────────────────────────────────────
+   홈 「오늘 챙길 것」 머리에 <b>이미 「➕ 고객 넣기」 단추가 있었습니다.</b>
+   그런데 그 단추가 하는 일은 <b>hdbNew()</b> — 묻지도 않고 <b>배정 DB 등록</b>
+   창을 엽니다. 단추 이름은 「고객 넣기」 인데 여는 것은 배정 DB 입니다.
+   내 고객(고객 365일)을 넣으려 해도 거기로 갑니다. 같은 단추가 <b>세
+   군데</b>(홈 · 아침 미션 빈 칸 · 서랍 메뉴)에 똑같이 달려 있었습니다.
+   <b>구분이 안 되는 것이 당연합니다 — 앱이 구분해 주지 않았습니다.</b>
+
+   ★★ <b>저장 코드를 한 줄도 새로 안 짭니다</b> (사장님 규칙 · 5번).
+     고르시면 <b>이미 있는 두 창</b>이 그대로 뜹니다 —
+       👤 내 고객  osNewClient()  → osCreateClient() 가 clients 에 넣습니다
+       📇 배정 DB  hdbNew()       → hdbSave() 가 dbs 에 넣습니다
+     둘 다 제 덮개를 <b>스스로 만들어</b> body 에 붙이므로 어느 화면에서든
+     열립니다 — 화면을 옮기지 않습니다. 「오늘에서 바로」 가 그 뜻입니다.
+   ★★ <b>표를 안 합칩니다.</b> 배정 한도(일반 20 · 변액 +30)를 세는 자가
+     배정 DB 만 봐야 합니다 — 섞었다가 한도가 깨진 사고가 있었습니다
+     (2026-10-09). 「하나로」 는 <b>넣는 자리가 하나</b>라는 뜻입니다.
+   ★ 높이는 <b>0px</b> 입니다 — 새 단추를 안 세우고 <b>있던 단추가 가는 곳</b>만
+     바꿉니다. 홈은 지금 4.18화면이라 늘릴 자리가 없습니다 (8번).
+   check-creg 가 이 전부를 지킵니다.                                    */
+var CREG_K=[
+  {k:'cli',e:'👤',t:'내 고객',sub:'고객 365일',
+   what:'이미 제 고객인 분입니다.',
+   has:'30일 주기로 챙기고, 보장분석·전후·생일·다음 할 일이 붙습니다.',
+   cap:'배정 한도에 <b>안 셉니다</b>.',fn:'cregGoCli'},
+  {k:'db', e:'📇',t:'배정 DB',sub:'DB 통합 CRM',
+   what:'회사가 나눠 준 <b>가망고객</b>입니다.',
+   has:'미접촉 → TA → AP → PC → CS 로 올라갑니다.',
+   cap:'배정 한도에 <b>셉니다</b> (일반 20 · 변액 +30).',fn:'cregGoDb'}
+];
+function cregHost(){
+  var e=document.getElementById('cregSheet');
+  if(e)return e;
+  e=document.createElement('div');e.id='cregSheet';
+  e.addEventListener('click',function(ev){ if(ev.target===e)cregClose(); });
+  document.body.appendChild(e);
+  return e;
+}
+function cregClose(){ var e=document.getElementById('cregSheet'); if(e)e.classList.remove('on'); }
+function cregOpen(){
+  cregCss();
+  var h='<div class="creg-box">'+
+    '<button type="button" class="creg-x" onclick="cregClose()" aria-label="닫기">&times;</button>'+
+    '<div class="creg-t">➕ 고객 넣기 — <b>어느 쪽인가요?</b></div>'+
+    '<div class="creg-d">둘은 <b>다른 표</b>입니다. 넣는 자리만 여기 하나로 모았습니다.</div>',i,x;
+  for(i=0;i<CREG_K.length;i++){
+    x=CREG_K[i];
+    h+='<button type="button" class="creg-c" onclick="'+x.fn+'()">'+
+      '<span class="e">'+x.e+'</span>'+
+      '<span class="m"><b>'+osEsc(x.t)+'</b><em>'+osEsc(x.sub)+'</em>'+
+        '<span class="w">'+x.what+'</span>'+
+        '<span class="w">'+x.has+'</span>'+
+        '<span class="cap">'+x.cap+'</span></span>'+
+      '<span class="ar">›</span></button>';
+  }
+  h+='<div class="creg-n">배정 DB 에서 <b>계약까지 가신 분</b>은 내 고객으로도 올립니다 — '+
+     '그때 둘이 이어집니다. 「DB 통합 CRM」 에서 그 줄의 <b>「내 고객으로」</b> 를 누르시면 됩니다.</div>'+
+     '</div>';
+  var host=cregHost(); host.innerHTML=h; host.classList.add('on');
+}
+/* 고른 뒤 — <b>이미 있는 창</b>을 부르기만 합니다 (5번) */
+function cregGoCli(){ cregClose(); if(typeof osNewClient==='function')osNewClient();
+  else if(typeof toast==='function')toast('고객 등록 창을 아직 못 읽었습니다 — 새로고침해 주세요'); }
+function cregGoDb(){ cregClose(); if(typeof hdbNew==='function')hdbNew();
+  else if(typeof toast==='function')toast('배정 DB 등록 창을 아직 못 읽었습니다 — 새로고침해 주세요'); }
+function cregCss(){
+  if(document.getElementById('cregCss'))return;
+  var st=document.createElement('style');st.id='cregCss';
+  st.textContent=
+   '#cregSheet{position:fixed;inset:0;z-index:5300;background:rgba(15,23,42,.5);'+
+     'display:none;align-items:center;justify-content:center;padding:18px}'+
+   '#cregSheet.on{display:flex}'+
+   '.creg-box{position:relative;background:#fff;border-radius:var(--r);max-width:430px;width:100%;'+
+     'max-height:86vh;overflow-y:auto;padding:20px 18px 16px}'+
+   '.creg-x{position:absolute;top:8px;right:10px;min-width:40px;min-height:40px;border:0;'+
+     'background:none;font-size:22px;color:var(--t-sub2);cursor:pointer}'+
+   '.creg-t{font-size:var(--t4);font-weight:900;color:var(--t-ink)}'+
+   '.creg-d{margin-top:5px;font-size:var(--t6);color:var(--t-sub);line-height:1.6}'+
+   '.creg-c{display:flex;gap:11px;align-items:flex-start;width:100%;margin-top:12px;'+
+     'border:1.5px solid var(--t-line);border-radius:var(--r-sm);background:#fff;'+
+     'padding:13px 12px;font-family:inherit;text-align:left;cursor:pointer}'+
+   '.creg-c:hover{border-color:var(--t-point);background:var(--t-bg-3)}'+
+   '.creg-c .e{font-size:22px;line-height:1.2;flex:none}'+
+   '.creg-c .m{flex:1 1 auto;min-width:0}'+
+   '.creg-c .m b{display:inline;font-size:var(--t5);font-weight:900;color:var(--t-ink)}'+
+   '.creg-c .m em{font-style:normal;margin-left:6px;font-size:var(--t7);font-weight:700;color:var(--t-sub2)}'+
+   '.creg-c .w{display:block;margin-top:4px;font-size:var(--t6);line-height:1.6;color:var(--t-sub)}'+
+   '.creg-c .cap{display:block;margin-top:5px;font-size:var(--t7);font-weight:800;color:var(--t-ink-2)}'+
+   '.creg-c .ar{flex:none;align-self:center;color:var(--t-sub2);font-size:var(--t4)}'+
+   '.creg-n{margin-top:13px;padding-top:11px;border-top:1px solid var(--t-line);'+
+     'font-size:var(--t7);line-height:1.7;color:var(--t-sub)}';
+  document.head.appendChild(st);
+}
 function hdbOpen(id,wantStage){
   hdbCss();
   var r=id?hdbRow(id):null;
@@ -29878,7 +29975,7 @@ var HM_MS_BODY={
        : ('<div class="hm-ms-none"><b>오늘 연락할 분이 없습니다.</b> '+
        '사람을 <b>지어내지 않습니다</b> — 배정을 받으시거나 고객을 넣으시면 여기 섭니다.'+
        '<div class="hm-ms-b"><button type="button" class="btn btn-ghost" onclick="go(\'crm\')">📇 DB 통합 CRM 열기</button>'+
-       '<button type="button" class="btn btn-ghost" onclick="hdbNew()">➕ 고객 넣기</button></div></div>');
+       '<button type="button" class="btn btn-ghost" onclick="cregOpen()">➕ 고객 넣기</button></div></div>');
    var h='',i;
    /* 읽은 기록을 아직 안 받아 왔으면 여기서 받아 옵니다 — <b>한 번만</b> (7번) */
    hmBaLoad();
@@ -30768,7 +30865,7 @@ function hmTodayHtml(){
     hwhoBarHtml()+
     '<div class="hm-top"><span class="hm-d">'+osEsc(hmTodayLabel())+'</span>'+
       /* 홈을 <b>안 벗어나고</b> 고객을 넣는다 — 덮개로 뜬다 (사장님 말씀 ⑦) */
-      '<button type="button" class="hm-cal" onclick="hdbNew()">➕ 고객 넣기</button>'+
+      '<button type="button" class="hm-cal" onclick="cregOpen()">➕ 고객 넣기</button>'+
       '<button type="button" class="hm-cal" onclick="go(\'mycal\')">📅 내 캘린더</button></div>'+
     /* ⚠ <b>건수가 있을 때는 머리글을 안 세웁니다</b> (5번). 바로 위 토스판
        인사가 이미 「○○님, 오늘 <b>N개</b>예요」 라고 적고, 「지금 할 것」
