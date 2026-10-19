@@ -13,6 +13,8 @@
    여기서 확인합니다.
 
      1. 세 군데가 다 <b>고르는 창</b>으로 가는가 — hdbNew 로 직행하지 않는가
+        ★ 판 X134 부터 갈래가 <b>셋</b>입니다 — 👤 내 고객 · 📇 배정 DB ·
+          📁 엑셀·CSV(여러 명 한꺼번에)
      2. ★★ 창이 <b>둘의 다른 점</b>을 말하는가 — 사장님이 짚으신 그 자리입니다
         · 「배정 한도」 가 어느 쪽에 걸리는지 또렷이 적는가
      3. ★★ <b>저장 코드를 새로 안 짰는가</b> (5번 · 사장님 규칙) —
@@ -65,8 +67,8 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(blk !== '', 'creg 토막을 찾았다');
   is(!/\.insert\(|\.upsert\(|from\('clients'\)|from\('dbs'\)/.test(blk),
      'creg 안에 서버에 넣는 글이 <b>한 줄도 없다</b> (5번)');
-  is(/osNewClient/.test(blk) && /hdbNew/.test(blk),
-     '이미 있는 두 창을 <b>부르기만</b> 한다');
+  is(/osNewClient/.test(blk) && /hdbNew/.test(blk) && /cimpOpen/.test(blk),
+     '이미 있는 창 셋을 <b>부르기만</b> 한다 — osNewClient · hdbNew · cimpOpen');
 
   console.log('\n[8] 표를 합친다고 말하지 않는다');
   is(!/표를 합|하나의 표|한 표로 합/.test(blk),
@@ -106,7 +108,14 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   });
   console.log('\n[2] 창이 둘의 다른 점을 말한다');
   is(W.open, '창이 열린다');
-  is(W.n === 2, '고르는 칸이 둘이다 (받음 ' + W.n + ')');
+  /* ⚠ 판 X134 에서 <b>셋째 갈래</b>(📁 엑셀·CSV)가 붙었습니다. 수를 박아 두는
+     자리라, 늘 때마다 여기도 같이 고칩니다 — 느슨히 >=2 로 풀면 갈래가 조용히
+     사라져도 초록입니다 (8번).                                              */
+  is(W.n === 3, '고르는 칸이 셋이다 (받음 ' + W.n + ')');
+  is(/엑셀/.test(W.txt) && /여러 명 한꺼번에/.test(W.txt),
+     '📁 엑셀·CSV — 여러 명 한꺼번에 라고 적는다');
+  is(/내 고객<\/b>으로 들어갑니다|내 고객으로 들어갑니다/.test(W.txt) || /안 셉니다/.test(W.txt),
+     '엑셀에서 가져온 분이 <b>어느 쪽으로</b> 들어가는지 적는다');
   is(/내 고객/.test(W.txt) && /고객 365일/.test(W.txt), '👤 내 고객 · 고객 365일 이라고 적는다');
   is(/배정 DB/.test(W.txt) && /DB 통합 CRM/.test(W.txt), '📇 배정 DB · DB 통합 CRM 이라고 적는다');
   is(/안 셉니다/.test(W.txt) && /셉니다/.test(W.txt),

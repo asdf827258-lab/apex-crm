@@ -13300,19 +13300,16 @@ function olToMine(dbId){
   var sb=osClient();
   if(!sb||!OS.session||!OS.session.user){toast('로그인 후 이용하세요');return;}
   var name=r.name||'';
-  sb.from('clients').insert({advisor_id:OS.session.user.id,
-      name_masked:osMaskName(name),consent_status:'none'})
-    .select('id,name_masked').then(function(x){
-    if(x&&x.error){toast('내 고객으로 못 옮겼습니다 — '+(''+(x.error.message||'')).slice(0,60),6000);return;}
-    var c=(x.data&&x.data[0])||{};
-    if(!c.id){toast('만들었지만 번호를 못 받았습니다 — 새로고침해 주십시오',6000);return;}
-    try{ if(typeof cmRealSet==='function')cmRealSet(c.id,name); }catch(e){}
+  /* ★ 넣는 자리는 <b>cliMake 하나</b>입니다 (5번) */
+  cliMake(name,null,function(id,msk,why){
+    if(!id&&!msk){toast('내 고객으로 못 옮겼습니다 — '+(why||'저장하지 못했습니다'),6000);return;}
+    if(!id){toast('만들었지만 번호를 못 받았습니다 — 새로고침해 주십시오',6000);return;}
     /* 다리를 적는 것은 <b>여기 한 번</b>입니다 */
-    cmSave(c.id,{db:dbId},function(){
-      toast(osMaskName(name)+' 님을 내 고객으로 옮겼습니다 — 줄은 하나입니다');
+    cmSave(id,{db:dbId},function(){
+      toast((msk||osMaskName(name))+' 님을 내 고객으로 옮겼습니다 — 줄은 하나입니다');
       try{ osLoadClients(); }catch(e2){}
     });
-  },function(e){ toast('내 고객으로 못 옮겼습니다 — '+((e&&e.message)||'네트워크 오류'),6000); });
+  });
 }
 /* ── 🏷 <b>어디서 오셨나</b> — 꼬리표 하나로만 남습니다 ──────────────
    목각 FROM(hansaram.html 506행) 그대로입니다. <b>이 표 하나가</b> 답합니다 (5번) —
@@ -20654,8 +20651,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-19 20:10';
-var APP_BUILD_NOTE="➕ <b>고객 넣기가 어느 쪽인지 먼저 묻습니다</b> — 사장님이 「고객 365 / DB 구분을 잘 못하겠다」 하셔서 재어 보니 <b>앱 탓</b>이었습니다. 홈 「오늘 챙길 것」 머리의 <b>「➕ 고객 넣기」 단추가 묻지도 않고 배정 DB 등록 창</b>을 열고 있었습니다 — 이름은 「고객 넣기」 인데 여는 것은 배정 DB 라, 내 고객을 넣으려 해도 거기로 갑니다. 같은 단추가 <b>세 군데</b>(홈 · 아침 미션 · 서랍 메뉴)에 똑같이 달려 있었습니다. 이제 누르면 <b>묻습니다</b> — <b>👤 내 고객</b>(고객 365일 · 30일 주기 · 보장분석 · <b>배정 한도에 안 셉니다</b>) 와 <b>📇 배정 DB</b>(DB 통합 CRM · 미접촉→TA→AP→PC→CS · <b>배정 한도에 셉니다</b> 일반 20 · 변액 +30). 둘을 잇는 길도 적어 두었습니다. ★ <b>저장 코드는 한 줄도 새로 안 짰습니다</b> — 고르시면 이미 있는 두 창이 그대로 뜨고, 둘 다 <b>화면을 안 옮깁니다</b>(오늘에서 바로). ★ <b>표는 안 합칩니다</b> — 배정 한도를 세는 자가 배정 DB 만 봐야 합니다. ★ 홈 높이는 <b>0px</b> — 새 단추를 안 세우고 있던 단추가 가는 곳만 바꿨습니다. ★ <b>이미 있던 자도 같이 더 재게</b> 고쳤습니다 — 「사장님이 물으신 일곱 가지」(check-askall ⑦)가 「누르면 바로 DB 창이 뜬다」 로 박아 두고 있었습니다. 느슨히 풀지 않고 <b>묻지 않으면 빨간불</b>로 바꿨습니다 (8번). (판 X133)";
+var APP_BUILD='2026-10-19 22:40';
+var APP_BUILD_NOTE="📁 <b>엑셀·CSV 에서 고객을 가져와 분류합니다</b> — 사장님 말씀 「엑셀이나, 구글드라이브에 고객 정보를 가져오면 분류할 수 있는 프로그램을 만들었으면 좋겠어」. 재어 보니 본체에 <b>「csv」 라는 글자가 한 번도 없었습니다</b> — 엑셀을 읽는 자리가 아예 없었습니다. 이제 <b>➕ 고객 넣기 → 📁 엑셀·CSV 에서</b> 로 들어가 파일을 끌어다 놓으시면 됩니다. ★ <b>엑셀 .xlsx 를 그대로 읽습니다</b> — 시트 이름까지 보여 드리고 여러 시트면 고르실 수 있습니다. CSV·탭 파일도 받습니다. ★★ <b>윈도우 엑셀의 CSV 는 UTF-8 이 아닙니다</b>(EUC-KR) — 깨진 글자를 보고 되읽습니다. 「이름이 깨져 보인다」 가 안 납니다. ★ <b>칸을 맞춰 보여 드립니다</b> — 고객명·휴대폰·생년월일·성별·소득·메모를 알아서 맞추고, 틀리면 고치실 수 있습니다. 못 알아본 칸은 「메모에 적어 두기」 로 담아 <b>적어 두신 것을 버리지 않습니다</b>. ★★ <b>🗂 분류</b> — 새로 넣을 분 · 이미 계신 분(번호가 같음) · 같은 이름인 분(번호가 달라 모름) · 파일 안에서 두 번 · 이름이 없는 줄 로 갈라 세어 드리고, <b>갈래(유입경로·지역 같은 칸)별로 골라</b> 넣으실 수 있습니다. ★★ <b>주민등록번호는 받지 않습니다</b> — 그 칸은 고를 수 없게 잠그고, 미리보기에도 안 찍고, 다른 칸에 섞여 있으면 지워서 담습니다. ★★ <b>파일은 이 브라우저 안에서만</b> 읽습니다 — 서버로도, AI 로도 올릴 길을 아예 두지 않았습니다. 서버에는 <b>가린 이름만</b> 가고 실명은 이 기기에만 둡니다. ★★ <b>돈 단위를 묻습니다</b> — 엑셀이 「원」 으로 적혀 있으면 만원으로 고쳐 담습니다(안 하면 <b>만 배</b>입니다). ★★ <b>clients 에 넣는 자리를 하나로 모았습니다</b> — 셋이었습니다(새 고객 등록 · 자료 저장 · 배정 DB→내 고객). 덕분에 <b>「새 고객 등록」 으로 넣은 분의 실명이 안 담기던 것</b>도 같이 고쳐졌습니다(여태 화면에 홍*동 으로만 떴습니다). ★ <b>표는 안 합칩니다</b> — 엑셀에서 가져온 분은 내 고객(고객 365일)으로만 들어가고 배정 한도(일반 20 · 변액 +30)에 안 셉니다. ★ 홈 높이는 <b>0px</b> — 덮개로 뜨므로 홈에 한 줄도 안 섭니다. ⛔ <b>구글 드라이브를 앱에 바로 잇는 것은 아직입니다</b> — 구글 승인과 서버 열쇠가 필요해 사장님께 여쭌 뒤 하겠습니다. 지금은 구글 시트에서 [파일 → 다운로드 → Microsoft Excel(.xlsx)] 로 내려받아 넣으시면 됩니다. (판 X134)";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -27141,7 +27138,14 @@ var CREG_K=[
   {k:'db', e:'📇',t:'배정 DB',sub:'DB 통합 CRM',
    what:'회사가 나눠 준 <b>가망고객</b>입니다.',
    has:'미접촉 → TA → AP → PC → CS 로 올라갑니다.',
-   cap:'배정 한도에 <b>셉니다</b> (일반 20 · 변액 +30).',fn:'cregGoDb'}
+   cap:'배정 한도에 <b>셉니다</b> (일반 20 · 변액 +30).',fn:'cregGoDb'},
+  /* 📁 판 X134 — 사장님 말씀 「엑셀이나 구글드라이브에 고객 정보를 가져오면
+     분류할 수 있는 프로그램」. 여러 분을 한꺼번에 넣는 길이라 <b>같은 자리</b>에
+     둡니다 (5번) — 넣는 자리가 둘이 되면 또 못 찾으십니다.               */
+  {k:'xls',e:'📁',t:'엑셀·CSV 에서',sub:'여러 명 한꺼번에',
+   what:'파일에 적힌 분들을 <b>한꺼번에</b> 올립니다.',
+   has:'칸을 맞춰 보고 <b>분류</b>해 드립니다 — 새로 넣을 분 · 이미 계신 분 · 이름 없는 줄.',
+   cap:'<b>내 고객</b>으로 들어갑니다 — 배정 한도에 <b>안 셉니다</b>.',fn:'cregGoXls'}
 ];
 function cregHost(){
   var e=document.getElementById('cregSheet');
@@ -27178,6 +27182,8 @@ function cregGoCli(){ cregClose(); if(typeof osNewClient==='function')osNewClien
   else if(typeof toast==='function')toast('고객 등록 창을 아직 못 읽었습니다 — 새로고침해 주세요'); }
 function cregGoDb(){ cregClose(); if(typeof hdbNew==='function')hdbNew();
   else if(typeof toast==='function')toast('배정 DB 등록 창을 아직 못 읽었습니다 — 새로고침해 주세요'); }
+function cregGoXls(){ cregClose(); if(typeof cimpOpen==='function')cimpOpen();
+  else if(typeof toast==='function')toast('엑셀 가져오기를 아직 못 읽었습니다 — 새로고침해 주세요'); }
 function cregCss(){
   if(document.getElementById('cregCss'))return;
   var st=document.createElement('style');st.id='cregCss';
@@ -27204,6 +27210,1000 @@ function cregCss(){
    '.creg-c .ar{flex:none;align-self:center;color:var(--t-sub2);font-size:var(--t4)}'+
    '.creg-n{margin-top:13px;padding-top:11px;border-top:1px solid var(--t-line);'+
      'font-size:var(--t7);line-height:1.7;color:var(--t-sub)}';
+  document.head.appendChild(st);
+}
+/* ══ 🪪 <b>고객 한 줄을 만드는 자</b> — 이 한 곳만 만듭니다 (5번) ════
+   clients 에 줄을 넣는 자리가 <b>셋</b>이었습니다 —
+     ① osCreateClient  새 고객 등록
+     ② osPickClient    자료 저장할 고객 추가
+     ③ olToMine        배정 DB → 내 고객
+   셋이 저마다 「가린 이름으로 넣고 실명은 이 기기에」 를 다시 적고 있어서,
+   한 곳을 고치면 둘이 낡습니다. 엑셀 가져오기가 <b>넷째</b>가 되기 전에
+   <b>넣는 자리를 하나로</b> 모읍니다.
+   ★ <b>함수를 지우지 않습니다</b> — 셋은 그대로 서 있고 이 자를 부릅니다.
+
+   ★★ 여태 <b>①은 실명을 안 담았습니다.</b> 번호를 안 받아 오니
+     cmRealSet 을 부를 수가 없어서, 「새 고객 등록」 으로 넣은 분은
+     화면에도 영영 <b>홍○○</b> 로만 떴습니다. 이 자가 그것을 고칩니다.
+   ★ 서버에는 <b>가린 이름만</b> 갑니다. 실명은 이 브라우저에만 (3번).
+   ★ 번호를 못 받으면 <b>못 받았다고</b> 돌려줍니다 (1번) — 조용히
+     넘어가면 실명 없는 고객이 하나 생기고 아무도 모릅니다.           */
+/* 고객 한 사람에 붙는 <b>서버 칸 이름을 아는 자리</b> — 여기 하나입니다 (5번).
+   왼쪽이 우리 말, 오른쪽이 서버 칸입니다. 월 소득·고정지출은 <b>만원</b>입니다
+   (4번 — 이름이 단위를 말해야 하므로 읽는 자를 cimpMan 으로 둡니다).      */
+var CLI_EX=[['ph','phone'],['by','birth_year'],['gd','gender'],
+            ['inc','monthly_income'],['exp','monthly_fixed_expense'],['memo','household_notes']];
+function cliRow(name,ex,id){
+  var row={advisor_id:OS.session.user.id,
+           name_masked:(typeof osMaskName==='function')?osMaskName(name):name,
+           consent_status:'none'},i,k;
+  if(id)row.id=id;
+  for(i=0;i<CLI_EX.length;i++){
+    k=CLI_EX[i];
+    /* <b>모름(null)은 안 보냅니다</b> — 보내면 「없다」 가 되어 버립니다 (1번) */
+    if(ex&&ex[k[0]]!=null&&ex[k[0]]!=='')row[k[1]]=ex[k[0]];
+  }
+  return row;
+}
+function cliColDown(m){ return /column|42703|does not exist|schema cache/i.test(''+(m||'')); }
+function cliMake(name,ex,then){
+  var sb=(typeof osClient==='function')?osClient():null;
+  name=(''+(name==null?'':name)).replace(/^\s+|\s+$/g,'');
+  var fin=function(id,msk,why){ if(typeof then==='function')then(id||'',msk||'',why||''); };
+  if(!sb||!OS.session||!OS.session.user){ fin('','','로그인 후 이용하세요'); return; }
+  if(!name){ fin('','','이름이 비어 있습니다'); return; }
+  var msk=(typeof osMaskName==='function')?osMaskName(name):name;
+  var keep=function(id){ try{ if(id&&typeof cmRealSet==='function')cmRealSet(id,name); }catch(e){} };
+  var bare=function(why){
+    /* ⚠ 서버가 <b>같은 문장 안에서</b> 새 줄을 못 보는 판이 있습니다 —
+       clients_read 정책의 자기참조(can_see_client) 때문에 42501 이 납니다.
+       그때는 <b>넣기만</b> 하고 번호를 못 받았다고 적습니다. 번호 때문에
+       넣는 것 자체가 막히면 안 됩니다.                                  */
+    sb.from('clients').insert(cliRow(name,null,'')).then(function(r2){
+      if(r2&&r2.error){ fin('','',(''+(r2.error.message||'')).slice(0,80)); return; }
+      fin('',msk,why||'번호를 못 받았습니다');
+    },function(e2){ fin('','',(e2&&e2.message)||'네트워크 오류'); });
+  };
+  sb.from('clients').insert(cliRow(name,ex,'')).select('id,name_masked').then(function(r){
+    if(r&&r.error){
+      var m=''+(r.error.message||'');
+      /* 아직 안 만든 칸이면 <b>그 칸만 빼고</b> 다시 — migration 을 안 돌렸을
+         뿐인데 고객 등록이 막히면 안 됩니다 (hdbSave 와 같은 길)          */
+      if(cliColDown(m)&&ex){
+        sb.from('clients').insert(cliRow(name,null,'')).select('id,name_masked').then(function(r3){
+          if(r3&&r3.error){ bare('칸이 모자라 이름만 담았습니다'); return; }
+          var c3=(r3&&r3.data&&r3.data[0])||{};
+          if(!c3.id){ fin('',msk,'번호를 못 받았습니다'); return; }
+          keep(c3.id); fin(c3.id,c3.name_masked||msk,'칸이 모자라 이름만 담았습니다');
+        },function(){ bare('칸이 모자라 이름만 담았습니다'); });
+        return;
+      }
+      if(/42501|permission|policy|row-level/i.test(m)){ bare(''); return; }
+      fin('','',m.slice(0,80)); return;
+    }
+    var c=(r&&r.data&&r.data[0])||{};
+    if(!c.id){ fin('',msk,'번호를 못 받았습니다'); return; }
+    keep(c.id); fin(c.id,c.name_masked||msk,'');
+  },function(e){ fin('','',(e&&e.message)||'네트워크 오류'); });
+}
+/* ── 여러 줄을 한꺼번에 — <b>번호를 우리가 지어</b> 넣습니다 ──────────
+   엑셀 한 장에 쉰 분이 계시면 <b>쉰 번 부르지 않습니다</b> (7번). 그런데
+   묶어 넣으면 서버가 돌려주는 <b>차례</b>를 믿어야 하는데, 가린 이름은
+   「홍○○」 로 겹치므로 차례가 한 칸 틀리면 <b>남의 실명이 붙습니다.</b>
+   그래서 차례를 안 믿고 <b>번호를 우리가 지어</b>(bizUuid) 같이 넣습니다 —
+   어느 줄이 누구인지 처음부터 압니다. 그 길이 막힌 서버면 <b>한 줄씩</b>
+   cliMake 로 돌아갑니다 — 길을 지웁지 않습니다.                        */
+function cliMakeMany(list,step,done){
+  var sb=(typeof osClient==='function')?osClient():null;
+  var out={ok:0,fail:0,noid:0,why:'',note:'',ids:[]};
+  var fin=function(){ if(typeof done==='function')done(out); };
+  var tick=function(){ if(typeof step==='function')step(out.ok+out.fail+out.noid,L.length); };
+  if(!sb||!OS.session||!OS.session.user){ out.why='로그인 후 이용하세요'; fin(); return; }
+  var L=[],i,nm;
+  for(i=0;i<(list||[]).length;i++){
+    nm=(''+((list[i]&&list[i].nm)||'')).replace(/^\s+|\s+$/g,'');
+    if(!nm)continue;
+    L.push({nm:nm,ex:(list[i].ex||null)});
+  }
+  if(!L.length){ out.why='넣을 분이 없습니다'; fin(); return; }
+  var CH=25,at=0;
+  var one=function(k,after){                      /* 묶음이 안 되는 서버 — 한 줄씩 */
+    if(k>=L.length){ after(); return; }
+    cliMake(L[k].nm,L[k].ex,function(id,msk,why){
+      if(id){ out.ok++; out.ids.push(id); }
+      else if(msk){ out.noid++; if(!out.note)out.note=why||'번호를 못 받았습니다'; }
+      else { out.fail++; if(!out.why)out.why=why||'저장하지 못했습니다'; }
+      tick(); one(k+1,after);
+    });
+  };
+  var keepPart=function(part){
+    var j;
+    for(j=0;j<part.length;j++){
+      try{ if(typeof cmRealSet==='function')cmRealSet(part[j].id,part[j].nm); }catch(e){}
+      out.ok++; out.ids.push(part[j].id);
+    }
+    tick();
+  };
+  var go=function(){
+    if(at>=L.length){ fin(); return; }
+    var part=L.slice(at,at+CH),rows=[],j,uid;
+    for(j=0;j<part.length;j++){
+      uid=(typeof bizUuid==='function')?bizUuid():'';
+      if(!uid){ one(at,fin); return; }            /* 번호를 못 지으면 한 줄씩 */
+      part[j].id=uid;
+      rows.push(cliRow(part[j].nm,part[j].ex,uid));
+    }
+    var bareRows=function(){
+      var rs=[],k;
+      for(k=0;k<part.length;k++)rs.push(cliRow(part[k].nm,null,part[k].id));
+      return rs;
+    };
+    sb.from('clients').insert(rows).then(function(r){
+      if(r&&r.error){
+        var m=''+(r.error.message||'');
+        if(cliColDown(m)){
+          if(!out.note)out.note='서버에 아직 없는 칸이 있어 이름만 담았습니다';
+          sb.from('clients').insert(bareRows()).then(function(r2){
+            if(r2&&r2.error){ one(at,fin); return; }
+            keepPart(part); at+=CH; go();
+          },function(){ one(at,fin); });
+          return;
+        }
+        one(at,fin); return;                      /* 번호를 지어 넣는 길이 막힘 */
+      }
+      keepPart(part); at+=CH; go();
+    },function(){ one(at,fin); });
+  };
+  go();
+}
+/* ══ 📁 <b>엑셀·CSV 에서 고객을 가져와 분류합니다</b> (판 X134 · cimp*) ══
+   사장님 말씀 (2026-10-19) — 「<b>엑셀이나, 구글드라이브에 고객 정보를
+   가져오면 분류할 수 있는 프로그램</b>을 만들었으면 좋겠어」
+
+   ★★ 파일은 <b>이 브라우저 안에서만</b> 읽습니다 (3번·10번). 서버로도,
+     AI 로도 <b>올릴 길을 아예 두지 않았습니다</b> — 보내는 코드가 없습니다.
+   ★★ <b>주민등록번호는 받지 않습니다.</b> 머리글이 주민·RRN 이면 아예
+     고를 수 없게 잠그고, 다른 칸에 번호가 섞여 있으면 <b>지워서</b>
+     담습니다. 화면 미리보기에서도 가립니다 (사장님 규칙).
+   ★ <b>지어내지 않습니다</b> (1번). 못 알아본 칸은 「안 가져옴」 이라 적고
+     비워 둡니다. 빈 칸을 0 으로 채우지 않습니다.
+   ★ <b>넣는 자리는 cliMake 하나</b>입니다 (5번) — 엑셀이 넷째 저장 코드가
+     되지 않게, 먼저 셋을 하나로 모았습니다.
+   ★ <b>표를 안 합칩니다.</b> 엑셀에서 가져온 분은 <b>내 고객(고객 365일)</b>
+     으로만 들어갑니다 — 배정 DB 에 쏟아 넣으면 배정 한도(일반 20 · 변액
+     +30)를 세는 자가 무너집니다 (2026-10-09 사고).
+   ★ 홈 높이는 <b>0px</b> — 덮개로 뜨므로 홈에 한 줄도 안 섭니다.
+   check-cimp 가 <b>실제 .xlsx 를 만들어 읽는 왕복 시험</b>으로 지킵니다.  */
+
+/* ── 글자 풀기 — 엑셀이 내보낸 CSV 는 거의 <b>EUC-KR</b> 입니다 ───────
+   윈도우 엑셀의 「CSV(쉼표로 분리)」 는 UTF-8 이 아닙니다. utf-8 로 읽으면
+   이름이 통째로 깨져 사장님은 「앱이 고장났다」 고 보십니다. 그래서
+   <b>풀어 보고 고릅니다</b> — BOM 이 있으면 그 꼴, 없으면 utf-8 로 풀어
+   깨진 글자(U+FFFD)가 있으면 EUC-KR. 둘 다 깨지면 <b>그렇다고 적습니다</b>. */
+function cimpDec(buf){
+  var u=new Uint8Array(buf),i;
+  var bom3=(u.length>2&&u[0]===0xEF&&u[1]===0xBB&&u[2]===0xBF);
+  var pick=function(enc){
+    try{ return new TextDecoder(enc,{fatal:false}).decode(bom3?u.slice(3):u); }catch(e){ return null; }
+  };
+  var badOf=function(s){ var n=0,k; if(s==null)return -1; for(k=0;k<s.length;k++)if(s.charCodeAt(k)===0xFFFD)n++; return n; };
+  /* 엑셀의 「유니코드 텍스트(.txt)」 는 UTF-16 에 탭으로 갈려 나옵니다 */
+  if(u.length>1&&u[0]===0xFF&&u[1]===0xFE){ var a16=pick('utf-16le'); if(a16!=null)return {txt:a16,enc:'UTF-16',bad:0}; }
+  if(u.length>1&&u[0]===0xFE&&u[1]===0xFF){ var b16=pick('utf-16be'); if(b16!=null)return {txt:b16,enc:'UTF-16',bad:0}; }
+  if(bom3){ var t8=pick('utf-8'); if(t8!=null)return {txt:t8,enc:'UTF-8',bad:0}; }
+  var a=pick('utf-8'),ba=badOf(a);
+  if(a!=null&&!ba)return {txt:a,enc:'UTF-8',bad:0};
+  var b=pick('euc-kr'),bb=badOf(b);
+  if(b!=null&&(a==null||bb<ba))return {txt:b,enc:'EUC-KR',bad:bb};
+  if(a!=null)return {txt:a,enc:'UTF-8',bad:ba};
+  return {txt:'',enc:'',bad:-1};
+}
+/* 가름표를 <b>세어서</b> 고릅니다 — 큰따옴표 안의 것은 안 셉니다
+   (주소에는 쉼표가 들어 있습니다) */
+function cimpDelim(line){
+  var k=[',','\t',';','|'],best=',',bn=0,i,j,q,n;
+  for(j=0;j<k.length;j++){
+    n=0;q=false;
+    for(i=0;i<line.length;i++){
+      if(line.charAt(i)==='"')q=!q;
+      else if(!q&&line.charAt(i)===k[j])n++;
+    }
+    if(n>bn){bn=n;best=k[j];}
+  }
+  return best;
+}
+function cimpNoBlank(rows){
+  var out=[],i,j,any;
+  for(i=0;i<rows.length;i++){
+    any=false;
+    for(j=0;j<rows[i].length;j++)if((''+(rows[i][j]==null?'':rows[i][j])).replace(/^\s+|\s+$/g,''))any=true;
+    if(any)out.push(rows[i]);
+  }
+  return out;
+}
+function cimpCsv(txt,delim){
+  txt=(''+(txt==null?'':txt)).replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  var d=delim||cimpDelim(txt.split('\n')[0]||'');
+  var rows=[],row=[],cur='',q=false,i,ch,nx;
+  for(i=0;i<txt.length;i++){
+    ch=txt.charAt(i);
+    if(q){
+      if(ch==='"'){ nx=txt.charAt(i+1); if(nx==='"'){cur+='"';i++;} else q=false; }
+      else cur+=ch;
+      continue;
+    }
+    if(ch==='"'){q=true;continue;}
+    if(ch===d){row.push(cur);cur='';continue;}
+    if(ch==='\n'){row.push(cur);rows.push(row);row=[];cur='';continue;}
+    cur+=ch;
+  }
+  row.push(cur);rows.push(row);
+  return {rows:cimpNoBlank(rows),delim:d};
+}
+
+/* ── .xlsx — <b>지퍼를 직접 엽니다</b> ──────────────────────────────
+   xlsx 는 zip 묶음입니다. 바깥 셈틀(라이브러리)을 안 들여옵니다 — 고객
+   명단이 든 파일을 남의 코드에 흘리지 않기 위해서입니다 (10번). 브라우저가
+   이미 가진 DecompressionStream('deflate-raw') 만 씁니다.               */
+function cimpZip(buf){
+  var u=new Uint8Array(buf),n=u.length,i,eo=-1;
+  var g16=function(p){return u[p]|(u[p+1]<<8);};
+  var g32=function(p){return (u[p]|(u[p+1]<<8)|(u[p+2]<<16))+(u[p+3]*16777216);};
+  for(i=n-22;i>=0&&i>=n-66000;i--)
+    if(u[i]===0x50&&u[i+1]===0x4B&&u[i+2]===0x05&&u[i+3]===0x06){eo=i;break;}
+  if(eo<0)return null;
+  var cnt=g16(eo+10),p=g32(eo+16),out=[],k,dec=new TextDecoder('utf-8');
+  for(k=0;k<cnt;k++){
+    if(p+46>n)break;
+    if(!(u[p]===0x50&&u[p+1]===0x4B&&u[p+2]===0x01&&u[p+3]===0x02))break;
+    var meth=g16(p+10),csz=g32(p+20),nl=g16(p+28),el=g16(p+30),cl=g16(p+32),lo=g32(p+42);
+    out.push({name:dec.decode(u.subarray(p+46,p+46+nl)),meth:meth,csz:csz,lo:lo});
+    p+=46+nl+el+cl;
+  }
+  return out.length?{u:u,g16:g16,g32:g32,files:out}:null;
+}
+/* 한 칸을 풀어 글자로 — 없으면 <b>null</b> 입니다. 「없는 것」과 「빈 것」을
+   가릅니다 (1번) */
+function cimpZipText(z,name){
+  var f=null,i;
+  for(i=0;i<z.files.length;i++)if(z.files[i].name===name){f=z.files[i];break;}
+  if(!f)return Promise.resolve(null);
+  var u=z.u,lo=f.lo;
+  if(!(u[lo]===0x50&&u[lo+1]===0x4B&&u[lo+2]===0x03&&u[lo+3]===0x04))return Promise.resolve(null);
+  var st=lo+30+z.g16(lo+26)+z.g16(lo+28),body=u.subarray(st,st+f.csz);
+  if(f.meth===0)return Promise.resolve(new TextDecoder('utf-8').decode(body));
+  if(f.meth!==8)return Promise.resolve(null);
+  try{
+    var ds=new DecompressionStream('deflate-raw'),w=ds.writable.getWriter();
+    w.write(body.slice());w.close();
+    return new Response(ds.readable).text().then(function(t){return t;},function(){return null;});
+  }catch(e){ return Promise.resolve(null); }
+}
+function cimpXmlEnt(s){
+  return (''+(s==null?'':s))
+    .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'")
+    .replace(/&#x([0-9a-fA-F]+);/g,function(_,h){return String.fromCharCode(parseInt(h,16));})
+    .replace(/&#(\d+);/g,function(_,d){return String.fromCharCode(parseInt(d,10));})
+    .replace(/&amp;/g,'&');
+}
+function cimpColIx(ref){
+  var m=(''+(ref||'')).match(/^([A-Z]+)/),s=m?m[1]:'',n=0,i;
+  for(i=0;i<s.length;i++)n=n*26+(s.charCodeAt(i)-64);
+  return n>0?(n-1):0;
+}
+function cimpSheets(wb,rels){
+  var out=[],m,re=/<sheet\b[^>]*>/g,map={},i;
+  if(rels){
+    var rr=/<Relationship\b[^>]*>/g,t;
+    while((t=rr.exec(rels))){
+      var id=(t[0].match(/Id="([^"]*)"/)||[])[1],tg=(t[0].match(/Target="([^"]*)"/)||[])[1];
+      if(id&&tg)map[id]=(''+tg).replace(/^\/?xl\//,'').replace(/^\//,'');
+    }
+  }
+  while((m=re.exec(wb||''))){
+    var nm=cimpXmlEnt((m[0].match(/name="([^"]*)"/)||[])[1]||''),
+        rid=(m[0].match(/r:id="([^"]*)"/)||[])[1]||'';
+    out.push({name:nm,path:map[rid]?('xl/'+map[rid]):''});
+  }
+  for(i=0;i<out.length;i++)if(!out[i].path)out[i].path='xl/worksheets/sheet'+(i+1)+'.xml';
+  return out;
+}
+function cimpShared(xml){
+  if(xml==null)return [];
+  var out=[],re=/<si\b[^>]*>([\s\S]*?)<\/si>|<si\b[^>]*\/>/g,m;
+  while((m=re.exec(xml))){
+    var body=m[1]||'',s='',tr=/<t\b[^>]*>([\s\S]*?)<\/t>/g,t;
+    while((t=tr.exec(body)))s+=cimpXmlEnt(t[1]);
+    out.push(s);
+  }
+  return out;
+}
+/* 빈 칸은 <b>빈 글자로 자리를 지킵니다</b> — 자리가 밀리면 연락처 칸에
+   지역이 들어옵니다 */
+function cimpSheetRows(xml,shared){
+  if(xml==null)return [];
+  var rows=[],re=/<row\b[^>]*>([\s\S]*?)<\/row>|<row\b[^>]*\/>/g,m;
+  while((m=re.exec(xml))){
+    var body=m[1]||'',cells=[],cr=/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g,c;
+    while((c=cr.exec(body))){
+      var at=c[1]||'',in_=c[2]||'',
+          ix=cimpColIx((at.match(/r="([^"]*)"/)||[])[1]||''),
+          ty=(at.match(/t="([^"]*)"/)||[])[1]||'',v='',tr,t;
+      if(ty==='s'){
+        var si=parseInt((in_.match(/<v>([\s\S]*?)<\/v>/)||[])[1],10);
+        v=(isFinite(si)&&shared[si]!=null)?shared[si]:'';
+      }else{
+        var vv=(in_.match(/<v>([\s\S]*?)<\/v>/)||[])[1];
+        if(ty==='inlineStr'||vv==null){
+          tr=/<t\b[^>]*>([\s\S]*?)<\/t>/g;
+          while((t=tr.exec(in_)))v+=cimpXmlEnt(t[1]);
+        }else v=cimpXmlEnt(vv);
+      }
+      while(cells.length<ix)cells.push('');
+      cells[ix]=v;
+    }
+    rows.push(cells);
+  }
+  return cimpNoBlank(rows);
+}
+
+/* ── 칸 표 — <b>이 표 하나가</b> 무슨 칸이 있는지 답합니다 (5번) ───────
+   머리글 이름(w)·앱의 칸(k)·서버 칸(CLI_EX)이 한 줄에 있습니다. 화면·맞추기·
+   넣기 세 곳이 이것만 봅니다 — 삼항 사슬로 늘어놓으면 칸을 하나 더할 때
+   한 곳을 빠뜨립니다 (쿠폰 트랙을 두 번 빠뜨린 그 자리).               */
+var CIMP_F=[
+  {k:'nm', t:'이름',        to:'nm',   need:true, hint:'홍길동',
+   w:['이름','성명','고객명','고객이름','성함','수신자','name','customer'],
+   rd:function(v){ return cimpRrnOut(v).replace(/^\s+|\s+$/g,'').slice(0,20); }},
+  {k:'ph', t:'연락처',      to:'ex',   hint:'010-1234-5678',
+   w:['연락처','전화','전화번호','휴대폰','휴대전화','핸드폰','핸폰','모바일','hp','tel','phone','mobile','번호'],
+   rd:function(v){ return cimpPhone(v); }},
+  {k:'by', t:'생년',        to:'ex',   hint:'1985',
+   w:['생년','생일','생년월일','출생','birth','dob','생신'],
+   rd:function(v){ return cimpYear(v); }},
+  {k:'gd', t:'성별',        to:'ex',   hint:'남 / 여',
+   w:['성별','gender','sex'],
+   rd:function(v){ return cimpSex(v); }},
+  {k:'inc',t:'월 소득',     to:'ex',   man:true, hint:'만원',
+   w:['소득','월소득','수입','월수입','연봉','income','salary'],
+   rd:function(v,u){ return cimpMan(v,u); }},
+  {k:'exp',t:'월 고정지출', to:'ex',   man:true, hint:'만원',
+   w:['지출','고정지출','생활비','월지출','expense'],
+   rd:function(v,u){ return cimpMan(v,u); }},
+  {k:'memo',t:'메모',       to:'adds', hint:'첫 상담 전',
+   w:['메모','비고','특이사항','참고','note','memo','remark','내용'],
+   rd:function(v){ return cimpRrnOut(v); }}
+];
+/* 🔒 <b>절대 안 가져오는 머리글</b> — 고를 수 없게 잠급니다 (사장님 규칙) */
+var CIMP_NO=['주민','주민번호','주민등록','주민등록번호','rrn','ssn','social','신분증','여권','passport','카드번호','계좌'];
+/* 가져와도 <b>칸이 없는</b> 것 — 메모에 「적힌 그대로」 담습니다.
+   나이는 해마다 바뀌므로 생년으로 고쳐 적지 않습니다 (1번).            */
+var CIMP_MEMO='memo+';
+var CIMP_SKIP='';
+function cimpNorm(h){
+  return (''+(h==null?'':h)).toLowerCase()
+    .replace(/[\s()\[\]{}·.\-_/\\:]/g,'').replace(/칸$/,'');
+}
+/* 주민번호 <b>지우개</b> — 「있나 없나」 를 묻는 자는 MYP_RRN 하나입니다 (5번).
+   이 자는 묻지 않고 <b>지웁니다</b> — 하는 일이 다릅니다.                */
+function cimpRrnOut(s){
+  return (''+(s==null?'':s)).replace(/(^|[^0-9])(\d{6})\s*[-–]?\s*([1-4]\d{6})(?![0-9])/g,'$1(주민번호 지움)');
+}
+function cimpHasRrn(s){
+  try{ if(typeof MYP_RRN!=='undefined'&&MYP_RRN.test(''+(s||'')))return true; }catch(e){}
+  return /(^|[^0-9])\d{6}\s*[-–]?\s*[1-4]\d{6}(?![0-9])/.test(''+(s==null?'':s));
+}
+function cimpLocked(h){
+  var n=cimpNorm(h),i;
+  for(i=0;i<CIMP_NO.length;i++)if(n.indexOf(cimpNorm(CIMP_NO[i]))>=0)return true;
+  return false;
+}
+/* 머리글 → 칸. <b>한 칸은 한 번만</b> 쓰입니다 — 「이름」 과 「고객이름」 이
+   둘 다 있으면 앞의 것이 이깁니다. 못 알아본 것은 빈 글자(안 가져옴)입니다. */
+function cimpGuess(head){
+  var map={},used={},i,j,f,n;
+  for(i=0;i<CIMP_F.length;i++){
+    f=CIMP_F[i];
+    for(j=0;j<head.length;j++){
+      if(used[j]||cimpLocked(head[j]))continue;
+      n=cimpNorm(head[j]); if(!n)continue;
+      var hit=false,w;
+      for(w=0;w<f.w.length;w++)if(n.indexOf(cimpNorm(f.w[w]))>=0){hit=true;break;}
+      if(hit){ map[j]=f.k; used[j]=1; break; }
+    }
+  }
+  /* 남은 칸은 <b>메모에 적기</b>로 둡니다 — 버리면 사장님이 적어 두신 것이
+     사라집니다. 잠긴 칸은 그대로 잠깁니다.                              */
+  for(j=0;j<head.length;j++){
+    if(map[j]!=null)continue;
+    map[j]=cimpLocked(head[j])?CIMP_SKIP:(cimpNorm(head[j])?CIMP_MEMO:CIMP_SKIP);
+  }
+  return map;
+}
+function cimpFOf(k){ var i; for(i=0;i<CIMP_F.length;i++)if(CIMP_F[i].k===k)return CIMP_F[i]; return null; }
+
+/* ── 값 읽는 자들 — 못 읽으면 <b>null</b> 입니다 (1번) ── */
+function cimpTxt(v){ return (''+(v==null?'':v)).replace(/^\s+|\s+$/g,''); }
+function cimpPhone(v){
+  var s=cimpTxt(v); if(!s)return null;
+  var d=s.replace(/[^0-9]/g,'');
+  if(d.length===11)return d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7);
+  if(d.length===10)return d.slice(0,3)+'-'+d.slice(3,6)+'-'+d.slice(6);
+  if(d.length===9&&d.charAt(0)==='2')return '02-'+d.slice(1,5)+'-'+d.slice(5);
+  return s;                               /* 모양이 낯설면 <b>적힌 그대로</b> */
+}
+function cimpTail(v){ var d=(''+(v==null?'':v)).replace(/[^0-9]/g,''); return d.length>=8?d.slice(-8):''; }
+/* 생년 — 네 자리 · 엑셀 날짜(일련번호) · 여섯 자리 YYMMDD 를 다 받습니다.
+   ★ 여섯 자리에는 19xx/20xx 가 안 적혀 있습니다. 올해 두 자리(26)보다
+     크면 19xx 로 읽습니다 — 2027년에 태어난 고객은 없습니다. 이것은
+     <b>지어내기가 아니라 적어 둔 규칙</b>이고 화면에도 적습니다 (1번).   */
+function cimpYear(v){
+  var s=cimpTxt(v); if(!s)return null;
+  var now=new Date(),Y=now.getFullYear();
+  var m4=s.match(/(1[89]\d\d|20\d\d|21\d\d)/);
+  if(m4){ var y4=parseInt(m4[1],10); if(y4>=1900&&y4<=Y)return y4; }
+  var d=s.replace(/[^0-9]/g,'');
+  if(/^\d+$/.test(s)){
+    var n=parseInt(s,10);
+    if(n>=1900&&n<=Y)return n;
+    /* 엑셀 날짜 — 1899-12-30 부터 센 날수입니다 */
+    if(n>=10000&&n<=100000){
+      var dt=new Date(Date.UTC(1899,11,30)+n*86400000);
+      var yy=dt.getUTCFullYear();
+      if(yy>=1900&&yy<=Y)return yy;
+    }
+  }
+  if(d.length===6){
+    var hh=parseInt(d.slice(0,2),10),cut=Y%100;
+    return (hh>cut?1900:2000)+hh;
+  }
+  return null;
+}
+function cimpSex(v){
+  var s=cimpTxt(v); if(!s)return null;
+  if(/^(남|남자|남성|m|male)$/i.test(s))return 'M';
+  if(/^(여|여자|여성|f|female)$/i.test(s))return 'F';
+  if(s==='1'||s==='3')return 'M';         /* 주민번호 뒷자리 첫 글자로 적힌 표도 있습니다 */
+  if(s==='2'||s==='4')return 'F';
+  return null;
+}
+/* 돈 — <b>만원</b>으로 담습니다 (4번). 엑셀이 원으로 적혀 있으면 사장님이
+   단위를 고르십니다. 「만원」 칸에 원을 넣으면 <b>만 배</b>가 틀립니다.   */
+function cimpMan(v,unit){
+  var s=cimpTxt(v); if(!s)return null;
+  var d=s.replace(/[^0-9.-]/g,''); if(!d||!/[0-9]/.test(d))return null;
+  var n=Math.round(parseFloat(d)); if(!isFinite(n))return null;
+  if(unit==='원')n=Math.round(n/10000);
+  return n;
+}
+
+/* ── 지금 무엇을 들고 있나 — <b>한 자리</b>입니다 (5번) ── */
+var CIMP={open:false,step:'pick',fname:'',enc:'',bad:0,sheets:[],sheet:0,
+          head:[],rows:[],map:{},unit:{},grp:-1,off:{},maybe:false,
+          sort:null,err:'',note:'',busy:'',at:0,of:0,res:null,_z:null,_ss:null};
+var CIMP_MAX=500;
+var CIMP_OK_EXT=/\.(xlsx|xlsm|csv|tsv|txt)$/i;
+function cimpStamp(){
+  var d=new Date(),p=function(n){return (n<10?'0':'')+n;};
+  return '📁 엑셀에서 가져옴 ('+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+')';
+}
+function cimpReset(){
+  CIMP.step='pick';CIMP.fname='';CIMP.enc='';CIMP.bad=0;CIMP.sheets=[];CIMP.sheet=0;
+  CIMP.head=[];CIMP.rows=[];CIMP.map={};CIMP.unit={};CIMP.grp=-1;CIMP.off={};
+  CIMP.maybe=false;CIMP.sort=null;CIMP.err='';CIMP.note='';CIMP.busy='';
+  CIMP.at=0;CIMP.of=0;CIMP.res=null;CIMP._z=null;CIMP._ss=null;
+}
+/* ── 이미 계신 분을 아는 자 — 번호 뒷 8자리와 <b>이 기기에 둔 실명</b>으로만
+   봅니다. 가린 이름(홍○○)으로 보면 성이 같은 분이 다 걸립니다 (3번).  */
+function cimpHaveIx(){
+  var o={tel:{},nm:{},n:0,loaded:false},L=[],i,c,t,r;
+  try{ L=(typeof OSC!=='undefined'&&OSC.list)?OSC.list:[]; o.loaded=!!(OSC&&OSC.loaded); }catch(e){ L=[]; }
+  for(i=0;i<L.length;i++){
+    c=L[i]; if(!c)continue; o.n++;
+    t=cimpTail(c.phone); if(t&&!o.tel[t])o.tel[t]=c;
+    r='';
+    try{ r=(typeof cmRealOf==='function')?cmRealOf(c.id):''; }catch(e2){}
+    r=cimpTxt(r).replace(/\s/g,'');
+    if(r&&!o.nm[r])o.nm[r]=c;
+  }
+  return o;
+}
+/* 줄 하나 → 넣을 모양. <b>표(CIMP_F)가 어디로 갈지 알고 있습니다</b> (5번) */
+function cimpOne(r){
+  var o={nm:'',ex:{}},adds=[],j,k,f,v,x,u=CIMP.unit||{};
+  for(j=0;j<CIMP.head.length;j++){
+    k=CIMP.map[j]; if(!k)continue;
+    v=cimpTxt(r[j]); if(!v)continue;
+    if(k===CIMP_MEMO){ adds.push(cimpTxt(CIMP.head[j])+': '+cimpRrnOut(v)); continue; }
+    f=cimpFOf(k); if(!f||!f.rd)continue;
+    x=f.rd(v,u[k]);
+    if(x==null||x==='')continue;
+    if(f.to==='nm')o.nm=x;
+    else if(f.to==='adds')adds.unshift(''+x);
+    else o.ex[k]=x;
+  }
+  if(adds.length)o.ex.memo=cimpStamp()+'\n'+adds.join('\n');
+  o.g=(CIMP.grp>=0)?(cimpTxt(r[CIMP.grp])||'(빈칸)'):'';
+  return o;
+}
+/* ── 🗂 <b>분류</b> — 사장님이 시키신 그 자리입니다 ──────────────────
+   ★ 이미 계신 분을 <b>아직 못 읽었으면</b> 그렇다고 적고 넣기를 막습니다
+     (1번). 안 읽은 것을 「없다」 로 읽으면 같은 분이 한 줄 더 생깁니다. */
+function cimpSort(){
+  var H=cimpHaveIx(),sT={},sN={},
+      S={all:[],ok:[],maybe:[],dupHave:[],dupFile:[],noName:[],noTel:[],grp:{},gl:[],have:H},
+      i,r,o,t,n;
+  for(i=1;i<CIMP.rows.length;i++){
+    r=CIMP.rows[i]||[]; o=cimpOne(r); o.i=i; S.all.push(o);
+    if(!o.nm){ o.why='이름 칸이 비어 있습니다'; S.noName.push(o); continue; }
+    t=cimpTail(o.ex.ph); n=o.nm.replace(/\s/g,'');
+    if((t&&sT[t])||(!t&&sN[n])){ o.why='이 파일 안에 같은 분이 또 있습니다'; S.dupFile.push(o); continue; }
+    if(t)sT[t]=1; if(n)sN[n]=1;
+    if(t&&H.tel[t]){ o.why='번호가 같은 분이 이미 계십니다'; S.dupHave.push(o); continue; }
+    if(o.g){ if(S.grp[o.g]==null){S.grp[o.g]=0;S.gl.push(o.g);} S.grp[o.g]++; }
+    if(n&&H.nm[n]){ o.why='이름이 같은 분이 이미 계십니다 — 번호가 달라 같은 분인지 모릅니다'; S.maybe.push(o); continue; }
+    if(!t)S.noTel.push(o);
+    S.ok.push(o);
+  }
+  return S;
+}
+/* <b>넣을 분을 세는 자리도 하나</b>입니다 (5번) — 단추에 적는 수와 실제로
+   들어가는 줄이 따로 세면 「9명 넣기」 를 눌러 11명이 들어갑니다.        */
+function cimpPickList(){
+  var S=CIMP.sort||(CIMP.sort=cimpSort()),out=[],i,o;
+  for(i=0;i<S.ok.length;i++){ o=S.ok[i]; if(o.g&&CIMP.off[o.g])continue; out.push(o); }
+  if(CIMP.maybe)for(i=0;i<S.maybe.length;i++){ o=S.maybe[i]; if(o.g&&CIMP.off[o.g])continue; out.push(o); }
+  return out;
+}
+function cimpGrpGuess(){
+  var j,i,v,seen,cnt,best=-1,bestN=99;
+  for(j=0;j<CIMP.head.length;j++){
+    if(CIMP.map[j]!==CIMP_MEMO)continue;
+    seen={};cnt=0;
+    for(i=1;i<CIMP.rows.length;i++){
+      v=cimpTxt((CIMP.rows[i]||[])[j]); if(!v)continue;
+      if(!seen[v]){seen[v]=1;cnt++;}
+      if(cnt>12)break;
+    }
+    if(cnt>=2&&cnt<=12&&cnt<bestN){ best=j; bestN=cnt; }
+  }
+  return best;
+}
+
+/* ══ 📁 가져오기 화면 ═══════════════════════════════════════════════ */
+function cimpHost(){
+  var e=document.getElementById('cimpSheet');
+  if(e)return e;
+  e=document.createElement('div');e.id='cimpSheet';
+  e.addEventListener('click',function(ev){ if(ev.target===e)cimpClose(); });
+  /* 끌어다 놓기 — 컴퓨터에서 엑셀을 창으로 바로 끌어 오십니다.
+     막지 않으면 브라우저가 <b>그 파일을 통째로 열어</b> 앱이 사라집니다. */
+  e.addEventListener('dragover',function(ev){ ev.preventDefault();e.classList.add('drag'); });
+  e.addEventListener('dragleave',function(){ e.classList.remove('drag'); });
+  e.addEventListener('drop',function(ev){
+    ev.preventDefault();e.classList.remove('drag');
+    var f=ev.dataTransfer&&ev.dataTransfer.files&&ev.dataTransfer.files[0];
+    if(f)cimpRead(f);
+  });
+  document.body.appendChild(e);
+  return e;
+}
+function cimpClose(){
+  CIMP.open=false;
+  var e=document.getElementById('cimpSheet'); if(e)e.classList.remove('on');
+}
+function cimpOpen(){
+  cimpCss(); cimpReset(); CIMP.open=true;
+  /* 이미 계신 분을 모르면 <b>지금 읽습니다</b> — 모른 채로 세면 같은 분이
+     한 줄 더 생깁니다 (1번) */
+  try{ if(typeof OSC!=='undefined'&&!OSC.loaded&&typeof osLoadClients==='function')osLoadClients(); }catch(e){}
+  var host=cimpHost(); host.classList.add('on'); cimpPaint();
+}
+function cimpPaint(){
+  var host=document.getElementById('cimpSheet');
+  if(!host||!CIMP.open)return;
+  host.innerHTML='<div class="cimp-box">'+
+    '<button type="button" class="cimp-x" onclick="cimpClose()" aria-label="닫기">&times;</button>'+
+    cimpHtml()+'</div>';
+}
+function cimpSay(){
+  var h='';
+  if(CIMP.err)h+='<div class="cimp-bad">'+osEsc(CIMP.err)+'</div>';
+  if(CIMP.note)h+='<div class="cimp-note">'+osEsc(CIMP.note)+'</div>';
+  return h;
+}
+function cimpHtml(){
+  if(CIMP.step==='map')return cimpMapHtml();
+  if(CIMP.step==='sort')return cimpSortHtml();
+  if(CIMP.step==='done')return cimpDoneHtml();
+  return cimpPickHtml();
+}
+/* ── ① 파일 고르기 ── */
+function cimpPickHtml(){
+  return '<div class="cimp-t">📁 엑셀·CSV 에서 <b>고객 가져오기</b></div>'+
+    '<div class="cimp-d">이 파일은 <b>이 브라우저 안에서만</b> 읽습니다 — 서버로도, AI 로도 올리지 않습니다.</div>'+
+    cimpSay()+
+    '<label class="cimp-drop" id="cimpDrop">'+
+      '<input type="file" id="cimpFile" accept=".xlsx,.xlsm,.csv,.tsv,.txt" onchange="cimpFile(this)"/>'+
+      '<span class="e">📂</span>'+
+      '<b>파일 고르기</b>'+
+      '<em>여기로 끌어다 놓으셔도 됩니다</em>'+
+      '<span class="k">엑셀 .xlsx · CSV .csv · 탭 .tsv/.txt</span>'+
+    '</label>'+
+    '<div class="cimp-g"><b>구글 드라이브 · 구글 시트에 있으면</b><br/>'+
+      '그 시트에서 <b>[파일 → 다운로드 → Microsoft Excel(.xlsx)]</b> 을 누르고, '+
+      '내려받은 파일을 여기에 넣으시면 됩니다. 드라이브를 앱에 바로 잇는 것은 '+
+      '구글 승인과 서버 열쇠가 따로 필요해 <b>사장님께 여쭌 뒤</b> 하겠습니다.</div>'+
+    '<div class="cimp-lock">🔒 <b>주민등록번호는 가져오지 않습니다.</b> 그 칸은 고를 수 없게 잠그고, '+
+      '다른 칸에 번호가 섞여 있으면 지워서 담습니다.</div>'+
+    '<div class="cimp-n">가져온 분은 <b>👤 내 고객(고객 365일)</b> 으로 들어갑니다 — '+
+      '배정 DB 한도(일반 20 · 변액 +30)에 <b>안 셉니다</b>.</div>';
+}
+window.cimpFile=function(inp){
+  var f=inp&&inp.files&&inp.files[0];
+  if(inp)inp.value='';
+  if(f)cimpRead(f);
+};
+function cimpRead(f){
+  CIMP.err='';CIMP.note='';
+  if(!CIMP_OK_EXT.test(f.name||'')){
+    CIMP.err='이 꼴은 못 읽습니다 ('+((''+(f.name||'')).slice(-12))+') — 엑셀 .xlsx 나 CSV 로 주십시오.';
+    cimpPaint();return;
+  }
+  if(f.size>12*1024*1024){
+    CIMP.err='파일이 너무 큽니다 — 12MB 까지 읽습니다. 시트를 나눠 주십시오.';
+    cimpPaint();return;
+  }
+  CIMP.fname=''+(f.name||'');CIMP.busy='read';cimpPaint();
+  var rd=new FileReader();
+  rd.onerror=function(){ CIMP.busy='';CIMP.err='파일을 못 읽었습니다.';cimpPaint(); };
+  rd.onload=function(){
+    var buf=rd.result,u;
+    try{ u=new Uint8Array(buf); }catch(e){ CIMP.busy='';CIMP.err='파일을 못 읽었습니다.';cimpPaint();return; }
+    /* zip 머리글(PK) 이면 엑셀 묶음입니다 — 이름이 아니라 <b>속을</b> 봅니다 */
+    if(u.length>3&&u[0]===0x50&&u[1]===0x4B){ cimpXlsx(buf); return; }
+    var d=cimpDec(buf);
+    CIMP.enc=d.enc;CIMP.bad=d.bad||0;
+    if(!cimpTxt(d.txt)){ CIMP.busy='';CIMP.err='파일에 읽을 글이 없습니다.';cimpPaint();return; }
+    var c=cimpCsv(d.txt);
+    CIMP.sheets=[];CIMP.busy='';
+    cimpTake(c.rows, d.bad>0?('글자가 '+d.bad+'자 깨져 보입니다 — 엑셀에서 「CSV UTF-8」 로 다시 저장하시면 깔끔합니다.'):'');
+  };
+  rd.readAsArrayBuffer(f);
+}
+function cimpXlsx(buf){
+  var z=cimpZip(buf);
+  if(!z){ CIMP.busy='';CIMP.err='엑셀 묶음을 못 열었습니다 — 파일이 깨졌을 수 있습니다.';cimpPaint();return; }
+  CIMP._z=z;CIMP.enc='xlsx';
+  cimpZipText(z,'xl/workbook.xml').then(function(wb){
+    return cimpZipText(z,'xl/_rels/workbook.xml.rels').then(function(rels){
+      return cimpZipText(z,'xl/sharedStrings.xml').then(function(ss){
+        CIMP._ss=cimpShared(ss);
+        CIMP.sheets=cimpSheets(wb,rels);
+        if(!CIMP.sheets.length)CIMP.sheets=[{name:'시트1',path:'xl/worksheets/sheet1.xml'}];
+        return cimpSheetPick(0);
+      });
+    });
+  })['catch'](function(){ CIMP.busy='';CIMP.err='엑셀을 읽는 중에 멈췄습니다 — CSV 로 저장해 다시 주십시오.';cimpPaint(); });
+}
+window.cimpSheetPick=function(ix){
+  var z=CIMP._z;
+  if(!z||!CIMP.sheets[ix]){ CIMP.busy='';CIMP.err='그 시트를 못 찾았습니다.';cimpPaint();return Promise.resolve(); }
+  CIMP.sheet=ix;CIMP.busy='read';cimpPaint();
+  return cimpZipText(z,CIMP.sheets[ix].path).then(function(xml){
+    CIMP.busy='';
+    var rows=cimpSheetRows(xml,CIMP._ss||[]);
+    cimpTake(rows,'');
+  },function(){ CIMP.busy='';CIMP.err='그 시트를 못 읽었습니다.';cimpPaint(); });
+};
+/* 읽은 줄을 받아 <b>칸을 맞춰 봅니다</b> */
+function cimpTake(rows,note){
+  CIMP.note=note||'';
+  if(!rows||rows.length<2){
+    CIMP.err='머리글 한 줄과 고객 한 줄은 있어야 합니다 — 읽은 줄 '+((rows&&rows.length)||0)+'줄.';
+    CIMP.rows=rows||[];cimpPaint();return;
+  }
+  CIMP.rows=rows;CIMP.head=rows[0]||[];
+  CIMP.map=cimpGuess(CIMP.head);
+  CIMP.unit={};CIMP.off={};CIMP.maybe=false;CIMP.sort=null;
+  CIMP.grp=cimpGrpGuess();
+  CIMP.err='';CIMP.step='map';
+  cimpPaint();
+}
+/* ── ② 칸 맞추기 ── */
+function cimpMapHtml(){
+  var h='<div class="cimp-t">📋 <b>칸 맞추기</b></div>',i,j,f,k,v,used={},money=false;
+  var sh=CIMP.sheets.length?(' · '+osEsc(CIMP.sheets[CIMP.sheet].name)+' 시트'):'';
+  h+='<div class="cimp-d">'+osEsc(CIMP.fname)+sh+' · 고객 <b>'+(CIMP.rows.length-1)+'줄</b>'+
+     (CIMP.enc&&CIMP.enc!=='xlsx'?(' · '+osEsc(CIMP.enc)):'')+'</div>'+cimpSay();
+  if(CIMP.sheets.length>1){
+    h+='<div class="cimp-row"><span class="l">시트</span><select onchange="cimpSheetPick(this.selectedIndex)">';
+    for(i=0;i<CIMP.sheets.length;i++)
+      h+='<option'+(i===CIMP.sheet?' selected':'')+'>'+osEsc(CIMP.sheets[i].name)+'</option>';
+    h+='</select></div>';
+  }
+  for(j=0;j<CIMP.head.length;j++)if(CIMP.map[j]&&CIMP.map[j]!==CIMP_MEMO)used[CIMP.map[j]]=1;
+  h+='<table class="cimp-map"><thead><tr><th>엑셀 칸</th><th>앱의 어디로</th><th>첫 줄</th></tr></thead><tbody>';
+  for(j=0;j<CIMP.head.length;j++){
+    k=CIMP.map[j]||'';
+    v=cimpTxt((CIMP.rows[1]||[])[j]);
+    if(cimpHasRrn(v))v='(주민번호 — 안 가져옵니다)';
+    h+='<tr><td class="hd">'+osEsc(cimpTxt(CIMP.head[j])||'(이름 없는 칸)')+'</td><td>';
+    if(cimpLocked(CIMP.head[j])){
+      h+='<span class="lk">🔒 안 가져옵니다</span>';
+    }else{
+      h+='<select onchange="cimpMapSet('+j+',this.value)">'+
+         '<option value=""'+(k===''?' selected':'')+'>— 안 가져옴</option>'+
+         '<option value="'+CIMP_MEMO+'"'+(k===CIMP_MEMO?' selected':'')+'>메모에 적어 두기</option>';
+      for(i=0;i<CIMP_F.length;i++){
+        f=CIMP_F[i];
+        if(used[f.k]&&f.k!==k)continue;        /* 한 칸은 한 번만 */
+        h+='<option value="'+f.k+'"'+(k===f.k?' selected':'')+'>'+osEsc(f.t)+'</option>';
+      }
+      h+='</select>';
+    }
+    h+='</td><td class="vv">'+osEsc(v||'—')+'</td></tr>';
+  }
+  h+='</tbody></table>';
+  for(i=0;i<CIMP_F.length;i++)if(CIMP_F[i].man&&used[CIMP_F[i].k])money=true;
+  if(money){
+    h+='<div class="cimp-unit"><b>돈 칸의 단위</b> — 앱은 <b>만원</b>으로 담습니다. 엑셀이 원으로 적혀 있으면 「원」 을 고르십시오.';
+    for(i=0;i<CIMP_F.length;i++){
+      f=CIMP_F[i]; if(!f.man||!used[f.k])continue;
+      h+='<div class="cimp-row"><span class="l">'+osEsc(f.t)+'</span><select onchange="cimpUnitSet(\''+f.k+'\',this.value)">'+
+         '<option value="만원"'+((CIMP.unit[f.k]||'만원')==='만원'?' selected':'')+'>만원</option>'+
+         '<option value="원"'+(CIMP.unit[f.k]==='원'?' selected':'')+'>원</option></select></div>'+
+         cimpUnitSay(f.k);
+    }
+    h+='</div>';
+  }
+  h+='<div class="cimp-row"><span class="l">갈래로 나눌 칸</span><select onchange="cimpGrpSet(this.value)">'+
+     '<option value="-1"'+(CIMP.grp<0?' selected':'')+'>— 안 나눔</option>';
+  for(j=0;j<CIMP.head.length;j++){
+    if(cimpLocked(CIMP.head[j])||!cimpTxt(CIMP.head[j]))continue;
+    h+='<option value="'+j+'"'+(CIMP.grp===j?' selected':'')+'>'+osEsc(cimpTxt(CIMP.head[j]))+'</option>';
+  }
+  h+='</select></div>';
+  if(!used.nm)h+='<div class="cimp-bad">이름 칸을 하나 골라 주십시오 — 이름 없이는 넣을 수 없습니다.</div>';
+  h+='<div class="cimp-btns">'+
+     '<button type="button" class="cimp-b2" onclick="cimpReset();cimpPaint()">다른 파일</button>'+
+     '<button type="button" class="cimp-b1"'+(used.nm?'':' disabled')+' onclick="cimpGoSort()">분류해서 보기 ›</button>'+
+     '</div>'+
+     '<div class="cimp-n">생년이 <b>여섯 자리</b>(예: 760815)면 19xx·20xx 가 안 적혀 있습니다 — '+
+     '올해 두 자리보다 큰 것은 19xx 로 읽습니다. <b>나이 칸은 생년으로 고쳐 적지 않습니다</b> — '+
+     '해마다 바뀌는 값이라 「메모에 적어 두기」 로만 담습니다.</div>';
+  return h;
+}
+window.cimpMapSet=function(j,v){
+  var i;
+  /* 같은 칸을 두 곳에 두지 않습니다 — 먼저 쓰던 칸은 「메모에 적기」 로 */
+  if(v&&v!==CIMP_MEMO)for(i in CIMP.map)if(CIMP.map.hasOwnProperty(i)&&(+i)!==(+j)&&CIMP.map[i]===v)CIMP.map[i]=CIMP_MEMO;
+  CIMP.map[j]=v;CIMP.sort=null;cimpPaint();
+};
+window.cimpUnitSet=function(k,v){ CIMP.unit[k]=v;CIMP.sort=null;cimpPaint(); };
+/* ── 고른 단위로 <b>얼마가 되는지</b> 그 자리에서 보여 드립니다 ───────
+   「50만원」 이 「50억」 으로 찍힌 자리가 바로 돈 단위입니다 (4번). 글로
+   「만원입니다」 라고만 적으면 사장님은 엑셀이 원인지 만원인지 모르십니다.
+   <b>읽은 결과를 그대로 적어</b> 눈으로 보시게 합니다. 월 1억이 넘으면
+   거의 틀림없이 「원」 으로 적힌 것이라 그렇다고 적습니다 — 다만
+   <b>저 혼자 바꾸지는 않습니다</b> (1번 · 지어내지 않는다).            */
+function cimpUnitSay(k){
+  var j=-1,i,v,m,raw='',n=null;
+  for(i=0;i<CIMP.head.length;i++)if(CIMP.map[i]===k){j=i;break;}
+  if(j<0)return '';
+  for(i=1;i<CIMP.rows.length&&i<=6;i++){
+    v=cimpTxt((CIMP.rows[i]||[])[j]); if(!v)continue;
+    m=cimpMan(v,CIMP.unit[k]);
+    if(m!=null&&(n==null||m>n)){ n=m; raw=v; }
+  }
+  if(n==null)return '';
+  var big=(n>=10000),                       /* 월 1억 이상 */
+      say=(typeof vizWon==='function')?vizWon(n):(n+'만원');
+  return '<div class="cimp-u2'+(big?' warn':'')+'">'+(big?'⚠ ':'')+
+    '엑셀의 <b>'+osEsc(raw)+'</b> 을 「'+osEsc(CIMP.unit[k]||'만원')+'」 으로 읽으면 <b>'+
+    osEsc(say)+'</b> 입니다'+
+    (big?' — 엑셀이 <b>원</b> 으로 적혀 있지 않은지 보십시오.':'')+'</div>';
+}
+window.cimpGrpSet=function(v){ CIMP.grp=parseInt(v,10);CIMP.sort=null;cimpPaint(); };
+window.cimpGoSort=function(){ CIMP.sort=cimpSort();CIMP.step='sort';CIMP.err='';cimpPaint(); };
+
+/* ── ③ 분류 ── */
+function cimpBucket(e,t,n,why,cls){
+  if(!n)return '';
+  return '<div class="cimp-bk '+(cls||'')+'"><span class="e">'+e+'</span>'+
+    '<span class="m"><b>'+t+'</b> <i>'+n+'명</i>'+(why?('<span class="w">'+why+'</span>'):'')+'</span></div>';
+}
+function cimpSortHtml(){
+  var S=CIMP.sort||(CIMP.sort=cimpSort()),P=cimpPickList(),i,g,h;
+  h='<div class="cimp-t">🗂 <b>분류</b> — 모두 '+S.all.length+'줄</div>'+
+    '<div class="cimp-d">'+osEsc(CIMP.fname)+'</div>'+cimpSay();
+  if(!S.have.loaded){
+    h+='<div class="cimp-bad">이미 계신 분 명단을 <b>아직 못 읽었습니다.</b> 지금 넣으면 같은 분이 '+
+       '한 줄 더 생길 수 있어 넣기를 잠가 둡니다. 잠시 뒤 다시 눌러 주십시오.</div>';
+  }else{
+    h+='<div class="cimp-note">이미 계신 분 '+S.have.n+'명과 견줬습니다 — 번호 뒷자리, 번호가 없으면 이름으로.</div>';
+  }
+  h+='<div class="cimp-bks">'+
+    cimpBucket('✅','새로 넣을 분',S.ok.length,'','ok')+
+    cimpBucket('♻️','이미 계신 분',S.dupHave.length,'번호가 같습니다 — 넣지 않습니다','dup')+
+    cimpBucket('🤔','같은 이름이 계신 분',S.maybe.length,'번호가 달라 같은 분인지 모릅니다','may')+
+    cimpBucket('📄','이 파일 안에서 두 번',S.dupFile.length,'앞의 한 줄만 넣습니다','dup')+
+    cimpBucket('🙈','이름이 없는 줄',S.noName.length,'넣지 않습니다','no')+
+    cimpBucket('☎️','번호가 없는 분',S.noTel.length,'넣습니다 — 번호는 비워 둡니다','warn')+
+    '</div>';
+  if(S.maybe.length){
+    h+='<label class="cimp-ck"><input type="checkbox"'+(CIMP.maybe?' checked':'')+
+       ' onchange="cimpMaybeSet(this.checked)"/><span>같은 이름이 계신 '+S.maybe.length+'명도 <b>같이 넣기</b>'+
+       ' <i>(다른 분일 수 있어 기본은 안 넣습니다)</i></span></label>';
+  }
+  if(S.gl.length){
+    h+='<div class="cimp-grp"><b>갈래 — '+osEsc(cimpTxt(CIMP.head[CIMP.grp]))+'</b>';
+    for(i=0;i<S.gl.length;i++){
+      g=S.gl[i];
+      h+='<label class="cimp-tag'+(CIMP.off[g]?' off':'')+'"><input type="checkbox"'+(CIMP.off[g]?'':' checked')+
+         ' onchange="cimpGrpOff('+i+',!this.checked)"/><span>'+osEsc(g)+' <i>'+S.grp[g]+'</i></span></label>';
+    }
+    h+='</div>';
+  }
+  if(S.all.length&&!S.ok.length&&!S.maybe.length){
+    h+='<div class="cimp-bad">새로 넣을 분이 <b>없습니다</b> — 아무 숫자도 만들지 않습니다. '+
+       '칸 맞추기로 돌아가 이름 칸을 다시 보시겠습니까?</div>';
+  }
+  h+=cimpList(P);
+  h+='<div class="cimp-btns">'+
+     '<button type="button" class="cimp-b2" onclick="CIMP.step=\'map\';cimpPaint()">‹ 칸 맞추기</button>'+
+     '<button type="button" class="cimp-b1"'+((P.length&&S.have.loaded&&!CIMP.busy)?'':' disabled')+
+     ' onclick="cimpGo()">'+(CIMP.busy==='save'?('넣는 중… '+CIMP.at+'/'+CIMP.of):('👤 내 고객으로 '+P.length+'명 넣기'))+'</button>'+
+     '</div>'+
+     '<div class="cimp-n">들어가는 곳: <b>고객 365일</b>. 서버에는 <b>가린 이름</b>만 가고 '+
+     '실명은 이 기기에만 둡니다. 배정 DB 한도에는 <b>안 셉니다</b>.</div>';
+  return h;
+}
+function cimpList(P){
+  var h='',i,o,n=Math.min(P.length,12);
+  if(!P.length)return '';
+  h='<div class="cimp-pv"><b>넣을 분</b> '+P.length+'명'+(P.length>n?(' (앞 '+n+'명만 보입니다)'):'')+
+    '<table><tbody>';
+  for(i=0;i<n;i++){
+    o=P[i];
+    h+='<tr><td class="nm">'+osEsc(o.nm)+'</td>'+
+       '<td>'+(o.ex.ph?osEsc(o.ex.ph):osNoVal())+'</td>'+
+       '<td>'+(o.ex.by?osEsc(''+o.ex.by+'년'):osNoVal())+'</td>'+
+       '<td>'+(o.ex.gd==='M'?'남':(o.ex.gd==='F'?'여':osNoVal()))+'</td>'+
+       '<td>'+(o.g?osEsc(o.g):osNoVal())+'</td></tr>';
+  }
+  h+='</tbody></table></div>';
+  return h;
+}
+window.cimpMaybeSet=function(on){ CIMP.maybe=!!on;cimpPaint(); };
+window.cimpGrpOff=function(ix,off){
+  var S=CIMP.sort,g=(S&&S.gl&&S.gl[ix])||'';
+  if(!g)return;
+  if(off)CIMP.off[g]=1; else delete CIMP.off[g];
+  cimpPaint();
+};
+/* ── 넣기 — <b>cliMakeMany 하나</b>를 부릅니다 (5번) ── */
+window.cimpGo=function(){
+  var P=cimpPickList();
+  if(!P.length){ CIMP.err='넣을 분이 없습니다.';cimpPaint();return; }
+  if(!(CIMP.sort&&CIMP.sort.have.loaded)){ CIMP.err='이미 계신 분 명단을 아직 못 읽었습니다 — 잠시 뒤 다시 눌러 주십시오.';cimpPaint();return; }
+  if(P.length>CIMP_MAX){ CIMP.err='한 번에 '+CIMP_MAX+'명까지 넣습니다 — 파일을 나눠 주십시오 (지금 '+P.length+'명).';cimpPaint();return; }
+  if(CIMP.busy)return;
+  CIMP.busy='save';CIMP.at=0;CIMP.of=P.length;CIMP.err='';cimpPaint();
+  cliMakeMany(P,function(at,of){ CIMP.at=at;CIMP.of=of;cimpPaint(); },function(res){
+    CIMP.busy='';CIMP.res=res;CIMP.step='done';cimpPaint();
+    try{ if(typeof osLoadClients==='function'){ OSC.loaded=false;OSC.busy=false;osLoadClients(); } }catch(e){}
+    try{ if(typeof hmPaint==='function')hmPaint(); }catch(e2){}
+  });
+};
+function cimpDoneHtml(){
+  var r=CIMP.res||{ok:0,fail:0,noid:0},S=CIMP.sort||{dupHave:[],dupFile:[],noName:[],maybe:[]};
+  var h='<div class="cimp-t">'+(r.ok?'✅ ':'⚠️ ')+'<b>'+r.ok+'명</b>을 내 고객으로 넣었습니다</div>';
+  h+='<div class="cimp-d">고객 365일 에서 바로 보입니다.</div>';
+  h+='<div class="cimp-bks">'+
+    cimpBucket('✅','넣었습니다',r.ok,'','ok')+
+    cimpBucket('🙈','이름이 없어 안 넣음',S.noName.length,'','no')+
+    cimpBucket('♻️','이미 계셔서 안 넣음',S.dupHave.length,'','dup')+
+    cimpBucket('📄','파일 안 중복으로 안 넣음',S.dupFile.length,'','dup')+
+    (CIMP.maybe?'':cimpBucket('🤔','같은 이름이라 안 넣음',S.maybe.length,'','may'))+
+    cimpBucket('⛔','못 넣었습니다',r.fail,r.why||'','bad')+
+    cimpBucket('🔢','넣었지만 번호를 못 받음',r.noid,'실명이 이 기기에 안 담겼습니다 — 고객 365일에서 이름을 고쳐 주십시오','warn')+
+    '</div>';
+  if(r.note)h+='<div class="cimp-note">'+osEsc(r.note)+'</div>';
+  if(r.why&&r.fail)h+='<div class="cimp-bad">'+osEsc(r.why)+'</div>';
+  h+='<div class="cimp-btns">'+
+     '<button type="button" class="cimp-b2" onclick="cimpReset();cimpPaint()">또 가져오기</button>'+
+     '<button type="button" class="cimp-b1" onclick="cimpClose();if(typeof go===\'function\')go(\'clients\')">고객 365일 보기 ›</button>'+
+     '</div>';
+  return h;
+}
+function cimpCss(){
+  if(document.getElementById('cimpCss'))return;
+  var st=document.createElement('style');st.id='cimpCss';
+  st.textContent=
+   '#cimpSheet{position:fixed;inset:0;z-index:5320;background:rgba(15,23,42,.5);'+
+     'display:none;align-items:center;justify-content:center;padding:16px}'+
+   '#cimpSheet.on{display:flex}'+
+   '.cimp-box{position:relative;background:#fff;border-radius:var(--r);max-width:560px;width:100%;'+
+     'max-height:88vh;overflow-y:auto;padding:20px 16px 16px}'+
+   '.cimp-x{position:absolute;top:8px;right:10px;min-width:44px;min-height:44px;border:0;'+
+     'background:none;font-size:22px;color:var(--t-sub2);cursor:pointer}'+
+   '.cimp-t{font-size:var(--t4);font-weight:900;color:var(--t-ink);padding-right:40px}'+
+   '.cimp-d{margin-top:5px;font-size:var(--t6);color:var(--t-sub);line-height:1.6}'+
+   '.cimp-bad{margin-top:11px;padding:10px 12px;border-radius:var(--r-sm);background:#FEF2F2;'+
+     'border:1px solid #FECACA;font-size:var(--t6);line-height:1.7;color:var(--t-ink)}'+
+   '.cimp-note{margin-top:11px;padding:10px 12px;border-radius:var(--r-sm);background:var(--t-bg-3);'+
+     'font-size:var(--t7);line-height:1.7;color:var(--t-sub)}'+
+   '.cimp-drop{display:flex;flex-direction:column;align-items:center;gap:3px;margin-top:14px;'+
+     'border:2px dashed var(--t-line);border-radius:var(--r-sm);padding:22px 14px;cursor:pointer;'+
+     'background:var(--t-bg-3);text-align:center}'+
+   '#cimpSheet.drag .cimp-drop{border-color:var(--t-point);background:#fff}'+
+   '.cimp-drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}'+
+   '.cimp-drop .e{font-size:26px}'+
+   '.cimp-drop b{font-size:var(--t5);font-weight:900;color:var(--t-ink)}'+
+   '.cimp-drop em{font-style:normal;font-size:var(--t7);color:var(--t-sub2)}'+
+   '.cimp-drop .k{margin-top:5px;font-size:var(--t7);color:var(--t-sub2)}'+
+   '.cimp-g{margin-top:13px;padding:11px 12px;border-radius:var(--r-sm);border:1px solid var(--t-line);'+
+     'font-size:var(--t7);line-height:1.8;color:var(--t-sub)}'+
+   '.cimp-lock{margin-top:11px;font-size:var(--t7);line-height:1.7;color:var(--t-ink-2)}'+
+   '.cimp-n{margin-top:13px;padding-top:11px;border-top:1px solid var(--t-line);'+
+     'font-size:var(--t7);line-height:1.7;color:var(--t-sub)}'+
+   '.cimp-map{width:100%;margin-top:12px;border-collapse:collapse;font-size:var(--t7)}'+
+   '.cimp-map th{text-align:left;padding:6px 6px;color:var(--t-sub2);font-weight:800;'+
+     'border-bottom:1px solid var(--t-line)}'+
+   '.cimp-map td{padding:5px 6px;border-bottom:1px solid var(--t-bg-3);vertical-align:middle}'+
+   '.cimp-map td.hd{font-weight:800;color:var(--t-ink);max-width:120px;word-break:break-all}'+
+   '.cimp-map td.vv{color:var(--t-sub2);max-width:120px;word-break:break-all}'+
+   '.cimp-map select{width:100%;min-height:44px;border:1px solid var(--t-line);border-radius:8px;'+
+     'padding:4px 6px;font-size:var(--t7);font-family:inherit;background:#fff}'+
+   '.cimp-map .lk{font-size:var(--t7);font-weight:800;color:var(--t-ink-2)}'+
+   '.cimp-u2{margin-top:5px;font-size:var(--t7);line-height:1.6;color:var(--t-sub)}'+
+   '.cimp-u2.warn{font-weight:800;color:var(--t-ink)}'+
+   '.cimp-unit{margin-top:12px;padding:11px 12px;border-radius:var(--r-sm);background:#FFFBEB;'+
+     'font-size:var(--t7);line-height:1.7;color:var(--t-ink)}'+
+   '.cimp-row{display:flex;align-items:center;gap:8px;margin-top:8px}'+
+   '.cimp-row .l{flex:none;font-size:var(--t7);font-weight:800;color:var(--t-sub)}'+
+   '.cimp-row select{flex:1 1 auto;min-width:0;min-height:44px;border:1px solid var(--t-line);'+
+     'border-radius:8px;padding:5px 8px;font-size:var(--t7);font-family:inherit;background:#fff}'+
+   '.cimp-bks{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:7px;margin-top:12px}'+
+   '.cimp-bk{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--t-line);'+
+     'border-radius:var(--r-sm);padding:9px 10px;background:#fff}'+
+   '.cimp-bk.ok{border-color:#86EFAC;background:#F0FDF4}'+
+   '.cimp-bk.bad{border-color:#FECACA;background:#FEF2F2}'+
+   '.cimp-bk.warn{border-color:#FDE68A;background:#FFFBEB}'+
+   '.cimp-bk .e{font-size:17px;line-height:1.3;flex:none}'+
+   '.cimp-bk .m{flex:1 1 auto;min-width:0;font-size:var(--t7);line-height:1.6}'+
+   '.cimp-bk .m b{font-weight:800;color:var(--t-ink)}'+
+   '.cimp-bk .m i{font-style:normal;font-weight:900;color:var(--t-ink)}'+
+   '.cimp-bk .m .w{display:block;margin-top:2px;color:var(--t-sub2)}'+
+   '.cimp-ck{display:flex;gap:8px;align-items:flex-start;margin-top:11px;padding:13px 11px;min-height:44px;'+
+     'border:1px solid var(--t-line);border-radius:var(--r-sm);font-size:var(--t7);line-height:1.6;'+
+     'color:var(--t-sub);cursor:pointer}'+
+   '.cimp-ck input{margin-top:2px;width:18px;height:18px;flex:none}'+
+   '.cimp-ck i{font-style:normal;color:var(--t-sub2)}'+
+   '.cimp-grp{margin-top:12px;font-size:var(--t7);color:var(--t-sub)}'+
+   '.cimp-grp>b{display:block;margin-bottom:3px;color:var(--t-ink)}'+
+   '.cimp-tag{display:inline-flex;align-items:center;gap:5px;margin:6px 6px 0 0;padding:9px 12px;'+
+     'min-height:44px;border:1.5px solid var(--t-point);border-radius:999px;background:#fff;'+
+     'font-size:var(--t7);font-weight:800;color:var(--t-ink);cursor:pointer}'+
+   '.cimp-tag.off{border-color:var(--t-line);color:var(--t-sub2);background:var(--t-bg-3)}'+
+   '.cimp-tag input{width:16px;height:16px;flex:none}'+
+   '.cimp-tag i{font-style:normal;color:var(--t-sub2)}'+
+   '.cimp-pv{margin-top:12px;font-size:var(--t7);color:var(--t-sub)}'+
+   '.cimp-pv table{width:100%;margin-top:6px;border-collapse:collapse}'+
+   '.cimp-pv td{padding:5px 6px;border-bottom:1px solid var(--t-bg-3);color:var(--t-sub);'+
+     'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}'+
+   '.cimp-pv td.nm{font-weight:800;color:var(--t-ink)}'+
+   '.cimp-btns{display:flex;gap:8px;margin-top:14px}'+
+   '.cimp-b1{flex:1 1 auto;min-height:48px;border:0;border-radius:var(--r-sm);'+
+     'background:var(--t-point);color:#fff;font-size:var(--t5);font-weight:900;'+
+     'font-family:inherit;cursor:pointer}'+
+   '.cimp-b1[disabled]{background:var(--t-line);color:var(--t-sub2);cursor:default}'+
+   '.cimp-b2{flex:none;min-height:48px;padding:0 14px;border:1px solid var(--t-line);'+
+     'border-radius:var(--r-sm);background:#fff;font-size:var(--t6);font-weight:800;'+
+     'color:var(--t-sub);font-family:inherit;cursor:pointer}'+
+   '@media (max-width:420px){.cimp-box{padding:18px 12px 14px}'+
+     '.cimp-map td.hd,.cimp-map td.vv{max-width:84px}}';
   document.head.appendChild(st);
 }
 function hdbOpen(id,wantStage){
@@ -65225,16 +66225,12 @@ function osPickClient(cb){
   document.getElementById('osCliPickX').onclick=close;
   document.getElementById('osCliPickAdd').onclick=function(){
     var name=(document.getElementById('osCliPickNew').value||'').replace(/^\s+|\s+$/g,'');if(!name){toast('이름을 입력하세요');return;}
-    sb.from('clients').insert({advisor_id:OS.session.user.id,name_masked:osMaskName(name),consent_status:'none'}).select('id,name_masked').then(function(r){
-      /* ⚠ 여기는 <b>서버</b>입니다 — aiFailText 를 쓰면 AI 설정을 고치러
-         보내게 됩니다(1번). 서버용 자에게 묻습니다. */
-      if(r.error){toast('고객을 만들지 못했습니다 — '+svFailText(r.error),8000);return;}
-      var c=(r.data&&r.data[0])||{};
-      /* 서버에는 가린 이름만 갔고, <b>실명은 이 브라우저에</b> 둔다
-         (CLAUDE.md 3번). 안 두면 방금 적으신 이름을 앱이 잊어버려
-         화면에도 김*수 로만 뜨고, 나가는 글에서 실명을 골라낼 수도 없다. */
-      try{if(typeof cmRealSet==='function')cmRealSet(c.id,name);}catch(e){}
-      close();cb(c.id,c.name_masked||name);
+    /* ★ 넣는 자리는 <b>cliMake 하나</b>입니다 (5번) — 가린 이름으로 서버에,
+       실명은 이 기기에. 그 두 줄이 세 곳에 따로 적혀 있었습니다 (3번).  */
+    cliMake(name,null,function(id,msk,why){
+      if(!id&&!msk){toast('고객을 만들지 못했습니다 — '+(why||'저장하지 못했습니다'),8000);return;}
+      if(!id){toast('만들었지만 번호를 못 받았습니다 — 새로고침한 뒤 그 고객을 고르십시오',8000);return;}
+      close();cb(id,msk||name);
     });
   };
   arAll(sb,'clients','id,name_masked',['-created_at','id']).then(function(r){
@@ -70342,11 +71338,18 @@ function osCreateClient(){
   // 주의: INSERT 후 표현(return=representation) 읽기는 clients_read 정책의
   // 자기참조 서브쿼리(can_see_client) 때문에 같은 문장 안에서 새 행을 못 봐 42501을 낸다.
   // 그래서 .select() 없이 삽입만 하고, 목록은 별도 SELECT(osLoadClients)로 다시 불러온다.
-  sb.from('clients').insert({advisor_id:OS.session.user.id,name_masked:osMaskName(name),consent_status:'none'}).then(function(r){
+  /* ★ 넣는 자리는 <b>cliMake 하나</b>입니다 (5번). 여태 여기는 번호를 안
+     받아 와서 <b>실명을 이 기기에 담을 수가 없었습니다</b> — 그래서 「새 고객
+     등록」 으로 넣은 분은 화면에도 영영 홍○○ 로만 떴습니다. cliMake 가
+     번호를 받아 cmRealSet 까지 합니다 (3번).                            */
+  cliMake(name,null,function(id,msk,why){
     if(btn){btn.disabled=false;btn.textContent='등록하고 시작';}
-    if(r.error){if(err)err.textContent=r.error.message;return;}
+    if(!id&&!msk){ if(err)err.textContent=why||'저장하지 못했습니다';return; }
     osAudit('create','client',null,{note:'고객 등록'});
-    osCloseModal();toast('고객이 등록되었습니다.');
+    osCloseModal();
+    /* 번호를 못 받았으면 <b>그렇다고</b> 말합니다 — 조용히 넘어가면 실명이
+       안 담긴 것을 아무도 모릅니다 (1번) */
+    toast(id?'고객이 등록되었습니다.':('고객이 등록되었습니다 — 다만 '+(why||'번호를 못 받아')+' 실명은 못 담았습니다. 고객 365일에서 이름을 고쳐 주십시오.'),id?3000:8000);
     OSC.view='list';osLoadClients();
   });
 }
