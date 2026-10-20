@@ -56,6 +56,9 @@ main{max-width:1560px;margin:0 auto;padding:16px 14px 40px}
 .card>h2 .sp{flex:1}
 
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px;margin-bottom:14px}
+/* 맨 위 수가 <b>무엇을 센 것인지</b> 그 자리에 적습니다 — 칸을 통째로 차지합니다 (판 X139) */
+.kpi-note{grid-column:1/-1;margin-top:-2px;font-size:12px;line-height:1.7;color:#6B7684}
+.kpi .l i.w{font-style:normal;font-weight:700;color:#8B95A1}
 .kpi{background:#fff;border-radius:var(--r2);padding:14px 15px;box-shadow:var(--sh)}
 .kpi .l{font-size:12.5px;color:var(--tx3);font-weight:600}
 .kpi .v{font-size:22px;font-weight:800;margin-top:2px;letter-spacing:-1px}
@@ -600,8 +603,17 @@ $('#f-stage').onchange = e => { FILTER.stage = e.target.value; renderBoard(); };
 let qT; $('#f-q').oninput = e => { FILTER.q = e.target.value; clearTimeout(qT); qT = setTimeout(renderBoard, 240); };
 
 function renderKpi() {
-  const L = rowsFiltered();
-  const live = L.filter(isLive), done = L.filter(isDone), off = L.filter(r => r.closed);
+  /* ★★ 맨 위 수는 <b>거르개를 안 탑니다</b> (판 X139 · 사장님 말씀 2026-10-20).
+     여태 rowsFiltered() 를 썼는데, 아래 단계 거르개가 <b>기본값이 AP·PC</b>
+     라서 화면을 열자마자 <b>「계약업적 0원 · 0건」</b> 이 떴습니다 — 바로 밑
+     「전체 팀 한눈에」 는 같은 순간 <b>「체결 1,030,000」</b> 이라고 적고
+     있었습니다. 틀린 셈은 아니었지만 <b>한 화면이 같은 물음에 두 답</b>을
+     했습니다 (0-1번·5번). 사장님께 넷 중에 여쭈었고 「맨 위 카드는 늘
+     전부 세게」 를 고르셨습니다.
+     ★ 계약업적만 <b>달</b>로 셉니다 — 아래 표의 「체결」 과 <b>같은 자</b>
+       (doneWonMonth)를 부릅니다. 전체로 세면 세 번째 답이 생깁니다.    */
+  const L = ROWS.slice();
+  const live = L.filter(isLive), done = doneMonth(L), off = L.filter(r => r.closed);
   const we = weekEnd();
   const wk = live.filter(r => r.date && r.date >= TODAY_S && r.date <= we).length;
   const late = live.filter(r => r.date && r.date < TODAY_S).length;
@@ -615,18 +627,20 @@ function renderKpi() {
      아직 여러 곳</b> 남아 있습니다 — check-pex 가 그 수를 세고, <b>늘면
      빨간불</b>입니다. 한 번에 다 고치지 않은 까닭은 이 화면을 돌려 볼
      길이 없어, 머리 두 수부터 옮기고 나머지는 눈금으로 둔 것입니다. */
-  const cSum = APEX_PEX.doneWon(done);
+  const cSum = doneWonMonth(L);
   $('#kpis').innerHTML = `
     <div class="kpi pri"><div class="l">진행중 예상업적</div><div class="v">${won(APEX_PEX.liveWon(live))}<small>원</small></div></div>
     <div class="kpi"><div class="l">AP · PC</div><div class="v">${appc}<small>건</small></div></div>
     <div class="kpi"><div class="l">진행중</div><div class="v">${live.length}<small>건</small></div></div>
-    <div class="kpi ok"><div class="l">계약업적</div><div class="v">${won(cSum)}<small>원 · ${done.length}건</small></div></div>
+    <div class="kpi ok"><div class="l">계약업적 <i class="w">${goalMonth().replace('-', '.')}</i></div><div class="v">${won(cSum)}<small>원 · ${done.length}건</small></div></div>
     <div class="kpi"><div class="l">받은 소개</div><div class="v">${intro}<small>명</small></div></div>
     <div class="kpi"><div class="l">이번주 약속</div><div class="v">${wk}<small>건</small></div></div>
     <div class="kpi ${late ? 'warn' : ''}"><div class="l">약속일 지남</div><div class="v">${late}<small>건</small></div></div>
     <div class="kpi ${pol ? 'warn' : ''}"><div class="l">증권 미전달</div><div class="v">${pol}<small>건</small></div></div>
     <div class="kpi"><div class="l">소개 진행</div><div class="v">${fam}<small>건</small></div></div>
-    <div class="kpi"><div class="l">보류 · 무산</div><div class="v">${off.length}<small>건</small></div></div>`;
+    <div class="kpi"><div class="l">보류 · 무산</div><div class="v">${off.length}<small>건</small></div></div>
+    <div class="kpi-note">맨 위 수는 <b>전체 기준</b>입니다 — 아래 거르개는 <b>명단에만</b> 듭니다.
+      계약업적은 <b>${goalMonth().replace('-', '.')}</b> 체결이고, 아래 「전체 팀 한눈에」 의 체결과 <b>같은 수</b>입니다.</div>`;
 }
 function selOf(field, val, list, pre, dis, labels) {
   return `<select data-f="${field}" class="${pre}${esc(val)}"${dis ? ' disabled' : ''}>` +
@@ -698,6 +712,17 @@ function monthDone(mid) {
   const m = goalMonth();
   return ROWS.filter(r => r.mid === mid && isDone(r) && ym(r.cdate) === m);
 }
+/* ── 「<b>이 달 체결</b>」 을 내는 자 — 여기 하나입니다 (5번) ────────────
+   맨 위 카드와 「전체 팀 한눈에」 의 체결이 <b>이것을 같이 부릅니다</b>.
+   따로 세면 한 화면이 같은 물음에 두 답을 합니다 — 실제로 그랬습니다
+   (판 X139 · 사장님이 사진을 보시고 짚으신 자리).
+   ★ 금액은 APEX_PEX.wonOf 가 정합니다(계약업적이 비면 예상업적) —
+     여기서 또 손으로 더하지 않습니다.                                 */
+function doneMonth(rows) {
+  const m = goalMonth();
+  return (rows || ROWS).filter(r => isDone(r) && ym(r.cdate) === m);
+}
+function doneWonMonth(rows) { return APEX_PEX.doneWon(doneMonth(rows)); }
 /* 원을 받아 「25만」 처럼 적는다. 이름 끝의 <b>R</b> 이 「원을 받는다」 는
    뜻이다 (CLAUDE.md 4번 — xxxWon 은 만원, xxxWonR 은 원). 이름 옆에
    붙는 글이라 만 밑은 접는다. 억이 넘으면 억으로 적는다. */
@@ -787,8 +812,8 @@ function teamStat(tid) {
   const live = L.filter(isLive), done = L.filter(isDone);
   const goal = memsOf(tid).reduce((a, m) => a + (GOALS[m.id] || 0), 0) * 10000;
   const cases = memsOf(tid).reduce((a, m) => a + (+CASES[m.id] || 0), 0);
-  const got = memsOf(tid).reduce((a, m) => a + monthDone(m.id)
-    .reduce((b, r) => b + (+r.contract || +r.expect || 0), 0), 0);
+  /* 체결액은 <b>doneWonMonth 한 곳</b>이 냅니다 — 맨 위 카드와 같은 자입니다 (5번) */
+  const got = doneWonMonth(L);
   /* ★ 진행 예상은 <b>한 사람이라도 적었을 때만</b> 숫자로 적는다. 아무도
      안 적었는데 「0원」 이라고 적으면 <b>「이 팀은 기대할 게 없다」</b> 가
      되어 버린다 — 못 적은 것과 0 은 다르다 (1번). */

@@ -365,6 +365,56 @@ window.supabase={createClient:function(){ return {
   is(allfold.a === allfold.teams, '모두 접으면 <b>다 접힌다</b> — ' + allfold.a + '팀');
   is(allfold.b === 0, '한 번 더 누르면 <b>다 펴진다</b>');
 
+  head('[11] ★★ <b>맨 위 카드가 아래 표와 같은 수를 말한다</b> (판 X139)');
+  /* ★★ 사장님이 사진을 보시고 짚으신 자리입니다. 맨 위 「계약업적」 이
+     <b>0원 · 0건</b> 인데 바로 밑 「전체 팀 한눈에」 는 <b>체결 1,030,000</b>
+     이었습니다. 까닭은 아래 단계 거르개가 <b>기본값이 AP·PC</b> 라서
+     카드가 거른 것만 셌기 때문입니다 — 틀린 셈은 아니었지만 한 화면이
+     같은 물음에 <b>두 답</b>을 했습니다 (0-1번·5번).
+     사장님이 「맨 위 카드는 늘 전부 세게」 를 고르셨습니다.             */
+  const kpi = await pg.evaluate(() => {
+    /* ⚠ 카드 값은 「450,000<small>원 · 1건</small>」 입니다. 통째로 숫자만
+       뽑으면 <b>건수까지 붙어</b> 4500001 이 됩니다 — 처음에 그래서 헛
+       빨간불이 떴습니다. <b>금액 토막만</b> 읽습니다 (8번).            */
+    const amt = (v) => +(((v && v.firstChild && v.firstChild.textContent) || '').replace(/[^0-9]/g, '') || 0);
+    const card = [].slice.call(document.querySelectorAll('#kpis .kpi'))
+      .find(e => /계약업적/.test(e.querySelector('.l').innerText));
+    const tot = document.querySelector('#allteams tr.sum,#allteams tfoot tr') ||
+                [].slice.call(document.querySelectorAll('#allteams tr')).pop();
+    const tds = tot ? [].slice.call(tot.querySelectorAll('td,th')).map(x => x.innerText.trim()) : [];
+    return { card: card ? amt(card.querySelector('.v')) : -1,
+             cardTxt: card ? card.innerText.replace(/\s+/g, ' ') : '(카드 없음)',
+             totTds: tds, stage: FILTER.stage,
+             note: ((document.querySelector('.kpi-note') || {}).innerText || '').replace(/\s+/g, ' '),
+             byOwner: (typeof doneWonMonth === 'function') ? doneWonMonth(ROWS) : -1 };
+  });
+  is(kpi.card >= 0, '맨 위에 <b>계약업적 카드</b>가 있다 — ' + kpi.cardTxt);
+  is(kpi.card === kpi.byOwner,
+     '카드가 <b>이 달 체결</b>을 그대로 적는다 (카드 ' + kpi.card + ' · doneWonMonth ' + kpi.byOwner + ')');
+  is(kpi.totTds.some(x => x.replace(/[^0-9]/g, '') === String(kpi.byOwner) && kpi.byOwner > 0),
+     '아래 「전체 팀 한눈에」 의 <b>체결</b>과 같은 수다 — ' + kpi.totTds.join(' | '));
+  is(/전체 기준/.test(kpi.note) && /명단에만/.test(kpi.note),
+     '<b>무엇을 센 것인지</b> 그 자리에 적는다 — ' + kpi.note.slice(0, 70));
+  /* ★ 거르개를 바꿔도 카드는 <b>안 바뀐다</b> — 그것이 「전부 세기」 입니다 */
+  const afterFilter = await pg.evaluate(() => {
+    const amt = (v) => +(((v && v.firstChild && v.firstChild.textContent) || '').replace(/[^0-9]/g, '') || 0);
+    const pick = (v) => { FILTER.stage = v; renderKpi(); renderBoard(); renderAllTeams();
+      const c = [].slice.call(document.querySelectorAll('#kpis .kpi'))
+        .find(e => /계약업적/.test(e.querySelector('.l').innerText));
+      return amt(c.querySelector('.v')); };
+    const appc = pick('__appc'), live = pick('__live'), all = pick('');
+    const rows = () => document.querySelectorAll('#board tr.r').length;
+    FILTER.stage = '__appc'; renderBoard(); const nA = rows();
+    FILTER.stage = ''; renderBoard(); const nAll = rows();
+    FILTER.stage = '__appc'; renderKpi(); renderBoard(); renderAllTeams();
+    return { appc, live, all, nA, nAll };
+  });
+  is(afterFilter.appc === afterFilter.live && afterFilter.live === afterFilter.all,
+     '단계 거르개를 바꿔도 카드는 <b>같은 수</b>다 — AP·PC ' + afterFilter.appc +
+     ' · 진행중 ' + afterFilter.live + ' · 전체 ' + afterFilter.all);
+  is(afterFilter.nA < afterFilter.nAll,
+     '거르개는 <b>아래 명단</b>에는 든다 — AP·PC ' + afterFilter.nA + '줄 / 전체 ' + afterFilter.nAll + '줄');
+
   head('[10] 서버를 아껴 쓴다 (7번)');
   const calls = await pg.evaluate(() => window.__CALLS__.filter(x => /monthly_perf/.test(x)).length);
   is(calls <= 2, '목표를 <b>되풀이해 안 부른다</b> — monthly_perf ' + calls + '번');
