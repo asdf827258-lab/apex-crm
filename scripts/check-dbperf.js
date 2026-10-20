@@ -395,6 +395,29 @@ window.supabase={createClient:function(){ return {
      '아래 「전체 팀 한눈에」 의 <b>체결</b>과 같은 수다 — ' + kpi.totTds.join(' | '));
   is(/전체 기준/.test(kpi.note) && /명단에만/.test(kpi.note),
      '<b>무엇을 센 것인지</b> 그 자리에 적는다 — ' + kpi.note.slice(0, 70));
+  /* ⚠ 판 X141 — 라벨에 달을 붙이자 칸이 좁아져 「1,030,000원 · 3」 / 「건」 으로
+     <b>건이 아랫줄에 떨어졌습니다.</b> 숫자와 단위가 갈리면 한 박자 늦게
+     읽힙니다. 라이브에서 찍어 보고 찾은 자리라 자에 박아 둡니다 (8번).   */
+  const wrap = await pg.evaluate(() => {
+    const c = [].slice.call(document.querySelectorAll('#kpis .kpi'))
+      .find(e => /계약업적/.test(e.querySelector('.l').innerText));
+    const sm = c && c.querySelector('.v small');
+    if (!sm) return { ok: false, why: '(꼬리말이 없습니다)' };
+    /* ⚠⚠ 처음에는 그냥 쟀는데 <b>되돌려도 안 울었습니다</b> — 자가 칸이
+       넉넉한 자리에서 재고 있어 애초에 안 갈렸습니다. 안 울리는 알람은
+       알람이 아닙니다 (8번). <b>갈리는 조건</b>을 만들어 놓고 잽니다 —
+       칸을 좁히고 금액도 사장님 자료만큼 길게(1,030,000원 · 3건) 둡니다. */
+    const v = c.querySelector('.v'), keepW = c.style.width, keepH = v.innerHTML;
+    v.innerHTML = '1,030,000<small>원 · 3건</small>';
+    c.style.width = '158px';
+    const sm2 = c.querySelector('.v small');
+    const r = sm2.getClientRects();
+    const out = { ok: r.length === 1, n: r.length, txt: sm2.innerText.replace(/\s+/g, ' ') };
+    c.style.width = keepW; v.innerHTML = keepH;
+    return out;
+  });
+  is(wrap.ok, '계약업적 카드의 꼬리말이 <b>한 줄로 붙어 있다</b> — 「' +
+     (wrap.txt || wrap.why) + '」 · 줄 ' + (wrap.n || 0));
   /* ★ 거르개를 바꿔도 카드는 <b>안 바뀐다</b> — 그것이 「전부 세기」 입니다 */
   const afterFilter = await pg.evaluate(() => {
     const amt = (v) => +(((v && v.firstChild && v.firstChild.textContent) || '').replace(/[^0-9]/g, '') || 0);
