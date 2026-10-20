@@ -146,7 +146,7 @@ const LOOK = () => {
   is(/const isDone = r => APEX_PEX\.isDone\(r\);/.test(DECK)
      && /const isLive = r => APEX_PEX\.isLive\(r\);/.test(DECK),
     '  ★★ <b>판정이 덱에 안 남아 있다</b> — 부르기만 합니다');
-  /* ⚠ 판 X139 — 머리의 「계약업적」 은 이제 <b>doneWonMonth</b> 를 지납니다.
+  /* ⚠ 판 X140 — 머리의 「계약업적」 은 이제 <b>doneWonMonth</b> 를 지납니다.
      맨 위 카드와 「전체 팀 한눈에」 의 체결이 <b>같은 수</b>를 말하게 하려고
      한 자로 모았습니다. 여기 글자(APEX_PEX.doneWon(done))를 박아 두었더니
      <b>옳게 모았는데 울었습니다.</b> 재야 하는 것은 글자가 아니라
