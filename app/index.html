@@ -20651,8 +20651,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-20 05:10';
-var APP_BUILD_NOTE="📊 <b>DB · 업적관리 계약업적 카드에서 「건」 이 아랫줄로 떨어지던 것</b>을 붙였습니다 — 판 X140 에서 제가 라벨에 「2026.10」 을 붙이며 칸이 좁아져 <b>「1,030,000원 · 3」 / 「건」</b> 으로 갈렸습니다. 숫자와 단위가 갈리면 한 박자 늦게 읽힙니다. 꼬리말은 통째로 움직이게 두었습니다. 라이브에서 찍어 보고 찾은 자리이고 <b>셈은 한 자도 안 건드렸습니다.</b> ◾ 지난 판(X140)에서 고친 것 — 현황판 맨 위 수가 <b>거르개를 안 타고</b>, 계약업적이 아래 「전체 팀 한눈에」 의 체결과 <b>같은 자</b>를 부릅니다. (판 X141)";/* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
+var APP_BUILD='2026-10-20 13:20';
+var APP_BUILD_NOTE="🚗 <b>「오늘 어디로 가시나」 가 약속 없는 날에도 만나야 할 분을 보여 줍니다</b> — 사장님 말씀 「왜 지역동선에 추천인들이 안 떠」 그 자리입니다. 약속이 0건이면 사람을 세는 자가 그 자리에서 빈손을 돌려주어 <b>한 명도 안 떴습니다.</b> 앱은 그 동네에 몇 분 계신지 이미 세어 적고 있었는데 <b>그 분들이 누구인지는 안 적었습니다.</b> 이제 만나야 할 분이 제일 많은 동네를 권하고 <b>왜 골랐는지</b>도 적습니다 — 지어내는 것이 아니라 이미 있는 줄을 세어 고릅니다. 약속 줄과 시각은 그대로 0 입니다. ◾ 사람은 <b>접는 칸 하나</b>에 담았습니다 — 머리글이 몇 분인지 말하고, 한 번 누르면 펴지고, 펴 두시면 기억합니다. 홈 높이가 선(4.2화면)을 넘지 않게 하려고 그랬고, 재어 보니 <b>약속이 있는 날은 고치기 전에도 선을 넘고 있었습니다</b>(4.47화면) — 그 날도 4.14 로 내려왔습니다. ◾ 「강남 로」 로 찍히던 받침도 고쳤습니다. (판 X142)";/* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
    사이트 이름은 배포 주소에서 알아낸다 — apex-os-yunpro.netlify.app → apex-os-yunpro.
    못 알아내면 Netlify 첫 화면으로 보낸다(거기서 사이트를 고르면 된다). */
@@ -32383,17 +32383,33 @@ function hmRtAppts(){
 /* <b>오늘 내가 있는 동네</b> — 묻는 곳을 한 곳으로 둡니다 (5번).
    아래 두 자리(「오늘 걸 분」 · 「만나야 할 분」)가 각자 세면, 한쪽만 고쳐
    놓고 두 줄이 서로 다른 동네를 말하게 됩니다.                        */
-function hmRtRegions(){
-  var ap=hmRtAppts(),rg={},i;
-  for(i=0;i<ap.length;i++)if(ap[i].rg)rg[hmRtKey(ap[i].rg)]=1;
-  return rg;
+function hmRtWhere(){
+  var ap=hmRtAppts(),rg={},i,n=0,t;
+  for(i=0;i<ap.length;i++)if(ap[i].rg){ rg[hmRtKey(ap[i].rg)]=1; n++; }
+  if(n)return {rg:rg,from:'appt',top:[]};
+  /* ★★ <b>약속이 없는 날에도 빈손으로 두지 않습니다</b> (판 X142 · 사장님
+     말씀 2026-10-20 「왜 지역동선에 추천인들이 안 떠」).
+     여태는 약속이 0건이면 hmRtNear·hmRtMeet 가 그 자리에서 빈 배열을
+     돌려주어 <b>사람이 한 명도 안 떴습니다.</b> 앱은 그 동네에 몇 분
+     계신지 이미 세어 놓고(hmRtRgTop) 「8분을 하루로 묶으시면」 이라고
+     적고 있었는데, <b>그 8분이 누구인지는 안 보여 줬습니다.</b> 정작
+     「오늘 어디 가지」 를 묻는 날이 약속이 안 잡힌 날입니다.
+     ★ <b>지어내는 것이 아닙니다</b> (1번) — 이미 있는 줄을 세어 제일 많은
+       동네를 고를 뿐이고, 고른 까닭을 화면에 적습니다. 약속이 있는 것처럼
+       말하지 않습니다.                                                 */
+  t=hmRtRgTop(1);
+  for(i=0;i<t.length;i++)rg[hmRtKey(t[i].rg)]=1;
+  return {rg:rg,from:t.length?'top':'none',top:t};
 }
+/* 묻는 곳은 <b>hmRtWhere 하나</b>입니다 (5번) */
+function hmRtRegions(){ return hmRtWhere().rg; }
 /* 그 지역에서 <b>오늘 걸 분</b> — 약속 간 김에 같이 도는 사람들.
    지역을 <b>모르는 줄은 안 붙입니다</b> — 0 으로 세면 「없다」가 됩니다 (1번). */
 function hmRtNear(){
   var ap=hmRtAppts(),rg=hmRtRegions(),i,x,out=[],seen={},
       me=hmTmMe(),L=(typeof arTouch==='function')?arTouch(me||''):[];
-  if(!ap.length)return [];
+  /* 판 X142 — 약속이 없어도 <b>권한 동네</b>가 있으면 셉니다. 동네를 아는
+     자리는 hmRtWhere 하나이고, 거기가 비면 아래 고리가 저절로 빕니다. */
   for(i=0;i<ap.length;i++)seen[ap[i].id]=1;
   /* ★★ 2026-09-28 — 여기서 「만나야 할 분」 을 <b>빼 봤다가 되돌렸습니다.</b>
      check-hmroute 가 잡았습니다. AP·PC·CS 가 거의 다 아래 자리로 옮겨 가는
@@ -32521,7 +32537,7 @@ function hmRtRgTop(n){
 }
 function hmRtMeet(){
   var ap=hmRtAppts();
-  if(!ap.length)return [];          /* 갈 동네를 모르면 「그 근처」 도 없다 (1번) */
+  /* 판 X142 — 약속이 없어도 <b>권한 동네</b>가 있으면 셉니다 (위 hmRtWhere) */
   var rg=hmRtRegions(),
       db=(typeof AR!=='undefined'&&AR.db)||[],me=hmTmMe(),
       t=(typeof arToday==='function')?arToday():'',seen={},out=[],i,r,d;
@@ -33606,47 +33622,71 @@ function hmRtHtml(){
      여태는 빈 날에 아예 안 세워서, 그 자리만큼 <b>밑엣것이 올라와</b>
      어제와 다른 화면이 됐습니다 — 「화면이 자꾸 달라서 힘들다」 의 그
      자리입니다. 한 줄로 자리를 지키고, 무엇을 하면 되는지 적습니다 (1번). */
-  if(!ap.length){
-    hmRtCss();
-    return '<div class="card hm-rt"><div class="card-body">'+
-      '<div class="hm-rt-h"><span class="ci">🚗</span><b>오늘 어디로 가시나</b>'+
-        '<button type="button" class="hm-rt-go" onclick="hmRtOpen()">🗺️ 지역 동선 →</button></div>'+
-      '<div class="hm-rt-none">오늘은 <b>갈 데가 없습니다.</b> '+
-        hmRtRgTxt()+'</div>'+
-    '</div></div>';
-  }
-  var near=hmRtNear(),i,h,noRg=0;
+  /* ★★ 판 X142 — <b>약속이 없는 날에도 사람을 세웁니다</b>. 여태는 여기서
+     바로 돌려보내 「갈 데가 없습니다」 한 줄만 남았습니다 — 그런데 정작
+     「오늘 어디 가지」 를 묻는 날이 <b>약속이 안 잡힌 날</b>입니다.
+     ★ <b>약속인 척하지 않습니다</b> (1번) — 시간 줄(.hm-rt-r)은 약속이 있을
+       때만 서고, 권한 동네는 <b>왜 골랐는지</b>를 그 자리에 적습니다.    */
+  var where=hmRtWhere(),near=hmRtNear(),i,h,noRg=0;
+  /* ★ <b>만나야 할 분을 세는 자는 hmRtMeet 하나</b>입니다 (5번). 권한 동네
+     줄과 아래 「가는 김에」 줄이 각자 세면 한 화면에서 「4분」·「5분」 두
+     답이 섭니다 — 그래서 여기서 <b>한 번만</b> 세어 둘이 나눠 씁니다.    */
+  var meet=hmRtMeet(),noAp=hmRtNoAppt(meet);
+  /* 「만나야 할 분」 이름표도 <b>한 곳</b>에서 고릅니다 (5번) — 약속이 있는
+     날과 없는 날은 <b>다른 물음</b>이라 이름표가 다릅니다. 머리글과 안쪽
+     줄이 각자 고르면 한 이름표에 두 뜻이 섞입니다 (0-1번).               */
+  var mAsk=ap.length?'약속동네만나야할분':'권한동네몇분',rec='';
   for(i=0;i<ap.length;i++)if(!ap[i].rg)noRg++;
+  hmRtCss();
   h='<div class="card hm-rt"><div class="card-body">'+
     '<div class="hm-rt-h"><span class="ci">🚗</span><b>오늘 어디로 가시나</b>'+
       '<button type="button" class="hm-rt-go" onclick="hmRtOpen()">🗺️ 지역 동선 →</button></div>';
-  h+='<div class="hm-rt-ap">';
-  for(i=0;i<ap.length;i++)
-    h+='<button type="button" class="hm-rt-r" onclick="hmRtPerson(\''+osEsc(ap[i].id)+'\')">'+
-       '<span class="tm">'+osEsc(ap[i].hm||'시간 미정')+'</span>'+
-       '<span class="nm">'+osEsc(ap[i].nm||'고객')+'</span>'+
-       '<span class="rg">'+osEsc(ap[i].rg||'지역 모름')+'</span>'+
-       '<span class="ar">›</span></button>';
-  h+='</div>';
+  if(ap.length){
+    h+='<div class="hm-rt-ap">';
+    for(i=0;i<ap.length;i++)
+      h+='<button type="button" class="hm-rt-r" onclick="hmRtPerson(\''+osEsc(ap[i].id)+'\')">'+
+         '<span class="tm">'+osEsc(ap[i].hm||'시간 미정')+'</span>'+
+         '<span class="nm">'+osEsc(ap[i].nm||'고객')+'</span>'+
+         '<span class="rg">'+osEsc(ap[i].rg||'지역 모름')+'</span>'+
+         '<span class="ar">›</span></button>';
+    h+='</div>';
+  }else if(where.from==='top'&&meet.length){
+    /* 고른 동네를 적는 자리는 <b>접는 칸 머리글 하나</b>입니다 — 여기에 줄을
+       또 세우면 홈이 <b>4.2화면</b>을 넘습니다(아래 접는 칸 설명). */
+    rec=where.top[0].rg;
+  }else{
+    h+='<div class="hm-rt-none">오늘은 <b>갈 데가 없습니다.</b> '+hmRtRgTxt()+'</div>';
+    h+='<div class="hm-rt-f">길 찾기·동네 찍기는 <b>🗺️ 지역 동선</b> 한 곳에서 합니다 — '+
+       '여기서는 오늘 갈 곳만 봅니다.</div>';
+    return h+'</div></div>';
+  }
+  /* ══ 접는 칸 하나에 <b>사람을 다 담습니다</b> (판 X142) ══════════════
+     ★★ 홈은 <b>4.2화면</b>이 선입니다(check-homeone · 사장님이 정한 선).
+       글로 붙여 재어 보니 걸 분 칩·만나야 할 분 줄을 <b>펴 둔 채로</b> 두면
+       🚗 카드가 155 → <b>576px</b> 가 되어 홈이 4.68화면이 됩니다.
+       ⚠ 그리고 재어 보니 <b>약속이 있는 날은 고치기 전에도 4.47화면</b>이었습니다
+         — 자의 견본에 오늘 약속이 없어서 여태 안 걸렸습니다. 접으면 그 날도
+         4.13화면으로 내려옵니다.
+     ★ <b>감추는 것이 아닙니다</b> (6번) — 머리글이 <b>몇 분인지</b> 말하고,
+       한 번 누르면 펴지고, <b>펴 두신 것을 기억합니다</b>(hmFoldOpen).
+     ★ 접는 자는 <b>hmFoldWrap 한 곳</b>입니다 — 여기서 또 만들지 않습니다 (5번). */
+  var inner='';
   if(near.length){
-    h+='<div class="hm-rt-n"><b>그 지역에서 오늘 걸 분 '+near.length+'명</b>'+
-       ' <span>간 김에 같이 돕니다</span></div><div class="hm-rt-chips">';
+    /* ★ 이 수는 <b>위 「만나야 할 분」 과 다른 물음</b>입니다 — 오늘 연락
+       주기가 돌아온 분(arTouch)이라 수가 달라도 맞습니다. 이름표를 달아
+       기계가 <b>다른 물음인 줄 알게</b> 둡니다 (0-1번). */
+    inner+='<div class="hm-rt-n"><b data-ask="동네오늘걸분">'+(ap.length?'그 지역에서':'그 동네에서')+' 오늘 걸 분 '+near.length+'명</b>'+
+       ' <span>'+(ap.length?'간 김에 같이 돕니다':'가시는 김에 같이 돕니다')+'</span></div><div class="hm-rt-chips">';
     for(i=0;i<near.length&&i<HM_RT_SHOW;i++)
-      h+='<button type="button" class="hm-rt-c '+
+      inner+='<button type="button" class="hm-rt-c '+
          ((typeof tdoColor==='function')?tdoColor(near[i].k):'')+'" '+
          'onclick="hmRtPerson(\''+osEsc(near[i].id)+'\')">'+
          osEsc(near[i].nm||'고객')+'<i>'+osEsc((typeof tdoLabel==='function')?tdoLabel(near[i].k):near[i].k)+'</i>'+
          '</button>';
     if(near.length>HM_RT_SHOW)
-      h+='<button type="button" class="hm-rt-c more" onclick="hmRtOpen()">+'+
+      inner+='<button type="button" class="hm-rt-c more" onclick="hmRtOpen()">+'+
          (near.length-HM_RT_SHOW)+'명 더 →</button>';
-    h+='</div>';
-  }else{
-    h+='<div class="hm-rt-n0">'+
-       (noRg===ap.length
-         ? '약속에 <b>지역이 안 적혀</b> 있어 주변을 못 찾았습니다 — 🗺️ 지역 동선에서 시(市)를 정해 주십시오.'
-         : '그 지역에 오늘 <b>더 걸 분은 없습니다.</b> 지어내지 않습니다.')+
-       '</div>';
+    inner+='</div>';
   }
   /* ── 판 ⑤ · 약속을 아직 안 잡은 분도 여기 섭니다 ────────────────────
      ★ <b>새 CSS 를 한 줄도 안 씁니다.</b> ui.css 에 있는 이름만 씁니다 —
@@ -33654,15 +33694,18 @@ function hmRtHtml(){
      ★ 「날짜 여쭙기」 는 <b>그 고객 자리로 보냅니다</b> (5번) — 여기서
        약속을 새로 저장하지 않습니다. 약속은 🗺️ 지역 동선·TFA 한 곳에서
        잡습니다. 여기는 <b>누구에게 여쭤야 하는지</b>만 말합니다.       */
-  var meet=hmRtMeet(),noAp=hmRtNoAppt(meet);
   if(meet.length){
     /* 말은 <b>목각 글자 그대로</b> 씁니다 — 「가는 김에」 (hansaram.html 823행) */
     var rgs=[],rk={};
     for(i=0;i<meet.length;i++)if(meet[i].rg&&!rk[meet[i].rg]){rk[meet[i].rg]=1;rgs.push(meet[i].rg);}
-    h+='<div class="t-note g"><b>가는 김에</b> — '+osEsc(rgs.join(' · '))+
-       '에 만나야 할 분이 <b>'+meet.length+'분</b> 더 계십니다.</div>';
+    /* ★ 「<b>더</b>」 는 <b>약속이 있는 날에만</b> 참입니다 — 약속이 없는 날엔
+       위 줄이 말한 그 분들이라 「더」 를 붙이면 두 번 센 것처럼 읽힙니다.
+       그때는 이름표도 같이 달아 <b>위 줄과 같은 수인지 기계가 견주게</b> 둡니다 (0-1번). */
+    inner+='<div class="t-note g"><b>'+(ap.length?'가는 김에':'가시는 김에')+'</b> — '+osEsc(rgs.join(' · '))+
+       '에 만나야 할 분이 <b data-ask="'+mAsk+'">'+meet.length+'분</b>'+
+       (ap.length?' 더':'')+' 계십니다.</div>';
     for(i=0;i<meet.length&&i<HM_RT_SHOW;i++)
-      h+='<div class="t-row"><span class="m">'+
+      inner+='<div class="t-row"><span class="m">'+
            '<span class="nm">'+osEsc(meet[i].nm||'고객')+'</span>'+
            '<span class="mt">'+osEsc(meet[i].st)+' · '+osEsc(meet[i].rg)+'</span>'+
          '</span><span class="r">'+
@@ -33672,12 +33715,14 @@ function hmRtHtml(){
                '📅 날짜 여쭙기</button>')+
          '</span></div>';
     if(meet.length>HM_RT_SHOW)
-      h+='<div class="t-row"><span class="m"><span class="mt">+'+
+      inner+='<div class="t-row"><span class="m"><span class="mt">+'+
          (meet.length-HM_RT_SHOW)+'분 더 계십니다</span></span>'+
          '<span class="r"><button type="button" class="t-chip" onclick="hmRtOpen()">'+
          '🗺️ 지역 동선에서 보기</button></span></div>';
-    if(noAp)
-      h+='<div class="t-note">이 중 <b>'+noAp+'분</b>은 <b>아직 약속이 없습니다</b> — '+
+    /* 약속이 없는 날엔 <b>전부</b> 약속이 없는 분이라 이 줄이 머리글과 같은
+       말을 두 번 합니다 — 그때는 안 적습니다 (5번 · 홈 66px). */
+    if(noAp&&ap.length)
+      inner+='<div class="t-note">이 중 <b>'+noAp+'분</b>은 <b>아직 약속이 없습니다</b> — '+
          '간 김에 날짜를 여쭈면 그 동네를 두 번 안 가셔도 됩니다.</div>';
     /* ⚠ 목각(hansaram.html 835행)에는 「같은 날로 모으기」·「이 순서로 돌기」
        두 단추가 더 있습니다. <b>안 달았습니다</b> — 그 둘은 목각에서 <b>한 장의
@@ -33685,8 +33730,31 @@ function hmRtHtml(){
        홈 카드가 아니라 🗺 지역 동선이 하는 일입니다. 조용히 빼지 않고
        적어 둡니다 — 사장님이 여기에도 달라고 하시면 그때 답니다.        */
   }
-  h+='<div class="hm-rt-f">길 찾기·동네 찍기는 <b>🗺️ 지역 동선</b> 한 곳에서 합니다 — '+
-     '여기서는 오늘 갈 곳만 봅니다.</div>';
+  if(inner){
+    inner+='<div class="hm-rt-f">길 찾기·동네 찍기는 <b>🗺️ 지역 동선</b> 한 곳에서 합니다 — '+
+       '여기서는 오늘 갈 곳만 봅니다.</div>';
+    /* 머리글이 <b>몇 분인지</b> 말합니다 — 접힌 채로도 빈손이 아닙니다.
+       ★ 수는 <b>한 칸에 하나</b>만 적습니다 — 한 이름표에 수가 둘이면
+         check-onesay 가 「갈렸다」 고 봅니다 (0-1번).                     */
+    h+=hmFoldWrap('rt','🧭',
+      rec?('오늘 약속 없음 · '+hmRo(rec)+' 권합니다')
+         :'간 김에 같이 돕니다',
+      meet.length
+        ?(rec?('오늘 만나야 할 분 '+meet.length+'분 · 제일 많은 동네')
+             :('그 지역에 만나야 할 분 '+meet.length+'분'))
+        :('오늘 걸 분 '+near.length+'명'),
+      inner,
+      meet.length?mAsk:'동네오늘걸분');
+  }else{
+    /* 접을 것이 없으면 <b>왜 없는지</b>는 그대로 보입니다 (1번) */
+    h+='<div class="hm-rt-n0">'+
+       ((ap.length&&noRg===ap.length)
+         ? '약속에 <b>지역이 안 적혀</b> 있어 주변을 못 찾았습니다 — 🗺️ 지역 동선에서 시(市)를 정해 주십시오.'
+         : '그 '+(ap.length?'지역':'동네')+'에 오늘 <b>걸 분은 없습니다.</b> 지어내지 않습니다.')+
+       '</div>';
+    h+='<div class="hm-rt-f">길 찾기·동네 찍기는 <b>🗺️ 지역 동선</b> 한 곳에서 합니다 — '+
+       '여기서는 오늘 갈 곳만 봅니다.</div>';
+  }
   return h+'</div></div>';
 }
 /* 눌러서 <b>그 고객 것</b>으로 — TFA 「오늘 손댈 사람」 을 그 사람으로 펼친다.
@@ -33734,7 +33802,13 @@ function hmRtCss(){
      'padding:7px 12px;font-size:var(--t6);font-weight:800;color:var(--ink-2);cursor:pointer;'+
      'font-family:inherit;min-height:34px;display:inline-flex;align-items:center;gap:5px}'+
    '.hm-rt-c i{font-style:normal;font-size:var(--t6);font-weight:800;color:var(--ink-5)}'+
-   '.hm-rt-f{margin-top:11px;font-size:var(--t6);color:var(--ink-5);line-height:1.6}';
+   '.hm-rt-f{margin-top:11px;font-size:var(--t6);color:var(--ink-5);line-height:1.6}'+
+   /* 접는 칸은 이 카드의 <b>맨 아래</b>라, .hm-fold 가 들고 있는 아래쪽
+      12px 가 <b>빈 자리</b>로 남습니다. 재어 보니 그만큼 홈이 길어졌습니다 —
+      홈은 남은 자리가 <b>4px</b> 뿐인 화면입니다(check-homeone).
+      ⚠ .hm-fold 자체는 안 건드립니다 — 홈의 다른 접는 칸 넷이 같은 옷을
+        입고 있어, 그쪽 사이가 붙습니다 (5번).                           */
+   '.hm-rt>.card-body>.hm-fold{margin-bottom:0}';
   document.head.appendChild(st);
 }
 function hmTmTeamName(id){

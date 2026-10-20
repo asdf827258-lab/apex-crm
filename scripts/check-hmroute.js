@@ -11,8 +11,9 @@
 
      [1] 오늘 약속이 <b>시간 순서대로</b> 선다
      [2] 그 지역에서 <b>오늘 걸 분</b>이 같이 뜬다 — 간 김에 도는 사람
-     [3] <b>지어내지 않는다</b> — 약속이 없으면 이름도 수도 안 짓고, 지역을
+     [3] <b>지어내지 않는다</b> — 아무도 없으면 이름도 수도 안 짓고, 지역을
          모르는 줄은 안 붙이고, 못 읽었으면 「없다」고 말하지 않는다
+     [3-1] <b>약속만 없는 날</b>에는 빈손으로 두지 않는다 (판 X142)
      [4] 눌러서 <b>그 사람 것</b>으로 · 🗺️ 는 <b>CRM</b> 으로 간다
      [5] 서버를 <b>더 안 부른다</b> (7번)
      [6] 남의 약속이 <b>내 홈에 안 선다</b> (3번)                        */
@@ -169,6 +170,91 @@ const SEED=(opt)=>`
   },SEED({}));
   is(/지역이 안 적혀/.test(R0.txt),
      '지역이 안 적혔으면 <b>그래서 못 찾았다</b>고 말한다 — 「'+R0.txt.replace(/\s+/g,' ').trim().slice(0,40)+'…」');
+
+  console.log('\n[3-1] <b>약속만 없는 날</b> — 빈손으로 두지 않는다 (판 X142)');
+  /* ★★ 2026-10-20 · 사장님 말씀 「왜 지역동선에 추천인들이 안 떠」.
+     위 [3] 은 <b>아무도 없는 날</b>(AR.db=[]) 을 재고 있었습니다. 그래서
+     맞는 말이었지만, 사장님이 실제로 맞으시는 날 — <b>약속만 없고 사람은
+     그대로 계신 날</b> — 을 아무도 안 재고 있었습니다. 그 날 앱은
+     「8분을 하루로 묶으시면」 이라고 수까지 적어 놓고 <b>그 8분이 누구인지는
+     한 명도 안 보여 줬습니다.</b> hmRtNear·hmRtMeet 가 약속이 0건이면 그
+     자리에서 빈 배열을 돌려주고 있었기 때문입니다.
+     여기는 <b>그 날</b>을 잽니다. 「지어내지 말라」 를 느슨하게 한 것이
+     아닙니다 — 약속 줄·시각은 여전히 0 이어야 하고, 뜨는 분은 모두 AR.db 에
+     <b>실제로 있는 분</b>이어야 하고, 그 동네 분이 아니면 안 뜨어야 합니다. */
+  const Y=await page.evaluate(async(seed)=>{
+    (0,eval)(seed);
+    /* 약속만 지웁니다 — <b>사람은 그대로</b> 계십니다.
+       ★ 홍을돌(순천 시)을 만나야 할 단계로 올려 둡니다. 그러면 지역을
+         <b>날글로 묶는 자</b>(hmRtRgTop 4분)와 <b>공백을 지워 묶는 자</b>
+         (hmRtMeet 5분)의 수가 갈립니다 — 화면이 어느 쪽을 적는지 보려고
+         일부러 갈라 둡니다 (8번). */
+    AR.db.forEach(x=>{ x.appt=''; if(x.id==='n2')x.stage='PC'; });
+    await window.__home();
+    const c=document.querySelector('#dynPane .hm-rt');
+    const T=(c.textContent||'').replace(/\s+/g,' ').trim();
+    const chip=[].slice.call(c.querySelectorAll('.hm-rt-c:not(.more)'))
+                 .map(e=>(e.firstChild&&e.firstChild.textContent||'').trim());
+    const row=[].slice.call(c.querySelectorAll('.t-row .nm')).map(e=>e.textContent.trim());
+    const fh=c.querySelector('.hm-fold-h');
+    return { shown:!!c, txt:T, chip:chip, row:row,
+      apr:c.querySelectorAll('.hm-rt-r').length, hhmm:/\d\d:\d\d/.test(T),
+      /* 머리글 — 접힌 채로 <b>보이는 글</b>입니다 */
+      ttl:fh?((fh.querySelector('.t')||{}).firstChild||{}).textContent||'':'',
+      sub:fh?((fh.querySelector('.t span')||{}).textContent||''):'',
+      btn:fh?fh.tagName.toLowerCase():'', exp:fh?fh.getAttribute('aria-expanded'):'',
+      bodyIn:(()=>{ const b=c.querySelector('.hm-fold-b');
+        return b?{chip:b.querySelectorAll('.hm-rt-c').length,row:b.querySelectorAll('.t-row').length}
+                :{chip:0,row:0}; })(),
+      note:(c.querySelector('.t-note.g')||{}).textContent||'',
+      ask:[].slice.call(c.querySelectorAll('[data-ask="권한동네몇분"]'))
+             .map(e=>(e.textContent.match(/\d+/)||[''])[0]),
+      topn:(hmRtWhere().top[0]||{}).n, meetn:hmRtMeet().length,
+      real:AR.db.map(x=>x.name) };
+  },SEED({}));
+  is(Y.shown&&Y.apr===0&&!Y.hhmm,
+     '약속이 없으니 <b>시간 줄도 시각도 안 짓는다</b> (1번) — 줄 '+Y.apr+' · 시각 '+(Y.hhmm?'있음':'없음'));
+  is(Y.chip.length>0&&Y.row.length>0,
+     '★ 그래도 <b>사람이 선다</b> — 걸 분 '+Y.chip.length+'명 · 만나야 할 분 '+Y.row.length+
+     '명 (여기가 0 이면 사장님이 보신 그 빈 화면이다)');
+  is(/순천시/.test(Y.ttl)&&/권합니다/.test(Y.ttl)&&/제일 많은/.test(Y.sub),
+     '<b>왜 그 동네인지</b> 접힌 채로도 적는다 — 「'+Y.ttl+'」 · 「'+Y.sub+'」');
+  /* ★ 접은 것은 <b>감춘 것이 아닙니다</b> (6번) — 머리글이 몇 분인지 말하고,
+     그 머리글이 <b>누르는 단추</b>이고, 사람은 안쪽에 다 들어 있습니다.
+     ⚠ 왜 접었나 — 펴 둔 채로 재어 보니 홈이 <b>4.68화면</b>이 되어 사장님이
+       정한 4.2 선을 넘었습니다(check-homeone). 접으면 4.18 입니다.       */
+  is(Y.btn==='button'&&Y.exp==='false'&&/\d+분/.test(Y.sub),
+     '접힌 머리글이 <b>몇 분인지 말하고 누르는 단추</b>다 (6번) — 「'+Y.sub+
+     '」 · '+Y.btn+' · 펴짐 '+Y.exp);
+  is(Y.bodyIn.chip>0&&Y.bodyIn.row>0,
+     '사람은 <b>그 안에 다 들어 있다</b> — 한 번 누르면 칩 '+Y.bodyIn.chip+
+     '개 · 줄 '+Y.bodyIn.row+'개 (펴 두시면 기억합니다 · hmFoldOpen)');
+  const 지어낸=[].concat(Y.chip,Y.row).filter(nm=>nm&&Y.real.indexOf(nm)<0);
+  is(지어낸.length===0,
+     '뜨는 분은 <b>모두 AR.db 에 실제로 있는 분</b>이다 (1번) — 지어낸 이름 '+지어낸.length+'개'+
+     (지어낸.length?(' ← '+지어낸.join(' · ')):''));
+  is(!/홍병돌/.test(Y.txt)&&!/홍정돌/.test(Y.txt)&&!/남의고객/.test(Y.txt),
+     '<b>다른 시(여수)·지역 모르는 분·남의 고객은 안 뜬다</b> — 권한 동네만 넓어지면 안 된다 (1·3번)');
+  is(Y.ask.length===2&&Y.ask[0]===Y.ask[1]&&Y.ask[0]===String(Y.meetn),
+     '권한 줄과 「가시는 김에」 줄이 <b>같은 수</b>를 말한다 — '+Y.ask.join(' / ')+
+     ' (hmRtMeet '+Y.meetn+' 하나가 센다 · 날글로 묶으면 '+Y.topn+' 이라 갈린다) (5번)');
+  /* ★ 줄이 아예 없으면 이 자가 <b>거저 통과</b>합니다 — 있는지도 함께 봅니다 (8번) */
+  is(!!Y.note&&!/더 계십니다/.test(Y.note),
+     '약속이 없는 날엔 <b>「더」 를 안 붙인다</b> — 그 분들이 바로 위에 말한 그 분들이다 — 「'+
+     Y.note.replace(/\s+/g,' ').trim()+'」');
+  is(/순천시로 권합니다/.test(Y.ttl),
+     '<b>받침에 맞는 말</b>로 적는다 — 「순천시<b>로</b>」 (「순천시 로」 라고 찍힌 적이 있다)');
+
+  const JO=await page.evaluate(async(seed)=>{
+    (0,eval)(seed);
+    AR.db.forEach(x=>{ x.appt=''; if(x.region)x.region='서울 강남'; });
+    await window.__home();
+    const c=document.querySelector('#dynPane .hm-rt'),fh=c&&c.querySelector('.hm-fold-h');
+    return { none:fh?(((fh.querySelector('.t')||{}).firstChild||{}).textContent||''):'' };
+  },SEED({}));
+  is(/서울 강남으로 권합니다/.test(JO.none),
+     '<b>받침이 있으면 「으로」</b> — 묻는 곳은 hmRo 하나다 (5번) — 「'+
+     JO.none.replace(/\s+/g,' ').trim().slice(0,46)+'…」');
 
   console.log('\n[4] 눌러서 <b>그 사람 것</b>으로 · 🗺️ 는 CRM 으로');
   const C=await page.evaluate(async(seed)=>{
