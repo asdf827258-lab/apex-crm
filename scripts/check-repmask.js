@@ -17,6 +17,8 @@
      3. 화면·종이는 <b>그대로 실명</b> — 그 자리에는 고객 본인이 앉아 있다
      4. 새 고객을 만들면 <b>실명을 이 브라우저에</b> 남긴다. 안 남기면
         방금 적으신 이름을 앱이 잊어, 나가는 글에서 골라낼 수도 없다
+        ★ 판 X135 부터 넣는 자리는 <b>cliMake 하나</b>입니다 — 글자가 아니라
+          진짜로 불러 보고 잽니다
      5. 글이 <b>망가지지 않는다</b> — 가린 뒤에도 그대로 읽힌다        */
 
 const { chromium } = require('playwright');
@@ -137,15 +139,44 @@ const DOC =
 
   /* ─────────────────────────────────────────────────────────────── */
   console.log('\n[4] 새 고객을 만들면 실명을 이 브라우저에 남긴다');
-  const four = await page.evaluate(() => {
-    const src = String(osPickClient);
-    return { keeps: /cmRealSet\(c\.id\s*,\s*name\)/.test(src),
-             masksOnServer: /name_masked:\s*osMaskName\(name\)/.test(src) };
+  /* ⚠ 판 X135 에서 clients 에 줄을 넣는 자리 <b>셋</b>(osCreateClient ·
+     osPickClient · olToMine)을 cliMake 하나로 모았습니다 (5번). 여태 이 자는
+     osPickClient 의 <b>글자 안에</b> cmRealSet(c.id,name) 이 있는지 봤습니다 —
+     옳게 한 곳으로 모았는데 자가 울었습니다. 글자가 아니라 <b>하는 일</b>을
+     잽니다: 진짜로 불러 보고 서버로 간 글과 이 기기에 남은 것을 봅니다 (8번). */
+  const four = await page.evaluate(async () => {
+    const O = {};
+    O.owner = typeof cliMake === 'function';
+    const src3 = [String(osPickClient), String(osCreateClient), String(olToMine)];
+    O.allThrough = src3.every(s => /cliMake\(/.test(s));
+    O.noOwnInsert = src3.every(s => !/from\('clients'\)/.test(s));
+    if (!O.owner) return O;
+    const W = [], keepC = window.osClient, keepS = OS.session;
+    OS.session = { user: { id: 'me' } };
+    window.osClient = function () {
+      const mk = () => { const st = {}; const a = {
+        insert: q => { st.pay = q; W.push(q); return a; },
+        select: () => a, eq: () => a,
+        then: (o, n) => Promise.resolve({
+          data: [].concat(st.pay || []).map((x, i) => ({ id: 'rm-' + i, name_masked: x.name_masked })),
+          error: null }).then(o, n) }; return a; };
+      return { from: mk, rpc: () => Promise.resolve({ data: null, error: null }) };
+    };
+    const id = await new Promise(r => cliMake('홍길동', null, (cid) => r(cid)));
+    window.osClient = keepC; OS.session = keepS;
+    const j = JSON.stringify(W);
+    O.real = (j.match(/홍길동/g) || []).length;
+    O.masked = (j.match(/홍[*○]/g) || []).length;
+    O.kept = (typeof cmRealOf === 'function') ? cmRealOf(id) : '';
+    return O;
   });
-  is(four.masksOnServer, '  서버에는 <b>가린 이름</b>으로 만든다');
-  is(four.keeps,
-     '  실명은 <b>이 브라우저에</b> 남긴다 — 안 남기면 방금 적으신 이름을 앱이 잊어, ' +
-     '화면에도 김*수 로만 뜨고 나가는 글에서 골라낼 수도 없다');
+  is(four.owner && four.allThrough && four.noOwnInsert,
+     '  clients 에 넣는 자리가 <b>cliMake 하나</b>다 — 셋이 다 그리로 간다 (5번)');
+  is(four.real === 0 && four.masked > 0,
+     '  서버에는 <b>가린 이름</b>으로 만든다 — 가린 이름 ' + four.masked + '군데 (실명 ' + four.real + ')');
+  is(four.kept === '홍길동',
+     '  실명은 <b>이 브라우저에</b> 남긴다 — 받음 「' + four.kept + '」. 안 남기면 방금 적으신 ' +
+     '이름을 앱이 잊어, 화면에도 가린 이름으로만 뜨고 나가는 글에서 골라낼 수도 없다');
 
   /* ─────────────────────────────────────────────────────────────── */
   console.log('\n[5] 콘솔이 조용하다');
