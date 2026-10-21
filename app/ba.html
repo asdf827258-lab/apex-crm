@@ -1219,6 +1219,36 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 .say::before{content:'“';color:var(--ln);font-weight:700;margin-right:2px}
 .say::after{content:'”';color:var(--ln);font-weight:700;margin-left:2px}
 .show:not(.deck) .say{font-size:17px;padding-top:14px;margin-top:16px}
+/* ══ 🧭 설계사 길잡이 · 장마다 아이콘 · 폰에서 안 무너지게 ═══════════════
+   사장님 말씀 2026-10-21 「보장분석 전 후 자료 … 토스 테마와 아이콘, 그리고
+   따라만 가도 할 수 있을 정도로」. 아이콘과 길잡이는 <b>BA_WALK 한 곳</b>이
+   들고, deckPaint 가 장마다 칠한다 — 장 함수마다 따로 적지 않는다 (5번).
+   길잡이는 <b>장 밖</b>(바로 앞 형제)에 선다 — 카톡 복사(innerText)와
+   인쇄에 안 섞이고, 「몇 장인가」 를 세는 자리(section 만 센다)도 그대로다. */
+.show:not(.deck) section>h3[data-ic]{align-items:center}
+.show:not(.deck) section>h3[data-ic]::before{content:attr(data-ic);display:inline-flex;align-items:center;justify-content:center;
+ width:34px;height:34px;border-radius:11px;background:var(--bl2);font-size:18px;flex:none}
+.show.deck>section.cur>h3[data-ic]::before{content:var(--no,'') ' ' attr(data-ic)}
+.show:not(.deck)>section+.bawalk,.show:not(.deck)>section+section{margin-top:30px}
+.bawalk{border:1px solid #D6E6FF;background:#F4F8FF;border-radius:16px;padding:13px 16px;margin:0 0 12px;font-size:13.5px;line-height:1.6;color:var(--nv)}
+.bawalk .bwh{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:var(--bl);margin-bottom:6px}
+.bawalk .bwh span{margin-left:auto;font-weight:700;color:var(--gy2)}
+.bawalk ol{margin:0;padding:0;list-style:none;display:grid;gap:5px}
+.bawalk li{display:flex;gap:9px;align-items:baseline}
+.bawalk li em{flex:none;font-style:normal;font-size:11.5px;font-weight:800;color:#fff;background:var(--bl);border-radius:999px;padding:1px 9px}
+.bawalk li.q em{background:var(--nv)}
+.bawalk li .qq{font-weight:700}
+.show.deck>.bawalk{display:none}
+#baWalk{position:fixed;left:16px;bottom:86px;z-index:60;max-width:460px;font-size:12.5px;padding:11px 14px;box-shadow:0 18px 40px rgba(25,31,40,.16);background:#fff}
+#baWalk:empty{display:none}
+@media(max-width:600px){
+ .show:not(.deck){padding:20px 16px;border-radius:16px}
+ .show:not(.deck) .tocs{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+ .show:not(.deck) .svg2,.show:not(.deck) .famg{grid-template-columns:minmax(0,1fr)}
+ .show:not(.deck) .stwrap.two{grid-template-columns:minmax(0,1fr)}
+ #baWalk{left:10px;right:10px;max-width:none;bottom:78px}
+}
+@media print{.bawalk,#baWalk{display:none!important}}
 /* 무대에서는 <b>흰 카드</b> 한 장 — 설계사가 여기만 보고 읽으면 된다 */
 .show.deck>section.cur>.say{border-top:0;background:#fff;border-radius:16px;
  border-left:7px solid var(--dkb);padding:18px 24px 18px 24px;margin-bottom:0;
@@ -3521,20 +3551,6 @@ var GUIDE_STEPS=[
   d:'암 5,000만 · 뇌 4,000만 · 심장 3,500만 · 간병 6,000만이 <b>이미 들어 있습니다.</b> 안 적으셔도 됩니다.',
   tip:'고치실 분만 <b>「⚙ 고치기」</b> 를 누르십시오. 여기 값이 시뮬레이션 · 방어력 · 경제활동기에 <b>그대로</b> 쓰입니다.'}
 ];
-var GUIDE_SELL=[
- {n:1,t:'한눈에 · 보험료 변화',d:'「지금 이만큼 내고 계시고, 조정하면 이렇게 됩니다」 — <b>숫자 넷</b>으로 시작합니다.',
-  say:'"월은 5만원 더 나가지만, <b>앞으로 낼 돈은 1,200만원 줄어듭니다.</b>"'},
- {n:2,t:'한 줄로 말씀드리면',d:'위에서 센 숫자를 <b>문장으로</b> 옮긴 것입니다. 그대로 읽으셔도 됩니다.',
-  say:'"암이 오면 기준 5,000만원 중 지금은 <b>2,000만원</b>이 준비돼 있습니다."'},
- {n:3,t:'이 병이 오면 (시뮬레이션)',d:'여기가 <b>가장 오래 머무는 자리</b>입니다. 단계마다 「드는 돈 / 지금 나옴 / 조정 후」 세 막대를 짚습니다.',
-  say:'"수술·입원 단계에서 <b>1,729만원이 모자랍니다.</b> 이 돈은 어디서 만드십니까?"'},
- {n:4,t:'내 몸 어디에 얼마가',d:'부위를 눌러 담보 하나하나를 폅니다. <b>회색 점</b>이 비어 있는 부위입니다.',
-  say:'"뇌출혈만 들고 계셔서, 뇌 사건의 <b>10분의 1</b>에서만 나옵니다."'},
- {n:5,t:'지금 더 넣으셔야 할 것',d:'급한 순서로 세워져 있습니다. <b>붉은 카드</b>가 아예 없는 것입니다.',
-  say:'"한 번에 다 하실 필요 없습니다. <b>이 순서</b>로 채우시면 됩니다."'},
- {n:6,t:'경제활동기',d:'마무리입니다. <b>붉은 선</b>(소득 끊기는 기간)을 막대가 넘느냐로 끝냅니다.',
-  say:'"지금은 <b>치료비도 못 냅니다.</b> 조정하면 6개월을 메우고도 10개월이 남습니다."'}
-];
 var GUIDE_FAQ=[
  {q:'KB 말고 다른 회사 보장분석도 되나요?',
   a:'<b>아직 안 됩니다.</b> KB 서식만 읽습니다. 남의 서식을 억지로 읽으면 담보와 금액이 어긋나서, <b>읽지 않고 멈추게</b> 해 두었습니다. 다른 회사는 <b>「+ 손으로 적기」</b> 로 넣으십시오.'},
@@ -3570,11 +3586,15 @@ function guideHtml(){
         '<div class="gd">'+g.d+'</div><div class="gtip">💡 '+g.tip+'</div></div>';
     }).join('')+'</div>';
   /* 상담 순서 */
+  /* 상담 순서는 <b>BA_WALK 한 곳</b>을 읽는다 — 고객 화면의 🧭 길잡이와 같은 표다 (5번) */
   h+='<div class="ghd">상담 자리에서 — 이 순서로 넘깁니다</div>'+
-    '<p class="gsub">고객 화면 위 <b>목차</b>를 눌러 바로 갈 수 있습니다. 장 수는 <b>그 고객 자료에 따라</b> 달라집니다 — 자료가 없는 장은 서지 않습니다. 아래는 <b>실제로 말이 되는 순서</b>입니다.</p>'+
-    '<div class="gsell">'+GUIDE_SELL.map(function(g){
-      return '<div class="gl"><div class="gn2">'+g.n+'</div><div class="gb">'+
-        '<b>'+esc(g.t)+'</b><div>'+g.d+'</div><div class="gsay">'+g.say+'</div></div></div>';
+    '<p class="gsub">고객 화면 위 <b>목차</b>를 눌러 바로 갈 수 있습니다. 장 수는 <b>그 고객 자료에 따라</b> 달라집니다 — 자료가 없는 장은 서지 않습니다. '+
+    '고객 화면에서 <b>「🧭 길잡이」</b> 를 켜 두시면 장마다 아래가 그 자리에 섭니다.</p>'+
+    '<div class="gsell">'+BA_WALK.map(function(g,n){
+      return '<div class="gl"><div class="gn2">'+g.ic+'</div><div class="gb">'+
+        '<b>'+esc(g.nm)+'</b><div>'+esc(g.pt)+'</div>'+
+        (g.q?('<div class="gsay">“'+esc(g.q)+'” → “'+esc(g.a)+'”</div>'):'')+
+        (g.tip?('<div>💡 '+esc(g.tip)+'</div>'):'')+'</div></div>';
     }).join('')+'</div>';
   /* 자주 막히는 것 */
   h+='<div class="ghd">자주 막히는 것</div><div class="gfaq">'+
@@ -5486,6 +5506,7 @@ function showHtml(){
     '<button class="mini'+(S.deck?'':' on')+'" onclick="setDeck(false)">📜 죽 이어서</button>'+
     '<button class="mini'+(S.deck?' on':'')+'" onclick="setDeck(true)">🖥 한 장씩 넘기기</button>'+
     (S.deck?'<button class="mini go" onclick="deckShow(true)">🔳 발표 시작 — 화면 가득</button>':'')+
+    '<button class="mini'+(baWalkOn()?' on':'')+'" onclick="baWalkSet('+(baWalkOn()?'false':'true')+')">🧭 길잡이 '+(baWalkOn()?'켬':'끔')+'</button>'+
     '<span class="ch">'+(S.deck?'← → 또는 화면을 쓸어서 넘깁니다 · 위 목차를 눌러 바로 갑니다 — 인쇄하면 전부 나옵니다':'전체를 죽 내려 보기 — 설계사가 혼자 훑을 때')+'</span></div>';
   /* 목차는 <b>무대 밖</b>에 둔다 — 16:9 한 장 안에 목차까지 넣으면
      보여 드릴 자리가 그만큼 줄어든다. 다 그린 뒤 채운다(deckPaint). */
@@ -5736,7 +5757,7 @@ window.addEventListener('resize',function(){
 });
 function deckPaint(){
   var box=document.querySelector('#app .show');
-  if(!box)return;
+  if(!box){baWalkPaint([],0,false);return;}
   var L=deckList(),cur=deckAt(L),i,on=!!S.deck,toc,bar;
   /* 보던 장이 사라졌으면 첫 장으로 — 빈 화면을 세우지 않는다 */
   if(cur<0){cur=0;S.slide=L.length?L[0].id:'';save();}
@@ -5793,7 +5814,9 @@ function deckPaint(){
     '<span class="dn"><b>'+(cur+1)+'</b> / '+L.length+'</span>'+
     '<button class="dnav" onclick="deckMove(1)"'+(cur>=L.length-1?' disabled':'')+' aria-label="다음 장">▶</button>'+
     '<button class="dnav kk" onclick="baKakao()" aria-label="이 장을 카톡으로 복사" title="보고 계신 이 장을 글로 복사합니다">💬</button>'+
+    '<button class="dnav'+(baWalkOn()?' on':'')+'" onclick="baWalkSet('+(baWalkOn()?'false':'true')+')" aria-label="설계사 길잡이 켜고 끄기" title="장마다 ① 짚기 ② 읽기 ③ 물으면">🧭</button>'+
     (DECK_SHOW?'<button class="dnav x" onclick="deckShow(false)" aria-label="발표 끝내기">✕</button>':''));
+  baWalkPaint(L,cur,on);
   deckFit();
 }
 /* ── 한 장씩 카톡으로 ─────────────────────────────────────────────
@@ -5808,6 +5831,93 @@ function deckPaint(){
      숫자만 잘라 보내면 그것이 <b>확정된 값</b>으로 읽힙니다.
    ■ 어느 장인지는 <b>deckPaint 가 아는 그 장</b>입니다 — 다시 세어 답하지
      않습니다 (5번).                                                   */
+/* ══ 🧭 설계사 길잡이 — 장마다 「① 짚기 ② 읽기 ③ 물으면」 ═══════════════
+   사장님 말씀 2026-10-21 「따라만 가도 할 수 있을 정도로」 — 따라 하는
+   사람은 <b>설계사</b>입니다. 처음 쓰는 분도 화면만 보고 상담을 끝내게.
+   ■ 표는 <b>여기 하나</b>입니다. 아이콘 · 짚을 곳 · 물으면 답을 장 함수마다
+     흩어 두면 장이 늘 때 빠뜨립니다. 사용방법의 「상담 자리에서」 도 이 표를
+     그대로 읽습니다 — 예전 GUIDE_SELL 은 여섯 장만 알고 있어 실제
+     스물두 장과 순서가 어긋났습니다 (5번).
+   ■ 「② 읽기」 는 <b>그 장의 따옴표 한 줄</b>(sayLine)을 가리킬 뿐 말을 새로
+     짓지 않습니다 — 숫자는 그 장이 이미 셌습니다 (1번).
+   ■ 「③ 물으면」 은 앱이 이미 들고 있는 답(사용방법 · 윤시현의 두뇌)에서만
+     옮겼습니다. 세금 · 금액 결론은 적지 않습니다 (2번).
+   ■ k 는 장 아이디 — 끝이 「_」 이면 앞이 같은 장 모두(s4_암_0 · s8_2 …).
+     nm 은 사용방법에 적을 이름 — 장의 data-nm(묶음 장은 data-grp · 머리글)과
+     같아야 합니다. check-bawalk 이 견줍니다. */
+var BA_WALK=[
+ {k:'sHd',nm:'표지',ic:'📄',pt:'고객 이름 · 지금 들고 계신 계약 수 · 견준 담보 수'},
+ {k:'sToc',nm:'오늘 순서',ic:'🗺️',pt:'다섯 묶음과 장 이름 — 고객이 먼저 궁금해하는 묶음이 있으면 눌러서 바로 가요'},
+ {k:'s1',nm:'한눈에',ic:'👀',pt:'월 보험료 지금 → 조정 후, 그리고 매달 더(덜) 나가는 돈',
+  q:'저 매달 이것보다 많이 내는데요?',a:'납입이 끝난 계약은 매달 안 나가서 뺐습니다. 낼 돈은 없어도 보장은 살아 있는 계약입니다.',
+  tip:'월이 오르면 여기서 끝내지 말고 「보험료 변화」 의 앞으로 낼 돈까지 이어요'},
+ {k:'s0',nm:'왜 나에게 맞는가',ic:'🧭',pt:'나이 · 가족 · 쓰고 남는 돈 — 세 줄이 이 집 숫자인지',
+  q:'그게 아닌데요?',a:'말씀해 주시면 다시 셈해 드리겠습니다. 그 줄이 바뀌면 제안도 바뀝니다.'},
+ {k:'s4_',nm:'이 병이 오면',ic:'🩺',pt:'위에서 병을 고르고, 단계마다 드는 돈 · 지금 나옴 · 조정 후 세 막대',
+  q:'실손 있는데 또 들어야 해요?',a:'실손은 영수증, 진단비는 월급입니다. 일을 못 하는 동안의 생활비는 실손이 내지 않습니다.',
+  tip:'모자라는 단계에서 “이 돈은 어디서 만드십니까?” 묻고 기다려요 — 가장 오래 머무는 장'},
+ {k:'s5',nm:'내 몸 어디에',ic:'🫀',pt:'부위마다 전 → 후 막대 — 회색 점이 비어 있는 부위',
+  q:'저 1억짜리 들었는데요',a:'금액은 큽니다. 그래서 오히려 언제 열리는 담보인지만 확인해 드리고 싶습니다.',
+  tip:'화면을 건네고 고객이 직접 눌러 보게 해요'},
+ {k:'s7',nm:'경제활동기',ic:'⏳',pt:'붉은 선(소득이 끊기는 기간)을 막대가 넘는지',
+  q:'어떻게 셈한 거예요?',a:'화면 아래 셈법 그대로입니다 — (준비된 목돈 − 기준 치료비) ÷ 월 생활비.'},
+ {k:'s2',nm:'보험료 변화',ic:'💳',pt:'월 납입 · 앞으로 낼 돈 · 총 납입 — 세 줄을 같이',
+  q:'해지하면 왜 월 보험료가 안 줄어요?',a:'납입이 이미 끝난 계약이라서입니다. 대신 보장은 사라집니다 — 가장 손해 보는 해지입니다.'},
+ {k:'sSave',nm:'이 돈이 무엇이 되는가',ic:'🎁',pt:'더 내는 돈과 늘어나는 목돈 보장을 나란히',
+  q:'그럼 넣은 돈이 불어나는 거예요?',a:'아닙니다. 불어나는 것이 아니라 두 숫자를 나눈 것입니다.'},
+ {k:'s6',nm:'더 넣을 것',ic:'➕',pt:'급한 순서 — 붉은 카드가 지금 아예 없는 담보',
+  q:'이걸 다 해야 해요?',a:'한 번에 다 하실 필요 없습니다. 이 순서로 채우시면 됩니다.',
+  tip:'합계를 앞세우지 말고 맨 위 카드부터 하나씩'},
+ {k:'s8_',nm:'담보 하나하나',ic:'📋',pt:'막대 끝이 표준 100% — 표에서 ⏫ 가 오른 담보',
+  q:'배서랑 해지는 뭐가 달라요?',a:'배서는 계약을 살리고 담보만 바꿉니다. 해지는 통째로 없애고, 다시 들려면 지금 나이 · 지금 건강으로 새로 심사받습니다.',
+  tip:'고객이 짚는 묶음에서만 멈춰요 — 나머지는 인쇄본으로'},
+ {k:'s3',nm:'한 줄 요약',ic:'📝',pt:'병마다 한 문단 — 그대로 읽어도 되는 장',
+  tip:'읽고 나서 “새로 만든 값은 없습니다” 까지 읽어요'},
+ {k:'sFam',nm:'가족에게 남는 것',ic:'👨‍👩‍👧',pt:'남는 목돈 ÷ 이 집 월 생활비 = 그대로 지낼 수 있는 기간',
+  tip:'이자 · 물가를 안 셈한 나눗셈이라고 꼭 밝혀요'},
+ {k:'sEnd',nm:'적어 둘 것',ic:'🧾',pt:'어떻게 셈했는지 — 기준 치료비는 예시',
+  q:'치료비 기준은 어디서 나온 숫자예요?',a:'평균 예시입니다. 공식 통계가 아닙니다 — 실제 치료비는 병원 · 치료법 · 사람마다 다릅니다.'},
+ {k:'sClose',nm:'이제 달라지는 것',ic:'🚪',pt:'병마다 준비율 지금 → 조정 후 · 앞으로 봐 드릴 것 셋',
+  tip:'다음 뵐 날을 받아요 — 오늘 다 정하시라는 게 아닙니다'}
+];
+function baWalkOf(id){
+  var i,w;id=id||'';
+  for(i=0;i<BA_WALK.length;i++){w=BA_WALK[i];
+    if(w.k===id||(w.k.charAt(w.k.length-1)==='_'&&id.indexOf(w.k)===0))return w;}
+  return null;
+}
+/* 길잡이를 켰는가 — 처음 여는 분께는 <b>켜져 있다</b>. 끄면 그 기기에 남는다 */
+function baWalkOn(){return S.walk!==false;}
+function baWalkSet(on){S.walk=!!on;save();render();}
+function baWalkHtml(sec,deck){
+  var w=sec?baWalkOf(sec.id):null;
+  if(!w)return '';
+  var hasSay=!!(sec.querySelector&&sec.querySelector('.say'));
+  return '<div class="bwh">🧭 설계사 길잡이 — '+esc(secName(sec)||'')+
+      (deck?'<span>고객에게도 보입니다 · 🧭 로 끄기</span>':'')+'</div><ol>'+
+    '<li><em>① 짚기</em><span>'+esc(w.pt)+'</span></li>'+
+    '<li><em>② 읽기</em><span>'+(hasSay?'맨 아래 <b>따옴표 한 줄</b>을 그대로 — 그 고객 숫자로 앱이 써 둔 말입니다':'화면 글을 그대로 짚어 가며 읽어요')+'</span></li>'+
+    (w.q?('<li class="q"><em>③ 물으면</em><span><span class="qq">“'+esc(w.q)+'”</span> → “'+esc(w.a)+'”</span></li>'):'')+
+    (w.tip?('<li><em>💡</em><span>'+esc(w.tip)+'</span></li>'):'')+
+    '</ol>';
+}
+/* 장마다 칠한다 — deckPaint 가 부른다. 그릴 때마다 지우고 다시 세운다(겹치지 않게) */
+function baWalkPaint(L,cur,on){
+  var box=document.querySelector('#app .show'),i,el,w,h3,d,fl=document.getElementById('baWalk');
+  /* 고객 화면을 떠나면 떠 있는 카드도 치운다 — 만들기 화면에 남으면 거짓 안내다 */
+  if(!box){if(fl)fl.innerHTML='';return;}
+  [].slice.call(box.querySelectorAll(':scope > .bawalk')).forEach(function(x){x.parentNode.removeChild(x);});
+  for(i=0;i<L.length;i++){
+    el=L[i];w=baWalkOf(el.id);h3=el.querySelector(':scope > h3');
+    if(h3){if(w)h3.setAttribute('data-ic',w.ic);else h3.removeAttribute('data-ic');}
+    if(!on&&baWalkOn()&&w){
+      d=document.createElement('div');d.className='bawalk noprint';d.setAttribute('data-for',el.id);
+      d.innerHTML=baWalkHtml(el,false);box.insertBefore(d,el);
+    }
+  }
+  if(!fl){fl=document.createElement('div');fl.id='baWalk';fl.className='bawalk noprint';document.body.appendChild(fl);}
+  fl.innerHTML=(on&&baWalkOn()&&S.mode==='show'&&L[cur])?baWalkHtml(L[cur],true):'';
+}
 function baCopy(t,ok){
   function done(){toast(ok||'복사했습니다',3000);}
   try{
