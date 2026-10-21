@@ -1077,6 +1077,14 @@ a{color:inherit;text-decoration:none;}
 .nav-pin-hd span{margin-left:auto;font-size:var(--t6);font-weight:700;color:var(--t-sub);
   background:var(--t-bg);border-radius:var(--r-pill);padding:1px 7px;}
 /* 메뉴 한 줄 = 단추 + 별표 */
+/* ── ✏️ <b>직접 그린 선 그림</b>이 앉는 자리 ─────────────────────
+   사장님 말씀 2026-10-21 「이모지 선 그림으로 바꿔줘」.
+   ★ 그림은 <b>글자색을 따릅니다</b>(currentColor) — 켜진 칸은 저절로
+     같이 켜지고, 색을 여기서 또 정하지 않습니다 (5번).
+   ★ 아직 안 바꾼 이모지는 .ico-emo 로 그대로 섭니다 — 크기만 맞춥니다. */
+svg.ico{display:block;flex:none;vertical-align:-3px}
+.ico-emo{display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.nav-row .ti svg.ico,.tb-b .e svg.ico{margin:0 auto}
 .nav-row{position:relative;display:flex;align-items:stretch;gap:2px;}
 .nav-row .tab-btn{flex:1;min-width:0;}
 .nav-star{flex:0 0 auto;border:0;background:transparent;color:var(--t-sub3);
@@ -2643,6 +2651,7 @@ body.dzguide-mode #dzGuideScreen{display:block;}
      netlify.toml 의 included_files 로 <b>같은 파일</b>을 읽습니다. 여기 또
      적으면 화면과 알람이 다른 말을 합니다 (5번). -->
 <script src="alm-slots.js"></script>
+<script src="apex-icon.js?v=1"></script>
 <script src="apex-map-data.js"></script>
 <!-- 고객 한 장 — 고객 365일과 DB 통합 CRM 이 <b>같은 카드</b>를 세운다.
      초성 표·이름 가리기·연락기록 섞기도 여기 한 벌만 둔다(5번).
@@ -15268,7 +15277,10 @@ function tbHtml(cur){
     if(!tbCan(x.id))continue;
     h+='<button type="button" class="tb-b'+((on&&on===x.id)?' on':'')+'" '+
        'onclick="tbGo(\''+x.id+'\')" aria-label="'+osEsc(x.t)+'">'+
-       '<span class="e">'+x.e+'</span><span>'+osEsc(x.t)+'</span></button>';
+       /* ★ 이모지를 <b>직접 그린 선 그림</b>으로 (사장님 말씀 2026-10-21).
+          못 바꾸는 것은 icoFromEmoji 가 <b>그대로</b> 돌려줍니다 (1번). */
+       '<span class="e">'+((typeof icoFromEmoji==='function')?icoFromEmoji(x.e,22):x.e)+'</span>'+
+       '<span>'+osEsc(x.t)+'</span></button>';
   }
   return h;
 }
@@ -15810,7 +15822,8 @@ function navBtnHtml(it,star){
   var fav=navIsFav(it.id);
   return '<div class="nav-row'+(fav?' fav':'')+'">'+
     '<button class="tab-btn" data-tab="'+it.id+'" onclick="go(\''+it.id+'\')">'+
-      '<span class="ti">'+it.icon+'</span><span class="tt">'+esc(it.title)+'</span>'+
+      '<span class="ti">'+((typeof icoFromEmoji==='function')?icoFromEmoji(it.icon,20):it.icon)+'</span>'+
+      '<span class="tt">'+esc(it.title)+'</span>'+
       (it.cnt?'<span class="tc">'+it.cnt+'</span>':'')+'</button>'+
     (star===false?'':
       '<button type="button" class="nav-star'+(fav?' on':'')+'" '+
