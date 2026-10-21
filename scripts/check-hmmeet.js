@@ -144,9 +144,25 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(!!z && !!z.ap, '  닷새 뒤 약속이 있는 분도 <b>동선에는 선다</b> — 날짜 ' + ((z && z.ap) || '없음'));
   is(R.html.indexOf('약속</span>') >= 0, '  그분 자리에는 <b>날짜 딱지</b>가 선다 (.t-tag.ok)');
 
-  console.log('\n[7] 오늘 약속이 하나도 없으면 이 자리가 안 선다 — 갈 동네를 모른다 (1번)');
-  is(R.noDay.indexOf('만나야 할 분') < 0, '  약속 없는 날에는 <b>지어내지 않는다</b>');
-  is(R.noDay.indexOf('갈 데가 없습니다') >= 0, '  그 자리에 <b>원래 한 줄</b>이 그대로 선다');
+  console.log('\n[7] 오늘 약속이 없는 날 — <b>그래도 만나야 할 분은 선다</b> (판 X142)');
+  /* ★★ 2026-10-20 · 사장님 말씀 「왜 지역동선에 추천인들이 안 떠」.
+     ⚠ <b>여기가 거꾸로 못 박고 있었습니다.</b> 여태 두 줄은 「약속 없는 날엔
+       『만나야 할 분』 이 <b>없어야</b> 한다」 였습니다. 뜻은 「약속을 지어내지
+       말라」 였는데, <b>진짜 계신 분을 보여 주는 것까지</b> 막아 버렸습니다.
+       그래서 정작 「오늘 어디 가지」 를 묻는 날 — 약속이 안 잡힌 날 — 에
+       화면이 빈손이었고, <b>자는 그것을 초록이라 적어 주고</b> 있었습니다.
+       재어 보니 그 날 걸 분 0명 · 만나야 할 분 0명이었습니다 (8번).
+     ★ <b>느슨해진 것이 아닙니다</b> — 약속을 지어내는지는 아래에서 그대로
+       봅니다(약속 줄 0 · 시각 0). 지어내지 말라는 것은 <b>약속</b>이지,
+       이미 대장에 계신 분이 아닙니다 (1번).                              */
+  is(R.noDay.indexOf('만나야 할 분') >= 0,
+     '  ★ 약속이 없어도 <b>만나야 할 분은 선다</b> — 빈손으로 두지 않는다');
+  is(!/hm-rt-r/.test(R.noDay) && !/\d\d:\d\d/.test(R.noDay),
+     '  그래도 <b>약속은 지어내지 않는다</b> (1번) — 시간 줄도 시각도 없다');
+  is(R.noDay.indexOf('오늘 약속 없음') >= 0,
+     '  <b>약속이 없다고 말한다</b> — 있는 척하지 않는다');
+  is(R.noDay.indexOf('갈 데가 없습니다') < 0,
+     '  만나야 할 분이 계시면 <b>「갈 데가 없다」 고 하지 않는다</b> — 갈 데가 있다');
 
   console.log('\n[8] 새 CSS 를 한 줄도 안 썼다 — 쓴 이름이 전부 ui.css 에 있다');
   /* 새로 그린 자리가 쓰는 이름만 봅니다. 옛 hm-rt-* 는 이 판이 만든 것이
@@ -166,6 +182,13 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     host.id = 'chkHmMeet';
     host.innerHTML = hmRtHtml();
     (document.getElementById('dynPane') || document.body).appendChild(host);
+    /* 판 X142 — 이 자리는 <b>접는 칸 안</b>으로 들어갔습니다(홈 4.2화면 선).
+       접힌 채로 재면 높이가 <b>0</b> 이라 자가 거짓 빨간불을 켭니다 —
+       사람이 보는 그 상태로 재려고 <b>펴 놓고</b> 잽니다 (8번). */
+    host.querySelectorAll('.hm-fold').forEach(f => {
+      f.classList.add('on');
+      const b = f.querySelector('.hm-fold-b'); if (b) b.hidden = false;
+    });
     const out = [];
     host.querySelectorAll('.t-row .r > *').forEach(el => {
       const r = el.getBoundingClientRect();

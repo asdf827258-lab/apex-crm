@@ -143,9 +143,13 @@ const SEED = () => {
   sec('[1] 🚗 묶이는 동네 — 진짜 수인가');
   const R = await pg.evaluate(() => {
     const t = hmRtRgTop(2), all = hmRtRgTop(99);
-    const el = document.querySelector('#dynPane .hm-rt .hm-rt-none')   /* ⚠ .hm-rt-none 은 여러 카드가 빌려 쓰는 옷 이름이라 동선 카드 안으로 좁힌다 */;
+    /* ⚠ .hm-rt-none 은 여러 카드가 빌려 쓰는 옷 이름이라 동선 카드 안으로 좁힌다.
+       판 X142 — 이 줄은 <b>접는 칸 안</b>으로 들어갔습니다(홈 4.2화면 선). 자리를
+       못 박지 않고 <b>카드 안 어디든</b> 찾습니다 — 어디 있느냐가 아니라
+       「그 말이 안 사라졌나」 가 이 자리의 물음입니다 (8번). */
+    const el = document.querySelector('#dynPane .hm-rt .hm-rt-none');
     return { top: t, all: all, html: el ? el.innerHTML : '',
-             txt: el ? el.innerText.replace(/\s+/g, ' ').trim() : '(줄이 없다)',
+             txt: el ? (el.innerText||el.textContent||'').replace(/\s+/g, ' ').trim() : '(줄이 없다)',
              h: el ? Math.round(el.getBoundingClientRect().height) : 0 };
   });
   const t0 = R.top[0] || {}, t1 = R.top[1] || {};
@@ -246,12 +250,15 @@ const SEED = () => {
     const H = (sel) => { const e = document.querySelector(sel); return e ? Math.round(e.getBoundingClientRect().height) : 0; };
     const out = {};
     AR.cliRows = AR.cliRows.map(r => ({ ...r, by: (r.id === 'p1' || r.id === 'p2') ? 1990 : (r.id === 'p3' ? 1972 : (r.id === 'p4' ? 1958 : null)) }));
-    go('home'); out.sub넣음 = H('#dynPane .hm-act'); out.rt넣음 = H('#dynPane .hm-rt .hm-rt-none'); out.act넣음 = 0;
+    /* 판 X142 — 접는 칸 안으로 들어가 <b>접힌 동안은 0px</b> 입니다. 그래도
+       카드 <b>통째로</b> 잽니다 — 누가 다시 펴 두면 그 늘어난 px 가 여기서
+       그대로 드러납니다 (안 울리는 알람은 알람이 아닙니다 · 8번). */
+    go('home'); out.sub넣음 = H('#dynPane .hm-act'); out.rt넣음 = H('#dynPane .hm-rt'); out.act넣음 = 0;
     const 참말 = { pt: window.hmPtChip, rg: window.hmRtRgTxt, more: window.hmActMoreHtml };
     window.hmPtChip = function(){ return ''; }; window.hmActMoreHtml = function(){ return ''; };
     window.hmRtRgTxt = function(){ return '지역을 묶어 하루를 잡으시면 오가는 시간이 줄어듭니다.'; };
     
-    go('home'); out.sub뺌 = H('#dynPane .hm-act'); out.rt뺌 = H('#dynPane .hm-rt .hm-rt-none'); out.act뺌 = 0;
+    go('home'); out.sub뺌 = H('#dynPane .hm-act'); out.rt뺌 = H('#dynPane .hm-rt'); out.act뺌 = 0;
     window.hmPtChip = 참말.pt; window.hmRtRgTxt = 참말.rg; window.hmActMoreHtml = 참말.more;
     go('home');          /* ⚠ 되돌린 뒤 <b>다시 그립니다</b> — 안 그리면 다음 자가 「빼 둔 화면」 을 재게 됩니다 */
     return out;
