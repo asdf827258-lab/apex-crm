@@ -50,14 +50,23 @@ const is = (ok,m)=>{ console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++; };
 const sec = (t)=>console.log('\n'+t);
 
 /* ── 바닥 — <b>2026-10-21 에 잰 수 그대로</b>입니다 ─────────────────── */
+/* ★★ 2026-10-21 · 판 X146 에서 <b>다섯 쪽을 고치고 바닥을 내렸습니다</b>.
+   괄호 안이 고치기 전 수입니다 — 올린 것이 아니라 <b>내린</b> 것입니다 (0-1번).
+     13px 밑 글씨   1,084 → 3
+     대비 4.5 밑      521 → 56
+     44px 밑 단추     131 → 1                                           */
 const BASE_SOLO = {
-  'app/ba.html':      { small:716, low:396, tap:67, nm:'보장 전·후' },
-  'app/finance.html': { small:0,   low:52,  tap:3,  nm:'재무설계 계산기' },
-  'app/apex-map.html':{ small:255, low:25,  tap:33, nm:'APEX 전체 지도' },
-  'edu-pipeline.html':{ small:25,  low:48,  tap:8,  nm:'카톡보내기·DB 업적관리' },
-  'app/blog.html':    { small:100, low:0,   tap:25, nm:'블로그' }
+  'app/ba.html':      { small:0,  low:1,  tap:0, nm:'보장 전·후' },          /* 716 · 396 · 67 */
+  'app/finance.html': { small:0,  low:17, tap:0, nm:'재무설계 계산기' },      /*   0 ·  52 ·  3 */
+  'app/apex-map.html':{ small:0,  low:23, tap:0, nm:'APEX 전체 지도' },      /* 255 ·  25 · 33 */
+  'edu-pipeline.html':{ small:0,  low:15, tap:1, nm:'카톡보내기·DB 업적관리' },/*  25 ·  48 ·  8 */
+  'app/blog.html':    { small:3,  low:0,  tap:0, nm:'블로그' }               /* 100 ·   0 · 25 */
 };
-const BASE_MAIN = { small:2, low:1550, tap:16, long:91 };
+/* ⚠ 본체의 단추 바닥을 16 → 2 로 내린 것은 <b>고쳐서가 아니라 자를 날카롭게
+   해서</b>입니다 — 누를 수 있는 줄 <b>안</b>에 든 글자(상품명 등)를 따로 세지
+   않게 바꿨습니다. 손가락이 겨누는 것은 줄이지 그 안 글자가 아닙니다.
+   <b>고친 것과 자를 고친 것을 섞어 적지 않습니다</b> (1번).              */
+const BASE_MAIN = { small:2, low:1550, tap:2, long:91 };
 /* ★ 「제일 긴 문단」 을 <b>화면 전부에서</b> 재면 설정(settings)이 23,221자로
    맨 위에 섭니다 — 거기는 약관·개인정보를 그대로 싣는 자리라 긴 것이 맞습니다.
    그래서 <b>두뇌 하나</b>를 지목해 잽니다. 사장님이 「안 읽힌다」 하신 자리이고,
@@ -105,6 +114,11 @@ function 잣대(){
     [].slice.call(host.querySelectorAll('button,a[role=button],.btn,[onclick]')).forEach(function(b){
       if(!b.offsetParent)return;
       if(b.querySelector('button'))return;          /* 담는 칸은 안 센다 */
+      /* ★ <b>손가락이 겨누는 것</b>만 셉니다. 누를 수 있는 줄 <b>안에</b> 들어
+         있는 글자(상품명 <b> 에 onclick 이 붙은 것)는 그 자체가 과녁이
+         아니라 줄의 일부입니다 — 따로 세면 「22px 짜리 단추」 라고 거짓으로
+         고발합니다. 줄은 이미 44px 입니다 (8번).                        */
+      if(b.parentElement&&b.parentElement.closest('button,[onclick],a[role=button],.btn'))return;
       var r=b.getBoundingClientRect(); if(r.width<4||r.height<2)return;
       /* ⚠ <b>반올림해서</b> 셉니다 — 43.6px 는 화면에서 44px 입니다. 날값으로
          재면 글꼴이 늦게 실릴 때마다 수가 하나씩 흔들려, 같은 코드에 빨간불이
