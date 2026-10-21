@@ -34,6 +34,7 @@
    ⚠ 자를 브라우저에 <b>글자로 넘기지 않습니다</b> — 템플릿 문자열 안에서
      정규식의 \d 가 d 로 삭습니다 (같은 자리에서 또 데였습니다).            */
 const { chromium } = require('playwright');
+const CLK = require('./lib-clock.js');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 const ROOT = process.cwd(), PORT = 8943;
 const MIME = { '.html':'text/html; charset=utf-8','.js':'application/javascript','.css':'text/css',
@@ -135,7 +136,13 @@ function 잣대(){
 (async()=>{
   await new Promise(r=>srv.listen(PORT,r));
   const b = await chromium.launch();
-  const ctx = await b.newContext({ viewport:{width:390,height:844} });
+  const ctx = await b.newContext({ viewport:{width:390,height:844}, timezoneId:CLK.TZ });
+  /* ★ <b>시계를 박습니다</b> (판 X148 에서 보탬) — 팀 허브·데일리·체크판은
+     「오늘」 에 따라 글자 자리가 바뀝니다. 안 박았더니 같은 코드가 한국
+     23:13 에는 1462 로 초록, 자정을 넘긴 00:15 에는 1463 으로 빨간불이었습니다
+     (#628 · 손으로 두 때에 박아 재어 알았습니다). 바닥 1462 는 main 이
+     초록이던 그 때(2026-10-21 14:13Z)에 잰 수라 그 때를 박습니다 (8번).  */
+  await CLK.pinIso(ctx, '2026-10-21T14:13:00Z');
   await ctx.route('**://**', rt=>{ const u=rt.request().url();
     if(u.indexOf('127.0.0.1:'+PORT)>=0)return rt.continue();
     return rt.fulfill({status:200,contentType:'application/javascript',body:''}); });
