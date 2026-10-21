@@ -1,4 +1,4 @@
-/* 보장 전·후 「고객에게 보여주기」 — 설계사가 <b>따라만 가도</b> 되나 (판 X146).
+/* 보장 전·후 「고객에게 보여주기」 — 설계사가 <b>따라만 가도</b> 되나 (판 X148).
 
    사장님 말씀 2026-10-21 「보장분석 전 후 자료에서 그 안에 내용만 전부 다듬고
    토스 테마와 아이콘, 그리고 따라만가도 할수 있을정도로 만들어」 — 따라 할
@@ -18,7 +18,8 @@
      2. 길잡이 표는 <b>BA_WALK 한 곳</b>인가 — GUIDE_SELL 이 되살아나지 않나 (5번)
         사용방법 「상담 자리에서」 가 같은 표를 읽나
      3. 표의 이름(nm)이 장의 이름(data-nm · 묶음 장은 data-grp)과 같나
-     4. 장 제목마다 아이콘(data-ic)이 붙나
+     4. 장 제목마다 아이콘이 붙나 — <b>선 그림</b>(app/apex-icon.js)이고 이모지가 아닌가
+        (#627 이 「이모지는 전부 선 그림으로」 를 정했습니다 · 9번)
      5. 길잡이가 <b>장 밖</b>에 서나 — 카톡 복사 글 · 장 수 세기에 안 섞이나
      6. 인쇄에는 안 나가나 · 끄면 사라지나 · 끈 것이 남나
      7. 한 장씩 넘기기 — 지금 장의 길잡이 한 장만 뜨고, 장을 넘기면 따라 바뀌나
@@ -74,6 +75,7 @@ is(/BA_WALK\.map\(/.test(SRC.slice(SRC.indexOf('function guideHtml'), SRC.indexO
       const w = baWalkOf(sec.id), prev = sec.previousElementSibling, h3 = sec.querySelector(':scope > h3');
       out.push({ id: sec.id, nm: sec.getAttribute('data-nm') || '', grp: sec.getAttribute('data-grp') || '',
         h3: h3 ? h3.textContent : '', hasH3: !!h3, ic: h3 ? (h3.getAttribute('data-ic') || '') : '',
+        svg: !!(h3 && h3.querySelector(':scope > .baic svg')), icOk: !!(w && typeof APEX_ICON === 'object' && APEX_ICON[w.ic]),
         w: w ? { nm: w.nm, q: w.q || '', a: w.a || '' } : null,
         walk: prev && prev.classList.contains('bawalk') && prev.getAttribute('data-for') === sec.id ? prev.innerText : '',
         inner: sec.innerText.indexOf('설계사 길잡이') >= 0,
@@ -100,6 +102,11 @@ is(/BA_WALK\.map\(/.test(SRC.slice(SRC.indexOf('function guideHtml'), SRC.indexO
   function BAK(id) { return /^s4_|^s8_/.test(id) ? 'x_' : 'x'; }
   is(badNm.length === 0, '표 이름이 장 이름과 같다' + (badNm.length ? ' — ' + badNm.slice(0, 3).join(' · ') : ''));
   const noIc = R.rows.filter(r => r.hasH3 && !r.ic).map(r => r.id);
+  const noSvg = R.rows.filter(r => r.hasH3 && !r.svg).map(r => r.id);
+  is(noSvg.length === 0, '장 머리 아이콘이 <b>선 그림(svg)</b>이다 — 이모지가 아니다 (#627 · 9번)' + (noSvg.length ? ' — 아님: ' + noSvg.join(', ') : ''));
+  const badIc = R.rows.filter(r => r.w && !r.icOk).map(r => r.id);
+  is(badIc.length === 0, 'BA_WALK 의 그림 이름이 전부 apex-icon.js 에 있다' + (badIc.length ? ' — 없음: ' + badIc.join(', ') : ''));
+  is(R.rows.every(r => !/\p{Extended_Pictographic}/u.test(r.walk)), '길잡이 글에 이모지가 없다');
   is(noIc.length === 0, '제목이 있는 장마다 아이콘이 붙는다 (' + R.rows.filter(r => r.hasH3).length + '장)' + (noIc.length ? ' — 없음: ' + noIc.join(', ') : ''));
   is(R.rows.every(r => !r.inner), '길잡이가 장 <b>밖</b>에 선다 — 장 글자에 안 섞인다');
   is(R.kk && R.kk.indexOf('길잡이') < 0 && R.kk.indexOf('짚기') < 0, '카톡으로 복사한 글에 길잡이가 안 섞인다');

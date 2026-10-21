@@ -1077,6 +1077,14 @@ a{color:inherit;text-decoration:none;}
 .nav-pin-hd span{margin-left:auto;font-size:var(--t6);font-weight:700;color:var(--t-sub);
   background:var(--t-bg);border-radius:var(--r-pill);padding:1px 7px;}
 /* 메뉴 한 줄 = 단추 + 별표 */
+/* ── ✏️ <b>직접 그린 선 그림</b>이 앉는 자리 ─────────────────────
+   사장님 말씀 2026-10-21 「이모지 선 그림으로 바꿔줘」.
+   ★ 그림은 <b>글자색을 따릅니다</b>(currentColor) — 켜진 칸은 저절로
+     같이 켜지고, 색을 여기서 또 정하지 않습니다 (5번).
+   ★ 아직 안 바꾼 이모지는 .ico-emo 로 그대로 섭니다 — 크기만 맞춥니다. */
+svg.ico{display:block;flex:none;vertical-align:-3px}
+.ico-emo{display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.nav-row .ti svg.ico,.tb-b .e svg.ico{margin:0 auto}
 .nav-row{position:relative;display:flex;align-items:stretch;gap:2px;}
 .nav-row .tab-btn{flex:1;min-width:0;}
 .nav-star{flex:0 0 auto;border:0;background:transparent;color:var(--t-sub3);
@@ -1176,7 +1184,10 @@ a{color:inherit;text-decoration:none;}
 @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
 
 .page-hd{margin-bottom:18px;}
-.page-tag{font-size:var(--t6);font-weight:700;color:var(--ink-5);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px;}
+/* ★ 화면 머리의 작은 딱지입니다. --ink-5 는 옅은 바탕(--bg) 위에서 대비가
+   <b>2.76</b> 이라 안 읽힙니다 — 화면마다 섭니다(사장님 말씀 2026-10-21
+   「다 가독성이 떨어져」). 한 칸 진한 --ink-4 로 올립니다 (check-read). */
+.page-tag{font-size:var(--t6);font-weight:700;color:var(--ink-4);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px;}
 
 /* ── 폰에서 보기 ──────────────────────────────────────────────────
    폰에서는 9~9.5px 짜리 꼬리표가 거의 안 읽힌다. 자리마다 쫓아다니며
@@ -1199,7 +1210,9 @@ a{color:inherit;text-decoration:none;}
   .app button.nav-star,.app .cc-b,.app .chip-opt{min-height:32px}
 }
 .page-title{font-size:var(--t2);font-weight:800;color:var(--ink-1);letter-spacing:-.045em;}
-.page-desc{font-size:var(--t6);color:var(--ink-4);margin-top:5px;line-height:1.6;max-width:680px;}
+/* ★ 머리글 설명 — --ink-4 는 옅은 바탕 위에서 <b>4.19</b> 입니다.
+   화면마다 서는 줄이라 한 칸 진한 --ink-3 로 올립니다.               */
+.page-desc{font-size:var(--t6);color:var(--ink-3);margin-top:5px;line-height:1.6;max-width:680px;}
 
 /* 히어로 (대시보드) */
 .hero{background:linear-gradient(135deg,#0F172A 0%,var(--t-point) 64%,#38BDF8 100%);color:#fff;border-radius:var(--r-lg);padding:28px 30px;margin-bottom:16px;}
@@ -2643,6 +2656,7 @@ body.dzguide-mode #dzGuideScreen{display:block;}
      netlify.toml 의 included_files 로 <b>같은 파일</b>을 읽습니다. 여기 또
      적으면 화면과 알람이 다른 말을 합니다 (5번). -->
 <script src="alm-slots.js"></script>
+<script src="apex-icon.js?v=1"></script>
 <script src="apex-map-data.js"></script>
 <!-- 고객 한 장 — 고객 365일과 DB 통합 CRM 이 <b>같은 카드</b>를 세운다.
      초성 표·이름 가리기·연락기록 섞기도 여기 한 벌만 둔다(5번).
@@ -15272,7 +15286,10 @@ function tbHtml(cur){
     if(!tbCan(x.id))continue;
     h+='<button type="button" class="tb-b'+((on&&on===x.id)?' on':'')+'" '+
        'onclick="tbGo(\''+x.id+'\')" aria-label="'+osEsc(x.t)+'">'+
-       '<span class="e">'+x.e+'</span><span>'+osEsc(x.t)+'</span></button>';
+       /* ★ 이모지를 <b>직접 그린 선 그림</b>으로 (사장님 말씀 2026-10-21).
+          못 바꾸는 것은 icoFromEmoji 가 <b>그대로</b> 돌려줍니다 (1번). */
+       '<span class="e">'+((typeof icoFromEmoji==='function')?icoFromEmoji(x.e,22):x.e)+'</span>'+
+       '<span>'+osEsc(x.t)+'</span></button>';
   }
   return h;
 }
@@ -15814,7 +15831,8 @@ function navBtnHtml(it,star){
   var fav=navIsFav(it.id);
   return '<div class="nav-row'+(fav?' fav':'')+'">'+
     '<button class="tab-btn" data-tab="'+it.id+'" onclick="go(\''+it.id+'\')">'+
-      '<span class="ti">'+it.icon+'</span><span class="tt">'+esc(it.title)+'</span>'+
+      '<span class="ti">'+((typeof icoFromEmoji==='function')?icoFromEmoji(it.icon,20):it.icon)+'</span>'+
+      '<span class="tt">'+esc(it.title)+'</span>'+
       (it.cnt?'<span class="tc">'+it.cnt+'</span>':'')+'</button>'+
     (star===false?'':
       '<button type="button" class="nav-star'+(fav?' on':'')+'" '+
@@ -20664,8 +20682,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-21 17:40';
-var APP_BUILD_NOTE="🧭 <b>보장 전·후 「고객에게 보여주기」 를 설계사가 따라만 가도 되게 했습니다.</b> 장마다 「① 짚기 ② 읽기 ③ 물으면」 길잡이가 서고(🧭 길잡이 켬/끔 · 인쇄·카톡 복사에는 안 섞임), 장 제목마다 아이콘이 붙었습니다. 폰에서 「오늘 순서」·「이 돈이 무엇이 되는가」·「가족에게 남는 것」·담보표가 한 자씩 세로로 끊기던 것을 한 줄로 세웠습니다. 사용방법 「상담 자리에서」 도 같은 표를 읽습니다. (판 X146) · 🧾 <b>재무설계 계산기가 세금을 단정하지 않습니다</b> — 「비과세가 적용됩니다」 · 「세금이 0원」 처럼 결론을 말하던 75곳에 「요건 충족 시」 를 붙이고, 시행령 한도 금액(200만원 · 148.5만원 · 900만원…)과 연금 나이(55세)를 글자에서 뺐습니다. 셈은 그대로입니다. (판 X147)";
+var APP_BUILD='2026-10-21 18:30';
+var APP_BUILD_NOTE="🧭 <b>보장 전·후 「고객에게 보여주기」 를 설계사가 따라만 가도 되게 했습니다.</b> 장마다 「① 짚기 ② 읽기 ③ 물으면」 길잡이가 서고(🧭 길잡이 켬/끔 · 인쇄·카톡 복사에는 안 섞임), 장 제목마다 아이콘이 붙었습니다. 폰에서 「오늘 순서」·「이 돈이 무엇이 되는가」·「가족에게 남는 것」·담보표가 한 자씩 세로로 끊기던 것을 한 줄로 세웠습니다. 사용방법 「상담 자리에서」 도 같은 표를 읽습니다. (판 X148) · 🧾 <b>재무설계 계산기가 세금을 단정하지 않습니다</b> — 「비과세가 적용됩니다」 · 「세금이 0원」 처럼 결론을 말하던 75곳에 「요건 충족 시」 를 붙이고, 시행령 한도 금액(200만원 · 148.5만원 · 900만원…)과 연금 나이(55세)를 글자에서 뺐습니다. 셈은 그대로입니다. (판 X149) · 앞서 나간 「👓 읽히게 · 이모지를 선 그림으로」(#627 · X146·X147)도 그대로 들어 있습니다.";
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
    사이트 이름은 배포 주소에서 알아낸다 — apex-os-yunpro.netlify.app → apex-os-yunpro.
