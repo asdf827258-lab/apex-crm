@@ -1521,7 +1521,7 @@ a { color: inherit; text-decoration: none; }
         </div>
         <div id="d_fx_note"></div>
         <div class="sf"><label>환급율(%) — 해지 시 납입 대비 수령</label><input type="number" id="d_refund_rate" value="85" step="1" oninput="render()"></div>
-        <div class="sb-note">환차익은 현재→예상 환율로 자동 계산됩니다. 환급율은 해지 시 납입보험료 대비 수령 비율이며, 10년 이상 유지 시 비과세가 적용됩니다.</div>
+        <div class="sb-note">환차익은 현재→예상 환율로 자동 계산됩니다. 환급율은 해지 시 납입보험료 대비 수령 비율이며, 10년 유지 등 요건 충족 시 비과세가 적용됩니다(판단은 세무 전문가 확인).</div>
       </div>
     </div>
 
@@ -2274,7 +2274,7 @@ const MOCK_ASSETS = [
     risk:'안정형 이상', account:['연금저축','IRP','ISA','일반'],
     desc:'배당 성장 + 방어력 (SCHD 한국판)',
     why:'50년 이상 꾸준히 배당을 늘려온 미국 고배당 성장주에 투자. 주가 오르면 시세차익, 내리면 배당으로 버팀. 멘탈 방어 최적.',
-    strategy:'ISA 계좌에서 보유 시 배당금 비과세. 하락장에서도 배당 수익으로 심리적 안정. 안정추구형의 필수 코어',
+    strategy:'ISA 계좌에서 보유 시 배당금 비과세(요건·한도 충족 시). 하락장에서도 배당 수익으로 심리적 안정. 안정추구형의 필수 코어',
     risk_detail:'방어적 성격으로 급등장에서는 S&P500 대비 수익률 낮을 수 있음. 강점은 하락 방어',
     expense:'0.05%',
     tag:'배당방어'
@@ -2445,7 +2445,7 @@ const MOCK_ASSETS = [
     risk:'안정추구형 이상', account:['ISA','국내주식'],
     desc:'국내 대장주 · 메모리 반도체 글로벌 1위',
     why:'HBM·DDR5 메모리 AI 수요 폭증. 환율 헤지 원화 자산. 배당수익률 3~4%대. 코스피 대표 우량주로 국내 포트폴리오 안정감.',
-    strategy:'원화 기반 자산으로 환율 헤지. ISA 내 배당 비과세. 저점 분할 매수 후 장기 보유',
+    strategy:'원화 기반 자산으로 환율 헤지. ISA 내 배당 비과세(요건·한도 충족 시). 저점 분할 매수 후 장기 보유',
     risk_detail:'TSMC 대비 파운드리 경쟁력 격차. HBM 점유율 회복 여부가 핵심 변수',
     expense:'-',
     tag:'국내우량'
@@ -2455,7 +2455,7 @@ const MOCK_ASSETS = [
     risk:'안정형', account:['ISA','해외주식'],
     desc:'배당왕 62년 · 경기 무관 방어주',
     why:'62년 연속 배당 증가. 200개국 판매. 경기 침체에도 콜라는 마신다. 주가 방어력 최강. Warren Buffett이 40년 이상 보유 중.',
-    strategy:'포트폴리오 방어막. 안정형의 핵심 위성 자산. 배당 3.1%를 ISA에서 비과세로 수령',
+    strategy:'포트폴리오 방어막. 안정형의 핵심 위성 자산. 배당 3.1%를 ISA에서 비과세로 수령(요건·한도 충족 시)',
     risk_detail:'성장성 낮음. 건강 트렌드로 탄산음료 소비 감소 우려. 그러나 체질 개선 중',
     expense:'-',
     tag:'배당방어'
@@ -2475,7 +2475,7 @@ const MOCK_ASSETS = [
     risk:'안정형', account:['ISA','해외주식'],
     desc:'월세 받는 부동산 리츠 · 월 배당주',
     why:'편의점·약국·마트에 임대하는 리츠. 매월 배당 지급. 25년 이상 배당 증가. 인플레이션 방어 실물 자산. 배당수익률 5.5%대.',
-    strategy:'월 배당으로 현금흐름 창출. ISA 내 배당 비과세. 은퇴 후 생활비 보완 수단으로 최적',
+    strategy:'월 배당으로 현금흐름 창출. ISA 내 배당 비과세(요건·한도 충족 시). 은퇴 후 생활비 보완 수단으로 최적',
     risk_detail:'금리 상승 시 부동산 리츠 주가 하락. 고금리 환경 불리. 금리 인하 사이클에서 강세',
     expense:'-',
     tag:'월배당'
@@ -2613,7 +2613,7 @@ const RISK_PROFILES = {
     whyCore:'S&P500으로 시장 수익 확보 + 배당ETF로 방어력 보완. 균형 잡힌 코어.',
     whySat:'국내 우량주 + 글로벌 방어적 성장주. 안정성 내에서 성장성 추가.',
     monthlyAlloc:{미국ETF:60,배당채권:25,우량주:15},
-    taxTip:'연금저축 세액공제(연 66~99만원) + ISA 배당 비과세 동시 활용.'
+    taxTip:'연금저축 세액공제 + ISA 배당 비과세 동시 활용(요건·한도 충족 시 — 한도는 세법 확인).'
   },
   '중립형': {
     core:60, sat:40, c:'#3B82F6',
@@ -3300,7 +3300,7 @@ function render() {
         <div class="mb blue"><div class="ml">예상 은퇴자산(${retRate}%)</div><div class="mv b">${fmt(fvWithNow)}<small>만</small></div></div>
         <div class="mb ${penScore>=80?'green':penScore>=50?'gold':'red'}"><div class="ml">목표 달성률</div><div class="mv ${penScore>=80?'g':penScore>=50?'o':'r'}">${penScore}%</div></div>
       </div>
-      <div class="hb blue">💡 <b>절세 3단 콤보:</b> ISA(연 2천만 비과세) + IRP/연금저축(세액공제 최대 148.5만원) + 달러·변액(장기 비과세) 순서로 자금 배분하면 세후 수익률이 극대화됩니다.</div>
+      <div class="hb blue">💡 <b>절세 3단 콤보:</b> ISA(비과세 한도 내) + IRP/연금저축(세액공제 한도 내) + 달러·변액(장기 비과세) 순서로 자금을 나누는 것이 기본입니다 (모두 요건 충족 시 — 한도는 세법을 확인하십시오).</div>
     `;
   }
 
@@ -3482,7 +3482,7 @@ function renderInvestTab() {
           <span style="font-size:var(--t2,20px)">🏦</span>
           <div>
             <div style="font-size:var(--t5,14px);font-weight:800;color:var(--g9)">ISA 계좌 (개인종합자산관리계좌)</div>
-            <div style="font-size:var(--t6,13px);color:#92400E">비과세 한도 200만원(서민·농어민 400만원) · 분리과세 9.9%</div>
+            <div style="font-size:var(--t6,13px);color:#92400E">비과세·분리과세 한도 있음 (요건 충족 시 — 한도는 세법을 확인하십시오)</div>
           </div>
           <span style="background:#F59E0B;color:white;font-size:var(--t6,13px);font-weight:700;padding:3px 8px;border-radius:99px;margin-left:auto">지금 바로 개설 가능</span>
         </div>
@@ -3493,11 +3493,11 @@ function renderInvestTab() {
           </div>
           <div style="background:white;border-radius:8px;padding:10px;text-align:center">
             <div style="font-size:var(--t6,13px);color:var(--g5)">연간 납입 한도</div>
-            <div style="font-size:var(--t3,17px);font-weight:900;color:var(--g9)">2,000만원</div>
+            <div style="font-size:var(--t3,17px);font-weight:900;color:var(--g9)">세법 확인</div>
           </div>
           <div style="background:white;border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:var(--t6,13px);color:var(--g5)">5년 비과세 한도</div>
-            <div style="font-size:var(--t3,17px);font-weight:900;color:var(--grn)">200만원</div>
+            <div style="font-size:var(--t6,13px);color:var(--g5)">비과세 한도</div>
+            <div style="font-size:var(--t3,17px);font-weight:900;color:var(--grn)">세법 확인</div>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:5px">
@@ -3505,8 +3505,8 @@ function renderInvestTab() {
             {step:'1단계', ico:'📱', title:'증권사 앱 설치 및 본인인증', desc:'삼성증권·미래에셋·한투·키움 등 비대면 개설. NH나무·토스증권도 간편 개설 가능. 신분증 준비'},
             {step:'2단계', ico:'🏦', title:'ISA 계좌 유형 선택', desc:'✅ 중개형 ISA (주식·ETF 직접 투자 가능) 선택 권장. 신탁형은 ETF 투자 불가'},
             {step:'3단계', ico:'💰', title:'계좌 개설 완료 후 자동이체 설정', desc:`월 ${fmt(isaAmt)}만원 자동이체 설정. 급여일 다음 날 자동이체 추천`},
-            {step:'4단계', ico:'📊', title:'ETF/주식 매수 시작', desc:`${profile.satRec.slice(0,2).join(', ')} 등 위성 종목 우선. 배당주는 ISA 내 비과세 혜택 극대화`},
-            {step:'5단계', ico:'🔄', title:'3년 의무보유 후 전략 검토', desc:'3년 후 해지 시 세금 정산. 또는 연장하여 비과세 한도 누적 활용'},
+            {step:'4단계', ico:'📊', title:'ETF/주식 매수 시작', desc:`${profile.satRec.slice(0,2).join(', ')} 등 위성 종목 우선. 배당주는 ISA 내 비과세 한도 활용(요건 충족 시)`},
+            {step:'5단계', ico:'🔄', title:'의무가입기간 후 전략 검토', desc:'의무가입기간 뒤 해지 시 세금 정산. 또는 연장하여 비과세 한도 활용 (요건 충족 시 — 기간·한도는 세법 확인)'},
           ].map(s=>`<div style="display:flex;gap:10px;padding:8px 10px;background:white;border-radius:8px">
             <div style="flex-shrink:0;width:52px;text-align:center">
               <div style="font-size:var(--t4,15px)">${s.ico}</div>
@@ -3519,7 +3519,7 @@ function renderInvestTab() {
           </div>`).join('')}
         </div>
         <div style="margin-top:8px;background:#FDE68A;border-radius:8px;padding:8px 11px;font-size:var(--t6,13px);color:#7D4F00">
-          💡 <b>핵심 전략:</b> 해외주식 매도 차익 250만원 초과분은 22% 세금. ISA 내에서 매도 시 200만원까지 비과세. 개별 종목 투자는 무조건 ISA 먼저!
+          💡 <b>핵심 전략:</b> 해외주식 매도 차익은 기본공제를 넘으면 양도세가 붙습니다. ISA 안에서 매매하면 비과세·분리과세 한도를 쓸 수 있습니다(요건 충족 시 — 한도는 세법을 확인하십시오). 개별 종목 투자는 ISA를 먼저 검토하십시오.
         </div>
       </div>
 
@@ -3529,7 +3529,7 @@ function renderInvestTab() {
           <span style="font-size:var(--t2,20px)">🏛️</span>
           <div>
             <div style="font-size:var(--t5,14px);font-weight:800;color:var(--g9)">IRP (개인형 퇴직연금)</div>
-            <div style="font-size:var(--t6,13px);color:#6D28D9">세액공제 연 최대 148.5만원 환급 · 연금 수령 시 과세이연</div>
+            <div style="font-size:var(--t6,13px);color:#6D28D9">세액공제 대상 (요건·한도 충족 시) · 연금 수령 시까지 과세이연</div>
           </div>
           <span style="background:#8B5CF6;color:white;font-size:var(--t6,13px);font-weight:700;padding:3px 8px;border-radius:99px;margin-left:auto">세액공제 핵심</span>
         </div>
@@ -3540,7 +3540,7 @@ function renderInvestTab() {
           </div>
           <div style="background:white;border-radius:8px;padding:10px;text-align:center">
             <div style="font-size:var(--t6,13px);color:var(--g5)">세액공제 한도</div>
-            <div style="font-size:var(--t3,17px);font-weight:900;color:var(--g9)">900만원</div>
+            <div style="font-size:var(--t3,17px);font-weight:900;color:var(--g9)">세법 확인</div>
           </div>
           <div style="background:white;border-radius:8px;padding:10px;text-align:center">
             <div style="font-size:var(--t6,13px);color:var(--g5)">연 환급 예상</div>
@@ -3550,7 +3550,7 @@ function renderInvestTab() {
         <div style="display:flex;flex-direction:column;gap:5px">
           ${[
             {step:'1단계', ico:'🏦', title:'IRP 계좌 개설 (증권사 추천)', desc:'삼성증권·미래에셋·한국투자·키움 · 은행 IRP보다 증권사가 투자 상품 다양. 비대면 10분 개설'},
-            {step:'2단계', ico:'💰', title:'연간 납입 계획 수립', desc:`연금저축과 합산 900만원 한도. 월 ${fmt(irpAmt)}만원 × 12 = 연 ${fmt(irpAmt*12)}만원. 연말 한도 소진 전략`},
+            {step:'2단계', ico:'💰', title:'연간 납입 계획 수립', desc:`연금저축과 합산해 한도를 봅니다(한도는 세법 확인). 월 ${fmt(irpAmt)}만원 × 12 = 연 ${fmt(irpAmt*12)}만원. 연말 한도 소진 전략`},
             {step:'3단계', ico:'📊', title:'안전자산 30% 의무 운용', desc:'IRP는 안전자산(채권 ETF·MMF) 30% 이상 의무. 나머지 70%는 ETF 자유 운용'},
             {step:'4단계', ico:'📈', title:'ETF 포트폴리오 구성', desc:`[안전자산 30%] SOFR채권·미국채 ETF / [성장자산 70%] ${profile.coreRec.slice(0,2).join(', ')}`},
             {step:'5단계', ico:'💳', title:'연말정산 세액공제 신청', desc:'홈택스에서 IRP 납입 확인서 발급 → 연말정산 의료비·교육비 항목에 함께 제출'},
@@ -3566,7 +3566,7 @@ function renderInvestTab() {
           </div>`).join('')}
         </div>
         <div style="margin-top:8px;background:#DDD6FE;border-radius:8px;padding:8px 11px;font-size:var(--t6,13px);color:#4C1D95">
-          💡 <b>세금 절감 계산:</b> IRP+연금저축 합산 연 900만원 납입 시 → 세율 16.5% 기준 연 148.5만원 환급. 10년이면 1,485만원 절세!
+          💡 <b>세금 절감 계산:</b> IRP+연금저축을 세액공제 한도까지 채우면 공제율만큼 연말정산에서 돌려받습니다(요건 충족 시). 위 「연 환급 예상」은 현행 한도와 공제율 16.5%를 가정한 추정이며, 한도·공제율은 세법을 확인하십시오.
         </div>
       </div>
 
@@ -3576,7 +3576,7 @@ function renderInvestTab() {
           <span style="font-size:var(--t2,20px)">📊</span>
           <div>
             <div style="font-size:var(--t5,14px);font-weight:800;color:var(--g9)">연금저축펀드</div>
-            <div style="font-size:var(--t6,13px);color:#065F46">세액공제 연 최대 99만원 · ETF 자유 투자 · 은퇴 후 연금소득</div>
+            <div style="font-size:var(--t6,13px);color:#065F46">세액공제 대상 (요건·한도 충족 시) · ETF 자유 투자 · 은퇴 후 연금소득</div>
           </div>
           <span style="background:#10B981;color:white;font-size:var(--t6,13px);font-weight:700;padding:3px 8px;border-radius:99px;margin-left:auto">ETF 자유롭게</span>
         </div>
@@ -3587,7 +3587,7 @@ function renderInvestTab() {
           </div>
           <div style="background:white;border-radius:8px;padding:10px;text-align:center">
             <div style="font-size:var(--t6,13px);color:var(--g5)">세액공제 한도</div>
-            <div style="font-size:var(--t3,17px);font-weight:900;color:var(--g9)">600만원</div>
+            <div style="font-size:var(--t3,17px);font-weight:900;color:var(--g9)">세법 확인</div>
           </div>
           <div style="background:white;border-radius:8px;padding:10px;text-align:center">
             <div style="font-size:var(--t6,13px);color:var(--g5)">연 환급 예상</div>
@@ -3597,10 +3597,10 @@ function renderInvestTab() {
         <div style="display:flex;flex-direction:column;gap:5px">
           ${[
             {step:'1단계', ico:'📱', title:'증권사 연금저축펀드 개설', desc:'삼성·미래에셋·한투·키움·NH나무. 연금보험(보험사)은 ETF 투자 불가 — 반드시 연금저축펀드(증권사) 개설'},
-            {step:'2단계', ico:'💰', title:'월 납입액 설정', desc:`연 600만원(월 50만원)이 세액공제 한도. 현재 월 ${fmt(pensionAmt)}만원 납입 중. 연말 소진 전략 권장`},
+            {step:'2단계', ico:'💰', title:'월 납입액 설정', desc:`세액공제 한도 안에서 납입액을 정합니다(한도는 세법 확인). 현재 월 ${fmt(pensionAmt)}만원 납입 중. 연말 소진 전략 권장`},
             {step:'3단계', ico:'📊', title:'ETF 자동 투자 설정', desc:`${profile.coreRec.slice(0,3).join(', ')} 중심으로 자동 매수 설정. 정기 리밸런싱(연 1회)`},
-            {step:'4단계', ico:'🔄', title:'IRP와 합산 절세 최적화', desc:'연금저축 600만원 + IRP 300만원 = 합산 900만원 세액공제 한도 소진'},
-            {step:'5단계', ico:'🎯', title:'55세 이후 연금 수령 전략', desc:'55세부터 연금으로 수령 시 3.3~5.5% 저율과세. 일시 수령은 16.5% 과세. 반드시 분할 수령'},
+            {step:'4단계', ico:'🔄', title:'IRP와 합산 절세 최적화', desc:'연금저축과 IRP를 합산한 세액공제 한도 안에서 나눠 채우기 (요건 충족 시)'},
+            {step:'5단계', ico:'🎯', title:'연금 수령 전략', desc:'연금 수령 요건(나이·가입기간)을 채워 연금으로 받으면 3.3~5.5% 저율과세(요건 충족 시). 일시 수령은 16.5% 과세. 반드시 분할 수령'},
           ].map(s=>`<div style="display:flex;gap:10px;padding:8px 10px;background:white;border-radius:8px">
             <div style="flex-shrink:0;width:52px;text-align:center">
               <div style="font-size:var(--t4,15px)">${s.ico}</div>
@@ -3613,7 +3613,7 @@ function renderInvestTab() {
           </div>`).join('')}
         </div>
         <div style="margin-top:8px;background:#A7F3D0;border-radius:8px;padding:8px 11px;font-size:var(--t6,13px);color:#065F46">
-          💡 <b>절세 3단 콤보 완성:</b> 연금저축펀드(600만) + IRP(300만) + ISA(2000만) = 연 148.5만원 세금 환급 + 운용 수익 비과세
+          💡 <b>절세 3단 콤보 완성:</b> 연금저축펀드 + IRP(세액공제 한도 내) + ISA(비과세 한도 내) — 요건 충족 시 연말정산 환급 + 운용 수익 비과세·분리과세. 한도는 세법을 확인하십시오.
         </div>
       </div>
     `;
@@ -3889,7 +3889,7 @@ function divStrategyHtml(){
    ['🧭','고배당이냐, 배당성장이냐','지금 현금이 필요하면 고배당, 10년 뒤가 목표면 배당성장입니다. 배당성장주는 지금 수익률이 2~3%라도 매년 배당을 올려 <b>내 매입가 대비 수익률</b>이 계속 높아집니다.'],
    ['📅','월 배당 현금흐름 만들기','국내는 대부분 연 1회·반기, 미국은 분기 배당이 많습니다. 지급월이 다른 종목을 섞으면 <b>매달 들어오는 구조</b>를 만들 수 있고, 리츠(예: 리얼티인컴)는 매월 지급합니다.'],
    ['🧾','세금부터 계산하기','배당소득세 <b>15.4%</b>가 원천징수되고, 이자·배당 합계가 연 <b>2,000만원</b>을 넘으면 금융소득종합과세 대상이 됩니다. 해외주식 배당은 현지 원천징수(미국 15%) 후 국내에서 정산합니다.'],
-   ['🛡','절세 계좌 먼저 채우기','<b>ISA</b>는 배당에 비과세·분리과세 혜택이 있고, <b>연금저축·IRP</b> 안의 배당은 인출 시점까지 과세가 미뤄집니다. 같은 종목도 어느 계좌에 담느냐로 손에 남는 돈이 달라집니다.'],
+   ['🛡','절세 계좌 먼저 채우기','<b>ISA</b>는 배당에 비과세·분리과세 혜택이 있고(요건·한도 충족 시), <b>연금저축·IRP</b> 안의 배당은 인출 시점까지 과세가 미뤄집니다. 같은 종목도 어느 계좌에 담느냐로 손에 남는 돈이 달라집니다.'],
    ['⚠️','고배당의 함정 피하기','수익률이 갑자기 높아졌다면 배당이 늘어난 게 아니라 <b>주가가 내려간</b> 경우가 많습니다. 이익보다 배당을 많이 주는 회사(배당성향 과다)는 배당이 줄 수 있습니다.'],
    ['⚖️','한 곳에 몰지 않기','국내 배당주는 <b>금융·통신</b>에 쏠리기 쉽습니다. 업종·국가·통화를 나눠 담아야 한 업종이 흔들려도 현금흐름이 유지됩니다.'],
    ['🔁','배당은 재투자가 복리','당장 쓸 돈이 아니라면 받은 배당으로 다시 사는 것이 복리를 만듭니다. 은퇴 전에는 재투자, 은퇴 후에는 인출로 <b>스위치</b>하는 설계가 기본입니다.'],
@@ -3940,7 +3940,7 @@ function divConsult(){
      '"지금 가지고 계신 '+divFmt(have*10000)+'원으로는 월 <b>'+divFmt(nowMonthly)+'원</b> 정도가 배당으로 들어옵니다.<br>'+
      '여기에 매달 '+divFmt(monthly)+'원씩 더 넣고 배당을 다시 투자하면, 65세엔 <b>'+divFmt(future)+'원</b>이 되어 월 <b>'+divFmt(futMonthly)+'원</b>이 세금 떼고 들어오는 구조가 됩니다.<br>'+
      '중요한 건 종목을 고르는 게 아니라, <b>배당이 끊기지 않는 회사</b>로 <b>업종을 나눠</b> 담는 것입니다. 그리고 같은 종목이라도 <b>ISA·연금계좌</b>에 담으면 세금이 줄어 손에 남는 돈이 달라집니다."</div>'+
-     '<div style="margin-top:12px;background:#F8FAFC;border-radius:10px;padding:11px 13px;font-size:var(--t6,13px);color:#475569;line-height:1.8"><b style="color:#0F172A">다음 상담 체크리스트</b><br>· 현재 보유 종목의 업종 쏠림 확인<br>· ISA·연금저축·IRP 한도 사용 여부<br>· 연 배당 2,000만원 초과 가능성(종합과세)<br>· 은퇴 후 인출 전환 시점 합의</div>'+
+     '<div style="margin-top:12px;background:#F8FAFC;border-radius:10px;padding:11px 13px;font-size:var(--t6,13px);color:#475569;line-height:1.8"><b style="color:#0F172A">다음 상담 체크리스트</b><br>· 현재 보유 종목의 업종 쏠림 확인<br>· ISA·연금저축·IRP 한도 사용 여부<br>· 연 배당이 종합과세 기준을 넘을 가능성<br>· 은퇴 후 인출 전환 시점 합의</div>'+
      '<div style="margin-top:10px;font-size:var(--t6,13px);color:#94A3B8;line-height:1.6">※ 위 계산은 배당수익률이 일정하다고 가정한 <b>참고용 예시</b>입니다. 배당은 기업 실적·정책에 따라 줄거나 중단될 수 있고 주가 변동에 따른 원금 손실이 가능합니다. 특정 종목의 매수 권유가 아니며, 세금은 개인 상황에 따라 달라지므로 세무 전문가 확인이 필요합니다.</div>'+
    '</div></div>';
 }
@@ -4035,7 +4035,7 @@ var IC_VIEW='bal', VC_VIEW='sim';
    ═══════════════════════════════════════════════════════════════ */
 var IV_BUCKETS = [
   { id:'s_pension',  t:'연금저축',   c:'#1A56DB',
-    why:'세액공제 대상입니다 <b>(요건·한도 충족 시)</b>. 55세 이후 연금으로 받습니다.' },
+    why:'세액공제 대상입니다 <b>(요건·한도 충족 시)</b>. 연금 수령 요건(나이·기간)을 채우면 연금으로 받습니다.' },
   { id:'s_irp',      t:'IRP',        c:'#2563EB',
     why:'연금저축과 <b>합쳐서</b> 세액공제 한도를 봅니다 (요건 충족 시).' },
   { id:'s_isa',      t:'ISA',        c:'#0891B2',
@@ -4301,12 +4301,12 @@ function icPlan(){
   if(age>=50){w.d+=5;w.e-=5;why.push('<b>'+age+'세</b> — 손실을 복구할 시간이 짧아 변동이 큰 ETF를 줄이고 <b>달러보험</b> 쪽 안전판을 넓혔습니다.');}
   else if(age<32){w.e+=5;w.d-=5;why.push('<b>'+age+'세</b> — 복리가 일할 시간이 가장 길어 <b>ETF 성장 자산</b>을 앞에 두었습니다.');}
   if(pay>=700){w.v+=5;w.d+=5;w.e-=10;why.push('월 급여 <b>'+icMan(pay)+'</b> — 이자·배당이 커지면 금융소득종합과세(연 2,000만원 초과) 부담이 생기므로 <b>10년 비과세 구조</b>를 키웠습니다.');}
-  if(IC.job==='지역가입자'||IC.job==='개인사업자'){w.v+=3;w.d+=4;w.e-=7;why.push('<b>'+IC.job+'</b> — 금융소득이 <b>건강보험료</b>에 그대로 반영되므로, 건보료에 잡히지 않는 보험형 비과세 비중을 더 실었습니다.');}
+  if(IC.job==='지역가입자'||IC.job==='개인사업자'){w.v+=3;w.d+=4;w.e-=7;why.push('<b>'+IC.job+'</b> — 금융소득이 <b>건강보험료</b>에 그대로 반영되므로, 요건 충족 시 건보료에 잡히지 않는 보험형 비과세 비중을 더 실었습니다.');}
   if(fam>=2){w.d+=3;w.e-=3;why.push('부양가족 <b>'+fam+'명</b> — 저축과 <b>사망보장</b>이 같이 붙는 달러보험으로 가족 안전판을 확보했습니다.');}
   if(IC.goal==='자녀 교육자금'){w.e+=6;w.v-=3;w.d-=3;why.push('<b>자녀 교육자금</b> — 10년 안에 목돈이 필요해 중도 인출이 자유로운 <b>ETF·연금저축</b> 비중을 올렸습니다.');}
   else if(IC.goal==='주택 마련'){w.e+=8;w.v-=4;w.d-=4;why.push('<b>주택 마련</b> — 사용 시점이 정해져 있어 해지 손실이 없는 <b>유동 자산</b> 중심으로 재배치했습니다.');}
   else if(IC.goal==='상속·증여'){w.d+=7;w.e-=7;why.push('<b>상속·증여</b> — 수익자를 지정해 바로 이전되는 <b>달러보험</b> 비중을 크게 실었습니다.');}
-  else if(IC.goal==='절세'){w.v+=4;w.d+=4;w.e-=8;why.push('<b>절세</b> 목적 — 보험차익 비과세·종합과세 제외 효과가 있는 구조를 우선했습니다.');}
+  else if(IC.goal==='절세'){w.v+=4;w.d+=4;w.e-=8;why.push('<b>절세</b> 목적 — 보험차익 비과세·종합과세 제외 효과(요건 충족 시)가 있는 구조를 우선했습니다.');}
   if(shortCash>0){var mv=w.e>25?10:5;w.c+=mv;w.e-=mv;why.push('비상금이 6개월 생활비(<b>'+icMan(needCash)+'</b>)보다 <b>'+icMan(shortCash)+'</b> 부족합니다. 투자보다 <b>비상금이 먼저</b>라 현금 비중을 올렸습니다.');}
 
   var k;
@@ -4324,7 +4324,7 @@ function icPlan(){
      how:'연금저축 → IRP → ISA 순으로 한도를 채우고 남는 금액을 일반계좌로.'},
     {id:'v',ico:'🏦',m:mV,n:'변액연금 (실적배당)',w:w.v,c:'#7C3AED',r:IC_ASSUME.va,taxed:false,ins:true,
      fee:fee,efee:IC_ASSUME.vaEarly,ey:IC_ASSUME.vaEarlyY,drag:IC_ASSUME.vaDrag,
-     role:'장기 복리 + 10년 비과세. 연금 전환으로 평생 현금흐름을 만듭니다.',
+     role:'장기 복리 + 비과세(10년 유지 등 요건 충족 시). 연금 전환으로 평생 현금흐름을 만듭니다.',
      how:'기본보험료는 낮추고 <b>추가납입</b>을 활용하면 사업비 부담이 크게 줄어듭니다.'},
     {id:'d',ico:'💵',m:mD,n:'달러보험 (외화)',w:w.d,c:'#059669',r:IC_ASSUME.usd,taxed:false,ins:true,
      fee:Math.max(0,fee-2),efee:IC_ASSUME.usdEarly,ey:IC_ASSUME.usdEarlyY,drag:IC_ASSUME.usdDrag,
@@ -4416,7 +4416,7 @@ function icBal(){
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px">'+cards+'</div>'+
     '<div style="margin-top:11px;background:#EEF2FF;border:1px solid #C7D2FE;border-radius:10px;padding:11px 13px;font-size:var(--t6,13px);color:#3730A3;line-height:1.75">'+
       '<b>한 바구니에 담지 않는 이유</b><br>'+
-      'ETF는 <b>많이 벌 수 있지만 많이 흔들리고</b>, 변액은 <b>10년을 견디면 세금이 0</b>이 되며, 달러보험은 <b>위기 때 값이 오르는 통화</b>를 들고 있게 해 줍니다. '+
+      'ETF는 <b>많이 벌 수 있지만 많이 흔들리고</b>, 변액은 <b>10년 유지 등 요건을 충족하면 보험차익에 세금이 붙지 않으며</b>, 달러보험은 <b>위기 때 값이 오르는 통화</b>를 들고 있게 해 줍니다. '+
       '세 가지는 <b>같은 시점에 같은 방향으로 움직이지 않습니다.</b> 그래서 나눠 담으면 최악의 해에도 전체가 무너지지 않습니다.</div>'+
   '</div></div>';
   host.innerHTML=h;
@@ -4534,9 +4534,9 @@ function icGain(){
 
   var items=[
     {ico:'📊',t:'담는 그릇을 바꾼 이익 (합계)',v:'+'+icMan(diff),d:'예·적금 연 '+icP1(IC_ASSUME.dep)+'%에 묶여 있던 돈을 실효 연 <b>'+icP1(p.eff)+'%</b>로 옮긴 결과입니다. 아래 ②는 이 금액에 <b>이미 포함</b>돼 있습니다.',c:'#2563EB'},
-    {ico:'🧾',t:'② 그중 세금에서 나온 몫',v:icMan(taxFree),d:'변액·달러보험을 <b>10년 이상</b> 유지하면 보험차익이 비과세라 '+IC_ASSUME.tax+'% 세금이 붙지 않습니다. 위 합계에 포함된 금액입니다.',c:'#059669'},
+    {ico:'🧾',t:'② 그중 세금에서 나온 몫',v:icMan(taxFree),d:'변액·달러보험은 <b>10년 유지 등 요건을 충족하면</b> 보험차익이 비과세라 '+IC_ASSUME.tax+'% 세금이 붙지 않습니다(요건 충족 가정). 위 합계에 포함된 금액입니다.',c:'#059669'},
     {ico:'💰',t:'연말정산 환급 (별도 누적)',v:'+'+icMan(dedTotal),d:'ETF·연금계좌 몫 중 연 '+icMan(annual)+'을 연금저축·IRP로 넣으면 매년 약 <b>'+icMan(ded)+'</b> 환급(공제율 '+dedPct+'%). 위 합계와는 <b>별개</b>로 돌려받는 현금입니다.',c:'#7C3AED'},
-    {ico:'🏥',t:'건강보험료 방어',v:'금액 외 효과',d:'비과세 상품의 수익은 금융소득에 잡히지 않아 <b>건보료 산정에서 제외</b>됩니다. 지역가입자·은퇴 후에 특히 큽니다.',c:'#0891B2'},
+    {ico:'🏥',t:'건강보험료 방어',v:'금액 외 효과',d:'요건을 충족한 비과세 상품의 수익은 금융소득에 잡히지 않아 <b>건보료 산정에서 제외</b>됩니다(현행 기준). 지역가입자·은퇴 후에 특히 큽니다.',c:'#0891B2'},
     {ico:'🛡️',t:'중도 해지를 막은 이익',v:'손실 회피',d:'비상금 '+icMan(p.needCash)+'을 먼저 확보해, 급한 일이 생겨도 <b>보험을 깨지 않습니다.</b> 해지환급금 손실이 가장 큰 손해입니다.',c:'#F59E0B'},
     {ico:'👨‍👩‍👧',t:'가족 안전판',v:'보장 동반',d:'달러보험에 붙는 사망보장과 <b>수익자 지정</b>으로, 자산이 아니라 <b>계획</b>이 남습니다.',c:'#DC2626'}
   ];
@@ -4550,7 +4550,7 @@ function icGain(){
   }
   h+='<div class="card"><div class="card-hd"><div class="card-tag">VALUE OF CONSULTING</div><div class="card-title">컨설팅이 만들어 낸 이익을 나눠 보면</div></div><div class="card-body">'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px">'+gi+'</div>'+
-    '<div style="margin-top:11px;font-size:var(--t6,13px);color:#7A8493;line-height:1.7">※ 「컨설팅 전」은 저축 여력 전액을 연 '+icP1(IC_ASSUME.dep)+'% 예·적금에 넣고 이자소득세 '+IC_ASSUME.tax+'%를 낸 경우를 가정한 <b>비교용 예시</b>입니다. 세액공제 한도·공제율(총급여 5,500만원 기준 '+dedPct+'%)과 비과세 요건은 세법 개정과 개인 상황에 따라 달라질 수 있으며, 연금계좌는 55세 이후 연금 형태로 받아야 하고 중도 해지 시 기타소득세 16.5%가 부과됩니다. 실제 적용은 세무 전문가 확인이 필요합니다.</div>'+
+    '<div style="margin-top:11px;font-size:var(--t6,13px);color:#7A8493;line-height:1.7">※ 「컨설팅 전」은 저축 여력 전액을 연 '+icP1(IC_ASSUME.dep)+'% 예·적금에 넣고 이자소득세 '+IC_ASSUME.tax+'%를 낸 경우를 가정한 <b>비교용 예시</b>입니다. 세액공제 한도·공제율(총급여 구간에 따라 다름 · 여기서는 '+dedPct+'% 가정)과 비과세 요건은 세법 개정과 개인 상황에 따라 달라질 수 있으며, 연금계좌는 수령 요건(나이·기간)을 채워 연금 형태로 받아야 하고 중도 해지 시 기타소득세 16.5%가 부과됩니다. 실제 적용은 세무 전문가 확인이 필요합니다.</div>'+
   '</div></div>';
   host.innerHTML=h;
 }
@@ -4574,7 +4574,7 @@ function icTalkHtml(){
 
   var qa=[
     {q:'"그냥 예금이 안전하지 않나요?"',a:'"원금은 안전합니다. 다만 <b>물가</b>는 안전하지 않습니다. 물가가 연 2~3%면 예금 이자 세후 2%로는 <b>매년 조금씩 가난해집니다.</b> 그래서 전부가 아니라 <b>일부만</b> 옮기자는 겁니다."'},
-    {q:'"보험은 수수료가 비싸잖아요."',a:'"맞습니다. 초기 사업비가 있어서 5~7년은 원금보다 적습니다. 대신 <b>10년을 넘기면 세금이 0</b>이 되고 건보료에도 안 잡힙니다. <b>10년 이상 안 쓸 돈</b>만 여기에 넣는 이유입니다."'},
+    {q:'"보험은 수수료가 비싸잖아요."',a:'"맞습니다. 초기 사업비가 있어서 5~7년은 원금보다 적습니다. 대신 10년 유지 등 <b>요건을 충족하면 보험차익에 세금이 붙지 않고</b> 건보료에도 잡히지 않습니다(현행 기준). <b>10년 이상 안 쓸 돈</b>만 여기에 넣는 이유입니다."'},
     {q:'"ETF가 더 낫지 않나요?"',a:'"수익만 보면 ETF가 유리할 수 있습니다. 그래서 <b>ETF도 '+p.w.e+'% 넣습니다.</b> 다만 ETF는 매년 세금이 나가고 금융소득에 잡힙니다. 둘 중 하나가 아니라 <b>둘 다, 역할을 나눠서</b>입니다."'},
     {q:'"환율이 지금 높은데 지금 달러를 사요?"',a:'"한 번에 사는 게 아니라 <b>매달 나눠서</b> 삽니다. 10년을 매달 사면 평균 환율로 사게 되니, 지금 환율이 얼마인지는 결정적이지 않습니다. <b>적립식이 곧 환 분산</b>입니다."'},
     {q:'"돈이 급하게 필요하면요?"',a:'"그래서 비상금 '+icMan(p.needCash)+'을 <b>먼저</b> 만듭니다. 그 위에 중도인출이 되는 한도까지만 보험에 넣습니다. <b>깰 일이 없게 설계하는 것</b>이 컨설팅입니다."'}
@@ -4852,8 +4852,8 @@ function vcMix(){
   '</div></div>';
 
   var roles=[
-    {ico:'🏦',t:'변액이 맡는 역할',c:'#7C3AED',li:['전 세계 <b>주식 펀드</b>로 물가를 이깁니다','10년 이상 유지 시 <b>보험차익 비과세</b>','연 12회 무료 <b>펀드 변경</b>으로 시장 대응','연금 전환 시 <b>평생 현금흐름</b>']},
-    {ico:'💵',t:'달러보험이 맡는 역할',c:'#059669',li:['위기 때 오르는 <b>기축통화</b>를 보유','<b>환차익까지 비과세</b>(10년 유지)','<b>사망보장 + 수익자 지정</b>으로 상속 설계','공시이율형은 <b>최저보증이율</b>로 하한 방어']},
+    {ico:'🏦',t:'변액이 맡는 역할',c:'#7C3AED',li:['전 세계 <b>주식 펀드</b>로 물가를 이깁니다','10년 유지 등 <b>요건 충족 시</b> 보험차익 비과세','연 12회 무료 <b>펀드 변경</b>으로 시장 대응','연금 전환 시 <b>평생 현금흐름</b>']},
+    {ico:'💵',t:'달러보험이 맡는 역할',c:'#059669',li:['위기 때 오르는 <b>기축통화</b>를 보유','<b>요건 충족 시</b> 환차익까지 비과세(10년 유지 등)','<b>사망보장 + 수익자 지정</b>으로 상속 설계','공시이율형은 <b>최저보증이율</b>로 하한 방어']},
     {ico:'⚖️',t:'둘을 나누는 기준',c:'#2563EB',li:['젊고 기간이 길다 → <b>변액 비중 ↑</b>','50대·은퇴 임박 → <b>달러 비중 ↑</b>','원화 자산(부동산·예금)이 많다 → <b>달러 ↑</b>','상속·증여가 목적이다 → <b>달러 ↑</b>']}
   ];
   var rh='',j,k;
@@ -4875,9 +4875,9 @@ function vcWhyHtml(){
   var why=[
     {ico:'🌍',t:'자산 전부가 원화라는 위험',c:'#2563EB',d:'집·예금·연금·급여까지 <b>전부 원화</b>인 분이 대부분입니다. 원화 가치가 떨어지는 해에는 아무것도 방어해 주지 않습니다. 달러는 <b>다른 방향으로 움직이는 유일한 칸</b>입니다.'},
     {ico:'🛡️',t:'위기 때 값이 오르는 자산',c:'#059669',d:'1997년, 2008년, 2020년, 2022년 — 주식이 크게 빠진 해에는 원/달러가 함께 <b>올랐습니다.</b> 주식이 마이너스일 때 환차익이 손실을 덜어 주는 구조입니다. (과거 사례이며 미래를 보장하지 않습니다)'},
-    {ico:'🧾',t:'환차익까지 비과세',c:'#7C3AED',d:'ETF·해외주식은 매매차익·배당에 세금이 붙습니다. 달러보험은 <b>10년 이상 유지</b> 시 이자와 <b>환차익 모두</b> 보험차익으로 비과세입니다.'},
-    {ico:'📉',t:'금융소득종합과세에서 빠진다',c:'#DC2626',d:'이자·배당이 연 <b>2,000만원</b>을 넘으면 다른 소득과 합산돼 최대 45%까지 누진됩니다. 비과세 보험차익은 <b>애초에 합산 대상이 아닙니다.</b>'},
-    {ico:'🏥',t:'건강보험료에 잡히지 않는다',c:'#0891B2',d:'지역가입자·은퇴 후에는 금융소득이 <b>건보료로 되돌아옵니다.</b> 비과세 보험차익은 소득으로 잡히지 않아 은퇴 이후 고정비를 낮춥니다.'},
+    {ico:'🧾',t:'환차익까지 비과세',c:'#7C3AED',d:'ETF·해외주식은 매매차익·배당에 세금이 붙습니다. 달러보험은 10년 유지 등 <b>요건을 충족하면</b> 이자와 <b>환차익 모두</b> 보험차익으로 비과세 대상이 됩니다(판단은 세무 전문가 확인).'},
+    {ico:'📉',t:'금융소득종합과세에서 빠진다',c:'#DC2626',d:'이자·배당이 세법이 정한 <b>기준 금액</b>을 넘으면 다른 소득과 합산돼 최대 45%까지 누진됩니다. 요건을 충족한 비과세 보험차익은 <b>합산 대상이 아닙니다.</b>'},
+    {ico:'🏥',t:'건강보험료에 잡히지 않는다',c:'#0891B2',d:'지역가입자·은퇴 후에는 금융소득이 <b>건보료로 되돌아옵니다.</b> 요건을 충족한 비과세 보험차익은 (현행 기준) 소득으로 잡히지 않아 은퇴 이후 고정비를 낮춥니다.'},
     {ico:'👨‍👩‍👧',t:'수익자를 지정할 수 있다',c:'#F59E0B',d:'ETF는 상속재산으로 분할 협의를 거쳐야 하지만, 보험은 <b>수익자에게 곧바로</b> 지급됩니다. 사망보장이 함께 붙어 <b>돈이 아니라 계획</b>이 남습니다.'},
     {ico:'✈️',t:'쓸 돈을 미리 달러로',c:'#4338CA',d:'자녀 유학, 해외여행, 수입 물가 — 미래에 <b>달러로 나갈 돈</b>이 있다면 달러로 모으는 게 자연스러운 헤지입니다.'},
     {ico:'🔒',t:'하한선이 있다',c:'#334155',d:'공시이율형 달러보험은 <b>최저보증이율</b>이 있어 시장이 아무리 나빠도 적립 이율이 그 아래로 내려가지 않습니다. ETF에는 이런 하한선이 없습니다.'}
@@ -4890,9 +4890,9 @@ function vcWhyHtml(){
 
   var cmp=[
     ['기대 수익(가정)','연 6~8% 시장수익','연 4~7% 펀드수익 − 사업비','연 3~4% 공시이율 + 환차익'],
-    ['세금','배당·분배금 15.4%<br>해외주식 직접투자 양도세 22%','10년 이상 유지 시<br><b>보험차익 비과세</b>','10년 이상 유지 시<br><b>이자·환차익 모두 비과세</b>'],
-    ['금융소득종합과세','연 2,000만원 초과 시 <b>합산</b>','비과세 → <b>제외</b>','비과세 → <b>제외</b>'],
-    ['건강보험료','금융소득으로 <b>반영</b>','<b>반영 안 됨</b>','<b>반영 안 됨</b>'],
+    ['세금','배당·분배금 15.4%<br>해외주식 직접투자 양도세 22%','10년 유지 등 요건 충족 시<br><b>보험차익 비과세</b>','10년 유지 등 요건 충족 시<br><b>이자·환차익 모두 비과세</b>'],
+    ['금융소득종합과세','기준 금액 초과 시 <b>합산</b>','요건 충족 시 <b>제외</b>','요건 충족 시 <b>제외</b>'],
+    ['건강보험료','금융소득으로 <b>반영</b>','요건 충족 시 <b>반영 안 됨</b>','요건 충족 시 <b>반영 안 됨</b>'],
     ['하한선(최저보증)','없음','없음 (최저보증 특약 시 일부)','<b>최저보증이율</b> 있음(공시이율형)'],
     ['사망보장','없음','<b>있음</b>','<b>있음</b>'],
     ['수익자 지정','불가 — 상속재산','<b>가능</b>','<b>가능</b>'],
@@ -4942,11 +4942,11 @@ function vcWhyHtml(){
 function vcTalkHtml(){
   var tot=VC.pay+VC.add;
   var sc=[
-    {n:'1',t:'변액을 "보험"이 아니라 "그릇"으로 설명',s:'"변액은 상품 이름이 아니라 <b>그릇</b>이라고 보시면 됩니다. 안에 어떤 펀드를 담느냐는 고객님이 정하고, 저는 <b>10년 넘게 세금 없이 굴러가는 그릇</b>을 드리는 겁니다."'},
+    {n:'1',t:'변액을 "보험"이 아니라 "그릇"으로 설명',s:'"변액은 상품 이름이 아니라 <b>그릇</b>이라고 보시면 됩니다. 안에 어떤 펀드를 담느냐는 고객님이 정하고, 저는 <b>10년 유지 등 요건을 채우면 세금 없이 굴러가는 그릇</b>을 드리는 겁니다."'},
     {n:'2',t:'사업비를 먼저, 솔직하게',s:'"먼저 불리한 얘기부터 하겠습니다. 초기 <b>5~7년은 원금보다 적습니다.</b> 사업비가 앞에서 빠지기 때문입니다. 그래서 <b>10년 안에 쓸 돈은 절대 넣지 않습니다.</b> 이걸 먼저 정하고 시작하겠습니다."'},
     {n:'3',t:'추가납입으로 비용을 낮춘다',s:'"기본보험료에는 초기에 <b>계약체결비용</b>이 붙지만, 추가납입에는 <b>수수료 '+icP1(VC.addfee)+'%</b>만 붙습니다. 같은 월 '+icMan(tot)+'이라도 <b>기본보험료를 낮추고 추가납입을 쓰면</b> 결과가 달라집니다. 대부분 이걸 모르고 기본보험료만 크게 잡아서 손해를 봅니다."'},
     {n:'4',t:'달러를 왜 같이 넣는지',s:'"변액은 <b>주식</b>을 담고, 달러보험은 <b>통화</b>를 담습니다. 주식이 빠지는 해에는 보통 환율이 오릅니다. 둘을 같이 들고 있어야 <b>나쁜 해에도 전체가 무너지지 않습니다.</b>"'},
-    {n:'5',t:'세금·건보료로 마무리',s:'"10년을 넘기면 수익에 세금이 <b>0</b>이고, 금융소득종합과세에도 안 들어가고, <b>건강보험료</b>에도 안 잡힙니다. 은퇴하시면 이 세 가지가 생각보다 훨씬 크게 다가옵니다."'},
+    {n:'5',t:'세금·건보료로 마무리',s:'"10년 유지 등 <b>요건을 충족하면</b> 보험차익에 세금이 붙지 않고, 금융소득종합과세에도 안 들어가고, <b>건강보험료</b>에도 잡히지 않습니다(현행 기준). 은퇴하시면 이 세 가지가 생각보다 훨씬 크게 다가옵니다."'},
     {n:'6',t:'유지할 수 있는 금액으로 확정',s:'"제일 큰 손해는 수익률이 아니라 <b>중간에 깨는 것</b>입니다. 지금 무리해서 크게 잡지 말고, <b>10년 동안 흔들리지 않을 금액</b>으로 시작하시죠. 여유가 생기면 추가납입으로 늘리면 됩니다."'}
   ];
   var sh='',i;
@@ -5198,10 +5198,10 @@ function dkInvestSlides(){
    sub:'세 가지는 같은 시점에 같은 방향으로 움직이지 않습니다. 그게 전부입니다.',
    body:'<div class="dk-cols">'+
      '<div class="dk-col"><div class="cl">📈 성장 자산</div><div class="cv" style="font-size:var(--t2,20px)">시장을 탑니다</div><div class="cs">오를 때 크게 오릅니다. 대신 흔들립니다.</div></div>'+
-     '<div class="dk-col"><div class="cl">🏦 비과세 장기</div><div class="cv" style="font-size:var(--t2,20px)">세금이 0</div><div class="cs">10년을 넘기면 수익에 세금이 붙지 않습니다.</div></div>'+
+     '<div class="dk-col"><div class="cl">🏦 비과세 장기</div><div class="cv" style="font-size:var(--t2,20px)">요건 충족 시 비과세</div><div class="cs">10년 유지 등 요건을 충족하면 보험차익에 세금이 붙지 않습니다.</div></div>'+
      '<div class="dk-col"><div class="cl">💵 달러</div><div class="cv" style="font-size:var(--t2,20px)">위기에 오릅니다</div><div class="cs">주가가 빠지는 해엔 보통 환율이 올랐습니다.</div></div>'+
    '</div>'+
-   '<div class="dk-quote" style="margin-top:16px">주식이 빠지는 해에 달러가 받쳐 주고, 그 사이 비과세 계좌는 <u>세금 없이 굴러갑니다.</u></div>',
+   '<div class="dk-quote" style="margin-top:16px">주식이 빠지는 해에 달러가 받쳐 주고, 그 사이 요건을 채운 비과세 계좌는 <u>세금 없이 굴러갑니다.</u></div>',
    note:'<b>"덜 잃으려고 나누는 겁니다"</b>라고 정확히 말하세요. 더 벌려고가 아니라는 게 신뢰를 만듭니다.'},
 
   {chip:'고객님 성향',
@@ -5379,25 +5379,25 @@ function dkDollarSlides(){
 
   {chip:'세금',
    big:'그리고 여기에<br><em>세금이 없습니다</em>',
-   sub:'10년 이상 유지하면 이자도 환차익도 비과세입니다.',
+   sub:'10년 유지 등 요건을 충족하면 이자도 환차익도 비과세입니다.',
    body:'<div class="dk-cols">'+
      '<div class="dk-col"><div class="cl">일반 금융상품이었다면</div><div class="cv" style="color:#C2410C">-'+dkMan(c.tax)+'</div><div class="cs">이자·배당소득세 15.4%</div></div>'+
-     '<div class="dk-col acc"><div class="cl">달러보험은</div><div class="cv">0원</div><div class="cs">10년 이상 유지 시 보험차익 비과세</div></div>'+
+     '<div class="dk-col acc"><div class="cl">달러보험은</div><div class="cv">0원</div><div class="cs">요건 충족 시 보험차익 비과세(10년 유지 등)</div></div>'+
      '<div class="dk-col"><div class="cl">그대로 남는 돈</div><div class="cv" style="color:#047857">'+dkMan(c.tax)+'</div><div class="cs">세금으로 나갔을 금액</div></div>'+
    '</div>'+
    '<div class="dk-quote" style="margin-top:18px">수익률을 <b>더 올린 게 아니라</b>, 나갈 돈을 <u>안 나가게 만든 것</u>입니다. 이게 더 확실합니다.</div>',
    note:'세금은 <b>확정된 이익</b>입니다. 수익률은 예측이지만 이건 계산입니다 — 이 차이를 강조하세요.'},
 
   {chip:'추가',
-   big:'게다가<br>건보료에도 안 잡힙니다',
+   big:'게다가<br>건보료에도 안 잡힙니다(요건 충족 시)',
    sub:'은퇴하고 지역가입자가 되면 이게 생각보다 크게 다가옵니다.',
    body:'<div class="dk-rows">'+
-     '<div class="dk-row up"><span class="ic">🏥</span><span class="tx">건강보험료 산정에서 제외<small>비과세라 소득으로 잡히지 않습니다</small></span></div>'+
-     '<div class="dk-row up"><span class="ic">🧾</span><span class="tx">금융소득종합과세에서 제외<small>이자·배당 연 2,000만원 합산에 안 들어갑니다</small></span></div>'+
+     '<div class="dk-row up"><span class="ic">🏥</span><span class="tx">건강보험료 산정에서 제외<small>요건 충족 시 — 비과세 보험차익은 소득으로 잡히지 않습니다(현행 기준)</small></span></div>'+
+     '<div class="dk-row up"><span class="ic">🧾</span><span class="tx">금융소득종합과세에서 제외<small>요건 충족 시 — 이자·배당 합산에 안 들어갑니다</small></span></div>'+
      '<div class="dk-row up"><span class="ic">👨‍👩‍👧</span><span class="tx">사망보장이 함께 붙습니다<small>모으는 동안에도 가족이 보호됩니다</small></span></div>'+
      '<div class="dk-row up"><span class="ic">📝</span><span class="tx">받을 사람을 미리 정할 수 있습니다<small>수익자 지정 — 분쟁 없이 바로 전달됩니다</small></span></div>'+
    '</div>'+
-   '<div class="dk-quote" style="margin-top:16px">저축인데 <u>보장이 같이 붙고</u>, 세금도 건보료도 비켜 갑니다. 이 세 개가 한 상품에 있는 경우는 많지 않습니다.</div>',
+   '<div class="dk-quote" style="margin-top:16px">저축인데 <u>보장이 같이 붙고</u>, 요건을 채우면 세금도 건보료도 비켜 갑니다. 이 세 개가 한 상품에 있는 경우는 많지 않습니다.</div>',
    note:'은퇴 이후 얘기를 꺼내세요. <b>"그때 되면 건보료가 진짜 부담입니다"</b> — 40대 이상은 거의 다 공감합니다.'},
 
   {chip:'클로징',
@@ -5406,7 +5406,7 @@ function dkDollarSlides(){
    body:'<div class="dk-rows">'+
      '<div class="dk-row hi"><span class="ic">1</span><span class="tx">매달 '+dkMan(c.pay)+'씩 '+c.payy+'년<small>원금 '+dkMan(c.prinKrw)+'</small></span></div>'+
      '<div class="dk-row hi"><span class="ic">2</span><span class="tx">'+c.total+'년 뒤 '+dkMan(c.atTgt)+' 수령<small>원금 대비 '+Math.round(c.pct)+'%</small></span></div>'+
-     '<div class="dk-row hi"><span class="ic">3</span><span class="tx">세금 0원 · 건보료 미산입<small>일반 상품이었다면 '+dkMan(c.tax)+' 세금</small></span></div>'+
+     '<div class="dk-row hi"><span class="ic">3</span><span class="tx">세금 0원 · 건보료 미산입(요건 충족 시)<small>일반 상품이었다면 '+dkMan(c.tax)+' 세금</small></span></div>'+
      '<div class="dk-row hi"><span class="ic">4</span><span class="tx">모으는 동안 사망보장까지<small>수익자 지정 가능</small></span></div>'+
    '</div>'+
    '<div class="dk-hero" style="margin-top:16px"><div class="lb">'+c.total+'년 뒤 받는 돈</div>'+
@@ -5651,7 +5651,7 @@ const MLIFE_INFO = {
     { ico:'🔄', t:'무한 펀드 이동', d:'연 12회 무료 펀드 변경. 시장 상황에 맞게 적극적 리밸런싱 가능' },
     { ico:'💰', t:'납입 중지 · 추가납입', d:'경제 상황 변화 시 납입 중지·감액·추가납입 가능. 유연한 현금흐름 관리' },
   ],
-  taxBenefit: '10년 이상 유지 시 보험차익 전액 비과세. 연금 수령 시 연금소득세 3.3~5.5% 저율과세. 건강보험료 부과 제외(연금소득).',
+  taxBenefit: '요건 충족 시(10년 유지 등) 보험차익 비과세. 연금 수령 시 연금소득세 3.3~5.5% 저율과세(요건 충족 시). 건강보험료 부과 제외(연금소득 · 현행 기준, 요건 충족 시).',
 };
 
 const MLIFE_FUNDS = [
@@ -5782,7 +5782,7 @@ const CARDIF_INFO = {
     { ico:'🔄', t:'자동재배분 기능', d:'설정한 비율로 자동 리밸런싱. 수익 실현된 펀드에서 저조한 펀드로 자동 조정' },
     { ico:'💎', t:'납입 유연성', d:'납입 일시 중지·감액·추가납입 모두 가능. 생애주기에 맞는 탄력적 운용' },
   ],
-  taxBenefit: '10년 이상 유지 시 보험차익 전액 비과세. 연금 수령 시 3.3~5.5% 연금소득세. 건강보험료 산정 기준에서 연금소득 제외(피부양자 유지).',
+  taxBenefit: '요건 충족 시(10년 유지 등) 보험차익 비과세. 연금 수령 시 3.3~5.5% 연금소득세(요건 충족 시). 건강보험료 산정 기준에서 연금소득 제외(피부양자 유지 · 현행 기준, 요건 충족 시).',
 };
 
 const CARDIF_FUNDS = [
@@ -6203,7 +6203,7 @@ function viPaint(){
      icStat('불어난 돈',icMan(gain),VI.keep+'년 · 연 '+icP1(VI.rate)+'% 가정','#059669')+
      icStat(VI.keep>=10?'안 낸 세금':'세금 (10년 미만)',
             VI.keep>=10?icMan(tax):'과세 대상',
-            VI.keep>=10?'보험차익 비과세 · 예금이면 15.4%':'10년을 넘겨야 비과세','#7C3AED')+
+            VI.keep>=10?'요건 충족 시 보험차익 비과세 · 예금이면 15.4%':'10년 유지 등 요건을 채워야 비과세','#7C3AED')+
      icStat('연금으로 받으면',icMan(mon)+'/월','쌓인 돈의 연 4% 기준','#D97706')+
    '</div>'+
    '<div style="margin-top:11px;font-size:var(--t6,13px);color:#7A8493;line-height:1.7">'+
@@ -6307,8 +6307,8 @@ function renderDollarWhy(){
    {n:'02',ic:'💱',t:'같은 돈을 넣어도 환율이 더해집니다',
     b:'지금 <b>'+rateNow.toLocaleString()+'원</b>일 때 넣은 달러는 나중에 <b>'+rateTgt.toLocaleString()+'원</b>이 되면 그 자체로 <b>+'+exPct+'%</b>가 붙습니다. 월 '+dPay+'만원씩 '+dPayY+'년이면 납입 '+prin.toLocaleString()+'만원에 <b>환차익 약 '+exAmt.toLocaleString()+'만원</b>이 더해지는 구조입니다.',
     k:'수익률이 아니라 통화가 만드는 이익'},
-   {n:'03',ic:'🧾',t:'10년 유지하면 이자·차익이 비과세',
-    b:'저축성 보험은 <b>10년 이상 유지</b>하면 보험차익이 비과세됩니다. 같은 수익이라도 <b>15.4%를 떼지 않는다</b>는 뜻이고, 금융소득종합과세(연 2,000만원) 계산에도 잡히지 않습니다.',
+   {n:'03',ic:'🧾',t:'요건을 채우면 이자·차익이 비과세',
+    b:'저축성 보험은 <b>10년 유지 등 요건을 충족하면</b> 보험차익이 비과세됩니다. 같은 수익이라도 <b>15.4%를 떼지 않는다</b>는 뜻이고, 금융소득종합과세 계산에도 잡히지 않습니다. 요건은 세무 전문가와 확인하십시오.',
     k:'세금이 줄면 손에 남는 돈이 다릅니다'},
    {n:'04',ic:'🌏',t:'자녀 유학·해외 지출을 미리 잠급니다',
     b:'유학비·해외 연수·해외 여행처럼 <b>미래에 달러로 쓸 돈</b>은 달러로 모으는 것이 정답입니다. 환율이 올라도 이미 달러로 갖고 있으면 부담이 늘지 않습니다.',
@@ -6488,8 +6488,8 @@ function renderDollarUpgrade() {
           </div>
           <div class="hb ${taxYear>=10?'green':'orange'}">
             ${taxYear>=10
-              ? `✅ <b>${taxYear}년 유지</b>로 비과세 적용. <b>${fmt(taxSaved10y)}만원</b> 세금 절감`
-              : `⚠️ 현재 ${taxYear}년 설정. 비과세는 <b>10년 이상</b> 유지 필수`}
+              ? `✅ <b>${taxYear}년 유지</b> — 요건 충족 시 비과세. 추정 <b>${fmt(taxSaved10y)}만원</b> 세금 절감`
+              : `⚠️ 현재 ${taxYear}년 설정. 비과세는 <b>10년 이상</b> 유지 등 요건을 채워야 합니다`}
           </div>
         </div>
       </div>
@@ -8598,9 +8598,9 @@ window.addEventListener('DOMContentLoaded', function(){
 
   function micLine(d){
     if(TYPE==='credit'){
-      return d.startA+'세부터 매달 '+won(d.monthlyNet)+'씩 평생 받는 구조예요. 그런데 더 중요한 건, 받기 전부터 매년 '+won(d.taxCreditYear)+'씩 세금을 돌려받고, 나중에 받을 때도 건보료가 안 붙는다는 겁니다. 같은 돈을 그냥 통장에 두는 것과 완전히 다른 흐름이에요.';
+      return d.startA+'세부터 매달 '+won(d.monthlyNet)+'씩 평생 받는 구조예요. 그런데 더 중요한 건, 받기 전부터 매년 '+won(d.taxCreditYear)+'씩 세금을 돌려받고, 나중에 받을 때도 (현행 기준·요건 충족 시) 건보료가 안 붙는다는 겁니다. 같은 돈을 그냥 통장에 두는 것과 완전히 다른 흐름이에요.';
     }
-    return d.startA+'세부터 매달 '+won(d.monthlyNet)+'씩 평생 받는 구조예요. 10년만 유지하면 그동안 불어난 수익에 세금이 안 붙고, 받을 때도 사적연금이라 건보료 부과대상에서 빠집니다. 노후엔 \u2018얼마 모았나\u2019보다 \u2018세금·건보료 떼고 손에 얼마 쥐나\u2019가 진짜 연금이에요.';
+    return d.startA+'세부터 매달 '+won(d.monthlyNet)+'씩 평생 받는 구조예요. 10년 유지 등 요건을 충족하면 그동안 불어난 수익에 세금이 안 붙고, 받을 때도 사적연금이라 (현행 기준) 건보료 부과대상에서 빠집니다. 노후엔 \u2018얼마 모았나\u2019보다 \u2018세금·건보료 떼고 손에 얼마 쥐나\u2019가 진짜 연금이에요.';
   }
 
   /* 결과 영역만 갱신 (폼 입력 포커스 유지) */
@@ -8617,10 +8617,10 @@ window.addEventListener('DOMContentLoaded', function(){
     var taxHtml = TYPE==='credit'
       ? '<div class="pp-box tax"><h4>💸 세금 절감 — 세액공제형(연금저축·IRP)</h4>'+
         '<div class="big">연 '+won(d.taxCreditYear)+'</div>'+
-        '<p>연 납입 '+won(d.pay*12)+' 중 세액공제 한도(연 900만) 적용분에 공제율 <b>'+(d.creditRate*100).toFixed(1)+'%</b>'+(d.gross<=5500?'(총급여 5,500만 이하)':'(총급여 5,500만 초과)')+'를 적용한 추정 환급액입니다. 납입기간 '+d.payY+'년 누적 시 약 <b>'+won(d.taxCreditTotal)+'</b> 환급. 중도해지 시 기타소득세 16.5%가 부과되니 유지가 핵심입니다.</p></div>'
+        '<p>연 납입 '+won(d.pay*12)+' 중 세액공제 한도(요건 충족 시 · 한도는 세법 확인) 적용분에 공제율 <b>'+(d.creditRate*100).toFixed(1)+'%</b>'+(d.gross<=5500?'(총급여 기준 이하 구간)':'(총급여 기준 초과 구간)')+'를 적용한 추정 환급액입니다. 납입기간 '+d.payY+'년 누적 시 약 <b>'+won(d.taxCreditTotal)+'</b> 환급. 중도해지 시 기타소득세 16.5%가 부과되니 유지가 핵심입니다.</p></div>'
       : '<div class="pp-box tax"><h4>💸 세금 절감 — 비과세형(연금보험 10년+)</h4>'+
         '<div class="big">약 '+won(d.taxfreeSave)+'</div>'+
-        '<p>10년 이상 유지 시 운용수익(약 '+won(d.gain)+')에 대한 이자소득세 <b>15.4%</b>가 면제되는 추정 효과입니다. 연금 수령 시에도 사적연금 연 1,500만원 이하면 저율 분리과세(연령별 3.3~5.5%)로 종합과세를 피할 수 있습니다.</p></div>';
+        '<p>10년 유지 등 요건을 충족하면 운용수익(약 '+won(d.gain)+')에 대한 이자소득세 <b>15.4%</b>가 면제된다고 가정한 추정 효과입니다. 연금 수령 시에도 사적연금 수령액이 세법 기준 이하면 저율 분리과세(연령별 3.3~5.5%)를 받을 수 있습니다(요건 충족 시).</p></div>';
 
     out.innerHTML=''+
       '<div class="pp-kpi">'+
@@ -8641,7 +8641,7 @@ window.addEventListener('DOMContentLoaded', function(){
       '<div class="pp-grid2">'+
         '<div class="pp-box save"><h4>🏥 건강보험료 절감(추정)</h4>'+
         '<div class="big">월 '+won(d.hiSaveMonthly)+'</div>'+
-        '<p>사적연금(연금저축·IRP·연금보험)은 현재 건강보험료 부과대상 소득에서 제외됩니다(공적연금은 연금소득의 50% 반영). 같은 월 연금 '+won(d.monthlyNet)+'을 부과대상으로 받았다면 들었을 건보료(장기요양 포함, 약 7%대)를 기준으로 한 추정 절감액으로, 연 약 <b>'+won(d.hiSaveYear)+'</b> 수준입니다.</p></div>'+
+        '<p>사적연금(연금저축·IRP·연금보험)은 현재 건강보험료 부과대상 소득에서 제외됩니다(현행 기준·요건 충족 시 · 공적연금은 일부 반영). 같은 월 연금 '+won(d.monthlyNet)+'을 부과대상으로 받았다면 들었을 건보료(장기요양 포함, 약 7%대)를 기준으로 한 추정 절감액으로, 연 약 <b>'+won(d.hiSaveYear)+'</b> 수준입니다.</p></div>'+
         taxHtml+
       '</div>'+
       '<div class="pp-mic"><div class="mt">🎤 본부장 실전 멘트</div><p>"'+micLine(d)+'"</p></div>'+
@@ -9253,7 +9253,7 @@ function apxSaveDir(o){
     d:'목적은 '+purp.join('·')+'인데 자금 기간은 3년 이내로 잡혀 있습니다. 장기 목적에 단기 상품을 쓰면 복리와 비과세를 둘 다 놓칩니다.'});
 
   if(longGoal && taxfree<=0) out.push({lv:'bad', t:'비과세 축이 비어 있습니다',
-    d:'장기 목적인데 10년 이상 유지 시 비과세가 되는 축(달러·변액)이 0원입니다. 과세 상품만으로 20년을 가면 이자의 15.4%가 매번 빠집니다.'});
+    d:'장기 목적인데 10년 유지 등 요건 충족 시 비과세가 되는 축(달러·변액)이 0원입니다. 과세 상품만으로 20년을 가면 이자의 15.4%가 매번 빠집니다.'});
 
   if(purp.indexOf('세금 절감')>=0){
     var t=pension+irp, room=75-t;   /* 연금저축+IRP 연 900만 = 월 75만 */
@@ -9500,7 +9500,7 @@ function plSlides(){
     sub:'금액이 아니라 <b>담는 그릇</b>이 문제인 경우가 대부분입니다. 지금 저축 '+p0(d.saving)+'만원 중 10년 이상 굴러가는 비과세 축은 '+p0(d.taxfree)+'만원입니다.',
     body:'<div class="dk-rows">'+
       row('🏦','단기·과세 상품에 들어가는 돈 <small>적금·일반 투자 등 이자에 15.4% 과세</small>',p0(Math.max(0,d.saving-d.taxfree))+'만원','dn')+
-      row('🛡','10년 이상 유지 시 비과세 축 <small>달러·변액</small>',p0(d.taxfree)+'만원',(d.taxfree>0?'up':'dn'))+
+      row('🛡','요건 충족 시 비과세 축 <small>달러·변액 · 10년 유지 등</small>',p0(d.taxfree)+'만원',(d.taxfree>0?'up':'dn'))+
       row('⏳','은퇴까지 남은 기간',P.yearsLeft+'년','hi')+
     '</div>'+
     '<div class="dk-quote" style="margin-top:16px">'+(d.taxfree<=0
@@ -9530,13 +9530,13 @@ function plSlides(){
       '<div style="flex:4;background:#0EA5E9">달러 40%</div>'+
     '</div>'+
     '<div class="dk-rows">'+
-      row('📈','변액 — 장기 수익을 만드는 축 <small>시장이 오르면 같이 오릅니다. 10년 이상 유지 시 비과세</small>',p0(Math.round(d.fillM*0.6))+'만원/월','up')+
+      row('📈','변액 — 장기 수익을 만드는 축 <small>시장이 오르면 같이 오릅니다. 10년 유지 등 요건 충족 시 비과세</small>',p0(Math.round(d.fillM*0.6))+'만원/월','up')+
       row('💵','달러 — 환율이 오를 때 버는 축 <small>원화가 약해지면 원화 환산액이 커집니다</small>',p0(Math.round(d.fillM*0.4))+'만원/월','up')+
       row('🏦','은행 — 3년 안에 쓸 돈만 <small>단기 자금은 원금이 흔들리면 안 됩니다</small>','비상금만')+
     '</div>',
     note:'"변액이 좋다, 달러가 좋다가 아닙니다. 둘의 움직임이 서로 반대라서 같이 들고 있는 겁니다."'});
 
-  S.push({chip:'세금', big:'10년을 넘기면<br><em>세금이 0원</em>이 됩니다.',
+  S.push({chip:'세금', big:'요건을 채우면<br><em>보험차익에 세금이 붙지 않습니다.</em>',
     sub:'은행 이자에는 15.4%가 붙습니다. 보험형 상품은 10년 이상 유지하면 이자소득세가 비과세입니다(요건 충족 시).',
     body:'<div class="dk-rows">'+
       row('🏦','은행 '+d.yrs+'년 — 세전 '+man(R.bank.gross)+'원 <small>이자에서 15.4% 차감</small>','-'+man(R.bank.gross-R.bank.net)+'원','dn')+
@@ -9813,9 +9813,9 @@ function tpSlides(){
   S.push({chip:'주의', big:'부족분을 <em>연금저축·IRP로만</em> 채우면<br>생기는 일입니다.',
     sub:'세액공제는 확실한 혜택입니다. 하지만 부족액 전부를 여기에 넣으면, 혜택이 부담으로 돌아옵니다.',
     body:'<div class="dk-rows">'+
-      tpRow('①','세액공제는 <b>연 900만원(월 75만원)까지</b>만 <small>지금 납입 월 '+p0(cur)+'만원 → 남은 한도 월 '+p0(limitLeft)+'만원. 그 위로는 공제 없이 규제만 받습니다</small>',(d.fill>limitLeft?'월 '+p0(d.fill-limitLeft)+'만원 초과':'한도 내'),(d.fill>limitLeft?'dn':'up'))+
-      tpRow('②','<b>55세까지 잠깁니다</b> <small>중도 인출·해지하면 공제받은 원금과 수익에 기타소득세 16.5%. 돌려받은 것보다 더 낼 수 있습니다</small>','16.5% 회수','dn')+
-      tpRow('③','받을 때 <b>다시 세금</b> <small>연금소득세 3.3~5.5%. 사적연금을 연 1,500만원 넘게 받으면 종합과세 또는 16.5% 분리과세</small>',(over?'1,500만 초과 예상':'수령 시 과세'),'dn')+
+      tpRow('①','세액공제는 <b>한도까지</b>만 (요건 충족 시) <small>한도는 세법 확인 — 이 화면은 현행 한도를 가정해 셉니다. 지금 납입 월 '+p0(cur)+'만원 → 남은 한도 월 '+p0(limitLeft)+'만원. 그 위로는 공제 없이 규제만 받습니다</small>',(d.fill>limitLeft?'월 '+p0(d.fill-limitLeft)+'만원 초과':'한도 내'),(d.fill>limitLeft?'dn':'up'))+
+      tpRow('②','<b>연금 수령 나이까지 잠깁니다</b> <small>중도 인출·해지하면 공제받은 원금과 수익에 기타소득세 16.5%. 돌려받은 것보다 더 낼 수 있습니다</small>','16.5% 회수','dn')+
+      tpRow('③','받을 때 <b>다시 세금</b> <small>연금소득세 3.3~5.5%. 사적연금 수령액이 세법 기준을 넘으면 종합과세 또는 분리과세</small>',(over?'기준 초과 예상':'수령 시 과세'),'dn')+
       tpRow('④','이 계획대로면 사적연금 수령액 <small>월 '+p0(d.fill)+'만원 × '+d.yrs+'년 → '+(P.payYears||25)+'년 분할 수령 가정</small>','연 '+p0(annual)+'만원',(over?'dn':''))+
     '</div>'+
     '<div class="dk-quote" style="margin-top:16px">'+(over
@@ -9835,7 +9835,7 @@ function tpSlides(){
     '</div>':'')+
     '<div class="dk-rows">'+
       tpRow('💚','세액공제 축 — 연금저축·IRP 월 '+p0(cur+toTax)+'만원 <small>연말정산으로 매년 돌려받는 돈</small>','연 약 '+p0(refund)+'만원 환급','up')+
-      (toFree>0?tpRow('💙','비과세 축 — 변액 '+p0(Math.round(toFree*0.6))+'만 + 달러 '+p0(Math.round(toFree*0.4))+'만 <small>10년 이상 유지 시 이자소득세 비과세 · 1,500만원 한도와 무관 · 55세 잠금 없음</small>','수령 시 과세 0원','up'):'')+
+      (toFree>0?tpRow('💙','비과세 축 — 변액 '+p0(Math.round(toFree*0.6))+'만 + 달러 '+p0(Math.round(toFree*0.4))+'만 <small>10년 유지 등 요건 충족 시 이자소득세 비과세 · 사적연금 분리과세 한도와 무관 · 연금 수령 나이 잠금 없음</small>','요건 충족 시 비과세','up'):'')+
       tpRow('🏦','유동성 축 — 비상금·3년 내 쓸 돈 <small>원금이 흔들리면 안 되는 돈은 은행에 둡니다</small>','언제든 인출')+
     '</div>'+
     '<div class="dk-quote" style="margin-top:16px">같은 월 '+p0(d.fill)+'만원인데, 나눠 담는 것만으로 <b>환급은 그대로, 세금 폭탄과 잠금은 제거</b>됩니다.</div>',
