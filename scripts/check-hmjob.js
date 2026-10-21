@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════
-   check-hmjob.js — ✅ <b>오늘 할 일</b> 이 홈 맨 위, 두 칸 바로 밑에 서나.
+   check-hmjob.js (판 X150) — ✅ <b>오늘 할 일</b> 이 홈 맨 위, 두 칸 바로 밑에 서나.
    그리고 <b>그 고객 밑에</b> 보장분석 넣기가 서나.
 
    사장님 말씀 (2026-10-21) — 「오늘 에서 <b>db통합 crm 밑에 보장분석pdf
@@ -30,7 +30,7 @@
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
-const ROOT = process.cwd(), PORT = 8967;
+const ROOT = process.cwd(), PORT = 8904;
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'application/javascript',
                '.css':'text/css', '.json':'application/json' };
 let 바깥 = 0;

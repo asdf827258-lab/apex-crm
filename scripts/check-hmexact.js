@@ -417,11 +417,45 @@ const INKS = (sel) => {
   is(odd.length === 0,
      '  홈의 글자색이 <b>전부 목업 것</b>이다 — ' + Object.keys(AP).length + '가지' +
      (odd.length ? (' ← 목업에 없는 색 ' + odd.join(' · ')) : ''));
-  ['ink', 'sub', 'sub2', 'point'].forEach(k => {
+  /* ══ ⚠ 2026-10-21 (판 X151) · <b>sub2 만 뒤집습니다</b> ════════════════
+     사장님 말씀 — 「가독성이 너무 떨어져서 … 다 가독성이 떨어져 보기 쉽게
+     정리해야되 <b>전부</b>」.
+
+     목업의 sub2(#8B95A1)는 흰 바탕에서 <b>3.04:1</b> 로 4.5 에 못 미칩니다.
+     재 보니 그 색이 본체에서 <b>916곳</b>에 쓰이고 <b>전부 color:</b> 였고,
+     --t-sub2 를 --t-sub(#6B7684 · 4.62)로 내리니 흐린 글씨가
+     <b>1,462 → 818곳</b>이 되었습니다(check-read).
+     ★ <b>이번 말씀이 먼저 말씀(「목업과 토시 하나 색상 하나 안 틀리게」)을
+       대신합니다.</b>
+     ★ <b>재는 것을 없애지 않고 뒤집습니다</b> — 이제는 「목업의 옅은 회색이
+       홈에 <b>안 쓰인다</b>」 와 「대신 쓰는 회색이 <b>읽힌다</b>」 를 봅니다.
+       누가 말없이 옛 색을 되살리면 그 자리에서 울립니다 (8번).
+     ★ 나머지 셋(ink · sub · point)은 <b>그대로</b> 목업 것이어야 합니다.   */
+  ['ink', 'sub', 'point'].forEach(k => {
     const hex = MK[k], rgb = hex2rgb(hex);
     is(Object.keys(AP).some(c => c === rgb),
        '  목업의 <b>' + k + '</b>(' + hex + ')가 홈에 <b>실제로</b> 쓰인다');
   });
+  is(!Object.keys(AP).some(c => c === hex2rgb(MK.sub2)),
+     '  ★★ 목업의 <b>옅은 회색</b>(' + MK.sub2 + ' · 흰 바탕 3.04:1)이 홈에 <b>안 쓰인다</b>' +
+     ' — 판 X151 에서 읽히는 회색으로 내렸습니다 (되살리면 여기서 울립니다)');
+  /* 대신 쓰는 회색이 <b>정말 읽히나</b> — 글로 안 믿고 잽니다 */
+  const sub2now = await p.evaluate(() => {
+    const lin = (c) => { c = c / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    const L = (r, g, b) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--t-sub2').trim();
+    const d = document.createElement('span'); d.style.color = v; document.body.appendChild(d);
+    const m = /(\d+)\D+(\d+)\D+(\d+)/.exec(getComputedStyle(d).color || ''); d.remove();
+    if (!m) return { v: v, c: 0 };
+    const l = L(+m[1], +m[2], +m[3]);
+    return { v: v, rgb: 'rgb(' + m[1] + ', ' + m[2] + ', ' + m[3] + ')',
+             c: +(((Math.max(l, 1) + 0.05) / (Math.min(l, 1) + 0.05)).toFixed(2)) };
+  });
+  is(sub2now.c >= 4.5,
+     '  ★ 대신 쓰는 회색(--t-sub2 = ' + sub2now.v + ')이 <b>흰 바탕에서 ' + sub2now.c +
+     ':1</b> 이다 — 4.5 이상 (판 X151)');
+  is(Object.keys(AP).some(c => c === sub2now.rgb),
+     '  그 회색이 홈에 <b>실제로</b> 쓰인다 — ' + sub2now.rgb);
 
   console.log('\n[2] 카드 <b>둥글기</b>가 목업과 같다');
   const R = await p.evaluate(() => {

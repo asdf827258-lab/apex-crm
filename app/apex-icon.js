@@ -139,3 +139,124 @@ function icoFromEmoji(e, size){
 }
 /* 이 파일이 바뀌었는지 자가 볼 수 있게 — 그림 가짓수 */
 function icoCount(){ var n = 0, k; for (k in APEX_ICON) if (APEX_ICON.hasOwnProperty(k)) n++; return n; }
+
+/* ══ 판 X151 에서 보탠 그림 스물아홉 ═════════════════════════════════
+   사장님 말씀 (2026-10-21) — 「남은 이모지도 바꿔」. 재 보니 그림 자리
+   <b>234곳</b> 가운데 158곳만 표에 있고 <b>76곳</b>이 표에 없어 이모지로
+   남아 있었습니다. 그 가운데 많이 쓰이는 것부터 그렸습니다.
+   ★ <b>표에 없으면 그대로 둡니다</b> — 모르는 것을 아무 그림에나 붙이면
+     엉뚱한 그림이 섭니다 (1번).                                      */
+APEX_ICON.scale  = '<path d="M12 4v16"/><path d="M5 8h14"/><path d="M5 8 2 14h6L5 8Z"/><path d="M19 8l-3 6h6l-3-6Z"/><path d="M8 20h8"/>';
+APEX_ICON.lock   = '<rect x="4.5" y="10.5" width="15" height="9.5" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>';
+APEX_ICON.unlock = '<rect x="4.5" y="10.5" width="15" height="9.5" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 7.5-2"/>';
+APEX_ICON.pin    = '<path d="M12 13v8"/><path d="M8 4h8l-1 5 3 4H6l3-4-1-5Z"/>';
+APEX_ICON.crown  = '<path d="M3 8l3.5 3L12 5l5.5 6L21 8l-2 10H5L3 8Z"/>';
+APEX_ICON.rocket = '<path d="M12 3c3 2.5 5 6 5 10l-2.5 3h-5L7 13c0-4 2-7.5 5-10Z"/><circle cx="12" cy="10" r="1.6"/><path d="M9.5 19.5 8 22M14.5 19.5 16 22"/>';
+APEX_ICON.ring   = '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.8"/><path d="M12 3.5v4.7M12 15.8v4.7M3.5 12h4.7M15.8 12h4.7"/>';
+APEX_ICON.eyeoff = '<path d="M3 3l18 18"/><path d="M10.6 6.3A9 9 0 0 1 12 6c5 0 9 6 9 6a16 16 0 0 1-2.3 2.9"/><path d="M6.5 7.9A16 16 0 0 0 3 12s4 6 9 6a9 9 0 0 0 3.3-.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>';
+APEX_ICON.hands  = '<path d="M8 12 5 9a2 2 0 0 1 2.8-2.8L11 9.3"/><path d="M13 9.3l3.2-3.1A2 2 0 0 1 19 9l-3 3"/><path d="M4 13.5 8.5 18a2 2 0 0 0 2.8 0l.7-.7.7.7a2 2 0 0 0 2.8 0L20 13.5"/>';
+APEX_ICON.refresh= '<path d="M20 11A8 8 0 0 0 6.3 6.3L4 8.5"/><path d="M4 4v4.5h4.5"/><path d="M4 13a8 8 0 0 0 13.7 4.7L20 15.5"/><path d="M20 20v-4.5h-4.5"/>';
+APEX_ICON.plug   = '<path d="M9 3v5M15 3v5"/><path d="M6 8h12v2.5a6 6 0 0 1-6 6 6 6 0 0 1-6-6V8Z"/><path d="M12 16.5V21"/>';
+APEX_ICON.keyb   = '<rect x="2.5" y="6.5" width="19" height="11" rx="2"/><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M7.5 14h9"/>';
+APEX_ICON.siren  = '<path d="M6 19h12"/><path d="M8 19v-5a4 4 0 0 1 8 0v5"/><path d="M12 5V3M5.5 8 4 6.6M18.5 8 20 6.6"/>';
+APEX_ICON.save   = '<path d="M5 4h11l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/><path d="M8 4v5h7V4"/><rect x="8" y="13" width="8" height="8"/>';
+APEX_ICON.folder = '<path d="M3 7.5a1.5 1.5 0 0 1 1.5-1.5H9l2 2.5h8a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 19 19.5H4.5A1.5 1.5 0 0 1 3 18V7.5Z"/>';
+APEX_ICON.moon   = '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/>';
+APEX_ICON.sunup  = '<path d="M3 19h18"/><path d="M6.5 15.5a5.5 5.5 0 0 1 11 0"/><path d="M12 4v3M5 7l2 2M19 7l-2 2M2.5 15.5h2M19.5 15.5h2"/>';
+APEX_ICON.pill   = '<rect x="2.8" y="9" width="18.4" height="6" rx="3" transform="rotate(-45 12 12)"/><path d="M8.5 8.5 15.5 15.5"/>';
+APEX_ICON.puzzle = '<path d="M10 4.5a1.8 1.8 0 0 1 3.6 0V6h3a1 1 0 0 1 1 1v3h1.5a1.8 1.8 0 0 1 0 3.6H17.6v3a1 1 0 0 1-1 1h-3v-1.5a1.8 1.8 0 0 0-3.6 0V17.6h-3a1 1 0 0 1-1-1v-3H4.5a1.8 1.8 0 0 1 0-3.6H6V7a1 1 0 0 1 1-1h3V4.5Z"/>';
+APEX_ICON.spark  = '<path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z"/><path d="M18 16l.8 2.2L21 19l-2.2.8L18 22l-.8-2.2L15 19l2.2-.8L18 16Z"/>';
+APEX_ICON.gift   = '<rect x="3.5" y="8.5" width="17" height="11.5" rx="1.5"/><path d="M3.5 12.5h17M12 8.5V20"/><path d="M12 8.5S10.5 4 8 4a2 2 0 0 0 0 4.5M12 8.5S13.5 4 16 4a2 2 0 0 1 0 4.5"/>';
+APEX_ICON.cake   = '<path d="M4 20h16"/><path d="M5 20v-5.5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2V20"/><path d="M12 12.5V9M12 5.5V7"/>';
+APEX_ICON.x      = '<path d="M6 6l12 12M18 6 6 18"/>';
+APEX_ICON.ticket = '<path d="M3 9.5V7a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2.5a2.5 2.5 0 0 0 0 5V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2.5a2.5 2.5 0 0 0 0-5Z"/><path d="M9.5 6v12"/>';
+APEX_ICON.sun    = '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.3 5.3l1.7 1.7M17 17l1.7 1.7M18.7 5.3 17 7M7 17l-1.7 1.7"/>';
+APEX_ICON.bulb   = '<path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.8c.6.5 1 1.2 1 2V18h5v-2.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3Z"/>';
+APEX_ICON.image  = '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5"/>';
+APEX_ICON.palette= '<path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.4 0 2-1 2-2s-.8-2-.8-2.6c0-.9.8-1.4 1.8-1.4h1.6c2.1 0 3.9-1.7 3.9-3.9 0-4-4.1-7.1-8.5-7.1Z"/><circle cx="8.3" cy="9" r="1.1"/><circle cx="12" cy="7.3" r="1.1"/><circle cx="7.6" cy="13" r="1.1"/>';
+APEX_ICON.dots   = '<circle cx="5.5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18.5" cy="12" r="1.3"/>';
+
+/* 옮기는 표에 보탭니다 — 왼쪽이 화면에 서 있던 이모지입니다 */
+APEX_ICON_OF['🔔']='bell';     APEX_ICON_OF['⚖']='scale';    APEX_ICON_OF['⚖️']='scale';
+APEX_ICON_OF['🔒']='lock';     APEX_ICON_OF['🔐']='lock';     APEX_ICON_OF['🔓']='unlock';
+APEX_ICON_OF['📌']='pin';      APEX_ICON_OF['🧷']='pin';      APEX_ICON_OF['👑']='crown';
+APEX_ICON_OF['🚀']='rocket';   APEX_ICON_OF['📚']='book';     APEX_ICON_OF['🛟']='ring';
+APEX_ICON_OF['✓']='check';     APEX_ICON_OF['✔']='check';     APEX_ICON_OF['✔️']='check';
+APEX_ICON_OF['🙈']='eyeoff';   APEX_ICON_OF['🤝']='hands';    APEX_ICON_OF['🧑']='user';
+APEX_ICON_OF['🧍']='user';     APEX_ICON_OF['🔄']='refresh';  APEX_ICON_OF['🔌']='plug';
+APEX_ICON_OF['🪪']='idcard';   APEX_ICON_OF['🛂']='idcard';   APEX_ICON_OF['🖼']='image';
+APEX_ICON_OF['🖼️']='image';   APEX_ICON_OF['🪞']='image';    APEX_ICON_OF['🎨']='palette';
+APEX_ICON_OF['⋯']='dots';      APEX_ICON_OF['📱']='phone';    APEX_ICON_OF['🦾']='robot';
+APEX_ICON_OF['⌨']='keyb';      APEX_ICON_OF['⌨️']='keyb';     APEX_ICON_OF['🚨']='siren';
+APEX_ICON_OF['🔍']='search';   APEX_ICON_OF['⏱']='clock';     APEX_ICON_OF['⏱️']='clock';
+APEX_ICON_OF['💾']='save';     APEX_ICON_OF['📂']='folder';   APEX_ICON_OF['💌']='mail';
+APEX_ICON_OF['🌙']='moon';     APEX_ICON_OF['🌅']='sunup';    APEX_ICON_OF['💊']='pill';
+APEX_ICON_OF['🧩']='puzzle';   APEX_ICON_OF['✨']='spark';     APEX_ICON_OF['✒']='pen';
+APEX_ICON_OF['✒️']='pen';     APEX_ICON_OF['💵']='money';    APEX_ICON_OF['💱']='swap';
+APEX_ICON_OF['🎁']='gift';     APEX_ICON_OF['🎂']='cake';     APEX_ICON_OF['✕']='x';
+APEX_ICON_OF['✖']='x';         APEX_ICON_OF['🏭']='building'; APEX_ICON_OF['🎫']='ticket';
+APEX_ICON_OF['☀']='sun';       APEX_ICON_OF['☀️']='sun';      APEX_ICON_OF['💡']='bulb';
+APEX_ICON_OF['🏅']='trophy';   APEX_ICON_OF['🆘']='warn';     APEX_ICON_OF['🏠']='home';
+
+/* ══ 🖼 <b>그림 자리를 제자리에서 바꿔 끼운다</b> (판 X151) ═══════════
+   사장님 말씀 — 「남은 이모지도 바꿔」.
+
+   ── 왜 글을 안 고치고 화면에서 바꾸나 ──────────────────────────────
+   카드 머리의 그림은 <b>app/index.html 안의 글자 195곳</b>에 박혀 있습니다
+   (`<span class="ci">📊</span>`). 그 195곳을 손으로 고치면 ① 한 줄씩 틀릴
+   자리가 195개 생기고 ② 다음에 카드를 하나 더 만들 때 또 이모지로 돌아갑니다.
+   그래서 <b>자리(class)를 보고 한 곳에서</b> 바꿔 끼웁니다 (5번).
+
+   ── 안 건드리는 것 ─────────────────────────────────────────────────
+   ★ <b>표에 있는 것만</b> 바꿉니다 — 표에 없으면 그대로 둡니다 (1번).
+   ★ <b>안에 다른 칸이 있으면</b> 손대지 않습니다 — 글이 섞인 자리입니다.
+   ★ <b>글 가운데 있는 이모지</b>는 안 건드립니다. 「🔔 새 소식이 없습니다」
+     처럼 글과 한 줄인 자리는 바꾸면 글이 쪼개져, 수를 세거나 글을 견주는
+     자리가 조용히 틀립니다. 그 자리는 <b>부르는 쪽에서</b> icoFromEmoji 로
+     바꿉니다(아래 띠·서랍·접이가 그렇게 바뀌었습니다).
+   ★ <b>두 번 해도 같습니다</b> — 바꾼 뒤에는 안에 <svg> 가 있어 건너뜁니다.
+   ★ 무엇이었는지 <b>data-emo</b> 에 남깁니다 — 되돌릴 때 손에 쥘 것이 있게.  */
+/* ⚠ <b>span.e 가 이 앱의 그림 자리입니다.</b> 처음에 뺐다가 재 보고 넣었습니다 —
+   「도구」 한 화면에만 <b>107곳</b>이 span.e 이고 전부 이모지였습니다. 뺐던 까닭은
+   「오늘 할 일」 칸의 차례 동그라미(.hm-nxs-r .e)가 같은 이름이기 때문인데, 그 안은
+   <b>「1」 「2」 같은 숫자</b>라 표에 없어 저절로 건너뜁니다 — 표에 있는 것만 바꾸는
+   규칙(1번)이 그 자리를 이미 지켜 주고 있었습니다. 겁내서 뺄 일이 아니었습니다. */
+var ICO_SLOT = 'span.e,div.e,b.e,i.e,span.ci,span.ic,div.ic,span.sbg-ic,span.myk-ic,' +
+               'span.stp-ic,div.dz-ic,span.hmc-i,span.blk-ic,span.mst-ic,span.tnv-ic,' +
+               'span.ngl-ic,span.nf-ic,span.mdimg-ic,span.bx,span.fx,span.ck,' +
+               'span.mnu-ic,span.hd-ic,span.bd-ic';
+function icoSlots(root){
+  var R = root || document, L, i, e, t, k, n = 0;
+  if (!R || !R.querySelectorAll) return 0;
+  try { L = R.querySelectorAll(ICO_SLOT); } catch (x) { return 0; }
+  for (i = 0; i < L.length; i++){
+    e = L[i];
+    if (e.firstElementChild) continue;                 /* 안에 칸이 있으면 그대로 */
+    t = (e.textContent || '').replace(/\s/g, '');
+    if (!t || t.length > 6) continue;                  /* 글이 섞인 자리는 그대로 */
+    k = APEX_ICON_OF[t.replace(/️/g, '')] || APEX_ICON_OF[t];
+    if (!k || !APEX_ICON[k]) continue;                 /* 표에 없으면 그대로 (1번) */
+    e.setAttribute('data-emo', t);
+    e.innerHTML = icoSvg(k, +(e.getAttribute('data-ico') || 0) || 20);
+    n++;
+  }
+  return n;
+}
+/* 화면이 다시 그려질 때마다 한 번 — <b>보는 자리는 여기 하나</b>입니다 (5번).
+   ★ 한 틀(rAF)에 한 번으로 묶습니다 — 안 그러면 한 번 그릴 때 수십 번 돕니다.
+   ★ 제 손으로 고친 것이 다시 저를 부르지만, 바꾼 자리는 건너뛰므로 멈춥니다. */
+var ICO_ON = false, ICO_RAF = 0;
+function icoWatch(){
+  if (ICO_ON) return;
+  ICO_ON = true;
+  icoSlots(document);
+  if (typeof MutationObserver !== 'function') return;
+  var raf = window.requestAnimationFrame || function(f){ return setTimeout(f, 16); };
+  new MutationObserver(function(){
+    if (ICO_RAF) return;
+    ICO_RAF = raf(function(){ ICO_RAF = 0; icoSlots(document); });
+  }).observe(document.body || document.documentElement, { childList: true, subtree: true });
+}
+if (document.readyState === 'loading')
+  document.addEventListener('DOMContentLoaded', function(){ icoWatch(); });
+else icoWatch();
