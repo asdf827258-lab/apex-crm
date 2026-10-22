@@ -2069,7 +2069,8 @@ async function toClient(id){
     return true;
   };
   /* 짝이 될 만한 분 — 이 담당자 고객만, 한 번만 부릅니다 (7번) */
-  const mine=await sb.from("clients").select("id,name_masked,phone").eq("advisor_id",d.assigned_to);
+  const mine=await pageAll((x,y)=>sb.from("clients").select("id,name_masked,phone").eq("advisor_id",d.assigned_to)
+    .order("id",{ascending:true}).range(x,y));
   const L=(mine&&!mine.error&&mine.data)||[];
   const num=v=>(""+(v||"")).replace(/[^0-9]/g,"");
   const p=num(d.phone);

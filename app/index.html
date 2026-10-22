@@ -72995,7 +72995,8 @@ function cusCrmLoad(again){
      ★ 칸이 없는 옛 서버에서만 아래 예전 길(통째로 받아 견주기)로 갑니다. */
   var colDown=function(m){return /column|42703|does not exist|schema cache/i.test(''+(m||''));};
   var byLink=function(){
-    return sb.from('dbs').select(cols+',client_id').eq('client_id',c.id).then(function(r){
+    /* 한 분에게 이어진 배정 줄은 다시 배정돼도 몇 줄입니다 — 일부러 몇 줄만 받습니다 (check-dbpage) */
+    return sb.from('dbs').select(cols+',client_id').eq('client_id',c.id).limit(50).then(function(r){
       if(r&&r.error&&colDown(r.error.message))return null;   /* 칸이 없는 서버 — 예전 길 */
       return {data:(r&&!r.error&&r.data)||[],error:(r&&r.error)||null,link:true};
     },function(e){ return {data:[],error:e||{message:'실패'},link:true}; });
