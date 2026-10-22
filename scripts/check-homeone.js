@@ -328,6 +328,25 @@ const tall = (p) => p.evaluate(() => {
      ★ 판 ②(접기)에서는 <b>하나도 안 올렸습니다</b> — 오히려 2,778 →
        2,662px 로 줄였습니다. 여기서는 올립니다. 정직하게 적어 둡니다.  */
   const hA = await tall(A.p);
+  /* 🔍 <b>어디가 길어졌나</b> — HOME_DEBUG=1 로 돌리면 「오늘 챙길 것」 안의
+     칸마다 높이를 찍어 줍니다. 홈이 선을 넘었을 때 <b>어느 칸인지</b>를
+     손으로 찾느라 두 판을 버려서 넣어 둡니다 (check-read 의 READ_DEBUG 와 같은 결). */
+  if(process.env.HOME_DEBUG){
+    const B = await A.p.evaluate(() => {
+      const pane=document.querySelector('.tab-pane.on'); if(!pane)return [];
+      const TOPS=(h)=>{const o=[];for(const e of h.children){
+        if(e.classList&&e.classList.contains('hm-2col')){for(const c of e.children)for(const d of c.children)o.push(d);}
+        else o.push(e);} return o;};
+      const t=document.getElementById('hmToday');
+      const o=[];
+      if(t){ const walk=(el,d)=>{ [].slice.call(el.children).forEach(c=>{
+        const r=c.getBoundingClientRect(); if(r.height<=0)return;
+        o.push('  '.repeat(d)+((c.id||(c.className||'').toString().split(' ')[0]||c.tagName))+' h'+Math.round(r.height));
+        if(d<2)walk(c,d+1); }); }; walk(t,0); }
+      return o;
+    });
+    console.log('      · 덩어리: '+B.join(' | '));
+  }
   /* ── 2026-10-01 · <b>3.8 → 3.9</b> (세 번째로 올립니다 — 적어 둡니다) ──
      「📥 읽어 둔 보장분석」 카드가 섰습니다(사장님 말씀 「읽어 둔 보장분석
      카드 만들어줘」). 3,158 → <b>3,280px</b> · 3.89화면. 늘어난 122px 은
@@ -451,7 +470,11 @@ const tall = (p) => p.evaluate(() => {
   /* ⚠ 2026-10-13 · 단추 이름을 박아 두지 않고 <b>앱에 묻습니다</b> — 「카드뉴스」 로
      박아 두었더니 이름이 「캐러셀로 제작하기」 로 바뀌며 거짓 빨간불이 떴습니다 (5번) */
   const CARD_T = await C.p.evaluate(() => (typeof nlCardName === 'function') ? nlCardName() : '');
-  is(g.단추.some(x => /캡션/.test(x)) && g.단추.some(x => x.indexOf(CARD_T) >= 0) &&
+  /* ⚠ 2026-10-22 (판 X155) — 단추 앞머리 이모지가 <b>선 그림</b>이 되어
+     글에 안 들어옵니다. 이름은 앱에 그대로 묻되(nlCardName), 견줄 때는
+     <b>앞머리 꾸밈을 벗겨</b> 봅니다 — 약속은 「그 단추가 거기 있나」 입니다 (8번). */
+  const bare = (t) => String(t || '').replace(/^[^0-9A-Za-z가-힣]+/, '').trim();
+  is(g.단추.some(x => /캡션/.test(x)) && g.단추.some(x => bare(x).indexOf(bare(CARD_T)) >= 0) &&
      g.단추.some(x => /보낼 문구/.test(x)),
      '  <b>만들 자리</b>가 그 자리에 있다 — ' + g.단추.join(' · '));
   /* 만드는 도구를 <b>또 만들지 않았는가</b> (5번) — 이미 있는 것을 부른다 */

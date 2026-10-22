@@ -174,7 +174,12 @@ const SEED = () => {
   const A1 = await pg.evaluate(() => {
     const el = document.querySelector('#dynPane .hm-act');
     return { t: el ? el.innerText.replace(/\s+/g, ' ') : '(없다)',
-             more: /🤝 더/.test(el ? el.innerText : ''),
+             /*  ⚠ 2026-10-22 (판 X155) — <b>앞머리 이모지가 선 그림이 됐습니다</b>
+     (사장님 말씀 「남은 이모지도 바꿔」). 글 앞의 이모지는 이제 <svg> 라
+     innerText·textContent 에 안 들어옵니다. <b>약속은 그대로</b>이므로
+     보는 자리만 <b>이름</b>으로 옮깁니다 (8번). 무엇이었는지는 data-emo 에
+     남아 있어, 꼭 가려야 할 때는 그것으로 봅니다. */
+             more: /더\s*\d/.test(el ? el.innerText : ''),
              act: (typeof hmActOf === 'function') ? hmActOf() : null };
   });
   is(!A1.act ? !A1.more : A1.more,
@@ -200,7 +205,8 @@ const SEED = () => {
     const o = hmPtOf((typeof hwhoFor === 'function') ? hwhoFor() : '');
     const el = document.querySelector('#dynPane .hm-act');
     const chip = [].slice.call((el||document).querySelectorAll('.t-chip'))
-      .filter(x => /🎯/.test(x.textContent))[0];
+      .filter(x => /접촉포인트|카톡 먼저|전화 먼저|🎯/.test(
+        (x.textContent||'') + ' ' + (x.getAttribute('aria-label')||'')))[0];
     return { o: o, t: chip ? chip.textContent.replace(/\s+/g, ' ') : '(칩이 없다)',
              lab: chip ? (chip.getAttribute('aria-label')||'') : '' };
   });
@@ -222,7 +228,8 @@ const SEED = () => {
        칠하는 자를 직접 불러 <b>지금 상태</b>를 읽습니다. */
     try { hmActPaint(); } catch (e) {}
     const c = [].slice.call(document.querySelectorAll('#dynPane .hm-act button, #dynPane .hm-act .t-chip'))
-      .filter(x => /🎯/.test(x.textContent))[0];
+      .filter(x => /접촉포인트|카톡 먼저|전화 먼저|🎯/.test(
+        (x.textContent||'') + ' ' + (x.getAttribute('aria-label')||'')))[0];
     return c ? (c.textContent + ' | ' + (c.getAttribute('aria-label')||'')).replace(/\s+/g, ' ') : '';
   });
   is(/생년을 적으면/.test(P0) && /출생년도/.test(P0),
@@ -236,9 +243,14 @@ const SEED = () => {
        칠하는 자를 직접 불러 <b>지금 상태</b>를 읽습니다. */
     try { hmActPaint(); } catch (e) {}
     const c = [].slice.call(document.querySelectorAll('#dynPane .hm-act button, #dynPane .hm-act .t-chip'))
-      .filter(x => /🎯/.test(x.textContent))[0];
+      .filter(x => /접촉포인트|카톡 먼저|전화 먼저|🎯/.test(
+        (x.textContent||'') + ' ' + (x.getAttribute('aria-label')||'')))[0];
     AR.loaded = true;
-    return c ? c.textContent : '';
+    /* ⚠ 판 X155 — 🎯 는 선 그림으로 갈려 textContent 에서 빠집니다. 글자만
+       돌려주면 토막이 <b>서 있어도</b> 아래 「🎯 가 없다」 가 통과해 버려,
+       낡지 않는 늘 초록인 줄이 됩니다. 무엇이었는지는 data-emo 에 남으니
+       그것까지 붙여 돌려줍니다 (8번). */
+    return c ? ((c.getAttribute('data-emo') || '') + ' ' + (c.textContent || '')) : '';
   });
   is(!/🎯/.test(PN), '아직 <b>못 읽었으면 토막이 아예 없다</b> (1번) — 「0분」 이 아니다');
 
@@ -282,7 +294,13 @@ const SEED = () => {
     const r = row.getBoundingClientRect();
     const it = [].slice.call(row.children).map(e => {
       const b = e.getBoundingClientRect();
-      return { t: e.textContent.replace(/\s+/g, ' ').trim(),
+      /* 판 X155 — 앞머리 이모지가 선 그림이라 글에 안 들어옵니다.
+         무엇이었는지는 data-emo 에 남으므로 그것까지 붙여 봅니다 (8번). */
+      /* ⚠ 빈칸을 <b>한 칸으로 모읍니다</b> — icoLead 는 이모지 뒤 빈칸을
+         남겨 두므로(줄 끊을 자리), 그냥 이으면 빈칸이 둘이 되어 「🤝 더」
+         로 찾는 자가 못 찾습니다. 판 X155 에서 그렇게 울었습니다. */
+      return { t: ((e.getAttribute('data-emo') || '') + ' ' +
+                   e.textContent).replace(/\s+/g, ' ').trim(),
                시작: Math.round(b.left - r.left),
                보임: (b.left >= r.left - 1 && b.right <= r.right + 1) };
     });

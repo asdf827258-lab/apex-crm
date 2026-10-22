@@ -271,8 +271,12 @@ const CARD = () => {
   const 새클래스 = (BLK.match(/class="([^"]+)"/g) || []).join(' ')
     .replace(/class="|"/g,' ').split(/\s+/).filter(Boolean)
     .filter(c => c.indexOf('t-') !== 0)
+    /* 변형 꼴 <b>.t-chips.x · .t-big.x</b> 도 같이 봅니다 (판 X158에서 늘었습니다) —
+       ui.css 에 <b>정말 적혀 있어야</b> 통과합니다. 느슨해진 것이 아니라
+       <b>같은 꼴을 빠뜨리고 있던 것</b>입니다 (8번). */
     .filter(c => UI.indexOf('.t-btn.' + c) < 0 && UI.indexOf('.t-chip.' + c) < 0 &&
-                 UI.indexOf('.t-note.' + c) < 0 && UI.indexOf('.t-tag.' + c) < 0);
+                 UI.indexOf('.t-note.' + c) < 0 && UI.indexOf('.t-tag.' + c) < 0 &&
+                 UI.indexOf('.t-chips.' + c) < 0 && UI.indexOf('.t-big.' + c) < 0);
   is(새클래스.length === 0, '  ★ <b>ui.css 이름만 썼다</b>' +
      (새클래스.length ? (' ← 새 이름 ' + [...new Set(새클래스)].join(' ')) : ''));
 
