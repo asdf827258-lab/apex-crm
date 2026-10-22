@@ -178,6 +178,36 @@ const SEED = () => {
   is(E.빈것 === '', '  ★ 못 셀 때는 <b>0 을 안 적는다</b> — 그 자리를 비운다 (1번)');
   is(E.도구 === '', '  셀 것이 없는 칸(도구)은 <b>딱지를 안 붙인다</b>');
 
+  /* ── [5-1] 빠른 안내도 <b>앱에 물어 적는가</b> ────────────────────
+     2026-10-22 · 판 X164. 서랍 이름을 바꾸고 라이브를 열어 보니, <b>빠른
+     안내</b>(osQuickGuideBody) 가 옛 이름 「APEX 전체 지도」 와 옛 그림
+     🗺️ 를 <b>손으로 베껴</b> 들고 있었습니다. 게다가 「화면 <b>여든아홉</b>
+     개」 라고 적혀 있었는데 실제로는 107개였고, 「<b>초록</b> 단추」 라고
+     했는데 지금은 파랑입니다 — 한 줄에 거짓이 셋이었습니다 (1번 · 5번).
+     ★ 수를 글자로 박으면 화면이 늘 때마다 그 줄이 낡아 거짓말이 됩니다 —
+     CLAUDE.md 가 제 머리글에서 쓰는 바로 그 규칙입니다.               */
+  console.log('\n[5-1] 빠른 안내가 앱에 물어 적는가 (손으로 베끼지 않는가)');
+  {
+    const G = await p.evaluate(() => {
+      const body = (typeof osQuickGuideBody === 'function') ? osQuickGuideBody() : '';
+      const nm = (typeof navTitle === 'function') ? navTitle('apexmap') : '';
+      const ic = (typeof navItemOf === 'function' && navItemOf('apexmap')) ? navItemOf('apexmap').icon : '';
+      return { body: body, nm: nm, ic: ic,
+               tabs: (typeof TABS !== 'undefined') ? 1 : 0 };
+    });
+    is(G.body.length > 200, '  빠른 안내를 읽었다 — ' + G.body.length + '자');
+    is(G.nm !== '' && G.body.indexOf(G.nm) >= 0,
+       '  빠른 안내가 <b>메뉴와 같은 이름</b>을 쓴다 — 「' + G.nm + '」');
+    is(!/APEX 전체 지도|전체지도 보기/.test(G.body),
+       '  <b>옛 이름을 안 들고 있다</b>');
+    is(G.body.indexOf('🗺️') < 0 && (G.ic === '' || G.body.indexOf(G.ic) >= 0),
+       '  빠른 안내의 그림도 <b>메뉴와 같다</b> — ' + (G.ic || '?'));
+    is(!/화면\s*(여든|아흔|일흔|예순|[0-9]{2,3})\s*[가-힣]*\s*개/.test(G.body),
+       '  ★ <b>화면 수를 글자로 박지 않는다</b> — 화면이 늘면 그 줄이 거짓말이 된다 (1번)');
+    is(!/초록 단추/.test(G.body),
+       '  ★ 단추 <b>색을 글자로 박지 않는다</b> — 옷이 바뀌면 거짓말이 된다 (1번)');
+  }
+
   console.log('\n[6] 조용히 터지지 않았나');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? (' ← ' + errs.slice(0, 2).join(' | ')) : ''));
 
