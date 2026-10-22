@@ -157,7 +157,10 @@ const SEED = (o) => `
   is(paint.ig.indexOf(NEWS[0].title) >= 0, '  📸 오늘 올릴 것이 <b>콘텐츠에서 다시 칠해졌다</b>');
   is(paint.ig.indexOf(NEWS[0].title) >= 0 && !paint.fold,
      '  <b>펴지 않아도 제목이 보인다</b> — 접는 장치가 없다 (예전엔 접힌 머리에 적어 줘야 했다)');
-  is(/📸 올릴 것/.test(homeIg.chip), '  홈에는 <b>몇 건인지 한 줄</b>만 남았다 — ' + homeIg.chip.slice(0, 60));
+  /* ⚠ 2026-10-22 (판 X155) — 칩 앞머리의 📸 가 <b>선 그림</b>이 되어 글에
+     안 들어옵니다(사장님 말씀 「남은 이모지도 바꿔」). 약속은 「몇 건인지
+     한 줄이 남았나」 이므로 <b>이름</b>으로 봅니다 (8번).               */
+  is(/올릴 것/.test(homeIg.chip), '  홈에는 <b>몇 건인지 한 줄</b>만 남았다 — ' + homeIg.chip.slice(0, 60));
   is(!homeIg.old, '  옛 📸 칸이 <b>홈에 안 남았다</b> — 남으면 두 벌이다 (5번)');
   is(ms.indexOf(NEWS[0].title) >= 0, '  🌅 아침 미션 ② 에도 <b>그 소식</b>이 섰다');
   /* 그 소식이 <b>왜</b> 이 분께 가는지도 같이 적혀야 한다 — 사장님이 그

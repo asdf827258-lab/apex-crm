@@ -403,7 +403,11 @@ window.supabase={createClient:function(){
     return {
       cats: Array.prototype.map.call(document.querySelectorAll('#arPane .ar-cat .m b'), e => e.textContent.trim()),
       tbl: document.querySelectorAll('#arPane .cc-team').length,
-      heads: Array.prototype.map.call(document.querySelectorAll('#arPane .cc-team thead th'), e => e.textContent.trim()),
+      /* ⚠ 판 X155 — 「👑 VIP 넘음」 의 앞머리 이모지는 선 그림으로 갈리고
+         원래 글자는 data-emo 에 남습니다. 둘을 합친 글이 사람이 보는 칸
+         이름입니다 — 글자만 읽으면 못 박아 둔 이름이 안 맞습니다 (8번). */
+      heads: Array.prototype.map.call(document.querySelectorAll('#arPane .cc-team thead th'),
+        e => ((e.getAttribute('data-emo') || '') + ' ' + (e.textContent || '')).replace(/\s+/g, ' ').trim()),
       body: p ? p.textContent : ''
     };
   });
