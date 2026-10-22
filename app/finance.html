@@ -1320,8 +1320,23 @@ a { color: inherit; text-decoration: none; }
 @media print{.report-action-row,.report-safe-btn,.print-fallback-note{display:none!important}}
 
 .fx-krw{color:var(--ink-3,#7A8493);font-weight:700;font-size:.86em;white-space:nowrap}
+.gen-btn.rpt-btn{margin-top:0;min-height:44px;background:#3182F6}
+.rpt-ov{position:fixed;inset:0;z-index:9999;background:rgba(25,31,40,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.rpt-pn{background:#fff;color:#191F28;border-radius:20px;padding:22px 20px;width:100%;max-width:420px;font-family:inherit}
+.rpt-h{font-size:18px;font-weight:800}
+.rpt-d{font-size:14px;color:#4E5968;line-height:1.6;margin:6px 0 14px}
+.rpt-f{display:block;margin-bottom:12px;font-size:14px;font-weight:700;color:#4E5968}
+.rpt-f small,.rpt-c small{font-weight:500;color:#6B7684;font-size:13px}
+.rpt-f input{display:block;width:100%;box-sizing:border-box;margin-top:5px;min-height:44px;border:1px solid #D1D6DB;border-radius:10px;padding:8px 12px;font-size:16px;color:#191F28;background:#fff;font-family:inherit}
+.rpt-c{display:flex;align-items:center;gap:8px;min-height:44px;font-size:14px;font-weight:700;color:#191F28}
+.rpt-c input{width:20px;height:20px}
+.rpt-b{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.rpt-b button{flex:1 1 auto;min-height:44px;border:0;border-radius:12px;background:#3182F6;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;padding:0 14px}
+.rpt-b button.rpt-x{background:#F2F4F6;color:#4E5968}
 </style>
 <script src="pension-engine.js"></script>
+<script src="apex_report_icons.js"></script>
+<script src="apex_report_engine.js"></script>
 </head>
 <body>
 <div class="app">
@@ -1640,6 +1655,7 @@ a { color: inherit; text-decoration: none; }
   </div><!-- /sb-scroll -->
 
   <button class="gen-btn" onclick="render()">📊 보고서 새로고침</button>
+  <button class="gen-btn rpt-btn" onclick="rptPanel()">📄 고객 결과지 보기</button>
 </div>
 
 <!-- ══ 메인 콘텐츠 ══ -->
@@ -1688,6 +1704,7 @@ a { color: inherit; text-decoration: none; }
       <div style="display:flex;align-items:center;gap:8px">
         <div style="font-size:var(--t6,13px);color:var(--g5)" id="dash-date"></div>
         <button onclick="printReport()" class="print-btn">🖨️ 보고서 출력</button>
+        <button onclick="rptPanel()" class="print-btn rpt-btn">📄 고객 결과지</button>
       </div>
     </div>
 
@@ -11307,6 +11324,234 @@ function renderPensionSim(){
   function hook(e){ if(e.target&&ids.indexOf(e.target.id)>=0){ try{renderPensionSim();}catch(_){} } }
   document.addEventListener('input',hook); document.addEventListener('change',hook);
 })();
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   고객 결과지 — 토스 테마 리포트 (rpt*)
+
+   계산기에 적힌 값 → APEX_REPORT data → 카톡용 HTML 한 장.
+   렌더는 apex_report_engine.js 가 하고, 여기서는 <b>옮기기만</b> 합니다.
+
+   ★ 연금 숫자는 「연금 시뮬레이션」 탭과 <b>같은 자</b>(pension-engine.js)로 셉니다.
+     엔진에도 변액연금 식이 있지만 여기서 그것을 쓰면 한 고객에게 연금이 두 개
+     찍힙니다(CLAUDE.md 0-1 · 5번). 그래서 상품 엔진이 센 줄(rows)을 넘깁니다.
+   ★ 이름은 <b>가린 것이 기본</b>입니다 — 카톡·인쇄로 나가는 종이입니다(3번).
+     실명은 칸을 켜고 한 번 더 눌러야 들어갑니다.
+   ★ 근속연수는 계산기에 칸이 없습니다. 모르는 값을 지어 퇴직소득세를 세우지 않고,
+     적어 주실 때만 그 장을 세웁니다(1번).
+   ★ 세금은 「요건 충족 시」 · 한도·나이 숫자를 글로 적지 않습니다(2번).
+   ═══════════════════════════════════════════════════════════ */
+function rptMask(n){
+  n=String(n||'').replace(/\s+/g,'');
+  if(!n||n==='고객님'||n==='고객') return '고객';
+  return n.charAt(0)+new Array(Math.max(2,n.length)).join('○');
+}
+function rptUniq(a){ var o=[]; a.forEach(function(x){ x=Math.round(x*10000)/10000; if(o.indexOf(x)<0) o.push(x); }); return o.sort(function(x,y){return x-y;}); }
+/* 연금 — 「연금 시뮬레이션」 탭이 고른 상품 그대로 */
+function rptPension(age,sex,rage){
+  if(!window.PENSION) return null;
+  var pay=Math.round(PSIM.pay)||10, prem=+PSIM.prem||0;
+  var list=PENSION.eligible(age,rage,pay), p=null, i;
+  for(i=0;i<list.length;i++) if(list[i].id===PSIM.pid) p=list[i];
+  if(!p) p=list[0];
+  if(!p||!prem) return null;
+  var inp={age:age,sex:sex,start:rage,pay:pay,monthly:prem*10000}, r=null;
+  try{ r=PENSION.calc(p,inp); }catch(e){ r=null; }
+  if(!r||!r.yearly) return null;
+  var guarM=r.yearly/12/10000, base=r.base/10000, isVar=(p.type==='변액'), tgt=PSIM.ret/100;
+  var rows=[{label:'최저보증', monthly:guarM, fund:base, guarantee:true}];
+  if(isVar){
+    rptUniq([0.05,0.07,tgt,0.095]).forEach(function(rate){
+      var fv=0; try{ fv=PENSION.fundAt(r.T,inp,{r:rate,cPrem:PSIM.cPrem/100,cFund:PSIM.cFund/100})/10000; }catch(e){}
+      var varM=base>0? guarM*(fv/base) : 0, by=varM<guarM;
+      rows.push({label:(rate===Math.round(tgt*10000)/10000?'목표 ':'')+(Math.round(rate*1000)/10)+'%', rate:rate,
+        monthly:Math.max(guarM,varM), fund:by?base:fv, byGuarantee:by, target:rate===Math.round(tgt*10000)/10000});
+    });
+  } else rows[0].target=true;
+  /* 납입기간 비교 — 같은 상품이 그 기간을 받아 주는 것만, 상품 엔진으로 */
+  var cmp=[], hi=-1;
+  rptUniq([5,7,10,pay]).forEach(function(y){
+    try{ if(!(y<=rage-age && p.ok(age,rage,y))) return; }catch(e){ return; }
+    var q={age:age,sex:sex,start:rage,pay:y,monthly:inp.monthly}, rr=PENSION.calc(p,q); if(!rr||!rr.yearly) return;
+    var gm=rr.yearly/12/10000, row=[y+'년납', prem*12*y, gm];
+    if(isVar){ var fv=0; try{ fv=PENSION.fundAt(rr.T,q,{r:tgt,cPrem:PSIM.cPrem/100,cFund:PSIM.cFund/100})/10000; }catch(e){}
+      row.push(Math.max(gm, rr.base>0? gm*(fv*10000/rr.base):0)); }
+    if(y===pay) hi=cmp.length; cmp.push(row);
+  });
+  return { p:p, r:r, isVar:isVar, guarM:guarM,
+    pension:{ premium:prem, payYears:pay, startAge:age, openAge:rage, rows:rows, principal:prem*12*pay,
+      targetRate:isVar?tgt:null, receiveUntil:p.omega||100,
+      compare: cmp.length>1 ? {head:['납입기간','낸 돈','최저보증 월'].concat(isVar?['목표 '+PSIM.ret+'% 월']:[]), rows:cmp, highlight:hi} : null } };
+}
+function rptData(opt){
+  opt=opt||{};
+  var C=APEX_REPORT.calc, M=APEX_REPORT.man;
+  function v(id){ var e=document.getElementById(id); return e?String(e.value||'').trim():''; }
+  function n(id){ var x=parseFloat(v(id).replace(/,/g,'')); return isFinite(x)?x:0; }
+  var raw=v('s_name'), name=opt.real&&raw&&raw!=='고객님'? raw : rptMask(raw);
+  var age=Math.round(n('s_age'))||40, rage=Math.round(n('s_rage'))||65;
+  var sex=(v('s_gender').indexOf('남')>=0)?'남성':'여성';
+  var gross=n('s_gross'), mGross=Math.round(gross/12);
+  var income=mGross+n('s_self')+n('s_spouse')+n('s_passive')+n('s_other');
+  function sum(ids){ return ids.reduce(function(a,id){return a+n(id);},0); }
+  var fixed=sum(['s_housing','s_loan','s_food','s_telecom','s_transport','s_insurance','s_medical','s_edu','s_support']);
+  var choice=sum(['s_dining','s_shopping','s_travel','s_choice_etc']);
+  var saving=sum(['s_emerg','s_pension','s_irp','s_isa','s_taxfree','s_general']);
+  var surplus=income-fixed-choice-saving;
+  var assume=[];
+
+  var PS=rptPension(age,sex,rage), P=PS&&PS.pension, tgRow=null;
+  if(P) P.rows.forEach(function(x){ if(x.target) tgRow=x; });
+
+  /* 국민연금 — 적어 주신 값이 먼저, 없으면 추정 */
+  var npsIn=n('s_nps'), np;
+  if(npsIn>0) np={monthly:npsIn, estimated:false};
+  else if(gross>0){ var y=Math.max(0,Math.min(rage,60)-27); np={monthly:C.nps(mGross,y).monthly, estimated:true};
+    assume.push('**국민연금** — 계산기 칸이 비어 27세 가입 · '+y+'년 · 지금 월급으로 **추정**했어요. 공단 조회액으로 바꿔 주세요.'); }
+  var retp=n('s_retire_pen'), priv=n('s_pen_now'), hp=0;
+  try{ if(PSIM.useHouse && typeof housePension==='function'){ var h=housePension(n('s_realty'),rage); hp=(h&&h.man)||0; } }catch(e){}
+  var other=[];
+  if(retp>0) other.push({label:'퇴직연금', value:retp, tone:'green'});
+  if(priv>0) other.push({label:'기존 개인연금', value:priv, tone:'orange'});
+  if(hp>0) other.push({label:'주택연금', value:hp, tone:'gray'});
+  var now=(np?np.monthly:0)+retp+priv+hp, withP=now+(tgRow?tgRow.monthly:0), goal=n('s_target'), gap=Math.max(0,goal-withP);
+
+  /* 배분 — 지금 모으는 것 + 새로 드리는 연금 */
+  var alloc=[], AL=[['s_emerg','비상금'],['s_pension','연금저축'],['s_irp','IRP'],['s_isa','ISA'],['s_taxfree','달러·변액'],['s_general','일반 투자']];
+  if(P) alloc.push({name:'제안 연금 (새로)', value:P.premium, tone:'blue'});
+  AL.forEach(function(a,i){ if(n(a[0])>0) alloc.push({name:a[1], value:n(a[0]), tone:['gray','purple','orange','green','mint','red'][i]}); });
+
+  var kp=[];
+  if(P){ kp.push({label:'매월 낼 돈', value:P.premium, sub:P.payYears+'년 동안', icon:'coin'});
+    if(tgRow){ kp.push({label:'나중에 매월 받을 돈', value:tgRow.monthly, sub:rage+'세부터 · '+(PS.isVar?tgRow.label+' 가정':'최저보증')+'\n최저보증 '+M(PS.guarM), icon:'money', tone:'blue'});
+      kp.push({label:'얻는 이익', value:Math.max(0,tgRow.fund-P.principal), sub:'개시 때 적립금 − 낸 돈\n**요건 충족 시** 비과세 대상', icon:'gift', tone:'green'}); } }
+  if(goal>0) kp.push({label:gap>0?'은퇴 후 매달 비는 돈':'목표 생활비', value:gap>0?gap:goal, sub:gap>0?'제안을 더해도 · 목표 '+M(goal):'제안을 더하면 채워져요', icon:'target', tone:gap>0?'red':'green'});
+  else kp.push({label:'지금 매달 남는 돈', value:surplus, sub:'소득 − 지출 − 저축', icon:'coin', tone:surplus>=0?'green':'red'});
+
+  var sections=[];
+  if(goal>0){
+    var st=withP>=goal?'가능':withP>=goal*0.8?'주의':'불가';
+    sections.push({kicker:'핵심 이슈', icon:'target', title:'노후 생활비, 지금 판정은요', cards:[
+      {type:'verdict', status:st, title:st==='가능'?'제안까지 더하면 목표를 채워요':st==='주의'?'거의 다 왔어요 — 조금만 더 채우면 돼요':'아직 많이 비어요 — 함께 채울 방법을 찾아봐요',
+       reasons:['지금 준비된 것 매달 **'+M(now)+'**', tgRow?'제안 연금을 더하면 **'+M(withP)+'**':'제안 연금이 아직 정해지지 않았어요', gap>0?'목표까지 매달 **'+M(gap)+'** 부족':'목표보다 매달 **'+M(withP-goal)+'** 여유'],
+       checks:['목표 생활비를 부부가 함께 정한 금액인지', np&&np.estimated?'국민연금 공단 조회액':'국민연금 금액이 공단 조회액인지', '물가를 생각하면 같은 생활에 돈이 더 들어요 — 여유를 둘지']}
+    ]});
+  }
+  sections.push({kicker:'핵심 이슈', icon:'coin', title:'지금 월급, 어디로 가고 있나요', cards:[
+    {type:'tiles', items:[{label:'매달 들어오는 돈', value:income, sub:'세전 · 계산기 기준'}, {label:'꼭 나가는 돈', value:fixed},
+      {label:'고르는 지출', value:choice}, {label:'저축·투자', value:saving, tone:'blue'}]},
+    {type:'verdict', status:surplus>=(P?P.premium:0)?'가능':'주의',
+     title:surplus>=0?'매달 '+M(surplus)+'이 남아요':'매달 '+M(-surplus)+'이 모자라요',
+     text:P?(surplus>=P.premium?'제안 연금 **'+M(P.premium)+'**은 남는 돈 안에서 낼 수 있어요.':'제안 연금 **'+M(P.premium)+'**을 내려면 지출이나 다른 저축을 조금 옮겨야 해요 — 어디서 옮길지 같이 볼까요?'):''}
+  ]});
+  var yrs=+opt.years||0, sev=n('s_severance');
+  if(yrs>0 && sev>0){
+    var rt=C.retireTax(sev,yrs);
+    sections.push({kicker:'핵심 이슈', icon:'bank', title:'퇴직금 '+M(sev)+', 받는 방법에 따라 세금이 달라져요', cards:[
+      {type:'verdict', status:'가능', title:'IRP로 옮겨 연금으로 나눠 받으면 세금이 줄어요',
+       text:'근속 '+rt.years+'년 · 퇴직금 '+M(sev)+'을 기준으로 계산했어요(추정).',
+       reasons:['한 번에 받으면 약 **'+M(rt.total)+'**','연금으로 나눠 받으면 초기 약 **'+M(rt.irpEarly)+'**, 오래 받으면 약 **'+M(rt.irpLate)+'**'],
+       checks:['실제 퇴직금·근속연수 (회사 확인)','연금으로 받기 시작하는 시점의 요건','세무 전문가 최종 확인']},
+      {type:'tiles3', title:'퇴직소득세 한눈에', icon:'coin', items:[{label:'일시금', value:rt.total, sub:'지방세 포함', tone:'red'},
+        {label:'연금 · 초기', value:rt.irpEarly, sub:'나눠 받을 때', tone:'orange'},{label:'연금 · 장기', value:rt.irpLate, sub:'오래 받을 때', tone:'green'}]}
+    ]});
+    assume.push('**퇴직금** — 계산기의 예상 퇴직금 '+M(sev)+' · 근속 '+rt.years+'년(적어 주신 값)으로 셌어요.');
+  }
+  if(mGross>0){
+    var so=C.social(mGross);
+    sections.push({kicker:'참고', icon:'memo', title:'월급에서 빠지는 4대보험', cards:[
+      {type:'rows', items:[{label:'국민연금',value:so.nps},{label:'건강보험',value:so.health},{label:'장기요양',value:so.care},{label:'고용보험',value:so.employ},{label:'합계 (본인 부담)',value:so.total,strong:true}],
+       note:'연 총급여 '+M(gross)+' ÷ 12 를 월급으로 보고 2026년 요율로 셌어요.'}]});
+  }
+
+  var good=[], todo=[];
+  if(income>0 && saving/income>=0.2) good.push('**소득의 '+Math.round(saving/income*100)+'%**를 이미 모으고 계세요.');
+  if(n('s_pension')+n('s_irp')>0) good.push('**연금저축·IRP**를 이미 쓰고 계세요 — 노후 준비의 바닥이에요.');
+  if(n('s_emerg')>0) good.push('**비상금**을 따로 모으고 계세요 — 급할 때 연금을 깨지 않아도 돼요.');
+  if(np&&!np.estimated&&np.monthly>0) good.push('**국민연금**이 매달 '+M(np.monthly)+' 준비돼 있어요.');
+  if(surplus>0) good.push('매달 **'+M(surplus)+'**이 남아 여유가 있어요.');
+  good.push('은퇴 전에 **미리 준비하려고** 오늘 시간을 내셨어요.');
+  if(np&&np.estimated) todo.push('**국민연금 공단 조회액** 확인하기');
+  if(P) todo.push('**설계서로 최저보증 조건** 같이 읽기');
+  if(sev>0&&!(yrs>0)) todo.push('**회사에 퇴직금 예상액·근속연수** 물어보기');
+  todo.push('**은퇴 뒤 한 달 생활비**를 함께 정해 보기');
+  todo.push('**비과세 요건**을 가입 전에 세무 전문가와 확인하기');
+
+  var thisYear=new Date().getFullYear();
+  var sched=[{when:'이번 주', title:'설계서 함께 읽기', text:'보증 조건 · 사업비 · 해지환급금을 같이 확인해요.'},
+    {when:'다음 달', title:'첫 납입 · 자동이체', text:'월급날 바로 다음 날로 맞추면 잊지 않아요.'}];
+  if(P){ sched.push({when:(thisYear+P.payYears)+'년 · '+(age+P.payYears)+'세', title:'납입 완료', text:'이후엔 내지 않아요.'});
+    sched.push({when:(thisYear+rage-age)+'년 · '+rage+'세', title:'연금 개시', text:'매달 받기 시작해요.', tone:'green'}); }
+
+  if(PS) assume.push('**연금** — 「연금 시뮬레이션」에서 고른 '+PS.p.co+' '+PS.p.name+' · '+(PS.isVar?'수익률 '+PSIM.ret+'% · 선취 사업비 '+PSIM.cPrem+'% · 펀드 보수 '+PSIM.cFund+'% 가정 · ':'')+'수령은 '+P.receiveUntil+'세까지로 셌어요.');
+  if(goal>0) assume.push('**목표 생활비** — 계산기에 적힌 월 '+M(goal)+'이에요(지금 돈 기준 · 물가 미반영).');
+
+  var summary=[];
+  if(P){ summary.push('매달 **'+M(P.premium)+'** × **'+P.payYears+'년**, '+rage+'세부터 받아요.');
+    summary.push('최저보증 기준 매달 **'+M(PS.guarM)+'**'+(PS.isVar&&tgRow?(tgRow.byGuarantee?' — '+tgRow.label+'가 나도 보증 쪽이 더 커요':', '+tgRow.label+'이면 **'+M(tgRow.monthly)+'**(가정)'):'')+(PS.isVar&&tgRow&&tgRow.byGuarantee?'.':'이에요.')); }
+  summary.push('지금 매달 들어오는 돈 **'+M(income)+'**, 남는 돈 **'+M(surplus)+'**이에요.');
+  if(goal>0) summary.push(gap>0?'목표 생활비까지 매달 **'+M(gap)+'**이 더 필요해요.':'제안까지 더하면 목표 생활비 **'+M(goal)+'**을 채워요.');
+  if(yrs>0&&sev>0){ var rr2=C.retireTax(sev,yrs); summary.push('퇴직금은 **IRP로 나눠 받으면** 세금이 최대 약 **'+M(rr2.total-rr2.irpLate)+'** 줄어요(추정).'); }
+  summary.push('비과세·세금은 **요건 충족 시** — 가입 전에 세무 전문가와 꼭 확인해요.');
+
+  var job=v('s_job');
+  return {
+    client:{name:name, age:age, job:job||null, retireAge:rage},
+    advisor:opt.advisor||'APEX 사업단',
+    date:thisYear+'년 '+(new Date().getMonth()+1)+'월',
+    topic:'노후 연금 준비',
+    oneLine:P&&tgRow?'월 **'+M(P.premium)+'**씩 **'+P.payYears+'년** 모으면, '+rage+'세부터 매달 **'+M(tgRow.monthly)+'**'+(PS.isVar?'('+tgRow.label+' 가정)':'')+'을 받는 구조예요.':
+      '지금 소득·지출·노후 준비를 한 장으로 정리했어요.',
+    kpis:kp,
+    proposalHeadline:P?'노후 월급을 하나 더 만들어요':'지금 모습부터 정리했어요',
+    proposalTitle:'매달 이렇게 나눠 담아요',
+    principle:PS?'**제안: '+PS.p.co+' '+PS.p.name+'**\n'+(PS.p.guar||'')+'\n지금 모으는 것은 그대로 두고, 은퇴 뒤 매달 받는 돈을 하나 더 만드는 구조예요.':'',
+    allocation:alloc,
+    good:good.slice(0,3), todo:todo.slice(0,4),
+    pension:P||null,
+    nationalPension:np||null,
+    otherIncome:other,
+    goal:goal>0?goal:null,
+    sections:sections,
+    explain:P?[
+      {q:'왜 '+(PS.isVar?'변액':'')+'연금인가요?', a:PS.isVar?'은퇴까지 **'+(rage-age)+'년**이 남았어요. 긴 시간은 펀드로 굴려야 물가를 이길 수 있고, 펀드가 부진할 때를 위해 **최저보증**이 있는 상품을 골랐어요.':'정해진 방식으로 쌓여 **받을 돈이 미리 보이는** 상품이에요.'},
+      {q:'최저보증이 뭐예요?', a:'펀드 결과와 상관없이 **이만큼은 연금으로 드린다**는 약속이에요. 이번 설계에서는 매달 **'+M(PS.guarM)+'**이에요.'},
+      {q:'왜 '+P.payYears+'년납인가요?', a:'월급이 있을 때 **다 내고 끝내는** 구조예요. 그 뒤로는 내는 돈 없이 기다리기만 하면 돼요.'}
+    ]:null,
+    schedule:sched,
+    summary:summary.slice(0,6),
+    assumptions:assume
+  };
+}
+/* 결과지 창 — 실명은 칸을 켜고 한 번 더 확인해야 들어갑니다(3번) */
+function rptPanel(){
+  var old=document.getElementById('rptPanel'); if(old){ old.remove(); }
+  if(!window.APEX_REPORT){ alert('결과지 엔진(apex_report_engine.js)을 못 불러왔습니다. 새로고침 해 주세요.'); return; }
+  var adv=''; try{ adv=localStorage.getItem('rpt_advisor')||''; }catch(e){}
+  var box=document.createElement('div'); box.id='rptPanel'; box.className='rpt-ov';
+  box.innerHTML='<div class="rpt-pn" role="dialog" aria-label="고객 결과지">'+
+    '<div class="rpt-h">📄 고객 결과지 (토스 테마)</div>'+
+    '<div class="rpt-d">지금 적힌 값으로 카톡용 HTML 한 장을 만듭니다. 연금은 「연금 시뮬레이션」에서 고른 상품 그대로입니다.</div>'+
+    '<label class="rpt-f"><span>근속연수(년) <small>— 적으면 퇴직금 세금 비교 장이 들어갑니다</small></span><input id="rptYears" type="number" inputmode="numeric" min="1" placeholder="모르면 비워 두세요"></label>'+
+    '<label class="rpt-f"><span>보내는 사람</span><input id="rptAdv" value="'+String(adv||'APEX 사업단').replace(/"/g,'&quot;')+'"></label>'+
+    '<label class="rpt-c"><input id="rptReal" type="checkbox"> 실명 넣기 <small>(기본은 가린 이름 '+rptMask((document.getElementById('s_name')||{}).value)+')</small></label>'+
+    '<div class="rpt-b"><button type="button" onclick="rptGo(\'open\')">결과지 열기</button><button type="button" onclick="rptGo(\'save\')">HTML 저장</button>'+
+    '<button type="button" class="rpt-x" onclick="document.getElementById(\'rptPanel\').remove()">닫기</button></div></div>';
+  box.addEventListener('click',function(e){ if(e.target===box) box.remove(); });
+  document.body.appendChild(box);
+  document.getElementById('rptReal').addEventListener('change',function(){
+    if(this.checked && !confirm('카톡으로 나가는 파일에 고객 실명이 들어갑니다. 넣을까요?')) this.checked=false;
+  });
+}
+function rptGo(kind){
+  var opt={ years:parseFloat((document.getElementById('rptYears')||{}).value)||0,
+            advisor:((document.getElementById('rptAdv')||{}).value||'').trim()||'APEX 사업단',
+            real:!!(document.getElementById('rptReal')||{}).checked };
+  try{ localStorage.setItem('rpt_advisor',opt.advisor); }catch(e){}
+  var d=rptData(opt);
+  if(kind==='save') APEX_REPORT.download(d); else APEX_REPORT.open(d);
+}
 </script>
 
 <script>
