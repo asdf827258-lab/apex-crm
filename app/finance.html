@@ -1366,6 +1366,11 @@ a { color: inherit; text-decoration: none; }
 .wk-see{display:flex;flex-direction:column;gap:6px;margin-top:12px;font-size:14.5px;color:#333D4B}.wk-see div{background:#F2F4F6;border-radius:12px;padding:10px 14px}.wk-see b{display:block;font-size:13.5px;color:#6B7684;margin-bottom:2px}
 .wk-bt{width:100%;border-collapse:collapse;margin-top:14px;font-size:14px}.wk-bt th{background:#F2F4F6;color:#6B7684;font-size:13px;padding:8px 6px;text-align:right}.wk-bt th:first-child,.wk-bt td:first-child{text-align:left}
 .wk-bt td{padding:9px 6px;border-bottom:1px solid #E5E8EB;text-align:right;color:#191F28;font-weight:600}.wk-bt tr.on td{background:#E8F3FF;color:#1B64DA;font-weight:800}
+.wk-order{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.wk-order li{display:flex;gap:12px;align-items:flex-start;border-radius:14px;padding:12px 14px;background:#F2F4F6}
+.wk-order li b{display:block;font-size:16px;color:#191F28}.wk-order li small{display:block;font-size:13.5px;color:#4E5968;margin-top:2px;line-height:1.5}
+.wk-pill{flex:none;font-size:13px;font-weight:800;border-radius:8px;padding:4px 9px;margin-top:1px}
+.wk-order li.good .wk-pill{background:#E5F8F0;color:#03B26C}.wk-order li.warn .wk-pill{background:#FFF3E0;color:#C46A00}.wk-order li.bad .wk-pill{background:#FDECEE;color:#C2414F}
 .wk-job{margin-top:12px;background:#E8F3FF;border-radius:12px;padding:11px 14px;font-size:14.5px;color:#1B64DA;line-height:1.6}
 .wk-gap{margin-top:12px;background:#FFF4F4;border-radius:12px;padding:11px 14px;font-size:15px;color:#333D4B}
 .wk-ly{display:flex;flex-direction:column;gap:8px}
@@ -1469,6 +1474,12 @@ var IP_AGE=[
    ③ 가족 — 대출 · 대출 뺀 생활비 · 막내가 독립할 때까지 남은 해(막내 나이를 모르면 셈하지 않음)
    ★ IP_RULE 의 수(3년 · 25세 · 1년 · 12개월)는 <b>APEX 원칙(가정)</b>입니다 — 화면에 그렇게 적습니다.
      보험료 8~15% 는 상담가이드 「보험료 비중」 판정이 쓰던 그 수를 여기로 옮긴 것입니다(5번). */
+/* 계산기 판정 숫자 — 대출(DSR·LTV) · 저축률. 예전엔 최종보고서·상담가이드·점수·팩트체크에 같은 숫자가
+   여섯 벌로 적혀 있었습니다(DSR 35 판정만 여섯 곳 …). 함께 점검 상담의 「고칠 순서」 도 같은 판정을 써야 해서
+   한 곳으로 모았습니다(판 X168 · 5번). 바꾸기 전후 화면 출력이 같음을 확인했습니다. */
+var FIN_RULE={ dsrOk:35, dsrWarn:45, ltvOk:60, ltvWarn:70, saveGood:20, saveMid:10 };
+function finCashKind(d){ return d.surplus>=0&&d.saveRatio>=FIN_RULE.saveGood?'good':d.surplus>=0?'warn':'bad'; }
+function finDebtKind(d){ return d.dsr<=FIN_RULE.dsrOk&&d.ltv<=FIN_RULE.ltvOk?'good':(d.dsr<=FIN_RULE.dsrWarn||d.ltv<=FIN_RULE.ltvWarn?'warn':'bad'); }
 var IP_RULE={ indepAge:25, spouseYears:3, meMonths:12, premLo:8, premHi:15 };
 /* ── 소득 셈의 배수는 직업군 평균 데이터에서 (판 X167) — 사장님 말씀 2026-10-22
    「배수는 평균 데이터를 기준으로 하고 직업군을 나누어서 다시 나눠서 해줘」
@@ -3842,12 +3853,12 @@ function renderFactCheck(essential, totalIncome, emerg, insurance, surplus, savi
             },
             {
               n:'③ 동시성 검증',
-              tag: surplus>=0&&savingRatio>=20?'fc-ok':surplus>=0?'fc-warn':'fc-bad',
-              tagLabel: surplus>=0&&savingRatio>=20?'동시 진행 가능':surplus>=0?'부분 가능':'구조 개선 시급',
+              tag: surplus>=0&&savingRatio>=FIN_RULE.saveGood?'fc-ok':surplus>=0?'fc-warn':'fc-bad',
+              tagLabel: surplus>=0&&savingRatio>=FIN_RULE.saveGood?'동시 진행 가능':surplus>=0?'부분 가능':'구조 개선 시급',
               val:`잉여금 ${fmt(surplus)}만원 / 저축 ${savingRatio}%`,
               desc:'주택·교육·은퇴 목표자금이 동시에 진행 가능한 잉여금 구조 검증',
               guide:'큰 목표자금인 주택/교육/은퇴가 한쪽으로 쏠리지 않고 동시 진행 가능한지 확인',
-              action: surplus<0?'⚠️ 적자 구조. 4개 레버(주거·대출·보험·연금) 최적화 시급':savingRatio<20?'⚠️ 저축률 미달. 선택 지출 절감으로 저축률 20% 이상 확보 필요':'✅ 목표자금 동시 진행 가능'
+              action: surplus<0?'⚠️ 적자 구조. 4개 레버(주거·대출·보험·연금) 최적화 시급':savingRatio<FIN_RULE.saveGood?'⚠️ 저축률 미달. 선택 지출 절감으로 저축률 20% 이상 확보 필요':'✅ 목표자금 동시 진행 가능'
             },
           ].map(f=>`<div style="border:1.5px solid var(--g2);border-radius:10px;padding:12px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -7692,7 +7703,7 @@ window.addEventListener('DOMContentLoaded', function(){
     var taxable=Math.max(estateBase-spouseDeduct-personalDeduct-mort-num('s_debt'),0);
     function tax(t){ if(t<=0)return 0; if(t<=10000)return Math.round(t*.1); if(t<=50000)return Math.round(t*.2-1000); if(t<=100000)return Math.round(t*.3-6000); if(t<=300000)return Math.round(t*.4-16000); return Math.round(t*.5-46000); }
     var inheritTax=tax(taxable), inheritGap=Math.max(inheritTax-num('inh_life'),0);
-    var score=(surplus>=0?20:6)+(saveRatio>=20?20:saveRatio>=10?12:5)+(pensionGap<=0?20:pensionGap<=150?12:5)+(dsr<=35&&ltv<=60?20:dsr<=45||ltv<=70?12:5)+(inheritGap<=0?20:inheritTax<5000?12:5);
+    var score=(surplus>=0?20:6)+(saveRatio>=FIN_RULE.saveGood?20:saveRatio>=FIN_RULE.saveMid?12:5)+(pensionGap<=0?20:pensionGap<=150?12:5)+(dsr<=FIN_RULE.dsrOk&&ltv<=FIN_RULE.ltvOk?20:dsr<=FIN_RULE.dsrWarn||ltv<=FIN_RULE.ltvWarn?12:5)+(inheritGap<=0?20:inheritTax<5000?12:5);
     return {name,age,job,gender,risk,rage,gross,income,fixed,choice,saving,surplus,saveRatio,insRatio,target,futureTarget,totalPension,pensionGap,employeeNhis,regionalNhis,nhisIncrease,npsReduction,house,mort,mortPay,ltv,dsr,estateBase,inheritTax,inheritGap,score};
   }
   function badge(label,type){ var cls=type==='good'?'cf-good':type==='warn'?'cf-warn':'cf-bad'; return '<span class="cf-badge '+cls+'">'+label+'</span>'; }
@@ -7711,9 +7722,9 @@ window.addEventListener('DOMContentLoaded', function(){
   window.renderContentFirstFinalReport=function(){
     var box=el('final-report-content'); if(!box) return;
     var d=snapshot();
-    var cashType=d.surplus>=0&&d.saveRatio>=20?'good':d.surplus>=0?'warn':'bad';
+    var cashType=finCashKind(d);
     var pensionType=d.pensionGap<=0?'good':d.pensionGap<=150?'warn':'bad';
-    var debtType=d.dsr<=35&&d.ltv<=60?'good':d.dsr<=45||d.ltv<=70?'warn':'bad';
+    var debtType=finDebtKind(d);
     var estateType=d.inheritGap<=0?'good':d.inheritTax<5000?'warn':'bad';
     var headline=d.score>=80?'현재 구조는 안정적입니다. 이제는 상품 추가보다 노후 현금흐름·세금·대출 리스크를 고정하는 단계입니다.':d.score>=55?'현재 구조는 유지 가능하지만 연금, 대출, 건보료 중 하나가 흔들리면 월 현금흐름 압박이 커질 수 있습니다.':'현재는 신규 상품보다 현금흐름 재정리와 위험순위 조정이 먼저 필요합니다.';
     box.innerHTML='<div class="cf-report">'
@@ -7960,7 +7971,7 @@ window.addEventListener('DOMContentLoaded', function(){
     var cancer=num('ins_cancer_diag',0), cancerTreat=num('ins_cancer_treat',0), brain=num('ins_brain',0), heart=num('ins_heart',0), care=num('ins_care',0)+num('ins_homecare',0), renewal=num('ins_renewal',0);
     var employeeNhis=Math.round(gross/12*0.0709/2), regionalNhis=Math.round((income*12*0.03 + net*0.00035)/12), nhisIncrease=Math.max(regionalNhis-employeeNhis,0);
     var npsReduction=years>0?Math.round(Math.min(55,years*1.8)):0;
-    var score=(surplus>=0?18:6)+(saveRatio>=20?18:saveRatio>=10?11:5)+(pensionGap<=0?18:pensionGap<=150?11:5)+(dsr<=35&&ltv<=60?16:dsr<=45||ltv<=70?10:4)+(inheritGap<=0?15:inheritTax<5000?9:4)+(cancer>=3000&&brain>=1000&&heart>=1000?15:8);
+    var score=(surplus>=0?18:6)+(saveRatio>=FIN_RULE.saveGood?18:saveRatio>=FIN_RULE.saveMid?11:5)+(pensionGap<=0?18:pensionGap<=150?11:5)+(dsr<=FIN_RULE.dsrOk&&ltv<=FIN_RULE.ltvOk?16:dsr<=FIN_RULE.dsrWarn||ltv<=FIN_RULE.ltvWarn?10:4)+(inheritGap<=0?15:inheritTax<5000?9:4)+(cancer>=3000&&brain>=1000&&heart>=1000?15:8);
     return {name:val('s_name','고객님'),age:age,gender:val('s_gender',''),job:val('s_job',''),risk:val('s_itype','중립형'),rage:rage,gross:gross,income:income,fixed:fixed,choice:choice,saving:saving,surplus:surplus,saveRatio:saveRatio,fixedRatio:fixedRatio,target:target,futureTarget:futureTarget,totalPension:totalPension,pensionGap:pensionGap,net:net,house:house,mort:mort,mortPay:mortPay,dsr:dsr,ltv:ltv,estate:estate,inheritTax:inheritTax,inheritGap:inheritGap,gift:gift,insFee:insFee,insRatio:insRatio,cancer:cancer,cancerTreat:cancerTreat,brain:brain,heart:heart,care:care,renewal:renewal,employeeNhis:employeeNhis,regionalNhis:regionalNhis,nhisIncrease:nhisIncrease,npsReduction:npsReduction,score:Math.max(0,Math.min(100,score))};
   }
   function quickTax(x){x=Math.max(0,Number(x)||0);var rows=[[10000,.10,0],[50000,.20,1000],[100000,.30,6000],[300000,.40,16000],[Infinity,.50,46000]];for(var i=0;i<rows.length;i++){if(x<=rows[i][0])return Math.max(0,Math.round(x*rows[i][1]-rows[i][2]));}return 0}
@@ -7970,7 +7981,9 @@ window.addEventListener('DOMContentLoaded', function(){
 .report-action-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.report-safe-btn,.ultimate-print-btn{border:0;border-radius:10px;padding:9px 14px;font-weight:900;font-size:var(--t6,13px);cursor:pointer;background:#1A56DB;color:#fff;box-shadow:0 8px 18px rgba(26,86,219,.18);min-height:44px;display:inline-flex;align-items:center;justify-content:center}.report-safe-btn.gray{background:#111827}.pretty-report{background:#fff;border:1px solid #E6EAF2;border-radius:24px;padding:20px;box-shadow:0 18px 48px rgba(15,23,42,.08);color:#101828;letter-spacing:-.02em}.pr-hero,.guide-hero{background:linear-gradient(135deg,#0F172A 0%,#1A56DB 67%,#38BDF8 100%);color:#fff;border-radius:22px;padding:28px 30px;margin-bottom:12px;display:flex;align-items:flex-end;justify-content:space-between;gap:18px}.guide-hero{display:block}.pr-kicker{font-size:var(--t6,13px);font-weight:950;letter-spacing:.14em;color:rgba(255,255,255,.62);margin-bottom:8px}.pr-hero h1,.guide-hero h1{font-size:29px;line-height:1.15;margin:0 0 7px;letter-spacing:-.075em}.pr-hero p,.guide-hero p{font-size:var(--t6,13px);line-height:1.7;margin:0;color:rgba(255,255,255,.82);max-width:780px}.pr-score{width:96px;height:96px;border-radius:25px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.25);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}.pr-score span{font-size:var(--t6,13px);color:rgba(255,255,255,.68);font-weight:900}.pr-score b{font-size:36px;line-height:1;font-weight:950}.pr-score em{font-size:var(--t6,13px);font-style:normal;color:rgba(255,255,255,.72)}.pr-client-line{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 11px}.pr-client-line span{background:#F2F6FF;border:1px solid #D8E7FF;color:#174EA6;font-size:var(--t6,13px);font-weight:850;border-radius:999px;padding:5px 10px}.pr-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}.pr-metric{border:1px solid #E6EAF2;border-radius:17px;padding:13px 14px;background:linear-gradient(180deg,#FFFFFF,#F8FAFC)}.pr-metric.blue{background:linear-gradient(180deg,#EFF6FF,#fff);border-color:#BFDBFE}.pr-metric.green{background:linear-gradient(180deg,#ECFDF5,#fff);border-color:#A7F3D0}.pr-metric.gold{background:linear-gradient(180deg,#FFFBEB,#fff);border-color:#FDE68A}.pr-metric.red{background:linear-gradient(180deg,#FEF2F2,#fff);border-color:#FECACA}.pr-mk{font-size:var(--t6,13px);color:#667085;font-weight:850;margin-bottom:3px}.pr-mv{font-size:var(--t2,20px);font-weight:950;color:#101828;letter-spacing:-.06em}.pr-ms{font-size:var(--t6,13px);color:#667085;margin-top:1px}.pr-summary,.guide-message,.guide-close{background:#F8FBFF;border:1px solid #D8E7FF;border-left:5px solid #1A56DB;border-radius:17px;padding:14px 16px;margin:10px 0}.guide-close{background:#0F172A;color:#fff;border:0}.pr-summary b,.guide-message b{font-size:var(--t5,14px);color:#101828}.pr-summary p,.guide-message p,.guide-close p{font-size:var(--t6,13px);line-height:1.72;color:#344054;margin:5px 0 0}.guide-close p{color:rgba(255,255,255,.88);font-size:var(--t6,13px)}.pr-section-title{font-size:var(--t3,17px);font-weight:950;margin:18px 0 9px;color:#101828;letter-spacing:-.05em}.pr-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pr-card,.guide-agenda>div,.choice-row>div,.insurance-cards>div,.question-grid>div,.pr-flow>div{border:1px solid #E6EAF2;border-radius:17px;background:#fff;padding:14px 15px;box-shadow:0 4px 12px rgba(15,23,42,.035)}.pr-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}.pr-card h3{font-size:var(--t5,14px);margin:0;color:#101828}.pr-card p{font-size:var(--t6,13px);line-height:1.72;color:#344054;margin:0}.pr-pill{font-size:var(--t6,13px);font-weight:950;border-radius:999px;padding:4px 8px;white-space:nowrap}.pr-pill.good{background:#ECFDF5;color:#047857}.pr-pill.warn{background:#FFFBEB;color:#B45309}.pr-pill.bad{background:#FEF2F2;color:#B91C1C}.pr-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #E6EAF2;border-radius:15px;overflow:hidden;font-size:var(--t6,13px);background:#fff}.pr-table th{background:#101828;color:#fff;padding:9px 11px;text-align:left;font-size:var(--t6,13px);letter-spacing:.03em}.pr-table td{padding:9px 11px;border-top:1px solid #EEF2F7;color:#344054;vertical-align:top}.pr-table tr:nth-child(even) td{background:#F8FAFC}.pr-flow,.guide-agenda,.choice-row,.insurance-cards,.question-grid{display:grid;gap:8px}.pr-flow,.guide-agenda,.insurance-cards{grid-template-columns:repeat(4,1fr)}.choice-row{grid-template-columns:repeat(3,1fr)}.question-grid{grid-template-columns:repeat(2,1fr)}.pr-flow b{width:28px;height:28px;border-radius:10px;background:#1A56DB;color:#fff;display:inline-flex;align-items:center;justify-content:center;margin-bottom:7px}.pr-flow span,.choice-row span,.question-grid span,.guide-agenda span,.insurance-cards p{display:block;font-size:var(--t6,13px);line-height:1.62;color:#344054}.guide-agenda em{font-style:normal;font-size:var(--t6,13px);font-weight:950;color:#1A56DB}.guide-agenda b,.choice-row b,.insurance-cards b,.question-grid b{display:block;font-size:var(--t6,13px);margin:4px 0;color:#101828}.pr-notice{margin-top:12px;border-radius:14px;background:#F2F4F7;color:#475467;font-size:var(--t6,13px);line-height:1.62;padding:11px 13px}@media(max-width:980px){.pr-metrics,.pr-grid2,.pr-flow,.guide-agenda,.question-grid,.insurance-cards,.choice-row{grid-template-columns:1fr}.pr-hero{display:block}.pr-score{margin-top:12px}.pretty-report{padding:12px}}@media print{@page{size:A4;margin:8mm}html,body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.pretty-report{border:0!important;border-radius:0!important;padding:0!important;box-shadow:none!important}.pr-hero,.guide-hero{border-radius:16px;padding:18px 20px;margin-bottom:7px}.pr-hero h1,.guide-hero h1{font-size:22px}.pr-hero p,.guide-hero p{font-size:10.5px}.pr-client-line{margin:6px 0}.pr-metrics{grid-template-columns:repeat(3,1fr);gap:5px;margin:6px 0}.pr-metric{padding:8px 9px;border-radius:12px}.pr-mv{font-size:15px}.pr-ms,.pr-mk{font-size:8.5px}.pr-summary,.guide-message,.guide-close{padding:9px 11px;margin:6px 0;border-radius:12px}.pr-summary p,.guide-message p,.guide-close p{font-size:10px;line-height:1.55}.pr-section-title{font-size:13px;margin:11px 0 5px}.pr-grid2{grid-template-columns:1fr 1fr;gap:5px}.pr-card{padding:8px 9px;border-radius:12px;break-inside:auto}.pr-card h3{font-size:11.5px}.pr-card p{font-size:9.4px;line-height:1.52}.pr-pill{font-size:8px;padding:2px 6px}.pr-table{font-size:9.2px}.pr-table th,.pr-table td{padding:6px 7px}.pr-flow,.guide-agenda,.insurance-cards{grid-template-columns:repeat(4,1fr);gap:5px}.choice-row{grid-template-columns:repeat(3,1fr);gap:5px}.question-grid{grid-template-columns:repeat(2,1fr);gap:5px}.pr-flow>div,.guide-agenda>div,.choice-row>div,.insurance-cards>div,.question-grid>div{padding:8px;border-radius:11px;box-shadow:none;break-inside:avoid}.pr-flow span,.choice-row span,.question-grid span,.guide-agenda span,.insurance-cards p{font-size:9.2px;line-height:1.45}.pr-flow b{width:22px;height:22px;border-radius:7px;margin-bottom:3px}.pr-notice{font-size:8.8px;padding:7px 9px;margin-top:7px}.sidebar,.report-topbar,.sec-hd,.print-btn,.report-safe-btn,.gen-btn,.ultimate-no-print{display:none!important}.main{height:auto!important;overflow:visible!important}.app{display:block!important}.tab-pane{display:none!important}.tab-pane.ultimate-print-target{display:block!important;padding:0!important}}';
     var st=document.createElement('style'); st.id='ultimate-stability-style'; st.textContent=css; document.head.appendChild(st);
   }
-  function renderFinal(){addStyle(); var d=data(), cash=d.surplus>=0?'good':'bad', pension=d.pensionGap<=0?'good':d.pensionGap<=150?'warn':'bad', debt=d.dsr<=35&&d.ltv<=60?'good':(d.dsr<=45||d.ltv<=70?'warn':'bad'), inherit=d.inheritGap<=0?'good':(d.inheritTax<5000?'warn':'bad'), ins=(d.cancer>=3000&&d.brain>=1000&&d.heart>=1000&&d.care>0?'good':(d.cancer>=2000?'warn':'bad'));
+  /* 함께 점검 상담·결과지가 이 계산(소득·지출·저축률·DSR·LTV·상속세 추정)을 <b>다시 짜지 않고</b> 그대로 씁니다(판 X168 · 5번) */
+  window.finData=data;
+  function renderFinal(){addStyle(); var d=data(), cash=d.surplus>=0?'good':'bad', pension=d.pensionGap<=0?'good':d.pensionGap<=150?'warn':'bad', debt=finDebtKind(d), inherit=d.inheritGap<=0?'good':(d.inheritTax<5000?'warn':'bad'), ins=(d.cancer>=3000&&d.brain>=1000&&d.heart>=1000&&d.care>0?'good':(d.cancer>=2000?'warn':'bad'));
     var html='<article class="pretty-report"><section class="pr-hero"><div><div class="pr-kicker">APEX YUN PRO · FINAL CLIENT REPORT</div><h1>'+esc(d.name)+' 최종 상담보고서</h1><p>오늘 보고서는 고객님의 현금흐름, 연금, 보험, 부동산·대출, 상속·증여를 한 장의 재무 구조로 연결해 “무엇을 먼저 정리해야 하는지” 보여주는 상담용 요약본입니다.</p></div><div class="pr-score"><span>종합점수</span><b>'+d.score+'</b><em>/100</em></div></section>'+
     '<div class="pr-client-line"><span>'+esc(d.name)+'</span><span>'+d.age+'세</span><span>'+esc(d.job)+'</span><span>투자성향 '+esc(d.risk)+'</span><span>은퇴목표 '+d.rage+'세</span></div>'+
     '<section class="pr-metrics">'+metric('월 소득',fmt(d.income),'연소득 '+fmt(d.gross),'blue')+metric('월 잉여금',fmt(d.surplus),'저축률 '+pct(d.saveRatio),d.surplus>=0?'green':'red')+metric('순자산 추정',fmt(d.net),'부동산·연금·부채 반영','gold')+metric('연금 부족액',fmt(d.pensionGap),'은퇴 목표 생활비 기준',pension==='good'?'green':'red')+metric('보험료 비중',pct(d.insRatio),'월 보험료 '+fmt(d.insFee),d.insRatio<=12?'green':'red')+metric('상속세 부족재원',fmt(d.inheritGap),'종신보험 재원 반영',inherit==='good'?'green':'red')+'</section>'+
@@ -8053,7 +8066,7 @@ window.addEventListener('DOMContentLoaded', function(){
     var insFee=num('ins_monthly',num('s_insurance',0)), insRatio=income?insFee/income*100:0;
     var cancer=num('ins_cancer_diag',0), cancerTreat=num('ins_cancer_treat',0), brain=num('ins_brain',0), heart=num('ins_heart',0), care=num('ins_care',0)+num('ins_homecare',0), renewal=num('ins_renewal',0);
     var nhisNow=Math.round(gross/12*0.0709/2), nhisAfter=Math.round((income*12*0.03+net*0.00035)/12), nhisGap=Math.max(nhisAfter-nhisNow,0);
-    var score=(surplus>=0?18:6)+(saveRatio>=20?18:saveRatio>=10?11:5)+(pensionGap<=0?18:pensionGap<=150?11:5)+(dsr<=35&&ltv<=60?16:dsr<=45||ltv<=70?10:4)+(inheritGap<=0?15:inheritTax<5000?9:4)+(cancer>=3000&&brain>=1000&&heart>=1000?15:8);
+    var score=(surplus>=0?18:6)+(saveRatio>=FIN_RULE.saveGood?18:saveRatio>=FIN_RULE.saveMid?11:5)+(pensionGap<=0?18:pensionGap<=150?11:5)+(dsr<=FIN_RULE.dsrOk&&ltv<=FIN_RULE.ltvOk?16:dsr<=FIN_RULE.dsrWarn||ltv<=FIN_RULE.ltvWarn?10:4)+(inheritGap<=0?15:inheritTax<5000?9:4)+(cancer>=3000&&brain>=1000&&heart>=1000?15:8);
     return {name:val('s_name','고객님'),age:age,gender:val('s_gender',''),job:val('s_job',''),risk:val('s_itype','중립형'),income:income,fixed:fixed,choice:choice,saving:saving,surplus:surplus,saveRatio:saveRatio,fixedRatio:fixedRatio,years:years,target:target,futureTarget:futureTarget,totalPension:totalPension,pensionGap:pensionGap,house:house,mort:mort,mortPay:mortPay,ltv:ltv,dsr:dsr,debt:debt,net:net,estate:estate,taxable:taxable,inheritTax:inheritTax,inheritGap:inheritGap,gift:gift,life:life,insFee:insFee,insRatio:insRatio,cancer:cancer,cancerTreat:cancerTreat,brain:brain,heart:heart,care:care,renewal:renewal,nhisNow:nhisNow,nhisAfter:nhisAfter,nhisGap:nhisGap,score:Math.max(0,Math.min(100,score))};
   }
   function addMapStyle(){
@@ -8077,7 +8090,7 @@ window.addEventListener('DOMContentLoaded', function(){
     var box=by('final-report-content'); if(!box) return '';
     var cashKind=d.surplus>=0&&d.saveRatio>=15?'good':d.surplus>=0?'warn':'bad';
     var pensionKind=d.pensionGap<=0?'good':d.pensionGap<=150?'warn':'bad';
-    var loanKind=d.dsr<=35&&d.ltv<=60?'good':d.dsr<=45||d.ltv<=70?'warn':'bad';
+    var loanKind=finDebtKind(d);
     var insKind=d.cancer>=3000&&d.brain>=1000&&d.heart>=1000?'good':d.cancer>=2000?'warn':'bad';
     var inheritKind=d.inheritGap<=0?'good':d.inheritTax<5000?'warn':'bad';
     var html='<article class="final-map-wrap"><section class="fm-hero"><div><div class="fm-kicker">APEX YUN PRO · TOTAL CONSULTING MAP</div><h1>'+esc(d.name)+'님 종합 재무상담 가이드맵</h1><p>최종보고서는 한 장의 긴 설명서가 아니라, 상담자가 종합대시보드부터 상속·증여까지 순서대로 짚어갈 수 있는 지도입니다. 각 칸은 고객의 현재 입력값을 기준으로 요약되며, 필요한 칸만 별도 인쇄할 수 있습니다.</p></div><div class="fm-score"><span>종합점수</span><b>'+Math.round(d.score)+'</b><em>/100</em></div></section>'+ 
@@ -11540,9 +11553,11 @@ function ipBase(I){
   var mInc=own/12, prem={avg:IP_AVG.prem?IP_AVG.prem.v:null, lo:mInc>0?mInc*R.premLo/100:null, hi:mInc>0?mInc*R.premHi/100:null, have:I.prem};
   prem.base=prem.avg==null?null:(mInc>0?Math.min(prem.hi,Math.max(prem.lo,prem.avg)):prem.avg);
   function w(f,m){ return (f!=null&&m!=null&&f+m>0)?Math.round(f/(f+m)*20)*5:null; }
-  /* 대출이 끝나고 자녀가 독립하면 — 같은 셈에 대출 0 · 자녀 0 (생활비는 그대로 둔 단순 셈) */
-  var lf=famBy(0,0,null), later=ipMid([fam.avg,fam.inc,lf.v]);
-  return {fam:fam, me:me, prem:prem, job:J, w:w(fam.base,me.base), wLater:w(later,me.base), famLater:later};
+  /* 대출이 끝나고 자녀가 독립하면 — 같은 셈에 대출 0 · 자녀 0 (생활비는 그대로 둔 단순 셈).
+     ★ 판 X168 — 사장님 말씀 「미래 장면에도 본인 대출을 넣어서 다시 셈해줘」: 소득 셈의 빚 배수도
+       본인 대출이 남은 만큼만 남깁니다 — 그때 대출 ÷ 지금 대출(그때는 0 → 0). 지금 대출이 없으면 그대로 */
+  var debtLater=0, lf=famBy(debtLater,0,null), incLater=fam.inc==null?null:(I.debt>0?fam.inc*debtLater/I.debt:fam.inc), later=ipMid([fam.avg,incLater,lf.v]);
+  return {fam:fam, me:me, prem:prem, job:J, w:w(fam.base,me.base), wLater:w(later,me.base), famLater:later, famIncLater:incLater};
 }
 function ipSrcText(){
   var a=[];
@@ -11563,6 +11578,42 @@ function ipTableRows(I,X){
           ['**기준값** (가운데)',ipCell(X.fam.base,'—'),ipCell(X.me.base,'—')],
           ['지금 가진 것',X.fam.have,X.me.have],
           ['모자란 돈',X.fam.gap===0?'없음':ipCell(X.fam.gap,'—'),X.me.gap===0?'없음':ipCell(X.me.gap,'—')]];
+}
+/* ═══════════════════════════════════════════════════════════
+   계산기 기능을 상담 말로 재구성 (판 X168) — 사장님 말씀 2026-10-22
+   「기존 재무설계계산기를 따와서 기능들을 가져오되 재해석해서 재구성해」
+   계산은 <b>다시 짜지 않습니다</b> — 최종보고서가 쓰는 finData()(소득·지출·저축률·DSR·LTV·상속세 추정)와
+   판정(finCashKind · finDebtKind · FIN_RULE)을 그대로 부르고, 상담 화면과 결과지가 이 한 곳(fsPlan)을 읽습니다.
+     현금흐름 · 팩트체크 → 「월급이 어디로 가나요」     부동산·대출 → 「대출이 노후를 먹나요」
+     교육자금 → 「교육비와 노후가 겹쳐요」             상속·증여 → 「남길 때 드는 세금」
+     종합 점수 → 「고칠 순서 — 바닥부터」(재무설계의 집 순서)
+   ★ DSR 은 계산기 그대로 주택담보대출 30년 원리금균등 가정 · 상속세는 추정(요건·공제는 세무 전문가 확인 · 2번)
+   ═══════════════════════════════════════════════════════════ */
+var FS_LV={good:'가능',warn:'주의',bad:'점검 필요'};
+function fsRetireKind(n){ return !(n&&n.goal>0)?null:n.withP>=n.goal?'good':n.withP>=n.goal*0.8?'warn':'bad'; }
+function fsPlan(n){
+  if(typeof window.finData!=='function') return null;
+  var d=finData(), I=ipPlan(), X=ipBase(I);
+  function v(id){ var e=document.getElementById(id), x=parseFloat(e?String(e.value).replace(/,/g,''):''); return isFinite(x)?x:0; }
+  var loanM=v('s_loan'), eduM=v('s_edu'), emerg=v('s_emerg'), rage=v('s_rage')||65;
+  var cash={income:d.income, fixed:d.fixed, choice:d.choice, saving:d.saving, surplus:d.surplus, saveRatio:d.saveRatio, kind:finCashKind(d)};
+  var debt={loanM:loanM, loanRatio:d.income?loanM/d.income*100:0, total:v('s_debt'), house:d.house, mort:d.mort, mortPay:d.mortPay, dsr:d.dsr, ltv:d.ltv, kind:finDebtKind(d), any:loanM>0||d.mort>0||v('s_debt')>0};
+  var ey=(I.kids>0&&I.youngest!=null)?Math.max(0,IP_RULE.indepAge-I.youngest):null;
+  var edu={eduM:eduM, years:ey, total:ey!=null?eduM*12*ey:null, endAge:ey!=null?I.age+ey:null, rage:rage};
+  edu.on=eduM>0&&ey>0; edu.kind=!edu.on?null:(edu.endAge>rage?'bad':'good');
+  var est={estate:d.estate, tax:d.inheritTax, gap:d.inheritGap, life:v('inh_life')}; est.on=d.inheritTax>0; est.kind=!est.on?null:(d.inheritGap>0?'warn':'good');
+  function cov(x){ return x.base==null?null:(x.gap===0?'good':(x.have>0?'warn':'bad')); }
+  var order=[
+    {k:'cash',  t:'남는 돈 (현금흐름)', kind:cash.kind, why:cash.surplus>=0?'매달 '+APEX_REPORT.man(cash.surplus)+' 남아요 · 저축률 '+Math.floor(cash.saveRatio)+'%':'매달 '+APEX_REPORT.man(-cash.surplus)+' 모자라요'},
+    {k:'emerg', t:'비상금', kind:emerg>0?'good':'bad', why:emerg>0?'매달 '+APEX_REPORT.man(emerg)+'씩 따로 모아요':'따로 모으는 돈이 없어요'},
+    {k:'fam',   t:'보장 · 가족 지키기', kind:cov(X.fam), why:X.fam.base==null?'기준값을 셀 숫자가 비어 있어요':(X.fam.gap>0?'기준값보다 '+APEX_REPORT.man(X.fam.gap)+' 모자라요':'기준값을 넘어요')},
+    {k:'me',    t:'보장 · 내 연금 지키기', kind:cov(X.me), why:X.me.base==null?'기준값을 셀 숫자가 비어 있어요':(X.me.gap>0?'기준값보다 '+APEX_REPORT.man(X.me.gap)+' 모자라요':'기준값을 넘어요')},
+    {k:'debt',  t:'대출', kind:debt.any?debt.kind:'good', why:debt.any?'주택담보 DSR '+Math.round(d.dsr)+'% · LTV '+Math.round(d.ltv)+'%'+(loanM>0?' · 매달 원리금 '+APEX_REPORT.man(loanM):''):'대출이 없어요'},
+    {k:'retire',t:'노후 연금', kind:fsRetireKind(n), why:n&&n.goal>0?(n.gap0>0?'지금 그대로면 매달 '+APEX_REPORT.man(n.gap0)+' 비어요':'목표를 채워요'):'목표 생활비를 넣으면 셀 수 있어요'}];
+  if(edu.on) order.push({k:'edu', t:'교육비', kind:edu.kind, why:'막내 독립까지 '+ey+'년 · 앞으로 약 '+APEX_REPORT.man(edu.total)+(edu.endAge>rage?' · 은퇴 뒤까지 이어져요':'')});
+  if(est.on) order.push({k:'est', t:'남길 것 (상속)', kind:est.kind, why:'상속세 추정 '+APEX_REPORT.man(est.tax)+(est.gap>0?' · 재원 '+APEX_REPORT.man(est.gap)+' 모자라요':' · 사망보험금으로 낼 수 있어요')});
+  var first=null; order.forEach(function(o){ if(!first&&o.kind&&o.kind!=='good') first=o; });
+  return {d:d, cash:cash, debt:debt, edu:edu, est:est, order:order, first:first};
 }
 function ipFamText(I){
   if(I.life<=0) return '사망보험금이 **없어요**. 남은 대출 **'+APEX_REPORT.man(I.debt)+'**은 그대로 가족에게 남아요.';
@@ -11688,7 +11739,7 @@ function rptData(opt){
       note:'위 빈칸 계산은 오늘 돈 기준이에요. 물가까지 넣으면 빈칸은 더 커져요.'});
     sections.push({kicker:'핵심 이슈', icon:'hourglass', title:'지금 그대로면, 은퇴하는 날 월급이 이렇게 줄어요', cards:cards0,
       ask:gap0>0?'매달 '+M(gap0)+'이 비는 날이 오면, 어디부터 줄이실 건가요? 같이 미리 막아 봐요.':''});
-    var st=withP>=goal?'가능':withP>=goal*0.8?'주의':'점검 필요';   /* 「불가」 는 포기로 읽힙니다 — 사장님 말씀 2026-10-22 */
+    var st=FS_LV[fsRetireKind({goal:goal, withP:withP})];   /* 「불가」 는 포기로 읽힙니다(판 X163) · 판정은 「고칠 순서」 와 한 자(판 X168) */
     sections.push({kicker:'핵심 이슈', icon:'target', title:'오늘 제안까지 더하면, 판정은요', cards:[
       {type:'verdict', status:st, title:st==='가능'?'제안까지 더하면 목표를 채워요':st==='주의'?'거의 다 왔어요 — 조금만 더 채우면 돼요':'아직 많이 비어요 — 함께 채울 방법을 찾아봐요',
        reasons:['지금 준비된 것 매달 **'+M(now)+'**', tgRow?'제안 연금을 더하면 **'+M(withP)+'**':'제안 연금이 아직 정해지지 않았어요', gap>0?'목표까지 매달 **'+M(gap)+'** 부족':'목표보다 매달 **'+M(withP-goal)+'** 여유'],
@@ -11783,6 +11834,30 @@ function rptData(opt){
   if(I.life<=0||I.left<=0) todo.push('**사망보험금이 대출을 갚고도 남는지** 같이 보기');
   if(I.kids>0&&I.youngest==null) todo.push('**막내 자녀 나이** 알려 주기 — 가족 기준값을 셈해요');
   if(meEmpty.length) todo.push('**'+meEmpty.slice(0,3).join(' · ')+'** 비어 있는 곳 점검하기 (보장은 심사 결과에 따릅니다)');
+
+  /* 계산기 기능을 상담 말로 — 대출 · 교육비 · 남길 것 · 고칠 순서 (판 X168) */
+  var F=fsPlan({goal:goal, now:now, withP:withP, gap0:gap0});
+  if(F){
+    var fc=[];
+    if(F.debt.any) fc.push({type:'tiles', title:'대출이 노후를 먹나요', icon:'house', items:[
+      {label:'매달 대출로 나가는 돈', value:F.debt.loanM, sub:'월급의 '+Math.round(F.debt.loanRatio)+'%', tone:F.debt.loanRatio>0?'orange':null},
+      {label:'주택담보 DSR', value:Math.round(F.debt.dsr)+'', unit:'%', sub:'30년 원리금균등 가정', tone:F.debt.kind==='good'?'green':F.debt.kind==='warn'?'orange':'red'},
+      {label:'LTV', value:Math.round(F.debt.ltv)+'', unit:'%', sub:'집값 대비 담보대출'},
+      {label:'판정', value:FS_LV[F.debt.kind], sub:'DSR '+FIN_RULE.dsrOk+'% · LTV '+FIN_RULE.ltvOk+'% 이하면 가능 (계산기 기준)'}],
+      note:'은퇴 뒤에도 대출이 남으면 그 원리금은 연금에서 나가요.'});
+    if(F.edu.on) fc.push({type:'text', title:'교육비와 노후가 겹쳐요', icon:'calendar',
+      text:'막내가 독립할 때까지 **'+F.edu.years+'년** · 교육비 월 **'+APEX_REPORT.man(F.edu.eduM)+'** → 앞으로 약 **'+APEX_REPORT.man(F.edu.total)+'**.\n그때 고객님은 **'+F.edu.endAge+'세** — '+(F.edu.endAge>F.edu.rage?'**은퇴('+F.edu.rage+'세) 뒤까지** 교육비가 이어져요.':'은퇴('+F.edu.rage+'세) 전에 끝나요.'),
+      note:'막내 '+IP_RULE.indepAge+'세 독립은 APEX 원칙(가정)이에요.'});
+    if(F.est.on) fc.push({type:'tiles', title:'남길 때 드는 세금', icon:'bank', items:[
+      {label:'상속세 추정', value:F.est.tax, sub:'계산기 추정', tone:'orange'},
+      {label:'사망보험금 (재원)', value:F.est.life},
+      {label:'재원이 모자란 돈', value:F.est.gap, tone:F.est.gap>0?'red':'green'}],
+      note:'추정이에요. 요건·공제에 따라 달라지고, 판단은 세무 전문가 확인이 필요해요.'});
+    if(fc.length) sections.push({kicker:'재무 점검', icon:'house', title:'대출 · 교육비 · 남길 것', cards:fc});
+    sections.push({kicker:'전략', icon:'check', title:'고칠 순서 — 바닥부터', cards:[
+      {type:'check', items:F.order.filter(function(o){ return o.kind; }).map(function(o){ return {q:o.t, status:FS_LV[o.kind], value:o.why}; })}],
+      ask:F.first?'먼저 **'+F.first.t+'**부터 같이 손봐요 — 바닥이 서야 지붕이 버텨요.':'바닥부터 지붕까지 다 서 있어요. 이제 지키는 일만 남았어요.'});
+  }
 
   /* 함께 점검 상담(wk*)에서 고객과 같이 답한 것 — 있으면 「스스로 점검」 물음 대신 그 결과를 그대로 싣고,
      확인 못 한 것은 「같이 할 일」 맨 앞으로 올립니다. 모름·아니요를 숨기지 않습니다(1번). */
@@ -11952,6 +12027,15 @@ function wkSlides(){
   var I=ipPlan(), B=I.band;
   S.push({part:'이해', html:'<div class="wk-k">이해 · 재무설계의 배치</div><h2 class="wk-h">재무설계는 집이에요</h2>'+wkHouse(I)+
     '<p class="wk-p">'+wkT('보험은 집의 **바닥**이에요. 바닥이 없으면 아플 때 지붕(연금)부터 깨요.\n그래서 연금을 짓기 전에 바닥부터 봐요.')+'</p>'});
+  var F=fsPlan(n);
+  if(F&&F.cash.income>0){
+    var C=F.cash;
+    S.push({part:'이해', html:'<div class="wk-k">이해 · 현금흐름</div><h2 class="wk-h">월급이<br>어디로 가고 있나요</h2><div class="wkx">'+
+      APEX_REPORT.parts.hbars([{label:'꼭 나가는 돈',value:C.fixed,tone:'gray',display:wkM(C.fixed)},{label:'고르는 지출',value:C.choice,tone:'orange',display:wkM(C.choice)},
+        {label:'모으는 돈',value:C.saving,tone:'blue',display:wkM(C.saving)},{label:C.surplus>=0?'남는 돈':'모자라는 돈',value:Math.abs(C.surplus),tone:C.surplus>=0?'green':'red',display:wkM(Math.abs(C.surplus))}])+'</div>'+
+      '<p class="wk-p">'+wkT('들어오는 **'+wkM(C.income)+'** 중 **'+Math.floor(C.saveRatio)+'%**를 모으고 있어요 — 계산기 판정 **'+FS_LV[C.kind]+'**(저축률 '+FIN_RULE.saveGood+'% 이상 · 남는 돈 0 이상이면 가능).'+
+        (C.surplus<0?'\n매달 모자라는 만큼은 빚이나 저축을 깨서 메우고 있어요.':'\n남는 돈이 있어야 집을 지을 수 있어요.'))+'</p>'});
+  }
   S.push({part:'이해', html:'<div class="wk-k">이해 1</div><h2 class="wk-h">노후 돈은 세 층으로 와요</h2>'+wkLayers(n)+
     '<p class="wk-p">'+wkT(n.own>0&&n.ret>0&&n.nps>0?'세 층이 다 있어요. 이제 **높이**가 충분한지 볼게요.':'**빨간 점선** 층은 지금 비어 있어요. 비어 있는 층만큼 노후 월급이 얇아져요.')+'</p>'});
   S.push({part:'이해', html:'<div class="wk-k">이해 2</div><h2 class="wk-h">「얼마 모았나」 보다<br>「매달 얼마 받나」 예요</h2>'+
@@ -11999,6 +12083,21 @@ function wkSlides(){
     (meEmpty.length?'<div class="wk-empty"><b>비어 있는 곳</b>'+meEmpty.map(function(x){ return '<span>'+wkEsc(x)+'</span>'; }).join('')+'</div>':'')+
     '<div class="wk-n">계산기 보험 칸에 적힌 숫자로만 셈했어요. 보험료·보장은 심사 결과에 따릅니다.</div>'});
   var X=ipBase(I);
+  if(F&&F.debt.any) S.push({part:'위기', html:'<div class="wk-k">내 숫자 · 대출</div><h2 class="wk-h">대출이<br>노후를 먹나요</h2>'+
+    '<div class="wk-big" style="color:'+(F.debt.kind==='good'?'#18A5A5':F.debt.kind==='warn'?'#FE9800':'#F04452')+'">'+APEX_REPORT.parts.big({good:'괜찮아요',warn:'주의',bad:'점검 필요'}[F.debt.kind])+'</div>'+
+    '<p class="wk-p">'+wkT((F.debt.loanM>0?'매달 대출로 **'+wkM(F.debt.loanM)+'** — 월급의 **'+Math.round(F.debt.loanRatio)+'%**가 나가요.\n':'')+
+      '주택담보 DSR **'+Math.round(F.debt.dsr)+'%** · LTV **'+Math.round(F.debt.ltv)+'%** (계산기 기준: DSR '+FIN_RULE.dsrOk+'% · LTV '+FIN_RULE.ltvOk+'% 이하면 가능).\n은퇴 전에 다 갚지 못하면 그 원리금은 **연금에서** 나가요.')+'</p>'+
+    '<div class="wk-n">DSR 은 주택담보대출 30년 원리금균등으로 가정한 계산기 값이에요.</div>'});
+  if(F&&F.edu.on) S.push({part:'위기', html:'<div class="wk-k">내 숫자 · 교육비</div><h2 class="wk-h">교육비와 노후가<br>겹쳐요</h2>'+
+    '<div class="wk-big" style="color:#FE9800">'+APEX_REPORT.parts.big(F.edu.total)+'</div>'+
+    '<p class="wk-p">'+wkT('막내가 독립할 때까지 **'+F.edu.years+'년** · 교육비 월 **'+wkM(F.edu.eduM)+'**이면 앞으로 약 **'+wkM(F.edu.total)+'**이에요.\n그때 고객님은 **'+F.edu.endAge+'세** — '+
+      (F.edu.endAge>F.edu.rage?'**은퇴('+F.edu.rage+'세) 뒤까지** 교육비가 이어져요. 그 돈도 연금에서 나가요.':'은퇴('+F.edu.rage+'세) 전에 끝나요. 그동안은 연금에 넣을 돈과 경쟁해요.'))+'</p>'+
+    '<div class="wk-n">막내 '+IP_RULE.indepAge+'세 독립은 APEX 원칙(가정)이에요.</div>'});
+  if(F&&F.est.on) S.push({part:'위기', html:'<div class="wk-k">내 숫자 · 남길 것</div><h2 class="wk-h">남길 때도<br>세금이 들어요</h2>'+
+    '<div class="wk-big" style="color:#FE9800">'+APEX_REPORT.parts.big(F.est.tax)+'</div>'+
+    '<p class="wk-p">'+wkT('계산기로 추정한 상속세예요. '+(F.est.life>0?'사망보험금 **'+wkM(F.est.life)+'**으로 내면 '+(F.est.gap>0?'**'+wkM(F.est.gap)+'**이 모자라요':'낼 수 있어요'):'따로 마련한 사망보험금이 **없어요**')+
+      (F.est.gap>0?' — 모자라는 만큼 집이나 연금을 팔아 내게 돼요.':'.'))+'</p>'+
+    '<div class="wk-n">추정이에요. 요건·공제에 따라 달라지고, 판단은 세무 전문가 확인이 필요해요.</div>'});
   S.push({part:'전략', html:'<div class="wk-k">전략 · '+wkEsc(B.band)+'</div><h2 class="wk-h">보험의 무게,<br>기준값으로 나눠요</h2>'+
     (X.w!=null?'<div class="wk-split"><div style="flex:'+X.w+';background:#18A5A5"></div><div style="flex:'+(100-X.w)+';background:#3182F6"></div></div>'+
       '<div class="wk-split-l"><span style="color:#18A5A5">가족 지키기 '+X.w+'%</span><span style="color:#3182F6">내 연금 지키기 '+(100-X.w)+'%</span></div>'
@@ -12010,6 +12109,11 @@ function wkSlides(){
     '<div class="wk-job">'+wkT('**'+X.job.label+'** 평균으로 셈했어요 — 빚 배수 **'+(Math.round(X.job.famX*100)/100)+'** · 일해서 버는 몫 **'+Math.round(X.job.meX*100)+'%**'+(X.job.key==='all'?'\n직업군을 고르면 그 직업군 평균으로 다시 셈해요.':''))+'</div>'+
     '<div class="wk-see"><div><b>가족 지키기 · '+wkEsc(B.band)+'</b>'+wkEsc(B.famSee)+'</div><div><b>내 연금 지키기 · '+wkEsc(B.band)+'</b>'+wkEsc(B.meSee)+'</div></div>'+
     '<div class="wk-n">'+wkT(ipSrcText())+'</div>'});
+  if(F) S.push({part:'전략', html:'<div class="wk-k">전략 · 고칠 순서</div><h2 class="wk-h">바닥부터<br>이 순서로 고쳐요</h2>'+
+    '<ol class="wk-order">'+F.order.filter(function(o){ return o.kind; }).map(function(o){
+      return '<li class="'+o.kind+'"><span class="wk-pill">'+FS_LV[o.kind]+'</span><div><b>'+wkEsc(o.t)+'</b><small>'+wkEsc(o.why)+'</small></div></li>'; }).join('')+'</ol>'+
+    '<p class="wk-p">'+wkT(F.first?'먼저 **'+F.first.t+'**부터 같이 손봐요. 바닥이 서야 지붕(연금)이 버텨요.':'바닥부터 지붕까지 다 서 있어요. 이제 지키는 일만 남았어요.')+'</p>'+
+    '<div class="wk-n">재무설계의 집 순서예요 — 남는 돈 · 비상금 · 보장(바닥) → 대출 → 노후 연금(지붕).</div>'});
   WK_ITEMS.forEach(function(it,ix){ S.push({part:'점검', item:it, ix:ix}); });
   S.push({part:'정리', end:true});
   return S;

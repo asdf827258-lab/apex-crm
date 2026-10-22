@@ -19,6 +19,9 @@
          분배 나이대마다 필요한 보험의 분배전략」) — 재무설계의 집 · 보험의 두 역할 · 「가족은 몇 달」 ·
          「아프면 연금을 깨요」 가 <b>칸 값으로 따로 셈한 달 수</b>와 맞나 · 전략 장이 고객 나이대를 켜고
          「APEX 상담 원칙 · 정답이 아님」 을 밝히나 · 결과지 「보장 전략」 장이 같은 달 수를 말하나
+     카. 판 X168 (사장님 말씀 「미래 장면에도 본인 대출을 넣어서 다시 셈해줘 · 기존 재무설계계산기를 따와서
+         기능들을 가져오되 재해석해서 재구성해」) — 미래 장면의 소득 셈에 본인 대출(그때 0) · 현금흐름 · 대출 ·
+         교육비 · 남길 것 · 고칠 순서 장이 서나 · 판정이 계산기 기준(저축률 · DSR · LTV)과 같나 · 결과지 장
      차. 판 X167 (사장님 말씀 「배수는 평균 데이터를 기준으로 하고 직업군을 나누어서 다시 나눠서 해줘」) —
          소득 셈의 배수가 직업군 평균(2025년 가계금융복지조사)에서 오나 · 자영업자를 고르면 빚 배수 1.56 ·
          일해서 버는 몫 82% · 모르면 「전체」 라고 적나 · 출처를 밝히나
@@ -159,7 +162,8 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
     const famL = living - v('s_loan');
     const fam = mid([IP_AVG.fam ? IP_AVG.fam.v : null, own * J.debt / J.inc, v('s_debt') + famL * 12 * Math.max(0, R.indepAge - v('inh_youngest'))]);
     const me = mid([IP_AVG.me ? IP_AVG.me.v : null, own * (J.work + J.biz) / J.inc * R.meMonths / 12, living * R.meMonths]);
-    const later = mid([IP_AVG.fam ? IP_AVG.fam.v : null, own * J.debt / J.inc, famL * 12 * R.spouseYears]);
+    /* 판 X168 — 미래 장면은 소득 셈에도 본인 대출(그때 0)을: 빚 배수 × (그때 대출 ÷ 지금 대출) */
+    const later = mid([IP_AVG.fam ? IP_AVG.fam.v : null, v('s_debt') > 0 ? own * J.debt / J.inc * 0 / v('s_debt') : own * J.debt / J.inc, famL * 12 * R.spouseYears]);
     return { fam, me, w: Math.round(fam / (fam + me) * 20) * 5, wLater: Math.round(later / (later + me) * 20) * 5 };
   }, SELF);
   await pg.evaluate(() => { WK.i = wkSlides().findIndex((x) => x.part === '전략'); wkPaint(); });
@@ -185,6 +189,37 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
   is(/보장 전략/.test(ri) && nos(ri).includes('내가없으면가족이버티는기간' + want.fam + '개월'), '결과지 「보장 전략」 장 — 같은 ' + want.fam + '개월');
   is(/기준값/.test(ri) && /APEX 원칙\(가정\)/.test(ri) && /아주경제 2022\.05\.15/.test(ri), '결과지에도 기준값 표 · 출처 · 「APEX 원칙(가정)」');
   await popI.close();
+
+  head('카. 계산기 기능을 상담 말로 재구성 (판 X168)');
+  await pg.evaluate(() => { const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); };
+    set('r_mortgage', '20000'); set('r_house_val', '50000'); set('inh_total', '250000'); });
+  const fsT = await pg.evaluate(() => wkSlides().filter((x) => x.html).map((x) => x.html.replace(/<[^>]+>/g, ' ')).join('\n'));
+  ['어디로 가고 있나요', '노후를 먹나요', '교육비와 노후가', '세금이 들어요', '이 순서로 고쳐요'].forEach((k) => is(nos(fsT).includes(nos(k)), '「' + k + '」 장이 선다'));
+  /* 판정은 자가 칸 값으로 따로 셉니다 — 계산기 기준(저축률 · DSR · LTV)을 그대로 */
+  const fx = await pg.evaluate(() => {
+    const v = (id) => parseFloat(document.getElementById(id).value) || 0;
+    const income = Math.round(v('s_gross') / 12) + v('s_self') + v('s_spouse') + v('s_passive') + v('s_other');
+    const fixed = ['s_housing', 's_loan', 's_food', 's_telecom', 's_transport', 's_insurance', 's_medical', 's_edu', 's_support'].reduce((a, id) => a + v(id), 0);
+    const choice = ['s_dining', 's_shopping', 's_travel', 's_choice_etc'].reduce((a, id) => a + v(id), 0);
+    const saving = ['s_emerg', 's_pension', 's_irp', 's_isa', 's_taxfree', 's_general'].reduce((a, id) => a + v(id), 0);
+    const surplus = income - fixed - choice - saving, sr = saving / income * 100;
+    const r = v('r_mortgage_rate') / 100 / 12, m = v('r_mortgage'), pay = Math.round(m * r * Math.pow(1 + r, 360) / (Math.pow(1 + r, 360) - 1));
+    const dsr = pay / income * 100, ltv = m / v('r_house_val') * 100;
+    const F = fsPlan(rptData({})._n), get = (k) => (F.order.find((o) => o.k === k) || {}).kind;
+    return { cash: surplus >= 0 && sr >= 20 ? 'good' : surplus >= 0 ? 'warn' : 'bad', debt: dsr <= 35 && ltv <= 60 ? 'good' : (dsr <= 45 || ltv <= 70 ? 'warn' : 'bad'), appCash: get('cash'), appDebt: get('debt'), dsr: Math.round(dsr), ltv: Math.round(ltv), appDsr: Math.round(F.debt.dsr) };
+  });
+  is(fx.cash === fx.appCash, '「고칠 순서」 의 남는 돈 판정 = 계산기 기준 그대로 (' + fx.cash + ')');
+  is(fx.debt === fx.appDebt && fx.dsr === fx.appDsr, '대출 판정 · DSR = 계산기 그대로 (DSR ' + fx.dsr + '% · LTV ' + fx.ltv + '% → ' + fx.debt + ')');
+  await pg.evaluate(() => { WK.i = wkSlides().findIndex((x) => x.html && x.html.indexOf('이 순서로 고쳐요') >= 0); wkPaint(); });
+  const ord = await pg.$eval('#wkOv .wk-body', (e) => e.innerText);
+  is(/남는 돈[\s\S]*비상금[\s\S]*가족 지키기[\s\S]*내 연금 지키기[\s\S]*대출[\s\S]*노후 연금/.test(ord), '고칠 순서가 재무설계의 집 순서 — 남는 돈 · 비상금 · 보장 → 대출 → 노후 연금');
+  is(/먼저 \S/.test(ord) && /부터 같이 손봐요/.test(ord), '「먼저 ○○부터」 — 판정이 가능이 아닌 첫 칸을 짚는다');
+  is(/추정/.test(fsT) && /세무 전문가/.test(fsT), '상속세는 「추정 · 세무 전문가 확인」 (2번)');
+  const [popF] = await Promise.all([ctx.waitForEvent('page'), pg.evaluate(() => wkReport('open'))]);
+  await popF.waitForLoadState();
+  const rf = strip(await popF.content());
+  is(/재무 점검/.test(rf) && /대출이 노후를 먹나요/.test(rf) && /고칠 순서/.test(rf), '결과지에 「대출 · 교육비 · 남길 것」 · 「고칠 순서」 장');
+  await popF.close();
 
   head('마. 위기감은 고객 숫자로만 (1번)');
   const all = texts.join('\n') + end;
