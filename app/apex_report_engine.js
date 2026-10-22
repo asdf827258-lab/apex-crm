@@ -278,6 +278,15 @@ var CARD = {
     }).join('') + '</ol>';
   },
   progress: function (c) { return progress(c.value, c.tone) + (c.text ? '<p class="p pg-t">' + txt(c.text) + '</p>' : ''); },
+  /* 함께 점검한 결과 — 확인됨 · 모름 · 아니요. 모름·아니요는 숨기지 않고 그대로 적습니다(1번) */
+  check: function (c) {
+    var T = { '확인됨': 'green', '모름': 'orange', '아니요': 'red' };
+    return '<div class="ck">' + (c.items || []).map(function (x) {
+      var t = T[x.status] || 'gray';
+      return '<div class="ck-r"><span class="ck-p" style="background:' + TONE_BG[t] + ';color:' + TONE[t] + '">' + esc(x.status || '안 물음') + '</span>' +
+        '<div><div class="ck-q">' + txt(x.q) + '</div>' + (x.value ? '<div class="ck-v">' + txt(x.value) + '</div>' : '') + '</div></div>';
+    }).join('') + '</div>';
+  },
   grid: function (c) {
     return '<div class="grid">' + (c.items || []).map(function (x, i) {
       return '<div class="gi">' + icon(x.icon, 'gic') + '<div class="gt">' + txt(x.title) + '</div><div class="gx">' + txt(x.text || '') + '</div></div>';
@@ -441,6 +450,9 @@ var CSS = [
   '.qz label{display:flex;align-items:center;gap:8px;margin-top:8px;min-height:32px;font-size:13.5px;font-weight:700;color:var(--blue-d)}.qz input{width:18px;height:18px}',
   '.aic{width:28px;height:28px;vertical-align:-8px;margin-right:6px}',
   '.wn{margin-top:8px;font-size:12.5px;color:var(--t2);line-height:1.6}',
+  '.ck{display:flex;flex-direction:column}.ck-r{display:flex;gap:10px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--line)}.ck-r:last-child{border-bottom:0}',
+  '.ck-p{flex:none;font-size:12px;font-weight:800;padding:3px 8px;border-radius:7px;margin-top:1px;min-width:52px;text-align:center}',
+  '.ck-q{font-size:14.5px;color:var(--t1);font-weight:600;line-height:1.5}.ck-v{font-size:13px;color:var(--t2);margin-top:2px}',
   '.ask{background:var(--blue-l);border-radius:14px;padding:13px 15px;margin-top:12px;font-size:14px;color:var(--blue-d);font-weight:600;line-height:1.6}',
   '.empty{background:var(--bg);border-radius:14px;padding:16px;font-size:14px;color:var(--t2);line-height:1.7}',
   '@media (max-width:400px){.nb{font-size:24px}.tiles.c3{grid-template-columns:1fr}.hb-row{grid-template-columns:76px 1fr auto}.hero h1{font-size:23px}}',
@@ -655,5 +667,27 @@ function download(d, file) {
   setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 
-g.APEX_REPORT = { html: html, open: open, download: download, calc: calc, selfTest: selfTest, man: manTxt, version: '2026.10' };
+/* 상담 화면(계산기 「함께 점검 상담」)이 결과지와 <b>같은 그림</b>을 쓰게 부품을 내보냅니다 — 그림을 두 벌로
+   그리면 한쪽만 고쳐집니다(5번). CSS 는 body·:root 를 건드리지 않게 prefix 안으로만 씌웁니다. */
+function scopedCss(prefix) {
+  var out = [];
+  CSS.split('\n').forEach(function (line) {
+    if (/^@(page|media print)/.test(line)) return;
+    var media = line.match(/^(@media[^{]+)\{([\s\S]*)\}$/);
+    var body = media ? media[2] : line, rules = [];
+    body.replace(/([^{}]+)\{([^{}]*)\}/g, function (_, sel, decl) {
+      sel = sel.trim();
+      if (/^(\*|html|body)$/.test(sel)) return '';
+      var scoped = sel.split(',').map(function (x) { x = x.trim(); return x === ':root' ? prefix : prefix + ' ' + x; }).join(',');
+      rules.push(scoped + '{' + decl + '}');
+      return '';
+    });
+    if (rules.length) out.push(media ? media[1] + '{' + rules.join('') + '}' : rules.join(''));
+  });
+  return out.join('\n');
+}
+var parts = { dayGrid: dayGrid, daysOf: daysOf, daysText: daysText, hbars: hbars, progress: progress, stackRows: stackRows,
+              card: card, txt: txt, esc: esc, icon: icon, man: manTxt, big: big };
+
+g.APEX_REPORT = { html: html, open: open, download: download, calc: calc, selfTest: selfTest, man: manTxt, parts: parts, scopedCss: scopedCss, version: '2026.10' };
 })(typeof window !== 'undefined' ? window : globalThis);
