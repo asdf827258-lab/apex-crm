@@ -34,6 +34,14 @@
        · 묶음 청구 · 접수일만 있는 청구는 「청구 안 된 듯」 으로 단정하지 않고 「확인 필요」 로 둡니다 — 견본
          시뮬레이션에서 헛것(멀쩡히 청구한 진료를 미청구로)이 나와 고쳤습니다.
        · 진료 기록은 이 브라우저에만, 「진료 자료 지우기」 로 지웁니다(3번). 안내장 인쇄는 이름을 가린 채가 기본.
+     ★ <b>판 X154 (2026-10-22)</b> — 사장님 말씀 「팀원들의 가망 고객들을 제대로 관리 … 각자 신입들의 성장기록북 …
+       고객 이름 가족관계 성향 등을 넣으면 어떻게 접근할지 너가 만들어서 인쇄」.
+       · 고객 상세 「전략」 — 성향(주도·사교·안정·분석) · 관계 · 보험 태도 · 관심사 · 결정하는 사람 · 가족을 고르면
+         규칙으로 접근 전략을 짭니다. 숫자를 지어 넣지 않고, 성향은 짐작이라고 화면·인쇄에 적습니다(1번).
+       · 📒 성장기록북 — 표지 · 고객 지도 · 고객별 전략 한 장 · 8주 기록(선배 한마디 칸) · 연락 · RP · 빈 고객 카드.
+         이름(가족 이름까지)은 가린 채가 기본입니다(3번).
+       · 팀장에게는 「주간 보고」 — 이름 가린 숫자와 진행만 카톡으로. 서버를 부르지 않습니다(7번).
+       · 인쇄는 글꼴이 다 온 뒤에 엽니다 — 숨긴 칸의 이모지 글꼴을 안 불러와 제목이 비어 찍히던 것(시뮬레이션에서 찾음).
      점검 : scripts/check-jiingrow.js -->
 <style>
 /* 폰이 다크여도 흰색 고정 — 앱의 다른 화면과 같게 (check-lightmode) */
@@ -424,6 +432,7 @@ body.editing .ck label,body.editing .keys>div,body.editing details.acc summary{b
 
 /* 인쇄 */
 #printArea{display:none}
+body.printing #printArea{display:block;position:fixed;left:-10000px;top:0;width:794px}
 .pn .m{display:none}
 @media print{
   @page{margin:13mm}
@@ -443,7 +452,7 @@ body.editing .ck label,body.editing .keys>div,body.editing details.acc summary{b
   body.pmask .pn .r{display:none}
   body.pmask .pn .m{display:inline}
   body.printing>*:not(#printArea){display:none!important}
-  body.printing #printArea{display:block}
+  body.printing #printArea{display:block;position:static;left:auto;width:auto}
   details.acc summary:after{display:none}
 }
 .pdoc{font-size:12.5px;color:#191F28}
@@ -591,6 +600,37 @@ table.sbt{width:100%;border-collapse:collapse;font-size:13.5px;min-width:640px}
 .letter .lt-f{margin-top:18px;padding-top:10px;border-top:2px solid #191F28;font-weight:700;text-align:right}
 .cfg-btn{font-size:12.5px}
 @media print{.letter{border:0;padding:0;max-width:none}.sbt select{display:none}.sbprev{display:none}}
+/* 접근 전략 · 성장기록북 */
+.pf-g{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.pf-g label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;font-weight:700;color:var(--sub)}
+.pf-g select{border:1px solid var(--line);border-radius:10px;padding:7px 8px;background:#fff;font-size:13.5px}
+.pf-int{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+.pf-int>span{font-size:12.5px;font-weight:700;color:var(--sub);margin-right:4px}
+.pf-int .chip{cursor:pointer;padding:6px 11px;font-size:13px}
+.pf-t{width:100%;border-collapse:collapse;font-size:13px}.pf-t th,.pf-t td{border-top:1px solid var(--line);padding:7px 6px;text-align:left;vertical-align:top}.pf-t th{font-size:12px;color:var(--mute)}
+.ap-sum{font-weight:800;font-size:15.5px;margin-bottom:10px}.ap-sum small{font-weight:600;color:var(--mute);font-size:12px}
+.ap-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ap-g>div,.ap-g2>div{background:var(--bg);border-radius:12px;padding:10px 12px}
+.ap h5{font-size:13px;margin:0 0 4px}.ap ul{margin:0;padding-left:16px;font-size:13px}.ap li{margin:2px 0}
+.ap>h5{margin-top:12px}
+.ap-o{border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin-top:6px;font-size:13px}.ap-o div{margin-top:2px}
+.ap-g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.ap-g2 p{font-size:13px;margin:2px 0}
+.ap-t{width:100%;border-collapse:collapse;font-size:13px}.ap-t th,.ap-t td{border-top:1px solid var(--line);padding:6px;text-align:left}.ap-t th{width:22%}.ap-ck{width:30px;text-align:center}
+.ap-n{font-size:11.5px;color:var(--mute);margin-top:8px}
+@media(max-width:600px){.ap-g,.ap-g2,.pf-g{grid-template-columns:1fr}}
+.bk-info{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.bk-info>div{background:var(--bg);border-radius:12px;padding:10px}.bk-info span{display:block;font-size:11.5px;color:var(--mute);font-weight:700}
+@media(max-width:600px){.bk-info{grid-template-columns:1fr 1fr}}
+pre.wr{white-space:pre-wrap;background:var(--bg);border-radius:12px;padding:12px;font-family:inherit;font-size:13.5px;line-height:1.7}
+.pdoc .pb{break-before:page}.pdoc .bk-cover{text-align:center;padding-top:60px}
+.pdoc .bk-k{font-size:14px;font-weight:800;color:#3182F6}.pdoc .bk-cover h1{font-size:30px;margin:10px 0 24px}
+.pdoc .bk-ct{max-width:440px;margin:0 auto}.pdoc .bk-ct td{height:30px}
+.pdoc .bk-q{margin-top:40px;font-size:14px;color:#4E5968;line-height:1.8}
+.pdoc .bk-lines div{border-bottom:1px solid #C9CED4;height:24px}
+.pdoc .bk-wk{break-inside:avoid;margin-bottom:12px;border:1px solid #DDE1E6;border-radius:8px;padding:8px 10px}
+.pdoc .bk-card table{margin-bottom:6px}.pdoc .bk-card td.blank{height:30px}
+.pdoc .ap-g>div,.pdoc .ap-g2>div{background:#F7F8FA}
+.pdoc .bk-cp h2 small{font-weight:500;font-size:11px;color:#4E5968}
+@media print{.pdoc .ap{font-size:11px}.pdoc .ap ul{font-size:11px}.pdoc .ap li{margin:0}.pdoc .ap-g{gap:6px}.pdoc .ap-g>div,.pdoc .ap-g2>div{padding:6px 8px}.pdoc .ap-o{padding:5px 8px;font-size:11px}.pdoc .ap-t th,.pdoc .ap-t td{padding:3px 6px;font-size:11px}.pdoc .ap h5{font-size:11.5px}}
 /* 내 이름 칸 */
 .me-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px;font-size:13px;color:var(--mute)}
 .me-row label{font-weight:700;color:var(--sub);font-size:14px}
@@ -620,6 +660,7 @@ table.sbt{width:100%;border-collapse:collapse;font-size:13.5px;min-width:640px}
     <div class="gl">관리하기</div>
     <button data-t="cust"><span class="n">👥</span>고객 관리</button>
     <button data-t="plan"><span class="n">🗓️</span>8주 로드맵</button>
+    <button data-t="book"><span class="n">📒</span>성장기록북</button>
     <button id="editT" type="button"><span class="tf">✏️</span> 편집 모드</button>
   </nav>
 </aside>
@@ -1110,6 +1151,16 @@ table.sbt{width:100%;border-collapse:collapse;font-size:13.5px;min-width:640px}
   <div class="weeks" id="weeks"></div>
 </section>
 
+<section class="page" id="t-book">
+  <div class="ph">
+    <div class="kick"><span class="tf">📒</span> 성장기록북</div>
+    <h1>8주의 기록을 한 권으로</h1>
+    <p>고객마다 성향 · 관계 · 가족을 넣으면 접근 전략이 한 장씩 만들어지고, 8주 기록 · 연락 기록 · RP 연습과 함께 <b>한 권으로 인쇄</b>됩니다. 손으로 쓰고 싶으면 빈 기록북을 뽑으세요.</p>
+  </div>
+  <div class="co teach"><span class="co-i">🧑‍🏫</span><div><b class="co-t">선배 선생님 한마디</b>기록북은 <b>선배와 같이 보는 책</b>입니다. 매주 한 번 펴 놓고 「잘된 대화 하나 · 막힌 고객 하나」 만 이야기하세요. 고객 이름은 가린 채 인쇄되는 게 기본이라, 선배에게 보여 줘도 됩니다. 팀장에게는 아래 「주간 보고」 를 카톡으로 보내면 됩니다.</div></div>
+  <div id="bkBody"></div>
+</section>
+
 <div class="foot">APEX · <span data-cfg="cur">에이플러스에셋</span> · 내부 교육용 자료 (고객에게 그대로 보내지 마세요)</div>
 </div>
 
@@ -1138,6 +1189,7 @@ const STEPS=[
 ];
 const FIND_KINDS=['숨은 보험금','미청구 병원비','기타'];
 const FIND_ST=['찾음','청구함','입금됨'];
+const FAM_REL=['배우자','자녀','부모님','형제·자매','기타'];
 const LOG_HOW=['전화','카톡','만남','문자'];
 const GRPS=[['call','📞 연락하기'],['find','🔍 찾아줌 현장'],['bridge','🌉 찾아줌 → 보장분석'],['check','🛡️ 보장분석 · 소개']];
 // 손글씨 리스트 옮김. chk=1 은 글씨가 애매해서 이름 확인이 필요한 분
@@ -1460,7 +1512,7 @@ const DEF={
 /* ================= 저장 ================= */
 let S;
 function newCust(o){
-  return Object.assign({id:0,g:'가망',name:'',chk:false,job:'',fam:'',tag:'',memo:'',concept:'',steps:Array(9).fill(false),next:'',bday:'',finds:[],clues:[],logs:[],res:{good:'',gap:'',todo:''},silbi:{cond:{},visits:[],claims:[]}},o);
+  return Object.assign({id:0,g:'가망',name:'',chk:false,job:'',fam:'',tag:'',memo:'',concept:'',steps:Array(9).fill(false),next:'',bday:'',finds:[],clues:[],logs:[],res:{good:'',gap:'',todo:''},silbi:{cond:{},visits:[],claims:[]},pf:{type:'',rel:'',att:'',int:[],dec:'',pref:'',note:''},fam2:[]},o);
 }
 function fresh(){
   return {v:2,customers:SEED.map(r=>newCust({id:r[0],g:r[1],name:r[2],chk:!!r[3],job:r[4],fam:r[5],tag:r[6]})),
@@ -1497,7 +1549,7 @@ function norm(s){
     o.libv=3;
   }
   o.cfg=Object.assign({},s.cfg||{});
-  o.customers.forEach(c=>{if(!c.silbi)c.silbi={cond:{},visits:[],claims:[]};});
+  o.customers.forEach(c=>{if(!c.silbi)c.silbi={cond:{},visits:[],claims:[]};pfOf(c);});
   o.v=2;
   return o;
 }
@@ -1526,7 +1578,7 @@ const meFull=()=>String(S.me||'').trim()||'○○';
 const meShort=()=>{const o=String((S.cfg||{}).mes||'').trim();if(o)return o;const n=String(S.me||'').trim();if(!n)return '○○';return /^[가-힣]{3,4}$/.test(n)?n.slice(1):n;};
 function renderMe(){const n=String(S.me||'').trim();$('#meKick').textContent=n?n+'님께':'설계사님께';const i=$('#meName');if(i&&document.activeElement!==i)i.value=n;}
 // 이름·회사 — 화면에서 바꿉니다(✏️ 이름·회사 바꾸기). 대본의 {PREV} · {CUR} 자리가 이 값을 씁니다
-const CFG_DEF={title:'',mes:'',phone:'',prev:'DB손해보험',prevS:'DB',cur:'에이플러스에셋',curDesc:'코스피 상장 법인보험대리점(GA)',partner:'생명·손해보험 33개 회사'};
+const CFG_DEF={title:'',mes:'',phone:'',team:'',leader:'',start:'',goal:'',prev:'DB손해보험',prevS:'DB',cur:'에이플러스에셋',curDesc:'코스피 상장 법인보험대리점(GA)',partner:'생명·손해보험 33개 회사'};
 function cfgRaw(){const c=Object.assign({},CFG_DEF,S.cfg||{});return {ME:meFull(),MES:meShort(),PREV:c.prev||'이전 회사',PREVS:c.prevS||c.prev||'이전 회사',CUR:c.cur||'지금 회사',CURDESC:c.curDesc||'',PARTNER:c.partner||'여러 보험회사',PHONE:c.phone||''};}
 // 받침에 맞는 조사 — 「길동이에요 / 주희예요」
 function hasJong(w){const t=String(w||'').trim();if(!t)return false;const ch=t.charCodeAt(t.length-1);if(ch>=0xAC00&&ch<=0xD7A3)return (ch-0xAC00)%28!==0;if(/[0-9]$/.test(t))return /[0136789]$/.test(t);return false;}
@@ -1608,7 +1660,8 @@ const SC={
   gloss:{t:'용어',req:'w',f:[['ic','아이콘 (이모지 하나)','text'],['w','말','text'],['m','뜻','textarea'],['say','고객에게 쉬운 말로','textarea']],blank:()=>({ic:'📘',w:'',m:'',say:''}),label:v=>'「'+v.w+'」'},
   visit:{t:'진료 내역 한 줄',req:'d',f:[['d','진료일','date'],['org','병·의원 (약국)','text'],['kind','구분','select',SEL(['외래','입원','약국'])],['cls','외래 종별 (비우면 이름으로 짐작)','select',[['',''],['의원','의원'],['병원','병원'],['종합·상급','종합·상급종합병원']]],['days','입원 · 내원 일수','number'],['cost','본인부담금 (원)','number'],['st','판정','select',[['auto','자동 판정'],['claimed','청구함'],['unclaimed','청구 안 함'],['skip','빼기']]],['memo','메모','text']],blank:()=>({id:uid(),d:today(),org:'',kind:'외래',cls:'',days:'',cost:'',st:'auto',memo:''}),label:v=>v.d+' '+(v.org||'')+' 진료'},
   claim:{t:'실비 청구 한 줄',req:'d',f:[['d','진료일 (사고일)','date'],['org','병·의원','text'],['amt','청구금액 (원)','number'],['paid','지급금액 (원)','number']],blank:()=>({id:uid(),d:today(),org:'',amt:'',paid:''}),label:v=>v.d+' 청구'},
-  cfg:{t:'이름 · 회사',f:[['me','내 이름','text'],['mes','부르는 이름 (비우면 이름에서 성을 뺍니다 — 홍길동 → 길동)','text'],['phone','내 연락처 (안내장 보내는 사람 칸)','text'],['title','프로그램 이름 (왼쪽 위)','text'],['prev','이전 회사 (전체 이름)','text'],['prevS','이전 회사 (짧게 — 예: DB)','text'],['cur','지금 회사','text'],['curDesc','지금 회사 한 줄 소개','text'],['partner','제휴 회사 (예: 생명·손해보험 33개 회사 — 회사 자료로 확인한 숫자만)','text']]},
+  cfg:{t:'이름 · 회사',f:[['me','내 이름','text'],['mes','부르는 이름 (비우면 이름에서 성을 뺍니다 — 홍길동 → 길동)','text'],['phone','내 연락처 (안내장 보내는 사람 칸)','text'],['title','프로그램 이름 (왼쪽 위)','text'],['prev','이전 회사 (전체 이름)','text'],['prevS','이전 회사 (짧게 — 예: DB)','text'],['cur','지금 회사','text'],['curDesc','지금 회사 한 줄 소개','text'],['partner','제휴 회사 (예: 생명·손해보험 33개 회사 — 회사 자료로 확인한 숫자만)','text'],['team','팀 · 지점 (성장기록북 표지)','text'],['leader','함께하는 선배 · 팀장','text'],['start','시작한 날 (8주 몇 주차인지 셉니다)','date'],['goal','8주 뒤 나의 모습','text']]},
+  fam:{t:'가족',req:'rel',f:[['rel','관계','select',SEL(FAM_REL)],['name','이름 (선택)','text'],['age','나이 · 학년 (예: 7살, 40대)','text'],['memo','메모 (건강 · 일 · 들은 이야기)','text']],blank:()=>({rel:'자녀',name:'',age:'',memo:''}),label:v=>v.rel+(v.name?' '+v.name:'')},
   faq:{t:'자주 받는 질문',req:'q',f:[['q','질문','text'],['a','답','textarea']],blank:()=>({q:'',a:''}),label:v=>v.q},
   dont:{t:'하지 않는 말',req:'b',f:[['b','하지 않는 말','text'],['s','이유','text']],blank:()=>({b:'',s:''}),label:v=>v.b},
   find:{t:'찾은 보험금',req:'kind',f:[['d','날짜','date'],['kind','구분','select',SEL(FIND_KINDS)],['co','보험회사','text'],['what','내용 (예: 정형외과 통원 3회)','text'],['amt','금액 (원) — 모르면 비워 두기','number'],['st','상태','select',SEL(FIND_ST)]],blank:()=>({id:uid(),d:today(),kind:'미청구 병원비',co:'',what:'',amt:'',st:'찾음'}),label:v=>'「'+(v.what||v.kind)+'」 기록'},
@@ -1835,7 +1888,7 @@ function renderList(){
    (L.length?L.map(({c,i})=>{const k=conc(c),s=stage(c),d=done(c),fo=foundOf(c),ll=lastLog(c);
     return `<div class="tr" data-open="${c.id}">
       <span class="rk ${prio(c)}">${prio(c)}</span>
-      <span><span class="nm">${pnH(c.name)}</span>${c.chk?' <span class="pill p-heart">❓확인</span>':''}<span class="s" style="display:block">${c.g}고객 · ${esc(c.job||'직업 미정')}${c.fam?' · '+esc(c.fam):''}${fo?' · <b style="color:var(--blue)">찾음 '+fmtWonR(fo)+'</b>':''}${ll?' · 연락 '+ll.slice(5):''}${c.next?' · 다음 '+c.next.slice(5):''}</span></span>
+      <span><span class="nm">${pnH(c.name)}</span>${c.chk?' <span class="pill p-heart">❓확인</span>':''}<span class="s" style="display:block">${c.g}고객 · ${esc(c.job||'직업 미정')}${c.fam?' · '+esc(c.fam):''}${(c.pf&&PF_TYPE[c.pf.type])?' · '+PF_TYPE[c.pf.type].ic+' '+PF_TYPE[c.pf.type].name:''}${fo?' · <b style="color:var(--blue)">찾음 '+fmtWonR(fo)+'</b>':''}${ll?' · 연락 '+ll.slice(5):''}${c.next?' · 다음 '+c.next.slice(5):''}</span></span>
       <span><span class="pill p-blue">${tf(icC(k,conceptOf(c)))} ${esc(k.name)}</span>${secondOf(c)?' <span class="pill">+가족</span>':''}</span>
       <span class="pgt"><span class="pg"><i style="width:${Math.round(d/9*100)}%"></i></span>${d}/9</span>
       <span style="display:flex;gap:4px;align-items:center;justify-content:flex-end"><span class="pill ${s[1]}">${s[0]}</span><span class="ed"><button class="eb" type="button" data-act="edit" data-path="customers" data-i="${i}" data-sc="cust" title="이름·정보 고치기">✏️</button><button class="eb del" type="button" data-act="del" data-path="customers" data-i="${i}" data-sc="cust" title="삭제">🗑</button></span></span></div>`}).join('')
@@ -1899,7 +1952,7 @@ function openDrawer(id,keep){
    <div class="dh">
     <div class="row"><span class="rk ${prio(c)}">${prio(c)}</span><h3>${esc(c.name)}</h3><button class="btn sm" id="dRename" title="이름·정보 고치기">✏️</button><button class="btn sm" id="dPrint">🖨 한 장</button><button class="btn sm blue" data-rp="${c.id}">RP</button><button class="btn sm" id="dClose">닫기</button></div>
     <div class="row" style="margin-top:8px"><span class="pill">${c.g}고객</span><span class="pill p-blue">${esc(conc(c).name)}</span><span class="pill ${s[1]}">${s[0]}</span><span style="font-size:12.5px;color:var(--mute)">${done(c)}/9 완료${foundOf(c)?' · 찾음 '+fmtWonR(foundOf(c)):''}</span></div>
-    <div class="seg" id="dSeg">${tab('ck','체크')}${tab('fd','찾아줌')}${tab('lg','연락')}${tab('cc','컨셉')}${tab('in','정보')}</div>
+    <div class="seg" id="dSeg">${tab('ck','체크')}${tab('fd','찾아줌')}${tab('lg','연락')}${tab('cc','전략')}${tab('in','정보')}</div>
    </div>
    <div class="db">
     ${c.chk?`<div class="warn" style="margin-bottom:12px">손글씨가 애매한 이름이에요. 「정보」에서 고친 뒤 체크해 주세요.<label style="display:flex;gap:6px;margin-top:6px;font-weight:700;cursor:pointer"><input type="checkbox" id="chkDone"> 이름 확인 완료</label></div>`:''}
@@ -1931,6 +1984,8 @@ function openDrawer(id,keep){
      </div>
     </div>
     <div data-p="cc" ${dTab!=='cc'?'hidden':''}>
+     ${pfFormHTML(c)}
+     <div class="blk"><div class="blk-h"><h3>🗺 접근 전략</h3><button class="btn sm blue" id="apPrint">🖨 전략 한 장</button><div class="d">위 칸 · 컨셉 · 단계 · 찾아줌 단서로 짭니다</div></div>${apHTML(c)}</div>
      ${ccHTML(conc(c),null,null,conceptOf(c))}
      ${k2?'<div style="height:12px"></div>'+ccHTML(S.lib.concepts[k2],null,null,k2):''}
     </div>
@@ -1953,6 +2008,7 @@ function openDrawer(id,keep){
   $('#drawer').classList.add('on');$('#dim').classList.add('on');
   $('#dClose').onclick=closeDrawer;
   $('#dPrint').onclick=()=>printCust(c);
+  $('#apPrint').onclick=()=>printDoc(`<h1>${pnH(nm(c))} — 접근 전략</h1><div class="meta">${c.g}고객 · ${esc(c.job||'직업 미정')} · 「${esc(conc(c).name)}」 · ${stage(c)[0]}</div>${apHTML(c,true)}`);
   $('#dRename').onclick=()=>openEditor('cust',clone(c),false,v=>{Object.assign(c,v);commit();toast('고쳤어요');});
   $('#dSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;dTab=b.dataset.d;
     $('#dSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
@@ -1973,6 +2029,8 @@ $('#drawer').addEventListener('change',e=>{
   if(f){cur[f]=t.value;save();renderCust();renderRPSel();renderHome();
     if(['concept','fam','job','tag','g','name','next'].includes(f))openDrawer(cur.id,true);}
   if(r){cur.res[r]=t.value;save();}
+  if(t.dataset.pf){pfOf(cur)[t.dataset.pf]=t.value;save();renderList();openDrawer(cur.id,true);return;}
+  if(t.dataset.pfi){const p=pfOf(cur);p.int=p.int.filter(x=>x!==t.dataset.pfi);if(t.checked)p.int.push(t.dataset.pfi);save();openDrawer(cur.id,true);return;}
   if(st!=null){cur.steps[+st]=t.checked;save();renderList();renderHome();renderRP();openDrawer(cur.id,true);
     if(+st===8&&t.checked&&!cur.next)toast('다음 연락일도 정해 두세요');}
 });
@@ -1983,7 +2041,7 @@ function rows(){
     STEPS.forEach((s,j)=>o[(j+1)+'.'+s[0]]=c.steps[j]?'O':'');
     o['다음연락일']=c.next;o['최근연락']=lastLog(c);o['생일']=c.bday;o['찾은보험금(원)']=foundOf(c);o['입금확인(원)']=paidOf(c);
     o['찾아줌단서']=cluesOf(c).map(q=>q.label).join(', ');
-    o['결과-잘된것']=c.res.good;o['결과-빈것']=c.res.gap;o['결과-할일']=c.res.todo;o['메모']=c.memo;return o;});
+    o['결과-잘된것']=c.res.good;o['결과-빈것']=c.res.gap;o['결과-할일']=c.res.todo;const pp=c.pf||{};o['성향']=PF_TYPE[pp.type]?PF_TYPE[pp.type].name:'';o['관계']=PF_REL[pp.rel]?PF_REL[pp.rel][0]:'';o['보험태도']=PF_ATT[pp.att]?PF_ATT[pp.att][0]:'';o['메모']=c.memo;return o;});
 }
 function dl(blob,fn){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);}
 $('#exX').onclick=()=>{
@@ -2351,6 +2409,217 @@ document.addEventListener('click',e=>{
   if(t.closest('#sbLetterPrint')){printDoc(`<div class="letter">${sbLetter(c)}</div>`,{customer:true,real:$('#sbReal').checked});return;}
 });
 
+/* ================= 🧭 고객별 접근 전략 · 📒 성장기록북 =================
+   고객의 성향 · 관계 · 보험 태도 · 관심사 · 결정하는 사람 · 가족을 넣으면 접근 순서를 짜 줍니다.
+   ★ 성향은 짐작입니다 — 만나 보고 고칩니다. 규칙으로만 짜고 숫자를 지어 넣지 않습니다 (1번). */
+const PF_TYPE={
+  d:{ic:'🦁',name:'주도형',sub:'결론 먼저',sign:['말이 빠르고 결론부터 묻는다','시간을 아까워한다 — "그래서 핵심이 뭐야?"','결정을 스스로 빨리 한다'],
+     talk:['결론 한 줄 → 근거 세 줄 순서로','약속한 시간을 지킨다 — 10분이면 10분','두 가지를 보여 주고 본인이 고르게'],
+     show:'비교표 · 한 장 요약 — 길게 설명하지 않기',avoid:['긴 서론 · 같은 말 반복','"제가 다 알아서 해 드릴게요" — 끌려가는 느낌','결정을 재촉하는 말'],
+     close:'"두 가지 중에 어느 쪽이 맞으세요?" — 결정은 본인이',line:'바쁘실 테니 결론부터 말씀드릴게요.'},
+  i:{ic:'🐬',name:'사교형',sub:'관계 · 이야기',sign:['말이 많고 잘 웃는다','사람 · 사례 이야기를 좋아한다','그 자리 기분으로 정했다가 나중에 바꾸기도 한다'],
+     talk:['근황 이야기를 충분히 — 본론은 그다음','숫자보다 비슷한 사람의 이야기로','맞장구와 칭찬을 아끼지 않기'],
+     show:'사례 · 그림 한 장 — 표는 마지막에 짧게',avoid:['처음부터 표 · 숫자만','딱딱한 말투 · 서류 먼저','그 자리 약속만 믿고 정리 없이 헤어지기'],
+     close:'만난 날 저녁, 오늘 이야기한 것을 카톡으로 정리해 보내기',line:'요즘 어떻게 지내요? 지난번에 말한 그 일은 어떻게 됐어요?'},
+  s:{ic:'🐨',name:'안정형',sub:'신중 · 배려',sign:['조용하고 남을 배려한다','바뀌는 것을 싫어한다','"생각해 볼게요" 를 자주 한다'],
+     talk:['천천히, 한 번에 하나씩','"지금 것 그대로 두셔도 돼요" — 유지가 먼저라고 안심시키기','가족 이야기로 마음 열기'],
+     show:'지금 것과 무엇이 같은지부터 — 바뀌는 것은 하나만',avoid:['재촉 — "오늘 정하셔야 해요"','한 번에 여러 가지 제안','해지 · 갈아타기 같은 큰 변화 이야기'],
+     close:'"천천히 생각해 보시고 다음 주에 다시 이야기해요" — 시간을 주면 결정이 빨라집니다',line:'부담 갖지 마세요. 오늘은 보기만 할게요.'},
+  c:{ic:'🦉',name:'분석형',sub:'자료 · 근거',sign:['질문이 많고 꼼꼼하다','자료 · 근거를 달라고 한다','처음엔 의심하고 따져 본다'],
+     talk:['근거 먼저 — 증권 · 약관 · 공식 자료로','단정하지 않고 정확한 말로 — "약관 기준에 맞으면"','모르는 것은 "확인해서 알려 드릴게요"'],
+     show:'자료 한 장 · 약관 쪽수 — 과장 없이',avoid:['과장 · "무조건" · "다들 해요"','감정에만 호소하기','질문을 얼버무리기'],
+     close:'자료를 남기고 "궁금한 점을 적어 두시면 다음에 다 답해 드릴게요"',line:'자료를 먼저 보여 드리고 설명드릴게요.'}
+};
+const PF_REL={close:['매우 가까움 (가족 · 절친)','전화로 바로','친할수록 더 정중하게 — 「부탁」 이 아니라 「챙겨 줄 게 생겨서」'],
+  near:['가까움','전화로','근황 3분 먼저 — 그다음 소식'],mid:['보통 (지인)','카톡으로 근황 → 통화','보험 단어 없이 근황부터, 답이 오면 통화'],
+  far:['오랜만 (1년 넘게 연락 없음)','카톡으로 근황만','첫 메시지에는 보험 이야기 0 — 두세 번 주고받은 뒤 통화'],
+  intro:['소개받음','소개해 준 분 이름으로 시작','"○○님이 꼭 연락해 보라고 하셔서요" — 짧고 정중하게, 5분 통화 약속']};
+const PF_ATT={good:['호의적','찾아줌 자리에서 보장분석까지 한 번에 잇기 쉽습니다 — 다리 대본으로 날짜까지'],
+  none:['무관심','보험 이야기 대신 「받을 돈」 — 찾아줌이 문입니다'],
+  distrust:['불신 (나쁜 경험)','그 경험을 먼저 끝까지 듣기 · 「오늘은 권하지 않아요」 약속 · 찾아줌 결과로 믿음을 쌓기'],
+  many:['보험이 많음','「많은 것과 맞는 것은 다르다」 — 보험 많은 고객 다리 대본'],
+  few:['보험이 거의 없음','무엇부터 있어야 하는지 순서만 — 한 번에 많이 권하지 않기']};
+const PF_INT={kid:['아이 · 교육','아이 학교 · 학원 이야기','자녀 보험 만기 · 한 사람이 아플 때 교육비'],
+  health:['건강','요즘 몸 관리 · 검진','진단비가 있는지 · 실손이 언제 가입한 것인지'],
+  old:['노후','은퇴 뒤 계획','아플 때 노후 자금이 새지 않게 — 진단비 · 간병'],
+  money:['돈 · 재테크','요즘 재테크 이야기','보험료가 겹쳐 새는 곳이 있는지 — 「줄여 드린다」 고 약속하지 않기'],
+  parent:['부모님','부모님 건강','부모님 보험 · 청구를 챙겨 드리기 (부모님 본인 동의로)'],
+  work:['일 · 사업','하는 일 이야기','일을 못 하는 동안 소득 공백'],
+  house:['집 · 대출','집 · 이사 · 대출 이야기','가장이 아플 때 대출 상환 공백']};
+const PF_DEC={self:['본인','본인에게 바로 — 결정할 시간만 주기'],both:['배우자와 같이','두 분 같이 계실 때로 약속 — 한 분만 설득하면 다시 처음부터'],
+  spouse:['배우자','배우자를 같이 만나기 — 본인 명의 보험은 본인도 알아야 한다고'],parent:['부모님','부모님과 함께 · 본인 동의는 따로']};
+const PF_PREF={call:'전화',kakao:'카톡',meet:'만남'};
+function pfOf(c){c.pf=Object.assign({type:'',rel:'',att:'',int:[],dec:'',pref:'',note:''},c.pf||{});if(!Array.isArray(c.pf.int))c.pf.int=[];if(!Array.isArray(c.fam2))c.fam2=[];return c.pf;}
+const pfTag=c=>{const t=PF_TYPE[(c.pf||{}).type];return t?`<span class="pill" title="${esc(t.name)}">${t.ic} ${esc(t.name)}</span>`:'';};
+function objPick(re){const o=S.lib.objs.find(x=>re.test(x.q));return o?{q:cfgFill(o.q),a:cfgFill(o.a),b:cfgFill(o.b),c:cfgFill(o.c)}:null;}
+// 접근 전략 — 칸 하나하나가 「왜 그렇게 하는지」 를 말하도록
+function apStrategy(c){
+  const p=pfOf(c),T=PF_TYPE[p.type],R=PF_REL[p.rel],A=PF_ATT[p.att],D=PF_DEC[p.dec],k=conc(c),cl=cluesOf(c);
+  const fam=c.fam2.length?c.fam2:[],kids=fam.filter(f=>f.rel==='자녀'),hasSp=fam.some(f=>f.rel==='배우자')||/배우자/.test(c.fam||''),hasPar=fam.some(f=>f.rel==='부모님');
+  const sum=[T?T.ic+' '+T.name:'성향 모름',R?R[0]:'',A?(A[0].includes('보험')?A[0]:'보험 '+A[0]):''].filter(Boolean).join(' · ');
+  const first=[];
+  if(c.tag&&/DB/.test(c.tag))first.push('연락처를 어떻게 알게 됐는지 먼저 확인 — 이전 회사 업무로 받은 정보면 연락하지 않기');
+  first.push('방법 — '+(PF_PREF[p.pref]?PF_PREF[p.pref]+' (본인이 편한 쪽)':R?R[1]:'전화 또는 카톡'));
+  if(R)first.push(R[2]);
+  first.push('첫 마디 — "'+(T?T.line+' ':'')+k.hook+'"');
+  if(p.rel==='intro')first.push('소개해 준 분께 먼저 「연락드려도 될지」 여쭤 두기');
+  const meet=T?T.talk.slice():['처음 10분은 듣기 — 말투 · 속도 · 질문을 보고 성향을 짐작하기','결론과 이야기를 반반으로','고를 수 있게 두 가지를 보여 주기'];
+  if(T)meet.push('보여 줄 때 — '+T.show);
+  if(A)meet.push(A[1]);
+  const topics=[];p.int.forEach(i=>{const x=PF_INT[i];if(x)topics.push(x[1]);});
+  kids.forEach(f=>topics.push({html:'자녀'+(f.name?' '+pnH(f.name):'')+(f.age?' ('+esc(f.age)+')':'')+' 이야기 — 이름 · 나이를 기억하고 먼저 묻기'}));
+  if(hasPar)topics.push('부모님 안부');
+  if(!topics.length)topics.push(k.heart);
+  const find=(k.check||[]).slice(0,3);
+  if(kids.length)find.push('아이 병원비도 같이 — 가족 실손 청구 습관');
+  if(hasPar)find.push('부모님 병원비 — 부모님이 직접 조회하시도록');
+  const bridge=[];
+  p.int.forEach(i=>{const x=PF_INT[i];if(x)bridge.push(x[2]);});
+  cl.slice(0,2).forEach(q=>bridge.push(q.see+' (찾아줌 단서)'));
+  if(!bridge.length)bridge.push('「오늘 본 건 지나간 영수증 — 앞으로 아플 때 나올지는 보험 안을 펴 봐야 압니다」');
+  const avoid=(T?T.avoid.slice():[]);
+  if(p.att==='distrust')avoid.push('그때 그 설계사 · 회사 탓하기 — 맞장구도 비방이 됩니다');
+  if(p.att==='many')avoid.push('「보험료 줄여 드릴게요」 — 근거 없는 절감 약속');
+  avoid.push('해지부터 권하기 — 유지가 맞는지부터');
+  const objs=[];
+  const push=o=>{if(o&&!objs.some(x=>x.q===o.q))objs.push(o);};
+  if(p.att==='distrust')push(objPick(/실적|불편/));
+  if(p.att==='many')push(objPick(/충분히/));
+  if(p.att==='none')push(objPick(/바빠|인터넷/));
+  if(p.dec==='spouse'||p.dec==='both')push(objPick(/남편|아내/));
+  if(p.type==='c')push(objPick(/개인정보/));
+  if(c.tag&&/DB/.test(c.tag))push(objPick(/해지해야/));
+  if(!objs.length)push(objPick(/결국 그거|충분히/));
+  const dec=D?D[1]:(hasSp?'배우자가 있으면 두 분 같이 볼 날을 먼저 묻기':'결정할 시간을 주기');
+  const close=T?T.close:'다음 약속은 양자택일로 — "화요일이 편하세요, 목요일이 편하세요?"';
+  const rec=recFor(c).map(id=>scenById(id)).filter(Boolean).map(s=>cfgFill(s.chip));
+  const s=c.steps,plan=[];
+  if(!s[0]){plan.push(['이번 주','첫 연락 — '+(R?R[1]:'편한 방법')+' · 목표는 찾아줌 약속 하나']);plan.push(['약속 날','찾아줌 10분 — 마지막 2분은 다리']);plan.push(['다음 날','카톡으로 고마움 + 입금 확인 + 보장분석 날짜']);}
+  else if(!(s[2]||s[3])){plan.push(['이번 주','찾아줌 약속 잡기 — 양자택일']);plan.push(['만나는 날','찾아줌 10분 · 단서 체크']);plan.push(['다음 날','카톡 후속 — 보장분석 날짜']);}
+  else if(!s[5]){plan.push(['이번 주','보장분석 약속 — 이유는 찾아줌 단서에서']);plan.push(['조회 뒤','결과 세 줄 정리 · 한 장 인쇄']);plan.push(['결과 날','칭찬 먼저 · 할 일은 하나']);}
+  else{plan.push(['이번 달','결과와 상관없이 안부 — 입금 · 생일 · 갱신일']);plan.push(['다음 만남','가족 보장분석 제안 ('+(hasSp||kids.length?'가족 있음':'필요할 때')+')']);plan.push(['그다음','소개 한 분 — "같은 직장 동료 중에 한 분만"']);}
+  return {sum,first,meet,topics,find,bridge,avoid,objs,dec,close,rec,plan,known:!!T};
+}
+function apHTML(c,print){
+  const a=apStrategy(c),li=x=>x.map(t=>`<li>${typeof t==='string'?esc(t):t.html}</li>`).join('');
+  return `<div class="ap${print?' ap-p':''}">
+    <div class="ap-sum">${esc(a.sum)}${a.known?'':' <small>— 성향을 고르면 말하는 법이 이 분에게 맞춰집니다</small>'}</div>
+    <div class="ap-g">
+      <div><h5>📞 첫 연락</h5><ul>${li(a.first)}</ul></div>
+      <div><h5>🤝 만나서 이렇게</h5><ul>${li(a.meet)}</ul></div>
+      <div><h5>💬 대화 소재</h5><ul>${li(a.topics)}</ul></div>
+      <div><h5>🔍 찾아줌에서 볼 것</h5><ul>${li(a.find)}</ul></div>
+      <div><h5>🌉 보장분석으로 잇는 이유</h5><ul>${li(a.bridge)}</ul></div>
+      <div><h5>🚫 이 분께 피할 말</h5><ul>${li(a.avoid)}</ul></div>
+    </div>
+    ${a.objs.length?`<h5>🙅 나올 만한 거절 — 공감 → 근거 → 작은 제안</h5>${a.objs.map(o=>`<div class="ap-o"><b>${o.q}</b><div>💗 ${o.a}</div><div>🧠 ${o.b}</div><div>✅ ${o.c}</div></div>`).join('')}`:''}
+    <div class="ap-g2"><div><h5>🗳 결정 돕기</h5><p>${esc(a.dec)}</p><p>${esc(a.close)}</p></div><div><h5>🎙 연습할 대본</h5><p>${a.rec.map(esc).join(' → ')||'—'}</p></div></div>
+    <h5>🗓 다음 세 번</h5><table class="ap-t">${a.plan.map(x=>`<tr><th>${esc(x[0])}</th><td>${esc(x[1])}</td><td class="ap-ck">☐</td></tr>`).join('')}</table>
+    <p class="ap-n">성향 · 관계는 짐작입니다 — 만나 보고 고치세요. 보험료 · 보장은 심사 결과에 따릅니다.</p></div>`;
+}
+function pfFormHTML(c){
+  const p=pfOf(c),sel=(k,o)=>`<select data-pf="${k}"><option value="">모름</option>${Object.entries(o).map(([v,x])=>`<option value="${v}" ${p[k]===v?'selected':''}>${esc(Array.isArray(x)?x[0]:(x.name?x.ic+' '+x.name+' — '+x.sub:x))}</option>`).join('')}</select>`;
+  const P='cust.'+c.id+'.fam2';
+  return `<div class="blk"><div class="blk-h"><h3>🧭 이 분은 어떤 분인가</h3><div class="d">고르면 아래 접근 전략이 바로 바뀝니다 · 모르면 비워 두기</div></div>
+   <div class="pf-g"><label>성향${sel('type',PF_TYPE)}</label><label>관계${sel('rel',PF_REL)}</label><label>보험에 대한 태도${sel('att',PF_ATT)}</label><label>결정하는 사람${sel('dec',PF_DEC)}</label><label>연락 편한 방법${sel('pref',PF_PREF)}</label></div>
+   <div class="pf-int"><span>관심사</span>${Object.entries(PF_INT).map(([v,x])=>`<label class="chip ${p.int.includes(v)?'on':''}"><input type="checkbox" data-pfi="${v}" ${p.int.includes(v)?'checked':''} hidden>${esc(x[0])}</label>`).join('')}</div>
+   <div class="blk-h" style="margin-top:14px"><h3>👨‍👩‍👧 가족</h3><button class="btn sm" data-act="add" data-path="${P}" data-sc="fam">+ 가족 한 명</button><div class="d">이름 · 나이를 적어 두면 「먼저 묻기」 에 들어갑니다${c.fam?' · 적어 둔 가족: '+esc(c.fam):''}</div></div>
+   ${c.fam2.length?c.fam2.map((f,i)=>`<div class="fr"><div><div class="t1">${esc(f.rel)}${f.name?' · '+pnH(f.name):''}${f.age?' · '+esc(f.age):''}</div>${f.memo?`<div class="t2">${esc(f.memo)}</div>`:''}</div><div></div>${IE(P,i,'fam',{always:true,noMove:true})}</div>`).join(''):'<p class="empty">아직 없어요.</p>'}
+   <details class="acc" style="margin-top:10px"><summary>성향 알아보는 법</summary><div class="a">${pfGuideHTML()}</div></details>
+  </div>`;
+}
+function pfGuideHTML(){return `<table class="pf-t"><tr><th>성향</th><th>이런 신호</th><th>이렇게</th><th>피할 것</th></tr>${Object.values(PF_TYPE).map(t=>`<tr><td><b>${t.ic} ${esc(t.name)}</b><br><small>${esc(t.sub)}</small></td><td>${t.sign.map(esc).join('<br>')}</td><td>${t.talk.map(esc).join('<br>')}</td><td>${t.avoid.map(esc).join('<br>')}</td></tr>`).join('')}</table>`;}
+
+/* ── 📒 성장기록북 ── */
+const BK={who:'ab',sec:{me:1,map:1,cards:1,weeks:1,logs:1,rp:1,blank:1,guide:1},blankN:4,pick:{}};
+function bkCusts(){const C=S.customers;if(BK.who==='all')return C;if(BK.who==='pick')return C.filter(c=>BK.pick[c.id]);return C.filter(c=>prio(c)!=='C');}
+function weekNow(){const st=(S.cfg||{}).start;if(!st)return null;const d=Math.floor((new Date(today())-new Date(st))/864e5);return d<0?0:Math.min(8,Math.floor(d/7)+1);}
+const lineBox=n=>`<div class="bk-lines">${'<div></div>'.repeat(n)}</div>`;
+function bkBlankCard(){return `<div class="bk-card pb"><h2>고객 카드 <small>— 손으로 채우기</small></h2>
+  <table><tr><th style="width:22%">이름</th><td></td><th style="width:18%">구분</th><td>☐ 계약 ☐ 가망 ☐ 소개</td></tr><tr><th>직업</th><td></td><th>연락 편한 방법</th><td>☐ 전화 ☐ 카톡 ☐ 만남</td></tr>
+  <tr><th>가족</th><td colspan="3">☐ 배우자 ________ ☐ 자녀 ______ (나이 ____) ☐ 부모님 ________</td></tr>
+  <tr><th>성향</th><td colspan="3">${Object.values(PF_TYPE).map(t=>'☐ '+t.ic+' '+esc(t.name)).join('  ')}  ☐ 모름</td></tr>
+  <tr><th>관계</th><td colspan="3">${Object.values(PF_REL).map(r=>'☐ '+esc(r[0])).join('  ')}</td></tr>
+  <tr><th>보험 태도</th><td colspan="3">${Object.values(PF_ATT).map(r=>'☐ '+esc(r[0])).join('  ')}</td></tr>
+  <tr><th>관심사</th><td colspan="3">${Object.values(PF_INT).map(r=>'☐ '+esc(r[0])).join('  ')}</td></tr></table>
+  <h2>접근 계획</h2><table><tr><th style="width:22%">첫 마디</th><td class="blank"></td></tr><tr><th>대화 소재</th><td class="blank"></td></tr><tr><th>찾아줌에서 볼 것</th><td class="blank"></td></tr><tr><th>보장분석으로 잇는 이유</th><td class="blank"></td></tr><tr><th>피할 말</th><td class="blank"></td></tr></table>
+  <h2>연락 기록</h2><table><tr><th style="width:16%">날짜</th><th style="width:14%">방법</th><th>나눈 이야기 · 다음에 할 것</th></tr>${'<tr><td class="blank"></td><td></td><td></td></tr>'.repeat(6)}</table></div>`;}
+function bookHTML(blank){
+  const R=cfgRaw(),c0=Object.assign({},CFG_DEF,S.cfg||{}),C=blank?[]:bkCusts(),me=blank?'':R.ME,sec=BK.sec;
+  const out=[];
+  out.push(`<div class="bk-cover"><div class="bk-k">📒 성장기록북</div><h1>${blank||me==='○○'?'__________ 의 8주':esc(me)+'의 8주'}</h1>
+    <table class="bk-ct"><tr><th>팀 · 지점</th><td>${blank?'':esc(c0.team||'')}</td></tr><tr><th>함께하는 선배</th><td>${blank?'':esc(c0.leader||'')}</td></tr><tr><th>시작한 날</th><td>${blank?'':esc(c0.start||'')}</td></tr><tr><th>8주 뒤 나의 모습</th><td class="blank">${blank?'':esc(c0.goal||'')}</td></tr></table>
+    <div class="bk-q">지인은 부탁하면 멀어지고, 챙겨주면 가까워집니다.<br>소식 → 찾아드리기 → 보장분석 → 소개</div></div>`);
+  if(sec.me){const st=S.story;out.push(`<div class="pb"><h2>1. 나의 이야기 · 하루 루틴</h2>
+    <div class="box"><b>내 이야기 30초</b><div class="ln2">${blank?lineBox(4):'① '+esc(st.q1)+'<br>② '+esc(st.q2)+'<br>③ '+esc(st.q3)}</div></div>
+    <div class="box"><b>하루 루틴</b> — 📞 연락 3명 · 🎙 RP 10분 · 📝 기록 2분</div>
+    <div class="box"><b>나의 다짐</b>${lineBox(3)}</div></div>`);}
+  if(sec.map&&!blank){out.push(`<div class="pb"><h2>2. 고객 지도 — ${C.length}명</h2><table><tr><th>우선</th><th>이름</th><th>구분</th><th>성향</th><th>관계</th><th>보험 태도</th><th>단계</th><th>다음 연락</th></tr>
+    ${C.map(c=>{const p=pfOf(c);return `<tr><td>${prio(c)}</td><td>${pnH(c.name)}</td><td>${c.g}</td><td>${PF_TYPE[p.type]?PF_TYPE[p.type].ic+' '+PF_TYPE[p.type].name:'?'}</td><td>${PF_REL[p.rel]?esc(PF_REL[p.rel][0]):''}</td><td>${PF_ATT[p.att]?esc(PF_ATT[p.att][0]):''}</td><td>${stage(c)[0]} ${done(c)}/9</td><td>${esc(c.next||'')}</td></tr>`;}).join('')}</table></div>`);}
+  if(sec.cards&&!blank)C.forEach((c,i)=>{const k=conc(c);out.push(`<div class="pb bk-cp"><h2>${i===0?'3. 고객별 접근 전략 — ':''}${pnH(nm(c))} <small>${c.g}고객 · ${esc(c.job||'직업 미정')}${c.fam?' · '+esc(c.fam):''} · 「${esc(k.name)}」 · ${stage(c)[0]}</small></h2>
+    ${c.fam2&&c.fam2.length?`<div class="ln2">👨‍👩‍👧 ${c.fam2.map(f=>esc(f.rel)+(f.name?' '+pnH(f.name):'')+(f.age?' ('+esc(f.age)+')':'')).join(' · ')}</div>`:''}
+    ${apHTML(c,true)}
+    <div class="box"><b>만나고 나서 — 선배 한마디</b>${lineBox(2)}</div></div>`);});
+  if(sec.weeks){out.push(`<div class="pb"><h2>4. 8주 기록</h2>${S.lib.weeks.map((w,i)=>`<div class="bk-wk"><div class="bk-wh"><b>${i+1}주차 · ${esc(w.t)}</b> <small>${esc(w.who)}</small></div>
+    ${w.m.map(m=>`<div class="ln2">${cb(!blank&&w.done[m])}${esc(m)}</div>`).join('')}
+    <div class="two"><div class="box"><b>이번 주 한 줄 회고</b><div class="ln2">${blank||!w.note?lineBox(1):esc(w.note)}</div></div><div class="box"><b>선배 한마디</b>${lineBox(1)}</div></div></div>`).join('')}</div>`);}
+  if(sec.logs){const L=[];if(!blank)C.forEach(c=>(c.logs||[]).forEach(l=>L.push([l.d,c,l.how,l.note])));L.sort((a,b)=>(a[0]||'').localeCompare(b[0]||''));
+    const F=[];if(!blank)C.forEach(c=>(c.finds||[]).forEach(f=>F.push([f,c])));
+    out.push(`<div class="pb"><h2>5. 연락 · 찾아줌 기록</h2><table><tr><th style="width:14%">날짜</th><th style="width:16%">고객</th><th style="width:10%">방법</th><th>나눈 이야기 · 다음에 할 것</th></tr>
+      ${L.map(x=>`<tr><td>${esc(x[0])}</td><td>${pnH(x[1].name)}</td><td>${esc(x[2])}</td><td>${esc(x[3])}</td></tr>`).join('')}${'<tr><td class="blank"></td><td></td><td></td><td></td></tr>'.repeat(Math.max(6,12-L.length))}</table>
+      <h2>찾아드린 보험금</h2><table><tr><th>날짜</th><th>고객</th><th>구분</th><th>내용</th><th>금액</th><th>상태</th></tr>${F.map(([f,c])=>`<tr><td>${esc(f.d)}</td><td>${pnH(c.name)}</td><td>${esc(f.kind)}</td><td>${esc(f.what)}</td><td>${f.amt===''||f.amt==null?'모름':fmtWonR(f.amt)}</td><td>${esc(f.st)}</td></tr>`).join('')}${'<tr><td class="blank"></td><td></td><td></td><td></td><td></td><td></td></tr>'.repeat(Math.max(3,6-F.length))}</table>
+      ${!blank&&F.length?`<div class="ln2">합계 <b>${fmtWonR(F.reduce((a,[f])=>a+(+f.amt||0),0))}</b> · ${F.length}건</div>`:''}</div>`);}
+  if(sec.rp){out.push(`<div class="pb"><h2>6. RP 연습 기록</h2><table><tr><th>대본</th><th style="width:16%">연습</th><th style="width:20%">마지막</th><th>잘된 말 · 막힌 곳</th></tr>${S.lib.scen.map(s=>`<tr><td>${cfgFill(s.chip)}</td><td>${blank?'':(S.rp[s.id]||0)+'회'}</td><td>${blank?'':esc((S.rpLast||{})[s.id]||'')}</td><td class="blank"></td></tr>`).join('')}</table></div>`);}
+  if(sec.guide)out.push(`<div class="pb"><h2>성향 알아보는 법 — 처음 10분은 듣기</h2>${pfGuideHTML()}<div class="ln2" style="margin-top:8px">성향은 짐작입니다. 한 사람에게 둘 이상 보이기도 합니다 — 더 강한 쪽으로 시작하고, 만나 보고 고칩니다.</div></div>`);
+  if(sec.blank||blank)for(let i=0;i<(blank?Math.max(BK.blankN,8):BK.blankN);i++)out.push(bkBlankCard());
+  return out.join('');
+}
+function weekReport(){
+  const C=S.customers,t=today(),ago=sbAdd(t,-7),R=cfgRaw(),w=weekNow();
+  const logs=C.reduce((a,c)=>a+(c.logs||[]).filter(l=>l.d>=ago&&l.d<=t).length,0);
+  const cnt=f=>C.filter(f).length,found=C.reduce((a,c)=>a+foundOf(c),0);
+  const stuck=C.filter(c=>c.next&&c.next<t).slice(0,5);
+  const types={};C.forEach(c=>{const k=(c.pf||{}).type;const n=PF_TYPE[k]?PF_TYPE[k].ic+PF_TYPE[k].name:'성향 모름';types[n]=(types[n]||0)+1;});
+  const wk=w&&S.lib.weeks[w-1];
+  return [`[주간 보고] ${R.ME} · ${t}${w?' · '+w+'주차':''}`,
+    `연락 기록 ${logs}건 (지난 7일)`,
+    `전체 ${C.length}명 — 연락 ${cnt(c=>c.steps[0])} · 찾아줌 ${cnt(c=>c.steps[2]||c.steps[3])} · 보장분석 완료 ${cnt(c=>c.steps[5])} · 소개 ${cnt(c=>c.steps[7])}`,
+    `찾아드린 보험금 ${fmtWonR(found)}`,
+    wk?`이번 주 미션 「${wk.t}」 ${wk.m.filter(m=>wk.done[m]).length}/${wk.m.length}`+(wk.note?` · 회고: ${wk.note}`:''):'',
+    `성향 — ${Object.entries(types).map(([k,v])=>k+' '+v).join(' · ')}`,
+    stuck.length?`연락일이 지난 분 — ${stuck.map(c=>mask(c.name)+'님('+(PF_TYPE[(c.pf||{}).type]?PF_TYPE[c.pf.type].name:'성향 모름')+' · '+stage(c)[0]+')').join(', ')}`:'연락일이 지난 분 없음',
+    `(이름은 가렸습니다)`].filter(Boolean).join('\n');
+}
+function renderBook(){
+  const el=$('#bkBody');if(!el)return;const c0=Object.assign({},CFG_DEF,S.cfg||{}),w=weekNow(),C=S.customers;
+  const SEC=[['me','나의 이야기 · 루틴'],['map','고객 지도'],['cards','고객별 접근 전략'],['weeks','8주 기록'],['logs','연락 · 찾아줌 기록'],['rp','RP 연습 기록'],['guide','성향 알아보는 법'],['blank','빈 고객 카드']];
+  el.innerHTML=`<div class="blk"><div class="blk-h"><h3>📇 표지</h3><button class="btn sm cfg-btn" data-cfgedit>✏️ 이름 · 팀 · 선배 · 시작일</button></div>
+     <div class="bk-info"><div><span>신입</span><b>${esc(cfgRaw().ME)}</b></div><div><span>팀 · 지점</span><b>${esc(c0.team||'—')}</b></div><div><span>선배</span><b>${esc(c0.leader||'—')}</b></div><div><span>시작한 날</span><b>${esc(c0.start||'—')}${w?' · '+w+'주차':''}</b></div></div></div>
+   <div class="blk"><div class="blk-h"><h3>🖨 무엇을 넣을까</h3></div>
+     <div class="seg" id="bkWho">${[['ab','우선 A · B 고객'],['all','전체 고객'],['pick','직접 고르기']].map(([v,l])=>`<button data-bkwho="${v}" class="${BK.who===v?'on':''}">${l}</button>`).join('')}</div>
+     ${BK.who==='pick'?`<div class="pf-int" style="margin-top:10px">${C.map(c=>`<label class="chip ${BK.pick[c.id]?'on':''}"><input type="checkbox" data-bkpick="${c.id}" ${BK.pick[c.id]?'checked':''} hidden>${esc(c.name)}</label>`).join('')}</div>`:''}
+     <div class="pf-int" style="margin-top:12px"><span>넣을 장</span>${SEC.map(([k,l])=>`<label class="chip ${BK.sec[k]?'on':''}"><input type="checkbox" data-bksec="${k}" ${BK.sec[k]?'checked':''} hidden>${l}</label>`).join('')}</div>
+     <div class="row mt"><label class="toggle" style="padding:0">빈 고객 카드 <select id="bkN">${[0,4,8,12].map(n=>`<option ${BK.blankN===n?'selected':''}>${n}</option>`).join('')}</select> 장</label><label class="toggle" style="padding:0"><input type="checkbox" data-pmask> 이름 가리기</label></div>
+     <div class="row mt"><button class="btn blue" id="bkPrint">🖨 내 기록북 인쇄 · PDF (${bkCusts().length}명)</button><button class="btn" id="bkBlank">🖨 빈 기록북 (손으로 쓰기)</button></div></div>
+   <div class="blk"><div class="blk-h"><h3>📤 선배(팀장)에게 주간 보고</h3><button class="btn sm blue" id="wrCopy">카톡 문구 복사</button><button class="btn sm" id="wrPrint">🖨 한 장</button><div class="d">이름은 가린 채 숫자와 진행만 — 팀장은 이것으로 팀원들의 가망 고객 흐름을 봅니다</div></div>
+     <pre class="wr">${esc(weekReport())}</pre></div>
+   <div class="blk"><div class="blk-h"><h3>🧭 성향 알아보는 법</h3><div class="d">고객 상세 「전략」 칸에서 고르면 그 분 전략이 바로 바뀝니다</div></div>${pfGuideHTML()}</div>`;
+}
+document.addEventListener('click',e=>{
+  const t=e.target;if(!t.closest||!t.closest('#t-book'))return;
+  const w=t.closest('[data-bkwho]');if(w){BK.who=w.dataset.bkwho;renderBook();return;}
+  if(t.closest('#bkPrint')){if(!bkCusts().length&&BK.sec.cards){toast('넣을 고객이 없어요 — 고르는 칸을 바꿔 보세요');}printDoc(`<div class="book">${bookHTML(false)}</div>`);return;}
+  if(t.closest('#bkBlank')){printDoc(`<div class="book">${bookHTML(true)}</div>`);return;}
+  if(t.closest('#wrCopy')){copyText(weekReport(),'주간 보고를 복사했어요 — 이름은 가려져 있어요');return;}
+  if(t.closest('#wrPrint')){printDoc(`<h1>주간 보고</h1><pre class="wr">${esc(weekReport())}</pre>`);return;}
+});
+document.addEventListener('change',e=>{
+  const t=e.target;if(!t.closest||!t.closest('#t-book'))return;
+  if(t.dataset.bkpick){BK.pick[t.dataset.bkpick]=t.checked;renderBook();return;}
+  if(t.dataset.bksec){BK.sec[t.dataset.bksec]=t.checked?1:0;renderBook();return;}
+  if(t.id==='bkN'){BK.blankN=+t.value;return;}
+});
+
 /* ================= 8주 ================= */
 function renderWeeks(){
   let tot=0,ok=0;
@@ -2384,7 +2653,7 @@ function printDoc(html,o){
   o=o||{};syncPmask();if(o.real)document.body.classList.remove('pmask');
   $('#printArea').innerHTML=`<div class="pdoc">${html}${o.customer?'':`<div class="foot2">APEX · ${esc(cfgRaw().CUR)} · 내부 교육용 (고객에게 그대로 보내지 마세요) · 인쇄 ${today()}${S.pmask?' · 이름 가림':''}</div>`}</div>`;
   document.body.classList.add('printing');
-  setTimeout(()=>window.print(),60);
+  setTimeout(()=>{let done=false;const go=()=>{if(done)return;done=true;window.print();};try{(document.fonts&&document.fonts.ready?document.fonts.ready:Promise.resolve()).then(()=>setTimeout(go,30));setTimeout(go,2500);}catch(e){go();}},80);
 }
 const cb=on=>`<span class="cb ${on?'on':''}"></span>`;
 function printList(){
@@ -2438,7 +2707,7 @@ $('#prCheckForm').onclick=()=>{
 };
 
 /* ================= 시작 ================= */
-function renderAll(){renderCfg();renderMe();renderGuide();renderHome();renderStory();renderLists();renderCust();renderRPSel();renderRP();renderWeeks();sbRender();syncPmask();}
+function renderAll(){renderCfg();renderMe();renderGuide();renderHome();renderStory();renderLists();renderCust();renderRPSel();renderRP();renderWeeks();sbRender();renderBook();syncPmask();}
 fillTools();
 $('#meName').addEventListener('input',e=>{S.me=e.target.value.slice(0,12);save();renderMe();renderRP();});
 renderAll();

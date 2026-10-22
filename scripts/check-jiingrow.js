@@ -1,4 +1,4 @@
-/* 🌱 <b>지인 8주 성장 프로그램</b> — 명단 비운 판 (판 X145 · 2026-10-21) · 이름·회사 · 미청구 찾기 · 안내장 (판 X152 · 2026-10-22)
+/* 🌱 <b>지인 8주 성장 프로그램</b> — 명단 비운 판 (판 X145 · 2026-10-21) · 이름·회사 · 미청구 찾기 · 안내장 (판 X152) · 접근 전략 · 성장기록북 (판 X154 · 2026-10-22)
 
    사장님 말씀 — 「더 디테일 하게 만들고 수정 / 인쇄 / 추가 / 삭제 기능과 고객에게
    보험금 찾아줌 → 그리고 보장분석 받아야 되는 이유를 명확하게 만들어줘 RP를」 ·
@@ -21,7 +21,11 @@
      ⑪ 대본 점검 — 모든 대본에 안 채운 {자리} 가 0 · 결과 전달은 결과 세 줄이 비면 지어 말하지 않는다 (1번)
      ⑫ ★ 미청구 찾기 — 칸을 잘못 잡지 않는다(기관기호·본인부담률·투약일수) · 묶음 청구·접수일만 있는 청구를
         「청구 안 된 듯」 으로 단정하지 않는다 · 조건이 비면 금액을 안 지어내고 「0원」 이라 하지 않는다 (1번)
-     ⑬ ★ 안내장 — 「심사 결과에 따릅니다」 · 3년 · 「내부 교육용」 쪽지가 안 붙는다 · 이름은 가린 채가 기본 (2번 · 3번)  */
+     ⑬ ★ 안내장 — 「심사 결과에 따릅니다」 · 3년 · 「내부 교육용」 쪽지가 안 붙는다 · 이름은 가린 채가 기본 (2번 · 3번)
+   판 X154 —
+     ⑭ 접근 전략 — 고른 성향·관계·태도·가족이 전략에 들어간다 · 안 채운 {자리} 0 · 성향은 짐작이라고 적는다
+     ⑮ ★ 성장기록북 · 주간 보고에 고객 실명 · 가족 이름이 안 나간다 (3번)
+     ⑯ ★ 인쇄는 글꼴이 다 온 뒤에 연다 — 제목이 비어 찍히지 않게  */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9171;
@@ -206,6 +210,30 @@ const srv = http.createServer((q, s) => {
     const lp = await p.evaluate(() => document.querySelector('#printArea').innerText);
     await p.emulateMedia({ media: 'screen' }); await p.evaluate(() => document.body.classList.remove('printing'));
     is(/홍○○/.test(lp) && !/홍길동/.test(lp) && !/내부 교육용/.test(lp), '안내장 인쇄 — 이름은 가린 채 · 「내부 교육용」 쪽지 없음');
+
+    console.log('\n[16] 접근 전략 (1번)');
+    await p.evaluate(() => { const c = S.customers[0]; c.pf = { type: 'i', rel: 'far', att: 'many', int: ['kid'], dec: 'both', pref: '', note: '' }; c.fam2 = [{ rel: '자녀', name: '홍말순', age: '7살', memo: '' }]; save(); go('cust'); dTab = 'cc'; openDrawer(c.id, true); });
+    const ap = await p.textContent('#drawer .ap');
+    is(/🐬 사교형/.test(ap) && /카톡으로 근황만/.test(ap) && /많은 것과 맞는 것은 다르다/.test(ap) && /두 분 같이/.test(ap) && /홍말순/.test(ap), '고른 성향 · 관계 · 태도 · 결정 · 가족이 전략에 들어간다');
+    is(!/\{[A-Z]/.test(ap) && /짐작/.test(ap), '안 채운 {자리} 0 · 성향은 짐작이라고 적는다');
+    is(!/보험 보험/.test(ap), '요약에 말이 겹치지 않는다');
+
+    console.log('\n[17] 성장기록북 · 주간 보고 — 실명이 안 나가나 (3번)');
+    /* 글꼴이 늦게 오는 것을 흉내 냅니다 — 0.3초 동안 안 오면 그때까지 인쇄 창을 열면 안 됩니다 */
+    await p.waitForTimeout(400); /* 앞 칸 인쇄의 남은 타이머가 끝나기를 기다립니다 — 안 기다리면 그 타이머를 「일찍 열었다」 로 읽습니다 */
+    await p.evaluate(() => { closeDrawer(); S.pmask = true; BK.who = 'all'; go('book'); renderBook(); window.__pr = 0; window.print = () => { window.__pr++; };
+      const late = new Promise(r => setTimeout(r, 300)); try { Object.defineProperty(document.fonts, 'ready', { get: () => late, configurable: true }); } catch (e) {} $('#bkPrint').click(); });
+    await p.waitForTimeout(180);
+    const early = await p.evaluate(() => window.__pr);
+    await p.waitForFunction(() => window.__pr > 0, null, { timeout: 5000 });
+    is(early === 0, '인쇄 창은 글꼴이 다 온 뒤에 연다 — 늦게 오는 글꼴을 기다린다');
+    await p.emulateMedia({ media: 'print' });
+    const bk = await p.evaluate(() => document.querySelector('#printArea').innerText);
+    await p.emulateMedia({ media: 'screen' }); await p.evaluate(() => document.body.classList.remove('printing'));
+    is(!/홍갑돌|홍길동|홍말순/.test(bk) && /홍○○/.test(bk), '기록북 인쇄에 고객 · 가족 실명이 없다 (가린 이름만)');
+    is(/첫 연락/.test(bk) && /8주 기록/.test(bk) && /성향 알아보는 법/.test(bk), '기록북에 전략 · 8주 기록 · 성향 알아보는 법');
+    const wr = await p.evaluate(() => { S.customers[0].next = sbAdd(today(), -3); return weekReport(); });
+    is(/연락일이 지난 분 — 홍○○님/.test(wr) && !/홍갑돌|홍길동/.test(wr) && /이름은 가렸습니다/.test(wr), '주간 보고에 실명이 없다 — 연락일 지난 분도 가린 이름');
 
     is(errs.length === 0, '오류 없이 끝났다' + (errs.length ? ' ← ' + errs[0] : ''));
 
