@@ -197,6 +197,42 @@ function timeline(steps) {
   }).join('') + '</div>';
 }
 
+/* 한 달 30일 — 「지금 준비된 돈으로 며칠을 사나」.
+   ★ 고객 본인의 숫자(준비된 돈 ÷ 목표)로만 셉니다. 바깥 통계·겁주는 말로 부족을 만들지 않습니다(1번). */
+function daysOf(now, goal) { return goal > 0 ? Math.max(0, Math.min(30, Math.round(now / goal * 30))) : 0; }
+function dayGrid(n, t) {
+  var s = '';
+  for (var i = 1; i <= 30; i++) s += '<i' + (i <= n ? ' class="on" style="background:' + TONE[tone(t || 'blue', 0)] + '"' : '') + '>' + i + '</i>';
+  return '<div class="dg" role="img" aria-label="한 달 30일 중 ' + n + '일">' + s + '</div>';
+}
+function daysText(n, now, goal) {
+  return n >= 30 ? '지금 준비된 돈(**' + manTxt(now) + '**)으로 한 달을 다 채워요.'
+    : '한 달 30일 중 **' + n + '일**만 지금 준비된 돈(**' + manTxt(now) + '**)으로 살 수 있어요.\n나머지 **' + (30 - n) + '일**, 매달 **' + manTxt(goal - now) + '**은 아직 비어 있어요.';
+}
+function progress(p, t) {
+  var w = Math.max(0, Math.min(100, p * 100));
+  return '<div class="pg"><i style="width:' + w.toFixed(1) + '%;background:' + TONE[tone(t || 'blue', 0)] + '"></i></div>';
+}
+/* 누적 막대 여러 줄 — 「지금 그대로」 와 「제안 후」 를 같은 자로 견줍니다 */
+function stackRows(rows, goal, goalLabel) {
+  var max = +goal || 0;
+  rows.forEach(function (r) { var s = 0; r.items.forEach(function (x) { s += Math.max(0, +x.value || 0); }); r.total = s; max = Math.max(max, s); });
+  var scale = max * 1.08 || 1, gl = goal ? goal / scale * 100 : null, seen = {}, legend = [];
+  var body = rows.map(function (r, ri) {
+    var segs = r.items.map(function (x, i) {
+      var v = Math.max(0, +x.value || 0), tn = tone(x.tone, i);
+      if (!seen[x.label]) { seen[x.label] = 1; legend.push('<div class="lg"><i style="background:' + TONE[tn] + '"></i><span class="lg-n">' + esc(x.label) + tag(x.assumed) + '</span><span class="lg-v">' + manTxt(x.value) + '</span></div>'); }
+      return v ? '<div class="st-s" style="width:' + (v / scale * 100).toFixed(2) + '%;background:' + TONE[tn] + '"></div>' : '';
+    }).join('');
+    var gap = goal ? r.total - goal : null;
+    return '<div class="sr"><div class="sr-l">' + esc(r.label) + '</div><div class="st-bar' + (ri ? ' st-n' : '') + '">' + segs +
+      (gl != null ? '<div class="st-goal" style="left:' + gl.toFixed(2) + '%">' + (ri ? '' : '<span>' + esc(goalLabel || '목표') + ' ' + manTxt(goal) + '</span>') + '</div>' : '') + '</div>' +
+      '<div class="st-sum"><span>매달 <b>' + manTxt(r.total) + '</b></span>' +
+      (gap != null ? '<span class="' + (gap >= 0 ? 'ok' : 'ng') + '">' + (gap >= 0 ? '목표보다 ' + manTxt(gap) + ' 여유' : '매달 ' + manTxt(-gap) + ' 부족') + '</span>' : '') + '</div></div>';
+  }).join('');
+  return '<div class="st">' + body + '<div class="legend">' + legend.join('') + '</div></div>';
+}
+
 /* ── 카드 ───────────────────────────────────────────────────── */
 var VERDICT = { '가능': 'green', '주의': 'orange', '불가': 'red' };
 function cardHead(c) {
@@ -232,7 +268,16 @@ var CARD = {
       }).join('') + '</tbody></table></div>' + (c.note ? '<div class="note">' + txt(c.note) + '</div>' : '');
   },
   bars: function (c) { return hbars(c.items || [], c.unit); },
-  stack: function (c) { return stack(c.items || [], c.goal, c.goalLabel); },
+  stack: function (c) { return c.rows ? stackRows(c.rows, c.goal, c.goalLabel) : stack(c.items || [], c.goal, c.goalLabel); },
+  days: function (c) { var n = daysOf(c.now, c.goal); return dayGrid(n, c.tone) + '<p class="p dg-t">' + txt(c.text || daysText(n, c.now, c.goal)) + '</p>'; },
+  /* 스스로 점검 — 고객이 「나는 이걸 모르는구나」 를 스스로 느끼는 칸. 체크는 HTML 그대로 눌립니다(스크립트 0) */
+  quiz: function (c) {
+    return '<ol class="qz">' + (c.items || []).map(function (x) {
+      return '<li><div class="q">' + txt(x.q || x) + '</div>' + (x.hint ? '<div class="h">' + txt(x.hint) + '</div>' : '') +
+        '<label><input type="checkbox"> 바로 답할 수 있어요</label></li>';
+    }).join('') + '</ol>';
+  },
+  progress: function (c) { return progress(c.value, c.tone) + (c.text ? '<p class="p pg-t">' + txt(c.text) + '</p>' : ''); },
   grid: function (c) {
     return '<div class="grid">' + (c.items || []).map(function (x, i) {
       return '<div class="gi">' + icon(x.icon, 'gic') + '<div class="gt">' + txt(x.title) + '</div><div class="gx">' + txt(x.text || '') + '</div></div>';
@@ -294,7 +339,7 @@ var CSS = [
   '.wrap{max-width:560px;margin:0 auto;padding:20px 16px 40px}',
   'b{color:var(--t1);font-weight:700}',
   '.ic{width:36px;height:36px;flex:none}.hic{width:28px;height:28px;vertical-align:-6px;margin-right:6px}.gic{width:32px;height:32px;display:block;margin-bottom:8px}',
-  '.as{display:inline-block;margin-left:5px;padding:1px 6px;border-radius:6px;background:#FFF3E0;color:#C46A00;font-size:11px;font-weight:700;vertical-align:2px;line-height:1.5}',
+  '.as{display:inline-block;white-space:nowrap;margin-left:5px;padding:1px 6px;border-radius:6px;background:#FFF3E0;color:#C46A00;font-size:11px;font-weight:700;vertical-align:2px;line-height:1.5}',
   /* 히어로 */
   '.hero{background:var(--card);border-radius:20px;padding:28px 22px 24px;margin-bottom:12px}',
   '.hero .hi0{width:56px;height:56px;margin-bottom:12px}',
@@ -305,7 +350,7 @@ var CSS = [
   /* KPI */
   '.kpi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}',
   '.kp{background:var(--card);border-radius:20px;padding:18px 18px 16px;min-width:0}',
-  '.kp .kl{font-size:13px;font-weight:600;color:var(--t3);display:flex;align-items:center;gap:6px}.kp .kl img{width:22px;height:22px}',
+  '.kp .kl{font-size:13px;font-weight:600;color:var(--t3);display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}.kp .kl img{width:22px;height:22px}',
   '.kp .kv{margin-top:8px;color:var(--t1);line-height:1.2}',
   '.kp .ks{margin-top:6px;font-size:12.5px;color:var(--t3);line-height:1.5}',
   '.nb{font-size:28px;font-weight:800;letter-spacing:-.03em}.nu{font-size:14px;font-weight:600;margin-left:2px;color:inherit;opacity:.8}.nv{font-size:22px;color:var(--t3)}',
@@ -379,6 +424,23 @@ var CSS = [
   '.sum li:before{content:counter(s);flex:none;width:22px;height:22px;border-radius:7px;background:var(--blue-l);color:var(--blue);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px}',
   '.disc{margin-top:12px;background:transparent;padding:4px 6px;font-size:12px;color:var(--t3);line-height:1.7}.disc b{color:var(--t2)}.disc ul{list-style:none}.disc li{padding-left:10px;position:relative}.disc li:before{content:"·";position:absolute;left:0}',
   '.foot{margin-top:18px;text-align:center;font-size:12px;color:var(--t3)}',
+  /* 지금 그대로면 — 30일 격자 */
+  '.worry{margin-top:18px;padding:16px 14px;border-radius:16px;background:#FFF4F4}',
+  '.wk{font-size:13.5px;font-weight:800;color:#F04452;margin-bottom:10px}',
+  '.dg{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}',
+  '.dg i{font-style:normal;aspect-ratio:1/1;border-radius:6px;background:#fff;border:1.5px dashed #F7A1AA;font-size:10px;color:#F04452;display:flex;align-items:center;justify-content:center;font-weight:700}',
+  '.dg i.on{border:0;color:#fff}',
+  '.worry p,.dg-t{margin-top:10px;font-size:14.5px;color:var(--t1);line-height:1.65}',
+  '.pg{height:16px;background:#FDECEE;border-radius:8px;overflow:hidden;margin-top:4px}.pg i{display:block;height:100%;border-radius:8px}',
+  '.pg-t{margin-top:10px}',
+  '.pg-l{display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--t2)}.pg-l b{color:var(--blue)}',
+  '.but{margin-top:14px;padding:12px 14px;background:#FFF4F4;border-radius:12px;font-size:14.5px;color:var(--t1);line-height:1.6}',
+  '.sr+.sr{margin-top:6px}.sr-l{font-size:13px;font-weight:800;color:var(--t2);margin-top:14px}.st-bar.st-n{margin-top:8px}',
+  '.qz{list-style:none;display:flex;flex-direction:column;gap:10px}.qz li{background:var(--bg);border-radius:14px;padding:14px}',
+  '.qz .q{font-size:15px;font-weight:800;color:var(--t1);line-height:1.45}.qz .h{font-size:13px;margin-top:4px;line-height:1.55}',
+  '.qz label{display:flex;align-items:center;gap:8px;margin-top:8px;min-height:32px;font-size:13.5px;font-weight:700;color:var(--blue-d)}.qz input{width:18px;height:18px}',
+  '.aic{width:28px;height:28px;vertical-align:-8px;margin-right:6px}',
+  '.wn{margin-top:8px;font-size:12.5px;color:var(--t2);line-height:1.6}',
   '.ask{background:var(--blue-l);border-radius:14px;padding:13px 15px;margin-top:12px;font-size:14px;color:var(--blue-d);font-weight:600;line-height:1.6}',
   '.empty{background:var(--bg);border-radius:14px;padding:16px;font-size:14px;color:var(--t2);line-height:1.7}',
   '@media (max-width:400px){.nb{font-size:24px}.tiles.c3{grid-template-columns:1fr}.hb-row{grid-template-columns:76px 1fr auto}.hero h1{font-size:23px}}',
@@ -405,6 +467,15 @@ function html(d) {
   }
   if (NP && NP.estimated) A('국민연금', '공단 조회액이 아니라 식으로 낸 **추정**입니다 — 공단 조회액이 오면 바꿉니다');
 
+  /* 지금 그대로면 — 제안을 더하기 전, 이미 들어올 돈만 (국민연금 + otherIncome) */
+  var SQ = null;
+  if (+d.goal > 0) {
+    var sq = NP && NP.monthly ? +NP.monthly : 0;
+    (d.otherIncome || []).forEach(function (x) { sq += +x.value || 0; });
+    SQ = { now: sq, goal: +d.goal, gap: Math.max(0, +d.goal - sq), days: daysOf(sq, +d.goal) };
+  }
+  var openAt = P ? P.input.openAge : c.retireAge;
+
   var out = [];
   /* 1. 히어로 */
   var topic = d.topic || d.proposalTitle || '재무설계';
@@ -413,7 +484,10 @@ function html(d) {
     '<h1>' + esc(name) + ' 님,<br>' + esc(topic) + josa(topic, '을', '를') + ' 정리했어요</h1>' +
     (d.oneLine ? '<p class="one">' + txt(d.oneLine) + '</p>' : '') +
     '<div class="chips">' + [c.age != null ? c.age + '세' : null].concat(c.chips || [], [c.family, c.region, c.job]).filter(Boolean)
-      .map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div></header>');
+      .map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div>' +
+    (SQ && d.worry !== false ? '<div class="worry"><div class="wk">지금 그대로면 — ' + (openAt ? openAt + '세 이후 ' : '은퇴 후 ') + '한 달 ' + manTxt(SQ.goal) + ' 중</div>' +
+      dayGrid(SQ.days, 'mint') + '<p>' + txt(daysText(SQ.days, SQ.now, SQ.goal)) + '</p>' +
+      (d.worryNote ? '<div class="wn">' + txt(d.worryNote) + '</div>' : '') + '</div>' : '') + '</header>');
 
   /* 2. KPI 4칸 — 비면 연금에서 채웁니다 */
   var K = (d.kpis || []).slice();
@@ -444,10 +518,20 @@ function html(d) {
   var b3 = '';
   if (d.allocation && d.allocation.length) b3 += card({ type: 'text', title: d.proposalTitle || '이렇게 나눠 담아요', icon: 'chart', text: d.principle || '' }).replace(/<\/div>$/, donut(d.allocation, d.allocationCenter, d.allocationLabel) + '</div>');
   else if (d.proposalTitle || d.principle) b3 += card({ type: 'text', title: d.proposalTitle, icon: 'chart', text: d.principle || '' });
+  if (SQ && SQ.gap > 0 && P && P.target) {
+    var prop = P.target.monthly + (SP && SP.target ? SP.target.monthly : 0), fill = Math.min(1, prop / SQ.gap), rem = Math.max(0, SQ.gap - prop);
+    var more = rem > 0 ? P.input.premium * rem / P.target.monthly : 0;
+    b3 += '<div class="card">' + cardHead({ title: '이 제안으로 빈칸을 얼마나 채우나요', sub: '매달 비는 ' + manTxt(SQ.gap) + ' 기준', icon: 'target' }) +
+      '<div class="pg-l"><span>채우는 몫</span><b>' + Math.round(fill * 100) + '%</b></div>' + progress(fill, 'blue') +
+      '<p class="p pg-t">' + txt('매달 비는 **' + manTxt(SQ.gap) + '** 중 **' + manTxt(prop) + '**을 채워요(' + P.target.label + ' 가정).' +
+        (rem > 0 ? '\n남은 **' + manTxt(rem) + '**까지 같은 방식으로 채우려면 매달 약 **' + manTxt(more) + '**을 더 모아야 해요 — 한 번에 어렵다면, 오늘이 첫 걸음이에요.' : '\n오늘 제안으로 빈칸이 다 채워져요.')) + '</p>' +
+      (rem > 0 ? '<div class="note">' + txt('같은 상품·같은 가정으로 단순히 비례해 셌어요(설계서로 다시 확인).') + '</div>' : '') + '</div>';
+  }
   if (steps && steps.length) b3 += '<div class="card">' + cardHead({ title: '언제 무엇이 일어나나요', icon: 'hourglass' }) + timeline(steps) + '</div>';
   if ((d.good && d.good.length) || (d.todo && d.todo.length)) {
     b3 += '<div class="card">' +
-      (d.good && d.good.length ? '<div class="lst-h" style="margin-top:0">' + icon('star') + '잘하고 계신 것</div><ul class="ul good">' + d.good.slice(0, 3).map(function (x) { return '<li>' + txt(x) + '</li>'; }).join('') + '</ul>' : '') +
+      (d.good && d.good.length ? '<div class="lst-h" style="margin-top:0">' + icon('star') + '잘하고 계신 것</div><ul class="ul good">' + d.good.slice(0, 3).map(function (x) { return '<li>' + txt(x) + '</li>'; }).join('') + '</ul>' +
+        (SQ && SQ.gap > 0 ? '<p class="but">' + txt('그런데 — 지금 준비된 것을 다 합쳐도 목표의 **' + Math.round(SQ.now / SQ.goal * 100) + '%**예요.') + '</p>' : '') : '') +
       (d.todo && d.todo.length ? '<div class="lst-h">' + icon('memo') + '같이 할 일</div><ul class="ul todo">' + d.todo.slice(0, 4).map(function (x) { return '<li>' + txt(x) + '</li>'; }).join('') + '</ul>' : '') + '</div>';
   }
   if (b3) out.push(section(N(), '최종 제안', d.proposalHeadline || '결론부터 말씀드릴게요', b3, 'target'));
@@ -477,15 +561,35 @@ function html(d) {
       b4 += card({ type: 'table', title: '납입기간을 바꾸면', sub: '같은 월 ' + manTxt(P.input.premium) + '을 낼 때', icon: 'calendar', head: head, rows: rows, highlight: hi,
         note: '같은 가정(사업비·전환계수)으로 낸 **단순 비교**예요. 실제 상품은 납입기간마다 사업비·해지공제가 달라 설계서 숫자가 기준입니다.' });
     }
+    /* 늦게 시작하면 — 같은 월 보험료·같은 납입기간·같은 개시 나이로, 시작만 미룹니다 */
+    var DL = P.input.delay;                          /* 화면이 상품 엔진으로 이미 센 것 [{label, monthly}] */
+    if (!DL && !P.input.rows) {
+      DL = [];
+      [0, 5, 10].forEach(function (k) {
+        var s0 = +P.input.startAge + k; if (s0 + (+P.input.payYears) > +P.input.openAge) return;
+        var q = {}; for (var kk in P.input) q[kk] = P.input[kk]; q.startAge = s0;
+        var m = annuity(q), tr2 = P.input.targetRate != null ? +P.input.targetRate : null;
+        DL.push({ label: k ? k + '년 뒤 시작' : '지금 시작', monthly: tr2 != null ? m.at(tr2).monthly : (m.guaranteedMonthly != null ? m.guaranteedMonthly : m.at(0.05).monthly) });
+      });
+    }
+    if (DL && DL.length > 1) {
+      var lost = DL[0].monthly - DL[1].monthly;
+      b4 += '<div class="card">' + cardHead({ title: '시작을 미루면', sub: '같은 월 ' + manTxt(P.input.premium) + ' · 같은 ' + P.input.payYears + '년납 · 같은 ' + P.input.openAge + '세 개시', icon: 'hourglass' }) +
+        hbars(DL.map(function (x, i) { return { label: x.label, value: x.monthly, hi: i === 0, tone: i ? 'red' : 'blue', display: '월 ' + manTxt(x.monthly) }; })) +
+        '<p class="p pg-t">' + txt('**' + DL[1].label + '**하면 매달 **' + manTxt(lost) + '** 줄어요 — ' + P.receiveYears + '년 받으면 **' + manTxt(lost * 12 * P.receiveYears) + '**이에요.\n쌓일 시간이 줄어든 만큼이에요.') + '</p>' +
+        '<div class="note">' + txt((P.target ? P.target.label + ' 가정 · ' : '') + '수익률은 보장되지 않아요.') + '</div></div>';
+    }
     out.push(section(N(), '수익률별 예상 수령액', '수익률에 따라 이렇게 달라져요', b4, 'chart'));
 
     /* 5. 얻게 되는 이익 */
     var t = P.target, totalGet = t ? t.monthly * 12 * P.receiveYears : null;
     var items = [];
     if (t) {
-      items.push({ label: '낸 돈 대비', value: (Math.round(totalGet / P.principal * 10) / 10) + '', unit: '배', sub: P.receiveUntil + '세까지 받으면', tone: 'blue', assumed: P.untilAssumed });
+      var gRow = null; P.rows.forEach(function (x) { if (x.guarantee) gRow = x; });
+      var beM = gRow ? gRow.monthly : t.monthly, beAge = beM > 0 ? Math.ceil(+P.input.openAge + P.principal / (beM * 12)) : null;
+      items.push({ label: '낸 돈 대비', value: (Math.round(totalGet / P.principal * 10) / 10) + '', unit: '배', sub: '낸 돈 ' + manTxt(P.principal) + ' · ' + P.receiveUntil + '세까지', tone: 'blue', assumed: P.untilAssumed });
       items.push({ label: '총 수령액', value: totalGet, sub: '월 ' + manTxt(t.monthly) + ' × ' + P.receiveYears + '년', assumed: P.untilAssumed });
-      items.push({ label: '낸 돈', value: P.principal, sub: '월 ' + manTxt(P.input.premium) + ' × ' + P.input.payYears + '년' });
+      if (beAge) items.push({ label: '낸 돈을 다 돌려받는 나이', value: beAge + '', unit: '세', sub: (gRow ? '**최저보증만** 받아도' : t.label + ' 가정') + '\n그 뒤로는 전부 더 받는 돈', tone: 'mint' });
       items.push({ label: '비과세 대상 이익', value: Math.max(0, t.fund - P.principal), sub: '개시 때 적립금 − 낸 돈 · **요건 충족 시**', tone: 'green' });
     }
     (d.extraBenefits || []).forEach(function (x) { items.push(x); });
@@ -497,7 +601,9 @@ function html(d) {
       (d.otherIncome || []).forEach(function (x) { parts.push(x); });
       if (t) parts.push({ label: '제안 연금 (' + t.label + ')', value: t.monthly, tone: 'blue' });
       if (SP && SP.target) parts.push({ label: '배우자 연금 (' + SP.target.label + ')', value: SP.target.monthly, tone: 'purple', assumed: d.spousePension.assumed });
-      b5 += card({ type: 'stack', title: d.goalTitle || '은퇴 후 매달 쓸 돈, 채워질까요?', icon: 'target', items: parts, goal: d.goal, goalLabel: '목표', assumed: d.goalAssumed });
+      var nBase = (NP && NP.monthly ? 1 : 0) + (d.otherIncome || []).length;
+      b5 += card({ type: 'stack', title: d.goalTitle || '은퇴 후 매달 쓸 돈, 채워질까요?', icon: 'target', goal: d.goal, goalLabel: '목표', assumed: d.goalAssumed,
+        rows: [{ label: '지금 그대로면', items: parts.slice(0, nBase) }, { label: '오늘 제안을 더하면', items: parts }] });
     }
     if (b5) out.push(section(N(), '얻게 되는 이익', '낸 돈보다 이만큼 더 돌아와요', b5, 'gift'));
   }
@@ -523,7 +629,9 @@ function html(d) {
     '세금(비과세·퇴직소득세 감면)은 **요건 충족 시**의 이야기이며, 판단은 세무 전문가 확인이 필요합니다.',
     '변액 상품의 펀드 수익률은 보장되지 않으며 실적에 따라 달라집니다.'
   ]);
+  var closing = d.closing != null ? d.closing : '오늘 본 숫자 중 **가장 마음에 걸린 숫자**는 무엇이었나요?\n그 숫자부터 같이 줄여 봐요 — 편한 시간을 알려 주세요.';
   var b9 = (d.summary && d.summary.length ? '<div class="card"><ol class="sum">' + d.summary.slice(0, 6).map(function (x) { return '<li><div>' + txt(x) + '</div></li>'; }).join('') + '</ol></div>' : '') +
+    (closing ? '<div class="ask">' + icon('speech', 'aic') + txt(closing) + '</div>' : '') +
     '<div class="disc"><b>꼭 읽어 주세요</b><ul>' + disc.map(function (x) { return '<li>' + txt(x) + '</li>'; }).join('') + '</ul></div>';
   out.push(section(N(), '한눈에 요약', '오늘 이야기, 여섯 줄로', b9, 'check'));
   out.push('<div class="foot">' + esc(d.advisor || 'APEX 사업단') + (d.contact ? ' · ' + esc(d.contact) : '') + '</div>');

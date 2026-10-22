@@ -25,7 +25,9 @@ module.exports = function (APEX) {
   var np = C.nps(659, 35);                          /* 공단 조회액이 오면 이 줄을 그 값으로 바꿉니다 */
   var rt = C.retireTax(35000, 30);
   var save = rt.total - rt.irpLate;
-  var pay = C.social(750);                          /* 연봉 9,000만 ÷ 12 */
+  var goal = 400, now = np.monthly, gap0 = goal - now;   /* 지금 그대로면 — 제안 전에 이미 들어올 돈 */
+  var after = now + tg.monthly + C.annuity(spouse).at(spouse.targetRate).monthly;
+  var bridgeY = openAge - retireAge, bridge = goal * 12 * bridgeY;  /* 퇴직 → 연금 개시 사이, 연금 0원 */
   var lim1 = C.irpLimit(35000, 1);
 
   return {
@@ -33,14 +35,14 @@ module.exports = function (APEX) {
     advisor: 'APEX 사업단 · 에이플러스에셋 온탑본부',
     date: '2026년 10월',
     topic: '노후 연금 준비',
-    oneLine: '월 **' + M(pension.premium) + '**씩 **' + pension.payYears + '년** 모으면, ' + openAge + '세부터 매달 **' + M(tg.monthly) +
-      '**(수익률 8% 가정)을 받는 구조예요. 펀드가 부진해도 **최저보증 ' + M(me.guaranteedMonthly) + '**은 지켜져요.',
+    oneLine: '지금 그대로면 ' + openAge + '세부터 한 달 **' + M(goal) + '** 중 **' + M(now) + '**만 들어와요. 그리고 ' + retireAge + '세 퇴직부터 ' + openAge +
+      '세까지 **' + bridgeY + '년은 연금이 0원**이에요.\n오늘은 이 두 빈칸을 같이 줄여 봐요.',
 
     kpis: [
       { label: '매월 낼 돈', value: pension.premium, sub: pension.payYears + '년만 내요 · 본인', icon: 'coin' },
       { label: '나중에 매월 받을 돈', value: tg.monthly, sub: openAge + '세부터 · 8% 가정\n최저보증 ' + M(me.guaranteedMonthly), icon: 'money', tone: 'blue' },
       { label: '얻는 이익', value: tg.base - me.principal, sub: '적립금 − 낸 돈\n**요건 충족 시** 비과세 대상', icon: 'gift', tone: 'green' },
-      { label: '퇴직금 세금 차이', value: save, sub: '일시금 대신 IRP 연금으로\n(장기 수령 · 추정)', icon: 'bank', tone: 'purple' }
+      { label: '지금 그대로면 매달 비는 돈', value: gap0, sub: '목표 ' + M(goal) + ' 기준\n오늘 제안을 더하면 ' + (after >= goal ? M(after - goal) + ' 여유' : M(goal - after) + ' 부족'), icon: 'target', tone: 'red', assumed: true }
     ],
 
     proposalHeadline: '본인 연금 하나, 배우자 연금 하나로 나눠 담아요',
@@ -72,10 +74,21 @@ module.exports = function (APEX) {
     pension: pension,
     spousePension: spouse,
     nationalPension: { monthly: np.monthly, estimated: true },
-    goal: 400, goalAssumed: true,
+    goal: goal, goalAssumed: true,
     goalTitle: '은퇴 후 한 달 400만 원, 채워질까요?',
 
     sections: [
+      { kicker: '핵심 이슈', icon: 'hourglass', title: retireAge + '세 퇴직부터 ' + openAge + '세까지, ' + bridgeY + '년의 빈칸',
+        cards: [
+          { type: 'days', now: 0, goal: goal, tone: 'red',
+            text: '회사를 나온 뒤 연금이 시작되기 전까지 **' + bridgeY + '년**, 매달 들어오는 연금이 **0원**이에요.\n이 ' + bridgeY + '년을 지금 목표대로 살면 **' + M(bridge) + '**이 필요해요.' },
+          { type: 'tiles', items: [
+            { label: '빈칸 기간', value: bridgeY + '', unit: '년', sub: retireAge + '세 → ' + openAge + '세' },
+            { label: '그동안 필요한 돈', value: bridge, sub: '월 ' + M(goal) + ' × ' + bridgeY * 12 + '개월', tone: 'red', assumed: true },
+            { label: '퇴직금으로 버티면 남는 돈', value: rt.severance - bridge, sub: '퇴직금 ' + M(rt.severance) + ' − 빈칸 생활비\n(세금 빼기 전)', tone: 'orange', assumed: true },
+            { label: '그다음 ' + openAge + '세부터', value: gap0, sub: '여전히 매달 비는 돈', tone: 'red' } ] }
+        ],
+        ask: '이 ' + bridgeY + '년, 어떻게 보내실 계획이세요? 퇴직금을 어떻게 받느냐가 여기서 갈려요.' },
       { kicker: '핵심 이슈', icon: 'bank', title: '퇴직금 ' + M(rt.severance) + ', 받는 방법에 따라 세금이 달라져요',
         cards: [
           { type: 'verdict', status: '가능', title: 'IRP로 옮겨 연금으로 나눠 받으면 세금이 줄어요',
@@ -105,19 +118,16 @@ module.exports = function (APEX) {
                       '이번 설계는 매달 같은 금액을 내는 **월 적립식**으로 짰어요'],
             checks: ['중도 인출·감액·납입 중지 계획이 있는지', '다른 저축성 보험과 합친 월 한도', '가입 전 세무 전문가 확인'] }
         ] },
-      { kicker: '참고', icon: 'coin', title: '국민연금, 내는 돈과 받는 돈',
+      { kicker: '스스로 점검', icon: 'speech', title: '이 질문에 바로 답할 수 있나요?',
         cards: [
-          { type: 'tiles', items: [
-            { label: '지금 매달 내는 국민연금 (본인분)', value: pay.nps, sub: '월급에서 빠지는 몫' },
-            { label: openAge + '세부터 매달 받을 돈', value: np.monthly, sub: '공단 조회 전 **추정**', tone: 'mint', assumed: '추정' } ] },
-          { type: 'rows', title: '월급에서 빠지는 4대보험 (본인 부담)', icon: 'memo', items: [
-            { label: '국민연금', value: pay.nps },
-            { label: '건강보험', value: pay.health },
-            { label: '장기요양', value: pay.care },
-            { label: '고용보험', value: pay.employ },
-            { label: '합계', value: pay.total, strong: true } ],
-            note: '연봉 9,000만 원(월 750만 원)을 가정해 2026년 요율로 셌어요.' }
-        ] }
+          { type: 'quiz', items: [
+            { q: '은퇴 후 한 달 생활비, 부부가 함께 정한 금액이 있나요?', hint: '정해 두지 않으면 얼마가 모자란지도 알 수 없어요.' },
+            { q: '국민연금, 공단에서 예상액을 조회해 보셨나요?', hint: '오늘 숫자는 추정이에요. 조회액이 나오면 빈칸이 다시 계산돼요.' },
+            { q: retireAge + '세에 회사를 나오면, 연금이 나오기 전까지 무엇으로 생활하나요?', hint: '그 ' + bridgeY + '년이 퇴직금을 가장 먼저 꺼내 쓰는 시간이에요.' },
+            { q: '한 분이 먼저 떠나면, 남은 분에게 매달 얼마가 들어오나요?', hint: '연금이 한 사람 이름으로만 있으면 그 사람과 함께 줄어들 수 있어요.' },
+            { q: '아프거나 간병이 필요해지면, 그 돈은 어디서 나오나요?', hint: '생활비와 따로 떼어 두지 않으면 생활비가 먼저 줄어요.' } ] }
+        ],
+        ask: '하나라도 막히셨다면, 그 질문부터 같이 답을 만들어 봐요.' }
     ],
 
     explain: [
@@ -136,10 +146,10 @@ module.exports = function (APEX) {
     ],
 
     summary: [
+      '지금 그대로면 은퇴 후 매달 **' + M(gap0) + '**이 비고, ' + retireAge + '세부터 ' + bridgeY + '년은 연금이 **0원**이에요.',
       '본인은 월 **' + M(pension.premium) + '** × **' + pension.payYears + '년**, ' + openAge + '세부터 받아요.',
       '최저보증 기준 매달 **' + M(me.guaranteedMonthly) + '**, 8%가 나면 **' + M(tg.monthly) + '**(가정)이에요.',
       '낸 돈 **' + M(me.principal) + '**이 개시 때 **' + M(tg.base) + '**(8% 가정)가 돼요.',
-      '국민연금 **' + M(np.monthly) + '**(추정)까지 더하면 목표 생활비에 다가가요.',
       '퇴직금은 **IRP로 나눠 받으면** 세금이 최대 약 **' + M(save) + '** 줄어요(추정).',
       '비과세·세금은 **요건 충족 시** — 가입 전에 세무 전문가와 꼭 확인해요.'
     ],
@@ -150,7 +160,8 @@ module.exports = function (APEX) {
       '**배우자 연금** — 월 30만 원 · 10년납 · 40세 가입으로 가정했어요.',
       '**비상금 통장** — 월 20만 원으로 가정했어요.',
       '**퇴직금** — 3.5억 원 · 근속 30년(30세 입사 → 60세 퇴직)으로 가정했어요.',
-      '**국민연금** — 기준소득 상한 · 35년 가입으로 추정했어요.',
+      '**국민연금** — 기준소득 상한 · 35년 가입 · ' + openAge + '세 개시로 추정했어요(공단 조회로 확인).',
+      '**퇴직 후 생활비** — 퇴직한 뒤에도 목표 생활비만큼 쓴다고 봤어요.',
       '**목표 수익률** — 연 8%로 가정했어요(보장되지 않아요).'
     ]
   };

@@ -11379,9 +11379,20 @@ function rptPension(age,sex,rage){
       row.push(Math.max(gm, rr.base>0? gm*(fv*10000/rr.base):0)); }
     if(y===pay) hi=cmp.length; cmp.push(row);
   });
+  /* 시작을 미루면 — 같은 상품 · 같은 월 보험료 · 같은 납입기간 · 같은 개시 나이로, 가입 나이만 늦춥니다 */
+  var delay=[];
+  [0,5,10].forEach(function(k){
+    var a2=age+k; try{ if(!(pay<=rage-a2 && p.ok(a2,rage,pay))) return; }catch(e){ return; }
+    var q={age:a2,sex:sex,start:rage,pay:pay,monthly:inp.monthly}, rr=null; try{ rr=PENSION.calc(p,q); }catch(e){}
+    if(!rr||!rr.yearly) return;
+    var gm=rr.yearly/12/10000, m=gm;
+    if(isVar){ var fv=0; try{ fv=PENSION.fundAt(rr.T,q,{r:tgt,cPrem:PSIM.cPrem/100,cFund:PSIM.cFund/100})/10000; }catch(e){}
+      m=Math.max(gm, rr.base>0? gm*(fv*10000/rr.base):0); }
+    delay.push({label:k? k+'년 뒤 시작':'지금 시작', monthly:m});
+  });
   return { p:p, r:r, isVar:isVar, guarM:guarM,
     pension:{ premium:prem, payYears:pay, startAge:age, openAge:rage, rows:rows, principal:prem*12*pay,
-      targetRate:isVar?tgt:null, receiveUntil:p.omega||100,
+      targetRate:isVar?tgt:null, receiveUntil:p.omega||100, delay:delay.length>1?delay:null,
       compare: cmp.length>1 ? {head:['납입기간','낸 돈','최저보증 월'].concat(isVar?['목표 '+PSIM.ret+'% 월']:[]), rows:cmp, highlight:hi} : null } };
 }
 function rptData(opt){
@@ -11416,6 +11427,8 @@ function rptData(opt){
   if(priv>0) other.push({label:'기존 개인연금', value:priv, tone:'orange'});
   if(hp>0) other.push({label:'주택연금', value:hp, tone:'gray'});
   var now=(np?np.monthly:0)+retp+priv+hp, withP=now+(tgRow?tgRow.monthly:0), goal=n('s_target'), gap=Math.max(0,goal-withP);
+  var saveP=n('s_pension')+n('s_irp')+n('s_taxfree');
+  var gap0=Math.max(0,goal-now), inf=n('s_inf'), futGoal=goal*Math.pow(1+inf/100,Math.max(0,rage-age));
 
   /* 배분 — 지금 모으는 것 + 새로 드리는 연금 */
   var alloc=[], AL=[['s_emerg','비상금'],['s_pension','연금저축'],['s_irp','IRP'],['s_isa','ISA'],['s_taxfree','달러·변액'],['s_general','일반 투자']];
@@ -11426,16 +11439,28 @@ function rptData(opt){
   if(P){ kp.push({label:'매월 낼 돈', value:P.premium, sub:P.payYears+'년 동안', icon:'coin'});
     if(tgRow){ kp.push({label:'나중에 매월 받을 돈', value:tgRow.monthly, sub:rage+'세부터 · '+(PS.isVar?tgRow.label+' 가정':'최저보증')+'\n최저보증 '+M(PS.guarM), icon:'money', tone:'blue'});
       kp.push({label:'얻는 이익', value:Math.max(0,tgRow.fund-P.principal), sub:'개시 때 적립금 − 낸 돈\n**요건 충족 시** 비과세 대상', icon:'gift', tone:'green'}); } }
-  if(goal>0) kp.push({label:gap>0?'은퇴 후 매달 비는 돈':'목표 생활비', value:gap>0?gap:goal, sub:gap>0?'제안을 더해도 · 목표 '+M(goal):'제안을 더하면 채워져요', icon:'target', tone:gap>0?'red':'green'});
+  if(goal>0) kp.push({label:'지금 그대로면 매달 비는 돈', value:gap0, sub:'목표 '+M(goal)+' 기준\n'+(tgRow?'오늘 제안을 더하면 '+(gap>0?M(gap)+' 부족':M(withP-goal)+' 여유'):''), icon:'target', tone:gap0>0?'red':'green'});
   else kp.push({label:'지금 매달 남는 돈', value:surplus, sub:'소득 − 지출 − 저축', icon:'coin', tone:surplus>=0?'green':'red'});
 
   var sections=[];
   if(goal>0){
+    var cliff=[];
+    if(income>0) cliff.push({label:'지금 월급 (세전)', value:income, tone:'gray', display:M(income)});
+    cliff.push({label:'은퇴 후 · 지금 그대로', value:now, tone:'red', display:M(now)});
+    cliff.push({label:'목표 생활비', value:goal, tone:'blue', display:M(goal)});
+    var cards0=[{type:'bars', title:'은퇴하는 날, 들어오는 돈이 이렇게 바뀌어요', icon:'chart', items:cliff,
+       note:income>0&&now<income?'지금 들어오는 돈의 **'+Math.round(now/income*100)+'%**만 남아요 — 월급이 **'+Math.round((1-now/income)*100)+'%** 줄어드는 셈이에요.':''}];
+    if(inf>0&&rage>age) cards0.push({type:'tiles', title:'같은 생활에 드는 돈도 늘어요', icon:'coin', items:[
+      {label:'지금 돈으로 목표', value:goal, sub:'오늘 정한 금액'},
+      {label:rage+'세가 되면', value:futGoal, sub:'물가 연 '+inf+'%씩 오르면', tone:'red', assumed:true}],
+      note:'위 빈칸 계산은 오늘 돈 기준이에요. 물가까지 넣으면 빈칸은 더 커져요.'});
+    sections.push({kicker:'핵심 이슈', icon:'hourglass', title:'지금 그대로면, 은퇴하는 날 월급이 이렇게 줄어요', cards:cards0,
+      ask:gap0>0?'매달 '+M(gap0)+'이 비는 날이 오면, 어디부터 줄이실 건가요? 같이 미리 막아 봐요.':''});
     var st=withP>=goal?'가능':withP>=goal*0.8?'주의':'불가';
-    sections.push({kicker:'핵심 이슈', icon:'target', title:'노후 생활비, 지금 판정은요', cards:[
+    sections.push({kicker:'핵심 이슈', icon:'target', title:'오늘 제안까지 더하면, 판정은요', cards:[
       {type:'verdict', status:st, title:st==='가능'?'제안까지 더하면 목표를 채워요':st==='주의'?'거의 다 왔어요 — 조금만 더 채우면 돼요':'아직 많이 비어요 — 함께 채울 방법을 찾아봐요',
        reasons:['지금 준비된 것 매달 **'+M(now)+'**', tgRow?'제안 연금을 더하면 **'+M(withP)+'**':'제안 연금이 아직 정해지지 않았어요', gap>0?'목표까지 매달 **'+M(gap)+'** 부족':'목표보다 매달 **'+M(withP-goal)+'** 여유'],
-       checks:['목표 생활비를 부부가 함께 정한 금액인지', np&&np.estimated?'국민연금 공단 조회액':'국민연금 금액이 공단 조회액인지', '물가를 생각하면 같은 생활에 돈이 더 들어요 — 여유를 둘지']}
+       checks:['목표 생활비를 부부가 함께 정한 금액인지', np&&np.estimated?'국민연금 공단 조회액':'국민연금 금액이 공단 조회액인지', saveP>0?'연금저축·IRP·변액에 지금까지 쌓인 금액':'물가를 생각해 여유를 둘지']}
     ]});
   }
   sections.push({kicker:'핵심 이슈', icon:'coin', title:'지금 월급, 어디로 가고 있나요', cards:[
@@ -11458,12 +11483,14 @@ function rptData(opt){
     ]});
     assume.push('**퇴직금** — 계산기의 예상 퇴직금 '+M(sev)+' · 근속 '+rt.years+'년(적어 주신 값)으로 셌어요.');
   }
-  if(mGross>0){
-    var so=C.social(mGross);
-    sections.push({kicker:'참고', icon:'memo', title:'월급에서 빠지는 4대보험', cards:[
-      {type:'rows', items:[{label:'국민연금',value:so.nps},{label:'건강보험',value:so.health},{label:'장기요양',value:so.care},{label:'고용보험',value:so.employ},{label:'합계 (본인 부담)',value:so.total,strong:true}],
-       note:'연 총급여 '+M(gross)+' ÷ 12 를 월급으로 보고 2026년 요율로 셌어요.'}]});
-  }
+  /* 스스로 점검 — 고객이 「나는 이걸 모르는구나」 를 스스로 느끼는 칸. 답을 지어 주지 않고 묻기만 합니다(1번) */
+  sections.push({kicker:'스스로 점검', icon:'speech', title:'이 질문에 바로 답할 수 있나요?', cards:[{type:'quiz', items:[
+    {q:'은퇴 후 한 달 생활비, 가족과 함께 정한 금액이 있나요?', hint:'정해 두지 않으면 얼마가 모자란지도 알 수 없어요.'},
+    {q:'국민연금, 공단에서 예상액을 조회해 보셨나요?', hint:np&&np.estimated?'오늘 숫자는 추정이에요. 조회액이 나오면 빈칸이 다시 계산돼요.':'조회액이 바뀌면 빈칸도 함께 바뀌어요.'},
+    {q:'회사를 나온 뒤 연금이 나오기 전까지, 무엇으로 생활하나요?', hint:'그 사이가 모아 둔 돈을 가장 먼저 꺼내 쓰는 시간이에요.'},
+    {q:'한 분이 먼저 떠나면, 남은 분에게 매달 얼마가 들어오나요?', hint:'연금이 한 사람 이름으로만 있으면 그 사람과 함께 줄어들 수 있어요.'},
+    {q:'아프거나 간병이 필요해지면, 그 돈은 어디서 나오나요?', hint:'생활비와 따로 떼어 두지 않으면 생활비가 먼저 줄어요.'}]}],
+    ask:'하나라도 막히셨다면, 그 질문부터 같이 답을 만들어 봐요.'});
 
   var good=[], todo=[];
   if(income>0 && saving/income>=0.2) good.push('**소득의 '+Math.round(saving/income*100)+'%**를 이미 모으고 계세요.');
@@ -11472,6 +11499,7 @@ function rptData(opt){
   if(np&&!np.estimated&&np.monthly>0) good.push('**국민연금**이 매달 '+M(np.monthly)+' 준비돼 있어요.');
   if(surplus>0) good.push('매달 **'+M(surplus)+'**이 남아 여유가 있어요.');
   good.push('은퇴 전에 **미리 준비하려고** 오늘 시간을 내셨어요.');
+  if(saveP>0&&priv<=0) todo.push('**연금저축·IRP·변액에 쌓인 금액** 알려 주기 — 빈칸이 줄어들 수 있어요');
   if(np&&np.estimated) todo.push('**국민연금 공단 조회액** 확인하기');
   if(P) todo.push('**설계서로 최저보증 조건** 같이 읽기');
   if(sev>0&&!(yrs>0)) todo.push('**회사에 퇴직금 예상액·근속연수** 물어보기');
@@ -11488,11 +11516,13 @@ function rptData(opt){
   if(goal>0) assume.push('**목표 생활비** — 계산기에 적힌 월 '+M(goal)+'이에요(지금 돈 기준 · 물가 미반영).');
 
   var summary=[];
+  if(goal>0&&gap0>0) summary.push('지금 그대로면 은퇴 후 매달 **'+M(gap0)+'**이 비어요 — 목표의 **'+Math.round(now/goal*100)+'%**만 준비돼 있어요.');
   if(P){ summary.push('매달 **'+M(P.premium)+'** × **'+P.payYears+'년**, '+rage+'세부터 받아요.');
     summary.push('최저보증 기준 매달 **'+M(PS.guarM)+'**'+(PS.isVar&&tgRow?(tgRow.byGuarantee?' — '+tgRow.label+'가 나도 보증 쪽이 더 커요':', '+tgRow.label+'이면 **'+M(tgRow.monthly)+'**(가정)'):'')+(PS.isVar&&tgRow&&tgRow.byGuarantee?'.':'이에요.')); }
   summary.push('지금 매달 들어오는 돈 **'+M(income)+'**, 남는 돈 **'+M(surplus)+'**이에요.');
   if(goal>0) summary.push(gap>0?'목표 생활비까지 매달 **'+M(gap)+'**이 더 필요해요.':'제안까지 더하면 목표 생활비 **'+M(goal)+'**을 채워요.');
   if(yrs>0&&sev>0){ var rr2=C.retireTax(sev,yrs); summary.push('퇴직금은 **IRP로 나눠 받으면** 세금이 최대 약 **'+M(rr2.total-rr2.irpLate)+'** 줄어요(추정).'); }
+  summary=summary.slice(0,5);   /* 마지막 줄은 언제나 세금 조건 — 잘려 나가지 않게 */
   summary.push('비과세·세금은 **요건 충족 시** — 가입 전에 세무 전문가와 꼭 확인해요.');
 
   var job=v('s_job');
@@ -11501,7 +11531,8 @@ function rptData(opt){
     advisor:opt.advisor||'APEX 사업단',
     date:thisYear+'년 '+(new Date().getMonth()+1)+'월',
     topic:'노후 연금 준비',
-    oneLine:P&&tgRow?'월 **'+M(P.premium)+'**씩 **'+P.payYears+'년** 모으면, '+rage+'세부터 매달 **'+M(tgRow.monthly)+'**'+(PS.isVar?'('+tgRow.label+' 가정)':'')+'을 받는 구조예요.':
+    oneLine:goal>0&&gap0>0?'지금 그대로면 '+rage+'세부터 한 달 **'+M(goal)+'** 중 **'+M(now)+'**만 들어와요.\n'+(P&&tgRow?'월 **'+M(P.premium)+'**씩 **'+P.payYears+'년**이면 그 빈칸에 매달 **'+M(tgRow.monthly)+'**'+(PS.isVar?'('+tgRow.label+' 가정)':'')+'이 채워져요.':'이 빈칸을 같이 줄여 봐요.'):
+      P&&tgRow?'월 **'+M(P.premium)+'**씩 **'+P.payYears+'년** 모으면, '+rage+'세부터 매달 **'+M(tgRow.monthly)+'**'+(PS.isVar?'('+tgRow.label+' 가정)':'')+'을 받는 구조예요.':
       '지금 소득·지출·노후 준비를 한 장으로 정리했어요.',
     kpis:kp,
     proposalHeadline:P?'노후 월급을 하나 더 만들어요':'지금 모습부터 정리했어요',
@@ -11513,6 +11544,9 @@ function rptData(opt){
     nationalPension:np||null,
     otherIncome:other,
     goal:goal>0?goal:null,
+    /* 지금 모으는 연금저축·IRP·변액은 쌓인 금액을 몰라 「지금 준비된 돈」 에 넣지 않습니다(연금 시뮬레이션 탭과 같은 기준).
+       숨기면 고객이 「나 IRP 넣고 있는데?」 하고 결과지 전체를 의심합니다 — 넣지 않았다고 밝히고 묻습니다(1번). */
+    worryNote:saveP>0&&priv<=0?'※ 지금 모으고 계신 연금저축·IRP·변액(월 '+M(saveP)+')은 **쌓인 금액을 몰라 넣지 않았어요.** 알려 주시면 빈칸이 다시 계산돼요.':null,
     sections:sections,
     explain:P?[
       {q:'왜 '+(PS.isVar?'변액':'')+'연금인가요?', a:PS.isVar?'은퇴까지 **'+(rage-age)+'년**이 남았어요. 긴 시간은 펀드로 굴려야 물가를 이길 수 있고, 펀드가 부진할 때를 위해 **최저보증**이 있는 상품을 골랐어요.':'정해진 방식으로 쌓여 **받을 돈이 미리 보이는** 상품이에요.'},

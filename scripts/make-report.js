@@ -13,7 +13,7 @@ const fs = require('fs'), path = require('path'), os = require('os'), https = re
 
 const dataFile = process.argv[2];
 if (!dataFile) { console.error('쓰는 법: node scripts/make-report.js <data.js> [폴더]'); process.exit(2); }
-const outDir = path.resolve(process.argv[3] || 'outputs/재무리포트');
+const outDir = path.resolve(process.argv[3] || 'outputs/재무리포트');   /* ★ PDF·PNG 는 커서 저장소에 올리지 않습니다(check-junk) — HTML 만 올립니다 */
 
 globalThis.window = globalThis;
 require(path.join(__dirname, '..', 'app', 'apex_report_icons.js'));
