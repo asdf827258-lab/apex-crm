@@ -62,7 +62,23 @@ const strip = (h) => h.replace(/<style[\s\S]*?<\/style>/g, '').replace(/src="dat
     is(/시작을 미루면/.test(t) && /5년 뒤 시작/.test(t), '시작을 미루면 — 상품 엔진이 받아 주는 나이로 셈한다');
     const tabN = tab && tab.replace(/[^\d]/g, ''), rep = (t.match(/최저보증 보증 월 ([\d,]+)만 원/) || [])[1];
     is(tabN && rep && tabN === rep.replace(/,/g, ''), '연금 시뮬레이션 탭과 같은 최저보증 — 탭 ' + tab + ' · 결과지 ' + (rep ? rep + '만 원' : '없음'));
+    is(/점검 필요/.test(t) && !/불가/.test(t), '「불가」 대신 「점검 필요」 (판 X161)');
     await pop.close();
+
+    /* 판 X161 — 「쌓인 금액」 을 넣으면 탭과 결과지가 같은 값으로 더하나 · 「모른다」 쪽지가 사라지나 */
+    await pg.evaluate(() => { const e = document.getElementById('s_pen_acc'); e.value = '3000'; e.dispatchEvent(new Event('input', { bubbles: true })); });
+    await pg.waitForTimeout(400);
+    const tabNow2 = await pg.evaluate(() => {
+      const box = [...document.querySelectorAll('#pension-sim div')].find((x) => x.children.length >= 2 && /^지금 준비된 것$/.test((x.children[0].textContent || '').trim()));
+      return box ? box.children[1].textContent.replace(/[^\d]/g, '') : null;
+    });
+    const [popA] = await Promise.all([ctx.waitForEvent('page'), pg.click('#rptPanel .rpt-b button:first-child')]);
+    await popA.waitForLoadState();
+    const tA = strip(await popA.content()), readyA = (tA.replace(/\s+/g, '').match(/지금준비된돈\(([\d,]+)만원\)/) || [])[1];
+    is(tabNow2 && tabNow2 !== tabNow && readyA && readyA.replace(/,/g, '') === tabNow2, '쌓인 금액 3,000만 → 탭 ' + tabNow + ' → ' + tabNow2 + '만 · 결과지 ' + (readyA || '없음') + ' (한 곳에서 셈)');
+    is(!/쌓인 금액을 몰라 넣지 않았어요/.test(tA) && /연금저축·IRP·달러·변액/.test(tA), '칸을 채우면 「모른다」 쪽지 대신 그 돈이 더해진다');
+    await popA.close();
+    await pg.evaluate(() => { const e = document.getElementById('s_pen_acc'); e.value = ''; e.dispatchEvent(new Event('input', { bubbles: true })); });
     pg.once('dialog', (d) => d.accept());
     await pg.check('#rptReal');
     const [pop2] = await Promise.all([ctx.waitForEvent('page'), pg.click('#rptPanel .rpt-b button:first-child')]);
