@@ -91,23 +91,27 @@ const look = (page) => page.evaluate(() => {
   is(shut.age !== null, '  고객 나이 칸도 <b>판에 있다</b> — ' + shut.age + '세');
   /* 가린 채로 값을 바꾸고 <b>앱이 제 길로</b> 다시 그리게 합니다.
      읽는 함수 이름을 직접 부르면 그 함수가 바뀔 날 헛것을 잡습니다 (8번).
-     보고서 글자가 <b>바뀐다면</b> 가린 칸을 읽은 것입니다. */
+     보고서 글자가 <b>바뀐다면</b> 가린 칸을 읽은 것입니다.
+     ⚠ 판 X172 — 바꿔 보는 칸을 물가상승률에서 <b>목표 생활비</b>로 옮겼습니다. 대시보드의 연금 준비율이
+     물가를 넣은 목표로 셈해 연금 시뮬레이션 탭(오늘 돈 · 물가는 참고)과 다른 답을 말하던 것을 한 곳으로
+     모으자, 대시보드는 이제 물가를 셈에 넣지 않습니다(한 물음에 한 답 · 5번). 이 자가 보려는 것은
+     「가린 칸이 계속 읽히나」 이므로 대시보드가 읽는 칸으로 잽니다. */
   const calc = await page.evaluate(async () => {
-    const e = document.getElementById('s_inf'); if (!e) return { ok: false };
+    const e = document.getElementById('s_target'); if (!e) return { ok: false };
     const pane = () => { const x = document.querySelector('.tab-pane.on'); return x ? (x.innerText || '') : ''; };
     const was = e.value;
     const before = pane();
-    e.value = '9';
-    if (typeof infSync === 'function') infSync(); else if (typeof render === 'function') render();
+    e.value = String((+was || 400) + 250);
+    e.dispatchEvent(new Event('input', { bubbles: true }));
     await new Promise(r => setTimeout(r, 700));
     const after = pane();
     e.value = was;
-    if (typeof infSync === 'function') infSync(); else if (typeof render === 'function') render();
+    e.dispatchEvent(new Event('input', { bubbles: true }));
     await new Promise(r => setTimeout(r, 400));
     return { ok: true, changed: before !== after, len: before.length };
   });
   is(calc.ok && calc.changed,
-     '  가린 채로 물가상승률을 고쳐도 <b>보고서 숫자가 따라 바뀐다</b> — 계산이 안 멈췄다');
+     '  가린 채로 목표 생활비를 고쳐도 <b>보고서 숫자가 따라 바뀐다</b> — 계산이 안 멈췄다');
 
   /* 단추는 <b>판에서</b> 누릅니다 — page.click 은 안 보이면 기다리다 터져서
      「무엇이 틀렸는지」 대신 에러 글을 남깁니다. 보이는지는 바로 위에서

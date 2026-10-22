@@ -234,7 +234,7 @@ function stackRows(rows, goal, goalLabel) {
 }
 
 /* ── 카드 ───────────────────────────────────────────────────── */
-var VERDICT = { '가능': 'green', '주의': 'orange', '점검 필요': 'red', '불가': 'red' };   /* 고객 결과지는 「불가」 대신 「점검 필요」 (판 X163) */
+var VERDICT = { '가능': 'green', '주의': 'orange', '점검 필요': 'red', '불가': 'red' };   /* 고객 결과지는 「불가」 대신 「점검 필요」 (판 X166) */
 function cardHead(c) {
   return c.title ? '<div class="ch">' + icon(c.icon, 'ic') + '<div><div class="ct">' + txt(c.title) + tag(c.assumed) + '</div>' + (c.sub ? '<div class="cs">' + txt(c.sub) + '</div>' : '') + '</div></div>' : '';
 }
@@ -280,7 +280,7 @@ var CARD = {
   progress: function (c) { return progress(c.value, c.tone) + (c.text ? '<p class="p pg-t">' + txt(c.text) + '</p>' : ''); },
   /* 함께 점검한 결과 — 확인됨 · 모름 · 아니요. 모름·아니요는 숨기지 않고 그대로 적습니다(1번) */
   check: function (c) {
-    var T = { '확인됨': 'green', '모름': 'orange', '아니요': 'red', '가능': 'green', '주의': 'orange', '점검 필요': 'red' };   /* 고칠 순서(판 X168)도 같은 카드 */
+    var T = { '확인됨': 'green', '모름': 'orange', '아니요': 'red', '가능': 'green', '주의': 'orange', '점검 필요': 'red' };   /* 고칠 순서(판 X171)도 같은 카드 */
     return '<div class="ck">' + (c.items || []).map(function (x) {
       var t = T[x.status] || 'gray';
       return '<div class="ck-r"><span class="ck-p" style="background:' + TONE_BG[t] + ';color:' + TONE[t] + '">' + esc(x.status || '안 물음') + '</span>' +

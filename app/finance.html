@@ -1399,12 +1399,13 @@ a { color: inherit; text-decoration: none; }
 <script src="apex_report_engine.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════
-   나이대 표 — 보험·재무 상담의 나이대 문구는 <b>여기 한 곳</b>에만 둡니다 (판 X165)
+   나이대 표 — 보험·재무 상담의 나이대 문구는 <b>여기 한 곳</b>에만 둡니다 (판 X168)
    전에는 세 벌이 될 뻔했습니다 — 상담가이드의 「나이별 보험 필요성 피드백」(insuranceGuideByAge
    의 if 사슬), 상담 가이드 한 줄(renderGuide 의 ageMsg 삼항 사슬), 그리고 새 「분배 전략」.
    한쪽만 고치면 한 고객에게 나이대 말이 둘이 됩니다(5번). 앞의 둘은 코드에서 글자 그대로
    뽑아 옮겼고(바꾸기 전후 출력이 같음을 확인), 셋 다 이 표를 읽습니다.
-   ★ 판 X166 — 나이대마다 박아 두었던 「가족 : 내 연금」 비율(20:80 …)은 <b>근거 없는 숫자</b>라
+   (판 X172 — 첫째 insuranceGuideByAge 는 화면에 한 번도 서지 않는 덧칠 안에 있어 덧칠째 지웠습니다.)
+   ★ 판 X169 — 나이대마다 박아 두었던 「가족 : 내 연금」 비율(20:80 …)은 <b>근거 없는 숫자</b>라
      지웠습니다. 무게는 이제 고객마다 <b>평균 · 소득 · 가족</b> 세 가지로 구한 기준값에서 셈합니다
      (ipBase). 이 표에는 나이대의 말(볼 것 · 까닭 · 화법)만 남습니다.
    ═══════════════════════════════════════════════════════════ */
@@ -1465,7 +1466,7 @@ var IP_AGE=[
     proposal:'새 가입보다 기존 보장의 유지·감액·전환 가능성을 먼저 보고, 현금흐름을 해치지 않는 범위에서 간병/상속 재원을 분리합니다.',
     close:'“이 시기에는 보험료를 많이 내는 것이 좋은 게 아니라, 가족이 실제로 필요할 때 바로 쓸 수 있는 현금성 보장을 남기는 것이 중요합니다.”'}
 ];
-/* ── 기준값 (판 X166) — 사장님 말씀 2026-10-22 「평균 값으로 구하고 소득에 따라 구하고 가족에 따라 구해서 기준값을 만들어」
+/* ── 기준값 (판 X169) — 사장님 말씀 2026-10-22 「평균 값으로 구하고 소득에 따라 구하고 가족에 따라 구해서 기준값을 만들어」
    세 가지로 구하고 <b>가운데 값</b>을 기준으로 삼습니다(값이 둘이면 둘의 평균). 한쪽으로 쏠린 값 하나가
    기준을 끌고 가지 않게 하려는 것입니다.
    ① 평균 — IP_AVG. <b>출처를 확인한 숫자만</b> 둡니다. 제목·언론사·날짜·주소를 그대로 적고(9번),
@@ -1476,12 +1477,152 @@ var IP_AGE=[
      보험료 8~15% 는 상담가이드 「보험료 비중」 판정이 쓰던 그 수를 여기로 옮긴 것입니다(5번). */
 /* 계산기 판정 숫자 — 대출(DSR·LTV) · 저축률. 예전엔 최종보고서·상담가이드·점수·팩트체크에 같은 숫자가
    여섯 벌로 적혀 있었습니다(DSR 35 판정만 여섯 곳 …). 함께 점검 상담의 「고칠 순서」 도 같은 판정을 써야 해서
-   한 곳으로 모았습니다(판 X168 · 5번). 바꾸기 전후 화면 출력이 같음을 확인했습니다. */
-var FIN_RULE={ dsrOk:35, dsrWarn:45, ltvOk:60, ltvWarn:70, saveGood:20, saveMid:10 };
+   한 곳으로 모았습니다(판 X171 · 5번). 바꾸기 전후 화면 출력이 같음을 확인했습니다. */
+var FIN_RULE={ dsrOk:35, dsrWarn:45, ltvOk:60, ltvWarn:70, saveGood:20, saveMid:10,
+  essHigh:65, essMid:55,            /* 꼭 나가는 지출 비율 — 현금흐름 모델(안정형·균형형·성장형) */
+  penWarnRatio:0.8,                 /* 노후 연금 — 목표의 80% 이상이면 주의, 100% 이상이면 가능 */
+  taxWarn:5000,                     /* 남길 것 — 상속세 추정이 이보다 적으면 주의 */
+  insCancer:3000, insBrain:1000, insHeart:1000, insCancerWarn:2000   /* 보장 판정(최종보고서 · 보험 대시보드) */
+};
+/* ═══════════════════════════════════════════════════════════
+   계산기 한 곳 — finCore (판 X172) · 사장님 말씀 2026-10-22 「전부 손대고 막아봐 우선」
+   전에는 같은 숫자를 <b>아홉 군데</b>가 따로 셈했고 정의도 달랐습니다 —
+     소득(세전 / 세전 × 0.82 어림 / 임대·배당 빠뜨림) · 지출(「기타/월」 빠뜨림 두 곳) ·
+     준비된 연금(× 1.7 / 4% 인출 · 퇴직금 연금화 · 주택연금 늘 합산) · 연금 부족(물가 반영 목표 기준) ·
+     DSR(월/월 · 연/연) · 점수(가중치 셋) · 상속세(간이 셈 셋 · 상속·증여 탭과 다름) ·
+     건보료(어림 셋) · 국민연금 감소(어림 셋 — 하나는 퍼센트를 만 원으로 찍음) ·
+     암 진단비·간병(없는 칸 ins_cancer_diag · ins_care 를 읽어 늘 0)
+   이제 모두 여기서 나오고, 각 화면은 읽기만 합니다(5번). 정한 것 —
+     소득 = <b>세전</b> 월 가구소득(연 총급여 ÷ 12 + 사업·배우자·임대/배당/이자·기타) — 0.82 같은 어림을 쓰지 않습니다
+     준비된 연금 = 연금 시뮬레이션 탭의 「지금 준비된 것」 (적힌 것만 · 주택연금은 합산을 켰을 때 · 쌓인 금액을 알 때만 연금저축)
+     연금 부족 = 목표 − 준비된 연금 (오늘 돈 · 물가는 참고) — 탭에 적힌 사장님 요구사항 그대로
+     상속세 = 상속·증여 탭의 셈(finInherit) · 건보료·국민연금 감소 = 예시 어림 하나(finNhis)
+   ═══════════════════════════════════════════════════════════ */
+var RPT_FIXED=['s_housing','s_loan','s_food','s_telecom','s_transport','s_insurance','s_medical','s_edu','s_support'];
+var RPT_CHOICE=['s_dining','s_shopping','s_travel','s_choice_etc'];
+var RPT_SAVE=['s_emerg','s_pension','s_irp','s_isa','s_taxfree','s_general'];
+function finNum(id,d){ var e=document.getElementById(id), v=e?parseFloat(String(e.value).replace(/,/g,'')):NaN; return isFinite(v)?v:(d||0); }
+function finVal(id,d){ var e=document.getElementById(id); return e&&e.value!==''?e.value:(d||''); }
+function finSum(ids){ return ids.reduce(function(a,id){ return a+finNum(id); },0); }
+function finQuickTax(t){ t=Math.max(0,Number(t)||0); var rows=[[10000,.10,0],[50000,.20,1000],[100000,.30,6000],[300000,.40,16000],[Infinity,.50,46000]];
+  for(var i=0;i<rows.length;i++) if(t<=rows[i][0]) return Math.max(0,Math.round(t*rows[i][1]-rows[i][2])); return 0; }
+function finTaxRate(t){ return t>300000?50:t>100000?40:t>50000?30:t>10000?20:t>0?10:0; }
+/* 지금 준비된 연금 — 연금 시뮬레이션 탭(renderPensionSim)과 결과지·상담이 이것만 부릅니다 */
+function finReady(){
+  var nps=finNum('s_nps'), retp=finNum('s_retire_pen'), priv=finNum('s_pen_now'), rage=finNum('s_rage',65), hp=0, hpMan=0, h=null, acc=null;
+  try{ if(typeof housePension==='function'){ h=housePension(finNum('s_realty'),rage); hpMan=(h&&h.man)||0; } }catch(e){}
+  if(typeof PSIM!=='undefined'&&PSIM&&PSIM.useHouse) hp=hpMan;
+  try{ if(typeof psAccPlan==='function') acc=psAccPlan(); }catch(e){ acc=null; }
+  var accMan=acc?acc.man:0;
+  return { nps:nps, retp:retp, priv:priv, house:hp, houseAvail:hpMan, housePen:h, acc:acc, accMan:accMan, total:nps+retp+priv+hp+accMan,
+    parts:[{k:'nps',label:'국민연금',v:nps},{k:'retp',label:'퇴직연금',v:retp},{k:'priv',label:'기존 개인연금',v:priv},{k:'house',label:'주택연금',v:hp},{k:'acc',label:'연금저축·IRP·달러·변액',v:accMan}] };
+}
+/* 상속세 — 상속·증여 탭의 셈 그대로(공제: 배우자 · 일괄/기초+인적 · 금융재산 · 동거주택 · 채무) */
+function finInherit(){
+  var total = finNum('inh_total');
+  var spouse = finVal('inh_spouse','있음');
+  var children = Math.max(parseInt(finVal('inh_children','1'))||1,0);
+  var gift = finNum('inh_gift');
+  var lifeAmt = finNum('inh_life');
+  var giftTo = finVal('inh_gift_to','자녀');
+  var memo = finVal('inh_memo','');
+  var age = parseInt(finVal('s_age','45'))||45;
+  var houseVal = finNum('r_house_val');
+  var mortgage = finNum('r_mortgage');
+  var spouseExists = spouse==='있음';
+  var heirs = children + (spouseExists?1:0);
+  var legalSpouseShare = spouseExists ? Math.round(total * 1.5 / (children + 1.5)) : 0;
+  var spouseDeduct = spouseExists ? Math.max(50000, Math.min(legalSpouseShare,300000)) : 0;
+  var lumpDeduct = 50000;
+  var basicPlusPersonal = 20000 + children*5000;
+  var dMinorN = finNum('inh_minor_n'), dMinorAge = finNum('inh_minor_age'), dElderN = finNum('inh_elder_n'), dDisN = finNum('inh_dis_n'), dDisLife = finNum('inh_dis_life');
+  var dHomeYN = finVal('inh_home_yn','해당없음'), dSoloSp = finVal('inh_solo_sp','아니오') === '예';
+  var dChild = children * 5000, dMinor = dMinorN * Math.max(0, 19 - dMinorAge) * 1000, dElder = dElderN * 5000, dDis = dDisN * dDisLife * 1000;
+  basicPlusPersonal = 20000 + dChild + dMinor + dElder + dDis;
+  var lumpOK = !dSoloSp;
+  var personalDeduct = lumpOK ? Math.max(lumpDeduct, basicPlusPersonal) : basicPlusPersonal;
+  var lumpPicked = lumpOK && lumpDeduct >= basicPlusPersonal;
+  var dHome = 0;
+  if(dHomeYN === '해당'){ var homeNet = Math.max(houseVal - mortgage, 0); dHome = Math.min(homeNet, 60000); }
+  var financialEstate = Math.max(total - houseVal + lifeAmt, 0);
+  var financialDeduct = Math.min(Math.round(financialEstate*0.20), 20000);
+  var debtDeduct = mortgage;
+  var totalDeduct = spouseDeduct + personalDeduct + financialDeduct + debtDeduct + dHome;
+  var taxable = Math.max(total - totalDeduct, 0);
+  var inheritTax = finQuickTax(taxable);
+  return { total:total, spouse:spouse, children:children, gift:gift, lifeAmt:lifeAmt, giftTo:giftTo, memo:memo, age:age, houseVal:houseVal, mortgage:mortgage,
+    spouseExists:spouseExists, heirs:heirs, legalSpouseShare:legalSpouseShare, spouseDeduct:spouseDeduct, lumpDeduct:lumpDeduct, basicPlusPersonal:basicPlusPersonal,
+    dMinorN:dMinorN, dMinorAge:dMinorAge, dElderN:dElderN, dDisN:dDisN, dDisLife:dDisLife, dHomeYN:dHomeYN, dSoloSp:dSoloSp, dChild:dChild, dMinor:dMinor, dElder:dElder, dDis:dDis,
+    lumpOK:lumpOK, personalDeduct:personalDeduct, lumpPicked:lumpPicked, dHome:dHome, financialEstate:financialEstate, financialDeduct:financialDeduct, debtDeduct:debtDeduct,
+    totalDeduct:totalDeduct, taxable:taxable, inheritTax:inheritTax, effRate:total>0?(inheritTax/total*100).toFixed(1):'0.0', mRate:finTaxRate(taxable),
+    lifeShort:Math.max(inheritTax-lifeAmt,0) };
+}
+/* 은퇴 후 건강보험료 · 국민연금 납부 중단 — 대시보드에 있던 예시 어림 하나(공단 산식 아님 · 금액으로 단정하지 않음) */
+function finNhis(){
+  var gross=finNum('s_gross'), monthlyGross=Math.round(gross/12), nps=finNum('s_nps'), retPen=finNum('s_retire_pen'), realty=finNum('s_realty'), debt=finNum('s_debt'), age=finNum('s_age',35), rage=finNum('s_rage',65);
+  var nhisPointValue=195.8, ltcLoad=1.1295;
+  var employeeHealthNowWon=Math.round(monthlyGross*10000*0.03595*ltcLoad);
+  var pensionIncomeHealthWon=Math.round(Math.max(nps+retPen,0)*10000*0.0719);
+  var netPropertyForHealth=Math.max(realty*0.6-debt-5000,0), propertyPoints=Math.round(netPropertyForHealth/65), propertyHealthWon=Math.round(propertyPoints*nhisPointValue);
+  var localWon=Math.min(3322170,Math.max(13980,Math.round((pensionIncomeHealthWon+propertyHealthWon)*ltcLoad)));
+  var npsPayBase=Math.min(Math.max(monthlyGross,40),637), npsRemainYears=Math.max(Math.min(60,rage)-age,0), lossRate=Math.min(0.35,npsRemainYears*0.018);
+  var npsLoss=Math.max(nps-Math.round(nps*(1-lossRate)),0);
+  return { nowMan:Math.round(employeeHealthNowWon/10000), localMan:Math.round(localWon/10000), increaseMan:Math.round(Math.max(localWon-employeeHealthNowWon,0)/10000),
+    propertyMan:Math.round(propertyHealthWon*ltcLoad/10000), netProperty:netPropertyForHealth, npsLoss:npsLoss, npsPreserve:npsRemainYears>0?Math.round(npsPayBase*0.09):0, npsPayBase:npsPayBase };
+}
+/* 은퇴 전까지 매달 얼마를 모으면 그 자본이 되나 — 연 수익률(가정) 월복리. 상담 · 종합 재무설계가 이 한 곳을 부릅니다 */
+function finReqMonthly(capital, years, ratePct){
+  var n=Math.max(1,Math.round(years*12)), r=(Number(ratePct)||0)/100/12;
+  return r===0?capital/n:capital*r/(Math.pow(1+r,n)-1);
+}
+function finPenKind(goal,have){ return !(goal>0)?null:(have>=goal?'good':(have>=goal*FIN_RULE.penWarnRatio?'warn':'bad')); }
+function finInsKind(d){ return d.cancer>=FIN_RULE.insCancer&&d.brain>=FIN_RULE.insBrain&&d.heart>=FIN_RULE.insHeart&&d.care>0?'good':(d.cancer>=FIN_RULE.insCancerWarn?'warn':'bad'); }
+function finEstKind(d){ return d.inheritGap<=0?'good':(d.inheritTax<FIN_RULE.taxWarn?'warn':'bad'); }
+/* 점수 — 한 벌. 여섯 칸 합 100 (남는 돈 18 · 저축률 18 · 노후 연금 18 · 대출 16 · 남길 것 15 · 보장 15) */
+function finScore(d){
+  var L={good:0,warn:1,bad:2};
+  var parts=[
+    {l:'남는 돈', max:18, v:d.surplus>=0?18:6},
+    {l:'저축률', max:18, v:d.saveRatio>=FIN_RULE.saveGood?18:(d.saveRatio>=FIN_RULE.saveMid?11:5)},
+    {l:'노후 연금', max:18, v:[18,11,5][L[finPenKind(d.target,d.totalPension)||'bad']]},
+    {l:'대출', max:16, v:[16,10,4][L[finDebtKind(d)]]},
+    {l:'남길 것', max:15, v:[15,9,4][L[finEstKind(d)]]},
+    {l:'보장', max:15, v:finInsKind(d)==='good'?15:8}];
+  var t=0; parts.forEach(function(x){ t+=x.v; });
+  return {total:Math.min(100,t), parts:parts};
+}
+function finCore(){
+  var gross=finNum('s_gross'), monthlyGross=Math.round(gross/12);
+  var income=monthlyGross+finNum('s_self')+finNum('s_spouse')+finNum('s_passive')+finNum('s_other');
+  var fixed=finSum(RPT_FIXED), choice=finSum(RPT_CHOICE), saving=finSum(RPT_SAVE), surplus=income-fixed-choice-saving;
+  var age=finNum('s_age',35), rage=finNum('s_rage',65), years=Math.max(rage-age,0), target=finNum('s_target'), inf=finNum('s_inf',3)/100;
+  var R=finReady(), totalPension=R.total, pensionGap=Math.max(target-totalPension,0);
+  var house=finNum('r_house_val'), mort=finNum('r_mortgage'), mr=finNum('r_mortgage_rate',3.8)/100/12;
+  var mortPay=mort>0?Math.round(mort*mr*Math.pow(1+mr,360)/(Math.pow(1+mr,360)-1)):0;
+  var realty=finNum('s_realty')+house, debt=finNum('s_debt')+mort, net=Math.max(realty+finNum('s_pen_now')+finNum('s_severance')-debt,0);
+  var H=finInherit(), N=finNhis();
+  var insFee=finNum('ins_monthly')||finNum('s_insurance');
+  var d={ name:finVal('s_name','고객님'), age:age, gender:finVal('s_gender',''), job:finVal('s_job',''), risk:finVal('s_itype','중립형'), riskType:finVal('s_itype','중립형'),
+    rage:rage, years:years, yearsLeft:Math.max(years,1), gross:gross, monthlyGross:monthlyGross, income:income, totalIncome:income,
+    fixed:fixed, essential:fixed, choice:choice, saving:saving, surplus:surplus,
+    saveRatio:income?saving/income*100:0, fixedRatio:income?fixed/income*100:0,
+    target:target, inf:inf, futureTarget:Math.round(target*Math.pow(1+inf,years)), totalPension:totalPension, ready:R, pensionGap:pensionGap,
+    gapCapital:pensionGap*((typeof APEX_REPORT!=='undefined')?APEX_REPORT.calc.RULE.annuity.annuityFactor:200),
+    house:house, houseVal:house, mort:mort, mortgage:mort, mortPay:mortPay, mortgagePay:mortPay, dsr:income?mortPay/income*100:0, ltv:house?mort/house*100:0,
+    realty:realty, debt:debt, net:net, netWorth:net,
+    estate:H.total, estateBase:H.total, totalEstate:H.total, estateKnown:H.total>0, taxable:H.taxable, inheritTax:H.inheritTax, inheritGap:H.lifeShort, inheritCashGap:H.lifeShort,
+    gift:H.gift, inhGift:H.gift, life:H.lifeAmt,
+    insFee:insFee, insRatio:income?insFee/income*100:0, insuranceRatio:income?Math.round(insFee/income*100):0,
+    cancer:finNum('ins_cancer_dx'), cancerTreat:finNum('ins_cancer_treat'), brain:finNum('ins_brain'), heart:finNum('ins_heart'),
+    care:finNum('ins_caregiver')+finNum('ins_homecare'), renewal:finNum('ins_renewal'),
+    nhisNow:N.nowMan, employeeNhis:N.nowMan, nhisAfter:N.localMan, regionalNhis:N.localMan, nhisGap:N.increaseMan, nhisIncrease:N.increaseMan, npsLoss:N.npsLoss, nhis:N };
+  d.score=finScore(d).total;
+  return d;
+}
 function finCashKind(d){ return d.surplus>=0&&d.saveRatio>=FIN_RULE.saveGood?'good':d.surplus>=0?'warn':'bad'; }
 function finDebtKind(d){ return d.dsr<=FIN_RULE.dsrOk&&d.ltv<=FIN_RULE.ltvOk?'good':(d.dsr<=FIN_RULE.dsrWarn||d.ltv<=FIN_RULE.ltvWarn?'warn':'bad'); }
 var IP_RULE={ indepAge:25, spouseYears:3, meMonths:12, premLo:8, premHi:15 };
-/* ── 소득 셈의 배수는 직업군 평균 데이터에서 (판 X167) — 사장님 말씀 2026-10-22
+/* ── 소득 셈의 배수는 직업군 평균 데이터에서 (판 X170) — 사장님 말씀 2026-10-22
    「배수는 평균 데이터를 기준으로 하고 직업군을 나누어서 다시 나눠서 해줘」
    전에 손으로 정했던 「소득 3년치 · 1년치」 를 지우고, 아래 공식 통계의 가구주 종사상지위별 평균에서 셈합니다.
      가족 지키기 배수 = 평균 부채 ÷ 평균 가구소득          (같은 직업군 가구가 평균적으로 진 빚이 소득의 몇 배인가)
@@ -2949,29 +3090,26 @@ function render() {
   const yearsLeft = Math.max(rage - age, 1);
   const today = new Date().toLocaleDateString('ko-KR');
 
-  /* 소득 계산 */
-  const gross = n('gross');
-  const monthlyGross = Math.round(gross / 12);
-  const netSalary = Math.round(monthlyGross * 0.82); // 4대보험·세금 공제
-  const self    = n('self'), spouse = n('spouse'), passive = n('passive'), other = n('other');
-  const totalIncome = netSalary + self + spouse + passive + other;
+  /* 소득 · 지출 · 연금 — 계산기 한 곳(finCore)에서 읽기만 합니다(판 X172 · 5번).
+     전에는 여기서 세전 × 0.82 로 「세후」 를 어림하고, 연금은 4% 인출 · 퇴직금 연금화 · 주택연금을 늘 더해
+     다른 화면과 다른 남는 돈 · 다른 연금 준비율을 말했습니다. 이제 세전 기준 · 연금은 연금 시뮬레이션의 「지금 준비된 것」. */
+  const C = finCore();
+  const gross = C.gross, monthlyGross = C.monthlyGross, totalIncome = C.income;
+  const self = n('self'), spouse = n('spouse'), passive = n('passive'), other = n('other');
 
-  /* 지출 계산 */
+  /* 지출 계산 — 칸 하나하나는 아래 8대 지출 · 팩트체크가 씁니다 */
   const housing=n('housing'), loan=n('loan'), food=n('food'), telecom=n('telecom');
   const transport=n('transport'), insurance=n('insurance'), medical=n('medical');
   const edu=n('edu'), support=n('support');
-  const essential = housing+loan+food+telecom+transport+insurance+medical+edu+support;
-
+  const essential = C.fixed;
   const dining=n('dining'), shopping=n('shopping'), travel=n('travel'), cetc=n('choice_etc');
-  const choice = dining+shopping+travel+cetc;
-
+  const choice = C.choice;
   const emerg=n('emerg'), pension=n('pension'), irp=n('irp'), isa=n('isa');
   const taxfree=n('taxfree'), general=n('general');
-  const saving = emerg+pension+irp+isa+taxfree+general;
-
+  const saving = C.saving;
   const totalExpense = essential + choice;
   const totalOut = totalExpense + saving;
-  const surplus = totalIncome - totalOut;
+  const surplus = C.surplus;
 
   /* 비율 계산 */
   const essentialRatio = totalIncome > 0 ? Math.round(essential/totalIncome*100) : 0;
@@ -2979,64 +3117,9 @@ function render() {
   const savingRatio    = totalIncome > 0 ? Math.round(saving/totalIncome*100) : 0;
   const surplusRatio   = totalIncome > 0 ? Math.round(surplus/totalIncome*100) : 0;
 
-  /* 연금 계산 */
-  const target  = n('target') || 400;
-  const retRate = n('ret') || 5;
-  const infRate = n('inf') || 3;
-  const nps     = n('nps');
-  const retPen  = n('retire_pen');
-  const penNow  = n('pen_now');
-  const realty  = n('realty') || 0;
-  const severance = n('severance') || 0;
-  const debt    = n('debt') || 0;
-
-  const fvTarget = Math.round(target * Math.pow(1 + infRate/100, yearsLeft));
-  const requiredCapital = Math.round((fvTarget * 12) / 0.04);
-  const r12 = (retRate/100)/12, n_months = yearsLeft*12;
-  const reqMonthly = r12===0 ? Math.round(requiredCapital/n_months)
-    : Math.round((requiredCapital*r12)/(Math.pow(1+r12,n_months)-1));
-
-  const housePen = housePension(realty, rage);
-  const housingPension = housePen.man;   /* 만원 / 월 */
-  const sevPension = sevPensionOf(severance, retRate);
-  const currentMonthlyInvest = pension + irp + taxfree + general;
-
-  // 현재 저축으로 쌓이는 예상 자산
-  const fvCurrent = currentMonthlyInvest > 0 && r12 > 0
-    ? Math.round(currentMonthlyInvest * ((Math.pow(1+r12,n_months)-1)/r12)*(1+r12))
-    : currentMonthlyInvest * n_months;
-  const fvWithNow = Math.round(fvCurrent + penNow * Math.pow(1+retRate/100, yearsLeft));
-  const monthlyFromCapital = Math.round(fvWithNow * 0.04 / 12);
-
-  const totalMonthlyPension = nps + retPen + housingPension + sevPension + monthlyFromCapital;
-  const penGap = Math.max(fvTarget - totalMonthlyPension, 0);
-  const penScore = Math.min(Math.round(totalMonthlyPension/fvTarget*100), 100);
-
-  /* 은퇴 후 건강보험료·국민연금 공백 리스크 상담용 추정 */
-  const nhisPointValue = 195.8; // 지역가입자 부과점수당 금액(상담용 기준)
-  const ltcLoad = 1.1295;       // 장기요양보험료를 반영한 보수적 배율
-  const monthlyGrossWon = monthlyGross * 10000;
-  const employeeHealthNowWon = Math.round(monthlyGrossWon * 0.03595 * ltcLoad);
-  const pensionTaxableWon = Math.max(nps + retPen, 0) * 10000;
-  const pensionIncomeHealthWon = Math.round(pensionTaxableWon * 0.0719);
-  const netPropertyForHealth = Math.max(realty * 0.6 - debt - 5000, 0); // 재산 과표 60%·기본공제 5천만원 가정
-  const propertyPoints = Math.round(netPropertyForHealth / 65);
-  const propertyHealthWon = Math.round(propertyPoints * nhisPointValue);
-  const estimatedLocalHealthWon = Math.min(3322170, Math.max(13980, Math.round((pensionIncomeHealthWon + propertyHealthWon) * ltcLoad)));
-  const healthIncreaseWon = Math.max(estimatedLocalHealthWon - employeeHealthNowWon, 0);
-  const healthIncreaseMan = Math.round(healthIncreaseWon / 10000);
-  const localHealthMan = Math.round(estimatedLocalHealthWon / 10000);
-  const propertyHealthMan = Math.round(propertyHealthWon * ltcLoad / 10000);
-  const employeeHealthNowMan = Math.round(employeeHealthNowWon / 10000);
-
-  const npsPayBase = Math.min(Math.max(monthlyGross, 40), 637);
-  const npsMonthlyContribution = Math.round(npsPayBase * 0.09);
-  const npsPayUntilAge = Math.min(60, rage);
-  const npsRemainYears = Math.max(npsPayUntilAge - age, 0);
-  const estimatedNpsLossRate = Math.min(0.35, npsRemainYears * 0.018);
-  const npsIfStopped = Math.round(nps * (1 - estimatedNpsLossRate));
-  const npsMonthlyLoss = Math.max(nps - npsIfStopped, 0);
-  const npsPreserveCost = npsRemainYears > 0 ? npsMonthlyContribution : 0;
+  /* 연금 준비율 — 지금 준비된 것 ÷ 목표 생활비 (오늘 돈 · 연금 시뮬레이션과 같은 자) */
+  const target  = C.target;
+  const penScore = target > 0 ? Math.min(Math.round(C.totalPension/target*100), 100) : 0;
 
   /* 달러 계산 */
   const dPay=parseFloat($('d_pay')?.value||50)||50;
@@ -3050,23 +3133,17 @@ function render() {
   const dCapitalEx = Math.round(dCapital*(1+dEx));
   const dPrincipal = Math.round(dPay*dN);
 
-  /* 재무 건전성 점수 */
-  const scores = [
-    Math.min(Math.round(savingRatio/30*30), 30),
-    Math.min(Math.round((100-essentialRatio)/50*25), 25),
-    Math.min(Math.round(penScore*20/100), 20),
-    surplus > 0 ? 15 : 0,
-    Math.min(10, 10),
-  ];
-  const healthScore = scores.reduce((a,b)=>a+b,0);
+  /* 재무 건전성 점수 — 최종보고서 · 상담가이드와 같은 한 벌(finScore · 판 X172) */
+  const FSC = finScore(C);
+  const healthScore = FSC.total;
 
   /* 현금흐름 모델 판단 */
-  const cfModel = essentialRatio >= 65 ? '안정형' : essentialRatio >= 55 ? '균형형' : '성장형';
+  const cfModel = essentialRatio >= FIN_RULE.essHigh ? '안정형' : essentialRatio >= FIN_RULE.essMid ? '균형형' : '성장형';
 
   /* 3대 팩트체크 */
   const emergReserve = emerg > 0 ? Math.round(essential / emerg) : 0;
-  const insuranceOK = insurance > 0 && insurance <= totalIncome*0.12;
-  const simultaneousOK = surplus >= 0 && saving/totalIncome >= 0.2;
+  const insuranceOK = insurance > 0 && insurance <= totalIncome*IP_RULE.premHi/100;
+  const simultaneousOK = surplus >= 0 && saving/totalIncome >= FIN_RULE.saveGood/100;
 
   /* ─── 대시보드 렌더 ─── */
   if ($('dash-title')) $('dash-title').textContent = `${name}님의 재무설계 종합 대시보드`;
@@ -3077,7 +3154,7 @@ function render() {
     $('dash-metrics').innerHTML = `
       <div class="mb blue"><div class="ml">월 총 소득</div>
         <div class="mv b">${fmt(totalIncome)}<small style="font-size:var(--t6,13px)"> 만</small></div>
-        <div class="mu">세후 실수령 기준</div></div>
+        <div class="mu">세전 기준</div></div>
       <div class="mb ${totalExpense/totalIncome>0.7?'red':''}">
         <div class="ml">월 지출 합계</div>
         <div class="mv ${totalExpense/totalIncome>0.7?'r':''}">${fmt(totalExpense)}<small style="font-size:var(--t6,13px)"> 만</small></div>
@@ -3118,9 +3195,9 @@ function render() {
   // 현금흐름 진행바
   if ($('cf-bars')) {
     const items = [
-      {l:'필수지출 비율',v:essentialRatio,ok:65,warn:55,unit:'%',inv:true},
-      {l:'저축·투자 비율',v:savingRatio,ok:25,warn:15,unit:'%'},
-      {l:'연금 준비율',v:penScore,ok:70,warn:40,unit:'%'},
+      {l:'필수지출 비율',v:essentialRatio,ok:FIN_RULE.essHigh,warn:FIN_RULE.essMid,unit:'%',inv:true},
+      {l:'저축·투자 비율',v:savingRatio,ok:FIN_RULE.saveGood,warn:FIN_RULE.saveMid,unit:'%'},
+      {l:'연금 준비율',v:penScore,ok:100,warn:FIN_RULE.penWarnRatio*100,unit:'%'},
     ];
     $('cf-bars').innerHTML = `<div class="pb-wrap">
       ${items.map(it=>{
@@ -3139,12 +3216,7 @@ function render() {
   if ($('health-score-wrap')) {
     $('health-svg').innerHTML = gaugeSVG(healthScore);
     $('health-items').innerHTML = `<div class="pb-wrap">
-      ${[
-        {l:'저축률 충족',v:Math.min(Math.round(savingRatio/30*100),100)},
-        {l:'지출 구조',v:Math.min(Math.round((100-essentialRatio)/50*100),100)},
-        {l:'연금 준비',v:penScore},
-        {l:'잉여금 창출',v:surplus>0?100:0},
-      ].map(it=>`<div class="pb-item">
+      ${FSC.parts.map(x=>({l:x.l,v:Math.round(x.v/x.max*100)})).map(it=>`<div class="pb-item">
         <div class="pb-row"><span class="pb-lbl" style="font-size:var(--t6,13px)">${it.l}</span>
           <span class="pb-val" style="font-size:var(--t6,13px);color:${colorOf(it.v)}">${it.v}%</span></div>
         <div class="pb-track"><div class="pb-fill" style="width:${it.v}%;background:${colorOf(it.v)}"></div></div>
@@ -3230,7 +3302,7 @@ function render() {
             val: insuranceOK ? '유지 가능' : '점검 필요',
             ok: insuranceOK, warn: true,
             desc:`보험료 ${fmt(insurance)}만원 / 소득의 ${totalIncome>0?Math.round(insurance/totalIncome*100):0}%`,
-            action: insurance/totalIncome > 0.12 ? '보험료 과다. 갱신형 정리·중복 제거 검토 필요' : '✅ 보험료 유지 구조 양호'
+            action: insurance/totalIncome > IP_RULE.premHi/100 ? '보험료 과다. 갱신형 정리·중복 제거 검토 필요' : '✅ 보험료 유지 구조 양호'
           },
           {ico:'🎯', title:'③ 동시성',
             val: simultaneousOK ? '병행 가능' : '구조 개선 필요',
@@ -3361,146 +3433,8 @@ function render() {
   }
 
   /* ─── 연금 탭 ─── */
-  if ($('pension-overview')) {
-    $('pension-overview').innerHTML = `
-      <div class="mg m5" style="margin-bottom:12px">
-        <div class="mb blue"><div class="ml">은퇴 목표 월 생활비</div><div class="mv b">${fmt(target)}<small>만</small></div><div class="mu">현재 기준</div></div>
-        <div class="mb gold"><div class="ml">물가 반영 목표액</div><div class="mv o">${fmt(fvTarget)}<small>만/월</small></div><div class="mu">${yearsLeft}년 후 (${infRate}% 반영)</div></div>
-        <div class="mb purple"><div class="ml">필요 은퇴 자산</div><div class="mv p">${fmt(requiredCapital)}<small>만</small></div><div class="mu">4% 인출 룰</div></div>
-        <div class="mb green"><div class="ml">예상 월 연금 합계</div><div class="mv ${totalMonthlyPension>=fvTarget?'g':'o'}">${fmt(totalMonthlyPension)}<small>만</small></div></div>
-        <div class="mb ${penGap>0?'red':'green'}"><div class="ml">연금 공백</div><div class="mv ${penGap>0?'r':'g'}">${penGap>0?'-':'+'} ${fmt(Math.abs(fvTarget-totalMonthlyPension))}<small>만</small></div></div>
-      </div>
-      <div class="pb-wrap">
-        ${[
-          {l:'국민연금',v:nps,target:fvTarget,c:'#3B82F6'},
-          {l:'퇴직연금',v:retPen,target:fvTarget,c:'#8B5CF6'},
-          {l:'개인연금(투자수익)',v:monthlyFromCapital,target:fvTarget,c:'#10B981'},
-          {l:'주택연금(추정)',v:housingPension,target:fvTarget,c:'#F59E0B'},
-          {l:'퇴직금 연금화',v:sevPension,target:fvTarget,c:'#06B6D4'},
-        ].map(it=>`<div class="pb-item">
-          <div class="pb-row">
-            <span class="pb-lbl">${it.l}</span>
-            <span class="pb-val">${fmt(it.v)}만/월 (${it.target>0?Math.round(it.v/it.target*100):0}%)</span>
-          </div>${`<div class="pb-track"><div class="pb-fill" style="width:${Math.min(it.target>0?it.v/it.target*100:0,100)}%;background:${it.c}"></div></div>`}
-        </div>`).join('')}
-      </div>
-      <div class="hb ${penGap>0?'red':'green'}" style="margin-top:10px">
-        ${penGap>0
-          ? `⚠️ 연금 공백 <b>${fmt(penGap)}만원/월</b> — 월 <b>${fmt(reqMonthly)}만원</b> 추가 저축 시 ${yearsLeft}년 후 목표 달성 가능`
-          : `✅ 현재 저축 구조로 은퇴 목표액 달성 가능합니다`}
-      </div>
-      ${housePen.young ? `<div class="hb orange" style="margin-top:8px">🏠 <b>주택연금은 아직 셈에 안 넣었습니다.</b> 만 ${HOUSE_PEN.minAge}세부터 가입할 수 있는데 은퇴 나이가 ${rage}세로 잡혀 있습니다. 위 표의 주택연금은 0원입니다.</div>` : ''}
-      ${housePen.over ? `<div class="hb orange" style="margin-top:8px">🏠 <b>부동산 ${fmt(realty)}만원은 주택연금 가입 상한(${fmt(HOUSE_PEN.capMan)}만원)을 넘습니다.</b> 상한 기준으로만 잡은 참고값이며, 실제로는 가입이 안 될 수 있습니다. 공사에 먼저 확인하십시오.</div>` : ''}
-      ${housingPension>0 ? `<div style="margin-top:8px;font-size:var(--t6,13px);color:#7A8493;line-height:1.7">※ 주택연금은 ${HOUSE_PEN.base} · ${HOUSE_PEN.asOf} 공시 기준으로 <b>${rage}세 가입 시 1억당 월 ${housePen.per.toFixed(1)}만원</b>으로 계산했습니다. 나이·주택 종류·지급 방식에 따라 달라지고 공사가 해마다 다시 고시하므로, 상담에서는 확정 금액으로 말씀하지 마시고 공사 공시로 확인하십시오. 여기 쓰인 부동산 금액은 투자용을 포함한 총액이라 실제 대상 주택과 다를 수 있습니다.</div>` : ''}
-      <div class="card" style="margin-top:12px;margin-bottom:0;border:1px solid var(--ink-7);box-shadow:none">
-        <div class="card-hd"><div class="card-tag">HEALTH INSURANCE · NPS GAP</div><div class="card-title">재산 반영 건강보험료 & 국민연금 감소 리스크</div></div>
-        <div class="card-body">
-          <div class="hb orange" style="margin-top:0;margin-bottom:10px">
-            ⚠️ <b>아래 건보료 숫자는 「예시」입니다.</b> 공단 산식이 아니라 상담용으로 단순화한 어림값이고,
-            요율도 해마다 바뀝니다. <b>고객에게 금액으로 말씀하지 마시고</b> 「이런 방향으로 늘어날 수 있다」
-            까지만 쓰십시오. 실제 금액은 건강보험공단 모의계산으로 확인해야 합니다.
-          </div>
-          <div class="mg m4" style="margin-bottom:10px">
-            <div class="mb ${healthIncreaseMan>20?'red':healthIncreaseMan>5?'gold':'green'}"><div class="ml">은퇴 후 지역건보 추정</div><div class="mv ${healthIncreaseMan>20?'r':healthIncreaseMan>5?'o':'g'}">${fmt(localHealthMan)}<small>만/월</small></div><div class="mu">재산·연금소득 반영</div></div>
-            <div class="mb"><div class="ml">재산 보험료분</div><div class="mv">${fmt(propertyHealthMan)}<small>만/월</small></div><div class="mu">순재산 ${fmt(netPropertyForHealth)}만원 기준</div></div>
-            <div class="mb ${npsMonthlyLoss>20?'red':npsMonthlyLoss>5?'gold':'green'}"><div class="ml">납부 중단 시 연금 감소</div><div class="mv ${npsMonthlyLoss>20?'r':npsMonthlyLoss>5?'o':'g'}">-${fmt(npsMonthlyLoss)}<small>만/월</small></div><div class="mu">${npsRemainYears}년 공백 가정</div></div>
-            <div class="mb blue"><div class="ml">연금권 방어 납입</div><div class="mv b">${fmt(npsPreserveCost)}<small>만/월</small></div><div class="mu">기준소득월액 ${fmt(npsPayBase)}만원</div></div>
-          </div>
-          <div class="g2">
-            <div class="hb ${healthIncreaseMan>0?'orange':'green'}" style="margin-top:0">🏥 <b>건보료 솔루션 (예시):</b> 은퇴 후 직장가입자에서 지역가입자로 바뀌면 재산·연금소득이 보험료에 반영될 수 있습니다. 부동산 순재산이 큰 경우 <b>배우자 직장가입 피부양자 가능성, 임대소득 발생 여부, 주택연금 전환, 금융소득 분산</b>을 먼저 검토하세요. 현재 근로자 부담 추정 ${fmt(employeeHealthNowMan)}만원 대비 상승분은 ${fmt(healthIncreaseMan)}만원/월입니다.</div>
-            <div class="hb ${npsMonthlyLoss>0?'blue':'green'}" style="margin-top:0">🏦 <b>국민연금 솔루션:</b> 소득 공백으로 납부예외가 길어지면 가입기간이 줄어 예상연금이 낮아질 수 있습니다. ${npsRemainYears>0?`현재부터 만 60세 전까지 <b>${npsRemainYears}년</b>은 임의가입·추납·임의계속가입 전략으로 월 ${fmt(npsMonthlyLoss)}만원 감소분을 방어하는 구간입니다.`:'현재 나이 기준 납부 공백 위험은 낮지만, 과거 납부예외·체납 기간이 있으면 추납 가능성을 확인하세요.'}</div>
-          </div>
-          <div style="font-size:var(--t6,13px);color:var(--ink-5);line-height:1.6;margin-top:8px">※ 이 화면의 건강보험료는 <b>예시</b>입니다. 소득 7.09%·재산 단순 비례로 어림잡고 장기요양보험료를 얹은 값이라, 공단이 쓰는 <b>재산 구간 점수표·피부양자 요건·재산공제·소득 종류별 반영률</b>과 다릅니다. 요율과 공제액도 해마다 바뀝니다. 상담에서는 금액이 아니라 <b>방향</b>만 말씀하시고, 실제 금액은 건강보험공단 모의계산으로 확인하십시오.</div>
-        </div>
-      </div>
-    `;
-  }
-
-  if ($('pension-donut')) {
-    const penSegs = [
-      {label:'국민연금',val:nps,color:'#3B82F6'},
-      {label:'퇴직연금',val:retPen,color:'#8B5CF6'},
-      {label:'개인연금',val:monthlyFromCapital,color:'#10B981'},
-      {label:'주택연금',val:housingPension,color:'#F59E0B'},
-      {label:'퇴직금 연금화',val:sevPension,color:'#06B6D4'},
-    ].filter(s=>s.val>0);
-    const penTotal = penSegs.reduce((a,b)=>a+b.val,0);
-    $('pension-donut').innerHTML = `
-      <div class="donut-wrap">
-        ${donutSVG(penSegs, 120, 14, fmt(penTotal), '만원/월')}
-        <div class="donut-legend">
-          ${penSegs.map(s=>`<div class="leg-item">
-            <div class="leg-dot" style="background:${s.color}"></div>
-            <span class="leg-lbl">${s.label}</span>
-            <span class="leg-val">${fmt(s.val)}만</span>
-          </div>`).join('')}
-          <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--g2)">
-            <div style="font-size:var(--t6,13px);color:var(--g5)">목표 ${fmt(fvTarget)}만원/월 대비</div>
-            <div style="font-size:var(--t3,17px);font-weight:800;color:${colorOf(penScore)}">${penScore}% 달성</div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  if ($('pension-monthly')) {
-    const rows = [
-      {label:'국민연금', now:nps, note:'2056년 고갈 위험', risk:'경고'},
-      {label:'퇴직연금(DB/DC)', now:retPen, note:'고용형태 확인 필요', risk:'확인'},
-      {label:'개인연금(투자수익)', now:monthlyFromCapital, note:`${fmt(yearsLeft)}년 적립 후`, risk:'양호'},
-      {label:'주택연금(추정)', now:housingPension,
-        note: housePen.young ? `만 ${HOUSE_PEN.minAge}세부터 가입 — 은퇴 나이 ${rage}세로는 아직 대상이 아닙니다`
-            : housePen.over  ? `${fmt(realty)}만원은 가입 상한(${fmt(HOUSE_PEN.capMan)}만원) 초과 — 상한 기준 참고값`
-            : `${rage}세 가입 · 1억당 월 ${housePen.per.toFixed(1)}만원 (${HOUSE_PEN.asOf} 공시)`,
-        risk: (housePen.young||housePen.over) ? '확인' : '참고'},
-      {label:'퇴직금 연금화', now:sevPension, note:`퇴직금 ${fmt(severance)}만원 · ${SEV_MONTHS/12}년 분할 · 연 ${retRate}% 운용 가정`, risk:'참고'},
-    ];
-    $('pension-monthly').innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:6px">
-        ${rows.map(r=>{
-          const c = r.risk==='경고'?'var(--red)':r.risk==='확인'?'var(--org)':'var(--grn)';
-          return `<div class="cmp-row">
-            <div><div class="cmp-lbl">${r.label}</div><div style="font-size:var(--t6,13px);color:var(--g5)">${r.note}</div></div>
-            <div style="text-align:right">
-              <div class="cmp-val">${fmt(r.now)}만/월</div>
-              <span class="badge" style="background:${c}20;color:${c}">${r.risk}</span>
-            </div>
-          </div>`;}).join('')}
-        <div class="cmp-row" style="background:var(--bl);border:1px solid #BFDBFE">
-          <div class="cmp-lbl" style="font-weight:800;color:var(--blue)">합계 예상 월 수령</div>
-          <div style="font-size:var(--t3,17px);font-weight:900;color:var(--blue)">${fmt(totalMonthlyPension)}만원</div>
-        </div>
-      </div>
-    `;
-  }
-
-  if ($('pension-required')) {
-    const rates = [3, 5, 7];
-    $('pension-required').innerHTML = `
-      <div class="dark-banner" style="margin-bottom:10px">
-        <div class="db-title">📊 목표 달성을 위한 월 필요 납입액 시뮬레이션</div>
-        <div class="g3">
-          ${rates.map(r=>{
-            const rr=(r/100)/12, nn=yearsLeft*12;
-            const req = rr===0?Math.round(requiredCapital/nn):Math.round((requiredCapital*rr)/(Math.pow(1+rr,nn)-1));
-            const surplus_to_req = req - currentMonthlyInvest;
-            return `<div style="background:rgba(255,255,255,.07);border-radius:10px;padding:12px;text-align:center">
-              <div style="font-size:var(--t6,13px);color:rgba(255,255,255,.5);margin-bottom:5px">수익률 ${r}%</div>
-              <div style="font-size:var(--t2,20px);font-weight:900;color:white">${fmt(req)}<span style="font-size:var(--t6,13px);opacity:.7">만/월</span></div>
-              <div style="font-size:var(--t6,13px);color:${surplus_to_req>0?'#FCA5A5':'#6EE7B7'};margin-top:4px">
-                ${surplus_to_req>0?'+'+fmt(surplus_to_req)+'만 추가 필요':fmt(Math.abs(surplus_to_req))+'만 여유'}
-              </div>
-            </div>`;}).join('')}
-        </div>
-      </div>
-      <div class="mg m3">
-        <div class="mb"><div class="ml">현재 월 투자금액</div><div class="mv">${fmt(currentMonthlyInvest)}<small>만</small></div><div class="mu">연금저축+IRP+변액+일반</div></div>
-        <div class="mb blue"><div class="ml">예상 은퇴자산(${retRate}%)</div><div class="mv b">${fmt(fvWithNow)}<small>만</small></div></div>
-        <div class="mb ${penScore>=80?'green':penScore>=50?'gold':'red'}"><div class="ml">목표 달성률</div><div class="mv ${penScore>=80?'g':penScore>=50?'o':'r'}">${penScore}%</div></div>
-      </div>
-      <div class="hb blue">💡 <b>절세 3단 콤보:</b> ISA(비과세 한도 내) + IRP/연금저축(세액공제 한도 내) + 달러·변액(장기 비과세) 순서로 자금을 나누는 것이 기본입니다 (모두 요건 충족 시 — 한도는 세법을 확인하십시오).</div>
-    `;
-  }
+  /* 판 X172 — 옛 연금 탭 칸 네 곳(pension-overview · pension-donut · pension-monthly · pension-required)은
+     그릴 자리가 화면에 없는 죽은 코드라 지웠습니다. 연금은 「연금 시뮬레이션」 이 그립니다. */
 
   /* ─── 달러 탭 (업그레이드) ─── */
   renderDollarUpgrade();
@@ -3844,12 +3778,12 @@ function renderFactCheck(essential, totalIncome, emerg, insurance, surplus, savi
             },
             {
               n:'② 유지 가능성 점검',
-              tag: insRatio<=12?'fc-ok':insRatio<=15?'fc-warn':'fc-bad',
-              tagLabel: insRatio<=12?'유지 가능':insRatio<=15?'점검 필요':'구조 개선',
+              tag: insRatio<IP_RULE.premLo?'fc-warn':insRatio<=IP_RULE.premHi?'fc-ok':'fc-bad',
+              tagLabel: insRatio<IP_RULE.premLo?'보장 점검':insRatio<=IP_RULE.premHi?'유지 가능':'구조 개선',
               val:`소득의 ${insRatio}%`,
               desc:`보험료 ${fmt(insurance)}만원 / 권장 5~12%`,
               guide:'소득이 줄어드는 은퇴 이후에도 끝까지 유지 가능한 보험료 구조인지가 핵심',
-              action: insRatio>12?'⚠️ 갱신형 비중 점검. 중복 정리→코어비갱신 다이어트 권장':'✅ 보험료 유지 구조 양호 — 갱신형 비중 재확인 권장'
+              action: insRatio>IP_RULE.premHi?'⚠️ 갱신형 비중 점검. 중복 정리→코어비갱신 다이어트 권장':'✅ 보험료 유지 구조 양호 — 갱신형 비중 재확인 권장'
             },
             {
               n:'③ 동시성 검증',
@@ -5648,25 +5582,22 @@ function trCalc(){
   var name=trVal('s_name','고객님')||'고객님';
   var age=trNum('s_age',40)||40, rage=trNum('s_rage',65)||65;
   var left=Math.max(1,rage-age);
-  var gross=trNum('s_gross',0);
-  var net=Math.round(gross/12*0.82);
-  var inc=net+trNum('s_self',0)+trNum('s_spouse',0)+trNum('s_passive',0)+trNum('s_other',0);
-  var fix=trNum('s_housing',0)+trNum('s_loan',0)+trNum('s_food',0)+trNum('s_telecom',0)+
-          trNum('s_transport',0)+trNum('s_insurance',0)+trNum('s_medical',0)+trNum('s_edu',0)+trNum('s_support',0);
-  var opt=trNum('s_dining',0)+trNum('s_shopping',0)+trNum('s_travel',0)+trNum('s_choice_etc',0);
-  var sav=trNum('s_emerg',0)+trNum('s_pension',0)+trNum('s_irp',0)+trNum('s_isa',0)+trNum('s_taxfree',0)+trNum('s_general',0);
+  /* 소득 · 지출 · 저축 · 준비된 연금은 계산기 한 곳(finCore)에서(판 X172 · 5번) — 전에는 세전 × 0.82 로 따로 셈했습니다 */
+  var FC=finCore(), gross=FC.gross;
+  var inc=FC.income, fix=FC.fixed, opt=FC.choice, sav=FC.saving;
   var out=fix+opt+sav;
-  var rest=inc-out;
+  var rest=FC.surplus;
   var savRate=inc>0?Math.round(sav/inc*100):0;
   var insRate=inc>0?Math.round(trNum('s_insurance',0)/inc*100):0;
   var live=fix+opt;
   var needCash=live*6;
   var haveCash=trNum('s_emerg',0)*12;
   var target=trNum('s_target',0);
-  var nps=trNum('s_nps',0), retpen=trNum('s_retire_pen',0), pennow=trNum('s_pen_now',0);
-  var penTotal=nps+retpen+pennow;
-  var needRet=target>0?target:Math.round(live*0.7);
-  var gapRet=Math.max(0,needRet-penTotal);
+  var nps=FC.ready.nps, retpen=FC.ready.retp, pennow=FC.ready.priv;
+  var penTotal=FC.totalPension;
+  /* 목표가 비면 「생활비의 70%」 로 지어 채우지 않습니다 — 모르면 0 으로 두고 화면이 칸을 채우라고 말합니다(1번) */
+  var needRet=target;
+  var gapRet=FC.pensionGap;
   var future=trFv(Math.max(0,sav),5,left);
   return {name:name,age:age,rage:rage,left:left,inc:inc,fix:fix,opt:opt,sav:sav,out:out,rest:rest,
     savRate:savRate,insRate:insRate,live:live,needCash:needCash,haveCash:haveCash,
@@ -5675,23 +5606,29 @@ function trCalc(){
 }
 function trGrade(c){
   var g=[],score=100;
-  if(c.savRate>=25)g.push({ok:1,t:'저축률이 '+c.savRate+'%입니다',d:'권장선(20%)을 넘겼습니다. 이대로 유지하시면 됩니다.'});
-  else if(c.savRate>=15){g.push({ok:0,t:'저축률 '+c.savRate+'%',d:'조금만 올리면 됩니다. 선택지출에서 월 '+trMan(Math.max(5,c.live*0.05))+'만 옮겨도 달라집니다.'});score-=10;}
-  else {g.push({ok:-1,t:'저축률 '+c.savRate+'%',d:'지금 구조로는 목표를 만들기 어렵습니다. 저축을 먼저 떼는 순서로 바꿔야 합니다.'});score-=20;}
+  /* 판 X172 — 판정 기준 · 점수는 계산기 한 벌(FIN_RULE · IP_RULE · finScore). 전에는 여기만 저축률 25/15 ·
+     점수식 따로 · 「부족액 × 0.35 만 더 쌓으면 채워집니다」 · 「월 적립 × 12」 를 쌓인 비상금으로 셈했습니다 */
+  var FC=finCore(); score=finScore(FC).total;
+  if(c.savRate>=FIN_RULE.saveGood)g.push({ok:1,t:'저축률이 '+c.savRate+'%입니다',d:'권장선('+FIN_RULE.saveGood+'%)을 넘겼습니다. 이대로 유지하시면 됩니다.'});
+  else if(c.savRate>=FIN_RULE.saveMid){g.push({ok:0,t:'저축률 '+c.savRate+'%',d:'조금만 올리면 됩니다. 선택지출에서 월 '+trMan(Math.max(5,c.live*0.05))+'만 옮겨도 달라집니다.'});}
+  else {g.push({ok:-1,t:'저축률 '+c.savRate+'%',d:'지금 구조로는 목표를 만들기 어렵습니다. 저축을 먼저 떼는 순서로 바꿔야 합니다.'});}
 
-  if(c.haveCash>=c.needCash)g.push({ok:1,t:'비상금이 확보돼 있습니다',d:'6개월 생활비 '+trMan(c.needCash)+' 기준을 넘겼습니다. 급한 일이 생겨도 다른 걸 깨지 않습니다.'});
-  else {g.push({ok:-1,t:'비상금 '+trMan(Math.max(0,c.needCash-c.haveCash))+' 부족',d:'투자보다 이게 먼저입니다. 비상금이 없으면 결국 중간에 해지하게 됩니다.'});score-=15;}
+  /* 쌓인 비상금 칸이 없어 「월 적립 × 12」 로 지어 셈하지 않습니다 — 모으고 있는지만 말하고 잔액은 묻습니다(1번) */
+  if(c.haveCash>0)g.push({ok:0,t:'비상금을 따로 모으고 있습니다',d:'매달 '+trMan(c.haveCash/12)+'씩이요. 지금까지 쌓인 비상금이 생활비 6개월치('+trMan(c.needCash)+')는 되는지 확인해 보시죠.'});
+  else g.push({ok:-1,t:'따로 모으는 비상금이 없습니다',d:'투자보다 이게 먼저입니다. 비상금이 없으면 결국 중간에 해지하게 됩니다.'});
 
-  if(c.insRate>=15){g.push({ok:-1,t:'보험료가 소득의 '+c.insRate+'%',d:'조금 무겁습니다. 중복 담보를 정리하면 저축 여력이 생깁니다.'});score-=10;}
-  else if(c.insRate>=8)g.push({ok:1,t:'보험료 비중 '+c.insRate+'%',d:'적정 범위(8~15%)입니다. 지금은 손댈 필요 없습니다.'});
-  else {g.push({ok:0,t:'보험료 비중 '+c.insRate+'%',d:'보장이 얇을 수 있습니다. 큰 병 하나가 저축을 다 가져가지 않는지 확인해 보시죠.'});score-=5;}
+  if(c.insRate>IP_RULE.premHi){g.push({ok:-1,t:'보험료가 소득의 '+c.insRate+'%',d:'조금 무겁습니다. 중복 담보를 정리하면 저축 여력이 생깁니다.'});}
+  else if(c.insRate>=IP_RULE.premLo)g.push({ok:1,t:'보험료 비중 '+c.insRate+'%',d:'적정 범위('+IP_RULE.premLo+'~'+IP_RULE.premHi+'%)입니다. 지금은 손댈 필요 없습니다.'});
+  else {g.push({ok:0,t:'보험료 비중 '+c.insRate+'%',d:'보장이 얇을 수 있습니다. 큰 병 하나가 저축을 다 가져가지 않는지 확인해 보시죠.'});}
 
-  if(c.gapRet<=0)g.push({ok:1,t:'노후 준비가 목표에 닿아 있습니다',d:'연금 합계 '+trMan(c.penTotal)+'로 목표 '+trMan(c.needRet)+'를 채웁니다.'});
-  else {g.push({ok:-1,t:'은퇴 후 월 '+trMan(c.gapRet)+' 부족',d:'지금 월 '+trMan(Math.max(1,c.gapRet*0.35))+'만 더 쌓으면 '+c.left+'년 뒤에 이 칸이 채워집니다.'});score-=15;}
+  if(!(c.needRet>0))g.push({ok:0,t:'은퇴 후 목표 생활비가 비어 있습니다',d:'목표를 정해야 얼마가 모자란지 셀 수 있어요. 지금 준비된 연금은 월 '+trMan(c.penTotal)+'입니다.'});
+  else if(c.gapRet<=0)g.push({ok:1,t:'노후 준비가 목표에 닿아 있습니다',d:'지금 준비된 연금 '+trMan(c.penTotal)+'로 목표 '+trMan(c.needRet)+'를 채웁니다.'});
+  else {var cap=FC.gapCapital, rr=finNum('s_ret',5);
+    g.push({ok:-1,t:'은퇴 후 월 '+trMan(c.gapRet)+' 부족',d:'이 빈칸을 연금으로 받으려면 은퇴하는 날 약 '+trMan(cap)+'이 있어야 해요. 연 '+rr+'%로 굴린다고 보면(가정) 지금부터 월 '+trMan(finReqMonthly(cap,c.left,rr))+'씩이에요.'});}
 
-  if(c.rest<0){g.push({ok:-1,t:'매달 '+trMan(-c.rest)+' 적자',d:'가장 먼저 볼 곳입니다. 고정지출부터 하나씩 확인해 보겠습니다.'});score-=20;}
+  if(c.rest<0){g.push({ok:-1,t:'매달 '+trMan(-c.rest)+' 적자',d:'가장 먼저 볼 곳입니다. 고정지출부터 하나씩 확인해 보겠습니다.'});}
   else g.push({ok:1,t:'매달 '+trMan(c.rest)+' 여유',d:'이 돈이 지금 어디에도 가 있지 않습니다. 여기서 시작하면 됩니다.'});
-  return {items:g,score:Math.max(30,score)};
+  return {items:g,score:score};
 }
 function trRow(g){
   var c=g.ok>0?'#047857':(g.ok<0?'#C2410C':'#B45309');
@@ -5741,13 +5678,13 @@ function renderTotalReport(){
       '안전판이 먼저입니다. 이게 있어야 <b>급한 일이 생겨도 모아둔 걸 깨지 않습니다.</b> 실제로 가장 큰 손해는 수익률이 아니라 중간에 깨는 것에서 납니다.</div>'+
     '</div></div>'+
     '<div class="card"><div class="card-hd"><div class="card-tag">RETIREMENT</div><div class="card-title">🌴 은퇴 후 — 매달 들어올 돈</div></div><div class="card-body">'+
-      trLine('필요한 생활비(월)',trMan(c.needRet),'지금 생활비의 70% 기준')+
+      trLine('필요한 생활비(월)',c.needRet>0?trMan(c.needRet):'비어 있어요',c.needRet>0?'목표 생활비 칸 · 오늘 돈':'목표 생활비 칸을 채워 주세요')+
       trLine('준비된 연금(월)',trMan(c.penTotal),'국민 + 퇴직 + 개인')+
       trLine('부족한 금액(월)',trMan(c.gapRet),c.gapRet>0?'여기를 채우는 게 목표입니다':'채워져 있습니다')+
       trLine('지금 저축을 '+c.left+'년 유지하면',trMan(c.future),'연 5% 가정')+
       '<div style="margin-top:11px;font-size:var(--t6,13px);color:#4B5A70;line-height:1.75;background:#F8FAFD;border-radius:11px;padding:11px 13px">'+
       (c.gapRet>0
-        ? '지금 월 <b>'+trMan(Math.max(1,c.gapRet*0.35))+'</b>만 더 쌓으시면 '+c.left+'년 뒤 이 칸이 채워집니다. 한 번에 다 하실 필요 없습니다.'
+        ? '연 '+finNum('s_ret',5)+'%로 굴린다고 보면(가정) 지금부터 월 <b>'+trMan(finReqMonthly(finCore().gapCapital,c.left,finNum('s_ret',5)))+'</b>씩이면 '+c.left+'년 뒤 이 칸을 메울 자본이 돼요. 한 번에 다 하실 필요 없습니다.'
         : '노후 쪽은 이미 자리를 잡았습니다. 이제 <b>세금과 건보료</b>를 줄이는 쪽으로 넘어가면 됩니다.')+'</div>'+
     '</div></div>'+
   '</div>';
@@ -5755,9 +5692,9 @@ function renderTotalReport(){
   var order=[];
   if(c.rest<0)order.push(['1','매달 적자부터 막습니다','고정지출을 한 줄씩 확인해서 '+trMan(-c.rest)+'을 만듭니다. 여기가 안 되면 나머지가 다 무너집니다.','#DC2626']);
   if(c.haveCash<c.needCash)order.push([''+(order.length+1),'비상금 '+trMan(c.needCash)+'을 채웁니다','파킹통장·CMA에 둡니다. 수익보다 <b>바로 꺼낼 수 있는 것</b>이 목적입니다.','#F59E0B']);
-  if(c.insRate>=15)order.push([''+(order.length+1),'보험료를 정리합니다','중복 담보를 걷어내면 매달 여유가 생깁니다. 보장을 줄이는 게 아니라 <b>겹친 걸 정리</b>하는 겁니다.','#7C3AED']);
+  if(c.insRate>IP_RULE.premHi)order.push([''+(order.length+1),'보험료를 정리합니다','중복 담보를 걷어내면 매달 여유가 생깁니다. 보장을 줄이는 게 아니라 <b>겹친 걸 정리</b>하는 겁니다.','#7C3AED']);
   order.push([''+(order.length+1),'저축을 목적별로 나눕니다','단기(3년) · 중기(10년) · 장기(은퇴)로 나눠 담습니다. 같은 돈이라도 <b>목적이 다르면 그릇이 달라야</b> 합니다.','#2563EB']);
-  if(c.gapRet>0)order.push([''+(order.length+1),'노후 부족분 월 '+trMan(Math.max(1,c.gapRet*0.35))+'을 시작합니다','연금저축·IRP 한도를 먼저 채우면 <b>연말정산으로 돌려받는 돈</b>도 생깁니다.','#059669']);
+  if(c.gapRet>0)order.push([''+(order.length+1),'노후 부족분을 메울 적립 월 '+trMan(finReqMonthly(finCore().gapCapital,c.left,finNum('s_ret',5)))+'을 시작합니다(연 '+finNum('s_ret',5)+'% 가정)','연금저축·IRP 한도를 먼저 채우면 <b>연말정산으로 돌려받는 돈</b>도 생깁니다.','#059669']);
   order.push([''+(order.length+1),'6개월 뒤 다시 봅니다','상황은 바뀝니다. 반년마다 이 표를 다시 채워서 <b>어긋난 곳만</b> 손보면 됩니다.','#0891B2']);
 
   h+='<div class="card" style="margin-bottom:12px"><div class="card-hd"><div class="card-tag">ACTION ORDER</div><div class="card-title">🧭 앞으로 이 순서로 하시면 됩니다</div></div><div class="card-body">'+
@@ -6368,7 +6305,7 @@ function viPaint(){
      받았다면 냈을 세금이 그대로 남는 셈이다. */
   var gain=Math.max(0,K.fv-K.paid);
   var tax=(VI.keep>=10)?gain*0.154:0;
-  var mon=Math.round(K.fv*0.04/12);
+  var mon=Math.round(K.fv/APEX_REPORT.calc.RULE.annuity.annuityFactor);   /* 모은 돈 → 매달: 결과지 · 상담과 같은 전환계수(판 X172) */
   host.innerHTML=
    '<div class="card" style="margin-top:14px"><div class="card-hd">'+
      '<div class="card-tag">VIRTUAL INVESTMENT</div>'+
@@ -6402,7 +6339,7 @@ function viPaint(){
      icStat(VI.keep>=10?'안 낸 세금':'세금 (10년 미만)',
             VI.keep>=10?icMan(tax):'과세 대상',
             VI.keep>=10?'요건 충족 시 보험차익 비과세 · 예금이면 15.4%':'10년 유지 등 요건을 채워야 비과세','#7C3AED')+
-     icStat('연금으로 받으면',icMan(mon)+'/월','쌓인 돈의 연 4% 기준','#D97706')+
+     icStat('연금으로 받으면',icMan(mon)+'/월','쌓인 돈 ÷ 전환계수 '+APEX_REPORT.calc.RULE.annuity.annuityFactor+'(가정)','#D97706')+
    '</div>'+
    '<div style="margin-top:11px;font-size:var(--t6,13px);color:#7A8493;line-height:1.7">'+
      '※ 사업비는 이 계산기의 변액 가정(계약체결 '+icP1(VC.efee)+'%·'+VC.eyrs+'년, 계약관리 '+icP1(VC.fee)+'%, '+
@@ -6758,11 +6695,7 @@ function renderRealEstate() {
   var name = ($('s_name')||{value:'고객님'}).value || '고객님';
   var gross = parseFloat(($('s_gross')||{value:0}).value)||0;
   var monthlyGross = Math.round(gross/12);
-  var netIncome = Math.round(monthlyGross*0.82)
-    + (parseFloat(($('s_self')||{value:0}).value)||0)
-    + (parseFloat(($('s_spouse')||{value:0}).value)||0)
-    + (parseFloat(($('s_passive')||{value:0}).value)||0)
-    + (parseFloat(($('s_other')||{value:0}).value)||0);
+  var netIncome = finCore().income;   /* 세전 월 가구소득 — 계산기 한 곳(판 X172). DSR 은 원래 세전 소득으로 잽니다 */
   var houseType = ($('r_house_type')||{value:'자가(1주택)'}).value;
   var houseVal = parseFloat(($('r_house_val')||{value:0}).value)||0;
   var houseYear = parseInt(($('r_house_year')||{value:2015}).value)||2015;
@@ -7172,62 +7105,15 @@ function lgvHtml(){
 }
 function renderInherit() {
   if (!$('inherit-content')) return;
-  var total = parseFloat(($('inh_total')||{value:0}).value)||0;
-  var spouse = ($('inh_spouse')||{value:'있음'}).value;
-  var children = Math.max(parseInt(($('inh_children')||{value:1}).value)||1,0);
-  var gift = parseFloat(($('inh_gift')||{value:0}).value)||0;
-  var lifeAmt = parseFloat(($('inh_life')||{value:0}).value)||0;
-  var giftTo = ($('inh_gift_to')||{value:'자녀'}).value;
-  var memo = ($('inh_memo')||{value:''}).value;
-  var age = parseInt(($('s_age')||{value:45}).value)||45;
-  var houseVal = parseFloat(($('r_house_val')||{value:0}).value)||0;
-  var mortgage = parseFloat(($('r_mortgage')||{value:0}).value)||0;
+  /* 셈은 finInherit 한 곳에서 — 결과지·점수·상담가이드가 같은 상속세를 말합니다(판 X172 · 5번) */
+  var I0=finInherit();
+  var total=I0.total, spouse=I0.spouse, children=I0.children, gift=I0.gift, lifeAmt=I0.lifeAmt, giftTo=I0.giftTo, memo=I0.memo, age=I0.age, houseVal=I0.houseVal, mortgage=I0.mortgage, spouseExists=I0.spouseExists, heirs=I0.heirs, legalSpouseShare=I0.legalSpouseShare, spouseDeduct=I0.spouseDeduct, lumpDeduct=I0.lumpDeduct, basicPlusPersonal=I0.basicPlusPersonal, dMinorN=I0.dMinorN, dMinorAge=I0.dMinorAge, dElderN=I0.dElderN, dDisN=I0.dDisN, dDisLife=I0.dDisLife, dHomeYN=I0.dHomeYN, dSoloSp=I0.dSoloSp, dChild=I0.dChild, dMinor=I0.dMinor, dElder=I0.dElder, dDis=I0.dDis, lumpOK=I0.lumpOK, personalDeduct=I0.personalDeduct, lumpPicked=I0.lumpPicked, dHome=I0.dHome, financialEstate=I0.financialEstate, financialDeduct=I0.financialDeduct, debtDeduct=I0.debtDeduct, totalDeduct=I0.totalDeduct, taxable=I0.taxable, inheritTax=I0.inheritTax;
   function fmt0(v){ return Math.round(v).toLocaleString(); }
   function row(l,v,c,note){ return '<div class="cmp-row"><div><span class="cmp-lbl">'+l+'</span>'+(note?'<span style="font-size:var(--t6,13px);color:var(--ink-5);margin-left:5px">'+note+'</span>':'')+'</div><span class="cmp-val" style="color:'+(c||'var(--ink-1)')+'">'+v+'</span></div>'; }
   function hb(cls,html){ return '<div class="hb '+cls+'">'+html+'</div>'; }
   function sec(tag,title,body,mb,fold){ return '<div class="card'+finFold(fold)+'" style="margin-bottom:'+(mb||'12')+'px"><div class="card-hd"><div class="card-tag">'+tag+'</div><div class="card-title">'+title+finHint(fold)+'</div></div><div class="card-body">'+body+'</div></div>'; }
-  function tax(t){ if(t<=0)return 0; if(t<=10000)return Math.round(t*.10); if(t<=50000)return Math.round(t*.20-1000); if(t<=100000)return Math.round(t*.30-6000); if(t<=300000)return Math.round(t*.40-16000); return Math.round(t*.50-46000); }
-  function rate(t){ return t>300000?50:t>100000?40:t>50000?30:t>10000?20:t>0?10:0; }
-  var spouseExists = spouse==='있음';
-  var heirs = children + (spouseExists?1:0);
-  var legalSpouseShare = spouseExists ? Math.round(total * 1.5 / (children + 1.5)) : 0;
-  var spouseDeduct = spouseExists ? Math.max(50000, Math.min(legalSpouseShare,300000)) : 0;
-  var lumpDeduct = 50000;
-  var basicPlusPersonal = 20000 + children*5000;
-  /* ═══ 인적공제 — 상황별로 전부 세운다 (상증법 제18~23조의2) ═══
-     일괄공제 5억 하나로 뭉개면 미성년 자녀·장애인이 있는 집에서 공제를 손해 본다.
-     기초+인적 합계와 일괄공제를 비교해 '큰 쪽'을 자동으로 고른다. */
-  var dMinorN   = parseFloat(($('inh_minor_n')||{value:0}).value)||0;   // 미성년 자녀 수
-  var dMinorAge = parseFloat(($('inh_minor_age')||{value:0}).value)||0; // 미성년 평균 나이
-  var dElderN   = parseFloat(($('inh_elder_n')||{value:0}).value)||0;   // 65세 이상 동거가족
-  var dDisN     = parseFloat(($('inh_dis_n')||{value:0}).value)||0;     // 장애인 수
-  var dDisLife  = parseFloat(($('inh_dis_life')||{value:0}).value)||0;  // 장애인 기대여명(년)
-  var dHomeYN   = ($('inh_home_yn')||{value:'해당없음'}).value;          // 동거주택 상속공제
-  var dSoloSp   = ($('inh_solo_sp')||{value:'아니오'}).value === '예';   // 배우자 단독상속
-
-  var dChild  = children * 5000;                                        // 자녀 1인 5천만
-  var dMinor  = dMinorN * Math.max(0, 19 - dMinorAge) * 1000;           // 미성년 1천만 × 19세까지
-  var dElder  = dElderN * 5000;                                         // 연로자 1인 5천만
-  var dDis    = dDisN * dDisLife * 1000;                                // 장애인 1천만 × 기대여명
-  basicPlusPersonal = 20000 + dChild + dMinor + dElder + dDis;          // 기초 2억 + 인적공제
-
-  /* 배우자가 단독으로 상속하면 일괄공제를 쓸 수 없다 (상증법 제21조 ①단서) */
-  var lumpOK = !dSoloSp;
-  var personalDeduct = lumpOK ? Math.max(lumpDeduct, basicPlusPersonal) : basicPlusPersonal;
-  var lumpPicked = lumpOK && lumpDeduct >= basicPlusPersonal;
-
-  /* 동거주택 상속공제 — 10년 이상 동거·1세대1주택·무주택 상속인. 한도 6억 */
-  var dHome = 0;
-  if(dHomeYN === '해당'){
-    var homeNet = Math.max(houseVal - mortgage, 0);
-    dHome = Math.min(homeNet, 60000);
-  }
-  var financialEstate = Math.max(total - houseVal + lifeAmt, 0);
-  var financialDeduct = Math.min(Math.round(financialEstate*0.20), 20000);
-  var debtDeduct = mortgage;
-  var totalDeduct = spouseDeduct + personalDeduct + financialDeduct + debtDeduct + dHome;
-  var taxable = Math.max(total - totalDeduct, 0);
-  var inheritTax = tax(taxable);
+  function tax(t){ return finQuickTax(t); }   /* 세율표는 한 곳 */
+  function rate(t){ return finTaxRate(t); }
   var effRate = total>0 ? (inheritTax/total*100).toFixed(1) : '0.0';
   var mRate = rate(taxable);
   var firstPay = Math.round(inheritTax/6);
@@ -7477,66 +7363,7 @@ function feedbackBox(tag,title,body){ return `<div class="feedback-box"><div cla
 
 
 /* ─── 최종 고객보고서: 고객 상황 평가 전용 ─── */
-function getFinancialSnapshot(){
-  const name = ($('s_name')||{value:'고객님'}).value || '고객님';
-  const age = n('age') || 35;
-  const gender = ($('s_gender')||{value:'남성'}).value;
-  const job = ($('s_job')||{value:'직장인'}).value || '직장인';
-  const rage = n('rage') || 65;
-  const riskType = ($('s_itype')||{value:'중립형'}).value;
-  const gross = n('gross');
-  const monthlyGross = Math.round(gross/12);
-  const netSalary = Math.round(monthlyGross * 0.82);
-  const self = n('self'), spouseIncome = n('spouse'), passive = n('passive'), other = n('other');
-  const totalIncome = netSalary + self + spouseIncome + passive + other;
-  const essential = n('housing')+n('loan')+n('food')+n('telecom')+n('transport')+n('insurance')+n('medical')+n('edu')+n('support');
-  const choice = n('dining')+n('shopping')+n('travel')+n('choice_etc');
-  const saving = n('emerg')+n('pension')+n('irp')+n('isa')+n('taxfree')+n('general');
-  const surplus = totalIncome - essential - choice - saving;
-  const savingRatio = totalIncome>0 ? Math.round(saving/totalIncome*100) : 0;
-  const fixedRatio = totalIncome>0 ? Math.round((essential+n('loan'))/totalIncome*100) : 0;
-  const insuranceRatio = totalIncome>0 ? Math.round(n('insurance')/totalIncome*100) : 0;
-  const realty = n('realty'), severance = n('severance'), penNow = n('pen_now'), debt = n('debt');
-  const netWorth = Math.max(realty + severance + penNow - debt, 0);
-  const target = n('target') || 400, inf = n('inf') || 3, ret = n('ret') || 5;
-  const yearsLeft = Math.max(rage-age, 1);
-  const futureTarget = Math.round(target * Math.pow(1+inf/100, yearsLeft));
-  const currentPensionPay = n('pension')+n('irp')+n('taxfree')+n('general');
-  const r12 = (ret/100)/12, months = yearsLeft*12;
-  const fvInvest = currentPensionPay>0 && r12>0 ? Math.round(currentPensionPay*((Math.pow(1+r12,months)-1)/r12)*(1+r12)) : currentPensionPay*months;
-  const monthlyFromCapital = Math.round((fvInvest + penNow*Math.pow(1+ret/100, yearsLeft))*0.04/12);
-  const housePen = housePension(realty, rage);
-  const housingPension = housePen.man;   /* 만원 / 월 */
-  const sevPension = sevPensionOf(severance, ret);
-  const totalPension = n('nps') + n('retire_pen') + monthlyFromCapital + housingPension + sevPension;
-  const pensionGap = Math.max(futureTarget-totalPension,0);
-  const npsGapYears = Math.max(rage-age-10,0);
-  const npsReduction = Math.round(npsGapYears * 0.8);
-  const regionalNhis = Math.round((Math.max(passive+other+spouseIncome+self-100,0)*0.071 + Math.max(realty+severance+penNow-debt-50000,0)*0.00042) * 1.0815);
-  const employeeNhis = Math.round(Math.max(monthlyGross,0)*0.071/2*1.0815);
-  const nhisIncrease = Math.max(regionalNhis-employeeNhis,0);
-  const houseVal = parseFloat($('r_house_val')?.value||0)||0;
-  const mortgage = parseFloat($('r_mortgage')?.value||0)||0;
-  const mRate = (parseFloat($('r_mortgage_rate')?.value||3.8)||3.8)/100/12;
-  const mortgagePay = mortgage>0 ? Math.round(mortgage*(mRate*Math.pow(1+mRate,360))/(Math.pow(1+mRate,360)-1)) : 0;
-  const dsr = gross>0 ? Math.round((mortgagePay*12)/gross*100) : 0;
-  const ltv = houseVal>0 ? Math.round(mortgage/houseVal*100) : 0;
-  const equity = Math.max(houseVal-mortgage,0);
-  const inhTotal = parseFloat($('inh_total')?.value||0)||0;
-  const inhLife = parseFloat($('inh_life')?.value||0)||0;
-  const inhGift = parseFloat($('inh_gift')?.value||0)||0;
-  const children = parseFloat($('inh_children')?.value||0)||0;
-  const hasSpouse = ($('inh_spouse')||{value:'있음'}).value==='있음';
-  const totalEstate = inhTotal>0 ? inhTotal : Math.max(houseVal + realty + penNow + severance + inhLife - mortgage - debt,0);
-  const quickTax = function(t){ if(t<=0)return 0; if(t<=10000)return Math.round(t*.10); if(t<=50000)return Math.round(t*.20-1000); if(t<=100000)return Math.round(t*.30-6000); if(t<=300000)return Math.round(t*.40-16000); return Math.round(t*.50-46000); };
-  const spouseShare = hasSpouse ? Math.round(totalEstate*1.5/(children+1.5)) : 0;
-  const spouseDeduct = hasSpouse ? Math.max(50000, Math.min(spouseShare,300000)) : 0;
-  const personalDeduct = Math.max(50000, 20000 + children*5000);
-  const taxableEstate = Math.max(totalEstate - spouseDeduct - personalDeduct - mortgage - debt, 0);
-  const inheritTax = quickTax(taxableEstate);
-  const inheritCashGap = Math.max(inheritTax - inhLife, 0);
-  return {name,age,gender,job,rage,riskType,totalIncome,essential,choice,saving,surplus,savingRatio,fixedRatio,insuranceRatio,netWorth,target,futureTarget,totalPension,pensionGap,npsReduction,nhisIncrease,employeeNhis,regionalNhis,houseVal,mortgage,mortgagePay,dsr,ltv,equity,totalEstate,inheritTax,inheritCashGap,inhGift,yearsLeft};
-}
+/* 판 X172 — getFinancialSnapshot 은 부르는 곳이 없는 죽은 사본이라 지웠습니다(× 0.82 · 4% 인출 · 다른 상속세 셈). */
 function statusBadge(label, level){
   const color = level==='good' ? 'var(--pos-l);color:#065F46' : level==='warn' ? 'var(--warn-l);color:#7D4F00' : 'var(--neg-l);color:#991B1B';
   return `<span class="fec-badge" style="background:${color}">${label}</span>`;
@@ -7661,272 +7488,11 @@ window.addEventListener('DOMContentLoaded', function(){
 
 
 
-/* ===== CONTENT-FIRST FINAL FIX · 화면 내용 우선 표시 ===== */
-(function(){
-  function el(id){ return document.getElementById(id); }
-  function val(id, def){ var x=el(id); return x && x.value!=='' ? x.value : def; }
-  function num(id, def){ var v=parseFloat(val(id, def||0)); return isFinite(v)?v:(def||0); }
-  function money(v){ v=Math.round(Number(v)||0); return (v<0?'-':'') + Math.abs(v).toLocaleString('ko-KR') + '만원'; }
-  function pct(v){ return (Math.round(Number(v)||0)).toLocaleString('ko-KR') + '%'; }
-  function safeHtml(v){ return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
-  function snapshot(){
-    var name=val('s_name','고객님'), age=num('s_age',35), job=val('s_job','직장인'), gender=val('s_gender','남성'), risk=val('s_itype','중립형'), rage=num('s_rage',65);
-    var gross=num('s_gross',6000), monthlyGross=Math.round(gross/12), netSalary=Math.round(monthlyGross*0.82);
-    var income=netSalary+num('s_self')+num('s_spouse')+num('s_passive')+num('s_other');
-    var fixed=num('s_housing')+num('s_loan')+num('s_food')+num('s_telecom')+num('s_transport')+num('s_insurance')+num('s_medical')+num('s_edu')+num('s_support');
-    var choice=num('s_dining')+num('s_shopping')+num('s_travel')+num('s_choice_etc');
-    var saving=num('s_emerg')+num('s_pension')+num('s_irp')+num('s_isa')+num('s_taxfree')+num('s_general');
-    var surplus=income-fixed-choice-saving;
-    var saveRatio=income>0?Math.round(saving/income*100):0;
-    var insRatio=income>0?Math.round(num('s_insurance')/income*100):0;
-    var target=num('s_target',400), inf=num('s_inf',3), ret=num('s_ret',5), nps=num('s_nps',80), retirePen=num('s_retire_pen',0), yearsLeft=Math.max(rage-age,1);
-    var futureTarget=Math.round(target*Math.pow(1+inf/100,yearsLeft));
-    var monthlyPensionPay=num('s_pension')+num('s_irp')+num('s_taxfree')+num('s_general');
-    var r12=(ret/100)/12, months=yearsLeft*12;
-    var fv=monthlyPensionPay>0&&r12>0?Math.round(monthlyPensionPay*((Math.pow(1+r12,months)-1)/r12)*(1+r12)):monthlyPensionPay*months;
-    var personalPension=Math.round(fv*0.04/12)+Math.round(num('s_pen_now')*Math.pow(1+ret/100,yearsLeft)*0.04/12);
-    var totalPension=nps+retirePen+personalPension;
-    var pensionGap=Math.max(futureTarget-totalPension,0);
-    var realty=num('s_realty')+num('r_house_val'), debt=num('s_debt')+num('r_mortgage'), propertyNet=Math.max(realty+num('s_severance')+num('s_pen_now')-debt,0);
-    var employeeNhis=Math.round(Math.max(monthlyGross,0)*0.071/2*1.0815);
-    var regionalNhis=Math.round((Math.max(num('s_passive')+num('s_self')+num('s_other')-100,0)*0.071 + Math.max(propertyNet-50000,0)*0.00042)*1.0815);
-    var nhisIncrease=Math.max(regionalNhis-employeeNhis,0);
-    var npsReduction=Math.round(Math.max(0,Math.min(10,yearsLeft))*0.8);
-    var house=num('r_house_val'), mort=num('r_mortgage'), mRate=num('r_mortgage_rate',3.8)/100/12;
-    var mortPay=mort>0?Math.round(mort*(mRate*Math.pow(1+mRate,360))/(Math.pow(1+mRate,360)-1)):0;
-    var ltv=house>0?Math.round(mort/house*100):0, dsr=gross>0?Math.round((mortPay*12)/gross*100):0;
-    var estateBase=num('inh_total')>0?num('inh_total'):Math.max(house+num('s_realty')+num('s_pen_now')+num('s_severance')+num('inh_life')-mort-num('s_debt'),0);
-    var children=num('inh_children',1), hasSpouse=val('inh_spouse','있음')==='있음';
-    var spouseShare=hasSpouse?Math.round(estateBase*1.5/(children+1.5)):0;
-    var spouseDeduct=hasSpouse?Math.max(50000,Math.min(spouseShare,300000)):0;
-    var personalDeduct=Math.max(50000,20000+children*5000);
-    var taxable=Math.max(estateBase-spouseDeduct-personalDeduct-mort-num('s_debt'),0);
-    function tax(t){ if(t<=0)return 0; if(t<=10000)return Math.round(t*.1); if(t<=50000)return Math.round(t*.2-1000); if(t<=100000)return Math.round(t*.3-6000); if(t<=300000)return Math.round(t*.4-16000); return Math.round(t*.5-46000); }
-    var inheritTax=tax(taxable), inheritGap=Math.max(inheritTax-num('inh_life'),0);
-    var score=(surplus>=0?20:6)+(saveRatio>=FIN_RULE.saveGood?20:saveRatio>=FIN_RULE.saveMid?12:5)+(pensionGap<=0?20:pensionGap<=150?12:5)+(dsr<=FIN_RULE.dsrOk&&ltv<=FIN_RULE.ltvOk?20:dsr<=FIN_RULE.dsrWarn||ltv<=FIN_RULE.ltvWarn?12:5)+(inheritGap<=0?20:inheritTax<5000?12:5);
-    return {name,age,job,gender,risk,rage,gross,income,fixed,choice,saving,surplus,saveRatio,insRatio,target,futureTarget,totalPension,pensionGap,employeeNhis,regionalNhis,nhisIncrease,npsReduction,house,mort,mortPay,ltv,dsr,estateBase,inheritTax,inheritGap,score};
-  }
-  function badge(label,type){ var cls=type==='good'?'cf-good':type==='warn'?'cf-warn':'cf-bad'; return '<span class="cf-badge '+cls+'">'+label+'</span>'; }
-  function card(title, label, type, body){ return '<div class="cf-eval"><div class="cf-eval-head"><b>'+title+'</b>'+badge(label,type)+'</div><div class="cf-eval-body">'+body+'</div></div>'; }
-  function metric(k,v,s,type){ return '<div class="cf-metric '+(type||'')+'"><div class="cf-metric-k">'+k+'</div><div class="cf-metric-v">'+v+'</div><div class="cf-metric-s">'+s+'</div></div>'; }
-  function lineup(risk){
-    var data={
-      '안정형':[['미국 단기채/달러형 ETF','현금성 대기자금과 금리형 자산 확인','원금 변동에 민감한 고객에게 첫 제시'],['미국배당 ETF','배당 현금흐름 이해용','연금저축·IRP에서 장기 적립 설명'],['국내 우량 채권형','포트폴리오 방어 역할','투자보다 변동성 관리가 우선일 때']],
-      '안정추구형':[['S&P500 ETF','글로벌 대표지수 장기 적립','ISA/연금저축의 기본축'],['미국배당 ETF','배당·성장 균형','연금 현금흐름 설명'],['달러채권 ETF','환율·금리 분산','부동산 편중 고객에게 분산 제안']],
-      '중립형':[['S&P500 ETF','장기 성장의 기준점','월 적립식 투자 설명'],['나스닥100 ETF','성장주 비중 확인','변동성 감내 가능 고객에게 일부 편입'],['미국배당 ETF','현금흐름 보완','연금 목적 계좌와 연결']],
-      '적극투자형':[['나스닥100 ETF','성장형 핵심 위성','장기기간과 손실 감내도 확인'],['반도체 ETF','산업 성장 테마','비중 제한을 전제로 제시'],['글로벌 빅테크','개별주 관심 고객용','네이버증권으로 실시간 확인']],
-      '공격형':[['반도체 ETF','고성장·고변동 테마','전체 자산 중 일부만'],['엔비디아/빅테크','개별주 관심 확인','수익률보다 비중관리 중심'],['인도/신흥국 ETF','장기 성장 테마','분산 목적의 위성 자산']]
-    };
-    return (data[risk]||data['중립형']).slice(0,3).map(function(x){return '<div class="cf-lineup"><b>'+x[0]+'</b><p><span>역할</span>'+x[1]+'</p><p><span>상담</span>'+x[2]+'</p></div>';}).join('');
-  }
-  window.renderContentFirstFinalReport=function(){
-    var box=el('final-report-content'); if(!box) return;
-    var d=snapshot();
-    var cashType=finCashKind(d);
-    var pensionType=d.pensionGap<=0?'good':d.pensionGap<=150?'warn':'bad';
-    var debtType=finDebtKind(d);
-    var estateType=d.inheritGap<=0?'good':d.inheritTax<5000?'warn':'bad';
-    var headline=d.score>=80?'현재 구조는 안정적입니다. 이제는 상품 추가보다 노후 현금흐름·세금·대출 리스크를 고정하는 단계입니다.':d.score>=55?'현재 구조는 유지 가능하지만 연금, 대출, 건보료 중 하나가 흔들리면 월 현금흐름 압박이 커질 수 있습니다.':'현재는 신규 상품보다 현금흐름 재정리와 위험순위 조정이 먼저 필요합니다.';
-    box.innerHTML='<div class="cf-report">'
-      +'<div class="cf-cover"><div class="cf-kicker">APEX YUN PRO · FINAL CLIENT REPORT</div><h1>'+safeHtml(d.name)+'님 최종상담보고서</h1><p>고객님의 입력 정보를 바탕으로 현금흐름, 연금, 건강보험료, 국민연금, 부동산 대출, 상속·증여 준비상태를 한눈에 볼 수 있도록 정리했습니다.</p></div>'
-      +'<div class="cf-metrics">'+metric('고객 정보',d.age+'세 · '+safeHtml(d.job),safeHtml(d.gender)+' / '+safeHtml(d.risk),'blue')+metric('월 추정 소득',money(d.income),'연소득 '+money(d.gross),'green')+metric('월 잉여금',money(d.surplus),d.surplus>=0?'설계 가능':'지출 조정 우선',d.surplus>=0?'green':'red')+metric('종합 평가',d.score+'점',d.score>=80?'양호':d.score>=55?'보완':'주의',d.score>=80?'green':d.score>=55?'gold':'red')+'</div>'
-      +'<div class="cf-summary"><b>종합 피드백</b><p>'+headline+'</p></div>'
-      +'<h2>1. 고객 상황 평가</h2>'
-      +card('현금흐름 평가',cashType==='good'?'양호':cashType==='warn'?'점검':'주의',cashType,'월 소득 '+money(d.income)+' 중 필수지출 '+money(d.fixed)+', 선택지출 '+money(d.choice)+', 저축·투자 '+money(d.saving)+'입니다. 잉여금은 '+money(d.surplus)+'이며, 상담의 핵심은 “새로 더 내는 돈”보다 “재배치 가능한 돈”을 찾는 것입니다.')
-      +card('연금·건보료·국민연금 평가',pensionType==='good'?'충분':pensionType==='warn'?'보완':'부족',pensionType,'물가 반영 은퇴 목표 생활비는 월 '+money(d.futureTarget)+'이고, 현재 예상 연금성 현금흐름은 월 '+money(d.totalPension)+'입니다. 부족액은 월 '+money(d.pensionGap)+'입니다. 은퇴 후 지역가입 전환 시 건강보험료 상승 가능액은 월 '+money(d.nhisIncrease)+'이며, 국민연금 납입 공백이 생기면 월 '+money(d.npsReduction)+' 수준의 감소 리스크를 체크해야 합니다.')
-      +card('부동산·대출 평가',debtType==='good'?'안정':debtType==='warn'?'관리':'부담',debtType,'주택가치 '+money(d.house)+', 대출잔액 '+money(d.mort)+', 추정 월 원리금 '+money(d.mortPay)+'입니다. LTV '+pct(d.ltv)+', DSR '+pct(d.dsr)+'로 계산됩니다. 대출은 “가능 금액”보다 “소득이 줄어도 유지 가능한가”가 핵심입니다.')
-      +card('상속·증여 평가',estateType==='good'?'준비':estateType==='warn'?'점검':'필요',estateType,'예상 상속재산은 '+money(d.estateBase)+', 상담용 추정 상속세는 '+money(d.inheritTax)+'입니다. 납부재원 부족액은 '+money(d.inheritGap)+'으로 계산됩니다. 부동산 비중이 높다면 사전증여, 부담부증여, 종신보험 납부재원을 분리해서 봐야 합니다.')
-      +'<h2>2. '+safeHtml(d.risk)+' 기준 핵심 펀드/ETF 2~3개</h2><div class="cf-lineups">'+lineup(d.risk)+'</div>'
-      +'<h2>3. 다음 실행 순서</h2><div class="cf-actions"><div><b>① 자료 확인</b><br>보험증권, 대출내역, 연금 예상액, 부동산 시세를 확인합니다.</div><div><b>② 리스크 순위</b><br>현금흐름 → 연금공백 → 대출부담 → 상속세 납부재원 순서로 우선순위를 잡습니다.</div><div><b>③ 솔루션 A/B/C</b><br>최소 보완안, 균형 보완안, 노후·상속 통합안을 나누어 제시합니다.</div><div><b>④ 계약 연결</b><br>고객이 인정한 부족분만 연금, 보장, 종신, 투자계좌로 연결합니다.</div></div>'
-      +'<div class="cf-notice">본 자료는 입력값 기준 상담용 추정 자료입니다. 실제 세금, 대출한도, 건강보험료, 국민연금, 투자수익률, 보험계약 여부는 관련 기관·상품설명서·약관·심사 결과에 따라 달라질 수 있습니다.</div>'
-      +'</div>';
-  };
-  function insuranceGuideByAge(d){
-    var age=Number(d.age)||35, income=Number(d.income)||0, surplus=Number(d.surplus)||0, insRatio=Number(d.insRatio)||0, pensionGap=Number(d.pensionGap)||0, inheritTax=Number(d.inheritTax)||0, debtRisk=(Number(d.dsr)||0)>40 || (Number(d.ltv)||0)>70;
-    var stage, stageMsg, hook, core, priorities, feedback, proposal, close;
-    var B=ipBand(age);   /* 나이대 문구는 IP_AGE 한 곳에서 (판 X165) */
-    stage=B.stage; stageMsg=B.stageMsg; hook=B.hook; core=B.core; priorities=B.priorities; proposal=B.proposal; close=B.close;
-    feedback=[];
-    if(insRatio>=IP_RULE.premHi) feedback.push('현재 보험료 비중이 월소득 대비 '+insRatio+'% 수준입니다. 보장 자체보다 갱신형·중복·저효율 담보를 먼저 점검해야 합니다.');
-    else if(insRatio>=IP_RULE.premLo) feedback.push('보험료 비중은 관리 가능한 범위입니다. 다만 암·뇌·심 진단비와 치료 과정형 보장이 실제 필요한 금액인지 확인해야 합니다.');
-    else feedback.push('보험료 비중은 낮은 편입니다. 보장이 부족하면 아플 때 저축·투자·부동산 계획이 먼저 깨질 수 있습니다.');
-    if(surplus<0) feedback.push('월 잉여금이 부족하므로 신규 가입보다 기존 보험료 재배치와 필수 보장 우선순위 정리가 먼저입니다.');
-    else feedback.push('월 잉여금이 있어 보장 보완과 연금 적립을 동시에 검토할 수 있습니다. 단, 보험료는 고정비이므로 월 잉여금의 일부만 사용해야 합니다.');
-    if(pensionGap>0) feedback.push('연금 부족액이 있으므로 보험은 단순 보장뿐 아니라 은퇴 후 의료비·간병비·건보료를 막는 구조로 설명해야 합니다.');
-    if(debtRisk) feedback.push('대출 부담이 있는 고객은 질병 발생 시 상환 리스크가 커지므로 소득보전·진단비·생활비 보장을 우선 확인해야 합니다.');
-    if(inheritTax>0) feedback.push('상속세 가능성이 있으므로 종신보험은 “사망 보장”보다 상속세 납부재원·배우자 현금 확보 관점으로 풀어낼 수 있습니다.');
-    return {stage,stageMsg,hook,core,priorities,feedback,proposal,close};
-  }
-  function insurancePriorityCards(items){ return items.map(function(x){return '<div class="cf-ins-card"><b>'+x[0]+'</b><p>'+x[1]+'</p></div>';}).join(''); }
-  function feedbackList(items){ return '<ul class="cf-feedback-list">'+items.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'; }
-  window.renderContentFirstGuide=function(){
-    var box=el('consulting-guide-content'); if(!box) return;
-    var d=snapshot();
-    var ins=insuranceGuideByAge(d);
-    box.innerHTML='<div class="cf-report cf-guide"><div class="cf-cover"><div class="cf-kicker">APEX YUN PRO · CONSULTING GUIDE</div><h1>'+safeHtml(d.name)+'님 상담가이드</h1><p>현금흐름, 연금, 부동산, 상속에 더해 고객의 나이와 재무상황에 맞춰 왜 보험이 필요한지까지 설명할 수 있도록 구성한 실행용 상담 가이드입니다.</p></div>'
-      +'<h2>1. 상담 오프닝</h2>'+card('3분 오프닝','화법','good','“오늘은 상품을 먼저 말씀드리는 시간이 아니라, 고객님 돈이 매달 어디로 흐르고 은퇴 후 어떤 비용이 늘어날 수 있는지 확인하는 시간입니다. 특히 부동산·대출·연금·건강보험료·상속세는 따로 보면 괜찮아 보여도 합쳐서 보면 부담이 될 수 있습니다.”')
-      +'<h2>2. 나이별 보험 필요성 피드백</h2><div class="cf-summary"><b>'+ins.stage+'</b><p>'+ins.stageMsg+'</p></div>'
-      +card('보험을 해야 하는 재무적 이유','핵심','good',ins.hook+'<br><br><b>보험의 역할:</b> 보험은 지출이 아니라, 아프거나 사고가 났을 때 저축·투자·부동산·연금 계획이 무너지지 않게 막아주는 “현금흐름 방어 장치”입니다.')
-      +'<div class="cf-ins-grid">'+insurancePriorityCards(ins.priorities)+'</div>'
-      +'<div class="cf-summary"><b>현재 고객 상황 기준 보험 피드백</b>'+feedbackList(ins.feedback)+'</div>'
-      +'<div class="cf-actions"><div><b>보험 상담 순서</b><br>'+ins.core+'</div><div><b>제안 방향</b><br>'+ins.proposal+'</div></div>'
-      +'<h2>3. 보험을 재무설계로 풀어내는 설명 구조</h2><div class="cf-actions"><div><b>① 치료비 통장</b><br>암·뇌·심 진단비는 병원비만이 아니라 치료기간 생활비, 대출상환, 가족 고정비를 지키는 현금입니다.</div><div><b>② 과정형 치료비</b><br>진단비는 1회성입니다. 수술, 항암, 방사선, 입원, 간병처럼 치료 과정에서 반복되는 비용은 별도로 확인해야 합니다.</div><div><b>③ 소득공백 방어</b><br>보험의 본질은 아플 때 돈을 버는 능력이 멈춰도 가족의 현금흐름을 유지하게 하는 것입니다.</div><div><b>④ 노후 의료비 방어</b><br>연금은 생활비 월급이고, 보험은 그 연금이 병원비로 새지 않게 막는 방어막입니다.</div><div><b>⑤ 건보료·간병 리스크</b><br>은퇴 후에는 소득은 줄어도 건보료, 의료비, 간병비가 늘 수 있어 보장과 연금 수령 구조를 함께 봐야 합니다.</div><div><b>⑥ 상속 재원</b><br>부동산 자산이 많고 현금이 부족하면 종신보험은 가족에게 세금 납부 현금을 남기는 도구가 될 수 있습니다.</div></div>'
-      +'<h2>4. 핵심 질문 12개</h2><div class="cf-actions"><div><b>현금흐름</b><br>지금 월 잉여금 '+money(d.surplus)+'이 예상되는데, 이 금액이 실제로 남고 있나요?</div><div><b>보장 인지</b><br>현재 보험에서 암·뇌·심 진단비가 각각 얼마인지 바로 말할 수 있으신가요?</div><div><b>치료비 통장</b><br>진단비 1회 지급 이후 항암·수술·입원·간병 비용은 어떤 돈으로 쓰실 계획인가요?</div><div><b>소득공백</b><br>3개월만 일을 못 하면 대출, 생활비, 자녀교육비는 어떤 통장에서 나가야 하나요?</div><div><b>연금</b><br>은퇴 후 월 '+money(d.futureTarget)+' 생활비가 필요하다면 현재 준비액으로 충분하다고 느끼시나요?</div><div><b>건보료</b><br>직장을 그만둔 뒤 재산 때문에 건보료가 오를 수 있다는 점을 알고 계셨나요?</div><div><b>국민연금</b><br>납입 공백이 생기면 예상 연금이 줄 수 있는데, 이 부분을 따로 관리하고 계신가요?</div><div><b>대출</b><br>대출 가능액보다 중요한 건 소득이 줄어도 버틸 수 있는 월상환액인데, 현재 상환액은 편하신가요?</div><div><b>상속</b><br>상속세가 생긴다면 현금으로 낼 준비가 되어 있나요, 아니면 부동산을 급하게 처분해야 하나요?</div><div><b>투자</b><br>투자를 수익률로 보시나요, 아니면 노후 현금흐름을 만드는 계좌로 보시나요?</div><div><b>가족</b><br>고객님이 아플 때 가장 먼저 경제적으로 영향을 받는 사람은 누구인가요?</div><div><b>결정</b><br>오늘 보신 내용 중 가장 먼저 정리하고 싶은 부분은 보험, 연금, 대출, 상속 중 무엇인가요?</div></div>'
-      +'<h2>5. 계약 연결 시나리오</h2><div class="cf-actions"><div><b>보장 부족</b><br>암·뇌·심 진단비와 치료 과정형 보장을 분리하여 최소안/균형안/확장안으로 제시합니다.</div><div><b>보험료 과다</b><br>기존 보험의 강점은 살리고 갱신형·중복·저효율 담보만 정리하는 리모델링으로 접근합니다.</div><div><b>연금 부족</b><br>IRP/연금저축/변액연금으로 월 부족액을 줄이고, 보험은 노후 의료비 방어막으로 연결합니다.</div><div><b>건보료 부담</b><br>은퇴 후 소득·재산 구조를 점검하고 비과세/연금수령 전략으로 분산합니다.</div><div><b>대출 부담</b><br>질병 발생 시 상환 공백이 생기지 않도록 진단비·소득보전·생활비 보장을 우선 확인합니다.</div><div><b>상속세 부족</b><br>종신보험 사망보험금, 사전증여, 신탁·유언 구조를 체크리스트로 연결합니다.</div></div>'
-      +'<h2>6. 보험 파트 클로징 멘트</h2>'+card('무압박 보험 클로징','마무리','warn',ins.close+'<br><br>“오늘 바로 결정하시라는 의미가 아닙니다. 다만 고객님 상황에서는 그냥 보험 하나를 고르는 것보다, 현금흐름과 노후·상속 리스크를 먼저 정리한 뒤 필요한 보장만 선택하는 게 맞습니다. 다음 미팅 때 최소안, 균형안, 확장안 3가지로 부담 없이 비교해드리겠습니다.”')
-      +'<div class="cf-notice">보험 상담 시 보장금액, 보험금 지급, 세금절감, 투자수익률을 확정적으로 표현하지 마세요. 모든 제안은 고객의 실제 증권, 병력, 직업, 소득, 약관, 상품설명서, 심사 결과에 따라 재검토해야 합니다.</div></div>';
-  };
-  window.showContentTab=function(tab){
-    document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('on');});
-    var pane=el('tab-'+tab); if(pane) pane.classList.add('on');
-    document.querySelectorAll('.tab-btn,.report-tab').forEach(function(b){b.classList.remove('on');});
-    if(tab==='final') window.renderContentFirstFinalReport();
-    if(tab==='guide') window.renderContentFirstGuide();
-    try{ pane && pane.scrollIntoView({block:'start'}); }catch(e){}
-  };
-  var oldSwitch=window.switchTab;
-  window.switchTab=function(tab,btn){
-    if(tab==='final'){ if(btn)btn.classList.add('on'); return window.showContentTab('final'); }
-    if(tab==='guide'){ if(btn)btn.classList.add('on'); return window.showContentTab('guide'); }
-    if(oldSwitch) return oldSwitch(tab,btn);
-  };
-  window.printFinalReport=function(){ window.renderContentFirstFinalReport(); var c=el('final-report-content'); if(window.printHtmlBlock) return window.printHtmlBlock('최종상담보고서', c?c.innerHTML:''); window.print(); };
-  window.printGuideReport=function(){ window.renderContentFirstGuide(); var c=el('consulting-guide-content'); if(window.printHtmlBlock) return window.printHtmlBlock('상담가이드', c?c.innerHTML:''); window.print(); };
-  function init(){
-    var style=document.createElement('style');
-    style.textContent='.cf-report{background:#fff;border:1px solid var(--ink-7);border-radius:18px;padding:18px;box-shadow:var(--shadow-sm);}.cf-ins-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 12px}.cf-ins-card{border:1px solid #D8E7FF;border-radius:13px;background:linear-gradient(135deg,#F8FBFF,#fff);padding:12px}.cf-ins-card b{font-size:var(--t6,13px);color:var(--ink-1)}.cf-ins-card p{font-size:var(--t6,13px);line-height:1.6;margin:5px 0 0;color:var(--ink-3)}.cf-feedback-list{margin:7px 0 0 16px;padding:0}.cf-feedback-list li{font-size:var(--t6,13px);line-height:1.7;color:var(--ink-3);margin:2px 0}@media(max-width:980px){.cf-ins-grid{grid-template-columns:1fr}}@media print{.cf-ins-grid{grid-template-columns:repeat(4,1fr)}}.cf-cover{background:linear-gradient(135deg,#111827,#1A56DB);color:#fff;border-radius:16px;padding:22px 24px;margin-bottom:12px}.cf-kicker{font-size:var(--t6,13px);font-weight:900;letter-spacing:.12em;color:rgba(255,255,255,.55);margin-bottom:8px}.cf-cover h1{font-size:24px;letter-spacing:-.06em;margin:0 0 6px}.cf-cover p{font-size:var(--t6,13px);line-height:1.65;color:rgba(255,255,255,.75);margin:0}.cf-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}.cf-metric{border:1px solid var(--ink-7);border-radius:12px;padding:12px;background:var(--ink-9)}.cf-metric.green{background:var(--pos-l)}.cf-metric.red{background:var(--neg-l)}.cf-metric.gold{background:var(--warn-l)}.cf-metric.blue{background:var(--primary-pale)}.cf-metric-k{font-size:var(--t6,13px);color:var(--ink-4);font-weight:700}.cf-metric-v{font-size:var(--t3,17px);color:var(--ink-1);font-weight:950;letter-spacing:-.05em}.cf-metric-s{font-size:var(--t6,13px);color:var(--ink-4)}.cf-summary{border-left:4px solid var(--primary);background:var(--primary-pale);border-radius:12px;padding:12px 14px;margin-bottom:12px}.cf-summary b{font-size:var(--t6,13px)}.cf-summary p{font-size:var(--t6,13px);line-height:1.7;margin:4px 0 0;color:var(--ink-3)}.cf-report h2{font-size:var(--t4,15px);letter-spacing:-.04em;margin:16px 0 8px;color:var(--ink-1)}.cf-eval{border:1px solid var(--ink-7);border-radius:14px;padding:13px 14px;margin-bottom:8px;background:#fff}.cf-eval-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}.cf-eval-head b{font-size:var(--t6,13px)}.cf-eval-body{font-size:var(--t6,13px);line-height:1.75;color:var(--ink-3)}.cf-badge{font-size:var(--t6,13px);font-weight:900;border-radius:99px;padding:3px 8px;white-space:nowrap}.cf-good{background:var(--pos-l);color:#065F46}.cf-warn{background:var(--warn-l);color:#7D4F00}.cf-bad{background:var(--neg-l);color:#991B1B}.cf-lineups{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.cf-lineup{border:1px solid #D8E7FF;border-radius:13px;background:linear-gradient(135deg,#F8FBFF,#fff);padding:12px}.cf-lineup b{font-size:var(--t6,13px);color:var(--ink-1)}.cf-lineup p{font-size:var(--t6,13px);line-height:1.55;margin:5px 0 0;color:var(--ink-3)}.cf-lineup span{font-size:var(--t6,13px);font-weight:900;color:var(--primary);margin-right:5px}.cf-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.cf-actions>div{border:1px solid var(--ink-7);border-radius:12px;background:var(--ink-9);padding:11px;font-size:var(--t6,13px);line-height:1.65;color:var(--ink-3)}.cf-actions b{color:var(--ink-1)}.cf-notice{background:var(--neg-l);border-left:4px solid var(--neg);border-radius:12px;padding:11px 13px;font-size:var(--t6,13px);line-height:1.6;color:#991B1B;margin-top:12px}@media(max-width:980px){.cf-metrics,.cf-lineups,.cf-actions{grid-template-columns:1fr}}@media print{.cf-report{box-shadow:none;border:0;padding:0}.cf-metrics{grid-template-columns:repeat(4,1fr)}.cf-lineups{grid-template-columns:repeat(3,1fr)}.cf-actions{grid-template-columns:repeat(2,1fr)}}';
-    document.head.appendChild(style);
-    window.renderContentFirstFinalReport();
-    window.renderContentFirstGuide();
-    window.showContentTab('final');
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
-})();
-
-
-
-/* ===== INSURANCE DASHBOARD FINAL ADD-ON · 암/뇌/심/간병/재가급여 보장분석 ===== */
-(function(){
-  function q(id){ return document.getElementById(id); }
-  function v(id, def){ var el=q(id); var n=parseFloat(el&&el.value); return isFinite(n)?n:(def||0); }
-  function text(id, def){ var el=q(id); return (el&&el.value) || def || ''; }
-  function won(x){ return Math.round(x||0).toLocaleString()+'만원'; }
-  function pct(x){ return (Math.round((x||0)*10)/10)+'%'; }
-  function esc(s){ return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-  function openLink(url){ window.open(url,'_blank','noopener'); }
-  window.openInsuranceTrend = openLink;
-  function getInsSnap(){
-    var age = (window.n ? n('age') : v('s_age',35)) || 35;
-    var income = 0;
-    try { income = Math.round((n('gross')/12)*0.82)+n('self')+n('spouse')+n('passive')+n('other'); } catch(e) { income=0; }
-    var monthly = v('ins_monthly', v('s_insurance',45));
-    var cancerDx=v('ins_cancer_dx',0), cancerTreat=v('ins_cancer_treat',0), advCancer=v('ins_advanced_cancer',0);
-    var brain=v('ins_brain',0), heart=v('ins_heart',0), vascular=v('ins_vascular_treat',0);
-    var surgery=v('ins_surgery',0), caregiver=v('ins_caregiver',0), homecare=v('ins_homecare',0);
-    var driver=v('ins_driver',0), life=v('ins_life',0), renewal=v('ins_renewal',0);
-    var silson=text('ins_silson','확인필요'), memo=text('ins_memo','');
-    var ratio = income>0 ? monthly/income*100 : 0;
-    return {age:age,income:income,monthly:monthly,ratio:ratio,cancerDx:cancerDx,cancerTreat:cancerTreat,advCancer:advCancer,brain:brain,heart:heart,vascular:vascular,surgery:surgery,caregiver:caregiver,homecare:homecare,driver:driver,life:life,renewal:renewal,silson:silson,memo:memo};
-  }
-  function grade(val, good, warn){ return val>=good?'good':val>=warn?'warn':'bad'; }
-  function badge(label,g){ return '<span class="ins-badge '+g+'">'+label+'</span>'; }
-  function metric(k,v,sub,cls){ return '<div class="mb '+(cls||'')+'"><div class="ml">'+k+'</div><div class="mv '+(cls==='red'?'r':cls==='green'?'g':cls==='blue'?'b':cls==='gold'?'o':'')+'">'+v+'</div><div class="mu">'+sub+'</div></div>'; }
-  function row(k,v,m){ return '<div class="cmp-row"><span class="cmp-lbl">'+k+'</span><span class="cmp-val">'+v+'</span></div>'+(m?'<div class="ins-row-note">'+m+'</div>':''); }
-  function productCard(icon,title,trend,check,link,detail){
-    return '<div class="ins-product-card"><div class="ipc-head"><div><div class="ipc-icon">'+icon+'</div><b>'+title+'</b></div><button onclick="openInsuranceTrend(\''+link+'\')">최신 내용 보기</button></div><div class="ipc-trend">'+trend+'</div><div class="ipc-check">'+check+'</div><details><summary>상담 설명 펼치기</summary><p>'+detail+'</p></details></div>';
-  }
-  function solutionCard(title, body, color){ return '<div class="ins-solution '+(color||'')+'"><b>'+title+'</b><p>'+body+'</p></div>'; }
-  function ageGuide(age){
-    if(age<30) return ['20대','실손·상해·최소 3대질병 진단비를 먼저 확인하고, 보험료는 월소득 대비 낮게 시작합니다. 핵심은 보장보다 저축 습관을 깨지 않는 최소 방어입니다.'];
-    if(age<40) return ['30대','결혼·대출·자녀 준비로 고정비가 커지는 구간입니다. 암·뇌·심 진단비와 치료과정 보장을 통해 소득공백과 가족 생활비를 방어해야 합니다.'];
-    if(age<50) return ['40대','보험료는 이미 많지만 치료비·간병·갱신형 구조가 비어 있는 경우가 많습니다. 해지보다 강점/중복/부족을 나눠 리모델링해야 합니다.'];
-    if(age<60) return ['50대','은퇴 전 마지막 정리 구간입니다. 보험료 유지 가능성, 간병·장기요양, 수술·입원비, 종신보험의 상속재원 역할을 함께 봐야 합니다.'];
-    return ['60대 이상','신규 가입보다 기존 보장의 유지·감액·전환, 실손 유지, 간병·재가급여, 사망보험금의 가족 현금 확보 기능이 핵심입니다.'];
-  }
-  function getInsEvaluation(d){
-    var cancerG=grade(d.cancerDx,5000,3000), treatG=grade(d.cancerTreat+d.advCancer,3000,1000), brainG=grade(d.brain,3000,1000), heartG=grade(d.heart,3000,1000), careG=grade(d.caregiver+d.homecare,1000,300);
-    var renewalMsg=d.renewal>=4?'갱신형 건수가 많아 향후 보험료 상승 가능성이 큽니다.':d.renewal>=1?'일부 갱신형은 보험료 변동 구간을 확인해야 합니다.':'갱신형 부담은 낮아 보입니다.';
-    var feeMsg=d.ratio>=15?'보험료 비중이 높습니다. 신규 가입보다 기존 담보 재배치가 먼저입니다.':d.ratio>=8?'보험료 비중은 관리 가능하나 보장 효율 점검이 필요합니다.':'보험료 비중은 낮은 편입니다. 필수 보장 공백을 확인해야 합니다.';
-    return {cancerG,treatG,brainG,heartG,careG,renewalMsg,feeMsg};
-  }
-  window.renderInsuranceDashboard=function(){
-    var box=q('insurance-dashboard-content'); if(!box) return;
-    var d=getInsSnap(), e=getInsEvaluation(d), ag=ageGuide(d.age);
-    var score = (e.cancerG==='good'?15:e.cancerG==='warn'?10:4) + (e.treatG==='good'?15:e.treatG==='warn'?9:3) + (e.brainG==='good'?15:e.brainG==='warn'?9:3) + (e.heartG==='good'?15:e.heartG==='warn'?9:3) + (e.careG==='good'?15:e.careG==='warn'?8:2) + (d.ratio<=12?15:d.ratio<=18?9:3) + (d.renewal<=2?10:d.renewal<=4?6:2);
-    score=Math.max(0,Math.min(100,score));
-    var mainFeedback = score>=80?'보장 구조는 비교적 안정적입니다. 이제는 갱신형 유지 가능성과 치료 과정형 보장의 실제 지급조건을 확인하는 단계입니다.':score>=55?'핵심 보장은 일부 있으나 암 치료과정, 뇌·심 주요치료비, 간병/재가급여 중 공백이 있을 가능성이 큽니다.':'보험료를 내고 있어도 실제 큰 병·간병 상황에서 쓸 수 있는 보장이 부족할 수 있습니다. 기존 증권을 기준으로 우선순위 리모델링이 필요합니다.';
-    var cancerSol = d.cancerDx<3000?'암 진단비는 치료 시작 시 생활비·소득공백·대출상환을 지키는 1차 현금입니다. 최소 3천만~5천만 원 기준으로 부족액을 확인하세요.':'암 진단비는 기본 골격이 있습니다. 다음은 표적·면역·CAR-T·양성자·중입자 등 고액 치료비 조건을 확인하세요.';
-    var treatSol = (d.cancerTreat+d.advCancer)<1000?'최근 암보험은 진단비 1회성보다 항암약물·방사선·수술·비급여 통합치료 같은 과정형 담보가 중요해지고 있습니다.':'암 치료 과정 보장이 일부 있습니다. 연간 한도, 최초 1회/매년 지급, 급여·비급여 범위를 확인하세요.';
-    var brainHeartSol = (d.brain<1000||d.heart<1000)?'뇌출혈/급성심근경색만 있는지, 더 넓은 뇌혈관질환·허혈성심장질환까지 있는지 먼저 확인해야 합니다.':'뇌·심 진단비는 기본 구조가 있습니다. 다음은 수술·혈전용해·혈전제거·중환자실 등 주요치료비 보완 여부를 봅니다.';
-    var careSol = (d.caregiver+d.homecare)<300?'간병비와 재가급여는 노후 현금흐름을 무너뜨리는 대표 리스크입니다. 가족이 직접 돌볼 수 없을 때 월 현금 지출을 계산해야 합니다.':'간병/재가 보장이 일부 있습니다. 장기요양등급, 재가/시설, 간병인 사용일당 지급조건을 확인하세요.';
-    box.innerHTML =
-      '<div class="ins-cover"><div class="ins-kicker">INSURANCE ANALYSIS · APEX YUN PRO</div><h1>보험 보장분석 대시보드</h1><p>고객 증권 입력값을 기준으로 암·뇌혈관·심혈관·간병비·재가급여·운전자·종신 보장을 고객 보고서 형태로 정리합니다.</p></div>'+
-      '<div class="mg m5">'+
-      metric('월 보험료',won(d.monthly),pct(d.ratio)+' / 월소득 대비',d.ratio>=15?'red':d.ratio>=8?'gold':'green')+
-      metric('암 진단비',won(d.cancerDx),e.cancerG==='good'?'양호':e.cancerG==='warn'?'점검':'부족',e.cancerG==='good'?'green':e.cancerG==='warn'?'gold':'red')+
-      metric('뇌·심 진단비',won(d.brain+d.heart),'뇌 '+won(d.brain)+' / 심 '+won(d.heart), (e.brainG==='bad'||e.heartG==='bad')?'red':'blue')+
-      metric('간병·재가',won(d.caregiver+d.homecare),'간병 '+won(d.caregiver)+' / 재가 '+won(d.homecare),e.careG==='good'?'green':e.careG==='warn'?'gold':'red')+
-      metric('보험 안정도',score+'점',ag[0]+' 기준 평가',score>=80?'green':score>=55?'gold':'red')+'</div>'+
-      '<div class="ins-feedback"><b>종합 피드백</b><p>'+mainFeedback+' '+e.feeMsg+' '+e.renewalMsg+'</p></div>'+
-      '<div class="g2"><div class="card"><div class="card-hd"><div class="card-tag">AGE BASED INSURANCE NEED</div><div class="card-title">나이별 보험 필요성</div></div><div class="card-body"><div class="hb blue"><b>'+ag[0]+'</b><br>'+ag[1]+'</div>'+row('실손 세대',esc(d.silson),'실손은 해지 전 대체 가능성·병력·자기부담률을 반드시 확인')+row('갱신형 건수',d.renewal+'건',e.renewalMsg)+row('운전자 보장',won(d.driver),'형사합의금·변호사선임비·벌금 담보 최신 한도 확인')+row('종신/사망보험금',won(d.life),'상속세·배우자 생활비·장례비 재원으로 활용 가능')+'</div></div><div class="card"><div class="card-hd"><div class="card-tag">COVERAGE STATUS</div><div class="card-title">핵심 보장 판정</div></div><div class="card-body"><div class="ins-status-grid"><div>암 진단비 '+badge(e.cancerG==='good'?'양호':e.cancerG==='warn'?'점검':'부족',e.cancerG)+'</div><div>암 치료비 '+badge(e.treatG==='good'?'양호':e.treatG==='warn'?'점검':'부족',e.treatG)+'</div><div>뇌혈관 '+badge(e.brainG==='good'?'양호':e.brainG==='warn'?'점검':'부족',e.brainG)+'</div><div>심혈관 '+badge(e.heartG==='good'?'양호':e.heartG==='warn'?'점검':'부족',e.heartG)+'</div><div>간병/재가 '+badge(e.careG==='good'?'양호':e.careG==='warn'?'점검':'부족',e.careG)+'</div></div><div class="hb orange" style="margin-top:10px">진단비는 1회성 현금, 치료비 담보는 반복·과정형 비용, 간병/재가급여는 가족의 시간과 월 현금흐름을 지키는 보장입니다.</div></div></div></div>'+
-      '<div class="card"><div class="card-hd"><div class="card-tag">RECENT COVERAGE TREND</div><div class="card-title">최근 담보 트렌드 & 고객에게 설명할 포인트</div></div><div class="card-body"><div class="ins-product-grid">'+
-      productCard('🎗️','암 주요치료비','진단비 중심에서 항암약물·방사선·수술·비급여 통합치료 등 치료 과정 보장으로 이동','최초 1회인지, 연간/매년 한도인지, 급여·비급여·허가치료 범위 확인','https://search.naver.com/search.naver?query=%EC%95%94%EB%B3%B4%ED%97%98+%ED%91%9C%EC%A0%81%ED%95%AD%EC%95%94+%EB%A9%B4%EC%97%AD%ED%95%AD%EC%95%94+CAR-T+%EC%A4%91%EC%9E%85%EC%9E%90+%EC%B9%98%EB%A3%8C%EB%B9%84+%EB%8B%B4%EB%B3%B4','고객에게는 “암 진단 이후 어떤 치료를 선택할 수 있는가”로 설명합니다. 진단비가 생활비 통장이라면, 주요치료비는 치료 선택권 통장입니다.')+
-      productCard('🧠','뇌혈관 보장','뇌출혈보다 넓은 뇌혈관질환, 진단비보다 수술·혈전용해·혈전제거·중환자실 등 주요치료비 확인','뇌출혈만인지, 뇌경색/뇌혈관질환까지인지, 치료비 담보가 있는지 확인','https://search.naver.com/search.naver?query=%EB%87%8C%ED%98%88%EA%B4%80%EC%A7%88%ED%99%98+%EC%A3%BC%EC%9A%94%EC%B9%98%EB%A3%8C%EB%B9%84+%EB%B3%B4%ED%97%98+%ED%98%88%EC%A0%84%EC%9A%A9%ED%95%B4+%ED%98%88%EC%A0%84%EC%A0%9C%EA%B1%B0','뇌는 치료 시점이 빠를수록 예후가 달라집니다. 그래서 진단금만 보지 말고 실제 치료비와 입원·간병 공백까지 이어서 봅니다.')+
-      productCard('❤️','심혈관 보장','급성심근경색보다 넓은 허혈성심장질환, 최근에는 순환계 주요치료비로 보장 범위 확대 흐름','협심증·스텐트·심장수술·중환자실·부정맥/심부전 포함 여부 확인','https://search.naver.com/search.naver?query=%ED%97%88%ED%98%88%EC%84%B1%EC%8B%AC%EC%9E%A5%EC%A7%88%ED%99%98+%EC%88%9C%ED%99%98%EA%B3%84+%EC%A3%BC%EC%9A%94%EC%B9%98%EB%A3%8C%EB%B9%84+%EB%B3%B4%ED%97%98','심장은 진단명 범위가 좁으면 보장 공백이 커질 수 있습니다. 급성심근경색만 있는지, 허혈성/순환계까지 넓은지 확인합니다.')+
-      productCard('🧓','간병비·재가급여','고령화로 간병인 사용일당, 장기요양등급, 재가급여/시설급여 보장 중요도 상승','간병인 직접사용/간호간병통합/요양병원/장기요양등급 지급조건 확인','https://search.naver.com/search.naver?query=%EA%B0%84%EB%B3%91%EC%9D%B8+%EC%82%AC%EC%9A%A9%EC%9D%BC%EB%8B%B9+%EC%9E%AC%EA%B0%80%EA%B8%89%EC%97%AC+%EC%9E%A5%EA%B8%B0%EC%9A%94%EC%96%91+%EB%B3%B4%ED%97%98+2026','간병은 병원비보다 가족의 시간과 소득을 함께 빼앗습니다. 월 200만~300만원 현금흐름 리스크로 설명하면 고객이 이해하기 쉽습니다.')+
-      '</div></div></div>'+
-      '<div class="card"><div class="card-hd"><div class="card-tag">SOLUTION</div><div class="card-title">보장 리모델링 솔루션</div></div><div class="card-body"><div class="ins-solution-grid">'+
-      solutionCard('1. 강점 유지', '실손, 오래된 비갱신 진단비, 저렴한 수술비처럼 다시 가입하기 어려운 담보는 무리하게 해지하지 않습니다.', 'green')+
-      solutionCard('2. 부족 보장 보완', cancerSol+' '+treatSol, 'blue')+
-      solutionCard('3. 뇌·심 범위 확장', brainHeartSol, 'blue')+
-      solutionCard('4. 간병·재가급여 연결', careSol, 'orange')+
-      solutionCard('5. 보험료 재배치', '보험료 비중 '+pct(d.ratio)+'입니다. 15% 이상이면 신규 가입보다 갱신형·중복·저효율 담보를 줄여 같은 예산 안에서 보장 효율을 높입니다.', d.ratio>=15?'red':'green')+
-      solutionCard('6. 계약 제안 방식', '최소안/균형안/확장안 3단계로 제시합니다. 고객이 인정한 부족액만 보완하고, “보험을 더 드는 것”이 아니라 “치료비 통장과 가족 생활비를 지키는 것”으로 설명합니다.', 'navy')+
-      '</div>'+(d.memo?'<div class="hb navy" style="margin-top:10px"><b>특이사항:</b> '+esc(d.memo)+'</div>':'')+'</div></div>'+
-      '<div class="hb red">본 보험 대시보드는 입력값 기준의 상담용 요약입니다. 실제 보장 여부는 보험증권, 약관, 상품설명서, 고지사항, 면책·감액기간, 보험사 심사 결과를 반드시 확인해야 합니다.</div>';
-  };
-  function addInsuranceToFinal(){
-    var box=q('final-report-content'); if(!box || !box.innerHTML) return;
-    var d=getInsSnap(), e=getInsEvaluation(d), ag=ageGuide(d.age);
-    var g=(e.cancerG==='bad'||e.brainG==='bad'||e.heartG==='bad'||e.careG==='bad')?'bad':(d.ratio>=15||d.renewal>=4?'warn':'good');
-    var html='<h2>보험 보장분석 평가</h2><div class="cf-eval"><div class="cf-eval-head"><b>⑤ 보험 보장 평가</b><span class="cf-badge '+(g==='good'?'cf-good':g==='warn'?'cf-warn':'cf-bad')+'">'+(g==='good'?'양호':g==='warn'?'점검':'보완필요')+'</span></div><div class="cf-eval-body">'+ag[0]+' 고객 기준으로 월 보험료는 '+won(d.monthly)+'이며 월소득 대비 '+pct(d.ratio)+'입니다. 암 진단비 '+won(d.cancerDx)+', 암 치료비/고액치료 '+won(d.cancerTreat+d.advCancer)+', 뇌·심 진단비 '+won(d.brain+d.heart)+', 간병·재가 보장 '+won(d.caregiver+d.homecare)+'으로 입력되었습니다. 핵심은 보험료를 늘리는 것이 아니라, 진단비·치료비·간병비·소득공백 방어가 각각 제 역할을 하는지 확인하는 것입니다.</div></div>';
-    if(!box.innerHTML.includes('보험 보장분석 평가')){
-      var notice=box.querySelector?null:null;
-      box.innerHTML=box.innerHTML.replace('<h2>2. ', html+'<h2>2. ');
-    }
-  }
-  function addInsuranceToGuide(){
-    var box=q('consulting-guide-content'); if(!box || !box.innerHTML) return;
-    if(box.innerHTML.includes('보험 대시보드 활용 상담')) return;
-    var d=getInsSnap();
-    var block='<h2>보험 대시보드 활용 상담</h2><div class="cf-actions"><div><b>① 증권 입력</b><br>월 보험료, 암·뇌·심, 치료비, 간병/재가급여를 입력한 뒤 부족/중복/갱신형을 한 화면에서 보여줍니다.</div><div><b>② 고객 언어 변환</b><br>담보명보다 “아플 때 어떤 통장에서 돈이 나오는가”로 설명합니다. 진단비는 생활비, 치료비는 치료 선택권, 간병은 가족 시간 보호입니다.</div><div><b>③ 최신 담보 확인</b><br>암 주요치료비, 순환계 주요치료비, 간병비/재가급여는 변화가 빠르므로 네이버 검색 연결로 현장에서 같이 확인합니다.</div><div><b>④ 계약 연결</b><br>부족액이 확인된 항목만 최소안/균형안/확장안으로 제시하고, 기존 보험의 강점은 유지합니다.</div></div>';
-    box.innerHTML=box.innerHTML.replace('<h2>3. 보험을 재무설계로 풀어내는 설명 구조</h2>', block+'<h2>3. 보험을 재무설계로 풀어내는 설명 구조</h2>');
-  }
-  var oldFinal=window.renderContentFirstFinalReport;
-  if(oldFinal) window.renderContentFirstFinalReport=function(){ oldFinal(); addInsuranceToFinal(); };
-  var oldGuide=window.renderContentFirstGuide;
-  if(oldGuide) window.renderContentFirstGuide=function(){ oldGuide(); addInsuranceToGuide(); };
-  var oldSwitch=window.switchTab;
-  window.switchTab=function(tab,btn){
-    if(tab==='insurance'){
-      document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('on');});
-      document.querySelectorAll('.tab-btn,.report-tab').forEach(function(b){b.classList.remove('on');});
-      var pane=q('tab-insurance'); if(pane) pane.classList.add('on'); if(btn) btn.classList.add('on');
-      window.renderInsuranceDashboard();
-      try{ pane&&pane.scrollIntoView({block:'start'}); }catch(e){}
-      return;
-    }
-    if(oldSwitch) return oldSwitch(tab,btn);
-  };
-  function initInsurance(){
-    var style=document.createElement('style');
-    style.textContent='.ins-cover{background:linear-gradient(135deg,#111827,#1A56DB);color:#fff;border-radius:18px;padding:22px 24px;margin-bottom:12px;box-shadow:var(--shadow-md)}.ins-kicker{font-size:var(--t6,13px);font-weight:900;letter-spacing:.12em;color:rgba(255,255,255,.55);margin-bottom:8px}.ins-cover h1{font-size:24px;letter-spacing:-.06em;margin:0 0 6px}.ins-cover p{font-size:var(--t6,13px);line-height:1.65;color:rgba(255,255,255,.76);margin:0}.ins-feedback{border-left:4px solid var(--primary);background:var(--primary-pale);border-radius:12px;padding:13px 15px;margin:10px 0 12px}.ins-feedback b{font-size:var(--t6,13px)}.ins-feedback p{font-size:var(--t6,13px);line-height:1.7;color:var(--ink-3);margin:4px 0 0}.ins-status-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:var(--t6,13px);color:var(--ink-3)}.ins-badge{float:right;border-radius:99px;padding:2px 7px;font-size:var(--t6,13px);font-weight:900}.ins-badge.good{background:var(--pos-l);color:#065F46}.ins-badge.warn{background:var(--warn-l);color:#7D4F00}.ins-badge.bad{background:var(--neg-l);color:#991B1B}.ins-row-note{font-size:var(--t6,13px);color:var(--ink-4);line-height:1.45;margin:-2px 0 5px 12px}.ins-product-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.ins-product-card{border:1px solid #D8E7FF;border-radius:14px;background:linear-gradient(135deg,#F8FBFF,#fff);padding:12px;min-height:185px}.ipc-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:8px}.ipc-head b{font-size:var(--t6,13px);color:var(--ink-1)}.ipc-icon{font-size:var(--t3,17px);margin-bottom:2px}.ipc-head button{border:none;background:var(--primary);color:#fff;border-radius:7px;padding:5px 8px;font-size:var(--t6,13px);font-weight:900;cursor:pointer;white-space:nowrap}.ipc-trend{font-size:var(--t6,13px);line-height:1.55;color:var(--ink-3);font-weight:700;margin-bottom:6px}.ipc-check{font-size:var(--t6,13px);line-height:1.5;color:var(--ink-4);margin-bottom:7px}.ins-product-card summary{font-size:var(--t6,13px);font-weight:900;color:var(--primary);cursor:pointer}.ins-product-card p{font-size:var(--t6,13px);line-height:1.55;color:var(--ink-3);margin:6px 0 0}.ins-solution-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.ins-solution{border:1px solid var(--ink-7);border-radius:13px;background:var(--ink-9);padding:12px}.ins-solution.green{background:var(--pos-l);border-color:#A7F3D0}.ins-solution.blue{background:var(--primary-pale);border-color:#C7D7F5}.ins-solution.orange{background:var(--warn-l);border-color:#FDE68A}.ins-solution.red{background:var(--neg-l);border-color:#FECACA}.ins-solution.navy{background:var(--ink-8)}.ins-solution b{font-size:var(--t6,13px);color:var(--ink-1)}.ins-solution p{font-size:var(--t6,13px);line-height:1.6;color:var(--ink-3);margin:5px 0 0}@media(max-width:1100px){.ins-product-grid,.ins-solution-grid{grid-template-columns:1fr}.ins-status-grid{grid-template-columns:1fr}}@media print{.ins-product-grid{grid-template-columns:repeat(2,1fr)}.ins-solution-grid{grid-template-columns:repeat(2,1fr)}}';
-    document.head.appendChild(style);
-    try{ window.renderInsuranceDashboard(); }catch(e){ console.error(e); }
-    try{ if(window.renderContentFirstFinalReport) window.renderContentFirstFinalReport(); if(window.renderContentFirstGuide) window.renderContentFirstGuide(); }catch(e){}
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', initInsurance); else initInsurance();
-})();
+/* ※ 여기 있던 「CONTENT-FIRST FINAL FIX」(최종보고서 · 상담가이드) 와 「INSURANCE DASHBOARD FINAL ADD-ON」(보험 대시보드)
+   두 덧칠은 <b>죽은 판</b>이었습니다(판 X172 · 5번). 아래 ULTIMATE · 가이드맵 덧칠이 window.renderFinalReport ·
+   renderContentFirstGuide · renderInsuranceDashboard · switchTab 을 통째로 덮어써, 그린 것이 화면에 한 번도 서지 않았습니다.
+   그런데도 저마다 따로 셈했습니다 — 보험료율 15/8 · 암 진단비 5000/3000 · 뇌·심 3000/1000 · 간병 300 기준의 다른 점수,
+   세전 × 0.82 소득. 브라우저로 그리는 자리를 따라가 확인한 뒤 지웠습니다(check-finoneweb 이 지금 서는 판을 잽니다). */
 
 </script>
 
@@ -7948,58 +7514,21 @@ window.addEventListener('DOMContentLoaded', function(){
   function card(title, status, level, text){return '<div class="pr-card"><div class="pr-card-head"><h3>'+esc(title)+'</h3>'+pill(status,level)+'</div><p>'+text+'</p></div>'}
   function metric(k,v,s,c){return '<div class="pr-metric '+(c||'')+'"><div class="pr-mk">'+esc(k)+'</div><div class="pr-mv">'+esc(v)+'</div><div class="pr-ms">'+esc(s||'')+'</div></div>'}
   function data(){
-    var gross=num('s_gross',6000), income=Math.round(gross/12)+num('s_self')+num('s_spouse')+num('s_passive')+num('s_other');
-    var fixed=['s_housing','s_loan','s_food','s_telecom','s_transport','s_insurance','s_medical','s_edu','s_support'].reduce(function(a,id){return a+num(id)},0);
-    var choice=['s_dining','s_shopping','s_travel','s_choice_etc'].reduce(function(a,id){return a+num(id)},0);
-    var saving=['s_emerg','s_pension','s_irp','s_isa','s_taxfree','s_general'].reduce(function(a,id){return a+num(id)},0);
-    var surplus=income-fixed-choice-saving;
-    var saveRatio=income? saving/income*100:0, fixedRatio=income? fixed/income*100:0;
-    var age=num('s_age',35), rage=num('s_rage',65), years=Math.max(rage-age,0);
-    var target=num('s_target',400), inf=num('s_inf',3)/100, futureTarget=Math.round(target*Math.pow(1+inf,years));
-    var totalPension=num('s_nps',80)+num('s_retire_pen')+Math.round((num('s_pension')+num('s_irp')+num('s_taxfree'))*1.7);
-    var pensionGap=Math.max(futureTarget-totalPension,0);
-    var realty=num('s_realty',0)+num('r_house_val',0), debt=num('s_debt',0)+num('r_mortgage',0), net=Math.max(realty+num('s_pen_now')+num('s_severance')-debt,0);
-    var house=num('r_house_val',0), mort=num('r_mortgage',0), rate=num('r_mortgage_rate',3.8)/100/12;
-    var mortPay=mort>0?Math.round(mort*rate*Math.pow(1+rate,360)/(Math.pow(1+rate,360)-1)):0;
-    var dsr=income? mortPay/income*100:0, ltv=house? mort/house*100:0;
-    var estate=num('inh_total',0)||Math.max(realty+num('inh_life',0)-debt,0);
-    var spouse=val('inh_spouse','있음')==='있음', kids=num('inh_children',1), life=num('inh_life',0), gift=num('inh_gift',0);
-    var spouseDed=spouse?Math.min(Math.max(50000, Math.round(estate*(1.5/(1.5+Math.max(kids,1))))),300000):0;
-    var taxable=Math.max(estate-spouseDed-50000-debt-gift,0);
-    var inheritTax=quickTax(taxable), inheritGap=Math.max(inheritTax-life,0);
-    var insFee=num('ins_monthly',num('s_insurance',0)), insRatio=income?insFee/income*100:0;
-    var cancer=num('ins_cancer_diag',0), cancerTreat=num('ins_cancer_treat',0), brain=num('ins_brain',0), heart=num('ins_heart',0), care=num('ins_care',0)+num('ins_homecare',0), renewal=num('ins_renewal',0);
-    var employeeNhis=Math.round(gross/12*0.0709/2), regionalNhis=Math.round((income*12*0.03 + net*0.00035)/12), nhisIncrease=Math.max(regionalNhis-employeeNhis,0);
-    var npsReduction=years>0?Math.round(Math.min(55,years*1.8)):0;
-    var score=(surplus>=0?18:6)+(saveRatio>=FIN_RULE.saveGood?18:saveRatio>=FIN_RULE.saveMid?11:5)+(pensionGap<=0?18:pensionGap<=150?11:5)+(dsr<=FIN_RULE.dsrOk&&ltv<=FIN_RULE.ltvOk?16:dsr<=FIN_RULE.dsrWarn||ltv<=FIN_RULE.ltvWarn?10:4)+(inheritGap<=0?15:inheritTax<5000?9:4)+(cancer>=3000&&brain>=1000&&heart>=1000?15:8);
-    return {name:val('s_name','고객님'),age:age,gender:val('s_gender',''),job:val('s_job',''),risk:val('s_itype','중립형'),rage:rage,gross:gross,income:income,fixed:fixed,choice:choice,saving:saving,surplus:surplus,saveRatio:saveRatio,fixedRatio:fixedRatio,target:target,futureTarget:futureTarget,totalPension:totalPension,pensionGap:pensionGap,net:net,house:house,mort:mort,mortPay:mortPay,dsr:dsr,ltv:ltv,estate:estate,inheritTax:inheritTax,inheritGap:inheritGap,gift:gift,insFee:insFee,insRatio:insRatio,cancer:cancer,cancerTreat:cancerTreat,brain:brain,heart:heart,care:care,renewal:renewal,employeeNhis:employeeNhis,regionalNhis:regionalNhis,nhisIncrease:nhisIncrease,npsReduction:npsReduction,score:Math.max(0,Math.min(100,score))};
+    /* 계산기 한 곳(finCore)에서 읽기만 합니다(판 X172 · 5번). 전에는 국민연금 감소를 퍼센트(최대 55)로 셈해 「만 원」 으로 찍었고,
+       없는 칸(ins_cancer_diag · ins_care)을 읽어 암 진단비 · 간병을 늘 0 으로 봤습니다. */
+    var C=finCore(); C.npsReduction=C.npsLoss; return C;
   }
-  function quickTax(x){x=Math.max(0,Number(x)||0);var rows=[[10000,.10,0],[50000,.20,1000],[100000,.30,6000],[300000,.40,16000],[Infinity,.50,46000]];for(var i=0;i<rows.length;i++){if(x<=rows[i][0])return Math.max(0,Math.round(x*rows[i][1]-rows[i][2]));}return 0}
+
   function addStyle(){
     if($('ultimate-stability-style'))return;
     var css='\
 .report-action-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.report-safe-btn,.ultimate-print-btn{border:0;border-radius:10px;padding:9px 14px;font-weight:900;font-size:var(--t6,13px);cursor:pointer;background:#1A56DB;color:#fff;box-shadow:0 8px 18px rgba(26,86,219,.18);min-height:44px;display:inline-flex;align-items:center;justify-content:center}.report-safe-btn.gray{background:#111827}.pretty-report{background:#fff;border:1px solid #E6EAF2;border-radius:24px;padding:20px;box-shadow:0 18px 48px rgba(15,23,42,.08);color:#101828;letter-spacing:-.02em}.pr-hero,.guide-hero{background:linear-gradient(135deg,#0F172A 0%,#1A56DB 67%,#38BDF8 100%);color:#fff;border-radius:22px;padding:28px 30px;margin-bottom:12px;display:flex;align-items:flex-end;justify-content:space-between;gap:18px}.guide-hero{display:block}.pr-kicker{font-size:var(--t6,13px);font-weight:950;letter-spacing:.14em;color:rgba(255,255,255,.62);margin-bottom:8px}.pr-hero h1,.guide-hero h1{font-size:29px;line-height:1.15;margin:0 0 7px;letter-spacing:-.075em}.pr-hero p,.guide-hero p{font-size:var(--t6,13px);line-height:1.7;margin:0;color:rgba(255,255,255,.82);max-width:780px}.pr-score{width:96px;height:96px;border-radius:25px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.25);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}.pr-score span{font-size:var(--t6,13px);color:rgba(255,255,255,.68);font-weight:900}.pr-score b{font-size:36px;line-height:1;font-weight:950}.pr-score em{font-size:var(--t6,13px);font-style:normal;color:rgba(255,255,255,.72)}.pr-client-line{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 11px}.pr-client-line span{background:#F2F6FF;border:1px solid #D8E7FF;color:#174EA6;font-size:var(--t6,13px);font-weight:850;border-radius:999px;padding:5px 10px}.pr-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}.pr-metric{border:1px solid #E6EAF2;border-radius:17px;padding:13px 14px;background:linear-gradient(180deg,#FFFFFF,#F8FAFC)}.pr-metric.blue{background:linear-gradient(180deg,#EFF6FF,#fff);border-color:#BFDBFE}.pr-metric.green{background:linear-gradient(180deg,#ECFDF5,#fff);border-color:#A7F3D0}.pr-metric.gold{background:linear-gradient(180deg,#FFFBEB,#fff);border-color:#FDE68A}.pr-metric.red{background:linear-gradient(180deg,#FEF2F2,#fff);border-color:#FECACA}.pr-mk{font-size:var(--t6,13px);color:#667085;font-weight:850;margin-bottom:3px}.pr-mv{font-size:var(--t2,20px);font-weight:950;color:#101828;letter-spacing:-.06em}.pr-ms{font-size:var(--t6,13px);color:#667085;margin-top:1px}.pr-summary,.guide-message,.guide-close{background:#F8FBFF;border:1px solid #D8E7FF;border-left:5px solid #1A56DB;border-radius:17px;padding:14px 16px;margin:10px 0}.guide-close{background:#0F172A;color:#fff;border:0}.pr-summary b,.guide-message b{font-size:var(--t5,14px);color:#101828}.pr-summary p,.guide-message p,.guide-close p{font-size:var(--t6,13px);line-height:1.72;color:#344054;margin:5px 0 0}.guide-close p{color:rgba(255,255,255,.88);font-size:var(--t6,13px)}.pr-section-title{font-size:var(--t3,17px);font-weight:950;margin:18px 0 9px;color:#101828;letter-spacing:-.05em}.pr-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pr-card,.guide-agenda>div,.choice-row>div,.insurance-cards>div,.question-grid>div,.pr-flow>div{border:1px solid #E6EAF2;border-radius:17px;background:#fff;padding:14px 15px;box-shadow:0 4px 12px rgba(15,23,42,.035)}.pr-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}.pr-card h3{font-size:var(--t5,14px);margin:0;color:#101828}.pr-card p{font-size:var(--t6,13px);line-height:1.72;color:#344054;margin:0}.pr-pill{font-size:var(--t6,13px);font-weight:950;border-radius:999px;padding:4px 8px;white-space:nowrap}.pr-pill.good{background:#ECFDF5;color:#047857}.pr-pill.warn{background:#FFFBEB;color:#B45309}.pr-pill.bad{background:#FEF2F2;color:#B91C1C}.pr-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #E6EAF2;border-radius:15px;overflow:hidden;font-size:var(--t6,13px);background:#fff}.pr-table th{background:#101828;color:#fff;padding:9px 11px;text-align:left;font-size:var(--t6,13px);letter-spacing:.03em}.pr-table td{padding:9px 11px;border-top:1px solid #EEF2F7;color:#344054;vertical-align:top}.pr-table tr:nth-child(even) td{background:#F8FAFC}.pr-flow,.guide-agenda,.choice-row,.insurance-cards,.question-grid{display:grid;gap:8px}.pr-flow,.guide-agenda,.insurance-cards{grid-template-columns:repeat(4,1fr)}.choice-row{grid-template-columns:repeat(3,1fr)}.question-grid{grid-template-columns:repeat(2,1fr)}.pr-flow b{width:28px;height:28px;border-radius:10px;background:#1A56DB;color:#fff;display:inline-flex;align-items:center;justify-content:center;margin-bottom:7px}.pr-flow span,.choice-row span,.question-grid span,.guide-agenda span,.insurance-cards p{display:block;font-size:var(--t6,13px);line-height:1.62;color:#344054}.guide-agenda em{font-style:normal;font-size:var(--t6,13px);font-weight:950;color:#1A56DB}.guide-agenda b,.choice-row b,.insurance-cards b,.question-grid b{display:block;font-size:var(--t6,13px);margin:4px 0;color:#101828}.pr-notice{margin-top:12px;border-radius:14px;background:#F2F4F7;color:#475467;font-size:var(--t6,13px);line-height:1.62;padding:11px 13px}@media(max-width:980px){.pr-metrics,.pr-grid2,.pr-flow,.guide-agenda,.question-grid,.insurance-cards,.choice-row{grid-template-columns:1fr}.pr-hero{display:block}.pr-score{margin-top:12px}.pretty-report{padding:12px}}@media print{@page{size:A4;margin:8mm}html,body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.pretty-report{border:0!important;border-radius:0!important;padding:0!important;box-shadow:none!important}.pr-hero,.guide-hero{border-radius:16px;padding:18px 20px;margin-bottom:7px}.pr-hero h1,.guide-hero h1{font-size:22px}.pr-hero p,.guide-hero p{font-size:10.5px}.pr-client-line{margin:6px 0}.pr-metrics{grid-template-columns:repeat(3,1fr);gap:5px;margin:6px 0}.pr-metric{padding:8px 9px;border-radius:12px}.pr-mv{font-size:15px}.pr-ms,.pr-mk{font-size:8.5px}.pr-summary,.guide-message,.guide-close{padding:9px 11px;margin:6px 0;border-radius:12px}.pr-summary p,.guide-message p,.guide-close p{font-size:10px;line-height:1.55}.pr-section-title{font-size:13px;margin:11px 0 5px}.pr-grid2{grid-template-columns:1fr 1fr;gap:5px}.pr-card{padding:8px 9px;border-radius:12px;break-inside:auto}.pr-card h3{font-size:11.5px}.pr-card p{font-size:9.4px;line-height:1.52}.pr-pill{font-size:8px;padding:2px 6px}.pr-table{font-size:9.2px}.pr-table th,.pr-table td{padding:6px 7px}.pr-flow,.guide-agenda,.insurance-cards{grid-template-columns:repeat(4,1fr);gap:5px}.choice-row{grid-template-columns:repeat(3,1fr);gap:5px}.question-grid{grid-template-columns:repeat(2,1fr);gap:5px}.pr-flow>div,.guide-agenda>div,.choice-row>div,.insurance-cards>div,.question-grid>div{padding:8px;border-radius:11px;box-shadow:none;break-inside:avoid}.pr-flow span,.choice-row span,.question-grid span,.guide-agenda span,.insurance-cards p{font-size:9.2px;line-height:1.45}.pr-flow b{width:22px;height:22px;border-radius:7px;margin-bottom:3px}.pr-notice{font-size:8.8px;padding:7px 9px;margin-top:7px}.sidebar,.report-topbar,.sec-hd,.print-btn,.report-safe-btn,.gen-btn,.ultimate-no-print{display:none!important}.main{height:auto!important;overflow:visible!important}.app{display:block!important}.tab-pane{display:none!important}.tab-pane.ultimate-print-target{display:block!important;padding:0!important}}';
     var st=document.createElement('style'); st.id='ultimate-stability-style'; st.textContent=css; document.head.appendChild(st);
   }
-  /* 함께 점검 상담·결과지가 이 계산(소득·지출·저축률·DSR·LTV·상속세 추정)을 <b>다시 짜지 않고</b> 그대로 씁니다(판 X168 · 5번) */
+  /* 함께 점검 상담·결과지가 이 계산(소득·지출·저축률·DSR·LTV·상속세 추정)을 <b>다시 짜지 않고</b> 그대로 씁니다(판 X171 · 5번) */
   window.finData=data;
-  function renderFinal(){addStyle(); var d=data(), cash=d.surplus>=0?'good':'bad', pension=d.pensionGap<=0?'good':d.pensionGap<=150?'warn':'bad', debt=finDebtKind(d), inherit=d.inheritGap<=0?'good':(d.inheritTax<5000?'warn':'bad'), ins=(d.cancer>=3000&&d.brain>=1000&&d.heart>=1000&&d.care>0?'good':(d.cancer>=2000?'warn':'bad'));
-    var html='<article class="pretty-report"><section class="pr-hero"><div><div class="pr-kicker">APEX YUN PRO · FINAL CLIENT REPORT</div><h1>'+esc(d.name)+' 최종 상담보고서</h1><p>오늘 보고서는 고객님의 현금흐름, 연금, 보험, 부동산·대출, 상속·증여를 한 장의 재무 구조로 연결해 “무엇을 먼저 정리해야 하는지” 보여주는 상담용 요약본입니다.</p></div><div class="pr-score"><span>종합점수</span><b>'+d.score+'</b><em>/100</em></div></section>'+
-    '<div class="pr-client-line"><span>'+esc(d.name)+'</span><span>'+d.age+'세</span><span>'+esc(d.job)+'</span><span>투자성향 '+esc(d.risk)+'</span><span>은퇴목표 '+d.rage+'세</span></div>'+
-    '<section class="pr-metrics">'+metric('월 소득',fmt(d.income),'연소득 '+fmt(d.gross),'blue')+metric('월 잉여금',fmt(d.surplus),'저축률 '+pct(d.saveRatio),d.surplus>=0?'green':'red')+metric('순자산 추정',fmt(d.net),'부동산·연금·부채 반영','gold')+metric('연금 부족액',fmt(d.pensionGap),'은퇴 목표 생활비 기준',pension==='good'?'green':'red')+metric('보험료 비중',pct(d.insRatio),'월 보험료 '+fmt(d.insFee),d.insRatio<=12?'green':'red')+metric('상속세 부족재원',fmt(d.inheritGap),'종신보험 재원 반영',inherit==='good'?'green':'red')+'</section>'+
-    '<section class="pr-summary"><b>종합 피드백</b><p>'+esc(d.name)+'님의 핵심은 “보험을 추가로 가입할지”가 아니라, 현재 현금흐름 안에서 질병·소득공백·노후·부동산 부채·상속세까지 감당 가능한 구조인지 확인하는 것입니다. 특히 보험은 치료비 통장, 연금은 노후 월급, 종신보험은 상속세·가족 현금흐름 재원으로 분리해 봐야 합니다.</p></section>'+
-    '<div class="pr-section-title">1. 고객 상황 평가</div><div class="pr-grid2">'+
-    card('현금흐름 평가',cash==='good'?'양호':'위험',cash,'월 소득 '+fmt(d.income)+'에서 고정지출 '+fmt(d.fixed)+', 선택지출 '+fmt(d.choice)+', 저축·투자 '+fmt(d.saving)+'를 제외한 잉여금은 '+fmt(d.surplus)+'입니다. 잉여금이 음수라면 보장 조정 전 지출 구조를 먼저 정리해야 합니다.')+
-    card('연금·건보료 평가',pension==='good'?'충분':pension==='warn'?'점검':'부족',pension,'은퇴 후 목표 생활비는 물가 반영 시 '+fmt(d.futureTarget)+' 수준이며, 예상 연금 현금흐름은 '+fmt(d.totalPension)+'입니다. 은퇴 후 지역가입 전환 시 건강보험료 증가 가능액은 월 '+fmt(d.nhisIncrease)+', 국민연금 공백 감소 추정액은 월 '+fmt(d.npsReduction)+'입니다.')+
-    card('보험 보장 평가',ins==='good'?'균형':ins==='warn'?'보완':'부족',ins,'암 진단비 '+fmt(d.cancer)+', 암 치료비 '+fmt(d.cancerTreat)+', 뇌혈관 '+fmt(d.brain)+', 심혈관 '+fmt(d.heart)+', 간병·재가 '+fmt(d.care)+'입니다. 진단비는 생활비 통장, 치료비 담보는 치료 선택권, 간병은 가족의 시간과 소득을 지키는 구조로 설명합니다.')+
-    card('부동산·대출 평가',debt==='good'?'안정':debt==='warn'?'주의':'위험',debt,'주택 시세 '+fmt(d.house)+', 담보대출 '+fmt(d.mort)+', LTV '+pct(d.ltv)+', DSR '+pct(d.dsr)+'입니다. 고객 앞에서는 금리·한도·정책대출 조건을 공식 페이지와 함께 확인하며 상환 가능성을 먼저 봅니다.')+
-    card('상속·증여 평가',inherit==='good'?'준비':inherit==='warn'?'점검':'필요',inherit,'예상 상속재산 '+fmt(d.estate)+', 상담용 추정 상속세 '+fmt(d.inheritTax)+', 납부재원 부족액 '+fmt(d.inheritGap)+'입니다. 상속세가 있다면 세금 자체보다 6개월 내 현금화 재원과 상속인 분쟁 방지가 핵심입니다.')+
-    card('계약 연결 방향','우선순위','warn','① 기존 보험 증권 확인 → ② 암·뇌·심·간병 부족액 계산 → ③ 연금 부족액과 건보료 리스크 설명 → ④ 부동산·상속세 납부재원 점검 → ⑤ 고객이 선택 가능한 A/B/C안으로 제안합니다.')+'</div>'+
-    '<div class="pr-section-title">2. 오늘의 실행 우선순위</div><div class="pr-flow"><div><b>1</b><span>보험증권을 확인해 갱신형, 중복, 부족 담보를 숫자로 정리합니다.</span></div><div><b>2</b><span>암·뇌·심 치료비 통장과 간병·재가급여 준비 여부를 확인합니다.</span></div><div><b>3</b><span>연금 부족액, 건보료 상승, 국민연금 공백을 월 단위로 정리합니다.</span></div><div><b>4</b><span>부동산 대출과 상속세 재원을 연결해 가족 현금흐름을 보호합니다.</span></div></div>'+
-    '<div class="pr-section-title">3. 고객 맞춤 추천 라인업</div><table class="pr-table"><thead><tr><th>구분</th><th>현재 진단</th><th>상담 솔루션</th></tr></thead><tbody><tr><td>보험</td><td>보험료 '+fmt(d.insFee)+' / 소득 대비 '+pct(d.insRatio)+'</td><td>갱신형·중복 정리 후 암·뇌·심·간병·재가 보장 우선순위 제안</td></tr><tr><td>연금</td><td>은퇴 부족액 '+fmt(d.pensionGap)+'</td><td>연금저축·IRP·비과세 달러/변액연금 등으로 월 현금흐름 설계</td></tr><tr><td>부동산</td><td>DSR '+pct(d.dsr)+' / LTV '+pct(d.ltv)+'</td><td>정책대출 가능성, 고정·변동금리, 중도상환수수료, 현금흐름 점검</td></tr><tr><td>상속</td><td>납부재원 부족 '+fmt(d.inheritGap)+'</td><td>종신보험, 사전증여, 신탁·유언장, 유동성 자산 배분 검토</td></tr></tbody></table>'+
-    '<footer class="pr-notice">본 보고서는 상담용 추정 자료입니다. 보험은 약관·상품설명서·심사 결과, 세금은 세무사 검토, 대출은 금융기관 심사, 건강보험료·국민연금은 관련 공단 기준 확인이 필요합니다.</footer></article>';
-    var box=$('final-report-content'); if(box) box.innerHTML=html; return html;
-  }
+  /* 여기 있던 renderFinal(최종 상담보고서 · 17줄)은 <b>죽은 판</b>이었습니다(판 X172 · 5번) — 「최종」 탭을 열 때마다 그리고
+     곧바로 아래 가이드맵(renderFinalMap)이 같은 칸을 덮어써, 한 번도 화면에 서지 않았습니다. 인쇄 단추도 가이드맵을 뽑습니다. */
   function renderGuide(){addStyle(); var d=data(); var ageMsg=ipBand(d.age).one;
     var html='<article class="pretty-report"><section class="guide-hero"><div class="pr-kicker">TODAY CONSULTING GUIDE</div><h1>오늘 상담은 이렇게 진행됩니다</h1><p>'+esc(d.name)+'님께 오늘 드릴 상담은 상품 설명이 아니라, 현재 재산과 현금흐름을 기준으로 “아팠을 때, 은퇴했을 때, 대출이 남았을 때, 가족에게 재산을 넘길 때” 돈이 어디서 나오는지 확인하는 과정입니다.</p></section>'+
     '<div class="guide-message"><b>'+esc(d.name)+'님 나이대 재무 피드백</b><p><strong>'+d.age+'세 기준:</strong> '+esc(ageMsg)+' 오늘 상담에서는 보험을 비용으로만 보지 않고, 치료비 통장·소득공백 방어·노후 의료비·상속재원으로 나누어 보겠습니다.</p></div>'+
@@ -8010,23 +7539,23 @@ window.addEventListener('DOMContentLoaded', function(){
     '<section class="guide-close"><p>오늘 상담의 목표는 보험을 많이 가입하는 것이 아니라, 고객님 가족의 현금흐름이 무너지지 않도록 “필요한 보장과 유지 가능한 보험료”를 찾는 것입니다.</p></section><footer class="pr-notice">본 상담가이드는 고객 안내용 자료입니다. 실제 가입 전에는 보험 약관, 상품설명서, 고지의무, 심사 결과, 세무·대출·공단 기준 확인이 필요합니다.</footer></article>';
     var box=$('consulting-guide-content'); if(box) box.innerHTML=html; return html;
   }
-  function renderInsurance(){addStyle(); var d=data(); var level=d.cancer>=3000&&d.brain>=1000&&d.heart>=1000&&d.care>0?'good':d.cancer>=2000?'warn':'bad'; var box=$('insurance-dashboard-content'); if(!box) return '';
-    var html='<article class="pretty-report"><section class="pr-hero"><div><div class="pr-kicker">INSURANCE DASHBOARD</div><h1>'+esc(d.name)+' 보험 보장분석</h1><p>고객의 보험을 암·뇌·심·치료비·간병·재가급여·종신보험 관점으로 나누어 현재 보장과 부족 보장을 한눈에 확인합니다.</p></div><div class="pr-score"><span>보장상태</span><b>'+ (level==='good'?'良':level==='warn'?'補':'缺') +'</b><em>'+ (level==='good'?'균형':level==='warn'?'보완':'부족') +'</em></div></section><section class="pr-metrics">'+metric('월 보험료',fmt(d.insFee),'소득 대비 '+pct(d.insRatio),d.insRatio<=12?'green':'red')+metric('암 진단비',fmt(d.cancer),'치료비 '+fmt(d.cancerTreat),d.cancer>=3000?'green':'red')+metric('뇌·심 진단비',fmt(d.brain+d.heart),'뇌 '+fmt(d.brain)+' / 심 '+fmt(d.heart),(d.brain>=1000&&d.heart>=1000)?'green':'red')+metric('간병·재가',fmt(d.care),'간병/장기요양 리스크',(d.care>0?'green':'red'))+metric('갱신형 건수',String(d.renewal)+'건','보험료 상승 가능성',d.renewal<=2?'green':'red')+metric('종신/상속재원',fmt(num('inh_life',0)),'상속세 부족 '+fmt(d.inheritGap),d.inheritGap<=0?'green':'gold')+'</section><div class="pr-section-title">보장 평가</div><div class="pr-grid2">'+card('암 보장','진단+치료',d.cancer>=3000?'good':'warn','진단비는 치료기간 생활비, 암 치료비 담보는 표적항암·면역항암·수술·방사선 등 치료 선택권을 지키는 구조입니다.')+card('뇌혈관 보장','범위 확인',d.brain>=1000?'good':'warn','뇌출혈만 있는지, 뇌졸중/뇌혈관질환까지 포함되는지 확인해야 합니다. 진단비와 주요치료비를 함께 봅니다.')+card('심혈관 보장','범위 확인',d.heart>=1000?'good':'warn','급성심근경색만 있는지, 허혈성심장질환/심혈관질환까지 포함되는지 확인합니다.')+card('간병·재가급여','가족 보호',d.care>0?'good':'bad','간병은 병원비보다 가족의 시간과 소득을 빼앗는 리스크입니다. 간병인, 재가급여, 장기요양 보장을 같이 봅니다.')+'</div><div class="pr-section-title">최근 담보 확인 링크</div><table class="pr-table"><thead><tr><th>영역</th><th>고객 설명</th><th>확인</th></tr></thead><tbody><tr><td>암 주요치료비</td><td>표적항암·면역항암·고액치료비 등 치료 과정 보장 확인</td><td><a target="_blank" href="https://search.naver.com/search.naver?query=%EC%95%94%EB%B3%B4%ED%97%98+%EC%A3%BC%EC%9A%94%EC%B9%98%EB%A3%8C%EB%B9%84+%ED%91%9C%EC%A0%81%ED%95%AD%EC%95%94">네이버 검색</a></td></tr><tr><td>뇌혈관</td><td>뇌출혈 한정인지 뇌혈관질환까지인지 범위 확인</td><td><a target="_blank" href="https://search.naver.com/search.naver?query=%EB%87%8C%ED%98%88%EA%B4%80%EC%A7%88%ED%99%98+%EB%B3%B4%ED%97%98+%EB%8B%B4%EB%B3%B4">네이버 검색</a></td></tr><tr><td>심혈관</td><td>급성심근경색 한정인지 허혈성/심혈관까지인지 확인</td><td><a target="_blank" href="https://search.naver.com/search.naver?query=%ED%97%88%ED%98%88%EC%84%B1%EC%8B%AC%EC%9E%A5%EC%A7%88%ED%99%98+%EC%8B%AC%ED%98%88%EA%B4%80+%EB%B3%B4%ED%97%98">네이버 검색</a></td></tr><tr><td>간병·재가급여</td><td>간병인, 재가급여, 장기요양 등급 연계 확인</td><td><a target="_blank" href="https://search.naver.com/search.naver?query=%EA%B0%84%EB%B3%91%EC%9D%B8+%EC%9E%AC%EA%B0%80%EA%B8%89%EC%97%AC+%EB%B3%B4%ED%97%98+%EB%8B%B4%EB%B3%B4">네이버 검색</a></td></tr></tbody></table></article>';
+  function renderInsurance(){addStyle(); var d=data(); var level=finInsKind(d); var box=$('insurance-dashboard-content'); if(!box) return '';
+    var html='<article class="pretty-report"><section class="pr-hero"><div><div class="pr-kicker">INSURANCE DASHBOARD</div><h1>'+esc(d.name)+' 보험 보장분석</h1><p>고객의 보험을 암·뇌·심·치료비·간병·재가급여·종신보험 관점으로 나누어 현재 보장과 부족 보장을 한눈에 확인합니다.</p></div><div class="pr-score"><span>보장상태</span><b>'+ (level==='good'?'良':level==='warn'?'補':'缺') +'</b><em>'+ (level==='good'?'균형':level==='warn'?'보완':'부족') +'</em></div></section><section class="pr-metrics">'+metric('월 보험료',fmt(d.insFee),'소득 대비 '+pct(d.insRatio),d.insRatio<=IP_RULE.premHi?'green':'red')+metric('암 진단비',fmt(d.cancer),'치료비 '+fmt(d.cancerTreat),d.cancer>=FIN_RULE.insCancer?'green':'red')+metric('뇌·심 진단비',fmt(d.brain+d.heart),'뇌 '+fmt(d.brain)+' / 심 '+fmt(d.heart),(d.brain>=FIN_RULE.insBrain&&d.heart>=FIN_RULE.insHeart)?'green':'red')+metric('간병·재가',fmt(d.care),'간병/장기요양 리스크',(d.care>0?'green':'red'))+metric('갱신형 건수',String(d.renewal)+'건','보험료 상승 가능성',d.renewal<=2?'green':'red')+metric('종신/상속재원',fmt(num('inh_life',0)),'상속세 부족 '+fmt(d.inheritGap),d.inheritGap<=0?'green':'gold')+'</section><div class="pr-section-title">보장 평가</div><div class="pr-grid2">'+card('암 보장','진단+치료',d.cancer>=FIN_RULE.insCancer?'good':'warn','진단비는 치료기간 생활비, 암 치료비 담보는 표적항암·면역항암·수술·방사선 등 치료 선택권을 지키는 구조입니다.')+card('뇌혈관 보장','범위 확인',d.brain>=FIN_RULE.insBrain?'good':'warn','뇌출혈만 있는지, 뇌졸중/뇌혈관질환까지 포함되는지 확인해야 합니다. 진단비와 주요치료비를 함께 봅니다.')+card('심혈관 보장','범위 확인',d.heart>=FIN_RULE.insHeart?'good':'warn','급성심근경색만 있는지, 허혈성심장질환/심혈관질환까지 포함되는지 확인합니다.')+card('간병·재가급여','가족 보호',d.care>0?'good':'bad','간병은 병원비보다 가족의 시간과 소득을 빼앗는 리스크입니다. 간병인, 재가급여, 장기요양 보장을 같이 봅니다.')+'</div><div class="pr-section-title">최근 담보 확인 링크</div><table class="pr-table"><thead><tr><th>영역</th><th>고객 설명</th><th>확인</th></tr></thead><tbody><tr><td>암 주요치료비</td><td>표적항암·면역항암·고액치료비 등 치료 과정 보장 확인</td><td><a target="_blank" href="https://search.naver.com/search.naver?query=%EC%95%94%EB%B3%B4%ED%97%98+%EC%A3%BC%EC%9A%94%EC%B9%98%EB%A3%8C%EB%B9%84+%ED%91%9C%EC%A0%81%ED%95%AD%EC%95%94">네이버 검색</a></td></tr><tr><td>뇌혈관</td><td>뇌출혈 한정인지 뇌혈관질환까지인지 범위 확인</td><td><a target="_blank" href="https://search.naver.com/search.naver?query=%EB%87%8C%ED%98%88%EA%B4%80%EC%A7%88%ED%99%98+%EB%B3%B4%ED%97%98+%EB%8B%B4%EB%B3%B4">네이버 검색</a></td></tr><tr><td>심혈관</td><td>급성심근경색 한정인지 허혈성/심혈관까지인지 확인</td><td><a target="_blank" href="https://search.naver.com/search.naver?query=%ED%97%88%ED%98%88%EC%84%B1%EC%8B%AC%EC%9E%A5%EC%A7%88%ED%99%98+%EC%8B%AC%ED%98%88%EA%B4%80+%EB%B3%B4%ED%97%98">네이버 검색</a></td></tr><tr><td>간병·재가급여</td><td>간병인, 재가급여, 장기요양 등급 연계 확인</td><td><a target="_blank" href="https://search.naver.com/search.naver?query=%EA%B0%84%EB%B3%91%EC%9D%B8+%EC%9E%AC%EA%B0%80%EA%B8%89%EC%97%AC+%EB%B3%B4%ED%97%98+%EB%8B%B4%EB%B3%B4">네이버 검색</a></td></tr></tbody></table></article>';
     box.innerHTML=html; return html;
   }
-  function printBlock(kind){addStyle(); var id=kind==='guide'?'consulting-guide-content':'final-report-content'; if(kind==='guide')renderGuide(); else renderFinal(); var src=$(id); var html=src?src.innerHTML:''; if(!html){alert('인쇄할 내용이 없습니다. 화면 새로고침 후 다시 시도해주세요.');return;} var css=$('ultimate-stability-style').textContent; var doc='<!doctype html><html data-theme="light"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>'+(kind==='guide'?'상담가이드':'최종상담보고서')+'</title><style>'+css+' body{margin:0;background:#fff;font-family:Pretendard,Arial,sans-serif;color:#101828}.pretty-report{box-shadow:none;border:0;margin:0 auto;max-width:190mm}</style></head><body><div class="print-root">'+html+'</div></body></html>'; var f=document.createElement('iframe'); f.style.position='fixed'; f.style.right='0'; f.style.bottom='0'; f.style.width='0'; f.style.height='0'; f.style.border='0'; document.body.appendChild(f); var w=f.contentWindow, d=w.document; d.open(); d.write(doc); d.close(); setTimeout(function(){try{w.focus();w.print();}catch(e){window.print();} setTimeout(function(){try{f.remove()}catch(e){}},900);},250); }
+  function printBlock(kind){addStyle(); var id=kind==='guide'?'consulting-guide-content':'final-report-content'; if(kind==='guide')renderGuide(); else if(window.renderFinalReport) window.renderFinalReport(); var src=$(id); var html=src?src.innerHTML:''; if(!html){alert('인쇄할 내용이 없습니다. 화면 새로고침 후 다시 시도해주세요.');return;} var css=$('ultimate-stability-style').textContent; var doc='<!doctype html><html data-theme="light"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><title>'+(kind==='guide'?'상담가이드':'최종상담보고서')+'</title><style>'+css+' body{margin:0;background:#fff;font-family:Pretendard,Arial,sans-serif;color:#101828}.pretty-report{box-shadow:none;border:0;margin:0 auto;max-width:190mm}</style></head><body><div class="print-root">'+html+'</div></body></html>'; var f=document.createElement('iframe'); f.style.position='fixed'; f.style.right='0'; f.style.bottom='0'; f.style.width='0'; f.style.height='0'; f.style.border='0'; document.body.appendChild(f); var w=f.contentWindow, d=w.document; d.open(); d.write(doc); d.close(); setTimeout(function(){try{w.focus();w.print();}catch(e){window.print();} setTimeout(function(){try{f.remove()}catch(e){}},900);},250); }
   function show(tab,btn){addStyle(); qa('.tab-pane').forEach(function(p){p.classList.remove('on')}); var pane=$('tab-'+tab)||$('tab-final'); if(pane)pane.classList.add('on'); qa('.tab-btn,.report-tab').forEach(function(b){b.classList.remove('on')}); if(btn)btn.classList.add('on'); else {var b=q('[onclick*="switchTab(\''+tab+'\'"]'); if(b)b.classList.add('on');}
     try{ if(window.render && ['dashboard','cashflow','pension','dollar','invest','factcheck'].indexOf(tab)>=0) window.render(); }catch(e){console.warn(e)}
     try{ if(tab==='realestate' && window.renderRealEstate) window.renderRealEstate(); }catch(e){console.warn(e)}
     try{ if(tab==='inherit' && window.renderInherit) window.renderInherit(); }catch(e){console.warn(e)}
-    try{ if(tab==='insurance') renderInsurance(); if(tab==='final') renderFinal(); if(tab==='guide') renderGuide(); }catch(e){console.error(e);}
+    try{ if(tab==='insurance') renderInsurance(); if(tab==='guide') renderGuide(); }catch(e){console.error(e);}
     try{ if(tab==='total' && window.renderTotalReport) window.renderTotalReport(); }catch(e){console.error(e);}
   }
   function injectButtons(){var top=q('.report-top-head')||q('.sec-hd')||q('.main'); if(top && !$('ultimate-print-buttons')){var wrap=document.createElement('div'); wrap.id='ultimate-print-buttons'; wrap.className='report-action-row ultimate-no-print'; wrap.innerHTML='<button class="ultimate-print-btn" onclick="printGuideReport()">🧭 상담가이드 인쇄</button><button class="ultimate-print-btn" onclick="switchTab(\'guide\')">상담가이드 보기</button>'; top.appendChild(wrap);} }
   window.switchTab=function(tab,btn){show(tab,btn)};
-  window.renderFinalReport=renderFinal; window.renderContentFirstFinalReport=renderFinal; window.renderConsultingGuide=renderGuide; window.renderContentFirstGuide=renderGuide; window.renderInsuranceDashboard=renderInsurance; window.printFinalReport=function(){printBlock('final')}; window.printGuideReport=function(){printBlock('guide')};
+  window.renderConsultingGuide=renderGuide; window.renderContentFirstGuide=renderGuide; window.renderInsuranceDashboard=renderInsurance; window.printFinalReport=function(){printBlock('final')}; window.printGuideReport=function(){printBlock('guide')};
   window.addEventListener('error',function(e){console.error('화면 오류:',e.message)});
-  function init(){addStyle(); injectButtons(); try{renderInsurance(); renderGuide(); renderFinal();}catch(e){console.error(e)} show('dashboard'); }
+  function init(){addStyle(); injectButtons(); try{renderInsurance(); renderGuide();}catch(e){console.error(e)} show('dashboard'); }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init); else init();
 })();
 </script>
@@ -8042,33 +7571,12 @@ window.addEventListener('DOMContentLoaded', function(){
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
   function fmt(n){n=Math.round(Number(n)||0); return n.toLocaleString('ko-KR')+'만원'}
   function pct(n){return (Math.round((Number(n)||0)*10)/10).toLocaleString('ko-KR')+'%'}
-  function quickTax(x){x=Math.max(0,Number(x)||0);var rows=[[10000,.10,0],[50000,.20,1000],[100000,.30,6000],[300000,.40,16000],[Infinity,.50,46000]];for(var i=0;i<rows.length;i++){if(x<=rows[i][0])return Math.max(0,Math.round(x*rows[i][1]-rows[i][2]));}return 0}
   function data(){
-    var gross=num('s_gross',6000), monthlyGross=Math.round(gross/12);
-    var income=monthlyGross+num('s_self')+num('s_spouse')+num('s_passive')+num('s_other');
-    var fixed=['s_housing','s_loan','s_food','s_telecom','s_transport','s_insurance','s_medical','s_edu','s_support'].reduce(function(a,id){return a+num(id)},0);
-    var choice=['s_dining','s_shopping','s_travel','s_choice_etc'].reduce(function(a,id){return a+num(id)},0);
-    var saving=['s_emerg','s_pension','s_irp','s_isa','s_taxfree','s_general'].reduce(function(a,id){return a+num(id)},0);
-    var surplus=income-fixed-choice-saving;
-    var saveRatio=income?saving/income*100:0, fixedRatio=income?fixed/income*100:0;
-    var age=num('s_age',35), rage=num('s_rage',65), years=Math.max(rage-age,0);
-    var target=num('s_target',400), inf=num('s_inf',3)/100, futureTarget=Math.round(target*Math.pow(1+inf,years));
-    var totalPension=num('s_nps',80)+num('s_retire_pen')+Math.round((num('s_pension')+num('s_irp')+num('s_taxfree'))*1.7);
-    var pensionGap=Math.max(futureTarget-totalPension,0);
-    var house=num('r_house_val',num('s_realty',0)), mort=num('r_mortgage',0), mrate=num('r_mortgage_rate',3.8)/100/12;
-    var mortPay=mort>0?Math.round(mort*mrate*Math.pow(1+mrate,360)/(Math.pow(1+mrate,360)-1)):0;
-    var ltv=house?mort/house*100:0, dsr=income?mortPay/income*100:0;
-    var debt=num('s_debt',0)+mort, realty=num('s_realty',0)+house, net=Math.max(realty+num('s_pen_now')+num('s_severance')-debt,0);
-    var estate=num('inh_total',0)||Math.max(realty+num('inh_life',0)-debt,0);
-    var spouse=val('inh_spouse','있음')==='있음', kids=Math.max(num('inh_children',1),0), gift=num('inh_gift',0), life=num('inh_life',0);
-    var spouseDed=spouse?Math.min(Math.max(50000, Math.round(estate*(1.5/(1.5+Math.max(kids,1))))),300000):0;
-    var taxable=Math.max(estate-spouseDed-50000-debt-gift,0), inheritTax=quickTax(taxable), inheritGap=Math.max(inheritTax-life,0);
-    var insFee=num('ins_monthly',num('s_insurance',0)), insRatio=income?insFee/income*100:0;
-    var cancer=num('ins_cancer_diag',0), cancerTreat=num('ins_cancer_treat',0), brain=num('ins_brain',0), heart=num('ins_heart',0), care=num('ins_care',0)+num('ins_homecare',0), renewal=num('ins_renewal',0);
-    var nhisNow=Math.round(gross/12*0.0709/2), nhisAfter=Math.round((income*12*0.03+net*0.00035)/12), nhisGap=Math.max(nhisAfter-nhisNow,0);
-    var score=(surplus>=0?18:6)+(saveRatio>=FIN_RULE.saveGood?18:saveRatio>=FIN_RULE.saveMid?11:5)+(pensionGap<=0?18:pensionGap<=150?11:5)+(dsr<=FIN_RULE.dsrOk&&ltv<=FIN_RULE.ltvOk?16:dsr<=FIN_RULE.dsrWarn||ltv<=FIN_RULE.ltvWarn?10:4)+(inheritGap<=0?15:inheritTax<5000?9:4)+(cancer>=3000&&brain>=1000&&heart>=1000?15:8);
-    return {name:val('s_name','고객님'),age:age,gender:val('s_gender',''),job:val('s_job',''),risk:val('s_itype','중립형'),income:income,fixed:fixed,choice:choice,saving:saving,surplus:surplus,saveRatio:saveRatio,fixedRatio:fixedRatio,years:years,target:target,futureTarget:futureTarget,totalPension:totalPension,pensionGap:pensionGap,house:house,mort:mort,mortPay:mortPay,ltv:ltv,dsr:dsr,debt:debt,net:net,estate:estate,taxable:taxable,inheritTax:inheritTax,inheritGap:inheritGap,gift:gift,life:life,insFee:insFee,insRatio:insRatio,cancer:cancer,cancerTreat:cancerTreat,brain:brain,heart:heart,care:care,renewal:renewal,nhisNow:nhisNow,nhisAfter:nhisAfter,nhisGap:nhisGap,score:Math.max(0,Math.min(100,score))};
+    /* 계산기 한 곳(finCore)에서 읽기만 합니다(판 X172 · 5번). 전에는 국민연금 감소를 퍼센트(최대 55)로 셈해 「만 원」 으로 찍었고,
+       없는 칸(ins_cancer_diag · ins_care)을 읽어 암 진단비 · 간병을 늘 0 으로 봤습니다. */
+    var C=finCore(); C.npsReduction=C.npsLoss; return C;
   }
+
   function addMapStyle(){
     if(by('final-map-print-style')) return;
     var css='\
@@ -8088,11 +7596,11 @@ window.addEventListener('DOMContentLoaded', function(){
     addMapStyle();
     var d=data();
     var box=by('final-report-content'); if(!box) return '';
-    var cashKind=d.surplus>=0&&d.saveRatio>=15?'good':d.surplus>=0?'warn':'bad';
-    var pensionKind=d.pensionGap<=0?'good':d.pensionGap<=150?'warn':'bad';
+    var cashKind=finCashKind(d);   /* 판정은 한 벌(판 X172) — 여기만 저축률 15% 였습니다 */
+    var pensionKind=finPenKind(d.target,d.totalPension)||'bad';
     var loanKind=finDebtKind(d);
-    var insKind=d.cancer>=3000&&d.brain>=1000&&d.heart>=1000?'good':d.cancer>=2000?'warn':'bad';
-    var inheritKind=d.inheritGap<=0?'good':d.inheritTax<5000?'warn':'bad';
+    var insKind=finInsKind(d);
+    var inheritKind=finEstKind(d);
     var html='<article class="final-map-wrap"><section class="fm-hero"><div><div class="fm-kicker">APEX YUN PRO · TOTAL CONSULTING MAP</div><h1>'+esc(d.name)+'님 종합 재무상담 가이드맵</h1><p>최종보고서는 한 장의 긴 설명서가 아니라, 상담자가 종합대시보드부터 상속·증여까지 순서대로 짚어갈 수 있는 지도입니다. 각 칸은 고객의 현재 입력값을 기준으로 요약되며, 필요한 칸만 별도 인쇄할 수 있습니다.</p></div><div class="fm-score"><span>종합점수</span><b>'+Math.round(d.score)+'</b><em>/100</em></div></section>'+ 
       '<div class="fm-toolbar"><button class="fm-btn dark" onclick="printFinalReport()">전체 가이드맵 인쇄</button><button class="fm-btn" onclick="printGuideReport()">상담가이드 별도 인쇄</button><button class="fm-btn" onclick="renderFinalReport()">화면 새로고침</button></div>'+ 
       '<div class="fm-client"><span>'+esc(d.name)+'</span><span>'+d.age+'세</span><span>'+esc(d.gender)+'</span><span>'+esc(d.job)+'</span><span>투자성향 '+esc(d.risk)+'</span></div>'+ 
@@ -8100,10 +7608,10 @@ window.addEventListener('DOMContentLoaded', function(){
       '<div class="fm-map-grid">'+
       card('dashboard','01','종합 대시보드','전체 재무 안정도 확인',[stat('월 소득',fmt(d.income)),stat('월 잉여금',fmt(d.surplus)),stat('저축률',pct(d.saveRatio)),stat('순자산',fmt(d.net))],'고객의 전체 재무 상태를 먼저 보여주는 첫 화면입니다. 숫자가 복잡해지기 전에 소득, 지출, 저축, 순자산, 안정도 점수만으로 오늘 상담의 방향을 잡습니다.',d.score>=75?'good':d.score>=55?'warn':'bad',d.score>=75?'양호':d.score>=55?'점검 필요':'우선 개선')+
       card('cashflow','02','현금흐름 분석','소득·지출·저축 구조',[stat('고정지출',fmt(d.fixed)),stat('선택지출',fmt(d.choice)),stat('고정지출률',pct(d.fixedRatio)),stat('저축/투자',fmt(d.saving))],'현금흐름은 모든 계약의 출발점입니다. 잉여금이 부족하면 보험·연금·투자 제안은 작게, 잉여금이 안정적이면 목적자금별로 나누어 설계합니다.',cashKind,cashKind==='good'?'확장 가능':cashKind==='warn'?'조정 필요':'지출 정리')+
-      card('pension','03','연금 시뮬레이션','은퇴 월소득과 공백',[stat('은퇴까지',d.years+'년'),stat('미래 필요생활비',fmt(d.futureTarget)),stat('예상 연금',fmt(d.totalPension)),stat('월 부족액',fmt(d.pensionGap))],'연금은 “얼마를 모을까”가 아니라 은퇴 후 매월 얼마가 들어오는지로 봅니다. 부족액이 있으면 연금저축, IRP, 비과세 연금, 달러자산 순서로 보완합니다.',pensionKind,pensionKind==='good'?'목표 근접':pensionKind==='warn'?'일부 부족':'보완 필요')+
+      card('pension','03','연금 시뮬레이션','은퇴 월소득과 공백',[stat('은퇴까지',d.years+'년'),stat('목표 생활비(오늘 돈)',fmt(d.target)),stat('지금 준비된 연금',fmt(d.totalPension)),stat('월 부족액',fmt(d.pensionGap))],'연금은 “얼마를 모을까”가 아니라 은퇴 후 매월 얼마가 들어오는지로 봅니다. 부족액이 있으면 연금저축, IRP, 비과세 연금, 달러자산 순서로 보완합니다.',pensionKind,pensionKind==='good'?'목표 근접':pensionKind==='warn'?'일부 부족':'보완 필요')+
       card('dollar','04','달러·투자 전략','성향별 2~3개만 제시',[stat('투자성향',d.risk),stat('월 투자여력',fmt(Math.max(d.surplus,0))),stat('추천라인업','2~3개'),stat('핵심방향','분산')],lineups(d.risk)+'로 과하지 않게 제시합니다. 전체 펀드 라인업을 보여주기보다 고객 성향에 맞는 후보만 짧게 보여주는 것이 상담 집중도를 높입니다.','warn','선별 제안')+
       card('insurance','05','보험 대시보드','암·뇌·심·간병 점검',[stat('월 보험료',fmt(d.insFee)),stat('소득대비',pct(d.insRatio)),stat('암 진단/치료',fmt(d.cancer)+' / '+fmt(d.cancerTreat)),stat('뇌·심',fmt(d.brain+d.heart))],'보험은 상품 설명이 아니라 재무방어 장치로 설명합니다. 암·뇌·심 진단비, 치료비, 간병, 재가급여, 종신보험을 고객의 나이와 가족 현금흐름에 맞게 연결합니다.',insKind,insKind==='good'?'핵심 양호':insKind==='warn'?'보완 여지':'부족 확인')+
-      card('factcheck','06','팩트체크 3대 점검','생존·유지·목표 검증',[stat('잉여금',fmt(d.surplus)),stat('보험료율',pct(d.insRatio)),stat('연금부족',fmt(d.pensionGap)),stat('건보증가',fmt(d.nhisGap))],'계약 전 반드시 확인할 세 가지는 비상시 버틸 수 있는지, 은퇴 이후 유지 가능한지, 대출·교육·노후 목표가 동시에 가능한지입니다.',(d.surplus>=0&&d.insRatio<=12)?'good':'warn',(d.surplus>=0&&d.insRatio<=12)?'진행 가능':'조건 조정')+
+      card('factcheck','06','팩트체크 3대 점검','생존·유지·목표 검증',[stat('잉여금',fmt(d.surplus)),stat('보험료율',pct(d.insRatio)),stat('연금부족',fmt(d.pensionGap)),stat('건보증가',fmt(d.nhisGap))],'계약 전 반드시 확인할 세 가지는 비상시 버틸 수 있는지, 은퇴 이후 유지 가능한지, 대출·교육·노후 목표가 동시에 가능한지입니다.',(d.surplus>=0&&d.insRatio<=IP_RULE.premHi)?'good':'warn',(d.surplus>=0&&d.insRatio<=IP_RULE.premHi)?'진행 가능':'조건 조정')+
       card('realestate','07','부동산·대출 분석','LTV·DSR·월상환',[stat('주택시세',fmt(d.house)),stat('대출잔액',fmt(d.mort)),stat('LTV',pct(d.ltv)),stat('DSR',pct(d.dsr))],'부동산은 자산이지만 현금흐름을 압박할 수도 있습니다. 월 원리금, DSR, LTV, 정책대출 가능성, 금리변동 리스크를 함께 봅니다.',loanKind,loanKind==='good'?'안정권':loanKind==='warn'?'주의권':'부담 높음')+
       card('inherit','08','상속·증여 설계','세금과 납부재원',[stat('상속재산',fmt(d.estate)),stat('과세표준',fmt(d.taxable)),stat('예상상속세',fmt(d.inheritTax)),stat('부족재원',fmt(d.inheritGap))],'상속은 세금 계산보다 납부재원이 더 중요합니다. 부동산 중심 자산이면 종신보험, 사전증여, 신탁·유언, 유동성 자산 확보를 분리해 검토합니다.',inheritKind,inheritKind==='good'?'재원 확보':inheritKind==='warn'?'검토 필요':'재원 부족')+
       '</div><div class="fm-next"><table><thead><tr><th>상담 순서</th><th>고객에게 보여줄 질문</th><th>다음 액션</th></tr></thead><tbody><tr><td>1단계</td><td>지금 매월 남는 돈이 보험·연금·대출을 동시에 감당할 수 있나요?</td><td>현금흐름과 고정지출 조정</td></tr><tr><td>2단계</td><td>아프거나 은퇴했을 때 가족 생활비는 어떤 통장에서 나오나요?</td><td>보험·연금·비상자금 역할 분리</td></tr><tr><td>3단계</td><td>부동산은 있지만 세금이나 대출 상환 재원이 부족하지 않나요?</td><td>대출 구조·상속세 납부재원 점검</td></tr><tr><td>4단계</td><td>오늘은 어떤 보완안부터 부담 없이 시작할 수 있을까요?</td><td>A/B/C안 제시 후 다음 상담 예약</td></tr></tbody></table></div><footer class="fm-notice">본 가이드맵은 상담용 추정 자료입니다. 보험은 약관·상품설명서·심사 결과, 세금은 세무사 검토, 대출은 금융기관 심사, 건강보험료·국민연금은 관련 공단 기준 확인이 필요합니다.</footer></article>';
@@ -9088,12 +8596,9 @@ window.addEventListener('DOMContentLoaded', function(){
     var name=($('s_name')||{value:''}).value||'고객';
     var age=gv('s_age',38), gender=($('s_gender')||{value:''}).value, job=($('s_job')||{value:''}).value, rage=gv('s_rage',60);
     var family=($('ff_family')||{value:''}).value;
-    var income=Math.round(gv('s_gross',0)/12)+gv('s_self',0)+gv('s_spouse',0)+gv('s_other',0);
-    /* 「기타/월」이 빠져 있었다. 그만큼 남는 돈이 부풀려지고, 그 남는 돈으로
-       낼 수 있는 보험료를 제안하게 된다. 사이드바 지출 칸을 전부 더한다. */
-    var expense=gv('s_housing')+gv('s_food')+gv('s_dining')+gv('s_edu')+gv('s_medical')+gv('s_transport')+gv('s_telecom')+gv('s_shopping')+gv('s_travel')+gv('s_support')+gv('s_loan')+gv('s_insurance')+gv('s_choice_etc');
-    var saving=gv('s_emerg')+gv('s_pension')+gv('s_irp')+gv('s_isa')+gv('s_taxfree')+gv('s_general');
-    var surplus=income-expense-saving;
+    /* 소득 · 지출 · 저축 · 남는 돈은 계산기 한 곳(finCore)에서 (판 X172 · 5번). 전에는 여기서 따로 셈하다
+       임대·배당·이자 소득과 「기타/월」 지출을 빠뜨렸습니다(남는 돈이 부풀어 그 돈으로 낼 보험료를 제안). */
+    var FC=finCore(), income=FC.income, expense=FC.fixed+FC.choice, saving=FC.saving, surplus=FC.surplus;
     var net=gv('s_realty')+gv('s_severance')-gv('s_debt');
     var saveRate=income>0?Math.round(saving/income*100):0;
     var insRate=income>0?Math.round(gv('s_insurance')/income*100):0;
@@ -9562,12 +9067,9 @@ var PL={i:0};
 function plData(){
   var age=num('s_age',38), rage=num('s_rage',60);
   var name=(($('s_name')||{value:''}).value||'고객').replace(/\s*님$/,'');
-  var income=Math.round(num('s_gross',0)/12)+num('s_self',0)+num('s_spouse',0)+num('s_other',0);
-  var expIds=['s_housing','s_food','s_dining','s_edu','s_medical','s_transport','s_telecom','s_shopping','s_travel','s_support','s_loan','s_insurance'];
-  var expense=expIds.reduce(function(a,id){return a+num(id,0);},0);
-  var savIds=['s_emerg','s_pension','s_irp','s_isa','s_taxfree','s_general'];
-  var saving=savIds.reduce(function(a,id){return a+num(id,0);},0);
-  var surplus=income-expense-saving;
+  /* 소득 · 지출 · 저축 · 남는 돈은 계산기 한 곳(finCore)에서 (판 X172 · 5번). 전에는 여기서 따로 셈하다
+     임대·배당·이자 소득과 「기타/월」 지출을 빠뜨렸습니다(남는 돈이 부풀어 그 돈으로 낼 보험료를 제안). */
+  var FC=finCore(), income=FC.income, expense=FC.fixed+FC.choice, saving=FC.saving, surplus=FC.surplus;
   var taxfree=num('s_taxfree',0);
   var P=apxPen({age:age, rage:rage, wage:Math.round(num('s_gross',0)/12)||income,
     npsYears:num('ff_npsyears',0), retYears:num('ff_retyears',0),
@@ -9864,12 +9366,9 @@ function tpD(){
   var name=(($('s_name')||{value:''}).value||'고객').replace(/\s*님$/,'');
   var age=g('s_age',38),rage=g('s_rage',60);
   var wage=Math.round(g('s_gross',0)/12);
-  var income=wage+g('s_self',0)+g('s_spouse',0)+g('s_other',0);
-  var expIds=['s_housing','s_food','s_dining','s_edu','s_medical','s_transport','s_telecom','s_shopping','s_travel','s_support','s_loan','s_insurance'];
-  var expense=expIds.reduce(function(a,id){return a+g(id,0);},0);
-  var savIds=['s_emerg','s_pension','s_irp','s_isa','s_taxfree','s_general'];
-  var saving=savIds.reduce(function(a,id){return a+g(id,0);},0);
-  var surplus=income-expense-saving;
+  /* 소득 · 지출 · 저축 · 남는 돈은 계산기 한 곳(finCore)에서 (판 X172 · 5번). 전에는 여기서 따로 셈하다
+     임대·배당·이자 소득과 「기타/월」 지출을 빠뜨렸습니다(남는 돈이 부풀어 그 돈으로 낼 보험료를 제안). */
+  var FC=finCore(), income=FC.income, expense=FC.fixed+FC.choice, saving=FC.saving, surplus=FC.surplus;
   var realty=g('s_realty',0),debt=g('s_debt',0),sev=g('s_severance',0),penNow=g('s_pen_now',0);
   var fin=sev+penNow, total=realty+fin, net=total-debt;
   var ins=g('s_insurance',0);
@@ -9950,8 +9449,9 @@ function tpSlides(){
     note:'"이 빈칸이 오늘 상담의 주인공입니다. 얼마인지 알았으니, 이제 무엇으로 채울지만 정하면 됩니다."'});
 
   /* 5 — 보험 준비 체크 */
-  var insMsg = d.insRate<5 ? {t:'보장이 얇을 가능성',c:'#DC2626',d:'소득 대비 '+d.insRate+'%. 큰 병 한 번이 지금까지 모은 자산을 꺼내 쓰게 만듭니다.'}
-             : d.insRate<=12 ? {t:'적정 범위',c:'#059669',d:'소득 대비 '+d.insRate+'% — 권장선(8~12%) 안입니다. 이제 금액이 아니라 구성을 봅니다.'}
+  /* 보험료율 기준은 IP_RULE 한 곳(판 X172) — 여기만 5 · 12 · 「권장선 8~12%」 였습니다 */
+  var insMsg = d.insRate<IP_RULE.premLo ? {t:'보장이 얇을 가능성',c:'#DC2626',d:'소득 대비 '+d.insRate+'%. 큰 병 한 번이 지금까지 모은 자산을 꺼내 쓰게 만듭니다.'}
+             : d.insRate<=IP_RULE.premHi ? {t:'적정 범위',c:'#059669',d:'소득 대비 '+d.insRate+'% — 권장선('+IP_RULE.premLo+'~'+IP_RULE.premHi+'%) 안입니다. 이제 금액이 아니라 구성을 봅니다.'}
              : {t:'구조 점검 필요',c:'#D97706',d:'소득 대비 '+d.insRate+'%. 보험료가 저축을 밀어내고 있지 않은지, 중복·비효율을 걷어냅니다.'};
   S.push({chip:'보험 점검', big:'모은 자산을 지키는 장치,<br><em>보험을 점검</em>합니다.',
     sub:'월 보험료 '+p0(d.ins)+'만원 — <b style="color:'+insMsg.c+'">'+insMsg.t+'</b>. '+insMsg.d,
@@ -11298,12 +10798,18 @@ function renderPensionSim(){
   var inf=psN('s_inf',3);
 
   /* STEP 1 — 사이드바에 적힌 것만 더한다. 없는 건 만들지 않는다. */
-  var nps=psN('s_nps',0), retp=psN('s_retire_pen',0), priv=psN('s_pen_now',0);
-  var realty=psN('s_realty',0), hpMan=0;
-  try{ if(typeof housePension==='function'){ var h=housePension(realty,rage); hpMan=(h&&h.man)?h.man:0; } }catch(e){}
+  var RD=finReady();   /* 지금 준비된 연금 — 결과지 · 상담 · 대시보드와 한 곳(판 X172) */
+  var nps=RD.nps, retp=RD.retp, priv=RD.priv, realty=psN('s_realty',0), hpMan=RD.houseAvail;
   var useH=PSIM.useHouse && hpMan>0;
-  var ap=psAccPlan(), apM=ap?ap.man:0, saveM=psN('s_pension',0)+psN('s_irp',0)+psN('s_taxfree',0);
-  var now=nps+retp+priv+(useH?hpMan:0)+apM;
+  var ap=RD.acc, apM=RD.accMan, saveM=psN('s_pension',0)+psN('s_irp',0)+psN('s_taxfree',0);
+  var now=RD.total;
+  /* 주택연금이 왜 0 인지 · 무엇을 기준으로 셈했는지를 이 줄에서 밝힙니다(1번). 전에는 대시보드의
+     안 보이는 칸(pension-overview · pension-monthly)에만 적혀 있어 화면에 한 번도 서지 않았습니다(판 X172). */
+  var housePen=RD.housePen;
+  var houseNote = !housePen ? '' : housePen.young ? `만 ${HOUSE_PEN.minAge}세부터 가입 — 은퇴 나이 ${rage}세로는 아직 대상이 아닙니다`
+      : housePen.over ? `가입 상한(${psWon(HOUSE_PEN.capMan)}) 초과 — 상한까지만 잡은 참고값이며 실제로는 가입이 안 될 수 있습니다. 공사에 먼저 확인하십시오`
+      : `${rage}세 가입 · 1억당 월 ${housePen.per.toFixed(1)}만원 (${HOUSE_PEN.base} · ${HOUSE_PEN.asOf} 공시)`;
+  var houseFine = hpMan>0 ? `<div style="margin-top:8px;font-size:var(--t6,13px);color:var(--ink-5);line-height:1.7">※ 주택연금은 나이·주택 종류·지급 방식에 따라 달라지고 공사가 해마다 다시 고시하므로, 상담에서는 확정 금액으로 말씀하지 마시고 공사 공시로 확인하십시오. 여기 쓰인 부동산 금액은 투자용을 포함한 총액이라 실제 대상 주택과 다를 수 있습니다.</div>` : '';
 
   /* STEP 2 — 물가는 계산에 넣지 않는다(요구사항). 참고로만 보여준다. */
   var target=psN('s_target',0), gap=Math.max(target-now,0);
@@ -11373,9 +10879,10 @@ function renderPensionSim(){
     (hpMan>0
       ? '<div class="cmp-row"><div><span class="cmp-lbl">주택연금 <label style="font-weight:600;font-size:var(--t6,13px);cursor:pointer">'+
         '<input type="checkbox" '+(useH?'checked':'')+' onchange="psSet(\'useHouse\',this.checked)" style="vertical-align:-2px;margin-left:6px"> 합산</label></span>'+
-        '<span style="display:block;font-size:var(--t6,13px);color:var(--ink-5);margin-top:2px">부동산 '+psWon(realty)+' 기준 · '+rage+'세 개시</span></div>'+
-        '<div class="cmp-val"'+(useH?'':' style="color:var(--ink-5)"')+'>'+psWon(hpMan)+' / 월</div></div>' : '')+
-    row('합계', psWon(now)+' / 월', null, true);
+        '<span style="display:block;font-size:var(--t6,13px);color:var(--ink-5);margin-top:2px">부동산 '+psWon(realty)+' 기준 · '+houseNote+'</span></div>'+
+        '<div class="cmp-val"'+(useH?'':' style="color:var(--ink-5)"')+'>'+psWon(hpMan)+' / 월</div></div>'
+      : (housePen&&housePen.young ? row('주택연금', '셈에 안 넣음', houseNote) : ''))+
+    row('합계', psWon(now)+' / 월', null, true)+houseFine;
 
   var s2='<div style="display:flex;gap:10px;flex-wrap:wrap">'+
       big(psWon(target)+' / 월','#F1F5F9','은퇴 후 목표 생활비')+
@@ -11504,11 +11011,8 @@ function renderPensionSim(){
      적어 주실 때만 그 장을 세웁니다(1번).
    ★ 세금은 「요건 충족 시」 · 한도·나이 숫자를 글로 적지 않습니다(2번).
    ═══════════════════════════════════════════════════════════ */
-/* 꼭 나가는 지출 · 고르는 지출 칸 — 결과지(rptData)와 보험의 자리(ipPlan)가 함께 읽습니다(5번) */
-var RPT_FIXED=['s_housing','s_loan','s_food','s_telecom','s_transport','s_insurance','s_medical','s_edu','s_support'];
-var RPT_CHOICE=['s_dining','s_shopping','s_travel','s_choice_etc'];
 /* ═══════════════════════════════════════════════════════════
-   보험의 자리 (판 X165) — 사장님 말씀 2026-10-22
+   보험의 자리 (판 X168) — 사장님 말씀 2026-10-22
    「재무설계로써의 배치 그리고 보험은 가족을 지키는 역할 내 연금을 지키는 역할의 분배
     나이대마다 필요한 보험의 분배전략」
    ① 배치 — 재무설계의 집: 지붕 연금 · 기둥 저축·투자 · <b>바닥 비상금·보험</b>
@@ -11523,7 +11027,7 @@ var IP_ME=[['암 진단비','ins_cancer_dx'],['뇌혈관 진단비','ins_brain']
 function ipPlan(){
   function n(id){ var e=document.getElementById(id), v=parseFloat(e?String(e.value).replace(/,/g,''):''); return isFinite(v)?v:0; }
   function sum(ids){ return ids.reduce(function(a,id){ return a+n(id); },0); }
-  var living=sum(RPT_FIXED)+sum(RPT_CHOICE), loan=n('s_loan'), famLiving=Math.max(0,living-loan);
+  var FCx=finCore(), living=FCx.fixed+FCx.choice, loan=n('s_loan'), famLiving=Math.max(0,living-loan);
   var life=n('ins_life'), debt=n('s_debt'), left=life-debt, dx=n('ins_cancer_dx');
   var me=IP_ME.map(function(x){ return {name:x[0], v:n(x[1])}; });
   var age=n('s_age')||35, yE=document.getElementById('inh_youngest'), yRaw=yE?String(yE.value).trim():'';
@@ -11554,7 +11058,7 @@ function ipBase(I){
   prem.base=prem.avg==null?null:(mInc>0?Math.min(prem.hi,Math.max(prem.lo,prem.avg)):prem.avg);
   function w(f,m){ return (f!=null&&m!=null&&f+m>0)?Math.round(f/(f+m)*20)*5:null; }
   /* 대출이 끝나고 자녀가 독립하면 — 같은 셈에 대출 0 · 자녀 0 (생활비는 그대로 둔 단순 셈).
-     ★ 판 X168 — 사장님 말씀 「미래 장면에도 본인 대출을 넣어서 다시 셈해줘」: 소득 셈의 빚 배수도
+     ★ 판 X171 — 사장님 말씀 「미래 장면에도 본인 대출을 넣어서 다시 셈해줘」: 소득 셈의 빚 배수도
        본인 대출이 남은 만큼만 남깁니다 — 그때 대출 ÷ 지금 대출(그때는 0 → 0). 지금 대출이 없으면 그대로 */
   var debtLater=0, lf=famBy(debtLater,0,null), incLater=fam.inc==null?null:(I.debt>0?fam.inc*debtLater/I.debt:fam.inc), later=ipMid([fam.avg,incLater,lf.v]);
   return {fam:fam, me:me, prem:prem, job:J, w:w(fam.base,me.base), wLater:w(later,me.base), famLater:later, famIncLater:incLater};
@@ -11580,7 +11084,7 @@ function ipTableRows(I,X){
           ['모자란 돈',X.fam.gap===0?'없음':ipCell(X.fam.gap,'—'),X.me.gap===0?'없음':ipCell(X.me.gap,'—')]];
 }
 /* ═══════════════════════════════════════════════════════════
-   계산기 기능을 상담 말로 재구성 (판 X168) — 사장님 말씀 2026-10-22
+   계산기 기능을 상담 말로 재구성 (판 X171) — 사장님 말씀 2026-10-22
    「기존 재무설계계산기를 따와서 기능들을 가져오되 재해석해서 재구성해」
    계산은 <b>다시 짜지 않습니다</b> — 최종보고서가 쓰는 finData()(소득·지출·저축률·DSR·LTV·상속세 추정)와
    판정(finCashKind · finDebtKind · FIN_RULE)을 그대로 부르고, 상담 화면과 결과지가 이 한 곳(fsPlan)을 읽습니다.
@@ -11590,7 +11094,6 @@ function ipTableRows(I,X){
    ★ DSR 은 계산기 그대로 주택담보대출 30년 원리금균등 가정 · 상속세는 추정(요건·공제는 세무 전문가 확인 · 2번)
    ═══════════════════════════════════════════════════════════ */
 var FS_LV={good:'가능',warn:'주의',bad:'점검 필요'};
-function fsRetireKind(n){ return !(n&&n.goal>0)?null:n.withP>=n.goal?'good':n.withP>=n.goal*0.8?'warn':'bad'; }
 function fsPlan(n){
   if(typeof window.finData!=='function') return null;
   var d=finData(), I=ipPlan(), X=ipBase(I);
@@ -11601,7 +11104,7 @@ function fsPlan(n){
   var ey=(I.kids>0&&I.youngest!=null)?Math.max(0,IP_RULE.indepAge-I.youngest):null;
   var edu={eduM:eduM, years:ey, total:ey!=null?eduM*12*ey:null, endAge:ey!=null?I.age+ey:null, rage:rage};
   edu.on=eduM>0&&ey>0; edu.kind=!edu.on?null:(edu.endAge>rage?'bad':'good');
-  var est={estate:d.estate, tax:d.inheritTax, gap:d.inheritGap, life:v('inh_life')}; est.on=d.inheritTax>0; est.kind=!est.on?null:(d.inheritGap>0?'warn':'good');
+  var est={estate:d.estate, tax:d.inheritTax, gap:d.inheritGap, life:v('inh_life')}; est.on=d.inheritTax>0; est.kind=!est.on?null:finEstKind(d);
   function cov(x){ return x.base==null?null:(x.gap===0?'good':(x.have>0?'warn':'bad')); }
   var order=[
     {k:'cash',  t:'남는 돈 (현금흐름)', kind:cash.kind, why:cash.surplus>=0?'매달 '+APEX_REPORT.man(cash.surplus)+' 남아요 · 저축률 '+Math.floor(cash.saveRatio)+'%':'매달 '+APEX_REPORT.man(-cash.surplus)+' 모자라요'},
@@ -11609,7 +11112,7 @@ function fsPlan(n){
     {k:'fam',   t:'보장 · 가족 지키기', kind:cov(X.fam), why:X.fam.base==null?'기준값을 셀 숫자가 비어 있어요':(X.fam.gap>0?'기준값보다 '+APEX_REPORT.man(X.fam.gap)+' 모자라요':'기준값을 넘어요')},
     {k:'me',    t:'보장 · 내 연금 지키기', kind:cov(X.me), why:X.me.base==null?'기준값을 셀 숫자가 비어 있어요':(X.me.gap>0?'기준값보다 '+APEX_REPORT.man(X.me.gap)+' 모자라요':'기준값을 넘어요')},
     {k:'debt',  t:'대출', kind:debt.any?debt.kind:'good', why:debt.any?'주택담보 DSR '+Math.round(d.dsr)+'% · LTV '+Math.round(d.ltv)+'%'+(loanM>0?' · 매달 원리금 '+APEX_REPORT.man(loanM):''):'대출이 없어요'},
-    {k:'retire',t:'노후 연금', kind:fsRetireKind(n), why:n&&n.goal>0?(n.gap0>0?'지금 그대로면 매달 '+APEX_REPORT.man(n.gap0)+' 비어요':'목표를 채워요'):'목표 생활비를 넣으면 셀 수 있어요'}];
+    {k:'retire',t:'노후 연금', kind:n?finPenKind(n.goal,n.now):null, why:n&&n.goal>0?(n.gap0>0?'지금 그대로면 매달 '+APEX_REPORT.man(n.gap0)+' 비어요':'목표를 채워요'):'목표 생활비를 넣으면 셀 수 있어요'}];
   if(edu.on) order.push({k:'edu', t:'교육비', kind:edu.kind, why:'막내 독립까지 '+ey+'년 · 앞으로 약 '+APEX_REPORT.man(edu.total)+(edu.endAge>rage?' · 은퇴 뒤까지 이어져요':'')});
   if(est.on) order.push({k:'est', t:'남길 것 (상속)', kind:est.kind, why:'상속세 추정 '+APEX_REPORT.man(est.tax)+(est.gap>0?' · 재원 '+APEX_REPORT.man(est.gap)+' 모자라요':' · 사망보험금으로 낼 수 있어요')});
   var first=null; order.forEach(function(o){ if(!first&&o.kind&&o.kind!=='good') first=o; });
@@ -11685,31 +11188,27 @@ function rptData(opt){
   var raw=v('s_name'), name=opt.real&&raw&&raw!=='고객님'? raw : rptMask(raw);
   var age=Math.round(n('s_age'))||40, rage=Math.round(n('s_rage'))||65;
   var sex=(v('s_gender').indexOf('남')>=0)?'남성':'여성';
-  var gross=n('s_gross'), mGross=Math.round(gross/12);
-  var income=mGross+n('s_self')+n('s_spouse')+n('s_passive')+n('s_other');
-  function sum(ids){ return ids.reduce(function(a,id){return a+n(id);},0); }
-  var fixed=sum(RPT_FIXED), choice=sum(RPT_CHOICE);
-  var saving=sum(['s_emerg','s_pension','s_irp','s_isa','s_taxfree','s_general']);
-  var surplus=income-fixed-choice-saving;
+  var FC=finCore();   /* 소득 · 지출 · 저축은 계산기 한 곳에서(판 X172) */
+  var gross=FC.gross, mGross=FC.monthlyGross, income=FC.income, fixed=FC.fixed, choice=FC.choice, saving=FC.saving, surplus=FC.surplus;
   var assume=[];
 
   var PS=rptPension(age,sex,rage), P=PS&&PS.pension, tgRow=null;
   if(P) P.rows.forEach(function(x){ if(x.target) tgRow=x; });
 
   /* 국민연금 — 적어 주신 값이 먼저, 없으면 추정 */
-  var npsIn=n('s_nps'), np;
-  if(npsIn>0) np={monthly:npsIn, estimated:false};
-  else if(gross>0){ var y=Math.max(0,Math.min(rage,60)-27); np={monthly:C.nps(mGross,y).monthly, estimated:true};
-    assume.push('**국민연금** — 계산기 칸이 비어 27세 가입 · '+y+'년 · 지금 월급으로 **추정**했어요. 공단 조회액으로 바꿔 주세요.'); }
-  var retp=n('s_retire_pen'), priv=n('s_pen_now'), hp=0;
-  try{ if(PSIM.useHouse && typeof housePension==='function'){ var h=housePension(n('s_realty'),rage); hp=(h&&h.man)||0; } }catch(e){}
+  /* 지금 준비된 연금 — 연금 시뮬레이션 탭 · 상담 · 결과지가 finReady 한 곳에서(판 X172).
+     국민연금 칸이 비면 탭처럼 <b>빼고</b> 셉니다. 추정은 셈에 넣지 않고 참고로만 적습니다(1번). */
+  var RD=finReady(), np=RD.nps>0?{monthly:RD.nps, estimated:false}:null;
+  if(!np&&gross>0){ var y=Math.max(0,Math.min(rage,60)-27);
+    assume.push('**국민연금** — 계산기 칸이 비어 **빼고** 셈했어요. 27세 가입 · '+y+'년 · 지금 월급이면 월 '+M(C.nps(mGross,y).monthly)+' 안팎일 수 있어요(추정) — 공단 조회액을 넣어 주세요.'); }
+  var retp=RD.retp, priv=RD.priv, hp=RD.house;
   var other=[];
   if(retp>0) other.push({label:'퇴직연금', value:retp, tone:'green'});
   if(priv>0) other.push({label:'기존 개인연금', value:priv, tone:'orange'});
   if(hp>0) other.push({label:'주택연금', value:hp, tone:'gray'});
-  var ap=psAccPlan();                                   /* 탭과 같은 한 곳 — 칸이 비면 null(모름) */
+  var ap=RD.acc;                                        /* 탭과 같은 한 곳 — 칸이 비면 null(모름) */
   if(ap&&ap.man>0) other.push({label:'연금저축·IRP·달러·변액', value:ap.man, tone:'purple', assumed:true});
-  var now=(np?np.monthly:0)+retp+priv+hp+(ap?ap.man:0), withP=now+(tgRow?tgRow.monthly:0), goal=n('s_target'), gap=Math.max(0,goal-withP);
+  var now=RD.total, withP=now+(tgRow?tgRow.monthly:0), goal=n('s_target'), gap=Math.max(0,goal-withP);
   var saveP=n('s_pension')+n('s_irp')+n('s_taxfree');
   var gap0=Math.max(0,goal-now), inf=n('s_inf'), futGoal=goal*Math.pow(1+inf/100,Math.max(0,rage-age));
 
@@ -11739,11 +11238,11 @@ function rptData(opt){
       note:'위 빈칸 계산은 오늘 돈 기준이에요. 물가까지 넣으면 빈칸은 더 커져요.'});
     sections.push({kicker:'핵심 이슈', icon:'hourglass', title:'지금 그대로면, 은퇴하는 날 월급이 이렇게 줄어요', cards:cards0,
       ask:gap0>0?'매달 '+M(gap0)+'이 비는 날이 오면, 어디부터 줄이실 건가요? 같이 미리 막아 봐요.':''});
-    var st=FS_LV[fsRetireKind({goal:goal, withP:withP})];   /* 「불가」 는 포기로 읽힙니다(판 X163) · 판정은 「고칠 순서」 와 한 자(판 X168) */
+    var st=FS_LV[finPenKind(goal,withP)];   /* 「불가」 는 포기로 읽힙니다(판 X166) · 판정은 「고칠 순서」 와 한 자(판 X171) */
     sections.push({kicker:'핵심 이슈', icon:'target', title:'오늘 제안까지 더하면, 판정은요', cards:[
       {type:'verdict', status:st, title:st==='가능'?'제안까지 더하면 목표를 채워요':st==='주의'?'거의 다 왔어요 — 조금만 더 채우면 돼요':'아직 많이 비어요 — 함께 채울 방법을 찾아봐요',
        reasons:['지금 준비된 것 매달 **'+M(now)+'**', tgRow?'제안 연금을 더하면 **'+M(withP)+'**':'제안 연금이 아직 정해지지 않았어요', gap>0?'목표까지 매달 **'+M(gap)+'** 부족':'목표보다 매달 **'+M(withP-goal)+'** 여유'],
-       checks:['목표 생활비를 부부가 함께 정한 금액인지', np&&np.estimated?'국민연금 공단 조회액':'국민연금 금액이 공단 조회액인지', saveP>0&&!ap?'연금저축·IRP·달러·변액에 지금까지 쌓인 금액':'물가를 생각해 여유를 둘지']}
+       checks:['목표 생활비를 부부가 함께 정한 금액인지', !np?'국민연금 공단 조회액':'국민연금 금액이 공단 조회액인지', saveP>0&&!ap?'연금저축·IRP·달러·변액에 지금까지 쌓인 금액':'물가를 생각해 여유를 둘지']}
     ]});
   }
   sections.push({kicker:'핵심 이슈', icon:'coin', title:'지금 월급, 어디로 가고 있나요', cards:[
@@ -11769,7 +11268,7 @@ function rptData(opt){
   /* 스스로 점검 — 고객이 「나는 이걸 모르는구나」 를 스스로 느끼는 칸. 답을 지어 주지 않고 묻기만 합니다(1번) */
   sections.push({kicker:'스스로 점검', icon:'speech', title:'이 질문에 바로 답할 수 있나요?', cards:[{type:'quiz', items:[
     {q:'은퇴 후 한 달 생활비, 가족과 함께 정한 금액이 있나요?', hint:'정해 두지 않으면 얼마가 모자란지도 알 수 없어요.'},
-    {q:'국민연금, 공단에서 예상액을 조회해 보셨나요?', hint:np&&np.estimated?'오늘 숫자는 추정이에요. 조회액이 나오면 빈칸이 다시 계산돼요.':'조회액이 바뀌면 빈칸도 함께 바뀌어요.'},
+    {q:'국민연금, 공단에서 예상액을 조회해 보셨나요?', hint:!np?'칸이 비어 빼고 셈했어요. 조회액을 넣으면 빈칸이 다시 계산돼요.':'조회액이 바뀌면 빈칸도 함께 바뀌어요.'},
     {q:'회사를 나온 뒤 연금이 나오기 전까지, 무엇으로 생활하나요?', hint:'그 사이가 모아 둔 돈을 가장 먼저 꺼내 쓰는 시간이에요.'},
     {q:'한 분이 먼저 떠나면, 남은 분에게 매달 얼마가 들어오나요?', hint:'연금이 한 사람 이름으로만 있으면 그 사람과 함께 줄어들 수 있어요.'},
     {q:'아프거나 간병이 필요해지면, 그 돈은 어디서 나오나요?', hint:'생활비와 따로 떼어 두지 않으면 생활비가 먼저 줄어요.'}]}],
@@ -11783,7 +11282,7 @@ function rptData(opt){
   if(surplus>0) good.push('매달 **'+M(surplus)+'**이 남아 여유가 있어요.');
   good.push('은퇴 전에 **미리 준비하려고** 오늘 시간을 내셨어요.');
   if(saveP>0&&priv<=0&&!ap) todo.push('**연금저축·IRP·달러·변액에 쌓인 금액** 알려 주기 — 빈칸이 줄어들 수 있어요');
-  if(np&&np.estimated) todo.push('**국민연금 공단 조회액** 확인하기');
+  if(!np) todo.push('**국민연금 공단 조회액** 확인하기');
   if(P) todo.push('**설계서로 최저보증 조건** 같이 읽기');
   if(sev>0&&!(yrs>0)) todo.push('**회사에 퇴직금 예상액·근속연수** 물어보기');
   todo.push('**은퇴 뒤 한 달 생활비**를 함께 정해 보기');
@@ -11804,12 +11303,12 @@ function rptData(opt){
   if(P){ summary.push('매달 **'+M(P.premium)+'** × **'+P.payYears+'년**, '+rage+'세부터 받아요.');
     summary.push('최저보증 기준 매달 **'+M(PS.guarM)+'**'+(PS.isVar&&tgRow?(tgRow.byGuarantee?' — '+tgRow.label+'가 나도 보증 쪽이 더 커요':', '+tgRow.label+'이면 **'+M(tgRow.monthly)+'**(가정)'):'')+(PS.isVar&&tgRow&&tgRow.byGuarantee?'.':'이에요.')); }
   summary.push('지금 매달 들어오는 돈 **'+M(income)+'**, 남는 돈 **'+M(surplus)+'**이에요.');
-  if(goal>0) summary.push(gap>0?'목표 생활비까지 매달 **'+M(gap)+'**이 더 필요해요.':'제안까지 더하면 목표 생활비 **'+M(goal)+'**을 채워요.');
+  if(goal>0) summary.push(gap>0?(tgRow?'오늘 제안(목표 수익률 가정)까지 더해도 ':'')+'목표 생활비까지 매달 **'+M(gap)+'**이 더 필요해요.':'제안까지 더하면 목표 생활비 **'+M(goal)+'**을 채워요.');
   if(yrs>0&&sev>0){ var rr2=C.retireTax(sev,yrs); summary.push('퇴직금은 **IRP로 나눠 받으면** 세금이 최대 약 **'+M(rr2.total-rr2.irpLate)+'** 줄어요(추정).'); }
   summary=summary.slice(0,5);   /* 마지막 줄은 언제나 세금 조건 — 잘려 나가지 않게 */
   summary.push('비과세·세금은 **요건 충족 시** — 가입 전에 세무 전문가와 꼭 확인해요.');
 
-  /* 보험의 자리 — 배치 · 두 역할 · 고객 숫자로 몇 달 · 나이대 분배(판 X165) */
+  /* 보험의 자리 — 배치 · 두 역할 · 고객 숫자로 몇 달 · 나이대 분배(판 X168) */
   var I=ipPlan(), B=I.band, X=ipBase(I), meEmpty=I.me.filter(function(x){ return !(x.v>0); }).map(function(x){ return x.name; });
   sections.push({kicker:'보장 전략', icon:'shield', title:'보험은 가족과 내 연금을 지켜요', cards:[
     {type:'rows', title:'재무설계의 집 — 매달 어디에 담고 있나요', icon:'house', items:I.layout.map(function(x){ return {label:x.k+' · '+x.t, note:x.s, value:x.v, strong:x.k==='바닥'}; }),
@@ -11835,7 +11334,7 @@ function rptData(opt){
   if(I.kids>0&&I.youngest==null) todo.push('**막내 자녀 나이** 알려 주기 — 가족 기준값을 셈해요');
   if(meEmpty.length) todo.push('**'+meEmpty.slice(0,3).join(' · ')+'** 비어 있는 곳 점검하기 (보장은 심사 결과에 따릅니다)');
 
-  /* 계산기 기능을 상담 말로 — 대출 · 교육비 · 남길 것 · 고칠 순서 (판 X168) */
+  /* 계산기 기능을 상담 말로 — 대출 · 교육비 · 남길 것 · 고칠 순서 (판 X171) */
   var F=fsPlan({goal:goal, now:now, withP:withP, gap0:gap0});
   if(F){
     var fc=[];
@@ -11872,7 +11371,7 @@ function rptData(opt){
   return {
     /* 상담 화면(wk*)이 다시 세지 않고 이 값을 씁니다 — 한 화면 한 답(5번). 엔진은 이 칸을 읽지 않습니다 */
     _n:{now:now, goal:goal, gap0:gap0, withP:withP, income:income, inf:inf, futGoal:futGoal, age:age, rage:rage,
-        nps:np?np.monthly:0, npsEst:!!(np&&np.estimated), ret:retp, own:priv+(ap?ap.man:0), house:hp, saveP:saveP, accKnown:!!ap},
+        nps:np?np.monthly:0, npsEst:false, ret:retp, own:priv+(ap?ap.man:0), house:hp, saveP:saveP, accKnown:!!ap},
     client:{name:name, age:age, job:job||null, retireAge:rage},
     advisor:opt.advisor||'APEX 사업단',
     date:thisYear+'년 '+(new Date().getMonth()+1)+'월',
@@ -11936,7 +11435,7 @@ function rptGo(kind){
 
 <script>
 /* ═══════════════════════════════════════════════════════════
-   함께 점검 상담 (wk*) — 사장님 말씀 2026-10-22 (판 X164)
+   함께 점검 상담 (wk*) — 사장님 말씀 2026-10-22 (판 X167)
    「계산기도 좋지만, 전반적인 이해를 시킬수 있는 상담과 느끼도록 하는 위기감
     그리고 같이 점검할수 있는 시스템」
 
