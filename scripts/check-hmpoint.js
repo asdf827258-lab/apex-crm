@@ -246,7 +246,11 @@ const SEED = () => {
       .filter(x => /접촉포인트|카톡 먼저|전화 먼저|🎯/.test(
         (x.textContent||'') + ' ' + (x.getAttribute('aria-label')||'')))[0];
     AR.loaded = true;
-    return c ? c.textContent : '';
+    /* ⚠ 판 X155 — 🎯 는 선 그림으로 갈려 textContent 에서 빠집니다. 글자만
+       돌려주면 토막이 <b>서 있어도</b> 아래 「🎯 가 없다」 가 통과해 버려,
+       낡지 않는 늘 초록인 줄이 됩니다. 무엇이었는지는 data-emo 에 남으니
+       그것까지 붙여 돌려줍니다 (8번). */
+    return c ? ((c.getAttribute('data-emo') || '') + ' ' + (c.textContent || '')) : '';
   });
   is(!/🎯/.test(PN), '아직 <b>못 읽었으면 토막이 아예 없다</b> (1번) — 「0분」 이 아니다');
 

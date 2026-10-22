@@ -43465,12 +43465,21 @@ function orgRow(m){
   if(ORGS.mid!==false)o.member_id=m.member_id||null;
   return o;
 }
+/* ── 「같은 글이면 안 건드린다」 를 아는 곳 ──
+   2026-10-22 · 판 X155 — 여태 화면에 들어 있는 글(el.innerHTML)과 새로 지은 글을
+   글자로 견줬습니다. 그런데 이모지를 선 그림으로 갈아 주는 자(icoLead)가
+   DOM 안의 이모지를 <span class="ico-l"> 로 바꿔 두므로, 화면의 글은 새로 지은
+   글과 <b>언제나 다릅니다.</b> 그래서 부를 때마다 칸을 통째로 갈아끼워,
+   일찍 고쳐 둔 조직도 깜빡임이 다시 살아났습니다.
+   ★ 화면을 되읽지 않고, <b>마지막으로 넣은 글</b>을 들고 있다가 그것과
+     견줍니다. 들고 있는 자리는 <b>한 곳</b>입니다 (5번).                 */
+var ORG_PUT={chart:null,bar:null};
 function orgSyncPaint(){
   var el=document.getElementById('orgSyncBar');
   if(!el)return;
   var h=orgSyncBarHtml();
-  if(el.outerHTML===h)return;   /* 같은 글이면 안 바꾼다 — 이것도 깜빡임이었다 */
-  el.outerHTML=h;
+  if(ORG_PUT.bar===h)return;   /* 같은 글이면 안 바꾼다 — 이것도 깜빡임이었다 */
+  el.outerHTML=h;ORG_PUT.bar=h;
 }
 function orgPull(force){
   var sb=osClient();
@@ -50969,21 +50978,25 @@ function orgPaintChart(){
   var el=document.getElementById('orgChartBox');
   if(!el)return;
   var h=orgChartInner();
-  if(el.innerHTML===h)return;   /* 안 바뀌었으면 안 건드린다 */
-  el.innerHTML=h;
+  if(ORG_PUT.chart===h)return;   /* 안 바뀌었으면 안 건드린다 (ORG_PUT · 판 X155) */
+  el.innerHTML=h;ORG_PUT.chart=h;
   var c=document.getElementById('orgCount');
   if(c)c.textContent='구성원 '+orgLoad().length+'명';
 }
 function renderOrg(){
   var list=orgLoad();
+  /* 처음 그릴 때 넣은 글도 ORG_PUT 에 적어 둔다 — 안 적으면 열고 나서
+     맨 처음 orgPaintChart 가 한 번 헛되게 칸을 갈아끼웁니다. */
+  var bar=orgSyncBarHtml(),inner=orgChartInner();
+  ORG_PUT.bar=bar;ORG_PUT.chart=inner;
   var body=''
-    + orgSyncBarHtml()
+    + bar
     + orgFromBoxHtml()
     + orgApplyBoxHtml()
     + orgForm(list)
     + '<div class="card" style="margin-top:12px"><div class="card-hd">조직도 · <span id="orgCount">구성원 '+list.length+'명</span> '
       + '<span style="float:right"><button class="btn btn-ghost" style="padding:4px 10px;font-size:var(--t6)" onclick="orgReset()">초기화</button></span></div>'
-      + '<div class="card-body"><div id="orgChartBox">'+orgChartInner()+'</div></div></div>';
+      + '<div class="card-body"><div id="orgChartBox">'+inner+'</div></div></div>';
   return osPage('조직','조직도','본부·지점·팀 구성원을 계층으로 한눈에. 연락처·인스타그램·사진 포함. 로그인하면 서버에 저장되어 어느 컴퓨터에서나 같은 조직도를 봅니다.',body);
 }
 
