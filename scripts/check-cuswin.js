@@ -229,6 +229,18 @@ const SEED = () => {
   is(R8.b.indexOf('고객 창 전체 보기') < 0, '  배정 줄만 있는 분에게는 안 선다 — 열 고객 창이 없습니다');
   is(/P\.cusGo\(\{cli:d\.client_id/.test(body(CRM, 'function cusOpen(')), '  CRM 카드 — 이어진 분은 앱의 cusGo 로');
 
+  console.log('\n[8-1] 내려가도 <b>이름 줄이 앱 머리띠 뒤로 안 숨는다</b>');
+  /* 찍어 보고 알았습니다 — 머리를 top:0 에 붙였더니 내려갈 때 이름 줄이 topnav(폰 86px)
+     뒤로 숨고 탭 띠만 보였습니다. 머리는 topnav 바로 밑에 붙어야 합니다 (cusHeadFit). */
+  await p.evaluate(() => { go('home'); cusGo({ cli: 'c1' }); });
+  await p.waitForTimeout(800);
+  await p.evaluate(() => { cusTab('info'); window.scrollTo(0, 900); }); await p.waitForTimeout(400);
+  const R81 = await p.evaluate(() => {
+    const n = document.getElementById('topnav'), b2 = document.getElementById('oscTopBar');
+    return { nb: n ? Math.round(n.getBoundingClientRect().bottom) : -1, bt: b2 ? Math.round(b2.getBoundingClientRect().top) : -1, y: Math.round(window.scrollY) };
+  });
+  is(R81.y > 0 && R81.bt >= R81.nb - 1, '  내린 뒤(' + R81.y + 'px) 이름 줄 위 ' + R81.bt + 'px ≥ 머리띠 아래 ' + R81.nb + 'px');
+
   console.log('\n[9] 인쇄에는 다 나온다 · 조용히 터진 곳이 없다');
   const css = await p.evaluate(() => (document.getElementById('cusWinCss') || {}).textContent || '');
   is(/@media print\{#cusWin \[data-cus-tab\]\{display:block!important\}/.test(css), '  인쇄에는 탭과 상관없이 다 나온다');

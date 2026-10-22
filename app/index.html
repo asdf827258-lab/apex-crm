@@ -72064,6 +72064,7 @@ function osClientsAfterRender(){
   if(OSC.view==='list'){osLoadClients();return;}
   if(OSC.view==='detail'&&OSC.current){
     if(typeof cusCss==='function')cusCss();
+    if(typeof cusHeadFit==='function')cusHeadFit();   /* 머리를 topnav 밑에 (판 X161) */
     osBindDrop();osLoadDocs();osLoadAnalysis();osCliInfoLoad();osRepListLoad();cusCrmLoad();frLoad();
     try{oscPolLoad();}catch(e0){}
     if(!CM.loaded)cmLoadAll(function(){if(OSC.current)cmDetailPaint(OSC.current.id);});
@@ -72480,6 +72481,21 @@ function cusTabsHtml(){
 function cusTabsPaint(){
   var e=document.getElementById('cusTabs');
   if(e)e.outerHTML=cusTabsHtml();
+  cusHeadFit();
+}
+/* 📌 머리를 <b>앱 맨 위 띠(topnav) 바로 밑</b>에 붙입니다 (판 X161).
+   topnav 도 위에 붙어 다니는데(폰 86px), 머리를 top:0 에 붙이면 내려갈 때
+   <b>이름 줄이 그 뒤로 숨고</b> 탭 띠만 보였습니다 — 찍어 보고 알았습니다.
+   띠 높이는 화면 폭마다 달라 <b>재서</b> 붙입니다. 모르면 0 그대로입니다. */
+var CUS_FIT_ON=false;
+function cusHeadFit(){
+  var h=document.querySelector('#cusWin .cus-head'),n=document.getElementById('topnav'),t=0;
+  if(!h)return;
+  try{
+    if(n&&getComputedStyle(n).position!=='static'&&n.offsetParent!==null)t=n.offsetHeight||0;
+  }catch(e){ t=0; }
+  h.style.top=t+'px';
+  if(!CUS_FIT_ON){ CUS_FIT_ON=true; try{ window.addEventListener('resize',cusHeadFit); }catch(e2){} }
 }
 function cusTab(k){
   if(!cusTabOk(k))return;
@@ -72501,7 +72517,7 @@ function cusWinCss(){
   }
   st.textContent=r+
    '.cus-head{position:sticky;top:0;z-index:40;background:var(--bg-0,#fff);margin:0 0 14px}'+
-   '.cus-head .osc-top{position:static;margin:0;border-bottom:0}'+
+   '.cus-head .osc-top{position:static;margin:0;border-bottom:0;padding-left:14px;padding-right:14px}'+
    '.cus-tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin:0;'+
      'border-bottom:1px solid var(--t-line);background:var(--bg-0,#fff)}'+
    '.cus-tabs::-webkit-scrollbar{display:none}'+
