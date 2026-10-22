@@ -41,10 +41,13 @@ let bad = 0;
 const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
 
 /* ★ <b>바닥</b> — 이 자가 제 씨로 잰 수입니다. 늘면 빨간불, 줄이면 같이 내립니다 (0-1번) */
-/* ⚠ 수는 <b>이 자가 제 씨로 잰 것</b>입니다 — 어림으로 적었다가 한 번
-   어긋났습니다(700 이라 적었는데 723 이었습니다). 바닥은 짐작이 아니라
-   <b>지금 잰 수</b>입니다 (0-1번·8번). 손대기 전은 920px 였습니다.   */
-const BASE = { 접힌높이: 723, 제목px: 15, 작은글줄: 0, 본문px: 14 };
+/* ⚠⚠ <b>px 로 못 박지 않습니다.</b> 처음에 「접힌 채 723px 이하」 로 적었더니
+   제 기계에서는 초록인데 <b>CI 에서만 빨간불</b>이었습니다 — 글꼴이 다르면
+   제목이 접히는 자리가 달라져 칸 높이가 달라집니다. 기계를 타는 자는
+   <b>헛것을 잡는 자</b>이고, 그것은 안 잡는 자보다 나쁩니다 (8번).
+   그래서 <b>같은 브라우저 안에서 한 줄짜리와 견줍니다</b> — 두 칸이 한 줄보다
+   또렷이 짧으면 됩니다. 어느 기계에서도 같은 답이 나옵니다.           */
+const BASE = { 짧아짐: 0.85, 제목px: 15, 작은글줄: 0, 본문px: 14 };
 
 const SEED = `
  document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x=>x.remove());
@@ -93,7 +96,12 @@ const SEED = `
       격자: getComputedStyle(g).display,
       열수: (getComputedStyle(g).gridTemplateColumns || '').split(/\s+/).filter(Boolean).length,
       칸수: 칸.length,
+      /* 한 줄짜리로 바꿔 재고 <b>되돌려</b> 둡니다 — 화면을 더럽히지 않습니다 */
       높이: Math.round(g.getBoundingClientRect().height),
+      한줄높이: (function(){ var k=g.style.gridTemplateColumns;
+        g.style.gridTemplateColumns='1fr';
+        var h=Math.round(g.getBoundingClientRect().height);
+        g.style.gridTemplateColumns=k; return h; })(),
       작은칸: 칸.filter(x => x.getBoundingClientRect().height < 44).length,
       제목px: t0 ? Math.round(parseFloat(getComputedStyle(t0).fontSize)) : 0,
       토막수: (typeof manSecs === 'function') ? manSecs().length : 0
@@ -106,8 +114,9 @@ const SEED = `
      '  칸 수가 <b>토막 수와 같다</b> — 칸 ' + G.칸수 + ' · 토막 ' + G.토막수 + ' (목록의 임자는 manSecs 하나 · 5번)');
   is(G.제목px >= BASE.제목px, '  ★ 제목이 <b>' + G.제목px + 'px</b> 이다 — 바닥 ' + BASE.제목px);
   is(G.작은칸 === 0, '  ★ 칸이 <b>44px 이상</b>이다 — 작은 칸 ' + G.작은칸 + '개');
-  is(G.높이 <= BASE.접힌높이,
-     '  ★ 접힌 채의 길이 <b>' + G.높이 + 'px</b> — 바닥 ' + BASE.접힌높이 + 'px (손대기 전 920px 였습니다)');
+  is(G.한줄높이 > 0 && G.높이 <= G.한줄높이 * BASE.짧아짐,
+     '  ★★ 두 칸이 한 줄짜리보다 <b>또렷이 짧다</b> — ' + G.높이 + 'px / 한 줄 ' + G.한줄높이 +
+     'px (' + Math.round(100 * G.높이 / Math.max(1, G.한줄높이)) + '% · 선 ' + Math.round(100 * BASE.짧아짐) + '% 이하)');
 
   console.log('\n[2] 🔛 <b>누르면 그 자리에서 한 줄 통째로</b> 펴진다');
   const O = await p.evaluate(async () => {
@@ -193,5 +202,6 @@ const SEED = `
   console.log('\n──────────────────────────────');
   await b.close(); srv.close();
   if (bad) { console.log('✗ 사용가이드 칸 — 고칠 자리 ' + bad + '곳'); process.exit(1); }
-  console.log('✓ 사용가이드의 주제 ' + G.칸수 + '개가 두 칸씩 격자로 섭니다 — 접힌 채 ' + G.높이 + 'px.');
+  console.log('✓ 사용가이드의 주제 ' + G.칸수 + '개가 두 칸씩 격자로 섭니다 — 접힌 채 ' + G.높이 +
+              'px (한 줄짜리라면 ' + G.한줄높이 + 'px).');
 })();
