@@ -1,0 +1,207 @@
+/* ══════════════════════════════════════════════════════════════════
+   check-mancard.js — 📘 <b>사용가이드의 주제가 칸으로 서나</b> (판 X159)
+
+   사장님 말씀 (2026-10-22) — 「핸드폰으로 보니 한눈에 안들어와 … <b>토스
+   어플처럼 칸을 활용</b>해보자」. 홈을 고친 뒤(판 X158) 남은 자리입니다.
+
+   ── 재어 본 것 (폰 390×844 · 사용가이드) ──────────────────────────
+     손대기 전 : <b>5,107px · 6.1화면</b> · 주제 줄 스물이 <b>13.5px 글씨의
+                 똑같은 회색 줄</b>로 920px 이어졌습니다. 어디에 무엇이 있는지
+                 줄을 하나씩 <b>읽어야</b> 알았습니다. 게다가 화면 머리글에
+                 주제 열둘이 <b>손으로 베껴</b> 적혀 있어, 토막을 하나 더
+                 만들면 그 줄만 조용히 낡았습니다 (5번).
+     고친 뒤   : 접힌 주제가 <b>두 칸씩 격자</b>로 서고 제목이 <b>15px</b>,
+                 편 것은 <b>한 줄을 통째로</b> 씁니다. 머리글의 베낀 나열은
+                 걷었습니다 — 목록의 임자는 manSecs() 하나입니다.
+
+   ── 이 자가 걱정하는 것 ────────────────────────────────────────────
+   ⓐ <b>다시 줄로 풀리는 것.</b> 격자가 아니면 옛 화면입니다.
+   ⓑ <b>글이 사라지는 것.</b> 제목의 꼬리말(「 — …」)은 접힌 칸에서 <b>숨긴</b>
+      것이지 버린 것이 아닙니다 — 글에는 그대로 있어야 합니다 (6번).
+   ⓒ <b>단추가 바뀌는 것.</b> check-guide · check-guidemap 이 이 칸을
+      <b>onclick=manToggle</b> 로 찾습니다. 바뀌면 그 둘이 눈을 잃습니다.
+   ⓓ <b>손가락보다 작아지는 것</b> — 44px.
+   ⓔ <b>나열이 되살아나는 것.</b> 화면 머리글에 주제 이름을 다시 적으면
+      목록이 두 벌이 됩니다 (5번).
+   ⓕ <b>길어지는 것.</b> 접힌 채의 길이에 바닥을 둡니다.
+   ══════════════════════════════════════════════════════════════════ */
+const { chromium } = require('playwright');
+const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
+const ROOT = process.cwd(), PORT = 8909;
+const MIME = { '.html':'text/html; charset=utf-8', '.js':'application/javascript',
+               '.css':'text/css', '.json':'application/json' };
+const srv = http.createServer((rq, rs) => {
+  const p = decodeURIComponent(url.parse(rq.url).pathname.split('?')[0]);
+  const f = path.join(ROOT, p);
+  if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { rs.writeHead(404); rs.end('no'); return; }
+  rs.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream' });
+  fs.createReadStream(f).pipe(rs);
+});
+let bad = 0;
+const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
+
+/* ★ <b>바닥</b> — 이 자가 제 씨로 잰 수입니다. 늘면 빨간불, 줄이면 같이 내립니다 (0-1번) */
+/* ⚠⚠ <b>px 로 못 박지 않습니다.</b> 처음에 「접힌 채 723px 이하」 로 적었더니
+   제 기계에서는 초록인데 <b>CI 에서만 빨간불</b>이었습니다 — 글꼴이 다르면
+   제목이 접히는 자리가 달라져 칸 높이가 달라집니다. 기계를 타는 자는
+   <b>헛것을 잡는 자</b>이고, 그것은 안 잡는 자보다 나쁩니다 (8번).
+   그래서 <b>같은 브라우저 안에서 한 줄짜리와 견줍니다</b> — 두 칸이 한 줄보다
+   또렷이 짧으면 됩니다. 어느 기계에서도 같은 답이 나옵니다.           */
+const BASE = { 짧아짐: 0.85, 제목px: 15, 작은글줄: 0, 본문px: 14 };
+
+const SEED = `
+ document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x=>x.remove());
+ ['osLoadProfile','osProfileApply','osShowLoginGate','arLoad','osLoadClients',
+  'osCliInfoLoad','osRepListLoad','chkLoad'].forEach(function(k){window[k]=function(){};});
+ window.toast=function(m){};
+ window.setupDone=function(){return true;};window.setupShow=function(){return false;};
+ window.osTabAllowed=function(){return true;};window.cmLoadAll=function(cb){if(cb)cb();};
+ OS.session={user:{id:'me'}};
+ OS.profile={id:'me',user_id:'me',name:'홍길동',role:'owner',user_role:'owner',team:'A',active:true,plan:'pro'};
+ window.osClient=function(){var mk=function(){var a={};
+   ['select','order','limit','in','is','eq','neq','not','gte','lte','update','insert','upsert','delete','single','range','or','filter']
+     .forEach(function(k){a[k]=function(){return a;};});
+   a.then=function(f){return Promise.resolve({data:[],error:null}).then(f);};return a;};
+   return {from:function(){return mk();},rpc:function(){return Promise.resolve({data:null,error:null});}};};
+ CM.loaded=true;CM.who={me:'홍길동'};CM.picked=true;
+ AR.loaded=true;AR.cliRows=[];AR.calls=[];AR.rep={};AR.db=[];
+ OSC.loaded=true;OSC.list=[];CHKS.busy=false;CHKS.rows=[];CHKS.by={};CHKS.fin={};
+ HWHO.id='';go('home');`;
+
+(async () => {
+  await new Promise(r => srv.listen(PORT, r));
+  const b = await chromium.launch();
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+  await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
+  const p = await ctx.newPage();
+  const errs = []; p.on('pageerror', e => errs.push(String(e).slice(0, 140)));
+  await p.goto('http://127.0.0.1:' + PORT + '/app/index.html');
+  await p.waitForTimeout(2600);
+  await p.evaluate(SEED); await p.waitForTimeout(1600);
+  await p.evaluate(() => go('manual')); await p.waitForTimeout(1600);
+
+  console.log('[1] 🧱 <b>주제가 칸 격자</b>로 선다 — 접힌 채로');
+  const G = await p.evaluate(async () => {
+    /* 다 접은 채로 잽니다 — 하나가 펴져 있으면 길이가 그 토막만큼 늘어나
+       「접힌 채의 길이」 를 못 잽니다 (8번). */
+    MAN.open = '';
+    const host = document.getElementById('manBody');
+    if (host) host.innerHTML = manBody();
+    await new Promise(r => setTimeout(r, 400));
+    const g = document.querySelector('.man-secs');
+    if (!g) return { 없음: true };
+    const 칸 = [].slice.call(g.children);
+    const t0 = 칸.length ? 칸[0].querySelector('.t') : null;
+    return {
+      격자: getComputedStyle(g).display,
+      열수: (getComputedStyle(g).gridTemplateColumns || '').split(/\s+/).filter(Boolean).length,
+      칸수: 칸.length,
+      /* 한 줄짜리로 바꿔 재고 <b>되돌려</b> 둡니다 — 화면을 더럽히지 않습니다 */
+      높이: Math.round(g.getBoundingClientRect().height),
+      한줄높이: (function(){ var k=g.style.gridTemplateColumns;
+        g.style.gridTemplateColumns='1fr';
+        var h=Math.round(g.getBoundingClientRect().height);
+        g.style.gridTemplateColumns=k; return h; })(),
+      작은칸: 칸.filter(x => x.getBoundingClientRect().height < 44).length,
+      제목px: t0 ? Math.round(parseFloat(getComputedStyle(t0).fontSize)) : 0,
+      토막수: (typeof manSecs === 'function') ? manSecs().length : 0
+    };
+  });
+  is(!G.없음, '주제 칸 묶음(.man-secs)이 선다');
+  is(G.격자 === 'grid', '  ★★ 줄이 아니라 <b>격자</b>다 — display 「' + G.격자 + '」');
+  is(G.열수 === 2, '  ★ 폰에서 <b>두 칸씩</b> 선다 — ' + G.열수 + '열');
+  is(G.칸수 > 0 && G.칸수 === G.토막수,
+     '  칸 수가 <b>토막 수와 같다</b> — 칸 ' + G.칸수 + ' · 토막 ' + G.토막수 + ' (목록의 임자는 manSecs 하나 · 5번)');
+  is(G.제목px >= BASE.제목px, '  ★ 제목이 <b>' + G.제목px + 'px</b> 이다 — 바닥 ' + BASE.제목px);
+  is(G.작은칸 === 0, '  ★ 칸이 <b>44px 이상</b>이다 — 작은 칸 ' + G.작은칸 + '개');
+  is(G.한줄높이 > 0 && G.높이 <= G.한줄높이 * BASE.짧아짐,
+     '  ★★ 두 칸이 한 줄짜리보다 <b>또렷이 짧다</b> — ' + G.높이 + 'px / 한 줄 ' + G.한줄높이 +
+     'px (' + Math.round(100 * G.높이 / Math.max(1, G.한줄높이)) + '% · 선 ' + Math.round(100 * BASE.짧아짐) + '% 이하)');
+
+  console.log('\n[2] 🔛 <b>누르면 그 자리에서 한 줄 통째로</b> 펴진다');
+  const O = await p.evaluate(async () => {
+    manToggle('map');
+    await new Promise(r => setTimeout(r, 500));
+    const el = document.querySelector('.man-sec.on');
+    const b = document.getElementById('manBody');
+    return {
+      편칸: !!el,
+      통째: el ? getComputedStyle(el).gridColumn : '',
+      속: el ? (el.innerText || '').replace(/\s+/g, ' ') : '',
+      꼬리: b ? (b.textContent || '').replace(/\s+/g, ' ').indexOf('메뉴 지도 — 어디에 있고') >= 0 : false,
+      단추: b ? b.querySelectorAll('button[onclick^="manToggle"]').length : 0
+    };
+  });
+  is(O.편칸, '  편 칸이 선다 (.man-sec.on)');
+  is(/1 \/ -1|1 \/ 3/.test(O.통째), '  ★★ 편 칸은 <b>한 줄을 통째로</b> 쓴다 — grid-column 「' + O.통째 + '」');
+  is(/메뉴는 두 자리에 있습니다|맨 위 띠/.test(O.속), '  그 속이 정말 열린다 — 「' + O.속.slice(0, 26) + '…」');
+  is(O.꼬리, '  ★★ 제목의 <b>꼬리말이 글에 그대로</b> 있다 — 접힌 칸에서 숨긴 것이지 버린 것이 아닙니다 (6번)');
+  is(O.단추 > 0, '  ★ 칸의 단추가 <b>onclick=manToggle</b> 이다 — check-guide · check-guidemap 이 이것으로 찾습니다 (' + O.단추 + '개)');
+
+  console.log('\n[3] 📖 <b>토막 속도 칸</b>이다 — 꼭지 하나가 칸 하나 (판 X160)');
+  /* 사장님 말씀 (2026-10-22) — 「사용가이드도 칸으로 바꿔줘」.
+     ⚠ 재어 보니 속이 <b>글줄 46개 전부 13px</b> 이고 뼈대는 점 찍힌 목록
+       이었습니다(21개 토막에 li 115개). 긴 문장이 점 하나에 매달려 줄줄이
+       흘러, 어디까지가 한 꼭지인지 눈으로 안 갈렸습니다.
+     ★ 글자 크기는 줄 안에 <b>style="font-size:var(--t6)"</b> 로 박혀 있어
+       바깥 옷이 못 이깁니다 — 그래서 #manBody 안에서 <b>눈금 자체</b>를 한 단
+       올렸습니다. 여기서는 <b>그 결과</b>를 잽니다 (무엇으로 했는지가 아니라). */
+  const B = await p.evaluate(async () => {
+    MAN.open = 'flow';
+    const host = document.getElementById('manBody');
+    if (host) host.innerHTML = manBody();
+    await new Promise(r => setTimeout(r, 400));
+    const body = document.getElementById('manBody');
+    const 줄 = [];
+    body.querySelectorAll('*').forEach(e => {
+      const own = [].slice.call(e.childNodes)
+        .filter(n => n.nodeType === 3 && (n.nodeValue || '').trim())
+        .map(n => n.nodeValue.trim()).join(' ');
+      if (!own) return;
+      const c = getComputedStyle(e);
+      if (c.display === 'none') return;
+      줄.push({ px: Math.round(parseFloat(c.fontSize)), 글: own.replace(/\s+/g, ' ') });
+    });
+    const li = [].slice.call(body.querySelectorAll('li'));
+    const s0 = li.length ? getComputedStyle(li[0]) : null;
+    return {
+      줄수: 줄.length,
+      작은: 줄.filter(x => x.px <= 13).length,
+      밑: 줄.filter(x => x.px < 13).length,
+      본문: 줄.filter(x => x.px === 14).length,
+      li수: li.length,
+      점: s0 ? s0.listStyleType : '?',
+      바탕: s0 ? (s0.backgroundColor !== 'rgba(0, 0, 0, 0)' && s0.backgroundColor !== 'transparent') : false,
+      둥글기: s0 ? Math.round(parseFloat(s0.borderTopLeftRadius) || 0) : 0
+    };
+  });
+  console.log('      글줄 ' + B.줄수 + '개 · 14px ' + B.본문 + '개 · 13px 이하 ' + B.작은 + '개 · 꼭지 칸 ' + B.li수 + '개');
+  is(B.밑 === 0, '  ★★ 가이드에 <b>13px 밑 글씨가 없다</b> — ' + B.밑 + '곳');
+  is(B.작은 <= BASE.작은글줄,
+     '  ★★ <b>13px 에 남은 글줄</b> ' + B.작은 + '개 — 바닥 ' + BASE.작은글줄 +
+     ' (손대기 전 132개였습니다 · 앉아서 읽는 글이라 14px 로 올렸습니다)');
+  is(B.본문 > 50, '  ★ 읽는 글이 <b>' + BASE.본문px + 'px</b> 로 선다 — ' + B.본문 + '줄');
+  is(B.li수 > 0 && B.점 === 'none',
+     '  ★★ 꼭지가 <b>점이 아니라 칸</b>이다 — list-style 「' + B.점 + '」 · 꼭지 ' + B.li수 + '개');
+  is(B.바탕 && B.둥글기 > 0,
+     '  ★ 그 칸이 <b>바탕과 둥글기</b>를 갖는다 — 둥글기 ' + B.둥글기 + 'px');
+
+  console.log('\n[4] 📝 <b>나열이 되살아나지 않았다</b> (5번)');
+  const SRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  const i = SRC.indexOf('function renderManual(');
+  const blk = i < 0 ? '' : SRC.slice(i, i + 900).replace(/\/\*[\s\S]*?\*\//g, '');
+  /* 토막 제목의 앞머리가 화면 머리글에 <b>손으로</b> 적혀 있으면 두 벌입니다 */
+  const 겹침 = await p.evaluate((b) => {
+    const names = manSecs().map(s => String(s.title).split(' — ')[0].split(' (')[0]);
+    return names.filter(n => n.length >= 4 && b.indexOf(n) >= 0);
+  }, blk);
+  is(겹침.length === 0,
+     '  화면 머리글에 <b>토막 이름을 베껴 적지 않았다</b>' + (겹침.length ? (' ← ' + 겹침.slice(0, 5).join(' · ')) : ''));
+  is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' ← ' + errs[0] : ''));
+
+  console.log('\n──────────────────────────────');
+  await b.close(); srv.close();
+  if (bad) { console.log('✗ 사용가이드 칸 — 고칠 자리 ' + bad + '곳'); process.exit(1); }
+  console.log('✓ 사용가이드의 주제 ' + G.칸수 + '개가 두 칸씩 격자로 섭니다 — 접힌 채 ' + G.높이 +
+              'px (한 줄짜리라면 ' + G.한줄높이 + 'px).');
+})();
