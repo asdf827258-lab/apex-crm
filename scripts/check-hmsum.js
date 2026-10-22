@@ -139,6 +139,7 @@ const 서랍 = async (p) => await p.evaluate(async () => {
   return { out,
     두칸있나: !!sb.querySelector('.hm-two, .nav-two'),
     지도단추: sb.querySelectorAll('.sb-guide.map').length,
+    지도이름: (typeof navTitle === 'function') ? navTitle('apexmap') : '',
     지도길: [...sb.querySelectorAll('[onclick]')].filter(e => /apexmap/.test(e.getAttribute('onclick') || '')).length };
 });
 
@@ -257,7 +258,10 @@ const 서랍 = async (p) => await p.evaluate(async () => {
   console.log('\n[8] 🗂️ <b>서랍은 원래대로</b> 돌아왔다 (판 X80 되돌림 · ⓕ)');
   const SB = await 서랍(A.p);
   is(!SB.X && SB.두칸있나 === false, '  서랍에는 두 칸이 <b>없다</b>');
-  is(SB.지도단추 === 1, '  🗺️ <b>APEX 전체 지도 단추가 하나</b> 돌아왔다 — 지금 ' + SB.지도단추 + '개');
+  /* ⚠ 2026-10-22 (판 X161) — 이 칸의 이름이 「APEX 자비스 모드」 로 바뀌었습니다.
+     <b>이름을 여기 박아 두지 않습니다</b> — 세는 것은 <b>칸의 수</b>이고, 이름은
+     앱(navTitle)에 물어 글로만 적습니다 (5번·8번).                      */
+  is(SB.지도단추 === 1, '  🤖 <b>' + (SB.지도이름 || '자비스 모드') + ' 단추가 하나</b> 돌아왔다 — 지금 ' + SB.지도단추 + '개');
   is(SB.지도길 === 1, '  서랍에서 지도로 가는 자리가 <b>하나</b>다 — 지금 ' + SB.지도길 + '곳');
 
   console.log('\n[9] 🧭 <b>왼쪽·오른쪽이 제 곳으로</b> 간다');
