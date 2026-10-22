@@ -19,6 +19,9 @@
          분배 나이대마다 필요한 보험의 분배전략」) — 재무설계의 집 · 보험의 두 역할 · 「가족은 몇 달」 ·
          「아프면 연금을 깨요」 가 <b>칸 값으로 따로 셈한 달 수</b>와 맞나 · 전략 장이 고객 나이대를 켜고
          「APEX 상담 원칙 · 정답이 아님」 을 밝히나 · 결과지 「보장 전략」 장이 같은 달 수를 말하나
+     자. 판 X166 (사장님 말씀 「평균 값으로 구하고 소득에 따라 구하고 가족에 따라 구해서 기준값을 만들어」) —
+         기준값 = 평균 · 소득 · 가족의 가운데 값 · 무게 = 두 기준값의 크기 · 자가 칸 값으로 따로 셈한 수와 맞나 ·
+         평균은 출처(기관·언론사·날짜)를 밝히나 · 못 찾은 평균은 비우나 · 막내 나이를 모르면 가족 셈을 비우나
 
    되돌려 보기 —
      · .wk-ov 의 z-index 를 9998 로 → 가 가 웁니다
@@ -122,7 +125,7 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
 
   head('아. 보험의 자리 — 배치 · 두 역할 · 몇 달 · 나이대 분배 (판 X165)');
   const T = texts.join('\n');
-  ['재무설계는 집이에요', '보험은 두 가지를 지켜요', '가족은 몇 달을 버틸까요', '연금을 깨게 돼요', '보험의 무게는'].forEach((k) => is(nos(T).includes(nos(k)), '「' + k + '」 장이 선다'));
+  ['재무설계는 집이에요', '보험은 두 가지를 지켜요', '가족은 몇 달을 버틸까요', '연금을 깨게 돼요', '기준값으로 나눠요'].forEach((k) => is(nos(T).includes(nos(k)), '「' + k + '」 장이 선다'));
   is(S.indexOf('전략') > S.lastIndexOf('위기') && S.indexOf('전략') < S.indexOf('점검'), '전략 장은 위기 다음 · 점검 앞');
   /* 자는 앱의 셈을 빌리지 않고 칸 값으로 따로 셉니다 — 같은 셈을 빌리면 틀려도 같이 틀립니다 */
   await pg.evaluate(() => { const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); }; set('ins_life', '30000'); set('s_debt', '25000'); set('ins_cancer_dx', '3000'); });
@@ -140,15 +143,36 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
   is(nos(insTxt[1]).includes(want.me + '개월'), '진단비로 버티는 달 = 암 진단비 ÷ 생활비 = ' + want.me + '개월');
   is(/심사 결과에 따릅니다/.test(insTxt[1]), '내 연금 지키기 장에 「심사 결과에 따릅니다」 (2번)');
   await pg.evaluate(() => { WK.i = wkSlides().findIndex((x) => x.part === '전략'); wkPaint(); });
-  const st = await pg.evaluate(() => ({ on: (document.querySelector('#wkOv .wk-ages .on b') || {}).textContent, txt: document.querySelector('#wkOv .wk-body').innerText, band: ipBand(42).band }));
-  is(st.on === '40대' && st.band === '40대', '42세 → 40대 줄이 켜진다');
-  is(/APEX 상담 원칙/.test(st.txt) && /정답이 아니라/.test(st.txt), '분배 비율은 「APEX 상담 원칙 · 정답이 아니라 출발점」 이라 밝힌다(1번)');
-  is(await pg.evaluate(() => IP_AGE.every((x) => x.fam + x.me === 100) && IP_AGE.length === 5), '나이대 표 다섯 줄 — 가족 + 내 연금 = 100');
+  /* 판 X166 — 무게는 기준값에서. 자는 앱의 ipBase 를 빌리지 않고 칸 값 · IP_RULE · IP_AVG 로 따로 셉니다 */
+  await pg.evaluate(() => { const e = document.getElementById('inh_youngest'); e.value = '10'; e.dispatchEvent(new Event('input', { bubbles: true })); });
+  const exp = await pg.evaluate(() => {
+    const v = (id) => parseFloat(document.getElementById(id).value) || 0, R = IP_RULE;
+    const mid = (a) => { a = a.filter((x) => x != null).sort((x, y) => x - y); const m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+    const own = v('s_gross') + v('s_self') * 12;
+    const living = ['s_housing', 's_loan', 's_food', 's_telecom', 's_transport', 's_insurance', 's_medical', 's_edu', 's_support', 's_dining', 's_shopping', 's_travel', 's_choice_etc'].reduce((a, id) => a + v(id), 0);
+    const famL = living - v('s_loan');
+    const fam = mid([IP_AVG.fam ? IP_AVG.fam.v : null, own * R.famIncomeYears, v('s_debt') + famL * 12 * Math.max(0, R.indepAge - v('inh_youngest'))]);
+    const me = mid([IP_AVG.me ? IP_AVG.me.v : null, own * R.meIncomeYears, living * R.meMonths]);
+    const later = mid([IP_AVG.fam ? IP_AVG.fam.v : null, own * R.famIncomeYears, famL * 12 * R.spouseYears]);
+    return { fam, me, w: Math.round(fam / (fam + me) * 20) * 5, wLater: Math.round(later / (later + me) * 20) * 5 };
+  });
+  await pg.evaluate(() => { WK.i = wkSlides().findIndex((x) => x.part === '전략'); wkPaint(); });
+  const st = await pg.$eval('#wkOv .wk-body', (e) => e.innerText);
+  const M = (x) => pg.evaluate((x) => APEX_REPORT.man(x), x);
+  is(nos(st).includes(nos('기준값 (가운데) ' + (await M(exp.fam)) + ' ' + (await M(exp.me)))), '기준값 — 가족 ' + (await M(exp.fam)) + ' · 내 연금 ' + (await M(exp.me)) + ' (평균·소득·가족의 가운데 값)');
+  is(nos(st).includes('가족지키기' + exp.w + '%') && nos(st).includes(exp.wLater + ':' + (100 - exp.wLater)), '무게 ' + exp.w + ' : ' + (100 - exp.w) + ' → 대출 끝·자녀 독립 후 ' + exp.wLater + ' : ' + (100 - exp.wLater) + ' (기준값의 크기로)');
+  is(/생명보험협회/.test(st) && /아주경제 2022\.05\.15/.test(st) && /데이터솜 2022\.01\.19/.test(st), '평균은 출처(기관 · 언론사 · 날짜)를 밝힌다(9번)');
+  is(/출처 확인 전/.test(st) && /출처를 확인하지 못해 비웠어요/.test(st), '출처를 못 찾은 평균(진단·치료비)은 비우고 그렇다고 적는다(1번)');
+  is(/APEX 원칙\(가정\)/.test(st), '소득·가족 셈의 배수는 「APEX 원칙(가정)」 이라 적는다');
+  is(await pg.evaluate(() => IP_AGE.every((x) => x.fam == null && x.me == null) && IP_AGE.length === 5), '나이대 표에 근거 없는 비율이 남지 않았다');
+  await pg.evaluate(() => { const e = document.getElementById('inh_youngest'); e.value = ''; e.dispatchEvent(new Event('input', { bubbles: true })); WK.i = wkSlides().findIndex((x) => x.part === '전략'); wkPaint(); });
+  is(/막내 나이 필요/.test(await pg.$eval('#wkOv .wk-body', (e) => e.innerText)), '자녀가 있는데 막내 나이를 모르면 가족 셈을 비우고 「막내 나이 필요」');
+  await pg.evaluate(() => { const e = document.getElementById('inh_youngest'); e.value = '10'; e.dispatchEvent(new Event('input', { bubbles: true })); });
   const [popI] = await Promise.all([ctx.waitForEvent('page'), pg.evaluate(() => wkReport('open'))]);
   await popI.waitForLoadState();
   const ri = strip(await popI.content());
   is(/보장 전략/.test(ri) && nos(ri).includes('내가없으면가족이버티는기간' + want.fam + '개월'), '결과지 「보장 전략」 장 — 같은 ' + want.fam + '개월');
-  is(/APEX 상담 원칙/.test(ri), '결과지에도 「APEX 상담 원칙」');
+  is(/기준값/.test(ri) && /APEX 원칙\(가정\)/.test(ri) && /아주경제 2022\.05\.15/.test(ri), '결과지에도 기준값 표 · 출처 · 「APEX 원칙(가정)」');
   await popI.close();
 
   head('마. 위기감은 고객 숫자로만 (1번)');
