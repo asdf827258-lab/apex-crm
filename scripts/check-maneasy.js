@@ -94,26 +94,33 @@ const STG = fs.readFileSync(path.join(ROOT, 'apex-stage.js'), 'utf8');
   const s2 = await pg.evaluate(() => {
     const b = document.getElementById('manBody'), e = document.getElementById('manEasy');
     return { has: !!e,
-             /* ⚠ 판 X155 — 앞머리 이모지가 선 그림이 되어 글에서 빠졌습니다.
-                약속(「처음이세요가 주제별 안내보다 먼저」)은 그대로입니다.
-                ★★ 처음에 「📚 주제별 안내」 → 「주제별 안내」 로만 풀었다가
-                  <b>헛 빨간불</b>을 켰습니다 — 그 낱말이 머리글보다 앞에
-                  <b>풀이글 속</b>에 한 번 더 있어서, 글자 자리로 재면 차례가
-                  뒤집혀 보입니다(주제별@144 · 처음@159). 이모지가 머리글을
-                  <b>가려 주고</b> 있었던 것입니다.
-                ★ 그래서 글자 자리가 아니라 <b>칸의 차례</b>로 잽니다 —
-                  머리글은 「주제별 안내」 로 <b>시작하는</b> 칸이고,
-                  그것이 #manEasy 보다 <b>뒤에</b> 와야 합니다 (8번). */
+             /* ⚠ 약속(「처음이세요가 주제별 안내보다 먼저」)은 그대로이고,
+                <b>머리글을 집는 법</b>만 두 번 고쳤습니다.
+                ★★ 판 X155 — 「📚 주제별 안내」 → 「주제별 안내」 로만 풀었다가
+                  <b>헛 빨간불</b>을 켰습니다. 그 낱말이 머리글보다 앞에
+                  <b>풀이글 속</b>(「… 그 아래 <b>주제별 안내</b>를 펼치십시오」)에
+                  한 번 더 있어, 글자 자리로 재면 차례가 뒤집혀 보입니다
+                  (주제별@144 · 처음@159). 이모지가 머리글을 <b>가려 주고</b>
+                  있었던 것입니다.
+                ★★ 판 X157 — 그때는 선 그림의 자국(data-emo)으로 가렸는데,
+                  사장님께서 「이모지 내용은 원래가 좋아」 하셔서 되돌리자
+                  그 자국이 사라져 <b>머리글을 못 찾게</b> 됐습니다.
+                  이제 <b>양쪽을 다 받습니다</b> — 날글 「📚 주제별 안내」 든,
+                  선 그림으로 갈린 뒤의 data-emo 든. 풀이글의 <b>주제별 안내</b>
+                  에는 📚 가 없으니 그대로 걸러집니다 (8번).
+                ★ 그리고 글자 자리가 아니라 <b>칸의 차례</b>로 잽니다 —
+                  머리글이 #manEasy 보다 <b>뒤에</b> 와야 합니다. */
              before: (function(){
                if(!b || !e) return false;
-               /* ★ <b>머리글만</b> 집습니다 — 같은 낱말이 바로 위 풀이글 속
-                  (「… 그 아래 <b>주제별 안내</b>를 펼치십시오」)에도 있습니다.
-                  머리글에는 앞머리 그림이 있었고, 그 자국이 <b>data-emo</b> 에
-                  남아 있습니다 (판 X155). 그것으로 가립니다.             */
-               var w = document.createTreeWalker(b, NodeFilter.SHOW_TEXT), nd, hd = null;
+               /* ★ <b>머리글만</b> 집습니다 — 머리글은 「📚」 를 달고 있고
+                  풀이글의 <b>주제별 안내</b> 는 안 달고 있습니다. 선 그림으로
+                  갈아입힌 판에서는 그 📚 가 <b>data-emo</b> 로 옮겨 가므로,
+                  <b>둘을 이어 붙여</b> 봅니다 — 켜도 꺼도 같은 답입니다.  */
+               var w = document.createTreeWalker(b, NodeFilter.SHOW_TEXT), nd, hd = null, lead;
                while((nd = w.nextNode())){
-                 if(!/^\s*주제별 안내/.test(nd.nodeValue || '')) continue;
-                 if(!nd.parentElement || !nd.parentElement.hasAttribute('data-emo')) continue;
+                 if(!nd.parentElement) continue;
+                 lead = (nd.parentElement.getAttribute('data-emo') || '') + (nd.nodeValue || '');
+                 if(!/^\s*📚\s*주제별 안내/.test(lead)) continue;
                  hd = nd.parentElement; break;
                }
                if(!hd) return false;
