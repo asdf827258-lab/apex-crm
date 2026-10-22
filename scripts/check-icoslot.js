@@ -95,7 +95,11 @@ const SEED = `
     const SL = (typeof ICO_SLOT === 'string') ? ICO_SLOT : '';
     for (const t of tabs) {
       try { go(t); } catch (e) { continue; }
-      await new Promise(r => setTimeout(r, 90));
+      /* ⚠ 지켜보는 자(icoWatch)는 <b>한 틀(rAF) 뒤</b>에 바꿉니다 — 90ms 만
+         기다리고 재면 늦게 그려진 화면에서 <b>헛 빨간불</b>이 뜹니다
+         (출발 점검에서 실제로 셋이 그랬습니다 · 8번). 틀 둘을 기다립니다. */
+      await new Promise(r => setTimeout(r, 140));
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       const L = [].slice.call(document.querySelectorAll(SL));
       L.forEach(e => {
         out.칸++;
@@ -129,7 +133,11 @@ const SEED = `
     catch (e) { tabs = ['home']; }
     for (const t of tabs) {
       try { go(t); } catch (e) { continue; }
-      await new Promise(r => setTimeout(r, 90));
+      /* ⚠ 지켜보는 자(icoWatch)는 <b>한 틀(rAF) 뒤</b>에 바꿉니다 — 90ms 만
+         기다리고 재면 늦게 그려진 화면에서 <b>헛 빨간불</b>이 뜹니다
+         (출발 점검에서 실제로 셋이 그랬습니다 · 8번). 틀 둘을 기다립니다. */
+      await new Promise(r => setTimeout(r, 140));
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       out.바뀜 += document.querySelectorAll('.tab-pane.on .ico-l').length;
       [].slice.call(document.querySelectorAll('.tab-pane.on *')).forEach(e => {
         if (e.hasAttribute('data-emo') || (e.closest && e.closest('[data-noico]'))) return;

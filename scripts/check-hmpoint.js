@@ -292,8 +292,11 @@ const SEED = () => {
       const b = e.getBoundingClientRect();
       /* 판 X152 — 앞머리 이모지가 선 그림이라 글에 안 들어옵니다.
          무엇이었는지는 data-emo 에 남으므로 그것까지 붙여 봅니다 (8번). */
+      /* ⚠ 빈칸을 <b>한 칸으로 모읍니다</b> — icoLead 는 이모지 뒤 빈칸을
+         남겨 두므로(줄 끊을 자리), 그냥 이으면 빈칸이 둘이 되어 「🤝 더」
+         로 찾는 자가 못 찾습니다. 판 X152 에서 그렇게 울었습니다. */
       return { t: ((e.getAttribute('data-emo') || '') + ' ' +
-                   e.textContent.replace(/\s+/g, ' ')).trim(),
+                   e.textContent).replace(/\s+/g, ' ').trim(),
                시작: Math.round(b.left - r.left),
                보임: (b.left >= r.left - 1 && b.right <= r.right + 1) };
     });
