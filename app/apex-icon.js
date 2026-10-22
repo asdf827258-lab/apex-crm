@@ -131,8 +131,23 @@ function icoSvg(name, size){
          '" fill="none" stroke="currentColor" stroke-width="1.8" ' +
          'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
 }
+/* ══ 선 그림으로 갈아입힐까, 이모지를 그대로 둘까 — 아는 곳 하나 ════════
+   2026-10-22 · 판 X157 · 사장님 말씀 「이모지 내용은 원래가 좋아 아이콘
+   그것은 원래대로 바꿔」.
+   판 X151·X155 에서 본체의 이모지 자리 2,582곳과 글 앞머리 642곳을 선
+   그림으로 갈아입혔는데, 사장님께서 <b>원래 이모지가 낫다</b>고 하셨습니다.
+   ★ 본체(#dynPane)에서는 <b>안 바꿉니다</b> — 이모지가 그대로 섭니다.
+   ★ <b>그림 한 벌(APEX_ICON)과 icoSvg 는 그대로 둡니다.</b> 보장 전·후
+     고객 화면(app/ba.html)이 <b>이름으로</b> 불러 쓰고 있고, 그쪽은 사장님
+     말씀대로 「지금 좋으니까」 그대로입니다. 함수를 지우지 않습니다
+     (사장님 규칙 · 6번). 지우면 고객 화면의 장 제목 그림이 사라집니다.
+   ★ 묻는 곳은 <b>이 한 줄</b>입니다 — 다시 켜시려면 true 로 바꾸면
+     그때의 모습으로 한 번에 돌아갑니다 (5번).                        */
+var ICO_SWAP = false;
+
 /* 이모지를 그림으로 — <b>못 바꾸면 그대로</b> 돌려줍니다 */
 function icoFromEmoji(e, size){
+  if (!ICO_SWAP) return '<span class="ico-emo">' + (e || '') + '</span>';
   var k = APEX_ICON_OF[String(e || '').replace(/️/g, '')] || APEX_ICON_OF[e];
   var svg = k ? icoSvg(k, size) : '';
   return svg || ('<span class="ico-emo">' + (e || '') + '</span>');
@@ -323,6 +338,7 @@ function icoLeadCss(){
 }
 var ICO_ON = false, ICO_RAF = 0;
 function icoWatch(){
+  if (!ICO_SWAP) return;   /* 판 X157 — 본체는 이모지 그대로 (사장님 말씀) */
   if (ICO_ON) return;
   /* ★★ <b>본체에서만</b> 돕니다 — #dynPane 이 있는 화면이 본체입니다.
      보장 전·후(ba.html) 같은 따로 선 쪽이 이 파일을 읽더라도(그 쪽은
