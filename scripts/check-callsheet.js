@@ -77,10 +77,11 @@ const WANT = [
 
     /* 고객 한 분 — 다리로 배정 DB 줄과 이어져 있습니다 */
     const cli = [{ id: 'c1', advisor_id: me, name_masked: '홍○○', consent_status: 'none' }];
-    CM.meta = { c1: { db: 'd1', next: { what: '만기 안내하고 다음 자리 잡기', due: '2026-09-01' } } };
+    CM.meta = { c1: { next: { what: '만기 안내하고 다음 자리 잡기', due: '2026-09-01' } } };
     OSC.list = cli; OSC.loaded = true;
     AR.cliRows = [{ id: 'c1', who: me, name: '', nm: '홍○○' }];
-    AR.db = [{ id: 'd1', who: me, name: '홍길동', region: '강남구', stage: 'AP', src: '배정', days: 3, appt: '' }];
+    /* 판 X161 — 다리는 dbs.client_id 하나입니다 (AR.db 줄에 실어 둡니다) */
+    AR.db = [{ id: 'd1', who: me, name: '홍길동', region: '강남구', stage: 'AP', src: '배정', days: 3, appt: '', client_id: 'c1' }];
     AR.calls = []; AR.loaded = true;
     /* hdbRow 가 이 줄을 찾아 줘야 단계를 압니다 */
     if (typeof HDB !== 'undefined') { HDB.rows = AR.db.slice(); }

@@ -108,7 +108,10 @@ const SEED = () => {
              created_at:new Date(Date.now()-60*864e5).toISOString().slice(0,10)}];
   CM.loaded=true; CM.meta={ c1: (function(){ var m=cmBlank(); m._rid='r1'; return m; })() };
   try{ osHideLoginGate(); }catch(e){}
+  /* 판 X161 — 고객 창이 탭으로 나뉘었습니다. 주민번호 칸은 <b>정보</b> 탭에 섭니다 —
+     사람이 그 탭을 여는 것과 똑같이 열고 잽니다 */
   osOpenClient('c1');
+  try{ cusTab('info'); }catch(e){}
 };
 
 /* 주석·APP_BUILD_NOTE 를 <b>먼저 지웁니다.</b> 무엇에 <b>대해 적은 글</b>은
@@ -360,8 +363,8 @@ const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, ' ')
 
   console.log('\n[9-2] ★ 상령일이 <b>곧</b>이면 말해 준다 · 금액은 지어내지 않는다');
   const G2 = await p.evaluate(async (soon) => {
-    /* 홈으로 돌아와 고객을 다시 연다 */
-    osOpenClient('c1');
+    /* 홈으로 돌아와 고객을 다시 연다 — 정보 탭으로 (판 X161) */
+    cusGo({cli:'c1',tab:'info'});
     await new Promise(r => setTimeout(r, 700));
     cmRrnSet('c1', soon); cmDetailPaint('c1');
     await new Promise(r => setTimeout(r, 400));
