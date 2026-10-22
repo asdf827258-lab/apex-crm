@@ -21,6 +21,7 @@
          · 「지금 그대로면 / 오늘 제안을 더하면」 두 줄 · 스스로 점검 질문 · 마지막 「가장 마음에 걸린 숫자」
          · ★★ 걱정은 고객 숫자로만 — 바깥 통계·「노후 파산」 같은 겁주는 말이 없나 (1번 · 지시문 「확인 안 된 통계 금지」)
          · 목표를 이미 채운 고객에게는 부족을 지어 말하지 않나 (1번)
+     타. 판 X163 — 나이대 문구 IP_AGE 한 곳 · 사슬 0 · 생활비 칸 목록 한 곳
      카. 판 X161 (사장님 말씀 2026-10-22 「점검 필요로 바꾸고, 2번은 만들어줘」) — 「불가」 → 「점검 필요」 ·
          「연금저축·IRP·달러·변액 쌓인 금액」 칸이 비면 모름(0 아님) · 탭과 결과지가 psAccPlan 한 곳에서 세나
      ※ 계산기에서 단추를 눌러 실제로 열어 보는 것은 check-reportweb.js 가 합니다(브라우저 갈래).
@@ -128,6 +129,11 @@ is((fin.match(/function psAccPlan\(/g) || []).length === 1 && (fin.match(/var ap
 is(/if\(raw===''\|\|!window\.APEX_REPORT\) return null;/.test(fin), '칸이 비면 null — 0 과 다르다(1번)');
 is(/APEX_REPORT\.calc\.RULE\.annuity\.annuityFactor/.test(fin) && !/psAccPlan[\s\S]{0,900}\b200\b/.test(fin.slice(fin.indexOf('function psAccPlan'), fin.indexOf('function psAccPlan') + 900)), '전환계수는 엔진 RULE 한 곳에서 — 200 을 따로 외우지 않는다');
 is(/'점검 필요'/.test(fin) && !/:'불가'/.test(fin), '계산기 결과지는 「불가」 대신 「점검 필요」');
+/* 판 X163 — 나이대 문구는 IP_AGE 한 곳 (예전엔 if 사슬 · 삼항 사슬로 두 벌) */
+is((fin.match(/var IP_AGE=\[/g) || []).length === 1 && (fin.match(/20대 · 시작기/g) || []).length === 1, '나이대 표가 IP_AGE 한 곳에만 있다(5번)');
+is(/var ageMsg=ipBand\(d\.age\)\.one;/.test(fin) && !/var ageMsg=d\.age<30\?/.test(fin), '상담 가이드 한 줄도 IP_AGE 를 읽는다 — 삼항 사슬 0');
+is(/var B=ipBand\(age\);/.test(fin) && !/if\(age<30\)\{\s*stage=/.test(fin), '「나이별 보험 필요성 피드백」 도 IP_AGE 를 읽는다 — if 사슬 0');
+is((fin.match(/var RPT_FIXED=/g) || []).length === 1 && /sum\(RPT_FIXED\)/.test(fin.slice(fin.indexOf('function ipPlan'), fin.indexOf('function ipPlan') + 900)), '생활비 칸 목록 한 곳 — 결과지와 보험의 자리가 함께 읽는다');
 is(/openAge:rage, rows:rows,/.test(fin) && /PENSION\.calc\(p,inp\)/.test(fin), '연금은 상품 엔진(PENSION)이 센 줄을 넘긴다 — 엔진 식으로 다시 세지 않는다');
 
 console.log('\n' + (bad ? '✗ ' + bad + '개 어긋남 — 고객 결과지를 믿을 수 없습니다' : '✓ 고객 결과지 — 계산·순서·세금 문구·이름 가리기가 맞습니다'));
