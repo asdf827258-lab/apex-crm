@@ -24,6 +24,16 @@
        (4번 · 5번). 금액을 모르면 0원이 아니라 「금액 모름」 입니다 (1번).
      ★ 다리 대본의 「찾은 내용」 · 「단서」 자리는 기록이 없으면 <b>지어 채우지 않고</b> 점선 칸으로
        무엇을 적어야 하는지 말합니다 (1번). 한도·기간 같은 숫자는 적지 않습니다 (2번).
+     ★ <b>판 X152 (2026-10-22)</b> — 사장님 말씀 「이름 수정 되게 다 만들고, RP 내용 다시 점검하고, 심평원 자료
+       넣고, 실비 청구 접수 내용 보내면 접수 안된거 추측해서 예상 금액 … 고객에게 안내장까지 하나로」 · 「견본으로
+       해보고 안되고 부족한 것들 시뮬레이션을 통해서 찾아서 해결」.
+       · 이름·회사는 S.cfg 한 곳 — 대본·회사 소개·안내장이 {PREV}·{CUR}·{ME} 자리로 읽습니다(5번). 조사는 받침으로.
+       · 🧾 미청구 찾기 — 심평원·공단 진료 내역 × 보험회사 청구 내역. 공제금액·자기부담 비율은 <b>그 고객 약관에서
+         옮겨 적은 값으로만</b> 셉니다. 비면 「조건 필요」 — 0원이라 하지 않습니다(1번). 비급여는 진료 내역에 없어
+         예상 금액은 추정이고, 안내장에 「심사 결과에 따릅니다」 를 뺄 수 없습니다(2번).
+       · 묶음 청구 · 접수일만 있는 청구는 「청구 안 된 듯」 으로 단정하지 않고 「확인 필요」 로 둡니다 — 견본
+         시뮬레이션에서 헛것(멀쩡히 청구한 진료를 미청구로)이 나와 고쳤습니다.
+       · 진료 기록은 이 브라우저에만, 「진료 자료 지우기」 로 지웁니다(3번). 안내장 인쇄는 이름을 가린 채가 기본.
      점검 : scripts/check-jiingrow.js -->
 <style>
 /* 폰이 다크여도 흰색 고정 — 앱의 다른 화면과 같게 (check-lightmode) */
@@ -537,6 +547,50 @@ body{font-family:"Pretendard Variable",Pretendard,Tossface,-apple-system,"Malgun
 .cluet b .tf{margin-right:5px}
 .adv{margin-bottom:12px!important}
 @media print{.co{break-inside:avoid;border:1px solid #DDE1E6}.guide-ban,.legend{display:none!important}}
+/* 이름·회사 · 미청구 찾기 · 안내장 */
+.p-orange{background:var(--orange-s);color:#D9622B}
+.sbcond{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.sbcond label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:600;color:var(--sub)}
+.sbcond select,.sbcond input{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;width:100%}
+.sbin{display:flex;align-items:center;gap:4px}.sbin em{font-style:normal;color:var(--mute);font-size:12px}
+@media(max-width:760px){.sbcond{grid-template-columns:1fr 1fr}}
+.sbscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.sbt{width:100%;border-collapse:collapse;font-size:13.5px;min-width:640px}
+.sbt th,.sbt td{padding:8px 7px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+.sbt th{font-size:12px;color:var(--mute);font-weight:700;border-top:0}
+.sbt tr.unclaimed td{background:#FFF7F7}.sbt tr.check td{background:#FFFAF3}.sbt tr.skip td{color:var(--mute)}
+.sbt select{margin-top:4px;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:2px 4px;background:#fff}
+.sbt small.w{color:#D9622B;font-weight:600}
+/* 폰 — 진료 표는 한 줄에 한 장(카드)으로: 판정·예상 금액이 화면 밖으로 밀리지 않게 */
+@media(max-width:600px){table.sbt{min-width:0}
+ .sbv tr:first-child{display:none}
+ .sbv tr{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;padding:10px 6px;border-top:1px solid var(--line)}
+ .sbv td{border:0;padding:0;background:none!important}
+ .sbv tr{border-radius:12px;margin-top:6px}.sbv tr.unclaimed{background:#FFF7F7}.sbv tr.check{background:#FFFAF3}
+ .sbv td:nth-child(2){font-weight:700}
+ .sbv td:nth-child(5),.sbv td:nth-child(8){grid-column:1/-1}
+ .sbv td:nth-child(8){justify-self:end}
+ .sbv td:nth-child(4):before{content:"본인부담 ";color:var(--mute);font-size:11.5px}
+ .sbv td:nth-child(6):before{content:"예상 ";color:var(--mute);font-size:11.5px}
+ .sbv td:nth-child(7):before{content:"기한 ";color:var(--mute);font-size:11.5px}}
+.sbprev{margin-top:12px;border:1.5px dashed var(--blue);border-radius:14px;padding:12px}
+.sbmap{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.sbmap label{display:flex;flex-direction:column;font-size:12px;font-weight:700;color:var(--sub);gap:3px}
+.sbmap select{border:1px solid var(--line);border-radius:8px;padding:5px 6px;background:#fff;font-size:13px}
+.sbsum{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.sbsum>div{background:var(--bg);border-radius:14px;padding:12px}
+.sbsum>div.hl{background:var(--blue-s)}
+.sbsum .l{display:block;font-size:12px;color:var(--mute);font-weight:700}
+.sbsum b{font-size:20px;letter-spacing:-.4px}.sbsum b small{font-size:12px;color:var(--mute);font-weight:600}
+.sbsum>div>small{display:block;font-size:11.5px;color:#D9622B;margin-top:2px}
+@media(max-width:760px){.sbsum{grid-template-columns:1fr 1fr}}
+.letter{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px 24px;max-width:760px;overflow-x:auto}
+@media(max-width:600px){.letter{padding:14px}.letter table{font-size:11px}.letter th,.letter td{padding:4px 5px}}
+.letter .lt-k{font-size:12px;font-weight:800;color:var(--blue)}
+.letter h1{font-size:21px;margin:2px 0 4px}
+.letter .lt-f{margin-top:18px;padding-top:10px;border-top:2px solid #191F28;font-weight:700;text-align:right}
+.cfg-btn{font-size:12.5px}
+@media print{.letter{border:0;padding:0;max-width:none}.sbt select{display:none}.sbprev{display:none}}
 /* 내 이름 칸 */
 .me-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px;font-size:13px;color:var(--mute)}
 .me-row label{font-weight:700;color:var(--sub);font-size:14px}
@@ -561,6 +615,7 @@ body{font-family:"Pretendard Variable",Pretendard,Tossface,-apple-system,"Malgun
     <div class="gl">고객 만나기</div>
     <button data-t="find"><span class="n">🔍</span>보험금 찾아줌</button>
     <button data-t="check"><span class="n">🛡️</span>보장분석</button>
+    <button data-t="silbi"><span class="n">🧾</span>미청구 찾기</button>
     <button data-t="rp"><span class="n">🎙️</span>RP 연습</button>
     <div class="gl">관리하기</div>
     <button data-t="cust"><span class="n">👥</span>고객 관리</button>
@@ -579,7 +634,7 @@ body{font-family:"Pretendard Variable",Pretendard,Tossface,-apple-system,"Malgun
     <div class="kick"><span class="tf">👋</span> <span id="meKick">설계사님께</span></div>
     <h1>지인은 부탁하면 멀어지고,<br>챙겨주면 가까워집니다.</h1>
     <p>가입 이야기는 맨 마지막입니다. 소식 → 찾아드리기 → 보장분석 → 소개, 이 순서로만 갑니다.</p>
-    <div class="me-row"><label for="meName"><span class="tf">🪪</span> 내 이름</label><input class="inp" id="meName" placeholder="예: 홍길동" maxlength="12"><span>대본에 「저 ○○예요」 로 들어갑니다 · 이 기기에만 남습니다</span></div>
+    <div class="me-row"><label for="meName"><span class="tf">🪪</span> 내 이름</label><input class="inp" id="meName" placeholder="예: 홍길동" maxlength="12"><span>대본에 「저 ○○예요」 로 들어갑니다 · 이 기기에만 남습니다</span><button class="btn sm cfg-btn" data-cfgedit>✏️ 이름·회사 바꾸기</button></div>
   </div>
 
   <a class="guide-ban" data-go="guide"><span class="ti l purple">🧑‍🏫</span><span><b>신입이라면 여기부터 — 선배 선생님 가이드</b><small>첫 주 확인할 것 · 신입이 꼭 하는 실수 9가지 · 고객 앞에서 쓰는 말 사전</small></span><span class="arr">›</span></a>
@@ -694,9 +749,9 @@ body{font-family:"Pretendard Variable",Pretendard,Tossface,-apple-system,"Malgun
 <section class="page" id="t-why">
   <div class="ph">
     <div class="kick"><span class="tf">🏢</span> 회사 소개</div>
-    <h1>DB손해보험에서<br>에이플러스에셋으로 온 이유</h1>
+    <h1><span data-cfg="prev">DB손해보험</span>에서<br><span data-cfg="cur">에이플러스에셋</span><span data-cfgj="cur:으로">으로</span> 온 이유</h1>
     <p>이전 회사를 낮추지 않습니다. 지금 해드릴 수 있는 일을 말합니다.</p>
-    <div class="ph-tools"><button class="btn sm" data-print="page"><span class="tf">🖨️</span> 이 화면 인쇄</button></div>
+    <div class="ph-tools"><button class="btn sm" data-print="page"><span class="tf">🖨️</span> 이 화면 인쇄</button><button class="btn sm cfg-btn" data-cfgedit>✏️ 이름·회사 바꾸기</button></div>
   </div>
 
   <div class="quote"><small><span class="tf">📌</span> 핵심 한 문장</small><p>"회사 편이 아니라, 고객님 편에서<br>비교해 드리고 싶어서 왔어요."</p></div>
@@ -705,7 +760,7 @@ body{font-family:"Pretendard Variable",Pretendard,Tossface,-apple-system,"Malgun
   <div class="cols">
     <div class="blk">
       <div class="blk-h"><h3><span class="tf">✍️</span>내 이야기 만들기</h3><a class="link" id="storyReset">예시로 되돌리기</a><div class="d">세 칸을 내 경험으로 바꾸면 대본이 바뀝니다</div></div>
-      <div class="field"><label>① DB에서 가장 보람 있었던 순간</label><textarea id="q1"></textarea></div>
+      <div class="field"><label>① <span data-cfg="prevS">DB</span>에서 가장 보람 있었던 순간</label><textarea id="q1"></textarea></div>
       <div class="field"><label>② 상담하면서 마음에 걸렸던 것</label><textarea id="q2"></textarea></div>
       <div class="field" style="margin:0"><label>③ 이제 해드릴 수 있는 것</label><textarea id="q3"></textarea></div>
     </div>
@@ -718,13 +773,13 @@ body{font-family:"Pretendard Variable",Pretendard,Tossface,-apple-system,"Malgun
   <div class="blk">
     <div class="blk-h"><h3><span class="tf">🔄</span>무엇이 달라졌나</h3></div>
     <table class="cmp">
-      <tr><th></th><th>이전 · 전속</th><th>지금 · 에이플러스에셋</th></tr>
-      <tr><td>보여드리는 상품</td><td>소속 보험사 상품</td><td>생명·손해보험 33개 제휴사</td></tr>
+      <tr><th></th><th>이전 · 전속</th><th>지금 · <span data-cfg="cur">에이플러스에셋</span></th></tr>
+      <tr><td>보여드리는 상품</td><td>소속 보험사 상품</td><td><span data-cfg="partner">생명·손해보험 33개 회사</span></td></tr>
       <tr><td>비교</td><td>같은 회사 상품끼리</td><td>회사를 넘어 같은 조건으로</td></tr>
       <tr><td>기존 계약</td><td>그 회사 계약 위주</td><td>어느 회사 계약이든 점검·청구 도움</td></tr>
-      <tr><td>회사</td><td>—</td><td>코스피 상장 법인보험대리점(GA)</td></tr>
+      <tr><td>회사</td><td>—</td><td><span data-cfg="curDesc">코스피 상장 법인보험대리점(GA)</span></td></tr>
     </table>
-    <div class="co key"><span class="co-i">📌</span><div><b class="co-t">먼저 하는 말</b>"DB손해보험 좋은 회사예요. 지금 보험도 그대로 좋아요." 이전 회사를 칭찬하는 사람의 말이 더 믿음이 갑니다.</div></div>
+    <div class="co key"><span class="co-i">📌</span><div><b class="co-t">먼저 하는 말</b>"<span data-cfg="prev">DB손해보험</span> 좋은 회사예요. 지금 보험도 그대로 좋아요." 이전 회사를 칭찬하는 사람의 말이 더 믿음이 갑니다.</div></div>
   </div>
 
   <div class="cols">
@@ -866,7 +921,7 @@ body{font-family:"Pretendard Variable",Pretendard,Tossface,-apple-system,"Malgun
         <div class="say">"실비 있으시면 통원비·약값도 청구 대상이에요. 필요한 서류는 금액·회사마다 달라서 제가 확인해 드릴게요."</div></div></div>
       <div><div class="c">3</div><div><h4>진료 내역으로 빠짐없이</h4><p>심평원 「내 진료정보 열람」 으로 진료 내역을 받아 표로 정리합니다. 기억에서 빠진 병원까지 나옵니다.</p>
         <div class="say">"기억 안 나는 병원까지 표로 다 나와요. 이걸로 놓친 게 없는지 한 번에 봐요."</div>
-        <button class="btn sm blue mt" data-app="ref_hira">🔗 앱의 「건강보험심사평가원」 열기</button></div></div>
+        <button class="btn sm mt" data-go="silbi">🧾 진료 내역으로 미청구 찾기</button> <button class="btn sm blue mt" data-app="ref_hira">🔗 앱의 「건강보험심사평가원」 열기</button></div></div>
     </div>
   </div>
 
@@ -993,6 +1048,19 @@ body{font-family:"Pretendard Variable",Pretendard,Tossface,-apple-system,"Malgun
   </div>
 </section>
 
+<!-- ================= 🧾 실비 미청구 찾기 ================= -->
+<section class="page" id="t-silbi">
+  <div class="ph">
+    <div class="kick"><span class="tf">🧾</span> 실비 미청구 찾기</div>
+    <h1>진료 내역과 청구 내역을 맞대 보면,<br>안 받은 병원비가 보입니다</h1>
+    <p>심평원·건강보험공단의 <b>진료 내역</b>과 보험회사의 <b>실비 청구 내역</b>을 넣으면, 청구 안 된 것으로 보이는 진료를 골라 예상 보험금을 계산하고 <b>고객 안내장</b>까지 한 장으로 만듭니다.</p>
+    <div class="ph-tools"><button class="btn sm" data-print="page"><span class="tf">🖨️</span> 이 화면 인쇄</button></div>
+  </div>
+  <div class="co teach"><span class="co-i">🧑‍🏫</span><div><b class="co-t">선배 선생님 한마디</b>예상 금액은 <b>추정</b>입니다. 진료 내역에는 비급여가 빠져 있고, 실제 금액은 약관과 <b>심사 결과에 따릅니다.</b> 고객에게는 "이 정도 받으실 수 있을 것 같아요" 까지만 — 금액을 약속하지 않습니다. 그리고 판정이 「확인 필요」 인 줄은 고객에게 먼저 물어보세요. 같은 날 다른 병원과 함께 청구한 경우가 많습니다.</div></div>
+  <div class="blk"><div class="rpbar"><div class="field"><label>고객</label><select id="sbWho"></select></div><label class="toggle"><input type="checkbox" data-pmask> 인쇄·내보낼 때 이름 가리기</label></div></div>
+  <div id="sbBody"></div>
+</section>
+
 <!-- ================= 6 RP ================= -->
 <section class="page" id="t-rp">
   <div class="ph">
@@ -1042,7 +1110,7 @@ body{font-family:"Pretendard Variable",Pretendard,Tossface,-apple-system,"Malgun
   <div class="weeks" id="weeks"></div>
 </section>
 
-<div class="foot">APEX · 에이플러스에셋 · 내부 교육용 자료 (고객에게 그대로 보내지 마세요)</div>
+<div class="foot">APEX · <span data-cfg="cur">에이플러스에셋</span> · 내부 교육용 자료 (고객에게 그대로 보내지 마세요)</div>
 </div>
 
 <div class="dim" id="dim"></div>
@@ -1142,7 +1210,7 @@ const WHY_CHECK=[
 ];
 // 찾아줌하며 보이는 단서 → 보장분석 이유. id 는 고객 기록과 이어지므로 바꾸지 않음
 const CLUES=[
-  {id:'c_where',ic:'🧭',label:'어느 보험에서 나오는지 헷갈림',sign:'청구하려는데 "이건 어디에 내야 돼?"',say:'아까 청구하려는데 어느 회사에 내야 할지 헷갈리셨잖아요. 보험 안을 한 번도 펴 본 적이 없다는 뜻이에요.',see:'어느 회사에 무엇이 있는지 — 한 장 지도'},
+  {id:'c_where',ic:'🧭',label:'어느 보험에서 나오는지 헷갈림',sign:'청구하려는데 "이건 어디에 내야 돼?"',say:'청구하려는데 어느 회사에 내야 할지 헷갈리셨잖아요. 보험 안을 한 번도 펴 본 적이 없다는 뜻이에요.',see:'어느 회사에 무엇이 있는지 — 한 장 지도'},
   {id:'c_dup',ic:'👯',label:'실비가 둘 이상',sign:'조회 목록에 실손(실비)이 두 개 이상',say:'보니까 실비가 두 개던데, 병원비는 두 번 안 나와요. 둘이 나눠서 내 줘요. 보험료는 두 번 내시는데요.',see:'겹치는 실손 — 유지가 맞는지, 정리할 수 있는지(요건 확인)'},
   {id:'c_nodiag',ic:'🎗️',label:'실비만 알고 진단비는 모름',sign:'병원비 이야기는 아는데 큰 병 이야기엔 "글쎄"',say:'병원비는 잘 챙기시는데, 큰 병으로 일을 쉬게 되면 그동안 생활비는 어디서 나올지 아세요? 그건 실비가 아니라 진단비가 해요.',see:'암·뇌·심장 진단비가 있는지, 얼마인지'},
   {id:'c_renew',ic:'📈',label:'보험료가 올랐다는 말',sign:'"요즘 보험료가 올랐더라"',say:'보험료 올랐다고 하셨죠? 갱신형이 있으면 다음에 또 언제 바뀌는지 알아야 준비가 돼요.',see:'갱신형인 것과 다음 갱신 시점'},
@@ -1156,12 +1224,12 @@ const CLUES=[
 ];
 const SCEN_RAW=[
   {id:'s1',grp:'call',chip:'이직 소식 전화',title:'계약고객 — 이직 소식 전화',goal:'서운함 없이 소식 전하기 + 찾아줌 약속',why:'이미 나를 믿는 분들입니다. 소식을 남에게 먼저 들으면 그 믿음이 서운함으로 바뀝니다.',lines:[
-    ['me','{N}, 저 {MES}예요~ 잘 지내셨어요? 요즘 날씨 많이 쌀쌀하죠.','heart'],
+    ['me','{N}, 저 {MES:이에요}~ 잘 지내셨어요? 요즘 날씨 많이 쌀쌀하죠.','heart'],
     ['cus','어, {MES} 씨! 웬일이야?'],
-    ['me','다른 게 아니라, 제 소식 하나 직접 말씀드리고 싶어서요. 제가 DB손해보험에서 에이플러스에셋이라는 회사로 옮겼어요. 남한테 먼저 들으시게 하는 것보다 제가 직접 말씀드리는 게 맞는 것 같아서요.','heart'],
+    ['me','다른 게 아니라, 제 소식 하나 직접 말씀드리고 싶어서요. 제가 {PREV}에서 {CUR:이라는} 회사로 옮겼어요. 남한테 먼저 들으시게 하는 것보다 제가 직접 말씀드리는 게 맞는 것 같아서요.','heart'],
     ['coach','"직접 말씀드리는 게 맞는 것 같아서" — 이 한 문장이 서운함을 막습니다'],
     ['cus','어? 왜 옮겼어? 무슨 일 있었어?'],
-    ['me','DB에서 좋은 분들 많이 만났고 회사도 좋았어요. 그런데 상담할수록 마음에 걸리는 게 있었어요. 고객님마다 맞는 회사가 다른데, 저는 한 회사 것만 보여드릴 수 있었거든요. 지금 회사는 생명·손해보험 33개 회사랑 제휴돼 있어서, 이제는 {N} 입장에서 비교해 드릴 수 있어요.','mind'],
+    ['me','{PREVS}에서 좋은 분들 많이 만났고 회사도 좋았어요. 그런데 상담할수록 마음에 걸리는 게 있었어요. 고객님마다 맞는 회사가 다른데, 저는 한 회사 것만 보여드릴 수 있었거든요. 지금 회사는 {PARTNER:이랑} 제휴돼 있어서, 이제는 {N} 입장에서 비교해 드릴 수 있어요.','mind'],
     ['cus','그럼 내가 든 보험은 어떻게 돼?'],
     ['me','그대로 유지돼요. 해지하실 필요 전혀 없고 보장도 그대로예요. 오히려 함부로 해지하시면 나이나 병력 때문에 다시 가입이 어렵거나 보험료가 오를 수 있어서, 그건 제가 먼저 말리고 싶어요. 회사에서 새 담당자 안내 연락이 갈 수도 있는데 놀라지 마시고요.','mind'],
     ['coach','"해지하지 마세요"를 먼저 말하는 설계사는 믿게 됩니다'],
@@ -1181,7 +1249,7 @@ const SCEN_RAW=[
     ['cus','음… 그럼 한번 볼까?'],
     ['me','좋아! 밥 먹으면서 10분이면 돼. 주말이 편해, 평일 저녁이 편해?','mind']
   ]},
-  {id:'s6',grp:'call',chip:'DB고객 연락',title:'DB(연결) 고객 — 짧고 정중하게',goal:'정중한 첫인상 + 5분 통화 약속',why:'오랜 지인이 아니라 연결된 고객입니다. 길게 말할수록 영업으로 들립니다.',lines:[
+  {id:'s6',grp:'call',chip:'{PREVS}고객 연락',title:'{PREVS}(연결) 고객 — 짧고 정중하게',goal:'정중한 첫인상 + 5분 통화 약속',why:'오랜 지인이 아니라 연결된 고객입니다. 길게 말할수록 영업으로 들립니다.',lines:[
     ['coach','먼저 확인 — 이전 회사에서 업무로 받은 고객 정보라면 옮긴 뒤 영업에 쓰는 것은 개인정보 문제가 될 수 있습니다. 개인적으로 아는 관계일 때만 연락하세요'],
     ['me','안녕하세요, {N}. 예전에 보험 상담으로 인사드렸던 {ME}입니다. 잘 지내셨어요?','heart'],
     ['cus','아… 네, 기억나요.'],
@@ -1211,7 +1279,7 @@ const SCEN_RAW=[
   ]},
   {id:'b1',grp:'bridge',chip:'찾은 돈 있을 때',title:'다리 ① — 찾은 돈이 있을 때',goal:'고마움을 「보장분석 약속」 으로 — 이유는 고객 화면에서',why:'고객이 <b>보험이 실제로 돈이 된다</b>를 방금 겪은 순간입니다. 이때 다음에 무엇을 볼지 정하지 않으면 고마움만 남고 약속은 사라집니다. 이유는 내가 지어내지 않고, 방금 같이 본 화면(단서)에서 가져옵니다.',lines:[
     ['coach','① 결과 정리 — 금액은 크게 외치지 말고, 고객 화면을 같이 보며 차분히'],
-    ['me','오늘 찾은 거 같이 정리해 볼게요. {FOUND}. 이건 제가 드리는 게 아니라 {N}이 이미 내신 보험료에서 원래 받으셨어야 하는 돈이에요.','heart'],
+    ['me','오늘 찾은 거 같이 정리해 볼게요. {FOUND}. 이건 제가 드리는 게 아니라, {N}이 보험료를 내 오신 계약에서 원래 받으셨어야 하는 돈이에요.','heart'],
     ['cus','와, 진짜 몰랐네. 고마워.'],
     ['me','청구는 오늘 넣으시면 되고, 입금되는지 제가 같이 확인할게요. 그런데 오늘 보면서 하나 마음에 걸린 게 있어요.','heart'],
     ['coach','② 멈춤 — 여기서 2초 쉽니다. 고객이 "뭐가?" 하고 물으면, 그다음 말은 권유가 아니라 대답이 됩니다'],
@@ -1294,7 +1362,7 @@ const SCEN_RAW=[
     ['coach','단체방·SNS에 같은 글을 올리면 광고 심의 대상입니다. 1:1로만']
   ]},
   {id:'s4',grp:'check',chip:'보장분석 제안',title:'보장분석 제안 — 따로 연락할 때',goal:'"바꾸라는 게 아니다"는 확신 + 조회 동의',why:'찾아줌 자리에서 다리를 못 놓았거나 시간이 지났을 때, 찾아줌 결과를 다시 꺼내 잇습니다.',lines:[
-    ['me','지난번에 같이 보니까 청구 놓친 게 있었잖아요. 이번엔 지금 보험이 {N}한테 잘 맞는지 볼게요. {POINT} 같은 것들이요.','mind'],
+    ['me','지난번에 같이 보니까 {RECALL}. 이번엔 지금 보험이 {N}한테 잘 맞는지 볼게요. 특히 「{SEE}」, 이건 꼭 같이 봐요.','mind'],
     ['cus','결국 바꾸라는 거 아니야?'],
     ['me','아니에요. 바꾸는 게 맞는 경우는 생각보다 적어요. 대부분은 지금 걸 유지하는 게 맞고, 빠진 데만 보완하면 돼요. 오히려 바꾸면 손해인 경우를 제가 먼저 말씀드릴게요.','heart'],
     ['cus','그럼 뭘 해야 돼?'],
@@ -1302,8 +1370,10 @@ const SCEN_RAW=[
     ['coach','결정을 미뤄도 된다고 말할 때 결정이 빨라집니다']
   ]},
   {id:'s5',grp:'check',chip:'결과 전달 · 소개',title:'보장분석 결과 전달 + 소개',goal:'칭찬 먼저, 할 일은 하나, 소개는 구체적으로',why:'결과는 세 줄 — 잘된 것, 빈 것, 할 일 하나. 소개는 "누구 있으면"이 아니라 "이런 분 한 분만"으로.',lines:[
-    ['me','{N} 보험, 전체적으로 잘 들어 두셨어요. 특히 실비는 잘 챙겨 두셨고요.','heart'],
-    ['me','다만 한 가지만 말씀드리면, {POINT} 이 부분은 지금 비어 있어요. 오늘 결정 안 하셔도 돼요. 여러 회사 걸 같은 조건으로 비교해서 보여 드릴게요.','mind'],
+    ['coach','결과 세 줄은 고객 상세 「체크」 칸에 적은 그대로 들어갑니다 — 적지 않은 칸을 지어 말하지 않습니다'],
+    ['me','{N} 보험, 한 장으로 정리해 봤어요. 잘 되어 있는 것부터 말씀드릴게요. {GOOD}','heart'],
+    ['me','다만 한 가지는 보셔야 해요. {GAP} 오늘 결정 안 하셔도 돼요. 필요하시면 여러 회사 걸 같은 조건으로 비교해서 보여 드릴게요.','mind'],
+    ['me','지금 하실 일은 딱 하나예요. {TODO}','mind'],
     ['cus','고마워. 이렇게 정리해 준 사람 처음이야.'],
     ['me','그렇게 말씀해 주셔서 정말 힘이 나요. 혹시 주변에 보험 정리를 한 번도 안 해 본 분 계시면, 오늘처럼 숨은 보험금부터 찾아 드릴게요. 한 분만 떠올려 주실래요?','heart'],
     ['coach','"누구 있으면 소개해 줘" 대신 "같은 직장 동료 중에 / 아이 친구 엄마 중에 한 분만"'],
@@ -1311,7 +1381,7 @@ const SCEN_RAW=[
   ]}
 ];
 const OBJS=[
-  {q:'"DB에 있을 땐 이런 거 안 해 줬잖아"',a:'맞아요, 그때 더 챙겨 드렸어야 했는데 죄송해요.',b:'그때는 한 회사 안에서만 볼 수 있어서 해 드릴 수 있는 게 좁았어요.',c:'이번엔 제대로 해 드리고 싶어요. 숨은 보험금부터 볼게요.'},
+  {q:'"{PREVS}에 있을 땐 이런 거 안 해 줬잖아"',a:'맞아요, 그때 더 챙겨 드렸어야 했는데 죄송해요.',b:'그때는 한 회사 안에서만 볼 수 있어서 해 드릴 수 있는 게 좁았어요.',c:'이번엔 제대로 해 드리고 싶어요. 숨은 보험금부터 볼게요.'},
   {q:'"옮겼으니까 실적 채우려는 거지?"',a:'그렇게 느끼실 수 있어요. 저도 그게 제일 조심스러웠어요.',b:'그래서 오늘은 가입 이야기는 안 하기로 스스로 정했어요.',c:'보험금 찾아 드리는 것까지만 할게요. 그다음은 필요하다고 하실 때만요.'},
   {q:'"나 보험 충분히 있어"',a:'다행이에요, 잘 챙기셨네요.',b:'많은 것과 맞는 것은 다를 때가 있어요. 실손은 여러 개여도 병원비 안에서 나눠 받거든요.',c:'충분한지 확인만 할게요. 그대로 두는 게 맞으면 그대로 두시라고 말씀드릴게요.'},
   {q:'"찾아준 건 고마운데, 결국 그거 하려고 온 거지?"',a:'그렇게 느끼셨다면 제가 순서를 잘못 말씀드린 거예요.',b:'오늘 찾아드린 건 그대로 받으시면 되고, 보장분석은 안 하셔도 그 돈은 그대로예요.',c:'보장분석은 필요하다고 느끼실 때 말씀만 주세요. 입금 확인 연락만 드릴게요.'},
@@ -1319,19 +1389,19 @@ const OBJS=[
   {q:'"개인정보 조회 동의는 좀 불안해"',a:'당연히 그러실 수 있어요.',b:'동의는 회사가 정한 서류로, 보장 내용 확인 목적으로만 받아요. 무엇을 어디까지 보는지 동의서에 다 적혀 있어요.',c:'읽어 보시고 편할 때 하셔도 돼요. 불안하시면 가지고 계신 증권이나 보험사 앱 화면을 같이 보는 것부터 해요.'},
   {q:'"지인끼리 보험 얘기 불편해"',a:'저도 그게 제일 조심스러워요. 불편하면 언제든 "여기까지" 하셔도 돼요.',b:'그래도 아는 사람이 봐 주는 게 나은 게 하나 있어요. 받을 돈을 못 받는 거요.',c:'그것만 10분 보고, 나머지는 안 할게요.'},
   {q:'"남편(아내)이 다 알아서 해"',a:'든든하시네요.',b:'본인 명의 보험은 본인이 알아야 아플 때 바로 청구할 수 있어요.',c:'두 분 것 한 장으로 정리해 드릴게요. 같이 보시면 더 좋고요.'},
-  {q:'"그럼 DB 보험 해지해야 돼?"',a:'아니요! 그건 제가 제일 먼저 말리고 싶어요.',b:'해지하고 새로 가입하면 가입이 거절되거나 보험료가 오를 수 있고, 새로 보장 제한 기간이 생길 수도 있어요.',c:'대부분은 그대로 두는 게 맞아요. 빠진 게 있는지만 봐 드릴게요.'},
+  {q:'"그럼 {PREVS} 보험 해지해야 돼?"',a:'아니요! 그건 제가 제일 먼저 말리고 싶어요.',b:'해지하고 새로 가입하면 가입이 거절되거나 보험료가 오를 수 있고, 새로 보장 제한 기간이 생길 수도 있어요.',c:'대부분은 그대로 두는 게 맞아요. 빠진 게 있는지만 봐 드릴게요.'},
   {q:'"바빠, 나중에 하자"',a:'그럼요, 요즘 정말 바쁘시죠.',b:'하나만 기억해 주세요. 병원비 청구는 3년 지나면 못 받아요.',c:'다음 달 이맘때 다시 연락드려도 될까요? (→ 다음 연락일 저장)'},
   {q:'"인터넷으로 내가 찾아볼게"',a:'좋아요! 직접 해 보시는 게 제일 좋아요.',b:'「내보험찾아줌」이라고 협회에서 운영하는 곳이에요.',c:'해 보시고 모르는 게 나오면 화면 사진만 보내 주세요. 해석은 제가 해 드릴게요.'}
 ];
 const FAQ=[
   {q:'"왜 옮겼어? 무슨 일 있었어?"',a:'사건이 아니라 방향으로 답합니다. "고객마다 맞는 회사가 다른데, 한 회사 것만 보여드릴 수 있었던 게 계속 마음에 걸렸어요."'},
-  {q:'"그럼 내 DB 보험은?"',a:'"그대로 유지돼요. 해지하실 필요 없어요." 이 말을 내가 먼저 합니다. 회사에서 새 담당자 안내 연락이 갈 수 있다는 것도 미리 알려 드립니다.'},
+  {q:'"그럼 내 {PREVS} 보험은?"',a:'"그대로 유지돼요. 해지하실 필요 없어요." 이 말을 내가 먼저 합니다. 회사에서 새 담당자 안내 연락이 갈 수 있다는 것도 미리 알려 드립니다.'},
   {q:'"GA가 뭐야? 보험회사야?"',a:'"보험회사가 아니라, 여러 보험회사 상품을 고객 입장에서 비교해 드리는 법인 대리점이에요. 마트처럼 여러 브랜드를 한곳에서 보는 거예요."'},
   {q:'"담당자가 바뀌면 보험금 청구는?"',a:'"청구는 보험회사에 직접 하는 거라 담당자와 상관없이 그대로 돼요. 모르는 게 있으면 저한테 물어보시면 같이 봐 드릴게요."'},
   {q:'"대리점 회사에 무슨 일 생기면 내 보험은?"',a:'"보험 계약은 보험회사와 맺는 거라, 대리점 사정과 상관없이 계약은 보험회사에 그대로 있어요."'}
 ];
 const DONT=[
-  {b:'"DB는 비싸요 / 별로예요"',s:'이전 회사·다른 설계사 비방은 규정 위반'},
+  {b:'"{PREVS:은} 비싸요 / 별로예요"',s:'이전 회사·다른 설계사 비방은 규정 위반'},
   {b:'"그거 해지하고 새로 드세요"',s:'불이익 설명 없는 갈아타기는 부당승환'},
   {b:'"보험료 무조건 줄여드릴게요"',s:'근거 없는 절감 약속 금지'},
   {b:'"누구나 가입돼요 / 실비는 다 나와요"',s:'단정·오인 표현 금지'},
@@ -1350,7 +1420,7 @@ const WEEKS=[
 const STORY_DEF={
   q1:'고객님이 아프셨을 때 보험금이 제때 나가서 "덕분에 살았어"라는 말을 들었을 때',
   q2:'고객님마다 맞는 회사가 다른데, 한 회사 상품만 보여드릴 수밖에 없었던 것',
-  q3:'33개 보험회사를 고객님 입장에서 비교해 드리고, 받을 수 있는 보험금부터 찾아 드리는 것'
+  q3:'여러 보험회사를 고객님 입장에서 비교해 드리고, 받을 수 있는 보험금부터 찾아 드리는 것'
 };
 // 신입 가이드 — 선배가 옆에서 짚어 주는 것
 const STARTER=it(['새 회사 등록(위촉)이 끝났는지 확인 — 끝나기 전엔 상품 권유를 하지 않기','지점에 보장분석 조회 방법 · 동의서 양식 위치 물어보기','회사가 정한 비교 안내 · 청약 절차를 선배와 한 번 따라 해 보기','「내보험찾아줌」을 내 휴대폰으로 직접 해 보기','「실손24」 앱 설치해서 화면 익히기','내 이야기 30초 버전 완성 (회사 소개 화면)','카톡·블로그에 올릴 글의 심의는 누구에게 받는지 확인','모르는 걸 물어볼 선배 한 명 정하기']);
@@ -1390,11 +1460,11 @@ const DEF={
 /* ================= 저장 ================= */
 let S;
 function newCust(o){
-  return Object.assign({id:0,g:'가망',name:'',chk:false,job:'',fam:'',tag:'',memo:'',concept:'',steps:Array(9).fill(false),next:'',bday:'',finds:[],clues:[],logs:[],res:{good:'',gap:'',todo:''}},o);
+  return Object.assign({id:0,g:'가망',name:'',chk:false,job:'',fam:'',tag:'',memo:'',concept:'',steps:Array(9).fill(false),next:'',bday:'',finds:[],clues:[],logs:[],res:{good:'',gap:'',todo:''},silbi:{cond:{},visits:[],claims:[]}},o);
 }
 function fresh(){
   return {v:2,customers:SEED.map(r=>newCust({id:r[0],g:r[1],name:r[2],chk:!!r[3],job:r[4],fam:r[5],tag:r[6]})),
-    lib:clone(DEF),rp:{},rpLast:{},story:{...STORY_DEF},pre:{},find:{},check:{},starter:{},pmask:true};
+    libv:3,cfg:{},lib:clone(DEF),rp:{},rpLast:{},story:{...STORY_DEF},pre:{},find:{},check:{},starter:{},pmask:true};
 }
 // v1(처음 판) 저장본도 그대로 받아 옵니다 — 찾은 금액·체크·회고를 잃지 않게
 function norm(s){
@@ -1416,6 +1486,18 @@ function norm(s){
     o.pre=byIdx(s.pre);o.find={};o.check=byIdx(s.check,o.lib.checkq);
     delete o.weeks;delete o.wnote;
   }
+  // 판 3 — 대본을 고쳐 내보냈습니다(결과 전달에 결과 세 줄 · 조사 · 회사 이름 자리). 기본 대본만 새 것으로 받고,
+  // 직접 만든 대본·고친 거절 응대는 그대로 둡니다
+  if((+s.libv||0)<3){
+    o.lib.scen=o.lib.scen.map(x=>{const d=DEF.scen.find(y=>y.id===x.id);return d?clone(d):x;});
+    DEF.scen.forEach(d=>{if(!o.lib.scen.some(x=>x.id===d.id))o.lib.scen.push(clone(d));});
+    o.lib.clues=o.lib.clues.map(x=>{const d=DEF.clues.find(y=>y.id===x.id);return d?Object.assign({},x,{say:d.say}):x;});
+    const fx=t=>String(t||'').replace(/"DB는/g,'"{PREVS:은}').replace(/DB에 있을/g,'{PREVS}에 있을').replace(/내 DB 보험/g,'내 {PREVS} 보험').replace(/그럼 DB 보험/g,'그럼 {PREVS} 보험');
+    o.lib.objs.forEach(x=>{x.q=fx(x.q);});o.lib.faq.forEach(x=>{x.q=fx(x.q);});o.lib.dont.forEach(x=>{x.b=fx(x.b);});
+    o.libv=3;
+  }
+  o.cfg=Object.assign({},s.cfg||{});
+  o.customers.forEach(c=>{if(!c.silbi)c.silbi={cond:{},visits:[],claims:[]};});
   o.v=2;
   return o;
 }
@@ -1441,8 +1523,25 @@ const pnH=s=>{s=String(s||'');const tail=/님$/.test(s)?'님':'';const core=tail
 function fmtWonR(n){n=Math.round(+n||0);if(!n)return '0원';const e=Math.floor(n/1e8),m=Math.floor(n%1e8/1e4),w=n%1e4;let s='';if(e)s+=e.toLocaleString()+'억 ';if(m)s+=m.toLocaleString()+'만 ';if(w)s+=w.toLocaleString();return s.trim()+'원';}
 // 설계사 이름 — 비어 있으면 ○○ 로 둡니다 (지어 넣지 않음 · 1번)
 const meFull=()=>String(S.me||'').trim()||'○○';
-const meShort=()=>{const n=String(S.me||'').trim();if(!n)return '○○';return /^[가-힣]{3,4}$/.test(n)?n.slice(1):n;};
+const meShort=()=>{const o=String((S.cfg||{}).mes||'').trim();if(o)return o;const n=String(S.me||'').trim();if(!n)return '○○';return /^[가-힣]{3,4}$/.test(n)?n.slice(1):n;};
 function renderMe(){const n=String(S.me||'').trim();$('#meKick').textContent=n?n+'님께':'설계사님께';const i=$('#meName');if(i&&document.activeElement!==i)i.value=n;}
+// 이름·회사 — 화면에서 바꿉니다(✏️ 이름·회사 바꾸기). 대본의 {PREV} · {CUR} 자리가 이 값을 씁니다
+const CFG_DEF={title:'',mes:'',phone:'',prev:'DB손해보험',prevS:'DB',cur:'에이플러스에셋',curDesc:'코스피 상장 법인보험대리점(GA)',partner:'생명·손해보험 33개 회사'};
+function cfgRaw(){const c=Object.assign({},CFG_DEF,S.cfg||{});return {ME:meFull(),MES:meShort(),PREV:c.prev||'이전 회사',PREVS:c.prevS||c.prev||'이전 회사',CUR:c.cur||'지금 회사',CURDESC:c.curDesc||'',PARTNER:c.partner||'여러 보험회사',PHONE:c.phone||''};}
+// 받침에 맞는 조사 — 「길동이에요 / 주희예요」
+function hasJong(w){const t=String(w||'').trim();if(!t)return false;const ch=t.charCodeAt(t.length-1);if(ch>=0xAC00&&ch<=0xD7A3)return (ch-0xAC00)%28!==0;if(/[0-9]$/.test(t))return /[0136789]$/.test(t);return false;}
+const JOSA={'이':['이','가'],'은':['은','는'],'을':['을','를'],'과':['과','와'],'이랑':['이랑','랑'],'이라는':['이라는','라는'],'이에요':['이에요','예요'],'이라서':['이라서','라서']};
+function josa(w,j){if(j==='으로'){const t=String(w||'').trim(),ch=t.charCodeAt(t.length-1);const l=ch>=0xAC00&&ch<=0xD7A3&&(ch-0xAC00)%28===8;return hasJong(w)&&!l?'으로':'로';}const p=JOSA[j];return p?(hasJong(w)?p[0]:p[1]):j;}
+function fillT(x,T,R){return esc(x).replace(/\{([A-Z0-9]+)(?::([가-힣]+))?\}/g,(m,k,j)=>(k in T)&&T[k]!=null?T[k]+(j?josa(R[k]!=null?R[k]:'',j):''):m);}
+function cfgFill(x){const R=cfgRaw(),T={};for(const k in R)T[k]=esc(R[k]);return fillT(x,T,R);}
+const cfgRich=x=>cfgFill(x).replace(/&lt;(\/?)b&gt;/g,'<$1b>');
+let CFG_TITLE0=null;
+function renderCfg(){
+  const c=Object.assign({},CFG_DEF,S.cfg||{}),R=cfgRaw();
+  document.querySelectorAll('[data-cfg]').forEach(el=>{const k=el.dataset.cfg;if(k==='title')return;el.textContent=c[k]||'';});
+  document.querySelectorAll('[data-cfgj]').forEach(el=>{const [k,j]=el.dataset.cfgj.split(':');el.textContent=josa(c[k]||'',j);});
+  const b=document.querySelector('.brand b');if(b){if(CFG_TITLE0==null)CFG_TITLE0=b.textContent;b.textContent=c.title||CFG_TITLE0;document.title=b.textContent;}
+}
 const PH=t=>`<span class="phx">[${esc(t)}]</span>`;
 const conc=c=>S.lib.concepts[conceptOf(c)]||S.lib.concepts.basic;
 const tf=e=>`<span class="tf">${esc(e)}</span>`;
@@ -1507,6 +1606,9 @@ const SC={
   cluster:{t:'연결 고리',req:'name',f:[['name','이름','text'],['ids','고객 이름 (쉼표로)','names'],['idea','다가가는 생각','textarea']],blank:()=>({name:'',ids:[],idea:''}),label:v=>'「'+v.name+'」 묶음'},
   mist:{t:'신입 실수',req:'bad',f:[['ic','아이콘 (이모지 하나)','text'],['bad','실수','text'],['why','왜 문제인가','textarea'],['good','이렇게 바꿉니다','textarea']],blank:()=>({ic:'🙅',bad:'',why:'',good:''}),label:v=>'「'+v.bad+'」'},
   gloss:{t:'용어',req:'w',f:[['ic','아이콘 (이모지 하나)','text'],['w','말','text'],['m','뜻','textarea'],['say','고객에게 쉬운 말로','textarea']],blank:()=>({ic:'📘',w:'',m:'',say:''}),label:v=>'「'+v.w+'」'},
+  visit:{t:'진료 내역 한 줄',req:'d',f:[['d','진료일','date'],['org','병·의원 (약국)','text'],['kind','구분','select',SEL(['외래','입원','약국'])],['cls','외래 종별 (비우면 이름으로 짐작)','select',[['',''],['의원','의원'],['병원','병원'],['종합·상급','종합·상급종합병원']]],['days','입원 · 내원 일수','number'],['cost','본인부담금 (원)','number'],['st','판정','select',[['auto','자동 판정'],['claimed','청구함'],['unclaimed','청구 안 함'],['skip','빼기']]],['memo','메모','text']],blank:()=>({id:uid(),d:today(),org:'',kind:'외래',cls:'',days:'',cost:'',st:'auto',memo:''}),label:v=>v.d+' '+(v.org||'')+' 진료'},
+  claim:{t:'실비 청구 한 줄',req:'d',f:[['d','진료일 (사고일)','date'],['org','병·의원','text'],['amt','청구금액 (원)','number'],['paid','지급금액 (원)','number']],blank:()=>({id:uid(),d:today(),org:'',amt:'',paid:''}),label:v=>v.d+' 청구'},
+  cfg:{t:'이름 · 회사',f:[['me','내 이름','text'],['mes','부르는 이름 (비우면 이름에서 성을 뺍니다 — 홍길동 → 길동)','text'],['phone','내 연락처 (안내장 보내는 사람 칸)','text'],['title','프로그램 이름 (왼쪽 위)','text'],['prev','이전 회사 (전체 이름)','text'],['prevS','이전 회사 (짧게 — 예: DB)','text'],['cur','지금 회사','text'],['curDesc','지금 회사 한 줄 소개','text'],['partner','제휴 회사 (예: 생명·손해보험 33개 회사 — 회사 자료로 확인한 숫자만)','text']]},
   faq:{t:'자주 받는 질문',req:'q',f:[['q','질문','text'],['a','답','textarea']],blank:()=>({q:'',a:''}),label:v=>v.q},
   dont:{t:'하지 않는 말',req:'b',f:[['b','하지 않는 말','text'],['s','이유','text']],blank:()=>({b:'',s:''}),label:v=>v.b},
   find:{t:'찾은 보험금',req:'kind',f:[['d','날짜','date'],['kind','구분','select',SEL(FIND_KINDS)],['co','보험회사','text'],['what','내용 (예: 정형외과 통원 3회)','text'],['amt','금액 (원) — 모르면 비워 두기','number'],['st','상태','select',SEL(FIND_ST)]],blank:()=>({id:uid(),d:today(),kind:'미청구 병원비',co:'',what:'',amt:'',st:'찾음'}),label:v=>'「'+(v.what||v.kind)+'」 기록'},
@@ -1516,7 +1618,7 @@ const SC={
 function getColl(path){
   const p=String(path).split('.');
   if(p[0]==='customers')return S.customers;
-  if(p[0]==='cust'){const c=custById(p[1]);return c?c[p[2]]:null;}
+  if(p[0]==='cust'){let o=custById(p[1]);for(const k of p.slice(2)){if(o==null)return null;o=o[k];}return o;}
   let o=S.lib;for(const k of p){if(o==null)return null;o=o[k];}return o;
 }
 const IE=(path,i,sc,o={})=>`<span class="${o.always?'ied always':'ed ied'}">${o.noMove?'':`<button class="eb" type="button" data-act="up" data-path="${path}" data-i="${i}" title="위로">↑</button><button class="eb" type="button" data-act="dn" data-path="${path}" data-i="${i}" title="아래로">↓</button>`}${o.ins?`<button class="eb" type="button" data-act="ins" data-path="${path}" data-i="${i}" data-sc="${sc}" title="아래에 새 대사 넣기">＋</button>`:''}<button class="eb" type="button" data-act="edit" data-path="${path}" data-i="${i}" data-sc="${sc}" title="수정">✏️</button>${o.noDel?'':`<button class="eb del" type="button" data-act="del" data-path="${path}" data-i="${i}" data-sc="${sc}" title="삭제">🗑</button>`}</span>`;
@@ -1635,6 +1737,8 @@ document.addEventListener('click',e=>{
   const r=e.target.closest('[data-rp]');if(r){closeDrawer();go('rp');$('#rpWho').value=r.dataset.rp;rpScen=null;renderRP();return;}
   const rb=e.target.closest('[data-rpb]');if(rb){const c=custById(rb.dataset.rpb);closeDrawer();go('rp');if(c){$('#rpWho').value=String(c.id);rpScen=bridgePick(c);}renderRP();return;}
   const rs=e.target.closest('[data-rps]');if(rs){closeDrawer();go('rp');rpScen=rs.dataset.rps;renderRP();return;}
+  const sg=e.target.closest('[data-sbgo]');if(sg){sbWhoId=+sg.dataset.sbgo;closeDrawer();go('silbi');sbRender();return;}
+  const ce=e.target.closest('[data-cfgedit]');if(ce){cfgEdit();return;}
   const g=e.target.closest('[data-go]');if(g){go(g.dataset.go);return;}
   const p=e.target.closest('[data-print]');if(p){printPage();return;}
   const ap=e.target.closest('[data-app]');if(ap){appGo(ap.dataset.app);return;}
@@ -1646,9 +1750,9 @@ function appGo(tab){try{if(window.parent&&window.parent!==window&&typeof window.
 /* ================= 내 이야기 ================= */
 let storyV='30';
 function storyHTML(){
-  const {q1,q2,q3}=S.story;
-  if(storyV==='30')return `제가 DB손해보험에서 일하면서 제일 보람 있었던 순간은요, <b>${esc(q1)}</b>.<br><br>그런데 상담할수록 마음에 걸리는 게 있었어요. <b>${esc(q2)}</b>.<br><br>그래서 에이플러스에셋으로 옮겼어요. 이제는 이걸 해 드릴 수 있어요. <b>${esc(q3)}</b>.`;
-  return `(30초 버전에 이어서)<br><br>에이플러스에셋은 보험회사가 아니라, 여러 보험회사 상품을 고객 입장에서 비교해 드리는 법인 보험대리점이에요. 코스피에 상장된 회사이고, 생명·손해보험 33개 회사와 제휴돼 있어요.<br><br>지금 갖고 계신 보험은 그대로 두셔도 돼요. 해지하고 새로 가입하면 나이나 병력 때문에 가입이 어렵거나 보험료가 오를 수 있어서, 그건 제가 먼저 말리고 싶어요.<br><br>대신 제가 처음으로 해 드리고 싶은 건, <b>받을 수 있는데 못 받으신 보험금을 찾아 드리는 것</b>이에요. 보험금은 3년이 지나면 청구를 못 하거든요. 오늘은 그것만 할게요.`;
+  const {q1,q2,q3}=S.story,R=cfgRaw();
+  if(storyV==='30')return `제가 ${esc(R.PREV)}에서 일하면서 제일 보람 있었던 순간은요, <b>${esc(q1)}</b>.<br><br>그런데 상담할수록 마음에 걸리는 게 있었어요. <b>${esc(q2)}</b>.<br><br>그래서 ${esc(R.CUR)}${josa(R.CUR,'으로')} 옮겼어요. 이제는 이걸 해 드릴 수 있어요. <b>${esc(q3)}</b>.`;
+  return `(30초 버전에 이어서)<br><br>${esc(R.CUR)}${josa(R.CUR,'은')} 보험회사가 아니라, 여러 보험회사 상품을 고객 입장에서 비교해 드리는 곳이에요. ${R.CURDESC?esc(R.CURDESC)+'이고, ':''}${esc(R.PARTNER)}${josa(R.PARTNER,'과')} 제휴돼 있어요.<br><br>지금 갖고 계신 보험은 그대로 두셔도 돼요. 해지하고 새로 가입하면 나이나 병력 때문에 가입이 어렵거나 보험료가 오를 수 있어서, 그건 제가 먼저 말리고 싶어요.<br><br>대신 제가 처음으로 해 드리고 싶은 건, <b>받을 수 있는데 못 받으신 보험금을 찾아 드리는 것</b>이에요. 보험금은 3년이 지나면 청구를 못 하거든요. 오늘은 그것만 할게요.`;
 }
 function updStory(){const o=$('#storyOut');o.innerHTML=storyHTML();o.classList.toggle('b',storyV!=='30');}
 function renderStory(){['q1','q2','q3'].forEach(k=>$('#'+k).value=S.story[k]||'');updStory();}
@@ -1673,13 +1777,13 @@ function renderLists(){
   $('#findList').innerHTML=ckHTML('find','find');
   $('#checkList').innerHTML=ckHTML('checkq','check');
   $('#whyCheck').innerHTML=S.lib.whyCheck.map((w,i)=>`<div>${IE('whyCheck',i,'reason')}<span class="ti ${['blue','purple','green','orange','teal','yellow','red','blue','green'][i%9]}">${esc(w.ic||'🛡️')}</span><div class="c">이유 ${i+1}</div><h4>${esc(w.h)}</h4><p>${esc(w.p)}</p>${w.say?`<div class="sayb">"${esc(w.say)}"</div>`:''}</div>`).join('')||'<p class="empty">이유가 없어요. 편집 모드에서 추가하세요.</p>';
-  $('#faq').innerHTML=S.lib.faq.map((f,i)=>`<details class="acc"><summary>${esc(f.q)}${IE('faq',i,'faq')}</summary><div class="a">${esc(f.a)}</div></details>`).join('')||'<p class="empty">질문이 없어요.</p>';
-  $('#dont').innerHTML=S.lib.dont.map((d,i)=>`<div class="kr"><div><b>${esc(d.b)}</b><span>${esc(d.s)}</span></div>${IE('dont',i,'dont')}</div>`).join('');
+  $('#faq').innerHTML=S.lib.faq.map((f,i)=>`<details class="acc"><summary>${cfgFill(f.q)}${IE('faq',i,'faq')}</summary><div class="a">${cfgFill(f.a)}</div></details>`).join('')||'<p class="empty">질문이 없어요.</p>';
+  $('#dont').innerHTML=S.lib.dont.map((d,i)=>`<div class="kr"><div><b>${cfgFill(d.b)}</b><span>${cfgFill(d.s)}</span></div>${IE('dont',i,'dont')}</div>`).join('');
   $('#clueTable').innerHTML=`<div class="h"><span>단서</span><span>찾아줌 중 이런 말·장면</span><span>이렇게 잇습니다</span><span>보장분석에서 보는 것</span><span></span></div>`+
     S.lib.clues.map((q,i)=>`<div><b>${tf(icQ(q))}${esc(q.label)}</b><span class="sg">${esc(q.sign)}</span><span class="sy">"${esc(q.say)}"</span><span class="se">${esc(q.see)}</span>${IE('clues',i,'clue')}</div>`).join('');
-  $('#bridgeBtns').innerHTML=S.lib.scen.filter(s=>s.grp==='bridge').map((s,i)=>`<button class="btn sm ${i===0?'blue':''}" data-rps="${esc(s.id)}">${esc(s.chip)}</button>`).join('');
-  $('#objs').innerHTML=S.lib.objs.map((o,i)=>`<details class="acc obj"><summary>${esc(o.q)}${IE('objs',i,'obj')}</summary><div class="a">
-    <div><span class="pill p-heart">공감</span><span>${esc(o.a)}</span></div><div><span class="pill p-blue">근거</span><span>${esc(o.b)}</span></div><div><span class="pill p-green">제안</span><span>${esc(o.c)}</span></div></div></details>`).join('');
+  $('#bridgeBtns').innerHTML=S.lib.scen.filter(s=>s.grp==='bridge').map((s,i)=>`<button class="btn sm ${i===0?'blue':''}" data-rps="${esc(s.id)}">${cfgFill(s.chip)}</button>`).join('');
+  $('#objs').innerHTML=S.lib.objs.map((o,i)=>`<details class="acc obj"><summary>${cfgFill(o.q)}${IE('objs',i,'obj')}</summary><div class="a">
+    <div><span class="pill p-heart">공감</span><span>${cfgFill(o.a)}</span></div><div><span class="pill p-blue">근거</span><span>${cfgFill(o.b)}</span></div><div><span class="pill p-green">제안</span><span>${cfgFill(o.c)}</span></div></div></details>`).join('');
 }
 document.addEventListener('change',e=>{
   const t=e.target;
@@ -1734,7 +1838,7 @@ function renderList(){
       <span><span class="nm">${pnH(c.name)}</span>${c.chk?' <span class="pill p-heart">❓확인</span>':''}<span class="s" style="display:block">${c.g}고객 · ${esc(c.job||'직업 미정')}${c.fam?' · '+esc(c.fam):''}${fo?' · <b style="color:var(--blue)">찾음 '+fmtWonR(fo)+'</b>':''}${ll?' · 연락 '+ll.slice(5):''}${c.next?' · 다음 '+c.next.slice(5):''}</span></span>
       <span><span class="pill p-blue">${tf(icC(k,conceptOf(c)))} ${esc(k.name)}</span>${secondOf(c)?' <span class="pill">+가족</span>':''}</span>
       <span class="pgt"><span class="pg"><i style="width:${Math.round(d/9*100)}%"></i></span>${d}/9</span>
-      <span style="display:flex;gap:4px;align-items:center;justify-content:flex-end"><span class="pill ${s[1]}">${s[0]}</span><span class="ed"><button class="eb del" type="button" data-act="del" data-path="customers" data-i="${i}" data-sc="cust" title="삭제">🗑</button></span></span></div>`}).join('')
+      <span style="display:flex;gap:4px;align-items:center;justify-content:flex-end"><span class="pill ${s[1]}">${s[0]}</span><span class="ed"><button class="eb" type="button" data-act="edit" data-path="customers" data-i="${i}" data-sc="cust" title="이름·정보 고치기">✏️</button><button class="eb del" type="button" data-act="del" data-path="customers" data-i="${i}" data-sc="cust" title="삭제">🗑</button></span></span></div>`}).join('')
    :'<div style="padding:30px;text-align:center;color:var(--mute)">조건에 맞는 고객이 없어요</div>');
 }
 function ccHTML(k,names,id,cid){
@@ -1793,7 +1897,7 @@ function openDrawer(id,keep){
   const tab=(k,l)=>`<button data-d="${k}" class="${dTab===k?'on':''}">${l}</button>`;
   $('#drawer').innerHTML=`
    <div class="dh">
-    <div class="row"><span class="rk ${prio(c)}">${prio(c)}</span><h3>${esc(c.name)}</h3><button class="btn sm" id="dPrint">🖨 한 장</button><button class="btn sm blue" data-rp="${c.id}">RP</button><button class="btn sm" id="dClose">닫기</button></div>
+    <div class="row"><span class="rk ${prio(c)}">${prio(c)}</span><h3>${esc(c.name)}</h3><button class="btn sm" id="dRename" title="이름·정보 고치기">✏️</button><button class="btn sm" id="dPrint">🖨 한 장</button><button class="btn sm blue" data-rp="${c.id}">RP</button><button class="btn sm" id="dClose">닫기</button></div>
     <div class="row" style="margin-top:8px"><span class="pill">${c.g}고객</span><span class="pill p-blue">${esc(conc(c).name)}</span><span class="pill ${s[1]}">${s[0]}</span><span style="font-size:12.5px;color:var(--mute)">${done(c)}/9 완료${foundOf(c)?' · 찾음 '+fmtWonR(foundOf(c)):''}</span></div>
     <div class="seg" id="dSeg">${tab('ck','체크')}${tab('fd','찾아줌')}${tab('lg','연락')}${tab('cc','컨셉')}${tab('in','정보')}</div>
    </div>
@@ -1815,6 +1919,7 @@ function openDrawer(id,keep){
         +`<div class="fsum"><span>합계 <b>${fmtWonR(foundOf(c))}</b></span><span>입금 확인 <b>${fmtWonR(paidOf(c))}</b></span><span>${fs.length}건</span></div>`
         :'<p class="empty">아직 없어요. 찾아줌을 했는데 0원이었다면, 「체크」 칸에서 3·4번만 체크해 두세요 — 0원일 때 다리 대본이 따로 있습니다.</p>'}
      </div>
+     <div class="blk"><div class="blk-h"><h3>진료 내역으로 더 찾기</h3><button class="btn sm blue" data-sbgo="${c.id}">🧾 미청구 찾기</button><div class="d">심평원·공단 진료 내역과 실비 청구 내역을 맞대 청구 안 된 진료와 예상 금액을 찾습니다</div></div></div>
      <div class="blk"><div class="blk-h"><h3>찾아줌하며 보인 단서</h3><button class="btn sm blue" data-rpb="${c.id}">다리 RP 연습</button><div class="d">체크한 순서대로 다리 대본의 「단서」 자리에 들어갑니다 — 보장분석을 받아야 하는 이 고객만의 이유</div></div>
       <div class="clueg">${S.lib.clues.map(q=>{const on=(c.clues||[]).indexOf(q.id);return `<label class="clue ${on>=0?'on':''}"><input type="checkbox" data-clue="${q.id}" data-cid="${c.id}" ${on>=0?'checked':''}><span class="ci tf">${esc(icQ(q))}</span><span><b>${esc(q.label)}${on>=0?`<span class="ord">${on+1}</span>`:''}</b><small>${esc(q.sign)}</small></span></label>`;}).join('')}</div>
      </div>
@@ -1848,6 +1953,7 @@ function openDrawer(id,keep){
   $('#drawer').classList.add('on');$('#dim').classList.add('on');
   $('#dClose').onclick=closeDrawer;
   $('#dPrint').onclick=()=>printCust(c);
+  $('#dRename').onclick=()=>openEditor('cust',clone(c),false,v=>{Object.assign(c,v);commit();toast('고쳤어요');});
   $('#dSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;dTab=b.dataset.d;
     $('#dSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
     $('#drawer').querySelectorAll('[data-p]').forEach(p=>p.hidden=p.dataset.p!==dTab);};
@@ -1917,11 +2023,17 @@ function renderRPSel(){
 }
 function tokens(c){
   const k=c?conc(c):S.lib.concepts.basic,cl=c?cluesOf(c):[],fs=c?foundSummary(c):'';
-  return {
+  const R=cfgRaw();R.N=nm(c);const rs=c?c.res||{}:{};
+  const done3=c&&(c.steps[2]||c.steps[3]);
+  return {_raw:R,PREV:esc(R.PREV),PREVS:esc(R.PREVS),CUR:esc(R.CUR),CURDESC:esc(R.CURDESC),PARTNER:esc(R.PARTNER),PHONE:esc(R.PHONE),
+    GOOD:rs.good?'<b>'+esc(rs.good)+'</b>':PH('결과 ① 잘 되어 있는 것 — 고객 상세 「체크」 칸에 적으면 들어갑니다'),
+    GAP:rs.gap?'<b>'+esc(rs.gap)+'</b>':PH('결과 ② 겹치거나 빈 것 — 적지 않았으면 말하지 않습니다'),
+    TODO:rs.todo?'<b>'+esc(rs.todo)+'</b>':PH('결과 ③ 지금 할 일 하나'),
+    RECALL:c&&(c.finds||[]).length?'청구 놓친 게 있었잖아요':done3?'받을 건 다 챙기고 계셨잖아요':PH('찾아줌 결과 — 고객 상세 「찾아줌」 에 적으면 들어갑니다'),
     N:pnH(nm(c)),ME:esc(meFull()),MES:esc(meShort()),
     HOOK:'<u>'+esc(k.hook)+'</u>',
     POINT:'<u>'+esc(cl[0]?cl[0].see:((k.check||[])[0]||''))+'</u>',
-    SEE:cl[0]?'<u>'+esc(cl[0].see)+'</u>':'큰 병일 때 생활비가 될 진단비가 있는지',
+    SEE:cl[0]?esc(cl[0].see):'큰 병일 때 생활비가 될 진단비가 있는지',
     FOUND:fs?'<b>'+esc(fs)+'</b>':PH('찾은 내용 — 고객 상세 「찾아줌」에 건별로 적으면 여기에 들어갑니다'),
     CLUE:cl[0]?esc(cl[0].say):PH('찾아줌 단서 — 위 「다리 문장 만들기」에서 체크하면 이 고객 상황이 들어갑니다'),
     CLUE2:cl[1]?esc(cl[1].say):null
@@ -1929,7 +2041,7 @@ function tokens(c){
 }
 function fillLine(x,T){
   if(String(x).includes('{CLUE2}')&&!T.CLUE2)return null;
-  return esc(x).replace(/\{(N|ME|MES|HOOK|POINT|SEE|FOUND|CLUE2|CLUE)\}/g,(m,t)=>T[t]||'');
+  return fillT(x,T,T._raw||{});
 }
 function chatHTML(s,c,edit){
   const T=tokens(c),P='scen.'+S.lib.scen.indexOf(s)+'.lines';let prev='';
@@ -1967,15 +2079,15 @@ function renderRP(){
   if(!rpScen||!scenById(rpScen))rpScen=now||(S.lib.scen[0]||{}).id;
   if(c)$('#rpHook').innerHTML=`<b>${tf(icC(k,conceptOf(c)))} ${esc(k.name)} · 첫 마디</b>${esc(k.hook)}`;
   $('#rpChips').innerHTML=GRPS.map(([g,lab])=>{const list=S.lib.scen.filter(s=>(s.grp||'check')===g);if(!list.length)return '';
-    return `<div class="cg ${g==='bridge'?'br':''}"><span class="cgl">${lab}</span>${list.map(s=>{const r=rec.indexOf(s.id);return `<button class="chip ${s.id===rpScen?'on':''}" data-s="${esc(s.id)}">${esc(s.chip)}${s.id===now?'<em>지금</em>':r>=0?`<em>${r+1}</em>`:''}</button>`;}).join('')}</div>`;}).join('')
+    return `<div class="cg ${g==='bridge'?'br':''}"><span class="cgl">${lab}</span>${list.map(s=>{const r=rec.indexOf(s.id);return `<button class="chip ${s.id===rpScen?'on':''}" data-s="${esc(s.id)}">${cfgFill(s.chip)}${s.id===now?'<em>지금</em>':r>=0?`<em>${r+1}</em>`:''}</button>`;}).join('')}</div>`;}).join('')
     +`<div class="ed" style="margin-top:4px">${AT('scen','scen','+ 새 대본')}</div>`;
   const si=S.lib.scen.findIndex(s=>s.id===rpScen),s=S.lib.scen[si];
   if(!s){$('#rpTitle').textContent='대본이 없어요';$('#rpChat').innerHTML='';$('#rpWhy').innerHTML='';$('#rpGoal').textContent='';$('#rpScenEd').innerHTML='';renderBridge(c,false);return;}
-  $('#rpTitle').textContent=s.title||s.chip;
-  $('#rpGoal').textContent='목표 · '+(s.goal||'');
+  $('#rpTitle').innerHTML=cfgFill(s.title||s.chip);
+  $('#rpGoal').innerHTML='목표 · '+cfgFill(s.goal||'');
   const last=(S.rpLast||{})[s.id];
   $('#rpCount').textContent='연습 '+(S.rp[s.id]||0)+'회'+(last?' · 마지막 '+last.slice(5):'');
-  $('#rpWhy').innerHTML=s.why?`<div class="co key" style="margin:0 0 14px"><span class="co-i">🎯</span><div><b class="co-t">왜 이 대본인가</b>${richB(s.why)}</div></div>`:'';
+  $('#rpWhy').innerHTML=s.why?`<div class="co key" style="margin:0 0 14px"><span class="co-i">🎯</span><div><b class="co-t">왜 이 대본인가</b>${cfgRich(s.why)}</div></div>`:'';
   $('#rpScenEd').innerHTML=`<span class="ed" style="gap:4px;margin-top:6px"><button class="eb" type="button" data-act="edit" data-path="scen" data-i="${si}" data-sc="scen">✎ 대본 이름·목표</button><button class="eb" type="button" data-act="dup" data-path="scen" data-i="${si}">복사해서 내 버전 만들기</button>${DEF.scen.some(d=>d.id===s.id)?`<button class="eb" type="button" data-act="restore" data-path="scen" data-i="${si}">이 대본 처음대로</button>`:''}<button class="eb" type="button" data-act="up" data-path="scen" data-i="${si}">← 앞으로</button><button class="eb" type="button" data-act="dn" data-path="scen" data-i="${si}">뒤로 →</button><button class="eb del" type="button" data-act="del" data-path="scen" data-i="${si}" data-sc="scen">🗑 대본 삭제</button></span>`;
   $('#rpAddLine').innerHTML=`<button class="eb add" type="button" data-act="add" data-path="scen.${si}.lines" data-sc="line">+ 대사 추가 (맨 끝)</button>`;
   renderBridge(c,s.grp==='bridge');
@@ -1998,6 +2110,246 @@ function renderGuide(){
 }
 $('#glossQ').addEventListener('input',e=>{glossQ=e.target.value.trim();renderGuide();});
 $('#starterReset').onclick=()=>{S.starter={};save();renderGuide();};
+
+function cfgEdit(){
+  const c=Object.assign({},CFG_DEF,S.cfg||{});
+  openEditor('cfg',Object.assign({me:S.me||''},c,{title:S.cfg&&S.cfg.title||''}),false,v=>{S.me=String(v.me||'').slice(0,12);const n={};Object.keys(CFG_DEF).forEach(k=>{n[k]=String(v[k]??'').trim();});S.cfg=n;commit();toast('이름·회사를 바꿨어요 — 대본·안내장에 다 들어갑니다');});
+}
+/* ================= 🧾 실비 미청구 찾기 =================
+   심평원·공단 진료 내역 × 보험사 실비 청구 내역을 맞대어, 청구 안 된 것으로 보이는 진료를 고르고
+   예상 보험금을 셉니다. ★ 공제금액·자기부담 비율은 지어 넣지 않습니다 — 그 고객 증권·약관에서
+   옮겨 적은 값으로만 셉니다. 비어 있으면 금액 칸은 「조건 필요」 입니다 (1번).
+   ★ 진료 내역에는 비급여가 없습니다 — 예상 금액은 급여 본인부담금 기준의 추정입니다. */
+const SB_COND=[['clinic','외래 · 의원 공제금액','원'],['hosp','외래 · 병원 공제금액','원'],['big','외래 · 종합·상급종합병원 공제금액','원'],['pharm','약국(처방 조제) 공제금액','원'],['rate','통원 자기부담 비율','%'],['inRate','입원 자기부담 비율','%']];
+const SB_GEN=['모름','1세대','2세대','3세대','4세대','5세대'];
+const SB_ST={auto:'자동 판정',claimed:'청구함',unclaimed:'청구 안 함',skip:'빼기'};
+// 칸 찾기 — [이름, 화면 글, 먼저 볼 꼴, 나중에 볼 꼴, 피할 꼴]. 「요양기관기호」 · 「본인부담률」 · 「투약일수」 를 잘못 잡은 일이 있어 피할 꼴을 둡니다
+const SB_FIELDS={
+  visit:[['d','진료일',/진료(개시|시작)일|진료일자|진료일|내원일/,/일자|날짜/,/종료|청구|접수/],
+         ['org','병·의원',/요양기관명|기관명|병[·.]?의원명|병원명|의료기관명|약국명/,/병[·.]?의원|의료기관|병원|약국|기관/,/기호|번호|코드|종별/],
+         ['kind','입원/외래',/진료형태|진료구분|입[·/]?외래|입원\/외래/,/구분|형태/,/급여/],
+         ['days','일수',/입내원일수|입원일수|내원일수|방문.*일수/,/일수/,/투약/],
+         ['cost','본인부담금',/본인\s*부담\s*(금|액)/,/본인\s*부담/,/률|율|상한|비율/],
+         ['total','총진료비',/총\s*진료비|진료비\s*총액/,/총액/,/본인|공단/],
+         ['nhis','공단부담금',/공단\s*부담/,/보험자\s*부담/,/률|율/]],
+  claim:[['d','진료일',/사고일|진료일|치료일|발생일|진료개시|내원일/,/^일자$/,/청구|접수|신청|지급/],
+         ['filed','접수일',/청구일|접수일|신청일/,/청구\s*일자|접수\s*일자/,/지급/],
+         ['org','병·의원',/병원명|의료기관명|기관명|병[·.]?의원명/,/병원|의료기관|기관|병[·.]?의원/,/기호|번호|코드/],
+         ['amt','청구금액',/청구\s*금액|청구액/,/청구/,/일자|일$/],
+         ['paid','지급금액',/지급\s*금액|지급액/,/보험금/,/일자|일$/]]
+};
+let sbWhoId=null;const sbPrev={visit:null,claim:null};
+function sbCust(){return custById(sbWhoId)||S.customers[0]||null;}
+function sbOf(c){if(!c.silbi)c.silbi={};const s=c.silbi;s.cond=s.cond||{};s.visits=s.visits||[];s.claims=s.claims||[];return s;}
+function sbDate(x){
+  const t=String(x||'').trim();let m;
+  if((m=t.match(/(\d{4})\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})/)))return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+  if((m=t.match(/^(\d{4})(\d{2})(\d{2})$/)))return m[1]+'-'+m[2]+'-'+m[3];
+  if((m=t.match(/^(\d{2})[.\-/](\d{1,2})[.\-/](\d{1,2})$/)))return '20'+m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+  return '';
+}
+function sbNum(x){const t=String(x??'').replace(/[^\d.-]/g,'');if(t===''||t==='-')return '';const n=Math.round(+t);return isFinite(n)?Math.max(0,n):'';}
+function sbRows(text){
+  const lines=String(text||'').replace(/\r/g,'').split('\n').filter(l=>l.trim());
+  const tab=lines.slice(0,5).some(l=>l.includes('\t'));
+  const split=l=>{if(tab)return l.split('\t').map(x=>x.trim());const r=[];let cur='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'&&l[i+1]==='"'){cur+='"';i++;}else if(ch==='"')q=false;else cur+=ch;}else if(ch==='"')q=true;else if(ch===','){r.push(cur.trim());cur='';}else cur+=ch;}r.push(cur.trim());return r;};
+  return lines.map(split);
+}
+function sbRead(type,text){
+  const R=sbRows(text),F=SB_FIELDS[type];if(!R.length)return null;
+  const okH=(f,h,lv)=>f[lv].test(h)&&!(f[4]&&f[4].test(h));
+  let hi=-1,best=0;
+  R.slice(0,10).forEach((row,i)=>{const n=F.filter(f=>row.some(c=>okH(f,c,2)||okH(f,c,3))).length;if(n>best){best=n;hi=i;}});
+  const head=hi>=0&&best>=2?R[hi]:R[0].map((_,i)=>'열 '+(i+1));
+  const rows=(hi>=0&&best>=2?R.slice(hi+1):R).filter(r=>r.some(c=>c));
+  const map={},used=k=>Object.values(map).includes(k);
+  F.forEach(f=>{let i=head.findIndex((h,k)=>okH(f,h,2)&&!used(k));if(i<0)i=head.findIndex((h,k)=>okH(f,h,3)&&!used(k));map[f[0]]=i;});
+  if(map.d<0){const i=head.findIndex((_,k)=>rows.slice(0,5).some(r=>sbDate(r[k])));map.d=i;}
+  return {head,rows,map};
+}
+function sbKind(kindTxt,org){const k=String(kindTxt||''),o=String(org||'');if(/입원/.test(k))return '입원';if(/약국|조제/.test(k)||/약국/.test(o))return '약국';return '외래';}
+function sbTake(type,P){
+  const R={n:0,skip:0,dup:0};const c=sbCust();if(!c||!P)return R;const s=sbOf(c),g=(r,f)=>P.map[f]>=0?r[P.map[f]]:'';
+  P.rows.forEach(r=>{
+    if(type==='visit'){const d=sbDate(g(r,'d'));if(!d){R.skip++;return;}
+      let cost=sbNum(g(r,'cost'));
+      // 본인부담금 칸이 없으면 총진료비 − 공단부담금 (둘 다 있을 때만 — 하나라도 없으면 「모름」)
+      if(cost===''){const t=sbNum(g(r,'total')),h=sbNum(g(r,'nhis'));if(t!==''&&h!=='')cost=Math.max(0,t-h);}
+      const v={id:uid(),d,org:String(g(r,'org')||'').trim(),kind:sbKind(g(r,'kind'),g(r,'org')),cls:'',days:sbNum(g(r,'days')),cost,st:'auto',memo:''};
+      if(s.visits.some(x=>x.d===v.d&&x.org===v.org&&String(x.cost)===String(v.cost))){R.dup++;return;}s.visits.push(v);R.n++;}
+    else{const dt=sbDate(g(r,'d')),fl=sbDate(g(r,'filed'));if(!dt&&!fl){R.skip++;return;}
+      // 진료일이 없고 접수일만 있으면 접수일로 두되 「접수일」 이라고 표시 — 진료일과 같은 셈으로 맞대지 않습니다
+      const v={id:uid(),d:dt||fl,dk:dt?'treat':'filed',filed:fl,org:String(g(r,'org')||'').trim(),amt:sbNum(g(r,'amt')),paid:sbNum(g(r,'paid'))};
+      if(s.claims.some(x=>x.d===v.d&&x.org===v.org&&String(x.amt)===String(v.amt))){R.dup++;return;}s.claims.push(v);R.n++;}});
+  return R;
+}
+const sbTakeMsg=(R,ty,P)=>R.n+'줄 넣었어요'+(ty==='visit'&&P&&R.n?(P.map.kind<0?' · 입원/외래 칸이 없어 모두 외래로 넣었어요(입원은 ✏️ 로 고치기)':'')+(P.map.cost<0&&(P.map.total<0||P.map.nhis<0)?' · 본인부담금 칸이 없어 금액은 비워 두었어요':''):'')+(R.skip?' · 날짜를 못 읽어 뺀 줄 '+R.skip:'')+(R.dup?' · 이미 있어 안 넣은 줄 '+R.dup:'');
+const sbKey=s=>String(s||'').replace(/\s|\(.*?\)|（.*?）|주식회사|의료법인|재단법인|사단법인|\(주\)/g,'').toLowerCase();
+function sbSame(a,b){const x=sbKey(a),y=sbKey(b);if(!x||!y)return true;return x.includes(y)||y.includes(x)||(x.length>=3&&y.length>=3&&x.slice(0,3)===y.slice(0,3));}
+function sbCls(v){if(v.cls)return v.cls;const o=String(v.org||'');if(/대학교?병원|대학병원|종합병원|의료원|상급/.test(o))return '종합·상급';if(/병원/.test(o))return '병원';if(/의원|클리닉/.test(o))return '의원';return '';}
+const sbAdd=(d,n)=>{const t=new Date(d+'T00:00:00');t.setDate(t.getDate()+n);return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');};
+const sb3y=d=>{const t=new Date(d+'T00:00:00');t.setFullYear(t.getFullYear()+3);return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');};
+function sbEst(v,cond){
+  if(v.cost===''||v.cost==null)return {est:null,why:'본인부담금 모름'};
+  const cost=+v.cost,num=k=>cond[k]===''||cond[k]==null?null:+cond[k];
+  if(v.kind==='입원'){const r=num('inRate');if(r==null)return {est:null,why:'입원 자기부담 비율 필요'};return {est:Math.round(cost*(100-r)/100),why:''};}
+  const rate=num('rate')||0;let fix;
+  if(v.kind==='약국'){fix=num('pharm');if(fix==null)return {est:null,why:'약국 공제금액 필요'};}
+  else{const cl=sbCls(v);if(!cl)return {est:null,why:'의원·병원 종별 고르기'};fix=num(cl==='의원'?'clinic':cl==='병원'?'hosp':'big');if(fix==null)return {est:null,why:cl+' 공제금액 필요'};}
+  const ded=Math.max(fix,Math.round(cost*rate/100));return {est:Math.max(0,cost-ded),why:''};
+}
+function sbJudge(c){
+  const s=sbOf(c),t=today(),soon=sbAdd(t,90);
+  return s.visits.map((v,i)=>{
+    const end=v.kind==='입원'&&+v.days>1?sbAdd(v.d,+v.days-1):v.d;
+    const T=s.claims.filter(k=>k.dk!=='filed'),Fd=s.claims.filter(k=>k.dk==='filed');
+    const same=T.filter(k=>k.d>=v.d&&k.d<=end);
+    let auto='unclaimed',note='';
+    if(same.some(k=>sbSame(k.org,v.org))){auto='claimed';}
+    else if(same.length){auto='check';note=v.kind==='약국'?'같은 날 다른 곳 청구에 함께 들어갔을 수 있음':'같은 날 다른 병원 청구가 있음';}
+    // 같은 병원을 여러 번 다니고 한 번에 묶어 청구하는 일이 흔합니다 — 가까운 날(앞뒤 31일) 같은 병원 청구가 있으면 단정하지 않습니다
+    else if(v.org&&T.some(k=>k.org&&sbSame(k.org,v.org)&&Math.abs((new Date(k.d)-new Date(v.d))/864e5)<=31)){auto='check';note='같은 병원 청구가 가까운 날에 있음 — 묶어서 청구했을 수 있음';}
+    // 청구 내역에 접수일만 있으면 — 진료 뒤 반년 안에 같은 병원 접수가 있으면 단정하지 않습니다
+    else if(v.org&&Fd.some(k=>k.org&&sbSame(k.org,v.org)&&k.d>=v.d&&k.d<=sbAdd(v.d,180))){auto='check';note='같은 병원 청구 접수가 진료 뒤에 있음 — 이 진료를 청구했을 수 있음';}
+    const st=v.st&&v.st!=='auto'?v.st:auto,dl=sb3y(v.d),E=sbEst(v,s.cond);
+    return {v,i,auto,st,note,dl,expired:dl<t,soon:dl>=t&&dl<=soon,est:E.est,why:E.why};
+  });
+}
+function sbSum(c){
+  const J=sbJudge(c),U=J.filter(j=>j.st==='unclaimed'&&!j.expired),K=J.filter(j=>j.st==='check'&&!j.expired);
+  const known=U.filter(j=>j.est!=null);
+  return {J,U,K,X:J.filter(j=>j.st==='unclaimed'&&j.expired),cost:U.reduce((a,j)=>a+(+j.v.cost||0),0),est:known.reduce((a,j)=>a+j.est,0),unknown:U.length-known.length,soon:U.filter(j=>j.soon).length};
+}
+const SB_PILL={claimed:['청구됨','p-green'],check:['확인 필요','p-orange'],unclaimed:['청구 안 된 듯','p-heart'],skip:['뺌','']};
+function sbPrevHTML(type){
+  const P=sbPrev[type];if(!P)return '';const F=SB_FIELDS[type];
+  return `<div class="sbprev"><div class="sbmap">${F.map(f=>`<label>${f[1]}<select data-sbmap="${type}:${f[0]}"><option value="-1">없음</option>${P.head.map((h,k)=>`<option value="${k}" ${P.map[f[0]]===k?'selected':''}>${esc(h||'열 '+(k+1))}</option>`).join('')}</select></label>`).join('')}</div>
+   <div class="sbscroll"><table class="sbt"><tr>${F.map(f=>`<th>${f[1]}</th>`).join('')}</tr>${P.rows.slice(0,5).map(r=>`<tr>${F.map(f=>{const x=P.map[f[0]]>=0?r[P.map[f[0]]]:'';return `<td>${esc(f[0]==='d'?(sbDate(x)||x):x)}</td>`;}).join('')}</tr>`).join('')}</table></div>
+   <div class="row mt"><button class="btn sm blue" data-sbtake="${type}">${P.rows.length}줄 넣기</button><button class="btn sm" data-sbcancel="${type}">취소</button><span style="font-size:12.5px;color:var(--mute)">진료일을 못 읽은 줄은 빠집니다 · 이미 있는 줄은 다시 안 넣습니다</span></div></div>`;
+}
+function sbLetter(c){
+  if(!c)return '';
+  const s=sbOf(c),M=sbSum(c),R=cfgRaw(),F=c.finds||[];
+  const amt=n=>n==null||n===''?'—':fmtWonR(n);
+  const row=j=>`<tr><td>${esc(j.v.d)}</td><td>${esc(j.v.org||'—')}</td><td>${esc(j.v.kind)}</td><td>${amt(j.v.cost)}</td><td>${j.est==null?'확인 후 안내':fmtWonR(j.est)}</td><td>${esc(j.dl)}${j.soon?' <b>(곧)</b>':''}</td></tr>`;
+  return `<div class="lt-h"><div class="lt-k">받으실 수 있는 보험금 안내</div><h1>${pnH(nm(c))}께</h1><div class="meta">${esc(today())} · ${esc(R.CUR)} ${esc(R.ME)}${R.PHONE?' · '+esc(R.PHONE):''}</div></div>
+   <p class="ln2">안녕하세요, ${esc(R.ME)}입니다. 보험금은 <b>청구해야 나오고, 3년이 지나면 청구할 수 없습니다</b>(상법 제662조). 함께 살펴본 내용을 한 장으로 정리해 드립니다.</p>
+   ${F.length?`<h2>1. 함께 찾은 보험금</h2><table><tr><th>날짜</th><th>구분</th><th>보험회사</th><th>내용</th><th>금액</th><th>상태</th></tr>${F.map(f=>`<tr><td>${esc(f.d)}</td><td>${esc(f.kind)}</td><td>${esc(f.co)}</td><td>${esc(f.what)}</td><td>${f.amt===''||f.amt==null?'확인 중':fmtWonR(f.amt)}</td><td>${esc(f.st)}</td></tr>`).join('')}</table>`:''}
+   ${!s.visits.length?'':`<h2>${F.length?'2':'1'}. 청구가 안 된 것으로 보이는 진료</h2>
+   ${M.U.length?`<table><tr><th>진료일</th><th>병·의원</th><th>구분</th><th>본인부담금</th><th>예상 보험금</th><th>청구 기한</th></tr>${M.U.map(row).join('')}</table>
+     <div class="box">${M.unknown===M.U.length?`<b>예상 보험금은 계약 조건을 확인한 뒤 알려 드리겠습니다</b> · ${M.U.length}건 · 본인부담금 합계 ${fmtWonR(M.cost)}`:`<b>예상 보험금 ${M.unknown?'(확인된 것만) ':''}약 ${fmtWonR(M.est)}</b> · ${M.U.length}건 · 본인부담금 합계 ${fmtWonR(M.cost)}${M.unknown?`<br>${M.unknown}건은 계약 조건을 확인한 뒤 따로 알려 드리겠습니다.`:''}`}</div>`
+     :'<div class="ln2">진료 내역과 청구 내역을 맞대 보니 청구 안 된 것으로 보이는 진료가 없습니다. 잘 챙기고 계십니다.</div>'}`}
+   ${M.X.length?`<div class="ln2" style="margin-top:8px"><b>기한이 지났을 수 있는 진료 ${M.X.length}건</b> — ${M.X.map(j=>esc(j.v.d)+' '+esc(j.v.org||'')).join(' · ')}. 진료일로부터 3년이 지나 청구가 어려울 수 있습니다 — 보험회사에 한 번 물어보세요.</div>`:''}
+   ${M.K.length?`<div class="ln2" style="margin-top:8px"><b>청구됐는지 확인이 필요한 진료 ${M.K.length}건</b> — ${M.K.map(j=>esc(j.v.d)+' '+esc(j.v.org||'')).join(' · ')}</div>`:''}
+   <h2>청구하는 방법</h2>
+   <div class="ln2">① 진료받은 병·의원에서 <b>영수증과 진료비 세부내역서</b>를 받습니다 (병원 창구나 병원 앱). 금액과 보험회사에 따라 서류가 더 필요할 수 있습니다.</div>
+   <div class="ln2">② 가입한 보험회사 앱 · 고객센터로 청구합니다. 참여 병원이면 「실손24」 앱으로 바로 보낼 수 있습니다.</div>
+   <div class="ln2">③ 보험금은 <b>고객님 명의 계좌</b>로 받습니다. 모르는 것은 언제든 물어보세요 — 같이 해 드리겠습니다.</div>
+   <h2>꼭 알아 두실 것</h2>
+   <div class="ln2">· 예상 보험금은 <b>추정</b>입니다. 진료 내역에는 비급여가 빠져 있고, 실제 금액은 약관과 <b>보험회사 심사 결과에 따릅니다.</b></div>
+   <div class="ln2">· 실손보험이 여러 개이면 보험금은 실제 병원비 안에서 나누어 지급됩니다.</div>
+   <div class="ln2">· 청구 기한은 진료일로부터 3년으로 계산했습니다. 기한이 가까운 것부터 청구하세요.</div>
+   <div class="ln2">· 저는 인증번호나 비밀번호를 여쭙지 않습니다. 그런 연락은 받지 마세요.</div>
+   <h2>다음에 해 드릴 것</h2>
+   <div class="ln2">이번에 본 것은 <b>지나간 병원비</b>입니다. 앞으로 크게 아프실 때 무엇이 나오는지는 지금 보험 안을 펴 봐야 압니다. 원하시면 보장 내용을 한 장으로 정리해 드리겠습니다 — 바꾸자는 것이 아니라, 무엇이 있는지 아시도록요.</div>
+   <div class="lt-f">${esc(R.CUR)} · ${esc(R.ME)}${R.PHONE?' · '+esc(R.PHONE):''}</div>`;
+}
+function sbRender(){
+  const sel=$('#sbWho'),body=$('#sbBody');if(!sel||!body)return;
+  if(sbWhoId==null||!custById(sbWhoId))sbWhoId=S.customers[0]?S.customers[0].id:null;
+  sel.innerHTML=S.customers.map(c=>`<option value="${c.id}" ${c.id===sbWhoId?'selected':''}>${c.g} · ${esc(c.name)}${(c.silbi&&c.silbi.visits&&c.silbi.visits.length)?' · 진료 '+c.silbi.visits.length+'건':''}</option>`).join('');
+  const c=sbCust();
+  if(!c){body.innerHTML='<div class="blk"><p class="empty">고객을 먼저 추가해 주세요 — 「고객 관리」 에서.</p><button class="btn sm blue" data-go="cust">고객 관리로</button></div>';return;}
+  const s=sbOf(c),M=sbSum(c),P='cust.'+c.id+'.silbi';
+  const condOk=SB_COND.some(([k])=>s.cond[k]!==''&&s.cond[k]!=null);
+  const vrows=M.J.slice().sort((a,b)=>b.v.d.localeCompare(a.v.d));
+  const crows=s.claims.map((k,i)=>({k,i})).sort((a,b)=>b.k.d.localeCompare(a.k.d));
+  body.innerHTML=`
+  <div class="blk"><div class="blk-h"><h3><span class="tf">📑</span>① 계약 조건 — ${pnH(nm(c))}의 실손</h3><div class="d">증권·약관의 「보상하는 손해」 에서 옮겨 적습니다. <b>비워 두면 그 금액은 계산하지 않습니다</b> — 지어 넣지 않습니다.</div></div>
+   <div class="sbcond"><label>가입 세대<select data-sbcond="gen">${SB_GEN.map(g=>`<option ${s.cond.gen===g?'selected':''}>${g}</option>`).join('')}</select></label>
+   ${SB_COND.map(([k,l,u])=>`<label>${l}<span class="sbin"><input type="number" min="0" inputmode="numeric" data-sbcond="${k}" value="${esc(s.cond[k]??'')}" placeholder="약관에서"><em>${u}</em></span></label>`).join('')}</div>
+   <div class="co tip"><span class="co-i">💡</span><div><b class="co-t">어떻게 셉니까</b>통원 · 약국은 <b>본인부담금 − (공제금액과 「본인부담금 × 자기부담 비율」 중 큰 것)</b>, 입원은 <b>본인부담금 × (100 − 자기부담 비율)%</b>. 가입 세대·상품마다 이 값이 다르니 그 고객 약관의 숫자를 넣으세요. 한도·특약·비급여는 셈에 넣지 않습니다.</div></div>
+  </div>
+
+  <div class="blk"><div class="blk-h"><h3><span class="tf">🏥</span>② 진료 내역 — 심평원 · 건강보험공단</h3><span class="sp"></span>${!s.visits.length&&!s.claims.length?'<button class="btn sm" id="sbDemo">견본으로 해 보기</button>':''}${s.visits.concat(s.claims).some(x=>x.memo==='견본')?'<button class="btn sm" id="sbDemoClear">견본 줄 지우기</button>':''}<div class="d">고객이 직접 조회한 진료 내역을 붙여넣습니다 (최근 3년)</div></div>
+   <div class="co key" style="margin-top:0"><span class="co-i">🔗</span><div><b class="co-t">진료 내역 받는 길</b>① 고객 휴대폰으로 <b>건강보험심사평가원 「내 진료정보 열람」</b>(누리집·앱) 또는 <b>국민건강보험공단 「The건강보험」</b> 앱에 고객이 직접 본인 인증 ② 진료받은 내역 · 기간 최근 3년 ③ 나온 표를 <b>복사해 아래에 붙여넣기</b> — 내려받은 파일이 있으면 CSV 로 넣기(엑셀은 「다른 이름으로 저장 → CSV」). 진료일 · 병·의원 · 입원/외래 · 본인부담금 칸을 알아서 찾고, 못 찾으면 골라 주시면 됩니다.<div class="mt" style="font-size:13px">⚠ 진료 기록은 민감한 정보입니다 — <b>고객 동의</b>를 받고, 이 기기에만 두고, 일이 끝나면 아래 「진료 자료 지우기」.</div></div></div>
+   <textarea class="inp" id="sbVisitPaste" placeholder="여기에 진료 내역 표를 붙여넣기 (Ctrl+V)" style="min-height:90px;margin-top:12px"></textarea>
+   <div class="row mt"><button class="btn sm blue" data-sbread="visit">붙여넣은 것 읽기</button><label class="btn sm">CSV 파일 넣기<input type="file" accept=".csv,.tsv,.txt" data-sbfile="visit" hidden></label><button class="btn sm" data-act="add" data-path="${P}.visits" data-sc="visit">+ 직접 한 줄</button></div>
+   ${sbPrevHTML('visit')}
+   ${vrows.length?`<div class="sbscroll mt"><table class="sbt sbv"><tr><th>진료일</th><th>병·의원</th><th>구분</th><th>본인부담</th><th>판정</th><th>예상 보험금</th><th>청구 기한</th><th></th></tr>
+     ${vrows.map(j=>{const pl=SB_PILL[j.st]||['',''];return `<tr class="${j.st}"><td>${esc(j.v.d)}</td><td>${esc(j.v.org||'—')}${j.v.kind==='외래'&&!sbCls(j.v)?' <small class="w">종별?</small>':''}</td><td>${esc(j.v.kind)}${j.v.kind==='입원'&&j.v.days?' '+esc(j.v.days)+'일':''}</td><td>${j.v.cost===''?'<small>모름</small>':fmtWonR(j.v.cost)}</td>
+       <td><span class="pill ${pl[1]}">${pl[0]}</span>${j.note?`<small class="w" style="display:block">${esc(j.note)}</small>`:''}<select data-sbst="${j.i}" title="판정 바꾸기">${Object.entries(SB_ST).map(([k,l])=>`<option value="${k}" ${(j.v.st||'auto')===k?'selected':''}>${l}</option>`).join('')}</select></td>
+       <td>${j.st==='unclaimed'||j.st==='check'?(j.est==null?`<small class="w">${esc(j.why)}</small>`:'<b>'+fmtWonR(j.est)+'</b>'):'—'}</td>
+       <td>${esc(j.dl)}${j.expired?' <small class="w">지났을 수 있음</small>':j.soon?' <small class="w">곧</small>':''}</td><td>${IE(P+'.visits',j.i,'visit',{always:true,noMove:true})}</td></tr>`;}).join('')}</table></div>`:'<p class="empty mt">아직 진료 내역이 없어요.</p>'}
+  </div>
+
+  <div class="blk"><div class="blk-h"><h3><span class="tf">📨</span>③ 실비 청구 접수 내역 — 보험회사</h3><div class="d">보험회사 앱 · 고객센터의 「청구 내역」 을 붙여넣습니다. 진료일 · 병원으로 진료 내역과 맞댑니다.</div></div>
+   <textarea class="inp" id="sbClaimPaste" placeholder="여기에 청구 내역 표를 붙여넣기 — 진료일(사고일) · 병원 · 청구금액 · 지급금액" style="min-height:80px"></textarea>
+   <div class="row mt"><button class="btn sm blue" data-sbread="claim">붙여넣은 것 읽기</button><label class="btn sm">CSV 파일 넣기<input type="file" accept=".csv,.tsv,.txt" data-sbfile="claim" hidden></label><button class="btn sm" data-act="add" data-path="${P}.claims" data-sc="claim">+ 직접 한 줄</button></div>
+   ${sbPrevHTML('claim')}
+   ${crows.length?`<div class="sbscroll mt"><table class="sbt"><tr><th>진료일</th><th>병·의원</th><th>청구금액</th><th>지급금액</th><th></th></tr>${crows.map(({k,i})=>`<tr><td>${esc(k.d)}${k.dk==='filed'?' <small class="w">접수일</small>':''}</td><td>${esc(k.org||'—')}</td><td>${k.amt===''?'—':fmtWonR(k.amt)}</td><td>${k.paid===''?'—':fmtWonR(k.paid)}</td><td>${IE(P+'.claims',i,'claim',{always:true,noMove:true})}</td></tr>`).join('')}</table></div>`:'<p class="empty mt">아직 청구 내역이 없어요. 청구를 한 번도 안 했다면 비워 두면 됩니다 — 그러면 모든 진료가 「청구 안 된 듯」 으로 잡힙니다.</p>'}
+  </div>
+
+  <div class="blk"><div class="blk-h"><h3><span class="tf">💰</span>④ 결과</h3><div class="d">기한(진료일 + 3년)이 지난 것은 합계에서 뺐습니다 · 「확인 필요」 는 합계에 안 넣습니다</div></div>
+   <div class="sbsum">
+     <div><span class="l">청구 안 된 듯</span><b>${M.U.length}<small>건</small></b></div>
+     <div><span class="l">본인부담금 합계</span><b>${fmtWonR(M.cost)}</b></div>
+     <div class="hl"><span class="l">예상 보험금 (추정)</span><b>${M.U.length?(M.unknown===M.U.length?'조건 필요':fmtWonR(M.est)):'0원'}</b>${M.unknown?`<small>${M.unknown}건은 조건이 없어 뺐습니다</small>`:''}</div>
+     <div><span class="l">확인 필요 · 기한 곧</span><b>${M.K.length}<small>건</small> · ${M.soon}<small>건</small></b></div>
+   </div>
+   ${M.X.length?`<p class="empty">기한이 지났을 수 있는 진료 ${M.X.length}건은 합계에서 뺐습니다 — 보험회사에 한 번 물어보세요.</p>`:''}
+   <div class="row mt"><button class="btn sm blue" id="sbToFind">찾은 보험금에 넣기</button><button class="btn sm" id="sbClear" style="color:var(--heart)">진료 자료 지우기</button></div>
+  </div>
+
+  <div class="blk"><div class="blk-h"><h3><span class="tf">📄</span>⑤ 고객 안내장</h3><button class="btn sm blue" id="sbLetterPrint">🖨 안내장 인쇄 · PDF</button><div class="d">함께 찾은 보험금 · 청구 안 된 진료 · 청구하는 법 · 다음 안내를 한 장에. 보내는 사람 이름 · 연락처는 「✏️ 이름·회사 바꾸기」 에서.</div></div>
+   ${!s.visits.length?'<p class="empty" style="margin:0 0 8px">② 진료 내역을 아직 넣지 않아 안내장에 「청구 안 된 진료」 칸이 없습니다 — 넣으면 바로 생깁니다.</p>':''}
+   <label class="toggle" style="padding:0 0 10px"><input type="checkbox" id="sbReal"> 안내장에 고객 실명 넣기 (인쇄할 때만 — 끄면 ${esc(mask(c.name))}님)</label>
+   <div class="letter pdoc">${sbLetter(c)}</div>
+  </div>`;
+}
+function sbSave(){save();sbRender();}
+document.addEventListener('change',e=>{
+  const t=e.target;if(!t.closest||!t.closest('#t-silbi'))return;
+  const c=sbCust();
+  if(t.id==='sbWho'){sbWhoId=+t.value;sbPrev.visit=sbPrev.claim=null;sbRender();return;}
+  if(!c)return;const s=sbOf(c);
+  if(t.dataset.sbcond){const k=t.dataset.sbcond;
+    let v=k==='gen'?t.value:(t.value===''?'':Math.max(0,+t.value));
+    if(k==='rate'||k==='inRate'){if(v!==''&&v>0&&v<1){v=Math.round(v*1000)/10;toast('비율을 '+v+'% 로 받았어요');}else if(v!==''&&v>100){toast('비율은 0~100 사이로 적어 주세요');v=s.cond[k]??'';}}
+    s.cond[k]=v;sbSave();
+    // Tab 으로 넘어가던 중이면 다시 그린 뒤 다음 칸에 손을 놓습니다 (다시 그리면 브라우저가 고른 다음 칸이 사라집니다)
+    if(sbTabNext){const nx=sbTabNext;sbTabNext=null;setTimeout(()=>{const el=document.querySelector('[data-sbcond="'+nx+'"]');if(el){el.focus();if(el.select)try{el.select();}catch(_){}}},0);}
+    return;}
+  if(t.dataset.sbst!=null){const v=s.visits[+t.dataset.sbst];if(v){v.st=t.value;sbSave();}return;}
+  if(t.dataset.sbmap){const [ty,f]=t.dataset.sbmap.split(':');if(sbPrev[ty]){sbPrev[ty].map[f]=+t.value;sbRender();}return;}
+  if(t.dataset.sbfile){const ty=t.dataset.sbfile,f=t.files[0];if(!f)return;const r=new FileReader();
+    r.onload=()=>{let txt='';try{txt=new TextDecoder('utf-8',{fatal:true}).decode(r.result);}catch(_){try{txt=new TextDecoder('euc-kr').decode(r.result);}catch(__){txt='';}}
+      const P=sbRead(ty,txt.replace(/^﻿/,''));if(!P||!P.rows.length){toast('표를 못 읽었어요 — CSV 인지 확인해 주세요');return;}sbPrev[ty]=P;sbRender();};
+    r.readAsArrayBuffer(f);t.value='';return;}
+});
+let sbTabNext=null;
+const SB_ORDER=['gen'].concat(SB_COND.map(x=>x[0]));
+document.addEventListener('keydown',e=>{const t=e.target;if(e.key!=='Tab'||!t.dataset||!t.dataset.sbcond){return;}const i=SB_ORDER.indexOf(t.dataset.sbcond),j=i+(e.shiftKey?-1:1);sbTabNext=j>=0&&j<SB_ORDER.length?SB_ORDER[j]:null;});
+document.addEventListener('click',e=>{
+  const t=e.target;if(!t.closest||!t.closest('#t-silbi'))return;
+  const c=sbCust();if(!c)return;const s=sbOf(c);
+  const rd=t.closest('[data-sbread]');if(rd){const ty=rd.dataset.sbread,txt=$(ty==='visit'?'#sbVisitPaste':'#sbClaimPaste').value;const P=sbRead(ty,txt);if(!P||!P.rows.length){toast('붙여넣은 표가 없어요');return;}sbPrev[ty]=P;sbRender();return;}
+  const tk=t.closest('[data-sbtake]');if(tk){const ty=tk.dataset.sbtake,P=sbPrev[ty],R=sbTake(ty,P);sbPrev[ty]=null;sbSave();toast(sbTakeMsg(R,ty,P));return;}
+  const cc=t.closest('[data-sbcancel]');if(cc){sbPrev[cc.dataset.sbcancel]=null;sbRender();return;}
+  if(t.closest('#sbDemo')){
+    const base=sbAdd(today(),-200),D=n=>sbAdd(base,n),mk=(d,org,kind,cost,days)=>({id:uid(),d,org,kind,cls:'',days:days||1,cost,st:'auto',memo:'견본'});
+    s.visits.push(mk(D(0),'견본정형외과의원','외래',23400),mk(D(7),'견본정형외과의원','외래',18600),mk(D(14),'견본정형외과의원','외래',18600),mk(D(0),'견본약국','약국',6800),
+      mk(D(40),'견본내과의원','외래',15200),mk(D(60),'견본소아청소년과의원','외래',9800),mk(D(90),'견본대학교병원','외래',48600),mk(D(120),'견본병원','입원',300000,3),mk(sbAdd(today(),-1500),'견본치과의원','외래',32000));
+    s.claims.push({id:uid(),d:D(0),dk:'treat',filed:D(20),org:'견본정형외과',amt:60600,paid:'',memo:'견본'},{id:uid(),d:D(60),dk:'treat',filed:D(65),org:'견본이비인후과의원',amt:12000,paid:'',memo:'견본'});
+    sbSave();toast('견본을 넣었어요 — 「견본」 이 붙은 줄은 🗑 로 지우세요');return;}
+  if(t.closest('#sbDemoClear')){s.visits=s.visits.filter(x=>x.memo!=='견본');s.claims=s.claims.filter(x=>x.memo!=='견본');sbSave();toast('견본 줄을 지웠어요 — 직접 넣은 줄은 그대로입니다');return;}
+  if(t.closest('#sbToFind')){const M=sbSum(c);if(!M.U.length){toast('청구 안 된 듯한 진료가 없어요');return;}
+    c.finds=(c.finds||[]).filter(f=>f.id!=='sb-'+c.id);
+    c.finds.push({id:'sb-'+c.id,d:today(),kind:'미청구 병원비',co:'',what:'실비 미청구 추정 '+M.U.length+'건 (진료 내역 대조'+(M.unknown?' · '+M.unknown+'건 금액 미정':'')+')',amt:M.unknown===M.U.length?'':M.est,st:'찾음'});
+    c.steps[3]=true;save();renderAll();toast('찾은 보험금에 넣었어요 — 다리 대본에도 들어갑니다');return;}
+  if(t.closest('#sbClear')){if(confirm(c.name+'님의 진료 내역·청구 내역을 이 기기에서 지울까요? (계약 조건은 남습니다)')){s.visits=[];s.claims=[];sbPrev.visit=sbPrev.claim=null;sbSave();toast('지웠어요');}return;}
+  if(t.closest('#sbLetterPrint')){printDoc(`<div class="letter">${sbLetter(c)}</div>`,{customer:true,real:$('#sbReal').checked});return;}
+});
 
 /* ================= 8주 ================= */
 function renderWeeks(){
@@ -2028,9 +2380,9 @@ window.addEventListener('afterprint',()=>{
   document.body.classList.remove('printing');$('#printArea').innerHTML='';
 });
 function printPage(){closeDrawer();window.print();}
-function printDoc(html){
-  syncPmask();
-  $('#printArea').innerHTML=`<div class="pdoc">${html}<div class="foot2">APEX · 에이플러스에셋 · 내부 교육용 (고객에게 그대로 보내지 마세요) · 인쇄 ${today()}${S.pmask?' · 이름 가림':''}</div></div>`;
+function printDoc(html,o){
+  o=o||{};syncPmask();if(o.real)document.body.classList.remove('pmask');
+  $('#printArea').innerHTML=`<div class="pdoc">${html}${o.customer?'':`<div class="foot2">APEX · ${esc(cfgRaw().CUR)} · 내부 교육용 (고객에게 그대로 보내지 마세요) · 인쇄 ${today()}${S.pmask?' · 이름 가림':''}</div>`}</div>`;
   document.body.classList.add('printing');
   setTimeout(()=>window.print(),60);
 }
@@ -2054,12 +2406,12 @@ function printCust(c){
 }
 function scenPrint(s,c){
   const T=tokens(c);
-  return `<div class="sc"><h2>${esc(s.title||s.chip)}</h2><div class="meta">목표 · ${esc(s.goal)}${s.why?'<br>'+richB(s.why):''}</div>
+  return `<div class="sc"><h2>${cfgFill(s.title||s.chip)}</h2><div class="meta">목표 · ${cfgFill(s.goal)}${s.why?'<br>'+cfgRich(s.why):''}</div>
    ${s.lines.map(l=>{const h=fillLine(l.x,T);if(h==null)return '';
      if(l.r==='coach')return `<div class="ln2 co">💡 ${h}</div>`;
      return `<div class="ln2 ${l.r}"><span class="w">${l.r==='me'?esc(meShort()):'고객'}</span>${h}${l.g?` <small>(${tagH(l.g)})</small>`:''}</div>`;}).join('')}</div>`;
 }
-function objPrint(){return `<h2>거절 응대</h2><table><tr><th>고객의 말</th><th>공감</th><th>근거</th><th>작은 제안</th></tr>${S.lib.objs.map(o=>`<tr><td><b>${esc(o.q)}</b></td><td>${esc(o.a)}</td><td>${esc(o.b)}</td><td>${esc(o.c)}</td></tr>`).join('')}</table>`;}
+function objPrint(){return `<h2>거절 응대</h2><table><tr><th>고객의 말</th><th>공감</th><th>근거</th><th>작은 제안</th></tr>${S.lib.objs.map(o=>`<tr><td><b>${cfgFill(o.q)}</b></td><td>${cfgFill(o.a)}</td><td>${cfgFill(o.b)}</td><td>${cfgFill(o.c)}</td></tr>`).join('')}</table>`;}
 const rpHead=c=>`<div class="meta">연습 고객 ${c?pnH(nm(c))+' · 컨셉 「'+esc(conc(c).name)+'」':'없음'}${c&&foundSummary(c)?' · 찾은 내용 '+esc(foundSummary(c)):''}</div>`;
 $('#prScen').onclick=()=>{const s=scenById(rpScen),c=rpCust();if(!s)return;printDoc(`<h1>RP 대본</h1>${rpHead(c)}${scenPrint(s,c)}`);};
 $('#prGrp').onclick=()=>{const s=scenById(rpScen),c=rpCust();if(!s)return;const g=s.grp||'check';const lab=(GRPS.find(x=>x[0]===g)||[0,''])[1];
@@ -2086,7 +2438,7 @@ $('#prCheckForm').onclick=()=>{
 };
 
 /* ================= 시작 ================= */
-function renderAll(){renderMe();renderGuide();renderHome();renderStory();renderLists();renderCust();renderRPSel();renderRP();renderWeeks();syncPmask();}
+function renderAll(){renderCfg();renderMe();renderGuide();renderHome();renderStory();renderLists();renderCust();renderRPSel();renderRP();renderWeeks();sbRender();syncPmask();}
 fillTools();
 $('#meName').addEventListener('input',e=>{S.me=e.target.value.slice(0,12);save();renderMe();renderRP();});
 renderAll();

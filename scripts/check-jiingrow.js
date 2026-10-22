@@ -1,4 +1,4 @@
-/* 🌱 <b>지인 8주 성장 프로그램</b> — 명단 비운 판 (판 X145 · 2026-10-21)
+/* 🌱 <b>지인 8주 성장 프로그램</b> — 명단 비운 판 (판 X145 · 2026-10-21) · 이름·회사 · 미청구 찾기 · 안내장 (판 X152 · 2026-10-22)
 
    사장님 말씀 — 「더 디테일 하게 만들고 수정 / 인쇄 / 추가 / 삭제 기능과 고객에게
    보험금 찾아줌 → 그리고 보장분석 받아야 되는 이유를 명확하게 만들어줘 RP를」 ·
@@ -15,7 +15,13 @@
         않고 점선 칸으로 무엇을 적을지 말한다 (1번). 둘째 단서 줄은 단서가 둘일 때만 선다
      ⑦ 설계사 이름은 화면에서 받는다 — 비어 있으면 ○○ (지어 넣지 않음)
      ⑧ 편집 — 대사 · 거절 응대를 넣고 · 고치고 · 지우고 · 처음으로 되돌린다
-     ⑨ 돈 이름 규약 (4번) — 원을 받는 함수는 …WonR  */
+     ⑨ 돈 이름 규약 (4번) — 원을 받는 함수는 …WonR
+   판 X152 —
+     ⑩ 이름·회사는 한 곳(S.cfg) — 대본·회사 소개·거절 응대가 그 값을 읽고, 조사가 받침에 맞는다(길동이에요/주희예요)
+     ⑪ 대본 점검 — 모든 대본에 안 채운 {자리} 가 0 · 결과 전달은 결과 세 줄이 비면 지어 말하지 않는다 (1번)
+     ⑫ ★ 미청구 찾기 — 칸을 잘못 잡지 않는다(기관기호·본인부담률·투약일수) · 묶음 청구·접수일만 있는 청구를
+        「청구 안 된 듯」 으로 단정하지 않는다 · 조건이 비면 금액을 안 지어내고 「0원」 이라 하지 않는다 (1번)
+     ⑬ ★ 안내장 — 「심사 결과에 따릅니다」 · 3년 · 「내부 교육용」 쪽지가 안 붙는다 · 이름은 가린 채가 기본 (2번 · 3번)  */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9171;
@@ -117,7 +123,7 @@ const srv = http.createServer((q, s) => {
     is(/저 ○○예요/.test(await p.textContent('#rpChat')), '이름을 안 적었으면 ○○ 로 둔다 — 지어 넣지 않는다');
     await p.evaluate(() => go('home')); await p.fill('#meName', '홍길동');
     await p.evaluate(() => go('rp'));
-    is(/저 길동예요/.test(await p.textContent('#rpChat')), '적은 이름이 대본에 들어간다 (부르는 이름)');
+    is(/저 길동이에요/.test(await p.textContent('#rpChat')), '적은 이름이 대본에 들어간다 — 받침에 맞는 조사(길동이에요)');
 
     console.log('\n[9] 편집 — 넣기 · 고치기 · 지우기 · 처음으로');
     await p.click('#editT');
@@ -149,6 +155,57 @@ const srv = http.createServer((q, s) => {
     p.removeAllListeners('dialog'); p.on('dialog', d => { dialogs.push(d.message()); d.dismiss(); });
     const csv2 = await p.evaluate(async () => { let got = null; window.dl = (blob) => { got = blob; }; $('#exX').click(); return got ? await got.text() : ''; });
     is(dialogs.some(m => /실명이 든 파일/.test(m)) && csv2 === '', '가리기를 끄면 한 번 더 묻고, 「아니오」 면 파일을 안 만든다');
+
+    console.log('\n[12] 이름·회사 — 한 곳에서 바꾸면 다 바뀌나 (5번)');
+    await p.evaluate(() => { S.me = '홍판서'; S.cfg = Object.assign({}, S.cfg, { prev: '견본생명', prevS: '견본', cur: '견본에셋금융', phone: '010-0000-0000' }); save(); renderAll(); go('why'); });
+    is((await p.textContent('#t-why h1')).replace(/\s/g, '') === '견본생명에서견본에셋금융으로온이유', '회사 소개 제목이 설정을 읽는다 (조사 「으로」 까지)');
+    is(/견본에 있을 땐/.test(await p.textContent('#objs')) && /견본은 비싸요/.test(await p.textContent('#dont')), '거절 응대 · 하지 않는 말도 같은 설정 — 조사 「은」');
+    await p.evaluate(() => { go('rp'); rpScen = 's1'; renderRP(); });
+    is(/견본생명에서 견본에셋금융이라는 회사로/.test(await p.textContent('#rpChat')), '대본도 같은 설정 — 조사 「이라는」');
+
+    console.log('\n[13] 대본 점검 — 안 채운 자리 · 지어 말하기 (1번)');
+    const left = await p.evaluate(() => { const out = []; const c = S.customers[0]; for (const full of [false, true]) { if (full) { c.res = { good: '실비는 잘 들어 있어요', gap: '진단비가 비어 있어요', todo: '진단비 비교' }; c.clues = ['c_where', 'c_dup']; }
+      S.lib.scen.forEach(x => { rpScen = x.id; renderRP(); if (/\{[A-Z]/.test($('#rpChat').innerText + $('#rpTitle').innerText + $('#rpGoal').innerText)) out.push(x.id); }); } return out; });
+    is(left.length === 0, '모든 대본에 안 채운 {자리} 가 0' + (left.length ? ' ← ' + left.join(',') : ''));
+    await p.evaluate(() => { S.customers[0].res = { good: '', gap: '', todo: '' }; rpScen = 's5'; renderRP(); });
+    is(!/잘 챙겨 두셨고요|지금 비어 있어요/.test(await p.textContent('#rpChat')) && await p.$$eval('#rpChat .phx', a => a.length) >= 3, '결과 전달 — 결과 세 줄이 비면 지어 말하지 않고 점선 칸');
+
+    console.log('\n[14] 미청구 찾기 — 칸 · 판정 · 금액 (1번)');
+    await p.evaluate(() => { sbWhoId = S.customers[0].id; const s = sbOf(S.customers[0]); s.visits = []; s.claims = []; s.cond = {}; go('silbi'); sbRender(); });
+    const tk = (ty, x) => p.evaluate(([t, txt]) => sbTake(t, sbRead(t, txt)), [ty, x]);
+    await tk('visit', ['번호\t진료일자\t요양기관기호\t요양기관명\t진료구분\t입내원일수\t투약일수\t본인부담률\t본인부담금(원)',
+      '1\t2025.03.04\t12345678\t견본정형외과의원\t외래\t1\t3\t30%\t12,000원', '2\t2025.03.11\t12345678\t견본정형외과의원\t외래\t1\t3\t30%\t12,000원',
+      '3\t2025.05.02\t22222222\t견본내과의원\t외래\t1\t0\t30%\t40,000원', '4\t2025.09.01\t33333333\t견본병원\t입원\t3\t0\t20%\t300,000원', '\t합계\t\t\t\t\t\t\t364,000원'].join('\n'));
+    const vs = await p.evaluate(() => sbOf(S.customers[0]).visits.map(v => [v.org, v.cost, v.days]));
+    is(vs.length === 4 && vs[0][0] === '견본정형외과의원' && vs[0][1] === 12000 && vs[3][2] === 3, '기관기호·본인부담률·투약일수를 잘못 잡지 않고 합계 줄을 뺀다 ' + JSON.stringify(vs[0]));
+    const mp = await p.evaluate(() => sbRead('visit', '일자\t기관기호\t병원\t본인부담률\t본인부담\n2025-01-02\t123\t견본의원\t30%\t5,000').map);
+    is(mp.org === 2 && mp.cost === 4, '머리줄이 흔한 말뿐이어도 「기관기호」 · 「본인부담률」 을 피한다 ' + JSON.stringify(mp));
+    await tk('claim', ['청구일자\t사고일자\t병원명\t청구금액\t지급금액', '2025-03-25\t2025-03-04\t견본정형외과\t24,000\t4,000'].join('\n'));
+    await p.evaluate(() => sbRender());
+    let J = await p.evaluate(() => { const o = {}; sbJudge(S.customers[0]).forEach(j => o[j.v.d] = j.st); return o; });
+    is(J['2025-03-04'] === 'claimed', '사고일자 · 「정형외과」=「정형외과의원」 으로 맞댄다');
+    is(J['2025-03-11'] === 'check', '같은 병원을 묶어 청구했을 수 있으면 「청구 안 된 듯」 으로 단정하지 않는다');
+    is(J['2025-05-02'] === 'unclaimed' && J['2025-09-01'] === 'unclaimed', '청구 기록이 없으면 「청구 안 된 듯」');
+    let M = await p.evaluate(() => { const m = sbSum(S.customers[0]); return [m.U.length, m.unknown]; });
+    is(M[0] === 2 && M[1] === 2 && /조건 필요/.test(await p.textContent('.sbsum')) && !/약 0원/.test(await p.textContent('.letter')), '조건이 비면 금액을 안 지어내고 「0원」 이라 하지 않는다');
+    await p.evaluate(() => { const s = sbOf(S.customers[0]); s.cond = { clinic: 10000, rate: 20, inRate: 20 }; sbRender(); });
+    M = await p.evaluate(() => sbSum(S.customers[0]).est);
+    is(M === 270000, '적어 넣은 조건으로만 센다 — (40,000−10,000) + 300,000×80% = 270,000 (' + M + ')');
+    await p.evaluate(() => { const el = document.querySelector('[data-sbcond="rate"]'); el.value = '0.3'; el.dispatchEvent(new Event('change', { bubbles: true })); });
+    is(await p.evaluate(() => sbOf(S.customers[0]).cond.rate) === 30, '비율 0.3 은 30% 로 받는다');
+    await p.evaluate(() => { const s = sbOf(S.customers[0]); s.claims = [{ id: 'f', d: '2025-05-20', dk: 'filed', org: '견본내과의원', amt: 40000, paid: '' }]; });
+    J = await p.evaluate(() => { const o = {}; sbJudge(S.customers[0]).forEach(j => o[j.v.d] = j.st); return o; });
+    is(J['2025-05-02'] === 'check', '청구 내역에 접수일만 있으면 그 앞 같은 병원 진료를 단정하지 않는다');
+
+    console.log('\n[15] 안내장 (2번 · 3번)');
+    await p.evaluate(() => { sbOf(S.customers[0]).claims = []; sbRender(); });
+    const lt = await p.textContent('.letter');
+    is(/심사 결과에 따릅니다/.test(lt) && /상법 제662조/.test(lt) && /010-0000-0000/.test(lt) && /견본에셋금융/.test(lt), '안내장 — 심사 결과 · 3년 · 보내는 사람 연락처 · 지금 회사');
+    await p.evaluate(() => { window.print = () => {}; S.pmask = true; $('#sbLetterPrint').click(); });
+    await p.emulateMedia({ media: 'print' });
+    const lp = await p.evaluate(() => document.querySelector('#printArea').innerText);
+    await p.emulateMedia({ media: 'screen' }); await p.evaluate(() => document.body.classList.remove('printing'));
+    is(/홍○○/.test(lp) && !/홍길동/.test(lp) && !/내부 교육용/.test(lp), '안내장 인쇄 — 이름은 가린 채 · 「내부 교육용」 쪽지 없음');
 
     is(errs.length === 0, '오류 없이 끝났다' + (errs.length ? ' ← ' + errs[0] : ''));
 
