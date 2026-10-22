@@ -174,7 +174,12 @@ const SEED = () => {
   const A1 = await pg.evaluate(() => {
     const el = document.querySelector('#dynPane .hm-act');
     return { t: el ? el.innerText.replace(/\s+/g, ' ') : '(없다)',
-             more: /🤝 더/.test(el ? el.innerText : ''),
+             /*  ⚠ 2026-10-22 (판 X152) — <b>앞머리 이모지가 선 그림이 됐습니다</b>
+     (사장님 말씀 「남은 이모지도 바꿔」). 글 앞의 이모지는 이제 <svg> 라
+     innerText·textContent 에 안 들어옵니다. <b>약속은 그대로</b>이므로
+     보는 자리만 <b>이름</b>으로 옮깁니다 (8번). 무엇이었는지는 data-emo 에
+     남아 있어, 꼭 가려야 할 때는 그것으로 봅니다. */
+             more: /더\s*\d/.test(el ? el.innerText : ''),
              act: (typeof hmActOf === 'function') ? hmActOf() : null };
   });
   is(!A1.act ? !A1.more : A1.more,
@@ -200,7 +205,8 @@ const SEED = () => {
     const o = hmPtOf((typeof hwhoFor === 'function') ? hwhoFor() : '');
     const el = document.querySelector('#dynPane .hm-act');
     const chip = [].slice.call((el||document).querySelectorAll('.t-chip'))
-      .filter(x => /🎯/.test(x.textContent))[0];
+      .filter(x => /접촉포인트|카톡 먼저|전화 먼저|🎯/.test(
+        (x.textContent||'') + ' ' + (x.getAttribute('aria-label')||'')))[0];
     return { o: o, t: chip ? chip.textContent.replace(/\s+/g, ' ') : '(칩이 없다)',
              lab: chip ? (chip.getAttribute('aria-label')||'') : '' };
   });
@@ -222,7 +228,8 @@ const SEED = () => {
        칠하는 자를 직접 불러 <b>지금 상태</b>를 읽습니다. */
     try { hmActPaint(); } catch (e) {}
     const c = [].slice.call(document.querySelectorAll('#dynPane .hm-act button, #dynPane .hm-act .t-chip'))
-      .filter(x => /🎯/.test(x.textContent))[0];
+      .filter(x => /접촉포인트|카톡 먼저|전화 먼저|🎯/.test(
+        (x.textContent||'') + ' ' + (x.getAttribute('aria-label')||'')))[0];
     return c ? (c.textContent + ' | ' + (c.getAttribute('aria-label')||'')).replace(/\s+/g, ' ') : '';
   });
   is(/생년을 적으면/.test(P0) && /출생년도/.test(P0),
@@ -236,7 +243,8 @@ const SEED = () => {
        칠하는 자를 직접 불러 <b>지금 상태</b>를 읽습니다. */
     try { hmActPaint(); } catch (e) {}
     const c = [].slice.call(document.querySelectorAll('#dynPane .hm-act button, #dynPane .hm-act .t-chip'))
-      .filter(x => /🎯/.test(x.textContent))[0];
+      .filter(x => /접촉포인트|카톡 먼저|전화 먼저|🎯/.test(
+        (x.textContent||'') + ' ' + (x.getAttribute('aria-label')||'')))[0];
     AR.loaded = true;
     return c ? c.textContent : '';
   });
@@ -282,7 +290,10 @@ const SEED = () => {
     const r = row.getBoundingClientRect();
     const it = [].slice.call(row.children).map(e => {
       const b = e.getBoundingClientRect();
-      return { t: e.textContent.replace(/\s+/g, ' ').trim(),
+      /* 판 X152 — 앞머리 이모지가 선 그림이라 글에 안 들어옵니다.
+         무엇이었는지는 data-emo 에 남으므로 그것까지 붙여 봅니다 (8번). */
+      return { t: ((e.getAttribute('data-emo') || '') + ' ' +
+                   e.textContent.replace(/\s+/g, ' ')).trim(),
                시작: Math.round(b.left - r.left),
                보임: (b.left >= r.left - 1 && b.right <= r.right + 1) };
     });

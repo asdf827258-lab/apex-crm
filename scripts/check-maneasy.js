@@ -94,10 +94,34 @@ const STG = fs.readFileSync(path.join(ROOT, 'apex-stage.js'), 'utf8');
   const s2 = await pg.evaluate(() => {
     const b = document.getElementById('manBody'), e = document.getElementById('manEasy');
     return { has: !!e,
-             before: !!(b && e && b.innerText.indexOf('📚 주제별 안내') > b.innerText.indexOf('처음이세요') && b.innerText.indexOf('처음이세요') >= 0),
+             /* ⚠ 판 X152 — 앞머리 이모지가 선 그림이 되어 글에서 빠졌습니다.
+                약속(「처음이세요가 주제별 안내보다 먼저」)은 그대로입니다.
+                ★★ 처음에 「📚 주제별 안내」 → 「주제별 안내」 로만 풀었다가
+                  <b>헛 빨간불</b>을 켰습니다 — 그 낱말이 머리글보다 앞에
+                  <b>풀이글 속</b>에 한 번 더 있어서, 글자 자리로 재면 차례가
+                  뒤집혀 보입니다(주제별@144 · 처음@159). 이모지가 머리글을
+                  <b>가려 주고</b> 있었던 것입니다.
+                ★ 그래서 글자 자리가 아니라 <b>칸의 차례</b>로 잽니다 —
+                  머리글은 「주제별 안내」 로 <b>시작하는</b> 칸이고,
+                  그것이 #manEasy 보다 <b>뒤에</b> 와야 합니다 (8번). */
+             before: (function(){
+               if(!b || !e) return false;
+               /* ★ <b>머리글만</b> 집습니다 — 같은 낱말이 바로 위 풀이글 속
+                  (「… 그 아래 <b>주제별 안내</b>를 펼치십시오」)에도 있습니다.
+                  머리글에는 앞머리 그림이 있었고, 그 자국이 <b>data-emo</b> 에
+                  남아 있습니다 (판 X152). 그것으로 가립니다.             */
+               var w = document.createTreeWalker(b, NodeFilter.SHOW_TEXT), nd, hd = null;
+               while((nd = w.nextNode())){
+                 if(!/^\s*주제별 안내/.test(nd.nodeValue || '')) continue;
+                 if(!nd.parentElement || !nd.parentElement.hasAttribute('data-emo')) continue;
+                 hd = nd.parentElement; break;
+               }
+               if(!hd) return false;
+               return !!(e.compareDocumentPosition(hd) & Node.DOCUMENT_POSITION_FOLLOWING);
+             })(),
              tb: TB.map(x => x.t), txt: e ? e.innerText : '' };
   });
-  is(s2.has && s2.before, '사용가이드에 「🌱 처음이세요? — 윤프로 쉽게」 가 <b>주제별 안내보다 먼저</b> 선다');
+  is(s2.has && s2.before, '사용가이드에 「처음이세요? — 윤프로 쉽게」 가 <b>주제별 안내보다 먼저</b> 선다');
   is(/세 가지/.test(s2.txt) && /꼭 지키는 것/.test(s2.txt), '① 소개 — 세 가지 · 꼭 지키는 것');
   is(s2.tb.every(x => s2.txt.indexOf(x) >= 0), '  아래 탭바 이름이 <b>TB 그대로</b> — ' + s2.tb.join(' · '));
   await pg.evaluate(() => manEasyPick('steps')); await pg.waitForTimeout(150);

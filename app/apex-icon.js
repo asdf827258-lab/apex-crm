@@ -175,6 +175,9 @@ APEX_ICON.bulb   = '<path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 
 APEX_ICON.image  = '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5"/>';
 APEX_ICON.palette= '<path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.4 0 2-1 2-2s-.8-2-.8-2.6c0-.9.8-1.4 1.8-1.4h1.6c2.1 0 3.9-1.7 3.9-3.9 0-4-4.1-7.1-8.5-7.1Z"/><circle cx="8.3" cy="9" r="1.1"/><circle cx="12" cy="7.3" r="1.1"/><circle cx="7.6" cy="13" r="1.1"/>';
 APEX_ICON.dots   = '<circle cx="5.5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18.5" cy="12" r="1.3"/>';
+/* 판 X153 에서 둘 더 — 🔥 연속 가동 · 🔁 돌아가기 */
+APEX_ICON.fire   = '<path d="M12 3s4.5 3.6 4.5 8a4.5 4.5 0 0 1-9 0c0-1.6.7-3 1.6-4.1.3 1 1 1.8 1.9 2.1C11.6 7.4 12 5.2 12 3Z"/><path d="M6.8 12.5A7 7 0 0 0 6 15.6C6 18.6 8.7 21 12 21s6-2.4 6-5.4a7 7 0 0 0-.8-3.1"/>';
+APEX_ICON.turn   = '<path d="M4 7h11a4.5 4.5 0 0 1 0 9H9"/><path d="M11.5 12.5 8 16l3.5 3.5"/><path d="M7.5 3.5 4 7l3.5 3.5"/>';
 
 /* 옮기는 표에 보탭니다 — 왼쪽이 화면에 서 있던 이모지입니다 */
 APEX_ICON_OF['🔔']='bell';     APEX_ICON_OF['⚖']='scale';    APEX_ICON_OF['⚖️']='scale';
@@ -197,6 +200,8 @@ APEX_ICON_OF['🎁']='gift';     APEX_ICON_OF['🎂']='cake';     APEX_ICON_OF['
 APEX_ICON_OF['✖']='x';         APEX_ICON_OF['🏭']='building'; APEX_ICON_OF['🎫']='ticket';
 APEX_ICON_OF['☀']='sun';       APEX_ICON_OF['☀️']='sun';      APEX_ICON_OF['💡']='bulb';
 APEX_ICON_OF['🏅']='trophy';   APEX_ICON_OF['🆘']='warn';     APEX_ICON_OF['🏠']='home';
+APEX_ICON_OF['🔥']='fire';     APEX_ICON_OF['🔁']='turn';     APEX_ICON_OF['♻']='turn';
+APEX_ICON_OF['♻️']='turn';
 
 /* ══ 🖼 <b>그림 자리를 제자리에서 바꿔 끼운다</b> (판 X151) ═══════════
    사장님 말씀 — 「남은 이모지도 바꿔」.
@@ -245,16 +250,94 @@ function icoSlots(root){
 /* 화면이 다시 그려질 때마다 한 번 — <b>보는 자리는 여기 하나</b>입니다 (5번).
    ★ 한 틀(rAF)에 한 번으로 묶습니다 — 안 그러면 한 번 그릴 때 수십 번 돕니다.
    ★ 제 손으로 고친 것이 다시 저를 부르지만, 바꾼 자리는 건너뛰므로 멈춥니다. */
+/* ══ ✍️ <b>글과 한 줄인 이모지</b> — 앞머리 한 글자만 그림으로 (판 X152) ══
+   사장님 말씀 (2026-10-21) — 「남은 이모지도 바꿔」 · 「그대로인 것들을 전부 고치고」.
+
+   ── 왜 따로 다루나 ─────────────────────────────────────────────────
+   위 icoSlots 는 <b>이모지만 든 칸</b>(`<span class="e">🏠</span>`)을 바꿉니다.
+   그런데 화면에 더 많은 것은 <b>글과 한 줄</b>인 자리입니다 — 「🔔 오늘 남은
+   알람 1번」 「🗂️ DB통합CRM」 「📊 상담현황 — 지금 어디에 몇 분」.
+   홈 한 화면에만 <b>50곳</b>이었습니다.
+
+   ── 무엇을 하나 ────────────────────────────────────────────────────
+   첫 <b>글 토막</b>이 「이모지 + 빈칸」 으로 시작하면 그 <b>한 글자만</b>
+   그림으로 바꿔 끼우고 <b>나머지 글은 그대로</b> 둡니다.
+
+   ── 안 건드리는 것 ─────────────────────────────────────────────────
+   ★ <b>표에 없는 이모지</b>는 그대로 (1번).
+   ★ 첫 자식이 글이 아니면 그대로 — 이미 칸이 있는 자리입니다.
+   ★ 적는 칸·코드·그림(input · textarea · svg · code · pre) 안은 그대로.
+   ★ <b>글 가운데</b>의 이모지는 그대로 — 「🎯 한 번은 받으시게 한다 ·
+     📑 카드 없음」 에서 앞의 🎯 만 바꾸고 📑 는 둡니다. 가운데를 건드리면
+     글이 쪼개져 수를 세거나 글을 견주는 자리가 조용히 틀립니다.
+   ★ <b>data-noico</b> 가 붙은 칸과 그 속은 통째로 건너뜁니다 — 글자 그대로
+     보여야 하는 자리(견본·받아쓴 글)를 위해 둔 문입니다.
+   ⚠ <b>글자가 바뀝니다.</b> 「🗂️ DB통합CRM」 의 textContent 가 「DB통합CRM」
+     이 됩니다 — 재 보니 옮길 이모지를 글에서 견주는 자가 <b>26개</b>
+     있었습니다. 그 자들은 <b>이모지가 아니라 이름</b>을 보도록 고쳤습니다
+     (약속은 그대로이고 보는 자리만 바꿨습니다 · 8번).                   */
+var ICO_LEAD_NO = { INPUT:1, TEXTAREA:1, OPTION:1, SELECT:1, SCRIPT:1, STYLE:1,
+                    CODE:1, PRE:1, SVG:1, TITLE:1, IFRAME:1 };
+function icoLead(root){
+  var R = root || document, L, i, e, tn, m, k, sp, n = 0;
+  if (!R || !R.querySelectorAll) return 0;
+  try { L = R.querySelectorAll('.tab-pane.on *, #sidebar *, #tabbar *, .t-top *, .os-ovl *'); }
+  catch (x) { return 0; }
+  for (i = 0; i < L.length; i++){
+    e = L[i];
+    if (ICO_LEAD_NO[e.tagName] || e.hasAttribute('data-emo')) continue;
+    if (e.namespaceURI && e.namespaceURI.indexOf('svg') >= 0) continue;
+    if (e.closest && e.closest('[data-noico]')) continue;
+    tn = e.firstChild;
+    if (!tn || tn.nodeType !== 3) continue;             /* 첫 자식이 글이 아니면 그대로 */
+    m = /^\s*(\S{1,3}?)\s+(?=\S)/.exec(tn.nodeValue || '');
+    if (!m) continue;
+    k = APEX_ICON_OF[m[1].replace(/️/g, '')] || APEX_ICON_OF[m[1]];
+    if (!k || !APEX_ICON[k]) continue;                  /* 표에 없으면 그대로 (1번) */
+    e.setAttribute('data-emo', m[1]);
+    /* ★★ <b>뒤 빈칸은 남깁니다</b> — 그림과 글이 붙으면 줄을 끊을 자리가
+       없어집니다. 빈칸을 남기면 예전처럼 거기서 줄이 끊깁니다.         */
+    tn.nodeValue = (tn.nodeValue || '').slice(
+      (tn.nodeValue || '').indexOf(m[1]) + m[1].length);
+    sp = document.createElement('span');
+    sp.className = 'ico-l';
+    sp.innerHTML = icoSvg(k, 17);
+    e.insertBefore(sp, tn);
+    n++;
+  }
+  return n;
+}
+/* 선 그림이 글 옆에 설 때의 결 — <b>한 곳에만</b> 적습니다 (5번) */
+function icoLeadCss(){
+  if (document.getElementById('icoLeadCss')) return;
+  var st = document.createElement('style'); st.id = 'icoLeadCss';
+  /* ⚠ <b>줄 높이를 안 밀어 올립니다.</b> 처음에 17px 짜리를 그냥 끼웠더니
+     줄마다 몇 px 씩 커져 <b>홈이 3,526 → 3,591px(4.25화면)</b> 이 되었습니다
+     — 홈의 선은 4.2화면입니다(check-homeone). 그래서 크기를 <b>글자에 매어</b>
+     (1.15em) 두고 line-height:0 으로 줄 상자를 안 늘립니다. 글자가 커지는
+     자리에서는 그림도 같이 커집니다.                                    */
+  st.textContent = '.ico-l{display:inline-block;width:1.05em;height:1.05em;' +
+                   'vertical-align:-.15em;line-height:0;flex:none}' +
+                   '.ico-l svg.ico{display:block;width:100%;height:100%}';
+  (document.head || document.documentElement).appendChild(st);
+}
 var ICO_ON = false, ICO_RAF = 0;
 function icoWatch(){
   if (ICO_ON) return;
+  /* ★★ <b>본체에서만</b> 돕니다 — #dynPane 이 있는 화면이 본체입니다.
+     보장 전·후(ba.html) 같은 따로 선 쪽이 이 파일을 읽더라도(그 쪽은
+     icoSvg·icoFromEmoji 만 부릅니다) <b>고객에게 보여주는 화면을 제 손으로
+     건드리지 않게</b> 문을 여기서 닫습니다 — 사장님 말씀 「고객에게
+     보여주는 건 지금 좋으니까 냅두고」 (1번·6번).                      */
+  if (!document.getElementById('dynPane')) return;
   ICO_ON = true;
-  icoSlots(document);
+  icoLeadCss();
+  icoSlots(document); icoLead(document);
   if (typeof MutationObserver !== 'function') return;
   var raf = window.requestAnimationFrame || function(f){ return setTimeout(f, 16); };
   new MutationObserver(function(){
     if (ICO_RAF) return;
-    ICO_RAF = raf(function(){ ICO_RAF = 0; icoSlots(document); });
+    ICO_RAF = raf(function(){ ICO_RAF = 0; icoSlots(document); icoLead(document); });
   }).observe(document.body || document.documentElement, { childList: true, subtree: true });
 }
 if (document.readyState === 'loading')
