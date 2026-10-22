@@ -174,7 +174,7 @@ const SEED = () => {
   const A1 = await pg.evaluate(() => {
     const el = document.querySelector('#dynPane .hm-act');
     return { t: el ? el.innerText.replace(/\s+/g, ' ') : '(없다)',
-             /*  ⚠ 2026-10-22 (판 X152) — <b>앞머리 이모지가 선 그림이 됐습니다</b>
+             /*  ⚠ 2026-10-22 (판 X155) — <b>앞머리 이모지가 선 그림이 됐습니다</b>
      (사장님 말씀 「남은 이모지도 바꿔」). 글 앞의 이모지는 이제 <svg> 라
      innerText·textContent 에 안 들어옵니다. <b>약속은 그대로</b>이므로
      보는 자리만 <b>이름</b>으로 옮깁니다 (8번). 무엇이었는지는 data-emo 에
@@ -290,11 +290,11 @@ const SEED = () => {
     const r = row.getBoundingClientRect();
     const it = [].slice.call(row.children).map(e => {
       const b = e.getBoundingClientRect();
-      /* 판 X152 — 앞머리 이모지가 선 그림이라 글에 안 들어옵니다.
+      /* 판 X155 — 앞머리 이모지가 선 그림이라 글에 안 들어옵니다.
          무엇이었는지는 data-emo 에 남으므로 그것까지 붙여 봅니다 (8번). */
       /* ⚠ 빈칸을 <b>한 칸으로 모읍니다</b> — icoLead 는 이모지 뒤 빈칸을
          남겨 두므로(줄 끊을 자리), 그냥 이으면 빈칸이 둘이 되어 「🤝 더」
-         로 찾는 자가 못 찾습니다. 판 X152 에서 그렇게 울었습니다. */
+         로 찾는 자가 못 찾습니다. 판 X155 에서 그렇게 울었습니다. */
       return { t: ((e.getAttribute('data-emo') || '') + ' ' +
                    e.textContent).replace(/\s+/g, ' ').trim(),
                시작: Math.round(b.left - r.left),

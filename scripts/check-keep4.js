@@ -138,7 +138,7 @@ head('[1] 표가 <b>하나</b>인가 — 4년 화면이 자기 줄을 따로 세
     .map(r => ({ t: r.innerText || '', btn: [].slice.call(r.querySelectorAll('.mst-b')).map(b => b.textContent) })));
   const r2 = rows.filter(r => /임○정/.test(r.t))[0] || { t: '', btn: [] };
   const r1 = rows.filter(r => /홍○동/.test(r.t))[0] || { t: '', btn: [] };
-  /* ⚠ 2026-10-22 (판 X152) — <b>앞머리 이모지가 선 그림이 됐습니다.</b>
+  /* ⚠ 2026-10-22 (판 X155) — <b>앞머리 이모지가 선 그림이 됐습니다.</b>
      사장님 말씀 「남은 이모지도 바꿔」. 글 앞의 📞·💬 는 이제 <svg> 라
      innerText 에 안 들어옵니다. <b>약속은 그대로</b>입니다 — 「전화하는
      달로 선다」 를 재는 것이지 이모지 글자를 재는 것이 아니었습니다.

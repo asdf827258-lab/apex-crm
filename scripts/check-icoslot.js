@@ -121,7 +121,7 @@ const SEED = `
      '  표에 있는데 <b>안 바뀐 자리</b> ' + 돌기.남음.length + '곳 — 바닥 ' + BASE.남은자리 +
      (돌기.남음.length ? (' ← ' + 돌기.남음.slice(0, 6).join(' · ')) : ''));
 
-  console.log('\n[2-b] ✍️ <b>글과 한 줄인 이모지</b>도 앞머리만 그림으로 (판 X152)');
+  console.log('\n[2-b] ✍️ <b>글과 한 줄인 이모지</b>도 앞머리만 그림으로 (판 X155)');
   /* 사장님 말씀 「남은 이모지도 바꿔」 · 「그대로인 것들을 전부 고치고」.
      icoSlots 는 <b>이모지만 든 칸</b>을 바꾸고, icoLead 는 <b>글 앞머리</b>
      한 글자를 바꿉니다. 여기서는 표에 있는데 <b>안 바뀐 앞머리</b>가
@@ -189,7 +189,7 @@ const SEED = `
   is(손.색 === 'currentColor',
      '  ★ 선이 <b>글자색을 따른다</b> — stroke 「' + 손.색 + '」 (색을 박으면 어두운 칸에서 사라집니다)');
 
-  console.log('\n[3-b] ✍️ <b>앞머리를 바꿀 때도</b> 글은 그대로 (판 X152)');
+  console.log('\n[3-b] ✍️ <b>앞머리를 바꿀 때도</b> 글은 그대로 (판 X155)');
   const 앞손 = await p.evaluate(() => {
     const host = document.createElement('div');
     host.className = 'tab-pane on';

@@ -94,7 +94,7 @@ const STG = fs.readFileSync(path.join(ROOT, 'apex-stage.js'), 'utf8');
   const s2 = await pg.evaluate(() => {
     const b = document.getElementById('manBody'), e = document.getElementById('manEasy');
     return { has: !!e,
-             /* ⚠ 판 X152 — 앞머리 이모지가 선 그림이 되어 글에서 빠졌습니다.
+             /* ⚠ 판 X155 — 앞머리 이모지가 선 그림이 되어 글에서 빠졌습니다.
                 약속(「처음이세요가 주제별 안내보다 먼저」)은 그대로입니다.
                 ★★ 처음에 「📚 주제별 안내」 → 「주제별 안내」 로만 풀었다가
                   <b>헛 빨간불</b>을 켰습니다 — 그 낱말이 머리글보다 앞에
@@ -109,7 +109,7 @@ const STG = fs.readFileSync(path.join(ROOT, 'apex-stage.js'), 'utf8');
                /* ★ <b>머리글만</b> 집습니다 — 같은 낱말이 바로 위 풀이글 속
                   (「… 그 아래 <b>주제별 안내</b>를 펼치십시오」)에도 있습니다.
                   머리글에는 앞머리 그림이 있었고, 그 자국이 <b>data-emo</b> 에
-                  남아 있습니다 (판 X152). 그것으로 가립니다.             */
+                  남아 있습니다 (판 X155). 그것으로 가립니다.             */
                var w = document.createTreeWalker(b, NodeFilter.SHOW_TEXT), nd, hd = null;
                while((nd = w.nextNode())){
                  if(!/^\s*주제별 안내/.test(nd.nodeValue || '')) continue;
