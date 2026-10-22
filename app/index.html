@@ -539,8 +539,11 @@ window.APEX_SB = window.APEX_SB || {
    ★ 꼬리말(제목의 「 — …」)은 <b>접힌 칸에서만</b> 숨깁니다 — 펴면 그대로
      섭니다. 글을 버린 것이 아니라 <b>접은 것</b>입니다 (6번).           */
 .man-secs{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start;margin-bottom:8px}
-.man-sec{border:1px solid #EAEDF2;border-radius:12px;background:#fff;overflow:hidden;
-  box-shadow:0 1px 2px rgba(16,24,40,.03)}
+/* ⚠ 둥글기·그림자는 <b>계단(토큰)에서만</b> 고릅니다 — 옛 줄에 손으로 적힌
+   12px 과 rgba(16,24,40,.03) 을 그대로 옮겨 왔다가 check-phonefit 이 울었습니다.
+   줄 안에 박혀 있을 때는 안 보이던 것이 CSS 로 나오니 드러났습니다 (8번).   */
+.man-sec{border:1px solid #EAEDF2;border-radius:var(--r);background:#fff;overflow:hidden;
+  box-shadow:var(--shadow-xs)}
 .man-sec.on{grid-column:1/-1;border-color:#BFD4FB}
 .man-sec-h{width:100%;display:flex;align-items:flex-start;gap:8px;min-height:62px;
   padding:12px 12px;border:0;background:#fff;cursor:pointer;text-align:left;font-family:inherit}
@@ -551,6 +554,33 @@ window.APEX_SB = window.APEX_SB || {
 .man-sec.on .man-sec-h .t span{display:inline}
 .man-sec-h .ar{flex:none;margin-left:auto;font-size:var(--t6);color:var(--t-sub2);font-weight:800}
 .man-sec-b{padding:2px 16px 18px}
+/* ══ 📘 <b>토막 속도 칸으로</b> (판 X160) ═════════════════════════════
+   사장님 말씀 (2026-10-22) — 「사용가이드도 칸으로 바꿔줘」.
+   ⚠ 재어 보니 토막 속이 <b>글줄 46개 전부 13px</b> 이고, 뼈대는 점 찍힌
+     목록이었습니다 — 21개 토막에 <b>li 가 115개</b>. 긴 문장이 점 하나에
+     매달려 줄줄이 흘러, 어디까지가 한 꼭지인지 눈으로 안 갈렸습니다.
+   ★ <b>꼭지 하나를 칸 하나로</b> 세웁니다 — 점을 떼고 옅은 바탕에 앉힙니다.
+   ★ 읽는 글이라 <b>14px</b> 로 올립니다(홈은 재는 화면이라 13px 바닥을
+     그대로 둡니다 — 여긴 앉아서 읽는 자리입니다).
+   ★ 글자 크기를 손으로 박아 둔 자리가 <b>0곳</b>이라 옷 한 벌로 다 닿습니다.
+   ⚠ 단추는 <b>글자를 물려받게</b> 해야 같이 커집니다 — button 은 기본으로
+     안 물려받습니다.                                                   */
+/* ★★ <b>눈금을 한 단 올립니다</b> — 크기를 덮어쓰지 않습니다.
+   토막 속 글은 줄 안에 <b>style="font-size:var(--t6)"</b> 로 박혀 있어
+   바깥 옷이 못 이깁니다(!important 로 밀면 그 뒤로는 아무도 못 고칩니다).
+   대신 이 칸 안에서 <b>--t6 · --t5 자체를 한 단 올립니다</b> — 줄 안의
+   var(--t6) 가 그대로 그 값을 받습니다. <b>새 계단을 만들지 않고</b> 있는
+   사다리를 한 칸 옮겨 놓는 것입니다 (5번). 앉아서 읽는 자리라 그렇습니다 —
+   홈은 재는 화면이라 13px 바닥 그대로 둡니다.                        */
+/* ★ <b>가이드 전체</b>에 겁니다 — 토막 속만 올리면 머리글 · 「처음이세요?」 ·
+   「이럴 때는」 · AI 코치 · 준법 문구가 <b>13px 로 남아</b> 한 화면에 두 결이
+   섞입니다. 재어 보니 그렇게 87줄이 남았습니다 (8번).                */
+#manBody{--t6:14px;--t5:15px;font-size:14px;line-height:1.7}
+#manBody button{font-size:inherit}
+#manBody ul{margin:10px 0 2px;padding:0;list-style:none}
+#manBody li{background:var(--t-bg);border:1px solid var(--t-line);border-radius:var(--r-sm);
+  padding:10px 12px;margin-bottom:7px;line-height:1.7}
+#manBody li:last-child{margin-bottom:0}
 /* 치료비 지급지도 */
 .tp-dis{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
 .tp-dis button{font-size:var(--t6);font-weight:700;border:1px solid var(--t-line);background:#fff;color:var(--t-ink);border-radius:var(--r-sm);padding:9px 14px;cursor:pointer;}
@@ -20722,8 +20752,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-22 19:20';
-var APP_BUILD_NOTE="📘 <b>사용가이드의 주제가 칸이 됐습니다.</b> 사장님 말씀 「토스어플처럼 칸을 활용해보자」 — 홈에 이어 가이드 차례입니다. ◾ 똑같은 회색 줄 스물이 <b>두 칸씩 선 칸 스물하나</b>로 바뀌었습니다. 그림이 크고 제목이 <b>15px</b> 라 어디에 무엇이 있는지 <b>훑어보면</b> 보입니다. ◾ 누르면 그 칸이 <b>한 줄을 통째로</b> 쓰며 그 자리에서 펴집니다. ◾ 길이는 접힌 채 <b>1,025 → 723px</b>, 화면 전체는 <b>6.1 → 5.4화면</b>입니다. ◾ 화면 머리글에 <b>주제 열두 가지가 또 적혀</b> 있던 것을 걷었습니다 — 이제 칸이 그 목록이라, 토막을 더 만들어도 낡는 자리가 없습니다. ★ 제목의 꼬리말은 <b>접힌 칸에서만</b> 숨깁니다 — 펴면 그대로 섭니다. (판 X159)";
+var APP_BUILD='2026-10-22 20:45';
+var APP_BUILD_NOTE="📘 <b>사용가이드가 칸으로 바뀌었습니다.</b> 사장님 말씀 「사용가이드도 칸으로 바꿔줘」. ◾ <b>찾아가는 길</b> — 똑같은 회색 줄 스물이 <b>두 칸씩 선 칸 스물하나</b>가 되었습니다. 그림이 크고 제목이 15px 라 훑어보면 보이고, 누르면 그 칸이 한 줄을 통째로 쓰며 그 자리에서 펴집니다. ◾ <b>읽는 글</b> — 점 찍힌 목록으로 줄줄이 흐르던 꼭지가 <b>칸 하나씩</b>으로 앉았고, 글자가 <b>13 → 14px</b> 입니다. 13px 에 몰려 있던 <b>132줄이 0줄</b>이 되었습니다. ◾ 화면 머리글에 주제 열두 가지가 또 적혀 있던 것을 걷었습니다 — 이제 칸이 그 목록이라 토막을 더 만들어도 낡는 자리가 없습니다. ★ 글은 한 자도 안 지웠습니다 — 제목의 꼬리말은 접힌 칸에서만 숨깁니다. (판 X159·X160)";
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.

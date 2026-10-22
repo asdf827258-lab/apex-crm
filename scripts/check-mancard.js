@@ -44,7 +44,7 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 /* ⚠ 수는 <b>이 자가 제 씨로 잰 것</b>입니다 — 어림으로 적었다가 한 번
    어긋났습니다(700 이라 적었는데 723 이었습니다). 바닥은 짐작이 아니라
    <b>지금 잰 수</b>입니다 (0-1번·8번). 손대기 전은 920px 였습니다.   */
-const BASE = { 접힌높이: 723, 제목px: 15 };
+const BASE = { 접힌높이: 723, 제목px: 15, 작은글줄: 0, 본문px: 14 };
 
 const SEED = `
  document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x=>x.remove());
@@ -129,7 +129,55 @@ const SEED = `
   is(O.꼬리, '  ★★ 제목의 <b>꼬리말이 글에 그대로</b> 있다 — 접힌 칸에서 숨긴 것이지 버린 것이 아닙니다 (6번)');
   is(O.단추 > 0, '  ★ 칸의 단추가 <b>onclick=manToggle</b> 이다 — check-guide · check-guidemap 이 이것으로 찾습니다 (' + O.단추 + '개)');
 
-  console.log('\n[3] 📝 <b>나열이 되살아나지 않았다</b> (5번)');
+  console.log('\n[3] 📖 <b>토막 속도 칸</b>이다 — 꼭지 하나가 칸 하나 (판 X160)');
+  /* 사장님 말씀 (2026-10-22) — 「사용가이드도 칸으로 바꿔줘」.
+     ⚠ 재어 보니 속이 <b>글줄 46개 전부 13px</b> 이고 뼈대는 점 찍힌 목록
+       이었습니다(21개 토막에 li 115개). 긴 문장이 점 하나에 매달려 줄줄이
+       흘러, 어디까지가 한 꼭지인지 눈으로 안 갈렸습니다.
+     ★ 글자 크기는 줄 안에 <b>style="font-size:var(--t6)"</b> 로 박혀 있어
+       바깥 옷이 못 이깁니다 — 그래서 #manBody 안에서 <b>눈금 자체</b>를 한 단
+       올렸습니다. 여기서는 <b>그 결과</b>를 잽니다 (무엇으로 했는지가 아니라). */
+  const B = await p.evaluate(async () => {
+    MAN.open = 'flow';
+    const host = document.getElementById('manBody');
+    if (host) host.innerHTML = manBody();
+    await new Promise(r => setTimeout(r, 400));
+    const body = document.getElementById('manBody');
+    const 줄 = [];
+    body.querySelectorAll('*').forEach(e => {
+      const own = [].slice.call(e.childNodes)
+        .filter(n => n.nodeType === 3 && (n.nodeValue || '').trim())
+        .map(n => n.nodeValue.trim()).join(' ');
+      if (!own) return;
+      const c = getComputedStyle(e);
+      if (c.display === 'none') return;
+      줄.push({ px: Math.round(parseFloat(c.fontSize)), 글: own.replace(/\s+/g, ' ') });
+    });
+    const li = [].slice.call(body.querySelectorAll('li'));
+    const s0 = li.length ? getComputedStyle(li[0]) : null;
+    return {
+      줄수: 줄.length,
+      작은: 줄.filter(x => x.px <= 13).length,
+      밑: 줄.filter(x => x.px < 13).length,
+      본문: 줄.filter(x => x.px === 14).length,
+      li수: li.length,
+      점: s0 ? s0.listStyleType : '?',
+      바탕: s0 ? (s0.backgroundColor !== 'rgba(0, 0, 0, 0)' && s0.backgroundColor !== 'transparent') : false,
+      둥글기: s0 ? Math.round(parseFloat(s0.borderTopLeftRadius) || 0) : 0
+    };
+  });
+  console.log('      글줄 ' + B.줄수 + '개 · 14px ' + B.본문 + '개 · 13px 이하 ' + B.작은 + '개 · 꼭지 칸 ' + B.li수 + '개');
+  is(B.밑 === 0, '  ★★ 가이드에 <b>13px 밑 글씨가 없다</b> — ' + B.밑 + '곳');
+  is(B.작은 <= BASE.작은글줄,
+     '  ★★ <b>13px 에 남은 글줄</b> ' + B.작은 + '개 — 바닥 ' + BASE.작은글줄 +
+     ' (손대기 전 132개였습니다 · 앉아서 읽는 글이라 14px 로 올렸습니다)');
+  is(B.본문 > 50, '  ★ 읽는 글이 <b>' + BASE.본문px + 'px</b> 로 선다 — ' + B.본문 + '줄');
+  is(B.li수 > 0 && B.점 === 'none',
+     '  ★★ 꼭지가 <b>점이 아니라 칸</b>이다 — list-style 「' + B.점 + '」 · 꼭지 ' + B.li수 + '개');
+  is(B.바탕 && B.둥글기 > 0,
+     '  ★ 그 칸이 <b>바탕과 둥글기</b>를 갖는다 — 둥글기 ' + B.둥글기 + 'px');
+
+  console.log('\n[4] 📝 <b>나열이 되살아나지 않았다</b> (5번)');
   const SRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
   const i = SRC.indexOf('function renderManual(');
   const blk = i < 0 ? '' : SRC.slice(i, i + 900).replace(/\/\*[\s\S]*?\*\//g, '');
