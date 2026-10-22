@@ -19,6 +19,9 @@
          분배 나이대마다 필요한 보험의 분배전략」) — 재무설계의 집 · 보험의 두 역할 · 「가족은 몇 달」 ·
          「아프면 연금을 깨요」 가 <b>칸 값으로 따로 셈한 달 수</b>와 맞나 · 전략 장이 고객 나이대를 켜고
          「APEX 상담 원칙 · 정답이 아님」 을 밝히나 · 결과지 「보장 전략」 장이 같은 달 수를 말하나
+     차. 판 X167 (사장님 말씀 「배수는 평균 데이터를 기준으로 하고 직업군을 나누어서 다시 나눠서 해줘」) —
+         소득 셈의 배수가 직업군 평균(2025년 가계금융복지조사)에서 오나 · 자영업자를 고르면 빚 배수 1.56 ·
+         일해서 버는 몫 82% · 모르면 「전체」 라고 적나 · 출처를 밝히나
      자. 판 X166 (사장님 말씀 「평균 값으로 구하고 소득에 따라 구하고 가족에 따라 구해서 기준값을 만들어」) —
          기준값 = 평균 · 소득 · 가족의 가운데 값 · 무게 = 두 기준값의 크기 · 자가 칸 값으로 따로 셈한 수와 맞나 ·
          평균은 출처(기관·언론사·날짜)를 밝히나 · 못 찾은 평균은 비우나 · 막내 나이를 모르면 가족 셈을 비우나
@@ -144,26 +147,34 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
   is(/심사 결과에 따릅니다/.test(insTxt[1]), '내 연금 지키기 장에 「심사 결과에 따릅니다」 (2번)');
   await pg.evaluate(() => { WK.i = wkSlides().findIndex((x) => x.part === '전략'); wkPaint(); });
   /* 판 X166 — 무게는 기준값에서. 자는 앱의 ipBase 를 빌리지 않고 칸 값 · IP_RULE · IP_AVG 로 따로 셉니다 */
-  await pg.evaluate(() => { const e = document.getElementById('inh_youngest'); e.value = '10'; e.dispatchEvent(new Event('input', { bubbles: true })); });
-  const exp = await pg.evaluate(() => {
+  await pg.evaluate(() => { const e = document.getElementById('inh_youngest'); e.value = '10'; e.dispatchEvent(new Event('input', { bubbles: true }));
+    const g = document.getElementById('s_jobg'); g.value = 'self'; g.dispatchEvent(new Event('change', { bubbles: true })); });
+  /* 판 X167 — 소득 셈의 배수는 직업군 평균(가계금융복지조사)에서. 자는 보도자료 표의 숫자를 따로 들고 셉니다 */
+  const SELF = { inc: 8000, debt: 12479, work: 1741, biz: 4833 };
+  const exp = await pg.evaluate((J) => {
     const v = (id) => parseFloat(document.getElementById(id).value) || 0, R = IP_RULE;
     const mid = (a) => { a = a.filter((x) => x != null).sort((x, y) => x - y); const m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
     const own = v('s_gross') + v('s_self') * 12;
     const living = ['s_housing', 's_loan', 's_food', 's_telecom', 's_transport', 's_insurance', 's_medical', 's_edu', 's_support', 's_dining', 's_shopping', 's_travel', 's_choice_etc'].reduce((a, id) => a + v(id), 0);
     const famL = living - v('s_loan');
-    const fam = mid([IP_AVG.fam ? IP_AVG.fam.v : null, own * R.famIncomeYears, v('s_debt') + famL * 12 * Math.max(0, R.indepAge - v('inh_youngest'))]);
-    const me = mid([IP_AVG.me ? IP_AVG.me.v : null, own * R.meIncomeYears, living * R.meMonths]);
-    const later = mid([IP_AVG.fam ? IP_AVG.fam.v : null, own * R.famIncomeYears, famL * 12 * R.spouseYears]);
+    const fam = mid([IP_AVG.fam ? IP_AVG.fam.v : null, own * J.debt / J.inc, v('s_debt') + famL * 12 * Math.max(0, R.indepAge - v('inh_youngest'))]);
+    const me = mid([IP_AVG.me ? IP_AVG.me.v : null, own * (J.work + J.biz) / J.inc * R.meMonths / 12, living * R.meMonths]);
+    const later = mid([IP_AVG.fam ? IP_AVG.fam.v : null, own * J.debt / J.inc, famL * 12 * R.spouseYears]);
     return { fam, me, w: Math.round(fam / (fam + me) * 20) * 5, wLater: Math.round(later / (later + me) * 20) * 5 };
-  });
+  }, SELF);
   await pg.evaluate(() => { WK.i = wkSlides().findIndex((x) => x.part === '전략'); wkPaint(); });
   const st = await pg.$eval('#wkOv .wk-body', (e) => e.innerText);
   const M = (x) => pg.evaluate((x) => APEX_REPORT.man(x), x);
   is(nos(st).includes(nos('기준값 (가운데) ' + (await M(exp.fam)) + ' ' + (await M(exp.me)))), '기준값 — 가족 ' + (await M(exp.fam)) + ' · 내 연금 ' + (await M(exp.me)) + ' (평균·소득·가족의 가운데 값)');
-  is(nos(st).includes('가족지키기' + exp.w + '%') && nos(st).includes(exp.wLater + ':' + (100 - exp.wLater)), '무게 ' + exp.w + ' : ' + (100 - exp.w) + ' → 대출 끝·자녀 독립 후 ' + exp.wLater + ' : ' + (100 - exp.wLater) + ' (기준값의 크기로)');
+  is(nos(st).includes('가족지키기' + exp.w + '%') && (exp.wLater === exp.w ? !/옮겨 가요/.test(st) : nos(st).includes(exp.wLater + ':' + (100 - exp.wLater))), '무게 ' + exp.w + ' : ' + (100 - exp.w) + ' → 대출 끝·자녀 독립 후 ' + exp.wLater + ' : ' + (100 - exp.wLater) + ' (기준값의 크기로)');
   is(/생명보험협회/.test(st) && /아주경제 2022\.05\.15/.test(st) && /데이터솜 2022\.01\.19/.test(st), '평균은 출처(기관 · 언론사 · 날짜)를 밝힌다(9번)');
   is(/출처 확인 전/.test(st) && /출처를 확인하지 못해 비웠어요/.test(st), '출처를 못 찾은 평균(진단·치료비)은 비우고 그렇다고 적는다(1번)');
-  is(/APEX 원칙\(가정\)/.test(st), '소득·가족 셈의 배수는 「APEX 원칙(가정)」 이라 적는다');
+  is(/APEX 원칙\(가정\)/.test(st), '가족 셈의 기간(막내 독립 · 치료 기간)은 「APEX 원칙(가정)」 이라 적는다');
+  is(/자영업자 평균으로 셈했어요/.test(st) && /빚 배수 1\.56/.test(st) && /일해서 버는 몫 82%/.test(st), '직업군(자영업자)을 고르면 그 평균의 배수로 — 빚 배수 1.56 · 일해서 버는 몫 82%');
+  is(/가계금융복지조사/.test(st) && /2025\.12\.04/.test(st), '배수의 출처(2025년 가계금융복지조사 · 2025.12.04)를 밝힌다(9번)');
+  await pg.evaluate(() => { const g = document.getElementById('s_jobg'); g.value = ''; g.dispatchEvent(new Event('change', { bubbles: true })); WK.i = wkSlides().findIndex((x) => x.part === '전략'); wkPaint(); });
+  is(/전체 \(직업군 모름\) 평균으로 셈했어요/.test(await pg.$eval('#wkOv .wk-body', (e) => e.innerText)), '직업군을 모르면 「전체」 평균으로 셈하고 그렇다고 적는다(1번)');
+  await pg.evaluate(() => { const g = document.getElementById('s_jobg'); g.value = 'self'; g.dispatchEvent(new Event('change', { bubbles: true })); });
   is(await pg.evaluate(() => IP_AGE.every((x) => x.fam == null && x.me == null) && IP_AGE.length === 5), '나이대 표에 근거 없는 비율이 남지 않았다');
   await pg.evaluate(() => { const e = document.getElementById('inh_youngest'); e.value = ''; e.dispatchEvent(new Event('input', { bubbles: true })); WK.i = wkSlides().findIndex((x) => x.part === '전략'); wkPaint(); });
   is(/막내 나이 필요/.test(await pg.$eval('#wkOv .wk-body', (e) => e.innerText)), '자녀가 있는데 막내 나이를 모르면 가족 셈을 비우고 「막내 나이 필요」');

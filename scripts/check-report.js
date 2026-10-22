@@ -21,6 +21,7 @@
          · 「지금 그대로면 / 오늘 제안을 더하면」 두 줄 · 스스로 점검 질문 · 마지막 「가장 마음에 걸린 숫자」
          · ★★ 걱정은 고객 숫자로만 — 바깥 통계·「노후 파산」 같은 겁주는 말이 없나 (1번 · 지시문 「확인 안 된 통계 금지」)
          · 목표를 이미 채운 고객에게는 부족을 지어 말하지 않나 (1번)
+     하. 판 X167 — 직업군 평균 다섯 줄이 보도자료 숫자 그대로 · 출처 · 손으로 정한 소득 배수 0
      파. 판 X166 — 평균마다 출처 · 못 찾은 평균은 null · 보험료 판정 IP_RULE 한 곳 · 나이대 비율 0 · ipBase 한 곳
      타. 판 X165 — 나이대 문구 IP_AGE 한 곳 · 사슬 0 · 생활비 칸 목록 한 곳
      카. 판 X163 (사장님 말씀 2026-10-22 「점검 필요로 바꾸고, 2번은 만들어줘」) — 「불가」 → 「점검 필요」 ·
@@ -141,6 +142,14 @@ is(/me:\s*null/.test(avgBlk), '출처를 못 찾은 진단·치료비 평균은 
 is(/insRatio>=IP_RULE\.premHi/.test(fin) && /insRatio>=IP_RULE\.premLo/.test(fin) && !/insRatio>=1[05]\)/.test(fin) && !/insRatio>=8\)/.test(fin), '보험료 비중 판정(8 · 15)도 IP_RULE 한 곳을 읽는다(5번)');
 const ageBlk = fin.slice(fin.indexOf('var IP_AGE=['), fin.indexOf('];', fin.indexOf('var IP_AGE=[')));
 is(!/fam:\d+|me:\d+/.test(ageBlk), '나이대 표에 근거 없는 「가족 : 내 연금」 비율이 없다');
+/* 판 X167 — 소득 셈의 배수는 직업군 평균. 숫자는 보도자료 〈표 3-6〉·〈표 4-5〉·〈표 4-7〉 그대로여야 합니다 */
+const JOB = { all: [7427, 9534, 4747, 1299], reg: [9519, 12004, 8145, 411], tmp: [4534, 3634, 2986, 322], self: [8000, 12479, 1741, 4833], etc: [4007, 4593, 1462, 256] };
+const jobBlk = fin.slice(fin.indexOf('var IP_JOB={'), fin.indexOf('};', fin.indexOf('var IP_JOB={')));
+is(Object.keys(JOB).every((k) => new RegExp(k + ':\\s*\\{[^}]*inc:' + JOB[k][0] + ', debt:' + JOB[k][1] + ',\\s*work:' + JOB[k][2] + ', biz:' + JOB[k][3] + '\\}').test(jobBlk)),
+  '직업군 평균 다섯 줄이 보도자료 표의 숫자 그대로다 (2025년 가계금융복지조사)');
+is(/var IP_JOB_SRC=\{[^}]*2025년 가계금융복지조사[^}]*2025\.12\.04[^}]*url:'https:\/\/mods\.go\.kr\//.test(fin), '배수의 출처(기관 · 발표일 · 주소)가 붙어 있다(9번)');
+is(!/famIncomeYears|meIncomeYears/.test(fin), '손으로 정한 소득 배수(3년치 · 1년치)가 남지 않았다');
+is(/inc:own>0\?own\*J\.famX:null/.test(fin) && /own\*J\.meX\*R\.meMonths\/12/.test(fin), '소득 셈은 직업군 배수(빚 배수 · 일해서 버는 몫)로');
 is((fin.match(/function ipBase\(/g) || []).length === 1 && (fin.match(/ipBase\(I\)/g) || []).length >= 3, '기준값은 ipBase 한 곳 — 상담·결과지가 함께 부른다');
 is((fin.match(/var RPT_FIXED=/g) || []).length === 1 && /sum\(RPT_FIXED\)/.test(fin.slice(fin.indexOf('function ipPlan'), fin.indexOf('function ipPlan') + 900)), '생활비 칸 목록 한 곳 — 결과지와 보험의 자리가 함께 읽는다');
 is(/openAge:rage, rows:rows,/.test(fin) && /PENSION\.calc\(p,inp\)/.test(fin), '연금은 상품 엔진(PENSION)이 센 줄을 넘긴다 — 엔진 식으로 다시 세지 않는다');

@@ -1366,6 +1366,7 @@ a { color: inherit; text-decoration: none; }
 .wk-see{display:flex;flex-direction:column;gap:6px;margin-top:12px;font-size:14.5px;color:#333D4B}.wk-see div{background:#F2F4F6;border-radius:12px;padding:10px 14px}.wk-see b{display:block;font-size:13.5px;color:#6B7684;margin-bottom:2px}
 .wk-bt{width:100%;border-collapse:collapse;margin-top:14px;font-size:14px}.wk-bt th{background:#F2F4F6;color:#6B7684;font-size:13px;padding:8px 6px;text-align:right}.wk-bt th:first-child,.wk-bt td:first-child{text-align:left}
 .wk-bt td{padding:9px 6px;border-bottom:1px solid #E5E8EB;text-align:right;color:#191F28;font-weight:600}.wk-bt tr.on td{background:#E8F3FF;color:#1B64DA;font-weight:800}
+.wk-job{margin-top:12px;background:#E8F3FF;border-radius:12px;padding:11px 14px;font-size:14.5px;color:#1B64DA;line-height:1.6}
 .wk-gap{margin-top:12px;background:#FFF4F4;border-radius:12px;padding:11px 14px;font-size:15px;color:#333D4B}
 .wk-ly{display:flex;flex-direction:column;gap:8px}
 .wk-l{display:flex;justify-content:space-between;align-items:center;gap:10px;border-radius:14px;padding:12px 16px;color:#fff}
@@ -1376,6 +1377,7 @@ a { color: inherit; text-decoration: none; }
 .wk-a.on{border-color:#3182F6;background:#E8F3FF;color:#1B64DA}
 .wk-a.on[data-s="모름"]{border-color:#FE9800;background:#FFF3E0;color:#B35F00}.wk-a.on[data-s="아니요"]{border-color:#F04452;background:#FDECEE;color:#C2414F}
 .wk-f{display:block;margin-top:14px;font-size:14px;font-weight:700;color:#4E5968}
+.wk-f select{display:block;width:100%;box-sizing:border-box;margin-top:6px;min-height:52px;border:1.5px solid #D1D6DB;border-radius:14px;padding:8px 12px;font-size:17px;font-weight:700;color:#191F28;background:#fff;font-family:inherit}
 .wk-f input{display:block;width:100%;box-sizing:border-box;margin-top:6px;min-height:52px;border:1.5px solid #D1D6DB;border-radius:14px;padding:8px 14px;font-size:20px;font-weight:700;color:#191F28;background:#fff;font-family:inherit}
 .wk-meter{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;background:#FFF4F4;border-radius:16px;padding:12px 16px;margin-bottom:10px;font-size:14px;color:#C2414F;font-weight:700}
 .wk-meter b{font-size:20px;color:#F04452}.wk-meter .wk-ms{color:#6B7684;font-weight:600;font-size:13px;margin-left:auto}
@@ -1467,7 +1469,26 @@ var IP_AGE=[
    ③ 가족 — 대출 · 대출 뺀 생활비 · 막내가 독립할 때까지 남은 해(막내 나이를 모르면 셈하지 않음)
    ★ IP_RULE 의 수(3년 · 25세 · 1년 · 12개월)는 <b>APEX 원칙(가정)</b>입니다 — 화면에 그렇게 적습니다.
      보험료 8~15% 는 상담가이드 「보험료 비중」 판정이 쓰던 그 수를 여기로 옮긴 것입니다(5번). */
-var IP_RULE={ famIncomeYears:3, indepAge:25, spouseYears:3, meIncomeYears:1, meMonths:12, premLo:8, premHi:15 };
+var IP_RULE={ indepAge:25, spouseYears:3, meMonths:12, premLo:8, premHi:15 };
+/* ── 소득 셈의 배수는 직업군 평균 데이터에서 (판 X167) — 사장님 말씀 2026-10-22
+   「배수는 평균 데이터를 기준으로 하고 직업군을 나누어서 다시 나눠서 해줘」
+   전에 손으로 정했던 「소득 3년치 · 1년치」 를 지우고, 아래 공식 통계의 가구주 종사상지위별 평균에서 셈합니다.
+     가족 지키기 배수 = 평균 부채 ÷ 평균 가구소득          (같은 직업군 가구가 평균적으로 진 빚이 소득의 몇 배인가)
+     내 연금 지키기 배수 = (근로소득 + 사업소득) ÷ 가구소득  (일을 못 하면 끊기는 몫)
+   ★ 숫자는 보도자료 원문(HWPX)의 표에서 글자 그대로 옮겼습니다 — 고치려면 같은 표의 새 해 숫자로만(1번 · 9번).
+   ★ 직업군을 모르면 「전체」 로 셉니다 — 화면에 그렇게 적습니다. */
+var IP_JOB={
+  all: {label:'전체 (직업군 모름)',            inc:7427, debt:9534,  work:4747, biz:1299},
+  reg: {label:'상용근로자 (직장인·공무원 등)',  inc:9519, debt:12004, work:8145, biz:411},
+  tmp: {label:'임시·일용근로자',               inc:4534, debt:3634,  work:2986, biz:322},
+  self:{label:'자영업자',                      inc:8000, debt:12479, work:1741, biz:4833},
+  etc: {label:'기타 (무직 등)',                inc:4007, debt:4593,  work:1462, biz:256}
+};
+var IP_JOB_SRC={ src:'2025년 가계금융복지조사(국가데이터처·금융감독원·한국은행) 가구주 종사상지위별 평균',
+  cite:'보도자료 2025.12.04 〈표 3-6〉 부채 보유액(2025.3.31) · 〈표 4-5〉 가구소득 · 〈표 4-7〉 소득원천별 가구소득(2024년)',
+  url:'https://mods.go.kr/board.es?mid=a10301010000&bid=215&list_no=439535&act=view&mainXml=Y' };
+function ipJob(){ var e=document.getElementById('s_jobg'), k=e?e.value:''; var J=IP_JOB[k]||IP_JOB.all;
+  return {key:IP_JOB[k]?k:'all', label:J.label, inc:J.inc, debt:J.debt, famX:J.debt/J.inc, meX:(J.work+J.biz)/J.inc}; }
 var IP_AVG={
   prem:{ v:39.1, what:'생명보험 가입가구 월평균 납입보험료', src:'생명보험협회 제16차 생명보험 성향조사(2021.9.1~11.2 · 전국 2,000가구)',
          cite:'데이터솜 2022.01.19 「지난해 9~10월 생명보험 가구가입률 5.0%p 하락...보험료는 5만6000원 하락」', url:'http://www.datasom.co.kr/news/articleView.html?idxno=120439' },
@@ -1531,6 +1552,7 @@ function ipBand(age){ age=Number(age)||0; for(var i=0;i<IP_AGE.length;i++) if(ag
             </select>
           </div>
           <div class="sf"><label>직업/유형</label><input id="s_job" value="직장인" oninput="render()"></div>
+          <div class="sf"><label>직업군 <small style="font-weight:600;color:#94A3B8">보험 기준값의 배수</small></label><select id="s_jobg" onchange="render()"><option value="">모름 (전체 평균)</option><option value="reg">상용근로자 (직장인·공무원 등)</option><option value="tmp">임시·일용근로자</option><option value="self">자영업자</option><option value="etc">기타 (무직 등)</option></select></div>
         </div>
         <div class="sf2">
           <div class="sf"><label>은퇴 목표 나이</label><input type="number" id="s_rage" value="65" oninput="render()"></div>
@@ -11503,7 +11525,7 @@ function ipPlan(){
 }
 /* 세 가지로 구한 기준값 · 무게 — 상담(wk*) · 결과지(rptData) 가 이 한 곳만 부릅니다(5번) */
 function ipBase(I){
-  var R=IP_RULE, own=I.ownAnnual;
+  var R=IP_RULE, own=I.ownAnnual, J=ipJob();
   function famBy(debt,kids,youngest){
     var y=null;
     if(kids>0){ if(youngest!=null) y=Math.max(0,R.indepAge-youngest); }
@@ -11511,30 +11533,32 @@ function ipBase(I){
     return {years:y, v:y==null?null:debt+I.famLiving*12*y};
   }
   var ff=famBy(I.debt,I.kids,I.youngest);
-  var fam={avg:IP_AVG.fam?IP_AVG.fam.v:null, inc:own>0?own*R.famIncomeYears:null, fam:ff.v, years:ff.years};
+  var fam={avg:IP_AVG.fam?IP_AVG.fam.v:null, inc:own>0?own*J.famX:null, fam:ff.v, years:ff.years};
   fam.base=ipMid([fam.avg,fam.inc,fam.fam]); fam.have=I.life; fam.gap=fam.base!=null?Math.max(0,fam.base-I.life):null;
-  var me={avg:IP_AVG.me?IP_AVG.me.v:null, inc:own>0?own*R.meIncomeYears:null, fam:I.living>0?I.living*R.meMonths:null};
+  var me={avg:IP_AVG.me?IP_AVG.me.v:null, inc:own>0?own*J.meX*R.meMonths/12:null, fam:I.living>0?I.living*R.meMonths:null};
   me.base=ipMid([me.avg,me.inc,me.fam]); me.have=I.dx; me.gap=me.base!=null?Math.max(0,me.base-I.dx):null;
   var mInc=own/12, prem={avg:IP_AVG.prem?IP_AVG.prem.v:null, lo:mInc>0?mInc*R.premLo/100:null, hi:mInc>0?mInc*R.premHi/100:null, have:I.prem};
   prem.base=prem.avg==null?null:(mInc>0?Math.min(prem.hi,Math.max(prem.lo,prem.avg)):prem.avg);
   function w(f,m){ return (f!=null&&m!=null&&f+m>0)?Math.round(f/(f+m)*20)*5:null; }
   /* 대출이 끝나고 자녀가 독립하면 — 같은 셈에 대출 0 · 자녀 0 (생활비는 그대로 둔 단순 셈) */
   var lf=famBy(0,0,null), later=ipMid([fam.avg,fam.inc,lf.v]);
-  return {fam:fam, me:me, prem:prem, w:w(fam.base,me.base), wLater:w(later,me.base), famLater:later};
+  return {fam:fam, me:me, prem:prem, job:J, w:w(fam.base,me.base), wLater:w(later,me.base), famLater:later};
 }
 function ipSrcText(){
   var a=[];
   if(IP_AVG.fam) a.push('사망보험금 평균 — '+IP_AVG.fam.src+' ('+IP_AVG.fam.cite+')');
   if(IP_AVG.prem) a.push('보험료 평균 — '+IP_AVG.prem.src+' ('+IP_AVG.prem.cite+')');
   if(!IP_AVG.me) a.push('진단·치료비 평균은 출처를 확인하지 못해 비웠어요');
-  a.push('소득·가족 셈의 배수(소득 '+IP_RULE.famIncomeYears+'년치 · 막내 '+IP_RULE.indepAge+'세 독립 · 배우자 '+IP_RULE.spouseYears+'년 · 치료 '+IP_RULE.meIncomeYears+'년치·'+IP_RULE.meMonths+'개월)는 APEX 원칙(가정)이에요');
+  var J=ipJob();
+  a.push('소득 셈의 배수 — '+J.label+' 평균: 빚 배수 '+(Math.round(J.famX*100)/100)+'(부채 '+APEX_REPORT.man(J.debt)+' ÷ 가구소득 '+APEX_REPORT.man(J.inc)+') · 일해서 버는 몫 '+Math.round(J.meX*100)+'% — '+IP_JOB_SRC.src+' ('+IP_JOB_SRC.cite+')');
+  a.push('가족 셈의 기간(막내 '+IP_RULE.indepAge+'세 독립 · 배우자만이면 '+IP_RULE.spouseYears+'년 · 치료·회복 '+IP_RULE.meMonths+'개월)은 APEX 원칙(가정)이에요');
   return a.join('\n');
 }
 function ipCell(v,why){ return v==null?why:v; }
 function ipTableRows(I,X){
   var kidWhy=I.kids>0&&I.youngest==null?'막내 나이 필요':'—';
   return [['평균',ipCell(X.fam.avg,'출처 확인 전'),ipCell(X.me.avg,'출처 확인 전')],
-          ['소득',ipCell(X.fam.inc,'소득 필요'),ipCell(X.me.inc,'소득 필요')],
+          ['소득 × '+X.job.label.replace(/ \(.*\)/,'')+' 배수',ipCell(X.fam.inc,'소득 필요'),ipCell(X.me.inc,'소득 필요')],
           ['가족',ipCell(X.fam.fam,kidWhy),ipCell(X.me.fam,'생활비 필요')],
           ['**기준값** (가운데)',ipCell(X.fam.base,'—'),ipCell(X.me.base,'—')],
           ['지금 가진 것',X.fam.have,X.me.have],
@@ -11864,6 +11888,7 @@ var WK_ITEMS=[
   {k:'care',  q:'아프거나 간병이 필요할 때 쓸 돈이 생활비와 따로 있나요?', why:'따로 없으면 생활비가 먼저 줄어요. 보장은 심사 결과에 따릅니다.', todo:'**치료·간병 자금** 따로 점검하기'},
   {k:'spouse',q:'한 분이 먼저 떠나면, 남은 분에게 매달 얼마가 들어오는지 아시나요?', why:'연금이 한 사람 이름으로만 있으면 함께 줄어들 수 있어요.', todo:'**혼자 남았을 때 들어오는 돈** 같이 세어 보기'},
   {k:'loan',  q:'대출은 은퇴 전에 다 끝나나요?', why:'은퇴 뒤에도 대출이 남으면 빈칸이 더 커져요.', todo:'**대출이 끝나는 때** 확인하기'},
+  {k:'jobg',  q:'어떤 일을 하시나요? (직업군)', why:'직업군마다 평균 빚과 「일해서 버는 몫」 이 달라 보험 기준값이 달라져요.', field:'s_jobg', unit:'직업군', options:[['reg','상용근로자 (직장인·공무원 등)'],['tmp','임시·일용근로자'],['self','자영업자'],['etc','기타 (무직 등)']], todo:'**직업군** 알려 주기'},
   {k:'kid',   q:'막내 자녀가 몇 살인지 적어 볼까요?', why:'막내가 독립할 때까지가 가족을 지켜야 하는 기간이에요. 자녀가 없으면 「아니요」.', field:'inh_youngest', unit:'세', todo:'**막내 자녀 나이** 알려 주기'},
   {k:'life',  q:'내가 없을 때 가족에게 가는 사망보험금, 얼마인지 아시나요?', why:'대출을 갚고 남는 돈으로 가족이 몇 달을 버틸지가 정해져요.', field:'ins_life', unit:'만원', todo:'**사망보험금이 대출을 갚고도 남는지** 같이 보기'},
   {k:'renew', q:'갱신형 보험료가 은퇴 뒤에도 오르는지 아시나요?', why:'은퇴 뒤에 오르는 보험료는 연금에서 나가요.', todo:'**갱신형 보험료가 언제까지 오르는지** 증권으로 확인하기'},
@@ -11880,7 +11905,8 @@ function wkResult(){
   WK_ITEMS.forEach(function(it){
     var a=st.ans[it.k]; if(!a) return;
     var val='';
-    if(a==='확인됨'&&it.field){ var e=document.getElementById(it.field), x=e?String(e.value).trim():''; if(x!=='') val=Number(x).toLocaleString('ko-KR')+(it.unit.indexOf('만원')===0?'만 원':it.unit.replace('만원','만 원'));
+    if(a==='확인됨'&&it.field&&it.options){ var eo=document.getElementById(it.field), xo=eo?eo.value:''; it.options.forEach(function(o){ if(o[0]===xo) val=o[1]; }); }
+    else if(a==='확인됨'&&it.field){ var e=document.getElementById(it.field), x=e?String(e.value).trim():''; if(x!=='') val=Number(x).toLocaleString('ko-KR')+(it.unit.indexOf('만원')===0?'만 원':it.unit.replace('만원','만 원'));
       if(it.extra&&st.vals[it.extra.k]) val+=' · '+it.extra.label+' '+st.vals[it.extra.k]+it.extra.unit; }
     items.push({q:it.q, status:a, value:val});
     if(a==='확인됨') ok++; else todo.push(it.todo);
@@ -11981,6 +12007,7 @@ function wkSlides(){
       ipTableRows(I,X).map(function(r,i){ return '<tr'+(i===3?' class="on"':'')+'>'+r.map(function(c,j){ return '<td>'+(typeof c==='number'?wkEsc(wkM(c)):wkT(c))+'</td>'; }).join('')+'</tr>'; }).join('')+'</tbody></table>'+
     '<p class="wk-p">'+wkT('세 가지로 구해 **가운데 값**을 기준으로 삼았어요(값이 둘이면 둘의 평균).'+
       (X.wLater!=null&&X.w!=null&&X.wLater!==X.w?'\n대출이 끝나고 자녀가 독립하면 무게가 **'+X.wLater+' : '+(100-X.wLater)+'**로 옮겨 가요.':'')+'\n'+B.band+' — '+B.why)+'</p>'+
+    '<div class="wk-job">'+wkT('**'+X.job.label+'** 평균으로 셈했어요 — 빚 배수 **'+(Math.round(X.job.famX*100)/100)+'** · 일해서 버는 몫 **'+Math.round(X.job.meX*100)+'%**'+(X.job.key==='all'?'\n직업군을 고르면 그 직업군 평균으로 다시 셈해요.':''))+'</div>'+
     '<div class="wk-see"><div><b>가족 지키기 · '+wkEsc(B.band)+'</b>'+wkEsc(B.famSee)+'</div><div><b>내 연금 지키기 · '+wkEsc(B.band)+'</b>'+wkEsc(B.meSee)+'</div></div>'+
     '<div class="wk-n">'+wkT(ipSrcText())+'</div>'});
   WK_ITEMS.forEach(function(it,ix){ S.push({part:'점검', item:it, ix:ix}); });
@@ -11992,7 +12019,10 @@ function wkItemHtml(it,ix){
   var h='<div class="wk-k">같이 점검 '+(ix+1)+' / '+WK_ITEMS.length+'</div><h2 class="wk-h">'+wkEsc(it.q)+'</h2><p class="wk-p">'+wkT(it.why)+'</p><div class="wk-ans">';
   ['확인됨','모름','아니요'].forEach(function(s){ h+='<button type="button" class="wk-a'+(a===s?' on':'')+'" data-s="'+s+'" onclick="wkAnswer(\''+it.k+'\',\''+s+'\')">'+WK_ANS[s]+'</button>'; });
   h+='</div>';
-  if(it.field&&a==='확인됨'){
+  if(it.field&&a==='확인됨'&&it.options){
+    h+='<label class="wk-f"><span>'+wkEsc(it.unit)+'</span><select id="wkIn" onchange="wkSet(\''+it.field+'\',this.value)"><option value="">고르세요</option>'+
+      it.options.map(function(o){ return '<option value="'+o[0]+'"'+(cur===o[0]?' selected':'')+'>'+wkEsc(o[1])+'</option>'; }).join('')+'</select></label>';
+  } else if(it.field&&a==='확인됨'){
     h+='<label class="wk-f"><span>'+wkEsc(it.unit.indexOf('세')===0?'나이':'금액')+' ('+wkEsc(it.unit)+')</span><input id="wkIn" type="number" inputmode="decimal" value="'+wkEsc(cur)+'" oninput="wkSet(\''+it.field+'\',this.value)"></label>';
     if(it.extra) h+='<label class="wk-f"><span>'+wkEsc(it.extra.label)+' ('+wkEsc(it.extra.unit)+')</span><input id="wkIn2" type="number" inputmode="numeric" value="'+wkEsc(st.vals[it.extra.k]||'')+'" oninput="wkVal(\''+it.extra.k+'\',this.value)"></label>';
     h+='<div class="wk-n">적으시는 숫자는 계산기 칸에 그대로 들어가고, 위의 빈칸이 바로 다시 셈해져요.</div>';
