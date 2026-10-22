@@ -1,4 +1,4 @@
-/* 고객 결과지(토스 테마 재무 리포트)가 믿을 만한가 (판 X159)
+/* 고객 결과지(토스 테마 재무 리포트)가 믿을 만한가 (판 X161)
 
    사장님 말씀 2026-10-22 「현재 내 메인세션에서 재무설계계산기만 따와서 가져와서 준비해줘
    운영방식을 이해하고 조금 더 고객에게 쉽게 어필할수 있도록 만들자」 — 계산 결과를
@@ -15,14 +15,14 @@
      사. data 에 넣은 HTML 이 글자로 찍히나
      아. 계산기 — 이름이 가려진 채 나가나 · 실명은 한 번 더 묻나 (3번)
      차. ★ 고객이 스스로 부족을 느끼나 — 사장님 말씀 2026-10-22 「고객이 이걸 통해서 스스로 부족하다고
-         느끼고 걱정하도록 … 고객의 입장에서 상담을 스스로 받아보고 … 개선해」 (판 X160)
+         느끼고 걱정하도록 … 고객의 입장에서 상담을 스스로 받아보고 … 개선해」 (판 X162)
          · 히어로에 「지금 그대로면」 한 달 30일 칸 — 날 수가 <b>고객 숫자(준비된 돈 ÷ 목표)</b>로만 셈해지나
          · 「잘하고 계신 것」 뒤에 「그런데 — 목표의 N%」 · 빈칸을 얼마나 채우나 · 시작을 미루면 · 원금 돌려받는 나이
          · 「지금 그대로면 / 오늘 제안을 더하면」 두 줄 · 스스로 점검 질문 · 마지막 「가장 마음에 걸린 숫자」
          · ★★ 걱정은 고객 숫자로만 — 바깥 통계·「노후 파산」 같은 겁주는 말이 없나 (1번 · 지시문 「확인 안 된 통계 금지」)
          · 목표를 이미 채운 고객에게는 부족을 지어 말하지 않나 (1번)
-     타. 판 X163 — 나이대 문구 IP_AGE 한 곳 · 사슬 0 · 생활비 칸 목록 한 곳
-     카. 판 X161 (사장님 말씀 2026-10-22 「점검 필요로 바꾸고, 2번은 만들어줘」) — 「불가」 → 「점검 필요」 ·
+     타. 판 X165 — 나이대 문구 IP_AGE 한 곳 · 사슬 0 · 생활비 칸 목록 한 곳
+     카. 판 X163 (사장님 말씀 2026-10-22 「점검 필요로 바꾸고, 2번은 만들어줘」) — 「불가」 → 「점검 필요」 ·
          「연금저축·IRP·달러·변액 쌓인 금액」 칸이 비면 모름(0 아님) · 탭과 결과지가 psAccPlan 한 곳에서 세나
      ※ 계산기에서 단추를 눌러 실제로 열어 보는 것은 check-reportweb.js 가 합니다(브라우저 갈래).
 
@@ -95,7 +95,7 @@ head('사. data 의 HTML 은 글자로');
 const evil = R.html({ client: { name: '<img src=x onerror=alert(1)>' }, summary: ['<script>x</script>'] });
 is(!/<img src=x|<script>x/.test(evil), '태그를 넣어도 글자로 찍힌다');
 
-head('차. 고객이 스스로 부족을 느끼나 — 고객 숫자로만 (판 X160)');
+head('차. 고객이 스스로 부족을 느끼나 — 고객 숫자로만 (판 X162)');
 const goal = sample.goal, now = sample.nationalPension.monthly, days = Math.round(now / goal * 30);
 is(text.includes('지금 그대로면 — ' + sample.pension.openAge + '세 이후 한 달 ' + R.man(goal) + ' 중'), '히어로에 「지금 그대로면」 이 선다');
 const nos = (x) => x.replace(/\s+/g, '');   /* 굵게(<b>)가 공백으로 바뀌므로 공백을 빼고 견줍니다 */
@@ -123,13 +123,13 @@ is((fin.match(/onclick="rptPanel\(\)"/g) || []).length >= 1, '「고객 결과�
 is(/name=opt\.real&&raw&&raw!=='고객님'\? raw : rptMask\(raw\)/.test(fin), '실명은 opt.real 일 때만 — 기본은 rptMask');
 is(/confirm\('카톡으로 나가는 파일에 고객 실명이 들어갑니다/.test(fin), '실명을 켜면 한 번 더 묻는다');
 is(/worryNote:saveP>0&&priv<=0&&!ap\?/.test(fin), '지금 모으는 연금저축·IRP 를 빼고 셌으면 뺐다고 밝힌다(1번)');
-/* 판 X161 — 쌓인 금액 칸 · 탭과 결과지가 한 곳(psAccPlan)에서 센다 · 「불가」 대신 「점검 필요」 */
+/* 판 X163 — 쌓인 금액 칸 · 탭과 결과지가 한 곳(psAccPlan)에서 센다 · 「불가」 대신 「점검 필요」 */
 is(/id="s_pen_acc"[^>]*placeholder="모름"/.test(fin) && !/id="s_pen_acc"[^>]*value="/.test(fin), '「쌓인 금액」 칸이 있고, 비어 있으면 모름이다(0 을 미리 넣지 않는다 · 1번)');
 is((fin.match(/function psAccPlan\(/g) || []).length === 1 && (fin.match(/var ap=psAccPlan\(\)/g) || []).length === 2, '탭과 결과지가 psAccPlan 한 곳에서 센다(5번)');
 is(/if\(raw===''\|\|!window\.APEX_REPORT\) return null;/.test(fin), '칸이 비면 null — 0 과 다르다(1번)');
 is(/APEX_REPORT\.calc\.RULE\.annuity\.annuityFactor/.test(fin) && !/psAccPlan[\s\S]{0,900}\b200\b/.test(fin.slice(fin.indexOf('function psAccPlan'), fin.indexOf('function psAccPlan') + 900)), '전환계수는 엔진 RULE 한 곳에서 — 200 을 따로 외우지 않는다');
 is(/'점검 필요'/.test(fin) && !/:'불가'/.test(fin), '계산기 결과지는 「불가」 대신 「점검 필요」');
-/* 판 X163 — 나이대 문구는 IP_AGE 한 곳 (예전엔 if 사슬 · 삼항 사슬로 두 벌) */
+/* 판 X165 — 나이대 문구는 IP_AGE 한 곳 (예전엔 if 사슬 · 삼항 사슬로 두 벌) */
 is((fin.match(/var IP_AGE=\[/g) || []).length === 1 && (fin.match(/20대 · 시작기/g) || []).length === 1, '나이대 표가 IP_AGE 한 곳에만 있다(5번)');
 is(/var ageMsg=ipBand\(d\.age\)\.one;/.test(fin) && !/var ageMsg=d\.age<30\?/.test(fin), '상담 가이드 한 줄도 IP_AGE 를 읽는다 — 삼항 사슬 0');
 is(/var B=ipBand\(age\);/.test(fin) && !/if\(age<30\)\{\s*stage=/.test(fin), '「나이별 보험 필요성 피드백」 도 IP_AGE 를 읽는다 — if 사슬 0');

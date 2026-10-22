@@ -234,7 +234,7 @@ function stackRows(rows, goal, goalLabel) {
 }
 
 /* ── 카드 ───────────────────────────────────────────────────── */
-var VERDICT = { '가능': 'green', '주의': 'orange', '점검 필요': 'red', '불가': 'red' };   /* 고객 결과지는 「불가」 대신 「점검 필요」 (판 X161) */
+var VERDICT = { '가능': 'green', '주의': 'orange', '점검 필요': 'red', '불가': 'red' };   /* 고객 결과지는 「불가」 대신 「점검 필요」 (판 X163) */
 function cardHead(c) {
   return c.title ? '<div class="ch">' + icon(c.icon, 'ic') + '<div><div class="ct">' + txt(c.title) + tag(c.assumed) + '</div>' + (c.sub ? '<div class="cs">' + txt(c.sub) + '</div>' : '') + '</div></div>' : '';
 }
