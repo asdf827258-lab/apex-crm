@@ -42,6 +42,13 @@
          이름(가족 이름까지)은 가린 채가 기본입니다(3번).
        · 팀장에게는 「주간 보고」 — 이름 가린 숫자와 진행만 카톡으로. 서버를 부르지 않습니다(7번).
        · 인쇄는 글꼴이 다 온 뒤에 엽니다 — 숨긴 칸의 이모지 글꼴을 안 불러와 제목이 비어 찍히던 것(시뮬레이션에서 찾음).
+     ★ <b>판 X156 (2026-10-22)</b> — 사장님 말씀 「성장 기록의 가이드를 다시 잡아봐」.
+       · 「0. 이 기록북 쓰는 법」 — 매일 2분 · 만나기 전 3분/만난 뒤 2분 · 매주 15분(선배와) · 8주에 한 번, 네 가지 약속,
+         아쉬운 기록 ↔ 좋은 기록 예시, 선배 · 팀장이 보는 법(볼 것 · 할 것 · 하지 않을 것). 인쇄하면 표지 바로 뒤.
+       · 🏁 8주 이정표 — 계약 수가 아니라 「할 수 있다」 12개(고치기 · 더하기 됨). 체크 수가 주간 보고에 들어갑니다.
+       · 주차 쪽 — 시작한 날로 날짜가 붙은 매일 칸. 연락 수는 연락 기록에서 세고, 기록 없는 날은 0 이 아니라 빈칸(1번).
+         돌아보기 ①~④(행동 수 · 잘된 대화 · 막힌 고객 · 바꿀 것) · 이번 주 만난 분(이름 가림) · 선배 칭찬 · 질문 · 숙제 칸.
+       · 돌아보기는 치는 대로 저장되고, 기록북 그 주차 쪽과 주간 보고에 같이 들어갑니다.
      점검 : scripts/check-jiingrow.js -->
 <style>
 /* 폰이 다크여도 흰색 고정 — 앱의 다른 화면과 같게 (check-lightmode) */
@@ -631,6 +638,27 @@ pre.wr{white-space:pre-wrap;background:var(--bg);border-radius:12px;padding:12px
 .pdoc .ap-g>div,.pdoc .ap-g2>div{background:#F7F8FA}
 .pdoc .bk-cp h2 small{font-weight:500;font-size:11px;color:#4E5968}
 @media print{.pdoc .ap{font-size:11px}.pdoc .ap ul{font-size:11px}.pdoc .ap li{margin:0}.pdoc .ap-g{gap:6px}.pdoc .ap-g>div,.pdoc .ap-g2>div{padding:6px 8px}.pdoc .ap-o{padding:5px 8px;font-size:11px}.pdoc .ap-t th,.pdoc .ap-t td{padding:3px 6px;font-size:11px}.pdoc .ap h5{font-size:11.5px}}
+/* 성장기록북 — 쓰는 법 · 이정표 · 주차 쪽 */
+.bk-rh{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.bk-rh>div{background:var(--bg);border-radius:12px;padding:10px 12px}.bk-rh .tf{font-size:20px;display:block}.bk-rh b{display:block;font-size:13.5px;margin:4px 0 2px}.bk-rh p{margin:0;font-size:12.5px;color:var(--sub);line-height:1.55}
+.bk-h4{font-size:13.5px;margin:14px 0 6px}
+.bk-pr{display:grid;grid-template-columns:1fr 1fr;gap:8px}.bk-pr>div{border:1px solid var(--line);border-radius:12px;padding:9px 12px}.bk-pr b{font-size:13.5px}.bk-pr p{margin:3px 0 0;font-size:12.5px;color:var(--sub);line-height:1.55}
+.bk-ex{width:100%;border-collapse:collapse;font-size:13px}.bk-ex th,.bk-ex td{border-top:1px solid var(--line);padding:7px 6px;text-align:left;vertical-align:top}.bk-ex th{font-size:12px;color:var(--mute)}
+.bk-ex td.bad{color:var(--mute);text-decoration:line-through;width:18%}.bk-ex td.good{color:var(--ink)}.bk-ex td.good::before{content:'👍 '}
+.bk-sn{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bk-sn>div{border-radius:12px;padding:9px 12px}.bk-sn ul{margin:4px 0 0;padding-left:16px;font-size:12.5px}.bk-sn li{margin:2px 0}
+.bk-sn .s1{background:#EEF4FF}.bk-sn .s2{background:#EAF8F0}.bk-sn .s3{background:#FFF0F0}
+.bk-ml-c{font-size:13px;color:var(--sub);margin-bottom:6px}.bk-ml-c b{font-size:20px;color:var(--blue)}
+.bk-ml{margin-top:8px}.bk-mlh{font-size:12px;font-weight:800;color:var(--blue);margin-bottom:4px}
+.bk-ml label{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--line);border-radius:10px;margin:4px 0;font-size:13.5px;cursor:pointer}.bk-ml label span{flex:1}
+.bk-ml input{width:18px;height:18px;accent-color:var(--blue)}
+.bk-rvn{background:var(--bg);border-radius:12px;padding:10px 12px;font-size:13.5px;margin-bottom:8px}.bk-rvn small{color:var(--mute)}
+@media(max-width:600px){.bk-rh,.bk-pr,.bk-sn{grid-template-columns:1fr 1fr}.bk-sn{grid-template-columns:1fr}}
+.pdoc .bk-rh>div,.pdoc .bk-sn>div{background:#F7F8FA}.pdoc .bk-sn .s1{background:#EEF4FF}.pdoc .bk-sn .s2{background:#EAF8F0}.pdoc .bk-sn .s3{background:#FFF0F0}
+.pdoc .bk-ex td.good::before{content:''}
+.pdoc .bk-day td{height:32px;padding:2px 6px}.pdoc .bk-day th{padding:3px 6px}
+.pdoc .bk-wk2{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:8px}.pdoc .bk-wk2>div{border:1px solid #DDE1E6;border-radius:8px;padding:6px 10px}
+.pdoc .bk-sv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}.pdoc .bk-sv .box{margin:0}
+.pdoc .bk-ml{break-inside:avoid}.pdoc .bk-mlh{font-size:12px}
 /* 내 이름 칸 */
 .me-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px;font-size:13px;color:var(--mute)}
 .me-row label{font-weight:700;color:var(--sub);font-size:14px}
@@ -1502,11 +1530,17 @@ const GLOSS=[
   {ic:'🧾',w:'진료비 세부내역서',m:'병원비를 항목별로 적은 서류. 실손 청구 때 영수증과 함께 자주 필요합니다.',say:'병원 창구나 병원 앱에서 다시 뽑을 수 있어요.'}
 ];
 // 고칠 수 있는 내용의 처음 상태 — 편집 모드의 「처음 내용으로」가 여기로 돌아옵니다
+/* 8주 이정표 — 계약 수가 아니라 「할 수 있다」 가 늘었는지 봅니다. 선배 앞에서 해 보이면 체크 */
+const MILES=[
+  {st:'1~2주',x:'「왜 옮겼나」 30초를 대본 없이 말한다'},{st:'1~2주',x:'첫 연락을 보험 단어 없이 근황으로 시작한다'},{st:'1~2주',x:'만난 직후 2분 안에 고객 상세에 적는다'},
+  {st:'3~4주',x:'찾아줌 10분을 혼자 진행한다'},{st:'3~4주',x:'「인증번호는 받지 않아요」 를 먼저 말한다'},{st:'3~4주',x:'0원이 나와도 칭찬으로 시작해 보장분석으로 잇는다'},
+  {st:'5~6주',x:'찾은 그 자리에서 보장분석 날짜를 양자택일로 잡는다'},{st:'5~6주',x:'보장분석 결과를 세 줄로 말한다'},{st:'5~6주',x:'거절 응대 여섯 개를 공감 → 근거 → 제안으로 말한다'},
+  {st:'7~8주',x:'소개를 「누구 · 왜」 까지 구체적으로 부탁한다'},{st:'7~8주',x:'고객 성향을 보고 말하는 방식을 바꾼다'},{st:'7~8주',x:'다음 8주 목표를 행동 숫자로 정한다'}];
 const DEF={
   scen:SCEN_RAW.map(s=>({...s,lines:s.lines.map(([r,x,g])=>({r,x,g:g||''}))})),
   objs:OBJS,find:FIND,checkq:CHECKQ,preH:PRE_H,preM:PRE_M,whyCheck:WHY_CHECK,clues:CLUES,
   weeks:WEEKS.map(w=>({t:w[0],who:w[1],m:w[2],done:{},note:''})),
-  concepts:CONCEPTS,clusters:CLUSTERS,faq:FAQ,dont:DONT,starter:STARTER,mist:MIST,gloss:GLOSS
+  concepts:CONCEPTS,clusters:CLUSTERS,faq:FAQ,dont:DONT,starter:STARTER,mist:MIST,gloss:GLOSS,miles:MILES
 };
 
 /* ================= 저장 ================= */
@@ -1516,7 +1550,7 @@ function newCust(o){
 }
 function fresh(){
   return {v:2,customers:SEED.map(r=>newCust({id:r[0],g:r[1],name:r[2],chk:!!r[3],job:r[4],fam:r[5],tag:r[6]})),
-    libv:3,cfg:{},lib:clone(DEF),rp:{},rpLast:{},story:{...STORY_DEF},pre:{},find:{},check:{},starter:{},pmask:true};
+    libv:3,cfg:{},lib:clone(DEF),rp:{},rpLast:{},story:{...STORY_DEF},pre:{},find:{},check:{},starter:{},mile:{},pmask:true};
 }
 // v1(처음 판) 저장본도 그대로 받아 옵니다 — 찾은 금액·체크·회고를 잃지 않게
 function norm(s){
@@ -1662,6 +1696,7 @@ const SC={
   claim:{t:'실비 청구 한 줄',req:'d',f:[['d','진료일 (사고일)','date'],['org','병·의원','text'],['amt','청구금액 (원)','number'],['paid','지급금액 (원)','number']],blank:()=>({id:uid(),d:today(),org:'',amt:'',paid:''}),label:v=>v.d+' 청구'},
   cfg:{t:'이름 · 회사',f:[['me','내 이름','text'],['mes','부르는 이름 (비우면 이름에서 성을 뺍니다 — 홍길동 → 길동)','text'],['phone','내 연락처 (안내장 보내는 사람 칸)','text'],['title','프로그램 이름 (왼쪽 위)','text'],['prev','이전 회사 (전체 이름)','text'],['prevS','이전 회사 (짧게 — 예: DB)','text'],['cur','지금 회사','text'],['curDesc','지금 회사 한 줄 소개','text'],['partner','제휴 회사 (예: 생명·손해보험 33개 회사 — 회사 자료로 확인한 숫자만)','text'],['team','팀 · 지점 (성장기록북 표지)','text'],['leader','함께하는 선배 · 팀장','text'],['start','시작한 날 (8주 몇 주차인지 셉니다)','date'],['goal','8주 뒤 나의 모습','text']]},
   fam:{t:'가족',req:'rel',f:[['rel','관계','select',SEL(FAM_REL)],['name','이름 (선택)','text'],['age','나이 · 학년 (예: 7살, 40대)','text'],['memo','메모 (건강 · 일 · 들은 이야기)','text']],blank:()=>({rel:'자녀',name:'',age:'',memo:''}),label:v=>v.rel+(v.name?' '+v.name:'')},
+  mile:{t:'이정표',req:'x',f:[['st','언제','select',SEL(['1~2주','3~4주','5~6주','7~8주'])],['x','할 수 있다 — 해 보일 수 있는 행동으로','text']],blank:()=>({st:'1~2주',x:''}),label:v=>'「'+v.x+'」'},
   faq:{t:'자주 받는 질문',req:'q',f:[['q','질문','text'],['a','답','textarea']],blank:()=>({q:'',a:''}),label:v=>v.q},
   dont:{t:'하지 않는 말',req:'b',f:[['b','하지 않는 말','text'],['s','이유','text']],blank:()=>({b:'',s:''}),label:v=>v.b},
   find:{t:'찾은 보험금',req:'kind',f:[['d','날짜','date'],['kind','구분','select',SEL(FIND_KINDS)],['co','보험회사','text'],['what','내용 (예: 정형외과 통원 3회)','text'],['amt','금액 (원) — 모르면 비워 두기','number'],['st','상태','select',SEL(FIND_ST)]],blank:()=>({id:uid(),d:today(),kind:'미청구 병원비',co:'',what:'',amt:'',st:'찾음'}),label:v=>'「'+(v.what||v.kind)+'」 기록'},
@@ -2530,8 +2565,44 @@ function pfFormHTML(c){
 }
 function pfGuideHTML(){return `<table class="pf-t"><tr><th>성향</th><th>이런 신호</th><th>이렇게</th><th>피할 것</th></tr>${Object.values(PF_TYPE).map(t=>`<tr><td><b>${t.ic} ${esc(t.name)}</b><br><small>${esc(t.sub)}</small></td><td>${t.sign.map(esc).join('<br>')}</td><td>${t.talk.map(esc).join('<br>')}</td><td>${t.avoid.map(esc).join('<br>')}</td></tr>`).join('')}</table>`;}
 
+/* ── 📒 성장기록북 — 쓰는 법 (선배가 옆에서 알려 주는 것) ──
+   ★ 행동을 적고 결과(계약)는 적지 않습니다 — 8주는 습관을 만드는 시간입니다.
+   ★ 매일 칸의 연락 수는 연락 기록에서 셉니다. 기록이 없는 날은 빈칸 — 0 으로 적지 않습니다 (1번). */
+const BK_RHYTHM=[
+  ['📅','매일 2분','자기 전에 그날 칸만 — 연락 몇 명 · RP 몇 분 · 기록했나 · 오늘 한 줄(잘된 말이나 막힌 말 하나)'],
+  ['👤','만나기 전 3분 · 만난 뒤 2분','고객 전략 한 장을 읽고 가서, 돌아오면 들은 것 · 단서 · 다음 약속을 적고 성향을 고쳐 쓰기'],
+  ['🗓','매주 15분 — 선배와','돌아보기 질문 네 개에 답하고 선배와 같이 보기. 선배는 칭찬 하나 · 질문 하나 · 숙제 하나'],
+  ['🏁','8주에 한 번','이정표 체크 — 「할 수 있다」 가 몇 개 늘었는지 보고 다음 8주 목표를 행동 숫자로 정하기']];
+const BK_PRINCIPLE=[
+  ['행동을 적고, 결과는 따라오게','계약 수 대신 연락 · 만남 · 연습 수를 적습니다. 8주는 습관을 만드는 시간이고, 행동이 쌓이면 결과가 따라옵니다.'],
+  ['한 일보다 배운 말','「통화함」 보다 「이 말에 웃으셨다」. 다음에 또 쓸 수 있는 말이 남아야 기록입니다.'],
+  ['잘된 것 하나, 막힌 것 하나','막힌 고객은 숨길 것이 아니라 선배와 이야기할 가장 좋은 재료입니다. 언제나 둘 다 적습니다.'],
+  ['이름은 가리고, 내 기기에만','인쇄는 이름이 가려진 채로 나옵니다. 실명이 적힌 종이는 밖으로 들고 다니지 않습니다.']];
+const BK_EX=[['연락 기록','통화함','아이 이름 지우(7살) · 화요일 7시 찾아줌 약속 · 「요즘 보험료 올랐다」 → 갱신 단서'],
+  ['오늘 한 줄','RP 함','「오늘은 권하지 않을게요」 를 먼저 했더니 화면을 같이 봐 주셨다'],
+  ['막힌 고객','거절당함','🦉 분석형 · 「자료부터 보자」 에 말로만 설명함 → 다음엔 약관 쪽수 한 장 들고 가기'],
+  ['다음 주 바꿀 것','열심히 하기','약속 잡을 때 「언제 시간 되세요」 대신 양자택일로']];
+const BK_SENIOR={see:['행동 숫자가 늘고 있는가 — 결과보다 먼저','기록에 「다음에 또 쓸 말」 이 있는가','막힌 고객을 성향 · 단계로 같이 풀었는가'],
+  do:['칭찬 하나 — 기록에서 구체적인 문장을 짚어서','질문 하나 — 「그 분은 어떤 성향 같아?」 「다음엔 뭘 바꿔 볼래?」','숙제 하나 — 다음 주에 딱 한 가지만'],
+  dont:['계약 숫자로 다그치기','고객 실명을 묻기 — 가린 이름으로 충분합니다','한 번에 여러 가지를 고치라고 하기']};
+const BK_RV=[['good','② 가장 잘된 대화 — 그 말 그대로'],['stuck','③ 막힌 고객 하나 — 성향 · 단계 · 다음에 해 볼 것'],['change','④ 다음 주 바꿀 것 하나']];
+const WD=['일','월','화','수','목','금','토'];
+function weekRange(i){const st=(S.cfg||{}).start;if(!st)return null;const a=sbAdd(st,i*7);return {a,b:sbAdd(a,6),days:Array.from({length:7},(_,k)=>sbAdd(a,k))};}
+const logsOn=d=>S.customers.reduce((n,c)=>n+(c.logs||[]).filter(l=>l.d===d).length,0);
+function weekActs(i){const r=weekRange(i);if(!r)return null;let call=0,meet=0;S.customers.forEach(c=>(c.logs||[]).forEach(l=>{if(l.d>=r.a&&l.d<=r.b){call++;if(l.how==='만남')meet++;}}));return {call,meet,r};}
+function bkHowtoHTML(){return `<div class="bk-rh">${BK_RHYTHM.map(r=>`<div><span class="tf">${r[0]}</span><b>${esc(r[1])}</b><p>${esc(r[2])}</p></div>`).join('')}</div>
+  <h4 class="bk-h4">이 책의 네 가지 약속</h4><div class="bk-pr">${BK_PRINCIPLE.map((r,i)=>`<div><b>${i+1}. ${esc(r[0])}</b><p>${esc(r[1])}</p></div>`).join('')}</div>
+  <h4 class="bk-h4">이렇게 적습니다</h4><table class="bk-ex"><tr><th>칸</th><th>아쉬운 기록</th><th>좋은 기록</th></tr>${BK_EX.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td class="bad">${esc(r[1])}</td><td class="good">${esc(r[2])}</td></tr>`).join('')}</table>`;}
+function bkSeniorHTML(){const L=(h,a,c)=>`<div class="${c}"><b>${h}</b><ul>${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`;
+  return `<div class="bk-sn">${L('👀 매주 볼 것',BK_SENIOR.see,'s1')}${L('💬 매주 할 것',BK_SENIOR.do,'s2')}${L('🚫 하지 않을 것',BK_SENIOR.dont,'s3')}</div>`;}
+const MILE_ST=['1~2주','3~4주','5~6주','7~8주'];
+function milesHTML(print,blank){const st=S.mile||(S.mile={}),L=S.lib.miles||[];
+  const n=L.filter(m=>st[m.x]).length;
+  return `<div class="bk-ml-c">${print?'':`<b>${n}</b> / ${L.length} 「할 수 있다」`}</div>`+MILE_ST.map(g=>{const it=L.map((m,i)=>({m,i})).filter(o=>o.m.st===g);if(!it.length)return '';
+    return `<div class="bk-ml"><div class="bk-mlh">${g}</div>${it.map(({m,i})=>print?`<div class="ln2">${cb(!blank&&st[m.x])}${esc(m.x)}</div>`:`<label><input type="checkbox" data-mile="${esc(m.x)}" ${st[m.x]?'checked':''}><span>${esc(m.x)}</span>${IE('miles',i,'mile')}</label>`).join('')}</div>`;}).join('');}
+
 /* ── 📒 성장기록북 ── */
-const BK={who:'ab',sec:{me:1,map:1,cards:1,weeks:1,logs:1,rp:1,blank:1,guide:1},blankN:4,pick:{}};
+const BK={who:'ab',sec:{howto:1,miles:1,me:1,map:1,cards:1,weeks:1,logs:1,rp:1,blank:1,guide:1},blankN:4,pick:{},rvw:null};
 function bkCusts(){const C=S.customers;if(BK.who==='all')return C;if(BK.who==='pick')return C.filter(c=>BK.pick[c.id]);return C.filter(c=>prio(c)!=='C');}
 function weekNow(){const st=(S.cfg||{}).start;if(!st)return null;const d=Math.floor((new Date(today())-new Date(st))/864e5);return d<0?0:Math.min(8,Math.floor(d/7)+1);}
 const lineBox=n=>`<div class="bk-lines">${'<div></div>'.repeat(n)}</div>`;
@@ -2550,6 +2621,8 @@ function bookHTML(blank){
   out.push(`<div class="bk-cover"><div class="bk-k">📒 성장기록북</div><h1>${blank||me==='○○'?'__________ 의 8주':esc(me)+'의 8주'}</h1>
     <table class="bk-ct"><tr><th>팀 · 지점</th><td>${blank?'':esc(c0.team||'')}</td></tr><tr><th>함께하는 선배</th><td>${blank?'':esc(c0.leader||'')}</td></tr><tr><th>시작한 날</th><td>${blank?'':esc(c0.start||'')}</td></tr><tr><th>8주 뒤 나의 모습</th><td class="blank">${blank?'':esc(c0.goal||'')}</td></tr></table>
     <div class="bk-q">지인은 부탁하면 멀어지고, 챙겨주면 가까워집니다.<br>소식 → 찾아드리기 → 보장분석 → 소개</div></div>`);
+  if(sec.howto)out.push(`<div class="pb"><h2>0. 이 기록북 쓰는 법</h2>${bkHowtoHTML()}<h2>선배 · 팀장이 보는 법</h2>${bkSeniorHTML()}</div>`);
+  if(sec.miles)out.push(`<div class="pb"><h2>🏁 8주 이정표 — 「할 수 있다」 에 체크</h2><div class="ln2" style="margin-bottom:6px">계약 수가 아니라 이것이 늘었는지 봅니다. 선배 앞에서 해 보이면 체크.</div>${milesHTML(true,blank)}<div class="box"><b>다음 8주 목표 — 행동 숫자로</b> (예: 매일 연락 3명 · RP 10분)${lineBox(2)}</div></div>`);
   if(sec.me){const st=S.story;out.push(`<div class="pb"><h2>1. 나의 이야기 · 하루 루틴</h2>
     <div class="box"><b>내 이야기 30초</b><div class="ln2">${blank?lineBox(4):'① '+esc(st.q1)+'<br>② '+esc(st.q2)+'<br>③ '+esc(st.q3)}</div></div>
     <div class="box"><b>하루 루틴</b> — 📞 연락 3명 · 🎙 RP 10분 · 📝 기록 2분</div>
@@ -2560,9 +2633,16 @@ function bookHTML(blank){
     ${c.fam2&&c.fam2.length?`<div class="ln2">👨‍👩‍👧 ${c.fam2.map(f=>esc(f.rel)+(f.name?' '+pnH(f.name):'')+(f.age?' ('+esc(f.age)+')':'')).join(' · ')}</div>`:''}
     ${apHTML(c,true)}
     <div class="box"><b>만나고 나서 — 선배 한마디</b>${lineBox(2)}</div></div>`);});
-  if(sec.weeks){out.push(`<div class="pb"><h2>4. 8주 기록</h2>${S.lib.weeks.map((w,i)=>`<div class="bk-wk"><div class="bk-wh"><b>${i+1}주차 · ${esc(w.t)}</b> <small>${esc(w.who)}</small></div>
-    ${w.m.map(m=>`<div class="ln2">${cb(!blank&&w.done[m])}${esc(m)}</div>`).join('')}
-    <div class="two"><div class="box"><b>이번 주 한 줄 회고</b><div class="ln2">${blank||!w.note?lineBox(1):esc(w.note)}</div></div><div class="box"><b>선배 한마디</b>${lineBox(1)}</div></div></div>`).join('')}</div>`);}
+  if(sec.weeks)S.lib.weeks.forEach((w,i)=>{const r=blank?null:weekRange(i),A=blank?null:weekActs(i),rv=w.rv||{};
+    const days=r?r.days.map(d=>{const n=logsOn(d);return `<tr><td>${d.slice(5).replace('-','/')} (${WD[new Date(d+'T00:00:00').getDay()]})</td><td>${n?n+'명':''}</td><td></td><td class="ap-ck">☐</td><td></td></tr>`;}).join(''):WD.slice(1).concat(WD[0]).map(x=>`<tr><td>__/__ (${x})</td><td></td><td></td><td class="ap-ck">☐</td><td></td></tr>`).join('');
+    out.push(`<div class="pb bk-wp"><h2>${i===0?'4. 8주 기록 — ':''}${i+1}주차 · ${esc(w.t)} <small>${esc(w.who)}${r?' · '+r.a.slice(5).replace('-','/')+' ~ '+r.b.slice(5).replace('-','/'):''}</small></h2>
+      <table class="bk-day"><tr><th style="width:17%">날</th><th style="width:13%">연락</th><th style="width:13%">RP</th><th style="width:9%">기록</th><th>오늘 한 줄 — 잘된 말 · 막힌 말</th></tr>${days}</table>
+      <div class="bk-wk2"><div><b>이번 주 미션</b>${w.m.map(m=>`<div class="ln2">${cb(!blank&&w.done[m])}${esc(m)}</div>`).join('')}</div>
+      <div><b>돌아보기</b><div class="ln2">① 이번 주 행동 — ${A?`연락 기록 ${A.call}건 · 만남 ${A.meet}건 · RP ____분`:'연락 ____명 · 만남 ____건 · RP ____분'}</div>
+      ${BK_RV.map(([k,l])=>`<div class="ln2"><b>${esc(l)}</b><br>${!blank&&rv[k]?esc(rv[k]):lineBox(1)}</div>`).join('')}${!blank&&w.note?`<div class="ln2">한 줄 회고 — ${esc(w.note)}</div>`:''}</div></div>
+      ${(()=>{const L=[];if(r)S.customers.forEach(c=>(c.logs||[]).forEach(l=>{if(l.d>=r.a&&l.d<=r.b)L.push([l.d,c,l.how,l.note]);}));L.sort((x,y)=>x[0].localeCompare(y[0]));const sh=L.slice(0,8);
+        return `<h4 class="bk-h4">이번 주 만난 분 · 다음 할 일</h4><table class="bk-day"><tr><th style="width:12%">날</th><th style="width:16%">고객</th><th style="width:10%">방법</th><th>나눈 이야기 · 다음 할 일</th></tr>${sh.map(x=>`<tr><td>${esc(x[0].slice(5).replace('-','/'))}</td><td>${pnH(x[1].name)}</td><td>${esc(x[2])}</td><td>${esc(x[3]||'')}</td></tr>`).join('')}${'<tr><td></td><td></td><td></td><td></td></tr>'.repeat(Math.max(3,5-sh.length))}</table>${L.length>sh.length?`<div class="ln2">그 밖에 ${L.length-sh.length}건 — 「5. 연락 기록」 쪽에</div>`:''}`;})()}
+      <div class="bk-sv"><div class="box"><b>👏 선배 — 칭찬 하나</b>${lineBox(2)}</div><div class="box"><b>❓ 질문 하나</b>${lineBox(2)}</div><div class="box"><b>📝 숙제 하나</b>${lineBox(2)}</div></div></div>`);});
   if(sec.logs){const L=[];if(!blank)C.forEach(c=>(c.logs||[]).forEach(l=>L.push([l.d,c,l.how,l.note])));L.sort((a,b)=>(a[0]||'').localeCompare(b[0]||''));
     const F=[];if(!blank)C.forEach(c=>(c.finds||[]).forEach(f=>F.push([f,c])));
     out.push(`<div class="pb"><h2>5. 연락 · 찾아줌 기록</h2><table><tr><th style="width:14%">날짜</th><th style="width:16%">고객</th><th style="width:10%">방법</th><th>나눈 이야기 · 다음에 할 것</th></tr>
@@ -2586,14 +2666,25 @@ function weekReport(){
     `전체 ${C.length}명 — 연락 ${cnt(c=>c.steps[0])} · 찾아줌 ${cnt(c=>c.steps[2]||c.steps[3])} · 보장분석 완료 ${cnt(c=>c.steps[5])} · 소개 ${cnt(c=>c.steps[7])}`,
     `찾아드린 보험금 ${fmtWonR(found)}`,
     wk?`이번 주 미션 「${wk.t}」 ${wk.m.filter(m=>wk.done[m]).length}/${wk.m.length}`+(wk.note?` · 회고: ${wk.note}`:''):'',
+    wk&&wk.rv&&wk.rv.good?`잘된 대화 — ${wk.rv.good}`:'',wk&&wk.rv&&wk.rv.stuck?`막힌 고객 — ${wk.rv.stuck}`:'',wk&&wk.rv&&wk.rv.change?`다음 주 바꿀 것 — ${wk.rv.change}`:'',
+    `이정표 「할 수 있다」 ${(S.lib.miles||[]).filter(m=>(S.mile||{})[m.x]).length}/${(S.lib.miles||[]).length}`,
     `성향 — ${Object.entries(types).map(([k,v])=>k+' '+v).join(' · ')}`,
     stuck.length?`연락일이 지난 분 — ${stuck.map(c=>mask(c.name)+'님('+(PF_TYPE[(c.pf||{}).type]?PF_TYPE[c.pf.type].name:'성향 모름')+' · '+stage(c)[0]+')').join(', ')}`:'연락일이 지난 분 없음',
     `(이름은 가렸습니다)`].filter(Boolean).join('\n');
 }
 function renderBook(){
   const el=$('#bkBody');if(!el)return;const c0=Object.assign({},CFG_DEF,S.cfg||{}),w=weekNow(),C=S.customers;
-  const SEC=[['me','나의 이야기 · 루틴'],['map','고객 지도'],['cards','고객별 접근 전략'],['weeks','8주 기록'],['logs','연락 · 찾아줌 기록'],['rp','RP 연습 기록'],['guide','성향 알아보는 법'],['blank','빈 고객 카드']];
-  el.innerHTML=`<div class="blk"><div class="blk-h"><h3>📇 표지</h3><button class="btn sm cfg-btn" data-cfgedit>✏️ 이름 · 팀 · 선배 · 시작일</button></div>
+  const SEC=[['howto','이 기록북 쓰는 법'],['miles','8주 이정표'],['me','나의 이야기 · 루틴'],['map','고객 지도'],['cards','고객별 접근 전략'],['weeks','8주 기록'],['logs','연락 · 찾아줌 기록'],['rp','RP 연습 기록'],['guide','성향 알아보는 법'],['blank','빈 고객 카드']];
+  if(BK.rvw==null)BK.rvw=Math.max(1,w||1);
+  const wi=BK.rvw-1,W=S.lib.weeks[wi],rv=(W&&W.rv)||{},A=weekActs(wi);
+  el.innerHTML=`<div class="blk"><div class="blk-h"><h3>📖 이 기록북 쓰는 법</h3><div class="d">신입이 혼자 펼쳐도 무엇을 언제 적을지 알 수 있게 — 인쇄하면 맨 앞에 들어갑니다</div></div>${bkHowtoHTML()}
+     <details class="acc" style="margin-top:12px"><summary>👀 선배 · 팀장이 보는 법</summary><div class="a">${bkSeniorHTML()}</div></details></div>
+   <div class="blk"><div class="blk-h"><h3>🗓 이번 주 돌아보기</h3><select id="bkRvw" class="inp" style="width:auto">${S.lib.weeks.map((x,i)=>`<option value="${i+1}" ${BK.rvw===i+1?'selected':''}>${i+1}주차 · ${esc(x.t)}</option>`).join('')}</select><div class="d">매주 한 번, 선배를 만나기 전에 — 적은 것은 기록북 그 주차 쪽과 주간 보고에 들어갑니다</div></div>
+     <div class="bk-rvn">① 이번 주 행동 — ${A?`연락 기록 <b>${A.call}</b>건 · 만남 <b>${A.meet}</b>건 <small>(${A.r.a.slice(5)} ~ ${A.r.b.slice(5)} · 연락 기록에서 셈)</small>`:'<small>「시작한 날」 을 넣으면 그 주의 연락 · 만남 수를 연락 기록에서 셉니다</small>'}</div>
+     ${BK_RV.map(([k,l])=>`<div class="field"><label>${esc(l)}</label><textarea data-rv="${k}" placeholder="예) ${esc((BK_EX.find(x=>(k==='good'&&x[0]==='오늘 한 줄')||(k==='stuck'&&x[0]==='막힌 고객')||(k==='change'&&x[0]==='다음 주 바꿀 것'))||['','',''])[2])}">${esc(rv[k]||'')}</textarea></div>`).join('')}
+   </div>
+   <div class="blk"><div class="blk-h"><h3>🏁 8주 이정표 — 할 수 있다</h3>${AT('miles','mile')}<div class="d">계약 수가 아니라 이것이 늘었는지 봅니다 · 선배 앞에서 해 보이면 체크</div></div>${milesHTML(false)}</div>
+   <div class="blk"><div class="blk-h"><h3>📇 표지</h3><button class="btn sm cfg-btn" data-cfgedit>✏️ 이름 · 팀 · 선배 · 시작일</button></div>
      <div class="bk-info"><div><span>신입</span><b>${esc(cfgRaw().ME)}</b></div><div><span>팀 · 지점</span><b>${esc(c0.team||'—')}</b></div><div><span>선배</span><b>${esc(c0.leader||'—')}</b></div><div><span>시작한 날</span><b>${esc(c0.start||'—')}${w?' · '+w+'주차':''}</b></div></div></div>
    <div class="blk"><div class="blk-h"><h3>🖨 무엇을 넣을까</h3></div>
      <div class="seg" id="bkWho">${[['ab','우선 A · B 고객'],['all','전체 고객'],['pick','직접 고르기']].map(([v,l])=>`<button data-bkwho="${v}" class="${BK.who===v?'on':''}">${l}</button>`).join('')}</div>
@@ -2618,6 +2709,14 @@ document.addEventListener('change',e=>{
   if(t.dataset.bkpick){BK.pick[t.dataset.bkpick]=t.checked;renderBook();return;}
   if(t.dataset.bksec){BK.sec[t.dataset.bksec]=t.checked?1:0;renderBook();return;}
   if(t.id==='bkN'){BK.blankN=+t.value;return;}
+  if(t.id==='bkRvw'){BK.rvw=+t.value;renderBook();return;}
+  if(t.dataset.mile!=null){(S.mile||(S.mile={}))[t.dataset.mile]=t.checked;save();renderBook();return;}
+});
+// 돌아보기는 치는 대로 저장합니다 — 칸을 벗어나기 전에 창을 닫아도 남게. 주간 보고 칸도 바로 따라 바뀝니다
+document.addEventListener('input',e=>{
+  const t=e.target;if(!t.dataset||!t.dataset.rv||!t.closest('#t-book'))return;
+  const w=S.lib.weeks[BK.rvw-1];if(!w)return;w.rv=Object.assign({},w.rv||{});w.rv[t.dataset.rv]=t.value;save();
+  const pre=$('#t-book pre.wr');if(pre)pre.textContent=weekReport();
 });
 
 /* ================= 8주 ================= */

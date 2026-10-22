@@ -1,4 +1,4 @@
-/* 🌱 <b>지인 8주 성장 프로그램</b> — 명단 비운 판 (판 X145 · 2026-10-21) · 이름·회사 · 미청구 찾기 · 안내장 (판 X152) · 접근 전략 · 성장기록북 (판 X154 · 2026-10-22)
+/* 🌱 <b>지인 8주 성장 프로그램</b> — 명단 비운 판 (판 X145 · 2026-10-21) · 이름·회사 · 미청구 찾기 · 안내장 (판 X152) · 접근 전략 · 성장기록북 (판 X154 · 2026-10-22) · 기록북 쓰는 법 (판 X156)
 
    사장님 말씀 — 「더 디테일 하게 만들고 수정 / 인쇄 / 추가 / 삭제 기능과 고객에게
    보험금 찾아줌 → 그리고 보장분석 받아야 되는 이유를 명확하게 만들어줘 RP를」 ·
@@ -25,7 +25,11 @@
    판 X154 —
      ⑭ 접근 전략 — 고른 성향·관계·태도·가족이 전략에 들어간다 · 안 채운 {자리} 0 · 성향은 짐작이라고 적는다
      ⑮ ★ 성장기록북 · 주간 보고에 고객 실명 · 가족 이름이 안 나간다 (3번)
-     ⑯ ★ 인쇄는 글꼴이 다 온 뒤에 연다 — 제목이 비어 찍히지 않게  */
+     ⑯ ★ 인쇄는 글꼴이 다 온 뒤에 연다 — 제목이 비어 찍히지 않게
+   판 X156 — 「성장 기록의 가이드를 다시 잡아봐」
+     ⑰ 기록북 쓰는 법 · 8주 이정표가 표지 바로 뒤에 선다 · 예전 저장본도 이정표 기본을 받는다
+     ⑱ ★ 주차 쪽 매일 칸은 연락 기록에서 센다 — 기록 없는 날은 0 이 아니라 빈칸 (1번)
+     ⑲ ★ 「이번 주 만난 분」 도 가린 이름 (3번) · 돌아보기는 치는 대로 남고 책 · 주간 보고에 들어간다  */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9171;
@@ -234,6 +238,38 @@ const srv = http.createServer((q, s) => {
     is(/첫 연락/.test(bk) && /8주 기록/.test(bk) && /성향 알아보는 법/.test(bk), '기록북에 전략 · 8주 기록 · 성향 알아보는 법');
     const wr = await p.evaluate(() => { S.customers[0].next = sbAdd(today(), -3); return weekReport(); });
     is(/연락일이 지난 분 — 홍○○님/.test(wr) && !/홍갑돌|홍길동/.test(wr) && /이름은 가렸습니다/.test(wr), '주간 보고에 실명이 없다 — 연락일 지난 분도 가린 이름');
+
+
+    console.log('\n[18] 기록북 쓰는 법 · 이정표 · 주차 쪽 (판 X156 · 1번 · 3번)');
+    await p.waitForTimeout(400); /* [17] 인쇄의 남은 타이머 */
+    const pr = async sel => { await p.evaluate(s => $(s).click(), sel); await p.waitForTimeout(150); await p.emulateMedia({ media: 'print' });
+      const t = await p.evaluate(() => document.querySelector('#printArea').innerText); await p.emulateMedia({ media: 'screen' }); await p.evaluate(() => document.body.classList.remove('printing')); return t; };
+    await p.evaluate(() => { const st = sbAdd(today(), -15); S.cfg.start = st; S.mile = {};
+      S.customers[0].logs = [{ id: 'g1', d: sbAdd(st, 1), how: '전화', note: '근황' }, { id: 'g2', d: sbAdd(st, 1), how: '만남', note: '찾아줌' }, { id: 'g3', d: sbAdd(st, 3), how: '카톡', note: '' }];
+      save(); BK.rvw = 1; renderBook(); });
+    /* 칸을 벗어나지 않고(change 없이) 다시 열어도 남아야 합니다 — 치다가 창을 닫는 일이 흔합니다 */
+    await p.fill('#bkBody [data-rv="stuck"]', '🦉 분석형 — 약관 쪽수 들고 다시');
+    await p.reload(); await p.waitForFunction(() => typeof S === 'object' && typeof renderBook === 'function');
+    await p.evaluate(() => { window.print = () => {}; S.pmask = true; BK.who = 'all'; BK.rvw = 1; go('book'); renderBook(); });
+    is(await p.inputValue('#bkBody [data-rv="stuck"]') === '🦉 분석형 — 약관 쪽수 들고 다시', '돌아보기는 치는 대로 저장된다 — 칸을 벗어나지 않고 다시 열어도 남는다');
+    is(/연락 기록 3건/.test(await p.textContent('#bkBody .bk-rvn')) && /만남 1건/.test(await p.textContent('#bkBody .bk-rvn')), '그 주 행동 수 — 연락 기록에서 센다');
+    const day = await p.evaluate(() => { const d = document.createElement('div'); d.innerHTML = bookHTML(false);
+      return [...d.querySelector('.bk-wp table.bk-day').querySelectorAll('tr')].slice(1).map(r => r.cells[1].textContent); });
+    is(day.join('|') === '|2명||1명|||', '1주차 매일 칸 — 기록한 날만 수, 기록 없는 날은 0 이 아니라 빈칸 (1번) ← ' + day.join('|'));
+    const nMile = await p.locator('#bkBody input[data-mile]').count();
+    is(nMile === 12, '8주 이정표 기본 12개가 화면에 선다 (' + nMile + ')');
+    if (nMile) await p.locator('#bkBody input[data-mile]').first().check();
+    is(/이정표 「할 수 있다」 1\/12/.test(await p.evaluate(() => weekReport())), '이정표 체크가 주간 보고에 들어간다');
+    let gb = await pr('#bkPrint');
+    is(gb.indexOf('0. 이 기록북 쓰는 법') > 0 && gb.indexOf('0. 이 기록북 쓰는 법') < gb.indexOf('8주 이정표') && gb.indexOf('8주 이정표') < gb.indexOf('1. 나의 이야기'), '인쇄 순서 — 표지 → 쓰는 법 → 이정표 → 나의 이야기');
+    is(/약관 쪽수 들고 다시/.test(gb) && /칭찬 하나/.test(gb) && /이번 주 만난 분/.test(gb), '주차 쪽에 돌아보기 · 만난 분 · 선배 칸');
+    is(!/홍갑돌|홍길동|홍말순/.test(gb) && /홍○○/.test(gb), '주차 쪽 「이번 주 만난 분」 도 가린 이름 (3번)');
+    is(await p.evaluate(() => document.querySelectorAll('#printArea .bk-ml .cb.on').length) === 1, '인쇄 이정표에 체크 하나');
+    gb = await pr('#bkBlank');
+    is(!/약관 쪽수 들고 다시/.test(gb) && await p.evaluate(() => document.querySelectorAll('#printArea .bk-ml .cb.on').length) === 0 && /__\/__ \(월\)/.test(gb) && /0\. 이 기록북 쓰는 법/.test(gb), '빈 기록북 — 쓰는 법은 있고 체크 · 돌아보기 · 날짜는 비어 있다');
+    await p.evaluate(() => { const o = JSON.parse(localStorage.getItem(KEY)); delete o.lib.miles; delete o.mile; localStorage.setItem(KEY, JSON.stringify(o)); });
+    await p.reload(); await p.waitForFunction(() => typeof S === 'object' && typeof renderBook === 'function');
+    is(await p.evaluate(() => S.lib.miles.length === 12 && !!S.mile), '이정표가 없던 저장본도 기본 12개를 받는다');
 
     is(errs.length === 0, '오류 없이 끝났다' + (errs.length ? ' ← ' + errs[0] : ''));
 
