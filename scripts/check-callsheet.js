@@ -101,6 +101,7 @@ const WANT = [
     AR.db.push({ id: 'd9', who: me, name: '홍말순', stage: '미접촉', client_id: '' });
     cshOpen('', 'd9');
     out.d9Sheet = !!document.getElementById('cshSheet') && !went;
+    out.d9Txt = ((document.getElementById('cshSheet') || {}).textContent || '');
     cshClose(); AR.db.pop();
     cshSheetOpen('c1');
     out.html = (document.getElementById('cshHost') || {}).innerHTML || '';
@@ -155,6 +156,8 @@ const WANT = [
   is(R.toWin === 'c1|talk', '  📞 cshOpen(고객) → 고객 창 · 연락 탭 — ' + (R.toWin || '안 감'));
   is(R.dbToWin === 'c1|talk', '  이어진 배정 줄에서 눌러도 그 고객 창 · 연락 탭 — ' + (R.dbToWin || '안 감'));
   is(R.d9Sheet, '  아직 고객 번호가 없는 배정 줄은 여태 창이 그대로 선다 — 열 고객 창이 없습니다');
+  is(!/가족으로 묶기|이 분 이야기|보낼 말/.test(R.d9Txt) && /내 고객으로/.test(R.d9Txt),
+     '  그 창에는 <b>고객에 붙는 칸</b>(이야기·가족·보낼 말)이 안 선다 — 담을 고객이 없습니다 · 대신 「내 고객으로」 를 알려 준다');
   console.log('\n[1] 창에서 고칠 수 있는 칸이 여섯이다');
   const 여섯 = [['cshStage', '단계'], ['cmCare', '요즘 상황'], ['cmWorry', '첫 문장에 붙일 말'],
                 ['cmFam', '가족'], ['cmNextWhat', '다음에 할 것'], ['cmTouchNote', '들은 말']];

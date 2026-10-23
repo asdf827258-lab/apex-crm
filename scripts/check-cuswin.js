@@ -306,6 +306,8 @@ const SEED = () => {
     const o = {}, c = OSC.current;
     const top = document.getElementById('oscTopBar');
     o.stg = document.querySelectorAll('#cusWin .cuw-stg').length;
+    /* 단계를 <b>글로</b> 또 적은 자리도 셉니다 — 딱지만 세면 「한눈에」 의 「지금 단계」 를 못 봅니다(화면 점검에서 찾음) */
+    o.stgTxt = ((document.getElementById('cusWin') || {}).textContent || '').split('지금 단계').length - 1;
     o.meta = ((top && top.querySelector('.cuw-meta')) || {}).textContent || '';
     o.tel = !!(top && top.querySelector('a[href^="tel:"]'));
     o.acts = top ? top.textContent : '';
@@ -333,7 +335,7 @@ const SEED = () => {
     cusTab('sum');
     return o;
   });
-  is(R11.stg === 1, '  단계는 머리의 <b>딱지 하나</b> — ' + R11.stg + '곳');
+  is(R11.stg === 1 && R11.stgTxt === 0, '  단계는 머리의 <b>딱지 하나</b> — 딱지 ' + R11.stg + '곳 · 「지금 단계」 글 ' + R11.stgTxt + '곳');
   is(/모름/.test(R11.meta), '  모르는 것은 「모름」 이라 적는다 (1번) — ' + R11.meta.replace(/\s+/g, ' ').slice(0, 60));
   is(!R11.tel && /번호 넣기/.test(R11.acts), '  번호가 없으면 전화 단추 대신 「📞 번호 넣기」 — 빈 tel: 을 안 건다');
   is(/오늘 약속/.test(R11.n1) && R11.n1.indexOf('기한 지남') < 0, '  ① 오늘 약속이 있으면 그것이 먼저');

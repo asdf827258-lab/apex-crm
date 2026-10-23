@@ -282,10 +282,13 @@
        담을 자리가 생겼으니 목각의 그 둘이 이제 섭니다. <b>적힌 것만</b>
        섭니다: 안 적으셨으면 null 이라 안 그립니다 (1번).                */
     var hasBig = (v.polN != null) || (v.policy && v.policy.premiumWon != null) || (v.due != null);
+    /* v.noHead — 앱의 고객 창은 단계를 머리 <b>딱지 하나</b>로 세웁니다. 여기 또 적으면 한 화면에 두 번 섭니다
+       (2026-10-23 화면 점검에서 찾음 · 「중복 되는 부분들을 하나로」). CRM 카드는 머리가 이 카드라 그대로 둡니다. */
     var rows = [['사는 곳', v.region], ['어디서 왔나', v.src],
                 ['지금 단계', v.stage], ['만난 횟수', (L && L.length) ? (met + '회') : null],
                 ['청구', v.clm ? (v.clm.n + '건'
                    + (v.clm.wonR > 0 ? (' · ' + cusWonR(v.clm.wonR)) : '')) : null]];
+    if (v.noHead) rows = rows.filter(function (r) { return r[0] !== '지금 단계'; });
     var hasRow = rows.some(function (r) { return r[1] != null && r[1] !== ''; });
     if (!hasBig && !hasRow && !v.wal) return '';
     h += '<div class="t-card" style="margin-bottom:14px">' +
