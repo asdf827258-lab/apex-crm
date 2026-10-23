@@ -62,10 +62,10 @@ const strip = (h) => h.replace(/<style[\s\S]*?<\/style>/g, '').replace(/src="dat
     is(/시작을 미루면/.test(t) && /5년 뒤 시작/.test(t), '시작을 미루면 — 상품 엔진이 받아 주는 나이로 셈한다');
     const tabN = tab && tab.replace(/[^\d]/g, ''), rep = (t.match(/최저보증 보증 월 ([\d,]+)만 원/) || [])[1];
     is(tabN && rep && tabN === rep.replace(/,/g, ''), '연금 시뮬레이션 탭과 같은 최저보증 — 탭 ' + tab + ' · 결과지 ' + (rep ? rep + '만 원' : '없음'));
-    is(/점검 필요/.test(t) && !/불가/.test(t), '「불가」 대신 「점검 필요」 (판 X174)');
+    is(/점검 필요/.test(t) && !/불가/.test(t), '「불가」 대신 「점검 필요」 (판 X187)');
     await pop.close();
 
-    /* 판 X174 — 「쌓인 금액」 을 넣으면 탭과 결과지가 같은 값으로 더하나 · 「모른다」 쪽지가 사라지나 */
+    /* 판 X187 — 「쌓인 금액」 을 넣으면 탭과 결과지가 같은 값으로 더하나 · 「모른다」 쪽지가 사라지나 */
     await pg.evaluate(() => { const e = document.getElementById('s_pen_acc'); e.value = '3000'; e.dispatchEvent(new Event('input', { bubbles: true })); });
     await pg.waitForTimeout(400);
     const tabNow2 = await pg.evaluate(() => {
