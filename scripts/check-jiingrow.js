@@ -302,6 +302,15 @@ const srv = http.createServer((q, s) => {
     await p.fill('#tkQ', '생각');
     is(await p.evaluate(() => /생각해 볼게/.test(document.querySelector('#objs').textContent) && document.activeElement.id === 'tkQ'), '들은 말로 찾기 — 치는 동안 칸을 놓치지 않는다');
     await p.fill('#tkQ', '');
+    /* 폰 — 목업으로 찍어 보고 찾은 두 자리: 위 띠의 고른 칸 글씨가 바탕에 묻힘 · 이름표가 좁은 폭에서 둥근 덩어리로 짓눌림 */
+    const zvp = p.viewportSize(); await p.setViewportSize({ width: 390, height: 844 });
+    const zph = await p.evaluate(() => { go('talk'); const d = document.querySelector('#objs details.tk-o'); d.open = true;
+      const rgb = c => (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number), L = c => { const v = rgb(c).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+      const b = getComputedStyle(document.querySelector('#nav button.on')), a = L(b.color), g = L(b.backgroundColor);
+      return [(Math.max(a, g) + 0.05) / (Math.min(a, g) + 0.05), d.querySelector('.a .pill').getBoundingClientRect().height]; });
+    await p.setViewportSize(zvp);
+    is(zph[0] >= 4.5, '폰 위 띠 — 고른 칸 글씨가 바탕과 구별된다 (대비 ' + zph[0].toFixed(1) + ')');
+    is(zph[1] < 32, '폰 — 거절 칸 이름표가 짓눌리지 않는다 (높이 ' + Math.round(zph[1]) + 'px)');
     await p.evaluate(() => { const o = JSON.parse(localStorage.getItem(KEY)); o.libv = 3; o.lib.objs = [{ q: '"나 보험 충분히 있어"', a: '내가 고친 공감', b: '', c: 'c' }, { q: '"내가 만든 거절"', a: 'a', b: 'b', c: 'c' }]; localStorage.setItem(KEY, JSON.stringify(o)); });
     await p.reload(); await p.waitForFunction(() => typeof S === 'object' && typeof renderTalk === 'function');
     const zmg = await p.evaluate(() => { const L = S.lib.objs, f = L.find(o => /충분히/.test(o.q)); return [L.length === DEF.objs.length + 1, f.a, f.b, !!f.why && !!f.back, !!L.find(o => /내가 만든/.test(o.q)), S.libv]; });
