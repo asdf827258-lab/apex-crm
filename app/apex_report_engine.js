@@ -687,7 +687,7 @@ function html(d) {
   });
   out.push('<div class="foot">' + esc(d.advisor || 'APEX 사업단') + (d.contact ? ' · ' + esc(d.contact) : '') + '</div>');
 
-  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+  return '<!doctype html><html lang="ko" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<meta name="color-scheme" content="light"><title>' + esc(name) + ' 님 재무 리포트</title><style>' + CSS + '</style></head><body><main class="wrap">' +
     out.join('') + '</main></body></html>';
 }
