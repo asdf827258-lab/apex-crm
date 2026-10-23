@@ -1,0 +1,372 @@
+<!doctype html>
+<html data-theme="light" lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light"/>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>고객 창 새 판</title>
+<!-- 목각(그림)입니다 — 앱이 아닙니다. 사장님 말씀 2026-10-23
+     「중복 되는 부분들을 하나로 만들고 … 기존에 틀을 다 깨고 다시 만드는거야.
+       아직 메인세션에 적용하기전에 디자인부터 목업해줘」.
+     견본 이름은 홍길동 식구만 · 숫자는 전부 견본입니다. -->
+<style>
+:root{
+  --ink:#191F28;--ink2:#4E5968;--sub:#6B7684;--sub3:#B0B8C1;
+  --line:#E5E8EB;--line2:#F1F3F5;--bg:#F2F4F6;--bg2:#F5F7F9;--card:#FFFFFF;
+  --pt:#1A56DB;--ptl:#EBF3FF;--ptd:#123A96;
+  --pos:#059669;--posl:#ECFDF5;--posd:#065F46;
+  --warn:#D97706;--warnl:#FFF7ED;--warnd:#7A4E0A;
+  --neg:#DC2626;--negl:#FEF2F2;--negd:#B91C1C;
+  --pur:#7C3AED;--purl:#F5F3FF;
+  --f:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);font-size:14px;line-height:1.45;letter-spacing:-.015em}
+button{font:inherit;letter-spacing:inherit;cursor:pointer}
+.page{max-width:1240px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:23px;margin:0 0 3px;letter-spacing:-.03em}
+.lead{color:var(--sub);margin:0 0 14px;font-size:13.5px}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 16px}
+.ctl b{font-size:13px;color:var(--sub)}
+.seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:3px}
+.seg button{border:0;background:none;font-size:13px;font-weight:700;color:var(--sub);padding:6px 10px;border-radius:8px;min-height:34px}
+.seg button.on{background:var(--ink);color:#fff}
+.wrap{display:grid;grid-template-columns:400px 1fr;gap:24px;align-items:start}
+@media (max-width:920px){.wrap{grid-template-columns:1fr}}
+
+/* ── 폰 ── */
+.phone{width:100%;max-width:400px;margin:0 auto;background:var(--bg);border:8px solid #111827;border-radius:38px;
+  overflow:hidden;height:820px;position:relative;display:flex;flex-direction:column}
+.scr{flex:1;overflow-y:auto}
+.hd{position:sticky;top:0;z-index:5;background:var(--card);box-shadow:0 1px 0 var(--line)}
+.hd .r1{display:flex;align-items:center;gap:9px;padding:10px 14px 0}
+.back{border:0;background:none;font-size:20px;color:var(--sub);padding:0 4px 0 0;min-height:36px}
+.av{width:38px;height:38px;border-radius:13px;background:var(--ptl);color:var(--ptd);font-weight:900;display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+.nmw{flex:1;min-width:0}
+.nm{font-size:18px;font-weight:900;letter-spacing:-.03em;display:flex;align-items:center;gap:6px}
+.nm small{font-size:11.5px;font-weight:800;color:var(--warnd);background:var(--warnl);border-radius:6px;padding:1px 5px}
+.meta{font-size:12.5px;color:var(--sub);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta b{color:var(--neg);font-weight:800}
+.stg{border:0;background:var(--ink);color:#fff;font-weight:900;font-size:13px;border-radius:9px;padding:6px 9px;min-height:34px;flex:none}
+.acts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:9px 14px 10px}
+.acts button{border:0;background:var(--bg2);border-radius:11px;font-size:12.5px;font-weight:800;color:var(--ink);min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.acts button i{font-style:normal;font-size:16px;line-height:1}
+.tabs{display:flex;padding:0 6px;border-top:1px solid var(--line2)}
+.tabs button{flex:1;border:0;background:none;font-size:14px;font-weight:800;color:var(--sub);padding:10px 0 9px;border-bottom:2.5px solid transparent;min-height:42px}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--pt)}
+.tabs button em{font-style:normal;font-size:11px;color:var(--sub3);margin-left:2px}
+.tabs button.lk{color:var(--sub3)}
+.body{padding:10px 10px 24px}
+.card{background:var(--card);border-radius:16px;padding:12px 14px;margin-bottom:8px}
+.ch{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.lab{font-size:12.5px;font-weight:900;color:var(--pt);letter-spacing:0}
+.lab.k{color:var(--sub)}
+.ed{border:0;background:none;color:var(--sub);font-size:12.5px;font-weight:800;padding:4px 2px;min-height:30px}
+.ed:hover{color:var(--pt)}
+.now{background:var(--ink);color:#fff;border-radius:16px;padding:12px 14px;margin-bottom:8px}
+.now .lab{color:#93C5FD}
+.now .t{font-size:16px;font-weight:800;margin:3px 0 1px;letter-spacing:-.03em}
+.now .s{font-size:12.5px;color:#CBD5E1}
+.now .bt{display:flex;gap:6px;margin-top:9px}
+.now .bt button{flex:1;border:0;border-radius:10px;min-height:40px;font-weight:800;font-size:13px;background:#334155;color:#fff}
+.now .bt button.p{background:var(--pt)}
+.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.nums div{background:var(--bg2);border-radius:11px;padding:8px 9px}
+.nums b{display:block;font-size:16px;font-weight:900;letter-spacing:-.03em}
+.nums span{font-size:11.5px;color:var(--sub)}
+.kv{display:grid;grid-template-columns:auto 1fr;column-gap:12px}
+.kv div{padding:6px 0;border-top:1px solid var(--line2);font-size:13.5px}
+.kv div:nth-child(-n+2){border-top:0}
+.kv .k{color:var(--sub);white-space:nowrap}
+.kv .v{text-align:right;font-weight:700}
+.kv .v i{font-style:normal;color:var(--sub3);font-weight:600}
+.kv .v small{color:var(--sub);font-weight:600;font-size:12px}
+.w8{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin-top:4px}
+.w8 span{height:8px;border-radius:3px;background:var(--line)}
+.w8 .ok{background:#34D399}.w8 .lo{background:#FBBF24}.w8 .no{background:#F87171}
+.w8l{display:flex;justify-content:space-between;font-size:12px;color:var(--sub);margin-top:5px}
+.w8l b{color:var(--negd)}
+.chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{border:0;background:var(--bg2);border-radius:9px;font-size:13px;font-weight:700;color:var(--ink2);padding:0 10px;min-height:36px;display:inline-flex;align-items:center;gap:4px}
+.chip b{color:var(--pt)}
+.chip.on{background:var(--ink);color:#fff}
+.chip.on b{color:#93C5FD}
+.tag{display:inline-block;font-size:11.5px;font-weight:800;border-radius:6px;padding:1px 6px;background:var(--bg2);color:var(--ink2);white-space:nowrap}
+.tag.ok{background:var(--posl);color:var(--posd)}.tag.wr{background:var(--warnl);color:var(--warnd)}
+.tag.no{background:var(--negl);color:var(--negd)}.tag.pt{background:var(--ptl);color:var(--ptd)}
+.inp{width:100%;border:0;border-bottom:1.5px solid var(--line);font:inherit;font-size:14px;padding:7px 0;background:none;margin-top:6px}
+.btn{width:100%;border:0;border-radius:12px;background:var(--pt);color:#fff;font-weight:800;font-size:14px;min-height:44px;margin-top:8px}
+.btn.g{background:var(--bg2);color:var(--ink)}
+.row{display:flex;align-items:center;gap:9px;padding:8px 0;border-top:1px solid var(--line2);font-size:13.5px}
+.row:first-of-type{border-top:0}
+.row .m{flex:1;min-width:0}
+.row .m b{display:block;font-weight:800}
+.row .m span{display:block;font-size:12px;color:var(--sub);margin-top:1px}
+.row .r{text-align:right;font-weight:800;white-space:nowrap}
+.ck{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);flex:none}
+.tl .row .ic{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;flex:none;background:var(--bg2)}
+.tl .row .src{font-size:11px;color:var(--sub3);font-weight:700}
+.flow{display:flex;gap:3px;margin-top:4px}
+.flow span{font-size:11px;font-weight:800;padding:1px 6px;border-radius:5px;background:var(--bg2);color:var(--sub3)}
+.flow span.on{background:var(--posl);color:var(--posd)}
+.lock{background:var(--bg2);border:1.5px dashed var(--line);border-radius:16px;padding:14px;text-align:center;color:var(--sub);font-size:13px;margin-bottom:8px}
+.lock>b{display:block;color:var(--ink);font-size:14px;margin-bottom:3px}
+.vault{background:linear-gradient(180deg,var(--purl),var(--card))}
+.mask{font-weight:900;letter-spacing:.06em}
+.prog{height:6px;border-radius:4px;background:var(--line2);overflow:hidden;margin-top:6px}
+.prog i{display:block;height:100%;background:var(--pt);border-radius:4px}
+.note{font-size:12px;color:var(--sub);margin-top:6px;line-height:1.45}
+details.fold>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary:after{content:"펴기";font-size:12px;font-weight:800;color:var(--sub)}
+details.fold[open]>summary:after{content:"접기"}
+/* 아래 시트 — 「고치기」 를 누르면 여기서 고칩니다 */
+.dim{position:absolute;inset:0;background:rgba(15,23,42,.45);display:none;z-index:20}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;padding:14px 14px 16px;z-index:21;
+  transform:translateY(105%);transition:transform .22s}
+.sheet.on{transform:none}.dim.on{display:block}
+.sheet .gr{display:grid;grid-template-columns:1fr 1fr;column-gap:12px}
+.sheet label{display:block;font-size:12px;font-weight:800;color:var(--sub);margin-top:8px}
+.sheet h3{margin:0 0 2px;font-size:16px}
+
+/* ── 오른쪽 설명 ── */
+.side .card{padding:16px 18px;margin-bottom:12px}
+.side h2{font-size:16px;margin:0 0 8px;letter-spacing:-.02em}
+.side table{width:100%;border-collapse:collapse;font-size:13px}
+.side th,.side td{text-align:left;padding:6px 5px;border-top:1px solid var(--line2);vertical-align:top}
+.side th{color:var(--sub);font-weight:800;font-size:12px}
+.side td.n{color:var(--sub);white-space:nowrap}
+.side ul,.side ol{margin:4px 0 0;padding-left:18px;font-size:13.5px}
+.side li{margin:3px 0}
+.side .big{font-size:22px;font-weight:900;letter-spacing:-.03em}
+.cmp{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px}
+.cmp div{background:var(--bg2);border-radius:11px;padding:9px 10px;font-size:12.5px;color:var(--sub)}
+.cmp b{display:block;font-size:17px;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>고객 창 — 새 판 (틀을 깨고 다시)</h1>
+  <p class="lead">눌러 보는 그림입니다 · 앱이 아닙니다 · 이름·숫자는 견본(홍길동) · 「고치기」 · 탭 · 칩을 눌러 보십시오</p>
+
+  <div class="ctl">
+    <b>이 분은</b>
+    <div class="seg" id="sWho"><button class="on" data-v="mine">내 고객</button><button data-v="db">배정 DB 줄만</button></div>
+    <b>보는 사람</b>
+    <div class="seg" id="sView"><button class="on" data-v="me">담당자 본인</button><button data-v="lead">팀장</button></div>
+    <b>오늘</b>
+    <div class="seg" id="sNow"><button class="on" data-v="appt">약속 있음</button><button data-v="ask">할 일 없음</button></div>
+  </div>
+
+  <div class="wrap">
+    <div class="phone">
+      <div class="scr" id="scr"></div>
+      <div class="dim" id="dim"></div>
+      <div class="sheet" id="sheet"></div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h2>원칙 셋</h2>
+        <ol>
+          <li><b>한 가지는 한 곳에만.</b> 같은 값을 두 칸에 세우지 않습니다 — 요약은 그 칸을 <b>읽어서</b> 한 줄로만 보여 줍니다.</li>
+          <li><b>보기가 먼저, 고치기는 눌러서.</b> 입력 칸을 늘 펼쳐 두지 않습니다. 「고치기」 → 아래 시트에서 고치고 닫으면 끝.</li>
+          <li><b>어디서 들어와도 같은 창.</b> 들어온 문에 따라 <b>탭만</b> 다르게 엽니다.</li>
+        </ol>
+        <div class="cmp">
+          <div>탭<b>6 → 5</b></div>
+          <div>흩어진 자리<b>15묶음 → 한 곳씩</b></div>
+          <div>늘 펼친 입력칸<b>55 → 1</b></div>
+        </div>
+        <p class="note">재어 본 수입니다(견본 고객 · 2026-10-23). 입력칸 55 는 지금 고객 창에 늘 펼쳐 있는 칸이고, 새 판의 1 은 연락 탭의 <b>기록 한 칸</b>(전화하면서 바로 적는 자리)입니다. 나머지는 「고치기」 를 누르면 아래 시트로 뜹니다. ⚠ 카드 수는 오히려 17 → 20 입니다 — 요약을 작은 카드 여러 장으로 나눴기 때문이고, 겹친 내용이 늘어난 것이 아닙니다.</p>
+      </div>
+
+      <div class="card">
+        <h2>머리 — 늘 붙어 있는 한 덩이</h2>
+        <ul>
+          <li>이름(실명은 이 기기에만) · 나이 · 보험나이 · <b>상령일 D-N</b> · 담당</li>
+          <li><b>단계 딱지</b> — 눌러서 바꿉니다. 단계 카드·한눈에 줄·머리 딱지 <b>세 곳 → 한 곳</b></li>
+          <li>단추 넷 — 📞 전화 · 💬 문자 · ✍ 기록(연락 탭의 기록 칸으로) · 📄 보장분석</li>
+          <li>탭 다섯 — <b>요약 · 연락 · 보장 · 서류 · 정보</b> (계약과 청구는 둘 다 「보험」 이라 보장 한 탭으로)</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>하나로 합친 것 — 지금 → 새 판</h2>
+        <table>
+          <tr><th>지금 (흩어진 자리)</th><th>새 판 (한 곳)</th></tr>
+          <tr><td>「한 가지만 여쭙니다」 · 다음 할 일 · 약속</td><td><b>요약 › 지금 할 일</b> 한 장 (할 일이 없을 때만 물음)</td></tr>
+          <tr><td>결과 다섯 단추 · 들은 말 칸 · 「오늘 연락함」</td><td><b>연락 › 기록 한 칸</b></td></tr>
+          <tr><td>관계의 접촉 기록 · CRM 통화 기록</td><td><b>연락 › 한 줄기</b> (전체·통화·접촉 거르개)</td></tr>
+          <tr><td>적어 두기의 다음 날 · 관계의 다음 할 일 · 약속</td><td><b>연락 › 다음 할 일·약속</b> 목록 하나</td></tr>
+          <tr><td>단계 카드 · 머리 딱지 · 한눈에 「지금 단계」</td><td><b>머리 › 단계 딱지</b></td></tr>
+          <tr><td>출생년도 · 생일(MM-DD) · 주민번호 앞자리</td><td><b>정보 › 생년월일</b> 하나 (주민번호가 있으면 거기서)</td></tr>
+          <tr><td>가족 줄 칸 · 가족으로 묶기 · 메모 속 가족</td><td><b>정보 › 가족·소개</b> 한 장</td></tr>
+          <tr><td>가족 칸의 「소개해 주신 분」 · 빈 통장·소개 카드</td><td>같은 <b>가족·소개</b> 안</td></tr>
+          <tr><td>가족 칸의 「실명 저장」</td><td><b>정보 › 사람 › 이름</b></td></tr>
+          <tr><td>한눈에 만기 · 만기 칸 · 가족 칸의 계약일</td><td><b>보장 › 계약마다</b> 계약일·만기</td></tr>
+          <tr><td>한눈에 8통장 칩 · 빈 통장 카드</td><td><b>보장 › 8통장</b> (요약엔 막대 한 줄)</td></tr>
+          <tr><td>만기·청구 카드</td><td><b>보장 › 청구</b></td></tr>
+          <tr><td>지금 상황 · 걱정 · 가구 메모</td><td><b>정보 › 이야기</b> (요약엔 한 줄)</td></tr>
+          <tr><td>예전 자료 · 저장된 상담 자료 · 풀리포트</td><td><b>서류</b> 한 목록 (종류 거르개)</td></tr>
+          <tr><td>고객 정보 입력 칸 6개 · 팩트파인딩 25칸 상시</td><td><b>보기만</b> — 「고치기」 · 「이어서 채우기」 를 누르면 시트</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>이 창으로 들어오는 문 — 열다섯 곳, 여는 함수는 하나</h2>
+        <table>
+          <tr><th>문</th><th>열리는 탭</th></tr>
+          <tr><td>고객 365일 명단 · 최근 본 고객 · 찾기</td><td class="n">요약</td></tr>
+          <tr><td>홈 「오늘 챙길 것」 · 오늘 터치 · 팀 할 일 · 고객 체크</td><td class="n">연락</td></tr>
+          <tr><td>달력 · 지도 동선 · 알람</td><td class="n">연락 (그날 약속)</td></tr>
+          <tr><td>DB 통합 CRM 이름 · 배정 DB 줄</td><td class="n">연락</td></tr>
+          <tr><td>보장분석 · 전·후 만들기 · 8통장 지도</td><td class="n">보장</td></tr>
+          <tr><td>미션 · 마디(계약 단계)</td><td class="n">요약</td></tr>
+        </table>
+        <p class="note">지금은 문마다 여는 길이 다릅니다(osOpenClient 12곳 · cshOpen 5곳 · navGoCli 6곳 · cusGo). 새 판은 <b>cusGo(고객, 탭)</b> 하나로 모읍니다. 홈의 빠른 창(cshOpen)은 이 창의 <b>연락 탭</b>이 대신합니다.</p>
+      </div>
+
+      <div class="card">
+        <h2>잠긴 칸은 까닭을 말합니다</h2>
+        <ul>
+          <li>배정 DB 줄만 있는 분 — 보장·서류·정보의 사람 밖 칸에 「👤 내 고객으로 올리기」 하나</li>
+          <li>팀장이 볼 때 — 서류·청구·금고·이야기는 「담당자만 봅니다」(없음과 다름)</li>
+          <li>동의가 없을 때 — 청구(병력) · 금고(주민번호) · 광고 문자가 그 자리에서 「동의 적기」</li>
+        </ul>
+        <p class="note">위 단추로 바꿔 보십시오.</p>
+      </div>
+
+      <div class="card">
+        <h2>정하실 것</h2>
+        <ol>
+          <li>탭 <b>다섯</b>(계약+청구 → 보장)으로 갈까요, 지금처럼 <b>여섯</b>으로 둘까요?</li>
+          <li>홈의 <b>빠른 창</b>을 없애고 이 창의 연락 탭으로 바로 열까요?</li>
+          <li>팩트파인딩 25칸을 정보 탭에서 <b>접고 시트로</b> 여는 것 괜찮으실까요?</li>
+          <li>요약 맨 위 「지금 할 일」 의 차례 — <b>오늘 약속 → 기한 지난 할 일 → 물음 하나</b> 이대로?</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const S={who:'mine',view:'me',now:'appt',tab:'sum',tl:'all'};
+const seg=(id,k)=>document.querySelectorAll('#'+id+' button').forEach(b=>b.onclick=()=>{S[k]=b.dataset.v;document.querySelectorAll('#'+id+' button').forEach(x=>x.classList.toggle('on',x===b));paint();});
+seg('sWho','who');seg('sView','view');seg('sNow','now');
+const P=()=>S.who==='mine', ME=()=>S.view==='me';
+const TABS=[['sum','요약',''],['talk','연락','7'],['cov','보장','3'],['doc','서류','4'],['info','정보','']];
+const toMine=w=>`<div class="lock"><b>${w}는 「사람」 에 붙습니다</b>이 분은 아직 배정 DB 줄만 있습니다.<button class="btn">👤 내 고객으로 올리기</button></div>`;
+const owner=w=>`<div class="lock"><b>담당자만 봅니다</b>${w} — 비어 있는 것이 아닙니다.</div>`;
+const ed=(k)=>`<button class="ed" onclick="sheet('${k}')">고치기</button>`;
+
+function head(){
+  return `<div class="hd">
+    <div class="r1"><button class="back">‹</button><div class="av">홍</div>
+      <div class="nmw"><div class="nm">${ME()?'홍길동':'홍*동'}${ME()?'<small>실명 · 이 기기</small>':''}</div>
+      <div class="meta">${P()?'44세 · 보험나이 45 · <b>상령 D-38</b> · 남 · ':''}담당 홍판서</div></div>
+      <button class="stg" onclick="sheet('stage')">${P()?'AP':'TA'} ▾</button></div>
+    <div class="acts"><button><i>📞</i>전화</button><button><i>💬</i>문자</button><button onclick="go('talk')"><i>✍</i>기록</button><button onclick="go('cov')"><i>📄</i>보장분석</button></div>
+    <div class="tabs">${TABS.map(t=>{const lk=!P()&&['cov','doc'].includes(t[0]);return `<button class="${S.tab===t[0]?'on':''} ${lk?'lk':''}" onclick="go('${t[0]}')">${t[1]}${t[2]&&!lk?`<em>${t[2]}</em>`:''}</button>`;}).join('')}</div>
+  </div>`;
+}
+const T={};
+T.sum=()=>`${S.now==='appt'||!P()
+  ? `<div class="now"><div class="lab">지금 할 일</div><div class="t">${P()?'오늘 14:00 · 망원동 — 보장분석 결과 설명':'첫 통화 — 배정 19일째, 아직 안 걸었습니다'}</div><div class="s">${P()?'약속 · 전에 할 말: 「실비는 4세대로 바꾸셨고, 건강보험 만기가 3월입니다」':'TA 단계 첫 마디가 연락 탭에 있습니다'}</div><div class="bt"><button class="p">${P()?'만났어요':'📞 걸기'}</button><button>${P()?'미루기':'나중에'}</button></div></div>`
+  : `<div class="now"><div class="lab">하나만 여쭙니다</div><div class="t">가장 빠른 만기가 언제인지 적어 둘까요?</div><div class="s">만기가 다가오면 그것이 다시 만날 이유가 됩니다 · 남은 물음 2</div><div class="bt"><button class="p">날짜 고르기</button><button>모름</button></div></div>`}
+  <div class="card"><div class="nums">
+    <div><b>${P()?'3건':'모름'}</b><span>보유 계약${P()?' · 월 18.4만':''}</span></div>
+    <div><b>${P()?'6일 전':'없음'}</b><span>마지막 연락</span></div>
+    <div><b>${P()?'4회':'0회'}</b><span>만난 횟수</span></div></div>
+    <div class="kv" style="margin-top:6px">
+      <div class="k">사는 곳</div><div class="v">서울 마포구</div>
+      <div class="k">어디서 왔나</div><div class="v">${P()?'소개 · 홍길순 님':'배정 DB · 일반'}</div>
+      ${P()?`<div class="k">가족</div><div class="v">3명 <small>배우자 · 자녀</small></div>
+      <div class="k">가까운 만기</div><div class="v">2027-03 <span class="tag wr">D-140</span></div>`:''}
+    </div></div>
+  ${P()?`<div class="card" onclick="go('cov')"><div class="ch"><span class="lab">8통장</span><span class="ed">보장에서 ›</span></div>
+    <div class="w8"><span class="ok"></span><span class="ok"></span><span class="ok"></span><span class="lo"></span><span class="no"></span><span class="ok"></span><span class="no"></span><span class="lo"></span></div>
+    <div class="w8l"><span>생활 · 병원비 · 치료비 · 소득공백 …</span><b>빈 통장 2</b></div></div>
+  <div class="card" onclick="go('info')"><div class="ch"><span class="lab">이 분 이야기</span><span class="ed">정보에서 ›</span></div>
+    <div class="chips"><span class="tag pt">출산 · 육아</span><span class="tag">걱정 — 아이 교육비</span></div></div>`:''}`;
+
+T.talk=()=>`<div class="card"><div class="ch"><span class="lab">기록 한 칸 — 전화하면서 바로</span></div>
+    <div class="chips">${[['통화됐어요','3일'],['부재','1일'],['만났어요','3일'],['다음에','7일'],['거절','30일']].map((x,i)=>`<button class="chip ${i==0?'on':''}">${x[0]} <b>${x[1]}</b></button>`).join('')}</div>
+    <div class="chips" style="margin-top:6px">${['📞 전화','💬 카톡','🤝 만남','✉️ 문자'].map((x,i)=>`<button class="chip ${i==0?'on':''}">${x}</button>`).join('')}</div>
+    <input class="inp" placeholder="들은 말 한 줄 — 그대로 적어 두십시오">
+    <button class="btn">남기기 · 다음 연락 10/26 · 단계 그대로 AP</button>
+    <div class="note">결과를 고르면 <b>다음 날과 단계는 규칙이 정합니다</b>(빠른 창의 그 표). 고르지 않고 메모만 남겨도 됩니다.</div></div>
+  <div class="card"><div class="ch"><span class="lab">다음 할 일 · 약속</span><button class="ed">＋ 더하기</button></div>
+    <div class="row"><span class="ck"></span><div class="m"><b>보장분석 결과 설명</b><span>10/25(토) 14:00 · 망원동 · 약속</span></div><span class="tag pt">오늘</span></div>
+    <div class="row"><span class="ck"></span><div class="m"><b>건강보험 만기 안내</b><span>2027-02 · 할 일</span></div><span class="tag">D-110</span></div></div>
+  <div class="card tl"><div class="ch"><span class="lab">한 줄기</span>
+      <div class="chips">${[['all','전체 7'],['call','통화 3'],['touch','접촉 4']].map(x=>`<button class="chip ${S.tl===x[0]?'on':''}" style="min-height:30px" onclick="S.tl='${x[0]}';paint()">${x[1]}</button>`).join('')}</div></div>
+    ${[['call','📞','10/18','상담','보장분석 PDF 받음','CRM 통화'],['touch','✉️','10/16','문자','생일 축하','접촉'],['call','📞','10/09','부재','','CRM 통화'],['touch','🤝','10/02','만남','실비 4세대 이야기','접촉']]
+      .filter(r=>S.tl==='all'||S.tl===r[0]).map(r=>`<div class="row"><span class="ic">${r[1]}</span><div class="m"><b>${r[3]}${r[4]?' — '+r[4]:''}</b><span>${r[2]}</span></div><span class="src">${r[5]}</span></div>`).join('')}
+    <div class="note">통화(CRM)와 접촉이 <b>한 줄기</b>입니다 — 지금은 두 칸(관계 · CRM 통화)에 나뉘어 같은 접촉이 두 번 섭니다.</div></div>
+  <details class="card fold"><summary><span class="lab">💬 보낼 말 — AP 단계</span></summary>
+    <div class="note" style="font-size:13px;color:var(--ink2)">「홍길동 고객님, 지난번 말씀하신 아이 교육비 걱정이 계속 마음에 걸렸습니다. 지금 보장 중 겹치는 것만 정리해도 …」</div><button class="btn g">복사</button></details>`;
+
+T.cov=()=>!P()?toMine('보장'):`<div class="card"><div class="ch"><span class="lab">계약 · 3건 · 월 184,000원</span><button class="ed">＋ 계약</button></div>
+    <div class="row"><div class="m"><b>○○생명 종신</b><span>계약 2019-04 · 20년납 · 타사</span></div><div class="r">98,000원</div></div>
+    <div class="row"><div class="m"><b>△△화재 실손</b><span>계약 2025-11 · 4세대 · 타사</span></div><div class="r">31,000원</div></div>
+    <div class="row"><div class="m"><b>□□손보 건강</b><span>우리 계약 2026-10-12 · 만기 2027-03 · 증권 <b style="display:inline">전달 전</b></span></div><div class="r">55,000원<br><span class="tag wr">D-140</span></div></div>
+    <div class="note">보장·보험료는 <b>심사 결과에 따릅니다</b> · 증권·제안서 PDF 에서 읽고 검수한 값</div></div>
+  <div class="card"><div class="ch"><span class="lab">보장분석 전 · 후</span></div>
+    <div class="chips"><button class="chip">전 — 10/09 읽음</button><button class="chip on">후 만들기 ›</button></div></div>
+  <div class="card"><div class="ch"><span class="lab">8통장</span><button class="ed">지도에서 ›</button></div>
+    <div class="chips">${['생활','병원비','치료비','소득공백','가족보호','은퇴·연금','간병·요양','자산·상속'].map((x,i)=>`<span class="tag ${[0,1,2,5].includes(i)?'ok':[3,7].includes(i)?'wr':'no'}">${x}</span>`).join('')}</div></div>
+  ${!ME()?owner('청구 이력(병력)'):`<div class="card"><div class="ch"><span class="lab">청구 · 2건</span><button class="ed">＋ 진단서·영수증</button></div>
+    <div class="row"><div class="m"><b>통원 · 2026-09-14</b><div class="flow"><span class="on">접수</span><span class="on">지급</span><span>종결</span></div></div><div class="r">42,300원</div></div>
+    <div class="row"><div class="m"><b>입원 4일 · 2026-10-03</b><div class="flow"><span class="on">접수</span><span class="on">보완</span><span>지급</span></div></div><div class="r"><span class="tag wr">보완</span></div></div>
+    <div class="note">원본은 안 남기고 핵심 칸만 · 주민번호 지움 · AI 로 안 보냄 · 본인·관리자만</div></div>`}`;
+
+T.doc=()=>!P()?toMine('서류'):!ME()?owner('제안서·증권·상담자료'):`<div class="card"><div class="ch"><span class="lab">서류 · 4건</span><button class="ed">＋ 올리기</button></div>
+    <div class="chips" style="margin-bottom:4px">${['전체','제안서','증권','상담자료','리포트'].map((x,i)=>`<button class="chip ${i==0?'on':''}" style="min-height:30px">${x}</button>`).join('')}</div>
+    ${[['📄','□□손보 건강 가입제안서','제안서 · 10/05'],['🧾','○○생명 종신 증권','증권 · 09/27'],['📊','AI 보장분석','상담자료 · 10/09'],['🗂','전·후 풀리포트','리포트 · 10/10']].map(r=>`<div class="row"><span style="font-size:18px">${r[0]}</span><div class="m"><b>${r[1]}</b><span>${r[2]}</span></div><span class="ed">열기</span></div>`).join('')}
+    <div class="note">지금은 「예전 자료」(접힘) · 「저장된 상담 자료」 · 풀리포트가 세 자리에 나뉘어 있습니다 — <b>한 목록</b>으로.</div></div>
+  <div class="card vault"><div class="ch"><span class="lab" style="color:var(--pur)">🔐 금고 — 담당자 본인만</span><button class="ed">잠깐 보기</button></div>
+    <div class="kv"><div class="k">주민번호</div><div class="v mask">●●●●●●-●●●●●●●</div><div class="k">신분증 사진</div><div class="v"><i>잠김</i></div></div>
+    <div class="note">기기에서 잠근 암호문만 서버에 · 관리자도 못 엶 · 열람 기록 남음</div></div>`;
+
+T.info=()=>`<div class="card"><div class="ch"><span class="lab">사람</span>${ed('person')}</div>
+    <div class="kv"><div class="k">이름</div><div class="v">${ME()?'홍길동 <small>실명 · 이 기기</small>':'홍*동'}</div>
+      <div class="k">연락처</div><div class="v">010-●●●●-1234</div>
+      <div class="k">생년월일</div><div class="v">${P()?'1982-05-14 <small>주민번호에서</small>':'<i>모름</i>'}</div>
+      <div class="k">성별 · 직업</div><div class="v">${P()?'남 · <i>모름</i>':'<i>모름</i>'}</div>
+      <div class="k">사는 곳</div><div class="v">서울 마포구 <small>배정 DB</small></div></div></div>
+  ${!P()?toMine('돈·가족·이야기·동의'):`<div class="card"><div class="ch"><span class="lab">돈</span>${ed('money')}</div>
+    <div class="kv"><div class="k">월 소득</div><div class="v">450만원</div><div class="k">월 생활비</div><div class="v"><i>모름</i></div>
+      <div class="k">여력 · 은퇴 나이</div><div class="v"><i>모름</i></div></div>
+    <div class="ch" style="margin-top:8px;margin-bottom:0"><span class="lab k">팩트파인딩 18 / 25</span><button class="ed" onclick="sheet('ff')">이어서 채우기 ›</button></div>
+    <div class="prog"><i style="width:72%"></i></div></div>
+  ${ME()?`<div class="card"><div class="ch"><span class="lab">가족 · 소개</span>${ed('fam')}</div>
+    <div class="kv"><div class="k">묶음</div><div class="v">홍길동 가족 · 본인</div></div>
+    <div class="chips" style="margin-top:6px"><button class="chip">홍길순 <b>배우자</b></button><button class="chip">홍말순 <b>자녀 · 2015</b></button></div>
+    <div class="kv" style="margin-top:6px"><div class="k">소개해 주신 분</div><div class="v">홍갑돌 님</div><div class="k">내가 받은 소개</div><div class="v">2명</div></div></div>
+  <div class="card"><div class="ch"><span class="lab">이야기 · 메모</span>${ed('story')}</div>
+    <div class="chips"><span class="tag pt">출산 · 육아</span><span class="tag">걱정 — 아이 교육비</span></div>
+    <div class="note" style="color:var(--ink2);font-size:13px">둘째 계획 있음 · 남편 회사 단체보험 있음</div></div>`:owner('가족·소개·이야기(관리 쪽지)')}
+  <div class="card"><div class="ch"><span class="lab">동의</span>${ed('cons')}</div>
+    <div class="chips"><span class="tag ok">✓ 수집·이용</span><span class="tag ok">✓ 주민번호</span><span class="tag ok">✓ 병력</span><span class="tag">— 광고</span></div></div>`}
+  <div class="card"><div class="ch"><span class="lab k">배정 DB</span></div>
+    <div class="kv"><div class="k">출처 · 배정일</div><div class="v">${P()?'소개':'일반'} · 2026-09-03</div><div class="k">한도</div><div class="v">${P()?'<i>개인 — 안 셈</i>':'셈 (일반)'}</div></div></div>`;
+
+const SH={
+ person:['사람 고치기',`<div class="gr"><div><label>이름(실명 · 이 기기에만)</label><input class="inp" value="홍길동"></div><div><label>연락처</label><input class="inp" value="010-0000-1234"></div><div><label>생년월일</label><input class="inp" value="1982-05-14"></div><div><label>성별</label><input class="inp" value="남"></div><div><label>직업</label><input class="inp" placeholder="모름"></div></div>`],
+ money:['돈 고치기',`<div class="gr"><div><label>월 소득(만원)</label><input class="inp" value="450"></div><div><label>월 생활비(만원)</label><input class="inp" placeholder="모름"></div><div><label>여력(만원)</label><input class="inp" placeholder="모름"></div><div><label>은퇴 나이</label><input class="inp" placeholder="모름"></div></div>`],
+ fam:['가족 · 소개 고치기',`<label>묶음 이름 · 이 사람 자리</label><input class="inp" value="홍길동 가족 · 본인"><label>구성원</label><input class="inp" value="홍길순 · 배우자 · 1984"><input class="inp" value="홍말순 · 자녀 · 2015"><label>소개해 주신 분</label><input class="inp" value="홍갑돌"><p class="note">구성원이 고객이면 이름을 누를 때 그 분 창이 열립니다.</p>`],
+ story:['이야기 · 메모 고치기',`<label>지금 상황</label><input class="inp" value="출산 · 육아"><label>걱정</label><input class="inp" value="아이 교육비"><label>메모</label><input class="inp" value="둘째 계획 있음 · 남편 회사 단체보험 있음">`],
+ cons:['동의 네 갈래',`<div class="kv"><div class="k">수집·이용</div><div class="v">2026-10-09 서면</div><div class="k">고유식별(주민번호)</div><div class="v">2026-10-09 서면</div><div class="k">민감정보(병력)</div><div class="v">2026-10-09 서면</div><div class="k">광고 수신</div><div class="v"><i>없음</i></div></div>`],
+ stage:['단계 바꾸기',`<div class="chips">${['미접촉','TA','AP','PC','CS','계약완료','증권전달'].map(x=>`<button class="chip ${x==='AP'?'on':''}">${x}</button>`).join('')}</div><p class="note">배정 DB 줄의 단계 — 배정 한도 셈은 그대로입니다.</p>`],
+ ff:['팩트파인딩 — 18 / 25',`<p class="note">계산기·상담자료와 같은 질문지입니다. 모르는 칸은 비워 두십시오 — 0 으로 적지 않습니다.</p><div class="gr"><div><label>부채(만원)</label><input class="inp" placeholder="모름"></div><div><label>자녀 교육비(만원/월)</label><input class="inp" value="60"></div><div><label>비상금(만원)</label><input class="inp" placeholder="모름"></div><div><label>…</label><input class="inp" placeholder="(나머지 칸)"></div></div>`]
+};
+function sheet(k){const s=SH[k];if(!s)return;document.getElementById('sheet').innerHTML=`<h3>${s[0]}</h3>${s[1]}<button class="btn" onclick="shut()">저장</button><button class="btn g" onclick="shut()">닫기</button>`;document.getElementById('dim').classList.add('on');document.getElementById('sheet').classList.add('on');}
+function shut(){document.getElementById('dim').classList.remove('on');document.getElementById('sheet').classList.remove('on');}
+document.getElementById('dim').onclick=shut;
+function go(t){S.tab=t;paint();document.getElementById('scr').scrollTop=0;}
+function paint(){document.getElementById('scr').innerHTML=head()+`<div class="body">${T[S.tab]()}</div>`;}
+paint();
+</script>
+</body>
+</html>
