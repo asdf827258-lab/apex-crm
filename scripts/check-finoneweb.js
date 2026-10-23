@@ -1,4 +1,4 @@
-/* 계산기 화면들이 같은 숫자를 말하나 — 실제로 열어 견줍니다 (판 X178)
+/* 계산기 화면들이 같은 숫자를 말하나 — 실제로 열어 견줍니다 (판 X179)
 
    사장님 말씀 2026-10-22 「전부 손대고 막아봐 우선」. 글자로 보는 check-finone 의 짝입니다 —
    글자가 깨끗해도 화면이 다른 숫자를 찍으면 소용없으니, 한 고객을 넣고 화면 여덟 곳을 실제로 엽니다.
@@ -58,7 +58,7 @@ const man = (s) => {
     const tab = (t) => { switchTab(t, document.querySelector('.report-tab')); return (document.getElementById('tab-' + t) || {}).innerText || ''; };
     const after = (txt, label) => { const m = txt.match(new RegExp(label + '\\s*\\n?\\s*([-−]?[\\d,]+(?:억\\s*[\\d,]*)?\\s*만?)')); return m ? m[1] : null; };
     const dash = tab('dashboard'); o.dash = { income: after(dash, '월 총 소득'), surplus: after(dash, '월 잉여금'), red: /월 잉여금[\s\S]{0,40}적자/.test(dash), score: ((document.getElementById('health-svg') || {}).textContent || '').replace(/\D/g, '') };
-    /* 최종 탭은 종합 가이드맵 한 장 — 이 칸을 그리는 덧칠이 넷이었고 셋은 그리자마자 덮였습니다(판 X178).
+    /* 최종 탭은 종합 가이드맵 한 장 — 이 칸을 그리는 덧칠이 넷이었고 셋은 그리자마자 덮였습니다(판 X179).
        탭을 한 번 열 때 이 칸에 몇 번 그리나도 셉니다 — 죽은 판이 돌아오면 2 이상이 됩니다. */
     window.__fw = 0;
     const map = tab('final');
