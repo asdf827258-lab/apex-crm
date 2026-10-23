@@ -117,8 +117,15 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}button{c
 .f label{display:block;font-size:var(--t6);font-weight:700;color:var(--gy2);margin-bottom:3px}
 .f input,.f select{width:100%;border:1px solid var(--ln);border-radius:9px;padding:8px 10px;font-size:var(--t6);font-weight:700;background:#fff;min-height:38px}
 .f input:focus,.f select:focus{outline:2px solid #BFDBFE;border-color:var(--blt)}
-.f .u{position:relative}.f .u input{padding-right:36px;text-align:right}
+.f .u{position:relative;align-self:start}  /* ★ 늘어나지 않게 — 늘어나면 bottom 에 붙인 단위 글자(「세」)가 칸 밑으로 밀린다. 같은 줄에 키가 큰 칸(.uw)이 생기면서 드러났다 */.f .u input{padding-right:36px;text-align:right}
 .f .u i{position:absolute;right:10px;bottom:10px;font-style:normal;font-size:var(--t6);font-weight:700;color:var(--gy2);pointer-events:none}
+.uw{min-width:0}
+.uw>label{display:flex;align-items:baseline;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.uw>label .wec{margin-left:auto}
+.uw .uwr{position:relative}
+.uw .uwr input{width:100%;padding-right:32px;text-align:right}
+.uw .uwr i{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-style:normal;font-size:var(--t6);font-weight:700;color:var(--gy2);pointer-events:none}
+.uw .wec{flex:none;font-style:normal;font-size:var(--t6);font-weight:800;color:var(--blt);white-space:nowrap;letter-spacing:-.01em}  /* ★ --bl(#3182F6) 은 흰 바탕에서 대비가 모자라 check-read 가 울었습니다. 새 색을 만들지 않고 앱에 이미 있는 진한 파랑 --blt 를 씁니다 */
 /* ── 계약 한 줄 ── 왼쪽 색 띠로 유지·배서·해지를 <b>글자 없이</b> 센다 */
 .pol{border:1px solid var(--ln);border-left:4px solid var(--ln);border-radius:13px;
  /* ⚠ 안쪽 여백을 11 → 6px 로 줄였습니다. 누르는 것을 44px 로 키우느라 계약
@@ -1852,6 +1859,67 @@ function man(v){if(v===null||v===undefined||!isFinite(v))return '—';
   return Math.round(v).toLocaleString()+'만';}
 function won(v){return (v===null||v===undefined||!isFinite(v))?'—':(man(v)+'원');}
 function fee(v){return (v===null||v===undefined||!isFinite(v))?'—':(Math.round(v*10000).toLocaleString()+'원');}
+/* ══ 적는 칸은 <b>원</b>, 담는 값은 <b>만원</b> ═══════════════════════════
+   2026-10-23 · 판 X165 · 사장님 말씀 「만원단위 표기 말고 원 단위로
+   표기해줘 … 새로 입력 넣는 칸에 봐봐」.
+
+   ★★ <b>담는 값은 그대로 만원입니다.</b> 셈도 저장도 인쇄도 한 줄 안
+   바꿉니다 — 담는 단위를 바꾸면 <b>이미 저장해 둔 고객 자료가 전부 만 배</b>
+   틀립니다. 「50만원」 이 「50억」 으로 찍힌 그 자리입니다 (4번).
+   그래서 바꾸는 자리는 <b>적는 칸 넷</b>뿐이고, 바꾸는 손도 <b>여기 둘</b>
+   뿐입니다 (5번) — 두 곳에 두면 한쪽만 고쳐 만 배가 틀립니다.
+
+   ★ <b>쉼표를 지우고 읽습니다.</b> 「124,000」 을 그냥 parseFloat 에 주면
+   <b>124</b> 가 됩니다 — 천 배입니다. 원 단위로 적으면 쉼표를 치는 것이
+   사람의 버릇이라, 이것을 안 지우면 바꾸자마자 사고가 납니다.
+
+   ★ 그리고 칸 밑에 <b>되읽어 줍니다</b> — 「= 12만 4,000원」. 0 을 하나 더
+   치거나 덜 쳤을 때 <b>그 자리에서</b> 보입니다. 사장님이 고르신 것입니다.
+
+   ★ 담보금액은 <b>만원 그대로</b> 둡니다 — 제안서·약관이 담보를 만원으로
+   적어서, 원으로 바꾸면 「50,000,000」 이 되어 한눈에 안 읽힙니다.
+   (2026-10-23 사장님 결정 · 「보험료 칸만」)
+
+   check-baedit [9] 가 이것을 지킵니다 — 담는 값이 <b>여전히 만원</b>인지,
+   쉼표를 쳐도 만 배가 안 틀리는지, 0 을 더 치면 되읽기가 <b>바뀌는지</b>. */
+function wonOfMan(v){            /* 담은 만원 값 → 칸에 보여 줄 <b>원</b> 글자 */
+  var n=num(v); if(n===null)return '';
+  return String(Math.round(n*10000));
+}
+function wonRaw(v){              /* 칸에 친 글자에서 쉼표·공백·「원」 을 지운다 */
+  return String(v===null||v===undefined?'':v).replace(/[,\s원]/g,'');
+}
+function manOfWon(v){            /* 칸에 친 <b>원</b> 글자 → 담을 <b>만원</b> 값 */
+  var n=num(wonRaw(v)); if(n===null)return '';
+  return String(n/10000);
+}
+function wonEcho(v){             /* 되읽기 — 「= 12만 4,000원」 (지어내지 않고 친 수 그대로) */
+  var n=num(wonRaw(v)); if(n===null||!isFinite(n))return '';
+  var neg=n<0; n=Math.round(Math.abs(n));
+  if(!n)return '= 0원';
+  var e=Math.floor(n/100000000), m=Math.floor((n%100000000)/10000), r=n%10000, t='';
+  if(e)t+=e.toLocaleString()+'억';
+  if(m)t+=(t?' ':'')+m.toLocaleString()+'만';
+  if(r||!t)t+=(t?' ':'')+r.toLocaleString();
+  return '= '+(neg?'-':'')+t+'원';
+}
+/* 되읽기 글만 갈아 끼운다 — 칸은 다시 안 그린다(커서가 튄다) */
+function wonEchoPut(id,v){
+  var e=document.getElementById(id); if(e)e.textContent=wonEcho(v);
+}
+function setWhoWon(k,el){ setWho(k,manOfWon(el.value)); wonEchoPut('we_who_'+k,el.value); }
+function setPolWon(sd,i,k,el){ setPol(sd,i,k,manOfWon(el.value)); wonEchoPut('we_'+sd+'_'+i+'_'+k,el.value); }
+/* 돈 칸 하나를 통째로 내준다 — 네 자리가 같은 모양이어야 한다 (5번) */
+function wonBox(lb,manVal,id,oninput,ph){
+  var w=wonOfMan(manVal);
+  /* ★ 되읽기는 <b>이름표 줄에</b> 얹습니다 — 밑에 한 줄을 보태면 계약마다
+     21px 씩 늘어 만들기 화면이 8,000px 선을 넘습니다(check-baedit [10]).
+     눈금을 올리는 대신 자리를 옮겼습니다 (8번).                        */
+  return '<div class="uw"><label>'+lb+'<em class="wec" id="'+id+'">'+esc(wonEcho(w))+'</em></label>'+
+    '<div class="uwr">'+
+    '<input value="'+esc(w)+'" placeholder="'+esc(ph||'미입력')+'" inputmode="numeric" '+
+    'onfocus="this.select()" oninput="'+oninput+'"><i>원</i></div></div>';
+}
 function amt(k,v){if(v===null||v===undefined||!isFinite(v))return '—';
   var u=UNIT[k]||'L';
   if(u==='D')return man(v)+'원/일';
@@ -2216,7 +2284,7 @@ function whoHtml(){
     '<div class="f c6">'+f('name','이름','예) 홍길동')+f('age','나이','예) 45','세')+
       '<div><label>성별</label><select onchange="setWho(\'sex\',this.value)">'+
       ['','남','여'].map(function(o){return '<option value="'+o+'"'+(w.sex===o?' selected':'')+'>'+(o||'미입력')+'</option>';}).join('')+'</select></div>'+
-      f('retire','은퇴 예정','예) 60','세')+f('incMan','월 소득','미입력','만원')+f('expMan','월 생활비','미입력','만원')+'</div>';
+      f('retire','은퇴 예정','예) 60','세')+wonBox('월 소득',w.incMan,'we_who_incMan','setWhoWon(&quot;incMan&quot;,this)')+wonBox('월 생활비',w.expMan,'we_who_expMan','setWhoWon(&quot;expMan&quot;,this)')+'</div>';
   if(S.fam.length)h+='<div class="f c4" style="margin-top:10px">'+S.fam.map(function(f2,i){
     return '<div><label>가족 '+(i+1)+'</label><div style="display:flex;gap:5px">'+
       '<input style="flex:1" value="'+esc(f2.rel)+'" placeholder="관계 예) 자녀" oninput="setFam('+i+',\'rel\',this.value)">'+
@@ -2298,15 +2366,17 @@ function polHtml(p,sd,i){
       '<div><label>상품명</label><input value="'+esc(p.nm)+'" placeholder="예) 무배당 건강보험" oninput="setPol(\''+sd+'\','+i+',\'nm\',this.value)"></div>'+
       '<div><label>가입 시기</label><input value="'+esc(p.start||'')+'" placeholder="예) 2019-04" oninput="setPol(\''+sd+'\','+i+',\'start\',this.value)"></div>'+
       '<div class="u"><label>납입기간</label><input value="'+esc(p.years||'')+'" placeholder="예) 20" inputmode="numeric" onfocus="this.select()" oninput="setPol(\''+sd+'\','+i+',\'years\',this.value)"><i>년</i></div>'+
-      '<div class="u"><label>월 납입보험료</label><input value="'+esc(p.premMan)+'" placeholder="미입력" inputmode="decimal" onfocus="this.select()" oninput="setPol(\''+sd+'\','+i+',\'premMan\',this.value)"><i>만원</i></div>'+
+      wonBox('월 보험료',p.premMan,'we_'+sd+'_'+i+'_premMan','setPolWon(&quot;'+sd+'&quot;,'+i+',&quot;premMan&quot;,this)')+
       '<div><label>만기 · 메모</label><input value="'+esc(p.term)+'" placeholder="예) 100세만기" oninput="setPol(\''+sd+'\','+i+',\'term\',this.value)"></div>'+
     '</div>'+payLine(p,sd,i);
   if(isB&&act==='endo')
     h+='<div class="note w" style="margin-bottom:8px">배서입니다 — 아래 담보판이 <b>「배서 후」</b> 로 바뀝니다. '+
        '<b>바꿀 담보만</b> 적으시면 됩니다. 안 적은 담보는 <b>없어집니다</b>(배서로 뺀 것으로 봅니다).'+
-       '<div class="f c2" style="margin-top:7px"><div class="u"><label>배서 후 월 보험료 (안 적으면 그대로)</label>'+
-       '<input value="'+esc(p.premMan2||'')+'" placeholder="'+esc(p.premMan||'그대로')+'" inputmode="decimal" onfocus="this.select()" '+
-       'oninput="setPol(\''+sd+'\','+i+',\'premMan2\',this.value)"><i>만원</i></div></div></div>';
+       '<div class="f c2" style="margin-top:7px"><div class="uw"><label>배서 후 월 보험료 (안 적으면 그대로)'+
+       '<em class="wec" id="we_'+sd+'_'+i+'_premMan2">'+esc(wonEcho(wonOfMan(p.premMan2)))+'</em></label>'+
+       '<div class="uwr"><input value="'+esc(wonOfMan(p.premMan2))+'" placeholder="'+esc(wonOfMan(p.premMan)||'그대로')+'" inputmode="numeric" onfocus="this.select()" '+
+       'oninput="setPolWon(&quot;'+sd+'&quot;,'+i+',&quot;premMan2&quot;,this)"><i>원</i></div>'+
+       '</div></div></div>';
   h+=padHtml(p,sd,i,(isB&&act==='endo')?'cov2':'cov');
   return h+'</div>';
 }

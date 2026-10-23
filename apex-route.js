@@ -467,6 +467,10 @@ function cityFixOpen(){
 }
 
 function myId(){ try{ return profile&&profile.id }catch(e){ return null } }
+/* ★ <b>이 앱은 팀이 같이 씁니다.</b> 전에는 안내 글이 누구에게나 「사장님
+   이름으로」 라고 했습니다 — 팀원이 보면 자기 이야기가 아닌 줄 압니다.
+   이름을 아는 곳은 여기 하나입니다 (5번). 모르면 「내」 라고만 합니다 (1번). */
+function myName(){ try{ return (profile&&profile.name)||"내" }catch(e){ return "내" } }
 function findDb(id){ try{ return dbs.filter(function(d){return d.id===id})[0] }catch(e){ return null } }
 
 /* 두 점 사이 직선거리(km) */
@@ -1678,7 +1682,7 @@ function render(){
      이 줄이 없으면 「왜 남의 고객이 뜨지?」 하고 한참을 헤맵니다. */
   if(!MINE_N&&!owner&&cityAll){
     side.push('<div class="rt-card" style="background:#EEF6FF;border-color:#BBD9FF;font-size:12.5px;color:#245ea8">'+
-      '<b>팀 전체를 보고 있습니다.</b> 사장님 이름으로 <b>직접 배정된 고객이 없어서</b>입니다 — '+
+      '<b>팀 전체를 보고 있습니다.</b> '+E(myName())+' 님 이름으로 <b>직접 배정된 고객이 없어서</b>입니다 — '+
       '위 <b>담당자</b> 칸에서 한 사람을 고르면 그 사람 고객만 남습니다.</div>');
   }
   var ck=Object.keys(city).sort(function(a,b){return city[b].n-city[a].n||(a<b?-1:1)});

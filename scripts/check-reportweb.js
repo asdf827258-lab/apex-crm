@@ -9,7 +9,7 @@
          근속연수를 적으면 퇴직소득세 장이 서나 · 실명은 칸을 켜고 확인해야만 · 취소하면 꺼지나
          결과지 창의 단추·칸 44px · 페이지 오류 0
 
-   ★ 판 X165 — 「지금 준비된 돈」 이 탭의 「지금 준비된 것」 과 같나 · 뺀 저축을 밝히나 · 시작을 미루면
+   ★ 판 X168 — 「지금 준비된 돈」 이 탭의 「지금 준비된 것」 과 같나 · 뺀 저축을 밝히나 · 시작을 미루면
 
    되돌려 보기 — rptData 의 rptMask(raw) 를 raw 로 → 「실명이 안 샌다」 가 웁니다.
                 rptPension 에서 rows 를 빼면 → 결과지가 안 열려 빨간불입니다.            */
@@ -55,17 +55,17 @@ const strip = (h) => h.replace(/<style[\s\S]*?<\/style>/g, '').replace(/src="dat
     is(/홍○○ 님/.test(t) && !/홍길동/.test(h), '가린 이름(홍○○)으로 열리고 실명이 안 샌다');
     is(!/NaN|undefined|Infinity/.test(t), 'NaN · undefined 가 없다');
     is(/1,506만 원/.test(t), '근속연수를 적으면 퇴직소득세 장이 선다');
-    /* 판 X165 — 결과지의 「지금 준비된 돈」 이 연금 시뮬레이션 탭의 「지금 준비된 것」 과 같은가 (한 고객 두 답 금지 · 5번) */
+    /* 판 X168 — 결과지의 「지금 준비된 돈」 이 연금 시뮬레이션 탭의 「지금 준비된 것」 과 같은가 (한 고객 두 답 금지 · 5번) */
     const ready = (t.replace(/\s+/g, '').match(/지금준비된돈\(([\d,]+)만원\)/) || [])[1];
     is(tabNow && ready && tabNow === ready.replace(/,/g, ''), '「지금 준비된 돈」 이 탭과 같다 — 탭 ' + tabNow + '만 · 결과지 ' + (ready || '없음'));
     is(/쌓인 금액을 몰라 넣지 않았어요/.test(t), '넣고 있는 연금저축·IRP 를 빼고 셌다고 밝힌다');
     is(/시작을 미루면/.test(t) && /5년 뒤 시작/.test(t), '시작을 미루면 — 상품 엔진이 받아 주는 나이로 셈한다');
     const tabN = tab && tab.replace(/[^\d]/g, ''), rep = (t.match(/최저보증 보증 월 ([\d,]+)만 원/) || [])[1];
     is(tabN && rep && tabN === rep.replace(/,/g, ''), '연금 시뮬레이션 탭과 같은 최저보증 — 탭 ' + tab + ' · 결과지 ' + (rep ? rep + '만 원' : '없음'));
-    is(/점검 필요/.test(t) && !/불가/.test(t), '「불가」 대신 「점검 필요」 (판 X166)');
+    is(/점검 필요/.test(t) && !/불가/.test(t), '「불가」 대신 「점검 필요」 (판 X169)');
     await pop.close();
 
-    /* 판 X166 — 「쌓인 금액」 을 넣으면 탭과 결과지가 같은 값으로 더하나 · 「모른다」 쪽지가 사라지나 */
+    /* 판 X169 — 「쌓인 금액」 을 넣으면 탭과 결과지가 같은 값으로 더하나 · 「모른다」 쪽지가 사라지나 */
     await pg.evaluate(() => { const e = document.getElementById('s_pen_acc'); e.value = '3000'; e.dispatchEvent(new Event('input', { bubbles: true })); });
     await pg.waitForTimeout(400);
     const tabNow2 = await pg.evaluate(() => {
