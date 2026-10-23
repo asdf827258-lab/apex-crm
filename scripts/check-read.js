@@ -56,11 +56,18 @@ const sec = (t)=>console.log('\n'+t);
      13px 밑 글씨   1,084 → 3
      대비 4.5 밑      521 → 56
      44px 밑 단추     131 → 1                                           */
+/* ⚠ 2026-10-23 (판 X169) · <b>따로 선 다섯 쪽도 흐린 글씨가 0 입니다.</b>
+   저마다 제 색표를 들고 있어 한 벌로 모으지 못하므로, 쪽마다 재고 고쳤습니다 —
+     계산기  --up #DC2626 → #B91C1C · 띠에 올라앉는 흰 글씨용 색 열 가지
+     자비스 모드  무리 제목 shade(.85 → .52) · 흐린 회색 #8593AB → #3C4A63
+     카톡보내기  --blue #3182F6(흰 글씨 3.71) → #1A56DB · 회색 → #636C78
+     보장 전·후  --gy/--gy2 → #636C78   (⚠ .show 는 한 줄도 안 건드립니다)
+   <b>바닥을 0 으로 내립니다</b> — 한 곳이라도 생기면 빨간불입니다 (0-1번).    */
 const BASE_SOLO = {
-  'app/ba.html':      { small:0,  low:1,  tap:0, nm:'보장 전·후' },          /* 716 · 396 · 67 */
-  'app/finance.html': { small:0,  low:17, tap:0, nm:'재무설계 계산기' },      /*   0 ·  52 ·  3 */
-  'app/apex-map.html':{ small:0,  low:23, tap:0, nm:'APEX 자비스 모드' },      /* 255 ·  25 · 33 */
-  'edu-pipeline.html':{ small:0,  low:15, tap:1, nm:'카톡보내기·DB 업적관리' },/*  25 ·  48 ·  8 */
+  'app/ba.html':      { small:0,  low:0,  tap:0, nm:'보장 전·후' },          /* 716 · 396 · 67 */
+  'app/finance.html': { small:0,  low:0,  tap:0, nm:'재무설계 계산기' },      /*   0 ·  52 ·  3 */
+  'app/apex-map.html':{ small:0,  low:0,  tap:0, nm:'APEX 자비스 모드' },      /* 255 ·  25 · 33 */
+  'edu-pipeline.html':{ small:0,  low:0,  tap:1, nm:'카톡보내기·DB 업적관리' },/*  25 ·  48 ·  8 */
   'app/blog.html':    { small:3,  low:0,  tap:0, nm:'블로그' }               /* 100 ·   0 · 25 */
 };
 /* ⚠ 본체의 단추 바닥을 16 → 2 로 내린 것은 <b>고쳐서가 아니라 자를 날카롭게
@@ -87,12 +94,40 @@ const BASE_SOLO = {
    11.5px 이라 바닥 아래였습니다 — 폰에서 「📊 상담현황」 이 화면에서 제일
    작은 글씨였습니다(사장님 말씀 「핸드폰으로 보니 한눈에 안들어와」).
    고쳤으니 <b>눈금도 같이 내립니다</b> — 이제 한 곳이라도 생기면 빨간불입니다. */
-const BASE_MAIN = { small:0, low:819, tap:2, long:91 };
+/* ⚠⚠ 2026-10-23 (판 X169) · <b>흐린 글씨 819 → 0 · 긴 문단 91 → 80.</b>
+   사장님 말씀 「다 가독성이 떨어져 보기 쉽게 정리해야되 <b>전부</b>」 (대장 X146).
+   ★ <b>자를 고친 것과 코드를 고친 것을 갈라 적습니다</b> (1번).
+     ① <b>자를 두 번 날카롭게 했습니다.</b>
+        · 「문단」 에서 <b>담는 칸(textarea 등)을 뺐습니다</b> — 두뇌의
+          「1,644자 문단」 은 <b>다른 AI 에 붙여 넣으라고 담아 둔 지침</b>이었습니다.
+          이것만으로 긴 문단 91 → 80, 두뇌 1,644 → <b>121자</b>. <b>고친 것이
+          아닙니다</b> — 자가 엉뚱한 것을 재고 있었을 뿐입니다.
+        · <b>그라디언트 칸</b>을 보게 했습니다. 전에는 흰 글씨를 「흰 바탕 위
+          1.0」 으로 거짓 고발(72곳)했고, 처음 고친 자는 거꾸로 글자가 닿지도
+          않는 밝은 귀퉁이로 고발(45곳)했습니다. 지금은 <b>글자 칸이 띠의
+          어디쯤에 앉는지</b>를 세어 그 자리 색으로 잽니다.
+          자만 고치고 코드는 그대로일 때 819 → <b>790곳</b>이었습니다.
+     ② <b>코드를 고쳐 790 → 0.</b> 큰 줄기 넷입니다 —
+        · <b>--t-sub #6B7684 → #636C78</b>. 흰 바탕에서는 4.62 로 넘겼지만
+          <b>회색 카드(#F1F3F5~#F7F9FA) 위에서 4.15~4.49</b> 로 미달이었습니다.
+          이 한 줄이 <b>519곳</b>입니다.
+        · <b>뜻있는 색을 글씨로 쓸 때는 -d 를</b> — color:var(--t-neg/--t-pos/
+          --t-warn/--t-teal) 103자리를 -d 로. 이름은 이미 있었는데 안 쓰고
+          있었습니다. 곁들여 손으로 박힌 hex 글자색도 토큰으로 모았습니다 (5번).
+        · <b>영웅 띠를 한 벌로</b> — 같은 남색→파랑 띠가 <b>스물넷, 열세 가지
+          철자</b>로 흩어져 있었습니다(5번). --t-hero 하나로 모으고 끝 색을
+          #38BDF8(흰 글씨 2.14) → #0D78B6(<b>4.80</b>)로 내렸습니다.
+          사장님이 「윤시현의 두뇌도 안 읽힌다」 하신 그 넉 줄이 거기였습니다.
+        · <b>어두운 칸 위에서는 거꾸로</b> — 판 X151 의 쪽지가 미리 적어 둔
+          자리입니다. .ar-cat.on · .nl-chip.on b · .tp-ask .ai>b · .pa-ic 처럼
+          어두운/파란 바탕에 어두운 글씨가 올라앉은 곳을 밝은 글씨로.
+   ⚠ <b>0 이 되었으니 바닥도 0 입니다.</b> 이제 한 곳이라도 생기면 빨간불입니다. */
+const BASE_MAIN = { small:0, low:0, tap:2, long:80 };
 /* ★ 「제일 긴 문단」 을 <b>화면 전부에서</b> 재면 설정(settings)이 23,221자로
    맨 위에 섭니다 — 거기는 약관·개인정보를 그대로 싣는 자리라 긴 것이 맞습니다.
    그래서 <b>두뇌 하나</b>를 지목해 잽니다. 사장님이 「안 읽힌다」 하신 자리이고,
    거기 1,644자는 <b>읽으라고 쓴 안내문</b>이지 약관이 아닙니다.           */
-const BASE_BRAIN_LONGEST = 1644;
+const BASE_BRAIN_LONGEST = 121;   /* 1,644 → 121 — <b>자를 고쳐서</b>입니다(위 ①) */
 
 function 잣대(){
   window.__lum=function(c){ var m=(c||'').match(/[\d.]+/g)||[0,0,0];
@@ -106,8 +141,83 @@ function 잣대(){
         t=(a.length>3)?a[3]:1,i,o=[];
     for(i=0;i<3;i++)o.push(Math.round(a[i]*t+b[i]*(1-t)));
     return 'rgb('+o.join(', ')+')'; };
-  window.__bg=function(el){ var e=el,st=[],out='rgb(255, 255, 255)',i;
-    while(e){ var c=getComputedStyle(e).backgroundColor||'';
+  /* ★ 2026-10-23 (판 X169) · <b>그라디언트 칸을 보게 했습니다.</b> 전에는
+     backgroundColor 만 읽어, 바탕이 그라디언트인 칸(영웅 띠는 남색→파랑)
+     위의 흰 글씨를 <b>「흰 글씨 on 흰 바탕 · 1.0」 으로 거짓 고발</b>했습니다
+     — 72곳이 그랬습니다. 헛것을 잡는 자가 제일 나쁩니다 (8번).
+     ★ <b>멈춤 가운데 제일 나쁜 것을 고르지 않습니다.</b> 그렇게 재 보니
+       글자가 닿지도 않는 <b>밝은 귀퉁이</b>로 45곳을 고발했습니다.
+       <b>글자 칸의 네 귀퉁이가 그라디언트 선의 어디쯤에 닿는지</b>를 세어
+       (CSS 각도·멈춤 그대로), 그 네 자리 가운데 <b>제일 나쁜 자리</b>를
+       씁니다. 지어내는 것이 아니라 <b>그려진 색을 그대로</b> 재는 것입니다 (1번).
+     ⚠ 그라디언트를 못 읽으면 <b>모른다고 합니다</b> — 알아서 0 으로 치지
+       않고 멈춤 가운데 나쁜 것을 씁니다(엄한 쪽).                        */
+  window.__gstops=function(bi){
+    var m=bi.match(/^linear-gradient\((.*)\)$/); if(!m)return null;
+    var body=m[1],parts=[],depth=0,cur='',i,ch;
+    for(i=0;i<body.length;i++){ ch=body[i];
+      if(ch==='(')depth++; if(ch===')')depth--;
+      if(ch===','&&depth===0){parts.push(cur);cur='';} else cur+=ch; }
+    parts.push(cur);
+    var ang=180,k=0,a0=parts[0].trim();
+    var TO={'to top':0,'to right':90,'to bottom':180,'to left':270,
+            'to top right':45,'to right top':45,'to bottom right':135,'to right bottom':135,
+            'to bottom left':225,'to left bottom':225,'to top left':315,'to left top':315};
+    if(/deg$/.test(a0)){ ang=parseFloat(a0); k=1; }
+    else if(/^to /.test(a0)){ var key=a0.replace(/\s+/g,' ');
+      if(!(key in TO))return null; ang=TO[key]; k=1; }
+    var sp=[];
+    for(i=k;i<parts.length;i++){ var p=parts[i].trim();
+      var cm=p.match(/^(rgba?\([^)]*\))/); if(!cm)return null;
+      var ps=p.slice(cm[1].length).trim().match(/(-?[\d.]+)%/);
+      sp.push({c:cm[1],p:ps?parseFloat(ps[1])/100:null}); }
+    if(sp.length<2)return null;
+    if(sp[0].p===null)sp[0].p=0;
+    if(sp[sp.length-1].p===null)sp[sp.length-1].p=1;
+    for(i=1;i<sp.length-1;i++) if(sp[i].p===null) sp[i].p=i/(sp.length-1);
+    return {ang:ang,sp:sp};
+  };
+  window.__gat=function(sp,t){
+    var i,a,b,u; if(t<=sp[0].p)return sp[0].c;
+    if(t>=sp[sp.length-1].p)return sp[sp.length-1].c;
+    for(i=0;i<sp.length-1;i++){ a=sp[i]; b=sp[i+1];
+      if(t>=a.p&&t<=b.p){ u=(b.p===a.p)?0:(t-a.p)/(b.p-a.p);
+        var A=(a.c.match(/[\d.]+/g)||[0,0,0,1]).map(Number),
+            B=(b.c.match(/[\d.]+/g)||[0,0,0,1]).map(Number),o=[],j;
+        for(j=0;j<3;j++)o.push(Math.round(A[j]*(1-u)+B[j]*u));
+        var al=(A.length>3?A[3]:1)*(1-u)+(B.length>3?B[3]:1)*u;
+        return 'rgba('+o.join(', ')+', '+al+')'; } }
+    return sp[sp.length-1].c;
+  };
+  window.__gpick=function(host,bi,rect,fg){
+    var G=window.__gstops(bi), pick=null, dd=1e9;
+    var lf=fg?window.__lum(fg):0;
+    if(!G){ (bi.match(/rgba?\([^)]*\)/g)||[]).forEach(function(x){
+        var d=Math.abs(window.__lum(x)-lf); if(d<dd){dd=d;pick=x;} });
+      return pick; }
+    var A=G.ang*Math.PI/180, sx=Math.sin(A), sy=-Math.cos(A);
+    var W=host.width,H=host.height, Lg=Math.abs(W*sx)+Math.abs(H*sy);
+    if(!Lg)return G.sp[0].c;
+    var cx=host.left+W/2, cy=host.top+H/2;
+    [[rect.left,rect.top],[rect.right,rect.top],[rect.left,rect.bottom],[rect.right,rect.bottom]]
+      .forEach(function(q){
+        var t=0.5+((q[0]-cx)*sx+(q[1]-cy)*sy)/Lg;
+        var c=window.__gat(G.sp,t), d=Math.abs(window.__lum(c)-lf);
+        if(d<dd){dd=d;pick=c;} });
+    return pick;
+  };
+  window.__bg=function(el,fg){ var e=el,st=[],out='rgb(255, 255, 255)',i;
+    var rect=el.getBoundingClientRect();
+    while(e){ var cs=getComputedStyle(e), bi=cs.backgroundImage||'';
+      if(bi.indexOf('gradient(')>=0){
+        var pick=window.__gpick(e.getBoundingClientRect(),bi,rect,fg);
+        if(pick){
+          var pm=pick.match(/[\d.]+/g),pa=(pm&&pm.length>3)?Number(pm[3]):1;
+          if(pa>0)st.push(pick);
+          if(pa>=1)break;
+        }
+      }
+      var c=cs.backgroundColor||'';
       var m=c.match(/[\d.]+/g),al=(m&&m.length>3)?Number(m[3]):(m?1:0);
       if(al>0)st.push(c); if(al>=1)break; e=e.parentElement; }
     for(i=st.length-1;i>=0;i--)out=window.__mix(st[i],out); return out; };
@@ -122,13 +232,21 @@ function 잣대(){
       if(!t)return;
       var cs=getComputedStyle(e),px=Math.round(parseFloat(cs.fontSize));
       R.n++; if(px<R.minpx)R.minpx=px; if(px<13)R.small++;
-      var c=window.__cr(cs.color,window.__bg(e));
+      var c=window.__cr(cs.color,window.__bg(e,cs.color));
       if(c<4.5){ R.low++; if(R.worst.length<3)R.worst.push({cr:c,px:px,t:t.slice(0,14)}); }
       var m=t.match(/[\u{1F300}-\u{1FAFF}\u{2300}-\u{27BF}\u{2B00}-\u{2BFF}]/gu);
       if(m)m.forEach(function(x){R.emoji[x]=1;});
     });
+    /* ★ 2026-10-23 (판 X169) · <b>칸에 담은 글은 문단이 아닙니다.</b>
+       두뇌의 「1,644자 문단」 을 열어 보니 <b>&lt;textarea&gt;</b> 였습니다 —
+       사람이 읽는 글이 아니라 <b>다른 AI 에 붙여 넣으라고 담아 둔 지침</b>
+       입니다. 길어야 맞는 자리를 「안 읽힌다」 고 고발하고 있었습니다 (8번).
+       ⚠ 이 줄로 수가 내려가는 것은 <b>고쳐서가 아니라 자를 고쳐서</b>입니다.
+         둘을 섞어 적지 않습니다 (1번).                                 */
+    var 담는칸=/^(textarea|input|select|option|script|style|template|noscript)$/;
     all.forEach(function(e){
       if(e.children.length)return;
+      if(담는칸.test(e.tagName.toLowerCase()))return;
       var t=(e.textContent||'').replace(/\s+/g,' ').trim();
       if(t.length>80){ R.long++; if(t.length>R.longest)R.longest=t.length; }
     });
