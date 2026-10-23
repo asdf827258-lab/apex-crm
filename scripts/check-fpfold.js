@@ -45,6 +45,8 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 
   await page.goto(base + PAGE, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1800);
+  /* 판 X183 — 칸에 박혀 있던 견본 값을 비웠습니다(1번). 견본은 「예시로 바로 보기」 와 같은 deckSample() 로 채웁니다 */
+  await page.evaluate(() => { if (typeof deckSample === 'function') deckSample(); });
 
   /* 견본 이름은 홍길동 — 실제 고객 이름은 쓰지 않는다 (CLAUDE.md 3번) */
   await page.evaluate(() => {

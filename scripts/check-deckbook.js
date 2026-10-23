@@ -1,4 +1,4 @@
-/* 재무설계 상담자료가 원툴 순서로 엮였나 (판 X182)
+/* 재무설계 상담자료가 원툴 순서로 엮였나 (판 X182 · X183)
 
    사장님 말씀 2026-10-23 「결과지말고 상담자료부터 내용들을 채워서 만들어줘」.
    app/재무설계/상담자료.html 의 장(46장 + 표지 · 마무리)을 재무설계의 집 순서로 엮었습니다 —
@@ -15,6 +15,16 @@
      마. ★ 기준이 계산기와 같다 — DECK_RULE 의 비상금 · 보험료율 · 저축률 · DSR · LTV 가 계산기
          FIN_RULE · IP_RULE 과 같은 값 · 「적정 8~10%」 같은 다른 기준이 글자로 남지 않음(5번)
      바. 「오늘 어디까지 보실까요」 에서 보장을 빼면 새 보험료 장도 같이 빠진다 · 페이지 오류 0
+     사. ★★ 판 X183 (사장님 말씀 「안 맞는 것들을 맞춰봐」) — 계산기와 한 값 · 한 셈
+         · 보장 기준 = 본부 권장 기준(암 5,000 · 뇌 3,000 · 심 3,000) — 상담자료 STD = 계산기 FIN_RULE
+         · 주택연금 1억당 표 = 계산기 HOUSE_PEN(2024-03 공시) · 국가지원 금액(첫만남 · 부모급여 · 아동수당)이 두 목록에서 같음
+         · 가족 생활자금 = 대출 + 대출 뺀 생활비 × 막내 25세 독립까지(계산기의 가족 셈)
+         · 연금은 적힌 것만 — 국민연금 · 퇴직연금이 비면 0(모름) · 개인연금 「월납」 을 받는 돈으로 세지 않음(시뮬레이션에서 두 번 0)
+         · 빈칸을 지어 채우지 않음 — 나이 · 은퇴 나이 · 은퇴 생활비가 비면 자료를 안 짓고, 기대수명 · 국민연금 개시는
+           「가정 · 모름」 장에 가정이라고 밝힘 · 실손은 「모름」 이 있고 미가입으로 읽지 않음
+         · 세금 · 건보료 숫자 0 — 「매년 확정 환급」 · 900만원 한도 · 16.5% · 환급액 합계 · 건보료 금액 추정 · 피부양자 2,000만원 · 5.4억
+         · 연금을 모르면 「모름」 — 국민연금이 비면 「월 0만원 · 소득대체율 0% · 준비율 0%」 대신 「모름 · 부족액 최대」
+         · 억 넘김 — 9,960만이 「-11억 10,000만」 으로 찍히지 않는다(실제 -12억)
 
    되돌려 보기 — buildSlides 가 deckOrder 를 안 부르면 가 · 마무리를 마지막 장으로만 찾으면 가 ·
                DECK_RULE.premHi 를 12 로 바꾸면 마 · 새 장이 예적금 빈칸을 0 으로 세면 라 가 웁니다. */
@@ -92,6 +102,44 @@ const SIDE = { f_name: '홍길동', f_age: '44', f_job: '회사원', f_sincome: 
   const B = await build(Object.assign({}, SIDE, { f_cash: '1600' }));
   const months = Math.floor(1600 / B.exp);
   is(new RegExp(months + '개월').test((B.S.find((x) => x.eb === 'THREE CHECKS') || {}).txt || ''), '예적금 1,600만 원을 적으면 1,600 ÷ 꼭 나가는 돈 ' + Math.round(B.exp) + ' = ' + months + '개월');
+
+  head('사. ★★ 계산기와 한 값 · 한 셈 (판 X183)');
+  const stdM = src.match(/var STD = \{cancer:(\d+), brain:(\d+), heart:(\d+)/) || [];
+  is(+stdM[1] === num(/insCancer:(\d+)/) && +stdM[2] === num(/insBrain:(\d+)/) && +stdM[3] === num(/insHeart:(\d+)/), '보장 기준 — 상담자료 STD ' + stdM.slice(1, 4).join('/') + ' = 계산기 FIN_RULE ' + [num(/insCancer:(\d+)/), num(/insBrain:(\d+)/), num(/insHeart:(\d+)/)].join('/'));
+  const hfD = (src.match(/var HF_TABLE=(\[\[[^;]*?\]\])/) || [])[1], hfF = (fin.match(/per:(\[\[[^\n]*?\]\])/) || [])[1];
+  is(hfD && hfF && JSON.stringify(eval(hfD)) === JSON.stringify(eval(hfF)), '주택연금 1억당 표 = 계산기 HOUSE_PEN (' + hfF + ')');
+  is(/'200만원 \(첫째\)'/.test(src) && /'300만원 \(둘째 이상\)'/.test(src) && /첫째 200 \/ 둘째↑ 300/.test(fin)
+     && /'월 100만원':'월 50만원'/.test(src) && /0세 월 100만 \+ 1세 월 50만/.test(fin)
+     && /if\(A<9\) add\(now,\{ic:'🧒',t:'아동수당'[\s\S]{0,80}amt:'월 10만원'/.test(src) && /만 9세 미만 월 10만/.test(fin), '국가지원 금액(첫만남 200/300 · 부모급여 월 100/50 · 아동수당 만 9세 미만 월 10만)이 두 목록에서 같다');
+  const srcCode = src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/<style[\s\S]*?<\/style>/g, ' ');   /* 주석 · CSS 의 16.5px 는 헛것(8번) */
+  is(!/매년 확정 환급|900만원|16\.5%|13\.2%|3\.3~5\.5|1,500만원|최대 300만원|300만원 한도 40%|확정 수익|확정된 수익|savTot\+'만원이 환급|900\*crR\)\+'만원(?![^;]*on:false)/.test(srcCode.replace(/Q\.refund=\{key:'refund',on:false[\s\S]*?\};/, '')), '세액공제 한도 · 공제율 · 환급액 · 「확정 수익」 0 — 「요건 충족 시」 만(2번 · 꺼 둔 물음 카드는 빼고)');
+  is(!/HC\.total|2,000만원 이하|5\.4억/.test(src) && /공단 모의계산/.test(src), '건보료 금액 추정 · 피부양자 요건 숫자 0 — 공단 모의계산으로');
+  const pen = await pg.evaluate(() => { const set = (k, v) => { const e = document.getElementById(k); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); };
+    set('f_np', ''); set('f_dc', ''); set('f_pp', '30'); const r0 = analyze(collect());
+    set('f_np', '140'); const r1 = analyze(collect()); set('f_np', ''); return { s0: r0.pensionSum, pp: r0.ppMonthly, s1: r1.pensionSum,
+      runPp: /d\.pp\*12\*0\.9/.test(runSim.toString()), fam: r0.f7[0].need, exp: r0.expenseTot, loan: r0.d.loanPay, debt: r0.d.debt, young: Math.min.apply(null, r0.d.kids.map((k) => k.age)) }; });
+  is(pen.s0 === 0 && pen.pp === 0 && pen.s1 === 140, '연금은 적힌 것만 — 국민연금 · 퇴직연금이 비면 0 · 개인연금 월납 30만은 받는 돈 0 · 국민연금 140 을 적으면 140');
+  is(!pen.runPp, '시뮬레이션이 개인연금 월납을 은퇴 뒤 수입으로 또 더하지 않는다(두 번 세기 0)');
+  const famWant = pen.debt + (pen.exp - pen.loan) * 12 * (25 - pen.young);
+  is(Math.round(pen.fam) === Math.round(famWant), '가족 생활자금 = 대출 ' + pen.debt + ' + 대출 뺀 생활비 ' + (pen.exp - pen.loan) + ' × 12 × 막내 독립까지 ' + (25 - pen.young) + '년 = ' + Math.round(famWant));
+  const K = T('WHAT WE KNOW');
+  is(/국민연금/.test(K) && /퇴직연금 적립액/.test(K) && /개인연금 쌓인 금액/.test(K) && /예적금/.test(K) && /실손보험/.test(K), '「가정 · 모름」 장 — 국민연금 · 퇴직연금 · 개인연금 · 예적금 · 실손을 몰라서 뺐다고');
+  is(/국민연금 받기 시작하는 나이/.test(K) && /65세로 가정/.test(K) && !/기대수명/.test(K), '「가정 · 모름」 장 — 비운 국민연금 개시는 「65세로 가정」 · 적어 준 기대수명은 가정이라 하지 않음');
+  is(S.findIndex((x) => x.eb === 'WHAT WE KNOW') > S.findIndex((x) => x.eb === 'CHOOSE') && S.findIndex((x) => x.eb === 'WHAT WE KNOW') < S.findIndex((x) => x.eb === 'PART 1'), '「가정 · 모름」 장은 숫자보다 앞(시작)');
+  is(/모름/.test(T('PREMIUM CHECK')) && !/미가입/.test(T('PREMIUM CHECK')), '실손이 비면 「모름」 — 미가입으로 읽지 않는다');
+  /* 국민연금이 비면 0 이 아니라 「모름」 — 「월 0만원 · 준비율 0%」 는 「한 푼도 없다」 로 들립니다(1번) */
+  const NP = T('NATIONAL PENSION'), PR = T('YOUR PRIORITY'), OP = T('ONE PAGE'), PD = T('PENSION DESIGN');
+  is(/국민연금 모름/.test(NP) && /월 부족액 \(최대\)/.test(NP) && !/소득대체율 0%|연금 준비율 0%/.test(NP), '국민연금 장 — 비면 「모름」 · 부족액은 「최대」 · 소득대체율 0% · 준비율 0% 를 적지 않음');
+  is(!/매달 얼마나 받으실 것 같으세요/.test(NP) && !/준비된 연금의 차이는 얼마일까요/.test(NP), '답을 모르는 물음(국민연금 얼마 · 연금 차이 얼마)은 세우지 않는다 — 「실제는 0만원」 을 맞혀 보게 하지 않음');
+  is(/공적연금 연 수령액 모름/.test(T('HEALTH INSURANCE COST')), '건보료 장 — 비운 국민연금을 「연 0만」 으로 적지 않는다');
+  is(/아직 몰라 뺐습니다/.test(PR) && !/다 합쳐도 월 0만원/.test(PR), '먼저 볼 것 장 — 「다 합쳐도 월 0만원」 대신 모르는 연금을 뺐다고 밝힘');
+  is(/국민연금·퇴직연금·개인연금 모름/.test(OP) && !/준비된 연금 월 0만원/.test(OP), '한 장 요약 — 준비된 연금에 모르는 것을 밝힘');
+  is(/모름 →/.test(PD) && /최대 월 [\d,]+만원/.test(PD), '연금 3층 — 모르는 층은 「모름 → 목표」 · 모르는 것을 0 으로 센 적립액은 「최대」');
+  const cmT = await pg.evaluate(() => [cm(-119960), cm(19960), cm(123456)].join('|'));
+  is(cmT === '-12억|2억|12억 3,500만', '억 넘김 — 9,960만이 「10,000만」 으로 안 찍힌다 (' + cmT + ')');
+  const req = await pg.evaluate(() => { const show = document.getElementById('show'); show.classList.remove('on'); const e = document.getElementById('f_age'); const was = e.value; e.value = '';
+    document.getElementById('start').click(); const on = show.classList.contains('on'); e.value = was; return on; });
+  is(req === false, '나이가 비면 자료를 짓지 않는다 (40세로 채우지 않음)');
 
   head('바. 「어디까지 보실까요」 · 오류');
   await pg.evaluate(() => { document.getElementById('start').click(); });

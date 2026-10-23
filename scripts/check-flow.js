@@ -37,6 +37,8 @@ const B = 'http://127.0.0.1:' + PORT;
   deck.on('pageerror', e => errs.push('상담자료: ' + e.message));
   await deck.goto(B + '/app/재무설계/상담자료.html', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await deck.waitForTimeout(2500);
+  /* 판 X183 — 칸에 박혀 있던 견본 값을 비웠습니다(1번). 견본은 「예시로 바로 보기」 와 같은 deckSample() 로 채웁니다 */
+  await deck.evaluate(() => { if (typeof deckSample === 'function') deckSample(); });
   await deck.fill('#f_name', '홍길동');
 
   is(await deck.locator('#sec1 .tofin').count() === 1, 'sec1 안에 「계산기에서 이어서」 버튼이 있다');
