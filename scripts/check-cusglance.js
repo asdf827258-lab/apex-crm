@@ -221,10 +221,12 @@ const CARD = () => {
      ★ DB 통합 CRM 카드는 이 한 장이 전부라 여섯이 그대로 섭니다(check-cuswin [10]). */
   const D = await p.evaluate(() => {
     const t = k => [].slice.call(document.querySelectorAll('#cusWin [data-cus-tab~="' + k + '"]')).map(e => e.textContent).join(' ');
-    return { info: t('info'), pol: t('pol'), talk: t('talk'), doc: t('doc') };
+    return { info: t('info'), cov: t('cov'), talk: t('talk'), doc: t('doc') };
   });
-  [['사람', 'info', /연락처/], ['가족', 'info', /가족/], ['돈', 'info', /월 소득/], ['계약', 'pol', /가입한 보험/],
-   ['연락기록', 'talk', /접촉 기록|통화 기록/], ['문서', 'doc', /저장된 상담 자료/]].forEach(([k, tab, re]) =>
+  /* ★ 새 판 (2026-10-23 「탭 다섯으로」) — 계약은 <b>보장</b> 탭, 연락 기록은 「🧵 한 줄기」,
+     서류는 「📎 서류」 + 「🗂️ 저장한 상담자료」 한 카드입니다. 여섯 칸이 <b>제 탭에 있다</b>는 묻는 것은 그대로. */
+  [['사람', 'info', /연락처/], ['가족', 'info', /가족/], ['돈', 'info', /월 소득/], ['계약', 'cov', /가입한 보험/],
+   ['연락기록', 'talk', /한 줄기/], ['문서', 'doc', /저장한 상담자료/]].forEach(([k, tab, re]) =>
     is(re.test(D[tab] || ''), '  <b>' + k + '</b> 칸이 그대로 있다 — ' + tab + ' 탭'));
 
   console.log('\n[6] ★ <b>새 CSS·새 class 를 안 만들었다</b> (사장님 계약)');

@@ -248,8 +248,8 @@ window.supabase={createClient:function(){
        저장하면 바로 화면에 뜨는가.                                       */
     /* ★ 판 X122 — 쌓인 줄은 .cm-nxrow 로 섭니다(여태 .t-note 한 줄).
        묻는 것은 그대로입니다 — <b>저장하면 바로 화면에 뜨는가</b>. */
-    shown: [].slice.call(document.querySelectorAll('#cmPanels .cm-nxrow, #cmPanels .t-note'))
-             .filter(e => /▶/.test(e.textContent)).map(e => e.textContent).join(' | ')
+    /* ★ 새 판 (2026-10-23) — 쌓인 할 일은 연락 탭 「📌 다음 할 일」(#cuwNext) 한 곳에 섭니다 */
+    shown: [].slice.call(document.querySelectorAll('#cuwNext .t-row')).map(e => e.textContent).join(' | ')
   }));
   ok(nx.saved.length === 1 && nx.saved[0].client_id === 'c1', '다음 할 일이 서버에 저장된다');
   /* ★ 판 X122 — 다음 할 일은 <b>쌓입니다</b>(content.nx 배열). 옛 한 칸도 같이 봅니다 (1번) */
@@ -283,8 +283,9 @@ window.supabase={createClient:function(){
   await page.waitForTimeout(500);
   const tc = await page.evaluate(() => ({
     /* 2026-09-27 · 판 ⑦ — .cm-ti → .t-ev · .cm-tp → 「마지막 접촉」 이 든 .t-tag */
-    n: document.querySelectorAll('#cmPanels .t-ev').length,
-    temp: ([].slice.call(document.querySelectorAll('#cmPanels .t-tag'))
+    /* ★ 새 판 (2026-10-23) — 접촉은 연락 탭 「🧵 한 줄기」(#cuwTl) 한 곳에 섭니다 */
+    n: [].slice.call(document.querySelectorAll('#cuwTl .t-row')).filter(e => /치료비 통장 설명함/.test(e.textContent)).length,
+    temp: ([].slice.call(document.querySelectorAll('#cuwTl .t-tag'))
              .filter(e => /마지막 접촉/.test(e.textContent))[0] || {}).textContent || '',
     srv: (window.__saved.filter(x => x.kind === 'client_meta' && x.client_id === 'c1')[0] || {}).content
   }));

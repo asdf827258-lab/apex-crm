@@ -356,7 +356,10 @@
     var away = v.elsewhere || null;     /* 이 화면에서 안 읽는 값에 적을 말 */
     var d = v.nextAppt ? cusDays(v.nextAppt) : null;
 
-    h += '<div class="cus-card"><div class="cus-hd">' +
+    /* v.noHead — 고객 창 새 판은 머리(이름·담당·약속)를 창 맨 위에 한 번만 세웁니다.
+       같은 말을 카드 머리에 또 적으면 한 화면에 두 번 섭니다 (2026-10-23 「중복 되는 부분들을 하나로」). */
+    if (v.noHead) h += '<div class="cus-card"><div class="cus-body">';
+    else h += '<div class="cus-card"><div class="cus-hd">' +
       '<div class="cus-nm">' + cusEsc(v.name || '이름 없음') +
         '<span class="cus-tag' + (v.real ? ' real' : '') + '">' +
           cusEsc(v.tag || (v.real ? '실명 · 이 기기에만' : '서버에는 가린 이름')) + '</span>' +

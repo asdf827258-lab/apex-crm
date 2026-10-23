@@ -88,8 +88,21 @@ const WANT = [
 
     const out = { seen: [], six: {}, html: '', stageOf: '' };
 
-    /* 창을 엽니다 */
+    /* ★ 새 판 (2026-10-23) — 고객 번호가 있는 분은 cshOpen 이 <b>고객 창 연락 탭</b>을 엽니다.
+       빠른 창 그 자체는 cshSheetOpen 이 엽니다(아직 고객 번호가 없는 배정 줄 · 명단에 없는 분).
+       아래는 그 창을 잽니다 — 그 창이 남아 있는 한 세 층·여섯 칸이 서야 합니다. */
+    let went = null;
+    window.cusGo = (function (real) { return function (o) { went = o; }; })(window.cusGo);
     cshOpen('c1');
+    out.toWin = went ? (went.cli + '|' + went.tab) : '';
+    went = null; cshOpen('', 'd1');
+    out.dbToWin = went ? (went.cli + '|' + went.tab) : '';
+    went = null;
+    AR.db.push({ id: 'd9', who: me, name: '홍말순', stage: '미접촉', client_id: '' });
+    cshOpen('', 'd9');
+    out.d9Sheet = !!document.getElementById('cshSheet') && !went;
+    cshClose(); AR.db.pop();
+    cshSheetOpen('c1');
     out.html = (document.getElementById('cshHost') || {}).innerHTML || '';
 
     /* 고칠 수 있는 칸 여섯 */
@@ -138,6 +151,10 @@ const WANT = [
     return out;
   }, WANT);
 
+  console.log('\n[0] 고객 번호가 있는 분은 고객 창 연락 탭이 열린다 (새 판 2026-10-23 「추천대로」)');
+  is(R.toWin === 'c1|talk', '  📞 cshOpen(고객) → 고객 창 · 연락 탭 — ' + (R.toWin || '안 감'));
+  is(R.dbToWin === 'c1|talk', '  이어진 배정 줄에서 눌러도 그 고객 창 · 연락 탭 — ' + (R.dbToWin || '안 감'));
+  is(R.d9Sheet, '  아직 고객 번호가 없는 배정 줄은 여태 창이 그대로 선다 — 열 고객 창이 없습니다');
   console.log('\n[1] 창에서 고칠 수 있는 칸이 여섯이다');
   const 여섯 = [['cshStage', '단계'], ['cmCare', '요즘 상황'], ['cmWorry', '첫 문장에 붙일 말'],
                 ['cmFam', '가족'], ['cmNextWhat', '다음에 할 것'], ['cmTouchNote', '들은 말']];
@@ -203,7 +220,7 @@ const WANT = [
      '  t- 이름 ' + names.length + '개가 전부 ui.css 에 있다 — ' + names.join(' · ') +
      (없는것.length ? '\n      ✗ 없는 이름: ' + 없는것.join(' · ') : ''));
   const H = await page.evaluate(() => {
-    cshOpen('c1');
+    cshSheetOpen('c1');
     const sh = document.getElementById('cshSheet');
     const out = [].slice.call(sh ? sh.querySelectorAll('button') : [])
       .map(b => Math.round(b.getBoundingClientRect().height));

@@ -179,7 +179,9 @@ const SEED = () => {
   const R5c = await p.evaluate(() => { go('clients'); OSC.view = 'list'; cusGo({ cli: 'c2' }); const f = CUS_WIN.from; osBackToList(); return { f: f, v: OSC.view, t: currentTab() }; });
   is(R5c.f === '' && R5c.v === 'list' && R5c.t === 'clients', '  명단에서 열면 명단으로 — ' + JSON.stringify(R5c));
 
-  console.log('\n[6] 탭 여섯 — 고른 탭의 칸만 · <b>칸은 하나도 안 사라졌다</b>');
+  /* ★ 새 판 (2026-10-23 「탭 다섯으로」) — 계약·청구가 <b>보장</b> 한 탭이 됐습니다. 고치는 칸은
+     탭이 아니라 <b>시트</b>(data-cus-tab="sh-…")에 섭니다 — 탭 어디에도 안 섭니다. */
+  console.log('\n[6] 탭 다섯 — 고른 탭의 칸만 · <b>칸은 하나도 안 사라졌다</b>');
   await p.evaluate(() => cusGo({ cli: 'c1' }));
   await p.waitForTimeout(1200);
   const R6 = await p.evaluate(() => {
@@ -194,15 +196,23 @@ const SEED = () => {
     o.ids = ['oscTopBar', 'cusCard', 'cmPanels', 'cliPhone', 'cliIncome', 'oscBaHost', 'oscPolHost', 'oscOld', 'oscReps', 'oscDocs', 'cmRrnIn']
       .filter(k => !document.getElementById(k));
     o.loose = [].slice.call(document.querySelectorAll('#cusWin > *')).filter(e =>
-      !e.hasAttribute('data-cus-tab') && !e.classList.contains('osc-detail-back') && !e.classList.contains('cus-head') && e.id !== 'cmPanels')
+      !e.hasAttribute('data-cus-tab') && !e.classList.contains('osc-detail-back') && !e.classList.contains('cus-head') && !e.classList.contains('cuw-shd') && e.id !== 'cmPanels')
       .map(e => e.className || e.tagName);
     /* #cmPanels 안의 칸들도 하나하나 탭에 담겼나 — 안 담긴 칸은 <b>모든 탭</b>에 떠 있습니다 */
     const cp = document.getElementById('cmPanels');
     [].slice.call(cp ? cp.children : []).forEach(e => { if (!e.hasAttribute('data-cus-tab')) o.loose.push('cmPanels>' + (((e.querySelector('.t-lab') || e).textContent || '').trim().slice(0, 12))); });
-    cusTab('glance');
+    cusTab('sum');
+    /* 옛 이름으로 불러도 새 탭으로 받는다 — 부르는 쪽을 다 안 고쳐도 됩니다 */
+    o.old = ['glance', 'pol', 'clm'].map(k => { cusTab(k); return CUS_WIN.tab; }).join(',');
+    /* 시트 칸은 탭 어디에서도 안 보인다 */
+    o.shVis = 0;
+    CUS_TABS.forEach(t => { cusTab(t[0]); o.shVis += [].slice.call(document.querySelectorAll('#cusWin [data-cus-tab^="sh-"]')).filter(e => e.offsetParent !== null).length; });
+    cusTab('sum');
     return o;
   });
-  is(R6.tabs.join(',') === 'glance,talk,pol,clm,doc,info', '  탭 여섯 — ' + R6.tabs.join(' · '));
+  is(R6.tabs.join(',') === 'sum,talk,cov,doc,info', '  탭 다섯 — ' + R6.tabs.join(' · '));
+  is(R6.old === 'sum,cov,cov', '  옛 이름(glance · pol · clm)으로 불러도 새 탭이 열린다 — ' + R6.old);
+  is(R6.shVis === 0, '  고치는 칸(시트)은 탭 어디에도 안 선다 — 보인 것 ' + R6.shVis);
   Object.keys(R6.per).forEach(k => is(R6.per[k] > 0 && R6.wrong[k] === 0,
      '  ' + k + ' — 칸 ' + R6.per[k] + '개 · 다른 탭 칸 ' + R6.wrong[k]));
   is(!R6.ids.length, '  예전 칸이 <b>다 있다</b>(감췄을 뿐) — 빠진 것 ' + (R6.ids.join(', ') || '없음'));
@@ -262,12 +272,14 @@ const SEED = () => {
     o.secs = card ? [].slice.call(card.querySelectorAll('.cus-st')).map(x => x.textContent.trim().split(' ')[0]) : ['(카드 없음)'];
     o.cqa = [].slice.call(document.querySelectorAll('#cusWin [data-cus-tab]')).filter(e => e.querySelector('#cqaCard')).map(e => e.getAttribute('data-cus-tab'));
     o.note = [].slice.call(document.querySelectorAll('#cusWin [data-cus-tab]')).filter(e => /적어 두기/.test((e.querySelector('.t-lab') || {}).textContent || '')).map(e => e.getAttribute('data-cus-tab'));
-    const lg = document.getElementById('cusLogCard');
-    o.logTxt = lg ? lg.textContent : '';
+    /* 연락 기록은 <b>한 줄기</b>(cuwTl) 한 곳 — 접촉 「생일 축하」 가 창 전체에 한 번만 */
+    const w = document.getElementById('cusWin');
+    o.bday = ((w ? w.textContent : '').match(/생일 축하/g) || []).length;
+    o.tl = !!document.getElementById('cuwTl') && !document.getElementById('cusLogCard');
     const first = k => { cusTab(k); const v = [].slice.call(document.querySelectorAll('#cusWin [data-cus-tab]')).filter(e => e.offsetParent !== null)
       .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)[0]; return v ? ((v.querySelector('.t-lab,.cus-nm') || v).textContent || '').trim().slice(0, 12) : ''; };
-    o.f = { glance: first('glance'), info: first('info') };
-    cusTab('glance');
+    o.f = { glance: first('sum'), info: first('info') };
+    cusTab('sum');
     o.names = [].slice.call(document.querySelectorAll('#cusWin .t-h1')).length;
     /* CRM 은 이 한 장이 전부라 <b>그대로</b> 다 서야 합니다 */
     const full = document.createElement('div'); full.innerHTML = cusCardHtml(cusAppView(OSC.current));
@@ -276,16 +288,60 @@ const SEED = () => {
     return o;
   });
   is(R10.secs.length === 0, '  한눈에 카드에 사람·가족·돈·계약·문서가 <b>또 안 선다</b>(제 탭에 있습니다) — ' + (R10.secs.join(' · ') || '없음'));
-  is(R10.cqa.join(',') === 'glance', '  「한 가지만 여쭙니다」 는 <b>한눈에에만</b> — ' + R10.cqa.join(','));
-  is(R10.note.join(',') === 'talk', '  📝 적어 두기는 🤝 관계와 같은 <b>연락</b> 탭에 — ' + R10.note.join(','));
-  is(/CRM 통화 기록/.test(R10.logTxt) && !/생일 축하/.test(R10.logTxt),
-     '  연락 탭 아래 칸은 <b>CRM 통화만</b> — 접촉(생일 축하)은 위 🤝 관계에 한 번만 섭니다');
-  is(/한눈에|홍/.test(R10.f.glance) && /고객 정보/.test(R10.f.info),
-     '  탭 맨 위 — 한눈에: 「' + R10.f.glance + '」 · 정보: 「' + R10.f.info + '」');
+  is(R10.cqa.join(',') === 'sum', '  「한 가지만 여쭙니다」 는 <b>요약에만</b> — ' + R10.cqa.join(','));
+  is(R10.note.join(',') === 'sh-story', '  📝 이야기 고치는 칸은 <b>시트 한 곳</b>(보기는 요약·정보) — ' + R10.note.join(','));
+  is(R10.tl && R10.bday === 1,
+     '  연락 기록은 <b>한 줄기</b> 한 곳 — 접촉(생일 축하)이 창 전체에 ' + R10.bday + '번');
+  is(/여쭙|한눈에|지금/.test(R10.f.glance) && /사람/.test(R10.f.info),
+     '  탭 맨 위 — 요약: 「' + R10.f.glance + '」 · 정보: 「' + R10.f.info + '」');
   is(R10.names === 0, '  큰 이름(t-h1)을 또 안 세운다 — 머리 줄에 있습니다');
   is(R10.full.length >= 6, '  ★ CRM 카드(전부)는 그대로 — ' + R10.full.join(' · '));
   is(/#cusWin \.t-card\{padding:14px/.test(R10.css) && !/font-size:1[0-2](\.\d+)?px/.test(R10.css),
      '  촘촘한 옷은 #cusWin 안에서만 · 글자를 13px 아래로 안 내린다');
+
+  console.log('\n[11] 🪪 새 판 머리 · 지금 할 일 · 고치는 시트 (2026-10-23 「탭 다섯으로 하고 추천대로 새 판 만들어」)');
+  await p.evaluate(() => { go('home'); cusGo({ cli: 'c1' }); });
+  await p.waitForTimeout(900);
+  const R11 = await p.evaluate(() => {
+    const o = {}, c = OSC.current;
+    const top = document.getElementById('oscTopBar');
+    o.stg = document.querySelectorAll('#cusWin .cuw-stg').length;
+    o.meta = ((top && top.querySelector('.cuw-meta')) || {}).textContent || '';
+    o.tel = !!(top && top.querySelector('a[href^="tel:"]'));
+    o.acts = top ? top.textContent : '';
+    /* 지금 할 일 — 차례는 오늘 약속 → 기한 지난 할 일 → 물음 하나 */
+    const keep = { db: CUS.db, m: CM.meta.c1 };
+    const t = cuwToday();
+    CUS.db = Object.assign({}, CUS.db || {}, { next_appt: t + 'T14:00:00+09:00' });
+    CM.meta.c1 = Object.assign({}, keep.m || {}, { next: { what: '만기 안내', due: '2000-01-01' } });
+    o.n1 = cuwNowHtml(c);
+    CUS.db = Object.assign({}, CUS.db, { next_appt: '' });
+    o.n2 = cuwNowHtml(c);
+    CM.meta.c1 = Object.assign({}, keep.m || {}, { next: null, nx: [] });
+    o.n3 = cuwNowHtml(c);
+    CUS.db = keep.db; CM.meta.c1 = keep.m;
+    /* 시트 — 열면 탭 띠가 걷히고 그 칸만, 탭을 누르면 닫힌다 */
+    cuwSheet('base');
+    const tabs = document.getElementById('cusTabs');
+    o.shTabs = tabs ? tabs.offsetParent !== null : null;
+    o.shPhone = !!(document.getElementById('cliPhone') && document.getElementById('cliPhone').offsetParent !== null);
+    o.shOther = [].slice.call(document.querySelectorAll('#cusWin [data-cus-tab]')).filter(e => e.offsetParent !== null && e.getAttribute('data-cus-tab') !== 'sh-base').length;
+    cusTab('talk');
+    o.closed = document.getElementById('cusWin').getAttribute('data-sheet') === '';
+    cuwSheet('nope');
+    o.bad = document.getElementById('cusWin').getAttribute('data-sheet');
+    cusTab('sum');
+    return o;
+  });
+  is(R11.stg === 1, '  단계는 머리의 <b>딱지 하나</b> — ' + R11.stg + '곳');
+  is(/모름/.test(R11.meta), '  모르는 것은 「모름」 이라 적는다 (1번) — ' + R11.meta.replace(/\s+/g, ' ').slice(0, 60));
+  is(!R11.tel && /번호 넣기/.test(R11.acts), '  번호가 없으면 전화 단추 대신 「📞 번호 넣기」 — 빈 tel: 을 안 건다');
+  is(/오늘 약속/.test(R11.n1) && R11.n1.indexOf('기한 지남') < 0, '  ① 오늘 약속이 있으면 그것이 먼저');
+  is(/기한 지남/.test(R11.n2) && /만기 안내/.test(R11.n2), '  ② 약속이 없으면 기한 지난 할 일');
+  is(!/cuw-now/.test(R11.n3), '  ③ 둘 다 없으면 「지금 할 일」 칸을 안 세우고 물음 하나로');
+  is(R11.shTabs === false && R11.shPhone && R11.shOther === 0, '  시트를 열면 탭 띠가 걷히고 <b>그 칸만</b> 선다 (번호 칸 보임 · 다른 칸 ' + R11.shOther + ')');
+  is(R11.closed, '  탭을 누르면 시트가 닫힌다');
+  is(R11.bad === '', '  없는 시트 이름은 안 연다 — 빈 화면이 안 선다');
 
   console.log('\n[9] 인쇄에는 다 나온다 · 조용히 터진 곳이 없다');
   const css = await p.evaluate(() => (document.getElementById('cusWinCss') || {}).textContent || '');
