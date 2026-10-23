@@ -1,0 +1,970 @@
+<!doctype html>
+<html data-theme="light" lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>B·C·D 영업 강의 · APEX</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<!-- ══ 🎤 <b>B·C·D 영업 강의 — 선택이 증명이 되는 시간</b> (판 X175 · 2026-10-23) ══════════════
+     사장님 말씀 — 「인생은 b와 d 그리고 가운데 c 에 의미 · 리더로써의 실패 · 선택의 과정중에서는
+     실패지만 결과를 냈다면 증명이다 · 증명의 시간이 쌓여가면서 나의 자존감의 상승 · 과감하게 도전하는
+     부분에서의 성공 자립심 · 영업인으로써 보험으로써 이걸 풀어내면서 왜 선택을 잘해야 하나 · 영업에서의
+     선택은 무엇인가 · 고객의 삶을 이해하는 것으로 전환 · 태어나고 죽는것 그 과정을 이해하는 과제로
+     재무설계와 상담 고객의 팩트파인딩 · 고객님의 수많은 선택에서 날 선택할수 있는 자료 · 타임라인 내가
+     힘들었던 과정들은 내가 입력할수 있도록 · 마음을 울리는 영업 강의자료 · 4시간 가량」.
+
+     ★ 강사님 이야기는 <b>지어 넣지 않습니다</b> (1번). 이야기 칸 · 타임라인은 비어서 오고, 비어 있는
+       장은 발표에서 건너뛰며 무엇을 적어야 하는지 「내 이야기」 에서 말합니다.
+     ★ 적은 것은 <b>이 브라우저(localStorage)에만</b> 남습니다. 서버를 부르지 않습니다 (7번).
+       다른 기기로 옮길 때는 「백업 저장 → 백업 불러오기」 (파일) 로 옮깁니다.
+     ★ 세금 · 보험료 · 한도 숫자는 적지 않습니다 — 「요건 충족 시」 · 「심사 결과에 따릅니다」 (2번).
+       통계도 지어 쓰지 않습니다 (9번). 견본 고객은 홍길동 (3번).
+     ★ 4시간(240분)은 SECTIONS 의 min 한 곳에서만 셉니다 — 진행표 · 발표 시계 · 인쇄가 모두 그것을 읽습니다 (5번).
+     ★ 타임라인의 곡선 · 증명의 계단 · 사건 장은 모두 S.tl 한 벌에서 그립니다 — 따로 세지 않습니다 (5번).
+     점검 : scripts/check-bcdlec.js -->
+<style>
+/* 폰이 다크여도 흰색 고정 — 앱의 다른 화면과 같게 (check-lightmode) */
+:root{color-scheme:light}
+:root{
+  --bg:#F4F5F7; --card:#fff; --ink:#191F28; --sub:#4E5968; --mute:#8B95A1; --line:#EBEDF0;
+  --blue:#3182F6; --blue-s:#EDF4FF; --heart:#F04452; --heart-s:#FFF0F1;
+  --green:#03B26C; --green-s:#E8F8F1; --gold:#E9A23B; --gold-s:#FFF6E6;
+  --night:#0E1525; --night2:#18233A; --dawn:#F6C76B; --fail:#FF7A85; --proof:#6FB3FF;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:"Pretendard Variable",Pretendard,-apple-system,"Malgun Gothic",sans-serif;font-size:15px;line-height:1.6;word-break:keep-all;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+
+/* ---------- 위 띠 ---------- */
+.top{position:sticky;top:0;z-index:30;background:var(--card);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.top .mk{width:34px;height:34px;border-radius:10px;background:var(--night);color:var(--dawn);display:grid;place-items:center;font-weight:900;font-size:12px;letter-spacing:-.5px;flex:none}
+.top .bt{font-weight:800;font-size:15px;letter-spacing:-.3px;margin-right:auto;line-height:1.25}
+.top .bt small{display:block;font-weight:500;font-size:12px;color:var(--mute)}
+#nav{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+#nav::-webkit-scrollbar{display:none}
+#nav button{flex:none;padding:7px 13px;border-radius:999px;font-weight:700;font-size:14px;color:var(--sub)}
+#nav button.on{background:var(--ink);color:#fff}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 16px 80px}
+.page{display:none}.page.on{display:block}
+.ph{margin-bottom:18px}
+.ph h1{font-size:22px;letter-spacing:-.5px}
+.ph p{color:var(--sub);margin-top:4px}
+.card{background:var(--card);border-radius:18px;padding:20px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.card h2{font-size:17px;letter-spacing:-.3px;margin-bottom:8px}
+.hint{font-size:13px;color:var(--mute)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:12px;background:var(--bg);font-weight:700;font-size:14px;color:var(--sub)}
+.btn:hover{background:#E9ECEF}
+.btn.pri{background:var(--blue);color:#fff}
+.btn.pri:hover{background:#1B64DA}
+.btn.red{background:var(--heart-s);color:var(--heart)}
+.btn.sm{padding:6px 10px;font-size:13px;border-radius:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.warn{background:var(--gold-s);color:#8A5A12;border-radius:14px;padding:12px 14px;font-size:14px;margin-bottom:14px}
+.warn b{color:#6E440A}
+
+/* ---------- 발표 ---------- */
+.deckbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.deckbar .where{font-weight:800;font-size:14px;margin-right:auto}
+.deckbar .where small{font-weight:600;color:var(--mute);margin-left:6px}
+.clock{font-size:13px;color:var(--sub);background:var(--card);border-radius:10px;padding:6px 10px}
+.clock b{color:var(--ink)}
+.clock.over b{color:var(--heart)}
+#stageBox{position:relative;background:#000;border-radius:16px;overflow:hidden}
+#stageBox:fullscreen{border-radius:0;display:grid;place-items:center}
+#stageBox:fullscreen .stage{width:min(100vw,177.78vh)}
+.stage{container-type:inline-size;width:100%;aspect-ratio:16/9;position:relative;overflow:hidden;color:#fff;background:radial-gradient(120% 90% at 15% 0%,#22325A 0%,var(--night) 55%,#070B14 100%)}
+.stage .sl{position:absolute;inset:0;padding:5.5cqw 7cqw;display:flex;flex-direction:column;justify-content:center}
+.stage .tag{font-size:1.45cqw;font-weight:800;letter-spacing:.2cqw;color:var(--dawn);text-transform:uppercase;margin-bottom:1.6cqw}
+.stage h2{font-size:4.2cqw;line-height:1.22;letter-spacing:-.15cqw;font-weight:800}
+.stage h2 em{font-style:normal;color:var(--dawn)}
+.stage .lead{font-size:2.05cqw;line-height:1.55;color:#C9D3E6;margin-top:2cqw;max-width:80cqw}
+.stage .lead b{color:#fff}
+.stage ul{list-style:none;margin-top:2.4cqw;display:grid;gap:1.25cqw}
+.stage li{font-size:2.05cqw;line-height:1.45;padding-left:3cqw;position:relative;color:#E3E9F4}
+.stage li::before{content:"";position:absolute;left:.4cqw;top:.85cqw;width:1.1cqw;height:1.1cqw;border-radius:50%;background:var(--dawn)}
+.stage li b{color:#fff}
+.stage li small{display:block;color:#93A1BC;font-size:1.6cqw}
+.stage .big h2{font-size:5.4cqw}
+.stage .num{position:absolute;right:2.2cqw;bottom:1.6cqw;font-size:1.2cqw;color:#5C6B88}
+.stage .pt{position:absolute;left:2.2cqw;bottom:1.6cqw;font-size:1.2cqw;color:#5C6B88}
+.stage .cover{text-align:left}
+.stage .cover .bcd{display:flex;align-items:baseline;gap:2.4cqw;font-weight:900;font-size:13cqw;line-height:1;letter-spacing:-.4cqw}
+.stage .cover .bcd .b,.stage .cover .bcd .d{color:#3A4A6A}
+.stage .cover .bcd .c{color:var(--dawn);font-size:16cqw}
+.stage .cover .bcd .ln{flex:1;height:.25cqw;background:linear-gradient(90deg,#3A4A6A,var(--dawn),#3A4A6A);align-self:center}
+.stage .cover h2{margin-top:2.6cqw}
+.stage .cover .who{margin-top:2.6cqw;font-size:1.9cqw;color:#C9D3E6}
+.stage .story-t{font-size:1.6cqw;color:#93A1BC;margin-top:1cqw}
+.stage .story{font-size:2.6cqw;line-height:1.55;margin-top:2cqw;white-space:pre-wrap;color:#F2F5FA;max-height:34cqw;overflow:hidden}
+.stage .cols{display:grid;grid-template-columns:1fr 1fr;gap:3cqw;margin-top:2.4cqw}
+.stage .box{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);border-radius:1.6cqw;padding:2cqw 2.2cqw}
+.stage .box .k{font-size:1.35cqw;font-weight:800;color:#93A1BC;letter-spacing:.1cqw}
+.stage .box .v{font-size:1.95cqw;line-height:1.5;margin-top:.6cqw;white-space:pre-wrap}
+.stage .box.fail{border-color:rgba(255,122,133,.45)}
+.stage .box.fail .k{color:var(--fail)}
+.stage .box.proof{border-color:rgba(111,179,255,.5)}
+.stage .box.proof .k{color:var(--proof)}
+.stage .badge{display:inline-block;font-size:1.5cqw;font-weight:800;border-radius:99cqw;padding:.4cqw 1.4cqw;margin-left:1cqw;vertical-align:middle}
+.stage .badge.fail{background:rgba(255,122,133,.18);color:var(--fail)}
+.stage .badge.proof{background:rgba(111,179,255,.18);color:var(--proof)}
+.stage .badge.ing{background:rgba(246,199,107,.16);color:var(--dawn)}
+.stage .meter{display:flex;gap:.35cqw;margin-top:.8cqw}
+.stage .meter i{flex:1;height:.9cqw;border-radius:.3cqw;background:rgba(255,255,255,.08)}
+.stage .meter i.n{background:var(--fail)}
+.stage .meter i.p{background:var(--proof)}
+.stage svg{width:100%;height:auto;margin-top:1.2cqw;overflow:visible}
+.stage .work{display:flex;gap:3cqw;align-items:center;margin-top:2.6cqw}
+.stage .tmr{font-size:7cqw;font-weight:900;letter-spacing:-.2cqw;color:var(--dawn);min-width:22cqw}
+.stage .tmr.done{color:var(--fail)}
+.stage .tmrb{font-size:1.7cqw;font-weight:800;background:var(--dawn);color:var(--night);border-radius:1.2cqw;padding:1cqw 2cqw}
+.stage .steps{list-style:none;counter-reset:s;display:grid;gap:1cqw;margin-top:2cqw}
+.stage .steps li{counter-increment:s;padding-left:4.2cqw}
+.stage .steps li::before{content:counter(s);background:none;color:var(--dawn);font-weight:900;font-size:2.05cqw;top:0;left:.4cqw;width:auto;height:auto}
+.stage table{width:100%;border-collapse:collapse;margin-top:2cqw;font-size:1.75cqw}
+.stage th,.stage td{text-align:left;padding:1cqw 1.4cqw;border-bottom:1px solid rgba(255,255,255,.09);vertical-align:top}
+.stage th{color:#93A1BC;font-weight:800;font-size:1.45cqw}
+.stage td b{color:var(--dawn)}
+.stage .life{display:grid;grid-template-columns:repeat(11,1fr);gap:.6cqw;margin-top:2.6cqw}
+.stage .life>div{background:rgba(255,255,255,.05);border-radius:1cqw;padding:1.2cqw .7cqw;text-align:center;border-top:.35cqw solid #3A4A6A}
+.stage .life>div.end{border-top-color:var(--dawn)}
+.stage .life .e{font-size:2.6cqw;line-height:1}
+.stage .life .n{font-size:1.4cqw;font-weight:800;margin-top:.8cqw}
+.stage .life .c{font-size:1.12cqw;color:#93A1BC;line-height:1.35;margin-top:.5cqw}
+.stage .stairs{display:flex;align-items:flex-end;gap:.8cqw;height:24cqw;margin-top:2cqw}
+.stage .stairs div{flex:1;background:linear-gradient(180deg,rgba(111,179,255,.55),rgba(111,179,255,.15));border-radius:1cqw 1cqw 0 0;padding:1cqw;font-size:1.3cqw;line-height:1.35;display:flex;flex-direction:column;justify-content:flex-start}
+.stage .stairs div b{font-size:1.2cqw;color:var(--proof)}
+.stage .sl.dense{padding-top:3.6cqw;padding-bottom:4cqw}
+.stage .sl.dense h2{font-size:3.2cqw}
+.stage .sl.dense table{font-size:1.42cqw;margin-top:1.4cqw}
+.stage .sl.dense th,.stage .sl.dense td{padding:.62cqw 1cqw}
+.stage .q{font-size:2.6cqw;font-weight:800;line-height:1.4;margin-top:2.4cqw;color:var(--dawn)}
+.deckctl{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:10px;flex-wrap:wrap}
+.deckctl .btn{min-width:46px;justify-content:center}
+#notes{background:var(--card);border-radius:16px;padding:16px 18px;margin-top:12px;display:none}
+#notes.on{display:block}
+#notes .nt{font-size:12.5px;font-weight:800;color:var(--mute);margin-bottom:6px}
+#notes .say{font-size:15.5px;line-height:1.75;white-space:pre-wrap}
+#notes .ask{margin-top:10px;background:var(--blue-s);color:#174EA6;border-radius:12px;padding:10px 12px;font-size:14.5px}
+#thumbs{display:flex;gap:6px;overflow-x:auto;margin-top:12px;padding-bottom:4px}
+#thumbs button{flex:none;font-size:12px;padding:5px 9px;border-radius:9px;background:var(--card);color:var(--sub);white-space:nowrap}
+#thumbs button.on{background:var(--ink);color:#fff}
+#thumbs button.pt0{margin-left:10px}
+
+/* ---------- 내 이야기 ---------- */
+.fld{margin-top:12px}
+.fld label{display:block;font-weight:800;font-size:14.5px}
+.fld .pq{font-size:13px;color:var(--mute);margin:2px 0 6px}
+.fld input,.fld textarea,.fld select{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#FAFBFC;font-size:15px}
+.fld textarea{min-height:96px;resize:vertical;line-height:1.6}
+.fld input:focus,.fld textarea:focus,.fld select:focus{outline:2px solid var(--blue-s);border-color:var(--blue);background:#fff}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g4{display:grid;grid-template-columns:110px 1fr 120px 130px;gap:10px}
+@media(max-width:720px){.g2,.g4{grid-template-columns:1fr}}
+.st{display:inline-block;font-size:12px;font-weight:800;border-radius:99px;padding:2px 9px;margin-left:6px;vertical-align:1px}
+.st.ok{background:var(--green-s);color:var(--green)}
+.st.no{background:var(--heart-s);color:var(--heart)}
+.ev{border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:12px;background:#fff}
+.ev .eh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ev .eh b{margin-right:auto}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chips button{font-size:13px;padding:6px 11px;border-radius:99px;background:var(--blue-s);color:var(--blue);font-weight:700}
+
+/* ---------- 진행표 ---------- */
+table.plan{width:100%;border-collapse:collapse;font-size:14.5px}
+table.plan th,table.plan td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+table.plan th{font-size:12.5px;color:var(--mute)}
+table.plan tr.brk td{color:var(--mute);background:#FAFBFC}
+table.plan td.t{white-space:nowrap;font-weight:800}
+table.plan td.m{white-space:nowrap}
+table.plan tfoot td{font-weight:800}
+
+/* ---------- 워크북 · 인쇄 ---------- */
+.wb{background:#fff;border-radius:18px;padding:26px;margin-bottom:14px}
+.wb h3{font-size:18px;letter-spacing:-.3px}
+.wb .wl{font-size:13px;color:var(--mute);margin-bottom:12px}
+.wb .lines div{border-bottom:1px solid #D9DDE3;height:32px}
+.wb table{width:100%;border-collapse:collapse;margin-top:8px}
+.wb th,.wb td{border:1px solid #D9DDE3;padding:8px;text-align:left;font-size:13.5px;vertical-align:top}
+.wb th{background:#F7F8FA;font-weight:800}
+.wb td{height:44px}
+.wb .grid{position:relative;height:230px;border:1px solid #D9DDE3;border-radius:10px;margin-top:8px;background:
+  linear-gradient(#fff 49.6%,#9AA3AE 49.6%,#9AA3AE 50.4%,#fff 50.4%)}
+.wb .grid span{position:absolute;left:8px;font-size:12px;color:#8B95A1}
+.wb .q2{margin-top:10px;font-weight:700;font-size:14.5px}
+.script .sc{border-top:1px solid var(--line);padding:12px 0}
+.script .sc .h{font-weight:800}
+.script .sc .h small{color:var(--mute);font-weight:600;margin-left:6px}
+.script .sc .b{white-space:pre-wrap;font-size:14px;color:var(--sub);margin-top:4px}
+.script .sc .n{white-space:pre-wrap;font-size:14px;margin-top:6px;background:#FAFBFC;border-radius:10px;padding:8px 10px}
+#printArea{display:none}
+@media print{
+  @page{size:A4;margin:14mm}
+  body{background:#fff}
+  .top,.wrap{display:none!important}
+  #printArea{display:block}
+  .wb{border-radius:0;padding:0;margin:0 0 10mm;page-break-after:always;break-after:page}
+  .wb:last-child{page-break-after:auto;break-after:auto}
+  .script .sc{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="mk">BCD</div>
+  <div class="bt">B · C · D 영업 강의<small>선택이 증명이 되는 시간 · 4시간</small></div>
+  <nav id="nav">
+    <button data-p="deck" class="on">🎬 발표</button>
+    <button data-p="mine">✍️ 내 이야기</button>
+    <button data-p="plan">🕒 4시간 진행표</button>
+    <button data-p="book">🖨️ 워크북 · 대본</button>
+  </nav>
+</div>
+
+<div class="wrap">
+
+<!-- ═════ 🎬 발표 ═════ -->
+<section class="page on" id="p-deck">
+  <div id="emptyWarn"></div>
+  <div class="deckbar">
+    <div class="where" id="where"></div>
+    <div class="clock" id="clk"></div>
+    <button class="btn sm" id="clkGo">▶ 강의 시작</button>
+    <button class="btn sm" id="clkReset">↺</button>
+  </div>
+  <div id="stageBox"><div class="stage" id="stage"></div></div>
+  <div class="deckctl">
+    <button class="btn" id="prev" title="이전 (←)">◀</button>
+    <span class="hint" id="cnt"></span>
+    <button class="btn pri" id="next" title="다음 (→ · 스페이스)">▶</button>
+    <button class="btn sm" id="noteBtn" title="N">📝 강사 노트</button>
+    <button class="btn sm" id="fsBtn" title="F">⛶ 전체 화면</button>
+    <a class="btn sm" href="bcd-lecture.html" target="_blank" rel="noopener">↗ 새 창 (빔 프로젝터)</a>
+  </div>
+  <div id="notes"><div class="nt">🎙 강사 노트 — 이렇게 말합니다</div><div class="say" id="say"></div><div id="askBox"></div></div>
+  <div id="thumbs"></div>
+  <p class="hint" style="margin-top:10px">← → 넘기기 · N 노트 · F 전체 화면. 강사님 이야기 장은 「✍️ 내 이야기」 에 적은 글이 그대로 섭니다.</p>
+</section>
+
+<!-- ═════ ✍️ 내 이야기 ═════ -->
+<section class="page" id="p-mine">
+  <div class="ph"><h1>✍️ 내 이야기 — 강의의 심장</h1>
+    <p>이 강의에서 청중의 마음을 움직이는 것은 이론이 아니라 <b>강사님이 실제로 지나온 길</b>입니다.
+      여기 적은 글이 발표 장에 그대로 섭니다. <b>비워 둔 칸의 장은 발표에서 건너뜁니다</b> — 지어 넣지 않습니다.</p></div>
+  <div class="warn">🔒 적은 글은 <b>이 브라우저에만</b> 남습니다(서버로 안 갑니다). 다른 기기로 옮길 때는 아래 <b>백업 저장</b> 파일을 그 기기에서 <b>백업 불러오기</b> 하십시오.
+    고객 이야기를 넣으실 때는 실명 대신 <b>김○○</b> 처럼 가려 적으십시오.</div>
+
+  <div class="card"><h2>🙋 강사</h2>
+    <div class="g2">
+      <div class="fld"><label for="meName">이름</label><input id="meName" data-me="name" placeholder="표지에 섭니다 — 비우면 안 섭니다"></div>
+      <div class="fld"><label for="meRole">소개 한 줄</label><input id="meRole" data-me="role" placeholder="예) ○○지점 팀장 · 영업 n년차"></div>
+    </div>
+  </div>
+
+  <div class="card"><h2>📖 이야기 칸 <span class="hint" id="storyCnt"></span></h2>
+    <p class="hint">질문에 답하듯 적으십시오. 잘 쓰려 하지 마시고 <b>그날의 장면</b>(어디서 · 누구와 · 무슨 말을 들었나)을 적으면 무대에서 살아납니다.</p>
+    <div id="storyForm"></div>
+  </div>
+
+  <div class="card"><h2>📈 나의 타임라인 — 힘들었던 과정 <span class="hint" id="tlCnt"></span></h2>
+    <p class="hint">한 줄이 한 장면입니다. 칸마다 <b>한두 문장</b>으로 — 긴 이야기는 위 이야기 칸이나 노트로 말하십시오. <b>마음 점수</b>(-5 바닥 ~ +5 정점)를 적으면 발표의 「내 인생 곡선」 에 점으로 섭니다.
+      결과를 <b>실패 · 증명 · 아직 쓰는 중</b> 중에서 고르면 「증명의 계단」 이 저절로 쌓입니다. 사건마다 발표 장이 하나씩 생깁니다.</p>
+    <div class="chips" id="seedChips"></div>
+    <div id="tlList"></div>
+    <div class="row" style="margin-top:12px"><button class="btn pri" id="tlAdd">＋ 장면 더하기</button></div>
+  </div>
+
+  <div class="card"><h2>💾 옮기기 · 지우기</h2>
+    <div class="row">
+      <button class="btn" id="bkSave">⬇ 백업 저장</button>
+      <label class="btn" for="bkLoad" style="cursor:pointer">⬆ 백업 불러오기</label><input type="file" id="bkLoad" accept=".json,application/json" hidden>
+      <button class="btn red" id="wipe">🗑 이 기기에서 모두 지우기</button>
+    </div>
+    <p class="hint" id="bkMsg" style="margin-top:8px"></p>
+  </div>
+</section>
+
+<!-- ═════ 🕒 진행표 ═════ -->
+<section class="page" id="p-plan">
+  <div class="ph"><h1>🕒 4시간 진행표</h1><p>시작 시각을 넣으면 각 부가 몇 시에 시작하는지 섭니다. 쉬는 시간까지 넣어 <b id="planTot"></b>입니다.</p></div>
+  <div class="card">
+    <div class="row" style="margin-bottom:10px"><label for="startAt"><b>시작 시각</b></label><input id="startAt" type="time" value="13:00" style="border:1px solid var(--line);border-radius:10px;padding:6px 10px"></div>
+    <div style="overflow-x:auto"><table class="plan" id="planTbl"></table></div>
+  </div>
+  <div class="card"><h2>🧭 이 강의가 걷는 길</h2>
+    <p>나의 C(실패 → 증명 → 자존감 → 자립) → 영업인의 C(왜 선택을 잘해야 하나) → 고객의 B와 D(태어나고 떠나는 과정) →
+      팩트파인딩(고객을 이해하는 질문) → <b>고객님이 수많은 선택 속에서 나를 고를 수 있는 자료</b>.</p>
+    <p class="hint" style="margin-top:6px">한 줄로 — 「내가 내 삶의 C 를 증명해 온 사람이라야, 고객님 삶의 C 를 함께 설계할 자격이 생긴다.」</p>
+  </div>
+  <div class="card"><h2>🧰 준비물</h2>
+    <ul style="padding-left:20px;color:var(--sub)">
+      <li>참가자 워크북(「🖨️ 워크북 · 대본」 에서 인쇄) — 한 사람에 한 부</li>
+      <li>필기구 · 색 펜 두 가지(실패는 빨강, 증명은 파랑)</li>
+      <li>3인 1조 역할극 자리(4부) — 설계사 · 고객 · 관찰자</li>
+      <li>빔 프로젝터 — 「↗ 새 창」 으로 열어 F 를 누르면 전체 화면</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═════ 🖨️ 워크북 · 대본 ═════ -->
+<section class="page" id="p-book">
+  <div class="ph"><h1>🖨️ 워크북 · 강사 대본</h1><p>참가자 워크북은 <b>빈 칸</b>으로 뽑힙니다. 강사 대본에는 모든 장의 글과 노트, 강사님이 적은 이야기가 들어갑니다.</p></div>
+  <div class="card">
+    <div class="row">
+      <button class="btn pri" id="prBook">🖨 참가자 워크북 인쇄 (5쪽)</button>
+      <button class="btn" id="prScript">🖨 강사 대본 인쇄</button>
+    </div>
+    <p class="hint" style="margin-top:8px">강사 대본에는 강사님 이야기가 그대로 찍힙니다. 고객 이야기를 적으셨다면 실명이 없는지 한 번 보고 뽑으십시오.</p>
+  </div>
+  <div id="bookView"></div>
+</section>
+
+</div>
+<div id="printArea"></div>
+
+<script>
+'use strict';
+/* ════════════════════════════════════════════════════════════════
+   저장 — 이 브라우저에만 (7번 · 3번)
+   ════════════════════════════════════════════════════════════════ */
+const KEY = 'apex_bcd_lecture_v1';
+const BLANK = () => ({ me: { name: '', role: '' }, story: {}, tl: [] });
+let S = load();
+function load() {
+  try {
+    const o = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (o && typeof o === 'object') return Object.assign(BLANK(), o, { me: Object.assign(BLANK().me, o.me || {}), story: o.story || {}, tl: Array.isArray(o.tl) ? o.tl : [] });
+  } catch (e) {}
+  return BLANK();
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const has = v => String(v == null ? '' : v).trim() !== '';
+const $ = id => document.getElementById(id);
+
+/* ════════════════════════════════════════════════════════════════
+   이야기 칸 — 강사님만 아는 것. 비어서 오고, 비면 그 장은 건너뜁니다 (1번)
+   ════════════════════════════════════════════════════════════════ */
+const STORY = [
+  { k: 'leaderFail', t: '리더로서 실패한 날', p: '언제 · 무엇을 맡았고 · 무엇이 무너졌나요? 그날 누가 어떤 말을 했나요? 그때 나는 나에게 뭐라고 했나요?' },
+  { k: 'quit', t: '그만두고 싶었던 밤', p: '그만두려던 그날 밤의 장면 — 어디에 있었고, 무엇이 나를 붙잡았나요?' },
+  { k: 'firstProof', t: '처음으로 결과로 증명한 날', p: '과정은 엉망이었는데 결과가 나온 날. 그 결과가 나에게 무엇을 증명해 주었나요?' },
+  { k: 'bold', t: '과감하게 도전한 것', p: '남들이 말렸는데 내가 고른 길. 무엇을 걸었고, 무엇을 얻었나요?' },
+  { k: 'standAlone', t: '혼자 선 순간 — 자립', p: '누구의 결정도 기다리지 않고 내가 결정한 첫 순간. 그 뒤로 무엇이 달라졌나요?' },
+  { k: 'whyIns', t: '내가 보험 영업을 선택한 이유', p: '수많은 일 가운데 왜 이 일이었나요? 나를 이 길로 데려온 사람 · 사건이 있나요?' },
+  { k: 'promise', t: '고객에게 하는 나의 약속 (세 줄)', p: '한 줄에 하나씩. 예) 모르는 것은 모른다고 말하겠습니다' },
+  { k: 'oneLine', t: '지금 나를 세운 한 문장', p: '무너질 때마다 나를 다시 세운 한 문장' }
+];
+/* 타임라인을 떠올리게 하는 질문 카드 — 누르면 제목만 넣습니다. 내용은 강사님이 적습니다 */
+const SEEDS = ['처음 영업을 시작한 날', '처음 거절당한 날', '팀을 맡은 날', '팀원이 떠난 날', '가장 큰 계약을 한 날', '몸이나 가족이 아팠던 때', '다시 일어선 날', '오늘의 나'];
+/* 무대 한 장에 서는 글 길이 — 넘으면 장에서 잘립니다. 적는 칸이 그 자리에서 말합니다 */
+const STORY_MAX = 450;
+const RES = { fail: '과정에서는 실패', proof: '결과로 증명', ing: '아직 쓰는 중' };
+
+/* 비어 있는 이야기 칸 수 — 발표 경고 · 내 이야기 머리가 이 하나를 읽습니다 (5번) */
+const storyEmpty = () => STORY.filter(x => !has(S.story[x.k]));
+const proofs = () => S.tl.filter(e => e.res === 'proof');
+const scored = () => S.tl.filter(e => has(e.score) && !isNaN(+e.score));
+
+/* ════════════════════════════════════════════════════════════════
+   4시간 — 부와 쉬는 시간. 분은 여기 한 곳에서만 셉니다 (5번)
+   ════════════════════════════════════════════════════════════════ */
+const SECTIONS = [
+  { id: 'open', name: '여는 마당', title: '인생은 B와 D 사이의 C', min: 15 },
+  { id: 'p1', name: '1부', title: '나의 C — 실패와 증명, 자존감과 자립', min: 45 },
+  { id: 'b1', name: '쉼', title: '쉬는 시간', min: 10, brk: true },
+  { id: 'p2', name: '2부', title: '영업인의 C — 왜 선택을 잘해야 하나', min: 40 },
+  { id: 'p3', name: '3부', title: '고객의 B와 D — 태어나고 떠나는 과정을 이해하기', min: 40 },
+  { id: 'b2', name: '쉼', title: '쉬는 시간', min: 10, brk: true },
+  { id: 'p4', name: '4부', title: '팩트파인딩 — 고객을 이해하는 질문', min: 45 },
+  { id: 'b3', name: '쉼', title: '쉬는 시간', min: 10, brk: true },
+  { id: 'p5', name: '5부', title: '고객님이 나를 선택할 수 있는 자료', min: 25 }
+];
+const TOTAL_MIN = SECTIONS.reduce((a, s) => a + s.min, 0);
+const SEC = Object.fromEntries(SECTIONS.map(s => [s.id, s]));
+
+/* 생애 지도 — 고객님의 B 에서 D 까지. 숫자(나이 · 금액)는 적지 않습니다 — 사람마다 다릅니다 (1번) */
+const LIFE = [
+  { e: '👶', n: '태어남', c: '고를 수 없는 B' },
+  { e: '🎒', n: '배움', c: '부모의 선택이 내 삶' },
+  { e: '💼', n: '홀로서기', c: '첫 월급 · 첫 선택' },
+  { e: '💍', n: '함께', c: '두 사람의 돈이 하나로' },
+  { e: '🍼', n: '새 생명', c: '지킬 사람이 생김' },
+  { e: '🏠', n: '둥지', c: '집 · 대출 · 책임' },
+  { e: '📚', n: '키움', c: '교육비가 가장 큰 날' },
+  { e: '🧭', n: '정점과 책임', c: '부모 · 자녀 · 나 동시에' },
+  { e: '🌅', n: '내려놓음', c: '월급이 멈추는 날' },
+  { e: '🤲', n: '돌봄', c: '돌보거나 돌봄 받거나' },
+  { e: '🕊️', n: '떠남과 남김', c: '고를 수 없는 D', end: 1 }
+];
+/* 팩트파인딩 일곱 걸음 — 사실(F)과 마음(♥) 두 겹 */
+const FF = [
+  { s: '관계 열기', f: '오늘 시간 내 주셔서 고맙습니다. 요즘 어떻게 지내세요?', h: '요즘 가장 신경 쓰이는 일은 무엇인가요?' },
+  { s: '오늘의 삶', f: '하루가 어떻게 흘러가세요? 일은 어떤 일을 하세요?', h: '그 일에서 가장 보람 있을 때는 언제세요?' },
+  { s: '가족', f: '함께 사는 가족은 누구신가요? 부모님은 어떠세요?', h: '가족 중에 꼭 지키고 싶은 분은 누구세요?' },
+  { s: '돈의 흐름', f: '들어오는 돈 · 나가는 돈 · 갚는 돈을 대략 함께 적어 볼까요? 모르시면 모른다고 적겠습니다.', h: '돈 때문에 가장 마음 졸였던 때가 있으셨어요?' },
+  { s: '이미 있는 준비', f: '지금 가지고 계신 보험 · 저축 · 연금은 무엇이 있나요? 증권을 같이 볼 수 있을까요?', h: '그 보험은 왜 드셨어요? 누가 권했나요?' },
+  { s: '걱정과 꿈', f: '앞으로 5년 안에 생길 큰일(이사 · 결혼 · 교육 · 은퇴)이 있나요?', h: '10년 뒤 어떤 모습이면 「잘 살았다」 하시겠어요?' },
+  { s: '우선순위', f: '오늘 이야기한 것 가운데 하나만 먼저 정한다면 무엇일까요?', h: '그것을 먼저 고르신 이유를 여쭤봐도 될까요?' }
+];
+
+/* ════════════════════════════════════════════════════════════════
+   장(슬라이드) — 부(sec) · 종류(ty) · 노트(say) · 청중 질문(ask)
+   ★ 강사님 이야기 장(ty:'story')은 그 칸이 비면 발표에서 빠집니다.
+   ★ 타임라인 장(curve · events · stairs)은 S.tl 에서 그 자리에 펼칩니다.
+   ════════════════════════════════════════════════════════════════ */
+const SLIDES = [
+  /* ── 여는 마당 · 15분 ── */
+  { sec: 'open', ty: 'cover',
+    say: '(조명이 켜지기 전, 잠깐 침묵) 안녕하십니까. 오늘 4시간 동안 저는 여러분께 상품 이야기를 거의 하지 않을 겁니다.\n오늘은 알파벳 세 글자 이야기를 하겠습니다. B, C, D.' },
+  { sec: 'open', ty: 'big', tag: 'Birth · Choice · Death', h: '태어나는 날은 고를 수 없습니다.<br>떠나는 날도 고를 수 없습니다.<br>우리가 고를 수 있는 것은 <em>그 사이, C</em> 하나뿐입니다.',
+    say: '「인생은 B와 D 사이의 C 다」 — 흔히 사르트르의 말로 전해지는 문장입니다.\n(출처는 단정하지 마십시오. 「그렇게 전해진다」 로 충분합니다.)\nBirth 와 Death 사이에 Choice. 우리 인생에서 내 손에 쥐어진 것은 C 하나뿐이라는 뜻입니다.' },
+  { sec: 'open', ty: 'work', tag: '1분 · 혼자', h: '오늘 아침부터 지금까지<br>몇 번 <em>선택</em>하셨습니까?', min: 1,
+    steps: ['일어날지 5분 더 잘지', '무엇을 입을지 · 무엇을 먹을지', '이 자리에 올지 말지 — 이미 고르셨습니다'],
+    say: '워크북 첫 장 귀퉁이에 오늘 한 선택을 세 개만 적어 보십시오. 1분 드리겠습니다.\n(1분 뒤) 몇 개 적으셨어요? 우리는 하루에도 셀 수 없이 고릅니다. 그런데 그중 대부분은 고른 줄도 모르고 지나갑니다.',
+    ask: '「오늘 고른 것 중에 가장 잘한 선택은 무엇인가요?」 — 두세 분께 여쭙니다.' },
+  { sec: 'open', ty: 'text', tag: '오늘의 지도', h: '오늘 4시간, 우리는 <em>다섯 개의 C</em>를 지납니다',
+    li: ['<b>1부 · 나의 C</b> — 리더로서의 실패, 그리고 증명<small>과정의 실패와 결과의 증명 · 자존감 · 자립심</small>',
+      '<b>2부 · 영업인의 C</b> — 왜 선택을 잘해야 하나<small>영업에서의 선택은 무엇인가</small>',
+      '<b>3부 · 고객의 B와 D</b> — 태어나고 떠나는 과정<small>재무설계와 상담은 그 과정을 이해하는 과제</small>',
+      '<b>4부 · 팩트파인딩</b> — 고객을 이해하는 질문',
+      '<b>5부 · 나를 선택하게 하는 자료</b> — 고객님의 수많은 선택 속에서'],
+    say: '오늘은 이 다섯 개의 문을 차례로 지납니다. 처음은 제 이야기, 끝은 여러분의 고객 이야기입니다.\n순서에 이유가 있습니다. 내 삶의 C 를 정직하게 본 사람만이, 고객의 C 앞에서 정직할 수 있기 때문입니다.' },
+  { sec: 'open', ty: 'big', tag: '오늘의 약속', h: '정답을 드리지 않겠습니다.<br>대신 <em>여러분의 타임라인</em>을 돌려드리겠습니다.',
+    say: '오늘 끝날 때 여러분 손에는 종이 몇 장이 남습니다. 내 인생 곡선, 내가 증명해 온 것들, 그리고 고객이 나를 고를 이유.\n그 종이가 내일 아침 고객 앞에서 여러분의 자료가 됩니다.' },
+
+  /* ── 1부 · 45분 ── */
+  { sec: 'p1', ty: 'big', tag: '1부 · 나의 C', h: '저는 <em>실패한 리더</em>였습니다',
+    say: '1부를 시작하겠습니다. 오늘 제 이야기는 성공담이 아닙니다.\n(천천히) 저는 실패한 리더였습니다.' },
+  { sec: 'p1', ty: 'story', k: 'leaderFail', tag: '나의 이야기 ①',
+    say: '(아래 글을 읽지 말고 그날의 장면을 말하듯 하십시오. 숫자보다 장면 — 어디서, 누가, 무슨 말을.)\n이야기가 끝나면 3초 쉬십시오. 청중이 자기 장면을 떠올리는 시간입니다.' },
+  { sec: 'p1', ty: 'story', k: 'quit', tag: '나의 이야기 ②',
+    say: '그만두고 싶었던 그 밤을 이야기합니다. 그리고 묻습니다 — 「여러분에게도 그런 밤이 있으셨지요.」\n대답을 기다리지 않아도 됩니다. 고개가 끄덕여지는 것으로 충분합니다.' },
+  { sec: 'p1', ty: 'text', tag: '두 개의 시계', h: '실패에는 <em>두 개의 시계</em>가 있습니다',
+    li: ['<b>과정의 시계</b> — 고르는 그 순간, 흔들리고 틀리고 넘어집니다<small>이 시계로 보면 거의 모든 선택은 실패처럼 보입니다</small>',
+      '<b>결과의 시계</b> — 끝까지 가서 결과를 냈는가<small>이 시계로 보면 그 넘어짐은 증명의 일부가 됩니다</small>',
+      '같은 사건이 <b>어느 시계로 보느냐</b>에 따라 판결이 달라집니다'],
+    say: '선택의 과정 중에서는 실패입니다. 그러나 결과를 냈다면, 그것은 증명입니다.\n과정의 시계만 보고 있으면 우리는 매일 실패자입니다. 결과의 시계를 같이 보십시오.' },
+  { sec: 'p1', ty: 'big', tag: '한 문장', h: '과정에서는 실패였지만,<br>결과를 냈다면 — 그것은 <em>증명</em>입니다',
+    say: '이 문장을 같이 읽어 보겠습니다. (청중과 함께 소리 내어 읽기)\n실패는 판결이 아니라 중간 기록입니다. 판결은 결과가 내립니다.' },
+  { sec: 'p1', ty: 'curve', tag: '내 인생 곡선',
+    say: '이것이 제 타임라인입니다. 빨간 점은 과정에서 실패했던 때, 파란 점은 결과로 증명한 때입니다.\n보시면 바닥 바로 뒤에 증명이 옵니다. 바닥이 없었으면 그 증명도 없었습니다.' },
+  { sec: 'p1', ty: 'events',
+    say: '(장면 하나에 1~2분. 「그때의 선택」 을 꼭 말하십시오 — 이 강의의 주제는 사건이 아니라 선택입니다.)' },
+  { sec: 'p1', ty: 'story', k: 'firstProof', tag: '나의 이야기 ③ · 증명',
+    say: '처음으로 결과로 증명한 날을 이야기합니다. 과정이 엉망이었던 부분을 숨기지 마십시오 — 그래야 증명이 됩니다.' },
+  { sec: 'p1', ty: 'text', tag: '증명 → 자존감', h: '증명이 쌓이면 <em>자존감</em>이 됩니다',
+    li: ['자존감은 남이 주는 점수가 아닙니다',
+      '<b>내가 나에게 한 약속을 지킨 횟수</b>입니다',
+      '증명 하나는 작습니다. 그러나 쌓이면 <b>「나는 해내는 사람이다」</b> 라는 믿음이 됩니다',
+      '그 믿음이 다음 바닥에서 나를 버티게 합니다'],
+    say: '증명의 시간이 쌓여 가면서 저의 자존감이 올라갔습니다.\n자존감은 칭찬으로 오지 않았습니다. 작은 약속을 지킨 날들이 모여서 왔습니다.' },
+  { sec: 'p1', ty: 'stairs', tag: '증명의 계단',
+    say: '제가 결과로 증명한 장면들을 계단으로 쌓았습니다. 계단 하나하나는 작지만, 돌아보면 꽤 높이 올라와 있습니다.' },
+  { sec: 'p1', ty: 'story', k: 'bold', tag: '나의 이야기 ④ · 도전',
+    say: '과감하게 도전한 이야기입니다. 무엇을 걸었는지 분명히 말하십시오. 걸지 않은 도전은 도전이 아닙니다.' },
+  { sec: 'p1', ty: 'story', k: 'standAlone', tag: '나의 이야기 ⑤ · 자립',
+    say: '남의 결정을 기다리지 않고 처음 혼자 선 순간입니다.' },
+  { sec: 'p1', ty: 'text', tag: '도전 → 자립심', h: '과감한 도전이 남기는 것은 성공이 아니라 <em>자립심</em>입니다',
+    li: ['도전의 결과는 성공일 수도, 실패일 수도 있습니다',
+      '그러나 <b>스스로 고르고 · 스스로 책임진 경험</b>은 언제나 남습니다',
+      '자립심이란 <b>남의 결정을 기다리지 않는 힘</b>',
+      '영업인에게 자립심은 「오늘 누구를 만날지 내가 정한다」 는 뜻입니다'],
+    say: '과감하게 도전했던 부분에서 저는 성공을 얻었습니다. 그런데 더 큰 것은 자립심이었습니다.\n이제 저는 누가 시키지 않아도 오늘 할 일을 압니다.' },
+  { sec: 'p1', ty: 'work', tag: '7분 · 혼자 → 3분 · 짝', h: '내 인생 곡선 그리기', min: 7,
+    steps: ['워크북 1쪽 — 가로는 시간, 세로는 마음 점수(-5 ~ +5)', '바닥이었던 장면 셋 · 정점이었던 장면 셋을 점으로', '바닥 점 옆에 「그때 내가 한 선택」 을 한 줄로', '실패는 빨강, 결과로 증명한 것은 파랑으로 동그라미'],
+    say: '이제 여러분 차례입니다. 7분 드리겠습니다. 잘 그리려 하지 마십시오. 정직하게만 그리십시오.\n(7분 뒤) 옆 분과 3분씩 — 가장 깊은 바닥 하나와, 그 뒤에 무엇을 골랐는지만 나눠 주십시오.',
+    ask: '「바닥 바로 뒤에 무엇이 왔습니까?」 — 두 분 정도 발표를 청합니다(억지로 시키지 않습니다).' },
+  { sec: 'p1', ty: 'big', tag: '1부를 닫으며', h: '여러분의 바닥은<br>여러분의 <em>자료</em>입니다',
+    say: '오늘 그린 바닥은 부끄러운 기록이 아닙니다. 5부에서 이것이 고객이 여러분을 고르는 자료가 됩니다.\n10분 쉬겠습니다.' },
+
+  /* ── 쉼 ── */
+  { sec: 'b1', ty: 'break', say: '쉬는 시간. 음악을 낮게 틀고, 화면에는 남은 시간을 띄워 둡니다.' },
+
+  /* ── 2부 · 40분 ── */
+  { sec: 'p2', ty: 'big', tag: '2부 · 영업인의 C', h: '영업은 <em>선택의 직업</em>입니다',
+    say: '2부입니다. 영업인은 하루에 남보다 훨씬 많이 고릅니다. 그리고 그 선택이 고객의 삶에 닿습니다.' },
+  { sec: 'p2', ty: 'text', tag: '영업에서의 선택은 무엇인가', h: '영업인이 매일 고르는 <em>다섯 가지</em>',
+    li: ['<b>누구를 만날 것인가</b><small>시간은 가장 비싼 자원입니다</small>',
+      '<b>무엇을 물을 것인가</b><small>질문이 상담의 방향을 정합니다</small>',
+      '<b>무엇을 말하지 않을 것인가</b><small>모르는 숫자 · 단정하는 말 · 과장</small>',
+      '<b>언제 물러설 것인가</b><small>오늘 계약보다 다음 만남이 더 큰 날이 있습니다</small>',
+      '<b>오늘 끝까지 갈 것인가</b><small>거절 다음 한 통을 거는가</small>'],
+    say: '영업에서의 선택은 결국 이 다섯 가지입니다. 이 중에 무엇을 말하지 않을 것인가 — 이것이 가장 어렵습니다.' },
+  { sec: 'p2', ty: 'text', tag: '왜 선택을 잘해야 하나', h: '내 선택의 값은 <em>고객이 치릅니다</em>',
+    li: ['내가 잘못 고르면 고객에게는 <b>삶에 맞지 않는 계약</b>이 남습니다',
+      '맞지 않는 계약은 <b>해지</b>가 되고, 해지는 고객에게 <b>손해와 불신</b>이 됩니다',
+      '그 불신은 다음 설계사 · 다음 고객에게까지 갑니다',
+      '그래서 영업인의 선택은 <b>내 실적이 아니라 고객의 삶</b>을 기준으로 해야 합니다'],
+    say: '왜 선택을 잘해야 합니까? 내 선택의 값을 내가 아니라 고객이 치르기 때문입니다.\n(사례가 있으면 여기서 — 이름은 가리고, 숫자는 아는 것만.)' },
+  { sec: 'p2', ty: 'table', tag: '전환', h: '파는 사람에서 <em>이해하는 사람</em>으로',
+    th: ['', '파는 사람', '이해하는 사람'],
+    rows: [['시작', '상품 설명', '<b>고객의 하루</b>를 묻는다'], ['중심', '내 말', '<b>고객의 말</b>'], ['보는 것', '보험료 · 보장', '<b>사건</b> — 아프면, 떠나면, 오래 살면'],
+      ['거절', '끝', '<b>정보</b> — 무엇이 안 맞았나'], ['목표', '오늘 계약', '<b>평생 관계</b>'], ['고객이 남기는 말', '「설명 잘하더라」', '<b>「나를 알더라」</b>']],
+    say: '영업에서의 선택을 「무엇을 팔까」 에서 「이 분의 삶을 얼마나 이해했나」 로 바꾸는 것 — 이것이 오늘의 전환입니다.' },
+  { sec: 'p2', ty: 'story', k: 'whyIns', tag: '나의 이야기 ⑥ · 왜 보험인가',
+    say: '제가 왜 수많은 일 가운데 이 일을 골랐는지 말씀드리겠습니다.' },
+  { sec: 'p2', ty: 'big', tag: '보험이라는 선택', h: '보험은 <em>B와 D 사이</em>에서<br>계획이 무너지는 날을 위한 선택입니다',
+    say: '보험은 고객이 고를 수 없는 것 — 아픔, 사고, 이른 이별 — 앞에서, 고를 수 있는 것을 남겨 두는 일입니다.\n(⚠ 보장 · 보험료는 언제나 「심사 결과에 따릅니다」. 여기서 숫자를 약속하지 마십시오.)' },
+  { sec: 'p2', ty: 'work', tag: '5분 · 혼자', h: '놓친 고객 한 분', min: 5,
+    steps: ['최근 계약하지 못한 고객 한 분을 떠올립니다(이름은 적지 않습니다)', '그때 내가 한 선택 — 무엇을 묻고 무엇을 말했나', '다시 만난다면 무엇을 먼저 묻겠는가'],
+    say: '워크북 2쪽입니다. 놓친 고객은 실패가 아니라 자료입니다. 1부와 같은 이야기입니다 — 과정의 실패를 결과의 증명으로 바꾸는 연습입니다.' },
+  { sec: 'p2', ty: 'big', tag: '2부를 닫으며', h: '선택을 잘한다는 것은<br>고객이 <em>말하지 않은 것</em>을 듣는 것입니다',
+    say: '그러면 무엇을 들어야 할까요? 3부에서는 고객의 B 부터 D 까지를 함께 보겠습니다.' },
+
+  /* ── 3부 · 40분 ── */
+  { sec: 'p3', ty: 'big', tag: '3부 · 고객의 B와 D', h: '고객님도 <em>B와 D 사이</em>에 계십니다',
+    say: '우리 앞에 앉은 고객님도 B 와 D 사이의 어딘가에 계십니다. 상담은 그 「어딘가」 를 함께 찾는 일입니다.' },
+  { sec: 'p3', ty: 'life', tag: '생애 지도', h: '태어나고 떠나기까지 — <em>열한 개의 마당</em>',
+    say: '한 사람의 삶을 열한 마당으로 놓아 보았습니다. 나이를 적지 않은 이유가 있습니다 — 사람마다 다르기 때문입니다.\n고객님께 「지금 어디쯤 계세요?」 하고 이 지도를 보여 드리십시오. 고객이 스스로 손가락으로 짚게 하는 것이 핵심입니다.' },
+  { sec: 'p3', ty: 'text', tag: '어느 마당이든', h: '삶의 계획을 무너뜨리는 <em>세 가지 사건</em>',
+    li: ['<b>너무 일찍 떠나는 것</b><small>남은 가족의 생활이 멈춥니다</small>',
+      '<b>아파서 멈추는 것</b><small>치료비보다 무서운 것은 멈춘 소득입니다</small>',
+      '<b>생각보다 오래 사는 것</b><small>월급은 멈췄는데 삶은 계속됩니다</small>',
+      '재무설계는 이 셋 앞에서 <b>고객이 고를 수 있는 것을 남겨 두는 일</b>입니다'],
+    say: '어느 마당에 계시든, 계획을 무너뜨리는 사건은 이 세 가지입니다. 이 중 어떤 것이 이 분에게 가장 가까운지 — 그것을 아는 것이 이해입니다.' },
+  { sec: 'p3', ty: 'text', tag: '재무설계와 상담', h: '재무설계는 고객님의 B와 D 사이를<br><em>돈의 언어로 다시 그리는 일</em>입니다',
+    li: ['<b>흐름</b> — 들어오고 · 나가고 · 갚는 돈',
+      '<b>모아 둔 것</b> — 자산과 빚',
+      '<b>지켜 둔 것</b> — 보험 · 비상금',
+      '<b>내려놓을 날</b> — 은퇴 뒤의 생활',
+      '<b>남길 것</b> — 상속 · 증여<small>세금은 언제나 「요건 충족 시」 — 판단은 세무 전문가와 함께</small>'],
+    say: '이 다섯 칸을 채우면 고객님의 삶이 한 장에 섭니다.\n(⚠ 세금은 결론을 말하지 마십시오. 「비과세입니다」 가 아니라 「요건을 함께 확인해 보겠습니다」. 한도 · 나이 같은 숫자도 외워서 말하지 않습니다.)' },
+  { sec: 'p3', ty: 'big', tag: '죽음을 이야기하는 법', h: '죽음을 이야기하는 것이 아니라<br><em>남는 사람의 삶</em>을 이야기합니다',
+    say: 'D 를 꺼내는 것이 가장 어렵습니다. 그래서 D 를 말하지 말고, D 다음에 남는 사람의 아침을 말하십시오.\n「고객님이 안 계신 다음 날 아침, 아이는 학교에 갈 수 있을까요?」' },
+  { sec: 'p3', ty: 'work', tag: '8분 · 짝', h: '견본 고객 <em>홍길동</em> 님의 지도', min: 8,
+    steps: ['워크북 3쪽 생애 지도에 홍길동 님이 지금 어디쯤인지 짝과 정합니다', '다음 5년 안에 홍길동 님이 할 큰 선택 셋', '그 선택을 무너뜨릴 수 있는 사건 하나', '내가 먼저 물어야 할 질문 하나'],
+    say: '견본 고객 홍길동 님입니다 — 실제 고객 이름은 쓰지 않습니다. 나이 · 가족은 짝끼리 정하셔도 됩니다.\n정답은 없습니다. 「무엇을 물어야 하는가」 까지 가면 성공입니다 — 그것이 4부입니다.' },
+  { sec: 'p3', ty: 'steps', tag: '상담의 순서', h: '이해 없이 제안은 <em>설득</em>일 뿐입니다',
+    li: ['<b>이해</b> — 팩트파인딩으로 그 분의 B와 D 사이를 듣는다', '<b>정리</b> — 들은 것을 고객의 말 그대로 한 장에 적는다', '<b>제안</b> — 정리한 것 가운데 고객이 고른 우선순위부터', '<b>약속</b> — 다음에 언제 무엇을 확인할지', '<b>관리</b> — 마당이 바뀔 때마다 다시 그린다'],
+    say: '제안은 세 번째입니다. 첫째가 이해입니다. 10분 쉬고, 그 「이해」 의 기술 — 팩트파인딩으로 들어가겠습니다.' },
+
+  /* ── 쉼 ── */
+  { sec: 'b2', ty: 'break', say: '쉬는 시간. 4부 역할극 조(3인 1조)를 미리 짜 둡니다.' },
+
+  /* ── 4부 · 45분 ── */
+  { sec: 'p4', ty: 'big', tag: '4부 · 팩트파인딩', h: '제안서는 <em>질문지의 답장</em>입니다',
+    say: '좋은 제안서는 좋은 질문에서 나옵니다. 질문 없이 쓴 제안서는 받는 사람이 없는 편지입니다.' },
+  { sec: 'p4', ty: 'cols', tag: '두 겹', h: '사실(Fact)과 <em>마음(Feeling)</em>을 함께 묻습니다',
+    a: { k: 'FACT · 사실', v: '가족 · 일 · 들어오고 나가는 돈 · 빚 · 모아 둔 것 · 이미 있는 보험' },
+    b: { k: 'FEELING · 마음', v: '걱정 · 꿈 · 꼭 지키고 싶은 사람 · 돈에 대한 기억 · 보험에 대한 경험' },
+    say: '사실만 물으면 조사가 되고, 마음만 물으면 수다가 됩니다. 두 겹을 함께 물어야 이해가 됩니다.\n고객은 사실 때문에 계약하지 않습니다. 마음 때문에 계약하고, 사실 때문에 유지합니다.' },
+  { sec: 'p4', ty: 'ff', tag: '일곱 걸음', h: '팩트파인딩 <em>일곱 걸음</em>',
+    say: '이 순서대로 걸으십시오. 한 걸음마다 사실 질문 하나, 마음 질문 하나.\n돈의 흐름에서 고객이 모르시면 「모름」 으로 적습니다. 0 으로 적으면 「없다」 는 뜻이 됩니다 — 모름과 0 은 다릅니다.' },
+  { sec: 'p4', ty: 'text', tag: '질문의 원칙', h: '좋은 질문의 <em>다섯 원칙</em>',
+    li: ['<b>열린 질문</b> — 「예 · 아니오」 로 끝나지 않게', '<b>한 번에 하나</b> — 두 개를 물으면 쉬운 쪽만 답합니다', '<b>고객의 말 그대로</b> 받아 적는다 — 내 말로 바꾸지 않는다', '<b>모르는 것은 「모름」</b> — 지어 채우지 않는다', '<b>판단 대신 요약</b> — 「제가 들은 것이 맞는지 볼까요?」'],
+    say: '마지막 원칙이 가장 강력합니다. 고객의 말을 요약해 돌려드리면, 고객은 「이 사람은 나를 안다」 고 느낍니다.' },
+  { sec: 'p4', ty: 'table', tag: '말 한마디', h: '고객 앞에서 <em>하지 않는 말</em>',
+    th: ['하지 않는 말', '대신 이렇게'],
+    rows: [['「비과세 상품입니다」', '「<b>요건을 충족하면</b> 비과세가 될 수 있습니다. 요건은 세무 전문가와 함께 확인하겠습니다」'],
+      ['「무조건 나옵니다」', '「보장과 보험료는 <b>심사 결과에 따릅니다</b>」'],
+      ['외워 둔 한도 · 나이 · 숫자', '「정확한 기준은 <b>지금 시행 중인 규정</b>으로 확인해 드리겠습니다」'],
+      ['「다들 이거 하세요」', '「고객님 <b>우선순위</b>에서 보면 이것이 먼저입니다」']],
+    say: '이 표의 왼쪽 말은 그 자리에서는 강해 보이지만, 요건 하나가 어긋나는 날 고객 앞에서 무너집니다. 오른쪽 말이 오래 갑니다.' },
+  { sec: 'p4', ty: 'work', tag: '15분 · 3인 1조 역할극', h: '홍길동 님 팩트파인딩', min: 15,
+    steps: ['설계사 · 고객(홍길동) · 관찰자 — 5분씩 돌아가며', '설계사는 일곱 걸음 가운데 세 걸음만 깊게', '고객은 워크북 4쪽의 「고객 카드」 대로, 마음은 솔직하게', '관찰자는 관찰 체크 여섯 칸에 표시'],
+    say: '역할극입니다. 5분씩 세 번, 역할을 바꿉니다. 시간은 제가 재겠습니다.\n고객 역할은 일부러 까다롭게 하지 마십시오. 솔직하게만 하시면 됩니다 — 그것이 가장 어렵습니다.' },
+  { sec: 'p4', ty: 'steps', tag: '관찰 체크', h: '관찰자가 보는 <em>여섯 가지</em>',
+    li: ['내가 말한 시간보다 고객이 말한 시간이 길었나', '마음(Feeling) 질문을 하나 이상 했나', '고객의 말을 그대로 받아 적었나', '모르는 것을 지어 채우지 않았나', '끝에 요약해 돌려드렸나', '다음 약속을 잡았나'],
+    say: '관찰자가 한 사람씩 이야기해 주십시오. 칭찬 하나, 다음에 바꿀 것 하나.' },
+  { sec: 'p4', ty: 'big', tag: '4부를 닫으며', h: '고객이 <em>스스로 말한 이유</em>만이<br>계약을 지킵니다',
+    say: '내가 말한 이유는 해지 앞에서 잊힙니다. 고객이 스스로 말한 이유는 남습니다.\n10분 쉬고 마지막 5부로 가겠습니다.' },
+
+  /* ── 쉼 ── */
+  { sec: 'b3', ty: 'break', say: '쉬는 시간. 5부 선언문 쓸 워크북 5쪽을 펴 두라고 안내합니다.' },
+
+  /* ── 5부 · 25분 ── */
+  { sec: 'p5', ty: 'big', tag: '5부 · 나를 선택하게 하는 자료', h: '고객님은 오늘도 수많은 선택을 합니다.<br>그중 하나가 <em>「누구에게 맡길까」</em> 입니다',
+    say: '마지막 5부입니다. 고객님 앞에는 설계사가 여럿 있습니다. 회사도 상품도 비슷합니다. 그러면 고객은 무엇으로 고를까요?' },
+  { sec: 'p5', ty: 'text', tag: '자료 네 장', h: '고객이 나를 고를 수 있는 <em>자료 네 장</em>',
+    li: ['<b>① 내 타임라인 한 장</b> — 내가 걸어온 길 · 넘어진 곳 · 증명한 것<small>오늘 1부에서 그린 바로 그것</small>',
+      '<b>② 내 약속 세 줄</b> — 무엇을 지키는 사람인가',
+      '<b>③ 고객님의 생애 지도</b> — 그 분의 B와 D 사이를 내가 이해한 기록',
+      '<b>④ 다음 약속</b> — 언제 · 무엇을 다시 확인할지'],
+    say: '고객이 고르는 것은 상품이 아니라 사람입니다. 그리고 사람은 그가 지나온 길로 증명됩니다.\n여러분의 바닥, 여러분의 증명 — 그것이 고객이 여러분을 고를 수 있는 자료입니다.' },
+  { sec: 'p5', ty: 'curve', tag: '자료 ① · 내 타임라인 한 장',
+    say: '다시 이 곡선입니다. 처음에 보셨을 때와 지금 다르게 보이십니까?\n고객 앞에서는 이렇게 말합니다 — 「저도 무너진 적이 있습니다. 그래서 계획이 무너지는 날이 어떤 날인지 압니다.」' },
+  { sec: 'p5', ty: 'story', k: 'promise', tag: '자료 ② · 나의 약속',
+    say: '제가 고객님께 드리는 약속 세 줄입니다. 이 약속은 제 명함 뒤에도 있습니다(있다면).' },
+  { sec: 'p5', ty: 'story', k: 'oneLine', tag: '지금 나를 세운 한 문장',
+    say: '마지막으로, 무너질 때마다 저를 다시 세운 한 문장입니다.' },
+  { sec: 'p5', ty: 'work', tag: '5분 · 혼자', h: '나의 <em>다음 C</em> 선언문', min: 5,
+    steps: ['워크북 5쪽 — 「나는 ___ 을 증명해 온 사람이다」', '「고객에게 나는 ___ 을 약속한다」', '「내일 아침 나의 첫 번째 선택은 ___ 이다」'],
+    say: '5분 드리겠습니다. 다 쓰신 분은 일어나서 옆 분께 소리 내어 읽어 주십시오.',
+    ask: '「내일 아침 첫 번째 선택」 을 세 분께 듣습니다.' },
+  { sec: 'p5', ty: 'big', tag: '맺음', h: 'B와 D는 이미 정해져 있습니다.<br>오늘부터의 <em>C</em>는 여러분 것입니다',
+    say: '(천천히) 고객님의 B 와 D 도 이미 정해져 있습니다. 그 사이의 C 를 함께 설계할 사람 — 그 사람이 여러분이기를 바랍니다.\n4시간 동안 함께해 주셔서 고맙습니다.' }
+];
+
+/* ════════════════════════════════════════════════════════════════
+   펼치기 — 이야기 장이 비면 빼고, 타임라인 장은 사건 수만큼 늘립니다
+   ════════════════════════════════════════════════════════════════ */
+function deckList() {
+  const out = [];
+  for (const s of SLIDES) {
+    if (s.ty === 'story' && !has(S.story[s.k])) continue;          /* 지어 넣지 않습니다 (1번) */
+    if (s.ty === 'curve' && scored().length < 2) continue;          /* 점 두 개가 있어야 곡선이 섭니다 */
+    if (s.ty === 'stairs' && !proofs().length) continue;
+    if (s.ty === 'events') { S.tl.forEach((e, i) => { if (has(e.t)) out.push({ sec: s.sec, ty: 'event', i, say: s.say }); }); continue; }
+    out.push(s);
+  }
+  return out;
+}
+let D = deckList();
+let cur = 0;
+
+const STORY_T = Object.fromEntries(STORY.map(x => [x.k, x.t]));
+/* 이야기가 길면 글씨를 줄여 그 장에 다 세웁니다 — 잘라 내지 않습니다 */
+function fitStory() {
+  const el = document.querySelector('#stage .story'); if (!el) return;
+  let f = 2.6; el.style.fontSize = '';
+  while (el.scrollHeight > el.clientHeight + 1 && f > 1.2) { f -= 0.1; el.style.fontSize = f.toFixed(2) + 'cqw'; }
+}
+
+function curveSvg() {
+  const P = scored();
+  const W = 1000, H = 370, L = 30, R = 30, T = 30, B = 100;
+  const x = i => L + (P.length < 2 ? (W - L - R) / 2 : i * (W - L - R) / (P.length - 1));
+  const y = v => T + (5 - Math.max(-5, Math.min(5, +v))) * (H - T - B) / 10;
+  let path = P.map((e, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(e.score).toFixed(1)).join(' ');
+  let g = '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(0) + '" y2="' + y(0) + '" stroke="#3A4A6A" stroke-dasharray="6 8"/>';
+  g += '<path d="' + path + '" fill="none" stroke="url(#cg)" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>';
+  P.forEach((e, i) => {
+    const c = e.res === 'proof' ? '#6FB3FF' : e.res === 'fail' ? '#FF7A85' : '#F6C76B';
+    const up = +e.score >= 0;
+    g += '<circle cx="' + x(i) + '" cy="' + y(e.score) + '" r="9" fill="' + c + '" stroke="#0E1525" stroke-width="3"/>';
+    g += '<text x="' + x(i) + '" y="' + (y(e.score) + (up ? -20 : 32)) + '" fill="#E3E9F4" font-size="17" font-weight="700" text-anchor="middle">' + esc(String(e.t).slice(0, 14)) + '</text>';
+    g += '<text x="' + x(i) + '" y="' + (H - 8) + '" fill="#93A1BC" font-size="16" text-anchor="middle">' + esc(e.y || '') + '</text>';
+  });
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="마음 점수 곡선"><defs><linearGradient id="cg" x1="0" x2="1"><stop offset="0" stop-color="#FF7A85"/><stop offset="1" stop-color="#6FB3FF"/></linearGradient></defs>' + g +
+    '<text x="0" y="' + (T + 6) + '" fill="#5C6B88" font-size="14">+5</text><text x="0" y="' + (H - B + 4) + '" fill="#5C6B88" font-size="14">-5</text></svg>';
+}
+
+function slideHtml(s) {
+  const sec = SEC[s.sec];
+  let h = '';
+  if (s.ty === 'cover') {
+    h = '<div class="sl cover"><div class="bcd"><span class="b">B</span><span class="ln"></span><span class="c">C</span><span class="ln"></span><span class="d">D</span></div>' +
+      '<h2>인생은 B와 D 사이의 <em>C</em><br>선택이 증명이 되는 시간</h2>' +
+      (has(S.me.name) || has(S.me.role) ? '<div class="who">' + esc(S.me.name) + (has(S.me.role) ? ' · ' + esc(S.me.role) : '') + '</div>' : '') + '</div>';
+  } else if (s.ty === 'big') {
+    h = '<div class="sl big"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2></div>';
+  } else if (s.ty === 'text' || s.ty === 'steps') {
+    h = '<div class="sl"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2><ul' + (s.ty === 'steps' ? ' class="steps"' : '') + '>' + s.li.map(x => '<li>' + x + '</li>').join('') + '</ul></div>';
+  } else if (s.ty === 'story') {
+    const t = S.story[s.k];
+    h = '<div class="sl"><div class="tag">' + esc(s.tag) + '</div><h2>' + esc(STORY_T[s.k]) + '</h2><div class="story">' + esc(t) + '</div></div>';
+  } else if (s.ty === 'curve') {
+    h = '<div class="sl"><div class="tag">' + esc(s.tag) + '</div><h2>바닥 바로 뒤에 <em>증명</em>이 옵니다</h2>' + curveSvg() + '</div>';
+  } else if (s.ty === 'event') {
+    const e = S.tl[s.i] || {};
+    const r = RES[e.res] ? '<span class="badge ' + e.res + '">' + RES[e.res] + '</span>' : '';
+    let m = '';
+    if (has(e.score) && !isNaN(+e.score)) {
+      const v = Math.max(-5, Math.min(5, Math.round(+e.score)));
+      m = '<div class="meter">' + Array.from({ length: 10 }, (_, j) => { const k = j - 5; return '<i class="' + (v < 0 && k >= v && k < 0 ? 'n' : v > 0 && k >= 0 && k < v ? 'p' : '') + '"></i>'; }).join('') + '</div>';
+    }
+    const box = (k, v, c) => has(v) ? '<div class="box ' + (c || '') + '"><div class="k">' + k + '</div><div class="v">' + esc(v) + '</div></div>' : '';
+    const L = box('그때 — 마음 점수 ' + (has(e.score) ? esc(e.score) : '안 적음'), e.what) || (m ? '<div class="box"><div class="k">그때 — 마음 점수 ' + esc(e.score) + '</div></div>' : '');
+    h = '<div class="sl"><div class="tag">' + esc(e.y || '나의 타임라인') + ' · 장면 ' + (s.i + 1) + '</div><h2>' + esc(e.t) + r + '</h2>' +
+      (m ? '<div style="max-width:40cqw">' + m + '</div>' : '') +
+      '<div class="cols">' + L + box('그때 내가 한 선택', e.choice, '') + box('그래서 배운 것', e.learn, e.res === 'proof' ? 'proof' : e.res === 'fail' ? 'fail' : '') + '</div></div>';
+  } else if (s.ty === 'stairs') {
+    const P = proofs();
+    h = '<div class="sl"><div class="tag">' + esc(s.tag) + '</div><h2>증명이 쌓이면 <em>자존감</em>이 됩니다 — ' + P.length + '계단</h2><div class="stairs">' +
+      P.map((e, i) => '<div style="height:' + Math.round(30 + 70 * (i + 1) / P.length) + '%"><b>' + esc(e.y || '') + '</b>' + esc(e.t) + '</div>').join('') + '</div></div>';
+  } else if (s.ty === 'work') {
+    h = '<div class="sl"><div class="tag">✍ 함께 해 봅니다 · ' + esc(s.tag) + '</div><h2>' + s.h + '</h2><ul class="steps">' + s.steps.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' +
+      '<div class="work"><div class="tmr" id="tmr">' + s.min + ':00</div><button class="tmrb" id="tmrGo">⏱ ' + s.min + '분 시작</button></div></div>';
+  } else if (s.ty === 'table') {
+    h = '<div class="sl"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2><table><tr>' + s.th.map(x => '<th>' + esc(x) + '</th>').join('') + '</tr>' +
+      s.rows.map(r => '<tr>' + r.map(x => '<td>' + x + '</td>').join('') + '</tr>').join('') + '</table></div>';
+  } else if (s.ty === 'cols') {
+    h = '<div class="sl"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2><div class="cols"><div class="box"><div class="k">' + esc(s.a.k) + '</div><div class="v">' + esc(s.a.v) + '</div></div>' +
+      '<div class="box proof"><div class="k">' + esc(s.b.k) + '</div><div class="v">' + esc(s.b.v) + '</div></div></div></div>';
+  } else if (s.ty === 'life') {
+    h = '<div class="sl"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2><div class="life">' +
+      LIFE.map(x => '<div class="' + (x.end ? 'end' : '') + '"><div class="e">' + x.e + '</div><div class="n">' + esc(x.n) + '</div><div class="c">' + esc(x.c) + '</div></div>').join('') +
+      '</div><div class="q">「고객님은 지금 어디쯤 계세요?」</div></div>';
+  } else if (s.ty === 'ff') {
+    h = '<div class="sl dense"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2><table><tr><th>걸음</th><th>사실(Fact)</th><th>마음(Feeling)</th></tr>' +
+      FF.map((x, i) => '<tr><td><b>' + (i + 1) + ' ' + esc(x.s) + '</b></td><td>' + esc(x.f) + '</td><td>' + esc(x.h) + '</td></tr>').join('') + '</table></div>';
+  } else if (s.ty === 'break') {
+    h = '<div class="sl big" style="text-align:center;align-items:center"><div class="tag">쉬는 시간</div><h2><em>' + sec.min + '분</em> 쉬겠습니다</h2>' +
+      '<div class="work" style="justify-content:center"><div class="tmr" id="tmr">' + sec.min + ':00</div><button class="tmrb" id="tmrGo">⏱ 시작</button></div></div>';
+  }
+  return h + '<div class="pt">' + esc(sec.name + ' · ' + sec.title) + '</div><div class="num">' + (cur + 1) + ' / ' + D.length + '</div>';
+}
+
+/* 활동 시계 — 그 장에만. 장을 넘기면 멈춥니다 */
+let tmrId = null;
+function stopTmr() { if (tmrId) { clearInterval(tmrId); tmrId = null; } }
+function bindTmr(min) {
+  const b = $('tmrGo'), t = $('tmr');
+  if (!b || !t) return;
+  b.onclick = () => {
+    stopTmr();
+    let left = min * 60;
+    t.classList.remove('done');
+    b.textContent = '↺ 다시';
+    tmrId = setInterval(() => {
+      left--;
+      t.textContent = Math.floor(Math.max(0, left) / 60) + ':' + String(Math.max(0, left) % 60).padStart(2, '0');
+      if (left <= 0) { stopTmr(); t.classList.add('done'); t.textContent = '끝'; }
+    }, 1000);
+  };
+}
+
+function show(i) {
+  D = deckList();
+  cur = Math.max(0, Math.min(D.length - 1, i));
+  stopTmr();
+  const s = D[cur];
+  $('stage').innerHTML = slideHtml(s);
+  if (s.ty === 'story') fitStory();
+  if (s.ty === 'work') bindTmr(s.min);
+  if (s.ty === 'break') bindTmr(SEC[s.sec].min);
+  const sec = SEC[s.sec];
+  $('where').innerHTML = esc(sec.name + ' · ' + sec.title) + '<small>계획 ' + sec.min + '분</small>';
+  $('cnt').textContent = (cur + 1) + ' / ' + D.length;
+  $('say').textContent = s.say || '';
+  $('askBox').innerHTML = s.ask ? '<div class="ask">🙋 청중에게 — ' + esc(s.ask) + '</div>' : '';
+  thumbs();
+  clockTick();
+}
+function thumbs() {
+  let last = '';
+  $('thumbs').innerHTML = D.map((s, i) => {
+    const first = s.sec !== last; last = s.sec;
+    const lab = s.ty === 'event' ? '📍' + (S.tl[s.i].t || '').slice(0, 8) : s.ty === 'story' ? '✍' + STORY_T[s.k].slice(0, 8) : (first ? SEC[s.sec].name : '') || (i + 1);
+    return '<button data-i="' + i + '" class="' + (i === cur ? 'on' : '') + (first && i ? ' pt0' : '') + '">' + esc(lab) + '</button>';
+  }).join('');
+}
+$('thumbs').onclick = e => { const b = e.target.closest('button'); if (b) show(+b.dataset.i); };
+$('prev').onclick = () => show(cur - 1);
+$('next').onclick = () => show(cur + 1);
+$('noteBtn').onclick = () => $('notes').classList.toggle('on');
+$('fsBtn').onclick = () => { const el = $('stageBox'); if (document.fullscreenElement) document.exitFullscreen(); else if (el.requestFullscreen) el.requestFullscreen().catch(() => {}); };
+$('stageBox').onclick = e => { if (document.fullscreenElement && !e.target.closest('button')) show(cur + 1); };
+document.addEventListener('keydown', e => {
+  if (!$('p-deck').classList.contains('on') || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(cur + 1); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(cur - 1); }
+  else if (e.key === 'n' || e.key === 'N') $('notes').classList.toggle('on');
+  else if (e.key === 'f' || e.key === 'F') $('fsBtn').click();
+});
+
+/* 강의 시계 — 지금 부의 계획과 견줍니다. 계획은 SECTIONS 한 곳 (5번) */
+let clk = { start: 0, run: false };
+function secStartMin(id) { let a = 0; for (const s of SECTIONS) { if (s.id === id) return a; a += s.min; } return a; }
+function clockTick() {
+  const s = D[cur]; if (!s) return;
+  const plan = secStartMin(s.sec), planEnd = plan + SEC[s.sec].min;
+  if (!clk.run) { $('clk').className = 'clock'; $('clk').innerHTML = '계획 — 이 부는 <b>' + plan + '분</b>에 시작해 <b>' + planEnd + '분</b>에 끝 · 전체 ' + TOTAL_MIN + '분'; return; }
+  const el = (Date.now() - clk.start) / 60000;
+  const over = el > planEnd;
+  $('clk').className = 'clock' + (over ? ' over' : '');
+  $('clk').innerHTML = '지난 <b>' + Math.floor(el) + '분</b> / ' + TOTAL_MIN + '분 · 이 부는 ' + planEnd + '분까지' + (over ? ' · <b>' + Math.ceil(el - planEnd) + '분 늦음</b>' : '');
+}
+$('clkGo').onclick = () => { if (!clk.run) { clk = { start: Date.now(), run: true }; $('clkGo').textContent = '⏸ 시계 멈춤'; } else { clk.run = false; $('clkGo').textContent = '▶ 강의 시작'; } clockTick(); };
+$('clkReset').onclick = () => { clk = { start: 0, run: false }; $('clkGo').textContent = '▶ 강의 시작'; clockTick(); };
+setInterval(clockTick, 15000);
+
+function emptyWarn() {
+  const E = storyEmpty();
+  const noTl = !S.tl.some(e => has(e.t));
+  if (!E.length && !noTl) { $('emptyWarn').innerHTML = ''; return; }
+  $('emptyWarn').innerHTML = '<div class="warn">✍️ 아직 안 적은 내 이야기 <b>' + E.length + '칸</b>' + (noTl ? ' · 타임라인 <b>0장면</b>' : '') +
+    ' — 그 장은 발표에서 <b>건너뜁니다</b>(지어 넣지 않습니다). 강의의 심장은 강사님 이야기입니다. <button class="btn sm" data-go="mine">적으러 가기 →</button></div>';
+}
+$('emptyWarn').onclick = e => { const b = e.target.closest('[data-go]'); if (b) page(b.dataset.go); };
+
+/* ════════════════════════════════════════════════════════════════
+   ✍️ 내 이야기
+   ════════════════════════════════════════════════════════════════ */
+function renderMine() {
+  $('meName').value = S.me.name; $('meRole').value = S.me.role;
+  $('storyForm').innerHTML = STORY.map(x => '<div class="fld"><label for="st_' + x.k + '">' + esc(x.t) +
+    '<span class="st ' + (has(S.story[x.k]) ? 'ok">발표에 섬' : 'no">비어 있음 — 건너뜀') + '</span></label><div class="pq">' + esc(x.p) + '</div>' +
+    '<textarea id="st_' + x.k + '" data-st="' + x.k + '">' + esc(S.story[x.k] || '') + '</textarea><div class="hint" data-len="' + x.k + '">' + lenTxt(S.story[x.k]) + '</div></div>').join('');
+  $('storyCnt').textContent = (STORY.length - storyEmpty().length) + ' / ' + STORY.length + '칸 적음';
+  $('seedChips').innerHTML = '<span class="hint" style="align-self:center">떠올리기 —</span>' + SEEDS.map(t => '<button data-seed="' + esc(t) + '">＋ ' + esc(t) + '</button>').join('');
+  renderTl();
+}
+function lenTxt(v) {
+  const n = String(v || '').length;
+  return n > STORY_MAX ? '⚠ ' + n + '자 — 무대 한 장에는 ' + STORY_MAX + '자까지 섭니다. 넘는 부분은 장에서 잘리니 줄여 주십시오(노트로 말하시면 됩니다).' : n ? n + ' / ' + STORY_MAX + '자' : '';
+}
+function renderTl() {
+  $('tlCnt').textContent = S.tl.length + '장면 · 증명 ' + proofs().length;
+  $('tlList').innerHTML = S.tl.length ? S.tl.map((e, i) => '<div class="ev" data-i="' + i + '"><div class="eh"><b>장면 ' + (i + 1) + '</b>' +
+    '<button class="btn sm" data-mv="-1" ' + (i ? '' : 'disabled') + '>↑</button><button class="btn sm" data-mv="1" ' + (i < S.tl.length - 1 ? '' : 'disabled') + '>↓</button><button class="btn sm red" data-del>지우기</button></div>' +
+    '<div class="g4"><div class="fld"><label>언제</label><input data-f="y" value="' + esc(e.y) + '" placeholder="2019 · 3년차"></div>' +
+    '<div class="fld"><label>한 줄 제목</label><input data-f="t" value="' + esc(e.t) + '" placeholder="그 장면을 한 줄로"></div>' +
+    '<div class="fld"><label>마음 점수</label><select data-f="score"><option value="">안 적음</option>' + Array.from({ length: 11 }, (_, j) => 5 - j).map(v => '<option value="' + v + '"' + (String(e.score) === String(v) ? ' selected' : '') + '>' + (v > 0 ? '+' + v : v) + '</option>').join('') + '</select></div>' +
+    '<div class="fld"><label>결과</label><select data-f="res"><option value="">안 고름</option>' + Object.keys(RES).map(k => '<option value="' + k + '"' + (e.res === k ? ' selected' : '') + '>' + RES[k] + '</option>').join('') + '</select></div></div>' +
+    '<div class="g2"><div class="fld"><label>그때 — 무슨 일이 있었나</label><textarea data-f="what" placeholder="어디서 · 누구와 · 무슨 말을 들었나">' + esc(e.what) + '</textarea></div>' +
+    '<div class="fld"><label>그때 내가 한 선택</label><textarea data-f="choice" placeholder="무엇을 골랐나 · 무엇을 포기했나">' + esc(e.choice) + '</textarea></div></div>' +
+    '<div class="fld"><label>그래서 배운 것</label><input data-f="learn" value="' + esc(e.learn) + '" placeholder="한 문장으로"></div></div>').join('')
+    : '<p class="hint" style="margin-top:10px">아직 장면이 없습니다. 위 「떠올리기」 를 누르거나 「＋ 장면 더하기」 로 시작하십시오.</p>';
+}
+const newEv = t => ({ y: '', t: t || '', score: '', res: '', what: '', choice: '', learn: '' });
+$('p-mine').addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.me) S.me[t.dataset.me] = t.value;
+  else if (t.dataset.st) {
+    S.story[t.dataset.st] = t.value;
+    const b = t.parentNode.querySelector('.st'), on = has(t.value);
+    b.className = 'st ' + (on ? 'ok' : 'no'); b.textContent = on ? '발표에 섬' : '비어 있음 — 건너뜀';
+    t.parentNode.querySelector('[data-len]').textContent = lenTxt(t.value);
+    $('storyCnt').textContent = (STORY.length - storyEmpty().length) + ' / ' + STORY.length + '칸 적음';
+  }
+  else if (t.dataset.f) { const ev = t.closest('.ev'); S.tl[+ev.dataset.i][t.dataset.f] = t.value; if (t.tagName === 'SELECT') $('tlCnt').textContent = S.tl.length + '장면 · 증명 ' + proofs().length; }
+  else return;
+  save();
+});
+$('p-mine').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.seed) { S.tl.push(newEv(b.dataset.seed)); save(); renderTl(); return; }
+  const ev = b.closest('.ev');
+  if (ev) {
+    const i = +ev.dataset.i;
+    if (b.hasAttribute('data-del')) { if (!confirm('장면 ' + (i + 1) + ' 「' + (S.tl[i].t || '제목 없음') + '」 을 지울까요?')) return; S.tl.splice(i, 1); }
+    else if (b.dataset.mv) { const j = i + +b.dataset.mv; if (j < 0 || j >= S.tl.length) return; [S.tl[i], S.tl[j]] = [S.tl[j], S.tl[i]]; }
+    save(); renderTl();
+  }
+});
+$('tlAdd').onclick = () => { S.tl.push(newEv('')); save(); renderTl(); };
+$('bkSave').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' }));
+  a.download = 'BCD강의_내이야기_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  $('bkMsg').textContent = '백업 파일을 내려받았습니다. 그 파일에는 강사님 이야기가 그대로 들어 있습니다.';
+};
+$('bkLoad').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const o = JSON.parse(r.result);
+      if (!o || typeof o !== 'object' || !('story' in o || 'tl' in o)) throw 0;
+      if (!confirm('지금 적힌 내용을 이 백업으로 바꿀까요?')) return;
+      localStorage.setItem(KEY, JSON.stringify(o)); S = load(); save(); renderMine(); show(0); emptyWarn();
+      $('bkMsg').textContent = '불러왔습니다 — 이야기 ' + (STORY.length - storyEmpty().length) + '칸 · 장면 ' + S.tl.length + '개.';
+    } catch (x) { $('bkMsg').textContent = '이 강의의 백업 파일이 아닙니다 — 아무것도 바꾸지 않았습니다.'; }
+  };
+  r.readAsText(f); e.target.value = '';
+};
+$('wipe').onclick = () => {
+  if (!confirm('이 기기에 적은 강사 이야기 · 타임라인을 모두 지웁니다. 백업이 없으면 되돌릴 수 없습니다. 지울까요?')) return;
+  S = BLANK(); try { localStorage.removeItem(KEY); } catch (e) {}
+  renderMine(); $('bkMsg').textContent = '지웠습니다.';
+};
+
+/* ════════════════════════════════════════════════════════════════
+   🕒 진행표 — SECTIONS 를 그대로 읽습니다
+   ════════════════════════════════════════════════════════════════ */
+function hm(base, add) {
+  const [h, m] = (base || '13:00').split(':').map(Number);
+  const t = (h * 60 + m + add) % 1440;
+  return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+}
+function renderPlan() {
+  const st = $('startAt').value || '13:00';
+  let a = 0;
+  const rows = SECTIONS.map(s => {
+    const n = SLIDES.filter(x => x.sec === s.id);
+    const work = n.filter(x => x.ty === 'work').map(x => esc(x.h.replace(/<[^>]+>/g, '')) + ' ' + x.min + '분').join(' · ');
+    const r = '<tr' + (s.brk ? ' class="brk"' : '') + '><td class="t">' + hm(st, a) + '</td><td><b>' + esc(s.name) + '</b></td><td>' + esc(s.title) +
+      (work ? '<div class="hint">✍ 활동 — ' + work + '</div>' : '') + '</td><td class="m">' + s.min + '분</td></tr>';
+    a += s.min; return r;
+  }).join('');
+  $('planTbl').innerHTML = '<thead><tr><th>시각</th><th>부</th><th>내용</th><th>분</th></tr></thead><tbody>' + rows + '</tbody>' +
+    '<tfoot><tr><td class="t">' + hm(st, TOTAL_MIN) + '</td><td colspan="2">끝</td><td class="m">' + TOTAL_MIN + '분</td></tr></tfoot>';
+  $('planTot').textContent = '모두 ' + Math.floor(TOTAL_MIN / 60) + '시간' + (TOTAL_MIN % 60 ? ' ' + TOTAL_MIN % 60 + '분' : '') + '(' + TOTAL_MIN + '분)';
+}
+$('startAt').oninput = renderPlan;
+
+/* ════════════════════════════════════════════════════════════════
+   🖨️ 워크북(빈 칸) · 강사 대본
+   ★ 워크북은 참가자 것이라 강사님 이야기가 안 들어갑니다. 견본 고객은 홍길동 (3번).
+   ════════════════════════════════════════════════════════════════ */
+function lines(n) { return '<div class="lines">' + '<div></div>'.repeat(n) + '</div>'; }
+function bookHtml() {
+  return [
+    '<div class="wb"><h3>1쪽 · 나의 B · C · D 인생 곡선</h3><div class="wl">이름 ______________ · 오늘 아침 내가 한 선택 셋: ① ________ ② ________ ③ ________</div>' +
+      '<div class="grid"><span style="top:6px">+5 정점</span><span style="top:calc(50% - 18px)">0</span><span style="bottom:6px">-5 바닥</span></div>' +
+      '<div class="hint" style="margin-top:6px">← B (태어남) ··························· 지금 →</div>' +
+      '<table><tr><th style="width:18%">언제</th><th>그 장면</th><th>그때 내가 한 선택</th><th style="width:20%">실패 / 증명</th></tr>' + '<tr><td></td><td></td><td></td><td></td></tr>'.repeat(5) + '</table></div>',
+    '<div class="wb"><h3>2쪽 · 두 개의 시계 — 실패를 다시 읽기</h3><div class="wl">과정에서는 실패였지만, 결과를 냈다면 그것은 증명입니다.</div>' +
+      '<table><tr><th>그 사건</th><th>과정의 시계로 보면</th><th>결과의 시계로 보면</th></tr>' + '<tr><td></td><td></td><td></td></tr>'.repeat(3) + '</table>' +
+      '<div class="q2">놓친 고객 한 분 (이름은 적지 않습니다)</div><table><tr><th>그때 내가 한 선택</th><th>다시 만난다면 먼저 물을 것</th></tr><tr><td style="height:80px"></td><td></td></tr></table></div>',
+    '<div class="wb"><h3>3쪽 · 고객님의 B와 D — 생애 지도</h3><div class="wl">견본 고객 <b>홍길동</b> 님 · 지금 계신 마당에 ○ 표</div>' +
+      '<table><tr>' + LIFE.map(x => '<th style="text-align:center;font-size:12px">' + x.e + '<br>' + esc(x.n) + '</th>').join('') + '</tr><tr>' + '<td></td>'.repeat(LIFE.length) + '</tr></table>' +
+      '<div class="q2">다음 5년 안에 홍길동 님이 할 큰 선택 셋</div>' + lines(3) +
+      '<div class="q2">그 선택을 무너뜨릴 수 있는 사건 (일찍 떠남 · 아파서 멈춤 · 오래 삶)</div>' + lines(2) +
+      '<div class="q2">내가 먼저 물어야 할 질문 하나</div>' + lines(1) + '</div>',
+    '<div class="wb"><h3>4쪽 · 팩트파인딩 일곱 걸음 · 역할극</h3><div class="wl">사실(Fact) 하나, 마음(Feeling) 하나. 모르시는 것은 0 이 아니라 「모름」 으로 적습니다.</div>' +
+      '<table><tr><th style="width:16%">걸음</th><th>사실 질문 → 고객의 말 그대로</th><th>마음 질문 → 고객의 말 그대로</th></tr>' +
+      FF.map((x, i) => '<tr><td><b>' + (i + 1) + ' ' + esc(x.s) + '</b></td><td>' + esc(x.f) + '</td><td>' + esc(x.h) + '</td></tr>').join('') + '</table>' +
+      '<div class="q2">관찰 체크 (관찰자)</div><table>' + SLIDES.find(x => x.tag === '관찰 체크').li.map(x => '<tr><td style="height:auto">☐ ' + esc(x) + '</td></tr>').join('') + '</table>' +
+      '<div class="q2">고객 카드 — 홍길동 님 (역할극용 · 조에서 정하세요)</div><div class="hint">나이 ____ · 가족 ________ · 일 ________ · 요즘 걱정 ________ · 꿈 ________</div></div>',
+    '<div class="wb"><h3>5쪽 · 나의 다음 C 선언문</h3><div class="wl">고객님이 수많은 선택 속에서 나를 고를 수 있는 자료</div>' +
+      '<div class="q2">나는 ______________________________ 을(를) 증명해 온 사람이다.</div>' + lines(2) +
+      '<div class="q2">고객에게 나는 이것을 약속한다 (세 줄)</div>' + lines(3) +
+      '<div class="q2">무너질 때 나를 다시 세우는 한 문장</div>' + lines(1) +
+      '<div class="q2">내일 아침 나의 첫 번째 선택은 ______________________________ 이다.</div>' + lines(1) +
+      '<div class="hint" style="margin-top:14px">B와 D는 이미 정해져 있습니다. 오늘부터의 C는 여러분 것입니다.</div></div>'
+  ].join('');
+}
+function scriptHtml() {
+  const L = deckList();
+  return '<div class="wb script"><h3>B · C · D 영업 강의 — 강사 대본</h3><div class="wl">' + (has(S.me.name) ? esc(S.me.name) + ' · ' : '') + TOTAL_MIN + '분 · ' + L.length + '장' +
+    (storyEmpty().length ? ' · 안 적은 이야기 ' + storyEmpty().length + '칸은 빠졌습니다' : '') + '</div>' +
+    L.map((s, i) => {
+      const sec = SEC[s.sec];
+      let t = '', b = '';
+      if (s.ty === 'story') { t = STORY_T[s.k]; b = S.story[s.k]; }
+      else if (s.ty === 'event') { const e = S.tl[s.i]; t = (e.y ? e.y + ' · ' : '') + e.t + (RES[e.res] ? ' — ' + RES[e.res] : ''); b = [e.what && '그때: ' + e.what, e.choice && '선택: ' + e.choice, e.learn && '배운 것: ' + e.learn].filter(Boolean).join('\n'); }
+      else if (s.ty === 'cover') t = '표지 — 인생은 B와 D 사이의 C';
+      else if (s.ty === 'curve') t = '내 인생 곡선 (점 ' + scored().length + '개)';
+      else if (s.ty === 'stairs') t = '증명의 계단 — ' + proofs().map(e => e.t).join(' → ');
+      else if (s.ty === 'break') t = sec.min + '분 쉬는 시간';
+      else if (s.ty === 'life') { t = (s.h || '').replace(/<[^>]+>/g, ''); b = LIFE.map(x => x.n).join(' → '); }
+      else if (s.ty === 'ff') { t = '팩트파인딩 일곱 걸음'; b = FF.map((x, j) => (j + 1) + '. ' + x.s + ' — ' + x.f + ' / ' + x.h).join('\n'); }
+      else {
+        t = (s.h || '').replace(/<br>/g, ' ').replace(/<[^>]+>/g, '');
+        b = (s.li || s.steps || []).map(x => '· ' + x.replace(/<small>/g, ' — ').replace(/<[^>]+>/g, '')).join('\n') +
+          (s.rows ? s.rows.map(r => '· ' + r.join(' | ').replace(/<[^>]+>/g, '')).join('\n') : '') + (s.a ? s.a.k + ': ' + s.a.v + '\n' + s.b.k + ': ' + s.b.v : '');
+      }
+      return '<div class="sc"><div class="h">' + (i + 1) + '. ' + esc(t) + '<small>' + esc(sec.name) + '</small></div>' + (b ? '<div class="b">' + esc(b) + '</div>' : '') +
+        (s.say ? '<div class="n">🎙 ' + esc(s.say) + (s.ask ? '\n🙋 ' + esc(s.ask) : '') + '</div>' : '') + '</div>';
+    }).join('') + '</div>';
+}
+function doPrint(html) { $('printArea').innerHTML = html; window.print(); }
+$('prBook').onclick = () => doPrint(bookHtml());
+$('prScript').onclick = () => doPrint(scriptHtml());
+window.addEventListener('afterprint', () => { $('printArea').innerHTML = ''; });
+
+/* ════════════════════════════════════════════════════════════════
+   쪽 넘김
+   ════════════════════════════════════════════════════════════════ */
+function page(p) {
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+  document.querySelectorAll('.page').forEach(x => x.classList.toggle('on', x.id === 'p-' + p));
+  if (p === 'deck') { show(cur); emptyWarn(); }
+  else if (p === 'mine') renderMine();
+  else if (p === 'plan') renderPlan();
+  else if (p === 'book') $('bookView').innerHTML = bookHtml();
+  try { localStorage.setItem(KEY + '_tab', p); } catch (e) {}
+}
+$('nav').onclick = e => { const b = e.target.closest('button'); if (b) page(b.dataset.p); };
+let first = 'deck';
+try { first = localStorage.getItem(KEY + '_tab') || 'deck'; } catch (e) {}
+page(['deck', 'mine', 'plan', 'book'].includes(first) ? first : 'deck');
+</script>
+</body>
+</html>
