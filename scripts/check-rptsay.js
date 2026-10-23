@@ -108,7 +108,7 @@ const ANS = { goal: ['확인됨', '300'], rage: ['확인됨', '60'], nps: ['모�
   is(/계산기는 목표를 다 채우면 「가능」/.test(D.sec), '판정 카드가 어떤 자로 딱지를 붙였는지 말한다');
   const rule = await pg.evaluate(() => ({ save: FIN_RULE.saveGood, dsr: FIN_RULE.dsrOk }));
   is(order.o.cash.why.includes(rule.save + '%') && /월급의 \d+%/.test(order.o.cash.why), '「남는 돈」 줄 — 고객 저축률과 계산기 기준(' + rule.save + '%)을 같이');
-  is(order.o.debt.why.includes('DSR ' + rule.dsr + '%'), '「대출」 줄 — 계산기 기준(DSR ' + rule.dsr + '%)을 같이');
+  is(order.o.debt.why.includes(rule.dsr + '%') && /월급 중 대출로 나가는 몫 \d+%/.test(order.o.debt.why), '「대출」 줄 — 고객 숫자(월급 중 대출 몫)와 계산기 기준(' + rule.dsr + '%)을 같이');
   is(/를? ?빼고 남은 돈이에요/.test(D.sec), '「매달 116만 원이 남아요」 가 무엇을 빼고 남은 돈인지 말한다');
 
   head('바. 선고하던 말이 돌아오지 않았나');

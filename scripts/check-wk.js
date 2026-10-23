@@ -203,10 +203,14 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
     const choice = ['s_dining', 's_shopping', 's_travel', 's_choice_etc'].reduce((a, id) => a + v(id), 0);
     const saving = ['s_emerg', 's_pension', 's_irp', 's_isa', 's_taxfree', 's_general'].reduce((a, id) => a + v(id), 0);
     const surplus = income - fixed - choice - saving, sr = saving / income * 100;
-    const r = v('r_mortgage_rate') / 100 / 12, m = v('r_mortgage'), pay = Math.round(m * r * Math.pow(1 + r, 360) / (Math.pow(1 + r, 360) - 1));
-    const dsr = pay / income * 100, ltv = m / v('r_house_val') * 100;
+    /* 판 X177 — 부동산 탭의 견본 값(손대지 않은 칸)은 고객 숫자가 아닙니다. 그때는 고객이 말한 숫자로:
+       DSR = 매달 원리금 ÷ 월 소득 · LTV = 총부채 ÷ 부동산 (자는 앱의 셈을 빌리지 않고 칸 값으로 따로 셉니다) */
+    const touched = (id) => { const e = document.getElementById(id); return e.value.trim() !== '' && (e.dataset.touched === '1' || e.value !== e.defaultValue); };
+    const r = v('r_mortgage_rate') / 100 / 12, m = touched('r_mortgage') ? v('r_mortgage') : 0, hv = touched('r_house_val') ? v('r_house_val') : 0;
+    const pay = m > 0 ? Math.round(m * r * Math.pow(1 + r, 360) / (Math.pow(1 + r, 360) - 1)) : v('s_loan');
+    const dsr = pay / income * 100, ltv = hv > 0 ? m / hv * 100 : (v('s_realty') > 0 ? v('s_debt') / v('s_realty') * 100 : 0);
     const F = fsPlan(rptData({})._n), get = (k) => (F.order.find((o) => o.k === k) || {}).kind;
-    return { cash: surplus >= 0 && sr >= 20 ? 'good' : surplus >= 0 ? 'warn' : 'bad', debt: dsr <= 35 && ltv <= 60 ? 'good' : (dsr <= 45 || ltv <= 70 ? 'warn' : 'bad'), appCash: get('cash'), appDebt: get('debt'), dsr: Math.round(dsr), ltv: Math.round(ltv), appDsr: Math.round(F.debt.dsr) };
+    return { cash: surplus >= 0 && sr >= 20 ? 'good' : surplus >= 0 ? 'warn' : 'bad', debt: dsr <= 35 && ltv <= 60 ? 'good' : (dsr <= 45 || ltv <= 70 ? 'warn' : 'bad'), appCash: get('cash'), appDebt: get('debt'), dsr: Math.round(dsr), ltv: Math.round(ltv), appDsr: Math.round(F.debt.loanRatio) };
   });
   is(fx.cash === fx.appCash, '「고칠 순서」 의 남는 돈 판정 = 계산기 기준 그대로 (' + fx.cash + ')');
   is(fx.debt === fx.appDebt && fx.dsr === fx.appDsr, '대출 판정 · DSR = 계산기 그대로 (DSR ' + fx.dsr + '% · LTV ' + fx.ltv + '% → ' + fx.debt + ')');

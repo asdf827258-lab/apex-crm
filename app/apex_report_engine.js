@@ -466,7 +466,7 @@ var CSS = [
   '.empty{background:var(--bg);border-radius:14px;padding:16px;font-size:14px;color:var(--t2);line-height:1.7}',
   '@media (max-width:400px){.nb{font-size:24px}.tiles.c3{grid-template-columns:1fr}.hb-row{grid-template-columns:76px 1fr auto}.hero h1{font-size:23px}}',
   '@page{size:A4;margin:12mm 11mm}',
-  '@media print{body{font-size:13.5px}.wrap{max-width:none;padding:0}.sec{margin-top:18px}.sh{break-inside:avoid;page-break-inside:avoid;break-after:avoid;page-break-after:avoid}.hero,.kpi,.kp,.tile,.gi{break-inside:avoid;page-break-inside:avoid}.hero{margin-top:0}}'
+  '.part{margin:40px 0 4px;padding:22px 22px 20px;border-radius:22px;background:#191F28;color:#fff}.part .pk{display:inline-block;font-size:13px;font-weight:800;color:#191F28;background:#fff;border-radius:99px;padding:3px 10px}.part h2{margin:10px 0 0;font-size:22px;line-height:1.35}.part p{margin:8px 0 0;font-size:15px;line-height:1.65;color:#D1D6DB}.toc{margin-top:16px;background:#fff;border-radius:22px;padding:20px 20px 14px}.tc-h{display:flex;align-items:center;gap:8px;font-size:19px;font-weight:800}.tc-p{margin-top:14px;font-size:15px;font-weight:800;color:#191F28}.tc-p b{display:inline-block;min-width:38px;color:#3182F6}.tc-l{list-style:none;margin:6px 0 0;padding:0}.tc-l li{display:flex;gap:10px;padding:6px 0;font-size:15px;line-height:1.5;color:#4E5968;border-bottom:1px solid #F2F4F6}.tc-l li span{flex:0 0 28px;font-weight:800;color:#8B95A1}.tc-n{font-size:13px;color:#8B95A1;line-height:1.6;margin:12px 0 0}.lead{font-size:15px;line-height:1.7;color:#4E5968;margin:0 6px 12px}@media print{body{font-size:13.5px}.part{break-before:page;page-break-before:always;break-after:avoid;page-break-after:avoid}.toc{break-inside:avoid;page-break-inside:avoid}.wrap{max-width:none;padding:0}.sec{margin-top:18px}.sh{break-inside:avoid;page-break-inside:avoid;break-after:avoid;page-break-after:avoid}.hero,.kpi,.kp,.tile,.gi{break-inside:avoid;page-break-inside:avoid}.hero{margin-top:0}}'
 ].join('\n');
 
 /* ── 본문 ──────────────────────────────────────────────────── */
@@ -526,7 +526,10 @@ function html(d) {
       '</div>' + (k.sub ? '<div class="ks">' + txt(k.sub) + '</div>' : '') + '</div>';
   }).join('') + '</div>');
 
-  var no = 0; function N() { no++; return (no < 10 ? '0' : '') + no; }
+  /* 장은 먼저 모으고 나중에 번호를 답니다 — 「한 권」(판 X177)에서는 순서를 data 가 정하므로 목차도 같은 목록에서 냅니다.
+     엔진이 스스로 짓는 장(최종 제안 · 수익률 · 이익)은 이름으로 모아 두었다가, sections 에 {use:'proposal'} 처럼
+     자리 표시가 있으면 그 자리에 · 없으면 예전 순서(제안 → 수익률 → 이익 → 핵심 이슈) 그대로 둡니다. */
+  var BLT = {};
 
   /* 3. 최종 제안 */
   var steps = d.steps;
@@ -555,7 +558,7 @@ function html(d) {
         (SQ && SQ.gap > 0 ? '<p class="but">' + txt('그런데 — 지금 준비된 것을 다 합쳐도 목표의 **' + Math.round(SQ.now / SQ.goal * 100) + '%**예요.' + (d.fill && d.fill.unknown && d.fill.unknown.length ? '\n(' + d.fill.unknown.join(' · ') + josa(d.fill.unknown[d.fill.unknown.length - 1], '은', '는') + ' 아직 몰라서 빼고 셌어요)' : '')) + '</p>' : '') : '') +
       (d.todo && d.todo.length ? '<div class="lst-h">' + icon('memo') + '같이 할 일</div><ul class="ul todo">' + d.todo.slice(0, 4).map(function (x) { return '<li>' + txt(x) + '</li>'; }).join('') + '</ul>' : '') + '</div>';
   }
-  if (b3) out.push(section(N(), '최종 제안', d.proposalHeadline || '결론부터 말씀드릴게요', b3, 'target'));
+  if (b3) BLT.proposal = { kicker: '최종 제안', title: d.proposalHeadline || '결론부터 말씀드릴게요', body: b3, icon: 'target' };
 
   /* 4. 수익률별 예상 수령액 */
   if (P) {
@@ -600,7 +603,7 @@ function html(d) {
         '<p class="p pg-t">' + txt('**' + DL[1].label + '**하면 매달 **' + manTxt(lost) + '** 줄어요 — ' + P.receiveYears + '년 받으면 **' + manTxt(lost * 12 * P.receiveYears) + '**이에요.\n쌓일 시간이 줄어든 만큼이에요.') + '</p>' +
         '<div class="note">' + txt((P.target ? P.target.label + ' 가정 · ' : '') + '수익률은 보장되지 않아요.') + '</div></div>';
     }
-    out.push(section(N(), '수익률별 예상 수령액', '수익률에 따라 이렇게 달라져요', b4, 'chart'));
+    BLT.returns = { kicker: '수익률별 예상 수령액', title: '수익률에 따라 이렇게 달라져요', body: b4, icon: 'chart' };
 
     /* 5. 얻게 되는 이익 */
     var t = P.target, totalGet = t ? t.monthly * 12 * P.receiveYears : null;
@@ -626,22 +629,27 @@ function html(d) {
       b5 += card({ type: 'stack', title: d.goalTitle || '은퇴 후 매달 쓸 돈, 채워질까요?', icon: 'target', goal: d.goal, goalLabel: '목표', assumed: d.goalAssumed,
         rows: [{ label: '지금 그대로면', items: parts.slice(0, nBase) }, { label: '오늘 제안을 더하면', items: parts }] });
     }
-    if (b5) out.push(section(N(), '얻게 되는 이익', '낸 돈보다 이만큼 더 돌아와요', b5, 'gift'));
+    if (b5) BLT.benefit = { kicker: '얻게 되는 이익', title: '낸 돈보다 이만큼 더 돌아와요', body: b5, icon: 'gift' };
   }
 
   /* 6. 고객 핵심 이슈 */
-  (d.sections || []).forEach(function (s) {
-    out.push(section(N(), s.kicker || '핵심 이슈', s.title || '', (s.cards || []).map(card).join('') + (s.ask ? '<div class="ask">' + txt(s.ask) + '</div>' : ''), s.icon || 'pin'));
+  var CH = [], used = {}, SEC = d.sections || [];
+  SEC.forEach(function (s) { if (s.use) used[s.use] = 1; });
+  if (!SEC.some(function (s) { return s.use; })) ['proposal', 'returns', 'benefit'].forEach(function (k) { if (BLT[k]) CH.push(BLT[k]); });
+  SEC.forEach(function (s) {
+    if (s.use) { if (BLT[s.use]) { var b = {}; for (var k in BLT[s.use]) b[k] = BLT[s.use][k]; b.part = s.part; CH.push(b); } return; }
+    CH.push({ kicker: s.kicker || '핵심 이슈', title: s.title || '', icon: s.icon || 'pin', part: s.part,
+      body: (s.lead ? '<p class="lead">' + txt(s.lead) + '</p>' : '') + (s.cards || []).map(card).join('') + (s.ask ? '<div class="ask">' + txt(s.ask) + '</div>' : '') });
   });
 
   /* 7. 설명 */
   if (d.explain) {
     var ex = typeof d.explain === 'string' ? '<p class="p">' + txt(d.explain) + '</p>'
       : d.explain.map(function (x) { return '<div class="qa"><div class="qq">' + txt(x.q) + '</div><div class="p">' + txt(x.a) + '</div></div>'; }).join('');
-    out.push(section(N(), '왜 이렇게 짰나요', d.explainTitle || '쉽게 풀어 볼게요', '<div class="card">' + ex + '</div>', 'bulb'));
+    CH.push({ kicker: '왜 이렇게 짰나요', title: d.explainTitle || '쉽게 풀어 볼게요', body: '<div class="card">' + ex + '</div>', icon: 'bulb' });
   }
   /* 8. 일정 */
-  if (d.schedule && d.schedule.length) out.push(section(N(), '일정', '이 순서로 함께 해요', '<div class="card">' + vsteps(d.schedule) + '</div>', 'calendar'));
+  if (d.schedule && d.schedule.length) CH.push({ kicker: '일정', title: '이 순서로 함께 해요', body: '<div class="card">' + vsteps(d.schedule) + '</div>', icon: 'calendar' });
 
   /* 9. 요약 + 면책 */
   var disc = assumed.concat(d.disclaimer || [], [
@@ -654,7 +662,29 @@ function html(d) {
   var b9 = (d.summary && d.summary.length ? '<div class="card"><ol class="sum">' + d.summary.slice(0, 6).map(function (x) { return '<li><div>' + txt(x) + '</div></li>'; }).join('') + '</ol></div>' : '') +
     (closing ? '<div class="ask">' + icon('speech', 'aic') + txt(closing) + '</div>' : '') +
     '<div class="disc"><b>꼭 읽어 주세요</b><ul>' + disc.map(function (x) { return '<li>' + txt(x) + '</li>'; }).join('') + '</ul></div>';
-  out.push(section(N(), '한눈에 요약', '오늘 이야기, 여섯 줄로', b9, 'check'));
+  CH.push({ kicker: '한눈에 요약', title: '오늘 이야기, 여섯 줄로', body: b9, icon: 'check' });
+
+  /* 번호 · 부 · 목차 — 부(part)가 없는 장은 앞 장의 부를 따릅니다 */
+  var curPart = null;
+  CH.forEach(function (x, i) { x.no = (i < 9 ? '0' : '') + (i + 1); if (x.part) curPart = x.part; else x.part = curPart; });
+  if (d.toc && CH.length) {
+    var tp = null, toc = '';
+    CH.forEach(function (x) {
+      if (x.part && (!tp || x.part.no !== tp.no)) { toc += (tp ? '</ol>' : '') + '<div class="tc-p"><b>' + esc(x.part.no) + '</b>' + esc(x.part.title) + '</div><ol class="tc-l">'; tp = x.part; }
+      else if (!tp && !toc) toc += '<ol class="tc-l">';
+      toc += '<li><span>' + x.no + '</span>' + txt(x.title) + '</li>';
+    });
+    out.push('<nav class="toc" aria-label="목차"><div class="tc-h">' + icon('memo', 'hic') + '목차</div>' + toc + '</ol>' +
+      (d.tocNote ? '<p class="tc-n">' + txt(d.tocNote) + '</p>' : '') + '</nav>');
+  }
+  var shown = null;
+  CH.forEach(function (x) {
+    if (x.part && (!shown || x.part.no !== shown.no)) {
+      out.push('<div class="part"><div class="pk">' + esc(x.part.no) + '</div><h2>' + esc(x.part.title) + '</h2>' + (x.part.lead ? '<p>' + txt(x.part.lead) + '</p>' : '') + '</div>');
+      shown = x.part;
+    }
+    out.push(section(x.no, x.kicker, x.title, x.body, x.icon));
+  });
   out.push('<div class="foot">' + esc(d.advisor || 'APEX 사업단') + (d.contact ? ' · ' + esc(d.contact) : '') + '</div>');
 
   return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
