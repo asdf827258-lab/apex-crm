@@ -93,7 +93,12 @@ const SEED = () => {
     return o; };
   window.osClient=function(){
     return { from:function(tb){ return {
-      select:function(){ WROTE.push({op:'select',tb:tb}); return chain({data:[]}); },
+      /* ✅ 판 X174 — 동의 표는 <b>네 갈래 다 받은</b> 분으로 답합니다. 이 자는 주민번호 칸이 하는 일을 잽니다 —
+         동의가 없어 칸이 잠기는 쪽은 check-cns 가 잽니다. 빈 목록이면 앱이 「동의 없음」 으로 읽고 잠급니다(옳은 동작). */
+      select:function(){ WROTE.push({op:'select',tb:tb});
+        if(tb==='client_consents')return chain({data:['collect','uid','sensitive','ad'].map(function(k){
+          return {kind:k,granted_at:'2026-10-01T00:00:00Z',revoked_at:null,method:'서면'}; })});
+        return chain({data:[]}); },
       update:function(o){ WROTE.push({op:'update',tb:tb,body:o}); return chain({}); },
       insert:function(o){ WROTE.push({op:'insert',tb:tb,body:o}); return chain({}); },
       upsert:function(o){ WROTE.push({op:'upsert',tb:tb,body:o}); return chain({}); },

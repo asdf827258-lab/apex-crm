@@ -75,6 +75,9 @@ const SEED = () => {
         if (t === 'dbs' && q.eq.indexOf('client_id=c1') >= 0)
           d = [{ id: 'd1', customer_name: '홍길동', region: '강남구', stage: 'AP', source: '소개',
                  assigned_date: '2026-09-03', assigned_to: 'me', client_id: 'c1', phone: '010-1111-2222' }];
+        /* ✅ 판 X174 — 동의 네 갈래를 다 받은 분으로 답합니다(칸이 다 서 있는지를 재는 자라서). 잠김은 check-cns 가 잽니다 */
+        if (t === 'client_consents')
+          d = ['collect', 'uid', 'sensitive', 'ad'].map(k => ({ kind: k, granted_at: '2026-10-01T00:00:00Z', revoked_at: null, method: '서면' }));
         if (t === 'clients' && q.eq.indexOf('id=c7') >= 0)
           d = [{ id: 'c7', advisor_id: 'me', name_masked: '홍*순', consent_status: 'none', created_at: '2026-09-03' }];
         return Promise.resolve({ data: d, error: null }).then(f, g);
