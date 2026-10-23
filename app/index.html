@@ -2155,6 +2155,15 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
 body.dzguide-mode .app{display:none;}
 body.dzguide-mode #dzGuideScreen{display:block;}
 #dzGuideScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 📅 APEX 교육 캘린더 (상담자료와 같은 패턴 · app/edu-cal.html)
+   ★ <b>덮개로 엽니다</b> — 사장님 말씀 「로그인 창을 없애버려 <b>이미 1차
+     로그인을 하니깐</b>」. 새 탭으로 내보내면 주소가 달라 거기서 또 로그인을
+     해야 합니다. 앱 안에 두면 <b>여기 로그인 하나로 끝</b>입니다.
+   ★ 이 쪽에는 로그인 칸이 <b>한 곳도 없습니다</b> — check-educal 이 셉니다. */
+#educalScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.educal-mode .app{display:none;}
+body.educal-mode #educalScreen{display:block;}
+#educalScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* 상담자료는 화면 아래에 자기 버튼이 있다 — 그 위로 올린다 */
 #fpDeckScreen .fin-float{bottom:88px;}
 @media(max-width:880px){#fpDeckScreen .fin-float{bottom:96px;}}
@@ -2672,6 +2681,16 @@ body.dzguide-mode #dzGuideScreen{display:block;}
     <button class="ff-back" onclick="exitSangdam()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadSangdam()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openSangdamNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 📅 APEX 교육 캘린더 (앱 폴더에 번들: app/edu-cal.html) -->
+<div id="educalScreen">
+  <iframe id="educalFrame" class="fin-frame" title="APEX 교육 캘린더"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitEducal()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadEducal()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openEducalNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
 
@@ -14898,6 +14917,13 @@ var TABS=[
       ⚠ 묶음에 role:'edu' 만 달았을 때는 <b>설계사에게도 그대로 보였습니다</b> —
         재어 보고 알았습니다. check-emcenter 가 이 문을 지킵니다 (8번).        */
    {id:'emcenter',icon:'🎓',title:'EM 전용 운영센터',cnt:'',tk:'교육시스템EM',ak:'교육매니저 EM 운영센터 업적 시책 월급 정산 주간마감 팀원'},
+   /* ★ 2026-10-23 (판 X174) · 사장님 말씀 「교육캘린더 … 토스 테마 아이콘 등
+      전부 바꿔줘 색상 까지」 → 「<b>2번</b>으로 하고 <b>로그인 창을 없애버려</b>
+      이미 1차 로그인을 하니깐」. 「2번」 은 <b>교육매니저·지점장·대표만</b>
+      입니다 — 그래서 위 칸과 같은 <code>tk</code> 를 답니다.
+      ★ <b>앱 안에서 덮개로</b> 엽니다(educalScreen) — 새 탭이면 주소가 달라
+        또 로그인을 해야 합니다. 여기 로그인 하나로 끝입니다.           */
+   {id:'educal',icon:'📅',title:'APEX 교육 캘린더',cnt:'',tk:'교육시스템EM',ak:'교육 캘린더 일정 신입 교육 주간 팀별 교육 운영표 본부장 루틴 공지'},
    {id:'manual',icon:'📘',title:'APEX 사용가이드',cnt:'',ak:'업무매뉴얼'},
    /* 지도는 맨 왼쪽 위 「APEX 사용가이드」 바로 밑에 단추로 세워 두었다(renderNav).
       여기서는 hide 로 눈에서만 뺀다 — 두 번 서면 어수선하다. 지우지 않는 이유는
@@ -14968,7 +14994,8 @@ var TABS=[
 
 ];
 var TAB_META={
- emcenter:{tag:'교육시스템EM',title:'EM 전용 운영센터',desc:'아래 단추를 누르면 새 탭으로 열립니다. 주소가 달라 거기서 한 번 더 로그인하십시오.'},   /* ⚠ 이 글은 esc() 를 지납니다 — <b> 를 넣으면 글자 그대로 찍힙니다 */
+ emcenter:{tag:'교육시스템EM',title:'EM 전용 운영센터',desc:'아래 단추를 누르면 새 탭으로 열립니다. 주소가 달라 거기서 한 번 더 로그인하십시오.'},
+ educal:{tag:'교육시스템EM',title:'APEX 교육 캘린더',desc:'월간 캘린더 · 신입 교육 주간 · 팀별 교육 · 교육매니저 운영표 · 본부장 루틴 · 공지 만들기.'},   /* ⚠ 이 글은 esc() 를 지납니다 — <b> 를 넣으면 글자 그대로 찍힙니다 */
  clients:{tag:'OS',title:'고객 보장분석 프로젝트',desc:'고객별 보장분석 상담을 한 곳에서. 문서 업로드·추출·검수·전후비교·리포트까지 이어집니다.'},
  cs_assist:{tag:'CONSULT',title:'AI 통합상담 어시스턴트',desc:'윤시현 「고객이익 통합상담」 방법론으로 상담 준비 브리핑과 녹취 복기를 돕습니다. 녹취는 텍스트 붙여넣기(길이 제한 없음) 또는 오디오 업로드.'},
  blog:{tag:'CONTENT',title:'블로그',desc:'글은 「블로그 공장」에서 씁니다 — 새 탭으로 열립니다. 여기에는 상위노출 키트만 둡니다.'},
@@ -15088,6 +15115,7 @@ var NAV_WHEN={
  org:'run', attend:'run', audit:'run', teamhub:'run', daily:'run',
  report:'run', branch_coach:'run', hq:'run',
  emcenter:'run',        /* 「EM 전용 운영센터」 · 교육시스템EM — 업적·시책·월급은 조직을 돌리는 일입니다 */
+ educal:'run',          /* 「APEX 교육 캘린더」 · 교육시스템EM — 교육 일정을 짜는 것도 조직을 돌리는 일입니다 */
  /* 📢 공지사항 — 2026-09-30. 팀에 알리는 것이라 <b>팀 · 설정</b> 입니다
     (메뉴에서도 시스템 묶음에 섭니다). 여기 안 적으면 check-nav 가 웁니다 —
     <b>화면 하나하나가 어느 때 것인지</b> 빠짐없이 적어야 서랍이 셉니다. */
@@ -16114,7 +16142,7 @@ function navMainPaint(){
      그대로 씁니다 (5번). 묶음 이름을 고치면 여기도 따라옵니다.
    ⚠ <b>누가 보는지도 여기서 다시 안 셀니다</b> — visibleTabs() 가 이미 문을 봅니다
      (교육매니저·지점장·대표만). 둘이 각자 셀면 한 화면이 두 말을 합니다 (5번). */
-var NAV_TOP={lab:'교육시스템EM',ids:['emcenter']};
+var NAV_TOP={lab:'교육시스템EM',ids:['emcenter','educal']};
 function navTopGroupHtml(cur){
   var h='',n=0;
   NAV_TOP.ids.forEach(function(id){
@@ -19714,7 +19742,7 @@ var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode','bohum-mode','pdel-m
                       멀쩡히 떠 있는데 눈에는 안 보인다. 바로 위 주석이 「여기 이름만
                       적으면 된다」 고 적어 두었는데, 칸을 만들면서 그 한 줄을
                       빠뜨린 것이다. check-stayput 이 이제 이것을 센다. */
-                   'onecmp-mode'];
+                   'onecmp-mode','educal-mode'];
 function osFullMode(on){
   var b=document.body,i;
   for(i=0;i<OS_FULL_MODES.length;i++)
@@ -19957,7 +19985,7 @@ function osFullMode(on){
    ⚠ <b>이 쪽지를 표 안에 두지 마십시오.</b> check-skinmap 이 표를 쉼표로
      잘라 읽어서, 주석이 안에 있으면 그것을 <b>이름 하나로 셉니다</b> — 실제로
      한 번 그렇게 빨간불이 켜졌습니다 (8번).                               */
-var T_SKIN={emcenter:1,home:1,dashboard:1,clients:1,keep4:1,rjnews:1,news_live:1,mycal:1,me:1,tools:1,
+var T_SKIN={emcenter:1,educal:1,home:1,dashboard:1,clients:1,keep4:1,rjnews:1,news_live:1,mycal:1,me:1,tools:1,
             voiceasst:1,growboard:1,assistant:1,airep:1,brain:1,notice:1,
             academy_notion:1,apexmaster:1,bojang:1,branch_coach:1,calc:1,calendar:1,
             compare:1,cs_assist:1,cs_gso:1,cs_needs:1,ext_naver:1,ext_reply:1,ext_thread:1,
@@ -20332,6 +20360,13 @@ function go(tab){
     mountSangdam();
     osFullMode('sangdam-mode');
     navMark('sangdam');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
+  if(tab==='educal'){
+    mountEducal();
+    osFullMode('educal-mode');
+    navMark('educal');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
@@ -20825,8 +20860,9 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-23 15:47';
-var APP_BUILD_NOTE="🎓 <b>교육시스템EM</b> 을 메뉴 <b>맨 위</b>에 넣었습니다. 왼쪽 메뉴를 열면 「오늘 하루」 <b>위</b>에 「교육시스템EM · 🎓 EM 전용 운영센터」 가 섭니다 — 누르면 <b>EM 전용 운영센터</b>가 새 탭으로 열립니다(대시보드 · 주간 마감 · 업적 입력 · 월급 정산 · 시책 관리 · 팀원 · 자료실 · 데이터). ◾ <b>주소가 달라 거기서 한 번 더 로그인</b>하셔야 합니다 — 화면에 미리 적어 두었습니다. ◾ <b>교육매니저 · 지점장 · 대표에게만</b> 보입니다. 팀 업적·시책·월급을 다루는 자리라 그렇게 했고, 넓히시려면 <b>설정 → 도구 권한</b>에서 「교육시스템EM」 을 고치시면 됩니다. ◾ 곁들여 <b>꺾쇠가 글자로 찍히던 자리 둘</b>을 고쳤습니다 — 블로그 머리글이 예전부터 그랬습니다. (함께 실려 나갑니다 — 13:30 판 「고객이 제 폰에서 혼자 하는 보장 셀프 점검」)";
+var APP_BUILD='2026-10-23 19:05';
+var APP_BUILD_NOTE="📅 <b>APEX 교육 캘린더</b>를 앱 안에 넣었습니다. 왼쪽 메뉴 맨 위 「교육시스템EM」 아래 <b>📅 APEX 교육 캘린더</b>를 누르시면 <b>로그인 없이 바로</b> 열립니다 — 이 앱에 이미 들어와 계시니 한 번 더 물을 자리가 아닙니다. ◾ 일곱 장입니다 — <b>월간 캘린더 · 신입 교육 주간 · 팀별 교육 · 교육매니저 운영표 · 본부장 루틴 · 공지 만들기 · 설정</b>. ◾ <b>색·글꼴·아이콘을 앱과 한 벌로</b> 맞췄습니다 — 색은 app/ui.css 한 곳에서 오고, ‹› · ☑ … 처럼 기기마다 굵기가 달라지던 글자 그림은 <b>선 그림</b>으로 바꿨습니다. ◾ <b>교육매니저 · 지점장 · 대표에게만</b> 보입니다 (「교육시스템EM」 과 같은 문입니다 · 넓히시려면 <b>설정 → 도구 권한</b>). ◾ 적으신 것은 <b>이 기기에만</b> 남고 서버를 부르지 않습니다. ◾ 곁들여 <b>「신입 교육 주간」·「일반 주간」 두 단추</b>를 손가락 바닥(44px)에 맞췄습니다 — 34px 이었습니다. (함께 실려 나갑니다 — 15:47 판 「🎓 교육시스템EM · EM 전용 운영센터」)";
+
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -21277,6 +21313,22 @@ function mountSangdam(){
 function reloadSangdam(){var f=$('sangdamFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountSangdam,30);toast('보장분석 상담자료 새로고침');}}
 function openSangdamNewTab(){var w=window.open(SANGDAM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitSangdam(){go(prevTab||'home');}
+
+/* ════════ 📅 APEX 교육 캘린더 (앱 폴더에 번들: app/edu-cal.html) ════════
+   교육매니저가 돌리는 자리입니다 — 월간 캘린더 · 신입 교육 주간 · 팀별 교육 ·
+   교육매니저 운영표 · 본부장 루틴 · 공지 만들기 · 설정.
+   ★ <b>로그인이 없습니다.</b> 사장님 말씀 「로그인 창을 없애버려 이미 1차
+     로그인을 하니깐」 — 그래서 새 탭으로 내보내지 않고 <b>여기 안에</b> 둡니다.
+   ★ 적은 것은 <b>이 기기(localStorage)에만</b> 남습니다 — 서버를 안 부릅니다 (7번).
+   ★ 색·글꼴은 <b>app/ui.css 한 곳</b>에서 옵니다 (5번).                    */
+var EDUCAL_URL='edu-cal.html';
+function mountEducal(){
+  var f=$('educalFrame');if(!f||f._mounted)return;
+  f.src=EDUCAL_URL;f._mounted=true;
+}
+function reloadEducal(){var f=$('educalFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountEducal,30);toast('교육 캘린더 새로고침');}}
+function openEducalNewTab(){var w=window.open(EDUCAL_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitEducal(){go(prevTab||'home');}
 
 /* ════════ 증권 전달 (앱 폴더에 번들: app/증권전달/index.html) ════════
    계약이 성립된 뒤 증권을 고객에게 전하는 자리에서 쓰는 한 벌.
@@ -25616,6 +25668,7 @@ document.addEventListener('keydown',function(e){
   if(document.body.classList.contains('finance-mode'))exitFinance();
   else if(document.body.classList.contains('crm-mode'))exitCrm();
   else if(document.body.classList.contains('sangdam-mode'))exitSangdam();
+  else if(document.body.classList.contains('educal-mode'))exitEducal();
   else if(document.body.classList.contains('pdel-mode'))exitPdel();
   else if(document.body.classList.contains('bohum-mode'))exitBohum();
   else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
@@ -29240,6 +29293,7 @@ function hmSheetUrl(id){
   if(typeof FIN_URL     !=='undefined')M.finance   =FIN_URL;
   if(typeof BA_URL      !=='undefined')M.frmake    =BA_URL;
   if(typeof SANGDAM_URL !=='undefined')M.sangdam   =SANGDAM_URL;
+  if(typeof EDUCAL_URL  !=='undefined')M.educal    =EDUCAL_URL;
   if(typeof FP_DECK_URL !=='undefined')M.fp_deck   =FP_DECK_URL;
   if(typeof FP_TALK_URL !=='undefined')M.fp_talk   =FP_TALK_URL;
   if(typeof PDEL_URL    !=='undefined')M.pdel      =PDEL_URL;
