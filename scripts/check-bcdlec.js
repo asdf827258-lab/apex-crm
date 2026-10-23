@@ -14,7 +14,14 @@
      ⑦ ★ 장 어디에도 금액 · 비율 숫자가 없다 · 비과세를 말하는 장은 「요건」 을 함께 말한다 ·
         「심사 결과에 따릅니다」 가 있다 (1번 · 2번)
      ⑧ 워크북은 빈 칸 — 강사님 이야기가 안 들어간다. 강사 대본에는 들어간다
-     ⑨ 이 브라우저에만 남는다 — 다시 열어도 남고, 「모두 지우기」 로 지워진다  */
+     ⑨ 이 브라우저에만 남는다 — 다시 열어도 남고, 「모두 지우기」 로 지워진다
+   판 X176 (2026-10-23 「애니메이션을 넣고 죽음 해골에 대한 이미지 … 뉴스에서 가져오고 이미지도 네이버에서도」) —
+     ⑩ ★ 뉴스는 실제 기사만 — 카드마다 언론사 · 제목 · https 원문 주소. 날짜를 모르면 「날짜 확인 못 함」 (9번 · 1번)
+        기사 사진을 저장소에 안 넣는다 — 해골 · 모래시계 · 촛불은 직접 그린 SVG
+     ⑪ 네이버는 주소만 연다(새 창) — 서버로 받지 않는다 (7번)
+     ⑫ 사진 — 넣지 않으면 그 장이 없다 · 넣으면 출처가 장에 서고, 안 적으면 「출처를 안 적었습니다」 ·
+        사진은 워크북 · 강사 대본 인쇄에 안 들어간다
+     ⑬ 움직임이 실제로 돈다 — 움직임 줄이기를 켠 기기에서는 멈춘다  */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9174;
@@ -36,7 +43,8 @@ is(/else if\(tab==='bcd_lec'\)dyn\.innerHTML=renderBcdLecPage\(\);/.test(IDX), '
 is(/function renderBcdLecPage\(\)[\s\S]{0,1200}src="bcd-lecture\.html"[^>]*allow="fullscreen"/.test(IDX), '그 화면이 bcd-lecture.html 을 띄우고 전체 화면을 허락한다(빔 프로젝터)');
 
 console.log('\n[2] 강사 이야기가 비어서 오나 (1번)');
-is(/const BLANK = \(\) => \(\{ me: \{ name: '', role: '' \}, story: \{\}, tl: \[\] \}\);/.test(CODE), '처음 값(BLANK)이 이름 · 이야기 · 타임라인 모두 빈 칸이다');
+is(/const BLANK = \(\) => \(\{ me: \{ name: '', role: '' \}, story: \{\}, tl: \[\], photos: \[\] \}\);/.test(CODE), '처음 값(BLANK)이 이름 · 이야기 · 타임라인 · 사진 모두 빈 칸이다');
+is(!/data:image\/(png|jpe?g|webp|gif);base64/i.test(PAGE) && !/<img[^>]+src="(?!' \+)/i.test(PAGE), '저장소에 사진(기사 사진 · 네이버 이미지)을 안 넣었다 — 그림은 직접 그린 SVG (9번)');
 is(!/story\s*:\s*\{\s*[a-zA-Z]+\s*:\s*'[^']/.test(CODE) && !/tl\s*:\s*\[\s*\{/.test(CODE), '이야기 · 장면을 미리 적어 둔 줄이 없다');
 
 console.log('\n[3] 서버 · 바깥 스크립트 · tnum (7번 · 4-1번)');
@@ -68,9 +76,9 @@ const srv = http.createServer((q, s) => {
     await p.reload({ waitUntil: 'load' });
 
     console.log('\n[4] 빈 채로 서나 — 이야기 장은 빠지고 몇 칸이 비었는지 말한다');
-    const e0 = await p.evaluate(() => ({ n: D.length, st: D.filter(s => s.ty === 'story').length,
+    const e0 = await p.evaluate(() => ({ n: D.length, st: D.filter(s => s.ty === 'story').length, ph: D.filter(s => s.ty === 'photo').length,
       tl: D.filter(s => /^(event|curve|stairs)$/.test(s.ty)).length, w: $('emptyWarn').innerText, k: STORY.length }));
-    is(e0.st === 0 && e0.tl === 0, '비어 있으면 이야기 장 · 타임라인 장이 하나도 안 선다 (지어 넣지 않음)');
+    is(e0.st === 0 && e0.tl === 0 && e0.ph === 0, '비어 있으면 이야기 장 · 타임라인 장 · 사진 장이 하나도 안 선다 (지어 넣지 않음)');
     is(new RegExp('내 이야기 ' + e0.k + '칸').test(e0.w) && /0장면/.test(e0.w) && /건너뜁니다/.test(e0.w), '「아직 안 적은 내 이야기 ' + e0.k + '칸 · 타임라인 0장면 — 건너뜁니다」 라고 말한다');
     is(e0.n >= 40, '이야기 없이도 강의 뼈대가 선다 — ' + e0.n + '장');
     /* 끝까지 넘겨 본다 — 어느 장에서도 오류가 없어야 한다 */
@@ -123,14 +131,17 @@ const srv = http.createServer((q, s) => {
     is(await p.evaluate(() => D.filter(s => s.ty === 'curve').length) === 2 && await p.evaluate(() => scored().length) === 2, '점수를 비운 장면은 곡선에서 빠진다 — 0 으로 그리지 않는다');
 
     console.log('\n[7] 숫자 · 세금 · 보험 말 (1번 · 2번)');
+    await p.emulateMedia({ reducedMotion: 'reduce' });   /* 움직이는 중인 자리를 넘침으로 잘못 재지 않게 */
     const ov = [];
-    const all = await p.evaluate(ov => { const o = []; for (let i = 0; i < D.length; i++) { show(i); o.push($('stage').innerText);
+    const all = await p.evaluate(ov => { const o = []; for (let i = 0; i < D.length; i++) { show(i); o.push((D[i].ty === 'news' ? '\u0000뉴스\u0000' : '') + $('stage').innerText);
       const sl = document.querySelector('#stage .sl'), st = $('stage').getBoundingClientRect();
       if (sl.scrollHeight > sl.clientHeight + 2 || [...sl.querySelectorAll('*')].some(x => x.getBoundingClientRect().bottom > st.bottom + 1)) ov.push(i + 1); }
       show(0); return { o, ov }; }, ov).then(r => { ov.push(...r.ov); return r.o; });
     is(ov.length === 0, '어느 장도 화면(16:9) 밖으로 넘치지 않는다' + (ov.length ? ' ← ' + ov.join(',') + '장' : ''));
-    const money = all.filter(t => /\d[\d,]*\s*(만\s*원|억|천만|원\b|%)/.test(t));
-    is(money.length === 0, '어느 장에도 금액 · 비율 숫자가 없다' + (money.length ? ' ← ' + money[0].slice(0, 60) : ''));
+    await p.emulateMedia({ reducedMotion: 'no-preference' });
+    /* 뉴스 장은 기사 제목을 그대로 옮기므로 기사 속 숫자가 섭니다 — 그 장만 빼고, 대신 [10] 에서 출처를 잽니다 */
+    const money = all.filter(t => t.indexOf('\u0000뉴스\u0000') < 0 && /\d[\d,]*\s*(만\s*원|억|천만|원\b|%)/.test(t));
+    is(money.length === 0, '뉴스 장 말고는 어느 장에도 금액 · 비율 숫자가 없다' + (money.length ? ' ← ' + money[0].slice(0, 60) : ''));
     const tax = all.filter(t => /비과세/.test(t));
     is(tax.length > 0 && tax.every(t => /요건/.test(t)), '비과세를 말하는 장은 언제나 「요건」 을 함께 말한다');
     is(all.some(t => /심사 결과에 따릅니다/.test(t)), '「심사 결과에 따릅니다」 가 있다');
@@ -138,19 +149,62 @@ const srv = http.createServer((q, s) => {
 
     console.log('\n[8] 워크북은 빈 칸 · 강사 대본에는 이야기');
     const bk = await p.evaluate(() => ({ book: bookHtml(), n: (bookHtml().match(/class="wb"/g) || []).length, sc: scriptHtml() }));
-    is(bk.n === 5, '참가자 워크북이 5쪽이다');
+    is(bk.n === 6, '참가자 워크북이 6쪽이다 (3쪽 · 나의 마지막 하루)');
     is(!/홍길동 점검 이야기|다음 날 또 나갔다/.test(bk.book), '워크북에 강사님 이야기 · 장면이 안 들어간다');
     is(/홍길동 점검 이야기/.test(bk.sc) && /다음 날 또 나갔다/.test(bk.sc), '강사 대본에는 이야기 · 장면이 들어간다');
     await p.evaluate(() => { window.print = () => {}; page('book'); $('prBook').click(); });
     await p.emulateMedia({ media: 'print' });
-    is(await p.evaluate(() => getComputedStyle(document.querySelector('.wrap')).display === 'none' && document.querySelectorAll('#printArea .wb').length === 5), '인쇄하면 화면은 숨고 워크북 5쪽만 나온다');
+    is(await p.evaluate(() => getComputedStyle(document.querySelector('.wrap')).display === 'none' && document.querySelectorAll('#printArea .wb').length === 6), '인쇄하면 화면은 숨고 워크북 6쪽만 나온다');
     await p.emulateMedia({ media: 'screen' });
+
+    console.log('\n[10] 뉴스 — 실제 기사 · 출처 · 날짜 (9번 · 1번)');
+    await p.evaluate(() => page('deck'));   /* 움직임은 보이는 쪽에서만 돕니다 */
+    const nw = await p.evaluate(() => NEWS.map(n => ({ o: n.o, t: n.t, u: n.u, d: n.d, set: n.set })));
+    is(nw.length >= 4 && nw.every(n => n.o && n.t && /^https:\/\/[^\s]+\.[a-z]{2,}\//.test(n.u)), '기사 ' + nw.length + '건 모두 언론사 · 제목 · https 원문 주소가 있다');
+    is(nw.every(n => !n.d || /^\d{4}[.\-]\s?\d{1,2}[.\-]\s?\d{1,2}\.?$/.test(n.d)), '날짜는 원문 꼴 그대로이거나 비어 있다');
+    const nsl = await p.evaluate(() => { const o = []; D.forEach((s, i) => { if (s.ty === 'news') { show(i); o.push({ set: s.set, txt: $('stage').innerText,
+      a: [...document.querySelectorAll('#stage a')].map(a => [a.getAttribute('href'), a.target]) }); } }); return o; });
+    is(nsl.length === 2 && nsl.every(x => nw.filter(n => n.set === x.set).every(n => x.txt.indexOf(n.o) >= 0 && x.txt.indexOf(n.t) >= 0)), '뉴스 장 둘 — 기사마다 언론사와 제목이 그 장에 선다');
+    is(nw.some(n => !n.d) ? nsl.some(x => /날짜 확인 못 함/.test(x.txt)) : true, '날짜를 확인 못 한 기사는 「날짜 확인 못 함」 이라 적는다 — 지어 적지 않는다');
+    const links = nsl.flatMap(x => x.a);
+    is(links.every(([h, t]) => t === '_blank' && /^https:\/\//.test(h)), '장 안의 링크는 모두 새 창으로 원문 · 네이버를 연다');
+    is(links.some(([h]) => /^https:\/\/search\.naver\.com\/search\.naver\?where=news&query=/.test(h)), '네이버 최신 기사 찾기 링크가 있다(주소만 엽니다)');
+    is(/\/\* 메멘토 모리[\s\S]{0,80}직접 그렸습니다/.test(PAGE) && await p.evaluate(() => { show(D.findIndex(s => s.ty === 'memento')); return !!document.querySelector('#stage .skull path') && !!document.querySelector('#stage .glass .sandTop') && !!document.querySelector('#stage .candle .flame'); }),
+      '메멘토 모리 장 — 해골 · 모래시계 · 촛불이 직접 그린 SVG 로 선다');
+
+    console.log('\n[11] 움직임 — 돌고, 줄이기를 켜면 멈춘다');
+    const an = await p.evaluate(() => document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('#stage')).map(a => a.animationName));
+    is(an.indexOf('sandTop') >= 0 && an.indexOf('flicker') >= 0 && an.indexOf('float') >= 0, '모래가 떨어지고 · 촛불이 흔들리고 · 해골이 떠 있다 (' + [...new Set(an)].slice(0, 6).join(',') + ')');
+    await p.evaluate(() => show(0));
+    is(await p.evaluate(() => document.getAnimations().some(a => a.animationName === 'pop')), '표지의 C 가 튀어나온다');
+    await p.emulateMedia({ reducedMotion: 'reduce' });
+    await p.evaluate(() => show(D.findIndex(s => s.ty === 'memento')));
+    is(await p.evaluate(() => document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('#stage')).length) === 0, '움직임 줄이기를 켠 기기에서는 아무것도 안 움직인다');
+    await p.emulateMedia({ reducedMotion: 'no-preference' });
+
+    console.log('\n[12] 사진 — 넣으면 서고 · 출처를 말하고 · 인쇄에는 안 들어간다');
+    await p.evaluate(() => page('mine'));
+    is(await p.$$eval('#nvImg a', a => a.length > 0 && a.every(x => x.target === '_blank' && /^https:\/\/search\.naver\.com\/search\.naver\?where=image&query=/.test(x.href))), '네이버 이미지 찾기는 새 창으로 주소만 연다');
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR42mP8z8DwnwEJMDGgAQBu4gP+3l2ZyAAAAABJRU5ErkJggg==', 'base64');
+    await p.setInputFiles('#phAdd', [{ name: 'a.png', mimeType: 'image/png', buffer: png }, { name: 'b.png', mimeType: 'image/png', buffer: png }]);
+    await p.waitForFunction(() => S.photos.length === 2);
+    await p.fill('.ph-row[data-i="0"] [data-pf="cap"]', '점검 사진 설명');
+    await p.fill('.ph-row[data-i="0"] [data-pf="from"]', '직접 촬영');
+    const ph = await p.evaluate(() => { page('deck'); const o = D.map((s, i) => [s.ty, i]).filter(x => x[0] === 'photo');
+      show(o[0][1]); const a = $('stage').innerText; show(o[1][1]); const b = $('stage').innerText;
+      return { n: o.length, a, b, src: /^data:image\/jpeg/.test(S.photos[0].src), sec: D[o[0][1]].sec, book: bookHtml(), sc: scriptHtml() }; });
+    is(ph.n === 2 && ph.sec === 'p3', '넣은 사진 둘이 3부에 한 장씩 선다');
+    is(ph.src, '사진은 줄여 JPEG 로 담는다');
+    is(/점검 사진 설명/.test(ph.a) && /출처 · 직접 촬영/.test(ph.a), '설명과 출처가 장에 선다');
+    is(/출처를 안 적었습니다/.test(ph.b), '출처를 안 적으면 그 장이 그렇다고 말한다');
+    is(!/<img|data:image/.test(ph.book) && !/<img|data:image/.test(ph.sc) && /출처: 직접 촬영/.test(ph.sc), '워크북 · 강사 대본 인쇄에 사진이 안 들어간다 — 대본에는 설명 · 출처만');
+    is(await p.evaluate(() => { const s0 = TOTAL_MIN; return s0 === 240; }), '장이 늘어도 4시간(240분) 그대로');
 
     console.log('\n[9] 이 브라우저에만 — 다시 열어도 남고, 지우면 지워진다 (3번 · 7번)');
     await p.reload({ waitUntil: 'load' });
     is(await p.evaluate(() => S.tl.length === 3 && /홍길동 점검/.test(S.story.leaderFail)), '다시 열어도 적은 것이 남는다');
     await p.evaluate(() => { page('mine'); $('wipe').click(); });
-    is(await p.evaluate(() => S.tl.length === 0 && !Object.values(S.story).some(v => v) && localStorage.getItem(KEY) === null), '「모두 지우기」 로 이 기기에서 지워진다');
+    is(await p.evaluate(() => S.tl.length === 0 && S.photos.length === 0 && !Object.values(S.story).some(v => v) && localStorage.getItem(KEY) === null), '「모두 지우기」 로 이 기기에서 지워진다 (사진까지)');
     is(errs.length === 0, '오류가 없다' + (errs.length ? ' ← ' + errs[0] : ''));
   } catch (e) { is(false, '점검이 멈췄습니다 — ' + e.message); }
   await b.close(); srv.close();
