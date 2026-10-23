@@ -1,4 +1,4 @@
-/* 🌱 <b>지인 8주 성장 프로그램</b> — 명단 비운 판 (판 X145 · 2026-10-21) · 이름·회사 · 미청구 찾기 · 안내장 (판 X152 · 2026-10-22)
+/* 🌱 <b>지인 8주 성장 프로그램</b> — 명단 비운 판 (판 X145 · 2026-10-21) · 이름·회사 · 미청구 찾기 · 안내장 (판 X152) · 접근 전략 · 성장기록북 (판 X154 · 2026-10-22) · 기록북 쓰는 법 (판 X156) · 화법 · 클로징 · 거절 (판 X161)
 
    사장님 말씀 — 「더 디테일 하게 만들고 수정 / 인쇄 / 추가 / 삭제 기능과 고객에게
    보험금 찾아줌 → 그리고 보장분석 받아야 되는 이유를 명확하게 만들어줘 RP를」 ·
@@ -21,7 +21,19 @@
      ⑪ 대본 점검 — 모든 대본에 안 채운 {자리} 가 0 · 결과 전달은 결과 세 줄이 비면 지어 말하지 않는다 (1번)
      ⑫ ★ 미청구 찾기 — 칸을 잘못 잡지 않는다(기관기호·본인부담률·투약일수) · 묶음 청구·접수일만 있는 청구를
         「청구 안 된 듯」 으로 단정하지 않는다 · 조건이 비면 금액을 안 지어내고 「0원」 이라 하지 않는다 (1번)
-     ⑬ ★ 안내장 — 「심사 결과에 따릅니다」 · 3년 · 「내부 교육용」 쪽지가 안 붙는다 · 이름은 가린 채가 기본 (2번 · 3번)  */
+     ⑬ ★ 안내장 — 「심사 결과에 따릅니다」 · 3년 · 「내부 교육용」 쪽지가 안 붙는다 · 이름은 가린 채가 기본 (2번 · 3번)
+   판 X154 —
+     ⑭ 접근 전략 — 고른 성향·관계·태도·가족이 전략에 들어간다 · 안 채운 {자리} 0 · 성향은 짐작이라고 적는다
+     ⑮ ★ 성장기록북 · 주간 보고에 고객 실명 · 가족 이름이 안 나간다 (3번)
+     ⑯ ★ 인쇄는 글꼴이 다 온 뒤에 연다 — 제목이 비어 찍히지 않게
+   판 X156 — 「성장 기록의 가이드를 다시 잡아봐」
+     ⑰ 기록북 쓰는 법 · 8주 이정표가 표지 바로 뒤에 선다 · 예전 저장본도 이정표 기본을 받는다
+     ⑱ ★ 주차 쪽 매일 칸은 연락 기록에서 센다 — 기록 없는 날은 0 이 아니라 빈칸 (1번)
+     ⑲ ★ 「이번 주 만난 분」 도 가린 이름 (3번) · 돌아보기는 치는 대로 남고 책 · 주간 보고에 들어간다
+   판 X161 — 「쉬운 화법과 클로징 거절처리 응대를 디테일하게」
+     ⑳ 화법 · 클로징 · 거절 화면이 선다 · 기본 거절마다 다섯 칸과 속마음 · 하지 않을 말이 있다
+     ㉑ ★ 금액 · 비율 · 나이 · 개월 수를 적지 않는다 · 가입 · 보험료는 심사 결과에 따른다 (1번 · 2번)
+     ㉒ ★ 연습 횟수는 S.tkRp 한 곳 — 주간 보고가 같은 수를 읽는다 (5번) · 예전 저장본의 고친 거절은 그대로  */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9171;
@@ -135,6 +147,7 @@ const srv = http.createServer((q, s) => {
     await p.click('#rpChat .ln:last-of-type [data-act="del"]');
     is(await p.evaluate(() => scenById('s1').lines.length) === n0, '대사를 지운다');
     const o0 = await p.evaluate(() => S.lib.objs.length);
+    await p.evaluate(() => go('talk')); /* 판 X161 — 거절 응대는 「화법 · 거절」 화면으로 옮겼습니다 */
     await p.click('[data-tools="objs:obj"] [data-act="add"]'); await p.fill('#mForm [name=q]', '"점검"'); await p.click('#mSave');
     await p.click('[data-tools="objs:obj"] [data-act="reset"]');
     is(await p.evaluate(() => S.lib.objs.length) === o0, '거절 응대를 넣고 「처음 내용으로」 되돌린다');
@@ -206,6 +219,104 @@ const srv = http.createServer((q, s) => {
     const lp = await p.evaluate(() => document.querySelector('#printArea').innerText);
     await p.emulateMedia({ media: 'screen' }); await p.evaluate(() => document.body.classList.remove('printing'));
     is(/홍○○/.test(lp) && !/홍길동/.test(lp) && !/내부 교육용/.test(lp), '안내장 인쇄 — 이름은 가린 채 · 「내부 교육용」 쪽지 없음');
+
+    console.log('\n[16] 접근 전략 (1번)');
+    await p.evaluate(() => { const c = S.customers[0]; c.pf = { type: 'i', rel: 'far', att: 'many', int: ['kid'], dec: 'both', pref: '', note: '' }; c.fam2 = [{ rel: '자녀', name: '홍말순', age: '7살', memo: '' }]; save(); go('cust'); dTab = 'cc'; openDrawer(c.id, true); });
+    const ap = await p.textContent('#drawer .ap');
+    is(/🐬 사교형/.test(ap) && /카톡으로 근황만/.test(ap) && /많은 것과 맞는 것은 다르다/.test(ap) && /두 분 같이/.test(ap) && /홍말순/.test(ap), '고른 성향 · 관계 · 태도 · 결정 · 가족이 전략에 들어간다');
+    is(!/\{[A-Z]/.test(ap) && /짐작/.test(ap), '안 채운 {자리} 0 · 성향은 짐작이라고 적는다');
+    is(!/보험 보험/.test(ap), '요약에 말이 겹치지 않는다');
+
+    console.log('\n[17] 성장기록북 · 주간 보고 — 실명이 안 나가나 (3번)');
+    /* 글꼴이 늦게 오는 것을 흉내 냅니다 — 0.3초 동안 안 오면 그때까지 인쇄 창을 열면 안 됩니다 */
+    await p.waitForTimeout(400); /* 앞 칸 인쇄의 남은 타이머가 끝나기를 기다립니다 — 안 기다리면 그 타이머를 「일찍 열었다」 로 읽습니다 */
+    await p.evaluate(() => { closeDrawer(); S.pmask = true; BK.who = 'all'; go('book'); renderBook(); window.__pr = 0; window.print = () => { window.__pr++; };
+      const late = new Promise(r => setTimeout(r, 300)); try { Object.defineProperty(document.fonts, 'ready', { get: () => late, configurable: true }); } catch (e) {} $('#bkPrint').click(); });
+    await p.waitForTimeout(180);
+    const early = await p.evaluate(() => window.__pr);
+    await p.waitForFunction(() => window.__pr > 0, null, { timeout: 5000 });
+    is(early === 0, '인쇄 창은 글꼴이 다 온 뒤에 연다 — 늦게 오는 글꼴을 기다린다');
+    await p.emulateMedia({ media: 'print' });
+    const bk = await p.evaluate(() => document.querySelector('#printArea').innerText);
+    await p.emulateMedia({ media: 'screen' }); await p.evaluate(() => document.body.classList.remove('printing'));
+    is(!/홍갑돌|홍길동|홍말순/.test(bk) && /홍○○/.test(bk), '기록북 인쇄에 고객 · 가족 실명이 없다 (가린 이름만)');
+    is(/첫 연락/.test(bk) && /8주 기록/.test(bk) && /성향 알아보는 법/.test(bk), '기록북에 전략 · 8주 기록 · 성향 알아보는 법');
+    const wr = await p.evaluate(() => { S.customers[0].next = sbAdd(today(), -3); return weekReport(); });
+    is(/연락일이 지난 분 — 홍○○님/.test(wr) && !/홍갑돌|홍길동/.test(wr) && /이름은 가렸습니다/.test(wr), '주간 보고에 실명이 없다 — 연락일 지난 분도 가린 이름');
+
+
+    console.log('\n[18] 기록북 쓰는 법 · 이정표 · 주차 쪽 (판 X156 · 1번 · 3번)');
+    await p.waitForTimeout(400); /* [17] 인쇄의 남은 타이머 */
+    const pr = async sel => { await p.evaluate(s => $(s).click(), sel); await p.waitForTimeout(150); await p.emulateMedia({ media: 'print' });
+      const t = await p.evaluate(() => document.querySelector('#printArea').innerText); await p.emulateMedia({ media: 'screen' }); await p.evaluate(() => document.body.classList.remove('printing')); return t; };
+    await p.evaluate(() => { const st = sbAdd(today(), -15); S.cfg.start = st; S.mile = {};
+      S.customers[0].logs = [{ id: 'g1', d: sbAdd(st, 1), how: '전화', note: '근황' }, { id: 'g2', d: sbAdd(st, 1), how: '만남', note: '찾아줌' }, { id: 'g3', d: sbAdd(st, 3), how: '카톡', note: '' }];
+      save(); BK.rvw = 1; renderBook(); });
+    /* 칸을 벗어나지 않고(change 없이) 다시 열어도 남아야 합니다 — 치다가 창을 닫는 일이 흔합니다 */
+    await p.fill('#bkBody [data-rv="stuck"]', '🦉 분석형 — 약관 쪽수 들고 다시');
+    await p.reload(); await p.waitForFunction(() => typeof S === 'object' && typeof renderBook === 'function');
+    await p.evaluate(() => { window.print = () => {}; S.pmask = true; BK.who = 'all'; BK.rvw = 1; go('book'); renderBook(); });
+    is(await p.inputValue('#bkBody [data-rv="stuck"]') === '🦉 분석형 — 약관 쪽수 들고 다시', '돌아보기는 치는 대로 저장된다 — 칸을 벗어나지 않고 다시 열어도 남는다');
+    is(/연락 기록 3건/.test(await p.textContent('#bkBody .bk-rvn')) && /만남 1건/.test(await p.textContent('#bkBody .bk-rvn')), '그 주 행동 수 — 연락 기록에서 센다');
+    const day = await p.evaluate(() => { const d = document.createElement('div'); d.innerHTML = bookHTML(false);
+      return [...d.querySelector('.bk-wp table.bk-day').querySelectorAll('tr')].slice(1).map(r => r.cells[1].textContent); });
+    is(day.join('|') === '|2명||1명|||', '1주차 매일 칸 — 기록한 날만 수, 기록 없는 날은 0 이 아니라 빈칸 (1번) ← ' + day.join('|'));
+    const nMile = await p.locator('#bkBody input[data-mile]').count();
+    is(nMile === 12, '8주 이정표 기본 12개가 화면에 선다 (' + nMile + ')');
+    if (nMile) await p.locator('#bkBody input[data-mile]').first().check();
+    is(/이정표 「할 수 있다」 1\/12/.test(await p.evaluate(() => weekReport())), '이정표 체크가 주간 보고에 들어간다');
+    let gb = await pr('#bkPrint');
+    is(gb.indexOf('0. 이 기록북 쓰는 법') > 0 && gb.indexOf('0. 이 기록북 쓰는 법') < gb.indexOf('8주 이정표') && gb.indexOf('8주 이정표') < gb.indexOf('1. 나의 이야기'), '인쇄 순서 — 표지 → 쓰는 법 → 이정표 → 나의 이야기');
+    is(/약관 쪽수 들고 다시/.test(gb) && /칭찬 하나/.test(gb) && /이번 주 만난 분/.test(gb), '주차 쪽에 돌아보기 · 만난 분 · 선배 칸');
+    is(!/홍갑돌|홍길동|홍말순/.test(gb) && /홍○○/.test(gb), '주차 쪽 「이번 주 만난 분」 도 가린 이름 (3번)');
+    is(await p.evaluate(() => document.querySelectorAll('#printArea .bk-ml .cb.on').length) === 1, '인쇄 이정표에 체크 하나');
+    gb = await pr('#bkBlank');
+    is(!/약관 쪽수 들고 다시/.test(gb) && await p.evaluate(() => document.querySelectorAll('#printArea .bk-ml .cb.on').length) === 0 && /__\/__ \(월\)/.test(gb) && /0\. 이 기록북 쓰는 법/.test(gb), '빈 기록북 — 쓰는 법은 있고 체크 · 돌아보기 · 날짜는 비어 있다');
+    await p.evaluate(() => { const o = JSON.parse(localStorage.getItem(KEY)); delete o.lib.miles; delete o.mile; localStorage.setItem(KEY, JSON.stringify(o)); });
+    await p.reload(); await p.waitForFunction(() => typeof S === 'object' && typeof renderBook === 'function');
+    is(await p.evaluate(() => S.lib.miles.length === 12 && !!S.mile), '이정표가 없던 저장본도 기본 12개를 받는다');
+
+
+    console.log('\n[19] 화법 · 클로징 · 거절 (판 X161 · 1번 · 2번 · 5번)');
+    await p.evaluate(() => { localStorage.removeItem(KEY + '_tab'); });
+    await p.evaluate(() => { S.tkRp = {}; save(); go('talk'); TK.drill = null; TK.deck = 'mix'; renderTalk(); });
+    const ztk = await p.evaluate(() => [document.querySelectorAll('#tkForms .tk-f').length, document.querySelectorAll('#tkSwap .tk-sw:not(.h)').length, document.querySelectorAll('#tkClose .tk-k').length, document.querySelectorAll('#objs .tk-o').length, S.lib.objs.length]);
+    is(ztk[0] > 0 && ztk[1] > 0 && ztk[2] > 0 && ztk[3] === ztk[4] && ztk[4] >= 21, '말의 틀 · 바꿔 말하기 · 클로징 사다리 · 거절 응대가 선다 ← ' + ztk.join(','));
+    is(await p.evaluate(() => DEF.objs.every(o => o.why && o.a && o.b && o.c && o.back && o.no && o.cat)), '기본 거절마다 속마음 · 공감 · 근거 · 작은 제안 · 그래도 싫다면 · 하지 않을 말 · 묶음');
+    const ztalkTxt = await p.evaluate(() => JSON.stringify([DEF.objs, DEF.forms, DEF.swaps, DEF.closes, TALK_SIGN]));
+    const znumHit = ztalkTxt.match(/\d[\d,]*\s*(원|만원|%|퍼센트|세\b|개월)/g);
+    is(!znumHit, '금액 · 비율 · 나이 · 개월 수를 적지 않는다 (1번)' + (znumHit ? ' ← ' + znumHit.join(',') : ''));
+    is(!/비과세|세금이 없/.test(ztalkTxt), '세금 결론이 없다 (2번)');
+    /* 정하는 계단(청약)의 「이렇게 말해요」 에 심사 결과가 있어야 합니다 — 다른 칸에 같은 말이 있어도 그 자리를 대신하지 못합니다 */
+    is(await p.evaluate(() => { const k = DEF.closes.find(x => /정하기|청약/.test(x.st)); return !!k && /심사 결과/.test(k.say); }), '정하는 자리의 말에 「보험료 · 가입 여부는 심사 결과에 따라」 (2번)');
+    /* 「무조건」 은 하지 않을 말(no · dont) 안에만 — 고객에게 하는 말 칸에는 없어야 합니다 */
+    const zsay = await p.evaluate(() => DEF.objs.flatMap(o => [o.a, o.ask, o.b, o.c, o.back]).concat(DEF.closes.flatMap(k => [k.say, k.yes, k.maybe, k.no])).filter(t => /무조건|다 돼요|반드시 나와/.test(t || '')));
+    is(!zsay.length, '고객에게 하는 말 칸에 단정(무조건 · 다 돼요)이 없다' + (zsay.length ? ' ← ' + zsay[0] : ''));
+    await p.click('#tkStart');
+    const zhid0 = await p.evaluate(() => document.querySelectorAll('#tkDrill .tk-hide span').length);
+    let zg = 0; while (await p.isVisible('#tkNext') && zg++ < 8) await p.click('#tkNext');
+    const zdk = await p.evaluate(() => TK.drill.k);
+    await p.click('#tkDone');
+    is(zhid0 >= 4 && await p.evaluate(k => S.tkRp[k] === 1 && TK.drill.k !== k, zdk), '연습 카드 — 답이 가려져 나오고, 다 열고 「말해 봤어요」 를 누르면 그 장이 1번 · 다음 장은 다른 것');
+    is(/거절 · 클로징 연습 1번/.test(await p.evaluate(() => weekReport())), '연습 횟수가 주간 보고에 — 세는 곳은 S.tkRp 하나 (5번)');
+    await p.fill('#tkQ', '생각');
+    is(await p.evaluate(() => /생각해 볼게/.test(document.querySelector('#objs').textContent) && document.activeElement.id === 'tkQ'), '들은 말로 찾기 — 치는 동안 칸을 놓치지 않는다');
+    await p.fill('#tkQ', '');
+    /* 폰 — 목업으로 찍어 보고 찾은 두 자리: 위 띠의 고른 칸 글씨가 바탕에 묻힘 · 이름표가 좁은 폭에서 둥근 덩어리로 짓눌림 */
+    const zvp = p.viewportSize(); await p.setViewportSize({ width: 390, height: 844 });
+    const zph = await p.evaluate(() => { go('talk'); const d = document.querySelector('#objs details.tk-o'); d.open = true;
+      const rgb = c => (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number), L = c => { const v = rgb(c).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+      const b = getComputedStyle(document.querySelector('#nav button.on')), a = L(b.color), g = L(b.backgroundColor);
+      return [(Math.max(a, g) + 0.05) / (Math.min(a, g) + 0.05), d.querySelector('.a .pill').getBoundingClientRect().height]; });
+    await p.setViewportSize(zvp);
+    is(zph[0] >= 4.5, '폰 위 띠 — 고른 칸 글씨가 바탕과 구별된다 (대비 ' + zph[0].toFixed(1) + ')');
+    is(zph[1] < 32, '폰 — 거절 칸 이름표가 짓눌리지 않는다 (높이 ' + Math.round(zph[1]) + 'px)');
+    await p.evaluate(() => { const o = JSON.parse(localStorage.getItem(KEY)); o.libv = 3; o.lib.objs = [{ q: '"나 보험 충분히 있어"', a: '내가 고친 공감', b: '', c: 'c' }, { q: '"내가 만든 거절"', a: 'a', b: 'b', c: 'c' }]; localStorage.setItem(KEY, JSON.stringify(o)); });
+    await p.reload(); await p.waitForFunction(() => typeof S === 'object' && typeof renderTalk === 'function');
+    const zmg = await p.evaluate(() => { const L = S.lib.objs, f = L.find(o => /충분히/.test(o.q)); return [L.length === DEF.objs.length + 1, f.a, f.b, !!f.why && !!f.back, !!L.find(o => /내가 만든/.test(o.q)), S.libv]; });
+    is(zmg[0] && zmg[1] === '내가 고친 공감' && zmg[2] === '' && zmg[3] && zmg[4] && zmg[5] === 4, '예전 저장본 — 고친 글 · 지운 칸은 그대로, 빈 칸만 채우고 새 거절은 끝에 · 직접 만든 거절도 그대로 ← ' + JSON.stringify(zmg));
+    await p.reload(); await p.waitForFunction(() => typeof S === 'object' && typeof renderTalk === 'function');
+    is(await p.evaluate(() => S.lib.objs.length === DEF.objs.length + 1), '다시 열어도 새 거절이 두 번 붙지 않는다');
 
     is(errs.length === 0, '오류 없이 끝났다' + (errs.length ? ' ← ' + errs[0] : ''));
 
