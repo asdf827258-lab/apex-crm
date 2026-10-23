@@ -1,0 +1,247 @@
+<!doctype html>
+<html data-theme="light" lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>B·C·D 워크북 · 내 폰에 적기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<!-- ══ 📱 <b>B·C·D 워크북 — 참가자가 제 폰에 적는 곳</b> (판 X177 · 2026-10-23) ══════════════
+     사장님 말씀 — 「응 강의라서 적어보게 해」.
+     강의 덱(bcd-lecture.html)의 「📱 함께 적습니다」 장이 이 주소를 띄우고, 강사가 단톡방에 올립니다.
+
+     ★ 물음은 bcd-data.js 한 벌 — 종이 워크북과 같은 쪽 · 같은 물음입니다 (5번).
+     ★ 적은 것은 <b>그 폰(localStorage)에만</b> 남습니다. 서버를 부르지 않습니다 (7번) —
+       강사도 회사도 못 봅니다. 간직하려면 「인쇄 · PDF 저장」.
+     ★ 고객 실명은 적지 않게 말합니다 — 견본 고객은 홍길동 (3번).
+     ★ 마음 점수를 비운 장면은 곡선에 안 섭니다 — 0 으로 그리지 않습니다 (1번).
+     점검 : scripts/check-bcdlec.js [13] -->
+<style>
+:root{color-scheme:light}
+:root{--bg:#F4F5F7;--card:#fff;--ink:#191F28;--sub:#4E5968;--mute:#8B95A1;--line:#E5E8EB;--blue:#3182F6;--blue-s:#EDF4FF;
+  --heart:#F04452;--heart-s:#FFF0F1;--green:#03B26C;--green-s:#E8F8F1;--gold:#E9A23B;--gold-s:#FFF6E6;--night:#0E1525;--dawn:#F6C76B}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:"Pretendard Variable",Pretendard,-apple-system,"Malgun Gothic",sans-serif;font-size:16px;line-height:1.6;word-break:keep-all;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+.hd{background:var(--night);color:#fff;padding:22px 16px 18px}
+.hd .bcd{font-weight:900;letter-spacing:-.5px;font-size:13px;color:var(--dawn)}
+.hd h1{font-size:21px;letter-spacing:-.4px;margin-top:2px}
+.hd p{font-size:13.5px;color:#A9B5CC;margin-top:4px}
+.bar{height:6px;background:rgba(255,255,255,.12);border-radius:9px;margin-top:12px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--dawn);width:0;transition:width .3s}
+.tabs{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);display:flex;gap:6px;padding:10px 12px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:none;min-width:44px;padding:7px 12px;border-radius:99px;font-weight:800;font-size:14px;color:var(--sub);background:var(--bg)}
+.tabs button.on{background:var(--ink);color:#fff}
+.tabs button.done::after{content:" ✓";color:var(--green)}
+.tabs button.on.done::after{color:#7CF0B4}
+.wrap{max-width:640px;margin:0 auto;padding:16px 16px 100px}
+.pg{display:none}.pg.on{display:block}
+.pg h2{font-size:20px;letter-spacing:-.4px}
+.pg .lead{color:var(--sub);font-size:14.5px;margin:4px 0 14px}
+.card{background:var(--card);border-radius:18px;padding:16px;margin-bottom:12px}
+.q{font-weight:800;font-size:15.5px;margin-bottom:8px}
+.q small{font-weight:600;color:var(--mute);margin-left:4px}
+input,textarea,select{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 12px;background:#FAFBFC;font-size:16px}
+textarea{resize:vertical;line-height:1.6}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--blue-s);border-color:var(--blue);background:#fff}
+.g3{display:grid;gap:8px}
+.sc{border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px}
+.sc .sh{font-size:13px;font-weight:800;color:var(--mute);margin-bottom:6px}
+.sc .r2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+label.lb{display:block;font-size:13px;font-weight:700;color:var(--sub);margin:8px 0 4px}
+.life{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.life button{background:var(--bg);border-radius:12px;padding:10px 4px;text-align:center;font-size:12.5px;font-weight:700;line-height:1.3}
+.life button .e{display:block;font-size:22px}
+.life button.on{background:var(--ink);color:#fff}
+.ck{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px}
+.ck input{width:22px;height:22px;flex:none;margin-top:1px}
+.ffq{font-size:13.5px;color:var(--sub);background:var(--bg);border-radius:10px;padding:8px 10px;margin:6px 0}
+.ffq b{color:var(--ink)}
+.fill{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-weight:800}
+.fill input{flex:1 1 160px;width:auto}
+svg{width:100%;height:auto;background:var(--night);border-radius:14px;margin-top:10px}
+.nav{display:flex;gap:8px;margin-top:6px}
+.btn{flex:1;padding:13px;border-radius:14px;font-weight:800;background:var(--card);color:var(--sub);text-align:center}
+.btn.pri{background:var(--blue);color:#fff}
+.btn.red{background:var(--heart-s);color:var(--heart)}
+.warn{background:var(--gold-s);color:#8A5A12;border-radius:14px;padding:12px 14px;font-size:13.5px;margin-bottom:12px}
+.foot{text-align:center;color:var(--mute);font-size:13.5px;margin:18px 0}
+.tools{display:flex;gap:8px;margin-top:18px}
+#printArea{display:none}
+@media print{
+  @page{size:A4;margin:14mm}
+  body{background:#fff;font-size:13px}
+  .hd,.tabs,.wrap{display:none!important}
+  #printArea{display:block}
+  #printArea section{break-after:page;page-break-after:always}
+  #printArea section:last-child{break-after:auto;page-break-after:auto}
+  #printArea h3{font-size:17px;margin-bottom:2px}
+  #printArea .pl{color:#666;font-size:12px;margin-bottom:10px}
+  #printArea .pq{font-weight:800;margin-top:10px}
+  #printArea .pa{white-space:pre-wrap;border-bottom:1px solid #ccc;min-height:22px;padding:2px 0}
+  #printArea table{width:100%;border-collapse:collapse;margin-top:6px}
+  #printArea th,#printArea td{border:1px solid #ccc;padding:6px;text-align:left;vertical-align:top;font-size:12px}
+  #printArea svg{background:#0E1525;max-height:70mm}
+}
+</style>
+</head>
+<body>
+<div class="hd">
+  <div class="bcd">B · C · D</div>
+  <h1 id="ttl">내 워크북 — 적으면서 듣는 강의</h1>
+  <p>적은 것은 <b>이 폰에만</b> 남습니다. 강사도 회사도 못 봅니다. <span id="prog"></span></p>
+  <div class="bar"><i id="barI"></i></div>
+</div>
+<nav class="tabs" id="tabs"></nav>
+<div class="wrap">
+  <div class="warn">⚠ <b>고객 이름은 적지 마십시오.</b> 역할극 고객은 견본 <b>홍길동</b> 님입니다. 내 이야기는 마음껏 적으셔도 이 폰 밖으로 나가지 않습니다.</div>
+  <div class="card"><label class="lb" for="myName" style="margin-top:0">내 이름 (적지 않아도 됩니다 · 인쇄 머리에만 섭니다)</label><input id="myName" data-k="_name" autocomplete="off"></div>
+  <div id="pages"></div>
+  <div class="tools">
+    <button class="btn pri" id="prBtn">🖨 인쇄 · PDF 저장</button>
+    <button class="btn red" id="wipe">🗑 다 지우기</button>
+  </div>
+  <p class="foot">B와 D는 이미 정해져 있습니다. 오늘부터의 C는 여러분 것입니다.</p>
+</div>
+<div id="printArea"></div>
+
+<script src="bcd-data.js"></script>
+<script>
+'use strict';
+const { LIFE, FF, OBS, WB, RES } = window.BCD;
+const KEY = 'apex_bcd_wb_v1';
+let A = {};
+try { A = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { A = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(A)); } catch (e) {} };
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const has = v => v === true || String(v == null ? '' : v).trim() !== '';
+const $ = id => document.getElementById(id);
+const v = k => A[k] == null ? '' : A[k];
+
+/* 적는 칸 하나하나의 열쇠 — 그리기 · 세기 · 인쇄가 이 하나를 씁니다 (5번) */
+function slots(it) {
+  const k = it.k;
+  if (it.ty === 'three') return [0, 1, 2].map(i => k + '.' + i);
+  if (it.ty === 'curve') return Array.from({ length: it.rows }, (_, r) => ['t', 'c'].map(f => k + '.' + r + '.' + f)).flat();
+  if (it.ty === 'table') return Array.from({ length: it.rows }, (_, r) => it.cols.map((_, c) => k + '.' + r + '.' + c)).flat();
+  if (it.ty === 'ff') return FF.map((_, i) => ['f', 'h'].map(f => k + '.' + i + '.' + f)).flat();
+  if (it.ty === 'check') return [];                       /* 체크는 「안 함」 도 답이라 빈 칸으로 안 셉니다 */
+  if (it.ty === 'card') return it.fields.map((_, i) => k + '.' + i);
+  return [k];
+}
+const pageSlots = pg => pg.items.map(slots).flat();
+
+function field(k, ph, rows) {
+  return rows ? '<textarea data-k="' + k + '" rows="' + rows + '" placeholder="' + esc(ph || '') + '">' + esc(v(k)) + '</textarea>'
+    : '<input data-k="' + k + '" value="' + esc(v(k)) + '" placeholder="' + esc(ph || '') + '" autocomplete="off">';
+}
+function curveSvg(it) {
+  const P = [];
+  for (let r = 0; r < it.rows; r++) { const sc = v(it.k + '.' + r + '.s'); if (has(sc) && !isNaN(+sc)) P.push({ t: v(it.k + '.' + r + '.t'), y: v(it.k + '.' + r + '.y'), s: +sc, r: v(it.k + '.' + r + '.r') }); }
+  if (P.length < 2) return '<p class="ffq">마음 점수를 두 장면 이상 고르면 여기에 <b>내 인생 곡선</b>이 그려집니다. (지금 ' + P.length + '장면)</p>';
+  const W = 600, H = 260, L = 24, R = 24, T = 30, B = 46;
+  const x = i => L + i * (W - L - R) / (P.length - 1), y = s => T + (5 - Math.max(-5, Math.min(5, s))) * (H - T - B) / 10;
+  let g = '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(0) + '" y2="' + y(0) + '" stroke="#3A4A6A" stroke-dasharray="5 7"/>' +
+    '<path d="' + P.map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.s).toFixed(1)).join(' ') + '" fill="none" stroke="#F6C76B" stroke-width="3.5" stroke-linejoin="round"/>';
+  P.forEach((p, i) => {
+    const c = p.r === 'proof' ? '#6FB3FF' : p.r === 'fail' ? '#FF7A85' : '#F6C76B';
+    g += '<circle cx="' + x(i) + '" cy="' + y(p.s) + '" r="7" fill="' + c + '" stroke="#0E1525" stroke-width="2.5"/>' +
+      '<text x="' + x(i) + '" y="' + (y(p.s) + (p.s >= 0 ? -14 : 24)) + '" fill="#E3E9F4" font-size="13" font-weight="700" text-anchor="middle">' + esc(String(p.t).slice(0, 10)) + '</text>' +
+      '<text x="' + x(i) + '" y="' + (H - 12) + '" fill="#93A1BC" font-size="12" text-anchor="middle">' + esc(p.y) + '</text>';
+  });
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="내 인생 곡선">' + g + '</svg>';
+}
+function itemHtml(it) {
+  const k = it.k;
+  if (it.ty === 'three') return '<div class="card"><div class="q">' + esc(it.q) + '</div><div class="g3">' + [0, 1, 2].map(i => field(k + '.' + i, (i + 1) + '번째 선택')).join('') + '</div></div>';
+  if (it.ty === 'curve') return '<div class="card"><div class="q">' + esc(it.q) + ' <small>바닥 셋 · 정점 셋</small></div><div id="cv_' + k + '">' + curveSvg(it) + '</div>' +
+    Array.from({ length: it.rows }, (_, r) => '<div class="sc"><div class="sh">장면 ' + (r + 1) + '</div>' +
+      '<div class="r2">' + field(k + '.' + r + '.y', '언제 (예: 3년차)') + field(k + '.' + r + '.t', '그 장면 한 줄') + '</div>' +
+      '<div class="r2"><select data-k="' + k + '.' + r + '.s" aria-label="마음 점수"><option value="">마음 점수</option>' +
+        Array.from({ length: 11 }, (_, j) => 5 - j).map(n => '<option value="' + n + '"' + (String(v(k + '.' + r + '.s')) === String(n) ? ' selected' : '') + '>' + (n > 0 ? '+' + n : n) + (n === 5 ? ' 정점' : n === -5 ? ' 바닥' : '') + '</option>').join('') + '</select>' +
+      '<select data-k="' + k + '.' + r + '.r" aria-label="실패 또는 증명"><option value="">실패 / 증명</option>' + Object.keys(RES).map(o => '<option value="' + o + '"' + (v(k + '.' + r + '.r') === o ? ' selected' : '') + '>' + RES[o] + '</option>').join('') + '</select></div>' +
+      '<label class="lb">그때 내가 한 선택</label>' + field(k + '.' + r + '.c', '무엇을 골랐나 · 무엇을 포기했나', 2) + '</div>').join('') + '</div>';
+  if (it.ty === 'table') return '<div class="card"><div class="q">' + esc(it.q) + '</div>' + Array.from({ length: it.rows }, (_, r) =>
+      '<div class="sc">' + (it.rows > 1 ? '<div class="sh">' + (r + 1) + '</div>' : '') + it.cols.map((c, ci) => '<label class="lb">' + esc(c) + '</label>' + field(k + '.' + r + '.' + ci, '', 2)).join('') + '</div>').join('') + '</div>';
+  if (it.ty === 'text') return '<div class="card"><div class="q">' + esc(it.q) + '</div>' + field(k, '', Math.max(2, it.lines + 1)) + '</div>';
+  if (it.ty === 'fill') { const p = it.q.split('___'); return '<div class="card"><div class="fill"><span>' + esc(p[0]) + '</span>' + field(k, '') + '<span>' + esc(p[1] || '') + '</span></div>' +
+      (it.lines > 1 ? '<label class="lb">더 적기</label>' + field(k + '.more', '', it.lines) : '') + '</div>'; }
+  if (it.ty === 'life') return '<div class="card"><div class="q">' + esc(it.q) + '</div><div class="life">' + LIFE.map((x, i) => '<button data-life="' + k + '" data-i="' + i + '" class="' + (String(v(k)) === String(i) ? 'on' : '') + '"><span class="e">' + x.e + '</span>' + esc(x.n) + '</button>').join('') + '</div></div>';
+  if (it.ty === 'ff') return '<div class="card"><div class="q">' + esc(it.q) + ' <small>모르시면 「모름」</small></div>' + FF.map((x, i) => '<div class="sc"><div class="sh">' + (i + 1) + ' · ' + esc(x.s) + '</div>' +
+      '<div class="ffq"><b>사실</b> — ' + esc(x.f) + '</div>' + field(k + '.' + i + '.f', '고객의 말 그대로', 2) +
+      '<div class="ffq"><b>마음</b> — ' + esc(x.h) + '</div>' + field(k + '.' + i + '.h', '고객의 말 그대로', 2) + '</div>').join('') + '</div>';
+  if (it.ty === 'check') return '<div class="card"><div class="q">' + esc(it.q) + '</div>' + OBS.map((x, i) => '<label class="ck"><input type="checkbox" data-k="' + k + '.' + i + '"' + (A[k + '.' + i] === true ? ' checked' : '') + '><span>' + esc(x) + '</span></label>').join('') + '</div>';
+  if (it.ty === 'card') return '<div class="card"><div class="q">' + esc(it.q) + '</div><div class="r2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' + it.fields.map((f, i) => '<div><label class="lb">' + esc(f) + '</label>' + field(k + '.' + i, '') + '</div>').join('') + '</div></div>';
+  return '';
+}
+
+let cur = 0;
+function render() {
+  $('tabs').innerHTML = WB.map((pg, i) => '<button data-p="' + i + '" class="' + (i === cur ? 'on' : '') + '">' + (i + 1) + '쪽</button>').join('');
+  $('pages').innerHTML = WB.map((pg, i) => '<section class="pg' + (i === cur ? ' on' : '') + '" id="pg' + i + '"><h2>' + (i + 1) + '쪽 · ' + esc(pg.t) + '</h2><p class="lead">' + esc(pg.lead) + '</p>' +
+    pg.items.map(itemHtml).join('') +
+    '<div class="nav">' + (i ? '<button class="btn" data-p="' + (i - 1) + '">← ' + i + '쪽</button>' : '') + (i < WB.length - 1 ? '<button class="btn pri" data-p="' + (i + 1) + '">' + (i + 2) + '쪽 →</button>' : '') + '</div></section>').join('');
+  $('myName').value = v('_name');
+  progress();
+}
+function progress() {
+  let all = 0, got = 0;
+  WB.forEach((pg, i) => {
+    const S = pageSlots(pg), n = S.filter(k => has(A[k])).length;
+    all += S.length; got += n;
+    const b = $('tabs').children[i]; if (b) b.classList.toggle('done', S.length > 0 && n > 0);
+  });
+  $('prog').textContent = '· ' + got + ' / ' + all + '칸 적음';
+  $('barI').style.width = (all ? Math.round(100 * got / all) : 0) + '%';
+}
+function go(i) {
+  cur = Math.max(0, Math.min(WB.length - 1, i));
+  document.querySelectorAll('.pg').forEach((p, j) => p.classList.toggle('on', j === cur));
+  [...$('tabs').children].forEach((b, j) => b.classList.toggle('on', j === cur));
+  window.scrollTo(0, 0);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-p],[data-life]'); if (!b) return;
+  if (b.dataset.life) { const k = b.dataset.life; A[k] = String(A[k]) === b.dataset.i ? '' : b.dataset.i; save();
+    b.parentNode.querySelectorAll('button').forEach(x => x.classList.toggle('on', String(A[k]) === x.dataset.i)); progress(); return; }
+  go(+b.dataset.p);
+});
+function onEdit(e) {
+  const t = e.target, k = t.dataset && t.dataset.k; if (!k) return;
+  A[k] = t.type === 'checkbox' ? t.checked : t.value; save(); progress();
+  const m = /^([^.]+)\.\d+\.(s|r|t|y)$/.exec(k);      /* 장면을 고치면 곡선을 다시 그립니다 */
+  if (m) { const it = WB.flatMap(p => p.items).find(x => x.k === m[1] && x.ty === 'curve'); if (it) $('cv_' + it.k).innerHTML = curveSvg(it); }
+}
+document.addEventListener('input', onEdit);
+document.addEventListener('change', onEdit);
+
+/* 인쇄 — 적은 것을 그대로. 안 적은 칸은 빈 줄로 둡니다 */
+function printHtml() {
+  const ans = k => '<div class="pa">' + esc(v(k)) + '</div>';
+  return WB.map((pg, n) => '<section><h3>' + (n + 1) + '쪽 · ' + esc(pg.t) + '</h3><div class="pl">' + (n || !has(v('_name')) ? '' : esc(v('_name')) + ' · ') + esc(pg.lead) + '</div>' +
+    pg.items.map(it => {
+      const k = it.k, q = '<div class="pq">' + esc(it.q) + '</div>';
+      if (it.ty === 'curve') return q + curveSvg(it).replace(/^<p[\s\S]*<\/p>$/, '') + '<table><tr><th>언제</th><th>장면</th><th>점수</th><th>그때 한 선택</th><th>실패/증명</th></tr>' +
+        Array.from({ length: it.rows }, (_, r) => '<tr>' + ['y', 't', 's', 'c'].map(f => '<td>' + esc(v(k + '.' + r + '.' + f)) + '</td>').join('') + '<td>' + esc(RES[v(k + '.' + r + '.r')] || '') + '</td></tr>').join('') + '</table>';
+      if (it.ty === 'table') return q + '<table><tr>' + it.cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr>' + Array.from({ length: it.rows }, (_, r) => '<tr>' + it.cols.map((_, c) => '<td>' + esc(v(k + '.' + r + '.' + c)) + '</td>').join('') + '</tr>').join('') + '</table>';
+      if (it.ty === 'ff') return q + '<table><tr><th>걸음</th><th>사실</th><th>마음</th></tr>' + FF.map((x, i) => '<tr><td>' + esc(x.s) + '</td><td>' + esc(v(k + '.' + i + '.f')) + '</td><td>' + esc(v(k + '.' + i + '.h')) + '</td></tr>').join('') + '</table>';
+      if (it.ty === 'check') return q + OBS.map((x, i) => '<div>' + (A[k + '.' + i] === true ? '☑ ' : '☐ ') + esc(x) + '</div>').join('');
+      if (it.ty === 'life') return q + '<div class="pa">' + (has(v(k)) ? esc(LIFE[+v(k)].e + ' ' + LIFE[+v(k)].n) : '') + '</div>';
+      if (it.ty === 'three') return q + [0, 1, 2].map(i => ans(k + '.' + i)).join('');
+      if (it.ty === 'card') return q + '<div>' + it.fields.map((f, i) => esc(f) + ': ' + esc(v(k + '.' + i))).join(' · ') + '</div>';
+      if (it.ty === 'fill') return '<div class="pq">' + esc(it.q).replace('___', '<u>' + (esc(v(k)) || '&nbsp;'.repeat(30)) + '</u>') + '</div>' + (it.lines > 1 ? ans(k + '.more') : '');
+      return q + ans(k);
+    }).join('') + (pg.foot ? '<p class="pl" style="margin-top:12px">' + esc(pg.foot) + '</p>' : '') + '</section>').join('');
+}
+$('prBtn').onclick = () => { $('printArea').innerHTML = printHtml(); window.print(); };
+window.addEventListener('afterprint', () => { $('printArea').innerHTML = ''; });
+$('wipe').onclick = () => {
+  if (!confirm('이 폰에 적은 워크북을 모두 지웁니다. 되돌릴 수 없습니다. 지울까요?')) return;
+  A = {}; try { localStorage.removeItem(KEY); } catch (e) {} cur = 0; render();
+};
+render();
+</script>
+</body>
+</html>

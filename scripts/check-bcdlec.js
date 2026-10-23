@@ -21,7 +21,13 @@
      ⑪ 네이버는 주소만 연다(새 창) — 서버로 받지 않는다 (7번)
      ⑫ 사진 — 넣지 않으면 그 장이 없다 · 넣으면 출처가 장에 서고, 안 적으면 「출처를 안 적었습니다」 ·
         사진은 워크북 · 강사 대본 인쇄에 안 들어간다
-     ⑬ 움직임이 실제로 돈다 — 움직임 줄이기를 켠 기기에서는 멈춘다  */
+     ⑬ 움직임이 실제로 돈다 — 움직임 줄이기를 켠 기기에서는 멈춘다
+   판 X177 (2026-10-23 「응 강의라서 적어보게 해」) —
+     ⑭ ★ 참가자가 제 폰에 적는 워크북(bcd-workbook.html) — 물음은 bcd-data.js 한 벌. 종이 워크북과 같은 쪽 수 ·
+        같은 물음 (5번). 덱 · 워크북 어디에도 물음 목록을 따로 적지 않는다
+     ⑮ 적은 것은 그 폰에만 · 다시 열어도 남고 · 다 지우기로 지워진다 · 서버를 안 부른다 (7번)
+     ⑯ 마음 점수를 고른 장면만 곡선 점이 된다 — 비운 장면을 0 으로 그리지 않는다 (1번)
+     ⑰ 덱의 활동 장마다 「📱 n쪽」 이 그 쪽 제목과 함께 선다 · 덱이 폰 워크북 주소를 띄우고 복사한다  */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9174;
@@ -31,6 +37,9 @@ let bad = 0;
 const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
 
 const PAGE = fs.readFileSync(path.join(ROOT, 'app/bcd-lecture.html'), 'utf8');
+const WBP = fs.readFileSync(path.join(ROOT, 'app/bcd-workbook.html'), 'utf8');
+const DATA = fs.readFileSync(path.join(ROOT, 'app/bcd-data.js'), 'utf8');
+const strip = t => t.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
 const IDX = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
 /* 주석을 떼고 본다 — 쪽지 글을 코드로 읽지 않게 */
 const CODE = PAGE.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -48,9 +57,12 @@ is(!/data:image\/(png|jpe?g|webp|gif);base64/i.test(PAGE) && !/<img[^>]+src="(?!
 is(!/story\s*:\s*\{\s*[a-zA-Z]+\s*:\s*'[^']/.test(CODE) && !/tl\s*:\s*\[\s*\{/.test(CODE), '이야기 · 장면을 미리 적어 둔 줄이 없다');
 
 console.log('\n[3] 서버 · 바깥 스크립트 · tnum (7번 · 4-1번)');
-is(!/\bfetch\s*\(|XMLHttpRequest|supabase|\/\.netlify\//i.test(CODE), '서버를 부르는 줄이 없다');
-is(!/<script[^>]+src=/i.test(PAGE), '바깥 스크립트를 안 들여온다');
-is(!/tnum/.test(PAGE), '숫자 글꼴 tnum 을 안 켠다');
+is([CODE, strip(WBP), strip(DATA)].every(t => !/\bfetch\s*\(|XMLHttpRequest|supabase|\/\.netlify\//i.test(t)), '덱 · 폰 워크북 · 글 한 벌 모두 서버를 부르는 줄이 없다');
+const srcs = t => (t.match(/<script[^>]+src="([^"]+)"/gi) || []).map(x => /src="([^"]+)"/i.exec(x)[1]);
+is(srcs(PAGE).join() === 'bcd-data.js' && srcs(WBP).join() === 'bcd-data.js', '바깥 스크립트를 안 들여온다 — 둘 다 옆 파일 bcd-data.js 하나만 읽는다');
+is(![PAGE, WBP].some(t => /tnum/.test(t)), '숫자 글꼴 tnum 을 안 켠다');
+is(!/const (LIFE|FF|OBS|WB) = \[/.test(CODE) && !/const (LIFE|FF|OBS|WB) = \[/.test(strip(WBP)) && !/'내가 말한 시간보다 고객이/.test(CODE + strip(WBP)),
+  '★ 생애 지도 · 팩트파인딩 · 관찰 체크 · 워크북 물음을 덱 · 폰 워크북에 따로 적지 않았다 — bcd-data.js 한 벌 (5번)');
 
 const srv = http.createServer((q, s) => {
   const p = decodeURIComponent(q.url.split('?')[0]);
@@ -149,7 +161,7 @@ const srv = http.createServer((q, s) => {
 
     console.log('\n[8] 워크북은 빈 칸 · 강사 대본에는 이야기');
     const bk = await p.evaluate(() => ({ book: bookHtml(), n: (bookHtml().match(/class="wb"/g) || []).length, sc: scriptHtml() }));
-    is(bk.n === 6, '참가자 워크북이 6쪽이다 (3쪽 · 나의 마지막 하루)');
+    is(bk.n === 6 && await p.evaluate(() => WB.length) === 6, '참가자 워크북이 6쪽이다 — 글 한 벌(WB)의 쪽 수 그대로 (3쪽 · 나의 마지막 하루)');
     is(!/홍길동 점검 이야기|다음 날 또 나갔다/.test(bk.book), '워크북에 강사님 이야기 · 장면이 안 들어간다');
     is(/홍길동 점검 이야기/.test(bk.sc) && /다음 날 또 나갔다/.test(bk.sc), '강사 대본에는 이야기 · 장면이 들어간다');
     await p.evaluate(() => { window.print = () => {}; page('book'); $('prBook').click(); });
@@ -199,6 +211,56 @@ const srv = http.createServer((q, s) => {
     is(/출처를 안 적었습니다/.test(ph.b), '출처를 안 적으면 그 장이 그렇다고 말한다');
     is(!/<img|data:image/.test(ph.book) && !/<img|data:image/.test(ph.sc) && /출처: 직접 촬영/.test(ph.sc), '워크북 · 강사 대본 인쇄에 사진이 안 들어간다 — 대본에는 설명 · 출처만');
     is(await p.evaluate(() => { const s0 = TOTAL_MIN; return s0 === 240; }), '장이 늘어도 4시간(240분) 그대로');
+
+    console.log('\n[13] 📱 함께 적기 — 덱이 폰 워크북을 가리키나 · 활동 장마다 쪽이 서나');
+    await p.evaluate(() => page('deck'));
+    const pw = await p.evaluate(() => { const i = D.findIndex(s => s.ty === 'phone'); if (i < 0) return null; show(i);
+      return { txt: $('stage').innerText, sec: D[i].sec, href: (document.querySelector('#stage a[href]') || {}).getAttribute && document.querySelector('#stage a[href]').getAttribute('href'), url: wbUrl() }; });
+    is(pw && pw.sec === 'open' && /bcd-workbook\.html$/.test(pw.url) && pw.txt.indexOf(pw.url) >= 0 && pw.href === 'bcd-workbook.html', '여는 마당에 폰 워크북 주소가 크게 서고 열어 보기가 그 파일로 간다');
+    is(/링크 복사/.test(pw.txt), '「링크 복사」 단추가 있다(단톡방에 올리기)');
+    const wk = await p.evaluate(() => { const o = []; D.forEach((s, i) => { if (s.ty === 'work') { show(i); const t = $('stage').innerText; const m = /워크북 (\d)쪽/.exec(s.steps.join(' ') + ' ' + s.say);
+      o.push({ wb: s.wb, badge: s.wb ? t.indexOf('워크북 ' + s.wb + '쪽') >= 0 && t.indexOf(WB[s.wb - 1].t) >= 0 : false, said: m ? +m[1] : null }); } }); return o; });
+    is(wk.length >= 7 && wk.every(w => w.wb >= 1 && w.wb <= 6 && w.badge), '활동 장 ' + wk.length + '개 모두 「📱 n쪽 — 그 쪽 제목」 이 선다');
+    is(wk.every(w => w.said === null || w.said === w.wb), '활동 장의 말(「워크북 n쪽」)과 쪽 표시가 같다');
+    is(new Set(wk.map(w => w.wb)).size === 6, '워크북 여섯 쪽이 모두 어느 활동에서 쓰인다');
+
+    console.log('\n[14] 📱 폰 워크북 — 적고 · 남고 · 그리고 · 뽑고 · 지운다 (bcd-workbook.html)');
+    const q = await ctx.newPage({ viewport: { width: 390, height: 844 } });
+    const qe = []; q.on('pageerror', e => qe.push(e.message)); q.on('dialog', d => d.accept());
+    await q.setViewportSize({ width: 390, height: 844 });
+    await q.goto('http://127.0.0.1:' + PORT + '/app/bcd-workbook.html', { waitUntil: 'load' });
+    await q.evaluate(() => { localStorage.removeItem(KEY); }); await q.reload({ waitUntil: 'load' });
+    const w0 = await q.evaluate(() => ({ pages: document.querySelectorAll('.pg').length, tabs: document.querySelectorAll('#tabs button').length, n: WB.length,
+      qs: WB.flatMap(p => p.items).filter(it => it.ty !== 'curve' && it.ty !== 'ff').every(it => document.body.innerText.indexOf(it.q.split('___')[0].trim()) >= 0 || document.body.innerHTML.indexOf(it.q.split('___')[0].trim()) >= 0),
+      sw: document.documentElement.scrollWidth, prog: $('prog').textContent }));
+    is(w0.pages === w0.n && w0.tabs === w0.n, '쪽이 글 한 벌(WB)과 같은 ' + w0.n + '쪽이다');
+    is(w0.qs, '종이 워크북의 물음이 폰에도 그대로 선다(같은 글)');
+    is(w0.sw <= 390, '폰 폭(390px)에서 옆으로 안 넘친다 — ' + w0.sw + 'px');
+    is(/· 0 \/ \d+칸 적음/.test(w0.prog), '처음에는 「0 / n칸 적음」 — 아무것도 미리 안 적혀 있다');
+    await q.fill('[data-k="today.0"]', '오늘은 일찍 일어났다');
+    await q.selectOption('[data-k="scenes.0.s"]', '-4'); await q.fill('[data-k="scenes.0.t"]', '첫 거절'); await q.selectOption('[data-k="scenes.0.r"]', 'fail');
+    is(await q.$$eval('#cv_scenes circle', a => a.length) === 0 && /지금 1장면/.test(await q.textContent('#cv_scenes')), '점수를 한 장면만 고르면 곡선 대신 「두 장면 이상」 이라 말한다');
+    await q.selectOption('[data-k="scenes.1.s"]', '3'); await q.fill('[data-k="scenes.1.t"]', '다시 일어선 날'); await q.fill('[data-k="scenes.2.t"]', '점수 안 고른 장면');
+    is(await q.$$eval('#cv_scenes circle', a => a.length) === 2, '점수를 고른 두 장면만 곡선의 점이 된다 — 비운 장면을 0 으로 안 그린다 (1번)');
+    await q.click('#tabs button[data-p="2"]');
+    await q.fill('[data-k="word"]', '고마웠다 길동아');
+    await q.click('#tabs button[data-p="3"]'); await q.click('[data-life="where"][data-i="4"]');
+    await q.click('#tabs button[data-p="4"]'); await q.check('[data-k="obs.1"]'); await q.fill('[data-k="ff.3.f"]', '모름');
+    await q.click('#tabs button[data-p="5"]'); await q.fill('[data-k="proved"]', '끝까지 가는 것');
+    await q.reload({ waitUntil: 'load' });
+    const w1 = await q.evaluate(() => ({ a: A['today.0'], w: A['word'], l: A['where'], o: A['obs.1'], f: A['ff.3.f'], p: A['proved'], prog: $('prog').textContent,
+      lifeOn: document.querySelector('[data-life="where"][data-i="4"]').classList.contains('on') }));
+    is(w1.a === '오늘은 일찍 일어났다' && w1.w === '고마웠다 길동아' && w1.l === '4' && w1.o === true && w1.f === '모름' && w1.p === '끝까지 가는 것' && w1.lifeOn, '다시 열어도 그 폰에 적은 것이 남는다 (글 · 생애 지도 · 체크)');
+    is(!/· 0 \//.test(w1.prog), '적은 칸 수가 머리에 선다 — ' + w1.prog.replace('· ', ''));
+    await q.evaluate(() => { window.print = () => {}; $('prBtn').click(); });
+    await q.emulateMedia({ media: 'print' });
+    const pt = await q.evaluate(() => ({ t: $('printArea').innerText, n: document.querySelectorAll('#printArea section').length, hid: getComputedStyle(document.querySelector('.wrap')).display === 'none', svg: !!document.querySelector('#printArea svg circle') }));
+    is(pt.n === 6 && pt.hid && /고마웠다 길동아/.test(pt.t) && /끝까지 가는 것/.test(pt.t) && /☑ 마음\(Feeling\)/.test(pt.t) && pt.svg, '인쇄 · PDF — 6쪽에 적은 것 · 체크 · 곡선이 그대로 찍힌다');
+    await q.emulateMedia({ media: 'screen' });
+    await q.click('#wipe');
+    is(await q.evaluate(() => Object.keys(A).length === 0 && localStorage.getItem(KEY) === null && document.querySelector('[data-k="today.0"]').value === ''), '「다 지우기」 로 그 폰에서 지워진다');
+    is(qe.length === 0, '폰 워크북에 오류가 없다' + (qe.length ? ' ← ' + qe[0] : ''));
+    await q.close();
 
     console.log('\n[9] 이 브라우저에만 — 다시 열어도 남고, 지우면 지워진다 (3번 · 7번)');
     await p.reload({ waitUntil: 'load' });
