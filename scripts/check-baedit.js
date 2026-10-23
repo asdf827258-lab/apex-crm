@@ -340,6 +340,11 @@ const head = (t) => console.log('\n' + t);
         await new Promise(r => setTimeout(r, 250));
         O.liveEcho2 = e ? e.textContent : '';
         O.stored2 = String(S.before[0].premMan);
+        /* ★ <b>계약 머리의 칩</b>도 같이 바뀌는가 (판 X168 · 사장님 말씀 「고쳐줘」).
+           전에는 보험료를 쳐 넣는 동안 바로 위가 「월 미입력」 그대로였습니다 —
+           고객 앞에서 금액을 적는데 위가 「미입력」 이면 안 들어간 줄 압니다 (1번). */
+        const chip = document.getElementById('pm_before_0');
+        O.chip = chip ? chip.textContent.replace(/\s+/g, ' ').trim() : '(칩 없음)';
       } else O.noInput = true;
       /* ④ 담보금액은 만원 그대로인가 */
       O.covUnit = (typeof UNIT_LB !== 'undefined') ? UNIT_LB.L : '';
@@ -366,6 +371,8 @@ const head = (t) => console.log('\n' + t);
     is(M.liveEcho2 === '= 124만원' && M.stored2 === '124',
        '★ 0 을 하나 더 치면 되읽기도 담긴 값도 <b>같이</b> 바뀐다 — ' + M.liveEcho2 + ' · ' + M.stored2);
     is(M.covUnit === '만원', '★ <b>담보금액은 만원 그대로</b>다 — 사장님이 「보험료 칸만」 으로 고르셨다');
+    is(/1,240,000원/.test(M.chip) && !/미입력/.test(M.chip),
+       '★ 치는 대로 <b>계약 머리의 칩</b>도 같이 바뀐다 — 「' + M.chip + '」');
   }
 
   head('[15] 조용한가');
