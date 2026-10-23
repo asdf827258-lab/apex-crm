@@ -72484,15 +72484,25 @@ function cusTabsPaint(){
   cusHeadFit();
 }
 /* 📌 머리를 <b>앱 맨 위 띠(topnav) 바로 밑</b>에 붙입니다 (판 X161).
-   topnav 도 위에 붙어 다니는데(폰 86px), 머리를 top:0 에 붙이면 내려갈 때
-   <b>이름 줄이 그 뒤로 숨고</b> 탭 띠만 보였습니다 — 찍어 보고 알았습니다.
-   띠 높이는 화면 폭마다 달라 <b>재서</b> 붙입니다. 모르면 0 그대로입니다. */
+   붙는 자리는 <b>굴리는 칸</b>에 따라 다릅니다 — 폰에서는 main 이 굴리는 칸이고
+   그 칸이 이미 띠 밑(86px)에서 시작하므로 top:0 이 곧 띠 밑입니다. 창 전체가
+   굴리는 판이면 띠 높이만큼 내려 붙여야 합니다.
+   ⚠ 처음에 띠 높이를 <b>그냥 더해</b> 폰에서 머리가 86px 더 내려가 빈 틈이 생겼습니다 —
+     점검이 창(window)을 굴려서 못 봤습니다. 이제 「띠 아래 − 굴리는 칸 위」 를 잽니다. */
 var CUS_FIT_ON=false;
 function cusHeadFit(){
-  var h=document.querySelector('#cusWin .cus-head'),n=document.getElementById('topnav'),t=0;
+  var h=document.querySelector('#cusWin .cus-head'),n=document.getElementById('topnav'),t=0,x,cs,top0=0;
   if(!h)return;
   try{
-    if(n&&getComputedStyle(n).position!=='static'&&n.offsetParent!==null)t=n.offsetHeight||0;
+    /* 굴리는 칸 — 위로 올라가며 처음 만나는 overflow auto/scroll. 없으면 창(위 0) */
+    for(x=h.parentElement;x&&x!==document.body&&x!==document.documentElement;x=x.parentElement){
+      cs=getComputedStyle(x);
+      if(/(auto|scroll)/.test(cs.overflowY)){ top0=x.getBoundingClientRect().top+(parseFloat(cs.paddingTop)||0); break; }
+    }
+    if(n&&n.offsetParent!==null){
+      var nc=getComputedStyle(n);
+      if(nc.position==='sticky'||nc.position==='fixed')t=Math.max(0,Math.round(n.getBoundingClientRect().bottom-top0));
+    }
   }catch(e){ t=0; }
   h.style.top=t+'px';
   if(!CUS_FIT_ON){ CUS_FIT_ON=true; try{ window.addEventListener('resize',cusHeadFit); }catch(e2){} }

@@ -234,12 +234,24 @@ const SEED = () => {
      뒤로 숨고 탭 띠만 보였습니다. 머리는 topnav 바로 밑에 붙어야 합니다 (cusHeadFit). */
   await p.evaluate(() => { go('home'); cusGo({ cli: 'c1' }); });
   await p.waitForTimeout(800);
-  await p.evaluate(() => { cusTab('info'); window.scrollTo(0, 900); }); await p.waitForTimeout(400);
-  const R81 = await p.evaluate(() => {
-    const n = document.getElementById('topnav'), b2 = document.getElementById('oscTopBar');
-    return { nb: n ? Math.round(n.getBoundingClientRect().bottom) : -1, bt: b2 ? Math.round(b2.getBoundingClientRect().top) : -1, y: Math.round(window.scrollY) };
+  /* ★ <b>실제로 굴리는 칸</b>을 굴립니다 — 폰에서는 main 입니다. 처음에 창(window)을
+     굴려 재다가 머리를 86px 더 내려 붙이는 잘못을 놓쳤습니다(맨 위에 빈 틈). */
+  const R81 = await p.evaluate(async () => {
+    cusTab('info');
+    const h = document.querySelector('.cus-head'), n = document.getElementById('topnav'), b2 = document.getElementById('oscTopBar');
+    let sc = null; for (let x = h.parentElement; x && x !== document.body; x = x.parentElement) if (/(auto|scroll)/.test(getComputedStyle(x).overflowY)) { sc = x; break; }
+    const nb = () => Math.round(n.getBoundingClientRect().bottom), bt = () => Math.round(b2.getBoundingClientRect().top);
+    const back = document.querySelector('.osc-detail-back');
+    const o = { gap0: bt() - Math.round(back.getBoundingClientRect().bottom) };
+    if (sc) sc.scrollTop = 900; else window.scrollTo(0, 900);
+    await new Promise(r => setTimeout(r, 300));
+    o.y = sc ? sc.scrollTop : window.scrollY; o.nb = nb(); o.bt = bt(); o.who = sc ? (sc.tagName + (sc.id ? '#' + sc.id : '')) : 'window';
+    if (sc) sc.scrollTop = 0; else window.scrollTo(0, 0);
+    return o;
   });
-  is(R81.y > 0 && R81.bt >= R81.nb - 1, '  내린 뒤(' + R81.y + 'px) 이름 줄 위 ' + R81.bt + 'px ≥ 머리띠 아래 ' + R81.nb + 'px');
+  is(R81.gap0 >= 0 && R81.gap0 <= 20, '  맨 위에서는 「← 돌아가기」 바로 밑이다 — 틈 ' + R81.gap0 + 'px');
+  is(R81.y > 0 && Math.abs(R81.bt - R81.nb) <= 1,
+     '  ' + R81.who + ' 를 ' + R81.y + 'px 내린 뒤 이름 줄 위 ' + R81.bt + 'px = 머리띠 아래 ' + R81.nb + 'px (숨지도 · 뜨지도 않음)');
 
   console.log('\n[9] 인쇄에는 다 나온다 · 조용히 터진 곳이 없다');
   const css = await p.evaluate(() => (document.getElementById('cusWinCss') || {}).textContent || '');
