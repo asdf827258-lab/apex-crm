@@ -212,6 +212,11 @@ window.supabase={createClient:function(){
        .t-h1(물음 카드의 「아는 것 N가지」)을 집어 오면 안 됩니다.        */
     title: (function(){
       var cards=[].slice.call(document.querySelectorAll('#dynPane .t-card')),i,lab;
+      /* 판 X161 — 고객 창에서 이름은 <b>맨 위 머리 줄</b>(늘 붙어 다님)에 한 번만 섭니다.
+         큰 이름 칸(👤 고객 · t-h1)은 같은 이름을 두 번 세워 걷었습니다(2026-10-23
+         「중복된 부분 줄이고」). 「제목이 실명인가」 는 그 머리 줄에서 잽니다. */
+      var top=document.querySelector('#oscTopBar .nm');
+      if(top)return top.textContent||'';
       for(i=0;i<cards.length;i++){
         lab=cards[i].querySelector('.t-lab');
         if(lab&&lab.textContent.indexOf('고객')>=0&&cards[i].querySelector('.t-h1'))
@@ -243,8 +248,8 @@ window.supabase={createClient:function(){
        저장하면 바로 화면에 뜨는가.                                       */
     /* ★ 판 X122 — 쌓인 줄은 .cm-nxrow 로 섭니다(여태 .t-note 한 줄).
        묻는 것은 그대로입니다 — <b>저장하면 바로 화면에 뜨는가</b>. */
-    shown: [].slice.call(document.querySelectorAll('#cmPanels .cm-nxrow, #cmPanels .t-note'))
-             .filter(e => /▶/.test(e.textContent)).map(e => e.textContent).join(' | ')
+    /* ★ 새 판 (2026-10-23) — 쌓인 할 일은 연락 탭 「📌 다음 할 일」(#cuwNext) 한 곳에 섭니다 */
+    shown: [].slice.call(document.querySelectorAll('#cuwNext .t-row')).map(e => e.textContent).join(' | ')
   }));
   ok(nx.saved.length === 1 && nx.saved[0].client_id === 'c1', '다음 할 일이 서버에 저장된다');
   /* ★ 판 X122 — 다음 할 일은 <b>쌓입니다</b>(content.nx 배열). 옛 한 칸도 같이 봅니다 (1번) */
@@ -278,8 +283,9 @@ window.supabase={createClient:function(){
   await page.waitForTimeout(500);
   const tc = await page.evaluate(() => ({
     /* 2026-09-27 · 판 ⑦ — .cm-ti → .t-ev · .cm-tp → 「마지막 접촉」 이 든 .t-tag */
-    n: document.querySelectorAll('#cmPanels .t-ev').length,
-    temp: ([].slice.call(document.querySelectorAll('#cmPanels .t-tag'))
+    /* ★ 새 판 (2026-10-23) — 접촉은 연락 탭 「🧵 한 줄기」(#cuwTl) 한 곳에 섭니다 */
+    n: [].slice.call(document.querySelectorAll('#cuwTl .t-row')).filter(e => /치료비 통장 설명함/.test(e.textContent)).length,
+    temp: ([].slice.call(document.querySelectorAll('#cuwTl .t-tag'))
              .filter(e => /마지막 접촉/.test(e.textContent))[0] || {}).textContent || '',
     srv: (window.__saved.filter(x => x.kind === 'client_meta' && x.client_id === 'c1')[0] || {}).content
   }));

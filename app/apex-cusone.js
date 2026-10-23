@@ -248,6 +248,30 @@
                           예) '고객 365일에 있습니다'. 「모름」과 다르다
        where:'app'|'crm'
        act:{fam:'함수이름(id)'}  버튼은 부르는 화면이 정합니다   */
+  /* 연락기록 한 줄기 — 통화와 접촉을 섞어 날짜순. 카드 안에서도, 따로도 같은 그림 */
+  function cusLogHtml(L, t) {
+    var h = '', i, r;
+    L = L || [];
+    t = t || {};
+    h += '<div class="cus-sec"><div class="cus-st">' + cusEsc(t.title || '연락기록') + ' ' +
+      (L.length ? ('<span style="color:#64748B">' + L.length + '건' + (t.title ? '' : ' · 통화와 접촉을 한 줄기로') + '</span>') : '') + '</div>';
+    if (!L.length) {
+      h += '<div class="cus-none">' + cusEsc(t.none || '아직 연락 기록이 없습니다. 통화 한 번, 카톡 한 번도 남겨 두면 다음에 무슨 말을 할지 알게 됩니다.') + '</div>';
+    } else {
+      h += '<div class="cus-tl">';
+      for (i = 0; i < L.length && i < 20; i++) {
+        r = L[i];
+        h += '<div class="cus-ti"><span class="d">' + cusEsc(cusDate(r.at)) + '</span>' +
+          '<span class="r" style="background:' + (TONE[r.kind] || '#64748B') + '">' + cusEsc(r.kind) + '</span>' +
+          '<span class="n">' + cusEsc(r.note || '메모 없음') + '</span>' +
+          '<span class="s">' + (r.src === 'call' ? 'CRM 통화' : '접촉') + '</span></div>';
+      }
+      h += '</div>';
+      if (L.length > 20) h += '<div class="cus-none">가장 최근 20건만 보여 줍니다.</div>';
+    }
+    h += '</div>';
+    return h;
+  }
   /* 🔎 한눈에 — 위 ★ 참고. 값이 하나도 없으면 <b>칸을 안 세웁니다</b> */
   function cusGlanceHtml(v, L) {
     var h = '', i, x, met = 0, low = 0, seen = 0;
@@ -258,10 +282,13 @@
        담을 자리가 생겼으니 목각의 그 둘이 이제 섭니다. <b>적힌 것만</b>
        섭니다: 안 적으셨으면 null 이라 안 그립니다 (1번).                */
     var hasBig = (v.polN != null) || (v.policy && v.policy.premiumWon != null) || (v.due != null);
+    /* v.noHead — 앱의 고객 창은 단계를 머리 <b>딱지 하나</b>로 세웁니다. 여기 또 적으면 한 화면에 두 번 섭니다
+       (2026-10-23 화면 점검에서 찾음 · 「중복 되는 부분들을 하나로」). CRM 카드는 머리가 이 카드라 그대로 둡니다. */
     var rows = [['사는 곳', v.region], ['어디서 왔나', v.src],
                 ['지금 단계', v.stage], ['만난 횟수', (L && L.length) ? (met + '회') : null],
                 ['청구', v.clm ? (v.clm.n + '건'
                    + (v.clm.wonR > 0 ? (' · ' + cusWonR(v.clm.wonR)) : '')) : null]];
+    if (v.noHead) rows = rows.filter(function (r) { return r[0] !== '지금 단계'; });
     var hasRow = rows.some(function (r) { return r[1] != null && r[1] !== ''; });
     if (!hasBig && !hasRow && !v.wal) return '';
     h += '<div class="t-card" style="margin-bottom:14px">' +
@@ -320,13 +347,22 @@
     h += '</div>';
     return h;
   }
+  /* ★ v.only (판 X161 · 사장님 말씀 2026-10-23 「고객창에서 중복된 부분 줄이고」)
+       'glance' — 머리 + 🔎 한눈에 만. 앱의 고객 창은 사람·가족·돈·계약·문서를
+                  <b>제 탭</b>에서 고치므로, 한눈에 탭에 같은 칸을 또 세우면 겹칩니다.
+       'log'    — 연락기록 한 줄기만 (연락 탭). v.logT 로 제목·빈 글을 바꿉니다.
+       없으면  — 지금처럼 전부 (DB 통합 CRM 은 이 한 장이 전부라 그대로입니다). */
   function cusCardHtml(v) {
     v = v || {};
+    if (v.only === 'log') return '<div class="cus-card"><div class="cus-body">' + cusLogHtml(v.log, v.logT) + '</div></div>';
     var h = '', i, r, L = v.log || [], fam = v.fam || {}, po = v.policy || {};
     var away = v.elsewhere || null;     /* 이 화면에서 안 읽는 값에 적을 말 */
     var d = v.nextAppt ? cusDays(v.nextAppt) : null;
 
-    h += '<div class="cus-card"><div class="cus-hd">' +
+    /* v.noHead — 고객 창 새 판은 머리(이름·담당·약속)를 창 맨 위에 한 번만 세웁니다.
+       같은 말을 카드 머리에 또 적으면 한 화면에 두 번 섭니다 (2026-10-23 「중복 되는 부분들을 하나로」). */
+    if (v.noHead) h += '<div class="cus-card"><div class="cus-body">';
+    else h += '<div class="cus-card"><div class="cus-hd">' +
       '<div class="cus-nm">' + cusEsc(v.name || '이름 없음') +
         '<span class="cus-tag' + (v.real ? ' real' : '') + '">' +
           cusEsc(v.tag || (v.real ? '실명 · 이 기기에만' : '서버에는 가린 이름')) + '</span>' +
@@ -352,6 +388,7 @@
          「실비 청구 없음」 은 <b>앱에 담는 자리가 없어</b> 안 그립니다 —
          빈 칸을 그려 두면 적으신 것이 어디에도 저장되지 않습니다.      */
     h += cusGlanceHtml(v, L);
+    if (v.only === 'glance') return h + '</div></div>';
 
     /* 사람 */
     h += '<div class="cus-sec"><div class="cus-st">사람</div><div class="cus-kv">' +
@@ -404,24 +441,8 @@
       '빈 칸을 먼저 그려 두면 적으신 것이 어디에도 저장되지 않습니다 — 칸과 저장을 같이 세울 때 함께 엽니다.</div>' +
       '</div>';
 
-    /* 연락기록 — 한 줄기 */
-    h += '<div class="cus-sec"><div class="cus-st">연락기록 ' +
-      (L.length ? ('<span style="color:#64748B">' + L.length + '건 · 통화와 접촉을 한 줄기로</span>') : '') + '</div>';
-    if (!L.length) {
-      h += '<div class="cus-none">아직 연락 기록이 없습니다. 통화 한 번, 카톡 한 번도 남겨 두면 다음에 무슨 말을 할지 알게 됩니다.</div>';
-    } else {
-      h += '<div class="cus-tl">';
-      for (i = 0; i < L.length && i < 20; i++) {
-        r = L[i];
-        h += '<div class="cus-ti"><span class="d">' + cusEsc(cusDate(r.at)) + '</span>' +
-          '<span class="r" style="background:' + (TONE[r.kind] || '#64748B') + '">' + cusEsc(r.kind) + '</span>' +
-          '<span class="n">' + cusEsc(r.note || '메모 없음') + '</span>' +
-          '<span class="s">' + (r.src === 'call' ? 'CRM 통화' : '접촉') + '</span></div>';
-      }
-      h += '</div>';
-      if (L.length > 20) h += '<div class="cus-none">가장 최근 20건만 보여 줍니다.</div>';
-    }
-    h += '</div>';
+    /* 연락기록 — 한 줄기 (그리는 자리는 cusLogHtml 하나 · 5번) */
+    h += cusLogHtml(L);
 
     /* 문서 */
     h += '<div class="cus-sec"><div class="cus-st">문서 · 리포트</div>';
@@ -452,4 +473,5 @@
   w.cusLog = cusLog;
   w.cusCss = cusCss;
   w.cusCardHtml = cusCardHtml;
+  w.cusLogHtml = cusLogHtml;
 })(typeof window !== 'undefined' ? window : this);

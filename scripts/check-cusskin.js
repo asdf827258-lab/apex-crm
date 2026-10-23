@@ -135,7 +135,7 @@ const LOOK = () => {
     /* 접힌 「📂 예전 자료」 안은 따로 센다 — 눈에 안 보입니다 */
     if (box.closest('#oscOld')) { if (fold.indexOf(t) < 0) fold.push(t); return; }
     /* ★ 팩트파인딩은 사장님이 빼라고 하셨습니다 — 면제 */
-    if (/팩트파인딩/.test(box.innerText || '')) { if (면제.indexOf(t) < 0) 면제.push(t); return; }
+    if (/팩트파인딩/.test(box.textContent || '')) { if (면제.indexOf(t) < 0) 면제.push(t); return; }   /* 판 X161 · 탭에 감춰져도 */
     if (old.indexOf(t) < 0) old.push(t);
   });
   [].slice.call(host.querySelectorAll('.t-card')).forEach(x => {
@@ -150,7 +150,9 @@ const LOOK = () => {
     const m = (x.getAttribute('onclick') || '').match(/([A-Za-z_$][\w$]*)\s*\(/);
     if (m && fns.indexOf(m[1]) < 0) fns.push(m[1]); });
   return { old: old, fold: fold, skin: skin, 면제: 면제, ids: ids, fns: fns,
-           팩트있나: /팩트파인딩/.test(host.innerText || ''), 높이: host.scrollHeight };
+           /* 판 X161 — 칸이 고객 창의 탭에 나뉘어 섭니다. 감춰진 탭의 칸도 <b>있는</b> 것이라
+              innerText(보이는 글) 대신 textContent(있는 글)로 잽니다 */
+           팩트있나: /팩트파인딩/.test(host.textContent || ''), 높이: host.scrollHeight };
 };
 
 (async () => {
@@ -205,7 +207,7 @@ const LOOK = () => {
     const host = document.getElementById('cmPanels');
     const lab = [].slice.call((host || document).querySelectorAll('.t-lab'))
                   .map(x => x.textContent.replace(/\s+/g, ' ').trim());
-    return { lab: lab, t: (host ? host.innerText : '').replace(/\s+/g, ' ') };
+    return { lab: lab, t: (host ? host.textContent : '').replace(/\s+/g, ' ') };   /* 판 X161 — 탭에 감춰져도 있는 글 */
   });
   ['🧭 지금 이 자리에서', '📝 적어 두기'].forEach(w => {
     is(V.lab.some(x => x.indexOf(w) >= 0), '  ' + w + ' 칸이 선다');

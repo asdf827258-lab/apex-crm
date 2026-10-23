@@ -268,7 +268,9 @@ const CARD = () => {
 
   console.log('\n[7] ★ <b>아래 칸들이 안 없어졌다</b> (6번) · 「여기에 적기」 가 그 칸으로');
   const E = await p.evaluate(() => {
-    const t = (document.getElementById('cmPanels') || {}).innerText || '';
+    /* 판 X161 — 칸들이 고객 창의 <b>탭</b>에 나뉘어 섭니다. 안 고른 탭의 칸은 감춰질 뿐
+       있으므로 innerText(보이는 글) 대신 textContent(있는 글)로 「안 없어졌나」 를 잽니다 */
+    const t = (document.getElementById('cmPanels') || {}).textContent || '';
     const one = id => document.querySelectorAll('#' + id).length;
     return { 관계:/관계/.test(t), 가족:/가족으로 묶기/.test(t), 팩트:/팩트파인딩/.test(t),
              통장:/빈 통장/.test(t),
