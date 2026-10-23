@@ -15,17 +15,17 @@
      사. data 에 넣은 HTML 이 글자로 찍히나
      아. 계산기 — 이름이 가려진 채 나가나 · 실명은 한 번 더 묻나 (3번)
      차. ★ 고객이 스스로 부족을 느끼나 — 사장님 말씀 2026-10-22 「고객이 이걸 통해서 스스로 부족하다고
-         느끼고 걱정하도록 … 고객의 입장에서 상담을 스스로 받아보고 … 개선해」 (판 X168)
+         느끼고 걱정하도록 … 고객의 입장에서 상담을 스스로 받아보고 … 개선해」 (판 X169)
          · 히어로에 「지금 그대로면」 한 달 30일 칸 — 날 수가 <b>고객 숫자(준비된 돈 ÷ 목표)</b>로만 셈해지나
          · 「잘하고 계신 것」 뒤에 「그런데 — 목표의 N%」 · 빈칸을 얼마나 채우나 · 시작을 미루면 · 원금 돌려받는 나이
          · 「지금 그대로면 / 오늘 제안을 더하면」 두 줄 · 스스로 점검 질문 · 마지막 「가장 마음에 걸린 숫자」
          · ★★ 걱정은 고객 숫자로만 — 바깥 통계·「노후 파산」 같은 겁주는 말이 없나 (1번 · 지시문 「확인 안 된 통계 금지」)
          · 목표를 이미 채운 고객에게는 부족을 지어 말하지 않나 (1번)
-     거. 판 X174 — 판정 숫자 FIN_RULE 한 곳(글자 35·45·60·70·20·10 이 0) · 판정식 한 곳 · finData 재사용 · 미래 장면 본인 대출
-     하. 판 X173 — 직업군 평균 다섯 줄이 보도자료 숫자 그대로 · 출처 · 손으로 정한 소득 배수 0
-     파. 판 X172 — 평균마다 출처 · 못 찾은 평균은 null · 보험료 판정 IP_RULE 한 곳 · 나이대 비율 0 · ipBase 한 곳
-     타. 판 X171 — 나이대 문구 IP_AGE 한 곳 · 사슬 0 · 생활비 칸 목록 한 곳
-     카. 판 X169 (사장님 말씀 2026-10-22 「점검 필요로 바꾸고, 2번은 만들어줘」) — 「불가」 → 「점검 필요」 ·
+     거. 판 X175 — 판정 숫자 FIN_RULE 한 곳(글자 35·45·60·70·20·10 이 0) · 판정식 한 곳 · finData 재사용 · 미래 장면 본인 대출
+     하. 판 X174 — 직업군 평균 다섯 줄이 보도자료 숫자 그대로 · 출처 · 손으로 정한 소득 배수 0
+     파. 판 X173 — 평균마다 출처 · 못 찾은 평균은 null · 보험료 판정 IP_RULE 한 곳 · 나이대 비율 0 · ipBase 한 곳
+     타. 판 X172 — 나이대 문구 IP_AGE 한 곳 · 사슬 0 · 생활비 칸 목록 한 곳
+     카. 판 X170 (사장님 말씀 2026-10-22 「점검 필요로 바꾸고, 2번은 만들어줘」) — 「불가」 → 「점검 필요」 ·
          「연금저축·IRP·달러·변액 쌓인 금액」 칸이 비면 모름(0 아님) · 탭과 결과지가 psAccPlan 한 곳에서 세나
      ※ 계산기에서 단추를 눌러 실제로 열어 보는 것은 check-reportweb.js 가 합니다(브라우저 갈래).
 
@@ -98,7 +98,7 @@ head('사. data 의 HTML 은 글자로');
 const evil = R.html({ client: { name: '<img src=x onerror=alert(1)>' }, summary: ['<script>x</script>'] });
 is(!/<img src=x|<script>x/.test(evil), '태그를 넣어도 글자로 찍힌다');
 
-head('차. 고객이 스스로 부족을 느끼나 — 고객 숫자로만 (판 X168)');
+head('차. 고객이 스스로 부족을 느끼나 — 고객 숫자로만 (판 X169)');
 const goal = sample.goal, now = sample.nationalPension.monthly, days = Math.round(now / goal * 30);
 is(text.includes('지금 그대로면 — ' + sample.pension.openAge + '세 이후 한 달 ' + R.man(goal) + ' 중'), '히어로에 「지금 그대로면」 이 선다');
 const nos = (x) => x.replace(/\s+/g, '');   /* 굵게(<b>)가 공백으로 바뀌므로 공백을 빼고 견줍니다 */
@@ -126,26 +126,26 @@ is((fin.match(/onclick="rptPanel\(\)"/g) || []).length >= 1, '「고객 결과�
 is(/name=opt\.real&&raw&&raw!=='고객님'\? raw : rptMask\(raw\)/.test(fin), '실명은 opt.real 일 때만 — 기본은 rptMask');
 is(/confirm\('카톡으로 나가는 파일에 고객 실명이 들어갑니다/.test(fin), '실명을 켜면 한 번 더 묻는다');
 is(/saveP>0&&priv<=0&&!ap\?'※ 지금 모으고 계신 연금저축·IRP·달러·변액/.test(fin), '지금 모으는 연금저축·IRP 를 빼고 셌으면 뺐다고 밝힌다(1번)');
-/* 판 X169 — 쌓인 금액 칸 · 탭과 결과지가 한 곳(psAccPlan)에서 센다 · 「불가」 대신 「점검 필요」 */
+/* 판 X170 — 쌓인 금액 칸 · 탭과 결과지가 한 곳(psAccPlan)에서 센다 · 「불가」 대신 「점검 필요」 */
 is(/id="s_pen_acc"[^>]*placeholder="모름"/.test(fin) && !/id="s_pen_acc"[^>]*value="/.test(fin), '「쌓인 금액」 칸이 있고, 비어 있으면 모름이다(0 을 미리 넣지 않는다 · 1번)');
-/* 판 X175 — 쌓인 금액 셈(psAccPlan)은 준비된 연금 셈(finReady) 안에서 한 번만 부르고, 탭과 결과지는 finReady 를 부릅니다 */
+/* 판 X176 — 쌓인 금액 셈(psAccPlan)은 준비된 연금 셈(finReady) 안에서 한 번만 부르고, 탭과 결과지는 finReady 를 부릅니다 */
 is((fin.match(/function psAccPlan\(/g) || []).length === 1 && (fin.match(/[^ ]psAccPlan\(\)/g) || []).length === 1 && /acc=psAccPlan\(\)/.test(fin) && (fin.match(/var RD=finReady\(\)|=finReady\(\)/g) || []).length >= 2, '탭과 결과지가 psAccPlan 한 곳에서 센다 — finReady 를 거쳐(5번)');
 is(/if\(raw===''\|\|!window\.APEX_REPORT\) return null;/.test(fin), '칸이 비면 null — 0 과 다르다(1번)');
 is(/APEX_REPORT\.calc\.RULE\.annuity\.annuityFactor/.test(fin) && !/psAccPlan[\s\S]{0,900}\b200\b/.test(fin.slice(fin.indexOf('function psAccPlan'), fin.indexOf('function psAccPlan') + 900)), '전환계수는 엔진 RULE 한 곳에서 — 200 을 따로 외우지 않는다');
 is(/'점검 필요'/.test(fin) && !/:'불가'/.test(fin), '계산기 결과지는 「불가」 대신 「점검 필요」');
-/* 판 X171 — 나이대 문구는 IP_AGE 한 곳 (예전엔 if 사슬 · 삼항 사슬로 두 벌) */
+/* 판 X172 — 나이대 문구는 IP_AGE 한 곳 (예전엔 if 사슬 · 삼항 사슬로 두 벌) */
 is((fin.match(/var IP_AGE=\[/g) || []).length === 1 && (fin.match(/20대 · 시작기/g) || []).length === 1, '나이대 표가 IP_AGE 한 곳에만 있다(5번)');
 is(/var ageMsg=ipBand\(d\.age\)\.one;/.test(fin) && !/var ageMsg=d\.age<30\?/.test(fin), '상담 가이드 한 줄도 IP_AGE 를 읽는다 — 삼항 사슬 0');
-/* 판 X175 — 「나이별 보험 필요성 피드백」 을 그리던 덧칠(CONTENT-FIRST)은 화면에 한 번도 서지 않는 죽은 판이라 지웠습니다. 남은 자리는 ipBand 를 읽습니다 */
+/* 판 X176 — 「나이별 보험 필요성 피드백」 을 그리던 덧칠(CONTENT-FIRST)은 화면에 한 번도 서지 않는 죽은 판이라 지웠습니다. 남은 자리는 ipBand 를 읽습니다 */
 is(!/if\(age<30\)\{\s*stage=/.test(fin) && (!/function insuranceGuideByAge\(/.test(fin) || /var B=ipBand\(age\);/.test(fin)) && /ipBand\(d\.age\)/.test(fin), '「나이별 보험 필요성 피드백」 도 IP_AGE 를 읽는다 — if 사슬 0');
-/* 판 X172 — 기준값: 평균은 출처가 붙은 것만 · 보험료 판정 8/15 는 IP_RULE 한 곳 · 나이대 비율 0 */
+/* 판 X173 — 기준값: 평균은 출처가 붙은 것만 · 보험료 판정 8/15 는 IP_RULE 한 곳 · 나이대 비율 0 */
 const avgBlk = fin.slice(fin.indexOf('var IP_AVG={'), fin.indexOf('};', fin.indexOf('var IP_AVG={')));
 is(/fam:\s*\{ v:2995,[\s\S]*?src:'[^']+'[\s\S]*?cite:'아주경제 2022\.05\.15[\s\S]*?url:'https:\/\/www\.ajunews\.com\//.test(avgBlk) && /prem:\{ v:39\.1,[\s\S]*?cite:'데이터솜 2022\.01\.19[\s\S]*?url:'http:\/\/www\.datasom\.co\.kr\//.test(avgBlk), '평균마다 출처 · 언론사 · 날짜 · 주소가 붙어 있다(9번)');
 is(/me:\s*null/.test(avgBlk), '출처를 못 찾은 진단·치료비 평균은 null — 지어 넣지 않는다(1번)');
 is((fin.match(/IP_RULE\.premHi/g) || []).length >= 4 && (fin.match(/IP_RULE\.premLo/g) || []).length >= 3 && !/(insRatio|insRate|ratio)\s*(>=|>|<=|<)\s*(8|10|12|15)\b/.test(fin), '보험료 비중 판정(8 · 15)도 IP_RULE 한 곳을 읽는다(5번)');
 const ageBlk = fin.slice(fin.indexOf('var IP_AGE=['), fin.indexOf('];', fin.indexOf('var IP_AGE=[')));
 is(!/fam:\d+|me:\d+/.test(ageBlk), '나이대 표에 근거 없는 「가족 : 내 연금」 비율이 없다');
-/* 판 X173 — 소득 셈의 배수는 직업군 평균. 숫자는 보도자료 〈표 3-6〉·〈표 4-5〉·〈표 4-7〉 그대로여야 합니다 */
+/* 판 X174 — 소득 셈의 배수는 직업군 평균. 숫자는 보도자료 〈표 3-6〉·〈표 4-5〉·〈표 4-7〉 그대로여야 합니다 */
 const JOB = { all: [7427, 9534, 4747, 1299], reg: [9519, 12004, 8145, 411], tmp: [4534, 3634, 2986, 322], self: [8000, 12479, 1741, 4833], etc: [4007, 4593, 1462, 256] };
 const jobBlk = fin.slice(fin.indexOf('var IP_JOB={'), fin.indexOf('};', fin.indexOf('var IP_JOB={')));
 is(Object.keys(JOB).every((k) => new RegExp(k + ':\\s*\\{[^}]*inc:' + JOB[k][0] + ', debt:' + JOB[k][1] + ',\\s*work:' + JOB[k][2] + ', biz:' + JOB[k][3] + '\\}').test(jobBlk)),
@@ -153,7 +153,7 @@ is(Object.keys(JOB).every((k) => new RegExp(k + ':\\s*\\{[^}]*inc:' + JOB[k][0] 
 is(/var IP_JOB_SRC=\{[^}]*2025년 가계금융복지조사[^}]*2025\.12\.04[^}]*url:'https:\/\/mods\.go\.kr\//.test(fin), '배수의 출처(기관 · 발표일 · 주소)가 붙어 있다(9번)');
 is(!/famIncomeYears|meIncomeYears/.test(fin), '손으로 정한 소득 배수(3년치 · 1년치)가 남지 않았다');
 is(/inc:own>0\?own\*J\.famX:null/.test(fin) && /own\*J\.meX\*R\.meMonths\/12/.test(fin), '소득 셈은 직업군 배수(빚 배수 · 일해서 버는 몫)로');
-/* 판 X174 — 계산기 판정 숫자 한 곳 · 기존 계산(finData)을 그대로 · 재구성은 fsPlan 한 곳 */
+/* 판 X175 — 계산기 판정 숫자 한 곳 · 기존 계산(finData)을 그대로 · 재구성은 fsPlan 한 곳 */
 is((fin.match(/var FIN_RULE=\{/g) || []).length === 1 && !/(dsr<=(35|45)|ltv<=(60|70)|saveRatio>=(20|10)|savingRatio(>=|<)20)(?![0-9.])/.test(fin), '대출·저축률 판정 숫자가 FIN_RULE 한 곳 — 글자로 적힌 35 · 45 · 60 · 70 · 20 · 10 이 0(예전엔 서른네 곳)');
 const kindBody = (fn) => (fin.match(new RegExp('function ' + fn + '\\(d\\)\\{([^}]*)\\}')) || [, '1'])[1];
 is(!/\d/.test(kindBody('finCashKind').replace(/surplus>=0/g, '')) && !/\d/.test(kindBody('finDebtKind')), '판정식 안에 숫자가 0 — 기준은 FIN_RULE 에서만 (되돌림: 40 을 몰래 넣으면 웁니다)');
