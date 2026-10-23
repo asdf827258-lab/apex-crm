@@ -59,7 +59,7 @@ const sec = (t)=>console.log('\n'+t);
 const BASE_SOLO = {
   'app/ba.html':      { small:0,  low:1,  tap:0, nm:'보장 전·후' },          /* 716 · 396 · 67 */
   'app/finance.html': { small:0,  low:17, tap:0, nm:'재무설계 계산기' },      /*   0 ·  52 ·  3 */
-  'app/apex-map.html':{ small:0,  low:23, tap:0, nm:'APEX 전체 지도' },      /* 255 ·  25 · 33 */
+  'app/apex-map.html':{ small:0,  low:23, tap:0, nm:'APEX 자비스 모드' },      /* 255 ·  25 · 33 */
   'edu-pipeline.html':{ small:0,  low:15, tap:1, nm:'카톡보내기·DB 업적관리' },/*  25 ·  48 ·  8 */
   'app/blog.html':    { small:3,  low:0,  tap:0, nm:'블로그' }               /* 100 ·   0 · 25 */
 };
