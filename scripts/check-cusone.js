@@ -96,7 +96,11 @@ function twins() {
     CUS.calls = [{ db_id: 'd1', call_at: '2026-09-05T02:00:00Z', result: '상담',
                    memo: '보장분석 약속', appointment_at: '2026-09-12T05:00:00Z' }];
     CUS.docN = 2; CUS.repN = null;
-    const html = cusAppCardHtml(OSC.current);
+    /* 판 X161 — 고객 창의 한눈에 카드는 머리 + 한눈에만 섭니다(겹침 걷기 · 2026-10-23
+       「고객창에서 중복된 부분 줄이고」). 여기서 재는 것은 <b>카드 그리는 자 전부</b>
+       (DB 통합 CRM 이 그대로 쓰는 모양)라 only 없이 그립니다. 앱에서 그 여섯 칸은
+       제 탭에 섭니다 — check-cusglance [5] · check-cuswin [10] 이 잽니다. */
+    const html = cusCardHtml(cusAppView(OSC.current));
     const detail = osClientDetailHtml(OSC.current);
     const log = cusLog(CUS.calls, CM.meta.k1.touch);
     return { html, detail, log, fams: cusFamRowsHtml('k1') };

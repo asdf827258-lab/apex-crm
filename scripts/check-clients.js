@@ -212,6 +212,11 @@ window.supabase={createClient:function(){
        .t-h1(물음 카드의 「아는 것 N가지」)을 집어 오면 안 됩니다.        */
     title: (function(){
       var cards=[].slice.call(document.querySelectorAll('#dynPane .t-card')),i,lab;
+      /* 판 X161 — 고객 창에서 이름은 <b>맨 위 머리 줄</b>(늘 붙어 다님)에 한 번만 섭니다.
+         큰 이름 칸(👤 고객 · t-h1)은 같은 이름을 두 번 세워 걷었습니다(2026-10-23
+         「중복된 부분 줄이고」). 「제목이 실명인가」 는 그 머리 줄에서 잽니다. */
+      var top=document.querySelector('#oscTopBar .nm');
+      if(top)return top.textContent||'';
       for(i=0;i<cards.length;i++){
         lab=cards[i].querySelector('.t-lab');
         if(lab&&lab.textContent.indexOf('고객')>=0&&cards[i].querySelector('.t-h1'))

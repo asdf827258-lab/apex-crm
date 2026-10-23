@@ -253,6 +253,40 @@ const SEED = () => {
   is(R81.y > 0 && Math.abs(R81.bt - R81.nb) <= 1,
      '  ' + R81.who + ' 를 ' + R81.y + 'px 내린 뒤 이름 줄 위 ' + R81.bt + 'px = 머리띠 아래 ' + R81.nb + 'px (숨지도 · 뜨지도 않음)');
 
+  console.log('\n[10] ✂️ <b>겹친 칸을 걷었나</b> (사장님 말씀 2026-10-23 「고객창에서 중복된 부분 줄이고 자간·높낮이 최소화로」)');
+  await p.evaluate(() => { go('home'); cusGo({ cli: 'c1' }); });
+  await p.waitForTimeout(900);
+  const R10 = await p.evaluate(() => {
+    const o = {};
+    const card = document.getElementById('cusCard');
+    o.secs = card ? [].slice.call(card.querySelectorAll('.cus-st')).map(x => x.textContent.trim().split(' ')[0]) : ['(카드 없음)'];
+    o.cqa = [].slice.call(document.querySelectorAll('#cusWin [data-cus-tab]')).filter(e => e.querySelector('#cqaCard')).map(e => e.getAttribute('data-cus-tab'));
+    o.note = [].slice.call(document.querySelectorAll('#cusWin [data-cus-tab]')).filter(e => /적어 두기/.test((e.querySelector('.t-lab') || {}).textContent || '')).map(e => e.getAttribute('data-cus-tab'));
+    const lg = document.getElementById('cusLogCard');
+    o.logTxt = lg ? lg.textContent : '';
+    const first = k => { cusTab(k); const v = [].slice.call(document.querySelectorAll('#cusWin [data-cus-tab]')).filter(e => e.offsetParent !== null)
+      .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)[0]; return v ? ((v.querySelector('.t-lab,.cus-nm') || v).textContent || '').trim().slice(0, 12) : ''; };
+    o.f = { glance: first('glance'), info: first('info') };
+    cusTab('glance');
+    o.names = [].slice.call(document.querySelectorAll('#cusWin .t-h1')).length;
+    /* CRM 은 이 한 장이 전부라 <b>그대로</b> 다 서야 합니다 */
+    const full = document.createElement('div'); full.innerHTML = cusCardHtml(cusAppView(OSC.current));
+    o.full = [].slice.call(full.querySelectorAll('.cus-st')).map(x => x.textContent.trim().split(' ')[0]);
+    o.css = (document.getElementById('cusWinCss') || {}).textContent || '';
+    return o;
+  });
+  is(R10.secs.length === 0, '  한눈에 카드에 사람·가족·돈·계약·문서가 <b>또 안 선다</b>(제 탭에 있습니다) — ' + (R10.secs.join(' · ') || '없음'));
+  is(R10.cqa.join(',') === 'glance', '  「한 가지만 여쭙니다」 는 <b>한눈에에만</b> — ' + R10.cqa.join(','));
+  is(R10.note.join(',') === 'talk', '  📝 적어 두기는 🤝 관계와 같은 <b>연락</b> 탭에 — ' + R10.note.join(','));
+  is(/CRM 통화 기록/.test(R10.logTxt) && !/생일 축하/.test(R10.logTxt),
+     '  연락 탭 아래 칸은 <b>CRM 통화만</b> — 접촉(생일 축하)은 위 🤝 관계에 한 번만 섭니다');
+  is(/한눈에|홍/.test(R10.f.glance) && /고객 정보/.test(R10.f.info),
+     '  탭 맨 위 — 한눈에: 「' + R10.f.glance + '」 · 정보: 「' + R10.f.info + '」');
+  is(R10.names === 0, '  큰 이름(t-h1)을 또 안 세운다 — 머리 줄에 있습니다');
+  is(R10.full.length >= 6, '  ★ CRM 카드(전부)는 그대로 — ' + R10.full.join(' · '));
+  is(/#cusWin \.t-card\{padding:14px/.test(R10.css) && !/font-size:1[0-2](\.\d+)?px/.test(R10.css),
+     '  촘촘한 옷은 #cusWin 안에서만 · 글자를 13px 아래로 안 내린다');
+
   console.log('\n[9] 인쇄에는 다 나온다 · 조용히 터진 곳이 없다');
   const css = await p.evaluate(() => (document.getElementById('cusWinCss') || {}).textContent || '');
   is(/@media print\{#cusWin \[data-cus-tab\]\{display:block!important\}/.test(css), '  인쇄에는 탭과 상관없이 다 나온다');

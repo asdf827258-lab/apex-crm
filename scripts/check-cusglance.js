@@ -213,10 +213,19 @@ const CARD = () => {
      주석까지 세면, 왜 안 쓰는지 설명한 것이 빨간불이 됩니다 (8번). */
   is(!/D-\d/.test(CUSJ_C), '  ★ 「<b>D-30</b>」 이라고 <b>화면에</b> 안 쓴다 (사장님 말씀)');
 
-  console.log('\n[5] ★ <b>아래 칸들이 안 없어졌다</b> (6번)');
-  const D = await p.evaluate(() => (document.getElementById('cusCard') || {}).innerText || '');
-  ['사람','가족','돈','계약','연락기록','문서'].forEach(k =>
-    is(D.indexOf(k) >= 0, '  <b>' + k + '</b> 칸이 그대로 있다'));
+  console.log('\n[5] ★ <b>아래 칸들이 안 없어졌다</b> (6번) — 판 X161 부터는 <b>제 탭에</b> 있다');
+  /* 2026-10-23 · 사장님 말씀 「고객창에서 중복된 부분 줄이고」. 고객 창이 탭 여섯이 된 뒤로
+     한눈에 카드 아래 여섯 칸(사람·가족·돈·계약·연락기록·문서)은 <b>제 탭의 칸과 같은 것을
+     또 세운 것</b>이었습니다. 그래서 한눈에 카드는 머리 + 🔎 한눈에만 남기고, 여섯은
+     <b>제 탭</b>에서 잽니다 — 「안 없어졌다」(6번)는 뜻은 그대로입니다.
+     ★ DB 통합 CRM 카드는 이 한 장이 전부라 여섯이 그대로 섭니다(check-cuswin [10]). */
+  const D = await p.evaluate(() => {
+    const t = k => [].slice.call(document.querySelectorAll('#cusWin [data-cus-tab~="' + k + '"]')).map(e => e.textContent).join(' ');
+    return { info: t('info'), pol: t('pol'), talk: t('talk'), doc: t('doc') };
+  });
+  [['사람', 'info', /연락처/], ['가족', 'info', /가족/], ['돈', 'info', /월 소득/], ['계약', 'pol', /가입한 보험/],
+   ['연락기록', 'talk', /접촉 기록|통화 기록/], ['문서', 'doc', /저장된 상담 자료/]].forEach(([k, tab, re]) =>
+    is(re.test(D[tab] || ''), '  <b>' + k + '</b> 칸이 그대로 있다 — ' + tab + ' 탭'));
 
   console.log('\n[6] ★ <b>새 CSS·새 class 를 안 만들었다</b> (사장님 계약)');
   const i0 = CUSJ.indexOf('function cusGlanceHtml'), i1 = CUSJ.indexOf('function cusCardHtml');
