@@ -348,6 +348,18 @@ const SEED = () => {
   console.log('\n[9] 인쇄에는 다 나온다 · 조용히 터진 곳이 없다');
   const css = await p.evaluate(() => (document.getElementById('cusWinCss') || {}).textContent || '');
   is(/@media print\{#cusWin \[data-cus-tab\]\{display:block!important\}/.test(css), '  인쇄에는 탭과 상관없이 다 나온다');
+  /* ★ 새 판 — 고치는 시트(sh-…)는 <b>종이에 안 나와야</b> 합니다. 글자로만 보지 않고 인쇄로 바꿔 실제로 잽니다 */
+  await p.emulateMedia({ media: 'print' });
+  const PR = await p.evaluate(() => {
+    const all = [].slice.call(document.querySelectorAll('#cusWin [data-cus-tab]'));
+    const vis = e => getComputedStyle(e).display !== 'none';
+    return { tabs: all.filter(e => !/^sh-/.test(e.getAttribute('data-cus-tab')) && vis(e)).length,
+             tabsAll: all.filter(e => !/^sh-/.test(e.getAttribute('data-cus-tab'))).length,
+             sheets: all.filter(e => /^sh-/.test(e.getAttribute('data-cus-tab')) && vis(e)).length };
+  });
+  await p.emulateMedia({ media: 'screen' });
+  is(PR.tabs === PR.tabsAll && PR.tabs > 0, '  인쇄 — 보는 칸 ' + PR.tabs + '/' + PR.tabsAll + ' 다 나온다');
+  is(PR.sheets === 0, '  인쇄 — 고치는 시트(입력칸)는 안 나온다 — 나온 것 ' + PR.sheets);
   is(!errs.length, '  터진 곳 없음' + (errs.length ? ' — ' + errs.join(' / ') : ''));
 
   await b.close(); srv.close();
