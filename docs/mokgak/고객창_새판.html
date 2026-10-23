@@ -156,6 +156,8 @@ details.fold[open]>summary:after{content:"접기"}
     <div class="seg" id="sView"><button class="on" data-v="me">담당자 본인</button><button data-v="lead">팀장</button></div>
     <b>오늘</b>
     <div class="seg" id="sNow"><button class="on" data-v="appt">약속 있음</button><button data-v="ask">할 일 없음</button></div>
+    <b>화면</b>
+    <div class="seg" id="sPage"><button class="on" data-v="win">고객 창</button><button data-v="reg">＋ 고객 넣기</button></div>
   </div>
 
   <div class="wrap">
@@ -228,6 +230,19 @@ details.fold[open]>summary:after{content:"접기"}
       </div>
 
       <div class="card">
+        <h2>＋ 고객 넣기 — 세 갈래 → 한 흐름</h2>
+        <table>
+          <tr><th>지금</th><th>새 판</th></tr>
+          <tr><td>👤 내 고객 등록 — <b>이름 한 칸</b>만 받고, 「주민번호 등은 저장하지 않습니다」 라고 적힘(고객 창엔 주민번호 칸이 있음)</td><td rowspan="2"><b>① 누구</b>(이름·번호) → <b>② 어디서</b>(배정 DB · 소개 · 지인 · 개척 · 기존) → <b>③ 더 아시는 것</b>(건너뛰기 가능) → 고객 창 정보 탭</td></tr>
+          <tr><td>📇 배정 DB 등록 — 칸 <b>열 개 넘게</b> 한 번에</td></tr>
+          <tr><td>둘 다 번호로 <b>이미 계신 분인지 안 묻습니다</b></td><td>① 에서 번호로 찾아 「이 분 창 열기」 — 짝이 하나일 때만, 까닭과 함께</td></tr>
+          <tr><td>개인 고객을 넣으면 두 표 중 한 곳에만</td><td>소개·지인·개척은 <b>사람 줄 + 배정 줄(개인)</b> 을 처음부터 이어서 (한도 안 셈)</td></tr>
+          <tr><td>회사 배정 DB 한도는 화면마다 따로 셈</td><td>② 에서 🚦 「지금 18건 · 한도 20 · 넣으면 19건」</td></tr>
+        </table>
+        <p class="note">위 「화면 › ＋ 고객 넣기」 를 누르면 세 걸음을 눌러 볼 수 있습니다.</p>
+      </div>
+
+      <div class="card">
         <h2>잠긴 칸은 까닭을 말합니다</h2>
         <ul>
           <li>배정 DB 줄만 있는 분 — 보장·서류·정보의 사람 밖 칸에 「👤 내 고객으로 올리기」 하나</li>
@@ -251,9 +266,9 @@ details.fold[open]>summary:after{content:"접기"}
 </div>
 
 <script>
-const S={who:'mine',view:'me',now:'appt',tab:'sum',tl:'all'};
+const S={who:'mine',view:'me',now:'appt',tab:'sum',tl:'all',page:'win',step:1,dup:'none',from:'ref'};
 const seg=(id,k)=>document.querySelectorAll('#'+id+' button').forEach(b=>b.onclick=()=>{S[k]=b.dataset.v;document.querySelectorAll('#'+id+' button').forEach(x=>x.classList.toggle('on',x===b));paint();});
-seg('sWho','who');seg('sView','view');seg('sNow','now');
+seg('sWho','who');seg('sView','view');seg('sNow','now');seg('sPage','page');
 const P=()=>S.who==='mine', ME=()=>S.view==='me';
 const TABS=[['sum','요약',''],['talk','연락','7'],['cov','보장','3'],['doc','서류','4'],['info','정보','']];
 const toMine=w=>`<div class="lock"><b>${w}는 「사람」 에 붙습니다</b>이 분은 아직 배정 DB 줄만 있습니다.<button class="btn">👤 내 고객으로 올리기</button></div>`;
@@ -365,7 +380,48 @@ function sheet(k){const s=SH[k];if(!s)return;document.getElementById('sheet').in
 function shut(){document.getElementById('dim').classList.remove('on');document.getElementById('sheet').classList.remove('on');}
 document.getElementById('dim').onclick=shut;
 function go(t){S.tab=t;paint();document.getElementById('scr').scrollTop=0;}
-function paint(){document.getElementById('scr').innerHTML=head()+`<div class="body">${T[S.tab]()}</div>`;}
+/* ── ＋ 고객 넣기 — 한 흐름 (지금은 내 고객 · 배정 DB · 엑셀 세 갈래가 따로) ── */
+const FROM=[['db','📇','회사 배정 DB','배정 줄 하나 · 한도에 셈'],['ref','🙌','소개','사람 줄 + 배정 줄(개인) · 한도 안 셈'],['kin','👋','지인','사람 줄 + 배정 줄(개인) · 한도 안 셈'],['new','🚪','개척','사람 줄 + 배정 줄(개인) · 한도 안 셈'],['old','🪪','이미 내 고객이던 분','사람 줄만']];
+function reg(){
+  const st=n=>`<span class="tag ${S.step===n?'pt':S.step>n?'ok':''}">${S.step>n?'✓ ':''}${['','누구','어디서','더 아시는 것'][n]}</span>`;
+  let h=`<div class="hd"><div class="r1" style="padding-bottom:10px"><button class="back" onclick="S.page='win';syncPage();paint()">‹</button>
+    <div class="nmw"><div class="nm">＋ 고객 넣기</div><div class="meta">한 번만 적습니다 — 넣는 자리는 여기 하나</div></div></div>
+    <div class="chips" style="padding:0 14px 10px">${st(1)}${st(2)}${st(3)}</div></div><div class="body">`;
+  if(S.step===1){
+    h+=`<div class="card"><div class="lab">누구인가요</div>
+      <label class="note" style="display:block">이름 — 실명은 <b>이 기기에만</b>, 서버에는 홍*동</label><input class="inp" value="홍길동">
+      <label class="note" style="display:block">연락처 — 이미 계신 분인지 <b>번호로</b> 찾습니다</label><input class="inp" value="010-0000-1234">
+      <div class="chips" style="margin-top:8px"><b class="note" style="margin:0">견본:</b>${[['none','짝 없음'],['sure','번호 같은 분'],['weak','가린 이름만 같은 분']].map(x=>`<button class="chip ${S.dup===x[0]?'on':''}" style="min-height:30px" onclick="S.dup='${x[0]}';paint()">${x[1]}</button>`).join('')}</div></div>`;
+    if(S.dup==='sure')h+=`<div class="card" style="border:1.5px solid var(--pt)"><div class="lab">이미 계신 것 같습니다 — 번호가 같습니다</div>
+      <div class="row"><div class="av" style="width:32px;height:32px">홍</div><div class="m"><b>홍*동 님</b><span>내 고객 · 마지막 연락 6일 전 · AP</span></div></div>
+      <button class="btn">이 분 창 열기</button><button class="btn g">다른 분입니다 (가족이 번호를 같이 씀) — 새로 넣기</button></div>`;
+    else if(S.dup==='weak')h+=`<div class="card" style="border:1.5px dashed var(--warn)"><div class="lab" style="color:var(--warnd)">가린 이름만 같은 분이 한 분 — 약한 짝</div>
+      <div class="row"><div class="av" style="width:32px;height:32px">홍</div><div class="m"><b>홍*동 님</b><span>번호 없음 · 2026-09-04 등록</span></div></div>
+      <div class="note">번호로 한 번 더 보십시오. 같은 분이면 열고, 아니면 그대로 다음으로 가십시오.</div><button class="btn g">이 분 창 열기</button></div>`;
+    else h+=`<div class="note" style="padding:0 4px">같은 담당 고객 중 번호가 같은 분이 없습니다. 번호를 비우시면 「이미 계신 분인지 확인하지 못했습니다」 라고 남겨 둡니다.</div>`;
+    h+=`<button class="btn" onclick="S.step=2;paint()">다음 — 어디서 오셨나요</button>`;
+  }else if(S.step===2){
+    h+=`<div class="card"><div class="lab">어디서 오셨나요</div>${FROM.map(f=>`<div class="row" style="cursor:pointer" onclick="S.from='${f[0]}';paint()"><span style="font-size:20px">${f[1]}</span><div class="m"><b>${f[2]}</b><span>${f[3]}</span></div><span class="ck" style="${S.from===f[0]?'background:var(--pt);border-color:var(--pt)':''}"></span></div>`).join('')}</div>`;
+    if(S.from==='ref')h+=`<div class="card"><div class="lab">누가 소개해 주셨나요</div><input class="inp" value="홍갑돌"><div class="note">고객이면 이어지고(소개 고리), 아니면 이름만 남깁니다.</div></div>`;
+    if(S.from==='db')h+=`<div class="card"><div class="lab">배정</div><div class="kv"><div class="k">DB 종류</div><div class="v">일반 ▾</div><div class="k">담당 · 배정일</div><div class="v">홍판서 · 오늘</div></div><div class="note">🚦 지금 홍판서 님이 쥔 회사 배정 18건 — 한도 20 · 넣으면 19건</div></div>`;
+    h+=`<div class="card"><div class="lab k">이렇게 만들어집니다</div><div class="note" style="font-size:13px;color:var(--ink2)">${S.from==='db'?'📇 배정 줄 하나 (미접촉) · 만나고 나면 「내 고객으로」 한 번에 사람 줄이 이어서 생깁니다':S.from==='old'?'👤 사람 줄 하나':'👤 사람 줄 + 📇 배정 줄(개인 갈래) — <b>둘이 처음부터 이어진 채로</b> · 배정 한도엔 안 셉니다'}</div></div>
+      <button class="btn" onclick="S.step=3;paint()">다음 — 더 아시는 것 (건너뛰어도 됩니다)</button><button class="btn g" onclick="S.step=1;paint()">앞으로</button>`;
+  }else{
+    h+=`<div class="card"><div class="lab">더 아시는 것 — 모르면 비워 두십시오</div>
+      <div class="sheet-gr" style="display:grid;grid-template-columns:1fr 1fr;column-gap:12px">
+        <div><label class="note" style="display:block">생년월일</label><input class="inp" placeholder="모름"></div>
+        <div><label class="note" style="display:block">성별</label><input class="inp" placeholder="모름"></div>
+        <div><label class="note" style="display:block">사는 곳</label><input class="inp" placeholder="모름"></div>
+        <div><label class="note" style="display:block">${S.from==='db'?'단계':'다음 연락 날'}</label><input class="inp" value="${S.from==='db'?'미접촉':'10/26'}"></div></div>
+      <label class="note" style="display:block">처음 들은 말 한 줄</label><input class="inp" placeholder="예: 아이 보험 알아보는 중">
+      <div class="note">비운 칸은 <b>「모름」</b> 으로 남습니다 — 0 이나 빈 값으로 「없다」 가 되지 않습니다. 소득·가족·팩트파인딩은 고객 창 <b>정보</b> 탭에서 천천히.</div></div>
+      <button class="btn" onclick="S.page='win';S.tab='info';S.step=1;syncPage();paint()">넣고 고객 창 열기 → 정보 탭</button><button class="btn g" onclick="S.step=2;paint()">앞으로</button>
+      <div class="note" style="text-align:center">여러 분을 한꺼번에? <b>📁 엑셀·CSV 에서 가져오기</b></div>`;
+  }
+  return h+'</div>';
+}
+function syncPage(){document.querySelectorAll('#sPage button').forEach(x=>x.classList.toggle('on',x.dataset.v===S.page));}
+function paint(){document.getElementById('scr').innerHTML=S.page==='reg'?reg():head()+`<div class="body">${T[S.tab]()}</div>`;}
 paint();
 </script>
 </body>
