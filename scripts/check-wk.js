@@ -1,4 +1,4 @@
-/* 함께 점검 상담 — 이해 · 위기 · 같이 점검이 한 흐름으로 서나 (판 X171)
+/* 함께 점검 상담 — 이해 · 위기 · 같이 점검이 한 흐름으로 서나 (판 X173)
 
    사장님 말씀 2026-10-22 「응 계산기도 좋지만, 전반적인 이해를 시킬수 있는 상담과 느끼도록 하는
    위기감 그리고 같이 점검할수 있는 시스템」 — 계산기(app/finance.html)의 「🧭 함께 점검 상담」.
@@ -15,17 +15,17 @@
      마. 위기감은 고객 숫자로만 — 바깥 통계·「노후 파산」 같은 말이 장 어디에도 없나 (1번)
      바. 이름은 가린 채 · 답만 이 브라우저에 (3번) · 닫았다 열면 그 장 그대로 · 「처음부터」 는 답만 지우나
      사. 글씨 13px · 누르는 것 44px 바닥 · 페이지 오류 0
-     아. 판 X172 (사장님 말씀 「재무설계로써의 배치 그리고 보험은 가족을 지키는 역할 내 연금을 지키는 역할의
+     아. 판 X174 (사장님 말씀 「재무설계로써의 배치 그리고 보험은 가족을 지키는 역할 내 연금을 지키는 역할의
          분배 나이대마다 필요한 보험의 분배전략」) — 재무설계의 집 · 보험의 두 역할 · 「가족은 몇 달」 ·
          「아프면 연금을 깨요」 가 <b>칸 값으로 따로 셈한 달 수</b>와 맞나 · 전략 장이 고객 나이대를 켜고
          「APEX 상담 원칙 · 정답이 아님」 을 밝히나 · 결과지 「보장 전략」 장이 같은 달 수를 말하나
-     카. 판 X175 (사장님 말씀 「미래 장면에도 본인 대출을 넣어서 다시 셈해줘 · 기존 재무설계계산기를 따와서
+     카. 판 X177 (사장님 말씀 「미래 장면에도 본인 대출을 넣어서 다시 셈해줘 · 기존 재무설계계산기를 따와서
          기능들을 가져오되 재해석해서 재구성해」) — 미래 장면의 소득 셈에 본인 대출(그때 0) · 현금흐름 · 대출 ·
          교육비 · 남길 것 · 고칠 순서 장이 서나 · 판정이 계산기 기준(저축률 · DSR · LTV)과 같나 · 결과지 장
-     차. 판 X174 (사장님 말씀 「배수는 평균 데이터를 기준으로 하고 직업군을 나누어서 다시 나눠서 해줘」) —
+     차. 판 X176 (사장님 말씀 「배수는 평균 데이터를 기준으로 하고 직업군을 나누어서 다시 나눠서 해줘」) —
          소득 셈의 배수가 직업군 평균(2025년 가계금융복지조사)에서 오나 · 자영업자를 고르면 빚 배수 1.56 ·
          일해서 버는 몫 82% · 모르면 「전체」 라고 적나 · 출처를 밝히나
-     자. 판 X173 (사장님 말씀 「평균 값으로 구하고 소득에 따라 구하고 가족에 따라 구해서 기준값을 만들어」) —
+     자. 판 X175 (사장님 말씀 「평균 값으로 구하고 소득에 따라 구하고 가족에 따라 구해서 기준값을 만들어」) —
          기준값 = 평균 · 소득 · 가족의 가운데 값 · 무게 = 두 기준값의 크기 · 자가 칸 값으로 따로 셈한 수와 맞나 ·
          평균은 출처(기관·언론사·날짜)를 밝히나 · 못 찾은 평균은 비우나 · 막내 나이를 모르면 가족 셈을 비우나
 
@@ -129,7 +129,7 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
   is(/홍○○/.test(rt) && !/홍길동/.test(rh), '결과지는 가린 이름');
   await pop.close();
 
-  head('아. 보험의 자리 — 배치 · 두 역할 · 몇 달 · 나이대 분배 (판 X172)');
+  head('아. 보험의 자리 — 배치 · 두 역할 · 몇 달 · 나이대 분배 (판 X174)');
   const T = texts.join('\n');
   ['재무설계는 집이에요', '보험은 두 가지를 지켜요', '가족은 몇 달을 버틸까요', '진단비로 몇 달을 버틸까요', '기준값으로 나눠요'].forEach((k) => is(nos(T).includes(nos(k)), '「' + k + '」 장이 선다'));
   is(S.indexOf('전략') > S.lastIndexOf('위기') && S.indexOf('전략') < S.indexOf('점검'), '전략 장은 위기 다음 · 점검 앞');
@@ -149,10 +149,10 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
   is(nos(insTxt[1]).includes(want.me + '개월'), '진단비로 버티는 달 = 암 진단비 ÷ 생활비 = ' + want.me + '개월');
   is(/심사 결과에 따릅니다/.test(insTxt[1]), '내 연금 지키기 장에 「심사 결과에 따릅니다」 (2번)');
   await pg.evaluate(() => { WK.i = wkSlides().findIndex((x) => x.part === '전략'); wkPaint(); });
-  /* 판 X173 — 무게는 기준값에서. 자는 앱의 ipBase 를 빌리지 않고 칸 값 · IP_RULE · IP_AVG 로 따로 셉니다 */
+  /* 판 X175 — 무게는 기준값에서. 자는 앱의 ipBase 를 빌리지 않고 칸 값 · IP_RULE · IP_AVG 로 따로 셉니다 */
   await pg.evaluate(() => { const e = document.getElementById('inh_youngest'); e.value = '10'; e.dispatchEvent(new Event('input', { bubbles: true }));
     const g = document.getElementById('s_jobg'); g.value = 'self'; g.dispatchEvent(new Event('change', { bubbles: true })); });
-  /* 판 X174 — 소득 셈의 배수는 직업군 평균(가계금융복지조사)에서. 자는 보도자료 표의 숫자를 따로 들고 셉니다 */
+  /* 판 X176 — 소득 셈의 배수는 직업군 평균(가계금융복지조사)에서. 자는 보도자료 표의 숫자를 따로 들고 셉니다 */
   const SELF = { inc: 8000, debt: 12479, work: 1741, biz: 4833 };
   const exp = await pg.evaluate((J) => {
     const v = (id) => parseFloat(document.getElementById(id).value) || 0, R = IP_RULE;
@@ -162,7 +162,7 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
     const famL = living - v('s_loan');
     const fam = mid([IP_AVG.fam ? IP_AVG.fam.v : null, own * J.debt / J.inc, v('s_debt') + famL * 12 * Math.max(0, R.indepAge - v('inh_youngest'))]);
     const me = mid([IP_AVG.me ? IP_AVG.me.v : null, own * (J.work + J.biz) / J.inc * R.meMonths / 12, living * R.meMonths]);
-    /* 판 X175 — 미래 장면은 소득 셈에도 본인 대출(그때 0)을: 빚 배수 × (그때 대출 ÷ 지금 대출) */
+    /* 판 X177 — 미래 장면은 소득 셈에도 본인 대출(그때 0)을: 빚 배수 × (그때 대출 ÷ 지금 대출) */
     const later = mid([IP_AVG.fam ? IP_AVG.fam.v : null, v('s_debt') > 0 ? own * J.debt / J.inc * 0 / v('s_debt') : own * J.debt / J.inc, famL * 12 * R.spouseYears]);
     return { fam, me, w: Math.round(fam / (fam + me) * 20) * 5, wLater: Math.round(later / (later + me) * 20) * 5 };
   }, SELF);
@@ -190,7 +190,7 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
   is(/기준값/.test(ri) && /APEX 원칙\(가정\)/.test(ri) && /아주경제 2022\.05\.15/.test(ri), '결과지에도 기준값 표 · 출처 · 「APEX 원칙(가정)」');
   await popI.close();
 
-  head('카. 계산기 기능을 상담 말로 재구성 (판 X175)');
+  head('카. 계산기 기능을 상담 말로 재구성 (판 X177)');
   await pg.evaluate(() => { const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); };
     set('r_mortgage', '20000'); set('r_house_val', '50000'); set('inh_total', '250000'); });
   const fsT = await pg.evaluate(() => wkSlides().filter((x) => x.html).map((x) => x.html.replace(/<[^>]+>/g, ' ')).join('\n'));
@@ -203,7 +203,7 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
     const choice = ['s_dining', 's_shopping', 's_travel', 's_choice_etc'].reduce((a, id) => a + v(id), 0);
     const saving = ['s_emerg', 's_pension', 's_irp', 's_isa', 's_taxfree', 's_general'].reduce((a, id) => a + v(id), 0);
     const surplus = income - fixed - choice - saving, sr = saving / income * 100;
-    /* 판 X177 — 부동산 탭의 견본 값(손대지 않은 칸)은 고객 숫자가 아닙니다. 그때는 고객이 말한 숫자로:
+    /* 판 X179 — 부동산 탭의 견본 값(손대지 않은 칸)은 고객 숫자가 아닙니다. 그때는 고객이 말한 숫자로:
        DSR = 매달 원리금 ÷ 월 소득 · LTV = 총부채 ÷ 부동산 (자는 앱의 셈을 빌리지 않고 칸 값으로 따로 셉니다) */
     const touched = (id) => { const e = document.getElementById(id); return e.value.trim() !== '' && (e.dataset.touched === '1' || e.value !== e.defaultValue); };
     const r = v('r_mortgage_rate') / 100 / 12, m = touched('r_mortgage') ? v('r_mortgage') : 0, hv = touched('r_house_val') ? v('r_house_val') : 0;

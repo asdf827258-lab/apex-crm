@@ -189,7 +189,7 @@ const B = 'http://127.0.0.1:' + PORT;
   /* ── ⑥ 지출 합계 ─────────────────────────────────────────────── */
   console.log('\n[10] 남는 돈이 부풀려지지 않는가');
   const src = fs.readFileSync(path.join(ROOT, 'app/finance.html'), 'utf8');
-  /* 판 X176 — 지출 합계는 계산기 한 곳(finCore)에서 셉니다. 「기타/월」 은 선택지출 칸 목록(RPT_CHOICE)에 들고,
+  /* 판 X178 — 지출 합계는 계산기 한 곳(finCore)에서 셉니다. 「기타/월」 은 선택지출 칸 목록(RPT_CHOICE)에 들고,
      덱(tpD)도 finCore 의 지출을 그대로 씁니다(check-finone · check-finoneweb 이 화면마다 견줍니다). */
   const tpd = src.slice(src.indexOf('function tpD('), src.indexOf('function tpD(') + 800);
   is(/var RPT_CHOICE=\[[^\]]*'s_choice_etc'/.test(src) && /choice=finSum\(RPT_CHOICE\)/.test(src) && /expense=FC\.fixed\+FC\.choice/.test(tpd),
