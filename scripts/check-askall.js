@@ -286,6 +286,13 @@ const SEED=(role)=>`
          ① 고르개가 뜨고 DB 창은 <b>아직</b> 안 떴나
          ② 두 갈래(내 고객 · 배정 DB)가 다 있나
          ③ 「배정 DB」 를 누르면 <b>그때</b> DB 창이 뜨고 고르개는 닫히나        */
+    /* ★ 새 판 (판 X161 · 2026-10-23 「추천대로」) — 창이 세 걸음입니다. 첫 걸음은 <b>누구</b>(이름·번호)이고
+       DB 창은 <b>여전히 안 뜹니다</b>. 이름을 적고 「다음」 을 누르면 둘째 걸음에서 어느 쪽인지 묻습니다 —
+       아래 ①②③ 은 그대로 그 둘째 걸음에서 잽니다. */
+    const step1=await p.evaluate(()=>({nm:!!document.getElementById('cregNm'),hdb:!!document.querySelector('#hdbSheet.on')}));
+    ok('⑦ 「고객 넣기」 첫 걸음은 누구 — 이름·번호를 받고 DB 창은 아직 안 뜬다',step1.nm&&!step1.hdb,JSON.stringify(step1));
+    await p.evaluate(()=>{const n=document.getElementById('cregNm');if(n)n.value='홍길동새';if(typeof cregStep==='function')cregStep(2);});
+    await p.waitForTimeout(200);
     const pickOn=await p.evaluate(()=>({
       creg:!!document.querySelector('#cregSheet.on'),
       hdb:!!document.querySelector('#hdbSheet.on'),
@@ -299,7 +306,9 @@ const SEED=(role)=>`
     await p.waitForTimeout(450);
     const opened=await p.evaluate(()=>!!document.querySelector('#hdbSheet.on')&&!document.querySelector('#cregSheet.on'));
     ok('⑦ 「📇 배정 DB」 를 고르면 홈을 안 벗어나고 뜬다',opened,'덮개 '+opened);
-    await p.evaluate(()=>{document.getElementById('hdbName').value='홍길동새';});
+    /* 첫 걸음에 적은 이름이 DB 창에 옮겨져 있어야 합니다 — 두 번 안 치게 */
+    const carried=await p.evaluate(()=>(document.getElementById('hdbName')||{}).value||'');
+    ok('⑦ 첫 걸음에 적은 이름이 배정 DB 창에 옮겨져 있다',carried==='홍길동새','받음 '+carried);
     await p.evaluate(()=>hdbSave());await p.waitForTimeout(600);
     const w3=(await W()).filter(x=>x.t==='dbs');
     ok('⑦ 새 고객이 dbs 에 들어간다',w3.length===1&&w3[0].op==='insert'&&w3[0].pay.customer_name==='홍길동새',

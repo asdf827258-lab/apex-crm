@@ -8,7 +8,9 @@
 
    여기서 확인합니다.
      1. 배정 DB 와 내 고객이 <b>한 명단</b>에 선다
-     2. 「내 고객으로」 뒤에 <b>줄이 하나만</b> 남는다 — 다리(client_meta.db)
+     2. 「내 고객으로」 뒤에 <b>줄이 하나만</b> 남는다 — 다리(dbs.client_id · 판 X161)
+        ★ 옛 다리(client_meta.db)는 <b>더 이상 다리가 아니다</b> — 다리가 둘이면
+          한쪽만 고쳐도 다른 쪽이 답합니다 (5번)
      3. 그 뒤 <b>단계를 올려도 줄이 안 늘어난다</b>
      4. ★★ <b>동명이인 두 분이 안 붙는다</b> — 이 판의 본업입니다
      5. 다리가 있으면 <b>이름 대조보다 다리를 먼저</b> 본다
@@ -100,7 +102,10 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     const c4 = { id: 'c4', advisor_id: me, name_masked: '홍○○', consent_status: 'none' };
     OSC.list = cli.concat([c4]);
     AR.cliRows = AR.cliRows.concat([{ id: 'c4', who: me, name: '', nm: '홍○○' }]);
-    CM.meta.c4 = { db: 'd1' };
+    /* 판 X161 — 다리는 <b>dbs.client_id</b> 하나입니다 (AR.db 줄의 client_id) */
+    db[0].client_id = 'c4';
+    /* ★ 옛 다리(client_meta.db)만 있는 d2 는 <b>다리가 아닙니다</b> — 그대로 서야 합니다 */
+    CM.meta.c3 = { db: 'd2' };
     out.after = ids(olRows(OSC.list));
     /* 단계를 올려도 줄이 안 늘어나는가 */
     db[0].stage = 'PC';
@@ -148,10 +153,13 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
      '  고객 줄과 배정 DB 줄이 같이 있다 — ' + R.merged.join(' · '));
   is(R.merged.indexOf('db:d9') < 0, '  <b>남의 배정 DB 는 안 선다</b> (3번)');
 
-  console.log('\n[2] 「내 고객으로」 뒤에 줄이 하나만 남는다 — 다리(client_meta.db)');
+  console.log('\n[2] 「내 고객으로」 뒤에 줄이 하나만 남는다 — 다리(dbs.client_id · 판 X161)');
   is(R.after.indexOf('db:d1') < 0, '  배정 DB 줄이 <b>사라졌다</b> — 그 분은 c4 로 섰다');
   is(R.after.indexOf('c4') >= 0, '  고객 줄로 <b>하나만</b> 남았다');
   is(R.after.length === R.merged.length, '  <b>수가 안 늘었다</b> — ' + R.merged.length + ' → ' + R.after.length);
+  is(R.after.indexOf('db:d2') >= 0,
+     '  ★ <b>옛 다리(client_meta.db)는 다리가 아니다</b> — d2 는 그대로 섰다' +
+     (R.after.indexOf('db:d2') < 0 ? '\n      ✗ 다리가 둘이 됐습니다 — 한쪽만 고치면 다른 쪽이 답합니다 (5번)' : ''));
 
   console.log('\n[3] 그 뒤 단계를 올려도 줄이 안 늘어난다');
   is(R.afterStage.length === R.after.length && R.afterStage.indexOf('db:d1') < 0,

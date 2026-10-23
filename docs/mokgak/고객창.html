@@ -1,0 +1,313 @@
+<!doctype html>
+<html data-theme="light" lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light"/>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>고객 창 하나 — 화면 판</title>
+<!-- 목각 그림입니다 — 앱이 아닙니다. docs/고객한장_설계.md 11장의 화면 판을 눌러 보게 한 것입니다.
+     견본 이름은 홍길동 식구만 씁니다(CLAUDE.md 3번). 숫자는 전부 견본입니다. -->
+<style>
+:root{
+  --t-ink:#191F28;--t-ink-2:#4E5968;--t-sub:#6B7684;--t-sub3:#B0B8C1;
+  --t-line:#E5E8EB;--t-line-2:#F1F3F5;--t-bg:#F2F4F6;--t-bg-2:#F5F7F9;--t-card:#FFFFFF;
+  --t-point:#1A56DB;--t-point-l:#EBF3FF;--t-point-d:#123A96;
+  --t-pos:#059669;--t-pos-l:#ECFDF5;--t-pos-d:#065F46;
+  --t-warn:#D97706;--t-warn-l:#FFF7ED;--t-warn-d2:#7A4E0A;
+  --t-neg:#DC2626;--t-neg-l:#FEF2F2;--t-neg-d:#B91C1C;
+  --t-pur:#7C3AED;--t-pur-l:#F5F3FF;
+  --t-r:20px;--t-r-sm:13px;
+  --t-font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;
+}
+/* 흰색 고정 — 모든 문서가 밝게 섭니다 (check-lightmode) */
+*{box-sizing:border-box}
+body{margin:0;background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);
+  font-size:15px;line-height:1.55;letter-spacing:-.01em}
+.page{max-width:1180px;margin:0 auto;padding:22px 16px 60px}
+h1{font-size:24px;margin:0 0 4px;letter-spacing:-.03em}
+.lead{color:var(--t-sub);margin:0 0 18px;font-size:14px}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.ctl b{font-size:13px;color:var(--t-sub);align-self:center;margin-right:2px}
+.seg{display:inline-flex;background:var(--t-card);border:1px solid var(--t-line);border-radius:12px;padding:3px}
+.seg button{border:0;background:none;font:inherit;font-size:13px;font-weight:700;color:var(--t-sub);
+  padding:7px 11px;border-radius:9px;cursor:pointer;min-height:36px}
+.seg button.on{background:var(--t-point);color:#fff}
+.wrap{display:grid;grid-template-columns:400px 1fr;gap:26px;align-items:start}
+@media (max-width:900px){.wrap{grid-template-columns:1fr}}
+
+/* 폰 */
+.phone{width:100%;max-width:400px;margin:0 auto;background:var(--t-bg);border:8px solid #111827;
+  border-radius:38px;overflow:hidden;height:780px;display:flex;flex-direction:column;position:relative}
+.scr{flex:1;overflow-y:auto;padding-bottom:84px}
+.top{position:sticky;top:0;z-index:5}
+.hd{background:var(--t-card);border-bottom:1px solid var(--t-line);padding:12px 16px 10px}
+.hd .back{font-size:13px;color:var(--t-sub);margin-bottom:6px}
+.hd .nm{font-size:21px;font-weight:900;letter-spacing:-.03em;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.tag{display:inline-block;font-size:12px;font-weight:800;border-radius:8px;padding:2px 7px;background:var(--t-bg-2);color:var(--t-ink-2)}
+.tag.pt{background:var(--t-point-l);color:var(--t-point-d)}
+.tag.ok{background:var(--t-pos-l);color:var(--t-pos-d)}
+.tag.no{background:var(--t-neg-l);color:var(--t-neg-d)}
+.tag.wr{background:var(--t-warn-l);color:var(--t-warn-d2)}
+.hd .bits{font-size:13px;color:var(--t-sub);margin-top:3px}
+.cons{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.cons span{font-size:11.5px;font-weight:800;border-radius:7px;padding:2px 6px}
+.cons .y{background:var(--t-pos-l);color:var(--t-pos-d)}
+.cons .n{background:var(--t-bg-2);color:var(--t-sub)}
+.tabs{display:flex;gap:2px;overflow-x:auto;background:var(--t-card);border-bottom:1px solid var(--t-line);
+  padding:0 8px;scrollbar-width:none}
+.tabs button{flex:none;border:0;background:none;font:inherit;font-size:14px;font-weight:800;color:var(--t-sub);
+  padding:11px 10px 10px;border-bottom:2.5px solid transparent;cursor:pointer;min-height:44px}
+.tabs button.on{color:var(--t-ink);border-bottom-color:var(--t-point)}
+.tabs button em{font-style:normal;font-size:11.5px;color:var(--t-sub3);margin-left:3px}
+.tabs button.lk{color:var(--t-sub3)}
+.body{padding:12px}
+.card{background:var(--t-card);border-radius:var(--t-r);padding:15px 16px;margin-bottom:10px}
+.lab{font-size:12.5px;font-weight:800;color:var(--t-sub);margin-bottom:6px}
+.big{font-size:19px;font-weight:900;letter-spacing:-.03em}
+.big small{display:block;font-size:12.5px;font-weight:600;color:var(--t-sub);letter-spacing:0;margin-top:2px}
+.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.nums div{background:var(--t-bg-2);border-radius:12px;padding:9px 8px}
+.nums b{display:block;font-size:17px;font-weight:900}
+.nums span{font-size:11.5px;color:var(--t-sub)}
+.row{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--t-line-2);font-size:14px}
+.row:first-of-type{border-top:0}
+.row .k{color:var(--t-sub);flex:none}
+.row .v{text-align:right;font-weight:700}
+.row .v i{font-style:normal;color:var(--t-sub3);font-weight:600}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--t-line);background:var(--t-card);border-radius:10px;font:inherit;font-size:13px;font-weight:700;
+  padding:7px 10px;color:var(--t-ink-2);cursor:pointer;min-height:36px}
+.chip b{color:var(--t-point)}
+.btn{display:block;width:100%;border:0;border-radius:14px;background:var(--t-point);color:#fff;font:inherit;
+  font-size:15px;font-weight:800;padding:12px;margin-top:10px;cursor:pointer;min-height:44px}
+.btn.g{background:var(--t-bg-2);color:var(--t-ink)}
+.note{font-size:12.5px;color:var(--t-sub);line-height:1.6;margin-top:8px}
+.ask{background:var(--t-point-l);border-radius:var(--t-r);padding:14px 16px;margin-bottom:10px}
+.ask .q{font-weight:900;font-size:16px;letter-spacing:-.02em}
+.ask .why{font-size:12.5px;color:var(--t-ink-2);margin:3px 0 9px}
+.tl{border-left:2px solid var(--t-line);margin-left:6px;padding-left:12px}
+.tl div{position:relative;padding:6px 0;font-size:13.5px}
+.tl div:before{content:"";position:absolute;left:-18px;top:12px;width:10px;height:10px;border-radius:50%;background:var(--t-point)}
+.tl .d{color:var(--t-sub);font-size:12px;margin-right:6px}
+.tl .s{float:right;font-size:11.5px;color:var(--t-sub3)}
+.lock{background:var(--t-bg-2);border:1.5px dashed var(--t-line);border-radius:var(--t-r);padding:16px;text-align:center;color:var(--t-sub);font-size:13.5px}
+.lock>b{display:block;color:var(--t-ink);font-size:15px;margin-bottom:4px}
+.vault{background:linear-gradient(180deg,var(--t-pur-l),var(--t-card));border:1px solid var(--t-line)}
+.idimg{height:74px;border-radius:10px;background:repeating-linear-gradient(45deg,var(--t-bg-2),var(--t-bg-2) 8px,var(--t-line-2) 8px,var(--t-line-2) 16px);
+  display:flex;align-items:center;justify-content:center;font-size:12.5px;color:var(--t-sub);filter:blur(.2px)}
+.flow{display:flex;gap:4px;flex-wrap:wrap;margin:6px 0 2px}
+.flow span{font-size:11.5px;font-weight:800;padding:3px 7px;border-radius:7px;background:var(--t-bg-2);color:var(--t-sub3)}
+.flow span.on{background:var(--t-pos-l);color:var(--t-pos-d)}
+.bar{position:absolute;left:0;right:0;bottom:0;background:var(--t-card);border-top:1px solid var(--t-line);
+  display:grid;grid-template-columns:repeat(4,1fr);padding:8px 8px 14px;gap:6px}
+.bar button{border:0;background:var(--t-bg-2);border-radius:12px;font:inherit;font-size:13px;font-weight:800;color:var(--t-ink);padding:9px 0;min-height:44px;cursor:pointer}
+.bar button.p{background:var(--t-point);color:#fff}
+
+/* 오른쪽 설명 */
+.side .card{padding:18px 20px}
+.side h2{font-size:17px;margin:0 0 8px;letter-spacing:-.02em}
+.side ol,.side ul{margin:6px 0 0;padding-left:20px;font-size:14px}
+.side li{margin:4px 0}
+.side table{width:100%;border-collapse:collapse;font-size:13.5px}
+.side th,.side td{text-align:left;padding:7px 6px;border-top:1px solid var(--t-line-2);vertical-align:top}
+.side th{color:var(--t-sub);font-weight:800;font-size:12.5px}
+.why{font-size:13px;color:var(--t-sub)}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>고객 창 하나 — 화면 판</h1>
+  <p class="lead">눌러 보는 그림입니다(목각). 앱이 아닙니다 · 이름과 숫자는 모두 견본 · 설계는 <code>docs/고객한장_설계.md</code> 11장</p>
+
+  <div class="ctl">
+    <b>이 분은</b>
+    <div class="seg" id="segWho">
+      <button class="on" data-v="mine">내 고객 (사람 + 배정 이어짐)</button>
+      <button data-v="db">배정 줄만 (아직 사람 없음)</button>
+    </div>
+    <b>보는 사람</b>
+    <div class="seg" id="segView">
+      <button class="on" data-v="me">담당자 본인</button>
+      <button data-v="lead">팀장</button>
+    </div>
+    <b>동의</b>
+    <div class="seg" id="segCons">
+      <button class="on" data-v="all">네 갈래 다 받음</button>
+      <button data-v="none">아직 없음</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="phone"><div class="scr" id="scr"></div>
+      <div class="bar" id="bar"></div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h2>뼈대 — 위에서 아래로 넷</h2>
+        <ol>
+          <li><b>머리</b>(붙박이) — 이름 · 나이·보험나이 · 단계 · 담당 · <b>동의 칩 넷</b>. 어디로 내려가도 누구 화면인지 안 잃습니다.</li>
+          <li><b>지금 한 가지</b> — 이미 있는 「한 가지만 물어봅니다」(<code>cqaHtml</code>) 그대로. 답하면 물러섭니다.</li>
+          <li><b>탭 여섯</b> — 한눈에 · 연락 · 계약 · 청구 · 서류 · 정보. 탭마다 <b>건수</b>를 붙여 비어 있는지 밖에서 보입니다.</li>
+          <li><b>아래 띠</b>(폰) — 📞 전화 · 💬 문자 · ✍ 남기기 · ⋯. 전화하면서 그 자리에서 적습니다.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h2>어디서 누르든 이 창 — <code>cusGo()</code> 하나</h2>
+        <table>
+          <tr><th>누르는 곳</th><th>지금</th><th>바뀌면</th></tr>
+          <tr><td>고객 365일 명단</td><td>상세 화면(긴 스크롤 15칸)</td><td>이 창 · 한눈에</td></tr>
+          <tr><td>홈 「오늘 챙길 것」</td><td>빠른 창 <code>cshOpen</code></td><td>이 창 · <b>연락</b> 탭으로 열림</td></tr>
+          <tr><td>DB 통합 CRM 이름</td><td>따로 그린 카드 <code>cusOpen</code></td><td>앱 안이면 이 창 · 밖이면 같은 카드(읽기)</td></tr>
+          <tr><td>찾기 · 지도 · 달력</td><td>저마다</td><td>이 창</td></tr>
+        </table>
+        <p class="note">덮개 창으로 뜨고 닫으면 <b>누르던 자리로</b> 돌아갑니다. 폰의 「뒤로」 도 창만 닫습니다.</p>
+      </div>
+      <div class="card">
+        <h2>합쳐서 없어지는 겹침</h2>
+        <ul>
+          <li>가족이 <b>세 곳</b>(한 장 카드 · 가족 칸 · 쪽지 가족) → 정보 탭 한 곳</li>
+          <li>전화번호가 <b>세 곳</b>(맨 위 줄 · 카드 · 입력 칸) → 머리에는 단추, 고치는 곳은 정보 탭</li>
+          <li>계약이 <b>두 곳</b>(카드 계약 칸 · 가입한 보험) → 계약 탭</li>
+          <li>창이 <b>셋</b>(상세 · 빠른 창 · CRM 카드) → 하나</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>잠긴 칸은 <b>까닭</b>을 말합니다</h2>
+        <ul>
+          <li>배정 줄만 있는 분 → 계약·청구·서류·금고에 「👤 내 고객으로 올리면 열립니다」 단추 하나</li>
+          <li>팀장이 볼 때 → 쪽지·청구·금고는 <b>「담당자만 봅니다」</b> — 「없음」 이 아닙니다(1번)</li>
+          <li>동의가 없을 때 → 청구·금고·광고 문자가 잠기고 그 자리에서 동의를 적습니다</li>
+        </ul>
+        <p class="why">위 단추로 바꿔 보십시오.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const S={who:'mine',view:'me',cons:'all',tab:'glance'};
+const TABS=[['glance','한눈에',''],['talk','연락','7'],['pol','계약','3'],['clm','청구','2'],['doc','서류','4'],['info','정보','']];
+const E=s=>String(s);
+function seg(id,key){document.querySelectorAll('#'+id+' button').forEach(b=>b.onclick=()=>{
+  S[key]=b.dataset.v;document.querySelectorAll('#'+id+' button').forEach(x=>x.classList.toggle('on',x===b));paint();});}
+seg('segWho','who');seg('segView','view');seg('segCons','cons');
+
+const person=()=>S.who==='mine';
+const mine=()=>S.view==='me';
+const ok=k=>S.cons==='all';
+
+function lockToMine(what){return `<div class="lock"><b>${what}는 「사람」 에 붙습니다</b>이 분은 아직 배정 줄만 있습니다.<button class="btn">👤 내 고객으로 올리기</button><div class="note">올리면 이 배정 줄과 <b>이어진 채로</b> 사람 줄이 생깁니다(<code>dbs.client_id</code>). 배정 한도 셈은 그대로입니다.</div></div>`;}
+function lockOwner(what){return `<div class="lock"><b>담당자만 봅니다</b>${what}는 담당 설계사 본인만 엽니다. 비어 있는 것이 아닙니다.</div>`;}
+function lockCons(kind,what){return `<div class="lock"><b>${kind} 동의가 아직 없습니다</b>${what}<button class="btn g">✅ 동의 적기</button></div>`;}
+
+function head(){
+  const c=k=>`<span class="${ok(k)&&person()?'y':'n'}">${ok(k)&&person()?'✓':'—'} ${k}</span>`;
+  return `<div class="hd"><div class="back">← 돌아가기</div>
+    <div class="nm">${mine()?'홍길동':'홍*동'} <span class="tag ${mine()?'pt':''}">${mine()?'실명 · 이 기기에만':'가린 이름'}</span>
+      <span class="tag ok">${person()?'AP':'TA'}</span>${person()?'<span class="tag">🪪 내 고객</span>':'<span class="tag wr">📥 배정 DB</span>'}</div>
+    <div class="bits">${person()?'44세 · 보험나이 45 (상령일 D-38) · 남 · ':''}담당 홍판서 · 배정 2026-09-03</div>
+    ${person()?`<div class="cons">${c('수집·이용')}${c('주민번호')}${c('병력')}${c('광고')}</div>`:''}
+  </div>`;
+}
+function tabs(){
+  return `<div class="tabs">${TABS.map(t=>{
+    const lk=!person()&&['pol','clm','doc'].includes(t[0]);
+    return `<button class="${S.tab===t[0]?'on':''} ${lk?'lk':''}" data-t="${t[0]}">${lk?'🔒 ':''}${t[1]}${t[2]&&!lk?`<em>${t[2]}</em>`:''}</button>`;}).join('')}</div>`;
+}
+function ask(){
+  if(!person())return `<div class="ask"><div class="q">📞 첫 통화 결과를 남길까요?</div><div class="why">배정 받고 19일째, 아직 한 번도 안 걸었습니다.</div><div class="chips"><button class="chip">통화됐어요 <b>3일 뒤</b></button><button class="chip">부재 <b>1일 뒤</b></button><button class="chip">거절</button></div></div>`;
+  return `<div class="ask"><div class="q">🙋 가장 빠른 만기가 언제인지 적어 둘까요?</div><div class="why">만기가 다가오면 그것이 <b>다시 만날 이유</b>가 됩니다.</div><div class="chips"><button class="chip">날짜 고르기</button><button class="chip">모름</button></div></div>`;
+}
+const T={};
+T.glance=()=>`${ask()}
+  <div class="card"><div class="lab">🔎 한눈에</div>
+    <div class="nums">
+      <div><b data-ask="보유계약">${person()?'3건':'모름'}</b><span>보유 계약</span></div>
+      <div><b>${person()?'18.4만':'모름'}</b><span>월 보험료(원)</span></div>
+      <div><b data-ask="마지막연락">${person()?'6일 전':'없음'}</b><span>마지막 연락</span></div>
+    </div>
+    <div style="margin-top:10px">
+      <div class="row"><span class="k">사는 곳</span><span class="v">서울 마포구</span></div>
+      <div class="row"><span class="k">어디서 왔나</span><span class="v">${person()?'소개 · 홍길순 님':'배정 DB · 일반'}</span></div>
+      <div class="row"><span class="k">다음 약속</span><span class="v">${person()?'10/25 (토) 14:00':'<i>없음</i>'}</span></div>
+      <div class="row"><span class="k">다음 할 일</span><span class="v">${person()?'보장분석 결과 설명':'<i>없음</i>'}</span></div>
+    </div></div>
+  ${person()?`<div class="card"><div class="lab">8통장</div><div class="chips">${['생활','병원비','치료비','소득공백','가족보호','은퇴·연금','간병·요양','자산·상속'].map((x,i)=>`<span class="tag ${i<3?'ok':i<5?'wr':''}">${x}</span>`).join('')}</div><div class="note">진단을 붙인 날 기준입니다. 보장·보험료는 <b>심사 결과에 따릅니다</b>.</div></div>`:''}`;
+T.talk=()=>`<div class="card"><div class="lab">📞 ${mine()?'홍길동':'홍*동'}님, 어떻게 됐나요?</div>
+    <div class="chips"><button class="chip">통화됐어요 <b>3일 뒤</b></button><button class="chip">부재 <b>1일 뒤</b></button><button class="chip">만났어요 <b>3일 뒤</b></button><button class="chip">다음에 <b>7일 뒤</b></button><button class="chip">거절 <b>30일 뒤</b></button></div>
+    <div class="note">누르면 단계와 다음 날이 <b>규칙대로</b> 정해집니다 — 지금 빠른 창(<code>cshMark</code>) 그대로입니다.</div></div>
+  <div class="card"><div class="lab">단계 · 약속</div>
+    <div class="row"><span class="k">단계</span><span class="v">${person()?'AP':'TA'} <button class="chip" style="margin-left:6px">바꾸기</button></span></div>
+    <div class="row"><span class="k">약속</span><span class="v">${person()?'10/25 14:00 · 망원동':'<i>없음</i>'} <button class="chip" style="margin-left:6px">잡기</button></span></div>
+    <div class="note">약속은 이어진 분은 <b>배정 줄 한 곳</b>에만 적힙니다(설계 3장).</div></div>
+  <div class="card"><div class="lab">연락 기록 · 7건 · 통화·접촉·문자를 한 줄기로</div><div class="tl">
+    <div><span class="d">10/16</span>문자 — 생일 축하<span class="s">💬 접촉</span></div>
+    <div><span class="d">10/09</span>상담 — 보장분석 PDF 받음<span class="s">📞 CRM 통화</span></div>
+    <div><span class="d">10/02</span>부재<span class="s">📞 CRM 통화</span></div>
+    <div><span class="d">09/27</span>카톡 — 자료 보냄<span class="s">💬 접촉</span></div>
+  </div></div>`;
+T.pol=()=>!person()?lockToMine('계약'):`<div class="card"><div class="lab">📄 가진 계약 · 3건 · 월 184,000원</div>
+    <div class="row"><span class="k">○○생명 종신</span><span class="v">98,000원/월 <span class="tag">20년납</span></span></div>
+    <div class="row"><span class="k">△△화재 실손</span><span class="v">31,000원/월 <span class="tag">4세대</span></span></div>
+    <div class="row"><span class="k">□□손보 건강</span><span class="v">55,000원/월 <span class="tag wr">만기 2027-03</span></span></div>
+    <div class="note">증권·제안서 PDF 에서 읽고 검수한 값입니다. 보장·보험료는 <b>심사 결과에 따릅니다</b>.</div></div>
+  <div class="card"><div class="lab">🤝 우리 계약 (배정 줄에서 왔음)</div>
+    <div class="row"><span class="k">계약일 · 월납</span><span class="v">2026-10-12 · 55,000원</span></div>
+    <div class="row"><span class="k">증권번호</span><span class="v">□□-2026-****</span></div>
+    <div class="row"><span class="k">증권 전달</span><span class="v"><i>아직</i> <button class="chip" style="margin-left:6px">전달함</button></span></div>
+    <div class="note">계약일·월납은 업적 셈 자리라 <b>배정 줄</b>에, 증권번호·전달은 <b>계약 표</b>에 한 곳씩.</div></div>
+  <div class="card"><div class="lab">보장분석 전 · 후</div><div class="chips"><button class="chip">전 — 10/09 읽음</button><button class="chip">후 만들기</button></div></div>`;
+T.clm=()=>{
+  if(!person())return lockToMine('청구');
+  if(!mine())return lockOwner('청구 이력');   /* 팀장은 못 봅니다 · 관리자는 봅니다 */
+  if(!ok())return lockCons('병력(민감정보)','청구 이력에는 진단명이 담깁니다. 동의를 적은 뒤에 열립니다.');
+  return `<div class="card"><div class="lab">🧾 청구 · 2건</div>
+    <div class="row"><span class="k">2026-09-14 · 통원</span><span class="v">지급 42,300원</span></div>
+    <div class="flow"><span class="on">접수</span><span class="on">지급</span><span>종결</span></div>
+    <div class="row"><span class="k">2026-10-03 · 입원 4일</span><span class="v"><span class="tag wr">보완 요청</span></span></div>
+    <div class="flow"><span class="on">접수</span><span class="on">보완</span><span>지급</span><span>종결</span></div>
+    <button class="btn">＋ 청구 넣기 — 진단서·영수증 읽기</button>
+    <div class="note">원본 파일은 <b>안 남깁니다</b> — 핵심 칸만 담고, 주민번호는 지웁니다. <b>AI 로 안 보냅니다.</b> 관리자도 봅니다.</div></div>
+  <div class="card"><div class="lab">＋ 청구 넣기 — 세 걸음</div>
+    <div class="row"><span class="k">① 올리기</span><span class="v">PDF · 사진 <i>(저장 안 함)</i></span></div>
+    <div class="row"><span class="k">② 읽은 칸</span><span class="v">진단명 · KCD · 치료일 · 입원/통원 · 수술 · 병원 · 본인부담 · 비급여</span></div>
+    <div class="row"><span class="k">③ 청구</span><span class="v">청구일 · 보험사 · 상태 · 지급액</span></div>
+    <div class="note">못 읽은 칸은 <b>빈 채로</b> 둡니다 — 0 으로 적지 않습니다. 사진은 옆에 띄워 두고 사람이 칸을 칩니다.</div></div>`;};
+T.doc=()=>!person()?lockToMine('서류'):!mine()?lockOwner('가입제안서·증권'):`<div class="card"><div class="lab">📎 서류 · 4건</div>
+    <div class="row"><span class="k">가입제안서</span><span class="v">□□손보 건강 · 10/05</span></div>
+    <div class="row"><span class="k">증권</span><span class="v">○○생명 종신 · 09/27</span></div>
+    <div class="row"><span class="k">저장한 상담자료</span><span class="v">2건</span></div>
+    <button class="btn g">＋ 제안서·증권 올리기</button>
+    <div class="note">본인만 봅니다. 올린 제안서는 보장분석·전후에서 <b>그대로 다시 읽습니다</b>(4-1번).</div></div>`;
+T.info=()=>{
+  let h=`<div class="card"><div class="lab">👤 사람</div>
+    <div class="row"><span class="k">전화</span><span class="v">010-****-1234 <button class="chip" style="margin-left:6px">고치기</button></span></div>
+    <div class="row"><span class="k">생년월일 · 성별</span><span class="v">${person()?'1982-05-14 · 남':'<i>모름</i>'}</span></div>
+    <div class="row"><span class="k">직업</span><span class="v"><i>모름</i></span></div>
+    <div class="row"><span class="k">사는 곳</span><span class="v">서울 마포구 <i>(배정 줄)</i></span></div></div>`;
+  if(!person())return h+lockToMine('돈·가족·금고·동의');
+  h+=`<div class="card"><div class="lab">💰 돈</div>
+    <div class="row"><span class="k">월 소득</span><span class="v">450만원</span></div>
+    <div class="row"><span class="k">월 생활비</span><span class="v"><i>모름</i></span></div>
+    <button class="btn g">팩트파인딩 이어서</button></div>`;
+  h+=mine()?`<div class="card"><div class="lab">👪 가족 · 소개</div><div class="chips"><button class="chip">홍길순 <b>배우자</b></button><button class="chip">홍말순 <b>자녀</b></button></div><div class="note">소개해 주신 분 — 홍갑돌 님</div></div>`:lockOwner('가족·소개(관리 쪽지)');
+  h+=!mine()?lockOwner('주민번호·신분증'):!ok()?lockCons('고유식별정보(주민번호)','동의를 적으면 금고가 열립니다.'):
+   `<div class="card vault"><div class="lab">🔐 금고 — 담당자 본인만 · 관리자도 못 엽니다</div>
+    <div class="row"><span class="k">주민번호</span><span class="v">820514-1****** <button class="chip" style="margin-left:6px">잠깐 보기</button></span></div>
+    <div class="idimg">신분증 사진 — 잠김 · 「잠깐 보기」 때만 풀림</div>
+    <div class="note">이 기기에서 금고 비밀번호로 잠근 <b>암호문만</b> 서버에 있습니다. 보기·복사·고치기마다 열람 기록이 남습니다. <b>비밀번호를 잊으면 아무도 못 엽니다</b> — 복구 코드를 따로 두십시오.</div></div>`;
+  h+=`<div class="card"><div class="lab">✅ 동의 네 갈래</div>
+    ${['수집·이용','고유식별(주민번호)','민감정보(병력)','광고 수신'].map(k=>`<div class="row"><span class="k">${k}</span><span class="v">${ok()?'2026-10-09 · 서면':'<i>없음</i>'} <button class="chip" style="margin-left:6px">${ok()?'철회':'적기'}</button></span></div>`).join('')}
+    <div class="note">동의 기록은 관리자·팀장도 봅니다 — 준법 확인 자리입니다.</div></div>`;
+  return h;};
+
+function paint(){
+  document.getElementById('scr').innerHTML=`<div class="top">`+head()+tabs()+`</div><div class="body">${T[S.tab]()}</div>`;
+  document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{S.tab=b.dataset.t;paint();});
+  document.getElementById('bar').innerHTML=`<button class="p">📞 전화</button><button>💬 문자</button><button>✍ 남기기</button><button>⋯</button>`;
+}
+paint();
+</script>
+</body>
+</html>

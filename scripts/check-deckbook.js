@@ -1,4 +1,4 @@
-/* 재무설계 상담자료가 원툴 순서로 엮였나 (판 X182 · X183)
+/* 재무설계 상담자료가 원툴 순서로 엮였나 (판 X183 · X184)
 
    사장님 말씀 2026-10-23 「결과지말고 상담자료부터 내용들을 채워서 만들어줘」.
    app/재무설계/상담자료.html 의 장(46장 + 표지 · 마무리)을 재무설계의 집 순서로 엮었습니다 —
@@ -15,7 +15,7 @@
      마. ★ 기준이 계산기와 같다 — DECK_RULE 의 비상금 · 보험료율 · 저축률 · DSR · LTV 가 계산기
          FIN_RULE · IP_RULE 과 같은 값 · 「적정 8~10%」 같은 다른 기준이 글자로 남지 않음(5번)
      바. 「오늘 어디까지 보실까요」 에서 보장을 빼면 새 보험료 장도 같이 빠진다 · 페이지 오류 0
-     사. ★★ 판 X183 (사장님 말씀 「안 맞는 것들을 맞춰봐」) — 계산기와 한 값 · 한 셈
+     사. ★★ 판 X184 (사장님 말씀 「안 맞는 것들을 맞춰봐」) — 계산기와 한 값 · 한 셈
          · 보장 기준 = 본부 권장 기준(암 5,000 · 뇌 3,000 · 심 3,000) — 상담자료 STD = 계산기 FIN_RULE
          · 주택연금 1억당 표 = 계산기 HOUSE_PEN(2024-03 공시) · 국가지원 금액(첫만남 · 부모급여 · 아동수당)이 두 목록에서 같음
          · 가족 생활자금 = 대출 + 대출 뺀 생활비 × 막내 25세 독립까지(계산기의 가족 셈)
@@ -103,7 +103,7 @@ const SIDE = { f_name: '홍길동', f_age: '44', f_job: '회사원', f_sincome: 
   const months = Math.floor(1600 / B.exp);
   is(new RegExp(months + '개월').test((B.S.find((x) => x.eb === 'THREE CHECKS') || {}).txt || ''), '예적금 1,600만 원을 적으면 1,600 ÷ 꼭 나가는 돈 ' + Math.round(B.exp) + ' = ' + months + '개월');
 
-  head('사. ★★ 계산기와 한 값 · 한 셈 (판 X183)');
+  head('사. ★★ 계산기와 한 값 · 한 셈 (판 X184)');
   const stdM = src.match(/var STD = \{cancer:(\d+), brain:(\d+), heart:(\d+)/) || [];
   is(+stdM[1] === num(/insCancer:(\d+)/) && +stdM[2] === num(/insBrain:(\d+)/) && +stdM[3] === num(/insHeart:(\d+)/), '보장 기준 — 상담자료 STD ' + stdM.slice(1, 4).join('/') + ' = 계산기 FIN_RULE ' + [num(/insCancer:(\d+)/), num(/insBrain:(\d+)/), num(/insHeart:(\d+)/)].join('/'));
   const hfD = (src.match(/var HF_TABLE=(\[\[[^;]*?\]\])/) || [])[1], hfF = (fin.match(/per:(\[\[[^\n]*?\]\])/) || [])[1];
