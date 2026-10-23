@@ -207,7 +207,16 @@ function dayGrid(n, t) {
 }
 function daysText(n, now, goal) {
   return n >= 30 ? '지금 준비된 돈(**' + manTxt(now) + '**)으로 한 달을 다 채워요.'
-    : '한 달 30일 중 **' + n + '일**만 지금 준비된 돈(**' + manTxt(now) + '**)으로 살 수 있어요.\n나머지 **' + (30 - n) + '일**, 매달 **' + manTxt(goal - now) + '**은 아직 비어 있어요.';
+    : '한 달 30일 중 **' + n + '일**은 지금 준비된 돈(**' + manTxt(now) + '**)으로 살 수 있어요.\n남은 **' + (30 - n) + '일**(매달 **' + manTxt(goal - now) + '**)을 무엇으로 채울지가 오늘 이야기예요.';
+}
+/* 빈칸을 같은 상품으로만 채울 때 드는 돈 — 그 숫자만 던지면 통보가 됩니다. 무엇을 빼고 센 빈칸인지,
+   지금 남는 돈과 견주면 어떤지까지 말해 「그래서 어떻게 하나」 로 잇습니다 (fill: {unknown:[..], surplus}) */
+function fillWhy(f, more) {
+  f = f || {};
+  var u = (f.unknown || []).filter(Boolean), s = '';
+  if (u.length) s += '\n다만 이 빈칸은 **' + u.join(' · ') + josa(u[u.length - 1], '을', '를') + ' 빼고** 센 것이에요 — 확인되면 다시 줄어요.';
+  if (f.surplus != null && more > f.surplus) s += '\n지금 매달 남는 돈(**' + manTxt(Math.max(0, f.surplus)) + '**)보다 큰 돈이라, 한 상품으로 다 채우기보다 여러 곳에서 나눠 채우는 게 맞아요.';
+  return s || ' — 한 번에 어렵다면, 오늘이 첫 걸음이에요.';
 }
 function progress(p, t) {
   var w = Math.max(0, Math.min(100, p * 100));
@@ -497,7 +506,7 @@ function html(d) {
     (d.oneLine ? '<p class="one">' + txt(d.oneLine) + '</p>' : '') +
     '<div class="chips">' + [c.age != null ? c.age + '세' : null].concat(c.chips || [], [c.family, c.region, c.job]).filter(Boolean)
       .map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div>' +
-    (SQ && d.worry !== false ? '<div class="worry"><div class="wk">지금 그대로면 — ' + (openAt ? openAt + '세 이후 ' : '은퇴 후 ') + '한 달 ' + manTxt(SQ.goal) + ' 중</div>' +
+    (SQ && d.worry !== false ? '<div class="worry"><div class="wk">' + esc(d.worryLead || '지금 그대로면') + ' — ' + (openAt ? openAt + '세 이후 ' : '은퇴 후 ') + '한 달 ' + manTxt(SQ.goal) + ' 중</div>' +
       dayGrid(SQ.days, 'mint') + '<p>' + txt(daysText(SQ.days, SQ.now, SQ.goal)) + '</p>' +
       (d.worryNote ? '<div class="wn">' + txt(d.worryNote) + '</div>' : '') + '</div>' : '') + '</header>');
 
@@ -536,14 +545,14 @@ function html(d) {
     b3 += '<div class="card">' + cardHead({ title: '이 제안으로 빈칸을 얼마나 채우나요', sub: '매달 비는 ' + manTxt(SQ.gap) + ' 기준', icon: 'target' }) +
       '<div class="pg-l"><span>채우는 몫</span><b>' + Math.round(fill * 100) + '%</b></div>' + progress(fill, 'blue') +
       '<p class="p pg-t">' + txt('매달 비는 **' + manTxt(SQ.gap) + '** 중 **' + manTxt(prop) + '**을 채워요(' + P.target.label + ' 가정).' +
-        (rem > 0 ? '\n남은 **' + manTxt(rem) + '**까지 같은 방식으로 채우려면 매달 약 **' + manTxt(more) + '**을 더 모아야 해요 — 한 번에 어렵다면, 오늘이 첫 걸음이에요.' : '\n오늘 제안으로 빈칸이 다 채워져요.')) + '</p>' +
+        (rem > 0 ? '\n남은 **' + manTxt(rem) + '**을 같은 상품으로만 채운다면 매달 약 **' + manTxt(more) + '**이 더 들어요.' + fillWhy(d.fill, more) : '\n오늘 제안으로 빈칸이 다 채워져요.')) + '</p>' +
       (rem > 0 ? '<div class="note">' + txt('같은 상품·같은 가정으로 단순히 비례해 셌어요(설계서로 다시 확인).') + '</div>' : '') + '</div>';
   }
   if (steps && steps.length) b3 += '<div class="card">' + cardHead({ title: '언제 무엇이 일어나나요', icon: 'hourglass' }) + timeline(steps) + '</div>';
   if ((d.good && d.good.length) || (d.todo && d.todo.length)) {
     b3 += '<div class="card">' +
       (d.good && d.good.length ? '<div class="lst-h" style="margin-top:0">' + icon('star') + '잘하고 계신 것</div><ul class="ul good">' + d.good.slice(0, 3).map(function (x) { return '<li>' + txt(x) + '</li>'; }).join('') + '</ul>' +
-        (SQ && SQ.gap > 0 ? '<p class="but">' + txt('그런데 — 지금 준비된 것을 다 합쳐도 목표의 **' + Math.round(SQ.now / SQ.goal * 100) + '%**예요.') + '</p>' : '') : '') +
+        (SQ && SQ.gap > 0 ? '<p class="but">' + txt('그런데 — 지금 준비된 것을 다 합쳐도 목표의 **' + Math.round(SQ.now / SQ.goal * 100) + '%**예요.' + (d.fill && d.fill.unknown && d.fill.unknown.length ? '\n(' + d.fill.unknown.join(' · ') + josa(d.fill.unknown[d.fill.unknown.length - 1], '은', '는') + ' 아직 몰라서 빼고 셌어요)' : '')) + '</p>' : '') : '') +
       (d.todo && d.todo.length ? '<div class="lst-h">' + icon('memo') + '같이 할 일</div><ul class="ul todo">' + d.todo.slice(0, 4).map(function (x) { return '<li>' + txt(x) + '</li>'; }).join('') + '</ul>' : '') + '</div>';
   }
   if (b3) out.push(section(N(), '최종 제안', d.proposalHeadline || '결론부터 말씀드릴게요', b3, 'target'));

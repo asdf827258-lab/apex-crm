@@ -102,7 +102,7 @@ head('차. 고객이 스스로 부족을 느끼나 — 고객 숫자로만 (판 
 const goal = sample.goal, now = sample.nationalPension.monthly, days = Math.round(now / goal * 30);
 is(text.includes('지금 그대로면 — ' + sample.pension.openAge + '세 이후 한 달 ' + R.man(goal) + ' 중'), '히어로에 「지금 그대로면」 이 선다');
 const nos = (x) => x.replace(/\s+/g, '');   /* 굵게(<b>)가 공백으로 바뀌므로 공백을 빼고 견줍니다 */
-is(nos(text).includes(nos('한 달 30일 중 ' + days + '일만 지금 준비된 돈(' + R.man(now) + ')')) && (html.match(/<i class="on"/g) || []).length >= days,
+is(nos(text).includes(nos('한 달 30일 중 ' + days + '일은 지금 준비된 돈(' + R.man(now) + ')')) && (html.match(/<i class="on"/g) || []).length >= days,
   '30일 중 ' + days + '일 — 준비된 돈 ' + R.man(now) + ' ÷ 목표 ' + R.man(goal) + ' 로만 셈한다');
 is(text.indexOf('지금 그대로면') < text.indexOf('매월 낼 돈'), '부족이 상품보다 먼저 나온다 (히어로 → KPI)');
 is(text.includes('그런데 — 지금 준비된 것을 다 합쳐도 목표의 ' + Math.round(now / goal * 100) + '%'), '「잘하고 계신 것」 뒤에 「그런데 — 목표의 N%」');
@@ -125,7 +125,7 @@ is(/<script src="apex_report_engine\.js"><\/script>/.test(fin) && /<script src="
 is((fin.match(/onclick="rptPanel\(\)"/g) || []).length >= 1, '「고객 결과지」 단추가 있다');
 is(/name=opt\.real&&raw&&raw!=='고객님'\? raw : rptMask\(raw\)/.test(fin), '실명은 opt.real 일 때만 — 기본은 rptMask');
 is(/confirm\('카톡으로 나가는 파일에 고객 실명이 들어갑니다/.test(fin), '실명을 켜면 한 번 더 묻는다');
-is(/worryNote:saveP>0&&priv<=0&&!ap\?/.test(fin), '지금 모으는 연금저축·IRP 를 빼고 셌으면 뺐다고 밝힌다(1번)');
+is(/saveP>0&&priv<=0&&!ap\?'※ 지금 모으고 계신 연금저축·IRP·달러·변액/.test(fin), '지금 모으는 연금저축·IRP 를 빼고 셌으면 뺐다고 밝힌다(1번)');
 /* 판 X169 — 쌓인 금액 칸 · 탭과 결과지가 한 곳(psAccPlan)에서 센다 · 「불가」 대신 「점검 필요」 */
 is(/id="s_pen_acc"[^>]*placeholder="모름"/.test(fin) && !/id="s_pen_acc"[^>]*value="/.test(fin), '「쌓인 금액」 칸이 있고, 비어 있으면 모름이다(0 을 미리 넣지 않는다 · 1번)');
 /* 판 X175 — 쌓인 금액 셈(psAccPlan)은 준비된 연금 셈(finReady) 안에서 한 번만 부르고, 탭과 결과지는 finReady 를 부릅니다 */

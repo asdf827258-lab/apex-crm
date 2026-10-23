@@ -11094,6 +11094,12 @@ function ipTableRows(I,X){
    ★ DSR 은 계산기 그대로 주택담보대출 30년 원리금균등 가정 · 상속세는 추정(요건·공제는 세무 전문가 확인 · 2번)
    ═══════════════════════════════════════════════════════════ */
 var FS_LV={good:'가능',warn:'주의',bad:'점검 필요'};
+/* 함께 점검(wk*)에서 고객이 직접 한 답 — 숫자만 보고 내린 판정보다 먼저입니다.
+   「비상금 따로 없어요」 라고 하신 분께 「비상금 — 가능」 을 내밀면 결과지 전체를 안 믿게 됩니다(판 X176 · 0-1번) */
+function fsAns(k){ try{ return (typeof wkState==='function')?((wkState().ans||{})[k]||null):null; }catch(e){ return null; } }
+function fsWorse(a,b){ var r={good:0,warn:1,bad:2}; return (r[b]||0)>(r[a]||0)?b:a; }
+/* 국민연금 칸이 비었나 — 0 을 적은 것(가입 안 함)과 비운 것(모름)은 다릅니다(1번) */
+function finNpsKnown(){ var e=document.getElementById('s_nps'); return !!(e&&String(e.value).trim()!==''); }
 function fsPlan(n){
   if(typeof window.finData!=='function') return null;
   var d=finData(), I=ipPlan(), X=ipBase(I);
@@ -11106,26 +11112,50 @@ function fsPlan(n){
   edu.on=eduM>0&&ey>0; edu.kind=!edu.on?null:(edu.endAge>rage?'bad':'good');
   var est={estate:d.estate, tax:d.inheritTax, gap:d.inheritGap, life:v('inh_life')}; est.on=d.inheritTax>0; est.kind=!est.on?null:finEstKind(d);
   function cov(x){ return x.base==null?null:(x.gap===0?'good':(x.have>0?'warn':'bad')); }
+  var M=APEX_REPORT.man;
+  /* ★ 판 X176 — 사장님 말씀 「통보하듯이 말하지말고 이해가 될 수 있도록」. 칸마다 「가능 · 주의」 만 붙이지 않고
+       <b>왜 그렇게 봤는지</b>(고객 숫자 · 계산기 기준)와 <b>그래서 무엇을 하면 되는지</b>를 한 줄로 말합니다. */
+  var sr=Math.floor(cash.saveRatio);
+  var cashWhy=cash.surplus<0?'매달 '+M(-cash.surplus)+'이 모자라요 — 모자란 만큼 빚이나 저축을 깨서 메우고 있는 셈이에요.'
+    : cash.kind==='good'?'매달 '+M(cash.surplus)+'이 남고, 모으는 돈이 월급의 '+sr+'%예요 — 계산기 기준('+FIN_RULE.saveGood+'% 이상)을 넘어요.'
+    : '매달 '+M(cash.surplus)+'이 남지만 모으는 돈은 월급의 '+sr+'%예요 — 계산기는 '+FIN_RULE.saveGood+'% 이상을 넉넉하다고 봐요. 남는 돈 일부를 모으는 쪽으로 옮기면 올라가요.';
+  var aE=fsAns('emerg'), eKind=emerg>0?(aE==='아니요'?'warn':'good'):'bad';
+  var eWhy=emerg>0?(aE==='아니요'?'매달 '+M(emerg)+'을 떼어 두고 계시지만, 따로 둔 비상금 통장은 없다고 하셨어요 — 통장만 나눠도 급할 때 연금을 깨지 않아요.':'매달 '+M(emerg)+'씩 따로 모으고 계세요 — 급할 때 연금을 깨지 않아도 돼요.')
+    :'따로 모으는 비상금이 없어요 — 급한 일이 생기면 연금·저축부터 깨게 돼요.';
+  /* 가족 지키기 — 기준값을 넘어도 사망보험금이 대출보다 적으면 가족에게 빚이 남습니다. 「기준값을 넘어요 · 가능」 과
+     「가족이 버티는 기간 0개월」 이 한 장에 같이 서면 고객은 어느 쪽을 믿어야 할지 모릅니다(판 X176 · 0-1번) */
+  var fKind=cov(X.fam), fWhy=X.fam.base==null?'기준값을 셀 숫자가 비어 있어요':(X.fam.gap>0?'세 가지로 구한 기준값('+M(X.fam.base)+')보다 '+M(X.fam.gap)+' 모자라요':'세 가지로 구한 기준값('+M(X.fam.base)+')은 넘어요');
+  if(fKind&&I.debt>0&&I.left<=0){ fKind=fsWorse(fKind,I.life>0?'warn':'bad'); fWhy+=' — 그런데 사망보험금'+(I.life>0?' '+M(I.life)+'이':'이 없어')+' 대출 '+M(I.debt)+'을 다 갚지 못해, 가족이 생활비로 쓸 수 있는 달은 0개월이에요.'; }
+  var mWhy=X.me.base==null?'기준값을 셀 숫자가 비어 있어요':(X.me.gap>0?'세 가지로 구한 기준값('+M(X.me.base)+')보다 '+M(X.me.gap)+' 모자라요 — 지금 암 진단비로는 생활비 '+I.meMonths+'개월 치예요.':'세 가지로 구한 기준값('+M(X.me.base)+')을 넘어요.');
+  var aL=fsAns('loan'), dKind=debt.any?debt.kind:'good';
+  var dWhy=debt.any?'주택담보 DSR '+Math.round(d.dsr)+'% · LTV '+Math.round(d.ltv)+'%'+(loanM>0?' · 매달 원리금 '+M(loanM):'')+(debt.kind==='good'?' — 계산기 기준(DSR '+FIN_RULE.dsrOk+'% · LTV '+FIN_RULE.ltvOk+'% 이하) 안이라 지금 갚는 데는 무리가 없어요.':' — 계산기 기준(DSR '+FIN_RULE.dsrOk+'% · LTV '+FIN_RULE.ltvOk+'% 이하)을 넘어요.'):'대출이 없어요';
+  if(debt.any&&aL==='아니요'){ dKind=fsWorse(dKind,'warn'); dWhy+=' 다만 은퇴('+rage+'세) 뒤에도 대출이 남는다고 하셨어요 — 남은 원리금은 연금에서 나가요.'; }
+  debt.kind=dKind;   /* 대출 장 · 결과지 「판정」 도 고객의 답을 따릅니다 */
+  debt.after=debt.any&&aL==='아니요';
+  debt.sub=debt.after?'기준 안이지만 은퇴('+rage+'세) 뒤에도 남는다고 하셨어요':'DSR '+FIN_RULE.dsrOk+'% · LTV '+FIN_RULE.ltvOk+'% 이하면 가능 (계산기 기준)';
+  var un=(n&&n.unknown)||[];   /* 무엇을 몰라 뺐나 — rptData 한 곳이 정한 목록 그대로(5번) */
+  var rWhy=n&&n.goal>0?(n.gap0>0?'지금 준비된 '+M(n.now)+'은 목표 '+M(n.goal)+'의 '+Math.round(n.now/n.goal*100)+'%예요 — 매달 '+M(n.gap0)+'이 비어요'+(un.length?'('+un.join(' · ')+'은 아직 몰라 빼고 셌어요).':'.'):'목표를 채워요'):'목표 생활비를 넣으면 셀 수 있어요';
   var order=[
-    {k:'cash',  t:'남는 돈 (현금흐름)', kind:cash.kind, why:cash.surplus>=0?'매달 '+APEX_REPORT.man(cash.surplus)+' 남아요 · 저축률 '+Math.floor(cash.saveRatio)+'%':'매달 '+APEX_REPORT.man(-cash.surplus)+' 모자라요'},
-    {k:'emerg', t:'비상금', kind:emerg>0?'good':'bad', why:emerg>0?'매달 '+APEX_REPORT.man(emerg)+'씩 따로 모아요':'따로 모으는 돈이 없어요'},
-    {k:'fam',   t:'보장 · 가족 지키기', kind:cov(X.fam), why:X.fam.base==null?'기준값을 셀 숫자가 비어 있어요':(X.fam.gap>0?'기준값보다 '+APEX_REPORT.man(X.fam.gap)+' 모자라요':'기준값을 넘어요')},
-    {k:'me',    t:'보장 · 내 연금 지키기', kind:cov(X.me), why:X.me.base==null?'기준값을 셀 숫자가 비어 있어요':(X.me.gap>0?'기준값보다 '+APEX_REPORT.man(X.me.gap)+' 모자라요':'기준값을 넘어요')},
-    {k:'debt',  t:'대출', kind:debt.any?debt.kind:'good', why:debt.any?'주택담보 DSR '+Math.round(d.dsr)+'% · LTV '+Math.round(d.ltv)+'%'+(loanM>0?' · 매달 원리금 '+APEX_REPORT.man(loanM):''):'대출이 없어요'},
-    {k:'retire',t:'노후 연금', kind:n?finPenKind(n.goal,n.now):null, why:n&&n.goal>0?(n.gap0>0?'지금 그대로면 매달 '+APEX_REPORT.man(n.gap0)+' 비어요':'목표를 채워요'):'목표 생활비를 넣으면 셀 수 있어요'}];
+    {k:'cash',  t:'남는 돈 (현금흐름)', kind:cash.kind, why:cashWhy},
+    {k:'emerg', t:'비상금', kind:eKind, why:eWhy},
+    {k:'fam',   t:'보장 · 가족 지키기', kind:fKind, why:fWhy},
+    {k:'me',    t:'보장 · 내 연금 지키기', kind:cov(X.me), why:mWhy},
+    {k:'debt',  t:'대출', kind:dKind, why:dWhy},
+    {k:'retire',t:'노후 연금', kind:n?finPenKind(n.goal,n.now):null, why:rWhy}];
   if(edu.on) order.push({k:'edu', t:'교육비', kind:edu.kind, why:'막내 독립까지 '+ey+'년 · 앞으로 약 '+APEX_REPORT.man(edu.total)+(edu.endAge>rage?' · 은퇴 뒤까지 이어져요':'')});
   if(est.on) order.push({k:'est', t:'남길 것 (상속)', kind:est.kind, why:'상속세 추정 '+APEX_REPORT.man(est.tax)+(est.gap>0?' · 재원 '+APEX_REPORT.man(est.gap)+' 모자라요':' · 사망보험금으로 낼 수 있어요')});
   var first=null; order.forEach(function(o){ if(!first&&o.kind&&o.kind!=='good') first=o; });
   return {d:d, cash:cash, debt:debt, edu:edu, est:est, order:order, first:first};
 }
 function ipFamText(I){
-  if(I.life<=0) return '사망보험금이 **없어요**. 남은 대출 **'+APEX_REPORT.man(I.debt)+'**은 그대로 가족에게 남아요.';
-  if(I.left<=0) return '사망보험금 **'+APEX_REPORT.man(I.life)+'**으로는 대출 **'+APEX_REPORT.man(I.debt)+'**도 다 못 갚아요 — **'+APEX_REPORT.man(-I.left)+'**이 가족에게 남아요.';
-  return '사망보험금 **'+APEX_REPORT.man(I.life)+'**에서 대출 **'+APEX_REPORT.man(I.debt)+'**을 갚으면 **'+APEX_REPORT.man(I.left)+'**이 남아요.\n대출을 뺀 생활비 월 **'+APEX_REPORT.man(I.famLiving)+'**로 **'+I.famMonths+'개월**을 버텨요.';
+  var M=APEX_REPORT.man;
+  if(I.life<=0) return I.debt>0?'사망보험금이 **없어요**. 그러면 남은 대출 **'+M(I.debt)+'**을 가족이 그대로 떠안게 돼요.\n그래서 가족이 생활비로 쓸 수 있는 달은 **0개월**로 셌어요.':'사망보험금이 **없어요**. 내가 없을 때 가족의 생활비는 모아 둔 돈에서 나와요.';
+  if(I.left<=0) return '사망보험금 **'+M(I.life)+'**으로 대출 **'+M(I.debt)+'**을 갚으면, **갚지 못한 대출 '+M(-I.left)+'**이 가족에게 남아요.\n그래서 가족이 생활비로 쓸 수 있는 달은 **0개월**로 셌어요.';
+  return '사망보험금 **'+M(I.life)+'**에서 대출 **'+M(I.debt)+'**을 먼저 갚으면 **'+M(I.left)+'**이 남아요.\n이 돈을 대출을 뺀 생활비(월 **'+M(I.famLiving)+'**)로 나누면 **'+I.famMonths+'개월**을 버틸 수 있어요.';
 }
 function ipMeText(I){
-  if(I.dx<=0) return '암 진단비가 **없어요**. 치료하는 동안의 생활비는 연금·저축에서 나와요.';
-  return '암 진단비 **'+APEX_REPORT.man(I.dx)+'**은 지금 생활비 월 **'+APEX_REPORT.man(I.living)+'**로 **'+I.meMonths+'개월**이에요.\n그다음 달부터는 연금·저축을 꺼내 쓰게 돼요.';
+  if(I.dx<=0) return '암 진단비가 **없어요**. 그러면 치료하는 동안의 생활비는 연금·저축에서 나와요.';
+  return '암 진단비 **'+APEX_REPORT.man(I.dx)+'**을 지금 생활비(월 **'+APEX_REPORT.man(I.living)+'**)로 나누면 **'+I.meMonths+'개월** 치예요.\n치료가 그보다 길어지면, 그다음 달부터는 연금·저축을 꺼내 쓰게 돼요.';
 }
 function rptMask(n){
   n=String(n||'').replace(/\s+/g,'');
@@ -11211,6 +11241,11 @@ function rptData(opt){
   var now=RD.total, withP=now+(tgRow?tgRow.monthly:0), goal=n('s_target'), gap=Math.max(0,goal-withP);
   var saveP=n('s_pension')+n('s_irp')+n('s_taxfree');
   var gap0=Math.max(0,goal-now), inf=n('s_inf'), futGoal=goal*Math.pow(1+inf/100,Math.max(0,rage-age));
+  /* 아직 몰라서 빼고 센 것 — 빈칸이 「정해진 사실」 처럼 읽히지 않게, 무엇이 빠졌는지 늘 같이 말합니다(판 X176 · 1번) */
+  var nk=finNpsKnown(), unknown=[];
+  if(!nk) unknown.push('국민연금');
+  if(saveP>0&&priv<=0&&!ap) unknown.push('연금저축·IRP 쌓인 금액');
+  if(retp<=0&&fsAns('sev')==='모름') unknown.push('퇴직연금');
 
   /* 배분 — 지금 모으는 것 + 새로 드리는 연금 */
   var alloc=[], AL=[['s_emerg','비상금'],['s_pension','연금저축'],['s_irp','IRP'],['s_isa','ISA'],['s_taxfree','달러·변액'],['s_general','일반 투자']];
@@ -11231,7 +11266,8 @@ function rptData(opt){
     cliff.push({label:'은퇴 후 · 지금 그대로', value:now, tone:'red', display:M(now)});
     cliff.push({label:'목표 생활비', value:goal, tone:'blue', display:M(goal)});
     var cards0=[{type:'bars', title:'은퇴하는 날, 들어오는 돈이 이렇게 바뀌어요', icon:'chart', items:cliff,
-       note:income>0&&now<income?'지금 들어오는 돈의 **'+Math.round(now/income*100)+'%**만 남아요 — 월급이 **'+Math.round((1-now/income)*100)+'%** 줄어드는 셈이에요.':''}];
+       note:income>0&&now<income?'월급(세전 **'+M(income)+'**)이 멈추면, 지금 숫자가 있는 노후 돈은 **'+M(now)+'**이에요 — 월급의 **'+Math.round(now/income*100)+'%** 정도예요.'+
+         (unknown.length?'\n여기엔 **'+unknown.join(' · ')+'**이 빠져 있어요. 확인되면 이 막대는 길어져요.':'')+'\n이 차이를 생활을 줄여 맞출지, 지금부터 채울지가 오늘 같이 정할 일이에요.':''}];
     if(inf>0&&rage>age) cards0.push({type:'tiles', title:'같은 생활에 드는 돈도 늘어요', icon:'coin', items:[
       {label:'지금 돈으로 목표', value:goal, sub:'오늘 정한 금액'},
       {label:rage+'세가 되면', value:futGoal, sub:'물가 연 '+inf+'%씩 오르면', tone:'red', assumed:true}],
@@ -11239,10 +11275,13 @@ function rptData(opt){
     sections.push({kicker:'핵심 이슈', icon:'hourglass', title:'지금 그대로면, 은퇴하는 날 월급이 이렇게 줄어요', cards:cards0,
       ask:gap0>0?'매달 '+M(gap0)+'이 비는 날이 오면, 어디부터 줄이실 건가요? 같이 미리 막아 봐요.':''});
     var st=FS_LV[finPenKind(goal,withP)];   /* 「불가」 는 포기로 읽힙니다(판 X169) · 판정은 「고칠 순서」 와 한 자(판 X174) */
-    sections.push({kicker:'핵심 이슈', icon:'target', title:'오늘 제안까지 더하면, 판정은요', cards:[
+    sections.push({kicker:'핵심 이슈', icon:'target', title:'오늘 제안까지 더하면 어디까지 오나요', cards:[
       {type:'verdict', status:st, title:st==='가능'?'제안까지 더하면 목표를 채워요':st==='주의'?'거의 다 왔어요 — 조금만 더 채우면 돼요':'아직 많이 비어요 — 함께 채울 방법을 찾아봐요',
+       /* 「점검 필요」 라는 딱지만 붙이면 통보입니다 — 그 딱지가 어떤 자로 붙었는지 말합니다(판 X176) */
+       text:'목표 생활비의 **'+Math.round(withP/goal*100)+'%**까지 와요. 계산기는 목표를 다 채우면 「가능」, '+Math.round(FIN_RULE.penWarnRatio*100)+'%를 넘으면 「주의」, 그보다 적으면 「점검 필요」로 봐요.'+
+         (unknown.length?'\n**'+unknown.join(' · ')+'**을 빼고 센 판정이라, 확인되면 달라질 수 있어요.':''),
        reasons:['지금 준비된 것 매달 **'+M(now)+'**', tgRow?'제안 연금을 더하면 **'+M(withP)+'**':'제안 연금이 아직 정해지지 않았어요', gap>0?'목표까지 매달 **'+M(gap)+'** 부족':'목표보다 매달 **'+M(withP-goal)+'** 여유'],
-       checks:['목표 생활비를 부부가 함께 정한 금액인지', !np?'국민연금 공단 조회액':'국민연금 금액이 공단 조회액인지', saveP>0&&!ap?'연금저축·IRP·달러·변액에 지금까지 쌓인 금액':'물가를 생각해 여유를 둘지']}
+       checks:['목표 생활비를 부부가 함께 정한 금액인지', !nk?'국민연금 공단 조회액 — 넣으면 이 판정이 다시 셈해져요':'국민연금 금액이 공단 조회액인지', saveP>0&&!ap?'연금저축·IRP·달러·변액에 지금까지 쌓인 금액':'물가를 생각해 여유를 둘지']}
     ]});
   }
   sections.push({kicker:'핵심 이슈', icon:'coin', title:'지금 월급, 어디로 가고 있나요', cards:[
@@ -11250,7 +11289,8 @@ function rptData(opt){
       {label:'고르는 지출', value:choice}, {label:'저축·투자', value:saving, tone:'blue'}]},
     {type:'verdict', status:surplus>=(P?P.premium:0)?'가능':'주의',
      title:surplus>=0?'매달 '+M(surplus)+'이 남아요':'매달 '+M(-surplus)+'이 모자라요',
-     text:P?(surplus>=P.premium?'제안 연금 **'+M(P.premium)+'**은 남는 돈 안에서 낼 수 있어요.':'제안 연금 **'+M(P.premium)+'**을 내려면 지출이나 다른 저축을 조금 옮겨야 해요 — 어디서 옮길지 같이 볼까요?'):''}
+     text:'들어오는 **'+M(income)+'**에서 꼭 나가는 돈 **'+M(fixed)+'**, 고르는 지출 **'+M(choice)+'**, 모으는 돈 **'+M(saving)+'**을 빼고 남은 돈이에요.'+
+       (P?'\n'+(surplus>=P.premium?'그래서 제안 연금 **'+M(P.premium)+'**은 이 남는 돈 안에서 낼 수 있어요.':'제안 연금 **'+M(P.premium)+'**을 내려면 지출이나 다른 저축을 조금 옮겨야 해요 — 어디서 옮길지 같이 볼까요?'):'')}
   ]});
   var yrs=+opt.years||((typeof wkYears==='function')?wkYears():0)||0, sev=n('s_severance');
   if(yrs>0 && sev>0){
@@ -11277,9 +11317,9 @@ function rptData(opt){
   var good=[], todo=[];
   if(income>0 && saving/income>=0.2) good.push('**소득의 '+Math.round(saving/income*100)+'%**를 이미 모으고 계세요.');
   if(n('s_pension')+n('s_irp')>0) good.push('**연금저축·IRP**를 이미 쓰고 계세요 — 노후 준비의 바닥이에요.');
-  if(n('s_emerg')>0) good.push('**비상금**을 따로 모으고 계세요 — 급할 때 연금을 깨지 않아도 돼요.');
+  if(n('s_emerg')>0&&fsAns('emerg')!=='아니요') good.push('**비상금**을 따로 모으고 계세요 — 급할 때 연금을 깨지 않아도 돼요.');   /* 「따로 없어요」 라고 답하신 분께는 칭찬하지 않습니다(판 X176) */
   if(np&&!np.estimated&&np.monthly>0) good.push('**국민연금**이 매달 '+M(np.monthly)+' 준비돼 있어요.');
-  if(surplus>0) good.push('매달 **'+M(surplus)+'**이 남아 여유가 있어요.');
+  if(surplus>0) good.push('매달 **'+M(surplus)+'**이 남아요 — 이 돈이 노후를 채울 자리예요.');
   good.push('은퇴 전에 **미리 준비하려고** 오늘 시간을 내셨어요.');
   if(saveP>0&&priv<=0&&!ap) todo.push('**연금저축·IRP·달러·변액에 쌓인 금액** 알려 주기 — 빈칸이 줄어들 수 있어요');
   if(!np) todo.push('**국민연금 공단 조회액** 확인하기');
@@ -11299,7 +11339,7 @@ function rptData(opt){
   if(goal>0) assume.push('**목표 생활비** — 계산기에 적힌 월 '+M(goal)+'이에요(지금 돈 기준 · 물가 미반영).');
 
   var summary=[];
-  if(goal>0&&gap0>0) summary.push('지금 그대로면 은퇴 후 매달 **'+M(gap0)+'**이 비어요 — 목표의 **'+Math.round(now/goal*100)+'%**만 준비돼 있어요.');
+  if(goal>0&&gap0>0) summary.push('지금 준비된 돈은 목표 생활비의 **'+Math.round(now/goal*100)+'%**예요 — 매달 **'+M(gap0)+'**이 아직 비어 있어요'+(unknown.length?'('+unknown.join(' · ')+' 빼고 셈)':'')+'.');
   if(P){ summary.push('매달 **'+M(P.premium)+'** × **'+P.payYears+'년**, '+rage+'세부터 받아요.');
     summary.push('최저보증 기준 매달 **'+M(PS.guarM)+'**'+(PS.isVar&&tgRow?(tgRow.byGuarantee?' — '+tgRow.label+'가 나도 보증 쪽이 더 커요':', '+tgRow.label+'이면 **'+M(tgRow.monthly)+'**(가정)'):'')+(PS.isVar&&tgRow&&tgRow.byGuarantee?'.':'이에요.')); }
   summary.push('지금 매달 들어오는 돈 **'+M(income)+'**, 남는 돈 **'+M(surplus)+'**이에요.');
@@ -11335,15 +11375,15 @@ function rptData(opt){
   if(meEmpty.length) todo.push('**'+meEmpty.slice(0,3).join(' · ')+'** 비어 있는 곳 점검하기 (보장은 심사 결과에 따릅니다)');
 
   /* 계산기 기능을 상담 말로 — 대출 · 교육비 · 남길 것 · 고칠 순서 (판 X174) */
-  var F=fsPlan({goal:goal, now:now, withP:withP, gap0:gap0});
+  var F=fsPlan({goal:goal, now:now, withP:withP, gap0:gap0, unknown:unknown});
   if(F){
     var fc=[];
     if(F.debt.any) fc.push({type:'tiles', title:'대출이 노후를 먹나요', icon:'house', items:[
       {label:'매달 대출로 나가는 돈', value:F.debt.loanM, sub:'월급의 '+Math.round(F.debt.loanRatio)+'%', tone:F.debt.loanRatio>0?'orange':null},
       {label:'주택담보 DSR', value:Math.round(F.debt.dsr)+'', unit:'%', sub:'30년 원리금균등 가정', tone:F.debt.kind==='good'?'green':F.debt.kind==='warn'?'orange':'red'},
       {label:'LTV', value:Math.round(F.debt.ltv)+'', unit:'%', sub:'집값 대비 담보대출'},
-      {label:'판정', value:FS_LV[F.debt.kind], sub:'DSR '+FIN_RULE.dsrOk+'% · LTV '+FIN_RULE.ltvOk+'% 이하면 가능 (계산기 기준)'}],
-      note:'은퇴 뒤에도 대출이 남으면 그 원리금은 연금에서 나가요.'});
+      {label:'판정', value:FS_LV[F.debt.kind], sub:F.debt.sub}],
+      note:F.debt.after?'은퇴('+rage+'세) 뒤에도 대출이 남는다고 하셨어요 — 그때부터는 남은 원리금이 연금에서 나가요. 언제 끝나는지 같이 확인해요.':'은퇴 뒤에도 대출이 남으면 그 원리금은 연금에서 나가요.'});
     if(F.edu.on) fc.push({type:'text', title:'교육비와 노후가 겹쳐요', icon:'calendar',
       text:'막내가 독립할 때까지 **'+F.edu.years+'년** · 교육비 월 **'+APEX_REPORT.man(F.edu.eduM)+'** → 앞으로 약 **'+APEX_REPORT.man(F.edu.total)+'**.\n그때 고객님은 **'+F.edu.endAge+'세** — '+(F.edu.endAge>F.edu.rage?'**은퇴('+F.edu.rage+'세) 뒤까지** 교육비가 이어져요.':'은퇴('+F.edu.rage+'세) 전에 끝나요.'),
       note:'막내 '+IP_RULE.indepAge+'세 독립은 APEX 원칙(가정)이에요.'});
@@ -11371,12 +11411,15 @@ function rptData(opt){
   return {
     /* 상담 화면(wk*)이 다시 세지 않고 이 값을 씁니다 — 한 화면 한 답(5번). 엔진은 이 칸을 읽지 않습니다 */
     _n:{now:now, goal:goal, gap0:gap0, withP:withP, income:income, inf:inf, futGoal:futGoal, age:age, rage:rage,
-        nps:np?np.monthly:0, npsEst:false, ret:retp, own:priv+(ap?ap.man:0), house:hp, saveP:saveP, accKnown:!!ap},
+        nps:np?np.monthly:0, npsEst:false, npsKnown:nk, unknown:unknown, ret:retp, own:priv+(ap?ap.man:0), house:hp, saveP:saveP, accKnown:!!ap},
     client:{name:name, age:age, job:job||null, retireAge:rage},
     advisor:opt.advisor||'APEX 사업단',
     date:thisYear+'년 '+(new Date().getMonth()+1)+'월',
     topic:'노후 연금 준비',
-    oneLine:goal>0&&gap0>0?'지금 그대로면 '+rage+'세부터 한 달 **'+M(goal)+'** 중 **'+M(now)+'**만 들어와요.\n'+(P&&tgRow?'월 **'+M(P.premium)+'**씩 **'+P.payYears+'년**이면 그 빈칸에 매달 **'+M(tgRow.monthly)+'**'+(PS.isVar?'('+tgRow.label+' 가정)':'')+'이 채워져요.':'이 빈칸을 같이 줄여 봐요.'):
+    /* 히어로 — 「…만 들어와요」 로 선고하지 않고, 무엇으로 셌는지 · 무엇이 빠졌는지 · 오늘 제안이 무엇을 하는지 순서로(판 X176) */
+    oneLine:goal>0&&gap0>0?'오늘 적어 주신 것으로 세어 보면, '+rage+'세 이후 한 달 생활비 **'+M(goal)+'** 가운데 지금 준비돼 있는 돈은 **'+M(now)+'**이에요.\n'+
+      (unknown.length?'여기엔 **'+unknown.join(' · ')+'**이 빠져 있어요 — 아직 몰라서요. 확인되면 이 숫자는 올라가요.\n':'')+
+      (P&&tgRow?'오늘 제안(월 **'+M(P.premium)+'** × **'+P.payYears+'년**)은 이 빈칸에 매달 **'+M(tgRow.monthly)+'**'+(PS.isVar?'('+tgRow.label+' 가정)':'')+'을 보태는 방법이에요.':'이 빈칸을 같이 줄여 봐요.'):
       P&&tgRow?'월 **'+M(P.premium)+'**씩 **'+P.payYears+'년** 모으면, '+rage+'세부터 매달 **'+M(tgRow.monthly)+'**'+(PS.isVar?'('+tgRow.label+' 가정)':'')+'을 받는 구조예요.':
       '지금 소득·지출·노후 준비를 한 장으로 정리했어요.',
     kpis:kp,
@@ -11391,7 +11434,10 @@ function rptData(opt){
     goal:goal>0?goal:null,
     /* 지금 모으는 연금저축·IRP·변액은 쌓인 금액을 몰라 「지금 준비된 돈」 에 넣지 않습니다(연금 시뮬레이션 탭과 같은 기준).
        숨기면 고객이 「나 IRP 넣고 있는데?」 하고 결과지 전체를 의심합니다 — 넣지 않았다고 밝히고 묻습니다(1번). */
-    worryNote:saveP>0&&priv<=0&&!ap?'※ 지금 모으고 계신 연금저축·IRP·달러·변액(월 '+M(saveP)+')은 **쌓인 금액을 몰라 넣지 않았어요.** 알려 주시면 빈칸이 다시 계산돼요.':null,
+    worryLead:unknown.length?'지금 알고 있는 돈으로만':'지금 그대로면',
+    worryNote:[!nk?'※ **국민연금은 넣지 않았어요** — 공단 조회액을 알려 주시면 이 칸이 다시 셈해져요.':null,
+      saveP>0&&priv<=0&&!ap?'※ 지금 모으고 계신 연금저축·IRP·달러·변액(월 '+M(saveP)+')은 **쌓인 금액을 몰라 넣지 않았어요.** 알려 주시면 빈칸이 다시 계산돼요.':null].filter(Boolean).join('\n')||null,
+    fill:{unknown:unknown, surplus:surplus},
     sections:sections,
     explain:P?[
       {q:'왜 '+(PS.isVar?'변액':'')+'연금인가요?', a:PS.isVar?'은퇴까지 **'+(rage-age)+'년**이 남았어요. 긴 시간은 펀드로 굴려야 물가를 이길 수 있고, 펀드가 부진할 때를 위해 **최저보증**이 있는 상품을 골랐어요.':'정해진 방식으로 쌓여 **받을 돈이 미리 보이는** 상품이에요.'},
@@ -11495,11 +11541,14 @@ function wkM(x){ return APEX_REPORT.parts.man(x); }
 /* 노후 돈의 세 층 — 직접 그립니다(9번). 빈 층은 빨간 점선.
    ★ SVG 로 그렸더니 폰 폭에서 글자가 9px 로 줄었습니다 — 글자 크기가 그대로 서도록 칸으로 그립니다 */
 function wkLayers(n){
-  var L=[{t:'3층 · 내가 준비',s:'개인연금·연금저축·IRP',v:n.own,c:'#8B5CF6'},{t:'2층 · 회사가 준비',s:'퇴직연금',v:n.ret,c:'#03B26C'},{t:'1층 · 나라가 준비',s:'국민연금'+(n.npsEst?' (추정)':''),v:n.nps,c:'#18A5A5'}];
+  /* 「비어 있어요」 는 「없다」 로 읽힙니다 — 몰라서 빈 것과 정말 없는 것을 가립니다(판 X176 · 1번) */
+  var L=[{t:'3층 · 내가 준비',s:'개인연금·연금저축·IRP',v:n.own,c:'#8B5CF6',off:n.saveP>0&&!n.accKnown?'월 '+wkM(n.saveP)+' 넣는 중 · 쌓인 돈 모름':'아직 숫자가 없어요'},
+         {t:'2층 · 회사가 준비',s:'퇴직연금',v:n.ret,c:'#03B26C',off:'아직 숫자가 없어요'},
+         {t:'1층 · 나라가 준비',s:'국민연금'+(n.npsEst?' (추정)':''),v:n.nps,c:'#18A5A5',off:n.npsKnown?'없어요':'조회 전 · 모름'}];
   return '<div class="wk-ly" role="img" aria-label="노후 돈의 세 층">'+L.map(function(x,i){
     var on=x.v>0;
     return '<div class="wk-l'+(on?'':' off')+'" style="margin:0 '+((2-i)*14)+'px;'+(on?'background:'+x.c:'')+'"><div><b>'+wkEsc(x.t)+'</b><small>'+wkEsc(x.s)+'</small></div>'+
-      '<span>'+(on?'월 '+wkEsc(wkM(x.v)):'비어 있어요')+'</span></div>';
+      '<span>'+(on?'월 '+wkEsc(wkM(x.v)):wkEsc(x.off))+'</span></div>';
   }).join('')+'</div>';
 }
 /* 기준값과 견준 한 줄 — 기준값이 서야만 적습니다(1번) */
@@ -11532,11 +11581,10 @@ function wkSlides(){
     S.push({part:'이해', html:'<div class="wk-k">이해 · 현금흐름</div><h2 class="wk-h">월급이<br>어디로 가고 있나요</h2><div class="wkx">'+
       APEX_REPORT.parts.hbars([{label:'꼭 나가는 돈',value:C.fixed,tone:'gray',display:wkM(C.fixed)},{label:'고르는 지출',value:C.choice,tone:'orange',display:wkM(C.choice)},
         {label:'모으는 돈',value:C.saving,tone:'blue',display:wkM(C.saving)},{label:C.surplus>=0?'남는 돈':'모자라는 돈',value:Math.abs(C.surplus),tone:C.surplus>=0?'green':'red',display:wkM(Math.abs(C.surplus))}])+'</div>'+
-      '<p class="wk-p">'+wkT('들어오는 **'+wkM(C.income)+'** 중 **'+Math.floor(C.saveRatio)+'%**를 모으고 있어요 — 계산기 판정 **'+FS_LV[C.kind]+'**(저축률 '+FIN_RULE.saveGood+'% 이상 · 남는 돈 0 이상이면 가능).'+
-        (C.surplus<0?'\n매달 모자라는 만큼은 빚이나 저축을 깨서 메우고 있어요.':'\n남는 돈이 있어야 집을 지을 수 있어요.'))+'</p>'});
+      '<p class="wk-p">'+wkT('들어오는 **'+wkM(C.income)+'**에서 꼭 나가는 돈 · 고르는 지출 · 모으는 돈을 빼고 나면 이렇게 돼요.\n'+F.order[0].why)+'</p>'});
   }
   S.push({part:'이해', html:'<div class="wk-k">이해 1</div><h2 class="wk-h">노후 돈은 세 층으로 와요</h2>'+wkLayers(n)+
-    '<p class="wk-p">'+wkT(n.own>0&&n.ret>0&&n.nps>0?'세 층이 다 있어요. 이제 **높이**가 충분한지 볼게요.':'**빨간 점선** 층은 지금 비어 있어요. 비어 있는 층만큼 노후 월급이 얇아져요.')+'</p>'});
+    '<p class="wk-p">'+wkT(n.own>0&&n.ret>0&&n.nps>0?'세 층이 다 있어요. 이제 **높이**가 충분한지 볼게요.':'**점선** 층은 아직 숫자가 없는 층이에요. 정말 없는 건지, 몰라서 비어 있는 건지는 뒤에서 같이 확인해요.\n층이 하나 빌 때마다 노후 월급이 그만큼 얇아져요.')+'</p>'});
   S.push({part:'이해', html:'<div class="wk-k">이해 2</div><h2 class="wk-h">「얼마 모았나」 보다<br>「매달 얼마 받나」 예요</h2>'+
     '<div class="wkx"><div class="tiles c2"><div class="tile"><div class="tk">통장에 쌓인 돈</div><div class="tv">'+APEX_REPORT.parts.big(10000)+'</div></div>'+
     '<div class="tile" style="background:#E8F3FF"><div class="tk">매달 받는 돈으로 바꾸면</div><div class="tv" style="color:#3182F6">'+APEX_REPORT.parts.big(10000/fac)+'</div></div></div></div>'+
@@ -11559,11 +11607,12 @@ function wkSlides(){
       (n.saveP>0&&!n.accKnown?'<div class="wk-n">'+wkT('지금 모으시는 연금저축·IRP·달러·변액(월 '+wkM(n.saveP)+')은 쌓인 금액을 몰라 **넣지 않았어요** — 점검에서 같이 채워요.')+'</div>':'')});
     if(n.income>0) S.push({part:'위기', html:'<div class="wk-k">내 숫자 2</div><h2 class="wk-h">은퇴하는 날,<br>월급이 이렇게 바뀌어요</h2><div class="wkx">'+
       APEX_REPORT.parts.hbars([{label:'지금 월급(세전)',value:n.income,tone:'gray'},{label:'은퇴 후 · 지금 그대로',value:n.now,tone:'red'},{label:'목표 생활비',value:n.goal,tone:'blue'}])+'</div>'+
-      (n.now<n.income?'<p class="wk-p">'+wkT('들어오는 돈이 **'+Math.round((1-n.now/n.income)*100)+'%** 줄어요. 줄어든 만큼 생활을 줄이거나, 지금 채워야 해요.')+'</p>':'')});
+      (n.now<n.income?'<p class="wk-p">'+wkT('월급 **'+wkM(n.income)+'**이 멈추면, 지금 숫자가 있는 노후 돈은 **'+wkM(n.now)+'**이에요.'+
+        (n.unknown.length?'\n여기엔 **'+n.unknown.join(' · ')+'**이 빠져 있어요 — 확인되면 이 막대는 길어져요.':'')+'\n이 차이를 생활을 줄여 맞출지, 지금부터 채울지가 오늘 같이 정할 일이에요.')+'</p>':'')});
     if(n.gap0>0) S.push({part:'위기', html:'<div class="wk-k">내 숫자 3</div><h2 class="wk-h">빈칸을 채우려면<br>은퇴하는 날 통장에</h2>'+
       '<div class="wk-big">'+APEX_REPORT.parts.big(n.gap0*fac)+'</div>'+
       '<p class="wk-p">'+wkT('매달 비는 **'+wkM(n.gap0)+'**을 연금으로 받으려면, 은퇴하는 날 약 **'+wkM(n.gap0*fac)+'**이 쌓여 있어야 해요.\n지금 그 돈이 어디서 오고 있나요?')+'</p>'+
-      '<div class="wk-n">'+wkT('매달 비는 돈 × 연금 전환계수 '+fac+'(가정)으로 단순하게 셈한 값이에요.')+'</div>'});
+      '<div class="wk-n">'+wkT('매달 비는 돈 × 연금 전환계수 '+fac+'(가정)으로 단순하게 셈한 값이에요.'+(n.unknown.length?' '+n.unknown.join(' · ')+'을 빼고 센 빈칸이라, 확인되면 이 돈은 줄어요.':''))+'</div>'});
   }
   if(P&&P.delay&&P.delay.length>1){
     var lost=P.delay[0].monthly-P.delay[1].monthly, yrs=Math.max(0,(P.receiveUntil||100)-P.openAge);
@@ -11576,7 +11625,7 @@ function wkSlides(){
     '<div class="wk-big" style="color:'+(I.famMonths>0?'#18A5A5':'#F04452')+'">'+APEX_REPORT.parts.big(I.famMonths+'','개월')+'</div>'+
     '<p class="wk-p">'+wkT(ipFamText(I))+'</p>'+wkGapLine(ipBase(I).fam,'사망보장')+(I.spouse||I.kids>0?'':'<div class="wk-n">배우자·자녀 칸이 비어 있어요 — 지킬 가족이 없으면 이 장의 무게는 낮아져요.</div>')});
   var meEmpty=I.me.filter(function(x){ return !(x.v>0); }).map(function(x){ return x.name; });
-  S.push({part:'위기', html:'<div class="wk-k">내 숫자 · 내 연금 지키기</div><h2 class="wk-h">아프면,<br>연금을 깨게 돼요</h2>'+
+  S.push({part:'위기', html:'<div class="wk-k">내 숫자 · 내 연금 지키기</div><h2 class="wk-h">아프면, 진단비로<br>몇 달을 버틸까요</h2>'+
     '<div class="wk-big" style="color:'+(I.meMonths>0?'#18A5A5':'#F04452')+'">'+APEX_REPORT.parts.big(I.meMonths+'','개월')+'</div>'+
     '<p class="wk-p">'+wkT(ipMeText(I))+'</p>'+wkGapLine(ipBase(I).me,'암 진단비')+
     (meEmpty.length?'<div class="wk-empty"><b>비어 있는 곳</b>'+meEmpty.map(function(x){ return '<span>'+wkEsc(x)+'</span>'; }).join('')+'</div>':'')+
@@ -11585,7 +11634,7 @@ function wkSlides(){
   if(F&&F.debt.any) S.push({part:'위기', html:'<div class="wk-k">내 숫자 · 대출</div><h2 class="wk-h">대출이<br>노후를 먹나요</h2>'+
     '<div class="wk-big" style="color:'+(F.debt.kind==='good'?'#18A5A5':F.debt.kind==='warn'?'#FE9800':'#F04452')+'">'+APEX_REPORT.parts.big({good:'괜찮아요',warn:'주의',bad:'점검 필요'}[F.debt.kind])+'</div>'+
     '<p class="wk-p">'+wkT((F.debt.loanM>0?'매달 대출로 **'+wkM(F.debt.loanM)+'** — 월급의 **'+Math.round(F.debt.loanRatio)+'%**가 나가요.\n':'')+
-      '주택담보 DSR **'+Math.round(F.debt.dsr)+'%** · LTV **'+Math.round(F.debt.ltv)+'%** (계산기 기준: DSR '+FIN_RULE.dsrOk+'% · LTV '+FIN_RULE.ltvOk+'% 이하면 가능).\n은퇴 전에 다 갚지 못하면 그 원리금은 **연금에서** 나가요.')+'</p>'+
+      F.order[4].why+(fsAns('loan')==='아니요'?'':'\n은퇴 전에 다 갚지 못하면 그 원리금은 **연금에서** 나가요.'))+'</p>'+
     '<div class="wk-n">DSR 은 주택담보대출 30년 원리금균등으로 가정한 계산기 값이에요.</div>'});
   if(F&&F.edu.on) S.push({part:'위기', html:'<div class="wk-k">내 숫자 · 교육비</div><h2 class="wk-h">교육비와 노후가<br>겹쳐요</h2>'+
     '<div class="wk-big" style="color:#FE9800">'+APEX_REPORT.parts.big(F.edu.total)+'</div>'+
@@ -11639,7 +11688,7 @@ function wkEndHtml(){
     '<div class="tile" style="background:#FFF3E0"><div class="tk">모르거나 아니요</div><div class="tv" style="color:#C46A00">'+APEX_REPORT.parts.big((asked-R.ok)+'','가지')+'</div></div>'+
     '<div class="tile"><div class="tk">아직 안 물음</div><div class="tv">'+APEX_REPORT.parts.big((all-asked)+'','가지')+'</div></div></div></div>';
   if(n.goal>0) h+='<p class="wk-p">'+wkT(n.gap0>0
-      ? '지금 숫자로 은퇴 후 매달 **'+wkM(n.gap0)+'**이 비어요'+(n.withP>n.now?(n.withP>=n.goal?' — 오늘 제안을 더하면 **빈칸이 다 채워져요.**':' — 오늘 제안을 더하면 **'+wkM(n.goal-n.withP)+'**으로 줄어요.'):'.')
+      ? '지금 숫자로 은퇴 후 매달 **'+wkM(n.gap0)+'**이 비어요'+(n.unknown.length?'('+n.unknown.join(' · ')+' 빼고 셈)':'')+(n.withP>n.now?(n.withP>=n.goal?' — 오늘 제안을 더하면 **빈칸이 다 채워져요.**':' — 오늘 제안을 더하면 **'+wkM(n.goal-n.withP)+'**으로 줄어요.'):'.')
       : '지금 숫자로도 목표 생활비 **'+wkM(n.goal)+'**을 채워요.')+'</p>';
   if(R.todo.length) h+='<div class="wk-todo"><b>다음 만남 전까지 같이 채울 것</b><ol>'+R.todo.map(function(x){ return '<li>'+wkT(x)+'</li>'; }).join('')+'</ol></div>';
   h+='<div class="wk-end"><button type="button" onclick="wkReport(\'open\')">📄 결과지 열기</button><button type="button" onclick="wkReport(\'save\')">HTML 저장</button>'+
@@ -11650,9 +11699,18 @@ function wkMeter(){
   var n=wkN().n; if(!(n.goal>0)) return '';
   return '<div class="wk-meter"><span>지금 빈칸</span><b>매달 '+wkEsc(wkM(n.gap0))+'</b><span class="wk-ms">준비 '+wkEsc(wkM(n.now))+' / 목표 '+wkEsc(wkM(n.goal))+'</span></div>';
 }
+/* 장마다 이름표 — 물음은 그 물음 · 나머지는 장 머리글(「내 숫자 4」 처럼 장마다 다름).
+   ★ 판 X176 — 답을 적으면 장이 늘거나 줍니다(은퇴 나이를 당기면 「시작을 미루면」 장이 빠지고, 막내 나이를 적으면
+     「교육비」 장이 생깁니다). 번호(WK.i)만 들고 있으면 「다음」 을 눌렀을 때 <b>국민연금 물음을 건너뛰었습니다</b>.
+     그래서 번호가 아니라 이 이름표로 「보던 장」 을 붙잡습니다. */
+function wkSlideKey(sl){ if(!sl) return ''; if(sl.item) return 'q:'+sl.item.k; if(sl.end) return 'end'; var m=/class="wk-k">([^<]*)</.exec(sl.html||''); return sl.part+':'+(m?m[1]:''); }
+function wkSlideAt(S){
+  /* 누가 번호를 직접 옮겼으면(다시 열기 · 점검) 그 번호가 먼저입니다. 번호가 그대로인데 장이 늘고 줄었을 때만 이름표로 찾습니다 */
+  if(WK.key&&WK.i===WK.ki){ for(var i=0;i<S.length;i++) if(wkSlideKey(S[i])===WK.key) return i; }
+  return Math.max(0,Math.min(S.length-1,WK.i)); }
 function wkPaint(){
   var ov=document.getElementById('wkOv'); if(!ov) return;
-  var S=wkSlides(); WK.i=Math.max(0,Math.min(S.length-1,WK.i)); var sl=S[WK.i];
+  var S=wkSlides(); WK.i=wkSlideAt(S); var sl=S[WK.i]; WK.key=wkSlideKey(sl); WK.ki=WK.i;
   var parts=['이해','위기','전략','점검','정리'], cur=sl.part;
   ov.querySelector('.wk-top').innerHTML='<div class="wk-parts">'+parts.map(function(p){ return '<span class="'+(p===cur?'on':'')+'">'+p+'</span>'; }).join('')+'</div>'+
     '<div class="wk-pg">'+(WK.i+1)+' / '+S.length+'</div><button type="button" class="wk-x" onclick="wkClose()" aria-label="닫기">✕</button>';
@@ -11661,7 +11719,7 @@ function wkPaint(){
   ov.querySelector('.wk-next').textContent=WK.i===S.length-1?'마치기':'다음 ›';
   var st=wkState(); st.at=WK.i; wkSave(st);
 }
-function wkGo(d){ var S=wkSlides(); if(d>0&&WK.i===S.length-1){ wkClose(); return; } WK.i+=d; wkPaint(); var b=document.querySelector('#wkOv .wk-body'); if(b) b.scrollTop=0; }
+function wkGo(d){ var S=wkSlides(); WK.i=wkSlideAt(S); if(d>0&&WK.i===S.length-1){ wkClose(); return; } WK.i=Math.max(0,Math.min(S.length-1,WK.i+d)); WK.key=wkSlideKey(S[WK.i]); WK.ki=WK.i; wkPaint(); var b=document.querySelector('#wkOv .wk-body'); if(b) b.scrollTop=0; }
 function wkAnswer(k,s){ var st=wkState(); st.ans[k]=s; wkSave(st); wkPaint(); }
 function wkSet(id,v){
   var e=document.getElementById(id); if(!e) return; e.value=v; e.dispatchEvent(new Event('input',{bubbles:true}));
@@ -11673,7 +11731,7 @@ function wkReport(kind){
   var d=rptData({years:wkYears(), advisor:adv, real:false});
   if(kind==='save') APEX_REPORT.download(d); else APEX_REPORT.open(d);
 }
-function wkReset(){ if(!confirm('같이 점검한 답을 지우고 처음부터 할까요? (계산기에 적은 숫자는 그대로 둡니다)')) return; try{ localStorage.removeItem('wk_v1'); }catch(e){} WK.i=0; wkPaint(); }
+function wkReset(){ if(!confirm('같이 점검한 답을 지우고 처음부터 할까요? (계산기에 적은 숫자는 그대로 둡니다)')) return; try{ localStorage.removeItem('wk_v1'); }catch(e){} WK.i=0; WK.key=''; wkPaint(); }
 function wkKey(e){ if(!document.getElementById('wkOv')) return; if(/INPUT|TEXTAREA/.test((e.target||{}).tagName||'')) return;
   if(e.key==='ArrowRight') wkGo(1); else if(e.key==='ArrowLeft') wkGo(-1); else if(e.key==='Escape') wkClose(); }
 function wkOpen(){

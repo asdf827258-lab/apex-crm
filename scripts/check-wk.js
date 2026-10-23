@@ -131,7 +131,7 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
 
   head('아. 보험의 자리 — 배치 · 두 역할 · 몇 달 · 나이대 분배 (판 X171)');
   const T = texts.join('\n');
-  ['재무설계는 집이에요', '보험은 두 가지를 지켜요', '가족은 몇 달을 버틸까요', '연금을 깨게 돼요', '기준값으로 나눠요'].forEach((k) => is(nos(T).includes(nos(k)), '「' + k + '」 장이 선다'));
+  ['재무설계는 집이에요', '보험은 두 가지를 지켜요', '가족은 몇 달을 버틸까요', '진단비로 몇 달을 버틸까요', '기준값으로 나눠요'].forEach((k) => is(nos(T).includes(nos(k)), '「' + k + '」 장이 선다'));
   is(S.indexOf('전략') > S.lastIndexOf('위기') && S.indexOf('전략') < S.indexOf('점검'), '전략 장은 위기 다음 · 점검 앞');
   /* 자는 앱의 셈을 빌리지 않고 칸 값으로 따로 셉니다 — 같은 셈을 빌리면 틀려도 같이 틀립니다 */
   await pg.evaluate(() => { const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); }; set('ins_life', '30000'); set('s_debt', '25000'); set('ins_cancer_dx', '3000'); });
@@ -141,7 +141,7 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
     return { fam: Math.floor((v('ins_life') - v('s_debt')) / (living - v('s_loan'))), me: Math.floor(v('ins_cancer_dx') / living), living };
   });
   const insTxt = [];
-  for (const k of ['가족은 몇 달', '연금을 깨게']) {
+  for (const k of ['가족은 몇 달', '진단비로<br>몇 달']) {
     await pg.evaluate((k) => { WK.i = wkSlides().findIndex((x) => x.html && x.html.indexOf(k) >= 0); wkPaint(); }, k);
     insTxt.push(await pg.$eval('#wkOv .wk-body', (e) => e.innerText));
   }

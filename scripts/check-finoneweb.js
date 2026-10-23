@@ -65,7 +65,7 @@ const man = (s) => {
     o.map = { income: after(map, '월 소득'), surplus: after(map, '월 잉여금'), score: (map.match(/종합점수\s*(\d+)\s*\/\s*100/) || [])[1], writes: window.__fw };
     const T = trCalc(); o.tr = { rest: T.rest, score: trGrade(T).score };
     const d = rptData(); const sm = d.summary.join('\n');
-    o.rpt = { surplus: (sm.match(/남는 돈 \*\*([^*]+)\*\*/) || [])[1], pct: (sm.match(/목표의 \*\*(\d+)%\*\*/) || [])[1], sm: sm };
+    o.rpt = { surplus: (sm.match(/남는 돈 \*\*([^*]+)\*\*/) || [])[1], pct: (sm.match(/목표(?: 생활비)?의 \*\*(\d+)%\*\*/) || [])[1], sm: sm };
     tab('pension');
     const box = [...document.querySelectorAll('#pension-sim div')].find((x) => x.children.length >= 2 && /^지금 준비된 것$/.test((x.children[0].textContent || '').trim()));
     o.pen = box ? box.children[1].textContent : null;
