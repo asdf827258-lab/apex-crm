@@ -26,10 +26,10 @@
     (사장님 말씀 2026-10-21 「가독성이 너무 떨어져서」 · check-read 가 지킵니다) */
  --t1:24px; --t2:20px; --t3:17px; --t4:15px; --t5:14px; --t6:13px;
  color-scheme:light;  /* 🌗 흰색 고정 (사장님 말씀 2026-10-03) */
-  --blue:#3182F6; --blue-d:#1B64DA; --blue-l:#E8F3FF;
-  --tx:#191F28; --tx2:#4E5968; --tx3:#6C7684; --tx4:#6C7684;
+  --blue:#1A56DB; --blue-d:#1B64DA; --blue-l:#E8F3FF;
+  --tx:#191F28; --tx2:#4E5968; --tx3:#636C78; --tx4:#636C78;
   --bg:#F9FAFB; --grey:#F2F4F6; --grey2:#E5E8EB;
-  --red:#F04452; --red-l:#FFEBEE; --green:#00B26B; --green-l:#E5F8F0;
+  --red:#F04452; --red-l:#FFEBEE; --green:#047857; --green-l:#E5F8F0;
   --amber:#FF9500; --amber-l:#FFF4E0; --purple:#7C3AED;
   --r:18px; --r2:13px; --r3:10px; --sh:0 1px 3px rgba(0,0,0,.04);
 }
@@ -63,8 +63,8 @@ main{max-width:1560px;margin:0 auto;padding:16px 14px 40px}
 
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px;margin-bottom:14px}
 /* 맨 위 수가 <b>무엇을 센 것인지</b> 그 자리에 적습니다 — 칸을 통째로 차지합니다 (판 X140) */
-.kpi-note{grid-column:1/-1;margin-top:-2px;font-size:var(--t6);line-height:1.7;color:#6B7684}
-.kpi .l i.w{font-style:normal;font-weight:700;color:#6C7684}
+.kpi-note{grid-column:1/-1;margin-top:-2px;font-size:var(--t6);line-height:1.7;color:#636C78}
+.kpi .l i.w{font-style:normal;font-weight:700;color:#636C78}
 .kpi{background:#fff;border-radius:var(--r2);padding:14px 15px;box-shadow:var(--sh)}
 .kpi .l{font-size:var(--t6);color:var(--tx3);font-weight:600}
 .kpi .v{font-size:22px;font-weight:800;margin-top:2px;letter-spacing:-1px}
@@ -72,8 +72,9 @@ main{max-width:1560px;margin:0 auto;padding:16px 14px 40px}
 /* ⚠ 판 X140 에서 계약업적 라벨에 「2026.10」 을 붙였더니 칸이 좁아져
    「1,030,000원 · 3」 / 「건」 으로 <b>건이 아랫줄에 떨어졌습니다.</b>
    꼬리말은 통째로 움직이게 둡니다 — 숫자와 단위가 갈리면 한 박자 늦게 읽힙니다. */
-.kpi.pri{background:linear-gradient(135deg,#3182F6,#1B64DA);color:#fff}
-.kpi.pri .l{color:#cfe3ff}
+.kpi.pri{background:linear-gradient(135deg,#1A56DB,#123A96);color:#fff}
+.kpi.pri .l{color:#E3EDFF}
+.kpi.pri .v small{color:#E3EDFF}   /* 파란 칸 위에서는 흐린 회색이 1.34 였습니다 (판 X169) */
 .kpi.warn .v{color:var(--red)} .kpi.ok .v{color:var(--green)}
 
 .btn{background:var(--grey);border:0;border-radius:var(--r3);padding:9px 14px;font-weight:700;font-size:var(--t5);
@@ -751,7 +752,7 @@ function goalHTML(mid, ro) {
   const gc = +CASES[mid] || 0, per = perOf(mid);
   const got = monthDone(mid).reduce((a, r) => a + (+r.contract || +r.expect || 0), 0);
   const pct = g ? Math.round(got / g * 100) : 0;
-  const col = pct >= 100 ? '#00B26B' : pct >= 60 ? '#FF9500' : '#8B95A1';
+  const col = pct >= 100 ? '#047857' : pct >= 60 ? '#FF9500' : '#8B95A1';
   const live = ROWS.filter(r => r.mid === mid && isLive(r)).length;
   const d = ro ? ' disabled' : '';
   return `<span class="goal">${goalMonth().slice(5)}월 <b>월간목표</b>
@@ -761,7 +762,7 @@ function goalHTML(mid, ro) {
     `<span class="goal per" data-per="${mid}"
        title="월간목표 ÷ 목표 건수 입니다. 따로 적지 않습니다 — 세 칸을 다 적게 하면 서로 안 맞는 날이 옵니다.">${perTXT(mid)}</span>` +
     (g ? `<span class="gpct" style="color:${col}" title="${goalMonth().replace('-', '.')} 에 체결한 계약업적 합계입니다">체결 ${won(got)}원 · ${pct}%</span>` : '') +
-    (per ? `<span class="gpct" style="color:${live >= gc ? '#00B26B' : '#8B95A1'}" title="목표 건수만큼 사람이 붙어 있는지 봅니다">진행 ${live} / ${gc}명</span>` : '');
+    (per ? `<span class="gpct" style="color:${live >= gc ? '#047857' : '#8B95A1'}" title="목표 건수만큼 사람이 붙어 있는지 봅니다">진행 ${live} / ${gc}명</span>` : '');
 }
 /* 고객명당목표 한 조각만 따로 — 숫자를 치는 <b>도중에</b> 판을 다시 세우면
    커서가 날아간다. 이 조각만 갈아 끼운다. */
@@ -785,7 +786,7 @@ function memSum(mid) {
   const cSum = done.reduce((a, r) => a + (+r.contract || +r.expect || 0), 0);
   const intro = L.reduce((a, r) => a + (+r.introN || 0), 0);
   return `AP·PC ${appc}건 · 진행 ${live.length}건 · 예상 ${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원` +
-    (done.length ? ` · <b style="color:#00B26B">계약 ${done.length}건 ${won(cSum)}원</b>` : '') +
+    (done.length ? ` · <b style="color:#047857">계약 ${done.length}건 ${won(cSum)}원</b>` : '') +
     (intro ? ` · <b style="color:#7C3AED">소개 ${intro}명</b>` : '');
 }
 function teamGoal(tid) {
@@ -795,7 +796,7 @@ function teamGoal(tid) {
   const got = ms.reduce((a, m) => a + monthDone(m.id)
     .reduce((b, r) => b + (+r.contract || +r.expect || 0), 0), 0);
   const pct = Math.round(got / g * 100);
-  return `<b style="color:${pct >= 100 ? '#00B26B' : '#4E5968'}">${goalMonth().slice(5)}월 목표 ${won(g)}원 · 체결 ${pct}%</b> · `;
+  return `<b style="color:${pct >= 100 ? '#047857' : '#4E5968'}">${goalMonth().slice(5)}월 목표 ${won(g)}원 · 체결 ${pct}%</b> · `;
 }
 function teamSum(tid) {
   const ids = memsOf(tid).map(m => m.id);
@@ -897,7 +898,7 @@ function renderBoard() {
       <button type="button" class="tf" data-tfold="${t.id}" aria-expanded="${shut ? 'false' : 'true'}"
         title="${shut ? '이 팀을 폅니다' : '이 팀을 접습니다 — 팀 줄과 숫자는 그대로 남습니다'}">▾</button>${esc(t.name)}${t.leader ? ` <span style="font-weight:600;color:#4E5968">· 팀장 ${esc(t.leader)}</span>` : ''}
       <span class="tn">${ms.length}명 · ${L.filter(r => ms.some(m => m.id === r.mid)).length}건</span>
-      <span style="float:right;font-weight:600;font-size:12.5px;color:#6C7684">${teamGoal(t.id)}${teamSum(t.id)}</span></td></tr>`;
+      <span style="float:right;font-weight:600;font-size:12.5px;color:#636C78">${teamGoal(t.id)}${teamSum(t.id)}</span></td></tr>`;
     /* 접힌 팀은 <b>안만</b> 안 그린다. 위 줄은 그대로 서 있어서 목표·체결·
        진행이 보인다 — 없어진 것이 아니라 접힌 것이다. */
     if (shut) return;
@@ -1190,19 +1191,19 @@ function renderDb() {
     <th>단계</th><th>증권</th><th>상태</th><th class="n">예상업적</th><th class="n">계약업적</th>
     <th>소개진행</th><th class="n">소개수</th><th>비고</th></tr></thead><tbody>` +
     L.slice().sort((a, b) => (a.dbdate || '').localeCompare(b.dbdate || '')).map(r => {
-      const c = r.closed ? 'color:#F04452' : isDone(r) ? 'color:#00B26B' : 'color:#3182F6';
+      const c = r.closed ? 'color:#F04452' : isDone(r) ? 'color:#047857' : 'color:var(--blue)';
       return `<tr><td>${(r.dbdate || '').slice(5).replace('-', '.')}</td><td>${esc(teamName(teamOf(r.mid)))}</td>
         <td>${esc(memName(r.mid))}</td><td style="color:#6D28D9;font-weight:700">${esc(r.dbtype || '-')}</td>
         <td style="font-weight:700">${esc(r.client || '-')}</td><td>${esc(r.region || '-')}</td>
         <td>${r.date ? r.date.slice(5).replace('-', '.') : '-'}</td>
         <td style="font-weight:800;${c}">${esc(r.stage)}</td>
-        <td>${policyOf(r) === '해당없음' ? '<span class="z">·</span>' : `<b style="color:${policyOf(r) === '전달완료' ? '#00B26B' : '#F04452'}">${policyOf(r)}</b>`}</td>
+        <td>${policyOf(r) === '해당없음' ? '<span class="z">·</span>' : `<b style="color:${policyOf(r) === '전달완료' ? '#047857' : '#F04452'}">${policyOf(r)}</b>`}</td>
         <td>${r.closed ? `<b style="color:#F04452">${esc(r.closed)}</b>` : '<span class="z">·</span>'}</td>
         <td style="text-align:right">${r.expect ? won(r.expect) : '<span class="z">·</span>'}</td>
-        <td style="text-align:right;color:#00B26B;font-weight:700">${r.contract ? won(r.contract) : '<span class="z" style="color:#D1D6DB">·</span>'}</td>
+        <td style="text-align:right;color:#047857;font-weight:700">${r.contract ? won(r.contract) : '<span class="z" style="color:#D1D6DB">·</span>'}</td>
         <td>${r.family === '미요청' ? '<span class="z">·</span>' : esc(r.family)}</td>
         <td style="text-align:right;color:#7C3AED;font-weight:700">${r.introN || '<span class="z" style="color:#D1D6DB">·</span>'}</td>
-        <td style="color:#6C7684">${esc(r.memo || '')}</td></tr>`;
+        <td style="color:#636C78">${esc(r.memo || '')}</td></tr>`;
     }).join('') + `</tbody></table></div>`;
 }
 function shiftMonth(d) {
@@ -1306,7 +1307,7 @@ function buildCanvas(tid) {
   c.fillStyle = 'rgba(255,255,255,.18)'; rr(c, PAD, 26, 44, 44, 13); c.fill();
   c.fillStyle = '#fff'; c.font = f(800, 17); c.textAlign = 'center'; c.fillText('A+', PAD + 22, 49); c.textAlign = 'left';
   c.font = f(800, 26); c.fillText(`${t.name} 진행현황`, PAD + 58, 44);
-  c.font = f(600, 14); c.fillStyle = '#CFE3FF';
+  c.font = f(600, 14); c.fillStyle = '#E3EDFF';
   c.fillText(`${t.leader ? '팀장 ' + t.leader + ' · ' : ''}기준 ${TODAY_S.replace(/-/g, '.')}`
     + ` · 팀원 ${memsOf(tid).length}명${o.appc ? ' · ' + APPC_T + ' 단계만' : ''}`, PAD + 58, 70);
 
