@@ -1862,6 +1862,9 @@ function analyze(d){
   r.expenseTot = d.living+d.house+d.edu+d.ins+d.loanPay;
   r.surplus = r.incomeTot - r.expenseTot;
   r.saveM = d.save>0 ? d.save : Math.max(0,r.surplus);
+  /* 판 X186 — 「월 여유」 는 소득 − 지출(CASH FLOW) 하나입니다. 저축액을 적었으면 그 돈은 「지금 모으시는 돈」 이라
+     부릅니다 — 같은 장 묶음에서 「월 여유 186」 과 「월 여유자금 70」 이 나란히 서던 자리(0-1번 · 한 물음에 두 답) */
+  r.saveLbl = d.save>0 ? '지금 모으시는 월 '+Math.round(d.save)+'만원' : '월 여유자금 '+Math.round(r.saveM)+'만원';
   r.saveRate = r.incomeTot>0 ? r.saveM/r.incomeTot*100 : 0;
   r.insRate = r.incomeTot>0 ? d.ins/r.incomeTot*100 : 0;
 
@@ -1917,14 +1920,14 @@ function analyze(d){
     desc:'월 150만원 × 5~6년 장기간병 대비'});
   f7.push({k:'retire',t:'노후 생활자금',ic:'🌤️',
     need: d.retspend*12*(d.life-d.ret),
-    have: r.pensionSum*12*(d.life-d.ret) + Math.max(0,r.retireAssets),
+    have: r.pensionSum*12*(d.life-d.ret) + Math.max(0,r.retireAssets), unk: r.penUnk.length?r.penUnk.join('·')+' 빼고 셈':'',
     desc:'월 '+d.retspend+'만원 × '+(d.life-d.ret)+'년'});
   var UNIV=4000;  // 1인당 대학 4년 (등록금+생활비) 목돈 기준
   var uniN=0;
   for(var i=0;i<d.kids.length;i++) if(d.kids[i].age<19) uniN++;
   var eduNeed=uniN*UNIV;
   f7.push({k:'edu',t:'자녀 대학자금',ic:'🎓',
-    need: eduNeed, have: 0,
+    need: eduNeed, have: 0, unk: eduNeed>0?'따로 모아 둔 교육자금은 칸이 없어 모름':'',
     desc: uniN? uniN+'명 × 4년 등록금·생활비 (1인 4,000만원 기준) · 초중고 교육비는 월 생활비에서 지출':'대학 진학 전 자녀 없음'});
   f7.push({k:'house',t:'주택·부채 정리자금',ic:'🔑',
     need: d.debt, have: Math.max(0,d.cash+d.inv-d.debt)>0?d.debt:d.cash+d.inv,
@@ -1946,7 +1949,7 @@ function analyze(d){
     {t:'생활비',ic:'🏠',rate:clamp(d.cDeath/Math.max(1,famNeedM*12*famYears+d.debt)*100,0,100),
      note:'사망보험금 '+cm(d.cDeath)},
     {t:'간병비',ic:'🧑‍🦽',rate:clamp(d.cCare/STD.care*100,0,100), note:'간병자금 '+cm(d.cCare)},
-    {t:'노후',ic:'🌤️',rate:clamp(r.pensionCover,0,100), unk:r.penUnk.join('·'), note:'연금 준비율 '+pct(r.pensionCover)}
+    {t:'노후',ic:'🌤️',rate:clamp(r.pensionCover,0,100), unk:r.penUnk.join('·'), note:'연금 준비율 '+pct(r.pensionCover)+(r.penUnk.length?' · '+r.penUnk.join('·')+' 모름':'')}
   ];
   r.weakest = r.bal4.slice().sort(function(a,b){return a.rate-b.rate;})[0];
 
@@ -2631,7 +2634,7 @@ function buildReport(d,r){
       '<div class="h"><div class="l">부족자금 합계</div><div class="v" style="color:#F04452">'+won(r.f7Short)+'</div></div>'+
     '</div>'+
     '<div class="rnote">가장 시급한 영역은 <b>'+worstArea.t+'</b>(준비율 '+rateTxt(worstArea)+')입니다. '+
-    '월 여유자금 '+Math.round(r.saveM)+'만원을 목적별로 나눠 담으면 '+SC.T+'년 뒤 <b>'+won(SC.gap)+'</b>의 차이가 만들어집니다.</div>'+
+    r.saveLbl+'을 목적별로 나눠 담으면 '+SC.T+'년 뒤 <b>'+won(SC.gap)+'</b>의 차이가 만들어집니다.</div>'+
     '<div class="rs">2. 가계 현황</div>'+
     '<table class="rt"><tr><th style="width:34%">항목</th><th>내용</th><th style="width:26%">금액</th></tr>'+
     '<tr><td>월 소득</td><td>본인·배우자·기타 합산</td><td class="n">'+Math.round(r.incomeTot)+'만원</td></tr>'+
@@ -3461,8 +3464,8 @@ function buildSlides(r){
     '<div class="gain">'+
       '<div class="g"><div class="gl">확인되는 부족자금</div><div class="gv">'+won(r.f7Short)+'</div>'+
         '<div class="gs">7대 필수자금 기준</div></div>'+
-      '<div class="g"><div class="gl">찾아내는 국가지원·절세</div><div class="gv">연 '+(r.gov.total+savT)+'만원</div>'+
-        '<div class="gs">신청·공제하면 바로 들어오는 돈</div></div>'+
+      '<div class="g"><div class="gl">찾아내는 국가지원·절세</div><div class="gv">'+(r.gov.total>0?'연 '+r.gov.total+'만원':(r.gov.now.length+r.gov.later.length+r.gov.save.length)+'가지')+'</div>'+
+        '<div class="gs">'+(r.gov.total>0?'국가지원 금액 · 절세는 요건 충족 시 따로':'금액은 요건을 확인한 뒤 — 지어 적지 않습니다')+'</div></div>'+
       '<div class="g"><div class="gl">보장을 갖췄을 때 자산 수명</div><div class="gv">'+(illP&&illP.saved>0?'+'+illP.saved+'년':'재계산')+'</div>'+
         '<div class="gs">중대질병 발생 가정 기준</div></div>'+
     '</div>'+
@@ -3562,7 +3565,7 @@ function buildSlides(r){
     '<div class="kpi">'+
       '<div class="box"><div class="lbl">월 소득</div><div class="val">'+Math.round(r.incomeTot)+'<small>만원</small></div></div>'+
       '<div class="box"><div class="lbl">월 지출</div><div class="val" style="color:var(--red)">'+Math.round(r.expenseTot)+'<small>만원</small></div></div>'+
-      '<div class="box"><div class="lbl">월 여유</div><div class="val" style="color:'+(r.surplus>=0?'var(--blue)':'var(--red)')+'">'+Math.round(r.surplus)+'<small>만원</small></div></div>'+
+      '<div class="box"><div class="lbl">월 여유</div><div class="val" style="color:'+(r.surplus>=0?'var(--blue)':'var(--red)')+'">'+Math.round(r.surplus)+'<small>만원</small></div>'+(d.save>0&&r.surplus>0?'<div class="note">이 중 지금 모으시는 돈 '+Math.round(d.save)+'만원'+(r.surplus>d.save?' · 나머지 '+Math.round(r.surplus-d.save)+'만원은 쓰임이 안 정해짐':'')+'</div>':'')+'</div>'+
     '</div>'+
     '<div class="panel" style="margin-top:12px">'+
       '<div class="row"><div><div class="n">생활비</div></div><div class="v">'+d.living+'만원</div></div>'+
@@ -3814,8 +3817,8 @@ function buildSlides(r){
       '<span style="color:'+(f.rate>=80?'var(--green)':f.rate>=50?'var(--amber)':'var(--red)')+'">'+pct(f.rate)+'</span>',
       ring(f.rate)+'<div style="margin-top:12px">'+f.desc+'</div>'+
       '<div class="metric" style="margin-top:8px"><span>필요액</span><b>'+won(f.need)+'</b></div>'+
-      '<div class="metric"><span>준비된 금액</span><b>'+won(f.have)+'</b></div>'+
-      '<div class="metric"><span>부족액</span><b style="color:'+(f.short>0?'var(--red)':'var(--green)')+'">'+(f.short>0?won(f.short):'없음')+'</b></div>');
+      '<div class="metric"><span>준비된 금액</span><b>'+(f.unk&&!f.have?'모름':won(f.have))+'</b></div>'+(f.unk?'<div class="metric"><span></span><b style="font-weight:600;color:var(--gray-600,#6B7684)">'+f.unk+'</b></div>':'')+
+      '<div class="metric"><span>부족액'+(f.unk?' (최대)':'')+'</span><b style="color:'+(f.short>0?'var(--red)':'var(--green)')+'">'+(f.short>0?won(f.short):'없음')+'</b></div>');
   }
   S.push('<div class="s-eyebrow">7 ESSENTIAL FUNDS</div><h2 class="s-title">평생 반드시 필요한<br>7가지 자금</h2>'+
     '<p class="s-lead">비어 있는 순서대로 정렬했습니다. 위 두 개만 먼저 보시면 됩니다.</p>'+
@@ -4060,17 +4063,17 @@ function buildSlides(r){
   var premTotal=pC+pB+pH+pL+pT+pW;
   var PLAN=[
     {ic:'🩺',t:'치료비 — 진단금',need:needCancer+needBrain+needHeart,prem:pC+pB+pH,
-     rows:[['암 진단금',cm(d.cCancer)+' → <b>5,000만</b>'],
-           ['뇌혈관 진단금',cm(d.cBrain)+' → <b>3,000만</b>'],
-           ['심장 진단금',cm(d.cHeart)+' → <b>3,000만</b>'],
+     rows:[['암 진단금',cm(d.cCancer)+' → <b>'+cm(STD.cancer)+'</b>'],
+           ['뇌혈관 진단금',cm(d.cBrain)+' → <b>'+cm(STD.brain)+'</b>'],
+           ['심장 진단금',cm(d.cHeart)+' → <b>'+cm(STD.heart)+'</b>'],
            ['실손의료비',(d.cSilson==null?'모름 · 증권 확인':d.cSilson?'가입 유지':'<b style="color:var(--red)">미가입 · 최우선</b>')]],
      how:'<b>비갱신 · 80~90세 만기 이상</b>의 정액 진단금으로 채웁니다. 상품명이 아니라 <b>보장 범위</b>를 보세요. 뇌출혈만 보장하면 뇌혈관질환의 13% 수준이고, 뇌혈관질환(I60~I69) 전체를 보장해야 90% 이상 커버됩니다. 심장도 급성심근경색만이 아니라 허혈성심장질환(I20~I25)까지 봐야 합니다.'},
     {ic:'🏠',t:'생활비 — 사망보장',need:needDeath,prem:pT+pW,
      rows:[['현재 사망보험금',cm(d.cDeath)],
            ['필요 보장액','<b>'+cm(r.f7[0].need)+'</b>'],
            ['부족분','<b style="color:var(--red)">'+cm(needDeath)+'</b>'],
-           ['상속세 재원',cm(ETx.tax)]],
-     how:'두 가지를 섞습니다. <b>정기보험</b>으로 '+d.ret+'세까지 '+cm(Math.max(0,needDeath-ETx.tax))+'원을 저렴하게 덮고, <b>종신보험</b>으로 상속세 재원 '+cm(ETx.tax)+'원만 평생 남깁니다. 전부 종신으로 가면 보험료가 감당이 안 되고, 전부 정기로 가면 상속 재원이 사라집니다.'},
+           ['상속세 재원',ETx.tax>0?cm(ETx.tax):'지금 기준 없음']],
+     how:ETx.tax<=0?'지금 자산으로는 상속세가 나오지 않아 <b>정기보험</b> 하나로 '+d.ret+'세까지 '+cm(needDeath)+'원을 저렴하게 덮습니다. 종신 몫은 두지 않고, 자산이 늘면 다시 봅니다.':'두 가지를 섞습니다. <b>정기보험</b>으로 '+d.ret+'세까지 '+cm(Math.max(0,needDeath-ETx.tax))+'원을 저렴하게 덮고, <b>종신보험</b>으로 상속세 재원 '+cm(ETx.tax)+'원만 평생 남깁니다. 전부 종신으로 가면 보험료가 감당이 안 되고, 전부 정기로 가면 상속 재원이 사라집니다.'},
     {ic:'🧑‍🦽',t:'간병비 — LTC',need:needCare,prem:pL,
      rows:[['현재 간병자금',(d.cCare>0?cm(d.cCare):'없음')],
            ['목표','<b>1억원</b>'],
@@ -4274,7 +4277,7 @@ function buildSlides(r){
   /* 12. 포트폴리오 */
   var pt=r.port;
   S.push('<!--nostep--><div class="s-eyebrow">PORTFOLIO</div><h2 class="s-title">남는 돈을<br>어디에 담을까요</h2>'+
-    '<p class="s-lead">월 여유자금 '+Math.round(r.saveM)+'만원을 목적별로 나눕니다. 한 통장에 몰아두면 어떤 목적도 달성되지 않습니다.</p>'+
+    '<p class="s-lead">'+r.saveLbl+'을 목적별로 나눕니다. 한 통장에 몰아두면 어떤 목적도 달성되지 않습니다.</p>'+
     '<div class="panel">'+
       '<div class="row"><div><div class="n">유동성 · 비상금</div><div class="d">CMA·파킹통장 / 월지출 6개월치까지</div></div><div class="v">'+pt.liquid+'만원</div></div>'+
       '<div class="row"><div><div class="n">보장 · 리스크</div><div class="d">치료비·간병·사망 보완</div></div><div class="v">'+pt.protect+'만원</div></div>'+
@@ -4492,7 +4495,7 @@ function buildSlides(r){
     '<p class="s-lead">오늘 본 모든 숫자를 네 영역으로 압축했습니다.</p>'+
     '<div class="verdict"><div class="vl">종합 진단</div><div class="vt">'+
     '가장 시급한 곳은 <b>'+worst4.t+'</b>('+rateTxt(worst4)+')입니다. '+
-    '전체 부족자금은 <b>'+won(r.f7Short)+'</b>이지만, 월 여유자금 '+Math.round(r.saveM)+'만원을 '+
+    '전체 부족자금은 <b>'+won(r.f7Short)+'</b>이지만, '+r.saveLbl+'을 '+
     '나눠 담는 것만으로 '+SCz.T+'년 뒤 <b>'+won(SCz.gap)+'</b>의 차이가 만들어집니다.</div></div>'+
     s4h+
     '<div class="panel tint"><p class="mini-title">채우는 순서</p>'+
