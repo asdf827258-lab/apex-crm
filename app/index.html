@@ -2767,7 +2767,7 @@ body.educal-mode #educalScreen{display:block;}
 <!-- 고객 한 장 — 고객 365일과 DB 통합 CRM 이 <b>같은 카드</b>를 세운다.
      초성 표·이름 가리기·연락기록 섞기도 여기 한 벌만 둔다(5번).
      db-crm.html 도 같은 파일을 싣는다 — /app/apex-cusone.js -->
-<script src="apex-cusone.js?v=1"></script>
+<script src="apex-cusone.js?v=4"></script>
 <script src="질병가이드-data.js"></script>
 <script src="질병가이드-코드.js"></script>
 
@@ -8548,14 +8548,19 @@ function arPageAll(make,cap){
 function arAll(sb,tbl,cols,key,tune,cap){
   var ks=(typeof key==='string')?[key]:(key||['id']);
   return arPageAll(function(a,b){
-    var x=sb.from(tbl).select(cols),i,d;
-    if(typeof tune==='function')x=tune(x);
-    for(i=0;i<ks.length;i++){
-      d=ks[i].charAt(0)==='-';
-      x=x.order(d?ks[i].slice(1):ks[i],{ascending:!d});
-    }
-    return x.range(a,b).then(function(r){return r;},
-                            function(e){return {error:e||{message:'실패'}};});
+    /* ⚠ 묻는 글을 짓다가 <b>그 자리에서</b> 터지면(손이 모자란 서버 · 옛 판) 약속 밖으로 새어
+       부르는 쪽이 「읽는 중」(CC.busy)으로 영영 남았습니다 — check-push 가 잡았습니다.
+       터져도 <b>못 읽었다</b>로 돌려줍니다 (1번). */
+    try{
+      var x=sb.from(tbl).select(cols),i,d;
+      if(typeof tune==='function')x=tune(x);
+      for(i=0;i<ks.length;i++){
+        d=ks[i].charAt(0)==='-';
+        x=x.order(d?ks[i].slice(1):ks[i],{ascending:!d});
+      }
+      return x.range(a,b).then(function(r){return r;},
+                              function(e){return {error:e||{message:'실패'}};});
+    }catch(eA){ return Promise.resolve({error:{message:(eA&&eA.message)||'실패'}}); }
   },cap);
 }
 /* ── 불러오기 — 체크판·성장판·CRM·고객 365일을 한 번에 ── */
@@ -8678,11 +8683,22 @@ function arLoad(force){
       ld=(''+(calls[lci].call_at||'')).slice(0,10);
       if(ld&&(!lcd[lk]||ld>lcd[lk]))lcd[lk]=ld;
     }
+    /* ★ 판 X161 — 잇는 칸이 있는 서버에서는 <b>client_id 로만</b> 잇습니다.
+       가린 이름은 다섯 명에 한 명꼴로 겹쳐(판 X82) <b>남의 통화</b>가
+       그 분 마지막 연락으로 섰습니다. 칸이 없는 옛 서버에서만 예전처럼
+       가린 이름으로 견줍니다 — 그때 화면이 통째로 비면 안 됩니다.     */
+    var lLink=(typeof crmLinkOn==='function')?crmLinkOn():false;
     for(lci=0;lci<dbs.length;lci++){
-      lnm=(''+(dbs[lci].customer_name||'')).replace(/\s/g,'');
       ld=lcd[dbs[lci].id];
-      if(!lnm||!ld)continue;
-      lmk=(typeof osMaskName==='function')?osMaskName(lnm):lnm;
+      if(!ld)continue;
+      if(lLink){
+        if(!dbs[lci].client_id)continue;
+        lmk='id:'+dbs[lci].client_id;
+      }else{
+        lnm=(''+(dbs[lci].customer_name||'')).replace(/\s/g,'');
+        if(!lnm)continue;
+        lmk=(typeof osMaskName==='function')?osMaskName(lnm):lnm;
+      }
       if(!lastCall[lmk]||ld>lastCall[lmk])lastCall[lmk]=ld;
     }
     AR.cliRows=arCliRows(r[2].error?[]:(r[2].data||[]),r[3].error?[]:(r[3].data||[]),lastCall);
@@ -8818,7 +8834,7 @@ function arCliRows(clients,metas,last){
     lt=arTouchLast(m);
     /* DB 통합 CRM 에 남은 통화도 연락이다. 통화는 고객이 아니라 DB 줄에 붙어 있으니
        이름으로 잇는다 — 실명은 이 기기에만 있으므로 가린 모양끼리 견준다. */
-    d=(last||{})[c.name_masked||''];
+    d=(last||{})[((typeof crmLinkOn==='function')&&crmLinkOn())?('id:'+c.id):(c.name_masked||'')];  /* 판 X161 · client_id */
     if(d&&d>lt)lt=d;
     var ever=!!lt;
     /* 한 번도 손대지 않았으면 등록한 날을 기준으로 센다 — 피드백 숫자와 같은 뜻이어야 한다 */
@@ -8879,6 +8895,26 @@ function crmCliOf(db){
   var L=[]; try{ L=(typeof OSC!=='undefined'&&OSC.list)?OSC.list:[]; }catch(e){ return null; }
   for(var i=0;i<L.length;i++)if((''+L[i].id)===id)return L[i];
   return null;
+}
+/* 🔗 <b>거꾸로 묻기</b> — 이 고객에게 이어진 배정 DB 줄들 (판 X161 · 고객 창 하나)
+   사장님 말씀 (2026-10-22) — 「고객 365 와 DB통합CRM 고객 등록을 하나로 ·
+   그 고객 창 하나로 모든 것들을 연계」. 재어 보니 「같은 사람인가」 를
+   <b>네 곳</b>이 저마다 답하고 있었습니다 — client_meta.db(서버에 0줄) ·
+   dbs.client_id(39줄) · 번호·이름 대조 · 가린 이름 대조. 이어 둔 39줄이
+   고객 365일 명단에 <b>두 번</b> 서고, 빠른 창에서 단계를 못 바꿨습니다.
+   ★ 이제 <b>dbs.client_id 하나</b>만 답합니다 (5번). olDbOf · olByDb ·
+     cusCrmLoad · db-crm.html 이 모두 이것을 봅니다.
+   ★ 아직 명단을 안 읽었거나 서버에 칸이 없으면 <b>null</b> — 「없다」 가
+     아니라 「모른다」 입니다 (1번).
+   ★ 줄이 여럿이면(다시 배정) <b>가장 최근 배정</b>이 앞입니다.         */
+function crmDbsOf(cid){
+  if(!cid||!crmLinkOn())return null;
+  var L=(typeof AR!=='undefined')?AR.db:null;
+  if(!L)return null;
+  var out=[],i,k=''+cid;
+  for(i=0;i<L.length;i++)if(crmLinkOf(L[i])===k)out.push(L[i]);
+  out.sort(function(a,b){ return (''+(b.got||''))<(''+(a.got||''))?-1:((''+(b.got||''))>(''+(a.got||''))?1:0); });
+  return out;
 }
 function crmNum(v){ return (''+(v||'')).replace(/[^0-9]/g,''); }
 /* 🔎 아직 안 이어진 줄에 <b>짝이 될 만한 분</b> — 까닭을 같이 돌려줍니다.
@@ -13373,12 +13409,21 @@ function chkCliBy(){
    그래서 <b>다리 한 칸</b>을 놓습니다 — client_meta.db 에 그 고객이 온
    배정 DB 줄의 id 를 적습니다. 「내 고객으로」 를 누를 때 한 번 적히고,
    그 뒤로는 <b>짐작하지 않습니다.</b>
+   ⚠ 판 X161 (2026-10-22) — 다리는 이제 <b>dbs.client_id</b> 입니다. 판 X82 가
+     서버 칸을 놓은 뒤로 다리가 둘이 됐고, client_meta.db 는 서버에 <b>0줄</b>
+     이었습니다. 아래 olDbOf · olByDb · olToMine 이 모두 crmDbsOf ·
+     crmLinkOf · crmLinkSet 을 부릅니다 (5번).
 
    ★ <b>이름 대조는 안 지웁니다</b> — 다리가 없는 옛 자료를 잇는 길입니다.
      지우면 지난 것이 다 끊깁니다. 다리가 있으면 <b>다리를 먼저</b> 보고,
      없을 때만 이름으로 견줍니다.                                      */
-/* 이 고객이 어느 배정 DB 에서 왔나 — 모르면 <b>빈 글</b>입니다 (1번) */
-function olDbOf(cid){ try{ return (cmOf(cid).db||''); }catch(e){ return ''; } }
+/* 이 고객이 어느 배정 DB 에서 왔나 — 모르면 <b>빈 글</b>입니다 (1번)
+   ★ 판 X161 — 다리는 <b>dbs.client_id 하나</b>입니다(crmDbsOf). 여태 여기는
+     client_meta.db 를 봤는데 서버에 <b>0줄</b>이라 이어 둔 39줄을 하나도
+     못 봤습니다. 줄이 여럿이면 가장 최근 배정입니다.                    */
+function olDbOf(cid){
+  try{ var L=crmDbsOf(cid); return (L&&L.length)?(''+L[0].id):''; }catch(e){ return ''; }
+}
 /* dbs id → 고객 줄. <b>다리가 놓인 것만</b> 담습니다.
    ★★ <b>아직 안 읽었으면 null 을 돌려줍니다 — 빈 표가 아닙니다</b> (1번).
      AR.cliRows 의 처음 값은 null 이고(7880행) 채워지는 것은 8110행
@@ -13390,8 +13435,12 @@ function olDbOf(cid){ try{ return (cmOf(cid).db||''); }catch(e){ return ''; } }
 function olByDb(){
   var L=(typeof AR!=='undefined')?AR.cliRows:null;
   if(!L)return null;                 /* 모름 — 없음이 아닙니다 */
-  var o={},i,d;
-  for(i=0;i<L.length;i++){ d=olDbOf(L[i].id); if(d&&!o[d])o[d]=L[i]; }
+  var D=(typeof AR!=='undefined')?AR.db:null;
+  if(!D||!crmLinkOn())return null;   /* 배정 DB 를 안 읽었거나 칸이 없는 서버 — 모름 */
+  var by={},o={},i,k;
+  for(i=0;i<L.length;i++)by[''+L[i].id]=L[i];
+  /* 판 X161 — 다리는 dbs.client_id 하나에서 읽습니다 (crmLinkOf · 5번) */
+  for(i=0;i<D.length;i++){ k=crmLinkOf(D[i]); if(k&&by[k])o[D[i].id]=by[k]; }
   return o;
 }
 /* ── 「내 고객으로」 — <b>다리가 놓이는 단 한 번</b> ──────────────────
@@ -13419,7 +13468,9 @@ function olToMine(dbId){
   var L=AR.db,r=null,i;
   for(i=0;i<L.length;i++)if(L[i].id===dbId){r=L[i];break;}
   if(!r){toast('그 배정 DB 줄을 못 찾았습니다');return;}
-  if(bd[dbId]){toast('이미 내 고객입니다 — 줄은 하나입니다');return;}
+  if(bd[dbId]||crmLinkOf(r)){toast('이미 내 고객입니다 — 줄은 하나입니다');return;}
+  /* 이을 칸이 없는 서버에서 만들면 <b>다리 없는 고객</b>이 하나 생깁니다 — 만들기 전에 멈춥니다 */
+  if(!crmLinkOn()){toast('서버 준비가 아직 남았습니다 — <b>홈 맨 위 🚀 서버 준비 SQL</b> 을 먼저 돌려 주십시오',6000);return;}
   var sb=osClient();
   if(!sb||!OS.session||!OS.session.user){toast('로그인 후 이용하세요');return;}
   var name=r.name||'';
@@ -13427,8 +13478,8 @@ function olToMine(dbId){
   cliMake(name,null,function(id,msk,why){
     if(!id&&!msk){toast('내 고객으로 못 옮겼습니다 — '+(why||'저장하지 못했습니다'),6000);return;}
     if(!id){toast('만들었지만 번호를 못 받았습니다 — 새로고침해 주십시오',6000);return;}
-    /* 다리를 적는 것은 <b>여기 한 번</b>입니다 */
-    cmSave(id,{db:dbId},function(){
+    /* 다리를 적는 것은 <b>여기 한 번</b>입니다 — 적는 자리는 crmLinkSet 하나 (판 X161 · 5번) */
+    crmLinkSet(dbId,id,function(){
       toast((msk||osMaskName(name))+' 님을 내 고객으로 옮겼습니다 — 줄은 하나입니다');
       try{ osLoadClients(); }catch(e2){}
     });
@@ -13466,7 +13517,7 @@ function olRows(cli){
   for(i=0;i<L.length;i++){
     r=L[i];
     if(me&&r.who&&r.who!==me)continue;
-    if(bd[r.id])continue;                  /* 다리가 있으면 고객 줄로 이미 섰습니다 */
+    if(bd[r.id]||crmLinkOf(r))continue;    /* 다리가 있으면 고객 줄로 이미 섰습니다 (판 X161 · client_id) */
     out.push({id:'db:'+r.id,_db:true,_dbid:r.id,
       name_masked:(typeof osMaskName==='function')?osMaskName(r.name||''):'',
       advisor_id:r.who||'',region:r.region||'',stage:r.stage||'',
@@ -14917,7 +14968,7 @@ var TABS=[
       ⚠ 묶음에 role:'edu' 만 달았을 때는 <b>설계사에게도 그대로 보였습니다</b> —
         재어 보고 알았습니다. check-emcenter 가 이 문을 지킵니다 (8번).        */
    {id:'emcenter',icon:'🎓',title:'EM 전용 운영센터',cnt:'',tk:'교육시스템EM',ak:'교육매니저 EM 운영센터 업적 시책 월급 정산 주간마감 팀원'},
-   /* ★ 2026-10-23 (판 X174) · 사장님 말씀 「교육캘린더 … 토스 테마 아이콘 등
+   /* ★ 2026-10-23 (판 X175) · 사장님 말씀 「교육캘린더 … 토스 테마 아이콘 등
       전부 바꿔줘 색상 까지」 → 「<b>2번</b>으로 하고 <b>로그인 창을 없애버려</b>
       이미 1차 로그인을 하니깐」. 「2번」 은 <b>교육매니저·지점장·대표만</b>
       입니다 — 그래서 위 칸과 같은 <code>tk</code> 를 답니다.
@@ -27380,32 +27431,193 @@ function cregHost(){
   return e;
 }
 function cregClose(){ var e=document.getElementById('cregSheet'); if(e)e.classList.remove('on'); }
+/* ══ ➕ 고객 넣기 — <b>한 흐름</b> (2026-10-23 「탭 다섯으로 하고 추천대로 새 판 만들어」) ══
+   목각 docs/mokgak/고객창_새판.html 「＋ 고객 넣기」 의 세 걸음 그대로입니다 —
+     ① <b>누구</b>       이름 · 번호. 번호가 같은 분이 <b>이미 계시면</b> 그 자리에서 알려 드립니다.
+                       여태 두 등록 창은 둘 다 이미 계신 분인지 안 물어서, 같은 분이 두 번 섰습니다.
+     ② <b>어디서</b>     👤 내 고객 · 📇 배정 DB — 다른 점(한도)을 그대로 말합니다 (판 X133).
+     ③ <b>더 아시는 것</b> 내 고객이면 어디서 오셨나(소개·지인·개척·기존) · 생년 · 성별 · 처음 들은 말.
+                       <b>건너뛰어도 됩니다</b> — 비운 칸은 「모름」 으로 남습니다 (1번).
+   넣고 나면 <b>고객 창 정보 탭</b>이 바로 열립니다.
+   ★★ <b>저장 코드를 한 줄도 새로 안 짭니다</b> (5번) — 사람 줄은 cliMake, 소개·어디서는 cmSave,
+     배정 DB 는 <b>이미 있는 등록 창</b>(hdbNew)에 이름·번호를 채워 엽니다. 배정 한도를 세는 자는
+     그 창 하나라서 거기를 지나야 합니다.
+   ★ 실명은 이 기기에만, 서버에는 가린 이름만 (3번) — cliMake 가 그렇게 합니다.             */
+var CREG={step:1,nm:'',ph:'',src:'',ref:'',by:'',gd:'',say:'',busy:false};
+var CREG_SRC=[['ref','🙌','소개'],['kin','👋','지인'],['new','🚪','개척'],['old','🪪','이미 내 고객이던 분']];
+function cregSrcName(k){ for(var i=0;i<CREG_SRC.length;i++)if(CREG_SRC[i][0]===k)return CREG_SRC[i][2]; return ''; }
+function cregDigits(v){ return (''+(v||'')).replace(/[^0-9]/g,''); }
+/* 이미 계신 분인가 — <b>번호가 같으면 확실</b>, 가린 이름만 같으면 <b>약한 짝</b>.
+   이름만으로 「같은 분」 이라고 하지 않습니다 — 홍○○ 은 흔합니다 (1번).
+   번호는 내 고객(clients.phone)과 내 배정 DB 줄 두 곳에서 봅니다. */
+function cregDup(nm,ph){
+  var o=[],i,c,d=cregDigits(ph),msk=nm?((typeof osMaskName==='function')?osMaskName(nm):nm):'',cp,seen={};
+  var L=(typeof OSC!=='undefined'&&OSC.list)||[];
+  for(i=0;i<L.length;i++){
+    c=L[i]; if(!c)continue;
+    cp=cregDigits(c.phone||((typeof CM_BASE!=='undefined'&&CM_BASE[c.id]&&CM_BASE[c.id].ph)||''));
+    if(d.length>=8&&cp&&cp===d){ o.push({k:'sure',cli:c.id,nm:cmName(c),why:'번호가 같습니다'}); seen[c.id]=1; }
+  }
+  var D=(typeof AR!=='undefined'&&AR.db)||[];
+  for(i=0;i<D.length;i++){
+    c=D[i]; if(!c)continue;
+    cp=cregDigits(c.phone||'');
+    if(d.length>=8&&cp&&cp===d){
+      var lk=(typeof crmLinkOf==='function')?crmLinkOf(c):'';
+      if(lk&&seen[lk])continue;
+      o.push({k:'sure',db:c.id,cli:lk||'',nm:c.name||'배정 줄',why:'배정 DB 에 번호가 같은 줄이 있습니다'+(c.stage?(' · '+c.stage):'')});
+    }
+  }
+  if(o.length||!msk)return o;
+  for(i=0;i<L.length;i++){
+    c=L[i]; if(!c)continue;
+    if((c.name_masked||'')===msk)o.push({k:'weak',cli:c.id,nm:cmName(c),why:'가린 이름만 같습니다 — 번호로 한 번 더 보십시오'});
+  }
+  return o;
+}
+function cregHold(){
+  var g=function(id){ var e=document.getElementById(id); return e?(''+e.value).replace(/^\s+|\s+$/g,''):null; },v;
+  if((v=g('cregNm'))!==null)CREG.nm=v.slice(0,20);
+  if((v=g('cregPh'))!==null)CREG.ph=v.slice(0,20);
+  if((v=g('cregRef'))!==null)CREG.ref=v.slice(0,20);
+  if((v=g('cregBy'))!==null)CREG.by=v.slice(0,4);
+  if((v=g('cregGd'))!==null)CREG.gd=v;
+  if((v=g('cregSay'))!==null)CREG.say=v.slice(0,140);
+}
 function cregOpen(){
   cregCss();
+  CREG={step:1,nm:'',ph:'',src:'',ref:'',by:'',gd:'',say:'',busy:false};
+  cregPaint();
+  var n=document.getElementById('cregNm'); if(n)try{ n.focus(); }catch(e){}
+}
+function cregStep(n){
+  cregHold();
+  if(n>1&&!CREG.nm){ toast('이름부터 적어 주십시오 — 실명은 이 기기에만 남습니다'); n=1; }
+  CREG.step=n; cregPaint();
+}
+function cregPaint(){
+  var st=function(n,t){ return '<span class="creg-st'+(CREG.step===n?' on':(CREG.step>n?' ok':''))+'">'+(CREG.step>n?'✓ ':'')+t+'</span>'; };
   var h='<div class="creg-box">'+
     '<button type="button" class="creg-x" onclick="cregClose()" aria-label="닫기">&times;</button>'+
-    '<div class="creg-t">➕ 고객 넣기 — <b>어느 쪽인가요?</b></div>'+
-    '<div class="creg-d">둘은 <b>다른 표</b>입니다. 넣는 자리만 여기 하나로 모았습니다.</div>',i,x;
-  for(i=0;i<CREG_K.length;i++){
-    x=CREG_K[i];
-    h+='<button type="button" class="creg-c" onclick="'+x.fn+'()">'+
-      '<span class="e">'+x.e+'</span>'+
-      '<span class="m"><b>'+osEsc(x.t)+'</b><em>'+osEsc(x.sub)+'</em>'+
-        '<span class="w">'+x.what+'</span>'+
-        '<span class="w">'+x.has+'</span>'+
-        '<span class="cap">'+x.cap+'</span></span>'+
-      '<span class="ar">›</span></button>';
+    '<div class="creg-t">➕ 고객 넣기</div>'+
+    '<div class="creg-sts">'+st(1,'누구')+st(2,'어디서')+st(3,'더 아시는 것')+'</div>',i,x,D;
+  if(CREG.step===1){
+    h+='<label class="creg-l" for="cregNm">이름 — 실명은 <b>이 기기에만</b>, 서버에는 가린 이름만</label>'+
+       '<input class="creg-in" id="cregNm" maxlength="20" autocomplete="off" value="'+osEsc(CREG.nm)+'" placeholder="예: 홍길동" oninput="cregDupPaint()">'+
+       '<label class="creg-l" for="cregPh">연락처 — 이미 계신 분인지 <b>번호로</b> 찾습니다</label>'+
+       '<input class="creg-in" id="cregPh" maxlength="20" inputmode="tel" autocomplete="off" value="'+osEsc(CREG.ph)+'" placeholder="010-0000-0000" oninput="cregDupPaint()">'+
+       '<div id="cregDupBox">'+cregDupHtml()+'</div>'+
+       '<button type="button" class="creg-go" onclick="cregStep(2)">다음 — 어디서 오셨나요</button>'+
+       '<button type="button" class="creg-c sm" onclick="cregGoXls()"><span class="e">📁</span><span class="m"><b>엑셀·CSV 에서</b><em>여러 명 한꺼번에</em>'+
+         '<span class="w">'+CREG_K[2].has+'</span><span class="cap">'+CREG_K[2].cap+'</span></span><span class="ar">›</span></button>';
+  }else if(CREG.step===2){
+    h+='<div class="creg-d"><b>'+osEsc(CREG.nm)+'</b>님은 어느 쪽인가요? 둘은 <b>다른 표</b>입니다. 넣는 자리만 여기 하나로 모았습니다.</div>';
+    for(i=0;i<2;i++){
+      x=CREG_K[i];
+      h+='<button type="button" class="creg-c" onclick="'+x.fn+'()">'+
+        '<span class="e">'+x.e+'</span>'+
+        '<span class="m"><b>'+osEsc(x.t)+'</b><em>'+osEsc(x.sub)+'</em>'+
+          '<span class="w">'+x.what+'</span>'+
+          '<span class="w">'+x.has+'</span>'+
+          '<span class="cap">'+x.cap+'</span></span>'+
+        '<span class="ar">›</span></button>';
+    }
+    h+='<div class="creg-n">배정 DB 에서 <b>계약까지 가신 분</b>은 내 고객으로도 올립니다 — '+
+       '그때 둘이 이어집니다. 고객 창이나 「DB 통합 CRM」 에서 <b>「내 고객으로」</b> 를 누르시면 됩니다.</div>'+
+       '<button type="button" class="creg-bk" onclick="cregStep(1)">‹ 앞으로</button>';
+  }else{
+    h+='<div class="creg-d"><b>'+osEsc(CREG.nm)+'</b>님 — <b>모르면 비워 두십시오.</b> 비운 칸은 「모름」 으로 남습니다. '+
+       '소득·가족·팩트파인딩은 고객 창 <b>정보</b> 탭에서 천천히 채웁니다.</div>'+
+       '<div class="creg-l">어디서 오셨나요</div><div class="creg-chips">';
+    for(i=0;i<CREG_SRC.length;i++)
+      h+='<button type="button" class="creg-chip'+(CREG.src===CREG_SRC[i][0]?' on':'')+'" onclick="cregHold();CREG.src=(CREG.src===\''+CREG_SRC[i][0]+'\'?\'\':\''+CREG_SRC[i][0]+'\');cregPaint()">'+
+         CREG_SRC[i][1]+' '+CREG_SRC[i][2]+'</button>';
+    h+='</div>'+
+       (CREG.src==='ref'?('<label class="creg-l" for="cregRef">누가 소개해 주셨나요 — 고객이면 이어지고, 아니면 가린 이름만 서버로</label>'+
+         '<input class="creg-in" id="cregRef" maxlength="20" value="'+osEsc(CREG.ref)+'" placeholder="예: 홍갑돌">'):'')+
+       '<div class="creg-2"><div><label class="creg-l" for="cregBy">태어난 해</label>'+
+         '<input class="creg-in" id="cregBy" maxlength="4" inputmode="numeric" value="'+osEsc(CREG.by)+'" placeholder="모름"></div>'+
+       '<div><label class="creg-l" for="cregGd">성별</label><select class="creg-in" id="cregGd">'+
+         '<option value=""'+(CREG.gd===''?' selected':'')+'>모름</option><option value="M"'+(CREG.gd==='M'?' selected':'')+'>남</option>'+
+         '<option value="F"'+(CREG.gd==='F'?' selected':'')+'>여</option></select></div></div>'+
+       '<label class="creg-l" for="cregSay">처음 들은 말 한 줄</label>'+
+       '<input class="creg-in" id="cregSay" maxlength="140" value="'+osEsc(CREG.say)+'" placeholder="예: 아이 보험 알아보는 중">'+
+       '<button type="button" class="creg-go" id="cregDo" onclick="cregMake()"'+(CREG.busy?' disabled':'')+'>'+(CREG.busy?'넣는 중…':'넣고 고객 창 열기 → 정보 탭')+'</button>'+
+       '<button type="button" class="creg-bk" onclick="cregStep(2)">‹ 앞으로</button>';
   }
-  h+='<div class="creg-n">배정 DB 에서 <b>계약까지 가신 분</b>은 내 고객으로도 올립니다 — '+
-     '그때 둘이 이어집니다. 「DB 통합 CRM」 에서 그 줄의 <b>「내 고객으로」</b> 를 누르시면 됩니다.</div>'+
-     '</div>';
+  h+='</div>';
   var host=cregHost(); host.innerHTML=h; host.classList.add('on');
 }
-/* 고른 뒤 — <b>이미 있는 창</b>을 부르기만 합니다 (5번) */
-function cregGoCli(){ cregClose(); if(typeof osNewClient==='function')osNewClient();
-  else if(typeof toast==='function')toast('고객 등록 창을 아직 못 읽었습니다 — 새로고침해 주세요'); }
-function cregGoDb(){ cregClose(); if(typeof hdbNew==='function')hdbNew();
-  else if(typeof toast==='function')toast('배정 DB 등록 창을 아직 못 읽었습니다 — 새로고침해 주세요'); }
+function cregDupHtml(){
+  var L=cregDup(CREG.nm,CREG.ph),i,x,h='';
+  if(!CREG.nm&&!CREG.ph)return '';
+  if(!L.length)return '<div class="creg-n" style="border:0;margin-top:6px;padding-top:0">'+
+    (cregDigits(CREG.ph).length>=8?'같은 담당 고객·배정 줄 중 <b>번호가 같은 분이 없습니다.</b>'
+      :'번호를 적으시면 이미 계신 분인지 봐 드립니다. 비우시면 <b>확인하지 못한 채</b> 넣습니다.')+'</div>';
+  for(i=0;i<L.length&&i<3;i++){
+    x=L[i];
+    h+='<div class="creg-dup'+(x.k==='weak'?' weak':'')+'"><div><b>'+osEsc(x.nm)+'</b> — '+osEsc(x.why)+'</div>'+
+       '<button type="button" onclick="cregOpenDup(\''+osEsc(x.cli||'')+'\',\''+osEsc(x.db||'')+'\')">이 분 창 열기</button></div>';
+  }
+  return h+'<div class="creg-n" style="border:0;margin-top:4px;padding-top:0">다른 분이면(가족이 번호를 같이 쓰는 등) 그대로 <b>다음</b>을 누르십시오.</div>';
+}
+function cregDupPaint(){ cregHold(); var b=document.getElementById('cregDupBox'); if(b)b.innerHTML=cregDupHtml(); }
+function cregOpenDup(cli,db){ cregClose(); if(typeof cusGo==='function')cusGo(cli?{cli:cli}:{db:db}); }
+/* ③ 넣기 — 사람 줄은 cliMake 하나, 덧붙이는 것은 cmSave 하나 (5번) */
+function cregMake(){
+  cregHold();
+  if(CREG.busy)return;
+  if(!CREG.nm){ cregStep(1); return; }
+  var ex={},by=parseInt(CREG.by,10);
+  if(CREG.ph)ex.ph=CREG.ph;
+  if(by>=1900&&by<=new Date().getFullYear())ex.by=by;
+  if(CREG.gd)ex.gd=CREG.gd;
+  if(CREG.say)ex.memo=CREG.say;
+  CREG.busy=true; cregPaint();
+  if(typeof cliMake!=='function'){ CREG.busy=false; cregPaint(); toast('고객 등록을 아직 못 읽었습니다 — 새로고침해 주세요'); return; }
+  cliMake(CREG.nm,ex,function(id,msk,why){
+    CREG.busy=false;
+    if(!id&&!msk){ cregPaint(); toast(why||'넣지 못했습니다',6000); return; }
+    try{ osAudit('create','client',null,{note:'고객 넣기'}); }catch(e){}
+    if(!id){
+      /* 번호를 못 받았으면 <b>그렇다고</b> — 실명·어디서를 못 붙였습니다 (1번) */
+      cregClose(); toast('넣었습니다 — 다만 '+(why||'번호를 못 받아')+' 실명·어디서는 못 담았습니다. 고객 365일에서 고쳐 주십시오.',8000);
+      OSC.view='list'; osLoadClients(); return;
+    }
+    var patch={},nm=CREG.ref,c=null;
+    if(CREG.src)patch.src=CREG.src;
+    if(CREG.src==='ref'&&nm){
+      c=(typeof cmRefFind==='function')?cmRefFind(nm):null;
+      if(c&&c.id!==id){ patch.ref=c.id; patch.refx=''; }
+      else{ patch.ref=''; patch.refx=osMaskName(nm); try{ cmRefRealSet(id,nm); }catch(e2){} }
+    }
+    var open=function(){
+      cregClose();
+      toast(CREG.nm+'님을 넣었습니다 — 서버에는 '+(msk||'가린 이름')+' 로만 갑니다');
+      /* 명단을 다시 받고 연다 — 명단에 없으면 cusGo 가 그 한 줄만 묻습니다 (7번) */
+      if(typeof cusGo==='function')cusGo({cli:id,tab:'info'});
+      try{ osLoadClients(); }catch(e3){}
+    };
+    /* cmSave 는 이 기기 칸을 <b>먼저</b> 고치고 서버로 보냅니다 — 창은 기다리지 않고 엽니다.
+       서버가 못 받으면 cmSave 가 그렇다고 알립니다. */
+    var k,any=false; for(k in patch)any=true;
+    if(any)cmSave(id,patch,function(){ try{ if(OSC.current&&OSC.current.id===id)cuwPaint(OSC.current); }catch(e4){} });
+    open();
+  });
+}
+/* 고른 뒤 — 👤 는 셋째 걸음으로, 📇 · 📁 는 <b>이미 있는 창</b>을 부르기만 합니다 (5번) */
+function cregGoCli(){ cregStep(3); }
+function cregGoDb(){
+  cregHold();
+  var nm=CREG.nm,ph=CREG.ph;
+  cregClose();
+  if(typeof hdbNew!=='function'){ if(typeof toast==='function')toast('배정 DB 등록 창을 아직 못 읽었습니다 — 새로고침해 주세요'); return; }
+  hdbNew();
+  /* 첫 걸음에 적으신 것을 그 창에 옮겨 둡니다 — 두 번 치지 않게 */
+  var a=document.getElementById('hdbName'),b=document.getElementById('hdbPhone');
+  if(a&&nm&&!a.value)a.value=nm;
+  if(b&&ph&&!b.value)b.value=ph;
+}
 function cregGoXls(){ cregClose(); if(typeof cimpOpen==='function')cimpOpen();
   else if(typeof toast==='function')toast('엑셀 가져오기를 아직 못 읽었습니다 — 새로고침해 주세요'); }
 function cregCss(){
@@ -27433,7 +27645,26 @@ function cregCss(){
    '.creg-c .cap{display:block;margin-top:5px;font-size:var(--t7);font-weight:800;color:var(--t-ink-2)}'+
    '.creg-c .ar{flex:none;align-self:center;color:var(--t-sub2);font-size:var(--t4)}'+
    '.creg-n{margin-top:13px;padding-top:11px;border-top:1px solid var(--t-line);'+
-     'font-size:var(--t7);line-height:1.7;color:var(--t-sub)}';
+     'font-size:var(--t7);line-height:1.7;color:var(--t-sub)}'+
+   /* 세 걸음 (2026-10-23) */
+   '.creg-sts{display:flex;gap:6px;margin:10px 0 4px;flex-wrap:wrap}'+
+   '.creg-st{font-size:13px;font-weight:800;padding:4px 10px;border-radius:999px;background:var(--t-bg-2);color:var(--t-sub)}'+
+   '.creg-st.on{background:var(--t-ink);color:#fff}.creg-st.ok{color:var(--t-point)}'+
+   '.creg-l{display:block;margin-top:11px;font-size:13px;font-weight:700;color:var(--t-sub)}'+
+   '.creg-in{display:block;width:100%;box-sizing:border-box;min-height:44px;margin-top:4px;padding:0 12px;'+
+     'border:1.5px solid var(--t-line);border-radius:10px;font-family:inherit;font-size:16px;color:var(--t-ink);background:#fff}'+
+   '.creg-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}'+
+   '.creg-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}'+
+   '.creg-chip{min-height:44px;padding:0 12px;border:0;border-radius:10px;background:var(--t-bg-2);font-family:inherit;font-weight:800;font-size:14px;color:var(--t-ink);cursor:pointer}'+
+   '.creg-chip.on{background:var(--t-ink);color:#fff}'+
+   '.creg-go{display:block;width:100%;min-height:48px;margin-top:14px;border:0;border-radius:12px;background:var(--t-point);color:#fff;font-family:inherit;font-weight:900;font-size:15px;cursor:pointer}'+
+   '.creg-go[disabled]{opacity:.6}'+
+   '.creg-bk{display:block;width:100%;min-height:44px;margin-top:8px;border:0;border-radius:12px;background:var(--t-bg-2);color:var(--t-ink);font-family:inherit;font-weight:800;font-size:14px;cursor:pointer}'+
+   '.creg-c.sm{margin-top:16px}'+
+   '.creg-dup{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:10px;padding:10px 12px;'+
+     'border:1.5px solid var(--t-point);border-radius:10px;font-size:13px;line-height:1.5;color:var(--t-ink)}'+
+   '.creg-dup.weak{border-style:dashed;border-color:var(--t-sub2)}'+
+   '.creg-dup button{flex:none;min-height:40px;border:0;border-radius:9px;background:var(--t-ink);color:#fff;font-family:inherit;font-weight:800;font-size:13px;padding:0 10px;cursor:pointer}';
   document.head.appendChild(st);
 }
 /* ══ 🪪 <b>고객 한 줄을 만드는 자</b> — 이 한 곳만 만듭니다 (5번) ════
@@ -31101,7 +31332,7 @@ function hmBaCan(x){
 /* ── 🌉 이 줄은 <b>고객 365일의 어느 카드</b>인가 — 묻는 자리는 하나 ───
    2026-10-09. 하루를 끝까지 몰아 보다 잡았습니다. 아침에 고른 분을
    「📄 보장분석 열기」 로 열면 <b>같은 이름 다른 분의 증권</b>이 올라왔습니다.
-   chkFind 는 <b>다리(client_meta.db)를 먼저</b> 볼 줄 아는데, 여기서는
+   chkFind 는 <b>다리(판 X161 부터 dbs.client_id)를 먼저</b> 볼 줄 아는데, 여기서는
    세 번째 칸(dbId)을 <b>안 주고</b> 불렀습니다 — 그러면 이름 글자로만
    붙습니다. 바로 그 함수 위에 「이름으로 붙이면 다른 분의 증권을 그 분
    것이라고 말하게 됩니다」 라고 적혀 있던 자리입니다 (1번·3번).
@@ -34201,7 +34432,25 @@ function hmRtPerson(id){
   try{ AR.cat='touch'; AR.tkAll=false; AR.open=id||''; }catch(e){}
   go('airep');
 }
-function hmRtOpen(){ go('crm'); }
+/* 🗺️ 지역 동선 — <b>동선 창까지</b> 엽니다 (사장님 말씀 2026-10-23 「지역동선은 왜 안되고」).
+   여태는 go('crm') 만 해서 DB 통합 CRM <b>명단</b>이 떴고, 동선은 그 위 「🗺️ 지역 동선」 을
+   한 번 더 눌러야 했습니다 — 단추 이름은 「지역 동선」 인데 동선이 안 떴습니다.
+   ★ 동선 창은 CRM 안(apex-route.js · apexRouteOpen) <b>한 곳</b>입니다 — 여기 다시 안 만듭니다 (5번).
+   ★ CRM 이 자료를 다 읽은 뒤에 엽니다(apexCrmReady). 덜 읽고 열면 「오늘 약속 0」 으로 섭니다 (1번).
+   ★ 기다림에는 끝이 있습니다 — 12초 안에 못 열면 그렇다고 말합니다. 조용히 명단만 남기지 않습니다. */
+function hmRtOpen(){
+  go('crm');
+  var n=0,tick=function(){
+    var f=document.getElementById('crmFrame'),w=null;
+    try{ w=f&&f.contentWindow; if(w&&typeof w.apexRouteOpen!=='function')w=null; }catch(e){ w=null; }
+    var ready=false;
+    try{ ready=!!(w&&(typeof w.apexCrmReady!=='function'||w.apexCrmReady())); }catch(e2){ ready=false; }
+    if(ready){ try{ w.apexRouteOpen(); return; }catch(e3){} }
+    if(++n>48){ toast('지역 동선 창을 못 열었습니다 — DB 통합 CRM 위 「🗺️ 지역 동선」 을 눌러 주십시오',6000); return; }
+    setTimeout(tick,250);
+  };
+  setTimeout(tick,60);
+}
 function hmRtCss(){
   if(document.getElementById('hmRtCss'))return;
   var st=document.createElement('style');st.id='hmRtCss';
@@ -47101,7 +47350,7 @@ var OS_TODO_SQL=[
   "notify pgrst, 'reload schema';"
 ];
 var HX_SQL={
- '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs","coach_notes","legal_consents","tool_access","monthly_perf","team_plans","계정 찾기·중복 정리","advisor_intro","terms_verdicts","team_feedback","team_todos"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
+ '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs","coach_notes","legal_consents","tool_access","monthly_perf","team_plans","계정 찾기·중복 정리","advisor_intro","terms_verdicts","team_feedback","team_todos","client_consents"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
   "set search_path = public;",
   "",
   "create or replace function public.is_admin()",
@@ -47958,8 +48207,61 @@ var HX_SQL={
   "  from pair",
   " where t.id = pair.db_id and pair.n = 1 and t.client_id is null;",
   "",
+  "/* ✅ <b>고객 동의 — 네 갈래</b> (판 X161-판2 · 설계 docs/고객한장_설계.md 7장)",
+  "   사장님 말씀 (2026-10-22) 「동의는 네 갈래로」 · (2026-10-23) 「판 2부터 만들어」.",
+  "   갈래: collect 수집·이용 · uid 고유식별정보(주민번호) · sensitive 민감정보(병력) · ad 광고 수신.",
+  "   ★ 갈래마다 <b>받은 날 · 철회한 날 · 받은 방법 · 적은 사람</b>을 남깁니다.",
+  "   ★ 보는 사람은 clients 와 같습니다 — 본인 · 관리자 · 팀장(준법 확인 때 관리자가 봐야 함).",
+  "     적는 사람은 담당자 본인(과 전체 편집 권한)뿐입니다.",
+  "   ★ clients.consent_status 는 이 표의 <b>수집·이용</b> 갈래에서 읽어 세우는 요약입니다 —",
+  "     주인은 이 표 하나입니다(5번). 앱은 consent_status 를 직접 안 씁니다.",
+  "   되돌리려면: drop table public.client_consents cascade;",
+  "              drop function public.client_consents_sum(); */",
+  "create table if not exists public.client_consents (",
+  "  client_id   uuid not null references public.clients(id) on delete cascade,",
+  "  kind        text not null check (kind in ('collect','uid','sensitive','ad')),",
+  "  granted_at  timestamptz,",
+  "  revoked_at  timestamptz,",
+  "  method      text check (method is null or method in ('서면','전자서명','녹취','구두')),",
+  "  recorded_by uuid default auth.uid(),",
+  "  updated_at  timestamptz not null default now(),",
+  "  primary key (client_id, kind)",
+  ");",
+  "alter table public.client_consents enable row level security;",
+  "drop policy if exists client_consents_read on public.client_consents;",
+  "create policy client_consents_read on public.client_consents for select using (",
+  "  exists (select 1 from public.clients c where c.id = client_consents.client_id",
+  "          and (c.advisor_id = auth.uid() or public.is_admin() or public.is_my_teammate(c.advisor_id))));",
+  "drop policy if exists client_consents_write on public.client_consents;",
+  "create policy client_consents_write on public.client_consents for all using (",
+  "  exists (select 1 from public.clients c where c.id = client_consents.client_id",
+  "          and (c.advisor_id = auth.uid() or public.is_editor_all())))",
+  "  with check (",
+  "  exists (select 1 from public.clients c where c.id = client_consents.client_id",
+  "          and (c.advisor_id = auth.uid() or public.is_editor_all())));",
+  "grant select, insert, update, delete on public.client_consents to authenticated;",
+  "",
+  "/* 요약 — 철회가 적혀 있으면 revoked, 받은 날만 있으면 granted, 없으면 none.",
+  "   ★ 앱은 다시 받을 때 철회한 날을 비웁니다 — 그래서 「철회 뒤 다시 받음」 은 granted 입니다. */",
+  "create or replace function public.client_consents_sum()",
+  "returns trigger language plpgsql security definer set search_path = public as $fn$",
+  "declare cid uuid; g timestamptz; r timestamptz;",
+  "begin",
+  "  cid := coalesce(new.client_id, old.client_id);",
+  "  select granted_at, revoked_at into g, r",
+  "    from public.client_consents where client_id = cid and kind = 'collect';",
+  "  update public.clients set consent_status =",
+  "    (case when r is not null then 'revoked' when g is not null then 'granted' else 'none' end)::public.consent_status",
+  "   where id = cid;",
+  "  return null;",
+  "end",
+  "$fn$;",
+  "drop trigger if exists client_consents_sum on public.client_consents;",
+  "create trigger client_consents_sum after insert or update or delete on public.client_consents",
+  "  for each row execute function public.client_consents_sum();",
+  "",
   "insert into public.app_config(key, value)",
-  "values ('schema_version', '44')",
+  "values ('schema_version', '45')",
   "on conflict (key) do update set value = excluded.value, updated_at = now();",
   "",
   "notify pgrst, 'reload schema';",
@@ -47967,6 +48269,9 @@ var HX_SQL={
   "select",
   "  '조직도'       as 화면, to_regclass('public.org_members') is not null as 표_준비,",
   "  (select count(*) from pg_policies where schemaname='public' and tablename='org_members') as 정책수",
+  "union all select",
+  "  '고객 동의(네 갈래)', to_regclass('public.client_consents') is not null,",
+  "  (select count(*) from pg_policies where schemaname='public' and tablename='client_consents')",
   "union all select",
   "  '실행 체크판', to_regclass('public.daily_checks') is not null,",
   "  (select count(*) from pg_policies where schemaname='public' and tablename='daily_checks')",
@@ -50067,7 +50372,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    실제로 2026-09-25 에 제가 hours 칸을 더하고 이 줄을 안 올려,
    사장님이 「SQL이 어딨어?」 하고 물으셨습니다. 넣는 것과 알리는 것은
    <b>다른 일</b>입니다 (1번).                                        */
-var SETUP_VER=44;   /* 44: 고객 365일 ↔ DB 통합 CRM 을 잇는 칸(dbs.client_id) · 43: 알람 네 번(push_subs.hours) */
+var SETUP_VER=45;   /* 45: 고객 동의 네 갈래(client_consents · 판 X161-판2) · 44: 고객 365일 ↔ DB 통합 CRM 을 잇는 칸(dbs.client_id) · 43: 알람 네 번(push_subs.hours) */
 var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false,split:false,more:false,got:{}};
 
 /* ══ 준비 SQL 을 <b>나눠서</b> 돌린다 ══════════════════════════════════
@@ -67843,7 +68148,11 @@ var CM_FIELDS=[
     ★ <b>여쭙는 칸이 아닙니다</b>(넷째가 null) — 「내 고객으로」 를 누를 때
       조용히 적힙니다. 「오늘 이분」 줄을 세우면 안 되는 값입니다.
     ★ <b>이름 대조는 그대로 둡니다</b> — 옛 자료를 잇는 길입니다. 다리가
-      있으면 다리를 먼저 보고, 없을 때만 이름으로 견줍니다.            */
+      있으면 다리를 먼저 보고, 없을 때만 이름으로 견줍니다.
+    ⚠ 판 X161 — <b>이제 아무도 안 읽고 안 씁니다.</b> 다리는 dbs.client_id
+      하나입니다(crmDbsOf · crmLinkSet). 서버에도 값 있는 줄이 0입니다.
+      칸을 남겨 두는 까닭은 하나 — 이 쪽지가 없으면 <b>왜 안 쓰는지</b>
+      다음 세션이 모릅니다.                                              */
  ['db',   'str', 0, null],
  /* ── ❓ <b>여쭤서 알게 된 것</b> — {물음열쇠:고른 답} ────────────────
     2026-09-28 · 판 ⑥. 이것은 <b>여쭙는 칸이 아닙니다</b>(넷째가 null) —
@@ -67903,6 +68212,9 @@ var CM_FIELDS=[
  /* 고객이 아닌 분 — <b>가린 이름만</b>(김○○). 실명은 이 기기에.
     ref 와 <b>같은 칸·같은 단추</b>로 적히므로 따로 안 여쭙는다 */
  ['refx', 'str', 0, null],
+ /* 🚪 어디서 오신 분인가 — 소개 · 지인 · 개척 · 기존 (CREG_SRC 의 열쇠). 고객 넣기 둘째 걸음이 적습니다.
+    배정 DB 로 오신 분은 dbs.source 가 이미 말하므로 여기 안 적습니다 (5번) */
+ ['src',  'str', 0, null],
  /* 언제 고쳤나 — 앱이 적는다 */
  ['up',   'num', 0, null]
 ];
@@ -68225,7 +68537,11 @@ function ccRate(list){
 
 /* ── 통화 기록을 고객에 잇는다 ──
    calls 는 고객이 아니라 DB 줄(db_id)에 붙어 있다. 둘을 잇는 것은 이름뿐이다.
-   실명은 이 기기에만 있으니, 실명을 아는 고객은 실명으로, 모르면 가린 모양끼리 견준다. */
+   실명은 이 기기에만 있으니, 실명을 아는 고객은 실명으로, 모르면 가린 모양끼리 견준다.
+   ★ 판 X161 — 이제 둘을 잇는 칸이 있다(<b>dbs.client_id</b>). 그 칸이 있는
+     서버에서는 <b>그것만</b> 본다 — 가린 이름은 다섯 명에 한 명꼴로 겹쳐
+     남의 통화를 그 분의 마지막 연락으로 셌다(판 X82). 칸이 없는 옛
+     서버에서만 아래 이름 견주기가 돈다 (5번 · 묻는 곳은 crmLinkOf).   */
 function ccLoadCalls(){
   var sb=(typeof osClient==='function')?osClient():null;
   if(!sb||!OS.profile){CC.loaded=true;return;}
@@ -68237,8 +68553,12 @@ function ccLoadCalls(){
     CC.err='DB 통합 CRM 의 통화 기록을 못 읽었습니다 — 고객 365일 접촉 기록만으로 셉니다.';
     ccAfter();
   };
+  var dbDown=function(m){return /column|42703|does not exist|schema cache/i.test(''+(m||''));};
   Promise.all([
-    arAll(sb,'dbs','id,customer_name','id'),
+    arAll(sb,'dbs','id,customer_name,client_id','id').then(function(r0){
+      if(r0&&r0.error&&dbDown(r0.error.message))return arAll(sb,'dbs','id,customer_name','id');
+      return r0;
+    }),
     arAll(sb,'calls','db_id,call_at',['-call_at','db_id'],null,4000)
   ]).then(function(r){
     if(r[0].error||r[1].error){fail();return;}
@@ -68249,9 +68569,15 @@ function ccLoadCalls(){
       d=(''+(calls[i].call_at||'')).slice(0,10);
       if(d&&(!perDb[k]||d>perDb[k]))perDb[k]=d;
     }
+    var byCli={},link=!!(dbs.length&&('client_id' in dbs[0]));
     for(i=0;i<dbs.length;i++){
-      nm=(''+(dbs[i].customer_name||'')).replace(/\s/g,'');
       d=perDb[dbs[i].id];
+      if(link){
+        k=(typeof crmLinkOf==='function')?crmLinkOf(dbs[i]):'';
+        if(k&&d&&(!byCli[k]||d>byCli[k]))byCli[k]=d;
+        continue;
+      }
+      nm=(''+(dbs[i].customer_name||'')).replace(/\s/g,'');
       if(!nm||!d)continue;
       if(!byReal[nm]||d>byReal[nm])byReal[nm]=d;
       mk=(typeof osMaskName==='function')?osMaskName(nm):nm;
@@ -68261,9 +68587,12 @@ function ccLoadCalls(){
     var L=OSC.list||[],c,real,hit;
     for(i=0;i<L.length;i++){
       c=L[i];
-      real=(typeof cmRealOf==='function')?cmRealOf(c.id):'';
-      hit=real?byReal[real.replace(/\s/g,'')]:null;
-      if(!hit)hit=byMask[c.name_masked||''];
+      if(link)hit=byCli[''+c.id]||null;
+      else{
+        real=(typeof cmRealOf==='function')?cmRealOf(c.id):'';
+        hit=real?byReal[real.replace(/\s/g,'')]:null;
+        if(!hit)hit=byMask[c.name_masked||''];
+      }
       if(hit){CC.calls[c.id]=hit;CC.hitN++;}
     }
     ccAfter();
@@ -69850,6 +70179,7 @@ function cqaFld(fid,id){
     }
     toast('이 칸은 「고객 365일」 상세 화면에서 적습니다');return;
   }
+  if(typeof cusReveal==='function')cusReveal(e);   /* 다른 탭에 있으면 그 탭을 엽니다 (판 X161) */
   try{ e.scrollIntoView({behavior:'smooth',block:'center'}); }
   catch(x){ try{ e.scrollIntoView(); }catch(x2){} }
   try{ e.focus({preventScroll:true}); }catch(x3){}
@@ -70179,8 +70509,23 @@ function cmPanelsHtml(id){
      보낼 말 → 팩트파인딩.
      ★ 걱정 카드(cmWorryHtml)는 <b>적어 두기 카드로 옮겨</b> 여기서 안
        부릅니다 — 함수는 지우지 않았습니다 (부르는 자리만 한 곳으로 · 5번). */
-  return cqaHtml(id)+cmStageHtml(id)+cmNoteHtml(id)+cmRelHtml(id)+cmWalRefHtml(id)+
-         cmDueClmHtml(id)+cmRrnHtml(id)+cmFamHtml(id)+cmSayHtml(id)+cmFfPanelHtml(id);
+  /* ★ 판 X161 — 칸마다 <b>어느 탭</b>에 서는지 붙입니다(cusSec). 차례와 칸은
+       그대로입니다. 「한 가지만 물어봅니다」 는 <b>한눈에</b> 맨 위에만 섭니다 —
+       연락 탭에도 세웠더니 탭을 넘길 때마다 같은 물음이 또 섰습니다(2026-10-23
+       「중복된 부분 줄이고」). 📝 적어 두기(다음 할 날 · 들은 말)는 연락 탭의 🤝 관계와
+       같은 것을 다루므로 <b>연락 탭</b>으로 모았습니다. 한눈에 탭 맨 위에는 🔎 요약이 섭니다.
+       연락 탭에는 빠른 창의 결과 다섯(cusTalkHtml)이 같이 섭니다.             */
+  /* ★★ 새 판 (2026-10-23 「틀을 다 깨고 다시」) — 칸은 그대로, <b>자리만</b> 바꿨습니다.
+       「한 가지만」 은 요약의 「지금 할 일」(cuwNowHtml) 이 할 일이 없을 때 세웁니다.
+       🤝 관계(다음 할 일 · 접촉)와 결과 다섯은 연락 탭의 cuwNext · cuwTl · cuwCompose 가
+       <b>같은 저장 함수</b>(cmNextDone · cmNextDel · cmTouchDel · cshMark)로 대신합니다.
+       적어 두기 · 가족 · 팩트파인딩 · 단계 안내는 <b>고치기 화면</b>(sh-…)에서만 섭니다. */
+  var say=cmSayHtml(id);
+  return cusSec('sh-stage',cmStageHtml(id))+cusSec('sh-story',cmNoteHtml(id))+
+         cusSec('cov',cmWalRefHtml(id))+cusSec('cov',cmDueClmHtml(id))+
+         cusSec('doc',cmRrnHtml(id))+cusSec('sh-fam',cmFamHtml(id))+
+         (say?cusSec('talk','<details class="cuw-fold"><summary class="t-card cuw-ch"><span class="t-lab">💬 보낼 말</span><span class="ed">펴기</span></summary>'+say+'</details>'):'')+
+         cusSec('sh-ff',cmFfPanelHtml(id));
 }
 /* ══ 🗺️🙌 <b>빈 통장 · 소개</b> — 담을 칸이 생겼으니 보이는 자리도 ══════
    ★ <b>「없다」 와 「아직 안 봤다」 를 갈라 적습니다</b> (1번). 진단을 안
@@ -70407,7 +70752,28 @@ function cshNm(id){
     return (r&&r.name)||'고객';
   }catch(e){ return '고객'; }
 }
+/* 🪪 새 판 (2026-10-23 「탭 다섯으로 하고 추천대로」) — <b>고객 번호가 있는 분</b>은 빠른 창 대신
+   <b>고객 창의 연락 탭</b>이 열립니다. 연락 탭 맨 위가 빠른 창이 하던 「기록 한 칸」 이라 전화하면서
+   적는 일은 그대로이고, 같은 분을 두 창이 저마다 그리던 것이 하나가 됩니다 (5번).
+   ★ 아직 고객 번호가 없는 <b>배정 DB 줄</b>은 열 창이 없으니 여태 창(아래)이 그대로 엽니다.
+   ★ 명단(OSC.list)에 있는 분만 넘깁니다 — 없는 분을 넘기면 cusGo 가 서버에 묻고, 못 찾으면
+     다시 이리로 돌아와 <b>돌고 돕니다</b>. 그 자리는 여태 창으로 엽니다. */
+function cshCusOf(id,dbid){
+  var cid=id?(''+id):'',i;
+  if(!cid&&dbid&&typeof AR!=='undefined'&&AR.db&&typeof crmLinkOf==='function'){
+    for(i=0;i<AR.db.length;i++)if((''+AR.db[i].id)===(''+dbid)){ cid=crmLinkOf(AR.db[i])||''; break; }
+  }
+  if(!cid||typeof cusGo!=='function'||typeof OSC==='undefined'||!OSC.list)return '';
+  for(i=0;i<OSC.list.length;i++)if((''+OSC.list[i].id)===cid)return cid;
+  return '';
+}
 function cshOpen(id,dbid){
+  var cus=cshCusOf(id,dbid);
+  if(cus){ cusGo({cli:cus,tab:'talk'}); return; }
+  cshSheetOpen(id,dbid);
+}
+/* 여태 창 그 자체 — 고객 창이 못 여는 자리(아직 고객 번호가 없는 배정 줄 · 명단에 없는 분)에서만 섭니다 */
+function cshSheetOpen(id,dbid){
   CSH.id=id||''; CSH.dbid=dbid||cshDbOf(id);
   var host=document.getElementById('cshHost');
   if(!host){ host=document.createElement('div'); host.id='cshHost'; document.body.appendChild(host); }
@@ -70429,9 +70795,15 @@ function cshHtml(id){
   h+='<div class="t-lab">🧾 지금 이 분 상황</div>'+
      '<div class="t-big">여기서 바로 고칩니다<small>전화하면서 알게 된 것을 그 자리에서 적습니다. 딴 화면으로 안 보냅니다.</small></div>';
   h+=cshStageHtml(id,dbid);
-  h+=(typeof cmNoteHtml==='function')?cmNoteHtml(id):'';
-  h+=(typeof cmFamHtml==='function')?cmFamHtml(id):'';
-  h+=(typeof cmSayHtml==='function')?cmSayHtml(id):'';
+  /* ★ 이야기·가족·보낼 말은 <b>고객 한 사람</b>에 붙는 칸입니다. 새 판부터 이 창은 거의 언제나
+     <b>고객 번호가 없는 배정 줄</b>에서 열려(고객이면 고객 창 연락 탭), 그 칸에 적으면 담을 곳이
+     없었습니다(빈 번호로 저장). 번호가 있을 때만 세웁니다 — 화면 점검 2026-10-23 에서 찾음 */
+  if(id){
+    h+=(typeof cmNoteHtml==='function')?cmNoteHtml(id):'';
+    h+=(typeof cmFamHtml==='function')?cmFamHtml(id):'';
+    h+=(typeof cmSayHtml==='function')?cmSayHtml(id):'';
+  }else h+='<div class="t-note" style="margin:0 0 12px">아직 <b>내 고객으로 안 올린</b> 배정 줄이라 이야기·가족은 여기 안 담깁니다 — '+
+      '계약까지 가시면 「🪪 내 고객으로」 를 누르십시오. 그때부터 고객 창에서 다 적습니다.</div>';
   h+='<div class="t-card"><div class="t-lab">📞 '+osEsc(nm)+'님, 어떻게 됐나요?</div>'+
      '<div class="t-big">누르면 다음에 뜰 날까지 정해집니다<small>날짜는 <b>규칙이 정합니다</b> — 고르지 않으셔도 됩니다.</small></div>'+
      '<div class="t-chips">';
@@ -70440,6 +70812,8 @@ function cshHtml(id){
        'onclick="cshMark(\''+osEsc(id)+'\',\''+CSH_RES[i][0]+'\')">'+
        osEsc(CSH_RES[i][1])+' <b>'+CSH_RES[i][2]+'일 뒤</b></button>';
   h+='</div>'+
+     /* 🪪 판 X161 — 빠른 창에서 <b>고객 창 전체</b>로. 여는 자리는 cusGo 하나 (5번) */
+     (id?('<button type="button" class="t-btn sm" style="margin-top:14px" onclick="cusGo({cli:\''+osEsc(id)+'\',tab:\'talk\'})">🪪 고객 창 전체 보기</button>'):'')+
      '<button type="button" class="t-btn g sm" style="margin-top:14px" onclick="cshClose()">닫기</button>'+
   '</div></div>';
   return h;
@@ -70458,19 +70832,25 @@ function cshStageHtml(id,dbid){
   for(i=0;i<L.length;i++)
     h+='<option value="'+osEsc(L[i])+'"'+(cur===L[i]?' selected':'')+'>'+osEsc(L[i])+'</option>';
   h+='</select></div>'+
-    '<button type="button" class="t-btn g sm" onclick="cshStageSave(\''+osEsc(dbid)+'\')">단계만 바꾸기</button></div>';
+    '<button type="button" class="t-btn g sm" onclick="cshStageSave(\''+osEsc(dbid)+'\',this)">단계만 바꾸기</button></div>';
   return h;
 }
 /* 단계를 바꾸는 곳은 <b>hdbTo 하나</b>입니다 — 권한·필요 조건까지 거기서 봅니다 (5번) */
-function cshStageSave(dbid){
-  var to=osVal('cshStage')||'';
+function cshStageSave(dbid,btn){
+  /* ★ 이 칸은 빠른 창과 고객 창 단계 시트 <b>두 곳</b>에 섭니다(같은 id). 누른 단추 <b>바로 옆</b> 칸을 읽습니다 —
+     id 로만 찾으면 둘이 같이 떠 있을 때 남의 칸을 읽습니다 (새 판 · 이어진 자리 점검에서 굳힘) */
+  var box=btn&&btn.parentNode,sel=box&&box.querySelector?box.querySelector('select'):null;
+  var to=(sel&&sel.value)||osVal('cshStage')||'';
   if(!dbid||!to)return;
   if(typeof hdbTo==='function')hdbTo(dbid,to);
   else toast('단계를 바꾸는 자리를 못 찾았습니다');
 }
 /* ── 결과 다섯 — 누르면 <b>표대로</b> 단계와 다음 날이 정해집니다 ──
    쓰는 곳은 전부 <b>이미 있는 함수</b>입니다 (S04).                   */
-function cshMark(id,key){
+/* tc — 새 판 「기록 한 칸」 이 넘기는 {how, note}. 주면 그 말 그대로 접촉 한 줄이
+   되고(cmTouchAdd), 안 주면 예전처럼 「전화 · 30일 관리」 한 줄(ccMark)입니다.
+   단계 · 다음 날을 정하는 규칙은 <b>여기 하나</b>입니다 (5번). */
+function cshMark(id,key,tc){
   var r=cshResOf(key);
   if(!r){toast('모르는 결과입니다');return;}
   /* ★ cmOf(id) 를 안 부릅니다 — 빈 번호로 부르면 CM.meta[''] 라는
@@ -70492,7 +70872,8 @@ function cshMark(id,key){
      ⚠ 조용히 넘기지 않고 <b>무엇이 안 남았는지</b> 말합니다 (1번).      */
   if(id){
     if(typeof cmNextSave==='function')cmNextSave(id,what,due);
-    if(typeof ccMark==='function')ccMark(id,'전화');
+    if(tc&&typeof cmTouchAdd==='function')cmTouchAdd(id,tc.note||r[1],tc.how||'전화',cmToday());
+    else if(typeof ccMark==='function')ccMark(id,'전화');
   }
   toast((id?(cshNm(id)+'님 — '):'')+r[5]+' 적었습니다. '+
     (to&&to!==from?('단계가 '+from+' → '+to+' 로 갔고, '):'')+
@@ -70624,15 +71005,21 @@ function cmDueClmHtml(id){
   if(!id)return '';
   h+='<div class="t-card" style="margin-bottom:16px">'+
      '<div class="t-lab">📅 만기 · 🧾 청구 이력</div>'+
-     '<div class="t-big">목각에 있던 두 줄<small>여태 담을 자리가 없어 「한눈에」 에 안 섰습니다. 적으시면 바로 섭니다.</small></div>'+
+     '<div class="t-big">만기와 청구한 기록<small>적으시면 요약 탭 「한눈에」 에 바로 섭니다.</small></div>'+
      '<div class="t-fld"><span class="l">가장 빠른 만기 — 날짜로</span>'+
        '<input id="cmDue" type="date" value="'+osEsc(m.due||'')+'"></div>'+
      '<button type="button" class="t-btn sm" style="margin-top:12px" onclick="cmDueSave(\''+id+'\')">만기 적어 두기</button>'+
      '<div class="t-lab" style="margin-top:22px">🧾 청구 이력 — 이 기기에만</div>'+
-     '<div id="cmClmRows">'+cmClmRowsHtml(id)+'</div>'+
-     '<div class="t-row2" style="margin-top:14px">'+
-       '<button type="button" class="t-btn g sm" onclick="cmClmAdd(\''+id+'\')">＋ 한 줄 더</button>'+
-       '<button type="button" class="t-btn sm" onclick="cmClmSave(\''+id+'\')">청구 이력 적어 두기</button></div>'+
+     /* ✅ 판 X161-판2 — 민감정보(병력) 동의를 안다면서 받지 않았으면 적는 칸을 닫습니다.
+        이미 적어 둔 것은 <b>몇 건인지 말하고 지울 수 있게</b> 둡니다 (6번). 모르면 안 잠급니다 (1번). */
+     ((typeof cnsLocked==='function'&&cnsLocked(id,'sensitive'))
+       ? (cnsLockHtml(id,'sensitive','청구 이력을 새로 적지 않습니다')+
+          (L.length?('<div class="t-note">이 기기에 적어 둔 청구 <b>'+L.length+'건</b>이 있습니다. '+
+            '<button type="button" class="t-chip" onclick="cmClmWipe(\''+id+'\')">이 기기에서 지우기</button></div>'):''))
+       : ('<div id="cmClmRows">'+cmClmRowsHtml(id)+'</div>'+
+          '<div class="t-row2" style="margin-top:14px">'+
+          '<button type="button" class="t-btn g sm" onclick="cmClmAdd(\''+id+'\')">＋ 한 줄 더</button>'+
+          '<button type="button" class="t-btn sm" onclick="cmClmSave(\''+id+'\')">청구 이력 적어 두기</button></div>'))+
      '<div class="t-note">만기는 <b>서버에 담깁니다</b> — 팀도 봅니다. 청구 이력은 <b>이 기기에만</b> 둡니다 — '+
        '실비를 언제 얼마 청구했는지는 <b>병력에 가까운 것</b>이라, 이 앱이 병력을 다루는 그 결을 따릅니다.</div>'+
   '</div>';
@@ -70668,7 +71055,15 @@ function cmClmRead(id){
   }
   return out;
 }
+/* 동의가 없을 때 이 기기에 남은 청구 이력을 지웁니다 — 잠긴 채로 지울 길은 남깁니다 (6번 · 판 X161-판2) */
+function cmClmWipe(id){
+  if(!confirm('이 기기에 적어 둔 청구 이력을 지웁니다. 서버에는 사본이 없으니 지우면 끝입니다.\n\n계속할까요?'))return;
+  cmClmSet(id,[]);
+  toast('지웠습니다');
+  cmDetailPaint(id);
+}
 function cmClmAdd(id){
+  if(typeof cnsLocked==='function'&&cnsLocked(id,'sensitive'))return;
   var L=cmClmRead(id);
   L.push({at:cmToday(),won:'',what:''});
   cmClmSet(id,L);
@@ -70681,6 +71076,7 @@ function cmClmDel(id,i){
   cmDetailPaint(id);
 }
 function cmClmSave(id){
+  if(typeof cnsLocked==='function'&&cnsLocked(id,'sensitive')){ toast('민감(병력) 동의가 없어 적지 않습니다 — ✅ 동의를 먼저 적어 주십시오',5000); return; }
   cmClmSet(id,cmClmRead(id));
   toast('이 기기에만 적어 두었습니다 — 서버로 보내지 않았습니다');
   cmDetailPaint(id);
@@ -70692,11 +71088,152 @@ function cmDueSave(id){
     cmDetailPaint(id);
   });
 }
+/* ══ ✅ <b>동의 네 갈래</b> (판 X161-판2 · 설계 docs/고객한장_설계.md 7장) ══════════════════
+   사장님 말씀 (2026-10-22) 「동의는 네 갈래로」 · (2026-10-23) 「판 2부터 만들어」.
+   갈래마다 <b>받은 날 · 철회한 날 · 받은 방법 · 적은 사람</b>을 서버 표 client_consents 에 남깁니다.
+   ★ 묻는 곳은 cnsOf / cnsSt 하나입니다 (5번). 잠그는 자리(주민번호 · 청구 이력)도 이것만 부릅니다.
+   ★ <b>모르면 안 잠급니다</b> (1번). 서버 칸이 아직 없거나(준비 SQL 45판 전) 못 읽었으면 cnsOf 는 null —
+     「동의 없음」 으로 단정해 잠그면, 준비 SQL 을 안 돌린 날 모든 고객의 주민번호 칸이 닫힙니다.
+   ★ clients.consent_status 는 서버 트리거가 「수집·이용」 갈래에서 읽어 세웁니다 — 앱은 직접 안 씁니다.
+   ★ 적는 사람은 담당자 본인입니다(서버 규칙). 팀장·관리자는 봅니다만 못 고칩니다. */
+var CNS_K=[['collect','수집·이용','고객 정보를 담는 것 자체'],
+           ['uid','고유식별(주민번호)','서류 탭 주민번호 칸이 이것에 걸립니다'],
+           ['sensitive','민감(병력)','보장 탭 청구 이력이 이것에 걸립니다'],
+           ['ad','광고 수신','단체 문자의 광고성 글이 이것에 걸립니다']];
+var CNS_HOW=['서면','전자서명','녹취','구두'];
+var CNS={rows:{},has:null,err:'',busy:false,how:{}};
+function cnsDown(m){ return /client_consents|42P01|does not exist|schema cache|relation/i.test(''+(m||'')); }
+function cnsName(k){ for(var i=0;i<CNS_K.length;i++)if(CNS_K[i][0]===k)return CNS_K[i][1]; return k; }
+function cnsLoad(cid){
+  if(!cid)return;
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){ CNS.err='서버에 연결되어 있지 않습니다'; return; }
+  sb.from('client_consents').select('kind,granted_at,revoked_at,method,recorded_by,updated_at')
+    .eq('client_id',cid).limit(8).then(function(r){
+      if(r&&r.error){
+        if(cnsDown(r.error.message)){ CNS.has=false; CNS.err=''; }
+        else CNS.err=(''+(r.error.message||'못 읽었습니다')).slice(0,80);
+      }else{
+        var o={},L=(r&&r.data)||[],i;
+        for(i=0;i<L.length;i++)if(L[i]&&L[i].kind)o[L[i].kind]=L[i];
+        CNS.has=true; CNS.err=''; CNS.rows[cid]=o;
+      }
+      cnsRepaint(cid);
+    },function(e){ CNS.err=(''+((e&&e.message)||'네트워크 오류')).slice(0,80); cnsRepaint(cid); });
+}
+function cnsRepaint(cid){
+  try{
+    if(!OSC.current||OSC.current.id!==cid)return;
+    cuwPaint(OSC.current);
+    /* 잠그는 칸(주민번호 · 청구 이력)은 cmPanels 안에 있습니다 */
+    if(typeof cmDetailPaint==='function')cmDetailPaint(cid);
+  }catch(e){}
+}
+/* 그 분 동의 — <b>모르면 null</b> (서버 칸 없음 · 못 읽음 · 아직 안 읽음) */
+function cnsOf(cid){ return (CNS.has===true&&cid&&CNS.rows[cid])?CNS.rows[cid]:null; }
+/* 한 갈래 — 'yes' 받음 · 'off' 철회 · 'no' 안 받음 · '' 모름 */
+function cnsSt(cid,k){
+  var o=cnsOf(cid),r;
+  if(!o)return '';
+  r=o[k];
+  if(!r)return 'no';
+  if(r.revoked_at)return 'off';
+  return r.granted_at?'yes':'no';
+}
+/* 잠그나 — <b>안다</b>면서 받지 않았을 때만 */
+function cnsLocked(cid,k){ var t=cnsSt(cid,k); return t==='no'||t==='off'; }
+function cnsMine(c){ try{ return !!(c&&OS.session&&OS.session.user&&c.advisor_id===OS.session.user.id); }catch(e){ return false; } }
+function cnsChipTxt(c){
+  var o=c?cnsOf(c.id):null,n=0,i;
+  if(!o)return '동의 '+(CNS.has===false?'준비 전':'?');
+  for(i=0;i<CNS_K.length;i++)if(cnsSt(c.id,CNS_K[i][0])==='yes')n++;
+  return '동의 '+n+'/'+CNS_K.length;
+}
+function cnsStTxt(cid,k){
+  var t=cnsSt(cid,k),r=(cnsOf(cid)||{})[k]||{};
+  if(t==='yes')return '<b class="cns-y">받음</b> <small>'+osEsc((''+(r.granted_at||'')).slice(0,10))+(r.method?(' · '+osEsc(r.method)):'')+'</small>';
+  if(t==='off')return '<b class="cns-n">철회</b> <small>'+osEsc((''+(r.revoked_at||'')).slice(0,10))+'</small>';
+  if(t==='no')return '<b class="cns-n">안 받음</b>';
+  return '<i>모름</i>';
+}
+/* 서버 칸이 없거나 못 읽었을 때 — 무엇을 하면 되는지 말합니다 (1번) */
+function cnsWhyHtml(){
+  if(CNS.has===false)return '<div class="t-note">동의를 담을 서버 칸이 아직 없습니다 — 홈 「🧭 그 밖의 것」 의 <b>서버 준비 SQL(45판)</b>을 한 번 돌리시면 섭니다. 그 전에는 아무것도 잠그지 않습니다.</div>';
+  if(CNS.err)return '<div class="t-note">동의를 못 읽었습니다 — '+osEsc(CNS.err)+'. 모르는 채로는 아무것도 잠그지 않습니다.</div>';
+  return '';
+}
+/* 정보 탭 카드 — 보기만. 고치기는 시트(sh-cns) */
+function cnsHtml(c){
+  if(!c)return '';
+  var rows=[],i,why=cnsWhyHtml();
+  for(i=0;i<CNS_K.length;i++)rows.push([CNS_K[i][1],cnsStTxt(c.id,CNS_K[i][0])]);
+  return cuwCard('✅ 동의 · 네 갈래','cns',cuwKv(rows)+why);
+}
+/* 고치기 시트 — 갈래마다 받은 방법 · 받았어요 · 철회 */
+function cnsSheetHtml(c){
+  if(!c)return '';
+  var id=c.id,ids=osEsc(id),h='<div class="t-card">',i,k,t,j,mine=cnsMine(c),why=cnsWhyHtml(),ok=!!cnsOf(id);
+  h+='<div class="t-lab">✅ 동의 네 갈래</div>'+
+     '<div class="t-note" style="margin:4px 0 8px">받은 날 · 철회한 날 · 받은 방법 · 적은 사람이 서버에 남습니다. 동의서 원본은 회사 절차대로 보관하십시오 — 이 앱은 <b>받았다는 기록</b>만 남깁니다.</div>';
+  if(why)h+=why;
+  if(ok&&!mine)h+='<div class="t-note">담당자만 적습니다 — 팀장·관리자는 볼 수만 있습니다.</div>';
+  for(i=0;i<CNS_K.length;i++){
+    k=CNS_K[i][0]; t=cnsSt(id,k);
+    h+='<div class="t-row cns-row"><div class="m"><b>'+osEsc(CNS_K[i][1])+'</b><span>'+osEsc(CNS_K[i][2])+'</span><span>'+cnsStTxt(id,k)+'</span></div>';
+    if(ok&&mine){
+      h+='<div class="cns-act"><select id="cnsHow_'+k+'" aria-label="받은 방법">';
+      for(j=0;j<CNS_HOW.length;j++)h+='<option'+((CNS.how[k]||(((cnsOf(id)||{})[k]||{}).method)||'서면')===CNS_HOW[j]?' selected':'')+'>'+CNS_HOW[j]+'</option>';
+      h+='</select><button type="button" class="t-chip'+(t==='yes'?' on':'')+'" onclick="cnsSave(\''+ids+'\',\''+k+'\',\'yes\')">받았어요</button>'+
+         '<button type="button" class="t-chip" '+(t==='yes'?'':'disabled ')+'onclick="cnsSave(\''+ids+'\',\''+k+'\',\'off\')">철회</button></div>';
+    }
+    h+='</div>';
+  }
+  return h+'</div>';
+}
+/* 적기 — 받으면 받은 날을 새로 적고 철회한 날을 비웁니다. 철회하면 받은 날은 남기고 철회한 날을 적습니다. */
+function cnsSave(cid,k,act){
+  var sb=(typeof osClient==='function')?osClient():null,o=cnsOf(cid),prev=(o&&o[k])||{},sel=document.getElementById('cnsHow_'+k);
+  if(!sb||!o){ toast('동의를 아직 못 읽었습니다 — 잠시 뒤 다시 눌러 주십시오'); return; }
+  if(CNS.busy)return;
+  var now=new Date().toISOString(),how=(sel&&sel.value)||prev.method||'서면';
+  CNS.how[k]=how;
+  /* ★ 이미 받은 갈래에서 다시 누르면 <b>처음 받은 날을 덮지 않습니다</b> — 방법만 고칩니다.
+     덮으면 언제 받았는지가 사라져, 준비 확인 때 「언제부터 동의였나」 를 못 답합니다 (1번). */
+  var still=act==='yes'&&prev.granted_at&&!prev.revoked_at;
+  if(act==='off'&&!(prev.granted_at&&!prev.revoked_at)){ toast('받은 적이 없어 철회할 것이 없습니다'); return; }
+  var row={client_id:cid,kind:k,method:how,updated_at:now,
+           granted_at:act==='yes'?(still?prev.granted_at:now):(prev.granted_at||null),
+           revoked_at:act==='yes'?null:now};
+  CNS.busy=true;
+  sb.from('client_consents').upsert(row,{onConflict:'client_id,kind'}).then(function(r){
+    CNS.busy=false;
+    if(r&&r.error){ toast('동의를 적지 못했습니다 — '+(''+(r.error.message||'')).slice(0,60),6000); return; }
+    toast(cnsName(k)+' 동의 — '+(act==='yes'?'받았다고 적었습니다':'철회로 적었습니다'));
+    try{ if(typeof osAudit==='function')osAudit('update','consent',cid,{note:k+' '+act}); }catch(e){}
+    /* 서버가 돌려준 것으로 다시 그립니다 — 이 기기 짐작으로 그리지 않습니다 */
+    cnsLoad(cid);
+  },function(e){ CNS.busy=false; toast('동의를 적지 못했습니다 — '+((e&&e.message)||'네트워크 오류'),6000); });
+}
+/* 잠금 카드 — 그 자리에서 「✅ 동의 적기」 */
+function cnsLockHtml(cid,k,what){
+  var off=cnsSt(cid,k)==='off';
+  return '<div class="t-note cns-lock">🔒 <b>'+osEsc(cnsName(k))+' 동의가 '+(off?'철회되어':'없어')+'</b> '+what+' — '+
+    '<button type="button" class="t-chip" onclick="cuwSheet(\'cns\')">✅ 동의 적기</button></div>';
+}
 function cmRrnHtml(id){
   var v=cmRrnOf(id),why=cmRrnWhy(v),h='';
   if(!id)return '';
   h+='<div class="t-card" style="margin-bottom:16px">'+
      '<div class="t-lab">🔒 주민등록번호</div>';
+  /* ✅ 판 X161-판2 — <b>고유식별정보 동의를 안다</b>면서 받지 않았으면 새로 담지 않습니다.
+     이미 담겨 있던 번호는 <b>가린 채로 보이고 지울 수 있습니다</b> — 감추면 지울 길이 사라집니다 (6번).
+     모르면(서버 준비 전 · 못 읽음) 잠그지 않습니다 (1번 · cnsLocked). */
+  if(typeof cnsLocked==='function'&&cnsLocked(id,'uid')){
+    if(v)h+='<div class="t-big">'+osEsc(cmRrnMask(v))+'<small>동의 없이 이 기기에 담겨 있던 번호입니다 — 동의를 받으시거나 지우십시오.</small></div>'+
+            '<div class="t-chips"><button type="button" class="t-gb" onclick="cmRrnDel(\''+id+'\')">지우기</button></div>';
+    h+=cnsLockHtml(id,'uid','주민번호를 새로 담지 않습니다');
+    return h+'</div>';
+  }
   if(v){
     h+='<div class="t-big"><span id="cmRrnV" data-cid="'+osEsc(id)+'">'+osEsc(cmRrnMask(v))+'</span>'+
        '<small>이 기기에만 담겨 있습니다 — 서버에는 없습니다.</small></div>'+
@@ -70777,6 +71314,8 @@ function cmRrnEdit(){
    캡처됩니다. 「무엇이 이상한가」만 말하고 번호는 말하지 않습니다.        */
 function cmRrnSave(id){
   var v=(''+(osVal('cmRrnIn')||'')).replace(/[^0-9]/g,''),why;
+  /* 칸이 잠긴 뒤에 남은 단추로 불러도 안 담습니다 — 잠금은 그리는 곳과 담는 곳 둘 다에서 (판 X161-판2) */
+  if(typeof cnsLocked==='function'&&cnsLocked(id,'uid')){ toast('고유식별(주민번호) 동의가 없어 담지 않습니다 — ✅ 동의를 먼저 적어 주십시오',5000); return; }
   if(!v){toast('번호를 적어 주십시오');return;}
   /* ★ 목각 그대로 — <b>맞지 않으면 안 담습니다.</b> 처음에는 제 판단으로
      「이상해도 담는다」 로 했는데, 사장님 목각은 막습니다. 틀린 번호가
@@ -72093,7 +72632,10 @@ function renderClientsPage(){
          (osRenderList · mcalPaint · cliWhoPaint)는 하나도 안 건드립니다 (5번). */
     '<div class="osc-bar">'+
       '<input class="osc-search" id="oscSearch" placeholder="이름·초성(ㄱㅊㅅ)·연락처 뒷자리·가족 이름으로 찾기" oninput="osClientsFilter(this.value)" value="'+osEsc(OSC.q)+'"/>'+
-      '<button class="os-btn" style="width:auto;padding:9px 16px" onclick="osNewClient()">+ 새 고객</button>'+
+      /* ★ 새 판 — 고객을 넣는 길은 <b>➕ 고객 넣기 한 흐름</b>(cregOpen) 하나입니다. 여기만 옛 「이름 한 칸」 창을
+         열면 번호로 이미 계신 분인지 안 묻고, 「주민번호 등은 저장하지 않습니다」 라는 지금은 틀린 말을 합니다
+         (고객 창 서류 탭에 이 기기에만 담는 칸이 있음). 옛 창(osNewClient)은 지우지 않았습니다 (6번). */
+      '<button class="os-btn" style="width:auto;padding:9px 16px" onclick="cregOpen()">+ 새 고객</button>'+
     '</div>'+
     /* <b>기다림도 화면입니다.</b> 「불러오는 중…」 한 줄을 세우면 목록이
        올 때 화면이 통째로 튀어, 누르려던 자리가 손가락 아래에서 사라집니다.
@@ -72113,6 +72655,7 @@ function osClientsAfterRender(){
   if(OSC.view==='list'){osLoadClients();return;}
   if(OSC.view==='detail'&&OSC.current){
     if(typeof cusCss==='function')cusCss();
+    if(typeof cusHeadFit==='function')cusHeadFit();   /* 머리를 topnav 밑에 (판 X161) */
     osBindDrop();osLoadDocs();osLoadAnalysis();osCliInfoLoad();osRepListLoad();cusCrmLoad();frLoad();
     try{oscPolLoad();}catch(e0){}
     if(!CM.loaded)cmLoadAll(function(){if(OSC.current)cmDetailPaint(OSC.current.id);});
@@ -72431,16 +72974,298 @@ function osCreateClient(){
     OSC.view='list';osLoadClients();
   });
 }
+/* 고객 365일 명단에서 한 분 열기 — <b>여는 자리는 cusGo 하나</b>입니다 (판 X161 · 5번)
+   ★ 이 이름은 예전처럼 <b>명단에 있는 분만, 바로</b> 엽니다. 부르는 자리(hmGoCli 등)가
+     「부른 뒤 OSC.current 가 섰나」 로 됐는지 재기 때문입니다 — 서버에서 받아 와
+     나중에 여는 길은 cusGo 를 직접 부르는 자리만 씁니다.                 */
 function osOpenClient(id){
-  var c=null;for(var i=0;i<OSC.list.length;i++){if(OSC.list[i].id===id){c=OSC.list[i];break;}}
-  if(!c)return;
-  cmRecentAdd(c);
-  /* 한 장 카드가 쥐고 있던 <b>앞 고객 것</b>을 비운다. 안 비우면 다음 사람
-     카드에 남의 통화가 잠깐 서 있다 — 고객 앞에서 제일 위험한 그림이다. */
-  cusReset();
-  OSC.current=c;OSC.view='detail';go('clients');
+  var L=(typeof OSC!=='undefined'&&OSC.list)||[],i;
+  for(i=0;i<L.length;i++)if(L[i].id===id){ cusGo({cli:id}); return; }
 }
-function osBackToList(){OSC.view='list';OSC.current=null;cusReset();go('clients');}
+/* ══ 🪪 <b>고객 창 하나</b> — 어디서 누르든 이 창 (판 X161 · cusGo) ══════════
+   사장님 말씀 (2026-10-22) — 「고객 365 와 DB통합CRM 고객 등록을 하나로
+   합칠 수 있는 방법 · 그 고객 창 하나로 모든 것들을 연계하고 싶어」 →
+   설계(docs/고객한장_설계.md 11장) → 「1판부터 만들어」.
+
+   여태 한 분을 여는 창이 <b>셋</b>이었습니다 — 고객 365일 상세(긴 스크롤
+   15칸) · 홈의 빠른 창(cshOpen) · CRM 카드(db-crm.html cusOpen). 여는 길도
+   저마다였습니다. 이제 <b>여는 함수는 이것 하나</b>이고, 창은 탭 여섯으로
+   나눕니다 — 한눈에 · 연락 · 계약 · 청구 · 서류 · 정보.
+
+   ★ <b>칸을 새로 만들지 않았습니다.</b> 있던 15칸을 <b>탭에 나눠 담기만</b>
+     했습니다(cusSec). id · onclick 은 한 글자도 안 바꿨습니다 — 다시 그리는
+     함수(cmDetailPaint · cusPaint · oscPolPaint …)가 그대로 돕니다.
+   ★ 안 고른 탭은 <b>CSS 로만</b> 감춥니다 — 지우지 않습니다. 인쇄에는 다 나옵니다.
+   ★ 닫으면(「← 돌아가기」) <b>누르던 자리</b>로 돌아갑니다 — 홈에서 열었으면 홈으로.
+   ★ 배정 줄만 있고 아직 내 고객이 아닌 분은 1판에서는 <b>빠른 창</b>이 열립니다
+     (설계 11-4 의 잠금 탭은 판 2 부터).
+   ★ 명단에 아직 없는 분(홈에서 먼저 누름)은 <b>그 한 줄만</b> 받아 엽니다 (7번).
+   cusGo({cli:고객번호, db:배정줄번호, tab:'sum'|'talk'|'cov'|'doc'|'info'}) — 옛 이름(glance·pol·clm)도 CUS_TAB_OLD 가 받습니다 */
+/* ★ 새 판 (2026-10-23 「틀을 다 깨고 다시」 · 「탭 다섯으로」) — 요약 · 연락 · 보장 · 서류 · 정보.
+     계약과 청구는 둘 다 보험 이야기라 <b>보장</b> 한 탭입니다. 옛 이름(glance · pol · clm)으로
+     부르는 자리는 CUS_TAB_OLD 가 새 이름으로 바꿔 받습니다 — 부르는 쪽을 다 고치지 않아도 됩니다. */
+var CUS_TABS=[['sum','요약'],['talk','연락'],['cov','보장'],['doc','서류'],['info','정보']];
+var CUS_TAB_OLD={glance:'sum',pol:'cov',clm:'cov'};
+var CUS_WIN={tab:'sum',from:''};
+function cusTabKey(k){ k=CUS_TAB_OLD[k]||k; for(var i=0;i<CUS_TABS.length;i++)if(CUS_TABS[i][0]===k)return k; return ''; }
+function cusTabOk(k){ return !!cusTabKey(k); }
+function cusGo(o){
+  o=o||{};
+  var cid=o.cli?(''+o.cli):'',i,c=null,from='';
+  /* 배정 줄로 부르면 <b>잇는 칸</b>으로 사람을 찾습니다 — 이름으로 안 찾습니다 (1번) */
+  if(!cid&&o.db){
+    var L=(typeof AR!=='undefined'&&AR.db)||[];
+    for(i=0;i<L.length;i++)if((''+L[i].id)===(''+o.db)){ cid=crmLinkOf(L[i]); break; }
+    if(!cid){ if(typeof cshOpen==='function')cshOpen('',o.db); return; }
+  }
+  if(!cid)return;
+  try{ from=(typeof currentTab==='function')?(currentTab()||''):''; }catch(e){ from=''; }
+  /* 이미 고객 창 안에서 다른 분을 열면 <b>처음 누르던 자리</b>를 그대로 들고 갑니다 */
+  if(from==='clients'&&OSC.view==='detail'&&CUS_WIN.from)from=CUS_WIN.from;
+  var L2=(typeof OSC!=='undefined'&&OSC.list)||[];
+  for(i=0;i<L2.length;i++)if((''+L2[i].id)===cid){ c=L2[i]; break; }
+  var open=function(cc){
+    CUS_WIN.tab=cusTabKey(o.tab)||'sum'; CUW.sheet=''; CUW.res=''; CUW.nxAdd=false;
+    CUS_WIN.from=(from&&from!=='clients')?from:'';
+    try{ if(typeof cshClose==='function'&&document.getElementById('cshSheet'))cshClose(); }catch(e0){}
+    cmRecentAdd(cc);
+    /* 한 장 카드가 쥐고 있던 <b>앞 고객 것</b>을 비운다. 안 비우면 다음 사람
+       카드에 남의 통화가 잠깐 서 있다 — 고객 앞에서 제일 위험한 그림이다. */
+    cusReset();
+    OSC.current=cc;OSC.view='detail';go('clients');
+    /* ✅ 동의는 <b>열 때 그 분 것 한 번</b>만 읽습니다 — 명단에 미리 다 받지 않습니다 (7번) */
+    try{ cnsLoad(cc.id); }catch(eC){}
+    try{ window.scrollTo(0,0); }catch(e1){}
+  };
+  if(c){ open(c); return; }
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){ toast('서버에 연결되어 있지 않습니다'); return; }
+  sb.from('clients').select('*').eq('id',cid).limit(1).then(function(r){
+    var row=(r&&!r.error&&r.data&&r.data[0])||null;
+    if(!row){ toast('그 고객을 찾지 못했습니다 — 지워졌거나 담당이 바뀌었을 수 있습니다'); return; }
+    open(row);
+  },function(){ toast('그 고객을 불러오지 못했습니다'); });
+}
+/* 「← 돌아가기」 — 누르던 자리로. 고객 365일에서 열었으면 명단으로 */
+function osBackToList(){
+  var to=CUS_WIN.from||'';
+  CUS_WIN.from='';
+  OSC.view='list';OSC.current=null;cusReset();
+  go(to||'clients');
+}
+/* 칸 하나를 어느 탭에 담을지 — 담기만 합니다. 빈 칸이면 빈 글 (감쌀 것이 없습니다) */
+function cusSec(k,h){ return h?('<div data-cus-tab="'+k+'">'+h+'</div>'):''; }
+/* 탭 띠 — 건수는 <b>읽어 둔 것만</b> 붙입니다. 모르면 안 붙입니다 (0 이 아닙니다 · 1번) */
+function cusTabN(k){
+  var c=OSC.current; if(!c)return null;
+  try{
+    if(k==='talk'){ var m=cmOf(c.id); return (CUS.crmTried?(CUS.calls||[]).length:0)+((m.touch||[]).length); }
+    if(k==='cov'){ return (typeof OSCP!=='undefined'&&OSCP.rows&&!OSCP.busy)?OSCP.rows.length:null; }
+    if(k==='doc'){ return (CUS.docN==null||CUS.repN==null)?null:(CUS.docN+CUS.repN); }
+  }catch(e){}
+  return null;
+}
+function cusTabsHtml(){
+  var h='<div class="cus-tabs" id="cusTabs" role="tablist">',i,k,n;
+  for(i=0;i<CUS_TABS.length;i++){
+    k=CUS_TABS[i][0]; n=cusTabN(k);
+    h+='<button type="button" role="tab" data-k="'+k+'" class="'+(CUS_WIN.tab===k?'on':'')+'" '+
+       'aria-selected="'+(CUS_WIN.tab===k?'true':'false')+'" onclick="cusTab(\''+k+'\')">'+
+       osEsc(CUS_TABS[i][1])+(n?('<em>'+n+'</em>'):'')+'</button>';
+  }
+  return h+'</div>';
+}
+function cusTabsPaint(){
+  var e=document.getElementById('cusTabs');
+  if(e)e.outerHTML=cusTabsHtml();
+  cusHeadFit();
+}
+/* 📌 머리를 <b>앱 맨 위 띠(topnav) 바로 밑</b>에 붙입니다 (판 X161).
+   붙는 자리는 <b>굴리는 칸</b>에 따라 다릅니다 — 폰에서는 main 이 굴리는 칸이고
+   그 칸이 이미 띠 밑(86px)에서 시작하므로 top:0 이 곧 띠 밑입니다. 창 전체가
+   굴리는 판이면 띠 높이만큼 내려 붙여야 합니다.
+   ⚠ 처음에 띠 높이를 <b>그냥 더해</b> 폰에서 머리가 86px 더 내려가 빈 틈이 생겼습니다 —
+     점검이 창(window)을 굴려서 못 봤습니다. 이제 「띠 아래 − 굴리는 칸 위」 를 잽니다. */
+var CUS_FIT_ON=false;
+function cusHeadFit(){
+  var h=document.querySelector('#cusWin .cus-head'),n=document.getElementById('topnav'),t=0,x,cs,top0=0;
+  if(!h)return;
+  try{
+    /* 굴리는 칸 — 위로 올라가며 처음 만나는 overflow auto/scroll. 없으면 창(위 0) */
+    for(x=h.parentElement;x&&x!==document.body&&x!==document.documentElement;x=x.parentElement){
+      cs=getComputedStyle(x);
+      if(/(auto|scroll)/.test(cs.overflowY)){ top0=x.getBoundingClientRect().top+(parseFloat(cs.paddingTop)||0); break; }
+    }
+    if(n&&n.offsetParent!==null){
+      var nc=getComputedStyle(n);
+      if(nc.position==='sticky'||nc.position==='fixed')t=Math.max(0,Math.round(n.getBoundingClientRect().bottom-top0));
+    }
+  }catch(e){ t=0; }
+  h.style.top=t+'px';
+  if(!CUS_FIT_ON){ CUS_FIT_ON=true; try{ window.addEventListener('resize',cusHeadFit); }catch(e2){} }
+}
+function cusTab(k){
+  k=cusTabKey(k);
+  if(!k)return;
+  CUS_WIN.tab=k;
+  var w=document.getElementById('cusWin');
+  if(w)w.setAttribute('data-tab',k);
+  if(CUW.sheet)cuwSheet('');
+  cusTabsPaint();
+  /* 내려가 있던 채로 탭을 바꾸면 새 탭의 <b>중간</b>이 보입니다 — 창 맨 위로 올립니다 */
+  try{ if(w&&w.getBoundingClientRect().top<0)w.scrollIntoView({block:'start'}); }catch(e){}
+}
+/* 안 고른 탭을 감추는 옷 — <b>#cusWin 안에서만</b> 듭니다. 다른 화면이 같은
+   칸을 그려도(점검 · 홈) 안 감춰집니다. 인쇄에는 다 나옵니다. */
+function cusWinCss(){
+  if(document.getElementById('cusWinCss'))return;
+  var st=document.createElement('style'),r='',i,k;st.id='cusWinCss';
+  for(i=0;i<CUS_TABS.length;i++){
+    k=CUS_TABS[i][0];
+    r+='#cusWin[data-tab="'+k+'"] [data-cus-tab]:not([data-cus-tab~="'+k+'"]):not([data-cus-tab~="all"]){display:none}';
+  }
+  /* 고치기 화면 — 그 시트의 칸만 서고 나머지(탭 · 다른 칸)는 물러섭니다 */
+  for(i=0;i<CUW_SHEETS.length;i++){
+    k=CUW_SHEETS[i][0];
+    r+='#cusWin[data-sheet="'+k+'"] [data-cus-tab]:not([data-cus-tab~="sh-'+k+'"]){display:none!important}'+
+       '#cusWin[data-sheet="'+k+'"] [data-cus-tab~="sh-'+k+'"]{display:block!important}';
+  }
+  st.textContent=r+
+   '.cus-head{position:sticky;top:0;z-index:40;background:var(--bg-0,#fff);margin:0 0 14px}'+
+   '.cus-head .osc-top{position:static;margin:0;border-bottom:0;padding-left:14px;padding-right:14px}'+
+   '.cus-tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin:0;'+
+     'border-bottom:1px solid var(--t-line);background:var(--bg-0,#fff)}'+
+   '.cus-tabs::-webkit-scrollbar{display:none}'+
+   '.cus-tabs button{flex:none;border:0;background:none;font-family:inherit;font-size:var(--t5);font-weight:800;'+
+     'color:var(--t-sub);padding:11px 11px 10px;border-bottom:2.5px solid transparent;cursor:pointer;min-height:44px}'+
+   '.cus-tabs button.on{color:var(--t-ink);border-bottom-color:var(--t-point)}'+
+   '.cus-tabs button em{font-style:normal;font-size:var(--t7);color:var(--t-sub);margin-left:3px}'+
+   /* 인쇄 — 보는 칸(탭 다섯)은 다 나오고, <b>고치는 시트(sh-…)·단추 줄은 안 나옵니다</b>. 새 판에서 시트가 생겨
+      입력칸이 종이에 같이 찍히던 자리를 이어진 자리 점검에서 찾았습니다 */
+   '@media print{#cusWin [data-cus-tab]{display:block!important}#cusWin [data-cus-tab^="sh-"]{display:none!important}'+
+     '.cus-tabs,.cuw-shd,.cuw-acts,#cuwCompose{display:none!important}}'+
+   /* ── 촘촘하게 (사장님 말씀 2026-10-23 「자간·높낮이 최소화로 칸 맞춰서 줄여줘」) ──
+      ★ <b>#cusWin 안에서만</b> 듭니다 — 같은 칸 옷을 쓰는 다른 화면은 한 톨도 안 바뀝니다.
+      ★ 줄이는 것은 <b>여백 · 줄 높이 · 자간</b>입니다. 글자는 13px 아래로 안 내립니다
+        (폰에서 작은 글자를 늘리지 않는 자가 있습니다) · 누르는 자리는 44px 그대로.
+      ★ 차례 — 머리가 맨 위, 정보 탭에서는 📇 고객 정보 칸이 그다음(order).
+        #cmPanels 는 칸만 담는 그릇이라 display:contents 로 풀어 차례를 같이 탑니다. */
+   '#cusWin{display:flex;flex-direction:column;letter-spacing:-.01em}'+
+   '#cusWin>.osc-detail-back{order:-3;margin-bottom:2px}#cusWin>.cus-head{order:-2;margin-bottom:8px}'+
+   '#cusWin>#cmPanels{display:contents}'+
+   /* ── 새 판 칸 옷 (cuw*) — 고객 창 안에서만 ── */
+   '#cusWin .cuw-shd{display:none}'+
+   '#cusWin:not([data-sheet=""]) .cuw-shd{display:flex;order:-1;align-items:center;gap:8px;padding:10px 4px 6px;font-size:16px;font-weight:900}'+
+   '#cusWin:not([data-sheet=""]) .cus-tabs,#cusWin:not([data-sheet=""]) .cuw-acts{display:none}'+
+   '.cuw-shd .x{margin-left:auto}'+
+   '.cuw-shd button{border:0;background:var(--t-bg-2);border-radius:10px;min-height:40px;padding:0 12px;font-family:inherit;font-weight:800;color:var(--t-ink);cursor:pointer}'+
+   '.cuw-h1{display:flex;align-items:center;gap:9px;padding:8px 0 0}'+
+   '.cuw-av{width:38px;height:38px;border-radius:13px;background:var(--t-point-l);color:var(--t-point-d);font-weight:900;display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}'+
+   '.cuw-nmw{flex:1;min-width:0}'+
+   '.cuw-nmw .nm{font-size:18px;font-weight:900;letter-spacing:-.03em}'+
+   '.cuw-real{font-style:normal;font-size:13px;font-weight:800;color:var(--t-warn-d2);background:var(--t-warn-l);border-radius:6px;padding:1px 5px;margin-left:6px;vertical-align:2px}'+
+   '.cuw-meta{font-size:13px;color:var(--t-sub);margin-top:1px;line-height:1.35}'+
+   '.cuw-meta span{white-space:nowrap}'+
+   '.cuw-meta .ed.cns{color:var(--t-sub);text-decoration:underline;text-underline-offset:3px}'+
+   '.cns-row{flex-wrap:wrap;gap:6px}.cns-row .m span{display:block}'+
+   '.cns-act{display:flex;gap:6px;align-items:center;width:100%}.cns-act select{min-height:40px;font-family:inherit;font-size:14px;border-radius:9px}'+
+   '.cns-act .t-chip[disabled]{opacity:.45}'+
+   '.cns-y{color:var(--t-pos-d)}.cns-n{color:var(--t-neg)}'+
+   '.cns-lock{display:flex;flex-wrap:wrap;gap:8px;align-items:center}'+
+   /* ui.css 의 「.t-card .t-chip」 이 켜진 칩 바탕까지 덮어 흰 글씨가 흐린 바탕에 섰습니다 — 이 창 안에서는 켜진 것이 보이게 */
+   '#cusWin .t-card .t-chip.on{background:var(--t-ink);color:var(--t-card)}'+
+   '.cuw-meta i{font-style:normal;color:var(--t-sub)}.cuw-meta b{color:var(--t-neg);font-weight:800}'+
+   '.cuw-meta .ed{border:0;background:none;color:var(--t-point);font-family:inherit;font-weight:800;font-size:13px;padding:0 0 0 4px;cursor:pointer}'+
+   '.cuw-stg{border:0;background:var(--t-ink);color:#fff;font-family:inherit;font-weight:900;font-size:13px;border-radius:9px;padding:0 10px;min-height:36px;flex:none;cursor:pointer}'+
+   '.cuw-acts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px 0 8px}'+
+   /* 옛 머리 옷 「.osc-top .tel{margin-left:auto…}」 이 이 단추에도 걸려 PC 폭에서 「📞 전화」 만 좁았습니다 — 칸을 채우게 */
+   '#cusWin .cuw-acts>.tel{margin:0;border-radius:11px;padding:0 6px;min-height:44px;display:flex;font-size:13px}'+
+   '.cuw-acts>*{border:0;background:var(--t-bg-2);border-radius:11px;font-family:inherit;font-size:13px;font-weight:800;color:var(--t-ink);min-height:44px;display:flex;align-items:center;justify-content:center;gap:4px;text-decoration:none;cursor:pointer}'+
+   '.cuw-now{background:var(--t-ink);color:#fff;border-radius:16px;padding:12px 14px;margin:0 0 8px}'+
+   '.cuw-now .k{font-size:13px;font-weight:900;color:#93C5FD}'+
+   '.cuw-now .t{font-size:16px;font-weight:800;margin:3px 0 1px;letter-spacing:-.03em}'+
+   '.cuw-now .s{font-size:13px;color:#CBD5E1}'+
+   '.cuw-now .bt{display:flex;gap:6px;margin-top:9px}'+
+   '.cuw-now .bt button{flex:1;border:0;border-radius:10px;min-height:44px;font-family:inherit;font-weight:800;font-size:13px;background:#334155;color:#fff;cursor:pointer}'+
+   '.cuw-now .bt button.p{background:var(--t-point)}'+
+   '.cuw-ch{display:flex;align-items:center;justify-content:space-between;gap:8px}'+
+   '.cuw-ch .ed{border:0;background:none;color:var(--t-sub);font-family:inherit;font-weight:800;font-size:13px;min-height:36px;padding:0 2px;cursor:pointer}'+
+   '.cuw-kv{display:grid;grid-template-columns:auto 1fr;column-gap:12px;margin-top:4px}'+
+   '.cuw-kv>div{padding:6px 0;border-top:1px solid var(--t-line-2);font-size:14px}'+
+   '.cuw-kv>div:nth-child(-n+2){border-top:0}'+
+   '.cuw-kv .k{color:var(--t-sub);white-space:nowrap}'+
+   '.cuw-kv .v{text-align:right;font-weight:700}'+
+   '.cuw-kv .v i{font-style:normal;color:var(--t-sub);font-weight:600}'+
+   '.cuw-kv .v small{color:var(--t-sub);font-weight:600;font-size:13px}'+
+   '.cuw-in{width:100%;border:0;border-bottom:1.5px solid var(--t-line);font-family:inherit;font-size:15px;padding:8px 0;background:none;margin-top:6px;color:var(--t-ink)}'+
+   '.cuw-in:focus{outline:0;border-color:var(--t-point)}'+
+   '.cuw-prog{height:6px;border-radius:4px;background:var(--t-line-2);overflow:hidden;margin-top:6px}'+
+   '.cuw-prog i{display:block;height:100%;background:var(--t-point);border-radius:4px}'+
+   '.cuw-ck{width:24px;height:24px;border-radius:8px;border:2px solid var(--t-line);background:#fff;flex:none;cursor:pointer}'+
+   '.cuw-tl .ic{width:30px;height:30px;border-radius:9px;background:var(--t-bg-2);display:flex;align-items:center;justify-content:center;flex:none}'+
+   '.cuw-tl .src{font-size:13px;color:var(--t-sub);white-space:nowrap}'+
+   'details.cuw-fold>summary{list-style:none;cursor:pointer}details.cuw-fold>summary::-webkit-details-marker{display:none}'+
+   '#cusWin .t-card{padding:14px 14px 12px;margin:0 0 8px!important}'+
+   '#cusWin .t-card+.t-card{margin-top:0}'+
+   '#cusWin .t-lab{letter-spacing:0}'+
+   '#cusWin .t-big{margin-top:3px;font-size:16px;line-height:1.35;letter-spacing:-.02em}'+
+   '#cusWin .t-big small{margin-top:2px;font-size:13px;line-height:1.4;letter-spacing:-.01em}'+
+   '#cusWin .t-sub{margin-top:4px;font-size:13px;line-height:1.45}'+
+   '#cusWin .t-chips{margin-top:8px;gap:6px}'+
+   '#cusWin .t-note{margin-top:8px;padding:8px 11px;line-height:1.45}'+
+   '#cusWin .t-empty{padding:12px 8px;line-height:1.5}'+
+   '#cusWin .t-fld{margin-top:8px}'+
+   '#cusWin .t-fld textarea{min-height:56px}'+
+   '#cusWin .t-btn{margin-top:10px!important}'+
+   '#cusWin .t-row{padding:9px 0}'+
+   '#cusWin .cus-grid2{display:grid;grid-template-columns:1fr 1fr;column-gap:12px}'+
+   '#cusWin .cus-card{margin-bottom:8px}'+
+   '#cusWin .cus-hd{padding:10px 14px}'+
+   '#cusWin .cus-body{padding:2px 14px 10px}'+
+   '#cusWin .cus-sec{padding:8px 0 2px}'+
+   '#cusWin .osc-old{margin-top:0}';
+  document.head.appendChild(st);
+}
+/* 📞 <b>연락</b> 탭의 결과 다섯 — 빠른 창(cshMark)의 표를 그대로 씁니다.
+   여기서 새로 세는 것은 없습니다 — 단계·다음 날은 cshMark 가 정합니다 (5번). */
+function cusTalkHtml(id){
+  if(!id||typeof CSH_RES==='undefined')return '';
+  var nm=(typeof cshNm==='function')?cshNm(id):'고객',i,h='';
+  h+='<div class="t-card" style="margin-bottom:16px"><div class="t-lab">📞 '+osEsc(nm)+'님, 어떻게 됐나요?</div>'+
+     '<div class="t-big">누르면 다음에 뜰 날까지 정해집니다<small>날짜는 <b>규칙이 정합니다</b> — 빠른 창과 같은 표입니다.</small></div>'+
+     '<div class="t-chips">';
+  for(i=0;i<CSH_RES.length;i++)
+    h+='<button type="button" class="t-chip" data-res="'+CSH_RES[i][0]+'" '+
+       'onclick="cusMark(\''+osEsc(id)+'\',\''+CSH_RES[i][0]+'\')">'+
+       osEsc(CSH_RES[i][1])+' <b>'+CSH_RES[i][2]+'일 뒤</b></button>';
+  h+='</div>'+
+     (olDbOf(id)?'':'<div class="t-note">이 분은 아직 <b>배정 DB 줄과 안 이어져</b> 있어 단계는 안 바뀌고, 접촉 기록과 다음 날만 남습니다.</div>')+
+     '</div>';
+  return h;
+}
+/* 🔦 <b>칸으로 데려가는 자리</b>는 먼저 이것을 부릅니다 (판 X161) —
+   그 칸이 <b>다른 탭</b>에 있으면 그 탭을 엽니다. 안 그러면 감춰진 칸으로
+   데려가 아무것도 안 보이고 커서도 안 섭니다(「여기에 적기」 · 「고치기」 ·
+   「전·후 리포트」 가 그 자리였습니다). 고객 창 밖의 칸이면 아무것도 안 합니다. */
+function cusReveal(el){
+  if(!el)return;
+  var w=document.getElementById('cusWin');
+  if(!w||!w.contains(el)||!el.closest)return;
+  var sec=el.closest('[data-cus-tab]');
+  if(!sec)return;
+  var ks=(sec.getAttribute('data-cus-tab')||'').split(/\s+/),cur=w.getAttribute('data-tab')||'',i;
+  /* 고치기 화면(sh-…) 안의 칸이면 <b>그 화면</b>을 엽니다 (새 판) */
+  for(i=0;i<ks.length;i++)if(ks[i].indexOf('sh-')===0){ if(CUW.sheet!==ks[i].slice(3))cuwSheet(ks[i].slice(3)); return; }
+  if(CUW.sheet)cuwSheet('');
+  if(ks.indexOf(cur)>=0||ks.indexOf('all')>=0)return;
+  cusTab(ks[0]);
+}
+function cusMark(id,key){
+  if(typeof cshMark!=='function')return;
+  CSH.id=id||''; CSH.dbid=olDbOf(id);
+  cshMark(id,key);
+  setTimeout(function(){ try{ if(OSC.current&&OSC.current.id===id){ cmDetailPaint(id); cusTabsPaint(); } }catch(e){} },600);
+}
 /* ══ 고객 365일 — 맨 위 고정 줄 · 보장분석 전·후 ═══════════════════
    사장님 말씀 —
      「고객정보 맨 위, 어디서든 볼 수 있도록 만들어주고」
@@ -72456,25 +73281,38 @@ function oscAge(by){
 }
 function oscTopHtml(c){
   if(!c)return '';
+  /* 🪪 새 판 머리 (2026-10-23 「틀을 다 깨고 다시」) — 이름 · 나이 · 보험나이·상령 · 성별 · 소득 · 담당이
+     <b>한 줄</b>, 단계는 <b>딱지 하나</b>(눌러서 바꿈), 단추 넷. 단계 카드 · 한눈에 「지금 단계」 ·
+     옛 머리 딱지 세 곳에 서던 단계가 여기 한 곳입니다.
+     ★ <b>모르는 것은 「모름」</b> (1번) · 번호가 없으면 전화 단추 대신 「번호 넣기」. */
   var b=(typeof CM_BASE!=='undefined'&&CM_BASE[c.id])||{},
       nm=(typeof cmName==='function')?cmName(c):(c.name_masked||''),
+      real=(typeof cmRealOf==='function')?cmRealOf(c.id):'',
       age=oscAge(b.by),
       gd=b.gd==='M'?'남':(b.gd==='F'?'여':''),
       ph=b.ph||'',
-      bits=[];
-  /* <b>모르는 것은 「모름」 이라고 적습니다</b> — 빈칸으로 두면 0 으로 읽힙니다 */
-  bits.push('<span class="k">나이</span>'+(age?(age+'세'):'<i>모름</i>'));
-  bits.push('<span class="k">성별</span>'+(gd||'<i>모름</i>'));
-  /* 만원 단위다 — 이름이 단위를 말한다 (4번). 1,200 처럼 쉼표를 찍어 준다 */
+      st=(typeof CUS!=='undefined'&&CUS.db&&CUS.db.stage)||'',
+      who=(typeof cmWhoName==='function')?cmWhoName(c):'',
+      rb=null,ins=null,bits=[];
+  try{ rb=(typeof cmRrnBirth==='function')?cmRrnBirth(cmRrnOf(c.id)):null;
+       if(rb&&typeof insAgeOf==='function')ins=insAgeOf(rb.dt,new Date()); }catch(e){ ins=null; }
+  bits.push(age?(age+'세'):'나이 <i>모름</i>');
+  if(ins)bits.push('보험나이 '+ins.ins+((ins.dday!=null&&ins.dday<=90)?(' · <b>상령 D-'+ins.dday+'</b>'):''));
+  bits.push(gd||'성별 <i>모름</i>');
+  /* 만원 단위다 — 이름이 단위를 말한다 (4번) */
   var incMan=(b.inc==null||b.inc==='')?null:osNum(b.inc);
-  bits.push('<span class="k">월 소득</span>'+
-    (incMan==null?'<i>모름</i>':(incMan.toLocaleString('ko-KR')+'만원')));
-  return '<div class="osc-top-in">'+
-    '<b class="nm">'+osEsc(nm||'고객')+'</b>'+
-    '<div class="bits">'+bits.join('')+'</div>'+
-    (ph?('<a class="tel" href="tel:'+osEsc(ph)+'">📞 '+osEsc(ph)+'</a>'):'')+
-    '<button type="button" class="ed" onclick="oscTopEdit()">고치기</button>'+
-    '</div>';
+  bits.push(incMan==null?'소득 <i>모름</i>':('월 소득 '+incMan.toLocaleString('ko-KR')+'만원'));
+  if(who)bits.push('담당 '+osEsc(who));
+  return '<div class="cuw-h1"><span class="cuw-av">'+osEsc((nm||'고').charAt(0))+'</span>'+
+    '<div class="cuw-nmw"><b class="nm">'+osEsc(nm||'고객')+'</b>'+(real?'<em class="cuw-real">실명 · 이 기기</em>':'')+
+      '<div class="cuw-meta"><span>'+bits.join('</span> · <span>')+'</span> <button type="button" class="ed" onclick="oscTopEdit()">고치기</button>'+
+        '<button type="button" class="ed cns" onclick="cuwSheet(\'cns\')">'+cnsChipTxt(c)+'</button></div></div>'+
+    '<button type="button" class="cuw-stg" onclick="cuwSheet(\'stage\')">'+osEsc(st||'단계')+' ▾</button></div>'+
+    '<div class="cuw-acts">'+
+      (ph?('<a class="tel" href="tel:'+osEsc(ph)+'">📞 전화</a>'):'<button type="button" onclick="cuwSheet(\'base\')">📞 번호 넣기</button>')+
+      '<button type="button" onclick="ccSms(\''+osEsc(c.id)+'\')">💬 문자</button>'+
+      '<button type="button" onclick="cuwWrite()">✍ 기록</button>'+
+      '<button type="button" onclick="cusTab(\'cov\')">📄 보장</button></div>';
 }
 function oscTopPaint(){
   var e=document.getElementById('oscTopBar');
@@ -72484,6 +73322,7 @@ function oscTopPaint(){
 function oscTopEdit(){
   var e=document.getElementById('cliPhone');
   if(!e)return;
+  if(typeof cusReveal==='function')cusReveal(e);   /* 정보 탭에 있습니다 (판 X161) */
   try{ e.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e2){ e.scrollIntoView(); }
   try{ e.focus({preventScroll:true}); }catch(e3){}
 }
@@ -72594,6 +73433,7 @@ function oscPolHtml(){
 function oscPolPaint(){
   var e=document.getElementById('oscPolHost');
   if(e)e.innerHTML=oscPolHtml();
+  if(typeof cusTabsPaint==='function')cusTabsPaint();   /* 계약 탭 건수 (판 X161) */
 }
 function oscBaCss(){
   if(document.getElementById('oscBaCss'))return;
@@ -72641,59 +73481,261 @@ function oscBaCss(){
    '.osc-old .osc-panel{border:0;padding-left:0;padding-right:0}';
   document.head.appendChild(st);
 }
+/* ══ 🪪 <b>고객 창 새 판</b> (cuw*) — 사장님 말씀 2026-10-23 ═══════════════════════
+   「중복 되는 부분들을 하나로 만들고 이거 하나로 연결된 곳이 많으니 더 깔끔하게 정리해
+     기존에 틀을 다 깨고 다시 만드는거야」 → 목업(docs/mokgak/고객창_새판.html) →
+   「탭 다섯으로 하고 추천대로 새 판 만들어」.
+
+   원칙 셋 —
+   ① <b>한 가지는 한 곳에만.</b> 요약은 제 칸을 <b>읽어서</b> 한 줄로만 보여 줍니다.
+   ② <b>보기가 먼저, 고치기는 눌러서.</b> 입력 칸을 늘 펼쳐 두지 않습니다 — 「고치기」 →
+      그 칸들만 서는 <b>고치기 화면</b>(data-sheet). 늘 펼친 칸은 연락 탭의 기록 한 칸뿐.
+   ③ <b>어디서 들어와도 같은 창</b> (cusGo) — 들어온 문에 따라 탭만 다릅니다.
+
+   ★★ <b>저장 코드를 새로 짜지 않았습니다</b> (5번). 고치기 화면은 <b>있던 칸 그대로</b>
+     (osCliInfoSave · cmNoteSave · cmFamSave · cusFamSave · cmFfSave …)이고, 새 칸들은
+     cmNextSave · cmNextDone · cmNextDel · cmTouchAdd · cmTouchDel · cshMark 를 부르기만 합니다.
+   ★ id 는 그대로라 칸을 다시 그리는 함수들(cmDetailPaint · cusPaint · oscPolPaint …)이 그대로 돕니다.
+   ★ 모르는 것은 「모름」 (1번) · 이름은 가린 채 · 실명은 이 기기에만 (3번).                     */
+var CUW={sheet:'',res:'',how:'전화',tl:'all',nxAdd:false};
+var CUW_SHEETS=[['base','사람 · 돈 · 메모 고치기'],['fam','가족 · 소개 고치기'],['story','이야기 · 상황 고치기'],['ff','팩트파인딩 채우기'],['stage','단계'],['cns','동의 네 갈래']];
+function cuwSheetT(k){ for(var i=0;i<CUW_SHEETS.length;i++)if(CUW_SHEETS[i][0]===k)return CUW_SHEETS[i][1]; return ''; }
+/* 고치기 화면 열기 · 닫기 — 닫으면 보기 칸을 새로 그립니다(고친 것이 바로 보이게) */
+function cuwSheet(k){
+  var w=document.getElementById('cusWin'); if(!w)return;
+  CUW.sheet=cuwSheetT(k)?k:'';
+  w.setAttribute('data-sheet',CUW.sheet);
+  var t=document.getElementById('cuwShT'); if(t)t.textContent=cuwSheetT(CUW.sheet);
+  try{ var m=w.closest?w.closest('main'):null; if(m)m.scrollTop=0; else w.scrollIntoView({block:'start'}); }catch(e){}
+  if(!CUW.sheet&&OSC.current)cuwPaint(OSC.current);
+}
+function cuwToday(){ return ccToday(); }   /* 한국 날짜는 ccToday 한 곳 (5번) */
+/* 약속 — 이어진 배정 줄이 먼저, 없으면 고객 줄. 모르면 빈 글 (1번) */
+function cuwAppt(c){ var a=(typeof CUS!=='undefined'&&CUS.db&&CUS.db.next_appt)||(c&&c.next_appt)||''; return a?(''+a):''; }
+/* 약속 날은 <b>한국 날짜</b>로 — 오늘(ccToday)과 같은 자로 재야 「오늘 약속」 이 기기 시간대에 안 흔들립니다 */
+function cuwApptDay(a){ var d=new Date(a); return isNaN(d)?(''+a).slice(0,10):(new Date(d.getTime()+9*3600*1000)).toISOString().slice(0,10); }
+function cuwApptTxt(a){
+  var d=new Date(a); if(isNaN(d))return (''+a).slice(0,16);
+  return (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+function cuwDbId(id){ return (typeof olDbOf==='function'&&olDbOf(id))||((typeof CUS!=='undefined'&&CUS.db&&CUS.db.id)?(''+CUS.db.id):''); }
+/* ── 요약 › 지금 할 일 — 오늘 약속 → 기한 지난 할 일 → 물음 하나 (사장님 「추천대로」) ── */
+function cuwNowHtml(c){
+  if(!c)return '';
+  var id=c.id,t=cuwToday(),ap=cuwAppt(c),A=[],i,o=null,ids=osEsc(id);
+  try{ A=cmNextAll(id)||[]; }catch(e){ A=[]; }
+  if(ap&&cuwApptDay(ap)===t){
+    return '<div class="cuw-now"><div class="k">지금 할 일 · 오늘 약속</div>'+
+      '<div class="t">'+osEsc(cuwApptTxt(ap).split(' ')[1]||'')+(A[0]?(' — '+osEsc(A[0].what)):' — 약속')+'</div>'+
+      '<div class="s">만나고 나면 「만났어요」 — 다음 날은 규칙이 정합니다</div>'+
+      '<div class="bt"><button type="button" class="p" onclick="cuwRes(\''+ids+'\',\'met\')">만났어요</button>'+
+      '<button type="button" onclick="cusTab(\'talk\');cuwNxOpen()">미루기</button></div></div>';
+  }
+  for(i=0;i<A.length;i++)if(A[i].due&&A[i].due<=t){ o=A[i]; break; }
+  if(o){
+    return '<div class="cuw-now"><div class="k">지금 할 일 · '+(o.due===t?'오늘까지':('기한 지남 · '+osEsc(o.due)))+'</div>'+
+      '<div class="t">'+osEsc(o.what)+'</div>'+
+      '<div class="bt"><button type="button" class="p" onclick="cmNextDone(\''+ids+'\',\''+osEsc(o.k)+'\')">했어요</button>'+
+      '<button type="button" onclick="cusTab(\'talk\')">다시 잡기</button></div></div>';
+  }
+  /* 오늘 할 것이 없으면 — 다가오는 것 한 줄 + 「하나만 여쭙니다」 */
+  var nx=(ap?('다음 약속 '+cuwApptTxt(ap)):'')+((ap&&A.length)?' · ':'')+(A.length?('할 일 '+A.length+'건 · 가까운 것 '+osEsc(A[0].due||'날짜 없음')):'');
+  return (nx?('<div class="t-note b" style="margin:0 0 8px">'+nx+'</div>'):'')+((typeof cqaHtml==='function')?cqaHtml(id):'');
+}
+/* ── 요약 › 이 분 이야기 한 줄 (고치는 곳은 정보 탭 · 이야기) ── */
+function cuwSum2Html(c){
+  if(!c)return '';
+  var m=cmOf(c.id),bits=[];
+  if(m.care)bits.push('<span class="t-tag b">'+osEsc(m.care)+'</span>');
+  if(m.worry)bits.push('<span class="t-tag">걱정 — '+osEsc((''+m.worry).slice(0,30))+'</span>');
+  if(!bits.length)return '';
+  return '<div class="t-card" onclick="cuwSheet(\'story\')" style="cursor:pointer"><div class="cuw-ch"><span class="t-lab">이 분 이야기</span><span class="ed">고치기 ›</span></div>'+
+    '<div class="t-chips" style="margin-top:4px">'+bits.join('')+'</div></div>';
+}
+/* ── 연락 › 기록 한 칸 — 결과 · 방법 · 들은 말 → 남기기 ──
+   결과를 고르면 <b>다음 날과 단계는 빠른 창의 표(cshMark)</b>가 정하고, 들은 말이 접촉 한 줄로
+   남습니다. 결과 없이 들은 말만 남겨도 됩니다(cmTouchAdd).                                    */
+function cuwComposeHtml(c){
+  if(!c||typeof CSH_RES==='undefined')return '';
+  var ids=osEsc(c.id),i,h='',r=CUW.res?cshResOf(CUW.res):null,hows=(typeof CC_HOW!=='undefined')?CC_HOW:['전화','카톡','만남','문자'];
+  h+='<div class="t-card"><div class="t-lab">✍ 기록 한 칸 — 전화하면서 바로</div><div class="t-chips">';
+  for(i=0;i<CSH_RES.length;i++)
+    h+='<button type="button" class="t-chip'+(CUW.res===CSH_RES[i][0]?' on':'')+'" data-res="'+CSH_RES[i][0]+'" onclick="cuwPick(\'res\',\''+CSH_RES[i][0]+'\')">'+
+       osEsc(CSH_RES[i][1])+' <b>'+CSH_RES[i][2]+'일</b></button>';
+  h+='</div><div class="t-chips" style="margin-top:6px">';
+  for(i=0;i<hows.length;i++)
+    h+='<button type="button" class="t-chip'+(CUW.how===hows[i]?' on':'')+'" onclick="cuwPick(\'how\',\''+osEsc(hows[i])+'\')">'+osEsc(hows[i])+'</button>';
+  h+='</div><input class="cuw-in" id="cuwNote" maxlength="140" placeholder="들은 말 한 줄 — 그대로 적어 두십시오">'+
+    '<button type="button" class="t-btn sm" onclick="cuwLog(\''+ids+'\')">남기기'+
+      (r?(' · 다음 연락 '+osEsc(cshDayPlus(r[2]))):'')+'</button>'+
+    (cuwDbId(c.id)?'':'<div class="t-note">배정 DB 줄과 안 이어진 분이라 <b>단계 · 통화 기록은 안 남고</b>, 접촉 기록과 다음 날만 남습니다.</div>')+
+    '</div>';
+  return h;
+}
+function cuwPick(kind,v){
+  var n=document.getElementById('cuwNote'),keep=n?n.value:'';
+  if(kind==='res')CUW.res=(CUW.res===v?'':v); else CUW.how=v;
+  var e=document.getElementById('cuwCompose');
+  if(e&&OSC.current)e.innerHTML=cuwComposeHtml(OSC.current);
+  n=document.getElementById('cuwNote'); if(n)n.value=keep;
+}
+function cuwLog(id){
+  var note=(osVal('cuwNote')||'').replace(/^\s+|\s+$/g,'');
+  if(!CUW.res&&!note){ toast('결과를 고르시거나 들은 말을 한 줄 적어 주십시오'); return; }
+  if(CUW.res){ CSH.id=id||''; CSH.dbid=cuwDbId(id); cshMark(id,CUW.res,{how:CUW.how,note:note}); }
+  else cmTouchAdd(id,note,CUW.how,cuwToday());
+  CUW.res='';
+  var n=document.getElementById('cuwNote'); if(n)n.value='';
+  setTimeout(function(){ try{ if(OSC.current&&OSC.current.id===id){ var e=document.getElementById('cuwCompose'); if(e)e.innerHTML=cuwComposeHtml(OSC.current); cmDetailPaint(id); } }catch(e2){} },600);
+}
+/* 요약의 「만났어요」 — 기록 한 칸과 같은 길 */
+function cuwRes(id,key){ CUW.res=key; cuwLog(id); }
+function cuwWrite(){ cusTab('talk'); setTimeout(function(){ var n=document.getElementById('cuwNote'); if(n)try{ n.focus(); }catch(e){} },60); }
+/* ── 연락 › 다음 할 일 · 약속 — 목록 하나 ── */
+function cuwNextHtml(c){
+  if(!c)return '';
+  var id=c.id,ids=osEsc(id),A=[],i,h='',ap=cuwAppt(c),t=cuwToday();
+  try{ A=cmNextAll(id)||[]; }catch(e){ A=[]; }
+  h+='<div class="t-card"><div class="cuw-ch"><span class="t-lab">📌 다음 할 일 · 약속</span>'+
+     '<button type="button" class="ed" onclick="cuwNxOpen()">＋ 더하기</button></div>';
+  if(ap)h+='<div class="t-row"><div class="m"><b>⏰ 약속 '+osEsc(cuwApptTxt(ap))+'</b><span>'+(cuwApptDay(ap)===t?'오늘':'')+'</span></div></div>';
+  for(i=0;i<A.length;i++)
+    h+='<div class="t-row"><button type="button" class="cuw-ck" title="했어요" onclick="cmNextDone(\''+ids+'\',\''+osEsc(A[i].k)+'\')"></button>'+
+       '<div class="m"><b>'+osEsc(A[i].what)+'</b><span>'+osEsc(A[i].due||'날짜 없음')+((A[i].due&&A[i].due<t)?' · 지남':'')+'</span></div>'+
+       '<div class="r"><button type="button" class="t-gb" onclick="cmNextDel(\''+ids+'\',\''+osEsc(A[i].k)+'\')">지우기</button></div></div>';
+  if(!ap&&!A.length)h+='<div class="t-empty">잡아 둔 할 일 · 약속이 없습니다</div>';
+  if(CUW.nxAdd)h+='<div class="cus-grid2"><input class="cuw-in" id="cuwNxWhat" placeholder="무엇을"><input class="cuw-in" id="cuwNxDue" type="date"></div>'+
+     '<button type="button" class="t-btn sm" onclick="cuwNxSave(\''+ids+'\')">더하기</button>';
+  return h+'</div>';
+}
+function cuwNxOpen(){ CUW.nxAdd=true; var e=document.getElementById('cuwNext'); if(e&&OSC.current)e.innerHTML=cuwNextHtml(OSC.current); var w=document.getElementById('cuwNxWhat'); if(w)try{ w.focus(); }catch(x){} }
+function cuwNxSave(id){
+  var what=(osVal('cuwNxWhat')||'').replace(/^\s+|\s+$/g,''),due=osVal('cuwNxDue')||'';
+  if(!what){ toast('무엇을 할지 한 줄 적어 주십시오'); return; }
+  CUW.nxAdd=false; cmNextSave(id,what,due);
+}
+/* ── 연락 › 한 줄기 — 통화(CRM)와 접촉을 한 줄로. 지우기는 내가 적은 접촉만 ── */
+function cuwTlHtml(c){
+  if(!c||typeof cusLog!=='function')return '';
+  var id=c.id,ids=osEsc(id),m=cmOf(id),T=m.touch||[],L=cusLog((typeof CUS!=='undefined'&&CUS.calls)||[],T),i,j,r,h='',used={},nc=0,nt=0,ix;
+  for(i=0;i<L.length;i++){ if(L[i].src==='call')nc++; else nt++; }
+  var F=[['all','전체 '+L.length],['call','통화 '+nc],['touch','접촉 '+nt]];
+  h+='<div class="t-card cuw-tl"><div class="cuw-ch"><span class="t-lab">🧵 한 줄기</span><div class="t-chips" style="margin:0">';
+  for(i=0;i<F.length;i++)h+='<button type="button" class="t-chip'+(CUW.tl===F[i][0]?' on':'')+'" onclick="CUW.tl=\''+F[i][0]+'\';cuwPaint(OSC.current)">'+F[i][1]+'</button>';
+  h+='</div></div>';
+  /* 관계 온도 — 옛 🤝 관계 칸의 그 딱지. 묻는 곳은 cmTemp 하나 (5번) · 기록이 없으면 <b>모른다</b>는 흐린 색 (1번) */
+  try{ var tp=cmTemp(id); h+='<div class="t-chips" style="margin:2px 0 4px"><span class="t-tag '+(tp.k==='hot'?'ok':(tp.k==='cold'?'':'b'))+'">'+tp.e+' 마지막 접촉 '+osEsc(tp.t)+'</span></div>'; }catch(eT){}
+  var shown=0;
+  for(i=0;i<L.length&&shown<30;i++){
+    r=L[i];
+    if(CUW.tl!=='all'&&CUW.tl!==r.src)continue;
+    shown++;
+    ix=-1;
+    if(r.src!=='call')for(j=0;j<T.length;j++){
+      if(used[j])continue;
+      if((''+(T[j].at||'')).slice(0,10)===(''+(r.at||'')).slice(0,10)&&(T[j].how||'접촉')===r.kind&&(T[j].note||'')===(r.note||'')){ used[j]=1; ix=j; break; }
+    }
+    h+='<div class="t-row"><span class="ic">'+(r.src==='call'?'📞':((typeof CC_HOWE!=='undefined'&&CC_HOWE[r.kind])||'🤝'))+'</span>'+
+       '<div class="m"><b>'+osEsc(r.kind)+(r.note?(' — '+osEsc(r.note)):'')+'</b><span>'+osEsc((''+(r.at||'')).slice(0,10))+'</span></div>'+
+       '<div class="r">'+(r.src==='call'?'<span class="src">CRM 통화</span>':(ix>=0?('<button type="button" class="t-gb" onclick="cmTouchDel(\''+ids+'\','+ix+')">지우기</button>'):'<span class="src">접촉</span>'))+'</div></div>';
+  }
+  if(!shown)h+='<div class="t-empty">'+(L.length?'고른 갈래에 기록이 없습니다':'아직 연락 기록이 없습니다')+'</div>';
+  return h+'</div>';
+}
+/* ── 보장 › 우리 계약 (배정 줄의 계약) ── */
+function cuwOurPolHtml(c){
+  var d=(typeof CUS!=='undefined')?CUS.db:null;
+  if(!d||!(d.contracted_at||d.contract_premium||d.policy_no))return '';
+  var won=(d.contract_premium==null||d.contract_premium==='')?null:((typeof cusWonR==='function')?cusWonR(d.contract_premium):(d.contract_premium+'원'));
+  return '<div class="t-card"><div class="t-lab">🤝 우리 계약</div><div class="cuw-kv">'+
+    '<div class="k">계약일</div><div class="v">'+(d.contracted_at?osEsc((''+d.contracted_at).slice(0,10)):'<i>모름</i>')+'</div>'+
+    '<div class="k">월납</div><div class="v">'+(won?osEsc(won):'<i>모름</i>')+'</div>'+
+    '<div class="k">증권번호</div><div class="v">'+(d.policy_no?osEsc(d.policy_no):'<i>모름</i>')+'</div>'+
+    '<div class="k">증권 전달</div><div class="v">'+(d.policy_sent_at?osEsc((''+d.policy_sent_at).slice(0,10)):'<i>아직</i>')+'</div></div></div>';
+}
+/* ── 정보 — 보기 칸 (고치기는 시트) ── */
+function cuwKv(rows){ var h='<div class="cuw-kv">',i; for(i=0;i<rows.length;i++)h+='<div class="k">'+rows[i][0]+'</div><div class="v">'+rows[i][1]+'</div>'; return h+'</div>'; }
+function cuwCard(lab,sheet,body,edT){
+  return '<div class="t-card"><div class="cuw-ch"><span class="t-lab">'+lab+'</span>'+
+    (sheet?('<button type="button" class="ed" onclick="cuwSheet(\''+sheet+'\')">'+(edT||'고치기')+'</button>'):'')+'</div>'+body+'</div>';
+}
+function cuwInfoHtml(c){
+  if(!c)return '';
+  var id=c.id,m=cmOf(id),I=(typeof CUS!=='undefined'&&CUS.info)||null,d=(typeof CUS!=='undefined')?CUS.db:null,
+      real=(typeof cmRealOf==='function')?cmRealOf(id):'',U='<i>모름</i>',rb=null,h='',cs=c.consent_status||'none',i,fs=[];
+  try{ rb=cmRrnBirth(cmRrnOf(id)); }catch(e){ rb=null; }
+  var wait=I?null:'<i>불러오는 중</i>';
+  var by=I&&I.birth_year?(I.birth_year+'년생'):null;
+  h+=cuwCard('👤 사람','base',cuwKv([
+    ['이름',real?(osEsc(real)+' <small>실명 · 이 기기</small>'):osEsc(c.name_masked||'')],
+    ['연락처',wait||(I.phone?osEsc(I.phone):U)],
+    ['생년',rb?(osEsc(rb.f)+' <small>주민번호에서</small>'):(wait||(by?osEsc(by):U))],
+    ['성별',rb?osEsc(rb.sex):(wait||(I.gender==='M'?'남':(I.gender==='F'?'여':U)))],
+    ['사는 곳',d&&(d.region||d.sigungu)?(osEsc(d.region||d.sigungu)+' <small>배정 DB</small>'):U]]));
+  var ffN=(typeof cmFfCount==='function')?cmFfCount(id):0,ffT=(typeof cmFfTotal==='function')?cmFfTotal():0;
+  var man=function(v){ return (v==null||v==='')?U:(osNum(v).toLocaleString('ko-KR')+'만원'); };
+  h+=cuwCard('💰 돈','base',cuwKv([['월 소득',wait||man(I.monthly_income)],['월 생활비',wait||man(I.monthly_fixed_expense)]])+
+     '<div class="cuw-ch" style="margin-top:8px"><span class="t-lab" style="color:var(--t-sub)">팩트파인딩 '+ffN+' / '+ffT+'</span>'+
+     '<button type="button" class="ed" onclick="cuwSheet(\'ff\')">이어서 채우기 ›</button></div>'+
+     '<div class="cuw-prog"><i style="width:'+(ffT?Math.round(ffN*100/ffT):0)+'%"></i></div>');
+  var F=m.fams||[];
+  for(i=0;i<F.length;i++)if(F[i]&&(F[i].name||F[i].rel))fs.push('<span class="t-chip">'+osEsc(F[i].name||'')+' <b>'+osEsc(F[i].rel||'')+(F[i].by?(' · '+osEsc(F[i].by)):'')+'</b></span>');
+  var rf=(typeof cmRefName==='function')?cmRefName(id):'';
+  h+=cuwCard('👪 가족 · 소개','fam',cuwKv([['어디서 오셨나',m.src?osEsc(cregSrcName(m.src)):(d?'배정 DB':U)],
+     ['묶음',m.fam?(osEsc(m.fam)+(m.rel?(' · '+osEsc(m.rel)):'')):U],['소개해 주신 분',rf?osEsc(rf):U]])+
+     (fs.length?('<div class="t-chips" style="margin-top:6px">'+fs.join('')+'</div>'):''));
+  h+=cuwCard('📝 이야기 · 메모','story',cuwKv([['지금 상황',m.care?osEsc(m.care):U],['걱정',m.worry?osEsc(m.worry):U],
+     ['메모',wait||(I.household_notes?osEsc((''+I.household_notes).slice(0,60)):U)]]));
+  h+=cnsHtml(c);   /* ✅ 동의 네 갈래 (판 X161-판2) */
+  h+=cuwCard('📇 배정 DB','',d?cuwKv([['출처',osEsc(d.source||'일반')],['배정일',osEsc((''+(d.assigned_date||'')).slice(0,10))||U],['단계',osEsc(d.stage||'')||U]])
+     :'<div class="t-empty" style="padding:6px 0">배정 DB 줄과 안 이어진 분입니다 — 개인 고객이면 그대로 두셔도 됩니다</div>');
+  return h;
+}
+/* 단계 고치기 — 바꾸는 곳은 빠른 창의 그 칸 하나(cshStageHtml → hdbTo) */
+function cuwStageHtml(c){ return (c&&typeof cshStageHtml==='function')?cshStageHtml(c.id,cuwDbId(c.id)):''; }
+/* 새 판 칸들을 <b>한 번에</b> 다시 그립니다 — cusPaint 가 부릅니다(읽어 온 것이 늘 때마다).
+   기록 한 칸(cuwCompose)은 <b>안 다시 그립니다</b> — 치던 글이 사라집니다. */
+function cuwPaint(c){
+  if(!c)return;
+  var P=[['cuwNow',cuwNowHtml],['cuwSum2',cuwSum2Html],['cuwNext',cuwNextHtml],['cuwTl',cuwTlHtml],
+         ['cuwOurPol',cuwOurPolHtml],['cuwInfo',cuwInfoHtml],['cuwStage',cuwStageHtml],['cnsSheet',cnsSheetHtml]],i,e;
+  for(i=0;i<P.length;i++){ e=document.getElementById(P[i][0]); if(e)e.innerHTML=P[i][1](c); }
+  try{ oscTopPaint(); }catch(x){}
+}
 function osClientDetailHtml(c){
-  var nm=cmName(c);var cs=c.consent_status||'none';
-  oscBaCss();
-  return '<div class="osc-wrap">'+
-    '<div class="osc-detail-back" onclick="osBackToList()">← 고객 목록</div>'+
-    /* <b>고객정보를 맨 위에 붙여 둡니다</b> — 사장님 말씀대로 「어디서든
-       볼 수 있도록」. 아래로 내려가도 이 줄은 따라옵니다. 칸 전체를 붙이면
-       화면 절반을 먹으므로 <b>꼭 필요한 것만</b> 한 줄로 세웁니다. */
-    '<div id="oscTopBar" class="osc-top">'+oscTopHtml(c)+'</div>'+
-    /* 목각 옷 — 이름 줄도 카드입니다 (사장님 2026-09-27 「전부 목각 버전으로」) */
-    '<div class="t-card" style="margin-bottom:16px">'+
-      '<div class="t-lab">👤 고객</div>'+
-      '<div class="t-h1">'+osEsc(nm)+'</div>'+
-      '<div class="t-sub">'+osFmtDate(c.created_at)+' 등록 · <span class="t-tag '+
-        (cs==='granted'?'ok':(cs==='revoked'?'no':(cs==='requested'?'due':'')))+'">'+
-        osConsentLabel(cs)+'</span></div>'+
-    '</div>'+
-    /* ── 고객 한 장 ──
-       여기 위에 있던 것들(고객정보·가족·접촉기록·통화이력)은 <b>그대로</b>
-       아래 남아 있다. 이 카드는 그 흩어진 것을 한 장으로 모아 <b>맨 먼저</b>
-       보여 줄 뿐이다. 자료는 새로 안 만든다 — 표도 안 고친다. */
-    '<div id="cusCard">'+cusAppCardHtml(c)+'</div>'+
-    cusFamPanelHtml(c.id)+
-    /* 목각 옷 — id 와 onclick 은 <b>한 글자도</b> 안 바꿉니다 (기능만 맞춥니다) */
-    '<div class="t-card" style="margin-bottom:16px">'+
-      '<div class="t-lab">📇 고객 정보</div>'+
-      '<div class="t-big">내 계정에만 저장됩니다<small>계산기·팩트파인딩으로 그대로 따라갑니다.</small></div>'+
-      '<div class="t-fld"><span class="l">연락처</span><input id="cliPhone" type="text" placeholder="010-0000-0000"/></div>'+
-      '<div class="t-fld"><span class="l">출생년도</span><input id="cliBirth" type="number" placeholder="1980"/></div>'+
-      '<div class="t-fld"><span class="l">성별</span><select id="cliGender"><option value="">선택</option><option value="M">남</option><option value="F">여</option></select></div>'+
-      '<div class="t-fld"><span class="l">월 소득 (만원)</span><input id="cliIncome" type="number" placeholder="500"/></div>'+
-      /* 생활비를 적어 둘 자리가 없어서, 계산기로 넘어갈 때마다 비어 있었다.
-         여기 적어 두면 팩트파인딩을 안 채운 고객도 생활비가 따라간다. */
-      '<div class="t-fld"><span class="l">월 생활비 (만원)</span><input id="cliExp" type="number" placeholder="300"/></div>'+
-      '<div class="t-fld"><span class="l">메모 — 가족·니즈·상담 노트</span><textarea id="cliMemo" rows="3"></textarea></div>'+
-      '<button type="button" class="t-btn sm" style="margin-top:14px" onclick="osCliInfoSave()">정보 저장</button>'+
-    '</div>'+
-    '<div id="cmPanels">'+cmPanelsHtml(c.id)+'</div>'+
-    /* <b>보장분석 전·후</b> — 사장님이 여기서 바로 여시는 자리 */
-    '<div id="oscBaHost">'+oscBaHtml()+'</div>'+
-    /* <b>가입한 보험</b> — 상담 전에 「이분 뭐 들고 계시지」 를 여기서 본다 */
-    '<div id="oscPolHost">'+oscPolHtml()+'</div>'+
-    /* ── 예전 세 칸은 <b>접어 둡니다</b> ─────────────────────────────
-       사장님 말씀 — 「보장분석 문서 / 보장분석 / 고객맞춤보장분석풀리포트 /
-       다 지워버려 눈에 안보이게」. 눈에서 치우되 <b>지우지는 않습니다</b> —
-       PDF 를 여기로 올려야 담보가 들어오고, 그 담보로 전·후가 만들어집니다.
-       통째로 없애면 그 길이 끊깁니다. 접어 두면 자리를 안 먹고, 필요할 때
-       한 번 눌러 펴시면 됩니다. */
-    '<details class="osc-old" id="oscOld"><summary>📂 예전 자료 — 문서 올리기 · 보장분석 · 풀리포트 '+
-      '<small>여기 올린 PDF 에서 담보를 읽어 전·후를 만듭니다</small></summary>'+
+  var cs=c.consent_status||'none',id=c.id;
+  oscBaCss();cusWinCss();
+  return '<div class="osc-wrap" id="cusWin" data-tab="'+osEsc(CUS_WIN.tab||'sum')+'" data-sheet="'+osEsc(CUW.sheet||'')+'">'+
+    '<div class="osc-detail-back" onclick="osBackToList()">'+(CUS_WIN.from?'← 돌아가기':'← 고객 목록')+'</div>'+
+    /* 머리와 탭 띠는 한 덩이로 붙어 다닙니다 */
+    '<div class="cus-head"><div id="oscTopBar" class="osc-top">'+oscTopHtml(c)+'</div>'+cusTabsHtml()+'</div>'+
+    /* 고치기 화면의 머리 — 고치기 화면일 때만 섭니다 */
+    '<div class="cuw-shd"><button type="button" onclick="cuwSheet(\'\')">‹</button><span id="cuwShT">'+osEsc(cuwSheetT(CUW.sheet))+'</span>'+
+      '<button type="button" class="x" onclick="cuwSheet(\'\')">닫기</button></div>'+
+    /* ── 요약 ── */
+    cusSec('sum','<div id="cuwNow">'+cuwNowHtml(c)+'</div>')+
+    cusSec('sum','<div id="cusCard">'+cusAppCardHtml(c)+'</div>')+
+    cusSec('sum','<div id="cuwSum2">'+cuwSum2Html(c)+'</div>')+
+    /* ── 연락 ── */
+    cusSec('talk','<div id="cuwCompose">'+cuwComposeHtml(c)+'</div>')+
+    cusSec('talk','<div id="cuwNext">'+cuwNextHtml(c)+'</div>')+
+    cusSec('talk','<div id="cuwTl">'+cuwTlHtml(c)+'</div>')+
+    /* ── 있던 편집 칸들 — 탭 · 고치기 화면에 나뉘어 섭니다(cmPanelsHtml) ── */
+    '<div id="cmPanels">'+cmPanelsHtml(id)+'</div>'+
+    /* ── 보장 ── */
+    cusSec('cov','<div id="cuwOurPol">'+cuwOurPolHtml(c)+'</div>')+
+    cusSec('cov','<div id="oscPolHost">'+oscPolHtml()+'</div>')+
+    cusSec('cov','<div id="oscBaHost">'+oscBaHtml()+'</div>')+
+    /* ── 서류 — 한 목록 ── */
+    cusSec('doc','<div class="t-card"><div class="cuw-ch"><span class="t-lab">📎 서류 — 올린 파일</span>'+
+        '<button type="button" class="ed" onclick="osPickFile()">＋ 올리기</button></div>'+
+      '<div id="oscDocs" class="osc-doclist"><div class="osc-loading">문서를 불러오는 중…</div></div>'+
+      '<div class="t-lab" style="margin-top:12px">🗂️ 저장한 상담자료 — AI 보장분석 · 비포&애프터 · 재무설계</div>'+
+      '<div id="oscReps"><div class="t-empty">저장 자료를 불러오는 중…</div></div></div>')+
+    cusSec('doc','<details class="osc-old" id="oscOld"><summary>📂 보장분석 · 풀리포트 '+
+      '<small>올린 PDF 에서 담보를 읽어 전·후를 만듭니다</small></summary>'+
     '<div class="osc-panel">'+
       '<h3 style="font-size:var(--t4);font-weight:800;margin-bottom:6px">보장분석 문서</h3>'+
-      '<p style="font-size:var(--t6);color:var(--t-sub);line-height:1.6">이 고객의 보장분석 리포트·제안서 PDF를 업로드하면, 담보를 구조화 추출하고 사람이 검수한 뒤 전후비교·상담 리포트로 이어집니다.</p>'+
       '<div class="osc-drop" id="oscDrop" onclick="osPickFile()">'+
         '<div class="di">📄</div>'+
         '<div class="dt">PDF를 여기로 끌어다 놓거나 클릭해 선택</div>'+
@@ -72701,7 +73743,6 @@ function osClientDetailHtml(c){
         '<input type="file" id="oscFile" accept="application/pdf,.pdf" multiple style="display:none" onchange="osHandleFiles(this.files)"/>'+
       '</div>'+
       '<div id="oscUpRows"></div>'+
-      '<div id="oscDocs" class="osc-doclist"><div class="osc-loading">문서를 불러오는 중…</div></div>'+
       '<div class="osc-note">업로드 원문은 <b>비공개(private) 스토리지</b>에 고객별 폴더로 저장되며, 소유 설계사·같은 팀·관리자만 접근할 수 있습니다. 실명·주민번호 등 민감정보는 파일명에 넣지 마세요. 동일 파일 재업로드는 체크섬으로 자동 감지합니다.</div>'+
     '</div>'+
     '<div class="osc-panel" style="margin-top:16px" id="oscAnalysisPanel">'+
@@ -72710,15 +73751,29 @@ function osClientDetailHtml(c){
       '<div id="oscAnalysis"><div class="osc-loading">분석 상태를 불러오는 중…</div></div>'+
     '</div>'+
     frPanelHtml()+
-    '</details>'+
-    '<div class="t-card" style="margin-top:16px;margin-bottom:16px">'+
-      '<div class="t-lab">🗂️ 저장된 상담 자료</div>'+
-      '<div class="t-big">AI 보장분석 · 비포&애프터 · 재무설계<small>여기서 바로 펴 보십니다.</small></div>'+
-      '<div id="oscReps"><div class="t-empty">저장 자료를 불러오는 중…</div></div>'+
-    '</div>'+
-    /* 여기 있던 「DB 통합 CRM 통화 이력」 칸은 <b>맨 위 한 장</b>으로 옮겼다.
-       통화와 접촉을 두 곳에서 따로 세면 「몇 번 연락했나」가 갈린다(규칙 ④). */
-    '<button type="button" class="t-btn g sm" style="margin-top:4px" onclick="go(\'crm\')">🗄️ DB 통합 CRM 에서 보기</button>'+
+    '</details>')+
+    /* ── 정보 — 보기 칸 ── */
+    cusSec('info','<div id="cuwInfo">'+cuwInfoHtml(c)+'</div>')+
+    /* ── 고치기 화면들 — 있던 칸 그대로 (id · 저장 함수 그대로) ── */
+    cusSec('sh-base','<div class="t-card cus-info1">'+
+      '<div class="t-lab">📇 사람 · 돈 · 메모</div>'+
+      '<div class="t-sub cus-info-sub">'+osFmtDate(c.created_at)+' 등록 · <span class="t-tag '+
+        (cs==='granted'?'ok':(cs==='revoked'?'no':(cs==='requested'?'due':'')))+'">'+
+        osConsentLabel(cs)+'</span> · 내 계정에만 저장 · 계산기·팩트파인딩으로 따라갑니다</div>'+
+      '<div class="cus-grid2">'+
+      '<div class="t-fld"><span class="l">연락처</span><input id="cliPhone" type="text" placeholder="010-0000-0000"/></div>'+
+      '<div class="t-fld"><span class="l">출생년도</span><input id="cliBirth" type="number" placeholder="1980"/></div>'+
+      '<div class="t-fld"><span class="l">성별</span><select id="cliGender"><option value="">선택</option><option value="M">남</option><option value="F">여</option></select></div>'+
+      '<div class="t-fld"><span class="l">월 소득 (만원)</span><input id="cliIncome" type="number" placeholder="500"/></div>'+
+      '<div class="t-fld"><span class="l">월 생활비 (만원)</span><input id="cliExp" type="number" placeholder="300"/></div>'+
+      '</div>'+
+      '<div class="t-fld"><span class="l">메모 — 가족·니즈·상담 노트</span><textarea id="cliMemo" rows="3"></textarea></div>'+
+      '<button type="button" class="t-btn sm" onclick="osCliInfoSave()">정보 저장</button>'+
+    '</div>')+
+    cusSec('sh-fam',cusFamPanelHtml(id))+
+    cusSec('sh-stage','<div id="cuwStage">'+cuwStageHtml(c)+'</div>')+
+    cusSec('sh-cns','<div id="cnsSheet">'+cnsSheetHtml(c)+'</div>')+
+    cusSec('talk','<button type="button" class="t-btn g sm" onclick="go(\'crm\')">🗄️ DB 통합 CRM 에서 보기</button>')+
   '</div>';
 }
 
@@ -72746,6 +73801,9 @@ function cusPaint(){
   var el=document.getElementById('cusCard');
   if(!el||!OSC.current)return;
   el.innerHTML=cusAppCardHtml(OSC.current);
+  if(typeof cuwPaint==='function')cuwPaint(OSC.current);
+  /* 탭 띠의 건수도 같이 — 읽어 온 것이 늘면 띠가 옛 수를 말하면 안 됩니다 (판 X161) */
+  if(typeof cusTabsPaint==='function')cusTabsPaint();
 }
 function cusAppCardHtml(c){
   if(typeof cusCardHtml!=='function'){
@@ -72754,7 +73812,26 @@ function cusAppCardHtml(c){
            '아래 칸에서 그대로 보실 수 있습니다.</div>';
   }
   if(typeof cusCss==='function')cusCss();
-  return cusCardHtml(cusAppView(c));
+  /* 판 X161 — 고객 창에서는 <b>머리 + 한눈에</b>만 섭니다. 사람·가족·돈·계약·문서는
+     제 탭(정보·계약·서류)에서 고치므로 여기 또 세우면 같은 것이 두 번 섭니다.
+     연락기록 한 줄기는 연락 탭(cusAppLogHtml)으로 갔습니다 (사장님 말씀 2026-10-23
+     「고객창에서 중복된 부분 줄이고」).                                   */
+  var v=cusAppView(c); v.only='glance'; v.noHead=true;   /* 새 판 — 이름 줄은 창 머리에 있습니다 */
+  return cusCardHtml(v);
+}
+/* 연락 탭의 <b>CRM 통화 기록</b> — 접촉 기록은 바로 위 🤝 관계 칸에 (지우기 단추와 함께)
+   이미 섭니다. 여기에 또 섞으면 같은 접촉이 두 번 섭니다 — 그래서 <b>통화만</b> 남깁니다
+   (사장님 말씀 2026-10-23 「중복된 부분 줄이고」). 그리는 자는 apex-cusone 의 cusLogHtml 하나. */
+function cusAppLogHtml(c){
+  if(typeof cusCardHtml!=='function'||!c)return '';
+  var v=cusAppView(c),L=v.log||[],i,o=[];
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].src==='call')o.push(L[i]);
+  v.only='log'; v.log=o;
+  v.logT={title:'📞 CRM 통화 기록',
+          none:(typeof olDbOf==='function'&&olDbOf(c.id))
+            ?'아직 DB 통합 CRM 에 남긴 통화가 없습니다.'
+            :'배정 DB 줄과 안 이어진 분이라 CRM 통화가 없습니다 — 접촉 기록은 위 🤝 관계 칸에 있습니다.'};
+  return cusCardHtml(v);
 }
 function cusAppView(c){
   var m=(typeof cmOf==='function')?cmOf(c.id):{},info=CUS.info||{},db=CUS.db;
@@ -73024,7 +74101,9 @@ function cusFamSave(id){
 
    이름으로 잇는다. <b>clients 에는 실명이 없어</b> 연락처가 있으면
    연락처로, 없으면 마스킹 이름으로 견준다. 짐작으로 잇는 자리를
-   늘리지 않는다 — 서버에 못 박는 것은 3단계에서 한다(계획서 규칙 ②). */
+   늘리지 않는다 — 서버에 못 박는 것은 3단계에서 한다(계획서 규칙 ②).
+   ⚠ 판 X161 — 그 「3단계」 가 dbs.client_id 입니다. 이제 그 칸으로만 잇고,
+     이름 견주기는 칸이 없는 옛 서버에서만 돕니다 (아래 byLink). */
 function cusCrmLoad(again){
   var sb=osClient(),c=OSC.current;
   if(!sb||!c)return;
@@ -73048,14 +74127,31 @@ function cusCrmLoad(again){
     }
     return hit;
   };
+  /* ★ 판 X161 — <b>잇는 칸(client_id)으로 그 분 줄만</b> 받습니다.
+     여태는 한 분을 보려고 담당자의 배정 DB 를 <b>통째로</b>(1,000줄 넘게)
+     받아 번호·이름으로 골랐습니다 (7번). 그리고 이름 견주기는 다섯 명에
+     한 명꼴로 남의 줄을 집었습니다(판 X82). 이제 묻는 곳은 하나입니다.
+     ★ 이어진 줄이 없으면 <b>빈 손</b>입니다 — 비슷한 분을 골라 오지 않습니다(1번).
+     ★ 칸이 없는 옛 서버에서만 아래 예전 길(통째로 받아 견주기)로 갑니다. */
+  var colDown=function(m){return /column|42703|does not exist|schema cache/i.test(''+(m||''));};
+  var byLink=function(){
+    /* 한 분에게 이어진 배정 줄은 다시 배정돼도 몇 줄입니다 — 일부러 몇 줄만 받습니다 (check-dbpage) */
+    return sb.from('dbs').select(cols+',client_id').eq('client_id',c.id).limit(50).then(function(r){
+      if(r&&r.error&&colDown(r.error.message))return null;   /* 칸이 없는 서버 — 예전 길 */
+      return {data:(r&&!r.error&&r.data)||[],error:(r&&r.error)||null,link:true};
+    },function(e){ return {data:[],error:e||{message:'실패'},link:true}; });
+  };
   /* <b>쪽을 나눠</b> 끝까지 읽는다. 서버는 한 판에 1,000줄까지만 주고
      넘는 줄은 <b>에러도 없이</b> 안 온다 — 배정이 1,000건을 넘는 분은
      여기서 통째로 안 보였을 자리다(1번 · #382). */
-  arAll(sb,'dbs',cols,'id',function(x){
-    return x.eq('assigned_to',c.advisor_id||(OS.profile&&OS.profile.id)||'');
-  }).then(function(r){
+  var byName=function(){
+    return arAll(sb,'dbs',cols,'id',function(x){
+      return x.eq('assigned_to',c.advisor_id||(OS.profile&&OS.profile.id)||'');
+    });
+  };
+  byLink().then(function(r){ return r||byName(); }).then(function(r){
     if(r&&r.error){cusPaint();return;}
-    var hit=pick((r&&r.data)||[]),ids,i;
+    var hit=r.link?((r&&r.data)||[]):pick((r&&r.data)||[]),ids,i;
     if(!hit.length){cusPaint();return;}
     /* 같은 사람이 여러 건이면 <b>가장 최근 배정</b>을 카드에 세운다 */
     hit.sort(function(a,b){return (''+(b.assigned_date||''))<(''+(a.assigned_date||''))?-1:1;});
@@ -75249,6 +76345,7 @@ function frMakeGo(){
     setTimeout(function(){
       try{
         var e=document.getElementById('frPanel');
+        if(e&&typeof cusReveal==='function')cusReveal(e);   /* 서류 탭에 있습니다 (판 X161) */
         if(e)e.scrollIntoView({behavior:'smooth',block:'start'});
       }catch(x){}
     },420);

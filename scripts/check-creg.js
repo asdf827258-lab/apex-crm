@@ -28,6 +28,13 @@
      8. ★ <b>표를 합치지 않았는가</b> — 창이 「하나로 합칩니다」 같은 말을
         하지 않는가. 배정 한도를 세는 자가 배정 DB 만 봐야 합니다
 
+   ★ 판 X161 새 판 (2026-10-23 「탭 다섯으로 하고 추천대로 새 판 만들어」) — 창이 <b>세 걸음</b>입니다.
+     ① 누구(이름·번호 · 이미 계신 분 찾기) → ② 어디서(👤 · 📇 고르는 칸 — 여기가 위 2번의 그 자리)
+     → ③ 더 아시는 것(👤 만). 📁 엑셀은 ① 아래 한 칸입니다(이름을 하나 적고 나서 「여러 명」 을 고르게
+     하면 거꾸로라). 그래서 고르는 칸은 ①의 📁 하나 + ②의 둘 = <b>셋</b> 그대로입니다.
+     10. ★★ 번호가 같은 분이 <b>이미 계시면</b> ① 에서 알려 주나 · 가린 이름만 같으면 <b>약한 짝</b>이라 적나
+     11. ★ 👤 셋째 걸음 — 넣는 것은 <b>cliMake</b>(사람 줄) · <b>cmSave</b>(어디서·소개) 뿐인가 · 고객 창 <b>정보</b> 탭이 열리나
+     12. ★ 📇 는 이미 있는 배정 DB 창에 <b>적으신 이름·번호를 옮겨</b> 여나 (두 번 안 치게)
    ★ 사장님 진짜 서버는 읽지 않습니다. 견본 이름은 홍길동 집안입니다 (3번). */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -67,8 +74,9 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(blk !== '', 'creg 토막을 찾았다');
   is(!/\.insert\(|\.upsert\(|from\('clients'\)|from\('dbs'\)/.test(blk),
      'creg 안에 서버에 넣는 글이 <b>한 줄도 없다</b> (5번)');
-  is(/osNewClient/.test(blk) && /hdbNew/.test(blk) && /cimpOpen/.test(blk),
-     '이미 있는 창 셋을 <b>부르기만</b> 한다 — osNewClient · hdbNew · cimpOpen');
+  /* 새 판 — 👤 는 등록 창(osNewClient) 대신 셋째 걸음이 <b>cliMake</b> 를 부릅니다. 넣는 자는 그대로 하나입니다 (5번) */
+  is(/cliMake\(/.test(blk) && /hdbNew/.test(blk) && /cimpOpen/.test(blk),
+     '이미 있는 자 셋을 <b>부르기만</b> 한다 — cliMake · hdbNew · cimpOpen');
 
   console.log('\n[8] 표를 합친다고 말하지 않는다');
   is(!/표를 합|하나의 표|한 표로 합/.test(blk),
@@ -97,11 +105,23 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     const before = location.hash + '|' + (typeof currentTab === 'function' ? currentTab() : '?');
     cregOpen();
     const sheet = document.getElementById('cregSheet');
-    const cards = [].slice.call(document.querySelectorAll('.creg-c'));
+    let cards = [].slice.call(document.querySelectorAll('.creg-c'));
+    const px = cards.map(c => Math.round(c.getBoundingClientRect().height));
+    let txt = sheet ? sheet.textContent : '';
+    const nm = document.getElementById('cregNm'), ph = document.getElementById('cregPh');
+    const step1 = !!nm && !!ph;
+    /* ① 이름 없이 다음 → 안 넘어간다 */
+    cregStep(2);
+    const stay = !!document.getElementById('cregNm');
+    document.getElementById('cregNm').value = '홍길동';
+    cregStep(2);
+    const c2 = [].slice.call(document.querySelectorAll('.creg-c'));
+    c2.forEach(c => px.push(Math.round(c.getBoundingClientRect().height)));
+    txt += ' ' + (sheet ? sheet.textContent : '');
     return { open: !!(sheet && sheet.classList.contains('on')),
-             n: cards.length,
-             txt: sheet ? sheet.textContent.replace(/\s+/g, ' ') : '',
-             px: cards.map(c => Math.round(c.getBoundingClientRect().height)),
+             n: cards.length + c2.length, n1: cards.length, n2: c2.length, step1: step1, stay: stay,
+             txt: txt.replace(/\s+/g, ' '),
+             px: px,
              x: !!document.querySelector('.creg-x'),
              after: location.hash + '|' + (typeof currentTab === 'function' ? currentTab() : '?'),
              same: before === (location.hash + '|' + (typeof currentTab === 'function' ? currentTab() : '?')) };
@@ -111,7 +131,9 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   /* ⚠ 판 X135 에서 <b>셋째 갈래</b>(📁 엑셀·CSV)가 붙었습니다. 수를 박아 두는
      자리라, 늘 때마다 여기도 같이 고칩니다 — 느슨히 >=2 로 풀면 갈래가 조용히
      사라져도 초록입니다 (8번).                                              */
-  is(W.n === 3, '고르는 칸이 셋이다 (받음 ' + W.n + ')');
+  is(W.n === 3 && W.n1 === 1 && W.n2 === 2, '고르는 칸이 셋이다 — ① 📁 하나 · ② 👤📇 둘 (받음 ' + W.n1 + ' · ' + W.n2 + ')');
+  is(W.step1, '첫 걸음은 <b>누구</b> — 이름 · 번호 칸');
+  is(W.stay, '이름 없이 「다음」 을 누르면 안 넘어간다');
   is(/엑셀/.test(W.txt) && /여러 명 한꺼번에/.test(W.txt),
      '📁 엑셀·CSV — 여러 명 한꺼번에 라고 적는다');
   is(/내 고객<\/b>으로 들어갑니다|내 고객으로 들어갑니다/.test(W.txt) || /안 셉니다/.test(W.txt),
@@ -147,18 +169,59 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   console.log('\n[4-2] 고르면 이미 있는 창이 뜬다 — 화면은 그대로');
   const pick = await page.evaluate(() => {
     const o = {};
-    cregOpen(); cregGoCli();
-    o.cli = !!document.getElementById('oscName');
+    cregOpen(); document.getElementById('cregNm').value = '홍길동'; cregStep(2); cregGoCli();
+    o.cli = !!document.getElementById('cregBy') && !!document.getElementById('cregSay') && /정보 탭/.test(document.getElementById('cregSheet').textContent);
     o.cliTab = (typeof currentTab === 'function') ? currentTab() : '?';
-    if (typeof osCloseModal === 'function') osCloseModal();
-    cregOpen(); cregGoDb();
+    cregClose();
+    cregOpen(); document.getElementById('cregNm').value = '홍길순'; document.getElementById('cregPh').value = '010-3333-4444';
+    cregStep(2); cregGoDb();
     o.db = !!document.getElementById('hdbName');
+    o.carry = o.db && document.getElementById('hdbName').value === '홍길순' &&
+              (document.getElementById('hdbPhone') || {}).value === '010-3333-4444';
     o.dbTab = (typeof currentTab === 'function') ? currentTab() : '?';
     if (typeof hdbClose === 'function') hdbClose();
     return o;
   });
-  is(pick.cli, '👤 를 누르면 <b>고객 365일 등록 창</b>이 뜬다 (#oscName)');
+  is(pick.cli, '👤 를 누르면 <b>셋째 걸음</b>(더 아시는 것)이 선다 — 넣고 나면 고객 창 정보 탭');
   is(pick.db, '📇 를 누르면 <b>배정 DB 등록 창</b>이 뜬다 (#hdbName)');
+  is(pick.carry, '📇 창에 <b>적으신 이름·번호가 옮겨져</b> 있다 — 두 번 안 칩니다');
+
+  console.log('\n[10] 이미 계신 분을 번호로 찾는다');
+  const dup = await page.evaluate(() => {
+    OSC.list = [{ id: 'k1', name_masked: '홍*동', phone: '010-1111-2222' }, { id: 'k2', name_masked: '홍*순' }];
+    AR.db = [{ id: 'q1', name: '홍말순', phone: '010 5555 6666', stage: 'TA', client_id: '' }];
+    const a = cregDup('홍길동', '010-1111-2222'), b = cregDup('홍길순', ''), c = cregDup('홍말순', '01055556666'),
+          d = cregDup('홍길동', '010-9999-0000');
+    return { a: a.map(x => x.k + ':' + (x.cli || x.db)).join(','), b: b.map(x => x.k + ':' + x.cli).join(','),
+             c: c.map(x => x.k + ':' + x.db).join(','), d: d.map(x => x.k).join(',') };
+  });
+  is(dup.a === 'sure:k1', '  번호가 같으면 <b>확실한 짝</b> — ' + dup.a);
+  is(dup.b === 'weak:k2', '  가린 이름만 같으면 <b>약한 짝</b> (번호를 한 번 더 보라고) — ' + dup.b);
+  is(dup.c === 'sure:q1', '  배정 DB 줄도 번호로 찾는다 (띄어쓰기·- 는 지우고 견준다) — ' + dup.c);
+  is(dup.d.indexOf('sure') < 0, '  번호가 다르면 이름이 같아도 「확실」 이라 하지 않는다 — 번호가 말한다 (받음 ' + (dup.d || '없음') + ')');
+
+  console.log('\n[11] 👤 넣기 — cliMake · cmSave 만 부르고 정보 탭을 연다');
+  const mk = await page.evaluate(() => {
+    const got = {}, real = { cliMake: window.cliMake, cmSave: window.cmSave, cusGo: window.cusGo, osLoadClients: window.osLoadClients };
+    window.cliMake = function (n, ex, cb) { got.n = n; got.ex = ex; cb('k9', '홍*동', ''); };
+    window.cmSave = function (id, p, cb) { got.patch = p; if (cb) cb(); };
+    window.cusGo = function (o) { got.go = o.cli + '|' + o.tab; };
+    window.osLoadClients = function () {};
+    cregOpen(); document.getElementById('cregNm').value = '홍길동'; document.getElementById('cregPh').value = '010-7777-8888';
+    cregStep(2); cregGoCli(); CREG.src = 'ref'; cregPaint();
+    document.getElementById('cregRef').value = '홍갑돌'; document.getElementById('cregBy').value = '1982';
+    cregMake();
+    Object.keys(real).forEach(k => { window[k] = real[k]; });
+    return { n: got.n, ex: JSON.stringify(got.ex || {}), patch: JSON.stringify(got.patch || {}), go: got.go || '',
+             real: (typeof cmRefRealOf === 'function') ? cmRefRealOf('k9') : '' };
+  });
+  is(mk.n === '홍길동' && /"ph":"010-7777-8888"/.test(mk.ex) && /"by":1982/.test(mk.ex),
+     '  cliMake 에 이름·번호·생년이 간다 — ' + mk.ex);
+  is(!/"gd"|"memo"/.test(mk.ex), '  <b>비운 칸은 안 보낸다</b> — 성별·처음 들은 말을 안 적었으면 「모름」 그대로 (1번)');
+  is(/"src":"ref"/.test(mk.patch) && /"refx":"홍\*돌"/.test(mk.patch) && !/홍갑돌/.test(mk.patch),
+     '  어디서·소개는 cmSave 로 — 소개자 실명은 <b>서버로 안 간다</b>(가린 이름만 · 3번) — ' + mk.patch);
+  is(mk.real === '홍갑돌', '  소개자 실명은 이 기기에만 남는다');
+  is(mk.go === 'k9|info', '  넣고 나면 <b>고객 창 정보 탭</b>이 열린다 — ' + mk.go);
   is(pick.cliTab === 'home' && pick.dbTab === 'home',
      '둘 다 <b>화면을 안 옮긴다</b> — 홈 그대로 (받음 ' + pick.cliTab + ' / ' + pick.dbTab + ')');
 

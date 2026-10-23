@@ -89,7 +89,11 @@ const SEED=(o)=>`
     (0,eval)(seed); await window.__open();
     const bar=document.getElementById('oscTopBar');
     if(!bar)return {has:false};
-    const cs=getComputedStyle(bar);
+    /* 판 X161 — 고객 창 하나: 머리 줄과 탭 띠가 <b>한 덩이(.cus-head)</b>로 붙어
+       다닙니다(따로 붙이면 내려갈 때 서로 덮습니다). 그때는 그 덩이가 붙어 있으면
+       됩니다 — 「내려가도 따라온다」 는 뜻은 그대로 잽니다. */
+    const head=bar.parentElement&&bar.parentElement.classList.contains('cus-head')?bar.parentElement:bar;
+    const cs=getComputedStyle(head);
     return { has:true, pos:cs.position, top:cs.top,
              txt:bar.textContent.replace(/\s+/g,' ').trim(),
              tel:!!bar.querySelector('a[href^="tel:"]'),
@@ -97,7 +101,8 @@ const SEED=(o)=>`
              /* 맨 위인가 — 뒤로 가기 줄 바로 다음이어야 한다 */
              first:(function(){
                const w=document.querySelector('#dynPane .osc-wrap');
-               return !!(w&&w.children[1]&&w.children[1].id==='oscTopBar');
+               const c1=w&&w.children[1];
+               return !!(c1&&(c1.id==='oscTopBar'||(c1.classList.contains('cus-head')&&c1.firstElementChild&&c1.firstElementChild.id==='oscTopBar')));
              })() };
   },SEED({}));
   is(T.has, '고객정보 <b>고정 줄</b>이 있다');

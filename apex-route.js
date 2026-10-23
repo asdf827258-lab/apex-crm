@@ -1455,7 +1455,27 @@ function styles(){
   ".rt-city button.on{background:var(--blue,#3182f6);color:#fff;border-color:transparent}",
   ".rt-city button small{font-weight:600;opacity:.75;margin-left:4px}",
   ".rt-pin.h{background:var(--navy)}",
-  "@media(max-width:860px){.rt-body{flex-direction:column}.rt-side{width:auto;max-width:none;max-height:52%;border-right:0;border-bottom:1px solid var(--line)}}"
+  "@media(max-width:860px){.rt-body{flex-direction:column}.rt-side{width:auto;max-width:none;max-height:52%;border-right:0;border-bottom:1px solid var(--line)}}",
+  /* 📱 폰에서 칸이 공백을 먹었습니다 (사장님 말씀 2026-10-23 「칸 잡아먹는 공백이 너무 많은데」).
+     재어 보니 390px 폭에서 위 도구 띠가 <b>네 줄 · 199px</b>, 그 밑 목록 칸은 335px 뿐이었습니다 —
+     칸이 넘쳐 줄이 늘어난 것과 넉넉한 안쪽 여백 때문입니다. 폰 폭에서만 줄입니다(컴퓨터는 그대로).
+     ★ 단추는 <b>하나도 안 숨깁니다</b> — 키 설정·위치 정리는 고칠 단추입니다 (6번).
+     ★ 글자는 13px 아래로, 누르는 자리는 40px 아래로 안 내립니다. */
+  "@media(max-width:860px){"+
+    ".rt-bar{gap:6px;padding:8px 12px}"+
+    ".rt-bar b{font-size:15px;order:0;margin-right:0}"+
+    "#rtDate{order:1;flex:1 1 38%;min-width:0}"+
+    "#rtX{order:2}"+
+    "#rtRegion,#rtOwner,#rtStay{order:3;flex:1 1 28%;min-width:0;max-width:none}"+
+    "#rtHome,#rtFix,#rtKey{order:4;flex:1 1 28%;padding-left:6px;padding-right:6px;white-space:nowrap}"+
+    ".rt-sp{display:none}"+
+    ".rt-bar input,.rt-bar select{min-width:0;min-height:40px;padding:6px 8px;font-size:14px}"+
+    ".rt-bar .btn-sm{min-height:40px;font-size:13px}"+
+    ".rt-side{padding:10px 12px}"+
+    ".rt-card{padding:10px 11px;margin-bottom:8px;border-radius:12px}"+
+    ".rt-h{margin:10px 0 6px}"+
+    ".rt-nokey{padding:14px}"+
+  "}"
   ].join("");
   document.head.appendChild(s);
 }

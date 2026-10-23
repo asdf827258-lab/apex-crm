@@ -16,7 +16,7 @@
        까닭 — 보던 것이 x.go 뿐이었고, 배정 DB 에서 온 분은 go 가 'crm'
        입니다. <b>그때는 맞았습니다</b> — 배정 DB id 로는 고객 카드를 열
        수 없었으니까요. 그런데 2026-09-28 에 <b>다리</b>(client_meta.db)가
-       놓였습니다. 물어볼 자리가 생긴 것을 이 단추가 몰랐습니다.
+       놓였습니다(판 X161 부터 다리는 dbs.client_id 하나입니다). 물어볼 자리가 생긴 것을 이 단추가 몰랐습니다.
 
      ❷ <b>같은 이름 다른 분의 증권</b>이 올라왔습니다. hmBaOf 가
        chkFind 를 부르면서 <b>세 번째 칸(dbId)을 안 줬습니다.</b> 그러면
@@ -103,15 +103,16 @@ const SEED = (o) => `
    a.then=function(f){return Promise.resolve({data:[],error:null}).then(f);};return a;};
    return {from:function(){return mk();},rpc:function(){return Promise.resolve({data:null,error:null});}};};
  CM.loaded=true;CM.who={me:'홍길동'};CM.pick='';CM.picked=true;
- /* 🌉 다리 — d1 은 c1 입니다. 사람이 「내 고객으로」 를 눌러 놓은 것입니다 */
- CM.meta=${o.bridge === false ? '{}' : "{c1:{db:'d1'}}"};
+ /* 🌉 다리 — d1 은 c1 입니다. 사람이 「내 고객으로」 를 눌러 놓은 것입니다.
+    판 X161 부터 다리는 <b>dbs.client_id</b> 하나입니다 — AR.db 줄에 실어 둡니다 */
+ CM.meta={};
  var CLI=${o.twin === false
    ? "[{id:'c1',who:'me',name:'홍길동',nm:'홍길동',name_masked:'홍○○'}]"
    : "[{id:'c9',who:'me',name:'홍길동',nm:'홍길동',name_masked:'홍○○'},"+
      " {id:'c1',who:'me',name:'홍길동',nm:'홍길동',name_masked:'홍○○'}]"};
  AR.loaded=true;AR.busy='';AR.calls=[];AR.rep={};
  AR.db=${o.hold === 'wait' ? 'null' : `[
-   {id:'d1',who:'me',name:'홍길동',stage:'TA',   days:5,region:'서울 강남구',src:'DB'},
+   {id:'d1',who:'me',name:'홍길동',stage:'TA',   days:5,region:'서울 강남구',src:'DB'${o.bridge === false ? '' : ",client_id:'c1'"}},
    {id:'d2',who:'me',name:'홍길순',stage:'미접촉',days:7,region:'서울 서초구',src:'DB'}${
      o.chk === false ? '' :
    `,{id:'d4',who:'me',name:'홍만복',stage:'AP', days:2,region:'서울 강남구',src:'DB'}`}]`};
