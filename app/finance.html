@@ -1375,7 +1375,7 @@ a { color: inherit; text-decoration: none; }
 .wk-gap{margin-top:12px;background:#FFF4F4;border-radius:12px;padding:11px 14px;font-size:15px;color:#333D4B}
 .wk-ly{display:flex;flex-direction:column;gap:8px}
 .wk-l{display:flex;justify-content:space-between;align-items:center;gap:10px;border-radius:14px;padding:12px 16px;color:#fff}
-.wk-l b{display:block;font-size:16px}.wk-l small{display:block;font-size:13px;opacity:.92;margin-top:2px}.wk-l span{font-size:17px;font-weight:800;white-space:nowrap}
+.wk-l>div{flex:1;min-width:0}.wk-l b{display:block;font-size:16px}.wk-l small{display:block;font-size:13px;opacity:.92;margin-top:2px}.wk-l span{font-size:17px;font-weight:800;white-space:nowrap}
 .wk-l.off{background:#FFF4F4;border:2px dashed #F04452;color:#C2414F}.wk-l.off span{color:#F04452}
 .wk-ans{display:flex;flex-direction:column;gap:8px;margin-top:18px}
 .wk-a{min-height:52px;border:1.5px solid #D1D6DB;border-radius:14px;background:#fff;font-size:16px;font-weight:700;color:#333D4B;cursor:pointer;font-family:inherit;text-align:left;padding:0 18px}
@@ -11542,7 +11542,8 @@ function wkM(x){ return APEX_REPORT.parts.man(x); }
    ★ SVG 로 그렸더니 폰 폭에서 글자가 9px 로 줄었습니다 — 글자 크기가 그대로 서도록 칸으로 그립니다 */
 function wkLayers(n){
   /* 「비어 있어요」 는 「없다」 로 읽힙니다 — 몰라서 빈 것과 정말 없는 것을 가립니다(판 X177 · 1번) */
-  var L=[{t:'3층 · 내가 준비',s:'개인연금·연금저축·IRP',v:n.own,c:'#8B5CF6',off:n.saveP>0&&!n.accKnown?'월 '+wkM(n.saveP)+' 넣는 중 · 쌓인 돈 모름':'아직 숫자가 없어요'},
+  var inP=n.saveP>0&&!n.accKnown;   /* 넣고는 있는데 쌓인 돈을 모름 — 값 칸은 짧게, 넣는 돈은 밑줄로(폰 폭에서 칸이 넘쳤습니다) */
+  var L=[{t:'3층 · 내가 준비',s:'개인연금·연금저축·IRP'+(inP?' · 월 '+wkM(n.saveP)+' 넣는 중':''),v:n.own,c:'#8B5CF6',off:inP?'쌓인 돈 모름':'아직 숫자가 없어요'},
          {t:'2층 · 회사가 준비',s:'퇴직연금',v:n.ret,c:'#03B26C',off:'아직 숫자가 없어요'},
          {t:'1층 · 나라가 준비',s:'국민연금'+(n.npsEst?' (추정)':''),v:n.nps,c:'#18A5A5',off:n.npsKnown?'없어요':'조회 전 · 모름'}];
   return '<div class="wk-ly" role="img" aria-label="노후 돈의 세 층">'+L.map(function(x,i){
