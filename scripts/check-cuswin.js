@@ -348,6 +348,37 @@ const SEED = () => {
   is(R11.closed, '  탭을 누르면 시트가 닫힌다');
   is(R11.bad === '', '  없는 시트 이름은 안 연다 — 빈 화면이 안 선다');
 
+  console.log('\n[12] ✂️ 한 화면에 한 번 (2026-10-24 「중복적인 부분들 확인해」)');
+  /* 머리는 늘 떠 있으므로, 탭마다 <b>머리 + 그 탭</b>에서 보이는 글을 모아 같은 사실이 두 번 서는지 잽니다.
+     처음 재어 보니 정보 탭에서 이름 · 성별 · 월 소득 · 단계가 머리와 한 번씩 더, 「어디서 오셨나」 가 두 카드에서
+     다른 말(배정 DB · 소개)로, 「🙌 소개해 주신 분」 이 보장 탭과 정보 탭 두 곳에 섰습니다. */
+  await p.evaluate(() => { go('home'); cusGo({ cli: 'c1' }); });
+  await p.waitForTimeout(900);
+  const R12 = await p.evaluate(() => {
+    const vis = () => { const w = document.getElementById('cusWin'), L = [];
+      const walk = el => { const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') return;
+        if (el.tagName === 'DETAILS' && !el.open) { const sm = el.querySelector('summary'); if (sm) walk(sm); return; }
+        for (const n of el.childNodes) { if (n.nodeType === 3) L.push(n.nodeValue); else if (n.nodeType === 1) walk(n); } };
+      walk(w); return L.join(' ').replace(/\s+/g, ' '); };
+    CUS.info = { phone: '010-1111-2222', birth_year: 1982, gender: 'M', monthly_income: 450, monthly_fixed_expense: 280, household_notes: '' };
+    try { CM_BASE.c1 = { by: 1982, gd: 'M', inc: 450, ph: '010-1111-2222' }; } catch (e) {}
+    const o = {};
+    CUS_TABS.forEach(t => { cuwSheet(''); cusTab(t[0]); cuwPaint(OSC.current); o[t[0]] = vis(); });
+    cusTab('sum');
+    return o;
+  });
+  const cnt = (t, re) => (t.match(re) || []).length;
+  const nm = await p.evaluate(() => OSC.current.name_masked);
+  Object.keys(R12).forEach(k => {
+    const t = R12[k];
+    is(cnt(t, new RegExp(nm.replace(/\*/g, '\\*'), 'g')) === 1, '  ' + k + ' — 이름이 한 번 (' + cnt(t, new RegExp(nm.replace(/\*/g, '\\*'), 'g')) + ')');
+    is(cnt(t, /450만원/g) <= 1, '  ' + k + ' — 월 소득이 많아야 한 번 (' + cnt(t, /450만원/g) + ')');
+    is(!/지금 단계|단계 AP/.test(t), '  ' + k + ' — 단계를 글로 또 안 적는다(머리 딱지 한 곳)');
+    is(!(/어디서 오셨나 배정 DB/.test(t)), '  ' + k + ' — 「어디서 오셨나」 가 배정 DB 카드의 출처와 겹치지 않는다');
+  });
+  is(cnt(R12.info, /성별/g) === 0 && /남/.test(R12.info), '  정보 탭에 「성별」 줄이 없다 — 머리 한 곳');
+  is(!/소개해 주신 분/.test(R12.cov) && /소개해 주신 분/.test(R12.info), '  「🙌 소개해 주신 분」 은 정보 탭 한 곳 — 보장 탭에서 걷음');
+
   console.log('\n[9] 인쇄에는 다 나온다 · 조용히 터진 곳이 없다');
   const css = await p.evaluate(() => (document.getElementById('cusWinCss') || {}).textContent || '');
   is(/@media print\{#cusWin \[data-cus-tab\]\{display:block!important\}/.test(css), '  인쇄에는 탭과 상관없이 다 나온다');
