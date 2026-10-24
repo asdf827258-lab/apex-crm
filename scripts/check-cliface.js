@@ -110,7 +110,14 @@ const SEED=(o)=>`
   is(T.first, '<b>맨 위</b>다 — 뒤로 가기 바로 밑');
   is(/홍○동/.test(T.txt), '이름이 <b>가린 채로</b> 선다 (3번) — '+T.txt.slice(0,44));
   is(/47세/.test(T.txt), '<b>나이</b>를 세어 적는다 — 1980년생 · 47세');
-  is(/520만원/.test(T.txt), '<b>월 소득</b>이 만원 단위로 선다 (4번)');
+  /* ✂️ 2026-10-24 「중복적인 부분들 확인해」 — 월 소득은 <b>정보 탭 「💰 돈」 한 곳</b>입니다. 머리에도 적으니
+     정보 탭에서 같은 수가 두 번 섰습니다. 머리는 「누구인가」(이름·나이·성별·담당·단계)만 말합니다. */
+  is(!/520만원|소득/.test(T.txt), '머리에 <b>월 소득을 또 안 적는다</b> — 정보 탭 「💰 돈」 한 곳');
+  /* 이 견본은 머리 값을 CM_BASE 로만 심어, 정보 탭이 읽는 CUS.info 는 비어 있습니다. 앱에서는 osCliInfoLoad 가
+     둘을 함께 채우므로 여기서도 같이 채우고 잽니다. */
+  const INC=await page.evaluate(()=>{ CUS.info={phone:'010-0000-1234',birth_year:1980,gender:'M',monthly_income:520,monthly_fixed_expense:300,household_notes:''};
+    const d=document.createElement('div'); d.innerHTML=cuwInfoHtml(OSC.current); return d.textContent; });
+  is((INC.match(/520만원/g)||[]).length===1, '<b>월 소득</b>이 만원 단위로 <b>한 번</b> 선다 — 정보 탭 (4번)');
   is(T.tel, '<b>눌러서 바로 전화</b>가 걸린다 — 번호를 옮겨 적지 않는다');
   is(T.ed, '<b>고치기</b> 가 있다 — 그 자리에서 칸으로 내려간다');
 
@@ -121,8 +128,8 @@ const SEED=(o)=>`
     return { txt:bar?bar.textContent.replace(/\s+/g,' ').trim():'',
              tel:!!(bar&&bar.querySelector('a[href^="tel:"]')) };
   },SEED({info:false}));
-  is((U.txt.match(/모름/g)||[]).length>=3,
-     '나이·성별·소득을 모르면 <b>「모름」</b> 이라 적는다 — '+U.txt.slice(0,50));
+  is((U.txt.match(/모름/g)||[]).length>=2,
+     '나이·성별을 모르면 <b>「모름」</b> 이라 적는다 — '+U.txt.slice(0,50));
   is(!U.tel, '번호를 모르면 <b>전화 단추를 안 세운다</b> — 눌러 보고 나서야 알면 안 된다');
 
   console.log('\n[3] 예전 세 칸은 <b>접혀</b> 있다 — 그러나 지워지지 않았다');

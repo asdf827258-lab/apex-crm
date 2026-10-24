@@ -79,7 +79,23 @@ const SEED = () => {
       찾기칸: !!q,
       옷: !!(el && el.classList.contains('t-skin')),
       묶음수: (el ? el.querySelectorAll('.tlp-c').length : 0),
-      줄수: (el ? el.querySelectorAll('.tlp-row').length : 0),
+      /* ★ 2026-10-24 (판 X180) · <b>칸이 접혀서</b> 줄이 안 그려집니다.
+         예전에는 107줄이 늘 떠 있어 그냥 세면 됐습니다 — 이제 <b>하나씩
+         펴서</b> 세야 같은 것을 재는 것입니다. check-toolfold 가 접히는
+         것을 지키고, 여기서는 <b>그래도 다 있나</b> 를 봅니다.
+         ⚠ 자를 안 고쳤다면 「0줄」 이라고 <b>거짓으로 고발</b>했을 자리입니다. */
+      줄수: (function(){
+        if(!el)return 0;
+        var hs=[].slice.call(el.querySelectorAll('.tlp-head')), n=0, i;
+        if(!hs.length)return el.querySelectorAll('.tlp-row').length;
+        for(i=0;i<hs.length;i++){
+          hs[i].click();
+          n+=[].slice.call(el.querySelectorAll('.tlp-row')).filter(function(x){return x.offsetParent;}).length;
+          hs=[].slice.call(el.querySelectorAll('.tlp-head'));
+        }
+        hs.forEach(function(h){ if(h.closest('.tlp-c').classList.contains('on'))h.click(); });
+        return n;
+      })(),
       지금: /지금 .*님께/.test(t),
       칩: (el ? el.querySelectorAll('.tlp-chip').length : 0) };
   });
@@ -154,7 +170,17 @@ const SEED = () => {
     const b = el.querySelectorAll('.tlp-row').length;
     const none = /그런 이름은 없습니다/.test(el.innerText || '');
     tlpSetQ(''); await new Promise(r => setTimeout(r, 300));
-    const c = document.getElementById('dynPane').querySelectorAll('.tlp-row').length;
+    /* ★ 판 X180 — 찾기를 지우면 칸이 <b>도로 접힙니다</b>. 「전부」 를 세려면
+       하나씩 펴야 합니다 (위 줄수 와 같은 까닭).                        */
+    const pane = document.getElementById('dynPane');
+    let hs = [].slice.call(pane.querySelectorAll('.tlp-head')), c = 0;
+    if(hs.length){
+      for(let i=0;i<hs.length;i++){
+        hs[i].click();
+        c += [].slice.call(pane.querySelectorAll('.tlp-row')).filter(x=>x.offsetParent).length;
+        hs = [].slice.call(pane.querySelectorAll('.tlp-head'));
+      }
+    } else { c = pane.querySelectorAll('.tlp-row').length; }
     return { a, b, none, c };
   });
   is(F.a > 0 && F.a < F.c, '  치면 <b>줄어든다</b> — 「보장」 ' + F.a + '줄 / 전부 ' + F.c + '줄');

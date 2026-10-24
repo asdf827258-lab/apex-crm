@@ -2785,7 +2785,7 @@ body.educal-mode #educalScreen{display:block;}
 <!-- 고객 한 장 — 고객 365일과 DB 통합 CRM 이 <b>같은 카드</b>를 세운다.
      초성 표·이름 가리기·연락기록 섞기도 여기 한 벌만 둔다(5번).
      db-crm.html 도 같은 파일을 싣는다 — /app/apex-cusone.js -->
-<script src="apex-cusone.js?v=4"></script>
+<script src="apex-cusone.js?v=6"></script>
 <script src="질병가이드-data.js"></script>
 <script src="질병가이드-코드.js"></script>
 
@@ -15700,6 +15700,34 @@ function navRecAdd(id){
    ★ <b>고객 이름은 가려서</b> 적습니다 (3번) — osMaskName.
    ★ <b>서버를 안 부릅니다</b> (7번) — 이미 손에 있는 표만 읽습니다.  */
 var TLP_Q='';
+/* ══ 📦 <b>접어 둔다</b> — 칸 여섯을 한 번에 한 칸만 편다 (판 X181) ══════
+   사장님 말씀 2026-10-24 — 「카테고리에서 <b>비슷한 메뉴가 너무 많아서</b>
+   어떻게 줄여서 효과적으로 관리할지」 · (그림을 보시고) 「응 그렇게 해줘
+   <b>접기부터</b> 넣어줘」.
+
+   ★★ 재어 보니 <b>분류는 이미 맞았고 접히지가 않았습니다.</b> 이 화면이
+     폰에서 <b>6,892px · 8.2화면</b>이고, 칸 여섯이 다 펴진 채로 줄
+     <b>107개</b>가 이어졌습니다. 접는 칸은 <b>0개</b>였습니다.
+   ★★ 사장님은 이것을 <b>2026-09-24 에도</b> 말씀하셨습니다 — 「메뉴가 너무
+     많아서 … <b>토스 어플처럼 쉽게</b>」. 그때 「언제 쓰는지」 여섯 묶음은
+     만들었는데, <b>칸으로 접는 것은 사용가이드에만</b> 들어갔습니다
+     (판 X159·X160). 이 화면이 빠져 있었습니다.
+   ★ 접으면 <b>777px · 0.9화면</b>, 하나 펴면 2,433px 입니다.
+   ★ <b>접는 법을 새로 짜지 않습니다</b> — 사용가이드의 .man-sec 와 같은
+     꼴입니다(접힌 것은 두 칸씩 · 편 것은 한 줄 통째). 꼴은 CSS 한 곳
+     (.tlp-c*)에 둡니다 (5번).
+   ★★ <b>찾을 때는 저절로 펴집니다.</b> 접어 두고 안 펴면 찾기 칸이 쓸모가
+     없어집니다 — 「연금」 을 쳤는데 칸 이름만 여섯 개 서면 사장님은 못
+     찾은 줄 아십니다 (1번). check-toolfold 가 이것을 봅니다.
+   ★ <b>지운 것은 하나도 없습니다</b> — 줄은 그대로 있고 접혀 있을 뿐입니다. */
+var TLP_OPEN='';
+function tlpToggle(k){ TLP_OPEN=(TLP_OPEN===k?'':k); tlpPaint(); }
+/* 지금 <b>펴져 있나</b> — 묻는 곳은 하나다 (5번).
+   찾는 중이면 <b>고른 칸은 다 편다</b> — 안 그러면 찾기가 죽습니다. */
+function tlpIsOpen(k){
+  if(TLP_Q.replace(/^\s+|\s+$/g,''))return true;
+  return TLP_OPEN===k;
+}
 function tlpSetQ(v){ TLP_Q=(''+(v||'')); tlpPaint(); }
 /* 지금 <b>맨 앞에 선 분</b> — 홈 카드가 세우는 그 줄을 그대로 본다 (5번) */
 function tlpNow(){
@@ -15752,6 +15780,29 @@ function tlpCss(){
      'background:var(--t-card);padding:13px 15px}'+
    '.tlp-lab{font-size:var(--t6);font-weight:800;color:var(--t-point);letter-spacing:-.01em}'+
    '.tlp-lab i{font-style:normal;color:var(--t-sub2);font-weight:600}'+
+   /* 📦 접는 칸 — 사용가이드(.man-sec)와 <b>같은 짜임</b>입니다 (5번).
+      접힌 것은 두 칸씩, 편 것은 한 줄을 통째로 씁니다.                 */
+   '.tlp-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;align-items:start;margin-top:13px}'+
+   '@media(min-width:1101px){.tlp-grid{grid-template-columns:repeat(3,1fr)}}'+
+   '.tlp-grid .tlp-c{margin-top:0;padding:0;overflow:hidden}'+
+   '.tlp-grid .tlp-c.on{grid-column:1/-1;border-color:#BFD4FB}'+
+   '.tlp-head{width:100%;display:flex;align-items:flex-start;gap:9px;min-height:64px;'+
+     'padding:13px 14px;border:0;background:none;font-family:inherit;text-align:left;cursor:pointer}'+
+   /* ⚠ 편 칸의 머리 바탕은 <b>--t-bg-b</b> 입니다 — 사용가이드에서 베껴 오며
+      <b>날값으로 또 적었다가</b> check-indigo 가 잡았습니다. 색표에 이미
+      있는 색이라 이름으로 부릅니다 (5번).
+      ★ 그 날값을 <b>이 주석에 적는 것도 안 됩니다</b> — 자는 주석까지 세어,
+        적어 두자 수가 그대로 8 이었습니다. 한 번 더 걸렸습니다.         */
+   '.tlp-c.on .tlp-head{align-items:center;background:var(--t-bg-b);min-height:52px}'+
+   '.tlp-head .e{flex:none;font-size:19px;line-height:1.2}'+
+   '.tlp-head .t{min-width:0;font-size:15px;font-weight:800;color:var(--t-ink);'+
+     'line-height:1.35;letter-spacing:-.02em}'+
+   '.tlp-head .t i{display:block;font-style:normal;margin-top:3px;font-size:var(--t6);'+
+     'font-weight:600;color:var(--t-sub)}'+
+   '.tlp-head .t b{display:block;margin-top:7px;font-size:var(--t6);font-weight:800;color:var(--t-point)}'+
+   '.tlp-c.on .tlp-head .t b{display:none}'+
+   '.tlp-head .ar{flex:none;margin-left:auto;font-size:var(--t6);color:var(--t-sub);font-weight:800}'+
+   '.tlp-body{padding:0 15px 13px}'+
    '.tlp-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}'+
    '.tlp-chip{border:1px solid var(--t-line);background:var(--t-bg-2);border-radius:var(--t-r-sm);'+
      'padding:8px 12px;font-family:inherit;font-size:var(--t6);font-weight:700;color:var(--t-ink);cursor:pointer}'+
@@ -15803,19 +15854,33 @@ function renderToolsPage(){
      '<input class="tlp-q" id="tlpQ" value="'+osEsc(TLP_Q)+'" '+
        'oninput="tlpSetQ(this.value)" placeholder="🔎 하려는 것을 그냥 적으세요 — 연금 · 알릴의무 · 실비">';
   h+=tlpNowHtml();
+  /* 📦 칸 여섯을 <b>접어서</b> 세웁니다 (판 X181 · 위 TLP_OPEN 쪽지).
+     ★ 단추의 onclick 은 <b>tlpToggle</b> 입니다 — check-toolfold 가 그것으로
+       이 줄을 찾습니다. 건드리지 마십시오. */
+  h+='<div class="tlp-grid">';
   for(i=0;i<L.length;i++){
     g=L[i].g;
-    h+='<div class="tlp-c"><div class="tlp-lab">'+g.e+' '+osEsc(g.t)+
-       ' <i>· '+osEsc(g.s)+'</i></div>';
-    for(j=0;j<L[i].rows.length;j++){
-      it=L[i].rows[j];
-      h+='<button type="button" class="tlp-row" onclick="go(\''+osEsc(it.id)+'\')">'+
-         '<span class="e">'+(it.icon||'🧰')+'</span>'+
-         '<span class="n">'+osEsc(it.title||it.id)+'</span>'+
-         '<span class="o">열기</span></button>';
+    var 폄=tlpIsOpen(g.k);
+    h+='<div class="tlp-c'+(폄?' on':'')+'">'+
+       '<button type="button" class="tlp-head" onclick="tlpToggle(\''+osEsc(g.k)+'\')">'+
+         '<span class="e">'+g.e+'</span>'+
+         '<span class="t">'+osEsc(g.t)+'<i>· '+osEsc(g.s)+'</i>'+
+           '<b>'+L[i].rows.length+'개</b></span>'+
+         '<span class="ar">'+(폄?'▲':'▼')+'</span></button>';
+    if(폄){
+      h+='<div class="tlp-body">';
+      for(j=0;j<L[i].rows.length;j++){
+        it=L[i].rows[j];
+        h+='<button type="button" class="tlp-row" onclick="go(\''+osEsc(it.id)+'\')">'+
+           '<span class="e">'+(it.icon||'🧰')+'</span>'+
+           '<span class="n">'+osEsc(it.title||it.id)+'</span>'+
+           '<span class="o">열기</span></button>';
+      }
+      h+='</div>';
     }
     h+='</div>';
   }
+  h+='</div>';
   if(q&&!L.length)
     h+='<div class="tlp-none">그런 이름은 없습니다.<br>다른 말로 찾아보세요.</div>';
   /* ★ <b>길을 남깁니다</b> — 서랍은 그대로 있습니다 (1번) */
@@ -20937,8 +21002,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-24 12:49';
-var APP_BUILD_NOTE="▦ <b>B·C·D 영업 강의를 한눈에 펼쳐 봅니다</b> — 발표 화면 아래 「▦ 한눈에」(또는 G 키)를 누르면 강의 전체가 <b>부마다 작은 화면으로 쭉</b> 펼쳐집니다. 부마다 분 · 몇 시부터 몇 시까지 · 몇 장인지가 서고, 작은 화면을 누르면 그 장으로 바로 갑니다. ◾ 강사님이 아직 안 적어 <b>발표에서 빠지는 장</b>도 그 자리에 점선 칸으로 서서 「무엇을 적으면 서는지」 말합니다 — 「적으러 가기」 로 바로 갑니다. ◾ 같이 실려 나가는 것 — 아직 안 나간 <b>B·C·D 영업 강의</b> 전부: 첫 판(X178 · 4시간 발표 · 내 타임라인 · 워크북) · 💀 메멘토 모리 · 실제 뉴스 · 내 사진 · 움직임(X176) · 📱 참가자 폰 워크북(X177). <b>19:05 판</b>(🎓 교육시스템EM · 📅 교육 캘린더 · X173·X175)과 <b>12:15 판</b>(📏 보험의 기준 · 셀프 점검 · X180)은 먼저 main 에 들어갔고 이 판에도 그대로 들어 있습니다. (판 X179)";
+var APP_BUILD='2026-10-24 13:47';
+var APP_BUILD_NOTE="▦ <b>B·C·D 영업 강의를 한눈에 펼쳐 봅니다</b> — 발표 화면 아래 「▦ 한눈에」(또는 G 키)를 누르면 강의 전체가 <b>부마다 작은 화면으로 쭉</b> 펼쳐집니다. 부마다 분 · 몇 시부터 몇 시까지 · 몇 장인지가 서고, 작은 화면을 누르면 그 장으로 바로 갑니다. ◾ 강사님이 아직 안 적어 <b>발표에서 빠지는 장</b>도 그 자리에 점선 칸으로 서서 「무엇을 적으면 서는지」 말합니다 — 「적으러 가기」 로 바로 갑니다. ◾ 같이 실려 나가는 것 — 아직 안 나간 <b>B·C·D 영업 강의</b> 전부: 첫 판(X178 · 4시간 발표 · 내 타임라인 · 워크북) · 💀 메멘토 모리 · 실제 뉴스 · 내 사진 · 움직임(X176) · 📱 참가자 폰 워크북(X177). 먼저 main 에 들어간 판 — <b>19:05</b>(🎓 교육시스템EM · 📅 교육 캘린더 · X173·X175) · <b>12:15</b>(📏 보험의 기준 · 셀프 점검 · X180) · 🧰 도구 화면 접기(X181) · <b>13:33</b>(📒 TA → CS 상황별 터치 · 📅 약속 안내 문자 · X182·X183) — 도 이 판에 그대로 들어 있습니다. (판 X179)";
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -70683,11 +70748,11 @@ function cmPanelsHtml(id){
        🤝 관계(다음 할 일 · 접촉)와 결과 다섯은 연락 탭의 cuwNext · cuwTl · cuwCompose 가
        <b>같은 저장 함수</b>(cmNextDone · cmNextDel · cmTouchDel · cshMark)로 대신합니다.
        적어 두기 · 가족 · 팩트파인딩 · 단계 안내는 <b>고치기 화면</b>(sh-…)에서만 섭니다. */
-  var say=cmSayHtml(id);
+  var say=cuwSayHtml(id);
   return cusSec('sh-stage',cmStageHtml(id))+cusSec('sh-story',cmNoteHtml(id))+
          cusSec('cov',cmWalRefHtml(id))+cusSec('cov',cmDueClmHtml(id))+
          cusSec('doc',cmRrnHtml(id))+cusSec('sh-fam',cmFamHtml(id))+
-         (say?cusSec('talk','<details class="cuw-fold"><summary class="t-card cuw-ch"><span class="t-lab">💬 보낼 말</span><span class="ed">펴기</span></summary>'+say+'</details>'):'')+
+         cusSec('talk','<div id="cuwSay">'+say+'</div>')+
          cusSec('sh-ff',cmFfPanelHtml(id));
 }
 /* ══ 🗺️🙌 <b>빈 통장 · 소개</b> — 담을 칸이 생겼으니 보이는 자리도 ══════
@@ -70697,11 +70762,11 @@ function cmPanelsHtml(id){
    ★ 이름·갈래를 여기서 다시 세지 않습니다 — cmWalLow · cmRefName ·
      cmRefsOf 를 그대로 부릅니다 (5번).                                 */
 function cmWalRefHtml(id){
-  var w=cmWalOf(id),low=cmWalLow(id),rf=cmRefName(id),mine=cmRefsOf(id),h='',i,c;
+  var w=cmWalOf(id),low=cmWalLow(id),h='';
   /* 목각 옷 — 「없다」 와 「아직 안 봤다」 는 여전히 갈라 적습니다 (1번) */
   h+='<div class="t-card" style="margin-bottom:16px">'+
-    '<div class="t-lab">🗺️ 빈 통장 · 소개</div>'+
-    '<div class="t-big">어디가 비었는지 · 누가 보내 주셨는지<small>이 둘이 다음 상담을 만듭니다.</small></div>';
+    '<div class="t-lab">🗺️ 빈 통장</div>'+
+    '<div class="t-big">어디가 비었는지<small>진단을 붙이면 다음 상담 거리가 섭니다.</small></div>';
   /* 🗺️ 8통장 */
   h+='<div class="t-row"><div class="m"><b>8통장 진단</b><span>';
   if(!w)h+='아직 진단을 안 붙였습니다';
@@ -70710,24 +70775,8 @@ function cmWalRefHtml(id){
   h+='</span></div><div class="r">'+
      '<button type="button" class="t-gb" onclick="waOpenFor(\''+id+'\')">'+(w?'지도에서 열기':'지도에서 진단')+'</button>'+
      '</div></div>';
-  /* 🙌 소개 */
-  h+='<div class="t-row"><div class="m"><b>🙌 소개해 주신 분</b><span>';
-  c=null;
-  if(!rf)h+='아직 적지 않았습니다 — 아래 칸에 적어 주십니다';
-  else{
-    c=cmOf(id).ref?cmCliOf(cmOf(id).ref):null;
-    h+=osEsc(rf)+(c?' · 고객으로 이어져 있습니다':' · 고객으로는 아직 없습니다');
-  }
-  h+='</span></div>'+(c?('<div class="r"><button type="button" class="t-gb" onclick="osOpenClient(\''+c.id+'\')">열기</button></div>'):'')+'</div>';
-  if(mine.length){
-    h+='<div class="t-row"><div class="m"><b>🤝 이분이 소개해 주신 분</b><span>'+mine.length+'명</span></div></div>'+
-       '<div class="t-chips">';
-    for(i=0;i<mine.length&&i<12;i++)
-      h+='<button type="button" class="t-chip" onclick="osOpenClient(\''+mine[i].id+'\')">'+
-         cmTemp(mine[i].id).e+' '+osEsc(cmName(mine[i]))+'</button>';
-    h+='</div>';
-    if(mine.length>12)h+='<div class="t-sub">그 밖에 '+(mine.length-12)+'분이 더 있습니다.</div>';
-  }
+  /* ✂️ 🙌 소개 · 🤝 이분이 소개해 주신 분 은 정보 탭 「👪 가족 · 소개」 한 곳으로 옮겼습니다 (2026-10-24 화면 점검).
+     보장 탭에도 서서 같은 말이 두 탭에 있었고, 「아래 칸에 적어 주십니다」 의 그 칸은 이제 고치기 시트에 있어 틀린 말이었습니다. */
   h+='</div>';
   return h;
 }
@@ -71045,7 +71094,7 @@ function cshMark(id,key,tc){
     (!id?' 이 줄은 아직 <b>내 고객</b>이 아니라 고객 쪽 기록·다음 할 일은 안 남았습니다 — 명단에서 「🪪 내 고객으로」 를 누르시면 그때부터 같이 남습니다.'.replace(/<[^>]*>/g,''):''),6000);
   cshClose();
 }
-function cmSayHtml(id){
+function cmSayHtml(id,inFold){
   var c=(typeof cmCliOf==='function')?cmCliOf(id):null,st='',src='',S,h='',by=null,band='';
   if(typeof APEX_STAGE==='undefined'||!APEX_STAGE.script)return '';
   try{ st=(c&&c.stage)||((typeof CUS!=='undefined'&&CUS.db&&CUS.db.stage)||''); }catch(e){}
@@ -71059,6 +71108,24 @@ function cmSayHtml(id){
       if(R)band=APEX_STAGE.ageBand(R.age)||'';
     }
   }catch(e){}
+  /* 📒 판 X183 — 그 단계에 <b>상황별 터치 표</b>(TA→CS)가 있으면 그것을 세웁니다. 그리는 것은
+     apex-cusone.js 의 cusTouchHtml <b>한 벌</b> — DB 통합 CRM 「무엇을 할까」 도 같은 것을 부릅니다 (5번).
+     TA 의 첫 마디(APEX_STAGE.script)는 그 표의 「처음 거는 분」 여는 말로 들어가므로 여기 따로 안 섭니다. */
+  if(APEX_STAGE.touchOf&&APEX_STAGE.touchOf(st).length&&typeof cusTouchHtml==='function'){
+    var ph='',me={},ap='',k;
+    try{ ph=((typeof CM_BASE!=='undefined'&&CM_BASE[id]&&CM_BASE[id].ph)||'')||((typeof ccTelOf==='function')?ccTelOf(id):'')||((typeof CUS!=='undefined'&&CUS.db&&CUS.db.phone)||''); }catch(e){}
+    /* 보내는 사람 — 「내 소개」(advGet 과 같은 칸)를 cusMeOf 로 · CRM 도 같은 함수로 읽습니다 */
+    try{ me=(typeof cusMeOf==='function')?cusMeOf(OS.profile&&OS.profile.id,OS.profile&&OS.profile.name):{name:(OS.profile&&OS.profile.name)||''}; }catch(e){ me={}; }
+    /* 약속 — 배정 DB next_appt 와 통화 기록 appointment_at 중 <b>늦은 것</b> (CRM nextAppt 와 같은 규칙) */
+    try{ ap=''+(((typeof CUS!=='undefined'&&CUS.db&&CUS.db.next_appt)||(c&&c.next_appt))||'');
+         for(k=0;CUS&&CUS.calls&&k<CUS.calls.length;k++)if(CUS.calls[k].appointment_at&&CUS.calls[k].appointment_at>ap)ap=CUS.calls[k].appointment_at; }catch(e){}
+    if(typeof cusCss==='function')cusCss();
+    /* 접는 칸(cuwSayHtml) 안이면 머리는 접는 칸이 이미 말합니다 — 같은 머리를 두 번 안 세웁니다 */
+    if(inFold)return '<div style="margin:0 0 16px">'+cusTouchHtml({stage:st,src:src,age:band||undefined,phone:ph,me:me,appt:ap,key:id})+'</div>';
+    return '<div class="t-card" style="margin-bottom:16px">'+
+       '<div class="t-lab">💬 보낼 말 · 📞 전화 — '+osEsc(st)+'</div>'+
+       cusTouchHtml({stage:st,src:src,age:band||undefined,phone:ph,me:me,appt:ap,key:id})+'</div>';
+  }
   S=APEX_STAGE.script(st,src,band||undefined);
   if(!S||!S.say)return '';
   h+='<div class="t-card" style="margin-bottom:16px">'+
@@ -71076,6 +71143,27 @@ function cmSayHtml(id){
   if(S.stop)h+='<div class="t-note">여기서 멈춤 — '+osEsc(S.stop)+'</div>';
   return h+'</div>';
 }
+/* 연락 탭의 💬 보낼 말 접는 칸 — 단계는 배정 DB(CUS.db)가 <b>창이 열린 뒤에</b> 오는 일이 많아,
+   처음 그릴 때는 단계를 몰라 빈 칸이었다가 그대로 남았습니다(판 X183 화면 찍다 찾음).
+   그래서 cuwPaint 가 다시 그립니다 — 글이 같으면 손대지 않고, 바뀌면 펴 둔 것은 편 채로. */
+function cuwSayHtml(id){
+  var say=cmSayHtml(id,1),st='';
+  /* 단계를 읽는 차례는 cmSayHtml 과 같습니다 — 고객 단계 먼저, 없으면 배정 DB */
+  if(/class="cus-tc"/.test(say)){ try{ st=((cmCliOf(id)||{}).stage)||((typeof CUS!=='undefined'&&CUS.db&&CUS.db.stage)||''); }catch(e){} }
+  return say?('<details class="cuw-fold"><summary class="t-card cuw-ch"><span class="t-lab">💬 보낼 말'+(st?' · 📞 전화 — '+osEsc(st):'')+'</span><span class="ed">펴기</span></summary>'+say+'</details>'):'';
+}
+function cuwSayPaint(c){
+  var e=document.getElementById('cuwSay'),h,f,op;
+  if(!e||!c)return;
+  h=cuwSayHtml(c.id);
+  if(e.innerHTML===''&&h===''){ e._h=h; return; }
+  if(e._h===h)return;
+  f=e.querySelector('details.cuw-fold'); op=!!(f&&f.open);
+  e.innerHTML=h; e._h=h;
+  if(op){ f=e.querySelector('details.cuw-fold'); if(f)f.open=true; }
+}
+/* 상황별 터치에서 문자를 열거나 걸면 — 접촉 기록 한 줄(ccMark · 💬 문자 단추와 같은 자리) */
+window.cusTouchDone=function(key,how){ if(key&&typeof ccMark==='function')ccMark(key,how); };
 /* 복사 — <b>보이는 그대로</b>. 못 했을 때도 말을 토스트에 쏟지 않습니다 */
 function cmSayCopy(id){
   var el=document.getElementById('cmPanels'),box=el?el.querySelector('.t-script'):null,
@@ -73461,10 +73549,11 @@ function oscTopHtml(c){
        if(rb&&typeof insAgeOf==='function')ins=insAgeOf(rb.dt,new Date()); }catch(e){ ins=null; }
   bits.push(age?(age+'세'):'나이 <i>모름</i>');
   if(ins)bits.push('보험나이 '+ins.ins+((ins.dday!=null&&ins.dday<=90)?(' · <b>상령 D-'+ins.dday+'</b>'):''));
+  /* 성별 — 적어 둔 것이 없으면 주민번호에서 읽은 것 (정보 탭에서 「성별」 줄을 걷었으므로 여기가 한 곳) */
+  if(!gd&&rb&&rb.sex)gd=rb.sex;
   bits.push(gd||'성별 <i>모름</i>');
-  /* 만원 단위다 — 이름이 단위를 말한다 (4번) */
-  var incMan=(b.inc==null||b.inc==='')?null:osNum(b.inc);
-  bits.push(incMan==null?'소득 <i>모름</i>':('월 소득 '+incMan.toLocaleString('ko-KR')+'만원'));
+  /* ✂️ 월 소득은 <b>정보 탭 「💰 돈」 한 곳</b>에 섭니다 — 머리에도 적으니 정보 탭에서 같은 수가 두 번 섰습니다
+     (2026-10-24 「중복적인 부분들 확인해」). 머리는 「누구인가」 만 말합니다: 이름 · 나이 · 성별 · 담당 · 단계. */
   if(who)bits.push('담당 '+osEsc(who));
   return '<div class="cuw-h1"><span class="cuw-av">'+osEsc((nm||'고').charAt(0))+'</span>'+
     '<div class="cuw-nmw"><b class="nm">'+osEsc(nm||'고객')+'</b>'+(real?'<em class="cuw-real">실명 · 이 기기</em>':'')+
@@ -73829,11 +73918,11 @@ function cuwInfoHtml(c){
   try{ rb=cmRrnBirth(cmRrnOf(id)); }catch(e){ rb=null; }
   var wait=I?null:'<i>불러오는 중</i>';
   var by=I&&I.birth_year?(I.birth_year+'년생'):null;
+  /* ✂️ 이름 · 성별은 <b>머리 한 곳</b>입니다 — 여기도 적으니 정보 탭에서 두 번 섰습니다 (2026-10-24 「중복적인 부분들 확인해」).
+     생년은 머리의 「나이」 와 다른 값(정확한 해 · 주민번호에서 읽음)이라 남깁니다. */
   h+=cuwCard('👤 사람','base',cuwKv([
-    ['이름',real?(osEsc(real)+' <small>실명 · 이 기기</small>'):osEsc(c.name_masked||'')],
     ['연락처',wait||(I.phone?osEsc(I.phone):U)],
     ['생년',rb?(osEsc(rb.f)+' <small>주민번호에서</small>'):(wait||(by?osEsc(by):U))],
-    ['성별',rb?osEsc(rb.sex):(wait||(I.gender==='M'?'남':(I.gender==='F'?'여':U)))],
     ['사는 곳',d&&(d.region||d.sigungu)?(osEsc(d.region||d.sigungu)+' <small>배정 DB</small>'):U]]));
   var ffN=(typeof cmFfCount==='function')?cmFfCount(id):0,ffT=(typeof cmFfTotal==='function')?cmFfTotal():0;
   var man=function(v){ return (v==null||v==='')?U:(osNum(v).toLocaleString('ko-KR')+'만원'); };
@@ -73844,13 +73933,26 @@ function cuwInfoHtml(c){
   var F=m.fams||[];
   for(i=0;i<F.length;i++)if(F[i]&&(F[i].name||F[i].rel))fs.push('<span class="t-chip">'+osEsc(F[i].name||'')+' <b>'+osEsc(F[i].rel||'')+(F[i].by?(' · '+osEsc(F[i].by)):'')+'</b></span>');
   var rf=(typeof cmRefName==='function')?cmRefName(id):'';
-  h+=cuwCard('👪 가족 · 소개','fam',cuwKv([['어디서 오셨나',m.src?osEsc(cregSrcName(m.src)):(d?'배정 DB':U)],
-     ['묶음',m.fam?(osEsc(m.fam)+(m.rel?(' · '+osEsc(m.rel)):'')):U],['소개해 주신 분',rf?osEsc(rf):U]])+
-     (fs.length?('<div class="t-chips" style="margin-top:6px">'+fs.join('')+'</div>'):''));
+  /* ✂️ 「어디서 오셨나」 는 <b>개인 경로(소개·지인·개척·기존)를 적어 둔 분</b>만 — 배정 DB 로 오신 분은 아래
+     「📇 배정 DB」 카드의 출처가 한 곳입니다. 여기도 「배정 DB」 라고 적으니 같은 물음에 두 카드가 다른 말
+     (「배정 DB」 · 「소개」)을 했습니다 (2026-10-24 화면 점검).
+     ★ 「🙌 소개」 는 여기 한 곳 — 보장 탭에도 있던 것을 걷었습니다(보장 이야기가 아니라서). */
+  var K=[];
+  if(m.src)K.push(['어디서 오셨나',osEsc(cregSrcName(m.src))]);
+  else if(!d)K.push(['어디서 오셨나',U]);
+  K.push(['묶음',m.fam?(osEsc(m.fam)+(m.rel?(' · '+osEsc(m.rel)):'')):U]);
+  K.push(['소개해 주신 분',rf?osEsc(rf):U]);
+  var mine=(typeof cmRefsOf==='function')?cmRefsOf(id):[],rc='';
+  for(i=0;i<mine.length&&i<12;i++)rc+='<button type="button" class="t-chip" onclick="osOpenClient(\''+osEsc(mine[i].id)+'\')">'+osEsc(cmName(mine[i]))+'</button>';
+  h+=cuwCard('👪 가족 · 소개','fam',cuwKv(K)+
+     (fs.length?('<div class="t-chips" style="margin-top:6px">'+fs.join('')+'</div>'):'')+
+     (mine.length?('<div class="t-lab" style="margin-top:10px">🤝 이분이 소개해 주신 분 '+mine.length+'명</div><div class="t-chips">'+rc+'</div>'+
+       (mine.length>12?('<div class="t-sub">그 밖에 '+(mine.length-12)+'분이 더 있습니다.</div>'):'')):''));
   h+=cuwCard('📝 이야기 · 메모','story',cuwKv([['지금 상황',m.care?osEsc(m.care):U],['걱정',m.worry?osEsc(m.worry):U],
      ['메모',wait||(I.household_notes?osEsc((''+I.household_notes).slice(0,60)):U)]]));
   h+=cnsHtml(c);   /* ✅ 동의 네 갈래 (판 X161-판2) */
-  h+=cuwCard('📇 배정 DB','',d?cuwKv([['출처',osEsc(d.source||'일반')],['배정일',osEsc((''+(d.assigned_date||'')).slice(0,10))||U],['단계',osEsc(d.stage||'')||U]])
+  /* ✂️ 단계는 머리 딱지 한 곳 (2026-10-24 「중복적인 부분들 확인해」) */
+  h+=cuwCard('📇 배정 DB','',d?cuwKv([['출처',osEsc(d.source||'일반')],['배정일',osEsc((''+(d.assigned_date||'')).slice(0,10))||U]])
      :'<div class="t-empty" style="padding:6px 0">배정 DB 줄과 안 이어진 분입니다 — 개인 고객이면 그대로 두셔도 됩니다</div>');
   return h;
 }
@@ -73863,6 +73965,7 @@ function cuwPaint(c){
   var P=[['cuwNow',cuwNowHtml],['cuwSum2',cuwSum2Html],['cuwNext',cuwNextHtml],['cuwTl',cuwTlHtml],
          ['cuwOurPol',cuwOurPolHtml],['cuwInfo',cuwInfoHtml],['cuwStage',cuwStageHtml],['cnsSheet',cnsSheetHtml]],i,e;
   for(i=0;i<P.length;i++){ e=document.getElementById(P[i][0]); if(e)e.innerHTML=P[i][1](c); }
+  try{ cuwSayPaint(c); }catch(x){}
   try{ oscTopPaint(); }catch(x){}
 }
 function osClientDetailHtml(c){
