@@ -15676,6 +15676,34 @@ function navRecAdd(id){
    ★ <b>고객 이름은 가려서</b> 적습니다 (3번) — osMaskName.
    ★ <b>서버를 안 부릅니다</b> (7번) — 이미 손에 있는 표만 읽습니다.  */
 var TLP_Q='';
+/* ══ 📦 <b>접어 둔다</b> — 칸 여섯을 한 번에 한 칸만 편다 (판 X180) ══════
+   사장님 말씀 2026-10-24 — 「카테고리에서 <b>비슷한 메뉴가 너무 많아서</b>
+   어떻게 줄여서 효과적으로 관리할지」 · (그림을 보시고) 「응 그렇게 해줘
+   <b>접기부터</b> 넣어줘」.
+
+   ★★ 재어 보니 <b>분류는 이미 맞았고 접히지가 않았습니다.</b> 이 화면이
+     폰에서 <b>6,892px · 8.2화면</b>이고, 칸 여섯이 다 펴진 채로 줄
+     <b>107개</b>가 이어졌습니다. 접는 칸은 <b>0개</b>였습니다.
+   ★★ 사장님은 이것을 <b>2026-09-24 에도</b> 말씀하셨습니다 — 「메뉴가 너무
+     많아서 … <b>토스 어플처럼 쉽게</b>」. 그때 「언제 쓰는지」 여섯 묶음은
+     만들었는데, <b>칸으로 접는 것은 사용가이드에만</b> 들어갔습니다
+     (판 X159·X160). 이 화면이 빠져 있었습니다.
+   ★ 접으면 <b>777px · 0.9화면</b>, 하나 펴면 2,433px 입니다.
+   ★ <b>접는 법을 새로 짜지 않습니다</b> — 사용가이드의 .man-sec 와 같은
+     꼴입니다(접힌 것은 두 칸씩 · 편 것은 한 줄 통째). 꼴은 CSS 한 곳
+     (.tlp-c*)에 둡니다 (5번).
+   ★★ <b>찾을 때는 저절로 펴집니다.</b> 접어 두고 안 펴면 찾기 칸이 쓸모가
+     없어집니다 — 「연금」 을 쳤는데 칸 이름만 여섯 개 서면 사장님은 못
+     찾은 줄 아십니다 (1번). check-toolfold 가 이것을 봅니다.
+   ★ <b>지운 것은 하나도 없습니다</b> — 줄은 그대로 있고 접혀 있을 뿐입니다. */
+var TLP_OPEN='';
+function tlpToggle(k){ TLP_OPEN=(TLP_OPEN===k?'':k); tlpPaint(); }
+/* 지금 <b>펴져 있나</b> — 묻는 곳은 하나다 (5번).
+   찾는 중이면 <b>고른 칸은 다 편다</b> — 안 그러면 찾기가 죽습니다. */
+function tlpIsOpen(k){
+  if(TLP_Q.replace(/^\s+|\s+$/g,''))return true;
+  return TLP_OPEN===k;
+}
 function tlpSetQ(v){ TLP_Q=(''+(v||'')); tlpPaint(); }
 /* 지금 <b>맨 앞에 선 분</b> — 홈 카드가 세우는 그 줄을 그대로 본다 (5번) */
 function tlpNow(){
@@ -15728,6 +15756,24 @@ function tlpCss(){
      'background:var(--t-card);padding:13px 15px}'+
    '.tlp-lab{font-size:var(--t6);font-weight:800;color:var(--t-point);letter-spacing:-.01em}'+
    '.tlp-lab i{font-style:normal;color:var(--t-sub2);font-weight:600}'+
+   /* 📦 접는 칸 — 사용가이드(.man-sec)와 <b>같은 짜임</b>입니다 (5번).
+      접힌 것은 두 칸씩, 편 것은 한 줄을 통째로 씁니다.                 */
+   '.tlp-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;align-items:start;margin-top:13px}'+
+   '@media(min-width:1101px){.tlp-grid{grid-template-columns:repeat(3,1fr)}}'+
+   '.tlp-grid .tlp-c{margin-top:0;padding:0;overflow:hidden}'+
+   '.tlp-grid .tlp-c.on{grid-column:1/-1;border-color:#BFD4FB}'+
+   '.tlp-head{width:100%;display:flex;align-items:flex-start;gap:9px;min-height:64px;'+
+     'padding:13px 14px;border:0;background:none;font-family:inherit;text-align:left;cursor:pointer}'+
+   '.tlp-c.on .tlp-head{align-items:center;background:#F5F9FF;min-height:52px}'+
+   '.tlp-head .e{flex:none;font-size:19px;line-height:1.2}'+
+   '.tlp-head .t{min-width:0;font-size:15px;font-weight:800;color:var(--t-ink);'+
+     'line-height:1.35;letter-spacing:-.02em}'+
+   '.tlp-head .t i{display:block;font-style:normal;margin-top:3px;font-size:var(--t6);'+
+     'font-weight:600;color:var(--t-sub)}'+
+   '.tlp-head .t b{display:block;margin-top:7px;font-size:var(--t6);font-weight:800;color:var(--t-point)}'+
+   '.tlp-c.on .tlp-head .t b{display:none}'+
+   '.tlp-head .ar{flex:none;margin-left:auto;font-size:var(--t6);color:var(--t-sub);font-weight:800}'+
+   '.tlp-body{padding:0 15px 13px}'+
    '.tlp-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}'+
    '.tlp-chip{border:1px solid var(--t-line);background:var(--t-bg-2);border-radius:var(--t-r-sm);'+
      'padding:8px 12px;font-family:inherit;font-size:var(--t6);font-weight:700;color:var(--t-ink);cursor:pointer}'+
@@ -15779,19 +15825,33 @@ function renderToolsPage(){
      '<input class="tlp-q" id="tlpQ" value="'+osEsc(TLP_Q)+'" '+
        'oninput="tlpSetQ(this.value)" placeholder="🔎 하려는 것을 그냥 적으세요 — 연금 · 알릴의무 · 실비">';
   h+=tlpNowHtml();
+  /* 📦 칸 여섯을 <b>접어서</b> 세웁니다 (판 X180 · 위 TLP_OPEN 쪽지).
+     ★ 단추의 onclick 은 <b>tlpToggle</b> 입니다 — check-toolfold 가 그것으로
+       이 줄을 찾습니다. 건드리지 마십시오. */
+  h+='<div class="tlp-grid">';
   for(i=0;i<L.length;i++){
     g=L[i].g;
-    h+='<div class="tlp-c"><div class="tlp-lab">'+g.e+' '+osEsc(g.t)+
-       ' <i>· '+osEsc(g.s)+'</i></div>';
-    for(j=0;j<L[i].rows.length;j++){
-      it=L[i].rows[j];
-      h+='<button type="button" class="tlp-row" onclick="go(\''+osEsc(it.id)+'\')">'+
-         '<span class="e">'+(it.icon||'🧰')+'</span>'+
-         '<span class="n">'+osEsc(it.title||it.id)+'</span>'+
-         '<span class="o">열기</span></button>';
+    var 폄=tlpIsOpen(g.k);
+    h+='<div class="tlp-c'+(폄?' on':'')+'">'+
+       '<button type="button" class="tlp-head" onclick="tlpToggle(\''+osEsc(g.k)+'\')">'+
+         '<span class="e">'+g.e+'</span>'+
+         '<span class="t">'+osEsc(g.t)+'<i>· '+osEsc(g.s)+'</i>'+
+           '<b>'+L[i].rows.length+'개</b></span>'+
+         '<span class="ar">'+(폄?'▲':'▼')+'</span></button>';
+    if(폄){
+      h+='<div class="tlp-body">';
+      for(j=0;j<L[i].rows.length;j++){
+        it=L[i].rows[j];
+        h+='<button type="button" class="tlp-row" onclick="go(\''+osEsc(it.id)+'\')">'+
+           '<span class="e">'+(it.icon||'🧰')+'</span>'+
+           '<span class="n">'+osEsc(it.title||it.id)+'</span>'+
+           '<span class="o">열기</span></button>';
+      }
+      h+='</div>';
     }
     h+='</div>';
   }
+  h+='</div>';
   if(q&&!L.length)
     h+='<div class="tlp-none">그런 이름은 없습니다.<br>다른 말로 찾아보세요.</div>';
   /* ★ <b>길을 남깁니다</b> — 서랍은 그대로 있습니다 (1번) */
@@ -20911,8 +20971,9 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-23 19:05';
-var APP_BUILD_NOTE="📅 <b>APEX 교육 캘린더</b>를 앱 안에 넣었습니다. 왼쪽 메뉴 맨 위 「교육시스템EM」 아래 <b>📅 APEX 교육 캘린더</b>를 누르시면 <b>로그인 없이 바로</b> 열립니다 — 이 앱에 이미 들어와 계시니 한 번 더 물을 자리가 아닙니다. ◾ 일곱 장입니다 — <b>월간 캘린더 · 신입 교육 주간 · 팀별 교육 · 교육매니저 운영표 · 본부장 루틴 · 공지 만들기 · 설정</b>. ◾ <b>색·글꼴·아이콘을 앱과 한 벌로</b> 맞췄습니다 — 색은 app/ui.css 한 곳에서 오고, ‹› · ☑ … 처럼 기기마다 굵기가 달라지던 글자 그림은 <b>선 그림</b>으로 바꿨습니다. ◾ <b>교육매니저 · 지점장 · 대표에게만</b> 보입니다 (「교육시스템EM」 과 같은 문입니다 · 넓히시려면 <b>설정 → 도구 권한</b>). ◾ 적으신 것은 <b>이 기기에만</b> 남고 서버를 부르지 않습니다. ◾ 곁들여 <b>「신입 교육 주간」·「일반 주간」 두 단추</b>를 손가락 바닥(44px)에 맞췄습니다 — 34px 이었습니다. (함께 실려 나갑니다 — 15:47 판 「🎓 교육시스템EM · EM 전용 운영센터」)";
+var APP_BUILD='2026-10-24 10:42';
+var APP_BUILD_NOTE="📦 <b>🧰 도구 화면을 접었습니다.</b> 여섯 칸(오늘 · 고객 만나기 · 계약하고 나서 · 고객 늘리기 · 찾아보고 배우기 · 팀 · 설정)이 <b>접힌 채로 한 화면에</b> 서고, 칸마다 <b>몇 개인지</b> 적혀 있습니다(9 · 28 · 9 · 18 · 25 · 18). 누르면 그 칸만 펴집니다. ◾ 폰에서 <b>6,892px(8.2화면) → 837px(1.0화면)</b> 입니다 — 손가락으로 여덟 번 쓸던 것을 한 번에 보십니다. ◾ <b>찾기 칸에 치면 그 칸이 저절로 펴집니다</b> — 「연금」 을 치면 해당 칸만 열려 바로 보입니다. ◾ ★ <b>지운 것은 하나도 없습니다</b> — 줄 107개 그대로이고 접혀 있을 뿐입니다. ◾ 접는 꼴은 <b>사용가이드와 같은 칸</b>입니다. ◾ ⚠ <b>아직 남은 것</b> — 「고객 만나기 28개」 는 펴면 아직 깁니다. 안에서 한 번 더 나누는 것은 <b>다음 판</b>으로 올리겠습니다.";
+
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
