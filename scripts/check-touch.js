@@ -230,6 +230,27 @@ const STAGES = ['TA', 'AP', 'PC', 'CS'];
   });
   is(mark.got.indexOf('c1|전화') >= 0, '  📞 걸기 → 접촉 기록(ccMark) 「전화」 한 줄 — ' + mark.got.join(' · '));
   is(mark.t.length > 30, '  💬 문자로 열기가 담는 글 = 그 상자의 글 (' + mark.t.length + '자)');
+  /* ★ 단계는 배정 DB 가 <b>창이 열린 뒤에</b> 옵니다 — 처음엔 몰라 빈 칸, 오면 다시 그려야 합니다.
+     화면을 찍다 실제로 빈 칸으로 남은 것을 찾았습니다(판 X180). */
+  const late = await A.pg.evaluate(() => {
+    const host = document.createElement('div'); host.id = 'cuwSay'; document.body.appendChild(host);
+    window.cmCliOf = () => ({ id: 'c1' }); CUS.db = null;
+    cuwSayPaint({ id: 'c1' }); const before = host.querySelectorAll('.cus-tc').length;
+    CUS.db = { stage: 'PC', source: '', phone: '010-1234-5678' };
+    cuwSayPaint({ id: 'c1' }); const after = [].map.call(host.querySelectorAll('.cus-tc-s'), e => e.getAttribute('data-k')).join(',');
+    const f = host.querySelector('details.cuw-fold'); f.open = true; const node = host.firstChild;
+    cuwSayPaint({ id: 'c1' }); const kept = host.firstChild === node && host.querySelector('details.cuw-fold').open;
+    CUS.db = { stage: 'CS', source: '', phone: '010-1234-5678' };
+    cuwSayPaint({ id: 'c1' }); const cs = [].map.call(host.querySelectorAll('.cus-tc-s'), e => e.getAttribute('data-k')).join(',');
+    const reopen = host.querySelector('details.cuw-fold').open;
+    host.remove();
+    return { before, after, kept, cs, reopen };
+  });
+  is(late.before === 0 && late.after === 'pc-sent,pc-think,pc-family',
+     '  배정 DB 가 늦게 와도 💬 칸이 <b>다시 선다</b> — 처음 ' + late.before + '칸 → 온 뒤 ' + late.after);
+  is(late.kept, '  같은 글이면 손대지 않는다 — 펴 둔 칸이 안 닫힌다');
+  is(late.cs === 'cs-prep,cs-wait,cs-done' && late.reopen, '  단계가 바뀌면 새 글로 · 펴 둔 것은 편 채로 — ' + late.cs);
+  is(/cuwSayPaint\(c\)/.test(body(APP, 'function cuwPaint(')), '  cuwPaint(고객 창을 다시 그리는 한 곳)가 cuwSayPaint 를 부른다');
   is(!A.errs.length && !C.errs.length, '  조용히 터진 곳이 없다' + ((A.errs[0] || C.errs[0]) ? ' — ' + (A.errs[0] || C.errs[0]) : ''));
   await A.ctx.close(); await C.ctx.close(); await br.close(); srv.close();
 

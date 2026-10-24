@@ -70520,11 +70520,11 @@ function cmPanelsHtml(id){
        🤝 관계(다음 할 일 · 접촉)와 결과 다섯은 연락 탭의 cuwNext · cuwTl · cuwCompose 가
        <b>같은 저장 함수</b>(cmNextDone · cmNextDel · cmTouchDel · cshMark)로 대신합니다.
        적어 두기 · 가족 · 팩트파인딩 · 단계 안내는 <b>고치기 화면</b>(sh-…)에서만 섭니다. */
-  var say=cmSayHtml(id);
+  var say=cuwSayHtml(id);
   return cusSec('sh-stage',cmStageHtml(id))+cusSec('sh-story',cmNoteHtml(id))+
          cusSec('cov',cmWalRefHtml(id))+cusSec('cov',cmDueClmHtml(id))+
          cusSec('doc',cmRrnHtml(id))+cusSec('sh-fam',cmFamHtml(id))+
-         (say?cusSec('talk','<details class="cuw-fold"><summary class="t-card cuw-ch"><span class="t-lab">💬 보낼 말</span><span class="ed">펴기</span></summary>'+say+'</details>'):'')+
+         cusSec('talk','<div id="cuwSay">'+say+'</div>')+
          cusSec('sh-ff',cmFfPanelHtml(id));
 }
 /* ══ 🗺️🙌 <b>빈 통장 · 소개</b> — 담을 칸이 생겼으니 보이는 자리도 ══════
@@ -70866,7 +70866,7 @@ function cshMark(id,key,tc){
     (!id?' 이 줄은 아직 <b>내 고객</b>이 아니라 고객 쪽 기록·다음 할 일은 안 남았습니다 — 명단에서 「🪪 내 고객으로」 를 누르시면 그때부터 같이 남습니다.'.replace(/<[^>]*>/g,''):''),6000);
   cshClose();
 }
-function cmSayHtml(id){
+function cmSayHtml(id,inFold){
   var c=(typeof cmCliOf==='function')?cmCliOf(id):null,st='',src='',S,h='',by=null,band='';
   if(typeof APEX_STAGE==='undefined'||!APEX_STAGE.script)return '';
   try{ st=(c&&c.stage)||((typeof CUS!=='undefined'&&CUS.db&&CUS.db.stage)||''); }catch(e){}
@@ -70888,6 +70888,8 @@ function cmSayHtml(id){
     try{ ph=((typeof CM_BASE!=='undefined'&&CM_BASE[id]&&CM_BASE[id].ph)||'')||((typeof ccTelOf==='function')?ccTelOf(id):'')||((typeof CUS!=='undefined'&&CUS.db&&CUS.db.phone)||''); }catch(e){}
     try{ me=(OS.profile&&OS.profile.name)||''; }catch(e){}
     if(typeof cusCss==='function')cusCss();
+    /* 접는 칸(cuwSayHtml) 안이면 머리는 접는 칸이 이미 말합니다 — 같은 머리를 두 번 안 세웁니다 */
+    if(inFold)return '<div style="margin:0 0 16px">'+cusTouchHtml({stage:st,src:src,age:band||undefined,phone:ph,me:me,key:id})+'</div>';
     return '<div class="t-card" style="margin-bottom:16px">'+
        '<div class="t-lab">💬 보낼 말 · 📞 전화 — '+osEsc(st)+'</div>'+
        cusTouchHtml({stage:st,src:src,age:band||undefined,phone:ph,me:me,key:id})+'</div>';
@@ -70908,6 +70910,25 @@ function cmSayHtml(id){
   if(S.avoid)h+='<div class="t-note">하지 말 것 — '+osEsc(S.avoid)+'</div>';
   if(S.stop)h+='<div class="t-note">여기서 멈춤 — '+osEsc(S.stop)+'</div>';
   return h+'</div>';
+}
+/* 연락 탭의 💬 보낼 말 접는 칸 — 단계는 배정 DB(CUS.db)가 <b>창이 열린 뒤에</b> 오는 일이 많아,
+   처음 그릴 때는 단계를 몰라 빈 칸이었다가 그대로 남았습니다(판 X180 화면 찍다 찾음).
+   그래서 cuwPaint 가 다시 그립니다 — 글이 같으면 손대지 않고, 바뀌면 펴 둔 것은 편 채로. */
+function cuwSayHtml(id){
+  var say=cmSayHtml(id,1),st='';
+  /* 단계를 읽는 차례는 cmSayHtml 과 같습니다 — 고객 단계 먼저, 없으면 배정 DB */
+  if(/class="cus-tc"/.test(say)){ try{ st=((cmCliOf(id)||{}).stage)||((typeof CUS!=='undefined'&&CUS.db&&CUS.db.stage)||''); }catch(e){} }
+  return say?('<details class="cuw-fold"><summary class="t-card cuw-ch"><span class="t-lab">💬 보낼 말'+(st?' · 📞 전화 — '+osEsc(st):'')+'</span><span class="ed">펴기</span></summary>'+say+'</details>'):'';
+}
+function cuwSayPaint(c){
+  var e=document.getElementById('cuwSay'),h,f,op;
+  if(!e||!c)return;
+  h=cuwSayHtml(c.id);
+  if(e.innerHTML===''&&h===''){ e._h=h; return; }
+  if(e._h===h)return;
+  f=e.querySelector('details.cuw-fold'); op=!!(f&&f.open);
+  e.innerHTML=h; e._h=h;
+  if(op){ f=e.querySelector('details.cuw-fold'); if(f)f.open=true; }
 }
 /* 상황별 터치에서 문자를 열거나 걸면 — 접촉 기록 한 줄(ccMark · 💬 문자 단추와 같은 자리) */
 window.cusTouchDone=function(key,how){ if(key&&typeof ccMark==='function')ccMark(key,how); };
@@ -73712,6 +73733,7 @@ function cuwPaint(c){
   var P=[['cuwNow',cuwNowHtml],['cuwSum2',cuwSum2Html],['cuwNext',cuwNextHtml],['cuwTl',cuwTlHtml],
          ['cuwOurPol',cuwOurPolHtml],['cuwInfo',cuwInfoHtml],['cuwStage',cuwStageHtml],['cnsSheet',cnsSheetHtml]],i,e;
   for(i=0;i<P.length;i++){ e=document.getElementById(P[i][0]); if(e)e.innerHTML=P[i][1](c); }
+  try{ cuwSayPaint(c); }catch(x){}
   try{ oscTopPaint(); }catch(x){}
 }
 function osClientDetailHtml(c){
