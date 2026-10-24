@@ -167,7 +167,29 @@ const 접은바닥 = 1100;
      '그 수가 <b>앱이 아는 수(tlpCount)</b> 와 같다 — '+합.앱이아는수+
      '개 (세는 곳이 둘이 아닙니다 · 5번)');
 
-  sec('[6] 조용한가');
+  sec('[7] 🖼 <b>그림이 한 자리도 안 빠졌나</b> (판 X184)');
+  /* ★ 사장님 말씀 2026-10-24 「남은 이모지도 바꿔줘」 → 「한 화면만 — 🧰 도구 화면」.
+     ★ <b>예외는 check-icoslot 이 지킵니다</b>(칸 머리 6/6) — 여기서 또 세지
+       않습니다. 이 자가 보는 것은 <b>줄까지 빠짐없나 · 빈 칸이 없나</b>입니다.
+     ⚠ 짝이 없는 이모지는 <b>이모지 그대로</b> 서야 합니다 — 빈 칸은 안 됩니다 (1번). */
+  await pg.evaluate(()=>{ tlpSetQ(''); });
+  await pg.waitForTimeout(300);
+  await pg.evaluate(()=>document.querySelectorAll('#dynPane .tlp-head')[1].click());
+  await pg.waitForTimeout(420);
+  const 그림 = await pg.evaluate(()=>{
+    var d=document.getElementById('dynPane'), 빈=0;
+    [].slice.call(d.querySelectorAll('.tlp-head .e,.tlp-row .e')).forEach(function(e){
+      if(!(e.textContent||'').trim() && !e.querySelector('svg')) 빈++;
+    });
+    return { 줄:d.querySelectorAll('.tlp-row .e').length,
+             줄그림:d.querySelectorAll('.tlp-row .e svg.ico').length,
+             빈:빈 };
+  });
+  is(그림.빈 === 0, '그림 자리에 <b>빈 칸이 없다</b> — ' + 그림.빈 + '곳 (짝이 없으면 이모지가 그대로 섭니다)');
+  is(그림.줄 > 0 && 그림.줄그림 === 그림.줄,
+     '편 칸의 <b>줄도 다</b> 선 그림이다 — ' + 그림.줄그림 + '/' + 그림.줄);
+
+  sec('[8] 조용한가');
   is(errs.length === 0, '터진 곳이 없다'+(errs.length?(' ← '+errs.slice(0,2).join(' · ')):''));
 
   await b.close(); srv.close();
