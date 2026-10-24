@@ -1,4 +1,4 @@
-/* 📒 TA → CS <b>상황별 터치</b> — 무엇을 보고 · 어떻게 닿고 · 무슨 글을 보내고 · 무엇을 말하나 — 판 X180
+/* 📒 TA → CS <b>상황별 터치</b> — 무엇을 보고 · 어떻게 닿고 · 무슨 글을 보내고 · 무엇을 말하나 — 판 X183
 
    사장님 말씀 (2026-10-24) — 「ta-cs 까지 어떤 상황과 어떻게 터치해야할지 그리고 문자/카톡 내용도
    예시표를 2~3개 만들어서 디테일하게 터치하고 전화까지 할수있도록 · dB통합CRM 에 있는 고객 상황과
@@ -315,7 +315,7 @@ const STAGES = ['TA', 'AP', 'PC', 'CS'];
   is(mark.got.indexOf('c1|전화') >= 0, '  📞 걸기 → 접촉 기록(ccMark) 「전화」 한 줄 — ' + mark.got.join(' · '));
   is(mark.t.length > 30, '  💬 문자로 열기가 담는 글 = 그 상자의 글 (' + mark.t.length + '자)');
   /* ★ 단계는 배정 DB 가 <b>창이 열린 뒤에</b> 옵니다 — 처음엔 몰라 빈 칸, 오면 다시 그려야 합니다.
-     화면을 찍다 실제로 빈 칸으로 남은 것을 찾았습니다(판 X180). */
+     화면을 찍다 실제로 빈 칸으로 남은 것을 찾았습니다(판 X183). */
   const late = await A.pg.evaluate(() => {
     const host = document.createElement('div'); host.id = 'cuwSay'; document.body.appendChild(host);
     window.cmCliOf = () => ({ id: 'c1' }); CUS.db = null;

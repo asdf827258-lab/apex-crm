@@ -93,7 +93,7 @@ const SEED = () => {
   const ago = n => new Date(Date.now()-n*864e5).toISOString().slice(0,10);
   OSC.loaded=true; OSC.busy=false; OSC.err='';
   /* ★ 단계를 <b>AP</b> 로 둡니다 — apex-stage 표에 <b>판단(q)</b> 이 있는
-     단계라 🧭 칸이 무엇을 세우는지 볼 수 있습니다. 보낼 말은 판 X180 부터
+     단계라 🧭 칸이 무엇을 세우는지 볼 수 있습니다. 보낼 말은 판 X183 부터
      AP 에도 표(상황별 터치)가 있어 <b>그 표대로</b> 섭니다([7] 에서 봅니다 · 1번).                        */
   OSC.list=[{id:'c1',name:'홍길동',name_masked:'홍○○',advisor_id:'me',stage:'AP',created_at:ago(60)},
             {id:'c2',name:'홍길순',name_masked:'홍○○',advisor_id:'me',stage:'AP',created_at:ago(30)}];
@@ -214,7 +214,7 @@ const LOOK = () => {
   });
   is(/AP/.test(V.t) && /판단/.test(V.t),
      '  🧭 칸이 <b>지금 단계(AP)</b> 를 말하고 판단을 세운다');
-  /* ★★ 💬 보낼 말 — <b>표에 있는 단계에만</b> 섭니다 (1번). 판 X180 부터 AP 에도 표가 있습니다 —
+  /* ★★ 💬 보낼 말 — <b>표에 있는 단계에만</b> 섭니다 (1번). 판 X183 부터 AP 에도 표가 있습니다 —
      apex-stage 의 상황별 터치(TOUCH · TA→CS). 그래서 AP 에서 서는 보낼 말은 <b>그 표의 글</b>이어야
      하고, 표 밖의 글(지어낸 말)이 서면 안 됩니다. 글이 표에서 왔는지는 check-touch 가 낱낱이 봅니다.
      단계를 TA 로 바꿔 <b>있을 때는 서는지</b>도 같이 봅니다.              */

@@ -219,7 +219,7 @@
     '.cus-fchip em{font-style:normal;color:#64748B;font-weight:600;margin-left:5px;font-size:var(--t6,13px)}',
     '.cus-frow{display:flex;gap:6px;align-items:center;font-size:var(--t6,13px);padding:5px 8px;border:1px solid #F1F5F9;border-radius:8px;background:#FBFCFE}',
     '.cus-frow .rel{font-weight:800;color:#3730A3;min-width:44px}',
-    /* 📒 상황별 터치 (cusTouchHtml) — 두 화면이 같은 옷 · 판 X180 */
+    /* 📒 상황별 터치 (cusTouchHtml) — 두 화면이 같은 옷 · 판 X183 */
     '.cus-tc{margin-top:4px}',
     '.cus-tc-hd{font-size:var(--t6,13px);color:#64748B;line-height:1.6;margin:0 0 8px}',
     '.cus-tc-s{border:1px solid #E5E9F0;border-radius:12px;background:#fff;margin-top:8px;overflow:hidden}',
@@ -500,7 +500,7 @@
     return h;
   }
 
-  /* ══ 📒 <b>상황별 터치</b> — TA → CS · 판 X180 ════════════════════════
+  /* ══ 📒 <b>상황별 터치</b> — TA → CS · 판 X183 ════════════════════════
      사장님 말씀 (2026-10-24) — 「ta-cs 까지 어떤 상황과 어떻게 터치해야할지 · 문자/카톡 예시 2~3 ·
      전화까지 · dB통합CRM 에 있는 고객 상황과 안겹치고 똑같은 화면을 띄우도록」 → 「대본이 너무 허접 ·
      태도가 엉망 · 더 길게」 · 「약속이 잡히면 약속 안내 문자까지 바로 · 골라서」.

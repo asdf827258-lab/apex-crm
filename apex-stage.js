@@ -1188,7 +1188,7 @@ var SAY={
      (비어 있으면 「담당 설계사」 — 소속을 지어 넣지 않습니다).
    ★ 이 글들은 <b>약속·안내 글(정보성)</b>입니다. 상품 권유나 혜택을 넣으면 광고성 글이 되어
      <b>광고 수신 동의(동의 네 갈래 · ad)</b>가 있는 분께만 보낼 수 있습니다 — 그래서 여기는 안 넣습니다.
-   ★ 제가 지어 적은 글입니다(사장님이 맡기신 판 X180). 사장님 실제 말투가 있으면 이 표만 고치십시오. */
+   ★ 제가 지어 적은 글입니다(사장님이 맡기신 판 X183). 사장님 실제 말투가 있으면 이 표만 고치십시오. */
 function tcM(ch,t,text){ return {ch:ch,t:t,text:text}; }
 function tcC(t,say,tip){ return {t:t,say:say,tip:tip||''}; }
 function tcR(q,a){ return {q:q,a:a}; }
@@ -1648,7 +1648,7 @@ g.APEX_STAGE={
   /* 그 상황에서 <b>그대로 말할 것</b> — 부재·거절·기고객, 그리고 첫 마디 */
   say:SAY,
   sayList:sayList,
-  /* 📒 TA → CS 상황별 터치 — 할 일 · 문자/카톡 예시 · 전화 대본 (판 X180). 그리는 판은 apex-cusone.js 의 cusTouchHtml 하나 */
+  /* 📒 TA → CS 상황별 터치 — 할 일 · 문자/카톡 예시 · 전화 대본 (판 X183). 그리는 판은 apex-cusone.js 의 cusTouchHtml 하나 */
   touch:TOUCH,
   touchOf:touchOf,
   appt:APPT,
