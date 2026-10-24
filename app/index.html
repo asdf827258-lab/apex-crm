@@ -26881,14 +26881,61 @@ function hmNowNewsHtml(){
   var it=(NLIVE.items||[])[i]; if(!it||!it.t)return '';
   var v=function(t){ return (typeof osEsc==='function')?osEsc(t):t; };
   return '<div class="hm-nw">'+
-    hmNwPickHtml()+              /* 🗂️ 보험 · 경제 · 저축 · 정책 — 여기서 고르십니다 */
-    '<div class="hm-nw-t">📰 <b>오늘 보낼 소식</b> — '+v(it.t)+'</div>'+
-    ((typeof nlWhyHtml==='function')?nlWhyHtml(it):'')+
+    /* 🗂️ 어느 칸에서 온 기사인가 · 🎂 어떤 분께 — <b>있던 줄 안에</b> 적습니다.
+       ★★ 홈은 <b>4.19/4.20화면</b>입니다(사장님이 2026-10-09 에 그으신 선).
+         남은 자리가 <b>5px</b> 라, 여기에 칸 한 줄을 세우면 그 선을 넘습니다 —
+         처음에 고르개를 칩 다섯 줄(146px)로 세웠다가 홈이 4.57화면이 되어
+         자 넷이 울었습니다. <b>눈금을 올리는 대신 자리를 옮겼습니다</b>
+         (8번 · 판 X130 이 같은 자리에서 그렇게 했습니다).
+       ★ 그래서 <b>고르는 자리는 뉴스 화면</b>이고, 여기서는 「어느 칸에서
+         왔는지」 를 있던 제목 줄에 달고, 누르면 그 화면으로 갑니다.       */
+    /* 🎂 추천 이유는 <b>여기 안 섭니다</b> — 재어 보고 내린 결정입니다.
+       제 줄로 세우면 24px, 이 줄 안에 넣어도 21px 입니다(줄이 하나 늘어납니다).
+       홈에 남은 자리는 <b>5px</b> 이고, 그 선은 사장님이 2026-10-09 에
+       그으신 것입니다. 「추천 이유까지」 라는 말씀을 지키되 <b>자리를 옮겨</b>
+       <b>고르시는 자리(뉴스 화면)</b>에 낱말·까닭을 다 적습니다 — 거기가
+       많은 것 중에서 고르는 자리이기도 합니다 (판 X130 이 같은 자리에서
+       「눈금을 올리는 대신 자리를 옮겼」습니다 · 8번).                    */
+    '<div class="hm-nw-t">📰 <b>오늘 보낼 소식</b>'+hmNwKeyHtml()+' — '+v(it.t)+'</div>'+
     '<div class="hm-nw-b">'+
       '<button type="button" class="btn btn-ghost" onclick="nlCopy('+i+')">💬 보낼 문구 복사</button>'+
-      '<button type="button" class="btn btn-ghost" onclick="hmIgNext()">다른 기사로 ↻</button>'+
       (it.u?('<a class="btn btn-ghost" href="'+v(it.u)+'" target="_blank" rel="noopener">원문 ↗</a>'):'')+
     '</div></div>';
+}
+/* 🗂️ <b>지금 고르신 칸</b> 한 토막 — 제목 줄 안에 섭니다(새 줄이 아닙니다).
+   누르면 <b>고르는 자리</b>(뉴스 화면)로 갑니다. 이름·색은 apex-newsfit.js
+   한 곳에서 옵니다 (5번).                                              */
+function hmNwKeyHtml(){
+  var k=null,t='🗂️ 전체';
+  try{ if(typeof APEX_FIT!=='undefined'&&APEX_FIT.keyOf&&NLIVE.cat&&NLIVE.cat!=='all'){
+         k=APEX_FIT.keyOf(NLIVE.cat); if(k)t=k.ic+' '+k.t; } }catch(e){}
+  /* ★★ <b>이름표 줄에 넣지 마십시오.</b> 재어 보고 알았습니다 — 글자를 한 자도
+     안 늘리고 「📰 오늘 보낼 소식」 을 그냥 단추로 감쌌더니 제목 줄이
+     <b>42px → 65px</b> 가 되었습니다. 단추는 글 속에서 <b>쪼개지지 않아</b>
+     그 뒤 글이 통째로 다음 줄로 밀립니다. 홈은 남은 자리가 5px 라 그대로
+     4.2화면 선을 넘습니다. 그래서 <b>이미 있는 단추 줄</b>에 섭니다 —
+     거기는 한 줄(44px)에 자리가 남습니다.                               */
+  if(!k)return '';            /* 「전체」 면 한 글자도 안 늘립니다 */
+  return ' · <b class="hm-nw-k">'+((typeof osEsc==='function')?osEsc(t):t)+'</b>';
+}
+/* 🎂 <b>이 기사는 어떤 분께</b> — 홈에서는 <b>한 줄</b>로 줄입니다.
+   까닭 문장(「청년·신혼·출산 제도는 실제로 나이로 갈립니다」)은 <b>뉴스
+   화면</b>에 그대로 있습니다 — 홈은 자리가 5px 밖에 없어 낱말만 답니다.
+   ★ 만드는 자는 여전히 <b>APEX_FIT.ageOf 하나</b>입니다 (5번) — 홈이 제
+     낱말표를 따로 가지면 두 화면이 다른 말을 합니다.
+   ★ 걸린 낱말이 없으면 <b>아무 줄도 안 세웁니다</b>. 홈에서 「없습니다」 한
+     줄은 자리만 먹습니다 — 뉴스 화면에서는 그대로 말해 드립니다 (1번).   */
+/* ⚠ <b>지금은 아무도 안 부릅니다</b> — 위 쪽지의 21px 때문입니다. 홈이
+   짧아지거나 넓은 화면에서 자리가 생기면 이것을 부릅니다. <b>지우지
+   않습니다</b> (CLAUDE.md 5번 「함수를 지우지 마십시오」).                */
+function hmNwWhyHtml(it){
+  var L=[],i,p=[];
+  try{ if(typeof APEX_FIT!=='undefined'&&APEX_FIT.ageOf)
+         L=APEX_FIT.ageOf({t:(it&&it.t)||'',desc:(it&&it.desc)||''})||[]; }catch(e){ L=[]; }
+  if(!L.length)return '';
+  var v=function(x){ return (typeof osEsc==='function')?osEsc(x):x; };
+  for(i=0;i<L.length;i++)p.push('<b>'+v(L[i].t)+'</b>「'+v(L[i].word)+'」');
+  return ' · <span class="hm-nw-why">🎂 '+p.join(' · ')+'</span>';
 }
 /* ══ 🗂️ <b>홈에서 바로 고르십니다</b> (2026-10-24 · 판 X187) ══════════
    사장님 말씀 — 「뉴스도 많은 것들 중에서 <b>선택할수 있도록 보험 /
@@ -26904,6 +26951,10 @@ function hmNowNewsHtml(){
      보낸다」 이고, 추천 이유는 <b>그 한 건에 대해</b> 바로 아래 적힙니다.
      고르개를 둘 다 두면 작은 칸에 줄이 넷이 되어 카드가 한 화면을 넘습니다.
      골라 보시는 자리는 뉴스 화면이고, 거기서 고르시면 여기도 따릅니다.  */
+/* ⚠ <b>지금은 아무도 안 부릅니다.</b> 홈에 세웠다가 4.2화면 선을 넘겨
+   뉴스 화면으로 옮겼습니다(위 hmNowNewsHtml 쪽지). <b>지우지 않습니다</b> —
+   홈이 짧아지거나 넓은 화면에서 쓸 자리가 생기면 이것을 부릅니다
+   (CLAUDE.md 5번 「함수를 지우지 마십시오 — 부르는 자리만 한 곳으로」). */
 function hmNwPickHtml(){
   var M=[],i,k,h='';
   try{ M=(APEX_FIT.main||[]).slice(); }catch(e){}
@@ -35598,6 +35649,11 @@ function hmIgCss(){
    '.hm-nw{margin-top:10px;border:1px solid var(--t-ind-b);background:var(--t-ind-l);'+
      'border-radius:var(--r-sm);padding:10px 12px}'+
    '.hm-nw-t{font-size:var(--t6);line-height:1.6;color:var(--t-ind-d)}'+
+   /* 🗂️ 칸 토막 — <b>제목 줄 안</b>에 섭니다. 새 줄을 안 만듭니다(홈 4.2화면 선) */
+   /* 🗂️ 고르신 칸 — 단추 줄의 <b>맨 앞</b>. 좁게 두어야 셋이 한 줄에 듭니다 */
+   '.hm-nw-k{font-weight:800;color:var(--t-point);white-space:nowrap}'+
+   '.hm-nw-why{color:var(--t-sub)}'+
+   '.hm-nw-why b{color:#6D28D9;font-weight:800}'+
    '.hm-nw-b{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}'+
    '.hm-nw-b .btn{min-height:44px;padding:8px 12px;font-size:var(--t6)}'+
    /* <b>다음 분</b> 줄 */
@@ -80616,6 +80672,17 @@ function nlChip(id,ic,t,n,col,set){
    ★ 앞줄에 무엇이 서는지는 <b>apex-newsfit.js 의 MAIN</b> 한 곳이 압니다.
      뒷줄은 <b>세지 않고 빼서</b> 냅니다 — 갈래를 하나 늘릴 때 그 칸이
      조용히 사라지지 않게요.                                          */
+/* 이 화면이 무엇을 하는지 <b>표에 물어서</b> 적습니다 — 칸 이름을 글자로
+   박아 두면 갈래를 늘릴 때마다 이 줄만 낡습니다 (5번·1번).              */
+function nlDescHtml(){
+  var M=[],R=[];
+  try{ M=(APEX_FIT.main||[]).map(function(k){var o=APEX_FIT.keyOf(k);return o?o.t:k;});
+       R=(APEX_FIT.restIds()||[]).map(function(i){var o=APEX_FIT.keyOf(i);return o?o.t:i;}); }catch(e){}
+  if(!M.length)return '서버가 신문 RSS 를 모아 오고, 낱말로 칸을 나눕니다.';
+  return '<b>'+osEsc(M.join(' · '))+'</b> 넷에서 고르시고, 🎂 <b>연령대</b>를 겹쳐 좁히실 수 있습니다'+
+    (R.length?(' (그 밖에 '+osEsc(R.join(' · '))+')'):'')+'. '+
+    '서버가 신문 RSS 를 모아 오고, 낱말로 칸을 나눕니다. 사무실 PC 를 켜 두지 않으셔도 됩니다.';
+}
 function nlChipsHtml(){
   var h='',i,k,M=[],R=[];
   try{ M=(APEX_FIT.main||[]).slice(); R=(APEX_FIT.restIds&&APEX_FIT.restIds())||[]; }catch(e){}
@@ -80853,6 +80920,11 @@ function nlPaint(){
   if(c)c.innerHTML=nlHeadHtml();
   var live=$('bnLiveBox');
   if(live)live.innerHTML=nlMiniHtml();
+  /* 📸 <b>오늘 올릴 것도 같이</b> — 2026-10-24 에 재어 보고 찾은 자리입니다.
+     「저축」 을 골랐는데 이 칸은 <b>그대로 보험 기사</b>를 들고 있었습니다.
+     고르신 칸과 화면이 어긋나면, 고르신 것이 안 먹은 줄 아십니다 (1번).  */
+  var ig=$('hmIgHost');
+  if(ig&&typeof hmIgHtml==='function'){ ig.innerHTML=hmIgHtml(); try{hmFoldIgPaint();}catch(e2){} }
   /* 🏠 <b>홈도 같이</b> — 「오늘 보낼 소식」 과 그 고르개가 홈에 있습니다.
      홈이 안 떠 있으면 아무 일도 안 일어납니다(#hmToday 가 없습니다).
      ⚠ 다시 칠하는 자리는 <b>hmPaint 하나</b>입니다 (5번) — 여기서 칸을
@@ -80884,7 +80956,7 @@ function nlMiniHtml(){
   }
   return h+'<div style="margin-top:9px;display:flex;gap:7px;flex-wrap:wrap">'+
     '<button type="button" class="btn btn-primary" style="padding:6px 13px;font-size:var(--t6)" '+
-    'onclick="go(\'news_live\')">📰 다섯 칸 다 보기 →</button>'+
+    'onclick="go(\'news_live\')">📰 골라서 다 보기 →</button>'+
     '<button type="button" class="btn btn-ghost" style="padding:6px 13px;font-size:var(--t6)" '+
     (NLIVE.busy?'disabled':'')+' onclick="nlPull()">'+(NLIVE.busy?'모으는 중…':'🌐 새로 모으기')+'</button></div>';
 }
@@ -80958,8 +81030,11 @@ function renderNewsLive(){
        영문이었습니다. 아래 띠의 이름(TB)과도 같은 말이어야 합니다. */
     '<div class="page-hd"><div class="page-tag">콘텐츠</div>'+
     '<div class="page-title">📰 고객에게 전할 뉴스</div>'+
-    '<div class="page-desc">보험 · 경제 · 부동산 · 세금 · 지원금·혜택 다섯 칸입니다. '+
-    '서버가 신문 RSS 를 모아 오고, 낱말로 칸을 나눕니다. 사무실 PC 를 켜 두지 않으셔도 됩니다.</div></div>'+
+    /* ⚠ <b>칸 이름을 글자로 박지 않습니다</b> (5번). 2026-10-24 까지 여기에
+       「보험 · 경제 · 부동산 · 세금 · 지원금·혜택 <b>다섯 칸</b>」 이라고
+       적혀 있었는데, 칸은 그때 이미 여섯이었습니다. 갈래를 늘릴 때마다
+       이 줄이 낡아 <b>화면이 거짓말</b>을 합니다. 표에 물어서 적습니다. */
+    '<div class="page-desc">'+nlDescHtml()+'</div></div>'+
     nlRhyHtml()+                          /* 📅 나를 알리는 월·수·금 — 목업의 리듬 */
     ig+                                   /* 📸 오늘 올릴 것 — 홈에서 옮겨 온 칸 */
     '<div class="nl-wrap">'+

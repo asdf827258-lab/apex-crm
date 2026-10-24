@@ -174,6 +174,29 @@ const SEED = (o) => `
      '  <b>보험·경제·저축·정책</b> 이 다 있다');
   is(o.뒷줄.length >= 2, '  <b>그 밖에</b> 칸도 그대로 선다 — ' + o.뒷줄.join(' | ') + ' (6번 · 길을 안 지웁니다)');
   is(o.줄수 === o.받은것, '  처음에는 <b>전체</b>가 보인다 — ' + o.줄수 + '건 / 받아 둔 ' + o.받은것 + '건');
+  /* ★★ 2026-10-24 · <b>재어 보고 찾은 버그입니다.</b> 「저축」 을 골랐는데
+     같은 화면의 📸 오늘 올릴 것 칸은 <b>그대로 보험 기사</b>를 들고
+     있었습니다 — nlPaint 가 그 칸을 안 칠했습니다. 고르신 칸과 화면이
+     어긋나면 사장님은 <b>고르신 것이 안 먹은 줄</b> 아십니다 (1번).      */
+  const 따라 = await A.p.evaluate(() => {
+    nlSetCat('save');
+    const t = ((document.querySelector('#hmIgHost .hm-ig-t') || {}).innerText || '').trim();
+    const i = hmIgIdx(), it = (NLIVE.items || [])[i] || {};
+    nlSetCat('all');
+    return { 글:t, 갈래:(it.cats || []).slice(), 같나:(it.t || '').trim() === t };
+  });
+  is(따라.같나 && 따라.갈래.indexOf('save') >= 0,
+     '  ★★ 칸을 바꾸면 <b>📸 오늘 올릴 것도 따라온다</b> — 「' + 따라.글.slice(0, 26) +
+     '」 · 갈래 ' + (따라.갈래.join('/') || '(없음)'));
+  /* ⚠ 화면 설명이 <b>칸 수를 글자로 박고</b> 있지 않나 — 갈래를 늘릴 때마다
+     그 줄만 낡아 화면이 거짓말을 합니다. 2026-10-24 까지 「다섯 칸입니다」
+     라고 적혀 있었는데 칸은 그때 이미 여섯이었습니다 (1번 · 5번).        */
+  const 설명 = await A.p.evaluate(() =>
+    ((document.querySelector('.page-desc') || {}).innerText || '').replace(/\s+/g, ' ').trim());
+  is(!/(다섯|여섯|일곱|넷|셋|둘)\s*칸입니다/.test(설명),
+     '  설명이 <b>칸 수를 글자로 박지 않았다</b> — 「' + 설명.slice(0, 54) + '…」');
+  is(/저축/.test(설명) && /연령대/.test(설명),
+     '  설명이 <b>지금 있는 칸</b>을 말한다 — 저축·연령대가 들어 있다');
 
   /* ══ [2] ★ 칸에 적힌 수가 거짓말을 안 하나 ══════════════════════ */
   head('[2] ★ <b>칸에 적힌 수 == 눌러서 나오는 수</b> (1·5번)');
@@ -286,55 +309,57 @@ const SEED = (o) => `
      '  <b>「어느 연령대에나 좋습니다」 로 때우지 않는다</b> — 아무 말도 안 하면서 말한 척하는 글입니다');
   await A.ctx.close();
 
-  /* ══ [6] 🏠 홈에서 고르고, 고른 것이 남나 ══════════════════════ */
-  head('[6] 🏠 <b>홈 「지금 할 것」 안에서</b> 고를 수 있나 · 고른 것이 남나');
+  /* ══ [6] 🏠 홈 — 고른 것이 남나 · 오늘 한 건이 그 칸에서 오나 ═════ */
+  head('[6] 🏠 <b>홈</b> — 고른 것이 남나 · 오늘 한 건이 <b>그 칸에서</b> 오나');
+  /* ★★ <b>왜 홈에 고르개가 없나.</b> 처음에는 홈 「지금 할 것」 카드 안에
+     칸 다섯을 세웠습니다. 재어 보니 칩이 <b>세 줄(146px)</b> 로 접혀 홈이
+     3,539 → 3,854px(4.57화면)가 되었습니다. 사장님이 2026-10-09 에 그으신
+     선은 <b>4.2화면</b>이고 홈은 이미 4.19 — 남은 자리가 <b>5px</b> 입니다.
+     ★ <b>눈금을 올리지 않고 자리를 옮겼습니다</b> (8번 · 판 X130 이 같은
+       자리에서 그렇게 했습니다). 고르시는 자리는 <b>뉴스 화면</b>이고,
+       홈은 <b>어느 칸에서 온 기사인지</b>만 있던 줄 안에 답니다.
+     ★ 추천 이유도 같은 이유로 <b>뉴스 화면</b>에 있습니다 — 홈에 넣으면
+       제 줄로 24px, 제목 줄 안에 넣어도 21px 입니다(재어 봤습니다).      */
   const B = await open({ 탭:'home' });
-  let h = await B.p.evaluate(() => {
-    const g = document.querySelector('.hm-nw-g');
-    return { 고르개:!!g,
-             칸:g ? Array.from(g.querySelectorAll('.nl-chip')).map(b => b.textContent.replace(/\s+/g,' ').trim()) : [],
-             소식:((document.querySelector('.hm-nw .hm-nw-t') || {}).innerText || '').replace(/\s+/g,' ').trim(),
-             이유:Array.from(document.querySelectorAll('.hm-nw .nl-why')).length };
-  });
-  is(h.고르개, '  홈 소식 칸에 <b>고르개가 선다</b> — ' + h.칸.join(' | '));
-  is(h.칸.length === 5, '  <b>전체 + 넷</b>이다 — ' + h.칸.length + '개');
-  is(h.이유 > 0, '  그 한 건의 <b>추천 이유</b>도 거기 적힌다 — ' + h.이유 + '줄');
-  is(/오늘 보낼 소식/.test(h.소식), '  소식 한 줄이 그대로 선다 — 「' + h.소식.slice(0, 40) + '…」');
-  /* 「저축」 을 눌러 봅니다 — 오늘 한 건이 그 칸에서 와야 합니다 */
-  const 눌 = await B.p.evaluate(() => {
-    const bs = Array.from(document.querySelectorAll('.hm-nw-g .nl-chip'));
-    const t = bs.filter(x => x.textContent.indexOf('저축') >= 0)[0];
-    if (!t) return { err:'저축 칸이 없습니다' };
-    t.click();
-    return { ok:true };
-  });
-  await B.p.waitForTimeout(700);
-  const 뒤상태 = await B.p.evaluate(() => {
-    let 담김 = null; try { 담김 = JSON.parse(localStorage.getItem('apex_nl_pick_v1') || 'null'); } catch (e) {}
+  const 홈 = await B.p.evaluate(() => {
+    const H = e => e ? Math.round(e.getBoundingClientRect().height) : -1;
+    const 재다 = () => {
+      const nw = document.querySelector('.hm-nw');
+      return { 키:H(nw), 글:((nw || {}).innerText || '').replace(/\s+/g, ' ').trim() };
+    };
+    const 전체 = 재다();
+    nlSetCat('save');
+    const 저축 = 재다();
     const i = hmIgIdx(), it = (NLIVE.items || [])[i] || {};
-    return { 상태:NLIVE.cat, 담김:담김,
-             켜짐:Array.from(document.querySelectorAll('.hm-nw-g .nl-chip.on')).map(b => b.textContent.replace(/\s+/g,' ').trim()),
-             오늘:it.t || '', 갈래:(it.cats || []).slice(),
-             소식:((document.querySelector('.hm-nw .hm-nw-t') || {}).innerText || '').replace(/\s+/g,' ').trim() };
+    let 담김 = null; try { 담김 = JSON.parse(localStorage.getItem('apex_nl_pick_v1') || 'null'); } catch (e) {}
+    return { 전체:전체, 저축:저축, 담김:담김, 오늘:it.t || '', 갈래:(it.cats || []).slice(), 상태:NLIVE.cat };
   });
-  is(!눌.err && 뒤상태.상태 === 'save', '  「저축」 을 누르면 <b>그 칸이 켜진다</b> — ' + 뒤상태.켜짐.join('|'));
-  is(!!(뒤상태.담김 && 뒤상태.담김.cat === 'save'),
-     '  ★ 고르신 것이 <b>이 브라우저에 남는다</b> — ' + JSON.stringify(뒤상태.담김) +
+  is(홈.전체.키 > 0, '  홈에 <b>「오늘 보낼 소식」 칸</b>이 선다 — ' + 홈.전체.키 + 'px');
+  is(!/전체/.test(홈.전체.글) && /오늘 보낼 소식/.test(홈.전체.글),
+     '  <b>「전체」 일 때는 한 글자도 안 늘린다</b> — 「' + 홈.전체.글.slice(0, 34) + '…」');
+  is(/저축/.test(홈.저축.글),
+     '  칸을 고르면 <b>그 이름이 있던 줄 안에</b> 선다 — 「' + 홈.저축.글.slice(0, 40) + '…」');
+  is(홈.저축.키 === 홈.전체.키,
+     '  ★★ 그래도 <b>한 줄도 안 길어진다</b> — 전체 ' + 홈.전체.키 + 'px · 저축 ' + 홈.저축.키 +
+     'px (홈에 남은 자리는 5px 입니다 · 사장님 말씀 2026-10-09 의 4.2화면 선)');
+  is(!!(홈.담김 && 홈.담김.cat === 'save'),
+     '  ★ 고르신 것이 <b>이 브라우저에 남는다</b> — ' + JSON.stringify(홈.담김) +
      ' (매번 다시 고르면 「순차적으로」 가 안 됩니다)');
-  is(뒤상태.갈래.indexOf('save') >= 0,
-     '  ★★ 오늘 한 건이 <b>고르신 칸에서</b> 온다 — 「' + 뒤상태.오늘.slice(0, 24) + '」 · 갈래 ' + 뒤상태.갈래.join('/'));
-  /* 뉴스 화면으로 가도 그대로인가 */
-  const 건너 = await B.p.evaluate(() => {
-    go('news_live');
-    return 1;
-  });
+  is(홈.갈래.indexOf('save') >= 0,
+     '  ★★ 오늘 한 건이 <b>고르신 칸에서</b> 온다 — 「' + 홈.오늘.slice(0, 24) + '」 · 갈래 ' +
+     (홈.갈래.join('/') || '(없음)'));
+  /* 뉴스 화면으로 가도 그대로인가 — 묻는 곳이 하나입니다 */
+  await B.p.evaluate(() => { go('news_live'); });
   await B.p.waitForTimeout(900);
-  const 건너뒤 = await B.p.evaluate(() => ({
+  const 건너 = await B.p.evaluate(() => ({
     상태:NLIVE.cat,
-    켜짐:Array.from(document.querySelectorAll('#nlChips .nl-chip.on')).map(b => b.textContent.replace(/\s+/g,' ').trim())
+    켜짐:Array.from(document.querySelectorAll('#nlChips .nl-chip.on')).map(b => b.textContent.replace(/\s+/g,' ').trim()),
+    이유:document.querySelectorAll('#nlBody .nl-why').length
   }));
-  is(건너뒤.상태 === 'save',
-     '  ★ 뉴스 화면으로 가도 <b>그대로 저축</b>이다 — ' + 건너뒤.켜짐.join('|') + ' (묻는 곳이 하나입니다 · 5번)');
+  is(건너.상태 === 'save',
+     '  ★ 뉴스 화면으로 가도 <b>그대로 저축</b>이다 — ' + 건너.켜짐.join('|') + ' (묻는 곳이 하나입니다 · 5번)');
+  is(건너.이유 > 0,
+     '  ★ <b>추천 이유는 거기에</b> 있다 — ' + 건너.이유 + '줄 (홈에서 옮겨 온 자리입니다)');
   await B.ctx.close();
 
   /* ══ [7] 서버를 더 안 부르나 · 조용한가 ════════════════════════ */
