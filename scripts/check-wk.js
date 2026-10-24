@@ -4,6 +4,7 @@
    위기감 그리고 같이 점검할수 있는 시스템」 — 계산기(app/finance.html)의 「🧭 함께 점검 상담」.
 
    설계사가 고객 앞에서 한 장씩 넘기는 화면이라, 여기서 틀리면 그 자리에서 깨집니다.
+   ★ 판 X189 — 결과지는 빼기로 하셨습니다. 아래 「결과지」 로 이어지던 물음은 정리 장 · 계산기 칸으로 봅니다.
      가. 단추로 열리고 <b>맨 위에</b> 서나 — 떠 있는 「트랙 골라 열기」 단추(z 9999)가 「다음」 을
          가려 눌리지 않던 것을 실제로 겪었습니다. 「다음」 한가운데를 누르면 「다음」 이 눌리나
      나. 순서 — 시작 → 이해 → 위기 → 점검(아홉) → 정리
@@ -98,7 +99,7 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
   const days = await pg.evaluate((n) => APEX_REPORT.parts.daysOf(n.now, n.goal), n);
   is(nos(crisis).includes('30일중' + days + '일'), '30일 중 ' + days + '일 — 결과지와 같은 자(daysOf)로');
 
-  head('라. 같이 점검 — 답이 계산기와 결과지로 이어지나');
+  head('라. 같이 점검 — 답이 계산기로 이어지나 (결과지는 판 X189 에서 뺌)');
   const iGoal = S.indexOf('점검');
   await pg.evaluate((i) => { WK.i = i; wkPaint(); }, iGoal);
   const before = await pg.$eval('#wkOv .wk-meter', (e) => e.innerText);
@@ -120,14 +121,9 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
   is(/확인했어요\s*3\s*가지/.test(end) && /모르거나 아니요\s*3\s*가지/.test(end) && new RegExp('아직 안 물음\\s*' + (S.filter((p) => p === '점검').length - 6) + '\\s*가지').test(end), '정리 장이 확인 3 · 모름/아니요 3 · 안 물음 ' + (S.filter((p) => p === '점검').length - 6) + ' 을 적는다');
   const wantTodo = ['국민연금 공단 조회액', '연금저축·IRP·달러·변액 쌓인 금액', '퇴직금 예상액·근속연수'];
   is(wantTodo.every((t) => end.includes(t)), '모름·아니요가 「다음 만남 전까지 같이 채울 것」 에 선다');
-  const [pop] = await Promise.all([ctx.waitForEvent('page'), pg.click('#wkOv .wk-end button:first-child')]);
-  await pop.waitForLoadState();
-  const rh = await pop.content(), rt = strip(rh);
-  is(/함께 점검/.test(rt) && /6가지 중 3가지 확인/.test(rt) && /모름/.test(rt) && /아니요/.test(rt), '결과지에 「함께 점검」 장 — 모름·아니요를 숨기지 않는다');
-  is(!/이 질문에 바로 답할 수 있나요/.test(rt), '같이 점검했으면 「스스로 점검」 물음을 다시 싣지 않는다(두 벌 금지)');
-  is(wantTodo.some((t) => nos(rt).includes(nos(t))), '확인 못 한 것이 결과지 「같이 할 일」 로 올라간다');
-  is(/홍○○/.test(rt) && !/홍길동/.test(rh), '결과지는 가린 이름');
-  await pop.close();
+  /* 판 X189 — 결과지는 빼기로 하셨습니다(사장님 말씀 「결과지 빼고」). 정리 장에는 결과지 단추가 없고, 답 지우기만 섭니다 */
+  const endBtns = await pg.$$eval('#wkOv .wk-end button', (bs) => bs.map((b) => b.textContent.trim()));
+  is(!/결과지/.test(end) && endBtns.length === 1 && /답 지우기/.test(endBtns[0]), '정리 장에 결과지 단추가 없다 — ' + JSON.stringify(endBtns));
 
   head('아. 보험의 자리 — 배치 · 두 역할 · 몇 달 · 나이대 분배 (판 X182)');
   const T = texts.join('\n');
@@ -183,12 +179,6 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
   await pg.evaluate(() => { const e = document.getElementById('inh_youngest'); e.value = ''; e.dispatchEvent(new Event('input', { bubbles: true })); WK.i = wkSlides().findIndex((x) => x.part === '전략'); wkPaint(); });
   is(/막내 나이 필요/.test(await pg.$eval('#wkOv .wk-body', (e) => e.innerText)), '자녀가 있는데 막내 나이를 모르면 가족 셈을 비우고 「막내 나이 필요」');
   await pg.evaluate(() => { const e = document.getElementById('inh_youngest'); e.value = '10'; e.dispatchEvent(new Event('input', { bubbles: true })); });
-  const [popI] = await Promise.all([ctx.waitForEvent('page'), pg.evaluate(() => wkReport('open'))]);
-  await popI.waitForLoadState();
-  const ri = strip(await popI.content());
-  is(/보장 전략/.test(ri) && nos(ri).includes('내가없으면가족이버티는기간' + want.fam + '개월'), '결과지 「보장 전략」 장 — 같은 ' + want.fam + '개월');
-  is(/기준값/.test(ri) && /APEX 원칙\(가정\)/.test(ri) && /아주경제 2022\.05\.15/.test(ri), '결과지에도 기준값 표 · 출처 · 「APEX 원칙(가정)」');
-  await popI.close();
 
   head('카. 계산기 기능을 상담 말로 재구성 (판 X185)');
   await pg.evaluate(() => { const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); };
@@ -215,11 +205,6 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
   is(/남는 돈[\s\S]*비상금[\s\S]*가족 지키기[\s\S]*내 연금 지키기[\s\S]*대출[\s\S]*노후 연금/.test(ord), '고칠 순서가 재무설계의 집 순서 — 남는 돈 · 비상금 · 보장 → 대출 → 노후 연금');
   is(/먼저 \S/.test(ord) && /부터 같이 손봐요/.test(ord), '「먼저 ○○부터」 — 판정이 가능이 아닌 첫 칸을 짚는다');
   is(/추정/.test(fsT) && /세무 전문가/.test(fsT), '상속세는 「추정 · 세무 전문가 확인」 (2번)');
-  const [popF] = await Promise.all([ctx.waitForEvent('page'), pg.evaluate(() => wkReport('open'))]);
-  await popF.waitForLoadState();
-  const rf = strip(await popF.content());
-  is(/재무 점검/.test(rf) && /대출이 노후를 먹나요/.test(rf) && /고칠 순서/.test(rf), '결과지에 「대출 · 교육비 · 남길 것」 · 「고칠 순서」 장');
-  await popF.close();
 
   head('마. 위기감은 고객 숫자로만 (1번)');
   const all = texts.join('\n') + end;
@@ -228,8 +213,9 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
 
   head('바. 이름 · 저장 · 다시 열기 (3번)');
   is(/홍○○/.test(texts[0]) && !/홍길동/.test(all), '상담 화면도 가린 이름');
-  const saved = await pg.evaluate(() => localStorage.getItem('wk_v1') || '');
-  is(saved && !/홍/.test(saved), '이 브라우저에는 답만 — 이름이 없다');
+  /* 판 X189 — 답은 이 브라우저 한 칸(wk_v1)이 아니라 고객 칸 한 벌 안(wk_state)에 — 저장 · 불러오기에 같이 실립니다 */
+  const saved = await pg.$eval('#wk_state', (e) => e.value);
+  is(saved && /확인됨/.test(saved) && !/홍/.test(saved) && !(await pg.evaluate(() => localStorage.getItem('wk_v1'))), '답은 고객 칸(wk_state)에만 — 이름이 없고 브라우저 한 칸(wk_v1)은 안 씀');
   await pg.evaluate(() => { WK.i = 5; wkPaint(); wkClose(); wkOpen(); });
   is((await pg.evaluate(() => WK.i)) === 5 && (await pg.evaluate(() => wkResult().items.length)) === 6, '닫았다 열면 그 장 · 그 답 그대로');
   await pg.keyboard.press('Escape');

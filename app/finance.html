@@ -1320,19 +1320,6 @@ a { color: inherit; text-decoration: none; }
 @media print{.report-action-row,.report-safe-btn,.print-fallback-note{display:none!important}}
 
 .fx-krw{color:var(--ink-3,#7A8493);font-weight:700;font-size:.86em;white-space:nowrap}
-.gen-btn.rpt-btn{margin-top:0;min-height:44px;background:#3182F6}
-.rpt-ov{position:fixed;inset:0;z-index:9999;background:rgba(25,31,40,.45);display:flex;align-items:center;justify-content:center;padding:16px}
-.rpt-pn{background:#fff;color:#191F28;border-radius:20px;padding:22px 20px;width:100%;max-width:420px;font-family:inherit}
-.rpt-h{font-size:18px;font-weight:800}
-.rpt-d{font-size:14px;color:#4E5968;line-height:1.6;margin:6px 0 14px}
-.rpt-f{display:block;margin-bottom:12px;font-size:14px;font-weight:700;color:#4E5968}
-.rpt-f small,.rpt-c small{font-weight:500;color:#6B7684;font-size:13px}
-.rpt-f input{display:block;width:100%;box-sizing:border-box;margin-top:5px;min-height:44px;border:1px solid #D1D6DB;border-radius:10px;padding:8px 12px;font-size:16px;color:#191F28;background:#fff;font-family:inherit}
-.rpt-c{display:flex;align-items:center;gap:8px;min-height:44px;font-size:14px;font-weight:700;color:#191F28}
-.rpt-c input{width:20px;height:20px}
-.rpt-b{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.rpt-b button{flex:1 1 auto;min-height:44px;border:0;border-radius:12px;background:#3182F6;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;padding:0 14px}
-.rpt-b button.rpt-x{background:#F2F4F6;color:#4E5968}
 .gen-btn.wk-btn{margin-top:0;margin-bottom:8px;min-height:44px;background:#191F28}
 .wk-ov{position:fixed;inset:0;z-index:10050;background:#F2F4F6;color:#191F28;display:flex;flex-direction:column;font-family:Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
 .wk-top{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#fff;border-bottom:1px solid #E5E8EB}
@@ -1482,7 +1469,8 @@ var FIN_RULE={ dsrOk:35, dsrWarn:45, ltvOk:60, ltvWarn:70, saveGood:20, saveMid:
   essHigh:65, essMid:55,            /* 꼭 나가는 지출 비율 — 현금흐름 모델(안정형·균형형·성장형) */
   penWarnRatio:0.8,                 /* 노후 연금 — 목표의 80% 이상이면 주의, 100% 이상이면 가능 */
   taxWarn:5000,                     /* 남길 것 — 상속세 추정이 이보다 적으면 주의 */
-  insCancer:3000, insBrain:1000, insHeart:1000, insCancerWarn:2000   /* 보장 판정(최종보고서 · 보험 대시보드) */
+  insCancer:3000, insBrain:1000, insHeart:1000, insCancerWarn:2000,  /* 보장 판정(최종보고서 · 보험 대시보드) */
+  emergOk:6, emergWarn:3            /* 비상금 — 꼭 나가는 돈 몇 달치 (APEX 상담 원칙 · 가정) */
 };
 /* ═══════════════════════════════════════════════════════════
    계산기 한 곳 — finCore (판 X186) · 사장님 말씀 2026-10-22 「전부 손대고 막아봐 우선」
@@ -1619,6 +1607,20 @@ function finCore(){
   d.score=finScore(d).total;
   return d;
 }
+/* 판 X189 — 비상금으로 버티는 달은 <b>이 한 곳</b>에서 셉니다: 쌓인 비상금 ÷ 꼭 나가는 돈.
+   전에는 대시보드 · 팩트체크가 「꼭 나가는 돈 ÷ 매달 모으는 비상금(20만)」 을 개월로 적어 「18개월 · 충분」 이라 했고,
+   종합 재무설계는 「매달 모으는 돈 × 12」 를 쌓인 돈으로 짐작해 같은 고객에 「2,460만 부족」 이라 했습니다.
+   쌓인 비상금 칸이 비면 「모름」 입니다 — 0 이 아닙니다(1번). */
+function finEmerg(){
+  var e=document.getElementById('s_emerg_acc'), raw=e?String(e.value).trim():'', fixed=finSum(RPT_FIXED), need=fixed*FIN_RULE.emergOk;
+  if(raw===''||!isFinite(+raw)) return {known:false, acc:null, fixed:fixed, months:null, need:need};
+  var acc=Math.max(0,+raw);
+  return {known:true, acc:acc, fixed:fixed, months:fixed>0?Math.floor(acc/fixed):null, need:need};
+}
+/* 판 X189 — 저장할 때 본체로 「계산기가 센 부족액」 을 같이 보냅니다. 본체는 그동안 「목표 − 연금저축 월 납입액(s_pension)」
+   으로 따로 셌습니다 — 같은 고객에 다른 부족액이 다른 플랜으로 넘어갔습니다. 정의는 계산기 한 곳: 목표 생활비 − 받게 될 연금. */
+function finGapOut(){ try{ var C=finCore(); return {gap:Math.max(0,Math.round((C.target||0)-(C.totalPension||0))), years:Math.max(0,(+C.rage||0)-(+C.age||0)), from:'finCore'}; }catch(e){ return null; } }
+function finEmergKind(E){ return !E.known||E.months==null?'warn':(E.months>=FIN_RULE.emergOk?'good':(E.months>=FIN_RULE.emergWarn?'warn':'bad')); }
 function finCashKind(d){ return d.surplus>=0&&d.saveRatio>=FIN_RULE.saveGood?'good':d.surplus>=0?'warn':'bad'; }
 function finDebtKind(d){ return d.dsr<=FIN_RULE.dsrOk&&d.ltv<=FIN_RULE.ltvOk?'good':(d.dsr<=FIN_RULE.dsrWarn||d.ltv<=FIN_RULE.ltvWarn?'warn':'bad'); }
 var IP_RULE={ indepAge:25, spouseYears:3, meMonths:12, premLo:8, premHi:15 };
@@ -1694,7 +1696,7 @@ function ipBand(age){ age=Number(age)||0; for(var i=0;i<IP_AGE.length;i++) if(ag
       </div>
       <div class="sb-body">
         <div class="sf2">
-          <div class="sf"><label>고객명</label><input id="s_name" value="고객님" oninput="render()"></div>
+          <div class="sf"><label>고객명</label><input id="s_name" value="고객님" oninput="render()"></div><input type="hidden" id="wk_state" value="" autocomplete="off">
           <div class="sf"><label>현재 나이</label><input type="number" id="s_age" value="35" oninput="render()"></div>
         </div>
         <div class="sf2">
@@ -1794,7 +1796,7 @@ function ipBand(age){ age=Number(age)||0; for(var i=0;i<IP_AGE.length;i++) if(ag
       </div>
       <div class="sb-body">
         <div class="sf2">
-          <div class="sf"><label>비상금 적립/월(만원)</label><input type="number" id="s_emerg" value="20" oninput="render()"></div>
+          <div class="sf"><label>비상금 적립/월(만원)</label><input type="number" id="s_emerg" value="20" oninput="render()"></div><div class="sf"><label>지금 쌓인 비상금(만원)</label><input type="number" id="s_emerg_acc" placeholder="모르면 비워 두세요" oninput="render()"></div>
           <div class="sf"><label>연금저축/월(만원)</label><input type="number" id="s_pension" value="34" oninput="render()"></div>
         </div>
         <div class="sf2">
@@ -1976,7 +1978,6 @@ function ipBand(age){ age=Number(age)||0; for(var i=0;i<IP_AGE.length;i++) if(ag
 
   <button class="gen-btn" onclick="render()">📊 보고서 새로고침</button>
   <button class="gen-btn wk-btn" onclick="wkOpen()">🧭 함께 점검 상담</button>
-  <button class="gen-btn rpt-btn" onclick="rptPanel()">📄 고객 결과지 보기</button>
 </div>
 
 <!-- ══ 메인 콘텐츠 ══ -->
@@ -2026,7 +2027,6 @@ function ipBand(age){ age=Number(age)||0; for(var i=0;i<IP_AGE.length;i++) if(ag
         <div style="font-size:var(--t6,13px);color:var(--g5)" id="dash-date"></div>
         <button onclick="printReport()" class="print-btn">🖨️ 보고서 출력</button>
         <button onclick="wkOpen()" class="print-btn wk-btn">🧭 함께 점검 상담</button>
-        <button onclick="rptPanel()" class="print-btn rpt-btn">📄 고객 결과지</button>
       </div>
     </div>
 
@@ -3141,7 +3141,7 @@ function render() {
   const cfModel = essentialRatio >= FIN_RULE.essHigh ? '안정형' : essentialRatio >= FIN_RULE.essMid ? '균형형' : '성장형';
 
   /* 3대 팩트체크 */
-  const emergReserve = emerg > 0 ? Math.round(essential / emerg) : 0;
+  const EM = finEmerg();
   const insuranceOK = insurance > 0 && insurance <= totalIncome*IP_RULE.premHi/100;
   const simultaneousOK = surplus >= 0 && saving/totalIncome >= FIN_RULE.saveGood/100;
 
@@ -3293,10 +3293,10 @@ function render() {
       <div class="g3">
         ${[
           {ico:'⏱️', title:'① 생존 개월수', 
-            val: emergReserve > 0 ? emergReserve+'개월' : '미설정',
-            ok: emergReserve >= 6, warn: emergReserve >= 3,
-            desc:`필수지출 ${fmt(essential)}만원 기준. 권장 6개월+`,
-            action: emergReserve < 6 ? `비상금 월 ${fmt(Math.max(emerg,0))}만원으로 ${Math.max(6-emergReserve,0)}개월 추가 필요` : '✅ 비상자금 충분'
+            val: EM.known ? EM.months+'개월' : '모름',
+            ok: finEmergKind(EM)==='good', warn: finEmergKind(EM)!=='bad',
+            desc: EM.known ? `쌓인 비상금 ${fmt(EM.acc)}만원 ÷ 꼭 나가는 돈 ${fmt(EM.fixed)}만원. 권장 ${FIN_RULE.emergOk}개월+` : `쌓인 비상금 칸이 비어 있어요 — 꼭 나가는 돈 ${fmt(EM.fixed)}만원 기준으로 셉니다`,
+            action: !EM.known ? '「지금 쌓인 비상금」 칸을 채우면 셉니다' : EM.months < FIN_RULE.emergOk ? `${FIN_RULE.emergOk}개월치까지 ${fmt(Math.max(0,EM.need-EM.acc))}만원 더` : '✅ 비상자금 충분'
           },
           {ico:'✅', title:'② 유지 가능성',
             val: insuranceOK ? '유지 가능' : '점검 필요',
@@ -3331,7 +3331,8 @@ function render() {
       {l:'필수지출',v:essential,c:'#EF4444'},
       {l:'선택지출',v:choice,c:'#F59E0B'},
       {l:'저축·투자',v:saving,c:'#10B981'},
-      {l:'잉여금',v:Math.max(surplus,0),c:'#94A3B8'},
+      /* 판 X189 — 모자라면 0 으로 자르지 않고 「모자라는 돈 −99만」 이라고 적습니다. 막대에는 안 쌓습니다(쌓으면 지출+저축이 부풀어 보임) */
+      surplus>=0 ? {l:'잉여금',v:surplus,c:'#94A3B8'} : {l:'모자라는 돈',v:-surplus,c:'#F04452',neg:true},
     ];
     const maxV = Math.max(totalIncome, totalExpense+saving, 1);
     $('income-expense-chart').innerHTML = `
@@ -3342,7 +3343,7 @@ function render() {
           <div class="bar-lbl">월 소득</div>
         </div>
         <div style="flex:1;display:flex;flex-direction:column;align-items:stretch;gap:2px;justify-content:flex-end;height:120px">
-          ${items.filter(i=>i.v>0).map(i=>`
+          ${items.filter(i=>i.v>0&&!i.neg).map(i=>`
             <div style="height:${Math.round(i.v/maxV*120)}px;background:${i.c};border-radius:4px 4px 0 0;
               display:flex;align-items:center;justify-content:center;font-size:var(--t6,13px);font-weight:700;color:white;min-height:10px">
               ${i.v/maxV>0.08?fmt(i.v)+'만':''}
@@ -3353,7 +3354,7 @@ function render() {
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
         ${items.map(i=>`<div style="display:flex;align-items:center;gap:5px;font-size:var(--t6,13px)">
           <div style="width:8px;height:8px;border-radius:2px;background:${i.c}"></div>
-          <span style="color:var(--g6)">${i.l}</span><span style="font-weight:700">${fmt(i.v)}만</span>
+          <span style="color:var(--g6)">${i.l}</span><span style="font-weight:700${i.neg?';color:#F04452':''}">${i.neg?'−':''}${fmt(i.v)}만</span>
         </div>`).join('')}
       </div>
     `;
@@ -3756,7 +3757,7 @@ function renderInvestTab() {
 function renderFactCheck(essential, totalIncome, emerg, insurance, surplus, saving, pensionInvest, housing, loan, food, telecom, transport, edu, medical, choice) {
   if (!$('factcheck-full')) return;
 
-  const emergMonths = emerg>0?Math.round(essential/emerg):0;
+  const EMF = finEmerg(), emK = finEmergKind(EMF);
   const insRatio = totalIncome>0?Math.round(insurance/totalIncome*100):0;
   const savingRatio = totalIncome>0?Math.round(saving/totalIncome*100):0;
 
@@ -3769,12 +3770,12 @@ function renderFactCheck(essential, totalIncome, emerg, insurance, surplus, savi
           ${[
             {
               n:'① 생존 개월수 점검',
-              tag: emergMonths>=6?'fc-ok':emergMonths>=3?'fc-warn':'fc-bad',
-              tagLabel: emergMonths>=6?'양호':emergMonths>=3?'주의':'위험',
-              val:`${emergMonths}개월`,
-              desc:`Family Must Pay(가계 필수지출) ${fmt(essential)}만원 기준 비상자금 ${fmt(emerg*emergMonths)}만원`,
+              tag: emK==='good'?'fc-ok':emK==='warn'?'fc-warn':'fc-bad',
+              tagLabel: !EMF.known?'모름':emK==='good'?'양호':emK==='warn'?'주의':'위험',
+              val: EMF.known?`${EMF.months}개월`:'모름',
+              desc: EMF.known?`쌓인 비상금 ${fmt(EMF.acc)}만원 ÷ 꼭 나가는 돈 ${fmt(EMF.fixed)}만원`:`쌓인 비상금 칸이 비어 있어요 — 꼭 나가는 돈 ${fmt(EMF.fixed)}만원 기준으로 셉니다`,
               guide:'소득 상실 시 비상자금으로 버틸 수 있는 생존 개월이 몇 개월인지 확인',
-              action: emergMonths<6?`⚠️ ${6-emergMonths}개월 추가 필요. 월 ${fmt(emerg)}만원으로 ${Math.round((6-emergMonths)*essential/emerg)}개월 내 달성 계획`:'✅ 비상자금 충분 — 유지 관리만 하면 됩니다'
+              action: !EMF.known?'「지금 쌓인 비상금」 칸을 채우면 셉니다':EMF.months<FIN_RULE.emergOk?`⚠️ ${FIN_RULE.emergOk}개월치까지 ${fmt(Math.max(0,EMF.need-EMF.acc))}만원 더`+(emerg>0?` — 지금처럼 월 ${fmt(emerg)}만원씩이면 약 ${Math.ceil(Math.max(0,EMF.need-EMF.acc)/emerg)}개월`:''):'✅ 비상자금 충분 — 유지 관리만 하면 됩니다'
             },
             {
               n:'② 유지 가능성 점검',
@@ -5590,8 +5591,8 @@ function trCalc(){
   var savRate=inc>0?Math.round(sav/inc*100):0;
   var insRate=inc>0?Math.round(trNum('s_insurance',0)/inc*100):0;
   var live=fix+opt;
-  var needCash=live*6;
-  var haveCash=trNum('s_emerg',0)*12;
+  var EMT=finEmerg(), needCash=EMT.need;   /* 판 X189 — 비상금은 finEmerg 한 곳(쌓인 비상금 · 모르면 null) */
+  var haveCash=EMT.known?EMT.acc:null;
   var target=trNum('s_target',0);
   var nps=FC.ready.nps, retpen=FC.ready.retp, pennow=FC.ready.priv;
   var penTotal=FC.totalPension;
@@ -5614,8 +5615,10 @@ function trGrade(c){
   else {g.push({ok:-1,t:'저축률 '+c.savRate+'%',d:'지금 구조로는 목표를 만들기 어렵습니다. 저축을 먼저 떼는 순서로 바꿔야 합니다.'});}
 
   /* 쌓인 비상금 칸이 없어 「월 적립 × 12」 로 지어 셈하지 않습니다 — 모으고 있는지만 말하고 잔액은 묻습니다(1번) */
-  if(c.haveCash>0)g.push({ok:0,t:'비상금을 따로 모으고 있습니다',d:'매달 '+trMan(c.haveCash/12)+'씩이요. 지금까지 쌓인 비상금이 생활비 6개월치('+trMan(c.needCash)+')는 되는지 확인해 보시죠.'});
-  else g.push({ok:-1,t:'따로 모으는 비상금이 없습니다',d:'투자보다 이게 먼저입니다. 비상금이 없으면 결국 중간에 해지하게 됩니다.'});
+  var emM=trNum('s_emerg',0);
+  if(c.haveCash==null){ if(emM>0)g.push({ok:0,t:'비상금을 따로 모으고 있습니다',d:'매달 '+trMan(emM)+'씩이요. 지금까지 쌓인 금액을 알면 꼭 나가는 돈 '+FIN_RULE.emergOk+'개월치('+trMan(c.needCash)+')와 견줘 드릴게요.'}); else g.push({ok:-1,t:'따로 모으는 비상금이 없습니다',d:'투자보다 이게 먼저입니다. 비상금이 없으면 결국 중간에 해지하게 됩니다.'}); }
+  else if(c.haveCash>=c.needCash)g.push({ok:1,t:'비상금이 '+FIN_RULE.emergOk+'개월치 넘게 쌓여 있습니다',d:trMan(c.haveCash)+' — 급할 때 연금을 깨지 않아도 됩니다.'});
+  else g.push({ok:0,t:'비상금이 '+FIN_RULE.emergOk+'개월치에 못 미칩니다',d:'쌓인 '+trMan(c.haveCash)+' · 꼭 나가는 돈 '+FIN_RULE.emergOk+'개월치 '+trMan(c.needCash)+'까지 '+trMan(c.needCash-c.haveCash)+' 더.'});
 
   if(c.insRate>IP_RULE.premHi){g.push({ok:-1,t:'보험료가 소득의 '+c.insRate+'%',d:'조금 무겁습니다. 중복 담보를 정리하면 저축 여력이 생깁니다.'});}
   else if(c.insRate>=IP_RULE.premLo)g.push({ok:1,t:'보험료 비중 '+c.insRate+'%',d:'적정 범위('+IP_RULE.premLo+'~'+IP_RULE.premHi+'%)입니다. 지금은 손댈 필요 없습니다.'});
@@ -5670,8 +5673,8 @@ function renderTotalReport(){
 
   h+='<div class="g2" style="margin-bottom:12px">'+
     '<div class="card"><div class="card-hd"><div class="card-tag">SAFETY NET</div><div class="card-title">🛡 안전판 — 흔들려도 무너지지 않게</div></div><div class="card-body">'+
-      trLine('6개월 생활비',trMan(c.needCash),'이만큼은 바로 쓸 수 있어야 합니다')+
-      trLine('지금 확보한 비상금',trMan(c.haveCash),c.haveCash>=c.needCash?'충분합니다':'아직 '+trMan(c.needCash-c.haveCash)+' 부족합니다')+
+      trLine('꼭 나가는 돈 '+FIN_RULE.emergOk+'개월치',trMan(c.needCash),'이만큼은 바로 쓸 수 있어야 합니다')+
+      trLine('지금 쌓인 비상금',c.haveCash==null?'모름':trMan(c.haveCash),c.haveCash==null?'칸에 적으면 견줘 드립니다':c.haveCash>=c.needCash?'충분합니다':'아직 '+trMan(c.needCash-c.haveCash)+' 부족합니다')+
       trLine('한 달 보험료',trMan(trNum('s_insurance',0)),'소득의 '+c.insRate+'%')+
       trLine('갚아야 할 빚',trMan(c.debt),c.debt>0?'금리부터 확인하겠습니다':'없습니다')+
       '<div style="margin-top:11px;font-size:var(--t6,13px);color:#4B5A70;line-height:1.75;background:#F8FAFD;border-radius:11px;padding:11px 13px">'+
@@ -5691,7 +5694,7 @@ function renderTotalReport(){
 
   var order=[];
   if(c.rest<0)order.push(['1','매달 적자부터 막습니다','고정지출을 한 줄씩 확인해서 '+trMan(-c.rest)+'을 만듭니다. 여기가 안 되면 나머지가 다 무너집니다.','#DC2626']);
-  if(c.haveCash<c.needCash)order.push([''+(order.length+1),'비상금 '+trMan(c.needCash)+'을 채웁니다','파킹통장·CMA에 둡니다. 수익보다 <b>바로 꺼낼 수 있는 것</b>이 목적입니다.','#F59E0B']);
+  if(c.haveCash!=null&&c.haveCash<c.needCash)order.push([''+(order.length+1),'비상금 '+trMan(c.needCash)+'을 채웁니다','파킹통장·CMA에 둡니다. 수익보다 <b>바로 꺼낼 수 있는 것</b>이 목적입니다.','#F59E0B']);
   if(c.insRate>IP_RULE.premHi)order.push([''+(order.length+1),'보험료를 정리합니다','중복 담보를 걷어내면 매달 여유가 생깁니다. 보장을 줄이는 게 아니라 <b>겹친 걸 정리</b>하는 겁니다.','#7C3AED']);
   order.push([''+(order.length+1),'저축을 목적별로 나눕니다','단기(3년) · 중기(10년) · 장기(은퇴)로 나눠 담습니다. 같은 돈이라도 <b>목적이 다르면 그릇이 달라야</b> 합니다.','#2563EB']);
   if(c.gapRet>0)order.push([''+(order.length+1),'노후 부족분을 메울 적립 월 '+trMan(finReqMonthly(finCore().gapCapital,c.left,finNum('s_ret',5)))+'을 시작합니다(연 '+finNum('s_ret',5)+'% 가정)','연금저축·IRP 한도를 먼저 채우면 <b>연말정산으로 돌려받는 돈</b>도 생깁니다.','#059669']);
@@ -5743,7 +5746,7 @@ function trSave(){
   for(var i=0;i<els.length;i++){var el=els[i];if(el.type==='file')continue;inputs[el.id]=el.value;}
   var md=host?host.innerHTML:'';
   try{
-    parent.postMessage({type:'apexFinSave',title:'종합 재무설계 보고서 — '+c.name,md:md,inputs:inputs},'*');
+    parent.postMessage({type:'apexFinSave',title:'종합 재무설계 보고서 — '+c.name,md:md,inputs:inputs,fin:finGapOut()},'*');
     alert('고객 365일 저장 창을 띄웠습니다. 고객을 선택해 주세요.');
   }catch(e){alert('저장 요청에 실패했습니다.');}
 }
@@ -9574,13 +9577,17 @@ window.addEventListener('message',function(e){
   if(d.type==='apexFinCollect'){
     var inputs={};var els=document.querySelectorAll("input[id],select[id],textarea[id]");
     for(var i=0;i<els.length;i++){var el=els[i];if(el.type==='file')continue;inputs[el.id]=el.value;}
-    try{parent.postMessage({type:'apexFinSave',title:'재무설계 스냅샷',inputs:inputs},'*');}catch(x){}
+    try{parent.postMessage({type:'apexFinSave',title:'재무설계 스냅샷',inputs:inputs,fin:finGapOut()},'*');}catch(x){}
   }
   if(d.type==='apexFinAsk'){        /* 부모가 「살아 있냐」고 물으면 답한다 */
     if(window.parent!==window){try{parent.postMessage({type:'apexFinReady'},'*');}catch(x){}}
   }
   if(d.type==='apexFinLoad'){
     var ins=d.inputs||{};var ks=Object.keys(ins);
+    /* 판 X189 — 다른 고객이 들어오면 앞 고객의 점검 답을 비웁니다. 저장본(wk_state 가 실려 옴)은 그 답으로 돌아갑니다 */
+    try{ var wkE=document.getElementById('wk_state'), nmE=document.getElementById('s_name');
+      if(wkE && !Object.prototype.hasOwnProperty.call(ins,'wk_state') && Object.prototype.hasOwnProperty.call(ins,'s_name') && nmE && String(ins.s_name)!==String(nmE.value)) wkE.value='';
+    }catch(x){}
     for(var j=0;j<ks.length;j++){var el2=document.getElementById(ks[j]);if(el2&&(el2.tagName==="INPUT"||el2.tagName==="SELECT"||el2.tagName==="TEXTAREA")&&el2.type!=="file"){el2.value=ins[ks[j]];
       try{el2.dispatchEvent(new Event('input',{bubbles:true}));el2.dispatchEvent(new Event('change',{bubbles:true}));}catch(x){}}}
     try{if(typeof render==="function")render();}catch(x){}
@@ -11119,8 +11126,9 @@ function fsPlan(n){
   var cashWhy=cash.surplus<0?'매달 '+M(-cash.surplus)+'이 모자라요 — 모자란 만큼 빚이나 저축을 깨서 메우고 있는 셈이에요.'
     : cash.kind==='good'?'매달 '+M(cash.surplus)+'이 남고, 모으는 돈이 월급의 '+sr+'%예요 — 계산기 기준('+FIN_RULE.saveGood+'% 이상)을 넘어요.'
     : '매달 '+M(cash.surplus)+'이 남지만 모으는 돈은 월급의 '+sr+'%예요 — 계산기는 '+FIN_RULE.saveGood+'% 이상을 넉넉하다고 봐요. 남는 돈 일부를 모으는 쪽으로 옮기면 올라가요.';
-  var aE=fsAns('emerg'), eKind=emerg>0?(aE==='아니요'?'warn':'good'):'bad';
-  var eWhy=emerg>0?(aE==='아니요'?'매달 '+M(emerg)+'을 떼어 두고 계시지만, 따로 둔 비상금 통장은 없다고 하셨어요 — 통장만 나눠도 급할 때 연금을 깨지 않아요.':'매달 '+M(emerg)+'씩 따로 모으고 계세요 — 급할 때 연금을 깨지 않아도 돼요.')
+  /* 판 X189 — 쌓인 비상금을 알면 finEmerg 한 곳의 개월로 말합니다. 모르면 매달 모으는 것만 말하고 「충분」 이라 하지 않습니다 */
+  var aE=fsAns('emerg'), EF=finEmerg(), eKind=EF.known?finEmergKind(EF):(emerg>0?(aE==='아니요'?'warn':'warn'):'bad');
+  var eWhy=EF.known?('쌓인 비상금 '+M(EF.acc)+' — 꼭 나가는 돈 '+EF.months+'개월치예요'+(EF.months>=FIN_RULE.emergOk?'. 급할 때 연금을 깨지 않아도 돼요.':'. '+FIN_RULE.emergOk+'개월치까지 '+M(Math.max(0,EF.need-EF.acc))+' 더 쌓아요.')):emerg>0?(aE==='아니요'?'매달 '+M(emerg)+'을 떼어 두고 계시지만, 따로 둔 비상금 통장은 없다고 하셨어요 — 통장만 나눠도 급할 때 연금을 깨지 않아요.':'매달 '+M(emerg)+'씩 따로 모으고 계세요 — 지금까지 쌓인 금액을 알면 몇 달 버티는지 셀 수 있어요.')
     :'따로 모으는 비상금이 없어요 — 급한 일이 생기면 연금·저축부터 깨게 돼요.';
   /* 가족 지키기 — 기준값을 넘어도 사망보험금이 대출보다 적으면 가족에게 빚이 남습니다. 「기준값을 넘어요 · 가능」 과
      「가족이 버티는 기간 0개월」 이 한 장에 같이 서면 고객은 어느 쪽을 믿어야 할지 모릅니다(판 X187 · 0-1번) */
@@ -11449,34 +11457,6 @@ function rptData(opt){
     assumptions:assume
   };
 }
-/* 결과지 창 — 실명은 칸을 켜고 한 번 더 확인해야 들어갑니다(3번) */
-function rptPanel(){
-  var old=document.getElementById('rptPanel'); if(old){ old.remove(); }
-  if(!window.APEX_REPORT){ alert('결과지 엔진(apex_report_engine.js)을 못 불러왔습니다. 새로고침 해 주세요.'); return; }
-  var adv=''; try{ adv=localStorage.getItem('rpt_advisor')||''; }catch(e){}
-  var box=document.createElement('div'); box.id='rptPanel'; box.className='rpt-ov';
-  box.innerHTML='<div class="rpt-pn" role="dialog" aria-label="고객 결과지">'+
-    '<div class="rpt-h">📄 고객 결과지 (토스 테마)</div>'+
-    '<div class="rpt-d">지금 적힌 값으로 카톡용 HTML 한 장을 만듭니다. 연금은 「연금 시뮬레이션」에서 고른 상품 그대로입니다.</div>'+
-    '<label class="rpt-f"><span>근속연수(년) <small>— 적으면 퇴직금 세금 비교 장이 들어갑니다</small></span><input id="rptYears" type="number" inputmode="numeric" min="1" placeholder="모르면 비워 두세요"></label>'+
-    '<label class="rpt-f"><span>보내는 사람</span><input id="rptAdv" value="'+String(adv||'APEX 사업단').replace(/"/g,'&quot;')+'"></label>'+
-    '<label class="rpt-c"><input id="rptReal" type="checkbox"> 실명 넣기 <small>(기본은 가린 이름 '+rptMask((document.getElementById('s_name')||{}).value)+')</small></label>'+
-    '<div class="rpt-b"><button type="button" onclick="rptGo(\'open\')">결과지 열기</button><button type="button" onclick="rptGo(\'save\')">HTML 저장</button>'+
-    '<button type="button" class="rpt-x" onclick="document.getElementById(\'rptPanel\').remove()">닫기</button></div></div>';
-  box.addEventListener('click',function(e){ if(e.target===box) box.remove(); });
-  document.body.appendChild(box);
-  document.getElementById('rptReal').addEventListener('change',function(){
-    if(this.checked && !confirm('카톡으로 나가는 파일에 고객 실명이 들어갑니다. 넣을까요?')) this.checked=false;
-  });
-}
-function rptGo(kind){
-  var opt={ years:parseFloat((document.getElementById('rptYears')||{}).value)||0,
-            advisor:((document.getElementById('rptAdv')||{}).value||'').trim()||'APEX 사업단',
-            real:!!(document.getElementById('rptReal')||{}).checked };
-  try{ localStorage.setItem('rpt_advisor',opt.advisor); }catch(e){}
-  var d=rptData(opt);
-  if(kind==='save') APEX_REPORT.download(d); else APEX_REPORT.open(d);
-}
 </script>
 
 <script>
@@ -11504,7 +11484,7 @@ var WK_ITEMS=[
   {k:'nps',   q:'국민연금, 공단에서 예상액을 조회해 보셨나요?', why:'조회액을 넣으면 빈칸이 다시 계산돼요.', field:'s_nps', unit:'만원 / 월', todo:'**국민연금 공단 조회액** 확인하기'},
   {k:'acc',   q:'연금저축·IRP·달러·변액에 지금까지 쌓인 금액을 아시나요?', why:'알면 빈칸이 줄 수 있어요. 모르면 빼고 셉니다.', field:'s_pen_acc', unit:'만원', todo:'**연금저축·IRP·달러·변액 쌓인 금액** 알아보기'},
   {k:'sev',   q:'퇴직금(퇴직연금) 예상액과 근속연수를 아시나요?', why:'받는 방법에 따라 세금이 달라져요.', field:'s_severance', unit:'만원', extra:{k:'years', label:'근속연수', unit:'년'}, todo:'**회사에 퇴직금 예상액·근속연수** 물어보기'},
-  {k:'emerg', q:'급할 때 연금을 깨지 않아도 되는 비상금이 따로 있나요?', why:'비상금이 없으면 급할 때 연금부터 깨게 돼요.', todo:'**비상금 통장** 따로 만들기'},
+  {k:'emerg', q:'급할 때 연금을 깨지 않아도 되는 비상금이 따로 있나요?', why:'비상금이 없으면 급할 때 연금부터 깨게 돼요. 있으면 지금 쌓인 금액을 적어 주세요.', field:'s_emerg_acc', unit:'만원', todo:'**비상금 통장** 따로 만들기 · 쌓인 금액 확인하기'},
   {k:'care',  q:'아프거나 간병이 필요할 때 쓸 돈이 생활비와 따로 있나요?', why:'따로 없으면 생활비가 먼저 줄어요. 보장은 심사 결과에 따릅니다.', todo:'**치료·간병 자금** 따로 점검하기'},
   {k:'spouse',q:'한 분이 먼저 떠나면, 남은 분에게 매달 얼마가 들어오는지 아시나요?', why:'연금이 한 사람 이름으로만 있으면 함께 줄어들 수 있어요.', todo:'**혼자 남았을 때 들어오는 돈** 같이 세어 보기'},
   {k:'loan',  q:'대출은 은퇴 전에 다 끝나나요?', why:'은퇴 뒤에도 대출이 남으면 빈칸이 더 커져요.', todo:'**대출이 끝나는 때** 확인하기'},
@@ -11516,8 +11496,15 @@ var WK_ITEMS=[
 ];
 var WK_ANS={'확인됨':'예, 알아요','모름':'잘 모르겠어요','아니요':'아니요'};
 var WK={i:0};
-function wkState(){ var o=null; try{ o=JSON.parse(localStorage.getItem('wk_v1')||'null'); }catch(e){} return o||{ans:{},vals:{}}; }
-function wkSave(st){ try{ localStorage.setItem('wk_v1',JSON.stringify(st)); }catch(e){} }
+/* 판 X189 — 같이 점검한 답은 <b>고객 칸 한 벌 안</b>(숨은 칸 wk_state)에 둡니다.
+   전에는 이 기기 브라우저에 한 칸(wk_v1)만 있어서 —
+     · 다음 고객을 불러와도 앞 고객의 답이 그대로 떴고
+     · 고객 365일에 저장할 때 답이 빠졌고(칸만 저장)
+     · 새로고침하면 칸은 처음 값으로 가는데 「확인됨」 만 남아, 고객이 말하지 않은 숫자가 확인된 것으로 섰습니다.
+   이제 답은 칸과 같이 저장 · 불러오기 되고, 다른 고객이 들어오면 비웁니다(apexFinLoad). */
+function wkState(){ var o=null, e=document.getElementById('wk_state'); try{ o=JSON.parse((e&&e.value)||'null'); }catch(x){} if(!o||typeof o!=='object') o={}; o.ans=o.ans||{}; o.vals=o.vals||{}; return o; }
+function wkSave(st){ var e=document.getElementById('wk_state'); if(e) e.value=JSON.stringify(st); }
+try{ localStorage.removeItem('wk_v1'); }catch(e){}   /* 옛 한 칸은 지웁니다 — 남아 있으면 엉뚱한 고객의 답입니다 */
 function wkYears(){ var v=+(wkState().vals||{}).years; return v>0?v:0; }
 /* 결과지·정리 장이 함께 읽는 한 곳 — 답한 물음만, 표의 순서대로 */
 function wkResult(){
@@ -11692,8 +11679,8 @@ function wkEndHtml(){
       ? '지금 숫자로 은퇴 후 매달 **'+wkM(n.gap0)+'**이 비어요'+(n.unknown.length?'('+n.unknown.join(' · ')+' 빼고 셈)':'')+(n.withP>n.now?(n.withP>=n.goal?' — 오늘 제안을 더하면 **빈칸이 다 채워져요.**':' — 오늘 제안을 더하면 **'+wkM(n.goal-n.withP)+'**으로 줄어요.'):'.')
       : '지금 숫자로도 목표 생활비 **'+wkM(n.goal)+'**을 채워요.')+'</p>';
   if(R.todo.length) h+='<div class="wk-todo"><b>다음 만남 전까지 같이 채울 것</b><ol>'+R.todo.map(function(x){ return '<li>'+wkT(x)+'</li>'; }).join('')+'</ol></div>';
-  h+='<div class="wk-end"><button type="button" onclick="wkReport(\'open\')">📄 결과지 열기</button><button type="button" onclick="wkReport(\'save\')">HTML 저장</button>'+
-    '<button type="button" class="wk-g" onclick="wkReset()">처음부터 · 답 지우기</button></div>';
+  /* 결과지는 빼기로 하셨습니다(판 X189) — 정리 장에는 답 지우기만 둡니다 */
+  h+='<div class="wk-end"><button type="button" class="wk-g" onclick="wkReset()">처음부터 · 답 지우기</button></div>';
   return h;
 }
 function wkMeter(){
@@ -11727,16 +11714,11 @@ function wkSet(id,v){
   var m=document.querySelector('#wkOv .wk-meter'); if(m) m.outerHTML=wkMeter();
 }
 function wkVal(k,v){ var st=wkState(); st.vals[k]=v; wkSave(st); }
-function wkReport(kind){
-  var adv='APEX 사업단'; try{ adv=localStorage.getItem('rpt_advisor')||adv; }catch(e){}
-  var d=rptData({years:wkYears(), advisor:adv, real:false});
-  if(kind==='save') APEX_REPORT.download(d); else APEX_REPORT.open(d);
-}
-function wkReset(){ if(!confirm('같이 점검한 답을 지우고 처음부터 할까요? (계산기에 적은 숫자는 그대로 둡니다)')) return; try{ localStorage.removeItem('wk_v1'); }catch(e){} WK.i=0; WK.key=''; wkPaint(); }
+function wkReset(){ if(!confirm('같이 점검한 답을 지우고 처음부터 할까요? (계산기에 적은 숫자는 그대로 둡니다)')) return; wkSave({ans:{},vals:{}}); WK.i=0; WK.key=''; wkPaint(); }
 function wkKey(e){ if(!document.getElementById('wkOv')) return; if(/INPUT|TEXTAREA/.test((e.target||{}).tagName||'')) return;
   if(e.key==='ArrowRight') wkGo(1); else if(e.key==='ArrowLeft') wkGo(-1); else if(e.key==='Escape') wkClose(); }
 function wkOpen(){
-  if(!window.APEX_REPORT){ alert('결과지 엔진(apex_report_engine.js)을 못 불러왔습니다. 새로고침 해 주세요.'); return; }
+  if(!window.APEX_REPORT){ alert('함께 점검 화면을 그리는 파일(apex_report_engine.js)을 못 불러왔습니다. 새로고침 해 주세요.'); return; }
   if(!document.getElementById('wkCss')){ var c=document.createElement('style'); c.id='wkCss'; c.textContent=APEX_REPORT.scopedCss('.wkx'); document.head.appendChild(c); }
   wkClose();
   var ov=document.createElement('div'); ov.id='wkOv'; ov.className='wk-ov';

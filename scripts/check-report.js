@@ -122,9 +122,11 @@ is(!/지금 그대로면/.test(bt), '목표를 모르면 「지금 그대로면�
 head('아. 계산기 — 이름을 가린 채 내보내나 (3번)');
 const fin = fs.readFileSync(path.join(ROOT, 'app', 'finance.html'), 'utf8');
 is(/<script src="apex_report_engine\.js"><\/script>/.test(fin) && /<script src="apex_report_icons\.js"><\/script>/.test(fin), '엔진·아이콘을 <script src> 한 줄씩으로 싣는다');
-is((fin.match(/onclick="rptPanel\(\)"/g) || []).length >= 1, '「고객 결과지」 단추가 있다');
+/* 판 X189 — 결과지는 빼기로 하셨습니다. 엔진은 「함께 점검 상담」 화면을 그리므로 남고, 단추만 없습니다 */
+is(!/rptPanel|wkReport|고객 결과지 보기/.test(fin) && /apex_report_engine\.js/.test(fin), '「고객 결과지」 단추는 없고, 엔진은 함께 점검 상담을 위해 남아 있다');
 is(/name=opt\.real&&raw&&raw!=='고객님'\? raw : rptMask\(raw\)/.test(fin), '실명은 opt.real 일 때만 — 기본은 rptMask');
-is(/confirm\('카톡으로 나가는 파일에 고객 실명이 들어갑니다/.test(fin), '실명을 켜면 한 번 더 묻는다');
+/* 판 X189 — 결과지(카톡 파일)를 빼면서 실명을 켜는 칸도 없어졌습니다. 계산기 안 화면은 가린 이름만 씁니다(3번) */
+is(!/rptReal|실명 넣기/.test(fin), '실명을 넣는 칸이 없다 — 결과지와 함께 뺌');
 is(/saveP>0&&priv<=0&&!ap\?'※ 지금 모으고 계신 연금저축·IRP·달러·변액/.test(fin), '지금 모으는 연금저축·IRP 를 빼고 셌으면 뺐다고 밝힌다(1번)');
 /* 판 X180 — 쌓인 금액 칸 · 탭과 결과지가 한 곳(psAccPlan)에서 센다 · 「불가」 대신 「점검 필요」 */
 is(/id="s_pen_acc"[^>]*placeholder="모름"/.test(fin) && !/id="s_pen_acc"[^>]*value="/.test(fin), '「쌓인 금액」 칸이 있고, 비어 있으면 모름이다(0 을 미리 넣지 않는다 · 1번)');
