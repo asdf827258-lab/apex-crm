@@ -1,4 +1,4 @@
-/* 함께 점검 상담을 중심으로 — 결과지는 빼고, 답은 고객마다, 숫자는 한 곳에서 (판 X189)
+/* 함께 점검 상담을 중심으로 — 결과지는 빼고, 답은 고객마다, 숫자는 한 곳에서 (판 X189 · X192)
 
    사장님 말씀 2026-10-24 「결과지 빼고 … 이걸 토대로 만들거야」 · 「응 시작해봐」.
    계산기(app/finance.html)를 「함께 점검 상담」 중심으로 고친 것을 실제로 열어 봅니다.
@@ -17,6 +17,9 @@
      라. 모자라는 돈을 0 으로 자르지 않는다 — 현금흐름 그림의 「잉여금 0만」 → 「모자라는 돈 −99만」
      마. 저장할 때 계산기가 센 부족액(목표 − 받게 될 연금)을 같이 보낸다 — 본체가 「목표 − 연금저축 납입액」 으로 따로 세던 자리
      바. 「함께 점검 상담」 31장이 다 서고 페이지 오류 0
+     사. 판 X192 (「둘다 함께 해 모아줘」) — 물음 네 벌 · 발표 세 벌을 「함께 점검 상담」 한 곳으로. 팩트파인딩 · PPT 탭 단추와
+         우하단 「발표」 단추를 없애고, 첫 장 · 정리 장의 문으로 엽니다. 상담 가이드 · 가이드맵은 WK_ITEMS 한 벌을 보여 주고,
+         본체는 계산기가 보낸 부족액을 받습니다
 
    되돌려 보기 — wkState 를 localStorage('wk_v1') 로 되돌리면 나 가 · finEmerg 의 acc/fixed 를 fixed/s_emerg 로 바꾸면 다 가 ·
                현금흐름 항목을 Math.max(surplus,0) 로 되돌리면 라 가 · apexFinSave 에서 fin 을 빼면 마 가 웁니다. */
@@ -101,6 +104,31 @@ const head = (t) => console.log('\n' + t);
     window.postMessage({ type: 'apexFinCollect' }, '*'); setTimeout(() => ok(null), 1500); }));
   const wantGap = await pg.evaluate(() => window.__want);
   is(out && out.fin && out.fin.gap === wantGap, '저장 쪽지의 부족액 = 목표 − 받게 될 연금 (' + (out && out.fin ? out.fin.gap : '없음') + ' = ' + wantGap + ')');
+
+  head('사. ★★ 물음 · 발표는 「함께 점검 상담」 한 곳으로 (판 X192 · 사장님 말씀 「둘다 함께 해 모아줘」)');
+  const doors = await pg.evaluate(() => ({
+    tabs: [...document.querySelectorAll('.top-tab-grid .report-tab')].map((x) => x.textContent.replace(/\s+/g, ' ').trim()),
+    float: !!document.getElementById('apexPresentBtn') || !!document.getElementById('apexInfBox') }));
+  is(!doors.tabs.some((t) => /팩트파인딩|재무설계 PPT/.test(t)) && !doors.float, '팩트파인딩 · PPT 탭 단추와 우하단 「발표」 단추가 없다 — 문은 함께 점검 상담에만');
+  await pg.evaluate(() => { wkOpen(); WK.i = 0; wkPaint(); });
+  await pg.click('#wkOv .wk-doors button');
+  const ffOn = await pg.evaluate(() => ({ on: (document.getElementById('tab-factfind') || {}).classList.contains('on'), wk: !!document.getElementById('wkOv'), back: !!document.querySelector('#tab-factfind .ff-wk') }));
+  is(ffOn.on && !ffOn.wk && ffOn.back, '첫 장의 「칸을 한 번에 채우기」 → 팩트파인딩 입력지가 열리고, 거기서 함께 점검으로 돌아가는 단추가 있다');
+  await pg.evaluate(() => { wkOpen(); WK.i = wkSlides().length - 1; wkPaint(); });
+  await pg.click('#wkOv .wk-door-ppt');
+  is(await pg.evaluate(() => (document.getElementById('tab-plan') || {}).classList.contains('on') && !document.getElementById('wkOv')), '정리 장의 「PPT 12장으로 보기」 → PPT 가 열린다');
+  await pg.evaluate(() => { wkOpen(); WK.i = wkSlides().length - 1; wkPaint(); });
+  await pg.click('#wkOv .wk-door-deck');
+  is(await pg.evaluate(() => !!document.getElementById('apexTrackSheet') && !!document.querySelector('#apexTrackSheet #apexInf')), '정리 장의 「발표 덱으로 이어 보기」 → 트랙 고르기 판 (물가상승률도 그 안에)');
+  await pg.evaluate(() => { if (typeof apexClosePick === 'function') apexClosePick(); wkSave({ ans: {}, vals: {} }); wkAnswer('nps', '모름'); });
+  const g = await pg.evaluate(() => { switchTab('guide', document.querySelector('.report-tab')); const t = (document.getElementById('tab-guide') || {}).innerText || '';
+    switchTab('final', null); const m = (document.getElementById('tab-final') || {}).innerText || ''; return { t, m, qs: WK_ITEMS.map((x) => x.q) }; });
+  is(g.qs.every((q) => g.t.includes(q)) && !/현재 암·뇌·심 진단비가 각각 얼마인지 알고 계신가요/.test(g.t), '상담 가이드의 질문 = 함께 점검의 ' + g.qs.length + '가지 (따로 적던 질문은 없음)');
+  is(/국민연금, 공단에서 예상액을 조회해 보셨나요\?\s*모름/.test(g.t), '상담 가이드에 그 고객의 답(모름)이 같이 선다');
+  is(/함께 점검 상담에서/.test(g.m) && !/지금 매월 남는 돈이 보험·연금·대출을 동시에 감당할 수 있나요/.test(g.m), '가이드맵의 「고객에게 보여줄 질문」 → 함께 점검 상담의 흐름');
+  const idx = require('fs').readFileSync(path.join(ROOT, 'app', 'index.html'), 'utf8');
+  const hd = (idx.match(/d\.type!=='apexFinSave'\)return;[\s\S]{0,1600}?\n\}\);/) || [''])[0];
+  is(/var G=d\.fin;/.test(hd) && !/I\.s_pension/.test(hd), '본체가 저장할 때 계산기가 보낸 부족액(d.fin)을 그대로 받는다 — 「목표 − 연금저축 납입액」 셈 0');
 
   head('바. 오류');
   is(!errs.length, '페이지 오류 0' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));

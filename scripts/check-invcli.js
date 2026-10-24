@@ -78,7 +78,8 @@ function handSimp(m, annual, months) {
   await page.waitForTimeout(500);
   const follow = await page.evaluate(() => ({
     r: (document.getElementById('r_inflation') || {}).value,
-    a: (document.getElementById('apexInf') || {}).value
+    /* 판 X192 — 발표 물가상승률 칸은 떠 있지 않고 고르기 판 안에 섭니다. 발표 덱으로 넘기는 값(apexInf)을 봅니다 */
+    a: String(apexInf())
   }));
   is(follow.r === '4.5', '부동산 물가상승률이 같은 숫자를 따라온다 — 지금 ' + follow.r);
   is(follow.a === '4.5', '발표 물가상승률도 따라온다 (설계사가 따로 잡아 둔 게 없을 때) — 지금 ' + follow.a);

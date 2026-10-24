@@ -68122,10 +68122,12 @@ window.addEventListener('message',function(e){
   osRepSaveToClient('finance',(d.title||'재무설계 스냅샷'),(d.md?{html:d.md,inputs:(d.inputs||{})}:{inputs:(d.inputs||{})}));
   /* 계산기가 말한 부족액을 들고 세 플랜으로 넘어갈 수 있게 적어 둔다.
      계산기의 정의를 그대로 쓴다 — 목표 월 생활비 − 받게 될 연금. */
+  /* 판 X192 — 부족액은 <b>계산기가 센 값(d.fin)</b>을 그대로 받습니다. 전에는 여기서 「목표 − s_pension」 으로 따로 셌는데,
+     s_pension 은 받게 될 연금이 아니라 <b>연금저축 월 납입액</b>이라 같은 고객에 다른 부족액이 플랜으로 넘어갔습니다(5번).
+     옛 계산기라 d.fin 이 없으면 셈을 짓지 않고 비워 둡니다(1번). */
   try{
-    var I=d.inputs||{};
-    var want=+I.s_target||0, have=+I.s_pension||0;
-    if(want>0&&want>have)finGapSet(want-have,(+I.s_rage||65)-(+I.s_age||40),'재무설계 계산기');
+    var G=d.fin;
+    if(G&&isFinite(+G.gap)&&+G.gap>0)finGapSet(+G.gap,(+G.years>0?+G.years:0),'재무설계 계산기');
   }catch(_e){}
 });
 
