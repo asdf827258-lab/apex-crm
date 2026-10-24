@@ -1,4 +1,4 @@
-/* 함께 점검 상담을 중심으로 — 결과지는 빼고, 답은 고객마다, 숫자는 한 곳에서 (판 X189 · X192)
+/* 함께 점검 상담을 중심으로 — 결과지는 빼고, 답은 고객마다, 숫자는 한 곳에서 (판 X189 · X192 · X196)
 
    사장님 말씀 2026-10-24 「결과지 빼고 … 이걸 토대로 만들거야」 · 「응 시작해봐」.
    계산기(app/finance.html)를 「함께 점검 상담」 중심으로 고친 것을 실제로 열어 봅니다.
@@ -20,6 +20,8 @@
      사. 판 X192 (「둘다 함께 해 모아줘」) — 물음 네 벌 · 발표 세 벌을 「함께 점검 상담」 한 곳으로. 팩트파인딩 · PPT 탭 단추와
          우하단 「발표」 단추를 없애고, 첫 장 · 정리 장의 문으로 엽니다. 상담 가이드 · 가이드맵은 WK_ITEMS 한 벌을 보여 주고,
          본체는 계산기가 보낸 부족액을 받습니다
+     아. 판 X196 — 입력 칸에 견본 숫자를 미리 넣지 않음(「🧪 견본 넣기」 단추로만 · 넣는 동안 띠) · 소득 · 지출이 비면 분석 대신
+         「채워 주세요」 카드 · 발표 덱으로 비운 나이 · 이름 · 은퇴 나이를 짐작해 보내지 않음
 
    되돌려 보기 — wkState 를 localStorage('wk_v1') 로 되돌리면 나 가 · finEmerg 의 acc/fixed 를 fixed/s_emerg 로 바꾸면 다 가 ·
                현금흐름 항목을 Math.max(surplus,0) 로 되돌리면 라 가 · apexFinSave 에서 fin 을 빼면 마 가 웁니다. */
@@ -39,6 +41,8 @@ const head = (t) => console.log('\n' + t);
   pg.on('pageerror', (e) => errs.push(e.message)); pg.on('dialog', (d) => d.accept());
   await pg.goto('file://' + path.join(ROOT, 'app', 'finance.html'));
   await pg.waitForFunction(() => typeof wkOpen === 'function' && typeof finCore === 'function' && window.APEX_REPORT, null, { timeout: 15000 });
+  /* 판 X196 — 칸이 비어 열리므로 견본 고객을 넣고 잽니다 */
+  await pg.evaluate(() => finSample());
   const set = (id, v) => pg.evaluate(([id, v]) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); }, [id, v]);
 
   head('가. 결과지는 뺐다 · 함께 점검 상담은 그대로');
@@ -69,6 +73,9 @@ const head = (t) => console.log('\n' + t);
   const back = await pg.evaluate(() => wkResult().items.map((x) => x.status + ' ' + x.value).join(','));
   is(back === '확인됨 350만 원', '저장본을 불러오면 그 고객의 답과 숫자가 같이 돌아온다 — ' + back);
   await pg.reload(); await pg.waitForFunction(() => typeof wkState === 'function', null, { timeout: 15000 });
+  const rl0 = await pg.evaluate(() => ({ t: document.getElementById('s_target').value, empty: document.body.classList.contains('fin-empty') }));
+  is(rl0.t === '' && rl0.empty, '새로고침하면 칸이 비어 열린다 — 견본을 미리 넣지 않고 「채워 주세요」 카드 (판 X196)');
+  await pg.evaluate(() => finSample());
   const rl = await pg.evaluate(() => ({ n: Object.keys(wkState().ans).length, t: document.getElementById('s_target').value }));
   is(rl.n === 0, '새로고침하면 칸과 답이 같이 처음으로 — 「확인됨」 만 남아 처음 값(' + rl.t + ')을 확인된 것으로 세우지 않는다');
 
@@ -129,6 +136,33 @@ const head = (t) => console.log('\n' + t);
   const idx = require('fs').readFileSync(path.join(ROOT, 'app', 'index.html'), 'utf8');
   const hd = (idx.match(/d\.type!=='apexFinSave'\)return;[\s\S]{0,1600}?\n\}\);/) || [''])[0];
   is(/var G=d\.fin;/.test(hd) && !/I\.s_pension/.test(hd), '본체가 저장할 때 계산기가 보낸 부족액(d.fin)을 그대로 받는다 — 「목표 − 연금저축 납입액」 셈 0');
+
+  head('아. ★★ 견본은 단추로만 · 비면 세우지 않는다 (판 X196)');
+  const fresh = await b.newPage(); const ferrs = []; fresh.on('pageerror', (e) => ferrs.push(e.message));
+  await fresh.goto('file://' + path.join(ROOT, 'app', 'finance.html'));
+  await fresh.waitForFunction(() => typeof finSample === 'function' && document.getElementById('finEmptyCard'), null, { timeout: 15000 });
+  const f0 = await fresh.evaluate(() => {
+    const KEEP = ['s_inf', 's_ret', 'r_mortgage_rate', 'r_inflation'];
+    const preset = [...document.querySelectorAll('input[id]')].filter((e) => /^(s|r|ins|inh)_/.test(e.id) && e.type !== 'hidden' && !KEEP.includes(e.id) && String(e.value).trim() !== '').map((e) => e.id + '=' + e.value);
+    const vis = (el) => !!el && getComputedStyle(el).display !== 'none';
+    return { preset, empty: document.body.classList.contains('fin-empty'), card: vis(document.getElementById('finEmptyCard')),
+      panes: [...document.querySelectorAll('.tab-pane')].filter(vis).length, url: apexDeckUrl('w') };
+  });
+  is(f0.preset.length === 0, '열자마자 고객 칸에 견본 숫자가 없다 (가정 값 물가 · 수익률 · 대출 금리만)' + (f0.preset.length ? ' — ' + f0.preset.slice(0, 5).join(' ') : ''));
+  is(f0.empty && f0.card && f0.panes === 0, '칸이 비면 분석 화면을 세우지 않고 「채워 주세요」 카드만 — 0 을 늘어놓지 않는다');
+  is(!/[?&](age|name|start)=/.test(f0.url), '발표 덱으로 넘길 때 비운 나이 · 이름 · 은퇴 나이를 짐작해 채우지 않는다 — ' + f0.url.split('?')[1]);
+  await fresh.click('.fin-sample-btn'); await fresh.waitForTimeout(300);
+  const f1 = await fresh.evaluate(() => ({ s: document.body.hasAttribute('data-sample'), bar: getComputedStyle(document.getElementById('finSampleBar')).display !== 'none', empty: document.body.classList.contains('fin-empty'), name: document.getElementById('s_name').value }));
+  is(f1.s && f1.bar && !f1.empty && f1.name === '홍길동', '「🧪 견본(홍길동) 넣기」 → 견본이 서고 「견본」 띠가 보인다');
+  await fresh.fill('#s_age', '44'); await fresh.waitForTimeout(200);
+  is(!(await fresh.evaluate(() => document.body.hasAttribute('data-sample'))), '설계사가 칸을 고치면 견본 띠가 내려간다');
+  await fresh.reload(); await fresh.waitForFunction(() => typeof finSample === 'function' && document.getElementById('finEmptyCard'), null, { timeout: 15000 });
+  await fresh.evaluate(() => window.postMessage({ type: 'apexFinLoad', inputs: { s_name: '김○○', s_age: '50', s_gross: '7200' } }, '*'));
+  await fresh.waitForTimeout(500);
+  const f2 = await fresh.evaluate(() => ({ empty: document.body.classList.contains('fin-empty'), h: (document.querySelector('#finEmptyCard h3') || {}).textContent || '' }));
+  is(f2.empty && /지출/.test(f2.h), '소득만 들어오고 지출이 비면 「남는 돈 600 · 흑자」 를 세우지 않고 「지출 칸을 채우면」 — ' + f2.h);
+  is(!ferrs.length, '빈 계산기 페이지 오류 0' + (ferrs.length ? ' — ' + ferrs[0] : ''));
+  await fresh.close();
 
   head('바. 오류');
   is(!errs.length, '페이지 오류 0' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));

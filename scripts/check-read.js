@@ -370,6 +370,10 @@ function 잣대(){
          「다 고쳐졌다」 로 보입니다 (8번). 견본 이름은 홍철호입니다 (3번). */
       if(f==='app/ba.html'){ try{ await p2.evaluate(()=>{ localStorage.clear(); doSample(); go('edit'); });
         await p2.waitForTimeout(800); }catch(e){} }
+      /* 판 X196 — 계산기도 이제 칸이 비어 열립니다(견본을 미리 안 넣음). 빈 화면은 「채워 주세요」 카드 하나라
+         그대로 재면 분석 화면을 하나도 안 재고 「다 고쳐졌다」 로 보입니다 — 「견본 넣기」 를 누르고 잽니다(8번) */
+      if(f==='app/finance.html'){ try{ await p2.evaluate(()=>{ if(typeof finSample==='function') finSample(); });
+        await p2.waitForTimeout(800); }catch(e){} }
       r = await p2.evaluate(()=>window.__read(document.body));
     }catch(e){}
     await p2.close();

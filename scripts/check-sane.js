@@ -70,6 +70,9 @@ const BROKEN = [
   page.on('pageerror', e => errs.push(String(e).slice(0, 150)));
   await page.goto(base + '/app/finance.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2600);
+  /* 판 X196 — 계산기 칸은 이제 비어서 열립니다(견본을 미리 넣지 않음 · 1번). 이 자는 견본 고객으로 셈을 재므로 「견본 넣기」 를 누릅니다 */
+  await page.evaluate(() => { if (typeof finSample === 'function') finSample(); });
+  await page.waitForTimeout(400);
 
   console.log('\n[1] 사람이 넣을 만한 값 한 벌을 넣는다');
   const put = await page.evaluate((P) => {

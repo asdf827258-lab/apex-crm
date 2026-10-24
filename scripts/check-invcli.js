@@ -56,6 +56,9 @@ function handSimp(m, annual, months) {
   page.on('pageerror', e => errs.push('' + e));
   await page.goto('http://127.0.0.1:' + PORT + '/app/finance.html', { waitUntil: 'load', timeout: 90000 });
   await page.waitForTimeout(2200);
+  /* 판 X196 — 계산기 칸은 이제 비어서 열립니다(견본을 미리 넣지 않음 · 1번). 이 자는 견본 고객으로 셈을 재므로 「견본 넣기」 를 누릅니다 */
+  await page.evaluate(() => { if (typeof finSample === 'function') finSample(); });
+  await page.waitForTimeout(400);
 
   console.log('\n[1] 물가상승률 — 눈에 보이는 자리에 하나만');
   const pin = await page.evaluate(() => {

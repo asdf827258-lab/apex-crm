@@ -55,6 +55,8 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
   let dialogs = 0; pg.on('dialog', (d) => { dialogs++; d.accept(); });
   await pg.goto('file://' + path.join(ROOT, 'app', 'finance.html'));
   await pg.waitForFunction(() => window.APEX_REPORT && window.PENSION && typeof wkOpen === 'function', null, { timeout: 15000 });
+  /* 판 X196 — 칸이 비어 열리므로 견본 고객을 넣고 잽니다 */
+  await pg.evaluate(() => finSample());
   await pg.evaluate(() => {
     try { localStorage.removeItem('wk_v1'); } catch (e) {}
     const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); };
