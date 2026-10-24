@@ -43,6 +43,7 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 const PAGE = fs.readFileSync(path.join(ROOT, 'app/bcd-lecture.html'), 'utf8');
 const WBP = fs.readFileSync(path.join(ROOT, 'app/bcd-workbook.html'), 'utf8');
 const DATA = fs.readFileSync(path.join(ROOT, 'app/bcd-data.js'), 'utf8');
+const ARTJS = fs.readFileSync(path.join(ROOT, 'app/bcd-art.js'), 'utf8');
 const strip = t => t.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
 const IDX = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
 /* 주석을 떼고 본다 — 쪽지 글을 코드로 읽지 않게 */
@@ -61,11 +62,12 @@ is(!/data:image\/(png|jpe?g|webp|gif);base64/i.test(PAGE) && !/<img[^>]+src="(?!
 is(!/story\s*:\s*\{\s*[a-zA-Z]+\s*:\s*'[^']/.test(CODE) && !/tl\s*:\s*\[\s*\{/.test(CODE), '이야기 · 장면을 미리 적어 둔 줄이 없다');
 
 console.log('\n[3] 서버 · 바깥 스크립트 · tnum (7번 · 4-1번)');
-is([CODE, strip(WBP), strip(DATA)].every(t => !/\bfetch\s*\(|XMLHttpRequest|supabase|\/\.netlify\//i.test(t)), '덱 · 폰 워크북 · 글 한 벌 모두 서버를 부르는 줄이 없다');
+is([CODE, strip(WBP), strip(DATA), strip(ARTJS)].every(t => !/\bfetch\s*\(|XMLHttpRequest|supabase|\/\.netlify\//i.test(t)), '덱 · 폰 워크북 · 글 한 벌 · 장면 그림 모두 서버를 부르는 줄이 없다');
 const srcs = t => (t.match(/<script[^>]+src="([^"]+)"/gi) || []).map(x => /src="([^"]+)"/i.exec(x)[1]);
-is(srcs(PAGE).join() === 'bcd-data.js' && srcs(WBP).join() === 'bcd-data.js', '바깥 스크립트를 안 들여온다 — 둘 다 옆 파일 bcd-data.js 하나만 읽는다');
+is(srcs(PAGE).sort().join() === 'bcd-art.js,bcd-data.js' && srcs(WBP).join() === 'bcd-data.js', '바깥 스크립트를 안 들여온다 — 덱은 옆 파일 bcd-data.js · bcd-art.js, 폰 워크북은 bcd-data.js 만 읽는다');
+is(!/<image\b|href=["']https?:|xlink:href|data:image\/(png|jpe?g|webp|gif)/i.test(ARTJS), '장면 그림이 남의 사진 · 바깥 그림을 끌어오지 않는다 — 전부 직접 그린 SVG (9번)');
 is(![PAGE, WBP].some(t => /tnum/.test(t)), '숫자 글꼴 tnum 을 안 켠다');
-is(!/const (LIFE|FF|OBS|WB) = \[/.test(CODE) && !/const (LIFE|FF|OBS|WB) = \[/.test(strip(WBP)) && !/'내가 말한 시간보다 고객이/.test(CODE + strip(WBP)),
+is(!/const (LIFE|FF|OBS|WB) = \[/.test(CODE) && !/const (LIFE|FF|OBS|WB) = \[/.test(strip(WBP)) && !/'내가 말한 시간보다 고객이 말한 시간이 길었나'/.test(CODE + strip(WBP)),
   '★ 생애 지도 · 팩트파인딩 · 관찰 체크 · 워크북 물음을 덱 · 폰 워크북에 따로 적지 않았다 — bcd-data.js 한 벌 (5번)');
 
 const srv = http.createServer((q, s) => {
@@ -150,8 +152,9 @@ const srv = http.createServer((q, s) => {
     await p.emulateMedia({ reducedMotion: 'reduce' });   /* 움직이는 중인 자리를 넘침으로 잘못 재지 않게 */
     const ov = [];
     const all = await p.evaluate(ov => { const o = []; for (let i = 0; i < D.length; i++) { show(i); o.push((D[i].ty === 'news' ? '\u0000뉴스\u0000' : '') + $('stage').innerText);
+      /* svg 안의 모양은 그 svg 가 잘라서 그립니다(해의 빛무리가 땅 아래로 내려가도 화면 밖으로 안 나갑니다) — 그래서 svg 자신만 잽니다 */
       const sl = document.querySelector('#stage .sl'), st = $('stage').getBoundingClientRect();
-      if (sl.scrollHeight > sl.clientHeight + 2 || [...sl.querySelectorAll('*')].some(x => x.getBoundingClientRect().bottom > st.bottom + 1)) ov.push(i + 1); }
+      if (sl.scrollHeight > sl.clientHeight + 2 || [...sl.querySelectorAll('*')].some(x => !(x.closest('svg') && x.tagName.toLowerCase() !== 'svg') && x.getBoundingClientRect().bottom > st.bottom + 1)) ov.push(i + 1); }
       show(0); return { o, ov }; }, ov).then(r => { ov.push(...r.ov); return r.o; });
     is(ov.length === 0, '어느 장도 화면(16:9) 밖으로 넘치지 않는다' + (ov.length ? ' ← ' + ov.join(',') + '장' : ''));
     await p.emulateMedia({ reducedMotion: 'no-preference' });
@@ -185,12 +188,12 @@ const srv = http.createServer((q, s) => {
     const links = nsl.flatMap(x => x.a);
     is(links.every(([h, t]) => t === '_blank' && /^https:\/\//.test(h)), '장 안의 링크는 모두 새 창으로 원문 · 네이버를 연다');
     is(links.some(([h]) => /^https:\/\/search\.naver\.com\/search\.naver\?where=news&query=/.test(h)), '네이버 최신 기사 찾기 링크가 있다(주소만 엽니다)');
-    is(/\/\* 메멘토 모리[\s\S]{0,80}직접 그렸습니다/.test(PAGE) && await p.evaluate(() => { show(D.findIndex(s => s.ty === 'memento')); return !!document.querySelector('#stage .skull path') && !!document.querySelector('#stage .glass .sandTop') && !!document.querySelector('#stage .candle .flame'); }),
+    is(/메멘토 모리 — 정물/.test(ARTJS) && /직접 그린 SVG/.test(ARTJS) && await p.evaluate(() => { show(D.findIndex(s => s.ty === 'memento')); return !!document.querySelector('#stage .skull path') && !!document.querySelector('#stage .glass .sandTop') && !!document.querySelector('#stage .candle .flame'); }),
       '메멘토 모리 장 — 해골 · 모래시계 · 촛불이 직접 그린 SVG 로 선다');
 
     console.log('\n[11] 움직임 — 돌고, 줄이기를 켜면 멈춘다');
     const an = await p.evaluate(() => document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('#stage')).map(a => a.animationName));
-    is(an.indexOf('sandTop') >= 0 && an.indexOf('flicker') >= 0 && an.indexOf('float') >= 0, '모래가 떨어지고 · 촛불이 흔들리고 · 해골이 떠 있다 (' + [...new Set(an)].slice(0, 6).join(',') + ')');
+    is(an.indexOf('sandTop') >= 0 && an.indexOf('flicker') >= 0 && an.indexOf('smoke') >= 0, '모래가 떨어지고 · 촛불이 흔들리고 · 연기가 오른다 (' + [...new Set(an)].slice(0, 8).join(',') + ')');
     await p.evaluate(() => show(0));
     is(await p.evaluate(() => document.getAnimations().some(a => a.animationName === 'pop')), '표지의 C 가 튀어나온다');
     await p.emulateMedia({ reducedMotion: 'reduce' });
@@ -255,6 +258,38 @@ const srv = http.createServer((q, s) => {
     await p.keyboard.press('Escape');
     is(await p.evaluate(() => $('ov').hidden && !$('stageBox').hidden), 'Esc 로 닫힌다');
     await p.evaluate(() => { S = JSON.parse(window.__keep); save(); });   /* 앞 점검이 적어 둔 것을 되돌려 놓습니다 — [9] 가 그것을 봅니다 */
+
+    console.log('\n[16] 🎬 장면 · 🤫 1분 · 🕰 인생의 하루 (판 X186 — 「내용 / 이미지가 너무 허접해 감동도 없고」)');
+    await p.evaluate(() => { page('deck'); show(0); });
+    const sc = await p.evaluate(() => {
+      const S2 = SLIDES.filter(s => s.art || s.ty === 'scene');
+      return { n: SLIDES.filter(s => s.ty === 'scene').length, miss: S2.filter(s => !window.BCD_ART || !BCD_ART[s.art]).map(s => s.art || s.tag),
+        long: SLIDES.filter(s => s.ty === 'scene').flatMap(s => s.lines).filter(l => l.replace(/<[^>]+>/g, '').length > SERIF_LEN),
+        bigs: SLIDES.filter(s => s.ty === 'big').length, names: (window.BCD_ART_NAMES || []).length };
+    });
+    is(sc.n >= 12 && sc.miss.length === 0, '장면 ' + sc.n + '장 — 가리키는 그림이 모두 bcd-art.js 에 있다' + (sc.miss.length ? ' ← 없는 그림: ' + sc.miss.join(',') : ''));
+    is(sc.long.length === 0, '장면 한 줄이 ' + 'SERIF_LEN 자를 안 넘는다(줄이 접혀 그림을 가리지 않게)' + (sc.long.length ? ' ← ' + sc.long[0] : ''));
+    is(sc.bigs <= 4, '글자만 있는 큰 장이 ' + sc.bigs + '장으로 줄었다 — 나머지는 그림이 있는 장면');
+    const scr = await p.evaluate(() => { const o = []; D.forEach((s, i) => { if (s.ty === 'scene') { show(i); const st = $('stage'); o.push({ svg: !!st.querySelector('svg.art'), shade: !!st.querySelector('.shade'), ln: st.querySelectorAll('.ln').length, want: s.lines.length }); } }); return o; });
+    is(scr.every(x => x.svg && x.shade && x.ln >= x.want), '장면마다 화면 가득 그림 · 그늘 · 글 줄이 선다');
+    /* 1분 침묵 — 고리가 실제로 찬다 */
+    const si = await p.evaluate(async () => { const i = D.findIndex(s => s.ty === 'silence'); show(i); const r = document.querySelector('#stage .ring-p'); const a = parseFloat(getComputedStyle(r).strokeDashoffset);
+      $('tmrGo').click(); await new Promise(z => setTimeout(z, 2300)); const b = parseFloat(r.style.strokeDashoffset); stopTmr(); return { n: D.filter(s => s.ty === 'silence').length, a, b, txt: $('stage').innerText }; });
+    is(si.n === 2, '1분 침묵이 처음과 끝에 두 번 — 같은 1분으로 열고 닫는다');
+    is(si.a > 560 && si.b < si.a && si.b > 0, '「1분 시작」 을 누르면 고리가 차오른다 (' + si.a.toFixed(0) + ' → ' + si.b.toFixed(0) + ')');
+    /* 인생의 하루 — 통계를 안 쓰고, 넣은 두 수로만 셈 */
+    const ck0 = await p.evaluate(() => { const i = D.findIndex(s => s.ty === 'clock'); CK.age = ''; CK.life = ''; show(i); return { txt: $('stage').innerText, sun: !!document.querySelector('#stage .sunArc') }; });
+    is(/두 수를 넣으면/.test(ck0.txt) && !/\d+시 \d+분/.test(ck0.txt), '두 수를 안 넣으면 시각을 지어 말하지 않는다 — 평균 수명을 채우지 않는다 (1번)');
+    await p.fill('#ckAge', '47'); await p.fill('#ckLife', '90');
+    const ck1 = await p.evaluate(() => ({ txt: $('ckNow').innerText, cx: +document.querySelector('#stage .sunAt .sunCore').getAttribute('cx'), col: getComputedStyle(document.querySelector('#stage h2')).color }));
+    is(/오후 12시 32분/.test(ck1.txt), '47 ÷ 90 × 24 → 「오후 12시 32분」 (' + ck1.txt.split('\n')[0] + ')');
+    await p.fill('#ckAge', '20');
+    const cx2 = await p.evaluate(() => +document.querySelector('#stage .sunAt .sunCore').getAttribute('cx'));
+    is(cx2 < ck1.cx, '나이를 바꾸면 해가 그 자리로 옮겨 간다 (' + ck1.cx.toFixed(0) + ' → ' + cx2.toFixed(0) + ')');
+    await p.fill('#ckAge', '95');
+    is(/지금 나이보다 커야/.test(await p.textContent('#ckNow')), '살고 싶은 나이가 지금 나이보다 작으면 시각을 안 지어내고 그렇다고 말한다');
+    is(ck1.col === 'rgb(255, 255, 255)', '장 이름표가 위 띠의 시계(.clock)와 안 부딪힌다 — 제목이 흰 글씨');
+    await p.evaluate(() => { CK.age = ''; CK.life = ''; });
 
     console.log('\n[14] 📱 폰 워크북 — 적고 · 남고 · 그리고 · 뽑고 · 지운다 (bcd-workbook.html)');
     const q = await ctx.newPage({ viewport: { width: 390, height: 844 } });
