@@ -11,9 +11,13 @@
      마. 여는 문 셋 — 왼쪽 아래 · 대시보드 머리 · 함께 점검 상담 정리 장
      바. 목표 생활비가 비면 「30일 중」 을 세우지 않는다 · 견본이면 견본 띠 · 「요건 충족 시」 · 「심사 결과에 따릅니다」
      사. 폰(390)에서 옆으로 넘치지 않고 글자 13px 아래가 없다 · 페이지 오류 0
+     아. 판 X199 (「성별 기본값도 고쳐주고, 사업자 세금 / 퇴직금 / 국민연금 예상수령 / 주택연금 칸도 넣어줘」)
+         · 성별은 비어서 시작하고, 비면 연금 셈은 남성 기준이라고 밝힌다 · 성별을 읽는 자리는 finSex 하나
+         · 네 칸의 숫자는 finNpsEst · finSevOut · finHouseOut · finBizTax 그대로 — 칸이 비면 숫자 0 개 · 그 칸으로 가는 단추
+         · 상담 「퇴직금」 물음의 근속연수가 계산기 칸(s_sev_years)으로 들어간다
 
    되돌려 보기 — 카드 이유를 다른 글로 바꾸면 나 가 · finMissing 막이를 빼면 가 가 · GLC_TAB 의 debt 를 다른 탭으로 바꾸면 라 가 ·
-               정리 장의 wk-door-glc 를 빼면 마 가 웁니다. */
+               정리 장의 wk-door-glc 를 빼면 마 가 · 성별에 selected 남성을 되살리면 아 가 · 사업자 세금에서 지방소득세를 빼면 아 가 웁니다. */
 const path = require('path');
 const ROOT = path.join(__dirname, '..');
 let bad = 0;
@@ -104,6 +108,51 @@ const head = (t) => console.log('\n' + t);
   is(!g3.sample, '설계사가 칸을 고친 뒤에는 견본 띠가 없다');
   await pg.evaluate(() => finSample()); await pg.waitForTimeout(200);
   is(await pg.evaluate(() => { glcOpen(); const s = !!document.querySelector('#glcOv .glc-sample'); glcClose(); return s; }), '견본(홍길동)으로 보는 동안은 견본 띠가 선다');
+
+  head('아. 성별 · 노후 돈 · 세금 네 칸 (판 X199)');
+  const fs = require('fs'), src = fs.readFileSync(path.join(ROOT, 'app/finance.html'), 'utf8');
+  const fresh = await ctx.newPage(); const ferrs = []; fresh.on('pageerror', (e) => ferrs.push(e.message)); fresh.on('dialog', (d) => d.accept());
+  await fresh.goto('file://' + path.join(ROOT, 'app/finance.html'));
+  await fresh.waitForFunction(() => typeof glcMoneyHtml === 'function' && window.APEX_REPORT, null, { timeout: 15000 });
+  await fresh.waitForTimeout(300);
+  const s0 = await fresh.evaluate(() => ({ g: document.getElementById('s_gender').value, sx: finSex() }));
+  is(s0.g === '' && !s0.sx.known && s0.sx.sex === '남성', '성별은 비어서 시작한다(「모름 · 고르세요」) — 비면 연금 셈은 남성 기준');
+  const sexReads = (src.match(/s_gender['"]\)[^;\n]{0,80}indexOf\(\s*['"](남|여)/g) || []).length + (src.match(/gtext\(\s*['"]s_gender['"]\s*,\s*['"]남성['"]\)/g) || []).length;
+  is(sexReads === 0, '성별을 「남/여」 로 따로 읽는 자리가 finSex 밖에 없다 — 전에는 다섯 곳이 비면 남성 · 여성으로 갈렸습니다' + (sexReads ? ' — ' + sexReads + '곳' : ''));
+  is(/opt:\[\['','모름 · 고르세요'\],'남성','여성'\]/.test(src), '입력지(팩트파인딩)의 성별도 「모름」 이 먼저');
+  const M = async (setup) => fresh.evaluate((st) => { (new Function(st))(); const box = document.createElement('div'); box.innerHTML = glcMoneyHtml();
+    const g = (k) => { const e = box.querySelector('[data-m="' + k + '"]'); return e ? { cls: e.className, chip: (e.querySelector('.glc-chip') || {}).textContent, nb: [...e.querySelectorAll('.glc-mv .nb, .hb-v')].map((x) => x.textContent), t: e.textContent, bars: !!e.querySelector('.hb'), fill: !!e.querySelector('.glc-fill') } : null; };
+    return { nps: g('nps'), sev: g('sev'), house: g('house'), biz: g('biz'), sex: !!box.querySelector('.glc-sex'), all: box.textContent,
+      ne: finNpsEst(), so: finSevOut(), ho: finHouseOut(), bz: finBizTax(), man: (x) => x }; }, setup.toString().replace(/^[^{]*\{|\}$/g, ''));
+  const e0 = await M(() => {});
+  is(['nps', 'sev', 'house', 'biz'].every((k) => e0[k] && e0[k].nb.length === 0 && e0[k].fill), '칸이 비면 네 칸 모두 숫자 0 개 · 그 칸으로 가는 단추');
+  is(e0.sex && /남성 기준/.test(e0.all), '성별이 비면 「남성 기준이에요 · 성별 고르기」 를 밝힌다');
+  const e1 = await M(() => { const set = (o) => { for (const k in o) { const e = document.getElementById(k); e.value = o[k]; e.dispatchEvent(new Event('input', { bubbles: true })); } };
+    set({ s_age: '45', s_rage: '60', s_gross: '6000', s_severance: '15000', s_realty: '50000', s_self: '300', s_gender: '여성' }); });
+  is(e1.nps.chip === '추정' && e1.nps.nb[0] === String(Math.round(e1.ne.monthly)) && /노후 계산에는 넣지 않았어요/.test(e1.nps.t), '국민연금 칸이 비면 「추정」 — 값은 finNpsEst 그대로(' + e1.nps.nb[0] + ') · 노후 계산에는 안 넣었다고 밝힌다');
+  is(e1.sev.chip === '근속연수 모름' && e1.sev.fill && e1.sev.nb.length >= 1 && !e1.sev.bars, '근속연수가 비면 퇴직소득세를 세우지 않고 「근속연수 넣기」');
+  is(e1.house.chip === '추정' && e1.house.nb[0] === Number(e1.ho.man).toLocaleString('ko-KR') && /심사 결과에 따릅니다/.test(e1.house.t), '주택연금 = finReady 의 housePension 그대로(' + e1.house.nb[0] + '만) · 심사 결과에 따릅니다');
+  const wantBiz = Math.round(await fresh.evaluate(() => APEX_REPORT.calc.incomeTax(3600) * (1 + APEX_REPORT.calc.RULE.localTax) / 12));
+  is(e1.biz.nb[0] === String(wantBiz) && /공제를 빼기 전 어림/.test(e1.biz.t) && /합쳐 신고하면/.test(e1.biz.t), '사업자 세금 = 종합소득세 기본세율 × (1 + 지방소득세) ÷ 12 (' + e1.biz.nb[0] + '만 · 공제 전 어림 · 월급과 합치면 늘 수 있다고 밝힘)');
+  is(!e1.sex, '성별을 고르면 「남성 기준」 쪽지가 내려간다');
+  /* 상담 「퇴직금」 물음에서 근속연수를 적으면 계산기 칸으로 */
+  const w = await fresh.evaluate(() => { wkOpenAt('sev'); wkAnswer('sev', '확인됨'); const i = document.getElementById('wkIn2'); i.value = '20'; i.dispatchEvent(new Event('input', { bubbles: true })); const v = document.getElementById('s_sev_years').value; wkClose(); return v; });
+  const e2 = await M(() => {});
+  const T = await fresh.evaluate(() => { const t = APEX_REPORT.calc.retireTax(15000, 20), m = APEX_REPORT.man; return [m(t.total), m(t.irpEarly), m(t.irpLate)]; });
+  is(w === '20' && e2.sev.chip === '세금 추정' && e2.sev.nb.slice(-3).join() === T.join(), '상담에서 근속연수 20년을 적으면 s_sev_years 로 들어가고, 퇴직소득세 셋 = retireTax 그대로 — ' + e2.sev.nb.slice(-3).join(' · '));
+  const e3 = await M(() => { const e = document.getElementById('s_rage'); e.value = '50'; e.dispatchEvent(new Event('input', { bubbles: true })); });
+  is(e3.house.nb.length === 0 && /아직 가입할 수 있는 나이가 아니에요/.test(e3.house.t), '은퇴 나이가 가입 나이 전이면 주택연금 숫자를 세우지 않는다');
+  const e4 = await M(() => { const set = (o) => { for (const k in o) { const e = document.getElementById(k); e.value = o[k]; e.dispatchEvent(new Event('input', { bubbles: true })); } }; set({ s_self: '', s_jobg: 'self', s_nps: '80' }); });
+  is(e4.biz.nb.length === 0 && /자영업자로 고르셨는데/.test(e4.biz.t), '자영업자인데 사업 소득이 비면 숫자 없이 「칸이 비었어요」');
+  is(e4.nps.chip === '공단 조회액' && e4.nps.nb[0] === '80', '국민연금 조회액을 적으면 「공단 조회액 80」');
+  is(!/NaN|undefined|Infinity/.test(e1.all + e2.all + e3.all + e4.all), '네 칸에 NaN · undefined 0');
+  await fresh.evaluate(() => { const e = document.getElementById('s_gender'); e.value = ''; e.dispatchEvent(new Event('change', { bubbles: true })); try { switchTab('pension', document.querySelector('.report-tab[onclick*="\'pension\'"]')); } catch (x) {} });
+  await fresh.waitForTimeout(300);
+  is(await fresh.evaluate(() => !!document.querySelector('#pension-sim .fin-sexnote')), '연금 시뮬레이션 탭도 성별이 비면 「남성 기준으로 셈했어요」 를 밝힌다');
+  const fl = await fresh.evaluate(() => { glcOpen(); glcFill('s_sev_years'); return { ov: !!document.getElementById('glcOv'), f: document.activeElement && document.activeElement.id }; });
+  is(!fl.ov && fl.f === 's_sev_years', '「근속연수 넣기 ›」 는 한눈에 결과를 닫고 그 칸에 손이 가게 한다');
+  is(!ferrs.length, '페이지 오류 0' + (ferrs.length ? ' — ' + ferrs[0] : ''));
+  await fresh.close();
 
   head('사. 폰 폭 · 오류');
   const g4 = await pg.evaluate(() => { glcOpen(); const o = document.getElementById('glcOv'), body = o.querySelector('.wk-body');
