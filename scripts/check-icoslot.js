@@ -99,7 +99,7 @@ const SEED = `
   console.log('\n[2] 🙅 <b>본체에서는 한 자리도 안 바꾼다</b> (사장님 말씀)');
   /* 앱이 가진 화면을 그대로 돕니다 — 목록을 따로 안 적습니다 (5번) */
   const 돌기 = await p.evaluate(async () => {
-    const out = { 화면: 0, 칸: 0, 그림: 0, 앞머리: 0, 이모지: 0, 빈칸: [] };
+    const out = { 화면: 0, 칸: 0, 그림: 0, 앞머리: 0, 이모지: 0, 빈칸: [], 도구그림: 0, 칸머리: 0, 칸머리그림: 0 };
     let tabs = [];
     try { tabs = Object.keys(TABS).reduce((a, g) => a.concat(TABS[g].items.map(x => x.id)), []); }
     catch (e) { tabs = ['home']; }
@@ -111,7 +111,11 @@ const SEED = `
       await new Promise(r => setTimeout(r, 140));
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       out.화면++;
-      out.그림   += document.querySelectorAll('.tab-pane.on svg.ico').length;
+      /* ⚠ 2026-10-24 (판 X185) · 여기 <b>🧰 도구 화면만 예외</b>로 빼 둔 줄이
+         하루 있었습니다(판 X184). 사장님이 라이브를 보시고 <b>「이모지는 전으로
+         돌려 이상해」</b> 하셔서 <b>예외를 걷었습니다</b> — 이제 도구 화면도
+         똑같이 0 이어야 합니다. 판 X157 과 같은 답이 두 번 나온 자리입니다. */
+      out.그림 += document.querySelectorAll('.tab-pane.on svg.ico').length;
       out.앞머리 += document.querySelectorAll('.tab-pane.on .ico-l').length;
       [].slice.call(document.querySelectorAll(SL)).forEach(e => {
         out.칸++;
@@ -119,13 +123,37 @@ const SEED = `
         if (s) out.이모지++; else if (!e.children.length) out.빈칸.push(t);
       });
     }
+    /* ★ 🧰 도구(tools)는 <b>TABS 에 없습니다</b> — 아래 띠에서만 여는 화면이라
+       위 목록에 안 잡힙니다. 그래서 따로 들릅니다. 처음에 이것을 빠뜨려
+       「0개」 가 나왔고, 예외가 죽은 줄인 줄 알았습니다 (자를 고쳤습니다). */
+    try{ go('tools');
+      await new Promise(r => setTimeout(r, 160));
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      out.화면++;
+      out.그림 += document.querySelectorAll('.tab-pane.on svg.ico').length;
+      /* ★ 칸 머리도 따로 셉니다 — 도구 화면은 접혀 있어 칸 머리만 보입니다.
+         여기에 그림이 서면 그것이 「또 바꾼 것」 입니다. */
+      out.칸머리   = document.querySelectorAll('.tlp-head .e').length;
+      out.칸머리그림 = document.querySelectorAll('.tlp-head .e svg.ico').length;
+    }catch(e){}
     go('home'); await new Promise(r => setTimeout(r, 300));
     return out;
   });
   console.log('      화면 ' + 돌기.화면 + '개 · 그림 자리 ' + 돌기.칸 + '곳 · 글자가 선 자리 ' + 돌기.이모지 + '곳');
   is(돌기.화면 > 20 && 돌기.칸 > 0, '  화면을 돌며 그림 자리를 찾았다 — ' + 돌기.칸 + '곳');
   is(돌기.그림 === 0,
-     '  ★★ 본체에 <b>선 그림이 한 곳도 없다</b> — svg.ico ' + 돌기.그림 + '개');
+     '  ★★ 본체에 <b>선 그림이 한 곳도 없다</b> — 🧰 도구 화면까지 세어 svg.ico ' +
+     돌기.그림 + '개');
+
+  console.log('\n[2-1] 🧰 <b>도구 화면도 이모지 그대로</b>인가 (판 X185)');
+  /* ★ 이 화면은 접혀 있어 <b>칸 머리만</b> 보입니다 — 화면 전체만 세면
+     접힌 속의 변화를 놓칩니다. 칸 머리를 따로 봅니다.
+     ⚠ 2026-10-24 에 이 화면만 선 그림으로 해 봤다가(판 X184) 사장님이
+       <b>「이모지는 전으로 돌려 이상해」</b> 하셔서 되돌렸습니다. 판 X157 과
+       <b>같은 답이 두 번</b> 나온 자리입니다 — 다시 켜지 마십시오. */
+  is(돌기.칸머리 > 0 && 돌기.칸머리그림 === 0,
+     '  🧰 도구 화면의 <b>칸 머리가 이모지</b>다 — 선 그림 ' +
+     돌기.칸머리그림 + '/' + 돌기.칸머리);
   is(돌기.앞머리 === 0,
      '  ★★ 글 앞머리도 <b>안 갈아 끼운다</b> — .ico-l ' + 돌기.앞머리 + '개');
   is(돌기.빈칸.length === 0,

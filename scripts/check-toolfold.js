@@ -167,7 +167,32 @@ const 접은바닥 = 1100;
      '그 수가 <b>앱이 아는 수(tlpCount)</b> 와 같다 — '+합.앱이아는수+
      '개 (세는 곳이 둘이 아닙니다 · 5번)');
 
-  sec('[6] 조용한가');
+  sec('[7] 🖼 <b>그림 자리가 비지 않았나</b> (판 X185)');
+  /* ⚠ 2026-10-24 · 이 화면만 선 그림으로 해 봤다가(판 X184) 사장님이 라이브를
+     보시고 <b>「이모지는 전으로 돌려 이상해」</b> 하셔서 되돌렸습니다.
+     ★ 「이모지 그대로」 는 <b>이모지가 선다</b>는 뜻이지 아무것도 없다는 뜻이
+       아닙니다 — 빈 칸이 생기면 되돌리다 지운 것입니다 (1번).
+     ★ 다시 선 그림으로 켜지지 않았는지도 여기서 봅니다 (check-icoslot 과
+       묻는 각도가 다릅니다 — 그쪽은 본체 전부, 여기는 접힌 이 화면). */
+  await pg.evaluate(()=>{ tlpSetQ(''); });
+  await pg.waitForTimeout(300);
+  await pg.evaluate(()=>document.querySelectorAll('#dynPane .tlp-head')[1].click());
+  await pg.waitForTimeout(420);
+  const 그림 = await pg.evaluate(()=>{
+    var d=document.getElementById('dynPane'), 빈=0;
+    [].slice.call(d.querySelectorAll('.tlp-head .e,.tlp-row .e')).forEach(function(e){
+      if(!(e.textContent||'').trim() && !e.querySelector('svg')) 빈++;
+    });
+    return { 줄:d.querySelectorAll('.tlp-row .e').length,
+             줄그림:d.querySelectorAll('.tlp-row .e svg.ico').length,
+             빈:빈 };
+  });
+  is(그림.빈 === 0, '그림 자리에 <b>빈 칸이 없다</b> — ' + 그림.빈 + '곳');
+  is(그림.줄 > 0 && 그림.줄그림 === 0,
+     '칸 머리도 줄도 <b>이모지 그대로</b>다 — 선 그림 ' + 그림.줄그림 + '/' + 그림.줄 +
+     ' (판 X185 · 사장님 말씀 「이모지는 전으로 돌려」)');
+
+  sec('[8] 조용한가');
   is(errs.length === 0, '터진 곳이 없다'+(errs.length?(' ← '+errs.slice(0,2).join(' · ')):''));
 
   await b.close(); srv.close();
