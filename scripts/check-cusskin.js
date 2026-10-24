@@ -93,8 +93,8 @@ const SEED = () => {
   const ago = n => new Date(Date.now()-n*864e5).toISOString().slice(0,10);
   OSC.loaded=true; OSC.busy=false; OSC.err='';
   /* ★ 단계를 <b>AP</b> 로 둡니다 — apex-stage 표에 <b>판단(q)</b> 이 있는
-     단계라 🧭 칸이 무엇을 세우는지 볼 수 있습니다. 보낼 말은 AP 에 표가
-     없어 안 섭니다(그것도 [7] 에서 봅니다 · 1번).                        */
+     단계라 🧭 칸이 무엇을 세우는지 볼 수 있습니다. 보낼 말은 판 X180 부터
+     AP 에도 표(상황별 터치)가 있어 <b>그 표대로</b> 섭니다([7] 에서 봅니다 · 1번).                        */
   OSC.list=[{id:'c1',name:'홍길동',name_masked:'홍○○',advisor_id:'me',stage:'AP',created_at:ago(60)},
             {id:'c2',name:'홍길순',name_masked:'홍○○',advisor_id:'me',stage:'AP',created_at:ago(30)}];
   AR.loaded=true; AR.busy=''; AR.cliRows=[]; AR.db=[];
@@ -214,12 +214,18 @@ const LOOK = () => {
   });
   is(/AP/.test(V.t) && /판단/.test(V.t),
      '  🧭 칸이 <b>지금 단계(AP)</b> 를 말하고 판단을 세운다');
-  /* ★★ 💬 보낼 말 — <b>표에 있는 단계에만</b> 섭니다. apex-stage 의 말 표에는
-     미접촉·TA·부재·거절·기고객·입원 만 있습니다. AP 에는 <b>없습니다</b> —
-     그러니 AP 에서 보낼 말이 서면 그것은 <b>지어낸 말</b>입니다 (1번).
+  /* ★★ 💬 보낼 말 — <b>표에 있는 단계에만</b> 섭니다 (1번). 판 X180 부터 AP 에도 표가 있습니다 —
+     apex-stage 의 상황별 터치(TOUCH · TA→CS). 그래서 AP 에서 서는 보낼 말은 <b>그 표의 글</b>이어야
+     하고, 표 밖의 글(지어낸 말)이 서면 안 됩니다. 글이 표에서 왔는지는 check-touch 가 낱낱이 봅니다.
      단계를 TA 로 바꿔 <b>있을 때는 서는지</b>도 같이 봅니다.              */
-  is(!V.lab.some(x => x.indexOf('💬 보낼 말') >= 0),
-     '  ★ AP 에서는 💬 보낼 말이 <b>안 선다</b> — 표에 없는 말을 지어내지 않습니다 (1번)');
+  const AP_TC = await p.evaluate(() => {
+    const host = document.getElementById('cmPanels');
+    const L = (typeof APEX_STAGE !== 'undefined' && APEX_STAGE.touchOf) ? APEX_STAGE.touchOf('AP') : [];
+    const ks = [].slice.call((host || document).querySelectorAll('.cus-tc-s')).map(e => e.getAttribute('data-k'));
+    return { want: L.map(x => x.k).join(','), got: ks.join(',') };
+  });
+  is(V.lab.some(x => x.indexOf('💬 보낼 말') >= 0) && AP_TC.want && AP_TC.got === AP_TC.want,
+     '  ★ AP 에서는 💬 보낼 말이 <b>표(TOUCH)의 상황 그대로</b> 선다 — ' + (AP_TC.got || '없음') + ' (표: ' + (AP_TC.want || '없음') + ')');
   const SAY = await p.evaluate(async () => {
     cmCliOf('c1').stage = 'TA';
     if (typeof CUS !== 'undefined' && CUS.db) CUS.db.stage = 'TA';

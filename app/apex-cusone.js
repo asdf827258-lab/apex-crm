@@ -219,6 +219,29 @@
     '.cus-fchip em{font-style:normal;color:#64748B;font-weight:600;margin-left:5px;font-size:var(--t6,13px)}',
     '.cus-frow{display:flex;gap:6px;align-items:center;font-size:var(--t6,13px);padding:5px 8px;border:1px solid #F1F5F9;border-radius:8px;background:#FBFCFE}',
     '.cus-frow .rel{font-weight:800;color:#3730A3;min-width:44px}',
+    /* 📒 상황별 터치 (cusTouchHtml) — 두 화면이 같은 옷 · 판 X180 */
+    '.cus-tc{margin-top:4px}',
+    '.cus-tc-hd{font-size:var(--t6,13px);color:#64748B;line-height:1.6;margin:0 0 8px}',
+    '.cus-tc-s{border:1px solid #E5E9F0;border-radius:12px;background:#fff;margin-top:8px;overflow:hidden}',
+    '.cus-tc-s>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:46px;padding:8px 12px;font-size:14.5px}',
+    '.cus-tc-s>summary::-webkit-details-marker{display:none}',
+    '.cus-tc-s>summary .no{flex:0 0 22px;height:22px;border-radius:50%;background:#EEF2FF;color:#3730A3;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}',
+    '.cus-tc-s>summary b{flex:1;color:#0F172A}',
+    '.cus-tc-s>summary em{font-style:normal;font-size:13px;font-weight:700;color:#64748B;background:#F1F5F9;border-radius:999px;padding:2px 8px;white-space:nowrap}',
+    '.cus-tc-s[open]>summary{border-bottom:1px solid #EEF2F7;background:#FBFCFE}',
+    '.cus-tc-b{padding:6px 12px 12px}',
+    '.cus-tc-k{display:flex;gap:10px;padding:6px 0;font-size:13.5px;line-height:1.6;color:#334155}',
+    '.cus-tc-k>b{flex:0 0 52px;color:#94A3B8;font-size:13px;font-weight:800;padding-top:2px}',
+    '.cus-tc-st{font-size:13px;font-weight:800;color:#94A3B8;margin:12px 0 0}',
+    '.cus-tc .t-script{margin-top:8px;padding:12px 14px}',
+    '.cus-tc-tx{font-size:13.5px;line-height:1.7;color:#0F172A;white-space:pre-line;margin-top:4px}',
+    '.cus-tc-bt{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}',
+    '.cus-tc-bt button,.cus-tc-bt a{min-height:40px;padding:0 12px;border-radius:10px;border:1px solid #E5E9F0;background:#fff;font-size:13px;font-weight:700;color:#0F172A;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}',
+    '.cus-tc-bt .go{background:#3182F6;border-color:#3182F6;color:#fff}',
+    '.cus-tc-bt span{font-size:13px;color:#64748B}',
+    '.cus-tc-no{font-size:13px;color:#B45309;background:#FFFBEB;border-radius:9px;padding:8px 10px;margin-top:10px;line-height:1.6}',
+    '.cus-tc-nx{font-size:13px;color:#334155;background:#F8FAFC;border-radius:9px;padding:8px 10px;margin-top:6px;line-height:1.6}',
+    '@media print{.cus-tc-bt{display:none}.cus-tc-s{break-inside:avoid}}',
     '@media print{.cus-card{break-inside:avoid}}'
   ].join('');
   function cusCss() {
@@ -460,6 +483,116 @@
     return h;
   }
 
+  /* ══ 📒 <b>상황별 터치</b> — TA → CS · 판 X180 ════════════════════════
+     사장님 말씀 (2026-10-24) — 「ta-cs 까지 어떤 상황과 어떻게 터치해야할지 · 문자/카톡 예시 2~3 ·
+     전화까지 · dB통합CRM 에 있는 고객 상황과 안겹치고 똑같은 화면을 띄우도록」.
+
+     ★ 글은 apex-stage.js 의 TOUCH <b>한 곳</b>에 있고, 그리는 것도 <b>여기 한 벌</b>입니다 (5번).
+       고객 창(연락 탭 · cmSayHtml)과 DB 통합 CRM(「무엇을 할까」 · sgAskHtml)이 이것을 부릅니다 —
+       같은 단계 · 같은 종류면 <b>같은 글</b>이 섭니다.
+     ★ 이 함수는 서버를 안 부릅니다. 받은 것(o)을 그리기만 합니다.
+       o = { stage, src(어디서 오신 분 · dbs.source), age(나이대 · 모르면 안 줌),
+             phone(없으면 문자·전화 단추가 안 섭니다), me(설계사 이름 · 모르면 「담당 설계사」),
+             key(보낸 뒤 cusTouchAfter 에 넘길 번호) }
+     ★ TA 의 첫 상황(처음 거는 분) 여는 말은 <b>어디서 오신 분인가</b>로 갈립니다 —
+       예전 「💬 보낼 말」 의 그 첫 마디(APEX_STAGE.script)를 그대로 씁니다. 못 알아본 종류면
+       표의 기본 여는 말이 섭니다 (지어내지 않습니다 · 1번).
+     ★ 표에 없는 단계면 <b>빈 글</b>을 돌려줍니다 — 부르는 쪽이 아무것도 안 세웁니다. */
+  function cusTouchHtml(o) {
+    o = o || {};
+    var S = w.APEX_STAGE, L, i, j, x, m, h = '', me, ph, first = null, gen = null;
+    if (!S || typeof S.touchOf !== 'function') return '';
+    L = S.touchOf(o.stage);
+    if (!L.length) return '';
+    me = ('' + (o.me || '')).trim() || '담당 설계사';
+    ph = ('' + (o.phone || '')).replace(/[^0-9+]/g, '');
+    function fill(t) { return ('' + (t == null ? '' : t)).split('{나}').join(me); }
+    if (String(o.stage) === 'TA' && typeof S.script === 'function') {
+      try {
+        first = S.script('TA', o.src || '', o.age || undefined);
+        gen = S.script('TA', '');
+        /* 못 알아본 종류(일반)에 나이대도 없으면 표의 여는 말이 낫습니다 — 누구인지 먼저 밝힙니다 */
+        if (first && gen && first.t === gen.t && first.say === gen.say) first = null;
+      } catch (e) { first = null; }
+    }
+    h += '<div class="cus-tc" data-ph="' + cusEsc(ph) + '" data-key="' + cusEsc(o.key || '') + '">';
+    h += '<div class="cus-tc-hd"><b>' + cusEsc(o.stage) + '</b> 에서 자주 만나는 상황 ' + L.length + '가지 — 맞는 것을 펴십시오. ' +
+         '글은 <b>보이는 그대로</b> 나갑니다. 보내고 나면 기록 한 칸에 남기십시오.' +
+         (ph ? '' : ' <b>번호가 없어</b> 문자·전화 단추는 안 섭니다 — 복사만 됩니다.') + '</div>';
+    for (i = 0; i < L.length; i++) {
+      x = L[i];
+      h += '<details class="cus-tc-s" data-k="' + cusEsc(x.k) + '"' + (i === 0 ? ' open' : '') + '>' +
+           '<summary><span class="no">' + (i + 1) + '</span><b>' + cusEsc(x.t) + '</b><em>' + cusEsc(x.ch) + '</em></summary>' +
+           '<div class="cus-tc-b">' +
+           '<div class="cus-tc-k"><b>이럴 때</b><span>' + cusEsc(x.when) + '</span></div>' +
+           '<div class="cus-tc-k"><b>이렇게</b><span>' + x.how + '</span></div>';   /* how · next 는 표의 <b> 만 씁니다 */
+      h += '<div class="cus-tc-st">✉️ 보낼 글 ' + x.msg.length + '가지</div>';
+      for (j = 0; j < x.msg.length; j++) {
+        m = x.msg[j];
+        h += '<div class="t-script cus-tc-m" data-ch="' + cusEsc(m.ch) + '">' +
+             '<div class="sh">' + cusEsc(m.ch) + ' · ' + cusEsc(m.t) + '</div>' +
+             '<div class="cus-tc-tx">' + cusEsc(fill(m.text)) + '</div>' +
+             '<div class="cus-tc-bt"><button type="button" onclick="cusTouchCopy(this)">📋 복사</button>' +
+             (m.ch === '문자' && ph ? '<button type="button" class="go" onclick="cusTouchSms(this)">💬 문자로 열기</button>' : '') +
+             (m.ch === '카톡' ? '<span>복사해서 카톡 창에 붙여 넣으십시오</span>' : '') +
+             '</div></div>';
+      }
+      h += '<div class="cus-tc-st">📞 전화 대본</div><div class="t-script cus-tc-call">';
+      if (i === 0 && first && first.say) {
+        h += '<div class="sl2"><b>여는 말</b><span class="cus-tc-tx">' + cusEsc(first.say) + '</span></div>' +
+             '<div class="sh">어디서 오신 분인가로 갈립니다 — ' + cusEsc(first.t) + (first.age ? ' · 나이대 한마디가 끝에 붙었습니다' : '') + '</div>';
+      } else {
+        h += '<div class="sl2"><b>여는 말</b><span class="cus-tc-tx">' + cusEsc(fill(x.call.open)) + '</span></div>';
+      }
+      h += '<div class="sl2"><b>물을 것</b><span class="cus-tc-tx">' + cusEsc(fill(x.call.ask)) + '</span></div>' +
+           '<div class="sl2"><b>끝맺음</b><span class="cus-tc-tx">' + cusEsc(fill(x.call.close)) + '</span></div>' +
+           '<div class="cus-tc-bt"><button type="button" onclick="cusTouchCopy(this)">📋 대본 복사</button>' +
+           (ph ? '<a class="go" href="tel:' + cusEsc(ph) + '" onclick="cusTouchTel(this)">📞 이 대본으로 걸기</a>' : '') +
+           '</div></div>';
+      h += '<div class="cus-tc-no">하지 말 것 — ' + cusEsc(x.avoid) + '</div>' +
+           '<div class="cus-tc-nx">다음 — ' + x.next + '</div>' +
+           '</div></details>';
+    }
+    return h + '</div>';
+  }
+  /* 그 상자의 글 — 단추 글자는 빼고 <b>보이는 글만</b> */
+  function cusTouchText(btn) {
+    var box = btn && btn.closest ? btn.closest('.t-script') : null, q, t = '', k;
+    if (!box) return '';
+    q = box.querySelectorAll('.cus-tc-tx');
+    for (k = 0; k < q.length; k++) t += (t ? '\n' : '') + (q[k].textContent || '');
+    return t;
+  }
+  function cusTouchRoot(btn) { return btn && btn.closest ? btn.closest('.cus-tc') : null; }
+  function cusTouchSay(btn, msg) {
+    if (typeof w.toast === 'function') { w.toast(msg); return; }
+    var was = btn.textContent;
+    btn.textContent = msg;
+    setTimeout(function () { btn.textContent = was; }, 1600);
+  }
+  function cusTouchAfter(btn, ch) {
+    var r = cusTouchRoot(btn), key = r ? (r.getAttribute('data-key') || '') : '';
+    try { if (typeof w.cusTouchDone === 'function') w.cusTouchDone(key, ch); } catch (e) {}
+  }
+  /* 복사 — 못 했으면 <b>못 했다고</b> 말합니다 */
+  function cusTouchCopy(btn) {
+    var t = cusTouchText(btn), no = '복사하지 못했습니다 — 글을 손으로 골라 복사해 주십시오';
+    if (!t) { cusTouchSay(btn, '복사할 글이 없습니다'); return; }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText)
+        navigator.clipboard.writeText(t).then(function () { cusTouchSay(btn, '복사했습니다'); }, function () { cusTouchSay(btn, no); });
+      else cusTouchSay(btn, no);
+    } catch (e) { cusTouchSay(btn, no); }
+  }
+  /* 문자 — 폰의 문자 앱이 <b>그 글을 담고</b> 열립니다. 보내는 것은 사람이 누릅니다 */
+  function cusTouchSms(btn) {
+    var r = cusTouchRoot(btn), ph = r ? (r.getAttribute('data-ph') || '') : '', t = cusTouchText(btn);
+    if (!ph) { cusTouchSay(btn, '번호가 없습니다'); return; }
+    try { location.href = 'sms:' + ph + (t ? ('?&body=' + encodeURIComponent(t)) : ''); } catch (e) {}
+    cusTouchAfter(btn, '문자');
+  }
+  function cusTouchTel(btn) { cusTouchAfter(btn, '전화'); }
+
   w.cusEsc = cusEsc;
   w.cusCho = cusCho;
   w.cusOnlyCho = cusOnlyCho;
@@ -474,4 +607,8 @@
   w.cusCss = cusCss;
   w.cusCardHtml = cusCardHtml;
   w.cusLogHtml = cusLogHtml;
+  w.cusTouchHtml = cusTouchHtml;
+  w.cusTouchCopy = cusTouchCopy;
+  w.cusTouchSms = cusTouchSms;
+  w.cusTouchTel = cusTouchTel;
 })(typeof window !== 'undefined' ? window : this);
