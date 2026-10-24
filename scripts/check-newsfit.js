@@ -339,8 +339,14 @@ F.rules.forEach(r => inRules[r.cat] = 1);
 F.words.forEach(r => inRules[r.cat] = 1);
 const missing = F.cats.filter(c => !inRules[c.id]).map(c => c.t);
 is(missing.length === 0,
-   '여섯 갈래가 <b>다</b> 규칙에 있다' + (missing.length ? (' ← 빠진 것: ' + missing.join(', ')) : ''));
-is(F.cats.length === 6, '  갈래는 여섯이다 (' + F.cats.length + ')');
+   '일곱 갈래가 <b>다</b> 규칙에 있다' + (missing.length ? (' ← 빠진 것: ' + missing.join(', ')) : ''));
+/* ★★ 2026-10-24 (판 X187) · <b>여섯 → 일곱</b>. 사장님 말씀 「뉴스도 많은
+   것들 중에서 선택할수 있도록 보험 / 경제뉴스 / <b>저축</b> / 정책 중에서
+   골라서」 로 저축이 갈래가 되었습니다. 여태 예금·적금·ISA·연금저축은
+   경제 안에 섞여 있어, 「저축 이야기를 할 기사만」 을 물을 자리가 없었습니다.
+   ⚠ <b>수를 늘린 것이 아니라 갈래를 늘렸습니다.</b> 이 줄은 느슨해지지
+     않았습니다 — 아래 reach 에 저축이 없으면 그대로 빨간불입니다 (8번). */
+is(F.cats.length === 7, '  갈래는 일곱이다 (' + F.cats.length + ')');
 /* 갈래마다 실제로 하나라도 읽히는 길이 있는가 — 표에만 있고 길이 없으면 없는 것과 같다 */
 const reach = {
   ins:    fit({ c_cancer: '0', c_death: '0' }, []),
@@ -348,7 +354,10 @@ const reach = {
   tax:    fit({ f_income: '500', f_sincome: '250' }, []),
   help:   fit({ f_edu: '90' }, []),
   fund:   fit({ f_job: '제조업 대표' }, []),
-  econ:   fit({ f_np: '120' }, [])
+  econ:   fit({ f_np: '120' }, []),
+  /* 💰 저축은 <b>메모에서</b> 읽힙니다 — 질문지에 저축 칸이 없기 때문입니다.
+     없는 칸을 지어내지 않고, 있는 길로 잽니다 (1번).                     */
+  save:   fit({}, [{ src: '통화 메모', at: '2026-09-01', t: '목돈 만들고 싶다고 하심' }])
 };
 Object.keys(reach).forEach(k =>
   is(reach[k].read && reach[k].cat === k,
