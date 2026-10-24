@@ -380,6 +380,27 @@ const STAGES = ['TA', 'AP', 'PC', 'CS'];
   });
   is(TAB.s0 === 'msg' && TAB.s1 === 'call' && TAB.call === 6,
      '  상황 안은 탭 셋 — 처음엔 보낼 글만, 「📞 전화 대본」 을 누르면 대본 여섯 걸음만 (' + TAB.s0 + ' → ' + TAB.s1 + ' · 펼친 높이 ' + TAB.h0 + 'px)');
+  /* 📞 신입 TA 공유본 — AP 전까지 (판 X186 · 사장님 말씀 「이것도 넣어줘 AP하기전까지」) */
+  const TS = fs.existsSync('app/ta-share.html') ? fs.readFileSync('app/ta-share.html', 'utf8') : '';
+  is(/<title>신입 TA 공유본/.test(TS) && !/fetch\(|XMLHttpRequest|supabase|localStorage|sendBeacon/.test(TS),
+     '  app/ta-share.html — 사장님이 주신 공유본이 있고, 서버를 부르거나 기기에 적는 코드가 없다 (7번)');
+  const BA = ['미접촉', '부재', '거절', 'TA', 'AP', 'PC', 'CS', '계약완료'].map(k => k + ':' + (S.beforeAP(k) ? 1 : 0)).join(' ');
+  is(BA === '미접촉:1 부재:1 거절:1 TA:1 AP:0 PC:0 CS:0 계약완료:0', '  AP 전 단계만 — ' + BA + ' (차례는 ORDER 한 곳)');
+  const tsh = cusTaShareHtml('부재');
+  is(/href="\/app\/ta-share\.html"/.test(tsh) && /target="_blank"/.test(tsh) && /rel="noopener"/.test(tsh) && cusTaShareHtml('AP') === '',
+     '  링크는 새 탭(noopener)으로 /app/ta-share.html · AP 에서는 안 선다');
+  const SH = [];
+  for (const st of ['미접촉', '부재', '거절', 'TA', 'AP', 'CS']) {
+    const crm = await C.pg.evaluate(st => { const d = eval('dbs')[0]; d.stage = st; d.source = ''; sgAsk(d.id);
+      const a = document.querySelector('#askBody .cus-tash'); return a ? a.getAttribute('href') : ''; }, st);
+    const app = await A.pg.evaluate(st => { window.cmCliOf = () => ({ id: 'c1', stage: st }); CUS.db = { stage: st, source: '', phone: '010-1234-5678' }; CUS.calls = [];
+      const b = document.createElement('div'); b.innerHTML = cmSayHtml('c1'); const a = b.querySelector('.cus-tash'); return a ? a.getAttribute('href') : ''; }, st);
+    SH.push(st + ' 앱:' + (app ? 'O' : '-') + ' CRM:' + (crm ? 'O' : '-'));
+  }
+  is(SH.join(' · ') === '미접촉 앱:O CRM:O · 부재 앱:O CRM:O · 거절 앱:O CRM:O · TA 앱:O CRM:O · AP 앱:- CRM:- · CS 앱:- CRM:-',
+     '  ★ 두 화면이 같은 단계에 같은 링크를 세운다 — ' + SH.join(' · '));
+  const live = await A.pg.evaluate(async () => { try { const r = await fetch('/app/ta-share.html'); const t = await r.text(); return r.status + ':' + /신입 TA 공유본/.test(t); } catch (e) { return 'ERR'; } });
+  is(live === '200:true', '  링크를 누르면 실제로 그 문서가 열린다 — ' + live);
   is(!A.errs.length && !C.errs.length, '  조용히 터진 곳이 없다' + ((A.errs[0] || C.errs[0]) ? ' — ' + (A.errs[0] || C.errs[0]) : ''));
   await A.ctx.close(); await C.ctx.close(); await br.close(); srv.close();
 

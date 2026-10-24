@@ -1534,6 +1534,18 @@ var APPT=[
  {k:"sign",t:"서명 자리 준비물",only:["CS"],
   text:"[🪪 서명 자리 안내]\n고객님, 안녕하세요.\n{나}입니다.\n{일시}에 서명 자리로 뵙기 전에 안내드립니다.\n\n📍 장소 : {장소}\n📱 준비하실 것 : 인증번호를 받으실 휴대폰 하나면 됩니다\n🔒 주민등록번호 같은 개인정보는 제가 받아 적지 않습니다. 고객님이 직접 입력하셔서 개인정보를 보호받으실 수 있도록 도와드리겠습니다.\n\n🏥 최근 병원에 다니신 이력이나 💊 드시는 약이 있으시면 그날 함께 있는 그대로 확인하겠습니다. 나중에 보험금을 받으실 때 고객님을 지켜 드리기 위한 절차입니다.\n✅ 서두르지 않고 충분히 설명드린 뒤에 진행하겠습니다.\n\n{서명}"}
 ];
+/* ══ 📞 <b>신입 TA 공유본</b> — AP 전까지 (판 X186) ═══════════════════════════════
+   사장님 말씀 (2026-10-24) — 「이것도 넣어줘 AP하기전까지」 (신입 TA 공유본 — 건강보험 무사고 할인 전환).
+   ★ 문서는 <b>사장님이 주신 그대로</b> app/ta-share.html 에 둡니다 — 여기 옮겨 적지 않습니다(5번 · 두 벌이 되면
+     한쪽만 고쳐집니다). 이 표는 「어디에 있고 언제 띄우나」 만 압니다.
+   ★ AP 전 단계(미접촉 · 부재 · 거절 · TA)에서 고객 창 💬 칸과 CRM 「무엇을 할까」 에 같은 링크가 섭니다.
+     단계의 차례는 ORDER 한 곳이 압니다 — 여기 단계 이름을 다시 늘어놓지 않습니다. */
+var TA_SHARE={url:'/app/ta-share.html',t:'신입 TA 공유본 — 건강보험 무사고 할인 전환',
+  d:'📝 통화 질문지 · ☎️ 6단계 스크립트 · 🛡️ 거절처리 · 🤝 가까워지는 질문'};
+function beforeAP(stage){
+  var i=ORDER.indexOf(String(stage==null?'':stage)),a=ORDER.indexOf('AP');
+  return i>=0&&i<a;
+}
 /* 약속 자리의 이름 — 단계마다 무엇을 하러 뵙는가 */
 var APPT_WHAT={TA:'보장 점검 상담 (가지고 계신 보험 정리)',AP:'보장 점검 상담 (가지고 계신 보험 정리)',PC:'설계 내용 설명',CS:'청약 서명'};
 function apptOf(stage){
@@ -1657,6 +1669,8 @@ g.APEX_STAGE={
   appt:APPT,
   apptOf:apptOf,
   apptWhat:APPT_WHAT,
+  taShare:TA_SHARE,
+  beforeAP:beforeAP,
   color:stageColor,
   colors:COLOR,
   script:stageScript,

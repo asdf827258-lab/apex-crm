@@ -246,6 +246,12 @@
     '.cus-tc-rp .q{font-size:13.5px;font-weight:800;color:#3730A3}',
     '.cus-tc-rp .a{font-size:13.5px;line-height:1.7;color:#0F172A;margin-top:3px}',
     '.cus-tc-bt button:disabled{opacity:.45;cursor:default}',
+    '.cus-tash{display:flex;align-items:center;gap:10px;margin:4px 0 10px;padding:12px 14px;border-radius:12px;background:#EEF2FF;border:1px solid #C7D2FE;color:#1E1B4B;text-decoration:none;min-height:56px}',
+    '.cus-tash .ic{font-size:20px}',
+    '.cus-tash .tx{flex:1;min-width:0;display:flex;flex-direction:column}',
+    '.cus-tash .tx b{font-size:14px}',
+    '.cus-tash .tx small{font-size:13px;color:#4338CA}',
+    '.cus-tash .go{font-size:13px;font-weight:800;color:#3730A3;white-space:nowrap}',
     '.cus-tc-tabs{display:flex;gap:6px;margin:12px 0 2px;overflow-x:auto}',
     '.cus-tc-tabs button{flex:1 0 auto;min-height:42px;padding:0 12px;border-radius:10px;border:1px solid #E5E9F0;background:#F8FAFC;font-size:13.5px;font-weight:800;color:#64748B;cursor:pointer;white-space:nowrap}',
     '.cus-tc-tabs button.on{background:#EEF2FF;border-color:#C7D2FE;color:#3730A3}',
@@ -587,6 +593,15 @@
       '소개줄': sl.join('\n')
     }) };
   }
+  /* 📞 신입 TA 공유본 — AP 전 단계에서만. 문서는 사장님이 주신 그대로(app/ta-share.html) 새 탭으로 엽니다.
+     고객 창(cmSayHtml)과 CRM(sgAskHtml)이 이 한 함수를 불러 같은 칸을 세웁니다 (판 X186). */
+  function cusTaShareHtml(stage) {
+    var S = w.APEX_STAGE, T = S && S.taShare;
+    if (!T || typeof S.beforeAP !== 'function' || !S.beforeAP(stage)) return '';
+    return '<a class="cus-tash" href="' + cusEsc(T.url) + '" target="_blank" rel="noopener">' +
+      '<span class="ic">📞</span><span class="tx"><b>' + cusEsc(T.t) + '</b><small>' + cusEsc(T.d) + ' — 새 탭에서 열립니다</small></span>' +
+      '<span class="go">열기 ↗</span></a>';
+  }
   function cusTouchHtml(o) {
     o = o || {};
     var S = w.APEX_STAGE, L, AL, i, j, x, m, c, h = '', M, ph, first = null, gen = null, P, st, A0, apOpen;
@@ -613,6 +628,7 @@
          (ph ? '' : ' <b>번호가 없어</b> 문자·전화 단추는 안 섭니다 — 복사만 됩니다.') +
          (M.org ? '' : ' 글 끝 서명에 <b>소속</b>을 넣으시려면 설정 → 내 소개에 적어 주십시오.') +
          '<br>✍️ 문자·카톡은 굵게·색이 안 됩니다 — 그래서 첫 줄 <b>[제목]</b> · 줄머리 <b>이모지</b> · <b>①②③</b> 번호로 눈에 띄게 했습니다.</div>';
+    h += cusTaShareHtml(st);
     /* 📅 약속 안내 문자 — 약속이 읽혔으면 맨 위에 펴 둡니다 */
     if (AL.length) {
       A0 = cusApptText(st, 0, M, P.d, P.t, '');
@@ -787,4 +803,5 @@
   w.cusApptPaint = cusApptPaint;
   w.cusApptPick = cusApptPick;
   w.cusTcTab = cusTcTab;
+  w.cusTaShareHtml = cusTaShareHtml;
 })(typeof window !== 'undefined' ? window : this);
