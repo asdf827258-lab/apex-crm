@@ -91,6 +91,10 @@ var APEX_ICON = {
   lightning:'<path d="M12.8 3.4 5.6 13.2h5.4l-.8 7.4 7.2-9.8h-5.4z"/>',
   grid:   '<rect x="3.6" y="3.6" width="7" height="7" rx="1.6"/><rect x="13.4" y="3.6" width="7" height="7" rx="1.6"/><rect x="3.6" y="13.4" width="7" height="7" rx="1.6"/><rect x="13.4" y="13.4" width="7" height="7" rx="1.6"/>',
   swap:   '<path d="M4.4 8.2h12.2"/><path d="m13.6 5.2 3 3-3 3"/><path d="M19.6 15.8H7.4"/><path d="m10.4 12.8-3 3 3 3"/>',
+  /* ←→ 달 넘기기 · 2026-10-23 (판 X173) — 『‹』 『›』 는 글자라 기기마다
+     굵기·높이가 달라집니다. 나머지와 같은 선으로 두 개 그려 둡니다.  */
+  chevL:  '<path d="m14.4 6.2-5.6 5.8 5.6 5.8"/>',
+  chevR:  '<path d="m9.6 6.2 5.6 5.8-5.6 5.8"/>',
   ruler:  '<rect x="2.6" y="8.6" width="18.8" height="6.8" rx="1.8" transform="rotate(-45 12 12)"/><path d="M9.2 7.4 10.8 9M12 10.2l1.6 1.6M14.8 13l1.6 1.6"/>',
   thread: '<circle cx="12" cy="12" r="8.2"/><path d="M12 3.8c-2.6 2.6-2.6 13.8 0 16.4"/><path d="M9.4 5.6c3.6 2.2 3.6 10.6 0 12.8"/>',
   building:'<rect x="4.6" y="3.6" width="14.8" height="17" rx="2"/><path d="M8.4 7.4h2M13.6 7.4h2M8.4 11.2h2M13.6 11.2h2M10.4 20.6v-4.2h3.2v4.2"/>',
