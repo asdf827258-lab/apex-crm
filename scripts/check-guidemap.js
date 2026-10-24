@@ -322,8 +322,8 @@ const srv = http.createServer((rq, rs) => {
   is(cghost.length === 0,
      '  상황의 단추가 <b>전부 실제로 있는 화면</b>이다 (' + C.ids.length + '개)' +
      (cghost.length ? ' ← ' + cghost.slice(0, 6).join(', ') : ''));
-  is(/직접 해 보십시오/.test(C.openTxt),
-     '  상황을 누르면 <b>「직접 해 보십시오」</b> 가 실제로 화면에 뜬다');
+  is(/직접 해 보세요/.test(C.openTxt),
+     '  상황을 누르면 <b>「직접 해 보세요」</b> 가 실제로 화면에 뜬다');
   is(C.sample >= 1, '  연습에 쓰는 이름은 <b>홍길동</b>이다 — 실제 고객 이름을 안 쓴다 (3번)');
 
   sec('[7] 콘솔이 조용하다');

@@ -163,7 +163,7 @@ const STG = fs.readFileSync(path.join(ROOT, 'apex-stage.js'), 'utf8');
   const gone = await pg.evaluate(() => { const keep = window.APEX_STAGE; window.APEX_STAGE = undefined; let r = '';
     try { manEasyPick('day'); r = document.getElementById('manEasy').innerText; } catch (e) { r = 'ERR ' + e.message; }
     window.APEX_STAGE = keep; manEasyPick('day'); return r; });
-  is(!/^ERR/.test(gone) && /아직 못 읽었습니다/.test(gone), '대본 표가 없으면 <b>못 읽었다</b>고 적는다 — 터지지 않는다');
+  is(!/^ERR/.test(gone) && /아직 못 읽었(습니다|어요)/.test(gone), '대본 표가 없으면 <b>못 읽었다</b>고 적는다 — 터지지 않는다');
   is(gone.indexOf(live.busy) < 0, '  그때 그 말이 <b>안 선다</b>');
 
   head('[5] 단추가 그 화면으로 가나 · 폰 390px · 에러');
