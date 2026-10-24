@@ -399,6 +399,9 @@ const STAGES = ['TA', 'AP', 'PC', 'CS'];
   }
   is(SH.join(' · ') === '미접촉 앱:O CRM:O · 부재 앱:O CRM:O · 거절 앱:O CRM:O · TA 앱:O CRM:O · AP 앱:- CRM:- · CS 앱:- CRM:-',
      '  ★ 두 화면이 같은 단계에 같은 링크를 세운다 — ' + SH.join(' · '));
+  const tagLeak = await A.pg.evaluate(() => ['미접촉', '부재', '거절'].map(st => { window.cmCliOf = () => ({ id: 'c1', stage: st }); CUS.db = { stage: st, source: '' };
+    const b = document.createElement('div'); b.innerHTML = cmSayHtml('c1'); return /<\/?b>/.test(b.textContent) ? st : ''; }).filter(Boolean));
+  is(!tagLeak.length, '  예전 「💬 보낼 말」 카드(미접촉·부재·거절)에 「<b>」 가 글자로 안 찍힌다' + (tagLeak.length ? ' — ' + tagLeak.join(' · ') : ''));
   const live = await A.pg.evaluate(async () => { try { const r = await fetch('/app/ta-share.html'); const t = await r.text(); return r.status + ':' + /신입 TA 공유본/.test(t); } catch (e) { return 'ERR'; } });
   is(live === '200:true', '  링크를 누르면 실제로 그 문서가 열린다 — ' + live);
   is(!A.errs.length && !C.errs.length, '  조용히 터진 곳이 없다' + ((A.errs[0] || C.errs[0]) ? ' — ' + (A.errs[0] || C.errs[0]) : ''));
