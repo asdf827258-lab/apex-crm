@@ -190,6 +190,21 @@ function has(fp, k) { return manOf(fp && fp[k]) !== null; }
 function num(fp, k) { var v = manOf(fp && fp[k]); return v === null ? 0 : v; }
 function txt(v) { return String(v === null || v === undefined ? '' : v); }
 
+/* ══ <b>「…라고」 인가 「…이라고」 인가</b> — 받침을 보고 고른다 (한 곳) ══
+   2026-10-24 · 사장님 화면에 「기사에 「출산」 <b>라고</b> 적혀 있습니다」 로
+   찍혔습니다. 한국말은 <b>앞말 받침</b>이 정하는데, 글자를 박아 두어서
+   「출산」(받침 ㄴ)에도 「육아」(받침 없음)에도 똑같이 「라고」 가 붙었습니다.
+   ★ 여기 <b>한 곳</b>만 압니다 (5번) — 붙이는 자리가 늘 때마다 따로 적으면
+     어느 자리는 또 틀립니다.
+   ★ 한글이 아니면(ISA · CMA) <b>「라고」</b> 입니다 — 읽으면 「아이에스에이」
+     처럼 홀소리로 끝나기 때문입니다. 모르는 것은 <b>안 바꿉니다</b> (1번). */
+function rago(w) {
+  var s = txt(w); if (!s) return '라고';
+  var c = s.charCodeAt(s.length - 1);
+  if (c < 0xAC00 || c > 0xD7A3) return '라고';
+  return ((c - 0xAC00) % 28) ? '이라고' : '라고';
+}
+
 /* ══ 3. 칸에서 읽는 근거 — <b>표 하나</b> (5번) ══════════════════════
    한 줄 = 근거 하나다. 갈래를 늘려도 여기 한 줄만 더하면 된다.
      cat  어느 갈래로 읽나          w    근거의 힘 (큰 것이 이긴다)
@@ -200,7 +215,7 @@ var RULES = [
  /* ── 사업자 — 정책자금. 옛 규칙에 <b>아예 없던</b> 갈래다 ───────── */
  {id:'job-biz', cat:'fund', w:95,
   when:function(x){ return BIZ.hit(txt(x.fp.f_job)); },
-  say:function(x){ return '직업이 「' + txt(x.fp.f_job) + '」 라고 적혀 있습니다'; }},
+  say:function(x){ return '직업이 「' + txt(x.fp.f_job) + '」 ' + rago(x.fp.f_job) + ' 적혀 있습니다'; }},
 
  /* ── 집 + 그 집에 걸린 대출 ─────────────────────────────────────
     ⚠ <b>대출 잔액만으로 「부동산」이라 말하지 않는다.</b> 그 대출이
@@ -855,7 +870,7 @@ g.APEX_FIT = {
   field:FIELD, rules:RULES, words:WORDS, biz:BIZ, job:JOB, band:BAND, bandT:BAND_T, jobHit:jobHit,
   /* 사장님이 부르시는 네 갈래 · 연령대 — <b>묶음과 낱말은 여기 한 곳</b>이 안다 (5번) */
   grp:GRP, main:MAIN, idsOf:idsOf, restIds:restIds, keyOf:keyOf,
-  ageW:AGEW, ageKeys:AGE_ORD, ageOf:ageOf, ageHas:ageHas,
+  ageW:AGEW, ageKeys:AGE_ORD, ageOf:ageOf, ageHas:ageHas, rago:rago,
   /* 아침 미팅 준비 자료 — <b>판단이 아니라 모으기</b>다 */
   brief:brief, briefWon:briefWon, briefOne:briefOne, briefFp:BRIEF_FP,
   manOf:manOf, cut:cut, wordHit:wordHit, oldDays:OLD_DAYS, scrub:scrub,
