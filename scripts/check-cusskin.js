@@ -221,7 +221,7 @@ const LOOK = () => {
   const AP_TC = await p.evaluate(() => {
     const host = document.getElementById('cmPanels');
     const L = (typeof APEX_STAGE !== 'undefined' && APEX_STAGE.touchOf) ? APEX_STAGE.touchOf('AP') : [];
-    const ks = [].slice.call((host || document).querySelectorAll('.cus-tc-s')).map(e => e.getAttribute('data-k'));
+    const ks = [].slice.call((host || document).querySelectorAll('.cus-tc-s:not(.cus-ap)')).map(e => e.getAttribute('data-k'));
     return { want: L.map(x => x.k).join(','), got: ks.join(',') };
   });
   is(V.lab.some(x => x.indexOf('💬 보낼 말') >= 0) && AP_TC.want && AP_TC.got === AP_TC.want,

@@ -241,7 +241,19 @@
     '.cus-tc-bt span{font-size:13px;color:#64748B}',
     '.cus-tc-no{font-size:13px;color:#B45309;background:#FFFBEB;border-radius:9px;padding:8px 10px;margin-top:10px;line-height:1.6}',
     '.cus-tc-nx{font-size:13px;color:#334155;background:#F8FAFC;border-radius:9px;padding:8px 10px;margin-top:6px;line-height:1.6}',
-    '@media print{.cus-tc-bt{display:none}.cus-tc-s{break-inside:avoid}}',
+    '.cus-tc-tip{font-size:13px;color:#64748B;line-height:1.6;padding:0 0 6px 62px}',
+    '.cus-tc-rp{border:1px solid #EEF2F7;border-radius:10px;padding:9px 11px;margin-top:6px;background:#fff}',
+    '.cus-tc-rp .q{font-size:13.5px;font-weight:800;color:#3730A3}',
+    '.cus-tc-rp .a{font-size:13.5px;line-height:1.7;color:#0F172A;margin-top:3px}',
+    '.cus-tc-bt button:disabled{opacity:.45;cursor:default}',
+    '.cus-ap-in{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}',
+    '.cus-ap-in label{display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:800;color:#64748B;flex:1 1 130px}',
+    '.cus-ap-in label.pl{flex:1 1 100%}',
+    '.cus-ap-in input{min-height:44px;border:1px solid #E5E9F0;border-radius:10px;padding:0 10px;font-size:15px;color:#0F172A;background:#fff;font-family:inherit}',
+    '.cus-ap-cs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}',
+    '.cus-ap-c{min-height:40px;padding:0 12px;border-radius:999px;border:1px solid #E5E9F0;background:#fff;font-size:13px;font-weight:700;color:#334155;cursor:pointer}',
+    '.cus-ap-c.on{background:#0F172A;border-color:#0F172A;color:#fff}',
+    '@media print{.cus-tc-bt,.cus-ap-in,.cus-ap-cs{display:none}.cus-tc-s{break-inside:avoid}}',
     '@media print{.cus-card{break-inside:avoid}}'
   ].join('');
   function cusCss() {
@@ -485,75 +497,207 @@
 
   /* ══ 📒 <b>상황별 터치</b> — TA → CS · 판 X180 ════════════════════════
      사장님 말씀 (2026-10-24) — 「ta-cs 까지 어떤 상황과 어떻게 터치해야할지 · 문자/카톡 예시 2~3 ·
-     전화까지 · dB통합CRM 에 있는 고객 상황과 안겹치고 똑같은 화면을 띄우도록」.
+     전화까지 · dB통합CRM 에 있는 고객 상황과 안겹치고 똑같은 화면을 띄우도록」 → 「대본이 너무 허접 ·
+     태도가 엉망 · 더 길게」 · 「약속이 잡히면 약속 안내 문자까지 바로 · 골라서」.
 
-     ★ 글은 apex-stage.js 의 TOUCH <b>한 곳</b>에 있고, 그리는 것도 <b>여기 한 벌</b>입니다 (5번).
+     ★ 글은 apex-stage.js 의 TOUCH · APPT <b>한 곳</b>에 있고, 그리는 것도 <b>여기 한 벌</b>입니다 (5번).
        고객 창(연락 탭 · cmSayHtml)과 DB 통합 CRM(「무엇을 할까」 · sgAskHtml)이 이것을 부릅니다 —
-       같은 단계 · 같은 종류면 <b>같은 글</b>이 섭니다.
+       같은 단계 · 같은 종류 · 같은 약속이면 <b>같은 글</b>이 섭니다.
      ★ 이 함수는 서버를 안 부릅니다. 받은 것(o)을 그리기만 합니다.
        o = { stage, src(어디서 오신 분 · dbs.source), age(나이대 · 모르면 안 줌),
-             phone(없으면 문자·전화 단추가 안 섭니다), me(설계사 이름 · 모르면 「담당 설계사」),
-             key(보낸 뒤 cusTouchAfter 에 넘길 번호) }
-     ★ TA 의 첫 상황(처음 거는 분) 여는 말은 <b>어디서 오신 분인가</b>로 갈립니다 —
-       예전 「💬 보낼 말」 의 그 첫 마디(APEX_STAGE.script)를 그대로 씁니다. 못 알아본 종류면
-       표의 기본 여는 말이 섭니다 (지어내지 않습니다 · 1번).
+             phone(없으면 문자·전화 단추가 안 섭니다),
+             me({name,title,org,phone} — cusMeOf 가 「내 소개」 에서 읽어 줍니다 · 글자 하나만 주면 이름),
+             appt(읽은 약속 · 모르면 빈 글), key(보낸 뒤 cusTouchDone 에 넘길 번호) }
+     ★ TA 의 첫 상황에는 <b>어디서 오신 분인가</b>에 맞춘 첫 마디(APEX_STAGE.script)를 따로 세웁니다.
+       못 알아본 종류면 안 세웁니다 (지어내지 않습니다 · 1번).
      ★ 표에 없는 단계면 <b>빈 글</b>을 돌려줍니다 — 부르는 쪽이 아무것도 안 세웁니다. */
+  /* 보내는 사람 — 「내 소개」(설정)를 읽습니다. 앱의 advGet 과 <b>같은 칸</b>(apex_intro_아이디)입니다.
+     두 화면이 같은 칸을 읽어야 같은 서명이 나갑니다. 비면 지어 넣지 않습니다 (1번). */
+  function cusMeOf(uid, name) {
+    var o = {};
+    try { o = JSON.parse(localStorage.getItem('apex_intro_' + (uid || 'guest')) || 'null') || {}; } catch (e) { o = {}; }
+    return { name: ('' + (o.name || name || '')).trim(), title: ('' + (o.title || '')).trim(),
+             org: ('' + (o.org || '')).trim(), phone: ('' + (o.phone || '')).trim() };
+  }
+  function cusMeNorm(me) {
+    if (me == null) me = {};
+    if (typeof me === 'string') me = { name: me };
+    var n = ('' + (me.name || '')).trim(), ti = ('' + (me.title || '')).trim(), org = ('' + (me.org || '')).trim();
+    var nt = (n + (n && ti ? ' ' + ti : '')).trim();
+    return {
+      name: n, title: ti, org: org, phone: ('' + (me.phone || '')).trim(),
+      intro: org ? (org + ' ' + (nt || '담당 설계사')) : (nt ? ('담당 설계사 ' + nt) : '담당 설계사'),
+      short: nt || '담당 설계사',
+      sign: (org ? org + ' ' : '') + (nt || '담당 설계사') + ' 드림'
+    };
+  }
+  function cusFill(t, M, X) {
+    var s = '' + (t == null ? '' : t), k;
+    s = s.split('{나}').join(M.intro).split('{이름}').join(M.short).split('{서명}').join(M.sign);
+    if (X) for (k in X) if (X.hasOwnProperty(k)) s = s.split('{' + k + '}').join(X[k]);
+    return s;
+  }
+  /* 읽은 약속 → 날짜 · 시각 (한국 시각). 시간대가 붙은 값은 바꾸고, 안 붙은 값은 <b>적힌 그대로</b> */
+  function cusApptParts(a) {
+    var s = ('' + (a || '')).trim(), m, d;
+    if (!s) return { d: '', t: '' };
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return { d: s, t: '' };
+    if (/([zZ]|[+-]\d{2}:?\d{2})$/.test(s)) {
+      d = new Date(s);
+      if (isNaN(d.getTime())) return { d: '', t: '' };
+      d = new Date(d.getTime() + 9 * 3600000);
+      return { d: d.toISOString().slice(0, 10), t: d.toISOString().slice(11, 16) };
+    }
+    m = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+    return m ? { d: m[1], t: m[2] } : { d: '', t: '' };
+  }
+  var CUS_WD = ['일', '월', '화', '수', '목', '금', '토'];
+  function cusApptDay(d) {
+    var m = ('' + (d || '')).match(/^(\d{4})-(\d{2})-(\d{2})$/), dt;
+    if (!m) return '';
+    dt = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    return (+m[2]) + '월 ' + (+m[3]) + '일 (' + CUS_WD[dt.getUTCDay()] + ')';
+  }
+  function cusApptTime(t) {
+    var m = ('' + (t || '')).match(/^(\d{1,2}):(\d{2})/), h, mi;
+    if (!m) return '';
+    h = +m[1]; mi = +m[2];
+    return (h < 12 ? '오전 ' : '오후 ') + (h % 12 === 0 ? 12 : h % 12) + '시' + (mi ? ' ' + mi + '분' : '');
+  }
+  /* 약속 안내 글 하나 — 날짜·시간이 없으면 그 자리를 비워 두고 <b>못 보낸다</b>고 말합니다 */
+  function cusApptText(stage, i, me, d, t, place) {
+    var S = w.APEX_STAGE, L = (S && S.apptOf) ? S.apptOf(stage) : [], A = L[i] || L[0], M = cusMeNorm(me),
+        day = cusApptDay(d), tm = cusApptTime(t), ok = !!(day && tm), pl = ('' + (place || '')).trim(), sl = [];
+    if (!A) return { text: '', ok: false };
+    if (M.org) sl.push('· 소속 : ' + M.org);
+    sl.push('· 이름 : ' + M.short);
+    if (M.phone) sl.push('· 연락처 : ' + M.phone);
+    return { ok: ok, text: cusFill(A.text, M, {
+      '일시': ok ? (day + ' ' + tm) : '【날짜·시간을 넣어 주세요】',
+      '시각': tm || '【시간을 넣어 주세요】',
+      '장소': pl || '정해지는 대로 다시 알려 드리겠습니다',
+      '장소에서': pl ? (pl + '에서 ') : '',
+      '자리': (S.apptWhat && S.apptWhat[stage]) || '상담',
+      '소개줄': sl.join('\n')
+    }) };
+  }
   function cusTouchHtml(o) {
     o = o || {};
-    var S = w.APEX_STAGE, L, i, j, x, m, h = '', me, ph, first = null, gen = null;
+    var S = w.APEX_STAGE, L, AL, i, j, x, m, c, h = '', M, ph, first = null, gen = null, P, st, A0, apOpen;
     if (!S || typeof S.touchOf !== 'function') return '';
-    L = S.touchOf(o.stage);
+    st = String(o.stage == null ? '' : o.stage);
+    L = S.touchOf(st);
     if (!L.length) return '';
-    me = ('' + (o.me || '')).trim() || '담당 설계사';
+    M = cusMeNorm(o.me);
     ph = ('' + (o.phone || '')).replace(/[^0-9+]/g, '');
-    function fill(t) { return ('' + (t == null ? '' : t)).split('{나}').join(me); }
-    if (String(o.stage) === 'TA' && typeof S.script === 'function') {
+    AL = (typeof S.apptOf === 'function') ? S.apptOf(st) : [];
+    P = cusApptParts(o.appt);
+    apOpen = !!P.d;
+    if (st === 'TA' && typeof S.script === 'function') {
       try {
         first = S.script('TA', o.src || '', o.age || undefined);
         gen = S.script('TA', '');
-        /* 못 알아본 종류(일반)에 나이대도 없으면 표의 여는 말이 낫습니다 — 누구인지 먼저 밝힙니다 */
         if (first && gen && first.t === gen.t && first.say === gen.say) first = null;
       } catch (e) { first = null; }
     }
-    h += '<div class="cus-tc" data-ph="' + cusEsc(ph) + '" data-key="' + cusEsc(o.key || '') + '">';
-    h += '<div class="cus-tc-hd"><b>' + cusEsc(o.stage) + '</b> 에서 자주 만나는 상황 ' + L.length + '가지 — 맞는 것을 펴십시오. ' +
+    h += '<div class="cus-tc" data-ph="' + cusEsc(ph) + '" data-key="' + cusEsc(o.key || '') + '" data-st="' + cusEsc(st) + '"' +
+         ' data-me="' + cusEsc(JSON.stringify({ name: M.name, title: M.title, org: M.org, phone: M.phone })) + '">';
+    h += '<div class="cus-tc-hd"><b>' + cusEsc(st) + '</b> 에서 자주 만나는 상황 ' + L.length + '가지 — 맞는 것을 펴십시오. ' +
          '글은 <b>보이는 그대로</b> 나갑니다. 보내고 나면 기록 한 칸에 남기십시오.' +
-         (ph ? '' : ' <b>번호가 없어</b> 문자·전화 단추는 안 섭니다 — 복사만 됩니다.') + '</div>';
+         (ph ? '' : ' <b>번호가 없어</b> 문자·전화 단추는 안 섭니다 — 복사만 됩니다.') +
+         (M.org ? '' : ' 글 끝 서명에 <b>소속</b>을 넣으시려면 설정 → 내 소개에 적어 주십시오.') + '</div>';
+    /* 📅 약속 안내 문자 — 약속이 읽혔으면 맨 위에 펴 둡니다 */
+    if (AL.length) {
+      A0 = cusApptText(st, 0, M, P.d, P.t, '');
+      h += '<details class="cus-tc-s cus-ap" data-k="appt"' + (apOpen ? ' open' : '') + '>' +
+           '<summary><span class="no">📅</span><b>약속 안내 문자 — 약속이 잡히면 바로</b><em>' +
+             (P.d ? cusEsc(cusApptDay(P.d) + (P.t ? ' ' + cusApptTime(P.t) : '')) : '날짜 넣기') + '</em></summary>' +
+           '<div class="cus-tc-b">' +
+           '<div class="cus-tc-hd">' + (P.d ? '적혀 있는 약속(배정 DB · 통화 기록)을 읽어 채웠습니다. 다르면 고쳐 주십시오.'
+                                        : '아직 적힌 약속이 없습니다 — 날짜와 시간을 넣으면 글이 채워집니다. 지어 넣지 않습니다.') +
+             ' 장소는 이 글에만 들어가고 <b>저장하지 않습니다</b>.</div>' +
+           '<div class="cus-ap-in">' +
+             '<label>날짜<input type="date" class="cus-ap-d" value="' + cusEsc(P.d) + '" oninput="cusApptPaint(this)" onchange="cusApptPaint(this)"></label>' +
+             '<label>시간<input type="time" class="cus-ap-t" value="' + cusEsc(P.t) + '" oninput="cusApptPaint(this)" onchange="cusApptPaint(this)"></label>' +
+             '<label class="pl">장소<input type="text" class="cus-ap-p" maxlength="60" placeholder="예) 댁 근처 카페 이름" oninput="cusApptPaint(this)"></label>' +
+           '</div><div class="cus-ap-cs">';
+      for (j = 0; j < AL.length; j++)
+        h += '<button type="button" class="cus-ap-c' + (j === 0 ? ' on' : '') + '" data-i="' + j + '" onclick="cusApptPick(this)">' + cusEsc(AL[j].t) + '</button>';
+      h += '</div><div class="t-script cus-tc-m cus-ap-m" data-ch="문자"><div class="sh">미리 보기 — 보이는 그대로 나갑니다</div>' +
+           '<div class="cus-tc-tx cus-ap-tx">' + cusEsc(A0.text) + '</div>' +
+           '<div class="cus-tc-bt"><button type="button" class="cus-ap-b" onclick="cusTouchCopy(this)"' + (A0.ok ? '' : ' disabled') + '>📋 복사</button>' +
+           (ph ? '<button type="button" class="go cus-ap-b" onclick="cusTouchSms(this)"' + (A0.ok ? '' : ' disabled') + '>💬 문자로 열기</button>' : '') +
+           '<span class="cus-ap-why">' + (A0.ok ? '카톡으로 보내시려면 복사해서 붙여 넣으십시오' : '날짜와 시간을 넣으면 보낼 수 있습니다') + '</span>' +
+           '</div></div></div></details>';
+    }
     for (i = 0; i < L.length; i++) {
       x = L[i];
-      h += '<details class="cus-tc-s" data-k="' + cusEsc(x.k) + '"' + (i === 0 ? ' open' : '') + '>' +
+      h += '<details class="cus-tc-s" data-k="' + cusEsc(x.k) + '"' + (i === 0 && !apOpen ? ' open' : '') + '>' +
            '<summary><span class="no">' + (i + 1) + '</span><b>' + cusEsc(x.t) + '</b><em>' + cusEsc(x.ch) + '</em></summary>' +
            '<div class="cus-tc-b">' +
            '<div class="cus-tc-k"><b>이럴 때</b><span>' + cusEsc(x.when) + '</span></div>' +
-           '<div class="cus-tc-k"><b>이렇게</b><span>' + x.how + '</span></div>';   /* how · next 는 표의 <b> 만 씁니다 */
-      h += '<div class="cus-tc-st">✉️ 보낼 글 ' + x.msg.length + '가지</div>';
+           '<div class="cus-tc-k"><b>이렇게</b><span>' + x.how + '</span></div>';   /* how · next · tip 은 표의 <b> 만 씁니다 */
+      h += '<div class="cus-tc-st">✉️ 보낼 글 ' + x.msg.length + '가지 — 쓰임이 저마다 다릅니다</div>';
       for (j = 0; j < x.msg.length; j++) {
         m = x.msg[j];
         h += '<div class="t-script cus-tc-m" data-ch="' + cusEsc(m.ch) + '">' +
              '<div class="sh">' + cusEsc(m.ch) + ' · ' + cusEsc(m.t) + '</div>' +
-             '<div class="cus-tc-tx">' + cusEsc(fill(m.text)) + '</div>' +
+             '<div class="cus-tc-tx">' + cusEsc(cusFill(m.text, M)) + '</div>' +
              '<div class="cus-tc-bt"><button type="button" onclick="cusTouchCopy(this)">📋 복사</button>' +
              (m.ch === '문자' && ph ? '<button type="button" class="go" onclick="cusTouchSms(this)">💬 문자로 열기</button>' : '') +
              (m.ch === '카톡' ? '<span>복사해서 카톡 창에 붙여 넣으십시오</span>' : '') +
              '</div></div>';
       }
-      h += '<div class="cus-tc-st">📞 전화 대본</div><div class="t-script cus-tc-call">';
       if (i === 0 && first && first.say) {
-        h += '<div class="sl2"><b>여는 말</b><span class="cus-tc-tx">' + cusEsc(first.say) + '</span></div>' +
-             '<div class="sh">어디서 오신 분인가로 갈립니다 — ' + cusEsc(first.t) + (first.age ? ' · 나이대 한마디가 끝에 붙었습니다' : '') + '</div>';
-      } else {
-        h += '<div class="sl2"><b>여는 말</b><span class="cus-tc-tx">' + cusEsc(fill(x.call.open)) + '</span></div>';
+        h += '<div class="cus-tc-st">🎯 이 분께 맞춘 첫 마디 — ' + cusEsc(first.t) + '</div>' +
+             '<div class="t-script cus-tc-src"><div class="cus-tc-tx">' + cusEsc(first.say) + '</div>' +
+             (first.tip ? '<div class="cus-tc-tip">💡 ' + first.tip + '</div>' : '') +
+             (first.age ? '<div class="sh">나이대 한마디가 끝에 붙었습니다</div>' : '') +
+             '<div class="cus-tc-bt"><button type="button" onclick="cusTouchCopy(this)">📋 복사</button></div></div>';
       }
-      h += '<div class="sl2"><b>물을 것</b><span class="cus-tc-tx">' + cusEsc(fill(x.call.ask)) + '</span></div>' +
-           '<div class="sl2"><b>끝맺음</b><span class="cus-tc-tx">' + cusEsc(fill(x.call.close)) + '</span></div>' +
-           '<div class="cus-tc-bt"><button type="button" onclick="cusTouchCopy(this)">📋 대본 복사</button>' +
+      h += '<div class="cus-tc-st">📞 전화 대본 — ' + x.call.length + '걸음</div><div class="t-script cus-tc-call">';
+      for (j = 0; j < x.call.length; j++) {
+        c = x.call[j];
+        h += '<div class="sl2"><b>' + (j + 1) + '. ' + cusEsc(c.t) + '</b><span class="cus-tc-tx">' + cusEsc(cusFill(c.say, M)) + '</span></div>' +
+             (c.tip ? '<div class="cus-tc-tip">💡 ' + c.tip + '</div>' : '');
+      }
+      h += '<div class="cus-tc-bt"><button type="button" onclick="cusTouchCopy(this)">📋 대본 복사</button>' +
            (ph ? '<a class="go" href="tel:' + cusEsc(ph) + '" onclick="cusTouchTel(this)">📞 이 대본으로 걸기</a>' : '') +
            '</div></div>';
+      if (x.reply && x.reply.length) {
+        h += '<div class="cus-tc-st">💬 이런 말이 돌아오면</div>';
+        for (j = 0; j < x.reply.length; j++)
+          h += '<div class="cus-tc-rp"><div class="q">' + cusEsc(x.reply[j].q) + '</div><div class="a">' + cusEsc(cusFill(x.reply[j].a, M)) + '</div></div>';
+      }
       h += '<div class="cus-tc-no">하지 말 것 — ' + cusEsc(x.avoid) + '</div>' +
            '<div class="cus-tc-nx">다음 — ' + x.next + '</div>' +
            '</div></details>';
     }
     return h + '</div>';
+  }
+  /* 📅 고르거나 고치면 미리 보기를 <b>그 자리에서</b> 다시 씁니다 — 같은 cusApptText 로 */
+  function cusApptPaint(el) {
+    var r = cusTouchRoot(el), box = r ? r.querySelector('.cus-ap') : null, me = {}, on, i, R, q, k, why;
+    if (!box) return;
+    try { me = JSON.parse(r.getAttribute('data-me') || '{}'); } catch (e) { me = {}; }
+    on = box.querySelector('.cus-ap-c.on');
+    i = on ? +on.getAttribute('data-i') : 0;
+    R = cusApptText(r.getAttribute('data-st') || '', i, me,
+      (box.querySelector('.cus-ap-d') || {}).value || '', (box.querySelector('.cus-ap-t') || {}).value || '',
+      (box.querySelector('.cus-ap-p') || {}).value || '');
+    box.querySelector('.cus-ap-tx').textContent = R.text;
+    q = box.querySelectorAll('.cus-ap-b');
+    for (k = 0; k < q.length; k++) q[k].disabled = !R.ok;
+    why = box.querySelector('.cus-ap-why');
+    if (why) why.textContent = R.ok ? '카톡으로 보내시려면 복사해서 붙여 넣으십시오' : '날짜와 시간을 넣으면 보낼 수 있습니다';
+  }
+  function cusApptPick(btn) {
+    var box = btn && btn.closest ? btn.closest('.cus-ap') : null, q, k;
+    if (!box) return;
+    q = box.querySelectorAll('.cus-ap-c');
+    for (k = 0; k < q.length; k++) q[k].classList.remove('on');
+    btn.classList.add('on');
+    cusApptPaint(btn);
   }
   /* 그 상자의 글 — 단추 글자는 빼고 <b>보이는 글만</b> */
   function cusTouchText(btn) {
@@ -611,4 +755,10 @@
   w.cusTouchCopy = cusTouchCopy;
   w.cusTouchSms = cusTouchSms;
   w.cusTouchTel = cusTouchTel;
+  w.cusMeOf = cusMeOf;
+  w.cusTouchText = cusTouchText;
+  w.cusApptText = cusApptText;
+  w.cusApptParts = cusApptParts;
+  w.cusApptPaint = cusApptPaint;
+  w.cusApptPick = cusApptPick;
 })(typeof window !== 'undefined' ? window : this);
