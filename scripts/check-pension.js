@@ -49,12 +49,8 @@ const near = (a, b, tol, m) => is(Math.abs(a - b) <= tol, m + ' — 나온 값 '
     '나이를 안 보던 1억당 23만원 고정값이 사라졌다');
   is(!/sevPension *= *Math\.round\(severance\/240\)/.test(fin),
     '퇴직금을 그냥 240으로 나누던 줄이 사라졌다');
-  /* 판 X180 — 주택연금을 셈하던 두 자리(대시보드의 안 보이는 칸 · 부르는 곳 없던 getFinancialSnapshot)는
-     화면에 한 번도 서지 않는 죽은 판이라 지웠습니다. 이제 셈하는 자리는 finReady 하나이고,
-     연금 시뮬레이션 탭 · 대시보드 · 결과지 · 상담이 모두 그것을 부릅니다. 퇴직금 연금화(sevPensionOf)를
-     「준비된 연금」 에 더하는 화면은 이제 없습니다 — 사이드바 「퇴직연금」 칸에 적힌 것만 더합니다(1번). */
-  is(/h=housePension\(finNum\('s_realty'\),rage\)/.test(fin) && (fin.match(/[^ \w]housePension\(/g) || []).length === 1 && !/(const|var|let) +sevPension *=/.test(fin),
-    '주택연금은 한 자리(finReady)만 새 함수를 부른다 — 한 곳만 고치면 화면끼리 달라진다');
+  is(/housingPension *= *housePen\.man/.test(fin) && /sevPension *= *sevPensionOf\(/.test(fin),
+    '두 자리 모두 새 함수를 부른다 — 한 곳만 고치면 화면끼리 달라진다');
   is(/var HOUSE_PEN *= *\{/.test(fin), '주택연금 기준표가 한 곳에 모였다');
   is(/asOf:/.test(fin) && /base:/.test(fin), '언제 · 무엇을 기준으로 한 표인지 적어 뒀다');
   is(/공사가 해마다 다시 고시한다/.test(fin), '해마다 다시 고시된다고 코드에 밝혀 뒀다');
@@ -125,7 +121,7 @@ const near = (a, b, tol, m) => is(Math.abs(a - b) <= tol, m + ' — 나온 값 '
 
   console.log('\n[6] 화면이 사정을 말하는가');
   is(/만 \$\{HOUSE_PEN\.minAge\}세부터 가입/.test(fin), '나이가 안 되면 그 이유를 화면에 적는다');
-  is(/가입 상한\(\$\{(fmt|psWon)\(HOUSE_PEN\.capMan\)\}(만원)?\)/.test(fin), '상한을 넘으면 얼마가 상한인지 적는다');
+  is(/가입 상한\(\$\{fmt\(HOUSE_PEN\.capMan\)\}만원\)/.test(fin), '상한을 넘으면 얼마가 상한인지 적는다');
   is(/공시\)/.test(fin) && /1억당 월 \$\{housePen\.per\.toFixed\(1\)\}만원/.test(fin),
     '몇 세 기준 · 1억당 얼마인지를 표에 적는다');
   is(/확정 금액으로 말씀하지 마시고/.test(fin), '상담에서 확정 금액처럼 말하지 말라고 밝힌다');
@@ -140,8 +136,7 @@ const near = (a, b, tol, m) => is(Math.abs(a - b) <= tol, m + ' — 나온 값 '
   near(R.sev.r5, 66, 1, '연 5%면 월 66만원');
   is(R.sev.r4 > R.sev.r0, '이자를 붙이니 예전보다 늘었다 — 다른 계산과 가정이 맞는다');
   is(R.sev.none === 0, '퇴직금이 없으면 0 이다');
-  /* 판 X180 — 퇴직금 연금화를 찍던 칸은 화면에 서지 않는 죽은 판이라 지웠습니다. 다시 부르는 화면이 생기면 그때 밝혀야 합니다 */
-  is(!/[^ ]sevPensionOf\(/.test(fin) || /연 \$\{retRate\}% 운용 가정/.test(fin), '퇴직금 연금화를 찍는 화면이 있으면 몇 %로 굴린 값인지 적는다');
+  is(/연 \$\{retRate\}% 운용 가정/.test(fin), '몇 %로 굴린 값인지 화면에 적는다');
 
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 

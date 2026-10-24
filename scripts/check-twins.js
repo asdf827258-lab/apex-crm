@@ -195,7 +195,7 @@ var BROWSER = ('window document location navigator history screen console alert 
 
 /* 밖에서 실려 오는 것 — CDN 스크립트, 옆 파일, 서버가 심어 주는 값.
    <b>여기 적힌 것만</b> 봐주고 나머지는 잡는다.                       */
-var EXTERNAL = ['supabase', 'PENSION', 'APEX_REPORT', 'html2canvas', 'PptxGenJS', 'pdfjsLib', 'JSZip',
+var EXTERNAL = ['supabase', 'PENSION', 'html2canvas', 'PptxGenJS', 'pdfjsLib', 'JSZip',
   'saveAs', 'marked', 'Chart', 'gtag', 'dataLayer', 'APEX_SB', 'APEX_CFG', 'kakao', 'Kakao',
   'TossPayments',
   /* <b>우리가 만든 공용 파일</b>에서 오는 것들. 남의 라이브러리와 섞여 있지만

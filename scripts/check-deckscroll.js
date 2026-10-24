@@ -67,8 +67,6 @@ const key = (page, k) => page.evaluate(k =>
   p1.on('pageerror', e => errs.push('재무설계: ' + String(e).slice(0, 150)));
   await p1.goto(base + '/app/재무설계/상담자료.html', { waitUntil: 'domcontentloaded' });
   await p1.waitForTimeout(2200);
-  /* 판 X184 — 칸에 박혀 있던 견본 값을 비웠습니다(1번). 견본은 「예시로 바로 보기」 와 같은 deckSample() 로 채웁니다 */
-  await p1.evaluate(() => { if (typeof deckSample === 'function') deckSample(); });
 
   console.log('\n[1] 재무설계 — 글씨를 줄이지 않는다');
   const fp = await p1.evaluate(async () => {
