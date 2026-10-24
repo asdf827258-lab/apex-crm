@@ -118,7 +118,7 @@ const STAGES = ['TA', 'AP', 'PC', 'CS'];
   /* ★ 사장님 말씀 「더 가독성 있게 · 강조해서 · 이모지 등 활용해서」 — 문자·카톡은 굵게·색이 안 되므로
      강조는 <b>모양</b>입니다. ① 첫 줄 [제목](폰 알림에는 첫 줄만 보입니다) ② 꼭 볼 줄은 이모지나 ①②③ 으로
      시작 ③ 이모지는 <b>정해 둔 것만 · 한 글에 아홉까지</b> — 광고처럼 번쩍이면 오히려 안 읽힙니다 */
-  const EMO_OK = '🙂😊🙏📞⏰📅📍📝📋📄✅☑📌💡🔎🩺🪪👪💬🔔🤝⚠🏥💊📱📸✏✔👉🏢👤';
+  const EMO_OK = '🙂😊🙏📞⏰📅📍📝📋📄✅☑📌💡🔎🩺🪪👪💬🔔🤝⚠🏥💊📱📸✏✔👉🏢👤🔒';
   const emos = t => (t.match(/\p{Extended_Pictographic}/gu) || []);
   const msgs = said.filter(([, , w]) => w === 'msg');
   const badEmo = msgs.filter(([, t]) => emos(t).some(e => EMO_OK.indexOf(e) < 0) || emos(t).length > 9);
@@ -138,6 +138,14 @@ const STAGES = ['TA', 'AP', 'PC', 'CS'];
      '  처음 연락드리는 글에는 「원하지 않으시면 더 연락드리지 않겠습니다」 의 문이 열려 있다');
   const cs = all.filter(x => x.k === 'cs-prep')[0];
   is(cs && /있는 그대로/.test(cs.how + cs.msg.map(m => m.text).join('')), '  서명 전날 — 알릴 의무를 「있는 그대로」 라고 적는다');
+  /* ★ 사장님 말씀 (2026-10-24) 「본인인증 번호 하나만으로 확인할수 있고, 개인정보는 제가 수집하지 않고 따로 입력하여
+     개인 정보보호받도록 도와드린다」 — 서명 자리 글에 그 세 가지가 서고, 신분증·주민번호를 <b>받는</b> 말이 없어야 합니다 */
+  const signTexts = [cs.msg[0].text, S.appt.filter(a => a.k === 'sign')[0].text];
+  is(signTexts.every(t => /인증번호/.test(t) && /직접 입력/.test(t) && /받아 적지 않습니다/.test(t) && /보호받으실/.test(t)),
+     '  서명 자리 글 — 본인 확인은 <b>인증번호 하나</b> · 개인정보는 <b>받아 적지 않고 고객님이 직접 입력</b> · 보호받으시도록');
+  const idAsk = said.filter(([, t]) => /신분증/.test(t) || (/주민(등록)?번호/.test(t) && !/(받아 적지 않|불러 주지 않|여쭙거나 받아 적지 않|불러 달라고 하지 않)/.test(t)));
+  is(!idAsk.length && cs.reply.some(r => /주민번호/.test(r.q) && /불러 주지 않으셔도/.test(r.a)),
+     '  신분증·주민번호를 <b>받는</b> 말 0곳 · 「주민번호 불러 드려야 하나요?」 에 「아닙니다」 로 답한다' + (idAsk.length ? ' — ' + idAsk.map(x => x[0]).join(' · ') : ''));
   const csw = all.filter(x => x.k === 'cs-wait')[0];
   is(csw && /심사/.test(csw.how) && /단정/.test(csw.avoid), '  심사 기다리는 동안 — 결과를 단정하지 말라고 「하지 말 것」 에 적혀 있다');
 
