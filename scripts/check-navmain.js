@@ -67,17 +67,31 @@ const SEED = () => {
   const A = await p.evaluate(() => {
     const el = document.getElementById('navMain');
     const rows = el ? [].slice.call(el.querySelectorAll('.t-nav')) : [];
-    const lab = el ? el.querySelector('.t-glab') : null;
+    const labs = el ? [].slice.call(el.querySelectorAll('.t-glab')).map(x => x.textContent.trim()) : [];
+    const lab = labs[0] || '';
     const card = document.querySelector('#navFix .sb-guide');
     const top = x => x ? Math.round(x.getBoundingClientRect().top) : null;
     return { 있나: !!el, 칸수: rows.length,
              이름: rows.map(x => x.textContent.replace(/\s+/g, ' ').trim()),
-             라벨: lab ? lab.textContent.trim() : '',
+             라벨: lab, 라벨들: labs,
              첫칸y: top(rows[0]), 막칸y: top(rows[rows.length - 1]),
              카드y: top(card), 판높이: window.innerHeight };
   });
   is(A.있나 && A.칸수 > 0, '  기둥 맨 위에 <b>메뉴 칸</b>이 있다 — ' + A.칸수 + '칸');
-  is(A.라벨 === '오늘 하루', '  묶음 이름이 <b>「오늘 하루」</b> 다 — ' + (A.라벨 || '(없음)'));
+  /* ⚠⚠ 2026-10-23 (판 X173) · <b>「오늘 하루」 가 첫째여야 한다</b> 를
+     <b>「있어야 한다」</b> 로 바꿉니다. 사장님 말씀 「교육매니저 em 전용
+     사이트를 <b>메뉴 맨 왼쪽 위</b>에다가 넣어줄래 <b>교육시스템EM</b> 이라는
+     목록으로 넣어줘」 — 그 목록이 「오늘 하루」 <b>위</b>에 섭니다.
+     ★ 재는 것을 없애지 않습니다 — 「오늘 하루」 가 사라지면 그대로 울고,
+       맨 위에 설 수 있는 이름은 <b>적어 둔 것뿐</b>입니다. 아무 이름이나
+       올라오면 그 자리에서 빨간불입니다 (8번).
+     ⚠ 이 목록은 <b>교육매니저·지점장·대표에게만</b> 보입니다 — 설계사에게는
+       「오늘 하루」 가 그대로 첫째입니다(아래 둘째 줄).                   */
+  const 맨위허용 = ['교육시스템EM'];
+  is(A.라벨들.indexOf('오늘 하루') >= 0,
+     '  기둥에 <b>「오늘 하루」</b> 묶음이 있다 — ' + (A.라벨들.join(' · ') || '(없음)'));
+  is(A.라벨 === '오늘 하루' || 맨위허용.indexOf(A.라벨) >= 0,
+     '  맨 위 묶음이 <b>「오늘 하루」 이거나 적어 둔 것</b>이다 — ' + (A.라벨 || '(없음)'));
   is(A.첫칸y !== null && A.첫칸y < A.판높이,
      '  <b>첫 화면 안</b>에 있다 — 첫 칸 ' + A.첫칸y + 'px / 한 판 ' + A.판높이 + 'px');
   is(A.막칸y !== null && A.막칸y < A.판높이,

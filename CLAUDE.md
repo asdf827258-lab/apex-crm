@@ -63,7 +63,7 @@ node scripts/run-checks.js --only nav,공지   # 이름에 그 글자가 든 것
 | 눈금 | 보는 것 | 점검 |
 |---|---|---|
 | 재는 자 없는 말씀 | 시키셨는데 아무도 안 재는 것 | `check-ledger` |
-| 목업 옷 안 입은 화면 | 지금 93 / 98 | `check-skinmap` |
+| 목업 옷 안 입은 화면 | 덮개를 뺀 수 — `node scripts/audit.js` 가 지금 수를 적어 줍니다 | `check-skinmap` |
 | 스스로 어긋난 자리 | 한 화면이 같은 물음에 두 답 | `check-onesay` |
 
 **세 수는 늘면 빨간불이고, 줄이면 기준선도 같이 내립니다.** 점검이 고쳐

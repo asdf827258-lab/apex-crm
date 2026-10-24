@@ -31,6 +31,7 @@
      [5] 못 입힌 화면의 <b>수와 까닭이 적혀 있나</b> — 0 이라고 우기지 않기
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
+const { 덮개화면, 적어도 } = require('./lib-fullscr.js');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9081;
 let bad = 0;
@@ -139,34 +140,13 @@ const LOOK = () => {
   /* ── [2] 여기가 이 자의 핵심입니다 ─────────────────────────────── */
   console.log('\n[2] ★★ <b>전체화면으로 빠져나가는 화면</b>이 T_SKIN 에 <b>없나</b>');
   console.log('    (적으면 수만 줄고 화면은 그대로 — 「됐다」 고 거짓이 적힙니다)');
-  /* 손으로 적지 않고 <b>코드에서 찾습니다</b> — 화면이 늘어도 안 낡습니다.
-     go() 안에서 if(tab==='X'){ … osFullMode('무엇') … return; } 인 것.   */
-  const go = src.slice(src.indexOf('function go(tab){'));
-  const 전체화면 = [];
-  /* ⚠ <b>정규식으로 블록을 뜨지 마십시오.</b> 처음에 [\s\S]{0,420}? 로 떴다가
-     안쪽 if(window.innerWidth<=880){…} 의 <b>닫는 괄호에서 끊겨</b> 열한 개
-     중 <b>0개</b>를 찾았습니다. 그물이 비면 [2] 는 <b>언제나 초록</b>입니다 —
-     안 잡는 자였습니다. <b>중괄호를 세서</b> 블록을 통째로 뜹니다.        */
-  const re = /if\s*\(\s*tab\s*===\s*'([a-z_0-9]+)'\s*\)\s*\{/g;
-  let g;
-  while ((g = re.exec(go))) {
-    let i = g.index + g[0].length - 1, d = 0, end = -1;
-    for (let k = i; k < go.length && k < i + 4000; k++) {
-      if (go[k] === '{') d++;
-      else if (go[k] === '}') { d--; if (!d) { end = k; break; } }
-    }
-    if (end < 0) continue;
-    const body = go.slice(i, end);
-    const mo = body.match(/osFullMode\(\s*'([a-z-]+)'\s*\)/);
-    if (mo && mo[1] && /\breturn\s*;/.test(body))
-      if (!전체화면.some(x => x[0] === g[1])) 전체화면.push([g[1], mo[1]]);
-  }
-  /* openBa() 로 나가는 frmake 는 osFullMode('') 라 위 그물에 안 걸립니다 —
-     <b>제 전용 화면(#baScreen)이 덮으므로</b> 똑같이 옷이 안 보입니다.    */
-  if (/if\(tab==='frmake'\)\{\s*osFullMode\(''\);\s*openBa\(\);\s*return;/.test(go))
-    전체화면.push(['frmake', '']);
-  is(전체화면.length >= 11,
-     '  전체화면으로 빠져나가는 화면을 <b>' + 전체화면.length + '개</b> 찾았다 (11개 이상이어야 그물이 성한 것)' +
+  /* ★ 2026-10-23 (판 X175) · 찾는 자리를 <b>scripts/lib-fullscr.js 한 곳</b>으로
+     옮겼습니다. check-skinmap 이 따로 세고 있어, 덮개를 하나 만들자 한 자는
+     「T_SKIN 에 적지 마라」 다른 자는 「적어라」 고 <b>서로 반대로</b> 울었습니다.
+     묻는 곳은 하나입니다 (5번). 찾는 법은 그대로입니다 — 중괄호를 셉니다.   */
+  const 전체화면 = 덮개화면(src);
+  is(전체화면.length >= 적어도,
+     '  전체화면으로 빠져나가는 화면을 <b>' + 전체화면.length + '개</b> 찾았다 (' + 적어도 + '개 이상이어야 그물이 성한 것)' +
      '\n      ' + 전체화면.map(x => x[0]).join(' · '));
   const 잘못 = 전체화면.filter(x => skin.indexOf(x[0]) >= 0).map(x => x[0]);
   is(잘못.length === 0,

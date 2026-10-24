@@ -1,4 +1,4 @@
-/* 🎤 <b>B·C·D 영업 강의 — 선택이 증명이 되는 시간</b> (판 X175 · 2026-10-23)
+/* 🎤 <b>B·C·D 영업 강의 — 선택이 증명이 되는 시간</b> (판 X178 · 2026-10-23 · 처음 X175 로 적었으나 #644 가 먼저 X175 로 병합해 밀었습니다)
 
    사장님 말씀 — 「인생은 b와 d 그리고 가운데 c 에 의미 · 리더로써의 실패 · 선택의 과정중에서는
    실패지만 결과를 냈다면 증명 · … 고객님의 수많은 선택에서 날 선택할수 있는 자료 · 타임라인 내가
@@ -27,7 +27,11 @@
         같은 물음 (5번). 덱 · 워크북 어디에도 물음 목록을 따로 적지 않는다
      ⑮ 적은 것은 그 폰에만 · 다시 열어도 남고 · 다 지우기로 지워진다 · 서버를 안 부른다 (7번)
      ⑯ 마음 점수를 고른 장면만 곡선 점이 된다 — 비운 장면을 0 으로 그리지 않는다 (1번)
-     ⑰ 덱의 활동 장마다 「📱 n쪽」 이 그 쪽 제목과 함께 선다 · 덱이 폰 워크북 주소를 띄우고 복사한다  */
+     ⑰ 덱의 활동 장마다 「📱 n쪽」 이 그 쪽 제목과 함께 선다 · 덱이 폰 워크북 주소를 띄우고 복사한다
+   판 X179 (2026-10-24 「우선 펼쳐서 보일수 있도록」 → 「강의 장 한눈에」) —
+     ⑱ ▦ 한눈에 — 발표에 서는 장이 빠짐없이 같은 차례로 작은 화면으로 선다 · 부마다 분 · 시각
+     ⑲ ★ 빠지는 장은 점선 칸으로 그 자리에 서서 무엇을 적으면 서는지 말한다 — 발표 목록과 같은 한 곳(deckAll)에서 센다 (1번 · 5번)
+     ⑳ 누르면 그 장으로 · 작은 화면은 움직이지 않고 id 를 겹쳐 만들지 않는다  */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9174;
@@ -223,6 +227,34 @@ const srv = http.createServer((q, s) => {
     is(wk.length >= 7 && wk.every(w => w.wb >= 1 && w.wb <= 6 && w.badge), '활동 장 ' + wk.length + '개 모두 「📱 n쪽 — 그 쪽 제목」 이 선다');
     is(wk.every(w => w.said === null || w.said === w.wb), '활동 장의 말(「워크북 n쪽」)과 쪽 표시가 같다');
     is(new Set(wk.map(w => w.wb)).size === 6, '워크북 여섯 쪽이 모두 어느 활동에서 쓰인다');
+
+    console.log('\n[15] ▦ 한눈에 — 강의 전체를 펼쳐 보나');
+    await p.evaluate(() => { window.__keep = JSON.stringify(S); localStorage.removeItem(KEY); S = load(); S.story.leaderFail = '홍길동 점검 — 펼쳐 보기'; save(); page('deck'); show(0); });
+    await p.click('#ovBtn');
+    const ovw = await p.evaluate(() => { const A = deckAll();
+      return { open: !$('ov').hidden && $('stageBox').hidden, cards: document.querySelectorAll('#ov .ovc').length, d: D.length,
+        holes: document.querySelectorAll('#ov .ovx').length, skip: A.filter(x => x.skip).length,
+        order: [...document.querySelectorAll('#ov .ovc')].every((c, i) => +c.dataset.i === i),
+        secs: [...document.querySelectorAll('#ov .ovs h3 small')].map(x => +(/(\d+)분/.exec(x.textContent) || [0, 0])[1]).reduce((a, b) => a + b, 0),
+        story: /홍길동 점검 — 펼쳐 보기/.test($('ov').innerText),
+        nest: document.querySelectorAll('#ov .ovg > :not(.ovc):not(.ovx)').length, grid: [...document.querySelectorAll('#ov .ovg')].every(g => g.children.length > 0),
+        ids: [...document.querySelectorAll('[id]')].map(x => x.id).filter((v, i, a) => a.indexOf(v) !== i),
+        anim: document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('#ov')).length }; });
+    is(ovw.open, '▦ 한눈에를 누르면 펼친 판이 서고 큰 화면은 접힌다');
+    is(ovw.cards === ovw.d && ovw.order, '발표에 서는 장 ' + ovw.d + '장이 빠짐없이 같은 차례로 선다');
+    is(ovw.holes === ovw.skip && ovw.holes > 0, '빠지는 장 ' + ovw.skip + '개가 점선 칸으로 그 자리에 서서 무엇을 적으면 서는지 말한다');
+    is(ovw.secs === 240, '부마다 분을 더하면 240분');
+    is(ovw.story, '적은 이야기가 작은 화면에도 그대로 선다');
+    is(ovw.nest === 0 && ovw.grid, '펼친 판이 깨지지 않는다 — 칸 안에는 작은 화면과 점선 칸만 선다(단추 속 단추가 문서를 쪼개지 않게)');
+    is(ovw.ids.length === 0, '작은 화면이 id 를 겹쳐 만들지 않는다' + (ovw.ids.length ? ' ← ' + ovw.ids.slice(0, 3).join(',') : ''));
+    is(ovw.anim === 0, '작은 화면은 움직이지 않는다(장 수십 개가 한꺼번에 돌지 않게)');
+    const pick = await p.evaluate(() => { const c = document.querySelectorAll('#ov .ovc')[7]; c.click(); return { cur, hid: $('ov').hidden, big: !$('stageBox').hidden }; });
+    is(pick.cur === 7 && pick.hid && pick.big, '작은 화면을 누르면 그 장(8번째)으로 가고 펼친 판이 닫힌다');
+    await p.keyboard.press('g');
+    is(await p.evaluate(() => !$('ov').hidden), 'G 키로 펼친다');
+    await p.keyboard.press('Escape');
+    is(await p.evaluate(() => $('ov').hidden && !$('stageBox').hidden), 'Esc 로 닫힌다');
+    await p.evaluate(() => { S = JSON.parse(window.__keep); save(); });   /* 앞 점검이 적어 둔 것을 되돌려 놓습니다 — [9] 가 그것을 봅니다 */
 
     console.log('\n[14] 📱 폰 워크북 — 적고 · 남고 · 그리고 · 뽑고 · 지운다 (bcd-workbook.html)');
     const q = await ctx.newPage({ viewport: { width: 390, height: 844 } });

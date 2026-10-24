@@ -2155,6 +2155,15 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
 body.dzguide-mode .app{display:none;}
 body.dzguide-mode #dzGuideScreen{display:block;}
 #dzGuideScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 📅 APEX 교육 캘린더 (상담자료와 같은 패턴 · app/edu-cal.html)
+   ★ <b>덮개로 엽니다</b> — 사장님 말씀 「로그인 창을 없애버려 <b>이미 1차
+     로그인을 하니깐</b>」. 새 탭으로 내보내면 주소가 달라 거기서 또 로그인을
+     해야 합니다. 앱 안에 두면 <b>여기 로그인 하나로 끝</b>입니다.
+   ★ 이 쪽에는 로그인 칸이 <b>한 곳도 없습니다</b> — check-educal 이 셉니다. */
+#educalScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.educal-mode .app{display:none;}
+body.educal-mode #educalScreen{display:block;}
+#educalScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* 상담자료는 화면 아래에 자기 버튼이 있다 — 그 위로 올린다 */
 #fpDeckScreen .fin-float{bottom:88px;}
 @media(max-width:880px){#fpDeckScreen .fin-float{bottom:96px;}}
@@ -2672,6 +2681,16 @@ body.dzguide-mode #dzGuideScreen{display:block;}
     <button class="ff-back" onclick="exitSangdam()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadSangdam()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openSangdamNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 📅 APEX 교육 캘린더 (앱 폴더에 번들: app/edu-cal.html) -->
+<div id="educalScreen">
+  <iframe id="educalFrame" class="fin-frame" title="APEX 교육 캘린더"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitEducal()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadEducal()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openEducalNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
 
@@ -14942,6 +14961,25 @@ var TABS=[
    {id:'hq',icon:'🏛️',title:'승인·규칙',cnt:'',hide:true,ak:'매니저 관리'}
  ]},
  {group:'교육 자료',items:[
+   /* ★ 2026-10-23 (판 X173) · 사장님 말씀 「교육매니저 em 전용 사이트를
+      메뉴 <b>맨 왼쪽 위</b>에다가 넣어줄래 <b>교육시스템EM</b> 이라는 목록으로」.
+      <b>따로 선 주소</b>입니다 (APEX HB · EM 전용 운영센터) — 주소는 아래 LINKS 에
+      <b>한 번만</b> 적습니다. 색표처럼 주소도 한 곳입니다 (5번).
+      ★ <b>목록은 기둥 맨 위에 섭니다</b>(navTopGroupHtml). 여기에는 묶음을 따로
+        만들지 않고 교육 자료 안에 둡니다 — 묶음을 하나 더 만들면 다 접은 서랍이
+        942px 가 되어 한 화면(900px)을 넘습니다(check-navgrp 가 재 주었습니다 · 8번).
+      ★ <b>문을 여는 것은 tk 입니다</b> — 교육 자료 안에 있어도 이 칸만
+        교육매니저·지점장·대표에게 보입니다 (OS_KEY_ROLE · 아래).
+      ⚠ 묶음에 role:'edu' 만 달았을 때는 <b>설계사에게도 그대로 보였습니다</b> —
+        재어 보고 알았습니다. check-emcenter 가 이 문을 지킵니다 (8번).        */
+   {id:'emcenter',icon:'🎓',title:'EM 전용 운영센터',cnt:'',tk:'교육시스템EM',ak:'교육매니저 EM 운영센터 업적 시책 월급 정산 주간마감 팀원'},
+   /* ★ 2026-10-23 (판 X175) · 사장님 말씀 「교육캘린더 … 토스 테마 아이콘 등
+      전부 바꿔줘 색상 까지」 → 「<b>2번</b>으로 하고 <b>로그인 창을 없애버려</b>
+      이미 1차 로그인을 하니깐」. 「2번」 은 <b>교육매니저·지점장·대표만</b>
+      입니다 — 그래서 위 칸과 같은 <code>tk</code> 를 답니다.
+      ★ <b>앱 안에서 덮개로</b> 엽니다(educalScreen) — 새 탭이면 주소가 달라
+        또 로그인을 해야 합니다. 여기 로그인 하나로 끝입니다.           */
+   {id:'educal',icon:'📅',title:'APEX 교육 캘린더',cnt:'',tk:'교육시스템EM',ak:'교육 캘린더 일정 신입 교육 주간 팀별 교육 운영표 본부장 루틴 공지'},
    {id:'manual',icon:'📘',title:'APEX 사용가이드',cnt:'',ak:'업무매뉴얼'},
    /* 지도는 맨 왼쪽 위 「APEX 사용가이드」 바로 밑에 단추로 세워 두었다(renderNav).
       여기서는 hide 로 눈에서만 뺀다 — 두 번 서면 어수선하다. 지우지 않는 이유는
@@ -15012,9 +15050,11 @@ var TABS=[
 
 ];
 var TAB_META={
+ emcenter:{tag:'교육시스템EM',title:'EM 전용 운영센터',desc:'아래 단추를 누르면 새 탭으로 열립니다. 주소가 달라 거기서 한 번 더 로그인하십시오.'},
+ educal:{tag:'교육시스템EM',title:'APEX 교육 캘린더',desc:'월간 캘린더 · 신입 교육 주간 · 팀별 교육 · 교육매니저 운영표 · 본부장 루틴 · 공지 만들기.'},   /* ⚠ 이 글은 esc() 를 지납니다 — <b> 를 넣으면 글자 그대로 찍힙니다 */
  clients:{tag:'OS',title:'고객 보장분석 프로젝트',desc:'고객별 보장분석 상담을 한 곳에서. 문서 업로드·추출·검수·전후비교·리포트까지 이어집니다.'},
  cs_assist:{tag:'CONSULT',title:'AI 통합상담 어시스턴트',desc:'윤시현 「고객이익 통합상담」 방법론으로 상담 준비 브리핑과 녹취 복기를 돕습니다. 녹취는 텍스트 붙여넣기(길이 제한 없음) 또는 오디오 업로드.'},
- blog:{tag:'CONTENT',title:'블로그',desc:'글은 <b>블로그 공장</b>에서 씁니다 — 새 탭으로 열립니다. 여기에는 상위노출 키트만 둡니다.'},
+ blog:{tag:'CONTENT',title:'블로그',desc:'글은 「블로그 공장」에서 씁니다 — 새 탭으로 열립니다. 여기에는 상위노출 키트만 둡니다.'},
  threads:{tag:'CONTENT',title:'Threads 생성',desc:'한 번에 여러 개의 스레드 게시글을 타깃에 맞춰 생성합니다.'},
  insta:{tag:'CONTENT',title:'인스타그램 피드',desc:'피드 캡션·해시태그를 브랜드 톤으로 생성합니다.'},
  video:{tag:'CONTENT',title:'유튜브 & 릴스',desc:'영상 포맷·길이별 제목·후킹·대본을 \'삶을 설계하다\' 톤으로.'},
@@ -15130,6 +15170,8 @@ var NAV_WHEN={
  /* ⚙️ 팀 · 설정 */
  org:'run', attend:'run', audit:'run', teamhub:'run', daily:'run',
  report:'run', branch_coach:'run', hq:'run',
+ emcenter:'run',        /* 「EM 전용 운영센터」 · 교육시스템EM — 업적·시책·월급은 조직을 돌리는 일입니다 */
+ educal:'run',          /* 「APEX 교육 캘린더」 · 교육시스템EM — 교육 일정을 짜는 것도 조직을 돌리는 일입니다 */
  /* 📢 공지사항 — 2026-09-30. 팀에 알리는 것이라 <b>팀 · 설정</b> 입니다
     (메뉴에서도 시스템 묶음에 섭니다). 여기 안 적으면 check-nav 가 웁니다 —
     <b>화면 하나하나가 어느 때 것인지</b> 빠짐없이 적어야 서랍이 셉니다. */
@@ -16147,9 +16189,33 @@ function navMainPaint(){
   var el=document.getElementById('navMain'); if(!el)return;
   try{ el.innerHTML=navMainHtml(); }catch(e){}
 }
+/* ★ 판 X173 · <b>기둥 맨 위에 서는 묶음.</b> 사장님 말씀
+   「교육매니저 em 전용 사이트를 <b>메뉴 맨 왼쪽 위</b>에다가 넣어줄래
+    <b>교육시스템EM</b> 이라는 목록으로 넣어줘」.
+   ★ TABS 에만 넣었더니 기둥 <b>932px 아래</b>에 서서 눈에 안 들었습니다
+     (재어 보고 알았습니다) — 「오늘 하루」 위에 세우어 맨 위로 올립니다.
+   ⚠ <b>이름·아이콘을 여기 또 적지 않습니다</b> — TABS 에서 그 묶음을 찾아
+     그대로 씁니다 (5번). 묶음 이름을 고치면 여기도 따라옵니다.
+   ⚠ <b>누가 보는지도 여기서 다시 안 셀니다</b> — visibleTabs() 가 이미 문을 봅니다
+     (교육매니저·지점장·대표만). 둘이 각자 셀면 한 화면이 두 말을 합니다 (5번). */
+var NAV_TOP={lab:'교육시스템EM',ids:['emcenter','educal']};
+function navTopGroupHtml(cur){
+  var h='',n=0;
+  NAV_TOP.ids.forEach(function(id){
+    if(typeof osTabAllowed==='function'&&!osTabAllowed(id))return;   /* 문은 한 곣에서만 봅니다 (5번) */
+    var it=null,i,j;
+    for(i=0;i<TABS.length;i++){ var its=TABS[i].items||[];
+      for(j=0;j<its.length;j++)if(its[j].id===id)it=its[j]; }
+    if(!it)return;                                                   /* 없는 칸을 지어 세우지 않습니다 (1번) */
+    h+=navMainRow(it.id,it.icon||'',it.title,cur); n++;
+  });
+  return n?('<div class="t-glab">'+osEsc(NAV_TOP.lab)+'</div>'+h):'';
+}
 function navMainHtml(){
-  var cur='',i,x,h='<div class="t-glab">오늘 하루</div>';
+  var cur='',i,x,h='';
   try{ if(typeof currentTab==='function')cur=currentTab(); }catch(e){}
+  h+=navTopGroupHtml(cur);
+  h+='<div class="t-glab">오늘 하루</div>';
   for(i=0;i<TB.length;i++){
     x=TB[i];
     if(typeof tbCan==='function'&&!tbCan(x.id))continue;   /* 등급에 막힌 칸은 안 세운다 */
@@ -19732,7 +19798,7 @@ var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode','bohum-mode','pdel-m
                       멀쩡히 떠 있는데 눈에는 안 보인다. 바로 위 주석이 「여기 이름만
                       적으면 된다」 고 적어 두었는데, 칸을 만들면서 그 한 줄을
                       빠뜨린 것이다. check-stayput 이 이제 이것을 센다. */
-                   'onecmp-mode'];
+                   'onecmp-mode','educal-mode'];
 function osFullMode(on){
   var b=document.body,i;
   for(i=0;i<OS_FULL_MODES.length;i++)
@@ -19975,7 +20041,7 @@ function osFullMode(on){
    ⚠ <b>이 쪽지를 표 안에 두지 마십시오.</b> check-skinmap 이 표를 쉼표로
      잘라 읽어서, 주석이 안에 있으면 그것을 <b>이름 하나로 셉니다</b> — 실제로
      한 번 그렇게 빨간불이 켜졌습니다 (8번).                               */
-var T_SKIN={home:1,dashboard:1,clients:1,keep4:1,rjnews:1,news_live:1,mycal:1,me:1,tools:1,
+var T_SKIN={emcenter:1,home:1,dashboard:1,clients:1,keep4:1,rjnews:1,news_live:1,mycal:1,me:1,tools:1,
             voiceasst:1,growboard:1,assistant:1,airep:1,brain:1,notice:1,
             academy_notion:1,apexmaster:1,bojang:1,branch_coach:1,calc:1,calendar:1,
             compare:1,cs_assist:1,cs_gso:1,cs_needs:1,ext_naver:1,ext_reply:1,ext_thread:1,
@@ -20350,6 +20416,13 @@ function go(tab){
     mountSangdam();
     osFullMode('sangdam-mode');
     navMark('sangdam');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
+  if(tab==='educal'){
+    mountEducal();
+    osFullMode('educal-mode');
+    navMark('educal');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
@@ -20844,8 +20917,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-23 19:59';
-var APP_BUILD_NOTE="📱 <b>B·C·D 영업 강의 — 참가자가 제 폰에 적습니다</b> — 강의 처음에 「📱 함께 적습니다」 장이 폰 워크북 주소를 크게 띄웁니다(🔗 링크 복사 → 단톡방에 붙여 넣기). 활동 장마다 「📱 n쪽」 이 뜨고, 참가자는 폰에서 그 쪽을 엽니다. ◾ 6쪽 — 오늘 선택 셋 · <b>인생 장면</b>(마음 점수를 고르면 내 인생 곡선이 바로 그려짐) · 두 개의 시계 · 놓친 고객 · <b>나의 마지막 하루</b> · 홍길동 생애 지도 · 팩트파인딩 답 · 관찰 체크 · 다음 C 선언문. ◾ 적은 것은 <b>그 폰에만</b> 남습니다 — 강사도 회사도 못 봅니다. 「인쇄 · PDF 저장」 으로 간직합니다. ◾ 종이 워크북과 <b>같은 물음 한 벌</b>을 읽어 둘이 어긋나지 않습니다. ◾ 이 판에는 아직 안 나간 <b>B·C·D 강의 첫 판(X175)</b>과 <b>메멘토 모리 · 뉴스 · 사진 · 움직임(X176)</b>도 같이 들어 있습니다. (판 X177)";
+var APP_BUILD='2026-10-24 11:53';
+var APP_BUILD_NOTE="▦ <b>B·C·D 영업 강의를 한눈에 펼쳐 봅니다</b> — 발표 화면 아래 「▦ 한눈에」(또는 G 키)를 누르면 강의 전체가 <b>부마다 작은 화면으로 쭉</b> 펼쳐집니다. 부마다 분 · 몇 시부터 몇 시까지 · 몇 장인지가 서고, 작은 화면을 누르면 그 장으로 바로 갑니다. ◾ 강사님이 아직 안 적어 <b>발표에서 빠지는 장</b>도 그 자리에 점선 칸으로 서서 「무엇을 적으면 서는지」 말합니다 — 「적으러 가기」 로 바로 갑니다. ◾ 같이 실려 나가는 것 — 아직 안 나간 <b>B·C·D 영업 강의</b> 전부: 첫 판(X178 · 4시간 발표 · 내 타임라인 · 워크북) · 💀 메멘토 모리 · 실제 뉴스 · 내 사진 · 움직임(X176) · 📱 참가자 폰 워크북(X177). <b>19:05 판</b>(🎓 교육시스템EM · 📅 교육 캘린더 · X173·X175)은 먼저 main 에 들어갔고 이 판에도 그대로 들어 있습니다. (판 X179)";
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -21296,6 +21369,22 @@ function mountSangdam(){
 function reloadSangdam(){var f=$('sangdamFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountSangdam,30);toast('보장분석 상담자료 새로고침');}}
 function openSangdamNewTab(){var w=window.open(SANGDAM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitSangdam(){go(prevTab||'home');}
+
+/* ════════ 📅 APEX 교육 캘린더 (앱 폴더에 번들: app/edu-cal.html) ════════
+   교육매니저가 돌리는 자리입니다 — 월간 캘린더 · 신입 교육 주간 · 팀별 교육 ·
+   교육매니저 운영표 · 본부장 루틴 · 공지 만들기 · 설정.
+   ★ <b>로그인이 없습니다.</b> 사장님 말씀 「로그인 창을 없애버려 이미 1차
+     로그인을 하니깐」 — 그래서 새 탭으로 내보내지 않고 <b>여기 안에</b> 둡니다.
+   ★ 적은 것은 <b>이 기기(localStorage)에만</b> 남습니다 — 서버를 안 부릅니다 (7번).
+   ★ 색·글꼴은 <b>app/ui.css 한 곳</b>에서 옵니다 (5번).                    */
+var EDUCAL_URL='edu-cal.html';
+function mountEducal(){
+  var f=$('educalFrame');if(!f||f._mounted)return;
+  f.src=EDUCAL_URL;f._mounted=true;
+}
+function reloadEducal(){var f=$('educalFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountEducal,30);toast('교육 캘린더 새로고침');}}
+function openEducalNewTab(){var w=window.open(EDUCAL_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitEducal(){go(prevTab||'home');}
 
 /* ════════ 증권 전달 (앱 폴더에 번들: app/증권전달/index.html) ════════
    계약이 성립된 뒤 증권을 고객에게 전하는 자리에서 쓰는 한 벌.
@@ -25635,6 +25724,7 @@ document.addEventListener('keydown',function(e){
   if(document.body.classList.contains('finance-mode'))exitFinance();
   else if(document.body.classList.contains('crm-mode'))exitCrm();
   else if(document.body.classList.contains('sangdam-mode'))exitSangdam();
+  else if(document.body.classList.contains('educal-mode'))exitEducal();
   else if(document.body.classList.contains('pdel-mode'))exitPdel();
   else if(document.body.classList.contains('bohum-mode'))exitBohum();
   else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
@@ -29439,6 +29529,7 @@ function hmSheetUrl(id){
   if(typeof FIN_URL     !=='undefined')M.finance   =FIN_URL;
   if(typeof BA_URL      !=='undefined')M.frmake    =BA_URL;
   if(typeof SANGDAM_URL !=='undefined')M.sangdam   =SANGDAM_URL;
+  if(typeof EDUCAL_URL  !=='undefined')M.educal    =EDUCAL_URL;
   if(typeof FP_DECK_URL !=='undefined')M.fp_deck   =FP_DECK_URL;
   if(typeof FP_TALK_URL !=='undefined')M.fp_talk   =FP_TALK_URL;
   if(typeof PDEL_URL    !=='undefined')M.pdel      =PDEL_URL;
@@ -60790,6 +60881,10 @@ function bjDownload(id) {
 
 /* ── 링크 보드(외부 시스템) ── */
 var LINKS=[
+ /* ★ 판 X173 · 교육시스템EM — 말하는 일곱은 <b>그 사이트를 열어 본 것</b>입니다
+    (2026-10-23 · HTTP 200 · <title>APEX HB · EM 전용 운영센터</title>).
+    지어 적지 않습니다 (1번) — 못 본 것은 안 적습니다.                     */
+ {tab:'emcenter',icon:'🎓',title:'EM 전용 운영센터',desc:'대시보드 · 주간 마감 · 업적 입력 · 월급 정산 · 시책 관리 · 팀원 · 자료실 · 데이터.',links:[{t:'🎓 EM 전용 운영센터 열기',u:'https://apex-hb-em.netlify.app'}]},
  {tab:'ref_jeonsan',icon:'🖥️',title:'통합 보험 전산 · 사이버창구 (설계사 로그인)',desc:'각 보험사 전산·사이버창구를 한 곳에서 접속하는 통합 전산 포털입니다. 아래 버튼으로 전산 홈페이지에 들어가 본인 설계사 계정으로 로그인하세요. (계정은 소속 대리점을 통해 발급) · 전산 로그인·조회는 반드시 본인 계정으로, 고객 개인정보는 규정에 따라 취급하세요.',links:[{t:'🏢 설계사닷컴 · 통합 전산 홈페이지 바로가기',u:'http://xn--989an19aika.com/'}]},
  {tab:'ref_jeonsan',icon:'🔐',title:'생명보험사 전산 · 설계사 로그인 (회사별 바로가기)',desc:'각 생명보험사 설계사 전산(사이버창구)으로 바로 이동합니다. 새 탭에서 본인 설계사 계정으로 로그인하세요. (계정은 소속 대리점을 통해 발급) · 로그인·조회는 반드시 본인 계정으로, 고객 개인정보는 규정에 따라 취급하세요.',links:[{t:'삼성생명',u:'https://ga.samsunglife.com'},{t:'한화생명',u:'https://hmp.hanwhalife.com/online/ga'},{t:'교보생명',u:'https://ga.kyobo.com'},{t:'신한라이프',u:'https://ga.shinhanlife.co.kr'},{t:'NH농협생명',u:'https://sfa.nhlife.co.kr:8443/'},{t:'미래에셋생명',u:'http://www.loveageplan.com'},{t:'동양생명',u:'http://1004.myangel.co.kr'},{t:'흥국생명',u:'https://sales.heungkuklife.co.kr/'},{t:'KB라이프',u:'https://sfa.kblife.co.kr/'},{t:'메트라이프',u:'http://metplus.metlife.co.kr'},{t:'푸본현대생명',u:'https://ez.fubonhyundai.com/'},{t:'DB생명',u:'http://etopia.idblife.com'},{t:'iM라이프(구 DGB)',u:'https://fgs.dgbfnlife.com:8443'},{t:'AIA생명',u:'https://imap.aia.co.kr'},{t:'라이나생명',u:'https://ga.lina.co.kr'},{t:'처브라이프',u:'http://esmart.chubblife.co.kr'},{t:'ABL생명',u:'http://ga.abllife.co.kr'},{t:'KDB생명',u:'http://kss.kdblife.co.kr'},{t:'하나생명',u:'https://ga.hanalife.co.kr'},{t:'BNP파리바카디프',u:'http://ga.cardif.co.kr'},{t:'IBK연금보험',u:'https://sf.ibki.co.kr/'}]},
  {tab:'ref_jeonsan',icon:'🔑',title:'손해보험사 전산 · 설계사 로그인 (회사별 바로가기)',desc:'각 손해보험사 설계사 전산으로 바로 이동합니다. 새 탭에서 본인 설계사 계정으로 로그인하세요. · 로그인·조회는 반드시 본인 계정으로, 고객 개인정보는 규정에 따라 취급하세요.',links:[{t:'삼성화재',u:'https://erp.samsungfire.com'},{t:'현대해상',u:'https://sp.hi.co.kr'},{t:'DB손해보험',u:'https://www.mdbins.com'},{t:'KB손해보험',u:'https://nsales.kbinsure.co.kr/'},{t:'메리츠화재',u:'http://sales.meritzfire.com'},{t:'한화손해보험',u:'http://portal.hwgeneralins.com'},{t:'NH농협손해보험',u:'https://ss.nhfire.co.kr/'},{t:'흥국화재',u:'https://sales.heungkukfire.co.kr/'},{t:'롯데손해보험',u:'http://lottero.lotteins.co.kr'},{t:'예별손해보험(구 MG)',u:'https://mganet.mggeneralins.com'},{t:'AIG손해보험',u:'https://sso.aig.co.kr/gaLogin/gaLogin.jsp'},{t:'하나손해보험',u:'https://sfa.saleshana.com/index.html'},{t:'라이나손해보험',u:'https://ga.linagi.com/'}]},
@@ -62099,7 +62194,13 @@ function osGroupAllowedRoles(g){
   return osGroupDefaultRoles(g);
 }
 /* ak 마다 기본 직급이 다르다 — 매니저 관리는 리더부터, 나머지는 전원 */
-var OS_KEY_ROLE={'매니저 관리':'lead','보험전략실':'hq'};
+/* ★★ 판 X173 · <b>문을 여는 것은 여기입니다.</b> 묶음에 적는 role:'edu' 는
+   <b>적어 둔 것일 뿐 판정을 안 합니다</b> — osItemAllowedRoles 는 열쇠(tk||ak)로
+   이 표를 봅니다. 재어 보고 알았습니다 — role:'edu' 만 달았을 때는
+   설계사(member)에게도 그대로 보였습니다. 묶음에 같이 적어 두는 것은
+   보험전략실이 원래 그렇게 하고 있어 꼴을 맞춘 것이고, <b>정하는 것은
+   이 줄</b>입니다 (5번 · 두 곣에서 각자 답하지 않게 여기를 가리킵니다).      */
+var OS_KEY_ROLE={'매니저 관리':'lead','보험전략실':'hq','교육시스템EM':'edu'};
 /* 설정 표에 세울 열쇠 목록 — 메뉴에 붙은 ak 를 나온 순서대로 모은다.
    대표가 예전에 저장해 둔 설정(tool_access)이 이 열쇠로 걸려 있으므로,
    메뉴를 어떻게 다시 묶든 이 목록과 저장된 값은 그대로 이어진다. */
