@@ -20,7 +20,7 @@
          분배 나이대마다 필요한 보험의 분배전략」) — 재무설계의 집 · 보험의 두 역할 · 「가족은 몇 달」 ·
          「아프면 연금을 깨요」 가 <b>칸 값으로 따로 셈한 달 수</b>와 맞나 · 전략 장이 고객 나이대를 켜고
          「APEX 상담 원칙 · 정답이 아님」 을 밝히나 · 결과지 「보장 전략」 장이 같은 달 수를 말하나
-     카. 판 X185 (사장님 말씀 「미래 장면에도 본인 대출을 넣어서 다시 셈해줘 · 기존 재무설계계산기를 따와서
+     카. 판 X197 (사장님 말씀 「미래 장면에도 본인 대출을 넣어서 다시 셈해줘 · 기존 재무설계계산기를 따와서
          기능들을 가져오되 재해석해서 재구성해」) — 미래 장면의 소득 셈에 본인 대출(그때 0) · 현금흐름 · 대출 ·
          교육비 · 남길 것 · 고칠 순서 장이 서나 · 판정이 계산기 기준(저축률 · DSR · LTV)과 같나 · 결과지 장
      차. 판 X195 (사장님 말씀 「배수는 평균 데이터를 기준으로 하고 직업군을 나누어서 다시 나눠서 해줘」) —
@@ -160,7 +160,7 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
     const famL = living - v('s_loan');
     const fam = mid([IP_AVG.fam ? IP_AVG.fam.v : null, own * J.debt / J.inc, v('s_debt') + famL * 12 * Math.max(0, R.indepAge - v('inh_youngest'))]);
     const me = mid([IP_AVG.me ? IP_AVG.me.v : null, own * (J.work + J.biz) / J.inc * R.meMonths / 12, living * R.meMonths]);
-    /* 판 X185 — 미래 장면은 소득 셈에도 본인 대출(그때 0)을: 빚 배수 × (그때 대출 ÷ 지금 대출) */
+    /* 판 X197 — 미래 장면은 소득 셈에도 본인 대출(그때 0)을: 빚 배수 × (그때 대출 ÷ 지금 대출) */
     const later = mid([IP_AVG.fam ? IP_AVG.fam.v : null, v('s_debt') > 0 ? own * J.debt / J.inc * 0 / v('s_debt') : own * J.debt / J.inc, famL * 12 * R.spouseYears]);
     return { fam, me, w: Math.round(fam / (fam + me) * 20) * 5, wLater: Math.round(later / (later + me) * 20) * 5 };
   }, SELF);
@@ -182,7 +182,7 @@ const SCARE = /노후\s*파산|파산|빈곤층|고독사|하류|\d+(\.\d+)?\s*%
   is(/막내 나이 필요/.test(await pg.$eval('#wkOv .wk-body', (e) => e.innerText)), '자녀가 있는데 막내 나이를 모르면 가족 셈을 비우고 「막내 나이 필요」');
   await pg.evaluate(() => { const e = document.getElementById('inh_youngest'); e.value = '10'; e.dispatchEvent(new Event('input', { bubbles: true })); });
 
-  head('카. 계산기 기능을 상담 말로 재구성 (판 X185)');
+  head('카. 계산기 기능을 상담 말로 재구성 (판 X197)');
   await pg.evaluate(() => { const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); };
     set('r_mortgage', '20000'); set('r_house_val', '50000'); set('inh_total', '250000'); });
   const fsT = await pg.evaluate(() => wkSlides().filter((x) => x.html).map((x) => x.html.replace(/<[^>]+>/g, ' ')).join('\n'));

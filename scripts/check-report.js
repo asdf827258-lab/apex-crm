@@ -21,7 +21,7 @@
          · 「지금 그대로면 / 오늘 제안을 더하면」 두 줄 · 스스로 점검 질문 · 마지막 「가장 마음에 걸린 숫자」
          · ★★ 걱정은 고객 숫자로만 — 바깥 통계·「노후 파산」 같은 겁주는 말이 없나 (1번 · 지시문 「확인 안 된 통계 금지」)
          · 목표를 이미 채운 고객에게는 부족을 지어 말하지 않나 (1번)
-     거. 판 X185 — 판정 숫자 FIN_RULE 한 곳(글자 35·45·60·70·20·10 이 0) · 판정식 한 곳 · finData 재사용 · 미래 장면 본인 대출
+     거. 판 X197 — 판정 숫자 FIN_RULE 한 곳(글자 35·45·60·70·20·10 이 0) · 판정식 한 곳 · finData 재사용 · 미래 장면 본인 대출
      하. 판 X195 — 직업군 평균 다섯 줄이 보도자료 숫자 그대로 · 출처 · 손으로 정한 소득 배수 0
      파. 판 X194 — 평균마다 출처 · 못 찾은 평균은 null · 보험료 판정 IP_RULE 한 곳 · 나이대 비율 0 · ipBase 한 곳
      타. 판 X193 — 나이대 문구 IP_AGE 한 곳 · 사슬 0 · 생활비 칸 목록 한 곳
@@ -155,7 +155,7 @@ is(Object.keys(JOB).every((k) => new RegExp(k + ':\\s*\\{[^}]*inc:' + JOB[k][0] 
 is(/var IP_JOB_SRC=\{[^}]*2025년 가계금융복지조사[^}]*2025\.12\.04[^}]*url:'https:\/\/mods\.go\.kr\//.test(fin), '배수의 출처(기관 · 발표일 · 주소)가 붙어 있다(9번)');
 is(!/famIncomeYears|meIncomeYears/.test(fin), '손으로 정한 소득 배수(3년치 · 1년치)가 남지 않았다');
 is(/inc:own>0\?own\*J\.famX:null/.test(fin) && /own\*J\.meX\*R\.meMonths\/12/.test(fin), '소득 셈은 직업군 배수(빚 배수 · 일해서 버는 몫)로');
-/* 판 X185 — 계산기 판정 숫자 한 곳 · 기존 계산(finData)을 그대로 · 재구성은 fsPlan 한 곳 */
+/* 판 X197 — 계산기 판정 숫자 한 곳 · 기존 계산(finData)을 그대로 · 재구성은 fsPlan 한 곳 */
 is((fin.match(/var FIN_RULE=\{/g) || []).length === 1 && !/(dsr<=(35|45)|ltv<=(60|70)|saveRatio>=(20|10)|savingRatio(>=|<)20)(?![0-9.])/.test(fin), '대출·저축률 판정 숫자가 FIN_RULE 한 곳 — 글자로 적힌 35 · 45 · 60 · 70 · 20 · 10 이 0(예전엔 서른네 곳)');
 const kindBody = (fn) => (fin.match(new RegExp('function ' + fn + '\\(d\\)\\{([^}]*)\\}')) || [, '1'])[1];
 is(!/\d/.test(kindBody('finCashKind').replace(/surplus>=0/g, '')) && !/\d/.test(kindBody('finDebtKind')), '판정식 안에 숫자가 0 — 기준은 FIN_RULE 에서만 (되돌림: 40 을 몰래 넣으면 웁니다)');
