@@ -22,6 +22,8 @@
      [7] ★ 다시 열어도 답이 남고, 「처음부터」 를 누르면 지워진다
      [8] 폰 390px 에서 옆으로 안 밀리고, 누르는 칸이 40px 이상이다
      [9] 인쇄하면 ✋ 단추가 빠지고 ☐ 칸이 선다 (펜으로 쓰는 종이)
+     [10] ★★ 내 플로우(판 X180) — 주소 # 뒤의 문항·순서·설계사 이름·첫인사가
+          서고, 결론 낱말이 든 첫인사는 안 서며, 판정은 그대로다
    ══════════════════════════════════════════════════════════════════ */
 const fs = require('fs'), path = require('path'), http = require('http'), url = require('url');
 const { chromium } = require('playwright');
@@ -30,12 +32,16 @@ let bad = 0;
 const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
 
 const src = fs.readFileSync(FILE, 'utf8');
-const js = (src.match(/<script>([\s\S]*?)<\/script>/) || [, ''])[1];
+/* 문항·판정은 selfcheck-core.js 한 벌입니다(판 X180) — 쪽에는 그것을 부르는 줄만 있어야 합니다 */
+const js = fs.readFileSync(path.join(ROOT, 'app', 'selfcheck-core.js'), 'utf8');
 
 console.log('\n[1] 아무것도 보내지 않는다 — 코드');
 is(js.length > 1000, '  점검 코드가 들어 있다 (' + js.length + '자)');
 is(!/\bfetch\s*\(|XMLHttpRequest|sendBeacon|WebSocket|EventSource/.test(js),
    '  fetch · XHR · beacon · 웹소켓이 코드에 없다');
+
+is(/<script src="selfcheck-core\.js"><\/script>/.test(src) && !/var ALLQ|\{k:'silson'/.test(src),
+   '  ★ 쪽은 selfcheck-core.js 를 부르기만 한다 — 문항 표를 또 박지 않았다(5번)');
 
 console.log('\n[2] 이름·전화번호·주민번호를 묻지 않는다 (3번)');
 is(!/type=["']?(tel|email)/.test(src), '  전화·메일 칸이 없다');
@@ -47,7 +53,7 @@ const srv = http.createServer((rq, rs) => {
   const p = decodeURIComponent(url.parse(rq.url).pathname);
   const f = path.join(ROOT, p);
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { rs.writeHead(404); rs.end('no'); return; }
-  rs.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); fs.createReadStream(f).pipe(rs);
+  rs.writeHead(200, { 'Content-Type': (/\.js$/.test(f) ? 'text/javascript' : 'text/html') + '; charset=utf-8' }); fs.createReadStream(f).pipe(rs);
 });
 
 (async () => {
@@ -130,6 +136,30 @@ const srv = http.createServer((rq, rs) => {
   is(/☐/.test(mark), '  안 고른 칸은 ☐');
   const on = await p.$eval('.sc-q[data-scq="brain"] .sc-op.on', e => getComputedStyle(e, '::before').content);
   is(/☑/.test(on), '  고른 칸은 ☑');
+
+  await p.emulateMedia({ media: 'screen' });
+  console.log('\n[10] 내 플로우 — 주소 # 뒤');
+  await p.evaluate(() => localStorage.removeItem('apxSelfCheck'));
+  const H = '#q=brain.cancer.claim&by=' + encodeURIComponent('홍길동') + '&hi=' + encodeURIComponent('오늘 강의 들어 주셔서 고마워요');
+  await p.goto(U + H, { waitUntil: 'domcontentloaded' }); await p.reload({ waitUntil: 'domcontentloaded' }); await p.waitForTimeout(300);
+  const order = await p.$$eval('.sc-q', a => a.map(e => e.getAttribute('data-scq')).join(','));
+  is(order === 'brain,cancer,claim', '  고른 세 문항이 고른 순서로만 선다 (' + order + ')');
+  is(await T('.prog [data-sccnt="all"]') === '3' && await T('[data-sccnt="left"]') === '3', '  「/ 3 답했어요」 · 남은 3 — 열셋이 아니라 고른 수');
+  is(await p.isVisible('[data-sc-show="by"]') && /홍길동/.test(await T('[data-sc="by"]')), '  「홍길동 설계사가 보낸 점검이에요」');
+  is(/고마워요/.test(await T('[data-sc="hi"]')) && /설계사가 적은 말/.test(await T('.hi')), '  첫인사가 「설계사가 적은 말」 이름표와 함께 선다');
+  await pick('brain', 'h');
+  is(await st('brain') === 'mid', '  ★ 판정은 그대로 — 뇌출혈만 → 채우면 좋아요 (플로우가 기준을 못 바꾼다)');
+  const t2 = await p.evaluate(() => APXSelf.text());
+  is(/→ 홍길동 설계사님께/.test(t2) && /약관과 보험사 심사 결과에 따라요/.test(t2), '  결과 글이 「→ 홍길동 설계사님께」 로 가고 약관·심사 문구는 그대로');
+  await p.goto(U + '#q=zzz.brain.brain&hi=' + encodeURIComponent('무조건 나오는 비과세 상품이에요'), { waitUntil: 'domcontentloaded' });
+  await p.reload({ waitUntil: 'domcontentloaded' }); await p.waitForTimeout(300);
+  is(await p.locator('.sc-q').count() === 1, '  모르는 문항 이름·겹친 문항은 버린다');
+  is(!(await p.isVisible('[data-sc-show="hi"]')), '  ★★ 「무조건 · 비과세」 가 든 첫인사는 안 선다 (1번·2번)');
+  is(!(await p.isVisible('[data-sc-show="by"]')), '  설계사 이름이 없으면 「보낸 점검」 줄도 안 선다');
+  await p.goto(U + '#q=', { waitUntil: 'domcontentloaded' }); await p.reload({ waitUntil: 'domcontentloaded' }); await p.waitForTimeout(300);
+  is(await p.locator('.sc-q').count() === 13, '  문항을 비워 보내면 열셋 그대로 (빈 점검이 안 된다)');
+  const lk = await p.evaluate(() => APXSelf.link({ q: ['silson', 'brain'], by: '홍길동<b>', hi: '원금 보장돼요' }, 'X'));
+  is(lk === 'X#q=silson.brain&by=' + encodeURIComponent('홍길동b'), '  링크 짓기 — 꺾쇠는 지우고, 결론 낱말 첫인사는 안 담는다 (' + lk.slice(0, 40) + ')');
 
   console.log('\n[1] 아무것도 보내지 않는다 — 눌러 본 뒤');
   is(sent.length === 0, '  요청이 한 번도 안 나갔다' + (sent.length ? ' ← ' + sent.slice(0, 3).join(' · ') : ''));
