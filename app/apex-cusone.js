@@ -246,6 +246,11 @@
     '.cus-tc-rp .q{font-size:13.5px;font-weight:800;color:#3730A3}',
     '.cus-tc-rp .a{font-size:13.5px;line-height:1.7;color:#0F172A;margin-top:3px}',
     '.cus-tc-bt button:disabled{opacity:.45;cursor:default}',
+    '.cus-tc-tabs{display:flex;gap:6px;margin:12px 0 2px;overflow-x:auto}',
+    '.cus-tc-tabs button{flex:1 0 auto;min-height:42px;padding:0 12px;border-radius:10px;border:1px solid #E5E9F0;background:#F8FAFC;font-size:13.5px;font-weight:800;color:#64748B;cursor:pointer;white-space:nowrap}',
+    '.cus-tc-tabs button.on{background:#EEF2FF;border-color:#C7D2FE;color:#3730A3}',
+    '.cus-tc-pane{display:none}',
+    '.cus-tc-pane.on{display:block}',
     '.cus-ap-in{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}',
     '.cus-ap-in label{display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:800;color:#64748B;flex:1 1 130px}',
     '.cus-ap-in label.pl{flex:1 1 100%}',
@@ -253,7 +258,7 @@
     '.cus-ap-cs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}',
     '.cus-ap-c{min-height:40px;padding:0 12px;border-radius:999px;border:1px solid #E5E9F0;background:#fff;font-size:13px;font-weight:700;color:#334155;cursor:pointer}',
     '.cus-ap-c.on{background:#0F172A;border-color:#0F172A;color:#fff}',
-    '@media print{.cus-tc-bt,.cus-ap-in,.cus-ap-cs{display:none}.cus-tc-s{break-inside:avoid}}',
+    '@media print{.cus-tc-bt,.cus-ap-in,.cus-ap-cs,.cus-tc-tabs{display:none}.cus-tc-pane{display:block}.cus-tc-s{break-inside:avoid}}',
     '@media print{.cus-card{break-inside:avoid}}'
   ].join('');
   function cusCss() {
@@ -528,7 +533,8 @@
       name: n, title: ti, org: org, phone: ('' + (me.phone || '')).trim(),
       intro: org ? (org + ' ' + (nt || '담당 설계사')) : (nt ? ('담당 설계사 ' + nt) : '담당 설계사'),
       short: nt || '담당 설계사',
-      sign: (org ? org + ' ' : '') + (nt || '담당 설계사') + ' 드림'
+      /* 서명은 구분선 아래 두 줄 — 문자에서 「누가 보냈나」 가 한눈에 갈립니다 */
+      sign: '────────\n' + (org ? org + '\n' : '') + (nt || '담당 설계사') + ' 드림'
     };
   }
   function cusFill(t, M, X) {
@@ -569,9 +575,9 @@
     var S = w.APEX_STAGE, L = (S && S.apptOf) ? S.apptOf(stage) : [], A = L[i] || L[0], M = cusMeNorm(me),
         day = cusApptDay(d), tm = cusApptTime(t), ok = !!(day && tm), pl = ('' + (place || '')).trim(), sl = [];
     if (!A) return { text: '', ok: false };
-    if (M.org) sl.push('· 소속 : ' + M.org);
-    sl.push('· 이름 : ' + M.short);
-    if (M.phone) sl.push('· 연락처 : ' + M.phone);
+    if (M.org) sl.push('🏢 소속 : ' + M.org);
+    sl.push('👤 이름 : ' + M.short);
+    if (M.phone) sl.push('📱 연락처 : ' + M.phone);
     return { ok: ok, text: cusFill(A.text, M, {
       '일시': ok ? (day + ' ' + tm) : '【날짜·시간을 넣어 주세요】',
       '시각': tm || '【시간을 넣어 주세요】',
@@ -605,7 +611,8 @@
     h += '<div class="cus-tc-hd"><b>' + cusEsc(st) + '</b> 에서 자주 만나는 상황 ' + L.length + '가지 — 맞는 것을 펴십시오. ' +
          '글은 <b>보이는 그대로</b> 나갑니다. 보내고 나면 기록 한 칸에 남기십시오.' +
          (ph ? '' : ' <b>번호가 없어</b> 문자·전화 단추는 안 섭니다 — 복사만 됩니다.') +
-         (M.org ? '' : ' 글 끝 서명에 <b>소속</b>을 넣으시려면 설정 → 내 소개에 적어 주십시오.') + '</div>';
+         (M.org ? '' : ' 글 끝 서명에 <b>소속</b>을 넣으시려면 설정 → 내 소개에 적어 주십시오.') +
+         '<br>✍️ 문자·카톡은 굵게·색이 안 됩니다 — 그래서 첫 줄 <b>[제목]</b> · 줄머리 <b>이모지</b> · <b>①②③</b> 번호로 눈에 띄게 했습니다.</div>';
     /* 📅 약속 안내 문자 — 약속이 읽혔으면 맨 위에 펴 둡니다 */
     if (AL.length) {
       A0 = cusApptText(st, 0, M, P.d, P.t, '');
@@ -637,6 +644,12 @@
            '<div class="cus-tc-b">' +
            '<div class="cus-tc-k"><b>이럴 때</b><span>' + cusEsc(x.when) + '</span></div>' +
            '<div class="cus-tc-k"><b>이렇게</b><span>' + x.how + '</span></div>';   /* how · next · tip 은 표의 <b> 만 씁니다 */
+      /* 상황 안을 <b>탭 셋</b>으로 — 한 번에 다 펴면 폰에서 화면 네 장이 넘었습니다(약 3,600px) */
+      h += '<div class="cus-tc-tabs">' +
+           '<button type="button" class="on" data-p="msg" onclick="cusTcTab(this)">✉️ 보낼 글 ' + x.msg.length + '</button>' +
+           '<button type="button" data-p="call" onclick="cusTcTab(this)">📞 전화 대본</button>' +
+           (x.reply && x.reply.length ? '<button type="button" data-p="reply" onclick="cusTcTab(this)">💬 돌아오는 말 ' + x.reply.length + '</button>' : '') +
+           '</div><div class="cus-tc-pane on" data-p="msg">';
       h += '<div class="cus-tc-st">✉️ 보낼 글 ' + x.msg.length + '가지 — 쓰임이 저마다 다릅니다</div>';
       for (j = 0; j < x.msg.length; j++) {
         m = x.msg[j];
@@ -648,6 +661,7 @@
              (m.ch === '카톡' ? '<span>복사해서 카톡 창에 붙여 넣으십시오</span>' : '') +
              '</div></div>';
       }
+      h += '</div><div class="cus-tc-pane" data-p="call">';
       if (i === 0 && first && first.say) {
         h += '<div class="cus-tc-st">🎯 이 분께 맞춘 첫 마디 — ' + cusEsc(first.t) + '</div>' +
              '<div class="t-script cus-tc-src"><div class="cus-tc-tx">' + cusEsc(first.say) + '</div>' +
@@ -664,10 +678,12 @@
       h += '<div class="cus-tc-bt"><button type="button" onclick="cusTouchCopy(this)">📋 대본 복사</button>' +
            (ph ? '<a class="go" href="tel:' + cusEsc(ph) + '" onclick="cusTouchTel(this)">📞 이 대본으로 걸기</a>' : '') +
            '</div></div>';
+      h += '</div>';
       if (x.reply && x.reply.length) {
-        h += '<div class="cus-tc-st">💬 이런 말이 돌아오면</div>';
+        h += '<div class="cus-tc-pane" data-p="reply"><div class="cus-tc-st">💬 이런 말이 돌아오면</div>';
         for (j = 0; j < x.reply.length; j++)
           h += '<div class="cus-tc-rp"><div class="q">' + cusEsc(x.reply[j].q) + '</div><div class="a">' + cusEsc(cusFill(x.reply[j].a, M)) + '</div></div>';
+        h += '</div>';
       }
       h += '<div class="cus-tc-no">하지 말 것 — ' + cusEsc(x.avoid) + '</div>' +
            '<div class="cus-tc-nx">다음 — ' + x.next + '</div>' +
@@ -690,6 +706,15 @@
     for (k = 0; k < q.length; k++) q[k].disabled = !R.ok;
     why = box.querySelector('.cus-ap-why');
     if (why) why.textContent = R.ok ? '카톡으로 보내시려면 복사해서 붙여 넣으십시오' : '날짜와 시간을 넣으면 보낼 수 있습니다';
+  }
+  /* 상황 안의 탭 — 고른 칸만 보입니다(인쇄에서는 다 나옵니다) */
+  function cusTcTab(btn) {
+    var b = btn && btn.closest ? btn.closest('.cus-tc-b') : null, p = btn.getAttribute('data-p'), q, k;
+    if (!b) return;
+    q = b.querySelectorAll('.cus-tc-tabs button');
+    for (k = 0; k < q.length; k++) q[k].classList.toggle('on', q[k] === btn);
+    q = b.querySelectorAll('.cus-tc-pane');
+    for (k = 0; k < q.length; k++) q[k].classList.toggle('on', q[k].getAttribute('data-p') === p);
   }
   function cusApptPick(btn) {
     var box = btn && btn.closest ? btn.closest('.cus-ap') : null, q, k;
@@ -761,4 +786,5 @@
   w.cusApptParts = cusApptParts;
   w.cusApptPaint = cusApptPaint;
   w.cusApptPick = cusApptPick;
+  w.cusTcTab = cusTcTab;
 })(typeof window !== 'undefined' ? window : this);

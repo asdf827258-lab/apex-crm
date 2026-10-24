@@ -115,9 +115,21 @@ const STAGES = ['TA', 'AP', 'PC', 'CS'];
   const RUDE = /몇 번이나|연락도 없이|기다렸는데|오늘 안에|지금 아니면|빨리 결정|왜 안 |하셔야 합니다|해야 돼요|바쁘신 것 같아 글로|길게 안 붙잡|2분만|잠깐이면 돼/;
   const rudeHit = said.filter(([, t, w]) => w !== 'how' && RUDE.test(t));
   is(!rudeHit.length, '  탓하는 말 · 재촉하는 말 0곳 (「하지 말 것」 칸 밖)' + (rudeHit.length ? ' — ' + rudeHit.map(x => x[0] + '「' + x[1].match(RUDE)[0] + '」').join(' · ') : ''));
-  const EMO = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
-  const emoHit = said.filter(([, t, w]) => w === 'msg' && EMO.test(t));
-  is(!emoHit.length, '  고객에게 가는 글에 그림 글자(이모지) 0개 — 처음 연락드리는 분께 가볍게 보이지 않게' + (emoHit.length ? ' — ' + emoHit.map(x => x[0]).join(' · ') : ''));
+  /* ★ 사장님 말씀 「더 가독성 있게 · 강조해서 · 이모지 등 활용해서」 — 문자·카톡은 굵게·색이 안 되므로
+     강조는 <b>모양</b>입니다. ① 첫 줄 [제목](폰 알림에는 첫 줄만 보입니다) ② 꼭 볼 줄은 이모지나 ①②③ 으로
+     시작 ③ 이모지는 <b>정해 둔 것만 · 한 글에 아홉까지</b> — 광고처럼 번쩍이면 오히려 안 읽힙니다 */
+  const EMO_OK = '🙂😊🙏📞⏰📅📍📝📋📄✅☑📌💡🔎🩺🪪👪💬🔔🤝⚠🏥💊📱📸✏✔👉🏢👤';
+  const emos = t => (t.match(/\p{Extended_Pictographic}/gu) || []);
+  const msgs = said.filter(([, , w]) => w === 'msg');
+  const badEmo = msgs.filter(([, t]) => emos(t).some(e => EMO_OK.indexOf(e) < 0) || emos(t).length > 9);
+  is(!badEmo.length, '  이모지는 정해 둔 ' + Array.from(EMO_OK).length + '가지만 · 한 글에 아홉까지' + (badEmo.length ? ' — ' + badEmo.map(x => x[0] + '(' + emos(x[1]).join('') + ')').join(' · ') : ''));
+  const noTitle = msgs.filter(([, t]) => !/^\[[^\]\n]{2,24}\]\n/.test(t));
+  is(!noTitle.length, '  글마다 첫 줄이 <b>[제목]</b> — 폰 알림에 첫 줄만 보여도 무슨 글인지 안다' + (noTitle.length ? ' — ' + noTitle.map(x => x[0]).join(' · ') : ''));
+  const flat = msgs.filter(([, t]) => t.split('\n').filter(l => /^(\p{Extended_Pictographic}|[①-⑨])/u.test(l)).length < 2);
+  is(!flat.length, '  글마다 꼭 볼 줄이 둘 이상 이모지·번호로 시작한다 — 문단에 묻히지 않게' + (flat.length ? ' — ' + flat.map(x => x[0]).join(' · ') : ''));
+  const apF = S.appt.filter(a => /\{일시\}/.test(a.text) && !/^📅 일시 : \{일시\}$/m.test(a.text) && !/\{일시\}에/.test(a.text) && !/^📅 뵙기로 한 날 : \{일시\}$/m.test(a.text));
+  is(!apF.length && S.appt.filter(a => /\{장소\}/.test(a.text)).every(a => /^📍 (장소|만날 곳) : \{장소\}$/m.test(a.text)),
+     '  약속 글의 일시·장소는 <b>제 줄</b>에 📅 · 📍 로 선다');
   is(all.every(x => /\{나\}/.test(x.call[0].say)), '  대본 첫 걸음마다 <b>소속·이름을 먼저</b> 밝힌다({나})');
   is(all.every(x => x.msg.every(m => /\{서명\}\s*$/.test(m.text))) && S.appt.every(a => /\{서명\}\s*$/.test(a.text)),
      '  글마다 끝에 <b>서명</b>({서명} — 소속·이름·직함 드림)이 붙는다');
@@ -134,7 +146,7 @@ const STAGES = ['TA', 'AP', 'PC', 'CS'];
   const T = h => h.replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ');
   const cnt = (h, re) => (h.match(re) || []).length;
   const ME = { name: '홍판서', title: '팀장', org: '견본지점', phone: '010-9999-0000' };
-  const fillMe = t => t.split('{나}').join('견본지점 홍판서 팀장').split('{이름}').join('홍판서 팀장').split('{서명}').join('견본지점 홍판서 팀장 드림');
+  const fillMe = t => t.split('{나}').join('견본지점 홍판서 팀장').split('{이름}').join('홍판서 팀장').split('{서명}').join('────────\n견본지점\n홍판서 팀장 드림');
   STAGES.forEach(st => {
     const L = S.touchOf(st);
     const h1 = cusTouchHtml({ stage: st, phone: '010-1234-5678', me: ME, key: 'c1' });
@@ -186,8 +198,8 @@ const STAGES = ['TA', 'AP', 'PC', 'CS'];
   is(!R0.ok && /【날짜·시간을 넣어 주세요】/.test(R0.text), '  날짜·시간이 없으면 <b>못 보낸다</b> — 빈자리를 지어 채우지 않는다 (1번)');
   is(R1.ok && /10월 28일 \(수\) 오후 7시 30분/.test(R1.text) && /정해지는 대로 다시 알려 드리겠습니다/.test(R1.text),
      '  날짜·시간을 넣으면 「10월 28일 (수) 오후 7시 30분」 · 장소가 비면 「정해지는 대로 다시 알려 드리겠습니다」');
-  is(/◾ 장소 : 역 앞 카페/.test(R2.text) && /보장 점검 상담/.test(R2.text) && /견본지점 홍판서 팀장 드림$/.test(R2.text.trim()),
-     '  장소를 넣으면 그대로 · 내용은 단계의 자리(TA = 보장 점검 상담) · 끝에 서명');
+  is(/📍 장소 : 역 앞 카페/.test(R2.text) && /보장 점검 상담/.test(R2.text) && /────────\n견본지점\n홍판서 팀장 드림$/.test(R2.text.trim()),
+     '  장소를 넣으면 그대로 · 내용은 단계의 자리(TA = 보장 점검 상담) · 끝에 구분선 아래 서명 두 줄');
   is(/청약 서명/.test(cusApptText('CS', 0, ME, '2026-10-28', '10:00', '').text) && /설계 내용 설명/.test(cusApptText('PC', 0, ME, '2026-10-28', '10:00', '').text),
      '  단계마다 자리 이름이 다르다 — PC 설계 내용 설명 · CS 청약 서명');
   is(/오늘 오전 10시에 뵙기로/.test(cusApptText('AP', S.apptOf('AP').map(a => a.k).indexOf('day'), ME, '2026-10-28', '10:00', '').text) &&
@@ -344,9 +356,22 @@ const STAGES = ['TA', 'AP', 'PC', 'CS'];
   });
   is(AP7.before.off && /【날짜·시간을 넣어 주세요】/.test(AP7.before.tx), '  📅 약속이 없을 때 — 보내기 단추가 잠겨 있고 빈자리를 비워 둔다');
   is(AP7.mid.on && /10월 28일 \(수\) 오후 7시 30분/.test(AP7.mid.tx), '  날짜·시간을 넣는 그 자리에서 글이 채워지고 단추가 풀린다');
-  is(AP7.onPick && /내일 뵙기로 한 약속/.test(AP7.sent) && /◾ 장소 : 역 앞 카페/.test(AP7.sent) && /10월 28일 \(수\) 오후 7시 30분/.test(AP7.sent),
+  is(AP7.onPick && /내일 뵙기로 한 약속/.test(AP7.sent) && /📍 장소 : 역 앞 카페/.test(AP7.sent) && /10월 28일 \(수\) 오후 7시 30분/.test(AP7.sent),
      '  「전날 확인」 을 고르면 💬 문자로 열기가 담는 글이 그 글이다 — 적은 장소·날짜 그대로');
   is(!AP7.stored, '  적은 장소는 <b>어디에도 저장하지 않는다</b> (이 기기 저장칸 0곳)');
+  const TAB = await A.pg.evaluate(() => {
+    window.cmCliOf = () => ({ id: 'c1', stage: 'PC' }); CUS.db = { stage: 'PC', source: '', phone: '010-1234-5678' }; CUS.calls = [];
+    const b = document.createElement('div'); b.innerHTML = cmSayHtml('c1'); document.body.appendChild(b);
+    const sit = b.querySelector('.cus-tc-s[data-k="pc-sent"]'); sit.open = true;
+    const shown = () => [].filter.call(sit.querySelectorAll('.cus-tc-pane'), e => getComputedStyle(e).display !== 'none').map(e => e.getAttribute('data-p')).join(',');
+    const h0 = sit.getBoundingClientRect().height, s0 = shown();
+    sit.querySelector('.cus-tc-tabs [data-p="call"]').click();
+    const s1 = shown(), call = sit.querySelectorAll('.cus-tc-pane.on .sl2').length;
+    b.remove();
+    return { s0, s1, call, h0: Math.round(h0) };
+  });
+  is(TAB.s0 === 'msg' && TAB.s1 === 'call' && TAB.call === 6,
+     '  상황 안은 탭 셋 — 처음엔 보낼 글만, 「📞 전화 대본」 을 누르면 대본 여섯 걸음만 (' + TAB.s0 + ' → ' + TAB.s1 + ' · 펼친 높이 ' + TAB.h0 + 'px)');
   is(!A.errs.length && !C.errs.length, '  조용히 터진 곳이 없다' + ((A.errs[0] || C.errs[0]) ? ' — ' + (A.errs[0] || C.errs[0]) : ''));
   await A.ctx.close(); await C.ctx.close(); await br.close(); srv.close();
 
