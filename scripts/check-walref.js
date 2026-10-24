@@ -159,8 +159,11 @@ const SEED = `
   console.log('\n[3] 거꾸로 — <b>이분이 소개해 주신 분</b>을 센다');
   const B = await page.evaluate(() => {
     const n = cmRefsOf('c2').map(c => c.id);
-    document.getElementById('cmPanels').innerHTML = cmPanelsHtml('c2');
-    const t = document.getElementById('cmPanels').innerText.replace(/\s+/g, ' ');
+    /* ✂️ 2026-10-24 「중복적인 부분들 확인해」 — 「🤝 이분이 소개해 주신 분」 은 보장 탭(cmPanels)에서 걷어
+       정보 탭 「👪 가족 · 소개」 한 곳(cuwInfoHtml)으로 옮겼습니다. 거기서 잽니다. */
+    const c2 = OSC.list.filter(x => x.id === 'c2')[0] || { id: 'c2' };
+    const d = document.createElement('div'); d.innerHTML = cuwInfoHtml(c2);
+    const t = d.textContent.replace(/\s+/g, ' ');
     return { n, t };
   });
   is(B.n.join(',') === 'c1', '  홍길순 님이 소개해 주신 분 — ' + B.n.join(','));

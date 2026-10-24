@@ -22,9 +22,9 @@
          · ★★ 걱정은 고객 숫자로만 — 바깥 통계·「노후 파산」 같은 겁주는 말이 없나 (1번 · 지시문 「확인 안 된 통계 금지」)
          · 목표를 이미 채운 고객에게는 부족을 지어 말하지 않나 (1번)
      거. 판 X185 — 판정 숫자 FIN_RULE 한 곳(글자 35·45·60·70·20·10 이 0) · 판정식 한 곳 · finData 재사용 · 미래 장면 본인 대출
-     하. 판 X184 — 직업군 평균 다섯 줄이 보도자료 숫자 그대로 · 출처 · 손으로 정한 소득 배수 0
-     파. 판 X183 — 평균마다 출처 · 못 찾은 평균은 null · 보험료 판정 IP_RULE 한 곳 · 나이대 비율 0 · ipBase 한 곳
-     타. 판 X182 — 나이대 문구 IP_AGE 한 곳 · 사슬 0 · 생활비 칸 목록 한 곳
+     하. 판 X195 — 직업군 평균 다섯 줄이 보도자료 숫자 그대로 · 출처 · 손으로 정한 소득 배수 0
+     파. 판 X194 — 평균마다 출처 · 못 찾은 평균은 null · 보험료 판정 IP_RULE 한 곳 · 나이대 비율 0 · ipBase 한 곳
+     타. 판 X193 — 나이대 문구 IP_AGE 한 곳 · 사슬 0 · 생활비 칸 목록 한 곳
      카. 판 X190 (사장님 말씀 2026-10-22 「점검 필요로 바꾸고, 2번은 만들어줘」) — 「불가」 → 「점검 필요」 ·
          「연금저축·IRP·달러·변액 쌓인 금액」 칸이 비면 모름(0 아님) · 탭과 결과지가 psAccPlan 한 곳에서 세나
      ※ 계산기에서 단추를 눌러 실제로 열어 보는 것은 check-reportweb.js 가 합니다(브라우저 갈래).
@@ -135,19 +135,19 @@ is((fin.match(/function psAccPlan\(/g) || []).length === 1 && (fin.match(/[^ ]ps
 is(/if\(raw===''\|\|!window\.APEX_REPORT\) return null;/.test(fin), '칸이 비면 null — 0 과 다르다(1번)');
 is(/APEX_REPORT\.calc\.RULE\.annuity\.annuityFactor/.test(fin) && !/psAccPlan[\s\S]{0,900}\b200\b/.test(fin.slice(fin.indexOf('function psAccPlan'), fin.indexOf('function psAccPlan') + 900)), '전환계수는 엔진 RULE 한 곳에서 — 200 을 따로 외우지 않는다');
 is(/'점검 필요'/.test(fin) && !/:'불가'/.test(fin), '계산기 결과지는 「불가」 대신 「점검 필요」');
-/* 판 X182 — 나이대 문구는 IP_AGE 한 곳 (예전엔 if 사슬 · 삼항 사슬로 두 벌) */
+/* 판 X193 — 나이대 문구는 IP_AGE 한 곳 (예전엔 if 사슬 · 삼항 사슬로 두 벌) */
 is((fin.match(/var IP_AGE=\[/g) || []).length === 1 && (fin.match(/20대 · 시작기/g) || []).length === 1, '나이대 표가 IP_AGE 한 곳에만 있다(5번)');
 is(/var ageMsg=ipBand\(d\.age\)\.one;/.test(fin) && !/var ageMsg=d\.age<30\?/.test(fin), '상담 가이드 한 줄도 IP_AGE 를 읽는다 — 삼항 사슬 0');
 /* 판 X186 — 「나이별 보험 필요성 피드백」 을 그리던 덧칠(CONTENT-FIRST)은 화면에 한 번도 서지 않는 죽은 판이라 지웠습니다. 남은 자리는 ipBand 를 읽습니다 */
 is(!/if\(age<30\)\{\s*stage=/.test(fin) && (!/function insuranceGuideByAge\(/.test(fin) || /var B=ipBand\(age\);/.test(fin)) && /ipBand\(d\.age\)/.test(fin), '「나이별 보험 필요성 피드백」 도 IP_AGE 를 읽는다 — if 사슬 0');
-/* 판 X183 — 기준값: 평균은 출처가 붙은 것만 · 보험료 판정 8/15 는 IP_RULE 한 곳 · 나이대 비율 0 */
+/* 판 X194 — 기준값: 평균은 출처가 붙은 것만 · 보험료 판정 8/15 는 IP_RULE 한 곳 · 나이대 비율 0 */
 const avgBlk = fin.slice(fin.indexOf('var IP_AVG={'), fin.indexOf('};', fin.indexOf('var IP_AVG={')));
 is(/fam:\s*\{ v:2995,[\s\S]*?src:'[^']+'[\s\S]*?cite:'아주경제 2022\.05\.15[\s\S]*?url:'https:\/\/www\.ajunews\.com\//.test(avgBlk) && /prem:\{ v:39\.1,[\s\S]*?cite:'데이터솜 2022\.01\.19[\s\S]*?url:'http:\/\/www\.datasom\.co\.kr\//.test(avgBlk), '평균마다 출처 · 언론사 · 날짜 · 주소가 붙어 있다(9번)');
 is(/me:\s*null/.test(avgBlk), '출처를 못 찾은 진단·치료비 평균은 null — 지어 넣지 않는다(1번)');
 is((fin.match(/IP_RULE\.premHi/g) || []).length >= 4 && (fin.match(/IP_RULE\.premLo/g) || []).length >= 3 && !/(insRatio|insRate|ratio)\s*(>=|>|<=|<)\s*(8|10|12|15)\b/.test(fin), '보험료 비중 판정(8 · 15)도 IP_RULE 한 곳을 읽는다(5번)');
 const ageBlk = fin.slice(fin.indexOf('var IP_AGE=['), fin.indexOf('];', fin.indexOf('var IP_AGE=[')));
 is(!/fam:\d+|me:\d+/.test(ageBlk), '나이대 표에 근거 없는 「가족 : 내 연금」 비율이 없다');
-/* 판 X184 — 소득 셈의 배수는 직업군 평균. 숫자는 보도자료 〈표 3-6〉·〈표 4-5〉·〈표 4-7〉 그대로여야 합니다 */
+/* 판 X195 — 소득 셈의 배수는 직업군 평균. 숫자는 보도자료 〈표 3-6〉·〈표 4-5〉·〈표 4-7〉 그대로여야 합니다 */
 const JOB = { all: [7427, 9534, 4747, 1299], reg: [9519, 12004, 8145, 411], tmp: [4534, 3634, 2986, 322], self: [8000, 12479, 1741, 4833], etc: [4007, 4593, 1462, 256] };
 const jobBlk = fin.slice(fin.indexOf('var IP_JOB={'), fin.indexOf('};', fin.indexOf('var IP_JOB={')));
 is(Object.keys(JOB).every((k) => new RegExp(k + ':\\s*\\{[^}]*inc:' + JOB[k][0] + ', debt:' + JOB[k][1] + ',\\s*work:' + JOB[k][2] + ', biz:' + JOB[k][3] + '\\}').test(jobBlk)),

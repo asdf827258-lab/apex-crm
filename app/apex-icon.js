@@ -213,6 +213,9 @@ APEX_ICON_OF['⌨']='keyb';      APEX_ICON_OF['⌨️']='keyb';     APEX_ICON_OF
 APEX_ICON_OF['🔍']='search';   APEX_ICON_OF['⏱']='clock';     APEX_ICON_OF['⏱️']='clock';
 APEX_ICON_OF['💾']='save';     APEX_ICON_OF['📂']='folder';   APEX_ICON_OF['💌']='mail';
 APEX_ICON_OF['🌙']='moon';     APEX_ICON_OF['🌅']='sunup';    APEX_ICON_OF['💊']='pill';
+/* ★ 2026-10-24 (판 X184) · 📏 만 짝이 없어 🧰 도구 화면에서 혼자 이모지로
+   남았습니다(「보험의 기준·셀프 점검」 · 판 X180). 자가 아니라 눈으로 봤습니다. */
+APEX_ICON_OF['📏']='ruler';
 APEX_ICON_OF['🧩']='puzzle';   APEX_ICON_OF['✨']='spark';     APEX_ICON_OF['✒']='pen';
 APEX_ICON_OF['✒️']='pen';     APEX_ICON_OF['💵']='money';    APEX_ICON_OF['💱']='swap';
 APEX_ICON_OF['🎁']='gift';     APEX_ICON_OF['🎂']='cake';     APEX_ICON_OF['✕']='x';

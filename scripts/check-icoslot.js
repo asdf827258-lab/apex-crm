@@ -99,7 +99,7 @@ const SEED = `
   console.log('\n[2] 🙅 <b>본체에서는 한 자리도 안 바꾼다</b> (사장님 말씀)');
   /* 앱이 가진 화면을 그대로 돕니다 — 목록을 따로 안 적습니다 (5번) */
   const 돌기 = await p.evaluate(async () => {
-    const out = { 화면: 0, 칸: 0, 그림: 0, 앞머리: 0, 이모지: 0, 빈칸: [] };
+    const out = { 화면: 0, 칸: 0, 그림: 0, 앞머리: 0, 이모지: 0, 빈칸: [], 도구그림: 0, 칸머리: 0, 칸머리그림: 0 };
     let tabs = [];
     try { tabs = Object.keys(TABS).reduce((a, g) => a.concat(TABS[g].items.map(x => x.id)), []); }
     catch (e) { tabs = ['home']; }
@@ -111,7 +111,18 @@ const SEED = `
       await new Promise(r => setTimeout(r, 140));
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       out.화면++;
-      out.그림   += document.querySelectorAll('.tab-pane.on svg.ico').length;
+      /* ★★ 2026-10-24 (판 X184) · <b>🧰 도구 화면 하나만 예외</b>입니다.
+         사장님 말씀 「남은 이모지도 바꿔줘」 → (어느 것인지 여쭈니)
+         <b>「한 화면만 — 어제 접은 🧰 도구 화면」</b>.
+         ★ 판 X157 의 결정(「이모지 내용은 원래가 좋아」)은 <b>그대로</b>입니다 —
+           나머지 화면은 여전히 0 이어야 하고, 이 자가 그것을 지킵니다.
+         ★ 예외를 <b>조용히 빼지 않습니다</b> — 아래 [2-1] 에서 그 화면에
+           선 그림이 <b>정말 서는지</b> 거꾸로 잽니다. 안 그러면 이 한 줄이
+           「아무 데나 바꿔도 되는 문」 이 됩니다 (8번). */
+      if (t !== 'tools')
+        out.그림 += document.querySelectorAll('.tab-pane.on svg.ico').length;
+      else
+        out.도구그림 = document.querySelectorAll('.tab-pane.on svg.ico').length;
       out.앞머리 += document.querySelectorAll('.tab-pane.on .ico-l').length;
       [].slice.call(document.querySelectorAll(SL)).forEach(e => {
         out.칸++;
@@ -119,13 +130,36 @@ const SEED = `
         if (s) out.이모지++; else if (!e.children.length) out.빈칸.push(t);
       });
     }
+    /* ★ 🧰 도구(tools)는 <b>TABS 에 없습니다</b> — 아래 띠에서만 여는 화면이라
+       위 목록에 안 잡힙니다. 그래서 따로 들릅니다. 처음에 이것을 빠뜨려
+       「0개」 가 나왔고, 예외가 죽은 줄인 줄 알았습니다 (자를 고쳤습니다). */
+    try{ go('tools');
+      await new Promise(r => setTimeout(r, 160));
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      out.화면++;
+      out.도구그림 = document.querySelectorAll('.tab-pane.on svg.ico').length;
+      /* ⚠ 「그림이 하나라도 있나」 로 재면 <b>너무 무릅니다</b> — 칸 머리를
+         도로 이모지로 되돌려도 다른 자리 그림 때문에 초록이었습니다.
+         <b>칸 머리 여섯이 다</b> 선 그림인지로 잽니다 (8번). */
+      out.칸머리   = document.querySelectorAll('.tlp-head .e').length;
+      out.칸머리그림 = document.querySelectorAll('.tlp-head .e svg.ico').length;
+    }catch(e){}
     go('home'); await new Promise(r => setTimeout(r, 300));
     return out;
   });
   console.log('      화면 ' + 돌기.화면 + '개 · 그림 자리 ' + 돌기.칸 + '곳 · 글자가 선 자리 ' + 돌기.이모지 + '곳');
   is(돌기.화면 > 20 && 돌기.칸 > 0, '  화면을 돌며 그림 자리를 찾았다 — ' + 돌기.칸 + '곳');
   is(돌기.그림 === 0,
-     '  ★★ 본체에 <b>선 그림이 한 곳도 없다</b> — svg.ico ' + 돌기.그림 + '개');
+     '  ★★ 본체에 <b>선 그림이 한 곳도 없다</b> — 🧰 도구 화면만 빼고 svg.ico ' +
+     돌기.그림 + '개');
+
+  console.log('\n[2-1] 🧰 <b>예외로 적어 둔 그 한 화면</b>은 거꾸로 <b>서 있나</b> (판 X184)');
+  /* 예외를 적어 두기만 하고 안 재면, 그 줄은 「아무 데나 바꿔도 되는 문」 이
+     됩니다. 그 화면이 <b>정말로</b> 선 그림인지 여기서 거꾸로 봅니다 (8번). */
+  is(돌기.칸머리 > 0 && 돌기.칸머리그림 === 돌기.칸머리,
+     '  🧰 도구 화면의 <b>칸 머리가 다</b> 선 그림이다 — ' +
+     돌기.칸머리그림 + '/' + 돌기.칸머리 + ' (화면 전체로는 ' + 돌기.도구그림 + '개) ' +
+     '· 예외가 살아 있다');
   is(돌기.앞머리 === 0,
      '  ★★ 글 앞머리도 <b>안 갈아 끼운다</b> — .ico-l ' + 돌기.앞머리 + '개');
   is(돌기.빈칸.length === 0,
