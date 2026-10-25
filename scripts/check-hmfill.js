@@ -80,8 +80,9 @@ const 본 = async (p) => await p.evaluate(() => {
   const q = (s) => document.querySelector(s);
   const hgt = (e) => e ? Math.round(e.getBoundingClientRect().height) : -1;
   const now = q('.hm-now'), kb = q('#hmKbHost'), two = q('.hm-two');
-  const 판단 = [].filter.call(document.querySelectorAll('.hm-now .t-note'),
-                              e => /^판단\s*—/.test((e.innerText || '').trim()));
+  /* ★ <b>이름표로 찾습니다</b>(.hm-judge) — 글자로 찾으면 말이 한 자만
+     바뀌어도 자가 눈을 감습니다. 이름은 판 X195 에서 달았습니다 (5번). */
+  const 판단 = [].slice.call(document.querySelectorAll('.hm-now .hm-judge'));
   const cells = two ? [].map.call(two.children, c => ({
       글: (c.innerText || '').replace(/\s+/g, ' ').trim(),
       길: c.getAttribute('onclick') || '',
