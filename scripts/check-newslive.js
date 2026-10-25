@@ -123,7 +123,7 @@ async function settle(page) {
   ['보험', '경제', '부동산', '생활정책', '정책자금'].forEach(c =>
     is(q.indexOf(c) >= 0, '  ' + c + ' 칸을 부른다'));
 
-  console.log('\n[3] 낱말대로 여섯 칸에 들어간다');
+  console.log('\n[3] 낱말대로 일곱 칸에 들어간다');
   const g = await page.evaluate(() => {
     const by = {};
     NLIVE.items.forEach(it => (it.cats || []).forEach(c => { (by[c] = by[c] || []).push(it.t); }));
@@ -133,9 +133,15 @@ async function settle(page) {
              cats: NL_CATS.map(c => c.id) };
   });
   /* 「정책자금·사업자」 를 더해 여섯 칸이 됐다. 사업자 고객에게는 보험보다
-     자금 이야기로 문이 먼저 열리는데, 보험 칸에 섞어 두면 묻힌다. */
-  is(g.cats.join(',') === 'ins,realty,tax,help,fund,econ',
-    '  칸이 여섯이다 — ' + g.cats.join(' · '));
+     자금 이야기로 문이 먼저 열리는데, 보험 칸에 섞어 두면 묻힌다.
+     ★★ 2026-10-24 (판 X187) · <b>일곱이 되었습니다.</b> 사장님 말씀 「보험 /
+       경제뉴스 / <b>저축</b> / 정책 중에서 골라서」 로 저축이 갈래가 됐습니다.
+       여태 예금·적금·ISA·연금저축은 경제 안에 섞여 있어 「저축 이야기를 할
+       기사만」 을 물을 자리가 없었습니다 — 정책자금이 그랬던 것과 같은 자리입니다.
+     ⚠ <b>차례까지 그대로 봅니다.</b> 이 줄을 「일곱 개다」 로 느슨하게 바꾸면,
+       누가 칸을 지우고 다른 것을 넣어도 초록입니다 (8번).                  */
+  is(g.cats.join(',') === 'ins,realty,tax,help,fund,econ,save',
+    '  칸이 일곱이다 — ' + g.cats.join(' · '));
   is(g.cats.indexOf('fund') >= 0, '  「정책자금·사업자」 칸이 있다');
   is((g.by.ins || []).some(t => /실손/.test(t)), '  실손 기사가 보험 칸에 — ' + (g.by.ins || [])[0]);
   is((g.by.realty || []).some(t => /청약/.test(t)), '  청약 기사가 부동산 칸에');
