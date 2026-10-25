@@ -252,6 +252,31 @@ button{cursor:pointer;border:0;background:none}
 .stage .ckrow input{width:7.5cqw;font-size:2.3cqw;font-weight:800;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);border-radius:.8cqw;color:#fff;padding:.4cqw .6cqw;text-align:center}
 .stage .cknow{margin-top:2.2cqw;font-family:"Noto Serif KR",serif;font-size:2.5cqw;line-height:1.5;color:#F6F1E6;max-width:58cqw;text-shadow:0 .3cqw 2cqw rgba(0,0,0,.6)}
 .stage .cknow small{display:block;font-family:inherit;font-size:1.6cqw;color:#A9B5CC;margin-top:.6cqw}
+.stage .sl.lifestage{justify-content:flex-start;padding-top:5cqw}
+.stage .lsh{display:flex;align-items:center;gap:2.4cqw;margin-top:1cqw}
+.stage .lse{font-size:7cqw;line-height:1}
+.stage .lifestage h2{font-family:"Noto Serif KR",serif;font-size:4.6cqw}
+.stage .lifestage h2 small{display:block;font-family:"Pretendard Variable",Pretendard,sans-serif;font-size:1.8cqw;font-weight:600;color:#93A1BC;margin-top:.6cqw;letter-spacing:0}
+.stage .lsbar{display:flex;gap:.5cqw;margin-top:2.2cqw}
+.stage .lsbar i{flex:1;height:.7cqw;border-radius:.4cqw;background:rgba(255,255,255,.1)}
+.stage .lsbar i.p{background:rgba(246,199,107,.45)}
+.stage .lsbar i.on{background:var(--dawn);box-shadow:0 0 1.4cqw rgba(246,199,107,.7)}
+.stage .ls3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6cqw;margin-top:2.6cqw}
+.stage .ls3 .box{padding:2.2cqw 2.2cqw 2.6cqw}
+.stage .ls3 .v{font-size:2.3cqw;line-height:1.55;margin-top:1cqw}
+.stage .lsq{margin-top:2.6cqw;font-family:"Noto Serif KR",serif;font-size:2.2cqw;color:#C9D3E6}
+.stage .share h2{font-family:"Noto Serif KR",serif;font-weight:700}
+.stage .share .tag{color:#A9C4E8}
+.stage .sl.talk{justify-content:flex-start;padding-top:4.4cqw}
+.stage .talk h2{font-size:3.1cqw;font-family:"Noto Serif KR",serif;font-weight:700}
+.stage .chat{display:flex;flex-direction:column;gap:1cqw;margin-top:2cqw}
+.stage .bub{max-width:66%;border-radius:1.6cqw;padding:1cqw 1.6cqw;font-size:1.8cqw;line-height:1.5;animation:rise .7s cubic-bezier(.2,.7,.2,1) both}
+.stage .bub b{display:block;font-size:1.15cqw;letter-spacing:.06cqw;margin-bottom:.2cqw;opacity:.75}
+.stage .bub.f{align-self:flex-start;background:rgba(246,199,107,.14);border:1px solid rgba(246,199,107,.35);border-top-left-radius:.3cqw}
+.stage .bub.f b{color:var(--dawn)}
+.stage .bub.c{align-self:flex-end;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-top-right-radius:.3cqw}
+.stage .bub.c b{color:#A9C4E8}
+.stage .tipb{margin-top:1.6cqw;font-size:1.55cqw;line-height:1.5;color:#C9D3E6;background:rgba(111,179,255,.08);border-left:.35cqw solid var(--proof);border-radius:.6cqw;padding:.9cqw 1.4cqw}
 /* 장면의 움직임 */
 @keyframes artIn{from{opacity:0;transform:scale(1.07)}to{opacity:1;transform:none}}
 @keyframes kb{to{transform:scale(1.06)}}
@@ -475,6 +500,7 @@ table.plan tfoot td{font-weight:800}
   <div class="card">
     <div class="row" style="margin-bottom:10px"><label for="startAt"><b>시작 시각</b></label><input id="startAt" type="time" value="13:00" style="border:1px solid var(--line);border-radius:10px;padding:6px 10px"></div>
     <div style="overflow-x:auto"><table class="plan" id="planTbl"></table></div>
+    <p class="hint" id="planNote" style="margin-top:8px"></p>
   </div>
   <div class="card"><h2>🧭 이 강의가 걷는 길</h2>
     <p>나의 C(실패 → 증명 → 자존감 → 자립) → 영업인의 C(왜 선택을 잘해야 하나) → 고객의 B와 D(태어나고 떠나는 과정) →
@@ -509,6 +535,7 @@ table.plan tfoot td{font-weight:800}
 
 <script src="bcd-data.js"></script>
 <script src="bcd-art.js"></script>
+<script src="bcd-slides.js"></script>
 <script>
 'use strict';
 /* ════════════════════════════════════════════════════════════════
@@ -604,218 +631,8 @@ const naverUrl = (q, w) => 'https://search.naver.com/search.naver?where=' + (w =
    ★ 강사님 이야기 장(ty:'story')은 그 칸이 비면 발표에서 빠집니다.
    ★ 타임라인 장(curve · events · stairs)은 S.tl 에서 그 자리에 펼칩니다.
    ════════════════════════════════════════════════════════════════ */
-const SLIDES = [
-  /* ── 여는 마당 · 15분 ── */
-  { sec: 'open', ty: 'cover', art: 'dawn',
-    say: '(조명이 켜지기 전, 잠깐 침묵) 안녕하십니까. 오늘 4시간 동안 저는 여러분께 상품 이야기를 거의 하지 않을 겁니다.\n오늘은 알파벳 세 글자 이야기를 하겠습니다. B, C, D.' },
-  { sec: 'open', ty: 'silence', tag: '1분', h: '지금부터 1분,<br>아무 말도 하지 않겠습니다', min: 1,
-    say: '(정말로 1분 동안 아무 말도 하지 마십시오. 불을 조금 낮추고 「1분 시작」 을 누른 뒤, 원이 다 찰 때까지 기다립니다.)\n(1분 뒤, 낮은 목소리로) 오늘 하루에도 이 나라 어딘가에서 누군가는 첫 울음을 터뜨렸고, 누군가는 마지막 숨을 쉬었습니다.\n숫자를 말씀드리지 않겠습니다. 그 한 사람 한 사람이 누군가에게는 전부였으니까요.' },
-  { sec: 'open', ty: 'scene', art: 'day', tag: 'Birth · Choice · Death',
-    lines: ['첫 울음은 고를 수 없었습니다.', '마지막 숨도 고를 수 없을 겁니다.', '우리 손에 쥐어진 것은 단 하나 —', '그 사이의 <em>선택</em>, C 입니다.'],
-    say: '「인생은 B와 D 사이의 C 다」 — 흔히 사르트르의 말로 전해지는 문장입니다.\n(출처는 단정하지 마십시오. 「그렇게 전해진다」 로 충분합니다.)\n(한 줄씩 떠오를 때마다 쉬십시오.) Birth 와 Death 사이에 Choice. 우리 인생에서 내 손에 쥐어진 것은 C 하나뿐입니다.' },
-  { sec: 'open', ty: 'clock', tag: '인생의 하루',
-    say: '(직접 계산해 보게 합니다) 지금 나이를 「살고 싶은 나이」 로 나누고 24를 곱하십시오. 그것이 인생을 하루로 접었을 때 지금 시각입니다.\n(강사님 나이를 화면에 넣어 해를 옮겨 보이십시오.) 저는 지금 … 시입니다.\n(두세 분께 여쭙니다) 몇 시였습니까? 오후라면 — 해가 지기까지 아직 시간이 있습니다. 그런데 해는, 늘 생각보다 빨리 집니다.\n⚠ 평균 수명 같은 통계를 말하지 마십시오. 각자 「살고 싶은 나이」 로 계산합니다.',
-    ask: '「지금 몇 시입니까? 해가 지기 전에 꼭 하고 싶은 일 하나는?」' },
-  { sec: 'open', ty: 'work', tag: '1분 · 혼자', h: '오늘 아침부터 지금까지<br>몇 번 <em>선택</em>하셨습니까?', min: 1, wb: 1,
-    steps: ['일어날지 5분 더 잘지', '무엇을 입을지 · 무엇을 먹을지', '이 자리에 올지 말지 — 이미 고르셨습니다'],
-    say: '워크북 1쪽 맨 위에(폰 워크북도 됩니다) 오늘 한 선택을 세 개만 적어 보십시오. 1분 드리겠습니다.\n(1분 뒤) 몇 개 적으셨어요? 우리는 하루에도 셀 수 없이 고릅니다. 그런데 그중 대부분은 고른 줄도 모르고 지나갑니다.',
-    ask: '「오늘 고른 것 중에 가장 잘한 선택은 무엇인가요?」 — 두세 분께 여쭙니다.' },
-  { sec: 'open', ty: 'text', tag: '오늘의 지도', h: '오늘 4시간, 우리는 <em>다섯 개의 C</em>를 지납니다',
-    li: ['<b>1부 · 나의 C</b> — 리더로서의 실패, 그리고 증명<small>과정의 실패와 결과의 증명 · 자존감 · 자립심</small>',
-      '<b>2부 · 영업인의 C</b> — 왜 선택을 잘해야 하나<small>영업에서의 선택은 무엇인가</small>',
-      '<b>3부 · 고객의 B와 D</b> — 태어나고 떠나는 과정<small>재무설계와 상담은 그 과정을 이해하는 과제</small>',
-      '<b>4부 · 팩트파인딩</b> — 고객을 이해하는 질문',
-      '<b>5부 · 나를 선택하게 하는 자료</b> — 고객님의 수많은 선택 속에서'],
-    say: '오늘은 이 다섯 개의 문을 차례로 지납니다. 처음은 제 이야기, 끝은 여러분의 고객 이야기입니다.\n순서에 이유가 있습니다. 내 삶의 C 를 정직하게 본 사람만이, 고객의 C 앞에서 정직할 수 있기 때문입니다.' },
-  { sec: 'open', ty: 'phone', tag: '📱 함께 적습니다',
-    say: '오늘은 듣기만 하는 강의가 아닙니다. 중간중간 일곱 번 적습니다.\n종이 워크북도 있고, 폰으로도 됩니다. 화면의 주소를 단톡방에 올려 드리겠습니다(「링크 복사」).\n폰에 적은 것은 그 폰에만 남습니다 — 저도, 회사도 못 봅니다. 끝나면 「인쇄 · PDF 저장」 으로 간직하십시오.\n⚠ 고객 이름은 적지 마십시오. 견본 고객은 홍길동 님입니다.',
-    ask: '「폰으로 여신 분 손 들어 주세요」 — 다 열 때까지 10초 기다립니다.' },
-  { sec: 'open', ty: 'big', tag: '오늘의 약속', h: '정답을 드리지 않겠습니다.<br>대신 <em>여러분의 타임라인</em>을 돌려드리겠습니다.',
-    say: '오늘 끝날 때 여러분 손에는 종이 몇 장이 남습니다. 내 인생 곡선, 내가 증명해 온 것들, 그리고 고객이 나를 고를 이유.\n그 종이가 내일 아침 고객 앞에서 여러분의 자료가 됩니다.' },
-
-  /* ── 1부 · 45분 ── */
-  { sec: 'p1', ty: 'scene', art: 'night', tag: '1부 · 나의 C',
-    lines: ['누구에게나 차에서 내리지 못하는 밤이 있습니다.', '시동은 껐는데, 문을 열 힘이 없는 밤.', '저는 — <em>실패한 리더</em>였습니다.'],
-    say: '1부를 시작하겠습니다. 오늘 제 이야기는 성공담이 아닙니다.\n(세 번째 줄이 떠오를 때까지 기다렸다가, 천천히) 저는 실패한 리더였습니다.\n(3초 쉼) 여러분에게도 그런 밤이 있으셨지요.' },
-  { sec: 'p1', ty: 'story', k: 'leaderFail', tag: '나의 이야기 ①',
-    say: '(아래 글을 읽지 말고 그날의 장면을 말하듯 하십시오. 숫자보다 장면 — 어디서, 누가, 무슨 말을.)\n이야기가 끝나면 3초 쉬십시오. 청중이 자기 장면을 떠올리는 시간입니다.' },
-  { sec: 'p1', ty: 'story', k: 'quit', tag: '나의 이야기 ②',
-    say: '그만두고 싶었던 그 밤을 이야기합니다. 그리고 묻습니다 — 「여러분에게도 그런 밤이 있으셨지요.」\n대답을 기다리지 않아도 됩니다. 고개가 끄덕여지는 것으로 충분합니다.' },
-  { sec: 'p1', ty: 'text', tag: '두 개의 시계', h: '실패에는 <em>두 개의 시계</em>가 있습니다',
-    li: ['<b>과정의 시계</b> — 고르는 그 순간, 흔들리고 틀리고 넘어집니다<small>이 시계로 보면 거의 모든 선택은 실패처럼 보입니다</small>',
-      '<b>결과의 시계</b> — 끝까지 가서 결과를 냈는가<small>이 시계로 보면 그 넘어짐은 증명의 일부가 됩니다</small>',
-      '같은 사건이 <b>어느 시계로 보느냐</b>에 따라 판결이 달라집니다'],
-    say: '선택의 과정 중에서는 실패입니다. 그러나 결과를 냈다면, 그것은 증명입니다.\n과정의 시계만 보고 있으면 우리는 매일 실패자입니다. 결과의 시계를 같이 보십시오.' },
-  { sec: 'p1', ty: 'scene', art: 'stairs', tag: '한 문장',
-    lines: ['과정에서는 실패였습니다.', '그러나 끝까지 가서 결과를 냈다면 —', '그것은 <em>증명</em>입니다.'],
-    say: '이 문장을 같이 읽어 보겠습니다. (청중과 함께 소리 내어 읽기)\n실패는 판결이 아니라 중간 기록입니다. 판결은 결과가 내립니다.\n계단 아래에 선 사람을 보십시오. 문은 저 위에 열려 있습니다. 한 칸씩 — 그것이 증명입니다.' },
-  { sec: 'p1', ty: 'curve', tag: '내 인생 곡선',
-    say: '이것이 제 타임라인입니다. 빨간 점은 과정에서 실패했던 때, 파란 점은 결과로 증명한 때입니다.\n보시면 바닥 바로 뒤에 증명이 옵니다. 바닥이 없었으면 그 증명도 없었습니다.' },
-  { sec: 'p1', ty: 'events',
-    say: '(장면 하나에 1~2분. 「그때의 선택」 을 꼭 말하십시오 — 이 강의의 주제는 사건이 아니라 선택입니다.)' },
-  { sec: 'p1', ty: 'story', k: 'firstProof', tag: '나의 이야기 ③ · 증명',
-    say: '처음으로 결과로 증명한 날을 이야기합니다. 과정이 엉망이었던 부분을 숨기지 마십시오 — 그래야 증명이 됩니다.' },
-  { sec: 'p1', ty: 'text', tag: '증명 → 자존감', h: '증명이 쌓이면 <em>자존감</em>이 됩니다',
-    li: ['자존감은 남이 주는 점수가 아닙니다',
-      '<b>내가 나에게 한 약속을 지킨 횟수</b>입니다',
-      '증명 하나는 작습니다. 그러나 쌓이면 <b>「나는 해내는 사람이다」</b> 라는 믿음이 됩니다',
-      '그 믿음이 다음 바닥에서 나를 버티게 합니다'],
-    say: '증명의 시간이 쌓여 가면서 저의 자존감이 올라갔습니다.\n자존감은 칭찬으로 오지 않았습니다. 작은 약속을 지킨 날들이 모여서 왔습니다.' },
-  { sec: 'p1', ty: 'stairs', tag: '증명의 계단',
-    say: '제가 결과로 증명한 장면들을 계단으로 쌓았습니다. 계단 하나하나는 작지만, 돌아보면 꽤 높이 올라와 있습니다.' },
-  { sec: 'p1', ty: 'story', k: 'bold', tag: '나의 이야기 ④ · 도전',
-    say: '과감하게 도전한 이야기입니다. 무엇을 걸었는지 분명히 말하십시오. 걸지 않은 도전은 도전이 아닙니다.' },
-  { sec: 'p1', ty: 'story', k: 'standAlone', tag: '나의 이야기 ⑤ · 자립',
-    say: '남의 결정을 기다리지 않고 처음 혼자 선 순간입니다.' },
-  { sec: 'p1', ty: 'scene', art: 'leap', tag: '도전 → 자립심',
-    lines: ['과감한 도전이 남기는 것은', '성공이 아닙니다.', '다시는 남의 결정을 기다리지 않는 힘 — <em>자립</em>입니다.'],
-    say: '도전의 결과는 성공일 수도, 실패일 수도 있습니다. 그러나 스스로 고르고 스스로 책임진 경험은 언제나 남습니다.\n자립심이란 남의 결정을 기다리지 않는 힘입니다. 영업인에게는 「오늘 누구를 만날지 내가 정한다」 는 뜻입니다.\n과감하게 도전했던 부분에서 저는 성공을 얻었습니다. 그런데 더 큰 것은 자립심이었습니다.' },
-  { sec: 'p1', ty: 'work', tag: '7분 · 혼자 → 3분 · 짝', h: '내 인생 곡선 그리기', min: 7, wb: 1,
-    steps: ['워크북 1쪽 — 가로는 시간, 세로는 마음 점수(-5 ~ +5)', '바닥이었던 장면 셋 · 정점이었던 장면 셋을 점으로', '바닥 점 옆에 「그때 내가 한 선택」 을 한 줄로', '실패는 빨강, 결과로 증명한 것은 파랑으로 동그라미'],
-    say: '이제 여러분 차례입니다. 7분 드리겠습니다. 잘 그리려 하지 마십시오. 정직하게만 그리십시오.\n(7분 뒤) 옆 분과 3분씩 — 가장 깊은 바닥 하나와, 그 뒤에 무엇을 골랐는지만 나눠 주십시오.',
-    ask: '「바닥 바로 뒤에 무엇이 왔습니까?」 — 두 분 정도 발표를 청합니다(억지로 시키지 않습니다).' },
-  { sec: 'p1', ty: 'scene', art: 'hill', tag: '1부를 닫으며',
-    lines: ['여러분의 바닥은', '부끄러운 기록이 아닙니다.', '고객이 여러분을 고를 — <em>자료</em>입니다.'],
-    say: '오늘 그린 바닥은 부끄러운 기록이 아닙니다. 5부에서 이것이 고객이 여러분을 고르는 자료가 됩니다.\n바람 속에 혼자 서 있는 사람 — 그 사람은 아직 쓰러지지 않았습니다. 그것이 증명입니다.\n10분 쉬겠습니다.' },
-
-  /* ── 쉼 ── */
-  { sec: 'b1', ty: 'break', say: '쉬는 시간. 음악을 낮게 틀고, 화면에는 남은 시간을 띄워 둡니다.' },
-
-  /* ── 2부 · 40분 ── */
-  { sec: 'p2', ty: 'scene', art: 'fork', tag: '2부 · 영업인의 C',
-    lines: ['오늘도 갈림길에 섭니다.', '누구를 만날지, 무엇을 물을지, 무엇을 말하지 않을지.', '영업은 — <em>선택의 직업</em>입니다.'],
-    say: '2부입니다. 영업인은 하루에 남보다 훨씬 많이 고릅니다. 그리고 그 선택이 고객의 삶에 닿습니다.\n길 끝마다 불빛이 있습니다. 어느 길을 고르든, 그 불빛 아래에는 한 사람의 고객이 기다리고 있습니다.' },
-  { sec: 'p2', ty: 'text', tag: '영업에서의 선택은 무엇인가', h: '영업인이 매일 고르는 <em>다섯 가지</em>',
-    li: ['<b>누구를 만날 것인가</b><small>시간은 가장 비싼 자원입니다</small>',
-      '<b>무엇을 물을 것인가</b><small>질문이 상담의 방향을 정합니다</small>',
-      '<b>무엇을 말하지 않을 것인가</b><small>모르는 숫자 · 단정하는 말 · 과장</small>',
-      '<b>언제 물러설 것인가</b><small>오늘 계약보다 다음 만남이 더 큰 날이 있습니다</small>',
-      '<b>오늘 끝까지 갈 것인가</b><small>거절 다음 한 통을 거는가</small>'],
-    say: '영업에서의 선택은 결국 이 다섯 가지입니다. 이 중에 무엇을 말하지 않을 것인가 — 이것이 가장 어렵습니다.' },
-  { sec: 'p2', ty: 'text', tag: '왜 선택을 잘해야 하나', h: '내 선택의 값은 <em>고객이 치릅니다</em>',
-    li: ['내가 잘못 고르면 고객에게는 <b>삶에 맞지 않는 계약</b>이 남습니다',
-      '맞지 않는 계약은 <b>해지</b>가 되고, 해지는 고객에게 <b>손해와 불신</b>이 됩니다',
-      '그 불신은 다음 설계사 · 다음 고객에게까지 갑니다',
-      '그래서 영업인의 선택은 <b>내 실적이 아니라 고객의 삶</b>을 기준으로 해야 합니다'],
-    say: '왜 선택을 잘해야 합니까? 내 선택의 값을 내가 아니라 고객이 치르기 때문입니다.\n(사례가 있으면 여기서 — 이름은 가리고, 숫자는 아는 것만.)' },
-  { sec: 'p2', ty: 'table', tag: '전환', h: '파는 사람에서 <em>이해하는 사람</em>으로',
-    th: ['', '파는 사람', '이해하는 사람'],
-    rows: [['시작', '상품 설명', '<b>고객의 하루</b>를 묻는다'], ['중심', '내 말', '<b>고객의 말</b>'], ['보는 것', '보험료 · 보장', '<b>사건</b> — 아프면, 떠나면, 오래 살면'],
-      ['거절', '끝', '<b>정보</b> — 무엇이 안 맞았나'], ['목표', '오늘 계약', '<b>평생 관계</b>'], ['고객이 남기는 말', '「설명 잘하더라」', '<b>「나를 알더라」</b>']],
-    say: '영업에서의 선택을 「무엇을 팔까」 에서 「이 분의 삶을 얼마나 이해했나」 로 바꾸는 것 — 이것이 오늘의 전환입니다.' },
-  { sec: 'p2', ty: 'story', k: 'whyIns', tag: '나의 이야기 ⑥ · 왜 보험인가',
-    say: '제가 왜 수많은 일 가운데 이 일을 골랐는지 말씀드리겠습니다.' },
-  { sec: 'p2', ty: 'scene', art: 'umbrella', tag: '보험이라는 선택',
-    lines: ['비는 고를 수 없습니다.', '하지만 우산은 — 미리 고를 수 있습니다.', '보험은 <em>계획이 무너지는 날</em>을 위한 선택입니다.'],
-    say: '(그림을 보게 두고) 아이 쪽으로 기울어진 우산을 보십시오. 우산을 든 사람의 어깨는 젖고 있습니다.\n보험은 고객이 고를 수 없는 것 — 아픔, 사고, 이른 이별 — 앞에서, 고를 수 있는 것을 남겨 두는 일입니다.\n⚠ 보장 · 보험료는 언제나 「심사 결과에 따릅니다」. 여기서 숫자를 약속하지 마십시오.' },
-  { sec: 'p2', ty: 'work', tag: '5분 · 혼자', h: '놓친 고객 한 분', min: 5, wb: 2,
-    steps: ['최근 계약하지 못한 고객 한 분을 떠올립니다(이름은 적지 않습니다)', '그때 내가 한 선택 — 무엇을 묻고 무엇을 말했나', '다시 만난다면 무엇을 먼저 묻겠는가'],
-    say: '워크북 2쪽입니다. 놓친 고객은 실패가 아니라 자료입니다. 1부와 같은 이야기입니다 — 과정의 실패를 결과의 증명으로 바꾸는 연습입니다.' },
-  { sec: 'p2', ty: 'big', tag: '2부를 닫으며', h: '선택을 잘한다는 것은<br>고객이 <em>말하지 않은 것</em>을 듣는 것입니다',
-    say: '그러면 무엇을 들어야 할까요? 3부에서는 고객의 B 부터 D 까지를 함께 보겠습니다.' },
-
-  /* ── 3부 · 40분 ── */
-  { sec: 'p3', ty: 'scene', art: 'hall', tag: '3부 · 고객의 B와 D',
-    lines: ['병원 복도의 긴 의자.', '누군가는 오늘, 거기서 처음으로 D 를 생각합니다.', '고객님도 — <em>B와 D 사이</em>에 계십니다.'],
-    say: '(낮은 목소리로) 병원 복도 의자에 앉아 본 적 있으십니까. 보호자로, 혹은 환자로.\n우리 앞에 앉은 고객님도 B 와 D 사이의 어딘가에 계십니다. 상담은 그 「어딘가」 를 함께 찾는 일입니다.' },
-  { sec: 'p3', ty: 'life', tag: '생애 지도', h: '태어나고 떠나기까지 — <em>열한 개의 마당</em>',
-    say: '한 사람의 삶을 열한 마당으로 놓아 보았습니다. 나이를 적지 않은 이유가 있습니다 — 사람마다 다르기 때문입니다.\n고객님께 「지금 어디쯤 계세요?」 하고 이 지도를 보여 드리십시오. 고객이 스스로 손가락으로 짚게 하는 것이 핵심입니다.' },
-  { sec: 'p3', ty: 'text', tag: '어느 마당이든', h: '삶의 계획을 무너뜨리는 <em>세 가지 사건</em>',
-    li: ['<b>너무 일찍 떠나는 것</b><small>남은 가족의 생활이 멈춥니다</small>',
-      '<b>아파서 멈추는 것</b><small>치료비보다 무서운 것은 멈춘 소득입니다</small>',
-      '<b>생각보다 오래 사는 것</b><small>월급은 멈췄는데 삶은 계속됩니다</small>',
-      '재무설계는 이 셋 앞에서 <b>고객이 고를 수 있는 것을 남겨 두는 일</b>입니다'],
-    say: '어느 마당에 계시든, 계획을 무너뜨리는 사건은 이 세 가지입니다. 이 중 어떤 것이 이 분에게 가장 가까운지 — 그것을 아는 것이 이해입니다.' },
-  { sec: 'p3', ty: 'memento', tag: 'Memento mori',
-    say: '(조명을 조금 낮추십시오. 모래시계가 떨어지는 것을 5초 동안 말없이 보게 둡니다.)\n「메멘토 모리」 — 「죽음을 기억하라」 는 라틴어 경구입니다. 옛 화가들은 정물화 한가운데 해골과 모래시계, 꺼져 가는 촛불을 그려 넣었습니다. 무섭게 하려는 것이 아니었습니다.\nD 를 기억하는 사람만이 오늘의 C 를 아껴 씁니다.' },
-  { sec: 'p3', ty: 'news', set: 'alone', tag: '뉴스가 말하는 D', h: '죽음은 <em>뉴스 속 숫자</em>가 아니라<br>누군가의 마지막 하루였습니다',
-    say: '실제 기사입니다. (원문은 카드를 누르면 열립니다 — 강의 전에 꼭 한 번 읽어 두십시오.)\n기사 속 숫자는 그 기사 시점의 숫자입니다. 숫자를 말할 때는 언론사와 날짜를 같이 말하십시오. 날짜를 확인 못 한 기사는 날짜를 말하지 않습니다.\n홀로 떠나는 분이 늘고, 다른 한쪽에서는 젊은 사람들이 스스로 유언장을 씁니다. 죽음을 미리 생각한 사람들이 하는 말은 하나입니다 — 「새로 살고 싶어졌다.」' },
-  { sec: 'p3', ty: 'photos',
-    say: '(강사님이 넣은 사진입니다. 사진 앞에서는 설명을 줄이고 3초 쉬십시오. 출처를 같이 밝힙니다.)' },
-  { sec: 'p3', ty: 'work', tag: '5분 · 혼자 · 촛불', h: '나의 <em>마지막 하루</em>', min: 5, art: 'letter', wb: 3,
-    steps: ['워크북 3쪽 — 내 장례식장 맨 앞줄에 앉은 사람은 누구인가', '그 사람이 내 영정 앞에서 할 한 마디', '그 말을 듣기 위해 내일부터 바꿀 선택 하나'],
-    say: '(음악을 낮게, 촛불 장을 띄운 채로) 눈을 감고 30초만 상상해 보십시오. 오늘이 제 삶의 마지막 하루라면.\n임종 체험에서 유언장을 쓰는 분들이 실제로 있습니다(앞 장 기사). 오늘은 관에 눕지 않고 종이 한 장으로 합니다. 5분 드리겠습니다.\n(끝나면) 억지로 발표시키지 마십시오. 「맨 앞줄에 누가 앉아 있었는지」 만 손을 들어 나눠 주셔도 충분합니다.',
-    ask: '「맨 앞줄에 앉은 사람에게, 오늘 전화 한 통 하실 분?」' },
-  { sec: 'p3', ty: 'scene', art: 'chair', tag: '죽음을 이야기하는 법',
-    lines: ['다음 날 아침에도 식탁은 차려집니다.', '의자 하나가 비어 있을 뿐.', '죽음이 아니라 — <em>남는 사람의 아침</em>을 이야기합니다.'],
-    say: '(그림을 오래 보게 두십시오. 김이 오르는 잔 하나, 손대지 않은 잔 하나.)\nD 를 꺼내는 것이 가장 어렵습니다. 그래서 D 를 말하지 말고, D 다음에 남는 사람의 아침을 말하십시오.\n「고객님이 안 계신 다음 날 아침, 아이는 학교에 갈 수 있을까요?」' },
-  { sec: 'p3', ty: 'news', set: 'left', tag: '뉴스가 말하는 D 다음', h: 'D 다음 날, <em>남는 사람</em>에게 오는 것',
-    say: '죽음 다음에는 남는 사람의 생활이 옵니다. 간병이 길어지면 가족이 무너지고, 남겨 둔 보험이 있어도 몰라서 못 찾습니다.\n⚠ 법안 기사는 「발의」 단계입니다 — 시행된 제도처럼 말하지 마십시오. 보험금은 언제나 「심사 결과에 따릅니다」.' },
-  { sec: 'p3', ty: 'text', tag: '재무설계와 상담', h: '재무설계는 고객님의 B와 D 사이를<br><em>돈의 언어로 다시 그리는 일</em>입니다',
-    li: ['<b>흐름</b> — 들어오고 · 나가고 · 갚는 돈',
-      '<b>모아 둔 것</b> — 자산과 빚',
-      '<b>지켜 둔 것</b> — 보험 · 비상금',
-      '<b>내려놓을 날</b> — 은퇴 뒤의 생활',
-      '<b>남길 것</b> — 상속 · 증여<small>세금은 언제나 「요건 충족 시」 — 판단은 세무 전문가와 함께</small>'],
-    say: '이 다섯 칸을 채우면 고객님의 삶이 한 장에 섭니다.\n(⚠ 세금은 결론을 말하지 마십시오. 「비과세입니다」 가 아니라 「요건을 함께 확인해 보겠습니다」. 한도 · 나이 같은 숫자도 외워서 말하지 않습니다.)' },
-  { sec: 'p3', ty: 'work', tag: '8분 · 짝', h: '견본 고객 <em>홍길동</em> 님의 지도', min: 8, wb: 4,
-    steps: ['워크북 4쪽 생애 지도에 홍길동 님이 지금 어디쯤인지 짝과 정합니다', '다음 5년 안에 홍길동 님이 할 큰 선택 셋', '그 선택을 무너뜨릴 수 있는 사건 하나', '내가 먼저 물어야 할 질문 하나'],
-    say: '견본 고객 홍길동 님입니다 — 실제 고객 이름은 쓰지 않습니다. 나이 · 가족은 짝끼리 정하셔도 됩니다.\n정답은 없습니다. 「무엇을 물어야 하는가」 까지 가면 성공입니다 — 그것이 4부입니다.' },
-  { sec: 'p3', ty: 'steps', tag: '상담의 순서', h: '이해 없이 제안은 <em>설득</em>일 뿐입니다',
-    li: ['<b>이해</b> — 팩트파인딩으로 그 분의 B와 D 사이를 듣는다', '<b>정리</b> — 들은 것을 고객의 말 그대로 한 장에 적는다', '<b>제안</b> — 정리한 것 가운데 고객이 고른 우선순위부터', '<b>약속</b> — 다음에 언제 무엇을 확인할지', '<b>관리</b> — 마당이 바뀔 때마다 다시 그린다'],
-    say: '제안은 세 번째입니다. 첫째가 이해입니다. 10분 쉬고, 그 「이해」 의 기술 — 팩트파인딩으로 들어가겠습니다.' },
-
-  /* ── 쉼 ── */
-  { sec: 'b2', ty: 'break', say: '쉬는 시간. 4부 역할극 조(3인 1조)를 미리 짜 둡니다.' },
-
-  /* ── 4부 · 45분 ── */
-  { sec: 'p4', ty: 'scene', art: 'tea', tag: '4부 · 팩트파인딩',
-    lines: ['마주 앉은 두 개의 찻잔.', '내가 말한 시간보다 고객이 말한 시간이 길 때,', '제안서는 <em>질문지의 답장</em>이 됩니다.'],
-    say: '좋은 제안서는 좋은 질문에서 나옵니다. 질문 없이 쓴 제안서는 받는 사람이 없는 편지입니다.\n두 잔의 김이 섞이는 것을 보십시오. 상담은 설명이 아니라 섞이는 시간입니다.' },
-  { sec: 'p4', ty: 'cols', tag: '두 겹', h: '사실(Fact)과 <em>마음(Feeling)</em>을 함께 묻습니다',
-    a: { k: 'FACT · 사실', v: '가족 · 일 · 들어오고 나가는 돈 · 빚 · 모아 둔 것 · 이미 있는 보험' },
-    b: { k: 'FEELING · 마음', v: '걱정 · 꿈 · 꼭 지키고 싶은 사람 · 돈에 대한 기억 · 보험에 대한 경험' },
-    say: '사실만 물으면 조사가 되고, 마음만 물으면 수다가 됩니다. 두 겹을 함께 물어야 이해가 됩니다.\n고객은 사실 때문에 계약하지 않습니다. 마음 때문에 계약하고, 사실 때문에 유지합니다.' },
-  { sec: 'p4', ty: 'ff', tag: '일곱 걸음', h: '팩트파인딩 <em>일곱 걸음</em>',
-    say: '이 순서대로 걸으십시오. 한 걸음마다 사실 질문 하나, 마음 질문 하나.\n돈의 흐름에서 고객이 모르시면 「모름」 으로 적습니다. 0 으로 적으면 「없다」 는 뜻이 됩니다 — 모름과 0 은 다릅니다.' },
-  { sec: 'p4', ty: 'text', tag: '질문의 원칙', h: '좋은 질문의 <em>다섯 원칙</em>',
-    li: ['<b>열린 질문</b> — 「예 · 아니오」 로 끝나지 않게', '<b>한 번에 하나</b> — 두 개를 물으면 쉬운 쪽만 답합니다', '<b>고객의 말 그대로</b> 받아 적는다 — 내 말로 바꾸지 않는다', '<b>모르는 것은 「모름」</b> — 지어 채우지 않는다', '<b>판단 대신 요약</b> — 「제가 들은 것이 맞는지 볼까요?」'],
-    say: '마지막 원칙이 가장 강력합니다. 고객의 말을 요약해 돌려드리면, 고객은 「이 사람은 나를 안다」 고 느낍니다.' },
-  { sec: 'p4', ty: 'table', tag: '말 한마디', h: '고객 앞에서 <em>하지 않는 말</em>',
-    th: ['하지 않는 말', '대신 이렇게'],
-    rows: [['「비과세 상품입니다」', '「<b>요건을 충족하면</b> 비과세가 될 수 있습니다. 요건은 세무 전문가와 함께 확인하겠습니다」'],
-      ['「무조건 나옵니다」', '「보장과 보험료는 <b>심사 결과에 따릅니다</b>」'],
-      ['외워 둔 한도 · 나이 · 숫자', '「정확한 기준은 <b>지금 시행 중인 규정</b>으로 확인해 드리겠습니다」'],
-      ['「다들 이거 하세요」', '「고객님 <b>우선순위</b>에서 보면 이것이 먼저입니다」']],
-    say: '이 표의 왼쪽 말은 그 자리에서는 강해 보이지만, 요건 하나가 어긋나는 날 고객 앞에서 무너집니다. 오른쪽 말이 오래 갑니다.' },
-  { sec: 'p4', ty: 'work', tag: '15분 · 3인 1조 역할극', h: '홍길동 님 팩트파인딩', min: 15, wb: 5,
-    steps: ['설계사 · 고객(홍길동) · 관찰자 — 5분씩 돌아가며', '설계사는 일곱 걸음 가운데 세 걸음만 깊게', '고객은 워크북 5쪽의 「고객 카드」 대로, 마음은 솔직하게', '관찰자는 관찰 체크 여섯 칸에 표시'],
-    say: '역할극입니다. 5분씩 세 번, 역할을 바꿉니다. 시간은 제가 재겠습니다.\n고객 역할은 일부러 까다롭게 하지 마십시오. 솔직하게만 하시면 됩니다 — 그것이 가장 어렵습니다.' },
-  { sec: 'p4', ty: 'steps', tag: '관찰 체크', h: '관찰자가 보는 <em>여섯 가지</em>',
-    li: OBS,
-    say: '관찰자가 한 사람씩 이야기해 주십시오. 칭찬 하나, 다음에 바꿀 것 하나.' },
-  { sec: 'p4', ty: 'big', tag: '4부를 닫으며', h: '고객이 <em>스스로 말한 이유</em>만이<br>계약을 지킵니다',
-    say: '내가 말한 이유는 해지 앞에서 잊힙니다. 고객이 스스로 말한 이유는 남습니다.\n10분 쉬고 마지막 5부로 가겠습니다.' },
-
-  /* ── 쉼 ── */
-  { sec: 'b3', ty: 'break', say: '쉬는 시간. 5부 선언문 쓸 워크북 6쪽을 펴 두라고 안내합니다.' },
-
-  /* ── 5부 · 25분 ── */
-  { sec: 'p5', ty: 'scene', art: 'fork', tag: '5부 · 나를 선택하게 하는 자료',
-    lines: ['고객님은 오늘도 수많은 갈림길에 섭니다.', '그중 하나가 —', '<em>「누구에게 맡길까」</em> 입니다.'],
-    say: '마지막 5부입니다. 고객님 앞에는 설계사가 여럿 있습니다. 회사도 상품도 비슷합니다. 그러면 고객은 무엇으로 고를까요?' },
-  { sec: 'p5', ty: 'text', tag: '자료 네 장', h: '고객이 나를 고를 수 있는 <em>자료 네 장</em>',
-    li: ['<b>① 내 타임라인 한 장</b> — 내가 걸어온 길 · 넘어진 곳 · 증명한 것<small>오늘 1부에서 그린 바로 그것</small>',
-      '<b>② 내 약속 세 줄</b> — 무엇을 지키는 사람인가',
-      '<b>③ 고객님의 생애 지도</b> — 그 분의 B와 D 사이를 내가 이해한 기록',
-      '<b>④ 다음 약속</b> — 언제 · 무엇을 다시 확인할지'],
-    say: '고객이 고르는 것은 상품이 아니라 사람입니다. 그리고 사람은 그가 지나온 길로 증명됩니다.\n여러분의 바닥, 여러분의 증명 — 그것이 고객이 여러분을 고를 수 있는 자료입니다.' },
-  { sec: 'p5', ty: 'curve', tag: '자료 ① · 내 타임라인 한 장',
-    say: '다시 이 곡선입니다. 처음에 보셨을 때와 지금 다르게 보이십니까?\n고객 앞에서는 이렇게 말합니다 — 「저도 무너진 적이 있습니다. 그래서 계획이 무너지는 날이 어떤 날인지 압니다.」' },
-  { sec: 'p5', ty: 'story', k: 'promise', tag: '자료 ② · 나의 약속',
-    say: '제가 고객님께 드리는 약속 세 줄입니다. 이 약속은 제 명함 뒤에도 있습니다(있다면).' },
-  { sec: 'p5', ty: 'story', k: 'oneLine', tag: '지금 나를 세운 한 문장',
-    say: '마지막으로, 무너질 때마다 저를 다시 세운 한 문장입니다.' },
-  { sec: 'p5', ty: 'work', tag: '5분 · 혼자', h: '나의 <em>다음 C</em> 선언문', min: 5, wb: 6,
-    steps: ['워크북 6쪽 — 「나는 ___ 을 증명해 온 사람이다」', '「고객에게 나는 ___ 을 약속한다」', '「내일 아침 나의 첫 번째 선택은 ___ 이다」'],
-    say: '5분 드리겠습니다. 다 쓰신 분은 일어나서 옆 분께 소리 내어 읽어 주십시오.',
-    ask: '「내일 아침 첫 번째 선택」 을 세 분께 듣습니다.' },
-  { sec: 'p5', ty: 'silence', tag: '다시 1분', h: '처음의 1분을 기억하십니까.<br>이번 1분은 — <em>고르는 1분</em>입니다', min: 1,
-    say: '(「1분 시작」 을 누르고 침묵) 내일 아침, 여러분의 첫 번째 선택을 마음속으로 정하십시오.\n(1분 뒤) 정하셨습니까. 그 선택이 여러분의 C 입니다.' },
-  { sec: 'p5', ty: 'scene', art: 'dawn', tag: '맺음', who: 1,
-    lines: ['B와 D는 이미 정해져 있습니다.', '오늘부터의 <em>C</em>는 —', '여러분의 것입니다.'],
-    say: '(천천히) 고객님의 B 와 D 도 이미 정해져 있습니다. 그 사이의 C 를 함께 설계할 사람 — 그 사람이 여러분이기를 바랍니다.\n(해가 떠오르는 동안 잠시 쉬고) 4시간 동안 함께해 주셔서 고맙습니다.' }
-];
+/* 장 한 벌은 bcd-slides.js 한 곳 — 판 X187 에서 약 100장으로 늘리며 옮겼습니다 */
+const SLIDES = window.BCD_SLIDES;
 
 /* ════════════════════════════════════════════════════════════════
    펼치기 — 이야기 장이 비면 빼고, 타임라인 장은 사건 수만큼 늘립니다
@@ -881,6 +698,23 @@ function slideHtml(s, at) {
       L.map((x, i) => '<div class="ln" style="animation-delay:' + (0.6 + i * 1.6).toFixed(1) + 's">' + x + '</div>').join('') +
       (s.who && (has(S.me.name) || has(S.me.role)) ? '<div class="who ln" style="animation-delay:' + (0.6 + L.length * 1.6).toFixed(1) + 's">' + esc(S.me.name) + (has(S.me.role) ? ' · ' + esc(S.me.role) : '') + '</div>' : '') +
       '</div></div>';
+  } else if (s.ty === 'lifestage') {
+    const x = LIFE[s.k] || {};
+    h = '<div class="sl lifestage"><div class="tag">생애 지도 · 마당 ' + (s.k + 1) + ' / ' + LIFE.length + '</div>' +
+      '<div class="lsh"><span class="lse">' + x.e + '</span><h2>' + esc(x.n) + '<small>' + esc(x.c) + '</small></h2></div>' +
+      '<div class="lsbar">' + LIFE.map((y, i) => '<i class="' + (i < s.k ? 'p' : i === s.k ? 'on' : '') + '"></i>').join('') + '</div>' +
+      '<div class="ls3"><div class="box"><div class="k">이 마당의 질문</div><div class="v">「' + esc(x.q) + '」</div></div>' +
+      '<div class="box fail"><div class="k">흔한 걱정</div><div class="v">' + esc(x.w) + '</div></div>' +
+      '<div class="box proof"><div class="k">먼저 건넬 한마디</div><div class="v">「' + esc(x.a) + '」</div></div></div>' +
+      '<div class="lsq">— 지금 이 마당에 계신 고객님 한 분을 떠올려 보십시오.</div></div>';
+  } else if (s.ty === 'talk') {
+    h = '<div class="sl talk"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2><div class="chat">' +
+      s.lines.map((l, i) => '<div class="bub ' + (l.w === '고객' ? 'c' : 'f') + '" style="animation-delay:' + (0.4 + i * 0.9).toFixed(1) + 's"><b>' + esc(l.w === '고객' ? '고객 · 홍길동 님' : '설계사') + '</b>' + esc(l.t) + '</div>').join('') +
+      '</div>' + (s.tip ? '<div class="tipb">💡 ' + esc(s.tip) + '</div>' : '') + '</div>';
+  } else if (s.ty === 'share') {
+    /* 나눔 — 강사가 아니라 청중(특히 먼저 걸어오신 분들)이 말하는 시간 */
+    h = '<div class="sl share"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2><ul>' + s.li.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' +
+      '<div class="work"><div class="tmr" id="tmr">' + s.min + ':00</div><button class="tmrb" id="tmrGo">⏱ ' + s.min + '분 시작</button></div></div>';
   } else if (s.ty === 'silence') {
     h = '<div class="sl silence"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2>' +
       '<div class="ringwrap"><svg class="ring" viewBox="0 0 200 200" aria-hidden="true"><circle class="ring-b" cx="100" cy="100" r="90"/><circle class="ring-p" cx="100" cy="100" r="90"/></svg><div class="beat"></div></div>' +
@@ -978,8 +812,8 @@ function ckSay() {
   const part = hh < 6 ? '새벽' : hh < 12 ? '오전' : hh < 18 ? '오후' : '저녁';
   const h12 = hh % 12 || 12;
   const word = hh < 6 ? '아직 동트기 전입니다. 하루가 통째로 남았습니다.' : hh < 12 ? '해가 오르고 있습니다. 가장 많이 고를 수 있는 시간입니다.' :
-    hh < 15 ? '해는 머리 위에 있습니다. 그러나 이미 기울기 시작했습니다.' : hh < 18 ? '그림자가 길어집니다. 미뤄 둔 선택을 꺼낼 시간입니다.' : '해가 집니다. 남은 빛으로 무엇을 비추시겠습니까.';
-  return '지금 — <em>' + part + ' ' + h12 + '시 ' + mm + '분</em><small>' + word + '</small>';
+    hh < 15 ? '해는 머리 위에 있습니다. 그러나 이미 기울기 시작했습니다.' : hh < 18 ? '그림자가 길어집니다. 미뤄 둔 선택을 꺼낼 시간입니다.' : '하루 중 빛이 가장 깊은 시간입니다. 무엇을 누구에게 남길지 고르는 시간입니다.';
+  return '지금 — <em>' + part + ' ' + h12 + '시 ' + mm + '분</em><small>' + word + ' 몇 시든, 하루는 아직 끝나지 않았습니다.</small>';
 }
 function bindClock() {
   const on = () => {
@@ -1028,7 +862,7 @@ function show(i) {
   $('stage').innerHTML = slideHtml(s);
   if (s.ty === 'story') fitStory();
   if (s.ty === 'phone') $('wbCopy').onclick = () => copyWb($('wbCopy'));
-  if (s.ty === 'work' || s.ty === 'silence') bindTmr(s.min);
+  if (s.ty === 'work' || s.ty === 'silence' || s.ty === 'share') bindTmr(s.min);
   if (s.ty === 'clock') bindClock();
   if (s.ty === 'break') bindTmr(SEC[s.sec].min);
   const sec = SEC[s.sec];
@@ -1045,6 +879,9 @@ function labOf(s) {
   if (s.ty === 'scene') return '🎬' + plain((s.lines || [])[0]).slice(0, 9);
   if (s.ty === 'silence') return '🤫' + plain(s.tag);
   if (s.ty === 'clock') return '🕰인생의 하루';
+  if (s.ty === 'lifestage') return (LIFE[s.k] || {}).e + (LIFE[s.k] || {}).n;
+  if (s.ty === 'share') return '🗣' + plain(s.h).slice(0, 9);
+  if (s.ty === 'talk') return '💬' + plain(s.tag).replace(/^[^·]*· /, '').slice(0, 8);
   return s.ty === 'photo' ? '🖼' + (S.photos[s.i].cap || '사진').slice(0, 8) : s.ty === 'memento' ? '💀메멘토 모리' : s.ty === 'phone' ? '📱폰 워크북' : s.ty === 'news' ? '📰뉴스' :
     s.ty === 'event' ? '📍' + (S.tl[s.i].t || '').slice(0, 8) : s.ty === 'story' ? '✍' + STORY_T[s.k].slice(0, 8) : '';
 }
@@ -1285,19 +1122,31 @@ function hm(base, add) {
   const t = (h * 60 + m + add) % 1440;
   return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
 }
+/* 부마다 분량 — 장 수 · 활동 분 · 노트를 읽는 데 드는 분. 낭독은 분당 약 READ_PER_MIN 자로 어림합니다(어림이라고 밝힙니다 · 1번) */
+const READ_PER_MIN = 300;
+function planVol(list) {
+  const shown = list.filter(x => x.ty !== 'break');
+  const act = list.filter(x => x.ty === 'work' || x.ty === 'silence').reduce((t, x) => t + (x.min || 0), 0);
+  const share = list.filter(x => x.ty === 'share').reduce((t, x) => t + (x.min || 0), 0);
+  const chars = list.reduce((t, x) => t + String(x.say || '').replace(/\([^)]*\)/g, '').length, 0);
+  const story = list.filter(x => x.ty === 'story' || x.ty === 'events').length;
+  return '장 ' + shown.length + ' · 활동 ' + act + '분' + (share ? ' · 나눔 ' + share + '분' : '') + ' · 노트 낭독 약 ' + Math.max(1, Math.round(chars / READ_PER_MIN)) + '분' + (story ? ' · 강사님 이야기 ' + story + '자리' : '');
+}
 function renderPlan() {
   const st = $('startAt').value || '13:00';
   let a = 0;
   const rows = SECTIONS.map(s => {
     const n = SLIDES.filter(x => x.sec === s.id);
     const work = n.filter(x => x.ty === 'work').map(x => esc(x.h.replace(/<[^>]+>/g, '')) + ' ' + x.min + '분').join(' · ');
+    const vol = s.brk ? '' : planVol(n);
     const r = '<tr' + (s.brk ? ' class="brk"' : '') + '><td class="t">' + hm(st, a) + '</td><td><b>' + esc(s.name) + '</b></td><td>' + esc(s.title) +
-      (work ? '<div class="hint">✍ 활동 — ' + work + '</div>' : '') + '</td><td class="m">' + s.min + '분</td></tr>';
+      (work ? '<div class="hint">✍ 활동 — ' + work + '</div>' : '') + (vol ? '<div class="hint">📄 ' + vol + '</div>' : '') + '</td><td class="m">' + s.min + '분</td></tr>';
     a += s.min; return r;
   }).join('');
   $('planTbl').innerHTML = '<thead><tr><th>시각</th><th>부</th><th>내용</th><th>분</th></tr></thead><tbody>' + rows + '</tbody>' +
     '<tfoot><tr><td class="t">' + hm(st, TOTAL_MIN) + '</td><td colspan="2">끝</td><td class="m">' + TOTAL_MIN + '분</td></tr></tfoot>';
   $('planTot').textContent = '모두 ' + Math.floor(TOTAL_MIN / 60) + '시간' + (TOTAL_MIN % 60 ? ' ' + TOTAL_MIN % 60 + '분' : '') + '(' + TOTAL_MIN + '분)';
+  $('planNote').textContent = '「노트 낭독」 은 강사 노트를 읽는 데 드는 시간을 분당 약 ' + READ_PER_MIN + '자로 어림한 것입니다 (괄호 안 진행 안내는 빼고 셉니다). 강사님 이야기 · 청중 나눔 · 질문은 그 위에 더해집니다.';
 }
 $('startAt').oninput = renderPlan;
 
@@ -1345,6 +1194,8 @@ function scriptHtml() {
       else if (s.ty === 'scene') { t = '🎬 ' + (s.tag || '장면'); b = (s.lines || []).map(x => x.replace(/<[^>]+>/g, '')).join('\n'); }
       else if (s.ty === 'silence') { t = '🤫 ' + s.tag + ' — ' + (s.h || '').replace(/<br>/g, ' ').replace(/<[^>]+>/g, ''); }
       else if (s.ty === 'clock') { t = '🕰 인생의 하루 — 지금 나이 ÷ 살고 싶은 나이 × 24시간'; }
+      else if (s.ty === 'lifestage') { const x = LIFE[s.k]; t = '생애 마당 ' + (s.k + 1) + ' · ' + x.n; b = '질문: ' + x.q + '\n걱정: ' + x.w + '\n먼저 건넬 한마디: ' + x.a; }
+      else if (s.ty === 'talk') { t = '💬 ' + s.tag + ' — ' + s.h.replace(/<[^>]+>/g, ''); b = s.lines.map(l => (l.w === '고객' ? '고객: ' : '설계사: ') + l.t).join('\n') + (s.tip ? '\n💡 ' + s.tip : ''); }
       else if (s.ty === 'memento') { t = '메멘토 모리 — 죽음을 기억하라 (해골 · 모래시계 · 촛불)'; }
       else if (s.ty === 'news') { t = (s.h || '').replace(/<br>/g, ' ').replace(/<[^>]+>/g, ''); b = NEWS.filter(n => n.set === s.set).map(n => '· ' + n.o + ' · ' + (has(n.d) ? n.d : '날짜 확인 못 함') + ' — ' + n.t + '\n  ' + n.u).join('\n'); }
       else if (s.ty === 'photo') { const ph = S.photos[s.i]; t = '사진 — ' + (ph.cap || '설명 없음'); b = '출처: ' + (has(ph.from) ? ph.from : '⚠ 안 적음') + ' (사진은 인쇄에 넣지 않습니다)'; }

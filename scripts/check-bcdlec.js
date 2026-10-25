@@ -44,6 +44,7 @@ const PAGE = fs.readFileSync(path.join(ROOT, 'app/bcd-lecture.html'), 'utf8');
 const WBP = fs.readFileSync(path.join(ROOT, 'app/bcd-workbook.html'), 'utf8');
 const DATA = fs.readFileSync(path.join(ROOT, 'app/bcd-data.js'), 'utf8');
 const ARTJS = fs.readFileSync(path.join(ROOT, 'app/bcd-art.js'), 'utf8');
+const SLJS = fs.readFileSync(path.join(ROOT, 'app/bcd-slides.js'), 'utf8');
 const strip = t => t.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
 const IDX = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
 /* 주석을 떼고 본다 — 쪽지 글을 코드로 읽지 않게 */
@@ -62,9 +63,9 @@ is(!/data:image\/(png|jpe?g|webp|gif);base64/i.test(PAGE) && !/<img[^>]+src="(?!
 is(!/story\s*:\s*\{\s*[a-zA-Z]+\s*:\s*'[^']/.test(CODE) && !/tl\s*:\s*\[\s*\{/.test(CODE), '이야기 · 장면을 미리 적어 둔 줄이 없다');
 
 console.log('\n[3] 서버 · 바깥 스크립트 · tnum (7번 · 4-1번)');
-is([CODE, strip(WBP), strip(DATA), strip(ARTJS)].every(t => !/\bfetch\s*\(|XMLHttpRequest|supabase|\/\.netlify\//i.test(t)), '덱 · 폰 워크북 · 글 한 벌 · 장면 그림 모두 서버를 부르는 줄이 없다');
+is([CODE, strip(WBP), strip(DATA), strip(ARTJS), strip(SLJS)].every(t => !/\bfetch\s*\(|XMLHttpRequest|supabase|\/\.netlify\//i.test(t)), '덱 · 폰 워크북 · 글 한 벌 · 장면 그림 모두 서버를 부르는 줄이 없다');
 const srcs = t => (t.match(/<script[^>]+src="([^"]+)"/gi) || []).map(x => /src="([^"]+)"/i.exec(x)[1]);
-is(srcs(PAGE).sort().join() === 'bcd-art.js,bcd-data.js' && srcs(WBP).join() === 'bcd-data.js', '바깥 스크립트를 안 들여온다 — 덱은 옆 파일 bcd-data.js · bcd-art.js, 폰 워크북은 bcd-data.js 만 읽는다');
+is(srcs(PAGE).sort().join() === 'bcd-art.js,bcd-data.js,bcd-slides.js' && srcs(WBP).join() === 'bcd-data.js', '바깥 스크립트를 안 들여온다 — 덱은 옆 파일 bcd-data.js · bcd-art.js · bcd-slides.js, 폰 워크북은 bcd-data.js 만 읽는다');
 is(!/<image\b|href=["']https?:|xlink:href|data:image\/(png|jpe?g|webp|gif)/i.test(ARTJS), '장면 그림이 남의 사진 · 바깥 그림을 끌어오지 않는다 — 전부 직접 그린 SVG (9번)');
 is(![PAGE, WBP].some(t => /tnum/.test(t)), '숫자 글꼴 tnum 을 안 켠다');
 is(!/const (LIFE|FF|OBS|WB) = \[/.test(CODE) && !/const (LIFE|FF|OBS|WB) = \[/.test(strip(WBP)) && !/'내가 말한 시간보다 고객이 말한 시간이 길었나'/.test(CODE + strip(WBP)),
@@ -290,6 +291,40 @@ const srv = http.createServer((q, s) => {
     is(/지금 나이보다 커야/.test(await p.textContent('#ckNow')), '살고 싶은 나이가 지금 나이보다 작으면 시각을 안 지어내고 그렇다고 말한다');
     is(ck1.col === 'rgb(255, 255, 255)', '장 이름표가 위 띠의 시계(.clock)와 안 부딪힌다 — 제목이 흰 글씨');
     await p.evaluate(() => { CK.age = ''; CK.life = ''; });
+
+    console.log('\n[17] 🧓 먼저 걸어오신 분들 · 4시간 분량 (판 X187 — 「나보다 나이 많은 사람들도 많은데 캐릭터도 그렇고 4시간 강의하기엔 너무 짧은데?」)');
+    const v = await p.evaluate(() => {
+      const A = SLIDES, says = A.map(s => String(s.say || '').length).sort((a, b) => a - b);
+      const ls = A.filter(s => s.ty === 'lifestage').map(s => s.k), tk = A.filter(s => s.ty === 'talk');
+      const open2 = A.filter(s => s.sec === 'open')[1] || {};
+      return { n: A.length, shown: D.length, med: says[Math.floor(says.length / 2)], tot: says.reduce((a, b) => a + b, 0),
+        ls: ls.slice().sort((a, b) => a - b).join(), lifeOk: LIFE.every(x => x.q && x.w && x.a),
+        tk: tk.length, tkOk: tk.every(s => s.lines.length >= 2 && s.lines.length <= 4 && s.tip),
+        open2: open2.art + '|' + (open2.lines || []).join(' ') };
+    });
+    is(v.n >= 90 && v.shown >= 80, '장이 ' + v.n + '장 — 강사 이야기를 하나도 안 적어도 발표에 ' + v.shown + '장이 선다 (전에는 49장)');
+    is(v.med >= 120 && v.tot >= 12000, '강사 노트가 그대로 말할 수 있는 대본이다 — 장마다 가운데 값 ' + v.med + '자 · 모두 ' + v.tot + '자');
+    is(v.ls === '0,1,2,3,4,5,6,7,8,9,10' && v.lifeOk, '생애 열한 마당이 한 장씩 — 마당마다 질문 · 걱정 · 먼저 건넬 한마디가 bcd-data.js 한 곳에 있다');
+    is(v.tk >= 8 && v.tkOk, '홍길동 님과의 대화 장 ' + v.tk + '장 — 장마다 말 두세 마디와 짚을 점 하나');
+    const shv = await p.evaluate(() => { const A = SLIDES.filter(s => s.ty === 'share'); const secs = [...new Set(A.map(s => s.sec))];
+      const i = D.findIndex(s => s.ty === 'share'); show(i); const r = { n: A.length, secs: secs.join(), min: A.reduce((t, s) => t + s.min, 0), tmr: !!$('tmrGo'), li: document.querySelectorAll('#stage li').length };
+      $('tmrGo').click(); r.run = !!tmrId; stopTmr(); return r; });
+    is(shv.n >= 8 && shv.secs.split(',').length >= 5 && shv.tmr && shv.run && shv.li >= 2, '🗣 나눔 ' + shv.n + '번 · ' + shv.min + '분 — 다섯 부에 고루 · 시계가 돈다 (먼저 걸어오신 분들이 말하는 시간)');
+    is(/^bench\|.*먼저 이 길을 걸어오신/.test(v.open2), '여는 둘째 장이 먼저 이 길을 걸어오신 분들께 드리는 인사다 (벤치의 노부부)');
+    is(!/여러분/.test(SLJS), '가르치는 말투를 걷어 냈다 — 장 · 노트 어디에도 「여러분」 이 없고 「우리」 로 말한다');
+    is((ARTJS.match(/'elder(Sit)?'\)/g) || []).length >= 3 && /ART\.bench/.test(ARTJS) && /ART\.family/.test(ARTJS), '그림에 어르신이 선다 — 지팡이를 짚은 분 · 벤치의 노부부 · 손잡고 걷는 삼대');
+    const ls1 = await p.evaluate(() => { const i = D.findIndex(s => s.ty === 'lifestage' && s.k === 7); show(i); return $('stage').innerText; });
+    is(/부모님 건강은 요즘 어떠세요/.test(ls1) && /부모님 돌봄과 자녀의 독립/.test(ls1), '생애 마당 장에 그 마당의 걱정과 먼저 건넬 한마디가 선다');
+    const tk1 = await p.evaluate(() => { const i = D.findIndex(s => s.ty === 'talk'); show(i); return { b: document.querySelectorAll('#stage .bub').length, w: D[i].lines.length, tip: !!document.querySelector('#stage .tipb') }; });
+    is(tk1.b === tk1.w && tk1.tip, '대화 장 — 말풍선이 대본 마디 수만큼 서고 짚을 점이 붙는다');
+    await p.evaluate(() => { show(D.findIndex(s => s.ty === 'clock')); });
+    await p.fill('#ckAge', '72'); await p.fill('#ckLife', '85');
+    const ev = await p.textContent('#ckNow');
+    is(/빛이 가장 깊은/.test(ev) && /하루는 아직 끝나지 않았습니다/.test(ev) && !/해가 집니다/.test(ev), '인생 시계의 저녁 — 「해가 집니다」 가 아니라 「빛이 가장 깊은 시간 · 하루는 아직 끝나지 않았습니다」');
+    await p.evaluate(() => { CK.age = ''; CK.life = ''; page('plan'); });
+    const pl2 = await p.evaluate(() => ({ t: $('planTbl').innerText, note: $('planNote').innerText }));
+    is(/장 \d+ · 활동 \d+분 · 나눔 \d+분 · 노트 낭독 약 \d+분/.test(pl2.t) && /어림/.test(pl2.note), '진행표가 부마다 분량(장 · 활동 · 노트 낭독)을 말하고, 낭독 시간은 어림이라고 밝힌다');
+    await p.evaluate(() => page('deck'));
 
     console.log('\n[14] 📱 폰 워크북 — 적고 · 남고 · 그리고 · 뽑고 · 지운다 (bcd-workbook.html)');
     const q = await ctx.newPage({ viewport: { width: 390, height: 844 } });

@@ -21,14 +21,21 @@
     stand: 'M-17 -142C-23 -140-27 -132-28 -120L-32 -70C-32 -65-25 -64-24 -69L-19 -112-18 -60-16 0-5 0-1 -55 1 -55 5 0 16 0 18 -60 19 -112 24 -69C25 -64 32 -65 32 -70L28 -120C27 -132 23 -140 17 -142Z',
     walk: 'M-17 -142C-23 -140-27 -132-28 -120L-36 -80-29 -77-19 -110-18 -62-34 0-22 0-3 -52 1 -52 13 0 25 0 18 -62 19 -110 30 -82 36 -86 28 -120C27 -132 23 -140 17 -142Z',
     sit: 'M-12 -88C2 -95 16 -88 19 -74L22 -44 52 -42 54 0 44 0 42 -30-6 -28C-14 -46-17 -72-12 -88Z',
-    coat: 'M-18 -142C-26 -138-30 -128-31 -116L-36 -40-20 -40-18 -12-16 0-5 0-2 -40 2 -40 5 0 16 0 18 -12 20 -40 36 -40 31 -116C30 -128 26 -138 18 -142Z'
+    coat: 'M-18 -142C-26 -138-30 -128-31 -116L-36 -40-20 -40-18 -12-16 0-5 0-2 -40 2 -40 5 0 16 0 18 -12 20 -40 36 -40 31 -116C30 -128 26 -138 18 -142Z',
+    /* 어르신 — 등이 조금 굽고 지팡이를 짚습니다(지팡이는 fig 가 붙입니다) */
+    elder: 'M-10 -134C-20 -132-27 -122-29 -110L-33 -66C-33 -61-26 -60-25 -65L-21 -100-19 -58-18 0-7 0-2 -52 2 -52 6 0 17 0 18 -58 21 -98 30 -80C32 -76 37 -78 35 -83L27 -112C24 -126 16 -134 6 -137Z',
+    elderSit: 'M-8 -80C6 -88 18 -80 20 -66L22 -40 50 -38 52 0 42 0 40 -26-6 -24C-12 -40-14 -66-8 -80Z',
+    /* 앞에서 본 앉은 사람 — 벤치 위 두 사람 */
+    front: 'M-20 -96C-28 -92-31 -80-31 -70V-40H-19V0H-7V-40H7V0H19V-40H31V-70C31 -80 28 -92 20 -96Z'
   };
-  var HEAD = { stand: [0, -159, 15], walk: [2, -159, 15], sit: [8, -102, 14], coat: [0, -159, 15] };
+  var HEAD = { stand: [0, -159, 15], walk: [2, -159, 15], sit: [8, -102, 14], coat: [0, -159, 15], elder: [10, -148, 14], elderSit: [16, -94, 13], front: [0, -112, 14] };
   function fig(x, y, s, fill, pose, extra) {
     pose = pose || 'stand';
     var h = HEAD[pose];
     return '<g transform="translate(' + x + ' ' + y + ') scale(' + s + ')" fill="' + fill + '"' + (extra || '') + '>' +
-      '<circle cx="' + h[0] + '" cy="' + h[1] + '" r="' + h[2] + '"/><path d="' + POSE[pose] + '"/></g>';
+      '<circle cx="' + h[0] + '" cy="' + h[1] + '" r="' + h[2] + '"/><path d="' + POSE[pose] + '"/>' +
+      (pose === 'elder' ? '<path d="M33 -80 44 0" stroke="' + fill + '" stroke-width="4" stroke-linecap="round"/>' : '') +
+      (pose === 'elderSit' ? '<path d="M24 -40 30 0" stroke="' + fill + '" stroke-width="4" stroke-linecap="round"/>' : '') + '</g>';
   }
   /* 흩어진 점 — 같은 씨로 늘 같은 자리 (그릴 때마다 바뀌면 「한눈에」 와 발표가 다르게 섭니다) */
   function rnd(seed) { var s = seed; return function () { s = (s * 9301 + 49297) % 233280; return s / 233280; }; }
@@ -76,7 +83,7 @@
       '<path d="M0 700C200 664 380 712 560 684 740 656 880 706 1060 680 1250 652 1420 700 1600 672V900H0Z" fill="#17122A"/>' +
       '<path d="M540 900 782 676H818L1060 900Z" fill="url(#dw-road)"/>' +
       '<path d="M798 690H802L806 730H794ZM792 760H808L814 820H786ZM780 860H820L826 900H774Z" fill="#FFD9A0" opacity=".55"/>' +
-      fig(842, 812, 0.5, '#07060D', 'walk', ' class="walker"') +
+      fig(826, 812, 0.5, '#07060D', 'walk', ' class="walker"') + fig(876, 812, 0.48, '#07060D', 'elder') +
       '<path d="M0 900V820C300 800 420 840 600 900Z" fill="#0C0918"/><path d="M1600 900V830C1320 806 1180 846 1000 900Z" fill="#0C0918"/>', d);
   };
 
@@ -238,7 +245,7 @@
       lights +
       '<path d="M180 210 330 290V610L180 690Z" fill="#161C2A"/><path d="M1420 210 1270 290V610L1420 690Z" fill="#141A28"/>' +
       '<path d="M1060 640 1240 690V716L1060 668Z" fill="#2E3850"/><path d="M1070 668V720M1230 714V770" stroke="#11151F" stroke-width="6"/>' +
-      fig(1110, 700, 0.95, '#05070D', 'sit'), d);
+      fig(1110, 700, 0.95, '#05070D', 'elderSit'), d);
   };
 
   /* ── 빈 의자의 아침 — 남는 사람의 삶 ── */
@@ -341,6 +348,47 @@
       '<path d="M1060 700C1140 690 1240 694 1330 704" stroke="#3C4A2A" stroke-width="5" fill="none"/>' +
       '<path d="M1180 692C1196 676 1214 676 1226 690M1270 698C1284 684 1300 686 1310 700" stroke="#3C4A2A" stroke-width="4" fill="#4A5A32"/>' +
       '<g transform="translate(1050 690) scale(1.25)">' + petals + '<circle r="6" fill="#E8D9A8"/></g>', d);
+  };
+
+  /* ── 벤치의 노부부 — 먼저 이 길을 걸어오신 분들께 ── */
+  ART.bench = function () {
+    var d = lin('bn-sky', [[0, '#1A1838'], [0.45, '#6A3E5E'], [0.72, '#E48A5E'], [0.82, '#FFCB86']]) +
+      rad('bn-sun', [[0, '#FFF2CC'], [0.3, '#FFC46B'], [1, '#FF9A4A', 0]]) + rad('bn-lamp', [[0, '#FFE6B0', 0.6], [1, '#FFE6B0', 0]]) + SOFT;
+    var trees = '', r = rnd(13);
+    [[120, 600, 150], [300, 620, 110], [1480, 610, 150]].forEach(function (t) {
+      trees += '<rect x="' + (t[0] - 8) + '" y="' + t[1] + '" width="16" height="' + (760 - t[1]) + '" fill="#120C14"/>' +
+        '<circle cx="' + t[0] + '" cy="' + (t[1] - t[2] * 0.5) + '" r="' + t[2] + '" fill="#160E18"/><circle cx="' + (t[0] - t[2] * 0.6) + '" cy="' + (t[1] - t[2] * 0.2) + '" r="' + (t[2] * 0.7) + '" fill="#160E18"/>';
+    });
+    var leaves = '';
+    for (var i = 0; i < 26; i++) leaves += '<ellipse cx="' + (r() * 1600).toFixed(0) + '" cy="' + (100 + r() * 600).toFixed(0) + '" rx="5" ry="2.6" fill="#E89A55" opacity="' + (0.4 + r() * 0.5).toFixed(2) + '" transform="rotate(' + (r() * 180).toFixed(0) + ' 0 0)"/>';
+    return svg('bench',
+      '<rect width="1600" height="900" fill="url(#bn-sky)"/>' +
+      '<circle cx="1240" cy="700" r="360" fill="url(#bn-sun)"/><circle cx="1240" cy="700" r="70" fill="#FFE9BE"/>' +
+      '<path d="M0 760C400 730 1200 730 1600 760V900H0Z" fill="#140D16"/>' + trees +
+      '<rect x="1390" y="420" width="8" height="340" fill="#120C14"/><circle cx="1394" cy="414" r="90" fill="url(#bn-lamp)"/><circle cx="1394" cy="414" r="10" fill="#FFF0C8"/>' +
+      '<g transform="translate(330 0)"><g fill="#0C070E"><rect x="580" y="672" width="440" height="14" rx="4"/><rect x="580" y="612" width="440" height="10" rx="4"/><rect x="580" y="636" width="440" height="10" rx="4"/>' +
+      '<rect x="600" y="686" width="12" height="74"/><rect x="988" y="686" width="12" height="74"/><rect x="600" y="600" width="10" height="86"/><rect x="990" y="600" width="10" height="86"/></g>' +
+      fig(740, 760, 0.95, '#06030A', 'front') +
+      '<g transform="translate(838 760) scale(0.92) rotate(-4 0 -100)" fill="#06030A"><circle cx="-6" cy="-112" r="14"/><path d="' + POSE.front + '"/></g>' +
+      '<path d="M770 690C790 694 806 694 818 690" stroke="#06030A" stroke-width="9" stroke-linecap="round"/>' +
+      '<path d="M690 760 700 692" stroke="#06030A" stroke-width="4" stroke-linecap="round"/></g>' +
+      '<g class="leaves">' + leaves + '</g>', d);
+  };
+
+  /* ── 손잡고 걷는 삼대 — 한 집 안의 세 개의 시계 ── */
+  ART.family = function () {
+    var d = lin('fm-sky', [[0, '#2A2448'], [0.5, '#B8676A'], [0.72, '#F2A660'], [0.8, '#FFD39A']]) +
+      rad('fm-sun', [[0, '#FFF4D2'], [0.3, '#FFCB78'], [1, '#FFA24E', 0]]) + lin('fm-field', [[0, '#3A2A2A'], [1, '#120C10']]) + SOFT;
+    var grass = '', r = rnd(17);
+    for (var i = 0; i < 120; i++) { var gx = r() * 1600, gy = 700 + r() * 190; grass += '<path d="M' + gx.toFixed(0) + ' ' + gy.toFixed(0) + 'q4 -18 12 -26" stroke="#2A1C1E" stroke-width="2" fill="none"/>'; }
+    var y = 780, sh = function (x, w) { return '<ellipse cx="' + (x - 120) + '" cy="' + (y + 4) + '" rx="' + w + '" ry="7" fill="#000" opacity=".35"/>'; };
+    return svg('family',
+      '<rect width="1600" height="900" fill="url(#fm-sky)"/><circle cx="1330" cy="660" r="380" fill="url(#fm-sun)"/><circle cx="1330" cy="660" r="70" fill="#FFF0C6"/>' +
+      '<path d="M0 700C320 680 900 690 1600 676V900H0Z" fill="url(#fm-field)"/>' +
+      '<path d="M960 900C1040 820 1140 760 1220 700H1280C1260 760 1260 820 1300 900Z" fill="#5A3E36" opacity=".55"/>' + grass +
+      '<g transform="translate(400 0)">' + sh(640, 130) + sh(760, 150) + sh(860, 90) +
+      fig(640, y, 0.82, '#0C0709', 'elder') + fig(760, y, 0.95, '#0C0709', 'walk') + fig(860, y, 0.55, '#0C0709', 'walk') +
+      '<path d="M668 716C688 720 708 720 728 714M792 714C808 724 824 734 842 742" stroke="#0C0709" stroke-width="6" fill="none" stroke-linecap="round"/></g>', d);
   };
 
   window.BCD_ART = ART;
