@@ -21025,8 +21025,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-25 18:20';
-var APP_BUILD_NOTE="✂️ <b>뉴스 제목 끝에 언론사가 두 번 찍히던 것</b>을 고쳤습니다. 사장님 말씀 「저축 뉴스 모아서 실제로 들어오는지 확인해줘」 로 <b>실제로 긁어 보고</b> 찾았습니다 — 구글이 보낸 제목이 「… 부과\" <b>- 머니투데이 - 머니투데이</b>」 였습니다(신문사가 제 헤드라인에 이미 이름을 붙였는데 구글이 또 붙입니다). 100건 중 <b>6건</b>이 그랬고, 이제 <b>되풀이해 뗍니다</b>. ◾ 「보험사」 칸 기사도 <b>같이</b> 깨끗해집니다 — 같은 자리를 고쳤습니다. ◾ ★ 「… - 종합」 처럼 <b>진짜 제목의 일부</b>는 안 깎습니다 — 언론사 이름과 글자까지 같은 꼬리만 뗍니다. ◾ ⚠ 구글이 영문 이름(Chosunbiz)을 주고 제목에는 한글(조선비즈)을 붙이는 신문사가 있어 <b>100건 중 2~3건</b>은 그대로 남습니다 — 틀린 말이 아니라서 짐작으로 깎지 않았습니다. ◾ 💰 저축 칸은 <b>실제로 들어옵니다</b> — 2026-10-25 에 재어 보니 <b>91건</b>(매일경제·조선일보· 연합뉴스TV·YTN 등 · 1~77시간 전).";
+var APP_BUILD='2026-10-25 20:10';
+var APP_BUILD_NOTE="🎯 <b>「오늘」 칸에서 바로 뉴스를 고르십니다.</b> 사장님 말씀 「오늘 칸에서도 … <b>나이대와 상황에 맞추어서</b> 뉴스 선택할 수 있도록」. 📰 <b>오늘 보낼 소식 ▾</b> 를 누르시면 그 자리에서 🗂️ <b>상황</b>(전체·보험·경제·저축·정책)과 🎂 <b>나이대</b>(20·30대·40·50대·60대 이상)를 고르시고, <b>왜 그 나이대인지</b>까지 같이 보십니다 — 화면을 옮기지 않으셔도 됩니다. ◾ 고르시면 <b>소식 줄의 기사가 바로 바뀝니다</b>(저축 × 60대 이상 → 기초연금 기사). ◾ 뉴스 화면에서 고르신 것과 <b>늘 같습니다</b> — 두 자리가 다른 말을 하지 않습니다. ◾ ★ <b>홈은 한 줄도 길어지지 않았습니다</b> — 고르개는 접힌 채로 <b>0px</b> 입니다(재어 보고 단추 하나를 도로 뺐습니다). ◾ ⚠ 뉴스가 아직 안 들어온 날에는 이 줄 자체가 안 섭니다 — 없는 소식을 지어내지 않습니다.";
 
 
 
@@ -26899,27 +26899,62 @@ function hmNowNewsHtml(){
        <b>고르시는 자리(뉴스 화면)</b>에 낱말·까닭을 다 적습니다 — 거기가
        많은 것 중에서 고르는 자리이기도 합니다 (판 X130 이 같은 자리에서
        「눈금을 올리는 대신 자리를 옮겼」습니다 · 8번).                    */
-    '<div class="hm-nw-t">📰 <b>오늘 보낼 소식</b>'+hmNwKeyHtml()+' — '+v(it.t)+'</div>'+
+    /* 🎯 <b>여기를 누르면 고르개가 열립니다</b> (판 X193).
+       ★★ <b>&lt;span&gt; 입니다 — 단추가 아닙니다.</b> 단추는 글 속에서 쪼개지지
+         않아 뒤 글이 통째로 다음 줄로 밀립니다(42 → 65px 로 재어 보았습니다).
+         span 은 글자처럼 접혀 <b>한 줄도 안 늘어납니다</b>.
+       ★ 늘어나는 글자는 <b>「▾」 한 자</b>뿐입니다.                        */
+    '<div class="hm-nw-t">📰 <span class="hm-nw-k hm-nw-o" role="button" tabindex="0"'+
+      ' onclick="hmNwPickToggle()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();hmNwPickToggle();}"'+
+      ' aria-controls="hmNwPick" aria-expanded="'+(HM_NW_OPEN?'true':'false')+'"'+
+      ' title="누르면 🗂️ 칸·🎂 연령대를 고르실 수 있습니다">'+
+      '오늘 보낼 소식 '+(HM_NW_OPEN?'▴':'▾')+'</span>'+hmNwKeyHtml()+' — '+v(it.t)+'</div>'+
     '<div class="hm-nw-b">'+
+      /* ⚠ <b>여기에 「🎯 골라 보기」 단추를 세웠다가 뺐습니다</b> (판 X193).
+         재어 보니 단추 셋이 390px 한 줄에 안 들어 <b>둘째 줄</b>로 내려가고,
+         홈이 3,529 → <b>3,579px</b>(4.24화면)이 되어 사장님 선을 넘었습니다.
+         ★ 그래서 여는 자리를 <b>제목 줄</b>로 옮겼습니다 — 거기는 글자라
+           쪼개져 붙고 <b>한 줄도 안 늘어납니다</b>. 「눈금을 올리지 말고
+           줄이라」 는 check-homeone 의 말을 그대로 지킵니다 (8번).         */
       '<button type="button" class="btn btn-ghost" onclick="nlCopy('+i+')">💬 보낼 문구 복사</button>'+
       (it.u?('<a class="btn btn-ghost" href="'+v(it.u)+'" target="_blank" rel="noopener">원문 ↗</a>'):'')+
-    '</div></div>';
+    '</div>'+
+    '<div class="hm-nw-pk" id="hmNwPick"'+(HM_NW_OPEN?'':' hidden')+'>'+hmNwPanelHtml(it)+'</div>'+
+    '</div>';
 }
 /* 🗂️ <b>지금 고르신 칸</b> 한 토막 — 제목 줄 안에 섭니다(새 줄이 아닙니다).
    누르면 <b>고르는 자리</b>(뉴스 화면)로 갑니다. 이름·색은 apex-newsfit.js
    한 곳에서 옵니다 (5번).                                              */
 function hmNwKeyHtml(){
-  var k=null,t='🗂️ 전체';
+  var k=null,t='🗂️ 전체',a='';
   try{ if(typeof APEX_FIT!=='undefined'&&APEX_FIT.keyOf&&NLIVE.cat&&NLIVE.cat!=='all'){
          k=APEX_FIT.keyOf(NLIVE.cat); if(k)t=k.ic+' '+k.t; } }catch(e){}
+  /* 🎂 연령대도 <b>고르신 것이 있을 때만</b> 한 토막 답니다. 「전체」 를
+     적으면 글자만 늘고 아무것도 안 알려 줍니다.                          */
+  try{ if(NLIVE.age&&NLIVE.age!=='all'&&APEX_FIT.bandT&&APEX_FIT.bandT[NLIVE.age])
+         a=' · 🎂 '+APEX_FIT.bandT[NLIVE.age]; }catch(e2){}
   /* ★★ <b>이름표 줄에 넣지 마십시오.</b> 재어 보고 알았습니다 — 글자를 한 자도
      안 늘리고 「📰 오늘 보낼 소식」 을 그냥 단추로 감쌌더니 제목 줄이
      <b>42px → 65px</b> 가 되었습니다. 단추는 글 속에서 <b>쪼개지지 않아</b>
      그 뒤 글이 통째로 다음 줄로 밀립니다. 홈은 남은 자리가 5px 라 그대로
      4.2화면 선을 넘습니다. 그래서 <b>이미 있는 단추 줄</b>에 섭니다 —
      거기는 한 줄(44px)에 자리가 남습니다.                               */
-  if(!k)return '';            /* 「전체」 면 한 글자도 안 늘립니다 */
-  return ' · <b class="hm-nw-k">'+((typeof osEsc==='function')?osEsc(t):t)+'</b>';
+  /* 🎯 <b>이 토막이 고르개를 엽니다</b> (판 X193 · 사장님 말씀
+       「오늘 칸에서도 … 나이대와 상황에 맞추어서 뉴스 선택할 수 있도록」).
+     ★★ <b>&lt;button&gt; 이 아니라 &lt;span&gt; 입니다.</b> 단추는 글 속에서
+       <b>쪼개지지 않아</b> 뒤 글이 통째로 다음 줄로 밀립니다 — 그것을 재어
+       보고 42px → 65px 가 되는 것을 확인했습니다(위 쪽지). span 은 글자처럼
+       접혀 <b>한 자도 안 늘립니다</b>.
+     ★ 「전체」 일 때도 <b>글자를 안 늘립니다</b> — 그때는 단추 줄의
+       「🎯 골라 보기」 가 같은 칸을 엽니다. 여는 자리가 둘이어도 <b>여는
+       자는 하나</b>입니다(hmNwPickToggle) — 두 곳에서 각자 열고 닫으면
+       한쪽만 접혀 어긋납니다 (5번).                                      */
+  if(!k&&!a)return '';        /* 「전체」 면 한 글자도 안 늘립니다 */
+  return ' · <span class="hm-nw-k" role="button" tabindex="0"'+
+    ' onclick="hmNwPickToggle()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();hmNwPickToggle();}"'+
+    ' aria-controls="hmNwPick" aria-expanded="'+(HM_NW_OPEN?'true':'false')+'"'+
+    ' title="누르면 칸·연령대를 고르실 수 있습니다">'+
+    ((typeof osEsc==='function')?osEsc(t+a):(t+a))+' '+(HM_NW_OPEN?'▴':'▾')+'</span>';
 }
 /* 🎂 <b>이 기사는 어떤 분께</b> — 홈에서는 <b>한 줄</b>로 줄입니다.
    까닭 문장(「청년·신혼·출산 제도는 실제로 나이로 갈립니다」)은 <b>뉴스
@@ -26950,14 +26985,19 @@ function hmNwWhyHtml(it){
    ★ <b>칸을 또 만들지 않았습니다</b> (5번) — 뉴스 화면의 그 칸(nlChip)과
      같은 꼴·같은 상태(NLIVE.cat)입니다. 홈에서 「저축」 을 고르시면 뉴스
      화면도 저축입니다.
-   ★ <b>연령대 고르개는 여기 안 둡니다.</b> 홈의 이 자리는 「오늘 한 건을
-     보낸다」 이고, 추천 이유는 <b>그 한 건에 대해</b> 바로 아래 적힙니다.
-     고르개를 둘 다 두면 작은 칸에 줄이 넷이 되어 카드가 한 화면을 넘습니다.
-     골라 보시는 자리는 뉴스 화면이고, 거기서 고르시면 여기도 따릅니다.  */
-/* ⚠ <b>지금은 아무도 안 부릅니다.</b> 홈에 세웠다가 4.2화면 선을 넘겨
-   뉴스 화면으로 옮겼습니다(위 hmNowNewsHtml 쪽지). <b>지우지 않습니다</b> —
-   홈이 짧아지거나 넓은 화면에서 쓸 자리가 생기면 이것을 부릅니다
-   (CLAUDE.md 5번 「함수를 지우지 마십시오 — 부르는 자리만 한 곳으로」). */
+   ── 2026-10-25 · <b>판 X193 — 연령대 고르개도 여기 섭니다</b> ──────
+   사장님 말씀 — 「오늘 칸에서도 그 뉴스들을 같이 맞춰서 <b>나이대와 상황에
+   맞추어서 뉴스 선택</b>할 수 있도록 띄워 줄거지?」
+
+   ★★ 전에 여기 적혀 있던 말은 <b>「연령대 고르개는 여기 안 둡니다 —
+     줄이 넷이 되어 카드가 한 화면을 넘습니다」</b> 였습니다. 그 걱정은
+     <b>펴 둔 채로</b> 세울 때의 이야기였습니다. <b>접어서</b> 세우면 접힌
+     채로 <b>0px</b> 이라 그 선을 안 건드립니다 — 재어 보고 바꿨습니다.
+     옛말을 지우지 않고 여기 적어 둡니다, 다음 세션이 「왜 바뀌었나」 를
+     다시 재지 않도록 (1번).
+   ★ 고르개를 여는 자리는 <b>둘</b>(제목 줄의 칸 토막 · 「🎯 골라 보기」)
+     이지만 <b>여는 자는 하나</b>입니다(hmNwPickToggle) — 두 곳에서 각자
+     열고 닫으면 한쪽만 접혀 어긋납니다 (5번).                            */
 function hmNwPickHtml(){
   var M=[],i,k,h='';
   try{ M=(APEX_FIT.main||[]).slice(); }catch(e){}
@@ -26966,6 +27006,41 @@ function hmNwPickHtml(){
   for(i=0;i<M.length;i++){ k=APEX_FIT.keyOf(M[i]); if(!k)continue;
     h+=nlChip(k.id,k.ic,k.t,nlCount(k.id),k.c); }
   return h+'</div>';
+}
+/* 🎯 <b>고르개 칸 — 셋 다 이미 있는 자를 부르기만 합니다</b> (5번)
+     ① 🗂️ 칸      — hmNwPickHtml   (앞줄 넷은 APEX_FIT.main 이 압니다)
+     ② 🎂 연령대  — nlAgeChipsHtml (차례는 APEX_FIT.ageKeys 가 압니다)
+     ③ 🎂 이 기사는 어떤 분께 — nlWhyHtml (기사가 <b>제 입으로</b> 말한 낱말만)
+   ★ 홈이 제 표·제 낱말을 따로 가지면 <b>두 화면이 다른 말</b>을 합니다.
+     뉴스 화면에서 「저축」 을 고르시면 여기도 저축이고, 그 반대도 같습니다
+     — 상태는 <b>NLIVE 하나</b>입니다.
+   ★ <b>까닭은 짧은 것이 아니라 그대로</b> 적습니다. 홈용으로 줄인 한 줄
+     (hmNwWhyHtml)은 제목 줄 안에 넣으려던 것이었는데, 접는 칸 안에는
+     자리가 넉넉해 <b>뉴스 화면과 같은 글</b>을 씁니다 (5번).             */
+function hmNwPanelHtml(it){
+  var h='';
+  try{ h+=hmNwPickHtml(); }catch(e1){}
+  try{ if(typeof nlAgeChipsHtml==='function')h+=nlAgeChipsHtml(); }catch(e2){}
+  try{ if(typeof nlWhyHtml==='function')h+=nlWhyHtml(it); }catch(e3){}
+  return h;
+}
+/* 🎯 <b>폈나 접었나</b> — 묻는 곳도 <b>한 곳</b>입니다 (5번).
+   ★ <b>창고에 안 담습니다.</b> 홈에는 「처음에는 다 접힌 채로 연다」 는
+     규칙이 이미 있습니다(hmFoldAll 위 쪽지 · check-toss). 담아 두면 펴 둔
+     채로 열려 「오늘 할 일」 이 첫 화면 밖으로 밀립니다.
+   ★ 펴고 접는 것은 <b>그 자리에서</b> — 홈을 다시 그리면 보던 자리가 맨
+     위로 튑니다(hmFoldToggle 과 같은 까닭).                              */
+var HM_NW_OPEN=false;
+function hmNwPickToggle(){
+  HM_NW_OPEN=!HM_NW_OPEN;
+  var box=document.getElementById('hmNwPick');
+  if(box)box.hidden=!HM_NW_OPEN;
+  /* 제목 줄에는 누를 수 있는 토막이 <b>둘</b>입니다(머리말 · 고르신 칸).
+     한쪽만 ▾ 면 어긋나므로 <b>둘 다</b> 같은 말을 하게 합니다 (5번).   */
+  var L=document.querySelectorAll('.hm-nw-t .hm-nw-k'),i,k;
+  for(i=0;i<L.length;i++){ k=L[i];
+    k.setAttribute('aria-expanded',HM_NW_OPEN?'true':'false');
+    k.innerHTML=k.innerHTML.replace(/[▾▴](\s*)$/,(HM_NW_OPEN?'▴':'▾')+'$1'); }
 }
 /* ══ <b>오늘은 뒤로</b> — 하루가 한 분에 걸려 멈추지 않게 ══════════
    오늘 못 닿는 분이 맨 위에 그대로 서 있으면 그 다음 분으로 갈 길이
@@ -35660,9 +35735,41 @@ function hmIgCss(){
    '.hm-nw{margin-top:10px;border:1px solid var(--t-ind-b);background:var(--t-ind-l);'+
      'border-radius:var(--r-sm);padding:10px 12px}'+
    '.hm-nw-t{font-size:var(--t6);line-height:1.6;color:var(--t-ind-d)}'+
-   /* 🗂️ 칸 토막 — <b>제목 줄 안</b>에 섭니다. 새 줄을 안 만듭니다(홈 4.2화면 선) */
-   /* 🗂️ 고르신 칸 — 단추 줄의 <b>맨 앞</b>. 좁게 두어야 셋이 한 줄에 듭니다 */
-   '.hm-nw-k{font-weight:800;color:var(--t-point);white-space:nowrap}'+
+   /* 🗂️ 칸 토막 — <b>제목 줄 안</b>에 섭니다. 새 줄을 안 만듭니다(홈 4.2화면 선).
+      ★ 누르면 고르개가 열립니다(판 X193). <b>&lt;span&gt; 그대로</b> 두십시오 —
+        단추로 바꾸면 글 속에서 안 쪼개져 줄이 하나 늘어납니다.           */
+   /* ★★ <b>안쪽 여백 12px 는 줄 높이를 안 키웁니다.</b> 글 속 토막(inline)의
+      위아래 여백은 <b>줄 상자 밖으로</b> 넘칩니다 — 그래서 누르는 넓이만
+      17 → 41px 가 되고 홈 높이는 한 자도 안 늘어납니다. 재어 보고 둔
+      값입니다(check-hmpick [2]). <b>display 를 바꾸지 마십시오</b> —
+      inline-block 으로 바꾸면 줄 상자가 커져 홈이 선을 넘습니다.        */
+   /* ★★ <b>밑줄은 text-decoration 입니다 — border-bottom 이 아닙니다.</b>
+      border 는 <b>여백 바깥</b>에 그려져, 위 12px 여백 때문에 밑줄이 <b>아랫줄
+      글자 밑</b>으로 내려가 찍힙니다 — 제목에 줄이 그어진 것처럼 보였습니다
+      (2026-10-25 에 찍어 보고 알았습니다). text-decoration 은 <b>글자에</b>
+      붙어 여백과 상관없습니다.                                          */
+   '.hm-nw-k{font-weight:800;color:var(--t-point);white-space:nowrap;cursor:pointer;'+
+     'padding:12px 4px;margin:0 -4px;text-decoration:underline dotted;'+
+     'text-underline-offset:3px;text-decoration-thickness:1px}'+
+   '.hm-nw-k:focus-visible{outline:2px solid var(--t-point);outline-offset:2px;border-radius:3px}'+
+   /* 📰 머리말 토막 — 색은 <b>제목 줄 색 그대로</b>입니다. 여기만 다른
+      색을 쓰면 「🗂️ 칸」 토막과 같은 것인 줄 아십니다.                */
+   '.hm-nw-o{color:inherit}'+
+   /* 🎯 <b>고르개 칸</b> — 접힌 채로 <b>0px</b>. 홈은 4.2화면 선에 남은
+      자리가 11px 뿐이라, 펴 둔 채로 세우면 그 자리에서 넘습니다.
+      ★★ <b>두 줄은 짝입니다 — 하나만 지우지 마십시오.</b> display 를 또렷이
+        적는 순간 브라우저가 제 몫으로 해 주던 [hidden] 을 <b>이깁니다</b>.
+        그래서 [hidden] 도 함께 적습니다. 되돌림으로 확인했습니다 —
+        아랫줄만 지우면 <b>접어도 펼쳐진 채</b>로 섭니다(check-hmpick [1]).
+      ★ display 를 또렷이 적는 까닭은, 다음 사람이 여기에 flex 나 grid 를
+        넣고 싶을 때 <b>무엇을 덮어쓰는지</b> 보이게 하려는 것입니다.      */
+   /* ⚠ 가름 선은 <b>--ink-7</b> 입니다 — 바로 위 .hm-ig-n · .hm-nx 가 쓰는 그 선입니다.
+      처음에 --t-ind-b 를 썼다가 check-indigo 에게 잡혔습니다: 그 이름은 <b>남색
+      바탕과 한 쌍</b>인 여섯 자리에만 붙이기로 못 박아 둔 것이고, 이 줄은 제 바탕을
+      안 세웁니다. 자가 맞았습니다 — 수를 올리지 않고 이웃과 같은 선을 씁니다.   */
+   '.hm-nw-pk{display:block;margin-top:9px;border-top:1px dashed var(--ink-7);padding-top:9px}'+
+   '.hm-nw-pk[hidden]{display:none}'+
+   '.hm-nw-pb{font-weight:800}'+
    '.hm-nw-why{color:var(--t-sub)}'+
    '.hm-nw-why b{color:#6D28D9;font-weight:800}'+
    '.hm-nw-b{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}'+
