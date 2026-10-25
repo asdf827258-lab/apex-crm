@@ -342,7 +342,12 @@ const SEED = () => {
   is(!pk.no && pk.shut.tools === 0 && pk.shut.cqa === 0,
      '  ★ <b>접힌 채로</b> 열린다 (사장님 말씀 「그 넷도 접어」) — 도구 ' +
      (pk.shut ? pk.shut.tools : '?') + '개 · 물음 ' + (pk.shut ? pk.shut.cqa : '?') + '개');
-  is(!pk.no && /이분 자세히/.test(pk.shutTxt) && /판단/.test(pk.shutTxt) && /단계/.test(pk.shutTxt),
+  /* ⚠ 2026-10-25 (판 X195) · 「판단」 → <b>「아는 것」</b>. ⚖️ 판단 줄은 이제
+     접히지 않고 카드에 <b>늘</b> 섭니다(사장님 말씀 「지금 할 것에 빈칸이
+     많은데 알차게 채워줘」). 접힌 칸 안에 들어 있다고 적으면 그 줄이
+     <b>거짓말</b>이 됩니다 — 안에 정말 든 것은 🧭 앱이 아는 것 · 단계 ·
+     도구입니다 (1번).                                                   */
+  is(!pk.no && /이분 자세히/.test(pk.shutTxt) && /아는 것/.test(pk.shutTxt) && /단계/.test(pk.shutTxt),
      '  ★ 단추가 <b>무엇이 들었는지</b> 말한다 (1번) — 「' + pk.shutTxt + '」');
   is(!pk.no && pk.open.tools > 0 && pk.open.h > pk.shut.h,
      '  ★ <b>눌렀더니 다 펴진다</b> — 카드 ' + pk.shut.h + 'px → ' + pk.open.h +

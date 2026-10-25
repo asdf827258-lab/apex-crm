@@ -1789,6 +1789,14 @@ button.hm-q-t.ba.go:active{transform:translateY(1px)}
   color:var(--t-sub2);background:var(--t-bg-3);border-radius:var(--t-r-sm);
   padding:10px 13px;word-break:keep-all}
 .hm-why b{color:var(--t-point)}
+/* ⚖️ <b>판단 줄</b> — 「왜 오늘인가」 와 <b>같은 상자</b> 안에 둘째 줄로 섭니다.
+   제 상자(.t-note)로 세우면 테두리 여백 26px + 위 틈 8px 이 더 들어
+   76px 인데, 여기서는 <b>42px</b> 입니다. 홈은 4.2화면 선에 붙어 있습니다.   */
+/* ⚠ 굵은 글씨 색은 <b>안 적습니다</b> — 바로 위 .hm-why b 가 이미 정합니다.
+   여기서 또 적으면 같은 값에 이름이 둘이 되고(5번), --t-ind-* 는 색표가
+   <b>42군데로 못 박아</b> 둔 이름이라 하나만 더 써도 check-indigo 가 웁니다. */
+.hm-why [data-row="judge"]{margin-top:7px;padding-top:7px;
+  border-top:1px dashed var(--ink-7);color:var(--t-point)}
 /* 목업 <b>.one .aim / .way</b> — 오늘 할 일을 <b>큰 한 문장</b>으로.
    그 문장은 <b>apex-stage.js 한 곳</b>이 쥡니다(APEX_STAGE.map[단계].aim).
    여태 그것을 평문으로 눌러 번호 목록 ①번에 끼워 넣어, 굵게 강조한 데가
@@ -30444,7 +30452,13 @@ function hmAimOf(x){
    ★ <b>「이분께 거리가 N가지」</b> 를 여기 적습니다. hmSteps 가 한 분을 한
      줄로 접으면서 x.more 에 세어 두는데, <b>여태 화면 어디에도 없었습니다</b> —
      「조용히 버리지 않습니다」 라고 적어 놓고 안 적고 있었습니다 (1번).   */
-function hmWhyHtml(x){
+/* ★★ <b>⚖️ 판단을 이 상자 <u>안</u>에 넣습니다</b> (판 X195). 제 .t-note 상자로
+   세우면 <b>76px</b> 인데, 테두리 여백(26px)과 위 틈(8px)이 그 절반입니다.
+   같은 물음(「오늘 이 분께 무엇을」)이라 한 상자에 두면 <b>글줄 값만</b>
+   듭니다 — 재어 보니 76 → <b>42px</b>. 홈은 선에 붙어 있어 34px 가 큽니다 (8번).
+   ⚠ 상자가 없어도 <b>이름표(data-row="judge")는 그대로</b>입니다 — 그것으로
+     찾는 자가 둘(check-hmsit · check-hmfill) 있습니다 (5번).             */
+function hmWhyHtml(x,j){
   if(!x)return '';
   /* ★ 셋째 자리까지 봅니다. 달력에서 올라온 줄은 <b>제 한 줄(s)이 비어</b>
      있어서, 「왜 오늘인가 —」 뒤에 아무 말도 안 서던 때가 있었습니다.
@@ -30454,7 +30468,9 @@ function hmWhyHtml(x){
   var o=hmOrdOf(x.k);
   var w=hmWhy(x)||(x.s?osEsc(x.s):'')||((o&&o.s)?osEsc(o.s):'');
   if(x.more)w+=(w?' · ':'')+'<b>이분께 거리가 '+(x.more+1)+'가지</b>';
-  return w?('<div class="hm-why">왜 오늘인가 — '+w+'</div>'):'';
+  j=j||'';
+  if(!w&&!j)return '';
+  return '<div class="hm-why">'+(w?('왜 오늘인가 — '+w):'')+j+'</div>';
 }
 /* 목업 <b>.t-btn</b> — 큰 파란 단추 한 방. <b>hmPicks ①번</b>을 그립니다.
    무엇으로 닿는가(ch)는 <b>apex-stage.js</b> 가 압니다 — 여기서 단계를 또
@@ -30554,7 +30570,12 @@ function hmJudgeLineHtml(m,x){
      다른 줄이면 이름이 달라야 합니다</b>(5번 · 판 X191 에서 .rt-row → .rt-arow
      로 데인 그 자리). 꾸밈이 없는 이름표라 class 가 아니라 <b>data-</b> 입니다 —
      이 저장소가 data-ask · data-noico 로 쓰는 그 꼴입니다.              */
-  var h='<div class="t-note b" data-row="judge">판단 —',i,go,n=['①','②','③','④','⑤'];
+  /* ★★ <b>class 가 아니라 data- 하나로 섭니다.</b> 이 묶음에는 「ui.css 이름만
+     쓴다」 는 사장님 계약이 걸려 있어(check-hmjudge · check-know 가 지킵니다)
+     여기서 새 class 를 만들 수 없습니다. 꾸밈은 바로 위 .hm-why 상자가 주고,
+     이 줄에 필요한 것(윗선 · 틈 · 색)은 <b>[data-row="judge"] 로</b> 입힙니다 —
+     이름표와 옷이 <b>한 이름</b>이라 둘이 어긋날 일이 없습니다 (5번).       */
+  var h='<div data-row="judge">판단 —',i,go,n=['①','②','③','④','⑤'];
   for(i=0;i<m.q.length&&i<5;i++)h+=' <b>'+n[i]+'</b> '+osEsc(m.q[i]);
   go=(typeof APEX_STAGE!=='undefined'&&APEX_STAGE.next&&x)?APEX_STAGE.next(x.tk||x.k):'';
   if(go)h+=' · 다음 <b>'+osEsc(go)+'</b>';
@@ -30600,7 +30621,8 @@ function hmNowHtml(){
       '<span class="m"><b>'+osEsc(nmT)+'</b>'+
       '<span class="hm-now-k">'+me+' '+osEsc(kt)+'</span></span></div>'+
     /* 목업 <b>.one .why</b> — 왜 하필 오늘 이분인가 */
-    hmWhyHtml(x)+
+    /* ⚖️ 판단 줄을 <b>같은 상자</b>에 실어 보냅니다 (판 X195 · 위 쪽지) */
+    hmWhyHtml(x,hmJudgeLineHtml(hmAimOf(x),x))+
     /* 😟 <b>첫 문장에 붙일 것</b> — 목각 사진 1 의 초록 상자.
        ★ <b>적어 두신 것이 있을 때만</b> 섭니다 (1번). 없는데 세우면
          무슨 말을 붙일지 지어내야 합니다. 값은 고객 365일의 「무엇을 제일
@@ -30616,8 +30638,9 @@ function hmNowHtml(){
             이라 평소에는 안 섭니다. 「이분 자세히 ▾」 를 누르면 펴집니다.
             접으셨을 때만 카드가 한 화면에 듭니다(check-homeshape). */
          /* ⚖️ <b>판단은 늘</b> · 🧭 <b>앱이 아는 것은 접힌 채</b> (판 X194).
-            둘을 따로 부르므로 펴도 판단이 <b>두 번</b> 서지 않습니다 (5번). */
-         hmJudgeLineHtml(am,x)+
+            둘을 따로 부르므로 펴도 판단이 <b>두 번</b> 서지 않습니다 (5번).
+            ⚠ 판단은 위 「왜 오늘인가」 상자 <b>안</b>에 들어갑니다 — 여기서는
+              아는 것만 세웁니다.                                          */
          (HM_MORE?stKnowHtml(am.know):'')):'')+
     /* 🙋 <b>「고객의 현재 상황은 무엇인가요?」</b> (사장님 말씀 2026-10-02 —
        「전화 걸러 갑니다 에서 … 로 묻고」). 목각의 큰 단추 자리입니다.
@@ -34515,8 +34538,13 @@ function hmKbHtml(){
        먹고 있었습니다(사장님 말씀 「빈칸이 많은데」). 말은 한 자도 안 줄이고
        큰 글(.t-big 18px)을 <b>이미 있는 작은 꼴</b>(.t-big.hm-road 14px)로
        바꿉니다 — 새 CSS 0줄 (5번).                                    */
-    return head0+'<div class="t-big hm-road">아직 못 읽었습니다 — '+
-      '고객 자료를 읽으면 이 자리에 섭니다.</div></div>';
+    /* ⚠⚠ <b>읽는 중에는 이름표 줄 하나로</b> (판 X195). 이 상태는 <b>잠깐</b>
+       지나가는데, 카드 한 장 값(테두리 여백 + 이름표 + 큰 글 + 작은 글)을
+       그대로 먹고 있었습니다 — check-phonefit 이 홈을 잴 때 늘 이 상태라
+       그 71px 가 고스란히 쌓였습니다. 말은 그대로 두고 <b>한 줄</b>로 붙입니다. */
+    return '<div class="t-card hm-kb0"><div class="t-lab">📥 읽어 둔 보장분석 '+
+      '<span class="hm-kb-w">— 아직 못 읽었습니다 · 고객 자료를 읽으면 이 자리에 섭니다.</span>'+
+      '</div></div>';
   var id=hmKbWho();
   /* ② <b>띄워 둔 것이 없는 날도 자리를 지킵니다</b> (사장님 말씀 2026-09-26 —
         「있다 없다 하는 칸을 없앱니다」). 무엇을 하면 되는지 적습니다.    */
