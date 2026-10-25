@@ -15,6 +15,11 @@
          · 성별은 비어서 시작하고, 비면 연금 셈은 남성 기준이라고 밝힌다 · 성별을 읽는 자리는 finSex 하나
          · 네 칸의 숫자는 finNpsEst · finSevOut · finHouseOut · finBizTax 그대로 — 칸이 비면 숫자 0 개 · 그 칸으로 가는 단추
          · 상담 「퇴직금」 물음의 근속연수가 계산기 칸(s_sev_years)으로 들어간다
+     자. 판 X200 (「경비 칸도 넣어줘, 매출 / 실소득을 구분해서 … 큰 틀로 … 노랑우산공제액도 넣어주고」)
+         · 사업자는 셋만 묻는다 — 매출/월 · 경비/월(한 숫자) · 노란우산/월
+         · 실소득은 s_self 한 칸 — 매출 · 경비가 둘 다 있을 때만 「매출 − 경비」 로 채우고 잠근다. 경비가 비면 매출을 실소득으로 보지 않는다
+         · 근거(매출 · 경비)가 사라지면 채웠던 실소득도 비운다 · 사업자 칸에 「매출 − 경비 = 실소득」 한 줄
+         · 노란우산은 「모두 공제 한도 안이면」 이라는 조건으로만 — 한도 숫자를 적지 않는다(2번) · 사업자가 아니면 그 칸이 없다
 
    되돌려 보기 — 카드 이유를 다른 글로 바꾸면 나 가 · finMissing 막이를 빼면 가 가 · GLC_TAB 의 debt 를 다른 탭으로 바꾸면 라 가 ·
                정리 장의 wk-door-glc 를 빼면 마 가 · 성별에 selected 남성을 되살리면 아 가 · 사업자 세금에서 지방소득세를 빼면 아 가 웁니다. */
@@ -153,6 +158,37 @@ const head = (t) => console.log('\n' + t);
   is(!fl.ov && fl.f === 's_sev_years', '「근속연수 넣기 ›」 는 한눈에 결과를 닫고 그 칸에 손이 가게 한다');
   is(!ferrs.length, '페이지 오류 0' + (ferrs.length ? ' — ' + ferrs[0] : ''));
   await fresh.close();
+
+  head('자. 매출 · 경비 · 실소득 · 노란우산 (판 X200)');
+  const bp = await ctx.newPage(); const berrs = []; bp.on('pageerror', (e) => berrs.push(e.message)); bp.on('dialog', (d) => d.accept());
+  await bp.goto('file://' + path.join(ROOT, 'app/finance.html'));
+  await bp.waitForFunction(() => typeof finBizSync === 'function' && window.APEX_REPORT, null, { timeout: 15000 });
+  await bp.evaluate(() => finSample()); await bp.waitForTimeout(200);
+  const B = (v) => bp.evaluate((v) => { for (const k in v) { const e = document.getElementById(k); e.value = v[k]; e.dispatchEvent(new Event('input', { bubbles: true })); }
+    const box = document.createElement('div'); box.innerHTML = glcMoneyHtml(); const g = (k) => { const e = box.querySelector('[data-m="' + k + '"]'); return e ? { t: e.textContent, chip: (e.querySelector('.glc-chip') || {}).textContent, nb: [...e.querySelectorAll('.glc-mv .nb')].map((x) => x.textContent), flow: [...e.querySelectorAll('.glc-flow b')].map((x) => x.textContent), fill: (e.querySelector('.glc-fill') || {}).outerHTML || '', tx: [...e.querySelectorAll('.glc-ml, .glc-mn')].map((x) => x.textContent).join(' ') } : null; };
+    const self = document.getElementById('s_self'); return { self: self.value, ro: self.readOnly, inc: finCore().income, mg: finCore().monthlyGross, biz: g('biz'), yel: g('yellow') }; }, v);
+  is(await bp.evaluate(() => ['s_biz_rev', 's_biz_cost', 's_yellow'].every((id) => !!document.getElementById(id))), '사업자 칸 셋 — 매출/월 · 경비/월 · 노란우산/월');
+  const b1 = await B({ s_self: '', s_biz_rev: '1000' });
+  is(b1.self === '' && !b1.ro && b1.biz.nb.length === 0 && /경비 넣기/.test(b1.biz.fill), '경비가 비면 매출 1,000을 실소득으로 보지 않는다 — 실소득 칸은 비고 「경비 넣기 ›」');
+  is(!b1.yel, '실소득을 모르면 노란우산 칸도 세우지 않는다');
+  const b2 = await B({ s_biz_cost: '600' });
+  const want = await bp.evaluate(() => { const C = APEX_REPORT.calc, L = 1 + C.RULE.localTax; return { per: Math.round(C.incomeTax(4800) * L / 12) }; });
+  is(b2.self === '400' && b2.ro && b2.inc === b2.mg + 400, '매출 1,000 · 경비 600 → 실소득 칸 400 으로 채워 잠그고, 그 400 이 소득 셈(finCore)에 들어간다');
+  is(b2.biz.flow.join('|') === '1,000만|600만|400만', '사업자 칸에 「매출 − 경비 = 실소득」 한 줄 — ' + b2.biz.flow.join(' · '));
+  is(b2.biz.nb[0] === String(want.per), '매달 떼어 둘 돈 = 실소득 한 해 × 기본세율 × (1 + 지방소득세) ÷ 12 (' + b2.biz.nb[0] + '만)');
+  is(b2.yel && b2.yel.chip === '넣고 계신가요' && b2.yel.nb.length === 0 && /s_yellow/.test(b2.yel.fill), '노란우산이 비면 숫자 없이 「노란우산 넣기 ›」');
+  const b3 = await B({ s_yellow: '25' });
+  const ysave = await bp.evaluate(() => { const C = APEX_REPORT.calc, L = 1 + C.RULE.localTax; return Math.round((C.incomeTax(4800) - C.incomeTax(4500)) * L); });
+  is(b3.yel.nb[0] === String(ysave) && b3.yel.chip === '한도 안이면' && /모두 공제 한도 안이면/.test(b3.yel.t), '노란우산 월 25 → 줄어드는 세금 = 세금(4,800) − 세금(4,500) (' + b3.yel.nb[0] + '만) · 「모두 공제 한도 안이면」 조건을 밝힌다');
+  is(!/한도[^.·]{0,8}\d/.test(b3.yel.tx) && /요건 충족 시/.test(b3.yel.tx), '노란우산 칸에 공제 한도 숫자를 적지 않는다 · 「요건 충족 시」(2번)');
+  const b4 = await B({ s_biz_cost: '' });
+  is(b4.self === '' && !b4.ro, '경비를 지우면 「매출 − 경비」 로 채웠던 실소득도 비고 잠금이 풀린다 — 근거 없는 400 이 남지 않는다');
+  const b5 = await B({ s_biz_rev: '', s_self: '300' });
+  is(b5.self === '300' && !b5.ro && b5.biz.flow.length === 0 && /매출이 아니라 실소득/.test(b5.biz.t), '실소득만 적으면 그대로 쓰고 「세금은 매출이 아니라 실소득에」 를 말한다');
+  const b6 = await B({ s_self: '', s_yellow: '', s_jobg: '' });
+  is(!b6.yel && /해당 없음/.test(b6.biz.chip), '사업자가 아니면 노란우산 칸이 없고 사업자 세금은 「해당 없음」');
+  is(!berrs.length, '페이지 오류 0' + (berrs.length ? ' — ' + berrs[0] : ''));
+  await bp.close();
 
   head('사. 폰 폭 · 오류');
   const g4 = await pg.evaluate(() => { glcOpen(); const o = document.getElementById('glcOv'), body = o.querySelector('.wk-body');

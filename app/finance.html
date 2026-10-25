@@ -1393,6 +1393,12 @@ body[data-sample] #finSampleBar{display:block}
 .glc-m.ok .glc-chip{background:#E5F8F0;color:#027A4A}.glc-m.est .glc-chip{background:#E8F3FF;color:#1B64DA}.glc-m.warn .glc-chip{background:#FFF3E0;color:#B35F00}
 .glc-mv{margin-top:10px;color:#191F28}.glc-mv .nb{font-size:32px;font-weight:800;letter-spacing:-.03em}.glc-mv .nu{font-size:16px;font-weight:700;margin-left:3px;color:#4E5968}
 .glc-m.est .glc-mv .nb{color:#1B64DA}.glc-m.warn .glc-mv .nb{color:#C46A00}
+.glc-flow{display:flex;align-items:stretch;gap:4px;margin:12px 0 6px}
+.glc-flow>div{flex:1;min-width:0;background:#F2F4F6;border-radius:12px;padding:8px 6px;text-align:center}
+.glc-flow>div.on{background:#E8F3FF}.glc-flow>div.on b{color:#1B64DA}
+.glc-flow small{display:block;font-size:13px;color:#6B7684;font-weight:700}.glc-flow b{display:block;font-size:16px;color:#191F28;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.glc-flow i{align-self:center;font-style:normal;font-weight:800;color:#8B95A1;font-size:16px}
+input.fin-lock{background:rgba(49,130,246,.10)!important}
 .glc-msub{margin:4px 0 6px;font-size:14px;font-weight:700;color:#6B7684}
 .glc-about{margin-left:6px;font-size:14px;font-weight:700;color:#6B7684}
 .glc-ml{margin:8px 0 0;font-size:15px;line-height:1.65;color:#333D4B}.glc-ml b{color:#191F28}
@@ -1714,11 +1720,17 @@ function finHouseOut(){
 }
 /* 사업자 세금 — 사업/부업 소득(경비 뺀 것)만 떼어 종합소득세 기본세율로 어림(지방소득세 포함 · 공제 전).
    ★ 공제를 빼지 않은 어림이라 실제보다 클 수 있고, 월급과 합쳐 신고하면 구간이 올라 커질 수도 있습니다 — 둘 다 화면에 적습니다 */
+/* 판 X200 — 매출 · 경비 · 실소득을 갈라 말하고, 노란우산공제는 「넣는 돈이 모두 공제 한도 안이면」 이라는 조건으로만 셉니다.
+   ★ 공제 한도는 실소득 구간마다 다르고 해마다 바뀌는 값이라 적지도 셈에 넣지도 않습니다(2번) — 그래서 조건을 화면에 밝힙니다 */
 function finBizTax(){
   var e=document.getElementById('s_self'), raw=e?String(e.value).trim():'', jg=(document.getElementById('s_jobg')||{}).value||'';
-  if(raw===''||!(+raw>0)) return {known:false, self:jg==='self'};
-  var m=+raw, yr=m*12, R=APEX_REPORT.calc.RULE, tax=APEX_REPORT.calc.incomeTax(yr)*(1+R.localTax);
-  return {known:true, monthly:m, yearly:yr, tax:tax, perMonth:tax/12, withSalary:finCore().gross>0};
+  var rev=finBizRaw('s_biz_rev'), cost=finBizRaw('s_biz_cost'), yel=finBizRaw('s_yellow');
+  if(raw===''||!(+raw>0)) return {known:false, self:jg==='self'||rev!=null, rev:rev, cost:cost, yellow:yel};
+  var C=APEX_REPORT.calc, R=C.RULE, m=+raw, yr=m*12;
+  function taxOf(base){ return C.incomeTax(Math.max(0,base))*(1+R.localTax); }
+  var tax=taxOf(yr), Y=null;
+  if(yel!=null&&yel>0){ var yy=yel*12, after=taxOf(yr-yy); Y={monthly:yel, yearly:yy, save:Math.max(0,tax-after), after:after}; }
+  return {known:true, monthly:m, yearly:yr, tax:tax, perMonth:tax/12, withSalary:finCore().gross>0, rev:rev, cost:cost, fromRev:rev!=null&&cost!=null, yellow:yel, Y:Y};
 }
 function finGapOut(){ try{ var C=finCore(); return {gap:Math.max(0,Math.round((C.target||0)-(C.totalPension||0))), years:Math.max(0,(+C.rage||0)-(+C.age||0)), from:'finCore'}; }catch(e){ return null; } }
 /* 판 X196 — 입력 칸에 견본 숫자를 미리 넣어 두지 않습니다(1번).
@@ -1742,7 +1754,19 @@ function finMissing(){
   if(!any) m.push('지출');
   return m;
 }
+/* 판 X200 — 실소득은 s_self <b>한 칸</b>입니다(finCore 가 그것만 셉니다 · 5번). 매출과 경비를 둘 다 적으면 그 칸을 매출 − 경비로
+   채우고 잠급니다 — 두 곳에서 따로 적으면 「실소득 400」 과 「매출 − 경비 = 300」 이 나란히 섭니다. 경비가 비면 실소득을 짐작하지 않습니다(1번) */
+function finBizRaw(id){ var e=document.getElementById(id), r=e?String(e.value).trim():''; return r===''||!isFinite(+r)?null:Math.max(0,+r); }
+function finBizSync(){
+  var e=document.getElementById('s_self'), how=document.getElementById('s_self_how'); if(!e) return;
+  var rev=finBizRaw('s_biz_rev'), cost=finBizRaw('s_biz_cost'), lock=rev!=null&&cost!=null;
+  if(lock){ var v=String(Math.max(0,rev-cost)); if(e.value!==v) e.value=v; e.setAttribute('data-from-rev',v); }
+  else if(e.getAttribute('data-from-rev')!=null){ if(e.value===e.getAttribute('data-from-rev')) e.value=''; e.removeAttribute('data-from-rev'); }   /* 매출 · 경비로 채웠던 값은 근거가 사라지면 같이 비웁니다(1번) */
+  e.readOnly=lock; e.classList.toggle('fin-lock',lock);
+  if(how) how.textContent=lock?'매출 − 경비로 채웠어요':(rev!=null?'경비를 넣으면 채워져요':'매출 − 경비');
+}
 function finEmptyPaint(){
+  finBizSync();
   var miss=finMissing(), empty=miss.length>0;
   document.body.classList.toggle('fin-empty',empty);
   var h3=document.querySelector('#finEmptyCard h3'); if(h3) h3.textContent=miss.join(' · ')+' 칸을 채우면 여기에 분석이 섭니다';
@@ -1763,6 +1787,7 @@ function finEmptyPaint(){
 document.addEventListener('input',function(e){
   var t=e.target; if(!t||!t.id) return;
   if(e.isTrusted&&/^(s|r|ins|inh)_/.test(t.id)) document.body.removeAttribute('data-sample');   /* 설계사가 고친 칸이 생기면 견본 띠를 내립니다 */
+  if(t.id==='s_biz_rev'||t.id==='s_biz_cost') finBizSync();   /* 그 칸의 render() 보다 먼저 — 실소득이 바로 셈에 들어갑니다 */
   setTimeout(finEmptyPaint,0);
 },true);
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){ setTimeout(finEmptyPaint,0); }); else setTimeout(finEmptyPaint,0);
@@ -1881,9 +1906,15 @@ function ipBand(age){ age=Number(age)||0; for(var i=0;i<IP_AGE.length;i++) if(ag
       <div class="sb-body">
         <div class="sf"><label>연 총급여(만원)</label><input placeholder="예: 6000" type="number" id="s_gross" oninput="render()"></div>
         <div class="sf2">
-          <div class="sf"><label>사업/부업 소득/월 <small style="font-weight:600;color:#94A3B8">경비 뺀 것</small></label><input placeholder="예: 0" type="number" id="s_self" oninput="render()"></div>
+          <div class="sf"><label>사업/부업 실소득/월 <small style="font-weight:600;color:#94A3B8" id="s_self_how">매출 − 경비</small></label><input placeholder="예: 0" type="number" id="s_self" oninput="render()"></div>
           <div class="sf"><label>배우자 소득/월</label><input placeholder="예: 0" type="number" id="s_spouse" oninput="render()"></div>
         </div>
+        <!-- 판 X200 — 사업자는 큰 틀로 셋만 묻습니다: 한 달 매출 · 한 달 경비(통째로 한 숫자) · 노란우산 한 달 납입 -->
+        <div class="sf2 fin-biz">
+          <div class="sf"><label>사업 매출/월 <small style="font-weight:600;color:#94A3B8">사업자만</small></label><input placeholder="예: 1000" type="number" id="s_biz_rev" min="0" oninput="render()"></div>
+          <div class="sf"><label>사업 경비/월 <small style="font-weight:600;color:#94A3B8">통째로 한 숫자</small></label><input placeholder="예: 600" type="number" id="s_biz_cost" min="0" oninput="render()"></div>
+        </div>
+        <div class="sf fin-biz"><label>노란우산공제/월 <small style="font-weight:600;color:#94A3B8">넣고 있으면</small></label><input placeholder="예: 25" type="number" id="s_yellow" min="0" oninput="render()"></div>
         <div class="sf2">
           <div class="sf"><label>임대/배당/이자/월</label><input placeholder="예: 0" type="number" id="s_passive" oninput="render()"></div>
           <div class="sf"><label>기타 소득/월</label><input placeholder="예: 0" type="number" id="s_other" oninput="render()"></div>
@@ -11957,12 +11988,30 @@ function glcMoneyHtml(){
   else h+=box('house','🏠','주택연금',HO.over?'대상이 아닐 수 있어요':'추정',HO.over?'warn':'est',APEX_REPORT.parts.big(HO.man,'만 원 / 월'),
       (HO.over?'집값이 가입 기준을 넘어 **대상이 아닐 수 있어요** — 기준까지만 넣어 본 참고값이에요.':'**'+HO.rage+'세**부터 집에 살면서 평생 매달 받는다고 어림한 값이에요.'),
       (HO.used?'노후 계산에 **넣었어요**.':'노후 계산에는 **안 넣었어요** — 「연금 시뮬레이션」 탭에서 켤 수 있어요.')+' 한국주택금융공사 기준표('+HOUSE_PEN.asOf+') 어림 · 심사 결과에 따릅니다.',null);
-  /* ④ 사업자 세금 */
+  /* ④ 사업자 세금 — 매출 · 경비 · 실소득을 한 줄로 가르고, 매달 떼어 둘 돈을 크게 */
   var BZ=finBizTax();
-  if(!BZ.known) h+=box('biz','🧾','사업자 세금',BZ.self?'칸이 비었어요':'해당 없음','none','',BZ.self?'자영업자로 고르셨는데 **사업 소득** 칸이 비었어요. 경비 뺀 한 달 소득을 넣으면 섭니다.':'사업 · 부업 소득이 없어요. 있으면 경비 뺀 한 달 소득을 넣어 주세요.','',['s_self','사업 소득 넣기']);
-  else h+=box('biz','🧾','사업자 세금 (종합소득세)','어림','warn',APEX_REPORT.parts.big(Math.round(BZ.perMonth),'만 원 / 월')+'<span class="glc-about">떼어 두기</span>',
-      '사업 소득 한 해 **'+M(BZ.yearly)+'**이면 세금이 한 해 약 **'+M(Math.round(BZ.tax))+'**(지방소득세 포함)이에요. 매달 이만큼 따로 떼어 두면 신고 때 당황하지 않아요.',
-      '공제를 빼기 전 어림이라 실제는 **줄어들 수 있어요**'+(BZ.withSalary?'. 월급(근로소득)과 합쳐 신고하면 구간이 올라 **늘어날 수도 있어요**':'')+' — 세무 전문가 확인이 필요해요.',null);
+  function flow(B){
+    var cells=[]; if(B.rev!=null) cells.push(['매출',B.rev]); if(B.cost!=null) cells.push(['경비',B.cost]);
+    if(B.known) cells.push(['실소득',B.monthly,1]);
+    if(cells.length<2) return '';
+    return '<div class="glc-flow">'+cells.map(function(c,i){ return (i?'<i>'+(c[2]?'=':'−')+'</i>':'')+'<div'+(c[2]?' class="on"':'')+'><small>'+c[0]+' / 월</small><b>'+wkEsc(M(c[1]).replace(' 원',''))+'</b></div>'; }).join('')+'</div>';
+  }
+  if(!BZ.known){
+    var why=BZ.rev!=null&&BZ.cost==null?'매출 **'+M(BZ.rev)+'**은 적어 주셨어요. **경비**를 한 숫자로 넣으면 실소득과 세금이 섭니다 — 매출을 실소득으로 보지 않아요.'
+      :BZ.self?'자영업자로 고르셨는데 매출 · 경비가 비었어요. 한 달 **매출**과 **경비**(통째로 한 숫자)만 넣으면 섭니다.'
+      :'사업 · 부업 소득이 없어요. 있으면 한 달 **매출**과 **경비**만 넣어 주세요.';
+    h+=box('biz','🧾','사업자 세금',BZ.self?'칸이 비었어요':'해당 없음','none',flow(BZ),why,'',[BZ.rev!=null?'s_biz_cost':'s_biz_rev',BZ.rev!=null?'경비 넣기':'매출 · 경비 넣기']);
+  } else {
+    h+=box('biz','🧾','사업자 세금 (종합소득세)','어림','warn',flow(BZ)+APEX_REPORT.parts.big(Math.round(BZ.perMonth),'만 원 / 월')+'<span class="glc-about">떼어 두기</span>',
+      (BZ.fromRev?'매출에서 경비를 뺀 ':'')+'**실소득** 한 해 **'+M(BZ.yearly)+'**이면 세금이 한 해 약 **'+M(Math.round(BZ.tax))+'**(지방소득세 포함)이에요. 매달 이만큼 따로 떼어 두면 신고 때 당황하지 않아요.'+
+        (BZ.fromRev?'':'\n세금은 **매출이 아니라 실소득**에 붙어요 — 매출 · 경비를 넣으면 나눠 보여 드려요.'),
+      '공제를 빼기 전 어림이라 실제는 **줄어들 수 있어요**'+(BZ.withSalary?'. 월급(근로소득)과 합쳐 신고하면 구간이 올라 **늘어날 수도 있어요**':'')+' — 세무 전문가 확인이 필요해요.',BZ.fromRev?null:['s_biz_rev','매출 · 경비 넣기']);
+    /* ⑤ 노란우산공제 — 사업자일 때만 */
+    if(BZ.Y) h+=box('yellow','☂️','노란우산공제','한도 안이면','est',APEX_REPORT.parts.big(Math.round(BZ.Y.save),'만 원 / 해')+'<span class="glc-about">세금이 줄어요</span>',
+        '한 달 **'+M(BZ.Y.monthly)+'** · 한 해 **'+M(BZ.Y.yearly)+'**을 넣고, 그 돈이 **모두 공제 한도 안이면** 실소득에서 빠져 세금이 이만큼 줄어요.',
+        '공제 한도는 실소득 구간마다 달라 **넘는 몫은 빠지지 않아요** · **요건 충족 시** — 중소기업중앙회(노란우산) · 세무 전문가 확인이 필요해요. 폐업 · 노령 때 돌려받는 사장님 퇴직금 같은 돈이에요.',null);
+    else h+=box('yellow','☂️','노란우산공제','넣고 계신가요','none','','사장님 퇴직금 같은 공제예요. 한 달 넣는 돈을 적으면 **줄어드는 세금**을 셀 수 있어요.','',['s_yellow','노란우산 넣기']);
+  }
   h+='</div>';
   if(!SX.known) h+='<div class="glc-mn glc-sex">⚠ 성별을 고르지 않아 연금 셈은 <b>남성 기준</b>이에요. <button type="button" class="glc-fill" onclick="glcFill(\'s_gender\')">성별 고르기 ›</button></div>';
   return h;
