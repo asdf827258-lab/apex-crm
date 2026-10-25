@@ -849,6 +849,34 @@ function pickLink(xml) {
   const h = xml.match(/<link[^>]*href=["']([^"']+)["']/i);
   return h ? h[1] : '';
 }
+/* ══ 모아 주는 피드의 제목에서 <b>언론사 꼬리</b>를 뗀다 ══════════════
+   구글 뉴스는 제목 끝에 「 - 언론사」 를 붙여 줍니다. 그대로 두면 사장님이
+   고객에게 보내는 제목에 언론사가 붙어 나갑니다.
+
+   ★★ 2026-10-25 · <b>한 번만 떼면 하나가 남습니다.</b> 저축 칸을 넣고 실제로
+      긁어 보니 날글이 이랬습니다 —
+        「"연금저축계좌 중도인출하면 … 부과" - 머니투데이 - 머니투데이」
+      신문사가 제 헤드라인에 <b>이미 제 이름을 붙여</b> 놓았고 구글이 <b>또</b>
+      붙인 것입니다. 100건 중 <b>6건</b>이 그랬습니다.
+   ★ <b>되풀이해 떼되</b>, 떼는 것은 <b>언론사 이름과 글자까지 같은 꼬리</b>
+     뿐입니다. 짐작으로 마지막 토막을 떼지 않습니다 — 진짜 제목이
+     「… - 종합」·「… - 단독」 으로 끝나는 일이 있어 넓게 떼면 <b>멀쩡한 제목을
+     깎습니다</b> (8번 · 헛것이 더 나쁩니다).
+   ★ 제목이 통째로 사라지지 않게 <b>한 조각은 남깁니다.</b>
+   ⚠ <b>못 떼는 것이 남습니다</b> (1번 — 모르는 것은 모른다고). 구글이
+     &lt;source&gt; 에 <b>영문 이름</b>(Chosunbiz)을 주고 제목 꼬리에는 <b>한글
+     이름</b>(조선비즈)을 붙이는 신문사가 있습니다. 글자가 달라 못 맞춥니다.
+     2026-10-25 에 100건 중 <b>2건</b>이 그랬습니다. 그 둘은 제목에 한글
+     언론사명이 남습니다 — 틀린 말은 아니라서 <b>짐작으로 깎지 않습니다.</b> */
+function gnewsTitle(title, source) {
+  var t = String(title == null ? '' : title);
+  var s = String(source == null ? '' : source);
+  if (!s) return t;
+  var tail = ' - ' + s, guard = 0;
+  while (t.slice(-tail.length) === tail && t.length > tail.length && guard++ < 4)
+    t = t.slice(0, -tail.length);
+  return t;
+}
 async function fetchFeed(feed) {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 6000);   /* 죽은 피드가 함수를 붙잡지 않게 */
@@ -873,8 +901,9 @@ async function fetchFeed(feed) {
         const real = pick(b, 'source');
         if (real) {
           press = real;
-          const tail = ' - ' + real;
-          if (title.slice(-tail.length) === tail) title = title.slice(0, -tail.length);
+          /* 떼는 일은 <b>gnewsTitle 한 곳</b>이 압니다 (5번) — 자가 날글로
+             그 함수를 그대로 불러 재도록 아래에서 내놓습니다 (8번).       */
+          title = gnewsTitle(title, real);
         }
       }
       return {
@@ -1519,3 +1548,14 @@ exports._pub = { looksReal: pubLooksReal, shape: pubShape };
    짝퉁을 만들면 여기가 바뀌어도 점검은 옛것을 재고 초록만 켭니다 (5번·8번). */
 exports._wtag = { tagsOf: wtagsOf, keys: WTAG_KEYS, names: WTAG_NAMES };
 exports._relay = { ageMin: relayAgeMin, shape: relayShape, freshMin: RELAY_FRESH_MIN };
+/* 뉴스 — <b>칸 고르기와 피드 긁기</b>를 그대로 내놓습니다.
+   사장님이 「저축 뉴스 모아서 실제로 들어오는지 확인해줘」 하셨을 때,
+   라이브 창구는 공유 토큰을 요구해 밖에서 못 두드립니다(그래야 맞습니다).
+   그렇다고 점검이 <b>제 나름의 짝퉁 긁개</b>를 만들면, 여기가 바뀌어도
+   점검은 옛것을 재고 초록만 켭니다 (5번·8번). 그래서 <b>같은 함수</b>를
+   내놓습니다. ⚠ 이것을 부르면 <b>진짜 신문사</b>를 긁으므로 CI 점검에서는
+   쓰지 않습니다 — 사람이 한 번 확인할 때만 씁니다 (「점검이 바깥을 부르면
+   신문사가 잠깐 죽은 날 CI 가 빨간불이 됩니다」).                        */
+exports._news = { cats: feedCats, fetchFeed: fetchFeed, sources: () => SOURCES };
+/* 제목 꼬리 떼기 — <b>바깥을 안 부르고</b> 날글만으로 잽니다 (check-nlfeed) */
+exports._gtitle = gnewsTitle;
