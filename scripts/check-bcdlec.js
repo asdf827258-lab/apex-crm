@@ -292,7 +292,7 @@ const srv = http.createServer((q, s) => {
     is(ck1.col === 'rgb(255, 255, 255)', '장 이름표가 위 띠의 시계(.clock)와 안 부딪힌다 — 제목이 흰 글씨');
     await p.evaluate(() => { CK.age = ''; CK.life = ''; });
 
-    console.log('\n[17] 🧓 먼저 걸어오신 분들 · 4시간 분량 (판 X187 — 「나보다 나이 많은 사람들도 많은데 캐릭터도 그렇고 4시간 강의하기엔 너무 짧은데?」)');
+    console.log('\n[17] 🧓 먼저 걸어오신 분들 · 4시간 분량 (판 X188 — 「나보다 나이 많은 사람들도 많은데 캐릭터도 그렇고 4시간 강의하기엔 너무 짧은데?」)');
     const v = await p.evaluate(() => {
       const A = SLIDES, says = A.map(s => String(s.say || '').length).sort((a, b) => a - b);
       const ls = A.filter(s => s.ty === 'lifestage').map(s => s.k), tk = A.filter(s => s.ty === 'talk');
