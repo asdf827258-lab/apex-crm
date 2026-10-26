@@ -53,8 +53,11 @@ const SEED=(opt)=>`
     var ap=function(id,nm,rg,hm,who){
       return {id:id,who:who||'me',name:nm,region:rg,src:'일반',stage:'AP',
               appt:T+'T'+hm+':00',days:1,n:1,cAt:'',pAt:''}; };
-    var due=function(id,nm,rg,st,d,who){
+    /* 📞 번호 — 판 X217. 한 분은 <b>일부러 비워</b> 둡니다. 「번호 없음」 과
+       「있다」 가 같은 글이면 자가 눈을 감습니다 (1번·8번).            */
+    var due=function(id,nm,rg,st,d,who,ph){
       return {id:id,who:who||'me',name:nm,region:rg,src:'일반',stage:st,
+              phone:(ph===undefined?'010-0000-0000':ph),
               appt:'',days:d,n:1,cAt:'',pAt:''}; };
     AR.db=${opt.empty?'[]':`[
       ap('p2','홍길순','순천시','14:00'),
@@ -67,7 +70,14 @@ const SEED=(opt)=>`
       due('n5','홍무돌','순천시','미접촉',5),
       due('n6','홍오돌','순천시','부재',9),
       due('n7','홍육돌','순천시','PC',4),
-      due('n8','홍칠돌','순천시','부재',12),
+      due('n8','홍칠돌','순천시','부재',12,'me',''),
+      ${opt.many?`
+      due('m1','홍구돌','순천시','PC',3),
+      due('m2','홍십돌','순천시','부재',9),
+      due('m3','홍열한','순천시','PC',4),
+      due('m4','홍열두','순천시','부재',11),
+      due('m5','홍열석','순천시','PC',6),
+      due('m6','홍열넉','순천시','부재',13),`:''}
       ap('x1','남의고객','순천시','10:00','u9')
     ]`};
   })();`;
@@ -120,7 +130,13 @@ const SEED=(opt)=>`
     return { txt:(c.querySelector('.hm-rt-n')||{}).textContent||'',
              chips:chips.map(e=>e.textContent.trim()),
              near:hmRtNear().map(x=>x.nm),
-             more:chips.filter(e=>e.classList.contains('more')).length };
+             more:chips.filter(e=>e.classList.contains('more')).length,
+             /* 📞 판 X217 — 전화 자리가 줄마다 서는가 · 걸리는가 */
+             tel:c.querySelectorAll('.hm-rt-tel').length,
+             telNo:c.querySelectorAll('.hm-rt-tel.no').length,
+             telHref:c.querySelectorAll('a.hm-rt-tel[href^="tel:"]').length,
+             tel1:((c.querySelector('a.hm-rt-tel[href^="tel:"]')||{}).getAttribute
+                   ? c.querySelector('a.hm-rt-tel[href^="tel:"]').getAttribute('href') : '') };
   },SEED({}));
   is(N.near.indexOf('홍갑돌')>=0, '같은 시(市) 사람이 <b>올라온다</b> — '+N.near.join(' · '));
   is(N.near.indexOf('홍을돌')>=0,
@@ -128,7 +144,30 @@ const SEED=(opt)=>`
   is(N.near.indexOf('홍병돌')<0, '<b>다른 시(여수)는 안 붙인다</b> — 간 김에 못 돈다');
   is(N.near.indexOf('홍정돌')<0, '<b>지역을 모르는 분은 안 붙인다</b> (1번) — 0 으로 세면 「없다」가 된다');
   is(/6명/.test(N.txt), '<b>몇 분인지</b> 적는다 — 「'+N.txt.replace(/\s+/g,' ').trim()+'」');
-  is(N.more===1, '많으면 <b>「더 보기」</b> 하나로 접는다 — 홈이 목록이 되면 안 본다');
+  /* ★★ <b>2026-10-26 (판 X217) — 다섯에서 열로.</b> 사장님 말씀 — 「오늘 어디로
+     가시나는, <b>추천해서 여기에 띄어주라고 10명</b> - 그리고 <b>전화할수 있도록</b>
+     지역동선에서 띄우는 칸을 띄어주고」.
+     ★ 그래서 <b>두 판</b>을 봅니다 — 여섯뿐이면 <b>안 접고</b>, 열보다 많으면
+       <b>열만 세우고 「더 보기」 하나</b>. 전에는 여섯 판 하나만 보았고, 바를
+       열로 올리는 순간 「더 보기」 를 <b>아무도 안 재게</b> 될 뻔했습니다 (8번). */
+  is(N.more===0, '<b>열까지는 안 접는다</b> — 여섯 분이면 「더 보기」 가 없다 (판 X217)');
+  is(N.tel>=6 && N.telNo===1,
+     '  ★ 줄마다 <b>📞 전화</b>가 선다 — ' + N.tel + '자리 · 번호 없는 분 ' + N.telNo +
+     '명은 <b>「번호 없음」</b> 이라고 적는다 (1번)');
+  is(N.telHref>=5 && /^tel:0100000/.test(N.tel1||''),
+     '  ★ <b>진짜 걸리는 자리</b>다 — ' + (N.tel1||'(없다)') + ' (' + N.telHref + '자리)');
+
+  const M=await page.evaluate(async(seed)=>{
+    (0,eval)(seed); await window.__home();
+    const c=document.querySelector('#dynPane .hm-rt');
+    const chips=[].slice.call(c.querySelectorAll('.hm-rt-c'));
+    return { 줄:c.querySelectorAll('.hm-rt-one').length,
+             more:chips.filter(e=>e.classList.contains('more')).length,
+             txt:(c.querySelector('.hm-rt-n')||{}).textContent||'' };
+  },SEED({many:true}));
+  is(M.줄===10, '열보다 많으면 <b>열만</b> 세운다 — ' + M.줄 + '줄 (판 X217)');
+  is(M.more===1, '많으면 <b>「더 보기」</b> 하나로 접는다 — 홈이 목록이 되면 안 본다');
+  is(/12명/.test(M.txt), '그래도 <b>몇 분인지</b>는 다 적는다 — 「' + M.txt.replace(/\s+/g,' ').trim() + '」');
 
   console.log('\n[3] <b>지어내지 않는다</b> (1번)');
   /* ⚠ 2026-09-23 · 여기는 여태 「빈 날이면 칸을 아예 안 세운다」 를 봤습니다.

@@ -229,13 +229,54 @@ const LOOK = () => {
     const c0 = h ? h.querySelector('.mcal-wd') : null;
     if (c0) c0.click();
     const h2 = document.getElementById('hmWkHost');
+    const td = document.getElementById('hmToday');
+    const Y = e => e ? Math.round(e.getBoundingClientRect().top + (window.scrollY || 0)) : -1;
     return { last: kids.length ? (kids[kids.length - 1].id || kids[kids.length - 1].className) : '',
+             /* 📆 판 X217 — 몇 자리에 섰나 · 「오늘 챙길 것」 보다 위인가 */
+             n: document.querySelectorAll('#hmWkHost').length,
+             /* 📆 판 X217 — <b>어느 자리</b>에 섰나. 폰이면 #hmUpHost(홈 맨 위),
+                컴퓨터면 #hmUpDown(왼쪽 기둥 맨 위)입니다. 정하는 자는
+                hmSidePlace 하나입니다 (5번).                           */
+             par: (function(){ var e=h; while(e&&e!==document.body){
+                     if(e.id==='hmUpHost'||e.id==='hmUpDown')return e.id; e=e.parentElement; }
+                   return ''; })(),
+             /* 그 기둥 <b>맨 위</b>인가 — <b>갈래 줄 목록(.hm-rows)보다 위</b>면
+                맨 위입니다. 그 앞에 서는 것은 카드 머리글(누구 화면인가 ·
+                날짜줄)뿐이고, 그것은 <b>어느 판에서나 맨 앞</b>입니다.
+                ⚠ 처음에 「부모의 첫 자식인가」 로 물었다가 제가 틀렸습니다 —
+                  머리글이 먼저라 영영 거짓입니다 (8번).                 */
+             첫째: (function(){ var e=document.getElementById('hmUpDown')
+                              ||document.getElementById('hmUpHost');
+                     var r=document.querySelector('#hmToday .hm-rows');
+                     if(!e)return false; if(!r)return true;
+                     return (e.getBoundingClientRect().top < r.getBoundingClientRect().top); })(),
              cells: cells, before: before,
              after: h2 ? Math.round(h2.getBoundingClientRect().height) : 0,
              opened: h2 ? /잡힌 것이 없습니다|오늘|월 \d+일/.test(h2.innerText || '') : false,
              head: h ? ((h.querySelector('.hm-rt-h') || {}).textContent || '').replace(/\s+/g, ' ').trim() : '' };
   });
-  is(wk.last === 'hmWkHost', '  카드의 <b>맨 밑 칸</b>이다 — ' + (wk.last || '못 찾았습니다'));
+  /* ══ 2026-10-26 (판 X217) · <b>이번 주가 맨 밑에서 맨 위로</b> ═══════════
+     ── 말씀 둘을 다 적습니다 ─────────────────────────────────────────
+       ① 2026-10-02 — 「오늘 칸에, 이번주 캘린더 주간만 짤라서 <b>맨 밑에</b>
+          띄어주고」 → 「오늘 챙길 것」 카드 맨 밑.
+       ② 2026-10-26 — 「오늘 약속 <b>캘린더 이번주</b> … 이거 칸도 <b>다 맨
+          위로</b> 올려야지」 → 폰에서는 홈 맨 위 묶음, 컴퓨터에서는 왼쪽
+          기둥 맨 위(#hmUpDown).
+     <b>이번 말씀이 먼저 말씀을 대신합니다.</b> 옛 말씀을 지우지 않습니다 —
+     다음 세션이 「왜 맨 밑이 아니지」 하고 되돌리지 않도록 둘 다 남깁니다.
+     ★ <b>자를 지우지 않습니다</b> — 묻는 것을 「맨 밑인가」 에서 <b>「섰는가 ·
+       한 자리에만 섰는가」</b> 로 옮깁니다. 두 곳에 서면 id 가 겹쳐 앞엣것이
+       빈 칸이 됩니다(check-hmtwo 와 같은 결 · 5번).                    */
+  is(wk.n === 1, '  <b>한 자리에만</b> 선다 — ' + wk.n + '곳 (판 X217 · 폰은 맨 위, 컴퓨터는 왼쪽 기둥)');
+  /* ⚠ 이 자는 <b>1280px(컴퓨터)</b> 로 돕니다 — 그 폭에서 맞는 자리는 왼쪽
+     기둥(#hmUpDown)입니다. 폰(#hmUpHost)은 check-hmtwo 가 390px 로 봅니다.
+     처음에 「폰에서 위인가」 로 물었다가 <b>제가 틀렸습니다</b> — 자가 어느
+     폭으로 도는지 보고 물어야 합니다 (8번).                            */
+  is(wk.par === 'hmUpHost' || wk.par === 'hmUpDown',
+     '  ★ <b>hmSidePlace 가 정한 자리</b>에 선다 — ' + (wk.par || '엉뚱한 자리') +
+     ' (사장님 말씀 2026-10-26 「다 맨 위로」)');
+  is(wk.첫째 === true,
+     '  ★ 그 기둥의 <b>맨 위</b>다 — 갈래 줄 목록보다 위 (밑으로 밀리면 「맨 위로」 가 거짓입니다)');
   is(wk.cells === 7, '  칸이 <b>일곱</b>이다 — ' + wk.cells + '개');
   is(wk.head.indexOf('이번 주') >= 0, '  머리글이 <b>「이번 주」</b> 다 — 「' + wk.head + '」');
   is(wk.after > wk.before && wk.opened,
@@ -263,7 +304,7 @@ const LOOK = () => {
   await b.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '개 — 상황 묻기 · 이번 주에 구멍이 있습니다')
-                  : '✓ 여섯이 저마다 다른 것을 권하고 · 기록은 안 바뀌고 · 이번 주가 맨 밑에 섭니다');
+                  : '✓ 여섯이 저마다 다른 것을 권하고 · 기록은 안 바뀌고 · 이번 주가 맨 위에 섭니다');
   console.log('  ⚠ 「그 상황에 정말 맞는 도구인가」 는 안 잽니다 — 그것은 사장님이 BOX 표에 적어 두신 판단입니다.');
   process.exit(bad ? 1 : 0);
 })().catch(e => { console.log('✗ 점검 자체가 터졌습니다: ' + e.message); srv.close(); process.exit(1); });
