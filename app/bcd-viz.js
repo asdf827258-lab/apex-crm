@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════
-   B·C·D 영업 강의 — 말 장의 그림 도해 (판 X217 · 2026-10-26)
+   B·C·D 영업 강의 — 말 장의 그림 도해 (판 X218 · 2026-10-26)
 
    사장님 말씀 — 「너무 별론데, 디자인의 글만 있다고 감동이 아니라, 이미지 / 강조할 부분들 /
    애니메이션화 / 내용 확인 등 핵심 내용 필요」.
@@ -13,6 +13,7 @@
    ★ 직접 그린 SVG 만 — 남의 그림 · 바깥 그림 · 사진을 끌어오지 않습니다 (CLAUDE.md 9번).
    ★ 도해 안에 금액 · 비율 숫자를 적지 않습니다 (1번).
    ★ 말 장의 원래 문장(li)은 그대로 두어 강사 대본 · 인쇄에 갑니다 — 화면에는 짧은 말과 그림이 섭니다.
+   판 X219 — 「설계사의 선택 → 고객님이 나를 고르는 이유」 짝(pair) · 두 질문(ask2) · 다섯 이유(whyall).
    ════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -188,6 +189,38 @@
       v.items.map(function (it) { return '<div class="sli bd">' + txt(it) + '</div>'; }).join('') + '</div></div>';
   };
 
+  /* 판 X219 — 「설계사의 선택 → 고객님이 나를 고르는 이유」. 다섯 이유는 bcd-slides.js 의 WHY 한 벌을 받아 그립니다 (5번) */
+  var NO = ['1', '2', '3', '4', '5', '6'], ORD = ['첫 번째', '두 번째', '세 번째', '네 번째', '다섯 번째', '여섯 번째'];
+  var ARW = '<svg class="parw" viewBox="0 0 64 24" aria-hidden="true"><path pathLength="1" d="M2 12H56M47 4l9 8-9 8"/></svg>';
+  /* 아래 다섯 칸 — 앞 부에서 모은 이유는 채워져 있고, 이번 이유는 오른쪽 카드가 설 때 들어옵니다(hook) */
+  function why5(W, n) {
+    return '<div class="why5">' + W.map(function (w, i) {
+      return '<i class="' + (i < n ? 'done' : i === n ? 'now' : '') + '"><em>' + NO[i] + '</em><span>' + (i <= n ? esc(w.you) : '') + '</span></i>';
+    }).join('') + '</div>';
+  }
+  /* 짝 — 왼쪽 설계사의 선택, 화살표가 그어지고, 오른쪽 고객님의 이유 */
+  T.pair = function (v) {
+    var w = v.why[v.n];
+    return '<div class="vz pair"><div class="pr">' +
+      '<div class="pc me bd"><div class="ic">' + icon(w.mi) + '</div><span class="fx">설계사의 선택</span>' + txt({ t: w.me, d: w.md }) + '</div>' +
+      '<div class="pc you bd">' + ARW + '<div class="ic">' + icon(w.yi) + '</div><span class="fx">고객님이 나를 고르는 이유 ' + NO[v.n] + '</span><b>「' + esc(w.you) + '」</b></div>' +
+      '</div>' + why5(v.why, v.n) + '</div>';
+  };
+  /* 두 질문 — 여는 마당. 아래 다섯 칸은 비어 있고, 오늘 하나씩 채웁니다 */
+  T.ask2 = function (v) {
+    return '<div class="vz pair ask2"><div class="pr">' +
+      '<div class="pc me bd"><div class="ic">' + icon(v.a.i) + '</div><span class="fx">질문 하나</span>' + txt(v.a) + '</div>' +
+      '<div class="pc you bd">' + ARW + '<div class="ic">' + icon(v.b.i) + '</div><span class="fx">질문 둘</span>' + txt(v.b) + '</div>' +
+      '</div><div class="w5 bd">' + why5(v.why, -1) + '<small>오늘 부마다 하나씩 — 다섯 칸을 채웁니다</small></div></div>';
+  };
+  /* 다섯 이유 모아 보기 — 줄마다 선택 → 이유 */
+  T.whyall = function (v) {
+    return '<div class="vz whyall">' + v.why.map(function (w, i) {
+      return '<div class="wa bd"><em>' + NO[i] + '</em><div class="m"><div class="ic">' + icon(w.mi) + '</div><span>' + esc(w.me) + '</span></div>' + ARW +
+        '<div class="y"><div class="ic">' + icon(w.yi) + '</div><b>「' + esc(w.you) + '」</b></div></div>';
+    }).join('') + '</div>';
+  };
+
   /* 누를 때마다 — 도해가 지금 몇 번째인지 따라 움직입니다 */
   function hook(stage) {
     var vz = stage.querySelector('.vz');
@@ -210,6 +243,8 @@
     } else if (vz.classList.contains('sun')) {
       var S = vz.querySelectorAll('.sm.bd.on'), b = vz.querySelector('.sunb');
       if (b) { var last = S[S.length - 1]; b.classList.toggle('on', !!last); if (last) { b.style.left = last.dataset.x + '%'; b.style.top = last.dataset.y + '%'; } }
+    } else if (vz.classList.contains('pair') && !vz.classList.contains('ask2')) {
+      vz.classList.toggle('got', !!vz.querySelector('.pc.you.bd.on'));
     } else if (vz.classList.contains('scale')) {
       var q = on('.sli'), beam = vz.querySelector('.beam');
       if (beam) beam.style.transform = 'rotate(' + (q ? (q % 2 ? -9 : 7) : 0) + 'deg)';
