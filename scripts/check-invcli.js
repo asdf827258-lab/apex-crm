@@ -56,6 +56,9 @@ function handSimp(m, annual, months) {
   page.on('pageerror', e => errs.push('' + e));
   await page.goto('http://127.0.0.1:' + PORT + '/app/finance.html', { waitUntil: 'load', timeout: 90000 });
   await page.waitForTimeout(2200);
+  /* 판 X209 — 계산기 칸은 이제 비어서 열립니다(견본을 미리 넣지 않음 · 1번). 이 자는 견본 고객으로 셈을 재므로 「견본 넣기」 를 누릅니다 */
+  await page.evaluate(() => { if (typeof finSample === 'function') finSample(); });
+  await page.waitForTimeout(400);
 
   console.log('\n[1] 물가상승률 — 눈에 보이는 자리에 하나만');
   const pin = await page.evaluate(() => {
@@ -78,7 +81,8 @@ function handSimp(m, annual, months) {
   await page.waitForTimeout(500);
   const follow = await page.evaluate(() => ({
     r: (document.getElementById('r_inflation') || {}).value,
-    a: (document.getElementById('apexInf') || {}).value
+    /* 판 X205 — 발표 물가상승률 칸은 떠 있지 않고 고르기 판 안에 섭니다. 발표 덱으로 넘기는 값(apexInf)을 봅니다 */
+    a: String(apexInf())
   }));
   is(follow.r === '4.5', '부동산 물가상승률이 같은 숫자를 따라온다 — 지금 ' + follow.r);
   is(follow.a === '4.5', '발표 물가상승률도 따라온다 (설계사가 따로 잡아 둔 게 없을 때) — 지금 ' + follow.a);
