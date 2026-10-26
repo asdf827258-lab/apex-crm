@@ -23,6 +23,11 @@
      [6] 「이 화면 열기」 를 누르면 <b>그 화면으로 간다</b>
      [7] AI 에게도 <b>앱 안내(근거)</b>를 쥐여 보낸다 — 이번 물음에만
      [8] 꺾쇠 0 · 콘솔 오류 0
+     [9] 🧑‍🔧 (판 X221 · 사장님 말씀 「뭐 들어가야 된다가 아니라 각자 할일을 시켜서
+         답변을 한번에 띄울수 있도록」) — 그 일을 맡은 곳(음성 비서의 명령 사전
+         VA_ACT)에 <b>직접 시켜</b> 지금 값을 읽어 오고, 앱 안내 · AI 의견과
+         <b>한 카드</b>에 띄우나. 저장하는 일은 시키지 않나 · 안 읽은 자료를
+         서버에서 새로 받지 않나(7번) · 「아직 안 읽었다」 고 하나(1번)
    ★ 이름은 「홍길동」 (3번). 서버를 부르지 않는다 (7번) — fetch 는 가로챈다. */
 
 const { chromium } = require('playwright');
@@ -243,6 +248,8 @@ const SEED = () => {
     };
     ask('증권 PDF 를 받았어');
     await new Promise(r => setTimeout(r, 400));
+    const card = [].slice.call(document.querySelectorAll('#jLog .msg.j')).pop();
+    const one = { way: !!card.querySelector('.st-way'), ai: ((card.querySelector('.j-ai') || {}).textContent || '') };
     ask('그다음은?');
     await new Promise(r => setTimeout(r, 400));
     window.fetch = keep; LS.del('gproxy'); LS.del('map_engine');
@@ -251,10 +258,52 @@ const SEED = () => {
     return { n: sent.length,
              g1: /\[앱 안내/.test(t(c1[c1.length - 1])) && /bojang/.test(t(c1[c1.length - 1])) && /가는 길/.test(t(c1[c1.length - 1])),
              old: c2.length >= 3 ? /\[앱 안내/.test(t(c2[0])) : null,
-             log: chatLog.some(m => /\[앱 안내/.test(m.content)) };
+             log: chatLog.some(m => /\[앱 안내/.test(m.content)), one };
   });
   is(AI.n === 2 && AI.g1, '물음에 <b>앱 안내</b>(상황 · 화면 id · 가는 길)가 붙어 간다');
   is(AI.old === false && !AI.log, '지난 물음에는 안 붙는다 — 대화 기록에 <b>쌓이지 않는다</b> (회사 서버 10초)');
+  is(AI.one.way && /AI 의견/.test(AI.one.ai) && /보장분석부터 보세요/.test(AI.one.ai),
+     'AI 가 켜져 있어도 앱 안내(가는 길)가 <b>없어지지 않고</b>, AI 의견이 <b>같은 카드</b>에 붙는다 (판 X221)');
+
+  sec('[9] 🧑‍🔧 <b>각자 할 일을 시켜</b> 답을 한 번에 띄우나 (판 X221)');
+  await p.evaluate(() => go('apexmap'));
+  await p.waitForTimeout(600);
+  const WK = await f.evaluate(async () => {
+    const P = window.parent, cnt = { w: 0, gb: 0, cal: 0, cli: 0 };
+    /* 저장하는 일 · 서버를 부르는 일이 불리면 센다 — 하나라도 불리면 빨간불 */
+    const keep = {};
+    ['ckToggle', 'hpDone', 'vaHelpAdd'].forEach(k => { keep[k] = P[k]; P[k] = function(){ cnt.w++; }; });
+    keep.gbLoad = P.gbLoad; P.gbLoad = function(){ cnt.gb++; };
+    keep.calLoad = P.calLoad; P.calLoad = function(){ cnt.cal++; };
+    keep.osLoadClients = P.osLoadClients; P.osLoadClients = function(){ cnt.cli++; };
+    const gbWas = !!(P.GB && P.GB.loaded);
+    if (P.GB) P.GB.loaded = false;
+    const run = async (q) => {
+      jLog.innerHTML = ''; ask(q); await new Promise(r => setTimeout(r, 300));
+      const c = [].slice.call(document.querySelectorAll('#jLog .msg.j')).pop();
+      return { work: ((c && c.querySelector('.j-work')) || {}).textContent || '', all: c ? c.textContent : '' };
+    };
+    const own = k => { const a = P.vaActOf(k); const r = a.run({}); return typeof r === 'string' ? r : r.say; };
+    const left = await run('뭐 남았어'), leftSay = own('할일');
+    const bday = await run('고객 생일 챙기기'), bdaySay = own('오늘고객');
+    const miss = await run('놓친 팀원 누구야');
+    const doIt = await run('전화 체크해줘');
+    const doIt2 = await run('홍길동 심사 잊지말고 챙겨야 돼');     /* 「도와줄 것 적어 두기」 의 말버릇 */
+    const plain = await run('질병코드 찾기');
+    Object.keys(keep).forEach(k => { P[k] = keep[k]; });
+    if (P.GB) P.GB.loaded = gbWas;
+    return { left, leftSay, bday, bdaySay, miss, doIt, plain, cnt };
+  });
+  is(WK.left.work.indexOf(WK.leftSay) >= 0,
+     '「뭐 남았어」 → 실행 체크판에 <b>시켜서</b> 읽어 온 그대로 — 「' + WK.leftSay.slice(0, 40) + '…」');
+  is(WK.bday.work.indexOf(WK.bdaySay) >= 0 && /대신 앱에 시켜서/.test(WK.bday.all),
+     '「고객 생일 챙기기」 — 사용가이드엔 없어도 <b>고객 365일에 시켜</b> 지금 값을 띄운다 — 「' + WK.bdaySay.slice(0, 30) + '…」');
+  is(/성장판/.test(WK.miss.work) && /0 이라고 하지 않습니다/.test(WK.miss.work),
+     '성장판을 아직 안 읽었으면 <b>「아직 안 읽었다」</b> 고 한다 — 0 명이라고 하지 않는다 (1번)');
+  is(WK.cnt.gb === 0 && WK.cnt.cal === 0 && WK.cnt.cli === 0,
+     '안 읽은 자료를 <b>서버에서 새로 받지 않는다</b> (7번) — 성장판 ' + WK.cnt.gb + ' · 달력 ' + WK.cnt.cal + ' · 고객 ' + WK.cnt.cli);
+  is(WK.cnt.w === 0, '「전화 체크해줘」 · 「잊지말고 챙겨야 돼」 같은 <b>저장하는 일은 자비스가 혼자 시키지 않는다</b> — 불린 수 ' + WK.cnt.w);
+  is(WK.plain.work === '', '상관없는 물음(질병코드)에는 일꾼이 <b>끼어들지 않는다</b>');
 
   sec('[8] 🔇 조용히 터지지 않았나');
   const real = errs.filter(x => !/favicon|net::ERR|Failed to load resource/i.test(x));

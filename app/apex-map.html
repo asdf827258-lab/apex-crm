@@ -427,6 +427,19 @@ body.in-crm{padding-bottom:84px}
   border-radius:12px; border:1px solid var(--blue-br); background:var(--blue-bg); color:var(--blue); cursor:pointer}
 .j-pick button:hover{background:#DBE7FF}
 .j-next div{white-space:normal}
+/* 🧑‍🔧 일꾼 · 🤖 AI 의견 (판 X221) */
+.j-work, .j-ai{margin-top:10px; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:11px; padding:9px 11px; white-space:normal}
+.j-ai{background:#F5F3FF; border-color:#DDD6FE}
+.j-work > b, .j-ai > b{display:block; font-size:var(--t6); color:#14532D; margin-bottom:4px}
+.j-ai > b{color:#4C1D95}
+.jw-row{padding:6px 0; border-top:1px dashed #CDEBD6}
+.jw-row:first-of-type{border-top:0}
+.jw-n{font-size:var(--t6); font-weight:800; color:var(--ink)}
+.jw-s{font-size:var(--t6); color:#2B3A54; line-height:1.65; margin:2px 0 4px}
+.jw-wait{color:#78350F}
+.j-ai-st{margin:4px 0; padding-left:18px}
+.j-ai-st li{font-size:var(--t6); color:#2B3A54; line-height:1.65; margin:3px 0}
+.j-ai-st a{color:var(--blue); font-weight:700; display:inline-flex; align-items:center; min-height:44px}
 
 @media (max-width:1180px){
   #wires{display:none}
@@ -4020,6 +4033,19 @@ function addJ(res, isErr){
   var d = document.createElement('div');
   d.className = 'msg j' + (isErr ? ' err' : '');
   var h = '<div class="bub">' + esc(res.answer || '');
+  /* 🧑‍🔧 일꾼이 지금 읽어 온 것 — 「어디로 가세요」 보다 먼저 「지금 이렇습니다」 (판 X221) */
+  var wk = (res.work || []).filter(function(x){ return x && (x.say || x.wait); });
+  if (wk.length){
+    h += '<div class="j-work"><b>🧑‍🔧 앱에 시켜서 지금 읽어 온 것</b>';
+    wk.forEach(function(x){
+      h += '<div class="jw-row"><div class="jw-n">' + esc(x.n.split(' — ')[0]) + '</div>';
+      if (x.wait) h += '<div class="jw-s jw-wait">「' + esc(x.wait) + '」 을 아직 안 읽어서 셀 수 없습니다 — 한 번 열면 셉니다. (0 이라고 하지 않습니다)</div>';
+      else h += '<div class="jw-s">' + esc(x.say) + '</div>';
+      if (x.go && MENU[x.go]) h += '<div class="st-b"><a href="' + BASE + x.go + '" data-id="' + x.go + '" target="_blank" rel="noopener">' + esc(MENU[x.go].n) + ' 열기 ›</a></div>';
+      h += '</div>';
+    });
+    h += '</div>';
+  }
 
   /* 화면이 없는 걸음(「이름 · 연락처 · 메모 한 줄이면 충분」)도 순서의 일부다 —
      없는 화면 id 만 거른다 (1번 · 없는 곳으로 안 보낸다) */
@@ -4066,6 +4092,8 @@ function addJ(res, isErr){
     h += '</div>';
   }
   if (res.from) h += '<div class="j-src">근거 — ' + esc(res.from) + (res.title ? ' 「' + esc(res.title) + '」' : '') + '</div>';
+  /* 🤖 AI 의견 자리 — 같은 카드 안에서 기다렸다가 채운다 (한 번에 · 판 X221) */
+  if (res.aiWait) h += '<div class="j-ai" data-ai="1"><b>🤖 AI 의견</b><span class="think"><i></i><i></i><i></i></span></div>';
   h += '</div>';
   d.innerHTML = h;
   jLog.appendChild(d);
@@ -4093,8 +4121,29 @@ function addJ(res, isErr){
         (names.length > 3 ? (' 해서 모두 ' + names.length + '단계입니다.') : ' 입니다.');
     }
     if (res.real) say += ' 솔직히 말씀드리면, ' + res.real;
+    if (wk.length && wk[0].say) say = wk[0].say + ' ' + say;
     speak(say);
   }
+}
+
+/* AI 의 답을 <b>같은 카드</b>의 자리에 채운다 — 순서·자리는 위(앱)의 것이 기준이고,
+   AI 는 의견을 보탠다. 화면 id 는 있는 것만 (1번). */
+function jvFillAI(card, res, errMsg){
+  var slot = card && card.querySelector('[data-ai]');
+  if (!slot) return;
+  if (errMsg){ slot.innerHTML = '<b>🤖 AI 의견</b><div class="jw-s">' + esc(errMsg) + ' 위의 앱 안내는 그대로 쓰셔도 됩니다.</div>'; return; }
+  var h = '<b>🤖 AI 의견</b><div class="jw-s">' + esc(res.answer || '') + '</div>';
+  var st = (res.steps || []).filter(function(s){ return s && MENU[s.id]; });
+  if (st.length){
+    h += '<ol class="j-ai-st">';
+    st.forEach(function(s){ h += '<li><b>' + esc(MENU[s.id].n) + '</b> — ' + esc(s.do || '') +
+      ' <a href="' + BASE + s.id + '" data-id="' + s.id + '" target="_blank" rel="noopener">열기 ›</a></li>'; });
+    h += '</ol>';
+  }
+  if (res.real) h += '<div class="jw-s"><b>짚는 말</b> ' + esc(res.real) + '</div>';
+  var nx = (res.next || []).filter(function(x){ return x; });
+  if (nx.length) h += '<div class="jw-s"><b>그다음</b> ' + nx.map(esc).join(' · ') + '</div>';
+  slot.innerHTML = h;
 }
 
 /* ── 키 없이도 아는 것: 지도 안의 자료로 답한다 ── */
@@ -4353,8 +4402,12 @@ function kbBuild(){
   Object.keys(lines).forEach(function(id){ lines[id] = lines[id].slice(0, 14); });
   /* 낱말이 몇 문서에 나오나 — 흔한 말(고객·보험)은 덜 친다 */
   KB = {docs:docs, lines:lines, src:src, df:{}, n:docs.length};
+  /* 낱말 사이 띄어쓰기는 <b>경계로 남깁니다</b> — 다 붙이면 「할 일 정리」 안에서
+     「일정」 이 생겨나 「일정 넣기」 가 「오늘 뭐부터」 순서표로 샜습니다. 이름을 통째로
+     견줄 때(jvNamed)만 붙인 것(nTj)을 씁니다. */
+  function nw(t){ return String(t || '').split(/[\s·,/()「」]+/).map(kbN).filter(Boolean).join('|'); }
   docs.forEach(function(d){
-    d.nT = kbN(d.title); d.nK = kbN(d.key); d.nB = kbN(d.body);
+    d.nTj = kbN(d.title); d.nT = nw(d.title); d.nK = nw(d.key); d.nB = nw(d.body);
   });
   return KB;
 }
@@ -4380,7 +4433,7 @@ var JV_SYN = {
   '등록':['넣기','넣'], '입력':['넣기','넣'], '추가':['넣기','넣'], '신상품':['새상품','미끼'], '배정':['db','crm'],
   '보험금':['청구','지급'], '청구':['보험금','지급'], '실비':['실손'], '실손':['실비'],
   '해지':['계약관리','정리'], '갈아타':['정리','해지'], '리모델링':['정리','전후'],
-  '알람':['알림'], '알림':['알람'], '스케줄':['일정','캘린더'], '일정':['캘린더','달력'], '약속':['일정','캘린더'],
+  '알람':['알림'], '알림':['알람'], '스케줄':['일정','달력'], '일정':['달력'], '약속':['일정','달력'],   /* 「캘린더」 는 안 빌립니다 — 「콘텐츠 캘린더」 는 올릴 글 달력입니다 */
   '문자':['카톡'], '메시지':['카톡'], '카톡':['문자'],
   '노후':['연금'], '은퇴':['연금','노후'], '증권':['보장분석'], '보장분석':['증권'],
   '홍보':['광고','콘텐츠'], '마케팅':['광고'], '신입':['처음','마스터'], '처음':['신입'],
@@ -4433,7 +4486,8 @@ function jvScore(d, words, syn){
   function one(w, mul){
     var idf = jvIdf(w), ln = Math.min(w.length, 4) / 2;
     if (d.nT.indexOf(w) >= 0) return {v:6 * idf * ln * mul, t:1};
-    if (d.nK.indexOf(w) >= 0) return {v:4 * idf * ln * mul, t:0};
+    /* 찾기 낱말(ak)은 앱이 <b>일부러</b> 달아 둔 이름이다 — 맞으면 이름이 맞은 것으로 센다 */
+    if (d.nK.indexOf(w) >= 0) return {v:4 * idf * ln * mul, t:1};
     /* 본문에만 한 번 나온 드문 말이 답을 끌고 가지 않게 — 본문 쪽 무게는 위를 막는다
        (「광고 문구」 의 「문구」 가 셀프 점검 본문 한 줄로 「보험의 기준」 을 끌어올렸다) */
     if (d.nB.indexOf(w) >= 0) return {v:1.4 * Math.min(idf, 2.5) * ln * mul, t:0};
@@ -4447,8 +4501,11 @@ function jvScore(d, words, syn){
   words.forEach(function(w){
     var act = JV_ACT.indexOf(w) >= 0 ? 0.45 : (JV_COMMON.indexOf(w) >= 0 ? 0.5 : 1);   /* 하는 말 · 흔한 말은 가볍게 */
     var own = one(w, act), best = own;
-    (syn[w] || []).forEach(function(v){
-      var r = one(kbN(v), 0.7);
+    /* 친 말 그대로 <b>어디든</b> 맞았으면 비슷한 말은 안 본다 — 「청구」 를 이름에 단
+       「청구·사후관리」 보다, 비슷한 말 「보험금」 이 제목에 든 「숨은보험금찾기」 가
+       앞서던 자리. 비슷한 말은 그 말이 <b>아예 없을 때</b>만 빌립니다. */
+    if (!own) (syn[w] || []).forEach(function(v){
+      var r = one(kbN(v), 0.7 * Math.min(1, Math.min(w.length, 4) / Math.min(kbN(v).length, 4)));
       if (r && (!best || r.v > best.v)) best = r;
     });
     if (!best) return;
@@ -4504,7 +4561,9 @@ function jvRank(q){
   var words = jvWords(q), K = kb();
   var list = K.docs.map(function(d){ var r = jvScore(d, words, JV_SYN); r.d = d; return r; })
                    .filter(function(r){ return r.s > 0; })
-                   .sort(function(a, b){ return b.s - a.s; });
+                   /* 줄 세울 때는 <b>이름(제목·찾기 낱말)이 맞은 것</b>을 앞에 — 본문에만 스친 것은
+                      한 눈금 뒤로 (「약속 잡힌 고객 일정 넣기」 가 본문에 「약속」 이 든 순서표로 새던 자리) */
+                   .sort(function(a, b){ return b.s * (b.hitTU ? 1 : 0.75) - a.s * (a.hitTU ? 1 : 0.75); });
   return {words:words, list:list, qn:kbN(q)};
 }
 /* 화면 하나를 걸음 하나로 — 가는 길과 자세한 줄을 같이 싣는다 */
@@ -4515,7 +4574,7 @@ function jvStep(id, t){
 function jvNamed(R){
   var qn = R.qn || '', out = [];
   kb().docs.forEach(function(d){
-    if (d.kind === 'scr' && d.nT.length >= 3 && qn.indexOf(d.nT) >= 0) out.push(d.id);
+    if (d.kind === 'scr' && d.nTj.length >= 3 && qn.indexOf(d.nTj) >= 0) out.push(d.id);
   });
   /* 긴 이름이 짧은 이름을 품으면(「AI 보장분석」 ⊃ 「보장분석」) 긴 것만 */
   return out.filter(function(x){
@@ -4588,10 +4647,11 @@ function jvNotSure(q, R){
 function jvHello(){
   var K = kb(), s = K.src, ways = K.docs.filter(function(d){ return d.kind === 'way'; }).length;
   var a = '저는 자비스입니다. 앱에 있는 화면 ' + Object.keys(MENU).length + '개와 상황별 안내 ' + ways + '가지를 엮어서, ' +
-          '무엇을 물으시든 「어디서 · 무엇을 · 어떤 순서로」 를 짚어 드립니다.';
+          '무엇을 물으시든 「어디서 · 무엇을 · 어떤 순서로」 를 짚어 드립니다.' +
+          (s.app ? '\n남은 할 일 · 챙길 고객 · 도와줄 것처럼 지금 값이 필요한 것은 앱에 직접 시켜 읽어 와서, 한 번에 같이 띄웁니다.' : '');
   if (!s.app) a += '\n(지금은 앱 밖에서 열려 사용가이드를 못 읽었습니다 — 화면 사전과 순서표로만 답합니다.)';
   return {answer:a, steps:[], real:'', next:[],
-    pick:['고객 등록은 어디서 해?', '증권 PDF 를 받았어', '고객이 보험을 정리하고 싶대', '아침에 뭐부터 해?'], how:'hello'};
+    pick:['오늘 브리핑해줘', '고객 등록은 어디서 해?', '증권 PDF 를 받았어', '고객이 보험을 정리하고 싶대'], how:'hello'};
 }
 
 /* 키가 없어도 · AI 가 못 와도 — 앱에 담긴 것으로 답한다.
@@ -4681,6 +4741,80 @@ function jvStitch(parts){
   });
   return {answer:a, steps:steps, real:real.join(' '), next:next, tip:tips.join(' '), how:'stitch'};
 }
+/* ══ 🧑‍🔧 <b>일꾼 — 그 일을 맡은 곳에 직접 시킨다</b> (판 X221) ══════════════
+   사장님 말씀 2026-10-26 「뭐 들어가야 된다가 아니라 각자 할일을 시켜서 답변을
+   한번에 띄울수 있도록 해보자」.
+   ★ 일꾼을 새로 만들지 않았습니다 (5번). 앱에는 이미 <b>말하면 찾아서 하는</b>
+     음성 비서의 명령 사전(VA_ACT)이 있고, 그 하나하나가 앱의 지금 값을 읽어
+     답합니다 — 오늘 브리핑 · 남은 할 일 · 도와줄 것 · 오늘 챙길 고객(기한 ·
+     생일 · 오래 연락 없음) · 놓친 팀원 · 내 점수 · 빠뜨린 날 · 오늘 배울 것.
+     자비스는 그 사전을 <b>그대로 불러</b> 답을 한 장에 모읍니다.
+   ★ <b>읽기만 시킵니다.</b> 저장하는 일(w) · 남이 보게 되는 일(c) · 값을 되물어야
+     하는 일(v)은 자비스가 혼자 시키지 않습니다 — 음성 비서처럼 확인을 거쳐야
+     하는 일입니다 (사장님 규칙 「남이 보게 되는 일은 먼저 확인받는다」).
+   ★ <b>서버를 새로 부르지 않습니다</b> (7번). 아직 안 읽은 자료(성장판 · 고객 목록 ·
+     달력)가 필요한 일은 시키지 않고 「아직 안 읽었다」 고 적습니다 — 0 이라고
+     하면 「없다」 가 됩니다 (1번).
+   ★ 일꾼이 읽어 온 것(고객 이름 등)은 <b>이 화면에만</b> 씁니다. AI 로 보내는
+     근거(jvGround)에는 넣지 않습니다 (3번).                                  */
+function jvActs(){ var P = kbApp(); try { return (P && P.VA_ACT) || []; } catch(e){ return []; } }
+/* 그 일이 읽는 자료가 이미 손에 있나 — 없으면 무엇을 열어야 하는지 */
+function jvReady(a){
+  var P = kbApp(), src = String(a.run || '');
+  try {
+    if (/vaGbWait/.test(src) && !(P.GB && P.GB.loaded)) return '성장판';
+    if (/osLoadClients/.test(src) && !(P.OSC && P.OSC.list && P.OSC.list.length && P.CM && P.CM.loaded)) return '고객 365일';
+    if (/vaCalMiss/.test(src) && !(P.CAL && P.CAL.loaded)) return '실행 체크판의 달력';
+  } catch(e){ return '앱'; }
+  return '';
+}
+/* 일꾼의 답 하나 — 글 또는 {say, go} */
+function jvRun(a, args){
+  var r;
+  try { r = a.run(args || {}); } catch(e){ return null; }
+  if (!r || typeof r.then === 'function') return null;
+  if (typeof r === 'string') r = {say:r};
+  if (r.quiet || !r.say) return null;
+  return {say:String(r.say), go:(r.go && MENU[r.go]) ? r.go : ''};
+}
+/* 이 물음에 맞는 일꾼만 — ① 그 일꾼의 말버릇(re)이 맞거나 ② 일꾼 이름에 물은 낱말이
+   들었거나 ③ 일꾼이 가리키는 화면이 자비스의 순서에 들어 있거나 */
+/* 일꾼 이름에 흔히 붙는 말 — 이 말 하나로 맞았다고 부르면 아무 물음에나 끼어듭니다
+   (「이번 달 며칠 빠뜨렸어」 에 「이번 주 생일」 일꾼이 끼던 자리) */
+var JV_WORK_SKIP = ['오늘','고객','보험','상담','설계사','이번','누구','누구야','지금','사람','하루'];
+function jvWork(q, steps){
+  var P = kbApp(), out = [], ids = {};
+  if (!P) return out;
+  var key = '';
+  try { key = P.vaKey ? P.vaKey(q) : kbN(q); } catch(e){ key = kbN(q); }
+  var ws = jvWords(q).filter(function(w){ return JV_WORK_SKIP.indexOf(w) < 0 && JV_ACT.indexOf(w) < 0; });
+  /* 순서의 <b>앞 셋</b>만 — 다섯째 걸음의 화면 일꾼까지 부르면 곁가지가 앞에 섭니다 */
+  (steps || []).filter(function(s){ return s.id; }).slice(0, 3).forEach(function(s){ ids[s.id] = 1; });
+  jvActs().forEach(function(a){
+    if (!a || typeof a.run !== 'function') return;
+    if (a.k === '어디서'){
+      /* 업무 루트 표(RT_STUCK · RT_STEP)도 「어디서」 를 안다 — <b>같은 곳을 가리킬 때만</b>
+         덧붙인다. 다른 곳을 가리키면 한 화면이 같은 물음에 두 답을 하게 된다 (0-1번) */
+      var rr = jvRun(a, {what:q});
+      /* 「…을 엽니다」 는 화면 이름만 찾은 것이라 보탤 말이 없다 — 표에서 찾은 「…에서 하시면 됩니다」 만 */
+      if (rr && rr.go && ids[rr.go] && /하시면 됩니다/.test(rr.say)) out.push({k:a.k, n:'업무 루트 표', say:rr.say, go:rr.go});
+      return;
+    }
+    if (a.w || a.c || (a.v && a.v.length)) return;            /* 읽기만 */
+    var nm = kbN(a.n);
+    /* 말버릇은 음성 비서가 듣는 꼴(vaKey — 「뭐」 같은 군말을 뺀 것)과 <b>날 그대로</b> 둘 다에
+       견준다 — 「뭐 남았어」 는 군말을 빼면 「남았어」 만 남아 /뭐남았/ 에 안 걸립니다 */
+    var byRe = !!(a.re && (a.re.test(key) || a.re.test(kbN(q))));
+    var hit = byRe || ws.some(function(w){ return nm.indexOf(w) >= 0; });
+    var why = jvReady(a);
+    if (why){ if (hit) out.push({k:a.k, n:a.n, wait:why, byRe:byRe}); return; }
+    var r = jvRun(a);
+    if (!r) return;
+    if (hit || (r.go && ids[r.go])) out.push({k:a.k, n:a.n, say:r.say, go:r.go, byRe:byRe});
+  });
+  return out.slice(0, 4);
+}
+
 /* AI 에게 보낼 근거 — 물은 말에 가까운 것만, 짧게.
    AI 가 <b>앱에 있는 것</b>에서 출발하게 합니다 (1번 · 지어내지 않는다). */
 function jvGround(q){
@@ -5037,28 +5171,42 @@ function ask(raw){
   document.getElementById('ask').value = '';
   document.getElementById('jSay').value = '';
 
-  if (!hasAI()){ var r0 = offline(q); logAsk(q, r0, '앱'); addJ(r0); return; }
+  /* 한 번에 — ① 앱 안내(순서·가는 길) ② 일꾼이 지금 읽어 온 것 ③ AI 의견을
+     <b>한 카드</b>에 모은다. 예전에는 AI 가 켜져 있으면 AI 답이 앱 안내를 대신했다. */
+  var r0 = offline(q);
+  r0.work = jvWork(q, r0.steps);
+  if (r0.how === 'none' && r0.work.some(function(x){ return x.say; }))
+    r0.answer = '사용가이드에는 “' + q + '” 에 딱 맞는 안내가 없습니다. 대신 앱에 시켜서 지금 읽어 온 것이 있습니다.';
+  /* 일꾼을 <b>제 말버릇으로</b> 부르셨으면(「브리핑해줘」 · 「뭐 남았어」) 그 일꾼이 답입니다.
+     자비스가 이름이 닮은 다른 화면(「대표 브리핑」)으로 길을 짜면 같은 물음에 두 답이 됩니다
+     (0-1번) — 그 화면은 「찾으신 게 이것이면」 한 줄로 내립니다. */
+  var cmd = r0.work.filter(function(x){ return x.byRe && x.say; })[0];
+  if (cmd && r0.how === 'screen' && r0.top !== cmd.go){
+    var alt = r0.top;
+    r0 = {answer:'「' + cmd.n.split(' — ')[0] + '」 — 앱에 시켜서 지금 읽어 왔습니다.', steps:[], real:'', how:'work',
+          next:['「' + MENU[alt].n + '」 화면을 찾으셨으면 — ' + jvWay(alt).txt], work:r0.work};
+  }
+  if (!hasAI()){ logAsk(q, r0, '앱'); addJ(r0); return; }
 
   /* AI 에게도 <b>앱에 있는 것</b>을 먼저 쥐여 준다 — 물은 말에 가까운 상황 ·
      화면 · 가는 길 · 사용가이드 줄. 화면 이름 한 줄만 주면 AI 가 화면 안의
-     단추를 지어냅니다 (1번 · 판 X220). */
+     단추를 지어냅니다 (1번 · 판 X220). 일꾼이 읽어 온 값(고객 이름)은 안 보냅니다 (3번). */
   var g = jvGround(q);
   var gr = g ? ('\n\n[앱 안내 — 이 질문에 가까운 것. 여기서 출발하고, 여기 없는 단추·칸 이름은 지어내지 마세요]\n' + g) : '';
+  r0.aiWait = true;
+  addJ(r0);
+  var card = jLog.lastChild;
   busy = true;
-  addThinking();
   (getEngine() === 'gemini' ? askGemini(q, gr) : askClaude(q, gr)).then(function(res){
     busy = false;
-    var how = getEngine();
-    if (!res.answer && !(res.steps || []).length){ res = offline(q); how = '앱(AI 빈답)'; }
-    logAsk(q, res, how);
-    addJ(res);
+    if (!res.answer && !(res.steps || []).length){ logAsk(q, r0, '앱(AI 빈답)'); jvFillAI(card, null, 'AI 가 빈 답을 보냈습니다.'); return; }
+    logAsk(q, res, getEngine());
+    jvFillAI(card, res);
   }).catch(function(e){
     busy = false;
     chatLog.pop();
-    var r1 = offline(q);
-    logAsk(q, r1, '앱(AI 실패)');
-    addJ({answer:whyFailed(e) + ' 대신 앱에 담긴 것으로 답해 드리겠습니다.', steps:[], next:[]}, true);
-    addJ(r1);
+    logAsk(q, r0, '앱(AI 실패)');
+    jvFillAI(card, null, whyFailed(e));
   });
 }
 
