@@ -36,7 +36,11 @@
      ㉑ ★ 장의 겉글이 강의하는 말 — 보고서 조각(<b>…</b><small>…) 0 · 끝맺은 문장 · 장 끝 물음
      ㉒ ★ → 한 번에 한 줄 · 줄이 다 서야 다음 장 · ← 는 앞 장을 다 선 채로 · 한눈에는 다 선 채로
      ㉓ ★ 🌙 상상 장 여덟 이상 · 다섯 부 · 그림 · 물음 · 쉼이 적힌 노트 · 「▶ 천천히」
-     ㉔ 그림의 사람은 뼈대에서 · 옛 네모 실루엣 0 · 장면 스물 이상 · 장면 하나 220KB 안  */
+     ㉔ 그림의 사람은 뼈대에서 · 옛 네모 실루엣 0 · 장면 스물 이상 · 장면 하나 220KB 안
+   판 X211 (2026-10-26 「글만 있다고 감동이 아니라, 이미지 / 강조할 부분들 / 애니메이션화 / 내용 확인 등 핵심 내용 필요」) —
+     ㉕ ★ 말 장이 모두 그림 도해 — 화면에 문단 줄 0 · 아이콘은 직접 그린 것 · 도해의 말은 짧게
+     ㉖ ★ 핵심 한 줄 — 장 끝 차례에 형광펜 · ㉗ 움직임 — 아이콘이 그려지고 · 계단을 오르고 · 카드가 뒤집히고 · 바늘이 돈다
+     ㉘ ★ ✔ 핵심 확인 다섯 부 — 빈칸은 한 번 더 눌러야 답이 선다 · 대본에 답  */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9174;
@@ -50,6 +54,7 @@ const WBP = fs.readFileSync(path.join(ROOT, 'app/bcd-workbook.html'), 'utf8');
 const DATA = fs.readFileSync(path.join(ROOT, 'app/bcd-data.js'), 'utf8');
 const ARTJS = fs.readFileSync(path.join(ROOT, 'app/bcd-art.js'), 'utf8');
 const SLJS = fs.readFileSync(path.join(ROOT, 'app/bcd-slides.js'), 'utf8');
+const VZJS = fs.readFileSync(path.join(ROOT, 'app/bcd-viz.js'), 'utf8');
 const strip = t => t.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
 const IDX = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
 /* 주석을 떼고 본다 — 쪽지 글을 코드로 읽지 않게 */
@@ -68,9 +73,9 @@ is(!/data:image\/(png|jpe?g|webp|gif);base64/i.test(PAGE) && !/<img[^>]+src="(?!
 is(!/story\s*:\s*\{\s*[a-zA-Z]+\s*:\s*'[^']/.test(CODE) && !/tl\s*:\s*\[\s*\{/.test(CODE), '이야기 · 장면을 미리 적어 둔 줄이 없다');
 
 console.log('\n[3] 서버 · 바깥 스크립트 · tnum (7번 · 4-1번)');
-is([CODE, strip(WBP), strip(DATA), strip(ARTJS), strip(SLJS)].every(t => !/\bfetch\s*\(|XMLHttpRequest|supabase|\/\.netlify\//i.test(t)), '덱 · 폰 워크북 · 글 한 벌 · 장면 그림 모두 서버를 부르는 줄이 없다');
+is([CODE, strip(WBP), strip(DATA), strip(ARTJS), strip(SLJS), strip(VZJS)].every(t => !/\bfetch\s*\(|XMLHttpRequest|supabase|\/\.netlify\//i.test(t)), '덱 · 폰 워크북 · 글 한 벌 · 장면 그림 모두 서버를 부르는 줄이 없다');
 const srcs = t => (t.match(/<script[^>]+src="([^"]+)"/gi) || []).map(x => /src="([^"]+)"/i.exec(x)[1]);
-is(srcs(PAGE).sort().join() === 'bcd-art.js,bcd-data.js,bcd-slides.js' && srcs(WBP).join() === 'bcd-data.js', '바깥 스크립트를 안 들여온다 — 덱은 옆 파일 bcd-data.js · bcd-art.js · bcd-slides.js, 폰 워크북은 bcd-data.js 만 읽는다');
+is(srcs(PAGE).sort().join() === 'bcd-art.js,bcd-data.js,bcd-slides.js,bcd-viz.js' && srcs(WBP).join() === 'bcd-data.js', '바깥 스크립트를 안 들여온다 — 덱은 옆 파일 bcd-data.js · bcd-art.js · bcd-viz.js · bcd-slides.js, 폰 워크북은 bcd-data.js 만 읽는다');
 is(!/<image\b|href=["']https?:|xlink:href|data:image\/(png|jpe?g|webp|gif)/i.test(ARTJS), '장면 그림이 남의 사진 · 바깥 그림을 끌어오지 않는다 — 전부 직접 그린 SVG (9번)');
 is(![PAGE, WBP].some(t => /tnum/.test(t)), '숫자 글꼴 tnum 을 안 켠다');
 is(!/const (LIFE|FF|OBS|WB) = \[/.test(CODE) && !/const (LIFE|FF|OBS|WB) = \[/.test(strip(WBP)) && !/'내가 말한 시간보다 고객이 말한 시간이 길었나'/.test(CODE + strip(WBP)),
@@ -392,6 +397,76 @@ const srv = http.createServer((q, s) => {
     const heavy = Object.keys(art.o).filter(k => art.o[k].kb > 220), withPpl = Object.keys(art.o).filter(k => art.o[k].ppl > 0);
     is(art.n >= 20 && withPpl.length >= 14, '장면 그림 ' + art.n + '가지 · 사람이 서는 장면 ' + withPpl.length + '가지');
     is(heavy.length === 0, '장면 하나가 220KB 를 안 넘는다 — 한눈에가 백 장을 한꺼번에 그려도 무겁지 않게' + (heavy.length ? ' ← ' + heavy.join(',') : ''));
+
+    console.log('\n[19] 🖼 그림으로 말하는 장 · 핵심 한 줄 · 움직임 · ✔ 핵심 확인 (판 X211 — 「글만 있다고 감동이 아니라, 이미지 / 강조할 부분들 / 애니메이션화 / 내용 확인 등 핵심 내용 필요」)');
+    /* ① 이미지 — 말 장마다 도해. 화면에 문단이 아니라 짧은 말 · 아이콘 · 그림이 선다 */
+    const vz = await p.evaluate(() => {
+      const A = SLIDES.filter(s => /^(text|steps|table|cols)$/.test(s.ty) && s.li !== window.BCD.OBS);
+      const no = A.filter(s => !s.viz).map(s => s.tag), V = SLIDES.filter(s => s.viz);
+      const names = new Set(window.BCD_VIZ.icons), miss = [];
+      V.forEach(s => (s.viz.items || []).concat(s.viz.L ? [s.viz.L, s.viz.R] : []).forEach(it => { if (it && it.i && !names.has(it.i)) miss.push(it.i); }));
+      const long = V.flatMap(s => (s.viz.items || []).map(it => it.t || it.a || '')).filter(t => t.length > 26);
+      const kinds = [...new Set(V.map(s => s.viz.k))];
+      const bad = [];
+      D.forEach((s, i) => { if (!s.viz) return; show(i); const st = $('stage'); if (!st.querySelector('.vz') || !st.querySelector('.vz svg') || st.querySelector('.spk')) bad.push(s.tag); });
+      return { n: A.length, no, v: V.length, miss, long, kinds, bad, key: SLIDES.filter(s => s.key).length };
+    });
+    is(vz.no.length === 0 && vz.v >= 25, '말 장 ' + vz.n + '장이 모두 그림 도해로 말한다 — 도해 ' + vz.v + '장 · ' + vz.kinds.length + '가지(' + vz.kinds.join(' · ') + ')' + (vz.no.length ? ' ← 글만 남은 장: ' + vz.no.join(',') : ''));
+    is(vz.bad.length === 0, '도해 장마다 화면에 그림(svg)이 서고, 문단 줄(.spk)은 안 선다 — 원래 문장은 강사 대본으로' + (vz.bad.length ? ' ← ' + vz.bad[0] : ''));
+    is(vz.miss.length === 0 && vz.long.length === 0, '아이콘은 모두 직접 그린 것(bcd-viz.js)에 있고, 도해의 말은 짧다(26자 안)' + (vz.miss.length ? ' ← 없는 아이콘: ' + vz.miss.join(',') : '') + (vz.long.length ? ' ← ' + vz.long[0] : ''));
+    is(!/<image\b|href=["']https?:|data:image\//i.test(VZJS) && /직접 그린 선 그림/.test(VZJS), '도해 · 아이콘이 남의 그림 · 바깥 그림을 끌어오지 않는다 (9번)');
+    /* ② 강조 — 핵심 한 줄. 마지막에 형광펜이 지나갑니다 */
+    const ky = await p.evaluate(async () => {
+      const i = D.findIndex(s => s.viz && s.key); show(i);
+      const k = document.querySelector('#stage .key'), sp = k && k.querySelector('span');
+      const before = sp ? getComputedStyle(sp).backgroundSize : '';
+      bstep = bItems().length; bPaint(); await new Promise(r => setTimeout(r, 2200));
+      return { has: !!k, last: bItems()[bItems().indexOf(k)] === k && bItems().indexOf(k) >= bItems().length - 2, before, after: sp ? getComputedStyle(sp).backgroundSize : '' };
+    });
+    is(vz.key >= 18 && ky.has && ky.last, '「핵심 한 줄」 이 ' + vz.key + '장에 서고, 장의 끝 차례에 떠오른다');
+    is(/^0%/.test(ky.before) && /^100%/.test(ky.after), '핵심 한 줄에 형광펜이 지나간다 (' + ky.before + ' → ' + ky.after + ')');
+    /* ③ 움직임 — 누르면 아이콘이 선으로 그려지고, 계단을 사람이 오르고, 카드가 뒤집힌다 */
+    const mv = await p.evaluate(async () => {
+      const r = {};
+      let i = D.findIndex(s => s.viz && s.viz.k === 'cards'); show(i); next();
+      await new Promise(z => setTimeout(z, 120));
+      r.draw = document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('#stage .vc.on .vi')).length;
+      i = D.findIndex(s => s.viz && s.viz.k === 'stairs'); show(i);
+      next(); const c = document.querySelector('#stage .climber'); const l1 = parseFloat(c.style.left), b1 = parseFloat(c.style.bottom);
+      next(); next(); const l3 = parseFloat(c.style.left), b3 = parseFloat(c.style.bottom);
+      r.climb = { l1, b1, l3, b3, on: c.classList.contains('on') };
+      i = D.findIndex(s => s.viz && s.viz.k === 'flip'); show(i);
+      next(); r.front = !document.querySelector('#stage .fl.on') && !!document.querySelector('#stage .fc.on');
+      next(); r.flip = !!document.querySelector('#stage .fl.on');
+      i = D.findIndex(s => s.viz && s.viz.k === 'rings'); show(i); next(); next();
+      r.rings = document.querySelectorAll('#stage .rgo.lit').length;
+      i = D.findIndex(s => s.viz && s.viz.k === 'clocks'); show(i); bstep = bItems().length; bPaint();
+      await new Promise(z => setTimeout(z, 200));
+      r.clock = document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('#stage .ckf')).length;
+      return r;
+    });
+    is(mv.draw >= 1, '누르면 아이콘이 선으로 그려진다 (움직임 ' + mv.draw + '개)');
+    is(mv.climb.on && mv.climb.l3 > mv.climb.l1 && mv.climb.b3 > mv.climb.b1, '계단이 한 칸씩 솟고 사람이 그 칸으로 오른다 (' + [mv.climb.l1, mv.climb.b1, mv.climb.l3, mv.climb.b3].map(x => Math.round(x)).join(' → ') + ')');
+    is(mv.front && mv.flip, '거절 카드 — 한 번 누르면 고객님의 말(앞면), 한 번 더 누르면 뒤집혀 속뜻 · 다음 선택');
+    is(mv.rings === 2 && mv.clock >= 2, '자립의 고리가 이름 수만큼 그어지고(' + mv.rings + ') · 두 시계의 바늘이 돈다(' + mv.clock + ')');
+    /* ④ 내용 확인 — 부마다 빈칸을 함께 채운다. 답은 한 번 더 눌러야 선다 */
+    const ck = await p.evaluate(() => {
+      const A = SLIDES.filter(s => s.ty === 'check'), secs = [...new Set(A.map(s => s.sec))];
+      const blanksOk = A.every(s => s.items.length >= 3 && s.items.every(x => /\[\[.+?\]\]/.test(x)));
+      const i = D.findIndex(s => s.ty === 'check'); show(i);
+      const q0 = document.querySelectorAll('#stage .ckq.on').length;
+      next(); const q1 = document.querySelectorAll('#stage .ckq.on').length, a1 = getComputedStyle(document.querySelector('#stage .blank b')).opacity;
+      next(); const a2 = document.querySelector('#stage .blank').classList.contains('on');
+      return { n: A.length, secs: secs.join(), blanksOk, q0, q1, a1, a2, txt: $('stage').innerText };
+    });
+    is(ck.n >= 5 && ck.secs === 'p1,p2,p3,p4,p5' && ck.blanksOk, '✔ 핵심 확인이 다섯 부마다 — 문장마다 빈칸이 있다');
+    is(ck.q0 === 0 && ck.q1 === 1 && ck.a1 === '0' && ck.a2, '문장이 먼저 서고 빈칸은 비어 있다 — 한 번 더 누르면 답이 형광펜으로 선다 (청중이 먼저 말하게)');
+    const pr = await p.evaluate(() => { const t = scriptHtml(); return /✔ 1부 핵심 확인/.test(t) && /「증명」/.test(t) && /★ 핵심 — /.test(t); });
+    is(pr, '강사 대본 인쇄에 핵심 확인의 답과 핵심 한 줄이 실린다');
+    await p.emulateMedia({ reducedMotion: 'reduce' });
+    const rm = await p.evaluate(() => { const i = D.findIndex(s => s.viz && s.viz.k === 'cards'); show(i); bstep = bItems().length; bPaint(); const el = document.querySelector('#stage .vc .vi path, #stage .vc .vi circle'); return getComputedStyle(el).strokeDashoffset; });
+    is(/^0(px)?$/.test(rm), '움직임 줄이기를 켠 기기에서도 아이콘이 다 그려진 채로 선다 (' + rm + ')');
+    await p.emulateMedia({ reducedMotion: 'no-preference' });
 
     console.log('\n[14] 📱 폰 워크북 — 적고 · 남고 · 그리고 · 뽑고 · 지운다 (bcd-workbook.html)');
     const q = await ctx.newPage({ viewport: { width: 390, height: 844 } });
