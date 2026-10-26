@@ -87,12 +87,20 @@ const SEED = SRC.slice(SRC.indexOf('const SEED = `') + 14, SRC.indexOf('`;', SRC
                   c: (el.getAttribute('class') || el.tagName.toLowerCase()).split(' ')[0],
                   t: t.slice(0, 20) });
     }
-    /* 홈 본문의 첫 글자가 몇 px 에서 시작하나 — 머리가 먹는 자리 */
+    /* 홈 본문이 몇 px 에서 시작하나 — <b>머리(앱 바)가 먹는 자리</b>
+       ★★ <b>2026-10-26 (판 X199) — 「첫 글자」 가 아니라 「첫 덩이」 를 잽니다.</b>
+         이 줄의 이름은 「<b>머리가 먹는 자리</b>」 인데, 첫 글자를 재면 <b>첫 칸의
+         안쪽 여백과 줄 가운데맞춤까지</b> 같이 재게 됩니다. 판 X199 에서 맨 위
+         칸이 「지금 할 것」 카드로 바뀌자, 그 머리줄이 44px 단추에 <b>가운데로</b>
+         맞춰지면서 첫 글자가 12px 아래로 내려가 <b>117 → 131px</b> 이 되었습니다 —
+         앱 바는 한 자도 안 커졌는데 자가 커졌다고 말한 것입니다 (1번).
+         ★ <b>첫 덩이는 104px 로 고치기 전과 똑같습니다</b>(두 판을 다 재어 봤습니다).
+         ★ 기준선 118 은 <b>한 자도 안 내렸습니다</b> — 묻는 것만 제 이름에 맞췄습니다.
+         ⚠ 칸 안쪽 여백·글자 크기는 다른 자들이 봅니다 (check-hmfill · check-hmglance). */
     let head = -1;
-    { const w2 = document.createTreeWalker(pane, NodeFilter.SHOW_TEXT, null); let m;
-      while ((m = w2.nextNode())) { const t = (m.nodeValue||'').trim(); if (!t) continue;
-        const el = m.parentElement; if (!el || !vis(el)) continue;
-        const b = el.getBoundingClientRect(); if (b.height <= 0) continue; head = Math.round(b.top); break; } }
+    { for (const c of [].slice.call(pane.children)) {
+        const b = c.getBoundingClientRect();
+        if (b.height > 0) { head = Math.round(b.top); break; } } }
     return { rows, head, vh: window.innerHeight };
   });
 

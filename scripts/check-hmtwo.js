@@ -320,19 +320,20 @@ const SEED = () => {
   const pk = await PC.evaluate(() => {
     /* ⚠ 누르면 <b>카드를 다시 그립니다</b>(hmPaint). 붙잡아 둔 카드는 떨어져
        나가 높이가 0px 이 됩니다 — <b>잴 때마다 다시 찾습니다</b>.        */
-    const cnt = () => { const c = document.querySelector('#hmToday .hm-now');
+    /* ★ 판 X199 — 카드가 #hmToday 밖(#hmJobHost)으로 올라갔습니다 */
+    const cnt = () => { const c = document.querySelector('#dynPane .hm-now');
       return {
-        judge: document.querySelectorAll('#hmToday .hm-now .t-note.b').length,
-        cqa:   document.querySelectorAll('#hmToday .cqaCard').length,
-        tools: document.querySelectorAll('#hmToday .hm-now .hm-ask-o').length,
+        judge: document.querySelectorAll('#dynPane .hm-now .t-note.b').length,
+        cqa:   document.querySelectorAll('#dynPane .cqaCard').length,
+        tools: document.querySelectorAll('#dynPane .hm-now .hm-ask-o').length,
         h:     c ? Math.round(c.getBoundingClientRect().height) : 0 }; };
-    const b = document.querySelector('#hmToday .hm-more-b');
+    const b = document.querySelector('#dynPane .hm-more-b');
     if (!b) return { no: 1 };
     const shutTxt = (b.innerText || '').replace(/\s+/g, ' ').trim();
     const shut = cnt();
     const tap = Math.round(b.getBoundingClientRect().height);
     b.click();
-    const b2 = document.querySelector('#hmToday .hm-more-b');
+    const b2 = document.querySelector('#dynPane .hm-more-b');   /* 판 X199 */
     const openTxt = (b2 ? b2.innerText : '').replace(/\s+/g, ' ').trim();
     const open = cnt();
     let saved = null; try { saved = JSON.parse(localStorage.getItem('apex_hm_fold_v1') || '{}').more; } catch (e) {}
@@ -403,6 +404,15 @@ const SEED = () => {
              kb: y(document.getElementById('hmKbHost')),
              td: y(document.getElementById('hmToday')),
              nowEnd: now ? y(now) + hh(now) : -1,
+             /* ★ 판 X199 — 카드 밑에 <b>세 칸 · 📄 한 줄</b>이 들어왔습니다.
+                곁칸은 그 다음이므로 📄 끝에서 잽니다 (아래 쪽지).        */
+             pdfEnd: (() => { const e = document.querySelector('.hm-pdf');
+                return e ? y(e) + hh(e) : -1; })(),
+             사이: (() => { const t = document.querySelector('.tz'); if (!t) return [];
+                const L = [].slice.call(t.children), a = L.indexOf(document.getElementById('hmJobHost')),
+                      b2 = L.indexOf(document.getElementById('hmSideUp'));
+                return (a < 0 || b2 < 0) ? [] : L.slice(a + 1, b2)
+                  .map(c => (c.id || (c.className || '').split(' ')[0] || c.tagName)); })(),
              넷: 넷, 위칸: !!up, 오른빔: !!(R.textContent || '').trim() === false,
              오른글: (R.textContent || '').trim().length,
              rt: document.querySelectorAll('#hmRtHost').length,
@@ -423,9 +433,23 @@ const SEED = () => {
      '  ★ 머리글(.hm-rt-h)이 <b>' + one.머리 + '개</b> 선다 — 목각 차례 그대로');
   /* ★ <b>기준선</b> — 첫 칸이 「지금 할 것」 이 끝나는 자리에서 <b>120px 안</b>.
      전에는 3,000 이었고 실제로 y2,612 였습니다. 이제 바로 붙어 섭니다.    */
-  is(!one.no && 첫넷 > 0 && one.nowEnd > 0 && 첫넷 >= one.nowEnd - 8 && 첫넷 <= one.nowEnd + 120,
-     '  ★★ 첫 칸이 <b>「지금 할 것」 바로 아래</b>다 — 지금 할 것 끝 y' + one.nowEnd +
+  /* ★★ <b>2026-10-26 (판 X199) — 재는 자리를 옮기고 묻는 것을 늘렸습니다.</b>
+     사장님 말씀 「ⓒ로 해줘」 로 카드가 맨 위로 올라오면서, 카드와 곁칸 사이에
+     <b>세 칸(➕ 고객 추가)과 📄 한 줄</b>이 들어왔습니다 — 둘 다 사장님이
+     시키신 것이라 치울 것이 아닙니다(판 X194 · 6번).
+     ★ 그래서 <b>틈 120px 은 그대로 두고</b> 재는 자리를 <b>📄 끝</b>으로
+       옮깁니다 — 「맨 위 묶음 바로 아래」 가 이제 그 뜻입니다.
+     ★ 그리고 <b>사이에 무엇이 섰는지까지</b> 봅니다 — 전에는 px 만 재어
+       <b>무엇이 끼어들었는지</b> 못 가렸습니다. 이제 둘(세 칸 · 📄)이
+       아니면 그 자리에서 빨간불입니다. <b>느슨해진 데가 없습니다</b> (8번). */
+  is(!one.no && 첫넷 > 0 && one.pdfEnd > 0 && 첫넷 >= one.pdfEnd - 8 && 첫넷 <= one.pdfEnd + 120,
+     '  ★★ 첫 칸이 <b>맨 위 묶음 바로 아래</b>다 — 📄 끝 y' + one.pdfEnd +
      ' · 첫 칸 y' + 첫넷 + ' (틈 120px 안 · 2026-10-06 사장님 「끌어올려」)');
+  is(!one.no && (one.사이 || []).length === 2 &&
+     (one.사이 || []).join(',').indexOf('hm-two') >= 0 &&
+     (one.사이 || []).join(',').indexOf('hm-pdf') >= 0,
+     '  ★ 카드와 곁칸 <b>사이에 선 것이 둘뿐</b>이다 — ' +
+     ((one.사이 || []).join(' · ') || '(못 셌습니다)') + ' (판 X199 · 슬그머니 끼어드는 것을 막습니다)');
   /* ★★ <b>두 자리에 같이 세우지 않는다</b> — id 가 겹치면 앞엣것이 빈 칸이다 */
   is(!one.no && one.오른글 === 0,
      '  ★★ 폰에서 <b>오른쪽 기둥은 비어 있다</b> — 글자 ' + one.오른글 + '자' +

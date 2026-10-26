@@ -107,7 +107,11 @@ const 본 = async (p) => await p.evaluate(() => {
   return {
     소식칸: !!nw,
     소식키: hgt(nw),
-    제목: (el('.hm-nw-t') || {}).innerText || '',
+    /* ★ 판 X199 — 기사 제목이 <b>제 줄(.hm-nw-ti)</b>로 내려갔습니다. 칸을
+       고르실 때 줄이 하나 늘었다 줄었다 하던 것을 막은 자리입니다(check-nlpick).
+       <b>머리줄과 제목 줄을 함께</b> 읽습니다 — 글은 한 자도 안 바뀌었습니다. */
+    제목: (((el('.hm-nw-t') || {}).innerText || '') + ' ' +
+           ((el('.hm-nw-ti') || {}).innerText || '')).trim(),
     /* 여는 토막 */
     여는토막: !!op,
     여는글: op ? (op.innerText || '').trim() : '',
