@@ -500,6 +500,20 @@ function mins(km){ if(km==null)return null; return Math.max(5, Math.round(km*1.3
 var RKM={}, RKM_OFF=false, RENDERING=false;   /* 다시 그리다 무한히 돌지 않게 */
 try{ RKM=JSON.parse(localStorage.getItem("apexRouteKmV1")||"{}") }catch(e){ RKM={} }
 function rkKey(a,b){ return [a.lat,a.lng,b.lat,b.lng].map(function(v){return (+v).toFixed(4)}).join(",") }
+/* ── 🛣️ <b>진짜 길 모양</b> ────────────────────────────────────────
+   사장님 말씀 (2026-10-26) — 「<b>경로까지 연결해서</b> 지역동선에
+   보여주도록 <b>위치만 체크하지 말고</b>」.
+   여태 지도는 들를 자리를 점으로 찍고 <b>직선</b>으로 이었습니다. 실제로
+   도는 길은 강을 돌고 산을 넘으므로, 직선은 그림이 거짓말을 합니다 —
+   「15분」 이라 적힌 구간이 지도에서는 산을 뚫고 갑니다.
+   ★ 길 모양은 <b>이미 묻고 있던 그 답</b>에 들어 있었습니다(카카오가
+     sections[].roads[].vertexes 로 줍니다). <b>한 번 더 안 묻습니다</b> (7번).
+   ★ 길을 못 받으면 <b>직선 그대로</b> 두고 화면에 「직선(어림)」 이라고
+     적습니다 — 직선을 길이라고 말하지 않습니다 (1번).
+   ⚠ 길 좌표는 <b>창고(localStorage)에 안 담습니다</b> — 한 구간이 수천 자라
+     며칠이면 창고가 찹니다. 거리·시간만 담던 그대로 둡니다.           */
+var RPATH={};
+function rkPath(a,b){ var p=RPATH[rkKey(a,b)]; return (p&&p.length>1)?p:null }
 function realKm(pairs){
   /* pairs: [{a:{lat,lng},b:{lat,lng}}, …] → 같은 차례의 {km,min}|null 배열 */
   var out=pairs.map(function(x){ return RKM[rkKey(x.a,x.b)]||null });
@@ -514,7 +528,10 @@ function realKm(pairs){
       if(!j||!j.ok){ RKM_OFF=true; return out }   /* 키가 없다 — 다시 안 묻는다 */
       (j.legs||[]).forEach(function(v,k){
         if(!v)return;
-        out[idx[k]]=v; RKM[rkKey(pairs[idx[k]].a,pairs[idx[k]].b)]=v;
+        /* 길 모양은 <b>따로</b> 둡니다 — 창고에 담는 것은 거리·시간뿐입니다 */
+        if(v.path&&v.path.length>1)RPATH[rkKey(pairs[idx[k]].a,pairs[idx[k]].b)]=v.path;
+        var w={km:v.km,min:v.min};
+        out[idx[k]]=w; RKM[rkKey(pairs[idx[k]].a,pairs[idx[k]].b)]=w;
       });
       try{ localStorage.setItem("apexRouteKmV1",JSON.stringify(RKM)) }catch(e){}
       return out;
@@ -2145,7 +2162,12 @@ function missCard(region,owner,top){
          (realN<L.list.length?(' 나머지는 아직 <b>어림</b>입니다 — 직선거리를 1.35배 해서 시속 28km 로 셉니다.'):''))
       : ('이동시간은 <b>어림</b>입니다 — 직선거리를 1.35배 해서 시속 28km 로 달린 셈으로 셉니다.'+
          (RKM_OFF?' 길찾기 키가 아직 없습니다.':'')))+
-    ' 실제 출발 전에는 <b>🧭 내비</b> 를 한 번 눌러 확인하십시오.</div>');
+    ' 실제 출발 전에는 <b>🧭 내비</b> 를 한 번 눌러 확인하십시오.'+
+    /* 🛣️ <b>지도에 그린 선이 무엇인가</b> (판 X217). 길을 못 받은 구간은
+       직선으로 이어 놓고 <b>직선이라고 적습니다</b> — 직선을 길이라고
+       말하면 산을 뚫고 가는 그림을 믿으시게 됩니다 (1번).
+       ★ 글은 drawMap 이 채웁니다 — 지도를 그리는 그때가 아는 때입니다. */
+    ' <span id="rtLineSrc" style="font-weight:800"></span></div>');
 
   q("rtSide").innerHTML=side.join("");
 
@@ -2256,11 +2278,30 @@ function drawMap(stops,cands){
     stops.forEach(function(s,i){ if(s.pt) path.push(pin(s.pt,String(i+1),"",5)) });
     cands.forEach(function(c){ var p=ptOf(c.d); if(p) pin(p,"","c",2) });
     if(HOME&&path.length) path.unshift(new kakao.maps.LatLng(HOME.lat,HOME.lng));
+    /* 🛣️ <b>진짜 길을 긋습니다</b> (판 X217). 들를 자리를 차례로 이으면서,
+       구간마다 받아 둔 길 좌표가 있으면 <b>그 길</b>을, 없으면 <b>직선</b>을
+       씁니다. 한 구간이라도 직선이면 아래 딱지가 그렇다고 말합니다 (1번). */
+    var 직선=0, 길=0;
     if(path.length>1){
-      var line=new kakao.maps.Polyline({path:path,strokeWeight:4,strokeColor:"#3182f6",
-        strokeOpacity:.85,strokeStyle:"solid"});
-      line.setMap(MAP); OVERLAY.push(line);
+      var seg=[],si;
+      for(si=0;si+1<path.length;si++){
+        var A={lat:path[si].getLat(),lng:path[si].getLng()},
+            B={lat:path[si+1].getLat(),lng:path[si+1].getLng()};
+        var pp=rkPath(A,B);
+        if(pp){ 길++; for(var pi=0;pi<pp.length;pi++)seg.push(new kakao.maps.LatLng(pp[pi][1],pp[pi][0])); }
+        else { 직선++; seg.push(path[si]); seg.push(path[si+1]); }
+      }
+      if(seg.length>1){
+        var line=new kakao.maps.Polyline({path:seg,strokeWeight:5,strokeColor:"#3182f6",
+          strokeOpacity:.9,strokeStyle:"solid"});
+        line.setMap(MAP); OVERLAY.push(line);
+      }
     }
+    /* 무엇을 그렸는지 <b>화면에 적습니다</b> — 직선을 길이라 말하지 않습니다 (1번) */
+    try{ var lb=q("rtLineSrc");
+      if(lb)lb.textContent = (!길&&!직선) ? ""
+        : (직선 ? ("길 "+길+"구간 · 직선(어림) "+직선+"구간") : ("실제 길 "+길+"구간"));
+    }catch(eL){}
     if(any) MAP.setBounds(bounds,60,60,60,60);
     setTimeout(function(){ try{ MAP.relayout(); if(any)MAP.setBounds(bounds,60,60,60,60) }catch(e){} },120);
   }).catch(function(e){ keyPanel(false,e) });
