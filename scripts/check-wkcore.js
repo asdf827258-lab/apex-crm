@@ -1,4 +1,4 @@
-/* 함께 점검 상담을 중심으로 — 결과지는 빼고, 답은 고객마다, 숫자는 한 곳에서 (판 X189 · X192 · X196)
+/* 함께 점검 상담을 중심으로 — 결과지는 빼고, 답은 고객마다, 숫자는 한 곳에서 (판 X202 · X205 · X209)
 
    사장님 말씀 2026-10-24 「결과지 빼고 … 이걸 토대로 만들거야」 · 「응 시작해봐」.
    계산기(app/finance.html)를 「함께 점검 상담」 중심으로 고친 것을 실제로 열어 봅니다.
@@ -17,10 +17,10 @@
      라. 모자라는 돈을 0 으로 자르지 않는다 — 현금흐름 그림의 「잉여금 0만」 → 「모자라는 돈 −99만」
      마. 저장할 때 계산기가 센 부족액(목표 − 받게 될 연금)을 같이 보낸다 — 본체가 「목표 − 연금저축 납입액」 으로 따로 세던 자리
      바. 「함께 점검 상담」 31장이 다 서고 페이지 오류 0
-     사. 판 X192 (「둘다 함께 해 모아줘」) — 물음 네 벌 · 발표 세 벌을 「함께 점검 상담」 한 곳으로. 팩트파인딩 · PPT 탭 단추와
+     사. 판 X205 (「둘다 함께 해 모아줘」) — 물음 네 벌 · 발표 세 벌을 「함께 점검 상담」 한 곳으로. 팩트파인딩 · PPT 탭 단추와
          우하단 「발표」 단추를 없애고, 첫 장 · 정리 장의 문으로 엽니다. 상담 가이드 · 가이드맵은 WK_ITEMS 한 벌을 보여 주고,
          본체는 계산기가 보낸 부족액을 받습니다
-     아. 판 X196 — 입력 칸에 견본 숫자를 미리 넣지 않음(「🧪 견본 넣기」 단추로만 · 넣는 동안 띠) · 소득 · 지출이 비면 분석 대신
+     아. 판 X209 — 입력 칸에 견본 숫자를 미리 넣지 않음(「🧪 견본 넣기」 단추로만 · 넣는 동안 띠) · 소득 · 지출이 비면 분석 대신
          「채워 주세요」 카드 · 발표 덱으로 비운 나이 · 이름 · 은퇴 나이를 짐작해 보내지 않음
 
    되돌려 보기 — wkState 를 localStorage('wk_v1') 로 되돌리면 나 가 · finEmerg 의 acc/fixed 를 fixed/s_emerg 로 바꾸면 다 가 ·
@@ -41,7 +41,7 @@ const head = (t) => console.log('\n' + t);
   pg.on('pageerror', (e) => errs.push(e.message)); pg.on('dialog', (d) => d.accept());
   await pg.goto('file://' + path.join(ROOT, 'app', 'finance.html'));
   await pg.waitForFunction(() => typeof wkOpen === 'function' && typeof finCore === 'function' && window.APEX_REPORT, null, { timeout: 15000 });
-  /* 판 X196 — 칸이 비어 열리므로 견본 고객을 넣고 잽니다 */
+  /* 판 X209 — 칸이 비어 열리므로 견본 고객을 넣고 잽니다 */
   await pg.evaluate(() => finSample());
   const set = (id, v) => pg.evaluate(([id, v]) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); }, [id, v]);
 
@@ -74,7 +74,7 @@ const head = (t) => console.log('\n' + t);
   is(back === '확인됨 350만 원', '저장본을 불러오면 그 고객의 답과 숫자가 같이 돌아온다 — ' + back);
   await pg.reload(); await pg.waitForFunction(() => typeof wkState === 'function', null, { timeout: 15000 });
   const rl0 = await pg.evaluate(() => ({ t: document.getElementById('s_target').value, empty: document.body.classList.contains('fin-empty') }));
-  is(rl0.t === '' && rl0.empty, '새로고침하면 칸이 비어 열린다 — 견본을 미리 넣지 않고 「채워 주세요」 카드 (판 X196)');
+  is(rl0.t === '' && rl0.empty, '새로고침하면 칸이 비어 열린다 — 견본을 미리 넣지 않고 「채워 주세요」 카드 (판 X209)');
   await pg.evaluate(() => finSample());
   const rl = await pg.evaluate(() => ({ n: Object.keys(wkState().ans).length, t: document.getElementById('s_target').value }));
   is(rl.n === 0, '새로고침하면 칸과 답이 같이 처음으로 — 「확인됨」 만 남아 처음 값(' + rl.t + ')을 확인된 것으로 세우지 않는다');
@@ -112,7 +112,7 @@ const head = (t) => console.log('\n' + t);
   const wantGap = await pg.evaluate(() => window.__want);
   is(out && out.fin && out.fin.gap === wantGap, '저장 쪽지의 부족액 = 목표 − 받게 될 연금 (' + (out && out.fin ? out.fin.gap : '없음') + ' = ' + wantGap + ')');
 
-  head('사. ★★ 물음 · 발표는 「함께 점검 상담」 한 곳으로 (판 X192 · 사장님 말씀 「둘다 함께 해 모아줘」)');
+  head('사. ★★ 물음 · 발표는 「함께 점검 상담」 한 곳으로 (판 X205 · 사장님 말씀 「둘다 함께 해 모아줘」)');
   const doors = await pg.evaluate(() => ({
     tabs: [...document.querySelectorAll('.top-tab-grid .report-tab')].map((x) => x.textContent.replace(/\s+/g, ' ').trim()),
     float: !!document.getElementById('apexPresentBtn') || !!document.getElementById('apexInfBox') }));
@@ -137,7 +137,7 @@ const head = (t) => console.log('\n' + t);
   const hd = (idx.match(/d\.type!=='apexFinSave'\)return;[\s\S]{0,1600}?\n\}\);/) || [''])[0];
   is(/var G=d\.fin;/.test(hd) && !/I\.s_pension/.test(hd), '본체가 저장할 때 계산기가 보낸 부족액(d.fin)을 그대로 받는다 — 「목표 − 연금저축 납입액」 셈 0');
 
-  head('아. ★★ 견본은 단추로만 · 비면 세우지 않는다 (판 X196)');
+  head('아. ★★ 견본은 단추로만 · 비면 세우지 않는다 (판 X209)');
   const fresh = await b.newPage(); const ferrs = []; fresh.on('pageerror', (e) => ferrs.push(e.message));
   await fresh.goto('file://' + path.join(ROOT, 'app', 'finance.html'));
   await fresh.waitForFunction(() => typeof finSample === 'function' && document.getElementById('finEmptyCard'), null, { timeout: 15000 });

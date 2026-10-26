@@ -51,12 +51,12 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 
   await page.goto(base + '/app/finance.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2600);
-  /* 판 X196 — 계산기 칸은 이제 비어서 열립니다(견본을 미리 넣지 않음 · 1번). 이 자는 견본 고객으로 셈을 재므로 「견본 넣기」 를 누릅니다 */
+  /* 판 X209 — 계산기 칸은 이제 비어서 열립니다(견본을 미리 넣지 않음 · 1번). 이 자는 견본 고객으로 셈을 재므로 「견본 넣기」 를 누릅니다 */
   await page.evaluate(() => { if (typeof finSample === 'function') finSample(); });
   await page.waitForTimeout(400);
 
   console.log('\n[1] 단추가 트랙 고르기 판을 연다');
-  /* 판 X192 — 우하단 「발표」 단추는 없앴습니다(사장님 말씀 「둘다 함께 해 모아줘」 · 발표 세 벌 → 한 곳).
+  /* 판 X205 — 우하단 「발표」 단추는 없앴습니다(사장님 말씀 「둘다 함께 해 모아줘」 · 발표 세 벌 → 한 곳).
      발표는 「함께 점검 상담」 정리 장의 「발표 덱으로 이어 보기」 에서 엽니다 */
   is(await page.locator('#apexPresentBtn').count() === 0, '우하단 「발표」 단추는 없다 — 발표는 함께 점검 상담 한 곳');
   await page.evaluate(() => { wkOpen(); WK.i = wkSlides().length - 1; wkPaint(); });

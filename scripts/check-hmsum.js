@@ -95,7 +95,13 @@ const 홈 = async (p) => await p.evaluate(async () => {
     pdf글: pdf ? (pdf.innerText || '').replace(/\s+/g, ' ').trim() : '',
     pdf가는곳: pdf ? (pdf.getAttribute('onclick') || '') : '',
     왼: btns[0] ? (btns[0].innerText || '').replace(/\s+/g, ' ').trim() : '',
-    오: btns[1] ? (btns[1].innerText || '').replace(/\s+/g, ' ').trim() : '',
+    /* ⚠ 2026-10-25 (판 X194) · <b>가운데 칸이 생겨 셋</b>입니다 — 사장님 말씀
+       「무엇을 도울까요 와 <b>가운데에 고객 추가 칸</b>을 넣어서」. 「오른쪽」 은
+       <b>맨 끝</b>이지 둘째가 아닙니다 — 둘째를 집으면 고객 추가를 보고
+       「무엇을 도울까요가 아니다」 고 웁니다(실제로 그랬습니다).
+       ⚠ 아래 서랍(.nav-two)은 <b>그대로 둘</b>입니다 — 거기는 안 건드렸습니다. */
+    가운데: btns[1] ? (btns[1].innerText || '').replace(/\s+/g, ' ').trim() : '',
+    오: btns.length ? (btns[btns.length - 1].innerText || '').replace(/\s+/g, ' ').trim() : '',
     가는곳: btns.map(b => (b.getAttribute('onclick') || '')),
     옛히어로: dyn.querySelectorAll('.tz-hero').length,
     /* 홈 안에서 보장분석으로 가는 길이 몇 개인가 */
@@ -216,8 +222,18 @@ const 서랍 = async (p) => await p.evaluate(async () => {
   const H = await 홈(A.p);
   const 그릴때 = 바깥 - 바깥전;
 
-  console.log('\n[3] 🏠 <b>홈 맨 위</b>에 두 칸이 선다 — 히어로가 섰던 자리');
-  is(!H.X && H.두칸 && H.칸수 === 2, '  두 칸이 선다 — ' + (H.칸수 || 0) + '칸');
+  /* ★ 2026-10-25 (판 X194) · <b>둘 → 셋</b>. 사장님 말씀 「DB통합CRM에있는
+     고객과 여기서 바로 고객등록할수 있도록 <b>무엇을 도울까요 와 가운데에
+     고객 추가 칸</b>을 넣어서 한번에 고객등록 하게」.
+     ★ <b>== 는 그대로</b> 둡니다 — 「셋 이상」 으로 풀면 누가 칸을 더 붙여
+       첫 화면 밖으로 밀려나도 조용합니다 (0-1번 · 8번).
+     ★ 줄 키는 <b>그대로 94px</b> 입니다 — 홈 높이는 check-homeone 이 봅니다. */
+  console.log('\n[3] 🏠 <b>홈 맨 위</b>에 세 칸이 선다 — 히어로가 섰던 자리');
+  is(!H.X && H.두칸 && H.칸수 === 3, '  세 칸이 선다 — ' + (H.칸수 || 0) + '칸');
+  is(/고객 추가/.test(H.가운데),
+    '  <b>가운데</b>는 ➕ 고객 추가 — 「' + (H.가운데 || '').slice(0, 24) + '」 (판 X194)');
+  is(/cregOpen/.test((H.가는곳 || [])[1] || ''),
+    '  가운데를 누르면 <b>어느 쪽인지 먼저 묻는 창</b>으로 간다 — ' + ((H.가는곳 || [])[1] || '없음'));
   is(H.두칸위 > 0 && H.두칸위 < 844,
     '  <b>첫 화면 안</b>에 있다 — 위에서 ' + H.두칸위 + 'px (화면 844px)');
   is(/DB통합CRM/.test(H.왼), '  왼쪽은 <b>DB통합CRM</b> — 「' + (H.왼 || '').slice(0, 34) + '」');
@@ -236,7 +252,9 @@ const 서랍 = async (p) => await p.evaluate(async () => {
 
   console.log('\n[5] 🔢 <b>수가 맞다</b> — 씨는 AP1·PC1·CS1·계약완료1·미접촉1');
   is(/5\s*명/.test(H.왼), '  전체 <b>5명</b>');
-  is(/진행중\s*3/.test(H.왼), '  진행중 <b>3</b> (AP·PC·CS)');
+  /* ⚠ 2026-10-25 (판 X194) · 칸이 셋이 되어 좁아진 만큼 꼬리글을 한 줄로
+     줄였습니다 — 「진행중」 → <b>「진행」</b>(뜻은 그대로). 수는 안 바뀝니다. */
+  is(/진행\s*3/.test(H.왼), '  진행 <b>3</b> (AP·PC·CS)');
   is(/미전달\s*1/.test(H.왼), '  증권 미전달 <b>1</b>');
 
   console.log('\n[6] 🙈 <b>두 칸·한 줄에 이름을 한 자도 안 적는다</b> (3번)');
@@ -266,7 +284,8 @@ const 서랍 = async (p) => await p.evaluate(async () => {
 
   console.log('\n[9] 🧭 <b>왼쪽·오른쪽이 제 곳으로</b> 간다');
   is(/go\('crm'\)/.test((H.가는곳 || [])[0] || ''), '  왼쪽을 누르면 <b>DB 통합 CRM</b> 으로 간다');
-  is(/go\('apexmap'\)/.test((H.가는곳 || [])[1] || ''), '  오른쪽을 누르면 <b>전체 지도</b>로 간다');
+  is(/go\('apexmap'\)/.test((H.가는곳 || [])[(H.가는곳 || []).length - 1] || ''),
+    '  오른쪽(맨 끝)을 누르면 <b>전체 지도</b>로 간다');
 
   console.log('\n[10] 🖥 <b>컴퓨터에서도 수가 적힌다</b>');
   const C = await open({}, 1280, 900);
@@ -293,6 +312,6 @@ const 서랍 = async (p) => await p.evaluate(async () => {
 
   await b.close(); srv.close();
   console.log(bad ? ('\n✗ ' + bad + '곳이 어긋났습니다.')
-                  : '\n✓ 홈 맨 위가 CRM 요약과 전체 지도를 두 칸으로 들고, 보장분석 한 줄은 그 아래 그대로 있습니다.');
+                  : '\n✓ 홈 맨 위가 CRM 요약 · 고객 추가 · 전체 지도를 세 칸으로 들고, 보장분석 한 줄은 그 아래 그대로 있습니다.');
   process.exit(bad ? 1 : 0);
 })();

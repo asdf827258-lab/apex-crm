@@ -142,7 +142,7 @@ const LOOK = () => {
       const k = (hmSteps()[0] || {}).key || '';
       hmStPick(k, w);
       const pane = document.getElementById('dynPane');
-      const say = [].slice.call(pane.querySelectorAll('.t-note.b'))
+      const say = [].slice.call(pane.querySelectorAll('.t-note.b:not([data-row=judge])'))
         .map(e => (e.textContent || '').replace(/\s+/g, ' ').trim())[0] || '';
       const tools = (typeof tdoTools === 'function') ? tdoTools(w).map(t => t.id) : [];
       /* ⚠ <b>「오늘 챙길 것」 안으로 좁혀 셉니다.</b> 처음에는 홈 전체에서
@@ -195,12 +195,16 @@ const LOOK = () => {
       + '아닌 것으로 기록이 남습니다 (AP ' + got['AP'].big.length + '개 · 나머지 0개)');
 
   /* ── [4] 표를 바꿔치기하면 화면도 바뀌나 ─────────────────── */
+  /* ⚠ <b>판단 줄(data-row="judge")을 뺍니다</b> (2026-10-25 · 판 X195). ⚖️ 판단 줄이 접히지
+     않고 늘 서게 되면서 같은 .t-note.b 가 <b>먼저</b> 놓입니다. 첫 것을 그냥
+     집으면 여섯 상황이 모두 <b>같은 말</b>로 보여 헛 빨간불이 뜹니다 —
+     묻는 것이 다른 줄이라 이름으로 가릅니다 (8번 · 5번).              */
   console.log('\n[4] ★★ <b>분류를 홈에서 새로 짓지 않는다</b> (5번)');
   const swap = await p.evaluate(() => {
     const k = (hmSteps()[0] || {}).key || '';
     const keep = TDO['PC'].aim; TDO['PC'].aim = '★표에서 왔습니다★';
     hmStPick(k, 'PC');
-    const t = ([].slice.call(document.getElementById('dynPane').querySelectorAll('.t-note.b'))
+    const t = ([].slice.call(document.getElementById('dynPane').querySelectorAll('.t-note.b:not([data-row=judge])'))
       .map(e => e.textContent || '')[0]) || '';
     TDO['PC'].aim = keep; return t;
   });
