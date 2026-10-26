@@ -660,10 +660,10 @@
     var post = '<g fill="#07060C"><rect x="742" y="610" width="7" height="130"/><path d="M748 622L806 612 812 622 806 632 748 638Z"/><path d="M742 646L688 640 682 650 688 660 742 662Z"/><path d="M748 668L800 674 806 684 800 692 748 688Z"/></g>';
     var d = sky(p, [[0, '#0C1028'], [0.45, '#2C2850'], [0.62, '#7A5274'], [0.7, '#D88A76']]) + rg.defs + rad(p + 'lamp', [[0, '#FFD48A', 0.55], [1, '#FFD48A', 0]]);
     return svg('fork',
-      '<rect width="1600" height="900" fill="url(#' + p + 'sky)"/>' + stars(113, 120, 360, 0.7) + rg.body + houses +
-      '<path d="M0 680C400 690 1200 670 1600 680V900H0Z" fill="#120F1E"/>' + path +
-      grass(114, { seed: 115, y: 690, amp: 14, freq: 3, sharp: 1 }, 380, '#0A0812', 10, 30, 2) + post +
-      person(800, 772, 168, 'front', { fill: '#07060C', rim: ['#E6B4A0', 0, -1.4, 0.6] }) +
+      '<rect width="1600" height="900" fill="url(#' + p + 'sky)"/>' + stars(113, 120, 360, 0.7) + rg.body + '<g transform="translate(200 0)">' + houses + '</g>' +
+      '<path d="M0 680C400 690 1200 670 1600 680V900H0Z" fill="#120F1E"/><g transform="translate(220 0)">' + path + '</g>' +
+      grass(114, { seed: 115, y: 690, amp: 14, freq: 3, sharp: 1 }, 380, '#0A0812', 10, 30, 2) + '<g transform="translate(220 0)">' + post +
+      person(800, 772, 168, 'front', { fill: '#07060C', rim: ['#E6B4A0', 0, -1.4, 0.6] }) + '</g>' +
       motes(116, 40, 0, 1600, 560, 860, '#FFE48A', 2, 0.7), d);
   };
 
@@ -704,7 +704,7 @@
       doors += '<path d="M' + r1(a(u0, 1600)) + ' ' + r1(b(u0, 60)) + 'L' + r1(a(u1, 1600)) + ' ' + r1(b(u1, 60)) + 'L' + r1(a(u1, 1600)) + ' ' + r1(b(u1, 860)) + 'L' + r1(a(u0, 1600)) + ' ' + r1(b(u0, 860)) + 'Z" fill="#0E2026" opacity=".75"/>';
     }
     var chairs = '';
-    for (var c = 0; c < 4; c++) { var x = 520 + c * 96; chairs += '<rect x="' + x + '" y="640" width="80" height="12" rx="4"/><rect x="' + (x + 6) + '" y="560" width="68" height="80" rx="8"/><rect x="' + (x + 36) + '" y="652" width="8" height="60"/>'; }
+    for (var c = 0; c < 4; c++) { var x = 820 + c * 96; chairs += '<rect x="' + x + '" y="640" width="80" height="12" rx="4"/><rect x="' + (x + 6) + '" y="560" width="68" height="80" rx="8"/><rect x="' + (x + 36) + '" y="652" width="8" height="60"/>'; }
     var d = lin(p + 'fl', [[0, '#6A8A86'], [1, '#0A1416']]) + lin(p + 'wall', [[0, '#1A2E32'], [1, '#2E4A4C']], 0, 0, 1, 0) + rad(p + 'win', [[0, '#FFFFFF'], [0.3, '#FFF2CC'], [1, '#FFF2CC', 0]]) +
       lin(p + 'ce', [[0, '#0E1A1C'], [1, '#2A4040']]) + blur(p + 'fb', 4);
     return svg('hall',
@@ -716,7 +716,7 @@
       '<path d="M' + (vx - 70) + ' ' + (vy + 70) + 'L640 900H1420L' + (vx + 70) + ' ' + (vy + 70) + 'Z" fill="#FFF2CC" opacity=".08"/>' +
       '<path d="M0 560L' + (vx - 70) + ' ' + (vy + 40) + '" stroke="#5A7A78" stroke-width="4" opacity=".35"/>' +
       '<g fill="#081012">' + chairs + '</g>' +
-      person(648, 642, 260, 'sitSide', { fill: '#081012', slump: true, hat: false, rim: ['#CFE6E2', 1.2, 0, 0.35] }), d);
+      person(948, 642, 260, 'sitSide', { fill: '#081012', slump: true, hat: false, rim: ['#CFE6E2', 1.2, 0, 0.35] }), d);
   };
 
   /* ════════ 빈 의자의 아침 — D 다음 날 ════════
@@ -766,8 +766,8 @@
       '<path d="M140 40H1500V520H140Z" fill="none" stroke="#120C0A" stroke-width="26"/><path d="M820 40V520" stroke="#120C0A" stroke-width="16"/>' +
       '<circle cx="1420" cy="560" r="420" fill="url(#' + p + 'lamp)"/>' +
       '<path d="M0 600H1600V900H0Z" fill="url(#' + p + 'tb)"/><path d="M0 600H1600" stroke="#8A5A36" stroke-width="3" opacity=".6"/>' +
-      cup(820, 1, false) + cup(1300, 0.9, true) +
-      '<g class="steam" stroke="#FFFFFF" stroke-width="4" fill="none" opacity=".45"><path d="M820 580C780 520 880 500 860 430 846 380 930 360 990 330"/><path d="M1300 590C1340 530 1250 500 1270 440 1286 390 1180 370 1100 330"/><path d="M840 570C860 520 820 480 850 430"/></g>', d);
+      cup(1050, 0.95, false) + cup(1420, 0.84, true) +
+      '<g class="steam" stroke="#FFFFFF" stroke-width="4" fill="none" opacity=".45"><path d="M1050 590C1010 530 1110 510 1090 440 1076 390 1160 370 1220 340"/><path d="M1420 600C1460 540 1370 510 1390 450 1406 400 1300 380 1230 340"/><path d="M1070 580C1090 530 1050 490 1080 440"/></g>', d);
   };
 
   /* ════════ 편지와 촛불 — 나의 마지막 하루 ════════ */
