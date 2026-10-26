@@ -482,6 +482,7 @@ const srv = http.createServer((q, s) => {
     is(pr2.got && pr2.now.indexOf(pr2.want) >= 0 && pr2.done === 2, '한 번 더 누르면 이유가 서고, 아래 다섯 칸의 그 칸에 들어간다 — 앞 부의 두 칸은 이미 차 있다 (' + pr2.want + ')');
     await p.waitForTimeout(1500);
     is(await p.evaluate(() => getComputedStyle(document.querySelector('#stage .why5 .now span')).opacity) === '1', '들어간 이유가 그 칸에 보인다');
+    is(/고객님이 나를 고르는 세 번째 이유/.test(pr2.txt) && !/[①-⑳]/.test(pr2.txt), '이유 카드가 「세 번째 이유」 처럼 말로 몇 번째인지 말한다 — 동그라미 숫자(도현체에서 작게 찍힘)를 안 쓴다');
     const wa = await p.evaluate(() => { const i = D.findIndex(s => s.viz && s.viz.k === 'whyall'); show(i); bstep = bItems().length; bPaint(); return { t: $('stage').innerText, rows: document.querySelectorAll('#stage .wa').length }; });
     is(wa.rows === 5 && await p.evaluate(t => window.BCD_WHY.every(w => t.indexOf(w.you) >= 0 && t.indexOf(w.me) >= 0), wa.t), '5부의 모아 보기에 다섯 줄 — 설계사의 선택과 고객님의 이유가 줄마다 짝으로 선다');
     /* ② 도현체 — 무대의 글씨는 하나 */

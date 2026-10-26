@@ -203,7 +203,7 @@
     var w = v.why[v.n];
     return '<div class="vz pair"><div class="pr">' +
       '<div class="pc me bd"><div class="ic">' + icon(w.mi) + '</div><span class="fx">설계사의 선택</span>' + txt({ t: w.me, d: w.md }) + '</div>' +
-      '<div class="pc you bd">' + ARW + '<div class="ic">' + icon(w.yi) + '</div><span class="fx">고객님이 나를 고르는 이유 ' + NO[v.n] + '</span><b>「' + esc(w.you) + '」</b></div>' +
+      '<div class="pc you bd">' + ARW + '<div class="ic">' + icon(w.yi) + '</div><span class="fx">고객님이 나를 고르는 ' + ORD[v.n] + ' 이유</span><b>「' + esc(w.you) + '」</b></div>' +
       '</div>' + why5(v.why, v.n) + '</div>';
   };
   /* 두 질문 — 여는 마당. 아래 다섯 칸은 비어 있고, 오늘 하나씩 채웁니다 */
