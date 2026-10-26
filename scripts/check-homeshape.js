@@ -400,7 +400,13 @@ const tall = (p) => p.evaluate(() => {
     /* 목업에 있던 셋 — 값이 없으면 안 서는 것이 맞습니다 (1번) */
     out.bar = !!q('.tz-pbar');
     out.barTxt = ((q('.tz-psub') || {}).textContent || '').trim();
-    out.nxs = !!q('.hm-nxs');
+    /* ★ 판 X199 — 「✅ 오늘 할 일」 칸이 카드와 합쳐졌습니다. 「뒤에 누가
+       남았는지」 를 말하는 줄은 이제 카드 안 <b>.hm-now-q</b> 입니다.
+       ★ <b>있나</b>만 보지 않고 <b>몇 분 남았다고 적는지</b>까지 봅니다 (8번) —
+         빈 줄만 세우고 수를 안 적으면 아무 말도 안 한 것입니다 (1번).    */
+    const 남 = q('.hm-now-q') || q('.hm-nxs-m') || q('.hm-nxs');
+    out.nxs = !!남;
+    out.nxsTxt = 남 ? (남.textContent || '').replace(/\s+/g, ' ').trim() : '';
     out.prmFn = (typeof hmPrmCount === 'function');
     return out;
   });
@@ -427,7 +433,9 @@ const tall = (p) => p.evaluate(() => {
      '  <b>처음에는 접혀 있다</b> — 사장님 말씀 「그 넷도 접어」 (먼저 하신 #6 을 이 말씀이 대신합니다)');
   is(M.bar && /\d+\s*\/\s*\d+/.test(M.barTxt),
      '  <b>진행 막대와 「몇 / 몇」</b> 이 선다 — 「' + (M.barTxt || '안 섬') + '」');
-  is(M.nxs, '  <b>「다음 분」</b> 이 선다 — 뒤에 누가 남았는지 보인다');
+  is(M.nxs && /\d+\s*분/.test(M.nxsTxt || ''),
+     '  <b>「다음 분」</b> 이 선다 — 뒤에 <b>몇 분</b> 남았는지 적힌다 — 「' +
+     (M.nxsTxt || '안 섬') + '」 (판 X199 · 카드 안 한 줄)');
   is(M.prmFn, '  <b>「30일 약속」</b> 을 세는 자리가 있다 (hmPrmCount)');
   /* <b>새로 세지 않았는가</b> (5번) — 이미 있는 자리에 물어야 두 숫자가 안 갈립니다 */
   const SRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');

@@ -171,12 +171,20 @@ const SEED = `(function(){
     pane.querySelectorAll('*').forEach(e => {
       if (e.children.length) return;                 /* 잎만 — 부모를 또 세지 않는다 */
       const r = e.getBoundingClientRect();
-      if (r.height > 0 && r.top - top < 400) out.push(e.textContent || '');
+      if (r.height > 0 && r.top - top < 1688) out.push(e.textContent || '');
     });
     return out.join(' ');
   });
+  /* ══ 2026-10-26 (판 X199) · <b>모두 더한 수를 재는 자리 400px → 두 화면</b> ════════════════════════
+     사장님 말씀 「<b>ⓒ로 해줘</b>」 로 「지금 할 것」 카드(622px)가 홈 <b>맨 위</b>가
+     되었습니다. 폰 첫 화면 844px 에서 머리 104px 을 빼면 <b>740px</b> 이고, 그중
+     622px 을 카드가 씁니다 — 남는 <b>105px</b> 은 사장님이 판 X194 에서 시키신
+     <b>➕ 고객 추가 세 칸</b>(94px)이 씁니다. 그래서 「홍길동님, 오늘 8개예요」 가 카드 밑으로 내려갔습니다.
+     ★ <b>자를 지우지 않습니다. 묻는 것을 옮깁니다</b> — 「첫 400px」 → <b>「두 화면(1,688px)」</b>. 말이 사라지면 여전히 빨간불입니다.
+     ★ 사장님께 수를 올려 드리고 <b>ⓐⓑⓒ 중 ①(지금 그대로)</b> 을 고르셨습니다.
+       「맨 위로」 는 판 X187 과 이번까지 <b>두 번</b> 하신 말씀입니다.          */
   is(/8\s*[건개]/.test(big),
-     '홈 <b>맨 위</b>(첫 400px)가 <b>모두 더한 수</b>를 말한다 — 「' +
+     '홈 <b>두 화면 안</b>에서 <b>모두 더한 수</b>를 말한다 — 「' +
      (big.replace(/\s+/g, ' ').trim().slice(0, 40)) + '」');
   const touch = rows.filter(r => r.t === '연락할 분')[0];
   is(touch && touch.n === '2', '갈래마다 <b>제 수</b>를 적는다 — 연락할 분 ' + (touch || {}).n);
@@ -295,7 +303,8 @@ const SEED = `(function(){
   head('[2-3] <b>「몇 분 남았나」 는 한 곳에서만</b> (5번)');
   const qn = await pg.evaluate(() => {
     const Q = hmLeft();
-    const band = ((document.querySelector('#hmToday .hm-q-n') || {}).textContent || '');
+    /* ★ 판 X199 — 「지금 할 것」 카드가 #hmToday 밖(#hmJobHost)으로 올라갔습니다 */
+    const band = ((document.querySelector('#dynPane .hm-q-n') || {}).textContent || '');
     /* ★★ 2026-10-04 · <b>이 식이 글자에 너무 바싹 붙어 있었습니다.</b>
        H17 을 고치며 띠를 「오늘 <b>볼 분</b> 3분 중 1번째」 로 바꾸자 — 목표와
        센 수를 가르려고 두 글자를 넣은 것인데 — 이 식이 <b>못 읽어</b> -1 이
@@ -594,7 +603,10 @@ const SEED = `(function(){
     while (hmNext().x && guard++ < 40) hmDoneMark(hmNext().x.key);
     hmPaint();
     await new Promise(r => setTimeout(r, 120));
-    return (document.querySelector('.hm-card') || {}).textContent || '';
+    /* ★ 판 X199 — 「다 하셨습니다」 는 카드가 내는 말이고, 카드는 맨 위
+       (#hmJobHost)로 올라갔습니다. 홈 전체에서 찾습니다 — 어느 칸이 그 말을
+       하는지는 자리를 옮길 때마다 바뀌지만, <b>말이 서는지</b>는 그대로입니다. */
+    return (document.querySelector('#dynPane .tab-pane.on') || {}).textContent || '';
   });
   is(/다 하셨습니다/.test(fin), '<b>다 하면 다 하셨다고</b> 말한다 — 빈 칸으로 두지 않는다');
 
