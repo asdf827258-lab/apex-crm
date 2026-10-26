@@ -56,7 +56,12 @@ const SEED = () => {
 const CARD = () => {
   const e = document.querySelector('#dynPane .hm-now');
   if (!e) return { 없음:true };
-  const note = [].slice.call(e.querySelectorAll('.t-note')).map(x => x.innerText.replace(/\s+/g,' ').trim());
+  /* ⚠ 2026-10-25 (판 X195) · ⚖️ 판단 줄이 <b>제 상자를 벗었습니다</b>. 「왜
+     오늘인가」 와 같은 물음이라 한 상자에 담아 76 → 42px 가 되었습니다
+     (홈이 4.2화면 선에 붙어 있습니다 · 8번). 상자는 없어졌지만 <b>이름표
+     (data-row="judge")</b>는 그대로이므로 그것도 같이 봅니다.           */
+  const note = [].slice.call(e.querySelectorAll('.t-note, [data-row="judge"]'))
+    .map(x => x.innerText.replace(/\s+/g,' ').trim());
   return { t: e.innerText.replace(/\s+/g,' ').trim(), 쪽지: note,
            칩: [].slice.call(e.querySelectorAll('.t-chips .t-chip'))
                  .map(x => ({ t:x.textContent.trim(), go:x.getAttribute('onclick')||'' })),
