@@ -12,6 +12,10 @@
 
    ── 보는 것 ───────────────────────────────────────────────────────
      [1] <b>차례</b> — 이름 → 왜 오늘인가 → 무엇을 → 어떻게 → 큰 단추
+         ★ 판 X197 부터 <b>무엇을·어떻게는 「이분 자세히」 접이 안</b>입니다
+           (사장님 말씀 2026-10-26). 그래서 <b>두 번 잽니다</b> — 접힌 채로
+           흐트러지지 않나(이름 → 왜 → 단추), <b>펴면</b> 목업 차례로 다 서나.
+           ★ 묻는 것은 <b>하나도 안 줄였습니다</b> — 보태기만 했습니다 (8번).
      [2] <b>누구인지가 먼저</b> — 이름이 카드에서 제일 큰 글씨다
      [3] <b>할 말이 apex-stage.js 그대로</b> — 굵게 강조한 데까지 살아 있다
      [4] <b>같은 말을 두 번 안 적는다</b> — 그 문장이 번호 갈래에 또 없다
@@ -83,6 +87,19 @@ const SEED = (o) => `
    return {from:function(){return mk();},rpc:function(){return Promise.resolve({data:null,error:null});}};};
  HWHO.id='';CM.pick='';CM.picked=true;go('home');`;
 
+/* <b>「이분 자세히」 접이를 편다</b> — 판 X197 부터 무엇을·어떻게가 그 안입니다.
+   ★ 접이를 여닫는 자는 <b>hmMoreToggle 하나</b>입니다 (5번) — 여기서 HM_MORE 를
+     직접 쥐지 않습니다. 이미 펴져 있으면 아무것도 안 합니다.
+   ⚠ SEED 가 접이 창고(apex_hm_fold_v1)를 비우므로 <b>씨를 뿌린 뒤마다</b>
+     한 번씩 부릅니다 — 「한 번 폈으니 그 뒤로도 펴져 있겠지」 로 넘기지 않습니다. */
+const 펴기 = async (p) => {
+  await p.evaluate(() => { try {
+    if (typeof HM_MORE !== 'undefined' && !HM_MORE
+        && typeof hmMoreToggle === 'function') hmMoreToggle();
+  } catch (e) {} });
+  await p.waitForTimeout(450);
+};
+
 /* 카드를 통째로 재 온다 */
 const look = (p) => p.evaluate(() => {
   /* ⚠ 2026-10-02 — 큰 단추 자리가 <b>물음</b>이 되었습니다 (사장님 말씀
@@ -144,7 +161,9 @@ const look = (p) => p.evaluate(() => {
     pick0: picks[0] ? (picks[0].act || '') : '',
     more: x ? (x.more || 0) : 0,
     kind: x ? x.k : '',
-    btnOf: (x && window.HM_ACT && HM_ACT[x.k]) ? (HM_ACT[x.k].btn || '') : ''
+    btnOf: (x && window.HM_ACT && HM_ACT[x.k]) ? (HM_ACT[x.k].btn || '') : '',
+    /* 접이 단추의 글 — 접힌 채로 <b>안에 무엇이 든지</b> 말하는가 (1번) */
+    moreTxt: ((q('.hm-more-b') || {}).textContent || '').replace(/\s+/g, ' ').trim()
   };
 });
 
@@ -161,7 +180,9 @@ const look = (p) => p.evaluate(() => {
   await page.waitForTimeout(2600);
   await page.evaluate(SEED({}));
   await page.waitForTimeout(900);
-  const A = await look(page);
+  const A0 = await look(page);          /* 접힌 채 */
+  await 펴기(page);
+  const A = await look(page);           /* 펴 둔 채 */
 
   console.log('\n[1] 목업의 <b>차례</b>로 선다 — 누구 → 왜 오늘인가 → 무엇을 → 어떻게 → 단추');
   if (!A) { is(false, '  카드가 안 섭니다'); }
@@ -171,6 +192,22 @@ const look = (p) => p.evaluate(() => {
       '  다섯이 <b>이 차례</b>로 선다 — 이름' + A.ord.nm + ' · 왜' + A.ord.why +
       ' · 무엇' + A.ord.aim + ' · 어떻게' + A.ord.way + ' · 단추' + A.ord.go +
       (seq.some(v => v < 0) ? ' ← 없는 것이 있다' : ''));
+
+    /* ── [1-b] <b>접힌 채</b>도 재 둡니다 — 판 X197 ────────────────────
+       사장님이 「접어」 라고 하신 것이지 <b>버려</b> 라신 것이 아닙니다.
+       그래서 셋을 봅니다 — ① 접혀도 남은 셋이 그 차례인가 · ② 무엇을·어떻게가
+       <b>정말</b> 접히는가(접은 척하고 서 있으면 아낀 자리가 없습니다) ·
+       ③ 접이 단추가 <b>안에 할 말이 들었다</b>고 적는가 (1번).            */
+    console.log('\n[1-b] <b>접힌 채</b>도 흐트러지지 않는다 (판 X197)');
+    const seq0 = A0 ? [A0.ord.nm, A0.ord.why, A0.ord.go] : [-1];
+    is(!!A0 && seq0.every(v => v >= 0) && seq0.every((v, i) => i === 0 || v > seq0[i - 1]),
+      '  접어도 <b>누구 → 왜 → 단추</b> 가 이 차례다 — 이름' + (A0 ? A0.ord.nm : '?') +
+      ' · 왜' + (A0 ? A0.ord.why : '?') + ' · 단추' + (A0 ? A0.ord.go : '?'));
+    is(!!A0 && A0.ord.aim < 0 && A0.ord.way < 0,
+      '  <b>무엇을·어떻게는 정말 접힌다</b> — 접은 척하고 서 있으면 아낀 자리가 없다');
+    is(!!A0 && /할 말/.test(A0.moreTxt),
+      '  접이 단추가 <b>안에 할 말이 들었다</b>고 적는다 (1번) — 「' +
+      ((A0 && A0.moreTxt) || '안 적는다').slice(0, 40) + '」');
 
     console.log('\n[2] <b>누구인지가 먼저</b> — 이름이 카드에서 제일 큰 글씨다');
     is(A.nmPx > A.ktPx && A.nmPx >= A.maxPx,
@@ -203,6 +240,7 @@ const look = (p) => p.evaluate(() => {
   console.log('\n[6] 한 분께 거리가 여럿이면 <b>몇 가지인지 적는다</b> (1번)');
   await page.evaluate(SEED({ both: true }));
   await page.waitForTimeout(900);
+  await 펴기(page);
   const B = await look(page);
   is(!!B && B.more >= 1,
     '  같은 분이 <b>두 자리</b>에서 올라와 한 줄로 접혔다 — 접은 것 ' + (B ? B.more : 0) + '가지');
@@ -213,6 +251,7 @@ const look = (p) => p.evaluate(() => {
   console.log('\n[7] 표에 <b>할 말이 없는 줄</b>에는 지어 세우지 않는다 (1번)');
   await page.evaluate(SEED({ only: true }));
   await page.waitForTimeout(900);
+  await 펴기(page);
   const C = await look(page);
   is(!!C && !C.mapAim && C.ord.aim < 0 && C.ord.way < 0,
     '  「' + ((C && C.kind) || '?') + '」 줄에는 <b>큰 문장을 안 세운다</b> — 표에 적힌 것이 없다');
