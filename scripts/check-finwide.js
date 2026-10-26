@@ -115,8 +115,9 @@ async function walk(page) {
 
   console.log('\n[3] 줄인다고 <b>입력칸을 뭉개지 않았다</b>');
   await a.page.evaluate(() => {
-    const b = [...document.querySelectorAll('.top-tab-grid .report-tab')].find(x => /팩트파인딩/.test(x.textContent || ''));
-    if (b) b.click();
+    /* 판 X205 — 팩트파인딩은 탭 단추 없이 「함께 점검 상담」 첫 장에서 엽니다 */
+    if (window.showFactfind) window.showFactfind();
+    else { const b = [...document.querySelectorAll('.top-tab-grid .report-tab')].find(x => /팩트파인딩/.test(x.textContent || '')); if (b) b.click(); }
   });
   await sleep(900);
   const ff = await a.page.evaluate(() => {
