@@ -31,7 +31,12 @@
    판 X179 (2026-10-24 「우선 펼쳐서 보일수 있도록」 → 「강의 장 한눈에」) —
      ⑱ ▦ 한눈에 — 발표에 서는 장이 빠짐없이 같은 차례로 작은 화면으로 선다 · 부마다 분 · 시각
      ⑲ ★ 빠지는 장은 점선 칸으로 그 자리에 서서 무엇을 적으면 서는지 말한다 — 발표 목록과 같은 한 곳(deckAll)에서 센다 (1번 · 5번)
-     ⑳ 누르면 그 장으로 · 작은 화면은 움직이지 않고 id 를 겹쳐 만들지 않는다  */
+     ⑳ 누르면 그 장으로 · 작은 화면은 움직이지 않고 id 를 겹쳐 만들지 않는다
+   판 X198 (2026-10-26 「그림이 너무 허접하고 말투가 강의가 없어 그리고 상상하게끔 하는 장도 없고」) —
+     ㉑ ★ 장의 겉글이 강의하는 말 — 보고서 조각(<b>…</b><small>…) 0 · 끝맺은 문장 · 장 끝 물음
+     ㉒ ★ → 한 번에 한 줄 · 줄이 다 서야 다음 장 · ← 는 앞 장을 다 선 채로 · 한눈에는 다 선 채로
+     ㉓ ★ 🌙 상상 장 여덟 이상 · 다섯 부 · 그림 · 물음 · 쉼이 적힌 노트 · 「▶ 천천히」
+     ㉔ 그림의 사람은 뼈대에서 · 옛 네모 실루엣 0 · 장면 스물 이상 · 장면 하나 220KB 안  */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9174;
@@ -101,8 +106,10 @@ const srv = http.createServer((q, s) => {
     is(new RegExp('내 이야기 ' + e0.k + '칸').test(e0.w) && /0장면/.test(e0.w) && /건너뜁니다/.test(e0.w), '「아직 안 적은 내 이야기 ' + e0.k + '칸 · 타임라인 0장면 — 건너뜁니다」 라고 말한다');
     is(e0.n >= 40, '이야기 없이도 강의 뼈대가 선다 — ' + e0.n + '장');
     /* 끝까지 넘겨 본다 — 어느 장에서도 오류가 없어야 한다 */
-    for (let i = 0; i < e0.n; i++) await p.keyboard.press('ArrowRight');
-    is(await p.evaluate(() => cur === D.length - 1), '→ 키로 마지막 장까지 넘어간다');
+    /* 판 X198 — 장 안의 줄이 한 번에 하나씩 서므로(bd) → 를 장 수보다 많이 누릅니다. 끝에 닿을 때까지 */
+    let presses = 0;
+    while (presses < 3000 && !(await p.evaluate(() => cur === D.length - 1 && bstep >= bItems().length))) { await p.keyboard.press('ArrowRight'); presses++; }
+    is(await p.evaluate(() => cur === D.length - 1), '→ 키로 마지막 장까지 넘어간다 (' + presses + '번 — 장 ' + e0.n + '개 · 줄마다 한 번씩)');
     is(errs.length === 0, '빈 채로 모든 장을 넘겨도 오류가 없다' + (errs.length ? ' ← ' + errs[0] : ''));
 
     console.log('\n[5] 4시간 — SECTIONS 한 곳 (5번)');
@@ -312,7 +319,7 @@ const srv = http.createServer((q, s) => {
     is(shv.n >= 8 && shv.secs.split(',').length >= 5 && shv.tmr && shv.run && shv.li >= 2, '🗣 나눔 ' + shv.n + '번 · ' + shv.min + '분 — 다섯 부에 고루 · 시계가 돈다 (먼저 걸어오신 분들이 말하는 시간)');
     is(/^bench\|.*먼저 이 길을 걸어오신/.test(v.open2), '여는 둘째 장이 먼저 이 길을 걸어오신 분들께 드리는 인사다 (벤치의 노부부)');
     is(!/여러분/.test(SLJS), '가르치는 말투를 걷어 냈다 — 장 · 노트 어디에도 「여러분」 이 없고 「우리」 로 말한다');
-    is((ARTJS.match(/'elder(Sit)?'\)/g) || []).length >= 3 && /ART\.bench/.test(ARTJS) && /ART\.family/.test(ARTJS), '그림에 어르신이 선다 — 지팡이를 짚은 분 · 벤치의 노부부 · 손잡고 걷는 삼대');
+    is((ARTJS.match(/person\([^;]*?'elder(Sit)?'/g) || []).length >= 3 && /ART\.bench/.test(ARTJS) && /ART\.family/.test(ARTJS), '그림에 어르신이 선다 — 지팡이를 짚은 분 · 벤치의 노부부 · 손잡고 걷는 삼대');
     const ls1 = await p.evaluate(() => { const i = D.findIndex(s => s.ty === 'lifestage' && s.k === 7); show(i); return $('stage').innerText; });
     is(/부모님 건강은 요즘 어떠세요/.test(ls1) && /부모님 돌봄과 자녀의 독립/.test(ls1), '생애 마당 장에 그 마당의 걱정과 먼저 건넬 한마디가 선다');
     const tk1 = await p.evaluate(() => { const i = D.findIndex(s => s.ty === 'talk'); show(i); return { b: document.querySelectorAll('#stage .bub').length, w: D[i].lines.length, tip: !!document.querySelector('#stage .tipb') }; });
@@ -325,6 +332,66 @@ const srv = http.createServer((q, s) => {
     const pl2 = await p.evaluate(() => ({ t: $('planTbl').innerText, note: $('planNote').innerText }));
     is(/장 \d+ · 활동 \d+분 · 나눔 \d+분 · 노트 낭독 약 \d+분/.test(pl2.t) && /어림/.test(pl2.note), '진행표가 부마다 분량(장 · 활동 · 노트 낭독)을 말하고, 낭독 시간은 어림이라고 밝힌다');
     await p.evaluate(() => page('deck'));
+
+    console.log('\n[18] 🎙 강의하는 말 · 한 줄씩 · 🌙 상상 · 다시 그린 그림 (판 X198 — 「그림이 너무 허접하고 말투가 강의가 없어 그리고 상상하게끔 하는 장도 없고」)');
+    /* ① 말투 — 겉글이 보고서 조각(「<b>방향을 잃을 때</b><small>…」)이 아니라 강사가 그대로 말하는 문장인가.
+         말하는 문장은 끝맺음이 있습니다(. ? ! 」). 조각은 없습니다. 관찰 체크(OBS)는 워크북 칸 이름이라 뺍니다. */
+    const vo = await p.evaluate(() => {
+      const T = SLIDES.filter(s => (s.ty === 'text' || s.ty === 'steps') && s.li !== window.BCD.OBS);
+      const plain = x => String(x).replace(/<[^>]+>/g, '').trim();
+      const frag = T.flatMap(s => s.li).filter(x => /<small>/.test(x) || /^<b>/.test(x) || !/[.?!」]$/.test(plain(x)));
+      return { n: T.length, li: T.reduce((a, s) => a + s.li.length, 0), frag: frag.map(plain), q: SLIDES.filter(s => s.q).length };
+    });
+    is(vo.n >= 15 && vo.frag.length === 0, '장의 겉글이 강의하는 말이다 — 말 장 ' + vo.n + '장 · ' + vo.li + '줄 모두 끝맺은 문장 (보고서 조각 0)' + (vo.frag.length ? ' ← ' + vo.frag.slice(0, 2).join(' / ') : ''));
+    is(vo.q >= 12, '장 끝에 청중에게 건네는 한 줄(물음)이 ' + vo.q + '장에 선다');
+    /* ② 한 줄씩 — → 를 누를 때마다 한 줄. 줄이 다 서야 다음 장. ← 는 한 줄 뒤로, 처음이면 앞 장(다 선 채로) */
+    const bd = await p.evaluate(() => {
+      const i = D.findIndex(s => s.ty === 'text' && s.li.length >= 4); show(i);
+      const n = bItems().length, r = { i, n, on0: document.querySelectorAll('#stage .bd.on').length };
+      next(); r.on1 = document.querySelectorAll('#stage .bd.on').length; r.same1 = cur === i;
+      for (let k = 1; k < n; k++) next(); r.onAll = document.querySelectorAll('#stage .bd.on').length; r.same2 = cur === i;
+      r.past = document.querySelectorAll('#stage .bd.on.past').length;
+      next(); r.moved = cur === i + 1;
+      prev(); r.back = cur === i; r.backAll = document.querySelectorAll('#stage .bd.on').length === n;
+      return r;
+    });
+    is(bd.n >= 4 && bd.on0 === 0 && bd.on1 === 1 && bd.same1, '말 장은 처음에 제목만 — → 한 번에 한 줄이 떠오른다 (' + bd.on0 + ' → ' + bd.on1 + ' / ' + bd.n + '줄)');
+    is(bd.onAll === bd.n && bd.same2 && bd.past === bd.n - 1 && bd.moved, '줄이 다 서야 다음 장으로 간다 · 앞 줄은 물러나고 지금 줄이 가장 밝다');
+    is(bd.back && bd.backAll, '← 로 돌아가면 앞 장이 다 선 채로 선다 — 다시 한 줄씩 누르지 않는다');
+    const ovb = await p.evaluate(() => { ovOpen(); const el = document.querySelector('#ov .ovc .bd'); const o = el ? getComputedStyle(el).opacity : 'x'; ovClose(); return o; });
+    is(ovb === '1', '▦ 한눈에의 작은 화면에는 줄이 다 서 있다 — 감춘 채로 펼치지 않는다 (' + ovb + ')');
+    /* ③ 상상 장 — 그림 위에 한 줄씩, 끝에 물음. 노트는 쉼까지 적은 대본 */
+    const im = await p.evaluate(() => {
+      const A = SLIDES.filter(s => s.ty === 'imagine');
+      return { n: A.length, secs: [...new Set(A.map(s => s.sec))].length, min: A.reduce((t, s) => t + (s.min || 0), 0),
+        art: A.filter(s => !window.BCD_ART[s.art]).map(s => s.h), lines: A.every(s => s.lines.length >= 4 && s.lines.length <= 7),
+        q: A.every(s => /[?]$/.test(s.q || '')), pause: A.every(s => /\(\d+초 (쉼|침묵)\)|\(한 줄마다/.test(s.say || '')),
+        long: A.flatMap(s => s.lines).filter(l => l.replace(/<[^>]+>/g, '').length > 44) };
+    });
+    is(im.n >= 8 && im.secs >= 5 && im.art.length === 0, '🌙 상상 장 ' + im.n + '장 · 다섯 부에 고루 · ' + im.min + '분 — 장마다 그 장면의 그림이 있다' + (im.art.length ? ' ← 그림 없음: ' + im.art.join(',') : ''));
+    is(im.lines && im.q && im.pause && im.long.length === 0, '상상 장마다 네~일곱 줄 · 끝은 물음표로 끝나는 물음 · 노트에 쉼(「3초 쉼」)이 적힌 대본 · 한 줄 44자 안' + (im.long.length ? ' ← ' + im.long[0] : ''));
+    const ia = await p.evaluate(async () => {
+      const i = D.findIndex(s => s.ty === 'imagine'); show(i);
+      const r = { art: !!document.querySelector('#stage .imagine svg.art'), q: !!document.querySelector('#stage .iq.bd'), on0: document.querySelectorAll('#stage .bd.on').length,
+        eyes: /눈을 감으셔도/.test($('stage').innerText) };
+      $('autoGo').click(); r.on1 = document.querySelectorAll('#stage .bd.on').length; r.run = !!autoId; r.btn = $('autoGo').textContent;
+      $('autoGo').click(); r.stop = !autoId; return r;
+    });
+    is(ia.art && ia.q && ia.eyes && ia.on0 === 0, '상상 장은 그림 · 「눈을 감으셔도 좋습니다」 · 물음이 서고, 줄은 처음에 감춰져 있다');
+    is(ia.on1 === 1 && ia.run && /멈춤/.test(ia.btn) && ia.stop, '「▶ 천천히」 — 누르면 첫 줄이 바로 서고 나머지는 저절로 떠오른다 · 다시 누르면 멈춘다');
+    const plm = await p.evaluate(() => { page('plan'); const t = $('planTbl').innerText; page('deck'); return t; });
+    is(/🌙 상상 \d+장/.test(plm), '진행표가 부마다 상상 장 수를 말한다');
+    /* ④ 그림 — 사람은 뼈대(관절 · IK)에서 그리고, 땅은 겹겹의 능선 · 안개, 빛은 번짐 · 테두리 빛 */
+    is(/function pose\(/.test(ARTJS) && /function ik\(/.test(ARTJS) && /function ridge\(/.test(ARTJS) && !/M-17 -142C-23 -140/.test(ARTJS),
+      '그림의 사람을 뼈대에서 그린다 — 네모 · 동그라미를 붙인 옛 실루엣이 남아 있지 않다');
+    const art = await p.evaluate(() => {
+      const N = window.BCD_ART_NAMES, o = {};
+      N.forEach(k => { const h = window.BCD_ART[k]({}); o[k] = { kb: Math.round(h.length / 1024), ppl: (h.match(/class="who-/g) || []).length, rim: /opacity="0?\.\d+"><path/.test(h) } });
+      return { n: N.length, o };
+    });
+    const heavy = Object.keys(art.o).filter(k => art.o[k].kb > 220), withPpl = Object.keys(art.o).filter(k => art.o[k].ppl > 0);
+    is(art.n >= 20 && withPpl.length >= 14, '장면 그림 ' + art.n + '가지 · 사람이 서는 장면 ' + withPpl.length + '가지');
+    is(heavy.length === 0, '장면 하나가 220KB 를 안 넘는다 — 한눈에가 백 장을 한꺼번에 그려도 무겁지 않게' + (heavy.length ? ' ← ' + heavy.join(',') : ''));
 
     console.log('\n[14] 📱 폰 워크북 — 적고 · 남고 · 그리고 · 뽑고 · 지운다 (bcd-workbook.html)');
     const q = await ctx.newPage({ viewport: { width: 390, height: 844 } });

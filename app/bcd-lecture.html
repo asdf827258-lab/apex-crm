@@ -29,6 +29,11 @@
      ★ <b>판 X188 (2026-10-25 「나보다 나이 많은 사람들도 많은데 캐릭터도 그렇고 4시간 강의하기엔 너무 짧은데?」)</b> —
        장 한 벌을 bcd-slides.js 로 옮겨 49장 → 107장. 「우리」 로 말하고 먼저 걸어오신 분들께 인사로 엽니다. 생애 열한 마당 ·
        홍길동 님과의 대화 · 거절 · 침묵 · 신뢰 · 어르신 고객 · 🗣 나눔 열 번. 그림에 어르신(지팡이 · 벤치의 노부부 · 삼대).
+     ★ <b>판 X198 (2026-10-26 「그림이 너무 허접하고 말투가 강의가 없어 그리고 상상하게끔 하는 장도 없고」)</b> —
+       ① 그림을 다시 그렸습니다 — 겹겹의 능선 · 안개 · 빛, 뼈대에서 그린 사람(bcd-art.js). 장면 스물두 가지.
+       ② 말 장(text · steps · table · cols)의 겉글을 강사가 그대로 말하는 문장으로 — → 한 번에 한 줄(bd), 앞 줄은 물러나고
+          지금 줄이 가장 밝습니다. 장 끝에 청중에게 건네는 물음(q). ← 는 앞 장을 다 선 채로 돌려줍니다.
+       ③ 🌙 상상 장(imagine) 아홉 — 그림 위에 한 줄씩, 끝에 물음 하나. 「▶ 천천히」 를 누르면 7초마다 저절로 떠오릅니다.
      점검 : scripts/check-bcdlec.js -->
 <style>
 /* 폰이 다크여도 흰색 고정 — 앱의 다른 화면과 같게 (check-lightmode) */
@@ -312,7 +317,33 @@ button{cursor:pointer;border:0;background:none}
 .stage .art .clouds{animation:driftX 40s ease-in-out infinite alternate}
 .stage .art .wind path{stroke-dasharray:90 370;animation:gust 4.5s linear infinite}
 .stage .art .leapf{animation:floatUp 3.2s ease-in-out infinite alternate}
-@media (prefers-reduced-motion:reduce){.stage *,.stage::before{animation:none!important}.stage svg .draw{stroke-dashoffset:0}}
+/* ---------- 판 X198 — 강의하는 말 · 한 줄씩 · 상상 ---------- */
+.stage .spk{display:grid;gap:1.35cqw;margin-top:2.4cqw;max-width:80cqw}
+.stage .spk p{font-family:"Noto Serif KR","Nanum Myeongjo",serif;font-size:2.2cqw;line-height:1.5;color:#E8EDF6;font-weight:500;letter-spacing:-.03cqw}
+.stage .spk p b{color:#fff;font-weight:700}
+.stage .spk.num{counter-reset:s}
+.stage .spk.num p{counter-increment:s;padding-left:3.6cqw;position:relative}
+.stage .spk.num p::before{content:counter(s);position:absolute;left:0;top:0;font-family:"Pretendard Variable",Pretendard,sans-serif;font-weight:900;color:var(--dawn)}
+.stage .q{font-family:"Noto Serif KR","Nanum Myeongjo",serif;font-size:2.25cqw;line-height:1.5;color:var(--dawn);margin-top:2.2cqw;padding-left:2cqw;border-left:.35cqw solid var(--dawn);font-weight:600}
+.stage .sl.spoken h2{font-family:"Noto Serif KR","Nanum Myeongjo",serif;font-size:3.5cqw;font-weight:700;letter-spacing:-.08cqw;line-height:1.3}
+/* 한 줄씩 — 누를 때마다 다음 줄이 떠오르고, 앞 줄은 조금 물러납니다(지금 말하는 줄이 늘 가장 밝게) */
+.stage .bd{animation:none!important;opacity:0;transform:translateY(1cqw);filter:blur(4px);transition:opacity .9s ease,transform .9s cubic-bezier(.2,.7,.2,1),filter .9s ease}
+.stage .bd.on{opacity:1;transform:none;filter:none}
+.stage .spk .bd.on.past,.stage .imagine .ln.on.past{opacity:.45}
+.ovc .stage .bd{opacity:1;transform:none;filter:none}
+.stage .sl.dim > .art{filter:brightness(.42) saturate(.75)}
+.stage .sl.dim > .shade{background:linear-gradient(90deg,rgba(3,5,12,.92) 0%,rgba(3,5,12,.7) 55%,rgba(3,5,12,.35) 100%)}
+.stage .sl.imagine{justify-content:center;padding:5cqw 7cqw}
+.stage .sl.imagine > .art{left:15cqw;animation:artIn 3s ease both,kb 70s ease-in-out 3s infinite alternate}
+.stage .sl.imagine > .shade{background:linear-gradient(90deg,rgba(3,5,12,.97) 0%,rgba(3,5,12,.86) 30%,rgba(3,5,12,.5) 50%,rgba(3,5,12,.05) 72%),linear-gradient(0deg,rgba(3,5,12,.55),rgba(3,5,12,0) 40%)}
+.stage .imagine .tag{color:#C9B8F0}
+.stage .sl.imagine > .eyes.eyes{position:absolute;top:5.2cqw;right:7cqw;font-size:1.35cqw;color:#C9D3E6;opacity:.75;letter-spacing:.1cqw}
+.stage .imagine h2{font-family:"Noto Serif KR","Nanum Myeongjo",serif;font-size:2.1cqw;font-weight:600;color:#C9D3E6;letter-spacing:.05cqw}
+.stage .imagine .lines{display:grid;gap:.9cqw;margin-top:1.8cqw;max-width:50cqw}
+.stage .imagine .ln{font-family:"Noto Serif KR","Nanum Myeongjo",serif;font-size:2.2cqw;line-height:1.42;font-weight:600;color:#F7F2E7;text-shadow:0 .3cqw 2.4cqw rgba(0,0,0,.7)}
+.stage .imagine .iq{font-family:"Noto Serif KR","Nanum Myeongjo",serif;font-size:2.35cqw;line-height:1.42;font-weight:700;color:var(--dawn);margin-top:1.2cqw;text-shadow:0 .3cqw 2.4cqw rgba(0,0,0,.7)}
+.stage .sl.imagine > .auto.auto{position:absolute;right:7cqw;bottom:4.6cqw;width:auto;background:rgba(255,255,255,.14);color:#F7F2E7;border:1px solid rgba(255,255,255,.25)}
+@media (prefers-reduced-motion:reduce){.stage *,.stage::before{animation:none!important}.stage svg .draw{stroke-dashoffset:0}.stage .bd{transition:none;filter:none;transform:none}}
 .deckctl{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:10px;flex-wrap:wrap}
 .deckctl .btn{min-width:46px;justify-content:center}
 #notes{background:var(--card);border-radius:16px;padding:16px 18px;margin-top:12px;display:none}
@@ -691,6 +722,8 @@ function curveSvg() {
 function artHtml(name, o) { try { return (window.BCD_ART && BCD_ART[name]) ? BCD_ART[name](o || {}) : ''; } catch (e) { return ''; } }
 const SERIF_LEN = 60;   /* 장면 한 줄의 글자 수 — 넘으면 줄이 접혀 그림을 가립니다(점검이 봅니다) */
 
+/* 장 끝에 청중에게 건네는 한 줄(물음) — 마지막 차례에 떠오릅니다 */
+function qHtml(s) { return s.q ? '<div class="q bd">' + esc(s.q) + '</div>' : ''; }
 function slideHtml(s, at) {
   const no = at == null ? cur : at;
   const sec = SEC[s.sec];
@@ -735,7 +768,14 @@ function slideHtml(s, at) {
   } else if (s.ty === 'big') {
     h = '<div class="sl big"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2></div>';
   } else if (s.ty === 'text' || s.ty === 'steps') {
-    h = '<div class="sl"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2><ul' + (s.ty === 'steps' ? ' class="steps"' : '') + '>' + s.li.map(x => '<li>' + x + '</li>').join('') + '</ul></div>';
+    /* 판 X198 — 보고서 줄(●) 대신 강사가 그대로 말하는 문장. 누를 때마다 한 줄씩(bd) */
+    h = '<div class="sl spoken"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2><div class="spk' + (s.ty === 'steps' ? ' num' : '') + '">' +
+      s.li.map(x => '<p class="bd">' + x + '</p>').join('') + '</div>' + qHtml(s) + '</div>';
+  } else if (s.ty === 'imagine') {
+    /* 상상 — 그림 위에 한 줄씩 떠오르고, 마지막에 물음 하나가 남습니다 */
+    h = '<div class="sl imagine">' + artHtml(s.art) + '<div class="shade"></div><div class="tag">🌙 ' + esc(s.tag) + '</div><div class="eyes">눈을 감으셔도 좋습니다</div>' +
+      '<h2>' + esc(s.h) + '</h2><div class="lines">' + (s.lines || []).map(x => '<div class="ln bd">' + x + '</div>').join('') +
+      (s.q ? '<div class="iq bd">' + esc(s.q) + '</div>' : '') + '</div><button class="tmrb auto" id="autoGo">▶ 천천히</button></div>';
   } else if (s.ty === 'story') {
     const t = S.story[s.k];
     h = '<div class="sl"><div class="tag">' + esc(s.tag) + '</div><h2>' + esc(STORY_T[s.k]) + '</h2><div class="story">' + esc(t) + '</div></div>';
@@ -764,11 +804,11 @@ function slideHtml(s, at) {
       (s.candle ? '<div class="wcandle">' + CANDLE + '</div>' : '') +
       (s.wb ? '<div class="wbb">📱 폰 · 📄 종이 워크북 <b>' + s.wb + '쪽</b> — ' + esc(WB[s.wb - 1].t) + '</div>' : '') + '</div>';
   } else if (s.ty === 'table') {
-    h = '<div class="sl"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2><table><tr>' + s.th.map(x => '<th>' + esc(x) + '</th>').join('') + '</tr>' +
-      s.rows.map(r => '<tr>' + r.map(x => '<td>' + x + '</td>').join('') + '</tr>').join('') + '</table></div>';
+    h = '<div class="sl spoken"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2><table><tr>' + s.th.map(x => '<th>' + esc(x) + '</th>').join('') + '</tr>' +
+      s.rows.map(r => '<tr class="bd">' + r.map(x => '<td>' + x + '</td>').join('') + '</tr>').join('') + '</table>' + qHtml(s) + '</div>';
   } else if (s.ty === 'cols') {
-    h = '<div class="sl"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2><div class="cols"><div class="box"><div class="k">' + esc(s.a.k) + '</div><div class="v">' + esc(s.a.v) + '</div></div>' +
-      '<div class="box proof"><div class="k">' + esc(s.b.k) + '</div><div class="v">' + esc(s.b.v) + '</div></div></div></div>';
+    h = '<div class="sl spoken"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2><div class="cols"><div class="box bd"><div class="k">' + esc(s.a.k) + '</div><div class="v">' + esc(s.a.v) + '</div></div>' +
+      '<div class="box proof bd"><div class="k">' + esc(s.b.k) + '</div><div class="v">' + esc(s.b.v) + '</div></div></div>' + qHtml(s) + '</div>';
   } else if (s.ty === 'life') {
     h = '<div class="sl"><div class="tag">' + esc(s.tag) + '</div><h2>' + s.h + '</h2><div class="life">' +
       LIFE.map(x => '<div class="' + (x.end ? 'end' : '') + '"><div class="e">' + x.e + '</div><div class="n">' + esc(x.n) + '</div><div class="c">' + esc(x.c) + '</div></div>').join('') +
@@ -800,7 +840,7 @@ function slideHtml(s, at) {
     h = '<div class="sl big" style="text-align:center;align-items:center"><div class="tag">쉬는 시간</div><h2><em>' + sec.min + '분</em> 쉬겠습니다</h2>' +
       '<div class="work" style="justify-content:center"><div class="tmr" id="tmr">' + sec.min + ':00</div><button class="tmrb" id="tmrGo">⏱ 시작</button></div></div>';
   }
-  if (s.art && /^(cover|work|big)$/.test(s.ty)) h = h.replace(/^<div class="sl([^"]*)">/, (m, c) => '<div class="sl' + c + ' hasart">' + artHtml(s.art) + '<div class="shade"></div>');
+  if (s.art && /^(cover|work|big|text|steps)$/.test(s.ty)) h = h.replace(/^<div class="sl([^"]*)">/, (m, c) => '<div class="sl' + c + ' hasart' + (/^(text|steps)$/.test(s.ty) ? ' dim' : '') + '">' + artHtml(s.art) + '<div class="shade"></div>');
   return h + '<div class="pt">' + esc(sec.name + ' · ' + sec.title) + '</div><div class="num">' + (no + 1) + ' / ' + D.length + '</div>';
 }
 
@@ -856,13 +896,32 @@ function bindTmr(min) {
   };
 }
 
-function show(i) {
+/* 한 줄씩 — 장 안의 .bd 를 차례로 켭니다. → 는 다음 줄, 줄이 다 서면 다음 장. ← 는 한 줄 뒤로, 처음이면 앞 장(다 선 채로) */
+let bstep = 0, autoId = null;
+function bItems() { return [...document.querySelectorAll('#stage .bd')]; }
+function bPaint() { bItems().forEach((el, k) => { el.classList.toggle('on', k < bstep); el.classList.toggle('past', k < bstep - 1); }); }
+function stopAuto() { if (autoId) { clearInterval(autoId); autoId = null; } const b = $('autoGo'); if (b) b.textContent = '▶ 천천히'; }
+function next() { if (bstep < bItems().length) { bstep++; bPaint(); return; } show(cur + 1); }
+function prev() { if (bstep > 0) { stopAuto(); bstep--; bPaint(); return; } show(cur - 1, true); }
+function bindAuto() {
+  const b = $('autoGo'); if (!b) return;
+  b.onclick = e => {
+    e.stopPropagation();
+    if (autoId) { stopAuto(); return; }
+    const step = () => { if (bstep < bItems().length) { bstep++; bPaint(); } if (bstep >= bItems().length) stopAuto(); };
+    step(); if (!autoId && bstep < bItems().length) { autoId = setInterval(step, 7000); b.textContent = '❚❚ 멈춤'; }
+  };
+}
+function show(i, atEnd) {
   if (!$('ov').hidden) ovClose();
   D = deckList();
+  const was = cur;
   cur = Math.max(0, Math.min(D.length - 1, i));
-  stopTmr();
+  stopTmr(); stopAuto();
   const s = D[cur];
   $('stage').innerHTML = slideHtml(s);
+  bstep = atEnd && cur !== was ? bItems().length : 0; bPaint();
+  if (s.ty === 'imagine') bindAuto();
   if (s.ty === 'story') fitStory();
   if (s.ty === 'phone') $('wbCopy').onclick = () => copyWb($('wbCopy'));
   if (s.ty === 'work' || s.ty === 'silence' || s.ty === 'share') bindTmr(s.min);
@@ -885,6 +944,7 @@ function labOf(s) {
   if (s.ty === 'lifestage') return (LIFE[s.k] || {}).e + (LIFE[s.k] || {}).n;
   if (s.ty === 'share') return '🗣' + plain(s.h).slice(0, 9);
   if (s.ty === 'talk') return '💬' + plain(s.tag).replace(/^[^·]*· /, '').slice(0, 8);
+  if (s.ty === 'imagine') return '🌙' + plain(s.h).slice(0, 9);
   return s.ty === 'photo' ? '🖼' + (S.photos[s.i].cap || '사진').slice(0, 8) : s.ty === 'memento' ? '💀메멘토 모리' : s.ty === 'phone' ? '📱폰 워크북' : s.ty === 'news' ? '📰뉴스' :
     s.ty === 'event' ? '📍' + (S.tl[s.i].t || '').slice(0, 8) : s.ty === 'story' ? '✍' + STORY_T[s.k].slice(0, 8) : '';
 }
@@ -911,7 +971,7 @@ function ovOpen() {
     for (const x of mine) {
       if (x.skip) { html += '<div class="ovx"><b>✍ ' + esc(x.s.tag || labOf(x.s) || '강사님 자리') + '</b>' + esc(x.skip) + '<button data-go="mine">적으러 가기 →</button></div>'; continue; }
       const s = x.s, i = di++;
-      const cap = s.ty === 'work' ? '✍ 활동 ' + s.min + '분' + (s.wb ? ' · 📱 ' + s.wb + '쪽' : '') : s.ty === 'break' ? '☕ 쉼 ' + SEC[s.sec].min + '분' : ((s.say || '').split('\n')[0].replace(/^\(.*?\)\s*/, '').slice(0, 40) || labOf(s) || s.tag || '');
+      const cap = s.ty === 'work' ? '✍ 활동 ' + s.min + '분' + (s.wb ? ' · 📱 ' + s.wb + '쪽' : '') : s.ty === 'imagine' ? '🌙 상상 ' + s.min + '분 — ' + s.h : s.ty === 'break' ? '☕ 쉼 ' + SEC[s.sec].min + '분' : ((s.say || '').split('\n')[0].replace(/^\(.*?\)\s*/, '').slice(0, 40) || labOf(s) || s.tag || '');
       /* 장 안에 단추 · 링크가 있어 <button> 으로 감싸면 문서가 깨집니다 — 그래서 div 에 role=button */
       html += '<div class="ovc' + (i === cur ? ' on' : '') + '" role="button" tabindex="0" data-i="' + i + '"><div class="stage" inert>' + ovIds(slideHtml(s, i), i) + '</div>' +
         '<div class="cap"><b>' + (i + 1) + '</b><span>' + esc(cap) + '</span></div></div>';
@@ -937,15 +997,15 @@ $('ov').onclick = e => {
   if (e.target.closest('[data-ovx]')) ovClose();
 };
 $('thumbs').onclick = e => { const b = e.target.closest('button'); if (b) show(+b.dataset.i); };
-$('prev').onclick = () => { if (!$('ov').hidden) ovClose(); show(cur - 1); };
-$('next').onclick = () => { if (!$('ov').hidden) ovClose(); show(cur + 1); };
+$('prev').onclick = () => { if (!$('ov').hidden) { ovClose(); return; } prev(); };
+$('next').onclick = () => { if (!$('ov').hidden) { ovClose(); return; } next(); };
 $('noteBtn').onclick = () => $('notes').classList.toggle('on');
 $('fsBtn').onclick = () => { const el = $('stageBox'); if (document.fullscreenElement) document.exitFullscreen(); else if (el.requestFullscreen) el.requestFullscreen().catch(() => {}); };
-$('stageBox').onclick = e => { if (document.fullscreenElement && !e.target.closest('button,a,input,label')) show(cur + 1); };
+$('stageBox').onclick = e => { if (document.fullscreenElement && !e.target.closest('button,a,input,label')) next(); };
 document.addEventListener('keydown', e => {
   if (!$('p-deck').classList.contains('on') || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
-  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(cur + 1); }
-  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(cur - 1); }
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
   else if (e.key === 'n' || e.key === 'N') $('notes').classList.toggle('on');
   else if (e.key === 'f' || e.key === 'F') $('fsBtn').click();
   else if (e.key === 'g' || e.key === 'G') $('ovBtn').click();
@@ -1129,11 +1189,12 @@ function hm(base, add) {
 const READ_PER_MIN = 300;
 function planVol(list) {
   const shown = list.filter(x => x.ty !== 'break');
-  const act = list.filter(x => x.ty === 'work' || x.ty === 'silence').reduce((t, x) => t + (x.min || 0), 0);
+  const act = list.filter(x => x.ty === 'work' || x.ty === 'silence' || x.ty === 'imagine').reduce((t, x) => t + (x.min || 0), 0);
+  const im = list.filter(x => x.ty === 'imagine').length;
   const share = list.filter(x => x.ty === 'share').reduce((t, x) => t + (x.min || 0), 0);
   const chars = list.reduce((t, x) => t + String(x.say || '').replace(/\([^)]*\)/g, '').length, 0);
   const story = list.filter(x => x.ty === 'story' || x.ty === 'events').length;
-  return '장 ' + shown.length + ' · 활동 ' + act + '분' + (share ? ' · 나눔 ' + share + '분' : '') + ' · 노트 낭독 약 ' + Math.max(1, Math.round(chars / READ_PER_MIN)) + '분' + (story ? ' · 강사님 이야기 ' + story + '자리' : '');
+  return '장 ' + shown.length + ' · 활동 ' + act + '분' + (share ? ' · 나눔 ' + share + '분' : '') + ' · 노트 낭독 약 ' + Math.max(1, Math.round(chars / READ_PER_MIN)) + '분' + (im ? ' · 🌙 상상 ' + im + '장(활동에 듦)' : '') + (story ? ' · 강사님 이야기 ' + story + '자리' : '');
 }
 function renderPlan() {
   const st = $('startAt').value || '13:00';
@@ -1200,6 +1261,7 @@ function scriptHtml() {
       else if (s.ty === 'lifestage') { const x = LIFE[s.k]; t = '생애 마당 ' + (s.k + 1) + ' · ' + x.n; b = '질문: ' + x.q + '\n걱정: ' + x.w + '\n먼저 건넬 한마디: ' + x.a; }
       else if (s.ty === 'talk') { t = '💬 ' + s.tag + ' — ' + s.h.replace(/<[^>]+>/g, ''); b = s.lines.map(l => (l.w === '고객' ? '고객: ' : '설계사: ') + l.t).join('\n') + (s.tip ? '\n💡 ' + s.tip : ''); }
       else if (s.ty === 'memento') { t = '메멘토 모리 — 죽음을 기억하라 (해골 · 모래시계 · 촛불)'; }
+      else if (s.ty === 'imagine') { t = '🌙 상상 ' + s.min + '분 — ' + s.h; b = (s.lines || []).map(x => '· ' + x.replace(/<[^>]+>/g, '')).join('\n') + (s.q ? '\n→ ' + s.q : ''); }
       else if (s.ty === 'news') { t = (s.h || '').replace(/<br>/g, ' ').replace(/<[^>]+>/g, ''); b = NEWS.filter(n => n.set === s.set).map(n => '· ' + n.o + ' · ' + (has(n.d) ? n.d : '날짜 확인 못 함') + ' — ' + n.t + '\n  ' + n.u).join('\n'); }
       else if (s.ty === 'photo') { const ph = S.photos[s.i]; t = '사진 — ' + (ph.cap || '설명 없음'); b = '출처: ' + (has(ph.from) ? ph.from : '⚠ 안 적음') + ' (사진은 인쇄에 넣지 않습니다)'; }
       else if (s.ty === 'life') { t = (s.h || '').replace(/<[^>]+>/g, ''); b = LIFE.map(x => x.n).join(' → '); }
@@ -1207,7 +1269,7 @@ function scriptHtml() {
       else {
         t = (s.h || '').replace(/<br>/g, ' ').replace(/<[^>]+>/g, '');
         b = (s.li || s.steps || []).map(x => '· ' + x.replace(/<small>/g, ' — ').replace(/<[^>]+>/g, '')).join('\n') +
-          (s.rows ? s.rows.map(r => '· ' + r.join(' | ').replace(/<[^>]+>/g, '')).join('\n') : '') + (s.a ? s.a.k + ': ' + s.a.v + '\n' + s.b.k + ': ' + s.b.v : '');
+          (s.rows ? s.rows.map(r => '· ' + r.join(' | ').replace(/<[^>]+>/g, '')).join('\n') : '') + (s.a ? s.a.k + ': ' + s.a.v + '\n' + s.b.k + ': ' + s.b.v : '') + (s.q ? '\n🙋 ' + s.q : '');
       }
       return '<div class="sc"><div class="h">' + (i + 1) + '. ' + esc(t) + '<small>' + esc(sec.name) + '</small></div>' + (b ? '<div class="b">' + esc(b) + '</div>' : '') +
         (s.say ? '<div class="n">🎙 ' + esc(s.say) + (s.ask ? '\n🙋 ' + esc(s.ask) : '') + '</div>' : '') + '</div>';
