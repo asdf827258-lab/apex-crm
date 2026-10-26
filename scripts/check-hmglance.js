@@ -43,10 +43,29 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
      옮깁니다. 올리지 마십시오 (0-1번·8번).                              */
 /* ⚠ 수는 <b>이 자가 제 씨로 잰 것</b>입니다 — 손으로 재던 딴 자의 수를
    베껴 적었다가 한 번 어긋났습니다. 씨가 다르면 화면도 다릅니다 (8번). */
-const BASE = { 큰글줄: 9, 작은글줄: 21, 가장큰수: 24 };
+/* ★★ <b>2026-10-26 (판 X199) · 「큰 글줄 9」 → 「눈이 멈출 자리 12」</b> ────
+   사장님 말씀 「<b>ⓒ로 해줘</b>」 로 「지금 할 것」 카드(622px)가 홈 맨 위가
+   되면서, 폰 첫 화면이 <b>대시보드에서 카드 한 장</b>으로 바뀌었습니다.
+   ⚠ <b>잰 값을 그대로 적습니다</b> — 큰 글줄은 <b>9 → 3</b> 으로 줄었습니다.
+     상담현황 격자의 24px 수 다섯과 「오늘 N개예요」 가 둘째 화면으로 갔습니다.
+   ★ 그런데 <b>눈이 멈추는 것은 글자 크기만이 아닙니다</b> — 파란 단추 셋,
+     회색 왜/판단 상자, 칩 상자가 첫 화면을 나눕니다. 그래서 <b>채워진 큰 칸</b>
+     까지 세면 <b>22 → 15</b> 입니다.
+   ★ 기준선은 <b>12</b> — 지금 15 에서 세 자리 여유입니다. 3 으로 두면 딱 붙어
+     헛 빨간불이 켜지고, 15 로 두면 글자 한 줄만 줄어도 울립니다 (8번).
+   ⚠ <b>큰 글줄 수는 그대로 찍어 둡니다</b> — 숨기지 않습니다. 다시 대시보드로
+     돌아가면 그 수가 먼저 말해 줍니다 (1번).
+   ★ 「가장 큰 글자 24px 이상」 · 「13px 바닥에 몰린 글줄 21 이하」 · 「13px 밑
+     글씨 0」 세 가지는 <b>한 자도 안 건드렸습니다</b>.                      */
+const BASE = { 멈출자리: 12, 작은글줄: 21, 가장큰수: 24 };
 
 /* 첫 화면에 서 있어야 하는 말 — 크기만 고쳤으니 하나도 안 사라집니다 (6번) */
-const 있어야 = ['오늘 할 일', '보장분석 PDF 넣기', '상담현황', 'DB통합CRM', '무엇을 도울까요'];
+/* ★ 판 X199 — 「✅ 오늘 할 일」 칸이 「지금 할 것」 카드와 <b>합쳐졌습니다</b>
+   (사장님 말씀 「ⓒ로 해줘」). 칸이 하나가 되었으니 이름표도 하나입니다 —
+   <b>말이 사라진 것이 아니라 한 칸이 된 것</b>입니다. 그 칸이 쥐고 있던
+   「오늘 볼 분 N분 중 M번째」·📄 보장분석·＋N분 더는 <b>전부 카드 안</b>에
+   그대로 있습니다(check-hmjob 이 하나씩 봅니다).                          */
+const 있어야 = ['지금 할 것', '보장분석 PDF 넣기', '상담현황', 'DB통합CRM', '무엇을 도울까요'];
 
 const SEED = `
  document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x=>x.remove());
@@ -96,11 +115,25 @@ const 재기 = () => {
     줄.push({ px: Math.round(parseFloat(getComputedStyle(e).fontSize)),
               글: own.replace(/\s+/g, ' ') });
   });
+  /* 📦 <b>채워진 큰 칸</b> — 눈이 멈추는 것은 글자 크기만이 아닙니다 (판 X199).
+     제 바탕을 가진 <b>44px 이상 · 폭 60px 이상</b>인 자리를 셉니다 — 파란 단추 ·
+     회색 상자 · 칸 격자가 그것입니다. <b>속이 복잡한 껍데기</b>(자식 넷 이상)는
+     제 자식을 또 세지 않도록 건너뜁니다.                                   */
+  let 칸채움 = 0;
+  document.querySelectorAll('#dynPane *').forEach(e => {
+    if (!보이나(e)) return;
+    const b = e.getBoundingClientRect();
+    if (b.height < 44 || b.width < 60 || b.top >= 844) return;
+    const bg = getComputedStyle(e).backgroundColor;
+    if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') return;
+    if (e.children.length > 3) return;
+    칸채움++;
+  });
   /* 상담현황 칸이 <b>격자</b>인가 · 칸이 손가락만 한가 */
   const g = document.querySelector('.t-chips.hm-flow');
   const 칸 = g ? [].slice.call(g.children) : [];
   return {
-    줄,
+    줄, 칸채움,
     글전부: (document.querySelector('#dynPane .tab-pane.on') || { innerText: '' }).innerText || '',
     격자: g ? getComputedStyle(g).display : '(없음)',
     칸수: 칸.length,
@@ -128,10 +161,13 @@ const 재기 = () => {
   const 최대 = R.줄.reduce((a, x) => Math.max(a, x.px), 0);
 
   console.log('[1] 👀 <b>눈이 멈출 자리</b>가 있나 — 글자 사다리');
-  console.log('      보이는 글줄 ' + R.줄.length + '개 · 17px 이상 ' + 큰 + '개 · 13px 이하 ' + 작은 + '개 · 가장 큰 글자 ' + 최대 + 'px');
+  const 멈춤 = 큰 + (R.칸채움 || 0);
+  console.log('      보이는 글줄 ' + R.줄.length + '개 · 17px 이상 ' + 큰 + '개 · 채운 칸 ' +
+    (R.칸채움 || 0) + '개 · 13px 이하 ' + 작은 + '개 · 가장 큰 글자 ' + 최대 + 'px');
   is(R.줄.length > 20, '  첫 화면을 제대로 읽었다 — 글줄 ' + R.줄.length + '개');
-  is(큰 >= BASE.큰글줄,
-     '  ★★ <b>큰 글줄</b> ' + 큰 + '개 — 바닥 ' + BASE.큰글줄 + ' (줄면 화면이 다시 납작해진 것입니다)');
+  is(멈춤 >= BASE.멈출자리,
+     '  ★★ <b>눈이 멈출 자리</b> ' + 멈춤 + '개 (큰 글줄 ' + 큰 + ' + 채운 칸 ' +
+     (R.칸채움 || 0) + ') — 바닥 ' + BASE.멈출자리 + ' (줄면 화면이 다시 납작해진 것입니다)');
   is(작은 <= BASE.작은글줄,
      '  ★ <b>13px 바닥에 몰린 글줄</b> ' + 작은 + '개 — 바닥 ' + BASE.작은글줄);
   is(최대 >= BASE.가장큰수,

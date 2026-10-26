@@ -1094,9 +1094,18 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     const e=document.querySelector('.almk-band .ok'); if(!e)return null;
     const r=e.getBoundingClientRect(); return {top:Math.round(r.top+scrollY),h:Math.round(r.height)};
   });
-  is(!!kkBand && kkBand.top + kkBand.h <= VH,
-     '<b>홈에도 한 줄</b>이 서고, 그것도 첫 화면 안이다 · ' +
-     (kkBand ? (kkBand.top+'px') : '한 줄이 없다'));
+  /* ══ 2026-10-26 (판 X199) · <b>🔔 알람 한 줄이 첫 화면 → 두 화면</b> ════════════════════════
+     사장님 말씀 「<b>ⓒ로 해줘</b>」 로 「지금 할 것」 카드(622px)가 홈 <b>맨 위</b>가
+     되었습니다. 폰 첫 화면 844px 에서 머리 104px 을 빼면 <b>740px</b> 이고, 그중
+     622px 을 카드가 씁니다 — 남는 <b>105px</b> 은 사장님이 판 X194 에서 시키신
+     <b>➕ 고객 추가 세 칸</b>(94px)이 씁니다. 그래서 알람 한 줄이 첫 화면에 들어갈 자리가 없습니다.
+     ★ <b>자를 지우지 않습니다. 묻는 것을 옮깁니다</b> — 「첫 화면」 → <b>「두 화면」</b>. 세 화면 아래로 밀리면 여전히 빨간불입니다.
+     ★ 사장님께 수를 올려 드리고 <b>ⓐⓑⓒ 중 ①(지금 그대로)</b> 을 고르셨습니다.
+       「맨 위로」 는 판 X187 과 이번까지 <b>두 번</b> 하신 말씀입니다.          */
+  is(!!kkBand && kkBand.top + kkBand.h <= VH * 2,
+     '<b>홈에도 한 줄</b>이 서고, 그것도 두 화면 안이다 · ' +
+     (kkBand ? (kkBand.top+'px / 두 화면 '+(VH*2)+'px') : '한 줄이 없다') +
+     ' (첫 화면은 「지금 할 것」 차지입니다 · 판 X199)');
   /* 눌러서 <b>거기로 간다</b> — 「설치 화면에 가서 찾으세요」 는 두 걸음이다 */
   if(kkBand)await kkPage.click('.almk-band .ok');
   await kkPage.waitForTimeout(1500);
