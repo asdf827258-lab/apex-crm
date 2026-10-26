@@ -406,7 +406,9 @@ const SEED = () => {
              nowEnd: now ? y(now) + hh(now) : -1,
              /* ★ 판 X199 — 카드 밑에 <b>세 칸 · 📄 한 줄</b>이 들어왔습니다.
                 곁칸은 그 다음이므로 📄 끝에서 잽니다 (아래 쪽지).        */
-             pdfEnd: (() => { const e = document.querySelector('.hm-pdf');
+             /* ★ 판 X217 — 맨 위 묶음 <b>끝</b>은 이제 📆 이번 주입니다 */
+             pdfEnd: (() => { const e = document.getElementById('hmWkHost')
+                           || document.querySelector('.hm-pdf');
                 return e ? y(e) + hh(e) : -1; })(),
              사이: (() => { const t = document.querySelector('.tz'); if (!t) return [];
                 const L = [].slice.call(t.children), a = L.indexOf(document.getElementById('hmJobHost')),
@@ -443,13 +445,25 @@ const SEED = () => {
        <b>무엇이 끼어들었는지</b> 못 가렸습니다. 이제 둘(세 칸 · 📄)이
        아니면 그 자리에서 빨간불입니다. <b>느슨해진 데가 없습니다</b> (8번). */
   is(!one.no && 첫넷 > 0 && one.pdfEnd > 0 && 첫넷 >= one.pdfEnd - 8 && 첫넷 <= one.pdfEnd + 120,
-     '  ★★ 첫 칸이 <b>맨 위 묶음 바로 아래</b>다 — 📄 끝 y' + one.pdfEnd +
+     '  ★★ 첫 칸이 <b>맨 위 묶음 바로 아래</b>다 — 📆 이번 주 끝 y' + one.pdfEnd +
      ' · 첫 칸 y' + 첫넷 + ' (틈 120px 안 · 2026-10-06 사장님 「끌어올려」)');
-  is(!one.no && (one.사이 || []).length === 2 &&
-     (one.사이 || []).join(',').indexOf('hm-two') >= 0 &&
-     (one.사이 || []).join(',').indexOf('hm-pdf') >= 0,
-     '  ★ 카드와 곁칸 <b>사이에 선 것이 둘뿐</b>이다 — ' +
-     ((one.사이 || []).join(' · ') || '(못 셌습니다)') + ' (판 X199 · 슬그머니 끼어드는 것을 막습니다)');
+  /* ══ 2026-10-26 (판 X217) · <b>사장님이 맨 위 묶음을 넷으로 늘리셨습니다</b> ══
+     말씀 — 「오늘 약속 <b>캘린더 이번주</b> / 오늘어디로가시나 / 이번달 고객관리
+     이거 칸도 <b>다 맨 위로</b> 올려야지」. 그래서 카드 밑에 선 것이 둘에서
+     <b>넷</b>이 되었습니다 — 세 칸 · 📄 한 줄 · 📅 오늘 약속 · 📆 이번 주.
+     ★ <b>자를 지우지 않습니다. 묻는 것을 옮깁니다</b> — 재는 자리를 📄 끝에서
+       <b>📆 이번 주 끝</b>으로 옮기고, 틈 120px 은 <b>그대로</b> 둡니다.
+     ★ <b>사이에 무엇이 섰는지</b>는 계속 봅니다 — 넷 말고 다른 것이 끼면
+       그 자리에서 빨간불입니다. 느슨해진 데가 없습니다 (8번).          */
+  /* ⚠ 📅 약속과 📆 이번 주는 <b>한 자리(#hmUpHost)</b> 안에 함께 섭니다 —
+     폰이냐 컴퓨터냐로 자리가 갈리므로 hmSidePlace 가 그 칸만 채웁니다 (5번). */
+  var 와야 = ['hm-two', 'hm-pdf', 'hmUpHost'];
+  var 선것 = (one.사이 || []).join(',');
+  is(!one.no && (one.사이 || []).length === 와야.length &&
+     와야.every(function (k) { return 선것.indexOf(k) >= 0; }),
+     '  ★ 카드와 곁칸 <b>사이에 선 것이 셋뿐</b>이다 — ' +
+     ((one.사이 || []).join(' · ') || '(못 셌습니다)') +
+     ' (판 X217 · 세 칸 · 📄 · 📅 약속+📆 이번 주 한 자리)');
   /* ★★ <b>두 자리에 같이 세우지 않는다</b> — id 가 겹치면 앞엣것이 빈 칸이다 */
   is(!one.no && one.오른글 === 0,
      '  ★★ 폰에서 <b>오른쪽 기둥은 비어 있다</b> — 글자 ' + one.오른글 + '자' +

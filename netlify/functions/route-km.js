@@ -11,7 +11,20 @@
  * 쓰는 법
  *   POST /.netlify/functions/route-km
  *     { legs:[{ox,oy,dx,dy}, ...] }        ox/oy 출발 경도·위도, dx/dy 도착
- *   →  { ok:true, legs:[{km,min}|null, ...] }
+ *   →  { ok:true, legs:[{km,min,path:[[lng,lat],…]}|null, ...] }
+ *
+ * 길 모양(path)도 같이 돌려줍니다 — 2026-10-26 사장님 말씀 「<b>경로까지
+ * 연결해서</b> 지역동선에 보여주도록 <b>위치만 체크하지 말고</b>」.
+ * 여태 지도는 들를 자리를 점으로 찍고 <b>직선</b>으로 이었습니다. 실제로
+ * 도는 길은 강을 돌고 산을 넘어가므로, 직선은 <b>그림이 거짓말</b>을 합니다.
+ * 카카오가 이미 그 길의 좌표를 답에 담아 주고 있었는데 우리가 거리만
+ * 꺼내 쓰고 있었습니다 — 한 번 더 묻지 않고 같은 답에서 꺼냅니다 (7번).
+ *
+ * ★ 좌표는 <b>솎아서</b> 보냅니다. 한 구간이 수백 점이라 그대로 보내면
+ *   답이 몇백 KB 가 됩니다. 2,000점을 넘으면 건너뛰며 줄입니다 —
+ *   화면에서는 눈에 안 보이는 차이입니다.
+ * ★ 길을 못 받았으면 path 를 <b>안 담습니다</b>. 빈 배열을 담으면 화면이
+ *   「길은 받았는데 비었다」 로 읽어 직선으로 못 돌아갑니다 (1번).
  *   →  { ok:false, why:'NOKEY' }           키가 없다 — 화면은 어림으로 간다
  *
  * 한 번에 여러 구간을 받습니다 — 하루 동선이면 대여섯 구간이라, 한 번에
@@ -20,6 +33,7 @@
 const KEY = process.env.KAKAO_REST_KEY || '';
 const API = 'https://apis-navi.kakaomobility.com/v1/directions';
 const MAX_LEGS = 20;          /* 하루 동선이 이보다 길 일은 없다 */
+const MAX_PTS  = 2000;        /* 한 구간의 길 좌표 — 이보다 촘촘할 까닭이 없다 */
 
 const json = (code, body) => ({
   statusCode: code,
@@ -45,14 +59,38 @@ async function one(leg) {
     return null;
   }
   const j = await r.json();
-  const s = j && j.routes && j.routes[0] && j.routes[0].summary;
+  const rt = j && j.routes && j.routes[0];
+  const s = rt && rt.summary;
   if (!s || typeof s.distance !== 'number') {
     LAST_WHY = '길을 못 찾았습니다' + (j && j.routes && j.routes[0] && j.routes[0].result_msg
       ? ' · ' + String(j.routes[0].result_msg).slice(0, 120) : '');
     return null;
   }
+  /* 길 모양 — sections[].roads[].vertexes 가 [경도,위도,경도,위도,…] 로 옵니다.
+     짝으로 묶어 [[lng,lat],…] 로 폅니다. 없으면 <b>안 담습니다</b> (1번). */
+  const path = [];
+  try {
+    for (const sec of (rt.sections || [])) {
+      for (const road of (sec.roads || [])) {
+        const v = road.vertexes || [];
+        for (let i = 0; i + 1 < v.length; i += 2) {
+          const lng = v[i], lat = v[i + 1];
+          if (typeof lng === 'number' && typeof lat === 'number') path.push([lng, lat]);
+        }
+      }
+    }
+  } catch (e) {}
+  /* 너무 촘촘하면 솎습니다 — 화면에서는 같은 선입니다 */
+  let thin = path;
+  if (path.length > MAX_PTS) {
+    const step = Math.ceil(path.length / MAX_PTS);
+    thin = path.filter((_, i) => i % step === 0);
+    if (thin[thin.length - 1] !== path[path.length - 1]) thin.push(path[path.length - 1]);
+  }
   /* 카카오는 미터·초로 답한다 */
-  return { km: Math.round(s.distance / 100) / 10, min: Math.max(1, Math.round(s.duration / 60)) };
+  const out = { km: Math.round(s.distance / 100) / 10, min: Math.max(1, Math.round(s.duration / 60)) };
+  if (thin.length > 1) out.path = thin;
+  return out;
 }
 
 exports.handler = async (event) => {
