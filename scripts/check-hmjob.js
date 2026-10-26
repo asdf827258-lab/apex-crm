@@ -28,6 +28,19 @@
    ⓘ <b>따라 그려지나.</b> 「이분 끝」 을 누르면 이 칸도 다음 분으로
       넘어가야 합니다 — hmPaint 는 #hmToday 만 갈아 끼웁니다.
    ⚠ 홈 높이는 <b>안 잽니다</b> — check-homeone 하나가 봅니다 (5번).
+
+   ★★ <b>2026-10-26 (판 X199) — 칸이 「지금 할 것」 과 합쳐졌습니다.</b>
+     사장님 말씀 — 「<b>ⓒ로 해줘</b>」(둘을 합쳐 한 칸으로). 라이브를 찍어
+     보니 맨 위 「✅ 오늘 할 일」 과 아래 「지금 할 것」 이 <b>같은 분 · 같은
+     문장</b>을 한 화면에 두 번 적고 있었습니다(HM_NXS=1).
+     ★ <b>묻는 것은 하나도 안 줄였습니다</b> — 이름 · 보장분석 단추 · 「그
+       고객 밑에」 · 44px · 그 분께 붙나 · 두 벌 아닌가 · 모름을 0 으로 안
+       적나 · 따라 그려지나 전부 그대로 묻습니다. <b>보는 데만</b> .hm-nxs
+       에서 <b>맨 위 카드(#hmJobHost .hm-now)</b> 로 옮겼습니다 (8번).
+     ★ 카드가 못 서는 판(다 끝냈다 · 못 읽었다)에서는 <b>옛 칸(.hm-nxs)</b>
+       이 그대로 그 말을 합니다 — 그래서 둘 다 찾습니다.
+     ★ [5] 는 <b>더 엄해졌습니다</b> — 전에는 두 자리를 견주었는데, 이제
+       홈에 있는 <b>「오늘몇분」 이름표 전부</b>가 같은 수인지 봅니다.
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -81,20 +94,31 @@ const SEED = (o) => `
 
 const 본 = async (p) => await p.evaluate(() => {
   const y = e => e ? Math.round(e.getBoundingClientRect().top + (window.scrollY || 0)) : -1;
-  const card = document.querySelector('.hm-nxs');
-  const i1 = card ? card.querySelector('.hm-nxs-i') : null;
-  const nm = i1 ? (i1.querySelector('.hm-nxs-r .m b') || {}).textContent || '' : '';
-  const box = i1 ? i1.querySelector('.hm-nxs-b') : null;
+  /* ★ 판 X199 — 맨 위 칸은 <b>합친 카드</b>입니다. 카드가 못 서는 판에서는
+     <b>옛 칸</b>이 그 말을 하므로 둘 다 찾습니다 (5번은 안 깨집니다 — 둘이
+     <b>동시에</b> 서지 않는 것은 아래 [4] 가 셉니다). */
+  const card = document.querySelector('#hmJobHost .hm-now')
+            || document.querySelector('#hmJobHost .hm-nxs')
+            || document.querySelector('.hm-nxs');
+  const 이름줄 = card ? (card.querySelector('.hm-now-m') || card.querySelector('.hm-nxs-r')) : null;
+  const nm = 이름줄 ? ((이름줄.querySelector('.m b') || {}).textContent || '') : '';
+  const box = card ? (card.querySelector('.hm-now-ba') || card.querySelector('.hm-nxs-b')) : null;
   const btn = box ? (box.querySelector('.btn') || box.querySelector('.hm-nxs-w')) : null;
   return {
     섰나: !!card,
-    칸수: document.querySelectorAll('.hm-nxs').length,
-    아래에도: document.querySelectorAll('#hmToday .hm-nxs').length,
+    /* 맨 위 칸이 <b>하나</b>인가 — 카드든 옛 칸이든 합쳐서 셉니다 */
+    칸수: document.querySelectorAll('#hmJobHost .hm-now, #hmJobHost .hm-nxs').length,
+    아래에도: document.querySelectorAll('#hmToday .hm-now, #hmToday .hm-nxs').length,
+    /* ★ 홈을 통틀어 「지금 할 것」 카드가 <b>하나</b>인가 (판 X199 · 5번) */
+    카드수: document.querySelectorAll('.hm-now').length,
+    /* ★ 「오늘몇분」 을 적는 자리 <b>전부</b>의 수 — 갈리면 그 자리에서 빨간불 */
+    몇분자리: [].map.call(document.querySelectorAll('[data-ask="오늘몇분"]'),
+      e => (e.textContent || '').replace(/\s+/g, ' ').trim()),
     두칸y: y(document.querySelector('.hm-two')),
     칸y: y(card), pdfy: y(document.querySelector('.hm-pdf')),
     흐름y: y(document.getElementById('hmFlowHost')),
     오늘y: y(document.getElementById('hmToday')),
-    머리: ((card && card.querySelector('.hm-nxs-hd')) || {}).innerText || '',
+    머리: ((card && (card.querySelector('.hm-nxs-hd') || card.querySelector('.hm-now-lab'))) || {}).innerText || '',
     머리수: ((card && card.querySelector('[data-ask="오늘몇분"]')) || {}).textContent || '',
     띠수: ((document.querySelector('#hmToday .hm-q-n')) || {}).textContent || '',
     첫이름: nm,
@@ -103,8 +127,8 @@ const 본 = async (p) => await p.evaluate(() => {
     단추키: btn ? Math.round(btn.getBoundingClientRect().height) : 0,
     단추길: btn ? (btn.getAttribute('onclick') || '') : '',
     /* ★ 단추가 <b>이름보다 아래</b>인가 — 「그 고객 밑에」 */
-    밑인가: !!(btn && nm && y(btn) > y(i1.querySelector('.hm-nxs-r'))),
-    꼬리: ((card && card.querySelector('.hm-nxs-m')) || {}).textContent || '',
+    밑인가: !!(btn && nm && y(btn) > y(이름줄)),
+    꼬리: ((card && (card.querySelector('.hm-now-q') || card.querySelector('.hm-nxs-m'))) || {}).textContent || '',
     빈말: ((card && card.querySelector('.hm-nxs-n0')) || {}).innerText || '',
     글: card ? (card.innerText || '').replace(/\s+/g, ' ').trim() : '',
     작은글자: (() => { if (!card) return -1; let n = 0;
@@ -176,7 +200,8 @@ const 수 = (s) => (String(s).match(/\d+/g) || []).map(Number);
 
   console.log('\n[3] 🤝 <b>눌러 보면</b> 그 분이 서고 그 분께 붙는다');
   const go1 = await A.p.evaluate(async () => {
-    const e = document.querySelector('.hm-nxs-b .btn'); if (!e) return { no: 1 };
+    const e = document.querySelector('.hm-now-ba .btn') ||
+              document.querySelector('.hm-nxs-b .btn'); if (!e) return { no: 1 };
     e.click(); await new Promise(r => setTimeout(r, 400));
     return { no: 0, cid: (typeof OSC !== 'undefined' && OSC.current) ? OSC.current.id : '',
              열림: window.__BA || 0, ba: (typeof BA !== 'undefined') ? (BA.cid || '') : '',
@@ -192,6 +217,11 @@ const 수 = (s) => (String(s).match(/\d+/g) || []).map(Number);
   const B = await open({});
   o = await 본(B.p);
   is(o.칸수 === 1, '  홈 안에 이 칸이 <b>하나</b>다 — ' + o.칸수 + '개');
+  /* ★ 판 X199 — 합친 뒤로 「지금 할 것」 카드도 <b>홈에 하나</b>여야 합니다.
+     아래에서 거두는 것을 빠뜨리면 같은 카드가 두 번 섭니다 (5번).      */
+  is(o.카드수 <= 1,
+     '  ★ 「지금 할 것」 <b>카드도 홈에 하나</b>다 (판 X199) — ' + o.카드수 + '개' +
+     ((o.카드수 > 1) ? ' ← 아래에서 안 거뒀습니다' : ''));
   is(o.아래에도 === 0,
      '  「오늘 챙길 것」 안에는 <b>없다</b> — ' + o.아래에도 + '개' +
      (o.아래에도 ? ' ← 두 벌입니다. 같은 분이 홈에 두 번 섭니다 (5번)' : ''));
@@ -200,9 +230,18 @@ const 수 = (s) => (String(s).match(/\d+/g) || []).map(Number);
   const src = 걷기(날);
   is((src.match(/function hmNxsHtml\(\)/g) || []).length === 1,
      '  <b>짓는 자리가 하나</b>다 (5번)');
-  is((src.match(/hmNxsHtml\(\)/g) || []).length === 3,
+  /* ★ 판 X199 — 맨 위에 세우는 자가 <b>hmTopHtml 하나</b>로 바뀌었습니다.
+     히어로와 hmJobPaint 가 <b>같은 자</b>를 불러야 합니다 — 한쪽만 고치면
+     처음 그릴 때와 다시 그릴 때가 <b>다른 카드</b>가 됩니다 (5번).     */
+  is((src.match(/function hmTopHtml\(\)/g) || []).length === 1,
+     '  <b>맨 위를 짓는 자도 하나</b>다 (hmTopHtml · 판 X199)');
+  is((src.match(/hmTopHtml\(\)/g) || []).length === 3,
      '  <b>부르는 자리가 둘</b>이다 — 히어로와 hmJobPaint (' +
-     ((src.match(/hmNxsHtml\(\)/g) || []).length - 1) + '곳)');
+     ((src.match(/hmTopHtml\(\)/g) || []).length - 1) + '곳)');
+  /* ★ 「몇 분 더」 를 세는 자도 하나 — 두 곳에서 각자 세면 수가 갈립니다 */
+  is((src.match(/function hmRestN\(\)/g) || []).length === 1 &&
+     (src.match(/hmRestN\(\)/g) || []).length >= 3,
+     '  <b>「몇 분 더」 를 세는 자도 하나</b>(hmRestN)이고 둘이 그것을 부른다 (5번)');
   is((src.match(/function hmBaBtn\(/g) || []).length === 1 &&
      (src.match(/hmBaBtn\(/g) || []).length >= 3,
      '  <b>단추를 만드는 자도 하나</b>(hmBaBtn)이고 여럿이 그것을 부른다 (5번)');
@@ -210,19 +249,35 @@ const 수 = (s) => (String(s).match(/\d+/g) || []).map(Number);
   console.log('\n[5] 🔢 <b>수가 갈리지 않는다</b> — hmLeft 한 곳에서 (5번)');
   is(!!o.머리수 && 수(o.머리수).length >= 2,
      '  머리에 <b>「N분 중 M번째」</b> 가 적힌다 — 「' + o.머리수.replace(/\s+/g, ' ').trim() + '」');
-  is(!!o.띠수 && 수(o.머리수).join(',') === 수(o.띠수).join(','),
-     '  ★★ 아래 띠와 <b>같은 수</b>를 말한다 — 머리 [' + 수(o.머리수) + '] · 띠 [' + 수(o.띠수) + ']');
+  /* ★★ 판 X199 — 전에는 <b>두 자리</b>(맨 위 머리 · 아래 띠)를 견주었습니다.
+     합치고 나니 그 둘이 <b>한 자리</b>가 되었으므로, 이제 홈에 있는
+     <b>「오늘몇분」 이름표 전부</b>를 견줍니다 — 자리가 하나든 셋이든
+     <b>갈리면 웁니다</b>. 자리 수를 못 박지 않으니 다음에 한 곳이 늘어도
+     이 자는 낡지 않습니다 (8번).                                       */
+  /* ★ 세는 규칙은 <b>check-onesay 와 같은 것</b>을 씁니다 — <b>분·명·개</b>가
+     붙은 수만 「오늘 몇 분」 입니다. 「1번째」 는 <b>다른 물음</b>이라 한 자리만
+     적습니다. 규칙을 여기서 따로 지으면 두 자가 다른 말을 합니다 (5번).
+     ⚠ 이름표마다 깊이 재는 것은 <b>check-onesay 하나</b>가 합니다 — 여기서는
+       이 칸이 쥔 수가 홈의 다른 자리와 <b>어긋나지 않는지</b>만 봅니다.    */
+  var 몇 = (t) => (String(t).match(/(\d+)\s*(?:분|명|개)/g) || [])
+                   .map(v => parseInt(v, 10)).pop();
+  var 수들 = (o.몇분자리 || []).map(몇).filter(v => v === 0 || !!v);
+  is(수들.length >= 1 && 수들.every(v => v === 수들[0]),
+     '  ★★ 「오늘몇분」 을 적는 <b>' + 수들.length + '자리가 모두 ' + 수들[0] +
+     '</b> 이라고 말한다 — [' + 수들.join('] [') + ']');
   is(/data-ask="오늘몇분"/.test(날),
      '  숫자 자리에 <b>이름표</b>가 달려 있다 (0-1번 · check-onesay)');
 
   console.log('\n[6] ✅ <b>「이분 끝」 을 누르면 이 칸도 따라간다</b> (hmJobPaint)');
   const nx = await B.p.evaluate(async () => {
-    const before = ((document.querySelector('.hm-nxs-r .m b') || {}).textContent || '');
+    const 이름 = () => ((document.querySelector('#hmJobHost .hm-now-m .m b') ||
+                        document.querySelector('.hm-nxs-r .m b') || {}).textContent || '');
+    const before = 이름();
     try { hmQdoneSet(hmNext().x.key); } catch (e) { return { no: 1 }; }
     hmPaint(); await new Promise(r => setTimeout(r, 420));
     return { no: 0, before: before,
-             after: ((document.querySelector('.hm-nxs-r .m b') || {}).textContent || ''),
-             머리: ((document.querySelector('.hm-nxs [data-ask="오늘몇분"]') || {}).textContent || '') };
+             after: 이름(),
+             머리: ((document.querySelector('#hmJobHost [data-ask="오늘몇분"]') || {}).textContent || '') };
   });
   is(!nx.no && !!nx.before && !!nx.after && nx.before !== nx.after,
      '  <b>다음 분으로 넘어간다</b> — 「' + nx.before + '」 → 「' + nx.after + '」' +

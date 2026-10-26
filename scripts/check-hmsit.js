@@ -149,7 +149,11 @@ const LOOK = () => {
          go('…') 칩을 셌는데, 위 띠의 <b>🔔 알람 칩</b>(go('me'))까지 같이
          세어 여섯 자리가 모두 <b>하나씩 많게</b> 나왔습니다 — 코드가 아니라
          제 셈이 틀린 <b>헛것</b>이었습니다 (8번).                        */
-      const host = document.getElementById('hmToday') || pane;
+      /* ★ 판 X199 — 카드가 <b>#hmJobHost</b> 로 올라갔습니다. 도구 칩은 카드
+         안에 있으므로 거기서 셉니다 — 위 쪽지의 까닭(🔔 알람 칩을 같이 세지
+         않기)은 <b>그대로 지켜집니다</b>. 칩 띠는 이제 카드보다 아래입니다.  */
+      const host = document.getElementById('hmJobHost')
+                || document.getElementById('hmToday') || pane;
       const shown = [].slice.call(host.querySelectorAll('.t-chip'))
         .map(e => (e.getAttribute('onclick') || ''))
         .filter(o => o.indexOf("go('") === 0)

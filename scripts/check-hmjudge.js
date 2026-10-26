@@ -219,7 +219,12 @@ const CARD = () => {
   /* ⚠ 2026-10-05 · 그리는 토막이 <b>stKnowHtml</b> 로 옮겨졌습니다 —
      홈과 DB 통합 CRM <b>두 곳</b>이 각자 그리던 것을 한 곳으로 모았습니다
      (5번). 그래서 보는 범위를 거기서부터 잡습니다.                    */
-  const i0 = SRC.indexOf('function stKnowHtml'), i1 = SRC.indexOf('function hmNowHtml(){');
+  /* ★ 이름만 찾습니다 — 판 X199 에서 hmNowHtml 이 <b>인자를 받게</b> 되자
+     'function hmNowHtml(){' 로 찾던 이 줄이 <b>−1</b> 을 내고 묶음이 빈 글이
+     되었습니다. 그런데도 아래 「hex 를 안 적었다」 는 <b>빈 글이라 초록</b>
+     이었습니다 — 묶음 길이를 재는 줄이 있어 들켰습니다 (8번 · 자가 눈을 감는
+     것을 막는 줄입니다). 괄호 안을 안 보게 고칩니다.                      */
+  const i0 = SRC.indexOf('function stKnowHtml'), i1 = SRC.indexOf('function hmNowHtml(');
   const BLK = (i0 >= 0 && i1 > i0) ? SRC.slice(i0, i1) : '';
   /* 주석은 코드가 아닙니다 — 「t-note.g 에 hex(#065F46)가 박혀 있어 안
      씁니다」 라고 <b>적어 둔 것</b>까지 세면, 왜 안 쓰는지 설명한 것이
