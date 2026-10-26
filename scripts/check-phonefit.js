@@ -360,7 +360,9 @@ const BASE = {
      기준선도 같이 내려 주십시오」 라고 해서 그대로 내립니다 (0-1번).
      ★ 3.9 가 아니라 <b>4.0</b> 으로 둡니다 — 3.9 는 지금 값에 딱 붙어, 글자 한
        줄만 길어져도 이 판과 상관없이 빨간불이 켜집니다(헛것 · 8번).      */
-  home:    { tiny: 9, size: 13, small: 2, screens: 4.0 },
+  /* ⬇ 2026-10-26 (판 X199) · screens <b>4.0 → 3.9</b> — 맨 위 두 칸을 하나로
+     합쳐 3.8화면이 되었습니다. 줄였으면 눈금도 같이 내립니다 (0-1번). */
+  home:    { tiny: 9, size: 13, small: 2, screens: 3.9 },
   /* 2026-09-21 · 2.5 → <b>2.4</b>. 「고객 체크」 칸을 늘리면서 2.6 이 되어
      여기가 잡았고, 기준을 올리는 대신 <b>내 코칭 · 본인 점검란</b>을 왼쪽에서
      뺐습니다(둘 다 ☰ 서랍에 그대로 있습니다). 그래서 오히려 짧아졌습니다 —
@@ -625,10 +627,19 @@ const SEED = `
        <b>덩이 수</b>를 따로 셉니다 — 길이가 늘어난 까닭이 <b>사장님이
        고르신 것</b>인지 <b>슬그머니 끼어든 것</b>인지 가릅니다.        */
     (function () {
-      const td = document.getElementById('hmToday');
+      /* ★★ <b>2026-10-26 (판 X199) — 이 자가 거짓말을 하고 있었습니다.</b>
+         「지금 할 것 위에 선 덩이」 라고 적어 놓고 실제로는 <b>#hmToday 위</b>
+         를 세고 있었습니다. 카드가 그 안 첫 줄이던 동안에는 같은 말이었는데,
+         카드가 <b>맨 위로 올라가자</b>(판 X199) 「위에 다섯이 섰다」 고 적으면서
+         <b>초록</b>이었습니다 — 실제로는 <b>하나도 안 섰습니다</b> (1번·8번).
+         이제 <b>카드 제 머리</b>에서 셉니다. 카드를 품은 덩이는 세지 않고
+         <b>속으로 들어갑니다</b> — 안 그러면 껍데기가 제 자식을 가립니다.   */
       const pane2 = document.querySelector('.tab-pane.on');
-      if (!td || !pane2) { out.wi = -1; out.wiName = []; return; }
-      const 끝 = td.getBoundingClientRect().top;
+      const 카드 = document.querySelector('#dynPane .hm-now')
+                || document.getElementById('hmJobHost')
+                || document.getElementById('hmToday');
+      if (!카드 || !pane2) { out.wi = -1; out.wiName = []; return; }
+      const 끝 = 카드.getBoundingClientRect().top;
       const 덩이 = [];
       const 훑 = (el) => { [].slice.call(el.children).forEach(c => {
         /* ⚠ 상자가 <b>없는</b> 칸(display:contents)은 높이가 0 이라 그냥
@@ -638,6 +649,7 @@ const SEED = `
         const r = c.getBoundingClientRect();
         if (r.height < 8 || r.top >= 끝) return;
         if (c.classList.contains('hm-2col')) { 훑(c); return; }
+        if (c !== 카드 && c.contains(카드)) { 훑(c); return; }
         if (c.tagName === 'DIV' && !c.id && !c.className) { 훑(c); return; }
         덩이.push((c.id || (c.className || '').split(' ')[0] || c.tagName));
       }); };
@@ -666,8 +678,19 @@ const SEED = `
      ★ 자를 <b>지우지 않습니다.</b> 묻는 것을 바꿉니다 —
        「맨 위 카드가 첫 화면 안인가」 와 「오늘 할 일이 <b>두 화면</b> 안인가」.
        세 화면 아래로 밀리면 여전히 빨간불입니다.                       */
-  is(HM.flowTop >= 0 && HM.flowTop < HM.vh,
-    '<b>맨 위 카드(상담현황)가 첫 화면 안</b>에 있다 — 위에서 ' + HM.flowTop + 'px (화면 ' + HM.vh + 'px)');
+  /* ══ 2026-10-26 (판 X199) · <b>첫 화면은 「지금 할 것」 차지가 되었습니다</b> ══
+     사장님 말씀 — 「<b>ⓒ로 해줘</b>」(맨 위 두 칸을 하나로). 카드가 622px 라
+     첫 화면(844px)을 거의 다 씁니다. 목각 차례(인사 → 상담현황 → 지금 할 것)
+     는 사장님이 <b>2026-10-24 에 이미 뒤집으셨고</b>(「지금할것을 맨위로」),
+     이번 말씀으로 한 걸음 더 갔습니다 — <b>어긋난 것이 아니라 같은 방향</b>입니다.
+     ★ <b>자를 지우지 않습니다. 묻는 것을 바꿉니다</b> — 이 파일이 2026-10-04 에
+       이미 한 그대로입니다. 상담현황은 <b>두 화면 안</b>이어야 합니다.
+       세 화면 아래로 밀리면 여전히 빨간불입니다.
+     ⚠ 대신 바로 위 「덩이」 자를 <b>5 → 0 으로 조였습니다</b> — 느슨하게 한
+       만큼 다른 데를 조입니다 (8번).                                     */
+  is(HM.flowTop >= 0 && HM.flowTop < HM.vh * 2,
+    '<b>상담현황이 두 화면 안</b>에 있다 — 위에서 ' + HM.flowTop + 'px (두 화면 ' +
+    (HM.vh * 2) + 'px · 첫 화면은 「지금 할 것」 차지입니다 · 판 X199)');
   is(!!HM.nowSay,
     '<b>「지금 할 것」 이라고 적힌 칸</b>을 찾았다 — ' + (HM.nowSay || '못 찾았습니다')
       + (HM.nowWhat ? (' · ' + HM.nowWhat) : ''));
@@ -691,9 +714,13 @@ const SEED = `
      늘었나」 를 못 가립니다. <b>기준선은 센 대로 5</b> — 하나만 늘어도
      울립니다. (처음에 4 라고 손으로 적었다가 보장분석을 빠뜨린 것을
      자가 잡아 주었습니다 — 세지 않고 적으면 이렇게 틀립니다.)         */
-  is(HM.wi >= 1 && HM.wi <= 5,
-    '  ★ 「지금 할 것」 <b>위에 선 덩이가 다섯뿐</b>이다 (기준선 5) — ' + HM.wi + '개'
-      + (HM.wiName && HM.wiName.length ? (' · ' + HM.wiName.join(' · ')) : ''));
+  /* ⬇ <b>2026-10-26 (판 X199) · 기준선 5 → 0.</b> 사장님 말씀 「ⓒ로 해줘」 로
+     카드가 <b>홈 맨 위</b>가 되었습니다 — 이제 그 위에 설 것이 <b>하나도
+     없습니다</b>. 자리를 하나라도 내주면 그 자리에서 빨간불입니다.
+     ★ 기준선을 <b>내렸습니다</b> — 줄였으면 눈금도 같이 내립니다 (0-1번).  */
+  is(HM.wi === 0,
+    '  ★ 「지금 할 것」 <b>위에 선 덩이가 없다</b> (기준선 0 · 전에는 5) — ' + HM.wi + '개'
+      + (HM.wiName && HM.wiName.length ? (' ← ' + HM.wiName.join(' · ')) : ''));
   /* 접이는 <b>하나만</b> — 사장님 말씀 「2번으로 해줘 접어」 로 「🧭 그 밖의
      것」 하나를 두었습니다. 둘이 되면 다시 「접이 더미」 가 됩니다.     */
   is(HM.n <= 1, '홈에 <b>접이가 하나뿐</b>이다 — ' + HM.n + '개 (🧭 그 밖의 것)');

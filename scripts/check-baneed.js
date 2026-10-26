@@ -71,7 +71,10 @@ const LOOK = () => {
        입니다(y366 대 y1,400).
        ★ <b>자를 약하게 한 것이 아닙니다</b> — 보는 <b>자리만</b> 옮기고 재는 것
          (적혀 있나 · 진짜 단추인가 · 44px 인가 · 그 분을 들고 가나)은 그대로입니다 (8번). */
-    band: ((document.querySelector('.hm-nxs-b .btn, .hm-nxs-b .hm-nxs-w') || {}).textContent || ''),
+    /* ★ 판 X199 — 「✅ 오늘 할 일」 칸이 「지금 할 것」 카드와 합쳐졌습니다.
+       그 분 보장분석 줄은 이제 카드 안(.hm-now-ba)입니다. 옛 이름도 그대로
+       찾습니다 — 카드가 못 서는 판에서는 옛 칸이 섭니다. */
+    band: ((document.querySelector('.hm-now-ba .btn, .hm-now-ba .hm-nxs-w, .hm-nxs-b .btn, .hm-nxs-b .hm-nxs-w') || {}).textContent || ''),
     msHi: Math.round(((document.getElementById('hmMsHost') || {}).getBoundingClientRect
       ? document.getElementById('hmMsHost').getBoundingClientRect().height : 0))
   };
@@ -227,18 +230,25 @@ const LOOK = () => {
      옮겨졌습니다(위 쪽지). 단추를 만드는 자는 그대로 <b>hmBaBtn 하나</b>이고
      (5번), 여기서는 그 단추가 <b>그 분 이름 아래에 서는지</b>를 봅니다. */
   const qb = await p.evaluate(() => {
-    const box = document.querySelector('.hm-nxs-b');
+    /* ★ 판 X199 — 카드 안(.hm-now-ba)을 먼저 보고, 없으면 옛 칸(.hm-nxs-b) */
+    const box = document.querySelector('.hm-now-ba') || document.querySelector('.hm-nxs-b');
     const e = box ? (box.querySelector('.btn') || box.querySelector('.hm-nxs-w')) : null;
     if (!e) return null;
-    /* ★ <b>그 분 줄 아래</b>인가 — 이름이 바로 위에 있어야 그 분 것입니다 */
-    const who = ((box.parentElement || {}).querySelector
-      ? ((box.parentElement.querySelector('.hm-nxs-r .m b') || {}).textContent || '') : '');
+    /* ★ <b>그 분 줄 아래</b>인가 — 이름이 <b>바로 위</b>에 있어야 그 분 것입니다.
+       카드에서는 이름이 .hm-now-m, 옛 칸에서는 .hm-nxs-r 입니다.          */
+    const 품 = box.closest('.hm-now') || box.parentElement;
+    const nmEl = 품 ? (품.querySelector('.hm-now-m .m b') || 품.querySelector('.hm-nxs-r .m b')) : null;
+    const who = nmEl ? (nmEl.textContent || '') : '';
+    /* ★ 이름이 <b>단추보다 위</b>인지도 봅니다 — 「그 고객 밑에」 (6번) */
+    const 밑 = !!(nmEl && e.getBoundingClientRect().top > nmEl.getBoundingClientRect().top);
     return { tag: e.tagName, h: Math.round(e.getBoundingClientRect().height),
-      누름: /hmBaGo|hmBaAdd/.test(e.getAttribute('onclick') || ''), 글: e.textContent, who: who };
+      누름: /hmBaGo|hmBaAdd/.test(e.getAttribute('onclick') || ''), 글: e.textContent, who: who, 밑: 밑 };
   });
   is(!!qb && qb.tag === 'BUTTON' && qb.누름,
      '  맨 위 「오늘 할 일」 의 📄 가 <b>진짜 눌리는 단추</b>다 — ' + (qb ? (qb.tag + ' 「' + qb.글 + '」') : '(없음)'));
-  is(!!qb && !!qb.who,
+  /* ★ 판 X199 — 이름이 <b>정말 위</b>인지까지 봅니다. 전에는 이름이 있기만
+     하면 초록이라, 단추가 이름보다 위로 올라가도 안 울렸습니다 (8번).     */
+  is(!!qb && !!qb.who && qb.밑 === true,
      '  ★ <b>그 고객 이름 바로 아래</b>에 선다 — 「' + ((qb && qb.who) || '(이름 없음)') +
      '」 (사장님 말씀 「그 고객 밑에 보장분석 넣기」)');
   is(!!qb && qb.h >= 44, '  손가락 크기 <b>44px</b> 를 지킨다 — ' + (qb ? qb.h : 0) + 'px');

@@ -1,4 +1,4 @@
-/* 📊 한눈에 결과 — 토스처럼 한 장에, 새로 세는 것 없이 (판 X198)
+/* 📊 한눈에 결과 — 토스처럼 한 장에, 새로 세는 것 없이 (판 X215)
 
    사장님 말씀 2026-10-24 「토스처럼 결과 보여주고 쉽게 이해하는것들 … 여기서 먼저 만들고 반영할거야」.
    계산기(app/finance.html)의 「📊 한눈에 결과」 를 실제로 열어 봅니다.
@@ -11,7 +11,7 @@
      마. 여는 문 셋 — 왼쪽 아래 · 대시보드 머리 · 함께 점검 상담 정리 장
      바. 목표 생활비가 비면 「30일 중」 을 세우지 않는다 · 견본이면 견본 띠 · 「요건 충족 시」 · 「심사 결과에 따릅니다」
      사. 폰(390)에서 옆으로 넘치지 않고 글자 13px 아래가 없다 · 페이지 오류 0
-     아. 판 X199 (「성별 기본값도 고쳐주고, 사업자 세금 / 퇴직금 / 국민연금 예상수령 / 주택연금 칸도 넣어줘」)
+     아. 판 X216 (「성별 기본값도 고쳐주고, 사업자 세금 / 퇴직금 / 국민연금 예상수령 / 주택연금 칸도 넣어줘」)
          · 성별은 비어서 시작하고, 비면 연금 셈은 남성 기준이라고 밝힌다 · 성별을 읽는 자리는 finSex 하나
          · 네 칸의 숫자는 finNpsEst · finSevOut · finHouseOut · finBizTax 그대로 — 칸이 비면 숫자 0 개 · 그 칸으로 가는 단추
          · 상담 「퇴직금」 물음의 근속연수가 계산기 칸(s_sev_years)으로 들어간다
@@ -114,7 +114,7 @@ const head = (t) => console.log('\n' + t);
   await pg.evaluate(() => finSample()); await pg.waitForTimeout(200);
   is(await pg.evaluate(() => { glcOpen(); const s = !!document.querySelector('#glcOv .glc-sample'); glcClose(); return s; }), '견본(홍길동)으로 보는 동안은 견본 띠가 선다');
 
-  head('아. 성별 · 노후 돈 · 세금 네 칸 (판 X199)');
+  head('아. 성별 · 노후 돈 · 세금 네 칸 (판 X216)');
   const fs = require('fs'), src = fs.readFileSync(path.join(ROOT, 'app/finance.html'), 'utf8');
   const fresh = await ctx.newPage(); const ferrs = []; fresh.on('pageerror', (e) => ferrs.push(e.message)); fresh.on('dialog', (d) => d.accept());
   await fresh.goto('file://' + path.join(ROOT, 'app/finance.html'));

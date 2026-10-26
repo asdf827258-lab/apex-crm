@@ -1,4 +1,4 @@
-/* 고객 결과지(토스 테마 재무 리포트)가 믿을 만한가 (판 X178)
+/* 고객 결과지(토스 테마 재무 리포트)가 믿을 만한가 (판 X211)
 
    사장님 말씀 2026-10-22 「현재 내 메인세션에서 재무설계계산기만 따와서 가져와서 준비해줘
    운영방식을 이해하고 조금 더 고객에게 쉽게 어필할수 있도록 만들자」 — 계산 결과를
@@ -15,7 +15,7 @@
      사. data 에 넣은 HTML 이 글자로 찍히나
      아. 계산기 — 이름이 가려진 채 나가나 · 실명은 한 번 더 묻나 (3번)
      차. ★ 고객이 스스로 부족을 느끼나 — 사장님 말씀 2026-10-22 「고객이 이걸 통해서 스스로 부족하다고
-         느끼고 걱정하도록 … 고객의 입장에서 상담을 스스로 받아보고 … 개선해」 (판 X179)
+         느끼고 걱정하도록 … 고객의 입장에서 상담을 스스로 받아보고 … 개선해」 (판 X212)
          · 히어로에 「지금 그대로면」 한 달 30일 칸 — 날 수가 <b>고객 숫자(준비된 돈 ÷ 목표)</b>로만 셈해지나
          · 「잘하고 계신 것」 뒤에 「그런데 — 목표의 N%」 · 빈칸을 얼마나 채우나 · 시작을 미루면 · 원금 돌려받는 나이
          · 「지금 그대로면 / 오늘 제안을 더하면」 두 줄 · 스스로 점검 질문 · 마지막 「가장 마음에 걸린 숫자」
@@ -98,7 +98,7 @@ head('사. data 의 HTML 은 글자로');
 const evil = R.html({ client: { name: '<img src=x onerror=alert(1)>' }, summary: ['<script>x</script>'] });
 is(!/<img src=x|<script>x/.test(evil), '태그를 넣어도 글자로 찍힌다');
 
-head('차. 고객이 스스로 부족을 느끼나 — 고객 숫자로만 (판 X179)');
+head('차. 고객이 스스로 부족을 느끼나 — 고객 숫자로만 (판 X212)');
 const goal = sample.goal, now = sample.nationalPension.monthly, days = Math.round(now / goal * 30);
 is(text.includes('지금 그대로면 — ' + sample.pension.openAge + '세 이후 한 달 ' + R.man(goal) + ' 중'), '히어로에 「지금 그대로면」 이 선다');
 const nos = (x) => x.replace(/\s+/g, '');   /* 굵게(<b>)가 공백으로 바뀌므로 공백을 빼고 견줍니다 */
@@ -130,7 +130,7 @@ is(!/rptReal|실명 넣기/.test(fin), '실명을 넣는 칸이 없다 — 결�
 is(/saveP>0&&priv<=0&&!ap\?'※ 지금 모으고 계신 연금저축·IRP·달러·변액/.test(fin), '지금 모으는 연금저축·IRP 를 빼고 셌으면 뺐다고 밝힌다(1번)');
 /* 판 X203 — 쌓인 금액 칸 · 탭과 결과지가 한 곳(psAccPlan)에서 센다 · 「불가」 대신 「점검 필요」 */
 is(/id="s_pen_acc"[^>]*placeholder="모름"/.test(fin) && !/id="s_pen_acc"[^>]*value="/.test(fin), '「쌓인 금액」 칸이 있고, 비어 있으면 모름이다(0 을 미리 넣지 않는다 · 1번)');
-/* 판 X186 — 쌓인 금액 셈(psAccPlan)은 준비된 연금 셈(finReady) 안에서 한 번만 부르고, 탭과 결과지는 finReady 를 부릅니다 */
+/* 판 X213 — 쌓인 금액 셈(psAccPlan)은 준비된 연금 셈(finReady) 안에서 한 번만 부르고, 탭과 결과지는 finReady 를 부릅니다 */
 is((fin.match(/function psAccPlan\(/g) || []).length === 1 && (fin.match(/[^ ]psAccPlan\(\)/g) || []).length === 1 && /acc=psAccPlan\(\)/.test(fin) && (fin.match(/var RD=finReady\(\)|=finReady\(\)/g) || []).length >= 2, '탭과 결과지가 psAccPlan 한 곳에서 센다 — finReady 를 거쳐(5번)');
 is(/if\(raw===''\|\|!window\.APEX_REPORT\) return null;/.test(fin), '칸이 비면 null — 0 과 다르다(1번)');
 is(/APEX_REPORT\.calc\.RULE\.annuity\.annuityFactor/.test(fin) && !/psAccPlan[\s\S]{0,900}\b200\b/.test(fin.slice(fin.indexOf('function psAccPlan'), fin.indexOf('function psAccPlan') + 900)), '전환계수는 엔진 RULE 한 곳에서 — 200 을 따로 외우지 않는다');
@@ -138,7 +138,7 @@ is(/'점검 필요'/.test(fin) && !/:'불가'/.test(fin), '계산기 결과지�
 /* 판 X206 — 나이대 문구는 IP_AGE 한 곳 (예전엔 if 사슬 · 삼항 사슬로 두 벌) */
 is((fin.match(/var IP_AGE=\[/g) || []).length === 1 && (fin.match(/20대 · 시작기/g) || []).length === 1, '나이대 표가 IP_AGE 한 곳에만 있다(5번)');
 is(/var ageMsg=ipBand\(d\.age\)\.one;/.test(fin) && !/var ageMsg=d\.age<30\?/.test(fin), '상담 가이드 한 줄도 IP_AGE 를 읽는다 — 삼항 사슬 0');
-/* 판 X186 — 「나이별 보험 필요성 피드백」 을 그리던 덧칠(CONTENT-FIRST)은 화면에 한 번도 서지 않는 죽은 판이라 지웠습니다. 남은 자리는 ipBand 를 읽습니다 */
+/* 판 X213 — 「나이별 보험 필요성 피드백」 을 그리던 덧칠(CONTENT-FIRST)은 화면에 한 번도 서지 않는 죽은 판이라 지웠습니다. 남은 자리는 ipBand 를 읽습니다 */
 is(!/if\(age<30\)\{\s*stage=/.test(fin) && (!/function insuranceGuideByAge\(/.test(fin) || /var B=ipBand\(age\);/.test(fin)) && /ipBand\(d\.age\)/.test(fin), '「나이별 보험 필요성 피드백」 도 IP_AGE 를 읽는다 — if 사슬 0');
 /* 판 X207 — 기준값: 평균은 출처가 붙은 것만 · 보험료 판정 8/15 는 IP_RULE 한 곳 · 나이대 비율 0 */
 const avgBlk = fin.slice(fin.indexOf('var IP_AVG={'), fin.indexOf('};', fin.indexOf('var IP_AVG={')));
