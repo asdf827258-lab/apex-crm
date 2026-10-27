@@ -336,26 +336,35 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
      pb ? ('막대 자리 ' + pb.tw.length + '줄이 <같은 폭>이다 (' + pb.tw[0] + 'px) — 달라지면 길이를 못 견준다') : '—');
   is(pics.nfill >= 3, '모자란 담보마다 <얼마나 찼는지> 막대가 있다 (' + pics.nfill + '개)');
   is(pics.svg >= 1, '직접 그린 그림(SVG)이 ' + pics.svg + '개 있다');
-  /* 치료 경로 — 「암이 오면」을 <b>한 번에 끝나는 일</b>로 듣지 않게, 진단
-     → 수술 → 항암 → 통원을 줄로 세우고 <b>지금 보는 자리만</b> 켠다.
-     그리고 그림은 <b>직접 그린 것</b>이어야 한다 — 남의 자료 삽화를
-     옮기지 않는다 (9번). 사진(<img>)이 한 장이라도 있으면 걸린다. */
-  const flow = await pg.evaluate(() => {
-    var secs = [].slice.call(document.querySelectorAll('#app .show > section'))
-      .filter(function (s) { return /^s4_/.test(s.id) && s.querySelector('.flow'); });
-    var bad = [];
-    secs.forEach(function (s) {
-      var all = s.querySelectorAll('.flow .fl').length;
-      var on = s.querySelectorAll('.flow .fl.on').length;
-      if (!all || !on || on >= all) bad.push(s.id + ' 단계' + all + '개 중 ' + on + '개 켜짐');
-    });
-    return { n: secs.length, bad: bad,
-             steps: secs.length ? secs[0].querySelectorAll('.flow .fl').length : 0,
-             img: document.querySelectorAll('#app img').length };
+  /* 치료 한 바퀴 — 「암이 오면」을 <b>한 번에 끝나는 일</b>로 듣지 않게, 진단
+     → 수술 → 항암 → 통원을 <b>한 장에 옆으로</b> 세운다 (2026-10 사장님 요청:
+     「치료 한 사이클을 한 장에」). 예전에는 아래로 쌓아 두 장으로 나눴다.
+     ① 사건마다 장은 <b>하나</b>, 단계 칸은 <b>그 사건의 단계 수 전부</b>
+     ② 무대(1280×720)에서 장이 <b>넘치지 않고</b>, 칸 <b>안쪽</b>도 안 잘린다
+        — 예전에 높이는 720 인데 카드 안에서 두 단계 반이 잘린 일이 있었다
+     ③ 그림은 <b>직접 그린 것</b> — 사진(<img>)이 한 장이라도 있으면 걸린다 (9번) */
+  const flow = await pg.evaluate(async () => {
+    var keep = { deck: S.deck, sim: S.sim, view: S.view, slide: S.slide }, bad = [], n = 0, steps = 0;
+    for (var e = 0; e < EVENTS.length; e++) {
+      var ev = EVENTS[e];
+      S.deck = true; S.view = 'full'; S.sim = ev.k; S.slide = 's4_' + ev.k; save(); render();
+      await new Promise(function (r) { setTimeout(r, 80); });
+      var secs = [].slice.call(document.querySelectorAll('#app .show > section'))
+        .filter(function (s) { return s.id.indexOf('s4_' + ev.k) === 0; });
+      if (secs.length !== 1) { bad.push(ev.k + ' 장 ' + secs.length + '개'); continue; }
+      var s = secs[0], cards = s.querySelectorAll('.cyc .cyk');
+      if (!s.querySelector('.cyc')) continue;            /* 기준 치료비가 없는 사건 — 그리지 않는다 */
+      n++; steps = Math.max(steps, cards.length);
+      if (cards.length !== ev.sim.length) bad.push(ev.k + ' 단계 ' + cards.length + '/' + ev.sim.length);
+      if (s.scrollHeight > 721) bad.push(ev.k + ' 장 높이 ' + s.scrollHeight + 'px');
+      [].forEach.call(cards, function (c, i) { if (c.scrollHeight > c.clientHeight + 1) bad.push(ev.k + ' ' + (i + 1) + '단계 칸 안쪽이 잘림'); });
+    }
+    S.deck = keep.deck; S.sim = keep.sim; S.view = keep.view; S.slide = keep.slide; save(); render();
+    return { n: n, bad: bad, steps: steps, img: document.querySelectorAll('#app img').length };
   });
   is(flow.n > 0 && flow.bad.length === 0,
-     flow.bad.length ? ('치료 경로가 어긋난 장 — ' + flow.bad.join(' / ')) :
-     '「이 병이 오면」 ' + flow.n + '장에 <치료 경로 ' + flow.steps + '단계>가 서고, 지금 보는 자리만 켜져 있다');
+     flow.bad.length ? ('치료 한 바퀴가 어긋난 장 — ' + flow.bad.join(' / ')) :
+     '「이 병이 오면」 ' + flow.n + '사건이 <각각 한 장>에 ' + flow.steps + '단계 전부 서고, 무대 안에 들어간다');
   is(flow.img === 0,
      '그림을 <직접 그렸다> — 남의 자료 사진(<img>)이 ' + flow.img + '장이다 (9번)');
   /* 「더 넣을 것」은 <세어서> 본다 — 옛 문구를 찾으면 문구를 바꾸는 날 알람이 죽는다 */

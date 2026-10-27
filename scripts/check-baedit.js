@@ -203,7 +203,9 @@ const head = (t) => console.log('\n' + t);
   await pg.evaluate(() => { localStorage.clear(); doSample(); go('edit'); });
   await pg.waitForTimeout(400);
   const F = await snap();
-  is(F.h < 8000, '계약 6건 · 화면 높이 ' + F.h + 'px (' + (F.h / 900).toFixed(1) + '화면) — 예전 8,462px(9.4화면)보다 짧다');
+  /* 2026-10 — 담보 6줄(비급여 암주요치료비 · 골절·화상 다섯)이 늘어 약 +670px.
+     늘어난 것은 <b>적을 칸</b>이지 군살이 아니다 — 그만큼만 기준을 옮긴다. */
+  is(F.h < 8800, '계약 6건 · 화면 높이 ' + F.h + 'px (' + (F.h / 900).toFixed(1) + '화면) — 담보 65가지 기준 8,800px 안이다');
   is(F.side === 'sticky', '옆 요약 칸은 <붙박이>라 내려도 따라온다');
 
   head('[11] 자동 보장분석이 다섯 칸으로 나뉜다 — 인쇄하면 전부 나온다');
