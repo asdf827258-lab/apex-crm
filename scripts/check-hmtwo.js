@@ -395,9 +395,20 @@ const SEED = () => {
     const y = (el) => el ? Math.round(el.getBoundingClientRect().top) : -1;
     const hh = (el) => el ? Math.round(el.getBoundingClientRect().height) : -1;
     const up = document.getElementById('hmSideUp');
-    const 넷 = up ? [].slice.call(up.children).map(e => ({
-      이름: (e.querySelector('.hm-rt-h b') || {}).textContent || e.id || e.className,
-      y: y(e) })) : [];
+    /* ★ 판 X219 — 곁칸 셋이 <b>타일</b>이 되어 격자(.hm-tiles) 안에 섭니다.
+       up 의 자식만 세면 격자가 <b>한 덩이</b>로 세어집니다 — 격자는 속으로
+       들어가서 셉니다. 이름은 머리글(.hm-rt-h b)이나 타일 이름(.m b)에서. */
+    const 넷 = up ? (function(){
+      const out=[];
+      [].slice.call(up.children).forEach(function(e){
+        const kids = e.classList && e.classList.contains('hm-tiles')
+          ? [].slice.call(e.children) : [e];
+        kids.forEach(function(c){
+          out.push({ 이름:((c.querySelector('.hm-rt-h b')||c.querySelector('.m b')||{}).textContent)
+                           || c.id || c.className, y:y(c) }); });
+      });
+      return out;
+    })() : [];
     const now = document.querySelector('.hm-now');
     return { no: 0, lx: Math.round(rl.left), rx: Math.round(rr.left),
              ly: Math.round(rl.top), ry: Math.round(rr.top),
@@ -419,7 +430,12 @@ const SEED = () => {
              오른글: (R.textContent || '').trim().length,
              rt: document.querySelectorAll('#hmRtHost').length,
              act: document.querySelectorAll('#hmActHost').length,
-             머리: document.querySelectorAll('#hmSideUp .hm-rt-h').length,
+             /* ★ 판 X219 — 곁칸 넷 중 셋이 <b>타일</b>이 되었습니다. 머리글
+                (.hm-rt-h)만 세면 타일을 못 봅니다 — <b>둘 다</b> 셉니다.
+                ★ 글이 사라진 것이 아닙니다 — 🚗 오늘 동선과 📒 오늘 기록은
+                  <b>카드 그대로</b>이고(열 분·📞 전화·칩 셋을 지키려고),
+                  나머지 셋만 한 줄 타일입니다 (6번).                   */
+             머리: document.querySelectorAll('#hmSideUp .hm-rt-h, #hmSideUp .hm-tile').length,
              펴짐: (typeof HM_MORE !== 'undefined') ? !!HM_MORE : null,
              over: Math.round(document.documentElement.scrollWidth - window.innerWidth) };
   });
