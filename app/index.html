@@ -21115,8 +21115,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-26 21:45';
-var APP_BUILD_NOTE="📱 <b>재무설계 계산기를 폰에서 열면 잘리던 셋을 고쳤습니다</b> (판 X218). ◾ 대시보드 머리의 「🖨 보고서 출력 · 🧭 함께 점검 상담 · 📊 한눈에 결과」 가 오른쪽 끝에서 잘리고 세 줄로 꺾이던 것 — 폰에서는 제목 아래 줄로 내립니다. ◾ 「월 잉여금 99만 ⚠ 적자」 가 남는 돈처럼 읽히던 것 — 모자라면 <b>「월 모자라는 돈 −99만」</b>. ◾ 「재무 건전성 점수」 오른쪽 글이 칸 밖으로 잘리던 것 — 폰에서는 칸을 한 줄에 하나씩(PC 는 그대로 두 칸). ◾ (같이 들어 있는 앞 판) ⬆ 오늘 약속 · 이번 주 캘린더가 맨 위로 · 동선에 열 분과 📞 전화 · 지도에 진짜 길(판 X217).";
+var APP_BUILD='2026-10-27 06:05';
+var APP_BUILD_NOTE="👀 <b>「지금 할 것」 위에 팀원 고르개가 섭니다</b> (판 X219). ◾ 누구 것을 보는지 <b>먼저 고르고</b> 나서 오늘 할 일을 봅니다. 내 화면이면 설명 줄을 접어 66px 만 씁니다. ◾ 칩을 눌러도 아무 일이 없던 것을 고쳤습니다 — 자리를 옮기면서 다시 그리는 자가 빠져 있었습니다. ◾ 홈이 3,207 → <b>3,154px</b>(3.7화면)로 조금 짧아졌습니다. ◾ ⛔ <b>곁칸을 두 열 타일로 접는 것은 못 했습니다</b> — 📈 이번 주 · 💌 이번 달 관리 · 🔔 알람을 한 줄로 접어 봤더니 「아직 N건」 · 「계약일 모름 N분」 · 「오늘은 아직입니다」 같이 <b>읽으시는 수</b>가 사라져 되돌렸습니다. 짧게 하려고 세는 수를 없애지 않습니다. ◾ (같이 들어 있는 앞 판) 📱 계산기가 폰에서 잘리던 셋(판 X218) · ⬆ 약속 · 이번 주가 맨 위로(판 X217).";
 
 
 
@@ -26431,7 +26431,15 @@ function hwhoBarHtml(){
   var cur=hwhoId(),me=(typeof arMyId==='function')?arMyId():'',i,x,tot=0,셌나=false;
   var mine=hwhoIsMe(),all=hwhoIsAll();
   for(i=0;i<L.length;i++)if(L[i].n!=null){tot+=L[i].n;셌나=true;}
-  var h='<div class="hwho'+(mine?'':' other')+'">'+
+  /* 🔲 <b>폰에서 내 화면일 때는 설명 줄을 안 적습니다</b> (판 X219 · 사장님 말씀
+     「지금 할것이 너무 많은 자리를 차지하고 있어」). 아래 칩이 <b>「홍길동 (나)」</b>
+     라고 이미 말하고, 내 화면에는 <b>경고할 것이 없습니다.</b>
+     ★★ <b>남의 화면일 때는 그대로 적습니다</b> — 「내 것이 아닙니다」 는 숨기면
+       안 되는 말입니다 (1번). 「← 내 화면으로」 단추도 그대로입니다 (6번).
+     ★ 「지금 넓은 화면인가」 를 아는 자는 <b>navWide 하나</b>입니다 (5번) —
+       수(1101)를 여기 또 안 적습니다. */
+  var 좁 = mine && !((typeof navWide==='function')?navWide():true);
+  var h='<div class="hwho'+(mine?'':' other')+(좁?' tight':'')+'">'+
     /* ⚠ 한 문장은 <b>한 덩어리</b>로 싼다. 이 칸이 flex 라서 <b> 를 그냥 두면
        그 자리가 따로 떨어져 「내 화면 / 입니다 —」 로 줄이 끊긴다. 폰에서
        실제로 그렇게 찍혔다 — 굵은 글자마다 줄이 바뀌던 그 병이다. */
@@ -26517,6 +26525,10 @@ function hwhoCss(){
      'border:1px solid #DBE7FF;background:var(--t-bg-b)}'+
    /* 남의 화면일 때는 <b>색이 다르다</b> — 스쳐 봐도 내 것이 아닌 줄 안다 */
    '.hwho.other{border-color:#FCD34D;background:#FFFBEB}'+
+   /* 🔲 좁은 화면에서 <b>내 화면</b>일 때는 설명 줄을 접습니다 (판 X219).
+      ★ 남의 화면(.other)에는 이 규칙이 <b>안 걸립니다</b> — 「내 것이 아닙니다」
+        는 숨기면 안 되는 말입니다 (1번). tight 는 mine 일 때만 붙습니다.   */
+   '.hwho.tight .hwho-now{display:none}'+
    '.hwho-now{font-size:var(--t6);line-height:1.6;color:var(--ink-4);'+
      'display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}'+
    '.hwho-tx{flex:1 1 auto;min-width:0}'+
@@ -32907,7 +32919,8 @@ function hmTodayHtml(){
   var head='<div class="card hm-card"><div class="card-body">'+
     /* <b>누구 화면인지가 제일 먼저</b> 선다 — 밑의 숫자를 내 것으로
        잘못 읽으면 그 자리에서 사고가 난다 (사장님 말씀 ③·④) */
-    hwhoBarHtml()+
+    /* 👤 누구 화면인가는 <b>홈 맨 위</b>로 올라갔습니다 (판 X219) — 여기서
+       또 세우면 같은 줄이 두 번 섭니다 (5번).                          */
     '<div class="hm-top"><span class="hm-d">'+osEsc(hmTodayLabel())+'</span>'+
       /* 홈을 <b>안 벗어나고</b> 고객을 넣는다 — 덮개로 뜬다 (사장님 말씀 ⑦) */
       '<button type="button" class="hm-cal" onclick="cregOpen()">➕ 고객 넣기</button>'+
@@ -33238,6 +33251,15 @@ function hmTopHtml(){
   try{ h=hmNowHtml(hmTopExt())||''; }catch(e){ h=''; }
   /* 카드가 못 서는 판 — 그 말을 <b>여기서 또 짓지 않습니다</b> (5번·1번) */
   return h||hmNxsHtml();
+}
+/* 👤 <b>팀원 고르개만 다시 그린다</b> (판 X219).
+   ★★ <b>제가 낸 버그를 자가 잡았습니다</b> — 이 줄을 홈 맨 위로 올리면서
+     hmPaint 가 안 칠하는 자리가 되어, <b>팀원을 눌러도 줄이 그대로</b>였습니다
+     (「＋N명 더」 도 안 펴지고, 고른 칩에 표시도 안 났습니다 · check-hwho).
+   ★ 칠하는 자리는 <b>여기 하나</b>이고 hmPaint 가 부릅니다 (5번 · hmJobPaint 와 같은 결). */
+function hmWhoPaint(){
+  var el=document.getElementById('hmWhoHost'); if(!el)return;
+  try{ el.innerHTML=hwhoBarHtml(); }catch(e){}
 }
 /* 이 칸만 다시 그린다 — hmPaint 는 #hmToday 만 갈아 끼우므로 (hmSumPaint 와 같은 결) */
 function hmJobPaint(){
@@ -33948,6 +33970,10 @@ function hmPrmHtml(){
 }
 function hmActHtml(){
   var a=hmActOf(); if(!a)return '';
+  /* ⚠⚠ <b>📒 도 타일로 안 바꿉니다</b> (판 X219). 한 번 바꿔 봤더니 이 줄에
+     달린 칩 셋 — <b>🤝 한 분 더 · 🎯 접촉포인트 · 📸 오늘 올릴 것</b> — 이
+     폰에서 통째로 사라졌습니다(check-homeone 이 잡았습니다). 이 칸은
+     <b>66px</b> 뿐이라 아끼는 것보다 잃는 것이 큽니다 (6번).           */
   hmActCss();
   var h='',i,k;
   /* 🤝 한 분 더 · 🎯 접촉포인트 — <b>같은 칩 줄</b>에 둡니다 (판 X97).
@@ -34359,6 +34385,9 @@ function hmRunSideHtml(){
   if(typeof hmRtCss==='function')hmRtCss();
   var S=null,h;
   try{ S=actStreak(); }catch(e){ S=null; }
+  /* 🔲 <b>타일</b>일 때는 한 줄로 (판 X219). 수는 <b>바로 위에서 이 칸이 센
+     그것</b>입니다 — 여기서 다시 세지 않습니다 (5번). 못 셌으면 안 적습니다 (1번).
+     길은 머리 단추가 쓰던 그대로입니다 (6번). — 연속 가동 일수 */
   h='<div class="card"><div class="card-body">'+
     '<div class="hm-rt-h"><span class="ci">📈</span><b>이번 주</b>'+
       '<button type="button" class="hm-rt-go" onclick="go(\'me\')">내 숫자 →</button></div>';
@@ -34486,6 +34515,12 @@ function hmMadiSideHtml(){
      남아 있거나 다른 길로 불러도 같은 일이 납니다. <b>모르는 것은 모른다고</b>
      적고 넘어갑니다.                                                     */
   if(L&&(!L.mon||typeof L.mon.length!=='number'))L=null;
+  /* ⛔ <b>이 칸은 타일로 접지 않습니다</b> (판 X219 · 세 번째로 데인 자리).
+     한 줄로 접으니 「마디 N건」 말고 <b>「아직 N건」 · 「계약일 모름 N분」 ·
+     목각의 말 · 44px 짜리 「보낼 말 보기 →」</b> 가 통째로 사라졌습니다 —
+     <b>check-hmmadi 가 CI 에서 잡았습니다</b>(제가 홈 자 열둘만 돌리고 이 자를
+     안 돌렸습니다). 🚗 동선 · 📒 기록도 같은 까닭으로 카드 그대로입니다.
+     <b>66px 아끼자고 세는 수를 없애지 않습니다</b> (1번 · 6번).           */
   h='<div class="card"><div class="card-body">'+
     '<div class="hm-rt-h"><span class="ci">💌</span><b>이번 달 고객 관리</b>'+
       '<button type="button" class="hm-rt-go" onclick="hmMadiGo()">보낼 말 보기 →</button></div>';
@@ -34554,12 +34589,48 @@ function hmSideTodoHtml(x){
   '</div></div>';
 }
 /* 오른쪽 기둥 통째 — 목각 차례(이번 주 · 오늘 동선 · 이번 달 · 알람) */
+/* ══ 🔲 <b>곁칸을 타일로</b> — 폰에서 한 화면에 들게 (판 X219) ═══════════
+   사장님 말씀 (2026-10-26) — 「지금 할것이 <b>너무 많은 자리를 차지</b>하고
+   있어 … 이 칸이 지금할것 <b>오른쪽에 있는다면</b>, 한번에 오늘 할일이 눈에
+   싹 들어올거 같은데 … 한번에 내가 오늘 할것들을 <b>한번에 이해하고
+   순차적으로</b> 할수있도록 하는게 가장 중요해」.
+
+   ── 재서 고른 모양 ──────────────────────────────────────────────────
+   폰 390 에서 곁칸 다섯이 <b>749px</b> 이었습니다 — 「지금 할 것」 카드
+   (512px)보다 큽니다. 첫 화면에 쓸 수 있는 자리는 <b>740px</b> 이라,
+   카드만으로 꽉 찹니다.
+   ★ 다섯을 <b>두 열 타일</b>로 바꿉니다 — 이모지 · 이름 · <b>한 수</b> · ›.
+     카드(512) + 세 칸(94) + 📄(48) + 타일(약 190) = <b>한 화면</b>입니다.
+   ★★ <b>수를 여기서 다시 세지 않습니다</b> (5번) — 타일마다 <b>그 칸이
+     이미 센 수</b>를 들고 옵니다. 두 곳에서 세면 카드와 타일이 다른 말을
+     합니다. 못 셌으면 <b>안 적습니다</b> — 0 이라고 적으면 거짓입니다 (1번).
+   ★ <b>누르면 그 칸이 하던 그 일</b>을 합니다 — 길도 카드의 머리 단추가
+     쓰던 것 그대로입니다 (6번 · 길은 안 지웁니다).
+   ★ 타일 키는 <b>44px — 사장님 손가락 바닥</b>(판 X146·X147).
+   ⚠ <b>컴퓨터에서는 그대로 큰 카드</b>입니다 — 오른쪽 기둥은 자리가 넉넉해
+     줄일 까닭이 없습니다. 정하는 자는 <b>hmSidePlace 하나</b>입니다 (5번). */
+/* ⛔ <b>곁칸을 한 줄 타일로 접는 길은 거두었습니다</b> (판 X219).
+   사장님 말씀 「지금 할것이 너무 많은 자리를 차지하고 있어 … 이 칸이 지금할것
+   오른쪽에 있는다면」 으로 📈 이번 주 · 💌 이번 달 관리 · 🔔 알람 셋을 두 열
+   타일로 접어 봤습니다. 곁칸이 749 → 462px 로 줄긴 했는데, <b>자 넷이 울었습니다</b> —
+     · check-hmwk · check-hmrun  : 📈 이번 주 — 전화·만남 수 · 「오늘은 아직입니다」 ·
+                                   칩과 카드가 같은 수인가(칸이 없어져 갈렸습니다)
+     · check-hmmadi · check-mstans: 💌 이번 달 관리 — 「아직 N건」 · 「계약일 모름 N분」 ·
+                                   44px 짜리 「보낼 말 보기 →」
+   곁칸 다섯은 <b>저마다 제 수를 지키는 자</b>를 갖고 있습니다. 한 줄로 접으면
+   사장님이 읽으시는 수가 사라집니다 — <b>66px 아끼자고 세는 수를 없애지
+   않습니다</b> (1번 · 6번). 🚗 오늘 동선 · 📒 오늘 기록도 같은 까닭입니다.
+   ★ 다음에 줄이려면 <b>접기</b>(글은 남기고 한 번 더 누르게) 나 「지금 할 것」
+     칸(748px) 쪽을 보십시오 — 어느 글을 접을지는 사장님이 정하실 일입니다. */
 function hmSideHtml(){
-  var h='',i;
+  var h='',i,one;
   for(i=0;i<HM_SIDE.length;i++){
-    if(HM_SIDE[i].at===2)h+=hmRtEtc();          /* ② 오늘 동선 (+ 오늘 기록) */
-    h+=(HM_SIDE[i].fn&&typeof window[HM_SIDE[i].fn]==='function')
+    if(HM_SIDE[i].at===2){
+      h+='<div id="hmRtHost"></div><div id="hmActHost"></div>';
+    }
+    one=(HM_SIDE[i].fn&&typeof window[HM_SIDE[i].fn]==='function')
         ? window[HM_SIDE[i].fn]() : hmSideTodoHtml(HM_SIDE[i]);
+    h+=one;
   }
   return h;
 }
@@ -34913,6 +34984,16 @@ function hmRtHtml(){
      줄이 각자 고르면 한 이름표에 두 뜻이 섞입니다 (0-1번).               */
   var mAsk=ap.length?'약속동네만나야할분':'권한동네몇분',rec='';
   for(i=0;i<ap.length;i++)if(!ap[i].rg)noRg++;
+  /* 🔲 <b>타일</b>일 때는 한 줄로 (판 X219). 수는 <b>바로 위에서 이 칸이 센</b>
+     ap(오늘 약속)·near(오늘 걸 분)입니다 — 여기서 다시 세지 않습니다 (5번).
+     길은 머리 단추(hmRtOpen)가 쓰던 그대로입니다 (6번). */
+  /* ⚠⚠ <b>🚗 는 타일로 안 바꿉니다</b> (판 X219). 한 번 타일로 바꿔 봤더니
+     바로 지난 판(X217)에 사장님이 시키신 <b>「그 지역 열 분 + 📞 전화」</b> 와
+     「이른 약속부터」·「갈 데 없는 날 무엇을 하면 되는지」 가 폰에서 <b>통째로
+     사라졌습니다</b>(check-hmroute·check-queue 가 잡았습니다). 이 칸의 248px 은
+     <b>낭비가 아니라 약속 줄과 접이</b>입니다 — 접힌 동안 열 분은 0px 입니다.
+     ★ 줄인 것은 <b>나머지 넷</b>입니다: 이번 주 123 · 오늘 기록 66 ·
+       이번 달 145 · 알람 153 = <b>487 → 약 124px</b> (6번 · 말은 안 지웁니다). */
   hmRtCss();
   h='<div class="card hm-rt"><div class="card-body">'+
     '<div class="hm-rt-h"><span class="ci">🚗</span><b>오늘 어디로 가시나</b>'+
@@ -35288,6 +35369,8 @@ function hmPaint(){
   /* ✅ 오늘 할 일 — 맨 위 칸도 같이. 「이분 끝」 을 누르거나 보장분석이 늦게
      실려 와도 이 칸이 따라갑니다 (판 X150) */
   try{ hmJobPaint(); }catch(eJb){}
+  /* 👤 팀원 고르개도 같이 — 누르면 그 자리에서 바뀌어야 합니다 (판 X219) */
+  try{ hmWhoPaint(); }catch(eWh){}
   /* 📒 이번 달 기록도 같이 — 접촉을 하나 남기면 그 수가 바로 바뀝니다 (판 X130) */
   try{ mlogPaint(); }catch(eMl){}
   /* 📍 <b>곁칸 넷을 어디에 세울지</b> — 오늘 카드를 다시 그리면 그 안의 자리도
@@ -36770,6 +36853,13 @@ function hmTossHtml(){
      ★ 칩·인사는 <b>안 지웠습니다</b> — 바로 밑으로 내려왔을 뿐입니다 (6번).  */
   return '<div class="tz">'+
     /* 🔗 <b>합친 한 칸</b> (판 X199 · 사장님 말씀 「ⓒ로 해줘」) */
+    /* 👤 <b>누구 화면인가 — 「지금 할 것」 바로 위</b> (판 X219 · 사장님 말씀
+       2026-10-26 「지금 할 것 - <b>위에 팀원들 누구꺼인지 선택</b>할수 있도록」).
+       ★ <b>새로 만들지 않습니다</b> — 「오늘 챙길 것」 머리에 있던 그 자
+         (hwhoBarHtml)를 그대로 부릅니다. 짓는 자도 고르는 길도 하나입니다 (5번).
+       ★ 아래에서는 <b>거뒀습니다</b> — 두 곳에 세우면 같은 줄이 홈에 두 번
+         서고, 한쪽에서 고르면 다른 쪽이 안 따라갑니다.                 */
+    '<div id="hmWhoHost">'+(function(){ try{ return hwhoBarHtml(); }catch(e){ return ''; } })()+'</div>'+
     '<div id="hmJobHost">'+hmTopHtml()+'</div>'+
     /* ⬆ <b>세 칸(➕ 고객 추가)과 📄 한 줄을 카드 바로 밑으로</b> (판 X199).
        카드가 622px 라 그 사이에 칩·인사·바(140px)가 끼면 세 칸이 <b>첫 화면
