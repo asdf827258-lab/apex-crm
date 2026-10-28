@@ -336,7 +336,7 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
      pb ? ('막대 자리 ' + pb.tw.length + '줄이 <같은 폭>이다 (' + pb.tw[0] + 'px) — 달라지면 길이를 못 견준다') : '—');
   is(pics.nfill >= 3, '모자란 담보마다 <얼마나 찼는지> 막대가 있다 (' + pics.nfill + '개)');
   is(pics.svg >= 1, '직접 그린 그림(SVG)이 ' + pics.svg + '개 있다');
-  /* 3번 · 4번 — 화면에서는 3D(ba-3d.html) 두 장, 종이에서는 「한 바퀴 한 장」 (판 X229).
+  /* 3번 · 4번 — 화면에서는 3D(ba-3d.html) 두 장, 종이에서는 「한 바퀴 한 장」 (판 X232).
      ① 화면: s4_3d · s4_why 두 장이 서고, iframe 주소의 # 뒤에 이 고객의 지금/조정 후 보장이 실린다
         (# 뒤라 서버로 안 간다 — 쿼리(?)로 싣지 않았는지도 본다)
      ② 종이(printAll): 3D 장은 빠지고, 사건마다 「한 바퀴 한 장」 이 단계 전부를 세운다
