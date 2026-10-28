@@ -2372,19 +2372,102 @@ function stageCol(d){
    있어서, 그쪽을 지울 때 <b>같이 딸려 나갔습니다</b> — 화면은 멀쩡한데
    🏠 출발지만 죽었습니다. 점검이 잡아 줬습니다. 이제 자기 주석을
    따로 갖습니다. */
-function setHome(){
+/* 🏠 <b>출발지를 잡는 길은 둘</b> (판 X227 · 사장님 말씀 2026-10-28
+   「현재 위치를 입력할수 있도록 해, 출발지 입력하면, 재구성해서 알려줄수
+   있도록해」).
+     📍 <b>지금 내 자리</b> — 폰의 GPS 로. 길에서 바로 쓰는 자리입니다.
+     ✏️ <b>주소로 적기</b> — 사무실·집처럼 늘 같은 자리.
+   ★ 잡고 나면 <b>그 자리에서 순서를 다시 짭니다</b> — tour() 가 HOME 에서
+     출발하므로 render() 한 번이면 끝입니다. 다시 짜는 셈을 여기 또 만들지
+     않습니다 (5번).
+   ★ <b>좌표는 이 브라우저에만</b> 둡니다(apexRouteHomeV1) — 서버로 안
+     보냅니다 (3번 · 7번).
+   ★ GPS 를 못 받으면 <b>못 받았다고</b> 말하고 아무것도 안 바꿉니다 —
+     지난 자리를 그대로 두지, 지어낸 자리를 넣지 않습니다 (1번).      */
+function homeAsk(){
+  if(q("rtHomeSheet")){ homeClose(); return }
+  var cur=HOME?HOME.label:"";
+  var w=document.createElement("div"); w.id="rtHomeSheet";
+  w.style.cssText="position:fixed;inset:0;z-index:10050;background:rgba(8,8,10,.42);"+
+    "display:flex;align-items:flex-end;justify-content:center";
+  w.innerHTML='<div style="background:#fff;width:100%;max-width:430px;border-radius:18px 18px 0 0;'+
+      'padding:16px 14px 20px;box-shadow:0 -10px 40px rgba(15,23,42,.24)">'+
+    '<div style="font-size:15px;font-weight:800;color:#0F172A;margin:2px 2px 4px">🏠 어디서 나서시나요</div>'+
+    '<div style="font-size:13px;color:#6B7688;margin:0 2px 12px;line-height:1.55">'+
+      '잡아 두면 <b>몇 시에 나서야 하는지</b>와 <b>어느 순서로 도는 것이 가까운지</b>를 '+
+      '그 자리에서 다시 셉니다.</div>'+
+    (cur?('<div style="font-size:13px;color:#245ea8;background:#eef6ff;border:1px solid #c9ddff;'+
+      'border-radius:10px;padding:9px 11px;margin-bottom:10px">지금 <b>'+E(cur)+'</b></div>'):'')+
+    '<button type="button" id="rtHomeGps" style="display:block;width:100%;min-height:52px;'+
+      'border:0;border-radius:13px;background:#1A56DB;color:#fff;font-family:inherit;'+
+      'font-size:15px;font-weight:800;cursor:pointer;margin-bottom:8px">📍 지금 내 자리로</button>'+
+    '<button type="button" id="rtHomeAddr" style="display:block;width:100%;min-height:52px;'+
+      'border:1px solid #D7DCE3;border-radius:13px;background:#fff;color:#0F172A;'+
+      'font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:8px">'+
+      '✏️ 주소로 적기 <span style="font-weight:600;color:#6B7688">(사무실 · 집)</span></button>'+
+    (cur?('<button type="button" id="rtHomeDel" style="display:block;width:100%;min-height:48px;'+
+      'border:1px solid #F0D2D2;border-radius:13px;background:#fff;color:#B42318;'+
+      'font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px">'+
+      '🗑 출발지 지우기</button>'):'')+
+    '<button type="button" id="rtHomeX" style="display:block;width:100%;min-height:48px;'+
+      'border:0;border-radius:13px;background:#F3F5F8;color:#42506A;font-family:inherit;'+
+      'font-size:14px;font-weight:700;cursor:pointer">닫기</button>'+
+    '</div>';
+  document.body.appendChild(w);
+  w.onclick=function(e){ if(e.target===w)homeClose() };
+  q("rtHomeGps").onclick=homeGps;
+  q("rtHomeAddr").onclick=homeAddr;
+  if(q("rtHomeDel"))q("rtHomeDel").onclick=function(){
+    HOME=null; try{ localStorage.removeItem("apexRouteHomeV1") }catch(e){}
+    homeClose(); say("출발지를 지웠습니다.",2500); render(); };
+  q("rtHomeX").onclick=homeClose;
+}
+function homeClose(){ var w=q("rtHomeSheet"); if(w&&w.parentNode)w.parentNode.removeChild(w) }
+/* 출발지를 쓰고 <b>그 자리에서 다시 짭니다</b> — 쓰는 곳은 여기 하나입니다 (5번) */
+function homeSave(lat,lng,label){
+  HOME={lat:lat,lng:lng,label:label};
+  try{ localStorage.setItem("apexRouteHomeV1",JSON.stringify(HOME)) }catch(e){}
+  homeClose();
+  say("출발지를 "+label+" 로 잡았습니다 — 순서를 다시 짰습니다.",3200);
+  render();
+}
+/* 📍 지금 내 자리 — 폰이 알려 주는 좌표 그대로. <b>서버를 안 부릅니다</b> (7번).
+   ★ 이름을 지어 붙이지 않습니다 — 주소를 모르니 「지금 내 자리」 라고만
+     적고 좌표를 함께 보여 드립니다 (1번).                             */
+function homeGps(){
+  if(!navigator.geolocation){
+    say("이 브라우저는 위치를 알려 주지 않습니다. 「주소로 적기」 를 써 주세요.",4000); return;
+  }
+  var b=q("rtHomeGps"); if(b){ b.disabled=true; b.textContent="📍 위치를 받는 중…" }
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var la=pos.coords.latitude, ln=pos.coords.longitude;
+    homeSave(la,ln,"지금 내 자리 ("+la.toFixed(4)+", "+ln.toFixed(4)+")");
+  },function(err){
+    if(b){ b.disabled=false; b.textContent="📍 지금 내 자리로" }
+    /* ★ 왜 안 됐는지 <b>갈라서</b> 말합니다 — 「안 됩니다」 한 마디로는
+       무엇을 하면 되는지 모릅니다 (1번). */
+    var m=(err&&err.code===1)?"위치 쓰기를 허락하지 않으셨습니다 — 브라우저 주소창 왼쪽 자물쇠에서 켜 주세요."
+         :(err&&err.code===3)?"위치를 받는 데 시간이 너무 걸립니다. 밖에서 다시 해 보시거나 「주소로 적기」 를 써 주세요."
+         :"위치를 못 받았습니다. 「주소로 적기」 를 써 주세요.";
+    say(m,4500);
+  },{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+}
+/* ✏️ 주소로 적기 — 예전 길 그대로입니다 (6번 · 길은 안 지웁니다) */
+function homeAddr(){
   var cur=HOME?HOME.label:"";
   var t=prompt("아침에 출발하는 곳을 적어 주세요 (사무실·집 주소)",cur||"");
   if(t===null)return;
   t=t.trim();
-  if(!t){ HOME=null; try{ localStorage.removeItem("apexRouteHomeV1") }catch(e){}; render(); return }
+  if(!t){ HOME=null; try{ localStorage.removeItem("apexRouteHomeV1") }catch(e){}
+    homeClose(); render(); return }
   geo(t,"").then(function(p){
     if(!p){ say("그 주소를 못 찾았습니다. 「순천시 조례동 1번지」 처럼 적어 보세요.",3500); return }
-    HOME={lat:p.lat,lng:p.lng,label:t};
-    try{ localStorage.setItem("apexRouteHomeV1",JSON.stringify(HOME)) }catch(e){}
-    say("출발지를 "+p.label+" 로 잡았습니다.",3000); render();
+    homeSave(p.lat,p.lng,t);
   });
 }
+/* ⚠ <b>setHome 은 안 지웁니다</b> — 부르던 자리가 있을 수 있어 그대로 두고
+   새 길(homeAsk)로 보냅니다 (사장님 규칙 「함수를 지우지 마십시오」).  */
+function setHome(){ homeAsk(); }
 
 /* ── 📍 위치 정리하기 — 한 단추, 한 화면, 한 번 누르기 ────────────
    예전에는 단추가 셋이었습니다 — 「좌표 채우기」·「지역 정리」·「주소를

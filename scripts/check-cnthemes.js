@@ -19,6 +19,10 @@
      ⑤ 마지막 장에 정보 제공 안내 문구가 빠지지 않나 · 심의필 문구를 적으면 찍히나
      ⑥ ★ html2canvas 가 box-shadow 를 상자 <b>위에</b> 칠해 흰 카드가 회색(214)이
         된 일이 있었다 — 굽기 전에 그림자를 떼어 내는 자리(fakeShadows)가 살아 있나
+     ⑦ ★ 누구나 따라 하게 (판 X228 · 사장님 말씀 「누구도 따라할수 있게 했어?」 →
+        「응 그렇게 해」) — ①테마 ②아이디 ③사진 ④저장 단계 줄이 서고, 한 일만큼
+        ✓ 가 켜지고, 지금 할 단계 <b>하나만</b> 강조되나 · 저장 때 아이디·심의필이
+        비었으면 <b>묻고</b>, 「아니오」 면 굽지 않나 · 다 채웠으면 <b>안 묻나</b>(헛물음 0)
    ══════════════════════════════════════════════════════════════════ */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = process.cwd();
@@ -42,6 +46,13 @@ let SRCVAL = '생명보험협회';
 const ctx = {
   document: doc, localStorage: { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = '' + v; } },
   setTimeout, clearTimeout, Promise, Math, Date, JSON,
+  confirm: m => { ctx._asked.push(m); return ctx._answer; }, _asked: [], _answer: false,
+  cnGo: k => { ctx.CN.i = k; }, cnPick() {}, _baked: 0,
+  ensureHtml2Canvas: () => { ctx._baked++; return new Promise(() => {}); },
+  _calls: [], _key: '', _fetchImpl: null,
+  cnImgFetch: (m, p, c) => { ctx._calls.push({ m: m, c: c, p: p }); return ctx._fetchImpl(m, p, c); },
+  getGeminiKey: () => ctx._key,
+  Image: function () { const me = this; Object.defineProperty(me, 'src', { set() { setTimeout(() => me.onerror && me.onerror(), 0); } }); },
   osEsc: s => ('' + (s == null ? '' : s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
   cnDateStr: () => '2026.10.28',
   CN: { i: 0, imgs: {}, ai: null, aiPlan: null, style: 'news' },
@@ -101,5 +112,84 @@ head('⑥ 그림자');
 is(/function fakeShadows\(/.test(SRC) && /fakeShadows\(node\)/.test(SRC), '굽기 전에 box-shadow 를 떼어 내는 자리가 있고, 실제로 부른다');
 is(/boxShadow = 'none'/.test(SRC), '떼어 낸다 (box-shadow → none)');
 
+head('⑦ 단계 줄 · 저장 전 물음');
+ctx.cxField('id', ''); ctx.cxField('seal', ''); ctx.CN.imgs = {}; ctx.CN.style = 'news';
+const steps = () => { const m = ctx.renderTodayCard().match(/<div class="cxs" id="cxSteps">([\s\S]*?)<\/div><div class="cxp-hd">/); return m ? m[1] : ''; };
+const btns = h => h.split('<button').slice(1);
+const curOf = h => btns(h).map((b, i) => (/class="cxs-b[^"]*\bcur\b/.test(b) ? i + 1 : 0)).filter(Boolean).join(',');
+const okN = h => btns(h).filter(b => /class="cxs-b[^"]*\bok\b/.test(b)).length;
+let S = steps();
+is(btns(S).length === 4, '단계 줄에 단추가 넷');
+is(curOf(S) === '1' && okN(S) === 0, '처음엔 ① 테마만 강조, ✓ 0');
+ctx.CN.style = 'lime'; S = steps();
+is(curOf(S) === '2' && okN(S) === 1, '테마를 고르면 ① ✓ · ② 아이디 강조');
+ctx.cxField('id', 'apex.test'); S = steps();
+is(curOf(S) === '3' && okN(S) === 2, '아이디를 적으면 ② ✓ · ③ 사진 강조');
+is(S.indexOf('빈 장 7개') >= 0, '③ 에 빈 장 수가 찍힌다 (7장 중 7)');
+LAYS.forEach((L, i) => { ctx.CN.imgs[i] = { url: 'data:x' }; }); S = steps();
+is(curOf(S) === '4' && okN(S) === 3, '사진을 다 넣으면 ③ ✓ · ④ 저장 강조');
+ctx.CN.imgs = {};
+ctx.cxField('id', ''); ctx._asked = []; ctx._answer = false; ctx._baked = 0;
+ctx.cardnewsSaveOne();
+is(ctx._asked.length === 1 && /아이디/.test(ctx._asked[0]) && /준법감시필/.test(ctx._asked[0]), '★ 아이디·심의필이 비면 저장 전에 묻는다 (둘 다 말함)');
+is(ctx._baked === 0, '★ 「아니오」 면 굽지 않는다');
+ctx._asked = []; ctx.cardnewsSaveAll();
+is(ctx._asked.length === 1 && ctx._baked === 0, '모두 저장도 같이 묻고, 「아니오」 면 안 굽는다');
+ctx._asked = []; ctx._answer = true; ctx.cardnewsSaveOne();
+is(ctx._baked === 1, '「예」 면 그대로 굽는다 — 막지 않는다 (6번)');
+ctx.cxField('id', 'apex.test'); ctx.cxField('seal', '에이플러스에셋 준법감시필 00-0000-0000'); ctx._asked = []; ctx._baked = 0;
+ctx.cardnewsSaveOne();
+is(ctx._asked.length === 0 && ctx._baked === 1, '다 채웠으면 묻지 않는다 (헛물음 0)');
+ctx.CN.style = 'news'; ctx.cxField('id', ''); ctx._asked = []; ctx.cardnewsSaveOne();
+is(ctx._asked.length === 0, '기본 뉴스 카드는 아이디를 안 찍으니 묻지 않는다');
+
+(async () => {
+head('⑧ AI 사진 — 화보 촬영처럼 (판 X231)');
+ctx.CN.style = 'news';
+is(ctx.cnImgPrompt(ctx.CN.ai[0]) === 'P', '기본 뉴스 카드는 원래 사진 지시를 그대로 쓴다');
+const P = {};
+THEMES.forEach(th => { ctx.CN.style = th; P[th] = LAYS.map((L, i) => ctx.cnImgPrompt(ctx.CN.ai[i])); });
+THEMES.forEach(th => {
+  const all = P[th].join(' ');
+  is(!/navy and blue tones|Korean business context/.test(all), th + ' — ★ 「navy · business」 꼬리가 떨어졌다 (모든 장이 경제신문 자료사진이 되던 까닭)');
+  is(P[th].every(p => /4:5/.test(p) && /no text/i.test(p) && /85mm/.test(p)), th + ' — 장마다 4:5 · 글자 금지 · 렌즈 지시가 있다');
+});
+is(/seamless backdrop/.test(P.lime[0]) && /Han River/.test(P.note[0]) && /rooftop/.test(P.zine[0]) && /cafe in Seoul at night/.test(P.app[0]),
+   '테마마다 촬영 장소가 다르다 (스튜디오 · 한강 · 옥상 · 밤 카페 — 참고 이미지 네 갈래)');
+is(/close-up portrait/.test(P.lime[0]) && /smile/.test(P.lime[LAYS.indexOf('cta')]) && /profile/.test(P.lime[LAYS.indexOf('quote')]),
+   '장 모양마다 구도가 다르다 (표지 클로즈업 · 인용 옆얼굴 · 마지막 장 미소)');
+const model = p => (p.match(/Model: ([^.]*)\./) || [])[1] || '';
+is(new Set(P.lime.map(model)).size === 1 && model(P.lime[0]), '★ 한 덱은 같은 모델 — 일곱 장 모두 「' + model(P.lime[0]).slice(0, 30) + '…」');
+ctx.cxField('who', 'none'); ctx.CN.style = 'zine';
+is(/no people at all/.test(ctx.cnImgPrompt(ctx.CN.ai[0])) && !/Model:/.test(ctx.cnImgPrompt(ctx.CN.ai[0])), '「인물 없이」 를 고르면 사람을 안 넣는다');
+ctx.cxField('who', 'm30');
+is(/mid-30s/.test(ctx.cnImgPrompt(ctx.CN.ai[1])), '인물을 고르면 그 사람으로 찍는다 (30대 남성)');
+ctx.cxField('who', '');
+
+/* 모델 고르기 */
+const ok = () => Promise.resolve('data:image/png;base64,AAAA');
+ctx.CN.style = 'lime';
+ctx._calls = []; ctx._key = ''; ctx._fetchImpl = ok;
+await ctx.cnImgFetch('gemini-2.5-flash-image', 'x');
+let c0 = ctx._calls;
+is(c0.length === 1 && c0[0].m === 'gemini-2.5-flash-image' && c0[0].c && c0[0].c.imageConfig.aspectRatio === '4:5',
+   '공용 연결 — 표준 모델을 <b>4:5</b> 로 부른다 (Pro 는 서버 10초 한도에 잘려 안 부른다)');
+ctx._calls = []; ctx._key = 'AIzaTEST';
+await ctx.cnImgFetch('gemini-2.5-flash-image', 'x');
+c0 = ctx._calls;
+is(c0.length === 1 && c0[0].m === 'gemini-3-pro-image-preview' && c0[0].c.imageConfig.imageSize === '2K' && c0[0].c.imageConfig.aspectRatio === '4:5',
+   '개인 키 — 최고 모델(Pro · 2K · 4:5)을 먼저 부른다');
+ctx._calls = []; ctx._fetchImpl = (m) => /pro/.test(m) ? Promise.reject(Object.assign(new Error('RESOURCE_EXHAUSTED quota'), { status: 429 })) : ok();
+let got = ''; try { got = await ctx.cnImgFetch('gemini-2.5-flash-image', 'x'); } catch (e) { got = 'ERR ' + e.message; }
+c0 = ctx._calls.map(x => x.m);
+is(c0.join(',') === 'gemini-3-pro-image-preview,gemini-2.5-flash-image' && /^data:/.test(got), '★ Pro 가 한도로 막히면 그 자리에서 표준으로 내려가 사진을 받는다 — 빈손 0');
+ctx._calls = []; await ctx.cnImgFetch('gemini-2.5-flash-image', 'x');
+is(ctx._calls.map(x => x.m).join(',') === 'gemini-2.5-flash-image', '한 번 막힌 Pro 는 이번 접속 동안 다시 안 부른다 (헛기다림 0)');
+ctx.CN.style = 'news'; ctx._calls = []; ctx._fetchImpl = ok;
+await ctx.cnImgFetch('gemini-2.5-flash-image', 'x');
+is(ctx._calls.length === 1 && !ctx._calls[0].c, '기본 뉴스 카드의 사진 부르기는 그대로 둔다');
+is(/function cnImgFetch\(mdl,prompt,cfg\)/.test(IDX) && /payload\.generationConfig\[ck\]=cfg\[ck\]/.test(IDX), 'index.html 의 cnImgFetch 가 cfg(4:5 · 2K)를 실제로 싣는다');
+
 console.log('\n' + (bad ? '✗ ' + bad + '/' + n + ' 실패' : '✓ ' + n + '가지 모두 통과'));
 process.exit(bad ? 1 : 0);
+})();

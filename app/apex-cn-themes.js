@@ -30,6 +30,13 @@
  * 나머지는 원래 함수를 감싸서(monkey-patch) 처리한다.
  *   cnSlidePreview · renderTodayCard · cnSrcOf · cnImgPrompt
  *   cardnewsSaveOne · cardnewsSaveAll
+ *
+ * ── 누구나 따라 하게 (판 X228) ─────────────────────────────────────────
+ * 사장님 말씀 「누구도 따라할수 있게 했어?」 → 「응 그렇게 해」.
+ * 테마 넷과 칸 다섯이 한꺼번에 서 있어 처음 보는 팀원은 무엇부터 할지 몰랐다.
+ * ① 테마 → ② 내 아이디 → ③ 사진 → ④ 저장 단계 줄을 세우고, 끝난 단계는 ✓,
+ * 지금 할 단계는 강조한다. 단계를 누르면 그 일을 바로 한다.
+ * 저장할 때 아이디·심의필이 비었으면 <b>한 번 묻는다</b> — 막지는 않는다(6번).
  */
 (function () {
   'use strict';
@@ -46,7 +53,7 @@
 
   /* ── 내 계정 · 출처 (이 브라우저에만) ── */
   var KEY = 'apex_cn_brand_v1';
-  var B = { id: '', mast: '', src: '', tags: '', seal: '', theme: '' };
+  var B = { id: '', mast: '', src: '', tags: '', seal: '', theme: '', who: '' };
   try { var sv = JSON.parse(localStorage.getItem(KEY) || 'null'); if (sv) for (var k in sv) if (B.hasOwnProperty(k)) B[k] = '' + (sv[k] || ''); } catch (e) {}
   function bSave() { try { localStorage.setItem(KEY, JSON.stringify(B)); } catch (e) {} }
   if (isMine(B.theme) && window.CN) window.CN.style = B.theme;
@@ -607,17 +614,26 @@
       '.cxD-go{position:absolute;left:308px;right:308px;bottom:112px;height:80px;line-height:80px;border-radius:40px;background:#000;color:#fff;text-align:center;font-size:36px;font-weight:600}',
       '.cxD-id{position:absolute;left:0;right:0;bottom:46px;text-align:center;font-size:32px;font-weight:700;color:#111}',
       /* 고르는 칸 */
-      '.cxp{border:1px solid var(--t-line,#E5E7EB);border-radius:var(--r,12px);padding:12px 13px;margin:0 0 12px;background:var(--t-bg,#fff)}',
+      '.cxp{border:1px solid var(--t-line,#E5E7EB);border-radius:var(--r,12px);padding:12px 13px;margin:0 0 12px;background:var(--t-card,#fff)}',
       '.cxp-hd{font-size:var(--t6);font-weight:800;color:var(--t-ink);margin-bottom:9px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.cxp-hd span{font-weight:600;color:var(--t-sub)}',
       '.cxp-th{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}',
       '@media(max-width:640px){.cxp-th{grid-template-columns:repeat(2,minmax(0,1fr))}.cxp-br{grid-template-columns:1fr!important}}',
-      '.cxp-tb{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:44px;padding:9px 10px;border:1.5px solid var(--t-line,#E5E7EB);border-radius:10px;background:var(--t-bg,#fff);cursor:pointer;text-align:left;font:inherit;color:var(--t-ink)}',
-      '.cxp-tb.on{border-color:#7C3AED;box-shadow:0 0 0 3px rgba(124,58,237,.14)}.cxp-tb b{font-size:var(--t6);font-weight:800}.cxp-tb small{font-size:11px;color:var(--t-sub)}',
+      '.cxp-tb{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:44px;padding:9px 10px;border:1.5px solid var(--t-line,#E5E7EB);border-radius:10px;background:var(--t-card,#fff);cursor:pointer;text-align:left;font:inherit;color:var(--t-ink)}',
+      '.cxp-tb.on{border-color:#7C3AED;box-shadow:0 0 0 3px rgba(124,58,237,.14)}.cxp-tb b{font-size:var(--t6);font-weight:800}.cxp-tb small{font-size:13px;color:var(--t-sub)}',
       '.cxp-sw{display:flex;gap:3px}.cxp-sw i{width:16px;height:16px;border-radius:4px;border:1px solid rgba(0,0,0,.12)}',
       '.cxp-br{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px;margin-top:11px}',
-      '.cxp-f{display:flex;flex-direction:column;gap:3px}.cxp-f label{font-size:11px;font-weight:700;color:var(--t-sub)}.cxp-f input{min-height:44px;padding:0 11px;border:1px solid var(--t-line,#D1D5DB);border-radius:9px;font:inherit;font-size:var(--t6);background:var(--t-bg,#fff);color:var(--t-ink)}',
+      '.cxp-f{display:flex;flex-direction:column;gap:3px}.cxp-f label{font-size:13px;font-weight:700;color:var(--t-sub)}.cxp-f input{min-height:44px;padding:0 11px;border:1px solid var(--t-line,#D1D5DB);border-radius:9px;font:inherit;font-size:var(--t6);background:var(--t-card,#fff);color:var(--t-ink)}',
       '.cxp-f.span2{grid-column:1/-1}',
-      '.cxp-nt{margin-top:9px;font-size:11.5px;line-height:1.55;color:#8A6A2F;background:#FFF9EC;border:1px solid #F3E2B8;border-radius:8px;padding:7px 10px}'
+      '.cxp-f select{min-height:44px;padding:0 9px;border:1px solid var(--t-line,#D1D5DB);border-radius:9px;font:inherit;font-size:var(--t6);background:var(--t-card,#fff);color:var(--t-ink)}',
+      '.cxp-ph{margin-top:9px;font-size:13px;line-height:1.55;color:var(--t-sub)}',
+      '.cxs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:12px}',
+      '@media(max-width:640px){.cxs{grid-template-columns:repeat(2,minmax(0,1fr))}}',
+      '.cxs-b{display:flex;align-items:center;gap:8px;min-height:52px;padding:7px 9px;border:1.5px solid var(--t-line,#E5E7EB);border-radius:10px;background:var(--t-card,#fff);cursor:pointer;text-align:left;font:inherit;color:var(--t-sub,#6B7280)}',
+      '.cxs-n{flex:0 0 26px;height:26px;border-radius:50%;background:var(--t-line,#E5E8EB);color:var(--t-ink);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900}',
+      '.cxs-t{display:flex;flex-direction:column;min-width:0}.cxs-t b{font-size:var(--t6);font-weight:800;color:var(--t-ink)}.cxs-t small{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.cxs-b.ok{border-color:#A7F3D0;background:#ECFDF5}.cxs-b.ok .cxs-n{background:#10B981;color:#fff}',
+      '.cxs-b.cur{border-color:#7C3AED;background:#F5F3FF;box-shadow:0 0 0 3px rgba(124,58,237,.14)}.cxs-b.cur .cxs-n{background:#7C3AED;color:#fff}',
+      '.cxp-nt{margin-top:9px;font-size:13px;line-height:1.55;color:#8A6A2F;background:#FFF9EC;border:1px solid #F3E2B8;border-radius:8px;padding:7px 10px}'
     ].join('\n');
     document.head.appendChild(s);
   })();
@@ -630,16 +646,149 @@
   /* 출처 칸에 적으면 기존 스타일의 마지막 장에도 그 출처가 찍힌다 */
   window.cnSrcOf = function () { var v = ('' + B.src).trim(); return v || autoSrc(); };
 
-  /* AI 사진을 테마 분위기에 맞춰 달라고 한 줄 덧붙인다 */
-  var MOOD = {
-    lime: ' Mood: trendy lifestyle magazine cover shoot, soft natural light, candid Korean people close-up, muted neutral background.',
-    note: ' Mood: bright airy daily snapshot, pale sky-blue and white tones, Han river park or cafe, soft and fresh.',
-    zine: ' Mood: street-style collage vibe, urban rooftop or graffiti wall, high contrast film look, confident Korean young adult.',
-    app: ' Mood: candid iPhone photo, cozy cafe or desk with laptop, warm low light, authentic everyday feel.'
+  /* ── AI 사진 — 화보 촬영처럼 (판 X231) ─────────────────────────────────
+     사장님 말씀 「사진도 고퀄리티로 만들어줘야만해. 내가 첨부한 퀄리티 보았지」.
+     재어 보니 화질이 무른 까닭이 셋이었다.
+       ① <b>정사각형(1:1)</b>으로 받아 4:5 로 잘랐다 — 1024 의 위아래를 잘라 819px 폭을
+          1080 으로 늘린 셈. → 처음부터 <b>4:5</b> 로 받는다(imageConfig.aspectRatio).
+       ② 글 맨 끝에 「navy and blue tones · Korean business context」 가 붙어 모든 장이
+          <b>경제신문 자료사진</b>이 됐다. → 테마가 켜지면 그 꼬리를 떼고 테마마다
+          <b>촬영 지시서</b>(장소·조명·옷·색보정·렌즈)를 쓴다. 참고 이미지 네 갈래를 옮겼다.
+       ③ 장마다 다른 사람이 나왔다. → 한 덱은 <b>같은 모델</b>(덱 제목으로 고정 · 칸에서 고름).
+     ★ 개인 Gemini 키가 있으면 <b>최고 모델(Pro · 2K)</b> 을 먼저 쓴다. 공용 프록시는
+       서버 함수 시간 한도(약 10초)가 있어 느린 Pro 가 잘리므로 표준 모델로 간다 — 둘 다 4:5.
+       Pro 가 한도·권한으로 막히면 그 자리에서 표준으로 내려가고, 이번 접속 동안은 다시 안 묻는다.
+     ★ 받은 사진은 <b>1080×1350 JPEG</b> 로 맞춰 둔다 — 2K 원본(수 MB)을 장마다 화면에 다시
+       그리면 폰이 무거워진다. 카드 크기가 1080×1350 이라 잃는 것이 없다.            */
+  var WHO = [['auto', '자동 (덱마다 한 사람)'], ['w20', '20대 여성'], ['w30', '30대 여성'], ['m20', '20대 남성'], ['m30', '30대 남성'], ['none', '인물 없이 (사물·풍경)']];
+  var PEOPLE = {
+    w20: 'a Korean woman in her mid-20s with long dark layered hair and fresh natural makeup',
+    w30: 'a Korean woman in her early 30s with shoulder-length soft wavy hair, elegant and approachable',
+    m20: 'a Korean man in his late 20s with a soft textured two-block haircut, clean-shaven, friendly',
+    m30: 'a Korean man in his mid-30s with neat short hair, smart-casual, calm and trustworthy'
   };
+  var LOOK = {
+    lime: 'Setting: a minimal photo studio with a warm light-grey seamless backdrop; a professional camera on a tripod sits softly out of focus in the near foreground. Light: large soft window key light with gentle fill. Wardrobe: a simple white tank top or plain knit. Grade: clean K-beauty magazine look, neutral warm tones, subtle filmic softness.',
+    note: 'Setting: a sunny Han River park or a bright minimal cafe in Seoul, pale sky and soft greenery. Light: bright airy daylight with a hint of golden-hour warmth. Wardrobe: a soft cream knit or light linen shirt. Grade: fresh pastel, pale sky-blue and white palette, low contrast, like a candid photo taken by a stylish friend.',
+    zine: 'Setting: a Seoul rooftop in daytime with the city skyline, or a wall covered in graffiti and torn posters. Light: direct on-camera flash mixed with hard daylight. Wardrobe: an oversized blue striped shirt over a white tank top, baseball cap or small sunglasses, Y2K street style. Grade: 35mm film grain, punchy contrast, slightly cool shadows.',
+    app: 'Setting: a cozy dim cafe in Seoul at night, warm tungsten pendant lights, a laptop and an iced coffee on a wooden table. Light: warm low ambient light with soft falloff. Wardrobe: a black knit, hair in a loose bun. Grade: moody and intimate, natural smartphone-like grain.'
+  };
+  var SHOT = {
+    cover: 'Shot: tight editorial close-up portrait from the chest up, subject looking straight into the lens, face placed in the upper half of the frame.',
+    point: 'Shot: natural medium shot, subject candidly engaged in an everyday moment that fits the story (checking a phone, reading papers, talking with someone), not posing for the camera.',
+    stat: 'Shot: medium close-up, hands holding a smartphone or paper documents, focus on a real, quiet moment of checking something important.',
+    quote: 'Shot: three-quarter profile, subject gazing thoughtfully away from the camera, generous negative space on one side.',
+    list: 'Shot: calm environmental wide shot, subject small in the frame, uncluttered background.',
+    cta: 'Shot: warm half-body portrait with a gentle, genuine smile, relaxed and approachable.'
+  };
+  var QUALITY = 'Ultra-realistic high-end Korean magazine editorial photograph, shot on a full-frame mirrorless camera with an 85mm f/1.4 lens (35mm for wide shots), shallow depth of field, creamy bokeh, tack-sharp focus on the eyes, true-to-life skin texture with fine pores, natural hands with correct fingers, accurate anatomy, professional color grading, high dynamic range, crisp fine detail.';
+  var NEG = 'Absolutely no text, letters, numbers, captions, logos, brand marks, watermarks, signage text, UI elements, borders or collage frames. No distorted faces, no extra fingers, no plastic or airbrushed skin, no cartoon, 3D render or illustration style.';
+  function deckSeed() { try { var s = cardnewsSlides(), t = plain((cnMagText(s[0] || {}).t) || ''); var h = 0; for (var i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return h; } catch (e) { return 0; } }
+  function whoKey() { var w = B.who || 'auto'; if (w !== 'auto') return w; return ['w20', 'w30', 'w20', 'm20'][deckSeed() % 4]; }
+  function cxPrompt(sl) {
+    var m = cnMagText(sl || {}), lay = cnLayout(sl || {}), wk = whoKey();
+    if (lay === 'news') lay = 'point';
+    var story = plain(m.t).replace(/\n/g, ' ') + (m.s ? ' — ' + plain(m.s) : '');
+    var who = wk === 'none'
+      ? 'Subject: no people at all — a styled, atmospheric still-life or scene with everyday objects that quietly symbolize the story.'
+      : 'Model: ' + PEOPLE[wk] + '. Keep the same model, hair and styling as every other photo in this series.';
+    var shot = wk === 'none' ? 'Shot: carefully composed still-life with intentional props, editorial product-photography quality.' : (SHOT[lay] || SHOT.point);
+    return [QUALITY, who, LOOK[CN.style] || '', shot,
+      (sl && sl.img ? 'Scene idea: ' + ('' + sl.img).slice(0, 160) + '.' : ''),
+      'Story context (Korean, for mood only — never render it as text): "' + story.slice(0, 140) + '".',
+      'Vertical 4:5 frame. Keep the lower third calm and slightly darker so a headline can sit on top.', NEG].filter(Boolean).join(' ');
+  }
+  window.cxPrompt = cxPrompt; /* 점검용 */
   var _origPrompt = window.cnImgPrompt;
-  if (typeof _origPrompt === 'function') window.cnImgPrompt = function (sl) { var p = _origPrompt.apply(this, arguments); return MOOD[CN.style] ? p + MOOD[CN.style] : p; };
+  if (typeof _origPrompt === 'function') window.cnImgPrompt = function (sl) { return isMine(CN.style) ? cxPrompt(sl) : _origPrompt.apply(this, arguments); };
 
+  /* 모델 · 4:5 · 2K — cnImgFetch(mdl, prompt, cfg) 의 cfg 로 넘긴다 */
+  var PRO = 'gemini-3-pro-image-preview', proDead = false;
+  function ownKey() { try { return typeof getGeminiKey === 'function' && !!getGeminiKey(); } catch (e) { return false; } }
+  /* 1080×1350 JPEG 로 맞춘다 — 가운데 기준 cover */
+  function fit1080(uri) {
+    return new Promise(function (res) {
+      var im = new Image();
+      im.onload = function () {
+        try {
+          var W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H; var x = c.getContext('2d');
+          x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+          var ir = im.width / im.height, cr = W / H, dw, dh; if (ir > cr) { dh = H; dw = H * ir; } else { dw = W; dh = W / ir; }
+          x.drawImage(im, (W - dw) / 2, (H - dh) / 2, dw, dh);
+          res(c.toDataURL('image/jpeg', 0.93));
+        } catch (e) { res(uri); }
+      };
+      im.onerror = function () { res(uri); };
+      im.src = uri;
+    });
+  }
+  var _origFetch = window.cnImgFetch;
+  if (typeof _origFetch === 'function') window.cnImgFetch = function (mdl, prompt, cfg) {
+    if (!isMine(CN.style) || cfg) return _origFetch.apply(this, arguments);
+    var std = { imageConfig: { aspectRatio: '4:5' } };
+    var stdTry = function () {
+      return _origFetch(mdl, prompt, std)['catch'](function (e) {
+        /* 이 모델이 imageConfig 를 모르면 예전 방식으로 한 번 더 */
+        if (/imageConfig|aspect|Unknown name|Invalid JSON payload/i.test((e && e.message) || '')) return _origFetch(mdl, prompt);
+        throw e;
+      });
+    };
+    var go;
+    if (ownKey() && !proDead && /flash-image/.test(mdl)) {
+      toast('최고화질(Pro · 2K)로 촬영 중입니다 — 20~40초 걸립니다', 4000);
+      go = _origFetch(PRO, prompt, { imageConfig: { aspectRatio: '4:5', imageSize: '2K' } })['catch'](function (e) {
+        proDead = true; /* 한도·권한·이름 — 무엇이든 이번 접속은 표준으로 */
+        return stdTry();
+      });
+    } else go = stdTry();
+    return go.then(fit1080);
+  };
+
+  /* ── 단계 줄 — 어디까지 했고 지금 무엇을 할지 ── */
+  function emptyPh() { try { var sl = cardnewsSlides(), c = 0; for (var k = 0; k < sl.length; k++) if (!(CN.imgs && CN.imgs[k])) c++; return c; } catch (e) { return 0; } }
+  function stepState() {
+    var t = isMine(CN.style), id = !!('' + B.id).trim(), e = emptyPh();
+    var st = [
+      { n: '1', t: '테마 고르기', d: t ? themeOf(CN.style).name : '아래 넷 중 하나', ok: t, go: 'cxStepGo(1)' },
+      { n: '2', t: '내 아이디 적기', d: id ? cxId() : '카드에 찍힐 인스타 아이디', ok: id, go: 'cxStepGo(2)' },
+      { n: '3', t: '사진 넣기', d: e ? ('빈 장 ' + e + '개 · 누르면 업로드') : '모든 장에 사진 있음', ok: !e, go: 'cxStepGo(3)' },
+      { n: '4', t: '저장', d: '1080×1350 PNG 로 전부', ok: false, go: 'cxStepGo(4)' }
+    ];
+    for (var i = 0; i < st.length; i++) if (!st[i].ok) { st[i].cur = true; break; }
+    return st;
+  }
+  function stepsHtml() {
+    return '<div class="cxs" id="cxSteps">' + stepState().map(function (x) {
+      return '<button type="button" class="cxs-b' + (x.ok ? ' ok' : '') + (x.cur ? ' cur' : '') + '" onclick="' + x.go + '">' +
+        '<span class="cxs-n">' + (x.ok ? '✓' : x.n) + '</span><span class="cxs-t"><b>' + E(x.t) + '</b><small>' + E(x.d) + '</small></span></button>';
+    }).join('') + '</div>';
+  }
+  function repaintSteps() { var o = document.getElementById('cxSteps'); if (!o) return; var tmp = document.createElement('div'); tmp.innerHTML = stepsHtml(); if (tmp.firstChild) o.parentNode.replaceChild(tmp.firstChild, o); }
+  window.cxStepGo = function (k) {
+    if (k === 1) { var th = document.querySelector('#cnHost .cxp-th'); if (th && th.scrollIntoView) th.scrollIntoView({ block: 'center', behavior: 'smooth' }); if (!isMine(CN.style)) toast('아래 테마 넷 중 마음에 드는 것을 누르세요.'); return; }
+    if (k === 2) { var f = document.getElementById('cxIdIn'); if (f) { f.focus(); if (f.scrollIntoView) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); } return; }
+    if (k === 3) {
+      /* 빈 장으로 옮긴 뒤 업로드 창을 연다 — 어느 장에 들어갈지 헷갈리지 않게 */
+      var sl = cardnewsSlides(), j; for (j = 0; j < sl.length; j++) if (!(CN.imgs && CN.imgs[j])) break;
+      if (j < sl.length && j !== CN.i && typeof cnGo === 'function') cnGo(j);
+      if (j >= sl.length) { toast('모든 장에 사진이 있습니다. 바꾸려면 그 장으로 가서 「🖼 직접 업로드」 를 누르세요.', 4000); return; }
+      toast((j + 1) + '번째 장에 넣을 사진을 고르세요. (✨ AI 사진 생성도 됩니다)', 3500);
+      if (typeof cnPick === 'function') cnPick(); return;
+    }
+    if (k === 4) { if (!isMine(CN.style)) { toast('먼저 ① 테마를 고르세요.', 3000); window.cxStepGo(1); return; } window.cardnewsSaveAll(); }
+  };
+  /* 저장 전에 빈 칸을 <b>한 번 묻는다</b> — 「아니오」 면 그 칸으로 데려간다 */
+  function cxAsk() {
+    var miss = [];
+    if (!('' + B.id).trim()) miss.push(['cxIdIn', '내 아이디 — 카드에 「@내아이디」 로 찍힙니다']);
+    if (!('' + B.seal).trim()) miss.push(['cxSealIn', '준법감시필 문구 — 보험 이야기 게시물은 심의필을 받은 뒤 올려야 합니다']);
+    if (!miss.length) return true;
+    var ok = true;
+    try { ok = confirm('⚠ 비어 있는 칸이 있습니다\n\n' + miss.map(function (m) { return '· ' + m[1]; }).join('\n') + '\n\n그래도 저장할까요? (취소하면 그 칸으로 갑니다)'); } catch (e) { ok = true; }
+    if (!ok) { var f = document.getElementById(miss[0][0]); if (f) { f.focus(); if (f.scrollIntoView) f.scrollIntoView({ block: 'center' }); } }
+    return ok;
+  }
+  window.cxAsk = cxAsk; /* 점검용 */
   function panelHtml() {
     var on = CN.style;
     var th = THEMES.map(function (t) {
@@ -650,15 +799,18 @@
       return '<div class="cxp-f' + (wide ? ' span2' : '') + '"><label for="' + id + '">' + lab + '</label><input id="' + id + '" value="' + E(B[key]) + '" placeholder="' + E(ph) + '" oninput="cxField(\'' + key + '\',this.value)"></div>';
     }
     var auto = autoSrc();
-    return '<div class="cxp"><div class="cxp-hd">✨ 매거진 테마 <span>— 뉴스를 이 디자인으로 바로 만듭니다 · 다시 누르면 기본 뉴스 카드</span></div>' +
+    return '<div class="cxp">' + stepsHtml() + '<div class="cxp-hd">✨ 매거진 테마 <span>— 뉴스를 이 디자인으로 바로 만듭니다 · 다시 누르면 기본 뉴스 카드</span></div>' +
       '<div class="cxp-th">' + th + '</div>' +
       '<div class="cxp-br">' +
       fld('cxIdIn', 'id', '🏷 내 아이디 (카드에 찍힘)', '@내인스타아이디') +
       fld('cxMastIn', 'mast', '📰 매거진 이름 (맨 위 이름)', 'APEX YUN PRO') +
       fld('cxSrcIn', 'src', '🔗 출처 (비우면 자동)', auto ? ('자동: ' + auto) : '예) 한국경제 2026.10.28 · 금융위원회 보도자료') +
       fld('cxTagIn', 'tags', '# 해시태그 (2개까지 카드에)', '#보험정보 #절세') +
+      '<div class="cxp-f"><label for="cxWhoIn">📷 AI 사진 속 인물</label><select id="cxWhoIn" onchange="cxField(\'who\',this.value)">' +
+        WHO.map(function (w) { return '<option value="' + w[0] + '"' + ((B.who || 'auto') === w[0] ? ' selected' : '') + '>' + w[1] + '</option>'; }).join('') + '</select></div>' +
       fld('cxSealIn', 'seal', '✅ 준법감시필 문구 (마지막 장 맨 아래)', '에이플러스에셋 준법감시필 00-0000-0000 (0000.00.00 ~ 0000.00.00)', true) +
-      '</div><div class="cxp-nt">아이디·이름·출처는 <b>이 기기에만</b> 저장됩니다. 출처는 지어내지 않습니다 — 비워 두면 AI·주제가 가진 출처만 찍히고, 없으면 빈칸입니다. ' +
+      '</div><div class="cxp-ph">📷 AI 사진은 고른 테마에 맞춘 <b>화보 촬영 지시서</b>로 세로 4:5 로 만듭니다. ' + (ownKey() ? '개인 Gemini 키가 있어 <b>최고화질(Pro · 2K)</b>로 찍습니다(장당 20~40초).' : '공용 연결이라 <b>표준 모델</b>로 찍습니다 — 개인 Gemini 키를 넣으면 최고화질(Pro · 2K)로 바뀝니다.') + '</div>' +
+      '<div class="cxp-nt">아이디·이름·출처는 <b>이 기기에만</b> 저장됩니다. 출처는 지어내지 않습니다 — 비워 두면 AI·주제가 가진 출처만 찍히고, 없으면 빈칸입니다. ' +
       '보험 이야기가 들어간 게시물은 <b>준법감시필을 받은 뒤</b> 올리세요.</div></div>';
   }
   window.cxTheme = function (id) {
@@ -671,6 +823,7 @@
   window.cxField = function (k, v) {
     B[k] = '' + v; bSave();
     clearTimeout(_pt); _pt = setTimeout(function () {
+      repaintSteps();
       var st = document.querySelector('#cnHost .cn2-stage'); if (!st) return;
       var slides = cardnewsSlides(), cur = st.children[1];
       if (cur) { var tmp = document.createElement('div'); tmp.innerHTML = window.cnSlidePreview(slides[CN.i], CN.i, slides.length); if (tmp.firstChild) st.replaceChild(tmp.firstChild, cur); }
@@ -732,6 +885,7 @@
   var _origOne = window.cardnewsSaveOne, _origAll = window.cardnewsSaveAll;
   window.cardnewsSaveOne = function () {
     if (!isMine(CN.style)) return _origOne.apply(this, arguments);
+    if (!cxAsk()) return;
     if (typeof cnNumAsk === 'function' && !cnNumAsk()) return;
     var slides = cardnewsSlides(), i = CN.i;
     toast('이 장을 굽는 중입니다…');
@@ -743,6 +897,7 @@
   };
   window.cardnewsSaveAll = function () {
     if (!isMine(CN.style)) return _origAll.apply(this, arguments);
+    if (!cxAsk()) return;
     if (typeof cnNumAsk === 'function' && !cnNumAsk()) return;
     var slides = cardnewsSlides(), n = slides.length, i = 0;
     toast((typeof cnSaveSay === 'function') ? cnSaveSay(slides, n + '장을 차례로 굽습니다. 여러 파일 저장 안내가 뜨면 허용하세요.') : n + '장을 굽습니다.', 6000);

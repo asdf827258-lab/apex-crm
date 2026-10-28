@@ -241,8 +241,23 @@ const hmActCssSrc = (() => {
   const r = IDX.slice(i), e = r.indexOf('document.head.appendChild(st);');
   return e > 0 ? r.slice(0, e) : r.slice(0, 4000);
 })();
-is(/flex-wrap:nowrap/.test(hmActCssSrc),
-   '  칩이 <b>한 줄</b>로 선다 — 접히면 122px 이 되어 홈이 0.15화면 길어진다');
+/* ⬇ <b>「한 줄로 선다」 → 「다 보인다」</b> (판 X227 · 사장님 말씀 2026-10-28,
+   오늘 화면 사진을 보시고 「③ 📒 오늘 기록 줄이 오른쪽에서 잘림」).
+   ★★ 여태 이 줄은 <b>nowrap + 옆으로 밀기</b>였습니다. 한 줄이라 짧긴 한데,
+     폰 390 에서 「☎️ 전화 0 · 🤝 만남 0 · 🤝 더 1 · ✍️ 기…」 까지만 보이고
+     나머지는 손으로 밀어야 나왔습니다 — <b>밀어야 보이는 것은 안 보이는
+     것</b>입니다. 사장님께서 그것을 고치라 하셨습니다.
+   ★ 그래서 묻는 것을 <b>뒤집지 않고 바로잡습니다</b> — 이 자가 지키려던 것은
+     「홈이 길어지지 않게」 였고, <b>홈 길이의 임자는 check-homeone ·
+     check-phonefit</b> 입니다(한 물음에 한 답 · 5번). 여기서는 <b>칩이 한
+     자도 안 숨나</b>를 봅니다 — 그것이 이 칸의 몫입니다.
+   ⚠ 되돌려 nowrap 으로 두면 이 줄이 웁니다 (8번).
+   (잰 값: 접히면서 칸이 66 → 118px · 홈은 칩 줄 44px 을 함께 거두어
+    2,969 → 2,975px 로 +6px 입니다.)                                  */
+is(!/flex-wrap:nowrap/.test(hmActCssSrc) && !/overflow-x:auto/.test(hmActCssSrc),
+   '  ★★ 📒 기록 칩이 <b>옆으로 안 밀린다</b> — 접혀서 다 보인다 (밀어야 보이는 것은 안 보이는 것)');
+is(/flex-wrap:wrap/.test(hmActCssSrc),
+   '  칩 줄이 <b>접히게</b> 되어 있다 — .hm-act .g 가 flex-wrap:wrap');
 
 console.log('\n──────────────────────────────');
 if (bad) { console.log('✗ 오늘 큐 — 고칠 자리 ' + bad + '곳'); process.exit(1); }
