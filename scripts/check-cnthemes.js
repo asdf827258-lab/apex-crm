@@ -19,6 +19,10 @@
      ⑤ 마지막 장에 정보 제공 안내 문구가 빠지지 않나 · 심의필 문구를 적으면 찍히나
      ⑥ ★ html2canvas 가 box-shadow 를 상자 <b>위에</b> 칠해 흰 카드가 회색(214)이
         된 일이 있었다 — 굽기 전에 그림자를 떼어 내는 자리(fakeShadows)가 살아 있나
+     ⑦ ★ 누구나 따라 하게 (판 X228 · 사장님 말씀 「누구도 따라할수 있게 했어?」 →
+        「응 그렇게 해」) — ①테마 ②아이디 ③사진 ④저장 단계 줄이 서고, 한 일만큼
+        ✓ 가 켜지고, 지금 할 단계 <b>하나만</b> 강조되나 · 저장 때 아이디·심의필이
+        비었으면 <b>묻고</b>, 「아니오」 면 굽지 않나 · 다 채웠으면 <b>안 묻나</b>(헛물음 0)
    ══════════════════════════════════════════════════════════════════ */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = process.cwd();
@@ -42,6 +46,9 @@ let SRCVAL = '생명보험협회';
 const ctx = {
   document: doc, localStorage: { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = '' + v; } },
   setTimeout, clearTimeout, Promise, Math, Date, JSON,
+  confirm: m => { ctx._asked.push(m); return ctx._answer; }, _asked: [], _answer: false,
+  cnGo: k => { ctx.CN.i = k; }, cnPick() {}, _baked: 0,
+  ensureHtml2Canvas: () => { ctx._baked++; return new Promise(() => {}); },
   osEsc: s => ('' + (s == null ? '' : s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
   cnDateStr: () => '2026.10.28',
   CN: { i: 0, imgs: {}, ai: null, aiPlan: null, style: 'news' },
@@ -100,6 +107,37 @@ THEMES.forEach(th => is(draw(th, CTA).indexOf('준법감시필 00-0000-0000') >=
 head('⑥ 그림자');
 is(/function fakeShadows\(/.test(SRC) && /fakeShadows\(node\)/.test(SRC), '굽기 전에 box-shadow 를 떼어 내는 자리가 있고, 실제로 부른다');
 is(/boxShadow = 'none'/.test(SRC), '떼어 낸다 (box-shadow → none)');
+
+head('⑦ 단계 줄 · 저장 전 물음');
+ctx.cxField('id', ''); ctx.cxField('seal', ''); ctx.CN.imgs = {}; ctx.CN.style = 'news';
+const steps = () => { const m = ctx.renderTodayCard().match(/<div class="cxs" id="cxSteps">([\s\S]*?)<\/div><div class="cxp-hd">/); return m ? m[1] : ''; };
+const btns = h => h.split('<button').slice(1);
+const curOf = h => btns(h).map((b, i) => (/class="cxs-b[^"]*\bcur\b/.test(b) ? i + 1 : 0)).filter(Boolean).join(',');
+const okN = h => btns(h).filter(b => /class="cxs-b[^"]*\bok\b/.test(b)).length;
+let S = steps();
+is(btns(S).length === 4, '단계 줄에 단추가 넷');
+is(curOf(S) === '1' && okN(S) === 0, '처음엔 ① 테마만 강조, ✓ 0');
+ctx.CN.style = 'lime'; S = steps();
+is(curOf(S) === '2' && okN(S) === 1, '테마를 고르면 ① ✓ · ② 아이디 강조');
+ctx.cxField('id', 'apex.test'); S = steps();
+is(curOf(S) === '3' && okN(S) === 2, '아이디를 적으면 ② ✓ · ③ 사진 강조');
+is(S.indexOf('빈 장 7개') >= 0, '③ 에 빈 장 수가 찍힌다 (7장 중 7)');
+LAYS.forEach((L, i) => { ctx.CN.imgs[i] = { url: 'data:x' }; }); S = steps();
+is(curOf(S) === '4' && okN(S) === 3, '사진을 다 넣으면 ③ ✓ · ④ 저장 강조');
+ctx.CN.imgs = {};
+ctx.cxField('id', ''); ctx._asked = []; ctx._answer = false; ctx._baked = 0;
+ctx.cardnewsSaveOne();
+is(ctx._asked.length === 1 && /아이디/.test(ctx._asked[0]) && /준법감시필/.test(ctx._asked[0]), '★ 아이디·심의필이 비면 저장 전에 묻는다 (둘 다 말함)');
+is(ctx._baked === 0, '★ 「아니오」 면 굽지 않는다');
+ctx._asked = []; ctx.cardnewsSaveAll();
+is(ctx._asked.length === 1 && ctx._baked === 0, '모두 저장도 같이 묻고, 「아니오」 면 안 굽는다');
+ctx._asked = []; ctx._answer = true; ctx.cardnewsSaveOne();
+is(ctx._baked === 1, '「예」 면 그대로 굽는다 — 막지 않는다 (6번)');
+ctx.cxField('id', 'apex.test'); ctx.cxField('seal', '에이플러스에셋 준법감시필 00-0000-0000'); ctx._asked = []; ctx._baked = 0;
+ctx.cardnewsSaveOne();
+is(ctx._asked.length === 0 && ctx._baked === 1, '다 채웠으면 묻지 않는다 (헛물음 0)');
+ctx.CN.style = 'news'; ctx.cxField('id', ''); ctx._asked = []; ctx.cardnewsSaveOne();
+is(ctx._asked.length === 0, '기본 뉴스 카드는 아이디를 안 찍으니 묻지 않는다');
 
 console.log('\n' + (bad ? '✗ ' + bad + '/' + n + ' 실패' : '✓ ' + n + '가지 모두 통과'));
 process.exit(bad ? 1 : 0);
