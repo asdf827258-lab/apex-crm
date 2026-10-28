@@ -256,8 +256,16 @@ const SEED = () => {
 
   /* ⚠ 앞 토막이 씨를 흔들어 둡니다 — <b>다시 심고</b> 잽니다 */
   await pg.evaluate(SEED); await pg.evaluate(() => { go('home'); }); await pg.waitForTimeout(500);
-  sec('[4] ★★ 내 글이 몇 px 먹나 — 남은 자리는 <b>18px</b> (844×4.2 − 3,526)');
-  /* 총 높이의 주인은 <b>check-homeone</b> 입니다. 여기서는 <b>차</b>만 잽니다. */
+  sec('[4] ★★ 내 글이 몇 px 먹나 — 남은 자리를 <b>그때그때 잽니다</b> (844×4.2 − 지금 홈)');
+  /* 총 높이의 주인은 <b>check-homeone</b> 입니다. 여기서는 <b>차</b>만 잽니다.
+     ★ 2026-10-28 (판 X230) — 남은 자리를 <b>18 로 얼려 두지 않습니다.</b>
+       18 은 홈이 3,526px 이던 시절(접이 이전)의 수였습니다. 판 X223 에서
+       곁칸 셋이 접히며 홈이 짧아졌는데 이 수만 그대로라, 자가 <b>옛 홈을
+       기준으로</b> 재고 있었습니다. 이제 세 토막을 뺀 홈을 <b>직접 재어</b>
+       844×4.2 에서 빼고, 그 자리 안에 드는지 봅니다.
+     ⚠ 그래도 <b>총 높이로 울지 않습니다</b> — 묻는 자리는 한 곳
+       (check-homeone)이고, 여기서는 <b>내 세 토막이 그 자리에 드나</b>만
+       묻습니다 (5번). 선(4.2화면)은 사장님 선이라 <b>안 올립니다</b>. */
   const D = await pg.evaluate(() => {
     const H = (sel) => { const e = document.querySelector(sel); return e ? Math.round(e.getBoundingClientRect().height) : 0; };
     const out = {};
@@ -271,23 +279,45 @@ const SEED = () => {
     window.hmRtRgTxt = function(){ return '지역을 묶어 하루를 잡으시면 오가는 시간이 줄어듭니다.'; };
     
     go('home'); out.sub뺌 = H('#dynPane .hm-act'); out.rt뺌 = H('#dynPane .hm-rt'); out.act뺌 = 0;
+    /* ★ 세 토막을 <b>뺀 채로</b> 홈을 통째로 잽니다 — 여기서 남은 자리가 나옵니다.
+       ⚠ <b>document.scrollHeight 로 재면 안 됩니다</b> — 이 앱은 화면이
+         제 칸 안에서 굴러가 930px 이라는 엉뚱한 수가 나옵니다. 실제로
+         그렇게 쟀다가 「남은 자리 2,615px」 로 <b>거짓 통과</b>했습니다.
+         홈 길이의 임자(check-homeone)가 재는 것과 같은 <b>.tab-pane.on</b>
+         을 잽니다 (폰 390px 이라 두 기둥 규칙은 없습니다). */
+    const pane = document.querySelector('.tab-pane.on');
+    out.홈뺌 = pane ? Math.round(pane.getBoundingClientRect().height) : 0;
     window.hmPtChip = 참말.pt; window.hmRtRgTxt = 참말.rg; window.hmActMoreHtml = 참말.more;
     go('home');          /* ⚠ 되돌린 뒤 <b>다시 그립니다</b> — 안 그리면 다음 자가 「빼 둔 화면」 을 재게 됩니다 */
     return out;
   });
   const 늘 = (D.sub넣음 - D.sub뺌) + (D.rt넣음 - D.rt뺌) + (D.act넣음 - D.act뺌);
+  /* 사장님 선 — <b>안 올립니다</b>. 수를 한 곳에만 두어 이름표가
+     거짓말하지 않게 합니다(되돌려 쳐 보니 선은 3.2 인데 글은 「4.2화면」
+     이라고 적고 있었습니다 · 1번). */
+  const 선화면 = 4.2;
+  const 선 = Math.round(844 * 선화면);
+  const 남은 = 선 - D.홈뺌;
   console.log('  · 🎯+🤝 칩 둘 ' + (D.sub넣음 - D.sub뺌) + 'px · 🚗 묶이는 동네 ' +
               (D.rt넣음 - D.rt뺌) + 'px · 🤝 독려 칩 ' + (D.act넣음 - D.act뺌) + 'px');
-  is(늘 <= 18, '세 토막을 다 넣어도 <b>' + 늘 + 'px</b> — 남은 자리(18px) 안이다' +
-     (늘 > 18 ? ' ← 넘었습니다. <b>올리지 말고 줄이십시오</b> (check-homeone 의 그 말)' : ''));
+  console.log('  · 세 토막을 뺀 홈 <b>' + D.홈뺌 + 'px</b> · 선 ' + 선 + 'px(' + 선화면 + '화면) → '
+              + '남은 자리 <b>' + 남은 + 'px</b>');
+  is(늘 <= 남은, '세 토막을 다 넣어도 <b>' + 늘 + 'px</b> — 남은 자리(' + 남은 + 'px) 안이다' +
+     (늘 > 남은 ? ' ← 넘었습니다. <b>올리지 말고 줄이십시오</b> (check-homeone 의 그 말)' : ''));
 
   /* ⚠ 앞 토막이 씨를 흔들어 둡니다 — <b>다시 심고</b> 잽니다 */
   await pg.evaluate(SEED); await pg.evaluate(() => { go('home'); }); await pg.waitForTimeout(500);
   sec('[4-1] 칩이 <b>눈에 보이는 자리</b>에 있나 — 칩 줄은 옆으로 미는 줄이다');
-  /* ⚠ 칩 글자가 길어도 <b>높이는 안 늘어납니다</b> — .hm-act .g 가
-     flex-wrap:nowrap · overflow-x:auto 이기 때문입니다. 대신 <b>오른쪽
-     화면 밖으로</b> 밀려 사장님이 옆으로 밀어야 보입니다. 그래서 길이를
-     px 가 아니라 <b>자리</b>로 잽니다 (8번 — 되돌려 보고 알았습니다). */
+  /* ⚠ <b>2026-10-28 (판 X229) 에 이 줄의 성질이 바뀌었습니다.</b> 여태
+     .hm-act .g 가 flex-wrap:nowrap · overflow-x:auto 라 칩 글자가 길어도
+     높이는 안 늘고 대신 <b>오른쪽 화면 밖으로</b> 밀렸습니다. 사장님께서
+     오늘 화면을 보시고 ③ 「📒 오늘 기록 줄이 오른쪽에서 잘림」 을 짚으셔서
+     <b>접히게</b>(flex-wrap:wrap) 바꿨습니다 — 이제 넘치면 <b>높이를
+     먹습니다</b>(칩 넷 44 → 80px · 밖으로 밀린 칩 1 → 0).
+     ★ 그래서 [4] 의 남은 자리를 <b>얼려 두지 않고 그때그때 잽니다.</b>
+     ★ 여기 [4-1] 은 그대로 <b>자리</b>로 잽니다 — 「다 보이나」 를 묻는
+       자리이고, px 는 글꼴을 타기 때문입니다 (8번).
+     ★ 「잘리지 않나」 를 우는 자리는 <b>check-homeday</b> 하나입니다 (5번). */
   const C = await pg.evaluate(() => {
     const row = document.querySelector('#dynPane .hm-act .g');
     if (!row) return { 없음: true };

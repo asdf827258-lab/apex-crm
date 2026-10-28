@@ -95,9 +95,16 @@ const PUT = (rows, from) => {
 const LOOK = () => {
   try { go('home'); } catch (e) {}
   const pane = document.getElementById('dynPane');
-  const chip = [].slice.call(pane.querySelectorAll('.t-chip'))
-    .filter(e => (e.textContent || '').indexOf('연속') >= 0)[0];
-  const row = pane.querySelector('.t-chips');
+  /* 🧷 <b>판 X227 — 칩 줄이 없어졌습니다.</b> 「🔥 연속」 칩이 바로 위
+     접힌 줄과 <b>같은 수를 두 번</b> 적고 있어 사장님께서 거두라 하셨습니다.
+     말은 한 자도 안 없어졌습니다 — 수는 이제 <b>접힌 머리</b>(또는 넓은
+     화면에서는 카드 머리의 data-sum)에 섭니다. 묻는 것은 그대로이고
+     <b>보는 자리만</b> 옮겼습니다 (8번).                                */
+  /* ⚠ <b>.t-chips 는 이 홈에 여럿</b> 있습니다(상담현황·미끼 …). 「첫 번째」
+     를 집으면 엉뚱한 줄을 세어 헛 빨간불이 납니다 — 실제로 그랬습니다.
+     <b>🔥 연속 · 🔔 알람이 든 줄</b>만 찾습니다 (8번). */
+  const row = [].slice.call(pane.querySelectorAll('.t-chips'))
+    .filter(e => /연속|알람/.test(e.textContent || ''))[0] || null;
   /* ★ <b>곁칸 넷은 자리를 옮깁니다</b> (2026-10-06 · 사장님 「끌어올려」) —
      컴퓨터는 오른쪽 기둥(#hmSideHost), 폰은 오늘 카드 안 「지금 할 것」
      바로 아래(#hmSideUp)입니다. 그래서 <b>「두 기둥의 둘째 칸」 으로 찾지
@@ -108,9 +115,16 @@ const LOOK = () => {
     [].slice.call(document.querySelectorAll('#hmSideHost>*')));
   const card = 곁칸.length ? 곁칸
     .filter(e => (e.innerText || '').indexOf('이번 주') >= 0)[0] : null;
+  /* ★ <b>이번 주 칸에서 바로</b> 읽습니다 — 접혔으면 접이 머리, 펴졌으면
+     카드 머리의 data-sum 입니다. 카드 머리는 이모지·이름·단추 글자도
+     들고 있어 <b>data-sum 이 있으면 그것</b>을 집습니다 (8번). */
+  const sum = card ? (card.querySelector('.hm-fold-h .t span')
+                   || card.querySelector('.hm-rt-h[data-sum]')) : null;
+  const 누름 = card ? (card.querySelector('.hm-fold-h') || card.querySelector('.hm-rt-go')) : null;
   return { S: (typeof actStreak === 'function') ? actStreak() : undefined,
-           chip: chip ? (chip.textContent || '').replace(/\s+/g, ' ').trim() : '',
-           chipH: chip ? Math.round(chip.getBoundingClientRect().height) : 0,
+           chip: sum ? ((sum.getAttribute && sum.getAttribute('data-sum')) || sum.textContent || '')
+                        .replace(/\s+/g, ' ').trim() : '',
+           chipH: 누름 ? Math.round(누름.getBoundingClientRect().height) : 0,
            rowH: row ? Math.round(row.getBoundingClientRect().height) : 0,
            rowN: row ? row.querySelectorAll('.t-chip').length : 0,
            card: card ? (card.innerText || '').replace(/\s+/g, ' ').trim() : '',
@@ -233,9 +247,15 @@ const LOOK = () => {
     '  오늘 하셨으면 <b>들었다</b>고 적는다');
 
   console.log('\n[7] ★★ <b>칩과 카드가 같은 수</b>를 적는다 (0-1번)');
-  is(wk.ask.length === 2, '  이름표를 <b>둘</b>이 달고 있다 — ' + wk.ask.length + '개 (칩 · 카드)');
-  is(wk.ask.length === 2 && wk.ask[0] === wk.ask[1],
-    '  ★★ <b>같은 수</b>다 — ' + wk.ask.join(' / ') + (wk.ask[0] === wk.ask[1] ? '' : ' ← 갈렸습니다'));
+  /* ⬇ <b>둘 → 하나</b> (판 X227). 칩을 거두어 「연속 가동 일수」 를 적는
+     자리가 <b>카드 한 곳</b>이 되었습니다 — 두 곳이 갈릴 자리가 아예
+     없어졌습니다 (5번 「묻는 곳을 하나로」). 묻는 것을 바꿉니다:
+     <b>하나인가</b>, 그리고 <b>그 하나가 정말 센 수인가</b>.             */
+  is(wk.ask.length === 1,
+    '  ★★ 이름표가 <b>하나</b>다 — ' + wk.ask.length + '개 (칩을 거두어 적는 곳이 한 곳입니다)');
+  is(wk.ask.length === 1 && wk.S && wk.ask[0] === String(wk.S.n) + '일',
+    '  ★★ 그 하나가 <b>정말 센 수</b>다 — 이름표 「' + wk.ask.join('') + '」 · 센 것 '
+    + (wk.S ? wk.S.n : '?') + '일');
 
   console.log('\n[8] ★★ <b>서버를 한 번만 부른다</b> (7번)');
   const once = await p.evaluate(() => {
@@ -265,9 +285,13 @@ const LOOK = () => {
     '  <b>내 것만</b> 읽는다 — 남의 줄을 받아 오지 않습니다 (3번·7번)');
 
   console.log('\n[9] 길이 — <b>칩이 한 줄</b>에 서고 카드가 안 불어난다');
-  is(wk.rowN === 2 && wk.rowH <= 60,
-    '  칩 ' + wk.rowN + '개가 <b>한 줄</b>이다 — ' + wk.rowH + 'px (두 줄이면 홈이 51px 길어집니다)');
-  is(wk.chipH >= 44, '  칩이 <b>44px 이상</b>이다 — ' + wk.chipH + 'px');
+  /* ⬇ <b>칩 줄 자체가 없어졌습니다</b> (판 X227) — 그래서 「칩 둘이 한
+     줄인가」 는 물을 것이 없어졌고, 대신 <b>정말 없어졌나</b>를 묻습니다.
+     칩이 되살아나면 같은 수가 또 두 곳에 서므로 그때 웁니다 (5번). */
+  is(wk.rowN === 0 && wk.rowH === 0,
+    '  ★★ 🔥·🔔 <b>칩 줄이 없다</b> — ' + wk.rowN + '개 · ' + wk.rowH + 'px'
+    + ' (접힌 줄이 같은 수를 이미 적습니다)');
+  is(wk.chipH >= 44, '  수를 적은 자리가 <b>44px 이상</b>이다 — ' + wk.chipH + 'px');
   is(wk.cardH <= 175, '  「이번 주」 카드가 <b>' + wk.cardH + 'px</b> — 175px 이하 (곁기둥 다른 칸과 같은 결)');
   /* 🧷 ★★ <b>홈이 실제로 치르는 값은 「접힌 높이」</b> 입니다 (판 X223 ·
      사장님이 고르신 「① 곁칸 셋을 접기」). 위 줄은 <b>펴 놓고</b> 잰 카드
