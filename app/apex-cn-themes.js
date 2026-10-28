@@ -30,6 +30,13 @@
  * 나머지는 원래 함수를 감싸서(monkey-patch) 처리한다.
  *   cnSlidePreview · renderTodayCard · cnSrcOf · cnImgPrompt
  *   cardnewsSaveOne · cardnewsSaveAll
+ *
+ * ── 누구나 따라 하게 (판 X228) ─────────────────────────────────────────
+ * 사장님 말씀 「누구도 따라할수 있게 했어?」 → 「응 그렇게 해」.
+ * 테마 넷과 칸 다섯이 한꺼번에 서 있어 처음 보는 팀원은 무엇부터 할지 몰랐다.
+ * ① 테마 → ② 내 아이디 → ③ 사진 → ④ 저장 단계 줄을 세우고, 끝난 단계는 ✓,
+ * 지금 할 단계는 강조한다. 단계를 누르면 그 일을 바로 한다.
+ * 저장할 때 아이디·심의필이 비었으면 <b>한 번 묻는다</b> — 막지는 않는다(6번).
  */
 (function () {
   'use strict';
@@ -617,6 +624,13 @@
       '.cxp-br{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px;margin-top:11px}',
       '.cxp-f{display:flex;flex-direction:column;gap:3px}.cxp-f label{font-size:11px;font-weight:700;color:var(--t-sub)}.cxp-f input{min-height:44px;padding:0 11px;border:1px solid var(--t-line,#D1D5DB);border-radius:9px;font:inherit;font-size:var(--t6);background:var(--t-bg,#fff);color:var(--t-ink)}',
       '.cxp-f.span2{grid-column:1/-1}',
+      '.cxs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:12px}',
+      '@media(max-width:640px){.cxs{grid-template-columns:repeat(2,minmax(0,1fr))}}',
+      '.cxs-b{display:flex;align-items:center;gap:8px;min-height:52px;padding:7px 9px;border:1.5px solid var(--t-line,#E5E7EB);border-radius:10px;background:var(--t-bg,#fff);cursor:pointer;text-align:left;font:inherit;color:var(--t-sub,#6B7280)}',
+      '.cxs-n{flex:0 0 26px;height:26px;border-radius:50%;background:#E5E7EB;color:#374151;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900}',
+      '.cxs-t{display:flex;flex-direction:column;min-width:0}.cxs-t b{font-size:var(--t6);font-weight:800;color:var(--t-ink)}.cxs-t small{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.cxs-b.ok{border-color:#A7F3D0;background:#ECFDF5}.cxs-b.ok .cxs-n{background:#10B981;color:#fff}',
+      '.cxs-b.cur{border-color:#7C3AED;background:#F5F3FF;box-shadow:0 0 0 3px rgba(124,58,237,.14)}.cxs-b.cur .cxs-n{background:#7C3AED;color:#fff}',
       '.cxp-nt{margin-top:9px;font-size:11.5px;line-height:1.55;color:#8A6A2F;background:#FFF9EC;border:1px solid #F3E2B8;border-radius:8px;padding:7px 10px}'
     ].join('\n');
     document.head.appendChild(s);
@@ -640,6 +654,51 @@
   var _origPrompt = window.cnImgPrompt;
   if (typeof _origPrompt === 'function') window.cnImgPrompt = function (sl) { var p = _origPrompt.apply(this, arguments); return MOOD[CN.style] ? p + MOOD[CN.style] : p; };
 
+  /* ── 단계 줄 — 어디까지 했고 지금 무엇을 할지 ── */
+  function emptyPh() { try { var sl = cardnewsSlides(), c = 0; for (var k = 0; k < sl.length; k++) if (!(CN.imgs && CN.imgs[k])) c++; return c; } catch (e) { return 0; } }
+  function stepState() {
+    var t = isMine(CN.style), id = !!('' + B.id).trim(), e = emptyPh();
+    var st = [
+      { n: '1', t: '테마 고르기', d: t ? themeOf(CN.style).name : '아래 넷 중 하나', ok: t, go: 'cxStepGo(1)' },
+      { n: '2', t: '내 아이디 적기', d: id ? cxId() : '카드에 찍힐 인스타 아이디', ok: id, go: 'cxStepGo(2)' },
+      { n: '3', t: '사진 넣기', d: e ? ('빈 장 ' + e + '개 · 누르면 업로드') : '모든 장에 사진 있음', ok: !e, go: 'cxStepGo(3)' },
+      { n: '4', t: '저장', d: '1080×1350 PNG 로 전부', ok: false, go: 'cxStepGo(4)' }
+    ];
+    for (var i = 0; i < st.length; i++) if (!st[i].ok) { st[i].cur = true; break; }
+    return st;
+  }
+  function stepsHtml() {
+    return '<div class="cxs" id="cxSteps">' + stepState().map(function (x) {
+      return '<button type="button" class="cxs-b' + (x.ok ? ' ok' : '') + (x.cur ? ' cur' : '') + '" onclick="' + x.go + '">' +
+        '<span class="cxs-n">' + (x.ok ? '✓' : x.n) + '</span><span class="cxs-t"><b>' + E(x.t) + '</b><small>' + E(x.d) + '</small></span></button>';
+    }).join('') + '</div>';
+  }
+  function repaintSteps() { var o = document.getElementById('cxSteps'); if (!o) return; var tmp = document.createElement('div'); tmp.innerHTML = stepsHtml(); if (tmp.firstChild) o.parentNode.replaceChild(tmp.firstChild, o); }
+  window.cxStepGo = function (k) {
+    if (k === 1) { var th = document.querySelector('#cnHost .cxp-th'); if (th && th.scrollIntoView) th.scrollIntoView({ block: 'center', behavior: 'smooth' }); if (!isMine(CN.style)) toast('아래 테마 넷 중 마음에 드는 것을 누르세요.'); return; }
+    if (k === 2) { var f = document.getElementById('cxIdIn'); if (f) { f.focus(); if (f.scrollIntoView) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); } return; }
+    if (k === 3) {
+      /* 빈 장으로 옮긴 뒤 업로드 창을 연다 — 어느 장에 들어갈지 헷갈리지 않게 */
+      var sl = cardnewsSlides(), j; for (j = 0; j < sl.length; j++) if (!(CN.imgs && CN.imgs[j])) break;
+      if (j < sl.length && j !== CN.i && typeof cnGo === 'function') cnGo(j);
+      if (j >= sl.length) { toast('모든 장에 사진이 있습니다. 바꾸려면 그 장으로 가서 「🖼 직접 업로드」 를 누르세요.', 4000); return; }
+      toast((j + 1) + '번째 장에 넣을 사진을 고르세요. (✨ AI 사진 생성도 됩니다)', 3500);
+      if (typeof cnPick === 'function') cnPick(); return;
+    }
+    if (k === 4) { if (!isMine(CN.style)) { toast('먼저 ① 테마를 고르세요.', 3000); window.cxStepGo(1); return; } window.cardnewsSaveAll(); }
+  };
+  /* 저장 전에 빈 칸을 <b>한 번 묻는다</b> — 「아니오」 면 그 칸으로 데려간다 */
+  function cxAsk() {
+    var miss = [];
+    if (!('' + B.id).trim()) miss.push(['cxIdIn', '내 아이디 — 카드에 「@내아이디」 로 찍힙니다']);
+    if (!('' + B.seal).trim()) miss.push(['cxSealIn', '준법감시필 문구 — 보험 이야기 게시물은 심의필을 받은 뒤 올려야 합니다']);
+    if (!miss.length) return true;
+    var ok = true;
+    try { ok = confirm('⚠ 비어 있는 칸이 있습니다\n\n' + miss.map(function (m) { return '· ' + m[1]; }).join('\n') + '\n\n그래도 저장할까요? (취소하면 그 칸으로 갑니다)'); } catch (e) { ok = true; }
+    if (!ok) { var f = document.getElementById(miss[0][0]); if (f) { f.focus(); if (f.scrollIntoView) f.scrollIntoView({ block: 'center' }); } }
+    return ok;
+  }
+  window.cxAsk = cxAsk; /* 점검용 */
   function panelHtml() {
     var on = CN.style;
     var th = THEMES.map(function (t) {
@@ -650,7 +709,7 @@
       return '<div class="cxp-f' + (wide ? ' span2' : '') + '"><label for="' + id + '">' + lab + '</label><input id="' + id + '" value="' + E(B[key]) + '" placeholder="' + E(ph) + '" oninput="cxField(\'' + key + '\',this.value)"></div>';
     }
     var auto = autoSrc();
-    return '<div class="cxp"><div class="cxp-hd">✨ 매거진 테마 <span>— 뉴스를 이 디자인으로 바로 만듭니다 · 다시 누르면 기본 뉴스 카드</span></div>' +
+    return '<div class="cxp">' + stepsHtml() + '<div class="cxp-hd">✨ 매거진 테마 <span>— 뉴스를 이 디자인으로 바로 만듭니다 · 다시 누르면 기본 뉴스 카드</span></div>' +
       '<div class="cxp-th">' + th + '</div>' +
       '<div class="cxp-br">' +
       fld('cxIdIn', 'id', '🏷 내 아이디 (카드에 찍힘)', '@내인스타아이디') +
@@ -671,6 +730,7 @@
   window.cxField = function (k, v) {
     B[k] = '' + v; bSave();
     clearTimeout(_pt); _pt = setTimeout(function () {
+      repaintSteps();
       var st = document.querySelector('#cnHost .cn2-stage'); if (!st) return;
       var slides = cardnewsSlides(), cur = st.children[1];
       if (cur) { var tmp = document.createElement('div'); tmp.innerHTML = window.cnSlidePreview(slides[CN.i], CN.i, slides.length); if (tmp.firstChild) st.replaceChild(tmp.firstChild, cur); }
@@ -732,6 +792,7 @@
   var _origOne = window.cardnewsSaveOne, _origAll = window.cardnewsSaveAll;
   window.cardnewsSaveOne = function () {
     if (!isMine(CN.style)) return _origOne.apply(this, arguments);
+    if (!cxAsk()) return;
     if (typeof cnNumAsk === 'function' && !cnNumAsk()) return;
     var slides = cardnewsSlides(), i = CN.i;
     toast('이 장을 굽는 중입니다…');
@@ -743,6 +804,7 @@
   };
   window.cardnewsSaveAll = function () {
     if (!isMine(CN.style)) return _origAll.apply(this, arguments);
+    if (!cxAsk()) return;
     if (typeof cnNumAsk === 'function' && !cnNumAsk()) return;
     var slides = cardnewsSlides(), n = slides.length, i = 0;
     toast((typeof cnSaveSay === 'function') ? cnSaveSay(slides, n + '장을 차례로 굽습니다. 여러 파일 저장 안내가 뜨면 허용하세요.') : n + '장을 굽습니다.', 6000);
