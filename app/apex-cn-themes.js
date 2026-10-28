@@ -53,7 +53,7 @@
 
   /* ── 내 계정 · 출처 (이 브라우저에만) ── */
   var KEY = 'apex_cn_brand_v1';
-  var B = { id: '', mast: '', src: '', tags: '', seal: '', theme: '' };
+  var B = { id: '', mast: '', src: '', tags: '', seal: '', theme: '', who: '' };
   try { var sv = JSON.parse(localStorage.getItem(KEY) || 'null'); if (sv) for (var k in sv) if (B.hasOwnProperty(k)) B[k] = '' + (sv[k] || ''); } catch (e) {}
   function bSave() { try { localStorage.setItem(KEY, JSON.stringify(B)); } catch (e) {} }
   if (isMine(B.theme) && window.CN) window.CN.style = B.theme;
@@ -624,6 +624,8 @@
       '.cxp-br{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px;margin-top:11px}',
       '.cxp-f{display:flex;flex-direction:column;gap:3px}.cxp-f label{font-size:13px;font-weight:700;color:var(--t-sub)}.cxp-f input{min-height:44px;padding:0 11px;border:1px solid var(--t-line,#D1D5DB);border-radius:9px;font:inherit;font-size:var(--t6);background:var(--t-card,#fff);color:var(--t-ink)}',
       '.cxp-f.span2{grid-column:1/-1}',
+      '.cxp-f select{min-height:44px;padding:0 9px;border:1px solid var(--t-line,#D1D5DB);border-radius:9px;font:inherit;font-size:var(--t6);background:var(--t-card,#fff);color:var(--t-ink)}',
+      '.cxp-ph{margin-top:9px;font-size:13px;line-height:1.55;color:var(--t-sub)}',
       '.cxs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:12px}',
       '@media(max-width:640px){.cxs{grid-template-columns:repeat(2,minmax(0,1fr))}}',
       '.cxs-b{display:flex;align-items:center;gap:8px;min-height:52px;padding:7px 9px;border:1.5px solid var(--t-line,#E5E7EB);border-radius:10px;background:var(--t-card,#fff);cursor:pointer;text-align:left;font:inherit;color:var(--t-sub,#6B7280)}',
@@ -644,15 +646,103 @@
   /* 출처 칸에 적으면 기존 스타일의 마지막 장에도 그 출처가 찍힌다 */
   window.cnSrcOf = function () { var v = ('' + B.src).trim(); return v || autoSrc(); };
 
-  /* AI 사진을 테마 분위기에 맞춰 달라고 한 줄 덧붙인다 */
-  var MOOD = {
-    lime: ' Mood: trendy lifestyle magazine cover shoot, soft natural light, candid Korean people close-up, muted neutral background.',
-    note: ' Mood: bright airy daily snapshot, pale sky-blue and white tones, Han river park or cafe, soft and fresh.',
-    zine: ' Mood: street-style collage vibe, urban rooftop or graffiti wall, high contrast film look, confident Korean young adult.',
-    app: ' Mood: candid iPhone photo, cozy cafe or desk with laptop, warm low light, authentic everyday feel.'
+  /* ── AI 사진 — 화보 촬영처럼 (판 X231) ─────────────────────────────────
+     사장님 말씀 「사진도 고퀄리티로 만들어줘야만해. 내가 첨부한 퀄리티 보았지」.
+     재어 보니 화질이 무른 까닭이 셋이었다.
+       ① <b>정사각형(1:1)</b>으로 받아 4:5 로 잘랐다 — 1024 의 위아래를 잘라 819px 폭을
+          1080 으로 늘린 셈. → 처음부터 <b>4:5</b> 로 받는다(imageConfig.aspectRatio).
+       ② 글 맨 끝에 「navy and blue tones · Korean business context」 가 붙어 모든 장이
+          <b>경제신문 자료사진</b>이 됐다. → 테마가 켜지면 그 꼬리를 떼고 테마마다
+          <b>촬영 지시서</b>(장소·조명·옷·색보정·렌즈)를 쓴다. 참고 이미지 네 갈래를 옮겼다.
+       ③ 장마다 다른 사람이 나왔다. → 한 덱은 <b>같은 모델</b>(덱 제목으로 고정 · 칸에서 고름).
+     ★ 개인 Gemini 키가 있으면 <b>최고 모델(Pro · 2K)</b> 을 먼저 쓴다. 공용 프록시는
+       서버 함수 시간 한도(약 10초)가 있어 느린 Pro 가 잘리므로 표준 모델로 간다 — 둘 다 4:5.
+       Pro 가 한도·권한으로 막히면 그 자리에서 표준으로 내려가고, 이번 접속 동안은 다시 안 묻는다.
+     ★ 받은 사진은 <b>1080×1350 JPEG</b> 로 맞춰 둔다 — 2K 원본(수 MB)을 장마다 화면에 다시
+       그리면 폰이 무거워진다. 카드 크기가 1080×1350 이라 잃는 것이 없다.            */
+  var WHO = [['auto', '자동 (덱마다 한 사람)'], ['w20', '20대 여성'], ['w30', '30대 여성'], ['m20', '20대 남성'], ['m30', '30대 남성'], ['none', '인물 없이 (사물·풍경)']];
+  var PEOPLE = {
+    w20: 'a Korean woman in her mid-20s with long dark layered hair and fresh natural makeup',
+    w30: 'a Korean woman in her early 30s with shoulder-length soft wavy hair, elegant and approachable',
+    m20: 'a Korean man in his late 20s with a soft textured two-block haircut, clean-shaven, friendly',
+    m30: 'a Korean man in his mid-30s with neat short hair, smart-casual, calm and trustworthy'
   };
+  var LOOK = {
+    lime: 'Setting: a minimal photo studio with a warm light-grey seamless backdrop; a professional camera on a tripod sits softly out of focus in the near foreground. Light: large soft window key light with gentle fill. Wardrobe: a simple white tank top or plain knit. Grade: clean K-beauty magazine look, neutral warm tones, subtle filmic softness.',
+    note: 'Setting: a sunny Han River park or a bright minimal cafe in Seoul, pale sky and soft greenery. Light: bright airy daylight with a hint of golden-hour warmth. Wardrobe: a soft cream knit or light linen shirt. Grade: fresh pastel, pale sky-blue and white palette, low contrast, like a candid photo taken by a stylish friend.',
+    zine: 'Setting: a Seoul rooftop in daytime with the city skyline, or a wall covered in graffiti and torn posters. Light: direct on-camera flash mixed with hard daylight. Wardrobe: an oversized blue striped shirt over a white tank top, baseball cap or small sunglasses, Y2K street style. Grade: 35mm film grain, punchy contrast, slightly cool shadows.',
+    app: 'Setting: a cozy dim cafe in Seoul at night, warm tungsten pendant lights, a laptop and an iced coffee on a wooden table. Light: warm low ambient light with soft falloff. Wardrobe: a black knit, hair in a loose bun. Grade: moody and intimate, natural smartphone-like grain.'
+  };
+  var SHOT = {
+    cover: 'Shot: tight editorial close-up portrait from the chest up, subject looking straight into the lens, face placed in the upper half of the frame.',
+    point: 'Shot: natural medium shot, subject candidly engaged in an everyday moment that fits the story (checking a phone, reading papers, talking with someone), not posing for the camera.',
+    stat: 'Shot: medium close-up, hands holding a smartphone or paper documents, focus on a real, quiet moment of checking something important.',
+    quote: 'Shot: three-quarter profile, subject gazing thoughtfully away from the camera, generous negative space on one side.',
+    list: 'Shot: calm environmental wide shot, subject small in the frame, uncluttered background.',
+    cta: 'Shot: warm half-body portrait with a gentle, genuine smile, relaxed and approachable.'
+  };
+  var QUALITY = 'Ultra-realistic high-end Korean magazine editorial photograph, shot on a full-frame mirrorless camera with an 85mm f/1.4 lens (35mm for wide shots), shallow depth of field, creamy bokeh, tack-sharp focus on the eyes, true-to-life skin texture with fine pores, natural hands with correct fingers, accurate anatomy, professional color grading, high dynamic range, crisp fine detail.';
+  var NEG = 'Absolutely no text, letters, numbers, captions, logos, brand marks, watermarks, signage text, UI elements, borders or collage frames. No distorted faces, no extra fingers, no plastic or airbrushed skin, no cartoon, 3D render or illustration style.';
+  function deckSeed() { try { var s = cardnewsSlides(), t = plain((cnMagText(s[0] || {}).t) || ''); var h = 0; for (var i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return h; } catch (e) { return 0; } }
+  function whoKey() { var w = B.who || 'auto'; if (w !== 'auto') return w; return ['w20', 'w30', 'w20', 'm20'][deckSeed() % 4]; }
+  function cxPrompt(sl) {
+    var m = cnMagText(sl || {}), lay = cnLayout(sl || {}), wk = whoKey();
+    if (lay === 'news') lay = 'point';
+    var story = plain(m.t).replace(/\n/g, ' ') + (m.s ? ' — ' + plain(m.s) : '');
+    var who = wk === 'none'
+      ? 'Subject: no people at all — a styled, atmospheric still-life or scene with everyday objects that quietly symbolize the story.'
+      : 'Model: ' + PEOPLE[wk] + '. Keep the same model, hair and styling as every other photo in this series.';
+    var shot = wk === 'none' ? 'Shot: carefully composed still-life with intentional props, editorial product-photography quality.' : (SHOT[lay] || SHOT.point);
+    return [QUALITY, who, LOOK[CN.style] || '', shot,
+      (sl && sl.img ? 'Scene idea: ' + ('' + sl.img).slice(0, 160) + '.' : ''),
+      'Story context (Korean, for mood only — never render it as text): "' + story.slice(0, 140) + '".',
+      'Vertical 4:5 frame. Keep the lower third calm and slightly darker so a headline can sit on top.', NEG].filter(Boolean).join(' ');
+  }
+  window.cxPrompt = cxPrompt; /* 점검용 */
   var _origPrompt = window.cnImgPrompt;
-  if (typeof _origPrompt === 'function') window.cnImgPrompt = function (sl) { var p = _origPrompt.apply(this, arguments); return MOOD[CN.style] ? p + MOOD[CN.style] : p; };
+  if (typeof _origPrompt === 'function') window.cnImgPrompt = function (sl) { return isMine(CN.style) ? cxPrompt(sl) : _origPrompt.apply(this, arguments); };
+
+  /* 모델 · 4:5 · 2K — cnImgFetch(mdl, prompt, cfg) 의 cfg 로 넘긴다 */
+  var PRO = 'gemini-3-pro-image-preview', proDead = false;
+  function ownKey() { try { return typeof getGeminiKey === 'function' && !!getGeminiKey(); } catch (e) { return false; } }
+  /* 1080×1350 JPEG 로 맞춘다 — 가운데 기준 cover */
+  function fit1080(uri) {
+    return new Promise(function (res) {
+      var im = new Image();
+      im.onload = function () {
+        try {
+          var W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H; var x = c.getContext('2d');
+          x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+          var ir = im.width / im.height, cr = W / H, dw, dh; if (ir > cr) { dh = H; dw = H * ir; } else { dw = W; dh = W / ir; }
+          x.drawImage(im, (W - dw) / 2, (H - dh) / 2, dw, dh);
+          res(c.toDataURL('image/jpeg', 0.93));
+        } catch (e) { res(uri); }
+      };
+      im.onerror = function () { res(uri); };
+      im.src = uri;
+    });
+  }
+  var _origFetch = window.cnImgFetch;
+  if (typeof _origFetch === 'function') window.cnImgFetch = function (mdl, prompt, cfg) {
+    if (!isMine(CN.style) || cfg) return _origFetch.apply(this, arguments);
+    var std = { imageConfig: { aspectRatio: '4:5' } };
+    var stdTry = function () {
+      return _origFetch(mdl, prompt, std)['catch'](function (e) {
+        /* 이 모델이 imageConfig 를 모르면 예전 방식으로 한 번 더 */
+        if (/imageConfig|aspect|Unknown name|Invalid JSON payload/i.test((e && e.message) || '')) return _origFetch(mdl, prompt);
+        throw e;
+      });
+    };
+    var go;
+    if (ownKey() && !proDead && /flash-image/.test(mdl)) {
+      toast('최고화질(Pro · 2K)로 촬영 중입니다 — 20~40초 걸립니다', 4000);
+      go = _origFetch(PRO, prompt, { imageConfig: { aspectRatio: '4:5', imageSize: '2K' } })['catch'](function (e) {
+        proDead = true; /* 한도·권한·이름 — 무엇이든 이번 접속은 표준으로 */
+        return stdTry();
+      });
+    } else go = stdTry();
+    return go.then(fit1080);
+  };
 
   /* ── 단계 줄 — 어디까지 했고 지금 무엇을 할지 ── */
   function emptyPh() { try { var sl = cardnewsSlides(), c = 0; for (var k = 0; k < sl.length; k++) if (!(CN.imgs && CN.imgs[k])) c++; return c; } catch (e) { return 0; } }
@@ -716,8 +806,11 @@
       fld('cxMastIn', 'mast', '📰 매거진 이름 (맨 위 이름)', 'APEX YUN PRO') +
       fld('cxSrcIn', 'src', '🔗 출처 (비우면 자동)', auto ? ('자동: ' + auto) : '예) 한국경제 2026.10.28 · 금융위원회 보도자료') +
       fld('cxTagIn', 'tags', '# 해시태그 (2개까지 카드에)', '#보험정보 #절세') +
+      '<div class="cxp-f"><label for="cxWhoIn">📷 AI 사진 속 인물</label><select id="cxWhoIn" onchange="cxField(\'who\',this.value)">' +
+        WHO.map(function (w) { return '<option value="' + w[0] + '"' + ((B.who || 'auto') === w[0] ? ' selected' : '') + '>' + w[1] + '</option>'; }).join('') + '</select></div>' +
       fld('cxSealIn', 'seal', '✅ 준법감시필 문구 (마지막 장 맨 아래)', '에이플러스에셋 준법감시필 00-0000-0000 (0000.00.00 ~ 0000.00.00)', true) +
-      '</div><div class="cxp-nt">아이디·이름·출처는 <b>이 기기에만</b> 저장됩니다. 출처는 지어내지 않습니다 — 비워 두면 AI·주제가 가진 출처만 찍히고, 없으면 빈칸입니다. ' +
+      '</div><div class="cxp-ph">📷 AI 사진은 고른 테마에 맞춘 <b>화보 촬영 지시서</b>로 세로 4:5 로 만듭니다. ' + (ownKey() ? '개인 Gemini 키가 있어 <b>최고화질(Pro · 2K)</b>로 찍습니다(장당 20~40초).' : '공용 연결이라 <b>표준 모델</b>로 찍습니다 — 개인 Gemini 키를 넣으면 최고화질(Pro · 2K)로 바뀝니다.') + '</div>' +
+      '<div class="cxp-nt">아이디·이름·출처는 <b>이 기기에만</b> 저장됩니다. 출처는 지어내지 않습니다 — 비워 두면 AI·주제가 가진 출처만 찍히고, 없으면 빈칸입니다. ' +
       '보험 이야기가 들어간 게시물은 <b>준법감시필을 받은 뒤</b> 올리세요.</div></div>';
   }
   window.cxTheme = function (id) {

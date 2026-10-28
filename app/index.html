@@ -21115,8 +21115,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-28 20:30';
-var APP_BUILD_NOTE="🧭 <b>캐러셀 — 누구나 따라 하게</b> (판 X228). ◾ 「✨ 매거진 테마」 칸 맨 위에 <b>1 테마 고르기 → 2 내 아이디 → 3 사진 넣기 → 4 저장</b> 단계 줄이 섰습니다. 한 단계는 ✓ 로 바뀌고, 지금 할 단계 하나만 보라색으로 켜집니다. 단계를 누르면 그 일을 바로 합니다(아이디 칸으로 · 빈 장으로 옮겨 사진 고르기 · 전부 저장). ◾ 저장할 때 <b>아이디나 준법감시필 문구가 비어 있으면 한 번 묻습니다</b> — 「취소」 면 그 칸으로 데려가고, 「확인」 이면 그대로 저장합니다(막지 않습니다). 다 채웠으면 묻지 않습니다. ◾ 판 X227(매거진 테마 넷 + 아이디·출처 칸)도 들어 있습니다.";
+var APP_BUILD='2026-10-28 22:30';
+var APP_BUILD_NOTE="📷 <b>캐러셀 AI 사진을 화보처럼</b> (판 X231). ◾ 매거진 테마를 켜면 AI 사진을 <b>테마마다 다른 촬영 지시서</b>로 찍습니다 — 📁 스튜디오 화보 · 💙 한강 낮 스냅 · 💗 옥상 스트릿 · 📱 밤 카페. 렌즈·조명·옷·색보정까지 적고, 「글자·로고 금지」 를 못 박았습니다. ◾ 처음부터 <b>세로 4:5</b> 로 받습니다 — 전에는 정사각형을 잘라 늘려서 사진이 물렀습니다. ◾ <b>한 덱은 같은 모델</b>로 찍고, 「📷 AI 사진 속 인물」 칸에서 20·30대 여성/남성 · 인물 없이를 고릅니다. ◾ 개인 Gemini 키가 있으면 <b>최고화질(Pro · 2K)</b>, 공용 연결이면 표준 모델로 찍고, Pro 가 막히면 그 자리에서 표준으로 내려갑니다. ◾ 판 X228(단계 줄 · 13px 바닥)도 들어 있습니다.";
 
 
 
@@ -81910,8 +81910,10 @@ function cnImgPrompt(sl){
   if(!base){var m=cnMagText(sl);base='한국의 경제·금융 카드뉴스에 어울리는 실사 사진: '+(''+(m.t||'')).replace(/\*\*/g,'').replace(/\n/g,' ');}
   return base+' — photorealistic editorial photography, Korean business context, navy and blue tones, vertical 4:5 composition, clean with copy space, absolutely no text, no letters, no numbers, no logos, no watermarks.';
 }
-function cnImgFetch(mdl,prompt){
+function cnImgFetch(mdl,prompt,cfg){
   var payload={contents:[{parts:[{text:prompt}]}],generationConfig:{responseModalities:['TEXT','IMAGE']}};
+  /* cfg — 덧붙일 생성 설정(예: imageConfig 의 4:5 · 2K). 캐러셀 테마가 넘깁니다(apex-cn-themes.js · 판 X231) */
+  if(cfg)for(var ck in cfg)if(cfg.hasOwnProperty(ck))payload.generationConfig[ck]=cfg[ck];
   var key=getGeminiKey(),gpx=getGeminiProxy(),url,headers={'Content-Type':'application/json'};
   if(key){url='https://generativelanguage.googleapis.com/v1beta/models/'+mdl+':generateContent?key='+encodeURIComponent(key);}
   else{url=gpx;payload.model=mdl;var _t=(typeof getAppToken==='function')?getAppToken():'';if(_t)headers['X-App-Token']=_t;}
@@ -84326,6 +84328,6 @@ try{osBootAuth();}catch(e){}
 try{osNoticeLoad();}catch(e){}
 </script>
 <script src="apex-aplus-disease.js"></script>
-<script src="apex-cn-themes.js?v=20261028b"></script>
+<script src="apex-cn-themes.js?v=20261028c"></script>
 </body>
 </html>
