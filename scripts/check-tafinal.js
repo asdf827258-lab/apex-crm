@@ -90,7 +90,10 @@ console.log('\n[7] 깔끔하게 · 글씨 크기 (판 X105 · 사장님 말씀 2
 /* 단계 안 거절은 <b>제목 단추 한 줄</b>이고, 멘트 미리보기를 또 늘어놓지 않는다 — 할 말은 누르면 팝업 하나에서 */
 is(/function brO\(id\)\{[^\n]*class="br" data-ob="'\+id\+'">'\+esc\(o\.title\)\+'<\/button>'/.test(TA) && TA.indexOf('멘트·평가 보기 ›') < 0,
    '  단계 안 거절은 <b>제목 단추</b>만 — 멘트 미리보기 카드를 늘어놓지 않는다');
-is(/class="qall"/.test(TA) && /id="qfind"/.test(TA), '  오른쪽 거절 목록은 <b>자주 나오는 것만 펼치고</b> 나머지는 접기 · 찾기 칸이 있다');
+is(/id="dock"/.test(TA) && /id="qfind"/.test(TA) && !/<aside class="side/.test(TA),
+   '  거절은 <b>하단 고정 판</b>에 전부 · 찾기 칸 (판 X234 — 오른쪽 칸은 걷었다)');
+is(/function printQuick\(/.test(TA) && /var PRINT_FULL = false;/.test(TA),
+   '  인쇄 기본은 <b>대본 + 거절 한눈표 2장</b>, 자세한 판은 고를 때만 (판 X234)');
 is(/id="fsz"/.test(TA) && /'ta_fsz'/.test(TA) && /\.app,#shB\{zoom:var\(--z,1\)\}/.test(TA), '  <b>글씨 크기</b> 단추(가- 가+)가 있고 이 기기에 기억한다');
 is(/\.cols\{grid-template-columns:minmax\(0,1fr\)\}/.test(TA), '  폰에서 대본 칸이 화면 밖으로 <b>안 밀린다</b> (가로 줄이 칸을 넓히지 않게)');
 

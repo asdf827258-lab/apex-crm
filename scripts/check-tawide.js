@@ -271,14 +271,20 @@ const 열기 = async (ctx, tab) => {
   const 옷2 = SRC.slice(SRC.indexOf('<style>'), SRC.indexOf('</style>'));
   is(!/min-width:1240px/.test(옷2),
      '  ★★ 옷에 <b>중단점 1240px 이 남아 있지 않다</b> — 틀 안에서는 창 폭을 물으면 틀립니다');
-  is(/@container\s*\(min-width/.test(옷2) && /container-type:inline-size/.test(옷2),
-     '  ★ 오른쪽 거절 두 줄은 <b>창이 아니라 그 칸</b>을 묻는다 (@container)');
-  const 펴둠 = await p1.evaluate(() => {
-    const d = document.querySelector('.qall');
-    return { 있나: !!d, 펴짐: !!(d && d.open), 접는길: !!(d && d.querySelector('summary')) };
+  /* 판 X234 (2026-10-16) — 사장님 말씀 「거절을 <b>오른쪽이 아닌 하단 고정</b>에 한번에 다 보이게」.
+     오른쪽 칸(두 줄 · 「나머지 N가지」 접기)을 걷고 하단 고정 판에 <b>전부</b> 깔았습니다.
+     「펴 둬」(X111) 는 그대로 지킵니다 — PC 는 처음부터 펴져 있고, 접는 길도 있습니다. */
+  const 판 = await p1.evaluate(() => {
+    const d = document.getElementById('dock'), q = document.getElementById('qbar');
+    const 봄 = e => e.offsetHeight > 0, all = [].slice.call(q.querySelectorAll('[data-ob]')).filter(봄);
+    return { 펴짐: d.classList.contains('open'), 수: all.length, 표: APEX_STAGE.objList().length,
+             다보이나: all.every(e => { const b = e.getBoundingClientRect(); return b.bottom <= innerHeight + 1 && b.top >= 0; }),
+             고정: getComputedStyle(d).position === 'fixed', 오른칸: !!document.querySelector('aside.side'),
+             접는길: !!document.getElementById('dkFold') };
   });
-  is(펴둠.있나 && 펴둠.펴짐, '  ★★ 「나머지 N가지 보기」가 <b>처음부터 펴져</b> 있다 (사장님 말씀 「펴 둬」)');
-  is(펴둠.접는길, '  ★ <b>접는 길은 그대로</b>다 — 누르면 접히고 그대로 기억합니다 (6번)');
+  is(판.고정 && !판.오른칸, '  ★★ 거절은 <b>하단 고정 판</b>에 있다 — 오른쪽 칸은 걷었다');
+  is(판.펴짐 && 판.수 >= 판.표 && 판.다보이나, '  ★★ 거절 <b>' + 판.수 + '가지가 한 번에</b> 보인다 — 스크롤 없이 (표 ' + 판.표 + '가지)');
+  is(판.접는길, '  ★ <b>접는 길</b>이 있다 — 누르면 한 줄로 접히고 그대로 기억합니다 (6번)');
 
   /* ─────────────────────────────────────────────────────────── */
   head('[8] 조용한가');

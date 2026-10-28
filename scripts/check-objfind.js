@@ -160,13 +160,37 @@ const 보이는수 = (p, sel) => p.evaluate(s => [].slice.call(document.querySel
   const p3 = await 열기(pc);
   p3.on('pageerror', e => errs.push(String(e.message || e)));
   const d = await p3.evaluate(() => ({ 상담정보: getComputedStyle(document.getElementById('infoBody')).display !== 'none',
-    오른칸: [].slice.call(document.querySelectorAll('#qobj [data-ob]')).filter(e => e.offsetHeight > 0).length }));
+    오른칸: [].slice.call(document.querySelectorAll('#qbar [data-ob]')).filter(e => e.offsetHeight > 0).length }));
   is(d.상담정보, '  PC 에서는 상담 정보가 <b>펴진 채</b>다');
   await p3.fill('#qfind', '이미'); await p3.waitForTimeout(400);
-  const d2 = await 보이는수(p3, '#qobj [data-ob]');
-  is(d2 > 0 && d2 < d.오른칸, '  PC 오른쪽 칸도 <b>그대로 걸러진다</b> — ' + d.오른칸 + ' → ' + d2 + '가지');
+  const d2 = await 보이는수(p3, '#qbar [data-ob]');
+  is(d2 > 0 && d2 < d.오른칸, '  PC 하단 거절판도 <b>그대로 걸러진다</b> (판 X234 — 오른쪽 칸을 아래로) — ' + d.오른칸 + ' → ' + d2 + '가지');
 
-  head('[6] ★★ 인쇄에 거절이 <b>전부</b> 나간다 (사장님 말씀)');
+  head('[6-1] ★★ 인쇄 기본은 <b>대본 1장 + 거절 한눈표 1장</b> (판 X234 · 사장님 말씀 2026-10-16 「거절이 너무 많아서 인쇄하면 너무 많은데」)');
+  /* 판 X114~X119 의 「거절 전부 · 화면과 똑같이」 는 <b>지우지 않았습니다</b> — 인쇄 단추의 고르는 쪽지에서
+     「거절 자세히까지」 를 고를 때 나갑니다. 아래 [6] 부터는 그 종이를 예전 그대로 잽니다. */
+  const 기본 = await p3.evaluate(() => { window.dispatchEvent(new Event('beforeprint'));
+    const ps = document.getElementById('printSheet'), 글 = ps.innerText || ps.textContent || '';
+    const names = APEX_STAGE.objList().map(o => o.title);
+    return { 표줄: ps.querySelectorAll('.pq tbody tr').length, 빠진: names.filter(x => 글.indexOf(x) < 0),
+             자세히: ps.querySelectorAll('.pobj').length, 머리: /거절 한눈표/.test(글), 앞장: /보장분석 TA 연속 스크립트/.test(글) }; });
+  is(기본.빠진.length === 0, '  ★★ 한눈표에도 거절 <b>전부</b>가 있다 — 빠진 것 ' + 기본.빠진.length + (기본.빠진.length ? ' ← ' + 기본.빠진.slice(0, 3).join(' · ') : ''));
+  is(기본.표줄 >= 28 && 기본.자세히 === 0, '  한 줄씩 <b>' + 기본.표줄 + '줄</b> — 자세한 칸은 기본 종이에 안 섞인다');
+  is(기본.머리 && 기본.앞장, '  앞장(대본)은 그대로이고 뒤에 <b>「거절 한눈표」</b>');
+  const 기본쪽 = await (async () => {
+    await p3.emulateMedia({ media: 'print' });
+    const buf = await p3.pdf({ format: 'A4', margin: { top:'6mm', bottom:'6mm', left:'7mm', right:'7mm' }, printBackground: true });
+    await p3.emulateMedia({ media: 'screen' });
+    return (buf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+  })();
+  is(기본쪽 === 2, '  ★★ 종이로 뽑아 세면 <b>' + 기본쪽 + '쪽</b> — 대본 1장 + 거절 1장 (전에는 31쪽)');
+  const 고름 = await p3.evaluate(() => { document.querySelector('[data-act="print"]').click();
+    const b = [].slice.call(document.querySelectorAll('#shB [data-act="printgo"]')).map(x => x.dataset.full);
+    document.getElementById('shX').click(); return b.join(','); });
+  is(고름 === '0,1', '  🖨 인쇄를 누르면 <b>고르는 쪽지</b>가 뜬다 — 「대본 + 한눈표(2장)」 · 「거절 자세히까지(약 30쪽)」');
+  await p3.evaluate(() => TA_APP.setPrintFull(true));
+
+  head('[6] ★★ 「거절 자세히까지」 를 고르면 거절이 <b>전부</b> 나간다 (사장님 말씀)');
   const pr = await p3.evaluate(() => {
     const ps = document.getElementById('printSheet');
     const 글 = ps.innerText || ps.textContent || '';

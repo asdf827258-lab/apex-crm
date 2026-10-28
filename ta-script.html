@@ -149,12 +149,6 @@ button{font:inherit;color:inherit}
 .src a{color:var(--g600)}
 
 /* 빠른 거절 패널(데스크톱 오른쪽) */
-.qobj{display:flex;flex-direction:column;gap:6px}
-.qobj button{border:0;background:var(--g50);border-radius:12px;padding:11px 12px;text-align:left;cursor:pointer;font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:8px}
-.qobj button:hover{background:var(--red-l);color:var(--red)}
-.qobj button i{font-style:normal;font-size:11px;font-weight:700;color:var(--g500);margin-left:auto;white-space:nowrap}
-.qobj button.hot{background:var(--red-l)}
-.qobj button.hot i{color:var(--red)}
 
 /* 거절처리 상세 */
 /* ── 거절처리 한 눈에 ── 2026-10-15 · 사장님 말씀 「거절처리도 한눈에
@@ -381,7 +375,6 @@ details.why3 summary{list-style:none;cursor:pointer;padding:11px 14px;font-size:
 details.why3 summary::-webkit-details-marker{display:none}
 details.why3 .in{padding:0 12px 12px}
 details.why3 .gi{background:#fff}
-.sidetabs{margin:0 0 12px}
 .emerg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 10px}
 .emerg button{border:0;border-radius:12px;padding:10px 8px;font-family:var(--dh);font-size:16px;cursor:pointer;background:var(--red-l);color:var(--red)}
 .emerg button.sos{background:var(--g900);color:#ffd0d4}
@@ -483,32 +476,9 @@ body{letter-spacing:-.2px}
 .coach.hint b{color:var(--g700)}
 .st .stop{background:var(--g50);color:var(--g800);border-left:3px solid var(--g800);border-radius:0 12px 12px 0}
 .st .stop b{color:var(--g900)}
-/* 오른쪽 거절 목록 — 자주 나오는 것만 펼치고 나머지는 접기 */
+/* 🔍 찾는 칸 — 하단 거절판 · 쪽지 · 거절처리 탭이 같이 씁니다 */
 .qfind{width:100%;border:0;background:var(--g100);border-radius:12px;padding:10px 12px;font:inherit;font-size:14px;margin:0 0 10px;outline:none}
 .qfind:focus{box-shadow:0 0 0 2px var(--blue) inset;background:#fff}
-.qobj{gap:2px}
-.qobj .ql{font-size:12px;font-weight:800;color:var(--g500);margin:2px 2px 4px}
-.qobj button{background:none;padding:9px 10px;font-size:14px;border-radius:10px}
-/* 칸이 넓어졌으니 자주 나오는 거절도 <b>두 줄</b>로 깔아 한눈에 보입니다.
-   ★★ <b>창이 아니라 이 칸</b>이 넓어졌는지를 묻습니다(@container) — 창으로
-     물으면 본체 틀 안에서 틀렸습니다. 이 물음을 못 아는 브라우저에서는
-     <b>한 줄로 그대로</b> 섭니다(지금까지와 같습니다). */
-#sideObj{container-type:inline-size}
-@container (min-width:340px){
-  .qobj{display:grid;grid-template-columns:1fr 1fr;gap:2px}
-  .qobj .ql,.qobj .qall{grid-column:1 / -1}
-  .qobj button{font-size:13.5px;padding:8px 10px}
-}
-.qobj button.hot{background:none;color:var(--g900)}
-.qobj button.hot::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--red);flex:0 0 6px}
-.qobj button i{color:var(--orange)}
-.qall{margin-top:8px;border-top:1px solid var(--g100);padding-top:6px}
-.qall summary{cursor:pointer;list-style:none;font-size:13px;font-weight:800;color:var(--g600);padding:8px 10px;border-radius:10px}
-.qall summary::-webkit-details-marker{display:none}
-.qall summary::after{content:' ▾'} .qall[open] summary::after{content:' ▴'}
-.qall summary:hover{background:var(--g50)}
-.qgrid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
-.qgrid button{font-size:13px;font-weight:600;padding:8px 10px;line-height:1.4}
 /* ── 🔍 <b>거절을 글자로 찾는 자리</b> (판 X114) ───────────────────────
    사장님 말씀 (2026-10-15) — 「핸드폰에서 너무 내용이 안 보이고 <b>거절처리
      등을 더 쉽게 보도록 바로 찾도록</b> 해줘」.
@@ -551,10 +521,51 @@ body{letter-spacing:-.2px}
 body.fb-off .coach,body.fb-off .heart,body.fb-off .timing{display:none!important}
 .app,#shB{zoom:var(--z,1)}
 .sticky{top:calc(132px / var(--z,1))}
-@media (min-width:901px){ .qbar{display:none} }
 @media (max-width:900px){ .cols{grid-template-columns:minmax(0,1fr)} }
 @media (max-width:640px){ .st{grid-template-columns:minmax(0,1fr)} }
 @media (max-width:640px){ .fsz span{display:none} .fsz button{padding:6px 8px} }
+/* ══ 🙅 하단 고정 거절판 (판 X234 · 사장님 말씀 2026-10-16 「거절을 오른쪽이 아닌
+     상단 또는 하단 고정에 한번에 다 보이게」 → 하단) ══════════════════════════════
+   ★ 오른쪽 칸을 걷고 대본은 가운데 한 칸 — 글줄은 920px 를 안 넘깁니다.
+   ★ 펴면 거절 <b>전부</b>가 한 판에 · 접으면 한 줄로 미끄러집니다(폰 처음).
+   ★ 판 높이만큼 본문 아래를 비워 마지막 줄이 안 가려집니다(--dockH). */
+#p-call .cols{grid-template-columns:minmax(0,1fr);max-width:1000px;margin:0 auto}
+.app{padding-bottom:calc(var(--dockH,120px) + 28px)}
+.toast{bottom:calc(var(--dockH,80px) + 14px)}
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(255,255,255,.97);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+      border-top:1px solid var(--g200);box-shadow:0 -8px 28px rgba(0,0,0,.08);padding-bottom:env(safe-area-inset-bottom)}
+.dk-in{max-width:1560px;margin:0 auto;padding:8px 16px 10px}
+.dk-hd{display:flex;align-items:center;gap:8px;margin:0 0 7px}
+.dk-t{font-family:var(--dh);font-weight:400;font-size:18px;white-space:nowrap}
+.dk-t span{font-family:var(--ff);font-size:12px;font-weight:800;color:var(--g500);margin-left:2px}
+.dock .qfind{margin:0;flex:1;max-width:340px;padding:8px 12px;font-size:13.5px}
+.dk-fold{margin-left:auto;border:0;background:var(--g100);border-radius:10px;padding:8px 12px;font:inherit;font-size:13px;font-weight:800;color:var(--g700);cursor:pointer;white-space:nowrap}
+.dock .qbar{position:static;transform:none;left:auto;bottom:auto;max-width:none;background:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;
+            padding:0;border-radius:0;display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;zoom:var(--z,1)}
+.dock.open .qbar{flex-wrap:wrap;overflow-y:auto;max-height:46vh}
+.dock .qb{font-family:var(--ff);font-size:13.5px;font-weight:700;padding:7px 12px;border-radius:999px;line-height:1.3;
+          background:var(--g50);color:var(--g800);border:1px solid var(--g200)}
+.dock .qb:hover{background:var(--red-l);border-color:#ffd0d4;color:var(--red)}
+.dock .qb.em{background:var(--red-l);border-color:#ffd6d9;color:#c9283a;font-weight:800}
+.dock .qb.sos{background:var(--g900);border-color:var(--g900);color:#ffd0d4}
+.dock .qb.hot::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--red);margin-right:6px;vertical-align:2px}
+.dock .qb i{font-style:normal;font-size:10.5px;font-weight:800;color:var(--orange);margin-left:5px}
+.dock .qb.obj{background:var(--g900);border-color:var(--g900);color:#fff}
+.dock .qb.gain{background:var(--blue-l);border-color:#cfe3ff;color:var(--blue-d)}
+@media (min-width:901px){ .dock .qb.obj{display:none} }
+@media (max-width:640px){
+  .dk-in{padding:7px 10px 9px}
+  .dk-t{font-size:16px}
+  .dock .qfind{max-width:none;min-width:0}
+  .dock .qb{font-size:13px;padding:7px 11px}
+  .dock.open .qbar{max-height:52vh}
+}
+/* 인쇄 고르는 쪽지 */
+.pch{display:grid;gap:10px}
+.pchb{border:2px solid var(--g200);background:#fff;border-radius:16px;padding:16px 18px;text-align:left;cursor:pointer;font:inherit}
+.pchb b{display:block;font-size:17px;margin-bottom:3px} .pchb span{font-size:13.5px;color:var(--g600)}
+.pchb.on{border-color:var(--blue);background:var(--blue-ll)}
+.pchb:hover{border-color:var(--blue)}
 /* ── 인쇄 전용 A4 한 장 (화면에서는 안 보임) ── */
 #printSheet{display:none}
 @media print{
@@ -601,6 +612,16 @@ body.fb-off .coach,body.fb-off .heart,body.fb-off .timing{display:none!important
      ⚠ 재어 보니 전에는 <b>28가지 중 12가지만</b> 나가고 16가지가 빠졌습니다
        — 앞장(A4 한 장)은 단계마다 몇 개만 끼워 넣기 때문입니다. 앞장은
        <b>그대로 두고</b> 뒤에 전부를 붙입니다(새 쪽부터 · 두 단). */
+  /* ── 거절 한눈표 (판 X234) — 28가지를 한 장에 ── */
+  .pq{width:100%;border-collapse:collapse;font-size:8.8px;line-height:1.32;margin-top:3px;table-layout:fixed}
+  .pq th{background:#e8edf4;color:#191f28;font-size:9.2px;font-weight:900;padding:3.5px 6px;text-align:left}
+  .pq td{border-bottom:1px solid #e3e7ec;padding:2.8px 6px;vertical-align:top;color:#191f28}
+  .pq tr{break-inside:avoid}
+  .pq tbody tr:nth-child(even) td{background:#f7f9fc}
+  .pq th:nth-child(1),.pq td.t{width:21%} .pq th:nth-child(2){width:40%}
+  .pq td.t{font-weight:900;font-size:10px;color:#c9283a}
+  .pq td.t small{font-size:8px;color:#9a5a00;font-weight:800}
+  .pq td.s{color:#5a4300}
   .ps-objs{break-before:page;margin-top:0}
   .ps-oh{background:#0b1b3a;color:#fff;border-radius:8px;padding:4px 10px;font-size:10px;display:flex;gap:8px;align-items:baseline}
   .ps-oh b{font-family:var(--dh);font-weight:400;font-size:14px}
@@ -715,7 +736,7 @@ body.fb-off .coach,body.fb-off .heart,body.fb-off .timing{display:none!important
       <div class="tools noprint">
         <div class="fsz" id="fsz" title="글씨 크기"><button data-z="-" aria-label="글씨 작게">가-</button><span id="fszV">보통</span><button data-z="+" aria-label="글씨 크게">가+</button></div>
         <button class="tbtn" id="fbBtn" type="button" data-act="fb" title="코치 한마디 · 고객 속마음 · 넘어가는 타이밍을 접습니다"><i>💬</i><span class="lb" id="fbTxt">피드백 끄기</span></button>
-        <button class="tbtn" type="button" data-act="print" title="A4 한 장으로 인쇄합니다 — 통화 대본과 거절처리 전부가 나갑니다"><i>🖨</i><span class="lb">인쇄</span></button>
+        <button class="tbtn" type="button" data-act="print" title="눌러서 고릅니다 — 대본 + 거절 한눈표(A4 2장) · 거절 자세히까지(약 30쪽)"><i>🖨</i><span class="lb">인쇄</span></button>
       </div>
     </div>
   </div>
@@ -760,7 +781,7 @@ body.fb-off .coach,body.fb-off .heart,body.fb-off .timing{display:none!important
           </div>
           <div class="row noprint">
             <button class="btn gray sm" id="copyScript">멘트 복사</button>
-            <button class="btn gray sm" data-act="print">A4 한 장 인쇄</button>
+            <button class="btn gray sm" data-act="print">🖨 인쇄</button>
           </div>
         </div>
         <div class="trow" id="trendTabs"></div><div class="tstale" id="trendStale"></div><div id="trendBody" class="small muted"></div>
@@ -787,17 +808,6 @@ body.fb-off .coach,body.fb-off .heart,body.fb-off .timing{display:none!important
       </div>
     </div>
 
-    <aside class="side sticky noprint">
-      <div class="card" style="padding:18px">
-        <div class="seg sidetabs" id="sideSeg"><button class="on" data-v="obj">🙅 거절</button><button data-v="gain">💡 이득·공감</button></div>
-        <div id="sideObj">
-          <div class="emerg" id="emerg"></div>
-          <input class="qfind" id="qfind" placeholder="🔍 거절 찾기 — 예: 바빠, 이미, 가족">
-          <div class="qobj" id="qobj"></div>
-        </div>
-        <div id="sideGain" class="gp" style="display:none"></div>
-      </div>
-    </aside>
   </div>
 </section>
 
@@ -950,7 +960,12 @@ body.fb-off .coach,body.fb-off .heart,body.fb-off .timing{display:none!important
 <!-- ★★ 아래 띠 — 자주 나오는 거절을 <b>한 번에</b> (판 X115 · 사장님 말씀
      「거절처리는 바로 누를 수 있도록 준비해주고 … 바로 응대하는 게 가장 중요」).
      ⚠ 손으로 적지 않습니다 — <b>EMERG 표 한 곳</b>에서 그립니다 (5번). -->
-<div class="qbar noprint" id="qbar"></div>
+<div class="dock noprint" id="dock">
+  <div class="dk-in">
+    <div class="dk-hd"><b class="dk-t">🙅 거절 <span id="dkN"></span></b><input class="qfind" id="qfind" placeholder="🔍 찾기 — 바빠, 이미, 가족" autocomplete="off"><button class="dk-fold" id="dkFold" type="button" data-act="dockfold">접기 ▾</button></div>
+    <div class="qbar" id="qbar"></div>
+  </div>
+</div>
 <div class="dim" id="dim"></div>
 <div class="sheet" id="sheet"><div class="handle"></div><div class="sh"><h3 id="shT"></h3><button class="x" id="shX">✕</button></div><div id="shB"></div></div>
 <div class="toast" id="toast"></div>
@@ -1043,7 +1058,6 @@ S.view = S.view || 'five'; if(location.hash==='#sayPanel'){ S.view='trend'; S.ta
 /* 사장님 말씀 (2026-10-15) — 「펴 둬」. 통화 중 오른쪽의 「나머지 N가지
    보기」 를 <b>처음부터 펴</b> 둡니다. 접는 길은 그대로입니다 (6번) —
    접으면 그대로 기억하고, 다시 펴면 또 기억합니다. */
-if(S.qall===undefined) S.qall=true;
 S.f = S.f || {}; S.ev = S.ev || {}; S.fatal = S.fatal || {}; S.cases = S.cases || []; S.obj = S.obj || 'k_busy';
 var FIELDS = ['c','me','area','date','s1','s2','addr','cnt','tm','office','dong','when','where','due','r1','r2','r3'];
 var DEF = { s1:D.SLOTS[0], s2:D.SLOTS[1] };
@@ -1178,8 +1192,8 @@ function buildFive(){
   h+=step(3,'거절처리','나올 때마다',
       heart('거절은 대부분 ‘싫다’가 아니라 ‘아직 잘 모르겠다, 붙잡힐까 봐 걱정된다’예요. 그 마음을 먼저 알아봐 주세요.')
     + coach('<b>마음 받기 → 생활 비유 → 이득 → 부드러운 양자택일.</b> 반문은 설득이 아니라 <b>🌟 만나 본 분들이 왜 좋아하셨는지</b>로. 화를 내셔도 끊지 않고 공감 두 번. 누르면 💭 속마음 · 🌟 만족 포인트 · 4단 멘트 · 재반응별 대답이 뜹니다.','hint')
-    + coach('🙅 <b>거절은 대본 밖에 늘 떠 있습니다</b> — 폰은 <b>아래 띠</b>에서, PC 는 '
-          + '<b>오른쪽 칸</b>에서 한 번만 누르면 첫 마디 · 재반응 · 평가까지 뜹니다. '
+    + coach('🙅 <b>거절은 대본 밖에 늘 떠 있습니다</b> — 화면 <b>아래 띠(거절판)</b>에서 '
+          + '한 번만 누르면 첫 마디 · 재반응 · 평가까지 뜹니다. '
           + '대본은 <b>읽는 말만</b> 남겨 두었습니다.')
     + '<div class="stop"><b>같은 거절이 두 번, 분명하게 나오면 — 포기가 아니라 문을 열어 두고 마무리.</b> "네, 알겠습니다. 오늘은 여기까지만 할게요. 혹시 나중에 보험금 청구하실 때 헷갈리시면 이 번호로 편하게 연락 주세요. 그럴 때 도움받으신 분들이 제일 좋아하시더라고요. 시간 내주셔서 감사해요." <span style="opacity:.75">(지워 달라 · 연락 말라 · 신고는 정중히 사과하고 정리 → 재연락 거부 기록)</span></div>'
     + coach('<b>'+A.name+' 고객 메모</b> — '+A.tip)
@@ -1245,16 +1259,6 @@ function renderCall(){
   if(S.view==='crm') S.view='five';
   $('script').innerHTML = S.view==='trend' ? buildTrend() : buildFive();
   Array.prototype.forEach.call(document.querySelectorAll('#viewSeg button'), function(b){ b.classList.toggle('on', b.dataset.v===S.view); });
-  var hot=hotIds();
-  $('emerg').innerHTML = emergHtml();
-  $('sideGain').innerHTML = gainPanel(true);
-  $('sideObj').style.display = S.side==='gain' ? 'none' : ''; $('sideGain').style.display = S.side==='gain' ? '' : 'none';
-  Array.prototype.forEach.call(document.querySelectorAll('#sideSeg button'), function(b){ b.classList.toggle('on', b.dataset.v===(S.side||'obj')); });
-  var rest = allObj().map(function(o){ return o.id; }).filter(function(id){ return hot.indexOf(id)<0; });
-  var qb = function(id){ var o=objById(id); if(!o) return ''; return '<button data-ob="'+id+'"'+(hot.indexOf(id)>=0?' class="hot"':'')+'>'+esc(o.title)+(o.from==='화제'?'<i>화제</i>':'')+'</button>'; };
-  $('qobj').innerHTML = '<p class="ql">이 DB에서 자주 나오는 거절</p>' + hot.map(qb).join('')
-    + '<details class="qall"'+(S.qall?' open':'')+'><summary>나머지 '+rest.length+'가지 보기</summary><div class="qgrid">'+rest.map(qb).join('')+'</div></details>';
-  qFilter();
 }
 
 /* ════════ 거절처리 상세 + 평가 포인트 ════════ */
@@ -1550,16 +1554,35 @@ function renderCtx(){
      빼고 이 띠를 <b>늘 떠 있게</b> 두었습니다 (사장님 말씀). */
 function renderQbar(){
   var box=$('qbar'); if(!box) return;
-  box.innerHTML = '<button class="qb obj" data-qb="obj">🙅 거절 전부 '+allObj().length+'</button>'
-    + EMERG.map(function(e){ var id=MAP[e[0]]; if(!id) return '';
-        return '<button class="qb ob'+(e[2]?' sos':'')+'" data-ob="'+id+'">'+esc(e[1])+'</button>'; }).join('')
+  var 본=[], hot=hotIds();
+  var one=function(id, cls){ if(!id || 본.indexOf(id)>=0) return ''; var o=objById(id); if(!o) return ''; 본.push(id);
+    return '<button class="qb dob'+(cls||'')+'" data-ob="'+id+'">'+esc(o.title)+(o.from==='화제'?'<i>화제</i>':'')+'</button>'; };
+  var h = EMERG.map(function(e){ var id=MAP[e[0]]; if(!id || 본.indexOf(id)>=0) return ''; 본.push(id);
+        return '<button class="qb dob em'+(e[2]?' sos':'')+'" data-ob="'+id+'">'+esc(e[1])+'</button>'; }).join('')
+    + hot.map(function(id){ return one(id,' hot'); }).join('')
+    + allObj().map(function(o){ return one(o.id); }).join('');
+  box.innerHTML = '<button class="qb obj" data-qb="obj">🙅 전부·찾기</button>' + h
     + '<button class="qb gain" data-qb="gain">💡 이득·공감</button>';
+  if($('dkN')) $('dkN').textContent = 본.length+'가지';
+  dockApply(); qFilter();
 }
+/* 하단 거절판 — 펴면 <b>전부 한 번에</b>, 접으면 한 줄로 미끄러집니다.
+   처음에는 PC 는 펴고 폰은 접습니다(폰은 펴면 화면 절반) — 손으로 바꾸면 기억합니다 */
+function dockOpen(){ return S.dock ? S.dock==='open' : window.innerWidth > 900; }
+function dockApply(){
+  var d=$('dock'); if(!d) return;
+  d.classList.toggle('open', dockOpen());
+  var f=$('dkFold'); if(f) f.textContent = dockOpen() ? '접기 ▾' : '전부 펴기 ▴';
+  dockPad();
+}
+function dockPad(){ var d=$('dock'); if(!d) return;
+  var h = d.style.display==='none' ? 0 : d.offsetHeight;
+  document.documentElement.style.setProperty('--dockH', h+'px'); }
 function renderAllPages(){ renderQbar(); renderCtx(); renderCall(); renderObjTab(); renderMsg(); renderEval(); renderAll(); if(typeof buildPrint==='function') buildPrint(); }
 function go(tab){
   Array.prototype.forEach.call(document.querySelectorAll('.tab'), function(b){ b.classList.toggle('on', b.dataset.t===tab); });
   Array.prototype.forEach.call(document.querySelectorAll('.page'), function(p){ p.classList.toggle('on', p.id==='p-'+tab); });
-  $('qbar').style.display = (tab==='call'||tab==='prac'||tab==='obj') ? '' : 'none';
+  $('dock').style.display = (tab==='call'||tab==='prac'||tab==='obj') ? '' : 'none'; dockPad();
   S.tab=tab; persist(); window.scrollTo({top:0});
 }
 
@@ -1575,7 +1598,6 @@ $('infoHd').onclick=function(){ S.infoOpen=!infoOpen(); persist(); renderInfo();
 $('pkInfo').onclick=function(){ S.infoOpen=true; persist(); renderInfo(); go('call'); $('infoCard').scrollIntoView({behavior:'smooth'}); setTimeout(function(){ $('i_c').focus(); },300); };
 $('qbar').addEventListener('click', function(e){ var b=e.target.closest('[data-qb]'); if(!b) return; var k=b.dataset.qb;
   if(k==='gain') openSheet('이득 · 공감 한눈에', gainPanel(false)); else if(k==='obj') objPicker(); else showObj(MAP.abuse); });
-$('sideSeg').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b) return; S.side=b.dataset.v; persist(); renderCall(); });
 $('dim').onclick=closeSheet; $('shX').onclick=closeSheet;
 $('viewSeg').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b) return; S.view=b.dataset.v; persist(); renderCall(); });
 $('chSeg').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b) return; S.ch=b.dataset.v; persist(); renderMsg(); });
@@ -1610,7 +1632,9 @@ document.addEventListener('click', function(e){
      봉투(IIFE) 안에 있어 밖에서 안 보입니다(실제로 「taFbToggle is not
      defined」 로 터졌습니다). 이 파일이 쓰던 방식 그대로 <b>여기 한 곳</b>에서
      받아 가릅니다 (5번). */
-  if((b=t.closest('[data-act="print"]'))){ taPrint(); return; }
+  if((b=t.closest('[data-act="print"]'))){ printChooser(); return; }
+  if((b=t.closest('[data-act="printgo"]'))){ closeSheet(); PRINT_FULL = b.dataset.full==='1'; buildPrint(); setTimeout(taPrint, 60); return; }
+  if((b=t.closest('[data-act="dockfold"]'))){ S.dock = dockOpen() ? 'fold' : 'open'; persist(); dockApply(); return; }
   if((b=t.closest('[data-act="infofold"]'))){ S.infoOpen=!infoOpen(); persist(); renderInfo();
     try{ $('infoCard').scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} return; }
   if((b=t.closest('[data-act="fb"]'))){ taFbToggle(); return; }
@@ -1703,6 +1727,7 @@ function buildPrint(){
      ★ 화면에서 <b>접혀 있는 칸</b>(재반응별 대답 · CRM 원문)은 종이에서는
        <b>펴서</b> 찍습니다 — 종이에서는 누를 수가 없습니다. */
   var OB=allObj();
+  if(!PRINT_FULL){ h+=printQuick(OB); $('printSheet').innerHTML = h; return; }
   /* ⚠ ★ 접힌 칸을 <b>옷(CSS)으로만</b> 펴려 했더니 글자가 안 찍혔습니다 —
      닫힌 details 안쪽은 브라우저가 <b>content-visibility:hidden</b> 으로 두어
      display 를 바꿔도 글이 없는 것과 같습니다. <b>open 을 박아</b> 둡니다 (8번). */
@@ -1715,6 +1740,29 @@ function buildPrint(){
   $('printSheet').innerHTML = h;
 }
 window.addEventListener('beforeprint', buildPrint);
+/* ══ 🖨 인쇄 분량 (판 X234 · 사장님 말씀 2026-10-16 「거절이 너무 많아서 인쇄하면 너무 많은데」) ══
+   ★ 기본은 <b>대본 1장 + 거절 한눈표 1장</b> — 28가지를 한 가지도 빼지 않고
+     「고객이 이러면 · ⚡ 3초 첫 마디 · 🌟 반문 한마디」 세 칸으로.
+   ★ 자세한 판(속마음 · 4단 · 재반응 · 평가 … 약 30쪽)은 <b>지우지 않았습니다</b> — 인쇄 단추를
+     누르면 고르는 쪽지에서 고를 때만 나갑니다(그 한 번만 · 다음은 다시 2장). */
+var PRINT_FULL = false;
+window.addEventListener('afterprint', function(){ if(PRINT_FULL){ PRINT_FULL=false; buildPrint(); } });
+function printQuick(OB){
+  var row=function(o){ var one=fill(o.one||o.text||''), sat=fill(o.sat||o.follow||'');
+    return '<tr><td class="t">“'+esc(o.title)+'”'+(o.from==='화제'?' <small>화제</small>':'')+'</td><td class="o">'+esc(one)+'</td><td class="s">'+esc(sat)+'</td></tr>'; };
+  return '<div class="ps-objs ps-quick"><div class="ps-oh"><b>거절 한눈표 '+OB.length+'가지</b>'
+    + '<span>먼저 마음 받기 → 첫 마디 → 반문은 「만나 본 분들이 좋아하신 점」으로 · 같은 거절이 두 번이면 문을 열어 두고 마무리</span></div>'
+    + '<table class="pq"><thead><tr><th>고객이 이러면</th><th>⚡ 3초 첫 마디</th><th>🌟 반문 한마디 — 만나 본 분들이 좋아하신 점</th></tr></thead><tbody>'
+    + OB.map(row).join('') + '</tbody></table>'
+    + '<div class="ps-ft">자세한 멘트·재반응·평가는 화면 거절판에서 · 인쇄 단추 → 「거절 자세히까지」 · 내부 교육용 · 고객 배포 금지</div></div>';
+}
+function printChooser(){
+  openSheet('무엇을 인쇄할까요?',
+    '<div class="pch">'
+    + '<button class="pchb on" type="button" data-act="printgo" data-full="0"><b>📄 대본 + 거절 한눈표</b><span>A4 2장 · 거절 전부를 첫 마디·반문 한마디로</span></button>'
+    + '<button class="pchb" type="button" data-act="printgo" data-full="1"><b>📚 거절 자세히까지</b><span>약 30쪽 · 속마음·4단 멘트·재반응·평가 전부</span></button>'
+    + '</div>');
+}
 
 /* ── 11차: 글씨 크기 (이 기기에만 기억) · 거절 찾기 ── */
 var FSZ = [[0.9,'작게'],[1,'보통'],[1.12,'크게'],[1.25,'더 크게'],[1.4,'아주 크게']];
@@ -1748,7 +1796,7 @@ function taFbApply(){
 function taFbToggle(){ S.fb = !taFbOn(); persist(); taFbApply(); toast(taFbOn()?'피드백을 폈어요':'피드백을 접었어요 — 고객에게 읽는 말만 남습니다'); }
 taFbApply();
 /* ══ 🔍 <b>거절을 글자로 거르는 자</b> — 묻는 곳은 하나 (판 X114 · 5번) ═══
-   세 자리가 <b>이 자를 부릅니다</b> — 오른쪽 칸(#qobj) · 폰 쪽지(#shB) ·
+   세 자리가 <b>이 자를 부릅니다</b> — 하단 거절판(#qbar · 판 X234) · 폰 쪽지(#shB) ·
    거절처리 탭(#objGrid). 전에는 오른쪽 칸만 거를 수 있었고, 폰에서 쓰는
    쪽지·탭에는 찾는 칸이 아예 없었습니다.
    ★ 제목 줄(.gh)은 <b>그 아래에 남은 것이 없으면</b> 같이 접습니다 —
@@ -1777,9 +1825,10 @@ function objCountSay(el, r){
   el.textContent = r.보임===0 ? '그런 거절이 없어요 — 글자를 줄여 보세요 (전부 '+r.전체+'가지)'
                 : r.보임===r.전체 ? ('거절 '+r.전체+'가지') : ('찾은 것 '+r.보임+'가지 / 전부 '+r.전체+'가지');
 }
-function qFilter(){ var box=$('qobj'); if(!box) return;
+function qFilter(){ var box=$('qbar'); if(!box) return;
   var q=(($('qfind')||{}).value||''); objSift(box, q);
-  var d=box.querySelector('.qall'); if(d && q.replace(/\s+/g,'')) d.open=true; }
+  /* 찾는 동안은 펴서 보여 줍니다 — 접힌 한 줄에서는 남은 것이 화면 밖에 있을 수 있습니다 */
+  var d=$('dock'); if(d) d.classList.toggle('open', dockOpen() || !!q.replace(/\s+/g,'')); dockPad(); }
 function shFilter(){ objCountSay($('shCnt'), objSift($('shB'), (($('shFind')||{}).value||''))); }
 function objTabFilter(){ objCountSay($('objCnt'), objSift($('objGrid'), (($('objFind')||{}).value||''))); }
 $('qfind').addEventListener('input', qFilter);
@@ -1788,9 +1837,10 @@ document.addEventListener('input', function(e){
   var t=e.target; if(!t || !t.id) return;
   if(t.id==='shFind') shFilter(); else if(t.id==='objFind') objTabFilter();
 });
-document.addEventListener('toggle', function(e){ if(e.target.classList && e.target.classList.contains('qall')){ S.qall=e.target.open; } }, true);
-window.TA_APP = { state:S, render:renderAllPages, setTrend:setTrend, setDB:function(k){ S.db=k; persist(); renderAllPages(); } };
+window.TA_APP = { state:S, setPrintFull:function(v){ PRINT_FULL=!!v; buildPrint(); }, render:renderAllPages, setTrend:setTrend, setDB:function(k){ S.db=k; persist(); renderAllPages(); } };
 window.addEventListener('hashchange', function(){ if(location.hash==='#sayPanel'){ S.view='trend'; persist(); renderAllPages(); go('call'); } });
+window.addEventListener('resize', dockApply);
+try { new ResizeObserver(dockPad).observe($('dock')); } catch(e){}
 renderCases(); renderPrac(); renderAllPages(); renderInfo(); buildPrint(); go(S.tab||'call');
 })();
 </script>
