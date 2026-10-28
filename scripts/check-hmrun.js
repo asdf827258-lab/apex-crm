@@ -46,6 +46,7 @@
    ══════════════════════════════════════════════════════════════════ */
 
 const { chromium } = require('playwright');
+const { 곁칸펴기 } = require('./lib-hmfold.js');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 const ROOT = process.cwd(), PORT = 8981;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript',
@@ -113,7 +114,13 @@ const LOOK = () => {
            rowH: row ? Math.round(row.getBoundingClientRect().height) : 0,
            rowN: row ? row.querySelectorAll('.t-chip').length : 0,
            card: card ? (card.innerText || '').replace(/\s+/g, ' ').trim() : '',
-           cardH: card ? Math.round(card.getBoundingClientRect().height) : 0,
+           /* 🧷 접이 안에 들어가면 <b>한 겹 들어가</b> 잽니다 (판 X223) —
+              묻는 것은 그대로 「카드 제 몸이 안 길어졌나」 입니다. 접이
+              머리(47px)는 새로 붙은 테두리라 섞으면 뜻이 달라집니다.
+              접힌 채로 홈이 치르는 값은 곁칸펴기 가 따로 내줍니다. */
+           cardH: card ? Math.round(((card.querySelector &&
+               card.querySelector('.hm-fold-b>.card')) || card)
+               .getBoundingClientRect().height) : 0,
            ask: [].slice.call(pane.querySelectorAll('[data-ask="연속가동일"]'))
                   .map(e => (e.textContent || '').trim()) };
 };
@@ -137,6 +144,13 @@ const LOOK = () => {
                              && typeof hmRunChipHtml === 'function', { timeout: 60000 });
   await p.evaluate(SEED);
   await p.waitForTimeout(1800);
+  /* 🧷 <b>곁칸이 접혀 섭니다</b> (판 X223 · 사장님 말씀 「지금 할것이 너무 많은
+     자리를 차지하고 있어」 → 고르신 「① 곁칸 셋을 접기」). 접으면 속이 hidden
+     이라 그냥 재면 「글이 없다」 고 읽습니다 — <b>펴고 잽니다</b>.
+     ★ 펴는 자리는 scripts/lib-hmfold.js <b>한 곳</b>입니다 (5번).
+     ★ hmFoldToggle 이 창고(localStorage)에 적어 두므로 <b>씨 뒤 한 번</b>이면
+       뒤에 다시 그려도 펴진 채입니다. 이 자의 씨는 그 창고를 안 비웁니다. */
+  const 접 = await 곁칸펴기(p);
   /* ★ 서버는 이 자가 안 부르게 막습니다 — 셈만 봅니다 */
   await p.evaluate(() => { window.actLoad = function () {}; });
   const hits0 = hits;
@@ -255,6 +269,19 @@ const LOOK = () => {
     '  칩 ' + wk.rowN + '개가 <b>한 줄</b>이다 — ' + wk.rowH + 'px (두 줄이면 홈이 51px 길어집니다)');
   is(wk.chipH >= 44, '  칩이 <b>44px 이상</b>이다 — ' + wk.chipH + 'px');
   is(wk.cardH <= 175, '  「이번 주」 카드가 <b>' + wk.cardH + 'px</b> — 175px 이하 (곁기둥 다른 칸과 같은 결)');
+  /* 🧷 ★★ <b>홈이 실제로 치르는 값은 「접힌 높이」</b> 입니다 (판 X223 ·
+     사장님이 고르신 「① 곁칸 셋을 접기」). 위 줄은 <b>펴 놓고</b> 잰 카드
+     제 몸이고, 사장님 화면은 <b>접힌 것이 기본</b>입니다.
+     ★ 접이를 걷어 내면 이 수가 카드 높이로 되돌아가 <b>그 자리에서
+       빨간불</b>입니다 — 안 울리는 알람은 알람이 아닙니다 (8번).
+     ★ 열쇠가 아예 없어도 빨간불입니다(접이가 사라진 것입니다 · 1번).
+     ★ 잰 값 67px · 선 <b>80px</b> — 딱 붙이면 글자 한 줄에 헛것 (8번). */
+  {
+    const 접힌 = 접 && 접.접힌 ? 접.접힌['side_hmRunSideHtml'] : undefined;
+    is(typeof 접힌 === 'number' && 접힌 > 0 && 접힌 <= 80,
+       '  ★★ 「📈 이번 주」 가 <b>접힌 채로 선다</b> — '
+       + (typeof 접힌 === 'number' ? 접힌 + 'px (선 80px)' : '접이를 못 찾았습니다'));
+  }
   is(errs.length === 0, '  재는 동안 <b>터진 곳이 없다</b>'
     + (errs.length ? (' ← ' + errs.slice(0, 2).join(' / ')) : ''));
 
