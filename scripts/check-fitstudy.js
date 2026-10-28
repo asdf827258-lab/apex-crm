@@ -102,7 +102,8 @@ const head = (t) => console.log('\n' + t);
     localStorage.clear(); doSample(); showPanel('age'); go('edit'); agePlanPick('40');
     function amtOf() {
       var f = [].slice.call(document.querySelectorAll('.apf')).filter(x => /암 치료비/.test(x.textContent))[0];
-      var v = f && f.querySelector('.apt td.v');
+      /* 맨 윗줄이 표준 없는 담보(비급여 암주요치료비)일 수 있다 — <b>표준이 있는</b> 첫 줄을 잰다 */
+      var v = f && [].slice.call(f.querySelectorAll('.apt td.v')).filter(function (td) { return !/표준 없음/.test(td.textContent); })[0];
       return { em: f ? (f.querySelector('.apb em') || {}).textContent.replace(/\s+/g, ' ') : '',
                amt: v ? v.textContent : '', mine: !!(f && f.querySelector('.apmine')) };
     }

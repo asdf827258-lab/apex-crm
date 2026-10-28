@@ -1,12 +1,12 @@
 /* 연령대별 담보안 · 인쇄에서 색이 안 날아가는가
 
-   표준 담보는 <b>59가지</b>입니다. 스물아홉과 예순다섯에게 같은 표를
+   표준 담보는 <b>65가지</b>입니다. 스물아홉과 예순다섯에게 같은 표를
    내밀면 고객은 <b>어디부터 봐야 할지</b> 모릅니다. 그래서 나이대마다
    순위와 금액을 매기고, <b>왜 그런지</b>를 같이 답니다.
 
    여기서 못 박는 것은 다섯입니다.
 
-     1. <b>담보가 한 줄도 안 빠진다.</b> 어느 나이대를 골라도 59가지가
+     1. <b>담보가 한 줄도 안 빠진다.</b> 어느 나이대를 골라도 65가지가
         전부 나와야 한다 — 빠진 담보는 그 상담에서 <b>없는 담보</b>다.
      2. <b>왜 그런지가 나이대마다 다르다.</b> 여섯 나이대 × 열 묶음이
         모두 채워져 있어야 한다. 비면 그 자리에서 할 말이 없다.
@@ -41,7 +41,7 @@ const head = (t) => console.log('\n' + t);
   await pg.goto('http://127.0.0.1:' + srv.address().port + '/app/ba.html', { waitUntil: 'domcontentloaded' });
   await pg.waitForTimeout(700);
 
-  head('[1] 어느 나이대를 골라도 <담보 59가지가 전부> 나온다');
+  head('[1] 어느 나이대를 골라도 <담보 65가지가 전부> 나온다');
   const all = await pg.evaluate(() => {
     /* 견본 자료 — 앱이 스스로 넣는 홍길동 자리다. 실제 고객 이름이 아니다. */
     localStorage.clear(); doSample(); showPanel('age'); go('edit');
@@ -56,7 +56,8 @@ const head = (t) => console.log('\n' + t);
     return { want: want, out: out, groups: STD.length };
   });
   await pg.waitForTimeout(300);
-  is(all.want === 59, '표준 담보가 <59가지>다 (지금 ' + all.want + '가지)');
+  /* 2026-10 — 비급여 암주요치료비 1 · 골절·화상 5 가 늘어 59 → 65 */
+  is(all.want === 65, '표준 담보가 <65가지>다 (지금 ' + all.want + '가지)');
   const miss = all.out.filter(x => x.got !== all.want);
   is(miss.length === 0, miss.length ? ('담보가 빠지는 나이대 — ' + miss.map(x => x.k + ' ' + x.got + '개').join(' / ')) :
      '여섯 나이대 <전부> ' + all.want + '가지가 다 나온다');
