@@ -395,11 +395,30 @@ const SEED = () => {
     const y = (el) => el ? Math.round(el.getBoundingClientRect().top) : -1;
     const hh = (el) => el ? Math.round(el.getBoundingClientRect().height) : -1;
     const up = document.getElementById('hmSideUp');
+    /* 🧷 판 X223 — 곁칸 셋이 <b>접이</b> 안에 섭니다(사장님이 고르신 「① 곁칸
+       셋을 접기」). 이름은 접이 머리(.hm-fold-h .t)에, 카드는 제 머리
+       (.hm-rt-h b)에 적습니다 — 둘 다 봅니다. */
+    const 이름of = (e) => {
+      const f = e.querySelector('.hm-fold-h .t');
+      if (f) return (f.childNodes[0] ? (f.childNodes[0].textContent || '') : '').trim();
+      return (e.querySelector('.hm-rt-h b') || {}).textContent || e.id || e.className;
+    };
     const 넷 = up ? [].slice.call(up.children).map(e => ({
-      이름: (e.querySelector('.hm-rt-h b') || {}).textContent || e.id || e.className,
-      y: y(e) })) : [];
+      이름: 이름of(e), y: y(e) })) : [];
+    /* 🧷 ★★ <b>접고도 수가 보이나</b> — 접기의 값어치가 여기 있습니다.
+       접힌 머리마다 「연속 1일」·「마디 3건」·「남은 1번」 한 줄이 서야
+       <b>펴지 않고</b> 오늘을 압니다. 비면 사장님은 세 번 눌러야 합니다 (1번).
+       ★ 수는 그 칸이 제 머리에 달아 둔 <b>data-sum</b> 에서 옵니다 —
+         여기서 다시 세지 않습니다 (5번). 둘이 갈리면 빨간불입니다. */
+    const 접이 = up ? [].slice.call(up.querySelectorAll('.hm-fold[id^="hmFold_side_"]'))
+      .map(f => {
+        const sp = f.querySelector('.hm-fold-h .t span');
+        const rt = f.querySelector('.hm-rt-h');
+        return { k: f.id, 머리: sp ? (sp.textContent || '').trim() : '',
+                 칸: rt ? (rt.getAttribute('data-sum') || '') : '' };
+      }) : [];
     const now = document.querySelector('.hm-now');
-    return { no: 0, lx: Math.round(rl.left), rx: Math.round(rr.left),
+    return { 접이, no: 0, lx: Math.round(rl.left), rx: Math.round(rr.left),
              ly: Math.round(rl.top), ry: Math.round(rr.top),
              kb: y(document.getElementById('hmKbHost')),
              td: y(document.getElementById('hmToday')),
@@ -433,6 +452,26 @@ const SEED = () => {
      ((one.위칸 && one.넷.length >= 4) ? '' : ' ← 자리를 못 찾았거나 비었습니다'));
   is(!one.no && one.머리 >= 3,
      '  ★ 머리글(.hm-rt-h)이 <b>' + one.머리 + '개</b> 선다 — 목각 차례 그대로');
+  /* ── 🧷 ★★ <b>접고도 수가 보이나</b> (판 X223) ────────────────────────
+     사장님 말씀 「지금 할것이 너무 많은 자리를 차지하고 있어」 → 고르신
+     「① 곁칸 셋을 접기」. 접기의 <b>값어치가 여기 있습니다</b> — 접어 두고도
+     「연속 1일」·「마디 3건」·「남은 1번」 이 머리에 적혀야 <b>펴지 않고</b>
+     오늘을 압니다. 비면 사장님은 세 번 눌러야 하고, 그러면 접은 것이
+     <b>감춘 것</b>이 됩니다 (1번).
+     ★ 수는 그 칸이 제 머리에 달아 둔 <b>data-sum</b> 에서 옵니다 — 여기서
+       다시 세지 않습니다 (5번). 머리와 칸이 갈리면 그 자리에서 빨간불.
+     ★ 묻는 자리를 <b>여기 하나</b>로 둡니다 — 칸마다 제 자가 물으면 자마다
+       씨가 달라 어떤 자는 자료가 들어오기 전에 읽습니다(실제로 그랬습니다).
+     ⚠ 수를 못 센 칸은 <b>빈 글이 맞습니다</b>(1번) — 그래서 「다 차 있다」 가
+       아니라 「머리와 칸이 같다」 와 「적어도 둘은 수를 적는다」 를 봅니다. */
+  const 접 = one.접이 || [];
+  is(접.length >= 3, '  ★★ 곁칸 셋이 <b>접힌 채로</b> 선다 — 접이 ' + 접.length + '개'
+     + (접.length >= 3 ? '' : ' ← 접기가 사라졌습니다'));
+  is(접.length > 0 && 접.every(x => x.머리 === x.칸),
+     '  ★★ 접힌 머리의 수가 <b>그 칸이 센 수</b>와 같다 — '
+     + (접.map(x => '「' + (x.머리 || '빈 글') + '」').join(' · ') || '없음'));
+  is(접.filter(x => x.머리).length >= 2,
+     '  ★★ 적어도 <b>둘</b>은 접힌 채로 수를 적는다 — ' + 접.filter(x => x.머리).length + '개');
   /* ★ <b>기준선</b> — 첫 칸이 「지금 할 것」 이 끝나는 자리에서 <b>120px 안</b>.
      전에는 3,000 이었고 실제로 y2,612 였습니다. 이제 바로 붙어 섭니다.    */
   /* ★★ <b>2026-10-26 (판 X199) — 재는 자리를 옮기고 묻는 것을 늘렸습니다.</b>

@@ -242,7 +242,9 @@ a { color: inherit; text-decoration: none; }
 .sb-pin .pin-in{display:flex;align-items:center;gap:7px;margin-top:7px}
 .sb-pin .pin-in input{flex:1;min-width:0;background:rgba(255,255,255,.10);
   border:1px solid rgba(255,255,255,.18);border-radius:8px;color:#fff;
-  font-size:var(--t3,17px);font-weight:800;padding:6px 10px;text-align:right;-webkit-appearance:none}
+  font-size:var(--t3,17px);font-weight:800;padding:6px 10px;min-height:44px;text-align:right;-webkit-appearance:none}
+  /* ⬆ 34px 였습니다 — 판 X226. 기둥 맨 위에 고정된 물가상승률 칸이라
+     .sf 밖에 있어 한 번에 안 잡혔습니다(자가 찾아 주었습니다). */
 .sb-pin .pin-in input:focus{border-color:rgba(96,165,250,.62);outline:none}
 .sb-pin .pin-in span{font-size:var(--t6,13px);font-weight:800;color:#93C5FD}
 .sb-pin .pin-x{font-size:var(--t6,13px);line-height:1.55;color:rgba(255,255,255,.40);margin-top:7px}
@@ -306,6 +308,16 @@ a { color: inherit; text-decoration: none; }
   letter-spacing: .05em;
   text-transform: uppercase;
 }
+/* ⬆ <b>왼쪽 입력 기둥도 44px</b> (판 X226 · 사장님 말씀 2026-10-28 「응 그것도
+   올려」). 판 X225 에서는 고르개 넷만 올리고 글 적는 칸 35개(28~34px)는
+   두었는데, 사장님께서 그것도 올리라 하셨습니다.
+   ★ 이제 <b>이 기둥에서 손이 닿는 자리는 모두 44px</b> 입니다 — 고르개도
+     글 적는 칸도 한 규칙입니다(판 X146·X147 · 손가락 바닥).
+   ★ 기둥은 <b>창 안에서 굴러갑니다</b>(900px 창 · 속 2,315px) — 길어지는
+     만큼 더 굴리실 뿐, 화면이 밀리거나 잘리지 않습니다.
+   ★ padding 이 아니라 <b>min-height</b> 로 올립니다 — 글자 자리는 그대로
+     두고 칸만 키웁니다. */
+.sf input, .sf select, .sf textarea { min-height: 44px; }
 .sf input, .sf select {
   background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.08);
@@ -346,6 +358,7 @@ a { color: inherit; text-decoration: none; }
   border: none;
   border-radius: var(--r-sm);
   padding: 10px;
+  min-height: 44px;              /* 38px 였습니다 — 판 X225 */
   font-size: var(--t6,13px);
   font-weight: 700;
   cursor: pointer;
@@ -1005,11 +1018,20 @@ a { color: inherit; text-decoration: none; }
 }
 /* 탭 열넷이 285px 을 먹고 있었다 — 화면 하나가 통째로 메뉴였다.
    아이콘과 이름을 <b>한 줄</b>에 놓아 절반 아래로 줄인다. */
+/* ⬆ <b>34px → 44px</b> (판 X225 · 사장님 말씀 2026-10-28 「올려 이건 다른
+   페이지니깐」). 누르는 자리는 <b>44px</b> 이 이 앱의 철칙입니다(판 X146·X147).
+   종합보고서 메뉴 칸 열셋이 다 34px 이었습니다 — 손가락이 덜 닿습니다.
+   ★ <b>폰에서는 한 픽셀도 안 길어집니다</b> — 이 격자는 폰에서 「📂 카테고리」
+     뒤로 접혀 있습니다(body.tbm-shut · 재어 보니 높이 0). 길어지는 것은
+     컴퓨터뿐이고 158 → 197px 입니다.
+   ★ padding 이 아니라 <b>min-height</b> 로 올립니다 — 글자 자리는 그대로
+     두고 칸만 키웁니다(가운데 맞춤이라 글은 저절로 가운데에 섭니다). */
 .report-tab {
   border: 1px solid var(--ink-7);
   background: var(--white);
   border-radius: var(--r);
   padding: 8px 10px;
+  min-height: 44px;
   cursor: pointer;
   transition: all var(--dur) var(--ease);
   text-align: left;
@@ -2200,6 +2222,17 @@ function ipBand(age){ age=Number(age)||0; for(var i=0;i<IP_AGE.length;i++) if(ag
       <button class="report-tab" onclick="switchTab('inherit',this)" title="상속·증여 — 세무사 관점"><div class="rt-ico">🏛️</div><div class="rt-title">상속·증여</div><div class="rt-sub">세무사 관점</div></button>
       <button class="report-tab" onclick="switchTab('guide',this)" title="상담 가이드 — 계약 전환"><div class="rt-ico">🧭</div><div class="rt-title">상담 가이드</div><div class="rt-sub">계약 전환</div></button>
       <button class="report-tab" onclick="switchTab('total',this)" title="종합 재무설계 — 한 장 정리·저장"><div class="rt-ico">🧾</div><div class="rt-title">종합 재무설계</div><div class="rt-sub">한 장 정리·저장</div></button>
+      <!-- ▶ 발표 덱 — 사장님 말씀 2026-10-28 「연금부터, 달러, 발표모드로 계산기
+           만들어 놓은게 다 사라졌어 복구하고 종합보고서 메뉴에 넣어놔」.
+           ★ 덱도 트랙 다섯(₩ 연금 · $ 달러 · 📈 투자·세금 · 🎓 교육자금 ·
+             🏢 일시납·쿠폰)도 <b>한 번도 안 사라졌습니다</b> — 판 X205 에서
+             우하단 단추를 빼면서 들어가는 길이 「🧭 함께 점검 상담」 을 끝까지
+             걸어야 나오는 자리 하나만 남았습니다. 재어 보니 첫 화면에 보이는
+             단추 23개 중 덱으로 가는 것이 <b>0개</b>였습니다.
+           ★ 그 길은 <b>그대로 둡니다</b> — 문을 하나 더 다는 것입니다 (6번).
+           ★ 트랙 이름은 APEX_TRACK_NAME <b>한 곳</b>에서 옵니다 — 여기 또
+             적지 않습니다 (5번). 고르기 판이 그것을 읽습니다. -->
+      <button class="report-tab" onclick="apexPickTrack()" title="발표 덱 — 연금·달러·투자·교육·쿠폰 트랙을 오늘 숫자 그대로"><div class="rt-ico">▶️</div><div class="rt-title">발표 덱</div><div class="rt-sub">연금·달러·세금…</div></button>
     </div>
   </div>
 
@@ -8028,7 +8061,7 @@ window.addEventListener('DOMContentLoaded', function(){
 .pdf-ins-card{margin:8px 12px 0;padding:12px 13px;border-radius:12px;background:rgba(96,165,250,.10);border:1px solid rgba(96,165,250,.22)}
 .pdf-ins-card .pic-title{font-size:var(--t6,13px);font-weight:800;color:#BFDBFE;margin-bottom:3px;display:flex;align-items:center;gap:6px}
 .pdf-ins-card .pic-desc{font-size:var(--t6,13px);color:rgba(255,255,255,.55);line-height:1.5;margin-bottom:8px}
-.pdf-ins-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;background:#1A56DB;color:#fff;border:none;border-radius:8px;padding:9px;font-size:var(--t6,13px);font-weight:800;cursor:pointer;transition:.15s}
+.pdf-ins-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;background:#1A56DB;color:#fff;border:none;border-radius:8px;padding:9px;min-height:44px;font-size:var(--t6,13px);font-weight:800;cursor:pointer;transition:.15s}/* 36px 였습니다 — 판 X225 */
 .pdf-ins-btn:hover{background:#1447B6}
 .pdf-ins-status{font-size:var(--t6,13px);color:#93C5FD;margin-top:7px;line-height:1.55;white-space:pre-line}
 .pdf-ins-status.err{color:#FCA5A5}
@@ -10360,7 +10393,21 @@ function apexPickTrack(){
   document.body.appendChild(sc);
 
   var w=document.createElement('div'); w.id='apexTrackSheet';
-  var order=['w','d','t','e','c'], h='<div class="tk-h">어느 트랙으로 발표할까요</div>'+
+  /* ★★ <b>트랙 목록이 두 벌이었습니다</b> (판 X224 · CLAUDE.md 5번).
+     여기 적힌 다섯과 APEX_TRACK_NAME 의 다섯이 <b>따로</b> 있어, 표에
+     트랙을 하나 더 넣어도 이 줄을 같이 안 고치면 <b>그 트랙만 조용히
+     사라집니다</b> — 쿠폰 트랙이 실제로 두 번 그렇게 빠진 자리입니다.
+     ★ 이 줄은 이제 <b>보여 주는 차례</b>만 정합니다. 표에 있는데 여기
+       안 적힌 트랙은 <b>뒤에 저절로 붙습니다</b> — 빠뜨릴 자리가 없습니다.
+     ★ 거꾸로 여기 적혔는데 표에 없는 것은 <b>안 세웁니다</b>(이름이
+       없으니 빈 칸이 섭니다 · 1번).                                   */
+  var 차례=['w','d','t','e','c'];
+  var order=Object.keys(APEX_TRACK_NAME).sort(function(a,b){
+    var i=차례.indexOf(a), j=차례.indexOf(b);
+    if(i<0)i=차례.length; if(j<0)j=차례.length;
+    return i-j;
+  });
+  var h='<div class="tk-h">어느 트랙으로 발표할까요</div>'+
     '<label class="tk-inf">발표 물가상승률 <input id="apexInf" type="number" step="0.1" min="0" max="15" value="'+apexInf()+'"> %</label>';
   order.forEach(function(k){
     h += '<button type="button" class="tk'+(k===now?' now':'')+'" data-tk="'+k+'">'+

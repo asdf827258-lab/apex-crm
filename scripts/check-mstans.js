@@ -42,6 +42,7 @@
    ══════════════════════════════════════════════════════════════════ */
 
 const { chromium } = require('playwright');
+const { 곁칸펴기 } = require('./lib-hmfold.js');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 const ROOT = process.cwd(), PORT = 8976;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript',
@@ -108,7 +109,13 @@ const LOOK = () => {
     .filter(e => (e.innerText || '').indexOf('이번 달 고객 관리') >= 0)[0] : null;
   return { L: L ? { sent: L.sent.length, ansNo: L.ansNo, monLeft: L.monLeft } : null,
            home: hc ? (hc.innerText || '').replace(/\s+/g, ' ').trim() : '',
-           homeH: hc ? Math.round(hc.getBoundingClientRect().height) : 0,
+           /* 🧷 접이 안에 들어가면 <b>한 겹 들어가</b> 잽니다 (판 X223) —
+              묻는 것은 그대로 「카드 제 몸이 안 길어졌나」 입니다. 접이
+              머리(47px)는 새로 붙은 테두리라 섞으면 뜻이 달라집니다.
+              접힌 채로 홈이 치르는 값은 곁칸펴기 가 따로 내줍니다. */
+           homeH: hc ? Math.round(((hc.querySelector &&
+               hc.querySelector('.hm-fold-b>.card')) || hc)
+               .getBoundingClientRect().height) : 0,
            homeAsk: [].slice.call(pane.querySelectorAll('[data-ask="답적을마디"]'))
                       .map(e => (e.textContent || '').trim()) };
 };
@@ -152,6 +159,13 @@ const OPEN = async () => {
                              && typeof hmMadiSideHtml === 'function', { timeout: 60000 });
   await p.evaluate(SEED);
   await p.waitForTimeout(1800);
+  /* 🧷 <b>곁칸이 접혀 섭니다</b> (판 X223 · 사장님 말씀 「지금 할것이 너무 많은
+     자리를 차지하고 있어」 → 고르신 「① 곁칸 셋을 접기」). 접으면 속이 hidden
+     이라 그냥 재면 「글이 없다」 고 읽습니다 — <b>펴고 잽니다</b>.
+     ★ 펴는 자리는 scripts/lib-hmfold.js <b>한 곳</b>입니다 (5번).
+     ★ hmFoldToggle 이 창고(localStorage)에 적어 두므로 <b>씨 뒤 한 번</b>이면
+       뒤에 다시 그려도 펴진 채입니다. 이 자의 씨는 그 창고를 안 비웁니다. */
+  const 접 = await 곁칸펴기(p);
   const hits0 = hits;
   const put = (done, ans) => p.evaluate(({ done, ans, fn, src }) => {
     (0, eval)('(' + fn + ')')(done, ans);
@@ -312,6 +326,19 @@ const OPEN = async () => {
   const oBig = await open();
   is(big.homeH <= 155,
     '  홈 카드가 <b>' + big.homeH + 'px</b> — 옛 판 155px 이하 (답 수를 적어도 안 늘어납니다)');
+  /* 🧷 ★★ <b>홈이 실제로 치르는 값은 「접힌 높이」</b> 입니다 (판 X223 ·
+     사장님이 고르신 「① 곁칸 셋을 접기」). 위 줄은 <b>펴 놓고</b> 잰 카드
+     제 몸이고, 사장님 화면은 <b>접힌 것이 기본</b>입니다.
+     ★ 접이를 걷어 내면 이 수가 카드 높이로 되돌아가 <b>그 자리에서
+       빨간불</b>입니다 — 안 울리는 알람은 알람이 아닙니다 (8번).
+     ★ 열쇠가 아예 없어도 빨간불입니다(접이가 사라진 것입니다 · 1번).
+     ★ 잰 값 67px · 선 <b>80px</b> — 딱 붙이면 글자 한 줄에 헛것 (8번). */
+  {
+    const 접힌 = 접 && 접.접힌 ? 접.접힌['side_hmMadiSideHtml'] : undefined;
+    is(typeof 접힌 === 'number' && 접힌 > 0 && 접힌 <= 80,
+       '  ★★ 「💌 이번 달 고객 관리」 가 <b>접힌 채로 선다</b> — '
+       + (typeof 접힌 === 'number' ? 접힌 + 'px (선 80px)' : '접이를 못 찾았습니다'));
+  }
   is(oBig.nIn <= 5,
     '  ★ 한 번에 <b>다섯 줄</b>까지다 — ' + oBig.nIn + '개 (' + (big.L ? big.L.sent : '?') + '건 중)');
   is(oBig.txt.indexOf('더 있습니다') >= 0,

@@ -99,7 +99,15 @@ is(/DAYRANK\.promiseOf/.test(IDX),
    '  홈이 <b>그 셈을 부른다</b> — 홈에서 또 세면 두 화면이 다른 수를 말한다 (5번)');
 
 console.log('\n[4] <b>약속이 없는 날에도 동선 자리가 남는다</b>');
-const rt = IDX.slice(IDX.indexOf('function hmRtHtml'), IDX.indexOf('function hmRtHtml') + 2400);
+/* ⚠ <b>2,400자로 잘라 보다가 눈이 감겼습니다</b> (판 X219). 그 함수 머리에
+   쪽지를 적자 「갈 데가 없습니다」 가 창 <b>밖으로</b> 나가 「없다」 고 울었습니다 —
+   코드는 멀쩡한데 자가 틀린 <b>헛것</b>입니다 (8번).
+   ★ 이제 <b>다음 function 까지</b>를 봅니다 — 길이를 손으로 안 적습니다.   */
+const rt = (function () {
+  const i = IDX.indexOf('function hmRtHtml'); if (i < 0) return '';
+  const j = IDX.indexOf('\nfunction ', i + 10);
+  return (j > i ? IDX.slice(i, j) : IDX.slice(i));
+})();
 is(!/if\(!ap\.length\)return\s*''/.test(rt),
    '  빈 날에 <b>자리를 통째로 지우지 않는다</b> — 지우면 밑엣것이 올라와 어제와 다른 화면이 된다');
 is(/hm-rt-none/.test(rt) && /갈 데가 없습니다/.test(rt),
