@@ -6,14 +6,13 @@
    사장님 손가락 바닥) 계산기만 그 밖에 있었습니다.
 
    ── 무엇을 세고 무엇을 안 세나 ─────────────────────────────────────
-   ★ <b>누르는 것</b>만 셉니다 — button · a[href] · 누르는 input ·
-     select. 이것들은 손가락이 빗나가면 <b>다른 일이 일어납니다.</b>
-   ⚠ <b>글 적는 칸(input text/number/textarea)은 안 셉니다.</b> 재어 보니
-     왼쪽 입력 기둥에 <b>39개</b>가 28~34px 이고, 다 44px 로 올리면 기둥이
-     <b>약 470px</b> 길어집니다. 빗나가도 옆 칸에 글자가 들어갈 뿐 일이
-     일어나지는 않고, 사장님께서 시키신 것은 <b>메뉴 칸</b>이었습니다.
-     <b>안 한 것은 안 했다고 적습니다</b> (1번) — 올릴지는 사장님 판단이고,
-     그때는 이 자의 ⚠ 를 걷어 내면 됩니다.
+   ★ <b>손이 닿는 자리는 모두</b> 셉니다 — button · a[href] · select ·
+     누르는 input, 그리고 <b>글 적는 칸(input · textarea)</b>까지.
+   ★ 판 X225 에서는 글 적는 칸을 빼 두었습니다(기둥이 길어진다는 까닭).
+     판 X226 에서 사장님께서 <b>「응 그것도 올려」</b> 하셔서 넣었습니다 —
+     이제 계산기에서 <b>손이 닿는 자리에 예외가 없습니다.</b>
+     기둥은 창 안에서 굴러가므로(900px 창 · 속 2,315 → 2,587px) 길어진
+     만큼 더 굴리실 뿐, 화면이 밀리거나 잘리지 않습니다.
    ⚠ 안 보이는 것은 안 셉니다 — 폰에서 메뉴 격자는 「📂 카테고리」 뒤로,
      입력 기둥은 「✏️ 고객정보 입력」 뒤로 접혀 있습니다(재어 보니 높이 0).
    ⚠ 바깥을 한 번도 안 부릅니다.                                       */
@@ -46,10 +45,10 @@ const 재기 = () => {
     const st = getComputedStyle(e);
     return r.width > 4 && r.height > 2 && st.visibility !== 'hidden' && st.display !== 'none';
   };
-  /* 누르면 <b>일이 일어나는</b> 것들 */
+  /* 손가락이 닿는 것들 — 누르는 것과 <b>글 적는 칸</b> (판 X226) */
   const 누름 = [...document.querySelectorAll(
-    'button, a[href], select, input[type=button], input[type=submit], input[type=file], ' +
-    'input[type=checkbox], input[type=radio]')].filter(보이나);
+    'button, a[href], select, input, textarea')].filter(보이나)
+    .filter(e => e.type !== 'hidden');
   const 작은 = 누름.map(e => ({
     h: Math.round(e.getBoundingClientRect().height),
     t: (e.innerText || e.value || e.title || '').replace(/\s+/g, ' ').trim().slice(0, 26),
@@ -61,10 +60,10 @@ const 재기 = () => {
     메뉴: [...document.querySelectorAll('.report-tab')]
             .map(e => Math.round(e.getBoundingClientRect().height)),
     격자높이: g ? Math.round(g.getBoundingClientRect().height) : 0,
-    /* 글 적는 칸은 <b>세기만</b> 합니다 — 빨간불로는 안 씁니다 (위 쪽지) */
-    글칸작은: [...document.querySelectorAll('input:not([type=button]):not([type=submit])'
-                + ':not([type=file]):not([type=checkbox]):not([type=radio]), textarea')]
-      .filter(보이나).filter(e => e.getBoundingClientRect().height < 44).length
+    /* 왼쪽 입력 기둥 — 길어진 만큼 굴리는 자리이지 밀리는 자리가 아닙니다 */
+    기둥속: (function(){ const sb = document.querySelector('.sidebar');
+      return sb ? Math.round([...sb.querySelectorAll('*')]
+        .reduce((a, e) => Math.max(a, e.scrollHeight), 0)) : 0; })()
   };
 };
 
@@ -113,10 +112,15 @@ const 재기 = () => {
      + '(펴지면 44×7줄 + 틈 = 약 350px 이 첫 화면을 먹습니다)');
 
   /* ── 안 한 것은 안 했다고 ─────────────────────────────────────── */
-  console.log('\n[남은 것] ⚠ <b>글 적는 칸은 이 판에서 안 올렸습니다</b> (1번)');
-  console.log('     PC 에서 44px 아래인 입력 칸 <b>' + 본[1280].글칸작은 + '개</b> — '
-    + '다 올리면 왼쪽 입력 기둥이 약 ' + (본[1280].글칸작은 * 12) + 'px 길어집니다.');
-  console.log('     빗나가도 옆 칸에 글자가 들어갈 뿐이라 급하지 않습니다. 올릴지는 사장님 판단입니다.');
+  /* ── 왼쪽 입력 기둥 (판 X226) ─────────────────────────────────── */
+  console.log('\n[기둥] 📜 <b>왼쪽 입력 기둥은 굴러간다</b> — 길어져도 안 밀린다');
+  /* ★ 글 적는 칸 마흔을 44px 로 올리며 기둥 속이 2,315 → 2,587px 이
+     되었습니다. 이 기둥은 <b>제 창 안에서 굴러가므로</b> 길어진 만큼 더
+     굴리실 뿐 화면이 밀리거나 잘리지 않습니다. 선은 <b>3,200px</b> —
+     여기서 더 불면 한 번에 보기 어려워집니다. 줄이면 같이 내리십시오 (0-1번). */
+  is(본[1280].기둥속 > 0 && 본[1280].기둥속 <= 3200,
+     '  ★ 기둥 속이 <b>' + 본[1280].기둥속 + 'px</b> — 선 3200px'
+     + ' (글칸 마흔을 44px 로 올려 2,315 → 2,587px 이 되었습니다)');
 
   console.log('\n──────────────────────────────');
   if (bad) { console.log('✗ ' + bad + '가지 빨간불 — 계산기에 손가락이 덜 닿는 자리가 있습니다'); process.exit(1); }
