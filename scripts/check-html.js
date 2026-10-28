@@ -47,8 +47,10 @@ for (const file of files) {
     }
     if (!src.trim()) continue;
     n++;
+    /* module 스크립트(ba-3d.html 의 three.js)는 맨 위 import 줄만 걷고 문법을 본다 — vm.Script 는 import 를 모른다 */
+    const code = type === 'module' ? src.replace(/^\s*import\s[^;]+;\s*$/gm, '') : src;
     try {
-      new vm.Script(src, { filename: file + '#inline' + n });
+      new vm.Script(code, { filename: file + '#inline' + n });
     } catch (e) {
       bad++;
       const line = html.slice(0, m.index).split('\n').length;

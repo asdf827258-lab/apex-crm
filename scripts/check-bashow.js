@@ -336,35 +336,38 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
      pb ? ('막대 자리 ' + pb.tw.length + '줄이 <같은 폭>이다 (' + pb.tw[0] + 'px) — 달라지면 길이를 못 견준다') : '—');
   is(pics.nfill >= 3, '모자란 담보마다 <얼마나 찼는지> 막대가 있다 (' + pics.nfill + '개)');
   is(pics.svg >= 1, '직접 그린 그림(SVG)이 ' + pics.svg + '개 있다');
-  /* 치료 한 바퀴 — 「암이 오면」을 <b>한 번에 끝나는 일</b>로 듣지 않게, 진단
-     → 수술 → 항암 → 통원을 <b>한 장에 옆으로</b> 세운다 (2026-10 사장님 요청:
-     「치료 한 사이클을 한 장에」). 예전에는 아래로 쌓아 두 장으로 나눴다.
-     ① 사건마다 장은 <b>하나</b>, 단계 칸은 <b>그 사건의 단계 수 전부</b>
-     ② 무대(1280×720)에서 장이 <b>넘치지 않고</b>, 칸 <b>안쪽</b>도 안 잘린다
-        — 예전에 높이는 720 인데 카드 안에서 두 단계 반이 잘린 일이 있었다
-     ③ 그림은 <b>직접 그린 것</b> — 사진(<img>)이 한 장이라도 있으면 걸린다 (9번) */
+  /* 3번 · 4번 — 화면에서는 3D(ba-3d.html) 두 장, 종이에서는 「한 바퀴 한 장」 (판 X229).
+     ① 화면: s4_3d · s4_why 두 장이 서고, iframe 주소의 # 뒤에 이 고객의 지금/조정 후 보장이 실린다
+        (# 뒤라 서버로 안 간다 — 쿼리(?)로 싣지 않았는지도 본다)
+     ② 종이(printAll): 3D 장은 빠지고, 사건마다 「한 바퀴 한 장」 이 단계 전부를 세운다
+     ③ 그림은 직접 그린 것 — 이 문서에 사진(<img>)이 한 장이라도 있으면 걸린다 (9번).
+        (실제 사진은 ba-3d.html 안 「실제 모습」 에만 있고, 출처 · 라이선스를 단다) */
   const flow = await pg.evaluate(async () => {
     var keep = { deck: S.deck, sim: S.sim, view: S.view, slide: S.slide }, bad = [], n = 0, steps = 0;
+    S.deck = true; S.view = 'full'; S.printAll = 0; save(); render();
+    var f3 = document.querySelector('#s4_3d iframe'), fw = document.querySelector('#s4_why iframe');
+    var scr = { d3: !!f3, why: !!fw, hash: !!(f3 && /ba-3d\.html#d=/.test(f3.getAttribute('src'))),
+      noQuery: !!(f3 && f3.getAttribute('src').indexOf('?') < 0),
+      whyMode: !!(fw && /%22mode%22%3A%22why%22/.test(fw.getAttribute('src'))), cov: false };
+    try { var d = JSON.parse(decodeURIComponent(f3.getAttribute('src').split('#d=')[1])); scr.cov = !!(d.a && d.b && Object.keys(d.a).length > 3); } catch (e) {}
+    S.printAll = 1; render();
     for (var e = 0; e < EVENTS.length; e++) {
-      var ev = EVENTS[e];
-      S.deck = true; S.view = 'full'; S.sim = ev.k; S.slide = 's4_' + ev.k; save(); render();
-      await new Promise(function (r) { setTimeout(r, 80); });
-      var secs = [].slice.call(document.querySelectorAll('#app .show > section'))
-        .filter(function (s) { return s.id.indexOf('s4_' + ev.k) === 0; });
-      if (secs.length !== 1) { bad.push(ev.k + ' 장 ' + secs.length + '개'); continue; }
-      var s = secs[0], cards = s.querySelectorAll('.cyc .cyk');
-      if (!s.querySelector('.cyc')) continue;            /* 기준 치료비가 없는 사건 — 그리지 않는다 */
-      n++; steps = Math.max(steps, cards.length);
+      var ev = EVENTS[e], s = document.getElementById('s4_' + ev.k);
+      if (!s) { bad.push(ev.k + ' 종이 장 없음'); continue; }
+      if (!s.querySelector('.cyc')) continue;
+      n++; var cards = s.querySelectorAll('.cyc .cyk'); steps = Math.max(steps, cards.length);
       if (cards.length !== ev.sim.length) bad.push(ev.k + ' 단계 ' + cards.length + '/' + ev.sim.length);
-      if (s.scrollHeight > 721) bad.push(ev.k + ' 장 높이 ' + s.scrollHeight + 'px');
-      [].forEach.call(cards, function (c, i) { if (c.scrollHeight > c.clientHeight + 1) bad.push(ev.k + ' ' + (i + 1) + '단계 칸 안쪽이 잘림'); });
     }
-    S.deck = keep.deck; S.sim = keep.sim; S.view = keep.view; S.slide = keep.slide; save(); render();
-    return { n: n, bad: bad, steps: steps, img: document.querySelectorAll('#app img').length };
+    var printBa3d = document.querySelectorAll('#app .show > section.ba3d').length;
+    S.printAll = 0; S.deck = keep.deck; S.sim = keep.sim; S.view = keep.view; S.slide = keep.slide; save(); render();
+    return { scr: scr, n: n, bad: bad, steps: steps, printBa3d: printBa3d, img: document.querySelectorAll('#app img').length };
   });
-  is(flow.n > 0 && flow.bad.length === 0,
-     flow.bad.length ? ('치료 한 바퀴가 어긋난 장 — ' + flow.bad.join(' / ')) :
-     '「이 병이 오면」 ' + flow.n + '사건이 <각각 한 장>에 ' + flow.steps + '단계 전부 서고, 무대 안에 들어간다');
+  is(flow.scr.d3 && flow.scr.why, '화면에 <3번 치료 한 바퀴(3D) · 4번 왜 넓어야> 두 장이 선다');
+  is(flow.scr.hash && flow.scr.noQuery && flow.scr.cov, '3D 에 이 고객의 지금 · 조정 후 보장이 <# 뒤로> 실린다(서버로 안 감)');
+  is(flow.scr.whyMode, '4번 장은 「왜 넓어야」 모드로 연다');
+  is(flow.n > 0 && flow.bad.length === 0 && flow.printBa3d === 0,
+     flow.bad.length ? ('종이용 한 바퀴가 어긋난 장 — ' + flow.bad.join(' / ')) :
+     '종이에는 3D 대신 사건 ' + flow.n + '개가 <각각 한 장>에 ' + flow.steps + '단계 전부 선다 (3D 장 ' + flow.printBa3d + '개)');
   is(flow.img === 0,
      '그림을 <직접 그렸다> — 남의 자료 사진(<img>)이 ' + flow.img + '장이다 (9번)');
   /* 「더 넣을 것」은 <세어서> 본다 — 옛 문구를 찾으면 문구를 바꾸는 날 알람이 죽는다 */
@@ -384,42 +387,29 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
      글씨체만은 <b>선언</b>을 본다 — 파일은 CDN 에서 받아 오므로, 못 받은
      자리에서 알람이 울리면 그건 <b>헛것을 잡는 점검</b>이 된다 (8번).
      못 받으면 조용히 Pretendard 로 서는 것이 <b>맞는 동작</b>이다.     */
-  /* ── [10-1] 발표 중에 <b>사건을 바꿔도</b> 그 자리에 있는다 ──────────
-     장 이름이 s4_cancer_0 → s4_heart_0 으로 바뀌니, 그냥 다시 그리면
-     보던 장이 사라져 <b>표지로 튕긴다.</b> 고객 앞에서 탭을 눌렀더니
-     표지가 떴다. 화면 가득도 그대로 유지돼야 한다.                  */
-  head('[10-1] 화면 가득 발표 중에 사건 탭을 눌러도 <표지로 안 튕긴다>');
+  /* ── [10-1] 화면 가득 발표 중에 <b>3D 장</b>으로 가도 그 자리에 있는다 ──────
+     3D 는 iframe 이다. 그 장으로 옮겨도 발표가 끊기거나 표지로 튕기면 안 되고,
+     장을 덮는 것은 3D 하나여야 한다(오른쪽 위 알약 · 진행 막대가 3D 를 가리지 않게). */
+  head('[10-1] 화면 가득 발표 중에 3D 장으로 가도 <표지로 안 튕긴다>');
   await pg.evaluate(() => { doSample(); S.view = 'full'; S.deck = true; go('show'); });
   await pg.waitForTimeout(400);
   await pg.evaluate(() => deckShow(true));
   await pg.waitForTimeout(300);
-  const simBefore = await pg.evaluate(() => {
+  const d3 = await pg.evaluate(() => {
     var L = deckList(), i;
-    for (i = 0; i < L.length; i++) if (L[i].id.indexOf('s4_') === 0) { deckJump(i); return L[i].id; }
-    return null;
+    for (i = 0; i < L.length; i++) if (L[i].id === 's4_3d') { deckJump(i); break; }
+    var s = document.getElementById('s4_3d'), f = s && s.querySelector('iframe');
+    var sr = s && s.getBoundingClientRect(), fr = f && f.getBoundingClientRect();
+    return { slide: S.slide, shown: [].slice.call(document.querySelectorAll('#app .show > section')).filter(x => x.offsetParent !== null).map(x => x.id),
+      presenting: document.body.className.indexOf('presenting') >= 0, iframe: !!(f && f.offsetParent),
+      fill: sr && fr ? Math.round(fr.width / sr.width * 100) : 0,
+      badge: getComputedStyle(document.getElementById('deckShow'), '::after').display };
   });
   await pg.waitForTimeout(250);
-  is(!!simBefore, '「이 병이 오면」 장으로 옮겨 놓았다 — ' + simBefore);
-  const tabN = await pg.evaluate(() =>
-    [].slice.call(document.querySelectorAll('.simtab button')).filter(b => b.offsetParent !== null).length);
-  is(tabN >= 2, '발표 중에도 사건 <탭이 보인다> (' + tabN + '개) — 안 보이면 바꿀 수가 없다');
-  await pg.evaluate(() => {
-    var b = [].slice.call(document.querySelectorAll('.simtab button')).filter(x => x.offsetParent !== null);
-    (b[b.length - 1] || b[0]).click();
-  });
-  await pg.waitForTimeout(450);
-  const simAfter = await pg.evaluate(() => ({
-    slide: S.slide, sim: S.sim,
-    shown: [].slice.call(document.querySelectorAll('#app .show > section'))
-      .filter(s => s.offsetParent !== null).map(s => s.id),
-    presenting: document.body.className.indexOf('presenting') >= 0,
-    x: !!document.querySelector('#deckBar .dnav.x')
-  }));
-  is(simAfter.slide.indexOf('s4_' + simAfter.sim) === 0,
-     '탭을 누르면 <그 사건의 장>이 열린다 — ' + simBefore + ' → ' + simAfter.slide);
-  is(simAfter.shown.length === 1 && simAfter.shown[0] === simAfter.slide,
-     '보이는 장도 그 장 하나다 — ' + simAfter.shown.join(' '));
-  is(simAfter.presenting && simAfter.x, '<화면 가득>이 그대로 유지된다 — 발표가 안 끊긴다');
+  is(d3.slide === 's4_3d' && d3.shown.length === 1 && d3.shown[0] === 's4_3d', '3D 장으로 옮기면 <그 장 하나>만 보인다 — ' + d3.shown.join(' '));
+  is(d3.iframe && d3.fill >= 98, '3D 가 장 폭을 <가득> 쓴다 (' + d3.fill + '%)');
+  is(d3.badge === 'none', '3D 장에서는 오른쪽 위 알약을 걷는다 — 3D 머리와 겹치지 않게');
+  is(d3.presenting, '<화면 가득>이 그대로 유지된다 — 발표가 안 끊긴다');
   await pg.keyboard.press('Escape');
   await pg.waitForTimeout(300);
 
