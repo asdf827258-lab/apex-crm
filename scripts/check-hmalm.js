@@ -80,8 +80,23 @@ const AT = (hh) => {
 const LOOK = () => {
   try { go('home'); } catch (e) {}
   const pane = document.getElementById('dynPane');
-  const chip = [].slice.call(pane.querySelectorAll('.t-chip'))
-    .filter(e => (e.textContent || '').indexOf('알람') >= 0)[0];
+  /* 🧷 <b>판 X227 — 칩 줄이 없어졌습니다.</b> 「🔥 연속 · 🔔 알람」 칩이
+     바로 위 접힌 줄과 <b>같은 수를 두 번</b> 적고 있어 사장님께서 「②」 로
+     거두라 하셨습니다. 말은 한 자도 안 없어졌습니다 — 칩이 가르던 네 때는
+     이제 <b>접힌 머리</b>(.hm-fold-h .t span)에 섭니다.
+     ★ 묻는 것은 그대로입니다 — 「네 때를 갈라 적나 · 누르면 그 화면으로
+       가나 · 손가락이 닿나」. <b>보는 자리만 옮겼습니다</b> (8번).
+     ★ 누르는 자리는 이제 <b>접이 머리 단추</b>(펴고 접는 것)와 카드 안
+       「시각 바꾸기 →」 입니다 — 둘 다 go('me') 로 갑니다.            */
+  /* ★ <b>알람 칸에서 바로</b> 읽습니다 — 처음에 「첫 번째 카드」 로 집었다가
+     📈 이번 주를 읽고 헛 빨간불이 났습니다. 접혔든(접이 머리) 펴졌든
+     (카드 머리) <b>그 칸의 수</b>를 집습니다 (8번). */
+  const 알람칸 = [].concat(
+    [].slice.call(document.querySelectorAll('#hmSideUp>*')),
+    [].slice.call(document.querySelectorAll('#hmSideHost>*')))
+    .filter(e => (e.innerText || '').indexOf('알람') >= 0)[0] || null;
+  const chip = 알람칸 ? (알람칸.querySelector('.hm-fold-h .t span')
+                      || 알람칸.querySelector('.hm-rt-h[data-sum]')) : null;
   /* ★ <b>곁칸 넷은 자리를 옮깁니다</b> (2026-10-06 · 사장님 「끌어올려」) —
      컴퓨터는 오른쪽 기둥(#hmSideHost), 폰은 오늘 카드 안 「지금 할 것」
      바로 아래(#hmSideUp)입니다. 그래서 <b>「두 기둥의 둘째 칸」 으로 찾지
@@ -96,9 +111,18 @@ const LOOK = () => {
   const ask = [].slice.call(pane.querySelectorAll('[data-ask="오늘남은알람"]'))
     .map(e => (e.textContent || '').trim());
   return {
-    chip: chip ? (chip.textContent || '').replace(/\s+/g, ' ').trim() : '',
-    chipH: chip ? Math.round(chip.getBoundingClientRect().height) : 0,
-    chipGo: chip ? (chip.getAttribute('onclick') || '') : '',
+    /* ⚠ 카드 머리(.hm-rt-h)는 이모지·이름·단추 글자도 들고 있습니다 —
+       <b>data-sum 이 있으면 그것</b>을 읽습니다. 처음에 textContent 를
+       먼저 읽어 「🔔알람시각 바꾸기 →」 를 수로 읽었습니다 (8번). */
+    chip: chip ? ((chip.getAttribute('data-sum') || chip.textContent || '')
+                   .replace(/\s+/g, ' ').trim()) : '',
+    /* 손가락이 닿는 자리는 <b>접이 머리 단추</b>(또는 넓은 화면의 카드 단추) */
+    chipH: (function(){ const b = 알람칸 ? (알람칸.querySelector('.hm-fold-h')
+          || 알람칸.querySelector('.hm-rt-go')) : null;
+      return b ? Math.round(b.getBoundingClientRect().height) : 0; })(),
+    /* 그 화면으로 가는 길 — 카드 머리의 「시각 바꾸기 →」 */
+    chipGo: (function(){ const g = 알람칸 ? 알람칸.querySelector('.hm-rt-go') : null;
+      return g ? (g.getAttribute('onclick') || '') : ''; })(),
     card: card ? (card.innerText || '').replace(/\s+/g, ' ').trim() : '',
     ask: ask, n: (almLeftToday() || []).length,
     none: almLeftToday() === null
@@ -151,15 +175,18 @@ const LOOK = () => {
   is(B.n === 1 && /1번/.test(B.chip),
     '  오후 2시 — <b>하나만</b> 남았다 · ' + B.n + '번 / 칩 「' + B.chip + '」');
   const C = await run(22);
-  is(C.n === 0 && C.chip.indexOf('다 지났습니다') >= 0,
-    '  밤 10시 — <b>다 지났다</b> · 칩 「' + C.chip + '」');
+  /* ⚠ 글자를 통째로 못 박지 않습니다 — 접힌 머리는 칩보다 좁아 말이
+     짧아졌습니다(「오늘 다 지났습니다」 → 「오늘 다 지남」). <b>묻는 것은
+     네 때가 서로 다른 말인가</b>이지 글자가 무엇인가가 아닙니다 (8번). */
+  is(C.n === 0 && /다 지남|다 지났/.test(C.chip),
+    '  밤 10시 — <b>다 지났다</b> · 머리 「' + C.chip + '」');
 
   console.log('\n[2] ★★ <b>네 때를 갈라 적는다</b> (1번)');
   is(C.ask.length === 0,
     '  ★ 다 지난 때는 <b>숫자를 안 적는다</b> — 이름표 ' + C.ask.length + '개 (0번이라고 적지 않습니다)');
   const D = await run(6, () => { almSlotSet('call', false); almSlotSet('am', false); almSlotSet('perf', false); });
-  is(D.chip.indexOf('다 꺼져 있습니다') >= 0,
-    '  <b>다 꺼 놓으면</b> 그렇게 적는다 — 「' + D.chip + '」 (「다 지남」 과 다른 말입니다)');
+  is(/다 꺼져/.test(D.chip) && D.chip !== C.chip,
+    '  <b>다 꺼 놓으면</b> 그렇게 적는다 — 「' + D.chip + '」 (「' + C.chip + '」 과 다른 말입니다)');
   is(D.ask.length === 0, '  그때도 <b>숫자를 안 적는다</b> — 이름표 ' + D.ask.length + '개');
   const E = await p.evaluate(({ at, src }) => {
     (0, eval)('(' + at + ')')(6);
@@ -167,16 +194,21 @@ const LOOK = () => {
     const o = (0, eval)('(' + src + ')')();
     window.ALM_SLOTS = keep; return o;
   }, { at: String(AT), src: String(LOOK) });
-  is(E.none === true && E.chip.indexOf('아직 못 읽었습니다') >= 0,
-    '  ★★ <b>표를 못 읽었으면 「아직 못 읽었습니다」</b> — 「0번」 이 아닙니다 (1번) · 「' + E.chip + '」');
+  is(E.none === true && /못 읽/.test(E.chip) && !/0번/.test(E.chip),
+    '  ★★ <b>표를 못 읽었으면 「못 읽음」</b> — 「0번」 이 아닙니다 (1번) · 「' + E.chip + '」');
   is(E.ask.length === 0, '  그때도 <b>숫자가 없다</b> — 이름표 ' + E.ask.length + '개');
 
   /* ── [3] 칩과 카드가 같은 수 ─────────────────────────────────── */
   console.log('\n[3] ★★ <b>칩과 카드가 같은 수</b>를 적는다 (0-1번)');
   const F = await run(6, () => { almSlotSet('call', true); almSlotSet('am', true); almSlotSet('perf', true); });
-  is(F.ask.length === 2, '  이름표를 <b>둘</b>이 달고 있다 — ' + F.ask.length + '개 (칩 · 카드)');
-  is(F.ask.length === 2 && F.ask[0] === F.ask[1],
-    '  ★★ <b>같은 수</b>다 — ' + F.ask.join(' / ') + (F.ask[0] === F.ask[1] ? '' : ' ← 갈렸습니다'));
+  /* ⬇ <b>둘 → 하나</b> (판 X227). 칩을 거두어 「오늘 남은 알람」 을 적는
+     자리가 <b>카드 한 곳</b>이 되었습니다 — 두 곳이 갈릴 자리가 아예
+     없어진 것입니다 (5번 「묻는 곳을 하나로」). 그래서 묻는 것을 바꿉니다:
+     <b>하나인가</b>, 그리고 <b>그 하나가 정말 센 수인가</b>.             */
+  is(F.ask.length === 1,
+    '  ★★ 이름표가 <b>하나</b>다 — ' + F.ask.length + '개 (칩을 거두어 적는 곳이 한 곳입니다)');
+  is(F.ask.length === 1 && F.ask[0] === String(F.n) + '번',
+    '  ★★ 그 하나가 <b>정말 센 수</b>다 — 이름표 「' + F.ask.join('') + '」 · 센 것 ' + F.n + '번');
   is(F.card.indexOf('오늘 남은 알람') >= 0 && /9시|13시|17시/.test(F.card),
     '  카드가 <b>몇 시에 무엇인지</b>도 적는다 — 「' + F.card.slice(0, 60) + '」');
 

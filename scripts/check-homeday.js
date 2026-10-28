@@ -124,9 +124,12 @@ const SEED = `(function(){
   /* ⚠ 2026-09-27 — 활동량·동선이 <b>「🧭 그 밖의 것」 접이 안</b>으로
      들어갔습니다(사장님 말씀 「2번으로 해줘 접어」). 접힌 채로 재면 칩 줄
      높이가 <b>0px</b> 이라 「한 줄인가」 를 잴 수 없습니다 — 접혀서 0 인
-     것과 칩이 한 줄이라 작은 것은 <b>다른 일</b>입니다. 먼저 펴고 잽니다.
-     ★ 자는 그대로입니다 — 펴 놓고 보면 칩이 한 줄인가. (옮기지 지우지
-       않습니다)                                                       */
+     것과 칩이 접혀서 짧은 것은 <b>다른 일</b>입니다. 먼저 펴고 잽니다.
+     ★ 자는 그대로입니다 — 펴 놓고 보면 <b>칩이 다 보이나</b>. (옮기지
+       지우지 않습니다)
+     ⚠ 2026-10-28 (판 X229) — 여기서 묻던 것이 「칩이 한 줄인가」 였는데
+       <b>그 한 줄이 사장님이 짚으신 잘림</b>이었습니다. 아래 [2-4] 쪽지에
+       까닭을 적었습니다.                                              */
   await pg.evaluate(() => { try { hmFoldSet('etc', true); } catch (e) {} });
   /* ⚠ 2026-09-30 — 「이분 자세히」 가 <b>접힌 채가 기본</b>이 됐습니다
      (사장님 말씀 「그 넷도 접어」). 접힌 채로 재면 여기 보려는 갈래·
@@ -352,18 +355,51 @@ const SEED = `(function(){
        세셨습니다). 칸 전체를 재면 그 줄 때문에 빨간불이 켜지는데, 여기서
        보려던 것은 <b>칩이 접혔나</b> 입니다 — 그것은 .hm-act-r 입니다 (8번). */
     const row = document.querySelector('#hmActHost .hm-act-r') || e;
+    /* ★ 칩이 <b>몇 줄</b>로 서나 — 칩마다 윗자리(top)를 모아 셉니다.
+       px 로 못 박지 않는 까닭: CI 는 글꼴이 달라 같은 한 줄도 몇 px 씩
+       다릅니다. 기계를 타는 자는 헛것을 잡는 자입니다 (8번 · check-guide
+       가 723px 로 못 박았다가 데인 그 자리). */
+    /* 칩은 <b>.g 안의 바로 아래 칸들</b>입니다 — 앱이 그렇게 짭니다
+       (<div class="hm-act-r"><b>📊 오늘 기록</b><span class="g">…칩…</span>).
+       ⚠ 처음에 '.t-chip, button, a' 로 집었다가 <b>1개</b>만 잡혀
+         「0개 / 1개」 라는 알맹이 없는 초록이 됐습니다 (8번). */
+    const 통 = row ? row.querySelector('.g') : null;         /* 옆으로 미는 그 통 */
+    const 칩 = 통 ? [...통.children]
+      .filter(c => { const r = c.getBoundingClientRect(); return r.width > 2 && r.height > 2; }) : [];
+    const 윗자리 = [...new Set(칩.map(c => Math.round(c.getBoundingClientRect().top)))];
+    const 밖 = 통 ? 칩.filter(c =>
+      c.getBoundingClientRect().right > 통.getBoundingClientRect().right + 1).length : 0;
     return { txt: e ? (e.innerText || '').replace(/\s+/g, ' ').trim() : '',
       h: row ? Math.round(row.getBoundingClientRect().height) : 0,
       all: e ? Math.round(e.getBoundingClientRect().height) : 0,
+      칩수: 칩.length, 줄수: 윗자리.length, 밖: 밖,
+      넘침: 통 ? Math.round(통.scrollWidth - 통.clientWidth) : 0,
       o: hmActOf() };
   });
   is(!!act.txt, '<b>홈에 선다</b> — 「' + act.txt + '」');
   is(act.o && act.o.call === 1 && act.o.meet === 1 && act.o.all === 3,
      '<b>오늘 것만</b> 센다 — 전화 ' + (act.o || {}).call + ' · 만남 ' + (act.o || {}).meet +
      ' · 기록 ' + (act.o || {}).all + ' (2000년 것은 안 셉니다)');
-  is(act.h > 0 && act.h <= 60,
-     '칩이 <b>한 줄</b>이다 — ' + act.h + 'px (접히면 122px 이 되어 홈이 0.15화면 길어진다)' +
-     ' · 칸 전체 ' + act.all + 'px');
+  /* ⬇ 2026-10-28 (판 X229) — <b>「한 줄이다」 를 「다 보인다」 로 바꿉니다.</b>
+     사장님께서 오늘 화면을 보시고 ③ <b>「📒 오늘 기록 줄이 오른쪽에서
+     잘림」</b> 을 짚으셨습니다. 여태 이 자는 「칩이 한 줄(60px 이하)」 을
+     지켰는데, <b>그 한 줄이 바로 그 잘림이었습니다</b> — 칩 줄이
+     flex-wrap:nowrap 이라 넘치는 칩은 높이를 안 먹는 대신 <b>오른쪽
+     화면 밖으로</b> 밀려 손으로 밀어야 보였습니다. 밀어야 보이는 것은
+     안 보이는 것입니다.
+     ★ 이제 접히게 했고(판 X229), 자도 <b>묻는 것을 바꿉니다</b> —
+       「한 줄인가」 가 아니라 <b>「다 보이는가 · 두 줄을 안 넘는가」</b>.
+     ★ <b>px 로 못 박지 않습니다</b> — 잰 값은 적되(지금 80px · 전 60px
+       아래) 울리는 자리는 <b>줄 수</b>입니다. CI 는 글꼴이 달라 px 가
+       흔들립니다 (8번).
+     ★ 홈이 길어졌는지는 <b>여기서 안 묻습니다</b> — 그 임자는
+       check-homeone 입니다 (5번). */
+  is(act.넘침 <= 2 && act.밖 === 0,
+     '칩이 <b>오른쪽에서 안 잘린다</b> — 넘침 ' + act.넘침 + 'px · 밖으로 밀린 칩 '
+     + act.밖 + '개 / ' + act.칩수 + '개 (사장님 말씀 ③ · 2026-10-28)');
+  is(act.줄수 > 0 && act.줄수 <= 2,
+     '칩이 <b>두 줄을 안 넘는다</b> — ' + act.줄수 + '줄 · ' + act.h + 'px'
+     + ' · 칸 전체 ' + act.all + 'px');
   const actWait = await pg.evaluate(() => {
     const k = CM.loaded; CM.loaded = false;                 /* 아직 못 읽은 판 */
     const h = hmActHtml(); CM.loaded = k;

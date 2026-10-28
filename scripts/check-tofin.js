@@ -96,7 +96,18 @@ async function waitBridge(page, ms) {
   page.on('pageerror', e => errs.push(String(e).slice(0, 140)));
 
   await page.goto(base + '/app/index.html', { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(2600);
+  /* ⚠ <b>시계로 세지 않습니다</b> (2026-10-28) — 여기는 2,600ms 를 세고
+     바로 재고 있었습니다. 제 기계에서는 넉넉한데 CI 에서는 본체(3.1MB)가
+     아직 안 일어난 판이 있어, 뒤따르는 여섯 줄이 <b>값이 전부 빈손</b>으로
+     울었습니다(같은 판이 13초에 초록 · 28초에 빨간불). 고친 것이 없는데
+     우는 자는 <b>헛것을 잡는 자</b>이고, 사람이 자를 안 믿게 됩니다 (8번).
+     그래서 <b>앱이 일어났는지를 기다립니다</b> — 못 일어나면 그때는
+     정말로 울어야 할 자리입니다. */
+  const 섰다 = await page.waitForFunction(
+    () => typeof window.go === 'function' && typeof window.OS !== 'undefined',
+    { timeout: 60000 }).then(() => true).catch(() => false);
+  is(섰다, '본체가 <b>일어났다</b> — go() · OS 가 선다 (60초 안)');
+  await page.waitForTimeout(600);           /* 그린 뒤 한 박자 — 자리를 잡게 */
   /* 계산기는 아무나 못 연다 — 대표로 들어와 있을 때를 본다 */
   await page.evaluate(() => { OS.profile = OS.profile || {}; OS.profile.role = 'owner'; });
 
