@@ -12,7 +12,7 @@
      ④ 팀원 화면을 따로 — <b>관리자는 자기 팀원 것</b>
      ⑤ 비포&애프터 대신 <b>보장분석 전&후 만들기</b>
      ⑥ 홈에서 단계를 <b>바로바로</b> · 통합CRM 에 반영
-     ⑦ 홈에서 고객을 <b>넣고·고치고·지우기</b>
+     ⑦ 홈에서 고객을 <b>넣고·고치고·지우기</b> (판 X133 부터 <b>어느 쪽인지 먼저 묻습니다</b>)
 
    ★ 「단추가 섰나」 가 아니라 <b>어느 표에 무엇을 썼나</b>와 <b>몇 px 에
      있나</b>를 봅니다. 화면만 보면 눌렀는데 아무 데도 안 쓰는 판과,
@@ -278,9 +278,37 @@ const SEED=(role)=>`
        w2.length===1&&w2[0].t==='calls'&&w2[0].pay.result==='부재',JSON.stringify(w2.map(x=>x.t+'.'+x.op)));
     await p.evaluate(()=>{const b=[...document.querySelectorAll('.hm-cal')].find(x=>/고객 넣기/.test(x.innerText));if(b)b.click();});
     await p.waitForTimeout(450);
-    const opened=await p.evaluate(()=>!!document.querySelector('#hdbSheet.on'));
-    ok('⑦ 홈에서 「고객 넣기」 가 홈을 안 벗어나고 뜬다',opened,'덮개 '+opened);
-    await p.evaluate(()=>{document.getElementById('hdbName').value='홍길동새';});
+    /* ⚠ 판 X133 부터 <b>먼저 묻습니다</b> — 「➕ 고객 넣기」 는 이제 고르개를
+       엽니다. 여태 이 자는 <b>바로 배정 DB 창이 뜨는 것</b>으로 박아 두었습니다.
+       사장님이 「고객 365 / DB 구분을 못 하겠다」 하신 자리가 바로 거기라,
+       이제는 묻지 않고 DB 창이 뜨면 <b>그것이 빨간불</b>입니다. 그래서 자를
+       느슨히 풀지 않고 <b>더 재게</b> 바꿉니다 (8번) —
+         ① 고르개가 뜨고 DB 창은 <b>아직</b> 안 떴나
+         ② 두 갈래(내 고객 · 배정 DB)가 다 있나
+         ③ 「배정 DB」 를 누르면 <b>그때</b> DB 창이 뜨고 고르개는 닫히나        */
+    /* ★ 새 판 (판 X161 · 2026-10-23 「추천대로」) — 창이 세 걸음입니다. 첫 걸음은 <b>누구</b>(이름·번호)이고
+       DB 창은 <b>여전히 안 뜹니다</b>. 이름을 적고 「다음」 을 누르면 둘째 걸음에서 어느 쪽인지 묻습니다 —
+       아래 ①②③ 은 그대로 그 둘째 걸음에서 잽니다. */
+    const step1=await p.evaluate(()=>({nm:!!document.getElementById('cregNm'),hdb:!!document.querySelector('#hdbSheet.on')}));
+    ok('⑦ 「고객 넣기」 첫 걸음은 누구 — 이름·번호를 받고 DB 창은 아직 안 뜬다',step1.nm&&!step1.hdb,JSON.stringify(step1));
+    await p.evaluate(()=>{const n=document.getElementById('cregNm');if(n)n.value='홍길동새';if(typeof cregStep==='function')cregStep(2);});
+    await p.waitForTimeout(200);
+    const pickOn=await p.evaluate(()=>({
+      creg:!!document.querySelector('#cregSheet.on'),
+      hdb:!!document.querySelector('#hdbSheet.on'),
+      n:document.querySelectorAll('#cregSheet.on .creg-c').length,
+      t:((document.querySelector('#cregSheet.on')||{}).innerText)||''
+    }));
+    ok('⑦ 홈에서 「고객 넣기」 — 어느 쪽인지 먼저 묻는다 (바로 DB 창이 뜨지 않는다)',
+       pickOn.creg&&!pickOn.hdb&&pickOn.n>=2&&/내 고객/.test(pickOn.t)&&/배정 DB/.test(pickOn.t),
+       '고르개 '+pickOn.creg+' · DB창 '+pickOn.hdb+' · 갈래 '+pickOn.n);
+    await p.evaluate(()=>{const b=[...document.querySelectorAll('#cregSheet .creg-c')].find(x=>/배정 DB/.test(x.innerText));if(b)b.click();});
+    await p.waitForTimeout(450);
+    const opened=await p.evaluate(()=>!!document.querySelector('#hdbSheet.on')&&!document.querySelector('#cregSheet.on'));
+    ok('⑦ 「📇 배정 DB」 를 고르면 홈을 안 벗어나고 뜬다',opened,'덮개 '+opened);
+    /* 첫 걸음에 적은 이름이 DB 창에 옮겨져 있어야 합니다 — 두 번 안 치게 */
+    const carried=await p.evaluate(()=>(document.getElementById('hdbName')||{}).value||'');
+    ok('⑦ 첫 걸음에 적은 이름이 배정 DB 창에 옮겨져 있다',carried==='홍길동새','받음 '+carried);
     await p.evaluate(()=>hdbSave());await p.waitForTimeout(600);
     const w3=(await W()).filter(x=>x.t==='dbs');
     ok('⑦ 새 고객이 dbs 에 들어간다',w3.length===1&&w3[0].op==='insert'&&w3[0].pay.customer_name==='홍길동새',

@@ -102,7 +102,15 @@ const SEED = () => {
   try { nlSave(); } catch (e) {}
 };
 /* 한 기사의 단추 줄을 그대로 읽어 온다 */
-const ROW = () => {
+/* ⚠ 판 X155 — 글 앞머리 이모지는 선 그림으로 갈리고, 원래 글자는
+   data-emo 에 남습니다. 단추에 사람이 보는 이름은 <b>둘을 합친 글</b>이니,
+   textContent 만 읽으면 「🎨」 가 미끄러집니다 (8번).
+   ★ 재는 법은 <b>한 줄에서만</b> 정합니다 — 화면 속으로 내려보낼 때만
+     글자로 집어 주고, 두 자리가 같은 자를 씁니다 (5번).               */
+const LBLSRC = "(e)=>((e.getAttribute('data-emo')||'')+' '+(e.textContent||''))" +
+               ".replace(/\\s+/g,' ').trim()";
+const ROW = (LBLSRC) => {
+  const LBL = new Function('return ' + LBLSRC)();
   const it = document.querySelector('.nl-item');
   const b = it ? it.querySelector('.nl-b') : null;
   if (!b) return null;
@@ -110,7 +118,7 @@ const ROW = () => {
   return {
     글: kids.map(x => (x.textContent || '').trim()),
     꼴: kids.map(x => (x.className || '')),
-    첫글: kids.length ? (kids[0].textContent || '').trim() : '',
+    첫글: kids.length ? LBL(kids[0]) : '',
     첫강조: kids.length ? /\bbtn-primary\b/.test(kids[0].className || '') : false,
     강조수: kids.filter(x => /\bbtn-primary\b/.test(x.className || '')).length,
     손잡이: !!it.querySelector('.nl-b > .nl-card'),
@@ -183,7 +191,7 @@ const ROW = () => {
   await pg.evaluate(SEED);
   await pg.evaluate(() => nlPaint());
   await pg.waitForSelector('.nl-item .nl-b', { timeout: 20000 });
-  const r = await pg.evaluate(ROW);
+  const r = await pg.evaluate(ROW, LBLSRC);
   is(!!r, '단추 줄이 선다');
   is(r && r.첫글 === NAME, '  <b>맨 왼쪽</b>이 그 단추다 — 「' + (r ? r.첫글 : '') + '」');
   is(r && r.첫강조, '  그 단추가 <b>강조</b>다 (btn-primary)');
@@ -199,15 +207,16 @@ const ROW = () => {
   is(/정책·상품 뉴스에 올리기/.test(글), '  📰 정책·상품 뉴스에 올리기 가 그대로 선다');
   console.log('      ' + 글);
   /* 팀원에게는 올리기가 안 서는 것이 맞다 — 그래도 <b>강조 단추는 선다</b> */
-  const t = await pg.evaluate(() => {
+  const t = await pg.evaluate((LBLSRC) => {
+    const LBL = new Function('return ' + LBLSRC)();
     window.bizNewsCanEdit = function () { return false; };
     nlPaint();
     const it = document.querySelector('.nl-item'), b = it ? it.querySelector('.nl-b') : null;
     const kids = b ? [].slice.call(b.children) : [];
     return { 글: kids.map(x => (x.textContent || '').trim()).join(' | '),
-             첫글: kids.length ? (kids[0].textContent || '').trim() : '',
+             첫글: kids.length ? LBL(kids[0]) : '',
              강조수: kids.filter(x => /\bbtn-primary\b/.test(x.className || '')).length };
-  });
+  }, LBLSRC);
   is(!/정책·상품 뉴스에 올리기/.test(t.글), '  팀원에게는 올리기가 <b>안 선다</b> — 대표만 올립니다');
   is(t.첫글 === NAME && t.강조수 === 1, '  팀원에게도 <b>맨 왼쪽 강조</b>는 그대로 — ' + t.첫글);
   await pg.evaluate(() => { window.bizNewsCanEdit = function () { return true; }; nlPaint(); });

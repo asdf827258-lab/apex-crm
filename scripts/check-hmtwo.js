@@ -320,19 +320,20 @@ const SEED = () => {
   const pk = await PC.evaluate(() => {
     /* ⚠ 누르면 <b>카드를 다시 그립니다</b>(hmPaint). 붙잡아 둔 카드는 떨어져
        나가 높이가 0px 이 됩니다 — <b>잴 때마다 다시 찾습니다</b>.        */
-    const cnt = () => { const c = document.querySelector('#hmToday .hm-now');
+    /* ★ 판 X199 — 카드가 #hmToday 밖(#hmJobHost)으로 올라갔습니다 */
+    const cnt = () => { const c = document.querySelector('#dynPane .hm-now');
       return {
-        judge: document.querySelectorAll('#hmToday .hm-now .t-note.b').length,
-        cqa:   document.querySelectorAll('#hmToday .cqaCard').length,
-        tools: document.querySelectorAll('#hmToday .hm-now .hm-ask-o').length,
+        judge: document.querySelectorAll('#dynPane .hm-now .t-note.b').length,
+        cqa:   document.querySelectorAll('#dynPane .cqaCard').length,
+        tools: document.querySelectorAll('#dynPane .hm-now .hm-ask-o').length,
         h:     c ? Math.round(c.getBoundingClientRect().height) : 0 }; };
-    const b = document.querySelector('#hmToday .hm-more-b');
+    const b = document.querySelector('#dynPane .hm-more-b');
     if (!b) return { no: 1 };
     const shutTxt = (b.innerText || '').replace(/\s+/g, ' ').trim();
     const shut = cnt();
     const tap = Math.round(b.getBoundingClientRect().height);
     b.click();
-    const b2 = document.querySelector('#hmToday .hm-more-b');
+    const b2 = document.querySelector('#dynPane .hm-more-b');   /* 판 X199 */
     const openTxt = (b2 ? b2.innerText : '').replace(/\s+/g, ' ').trim();
     const open = cnt();
     let saved = null; try { saved = JSON.parse(localStorage.getItem('apex_hm_fold_v1') || '{}').more; } catch (e) {}
@@ -342,7 +343,12 @@ const SEED = () => {
   is(!pk.no && pk.shut.tools === 0 && pk.shut.cqa === 0,
      '  ★ <b>접힌 채로</b> 열린다 (사장님 말씀 「그 넷도 접어」) — 도구 ' +
      (pk.shut ? pk.shut.tools : '?') + '개 · 물음 ' + (pk.shut ? pk.shut.cqa : '?') + '개');
-  is(!pk.no && /이분 자세히/.test(pk.shutTxt) && /판단/.test(pk.shutTxt) && /단계/.test(pk.shutTxt),
+  /* ⚠ 2026-10-25 (판 X195) · 「판단」 → <b>「아는 것」</b>. ⚖️ 판단 줄은 이제
+     접히지 않고 카드에 <b>늘</b> 섭니다(사장님 말씀 「지금 할 것에 빈칸이
+     많은데 알차게 채워줘」). 접힌 칸 안에 들어 있다고 적으면 그 줄이
+     <b>거짓말</b>이 됩니다 — 안에 정말 든 것은 🧭 앱이 아는 것 · 단계 ·
+     도구입니다 (1번).                                                   */
+  is(!pk.no && /이분 자세히/.test(pk.shutTxt) && /아는 것/.test(pk.shutTxt) && /단계/.test(pk.shutTxt),
      '  ★ 단추가 <b>무엇이 들었는지</b> 말한다 (1번) — 「' + pk.shutTxt + '」');
   is(!pk.no && pk.open.tools > 0 && pk.open.h > pk.shut.h,
      '  ★ <b>눌렀더니 다 펴진다</b> — 카드 ' + pk.shut.h + 'px → ' + pk.open.h +
@@ -389,15 +395,45 @@ const SEED = () => {
     const y = (el) => el ? Math.round(el.getBoundingClientRect().top) : -1;
     const hh = (el) => el ? Math.round(el.getBoundingClientRect().height) : -1;
     const up = document.getElementById('hmSideUp');
+    /* 🧷 판 X223 — 곁칸 셋이 <b>접이</b> 안에 섭니다(사장님이 고르신 「① 곁칸
+       셋을 접기」). 이름은 접이 머리(.hm-fold-h .t)에, 카드는 제 머리
+       (.hm-rt-h b)에 적습니다 — 둘 다 봅니다. */
+    const 이름of = (e) => {
+      const f = e.querySelector('.hm-fold-h .t');
+      if (f) return (f.childNodes[0] ? (f.childNodes[0].textContent || '') : '').trim();
+      return (e.querySelector('.hm-rt-h b') || {}).textContent || e.id || e.className;
+    };
     const 넷 = up ? [].slice.call(up.children).map(e => ({
-      이름: (e.querySelector('.hm-rt-h b') || {}).textContent || e.id || e.className,
-      y: y(e) })) : [];
+      이름: 이름of(e), y: y(e) })) : [];
+    /* 🧷 ★★ <b>접고도 수가 보이나</b> — 접기의 값어치가 여기 있습니다.
+       접힌 머리마다 「연속 1일」·「마디 3건」·「남은 1번」 한 줄이 서야
+       <b>펴지 않고</b> 오늘을 압니다. 비면 사장님은 세 번 눌러야 합니다 (1번).
+       ★ 수는 그 칸이 제 머리에 달아 둔 <b>data-sum</b> 에서 옵니다 —
+         여기서 다시 세지 않습니다 (5번). 둘이 갈리면 빨간불입니다. */
+    const 접이 = up ? [].slice.call(up.querySelectorAll('.hm-fold[id^="hmFold_side_"]'))
+      .map(f => {
+        const sp = f.querySelector('.hm-fold-h .t span');
+        const rt = f.querySelector('.hm-rt-h');
+        return { k: f.id, 머리: sp ? (sp.textContent || '').trim() : '',
+                 칸: rt ? (rt.getAttribute('data-sum') || '') : '' };
+      }) : [];
     const now = document.querySelector('.hm-now');
-    return { no: 0, lx: Math.round(rl.left), rx: Math.round(rr.left),
+    return { 접이, no: 0, lx: Math.round(rl.left), rx: Math.round(rr.left),
              ly: Math.round(rl.top), ry: Math.round(rr.top),
              kb: y(document.getElementById('hmKbHost')),
              td: y(document.getElementById('hmToday')),
              nowEnd: now ? y(now) + hh(now) : -1,
+             /* ★ 판 X199 — 카드 밑에 <b>세 칸 · 📄 한 줄</b>이 들어왔습니다.
+                곁칸은 그 다음이므로 📄 끝에서 잽니다 (아래 쪽지).        */
+             /* ★ 판 X217 — 맨 위 묶음 <b>끝</b>은 이제 📆 이번 주입니다 */
+             pdfEnd: (() => { const e = document.getElementById('hmWkHost')
+                           || document.querySelector('.hm-pdf');
+                return e ? y(e) + hh(e) : -1; })(),
+             사이: (() => { const t = document.querySelector('.tz'); if (!t) return [];
+                const L = [].slice.call(t.children), a = L.indexOf(document.getElementById('hmJobHost')),
+                      b2 = L.indexOf(document.getElementById('hmSideUp'));
+                return (a < 0 || b2 < 0) ? [] : L.slice(a + 1, b2)
+                  .map(c => (c.id || (c.className || '').split(' ')[0] || c.tagName)); })(),
              넷: 넷, 위칸: !!up, 오른빔: !!(R.textContent || '').trim() === false,
              오른글: (R.textContent || '').trim().length,
              rt: document.querySelectorAll('#hmRtHost').length,
@@ -416,11 +452,57 @@ const SEED = () => {
      ((one.위칸 && one.넷.length >= 4) ? '' : ' ← 자리를 못 찾았거나 비었습니다'));
   is(!one.no && one.머리 >= 3,
      '  ★ 머리글(.hm-rt-h)이 <b>' + one.머리 + '개</b> 선다 — 목각 차례 그대로');
+  /* ── 🧷 ★★ <b>접고도 수가 보이나</b> (판 X223) ────────────────────────
+     사장님 말씀 「지금 할것이 너무 많은 자리를 차지하고 있어」 → 고르신
+     「① 곁칸 셋을 접기」. 접기의 <b>값어치가 여기 있습니다</b> — 접어 두고도
+     「연속 1일」·「마디 3건」·「남은 1번」 이 머리에 적혀야 <b>펴지 않고</b>
+     오늘을 압니다. 비면 사장님은 세 번 눌러야 하고, 그러면 접은 것이
+     <b>감춘 것</b>이 됩니다 (1번).
+     ★ 수는 그 칸이 제 머리에 달아 둔 <b>data-sum</b> 에서 옵니다 — 여기서
+       다시 세지 않습니다 (5번). 머리와 칸이 갈리면 그 자리에서 빨간불.
+     ★ 묻는 자리를 <b>여기 하나</b>로 둡니다 — 칸마다 제 자가 물으면 자마다
+       씨가 달라 어떤 자는 자료가 들어오기 전에 읽습니다(실제로 그랬습니다).
+     ⚠ 수를 못 센 칸은 <b>빈 글이 맞습니다</b>(1번) — 그래서 「다 차 있다」 가
+       아니라 「머리와 칸이 같다」 와 「적어도 둘은 수를 적는다」 를 봅니다. */
+  const 접 = one.접이 || [];
+  is(접.length >= 3, '  ★★ 곁칸 셋이 <b>접힌 채로</b> 선다 — 접이 ' + 접.length + '개'
+     + (접.length >= 3 ? '' : ' ← 접기가 사라졌습니다'));
+  is(접.length > 0 && 접.every(x => x.머리 === x.칸),
+     '  ★★ 접힌 머리의 수가 <b>그 칸이 센 수</b>와 같다 — '
+     + (접.map(x => '「' + (x.머리 || '빈 글') + '」').join(' · ') || '없음'));
+  is(접.filter(x => x.머리).length >= 2,
+     '  ★★ 적어도 <b>둘</b>은 접힌 채로 수를 적는다 — ' + 접.filter(x => x.머리).length + '개');
   /* ★ <b>기준선</b> — 첫 칸이 「지금 할 것」 이 끝나는 자리에서 <b>120px 안</b>.
      전에는 3,000 이었고 실제로 y2,612 였습니다. 이제 바로 붙어 섭니다.    */
-  is(!one.no && 첫넷 > 0 && one.nowEnd > 0 && 첫넷 >= one.nowEnd - 8 && 첫넷 <= one.nowEnd + 120,
-     '  ★★ 첫 칸이 <b>「지금 할 것」 바로 아래</b>다 — 지금 할 것 끝 y' + one.nowEnd +
+  /* ★★ <b>2026-10-26 (판 X199) — 재는 자리를 옮기고 묻는 것을 늘렸습니다.</b>
+     사장님 말씀 「ⓒ로 해줘」 로 카드가 맨 위로 올라오면서, 카드와 곁칸 사이에
+     <b>세 칸(➕ 고객 추가)과 📄 한 줄</b>이 들어왔습니다 — 둘 다 사장님이
+     시키신 것이라 치울 것이 아닙니다(판 X194 · 6번).
+     ★ 그래서 <b>틈 120px 은 그대로 두고</b> 재는 자리를 <b>📄 끝</b>으로
+       옮깁니다 — 「맨 위 묶음 바로 아래」 가 이제 그 뜻입니다.
+     ★ 그리고 <b>사이에 무엇이 섰는지까지</b> 봅니다 — 전에는 px 만 재어
+       <b>무엇이 끼어들었는지</b> 못 가렸습니다. 이제 둘(세 칸 · 📄)이
+       아니면 그 자리에서 빨간불입니다. <b>느슨해진 데가 없습니다</b> (8번). */
+  is(!one.no && 첫넷 > 0 && one.pdfEnd > 0 && 첫넷 >= one.pdfEnd - 8 && 첫넷 <= one.pdfEnd + 120,
+     '  ★★ 첫 칸이 <b>맨 위 묶음 바로 아래</b>다 — 📆 이번 주 끝 y' + one.pdfEnd +
      ' · 첫 칸 y' + 첫넷 + ' (틈 120px 안 · 2026-10-06 사장님 「끌어올려」)');
+  /* ══ 2026-10-26 (판 X217) · <b>사장님이 맨 위 묶음을 넷으로 늘리셨습니다</b> ══
+     말씀 — 「오늘 약속 <b>캘린더 이번주</b> / 오늘어디로가시나 / 이번달 고객관리
+     이거 칸도 <b>다 맨 위로</b> 올려야지」. 그래서 카드 밑에 선 것이 둘에서
+     <b>넷</b>이 되었습니다 — 세 칸 · 📄 한 줄 · 📅 오늘 약속 · 📆 이번 주.
+     ★ <b>자를 지우지 않습니다. 묻는 것을 옮깁니다</b> — 재는 자리를 📄 끝에서
+       <b>📆 이번 주 끝</b>으로 옮기고, 틈 120px 은 <b>그대로</b> 둡니다.
+     ★ <b>사이에 무엇이 섰는지</b>는 계속 봅니다 — 넷 말고 다른 것이 끼면
+       그 자리에서 빨간불입니다. 느슨해진 데가 없습니다 (8번).          */
+  /* ⚠ 📅 약속과 📆 이번 주는 <b>한 자리(#hmUpHost)</b> 안에 함께 섭니다 —
+     폰이냐 컴퓨터냐로 자리가 갈리므로 hmSidePlace 가 그 칸만 채웁니다 (5번). */
+  var 와야 = ['hm-two', 'hm-pdf', 'hmUpHost'];
+  var 선것 = (one.사이 || []).join(',');
+  is(!one.no && (one.사이 || []).length === 와야.length &&
+     와야.every(function (k) { return 선것.indexOf(k) >= 0; }),
+     '  ★ 카드와 곁칸 <b>사이에 선 것이 셋뿐</b>이다 — ' +
+     ((one.사이 || []).join(' · ') || '(못 셌습니다)') +
+     ' (판 X217 · 세 칸 · 📄 · 📅 약속+📆 이번 주 한 자리)');
   /* ★★ <b>두 자리에 같이 세우지 않는다</b> — id 가 겹치면 앞엣것이 빈 칸이다 */
   is(!one.no && one.오른글 === 0,
      '  ★★ 폰에서 <b>오른쪽 기둥은 비어 있다</b> — 글자 ' + one.오른글 + '자' +

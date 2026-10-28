@@ -96,7 +96,11 @@ function twins() {
     CUS.calls = [{ db_id: 'd1', call_at: '2026-09-05T02:00:00Z', result: '상담',
                    memo: '보장분석 약속', appointment_at: '2026-09-12T05:00:00Z' }];
     CUS.docN = 2; CUS.repN = null;
-    const html = cusAppCardHtml(OSC.current);
+    /* 판 X161 — 고객 창의 한눈에 카드는 머리 + 한눈에만 섭니다(겹침 걷기 · 2026-10-23
+       「고객창에서 중복된 부분 줄이고」). 여기서 재는 것은 <b>카드 그리는 자 전부</b>
+       (DB 통합 CRM 이 그대로 쓰는 모양)라 only 없이 그립니다. 앱에서 그 여섯 칸은
+       제 탭에 섭니다 — check-cusglance [5] · check-cuswin [10] 이 잽니다. */
+    const html = cusCardHtml(cusAppView(OSC.current));
     const detail = osClientDetailHtml(OSC.current);
     const log = cusLog(CUS.calls, CM.meta.k1.touch);
     return { html, detail, log, fams: cusFamRowsHtml('k1') };
@@ -129,13 +133,17 @@ function twins() {
 
   console.log('\n[3] 실명을 적어 두면 그 기기에서만 실명으로');
   const B = await page.evaluate(() => {
+    /* ★ 새 판 (2026-10-23 「중복 되는 부분들을 하나로」) — 이름은 창 <b>머리 한 곳</b>(oscTopHtml)에 섭니다.
+       앱의 카드는 머리를 안 세웁니다(v.noHead) — 같은 이름이 한 화면에 두 번 서지 않게. */
     cmRealSet('k1', '홍길동');
-    const html = cusAppCardHtml(OSC.current);
+    const top = oscTopHtml(OSC.current);
+    const card = cusAppCardHtml(OSC.current);
     cmRealSet('k1', '');
-    return html;
+    return { top: top, card: card };
   });
-  is(/홍길동<\/div>|홍길동\s*<span/.test(B) || /홍길동/.test(B), '실명이 있으면 실명으로 부른다');
-  is(/실명 · 이 기기에만/.test(B), '그것이 이 기기에만 있는 이름이라고 적는다');
+  is(/홍길동/.test(B.top), '실명이 있으면 실명으로 부른다 — 창 머리에서');
+  is(/실명 · 이 기기/.test(B.top), '그것이 이 기기에만 있는 이름이라고 적는다');
+  is(!/cus-hd/.test(B.card) && !/홍길동/.test(B.card), '앱 카드는 이름을 <b>또 안 세운다</b> — 머리 한 곳 (CRM 카드는 그대로 아래 [4])');
 
   /* ── ③ DB 통합 CRM 쪽 — 같은 카드인가 ────────────────────────── */
   console.log('\n[4] DB 통합 CRM — 같은 카드가 열리나');

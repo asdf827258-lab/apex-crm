@@ -93,8 +93,8 @@ const SEED = () => {
   const ago = n => new Date(Date.now()-n*864e5).toISOString().slice(0,10);
   OSC.loaded=true; OSC.busy=false; OSC.err='';
   /* ★ 단계를 <b>AP</b> 로 둡니다 — apex-stage 표에 <b>판단(q)</b> 이 있는
-     단계라 🧭 칸이 무엇을 세우는지 볼 수 있습니다. 보낼 말은 AP 에 표가
-     없어 안 섭니다(그것도 [7] 에서 봅니다 · 1번).                        */
+     단계라 🧭 칸이 무엇을 세우는지 볼 수 있습니다. 보낼 말은 판 X183 부터
+     AP 에도 표(상황별 터치)가 있어 <b>그 표대로</b> 섭니다([7] 에서 봅니다 · 1번).                        */
   OSC.list=[{id:'c1',name:'홍길동',name_masked:'홍○○',advisor_id:'me',stage:'AP',created_at:ago(60)},
             {id:'c2',name:'홍길순',name_masked:'홍○○',advisor_id:'me',stage:'AP',created_at:ago(30)}];
   AR.loaded=true; AR.busy=''; AR.cliRows=[]; AR.db=[];
@@ -135,7 +135,7 @@ const LOOK = () => {
     /* 접힌 「📂 예전 자료」 안은 따로 센다 — 눈에 안 보입니다 */
     if (box.closest('#oscOld')) { if (fold.indexOf(t) < 0) fold.push(t); return; }
     /* ★ 팩트파인딩은 사장님이 빼라고 하셨습니다 — 면제 */
-    if (/팩트파인딩/.test(box.innerText || '')) { if (면제.indexOf(t) < 0) 면제.push(t); return; }
+    if (/팩트파인딩/.test(box.textContent || '')) { if (면제.indexOf(t) < 0) 면제.push(t); return; }   /* 판 X161 · 탭에 감춰져도 */
     if (old.indexOf(t) < 0) old.push(t);
   });
   [].slice.call(host.querySelectorAll('.t-card')).forEach(x => {
@@ -150,7 +150,9 @@ const LOOK = () => {
     const m = (x.getAttribute('onclick') || '').match(/([A-Za-z_$][\w$]*)\s*\(/);
     if (m && fns.indexOf(m[1]) < 0) fns.push(m[1]); });
   return { old: old, fold: fold, skin: skin, 면제: 면제, ids: ids, fns: fns,
-           팩트있나: /팩트파인딩/.test(host.innerText || ''), 높이: host.scrollHeight };
+           /* 판 X161 — 칸이 고객 창의 탭에 나뉘어 섭니다. 감춰진 탭의 칸도 <b>있는</b> 것이라
+              innerText(보이는 글) 대신 textContent(있는 글)로 잽니다 */
+           팩트있나: /팩트파인딩/.test(host.textContent || ''), 높이: host.scrollHeight };
 };
 
 (async () => {
@@ -205,19 +207,25 @@ const LOOK = () => {
     const host = document.getElementById('cmPanels');
     const lab = [].slice.call((host || document).querySelectorAll('.t-lab'))
                   .map(x => x.textContent.replace(/\s+/g, ' ').trim());
-    return { lab: lab, t: (host ? host.innerText : '').replace(/\s+/g, ' ') };
+    return { lab: lab, t: (host ? host.textContent : '').replace(/\s+/g, ' ') };   /* 판 X161 — 탭에 감춰져도 있는 글 */
   });
   ['🧭 지금 이 자리에서', '📝 적어 두기'].forEach(w => {
     is(V.lab.some(x => x.indexOf(w) >= 0), '  ' + w + ' 칸이 선다');
   });
   is(/AP/.test(V.t) && /판단/.test(V.t),
      '  🧭 칸이 <b>지금 단계(AP)</b> 를 말하고 판단을 세운다');
-  /* ★★ 💬 보낼 말 — <b>표에 있는 단계에만</b> 섭니다. apex-stage 의 말 표에는
-     미접촉·TA·부재·거절·기고객·입원 만 있습니다. AP 에는 <b>없습니다</b> —
-     그러니 AP 에서 보낼 말이 서면 그것은 <b>지어낸 말</b>입니다 (1번).
+  /* ★★ 💬 보낼 말 — <b>표에 있는 단계에만</b> 섭니다 (1번). 판 X183 부터 AP 에도 표가 있습니다 —
+     apex-stage 의 상황별 터치(TOUCH · TA→CS). 그래서 AP 에서 서는 보낼 말은 <b>그 표의 글</b>이어야
+     하고, 표 밖의 글(지어낸 말)이 서면 안 됩니다. 글이 표에서 왔는지는 check-touch 가 낱낱이 봅니다.
      단계를 TA 로 바꿔 <b>있을 때는 서는지</b>도 같이 봅니다.              */
-  is(!V.lab.some(x => x.indexOf('💬 보낼 말') >= 0),
-     '  ★ AP 에서는 💬 보낼 말이 <b>안 선다</b> — 표에 없는 말을 지어내지 않습니다 (1번)');
+  const AP_TC = await p.evaluate(() => {
+    const host = document.getElementById('cmPanels');
+    const L = (typeof APEX_STAGE !== 'undefined' && APEX_STAGE.touchOf) ? APEX_STAGE.touchOf('AP') : [];
+    const ks = [].slice.call((host || document).querySelectorAll('.cus-tc-s:not(.cus-ap)')).map(e => e.getAttribute('data-k'));
+    return { want: L.map(x => x.k).join(','), got: ks.join(',') };
+  });
+  is(V.lab.some(x => x.indexOf('💬 보낼 말') >= 0) && AP_TC.want && AP_TC.got === AP_TC.want,
+     '  ★ AP 에서는 💬 보낼 말이 <b>표(TOUCH)의 상황 그대로</b> 선다 — ' + (AP_TC.got || '없음') + ' (표: ' + (AP_TC.want || '없음') + ')');
   const SAY = await p.evaluate(async () => {
     cmCliOf('c1').stage = 'TA';
     if (typeof CUS !== 'undefined' && CUS.db) CUS.db.stage = 'TA';
@@ -255,7 +263,12 @@ const LOOK = () => {
     const w = WROTE.filter(x => x.tb === 'saved_reports');
     const body = w.length ? ((w[w.length - 1].body || {}).content || {}) : {};
     return { 번: w.length, care: body.care || '', worry: body.worry || '',
-             next: (body.next && body.next.what) || '',
+             /* ★ 판 X122 — 다음 할 일은 <b>쌓입니다</b>(body.nx 배열).
+                옛 body.next 한 칸을 보던 자리를 그대로 옮깁니다 — 무르게 한 것이
+                아니라 재는 대상이 한 칸에서 목록으로 바뀐 것입니다 (5번).
+                ★ 옛 칸도 같이 봅니다 — 아직 안 옮겨진 분이 있습니다 (1번). */
+             next: ((body.nx || []).map(x => (x && x.what) || '').join(' / ')
+                    || (body.next && body.next.what) || ''),
              touch: ((body.touch || [])[0] || {}).note || '',
              칸: (document.getElementById('cmCare') || {}).value || '' };
   });

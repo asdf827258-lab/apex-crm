@@ -403,7 +403,11 @@ window.supabase={createClient:function(){
     return {
       cats: Array.prototype.map.call(document.querySelectorAll('#arPane .ar-cat .m b'), e => e.textContent.trim()),
       tbl: document.querySelectorAll('#arPane .cc-team').length,
-      heads: Array.prototype.map.call(document.querySelectorAll('#arPane .cc-team thead th'), e => e.textContent.trim()),
+      /* ⚠ 판 X155 — 「👑 VIP 넘음」 의 앞머리 이모지는 선 그림으로 갈리고
+         원래 글자는 data-emo 에 남습니다. 둘을 합친 글이 사람이 보는 칸
+         이름입니다 — 글자만 읽으면 못 박아 둔 이름이 안 맞습니다 (8번). */
+      heads: Array.prototype.map.call(document.querySelectorAll('#arPane .cc-team thead th'),
+        e => ((e.getAttribute('data-emo') || '') + ' ' + (e.textContent || '')).replace(/\s+/g, ' ').trim()),
       body: p ? p.textContent : ''
     };
   });
@@ -418,8 +422,18 @@ window.supabase={createClient:function(){
   ok(r.cats.indexOf('30일 고객관리') < 0,
      'TFA 왼쪽에서 <b>30일 고객관리가 빠졌다</b> — 평가는 홈 아침 미션으로 갔다');
   ok(r.tbl === 1, '<b>지운 것이 아니다</b> — 불러서 열면 팀원별 표가 그대로 그려진다');
-  ok(r.heads.join('|') === '팀원|고객|30일 넘음|👑 VIP|한 번도 없음|이번 달 연락|달성률',
-    '표 머리 일곱 칸 — ' + r.heads.join(' · '));
+  /* ── 2026-10-19 · 판 X132 <b>칸이 일곱에서 아홉으로</b> ──────────────
+     사장님 말씀 「이번달 고객관리 [디테일하게 더 전문적으로 만들고]」.
+     보탠 둘 — <b>이번 달 몇 번</b>(횟수와 갈래) · <b>지난달 대비</b>.
+     그리고 이름 둘을 고쳤습니다 —
+       「이번 달 연락」 → <b>이번 달 연락한 분</b> (사람 수인 것을 밝힘.
+         바로 옆이 횟수라, 둘을 가르지 않으면 같은 것으로 읽힙니다)
+       「👑 VIP」     → <b>👑 VIP 넘음</b> (주기가 14일로 달라 넘긴 수를
+         따로 세웁니다. 여태 30일 칸 안에 괄호로 묻혀 있었습니다)
+     ★ <b>글자까지 못 박은 채로 둡니다</b> — 수만 세면 칸을 슬쩍 바꿔도
+       지나갑니다. 칸을 고치는 쪽이 여기도 같이 고쳐야 합니다 (8번).     */
+  ok(r.heads.join('|') === '팀원|고객|30일 넘음|👑 VIP 넘음|한 번도 없음|이번 달 연락한 분|이번 달 몇 번|지난달 대비|달성률',
+    '표 머리 아홉 칸 — ' + r.heads.join(' · '));
   ok(/지금 연락해야 할 분들/.test(r.body), '누가 밀렸는지 이름까지 같이 나온다');
   ok(/더 최근 것으로 셉니다/.test(r.body), '어떻게 셌는지 화면이 스스로 밝힌다');
 

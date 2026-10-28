@@ -66,8 +66,17 @@ const srv = http.createServer((rq, rs) => {
      주석에 적힌 id 까지 세어 헛수가 나온다 (8번) */
   const APP = await page.evaluate(() => {
     const out = {};
-    TABS.forEach(g => (g.items || []).forEach(x => { out[x.id] = { g: g.group, t: x.title }; }));
+    TABS.forEach(g => (g.items || []).forEach(x => { out[x.id] = { g: g.group, t: x.title, hide: !!x.hide }; }));
     return out;
+  });
+  /* 차례도 그대로 받아 둡니다 — 지도의 가지·잎이 <b>같은 차례</b>여야 하기 때문입니다 */
+  const APPORD = await page.evaluate(() => {
+    const gs = [], byg = {};
+    TABS.forEach(g => (g.items || []).forEach(x => {
+      if (gs.indexOf(g.group) < 0) { gs.push(g.group); byg[g.group] = []; }
+      byg[g.group].push(x.id);
+    }));
+    return { gs: gs, byg: byg };
   });
   const appIds = Object.keys(APP);
   const mapIds = Object.keys((DATA && DATA.menu) || {});
@@ -82,6 +91,122 @@ const srv = http.createServer((rq, rs) => {
   /* 이름이 비어 있으면 지도에서 <b>빈 칸</b>으로 보인다 */
   const blank = mapIds.filter(x => !((DATA.menu[x] || {}).n || '').trim());
   is(blank.length === 0, '지도의 칸마다 <b>이름이 있다</b>' + (blank.length ? ' ← ' + blank.join(', ') : ''));
+
+  sec('[1-b] 지도가 <b>지금 도구 그대로</b>인가 (판 X144 · 사장님 말씀 2026-10-21)');
+  /* ★★ 여태 [1] 은 <b>id 묶음만</b> 견주었습니다. 그래서 106개가 다 있는데도
+     ⓐ 화면 <b>열두</b> 개의 「어느 칸」 이 틀렸고(앱은 「조직 관리」 인데 지도는
+        「메뉴에서 뺐지만 열리는 곳」), 자비스가 <b>없는 칸</b>으로 안내했습니다.
+     ⓑ 🧰 연장 가지가 <b>14칸</b>에 멈춰 있어 「건의함」·「성장·교육」 두 칸이
+        아예 없고, 「조직 관리」 는 8개 중 <b>3개</b>만 들고 있었습니다.
+     ⓒ 가지 밑에 「14칸 78개」 라고 <b>박아</b> 두어 거짓말이 됐습니다.
+     사장님 말씀 「apex 전체지도 지금 도구에 있는 내용으로 재구성해서 짜주고」
+     가 바로 이 자리입니다. 재구성은 한 번이면 되지만, 다음에 또 어긋나지
+     않게 하는 것은 이 자뿐입니다 (8번).                                   */
+  const mg = appIds.filter(x => ((DATA.menu[x] || {}).g || '').trim() !== APP[x].g.trim());
+  is(mg.length === 0,
+     '화면마다 <b>어느 칸인지</b>가 앱의 ☰ 서랍 갈래와 같다 — 다른 것 ' + mg.length + '개' +
+     (mg.length ? (' ← ' + mg.slice(0, 6).map(x => x + '(앱 ' + APP[x].g + ' / 지도 ' + DATA.menu[x].g + ')').join(', ')) : ''));
+  const mh = appIds.filter(x => !!(DATA.menu[x] || {}).hide !== APP[x].hide);
+  is(mh.length === 0,
+     '<b>메뉴에 안 보이는 화면</b>을 지도도 같이 안다 — 다른 것 ' + mh.length + '개' +
+     (mh.length ? (' ← ' + mh.slice(0, 8).join(', ')) : ' (지금 ' +
+       appIds.filter(x => APP[x].hide).length + '개)'));
+
+  /* 🧰 연장 가지 — 앱의 갈래·차례를 그대로 들고 있나 */
+  const lz = (DATA.left || []).filter(b => b.name === '연장')[0];
+  is(!!lz, '🧰 <b>연장</b> 가지가 있다');
+  const 벗김 = (t) => String(t || '').replace(/^[^가-힣A-Za-z0-9]+/, '').replace(/\s*🔓\s*$/, '').trim();
+  const 가지 = ((lz && lz.children) || []).map(c => 벗김(c.t));
+  /* 맨 끝 「메뉴에서 뺐지만 열리는 곳」 은 <b>지름길 칸</b>이라 갈래로 안 셉니다 */
+  const 지름길 = 가지.length && /메뉴에서 뺐지만/.test(가지[가지.length - 1]);
+  const 갈래 = 지름길 ? 가지.slice(0, -1) : 가지;
+  is(갈래.join('|') === APPORD.gs.join('|'),
+     '연장의 칸이 앱의 갈래와 <b>이름도 차례도</b> 같다 — ' + 갈래.length + '칸' +
+     (갈래.join('|') === APPORD.gs.join('|') ? '' :
+       ('\n      ✗ 지도: ' + 갈래.join(' · ') + '\n      ✗ 앱  : ' + APPORD.gs.join(' · '))));
+  let 잎틀림 = [];
+  갈래.forEach((g, n) => {
+    const got = ((lz.children[n] || {}).leaves || []).map(l => l.id).filter(Boolean);
+    const want = APPORD.byg[g] || [];
+    if (got.join('|') !== want.join('|')) 잎틀림.push(g + ' (지도 ' + got.length + ' / 앱 ' + want.length + ')');
+  });
+  is(잎틀림.length === 0,
+     '칸마다 <b>그 갈래의 화면 전부</b>가 앱 차례로 들어 있다 — 어긋난 칸 ' + 잎틀림.length +
+     (잎틀림.length ? (' ← ' + 잎틀림.join(', ')) : ''));
+  const 숨김앱 = appIds.filter(x => APP[x].hide);
+  const 숨김지도 = 지름길 ? ((lz.children[lz.children.length - 1].leaves || []).map(l => l.id)) : [];
+  is(지름길 && 숨김지도.slice().sort().join('|') === 숨김앱.slice().sort().join('|'),
+     '맨 끝 🔓 칸이 <b>메뉴에 안 보이는 화면만</b> 들고 있다 — 지도 ' + 숨김지도.length +
+     ' · 앱 ' + 숨김앱.length);
+  /* ⓒ 박아 둔 개수 — 세어 말하게 두었나 */
+  is(!lz || (!lz.hint && lz.count === true),
+     '가지 밑 한 줄의 개수를 <b>박아 두지 않았다</b> (5번) — 그리는 자가 센다' +
+     (lz && lz.hint ? (' ← 「' + lz.hint + '」 가 적혀 있습니다') : ''));
+  /* ★ 그리고 <b>실제로 그려진 글</b>이 센 수를 말하나 — count:true 만 보면
+     그리는 자가 그것을 안 읽어도 초록입니다 (안 울리는 알람 · 8번).
+     그래서 지도 쪽을 <b>한 번 더 열어</b> 머리줄 글을 읽습니다.          */
+  const mp = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  mp.on('pageerror', e => errs.push('지도: ' + String(e).slice(0, 120)));
+  await mp.goto(B + 'apex-map.html', { waitUntil: 'domcontentloaded' });
+  await mp.waitForTimeout(1500);
+  const MH = await mp.evaluate(() => {
+    const h = [].slice.call(document.querySelectorAll('.head'))
+      .filter(x => /연장/.test((x.querySelector('.nm') || {}).textContent || ''))[0];
+    return { hint: h ? ((h.querySelector('.hint') || {}).textContent || '') : '(연장 머리를 못 찾음)',
+             cards: document.querySelectorAll('.card').length };
+  });
+  const 센칸 = (MH.hint.match(/(\d+)칸/) || [])[1], 센개 = (MH.hint.match(/(\d+)개/) || [])[1];
+  is(String(센칸) === String(((lz && lz.children) || []).length) && String(센개) === String(appIds.length),
+     '그려진 한 줄이 <b>센 수</b>를 말한다 — 「' + MH.hint.replace(/\s+/g, ' ').trim() + '」' +
+     ' (가지 ' + ((lz && lz.children) || []).length + ' · 화면 ' + appIds.length + ')');
+  is(/메뉴에 안 보입니다/.test(MH.hint),
+     '그 줄이 <b>메뉴에 안 보이는 것이 몇인지</b>도 말한다 (1번 — 숨긴 것을 숨기지 않습니다)');
+
+  sec('[1-c] <b>자비스</b>가 길을 바로 알려 주나 (판 X144 · 사장님 말씀 「자비스도 업그레이드」)');
+  /* ★★ 자비스는 <b>키가 없어도</b> 답합니다(지도에 담긴 것만 아는 상태). 사장님이
+     제일 많이 만나시는 것이 그 상태라, 여기를 잽니다 — AI 를 부르지 않습니다.
+     ★ 여태 「왼쪽 『연장』 가지의 X 칸에 있습니다」 라고만 했습니다. 사장님이
+       찾으시는 곳은 <b>앱의 ☰ 서랍</b>이고, 지도의 X 가 틀려 있었으니
+       <b>없는 칸</b>으로 안내한 셈입니다 (위 [1-b]).
+     ★★ 그리고 메뉴에 <b>안 보이는 화면 여덟</b>은 그렇다고 말해야 합니다 —
+       안 말하면 「서랍 조직 관리에서 여세요」 하고 사장님은 거기서 못 찾으십니다 (1번). */
+  const J = await mp.evaluate(() => {
+    const vis = offline('고객 365일 어떻게 써?');
+    const hid = offline('실행 체크판 어떻게 써?');
+    const sit = offline('상담은 했는데 계약이 안 돼요');
+    const ids = {}; Object.keys(MENU).forEach(k => ids[k] = 1);
+    const 가리킨것 = [].concat(vis.steps || [], hid.steps || [], sit.steps || []).map(x => x.id);
+    return { vis: vis.answer || '', hid: hid.answer || '', sitN: (sit.steps || []).length,
+             밖: 가리킨것.filter(x => !ids[x]),
+             visG: (MENU['clients'] || {}).g || '', hidG: (MENU['ckboard'] || {}).g || '',
+             shortLock: /🔓/.test(sysPromptShort()),
+             longHid: /메뉴에 안 보이는 화면/.test(sysPrompt()),
+             pick: [].slice.call(document.querySelectorAll('#kModel option')).map(o => o.value),
+             first: (document.querySelector('#kModel option') || {}).value || '',
+             now: getModel() };
+  });
+  is(J.vis.indexOf('☰ 서랍') >= 0 && J.vis.indexOf(J.visG) >= 0,
+     '보이는 화면을 물으면 <b>☰ 서랍의 그 갈래</b>를 말한다 — 「' +
+     J.vis.split('\n')[1] + '」');
+  is(J.hid.indexOf('안 보이는 화면') >= 0 && J.hid.indexOf('찾기') >= 0,
+     '메뉴에 없는 화면은 <b>없다고 말하고 여는 길</b>을 준다 (1번·6번) — 「' +
+     J.hid.split('\n')[1].slice(0, 56) + '…」');
+  is(!/<\/?[a-zA-Z]/.test(J.vis + J.hid),
+     '그 글에 <b>꺾쇠가 안 섞인다</b> — addJ 가 esc 를 지나므로 글자 그대로 찍힙니다');
+  is(J.밖.length === 0,
+     '자비스가 가리키는 화면은 <b>모두 있는 화면</b>이다 (1번) — 없는 것 ' + J.밖.length +
+     (J.밖.length ? (' ← ' + J.밖.join(', ')) : ''));
+  is(J.sitN >= 3, '상황을 적으면 <b>순서를 짜 준다</b> — 걸음 ' + J.sitN + '개');
+  is(J.shortLock && J.longHid,
+     'AI 에게 보내는 사전도 <b>메뉴에 안 보이는 화면</b>을 알려 준다 — 짧은 판 ' +
+     (J.shortLock ? '○' : '✗') + ' · 긴 판 ' + (J.longHid ? '○' : '✗'));
+  /* ★ 고르는 칸의 맨 위(추천)와 <b>처음값이 같아야</b> 합니다 — 다르면 칸은
+     5.5 를 권하는데 실제로는 다른 머리가 돌아갑니다 (5번).                */
+  is(J.pick.length >= 3 && J.first === J.now,
+     '머리 고르는 칸의 <b>맨 위와 처음값이 같다</b> — ' + J.first + ' / ' + J.now +
+     ' (고를 수 있는 것 ' + J.pick.length + '가지)');
+
+  await mp.close();
 
   sec('[2] 가이드가 「메뉴가 어디 있는지」를 지금 화면대로 말한다');
   const G = await page.evaluate(() => {

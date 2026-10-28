@@ -101,6 +101,10 @@ const ai = http.createServer((req, res) => {
   await page.click('#tbWho'); await page.waitForTimeout(280);
   const n = await page.locator('.mrow').count();
   ok(n >= 5, '팀원이 줄로 선다 (' + n + '명)');
+  /* ★ 판 X124 — 이름이 바뀌어도 자가 안 울게, <b>화면에 선 첫 이름</b>을
+     여기서 손에 들어 둡니다. 누른 뒤에는 줄이 다시 그려져 못 읽습니다. */
+  const 첫이름 = ((await page.locator('.mrow').first().innerText()) || '')
+    .replace(/\s+/g, ' ').trim().split(' ')[0];
   ok(await page.locator('.det').count() === 0, '처음에는 접혀 있다');
   await page.click('.mrow'); await page.waitForTimeout(240);
   const det = await page.locator('.det').innerText();
@@ -111,7 +115,11 @@ const ai = http.createServer((req, res) => {
   await page.click('.sec .mini'); await page.waitForTimeout(240);   /* 열어 보기 */
   const dg = await page.locator('.all p').innerText();
   ok(/\[사람별\]/.test(dg), '무엇을 보내는지 리더가 직접 열어 볼 수 있다');
-  ok(/김민수/.test(dg), '팀원 이름과 숫자는 나간다');
+  /* ★ 판 X124 — 견본 이름이 「홍길순」 에서 가짜 이름 식구로 바뀌었습니다.
+     글자를 박아 두면 이름을 또 바꿀 때 자가 웁니다 — <b>화면에 선 첫 팀원
+     이름</b>이 그대로 나가는지로 봅니다 (뜻은 그대로). */
+  ok(첫이름 && dg.indexOf(첫이름) >= 0,
+     '팀원 이름과 숫자는 나간다 — 화면 첫 줄 「' + 첫이름 + '」 이 그대로');
   ok(!/010-|고객|메모/.test(dg), '고객 이름·전화번호·통화 메모는 나가지 않는다');
 
   console.log('\nAI 가 쓰고, 사람이 보낸다');
@@ -144,8 +152,8 @@ const ai = http.createServer((req, res) => {
     __me: 'lead-1',
     profiles: [
       { id: 'lead-1', name: '윤시현', role: 'member', active: true },
-      { id: 'm1', name: '김민수', role: 'member', active: true },
-      { id: 'm2', name: '박서준', role: 'member', active: true }
+      { id: 'm1', name: '홍길순', role: 'member', active: true },
+      { id: 'm2', name: '변학도', role: 'member', active: true }
     ],
     teams: [{ id: 't1', name: '온탑 1팀', leader_id: 'lead-1' }],
     team_members: [{ team_id: 't1', member_id: 'm1' }, { team_id: 't1', member_id: 'm2' }],

@@ -128,8 +128,12 @@ const look = () => ({
              blocky: kids.filter(function (k) { return k.disp === 'block'; }).map(function (k) { return k.c; }) };
   }),
   /* 쓴 이름 */
+  /* ⚠ e.className 이 아니라 <b>getAttribute('class')</b> 로 읽억니다 — svg 요소의
+     className 은 글자가 아니고 SVGAnimatedString 객스라, 이어 붙이면
+     「nimated」·「tring」 같은 <b>없는 이름</b>이 생깁니다. 선 그림으로 갈아
+     주고 나서(판 X155) svg 가 줄 속에 서기 시작해 이 자가 울었습니다 (8번). */
   cls: Array.prototype.map.call(document.querySelectorAll('#oscList .t-row, #oscList .t-row *'),
-    function (e) { return e.className || ''; }).join(' ')
+    function (e) { return e.getAttribute('class') || ''; }).join(' ')
 });
 
 (async () => {
@@ -227,7 +231,10 @@ const look = () => ({
      고치고, <b>늘린 규칙이 토큰만 쓰는지</b> 를 아래에서 따로 봅니다.   */
   console.log('\n[6] <b>쓴 이름이 다 정의돼 있나</b> · 늘린 규칙이 토큰만 쓰나 · [7] 누르는 것 44px');
   const used = [...new Set((a.cls.match(/[a-z][a-z0-9-]*/g) || []))];
-  const miss = used.filter(c => UICSS.indexOf('.' + c) < 0 && SRC.indexOf('.' + c) < 0);
+  /* 선 그림 이름표(.ico-l)는 app/apex-icon.js 에서 정해집니다 — 거기도 봅니다 */
+  const ICOJS = fs.readFileSync(path.join(ROOT, 'app/apex-icon.js'), 'utf8');
+  const miss = used.filter(c => UICSS.indexOf('.' + c) < 0 && SRC.indexOf('.' + c) < 0
+                                                           && ICOJS.indexOf('.' + c) < 0);
   is(miss.length === 0, '  줄에 쓴 이름 ' + used.length + '개가 <b>다 정의된 것</b>이다 — 이름을 지어내지 않았다' +
      (miss.length ? (' ← 없는 것 ' + miss.join(' · ')) : ''));
   const avn = /\.t-row \.av\.n\{([^}]*)\}/.exec(UICSS);

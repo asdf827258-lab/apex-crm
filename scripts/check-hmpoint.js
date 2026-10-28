@@ -143,9 +143,13 @@ const SEED = () => {
   sec('[1] 🚗 묶이는 동네 — 진짜 수인가');
   const R = await pg.evaluate(() => {
     const t = hmRtRgTop(2), all = hmRtRgTop(99);
-    const el = document.querySelector('#dynPane .hm-rt .hm-rt-none')   /* ⚠ .hm-rt-none 은 여러 카드가 빌려 쓰는 옷 이름이라 동선 카드 안으로 좁힌다 */;
+    /* ⚠ .hm-rt-none 은 여러 카드가 빌려 쓰는 옷 이름이라 동선 카드 안으로 좁힌다.
+       판 X142 — 이 줄은 <b>접는 칸 안</b>으로 들어갔습니다(홈 4.2화면 선). 자리를
+       못 박지 않고 <b>카드 안 어디든</b> 찾습니다 — 어디 있느냐가 아니라
+       「그 말이 안 사라졌나」 가 이 자리의 물음입니다 (8번). */
+    const el = document.querySelector('#dynPane .hm-rt .hm-rt-none');
     return { top: t, all: all, html: el ? el.innerHTML : '',
-             txt: el ? el.innerText.replace(/\s+/g, ' ').trim() : '(줄이 없다)',
+             txt: el ? (el.innerText||el.textContent||'').replace(/\s+/g, ' ').trim() : '(줄이 없다)',
              h: el ? Math.round(el.getBoundingClientRect().height) : 0 };
   });
   const t0 = R.top[0] || {}, t1 = R.top[1] || {};
@@ -170,7 +174,12 @@ const SEED = () => {
   const A1 = await pg.evaluate(() => {
     const el = document.querySelector('#dynPane .hm-act');
     return { t: el ? el.innerText.replace(/\s+/g, ' ') : '(없다)',
-             more: /🤝 더/.test(el ? el.innerText : ''),
+             /*  ⚠ 2026-10-22 (판 X155) — <b>앞머리 이모지가 선 그림이 됐습니다</b>
+     (사장님 말씀 「남은 이모지도 바꿔」). 글 앞의 이모지는 이제 <svg> 라
+     innerText·textContent 에 안 들어옵니다. <b>약속은 그대로</b>이므로
+     보는 자리만 <b>이름</b>으로 옮깁니다 (8번). 무엇이었는지는 data-emo 에
+     남아 있어, 꼭 가려야 할 때는 그것으로 봅니다. */
+             more: /더\s*\d/.test(el ? el.innerText : ''),
              act: (typeof hmActOf === 'function') ? hmActOf() : null };
   });
   is(!A1.act ? !A1.more : A1.more,
@@ -196,7 +205,8 @@ const SEED = () => {
     const o = hmPtOf((typeof hwhoFor === 'function') ? hwhoFor() : '');
     const el = document.querySelector('#dynPane .hm-act');
     const chip = [].slice.call((el||document).querySelectorAll('.t-chip'))
-      .filter(x => /🎯/.test(x.textContent))[0];
+      .filter(x => /접촉포인트|카톡 먼저|전화 먼저|🎯/.test(
+        (x.textContent||'') + ' ' + (x.getAttribute('aria-label')||'')))[0];
     return { o: o, t: chip ? chip.textContent.replace(/\s+/g, ' ') : '(칩이 없다)',
              lab: chip ? (chip.getAttribute('aria-label')||'') : '' };
   });
@@ -218,7 +228,8 @@ const SEED = () => {
        칠하는 자를 직접 불러 <b>지금 상태</b>를 읽습니다. */
     try { hmActPaint(); } catch (e) {}
     const c = [].slice.call(document.querySelectorAll('#dynPane .hm-act button, #dynPane .hm-act .t-chip'))
-      .filter(x => /🎯/.test(x.textContent))[0];
+      .filter(x => /접촉포인트|카톡 먼저|전화 먼저|🎯/.test(
+        (x.textContent||'') + ' ' + (x.getAttribute('aria-label')||'')))[0];
     return c ? (c.textContent + ' | ' + (c.getAttribute('aria-label')||'')).replace(/\s+/g, ' ') : '';
   });
   is(/생년을 적으면/.test(P0) && /출생년도/.test(P0),
@@ -232,9 +243,14 @@ const SEED = () => {
        칠하는 자를 직접 불러 <b>지금 상태</b>를 읽습니다. */
     try { hmActPaint(); } catch (e) {}
     const c = [].slice.call(document.querySelectorAll('#dynPane .hm-act button, #dynPane .hm-act .t-chip'))
-      .filter(x => /🎯/.test(x.textContent))[0];
+      .filter(x => /접촉포인트|카톡 먼저|전화 먼저|🎯/.test(
+        (x.textContent||'') + ' ' + (x.getAttribute('aria-label')||'')))[0];
     AR.loaded = true;
-    return c ? c.textContent : '';
+    /* ⚠ 판 X155 — 🎯 는 선 그림으로 갈려 textContent 에서 빠집니다. 글자만
+       돌려주면 토막이 <b>서 있어도</b> 아래 「🎯 가 없다」 가 통과해 버려,
+       낡지 않는 늘 초록인 줄이 됩니다. 무엇이었는지는 data-emo 에 남으니
+       그것까지 붙여 돌려줍니다 (8번). */
+    return c ? ((c.getAttribute('data-emo') || '') + ' ' + (c.textContent || '')) : '';
   });
   is(!/🎯/.test(PN), '아직 <b>못 읽었으면 토막이 아예 없다</b> (1번) — 「0분」 이 아니다');
 
@@ -246,12 +262,15 @@ const SEED = () => {
     const H = (sel) => { const e = document.querySelector(sel); return e ? Math.round(e.getBoundingClientRect().height) : 0; };
     const out = {};
     AR.cliRows = AR.cliRows.map(r => ({ ...r, by: (r.id === 'p1' || r.id === 'p2') ? 1990 : (r.id === 'p3' ? 1972 : (r.id === 'p4' ? 1958 : null)) }));
-    go('home'); out.sub넣음 = H('#dynPane .hm-act'); out.rt넣음 = H('#dynPane .hm-rt .hm-rt-none'); out.act넣음 = 0;
+    /* 판 X142 — 접는 칸 안으로 들어가 <b>접힌 동안은 0px</b> 입니다. 그래도
+       카드 <b>통째로</b> 잽니다 — 누가 다시 펴 두면 그 늘어난 px 가 여기서
+       그대로 드러납니다 (안 울리는 알람은 알람이 아닙니다 · 8번). */
+    go('home'); out.sub넣음 = H('#dynPane .hm-act'); out.rt넣음 = H('#dynPane .hm-rt'); out.act넣음 = 0;
     const 참말 = { pt: window.hmPtChip, rg: window.hmRtRgTxt, more: window.hmActMoreHtml };
     window.hmPtChip = function(){ return ''; }; window.hmActMoreHtml = function(){ return ''; };
     window.hmRtRgTxt = function(){ return '지역을 묶어 하루를 잡으시면 오가는 시간이 줄어듭니다.'; };
     
-    go('home'); out.sub뺌 = H('#dynPane .hm-act'); out.rt뺌 = H('#dynPane .hm-rt .hm-rt-none'); out.act뺌 = 0;
+    go('home'); out.sub뺌 = H('#dynPane .hm-act'); out.rt뺌 = H('#dynPane .hm-rt'); out.act뺌 = 0;
     window.hmPtChip = 참말.pt; window.hmRtRgTxt = 참말.rg; window.hmActMoreHtml = 참말.more;
     go('home');          /* ⚠ 되돌린 뒤 <b>다시 그립니다</b> — 안 그리면 다음 자가 「빼 둔 화면」 을 재게 됩니다 */
     return out;
@@ -275,7 +294,13 @@ const SEED = () => {
     const r = row.getBoundingClientRect();
     const it = [].slice.call(row.children).map(e => {
       const b = e.getBoundingClientRect();
-      return { t: e.textContent.replace(/\s+/g, ' ').trim(),
+      /* 판 X155 — 앞머리 이모지가 선 그림이라 글에 안 들어옵니다.
+         무엇이었는지는 data-emo 에 남으므로 그것까지 붙여 봅니다 (8번). */
+      /* ⚠ 빈칸을 <b>한 칸으로 모읍니다</b> — icoLead 는 이모지 뒤 빈칸을
+         남겨 두므로(줄 끊을 자리), 그냥 이으면 빈칸이 둘이 되어 「🤝 더」
+         로 찾는 자가 못 찾습니다. 판 X155 에서 그렇게 울었습니다. */
+      return { t: ((e.getAttribute('data-emo') || '') + ' ' +
+                   e.textContent).replace(/\s+/g, ' ').trim(),
                시작: Math.round(b.left - r.left),
                보임: (b.left >= r.left - 1 && b.right <= r.right + 1) };
     });

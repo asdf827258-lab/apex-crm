@@ -137,7 +137,15 @@ async function boot(page) {
         return {
           name: t ? t.textContent : '',
           badge: n ? n.textContent : '',
-          icon: ic ? ic.textContent : '',
+          /* ⚠ 2026-10-21 (판 X151) — <b>그림 표시가 선 그림이 됐습니다.</b>
+             사장님 말씀 「남은 이모지도 바꿔」. 이 칸(.ngl-ic)은 이제 이모지
+             글자가 아니라 <svg class="ico"> 를 담고 있어 textContent 가
+             빈 글자입니다. <b>자를 무르게 한 것이 아니라</b>, 약속이
+             「그림 표시가 붙는다」 이므로 <b>이모지든 선 그림이든</b>
+             붙어 있는지를 봅니다 (8번). 무엇이었는지는 data-emo 에 남습니다. */
+          icon: ic ? ((ic.textContent || '').trim() ||
+                      (ic.querySelector('svg.ico')
+                        ? ('선그림:' + (ic.getAttribute('data-emo') || '?')) : '')) : '',
           tint: el.style.getPropertyValue('--gc'),
           items: el.querySelectorAll('.tab-btn').length,
           collapsed: el.classList.contains('collapsed')   /* 이제는 늘 false 여야 한다 */

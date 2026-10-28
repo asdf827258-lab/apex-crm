@@ -66,7 +66,7 @@ const SEED = `(function(){
   GB.teams=[{id:'t1',name:'순천지점'},{id:'t2',name:'광양지점'}];
   GB.rows=[mk('u1','홍길동','leader','t1',80,'2026-09-09'),
            mk('u2','홍길순','member','t1',40,'2026-09-08'),
-           mk('u3','박서준','member','t1',30,''),
+           mk('u3','변학도','member','t1',30,''),
            mk('u4','홍판서','member','t2',60,'2026-09-01'),
            mk('u5','임꺽정','member','t2',20,''),
            mk('u6','장길산','manager','t2',50,'2026-09-09')];
@@ -154,12 +154,12 @@ const type = async (pg, txt) => {
   head('[2] 이름 · 초성 · 팀 이름 · 직책 <b>넷 다</b> 걸린다');
   await type(pg, '홍');
   let got = await names(pg);
-  is(got.length === 3 && got.indexOf('박서준') < 0,
+  is(got.length === 3 && got.indexOf('변학도') < 0,
      '이름 — 「홍」 으로 세 명 (' + got.join(', ') + ')');
 
-  await type(pg, 'ㅂㅅㅈ');
+  await type(pg, 'ㅂㅎㄷ');
   got = await names(pg);
-  is(got.length === 1 && got[0] === '박서준', '초성 — 「ㅂㅅㅈ」 으로 박서준 하나');
+  is(got.length === 1 && got[0] === '변학도', '초성 — 「ㅂㅎㄷ」 으로 변학도 하나');
 
   await type(pg, '광양');
   got = await names(pg);
@@ -297,7 +297,12 @@ const type = async (pg, txt) => {
     const out = { box: !!f, v: f ? f.value : '', q: AR.q,
                   x: !!(x && !x.hidden && x.getBoundingClientRect().width > 0),
                   rows: document.querySelectorAll('#arTeamList .ar-nmx').length,
-                  note: (document.querySelector('.ar-n') || {}).textContent || '' };
+                  /* ★ 「팀 전체 보고」 의 그 칸을 <b>번호로</b> 집습니다 (판 X126).
+                     .ar-n 은 이 화면에 여럿이라 「맨 앞의 것」 으로 집으면,
+                     위에 칸이 하나 서는 순간 다른 것을 재게 됩니다 —
+                     실제로 그렇게 헛 빨간불이 떴습니다. */
+                  note: (document.getElementById('arDoneN') || {}).textContent || '',
+                  note2: (document.getElementById('arTtN') || {}).textContent || '' };
     GB.loaded = true; arPaint();
     return out;
   });
@@ -307,6 +312,10 @@ const type = async (pg, txt) => {
   is(reread.x, '지우는 단추도 <b>그대로 있다</b>');
   is(/다시 읽는 중/.test(reread.note),
      '다시 읽는 중이라고 <b>말은 한다</b> — 옛 숫자를 조용히 보여 주지 않는다');
+  /* 위에 선 「오늘, 팀원 저마다」 도 같은 말을 해야 합니다 — 한 화면이
+     두 말을 하면 어느 쪽이 맞는지 알 수 없습니다 (5번) */
+  is(!reread.note2 || /다시 읽는 중/.test(reread.note2),
+     '위 칸(오늘, 팀원 저마다)도 <b>같은 말을 한다</b> — 「' + reread.note2 + '」');
   await pg.evaluate(() => { arQClear(); });
   await pg.waitForTimeout(80);
 

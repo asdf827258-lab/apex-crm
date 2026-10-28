@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<!-- 내 보험 셀프 점검 — 「보험의 기준」 강의를 들은 고객이 혼자 해 보는 13문항 (판 X171).
+     ⚠ 아무것도 보내지 않는다 · 이름·전화번호를 묻지 않는다 · 답은 이 폰에만(localStorage apxSelfCheck).
+     문항·판정은 selfcheck-core.js 한 벌 · 설계사 「내 플로우」 는 주소 # 뒤에만(판 X180).
+     재는 자: scripts/check-selfcheck.js · check-kijun.js -->
+<html data-theme="light" lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- 🌗 흰색 고정 (사장님 말씀 2026-10-03 · check-lightmode) -->
+<meta name="color-scheme" content="light">
+<meta property="og:title" content="내 보험 셀프 점검">
+<meta property="og:description" content="증권을 펴 놓고 13개만 골라 보세요 — 내 보험에서 볼 칸이 모여요. 아무것도 보내지 않아요.">
+<title>내 보험 셀프 점검</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard.css">
+<style>
+:root{color-scheme:light;--ink:#191F28;--ink2:#4E5968;--ink3:#8B95A1;--blue:#3182F6;--blue2:#E8F3FF;--bg:#F2F4F6;--bg2:#F9FAFB;--line:#E5E8EB;--green:#0E9F57;--yel:#C98400;--red:#E03A48;--f:Pretendard,"Noto Sans KR",system-ui,-apple-system,sans-serif}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:#fff;color:var(--ink);font-family:var(--f);line-height:1.5;word-break:keep-all}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px 48px}
+header{padding:28px 0 8px}
+.badge{display:inline-block;font-size:13px;font-weight:700;color:var(--ink2);background:var(--bg);border-radius:999px;padding:6px 12px}
+h1{margin:12px 0 6px;font-size:30px;line-height:1.3;font-weight:800;letter-spacing:-.03em}
+h1 span{color:var(--blue)}
+.lead{margin:0;font-size:16px;color:var(--ink2)}
+.how{margin:16px 0 0;background:var(--bg2);border-radius:18px;padding:14px 16px;font-size:14px;color:var(--ink2)}
+.how b{color:var(--ink)}
+.how ol{margin:6px 0 0;padding-left:18px}
+.how li{margin:2px 0}
+.find{margin:10px 0 0;background:var(--blue2);border-radius:18px;padding:14px 16px;font-size:14px;color:var(--ink2)}
+.find p{margin:0 0 4px;font-weight:700;color:var(--blue)}
+.find ul{margin:0;padding-left:18px}
+.prog{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.94);backdrop-filter:blur(6px);padding:10px 0;margin:14px 0 4px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;color:var(--ink2)}
+.prog b{font-size:22px;color:var(--blue)}
+.prog a{margin-left:auto;color:var(--blue);text-decoration:none;font-size:14px}
+h2{margin:26px 0 10px;font-size:20px;font-weight:800;letter-spacing:-.02em}
+[data-sc="qs"]{display:flex;flex-direction:column;gap:10px}
+.sc-q{background:var(--bg2);border-radius:18px;padding:14px 14px 12px;border:1.5px solid transparent}
+.sc-qh{display:flex;gap:10px;align-items:flex-start}
+.sc-qh>i{flex:none;font-style:normal;font-weight:800;font-size:14px;color:var(--blue);width:22px;line-height:22px}
+.sc-qh>div{flex:1;min-width:0}
+.sc-qh .g{display:block;font-size:12px;font-weight:700;color:var(--ink3)}
+.sc-qh b{display:block;font-size:17px;font-weight:700}
+.sc-qh small{display:block;margin-top:2px;font-size:13px;color:var(--ink3)}
+.sc-st{flex:none;font-style:normal;font-size:12px;font-weight:800;border-radius:8px;padding:3px 8px}
+.sc-st:empty{display:none}
+.sc-ops{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;padding-left:32px}
+.sc-op{min-height:40px;border:0;background:#fff;border-radius:12px;padding:9px 12px;font:600 14.5px var(--f);color:var(--ink2);cursor:pointer;box-shadow:0 0 0 1px var(--line) inset;-webkit-tap-highlight-color:transparent}
+.sc-op.on{background:var(--blue);color:#fff;box-shadow:none}
+.sc-ops label{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:var(--ink2)}
+.sc-ops input{width:110px;font:600 16px var(--f);background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:7px 10px;text-align:right;color:var(--ink)}
+.sc-q[data-s="ok"]{background:#F0FBF5}.sc-q[data-s="ok"] .sc-st{background:#E5F8EE;color:var(--green)}
+.sc-q[data-s="mid"]{background:#FFFAEE}.sc-q[data-s="mid"] .sc-st{background:#FFF0CC;color:var(--yel)}
+.sc-q[data-s="need"]{background:#FFF4F5}.sc-q[data-s="need"] .sc-st{background:#FFE1E4;color:var(--red)}
+.sc-q[data-s="chk"] .sc-st{background:var(--line);color:var(--ink2)}
+.sc-score{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.sc-score>div{background:var(--bg2);border-radius:14px;padding:10px 6px;text-align:center}
+.sc-score b{display:block;font-size:28px;font-weight:800;line-height:1.1}
+.sc-score small{font-size:12px;font-weight:700;color:var(--ink2)}
+.c-need b{color:var(--red)}.c-mid b{color:#E8A100}.c-chk b{color:var(--ink3)}.c-ok b{color:var(--green)}
+.sc-pickn{margin:10px 0;background:var(--blue2);border-radius:14px;padding:12px 14px;font-size:16px;font-weight:700}
+.sc-pickn b{color:var(--blue);font-size:22px}.sc-pickn small{font-size:13px;color:var(--ink3)}.sc-pickn i{font-style:normal}
+.k{margin:0 0 8px;font-size:14px;color:var(--ink3);font-weight:600}.k b{color:var(--blue)}
+[data-sc="list"]{display:flex;flex-direction:column;gap:8px}
+.sc-it{display:flex;gap:10px;align-items:center;background:var(--bg2);border-radius:14px;padding:11px 12px;border-left:5px solid #D1D6DB}
+.sc-it.s-need{border-left-color:#F04452}.sc-it.s-mid{border-left-color:#FFB331}.sc-it.s-chk{border-left-color:#B0B8C1}
+.sc-it.on{background:var(--blue2)}
+.sc-it b{display:block;font-size:15px;font-weight:700}
+.sc-it b em{font-style:normal;font-size:12px;font-weight:800;margin-right:4px}
+.sc-it.s-need b em{color:var(--red)}.sc-it.s-mid b em{color:var(--yel)}.sc-it.s-chk b em{color:#6B7684}
+.sc-it small{display:block;font-size:13px;color:var(--ink2)}
+.sc-pick{min-height:40px;flex:none;order:2;margin-left:auto;border:0;border-radius:10px;padding:8px 10px;font:700 13px var(--f);background:#fff;color:var(--ink2);box-shadow:0 0 0 1px #D1D6DB inset;cursor:pointer;white-space:nowrap}
+.sc-it.on .sc-pick{background:var(--blue);color:#fff;box-shadow:none}
+.sc-okl{margin:4px 0 0;font-size:14px;color:var(--ink2);background:#F0FBF5;border-radius:12px;padding:10px 12px}.sc-okl em{font-style:normal;font-weight:800;color:var(--green);margin-right:4px}
+.sc-empty{margin:0;font-size:15px;color:var(--ink3);background:var(--bg2);border-radius:14px;padding:22px;text-align:center}.sc-empty b{color:var(--ink)}
+.act{display:flex;gap:8px;margin-top:14px}
+.act button{flex:1;border:0;border-radius:14px;padding:14px 10px;font:700 15px var(--f);cursor:pointer}
+.act .p{background:var(--blue);color:#fff}.act .s{background:var(--bg);color:var(--ink2)}
+.send{margin:12px 0 0;font-size:13.5px;color:var(--ink2);background:var(--bg2);border-radius:14px;padding:12px 14px}
+footer{margin-top:24px;font-size:12px;color:var(--ink3);line-height:1.6}
+.pr-only{display:none}
+.from{margin:12px 0 0;font-size:14px;font-weight:700;color:var(--blue);background:var(--blue2);border-radius:12px;padding:10px 12px}
+.from b{color:var(--ink)}
+.hi{margin:8px 0 0;font-size:15px;color:var(--ink);background:var(--bg2);border-radius:12px;padding:10px 12px}
+.hi small{display:block;margin-top:2px;font-size:11.5px;color:var(--ink3)}
+[hidden]{display:none!important}
+@media print{
+  @page{size:A4;margin:12mm}
+  body{font-size:12px}
+  .wrap{max-width:none;padding:0}
+  .prog,.act,.find,.send,.sc-pick,.how{display:none!important}
+  .pr-only{display:block;margin:6px 0 10px;font-size:13px;color:var(--ink2)}
+  header{padding:0}h1{font-size:22px;margin:6px 0}
+  .sc-q{break-inside:avoid;padding:8px 10px;border:1px solid var(--line);background:#fff!important}
+  .sc-ops{margin-top:6px}
+  .sc-op{min-height:0;padding:3px 8px;font-size:12px;box-shadow:none;background:#fff!important;color:var(--ink)!important}
+  .sc-op::before{content:'☐ '}.sc-op.on::before{content:'☑ '}.sc-op.on{font-weight:800}
+  [data-sc="qs"]{gap:6px}
+  .res{break-before:page}
+}
+</style>
+</head>
+<body data-sc-keep data-sc-flow>
+<div class="wrap">
+  <header>
+    <span class="badge">✍️ 보험의 기준 · 셀프 점검</span>
+    <h1>내 보험,<br><span>직접</span> 확인해 보세요</h1>
+    <p class="lead">증권을 펴 놓고 <b data-sccnt="all">13</b>개만 골라 보세요. 3분이면 돼요.</p>
+    <div class="from" data-sc-show="by">✉️ <b data-sc="by"></b> 설계사가 보낸 점검이에요</div>
+    <div class="hi" data-sc-show="hi"><span data-sc="hi"></span><small>설계사가 적은 말</small></div>
+    <div class="how"><b>이렇게 해요</b>
+      <ol><li>증권(또는 가입 내역)을 펴요 — 📍 가 찾을 자리예요</li><li>문항마다 맞는 걸 하나씩 눌러요. 모르면 <b>‘모르겠어요’</b></li><li>아래 <b>내 결과</b>에서 같이 보고 싶은 칸에 <b>✋</b> 를 눌러요</li><li>「결과 복사」로 담당 설계사에게 보내거나, 인쇄해서 가져오세요</li></ol></div>
+    <div class="find"><p>증권이 없으면?</p><ul>
+      <li>내 보험 한 번에 보기 — 한국신용정보원 「내보험다보여」</li>
+      <li>숨은 보험금 — 생명·손해보험협회 「내보험찾아줌」</li>
+      <li>내 진료 기록 — 국민건강보험공단 「The건강보험」 앱</li></ul>
+      <span style="font-size:12.5px;color:var(--ink3)">공식 사이트·앱에서 본인 인증 후 직접 조회해요</span></div>
+    <p class="pr-only">점검한 날 ____년 __월 __일 · 해당하는 칸에 ✓ 표시하세요 (이름은 적지 않아도 돼요)</p>
+  </header>
+  <div class="prog"><b data-sccnt="done">0</b> / <span data-sccnt="all">13</span> 답했어요<a href="#res">결과 보기 ↓</a></div>
+  <div data-sc="qs"></div>
+  <section class="res" id="res" data-sc="res">
+    <h2>🔎 내 결과</h2>
+    <div class="sc-score"><div class="c-need"><b data-sccnt="need">0</b><small>비어 있어요</small></div><div class="c-mid"><b data-sccnt="mid">0</b><small>채우면 좋아요</small></div><div class="c-chk"><b data-sccnt="chk">0</b><small>확인해요</small></div><div class="c-ok"><b data-sccnt="ok">0</b><small>괜찮아요</small></div></div>
+    <div class="sc-pickn">✋ 같이 볼 칸 <b data-sccnt="pick">0</b>개 <small>· 아직 <i data-sccnt="left">13</i>문항 남았어요</small></div>
+    <p class="k">필요한 칸에 <b>✋ 같이 볼래요</b>를 눌러 주세요 — 고르는 건 고객님이에요</p>
+    <div data-sc="list"></div>
+    <div class="act"><button type="button" class="p" data-sca="copy">결과 복사</button><button type="button" class="s" data-sca="print">인쇄</button><button type="button" class="s" data-sca="clear">처음부터</button></div>
+    <p class="send">「결과 복사」를 누르면 결과가 글로 복사돼요. 카톡 같은 데에 붙여 넣어 담당 설계사에게 보내 주세요. 이 화면은 <b>아무것도 보내지 않아요.</b></p>
+  </section>
+  <footer>
+    판정은 APEX 실무 기준이에요(법령·규정이 아니고 회사마다 다르게 봐요) · 내가 스스로 체크한 결과이며, 실제 보장과 지급은 약관과 보험사 심사 결과에 따라요 · 이름·전화번호를 묻지 않아요 · 답은 이 폰(브라우저)에만 남고, 「처음부터」를 누르면 지워져요
+  </footer>
+</div>
+<script src="selfcheck-core.js"></script>
+</body>
+</html>

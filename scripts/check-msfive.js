@@ -334,8 +334,13 @@ const SEED = (o) => `
      <b>아무것도 재지 않는 줄</b>이 되었습니다(없는 글자를 「없다」 고 확인하니 늘 초록).
      앱에 물어서 씁니다 — 이름을 아는 곳은 nlCardName() 하나입니다 (5번·8번). */
   const CARD_T = await N.p.evaluate(() => (typeof nlCardName === 'function') ? nlCardName() : '');
+  /* ⚠ 판 X155 — 글 앞머리 이모지는 선 그림으로 갈려 innerText 에서 빠집니다.
+     이름은 여전히 앱 한 곳(nlCardName)에서 받고, <b>글자 부분만</b> 견줍니다.
+     ★ 아래 「없다」 를 재는 줄에서 더 중요합니다 — 이모지가 붙은 글자를
+       찾으면 언제나 「없다」 가 되어 <b>늘 초록인 줄</b>이 됩니다 (8번). */
+  const bare = (s) => String(s).replace(/^[^\p{L}\p{N}]+/u, '').trim();
   is(!!CARD_T, '  단추 이름을 <b>앱에 물어</b> 쓴다 — 「' + CARD_T + '」');
-  is(/지어내지 않습니다/.test(n5) && n5.indexOf(CARD_T) < 0,
+  is(/지어내지 않습니다/.test(n5) && n5.indexOf(bare(CARD_T)) < 0,
      '  ⑤ 도 제목을 만들지 않고 <b>못 받았다</b>고 적는다');
   await jump(N.p, 3);
   const n4 = await txt(N.p);
@@ -348,7 +353,7 @@ const SEED = (o) => `
   is(/정책·상품 뉴스/.test(t7b) && /1건/.test(t7b), '  올려 둔 소식 <b>건수</b>를 적고 길을 낸다');
   /* ⚠ <b>앱이 몰래 바꾸지 않는다</b> — 오늘 고른 기사는 그대로 서 있어야 한다.
      저쪽 것으로 슬쩍 갈아 끼우면 사장님이 고른 것이 사라진다 (1번). */
-  is(t7b.indexOf(NEWS[0].t) >= 0 && t7b.indexOf(CARD_T) >= 0,
+  is(t7b.indexOf(NEWS[0].t) >= 0 && t7b.indexOf(bare(CARD_T)) >= 0,
      '  <b>오늘 고른 기사</b>는 그대로 서 있다 — 몰래 갈아 끼우지 않는다');
   /* 제목을 여기 옮겨 적지 않았다 — 저쪽을 고치면 한쪽만 갈린다 (5번) */
   const bizSrc = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');

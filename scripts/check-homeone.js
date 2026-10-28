@@ -328,6 +328,25 @@ const tall = (p) => p.evaluate(() => {
      ★ 판 ②(접기)에서는 <b>하나도 안 올렸습니다</b> — 오히려 2,778 →
        2,662px 로 줄였습니다. 여기서는 올립니다. 정직하게 적어 둡니다.  */
   const hA = await tall(A.p);
+  /* 🔍 <b>어디가 길어졌나</b> — HOME_DEBUG=1 로 돌리면 「오늘 챙길 것」 안의
+     칸마다 높이를 찍어 줍니다. 홈이 선을 넘었을 때 <b>어느 칸인지</b>를
+     손으로 찾느라 두 판을 버려서 넣어 둡니다 (check-read 의 READ_DEBUG 와 같은 결). */
+  if(process.env.HOME_DEBUG){
+    const B = await A.p.evaluate(() => {
+      const pane=document.querySelector('.tab-pane.on'); if(!pane)return [];
+      const TOPS=(h)=>{const o=[];for(const e of h.children){
+        if(e.classList&&e.classList.contains('hm-2col')){for(const c of e.children)for(const d of c.children)o.push(d);}
+        else o.push(e);} return o;};
+      const t=document.getElementById('hmToday');
+      const o=[];
+      if(t){ const walk=(el,d)=>{ [].slice.call(el.children).forEach(c=>{
+        const r=c.getBoundingClientRect(); if(r.height<=0)return;
+        o.push('  '.repeat(d)+((c.id||(c.className||'').toString().split(' ')[0]||c.tagName))+' h'+Math.round(r.height));
+        if(d<2)walk(c,d+1); }); }; walk(t,0); }
+      return o;
+    });
+    console.log('      · 덩어리: '+B.join(' | '));
+  }
   /* ── 2026-10-01 · <b>3.8 → 3.9</b> (세 번째로 올립니다 — 적어 둡니다) ──
      「📥 읽어 둔 보장분석」 카드가 섰습니다(사장님 말씀 「읽어 둔 보장분석
      카드 만들어줘」). 3,158 → <b>3,280px</b> · 3.89화면. 늘어난 122px 은
@@ -352,10 +371,31 @@ const tall = (p) => p.evaluate(() => {
        더하면 그 자리에서 울립니다 — 그때는 <b>올리지 말고 줄이십시오.</b>
        줄일 자리는 사장님께 여쭐 일입니다(무엇을 접을지는 제가 고를 것이
        아닙니다).
-     ★ 좁다고 헛것이 아닙니다 — 이 자가 지키는 것이 바로 <b>그 선</b>입니다. */
-  is(hA > 0 && hA <= 844 * 4.2,
+     ★ 좁다고 헛것이 아닙니다 — 이 자가 지키는 것이 바로 <b>그 선</b>입니다.
+     ⬇ <b>2026-10-26 (판 X199) · 4.2 → 3.95.</b> 사장님 말씀 「ⓒ로 해줘」 로
+       맨 위 두 칸이 하나가 되었습니다 — 182px 짜리 칸이 통째로 사라져 세 때
+       모두 <b>3,242~3,246px · 3.84~3.85화면</b> 입니다. <b>줄였으면 눈금도
+       같이 내립니다</b> (0-1번). 3.85 가 아니라 <b>3.95</b> 로 둡니다 — 딱
+       붙여 두면 글자 한 줄만 길어져도 이 판과 상관없이 헛 빨간불이 켜집니다
+       (8번). 남은 자리 <b>87px</b>. 다음에도 <b>올리지 말고 줄이십시오.</b>
+     ⬇ <b>2026-10-27 (판 X219) · 3.95 → 3.9.</b> 팀원 고르개를 「지금 할 것」
+       위로 올리면서(사장님 말씀) 내 화면에서는 설명 줄을 접어, 세 때 모두
+       <b>3,193~3,197px · 3.78~3.79화면</b> 이 되었습니다 (전 3,242~3,246px).
+       <b>줄였으면 눈금도 같이 내립니다</b> (0-1번). 남은 자리 <b>94px</b>.
+     ⛔ <b>같은 판에서 2,878px(3.41화면)까지 갔다가 되돌렸습니다.</b> 곁칸 셋을
+       두 열 타일로 접은 것인데, 자 넷(check-hmwk · check-hmrun · check-hmmadi ·
+       check-mstans)이 울었습니다 — 한 줄로 접으면 「아직 N건」 · 「계약일 모름
+       N분」 · 「오늘은 아직입니다」 처럼 <b>사장님이 읽으시는 수</b>가 사라집니다.
+       <b>짧게 하려고 세는 수를 없애지 않습니다</b> (1번).
+     ⬇ <b>2026-10-28 (판 X223) · 3.9 → 3.6.</b> 사장님이 「① 곁칸 셋을 접기」 를
+       고르셨습니다 — 타일이 아니라 <b>접이</b>라 글이 한 자도 안 없어지고
+       누르면 펴집니다. 세 때 모두 <b>2,969~2,973px · 3.52화면</b>
+       (전 3,193~3,197px). 줄였으면 눈금도 같이 내립니다 (0-1번).
+       남은 자리 <b>66px</b>. 다음에도 올리지 말고 줄이십시오. */
+  is(hA > 0 && hA <= 844 * 3.6,
      '  홈 높이 <b>' + hA + 'px</b> = 화면 ' + (hA / 844).toFixed(2)
-       + '개 (4.2개 이하 — 이것이 「고치기 전」 길이입니다. 더는 못 올립니다)');
+       + '개 — 선은 <b>' + (844 * 3.6) + 'px</b> 입니다'
+       + ' (줄일 때마다 같이 내렸습니다 · 0-1번 — 더는 못 올립니다)');
 
   /* ── ⏰ 2026-10-10 · <b>세 때를 다 잽니다</b> (판 X78 · 사장님 말씀) ────
      사장님 말씀 — 「홈 높이 자에 <b>시계 못 박는</b> 다음판 해줘」.
@@ -376,7 +416,7 @@ const tall = (p) => p.evaluate(() => {
   for (const w of CLK.WHEN) {
     const C = await open(SEED_A, w.h);
     const h3 = await tall(C.p);
-    is(h3 > 0 && h3 <= 844 * 4.2,
+    is(h3 > 0 && h3 <= 844 * 3.6,
        '  ' + CLK.label(w) + ' 홈 <b>' + h3 + 'px</b> = 화면 ' + (h3 / 844).toFixed(2) +
        '개 — ' + w.왜);
     await C.ctx.close();
@@ -451,7 +491,11 @@ const tall = (p) => p.evaluate(() => {
   /* ⚠ 2026-10-13 · 단추 이름을 박아 두지 않고 <b>앱에 묻습니다</b> — 「카드뉴스」 로
      박아 두었더니 이름이 「캐러셀로 제작하기」 로 바뀌며 거짓 빨간불이 떴습니다 (5번) */
   const CARD_T = await C.p.evaluate(() => (typeof nlCardName === 'function') ? nlCardName() : '');
-  is(g.단추.some(x => /캡션/.test(x)) && g.단추.some(x => x.indexOf(CARD_T) >= 0) &&
+  /* ⚠ 2026-10-22 (판 X155) — 단추 앞머리 이모지가 <b>선 그림</b>이 되어
+     글에 안 들어옵니다. 이름은 앱에 그대로 묻되(nlCardName), 견줄 때는
+     <b>앞머리 꾸밈을 벗겨</b> 봅니다 — 약속은 「그 단추가 거기 있나」 입니다 (8번). */
+  const bare = (t) => String(t || '').replace(/^[^0-9A-Za-z가-힣]+/, '').trim();
+  is(g.단추.some(x => /캡션/.test(x)) && g.단추.some(x => bare(x).indexOf(bare(CARD_T)) >= 0) &&
      g.단추.some(x => /보낼 문구/.test(x)),
      '  <b>만들 자리</b>가 그 자리에 있다 — ' + g.단추.join(' · '));
   /* 만드는 도구를 <b>또 만들지 않았는가</b> (5번) — 이미 있는 것을 부른다 */

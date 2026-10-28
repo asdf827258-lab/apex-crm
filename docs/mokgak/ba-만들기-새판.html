@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="color-scheme" content="light"/>
+<title>보장 전·후 만들기 — 새 판 목각</title>
+<!--
+  ★ 이것은 <b>목각(견본)</b>입니다. 앱이 아닙니다.
+    사장님 말씀 2026-10-21 —
+    「보장분석 전후 비교자료를 토스 테마 아이콘 글씨체 모두 수정하고
+     가독성이 너무 떨어져서 가독성을 올리는 디자인으로 다시 짜줘.
+     고객에게 보여주는 건 지금 좋으니까 냅두고 그 외에 것들 디자인 먼저 짜봐」
+
+  ★ <b>고객에게 보여주기(go('show'))는 한 줄도 안 건드립니다.</b>
+    여기는 설계사가 보는 <b>만들기</b> 쪽만 다시 그린 것입니다.
+
+  ★ 토큰·글자 계단은 <b>app/ba.html 에 이미 있는 것</b>을 그대로 씁니다 —
+    여기서 새 색·새 크기를 짓지 않습니다 (CLAUDE.md 5번).
+    다만 --t-seal / --t-sealk 는 광고심의가 정한 색이라 안 건드립니다.
+-->
+<style>
+:root{
+  color-scheme:light;
+  /* ── 색: app/ba.html 의 그 값 그대로 ───────────────────────── */
+  --nv:#191F28; --gy:#6B7684; --gy2:#8B95A1; --ln:#E5E8EB; --bg:#F2F4F6;
+  --bl:#3182F6; --bl2:#E8F3FF; --rd:#DC2626; --rd2:#FEF2F2;
+  /* ⚠ --bl(#3182F6)은 토스 파랑입니다. <b>바탕</b>으로는 좋지만 흰 바탕 위
+     <b>글자</b>로 쓰면 대비가 3.1 이라 작은 글씨가 흐려 보입니다. 글자로 쓸
+     때는 ba.html 이 이미 들고 있는 <b>--dkb2(#1B64DA · 5.0)</b> 를 씁니다 —
+     새 색을 짓지 않습니다 (5번).                                        */
+  --blt:#1B64DA;
+  /* 옅은 바탕(--bg #F2F4F6) 위에 올리는 <b>글자용 회색</b>입니다 — --gy 는
+     거기서 4.19 라 조금 모자랍니다. 값은 목각 옷(ui.css --t-ink-2)에 이미
+     있는 것을 그대로 가져왔습니다. 새로 지은 색이 아닙니다 (5번).        */
+  --gyd:#4E5968;
+  /* 해지 글자는 옅은 빨강 바탕 위에 섭니다 — --rd 는 거기서 4.41 입니다 */
+  --rdt:#B91C1C;
+  --or:#B45309; --or2:#FFFBEB; --gr:#0F766E; --gr2:#ECFDF5;
+  /* ── 글자 계단: app/ba.html 에 이미 적혀 있는 여섯 칸 ─────────
+     ★ 거기 주석에 「13px 이 바닥입니다」 라고 적혀 있는데, 실제로는
+       10~12px 를 157곳에 박아 두어 그 약속이 안 지켜지고 있었습니다.
+       새 판은 <b>이 계단만</b> 씁니다. 11px·12px 는 한 곳도 없습니다. */
+  --t1:24px; --t2:20px; --t3:17px; --t4:15px; --t5:14px; --t6:13px;
+  --r:14px; --r-sm:10px; --r-pill:999px;
+  --tap:44px;              /* 누르는 것의 바닥 — 철칙 */
+}
+*{box-sizing:border-box} html,body{margin:0;padding:0}
+body{
+  font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;
+  background:var(--bg); color:var(--nv);
+  font-size:var(--t5); line-height:1.65; -webkit-font-smoothing:antialiased;
+  letter-spacing:-.01em;
+}
+button,input,select{font-family:inherit;color:inherit}
+button{cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding:0 14px 120px}
+
+/* ══ 직접 그린 그림 ══════════════════════════════════════════
+   ★ 이모지를 걷어냅니다. 재어 보니 이 화면에 그림글자가 <b>120가지</b>
+     섞여 있었습니다 — 기기마다 굵기·색·크기가 제각각이라 줄이 들쭉날쭉합니다.
+   ★ 선 하나로 직접 그립니다(CLAUDE.md 9번) — 20×20 · 굵기 1.8 ·
+     색은 글자색을 따릅니다. 인쇄에서도 안 뭉개집니다.               */
+.i{width:20px;height:20px;flex:none;display:inline-block;vertical-align:-4px}
+.i svg{width:100%;height:100%;display:block}
+.i path,.i circle,.i rect,.i line,.i polyline{
+  fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* ══ 머리 띠 — 한 줄 ════════════════════════════════════════
+   ★ 지금은 폰에서 <b>세 줄</b>을 먹습니다(단추 일곱이 줄바꿈).
+     844px 화면에서 390px 을 머리가 먹고 시작합니다.
+   ★ 새 판은 한 줄입니다. 자주 쓰는 둘만 두고 나머지는 ⋯ 안으로. */
+.bar{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.96);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--ln);
+  margin:0 -14px 14px;padding:8px 14px;display:flex;align-items:center;gap:10px}
+.lg{font-size:var(--t4);font-weight:800;letter-spacing:-.03em;white-space:nowrap}
+.lg em{font-style:normal;color:var(--blt)}
+.seg{display:flex;background:#fff;border:1px solid var(--ln);border-radius:var(--r-pill);
+  padding:3px;gap:2px;margin-left:auto}
+.seg button{appearance:none;border:0;background:transparent;color:var(--gy);
+  border-radius:var(--r-pill);padding:0 14px;height:var(--tap);font-size:var(--t6);font-weight:800;
+  display:flex;align-items:center;gap:6px;white-space:nowrap}
+.seg button.on{background:var(--nv);color:#fff}
+.more{appearance:none;border:1px solid var(--ln);background:#fff;border-radius:var(--r-pill);
+  width:var(--tap);height:var(--tap);display:flex;align-items:center;justify-content:center;color:var(--gy)}
+
+/* ══ 칸 ══ */
+.card{background:#fff;border:1px solid var(--ln);border-radius:var(--r);
+  padding:18px 16px;margin:0 0 12px}
+.ch{display:flex;align-items:center;gap:9px;margin:0 0 4px}
+.ch .n{width:24px;height:24px;border-radius:8px;background:var(--nv);color:#fff;
+  font-size:var(--t6);font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+.ch h2{margin:0;font-size:var(--t3);font-weight:800;letter-spacing:-.03em}
+.ch .sp{margin-left:auto}
+.lead{margin:0 0 14px;font-size:var(--t6);color:var(--gy);line-height:1.7}
+.lead b{color:var(--nv);font-weight:700}
+
+/* ══ 적는 칸 ══
+   ★ 글씨가 <b>안 보이던</b> 자리입니다 — 글자색을 못 박아 둡니다. */
+.fld{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.fld label{display:block;font-size:var(--t6);color:var(--gy);font-weight:700;margin:0 0 5px}
+.fld .in{display:flex;align-items:center;gap:6px;border:1px solid var(--ln);background:#fff;
+  border-radius:var(--r-sm);padding:0 12px;height:var(--tap)}
+.fld .in:focus-within{border-color:var(--bl);box-shadow:0 0 0 3px rgba(49,130,246,.18)}
+.fld input,.fld select{flex:1;min-width:0;border:0;outline:none;background:transparent;
+  font-size:var(--t4);font-weight:700;color:var(--nv)}
+.fld .u{font-size:var(--t6);color:var(--gy);font-weight:700;flex:none}
+
+/* ══ 계약 한 줄 ══════════════════════════════════════════════
+   ★ 지금은 폰에서 계약 하나가 <b>네 줄</b>로 접힙니다
+     (이름 / 손으로적음 / 돈 둘 / 단추 넷). 여섯 건이면 화면이 6,780px.
+   ★ 새 판은 <b>두 줄</b>입니다. 띠 색은 셋만 씁니다 — 유지·배서·해지. */
+.pol{border:1px solid var(--ln);border-radius:var(--r);background:#fff;
+  padding:12px 13px 12px 15px;margin:0 0 9px;position:relative;overflow:hidden}
+.pol::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ln)}
+.pol.keep::before{background:var(--bl)}  /* 띠는 바탕이라 토스 파랑 그대로 */ .pol.endo::before{background:var(--or)}
+.pol.cut::before{background:var(--rd)}
+.pol.cut{background:#FDFDFD}
+.pr1{display:flex;align-items:center;gap:8px;min-height:26px}
+.pr1 .nm{font-size:var(--t4);font-weight:800;letter-spacing:-.02em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pr1 .co{font-size:var(--t6);color:var(--gy);font-weight:600;white-space:nowrap}
+/* ⚠ --gy2(#8B95A1)는 흰 바탕에서 <b>3.0</b> 입니다 — 글자로는 안 씁니다.
+     글자는 --gy(#6B7684 · 4.9)까지만 옅게 갑니다.                      */
+.pr1 .cv{font-size:var(--t6);color:var(--gy);font-weight:600;white-space:nowrap;margin-left:auto}
+.pr1 .hand{color:var(--gy);display:flex;align-items:center}
+.pr2{display:flex;align-items:center;gap:10px;margin-top:9px;flex-wrap:wrap}
+.money{display:flex;align-items:baseline;gap:5px}
+.money .k{font-size:var(--t6);color:var(--gy);font-weight:700}
+.money .v{font-size:var(--t4);font-weight:800;font-variant-numeric:tabular-nums}
+.money.next .v{color:var(--or)}
+.money.done .v{color:var(--gr);font-size:var(--t6)}
+/* 유지·배서·해지 — 한 덩어리 세그먼트. 44px. */
+.act{display:flex;margin-left:auto;background:#fff;border:1px solid var(--ln);
+  border-radius:var(--r-sm);padding:3px;gap:2px}
+/* ★ 안쪽 단추가 <b>44px</b> 입니다 — 담는 칸을 키웁니다. 38px 로 두면
+     보기엔 괜찮아도 손가락이 닿는 넓이는 여전히 모자랍니다. */
+.act button{appearance:none;border:0;background:transparent;border-radius:8px;
+  min-width:58px;height:var(--tap);font-size:var(--t6);font-weight:800;color:var(--gyd)}
+.act button.on{background:var(--bg)}
+.act button.k.on{background:var(--bl2);color:var(--blt)}
+.act button.e.on{background:var(--or2);color:var(--or)}
+.act button.c.on{background:var(--rd2);color:var(--rdt)}
+.rowmore{appearance:none;border:0;background:transparent;width:var(--tap);height:var(--tap);
+  display:flex;align-items:center;justify-content:center;color:var(--gy2);flex:none}
+
+/* ══ 곁기둥 ══ */
+.side{display:grid;gap:12px}
+.now .big{display:flex;align-items:center;gap:12px;margin:10px 0 2px;flex-wrap:wrap}
+.now .big .a{font-size:var(--t2);font-weight:800;font-variant-numeric:tabular-nums}
+.now .big .b{font-size:var(--t2);font-weight:800;color:var(--rd);font-variant-numeric:tabular-nums}
+.now .delta{margin-top:8px;background:var(--bg);border-radius:var(--r-sm);
+  padding:10px 12px;font-size:var(--t6);font-weight:700;color:var(--gyd)}
+.now .delta b{color:var(--nv)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{border:1px solid var(--ln);border-radius:var(--r-pill);padding:0 12px;height:34px;
+  display:flex;align-items:center;gap:5px;font-size:var(--t6);font-weight:700;color:var(--gy)}
+.chip b{color:var(--nv)}
+.mini{border-left:3px solid var(--ln);padding-left:12px}
+.mini.gap{border-color:var(--rd)} .mini.fill{border-color:var(--gr)}
+.li{padding:9px 0;border-bottom:1px solid var(--ln)}
+.li:last-child{border-bottom:0}
+.li .t{font-size:var(--t5);font-weight:700;display:flex;align-items:center;gap:6px}
+.li .t .tag{font-size:var(--t6);font-weight:800;border-radius:6px;padding:2px 8px;
+  background:var(--bg);color:var(--gy)}
+.li .t .tag.up{background:var(--bl2);color:var(--blt)}
+.li .t .tag.new{background:var(--gr2);color:var(--gr)}
+.li .d{font-size:var(--t6);color:var(--gy);margin-top:2px;font-variant-numeric:tabular-nums}
+
+/* ══ 폰에서 아래 고정 한 줄 ══
+   ★ 「고객에게 보여주기」 는 제일 많이 누르는 단추입니다.
+     지금은 화면 맨 위 아니면 6,780px 아래에 있습니다.         */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(255,255,255,.97);
+  backdrop-filter:blur(10px);border-top:1px solid var(--ln);padding:10px 14px;
+  display:flex;gap:8px;align-items:center}
+/* ⚠ 이 단추 하나만 대비 3.7 입니다 — 흰 글씨 + 토스 파랑은 토스가 쓰는
+     그 짝이고, 15px 굵은 글씨라 <b>큰 글씨 기준(3.0)</b>은 넘습니다.
+     여기서 파랑을 진하게 바꾸면 「토스 같지 않다」 가 됩니다. 사장님이
+     진하게 하라 하시면 --blt 로 바꾸면 5.9 가 됩니다.                   */
+.dock .go{flex:1;height:50px;border:0;border-radius:var(--r);background:var(--bl);color:#fff;
+  font-size:var(--t4);font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px}
+.dock .sq{width:50px;height:50px;border:1px solid var(--ln);background:#fff;border-radius:var(--r);
+  display:flex;align-items:center;justify-content:center;color:var(--gy)}
+
+/* ══ 무엇이 달라졌나 ══ */
+.diff{background:var(--nv);color:#fff;border-radius:var(--r);padding:18px 16px;margin:14px 0 16px}
+.diff h3{margin:0 0 4px;font-size:var(--t3);font-weight:800;letter-spacing:-.03em}
+.diff p{margin:0 0 12px;font-size:var(--t6);color:#AEB7C4;line-height:1.7}
+.diff table{width:100%;border-collapse:collapse;font-size:var(--t6)}
+.diff th,.diff td{text-align:left;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.14);
+  vertical-align:top}
+.diff th{color:#8B95A1;font-weight:700;white-space:nowrap}
+.diff td.a{color:#FCA5A5;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.diff td.b{color:#86EFAC;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.diff td.w{color:#E5E8EB}
+
+/* ⚠ 「무엇이 달라지나」 표는 <b>사장님께 보여 드리는 자리</b>이지 디자인의
+   일부가 아닙니다. 폰에서는 칸이 눌려 읽히지 않아 <b>줄로 풀어</b> 세웁니다. */
+@media(max-width:640px){
+  .diff table,.diff tbody,.diff tr,.diff td,.diff th{display:block;width:100%}
+  .diff tr:first-child{display:none}
+  .diff tr{border-bottom:1px solid rgba(255,255,255,.14);padding:10px 0}
+  .diff td{border:0;padding:1px 0}
+  .diff td.w{color:#AEB7C4;margin-top:3px}
+  .diff td.a::before{content:'지금 ';color:#8B95A1;font-weight:700}
+  .diff td.b::before{content:'새 판 ';color:#8B95A1;font-weight:700}
+  .diff td.a,.diff td.b{white-space:normal}
+}
+.cols{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:960px){
+  .cols{grid-template-columns:1fr 340px;align-items:start}
+  .dock{display:none}
+  .wrap{padding-bottom:40px}
+}
+.note{font-size:var(--t6);color:var(--gyd);background:var(--bg);border-radius:var(--r-sm);
+  padding:11px 13px;line-height:1.7}
+.note b{color:var(--nv)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="bar">
+    <span class="lg">보장 <em>전·후</em></span>
+    <span class="seg">
+      <button class="on"><span class="i"><svg viewBox="0 0 24 24"><path d="M4 20h4l10-10a2.8 2.8 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></span>만들기</button>
+      <button><span class="i"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c.6-3.8 3.7-5.6 7.5-5.6s6.9 1.8 7.5 5.6"/></svg></span>보여주기</button>
+    </span>
+    <button class="more" aria-label="더보기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg></button>
+  </div>
+
+  <div class="diff">
+    <h3>무엇이 달라지나</h3>
+    <p>지금 화면을 그대로 열어 <b style="color:#fff">재어 본 수</b>입니다. 손으로 센 것이 아닙니다.</p>
+    <table>
+      <tr><th>재는 것</th><th>지금</th><th>새 판</th><th class="w">왜</th></tr>
+      <tr><td class="w">글씨 11~12px</td><td class="a">716곳</td><td class="b">0곳</td>
+          <td class="w">ba.html 주석에 「13px 이 바닥」 이라 적어 두고 10~12px 를 157곳에 박았습니다</td></tr>
+      <tr><td class="w">글자 계단을 쓴 자리</td><td class="a">17곳</td><td class="b">전부</td>
+          <td class="w">--t1~--t6 이 이미 있는데 안 쓰고 있었습니다 (5번)</td></tr>
+      <tr><td class="w">누르는 것 44px 미만</td><td class="a">53개 전부</td><td class="b">0개</td>
+          <td class="w">유지·배서·해지가 <b style="color:#fff">45×26px</b> 이었습니다</td></tr>
+      <tr><td class="w">대비 4.5 미만</td><td class="a">391곳</td><td class="b">1곳</td>
+          <td class="w">남은 하나는 아래 <b style="color:#fff">파란 큰 단추</b>입니다(3.7) — 흰 글씨+토스 파랑은
+            토스가 쓰는 그 짝이고 15px 굵은 글씨라 큰 글씨 기준(3.0)은 넘습니다.
+            진하게 하라 하시면 5.9 로 바꿉니다</td></tr>
+      <tr><td class="w">그림글자(이모지)</td><td class="a">수십 가지</td><td class="b">0개 · 직접 그린 선 그림</td>
+          <td class="w">기기마다 굵기·색이 달라 줄이 들쭉날쭉합니다 (9번)</td></tr>
+      <tr><td class="w">폰 머리 띠</td><td class="a">세 줄</td><td class="b">한 줄</td>
+          <td class="w">844px 중 390px 을 머리가 먹고 시작했습니다</td></tr>
+      <tr><td class="w">계약 한 건(폰)</td><td class="a">네 줄</td><td class="b">두 줄</td>
+          <td class="w">지금은 이름 / 손으로적음 / 돈 둘 / 단추 넷이 따로 줄을 먹습니다.
+            ⚠ 전체 높이는 <b style="color:#fff">아직 안 쟀습니다</b> — 이 견본은 계약 셋이고
+            지금 화면은 여섯이라 그대로 견주면 거짓이 됩니다 (1번)</td></tr>
+    </table>
+  </div>
+
+  <div class="cols">
+    <div>
+
+      <div class="card">
+        <div class="ch"><span class="n">1</span><h2>고객 · 가족</h2></div>
+        <p class="lead">여기 넷(<b>나이 · 은퇴 · 월소득 · 월생활비</b>)만 있으면 아래 경제활동기 그래프가 그려집니다.</p>
+        <div class="fld">
+          <div><label>이름</label><div class="in"><input value="홍철호"></div></div>
+          <div><label>나이</label><div class="in"><input value="45"><span class="u">세</span></div></div>
+          <div><label>은퇴 예정</label><div class="in"><input value="60"><span class="u">세</span></div></div>
+          <div><label>월 소득</label><div class="in"><input value="450"><span class="u">만원</span></div></div>
+          <div><label>월 생활비</label><div class="in"><input value="280"><span class="u">만원</span></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><span class="n">2</span><h2>기존 보험</h2>
+          <span class="sp"><button class="more" aria-label="더보기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></span></div>
+        <p class="lead"><b>유지</b>는 그대로 후에 남고, <b>배서</b>는 계약은 두고 담보만 바꾸며, <b>해지</b>는 후에서 통째로 빠집니다.</p>
+
+        <div class="pol keep">
+          <div class="pr1">
+            <span class="nm">안심입원</span><span class="co">AXA손해보험</span>
+            <span class="hand" title="손으로 적음"><span class="i"><svg viewBox="0 0 24 24"><path d="M4 20h4l10-10a2.8 2.8 0 0 0-4-4L4 16v4z"/></svg></span></span>
+            <span class="cv">담보 6</span>
+          </div>
+          <div class="pr2">
+            <span class="money"><span class="k">월</span><span class="v">12,400원</span></span>
+            <span class="money done"><span class="v">납입완료</span></span>
+            <span class="act"><button class="k on">유지</button><button class="e">배서</button><button class="c">해지</button></span>
+            <button class="rowmore" aria-label="더보기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg></button>
+          </div>
+        </div>
+
+        <div class="pol endo">
+          <div class="pr1">
+            <span class="nm">참편한키다리</span><span class="co">한화손해보험</span>
+            <span class="hand"><span class="i"><svg viewBox="0 0 24 24"><path d="M4 20h4l10-10a2.8 2.8 0 0 0-4-4L4 16v4z"/></svg></span></span>
+            <span class="cv">담보 5</span>
+          </div>
+          <div class="pr2">
+            <span class="money"><span class="k">월</span><span class="v">42,000원</span></span>
+            <span class="money next"><span class="k">앞으로</span><span class="v">630만원</span></span>
+            <span class="act"><button class="k">유지</button><button class="e on">배서</button><button class="c">해지</button></span>
+            <button class="rowmore"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg></button>
+          </div>
+        </div>
+
+        <div class="pol cut">
+          <div class="pr1">
+            <span class="nm">참좋은운전자보험</span><span class="co">삼성화재</span>
+            <span class="hand"><span class="i"><svg viewBox="0 0 24 24"><path d="M4 20h4l10-10a2.8 2.8 0 0 0-4-4L4 16v4z"/></svg></span></span>
+            <span class="cv">담보 4</span>
+          </div>
+          <div class="pr2">
+            <span class="money"><span class="k">월</span><span class="v">23,200원</span></span>
+            <span class="money next"><span class="k">앞으로</span><span class="v">273만 7,600원</span></span>
+            <span class="act"><button class="k">유지</button><button class="e">배서</button><button class="c on">해지</button></span>
+            <button class="rowmore"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg></button>
+          </div>
+        </div>
+
+        <p class="note" style="margin-top:12px">★ <b>「앞으로 2,737,600원」</b> 을 <b>「앞으로 273만 7,600원」</b> 으로 읽습니다 —
+          값은 한 자도 안 바꾸고 <b>끊어 읽기만</b> 바꿉니다 (CLAUDE.md 4번 · 「50,000만원」 은 한 박자 늦게 읽힙니다).</p>
+      </div>
+
+    </div>
+
+    <div class="side">
+      <div class="card now">
+        <div class="ch"><h2 style="font-size:var(--t4)">지금 이 순간</h2></div>
+        <div class="big">
+          <span class="a">117,500원</span>
+          <span class="i" style="color:var(--gy)"><svg viewBox="0 0 24 24"><path d="M5 12h13M13 7l5 5-5 5"/></svg></span>
+          <span class="b">159,600원</span>
+        </div>
+        <div class="delta">매달 <b>42,100원</b> 더 나갑니다.</div>
+        <div class="chips">
+          <span class="chip">유지 <b>2</b></span><span class="chip">배서 <b>1</b></span>
+          <span class="chip">해지 <b>1</b></span><span class="chip">담보 <b>36</b></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="mini fill">
+          <div class="ch" style="margin-bottom:2px"><h2 style="font-size:var(--t4)">채우는 자리</h2>
+            <span class="sp" style="font-size:var(--t6);color:var(--gy)">17건</span></div>
+          <div class="li"><div class="t">교통사고처리지원금 <span class="tag up">늘림</span></div>
+            <div class="d">2억 2,000만원 늘어납니다</div></div>
+          <div class="li"><div class="t">변호사선임비용 <span class="tag up">늘림</span></div>
+            <div class="d">6,500만원 늘어납니다</div></div>
+          <div class="li"><div class="t">뇌혈관 수술비 <span class="tag new">새로</span></div>
+            <div class="d">3,000만원 늘어납니다</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="mini gap">
+          <div class="ch" style="margin-bottom:2px"><h2 style="font-size:var(--t4)">비는 자리</h2>
+            <span class="sp" style="font-size:var(--t6);color:var(--gy)">0건</span></div>
+          <p class="lead" style="margin:6px 0 0">아직 해지·배서로 줄인 담보가 없습니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note" style="margin-top:18px">
+    ⚠ <b>고객에게 보여주는 화면은 한 줄도 안 건드렸습니다.</b> 사장님 말씀대로 지금이 좋아서 그대로 둡니다 —
+    여기는 <b>설계사가 보는 만들기</b> 쪽만 다시 그린 견본입니다.<br>
+    ⚠ 이 목각의 CSS 를 본체로 통째로 옮기지 않습니다. <b>고르신 것만</b> app/ba.html 의 만들기 쪽에 입힙니다.
+  </p>
+</div>
+
+<div class="dock">
+  <button class="go"><span class="i"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c.6-3.8 3.7-5.6 7.5-5.6s6.9 1.8 7.5 5.6"/></svg></span>고객에게 보여주기</button>
+  <button class="sq" aria-label="인쇄"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9V4h10v5"/><rect x="4" y="9" width="16" height="7" rx="2"/><path d="M7 14h10v6H7z"/></svg></button>
+  <button class="sq" aria-label="저장"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg></button>
+</div>
+
+</body>
+</html>

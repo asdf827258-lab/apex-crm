@@ -199,6 +199,8 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     };
     out.slots=ALM_SLOTS.map(s=>s.k).join(',');
     out.slotN=ALM_SLOTS.length;
+    /* 켜져 있는 것이 몇인가 — 사장님께 드린 약속은 <b>울리는 수</b>입니다 (판 X131) */
+    out.slotOnN=ALM_SLOTS.filter(function(x){return x.on;}).length;
     /* 아직 안 된 시각 — 고정한 시각(10시)보다 뒤 */
     only('call',11);
     window.__rang.length=0; almTick(); out.early=window.__rang.length;
@@ -283,7 +285,22 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   is(T.again===0, '같은 날 <b>또 안 울린다</b> — 홈을 열 때마다 울리면 끄십니다');
   is(T.emptyRang===0&&T.emptyStamp==='',
      '안 울렸으면 <b>날짜 표시도 안 남긴다</b> — 남기면 오후에 생긴 일이 내일까지 안 울린다');
-  is(T.slotN===4, '알람이 <b>네 번</b>이다 — '+T.slots+' (표는 app/alm-slots.js 한 곳)');
+  /* ══ 알람이 <b>몇 번</b>인가 — 판 X131 에서 뜻이 또렷해졌습니다 ════════
+     여태 이 줄은 「표에 넷이 있다」 만 봤습니다(사장님 말씀 2026-09-25
+     「알람 하루 네 번 만들고」). 그런데 2026-10-19 에 <b>보장분석도 알람으로</b>
+     받겠다고 하셨습니다. 「네 번」 은 <b>하루에 몇 번 울리나</b> 라는 약속이지
+     「표에 몇 줄이 있나」 가 아닙니다 — 꺼 둔 줄은 울리지 않습니다.
+     ★ 그래서 자를 <b>무르게 하지 않고 또렷하게</b> 합니다 (8번) —
+       ① 열쇠를 <b>글자까지</b> 못 박습니다. 수만 세면 하나를 슬쩍 더
+          넣어도 수만 고치면 지나갑니다.
+       ② <b>켜져 있는 것이 넷을 안 넘는지</b> 를 봅니다. 이것이 사장님께
+          드린 진짜 약속입니다.
+     새 줄을 넣는 쪽은 <b>여기 열쇠도 같이</b> 적어야 합니다 — 그래야
+     「나도 모르게 늘었다」 가 안 됩니다.                                */
+  is(T.slots==='call,am,perf,tmr,bax',
+     '알람 칸이 <b>적어 둔 그대로</b>다 — '+T.slots+' (표는 app/alm-slots.js 한 곳)');
+  is(T.slotOnN<=4,
+     '<b>켜져 있는 것이 넷을 안 넘는다</b> — '+T.slotOnN+'개 ← 사장님 말씀 「알람 하루 네 번」');
   is(T.second===1,
      '하나가 울려도 <b>나머지는 제 시각에 울린다</b> — '+T.second+'번 ← 「오늘 울렸다」 를 한 칸에 적으면 낮·저녁이 통째로 막힙니다');
   /* ★★ 2026-10-03 · X05 — 예상업적이 <b>세는 슬롯</b>이 되었습니다.
@@ -584,7 +601,9 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
      빨간불이 새 값을 그대로 적어 줍니다.
      ★ 지문은 <b>사람이 손으로 옮기는 값</b>입니다. 자동으로 맞추면
        「고쳤는데 안 올렸다」 를 영영 못 잡습니다 (8번).               */
-  const SQL_SIG = 'd19ed4b0c18a';      /* ⚠⚠ <b>판 X84 — 판 번호를 일부러 안 올렸습니다.</b>
+  /* 판 X174 (2026-10-23) — 고객 동의 표(client_consents)를 준비 SQL 에 넣고 판 번호를 <b>45 로 올렸습니다</b>
+     (SETUP_VER 과 schema_version 같이). 그래서 지문을 새 값으로 바꿉니다. 아래 X84 쪽지는 그때 일입니다. */
+  const SQL_SIG = 'ca1e5fc85f6c';      /* ⚠⚠ <b>판 X84 — 판 번호를 일부러 안 올렸습니다.</b>
                                           이 자는 「SQL 을 고쳤으면 판 번호도 올리라」 고 합니다.
                                           맞는 말이고, 그 까닭은 <b>이미 준비를 마치신 분 화면에
                                           새 SQL 이 안 뜬다</b>는 것입니다. 이번은 그 자리가
@@ -1075,9 +1094,18 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     const e=document.querySelector('.almk-band .ok'); if(!e)return null;
     const r=e.getBoundingClientRect(); return {top:Math.round(r.top+scrollY),h:Math.round(r.height)};
   });
-  is(!!kkBand && kkBand.top + kkBand.h <= VH,
-     '<b>홈에도 한 줄</b>이 서고, 그것도 첫 화면 안이다 · ' +
-     (kkBand ? (kkBand.top+'px') : '한 줄이 없다'));
+  /* ══ 2026-10-26 (판 X199) · <b>🔔 알람 한 줄이 첫 화면 → 두 화면</b> ════════════════════════
+     사장님 말씀 「<b>ⓒ로 해줘</b>」 로 「지금 할 것」 카드(622px)가 홈 <b>맨 위</b>가
+     되었습니다. 폰 첫 화면 844px 에서 머리 104px 을 빼면 <b>740px</b> 이고, 그중
+     622px 을 카드가 씁니다 — 남는 <b>105px</b> 은 사장님이 판 X194 에서 시키신
+     <b>➕ 고객 추가 세 칸</b>(94px)이 씁니다. 그래서 알람 한 줄이 첫 화면에 들어갈 자리가 없습니다.
+     ★ <b>자를 지우지 않습니다. 묻는 것을 옮깁니다</b> — 「첫 화면」 → <b>「두 화면」</b>. 세 화면 아래로 밀리면 여전히 빨간불입니다.
+     ★ 사장님께 수를 올려 드리고 <b>ⓐⓑⓒ 중 ①(지금 그대로)</b> 을 고르셨습니다.
+       「맨 위로」 는 판 X187 과 이번까지 <b>두 번</b> 하신 말씀입니다.          */
+  is(!!kkBand && kkBand.top + kkBand.h <= VH * 2,
+     '<b>홈에도 한 줄</b>이 서고, 그것도 두 화면 안이다 · ' +
+     (kkBand ? (kkBand.top+'px / 두 화면 '+(VH*2)+'px') : '한 줄이 없다') +
+     ' (첫 화면은 「지금 할 것」 차지입니다 · 판 X199)');
   /* 눌러서 <b>거기로 간다</b> — 「설치 화면에 가서 찾으세요」 는 두 걸음이다 */
   if(kkBand)await kkPage.click('.almk-band .ok');
   await kkPage.waitForTimeout(1500);

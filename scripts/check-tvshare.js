@@ -34,7 +34,7 @@ const TEAM_ROWS = [
     verdict: [{ c: '암', k: '진단확정 기준', v: 'good', lab: '임상학적 진단도 인정' }],
     toxic: [{ cat: '갱신', label: '갱신형 특약 보험료 인상 가능' }] },
   { id: 'v2', owner_id: 'u-3', co: '삼성생명', title: '간편심사 건강보험', kind: '건강',
-    grade: 'B', good: 4, bad: 5, by_name: '김철수', updated_at: '2026-08-13T00:00:00Z',
+    grade: 'B', good: 4, bad: 5, by_name: '홍길동', updated_at: '2026-08-13T00:00:00Z',
     verdict: [{ c: '뇌', k: '뇌혈관질환 범위', v: 'bad', lab: '뇌졸중으로 한정' }],
     toxic: [{ cat: '감액', label: '1년 이내 50% 감액지급' }] }
 ];
@@ -119,7 +119,7 @@ const TERMS =
   is(/한화생명/.test(listed) && /삼성생명/.test(listed), '  회사 이름이 보인다');
   is(/유리 7/.test(listed) && /불리 5/.test(listed), '  유리·불리 건수가 보인다');
   is(/갱신형 특약/.test(listed), '  독소조항이 보인다');
-  is(/홍길동/.test(listed) && /김철수/.test(listed), '  누가 올렸는지 보인다');
+  is(/홍길동/.test(listed) && /홍길동/.test(listed), '  누가 올렸는지 보인다');
 
   console.log('\n[3] 찾기가 된다');
   await fr.evaluate(() => { const q = document.getElementById('tvQ'); q.value = '삼성'; q.oninput.call(q); });

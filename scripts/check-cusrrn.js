@@ -93,7 +93,12 @@ const SEED = () => {
     return o; };
   window.osClient=function(){
     return { from:function(tb){ return {
-      select:function(){ WROTE.push({op:'select',tb:tb}); return chain({data:[]}); },
+      /* ✅ 판 X174 — 동의 표는 <b>네 갈래 다 받은</b> 분으로 답합니다. 이 자는 주민번호 칸이 하는 일을 잽니다 —
+         동의가 없어 칸이 잠기는 쪽은 check-cns 가 잽니다. 빈 목록이면 앱이 「동의 없음」 으로 읽고 잠급니다(옳은 동작). */
+      select:function(){ WROTE.push({op:'select',tb:tb});
+        if(tb==='client_consents')return chain({data:['collect','uid','sensitive','ad'].map(function(k){
+          return {kind:k,granted_at:'2026-10-01T00:00:00Z',revoked_at:null,method:'서면'}; })});
+        return chain({data:[]}); },
       update:function(o){ WROTE.push({op:'update',tb:tb,body:o}); return chain({}); },
       insert:function(o){ WROTE.push({op:'insert',tb:tb,body:o}); return chain({}); },
       upsert:function(o){ WROTE.push({op:'upsert',tb:tb,body:o}); return chain({}); },
@@ -108,7 +113,11 @@ const SEED = () => {
              created_at:new Date(Date.now()-60*864e5).toISOString().slice(0,10)}];
   CM.loaded=true; CM.meta={ c1: (function(){ var m=cmBlank(); m._rid='r1'; return m; })() };
   try{ osHideLoginGate(); }catch(e){}
+  /* 판 X161 — 고객 창이 탭으로 나뉘었습니다. 주민번호 칸은 <b>정보</b> 탭에 섭니다 —
+     사람이 그 탭을 여는 것과 똑같이 열고 잽니다 */
   osOpenClient('c1');
+  /* ★ 새 판 (2026-10-23 「탭 다섯으로」) — 주민번호는 <b>서류</b> 탭(신분증·서류와 한 곳) */
+  try{ cusTab('doc'); }catch(e){}
 };
 
 /* 주석·APP_BUILD_NOTE 를 <b>먼저 지웁니다.</b> 무엇에 <b>대해 적은 글</b>은
@@ -360,8 +369,8 @@ const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, ' ')
 
   console.log('\n[9-2] ★ 상령일이 <b>곧</b>이면 말해 준다 · 금액은 지어내지 않는다');
   const G2 = await p.evaluate(async (soon) => {
-    /* 홈으로 돌아와 고객을 다시 연다 */
-    osOpenClient('c1');
+    /* 홈으로 돌아와 고객을 다시 연다 — 서류 탭으로 (새 판 · 주민번호 자리) */
+    cusGo({cli:'c1',tab:'doc'});
     await new Promise(r => setTimeout(r, 700));
     cmRrnSet('c1', soon); cmDetailPaint('c1');
     await new Promise(r => setTimeout(r, 400));

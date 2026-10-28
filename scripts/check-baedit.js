@@ -289,7 +289,93 @@ const head = (t) => console.log('\n' + t);
   is(part.after && part.after.note === 1, '안 보이는 담보가 <다른 부위 칸에 있다>고 적어 둔다 — 없어진 것이 아니다');
   is(part.before && part.before.all === 1, '기존 보험에는 「전부 보기」가 그대로 있다 — 읽어 온 것을 훑는 자리다');
 
-  head('[14] 조용한가');
+  /* ── [14] 보험료 칸은 <b>원</b>, 담는 값은 <b>만원</b> ────────────────
+     2026-10-23 · 판 X165 · 사장님 말씀 「만원단위 표기 말고 원 단위로
+     표기해줘 … 새로 입력 넣는 칸에 봐봐」.
+
+     ★★ 이 자리에서 <b>만 배</b>가 틀리면 고객 앞에서 「50만원」 이 「50억」
+     으로 찍힙니다 (CLAUDE.md 4번 · 실제로 있었던 사고). 그래서 적는 칸만
+     원으로 바꾸고 <b>담는 값은 만원 그대로</b> 뒀습니다 — 이 자가 그것을
+     지킵니다. 담는 값이 원으로 바뀌는 순간 여기서 빨간불입니다.
+
+     ★ <b>쉼표</b>를 반드시 봅니다. 「124,000」 을 그냥 parseFloat 에 주면
+     124 가 됩니다 — <b>천 배</b>입니다. 원으로 적으면 쉼표가 사람의
+     버릇이라, 안 지우면 바꾸자마자 사고가 납니다.
+
+     ★ 담보금액은 <b>만원 그대로</b>여야 합니다 (2026-10-23 사장님 결정).  */
+  head('[14] 보험료 칸은 원으로 적고, 담는 값은 만원 그대로인가');
+  {
+    const M = await pg.evaluate(async () => {
+      const O = {};
+      /* ① 바꾸는 손 */
+      O.has = ['wonOfMan','manOfWon','wonEcho','wonBox'].every(n => typeof window[n] === 'function');
+      O.toWon = wonOfMan('12.4');
+      O.toMan = manOfWon('124000');
+      O.comma = manOfWon('124,000');
+      O.wonTxt = manOfWon('124,000원');
+      O.trip = ['124000','123456','5000','0','50000000'].map(v => wonOfMan(manOfWon(v))).join(',');
+      O.empty = [wonOfMan(''), manOfWon(''), wonEcho('')].join('|');
+      O.echo = wonEcho('124000');
+      O.echo0 = wonEcho('1240000');
+      O.echoBig = wonEcho('120000000');
+      /* ② 담는 값을 아래쪽(fee)이 만원으로 읽는가 — 양쪽이 같은 뜻이어야 한다 */
+      O.fee = fee(num(manOfWon('124000')));
+      /* ③ 사람처럼 친다 */
+      const el = Array.prototype.slice.call(document.querySelectorAll('input'))
+        .find(x => (x.getAttribute('oninput')||'').indexOf(',"premMan"') >= 0);
+      if (el) {
+        O.unit = (el.parentElement.querySelector('i')||{}).textContent || '';
+        O.shown = el.value;
+        el.focus(); el.value = '124,000';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 250));
+        O.stored = String(S.before[0].premMan);
+        /* ★ 그 칸의 <b>제 되읽기</b>를 집는다 — 아무 .wec 이나 집으면 월 소득(450만원)을
+           제 되읽기로 착각한다. 실제로 한 번 그랬다 (8번 · 헛것을 잡는 자가 더 나쁘다) */
+        const e = el.closest('.uw') ? el.closest('.uw').querySelector('.wec') : null;
+        O.liveEcho = e ? e.textContent : '';
+        /* 0 을 하나 더 쳐 보면 되읽기가 바뀌는가 */
+        el.value = '1,240,000';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 250));
+        O.liveEcho2 = e ? e.textContent : '';
+        O.stored2 = String(S.before[0].premMan);
+        /* ★ <b>계약 머리의 칩</b>도 같이 바뀌는가 (판 X168 · 사장님 말씀 「고쳐줘」).
+           전에는 보험료를 쳐 넣는 동안 바로 위가 「월 미입력」 그대로였습니다 —
+           고객 앞에서 금액을 적는데 위가 「미입력」 이면 안 들어간 줄 압니다 (1번). */
+        const chip = document.getElementById('pm_before_0');
+        O.chip = chip ? chip.textContent.replace(/\s+/g, ' ').trim() : '(칩 없음)';
+      } else O.noInput = true;
+      /* ④ 담보금액은 만원 그대로인가 */
+      O.covUnit = (typeof UNIT_LB !== 'undefined') ? UNIT_LB.L : '';
+      return O;
+    });
+
+    is(M.has, '바꾸는 손 넷이 다 있다 — wonOfMan · manOfWon · wonEcho · wonBox');
+    is(M.toWon === '124000', '만원 → 원 — 12.4 → ' + M.toWon);
+    is(M.toMan === '12.4', '원 → 만원 — 124000 → ' + M.toMan);
+    is(M.comma === '12.4', '★ <b>쉼표를 쳐도 천 배가 안 틀린다</b> — 「124,000」 → ' + M.comma);
+    is(M.wonTxt === '12.4', '「원」 글자를 붙여도 같다 — 「124,000원」 → ' + M.wonTxt);
+    is(M.trip === '124000,123456,5000,0,50000000', '되돌려도 같은 수다 — ' + M.trip);
+    is(M.empty === '||', '빈칸은 <b>빈칸으로</b> 둔다 — 0 으로 메우지 않는다 (1번)');
+    is(M.echo === '= 12만 4,000원', '되읽기 — 124000 → ' + M.echo);
+    is(M.echo0 === '= 124만원', '★ 0 을 하나 더 치면 되읽기가 <b>달라진다</b> — ' + M.echo0);
+    is(M.echoBig === '= 1억 2,000만원', '억도 사람 말로 — ' + M.echoBig);
+    is(M.fee === '124,000원', '담은 값을 아래쪽이 <b>만원으로</b> 읽는다 — fee → ' + M.fee);
+    is(!M.noInput, '월 납입보험료 칸을 찾았다');
+    is(M.unit === '원', '칸의 단위 글자가 <b>원</b>이다 — 「' + M.unit + '」');
+    is(M.shown === '12400', '견본 1.24만원이 칸에는 <b>12400</b> 으로 선다 — ' + M.shown);
+    is(M.stored === '12.4', '★★ 「124,000」 을 쳤을 때 <b>담기는 값은 만원</b>(12.4)이다 — ' + M.stored +
+       ' (여기가 원이 되면 저장해 둔 고객 자료가 전부 만 배 틀립니다 · 4번)');
+    is(M.liveEcho === '= 12만 4,000원', '치는 대로 <b>그 자리에서</b> 되읽어 준다 — ' + M.liveEcho);
+    is(M.liveEcho2 === '= 124만원' && M.stored2 === '124',
+       '★ 0 을 하나 더 치면 되읽기도 담긴 값도 <b>같이</b> 바뀐다 — ' + M.liveEcho2 + ' · ' + M.stored2);
+    is(M.covUnit === '만원', '★ <b>담보금액은 만원 그대로</b>다 — 사장님이 「보험료 칸만」 으로 고르셨다');
+    is(/1,240,000원/.test(M.chip) && !/미입력/.test(M.chip),
+       '★ 치는 대로 <b>계약 머리의 칩</b>도 같이 바뀐다 — 「' + M.chip + '」');
+  }
+
+  head('[15] 조용한가');
   is(errs.length === 0, errs.length ? ('콘솔 에러 — ' + errs.join(' / ')) : '콘솔에 에러가 없다');
 
   console.log('\n──────────────────────────────');

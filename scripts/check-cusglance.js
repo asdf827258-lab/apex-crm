@@ -97,8 +97,14 @@ const CARD = () => {
      맞는데 자가 틀린 것입니다. check-cqa 에서 「열두 칸」 으로 같은 일을
      겪었습니다. 수를 세지 않고 <b>있어야 할 이름이 다 있나</b>를 봅니다 —
      줄이 늘어도 자가 안 낡습니다 (8번).                                  */
-  const 있어야할줄 = ['사는 곳 강남구','어디서 왔나 보장분석10DB','지금 단계 AP',
+  /* ★ 새 판 (2026-10-23 「중복 되는 부분들을 하나로」) — 앱의 고객 창에서는 단계가 <b>머리 딱지 하나</b>입니다.
+     한눈에 칸에 「지금 단계」 를 또 적으면 한 화면에 두 번 섭니다. 그래서 그 줄은 <b>머리에서</b> 잽니다
+     (CRM 카드는 머리가 이 카드라 그대로 섭니다 — check-cusone [4]). */
+  const 있어야할줄 = ['사는 곳 강남구','어디서 왔나 보장분석10DB',
                      '만난 횟수 2회','청구 아직'];
+  const STG = await p.evaluate(() => ((document.querySelector('#cusWin .cuw-stg') || {}).textContent || '').trim());
+  is(/AP/.test(STG) && !A.줄.some(r => /^지금 단계/.test(r)),
+     '  단계는 <b>머리 딱지</b>에 한 번 — 「' + STG + '」 · 한눈에 칸에는 안 섬');
   is(A.줄.length >= 있어야할줄.length,
      '  줄이 <b>' + A.줄.length + '개</b> 선다 — 있어야 할 것 ' + 있어야할줄.length + '개');
   있어야할줄.forEach(w => {
@@ -213,10 +219,21 @@ const CARD = () => {
      주석까지 세면, 왜 안 쓰는지 설명한 것이 빨간불이 됩니다 (8번). */
   is(!/D-\d/.test(CUSJ_C), '  ★ 「<b>D-30</b>」 이라고 <b>화면에</b> 안 쓴다 (사장님 말씀)');
 
-  console.log('\n[5] ★ <b>아래 칸들이 안 없어졌다</b> (6번)');
-  const D = await p.evaluate(() => (document.getElementById('cusCard') || {}).innerText || '');
-  ['사람','가족','돈','계약','연락기록','문서'].forEach(k =>
-    is(D.indexOf(k) >= 0, '  <b>' + k + '</b> 칸이 그대로 있다'));
+  console.log('\n[5] ★ <b>아래 칸들이 안 없어졌다</b> (6번) — 판 X161 부터는 <b>제 탭에</b> 있다');
+  /* 2026-10-23 · 사장님 말씀 「고객창에서 중복된 부분 줄이고」. 고객 창이 탭 여섯이 된 뒤로
+     한눈에 카드 아래 여섯 칸(사람·가족·돈·계약·연락기록·문서)은 <b>제 탭의 칸과 같은 것을
+     또 세운 것</b>이었습니다. 그래서 한눈에 카드는 머리 + 🔎 한눈에만 남기고, 여섯은
+     <b>제 탭</b>에서 잽니다 — 「안 없어졌다」(6번)는 뜻은 그대로입니다.
+     ★ DB 통합 CRM 카드는 이 한 장이 전부라 여섯이 그대로 섭니다(check-cuswin [10]). */
+  const D = await p.evaluate(() => {
+    const t = k => [].slice.call(document.querySelectorAll('#cusWin [data-cus-tab~="' + k + '"]')).map(e => e.textContent).join(' ');
+    return { info: t('info'), cov: t('cov'), talk: t('talk'), doc: t('doc') };
+  });
+  /* ★ 새 판 (2026-10-23 「탭 다섯으로」) — 계약은 <b>보장</b> 탭, 연락 기록은 「🧵 한 줄기」,
+     서류는 「📎 서류」 + 「🗂️ 저장한 상담자료」 한 카드입니다. 여섯 칸이 <b>제 탭에 있다</b>는 묻는 것은 그대로. */
+  [['사람', 'info', /연락처/], ['가족', 'info', /가족/], ['돈', 'info', /월 소득/], ['계약', 'cov', /가입한 보험/],
+   ['연락기록', 'talk', /한 줄기/], ['문서', 'doc', /저장한 상담자료/]].forEach(([k, tab, re]) =>
+    is(re.test(D[tab] || ''), '  <b>' + k + '</b> 칸이 그대로 있다 — ' + tab + ' 탭'));
 
   console.log('\n[6] ★ <b>새 CSS·새 class 를 안 만들었다</b> (사장님 계약)');
   const i0 = CUSJ.indexOf('function cusGlanceHtml'), i1 = CUSJ.indexOf('function cusCardHtml');

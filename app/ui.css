@@ -28,7 +28,25 @@
 
 :root{
   /* ── 이미 있는 열둘 + 하나 — #435 에서 한 글자도 바꾸지 않았습니다 ── */
-  --t-ink:#191F28; --t-sub:#6B7684; --t-sub2:#8B95A1; --t-line:#E5E8EB;
+  /* ⚠ 2026-10-21 (판 X151) · <b>--t-sub2 를 #8B95A1 → #6B7684 로 내렸습니다.</b>
+     사장님 말씀 「가독성이 너무 떨어져서 … 다 가독성이 떨어져 보기 쉽게
+     정리해야되 <b>전부</b>」. 재 보니 이 한 토큰이 <b>916곳</b>에 쓰이고
+     <b>전부 color:</b> 였습니다(선·바탕으로 쓰는 자리가 한 곳도 없습니다).
+     흰 바탕에서 <b>3.04:1</b> — 4.5 에 한참 못 미쳐, 본체의 흐린 글씨
+     1,462곳 가운데 큰 몫이 이 색이었습니다.
+     ★ 4.5 를 넘기는 가장 옅은 회색이 #6C7684(4.60) 이라 <b>--t-sub 과
+       거의 같아집니다.</b> 그래서 아예 같은 값으로 둡니다 — ba.html 에서
+       이미 같은 결론에 닿았습니다(판 X147): <b>이제 옅은 회색으로 층을
+       나누지 않습니다. 층은 굵기·크기로 냅니다.</b>
+     ★ 두 이름을 <b>합치지는 않았습니다</b> — 뜻이 다른 자리에 붙어 있어,
+       합치면 나중에 한쪽만 되돌릴 길이 없어집니다 (5번). 대신 --t-sub2 는
+       <b>값을 적지 않고 --t-sub 을 가리킵니다</b> — 같은 색값을 두 이름이
+       적어 두면 check-sealcolor [4] 가 울립니다(「색표는 한 곳입니다」).
+       그 자가 실제로 울려서 알았습니다 (8번).
+     ⚠ <b>어두운 칸</b> 위에서는 거꾸로입니다(#191F28 바탕에서 5.45 → 3.59).
+       재 보고 어두운 자리에서 쓰는 곳이 있으면 그 자리만 밝은 값을
+       따로 줍니다 — check-read 가 그것을 셉니다 (8번). */
+  --t-ink:#191F28; --t-sub:#636C78; --t-sub2:var(--t-sub); --t-line:#E5E8EB;
   --t-bg:#F2F4F6; --t-card:#FFFFFF;
   --t-point:#1A56DB; --t-point-l:#EBF3FF; --t-point-d:#123A96;
   --t-pos:#059669; --t-warn:#D97706; --t-neg:#DC2626;
@@ -175,6 +193,19 @@
      ★ 목업에는 청록이 없습니다 — <b>목업에서 온 색이 아니라 앱에서 온 색</b>
        이라는 사실을 적어 둡니다(--t-neg-d 와 같습니다 · 1번).            */
   --t-teal:#0891B2;     /* 실손·건강 쪽 청록 — 흰 위 3.68 · 담보 칩(실손)에 씀 */
+  --t-teal-d:#0E7490;   /* 실손·건강 <b>글씨</b> — 흰 위 5.36. --t-teal 은 흰 위 3.68 (판 X169) */
+  /* ── <b>영웅 띠 — 한 벌만 둡니다</b> (판 X169) ───────────────────────
+     2026-10-23. 세어 보니 같은 남색→파랑 띠가 <b>본체에만 스물넷</b>,
+     그것도 <b>열세 가지로 조금씩 다르게</b> 적혀 있었습니다(64% · 66% ·
+     70% · 72% · 78% · 118% · 128% …). 같은 것을 두 곳에 두지 않습니다 (5번).
+     ★ 끝 색을 <b>#38BDF8 → #0D78B6</b> 로 내렸습니다. 전에는 띠의 밝은 쪽에
+       앉은 흰 글씨가 <b>2.1~2.7</b> 이었습니다 — 사장님이 「윤시현의 두뇌도
+       안 읽힌다」 하신 그 카드의 넉 줄짜리 설명이 바로 거기였습니다.
+       #0D78B6 은 흰 글씨 <b>4.80</b> 이라, 띠의 <b>어디를 잘라도</b> 읽힙니다. */
+  --t-hero:linear-gradient(135deg,#0F172A 0%,var(--t-point) 64%,#0D78B6 100%);
+  --t-hero2:linear-gradient(135deg,var(--t-point),#0D78B6);   /* 작은 띠·단추 */
+  --t-hero-teal:linear-gradient(135deg,#0F172A 0%,#0F5A70 62%,var(--t-teal-d) 100%);
+  --t-hero-pur:linear-gradient(135deg,#0F172A 0%,#4C1D95 58%,#6D28D9 100%);
   --t-neg-d:#B91C1C;    /* 나쁨 <b>글씨</b> — 흰 위 6.47 · 연한 바탕 위 5.91~6.24 */
 
   /* ══ 🌑 <b>짙은 칸 위에 놓는 글자</b> (2026-10-08 · 사장님 답) ══════════
@@ -256,11 +287,26 @@
 .t-h1 span{color:var(--t-sub2)}                  /* 뒷말은 흐리게 — 목업 .h1 span */
 .t-h1 em{font-style:normal;color:var(--t-point)} /* 숫자 강조 — 목업 .h1 em */
 .t-sub{margin-top:12px;font-size:15px;color:var(--t-sub);line-height:1.55;letter-spacing:-.01em}
-.t-lab{font-size:11.5px;font-weight:800;color:var(--t-point);letter-spacing:.01em}
+/* ⚠ 2026-10-22 (판 X158) · <b>11.5px → 바닥 13px</b>. 칸의 이름표인데
+   앱이 정해 둔 바닥 아래였습니다 — 폰에서 「📊 상담현황」 이 제일 작은
+   글씨였습니다(사장님 말씀 「핸드폰으로 보니 한눈에 안들어와」).
+   check-read 가 적어 둔 「13px 밑 2곳」 가운데 하나입니다.          */
+/* ⚠ <b>var(--t6) 를 쓰면 안 됩니다.</b> 글자 토큰은 app/index.html 의
+   :root 에만 있고, 이 파일은 그것 없이 홀로 열리는 자리가 있습니다
+   (check-uidesk 가 ui.css 만 넣고 잽니다). 토큰이 없으면 font-size 가
+   통째로 무너져 <b>16px</b> 로 떨어집니다 — 실제로 그랬습니다 (8번).
+   이 파일에서는 <b>수를 그대로</b> 적습니다. 값은 바닥 13px 입니다.   */
+.t-lab{font-size:13px;font-weight:800;color:var(--t-point);letter-spacing:.01em}
 .t-nm{font-size:15px;font-weight:700;letter-spacing:-.025em;color:var(--t-ink)}
 .t-mt{font-size:12px;color:var(--t-sub2);margin-top:4px;font-weight:600;line-height:1.45}
 .t-big{margin-top:8px;font-size:18px;font-weight:700;letter-spacing:-.03em;line-height:1.45;color:var(--t-ink)}
 .t-big small{display:block;font-size:13.5px;color:var(--t-sub2);font-weight:600;margin-top:6px}
+/* 🧱 상담현황의 「TA → AP → … 」 한 줄 (판 X158).
+   칸 격자가 단계 이름과 수를 다 말하게 된 뒤로, 이 줄이 하는 일은
+   <b>차례</b> 하나입니다 — 같은 것을 두 곳에서 크게 외치지 않습니다 (5번).
+   지우지 않고 <b>쪽지 크기</b>로 내립니다 (6번). 홈 4.2화면 선도 이 14px
+   으로 맞춰집니다 — 눈금을 올리지 않습니다 (8번).                     */
+.t-big.hm-road{font-size:14px;font-weight:700;color:var(--t-sub);margin-top:6px;line-height:1.4}
 .t-num{font-size:44px;font-weight:800;letter-spacing:-.045em;line-height:1.1}
 .t-num span{font-size:26px;margin-left:3px;font-weight:700}
 
@@ -276,7 +322,11 @@
      --t-warn-d 라는 이름으로 있습니다(대비 5.57). 그때 이 한 자리만
      옮겨 붙이기를 빠뜨린 것입니다. check-sealcolor 가 봅니다.        */
 .t-note{background:var(--t-warn-l);border-radius:14px;padding:13px 16px;
-  font-size:12.5px;line-height:1.6;color:var(--t-warn-d);font-weight:600;margin-top:12px}
+  font-size:13px;line-height:1.6;color:var(--t-warn-d);font-weight:600;margin-top:8px}
+/* ⚠ 2026-10-23 (판 X167) · <b>12.5 → 13px(앱 바닥)</b>. 폰에서 12.5px 이고
+   컴퓨터에서만 13.5px 이었습니다 — <b>거꾸로</b>입니다. 사장님은 폰으로
+   보십니다. 「막힌 데 — ○○님이 CS에서 8일째입니다」 처럼 <b>읽고 움직여야
+   하는 글</b>이 여기 들어갑니다 (사장님 말씀 「핸드폰에서도 한번에 들어와야 돼」). */
 /* 알림칸 안의 <b>굵은 글자</b>는 한 톤 더 진합니다 — 목각 .note b (대비 6.77).
    여태 굵기만 달라 목각보다 강조가 약했습니다.                          */
 .t-note b{color:var(--t-warn-d2)}
@@ -298,7 +348,7 @@
 .t-btn:active{transform:scale(.99)}
 /* 작은 회색 단추 — 목업 .gb */
 .t-gb{min-height:44px;padding:0 13px;border-radius:var(--t-r-xs);background:var(--t-bg-2);
-  color:var(--t-ink-2);font-size:12.5px;font-weight:700;border:0;font-family:var(--t-font);
+  color:var(--t-ink-2);font-size:13px;font-weight:700;border:0;font-family:var(--t-font);   /* 12.5 → 13px (판 X167 · 앱 바닥) */
   display:inline-flex;align-items:center;cursor:pointer}
 .t-gb.b{background:var(--t-point);color:var(--t-card)}
 /* 고르는 칩 — 목업 .t-chip */
@@ -306,9 +356,40 @@
   color:var(--t-sub);font-size:13px;font-weight:700;border:0;font-family:var(--t-font);
   display:inline-flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer}
 .t-chip.on{background:var(--t-ink);color:var(--t-card)}
-.t-chip b{color:var(--t-point)}
+/* 칩의 주인공은 <b>수</b>입니다 — 토스 홈이 그렇습니다 (판 X158).
+   13px 글 속에 13px 수가 섞여 있어 눈이 멈출 자리가 없었습니다.    */
+.t-chip b{color:var(--t-point);font-size:15px;line-height:1}
 .t-chip.on b{color:var(--t-point-on)}
+/* 📥 <b>띄워 둔 보장분석이 없는 날</b>의 칸 (판 X194 · 사장님 말씀
+   2026-10-25 「빈칸이 많은데 … 알차게 채워줘」). 아무것도 없는 칸이 197px —
+   화면의 4분의 1 — 를 먹고 있었습니다. <b>말도 길도 그대로</b> 두고 줄만
+   하나로 합치고 테두리 여백을 좁혀 <b>119px</b> 로 줄였습니다.
+   ⚠ <b>담긴 날에는 안 붙입니다</b> — 그때는 적을 것이 많아 넓은 여백이 맞습니다. */
+.t-card.hm-kb0{padding:15px 16px}
+/* 📥 <b>읽는 중</b> — 이름표 줄에 그대로 잇는 말. 색만 다르고 크기는
+   이름표와 같은 13px(앱 바닥)입니다. 줄을 새로 안 만듭니다.          */
+.t-card.hm-kb0 .hm-kb-w{color:var(--t-sub2);font-weight:600}
+.t-card.hm-kb0 .t-row{padding:11px 0;border-bottom:0}
 .t-chips{display:flex;gap:7px;margin-top:14px;flex-wrap:wrap}
+/* ══ 📱 수가 주인공인 칸 격자 — 상담현황 (판 X158) ════════════════════
+   사장님 말씀 (2026-10-22) — 「핸드폰으로 보니 한눈에 안들어와 … <b>토스
+   어플처럼 칸을 활용</b>해보자」.
+   재어 보니 단계 칩 다섯이 폰에서 <b>줄줄이 흘러</b> 두 줄로 접히고, 수와
+   이름이 <b>같은 13px</b>로 한 줄에 붙어 있었습니다 — 어느 단계에 몇 분인지
+   세어 보려면 글을 읽어야 했습니다.
+   ★ <b>칸으로 세우고 수를 위로</b> 올립니다. 글자는 한 자도 안 바꿉니다 —
+     여러 자가 이 칩의 글을 읽고 있어 markup 을 건드리면 그쪽이 깨집니다
+     (8번). 옷만 바꿉니다.
+   ★ 수는 <b>--t1(24px)</b>, 이름은 그대로 13px — 눈이 수에 먼저 멈춥니다.
+   ★ 🕗 지남 칸은 <b>단추</b>라 44px 보다 커야 합니다 — 칸이 64px 입니다. */
+/* ⚠ 칸 높이·틈은 <b>재어서</b> 고른 값입니다 — 홈은 4.2화면이 선이고
+   (check-homeone) 처음 세운 64px·8px 로는 <b>4.25화면</b>이 되어 선을
+   넘었습니다. 눈금을 올리는 대신 칸을 조였습니다 (8번).             */
+.t-chips.hm-flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:8px}
+.t-chips.hm-flow .t-chip{display:flex;flex-direction:column;align-items:flex-start;
+  justify-content:center;gap:0;min-height:56px;padding:7px 10px;width:100%;
+  text-align:left;line-height:1.3}
+.t-chips.hm-flow .t-chip b{font-size:24px;line-height:1.15;letter-spacing:-.03em}
 /* 칩 바탕(--t-card)은 판 위에서는 하얗게 도드라지지만 <b>카드 안에서는</b>
    카드와 같은 색이라 글자만 남습니다 — 누를 수 있는 줄 모릅니다. 카드 안에서는
    목업이 칩에 쓰는 그 토큰(--t-bg-2)을 씁니다. 색은 여기 한 곳에만 둡니다. */
@@ -336,7 +417,7 @@
    여태 명단은 온도를 <b>네 색</b>으로 말했는데 빨강이 「괜찮은 분」 이고
    흐린 회색이 「챙겨야 할 분」 이라 <b>거꾸로</b> 였습니다. 색은 여기
    있는 토큰만 씁니다 — 새 색을 만들지 않습니다 (5번).                */
-.t-row .av.n{background:var(--t-neg-l);color:var(--t-neg)}
+.t-row .av.n{background:var(--t-neg-l);color:var(--t-neg-d)}
 /* ⚠ flex-basis 를 0 으로 두면 <b>오른쪽이 폭을 다 먹고 이름이 사라집니다.</b>
    390px 에서 재어 보니 .m 이 폭 0 이 되어 줄 높이가 434px 이었습니다.
    auto 로 두면 이름이 제 몫(127px)을 갖고 줄은 240px 이 됩니다.
@@ -346,7 +427,14 @@
    .nm 이 「.t-row .m span」 에 눌려 작은 회색 글씨로 나옵니다(실제로 그랬습니다). */
 .t-row :where(.m) b, .t-row .nm{display:block;font-size:15px;font-weight:700;
   color:var(--t-ink);letter-spacing:-.025em}
-.t-row :where(.m) span, .t-row .mt{display:block;margin-top:3px;font-size:12.5px;
+/* ⚠ <b>12.5 → 13px (앱 바닥)</b> — 2026-10-25 · 판 X194.
+   폰(≤900px)에서 <b>12.5px</b> 인데 컴퓨터(≥901px)에서는 13px 이었습니다 —
+   <b>거꾸로</b>입니다. 작게 보이는 쪽이 폰인데 폰이 더 작았습니다.
+   판 X167 에서 알림 칸이 똑같이 「폰 12.5 · 컴퓨터 13.5」 였고 그때 고친
+   그 병입니다. 바닥은 13px 입니다 (판 X146·X147).
+   ★ <b>제가 낸 것이 아니라 전부터 있던 것</b>입니다 — 판 X194 에서 📥 빈
+     보장분석 칸을 이 줄 꼴로 바꾸다 check-hmfill 이 찾아냈습니다.       */
+.t-row :where(.m) span, .t-row .mt{display:block;margin-top:3px;font-size:13px;
   color:var(--t-sub2);font-weight:600;line-height:1.45}
 /* ⚠ <b>flex:none 이면 오른쪽이 줄 밖으로 나갑니다.</b> 목각의 줄은 오른쪽에
    한두 가지뿐이라 안 겪던 자리인데, 본체 명단은 꼬리표·📞·마디·동의·
@@ -359,9 +447,9 @@
 /* 작은 표시 — 목업 .stg */
 .t-tag{font-size:10.5px;font-weight:800;padding:3px 7px;border-radius:7px;
   background:var(--t-bg);color:var(--t-sub);white-space:nowrap}
-.t-tag.due{background:var(--t-warn-l);color:var(--t-warn)}
-.t-tag.ok{background:var(--t-pos-l);color:var(--t-pos)}
-.t-tag.no{background:var(--t-neg-l);color:var(--t-neg)}
+.t-tag.due{background:var(--t-warn-l);color:var(--t-warn-d)}
+.t-tag.ok{background:var(--t-pos-l);color:var(--t-pos-d)}
+.t-tag.no{background:var(--t-neg-l);color:var(--t-neg-d)}
 .t-tag.b{background:var(--t-point-l);color:var(--t-point)}
 /* 다섯째 — 🙌 소개 꼬리표. 목각 FROM 의 보라입니다. <b>새 색이 아닙니다</b> —
    --t-pur 은 53행에 이미 있고 .t-cal .dt.sns · .t-script .sh 가 이미 씁니다.
@@ -404,8 +492,8 @@
 .t-cal .dt{margin-top:3px;font-size:9.5px;font-weight:700;border-radius:5px;padding:2px 4px;
   line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .t-cal .dt.sns{background:var(--t-pur-l);color:var(--t-pur)}
-.t-cal .dt.bd{background:var(--t-pos-l);color:var(--t-pos)}
-.t-cal .dt.end{background:var(--t-warn-l);color:var(--t-warn)}
+.t-cal .dt.bd{background:var(--t-pos-l);color:var(--t-pos-d)}
+.t-cal .dt.end{background:var(--t-warn-l);color:var(--t-warn-d)}
 .t-cal .dt.region{background:var(--t-point-l);color:var(--t-point)}
 .t-cal .dt.more{color:var(--t-sub3)}
 @media (max-width:900px){ .t-cal .cd{min-height:58px;padding:3px} .t-cal .dt{font-size:8px;padding:1px 3px} }
@@ -526,7 +614,6 @@
   .t-row .mt, .t-row :where(.m) span{font-size:13px;font-weight:500}
 
   .t-tag{font-size:11.5px;padding:5px 9px;border-radius:8px}
-  .t-lab{font-size:12px}
 
   .t-note{padding:15px 17px;font-size:13.5px;margin-top:14px}
 
@@ -534,3 +621,27 @@
   .t-ev .t{font-size:14.5px}
   .t-ev .s{font-size:12.5px;margin-top:4px}
 }
+
+
+/* ══ ▶ 잡아 둔 다음 할 일 — 줄마다 「끝」·「✕」 (판 X122) ═══════════════
+   사장님 말씀 (2026-10-17) 「다음 할일 여러개 쌓이게 해줘」.
+   글 · 끝 · ✕ 가 폰(390px)에서도 한 줄로 섭니다.
+   ★ 단추를 <b>전용</b>으로 둡니다 — 공용 .t-btn 은 칸 전체를 먹는 단추라
+     줄이 무너집니다(실제로 그랬습니다). 그렇다고 .t-btn 을 고치면 그것을
+     쓰는 다른 화면이 다 바뀝니다 (5번).                                  */
+.cm-nxrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;
+  align-items:center;background:var(--t-bg-3);border:1px solid var(--t-line);
+  border-radius:12px;padding:9px 11px;margin-top:8px}
+.cm-nxrow.due{background:var(--t-neg-l);border-color:var(--t-neg-l)}
+.cm-nxt{min-width:0;font-size:13.5px;color:var(--t-ink)}
+.cm-nxt b{display:block;font-weight:800;overflow-wrap:anywhere}
+.cm-nxt i{display:block;font-style:normal;font-size:13px;color:var(--t-sub);margin-top:2px}
+.cm-nxrow.due .cm-nxt i{color:var(--t-neg-d)}
+.cm-nxdo{appearance:none;border:0;font-family:inherit;font-size:13.5px;font-weight:800;
+  color:#fff;background:var(--t-point);border-radius:10px;
+  min-width:46px;height:34px;padding:0 12px;cursor:pointer;line-height:1}
+.cm-nxdo:hover{filter:brightness(1.06)}
+.cm-nxx{appearance:none;border:1px solid var(--t-line);background:var(--t-card);
+  color:var(--t-sub);border-radius:10px;width:34px;height:34px;font-size:13.5px;
+  cursor:pointer;line-height:1}
+.cm-nxx:hover{color:var(--t-neg-d);border-color:var(--t-neg-l)}

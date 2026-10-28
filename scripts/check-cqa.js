@@ -158,7 +158,10 @@ const CARD = () => {
     await new Promise(r => setTimeout(r, 600));
     const el = document.getElementById('cqaCard');
     const w = (WROTE || []).filter(x => x.tb === 'saved_reports');
-    return { 쓴것: w, 담긴것: cmOf('c1').next,
+    /* ★ 판 X122 — 다음 할 일은 <b>쌓입니다</b>. 묻는 곳은 cmNextAll 하나 (5번).
+       옛 m.next 를 직접 보던 자리를 그대로 옮깁니다 — 무르게 한 것이 아니라
+       재는 대상이 한 칸에서 목록으로 바뀐 것입니다. */
+    return { 쓴것: w, 담긴것: (typeof cmNextTop === 'function') ? cmNextTop('c1') : null,
              물음: (el && el.querySelector('.t-big')) ?
                    el.querySelector('.t-big').innerText.replace(/\s+/g,' ').trim() : '',
              머리: (el && el.querySelector('.t-h1')) ? el.querySelector('.t-h1').textContent.replace(/\s+/g,' ').trim() : '' };
@@ -169,8 +172,12 @@ const CARD = () => {
      '  다음 할 일이 <b>말과 날짜로</b> 담겼다 — ' +
      (B.담긴것 ? (B.담긴것.what + ' · ' + B.담긴것.due) : '(안 담김)'));
   const 보낸것 = (B.쓴것 && B.쓴것[0] && B.쓴것[0].body && B.쓴것[0].body.content) || {};
-  is(!!(보낸것.next && 보낸것.next.what),
-     '  ★ <b>cmSave 가 만든 꼴 그대로</b> 서버로 갔다 — content.next 가 있다');
+  /* ★★ <b>서버로 실제로 실렸나</b>. cmBody 는 CM_FIELDS 에 적힌 칸만 싣습니다 —
+     nx 를 표에 안 넣으면 화면에서는 쌓이는데 <b>새로고침하면 통째로 사라집니다.</b>
+     처음에 제가 그 줄을 빠뜨렸고 이 자가 잡았습니다 (8번). */
+  is(Array.isArray(보낸것.nx) && 보낸것.nx.length === 1 && !!보낸것.nx[0].what,
+     '  ★ <b>cmSave 가 만든 꼴 그대로</b> 서버로 갔다 — content.nx 에 한 줄 있다 (' +
+     (Array.isArray(보낸것.nx) ? (보낸것.nx.length + '건') : '배열이 아님') + ')');
   /* ★ 수를 <b>여기 박지 않습니다</b> — 칸을 하나 더할 때마다 이 줄을 손으로
      고쳐야 하면, 고치는 것을 잊은 날 <b>안 울립니다</b>. 칸 표에서 세어
      견줍니다 (8번). 자가 묻는 것은 그대로입니다 — <b>표만큼 보냈나</b>. */
@@ -217,8 +224,13 @@ const CARD = () => {
   [['.from(', '서버 표를 직접 부르는'], ['.insert(', '직접 넣는'], ['.update(', '직접 고치는'],
    ['fetch(', '직접 받아 오는'], ['localStorage', '따로 담아 두는']].forEach(x =>
     is(BLK.indexOf(x[0]) < 0, '  ★ ' + x[1] + ' 줄이 <b>한 줄도 없다</b> — ' + x[0]));
-  is(/cmSave\(id,\{next:/.test(BLK) && /cmSave\(id,\{touch:/.test(BLK),
-     '  ★ 쓰는 것은 <b>cmSave 하나</b>로만 한다 — 기존 함수를 부르기만 한다');
+  /* ★ 판 X122 — 다음 할 일은 <b>cmNextSave</b> 를 부릅니다(그 자가 cmSave 로 갑니다).
+     여기서 제 손으로 cmSave(id,{next:…}) 를 부르면 <b>덮어써서</b> 쌓이지 않습니다.
+     그래서 「cmSave 를 직접 안 부르고 기존 함수를 부른다」 로 더 좁게 봅니다 (5번). */
+  is(/cmNextSave\(/.test(BLK) && !/cmSave\(id,\{next:/.test(BLK),
+     '  ★ 다음 할 일은 <b>cmNextSave</b> 를 부른다 — 제 손으로 덮어쓰지 않는다');
+  is(/cmSave\(id,\{touch:/.test(BLK) || /cmTouchAdd\(/.test(BLK),
+     '  ★ 접촉 기록도 <b>기존 자리</b>로만 쓴다');
   is(BLK.indexOf('classList.add') >= 0 && !/\.className\s*=/.test(BLK),
      '  클래스를 <b>통째로 대입하지 않는다</b> — 다른 곳이 붙여 둔 것을 잃습니다 (5번)');
 
@@ -256,7 +268,9 @@ const CARD = () => {
 
   console.log('\n[7] ★ <b>아래 칸들이 안 없어졌다</b> (6번) · 「여기에 적기」 가 그 칸으로');
   const E = await p.evaluate(() => {
-    const t = (document.getElementById('cmPanels') || {}).innerText || '';
+    /* 판 X161 — 칸들이 고객 창의 <b>탭</b>에 나뉘어 섭니다. 안 고른 탭의 칸은 감춰질 뿐
+       있으므로 innerText(보이는 글) 대신 textContent(있는 글)로 「안 없어졌나」 를 잽니다 */
+    const t = (document.getElementById('cmPanels') || {}).textContent || '';
     const one = id => document.querySelectorAll('#' + id).length;
     return { 관계:/관계/.test(t), 가족:/가족으로 묶기/.test(t), 팩트:/팩트파인딩/.test(t),
              통장:/빈 통장/.test(t),

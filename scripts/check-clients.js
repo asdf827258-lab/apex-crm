@@ -71,8 +71,8 @@ window.supabase={createClient:function(){
        if(f.id&&out.length)out=[out[0]];
      }
      else if(tbl==='profiles')out=[{id:'cl',name:'점검',role:'owner',active:true,plan:'vip'},
-      {id:'p2',name:'박서준',role:'member',active:true},
-      {id:'p3',name:'최민아',role:'member',active:true}];
+      {id:'p2',name:'변학도',role:'member',active:true},
+      {id:'p3',name:'성춘향',role:'member',active:true}];
      else if(tbl==='documents')out=[];
      return Promise.resolve({data:out,error:null}).then(res)}};
   a['delete']=function(){return a};return a};
@@ -136,27 +136,27 @@ window.supabase={createClient:function(){
 
   /* ── 실명으로 그대로 찾기 ── */
   await page.evaluate(() => {
-    cmRealSet('c1', '김철수'); cmRealSet('c2', '김민지'); cmRealSet('c3', '박서준');
+    cmRealSet('c1', '홍길동'); cmRealSet('c2', '김민지'); cmRealSet('c3', '변학도');
     osRenderList();
   });
   L = await list();
-  ok(L.names.indexOf('김철수') >= 0, '실명을 적어 두면 목록에 그 이름이 나온다');
+  ok(L.names.indexOf('홍길동') >= 0, '실명을 적어 두면 목록에 그 이름이 나온다');
 
-  await page.evaluate(() => osClientsFilter('김철수'));
+  await page.evaluate(() => osClientsFilter('홍길동'));
   L = await list();
-  ok(L.n === 1 && L.names[0] === '김철수', '"김철수" 를 그대로 치면 한 명만 남는다');
+  ok(L.n === 1 && L.names[0] === '홍길동', '"홍길동" 를 그대로 치면 한 명만 남는다');
 
   await page.evaluate(() => osClientsFilter('김○○'));
   L = await list();
   ok(L.n === 2, '마스킹된 이름으로도 여전히 찾힌다 (' + L.n + '명)');
 
-  await page.evaluate(() => osClientsFilter('ㄱㅊㅅ'));
+  await page.evaluate(() => osClientsFilter('ㅎㄱㄷ'));
   L = await list();
-  ok(L.n === 1 && L.names[0] === '김철수', '초성 "ㄱㅊㅅ" 로도 찾는다');
+  ok(L.n === 1 && L.names[0] === '홍길동', '초성 "ㅎㄱㄷ" 로도 찾는다');
 
   await page.evaluate(() => osClientsFilter('5678'));
   L = await list();
-  ok(L.n === 1 && L.names[0] === '김철수', '연락처 뒷자리로도 찾는다');
+  ok(L.n === 1 && L.names[0] === '홍길동', '연락처 뒷자리로도 찾는다');
 
   await page.evaluate(() => osClientsFilter('없는사람'));
   L = await list();
@@ -176,7 +176,7 @@ window.supabase={createClient:function(){
     first: (document.querySelector('.cm-sec .cm-chip') || {}).textContent || '',
     saved: cmRecent().length
   }));
-  ok(r2.n === 1 && /박서준/.test(r2.first), '연 고객이 "최근 본 고객" 에 남는다');
+  ok(r2.n === 1 && /변학도/.test(r2.first), '연 고객이 "최근 본 고객" 에 남는다');
 
   await page.evaluate(() => { osOpenClient('c1'); });
   await page.waitForTimeout(300);
@@ -184,7 +184,7 @@ window.supabase={createClient:function(){
   await page.waitForTimeout(500);
   const r3 = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('.cm-sec .cm-chip'), e => e.textContent.replace(/\s/g, '')));
-  ok(r3.length === 2 && /김철수/.test(r3[0]), '가장 최근에 본 사람이 맨 앞에 온다');
+  ok(r3.length === 2 && /홍길동/.test(r3[0]), '가장 최근에 본 사람이 맨 앞에 온다');
 
   /* 새로고침해도 남아 있는가 */
   await page.reload({ waitUntil: 'domcontentloaded', timeout: 90000 });
@@ -201,7 +201,7 @@ window.supabase={createClient:function(){
     real: cmRealOf('c1')
   }));
   ok(r4.chips === 2, '새로고침해도 최근 본 고객이 그대로 있다');
-  ok(r4.real === '김철수', '적어 둔 실명도 그대로 남는다');
+  ok(r4.real === '홍길동', '적어 둔 실명도 그대로 남는다');
 
   /* ── 다음 할 일 · 접촉 기록 ── */
   await page.evaluate(() => osOpenClient('c1'));
@@ -212,6 +212,11 @@ window.supabase={createClient:function(){
        .t-h1(물음 카드의 「아는 것 N가지」)을 집어 오면 안 됩니다.        */
     title: (function(){
       var cards=[].slice.call(document.querySelectorAll('#dynPane .t-card')),i,lab;
+      /* 판 X161 — 고객 창에서 이름은 <b>맨 위 머리 줄</b>(늘 붙어 다님)에 한 번만 섭니다.
+         큰 이름 칸(👤 고객 · t-h1)은 같은 이름을 두 번 세워 걷었습니다(2026-10-23
+         「중복된 부분 줄이고」). 「제목이 실명인가」 는 그 머리 줄에서 잽니다. */
+      var top=document.querySelector('#oscTopBar .nm');
+      if(top)return top.textContent||'';
       for(i=0;i<cards.length;i++){
         lab=cards[i].querySelector('.t-lab');
         if(lab&&lab.textContent.indexOf('고객')>=0&&cards[i].querySelector('.t-h1'))
@@ -224,7 +229,7 @@ window.supabase={createClient:function(){
     ff: document.querySelectorAll('#cmPanels [id^=cmff_]').length,
     tot: cmFfTotal()
   }));
-  ok(/김철수/.test(det.title), '고객 화면 제목이 실명으로 나온다');
+  ok(/홍길동/.test(det.title), '고객 화면 제목이 실명으로 나온다');
   ok(det.rel && det.fam, '관계 칸과 가족 칸이 있다');
   ok(det.ff === det.tot && det.ff >= 20, '팩트파인딩이 ' + det.ff + '칸 모두 그려진다');
 
@@ -241,11 +246,16 @@ window.supabase={createClient:function(){
     /* 2026-09-27 · 판 ⑦ — 이 칸이 목각 옷으로 갈아입어 이름이 바뀌었습니다
        (.cm-next .w → 「▶」 가 든 .t-note). <b>묻는 것은 그대로</b>입니다 —
        저장하면 바로 화면에 뜨는가.                                       */
-    shown: ([].slice.call(document.querySelectorAll('#cmPanels .t-note'))
-              .filter(e => /▶/.test(e.textContent))[0] || {}).textContent || ''
+    /* ★ 판 X122 — 쌓인 줄은 .cm-nxrow 로 섭니다(여태 .t-note 한 줄).
+       묻는 것은 그대로입니다 — <b>저장하면 바로 화면에 뜨는가</b>. */
+    /* ★ 새 판 (2026-10-23) — 쌓인 할 일은 연락 탭 「📌 다음 할 일」(#cuwNext) 한 곳에 섭니다 */
+    shown: [].slice.call(document.querySelectorAll('#cuwNext .t-row')).map(e => e.textContent).join(' | ')
   }));
   ok(nx.saved.length === 1 && nx.saved[0].client_id === 'c1', '다음 할 일이 서버에 저장된다');
-  ok(nx.saved.length === 1 && /증권/.test(((nx.saved[0].content || {}).next || {}).what || ''), '적은 내용이 그대로 들어간다');
+  /* ★ 판 X122 — 다음 할 일은 <b>쌓입니다</b>(content.nx 배열). 옛 한 칸도 같이 봅니다 (1번) */
+  const nxTxt = (c) => ((c || {}).nx || []).map(x => (x && x.what) || '').join(' / ')
+                       + ' ' + (((c || {}).next || {}).what || '');
+  ok(nx.saved.length === 1 && /증권/.test(nxTxt(nx.saved[0].content)), '적은 내용이 그대로 들어간다');
   ok(/증권/.test(nx.shown), '저장하면 바로 화면에 뜬다');
 
   /* 두 번 저장해도 줄이 두 개가 되면 안 된다 */
@@ -253,7 +263,13 @@ window.supabase={createClient:function(){
   await page.waitForTimeout(500);
   const dup = await page.evaluate(() => window.__saved.filter(x => x.kind === 'client_meta' && x.client_id === 'c1'));
   ok(dup.length === 1, '두 번 저장해도 줄은 하나다 (' + dup.length + ')');
-  ok(/다시 전화/.test((((dup[0] || {}).content || {}).next || {}).what || ''), '나중에 적은 것으로 덮인다');
+  /* ★ 판 X122 · 사장님 말씀 「다음 할일 여러개 쌓이게 해줘」 —
+     여기서 재던 것은 <b>「덮인다」</b> 였습니다. 이제 <b>쌓입니다.</b>
+     자를 무르게 한 것이 아닙니다: <b>줄(saved_reports)은 그대로 하나</b>인지를
+     바로 위 255 줄이 지키고, 여기서는 <b>앞의 것이 안 사라지는가</b> 를 봅니다. */
+  const 담긴것 = nxTxt((dup[0] || {}).content);
+  ok(/다시 전화/.test(담긴것), '나중에 적은 것이 들어간다 — ' + 담긴것.trim());
+  ok(/증권/.test(담긴것), '★ 먼저 적은 것이 안 사라진다 — 쌓인다 (판 X122)');
 
   /* 접촉 기록 */
   /* 앱에 묻는다 — 3일 전은 <b>앱이 세는 오늘</b>에서 사흘 뺀 날입니다 */
@@ -267,8 +283,9 @@ window.supabase={createClient:function(){
   await page.waitForTimeout(500);
   const tc = await page.evaluate(() => ({
     /* 2026-09-27 · 판 ⑦ — .cm-ti → .t-ev · .cm-tp → 「마지막 접촉」 이 든 .t-tag */
-    n: document.querySelectorAll('#cmPanels .t-ev').length,
-    temp: ([].slice.call(document.querySelectorAll('#cmPanels .t-tag'))
+    /* ★ 새 판 (2026-10-23) — 접촉은 연락 탭 「🧵 한 줄기」(#cuwTl) 한 곳에 섭니다 */
+    n: [].slice.call(document.querySelectorAll('#cuwTl .t-row')).filter(e => /치료비 통장 설명함/.test(e.textContent)).length,
+    temp: ([].slice.call(document.querySelectorAll('#cuwTl .t-tag'))
              .filter(e => /마지막 접촉/.test(e.textContent))[0] || {}).textContent || '',
     srv: (window.__saved.filter(x => x.kind === 'client_meta' && x.client_id === 'c1')[0] || {}).content
   }));
@@ -311,7 +328,7 @@ window.supabase={createClient:function(){
 
   /* ── 가족 묶기 ── */
   await page.evaluate(() => {
-    document.getElementById('cmFam').value = '김철수 가족';
+    document.getElementById('cmFam').value = '홍철호 가족';
     document.getElementById('cmRel').value = '본인';
     cmFamSave('c1');
   });
@@ -321,7 +338,7 @@ window.supabase={createClient:function(){
   await page.evaluate(() => osOpenClient('c2'));
   await page.waitForTimeout(400);
   await page.evaluate(() => {
-    document.getElementById('cmFam').value = '김철수 가족';
+    document.getElementById('cmFam').value = '홍철호 가족';
     document.getElementById('cmRel').value = '배우자';
     cmFamSave('c2');
   });
@@ -341,7 +358,7 @@ window.supabase={createClient:function(){
              txt: ([].slice.call(c.querySelectorAll('.t-chip'))
                      .map(e => e.textContent).join(' ')) };
   });
-  ok(fam.mem === 1 && /김철수/.test(fam.txt), '같은 가족이면 상대가 바로가기로 뜬다');
+  ok(fam.mem === 1 && /홍길동/.test(fam.txt), '같은 가족이면 상대가 바로가기로 뜬다');
 
   await page.evaluate(() => osBackToList());
   await page.waitForTimeout(500);
@@ -349,7 +366,7 @@ window.supabase={createClient:function(){
     heads: Array.prototype.map.call(document.querySelectorAll('.cm-fh'), e => e.textContent.replace(/\s+/g, ' ').trim()),
     inFam: document.querySelectorAll('.cm-fam .t-row').length
   }));
-  ok(grp.heads.length === 1 && /김철수 가족/.test(grp.heads[0]) && /2명/.test(grp.heads[0]),
+  ok(grp.heads.length === 1 && /홍철호 가족/.test(grp.heads[0]) && /2명/.test(grp.heads[0]),
     '목록이 가족으로 묶여 보인다 — ' + grp.heads[0]);
   ok(grp.inFam === 2, '가족 아래에 두 명이 들어간다');
 
@@ -433,9 +450,9 @@ window.supabase={createClient:function(){
   ok(w1.chips.length >= 4, '담당자 고르는 단추가 뜬다 — ' + w1.chips.join(' · '));
   ok(/전체 ?4/.test(w1.chips[0] || ''), '맨 앞은 전체 4명 — ' + w1.chips[0]);
   ok(w1.me, '내 것이 맨 앞에 따로 표시된다');
-  ok(w1.chips.join(' ').indexOf('박서준') >= 0 && w1.chips.join(' ').indexOf('최민아') >= 0,
+  ok(w1.chips.join(' ').indexOf('변학도') >= 0 && w1.chips.join(' ').indexOf('성춘향') >= 0,
     '팀원 이름이 그대로 나온다');
-  ok(w1.tags.length === 2 && w1.tags.indexOf('박서준') >= 0 && w1.tags.indexOf('최민아') >= 0,
+  ok(w1.tags.length === 2 && w1.tags.indexOf('변학도') >= 0 && w1.tags.indexOf('성춘향') >= 0,
     '남이 맡은 고객 줄에만 담당자 딱지가 붙는다 (' + w1.tags.length + '개) — ' + w1.tags.join(','));
 
   /* 담당자를 하나 고르면 그 사람 것만 */
@@ -447,8 +464,8 @@ window.supabase={createClient:function(){
     cmWhoSet('p2');   /* 한 번 더 누르면 풀린다 */
     return { rows, txt, on, back: document.querySelectorAll('#oscList .t-row').length };
   });
-  ok(w2.rows === 1, '박서준을 고르면 그 사람 고객 한 명만 남는다 (' + w2.rows + '명)');
-  ok(/박서준<\/b> 담당 1명|박서준 담당 1명/.test(w2.txt.replace(/\s+/g, ' ')) || /박서준/.test(w2.txt),
+  ok(w2.rows === 1, '변학도을 고르면 그 사람 고객 한 명만 남는다 (' + w2.rows + '명)');
+  ok(/변학도<\/b> 담당 1명|변학도 담당 1명/.test(w2.txt.replace(/\s+/g, ' ')) || /변학도/.test(w2.txt),
     '누구 것을 보고 있는지 적어 준다');
   ok(w2.on === 1, '고른 단추 하나만 켜진다');
   ok(w2.back === 4, '다시 누르면 전체로 돌아온다 (' + w2.back + '명)');
@@ -471,7 +488,7 @@ window.supabase={createClient:function(){
   /* ── 이름으로 바로 찾기 ── */
   const f1 = await page.evaluate(() => {
     const r = {};
-    ['박', '김', 'ㅂ', 'ㅊ', '5678', '박서준'].forEach(q => {
+    ['박', '김', 'ㅂ', 'ㅊ', '5678', '변학도'].forEach(q => {
       OSC.q = q; osRenderList();
       r[q] = {
         n: document.querySelectorAll('#oscList .t-row').length,
@@ -484,11 +501,14 @@ window.supabase={createClient:function(){
   ok(f1['박'].n === 1, '「박」 한 글자로 바로 찾는다 (' + f1['박'].n + '명)');
   ok(f1['김'].n === 2, '「김」 이면 두 명 다 나온다 (' + f1['김'].n + '명)');
   ok(f1['ㅂ'].n === 1, '초성 「ㅂ」 으로도 찾는다 — 박○○ (' + f1['ㅂ'].n + '명)');
-  /* 「ㅊ」 은 최○○ 말고 가족명 「김철수 가족」 에도 걸린다. 그게 맞는 동작이다 —
+  /* 「ㅊ」 은 최○○ 말고 가족명 「홍철호 가족」 에도 걸린다. 그게 맞는 동작이다 —
+     ★ 가족 이름의 <b>둘째 글자 초성이 ㅊ</b> 이어야 이 시험이 섭니다 (판 X125).
+       옛 가족 이름은 둘째 글자가 ㅊ 이었는데, 가짜 이름으로 바꾸면서 「홍길동 가족」 이
+       되어 ㅊ 이 사라졌고 자가 울었습니다 — ㅊ 을 가진 홍철호로 다시 맞췄습니다.
      사람은 고객 이름이 기억 안 나면 가족 이름으로 찾는다. */
-  ok(f1['ㅊ'].n === 3, '초성은 고객 이름·가족 이름 둘 다에 걸린다 — 「ㅊ」 이면 최○○ 와 김철수 가족 둘 (' + f1['ㅊ'].n + '명)');
+  ok(f1['ㅊ'].n === 3, '초성은 고객 이름·가족 이름 둘 다에 걸린다 — 「ㅊ」 이면 최○○ 와 홍철호 가족 둘 (' + f1['ㅊ'].n + '명)');
   ok(f1['5678'].n === 1, '연락처 뒷자리로도 찾는다 (' + f1['5678'].n + '명)');
-  ok(f1['박서준'].n === 1, '담당자 이름으로 치면 그 사람이 맡은 고객이 나온다 (' + f1['박서준'].n + '명)');
+  ok(f1['변학도'].n === 1, '담당자 이름으로 치면 그 사람이 맡은 고객이 나온다 (' + f1['변학도'].n + '명)');
 
   /* 없는 이름을 치면 무엇으로 찾을 수 있는지 알려 준다 */
   const f2 = await page.evaluate(() => {
@@ -500,8 +520,8 @@ window.supabase={createClient:function(){
   ok(/담당자 이름으로도/.test(f2), '못 찾으면 담당자 이름으로도 된다고 알려 준다');
 
   const leak = await page.evaluate(() => JSON.stringify(window.__saved) + JSON.stringify(window.__clients));
-  ok(leak.indexOf('김철수 가족') >= 0, '가족 이름은 서버에 저장된다');
-  ok(!/"김철수"/.test(leak), '실명 자체는 서버로 나가지 않는다 — 이 기기 안에만 남는다');
+  ok(leak.indexOf('홍철호 가족') >= 0, '가족 이름은 서버에 저장된다');
+  ok(!/"홍길동"/.test(leak), '실명 자체는 서버로 나가지 않는다 — 이 기기 안에만 남는다');
 
   ok(errs.length === 0, '자바스크립트 오류 없음' + (errs.length ? ' — ' + errs.join(' / ') : ''));
 

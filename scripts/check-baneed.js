@@ -63,7 +63,18 @@ const LOOK = () => {
   return {
     rows: rows,
     head: head.replace(/\s+/g, ' ').trim(),
-    band: ((document.querySelector('.hm-q .hm-q-t.ba') || {}).textContent || ''),
+    /* ⚠ 2026-10-21 · 판 X150 — <b>그 분의 보장분석 단추가 홈 맨 위로 올라갔습니다.</b>
+       사장님 말씀 「db통합 crm 밑에 보장분석pdf넣기 자리에 오늘 할일이 올라오게
+       만들고 <b>그 고객 밑에 보장분석 넣기</b>를 만들어」. 여태는 한 분 퀘스트 띠
+       (.hm-q .hm-q-t.ba) 안의 칩이었고, 이제는 「✅ 오늘 할 일」 칸의
+       <b>그 분 이름 아래(.hm-nxs-b)</b> 입니다 — 폰에서 <b>안 내려도 보이는 자리</b>
+       입니다(y366 대 y1,400).
+       ★ <b>자를 약하게 한 것이 아닙니다</b> — 보는 <b>자리만</b> 옮기고 재는 것
+         (적혀 있나 · 진짜 단추인가 · 44px 인가 · 그 분을 들고 가나)은 그대로입니다 (8번). */
+    /* ★ 판 X199 — 「✅ 오늘 할 일」 칸이 「지금 할 것」 카드와 합쳐졌습니다.
+       그 분 보장분석 줄은 이제 카드 안(.hm-now-ba)입니다. 옛 이름도 그대로
+       찾습니다 — 카드가 못 서는 판에서는 옛 칸이 섭니다. */
+    band: ((document.querySelector('.hm-now-ba .btn, .hm-now-ba .hm-nxs-w, .hm-nxs-b .btn, .hm-nxs-b .hm-nxs-w') || {}).textContent || ''),
     msHi: Math.round(((document.getElementById('hmMsHost') || {}).getBoundingClientRect
       ? document.getElementById('hmMsHost').getBoundingClientRect().height : 0))
   };
@@ -103,7 +114,7 @@ const LOOK = () => {
      '  안 넣으신 분은 <b>눈에 띄게</b> 적힌다 (붉은 글씨)');
   is(/보장분석 없음\s*\d+명/.test(o.head),
      '  <b>접어 두셔도</b> 머리에 몇 분인지 보인다 — 「' + o.head.slice(0, 64) + '」');
-  is(!!o.band, '  <b>한 분 퀘스트 띠</b>에도 적힌다 — 「' + (o.band || '(없음)') + '」');
+  is(!!o.band, '  <b>맨 위 「오늘 할 일」 그 분 아래</b>에도 적힌다 — 「' + (o.band || '(없음)') + '」 (판 X150 에서 띠 → 맨 위)');
 
   console.log('\n[2] <b>「모름」 을 「없음」 으로 안 적는다</b> (1번)');
   /* chkLoad 를 막아 <b>아직 안 받아 온</b> 판을 만듭니다 */
@@ -215,14 +226,31 @@ const LOOK = () => {
   is(top.tz, '  홈 토스판이 선다');
   /* 띠의 📑 도 <b>진짜 단추</b>여야 합니다 — 누를 수 있게 해 놓고 손가락
      크기(44px)를 안 지키면 폰에서 옆을 누릅니다. 그러면 안 누르게 됩니다. */
+  /* ⚠ 판 X150 — 재는 자리가 <b>한 분 퀘스트 띠 → 맨 위 「오늘 할 일」</b> 로
+     옮겨졌습니다(위 쪽지). 단추를 만드는 자는 그대로 <b>hmBaBtn 하나</b>이고
+     (5번), 여기서는 그 단추가 <b>그 분 이름 아래에 서는지</b>를 봅니다. */
   const qb = await p.evaluate(() => {
-    const e = document.querySelector('.hm-q .hm-q-t.ba');
+    /* ★ 판 X199 — 카드 안(.hm-now-ba)을 먼저 보고, 없으면 옛 칸(.hm-nxs-b) */
+    const box = document.querySelector('.hm-now-ba') || document.querySelector('.hm-nxs-b');
+    const e = box ? (box.querySelector('.btn') || box.querySelector('.hm-nxs-w')) : null;
     if (!e) return null;
+    /* ★ <b>그 분 줄 아래</b>인가 — 이름이 <b>바로 위</b>에 있어야 그 분 것입니다.
+       카드에서는 이름이 .hm-now-m, 옛 칸에서는 .hm-nxs-r 입니다.          */
+    const 품 = box.closest('.hm-now') || box.parentElement;
+    const nmEl = 품 ? (품.querySelector('.hm-now-m .m b') || 품.querySelector('.hm-nxs-r .m b')) : null;
+    const who = nmEl ? (nmEl.textContent || '') : '';
+    /* ★ 이름이 <b>단추보다 위</b>인지도 봅니다 — 「그 고객 밑에」 (6번) */
+    const 밑 = !!(nmEl && e.getBoundingClientRect().top > nmEl.getBoundingClientRect().top);
     return { tag: e.tagName, h: Math.round(e.getBoundingClientRect().height),
-      누름: /hmBaGo|hmBaAdd/.test(e.getAttribute('onclick') || ''), 글: e.textContent };
+      누름: /hmBaGo|hmBaAdd/.test(e.getAttribute('onclick') || ''), 글: e.textContent, who: who, 밑: 밑 };
   });
   is(!!qb && qb.tag === 'BUTTON' && qb.누름,
-     '  띠의 📑 가 <b>진짜 눌리는 단추</b>다 — ' + (qb ? (qb.tag + ' 「' + qb.글 + '」') : '(없음)'));
+     '  맨 위 「오늘 할 일」 의 📄 가 <b>진짜 눌리는 단추</b>다 — ' + (qb ? (qb.tag + ' 「' + qb.글 + '」') : '(없음)'));
+  /* ★ 판 X199 — 이름이 <b>정말 위</b>인지까지 봅니다. 전에는 이름이 있기만
+     하면 초록이라, 단추가 이름보다 위로 올라가도 안 울렸습니다 (8번).     */
+  is(!!qb && !!qb.who && qb.밑 === true,
+     '  ★ <b>그 고객 이름 바로 아래</b>에 선다 — 「' + ((qb && qb.who) || '(이름 없음)') +
+     '」 (사장님 말씀 「그 고객 밑에 보장분석 넣기」)');
   is(!!qb && qb.h >= 44, '  손가락 크기 <b>44px</b> 를 지킨다 — ' + (qb ? qb.h : 0) + 'px');
   /* ══ ★ <b>뒤집힌 자리입니다</b> (2026-09-30) ═════════════════════════
      전에는 「<b>맨 위에 파랑 히어로를 안 세운다</b>」 를 봤습니다 —
@@ -258,7 +286,7 @@ const LOOK = () => {
   is(top.맨위한장 && top.옛히어로 === 0 && /go\('bojang'\)/.test(top.맨위길),
      '  <b>맨 위에서 보장분석으로 들어가는 길이 있다</b> — 「' + (top.맨위글 || '(없음)') +
      '」 · 옛 히어로 ' + top.옛히어로 + '개 (사장님께서 2026-10-09 에 두 칸 + 한 줄로 바꾸셨습니다)');
-  is(!!qb && qb.누름, '  ★ 그러면서도 <b>띠의 📑 로 「그 분을 들고」</b> 갈 수 있다 — 맨 위는 「아무나」, 띠는 「그 분」');
+  is(!!qb && qb.누름, '  ★ 그러면서도 <b>그 고객 아래 📄 로 「그 분을 들고」</b> 갈 수 있다 — 📄 한 줄은 「아무나」, 줄 아래 단추는 「그 분」 (판 X150)');
 
   console.log('\n──────────────────────────────');
   if (bad) { console.log('✗ 보장분석 체크 — 고칠 자리 ' + bad + '곳'); await b.close(); srv.close(); process.exit(1); }

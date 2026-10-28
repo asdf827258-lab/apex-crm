@@ -80,7 +80,9 @@ const ELEVEN = [
     OSC.loaded = true; OSC.list = [{ id: 'c1', name_masked: '홍○○', advisor_id: me }];
     CM.loaded = true;
     AR.loaded = true; AR.cliRows = [{ id: 'c1', who: me, nm: '홍○○' }];
-    AR.db = [{ id: 'd1', who: me, name: '홍길동', region: '강남구', stage: 'AP', appt: '' }];
+    /* 판 X161 — 다리는 dbs.client_id 하나입니다. 아래 set({db:'d1'}) 의 db 는
+       이제 다리가 아니고(아무도 안 읽음) 옛 쪽지 모양 그대로 둔 것입니다 */
+    AR.db = [{ id: 'd1', who: me, name: '홍길동', region: '강남구', stage: 'AP', appt: '', client_id: 'c1' }];
     if (typeof HDB !== 'undefined') HDB.rows = AR.db.slice();
     window.hwhoFor = function () { return me; };
 

@@ -467,6 +467,10 @@ function cityFixOpen(){
 }
 
 function myId(){ try{ return profile&&profile.id }catch(e){ return null } }
+/* ★ <b>이 앱은 팀이 같이 씁니다.</b> 전에는 안내 글이 누구에게나 「사장님
+   이름으로」 라고 했습니다 — 팀원이 보면 자기 이야기가 아닌 줄 압니다.
+   이름을 아는 곳은 여기 하나입니다 (5번). 모르면 「내」 라고만 합니다 (1번). */
+function myName(){ try{ return (profile&&profile.name)||"내" }catch(e){ return "내" } }
 function findDb(id){ try{ return dbs.filter(function(d){return d.id===id})[0] }catch(e){ return null } }
 
 /* 두 점 사이 직선거리(km) */
@@ -496,6 +500,20 @@ function mins(km){ if(km==null)return null; return Math.max(5, Math.round(km*1.3
 var RKM={}, RKM_OFF=false, RENDERING=false;   /* 다시 그리다 무한히 돌지 않게 */
 try{ RKM=JSON.parse(localStorage.getItem("apexRouteKmV1")||"{}") }catch(e){ RKM={} }
 function rkKey(a,b){ return [a.lat,a.lng,b.lat,b.lng].map(function(v){return (+v).toFixed(4)}).join(",") }
+/* ── 🛣️ <b>진짜 길 모양</b> ────────────────────────────────────────
+   사장님 말씀 (2026-10-26) — 「<b>경로까지 연결해서</b> 지역동선에
+   보여주도록 <b>위치만 체크하지 말고</b>」.
+   여태 지도는 들를 자리를 점으로 찍고 <b>직선</b>으로 이었습니다. 실제로
+   도는 길은 강을 돌고 산을 넘으므로, 직선은 그림이 거짓말을 합니다 —
+   「15분」 이라 적힌 구간이 지도에서는 산을 뚫고 갑니다.
+   ★ 길 모양은 <b>이미 묻고 있던 그 답</b>에 들어 있었습니다(카카오가
+     sections[].roads[].vertexes 로 줍니다). <b>한 번 더 안 묻습니다</b> (7번).
+   ★ 길을 못 받으면 <b>직선 그대로</b> 두고 화면에 「직선(어림)」 이라고
+     적습니다 — 직선을 길이라고 말하지 않습니다 (1번).
+   ⚠ 길 좌표는 <b>창고(localStorage)에 안 담습니다</b> — 한 구간이 수천 자라
+     며칠이면 창고가 찹니다. 거리·시간만 담던 그대로 둡니다.           */
+var RPATH={};
+function rkPath(a,b){ var p=RPATH[rkKey(a,b)]; return (p&&p.length>1)?p:null }
 function realKm(pairs){
   /* pairs: [{a:{lat,lng},b:{lat,lng}}, …] → 같은 차례의 {km,min}|null 배열 */
   var out=pairs.map(function(x){ return RKM[rkKey(x.a,x.b)]||null });
@@ -510,7 +528,10 @@ function realKm(pairs){
       if(!j||!j.ok){ RKM_OFF=true; return out }   /* 키가 없다 — 다시 안 묻는다 */
       (j.legs||[]).forEach(function(v,k){
         if(!v)return;
-        out[idx[k]]=v; RKM[rkKey(pairs[idx[k]].a,pairs[idx[k]].b)]=v;
+        /* 길 모양은 <b>따로</b> 둡니다 — 창고에 담는 것은 거리·시간뿐입니다 */
+        if(v.path&&v.path.length>1)RPATH[rkKey(pairs[idx[k]].a,pairs[idx[k]].b)]=v.path;
+        var w={km:v.km,min:v.min};
+        out[idx[k]]=w; RKM[rkKey(pairs[idx[k]].a,pairs[idx[k]].b)]=w;
       });
       try{ localStorage.setItem("apexRouteKmV1",JSON.stringify(RKM)) }catch(e){}
       return out;
@@ -1419,6 +1440,28 @@ function styles(){
     "border:1px solid #FDE68A;border-radius:9px;padding:9px 11px}",
   ".rt-row:last-child{border-bottom:0}",
   ".rt-no{width:26px;height:26px;flex:none;border-radius:8px;background:#eef2f6;color:#596575;display:grid;place-items:center;font-weight:900;font-size:12px}",
+  /* 🗓️ 하루 스케줄표 (판 X191) — <b>이 파일이 쓰는 이름만</b> 씁니다.
+     새 색을 만들지 않습니다: 파랑은 .rt-move 와 같은 #245ea8/#eef6ff,
+     빨강은 --red/--redbg, 글자색은 --navy/--muted 그대로입니다.          */
+  ".rt-sc{display:flex;gap:11px;align-items:flex-start;padding:9px 2px}",
+  ".rt-sc+.rt-sc{border-top:1px solid #f2f5f8}",
+  ".rt-sc-t{width:58px;flex:none;font-weight:900;color:var(--navy);font-size:14px;line-height:1.35}",
+  ".rt-sc-t small{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-top:1px}",
+  ".rt-sc-b{flex:1;min-width:0;font-size:13px;line-height:1.55;color:var(--text)}",
+  ".rt-sc-b b{color:var(--navy)}",
+  ".rt-sc-b small{display:block;color:var(--muted);font-size:12px;margin-top:2px}",
+  ".rt-sc-dep .rt-sc-t,.rt-sc-fin .rt-sc-t{color:#245ea8}",
+  ".rt-sc-mv .rt-sc-t{color:#9aa6b2;font-size:16px}",
+  ".rt-sc-mv .rt-sc-b{color:#245ea8;background:#eef6ff;border-radius:8px;padding:6px 9px}",
+  ".rt-sc-mv .rt-sc-b small{color:#245ea8}",
+  ".rt-sc-no .rt-sc-t{color:#a8730f}",
+  ".rt-sc-no .rt-sc-b{color:#a8730f;background:#fff4e6;border-radius:8px;padding:6px 9px}",
+  ".rt-sc-bad{display:block;margin-top:5px;font-size:12px;font-weight:800;color:var(--red);background:var(--redbg);border-radius:8px;padding:5px 9px}",
+  ".rt-sc-ask{font-size:13px;line-height:1.6;color:#245ea8;background:#eef6ff;border-radius:8px;padding:9px 11px;margin-bottom:9px}",
+  ".rt-sc-ask b{color:var(--navy)}",
+  /* 📮 주소 줄 — 생김새는 .rt-row 와 같되 <b>이름이 다릅니다</b>(위 쪽지) */
+  ".rt-arow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:11px 2px;border-bottom:1px solid #eef1f4}",
+  ".rt-arow:last-child{border-bottom:0}",
   ".rt-who{flex:1;min-width:150px}.rt-who b{color:var(--navy)}",
   ".rt-who small{display:block;color:var(--muted);font-size:12px;margin-top:2px}",
   ".rt-act{display:flex;gap:5px;flex-wrap:wrap}",
@@ -1451,7 +1494,27 @@ function styles(){
   ".rt-city button.on{background:var(--blue,#3182f6);color:#fff;border-color:transparent}",
   ".rt-city button small{font-weight:600;opacity:.75;margin-left:4px}",
   ".rt-pin.h{background:var(--navy)}",
-  "@media(max-width:860px){.rt-body{flex-direction:column}.rt-side{width:auto;max-width:none;max-height:52%;border-right:0;border-bottom:1px solid var(--line)}}"
+  "@media(max-width:860px){.rt-body{flex-direction:column}.rt-side{width:auto;max-width:none;max-height:52%;border-right:0;border-bottom:1px solid var(--line)}}",
+  /* 📱 폰에서 칸이 공백을 먹었습니다 (사장님 말씀 2026-10-23 「칸 잡아먹는 공백이 너무 많은데」).
+     재어 보니 390px 폭에서 위 도구 띠가 <b>네 줄 · 199px</b>, 그 밑 목록 칸은 335px 뿐이었습니다 —
+     칸이 넘쳐 줄이 늘어난 것과 넉넉한 안쪽 여백 때문입니다. 폰 폭에서만 줄입니다(컴퓨터는 그대로).
+     ★ 단추는 <b>하나도 안 숨깁니다</b> — 키 설정·위치 정리는 고칠 단추입니다 (6번).
+     ★ 글자는 13px 아래로, 누르는 자리는 40px 아래로 안 내립니다. */
+  "@media(max-width:860px){"+
+    ".rt-bar{gap:6px;padding:8px 12px}"+
+    ".rt-bar b{font-size:15px;order:0;margin-right:0}"+
+    "#rtDate{order:1;flex:1 1 38%;min-width:0}"+
+    "#rtX{order:2}"+
+    "#rtRegion,#rtOwner,#rtStay{order:3;flex:1 1 28%;min-width:0;max-width:none}"+
+    "#rtHome,#rtFix,#rtKey{order:4;flex:1 1 28%;padding-left:6px;padding-right:6px;white-space:nowrap}"+
+    ".rt-sp{display:none}"+
+    ".rt-bar input,.rt-bar select{min-width:0;min-height:40px;padding:6px 8px;font-size:14px}"+
+    ".rt-bar .btn-sm{min-height:40px;font-size:13px}"+
+    ".rt-side{padding:10px 12px}"+
+    ".rt-card{padding:10px 11px;margin-bottom:8px;border-radius:12px}"+
+    ".rt-h{margin:10px 0 6px}"+
+    ".rt-nokey{padding:14px}"+
+  "}"
   ].join("");
   document.head.appendChild(s);
 }
@@ -1580,6 +1643,178 @@ function legs(stops){
   return {list:out,km:km,late:late,unknown:unknown};
 }
 
+/* ══ 🗓️ <b>하루 스케줄표</b> — 몇 시에 나서서 몇 시에 끝나나 (판 X191) ══
+   사장님 말씀 (2026-10-25) — 「지역동선 <b>동선까지 짜서 스케줄표 짜줘</b>
+   자세한 주소가 안되어있는건, <b>입력권유</b> 할수 있도록 하고」
+
+   ── 여태 있던 것과 없던 것 ────────────────────────────────────────
+   있던 것 : 순서 짜기 · 구간 거리·분 · 출발 시각 한 칸 · 지각 경고
+   없던 것 : <b>하루를 시각으로 펼친 표</b>. 약속 시각은 보이는데
+             「몇 시에 나서나 · 상담이 몇 시에 끝나나 · 다음까지 몇 분 비나 ·
+             오늘 몇 시에 끝나나」 를 <b>사장님이 머리로 더하고</b> 계셨습니다.
+
+   ★★ <b>여기서 새로 세지 않습니다</b> (5번). 거리·분은 legs() 가, 상담 시간은
+      STAY 가, 출발지는 HOME 이 이미 압니다. 이 자리는 그것을 <b>시각으로
+      펼치기만</b> 합니다 — 여기서 또 세면 위 목록과 두 답이 섭니다.
+   ★★ <b>모르는 것은 모른다고 적습니다</b> (1번). 위치를 모르는 분은 이동
+      시간을 못 셉니다 — 그때는 그 줄부터 <b>시각 셈을 멈춥니다</b>.
+      「아마 이쯤」 으로 이어 적으면 사장님이 그것을 믿고 하루를 짜십니다.
+   ★ <b>어림인지 길찾기인지 밝힙니다</b> — legs() 의 real 을 그대로 씁니다.
+     어림을 길찾기라고 말하면 산을 낀 구간에서 늦습니다.
+   ★ 금액·보장 이야기는 한 줄도 안 적습니다 — 여기는 시간표입니다.        */
+function sched(stops, L){
+  var rows=[], i, s, l, cur=null, stop=0;   /* stop = 이동을 못 잰 구간 수 */
+  /* ① 집에서 나서는 시각 — <b>출발지를 정하셨고</b> 첫 구간을 잴 수 있을 때만 */
+  var first=L.list[0];
+  if(HOME && first && first.min!=null && stops.length){
+    var dep=new Date(stops[0].at.getTime()-(first.min+5)*60000);
+    rows.push({k:"dep", at:dep, t:(HOME.label||"출발지"),
+               m:first.min, km:first.km, real:first.real});
+  }
+  /* ② 약속마다 — 도착(약속 시각) · 상담 끝 · 다음까지 비는 시간
+     ★★ <b>여기서 끊지 않습니다.</b> 처음에는 위치를 모르는 분이 나오면 그
+       뒤로 시각을 안 적게 짰는데, 재어 보니 <b>끊는 쪽이 더 나빴습니다</b> —
+       뒤 약속 둘이 화면에서 통째로 사라졌습니다. <b>약속 시각은 사장님이
+       적어 두신 사실</b>이고 상담 끝은 그 시각 + STAY 라 둘 다 아는 값입니다.
+       모르는 것은 <b>그 사이 이동 시간</b> 하나뿐입니다.
+     ★ 그래서 모르는 구간에서는 <b>「빕니다」 를 주장하지 않고</b>(move 줄을
+       아예 안 세우고) 그 자리에 모른다고 적습니다. 가리는 것이 아니라
+       <b>무엇을 모르는지 또렷이</b> 하는 것입니다 (1번 · 6번).            */
+  for(i=0;i<stops.length;i++){
+    s=stops[i]; l=L.list[i];
+    var end=new Date(s.at.getTime()+STAY*60000);
+    rows.push({k:"meet", at:s.at, end:end, d:s.d, no:i+1,
+               m:(i===0?(HOME?l.min:null):l.min), km:(i===0?(HOME?l.km:null):l.km),
+               real:l.real, bad:l.bad, pt:!!s.pt});
+    cur=end;
+    if(i+1<stops.length){
+      var nx=stops[i+1], nl=L.list[i+1];
+      /* 다음 약속까지 <b>남는 시간</b> — 이동에 쓰고 남는 만큼만 「빕니다」.
+         이동 시간을 모르면 <b>안 적습니다</b>(1번).                       */
+      var gap=Math.round((nx.at-cur)/60000);
+      if(nl.min==null){ rows.push({k:"nomove", d:nx.d}); stop++; }
+      else {
+        var free=gap-nl.min;
+        rows.push({k:"move", m:nl.min, km:nl.km, real:nl.real,
+                   free:free, tight:(free<0?-free:0)});
+      }
+    }
+  }
+  /* ③ 오늘 끝나는 시각 — 마지막 상담이 끝나는 때 */
+  if(cur) rows.push({k:"fin", at:cur, 못잼:stop});
+  return {rows:rows, 못잼:stop, 끝:cur};
+}
+/* 비는 시간을 사람 말로 — 「97분」 보다 「1시간 37분」 이 눈에 들어옵니다 */
+function dur(m){
+  m=Math.round(m||0); if(m<=0)return "0분";
+  var h=Math.floor(m/60), r=m%60;
+  return (h?h+"시간":"")+(h&&r?" ":"")+(r?r+"분":(h?"":"0분"));
+}
+function schedHtml(stops, L){
+  if(!stops.length)return "";
+  var S=sched(stops,L), out=[];
+  S.rows.forEach(function(r){
+    if(r.k==="dep"){
+      out.push('<div class="rt-sc rt-sc-dep"><div class="rt-sc-t">'+hm(r.at)+'</div>'+
+        '<div class="rt-sc-b"><b>🏠 '+E(r.t)+' 에서 나섭니다</b>'+
+        '<small>첫 약속까지 '+kmTxt(r.km)+' · '+r.m+'분'+(r.real?"":" (어림)")+
+        ' · 5분 여유를 뒀습니다</small></div></div>');
+    } else if(r.k==="meet"){
+      out.push('<div class="rt-sc rt-sc-m"><div class="rt-sc-t">'+hm(r.at)+
+        '<small>~ '+hm(r.end)+'</small></div>'+
+        '<div class="rt-sc-b"><b>'+r.no+'. '+E(r.d.customer_name)+'</b>'+
+        '<small>'+E(placeOf(r.d)||"장소 미정")+' · 상담 '+STAY+'분</small>'+
+        (r.bad?('<span class="rt-sc-bad">앞 약속과 겹칩니다 — <b>'+r.bad+'분 늦습니다</b></span>'):"")+
+        '</div></div>');
+    } else if(r.k==="move"){
+      out.push('<div class="rt-sc rt-sc-mv"><div class="rt-sc-t">↓</div>'+
+        '<div class="rt-sc-b">이동 '+kmTxt(r.km)+' · '+r.m+'분'+(r.real?"":" (어림)")+
+        (r.tight?('<span class="rt-sc-bad">시간이 <b>'+r.tight+'분 모자랍니다</b></span>')
+                : (r.free>=15?('<small>이동하고도 <b>'+dur(r.free)+'</b> 빕니다 — 아래 후보에게 걸어 채우실 수 있습니다</small>')
+                             :'<small>바로 이어집니다</small>'))+
+        '</div></div>');
+    } else if(r.k==="nomove"){
+      out.push('<div class="rt-sc rt-sc-no"><div class="rt-sc-t">?</div>'+
+        '<div class="rt-sc-b"><b>'+E(r.d.customer_name)+'</b> 님은 <b>위치를 몰라</b> '+
+        '<b>이 구간 이동 시간을 못 셉니다</b> — 아래 <b>📮 주소가 없는 분</b> 에서 '+
+        '주소를 적어 주시면 몇 분 걸리는지까지 섭니다.</div></div>');
+    } else if(r.k==="fin"){
+      /* ⚠ 여기 글이 한 번 <b>거짓말</b>을 했습니다 — 끝까지 세어 놓고
+         「여기까지만 셌습니다」 라고 적었습니다. 자가 그 어긋남을 잡았습니다.
+         이제 <b>무엇을 못 쟀는지</b>를 그대로 적습니다 (1번).            */
+      out.push('<div class="rt-sc rt-sc-fin"><div class="rt-sc-t">'+hm(r.at)+'</div>'+
+        '<div class="rt-sc-b"><b>오늘 일정 끝</b>'+
+        (r.못잼?('<small>다만 <b>이동 시간을 못 잰 구간이 '+r.못잼+'곳</b> 있습니다 — '+
+                 '위 시각은 <b>적어 두신 약속 시각 그대로</b>이고, 그 사이에 닿을 수 있는지는 '+
+                 '아직 모릅니다</small>')
+               :'<small>이동 시간까지 다 세었습니다</small>')+
+        '</div></div>');
+    }
+  });
+  /* ⚠ 「출발지를 정하세요」 는 <b>여기서 또 말하지 않습니다</b> — 바로 아래
+     요약 칸이 이미 그 말을 합니다. 한 화면이 같은 말을 두 번 하면 둘 다
+     안 읽히고, 한쪽 글만 고쳐져 낡습니다 (5번).                          */
+  return '<div class="rt-h">🗓️ 하루 스케줄표</div><div class="rt-card">'+out.join("")+'</div>';
+}
+
+/* ══ 📮 <b>주소가 없는 분</b> — 그 자리에서 적으십니다 (판 X191) ══════
+   사장님 말씀 (2026-10-25) — 「<b>자세한 주소가 안되어있는건, 입력권유</b>
+   할수 있도록 하고」
+
+   ★★ <b>「📍 위치 정리하기」 와 다른 물음</b>입니다. 그쪽은 <b>앱이 혼자
+      풀 수 있는 것</b>을 정리합니다 — 지역 칸에 주소가 통째로 든 줄,
+      주소는 있는데 좌표가 없는 줄. 여기는 <b>적힌 것이 아예 없어</b>
+      카카오에 물어볼 거리조차 없는 분입니다. 사람만 풀 수 있습니다.
+   ★★ <b>새로 만들지 않습니다</b> (5번 · 사장님 규칙 「함수를 지우지 마십시오 —
+      부르는 자리만」). 적는 창도(pinOne) 지도도(pinPick) 저장도 이미
+      있습니다. 여기는 <b>누구에게 여쭤야 하는지</b>만 세웁니다.
+   ★ <b>오늘 약속부터</b> 세웁니다 — 오늘 길을 못 짜게 막는 분이 먼저입니다.
+     그 다음이 이 동네에서 만나야 할 분입니다.
+   ★ <b>이 화면의 이름 쓰는 법을 그대로</b> 따릅니다 — 이 판은 사장님이
+     혼자 보시는 작업 화면이고, 위 약속 목록·후보 목록·지도 말풍선이
+     이미 실명으로 섭니다. 여기만 가리면 같은 화면이 두 말을 합니다.
+     밖으로 나가는 자리(엑셀·인쇄·AI·폰 캘린더)는 그대로 가립니다 (3번).  */
+function needAddr(stops, cands){
+  var out=[], seen={}, i, d;
+  function push(d,why){
+    if(!d||!d.id||seen[d.id])return;
+    /* <b>쓸 수 있는 위치가 하나라도 있으면</b> 안 세웁니다 — 좌표가 있거나
+       주소가 적혀 있으면 길을 짤 수 있습니다. 「더 자세히」 를 조르지 않습니다. */
+    if(ptOf(d))return;
+    if(String(d.addr||"").trim())return;
+    if(String(d.next_appt_place||"").trim())return;
+    seen[d.id]=1; out.push({d:d,why:why});
+  }
+  for(i=0;i<(stops||[]).length;i++)push(stops[i].d,"오늘 약속");
+  for(i=0;i<(cands||[]).length;i++){ d=(cands[i]&&cands[i].d)||cands[i]; push(d,"이 동네 후보"); }
+  return out;
+}
+function needAddrHtml(stops, cands){
+  var L=needAddr(stops,cands);
+  if(!L.length)return "";
+  /* ★★ <b>.rt-row 를 쓰지 않습니다.</b> 처음에 그 이름을 썼다가
+     check-crmrun 을 깨뜨렸습니다 — 그 자는 「#rtSide .rt-row」 를 세어
+     <b>가는 김에 붙일 후보가 몇 줄인가</b>를 봅니다(미션 카드의 점 수와
+     견줍니다). 📮 줄이 거기 섞이니 「점 5 · 줄 8」 로 갈렸고, 맨 앞 줄을
+     집어 전화를 걸어 보는 자리에서는 터졌습니다.
+     ★ 생김새는 같아도 <b>묻는 것이 다른 줄</b>이면 이름이 달라야 합니다 —
+       한 이름에 두 뜻을 담으면 세는 자가 조용히 틀립니다 (5번).         */
+  var rows=L.slice(0,12).map(function(x){
+    return '<div class="rt-arow"><div class="rt-no">📮</div>'+
+      '<div class="rt-who"><b>'+E(x.d.customer_name)+'</b>'+
+      '<small>'+E(regionName(x.d)||"지역도 없음")+' · '+E(x.why)+'</small></div>'+
+      '<div><button type="button" class="rt-mini" onclick="apexRoutePinOne(\''+
+        E(x.d.id)+'\')">주소 적기</button></div></div>';
+  }).join("");
+  return '<div class="rt-h">📮 주소가 없는 분 '+L.length+'명</div>'+
+    '<div class="rt-card">'+
+    '<div class="rt-sc-ask">이 분들은 <b>자세한 주소가 적혀 있지 않아</b> 동선에 못 올립니다. '+
+    '전화 드릴 때 「댁이 어느 동네신가요」 한 번만 여쭤 적어 두시면, 다음부터 '+
+    '<b>가는 김에</b> 로 묶입니다.</div>'+rows+
+    (L.length>12?('<div class="rt-sc-ask">… 그 밖에 '+(L.length-12)+'명 더 있습니다.</div>'):"")+
+    '</div>';
+}
+
 /* 후보를 어느 틈에 넣으면 손해가 가장 적은가 */
 function fitIn(stops,c){
   var p=ptOf(c); if(!p)return null;
@@ -1678,7 +1913,7 @@ function render(){
      이 줄이 없으면 「왜 남의 고객이 뜨지?」 하고 한참을 헤맵니다. */
   if(!MINE_N&&!owner&&cityAll){
     side.push('<div class="rt-card" style="background:#EEF6FF;border-color:#BBD9FF;font-size:12.5px;color:#245ea8">'+
-      '<b>팀 전체를 보고 있습니다.</b> 사장님 이름으로 <b>직접 배정된 고객이 없어서</b>입니다 — '+
+      '<b>팀 전체를 보고 있습니다.</b> '+E(myName())+' 님 이름으로 <b>직접 배정된 고객이 없어서</b>입니다 — '+
       '위 <b>담당자</b> 칸에서 한 사람을 고르면 그 사람 고객만 남습니다.</div>');
   }
   var ck=Object.keys(city).sort(function(a,b){return city[b].n-city[a].n||(a<b?-1:1)});
@@ -1743,6 +1978,10 @@ function render(){
     }).join("");
     side.push('<div class="rt-card">'+body+'</div>');
 
+    /* 🗓️ <b>하루를 시각으로</b> — 사장님 말씀 2026-10-25 「동선까지 짜서
+       스케줄표 짜줘」. 위 목록은 <b>누구를</b>, 이 표는 <b>몇 시에</b> 입니다. */
+    side.push(schedHtml(stops,L));
+
     var firstM=L.list[0]&&L.list[0].min;
     var dep=(HOME&&firstM!=null)?new Date(stops[0].at.getTime()-(firstM+5)*60000):null;
     side.push('<div class="rt-sum">'+
@@ -1754,9 +1993,26 @@ function render(){
     if(!HOME) side.push('<div class="rt-card" style="background:#eef6ff;border-color:#c9ddff;'+
       'color:#245ea8;font-size:13px;margin-top:9px">위의 <b>🏠 출발지</b>에 사무실이나 집 주소를 한 번 넣어 두면, '+
       '몇 시에 나서야 첫 약속을 지키는지까지 나옵니다.</div>');
-    if(L.unknown) side.push('<div class="rt-card" style="background:#fff4e6;border-color:#ffd8a8;color:#a8730f;font-size:13px">'+
-      '위치를 모르는 약속이 '+L.unknown+'건 있습니다. 통화 기록의 <b>만날 장소</b>나 DB의 <b>동네</b>를 적고 '+
-      '<b>📍 좌표 채우기</b>를 누르면 지도에 올라갑니다.</div>');
+    /* ⚠ 2026-10-25 · <b>이 쪽지가 안 되는 길을 가리키고 있었습니다.</b>
+       「📍 좌표 채우기」 는 <b>적힌 주소를 카카오에 물어</b> 좌표로 바꾸는
+       일입니다. 주소가 <b>아예 없는</b> 분은 물어볼 글자가 없어서 눌러도
+       아무 일이 안 일어납니다 — 「눌러도 안 되는 단추를 세우면 고장인 줄
+       아십니다」(1번·6번). 그래서 <b>두 경우를 갈라</b> 적습니다.          */
+    if(L.unknown){
+      var 글없=0, ui;
+      for(ui=0;ui<stops.length;ui++){
+        var ud=stops[ui].d;
+        if(ptOf(ud))continue;
+        if(!String(ud.addr||"").trim()&&!String(ud.next_appt_place||"").trim())글없++;
+      }
+      var 글있=L.unknown-글없;
+      side.push('<div class="rt-card" style="background:#fff4e6;border-color:#ffd8a8;color:#a8730f;font-size:13px">'+
+        '위치를 모르는 약속이 '+L.unknown+'건 있습니다. '+
+        (글있?('그중 <b>'+글있+'건</b>은 주소가 적혀 있으니 <b>📍 위치 정리하기</b>를 누르면 지도에 올라갑니다. '):"")+
+        (글없?('나머지 <b>'+글없+'건</b>은 <b>주소가 아예 없어</b> 눌러도 찾을 것이 없습니다 — '+
+               '아래 <b>📮 주소가 없는 분</b> 에서 한 번 적어 주셔야 합니다.'):"")+
+        '</div>');
+    }
 
     /* 시간을 다시 잡을 수 있다면 이 순서가 낫다 */
     var pts=stops.map(function(s){return s.pt}), okAll=pts.every(function(p){return !!p});
@@ -1851,6 +2107,10 @@ function missCard(region,owner,top){
   });
   var top=cands.slice(0,8);
   side.push(missCard(region,owner,top));
+  /* 📮 <b>주소가 없어 동선에 못 올리는 분</b> — 사장님 말씀 2026-10-25
+     「자세한 주소가 안되어있는건, 입력권유 할수 있도록 하고」.
+     ★ 적는 창은 <b>이미 있는 것</b>(pinOne)을 부릅니다 (5번).           */
+  side.push(needAddrHtml(stops,cands));
   side.push('<div class="rt-h">추가로 연락 드릴 고객님 '+
     (stops.length?'<small style="font-weight:700;color:var(--muted)">— 약속 사이 빈틈 기준</small>'
                  :'<small style="font-weight:700;color:var(--muted)">— 오래 방치된 순</small>')+'</div>');
@@ -1902,7 +2162,12 @@ function missCard(region,owner,top){
          (realN<L.list.length?(' 나머지는 아직 <b>어림</b>입니다 — 직선거리를 1.35배 해서 시속 28km 로 셉니다.'):''))
       : ('이동시간은 <b>어림</b>입니다 — 직선거리를 1.35배 해서 시속 28km 로 달린 셈으로 셉니다.'+
          (RKM_OFF?' 길찾기 키가 아직 없습니다.':'')))+
-    ' 실제 출발 전에는 <b>🧭 내비</b> 를 한 번 눌러 확인하십시오.</div>');
+    ' 실제 출발 전에는 <b>🧭 내비</b> 를 한 번 눌러 확인하십시오.'+
+    /* 🛣️ <b>지도에 그린 선이 무엇인가</b> (판 X217). 길을 못 받은 구간은
+       직선으로 이어 놓고 <b>직선이라고 적습니다</b> — 직선을 길이라고
+       말하면 산을 뚫고 가는 그림을 믿으시게 됩니다 (1번).
+       ★ 글은 drawMap 이 채웁니다 — 지도를 그리는 그때가 아는 때입니다. */
+    ' <span id="rtLineSrc" style="font-weight:800"></span></div>');
 
   q("rtSide").innerHTML=side.join("");
 
@@ -2013,11 +2278,30 @@ function drawMap(stops,cands){
     stops.forEach(function(s,i){ if(s.pt) path.push(pin(s.pt,String(i+1),"",5)) });
     cands.forEach(function(c){ var p=ptOf(c.d); if(p) pin(p,"","c",2) });
     if(HOME&&path.length) path.unshift(new kakao.maps.LatLng(HOME.lat,HOME.lng));
+    /* 🛣️ <b>진짜 길을 긋습니다</b> (판 X217). 들를 자리를 차례로 이으면서,
+       구간마다 받아 둔 길 좌표가 있으면 <b>그 길</b>을, 없으면 <b>직선</b>을
+       씁니다. 한 구간이라도 직선이면 아래 딱지가 그렇다고 말합니다 (1번). */
+    var 직선=0, 길=0;
     if(path.length>1){
-      var line=new kakao.maps.Polyline({path:path,strokeWeight:4,strokeColor:"#3182f6",
-        strokeOpacity:.85,strokeStyle:"solid"});
-      line.setMap(MAP); OVERLAY.push(line);
+      var seg=[],si;
+      for(si=0;si+1<path.length;si++){
+        var A={lat:path[si].getLat(),lng:path[si].getLng()},
+            B={lat:path[si+1].getLat(),lng:path[si+1].getLng()};
+        var pp=rkPath(A,B);
+        if(pp){ 길++; for(var pi=0;pi<pp.length;pi++)seg.push(new kakao.maps.LatLng(pp[pi][1],pp[pi][0])); }
+        else { 직선++; seg.push(path[si]); seg.push(path[si+1]); }
+      }
+      if(seg.length>1){
+        var line=new kakao.maps.Polyline({path:seg,strokeWeight:5,strokeColor:"#3182f6",
+          strokeOpacity:.9,strokeStyle:"solid"});
+        line.setMap(MAP); OVERLAY.push(line);
+      }
     }
+    /* 무엇을 그렸는지 <b>화면에 적습니다</b> — 직선을 길이라 말하지 않습니다 (1번) */
+    try{ var lb=q("rtLineSrc");
+      if(lb)lb.textContent = (!길&&!직선) ? ""
+        : (직선 ? ("길 "+길+"구간 · 직선(어림) "+직선+"구간") : ("실제 길 "+길+"구간"));
+    }catch(eL){}
     if(any) MAP.setBounds(bounds,60,60,60,60);
     setTimeout(function(){ try{ MAP.relayout(); if(any)MAP.setBounds(bounds,60,60,60,60) }catch(e){} },120);
   }).catch(function(e){ keyPanel(false,e) });
@@ -2474,6 +2758,11 @@ function routeOpen(dateStr,region){
   render();
 }
 window.apexRouteOpen=routeOpen;
+/* 📮 「주소 적기」 단추가 부르는 손잡이. 이 파일은 통째로 봉투(IIFE) 안이라
+   onclick 에서 바로 못 부릅니다 — 그래서 한 줄만 내놓습니다.
+   ★ <b>하는 일을 여기서 새로 짜지 않습니다</b> (5번) — 이미 있는 pinOne
+     (동네 적기 창)을 그대로 부릅니다. 저장도 지도도 그쪽 길 그대로입니다. */
+window.apexRoutePinOne=function(id){ try{ pinOne(id) }catch(e){} };
 /* ── <b>시 이름으로 찾기</b>가 죽어 있었다 ──────────────────────────
    db-crm.html 의 찾기 재료(dbPool)가 <b>typeof cityOf==="function"</b> 으로
    묻고 있었는데, cityOf 는 이 파일 안(IIFE)에만 있어서 바깥에서는 늘

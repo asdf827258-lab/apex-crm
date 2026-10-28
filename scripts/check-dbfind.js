@@ -3,7 +3,7 @@
    DB 통합 CRM — 찾기가 이름·번호 밖으로 나간다
 
    찾는 칸은 이름과 전화번호만 보고 있었습니다. 천 건이 넘어간 뒤로는
-   「광주 사는 그분」·「박서준이 맡은 것」·「소개로 들어온 것」을 못 찾아
+   「광주 사는 그분」·「변학도이 맡은 것」·「소개로 들어온 것」을 못 찾아
    눈으로 훑는 수밖에 없었습니다.
 
    그래서 넓힙니다. 여기서 못 박는 것은 다섯입니다.
@@ -63,7 +63,7 @@ var CALLS=[{id:'c1',db_id:'d4',created_by:'u2',result:'부재',
             appt_place:null,appt_lat:null,appt_lng:null,
             recording_delivered:false,group_reported:false,first_call_issue:false}];
 var T={profiles:[{id:'u1',name:'홍길동',role:'admin',active:true},
-                 {id:'u2',name:'박서준',role:'member',active:true}],
+                 {id:'u2',name:'변학도',role:'member',active:true}],
        dbs:DBS,calls:CALLS,attendance:[],teams:[],team_members:[],
        app_config:[],clients:[]};
 window.__STUB__={dbs:DBS.length};
@@ -170,9 +170,9 @@ window.supabase={createClient:function(){return {
      + (r.join(', ') || '아무도 안 나옴') + ')');
   r = await find('순천');
   is(r.indexOf('장보고') >= 0, '<b>「순천」</b>으로도 그대로 찾힌다');
-  r = await find('박서준');
+  r = await find('변학도');
   is(r.length === 1 && r[0] === '임꺽정',
-     '담당자 — 「박서준」 이 맡은 하나 (' + r.join(', ') + ')');
+     '담당자 — 「변학도」 이 맡은 하나 (' + r.join(', ') + ')');
   r = await find('소개');
   is(r.length === 2 && r.indexOf('장길산') < 0, '종류 — 「소개」 로 둘 (' + r.join(', ') + ')');
   r = await find('아파트');
@@ -189,7 +189,7 @@ window.supabase={createClient:function(){return {
      r.join(', ') + ')');
   r = await find('홍길동');
   /* 홍길동은 <b>고객이자 담당자</b>다 — 본인 한 줄과, 본인이 맡은 줄(홍길순·홍만득)이 나온다.
-     임꺽정은 박서준이 맡았으니 안 나와야 한다. 여기가 「담당자로도 찾는다」를 지키는 자리다. */
+     임꺽정은 변학도이 맡았으니 안 나와야 한다. 여기가 「담당자로도 찾는다」를 지키는 자리다. */
   is(r.length === 2 && r.indexOf('임꺽정') < 0,
      '「홍길동」 은 고객이자 담당자다 — 본인과 <b>본인이 맡은 줄</b>만 나온다 (' + r.join(', ') + ')');
 

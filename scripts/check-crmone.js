@@ -7,7 +7,7 @@
 
    ── 재어 본 사실 (살아 있는 서버) ─────────────────────────────────
    · clients 113줄(가린 이름) · dbs 1,674줄(실명) — <b>잇는 칸이 없었습니다</b>
-   · 앱은 <b>가린 이름끼리</b> 견줬습니다(담긴 꼴 <b>김*수</b> — 첫 자와 끝 자).
+   · 앱은 <b>가린 이름끼리</b> 견줬습니다(담긴 꼴 <b>홍*동</b> — 첫 자와 끝 자).
      그런데 113줄 중 <b>22줄(11덩이)</b>이 가린 이름이 같아, 다섯 명에 한
      명꼴로 누가 누구인지 구별이 안 됐습니다.
    · 번호로 겹치는 분 37명 · <b>안전하게 자동으로 이을 수 있는 분 36명</b>
@@ -64,16 +64,20 @@ const SEED = (o) => `
    a.then=function(f){return Promise.resolve({data:[],error:null}).then(f);};return a;};
    return {from:function(){return mk();},rpc:function(){return Promise.resolve({data:null,error:null});}};};
  OSC.loaded=true;OSC.busy=false;OSC.err='';
+ /* ★ 세 사람의 <b>가린 꼴이 서로 달라야</b> 이 시험이 섭니다 (판 X125) —
+    c1 홍*동 · c2 홍*호 · c3 홍*순. 가짜 이름으로 바꾸면서 c2 를 c1 과 같은
+    홍*동 으로 만들었더니, 앱이 「누구인지 못 가린다」 로 보아 약한 짝이
+    아예 안 생겼고 자가 울었습니다. */
  OSC.list=[{id:'c1',advisor_id:'me',name_masked:'홍*동',phone:'010-1111-2222',consent_status:'consented'},
-           {id:'c2',advisor_id:'me',name_masked:'김*수',phone:'',consent_status:'consented'}
-           ${o && o.둘짝 ? ",{id:'c3',advisor_id:'me',name_masked:'박*수',phone:'010-1111-2222',consent_status:'consented'}" : ''}];
+           {id:'c2',advisor_id:'me',name_masked:'홍*호',phone:'',consent_status:'consented'}
+           ${o && o.둘짝 ? ",{id:'c3',advisor_id:'me',name_masked:'홍*순',phone:'010-1111-2222',consent_status:'consented'}" : ''}];
  CM.loaded=true;CM.who={me:'홍길동'};CM.pick='';CM.picked=true;
  AR.loaded=true;AR.busy='';AR.rep={};AR.cliRows=[];
  AR.noLink=${o && o.안담김 ? 'true' : 'false'};
  window.__RAW=[
   {id:'d1',assigned_to:'me',customer_name:'홍길동',phone:'010-1111-2222',region:'서울',stage:'AP',source:'일반',assigned_date:'2026-10-01',client_id:null},
-  {id:'d2',assigned_to:'me',customer_name:'김철수',phone:'010-9999-8888',region:'서울',stage:'PC',source:'일반',assigned_date:'2026-10-01',client_id:null},
-  {id:'d3',assigned_to:'me',customer_name:'박영수',phone:'010-7777-6666',region:'서울',stage:'TA',source:'일반',assigned_date:'2026-10-01',client_id:null},
+  {id:'d2',assigned_to:'me',customer_name:'홍철호',phone:'010-9999-8888',region:'서울',stage:'PC',source:'일반',assigned_date:'2026-10-01',client_id:null},
+  {id:'d3',assigned_to:'me',customer_name:'홍길순',phone:'010-7777-6666',region:'서울',stage:'TA',source:'일반',assigned_date:'2026-10-01',client_id:null},
   {id:'d4',assigned_to:'me',customer_name:'최이음',phone:'010-5555-4444',region:'서울',stage:'CS',source:'일반',assigned_date:'2026-10-01',client_id:'c1'},
   {id:'d5',assigned_to:'남',customer_name:'홍길동',phone:'010-1111-2222',region:'서울',stage:'AP',source:'일반',assigned_date:'2026-10-01',client_id:null}];
  window.__CALLS=[{db_id:'d1',created_by:'me',call_at:'2026-10-08T01:00:00Z',result:'상담'},

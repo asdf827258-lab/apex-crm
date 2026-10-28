@@ -51,7 +51,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascri
                '.css': 'text/css', '.json': 'application/json' };
 /* ⚠ <b>덱에 남은 손 더하기</b> — 2026-10-02 에 17곳. <b>늘면 빨간불</b>이고,
    줄이면 이 수도 같이 내립니다 (0-1번). 머리 두 수는 이미 옮겼습니다.   */
-const BASE = { 덱손더하기: 17 };
+const BASE = { 덱손더하기: 16 };
 let hits = 0;
 const srv = http.createServer((rq, rs) => {
   const p = decodeURIComponent(url.parse(rq.url).pathname.split('?')[0]);
@@ -146,8 +146,19 @@ const LOOK = () => {
   is(/const isDone = r => APEX_PEX\.isDone\(r\);/.test(DECK)
      && /const isLive = r => APEX_PEX\.isLive\(r\);/.test(DECK),
     '  ★★ <b>판정이 덱에 안 남아 있다</b> — 부르기만 합니다');
-  is(/APEX_PEX\.doneWon\(done\)/.test(DECK) && /APEX_PEX\.liveWon\(live\)/.test(DECK),
-    '  ★ 덱의 <b>머리 두 수</b>도 그 자를 부른다');
+  /* ⚠ 판 X140 — 머리의 「계약업적」 은 이제 <b>doneWonMonth</b> 를 지납니다.
+     맨 위 카드와 「전체 팀 한눈에」 의 체결이 <b>같은 수</b>를 말하게 하려고
+     한 자로 모았습니다. 여기 글자(APEX_PEX.doneWon(done))를 박아 두었더니
+     <b>옳게 모았는데 울었습니다.</b> 재야 하는 것은 글자가 아니라
+     「머리 두 수가 apex-pex 를 지나는가 · 체결을 내는 자가 하나인가」 입니다 (8번). */
+  is(/APEX_PEX\.liveWon\(live\)/.test(DECK),
+    '  ★ 덱의 「진행중 예상업적」 이 그 자를 부른다');
+  is(/function doneWonMonth\(rows\) \{ return APEX_PEX\.doneWon\(/.test(DECK),
+    '  ★ 「이 달 체결」 을 내는 자가 <b>apex-pex 를 지난다</b>');
+  is((DECK.match(/APEX_PEX\.doneWon\(/g) || []).length === 1,
+    '  ★★ 체결액을 내는 자가 <b>하나</b>다 (받음 ' + (DECK.match(/APEX_PEX\.doneWon\(/g) || []).length + '곳)');
+  is(/const cSum = doneWonMonth\(/.test(DECK) && /const got = doneWonMonth\(/.test(DECK),
+    '  ★★ 맨 위 카드와 「전체 팀 한눈에」 가 <b>같은 자</b>를 부른다 — 두 답이 안 납니다 (5번)');
   is(!/function (pexSum|pexRows)[\s\S]{0,900}(계약완료|증권전달)/.test(IDX),
     '  ★★ 본체가 <b>판정을 베껴 적지 않았다</b> — 단계 이름이 그 자리에 없습니다');
   const 손 = (DECK.match(/\+r\.contract \|\| \+r\.expect \|\| 0/g) || []).length
