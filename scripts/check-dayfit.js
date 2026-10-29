@@ -36,6 +36,14 @@ const fs = require('fs'), path = require('path'), http = require('http');
 const { chromium } = require('playwright');
 
 const ROOT = process.cwd();
+/* ⚠ <b>px 로만 재면 못 잡는 자리가 있습니다</b> (판 X243).
+   판 X240 을 올린 뒤 라이브를 재어 보니 「부재·거절·상담」 셋이 <b>42px</b>,
+   「APEX 열어서 로그인」 이 <b>39px</b> 로 남아 있었습니다. 이 자는 바깥을
+   막아 웹폰트(Pretendard)를 못 받는데, 대체 글꼴에서는 같은 단추가 44px
+   로 재집니다 — <b>그래서 0곳이라고 적었습니다.</b> check-gatefit 이 요금
+   단추로 데인 그 자리와 같은 꼴입니다 (8번).
+   그래서 <b>글로 못 박았는지</b>도 봅니다 — 그쪽은 글꼴을 안 탑니다.      */
+const SRC = fs.readFileSync(path.join(ROOT, 'app', 'day.html'), 'utf8');
 const MT = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
              '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8' };
 const srv = http.createServer((q, s) => {
@@ -53,6 +61,14 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 
 /* 바닥 — 판 X146·X147 이 정한 수입니다. 여기서 또 정하지 않습니다. */
 const 글바닥 = 13, 손바닥 = 44;
+/* 옆으로 잘리는 칸 — <b>잰 값 그대로</b>입니다 (1번).
+   ⚠ 라이브에서 위 띠의 딱지(#pSrc)가 「로그인이 필요합니다 —」 일 때
+     <b>28px 잘립니다.</b> 그 딱지는 .pill{max-width:112px;…ellipsis} 로
+     <b>일부러 가둔 자리</b>이고, 같은 말이 <b>바로 아래 본문에 전문으로</b>
+     서 있습니다(「로그인이 필요합니다」 + 까닭 + 단추). 그래서 숨은 글이
+     아니라 판단했고 모양을 억지로 바꾸지 않았습니다 — 안 한 것은 안
+     했다고 적습니다. 이 자(바깥 막힘)에서는 짧은 글이라 0곳입니다.      */
+const 잘림선 = { 390: 0, 1280: 0 };
 
 const 재기 = () => {
   const 보임 = (e) => {
@@ -137,12 +153,22 @@ const 재기 = () => {
        '  ★★ <b>' + 손바닥 + 'px 아래 누를 곳이 없다</b> — ' + r.좁은.length + '곳'
        + (r.좁은.length ? ' ← ' + r.좁은.slice(0, 5).join(' · ') : '')
        + ' (판 X240 까지는 <b>18곳</b>이었습니다 · 28~42px)');
-    is(r.잘림.length === 0,
-       '  ★ <b>글이 잘리는 칸이 없다</b> — ' + r.잘림.length + '곳'
-       + (r.잘림.length ? ' ← ' + r.잘림.slice(0, 3).join(' · ') : '')
+    is(r.잘림.length <= 잘림선[W],
+       '  ★ <b>옆으로 잘리는 칸</b> ' + r.잘림.length + '곳 — 선 ' + 잘림선[W] + '곳'
+       + (r.잘림.length > 잘림선[W] ? ' ← 늘었습니다: ' + r.잘림.slice(0, 3).join(' · ') : '')
        + ' (잘린 글은 안 보이는 글입니다 · 판 X229)');
     is(r.폭 <= r.창 + 2,
        '  <b>옆으로 안 샌다</b> — 글 폭 ' + r.폭 + 'px / 창 ' + r.창 + 'px');
+  }
+
+  /* ── 💧 글로 못 박았나 (판 X243) ─────────────────────────────────── */
+  console.log('\n[글] 💧 <b>44px 이 글로 못 박혀 있나</b> — px 는 글꼴을 탑니다');
+  for (const [이름, 재] of [
+    ['통화 결과 고르개 (부재·거절·상담)', /\.r3 button\{[^}]*min-height:44px/],
+    ['「APEX 열어서 로그인」',              /\.nop a\{[^}]*min-height:44px/]
+  ]) {
+    is(재.test(SRC), '  ★★ <b>' + 이름 + '</b>에 44px 이 적혀 있다'
+      + ' (라이브에서 42px·39px 로 재졌는데 이 자는 44px 로 재어 못 봤습니다 · 판 X243)');
   }
 
   console.log('\n[조용한가] 콘솔');
