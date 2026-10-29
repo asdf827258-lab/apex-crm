@@ -445,6 +445,115 @@ const SEED = () => {
   is(/body\.jv-dock[^{]*#osVaFab\{display:none/.test(fs.readFileSync(path.join(ROOT,'app','index.html'),'utf8')),
      '띠가 떠 있는 동안 <b>떠다니는 옛 쪽창은 안 띄운다</b> — 떠다니는 자비스가 둘이 되지 않게 (5번)');
 
+  /* ══ [11] 🙋 되묻고 · 이어 묻게 하고 · 쉽게 (판 X247) ═══════════════
+
+     사장님 말씀 2026-10-29 — 「<b>한번 너가 질문하고</b> 60대 어르신들도
+     물어보면 바로 이해가 되도록 또는 <b>더 파고들지 않도록</b> 만들어서
+     정리해줘야된다. 그리고 <b>추가 질문을 너가 해줌으로써</b> 스스로 이걸
+     쓰는 설계사들이 합리적으로 이해할수 있도록 만들어줘」.
+
+     ── 손대기 전 (재어 본 값) ─────────────────────────────────────
+       애매한 물음 열둘 → 되묻는 것 <b>0개</b>
+         · 짐작해 엉뚱하게 답한 것 6개 (「도와줘」 → 보험금 찾는 4걸음)
+         · 「못 찾았습니다」 로 끝내고 누를 것도 0개인 것 4개
+       「그다음에 하면 좋은 것」 은 <b>글자로만</b> 있어 못 눌렀습니다.
+       쉬운 말은 이미 괜찮았습니다 — 문장 211개 평균 <b>22자</b>.
+
+     ★ <b>좋은 답을 되물음으로 바꾸면 더 나빠집니다.</b> 그래서 정해진 물음
+       22가지와 화면 이름으로 물었을 때는 <b>한 번도 안 되물어야</b> 합니다.
+     ★ 이어서 물을 것은 <b>지어내지 않습니다</b> — 상황별 안내에 적힌 물음
+       그대로여야 합니다 (1번).
+     ══════════════════════════════════════════════════════════════ */
+  sec('[11] 🙋 <b>되묻고 · 이어 묻게 하고 · 쉽게</b> (판 X247)');
+  const JV = await f.evaluate(() => {
+    const 흐림 = ['뭐 해야 돼','도와줘','모르겠어','막혔어','뭐부터 하지',
+                  '요즘 힘들어','어떻게 해야 돼','영업이 안 돼'];
+    /* ★ <b>이름표(how)를 묻지 않습니다 — 약속을 묻습니다.</b>
+       약속은 둘입니다: ① 짐작해서 <b>엉뚱한 걸음을 주지 않는다</b>
+       ② 그러면서 <b>좁혀 갈 길은 같이 준다</b>.
+       「요즘 힘들어」 는 「찾지 못했습니다」 로 답하는 쪽이 더 정직한데,
+       처음에 how==='back' 만 세다가 그것을 빨간불로 적었습니다 —
+       자가 이름표를 묻고 있었습니다 (8번). */
+    const 되물음 = 흐림.map(q => { const r = offline(q);
+      return {q, how:r.how, 걸음:(r.steps || []).length, g:(r.group || []).length}; });
+    const 정해진 = RECIPES.map(r => r.q);
+    const 이름 = Object.keys(MENU).map(id => MENU[id].n);
+    const 안되물어야 = 정해진.concat(이름).map(q => ({q, how:offline(q).how}));
+    const 이어 = RECIPES.map(r => { const o = offline(r.q);
+      return {q:r.q, more:(o.more || [])}; });
+    const 아는물음 = {}; RECIPES.forEach(r => { 아는물음[r.q] = 1; });
+    const 지어낸 = [];
+    이어.forEach(x => x.more.forEach(m => { if (!아는물음[m]) 지어낸.push(m); }));
+    /* 쉬운 말 — <b>우리가 쓴 글만</b> 잽니다. AI 가 쓴 말은 우리 손이
+       아니라 안 잽니다 (헛것을 잡지 않으려고 · 8번). */
+    const 글 = [];
+    RECIPES.forEach(r => { const o = offline(r.q);
+      [o.answer, o.real, o.tip].forEach(t => { if (t) 글.push(String(t)); });
+      (o.steps || []).forEach(st => { if (st && st.do) 글.push(String(st.do)); });
+      (o.next || []).forEach(n => 글.push(String(n))); });
+    글.push(jvHello().answer);
+    글.push(offline('김치찌개 끓이는 법').answer);
+    글.push(offline('뭐 해야 돼').answer);
+    const 문장 = [];
+    글.forEach(t => String(t).split(/(?<=[.!?])\s+|\n+/).forEach(x => {
+      x = x.replace(/\s+/g, ' ').trim(); if (x.length > 1) 문장.push(x); }));
+    /* 풀어 쓰지 않은 영어 약자 — 뒤에 괄호로 우리말을 붙였으면 봐줍니다 */
+    const 봐줌 = {AI:1, PDF:1, APEX:1, CRM:1, SMS:1, DB:1, TA:1, OT:1};
+    const 날것 = [];
+    글.forEach(t => { const T = String(t);
+      (T.match(/\b[A-Z][A-Z0-9]{1,6}\b/g) || []).forEach(w => {
+        if (봐줌[w]) return;
+        const i = T.indexOf(w);
+        if (/^\s*\(/.test(T.slice(i + w.length))) return;   /* 바로 뒤에 괄호 풀이 */
+        날것.push(w); }); });
+    return {
+      되물음:되물음.filter(x => x.걸음 === 0 && x.g >= 3).length, 흐림수:흐림.length,
+      갈래빠짐:되물음.filter(x => x.g < 3).length,
+      샌것:되물음.filter(x => !(x.걸음 === 0 && x.g >= 3))
+        .map(x => x.q + '(걸음 ' + x.걸음 + ' · 갈래 ' + x.g + ')'),
+      되물은수:되물음.filter(x => x.how === 'back').length,
+      헛것:안되물어야.filter(x => x.how === 'back').map(x => x.q), 안되물수:안되물어야.length,
+      이어붙은:이어.filter(x => x.more.length > 0).length, 이어전체:이어.length,
+      지어낸:지어낸.slice(0, 3), 지어낸수:지어낸.length,
+      문장수:문장.length, 평균:Math.round(문장.reduce((a, x) => a + x.length, 0) / 문장.length),
+      넘60:문장.filter(x => x.length > 60).length,
+      넘45:문장.filter(x => x.length > 45).length,
+      넘35:문장.filter(x => x.length > 35).length,
+      제일긴:문장.slice().sort((a, b) => b.length - a.length)[0],
+      날것:Array.from(new Set(날것))
+    };
+  });
+  is(JV.되물음 === JV.흐림수,
+     '★★ 애매하게 물으면 <b>엉뚱한 걸음을 안 주고 되묻는다</b> — ' + JV.되물음 + '/' + JV.흐림수
+     + '가지 (되물음 ' + JV.되물은수 + ' · 나머지는 「찾지 못했습니다」 + 갈래)'
+     + (JV.샌것.length ? ' ← 샌 것: ' + JV.샌것.join(' · ') : ''));
+  is(JV.갈래빠짐 === 0, '그 자리마다 <b>누를 갈래</b>를 같이 준다 — 막다른 길로 안 끝난다');
+  is(JV.헛것.length === 0,
+     '★★ <b>좋은 답은 안 건드린다</b> — 정해진 물음과 화면 이름 ' + JV.안되물수
+     + '가지에서 되물은 것 ' + JV.헛것.length + '개'
+     + (JV.헛것.length ? ' ← ' + JV.헛것.slice(0, 3).join(' · ') : '')
+     + ' (헛것을 잡는 자는 안 잡는 자보다 나쁩니다 · 8번)');
+  is(JV.이어붙은 >= 18,
+     '★★ 답 뒤에 <b>이어서 물어보실 것</b>이 붙는다 — ' + JV.이어붙은 + '/' + JV.이어전체 + '가지');
+  is(JV.지어낸수 === 0,
+     '그 물음을 <b>지어내지 않는다</b> — 상황별 안내에 적힌 것 그대로 (1번) · 지어낸 것 '
+     + JV.지어낸수 + '개' + (JV.지어낸수 ? ' ← ' + JV.지어낸.join(' · ') : ''));
+  is(JV.넘60 === 0,
+     '★★ <b>한 문장이 60자를 안 넘는다</b> — 예순 넘으신 분이 한 번에 읽히게 · 문장 '
+     + JV.문장수 + '개 · 평균 ' + JV.평균 + '자 · 제일 긴 것 ' + (JV.제일긴 || '').length + '자');
+  is(JV.넘45 <= 2 && JV.넘35 <= 9,
+     '긴 문장이 <b>늘지 않았다</b> — 45자 넘는 것 ' + JV.넘45 + '개(선 2) · 35자 넘는 것 '
+     + JV.넘35 + '개(선 9) · 남은 것은 뜻이 든 문장이라 자르지 않았습니다');
+  is(JV.날것.length === 0,
+     '<b>영어 약자를 그냥 던지지 않는다</b> — 풀이 없는 것 ' + JV.날것.length + '개'
+     + (JV.날것.length ? ' ← ' + JV.날것.join(' · ') : '') + ' (ETF 는 괄호로 풀었습니다)');
+  const DQ = await f.evaluate(() => {
+    offline('뭐 해야 돼');
+    const r = offline('뭐 해야 돼');
+    return {g:(r.group || []).length};
+  });
+  is(DQ.g >= 3, '되물을 때 내놓는 갈래가 <b>이미 쓰는 여섯</b> 그대로다 — ' + DQ.g + '개 (5번)');
+
   sec('[8] 🔇 조용히 터지지 않았나');
   const real = errs.filter(x => !/favicon|net::ERR|Failed to load resource/i.test(x));
   is(real.length === 0, '콘솔 오류 없음' + (real.length ? (' ← ' + real[0]) : ''));
