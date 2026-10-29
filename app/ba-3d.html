@@ -98,6 +98,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--nv);
 .slot .sb{display:flex;flex-direction:column;gap:4px;flex:none}
 .slot .sb a,.slot .sb label,.slot .sb button{font:inherit;font-size:11.5px;font-weight:800;text-align:center;border:1px solid var(--ln);background:#fff;border-radius:8px;padding:4px 8px;cursor:pointer;color:var(--nv);text-decoration:none}
 .slot .sb a{background:#1CAAD9;border-color:#1CAAD9;color:#fff}.slot .sb input{display:none}
+.mfold{display:flex;gap:8px;margin:4px 0 12px}.mfold label{flex:1;text-align:center;border-radius:12px;padding:11px 8px;font-weight:800;font-size:14px;cursor:pointer;background:var(--bl);color:#fff}
+.mfold label+label{background:#fff;color:var(--nv);border:1px solid var(--ln)}.mfold input{display:none}
 #mtoast{position:absolute;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--nv);color:#fff;font-weight:800;font-size:13.5px;border-radius:99px;padding:10px 18px;opacity:0;transition:.25s;z-index:40;pointer-events:none}
 #mtoast.on{opacity:1;transform:translate(-50%,0)}
 .pxbtn{position:absolute;right:16px;top:52px;z-index:6;border:0;border-radius:99px;padding:10px 16px;font:inherit;font-size:14px;font-weight:800;color:#fff;background:linear-gradient(135deg,#3182F6,#6C5CE7);box-shadow:0 8px 20px rgba(49,130,246,.35);cursor:pointer}
@@ -692,15 +694,36 @@ let GL=null;
 function gl(){if(GL)return GL;GL=new GLTFLoader();
  try{const dr=new DRACOLoader();dr.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');GL.setDRACOLoader(dr);}catch(e){}
  try{GL.setMeshoptDecoder(MeshoptDecoder);}catch(e){}return GL;}
+/* 스케치팹 받기는 두 꼴 — GLB(한 파일) 와 glTF(zip: scene.gltf + scene.bin + textures/). 둘 다 읽는다.
+   zip 은 JSZip(cdnjs) 으로 풀어, 안의 파일을 blob 주소로 바꿔 GLTFLoader 에 넘긴다. */
+let JSZ=null;
+function jszip(){if(JSZ)return JSZ;JSZ=new Promise(function(res,rej){if(window.JSZip)return res(window.JSZip);
+ const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';sc.onload=function(){res(window.JSZip);};sc.onerror=rej;document.head.appendChild(sc);});return JSZ;}
+function gltfFrom(rec){return new Promise(function(res,rej){
+ if(!rec.zip){gl().parse(rec.buf,'',res,rej);return;}
+ jszip().then(function(Z){return Z.loadAsync(rec.buf);}).then(function(z){
+  const names=Object.keys(z.files).filter(function(n){return !z.files[n].dir;});
+  const glb=names.filter(function(n){return /\.glb$/i.test(n);})[0];
+  if(glb)return z.file(glb).async('arraybuffer').then(function(b){gl().parse(b,'',res,rej);});
+  const gf=names.filter(function(n){return /\.gltf$/i.test(n);})[0];
+  if(!gf)throw new Error('zip 안에 .glb · .gltf 가 없습니다');
+  const base=gf.indexOf('/')>=0?gf.slice(0,gf.lastIndexOf('/')+1):'';
+  return Promise.all(names.map(function(n){return z.file(n).async('blob').then(function(b){return [n,b];});})).then(function(L){
+   const map={};L.forEach(function(e){map[e[0]]=URL.createObjectURL(e[1]);});
+   const mgr=new THREE.LoadingManager();
+   mgr.setURLModifier(function(u){const d=decodeURIComponent(u).replace(/^\.\//,'');return map[base+d]||map[d]||u;});
+   const ld=new GLTFLoader(mgr);
+   return z.file(gf).async('string').then(function(txt){ld.parse(txt,'',res,rej);});});
+ }).catch(rej);});}
 function mdlParse(k,rec){return new Promise(function(res){
- gl().parse(rec.buf,'',function(g){
+ gltfFrom(rec).then(function(g){
   const raw=g.scene;raw.rotation.y=(rec.yaw||0)*Math.PI/2;raw.updateMatrixWorld(true);
   const b=new THREE.Box3().setFromObject(raw),sz=new THREE.Vector3(),c=new THREE.Vector3();b.getSize(sz);b.getCenter(c);
   const s=2.95/Math.max(.001,sz.y);const wrap=new THREE.Group();
   raw.position.set(-c.x,-b.min.y,-c.z);const inner=new THREE.Group();inner.add(raw);inner.scale.setScalar(s);wrap.add(inner);
   wrap.traverse(function(m){m.userData.keep=true;if(m.isMesh){m.castShadow=true;m.receiveShadow=true;if(m.material){(Array.isArray(m.material)?m.material:[m.material]).forEach(function(mm){if(mm.map)mm.map.anisotropy=8;});}}});
   MODELS[k]=wrap;MMETA[k]={name:rec.name,size:rec.buf.byteLength,yaw:rec.yaw||0};res(true);
- },function(err){console.warn('모델 읽기 실패',k,err);MMETA[k]={name:rec.name,err:String(err&&err.message||err)};res(false);});});}
+ }).catch(function(err){console.warn('모델 읽기 실패',k,err);MMETA[k]={name:rec.name,err:String(err&&err.message||err)};res(false);});});}
 function modelFor(role,o){
  if(o&&o.sit)return null;
  const c=SLOTS.filter(function(s){return s.roles.indexOf(o&&o.surg?'surg':role)>=0&&MODELS[s.k];});
@@ -712,24 +735,52 @@ function placeModel(tpl,x,y,z,o){
  G.add(m);anims.push({m:m,cls:'none'});return m;}
 function mdlBoot(){return idbAll().then(function(all){return Promise.all(Object.keys(all).map(function(k){return mdlParse(k,all[k]);}));}).catch(function(e){console.warn('IDB',e);});}
 function mdlFile(k,file){
- if(!file)return;if(!/\.glb$/i.test(file.name)){toastM('.glb 파일만 넣을 수 있습니다 — 스케치팹 받기에서 「GLB」 를 고르세요');return;}
- const fr=new FileReader();fr.onload=function(){const rec={name:file.name,buf:fr.result,yaw:0};
-  mdlParse(k,rec).then(function(ok){if(!ok){toastM('파일을 읽지 못했습니다 — 다른 형식으로 받아 보세요');mdlPanel();return;}
-   idbPut(k,rec).then(function(){toastM('넣었습니다 — '+SLOTS.filter(function(s){return s.k===k;})[0].t);mdlPanel();render();});});};
- fr.readAsArrayBuffer(file);}
+ if(!file)return Promise.resolve(false);
+ if(!/\.(glb|zip)$/i.test(file.name)){toastM('.glb 또는 .zip(glTF) 파일을 넣어 주세요 — 지금 파일: '+file.name);return Promise.resolve(false);}
+ return file.arrayBuffer().then(function(buf){const rec={name:file.name,buf:buf,yaw:0,zip:/\.zip$/i.test(file.name)};
+  return mdlParse(k,rec).then(function(ok){if(!ok){toastM('읽지 못했습니다 — '+file.name);mdlPanel();return false;}
+   return idbPut(k,rec).then(function(){toastM('넣었습니다 — '+SLOTS.filter(function(s){return s.k===k;})[0].t);mdlPanel();render();return true;});});});}
+/* 📁 폴더째 넣기 — 파일 · 폴더 이름을 보고 역할 칸을 알아서 고른다(스케치팹이 붙이는 이름 그대로).
+   풀어 둔 glTF 폴더(scene.gltf + scene.bin + textures)는 모델 폴더마다 zip 으로 다시 묶어 넣는다. */
+const SLOT_RX=[['doc_m',/portrait.*doctor|white.?lab.?coat|doctor.?portrait/i],['doc_f',/doctor.?in.?a.?white.?coat|female.?doctor|doctor.*coat/i],
+ ['surgeon',/surg/i],['nurse',/nurse|scrub/i],['patient',/patient|stomach/i],['old_f',/elderly.?woman|old.?woman|grand.?m|casual.?wear/i],
+ ['old_m',/elderly.?man|old.?man|elderly/i],['officer',/\bmei\b|mei.?posed|walking.?business/i],['caregiver',/hairstylist|apron|caregiver/i],['family',/dennis|standing.?business/i]];
+function slotOf(name){for(let i=0;i<SLOT_RX.length;i++)if(SLOT_RX[i][1].test(name))return SLOT_RX[i][0];return null;}
+let MDL_MISS=[];
+function mdlFolder(list){
+ const files=[].slice.call(list||[]);if(!files.length)return;
+ const singles=files.filter(function(f){return /\.(glb|zip)$/i.test(f.name);});
+ /* 풀어 둔 glTF — scene.gltf 가 든 폴더마다 묶는다 */
+ const groups={};files.filter(function(f){return /\.gltf$/i.test(f.name);}).forEach(function(gf){
+  const rp=gf.webkitRelativePath||gf.name,dir=rp.lastIndexOf('/')>=0?rp.slice(0,rp.lastIndexOf('/')+1):'';
+  groups[dir]=files.filter(function(f){const r=f.webkitRelativePath||f.name;return !/\.(glb|zip)$/i.test(f.name)&&r.indexOf(dir)===0;});});
+ MDL_MISS=[];toastM('모델 '+(singles.length+Object.keys(groups).filter(function(g){return groups[g].some(function(f){return /\.gltf$/i.test(f.name);});}).length)+'개를 읽는 중…');
+ const jobs=[];
+ singles.forEach(function(f){const k=slotOf((f.webkitRelativePath||'')+' '+f.name);if(!k){MDL_MISS.push(f.name);return;}jobs.push(function(){return mdlFile(k,f);});});
+ Object.keys(groups).forEach(function(dir){const L=groups[dir];const gf=L.filter(function(f){return /\.gltf$/i.test(f.name);})[0];
+  const k=slotOf(dir+' '+gf.name);if(!k){MDL_MISS.push(dir||gf.name);return;}
+  jobs.push(function(){return jszip().then(function(Z){const z=new Z();
+   L.forEach(function(f){const rp=f.webkitRelativePath||f.name;z.file(rp.slice(dir.length),f);});
+   return z.generateAsync({type:'blob'});}).then(function(blob){return mdlFile(k,new File([blob],(dir.replace(/\/$/,'').split('/').pop()||'model')+'.zip'));});});});
+ let ok=0;jobs.reduce(function(pr,j){return pr.then(function(){return j().then(function(r){if(r)ok++;});});},Promise.resolve()).then(function(){
+  toastM(ok+'개 넣음'+(MDL_MISS.length?' · 이름으로 못 맞춘 '+MDL_MISS.length+'개는 칸에 직접 끌어 주세요':''));mdlPanel();render();});}
 function mdlYaw(k){idbAll().then(function(all){const r=all[k];if(!r)return;r.yaw=((r.yaw||0)+1)%4;return idbPut(k,r).then(function(){return mdlParse(k,r);});}).then(function(){mdlPanel();render();});}
 function mdlDrop(k){idbDel(k).then(function(){delete MODELS[k];delete MMETA[k];mdlPanel();render();});}
 function toastM(t){const e=document.getElementById('mtoast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove('on');},3200);}
 function mdlPanel(){
  const e=document.getElementById('mdl');
  e.innerHTML='<button class="x" onclick="mdlClose()">닫기</button><h3>👤 진짜 사람 모델 넣기</h3>'+
-  '<ol class="how"><li>아래 <b>「스케치팹에서 보기」</b> 를 눌러 로그인(무료 가입)</li><li><b>Download 3D Model</b> → 형식 <b>GLB</b> 를 받기</li><li>받은 파일을 그 칸에 <b>끌어다 놓기</b>(또는 「파일 고르기」)</li></ol>'+
+  '<ol class="how"><li>아래 <b>「스케치팹에서 보기」</b> 를 눌러 로그인(무료 가입)</li><li><b>Download 3D Model</b> → <b>GLB</b> 또는 <b>glTF(zip)</b> 아무거나 받기</li><li>받은 파일을 <b>한 폴더</b>에 모아 아래 <b>「📁 폴더째 넣기」</b> — 이름을 보고 칸을 알아서 고릅니다</li></ol>'+
+  '<p class="note" style="color:#B45309;font-weight:800">⚠ 폴더에 넣어 두기만 하면 화면이 모릅니다 — 꼭 이 창에서 「폴더째 넣기」 나 칸에 끌어다 놓기를 해 주세요. 넣은 기기 · 브라우저에만 저장됩니다.</p>'+
+  '<div class="mfold"><label>📁 폴더째 넣기<input type="file" webkitdirectory directory multiple onchange="mdlFolder(this.files)"></label>'+
+  '<label>📄 파일 여러 개 고르기<input type="file" accept=".glb,.zip" multiple onchange="mdlFolder(this.files)"></label></div>'+
+  (MDL_MISS.length?'<p class="note" style="color:#E5484D">이름으로 못 맞춘 것: '+MDL_MISS.join(' · ')+' — 아래 칸에 직접 끌어다 놓아 주세요</p>':'')+
   '<p class="note">전부 <b>CC BY 4.0</b> — 출처를 적으면 사업용으로 쓸 수 있습니다. 넣은 모델은 「숫자 출처」 에 출처가 저절로 붙습니다. 파일은 이 컴퓨터 브라우저에만 저장됩니다.</p>'+
   SLOTS.map(function(s){const m=MMETA[s.k],ok=!!MODELS[s.k];
    return '<div class="slot'+(ok?' ok':'')+'" ondragover="event.preventDefault();this.classList.add(\'dg\')" ondragleave="this.classList.remove(\'dg\')" ondrop="event.preventDefault();this.classList.remove(\'dg\');mdlFile(\''+s.k+'\',event.dataTransfer.files[0])">'+
     '<div class="sl"><b>'+s.t+'</b><span>'+s.n+' · '+s.by+'</span>'+(m?(m.err?'<em class="er">읽기 실패 — '+m.err.slice(0,60)+'</em>':'<em>✓ 넣음 · '+m.name+' · '+(m.size/1e6).toFixed(1)+'MB</em>'):'<em class="no">비어 있음 — 직접 깎은 사람으로 그림</em>')+'</div>'+
     '<div class="sb"><a href="'+s.u+'" target="_blank" rel="noopener">스케치팹에서 보기</a>'+
-    '<label>파일 고르기<input type="file" accept=".glb" onchange="mdlFile(\''+s.k+'\',this.files[0])"></label>'+
+    '<label>파일 고르기<input type="file" accept=".glb,.zip" onchange="mdlFile(\''+s.k+'\',this.files[0])"></label>'+
     (ok?'<button onclick="mdlYaw(\''+s.k+'\')" title="모델이 엉뚱한 쪽을 보면 눌러서 90° 돌립니다">↻ 방향</button><button onclick="mdlDrop(\''+s.k+'\')">빼기</button>':'')+'</div></div>';}).join('')+
   '<p class="note">구급대원은 쓸 만한 무료 모델이 없어 직접 깎은 사람으로 둡니다. 앉은 · 누운 사람도 마찬가지입니다(받은 모델은 서 있는 자세라서).</p>';
  e.classList.add('on');}
@@ -1776,7 +1827,7 @@ if(BA&&BA.mode==='why')document.body.classList.add('whymode');
 var STAGE_SCALE=1;
 function fit(){var m=document.body.classList.contains('embed')?0:24;STAGE_SCALE=Math.min((innerWidth-m)/1280,(innerHeight-m)/720);document.getElementById('stage').style.transform='scale('+STAGE_SCALE+')';}
 addEventListener('resize',fit);fit();
-Object.assign(window,{whyOpen:whyOpen,mdlPanel:mdlPanel,mdlClose:mdlClose,mdlFile:mdlFile,mdlYaw:mdlYaw,mdlDrop:mdlDrop,pxOpen:pxOpen,pxClose:pxClose,pxGo:pxGo,pxStep:pxStep,pick:pick,go:go,move:move,hl:hl,srcOpen:srcOpen,srcClose:srcClose,render:render,CUR:CUR,J:J,__dbg:{clear3d:clear3d,person:person,lying:lying,room:room,box:box,CAM:CAM}});
+Object.assign(window,{mdlFolder:mdlFolder,whyOpen:whyOpen,mdlPanel:mdlPanel,mdlClose:mdlClose,mdlFile:mdlFile,mdlYaw:mdlYaw,mdlDrop:mdlDrop,pxOpen:pxOpen,pxClose:pxClose,pxGo:pxGo,pxStep:pxStep,pick:pick,go:go,move:move,hl:hl,srcOpen:srcOpen,srcClose:srcClose,render:render,CUR:CUR,J:J,__dbg:{clear3d:clear3d,person:person,lying:lying,room:room,box:box,CAM:CAM}});
 try{init3d();render();if(BA&&BA.mode==='why'){whyOpen(CUR.j);document.getElementById('ttlsub').textContent='보장 전·후 · 왜 보장이 넓어야 하나';document.querySelector('.ttl').firstChild.textContent='왜 보장이 「넓어야」 하나';}mdlBoot().then(function(){if(Object.keys(MODELS).length)render();});
  document.getElementById('scene').insertAdjacentHTML('beforeend','<div class="hint" id="hint">끌어서 돌려 보기</div>');}
 catch(e){document.getElementById('scene').insertAdjacentHTML('beforeend','<div class="err">3D 를 불러오지 못했습니다 — 인터넷 연결(그림 엔진)을 확인해 주십시오.<br>'+String(e).slice(0,120)+'</div>');}
