@@ -560,6 +560,19 @@ body.fb-off .coach,body.fb-off .heart,body.fb-off .timing{display:none!important
   .dock .qb{font-size:13px;padding:7px 11px}
   .dock.open .qbar{max-height:52vh}
 }
+/* ══ 📱 폰에서는 거절판 <b>한 줄만</b> (판 X235 · 사장님 말씀 2026-10-29 「폰에서 거절판이 너무 가려」) ══
+   재어 본 것(390×844) — 접어도 94px, 「전부 펴기」 를 누르면 500px(화면 59%)를 덮었습니다.
+   CRM 안에서는 틀이 더 작아 더 가렸습니다.
+   ★ 폰은 머리줄(찾기·펴기)을 접고 <b>거절 단추 한 줄</b>만 둡니다 — 옆으로 밀어 봅니다.
+   ★ 전부·찾기는 맨 앞 「🙅 전부」 → 찾는 칸 있는 쪽지(닫으면 사라짐). 판을 펴서 덮는 길은 없앴습니다.
+   ★ 입력 칸에 글을 쓰는 동안(자판이 올라온 동안)은 판을 숨깁니다. */
+@media (max-width:900px){
+  .dock .dk-hd{display:none}
+  .dock .dk-in{padding:7px 10px}
+  .dock .qbar,.dock.open .qbar{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-height:none}
+  .dock .qb{padding:7px 11px}
+}
+.dock.kb{display:none}
 /* 인쇄 고르는 쪽지 */
 .pch{display:grid;gap:10px}
 .pchb{border:2px solid var(--g200);background:#fff;border-radius:16px;padding:16px 18px;text-align:left;cursor:pointer;font:inherit}
@@ -1561,14 +1574,15 @@ function renderQbar(){
         return '<button class="qb dob em'+(e[2]?' sos':'')+'" data-ob="'+id+'">'+esc(e[1])+'</button>'; }).join('')
     + hot.map(function(id){ return one(id,' hot'); }).join('')
     + allObj().map(function(o){ return one(o.id); }).join('');
-  box.innerHTML = '<button class="qb obj" data-qb="obj">🙅 전부·찾기</button>' + h
+  box.innerHTML = '<button class="qb obj" data-qb="obj">🙅 전부 '+allObj().length+'</button>' + h
     + '<button class="qb gain" data-qb="gain">💡 이득·공감</button>';
   if($('dkN')) $('dkN').textContent = 본.length+'가지';
   dockApply(); qFilter();
 }
 /* 하단 거절판 — 펴면 <b>전부 한 번에</b>, 접으면 한 줄로 미끄러집니다.
    처음에는 PC 는 펴고 폰은 접습니다(폰은 펴면 화면 절반) — 손으로 바꾸면 기억합니다 */
-function dockOpen(){ return S.dock ? S.dock==='open' : window.innerWidth > 900; }
+function dockOpen(){ if(window.innerWidth <= 900) return false; /* 폰은 늘 한 줄 (판 X235) */
+  return S.dock ? S.dock==='open' : true; }
 function dockApply(){
   var d=$('dock'); if(!d) return;
   d.classList.toggle('open', dockOpen());
@@ -1840,6 +1854,11 @@ document.addEventListener('input', function(e){
 window.TA_APP = { state:S, setPrintFull:function(v){ PRINT_FULL=!!v; buildPrint(); }, render:renderAllPages, setTrend:setTrend, setDB:function(k){ S.db=k; persist(); renderAllPages(); } };
 window.addEventListener('hashchange', function(){ if(location.hash==='#sayPanel'){ S.view='trend'; persist(); renderAllPages(); go('call'); } });
 window.addEventListener('resize', dockApply);
+/* 📱 자판이 올라온 동안은 판을 숨깁니다 (판 X235) — 입력 칸을 가리지 않게 */
+document.addEventListener('focusin', function(e){ var t=e.target, d=$('dock');
+  if(!d || window.innerWidth > 900 || !t || !t.matches || !t.matches('input,textarea,select') || t.closest('#dock')) return;
+  d.classList.add('kb'); dockPad(); });
+document.addEventListener('focusout', function(){ var d=$('dock'); if(d && d.classList.contains('kb')){ d.classList.remove('kb'); dockPad(); } });
 try { new ResizeObserver(dockPad).observe($('dock')); } catch(e){}
 renderCases(); renderPrac(); renderAllPages(); renderInfo(); buildPrint(); go(S.tab||'call');
 })();

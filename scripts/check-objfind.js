@@ -118,6 +118,18 @@ const 보이는수 = (p, sel) => p.evaluate(s => [].slice.call(document.querySel
   const 띠거절 = await 보이는수(p1, '#qbar [data-ob]');
   is(띠전부 >= 8, '  아래 띠가 <b>서 있다</b> — 단추 ' + 띠전부 + '개');
   is(띠거절 >= 6, '  ★★ 자주 나오는 거절 <b>' + 띠거절 + '가지가 띠에서 바로</b> 눌린다 (판 X115)');
+  /* 판 X235 — 사장님 말씀 「폰에서 거절판이 너무 가려」. 접어도 94px · 펴면 500px 였습니다 */
+  const 판 = await p1.evaluate(() => {
+    const d = document.getElementById('dock'), h0 = d.offsetHeight;
+    const 머리 = document.querySelector('#dock .dk-hd'), 펴기 = document.getElementById('dkFold');
+    const i = document.getElementById('i_c');
+    i.dispatchEvent(new FocusEvent('focusin', { bubbles: true })); const 숨김 = d.offsetHeight;
+    i.dispatchEvent(new FocusEvent('focusout', { bubbles: true })); const 다시 = d.offsetHeight;
+    return { h0, 머리: 머리 ? 머리.offsetHeight : 0, 펴기: 펴기 ? 펴기.offsetHeight : 0, 숨김, 다시 };
+  });
+  is(판.h0 > 0 && 판.h0 <= 64, '  ★★ 폰에서 거절판은 <b>한 줄</b>만 — ' + 판.h0 + 'px (전에는 94px, 펴면 500px)');
+  is(판.머리 === 0 && 판.펴기 === 0, '  ★ 폰에는 <b>펴서 덮는 길이 없다</b> — 전부·찾기는 「🙅 전부」 쪽지로');
+  is(판.숨김 === 0 && 판.다시 === 판.h0, '  ★ 입력 칸에 <b>글을 쓰는 동안은 숨고</b>, 끝나면 돌아온다 — ' + 판.숨김 + ' → ' + 판.다시 + 'px');
   await p1.evaluate(() => document.querySelector('[data-qb="obj"]').click());
   await p1.waitForTimeout(700);
   const s1 = await p1.evaluate(() => ({ 찾는칸: !!document.getElementById('shFind'),
