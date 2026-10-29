@@ -372,6 +372,33 @@ const SEED = () => {
      + 'px · 보내기 ' + (D2.send ? D2.send.h : 0) + 'px');
   is(!D2.stage && !D2.bar, '띠에서는 지도 무대·머리 띠를 <b>안 띄운다</b>');
 
+  /* ★★ <b>접힌 띠에서 물으면 답이 보여야 합니다.</b>
+       접힌 띠는 대화 칸을 감춥니다. 그대로 두면 사장님이 적는 칸에 치고
+       보내기를 눌러도 <b>아무 일도 안 일어난 것처럼</b> 보입니다 —
+       「여기서 표현하고 <b>바로 볼수 있도록</b>」 이 거기서 막힙니다.
+       그래서 물으면 띠가 <b>저절로 펴집니다</b> (판 X245).                */
+  await f.evaluate(() => { try{ window.parent.jvDockOpen(false); }catch(e){}
+    const t = document.getElementById('jSay'); if (t) t.value = '청구 서류 어떻게 받아?';
+    const b = document.getElementById('jSend'); if (b) b.click(); });
+  await p.waitForTimeout(1800);
+  const DA = await p.evaluate(() => ({ shut: document.body.classList.contains('jv-shut'),
+    h: Math.round(document.getElementById('apexMapFrame').getBoundingClientRect().height) }));
+  /* ★ 「눈에 들어왔나」 를 <b>굴림 자리로 재지 않습니다</b> — 대화가 길면
+       마지막 줄이 아직 안 굴러와 있어 재는 때에 따라 들쭉날쭉합니다.
+       버그는 <b>대화 칸이 통째로 감춰지는 것</b>이었으니 그것을 바로 묻습니다
+       (헛것을 잡는 자는 안 잡는 자보다 나쁩니다 · 8번).                  */
+  const DB2 = await f.evaluate(() => {
+    const lg = document.getElementById('jLog');
+    const last = document.querySelector('#jLog .msg:last-child');
+    return { shown: !!lg && getComputedStyle(lg).display !== 'none',
+             h: lg ? Math.round(lg.getBoundingClientRect().height) : 0,
+             grown: !!last && last.getBoundingClientRect().height > 1,
+             txt: last ? (last.innerText || '').replace(/\s+/g, ' ').slice(0, 34) : '' };
+  });
+  is(!DA.shut && DB2.shown && DB2.h > 1 && DB2.grown,
+     '★★ 접힌 띠에서 물으면 <b>저절로 펴져 답이 선다</b> — 띠 ' + DA.h + 'px · 대화 칸 '
+     + DB2.h + 'px · 「' + DB2.txt + '…」 (안 펴지면 보내기를 눌러도 아무 일 없어 보입니다)');
+
   /* ★★ <b>화면을 통째로 덮는 자리에서도 띠가 보여야 합니다.</b>
        처음에 z-index 를 260 으로 두었더니 계산기(#financeScreen 300) 위에서
        <b>밑에 깔려 사라졌습니다</b> — 사장님께는 「자비스가 꺼졌다」 로
