@@ -197,7 +197,7 @@
     }
     if (lay === 'cta') {
       var bi = anyIdx(idx), bu = bi === idx ? u : (bi >= 0 ? cxBlur(bi) : '');
-      var src = cxSrc();
+      var src = srcLine();
       return '<div class="cx cxA" style="' + bgStyle(bu, dark) + '"><div class="cxA-shade dim"></div>' +
         '<div class="cxA-mast">' + E(cxMast()) + '</div><div class="cxA-mr">NEWS ISSUE</div>' +
         '<div class="cxA-card"><div class="cxA-av" style="' + bgStyle(u ? cxBlur(idx) : '', 'linear-gradient(140deg,#1F3A2C,#0C1A12)') + '"><span>' + E(cxShort()) + '<em>✳</em></span></div>' +
@@ -205,7 +205,7 @@
         '<div class="cxA-pill">' + E(cxId()) + '</div></div>' +
         '<div class="cxA-pins">' +
         (src ? '<div><span class="pin">📌</span><span class="bx">자료 · <b>' + E(sub2(src, 30)) + '</b></span></div>' : '') +
-        '<div><span class="pin">📌</span><span class="bx">' + E(sub2(m.s || '저장해 두고 필요할 때 다시 보세요', 34)) + '</span></div></div>' +
+        '<div><span class="pin">📌</span><span class="bx">' + E(sub2(m.s || '저장해 두고 필요할 때 다시 보세요', 22)) + '</span></div></div>' +
         '<div class="cxA-disc">' + E(DISC) + (B.seal ? '<br>' + E(B.seal) : '') + '</div><div class="cxA-rule"></div></div>';
     }
     if (lay === 'list') {
@@ -261,7 +261,7 @@
     }
     if (lay === 'cta') {
       var bi = anyIdx(idx), bg = bi >= 0 ? cxBlur(bi) : '';
-      var src = cxSrc();
+      var src = srcLine();
       return '<div class="cx cxB" style="' + bgStyle(bg, 'linear-gradient(170deg,#55636C,#2F5B73)') + '"><div class="cxB-dim"></div>' +
         '<div class="cxB-mast w">' + E(cxMast()) + '</div>' +
         '<div class="cxB-card"><div class="cxB-logo"><span>' + E(cxShort().slice(0, 2).toUpperCase()) + '</span></div>' +
@@ -324,7 +324,7 @@
     }
     if (lay === 'cta') {
       var bi = anyIdx(idx), bg = bi >= 0 ? cxBlur(bi) : '';
-      var src = cxSrc();
+      var src = srcLine();
       return '<div class="cx cxC" style="' + bgStyle(bg, grunge) + '"><div class="cxC-shade dk"></div>' +
         '<div class="cxC-lab ctr">' + heartSq(66) + '<span>END OF ISSUE</span></div>' +
         '<div class="cxC-card"><div class="cxC-av">' + E(cxShort().toUpperCase()) + '</div><div class="cxC-id">' + E(cxId()) + '</div><div class="cxC-dot"></div>' +
@@ -393,7 +393,7 @@
         '<div class="cxD-cv">' + ls.map(function (l) { return '<div>' + hl(l, 'bl') + '</div>'; }).join('') +
         (m.s ? '<div class="s">: ' + E(sub2(m.s, 30)) + '</div>' : '') + '</div></div></div>';
     }
-    var src = cxSrc(), isCta = lay === 'cta';
+    var src = srcLine(), isCta = lay === 'cta';
     var inner = '';
     if (isCta) {
       inner = '<div class="cxD-prof"><div class="av">' + E(cxShort().slice(0, 2).toUpperCase()) + '</div><div><b>' + E(cxMast()) + '</b><span>' + E(cxId()) + '</span></div><div class="fo">팔로우</div></div>' +
@@ -421,7 +421,8 @@
   }
 
   var DRAW = { lime: lime, note: note, zine: zine, app: app };
-  function slideHtml(sl, idx, n, pv) { var f = DRAW[CN.style]; return f ? f(sl || {}, idx, n, pv) : ''; }
+  /* 고른 실사 사진의 사진가 이름을 장마다 얹는다 (판 X235 · creditOf) */
+  function slideHtml(sl, idx, n, pv) { var f = DRAW[CN.style]; if (!f) return ''; var h = f(sl || {}, idx, n, pv), c = creditHtml(idx); return c ? h.replace(/<\/div>$/, c + '</div>') : h; }
 
   /* ── 스타일 · 글꼴 ── */
   (function inject() {
@@ -488,9 +489,9 @@
       '.cxA-av span{font-size:46px;font-weight:900;color:#fff;letter-spacing:-.02em;line-height:1}.cxA-av em{font-style:normal;color:#B6FF3B;margin-left:6px}',
       '.cxA-ct{margin:52px 36px 0;font-size:40px;font-weight:500;line-height:1.4;max-height:120px;overflow:hidden}',
       '.cxA-pill{margin:44px auto 0;width:408px;height:66px;line-height:66px;border-radius:34px;background:#222;color:#fff;font-size:36px;font-weight:700}',
-      '.cxA-pins{position:absolute;left:196px;right:120px;top:1050px;display:flex;flex-direction:column;gap:22px}',
+      '.cxA-pins{position:absolute;left:150px;right:80px;top:1010px;display:flex;flex-direction:column;gap:22px}',
       '.cxA-pins>div{display:flex;align-items:center;gap:18px}.cxA-pins .pin{font-size:44px}',
-      '.cxA-pins .bx{background:rgba(0,0,0,.72);color:#fff;font-size:34px;padding:4px 10px}.cxA-pins b{color:#B6FF3B;font-weight:700}',
+      '.cxA-pins .bx{background:rgba(0,0,0,.72);color:#fff;font-size:34px;padding:4px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:720px}.cxA-pins b{color:#B6FF3B;font-weight:700}',
       '.cxA-disc{position:absolute;left:80px;right:80px;bottom:84px;font-size:22px;line-height:1.5;color:rgba(255,255,255,.7);text-align:center}',
       /* ② 블루 노트 */
       '.cxB{background:linear-gradient(180deg,#E6EAED 0%,#E3E8EC 62%,#BFE2F4 100%);color:#111}',
@@ -633,6 +634,20 @@
       '.cxs-t{display:flex;flex-direction:column;min-width:0}.cxs-t b{font-size:var(--t6);font-weight:800;color:var(--t-ink)}.cxs-t small{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       '.cxs-b.ok{border-color:#A7F3D0;background:#ECFDF5}.cxs-b.ok .cxs-n{background:#10B981;color:#fff}',
       '.cxs-b.cur{border-color:#7C3AED;background:#F5F3FF;box-shadow:0 0 0 3px rgba(124,58,237,.14)}.cxs-b.cur .cxs-n{background:#7C3AED;color:#fff}',
+      '.cx-cr{position:absolute;right:26px;bottom:14px;z-index:6;background:rgba(0,0,0,.42);color:#fff;font-size:19px;font-weight:500;line-height:1.3;padding:4px 12px;border-radius:12px;white-space:nowrap;letter-spacing:0}',
+      '.cxk{border:1.5px solid #7C3AED;border-radius:var(--r,12px);padding:12px 13px;margin:0 0 12px;background:var(--t-card,#fff)}',
+      '.cxk-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:var(--t6);color:var(--t-ink);margin-bottom:9px}',
+      '.cxk-x{min-height:44px;padding:0 14px;border:1px solid var(--t-line,#E5E8EB);border-radius:9px;background:var(--t-card,#fff);color:var(--t-sub);font:inherit;font-size:13px;cursor:pointer}',
+      '.cxk-row{display:flex;gap:6px;flex-wrap:wrap}.cxk-row input{flex:1 1 200px;min-height:44px;padding:0 11px;border:1px solid var(--t-line,#D1D5DB);border-radius:9px;font:inherit;font-size:var(--t6);color:var(--t-ink);background:var(--t-card,#fff)}',
+      '.cxk-row select{min-height:44px;padding:0 9px;border:1px solid var(--t-line,#D1D5DB);border-radius:9px;font:inherit;font-size:var(--t6);color:var(--t-ink);background:var(--t-card,#fff)}.cxk-row .btn{min-height:44px}',
+      '.cxk-msg{margin-top:8px;font-size:13px;line-height:1.55;color:var(--t-sub)}',
+      '.cxk-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:10px;max-height:520px;overflow:auto}',
+      '@media(max-width:640px){.cxk-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}',
+      '.cxk-it{display:flex;flex-direction:column;gap:3px;padding:0;border:2px solid transparent;border-radius:10px;background:none;cursor:pointer;text-align:left;font:inherit;min-height:44px}',
+      '.cxk-it:hover{border-color:#7C3AED}.cxk-it img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:8px;display:block;background:var(--t-line,#E5E8EB)}',
+      '.cxk-it span{font-size:13px;color:var(--t-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px}',
+      '.cxk-ft{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.cxk-ft .btn{min-height:44px}',
+      '.cxk-nt{margin-top:9px;font-size:13px;line-height:1.55;color:var(--t-sub)}',
       '.cxp-nt{margin-top:9px;font-size:13px;line-height:1.55;color:#8A6A2F;background:#FFF9EC;border:1px solid #F3E2B8;border-radius:8px;padding:7px 10px}'
     ].join('\n');
     document.head.appendChild(s);
@@ -644,7 +659,7 @@
   window.cnSlidePreview = function (sl, idx, n) { return isMine(CN.style) ? pvHtml(sl, idx, n) : _origPv.apply(this, arguments); };
 
   /* 출처 칸에 적으면 기존 스타일의 마지막 장에도 그 출처가 찍힌다 */
-  window.cnSrcOf = function () { var v = ('' + B.src).trim(); return v || autoSrc(); };
+  window.cnSrcOf = function () { var v = ('' + B.src).trim() || autoSrc(), p = (typeof photoSum === 'function') ? photoSum() : ''; return [v, p ? '사진 ' + p : ''].filter(Boolean).join(' / '); };
 
   /* ── AI 사진 — 화보 촬영처럼 (판 X231) ─────────────────────────────────
      사장님 말씀 「사진도 고퀄리티로 만들어줘야만해. 내가 첨부한 퀄리티 보았지」.
@@ -744,6 +759,132 @@
     return go.then(fit1080);
   };
 
+  /* ── 📷 실사 사진 찾기 (판 X235) ─────────────────────────────────────
+     사장님 말씀 「사진이 사실적 또는 뉴스에서 사용하는 실제 이미지를 따와서 넣고
+     싶은거야」 → 고르신 길 「둘 다」.
+     ⚠ 뉴스 기사 사진 · 정책브리핑 사진은 <b>자동으로 안 가져옵니다</b> — 기사 사진은
+       언론사 저작물이고, 정책브리핑도 「사진은 담당자와 협의 후 사용」 이라 적혀 있어
+       기계가 「써도 된다」 고 판정할 길이 없습니다(netlify/functions/photo-search.js 머리글).
+     그래서 상업적 이용이 허락된 <b>진짜 사진</b>(Pexels · Unsplash)을 찾습니다.
+     ★ 고른 사진에는 <b>사진가 이름이 카드에 저절로</b> 찍힙니다(두 곳 지침 · creditOf).
+     ★ 고르면 다음 빈 장으로 넘어가 그 장의 검색어로 바로 찾습니다 — 열 장을 연달아 고르게.  */
+  var PK = { open: false, q: '', src: 'all', page: 1, items: [], busy: false, msg: '', en: '', idx: -1 };
+  function slideQuery(i) {
+    var sl = cardnewsSlides()[i] || {}, m = cnMagText(sl);
+    var k = plain(m.k).replace(/POINT\s*\d+/i, '').replace(/[^\w가-힣\s·]/g, ' ');
+    var t = plain(m.t).replace(/\n/g, ' ').replace(/[^\w가-힣\s%.,]/g, ' ');
+    return (k + ' ' + t).replace(/\s+/g, ' ').trim().slice(0, 60);
+  }
+  function apiHdr() { var h = {}; try { var t = (typeof getAppToken === 'function') ? getAppToken() : ''; if (t) h['X-App-Token'] = t; } catch (e) {} return h; }
+  function firstEmpty(from) { var sl = cardnewsSlides(), j; for (j = from || 0; j < sl.length; j++) if (!(CN.imgs && CN.imgs[j])) return j; for (j = 0; j < (from || 0); j++) if (!(CN.imgs && CN.imgs[j])) return j; return -1; }
+  function pkSearch(q, src, page) {
+    return fetch('/api/photo-search?q=' + encodeURIComponent(q) + '&src=' + encodeURIComponent(src || 'all') + '&page=' + (page || 1), { headers: apiHdr() })
+      .then(function (r) { return r.json().then(function (d) { if (!r.ok && !(d && d.error)) throw new Error('HTTP ' + r.status); return d; }); });
+  }
+  function keyMsg(d) {
+    var m = (d && d.missing) || [];
+    if (!m.length) return '';
+    return '⚠ 서버에 사진 키가 없습니다: <b>' + m.map(E).join(' · ') + '</b> — 관리자가 Netlify 환경변수에 넣으면 그쪽 사진도 나옵니다.';
+  }
+  function pkRun() {
+    PK.busy = true; PK.msg = '찾는 중…'; pkPaint();
+    pkSearch(PK.q, PK.src, PK.page).then(function (d) {
+      PK.busy = false;
+      if (!d || !d.ok) { PK.items = []; PK.msg = '⚠ ' + E((d && d.error) || '찾지 못했습니다'); pkPaint(); return; }
+      PK.items = d.items || []; PK.en = d.query || '';
+      var bits = [];
+      if (d.translated) bits.push('영어 검색어 「' + E(d.query) + '」 로 찾았습니다');
+      if (keyMsg(d)) bits.push(keyMsg(d));
+      if ((d.errors || []).length) bits.push('⚠ ' + E(d.errors.join(' · ')));
+      if (!PK.items.length && !keyMsg(d)) bits.push('맞는 사진이 없습니다 — 검색어를 짧게(예: 「병원」 「직장인」 「노후」) 바꿔 보세요.');
+      PK.msg = bits.join('<br>'); pkPaint();
+    })['catch'](function (e) { PK.busy = false; PK.items = []; PK.msg = '⚠ 사진을 찾지 못했습니다 — ' + E((e && e.message) || e); pkPaint(); });
+  }
+  function creditOf(idx) {
+    var im = CN.imgs && CN.imgs[idx]; if (im && im.credit) return im.credit;
+    var j = anyIdx(idx); im = (j >= 0 && CN.imgs) ? CN.imgs[j] : null; /* 다른 장 사진을 흐려 쓴 장 */
+    return (im && im.credit && j !== idx && !(CN.imgs && CN.imgs[idx])) ? im.credit : null;
+  }
+  function creditHtml(idx) { var c = creditOf(idx); return c ? '<div class="cx-cr">Photo · ' + E(sub2(c.name || c.src, 28)) + ' / ' + E(c.src) + '</div>' : ''; }
+  function photoSum() { var s = {}, k; for (k in CN.imgs) if (CN.imgs.hasOwnProperty(k) && CN.imgs[k] && CN.imgs[k].credit) s[CN.imgs[k].credit.src] = 1; return Object.keys(s).join('·'); }
+  function srcLine() { var a = cxSrc(), p = photoSum(); return [a, p ? '사진 ' + p : ''].filter(Boolean).join(' / '); }
+  function pkHtml() {
+    if (!PK.open || !isMine(CN.style)) return '';
+    var n = cardnewsSlides().length;
+    var grid = PK.items.map(function (it, i) {
+      return '<button type="button" class="cxk-it" onclick="cxPkUse(' + i + ')" title="' + E(it.alt || '') + '"><img src="' + E(it.thumb) + '" alt="" loading="lazy"><span>' + E(sub2(it.name || '', 16)) + ' · ' + E(it.src) + '</span></button>';
+    }).join('');
+    return '<div class="cxk" id="cxPick"><div class="cxk-hd"><b>📷 실사 사진 찾기 — ' + (PK.idx + 1) + ' / ' + n + '번째 장</b>' +
+      '<button type="button" class="cxk-x" onclick="cxPkClose()">닫기</button></div>' +
+      '<div class="cxk-row"><input id="cxPkQ" value="' + E(PK.q) + '" placeholder="검색어 (예: 병원 진료 · 직장인 · 노후)" onkeydown="if(event.key===\'Enter\')cxPkGo()">' +
+      '<select id="cxPkS" onchange="cxPkGo()">' + [['all', '전체'], ['pexels', 'Pexels'], ['unsplash', 'Unsplash']].map(function (o) { return '<option value="' + o[0] + '"' + (PK.src === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
+      '<button type="button" class="btn btn-primary" onclick="cxPkGo()"' + (PK.busy ? ' disabled' : '') + '>찾기</button>' +
+      '<button type="button" class="btn btn-ghost" onclick="cxPkMore()"' + (PK.busy || !PK.items.length ? ' disabled' : '') + '>다른 사진</button></div>' +
+      (PK.msg ? '<div class="cxk-msg">' + PK.msg + '</div>' : '') +
+      (grid ? '<div class="cxk-grid">' + grid + '</div>' : '') +
+      '<div class="cxk-ft"><button type="button" class="btn btn-ghost" onclick="cxPkAuto()"' + (PK.busy ? ' disabled' : '') + '>⚡ 빈 장 자동 채우기 (' + emptyPh() + ')</button>' +
+      '<button type="button" class="btn btn-ghost" onclick="cnGenImage(CN.i,this)">✨ 이 장은 AI 사진</button>' +
+      '<button type="button" class="btn btn-ghost" onclick="cnPick()">🖼 내 사진 올리기</button></div>' +
+      '<div class="cxk-nt">상업적 이용이 허락된 실사 사진(Pexels · Unsplash)만 찾습니다 — <b>사진가 이름이 카드에 저절로</b> 들어갑니다. ' +
+      '뉴스 기사 사진은 언론사 저작물이라 가져오지 않습니다. 사진 속 사람이 상품을 <b>추천하는 것처럼</b> 쓰지 마세요.</div></div>';
+  }
+  function pkPaint() { var o = document.getElementById('cxPick'); if (!o) return; var t = document.createElement('div'); t.innerHTML = pkHtml(); if (t.firstChild) o.parentNode.replaceChild(t.firstChild, o); }
+  function hostPaint() { var h = document.getElementById('cnHost'); if (h) h.innerHTML = window.renderTodayCard(); }
+  window.cxPkOpen = function (idx) {
+    if (!isMine(CN.style)) { toast('먼저 ① 테마를 고르세요.', 3000); return; }
+    var j = (idx == null) ? firstEmpty(CN.i) : idx; if (j < 0) j = CN.i;
+    PK.open = true; PK.idx = j; PK.q = slideQuery(j); PK.page = 1; PK.items = []; PK.msg = '';
+    if (j !== CN.i && typeof cnGo === 'function') cnGo(j); else hostPaint();
+    var o = document.getElementById('cxPick'); if (o && o.scrollIntoView) o.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    pkRun();
+  };
+  window.cxPkClose = function () { PK.open = false; hostPaint(); };
+  window.cxPkGo = function () { var q = document.getElementById('cxPkQ'), s = document.getElementById('cxPkS'); PK.q = q ? ('' + q.value).trim() : PK.q; PK.src = s ? s.value : PK.src; PK.page = 1; if (PK.q) pkRun(); };
+  window.cxPkMore = function () { PK.page = PK.page >= 10 ? 1 : PK.page + 1; pkRun(); };
+  /* 고른 사진을 data:URL 로 받아 그 장에 넣는다 — 카드 굽기(html2canvas)가 바깥 주소를 못 그리므로 */
+  function useItem(it, idx) {
+    return fetch(it.full).then(function (r) { if (!r.ok) throw new Error('사진 받기 ' + r.status); return r.blob(); }).then(function (b) {
+      return new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res('' + fr.result); }; fr.onerror = rej; fr.readAsDataURL(b); });
+    }).then(function (url) {
+      return new Promise(function (res, rej) {
+        var im = new Image(); im.onload = function () { CN.imgs[idx] = { img: im, url: url, credit: { name: it.name, src: it.src, link: it.link } }; res(); }; im.onerror = function () { rej(new Error('사진을 읽지 못했습니다')); }; im.src = url;
+      });
+    }).then(function () {
+      if (it.track) fetch('/api/photo-search?track=' + encodeURIComponent(it.track), { headers: apiHdr() })['catch'](function () {});
+    });
+  }
+  window.cxPkUse = function (i) {
+    var it = PK.items[i]; if (!it || PK.busy) return;
+    var idx = PK.idx; PK.busy = true; toast((idx + 1) + '번째 장에 사진을 넣는 중…', 2000);
+    useItem(it, idx).then(function () {
+      PK.busy = false;
+      var nx = firstEmpty(idx + 1);
+      if (nx < 0) { PK.open = false; hostPaint(); toast('모든 장에 사진이 들어갔습니다 — 이제 ④ 저장을 누르세요.', 4000); return; }
+      window.cxPkOpen(nx);
+    })['catch'](function (e) { PK.busy = false; pkPaint(); toast('사진을 넣지 못했습니다 — ' + ((e && e.message) || e), 6000); });
+  };
+  /* 빈 장마다 그 장의 검색어로 찾아 첫 사진을 넣는다 — 같은 사진은 두 번 안 쓴다 */
+  window.cxPkAuto = function () {
+    if (PK.busy) return;
+    var used = {}, k; for (k in CN.imgs) if (CN.imgs.hasOwnProperty(k) && CN.imgs[k] && CN.imgs[k].credit) used[CN.imgs[k].credit.link + CN.imgs[k].credit.name] = 1;
+    var todo = [], sl = cardnewsSlides(); for (k = 0; k < sl.length; k++) if (!(CN.imgs && CN.imgs[k])) todo.push(k);
+    if (!todo.length) { toast('빈 장이 없습니다.', 2500); return; }
+    PK.busy = true; var done = 0, miss = 0, keyWarn = '';
+    (function step() {
+      if (!todo.length) { PK.busy = false; PK.open = false; hostPaint(); toast(done + '장에 실사 사진을 넣었습니다' + (miss ? ' · ' + miss + '장은 못 찾아 비워 두었습니다' : '') + (keyWarn ? ' · ' + keyWarn : ''), 6000); return; }
+      var idx = todo.shift();
+      toast((idx + 1) + '번째 장 사진 찾는 중… (' + (done + miss + 1) + '/' + (done + miss + todo.length + 1) + ')', 2500);
+      pkSearch(slideQuery(idx), PK.src, 1).then(function (d) {
+        if (d && (d.missing || []).length) keyWarn = '서버에 ' + d.missing.join('·') + ' 없음';
+        var pick = null; (d && d.items || []).some(function (it) { if (used[it.link + it.name]) return false; pick = it; return true; });
+        if (!pick) { miss++; return; }
+        used[pick.link + pick.name] = 1;
+        return useItem(pick, idx).then(function () { done++; }, function () { miss++; });
+      }, function () { miss++; }).then(function () { setTimeout(step, 250); });
+    })();
+  };
+  window.cxCreditOf = creditOf; /* 점검용 */
+
   /* ── 단계 줄 — 어디까지 했고 지금 무엇을 할지 ── */
   function emptyPh() { try { var sl = cardnewsSlides(), c = 0; for (var k = 0; k < sl.length; k++) if (!(CN.imgs && CN.imgs[k])) c++; return c; } catch (e) { return 0; } }
   function stepState() {
@@ -751,7 +892,7 @@
     var st = [
       { n: '1', t: '테마 고르기', d: t ? themeOf(CN.style).name : '아래 넷 중 하나', ok: t, go: 'cxStepGo(1)' },
       { n: '2', t: '내 아이디 적기', d: id ? cxId() : '카드에 찍힐 인스타 아이디', ok: id, go: 'cxStepGo(2)' },
-      { n: '3', t: '사진 넣기', d: e ? ('빈 장 ' + e + '개 · 누르면 업로드') : '모든 장에 사진 있음', ok: !e, go: 'cxStepGo(3)' },
+      { n: '3', t: '사진 넣기', d: e ? ('빈 장 ' + e + '개 · 누르면 실사 사진 찾기') : '모든 장에 사진 있음', ok: !e, go: 'cxStepGo(3)' },
       { n: '4', t: '저장', d: '1080×1350 PNG 로 전부', ok: false, go: 'cxStepGo(4)' }
     ];
     for (var i = 0; i < st.length; i++) if (!st[i].ok) { st[i].cur = true; break; }
@@ -768,12 +909,9 @@
     if (k === 1) { var th = document.querySelector('#cnHost .cxp-th'); if (th && th.scrollIntoView) th.scrollIntoView({ block: 'center', behavior: 'smooth' }); if (!isMine(CN.style)) toast('아래 테마 넷 중 마음에 드는 것을 누르세요.'); return; }
     if (k === 2) { var f = document.getElementById('cxIdIn'); if (f) { f.focus(); if (f.scrollIntoView) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); } return; }
     if (k === 3) {
-      /* 빈 장으로 옮긴 뒤 업로드 창을 연다 — 어느 장에 들어갈지 헷갈리지 않게 */
-      var sl = cardnewsSlides(), j; for (j = 0; j < sl.length; j++) if (!(CN.imgs && CN.imgs[j])) break;
-      if (j < sl.length && j !== CN.i && typeof cnGo === 'function') cnGo(j);
-      if (j >= sl.length) { toast('모든 장에 사진이 있습니다. 바꾸려면 그 장으로 가서 「🖼 직접 업로드」 를 누르세요.', 4000); return; }
-      toast((j + 1) + '번째 장에 넣을 사진을 고르세요. (✨ AI 사진 생성도 됩니다)', 3500);
-      if (typeof cnPick === 'function') cnPick(); return;
+      /* 빈 장으로 옮겨 그 장의 검색어로 실사 사진을 찾는다 (판 X235) — AI·업로드는 그 칸 아래에 */
+      if (firstEmpty(0) < 0) { toast('모든 장에 사진이 있습니다. 바꾸려면 그 장에서 「📷 실사 사진 찾기」 를 누르세요.', 4000); return; }
+      window.cxPkOpen(); return;
     }
     if (k === 4) { if (!isMine(CN.style)) { toast('먼저 ① 테마를 고르세요.', 3000); window.cxStepGo(1); return; } window.cardnewsSaveAll(); }
   };
@@ -837,8 +975,10 @@
       var n = cardnewsSlides().length;
       h = h.replace(/<span class="cn-badge">[^<]*<\/span>/, '<span class="cn-badge">' + n + '장 · ' + t.ic + ' ' + t.name + '</span>');
     }
+    if (t) h = h.replace('<button class="btn btn-ghost" onclick="cnPick()">🖼 직접 업로드</button>',
+      '<button class="btn" style="background:var(--t-ink,#191F28);color:#fff;border:none" onclick="cxPkOpen(CN.i)">📷 실사 사진 찾기</button><button class="btn btn-ghost" onclick="cnPick()">🖼 직접 업로드</button>');
     var at = h.indexOf('<div class="cn2-stage">');
-    return at < 0 ? h : h.slice(0, at) + panelHtml() + h.slice(at);
+    return at < 0 ? h : h.slice(0, at) + panelHtml() + pkHtml() + h.slice(at);
   };
 
   /* ── 저장 — 화면과 같은 HTML 을 html2canvas 로 굽는다 ── */

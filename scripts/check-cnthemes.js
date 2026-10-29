@@ -43,6 +43,7 @@ function el() { return { style: {}, children: [], appendChild() {}, setAttribute
 const store = {};
 const doc = { head: el(), body: el(), getElementById: () => null, createElement: el, querySelector: () => null };
 let SRCVAL = '생명보험협회';
+const UPBTN = '<button class="btn btn-ghost" onclick="cnPick()">🖼 직접 업로드</button>';
 const ctx = {
   document: doc, localStorage: { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = '' + v; } },
   setTimeout, clearTimeout, Promise, Math, Date, JSON,
@@ -57,7 +58,7 @@ const ctx = {
   cnDateStr: () => '2026.10.28',
   CN: { i: 0, imgs: {}, ai: null, aiPlan: null, style: 'news' },
   toast() {}, cnDownload() {}, cnFileName: i => 'f' + i,
-  renderTodayCard: () => '<div class="cn-head">📅 오늘의 카드뉴스 <span class="cn-badge">뉴스 카드 스타일</span></div><div class="cn2-stage">X</div>',
+  renderTodayCard: () => '<div class="cn-head">📅 오늘의 카드뉴스 <span class="cn-badge">뉴스 카드 스타일</span></div>' + UPBTN + '<div class="cn2-stage">X</div>',
   cnSlidePreview: () => 'ORIG', cnSrcOf: () => SRCVAL, cnImgPrompt: () => 'P',
   cardnewsSaveOne() {}, cardnewsSaveAll() {},
   cnMagText: sl => ({ k: sl.mk || '', t: sl.mt || '', s: sl.ms || '' }),
@@ -189,6 +190,63 @@ ctx.CN.style = 'news'; ctx._calls = []; ctx._fetchImpl = ok;
 await ctx.cnImgFetch('gemini-2.5-flash-image', 'x');
 is(ctx._calls.length === 1 && !ctx._calls[0].c, '기본 뉴스 카드의 사진 부르기는 그대로 둔다');
 is(/function cnImgFetch\(mdl,prompt,cfg\)/.test(IDX) && /payload\.generationConfig\[ck\]=cfg\[ck\]/.test(IDX), 'index.html 의 cnImgFetch 가 cfg(4:5 · 2K)를 실제로 싣는다');
+
+head('⑨ 실사 사진 찾기 (판 X235)');
+/* 서버 함수 — 바깥을 한 번도 안 부르고 fetch 를 갈아 끼워 잽니다 (8번) */
+const FN = path.join(ROOT, 'netlify/functions/photo-search.js');
+const FSRC = fs.readFileSync(FN, 'utf8');
+is(/\/api\/photo-search\s+\/\.netlify\/functions\/photo-search\s+200/.test(fs.readFileSync(path.join(ROOT, '_redirects'), 'utf8')), '_redirects 에 /api/photo-search 길이 열렸다');
+is(!/korea\.kr\/[^\s"']*\.(jpg|png)|yna\.co\.kr|imgnews|og:image/i.test(FSRC), '★ 뉴스 기사·정책브리핑 사진을 긁어 오는 길이 없다 (저작권 · 머리글에 까닭)');
+const realFetch = global.fetch; const env0 = Object.assign({}, process.env);
+const FAKE = { calls: [] };
+global.fetch = async (u, o) => {
+  FAKE.calls.push(String(u));
+  const J = (b, st) => ({ ok: (st || 200) < 300, status: st || 200, json: async () => b, text: async () => JSON.stringify(b) });
+  if (/generativelanguage/.test(u)) return J({ candidates: [{ content: { parts: [{ text: 'korean doctor hospital' }] } }] });
+  if (/api\.pexels\.com/.test(u)) return J({ photos: [{ id: 1, alt: 'a', photographer: 'Kim P', url: 'https://www.pexels.com/photo/1', src: { medium: 'https://images.pexels.com/m1.jpg', original: 'https://images.pexels.com/o1.jpg' } }] });
+  if (/api\.unsplash\.com\/search/.test(u)) return J({ results: [{ id: 'u1', alt_description: 'b', user: { name: 'Lee U', links: { html: 'https://unsplash.com/@lee' } }, urls: { small: 'https://images.unsplash.com/s1', raw: 'https://images.unsplash.com/r1?ixid=1' }, links: { download_location: 'https://api.unsplash.com/photos/u1/download?ixid=1' } }] });
+  if (/api\.unsplash\.com\/photos\/.*\/download/.test(u)) return J({ url: 'x' });
+  return J({}, 404);
+};
+const fnRun = async (qs, hdr) => { delete require.cache[require.resolve(FN)]; const m = require(FN); const r = await m.handler({ httpMethod: 'GET', headers: hdr || {}, queryStringParameters: qs }); return { st: r.statusCode, b: JSON.parse(r.body || '{}') }; };
+delete process.env.PEXELS_API_KEY; delete process.env.UNSPLASH_ACCESS_KEY; delete process.env.GEMINI_API_KEY; delete process.env.SHARED_TOKEN;
+let R = await fnRun({ q: '병원 진료비' });
+is(R.b.ok && R.b.items.length === 0 && R.b.missing.join(',') === 'PEXELS_API_KEY,UNSPLASH_ACCESS_KEY', '★ 키가 없으면 「없다」 고 이름까지 말한다 — 빈 목록으로 조용히 넘기지 않는다 (1번)');
+process.env.PEXELS_API_KEY = 'pk'; process.env.UNSPLASH_ACCESS_KEY = 'uk'; process.env.GEMINI_API_KEY = 'gk'; FAKE.calls = [];
+R = await fnRun({ q: '병원 진료비' });
+is(R.b.translated && R.b.query === 'korean doctor hospital', '한글 검색어를 영어 사진 검색어로 바꾼다 (Gemini)');
+is(R.b.items.length === 2 && R.b.items[0].src === 'Pexels' && R.b.items[1].src === 'Unsplash', '두 곳 결과를 번갈아 섞는다');
+is(R.b.items.every(x => x.name && x.link && x.thumb && /w=1080/.test(x.full) && /h=1350/.test(x.full)), '사진마다 사진가 이름·링크가 있고, 1080×1350 으로 잘라 받는다');
+is(FAKE.calls.some(u => /orientation=portrait/.test(u)), '세로 사진만 찾는다');
+R = await fnRun({ q: 'x', src: 'unsplash' });
+is(R.b.items.length === 1 && R.b.items[0].track, 'Unsplash 사진은 고를 때 알릴 주소(download_location)를 들고 온다');
+FAKE.calls = []; R = await fnRun({ track: 'https://api.unsplash.com/photos/u1/download?ixid=1' });
+is(R.b.ok && FAKE.calls.length === 1, '고른 Unsplash 사진은 download 신호를 보낸다 (API 지침)');
+R = await fnRun({ track: 'https://evil.example.com/steal' });
+is(R.st === 400, 'track 에 Unsplash 가 아닌 주소를 넣으면 안 부른다 (아무 데나 대신 부르는 문 0)');
+process.env.SHARED_TOKEN = 'tok';
+R = await fnRun({ q: 'x' });
+is(R.st === 401, '공유 토큰이 걸려 있으면 토큰 없이는 못 쓴다 (gemini 프록시와 같은 문)');
+R = await fnRun({ q: 'x' }, { 'x-app-token': 'tok' });
+is(R.st === 200 && R.b.ok, '토큰이 맞으면 쓴다');
+global.fetch = realFetch; for (const k of ['PEXELS_API_KEY', 'UNSPLASH_ACCESS_KEY', 'GEMINI_API_KEY', 'SHARED_TOKEN']) { if (k in env0) process.env[k] = env0[k]; else delete process.env[k]; }
+
+/* 앱 — 사진가 이름이 카드와 마지막 장에 */
+ctx.CN.style = 'lime'; ctx.CN.imgs = {}; SRCVAL = '생명보험협회'; ctx.cxField('src', '');
+ctx.CN.imgs[1] = { url: 'data:x', credit: { name: 'Kim P', src: 'Pexels', link: 'https://www.pexels.com/photo/1' } };
+is(draw('lime', 1).indexOf('Photo · Kim P / Pexels') >= 0, '★ 고른 실사 사진의 장에 사진가 이름이 찍힌다');
+is(THEMES.every(th => draw(th, 1).indexOf('Photo · Kim P') >= 0), '테마 넷 모두 찍힌다');
+is(draw('lime', 2).indexOf('Photo ·') < 0 || !ctx.CN.imgs[2], '사진이 없는 장에 남의 이름을 함부로 안 찍는다(배경으로 빌려 쓴 장만)');
+is(THEMES.every(th => draw(th, CTA).indexOf('사진 Pexels') >= 0), '마지막 장 자료 줄에 「사진 Pexels」 가 붙는다');
+ctx.CN.style = 'news';
+is(/생명보험협회 \/ 사진 Pexels/.test(ctx.cnSrcOf()), '기본 뉴스 카드의 자료 줄에도 「사진 Pexels」 가 붙는다 (스타일을 바꿔도 출처가 안 빠짐)');
+ctx.CN.imgs = {};
+is(ctx.cnSrcOf() === '생명보험협회', '실사 사진이 없으면 자료 줄은 그대로');
+ctx.CN.style = 'lime'; ctx.cxField('id', 'apex.test');
+S = steps();
+is(/누르면 실사 사진 찾기/.test(S), '③ 사진 넣기 단계가 실사 사진 찾기로 이어진다');
+is(ctx.renderTodayCard().indexOf('📷 실사 사진 찾기') >= 0, '테마를 켜면 단추 줄에 「📷 실사 사진 찾기」 가 선다');
+is(IDX.indexOf(UPBTN) >= 0, '★ 그 단추를 붙이는 자리(「🖼 직접 업로드」 단추 글자)가 index.html 에 그대로 있다 — 글자가 바뀌면 단추가 조용히 사라집니다');
 
 console.log('\n' + (bad ? '✗ ' + bad + '/' + n + ' 실패' : '✓ ' + n + '가지 모두 통과'));
 process.exit(bad ? 1 : 0);

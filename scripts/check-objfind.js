@@ -118,7 +118,7 @@ const 보이는수 = (p, sel) => p.evaluate(s => [].slice.call(document.querySel
   const 띠거절 = await 보이는수(p1, '#qbar [data-ob]');
   is(띠전부 >= 8, '  아래 띠가 <b>서 있다</b> — 단추 ' + 띠전부 + '개');
   is(띠거절 >= 6, '  ★★ 자주 나오는 거절 <b>' + 띠거절 + '가지가 띠에서 바로</b> 눌린다 (판 X115)');
-  /* 판 X235 — 사장님 말씀 「폰에서 거절판이 너무 가려」. 접어도 94px · 펴면 500px 였습니다 */
+  /* 판 X236 — 사장님 말씀 「폰에서 거절판이 너무 가려」. 접어도 94px · 펴면 500px 였습니다 */
   const 판 = await p1.evaluate(() => {
     const d = document.getElementById('dock'), h0 = d.offsetHeight;
     const 머리 = document.querySelector('#dock .dk-hd'), 펴기 = document.getElementById('dkFold');
