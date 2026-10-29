@@ -372,6 +372,27 @@ const SEED = () => {
      + 'px · 보내기 ' + (D2.send ? D2.send.h : 0) + 'px');
   is(!D2.stage && !D2.bar, '띠에서는 지도 무대·머리 띠를 <b>안 띄운다</b>');
 
+  /* ★★ <b>화면을 통째로 덮는 자리에서도 띠가 보여야 합니다.</b>
+       처음에 z-index 를 260 으로 두었더니 계산기(#financeScreen 300) 위에서
+       <b>밑에 깔려 사라졌습니다</b> — 사장님께는 「자비스가 꺼졌다」 로
+       보입니다. ✕ 로 닫으실 수 있으니, 말없이 사라지는 쪽보다 떠 있는
+       쪽이 낫습니다 (1번 · 6번). 모달(덮개 9300)은 위에 있는 것이 맞습니다. */
+  await p.evaluate(() => { try{ jvDock('finance'); }catch(e){} });
+  await p.waitForTimeout(1500);
+  const DF = await p.evaluate(() => {
+    const fr = document.getElementById('apexMapFrame');
+    const top = document.elementFromPoint(Math.round(window.innerWidth / 2), window.innerHeight - 20);
+    return { full: document.body.classList.contains('finance-mode'),
+             onTop: !!(top && (top.id === 'apexMapFrame' || (top.closest && top.closest('#apexMapScreen')))),
+             what: top ? (top.id || top.className || top.tagName) : '(없음)',
+             z: fr ? getComputedStyle(fr.parentElement || fr).zIndex : '-' };
+  });
+  is(DF.full && DF.onTop,
+     '★★ 계산기처럼 <b>화면을 통째로 덮는 자리에서도</b> 띠가 맨 위에 남는다 — 덮은 것 「'
+     + String(DF.what).slice(0, 24) + '」');
+  await p.evaluate(() => { try{ jvDock('clients'); }catch(e){} });
+  await p.waitForTimeout(1200);
+
   await f.evaluate(() => { const u = document.getElementById('jUp'); if (u) u.click(); });
   await p.waitForTimeout(700);
   const D3 = await p.evaluate(() => {
