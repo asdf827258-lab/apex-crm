@@ -40,6 +40,12 @@ const fs = require('fs'), path = require('path'), http = require('http');
 const { chromium } = require('playwright');
 
 const ROOT = process.cwd();
+/* ⚠ <b>px 로만 재면 못 잡는 자리가 있습니다.</b> 라이브는 웹폰트
+   (Pretendard)를 받아 「연간 구독 시작」 이 42px 이었는데, 이 자는 바깥을
+   막아 그 글꼴을 못 받습니다 — 같은 단추가 44px 로 재집니다. 되돌려 쳐
+   보고서야 알았습니다(되돌렸는데 안 울었습니다 · 8번). 그래서 <b>글로
+   못 박았는지</b>도 같이 봅니다 — 그쪽은 글꼴을 안 탑니다.                */
+const SRC = fs.readFileSync(path.join(ROOT, 'app', 'index.html'), 'utf8');
 const MT = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
              '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8' };
 const srv = http.createServer((q, s) => {
@@ -109,7 +115,7 @@ const 재기 = () => {
   await new Promise(r => srv.listen(0, r));
   const PORT = srv.address().port;
   const b = await chromium.launch();
-  const 본 = {}; const 터짐 = [];
+  const 본 = {}; const 터짐 = []; let 요금 = null;
 
   for (const W of [390, 1280]) {
     const ctx = await b.newContext({ viewport: { width: W, height: 844 } });
@@ -123,6 +129,29 @@ const 재기 = () => {
                  { waitUntil: 'domcontentloaded', timeout: 90000 });
     await p.waitForTimeout(6000);
     본[W] = await p.evaluate(재기);
+    /* 💳 <b>서버가 응답해야 눈에 띄는 칸</b> (판 X238) — 폰 폭에서 한 번만.
+       ★★ 라이브에서 「연간 구독 시작」 단추 셋이 42px 로 남아 있었습니다.
+         이 자는 바깥을 다 막고 재므로 그 칸까지 못 가 보고 「0곳」 이라고
+         적었습니다 — <b>자가 안 가 본 자리는 자가 지켜 주지 않습니다</b>(8번).
+       ★ 요금표(TOSS_PLANS)는 <b>파일 안 붙박이 표</b>이고 apexPlanCard() 가
+         그립니다. 서버가 필요 없으니 <b>자가 직접 그려</b> 잽니다.
+       ⚠ 그린 칸은 재고 바로 걷습니다 — 화면에 안 남깁니다. */
+    if (W === 390) 요금 = await p.evaluate(() => {
+      if (typeof TOSS_PLANS === 'undefined' || typeof apexPlanCard !== 'function')
+        return { 못함: '요금표(TOSS_PLANS)나 그리는 자(apexPlanCard)가 없습니다' };
+      const box = document.createElement('div');
+      box.style.width = '360px';
+      box.innerHTML = TOSS_PLANS.map(x => apexPlanCard(x)).join('');
+      document.body.appendChild(box);
+      const 누름 = [...box.querySelectorAll('button, a[href], input, select')]
+        .filter(e => { const r = e.getBoundingClientRect(); return r.width > 1 && r.height > 1; });
+      const 작은 = 누름.filter(e => e.getBoundingClientRect().height < 44).map(e =>
+        Math.round(e.getBoundingClientRect().height) + 'px 「'
+        + (e.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 14) + '」');
+      const 칸 = box.children.length;
+      box.remove();
+      return { 칸, 누름수: 누름.length, 작은 };
+    });
     await ctx.close();
   }
   await b.close(); srv.close();
@@ -146,6 +175,23 @@ const 재기 = () => {
        + (r.좁은 > 누름선[W] ? ' ← 늘었습니다. <b>누를 것은 44px</b> 입니다 (판 X146·X147)'
             + (r.작은곳.length ? ' ← ' + r.작은곳.slice(0, 4).join(' · ') : '')
           : (r.좁은 < 누름선[W] ? ' (줄었습니다 — 선도 같이 내려 주십시오 · 0-1번)' : '')));
+  }
+
+  console.log('\n[요금 칸] 💳 <b>서버가 응답해야 눈에 띄는 칸도 본다</b>');
+  if (!요금 || 요금.못함) {
+    is(false, '  요금 칸을 그려 볼 수 없다 — ' + ((요금 || {}).못함 || '못 쟀습니다'));
+  } else {
+    is(요금.칸 > 0 && 요금.누름수 > 0,
+       '  요금 칸 <b>' + 요금.칸 + '개</b>가 그려지고 누를 곳이 ' + 요금.누름수 + '개 있다');
+    /* ★ 글로 못 박았나 — 글꼴을 안 타는 쪽입니다 (위 머리글 참고) */
+    is(/onclick="osStartCheckout[^"]*"[^>]*?min-height:44px/.test(SRC)
+       || /osStartCheckout[\s\S]{0,400}?min-height:44px/.test(SRC),
+       '  ★★ 요금 단추에 <b>44px 이 글로 못 박혀</b> 있다 — px 로만 재면 '
+       + '라이브(웹폰트 42px)와 이 자(44px)가 달라 못 잡습니다 (8번)');
+    is(요금.작은.length === 0,
+       '  ★★ 요금 칸의 누를 곳도 <b>다 44px</b> — 44px 아래 ' + 요금.작은.length + '개'
+       + (요금.작은.length ? ' ← ' + 요금.작은.join(' · ') : '')
+       + ' (판 X238 까지 「연간 구독 시작」 셋이 42px 이었습니다 — <b>라이브를 재어</b> 찾았습니다)');
   }
 
   console.log('\n[조용한가] 콘솔');
