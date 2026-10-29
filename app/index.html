@@ -1583,6 +1583,9 @@ body.onecmp-mode #onecmpScreen{display:block;}
 body.apexmap-mode .app{display:none;}
 body.apexmap-mode #apexMapScreen{display:block;}
 #apexMapScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#EDF2FA;}
+/* 빠진 화면이 0개면 단추를 안 세운다 — .ff-back 의 display 가 [hidden] 을 이겨
+   <b>빈 파란 알약</b>이 떠 있었습니다(판 X220 에서 처음 0 이 되며 드러남) */
+#amissBtn[hidden]{display:none;}
 /* 제안서 한 부 — 화면 미리보기와 인쇄본이 같은 모양을 쓴다 */
 
 /* ── 내 캘린더 — 폰에서 한 손으로 ─────────────────────────────── */
@@ -16507,12 +16510,13 @@ function hmSumHtml(){
     '</button>'+
     '<button type="button" onclick="go(\'apexmap\')" '+
       'title="APEX 자비스 모드 — 무엇을 도울까요">'+
-      '<span class="hm2-t">🗺️ 무엇을 도울까요?</span>'+
+      /* 🤖 그림도 자비스 것으로 (판 X220) — 이제 지도가 아니라 <b>물으면 답하는</b> 자리입니다 */
+      '<span class="hm2-t">🤖 무엇을 도울까요?</span>'+
       /* ⚠ 꼬리글이 <b>한 줄</b>이어야 합니다 — 칸이 셋이 되어 좁아졌고,
          두 줄이 되면 줄 키가 95 → 139px 로 뜁니다(재어 보았습니다). 「갈래가
          펼쳐집니다」 는 눌러 보시면 바로 아는 말이라 뺐습니다 — <b>가는 길은
          그대로</b>입니다 (6번).                                          */
-      '<span class="hm2-s">전체 지도 · 설명서</span>'+
+      '<span class="hm2-s">물으면 길 안내</span>'+
     '</button></div>';
 }
 function navFixHtml(){
@@ -21115,8 +21119,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-29 17:14';
-var APP_BUILD_NOTE="🎯 <b>보장 전·후 「왜 보장이 넓어야」 — 암 장의 갑상선 표시가 숫자를 가리던 것</b> (판 X242). 「유사암인 경우가 많음」 표시를 막대 위 빈자리로 옮기고, 막대 옆 숫자를 출처 그대로 「12.0%」 로. ◾ (먼저 나간 판 X243·X244 · X241) 그대로 들어 있습니다.";
+var APP_BUILD='2026-10-29 17:15';
+var APP_BUILD_NOTE="🎯 <b>보장 전·후 「왜 보장이 넓어야」 — 암 장의 갑상선 표시가 숫자를 가리던 것</b> (판 X242). 「유사암인 경우가 많음」 표시를 막대 위 빈자리로 옮기고, 막대 옆 숫자를 출처 그대로 「12.0%」 로. ◾ (먼저 나간 판 X220·X221 · X243 · X244 · X241) 그대로 들어 있습니다.";
 
 
 
@@ -21647,9 +21651,14 @@ var APEXMAP_URL='apex-map.html';
      뽑으면 이 줄은 <b>스스로 사라집니다</b>(0개가 되므로).
    ★ 찾기로는 <b>이미 다 열립니다</b> — 옛 id 로도 걸립니다(navHit 가
      id 를 같이 봅니다). 여기는 「지도에서」 안 보이는 것만 말합니다.   */
+/* ★ 판 X220 — <b>자비스가 실제로 아는 사전</b>과 견줍니다. 여태는 음성 비서용
+     apex-map-data.js(90칸)와 견주어 「지도에 없는 18개」 라고 했는데, 자비스
+     모드가 쓰는 사전은 apex-map.html 안의 DATA.menu(앱과 한 칸도 안 다름 ·
+     check-guidemap)였습니다. 없는 빈칸을 있다고 말하고 있었습니다 (1번).
+     창 속 화면이 아직 안 떴으면 <b>모른다</b> — 단추를 안 세웁니다.       */
 function amissList(){
-  var out=[],seen={},i,j,it,nm;
-  try{ nm=(typeof APEX_MAP!=='undefined'&&APEX_MAP.names)?APEX_MAP.names:null; }catch(e){ nm=null; }
+  var out=[],seen={},i,j,it,nm=null;
+  try{ var fw=$('apexMapFrame')&&$('apexMapFrame').contentWindow; nm=(fw&&fw.MENU)?fw.MENU:null; }catch(e){ nm=null; }
   if(!nm)return out;                    /* 지도를 못 읽었으면 <b>모른다</b> (1번) */
   var G=(typeof visibleTabs==='function')?visibleTabs():TABS;
   for(i=0;i<G.length;i++)for(j=0;j<G[i].items.length;j++){
@@ -21680,18 +21689,21 @@ function amissPaint(){
   if(!b||!p)return;
   /* 빠진 것이 없으면 <b>단추를 안 세웁니다</b> — 0개라고 적을 일이 아닙니다 */
   if(!L.length){ b.hidden=true; p.classList.remove('on'); return; }
-  b.hidden=false; b.textContent='지도에 없는 '+L.length+'개';
+  b.hidden=false; b.textContent='자비스가 모르는 '+L.length+'개';
   for(i=0;i<L.length;i++)
     h+='<button type="button" onclick="amissGo(\''+L[i].id+'\')">'+(L[i].icon||'•')+' '+osEsc(L[i].title||L[i].id)+'</button>';
-  p.innerHTML='<h4>🗺️ 지도에 아직 안 올라온 화면 '+L.length+'개</h4>'+
-    '<p><b>없어진 것이 아닙니다.</b> 지도 그림은 따로 뽑아 두는 것이라 새 화면이 늦게 올라옵니다. '+
+  p.innerHTML='<h4>🤖 자비스가 아직 모르는 화면 '+L.length+'개</h4>'+
+    '<p><b>없어진 것이 아닙니다.</b> 자비스의 화면 사전은 따로 적어 두는 것이라 새 화면이 늦게 올라옵니다. '+
     '찾기 칸에 이름이나 옛 id 를 치시면 <b>지금도 그대로 열립니다.</b> 여기서 바로 여셔도 됩니다.</p>'+
     '<div class="g">'+h+'</div>';
 }
 function amissToggle(){ var p=document.getElementById('amissPane'); if(p)p.classList.toggle('on'); }
 function amissGo(id){ var p=document.getElementById('amissPane'); if(p)p.classList.remove('on'); go(id); }
 
-function mountApexMap(){var f=$('apexMapFrame');if(!f||f._mounted)return;f.src=APEXMAP_URL;f._mounted=true;}
+function mountApexMap(){var f=$('apexMapFrame');if(!f||f._mounted)return;
+  /* 창 속 화면이 다 뜬 뒤에 한 번 더 센다 — 그 전에는 모르는 상태다 (amissList) */
+  f.onload=function(){ try{ amissPaint(); }catch(e){} };
+  f.src=APEXMAP_URL;f._mounted=true;}
 function reloadApexMap(){var f=$('apexMapFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountApexMap,30);toast('전체 지도 새로고침');}}
 function openApexMapNewTab(){var w=window.open(APEXMAP_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitApexMap(){go(prevTab||'home');}
