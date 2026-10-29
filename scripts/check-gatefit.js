@@ -57,8 +57,13 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 
 /* 손가락 바닥 — 판 X146·X147 이 정한 수입니다. 여기서 또 정하지 않습니다. */
 const 바닥 = 13;        /* 글씨 */
-/* 44px 아래 누를 곳 — <b>잰 값 그대로</b>입니다. 0 을 목표로 적지 않습니다 (1번). */
-const 누름선 = { 390: 35, 1280: 29 };
+/* 44px 아래 누를 곳 — <b>잰 값 그대로</b>입니다. 0 을 목표로 적지 않습니다 (1번).
+   ⬇ <b>2026-10-29 (판 X238) · 35·29 → 0·0.</b> 사장님 말씀 「응 그것도 고쳐줘」.
+     판 X237 에서 「서랍 줄을 다 키우면 서랍 길이가 달라져 손대지 않았습니다」
+     라고 적고 수를 선으로 두었는데, 그 다음 판에서 시키셔서 고쳤습니다 —
+     이제 <b>들어가기 전 화면에 44px 아래가 한 곳도 없습니다.</b>
+     줄였으니 선도 같이 내립니다 (0-1번). 되돌리면 그 자리에서 웁니다 (8번). */
+const 누름선 = { 390: 0, 1280: 0 };
 
 const 재기 = () => {
   const 보임 = (e) => {
@@ -86,6 +91,13 @@ const 재기 = () => {
   return {
     작은: 작은, 누름수: 누름.length,
     좁은: 누름.filter(e => e.getBoundingClientRect().height < 44).length,
+    /* ★ <b>어디가</b> 빗나갔는지 적습니다 — 수만 적으면 어디를 봐야 할지
+       모릅니다 (check-phonefit 가 「늘었습니다: biz_news:12」 로 화면 이름을
+       적어 준 덕에 제가 그 자리를 찾았습니다). */
+    작은곳: 누름.filter(e => e.getBoundingClientRect().height < 44).slice(0, 6).map(e =>
+      Math.round(e.getBoundingClientRect().height) + 'px '
+      + (e.id ? '#' + e.id : (('' + e.className).trim().split(/\s+/)[0] || e.tagName.toLowerCase()))
+      + ' 「' + (e.innerText || e.value || e.placeholder || '').replace(/\s+/g, ' ').trim().slice(0, 12) + '」'),
     길: 들어가는길.slice(0, 4),
     폭: Math.round(document.documentElement.scrollWidth),
     창: Math.round(document.documentElement.clientWidth),
@@ -131,7 +143,8 @@ const 재기 = () => {
        '  <b>옆으로 안 샌다</b> — 글 폭 ' + r.폭 + 'px / 창 ' + r.창 + 'px');
     is(r.좁은 <= 누름선[W],
        '  누를 곳 중 44px 아래 <b>' + r.좁은 + '개</b> — 선 ' + 누름선[W] + '개'
-       + (r.좁은 > 누름선[W] ? ' ← 늘었습니다. 서랍 줄을 더 빽빽하게 하지 마십시오'
+       + (r.좁은 > 누름선[W] ? ' ← 늘었습니다. <b>누를 것은 44px</b> 입니다 (판 X146·X147)'
+            + (r.작은곳.length ? ' ← ' + r.작은곳.slice(0, 4).join(' · ') : '')
           : (r.좁은 < 누름선[W] ? ' (줄었습니다 — 선도 같이 내려 주십시오 · 0-1번)' : '')));
   }
 
