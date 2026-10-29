@@ -305,6 +305,98 @@ const SEED = () => {
   is(WK.cnt.w === 0, '「전화 체크해줘」 · 「잊지말고 챙겨야 돼」 같은 <b>저장하는 일은 자비스가 혼자 시키지 않는다</b> — 불린 수 ' + WK.cnt.w);
   is(WK.plain.work === '', '상관없는 물음(질병코드)에는 일꾼이 <b>끼어들지 않는다</b>');
 
+  /* ══ [10] 🪟 여기서 표현하고 바로 본다 (판 X245) ════════════════════
+
+     사장님 말씀 2026-10-29 — 「집어만 주지말고 <b>원하는 내용을 여기서
+     표현하고 바로 볼수 있도록</b> 만들자는거야」.
+
+     판 X220·X221 까지는 자비스가 「거기로 가세요」 까지였고, 그 화면을 열면
+     <b>자비스가 사라졌습니다.</b> 이제 열어도 아래 띠로 남습니다.
+     ★ 「이 화면 열기 ›」 는 <b>그대로 있어야 합니다</b> — 길은 안 지웁니다 (6번).
+     ★ 접힌 띠에서 <b>적는 칸이 보여야</b> 합니다 — 처음 지었을 때 머리글이
+       넉 줄로 접히며 적는 칸을 띠 밖으로 밀어냈습니다. 그것이 「여기서
+       표현하고」 가 막힌 자리입니다.                                      */
+  sec('[10] 🪟 <b>여기서 표현하고 바로 본다</b> — 화면을 열어도 자비스가 남나 (판 X245)');
+  /* ★★ <b>폰 폭에서 잽니다.</b> 처음에는 컴퓨터 폭(1280)에서만 재다가
+       되돌림이 안 울렸습니다 — 머리글이 넉 줄로 접혀 적는 칸을 밀어내는
+       것은 <b>폰에서만</b> 생기는 일이기 때문입니다. 자가 안 가 본 자리는
+       자가 못 지킵니다 (8번).                                           */
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.waitForTimeout(600);
+  await f.evaluate(() => { try{ jClear(); }catch(e){} ask('고객 등록은 어디서 해?'); });
+  await p.waitForTimeout(1800);
+  const D0 = await f.evaluate(() => ({
+    here: document.querySelectorAll('#jLog .st-here').length,
+    open: [].slice.call(document.querySelectorAll('#jLog details.st-more')).filter(d => d.open).length,
+    more: document.querySelectorAll('#jLog details.st-more').length,
+    link: document.querySelectorAll('#jLog .st-b a').length
+  }));
+  is(D0.here > 0, '답에 <b>🪟 여기서 보기</b> 가 선다 — ' + D0.here + '개');
+  is(D0.link > 0, '「이 화면 열기 ›」 도 <b>그대로 있다</b> — 길은 안 지웁니다 (6번) · ' + D0.link + '개');
+  is(D0.more === 0 || D0.open >= 1,
+     '첫 걸음의 「이 화면 자세히」 가 <b>펴진 채</b>로 온다 — 접어 두면 한 번 더 눌러야 글이 나옵니다 · 펴짐 '
+     + D0.open + ' / ' + D0.more);
+
+  await f.evaluate(() => { const b = document.querySelector('#jLog .st-here'); if (b) b.click(); });
+  await p.waitForTimeout(1200);
+  const D1 = await p.evaluate(() => {
+    const fr = document.getElementById('apexMapFrame');
+    const r = fr ? fr.getBoundingClientRect() : null;
+    const ap = document.querySelector('.app');
+    return { dock: document.body.classList.contains('jv-dock'),
+             shut: document.body.classList.contains('jv-shut'),
+             full: document.body.classList.contains('apexmap-mode'),
+             app: ap ? getComputedStyle(ap).display : 'none',
+             top: r ? Math.round(r.top) : -1, h: r ? Math.round(r.height) : -1,
+             vh: window.innerHeight, w: window.innerWidth,
+             pane: (document.querySelector('.tab-pane.on') || {}).id || '' };
+  });
+  is(D1.dock && !D1.full, '눌렀더니 자비스가 <b>아래 띠</b>로 내려앉는다 (자비스 모드가 아니다)');
+  is(D1.app !== 'none', '그 화면이 <b>실제로 열린다</b> — 앱이 보인다 (' + D1.app + ')');
+  is(D1.top + D1.h >= D1.vh - 2 && D1.h > 0 && D1.h < D1.vh / 2,
+     '띠가 <b>바닥에 붙어</b> 있고 화면을 안 가린다 — 키 ' + D1.h + 'px / 창 ' + D1.w + '×' + D1.vh);
+  const D2 = await f.evaluate(() => {
+    const v = e => { if (!e) return null; const r = e.getBoundingClientRect(), st = getComputedStyle(e);
+      return (r.width > 1 && r.height > 1 && st.display !== 'none' && st.visibility !== 'hidden')
+        ? { h: Math.round(r.height), bottom: Math.round(r.bottom) } : null; };
+    return { dock: document.body.classList.contains('dock'),
+             say: v(document.getElementById('jSay')), send: v(document.getElementById('jSend')),
+             stage: v(document.getElementById('stage')), bar: v(document.querySelector('.bar')),
+             vh: window.innerHeight };
+  });
+  is(!!D2.say && D2.say.bottom <= D2.vh + 2,
+     '★★ 접힌 띠에서도 <b>적는 칸이 보인다</b> — 「여기서 표현하고」 가 이 칸입니다 ('
+     + (D2.say ? D2.say.h + 'px · 바닥 ' + D2.say.bottom + '/' + D2.vh : '안 보임') + ')');
+  is(!!D2.say && D2.say.h >= 44 && !!D2.send && D2.send.h >= 44,
+     '그 칸과 보내기가 <b>손가락 바닥 44px</b> — 적는 칸 ' + (D2.say ? D2.say.h : 0)
+     + 'px · 보내기 ' + (D2.send ? D2.send.h : 0) + 'px');
+  is(!D2.stage && !D2.bar, '띠에서는 지도 무대·머리 띠를 <b>안 띄운다</b>');
+
+  await f.evaluate(() => { const u = document.getElementById('jUp'); if (u) u.click(); });
+  await p.waitForTimeout(700);
+  const D3 = await p.evaluate(() => {
+    const fr = document.getElementById('apexMapFrame');
+    return { shut: document.body.classList.contains('jv-shut'),
+             h: Math.round(fr.getBoundingClientRect().height) };
+  });
+  is(!D3.shut && D3.h > D1.h, '⌃ 를 누르면 <b>펴진다</b> — ' + D1.h + 'px → ' + D3.h + 'px');
+  await f.evaluate(() => { const x = document.getElementById('jDockX'); if (x) x.click(); });
+  await p.waitForTimeout(700);
+  const D4 = await p.evaluate(() => ({ dock: document.body.classList.contains('jv-dock'),
+    fab: !!(document.getElementById('osVaFab')) }));
+  is(!D4.dock, '✕ 를 누르면 <b>띠가 닫힌다</b> — 따라다니지 않는다');
+
+  /* ★ 글로도 못 박혔나 — px 는 글꼴을 탑니다. 이 자는 바깥을 막아
+       웹폰트를 못 받는데 라이브는 받아서 2~5px 낮게 재집니다
+       (판 X239 · 판 X243 에서 두 번 데인 자리 · 8번).                   */
+  const JSRC = fs.readFileSync(path.join(ROOT, 'app', 'apex-map.html'), 'utf8');
+  is(/#ask\{[^}]*min-height:44px/.test(JSRC),
+     '<b>묻는 칸(#ask)</b>에 44px 이 <b>글로</b> 적혀 있다 — 라이브에서 29px 이던 자리');
+  is(/#jSay\{[^}]*min-height:44px/.test(JSRC),
+     '<b>이어 묻는 칸(#jSay)</b>에도 44px 이 <b>글로</b> 적혀 있다 — 라이브에서 40px 이던 자리');
+  is(/body\.jv-dock[^{]*#osVaFab\{display:none/.test(fs.readFileSync(path.join(ROOT,'app','index.html'),'utf8')),
+     '띠가 떠 있는 동안 <b>떠다니는 옛 쪽창은 안 띄운다</b> — 떠다니는 자비스가 둘이 되지 않게 (5번)');
+
   sec('[8] 🔇 조용히 터지지 않았나');
   const real = errs.filter(x => !/favicon|net::ERR|Failed to load resource/i.test(x));
   is(real.length === 0, '콘솔 오류 없음' + (real.length ? (' ← ' + real[0]) : ''));

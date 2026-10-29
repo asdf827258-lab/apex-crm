@@ -82,6 +82,10 @@ body{
 #ask{
   flex:1; border:0; background:none; outline:none; font:inherit; font-size:var(--t4);
   font-weight:600; color:var(--ink); padding:6px 2px; min-width:120px;
+  /* 44px — 손가락 바닥 (판 X146·X147 · 판 X245). 라이브에서 29px 로 재였습니다.
+     ★ 이 화면에서 <b>제일 많이 누르는 자리</b>입니다 — 자비스에게 묻는 칸입니다.
+     check-jvguide 가 이 줄을 글로도 봅니다(px 는 글꼴을 탑니다 · 8번). */
+  min-height:44px;
 }
 #ask::placeholder{color:#9AA8BF; font-weight:400}
 .chips{display:flex; flex-wrap:wrap; gap:7px; justify-content:center; margin-top:11px}
@@ -327,6 +331,34 @@ a.leaf.now{background:#BFD5FF; outline:2px solid var(--blue); outline-offset:1px
 .st-b a:hover{background:#DBE7FF}
 .st-b button{background:#fff; color:#5A6B85; border-color:#C9D3E4}
 .st-b button:hover{color:var(--ink)}
+/* 🪟 <b>여기서 보기</b> · 🪟 <b>독</b> — 판 X245 ════════════════════════
+   사장님 말씀 2026-10-29 — 「집어만 주지말고 <b>원하는 내용을 여기서
+   표현하고 바로 볼수 있도록</b> 만들자는거야」.
+   화면을 열면 자비스가 사라지던 자리입니다. 이제 자비스는 <b>아래 띠</b>로
+   남고, 그 자리에서 이어서 물으실 수 있습니다.
+   ★ 띄우고 내리는 것은 <b>본체</b>가 합니다(jvDock) — 창(iframe)을 DOM 에서
+     옮기면 다시 읽혀 <b>나눈 이야기가 날아갑니다.</b> 자리만 바뀝니다.      */
+.st-b .st-here{background:var(--blue); color:#fff; border-color:var(--blue)}
+.st-b .st-here:hover{background:#0F369B; color:#fff}
+.st-b a, .st-b button{min-height:44px; display:inline-flex; align-items:center}
+.jv-dockonly{display:none}
+body.dock .jv-dockonly{display:inline-flex; align-items:center; justify-content:center}
+body.dock{background:transparent}
+body.dock .bar, body.dock .ask, body.dock #stage, body.dock .howto{display:none}
+body.dock #jarvis{position:fixed; inset:0; width:auto; margin:0; max-height:none;
+  border-radius:22px 22px 0 0; box-shadow:none}
+body.dock .j-tip{display:none}
+body.dock.shut #jLog{display:none}
+/* ★ 접힌 띠에서 <b>적는 칸이 반드시 보여야 합니다</b> — 「여기서 표현하고」 가
+   이 칸입니다. 처음 지었을 때 머리글(「회사 서버 · gemini-flash-latest 에
+   연결됨」)이 넉 줄로 접히며 적는 칸을 띠 밖으로 밀어냈습니다.
+   그래서 접혔을 때는 <b>머리글을 감추고 한 줄로</b> 둡니다.                */
+body.dock .j-top{padding:7px 10px; gap:6px}
+body.dock .j-top .t{min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+body.dock.shut #jMode{display:none}
+body.dock #jFoot{padding:8px 10px 10px}
+body.dock #jarvis{display:flex; flex-direction:column}
+body.dock #jFoot{flex:0 0 auto}
 .j-real{
   margin-top:10px; background:#FFF8EC; border:1px solid #F5DCB0; border-left:4px solid #C8A24A;
   border-radius:11px; padding:9px 11px; font-size:var(--t6); color:#5A4522; line-height:1.65;
@@ -342,6 +374,8 @@ a.leaf.now{background:#BFD5FF; outline:2px solid var(--blue); outline-offset:1px
 #jSay{
   flex:1; border:1px solid var(--line); border-radius:11px; background:#fff; font:inherit;
   font-size:var(--t6); padding:9px 11px; outline:none; resize:none; max-height:96px; line-height:1.5;
+  /* 44px — 손가락 바닥 (판 X146·X147 · 판 X245). 라이브에서 40px 로 재였습니다. */
+  min-height:44px; box-sizing:border-box;
 }
 #jSay:focus{border-color:#8FA9D6}
 .j-tip{font-size:var(--t6); color:#3C4A63; margin-top:7px; line-height:1.5}
@@ -491,6 +525,8 @@ body.in-crm{padding-bottom:84px}
     <span class="t">자비스<small id="jMode">앱에 담긴 것으로 답합니다</small></span>
     <button class="j-x" id="jMic" title="말로 물어보기">🎤</button>
     <button class="j-x" id="jVoice" title="읽어 주기 켜고 끄기">🔊</button>
+    <button class="j-x jv-dockonly" id="jUp" title="펴기 · 접기">⌃</button>
+    <button class="j-x jv-dockonly" id="jDockX" title="자비스 띠 닫기">✕</button>
     <button class="j-x" id="jX" title="대화 지우기">새로</button>
   </div>
   <div id="jLog"></div>
@@ -3582,6 +3618,47 @@ if (inCrm){
     try { window.parent.go(id); } catch(err){ window.open(a.href,'_blank','noopener'); }
   });
 }
+/* ══ 🪟 여기서 보기 · 독 (판 X245) ═══════════════════════════════════
+   사장님 말씀 2026-10-29 — 「집어만 주지말고 <b>원하는 내용을 여기서
+   표현하고 바로 볼수 있도록</b> 만들자는거야」.
+
+   ★ 화면을 <b>여기서 다시 그리지 않습니다</b> — 여는 임자는 본체의 go() 하나
+     입니다 (5번). 이 쪽은 「내려앉혀 달라」 고 말할 뿐입니다.
+   ★ 본체가 옛 판이라 jvDock 이 없으면 <b>지금까지 하던 대로</b> 그 화면으로
+     갑니다 — 새 길이 막히면 옛 길로 (6번).                              */
+function jvHere(id){
+  if (!id) return;
+  if (!inCrm){ window.open(BASE + id, '_blank', 'noopener'); return; }
+  try {
+    if (typeof window.parent.jvDock === 'function') window.parent.jvDock(id);
+    else window.parent.go(id);
+  } catch(err){ window.open(BASE + id, '_blank', 'noopener'); }
+}
+/* 본체가 띠로 내리거나 올릴 때 불러 줍니다 — 같은 뿌리라 그냥 부릅니다 */
+function jvSetDock(on, shut){
+  document.body.classList.toggle('dock', !!on);
+  document.body.classList.toggle('shut', !!on && !!shut);
+  var u = document.getElementById('jUp');
+  if (u) u.textContent = (on && shut) ? '⌃' : '⌄';
+  try { if (on && !shut) { var lg=document.getElementById('jLog'); if(lg) lg.scrollTop=lg.scrollHeight; } } catch(e){}
+}
+document.addEventListener('click', function(e){
+  var b = e.target.closest && e.target.closest('.st-here');
+  if (!b) return;
+  e.preventDefault();
+  jvHere(b.getAttribute('data-here'));
+});
+(function(){
+  var u = document.getElementById('jUp'), x = document.getElementById('jDockX');
+  if (u) u.onclick = function(){
+    var shut = document.body.classList.contains('shut');
+    try { window.parent.jvDockOpen(shut); } catch(err){ jvSetDock(true, !shut); }
+  };
+  if (x) x.onclick = function(){
+    try { window.parent.jvDockEnd(); } catch(err){ jvSetDock(false, false); }
+  };
+})();
+
 document.getElementById('cTag').textContent = DATA.center.tag;
 document.getElementById('cSub').textContent = DATA.center.sub;
 document.getElementById('cFoot').textContent = DATA.center.foot;
@@ -4050,7 +4127,7 @@ function addJ(res, isErr){
   /* 화면이 없는 걸음(「이름 · 연락처 · 메모 한 줄이면 충분」)도 순서의 일부다 —
      없는 화면 id 만 거른다 (1번 · 없는 곳으로 안 보낸다) */
   var steps = (res.steps || []).filter(function(s){ return s && (!s.id || MENU[s.id]) && (s.id || s.do); });
-  var shown = {};
+  var shown = {}, nFold = 0;      /* 첫 걸음의 「자세히」 만 펴 둡니다 (판 X245) */
   if (steps.length){
     h += '<ol class="steps">';
     steps.forEach(function(s, i){
@@ -4063,12 +4140,21 @@ function addJ(res, isErr){
         var w = jvWay(s.id), L = jvLines(s.id);
         h += '<div class="st-way"><b>가는 길</b> ' + esc(w.txt) + '</div>';
         if (L.length){
-          h += '<details class="st-more"><summary>이 화면 자세히 — 사용가이드 ' + L.length + '줄 ▾</summary><ul>';
+          /* ★ <b>첫 걸음은 펴 둡니다</b> (판 X245 · 사장님 말씀 2026-10-29
+             「집어만 주지말고 … 바로 볼수 있도록」). 접어 두면 한 번 더
+             눌러야 글이 나옵니다 — 제일 먼저 하실 일만 펴고 나머지는
+             접어 둡니다(다 펴면 답이 화면을 넘깁니다).                    */
+          h += '<details class="st-more"' + (nFold++ ? '' : ' open') +
+               '><summary>이 화면 자세히 — 사용가이드 ' + L.length + '줄 ▾</summary><ul>';
           L.forEach(function(t){ h += '<li>' + esc(t) + '</li>'; });
           h += '</ul></details>';
         }
         if (!w.locked)
-          h += '<div class="st-b"><a href="' + BASE + s.id + '" data-id="' + s.id + '" target="_blank" rel="noopener">이 화면 열기 ›</a></div>';
+          /* 🪟 <b>여기서 보기</b> — 화면은 열되 자비스는 아래 띠로 남습니다 (판 X245).
+             「이 화면 열기 ›」 는 <b>그대로 둡니다</b> — 길은 안 지웁니다 (6번). */
+          h += '<div class="st-b">' +
+               '<button type="button" class="st-here" data-here="' + s.id + '">🪟 여기서 보기</button>' +
+               '<a href="' + BASE + s.id + '" data-id="' + s.id + '" target="_blank" rel="noopener">이 화면 열기 ›</a></div>';
       }
       h += '</div></li>';
     });
