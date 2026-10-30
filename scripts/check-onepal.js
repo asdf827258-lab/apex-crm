@@ -240,13 +240,14 @@ const SCAN = ([tab, page]) => {
     if (solid(cs.backgroundColor)) return num(cs.backgroundColor); e=e.parentElement; }
     return [255,255,255]; };
   const hex = c => '#'+c.map(x=>Math.round(x).toString(16).padStart(2,'0')).join('').toUpperCase();
-  const low = [], buried = [];
+  const low = [], buried = [], 뒤묻힘 = [];
   document.querySelectorAll('#dynPane *').forEach(el => {
     const r = el.getBoundingClientRect();
     if (r.width < 4 || r.height < 4) return;
     if (!el.offsetParent && getComputedStyle(el).position !== 'fixed') return;
     /* ▣ 판에 묻힌 상자 — 제 바탕을 칠했는데 <b>바로 위가 판</b>이고 색이 같다 */
-    const own = getComputedStyle(el).backgroundColor;
+    const cs0 = getComputedStyle(el);
+    const own = cs0.backgroundColor;
     if (solid(own) && r.width > 60 && r.height > 24) {
       const c = num(own), d = Math.abs(c[0]-page[0])+Math.abs(c[1]-page[1])+Math.abs(c[2]-page[2]);
       const pe = el.parentElement;
@@ -255,6 +256,41 @@ const SCAN = ([tab, page]) => {
         const onPage = Math.abs(pc[0]-page[0])+Math.abs(pc[1]-page[1])+Math.abs(pc[2]-page[2]) <= 6;
         if (d > 0 && d <= 10 && onPage)
           buried.push(tab+' · '+String(el.className||el.tagName).slice(0,30)+' '+hex(c)+' (판 '+hex(page)+')');
+      }
+    }
+    /* ▣▣ <b>제 바로 뒤에 묻힌 상자</b> — 2026-10-30 (판 X264 · 사장님 「안되는거 다
+       고쳐줘」). 위 ▣ 는 <b>바로 위가 판일 때만</b> 봅니다. 그래서 <b>연한 회색 칸
+       안에 거의 같은 회색 칩</b>을 아무도 못 봤습니다 — 라이브에서 「🗂 소개 ·
+       📍 순천」 칩이 --t-bg-2(#F5F7F9) 로 --t-bg-3(#F7F9FA) 칸 위에 앉아 <b>차이 5</b>
+       였고, 알약 모양이 아예 안 보이고 글자만 떠 있었습니다.
+       ★ <b>크기 문턱이 달라야 합니다</b> — 위 ▣ 는 60×24 를 넘는 것만 보는데
+         그 칩은 56×28·59×28 이라 문턱만 그대로 쓰면 <b>이 눈을 달아도 못 봅니다.</b>
+         실제로 재서 알았습니다. 그래서 40×20 으로 둡니다.
+       ★ <b>테두리·그림자가 있으면 안 셉니다</b> — 그것으로 모양이 보입니다.
+         (헛것을 잡는 점검은 안 잡는 점검보다 나쁩니다 · 8번)
+       ⚠⚠ <b>이 자의 견본에는 고객이 한 분도 없습니다</b>(OSC.list=[] · AR.db=[]).
+         그래서 「지금 할 것」 칸의 그 칩들은 <b>여기서는 아예 안 그려집니다</b> —
+         되돌려 보고 알았습니다(칩을 도로 묻어도 이 줄이 안 울렸습니다).
+         ★ 그 자리를 <b>정말로</b> 지키는 자는 <b>check-bgsame</b> 입니다 —
+           고객을 넣은 견본으로 홈을 채워 놓고 같은 눈으로 봅니다.
+         ★ 이 줄은 <b>그 밖의 화면</b>을 봅니다 — 공짜로 늘어난 눈이라 둡니다.
+       ★ 그림(그라데이션) 위도 안 셉니다 — 못 재는 자리입니다 (1번).         */
+    if (solid(own) && r.width >= 40 && r.height >= 20
+        && (cs0.backgroundImage||'none') === 'none'
+        && parseFloat(cs0.borderTopWidth||0) === 0
+        && parseFloat(cs0.borderBottomWidth||0) === 0
+        && (cs0.boxShadow||'none') === 'none') {
+      let e2 = el.parentElement, 뒤 = null, 그림 = false;
+      while (e2) { const s2 = getComputedStyle(e2);
+        if ((s2.backgroundImage||'none') !== 'none') { 그림 = true; break; }
+        if (solid(s2.backgroundColor)) { 뒤 = num(s2.backgroundColor); break; }
+        e2 = e2.parentElement; }
+      if (!그림 && 뒤) {
+        const c2 = num(own);
+        const d2 = Math.abs(c2[0]-뒤[0])+Math.abs(c2[1]-뒤[1])+Math.abs(c2[2]-뒤[2]);
+        if (d2 > 0 && d2 <= 10)
+          뒤묻힘.push(hex(c2)+' on '+hex(뒤)+' ('+d2+') — '+tab+' · '+
+                      String(el.className||el.tagName).slice(0,26));
       }
     }
     /* 글자 대비 — <b>이모지·기호만인 칸은 뺍니다</b>(제 색을 가집니다) */
@@ -276,7 +312,7 @@ const SCAN = ([tab, page]) => {
        같은 짝이 열 군데 나와도 <b>한 가지</b>입니다.                       */
     if (v < need) low.push(hex(fg)+' on '+hex(bg)+' ('+need+')');
   });
-  return { low: [...new Set(low)], buried: [...new Set(buried)] };
+  return { low: [...new Set(low)], buried: [...new Set(buried)], 뒤묻힘: [...new Set(뒤묻힘)] };
 };
 
 (async () => {
@@ -334,17 +370,29 @@ const SCAN = ([tab, page]) => {
     const n = (getComputedStyle(document.getElementById('main')||document.querySelector('.main')).backgroundColor.match(/\d+/g)||[242,244,246]);
     return n.slice(0,3).map(Number);
   });
-  let low = [], buried = [];
+  let low = [], buried = [], 뒤묻힘 = [];
   for (const t of tabs) {
     await p.evaluate(x => { try{ go(x); }catch(e){} }, t);
     await p.waitForTimeout(650);
     const r = await p.evaluate(SCAN, [t, page]);
     low = low.concat(r.low); buried = buried.concat(r.buried);
+    뒤묻힘 = 뒤묻힘.concat(r.뒤묻힘 || []);
   }
   is(buried.length <= BASE.묻힌상자,
      '  ★ <b>판에 묻힌 상자</b>가 ' + buried.length + '가지 — 기준선 ' + BASE.묻힌상자 +
      (buried.length ? ('\n      ✗ ' + buried.slice(0,6).join('\n      ✗ ') +
         '\n      → 판 위에 놓을 상자는 판과 다른 색이어야 합니다. --t-card(흰) 이나 --t-bg-3 을 쓰십시오.') : ''));
+  /* ▣▣ 2026-10-30 (판 X264) — <b>제 바로 뒤에 묻힌 상자</b>. 기준선을 안 둡니다:
+     고치고 재어 보니 화면 아홉에 <b>0가지</b>였고, 0 은 「늘면 바로 빨간불」 이라
+     기준선보다 셉니다. 기준선을 두면 그 수를 올리는 것만으로 조용히 느슨해집니다. */
+  is(뒤묻힘.length === 0,
+     '  ★★ <b>제 바로 뒤에 묻힌 상자</b>가 ' + 뒤묻힘.length + '가지 — 0이어야 합니다' +
+     (뒤묻힘.length
+       ? ('\n      ✗ ' + [...new Set(뒤묻힘)].slice(0,8).join('\n      ✗ ') +
+          '\n      → 이 상자는 <b>판이 아니라 제 바로 뒤</b>와 거의 같은 색입니다 — 모양이 안 보이고 ' +
+          '글자만 뜹니다. <b>--t-card(흰)</b> 로 보내거나, 테두리(--t-line)를 주십시오.' +
+          '\n      ⚠ 위 「판에 묻힌 상자」 와 다른 눈입니다 — 그 자는 <b>바로 위가 판일 때만</b> 봅니다.')
+       : ' (위 「판에 묻힌 상자」 는 바로 위가 판일 때만 봅니다 — 이 눈이 그 밖을 봅니다)'));
   const 짝 = [...new Set(low)].sort();
   const 새것 = 짝.filter(x => 봐주는색짝.indexOf(x) < 0);
   is(새것.length === 0,

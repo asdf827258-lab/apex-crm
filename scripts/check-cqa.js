@@ -19,6 +19,15 @@
      [8] 조용히 터지지 않았나
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
+/* 🕰 <b>시계를 못 박습니다</b> — 한 곳에서 (scripts/lib-clock.js).
+   ⚠⚠ 2026-10-31 에 이 자가 빨간불이었습니다. [2] 가 답을 적고 나서 「다음 것을
+     여쭙는다」 를 보는데, 적히는 <b>다음 할 일의 날짜가 진짜 오늘</b>이라
+     날에 따라 카드가 다른 갈래로 섰습니다 — <b>물음과 머리글이 빈 글자</b>로
+     나왔습니다. <b>고친 것이 없는데 날짜 때문에 켜지는 빨간불은 헛것입니다</b> (8번).
+   ★ 같은 날 check-mrt 도 같은 병으로 울었습니다(그쪽은 달의 마지막 날이라
+     「오늘+2일」 이 다음 달로 넘어갔습니다). <b>박는 자리는 한 곳</b>입니다 (5번).
+   ★ 되돌려 확인했습니다 — 박는 줄을 빼면 10월 31일에 다시 두 가지가 웁니다. */
+const CLK = require('./lib-clock.js');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9025;
 let bad = 0;
@@ -102,7 +111,9 @@ const CARD = () => {
 (async () => {
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
-  const p = await b.newPage({ viewport: { width: 1280, height: 1000 } });
+  const ctx = await b.newContext(CLK.ctxOpt({ viewport: { width: 1280, height: 1000 } }));
+  await CLK.pin(ctx, 14);   /* 낮 — 하루를 가르는 토막 가운데 (lib-clock 의 WHEN) */
+  const p = await ctx.newPage();
   const errs = []; p.on('pageerror', e => errs.push('' + (e && e.message)));
   await p.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
   await p.waitForTimeout(2400);
