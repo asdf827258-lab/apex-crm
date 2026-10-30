@@ -346,7 +346,7 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
     var keep = { deck: S.deck, sim: S.sim, view: S.view, slide: S.slide }, bad = [], n = 0, steps = 0;
     S.deck = true; S.view = 'full'; S.printAll = 0; save(); render();
     var f3 = document.querySelector('#s4_3d iframe'), fw = document.querySelector('#s4_why iframe');
-    var scr = { d3: !!f3, why: !!fw, hash: !!(f3 && /ba-3d\.html#d=/.test(f3.getAttribute('src'))),
+    var scr = { d3: !!f3, why: !!fw, hash: !!(f3 && /ba-report\.html#d=/.test(f3.getAttribute('src'))),   /* 판 X257 — 3D 대신 보장 분석 보고서 */
       noQuery: !!(f3 && f3.getAttribute('src').indexOf('?') < 0),
       whyMode: !!(fw && /%22mode%22%3A%22why%22/.test(fw.getAttribute('src'))), cov: false };
     try { var d = JSON.parse(decodeURIComponent(f3.getAttribute('src').split('#d=')[1])); scr.cov = !!(d.a && d.b && Object.keys(d.a).length > 3); } catch (e) {}
