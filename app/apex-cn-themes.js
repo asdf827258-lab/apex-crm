@@ -794,7 +794,8 @@
       PK.items = d.items || []; PK.en = d.query || '';
       var bits = [];
       if (d.translated) bits.push('영어 검색어 「' + E(d.query) + '」 로 찾았습니다');
-      if (keyMsg(d)) bits.push(keyMsg(d));
+      /* 키 없다는 말은 <b>사진이 하나도 안 나왔을 때만</b> — Pexels 가 새 키를 안 내줘(2026-10-30) Unsplash 만 쓰는데, 사진이 잘 나와도 매번 「키가 없습니다」 가 떴다 (판 X263) */
+      if (keyMsg(d) && !PK.items.length) bits.push(keyMsg(d));
       if ((d.errors || []).length) bits.push('⚠ ' + E(d.errors.join(' · ')));
       if (!PK.items.length && !keyMsg(d)) bits.push('맞는 사진이 없습니다 — 검색어를 짧게(예: 「병원」 「직장인」 「노후」) 바꿔 보세요.');
       PK.msg = bits.join('<br>'); pkPaint();

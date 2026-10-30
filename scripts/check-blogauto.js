@@ -1222,7 +1222,7 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
      '  <b>클립보드에 다 실릴 때까지</b> 잠겨 있다 — 먼저 풀면 아직 아까 것이 든 채로 붙이신다');
   is(!wait.afterDisabled, '  다 끝나면 다시 눌리게 풀린다');
 
-  console.log('\n[21] 돌려 보고 나온 둘 — 표가 글자로 남는가 · 빠진 카드를 말하는가 (판 X264)');
+  console.log('\n[21] 돌려 보고 나온 둘 — 표가 글자로 남는가 · 빠진 카드를 말하는가 (판 X265)');
   const sim = await page.evaluate(async () => {
     const out = {};
     localStorage.clear(); S.comply = null; await comply();
