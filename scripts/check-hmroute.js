@@ -245,6 +245,18 @@ const SEED=(opt)=>`
       bodyIn:(()=>{ const b=c.querySelector('.hm-fold-b');
         return b?{chip:b.querySelectorAll('.hm-rt-c').length,row:b.querySelectorAll('.t-row').length}
                 :{chip:0,row:0}; })(),
+      bodyH:(()=>{ const b=c.querySelector('.hm-fold-b');
+        return b?Math.round(b.getBoundingClientRect().height):0; })(),
+      /* 🧭 <b>추천 줄 · 이름 알약</b> — 판 X249 에서 접이 <b>밖</b>으로
+         나왔습니다. 접힌 채로도 보이는 글은 이제 여기입니다. */
+      rec:(()=>{ const r=c.querySelector('.hm-rt-why');
+        return r?{ t:((r.querySelector('b')||{}).textContent||''),
+                   s:((r.querySelector('span[data-ask]')||{}).textContent||''),
+                   h:Math.round(r.getBoundingClientRect().height) }
+                :{t:'',s:'',h:0}; })(),
+      pill:[].slice.call(c.querySelectorAll('.hm-rt-p:not(.more)'))
+             .map(e=>({n:(e.textContent||'').trim(),
+                       h:Math.round(e.getBoundingClientRect().height)})),
       note:(c.querySelector('.t-note.g')||{}).textContent||'',
       ask:[].slice.call(c.querySelectorAll('[data-ask="권한동네몇분"]'))
              .map(e=>(e.textContent.match(/\d+/)||[''])[0]),
@@ -256,40 +268,69 @@ const SEED=(opt)=>`
   is(Y.chip.length>0&&Y.row.length>0,
      '★ 그래도 <b>사람이 선다</b> — 걸 분 '+Y.chip.length+'명 · 만나야 할 분 '+Y.row.length+
      '명 (여기가 0 이면 사장님이 보신 그 빈 화면이다)');
-  is(/순천시/.test(Y.ttl)&&/권합니다/.test(Y.ttl)&&/제일 많은/.test(Y.sub),
-     '<b>왜 그 동네인지</b> 접힌 채로도 적는다 — 「'+Y.ttl+'」 · 「'+Y.sub+'」');
-  /* ★ 접은 것은 <b>감춘 것이 아닙니다</b> (6번) — 머리글이 몇 분인지 말하고,
-     그 머리글이 <b>누르는 단추</b>이고, 사람은 안쪽에 다 들어 있습니다.
-     ⚠ 왜 접었나 — 펴 둔 채로 재어 보니 홈이 <b>4.68화면</b>이 되어 사장님이
-       정한 4.2 선을 넘었습니다(check-homeone). 접으면 4.18 입니다.       */
+  /* ⬆ <b>판 X249 — 보는 자리가 접이 머리글에서 「추천 줄」 로 옮겼습니다.</b>
+     사장님 말씀 (2026-10-30) 「칸을 너무 잡아 먹는거 같아, <b>오른쪽에
+     조그만하게</b>」 → 여쭈니 「권하는 동네 + 걸 분 이름칩」 을 고르셨습니다.
+     추천을 접이 <b>밖</b>으로 꺼냈으니 묻는 자리도 따라갑니다.
+     ★ 묻는 것은 <b>그대로</b>입니다 — 「왜 그 동네인지 접지 않아도 적나」. */
+  is(/순천시/.test(Y.rec.t)&&/권합니다/.test(Y.rec.t)&&/제일 많은/.test(Y.rec.s),
+     '<b>왜 그 동네인지</b> 접지 않아도 적는다 — 「'+Y.rec.t+'」 · 「'+Y.rec.s+'」');
+  is(Y.rec.h>0, '  ★ 그 줄이 <b>정말 보인다</b> — '+Y.rec.h+'px');
+  /* ★ 머리글은 <b>몇 분인지 말하고 누르는 단추</b>입니다 (6번) — 사람은
+     안쪽에 다 들어 있습니다.
+     ⚠ <b>판 X248 에서 처음부터 펴 둡니다.</b> 전에는 접어 두었고, 그 까닭을
+       「펴 두면 홈이 4.68화면이 되어 <b>4.2 선</b>을 넘는다」 고 여기 적어
+       두었습니다. 2026-10-30 사장님 말씀 — 「지역동선하고 <b>내가 추천
+       띄우고</b> 뉴스부터 멘트까지 오늘 한칸에서 다 할 수 있도록 했는데
+       안되어있어서」. 그래서 <b>그 선을 사장님이 직접 놓아 주셨습니다</b>
+       (「홈이 길어져도 괜찮다」) — 4.2 → 4.3 으로 올린 자리는
+       `check-homeone` 의 `HOME_SCR` 한 곳이고, 왜 올렸는지도 거기 적혀
+       있습니다. ★ <b>제가 느슨하게 한 것이 아닙니다</b> (8번).
+     ★ 묻는 것은 <b>그대로</b>입니다 — 단추이고, 몇 분인지 말하고, 사람이
+       안쪽에 다 있습니다. <b>처음 상태만</b> 「접힘」 → 「펴짐」 입니다.
+     ★ 손으로 접으면 <b>접힌 채로 기억합니다</b> — 그쪽은 `check-homeone`
+       [1-a2] 가 봅니다(기본값보다 사람 손이 이깁니다).                    */
+  /* ★★ <b>걸 분 이름이 접지 않아도 보입니다</b> (판 X249) — 사장님이 두 번
+     말씀하신 「추천인들」 입니다(판 X142 「왜 지역동선에 추천인들이 안떠」).
+     ⚠ 알약도 <b>손가락 바닥 44px</b> 입니다 — 작게 보이려고 줄이지 않습니다. */
+  is(Y.pill.length>0&&Y.pill.every(p=>p.h>=44),
+     '★★ <b>걸 분 이름이 알약으로 접지 않아도</b> 선다 — '+Y.pill.length+'개 · '+
+     (Y.pill[0]?Y.pill[0].h:0)+'px');
   is(Y.btn==='button'&&Y.exp==='false'&&/\d+분/.test(Y.sub),
-     '접힌 머리글이 <b>몇 분인지 말하고 누르는 단추</b>다 (6번) — 「'+Y.sub+
+     '접이는 <b>안에 든 것을 말하고 누르는 단추</b>다 (판 X249) — 「'+Y.sub+
      '」 · '+Y.btn+' · 펴짐 '+Y.exp);
   is(Y.bodyIn.chip>0&&Y.bodyIn.row>0,
-     '사람은 <b>그 안에 다 들어 있다</b> — 한 번 누르면 칩 '+Y.bodyIn.chip+
-     '개 · 줄 '+Y.bodyIn.row+'개 (펴 두시면 기억합니다 · hmFoldOpen)');
+     '사람은 <b>그 안에 다 들어 있다</b> — 칩 '+Y.bodyIn.chip+
+     '개 · 줄 '+Y.bodyIn.row+'개 (접으시면 기억합니다 · hmFoldOpen)');
+  /* ★★ <b>접힌 것이 정말 접혔나</b> — aria 만 보면 거저 통과합니다 (8번).
+     속이 <b>높이를 안 가지는지</b> 로 잽니다. 판 X249 에서 뜻이 뒤집혔습니다. */
+  is(Y.bodyH===0,
+     '  ★★ 접힌 속이 <b>정말 안 보인다</b> — 높이 '+Y.bodyH+'px');
   const 지어낸=[].concat(Y.chip,Y.row).filter(nm=>nm&&Y.real.indexOf(nm)<0);
   is(지어낸.length===0,
      '뜨는 분은 <b>모두 AR.db 에 실제로 있는 분</b>이다 (1번) — 지어낸 이름 '+지어낸.length+'개'+
      (지어낸.length?(' ← '+지어낸.join(' · ')):''));
   is(!/홍병돌/.test(Y.txt)&&!/홍정돌/.test(Y.txt)&&!/남의고객/.test(Y.txt),
      '<b>다른 시(여수)·지역 모르는 분·남의 고객은 안 뜬다</b> — 권한 동네만 넓어지면 안 된다 (1·3번)');
-  is(Y.ask.length===2&&Y.ask[0]===Y.ask[1]&&Y.ask[0]===String(Y.meetn),
+  /* ⬆ 판 X249 — 추천 줄이 <b>셋째 자리</b>가 되었습니다. 수가 늘어도
+     묻는 것은 그대로 — <b>다 같은 수인가</b>. 두 곳으로 못 박아 두면
+     자리가 늘 때마다 헛 빨간불이 켜집니다 (8번). */
+  is(Y.ask.length>=2&&Y.ask.every(v=>v===Y.ask[0])&&Y.ask[0]===String(Y.meetn),
      '권한 줄과 「가시는 김에」 줄이 <b>같은 수</b>를 말한다 — '+Y.ask.join(' / ')+
      ' (hmRtMeet '+Y.meetn+' 하나가 센다 · 날글로 묶으면 '+Y.topn+' 이라 갈린다) (5번)');
   /* ★ 줄이 아예 없으면 이 자가 <b>거저 통과</b>합니다 — 있는지도 함께 봅니다 (8번) */
   is(!!Y.note&&!/더 계십니다/.test(Y.note),
      '약속이 없는 날엔 <b>「더」 를 안 붙인다</b> — 그 분들이 바로 위에 말한 그 분들이다 — 「'+
      Y.note.replace(/\s+/g,' ').trim()+'」');
-  is(/순천시로 권합니다/.test(Y.ttl),
+  is(/순천시로 권합니다/.test(Y.rec.t),
      '<b>받침에 맞는 말</b>로 적는다 — 「순천시<b>로</b>」 (「순천시 로」 라고 찍힌 적이 있다)');
 
   const JO=await page.evaluate(async(seed)=>{
     (0,eval)(seed);
     AR.db.forEach(x=>{ x.appt=''; if(x.region)x.region='서울 강남'; });
     await window.__home();
-    const c=document.querySelector('#dynPane .hm-rt'),fh=c&&c.querySelector('.hm-fold-h');
-    return { none:fh?(((fh.querySelector('.t')||{}).firstChild||{}).textContent||''):'' };
+    const c=document.querySelector('#dynPane .hm-rt'),r=c&&c.querySelector('.hm-rt-why');
+    return { none:r?((r.querySelector('b')||{}).textContent||''):'' };
   },SEED({}));
   is(/서울 강남으로 권합니다/.test(JO.none),
      '<b>받침이 있으면 「으로」</b> — 묻는 곳은 hmRo 하나다 (5번) — 「'+
