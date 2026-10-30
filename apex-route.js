@@ -1390,6 +1390,14 @@ function styles(){
   ".rt-nokey{position:absolute;inset:0;background:#fff;overflow:auto;padding:26px;display:grid;place-items:start center}",
   ".rt-card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:11px}",
   ".rt-h{font-size:13px;font-weight:900;color:var(--navy);margin:16px 0 9px}",
+  /* ══ 🧭 <b>홈이 권하는 동네</b> 한 줄 (판 X260) ═══════════════════════
+     사장님 말씀 「동선 추천하고」. <b>추천으로 켜졌을 때만</b> 섭니다.
+     ★ 색은 이 파일이 쓰던 파란 계열 그대로입니다 — 새 색을 만들지
+       않습니다 (10월 색표 · 5번).                                      */
+  ".rt-rec{margin:0 0 9px;padding:10px 12px;border:1px solid #b9d3f7;"+
+    "border-radius:10px;background:#f1f7ff;font-size:13px;line-height:1.6;color:#245ea8}",
+  ".rt-rec b{color:#1b4f9c;font-weight:900}",
+  ".rt-rec small{display:block;margin-top:5px;font-size:11.5px;color:#7089ad;line-height:1.5}",
   /* 🎯 오늘 이 지역 미션 — 한눈에 보이게, 손가락으로 누를 만하게 */
   ".rt-miss{margin:4px 0 12px;padding:14px 15px;border-radius:14px;background:linear-gradient(135deg,#eef6ff,#f8fbff);border:1px solid #c9ddff}",
   ".rt-mh{font-size:14px;font-weight:900;color:#1b4f9c;margin-bottom:6px}",
@@ -2114,9 +2122,30 @@ function missCard(region,owner,top){
   side.push('<div class="rt-h">추가로 연락 드릴 고객님 '+
     (stops.length?'<small style="font-weight:700;color:var(--muted)">— 약속 사이 빈틈 기준</small>'
                  :'<small style="font-weight:700;color:var(--muted)">— 오래 방치된 순</small>')+'</div>');
+  /* ══ 🧭 <b>왜 이 동네인가</b> — 추천으로 켜졌을 때만 적습니다 (판 X260) ══
+     사장님 말씀 「동선 추천하고」. 수는 <b>홈이 센 것</b>이고 여기서 다시
+     세지 않습니다 (5번). 추천이 아니면(손으로 고르셨거나 못 받았으면)
+     <b>한 글자도 안 적습니다</b> — 아무 근거 없이 「권합니다」 라고 하면
+     그것이 지어내는 것입니다 (1번).                                     */
+  if(HOTON&&HOT.rg&&HOT.n>0)
+    side.push('<div class="rt-rec">🧭 <b>홈이 권하는 동네</b>입니다 — 이번 주 '+
+      '<b>'+E(HOT.rg)+'</b>에 AP·PC 약속 <b>'+HOT.n+'건</b>'+
+      (HOT.more>0?(' (약속이 잡힌 동네가 외 '+HOT.more+'곳 더 있습니다)'):'')+
+      '<small>가는 김에 이 분들을 붙이십시오. 위에서 <b>시</b>를 바꾸시면 그쪽이 이깁니다.</small></div>');
   if(!top.length){
     side.push('<div class="rt-card" style="color:var(--muted)">'+
-      (region?('「'+E(region)+'」에 아직 걸 분이 없습니다.'):'걸 분이 없습니다. 위의 <b>시</b>를 하나 골라 보세요.')+'</div>');
+      (region?('「'+E(region)+'」에 아직 걸 분이 없습니다.')
+             /* ★ <b>왜 비었는지</b> 말해 드립니다 (1번). 여태 「위의 시를 하나
+                골라 보세요」 만 적어, 사장님께서 「추천 리스트가 없다」 고
+                하신 자리입니다 (판 X260).                               */
+             :(HOT.rg
+                /* ★ 토씨를 <b>안 고르게</b> 씁니다 — 「순천<b>을</b>」·「광주<b>를</b>」 은
+                   받침에 따라 갈립니다. 「…에는」 은 양쪽에 다 맞습니다.
+                   판 X187 에서 「출산 라고」 로 데인 그 자리입니다 (한국말 토씨). */
+                ? ('홈이 권하는 동네(<b>'+E(HOT.rg)+'</b>)에는 지금 걸 분이 없습니다 — '+
+                   '위에서 다른 <b>시</b>를 골라 보십시오.')
+                : '<b>이번 주에 잡힌 AP·PC 약속이 없어</b> 권할 동네가 없습니다 — '+
+                  '위에서 <b>시</b>를 하나 골라 보십시오.'))+'</div>');
   }else{
     side.push('<div class="rt-card">'+top.map(function(c,i){
       var d=c.d;
@@ -2825,9 +2854,33 @@ function tidyModal(){
 }
 
 /* ── 열기 ───────────────────────────────────────────────────────── */
+/* ══ 🧭 <b>홈이 권하는 동네</b> (판 X260) ═══════════════════════════════
+   사장님 말씀 (2026-10-30) — 「<b>지역동선 아직도 추천 리스트가 없어.. 동선
+   추천하고</b>」. 여쭈니 「<b>홈이 권하는 것을 그대로 받아 켠다</b>」 를 고르심.
+   ★★ <b>여기서 세지 않습니다</b> (5번). 「이번 주 AP·PC 약속이 많은 동네」 를
+     세는 자는 본체의 hmHotOf <b>한 곳</b>뿐이고, 이 파일은 그 답을 받아
+     적기만 합니다. 두 곳에서 각자 세면 홈은 「순천」 을 권하고 동선은
+     「광주」 를 켜는 날이 옵니다 — FP_MAP 이 두 벌 되던 그 자리입니다.
+   ★ 못 받았으면 <b>비어 있습니다</b> — 그때는 추천을 안 적습니다. 「아마
+     여기일 겁니다」 를 지어내지 않습니다 (1번).                          */
+var HOT={rg:"",n:0,to:"",more:0};
+window.apexRouteHot=function(h){
+  if(!h||!h.rg){ HOT={rg:"",n:0,to:"",more:0}; return; }
+  HOT={ rg:String(h.rg||""), n:(+h.n||0), to:String(h.to||""), more:(+h.more||0) };
+};
+/* 지금 켜진 시가 <b>추천으로 켜진 것인가</b> — 사장님이 손으로 고르시면
+   그 순간부터 아닙니다. 그래야 「홈이 권하는 동네입니다」 가 거짓말을
+   안 합니다 (1번). */
+var HOTON=false;
 function routeOpen(dateStr,region){
   wrap(); fillPickers();
   q("rtDate").value=dateStr||q("rtDate").value||todayKey();
+  /* 🧭 <b>안 넘어왔으면 권하는 동네로</b> 켭니다 (판 X260) — 안에서
+     「🗺️ 지역 동선」 단추로 여실 때가 그 자리입니다.
+     ★ 사장님이 이미 손으로 골라 두신 시가 있으면 <b>그것이 이깁니다</b> —
+       추천이 사람의 선택을 덮지 않습니다.                              */
+  if((region===undefined||region===null)&&HOT.rg&&!q("rtRegion").value)region=HOT.rg;
+  HOTON=false;
   if(region!==undefined&&region!==null){
     /* 넘어오는 것은 「순천」처럼 <b>적힌 그대로</b>일 수 있다. 목록은 표준
        이름(「순천시」)이라, 시로 바꿔서 고른다 — 바꾸는 규칙은 cityOf 하나뿐. */
@@ -2835,6 +2888,8 @@ function routeOpen(dateStr,region){
     var s=q("rtRegion"), hit=false;
     Array.prototype.forEach.call(s.options,function(o){ if(want&&o.value===want){s.value=want;hit=true} });
     if(!hit)s.value="";
+    /* 추천한 그 동네로 켜졌을 때만 「권하는 동네」 라고 적습니다 */
+    HOTON=!!(hit&&HOT.rg&&want&&want===(cityOf({region:HOT.rg})||""));
   }
   q("rtStay").value=String(STAY);
   q("rtWrap").classList.add("on");
