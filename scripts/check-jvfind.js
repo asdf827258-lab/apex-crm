@@ -370,6 +370,125 @@ const SEED = () => {
   });
   is(/못 읽었습니다/.test(FAIL) && /HTTP 404/.test(FAIL) && /없다는 뜻이 아닙니다/.test(FAIL), '못 읽었으면 <b>못 읽었다고</b> · 까닭까지 · 「없다」 고 하지 않는다');
 
+  sec('[11] 🛠 <b>시키면 한다</b> — 지식 말고 일 (판 X271 · 사장님 말씀 「지식말고 다른것도 자비스가 할수 있도록 해」)');
+  await p.evaluate(() => { jvDockEnd(); go('apexmap'); });
+  await p.waitForTimeout(500);
+  /* 카드를 세우고 단추를 누른다 */
+  const actAsk = (q) => f.evaluate(async (q) => { jLog.innerHTML = ''; ask(q); await new Promise(r => setTimeout(r, 250));
+    const c = document.querySelector('#jLog .j-act'); return c ? c.textContent : ''; }, q);
+  const actPress = (sel, val) => f.evaluate(async ([sel, val]) => {
+    const c = document.querySelector('#jLog .j-act'); if (!c) return '(카드 없음)';
+    if (val != null){ const v = c.querySelector('.ja-v'); if (!v) return '(적는 칸 없음)'; v.value = val; }
+    const b = c.querySelector(sel); if (!b) return '(단추 없음 ' + sel + ')';
+    b.click(); await new Promise(r => setTimeout(r, 400));
+    return (document.querySelector('#jLog .j-act') || {}).textContent || ''; }, [sel, val]);
+  const HOWA = await f.evaluate((L) => L.filter(q => jvAct(q)), HOWTO.concat(['뭘 챙겨야 해?', '뇌졸중 화법', '보험료가 너무 비싸요', '홍길동 연락처 알려줘']));
+  is(HOWA.length === 0, '묻는 말 · 자료 찾는 말에 <b>일 카드가 안 선다</b>' + (HOWA.length ? ' ← ' + HOWA.join(' · ') : ''));
+  /* ① 체크 — 누르기 전엔 안 바뀐다 · 누르면 바뀐다 */
+  const CK = await p.evaluate(() => { const it = vaPickOf('전화', CK_ITEMS.day, r => r[1]); const m = ckLoad('day'); if (m[it[0]]) ckToggle('day', it[0]); return it[0]; });
+  const c1 = await actAsk('전화 체크해줘');
+  const ck0 = await p.evaluate((k) => !!ckLoad('day')[k], CK);
+  is(/이대로 할까요/.test(c1) && !ck0, '「전화 체크해줘」 → 확인 카드 · <b>누르기 전엔 아무것도 안 바뀐다</b>');
+  const c1b = await actPress('.ja-ok');
+  const ck1 = await p.evaluate((k) => !!ckLoad('day')[k], CK);
+  is(ck1 && /✅/.test(c1b) && /체크했습니다/.test(c1b), '「✅ 이대로 하기」 → 실행 체크판에 <b>실제로 체크</b> — 「' + c1b.replace(/^🛠[^—]+— [^✅⚠]+/, '').slice(0, 40) + '」');
+  await actAsk('전화 체크 풀어줘');
+  const c2 = await actPress('.ja-no');
+  is(/취소했습니다/.test(c2) && await p.evaluate((k) => !!ckLoad('day')[k], CK), '「취소」 → 아무것도 안 바뀐다');
+  /* ② 값이 모자라면 카드 안에서 묻는다 */
+  const c3 = await actAsk('체크해줘');
+  const c3b = await actPress('.ja-put', '전화');
+  is(/어떤 것을 체크할까요/.test(c3) && /전화 — 이대로 할까요/.test(c3b), '「체크해줘」 → 카드 안에서 「어떤 것을?」 → 적으면 확인으로');
+  /* ③ 고객 연락 기록 — 못 담으면 못 담았다고 */
+  await actAsk('홍길동 통화했어');
+  const c4 = await actPress('.ja-ok');
+  is(/⚠/.test(c4) && /기록하지 못했습니다/.test(c4) && !/✅/.test(c4), '서버가 없으면 「✅」 가 아니라 <b>「기록하지 못했습니다」</b> (1번)');
+  /* 담기는 서버를 흉내 냅니다 — 진짜 서버로는 안 나갑니다 */
+  const ROWS = await p.evaluate(() => { window.__ins = []; window.__keepC = window.osClient;
+    window.osClient = function(){ return { from: function(t){ return {
+      insert: function(r){ window.__ins.push({t:t, r:r}); return Promise.resolve({}); },
+      update: function(r){ window.__ins.push({t:t, r:r}); return { eq: function(){ return Promise.resolve({}); } }; } }; } }; };
+    return true; });
+  const c5a = await actAsk('홍길동 통화했어 다음 주 증권 보기로');
+  const HD = await f.evaluate(() => { const c = [].slice.call(document.querySelectorAll('#jLog .msg.j')).pop(); const bub = c && c.querySelector('.bub');
+    return { head: bub && bub.firstChild ? bub.firstChild.textContent : '', wait: /읽는 중/.test(c ? c.textContent : '') }; });
+  is(/^「고객 연락 기록 남기기」/.test(HD.head) && !HD.wait, '답의 머리가 <b>시키신 일</b>을 말한다(찾은 것의 머리가 덮지 않음) · 「읽는 중」 안 섬 — 「' + HD.head + '」');
+  const c5 = await actPress('.ja-ok');
+  const TC = await p.evaluate(() => (cmOf('c0').touch || [])[0] || {});
+  is(/홍길동님/.test(c5a) && /✅/.test(c5) && /전화 기록을 남겼습니다/.test(c5) && TC.how === '전화' && TC.note === '다음 주 증권 보기로',
+     '「홍길동 통화했어 다음 주 증권 보기로」 → 확인에 <b>홍길동님</b> · 고객 365일에 전화 기록 · 들은 말까지');
+  await actAsk('홍길동님 만나고 왔어');
+  await actPress('.ja-ok');
+  is((await p.evaluate(() => (cmOf('c0').touch || [])[0].how)) === '만남', '「만나고 왔어」 는 <b>만남</b>으로 적는다');
+  /* ④ 다음 할 일 — 날짜까지 */
+  const TM = await p.evaluate(() => { const d = new Date(cmToday() + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); });
+  await actAsk('홍길동 다음 할 일 내일 증권 전달');
+  const c6 = await actPress('.ja-ok');
+  const NX = await p.evaluate(() => cmNextAll('c0').map(x => x.what + '@' + x.due));
+  is(NX.indexOf('증권 전달@' + TM) >= 0 && /✅/.test(c6), '「홍길동 다음 할 일 내일 증권 전달」 → 다음 할 일 <b>증권 전달 · ' + TM + '</b>');
+  const DU = await p.evaluate(() => [vaDueOf('증권 전달'), vaDueOf('3일 뒤 전화'), vaDueOf('모레 방문')]);
+  is(DU[0].due === '' && DU[0].rest === '증권 전달' && /^\d{4}-\d{2}-\d{2}$/.test(DU[1].due) && DU[1].rest === '전화' && DU[2].rest === '방문',
+     '날짜를 말 안 하면 <b>지어 넣지 않는다</b> · 「3일 뒤」 · 「모레」 를 읽는다');
+  const c6b = await actAsk('홍길동 다음 할 일 증권 전달');
+  const c6c = await actPress('.ja-ok');
+  is(/오늘로 잡았습니다/.test(c6c) || /이미 그 날에 잡혀/.test(c6c), '날짜가 없으면 「오늘로 잡았습니다」 라고 <b>밝힌다</b>');
+  /* ⑤ 두 분이 걸리면 단추를 안 세우고 되묻는다 */
+  await p.evaluate(() => { OSC.list.push({id:'c2', name_masked:'홍○○', advisor_id:'me', created_at:'2026-08-03'}); cmRealSet('c2', '홍길순'); });
+  const c7 = await actAsk('홍길 통화했어');
+  const okBtn = await f.evaluate(() => !!document.querySelector('#jLog .j-act .ja-ok'));
+  const c7b = await actPress('.ja-put', '홍길순');
+  is(/2분이 걸립니다/.test(c7) && !okBtn && /홍길순님/.test(c7b), '「홍길」 → 두 분이 걸리면 <b>확인 단추 없이 되묻고</b>, 이름을 적으면 그분으로');
+  await p.evaluate(() => { OSC.list = OSC.list.filter(c => c.id !== 'c2'); });
+  /* ⑥ 전화 — 걸지 않고 걸 단추만 · 저장 0 */
+  /* 저장은 고객 표(saved_reports)만 셉니다 — 물음 기록(suggestions)은 저장이 아닙니다 */
+  const n0 = await p.evaluate(() => window.__ins.filter(x => x.t === 'saved_reports').length);
+  await actAsk('성춘향한테 전화해줘');
+  const TEL = await f.evaluate(() => { const a = document.querySelector('#jLog .j-act a.ja-tel'); return { href: a ? a.getAttribute('href') : '', ok: !!document.querySelector('#jLog .j-act .ja-ok') }; });
+  is(TEL.href === 'tel:01099990000' && !TEL.ok && (await p.evaluate(() => window.__ins.filter(x => x.t === 'saved_reports').length)) === n0,
+     '「성춘향한테 전화해줘」 → <b>📞 걸기 단추</b>만 (누르는 것은 사람) · 저장 0');
+  /* ⑦ 위험한 숫자는 안 담는다 */
+  const h0 = await p.evaluate(() => (HELP.list || []).length);
+  await actAsk('도와줄 것 01012345678 확인');
+  const c8 = await actPress('.ja-ok');
+  is(/숫자가 길게/.test(c8) && (await p.evaluate(() => (HELP.list || []).length)) === h0, '전화번호 같은 긴 숫자는 <b>안 담는다</b>(vaRisky 그대로)');
+  /* ⑧ 회사 표에 남는 물음도 가린다 */
+  const LG = await p.evaluate(() => window.__ins.filter(x => x.t === 'suggestions').map(x => x.r.title));
+  is(LG.length > 0 && LG.every(t => t.indexOf('홍길동') < 0 && t.indexOf('성춘향') < 0), '회사 표(jarvis_q)에 남는 물음은 고객 이름을 가린다 — ' + LG.slice(-2).join(' · '));
+  await p.evaluate(() => { window.osClient = window.__keepC; });
+  /* ⑨ 열어 달라면 연다 — 자비스는 아래 띠로.
+     ★ 열린 화면(체크판 · 두뇌)이 <b>제 자료를 읽는 것</b>은 그 화면의 몫이라 [8] 의 「바깥 주소 0」 에서 뺍니다 */
+  const OUT0 = outside.length;
+  await actAsk('체크판 열어');
+  await p.waitForTimeout(500);
+  const OP = await p.evaluate(() => ({ tab: currentTab(), dock: document.body.classList.contains('jv-dock') }));
+  is(OP.tab === 'ckboard' && OP.dock, '「체크판 열어」 → 실행 체크판이 열리고 자비스는 아래 띠로');
+  await p.evaluate(() => { jvDockEnd(); go('apexmap'); });
+  await p.waitForTimeout(500);
+  /* ⑩ 자료 만들기 — AI 를 쓰므로 누르셔야 */
+  await p.evaluate(() => { window.__brain = 0; window.__keepB = window.brainAsk; window.brainAsk = function(){ window.__brain++; }; });
+  const c9 = await actAsk('40대 가장 상담 자료 만들어줘');
+  const b0 = await p.evaluate(() => window.__brain);
+  await actPress('.ja-ok'); await p.waitForTimeout(600);
+  const B1 = await p.evaluate(() => ({ n: window.__brain, tab: currentTab(), dock: document.body.classList.contains('jv-dock') }));
+  is(/이대로 할까요/.test(c9) && b0 === 0 && B1.n === 1 && B1.tab === 'brain' && B1.dock,
+     '「자료 만들어줘」 → 누르기 전엔 AI 0번 · 누르면 두뇌에게 한 번 · 자비스는 띠로 남는다');
+  await p.evaluate(() => { window.brainAsk = window.__keepB; jvDockEnd(); go('apexmap'); });
+  await p.waitForTimeout(500);
+  outside.splice(OUT0);
+  /* ⑪ 시킨 일에는 AI 를 안 부른다 · 음성 비서도 새 일을 안다 */
+  const NA = await f.evaluate(async () => {
+    LS.set('map_engine', 'gemini'); LS.set('gproxy', '/api/gemini');
+    let n = 0; const keep = window.fetch; window.fetch = function(){ n++; return keep.apply(this, arguments); };
+    jLog.innerHTML = ''; ask('전화 체크해줘'); await new Promise(r => setTimeout(r, 300));
+    window.fetch = keep; LS.del('gproxy'); LS.del('map_engine');
+    const P = window.parent;
+    return { n, voice: ['홍길동 통화했어', '홍길동 전화 걸어줘', '홍길동 다음 할 일 내일 증권 전달'].map(t => (P.vaActHit(t, P.vaNorm(t)) || {a:{}}).a.k) };
+  });
+  is(NA.n === 0, '시키신 일에는 AI 를 안 부른다 — 앱이 알아들었다');
+  const HL = await f.evaluate(() => ({ h: jvHello().answer, n: jvActCount(), all: window.parent.VA_ACT.length }));
+  is(HL.n > 0 && HL.n === HL.all - 2 && HL.h.indexOf('일 ' + HL.n + '가지') >= 0, '첫 인사가 시킬 수 있는 일 수를 <b>사전을 세어</b> 말한다 — ' + HL.n + '가지');
+  is(NA.voice.join(',') === '연락기록,전화걸기,고객할일', '🎙️ 음성 비서도 같은 사전으로 새 일을 알아듣는다 — ' + NA.voice.join(','));
+
   sec('[8] 🧼 꺾쇠 0 · 콘솔 오류 0 · 바깥 주소 0');
   const tags = [C1, K1, T1, Z1, Z4, Z7].filter(x => /&lt;\/?[a-z]/i.test(x.html)).length;
   is(tags === 0, '답에 꺾쇠가 글자로 찍히지 않는다');
