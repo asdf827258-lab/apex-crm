@@ -96,8 +96,16 @@ const SEED = () => {
        읽으면 안 됩니다(check-netblock). 글은 <b>견본</b>이라고 밝힙니다:
        지어낸 기사를 진짜처럼 적지 않습니다 (1번 · 9번).
      ★ 두 줄로 접히는 길이로 둡니다 — 라이브의 제목도 두 줄(42px)입니다.  */
-  try{ NLIVE.items = [{ t:'견본 기사 — 홍길동생명이 보험료 조정을 알렸습니다 (점검용 견본입니다)',
-                        u:'https://example.com/견본', src:'견본통신', cat:'insurance', d:'2026-09-15' }];
+  /* ★ <b>셋</b>을 심습니다 (판 X259) — 사장님께서 「펴면 여러 건 목록」 을
+     고르셔서, 목록이 서는지 재려면 고를 것이 둘 이상 있어야 합니다.
+     한 건만 있으면 앱이 「이 한 건뿐입니다」 라고 적는 것이 맞습니다.    */
+  try{ NLIVE.items = [
+      { t:'견본 기사 — 홍길동생명이 보험료 조정을 알렸습니다 (점검용 견본입니다)',
+        u:'https://example.com/견본1', s:'견본통신', d:'2026-09-15' },
+      { t:'견본 기사 둘 — 홍길순님 동네에 요양 등급 신청이 늘었습니다 (점검용 견본)',
+        u:'https://example.com/견본2', s:'견본일보', d:'2026-09-14' },
+      { t:'견본 기사 셋 — 홍길중님 또래의 노후 준비 설문 (점검용 견본입니다)',
+        u:'https://example.com/견본3', s:'견본경제', d:'2026-09-13' }];
        NLIVE.loaded = true; NLIVE.cat = 'all'; NLIVE.age = 'all'; }catch(e){}
   go('home');
 };
@@ -766,6 +774,78 @@ const SEED = () => {
          '  ★ 펴면 <b>셋이 다 있다</b> — 💬 보낼 문구 복사 · 원문 ↗ · 🗂 칸·연령대 고르개' +
          ((폄.복사 && 폄.원문 && 폄.고르개) ? '' :
            (' ← 복사 ' + 폄.복사 + ' · 원문 ' + 폄.원문 + ' · 고르개 ' + 폄.고르개)));
+      /* ══ 📋 <b>판 X259 — 펴면 여러 건 목록</b> ═══════════════════════
+         사장님 말씀 (2026-10-30) 「<b>소식칸은 조금 더 다양하게 보일수
+         있도록</b>」 → 여쭈니 「<b>펴면 여러 건 목록</b>」 을 고르심.
+         ⚠ 여태 홈은 하루에 <b>한 건</b>만 보여 드렸습니다.
+         ★ 묻는 것 넷 — ⓐ 목록이 선다(줄이 둘 이상) ⓑ 줄마다 <b>44px 위</b>
+           (판 X146·X147) ⓒ <b>오늘 것이 표시된다</b>(색만으로 가르지 않고
+           「오늘 이것」 글로도) ⓓ <b>골라 누르면 그 기사로 바뀐다</b> —
+           이것이 사장님이 고르신 바로 그 쓸모입니다.                    */
+      const 목 = await PH.evaluate(() => {
+        const L = [].slice.call(document.querySelectorAll('.hm-nw-li'));
+        return { 줄: L.length,
+          키최소: L.length ? Math.min.apply(null, L.map(e => Math.round(e.getBoundingClientRect().height))) : -1,
+          켜짐: L.filter(e => e.classList.contains('on')).length,
+          오늘글: L.filter(e => /오늘 이것/.test(e.innerText || '')).length,
+          머리: ((document.querySelector('.hm-nw-lh') || {}).innerText || '').replace(/\s+/g, ' ').trim() };
+      });
+      is(목.줄 >= 2, '  ★★ 펴면 <b>여러 건 목록</b>이 선다 — ' + 목.줄 +
+         '줄 「' + 목.머리.slice(0, 34) + '」');
+      is(목.줄 >= 2 && 목.키최소 >= 44,
+         '  ★ 목록 줄이 <b>' + 목.키최소 + 'px 위</b>다 — 손가락 바닥 44px (판 X146·X147)');
+      is(목.켜짐 === 1 && 목.오늘글 === 1,
+         '  ★★ <b>오늘 것이 표시된다</b> — 테두리 ' + 목.켜짐 + '줄 · 「오늘 이것」 글 ' +
+         목.오늘글 + '줄 (색만으로 가르지 않습니다)');
+      /* ⓓ <b>눌러서 바뀌나</b> — 접기와 달리 이것은 눌러 봐야 압니다 */
+      const 전 = await PH.evaluate(() =>
+        ((document.querySelector('.hm-nw-ti') || {}).innerText || '').trim());
+      await PH.evaluate(() => {
+        const L = [].slice.call(document.querySelectorAll('.hm-nw-li'));
+        const 다른 = L.filter(e => !e.classList.contains('on'))[0];
+        if (다른) 다른.click();
+      });
+      await PH.waitForTimeout(600);
+      const 후 = await PH.evaluate(() => ({
+        제목: ((document.querySelector('.hm-nw-ti') || {}).innerText || '').trim(),
+        꼬리: ((document.querySelector('#hmFold_nw .hm-fold-h .t span') || {}).textContent || '').trim() }));
+      is(!!전 && !!후.제목 && 전 !== 후.제목,
+         '  ★★ <b>골라 누르면 그 기사로 바뀐다</b> — 「' + 전.slice(0, 16) + '…」 → 「' +
+         후.제목.slice(0, 16) + '…」');
+      /* ★ <b>머리 꼬리도 같이</b> 바뀌어야 합니다 — 안 바뀌면 접었을 때
+         <b>옛 기사 제목</b>이 그대로 남아 거짓말합니다 (1번 · 5번).      */
+      is(!!후.꼬리 && 후.꼬리.indexOf(후.제목.slice(0, 10)) >= 0,
+         '  ★★ <b>접힌 머리 꼬리도 같이</b> 바뀐다 — 「' + 후.꼬리.slice(0, 22) +
+         '…」 (안 바뀌면 접었을 때 옛 제목이 남습니다)');
+      /* ══ 🔁 <b>바뀌었을 때 다시 그리는 길이 둘로 갈리지 않는가</b> (판 X259 · 5번) ══
+         ⚠⚠ <b>위 두 줄은 제가 넣은 줄을 지켜 주지 못합니다.</b> 되돌려 보니
+           hmNwUse 에서 hmIgRepaint() 를 빼도 <b>초록이었습니다</b> — 홈에는
+           제 화면을 다시 그리는 자리가 <b>따로 셋</b> 있어(nlAuto·nlPaint·
+           snsPaint) 그중 하나가 빠진 줄을 덮어 줍니다. 그래서 위 둘은
+           「사장님 눈에 바뀌나」 만 말하고 <b>제가 넣은 줄이 살아 있나</b> 는
+           못 말합니다 (8번 「안 울리는 알람은 알람이 아니다」).
+         ⚠ <b>그래서 처음에 「다시 그리는 줄이 파일에 한 번만 있나」 로
+           물었다가 걷어냈습니다</b> — 그 넷은 쌍둥이가 아니라 <b>저마다 다른
+           때</b>(소식을 받아 왔을 때 · 📰 화면 · 📸 화면)에 제 화면을 그리는
+           자리입니다. 그것을 「두 벌」 이라 부르면 <b>헛 빨간불</b>이고,
+           헛것은 안 잡는 것보다 나쁩니다 (8번).
+         ★ 시간으로도 재지 않습니다 — 「150ms 안에 바뀌나」 는 <b>기계를 타는
+           자</b>라 느린 CI 에서 헛 빨간불이 켜집니다 (8번).
+         ★ <b>참인 것만 묻습니다</b> — 기사를 바꾸는 길은 둘(「다른 기사로 ↻」 ·
+           목록에서 고르기)이고, 그 둘이 <b>같은 그리는 자</b>를 부르는가.
+           이것이 5번이 막으려는 바로 그 어긋남입니다(한쪽만 고쳐져 「↻」 는
+           바뀌는데 목록에서 고르면 안 바뀌는 꼴). 되돌리면 웁니다.      */
+      {
+        const 글 = require('fs').readFileSync('app/index.html', 'utf8');
+        const 몸 = (nm) => { const i = 글.indexOf('function ' + nm + '('); if (i < 0) return '';
+          return 글.slice(i, i + 1400); };
+        const next부름 = /hmIgRepaint\(\)/.test(몸('hmIgNext'));
+        const use부름 = /hmIgRepaint\(\)/.test(몸('hmNwUse'));
+        is(next부름 && use부름,
+           '  ★★ 기사를 바꾸는 <b>두 길이 같은 그리는 자를 부른다</b> — ' +
+           '「다른 기사로 ↻」 ' + (next부름 ? '✓' : '✗') +
+           ' · 목록에서 고르기 ' + (use부름 ? '✓' : '✗'));
+      }
       /* 본 대로 되돌려 둡니다 — 뒤에 오는 줄이 접힌 채를 잽니다 */
       await PH.evaluate(() => {
         var h = document.querySelector('#hmFold_nw>.hm-fold-h'); if (h) h.click();
