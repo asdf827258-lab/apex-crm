@@ -34,7 +34,28 @@ const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 const ROOT = process.cwd(), PORT = 8983;
 const UICSS = fs.readFileSync(path.join(ROOT, 'app/ui.css'), 'utf8');
-const SRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+/* ★★ 2026-10-30 (판 X262) — <b>판 안내글(APP_BUILD_NOTE)은 빼고 셉니다.</b>
+   오늘 이 자가 저를 물었습니다: --t-bg-b 로 보낸 까닭을 <b>쪽지에 색 값으로</b>
+   적었더니 「있어도 되는 것 7군데」 가 8군데가 되어 빨간불이 켜졌습니다.
+   ⚠ 이 자의 머리에는 이미 같은 일이 적혀 있었습니다 — 「이름으로 바꾸고도 또
+     걸렸는데, <b>날값을 주석에 적어 둔 것까지 세기 때문</b>이었습니다」.
+     그때는 주석에서 값을 뺐지만, <b>자를 고치지는 않았습니다.</b> 그래서 오늘
+     같은 자리에서 또 데었습니다 — <b>적어 두기만 한 규칙은 알람이 아닙니다</b>(8번).
+   ★ check-onepal 이 먼저 이렇게 고쳐 두었습니다(「색을 쓰는 것과 색을 글로 적는
+     것은 다릅니다」). <b>같은 뜻을 두 자가 다르게 보고 있었습니다</b> — 맞췄습니다 (5번).
+   ⚠ 주석 전체는 안 걷어 냅니다 — 이 자는 <b>주석에 적어 둔 옛 남색 값을 일부러
+     세는 자리</b>가 있습니다(아래 note — 주석으로 남긴 #4F46E5 를 셉니다).
+     쪽지 한 줄만 뺍니다.
+     ⚠⚠ 이 쪽지를 쓰다가 <b>주석 닫는 기호를 글 안에 적어</b> 이 파일을 한 번
+       깨뜨렸습니다. 주석 안에 그 두 글자를 적지 마십시오.
+   ★ 되돌려 확인했습니다 — 쪽지에 그 값을 도로 적어도 이제 7군데 그대로(초록),
+     <b>이 한 줄을 빼면 8군데로 빨간불</b>입니다.
+     ⚠ 그 되돌림을 <b>처음에는 잘못 쟀습니다</b> — 줄을 지우는 스크립트가 글자를
+       못 맞춰 <b>아무것도 안 지우고</b> 초록을 냈는데, 하마터면 「빼면 울린다」 를
+       그 초록으로 적을 뻔했습니다. 줄을 <b>줄 번호로</b> 지워 다시 재니 울렸습니다.
+       <b>되돌림이 정말 되돌아갔는지부터 보십시오</b> (8번).                              */
+const SRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8')
+  .replace(/var APP_BUILD_NOTE=[\s\S]*?;\n/, ' ');
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
                '.css': 'text/css; charset=utf-8', '.json': 'application/json' };
 const srv = http.createServer((rq, rs) => {
