@@ -1,4 +1,4 @@
-/* 🔎 <b>자비스가 길이 아니라 그 안의 값을 찾아 내놓는가</b> (판 X266)
+/* 🔎 <b>자비스가 길이 아니라 그 안의 값을 찾아 내놓는가</b> (판 X270)
 
    사장님 말씀 2026-10-30 — 「apex자비스 모드에서 가야할길을 알려주는게 아니라
    여기에 있는 내용을 찾아서 내보내서 결과 값을 보여줄수 있게 만들어보자」.
@@ -74,7 +74,7 @@ const SEED = () => {
 };
 
 (async () => {
-  console.log('자비스 — 길이 아니라 그 안의 값을 찾아 내놓는가 (판 X266)');
+  console.log('자비스 — 길이 아니라 그 안의 값을 찾아 내놓는가 (판 X270)');
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
