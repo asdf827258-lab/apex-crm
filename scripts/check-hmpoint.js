@@ -314,7 +314,7 @@ const SEED = () => {
      3,573 → <b>2,780px</b> 가 되었습니다. 줄였으면 눈금도 같이 내립니다
      (0-1번). 임자는 <b>check-homeone 의 HOME_SCR</b> 입니다. */
   /* ⬇ 판 X255 · 3.8 → 3.65 — 이 씨의 세 토막 뺀 홈이 2,693px 입니다 (0-1번) */
-  const 선화면 = 3.65;
+  const 선화면 = 3.56;
   const 선 = Math.round(844 * 선화면);
   const 남은 = 선 - D.홈뺌;
   console.log('  · 🎯+🤝 칩 둘 ' + (D.sub넣음 - D.sub뺌) + 'px · 🚗 묶이는 동네 ' +

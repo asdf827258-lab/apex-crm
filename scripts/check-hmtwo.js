@@ -557,6 +557,23 @@ const SEED = () => {
                return c ? Math.round(c.getBoundingClientRect().height) : -1; })(),
              소식: (function(){ var n=document.querySelector('.hm-nw');
                return n ? Math.round(n.getBoundingClientRect().height) : -1; })(),
+             /* 판 X258 — 📰 소식 접이. <b>보임</b>은 display 까지 봅니다 —
+                키만 보면 감춘 것을 「있다」 고 셉니다 (1번).              */
+             접소식: (function(){
+               var f=document.getElementById('hmFold_nw');
+               if(!f) return { 있다:false };
+               var hd=f.querySelector('.hm-fold-h'),
+                   sb=f.querySelector('.hm-fold-h .t span'),
+                   ti=document.querySelector('.hm-nw-ti');
+               var 봄=function(e){ if(!e) return false;
+                 var r=e.getBoundingClientRect();
+                 return r.height>0 && getComputedStyle(e).display!=='none'; };
+               return { 있다:true, 접힘:!f.classList.contains('on'),
+                 접이키:Math.round(f.getBoundingClientRect().height),
+                 머리키:hd?Math.round(hd.getBoundingClientRect().height):-1,
+                 꼬리보임:봄(sb), 제목보임:봄(ti),
+                 꼬리글:sb?(sb.textContent||''):'', 제목글:ti?(ti.innerText||''):'' };
+             })(),
              넷: 넷, 위칸: !!up, 오른빔: !!(R.textContent || '').trim() === false,
              오른글: (R.textContent || '').trim().length,
              rt: document.querySelectorAll('#hmRtHost').length,
@@ -698,6 +715,63 @@ const SEED = () => {
     is(!one.no && one.소식 > 0,
        '  ★ 📰 <b>오늘 보낼 소식 칸이 선다</b> — ' + one.소식 +
        'px (씨로 심은 견본 한 건 · 라이브와 같은 꼴로 잽니다)');
+    /* ══ 🧷 <b>판 X258 — 📰 소식이 폰에서 접히나</b> ═══════════════════
+       사장님 말씀 「<b>접이로 — 머리만 두고 접기</b>」. 여쭈어 고르신 자리라
+       <b>고르신 그대로인지</b> 묻습니다.
+       ★ 묻는 것 넷 — ⓐ 접힌 채로 온다 ⓑ 머리가 <b>손가락 바닥 44px</b> 위다
+         ⓒ 접힌 채로도 <b>오늘 기사 제목</b>이 보인다(판 X249 에서 배운 것 —
+         접었는데 아무것도 안 보이면 접기가 아니라 방해입니다) ⓓ <b>제목이
+         두 곳에 안 찍힌다</b>(접히면 안쪽 제목이 숨고, 펴면 꼬리가 숨습니다 ·
+         5번). ★ 그리고 <b>눌러서 펴지나</b> — 접기의 값은 펴지는 데 있습니다. */
+    if (!one.no) {
+      is(one.접소식 && one.접소식.있다 && one.접소식.접힘,
+         '  ★★ 📰 소식이 <b>접힌 채로</b> 온다 — ' +
+         (one.접소식 && one.접소식.있다 ? ('접이 ' + one.접소식.접이키 + 'px') : '← 접이가 없습니다'));
+      is(one.접소식 && one.접소식.머리키 >= 44,
+         '  ★ 접힌 머리가 <b>' + (((one.접소식 || {}).머리키 > 0)
+            ? ((one.접소식.머리키) + 'px') : '(못 셌습니다)') +
+         '</b> — 손가락 바닥 44px 위다 (판 X146·X147)');
+      is(one.접소식 && one.접소식.꼬리보임 && one.접소식.꼬리글 &&
+         one.접소식.꼬리글.indexOf(one.접소식.제목글.slice(0, 10)) >= 0,
+         '  ★★ 접힌 채로도 <b>오늘 기사 제목</b>이 보인다 — 「' +
+         (((one.접소식 || {}).꼬리글 || '(없음)').slice(0, 26)) + '…」');
+      is(one.접소식 && one.접소식.꼬리보임 && !one.접소식.제목보임,
+         '  ★★ 그래도 <b>제목이 두 곳에 안 찍힌다</b> — 접히면 안쪽 제목은 숨는다 (5번)');
+    }
+    /* ★★ <b>눌러서 펴지나</b> — 접기의 값은 펴지는 데 있습니다 (6번).
+       그리고 <b>펴진 때도</b> 제목이 한 곳에만 찍히는지 봅니다 — 접힌 때만
+       보면 꼬리를 감추는 줄을 빼도 자가 안 웁니다 (8번 「되돌려 확인」). */
+    if (!one.no && one.접소식 && one.접소식.있다) {
+      await PH.evaluate(() => {
+        var h = document.querySelector('#hmFold_nw>.hm-fold-h'); if (h) h.click();
+      });
+      await PH.waitForTimeout(450);
+      const 폄 = await PH.evaluate(() => {
+        const f = document.getElementById('hmFold_nw');
+        const sb = f && f.querySelector('.hm-fold-h .t span');
+        const ti = document.querySelector('.hm-nw-ti');
+        const 봄 = e => { if (!e) return false;
+          const r = e.getBoundingClientRect();
+          return r.height > 0 && getComputedStyle(e).display !== 'none'; };
+        return { 폄: !!(f && f.classList.contains('on')), 꼬리보임: 봄(sb), 제목보임: 봄(ti),
+          복사: !!document.querySelector('.hm-nw [onclick^="nlCopy"]'),
+          원문: !!document.querySelector('.hm-nw a[href^="http"]'),
+          고르개: !!document.querySelector('.hm-nw [onclick^="hmNwPickToggle"]') };
+      });
+      is(폄.폄 && 폄.제목보임,
+         '  ★★ <b>눌러서 펴진다</b> — 안에 제목이 제 줄로 선다 (글은 한 자도 안 없앴습니다 · 6번)');
+      is(폄.폄 && !폄.꼬리보임,
+         '  ★★ 펴면 <b>머리 꼬리를 감춘다</b> — 같은 제목이 두 곳에 안 찍힌다 (5번)');
+      is(폄.복사 && 폄.원문 && 폄.고르개,
+         '  ★ 펴면 <b>셋이 다 있다</b> — 💬 보낼 문구 복사 · 원문 ↗ · 🗂 칸·연령대 고르개' +
+         ((폄.복사 && 폄.원문 && 폄.고르개) ? '' :
+           (' ← 복사 ' + 폄.복사 + ' · 원문 ' + 폄.원문 + ' · 고르개 ' + 폄.고르개)));
+      /* 본 대로 되돌려 둡니다 — 뒤에 오는 줄이 접힌 채를 잽니다 */
+      await PH.evaluate(() => {
+        var h = document.querySelector('#hmFold_nw>.hm-fold-h'); if (h) h.click();
+      });
+      await PH.waitForTimeout(300);
+    }
   }
   /* ══ 2026-10-26 (판 X217) · <b>사장님이 맨 위 묶음을 넷으로 늘리셨습니다</b> ══
      말씀 — 「오늘 약속 <b>캘린더 이번주</b> / 오늘어디로가시나 / 이번달 고객관리

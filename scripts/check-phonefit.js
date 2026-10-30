@@ -409,7 +409,7 @@ const BASE = {
      <b>check-homeone 의 HOME_SCR</b> 이고 여기는 같은 수입니다 (5번). */
   /* ⬇ 판 X255 · 3.8 → 3.65 — 카드를 조여 2,950px(3.50화면). 임자는
      check-homeone 의 HOME_SCR 이고 여기는 같은 수입니다 (5번·0-1번). */
-  home:    { tiny: 0, size: 13, small: 2, screens: 3.65 },   /* tiny 9→0 · 판 X230 · 위 ALL_BASE 쪽지 */
+  home:    { tiny: 0, size: 13, small: 2, screens: 3.56 },   /* tiny 9→0 · 판 X230 · 위 ALL_BASE 쪽지 */
   /* 2026-09-21 · 2.5 → <b>2.4</b>. 「고객 체크」 칸을 늘리면서 2.6 이 되어
      여기가 잡았고, 기준을 올리는 대신 <b>내 코칭 · 본인 점검란</b>을 왼쪽에서
      뺐습니다(둘 다 ☰ 서랍에 그대로 있습니다). 그래서 오히려 짧아졌습니다 —
