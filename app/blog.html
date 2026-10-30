@@ -697,7 +697,8 @@ function userPrompt(row){
     '· <b>추상어를 쓰지 않는다</b> — 「체계적으로」 「전문적으로」 「최적의」 는 아무 뜻이 없다. 무엇을 어떻게 하는지로 바꿔 쓴다.\n'+
     '\n<b>비교표를 반드시 하나</b> 넣는다(마크다운 표) — 그 표는 그림 카드로도 뽑는다. 칸은 두셋, 줄은 넷 이내로 짧게 쓴다.\n'+
     '<b>「> 」 로 시작하는 강조 한 줄을 반드시 하나</b> 넣는다 — 그 줄이 캡처해 가는 카드가 된다. 10~90자로, 그 글에서 가장 남길 만한 말로 쓴다.\n'+
-    '[쓸 수 있는 그림] 중에서 골라 [이미지: 그림 이름 | alt: 대체텍스트] 자리표시를 본문에 넣는다.\n'+
+    '[쓸 수 있는 그림] 에 적힌 <b>그림마다 하나씩, 빠짐없이</b> [이미지: 그림 이름 | alt: 대체텍스트] 자리표시를 본문에 넣는다. '+
+    '하나라도 빠뜨리면 우리가 만들어 둔 그 카드는 <b>글에 못 들어간다</b> — 자리가 없으면 넣을 데가 없다.\n'+
     '## 해시태그\n10개(대형+롱테일)\n## 메타 설명\n2줄\n## 이 글이 딛고 선 것\n위 [근거] 를 그대로 옮겨 적는다.\n\n'+
     '길이가 모자라 끊기더라도 마지막 「## 이 글이 딛고 선 것」 까지 반드시 끝맺는다.';
 }
@@ -723,7 +724,7 @@ function autoNeed(t){
 async function autoClean(row, rounds){
   const fixed=[];
   for(let k=0;k<(rounds||2);k++){
-    const g=guard(row.out,row.kind);
+    const g=guard(row.out,row.kind,row);
     if(!g.hits.length) break;
     const seen={}, list=[];
     g.hits.forEach(h=>{ if(!seen[h.w]){ seen[h.w]=1; list.push(h); } });
@@ -751,7 +752,7 @@ async function draft(i){
     const fixed=await autoClean(row);
     const nd=autoNeed(row.out); row.out=nd.out;
     row.auto={ added:nd.added, fixed };
-    row.guard=guard(row.out,row.kind);
+    row.guard=guard(row.out,row.kind,row);
     S.busy=-1; save(); paint(); show(i);
   }catch(e){ S.busy=-1; paint(); toast('만들지 못했습니다 — '+(e.message||'네트워크 오류')); }
 }
@@ -784,7 +785,24 @@ function artMissing(t,kind){
   const have=(KINDS[kind]?KINDS[kind].art:[]).map(a=>ART[a].t.replace(/\s+/g,''));
   return artAsked(t).filter(a=>!have.some(b=>a.includes(b)||b.includes(a)));
 }
-function guard(t,kind){
+/* 만들 수 있는데 <b>글에 자리가 없는</b> 카드 — 말없이 빠진다.
+   게이트는 여태 <b>반대쪽만</b> 봤다(자리는 있는데 우리가 못 그리는 그림).
+   실제로 돌려 보니 「질문 카드」 를 만들어 놓고 초안에 자리가 없어
+   일곱 장 중 <b>여섯 장만</b> 나갔다. 파란 칸도 안 남아 아무도 못 알아챘다.
+   <b>막지는 않는다</b> — 심의 문제가 아니라 빠뜨림이라, 대신 또렷이 말한다 (6번).
+   이름 맞추는 자는 artMissing 과 <b>같다</b>. */
+function artOrphan(t,kind,row){
+  if(!kind||!row||typeof build!=='function'||typeof KINDS==='undefined') return [];
+  const asked=artAsked(t), list=(KINDS[kind]?KINDS[kind].art:[]);
+  return list.filter(id=>{
+    if(!ART[id]) return false;
+    const nm=ART[id].t.replace(/\s+/g,'');
+    if(asked.some(a=>a.includes(nm)||nm.includes(a))) return false;   /* 자리가 있다 */
+    let r; try{ r=build(id,row); }catch(e){ return false; }
+    return !(!r||r.err);                                             /* 만들 수 있는 것만 */
+  }).map(id=>ART[id].t);
+}
+function guard(t,kind,row){
   const hits=[];
   BAN.forEach(b=>{ b.re.lastIndex=0; let m; while((m=b.re.exec(t))) hits.push({w:m[0],why:b.why}); });
   names(t).forEach(n=>hits.push({w:n,why:'사람 이름처럼 보입니다 — 실명은 나가면 안 됩니다'}));
@@ -792,7 +810,9 @@ function guard(t,kind){
   const noart=kind?artMissing(t,kind):[];
   noart.forEach(n=>miss.push('「'+n+'」 는 우리가 그릴 수 있는 그림이 아닙니다 — 목록의 그림으로 바꾸거나 그 자리를 지우세요'));
   const holes=t.match(/\[\[확인\s*필요[^\]]*\]\]/g)||[];
-  return { hits, miss, holes, noart, ok:!hits.length&&!miss.length&&!holes.length };
+  /* 빠뜨린 카드는 ok 를 깎지 않는다 — 올릴 수는 있어야 하고, 다만 알고 올리셔야 한다 */
+  const orphan=artOrphan(t,kind,row);
+  return { hits, miss, holes, noart, orphan, ok:!hits.length&&!miss.length&&!holes.length };
 }
 </script>
 <script src="blog-art.js"></script>
@@ -805,11 +825,18 @@ function guard(t,kind){
    실제로 네이버에 붙여넣어 보고 나온 자리다. 이름 맞추는 자는 pickPng 하나를 그대로 쓴다. */
 function cutTaken(md,pngs){
   if(!pngs||typeof artSource!=='function') return md;
+  /* ★ 표는 <b>글자로도 남아야</b> 검색에 잡힌다 — 네이버는 그림 안의 글자를 못 읽는다.
+     그래서 표가 <b>하나뿐이면 그대로 둔다</b>(카드와 나란히 보인다). 둘 이상일 때만
+     카드가 떠 간 하나를 뺀다 — 같은 표를 두 번 읽히지 않으면서 글자는 남는다.
+     실제로 돌려 보니 표가 하나인 글에서 <b>글자로 남는 표가 0개</b>가 되었다.
+     강조 한 줄(> )은 그대로 뺀다 — 한 줄짜리라 바로 밑 카드와 겹쳐 보인다. */
+  const tbls=(typeof tableCount==='function')?tableCount(md):2;
   let out=md, m; const re=/^\[이미지\s*:\s*([^\]|]+)(?:\|[^\]]*)?\]$/gm;
   while((m=re.exec(md))){
     const nm=m[1].trim(); if(!pickPng(pngs,nm)) continue;
     for(const id in ART){
       const one={}; one[ART[id].t]=1; if(!pickPng(one,nm)) continue;
+      if(id==='table'&&tbls<2) continue;
       const b=artSource(id,md); if(b) out=out.replace(b,'');
     }
   }
@@ -1174,6 +1201,29 @@ function autoBox(row){
     a.added.map(x=>'<li><b>붙였습니다</b> — '+esc(x)+'</li>').join('')+
     '</ul><span style="opacity:.8">고친 자리는 본문에서 확인해 주세요. 게시 전 회사 준법감시(광고 심의)는 그대로 거칩니다.</span></div>';
 }
+/* 만든 카드 중 글에 자리가 없는 것을 <b>이름까지</b> 말한다.
+   「7장」 이라고만 적고 6장만 내보내면, 사장님은 다 들어간 줄 알고 올리십니다 (1번). */
+function orphanBox(i,g){
+  const o=(g&&g.orphan)||[]; if(!o.length) return '';
+  return '<div class="gate no" style="margin-top:-4px"><b>만든 카드 '+o.length+
+    '장이 글에 자리가 없습니다 — 이대로 올리면 그 카드는 안 들어갑니다.</b><ul>'+
+    o.map(t=>'<li>「<b>'+esc(t)+'</b>」 — 본문의 넣고 싶은 자리에 '+
+      '<code>[이미지: '+esc(t)+' | alt: 설명]</code> 을 적거나, '+
+      '<a onclick="orphanPut('+i+',\''+esc(t).replace(/'/g,"\\'")+'\')" '+
+      'style="cursor:pointer;text-decoration:underline">글 끝에 자리 넣기</a> 를 누르세요.</li>').join('')+
+    '</ul><span style="opacity:.8">막지는 않습니다 — 일부러 빼신 것일 수도 있어서, '+
+    '<b>알고 올리시라고</b> 적습니다.</span></div>';
+}
+/* 자리를 글 <b>맨 끝 본문</b>(해시태그 앞)에 넣는다 — 어디에 둘지는 사장님이 옮기십니다.
+   아무 데나 끼워 넣어 문단을 가르지 않는다. */
+function orphanPut(i,t){
+  const row=S.rows[i]; if(!row||!row.out) return;
+  const mark='\n\n[이미지: '+t+' | alt: '+t+']\n';
+  const at=row.out.search(/\n##\s*해시태그/);
+  row.out = at<0 ? (row.out+mark) : (row.out.slice(0,at)+mark+row.out.slice(at));
+  row.guard=guard(row.out,row.kind,row); save(); show(i);
+  toast('「'+t+'」 자리를 글 끝에 넣었습니다 — 본문에서 원하는 자리로 옮기세요');
+}
 function gateBox(g){
   if(!g) return '';
   if(g.ok) return '<div class="gate ok">✅ 1차 점검을 통과했습니다. 아래에서 <b>서식 있는 복사</b>와 <b>그림 내려받기</b>로 바로 올리시면 됩니다. 게시 전 회사 준법감시(광고 심의)는 그대로 거치세요.</div>';
@@ -1210,7 +1260,7 @@ function deskCopy(i,k){
 async function show(i){
   const row=S.rows[i]; if(!row||!row.out) return;
   await comply();          /* 아래 미리보기에도 준법 문구가 제대로 보이게 */
-  const d=KINDS[row.kind], g=row.guard||guard(row.out,row.kind);
+  const d=KINDS[row.kind], g=row.guard||guard(row.out,row.kind,row);
   const arts=d.art.map(id=>({id,d:ART[id],r:build(id,row)}));
   const okArts=arts.filter(a=>!a.r.err);
   $('view').innerHTML='<div class="card">'+
@@ -1218,6 +1268,7 @@ async function show(i){
     '<div class="desc">이 글이 딛고 선 것 — <b>'+esc(row.seed.src.split('\n')[0])+'</b></div>'+
     autoBox(row)+
     gateBox(g)+
+    orphanBox(i,g)+
     (S.complyMine ? '' :
       '<div class="gate no" style="margin-top:-4px"><b>글 끝에 붙는 준법 문구가 아직 기본값입니다.</b><ul>'+
       '<li>회사 문구가 아니라 <code>config/compliance.json</code> 의 견본입니다. '+
