@@ -504,6 +504,15 @@ const SEED = () => {
              pdfEnd: (() => { const e = document.getElementById('hmWkHost')
                            || document.querySelector('.hm-pdf');
                 return e ? y(e) + hh(e) : -1; })(),
+             /* 판 X250 — 「지금 할 것」 이 끝나는 자리 */
+             jobEnd: (() => { const e = document.getElementById('hmJobHost');
+                return e ? y(e) + hh(e) : -1; })(),
+             /* 활동 <b>뒤</b>에 선 것 — 내려간 셋이 그대로 있나 (6번) */
+             뒤: (() => { const t = document.querySelector('.tz'); if (!t) return [];
+                const L = [].slice.call(t.children),
+                      b2 = L.indexOf(document.getElementById('hmSideUp'));
+                return b2 < 0 ? [] : L.slice(b2 + 1, b2 + 4)
+                  .map(c => (c.id || (c.className || '').split(' ')[0] || c.tagName)); })(),
              사이: (() => { const t = document.querySelector('.tz'); if (!t) return [];
                 const L = [].slice.call(t.children), a = L.indexOf(document.getElementById('hmJobHost')),
                       b2 = L.indexOf(document.getElementById('hmSideUp'));
@@ -582,9 +591,21 @@ const SEED = () => {
      ★ 그리고 <b>사이에 무엇이 섰는지까지</b> 봅니다 — 전에는 px 만 재어
        <b>무엇이 끼어들었는지</b> 못 가렸습니다. 이제 둘(세 칸 · 📄)이
        아니면 그 자리에서 빨간불입니다. <b>느슨해진 데가 없습니다</b> (8번). */
-  is(!one.no && 첫넷 > 0 && one.pdfEnd > 0 && 첫넷 >= one.pdfEnd - 8 && 첫넷 <= one.pdfEnd + 120,
-     '  ★★ 첫 칸이 <b>맨 위 묶음 바로 아래</b>다 — 📆 이번 주 끝 y' + one.pdfEnd +
-     ' · 첫 칸 y' + 첫넷 + ' (틈 120px 안 · 2026-10-06 사장님 「끌어올려」)');
+  /* ══ 🔲 <b>2026-10-30 (판 X250) — 사장님이 한 걸음 더 올리셨습니다</b> ══
+     말씀 — <b>「응 폰도 활동 먼저 올리고」</b>. 라이브를 재어 보여 드리니
+     (컴퓨터 첫 화면에는 활동 다섯이 다 서는데 폰에서는 y1,150 이라 한 번
+     내려야 보였습니다) <b>활동을 「지금 할 것」 바로 밑</b>으로 고르셨습니다.
+     ★ 재는 자리를 <b>📆 이번 주 끝 → 「지금 할 것」 끝</b>으로 옮기고
+       <b>틈 120px 은 그대로</b> 둡니다 — 「바로 아래」 의 뜻은 안 바뀝니다.
+     ★ 치르는 값(세 칸·📄·약속이 아래로 내려감)은 아래에서 <b>그대로</b>
+       봅니다 — 사라지면 빨간불입니다 (6번).                             */
+  is(!one.no && 첫넷 > 0 && one.jobEnd > 0 && 첫넷 >= one.jobEnd - 8 && 첫넷 <= one.jobEnd + 120,
+     '  ★★ 첫 칸이 <b>「지금 할 것」 바로 아래</b>다 — 카드 끝 y' + one.jobEnd +
+     ' · 첫 칸 y' + 첫넷 + ' (틈 120px 안 · 판 X250 사장님 「활동 먼저 올리고」)');
+  /* ★★ <b>폰 첫 화면에 활동이 보이나</b> — 이것이 판 X250 의 까닭입니다.
+     적어도 한 칸이 844px 안에 들어야 합니다. 안 들면 올린 뜻이 없습니다. */
+  is(!one.no && 첫넷 > 0 && 첫넷 < 844,
+     '  ★★ <b>폰 첫 화면에 활동이 보인다</b> — 첫 칸 y' + 첫넷 + ' (화면 844px)');
   /* ══ 2026-10-26 (판 X217) · <b>사장님이 맨 위 묶음을 넷으로 늘리셨습니다</b> ══
      말씀 — 「오늘 약속 <b>캘린더 이번주</b> / 오늘어디로가시나 / 이번달 고객관리
      이거 칸도 <b>다 맨 위로</b> 올려야지」. 그래서 카드 밑에 선 것이 둘에서
@@ -595,12 +616,20 @@ const SEED = () => {
        그 자리에서 빨간불입니다. 느슨해진 데가 없습니다 (8번).          */
   /* ⚠ 📅 약속과 📆 이번 주는 <b>한 자리(#hmUpHost)</b> 안에 함께 섭니다 —
      폰이냐 컴퓨터냐로 자리가 갈리므로 hmSidePlace 가 그 칸만 채웁니다 (5번). */
+  /* ⬆ <b>판 X250 — 셋이 활동 「뒤」 로 내려갔습니다</b> (사장님 말씀
+     「활동 먼저 올리고」). 그래서 묻는 것이 둘로 갈립니다 —
+     ① 카드와 활동 <b>사이에 아무것도 안 낀다</b>(바로 밑이라는 뜻),
+     ② 내려간 셋이 활동 <b>바로 뒤에 그대로</b> 있다(지운 것이 아니다 · 6번).
+     ★ 하나라도 사라지면 그 자리에서 빨간불입니다 — 느슨해진 데가 없습니다. */
+  is(!one.no && (one.사이 || []).length === 0,
+     '  ★★ 카드와 활동 <b>사이에 아무것도 안 낀다</b> — ' +
+     ((one.사이 || []).join(' · ') || '(없음)'));
   var 와야 = ['hm-two', 'hm-pdf', 'hmUpHost'];
-  var 선것 = (one.사이 || []).join(',');
-  is(!one.no && (one.사이 || []).length === 와야.length &&
+  var 선것 = (one.뒤 || []).join(',');
+  is(!one.no && (one.뒤 || []).length === 와야.length &&
      와야.every(function (k) { return 선것.indexOf(k) >= 0; }),
-     '  ★ 카드와 곁칸 <b>사이에 선 것이 셋뿐</b>이다 — ' +
-     ((one.사이 || []).join(' · ') || '(못 셌습니다)') +
+     '  ★ 활동 <b>바로 뒤에 셋이 그대로</b> 있다 — ' +
+     ((one.뒤 || []).join(' · ') || '(못 셌습니다)') +
      ' (판 X217 · 세 칸 · 📄 · 📅 약속+📆 이번 주 한 자리)');
   /* ★★ <b>두 자리에 같이 세우지 않는다</b> — id 가 겹치면 앞엣것이 빈 칸이다 */
   is(!one.no && one.오른글 === 0,
