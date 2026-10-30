@@ -78,8 +78,10 @@ const SEED = () => {
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
-  const outside = [];
+  const outside = [], GOT = {};
   await ctx.route('**://**', rt => { const u = rt.request().url();
+    if (/보험아카데미\/(terms|terms2|disease1|disease2|surgery|design|costs)\.js$|실전화법서\.html$/.test(decodeURIComponent(u)) && /apex-map/.test(rt.request().headers()['referer'] || ''))
+      GOT[decodeURIComponent(u).split('/').pop()] = (GOT[decodeURIComponent(u).split('/').pop()] || 0) + 1;
     if (u.indexOf('127.0.0.1:' + PORT) >= 0) return rt.continue();
     outside.push(u);
     return rt.fulfill({ status: 200, contentType: 'application/javascript', body: '' }); });
@@ -183,9 +185,13 @@ const SEED = () => {
   is(!G.find && G.steps > 0 && !G.wayFolded, '못 찾은 물음은 <b>길이 그대로</b> 펴져 있다 — 걸음 ' + G.steps);
 
   sec('[5] 🙅 <b>헛것을 안 잡는다</b> — 「어디서 · 어떻게」 물음 ' + HOWTO.length + '가지 (8번)');
-  const H = await f.evaluate((L) => L.map(q => ({ q, F: jvFind(q).filter(x => (x.rows || []).length || x.wait).map(x => x.k) })), HOWTO);
+  /* ★ 판 X269 부터 보험 자료가 넓어져 「법인 대표 상담」 엔 아카데미 「법인 대표」 설계 가이드가 <b>제대로</b> 섭니다.
+     그래서 여기서 재는 것은 셋입니다 — ① 고객·코드·계약관리가 안 끼나 ② 「아직 안 읽었다」 가 안 끼나
+     ③ <b>「어디서 · 어떻게 써」</b> 물음에 굳은 자료가 서서 길을 접지 않나 */
+  const H = await f.evaluate((L) => L.map(q => ({ q, F: jvFind(q).filter(x =>
+      (!x.know && (x.rows || []).length) || x.wait || x.waitSay || (JV_USE.test(q) && x.strong && (x.rows || []).length)).map(x => x.k) })), HOWTO);
   const ghost = H.filter(x => x.F.length);
-  is(ghost.length === 0, '찾은 값 0 — ' + (ghost.length ? ghost.map(x => x.q + '→' + x.F.join('/')).join(' · ') : '스물네 가지 모두 길로'));
+  is(ghost.length === 0, '헛것 0 — ' + (ghost.length ? ghost.map(x => x.q + '→' + x.F.join('/')).join(' · ') : '스물네 가지 모두 길이 앞'));
   const ADV = await f.evaluate(() => jvFind('윤설계 실적').filter(x => x.k === 'cli').length);
   is(ADV === 0, '담당자 이름(윤설계)으로 그 사람 고객을 <b>다 늘어놓지 않는다</b>');
 
@@ -266,9 +272,17 @@ const SEED = () => {
   const E2 = await askCard('뇌졸중 화법');
   const empty2 = await f.evaluate(() => [].slice.call(document.querySelectorAll('#jLog .j-find .jw-s')).filter(e => /(—|:)\s*(「\s*」)?\s*$/.test(e.textContent)).length);
   is(empty === 0 && empty2 === 0, '표의 빈 칸으로 <b>「짚을 것 — 」 만 남은 줄</b>이 안 선다');
-  const FP = await f.evaluate(() => ['보험료 비교해달래', '거절한 고객 다시 연락하고 싶어', '화면이 이상해', '상속 증여 상담', '교통사고 났대']
-    .map(q => ({ q, n: jvFind(q).length })).filter(x => x.n));
-  is(FP.length === 0, '비슷한 낱말 하나로 엉뚱한 자료를 끌고 오지 않는다' + (FP.length ? ' ← ' + FP.map(x => x.q).join(' · ') : ''));
+  /* 아예 안 나와야 하는 것 · 나와도 「혹시 이것도」(약한 것)로만 서야 하는 것 — 길을 접지 않게 */
+  const FP = await f.evaluate(() => {
+    const none = ['거절한 고객 다시 연락하고 싶어', '화면이 이상해', '영업이 안 돼', 'DB 배정 받은 거 어디서 봐']
+      .map(q => ({ q, n: jvFind(q).filter(x => (x.rows || []).length).length })).filter(x => x.n);
+    const weak = ['보험료 비교해달래', '교통사고 났대', '질병코드 찾기']
+      .map(q => ({ q, n: jvFind(q).filter(x => x.strong && (x.rows || []).length).length })).filter(x => x.n);
+    return none.concat(weak);
+  });
+  is(FP.length === 0, '비슷한 낱말 하나로 엉뚱한 자료가 <b>앞에 서지 않는다</b>(「영업이 안 돼」 → 「자영업」 0)' + (FP.length ? ' ← ' + FP.map(x => x.q).join(' · ') : ''));
+  const WK = await askCard('교통사고 났대');
+  is(/혹시 이것도/.test(WK.find) && !WK.wayFolded && WK.steps > 0, '약하게 맞은 자료는 「혹시 이것도」 로 서고 <b>길은 펴 둔다</b>');
   /* 흔한 말(수술 · 진단비)이 이름 <b>안에</b> 들었다고 무겁게 치면 곁가지가 섭니다 */
   const BR = await f.evaluate(() => {
     const t = q => jvFind(q).map(x => (x.rows || []).map(r => r.t).join(' / ')).join(' ‖ ');
@@ -293,6 +307,68 @@ const SEED = () => {
   });
   is(AG.a, 'AI 에게 찾은 보험 자료를 근거로 쥐여 보낸다 — 앱의 글에서 출발하게');
   is(!AG.b, '고객을 찾은 물음에는 <b>고객 줄을 AI 에 안 보낸다</b> (3번)');
+
+  sec('[10] 🎓 <b>보험 마스터 아카데미 · 📕 실전화법서</b>도 찾는다 (판 X269 · 사장님 말씀 「아카데미랑 실전화법서도 찾게 붙여줘」)');
+  /* 견줄 글은 <b>파일에서 직접</b> 꺼냅니다 — 자비스가 읽은 것과 견주면 제 말을 제가 믿는 꼴입니다 */
+  const AC = {};
+  ['terms','terms2','disease1','disease2','surgery','design','costs'].forEach(n =>
+    new Function('window', fs.readFileSync(path.join(ROOT, 'app/보험아카데미/' + n + '.js'), 'utf8'))(AC));
+  const strip = t => String(t || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  const FPH = fs.readFileSync(path.join(ROOT, 'app/재무설계/실전화법서.html'), 'utf8');
+  const fpAns = strip((/<div class="oq">보험료가 너무 비싸요<\/div>[\s\S]*?<div class="ans">([\s\S]*?)<\/div>/.exec(FPH) || [])[1]);
+  const anTip = strip(AC.DISEASE.filter(x => x.name === '협심증')[0].cov.tip);
+  const dz20 = AC.DESIGN.filter(x => /사회초년생/.test(x.title))[0];
+  const LOAD = await f.evaluate(() => ({ st: JV_EXT.st, why: JV_EXT.why, own: ['TERMS','DISEASE','SURG','DESIGN','COSTS'].filter(k => k in window) }));
+  is(LOAD.st === 'ok' && !LOAD.why, '물으시자 아카데미 · 화법서를 읽었다 — ' + LOAD.st + (LOAD.why ? ' ← ' + LOAD.why : ''));
+  is(LOAD.own.length === 0, '아카데미 표가 <b>자비스 창의 이름을 더럽히지 않는다</b>(빈 그릇에 읽음 · 5번)' + (LOAD.own.length ? ' ← ' + LOAD.own.join(',') : ''));
+  const A1 = await askCard('보험료가 너무 비싸요');
+  is(!!fpAns && A1.find.indexOf(fpAns) >= 0, '「보험료가 너무 비싸요」 → 실전화법서 거절 20 의 <b>받는 말이 책 그대로</b>');
+  const A2 = await askCard('협심증');
+  is(A2.find.indexOf(anTip) >= 0 && /나오는 담보/.test(A2.find) && /안 나오는 담보/.test(A2.find),
+     '「협심증」 → 아카데미 질병백과의 나오는/안 나오는 담보 · 짚을 것이 표 그대로');
+  const A3 = await askCard('백내장 수술 몇 종');
+  is(/1-5종 수술비 — 1종/.test(A3.find), '「백내장 수술 몇 종」 → 1-5종 수술분류 <b>1종</b>(아카데미 표)');
+  const A4 = await askCard('20대 사회초년생 설계');
+  is(A4.find.indexOf(strip(dz20.sit)) >= 0 && /예산 — /.test(A4.find) && /심사 결과에 따릅니다/.test(A4.find),
+     '「20대 사회초년생 설계」 → 설계 가이드 상황·반드시·예산이 표 그대로 + 심사 문구');
+  const A5 = await askCard('중입자 치료비 얼마');
+  is(/6,005만 4,900원/.test(A5.find) && /영수증 실측 사례/.test(A5.find),
+     '「중입자 치료비」 → 영수증 금액(원)을 <b>억·만</b>으로(6,005만 4,900원) · 실측 사례라 밝힌다 (4번)');
+  const A6 = await askCard('암 화법');
+  is(/📕 암 화법/.test(A6.find) && /내 통장에서/.test(A6.find) && /설계사 — 「/.test(A6.find),
+     '「암 화법」 → 실전화법서 장 — 여는 질문 · 대화 스크립트');
+  const A7 = await askCard('비과세');
+  /* 책에도 「요건」 이 적혀 있어 그 낱말로 재면 우리가 붙인 줄이 빠져도 초록입니다 — 붙인 줄 그대로 봅니다 (8번) */
+  is(/비과세/.test(A7.find) && /세금은 요건 충족 시의 이야기입니다 — 판단은 세무 전문가에게 맡기십시오/.test(A7.find),
+     '세금 이야기에는 「요건 충족 시 · 판단은 세무 전문가에게」 를 붙인다 (2번)');
+  is([A1, A2, A3, A4, A5, A6, A7].every(z => !/&lt;\/?b&gt;|<\/?b>/.test(z.find)), '표 속 꼬리표가 글자로 안 찍힌다');
+  /* 읽는 것은 <b>한 번</b> — 열 번 물어도 파일마다 한 번 (7번) */
+  for (const q of ['위암', '탈장 수술 몇종', '연금 화법', '신혼부부', '배액술']) await askCard(q);
+  const many = Object.keys(GOT).filter(u => GOT[u] > 1);
+  is(Object.keys(GOT).length === 8 && many.length === 0, '아카데미 일곱 · 화법서 하나를 <b>한 번씩만</b> 받았다 — ' +
+     Object.keys(GOT).length + '개' + (many.length ? ' ← 두 번 이상: ' + many.join(', ') : ''));
+  /* 읽는 중에 물으면 「읽는 중」 → 다 읽으면 그 물음에 이어서 */
+  const PEND = await f.evaluate(async () => {
+    JV_EXT.st = ''; JV_EXT.A = {}; JV_EXT.fp = null; JV_EXT.pend = '';
+    jLog.innerHTML = ''; ask('이미 보험 많이 들었어요');
+    const w = (document.querySelector('#jLog .j-find') || {}).textContent || '';
+    await new Promise(r => setTimeout(r, 3000));
+    const cards = [].slice.call(document.querySelectorAll('#jLog .msg.j'));
+    const last = cards[cards.length - 1];
+    return { w, n: cards.length, last: last ? last.textContent : '' };
+  });
+  is(/읽는 중입니다/.test(PEND.w), '다 읽기 전에 물으면 <b>「읽는 중」</b> 이라고 한다 — 없다고 하지 않는다 (1번)');
+  is(PEND.n === 2 && /다 읽었습니다/.test(PEND.last) && /이미 보험 많이 들었어요/.test(PEND.last),
+     '다 읽으면 기다리시던 물음에 <b>이어서</b> 띄운다 — 카드 ' + PEND.n);
+  const FAIL = await f.evaluate(async () => {
+    const keep = { st: JV_EXT.st, why: JV_EXT.why };
+    JV_EXT.st = 'fail'; JV_EXT.why = '실전화법서(HTTP 404)';
+    jLog.innerHTML = ''; ask('협심증 화법');
+    const t = (document.querySelector('#jLog .j-find') || {}).textContent || '';
+    JV_EXT.st = keep.st; JV_EXT.why = keep.why;
+    return t;
+  });
+  is(/못 읽었습니다/.test(FAIL) && /HTTP 404/.test(FAIL) && /없다는 뜻이 아닙니다/.test(FAIL), '못 읽었으면 <b>못 읽었다고</b> · 까닭까지 · 「없다」 고 하지 않는다');
 
   sec('[8] 🧼 꺾쇠 0 · 콘솔 오류 0 · 바깥 주소 0');
   const tags = [C1, K1, T1, Z1, Z4, Z7].filter(x => /&lt;\/?[a-z]/i.test(x.html)).length;
