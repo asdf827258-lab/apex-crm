@@ -18,6 +18,16 @@
      [7] 홈 「오늘 챙길 것」 에 <b>두 번 안 선다</b> (5번)
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
+/* 🕰 <b>시계를 못 박습니다</b> — 한 곳에서 (lib-clock.js · 판 X83의 그 자리).
+   ⚠⚠ 2026-10-31 에 이 자가 <b>하루 종일 빨간불</b>이었습니다. 아래 [4] 가
+     앞날로 「<b>오늘 + 2일</b>」 을 잡는데, 오늘이 <b>달의 마지막 날</b>이면
+     그 날이 <b>다음 달</b>로 넘어가 이 달 달력 격자에 <b>아예 없습니다</b> —
+     그래서 「그 날에 아예 안 서 있다」 로 네 가지가 울었습니다.
+     <b>고친 것이 없는데 날짜 때문에 켜지는 빨간불은 헛것입니다</b> (8번).
+   ★ 집안에 이미 박는 자리가 있습니다(scripts/lib-clock.js · 2026-10-09).
+     달 가운데라 오늘+2일이 같은 달 안에 있습니다. 두 곳에 적지 않습니다 (5번).
+   ★ 되돌려 확인했습니다 — 박는 줄을 빼면 10월 31일에 다시 네 가지가 웁니다. */
+const CLK = require('./lib-clock.js');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 const ROOT = process.cwd(), PORT = 8900;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css' };
@@ -45,7 +55,8 @@ const SEED = `
 (async () => {
   await new Promise(r => srv.listen(PORT, r));
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 430, height: 930 } });
+  const ctx = await browser.newContext(CLK.ctxOpt({ viewport: { width: 430, height: 930 } }));
+  await CLK.pin(ctx, 14);   /* 낮 — 하루를 가르는 토막 가운데 (lib-clock 의 WHEN) */
   /* CI 에는 바깥으로 나가는 길이 있습니다 — 막아 둡니다 */
   await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
   const page = await ctx.newPage();
