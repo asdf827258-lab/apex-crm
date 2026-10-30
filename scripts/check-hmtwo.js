@@ -260,7 +260,7 @@ const SEED = () => {
     const e = document.querySelector('#hmSideUp .hm-rt');
     const f = e && e.querySelector('.hm-fold-h');
     return { h: e ? Math.round(e.getBoundingClientRect().height) : 0,
-             rec: !!(e && e.querySelector('.hm-rt-rec')),
+             rec: !!(e && e.querySelector('.hm-rt-why')),
              pill: e ? e.querySelectorAll('.hm-rt-p').length : 0,
              접힘: f ? f.getAttribute('aria-expanded') === 'false' : null };
   });

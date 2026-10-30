@@ -490,7 +490,7 @@ const tall = (p) => p.evaluate(() => {
       catch (e) { return null; }
     })();
     const 보임 = (e) => !!e && e.getBoundingClientRect().height > 0;
-    const rec = document.querySelector('.hm-rt .hm-rt-rec');
+    const rec = document.querySelector('.hm-rt .hm-rt-why');
     const pil = document.querySelectorAll('.hm-rt .hm-rt-pills .hm-rt-p');
     return { 접힘: 접힘, 추천: 보임(rec),
       추천글: (rec && rec.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 44),

@@ -249,7 +249,7 @@ const SEED=(opt)=>`
         return b?Math.round(b.getBoundingClientRect().height):0; })(),
       /* 🧭 <b>추천 줄 · 이름 알약</b> — 판 X249 에서 접이 <b>밖</b>으로
          나왔습니다. 접힌 채로도 보이는 글은 이제 여기입니다. */
-      rec:(()=>{ const r=c.querySelector('.hm-rt-rec');
+      rec:(()=>{ const r=c.querySelector('.hm-rt-why');
         return r?{ t:((r.querySelector('b')||{}).textContent||''),
                    s:((r.querySelector('span[data-ask]')||{}).textContent||''),
                    h:Math.round(r.getBoundingClientRect().height) }
@@ -329,7 +329,7 @@ const SEED=(opt)=>`
     (0,eval)(seed);
     AR.db.forEach(x=>{ x.appt=''; if(x.region)x.region='서울 강남'; });
     await window.__home();
-    const c=document.querySelector('#dynPane .hm-rt'),r=c&&c.querySelector('.hm-rt-rec');
+    const c=document.querySelector('#dynPane .hm-rt'),r=c&&c.querySelector('.hm-rt-why');
     return { none:r?((r.querySelector('b')||{}).textContent||''):'' };
   },SEED({}));
   is(/서울 강남으로 권합니다/.test(JO.none),
