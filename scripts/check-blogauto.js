@@ -1161,8 +1161,10 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
     /* ④ 그림으로 나간 카드가 떠 온 토막은 글에서 <b>한 번만</b> 나온다 */
     const pngs = await artPngs(0);
     const html = md2html(packText(0), true, pngs);
-    out.oneTable = (html.match(/<table/g) || []).length === 0 &&
-                   (html.match(/겹치는 보장/g) || []).length === 0;
+    /* 표를 뺄지 말지는 이제 [21] 한 곳이 답한다 — 표가 하나뿐이면 글자로 남긴다.
+       여기서는 <b>표가 살아서 한 번만</b> 나오는 것만 본다 (5번). */
+    out.oneTable = (html.match(/<table/g) || []).length === 1 &&
+                   (html.match(/겹치는 보장/g) || []).length === 1;
     out.oneQuote = (html.match(/이 한 줄만 크게 걸어/g) || []).length === 0;
     out.imgs = (html.match(/<img /g) || []).length;
     /* ⑤ 그림 없이 부르면 표와 인용이 <b>그대로 남는다</b> — 유일한 사본을 지우지 않는다 */
@@ -1179,7 +1181,7 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(pub.pickTitles && pub.pickMeta,
      '  <b>버린 것이 아니다</b> — 제목 후보와 메타 설명을 따로 뽑아 드린다');
   is(pub.boxUp, '  ③ 올리기에 <b>«제목·설명» 칸</b>이 서서 눌러 복사하실 수 있다');
-  is(pub.oneTable, '  표를 그림으로 내보내면 글에서는 <b>빠진다</b> — 같은 표를 두 번 읽히지 않는다');
+  is(pub.oneTable, '  하나뿐인 표는 글에 <b>한 번</b> 남는다 — 뺄지 말지는 [21] 이 답한다');
   is(pub.oneQuote, '  강조 한 줄도 마찬가지다 — 글로 한 번, 그림으로 또 한 번이 아니다');
   is(pub.imgs === 2, '  그 자리에 그림 두 장이 대신 선다 (' + pub.imgs + '장)');
   is(pub.keepTable && pub.keepQuote,
@@ -1219,6 +1221,97 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(wait.wrote && wait.atWriteDisabled,
      '  <b>클립보드에 다 실릴 때까지</b> 잠겨 있다 — 먼저 풀면 아직 아까 것이 든 채로 붙이신다');
   is(!wait.afterDisabled, '  다 끝나면 다시 눌리게 풀린다');
+
+  console.log('\n[21] 돌려 보고 나온 둘 — 표가 글자로 남는가 · 빠진 카드를 말하는가 (판 X265)');
+  const sim = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.comply = null; await comply();
+    localStorage.setItem('apex_intro_guest',
+      JSON.stringify({ org:'○○본부', name:'홍길동', title:'사업단장', at:Date.now() }));
+    const T1 = '| 구분 | 실손 | 진단비 |\n| --- | --- | --- |\n| 메우는 것 | 쓴 병원비 | 안 들어오는 돈 |\n| 영수증 | 있어야 한다 | 필요 없다 |\n';
+    const T2 = '| 칸 | 하는 일 |\n| --- | --- |\n| 병원비 | 쓴 돈을 메움 |\n| 소득공백 | 쉬는 동안 |\n';
+    const head = '## 제목 후보\n- 제목입니다\n\n## 본문\n글입니다. 보장 내용은 심사 결과에 따릅니다.\n\n';
+    const marks = '[이미지: 비교표 카드 | alt: 표]\n\n[이미지: 한 문장 카드 | alt: 한 줄]\n\n## 해시태그\n#가 #나\n';
+    const quote = '> 이 한 줄만 크게 걸어 주십시오\n\n';
+    const mk = body => { S.rows = [{ ymd:ymd(0), when:'1/1', kind:'ask',
+        seed:{kind:'ask',title:'질문',src:'상담'}, out:body, guard:null, up:false }];
+      S.rows[0].guard = guard(S.rows[0].out, 'ask', S.rows[0]); return S.rows[0]; };
+
+    /* ① 표가 하나뿐이면 <b>글자로 남는다</b> — 검색은 그림 속 글자를 못 읽는다 */
+    mk(head + quote + T1 + '\n' + marks);
+    const pngs1 = await artPngs(0);
+    const h1 = md2html(packText(0), true, pngs1);
+    out.one_table = (h1.match(/<table/g) || []).length;
+    out.one_cells = (h1.match(/영수증/g) || []).length;
+    out.one_imgs  = (h1.match(/<img /g) || []).length;
+    out.one_quote = /이 한 줄만 크게 걸어/.test(h1);     /* 강조 줄은 그대로 뺀다 */
+
+    /* ② 표가 둘이면 카드가 떠 간 하나만 빠진다 — 같은 표를 두 번 읽히지 않는다 */
+    mk(head + quote + T1 + '\n글.\n\n' + T2 + '\n' + marks);
+    const pngs2 = await artPngs(0);
+    const h2 = md2html(packText(0), true, pngs2);
+    out.two_table = (h2.match(/<table/g) || []).length;
+    out.two_first = (h2.match(/영수증/g) || []).length;  /* 카드가 떠 간 첫 표 */
+    out.two_second = (h2.match(/소득공백/g) || []).length;
+
+    /* ③ 만들 수 있는데 자리가 없는 카드를 <b>이름까지</b> 말한다 */
+    const row = mk(head + quote + T1 + '\n' + marks);
+    out.orphan = (row.guard.orphan || []).slice();
+    out.stillOk = row.guard.ok === true;                 /* 막지는 않는다 */
+    await show(0);
+    const view = document.getElementById('view').innerHTML;
+    out.said = /자리가 없습니다/.test(view) && /질문 카드/.test(view);
+    out.counted = /만든 카드 \d+장이 글에 자리가 없습니다/.test(view);
+    /* ④ 「글 끝에 자리 넣기」 를 누르면 진짜로 들어가고, 그 카드가 사라진다 */
+    const before = (row.guard.orphan || []).length;
+    orphanPut(0, '질문 카드');
+    out.put = /\[이미지: 질문 카드/.test(S.rows[0].out);
+    out.gone = (S.rows[0].guard.orphan || []).length === before - 1;
+    out.beforeHash = S.rows[0].out.indexOf('[이미지: 질문 카드') < S.rows[0].out.indexOf('## 해시태그');
+    /* ⑤ 자리가 다 있으면 조용하다 — 헛것을 띄우지 않는다 (8번) */
+    const all = KINDS['ask'].art.map(id => '[이미지: ' + ART[id].t + ' | alt: x]').join('\n\n');
+    mk(head + quote + T1 + '\n' + all + '\n');
+    out.quiet = (S.rows[0].guard.orphan || []).length === 0;
+    await show(0);
+    out.quietView = !/자리가 없습니다/.test(document.getElementById('view').innerHTML);
+    /* ⑤-1 <b>못 만드는 카드</b>는 「자리가 없다」고 떠들지 않는다 — 넣을 수가 없다.
+       표가 없으면 비교표 카드는 안 그려진다. 그것까지 세면 사장님은 못 넣을 것을
+       넣으려 하신다. 헛것을 잡는 점검·화면은 안 잡는 것보다 나쁘다 (8번). */
+    mk(head.replace('## 해시태그','## 해시태그') + '글만 있습니다.\n');   /* 표도 인용도 없다 */
+    const no = S.rows[0].guard.orphan || [];
+    out.noTable = no.indexOf('비교표 카드') < 0;
+    out.noQuote = no.indexOf('한 문장 카드') < 0;
+    out.stillSome = no.indexOf('8통장 구조도') >= 0;   /* 만들 수 있는 것은 그대로 집어낸다 */
+    /* ⑥ 주문서가 그림마다 자리를 시킨다 */
+    out.order = /그림마다 하나씩, 빠짐없이/.test(userPrompt(S.rows[0]));
+    return out;
+  });
+  is(sim.one_table === 1 && sim.one_cells >= 1,
+     '  표가 <b>하나뿐이면 글자로 남는다</b> — 검색은 그림 속 글자를 못 읽는다 (표 ' + sim.one_table + '개)');
+  is(sim.one_imgs >= 2, '  그러면서 카드도 함께 들어간다 (' + sim.one_imgs + '장)');
+  is(!sim.one_quote, '  강조 한 줄은 그대로 뺀다 — 한 줄짜리라 바로 밑 카드와 겹쳐 보인다');
+  is(sim.two_table === 1 && sim.two_first === 0 && sim.two_second >= 1,
+     '  표가 <b>둘이면</b> 카드가 떠 간 하나만 빠진다 — 같은 표를 두 번 안 읽힌다');
+  is(sim.orphan.indexOf('질문 카드') >= 0,
+     '  만들 수 있는데 자리가 없는 카드를 <b>집어낸다</b> — ' + sim.orphan.join(' · '));
+  is(sim.stillOk, '  <b>막지는 않는다</b> — 심의 문제가 아니라 빠뜨림이다 (6번)');
+  is(sim.said && sim.counted, '  화면에 <b>몇 장인지와 이름</b>을 적는다');
+  is(sim.put && sim.beforeHash, '  «글 끝에 자리 넣기» 가 해시태그 <b>앞</b> 본문에 넣는다');
+  is(sim.gone, '  넣고 나면 그 카드가 목록에서 <b>빠진다</b> — 고친 것이 반영된다');
+  is(sim.quiet && sim.quietView, '  자리가 다 있으면 <b>조용하다</b> — 헛것을 띄우지 않는다 (8번)');
+  is(sim.noTable && sim.noQuote,
+     '  <b>못 만드는 카드</b>는 「자리가 없다」고 안 떠든다 — 표가 없으면 비교표 카드도 없다');
+  is(sim.stillSome, '  그러면서 만들 수 있는 것은 <b>그대로</b> 집어낸다 — 다 입 다물지 않는다');
+  is(sim.order, '  주문서가 <b>그림마다 하나씩</b> 자리를 시킨다 — 다음부터 안 빠진다');
+  /* ★ guard(t,kind,row) 의 셋째를 빠뜨리면 <b>빠진 카드 찾기가 조용히 꺼진다.</b>
+     실제로 이 글을 돌려 보는 harness 에서 그렇게 꺼져, 화면이 아무 말도 안 했다.
+     사람이 다음에 또 빠뜨릴 자리라 소스에서 직접 센다 (5번·8번). */
+  const calls = (SRC.match(/[^.\w]guard\s*\(/g) || []).length;
+  const bare = (SRC.match(/[^.\w]guard\s*\([^)]*,\s*(?:row\.kind|'[a-z]+'|kind)\s*\)/g) || []);
+  is(calls >= 3, '  소스에서 guard( 를 부르는 자리를 찾는다 (' + calls + '군데)');
+  is(bare.length === 0,
+     '  갈래를 주면서 <b>줄(row)을 빠뜨린 자리가 없다</b> — 빠뜨리면 빠진 카드 찾기가 조용히 꺼진다'
+     + (bare.length ? ' — ' + bare[0].trim() : ''));
 
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
