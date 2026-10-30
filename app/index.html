@@ -1675,6 +1675,36 @@ body.jv-dock:not(.apexmap-mode) #osVaFab{display:none}
   .hm-2col>div{min-width:0}
   /* 오른쪽 기둥 첫 칸은 위 여백을 지웁니다 — 왼쪽 카드와 어깨를 맞춥니다 */
   .hm-2col>div>:first-child{margin-top:0}
+  /* ══ 🧭 <b>두 기둥이 「오늘」 카드 안으로 올라왔습니다</b> (판 X249) ══════
+     사장님 말씀 (2026-10-30) — 「<b>지금할것 왼쪽 오른쪽은 활동</b> 으로
+     나누어서 <b>한번에 보이게끔</b> 배치 짜줄수 있어? <b>첫 화면에서 딱</b>
+     모든걸 확인하고 관리하고 <b>고객터치 만남까지</b> 가능하게」.
+     ★★ <b>재어 보고 알았습니다 — 위가 문제가 아니었습니다.</b> 「지금 할 것」
+       위에 있는 것은 팀 고르개 <b>85px</b> 뿐이라, 컴퓨터에서 그 카드는
+       이미 y85~662 로 첫 화면 안이었습니다. 빈 것은 <b>오른쪽</b>이었습니다 —
+       넓은 화면에서 #hmSideUp 이 <b>0px</b> 이고 활동 다섯이 저 아래
+       y1,400 에 있었습니다(제가 처음에 「위의 둘이 734px」 라고 틀리게
+       적어 드렸고, 갈라 재어 바로잡았습니다 · 1번).
+     ★ 그래서 <b>DOM 을 안 옮깁니다</b> — .tz 를 두 기둥으로 만들고
+       <b>이미 있는 #hmSideUp</b> 을 오른쪽 기둥으로 씁니다. 폰의 차례는
+       한 글자도 안 바뀝니다(거기선 기둥이 위아래로 쌓입니다).
+     ★ 자리를 정하는 곳은 여전히 <b>hmSidePlace 하나</b>입니다 (5번) —
+       이제 넓든 좁든 <b>같은 칸</b>에 담으므로 갈래가 하나 줄었습니다. */
+  /* ⚠⚠ <b>세로 틈(row-gap)을 0 으로 둡니다.</b> 오른쪽 칸이 줄을
+     1~99 로 걸치는데 gap:14px 를 주면 <b>빈 줄 98개의 틈 1,372px</b> 가
+     그대로 홈 길이가 됩니다 — 재어 보고 알았습니다(홈 2,680px).
+     세로 사이는 칸들이 <b>제 바깥여백</b>으로 이미 띄우고 있습니다.     */
+  .tz{display:grid;grid-template-columns:minmax(0,1fr) 344px;column-gap:14px;row-gap:0;align-items:start}
+  .tz>*{grid-column:1;min-width:0}
+  .tz>#hmSideUp{grid-column:2;grid-row:1/span 99;margin:0;align-self:start;display:block}
+  /* 폰에서는 카드 <b>안</b>이라 테두리를 뺐습니다 — 여기서는 제 칸으로 섭니다 */
+  .tz>#hmSideUp>.card{border:1px solid var(--t-line);box-shadow:var(--shadow);margin:14px 0 0}
+  .tz>#hmSideUp>.card:first-child{margin-top:0}
+  .tz>#hmSideUp>.card+.card{border-top:1px solid var(--t-line)}
+  .tz>#hmSideUp>.card>.card-body{padding:16px 18px}
+  /* 아래 두 기둥은 <b>오른쪽이 비므로</b> 한 기둥이 됩니다 — 비었는지는
+     hmSidePlace 가 정하고 여기서 또 세지 않습니다 (5번) */
+  .hm-2col.hm-1col{grid-template-columns:minmax(0,1fr)}
 }
 /* ── 홈 · 오늘 챙길 것 ── */
 /* ══ 📍 <b>곁칸 넷이 폰에서 서는 자리</b> (2026-10-06 · 사장님 「끌어올려」) ══
@@ -1691,7 +1721,21 @@ body.jv-dock:not(.apexmap-mode) #osVaFab{display:none}
      check-hmexact 가 잡았습니다(20px×4 · 0px×3). 폭만 펴면 됩니다 —
      <b>모양을 바꿀 까닭이 없었습니다.</b>                                */
 #hmSideUp:empty{display:none}
-#hmSideUp{margin:6px -20px}
+/* ══ 🔲 <b>폰에서는 활동이 두 칸 타일</b> (판 X249) ════════════════════
+   사장님 말씀 (2026-10-30) — 「<b>핸드폰이든, 컴퓨터든</b> … 한번에
+   보이게끔」. 여쭈니 <b>「활동을 작은 타일 2열로」</b> 를 고르셨습니다.
+   ★ <b>아무것도 안 없앱니다</b> — 접힌 칸 그대로이고 <b>나란히</b> 설 뿐입니다.
+   ★ 🚗 동선은 <b>한 줄을 통째로</b> 씁니다 — 추천 줄과 이름 알약이 반 칸에
+     들어가면 글자가 줄줄이 접힙니다(판 X248 에서 거꾸로 데인 자리).
+   ★ <b>dense</b> 로 둡니다 — 통줄 칸이 끼면 그 앞 줄에 구멍이 하나 남는데,
+     dense 가 뒤엣것으로 메웁니다.
+   ★ 컴퓨터에서는 <b>오른쪽 기둥 한 줄</b>이라 이 격자를 풉니다(아래 1101 블록). */
+#hmSideUp{margin:6px -20px;display:grid;grid-template-columns:1fr 1fr;
+  gap:8px;grid-auto-flow:row dense;align-items:start}
+/* 🚗 동선과 📊 오늘 기록은 <b>한 줄을 통째로</b> — 둘 다 속에 줄이 있어
+   반 칸에 넣으면 칩이 한 줄에 하나씩 서서 오히려 길어집니다(찍어 보고
+   알았습니다 · 170px). 한 줄짜리 접이 셋만 나란히 섭니다. */
+#hmSideUp>#hmRtHost,#hmSideUp>#hmActHost{grid-column:1/-1}
 /* ★ 위아래 여백을 <b>재서</b> 줄였습니다 (2026-10-07). 금(4.2화면 · 3,544px)이
      빠듯해 <b>날짜가 바뀌는 것만으로</b> 2px 넘나들었습니다 — 날마다 흔들리는
      초록은 믿을 수 없습니다. 제가 X64 에서 넣은 여백에서 덜어냈습니다. */
@@ -21161,8 +21205,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-30 10:05';
-var APP_BUILD_NOTE="🚗📰 <b>「오늘」 칸을 다시 지었습니다 — 동선 추천이 펴진 채로, 소식은 미리 받아 둡니다</b> (판 X248) — 사장님 말씀 「지역동선하고 <b>내가 추천 띄우고</b> 뉴스부터 멘트까지 <b>오늘 한칸에서 다 할 수 있도록</b> 했는데 <b>안되어있어서</b>」. ◾ 먼저 <b>대장에서 50줄을 찾아</b> 시키신 말씀 아홉 줄의 원문을 보여 드린 뒤 손댔습니다. ◾ 재어 보니 <b>둘 다 만들어져 있는데 안 돌고</b> 있었습니다 — ① 🚗 동선 추천이 <b>접는 칸 안</b>이라 한 번 더 눌러야 보였습니다(두 번 말씀하신 자리입니다) ② 📰 소식을 받아 두는 몸이 다 지어져 있는데 <b>부르는 자리가 한 곳도 없어</b> 한 번도 안 돌았습니다. ◾ 이제 홈을 열면 <b>동선 추천 열 분이 바로 보이고</b>, 소식은 <b>하루 한 번</b> 미리 받아 둡니다(다른 탭에 가 있으면 쉬고, 못 받아도 그날은 다시 안 두드립니다). ◾ 🎯 접촉포인트는 <b>이미 서고 있었습니다</b> — 안 고쳤습니다(없는 일을 했다고 적지 않습니다). ◾ 컴퓨터에서는 🚗 동선 칸이 <b>두 기둥 아래 한 줄로</b> 내려갔습니다 — 펴 두니 곁기둥이 주기둥보다 길어졌고, <b>재어 보여 드리고 사장님이 고르신 자리</b>입니다. 넓어졌으니 <b>열 분을 다 펴</b> 둡니다. 내려놓고 찍어 보니 이름 한 칸이 <b>한 줄을 통째로</b> 먹고 있어 <b>셋씩</b> 세웠습니다(카드 1,023 → 799px). 폰은 그대로입니다. ◾ 홈이 2,969 → <b>3,576px</b>(3.52 → 4.24화면)이 되었습니다. 사장님께서 <b>「홈이 길어져도 괜찮다」</b> 로 선을 푸셔서 눈금을 3.6 → <b>4.4</b> 로 올렸습니다 — <b>길이 눈금 밖에서는 하나도 안 올렸습니다</b>.";
+var APP_BUILD='2026-10-30 11:20';
+var APP_BUILD_NOTE="🧭 <b>「오늘」 을 두 기둥으로 다시 짰습니다 — 왼쪽은 지금 할 것, 오른쪽은 활동</b> (판 X249) — 사장님 말씀 「칸을 너무 잡아 먹는거 같아, <b>오른쪽에 조그만하게</b> … <b>지금할것 왼쪽 오른쪽은 활동</b> 으로 나누어서 <b>한번에 보이게끔</b> … <b>첫 화면에서 딱</b> 모든걸 확인하고 관리하고 <b>고객터치 만남까지</b>」. ◾ 컴퓨터에서 <b>왼쪽에 지금 할 것</b>, <b>오른쪽에 활동 다섯</b>(🚗 동선 · 📊 오늘 기록 · 💌 이번 달 고객 관리 · 📈 이번 주 · 🔔 알람)이 나란히 섭니다 — 첫 화면에서 보고 누르고 전화까지 됩니다. ◾ <b>폰도 같습니다</b> — 활동이 <b>두 칸 타일</b>로 접혀 지금 할 것 바로 밑에 섭니다. ◾ 🚗 는 <b>조그맣게</b> — 권하는 동네 한 줄과 걸 분 이름이 <b>접지 않아도</b> 보이고, 전화 줄·만나야 할 분은 한 번 눌러 펴집니다. <b>한 글자도 안 없앴습니다</b>. 카드 799 → 약 300px. ◾ ⚠ <b>제가 드린 수가 틀렸습니다</b> — 「지금 할 것 위를 734px 가 막고 있다」 고 적었는데 갈라 재니 위에 있는 것은 팀 고르개 <b>85px</b> 뿐이었습니다. 빈 것은 위가 아니라 <b>오른쪽</b>이었습니다. ◾ 홈이 <b>짧아졌습니다</b> — 컴퓨터 3,137 → <b>2,350px</b> · 폰 3,793 → <b>3,020px</b>. 어제 올렸던 길이 눈금은 <b>같은 날 도로 내렸습니다</b>.";
 
 
 
@@ -34784,7 +34828,7 @@ function hmSideHtml(){
            hmSidePlace 하나입니다 (5번).
          ★ <b>id 는 한 곳에만</b> 섭니다 — 양쪽에 두면 앞엣것이 빈 칸으로
            남습니다(곁칸·약속 칸과 같은 규칙).                          */
-      h+=(넓?'':'<div id="hmRtHost"></div>')+'<div id="hmActHost"></div>';
+      h+='<div id="hmRtHost"></div><div id="hmActHost"></div>';
     }
     s=HM_SIDE[i];
     one=(s.fn&&typeof window[s.fn]==='function')
@@ -34815,19 +34859,35 @@ function hmSideHtml(){
      (check-hmtwo 가 그것을 봅니다). 그래서 한쪽을 <b>비우고</b> 한쪽만 채웁니다.
    ★ 「지금 넓은 화면인가」 는 <b>navWide() 한 곳</b>이 압니다 — 1101 이라는
      수를 여기 또 적지 않습니다 (5번).                                  */
+/* ══ 🧭 <b>판 X249 — 넓든 좁든 같은 칸</b> (사장님 말씀 2026-10-30
+   「지금할것 왼쪽 오른쪽은 활동으로 나누어서 한번에 보이게끔」) ══════════
+   여태 넓으면 #hmSideHost(아래 두 기둥의 오른쪽), 좁으면 #hmSideUp(오늘
+   카드 안) 으로 <b>갈라</b> 담았습니다. 이제 <b>늘 #hmSideUp</b> 입니다 —
+   컴퓨터에서는 .tz 가 두 기둥이 되어 그 칸이 <b>오른쪽 기둥</b>으로 섭니다.
+   ★ <b>갈래가 하나 줄었습니다</b> (5번) — 두 자리에 담던 것을 한 자리에
+     담으니 「어느 쪽이 비었나」 를 묻는 일이 없어집니다.
+   ★ #hmSideHost · #hmUpDown · #hmRtWide 는 <b>안 지웠습니다</b> — 자리를
+     되돌리실 때 그대로 씁니다 (사장님 규칙 「함수·길을 지우지 마십시오」).
+     빈 채로 두되 아래 두 기둥은 <b>한 기둥</b>이라고 알려 줍니다.         */
 function hmSidePlace(){
   var up=document.getElementById('hmSideUp'),rt=document.getElementById('hmSideHost');
   if(!up&&!rt)return;                       /* 홈이 아니면 할 일이 없다 */
-  var wide=(typeof navWide==='function')?navWide():true;
-  var host=wide?rt:up,other=wide?up:rt;
-  if(other&&other.innerHTML)other.innerHTML='';
-  if(host)host.innerHTML=hmSideHtml();
-  /* 🚗 넓을 때만 <b>두 기둥 아래</b>에 자리를 냅니다 (판 X248) — 좁을 때는
-     위 곁칸 목록이 냅니다. 둘 다 내면 id 가 겹쳐 앞엣것이 빕니다. */
+  if(rt&&rt.innerHTML)rt.innerHTML='';
+  if(up)up.innerHTML=hmSideHtml();
+  /* 🚗 는 이제 <b>활동 묶음 안</b>입니다 (판 X249) — 두 기둥 아래 자리는 비웁니다. */
   try{
     var wd=document.getElementById('hmRtWide');
-    if(wd)wd.innerHTML=wide?'<div id="hmRtHost"></div>':'';
+    if(wd&&wd.innerHTML)wd.innerHTML='';
   }catch(eW){}
+  /* 아래 두 기둥의 오른쪽이 비었으니 <b>한 기둥</b>으로 — 묻는 곳은 여기
+     하나이고, CSS 는 이 이름표만 봅니다 (5번).
+     ★ className 을 통째로 대입하지 않습니다 — 다른 곳이 붙여 둔 이름표를
+       잃습니다 (CLAUDE.md 5번).                                          */
+  try{
+    var two=document.querySelector('.hm-2col');
+    if(two){ if(rt&&!rt.innerHTML)two.classList.add('hm-1col');
+             else two.classList.remove('hm-1col'); }
+  }catch(eC){}
   /* ══ 📅 <b>오늘 약속 · 📆 이번 주도 같은 자가 자리를 정합니다</b> (판 X217) ══
      사장님 말씀 (2026-10-26) — 「오늘 약속 캘린더 이번주 … 이거 칸도 <b>다 맨
      위로</b> 올려야지」.
@@ -34838,12 +34898,15 @@ function hmSidePlace(){
        화면 맨 위라, <b>두 말씀이 다 지켜집니다</b>.
      ★ <b>id 는 한 곳에만</b> 섭니다 — 양쪽에 두면 앞엣것이 빈 칸으로 남습니다.
        그래서 한쪽을 비우고 한쪽만 채웁니다 (곁칸과 같은 규칙).           */
+  /* ★ 판 X249 — 약속·이번 주도 <b>늘 #hmUpHost</b>(왼쪽 기둥 안)입니다.
+     컴퓨터에서 아래로 내려보내던 까닭은 「왼쪽이 짧아 오른쪽 곁칸이 그늘
+     밖으로 나간다」 였는데, 이제 왼쪽 기둥에 <b>지금 할 것(577px)</b> 이
+     함께 서므로 그 걱정이 없어졌습니다. 갈래가 또 하나 줄었습니다 (5번). */
   try{
-    var up=document.getElementById('hmUpHost'), dn=document.getElementById('hmUpDown');
-    var uHost=wide?dn:up, uOther=wide?up:dn;
-    if(uOther&&uOther.innerHTML)uOther.innerHTML='';
-    if(uHost&&typeof hmTossAppt==='function')
-      uHost.innerHTML='<div id="hmApptHost">'+hmTossAppt()+'</div>'+hmWeekHtml();
+    var uUp=document.getElementById('hmUpHost'), dn=document.getElementById('hmUpDown');
+    if(dn&&dn.innerHTML)dn.innerHTML='';
+    if(uUp&&typeof hmTossAppt==='function')
+      uUp.innerHTML='<div id="hmApptHost">'+hmTossAppt()+'</div>'+hmWeekHtml();
   }catch(eU){}
   /* 자리를 옮기면 <b>빈 자리도 새로 생깁니다</b> — 칠하는 쪽을 다시 부릅니다.
      둘 다 서버를 안 부르는 그리기입니다 (7번). */
@@ -35297,15 +35360,45 @@ function hmRtHtml(){
     /* 머리글이 <b>몇 분인지</b> 말합니다 — 접힌 채로도 빈손이 아닙니다.
        ★ 수는 <b>한 칸에 하나</b>만 적습니다 — 한 이름표에 수가 둘이면
          check-onesay 가 「갈렸다」 고 봅니다 (0-1번).                     */
-    h+=hmFoldWrap('rt','🧭',
-      rec?('오늘 약속 없음 · '+hmRo(rec)+' 권합니다')
-         :'간 김에 같이 돕니다',
-      meet.length
-        ?(rec?('오늘 만나야 할 분 '+meet.length+'분 · 제일 많은 동네')
-             :('그 지역에 만나야 할 분 '+meet.length+'분'))
-        :('오늘 걸 분 '+near.length+'명'),
+    /* ══ 🧭 <b>추천은 늘 보이고, 손대는 줄은 접습니다</b> (판 X249) ══════
+       사장님 말씀 (2026-10-30) — 「칸을 너무 잡아 먹는거 같아, <b>오른쪽에
+       조그만하게</b> 해서」. 여쭈니 <b>「권하는 동네 + 걸 분 이름칩」</b> 을
+       고르셨습니다.
+       ★★ <b>한 글자도 안 없앴습니다</b> (6번) — 이름과 📞 전화가 한 줄로
+         서는 판 X217 의 그 줄도, 만나야 할 분 줄도, 돌아가기도 <b>접이 안에
+         그대로</b> 있습니다. 밖으로 꺼낸 것은 <b>추천 한 줄과 이름 알약</b>
+         뿐이고, 알약을 누르면 전과 같은 자리(hmRtPerson)로 갑니다.
+       ★ <b>같은 말을 두 곳에 안 적습니다</b> (5번) — 추천 줄을 밖으로 냈으니
+         접이 머리글은 <b>안에 든 것</b>을 말합니다(📞 전화 · 만나야 할 분).
+       ★ 그래서 접이는 <b>다시 접힌 것이 기본</b>입니다 — 판 X248 에서 펴
+         두었던 까닭(추천이 안 보임)이 <b>밖으로 나와 없어졌습니다</b>.    */
+    h+='<div class="hm-rt-rec"><span class="ci">🧭</span><b>'+
+         osEsc(rec?('오늘 약속 없음 · '+hmRo(rec)+' 권합니다'):'간 김에 같이 돕니다')+'</b>'+
+         (meet.length
+           ?('<span data-ask="'+osEsc(mAsk)+'">'+
+             osEsc(rec?('오늘 만나야 할 분 '+meet.length+'분 · 제일 많은 동네')
+                      :('그 지역에 만나야 할 분 '+meet.length+'분'))+'</span>')
+           :('<span data-ask="동네오늘걸분">'+osEsc('오늘 걸 분 '+near.length+'명')+'</span>'))+
+       '</div>';
+    /* 이름 알약 — <b>누구를 권하는지</b>가 접지 않아도 보입니다.
+       ★ 수를 다시 세지 않습니다 — 바로 위 near 그대로입니다 (5번). */
+    if(near.length){
+      h+='<div class="hm-rt-pills">';
+      for(i=0;i<near.length&&i<HM_RT_SHOW;i++)
+        h+='<button type="button" class="hm-rt-p '+
+             ((typeof tdoColor==='function')?tdoColor(near[i].k):'')+'" '+
+             'onclick="hmRtPerson(\''+osEsc(near[i].id)+'\')">'+
+             osEsc(near[i].nm||'고객')+'</button>';
+      if(near.length>HM_RT_SHOW)
+        h+='<button type="button" class="hm-rt-p more" onclick="hmRtOpen()">+'+
+           (near.length-HM_RT_SHOW)+'명 더 →</button>';
+      h+='</div>';
+    }
+    h+=hmFoldWrap('rt','📞',
+      near.length?'전화 걸기 · 자세히':'자세히',
+      meet.length?('만나야 할 분 '+meet.length+'분'):'',
       inner,
-      meet.length?mAsk:'동네오늘걸분');
+      meet.length?mAsk:'');
   }else{
     /* 접을 것이 없으면 <b>왜 없는지</b>는 그대로 보입니다 (1번) */
     h+='<div class="hm-rt-n0">'+
@@ -35386,6 +35479,19 @@ function hmRtCss(){
    '.hm-rt-n{font-size:var(--t6);color:var(--ink-3);margin:11px 0 7px}'+
    '.hm-rt-n span{color:var(--ink-5)}'+
    '.hm-rt-n0{font-size:var(--t6);color:var(--ink-4);margin-top:11px;line-height:1.6}'+
+   /* 🧭 <b>추천 한 줄 · 이름 알약</b> (판 X249) — 접지 않아도 늘 보입니다.
+      ★ 새 색을 안 만듭니다 — 이미 쓰는 토큰만 씁니다 (사장님 규칙).     */
+   '.hm-rt-rec{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;margin:11px 0 7px}'+
+   '.hm-rt-rec b{font-size:var(--t5);font-weight:900;color:var(--ink-1)}'+
+   '.hm-rt-rec span{font-size:var(--t6);color:var(--ink-4)}'+
+   '.hm-rt-rec .ci{flex:none}'+
+   '.hm-rt-pills{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 9px}'+
+   /* ⚠ 알약은 <b>손가락 바닥 44px</b> 입니다 (판 X146·X147) — 작게 보이려고
+      줄이지 않습니다. 줄이는 것은 <b>줄 수</b>이지 손가락이 아닙니다.    */
+   '.hm-rt-p{border:1px solid var(--ink-7);background:var(--bg-1);border-radius:var(--r-pill);'+
+     'padding:0 13px;min-height:44px;font-size:var(--t6);font-weight:800;color:var(--ink-2);'+
+     'cursor:pointer;font-family:inherit;display:inline-flex;align-items:center}'+
+   '.hm-rt-p:hover{border-color:var(--primary);color:var(--primary)}'+
    '.hm-rt-chips{display:flex;flex-wrap:wrap;gap:6px}'+
    '.hm-rt-c{border:1px solid var(--ink-7);background:var(--bg-1);border-radius:var(--r-pill);'+
      'padding:7px 12px;font-size:var(--t6);font-weight:800;color:var(--ink-2);cursor:pointer;'+
@@ -35672,7 +35778,11 @@ function hmFoldAll(){
      예외입니다. 사장님이 직접 「펴 둬」 하신 칸만 적습니다.
    ★ 한 번이라도 손수 접으시면 <b>그 기억이 먼저</b>입니다 — 아래에서
      o[k] 가 있으면 그것을 씁니다.                                        */
-var HM_FOLD_DEF={rt:true};
+/* ★ 판 X249 — <b>rt 를 도로 비웠습니다.</b> 판 X248 에서 펴 둔 까닭은
+   「추천이 접이 안이라 안 보인다」 였는데, 이제 추천 줄과 이름 알약이
+   <b>접이 밖</b>에 늘 섭니다. 그래서 펴 둘 까닭이 없어졌습니다 —
+   표는 비워 두되 <b>자리는 남깁니다</b>(다음에 또 쓸 자리입니다 · 6번). */
+var HM_FOLD_DEF={};
 function hmFoldOpen(k){
   var o=hmFoldAll();
   if(o[k]===undefined)return !!HM_FOLD_DEF[k];

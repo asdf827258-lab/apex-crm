@@ -74,8 +74,20 @@ const srv = http.createServer((rq, rs) => {
        `check-hmpoint`(선화면) · 그리고 씨가 무거운 둘(`check-pexlate` 5.6 ·
        `check-msfive` 5.5)은 <b>여기에 제 씨 몫을 더해</b> 씁니다. 까닭은
        <b>여기 한 곳</b>에만 적습니다 (5번).
-     ★ <b>다음에 또 올리지 마십시오.</b> 줄이면 그때는 같이 내리십시오 (0-1번). */
-const HOME_SCR = 4.4;
+     ★ <b>다음에 또 올리지 마십시오.</b> 줄이면 그때는 같이 내리십시오 (0-1번).
+
+   ⬇ <b>2026-10-30 · 4.4 → 3.8 · 같은 날 도로 내립니다</b> (판 X249).
+     사장님께서 라이브를 보시고 <b>「칸을 너무 잡아 먹는거 같아, 오른쪽에
+     조그만하게」</b> 하셔서, 🚗 추천을 접이 밖으로 내고 나머지를 접었습니다.
+     그리고 「지금 할 것 ｜ 활동」 두 기둥을 「오늘」 카드 안으로 올렸습니다.
+     잰 값 — 세 때 모두 <b>3,050~3,054px · 3.61~3.62화면</b>(올리기 전
+     3.52 와 거의 같은 자리로 돌아왔습니다).
+     ★ <b>줄였으면 눈금도 같이 내립니다</b> (0-1번) — 이것이 규칙이고,
+       올린 날 바로 다음에 내리는 것도 같은 규칙입니다.
+     ★ 3.62 에 딱 붙이지 않고 <b>3.8</b> 로 둡니다 — 🎯·🤝 칩이 서는 씨
+       (check-hmpoint)에서는 세 토막 68px 가 더 붙고, 글자 한 줄만 길어져도
+       헛 빨간불이 켜집니다 (8번). 남은 자리 <b>153px</b>.                 */
+const HOME_SCR = 3.8;
 const HOME_MAX = Math.round(844 * HOME_SCR);
 
 let bad = 0;
@@ -462,19 +474,37 @@ const tall = (p) => p.evaluate(() => {
      ★ ②는 <b>글로</b> 봅니다 — 이 자는 바깥을 막아 진짜로 받아 오는지는
        못 봅니다. 하지만 <b>부르는 자리가 0곳이면 영영 안 돕니다</b>.    */
   console.log('\n[1-a2] 🚗📰 <b>오늘 칸이 「한 칸에서 다」 되나</b> (판 X248)');
-  const RT = await A.p.evaluate(() => ({
-    열림: (typeof hmFoldOpen === 'function') ? hmFoldOpen('rt') : null,
-    기본: (typeof HM_FOLD_DEF !== 'undefined') ? !!HM_FOLD_DEF.rt : null,
-    접었다폈다: (function () {
-      try { hmFoldSet('rt', false); const a = hmFoldOpen('rt');
-            localStorage.removeItem('apex_hm_fold_v1'); return a === false; }
+  /* ⬆ <b>2026-10-30 (판 X249) — 묻는 것은 그대로, 보는 자리가 바뀌었습니다.</b>
+     판 X248 에서는 「접이를 펴 두었나」 로 물었습니다. 사장님께서 라이브를
+     보시고 <b>「칸을 너무 잡아 먹는거 같아, 오른쪽에 조그만하게」</b> 하셔서,
+     추천을 <b>접이 밖으로 꺼내고</b> 접이는 도로 접었습니다.
+     ★ 그러니 이제 물을 것은 「펴졌나」 가 아니라 <b>「접지 않아도 보이나」</b>
+       입니다 — 더 센 물음입니다. 접이가 접힌 채여도 <b>추천 한 줄과 이름
+       알약</b>이 눈에 보여야 합니다.
+     ★ <b>자를 무르게 한 것이 아닙니다</b> (8번) — 되돌려서 추천 줄을 도로
+       접이 안에 넣으면 이 줄이 웁니다.                                   */
+  const RT = await A.p.evaluate(() => {
+    const 접힘 = (function () {
+      try { const f = document.getElementById('hmFold_rt');
+            return f ? f.querySelector('.hm-fold-h').getAttribute('aria-expanded') === 'false' : null; }
       catch (e) { return null; }
-    })()
-  }));
-  is(RT.열림 === true && RT.기본 === true,
-     '  ★★ 🚗 <b>동선 추천이 처음부터 펴진 채</b>로 온다 — 사장님이 두 번 말씀하신 자리입니다 (판 X142)');
-  is(RT.접었다폈다 === true,
-     '  손수 <b>접으시면 그 기억이 먼저</b>다 — 펴 두기는 처음값일 뿐입니다');
+    })();
+    const 보임 = (e) => !!e && e.getBoundingClientRect().height > 0;
+    const rec = document.querySelector('.hm-rt .hm-rt-rec');
+    const pil = document.querySelectorAll('.hm-rt .hm-rt-pills .hm-rt-p');
+    return { 접힘: 접힘, 추천: 보임(rec),
+      추천글: (rec && rec.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 44),
+      알약: pil.length,
+      알약보임: pil.length > 0 && Math.round(pil[0].getBoundingClientRect().height),
+      기본: (typeof HM_FOLD_DEF !== 'undefined') ? !!HM_FOLD_DEF.rt : null };
+  });
+  is(RT.추천 === true && /권합니다|같이 돕니다/.test(RT.추천글),
+     '  ★★ 🚗 <b>권하는 동네가 접지 않아도 보인다</b> — 「' + RT.추천글 + '」 (판 X142·X249)');
+  is(RT.알약 > 0 && RT.알약보임 >= 44,
+     '  ★★ <b>걸 분 이름이 알약으로 바로 보인다</b> — ' + RT.알약 + '개 · ' + RT.알약보임 +
+     'px (손가락 바닥 44px)');
+  is(RT.접힘 === true && RT.기본 === false,
+     '  ★ 그래서 접이는 <b>도로 접힌 것이 기본</b>이다 — 안에 든 것(📞 전화·만나야 할 분)만 접힙니다');
   const SRC0 = fs.readFileSync(path.join(ROOT, 'app', 'index.html'), 'utf8');
   /* ⚠ 처음에는 「nlAuto() 라는 글자가 몇 번 나오나」 로 셌다가 <b>안 울었습니다</b> —
        제가 바로 위에 쓴 <b>주석 속 글자</b>까지 세고 있었습니다. 세는 것은

@@ -105,29 +105,54 @@ const SEED = () => {
   /* ── [1] 넓은 화면 — 두 기둥 ─────────────────────────────────── */
   console.log('\n[1] 넓은 화면(1440)에서 <b>두 기둥</b>이 선다');
   const PC = await open(1440);
+  /* ══ 🧭 <b>판 X249 — 두 기둥이 「오늘」 카드(.tz) 안으로 올라왔습니다</b> ══
+     사장님 말씀 (2026-10-30) — 「<b>지금할것 왼쪽 오른쪽은 활동</b> 으로
+     나누어서 <b>한번에 보이게끔</b> 배치 짜줄수 있어? <b>첫 화면에서 딱</b>
+     모든걸 확인하고 관리하고 <b>고객터치 만남까지</b> 가능하게」.
+     ★★ <b>재어 보고 자리를 골랐습니다.</b> 「지금 할 것」 위에 있던 것은
+       팀 고르개 <b>85px</b> 뿐이라 그 카드는 이미 첫 화면 안이었고, 빈 것은
+       <b>오른쪽</b>이었습니다 — 넓은 화면에서 #hmSideUp 이 0px 이고 활동
+       다섯이 y1,400 에 있었습니다. (제가 처음에 「위의 둘이 734px」 라고
+       <b>틀리게</b> 적어 드렸고 갈라 재어 바로잡았습니다 · 1번.)
+     ★ 그래서 <b>DOM 을 안 옮겼습니다</b> — .tz 를 두 기둥으로 만들고 이미
+       있던 #hmSideUp 을 오른쪽 기둥으로 씁니다. 폰 차례는 그대로입니다.
+     ★ 묻는 것은 <b>그대로</b>입니다 — 나란히 · 어깨 · 344px · 왼쪽이 넓다 ·
+       오른쪽이 그늘에 든다. <b>보는 칸만</b> .hm-2col → .tz 입니다 (8번).  */
   const two = await PC.evaluate(() => {
-    const c = document.querySelector('.hm-2col'); if (!c) return { no: 1 };
-    const [L, R] = c.children;
+    const c = document.querySelector('.tz'); if (!c) return { no: 1 };
+    const L = document.getElementById('hmJobHost');
+    const R = document.getElementById('hmSideUp');
+    if (!L || !R) return { no: 1 };
     const rl = L.getBoundingClientRect(), rr = R.getBoundingClientRect();
+    /* 왼쪽 기둥은 여러 칸이 쌓입니다 — <b>통째 높이</b>는 .tz 에서 오른쪽을
+       뺀 것이 아니라, 왼쪽 칸들의 맨 위~맨 아래로 잽니다. */
+    const 왼칸 = [...c.children].filter(e => e !== R && e.getBoundingClientRect().height > 0);
+    const top = Math.min(...왼칸.map(e => e.getBoundingClientRect().top));
+    const bot = Math.max(...왼칸.map(e => e.getBoundingClientRect().bottom));
     return { no: 0, lx: Math.round(rl.left), rx: Math.round(rr.left),
-             ly: Math.round(rl.top), ry: Math.round(rr.top),
+             ly: Math.round(top), ry: Math.round(rr.top),
              lw: Math.round(rl.width), rw: Math.round(rr.width),
-             lh: Math.round(rl.height), rh: Math.round(rr.height),
-             lk: [...L.children].map(e => e.id || e.className).join(' · '),
+             lh: Math.round(bot - top), rh: Math.round(rr.height),
+             lk: 왼칸.map(e => e.id || e.className).join(' · '),
              rk: [...R.children].map(e => e.id || e.className).join(' · ') };
   });
-  is(!two.no, '  <b>두 기둥 칸(.hm-2col)</b>이 있다');
+  is(!two.no, '  <b>두 기둥 칸(.tz)</b>이 있다');
   is(!two.no && two.rx > two.lx, '  <b>나란히</b> 선다 — 왼쪽 x' + two.lx + ' · 오른쪽 x' + two.rx);
   is(!two.no && Math.abs(two.ly - two.ry) <= 2, '  <b>어깨를 맞춘다</b> — 왼쪽 y' + two.ly + ' · 오른쪽 y' + two.ry);
   is(!two.no && two.rw === 344, '  오른쪽 기둥이 <b>목각과 같은 344px</b> — ' + two.rw + 'px');
   is(!two.no && two.lw > two.rw, '  왼쪽이 <b>넓다</b> — ' + two.lw + ' > ' + two.rw);
-  is(!two.no && /hmToday/.test(two.lk), '  왼쪽은 <b>오늘 하는 일</b> — ' + two.lk);
-  /* 🚗 hmRtHost 는 <b>두 기둥 아래</b>로 내려갔습니다 (판 X248 — 아래 쪽지).
-     곁기둥에는 활동량(hmActHost)이 남습니다. <b>곁기둥에 없다</b>는 것은
-     아래에서 따로 묻습니다 — 여기서 빼기만 하면 어디로 갔는지 아무도
-     안 봅니다 (8번).                                                    */
-  is(!two.no && /hmActHost/.test(two.rk) && !/hmRtHost/.test(two.rk),
-     '  오른쪽은 <b>곁에서 보는 것</b> — ' + two.rk);
+  /* ★★ 사장님 말씀 그대로 — <b>왼쪽은 「지금 할 것」</b> 입니다 */
+  is(!two.no && /hmJobHost/.test(two.lk) && two.lk.indexOf('hmJobHost') < 20,
+     '  ★★ 왼쪽은 <b>「지금 할 것」</b> — ' + two.lk);
+  /* ★★ <b>오른쪽은 「활동」</b> 입니다 (판 X249 · 사장님 말씀 「오른쪽은
+     활동으로」). 고르신 다섯이 다 거기 섭니다 — 🚗 동선 · 📊 오늘 기록 ·
+     💌 이번 달 고객 관리 · 📈 이번 주 · 🔔 알람.
+     ⚠ 판 X248 에서 🚗 를 두 기둥 <b>아래</b>로 내렸던 것은 <b>되돌렸습니다</b> —
+       사장님께서 「칸을 너무 잡아 먹는거 같아, 오른쪽에 조그만하게」 하셔서
+       작게 만들어 오른쪽으로 올렸습니다. #hmRtWide 는 <b>안 지웠고</b>
+       빈 채로 둡니다(되돌리실 자리 · 6번).                               */
+  is(!two.no && /hmActHost/.test(two.rk) && /hmRtHost/.test(two.rk),
+     '  ★★ 오른쪽은 <b>「활동」</b> — ' + two.rk);
   /* ★ 오른쪽이 왼쪽 그늘에 드는가 — 그것이 두 기둥을 세운 까닭이다 */
   is(!two.no && two.rh <= two.lh,
      '  ★ 오른쪽이 <b>왼쪽 그늘에 든다</b> — 오른쪽 ' + two.rh + 'px ≤ 왼쪽 ' + two.lh +
@@ -195,8 +220,7 @@ const SEED = () => {
      그중 셋은 <b>앱에 세는 자리가 없습니다</b>. 지어내지도, 비워 두지도
      않고 <b>화면에 그렇게 적습니다</b> (1번).                            */
   const side = await PC.evaluate(() => {
-    const c = document.querySelector('.hm-2col'); if (!c) return { no: 1 };
-    const R = c.children[1];
+    const R = document.getElementById('hmSideUp'); if (!R) return { no: 1 };
     const cards = [...R.children].map(e => {
       const t = (e.innerText || '').replace(/\s+/g, ' ').trim();
       return { t: t, h: Math.round(e.getBoundingClientRect().height),
@@ -224,33 +248,41 @@ const SEED = () => {
        빨간불입니다.
      ★ <b>폰은 안 바뀝니다</b> — 거기선 기둥이 위아래로 쌓입니다.        */
   const 있나 = (w) => !side.no && side.cards.some(c => c.t.indexOf(w) >= 0);
-  ['이번 주', '이번 달 고객 관리', '알람'].forEach(w =>
+  ['이번 주', '이번 달 고객 관리', '알람', '오늘 어디로'].forEach(w =>
     is(있나(w), '  목각의 <b>「' + w + '」</b> 자리가 있다'));
-  is(!있나('오늘 어디로'),
-     '  🚗 <b>「오늘 어디로」 는 곁기둥에 없다</b> — 두 기둥 아래로 내려갔습니다 (판 X248)');
+  /* ★★ 🚗 가 <b>작아졌나</b> (판 X249 · 사장님 말씀 「오른쪽에 조그만하게」).
+     판 X248 에서 펴 두니 <b>799px</b> 였습니다. 추천 줄과 이름 알약만 밖에
+     두고 나머지를 접으니 <b>300px 아래</b>입니다. 전화 줄·만나야 할 분은
+     접이 안에 그대로 있습니다 (6번 · 한 글자도 안 없앴습니다).
+     ⚠ 선을 <b>400px</b> 로 둡니다 — 글꼴이 다르면 알약 줄이 한 줄 더 접힐
+       수 있어 딱 붙여 두면 헛 빨간불이 켜집니다 (8번).                   */
+  const rtH = await PC.evaluate(() => {
+    const e = document.querySelector('#hmSideUp .hm-rt');
+    const f = e && e.querySelector('.hm-fold-h');
+    return { h: e ? Math.round(e.getBoundingClientRect().height) : 0,
+             rec: !!(e && e.querySelector('.hm-rt-rec')),
+             pill: e ? e.querySelectorAll('.hm-rt-p').length : 0,
+             접힘: f ? f.getAttribute('aria-expanded') === 'false' : null };
+  });
+  is(rtH.h > 0 && rtH.h <= 400,
+     '  ★★ 🚗 가 <b>조그맣다</b> — ' + rtH.h + 'px (판 X248 에서는 799px · 선 400px)');
+  is(rtH.rec && rtH.pill > 0 && rtH.접힘 === true,
+     '  ★ 그래도 <b>추천과 이름이 보인다</b> — 추천 줄 · 이름 알약 ' + rtH.pill +
+     '개 · 접이는 접힌 채(' + rtH.접힘 + ')');
+  /* 🚗 를 두 기둥 <b>아래</b>로 내렸던 자리(#hmRtWide)는 판 X249 에서 비웠고
+     <b>안 지웠습니다</b> — 되돌리실 자리입니다 (6번). 빈지 봅니다. */
   const 아래 = await PC.evaluate(() => {
     const w = document.getElementById('hmRtWide');
-    const rt = document.getElementById('hmRtHost');
-    const 온글 = (w && w.innerText || '').replace(/\s+/g, ' ').trim();
-    /* 「걸 분」 칸이 <b>한 줄에 몇이 서나</b> — 같은 윗변끼리 묶어 셉니다 */
-    const 칩 = w ? [].slice.call(w.querySelectorAll('.hm-rt-one')) : [];
-    const 줄 = {};
-    칩.forEach(e => { const y = Math.round(e.getBoundingClientRect().top);
-      줄[y] = (줄[y] || 0) + 1; });
-    const 한줄최대 = Object.keys(줄).reduce((m, k) => Math.max(m, 줄[k]), 0);
-    return { 자리: !!w, 들었나: !!(w && rt && w.contains(rt)),
-             온글: 온글, 글: 온글.slice(0, 30),
-             칩수: 칩.length, 한줄: 한줄최대,
-             칩폭: 칩[0] ? Math.round(칩[0].getBoundingClientRect().width) : 0,
-             칸폭: w ? Math.round(w.getBoundingClientRect().width) : 0 };
+    return { 자리: !!w, 비었나: !!w && !w.innerHTML.trim() };
   });
-  is(아래.자리 && 아래.들었나,
-     '  ★ 🚗 가 <b>두 기둥 아래</b>에 선다 — 「' + (아래.글 || '(빈 칸)') + '…」');
+  is(아래.자리 && 아래.비었나,
+     '  ★ 두 기둥 아래 자리(#hmRtWide)는 <b>남아 있고 비었다</b> — 지우지 않고 비웁니다 (6번)');
   /* ★ 차례도 목각대로 — 이번 주 → 이번 달 → 알람 (동선은 아래로) */
   const at = (w) => side.no ? -1 : side.cards.findIndex(c => c.t.indexOf(w) >= 0);
-  is(at('이번 주') >= 0 && at('이번 주') < at('이번 달 고객 관리') &&
+  is(at('이번 주') >= 0 && at('이번 주') < at('오늘 어디로') &&
+     at('오늘 어디로') < at('이번 달 고객 관리') &&
      at('이번 달 고객 관리') < at('알람'),
-     '  <b>차례가 목각대로</b>다 — 이번 주 → 이번 달 고객 관리 → 알람');
+     '  <b>차례가 목각대로</b>다 — 이번 주 → 오늘 어디로 → 이번 달 고객 관리 → 알람');
   /* ★★ 못 세는 셋 — 「아직 세는 자리가 없습니다」 라고 <b>적고</b>,
          <b>아무 숫자도 안 적는다</b>. 이것이 1번을 지키는 모양입니다.   */
   /* ⚠ 2026-10-02 · <b>「알람」 을 이 셋에서 빼냈습니다.</b> 사장님 말씀
@@ -305,25 +337,10 @@ const SEED = () => {
   /* ★ 비워 두지도 않는다 — 사장님이 「적기」 라고 하셨습니다 */
   is(!side.no && side.cards.every(c => c.h > 0),
      '  <b>빈 칸이 없다</b> — 자리만 잡고 아무 말도 안 하면 고장 난 것으로 보입니다');
-  /* ★ 셀 수 있는 것은 <b>진짜 수</b>로 — 「오늘 동선」 은 이미 셉니다.
-     ⚠ 판 X248 에서 이 칸이 <b>두 기둥 아래</b>로 내려갔으므로, 묻는 것은
-       그대로 두고 <b>보는 자리만</b> `#hmRtWide` 로 옮깁니다. 곁기둥에서
-       찾던 그대로 두면 이 자가 <b>빈 손으로 초록</b>이 됩니다 (8번).      */
-  is(아래.온글.length > 0 && !/아직 세는 자리가 없습니다/.test(아래.온글),
+  /* ★ 셀 수 있는 것은 <b>진짜 수</b>로 — 「오늘 동선」 은 이미 셉니다. */
+  const rt = side.no ? null : side.cards.find(c => c.t.indexOf('오늘 어디로') >= 0);
+  is(!!rt && !/아직 세는 자리가 없습니다/.test(rt.t) && /\d/.test(rt.t),
      '  ★ <b>「오늘 동선」 은 진짜 수로</b> 선다 — 셀 수 있는 것을 못 센다고 적지 않는다 (1번)');
-  is(/\d/.test(아래.온글),
-     '  ★ 그 칸에 <b>센 수가 적힌다</b> — 「' + 아래.온글.slice(0, 40) + '…」');
-  /* ★★ <b>넓어진 폭을 실제로 쓰나</b> (판 X248). 자리만 옮기고 그대로 두면
-     「홍길동 · 번호 없음」 한 칸이 <b>1,392px 한 줄을 통째로</b> 먹습니다 —
-     찍어 보고 알았습니다(카드 1,023px). 셋씩 세우니 <b>799px</b> 입니다.
-     ⚠ <b>44px 은 안 봅니다</b> — 그 자리는 check-phonefit·check-hmpick 이
-       보고, 여기서는 <b>폭만</b> 묻습니다 (5번).                         */
-  is(아래.칩수 >= 2 && 아래.한줄 >= 2,
-     '  ★★ 「걸 분」 칸이 <b>한 줄에 둘 이상</b> 선다 — 칩 ' + 아래.칩수 +
-     '개 · 한 줄에 ' + 아래.한줄 + '개 (하나면 넓은 폭을 통째로 버립니다)');
-  is(아래.칩수 >= 2 && 아래.칩폭 > 0 && 아래.칩폭 <= Math.round(아래.칸폭 * 0.6),
-     '  ★ 그 칸이 <b>폭을 통째로 안 먹는다</b> — 칩 ' + 아래.칩폭 + 'px · 칸 ' +
-     아래.칸폭 + 'px');
 
   /* ── [6] 위의 넷은 안 움직였다 ─────────────────────────────────── */
   console.log('\n[6] ★ <b>위의 넷은 안 움직였다</b> — 먼저 하신 말씀 둘을 같이 지킨다');
@@ -510,6 +527,30 @@ const SEED = () => {
      ((one.위칸 && one.넷.length >= 4) ? '' : ' ← 자리를 못 찾았거나 비었습니다'));
   is(!one.no && one.머리 >= 3,
      '  ★ 머리글(.hm-rt-h)이 <b>' + one.머리 + '개</b> 선다 — 목각 차례 그대로');
+  /* ── 🔲 ★★ <b>폰에서 활동이 두 칸 타일로</b> 선다 (판 X249) ──────────
+     사장님 말씀 (2026-10-30) — 「<b>핸드폰이든, 컴퓨터든</b> … 한번에
+     보이게끔」. 여쭈니 <b>「활동을 작은 타일 2열로」</b> 를 고르셨습니다.
+     ★ <b>한 줄짜리 접이 둘이 나란히</b> 서는지로 잽니다 — 같은 윗변에 둘.
+     ★ 🚗 동선과 📊 오늘 기록은 <b>통줄</b>입니다 — 반 칸에 넣으니 칩이
+       한 줄에 하나씩 서서 170px 로 <b>오히려 길어졌습니다</b>(찍어 보고
+       알았습니다). 그래서 통줄인지도 함께 봅니다.                       */
+  const 타일 = await PH.evaluate(() => {
+    const up = document.getElementById('hmSideUp'); if (!up) return { no: 1 };
+    const kid = [...up.children].filter(e => e.getBoundingClientRect().height > 0);
+    const 줄 = {};
+    kid.forEach(e => { const y = Math.round(e.getBoundingClientRect().top);
+      줄[y] = (줄[y] || 0) + 1; });
+    const 한줄 = Object.keys(줄).reduce((m, k) => Math.max(m, 줄[k]), 0);
+    const 통 = (id) => { const e = document.getElementById(id); if (!e) return null;
+      return Math.round(e.getBoundingClientRect().width) >= Math.round(up.getBoundingClientRect().width) - 2; };
+    return { no: 0, 칸: kid.length, 한줄: 한줄, rt: 통('hmRtHost'), act: 통('hmActHost'),
+             높이: Math.round(up.getBoundingClientRect().height) };
+  });
+  is(!타일.no && 타일.한줄 >= 2,
+     '  ★★ 폰에서 활동이 <b>두 칸 타일</b>로 선다 — 칸 ' + 타일.칸 + '개 · 한 줄에 ' +
+     타일.한줄 + '개 (판 X249 · 사장님이 고르신 꼴)');
+  is(!타일.no && 타일.rt === true && 타일.act === true,
+     '  ★ 🚗 동선 · 📊 오늘 기록은 <b>한 줄을 통째로</b> 쓴다 — 반 칸이면 오히려 길어집니다');
   /* ── 🧷 ★★ <b>접고도 수가 보이나</b> (판 X223) ────────────────────────
      사장님 말씀 「지금 할것이 너무 많은 자리를 차지하고 있어」 → 고르신
      「① 곁칸 셋을 접기」. 접기의 <b>값어치가 여기 있습니다</b> — 접어 두고도
