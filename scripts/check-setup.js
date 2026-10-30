@@ -307,12 +307,19 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
 
     /* ③ 배너를 「나중에」 로 닫아도 — <b>홈 맨 위에 한 줄</b>이 남아야 한다.
        어디에도 안 뜨면 돌릴 길이 사라진다. */
+    /* ★ 2026-10-31 (판 X265) — <b>펼친 높이를 먼저 잰다.</b> 아래 판정을
+       px 로 못 박지 않으려면 견줄 것이 있어야 합니다(바로 아래 폰 쪽
+       쪽지에 제가 적어 둔 그 말입니다). */
+    SETUP.hide = false; go('home'); await new Promise(r => setTimeout(r, 500));
+    const c1 = el('osSetupHome');
+    O.openH = c1 ? Math.round(c1.getBoundingClientRect().height) : 0;
     setupLater();
     go('home'); await new Promise(r => setTimeout(r, 500));
     const c2 = el('osSetupHome');
     O.afterLater = !!(c2 && /서버 준비 SQL/.test(c2.textContent));
     O.laterAct = !!(c2 && /setupGo\(\)/.test(c2.innerHTML));
     O.laterH = c2 ? Math.round(c2.getBoundingClientRect().height) : 0;
+
     SETUP.hide = false;
 
     /* ④ 팀원에게는 안 뜬다 — 못 고칠 일을 매일 아침 보여 드리지 않는다 */
@@ -342,8 +349,26 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(rd.afterLater,
      '  배너를 <b>「나중에」 로 닫아도 홈 맨 위에 그 자리가 남는다</b> — 어디에도 안 뜨면 돌릴 길이 사라진다');
   is(rd.laterAct, '  그때 <b>복사하고 Supabase 열기</b> 가 그 줄에 그대로 있다');
-  is(rd.laterH > 0 && rd.laterH <= 60,
-     '  넓은 화면에서는 <b>한 줄</b>이다 — ' + rd.laterH + 'px');
+  /* ⚠⚠ 2026-10-31 (판 X265) — <b>여기 60px 을 박아 두었다가 제 손에 물렸습니다.</b>
+     사장님 말씀 「응 컴퓨터로도 올려줘」 로 누르는 자리 바닥을 44px 로 올리자
+     이 줄이 <b>62px</b> 이 되어 빨간불이 켜졌습니다. <b>줄은 여전히 한 줄</b>인데
+     단추가 10px 커진 것이고, 자가 「두 줄이다」 라고 거짓 고발한 것입니다.
+     ★★ 그런데 <b>바로 아래 폰 쪽 쪽지에 제가 이미 적어 두었습니다</b> —
+       「px 를 박아 두지 않습니다 … 박아 두면 글자 크기를 바꿀 때마다 이 줄이
+       낡습니다」. <b>적어 두고 폰 쪽만 그렇게 했고 넓은 쪽은 박아 두었습니다.</b>
+       적어 두기만 한 규칙은 알람이 아닙니다 (8번).
+     ★ 이제 넓은 쪽도 <b>같은 물음</b>입니다 — ① 펼친 배너의 절반 아래인가(닫혔나)
+       ② 누를 것들이 <b>같은 줄</b>에 섰나(한 줄인가). 글자·바닥이 바뀌어도 안 낡습니다. */
+  is(rd.laterH > 0 && rd.openH > 0 && rd.laterH <= rd.openH / 2,
+     '  넓은 화면에서도 <b>닫히면 펼친 배너의 절반 아래</b>다 — ' + rd.laterH +
+     'px / 펼치면 ' + rd.openH + 'px');
+  /* ⚠⚠ <b>여기 「누를 것이 몇 줄에 섰나」 를 넣었다가 뺐습니다</b> (2026-10-31).
+     되돌려 보니 <b>안 울렸습니다</b> — 닫힌 띠에는 누를 것이 <b>하나뿐</b>이라
+     단추를 일부러 display:block 으로 갈라 놓아도 늘 「1줄」 입니다.
+     <b>영영 못 울리는 줄은 없는 것보다 나쁩니다</b>(거짓 안심 · 8번). 그래서 뺐고,
+     「닫혔나」 는 <b>위의 견주는 물음 하나</b>로 봅니다 — 폰 쪽과 같은 꼴입니다 (5번).
+     ★ 되돌림으로 확인한 것 — 펼친 높이가 183 → 287px 로 바뀌는 것은 잡힙니다
+       (제 CSS 가 실제로 먹은 것도 그 수로 알았습니다). */
   /* ── ★ <b>폰에서도 재 본다</b> ─────────────────────────────────────
      여기까지는 <b>넓은 화면</b>(1280px)에서만 쟀습니다. 그래서 「한 줄
      48px」 이라고 적었는데, 폰에서 열어 보니 <b>두 줄 91px</b> 이었습니다 —
