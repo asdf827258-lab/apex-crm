@@ -232,8 +232,17 @@ const SEED = () => {
     const w = document.getElementById('hmRtWide');
     const rt = document.getElementById('hmRtHost');
     const 온글 = (w && w.innerText || '').replace(/\s+/g, ' ').trim();
+    /* 「걸 분」 칸이 <b>한 줄에 몇이 서나</b> — 같은 윗변끼리 묶어 셉니다 */
+    const 칩 = w ? [].slice.call(w.querySelectorAll('.hm-rt-one')) : [];
+    const 줄 = {};
+    칩.forEach(e => { const y = Math.round(e.getBoundingClientRect().top);
+      줄[y] = (줄[y] || 0) + 1; });
+    const 한줄최대 = Object.keys(줄).reduce((m, k) => Math.max(m, 줄[k]), 0);
     return { 자리: !!w, 들었나: !!(w && rt && w.contains(rt)),
-             온글: 온글, 글: 온글.slice(0, 30) };
+             온글: 온글, 글: 온글.slice(0, 30),
+             칩수: 칩.length, 한줄: 한줄최대,
+             칩폭: 칩[0] ? Math.round(칩[0].getBoundingClientRect().width) : 0,
+             칸폭: w ? Math.round(w.getBoundingClientRect().width) : 0 };
   });
   is(아래.자리 && 아래.들었나,
      '  ★ 🚗 가 <b>두 기둥 아래</b>에 선다 — 「' + (아래.글 || '(빈 칸)') + '…」');
@@ -304,6 +313,17 @@ const SEED = () => {
      '  ★ <b>「오늘 동선」 은 진짜 수로</b> 선다 — 셀 수 있는 것을 못 센다고 적지 않는다 (1번)');
   is(/\d/.test(아래.온글),
      '  ★ 그 칸에 <b>센 수가 적힌다</b> — 「' + 아래.온글.slice(0, 40) + '…」');
+  /* ★★ <b>넓어진 폭을 실제로 쓰나</b> (판 X248). 자리만 옮기고 그대로 두면
+     「홍길동 · 번호 없음」 한 칸이 <b>1,392px 한 줄을 통째로</b> 먹습니다 —
+     찍어 보고 알았습니다(카드 1,023px). 셋씩 세우니 <b>799px</b> 입니다.
+     ⚠ <b>44px 은 안 봅니다</b> — 그 자리는 check-phonefit·check-hmpick 이
+       보고, 여기서는 <b>폭만</b> 묻습니다 (5번).                         */
+  is(아래.칩수 >= 2 && 아래.한줄 >= 2,
+     '  ★★ 「걸 분」 칸이 <b>한 줄에 둘 이상</b> 선다 — 칩 ' + 아래.칩수 +
+     '개 · 한 줄에 ' + 아래.한줄 + '개 (하나면 넓은 폭을 통째로 버립니다)');
+  is(아래.칩수 >= 2 && 아래.칩폭 > 0 && 아래.칩폭 <= Math.round(아래.칸폭 * 0.6),
+     '  ★ 그 칸이 <b>폭을 통째로 안 먹는다</b> — 칩 ' + 아래.칩폭 + 'px · 칸 ' +
+     아래.칸폭 + 'px');
 
   /* ── [6] 위의 넷은 안 움직였다 ─────────────────────────────────── */
   console.log('\n[6] ★ <b>위의 넷은 안 움직였다</b> — 먼저 하신 말씀 둘을 같이 지킨다');
