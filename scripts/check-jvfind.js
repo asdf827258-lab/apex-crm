@@ -20,6 +20,11 @@
      [6] 고객 목록을 안 읽었으면 <b>「아직 안 읽었다」</b> · 서버를 새로 안 부른다 (1번 · 7번)
      [7] 회사 표와 AI 로 가는 물음에 <b>고객 실명 0</b> (3번)
      [8] 꺾쇠 0 · 콘솔 오류 0
+     [9] 📚 (판 X268 · 사장님 말씀 「보험에 모든 내용을 여기안에서 다 해놨는데 여기내에서
+         찾아서 결과값을 보여주면 좋겠어」) — 질병 · 담보 · 용어 · 수술 · 지급 사례 ·
+         거절 처리를 <b>앱의 표 그대로</b> 내놓나 · 약관·심사 문구 · 금액은 예시라 밝히고
+         억·만으로 · 자리표·꼬리표가 안 새나 · 빈 칸 줄 0 · 흔한 말·낱말 하나로 곁가지 0 ·
+         AI 에는 보험 자료만(고객 줄 0)
    ★ 이름은 「홍길동」 (3번). 바깥 주소는 부르지 않는다 (7번).                 */
 
 const { chromium } = require('playwright');
@@ -221,8 +226,76 @@ const SEED = () => {
   is(M.rows.length >= 1 && M.rows.every(t => t.indexOf('홍길동') < 0), '회사 표(jarvis_q)에 적히는 물음도 가려졌다 — ' + M.rows.join(' · '));
   is(/홍길동/.test(M.shown), '이 화면(이 기기)에는 실명이 그대로 선다');
 
+  sec('[9] 📚 <b>보험 자료</b> — 앱에 담아 둔 글을 찾아 그대로 (판 X268 · 사장님 말씀 「보험에 모든 내용을 여기안에서 다 해놨는데 여기내에서 찾아서 결과값을」)');
+  /* 견줄 글은 <b>앱의 표에서</b> 꺼냅니다 — 여기 손으로 적으면 표가 고쳐질 때 이 자가 거짓말합니다 (5번) */
+  const KN = await f.evaluate(() => {
+    const P = window.parent, D = P.DZ_DATA;
+    const pick = (L, k, v) => L.filter(x => x[k] === v)[0] || {};
+    const sum = ['list','cov','terms','ops','cases'].reduce((n, k) => n + D[k].length, 0) + D.rej.all.length + P.APEX_STAGE.obj.length;
+    return { sum, count: jvKnowCount(), hello: jvHello().answer,
+             open: jvPlain(pick(D.list, 'id', 'stroke').talk ? pick(D.list, 'id', 'stroke').talk.open : (D.list.filter(x => /뇌졸중/.test(x.name))[0].talk.open)),
+             biopsy: jvPlain(D.terms.filter(x => /^조직검사/.test(x.t))[0].d),
+             polyp: jvPlain(D.ops.filter(x => /용종절제/.test(x.n))[0].ins) };
+  });
+  is(KN.count === KN.sum && KN.count > 0, '찾는 보험 자료 수를 <b>표를 세어</b> 말한다 — ' + KN.count + '가지 (질병·담보·용어·수술·사례·거절 처리)');
+  is(KN.hello.indexOf(String(KN.count)) >= 0, '첫 인사가 그 수를 말한다 — 「' + KN.hello.split('\n')[2] + '」');
+  const Z1 = await askCard('뇌졸중 화법');
+  is(/뇌졸중/.test(Z1.find) && Z1.find.indexOf(KN.open) >= 0, '「뇌졸중 화법」 → 질병 보험가이드의 <b>여는 말이 표 그대로</b>');
+  is(/약관과 보험사 심사 결과에 따릅니다/.test(Z1.find), '「약관과 보험사 심사 결과에 따릅니다」 를 붙인다 (2번)');
+  is(Z1.findFirst && /^앱에서 찾았습니다 — 질병/.test(Z1.head), '찾은 자료가 답 맨 위에 — 「' + Z1.head + '」');
+  const Z2 = await askCard('뇌졸증 화법');
+  is(Z2.find.indexOf(KN.open) >= 0, '흔히 틀리는 글자(뇌졸<b>증</b>)로 물어도 찾는다');
+  const Z3 = await askCard('조직검사가 뭐야');
+  is(Z3.find.indexOf(KN.biopsy) >= 0, '「조직검사가 뭐야」 → 용어 풀이가 표 그대로');
+  const Z4 = await askCard('용종 제거 수술비 나와?');
+  is(/내시경 용종절제술/.test(Z4.find) && Z4.find.indexOf(KN.polyp) >= 0 && /열릴 수 있는 담보/.test(Z4.find),
+     '「용종 제거 수술비 나와?」 → 내시경 용종절제술 · 보험에서 다투는 자리 · 열릴 수 있는 담보');
+  const Z5 = await askCard('위암 사례');
+  is(/3,000만원/.test(Z5.find) && /금액은 예시입니다/.test(Z5.find),
+     '「위암 사례」 → 금액을 <b>만원 → 억·만</b>으로(3,000만원) · 「예시」 라고 밝힌다 (1번·4번)');
+  const Z6 = await askCard('유사암 진단비');
+  is(/유사암진단비/.test(Z6.find), '「유사암 진단비」 → 담보 풀이');
+  const Z7 = await askCard('고객이 지금 바빠요 라고 해');
+  is(/지금 바빠요/.test(Z7.find) && /첫 마디/.test(Z7.find) && !/\[①\]|\[②\]|\[고객\]|\{kw\}/.test(Z7.find),
+     '「지금 바빠요」 → TA 거절 처리 · 자리표([①] · {kw})가 글자로 안 샌다');
+  const Z8 = await askCard('보험 많아요 거절');
+  is(/보험 많아요/.test(Z8.find) && !/\{병\}/.test(Z8.find), '「보험 많아요 거절」 → 질병 상담 거절 처리 · {병} 자리가 안 샌다');
+  const ZZ = [Z1, Z3, Z4, Z5, Z7, Z8];
+  is(ZZ.every(z => !/&lt;\/?b&gt;|<\/?b>/.test(z.find)), '표 속 <b> 꼬리표가 글자로 안 찍힌다');
+  const empty = await f.evaluate(() => [].slice.call(document.querySelectorAll('#jLog .j-find .jw-s')).filter(e => /(—|:)\s*(「\s*」)?\s*$/.test(e.textContent)).length);
+  const E2 = await askCard('뇌졸중 화법');
+  const empty2 = await f.evaluate(() => [].slice.call(document.querySelectorAll('#jLog .j-find .jw-s')).filter(e => /(—|:)\s*(「\s*」)?\s*$/.test(e.textContent)).length);
+  is(empty === 0 && empty2 === 0, '표의 빈 칸으로 <b>「짚을 것 — 」 만 남은 줄</b>이 안 선다');
+  const FP = await f.evaluate(() => ['보험료 비교해달래', '거절한 고객 다시 연락하고 싶어', '화면이 이상해', '상속 증여 상담', '교통사고 났대']
+    .map(q => ({ q, n: jvFind(q).length })).filter(x => x.n));
+  is(FP.length === 0, '비슷한 낱말 하나로 엉뚱한 자료를 끌고 오지 않는다' + (FP.length ? ' ← ' + FP.map(x => x.q).join(' · ') : ''));
+  /* 흔한 말(수술 · 진단비)이 이름 <b>안에</b> 들었다고 무겁게 치면 곁가지가 섭니다 */
+  const BR = await f.evaluate(() => {
+    const t = q => jvFind(q).map(x => (x.rows || []).map(r => r.t).join(' / ')).join(' ‖ ');
+    return { mi: t('심근경색 진단비'), cat: t('백내장 수술') };
+  });
+  is(/심근경색/.test(BR.mi) && !/일반암진단비/.test(BR.mi), '「심근경색 진단비」 에 <b>암 진단비가 안 낀다</b> — ' + BR.mi.slice(0, 60));
+  is(/백내장/.test(BR.cat) && !/보조항암/.test(BR.cat), '「백내장 수술」 에 「보조항암(수술 후)」 가 안 낀다');
+  /* AI 에게는 찾은 <b>보험 자료</b>만 — 고객 줄은 안 간다 (3번) */
+  const AG = await f.evaluate(async () => {
+    LS.set('map_engine', 'gemini'); LS.set('gproxy', '/api/gemini');
+    const sent = [], keep = window.fetch;
+    window.fetch = function(u, o){ sent.push(o.body);
+      const out = JSON.stringify({ answer: '네.', steps: [], real: '', next: [] });
+      return Promise.resolve(new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: out }] } }] }),
+                                          { status: 200, headers: { 'Content-Type': 'application/json' } })); };
+    jLog.innerHTML = ''; ask('뇌졸중 화법'); await new Promise(r => setTimeout(r, 400));
+    const a = sent.join(' '); sent.length = 0;
+    ask('홍길동 연락처'); await new Promise(r => setTimeout(r, 400));
+    const b = sent.join(' ');
+    window.fetch = keep; LS.del('gproxy'); LS.del('map_engine');
+    return { a: /앱 자료/.test(a) && /뇌졸중/.test(a), b: /앱 자료/.test(b) || /010-1234/.test(b) };
+  });
+  is(AG.a, 'AI 에게 찾은 보험 자료를 근거로 쥐여 보낸다 — 앱의 글에서 출발하게');
+  is(!AG.b, '고객을 찾은 물음에는 <b>고객 줄을 AI 에 안 보낸다</b> (3번)');
+
   sec('[8] 🧼 꺾쇠 0 · 콘솔 오류 0 · 바깥 주소 0');
-  const tags = [C1, K1, T1].filter(x => /&lt;\/?[a-z]/i.test(x.html)).length;
+  const tags = [C1, K1, T1, Z1, Z4, Z7].filter(x => /&lt;\/?[a-z]/i.test(x.html)).length;
   is(tags === 0, '답에 꺾쇠가 글자로 찍히지 않는다');
   is(errs.length === 0, '콘솔 오류 0' + (errs.length ? ' ← ' + errs.slice(0, 3).join(' | ') : ''));
   is(outside.length === 0, '바깥 주소를 부르지 않았다' + (outside.length ? ' ← ' + outside.slice(0, 2).join(' ') : ''));
