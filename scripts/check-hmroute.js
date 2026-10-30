@@ -245,6 +245,8 @@ const SEED=(opt)=>`
       bodyIn:(()=>{ const b=c.querySelector('.hm-fold-b');
         return b?{chip:b.querySelectorAll('.hm-rt-c').length,row:b.querySelectorAll('.t-row').length}
                 :{chip:0,row:0}; })(),
+      bodyH:(()=>{ const b=c.querySelector('.hm-fold-b');
+        return b?Math.round(b.getBoundingClientRect().height):0; })(),
       note:(c.querySelector('.t-note.g')||{}).textContent||'',
       ask:[].slice.call(c.querySelectorAll('[data-ask="권한동네몇분"]'))
              .map(e=>(e.textContent.match(/\d+/)||[''])[0]),
@@ -258,16 +260,30 @@ const SEED=(opt)=>`
      '명 (여기가 0 이면 사장님이 보신 그 빈 화면이다)');
   is(/순천시/.test(Y.ttl)&&/권합니다/.test(Y.ttl)&&/제일 많은/.test(Y.sub),
      '<b>왜 그 동네인지</b> 접힌 채로도 적는다 — 「'+Y.ttl+'」 · 「'+Y.sub+'」');
-  /* ★ 접은 것은 <b>감춘 것이 아닙니다</b> (6번) — 머리글이 몇 분인지 말하고,
-     그 머리글이 <b>누르는 단추</b>이고, 사람은 안쪽에 다 들어 있습니다.
-     ⚠ 왜 접었나 — 펴 둔 채로 재어 보니 홈이 <b>4.68화면</b>이 되어 사장님이
-       정한 4.2 선을 넘었습니다(check-homeone). 접으면 4.18 입니다.       */
-  is(Y.btn==='button'&&Y.exp==='false'&&/\d+분/.test(Y.sub),
-     '접힌 머리글이 <b>몇 분인지 말하고 누르는 단추</b>다 (6번) — 「'+Y.sub+
+  /* ★ 머리글은 <b>몇 분인지 말하고 누르는 단추</b>입니다 (6번) — 사람은
+     안쪽에 다 들어 있습니다.
+     ⚠ <b>판 X248 에서 처음부터 펴 둡니다.</b> 전에는 접어 두었고, 그 까닭을
+       「펴 두면 홈이 4.68화면이 되어 <b>4.2 선</b>을 넘는다」 고 여기 적어
+       두었습니다. 2026-10-30 사장님 말씀 — 「지역동선하고 <b>내가 추천
+       띄우고</b> 뉴스부터 멘트까지 오늘 한칸에서 다 할 수 있도록 했는데
+       안되어있어서」. 그래서 <b>그 선을 사장님이 직접 놓아 주셨습니다</b>
+       (「홈이 길어져도 괜찮다」) — 4.2 → 4.3 으로 올린 자리는
+       `check-homeone` 의 `HOME_SCR` 한 곳이고, 왜 올렸는지도 거기 적혀
+       있습니다. ★ <b>제가 느슨하게 한 것이 아닙니다</b> (8번).
+     ★ 묻는 것은 <b>그대로</b>입니다 — 단추이고, 몇 분인지 말하고, 사람이
+       안쪽에 다 있습니다. <b>처음 상태만</b> 「접힘」 → 「펴짐」 입니다.
+     ★ 손으로 접으면 <b>접힌 채로 기억합니다</b> — 그쪽은 `check-homeone`
+       [1-a2] 가 봅니다(기본값보다 사람 손이 이깁니다).                    */
+  is(Y.btn==='button'&&Y.exp==='true'&&/\d+분/.test(Y.sub),
+     '머리글이 <b>몇 분인지 말하고 누르는 단추</b>다 · <b>처음부터 펴짐</b> (판 X248) — 「'+Y.sub+
      '」 · '+Y.btn+' · 펴짐 '+Y.exp);
   is(Y.bodyIn.chip>0&&Y.bodyIn.row>0,
-     '사람은 <b>그 안에 다 들어 있다</b> — 한 번 누르면 칩 '+Y.bodyIn.chip+
-     '개 · 줄 '+Y.bodyIn.row+'개 (펴 두시면 기억합니다 · hmFoldOpen)');
+     '사람은 <b>그 안에 다 들어 있다</b> — 칩 '+Y.bodyIn.chip+
+     '개 · 줄 '+Y.bodyIn.row+'개 (접으시면 기억합니다 · hmFoldOpen)');
+  /* ★★ <b>펴 둔 것이 정말 보이나</b> — aria 만 보면 거저 통과합니다 (8번).
+     속이 <b>높이를 가지는지</b> 로 잽니다.                               */
+  is(Y.bodyH>0,
+     '  ★★ 펴 둔 속이 <b>정말 보인다</b> — 높이 '+Y.bodyH+'px (0 이면 글자만 펴짐이다)');
   const 지어낸=[].concat(Y.chip,Y.row).filter(nm=>nm&&Y.real.indexOf(nm)<0);
   is(지어낸.length===0,
      '뜨는 분은 <b>모두 AR.db 에 실제로 있는 분</b>이다 (1번) — 지어낸 이름 '+지어낸.length+'개'+
