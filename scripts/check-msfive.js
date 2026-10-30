@@ -466,9 +466,9 @@ const SEED = (o) => `
      (4.69화면)</b>. 줄였으면 눈금도 같이 내립니다 (0-1번). 남은 자리 138px.
      ⚠ 이 자는 「미션을 전부 펴 놓은 가장 긴 판」 이라 늘 느슨합니다 —
        진짜 선은 <b>check-homeone 의 HOME_SCR(3.8)</b> 이고 지금 3.62 입니다. */
-  is(worstHome > 0 && worstHome <= 844 * 4.7,
+  is(worstHome > 0 && worstHome <= 844 * 4.61,
      '  그때 홈이 <b>' + worstHome + 'px</b> = 화면 ' + (worstHome / 844).toFixed(2) +
-     '개 (4.7 이하 · 남은 자리 ' + Math.round(844 * 4.7 - worstHome) + 'px)');
+     '개 (4.61 이하 · 남은 자리 ' + Math.round(844 * 4.61 - worstHome) + 'px)');
   /* 다섯 마디 틀은 <b>기본으로 접혀</b> 있다 — 매일 같은 줄이 200px 을 먹지 않게 */
   const fr = await B.p.evaluate(() => { hmMsJump(2); return { open: hmMsFrOpen(), head: !!document.querySelector('.hm-ms-fr-h') }; });
   is(fr.head && !fr.open, '  다섯 마디 틀은 <b>접혀</b> 있고 머리는 보인다 — 정형화가 숨지는 않는다');
