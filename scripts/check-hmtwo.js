@@ -520,6 +520,11 @@ const SEED = () => {
                       b2 = L.indexOf(document.getElementById('hmSideUp'));
                 return (a < 0 || b2 < 0) ? [] : L.slice(a + 1, b2)
                   .map(c => (c.id || (c.className || '').split(' ')[0] || c.tagName)); })(),
+             /* 판 X255 — <b>칸이 보이는 높이</b>(위 띠를 뺀 것). 844 가 아닙니다. */
+             칸키: (function(){ var pn=document.querySelector('.tab-pane.on');
+               if(!pn) return window.innerHeight;
+               var pr=pn.getBoundingClientRect();
+               return Math.round(Math.min(window.innerHeight, pr.bottom) - pr.top); })(),
              넷: 넷, 위칸: !!up, 오른빔: !!(R.textContent || '').trim() === false,
              오른글: (R.textContent || '').trim().length,
              rt: document.querySelectorAll('#hmRtHost').length,
@@ -618,9 +623,16 @@ const SEED = () => {
   {
     const 첫칸 = one.no ? null : (one.넷 || []).filter(x => x.h > 0)
       .sort((a, b) => a.y - b.y)[0];
-    is(!!첫칸 && 첫칸.y > 0 && 첫칸.y < 844,
+    /* ⚠⚠ <b>2026-10-30 (판 X255) — 제가 잘못 재고 있었습니다.</b> 홈은 화면이
+       아니라 <b>제 칸(.tab-pane) 안에서</b> 굴러갑니다. 위 띠가 <b>89px</b> 를
+       먹어 <b>칸이 보이는 높이는 844 가 아니라 755px</b> 인데, 저는 844 와
+       견주고 있었습니다. 그 바람에 사장님께 「44px 모자랍니다」 라고
+       말씀드렸는데 라이브에서 제대로 재니 <b>153px</b> 이었습니다 (1번).
+       ★ 이제 <b>칸이 보이는 높이</b>로 잽니다 — 그것이 사장님 눈에 들어오는
+         자리입니다.                                                      */
+    is(!!첫칸 && 첫칸.y > 0 && 첫칸.y < one.칸키,
        '  ★★ <b>폰 첫 화면에 활동이 걸친다</b> — 첫 칸 y' + (첫칸 ? 첫칸.y : '?') +
-       ' (화면 844px)');
+       ' (칸이 보이는 키 ' + one.칸키 + 'px · 화면 844 가 아닙니다)');
     /* ★★ <b>안 된 것은 안 됐다고 적습니다</b> (1번). 「걸친다」 와 「보인다」 는
        다른 말입니다 — 칸이 67px 이라 윗변이 783 이면 <b>61px 만</b> 보입니다.
        통째로 들어가려면 「지금 할 것」 이 얼마나 줄어야 하는지 <b>CI 가 돌 때마다
@@ -629,7 +641,7 @@ const SEED = () => {
        아닙니다. 적어 두면 숨지는 못합니다 (0-1번).
        ⚠ 그리고 여기 수는 <b>라이브보다 141px 짧습니다</b> — 웹폰트를 못 받습니다. */
     if (첫칸) {
-      const 넘침 = 첫칸.y + 첫칸.h - 844;
+      const 넘침 = 첫칸.y + 첫칸.h - one.칸키;
       console.log('  · ' + (넘침 <= 0
         ? '칸이 <b>통째로</b> 들어갑니다 (여유 ' + (-넘침) + 'px)'
         : '칸이 <b>' + 넘침 + 'px 넘칩니다</b> — 통째로 보이려면 「지금 할 것」 이 ' +
