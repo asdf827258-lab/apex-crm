@@ -87,7 +87,8 @@ const srv = http.createServer((rq, rs) => {
      ★ 3.62 에 딱 붙이지 않고 <b>3.8</b> 로 둡니다 — 🎯·🤝 칩이 서는 씨
        (check-hmpoint)에서는 세 토막 68px 가 더 붙고, 글자 한 줄만 길어져도
        헛 빨간불이 켜집니다 (8번). 남은 자리 <b>153px</b>.                 */
-const HOME_SCR = 3.8;
+/* 잰 값 — 세 때 모두 2,950~2,954px · 3.50화면. 남은 자리 125px. */
+const HOME_SCR = 3.65;
 const HOME_MAX = Math.round(844 * HOME_SCR);
 
 let bad = 0;
