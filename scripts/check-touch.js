@@ -73,7 +73,13 @@ const STAGES = ['TA', 'AP', 'PC', 'CS'];
   });
   const ks = all.map(x => x.k);
   is(new Set(ks).size === ks.length, '  상황 이름표(k)가 겹치지 않는다 — ' + ks.length + '개');
-  is(S.touchOf('미접촉').length === 0 && S.touchOf('').length === 0 && S.touchOf(null).length === 0,
+  /* ⚠ 2026-10-31 (판 X275) — 여기 쓰던 보기 둘(<b>미접촉 · 부재</b>)이 <b>표에
+     들어왔습니다.</b> 사장님 말씀으로 미접촉·부재·거절·기고객·입원 다섯을
+     더했습니다. 그래서 <b>정말로 표에 없는 단계</b>로 바꿔 잽니다 —
+     계약완료·증권전달. 보기를 안 바꾸면 이 줄은 「없는 것이 없다」 를
+     영영 못 재고, 그냥 빨간불만 냅니다 (8번).                          */
+  is(S.touchOf('계약완료').length === 0 && S.touchOf('증권전달').length === 0 &&
+     S.touchOf('').length === 0 && S.touchOf(null).length === 0,
      '  표에 없는 단계는 <b>빈 배열</b> — 지어내지 않는다 (1번)');
   const c1 = S.touchOf('TA'); c1.pop();
   is(S.touchOf('TA').length === 3, '  받아 간 쪽이 고쳐도 표는 안 바뀐다 (복사본을 준다)');
@@ -175,7 +181,7 @@ const STAGES = ['TA', 'AP', 'PC', 'CS'];
     is(L.every(x => x.msg.every(m => txt.indexOf(T(fillMe(m.text))) >= 0) && x.call.every(c => txt.indexOf(T(fillMe(c.say))) >= 0)),
        '    글 · 대본이 <b>표 그대로</b> 선다 (고치거나 줄이지 않는다)');
   });
-  is(cusTouchHtml({ stage: '미접촉' }) === '' && cusTouchHtml({ stage: '부재' }) === '' && cusTouchHtml({}) === '',
+  is(cusTouchHtml({ stage: '계약완료' }) === '' && cusTouchHtml({ stage: '증권전달' }) === '' && cusTouchHtml({}) === '',
      '  표에 없는 단계는 빈 글 — 아무것도 안 세운다 (1번)');
   const hb = cusTouchHtml({ stage: 'TA', src: '보장분석3DB', me: ME });
   const hg = cusTouchHtml({ stage: 'TA', src: '', me: ME });
@@ -193,7 +199,13 @@ const STAGES = ['TA', 'AP', 'PC', 'CS'];
      '  네 단계 모두 — 확정 안내 · 명함 · 전날 · 당일 아침 · 일정 변경');
   is(keysOf('CS').indexOf('sign') >= 0 && keysOf('CS').indexOf('ready') < 0 && keysOf('TA').indexOf('sign') < 0,
      '  서명 자리 준비물은 CS 에만 · 증권 가져오실 것은 CS 에는 안 선다');
-  is(S.apptOf('부재').length === 0 && S.apptOf('미접촉').length === 0, '  표 밖 단계에는 약속 글도 없다');
+  /* ★★ 판 X275 — <b>약속 글은 상담 단계 넷에만</b> 섭니다. 부재·미접촉은
+     이제 표에 <b>있지만</b>(보낼 문자가 생겼습니다) 약속 글은 안 서야 합니다 —
+     전화도 안 받으신 분께 「약속 확정 안내」 는 말이 안 됩니다 (1번).
+     여기가 그것을 지키는 자리입니다.                                    */
+  is(S.apptOf('부재').length === 0 && S.apptOf('미접촉').length === 0 &&
+     S.apptOf('거절').length === 0 && S.apptOf('계약완료').length === 0,
+     '  <b>약속 글은 상담 단계 넷(TA·AP·PC·CS)에만</b> — 부재·거절·미접촉에는 안 선다');
   /* 기존 TA 스크립트가 통화 끝에 한 약속 — 「이름이랑 명함을 문자로 · 일정 변경이 필요하시면 미리 연락 · ○월○일 ○시에 ○○에서」 */
   const TT = fs.readFileSync('app/ta-train.html', 'utf8');
   is(/명함 및 방문 안내/.test(TT) && /명함을 문자나 카카오톡으로 보내드리겠습니다/.test(TT), '  기존 TA 스크립트에 「명함 및 방문 안내」 약속이 있다 (그 약속을 지키는 글이 여기 있다)');
@@ -301,11 +313,18 @@ const STAGES = ['TA', 'AP', 'PC', 'CS'];
     is(!!app && !app.old, '    고객 창에 예전 「💬 보낼 말」 상자가 <b>또 서지 않는다</b> — 한 화면에 한 번');
   }
   /* 표에 없는 단계는 두 화면 다 안 세운다 */
-  const none = await C.pg.evaluate(() => { const d = eval('dbs')[0]; d.stage = '부재'; sgAsk(d.id); return !!document.querySelector('#askBody .cus-tc'); });
-  is(!none, '  CRM — 부재(표 밖)에는 터치 칸이 안 선다');
+  const none = await C.pg.evaluate(() => { const d = eval('dbs')[0]; d.stage = '계약완료'; sgAsk(d.id); return !!document.querySelector('#askBody .cus-tc'); });
+  is(!none, '  CRM — 계약완료(표 밖)에는 터치 칸이 안 선다');
   const old = await A.pg.evaluate(() => { CUS.db = { stage: '부재', source: '' }; window.cmCliOf = () => ({ id: 'c1', stage: '부재' });
     const b = document.createElement('div'); b.innerHTML = cmSayHtml('c1'); return { tc: !!b.querySelector('.cus-tc'), say: !!b.querySelector('.t-script') }; });
-  is(!old.tc && old.say, '  고객 창 — 부재는 예전 「💬 보낼 말」 그대로 (지운 것이 없다)');
+  /* ⚠ 2026-10-31 (판 X275) — 부재에 <b>문자 본보기가 생겼습니다.</b> 여태 이
+     줄은 「부재에는 터치 칸이 안 선다」 를 재서 <b>지운 것이 없음</b>을
+     지켰습니다. 이제는 <b>둘 다 서야</b> 맞습니다 —
+       · 예전 「💬 보낼 말」(전화 말머리)이 <b>그대로</b> 있고 (6번 · 길은 안 지웁니다)
+       · 그 위에 <b>✉️ 보낼 글</b>이 더해졌습니다 (사장님 말씀)
+     한쪽이라도 빠지면 빨간불입니다.                                      */
+  is(old.say, '  고객 창 — 부재의 예전 「💬 보낼 말」 이 <b>그대로</b> 있다 (지운 것이 없다 · 6번)');
+  is(old.tc,  '  고객 창 — 부재에 <b>✉️ 보낼 글</b>이 더해졌다 (판 X275)');
 
   console.log('\n[6] 문자를 열면 접촉 기록 한 줄 · 전화도');
   const mark = await A.pg.evaluate(() => {
