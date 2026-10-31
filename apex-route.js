@@ -47,6 +47,13 @@ var PMAP=null;           /* 위치 고르는 창의 지도 — 동선 지도(MAP
 var CACHE={}; try{ CACHE=JSON.parse(localStorage.getItem("apexGeoCacheV1")||"{}") }catch(e){ CACHE={} }
 var HOME=null;  try{ HOME=JSON.parse(localStorage.getItem("apexRouteHomeV1")||"null") }catch(e){}
 var STAY=+(localStorage.getItem("apexRouteStayV1")||60);   /* 한 건 상담에 쓰는 시간(분) */
+/* 🗺 <b>폰에서 지도를 펴 두셨나</b> (판 X272). 폰에서는 목록과 지도가
+   <b>둘 중 하나</b>만 섭니다 — 둘로 가르면 목록이 361px 밖에 안 남아
+   열두 화면을 굴려야 했습니다. 고르신 것은 이 브라우저에만 남습니다. */
+var MAPON=false; try{ MAPON=localStorage.getItem("apexRouteMapOnV1")==="1" }catch(e){}
+/* 마지막으로 지도에 담은 테두리 — 접었던 지도를 펼 때 <b>그 자리로</b>
+   돌려놓는다. 0 높이에서 그린 지도는 테두리를 모른 채로 선다. */
+var LASTB=null;
 
 /* ── 자잘한 셈 ──────────────────────────────────────────────────── */
 function norm(s){return String(s==null?"":s).replace(/\s+/g,"").toLowerCase()}
@@ -1381,7 +1388,7 @@ function styles(){
   "#rtWrap.on{display:flex}",
   ".rt-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:11px 16px;background:#fff;border-bottom:1px solid var(--line)}",
   ".rt-bar b{font-size:16px;color:var(--navy);margin-right:4px}",
-  ".rt-bar input,.rt-bar select{width:auto;min-width:120px;padding:8px 10px;border-radius:9px}",
+  ".rt-bar input,.rt-bar select{width:auto;min-width:120px;min-height:44px;padding:8px 10px;border-radius:9px}",
   ".rt-sp{flex:1}",
   ".rt-body{flex:1;display:flex;min-height:0}",
   ".rt-side{width:420px;max-width:46vw;overflow:auto;padding:16px;background:#fff;border-right:1px solid var(--line)}",
@@ -1405,7 +1412,8 @@ function styles(){
   ".rt-dots{display:flex;gap:6px;margin:10px 0 2px;flex-wrap:wrap}",
   ".rt-dot{width:15px;height:15px;border-radius:50%;background:#fff;border:2px solid #b9d3f7}",
   ".rt-dot.on{background:#3182f6;border-color:#3182f6}",
-  ".rt-mgo{margin-top:11px;min-height:40px}",
+  /* 👆 「다음 → 누구」 도 40 → <b>44px</b> (판 X272) */
+  ".rt-mgo{margin-top:11px;min-height:44px}",
   ".rt-mn{margin-top:9px;font-size:11.5px;color:#7089ad;line-height:1.5}",
   ".rt-row.done{opacity:.55}",
   ".rt-row.done .rt-no{background:#d9e6f7;color:#6b86a8}",
@@ -1473,6 +1481,7 @@ function styles(){
   ".rt-who{flex:1;min-width:150px}.rt-who b{color:var(--navy)}",
   ".rt-who small{display:block;color:var(--muted);font-size:12px;margin-top:2px}",
   ".rt-act{display:flex;gap:5px;flex-wrap:wrap}",
+  ".rt-i .rt-act{margin-top:7px}",
   ".rt-act .btn{text-decoration:none}",
   ".rt-talk{width:100%;margin-top:8px}",
   ".rt-hit{cursor:pointer;border-radius:10px;padding-left:9px;padding-right:9px}",
@@ -1509,22 +1518,105 @@ function styles(){
      ★ 단추는 <b>하나도 안 숨깁니다</b> — 키 설정·위치 정리는 고칠 단추입니다 (6번).
      ★ 글자는 13px 아래로, 누르는 자리는 40px 아래로 안 내립니다. */
   "@media(max-width:860px){"+
-    ".rt-bar{gap:6px;padding:8px 12px}"+
+    ".rt-bar{gap:5px;padding:7px 12px}"+
     ".rt-bar b{font-size:15px;order:0;margin-right:0}"+
     "#rtDate{order:1;flex:1 1 38%;min-width:0}"+
     "#rtX{order:2}"+
-    "#rtRegion,#rtOwner,#rtStay{order:3;flex:1 1 28%;min-width:0;max-width:none}"+
+    "#rtRegion,#rtOwner,#rtMapT{order:3;flex:1 1 28%;min-width:0;max-width:none}"+
     "#rtHome,#rtFix,#rtKey{order:4;flex:1 1 28%;padding-left:6px;padding-right:6px;white-space:nowrap}"+
     ".rt-sp{display:none}"+
-    ".rt-bar input,.rt-bar select{min-width:0;min-height:40px;padding:6px 8px;font-size:14px}"+
-    ".rt-bar .btn-sm{min-height:40px;font-size:13px}"+
+    /* 👆 <b>40 → 44px</b> (판 X272) — 고르는 칸도 누르는 자리입니다.
+       띠가 그만큼 높아지는 것은 상담 분 고르개를 그날 칸으로 내려
+       되돌려 받았습니다(여덟 → 일곱). */
+    ".rt-bar input,.rt-bar select{min-width:0;min-height:44px;padding:6px 8px;font-size:14px}"+
+    ".rt-bar .btn-sm{min-height:44px;font-size:13px}"+
     ".rt-side{padding:10px 12px}"+
     ".rt-card{padding:10px 11px;margin-bottom:8px;border-radius:12px}"+
     ".rt-h{margin:10px 0 6px}"+
     ".rt-nokey{padding:14px}"+
-  "}"
+  "}",
+  /* ══ 📱 폰에서는 <b>목록이 창을 다 씁니다</b> — 지도는 단추로 (판 X272) ══
+     사장님 말씀 2026-10-31 「지역동선 다시 테스트해 <b>이걸 영업하면서 쓸 수가
+     없어</b>」. 여쭈니 「<b>지도를 접기 — 목록이 창을 다 쓰게</b>」 를 고르셨습니다.
+
+     ⚠ <b>재어 보니</b> 390px 폰에서 창 844px 이 이렇게 갈려 있었습니다 —
+       도구 띠 <b>149px</b> · 지도 <b>334px</b> · 목록 <b>361px</b>.
+       그런데 그 목록 안에 든 글은 <b>4,329px — 열두 화면</b>입니다.
+       한 사람을 보려고 손가락을 열두 번 굴려야 했습니다.
+
+     이제 폰에서는 <b>둘 중 하나만</b> 섭니다. 목록이 창을 다 쓰고, 지도는
+     띠의 「🗺 지도」 로 펴면 그때 창을 다 씁니다 — <b>어느 쪽도 반 토막이
+     아닙니다.</b>
+     ★ <b>지도를 없애지 않습니다</b> (6번) — 단추 한 번이면 돌아오고, 고르신
+       것은 이 브라우저에 남습니다.
+     ★ <b>컴퓨터는 그대로</b> 둡니다(곁에 나란히). 그래서 「🗺 지도」 단추도
+       컴퓨터에서는 <b>안 섭니다</b> — 거기서는 정말로 할 일이 없습니다 (6번).
+     ★ 접힌 지도는 <b>display:none 이 아니라 높이 0</b> 입니다. 아예 끄면
+       카카오 판이 죽고, 다시 펴도 회색 칸만 남습니다. 높이만 0 으로 두고
+       펼 때 relayout 으로 되살립니다.                                     */
+  "#rtMapT{display:none}",
+  "@media(max-width:860px){"+
+    "#rtMapT{display:inline-flex}"+
+    ".rt-side{max-height:none;flex:1 1 auto;border-bottom:0}"+
+    ".rt-mapbox{flex:0 0 auto;height:0;min-height:0;overflow:hidden}"+
+    "#rtWrap.rt-mapon .rt-side{display:none}"+
+    "#rtWrap.rt-mapon .rt-mapbox{flex:1 1 auto;height:auto}"+
+  "}",
+  /* ══ 👆 줄마다 <b>제일 많이 누르는 넷</b>을 크게 (판 X272) ═══════════
+     여쭈니 「<b>🧭 내비 · 📋 멘트 · 💬 문자 · 📞 전화</b>」 넷 다 라고
+     하셨습니다. 재어 보니 그 넷이 전부 <b>32px</b> 이었습니다 — 사장님
+     손가락 바닥은 <b>44px</b> 입니다(판 X146·X147).
+     ★ 폰에서는 그 넷이 <b>한 줄에 넷</b>으로 서고, 「약속 잡기」 는 그
+       아래 한 줄을 다 씁니다 — 운전 중에 잘못 누를 자리를 없앱니다.
+     ★ 바닥 44px 은 db-crm.html 의 <b>한 줄</b>이 겁니다 — 여기서 또
+       적지 않습니다 (5번).                                               */
+  "@media(max-width:860px){"+
+    ".rt-act{width:100%;gap:6px;margin-top:2px}"+
+    ".rt-act>.btn,.rt-act>button{flex:1 1 calc(25% - 5px);min-width:0;"+
+      "padding-left:4px;padding-right:4px;white-space:nowrap}"+
+    ".rt-act>.rt-wide{flex:1 1 100%}"+
+  "}",
+  /* ⏱ 상담 한 건에 몇 분 — <b>그날 칸</b>에서 고릅니다 (판 X272 · 아래 쪽지) */
+  ".rt-stay{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:9px;"+
+    "padding:9px 11px;border:1px solid #c9ddff;border-radius:11px;background:#eef6ff}",
+  ".rt-stay label{font-size:13px;font-weight:800;color:#245ea8}",
+  ".rt-stay select{flex:1;min-width:120px;max-width:180px;min-height:44px;padding:9px 10px;border-radius:9px}",
+  ".rt-stay small{flex:1 1 100%;font-size:11.5px;color:#7089ad;line-height:1.5}"
   ].join("");
   document.head.appendChild(s);
+}
+
+/* ── 🗺 지도 ↔ 📋 목록 (폰에서만) ─────────────────────────────────
+   「지금 어느 쪽을 보고 있나」 를 아는 자리는 <b>MAPON 하나</b>입니다 (5번).
+   단추에 적는 이름도, 틀에 붙이는 class 도 여기서 한 번에 정합니다 —
+   두 곳에서 각자 정하면 단추는 「지도」 인데 지도가 선 날이 옵니다.      */
+/* ⏱ <b>상담 몇 분인가를 담는 자리는 여기 하나</b>입니다 (5번).
+   동선 창의 그날 칸에서 고르셔도, 홈(오늘 칸)에서 고르셔도 이 문을
+   지납니다. 두 곳에서 각자 담으면 한쪽은 60분으로 짜고 다른 쪽은
+   45분으로 짜서, 같은 하루에 두 스케줄표가 섭니다.                     */
+function stayPut(v){
+  v=+v||60; if(v===STAY)return STAY;
+  STAY=v; try{ localStorage.setItem("apexRouteStayV1",STAY) }catch(e){}
+  var w=q("rtWrap");
+  if(w&&w.classList.contains("on"))render();
+  return STAY;
+}
+
+function mapPaint(){
+  var w=q("rtWrap"), b=q("rtMapT"); if(!w)return;
+  if(MAPON)w.classList.add("rt-mapon"); else w.classList.remove("rt-mapon");
+  /* 지금 보고 있는 것이 아니라 <b>누르면 가는 곳</b>을 적습니다 */
+  if(b)b.textContent=MAPON?"📋 목록":"🗺 지도";
+}
+function mapToggle(){
+  MAPON=!MAPON;
+  try{ localStorage.setItem("apexRouteMapOnV1",MAPON?"1":"0") }catch(e){}
+  mapPaint();
+  /* 접혀 있던 지도는 <b>제 키를 모릅니다</b> — 펴는 그때 다시 재게 하고,
+     마지막으로 담아 둔 테두리로 돌려놓습니다. 안 하면 회색 칸만 섭니다. */
+  if(MAPON) setTimeout(function(){ try{
+    if(MAP){ MAP.relayout(); if(LASTB) MAP.setBounds(LASTB,60,60,60,60); }
+  }catch(e2){} },80);
 }
 
 function wrap(){
@@ -1537,8 +1629,11 @@ function wrap(){
       '<input type="date" id="rtDate">'+
       '<select id="rtRegion"></select>'+
       '<select id="rtOwner"></select>'+
-      '<select id="rtStay"><option value="30">상담 30분</option><option value="45">상담 45분</option>'+
-        '<option value="60">상담 60분</option><option value="90">상담 90분</option></select>'+
+      /* 🗺 <b>지도 ↔ 목록</b> — 폰에서만 섭니다 (판 X272 · 위 CSS 쪽지).
+         ⏱ 상담 몇 분인가(#rtStay)는 <b>그날 칸</b>으로 내려갔습니다 —
+            띠에 여덟이 서면 폰에서 149px 을 먹고, 정작 그 수를 쓰는 자리는
+            아래 스케줄표입니다. 단추를 <b>없앤 것이 아니라 옮긴 것</b>입니다 (6번). */
+      '<button class="btn btn-light btn-sm" id="rtMapT">🗺 지도</button>'+
       '<button class="btn btn-light btn-sm" id="rtHome">🏠 출발지</button>'+
       '<button class="btn btn-light btn-sm" id="rtFix">📍 위치 정리하기</button>'+
       '<span class="rt-sp"></span>'+
@@ -1552,8 +1647,8 @@ function wrap(){
   document.body.appendChild(w);
   q("rtX").onclick=function(){ w.classList.remove("on") };
   q("rtDate").onchange=render; q("rtRegion").onchange=render; q("rtOwner").onchange=render;
-  q("rtStay").onchange=function(){ STAY=+q("rtStay").value||60;
-    try{ localStorage.setItem("apexRouteStayV1",STAY) }catch(e){} render() };
+  q("rtMapT").onclick=mapToggle;
+  mapPaint();
   q("rtHome").onclick=setHome;
   q("rtFix").onclick=fixAll;
   q("rtKey").onclick=function(){ keyPanel(true) };
@@ -1959,6 +2054,23 @@ function render(){
   side.push('<div class="rt-h">'+E((dt.getMonth()+1)+"월 "+dt.getDate()+"일("+wday(dt)+")")+
     ' 확정 약속 '+stops.length+'건'+(region?' · '+E(region):"")+'</div>');
 
+  /* ══ ⏱ <b>상담 한 건에 몇 분</b> (판 X272) ═══════════════════════════
+     사장님 말씀 2026-10-31 — 「<b>오늘 칸에서 예상 소요시간 정하고</b>」.
+     이 수 하나로 아래 <b>상담 끝 시각</b> · <b>다음까지 몇 분 비는지</b> ·
+     「몇 분 늦습니다」 가 전부 달라집니다. 그래서 그 수를 <b>쓰는 자리 바로
+     위</b>에 둡니다 — 여태는 위 도구 띠의 여덟째 칸이어서, 폰에서 띠가
+     149px 을 먹으면서도 정작 아무도 안 건드렸습니다.
+     ★ 수를 <b>담는 자리는 STAY 하나</b>입니다 (5번) — 홈(오늘 칸)에서
+       고르셔도 같은 문(window.apexRouteStay)을 지납니다.
+     ★ <b>약속이 없는 날에도 섭니다</b> — 약속을 잡기 <b>전에</b> 정하는
+       수이고, 단추를 날마다 숨기면 못 찾습니다 (6번).                    */
+  side.push('<div class="rt-stay"><label for="rtStay">⏱ 상담 한 건에</label>'+
+    '<select id="rtStay">'+[30,45,60,90].map(function(v){
+      return '<option value="'+v+'"'+(STAY===v?' selected':'')+'>'+v+'분</option>';
+    }).join("")+'</select>'+
+    '<small>이 수로 <b>상담 끝 시각</b>과 <b>다음까지 몇 분 비는지</b>를 셉니다 — '+
+    '홈 「🚗 오늘 어디로 가시나」 에서도 고치실 수 있습니다.</small></div>');
+
   if(!stops.length){
     side.push('<div class="rt-card" style="color:var(--muted)">이날 잡힌 약속이 없습니다. '+
       '날짜를 바꿔 보시거나, 아래 후보에게 걸어 하루를 만드십시오.</div>');
@@ -1977,12 +2089,27 @@ function render(){
       }
       var bad=l.bad?'<span class="rt-bad">앞 약속과 '+Math.round((x.at-stops[i-1].at)/60000)+
         '분 차이인데 상담 '+STAY+'분 + 이동 '+l.min+'분이 필요합니다 — <b>'+l.bad+'분 늦습니다</b></span>':"";
-      var nav=x.pt?'<a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="'+
-        naviUrl(x.d)+'">🧭 내비</a>':"";
+      /* ══ 👆 <b>확정 약속 줄에도 넷을</b> (판 X272) ════════════════════
+         여태 이 줄에는 <b>🧭 내비</b> 하나뿐이었습니다. 그런데 길에서 제일
+         많이 하는 일은 「<b>5분 늦습니다</b>」 를 보내는 것입니다 — 그러려면
+         명단 창으로 나가서 그 사람을 다시 찾아야 했습니다.
+         ★ <b>문자에 글을 지어 넣지 않습니다</b> (1번) — 문자 칸만 열어
+           드립니다. 「가는 김에」 멘트는 <b>약속을 잡는 전화</b>에 쓰는
+           말이라, 이미 약속이 잡힌 분에게 그 말을 넣으면 엉뚱합니다.
+         ★ 번호가 없으면 <b>없다고 적습니다</b> — 안 되는 단추를 세우지
+           않습니다 (6번).                                                */
+      var act='<div class="rt-act">'+
+        (telHref(x.d)?('<a class="btn btn-primary btn-sm" href="'+E(telHref(x.d))+'">📞 전화</a>'+
+                       '<a class="btn btn-light btn-sm" href="'+E(smsHref(x.d,""))+'">💬 문자</a>')
+                     :'<span class="badge gray">번호 없음</span>')+
+        (x.pt?'<a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="'+
+              naviUrl(x.d)+'">🧭 내비</a>'
+             :'<button class="btn btn-light btn-sm" data-pin="'+E(x.d.id)+'">📍 동네</button>')+
+        '</div>';
       return '<div class="rt-stop"><div class="rt-t0">'+hm(x.at)+'<small>'+(i+1)+'번째</small></div>'+
         '<div class="rt-i"><b>'+E(x.d.customer_name)+'</b>'+
         '<small>'+E(placeOf(x.d)||"장소 미정")+(x.d.phone?" · "+E(x.d.phone):"")+'</small>'+
-        move+bad+'</div><div>'+nav+'</div></div>';
+        move+bad+act+'</div></div>';
     }).join("");
     side.push('<div class="rt-card">'+body+'</div>');
 
@@ -2174,10 +2301,14 @@ function missCard(region,owner,top){
           /* 위치를 모르면 그 자리에서 찍고, 알면 그 자리에서 내비로 —
              전화 걸면서 「아, ○○동 사세요?」 하는 그 순간이 자료가
              들어오는 제일 싼 자리다. 창을 옮겨 다니지 않는다. */
-          (ptOf(d)?'<a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="'+naviUrl(d)+'">🧭</a>'
+          /* 🧭 에 <b>이름을 답니다</b> (판 X272) — 그림만 띄워 두면 운전 중에
+             무엇인지 한 박자 늦게 압니다. 사장님이 꼽으신 넷 가운데 하나입니다. */
+          (ptOf(d)?'<a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="'+naviUrl(d)+'">🧭 내비</a>'
                   :'<button class="btn btn-light btn-sm" data-pin="'+E(d.id)+'">📍 동네</button>')+
           '<button class="btn btn-light btn-sm" data-rtalk="'+i+'">📋 멘트</button>'+
-          '<button class="btn btn-dark btn-sm" data-rcall="'+E(d.id)+'">약속 잡기</button>'+
+          /* 「약속 잡기」 는 <b>한 줄을 다 씁니다</b> — 넷과 섞여 서면
+             운전 중에 잘못 눌러 명단 창으로 튕깁니다 (rt-wide). */
+          '<button class="btn btn-dark btn-sm rt-wide" data-rcall="'+E(d.id)+'">약속 잡기</button>'+
         '</div><div class="rt-talk hidden" id="rtRT'+i+'"></div></div>';
     }).join("")+'</div>');
   }
@@ -2203,6 +2334,8 @@ function missCard(region,owner,top){
   /* 시 칩 — 누르면 그 시만 남는다. 「지금 어느 지역인가」를 아는 자리는
      지역 고르는 칸 하나뿐이다. 칩은 그 칸을 바꾸고 다시 그릴 뿐이다 (5번). */
   if(q("rtCityFix"))q("rtCityFix").onclick=cityFixOpen;
+  /* ⏱ 상담 분 — 담는 문은 stayPut 하나입니다 (5번) */
+  if(q("rtStay"))q("rtStay").onchange=function(){ stayPut(+q("rtStay").value||60) };
 
   Array.prototype.forEach.call(q("rtSide").querySelectorAll("[data-city]"),function(b){
     b.onclick=function(){
@@ -2331,7 +2464,10 @@ function drawMap(stops,cands){
       if(lb)lb.textContent = (!길&&!직선) ? ""
         : (직선 ? ("길 "+길+"구간 · 직선(어림) "+직선+"구간") : ("실제 길 "+길+"구간"));
     }catch(eL){}
-    if(any) MAP.setBounds(bounds,60,60,60,60);
+    /* 담은 테두리를 <b>기억해 둡니다</b> — 폰에서 접힌 지도는 키가 0 이라
+       그 자리에서 담아도 엉뚱하게 섭니다. 펴는 그때 이것으로 되돌립니다. */
+    LASTB = any?bounds:null;
+    try{ if(any) MAP.setBounds(bounds,60,60,60,60) }catch(eB){}
     setTimeout(function(){ try{ MAP.relayout(); if(any)MAP.setBounds(bounds,60,60,60,60) }catch(e){} },120);
   }).catch(function(e){ keyPanel(false,e) });
 }
@@ -2891,11 +3027,19 @@ function routeOpen(dateStr,region){
     /* 추천한 그 동네로 켜졌을 때만 「권하는 동네」 라고 적습니다 */
     HOTON=!!(hit&&HOT.rg&&want&&want===(cityOf({region:HOT.rg})||""));
   }
-  q("rtStay").value=String(STAY);
+  /* ⏱ 상담 분 고르개는 <b>render 가 그날 칸에 세웁니다</b> (판 X272) —
+     여기서 또 값을 넣으면 아직 없는 칸을 더듬다 조용히 터집니다. */
   q("rtWrap").classList.add("on");
+  mapPaint();
   render();
 }
 window.apexRouteOpen=routeOpen;
+/* ⏱ <b>상담 한 건에 몇 분</b> — 홈(오늘 칸)이 부르는 문입니다 (판 X272).
+   사장님 말씀 2026-10-31 「오늘 칸에서 예상 소요시간 정하고」.
+   ★ 값 없이 부르면 <b>지금 몇 분인지</b> 답하고, 값을 주면 담고 다시 짭니다.
+     담는 자리는 stayPut <b>한 곳</b>입니다 (5번) — 홈이 제 손으로
+     localStorage 를 적으면 동선 창은 그것을 모른 채 옛 수로 짭니다.    */
+window.apexRouteStay=function(v){ return (v==null)?STAY:stayPut(v) };
 /* 📮 「주소 적기」 단추가 부르는 손잡이. 이 파일은 통째로 봉투(IIFE) 안이라
    onclick 에서 바로 못 부릅니다 — 그래서 한 줄만 내놓습니다.
    ★ <b>하는 일을 여기서 새로 짜지 않습니다</b> (5번) — 이미 있는 pinOne
