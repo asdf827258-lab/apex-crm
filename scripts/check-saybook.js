@@ -146,7 +146,7 @@ const srv = http.createServer((rq, rs) => {
     const p = document.querySelector('.tab-pane.on') || document.getElementById('dynPane');
     const 작 = [...p.querySelectorAll('button,.btn,input,select')]
       .filter(e => { const q = e.getBoundingClientRect(); return q.width > 0 && q.height > 0 && q.height < 44 });
-    return { 머리: T((p.querySelector('.page-head h2') || {}).innerText),
+    return { 머리: T((p.querySelector('.sbk-head h2') || {}).innerText),
              묶음: [...p.querySelectorAll('.sbk-g')].map(x => T(x.innerText)),
              상황: p.querySelectorAll('.sbk-sit').length,
              편글: p.querySelectorAll('.sbk-tx').length,
