@@ -5017,7 +5017,8 @@ function offline(q){
   one.more = jvMore(q, one);
   return one;
 }
-var JV_SPLIT = /\s+(?:하고|그리고|다음에?|그다음에?|후에|뒤에|하면서|한\s?다음에?|한\s?뒤에?|해서)\s+|(\S{2,}?)(?:하고|한\s?다음에?|한\s?뒤에?)\s+|\s*[,→>]\s*/g;
+/* 「계약하고 나서」 · 「청약하고 나면」 은 두 가지가 아니라 <b>때</b>입니다 — 거기서 가르지 않습니다 (판 X280) */
+var JV_SPLIT = /\s+(?:하고(?!\s*(?:나서|나면|난\s))|그리고|다음에?|그다음에?|후에|뒤에|하면서|한\s?다음에?|한\s?뒤에?|해서)\s+|(\S{2,}?)(?:하고(?!\s*(?:나서|나면|난\s))|한\s?다음에?|한\s?뒤에?)\s+|\s*[,→>]\s*/g;
 function jvSplit(q){
   var out = [];
   String(q).replace(JV_SPLIT, function(m, w){ return (w || '') + '\u0001'; }).split('\u0001').forEach(function(x){
@@ -5267,7 +5268,12 @@ var JV_FIND = [
      A.forEach(function(a){
        /* 이름과 괄호 속 다른 이름 — 「자동대출납입(APL)」 은 APL 로도 찾는다 */
        var al = [a.name.replace(/\(.*$/, '')].concat((/\(([^)]+)\)/.exec(a.name) || ['', ''])[1].split(/[·,]/));
-       al.forEach(function(x){ var n = kbN(x); if (n.length >= 2 && nq.indexOf(n) >= 0) hits.push({a:a, n:n}); });
+       al.forEach(function(x){
+         var n = kbN(x);
+         /* 「갈아타기」 는 「갈아타라는 거」 로도 묻습니다 — 끝의 「기」 를 뗀 줄기로도 봅니다 (판 X280) */
+         if (n.length >= 2 && nq.indexOf(n) >= 0) hits.push({a:a, n:n});
+         else if (n.length >= 4 && /기$/.test(n) && nq.indexOf(n.slice(0, -1)) >= 0) hits.push({a:a, n:n});
+       });
      });
      /* 「감액완납」 안의 「감액」 처럼 <b>더 긴 이름에 들어 있는 것</b>은 뺀다 */
      hits = hits.filter(function(h){ return !hits.some(function(o){ return o.n !== h.n && o.n.indexOf(h.n) >= 0; }); });
@@ -5305,26 +5311,54 @@ var JV_FIND = [
 var JV_FIELD = ['화법','멘트','대본','설명','설명해','뜻','정의','의미','차이','알려','말','말해',
   '방법','뭔지','뭐지','뭐예요','뭐에요','뭡니까','정리','내용','자료','보여','보여줘','찾아','찾아줘','관련',
   '나와','나와요','나오나','나오나요','나옵니까','받아','받나','받을','되나','될까','라고','뭐라고','하면','어떡해','거절',
-  '이상','이하','미만','초과','정도','경우','찾기','찾는'];
+  '이상','이하','미만','초과','정도','경우','찾기','찾는',
+  /* 판 X280 — 「다른 설계사도 만나본대」 의 「다른」 이 「크기가 다른 그물」 강의를 끌고 오던 자리 */
+  '다른','같은','이런','그런','저런','모든','어떤','많이','조금','정말','진짜','그냥','다시','먼저',
+  /* 「얘기 · 꺼내」 는 <b>어떻게</b> 말할지이지 <b>무엇</b>이 아닙니다 — 낱말 반을 맞혀야 서는 셈에서 짐이 됩니다 */
+  '얘기','이야기','꺼내','꺼낼','꺼내지'];
 /* 흔한 말 — 이름 안에 들어 있어도 <b>가볍게</b> 친다. 「백내장 수술」 의 수술이
    「보조항암(수술 후)」 을 끌고 오던 자리입니다. 이름과 <b>똑같으면</b> 그대로 무겁습니다 */
 var JV_KBROAD = ['수술','치료','진단','검사','사례','상담','보장','입원','약물','비용','관리','질환','질병','보험금',
   '진단비','수술비','치료비','일당','제거','절제','시술'];
 /* 보험 자료에만 쓰는 비슷한 말 — 앱 길(JV_SYN)과 섞지 않습니다. 그쪽은 「해지 → 계약관리」 처럼
    <b>화면</b>을 빌리는 표라, 여기 쓰면 화면 이름으로 자료를 찾게 됩니다 */
-var JV_KSYN = {'실비':['실손'], '실손':['실비'], '병원비':['치료비'], '뇌졸증':['뇌졸중'], '치매보험':['치매']};
+var JV_KSYN = {'실비':['실손'], '실손':['실비'], '병원비':['치료비'], '뇌졸증':['뇌졸중'], '치매보험':['치매'],
+  '노후':['연금']};   /* 판 X280 — 「노후 걱정하는 고객한테 연금 얘기」 가 연금 화법 장으로 */
 /* 「질병코드 찾기」 처럼 <b>화면을 부르는</b> 말도 쓰는 법이다 — 그 답은 길입니다 (check-jvguide [6] 이 잡았습니다) */
 var JV_USE = /어떻게\s*(?:써|쓰|해|하|만들|넣|받|올리|보)|사용법|쓰는\s*법|하려면|어디|찾기\s*$|찾는\s*(?:법|곳)/;
+/* ★ 판 X280 — 「어떻게 해 · 하 · 만들 · 넣 · 받 · 올리 · 보」 는 <b>물은 것이 화면일 때만</b> 앱 쓰는 법입니다.
+   「보장분석 어떻게 해?」 는 화면 · 「소개 부탁 어떻게 해?」 는 영업. 시뮬레이션에서 뒤의 것이 아무것도 못 찾았습니다.
+   「어디 · 사용법 · 쓰는 법 · 하려면 · …찾기」 는 그대로 늘 쓰는 법입니다. */
+var JV_USE_HARD = /어떻게\s*(?:써|쓰)|사용법|쓰는\s*법|하려면|어디|찾기\s*$|찾는\s*(?:법|곳)/;
+function jvIsUse(q){
+  if (JV_USE_HARD.test(q)) return true;
+  if (!JV_USE.test(q)) return false;
+  var raw = jvWords(q).map(kbN).filter(function(w){
+    if (!w || JV_FIELD.indexOf(w) >= 0 || JV_COMMON.indexOf(w) >= 0 || JV_STOP.indexOf(w) >= 0) return false;
+    /* 「만들어 · 넣어」 같은 움직임 말은 화제가 아닙니다 */
+    if (JV_ACT.some(function(a){ return a.length >= 2 && w.indexOf(a) === 0; })) return false;
+    return w.length >= 2 || JV_ONE.indexOf(w) >= 0;
+  });
+  /* 화면 <b>이름</b>에 든 말만 화면으로 칩니다 — 「소개」 는 찾기 말에는 있어도 화면 이름이 아닙니다 */
+  return raw.length > 0 && raw.every(function(w){
+    return kb().docs.some(function(d){ return d.kind === 'scr' && d.nTj.indexOf(w) >= 0; });
+  });
+}
 /* 이름 하나를 여러 이름으로 — 「뇌졸중(뇌출혈·뇌경색)」 은 셋으로 찾는다 */
 function jvAlias(t){
-  var s = kbTxt(t), out = [], m = /^([^(]+)\(([^)]+)\)/.exec(s);
-  [s].concat(m ? [m[1]].concat(m[2].split(/[·,\/]/)) : s.split(/[·\/]/)).forEach(function(x){
-    var n = kbN(x); if (n && out.indexOf(n) < 0) out.push(n);
+  var s = kbTxt(t), out = [], m = /^([^(]+)\(([^)]+)\)/.exec(s), frag = {};
+  var parts = m ? [m[1]].concat(m[2].split(/[·,\/]/)) : s.split(/[·\/]/);
+  [s].concat(parts).forEach(function(x, i){
+    var n = kbN(x); if (!n || out.indexOf(n) >= 0) return;
+    out.push(n);
+    /* 「이름(별명)」 의 이름·별명은 <b>이름</b>이고, 괄호 없이 「·」 로 늘어놓은 것은 <b>나열 조각</b>입니다 (판 X280) */
+    if (!m && i > 0 && parts.length > 1) frag[n] = 1;
   });
+  out.frag = frag;
   return out;
 }
 function jvKnowWords(q){
-  var use = JV_USE.test(q);
+  var use = jvIsUse(q);
   return jvWords(q).map(kbN).filter(function(w){
     if (!w || JV_FIELD.indexOf(w) >= 0 || JV_COMMON.indexOf(w) >= 0) return false;
     if (w.length < 2 && JV_ONE.indexOf(w) < 0) return false;
@@ -5346,14 +5380,17 @@ function jvKnowPick(q, list, f, max){
            흔한 말·한 글자는 가볍게 */
         var part = JV_KBROAD.indexOf(w) >= 0 || w.length === 1 ? 3 : (w.length >= 3 ? 7 : 0);
         al.forEach(function(a){
-          if (a === w) best = Math.max(best, 12);
+          /* 나열 조각과 같으면 <b>이름</b>만큼은 안 칩니다 — 목차 장의 「청구」 가 굳은 답이 되던 자리 (판 X280) */
+          if (a === w) best = Math.max(best, al.frag[a] ? 7 : 12);
           /* 두 글자는 <b>짧은 이름의 머리</b>일 때만 무겁게 — 「영업」 이 「자영업」 에 걸리던 자리 */
-          else if (a.indexOf(w) >= 0) best = Math.max(best, part || (a.length <= 4 && a.indexOf(w) === 0 ? 7 : 4));
+          else if (a.indexOf(w) >= 0) best = Math.max(best, al.frag[a] ? Math.min(4, part || 4) : (part || (a.length <= 4 && a.indexOf(w) === 0 ? 7 : 4)));
           else if (a.length >= 2 && JV_KBROAD.indexOf(a) < 0 && w.indexOf(a) >= 0) best = Math.max(best, 7);
         });
         keys.forEach(function(k){
           if (k === w) best = Math.max(best, 5);
           else if (w.length >= 2 && k.indexOf(w) === 0) best = Math.max(best, 3);
+          /* 찾기 말이 물은 낱말의 <b>머리</b>면 — 「부재중이면」 의 「부재중」 (판 X280) */
+          else if (k.length >= 2 && w.indexOf(k) === 0) best = Math.max(best, 4);
         });
         if (!best && w.length >= 2 && f.b){
           if (body === null) body = kbN(f.b(x));
@@ -5366,9 +5403,13 @@ function jvKnowPick(q, list, f, max){
     });
     /* 이름이 <b>통째로</b> 물음 안에 있으면 — 「보험 많아요 거절」 · 「지금 바빠요」.
        거절 처리는 이름이 곧 고객의 말이라 낱말로 쪼개면 놓칩니다 */
-    var whole = al.some(function(a){ return a.length >= 3 && JV_KBROAD.indexOf(a) < 0 && nq.indexOf(a) >= 0; }) ||
+    /* 통째 — 이름은 세 글자부터, 괄호 없이 「·」 로 늘어놓은 조각은 네 글자부터. 슬라이드 제목의 나열
+       (「신분증 · 청구서 · …」) 속 「청구서」 가 「청구 서류」 에 통째로 걸리던 자리 (판 X280) */
+    var whole = al.some(function(a){ return a.length >= (al.frag[a] ? 4 : 3) && JV_KBROAD.indexOf(a) < 0 && nq.indexOf(a) >= 0; }) ||
                 /* 띄어 물은 말을 붙이면 이름이 되는가 — 「암 진단비」 → 암진단비 ⊂ 일반암진단비 */
-                (jw.length >= 3 && al.some(function(a){ return a.indexOf(jw) >= 0; }));
+                (jw.length >= 3 && al.some(function(a){ if (al.frag[a]) return false; var at = a.indexOf(jw); return at === 0 || (at > 0 && jw.length * 2 >= a.length); }));
+    /* ↑ 붙인 말이 이름의 <b>머리</b>이거나 <b>반은</b> 돼야 통째로 칩니다 — 「청구 서류」 가 「치아보험금 청구서류」 장을
+       굳은 답으로 세워 청구 화면 길을 접던 자리 (판 X280 · check-jvfind [5] 가 잡음) */
     if (whole) sc += 12;
     /* 이름·찾기 말에 <b>한 번은</b> 걸려야 하고, 물은 낱말의 반은 어딘가에 맞아야 한다.
        f.strict(거절 처리) — 이름이 고객의 한 마디라 낱말 하나로는 안 맞춥니다.
@@ -5555,7 +5596,8 @@ function jvSurgRows(){
 function jvTalkRows(){
   if (JV_EXT.st !== 'ok') return [];
   var A = JV_EXT.A, out = [];
-  var put = function(x, from){ if (x && x.q && x.a) out.push({q:x.q, a:x.a, k:x.k || '', from:from}); };
+  /* 고객 말이 글자 없이 「—」 뿐인 줄은 뺍니다 — 찾기에 「」 만 서던 자리 (판 X280) */
+  var put = function(x, from){ if (x && x.q && x.a && /[가-힣A-Za-z]/.test(jvPlain(x.q))) out.push({q:x.q, a:x.a, k:x.k || '', from:from}); };
   (A.CURRICULUM || []).forEach(function(c){ (c.scripts || []).forEach(function(x){ put(x, '커리큘럼 ' + jvPlain(c.title)); }); });
   (A.LESSONS || []).forEach(function(l){ put(l.talk, '1교시 ' + jvPlain(l.title)); });
   if (A.HEALTH) put(A.HEALTH.talk, '헬스케어');
@@ -5725,6 +5767,106 @@ JV_FIND.push(
     }, '', 2, 1)
 );
 
+/* ══ 🧭 <b>영업 단계 — TA 부터 소개까지, 앱이 이미 아는 것</b> (판 X280) ══════════════════
+   사장님 말씀 2026-10-31 — 「고객을 만난다는 가정하에 신입이 물어보면 ta 부터 cs 까지 도와주는
+   시뮬레이션을 해봐」. 시뮬레이션에서 「처음 전화 뭐라고 해?」 · 「부재중이면 문자 뭐라고 보내?」 ·
+   「청약할 때 뭐 챙겨?」 · 「증권 전달할 때 뭐라고 해?」 · 「소개 부탁 어떻게 해?」 가 <b>길만</b>
+   짚었습니다. 그 답은 이미 apex-stage.js 에 있었습니다(TA 스크립트 · DB 통합 CRM 이 같이 쓰는 표).
+   ★ <b>새 글 0</b> — APEX_STAGE 의 단계 지도(map) · 단계별 보낼 글(touch) · 상황 대본(say) ·
+     약속 안내(appt) · 단계 점검(chk) · 증권 전달 차례(pdel) · 전화를 여는 다섯 마디(taFrame) 그대로.
+   ★ 보낼 글의 {나} · {이름} · {서명} 은 <b>앱의 cusFill 한 곳</b>으로 채웁니다(설계사 「내 소개」 ·
+     비면 「담당 설계사」 · 지어 넣지 않음). 일시 · 장소처럼 모르는 자리는 [일시] 로 <b>보이게</b> 둡니다.
+   ★ 보낼 글은 약속·안내 글입니다 — 상품 권유를 넣으면 광고 수신 동의가 있는 분께만 보낼 수 있다고
+     표에 적힌 그대로 붙입니다.                                                              */
+var JV_STAGE_W = {
+  '미접촉':'처음 신규 배정 DB 디비', '부재':'부재 부재중 안받 안 받아 문자', '거절':'거절 끊었 끊어',
+  'TA':'TA 전화 첫통화 처음 전화 콜 통화', 'AP':'약속 만남 미팅 만나기 방문 만나기전',
+  'PC':'제안 제안서 설계안', 'CS':'청약 서명 계약서 서류 심사', '계약완료':'계약후 계약하고나서 계약 뒤 계약끝',
+  '증권전달':'증권 전달 증권전달', '소개완료':'소개 소개받 소개부탁'
+};
+function jvStageFill(t){
+  var P = kbApp(), s = String(t || '');
+  var X = {'일시':'[일시]', '장소':'[장소]', '자리':'[자리]', '시각':'[시각]', '장소에서':'[장소]에서', '소개줄':'', 'cov':'[비어 있는 담보]'};
+  try {
+    if (P && typeof P.cusFill === 'function' && typeof P.cusMeNorm === 'function'){
+      var pr = (P.OS && P.OS.profile) || {};
+      var me = typeof P.cusMeOf === 'function' ? P.cusMeOf(pr.id, pr.name) : {};
+      return jvPlain(P.cusFill(s, P.cusMeNorm(me), X));
+    }
+  } catch(e){}
+  return jvPlain(s.replace(/\{([^{}]{1,8})\}/g, function(m, k){ return X[k] != null ? X[k] : '[' + k + ']'; }));
+}
+var JV_ADNOTE = '⚠ 약속·안내 글입니다 — 상품 권유를 넣으면 광고 수신 동의가 있는 분께만 보낼 수 있습니다.';
+function jvStageRows(){
+  var P = kbApp(), S = null, out = [];
+  try { S = P && P.APEX_STAGE; } catch(e){ S = null; }
+  if (!S) return out;
+  var W = function(st){ return st + ' ' + (JV_STAGE_W[st] || ''); };
+  Object.keys(S.map || {}).forEach(function(st){ var m = S.map[st];
+    out.push({kind:'map', st:st, t:st + ' 단계 — ' + jvPlain(m.aim), k:W(st) + ' 단계 목표', b:jvPlain(m.way) + ' ' + (m.q || []).join(' '), m:m}); });
+  Object.keys(S.touch || {}).forEach(function(st){ (S.touch[st] || []).forEach(function(x){
+    out.push({kind:'touch', st:st, t:x.t, k:W(st) + ' ' + (x.ch || '') + ' 문자 카톡 보낼 글', b:jvPlain(x.when) + ' ' + jvPlain(x.how), x:x}); }); });
+  Object.keys(S.say || {}).forEach(function(k){ var x = S.say[k];
+    out.push({kind:'say', t:x.t, k:k + ' ' + (JV_STAGE_W[k] || '') + ' ' + (x.chip || ''), b:x.say + ' ' + (x.next || ''), x:x}); });
+  (S.appt || []).forEach(function(x){ out.push({kind:'appt', t:x.t, k:'약속 안내 문자 약속문자 ' + (x.k || ''), b:x.text, x:x}); });
+  (S.chk || []).forEach(function(c){ out.push({kind:'chk', st:c.k, t:c.t, k:W(c.k) + ' 점검 챙길 준비 증권 사진 가져 안가져', b:jvPlain(c.aim) + ' ' + c.none + ' ' + c.ask, x:c}); });
+  if ((S.pdel || []).length) out.push({kind:'pdel', t:'증권 전달 — 말하는 차례', k:'증권 전달 증권전달 전할때 소개 가족 계약후', b:S.pdel.map(function(p){ return jvPlain(p.t) + ' ' + p.say; }).join(' '), x:S.pdel});
+  if ((S.taFrame || []).length) out.push({kind:'frame', t:'전화를 여는 다섯 마디', k:'TA 첫통화 첫마디 처음 전화 여는말 전화대본 첫 전화 DB 디비', b:S.taFrame.map(function(f){ return f.t + ' ' + f.s; }).join(' '), x:S.taFrame});
+  return out;
+}
+function jvStageRow(r){
+  var x = r.x, open = function(tab, lab){ return (tab && MENU[tab]) ? {local:1, fn:'jvHere', to:[tab], label:'🪟 ' + (lab || MENU[tab].n) + ' 열기'} : null; };
+  if (r.kind === 'map'){
+    var kn = (r.m.know || []).filter(function(k){ return MENU[k.tab]; }).slice(0, 3);
+    return {t:'🧭 ' + r.t, s:['어떻게 — ' + jvPlain(r.m.way), '스스로 물을 것 — ' + (r.m.q || []).join(' · ')]
+      .concat(kn.length ? ['쓸 도구 — ' + kn.map(function(k){ return MENU[k.tab].n + '(' + jvPlain(k.w) + ')'; }).join(' · ')] : []),
+      open:kn.length ? open(kn[0].tab) : null};
+  }
+  if (r.kind === 'touch'){
+    var m0 = (x.msg || [])[0], txt = m0 ? jvStageFill(m0.text) : '';
+    return {t:'✉️ ' + jvPlain(x.t) + (x.ch ? ' · ' + x.ch : ''), s:['언제 — ' + jvPlain(x.when), '어떻게 — ' + jvPlain(x.how)]
+      .concat(txt ? ['보낼 글 — ' + txt] : []).concat((x.msg || []).length > 1 ? ['다른 글 — ' + x.msg.slice(1).map(function(m){ return m.t; }).join(' · ')] : [])
+      .concat(txt ? [JV_ADNOTE] : []), say:txt};
+  }
+  if (r.kind === 'say'){
+    var sy = jvStageFill(x.say);
+    return {t:'📵 ' + jvPlain(x.t), s:['이렇게 — 「' + sy + '」', '그래도 어려우면 — ' + jvStageFill(x.next), '피할 말 — ' + jvPlain(x.avoid), '멈출 때 — ' + jvPlain(x.stop)], say:sy};
+  }
+  if (r.kind === 'appt'){ var at = jvStageFill(x.text); return {t:'📅 ' + jvPlain(x.t), s:['보낼 글 — ' + at, JV_ADNOTE], say:at}; }
+  if (r.kind === 'chk'){
+    return {t:'✅ ' + jvPlain(x.t) + ' — ' + jvPlain(x.aim), s:['증권을 읽었으면 — ' + jvStageFill(x.had), '아직 안 읽었으면 — ' + jvStageFill(x.none), '여쭐 말 — 「' + jvStageFill(x.ask) + '」'],
+      say:jvStageFill(x.ask), open:open(x.tool)};
+  }
+  if (r.kind === 'pdel'){
+    return {t:'📮 ' + r.t + ' ' + x.length + '걸음', s:x.map(function(p){ return p.n + '. ' + jvPlain(p.t) + ' — 「' + jvStageFill(p.say) + '」'; })
+      .concat(x[0] && x[0].no ? ['하지 말 것 — ' + jvPlain(x[0].no)] : []), say:x.map(function(p){ return jvStageFill(p.say); }).join('\n'), open:open('pdel')};
+  }
+  if (r.kind === 'frame'){
+    return {t:'☎️ ' + r.t, s:x.map(function(f){ return f.n + ' ' + jvPlain(f.t) + ' — 「' + jvStageFill(f.s) + '」'; }),
+      say:x.map(function(f){ return jvStageFill(f.s); }).join(' '), open:open('ta_script')};
+  }
+  return {t:r.t, s:[]};
+}
+/* 🩺 「○○ 있는 고객 가입돼?」 — 가입(인수)은 <b>보험사 심사가 정합니다</b>. 자비스가 「됩니다 · 안 됩니다」
+   를 말하지 않고, 회사가 낸 실제 기준을 보는 화면으로 보냅니다 (판 X280 · 1번 · 2번). 그 병의 자료는 그 아래에. */
+var JV_UW_RE = /(?:가입|인수|받아\s*주|들\s*수)\s*(?:돼|되|가능|할\s*수|있)|유병|병력|지병|고지\s*(?:하면|해야)/;
+JV_FIND.push({k:'uw', id:'ref_underwrite', n:'가입(인수) 확인', find:function(q){
+  if (!JV_UW_RE.test(q) || JV_USE.test(q) || !MENU.ref_underwrite) return null;
+  return {rows:[{t:'🩺 가입(인수) 여부는 보험사 심사가 정합니다',
+    s:['회사마다 예외질환 · 경과 기간 · 치료 · 수술 여부 기준이 다릅니다 — 「' + MENU.ref_underwrite.n + '」 에서 회사가 낸 기준을 그대로 보십시오.',
+       '자비스는 「됩니다 · 안 됩니다」 를 말하지 않습니다. 알릴 것은 사실대로 알리고, 결과는 심사로 확인합니다.'],
+    open:{local:1, fn:'jvHere', to:['ref_underwrite'], label:'🪟 ' + MENU.ref_underwrite.n + ' 열기'}}], more:0, unit:'건'};
+}});
+/* 두 갈래로 — 「무엇을 · 어떻게」(단계 지도 · 점검) 와 「뭐라고 말하나 · 보내나」(대본 · 보낼 글 · 증권 전달 · 다섯 마디).
+   한 갈래로 두면 「증권 전달할 때 뭐라고 해」 에 말 없는 단계 카드가 먼저 섰습니다 (판 X280) */
+var JV_STAGE_SAY = ['touch', 'say', 'appt', 'pdel', 'frame'];
+JV_FIND.push(jvKnowSrc('stage', '', '영업 단계', function(){ return jvStageRows().filter(function(r){ return JV_STAGE_SAY.indexOf(r.kind) < 0; }); },
+  {t:function(x){ return x.t; }, k:function(x){ return x.k; }, b:function(x){ return x.b; }},
+  function(x){ return jvStageRow(x); }, '', 2));
+JV_FIND.push(jvKnowSrc('stagesay', '', '할 말 · 보낼 글', function(){ return jvStageRows().filter(function(r){ return JV_STAGE_SAY.indexOf(r.kind) >= 0; }); },
+  {t:function(x){ return x.t; }, k:function(x){ return x.k; }, b:function(x){ return x.b; }},
+  function(x){ return jvStageRow(x); }, '', 2));
+
 /* 보험 자료가 몇 가지인가 — 갈래마다 표를 센다 (앱 밖이면 0 · 모르면 안 말한다) */
 function jvKnowCount(){
   var P = kbApp(), D = jvDz(P), n = 0;
@@ -5747,7 +5889,14 @@ var JV_KWANT = [
   {re:/슬라이드|그림|사진|보여\s*줄|자료\s*화면/, k:['aslide', 'deck'], add:8},
   {re:/상담\s*자료|덱|발표|장\s*열|PPT|ppt/, k:['deck'], add:8},
   {re:/강의|수업|교육|배우|공부/, k:['alesson'], add:6},
-  {re:/라고\s*(?:하면|해|하는|할\s*때)|고객이/, k:['atalk', 'obj', 'rej', 'fpobj'], add:4}
+  {re:/라고\s*(?:하면|해|하는|할\s*때)|고객이/, k:['atalk', 'obj', 'rej', 'fpobj'], add:4},
+  /* 「…해달래 · 한대」 — 고객이 <b>지금 한 말</b>이라 받는 말이 맨 앞이어야 합니다(실비 청구만 해달래 · 판 X280) */
+  {re:/해\s*달래|달래요?|한대요?|하신대|래요?\s*$/, k:['obj', 'rej', 'fpobj', 'atalk'], add:8},
+  /* 판 X280 — 영업 단계: 「문자 · 카톡 뭐라고」 면 보낼 글, 「챙겨 · 준비 · 단계 · 뭐 해야」 면 단계 지도 */
+  {re:/문자|카톡|보낼|보내|뭐라고|어떻게\s*말|멘트|대본/, k:['stagesay'], add:8},
+  {re:/챙겨|준비|단계|뭐\s*해야|무엇을\s*해야|어떻게\s*해야|순서/, k:['stage'], add:6},
+  {re:/증권\s*(?:을|이)?\s*(?:안|없|못)/, k:['stage'], add:10},
+  {re:/꺼내|얘기\s*어떻게|말을\s*어떻게|부탁/, k:['fpch', 'atalk', 'dz', 'stagesay'], add:4}
 ];
 /* 표를 한 바퀴 — 걸린 것만 돌려준다 */
 function jvFind(q){
@@ -5774,7 +5923,7 @@ function jvFind(q){
   /* 제일 잘 맞은 것의 <b>육 할</b>에 못 미치는 갈래는 곁가지다 — 내놓지 않는다 */
   kn = kn.filter(function(r){ return r.score >= kn[0].score * 0.6; });
   /* 「어디서 · 어떻게 써」 — 앱 쓰는 법을 물으면 답은 길이다. 이름이 딱 맞은 자료만 곁에 둔다 */
-  if (JV_USE.test(q)) kn = kn.filter(function(r){ return r.strong; });
+  if (jvIsUse(q)) kn = kn.filter(function(r){ return r.strong; });
   return fix.concat(kn.slice(0, Math.max(0, 4 - fix.length)), hold);
 }
 /* 찾은 것을 한 줄로 — 답의 머리와 읽어 주기에 같이 쓴다 (한 곳 · 5번) */
@@ -5939,7 +6088,8 @@ function jvAct(q){
     /* 여는 말은 <b>또렷한 동사</b>로만 — 음성 비서의 vaIsOpen 은 말로 부를 때를 위해 넓어서
        「보장분석 어떻게 해?」 · 「뇌졸중 화법」 까지 「열기」 로 잡습니다. 그 둘의 답은 길·자료입니다 */
     if (!hit && JV_OPEN.test(q) && !JV_USE.test(q) && P.vaFindTab && P.vaFindTab(s)) hit = {a:P.vaActOf('열기'), args:{what:q, _t:q}};
-    if (!hit && P.VA_MAKE_RE && s.length > 4 && P.VA_MAKE_RE.test(s))
+    /* 「제안서 어떻게 만들어?」 는 만드는 법을 묻는 말 — 두뇌에게 맡기지 않습니다 (판 X280) */
+    if (!hit && P.VA_MAKE_RE && s.length > 4 && P.VA_MAKE_RE.test(s) && !JV_USE.test(q) && !JV_QWORD.test(q))
       hit = {a:P.vaActOf(P.vaWantsPpt && P.vaWantsPpt(s) ? '발표자료' : '자료'), args:{what:q, _t:q}};
   } catch(e){}
   if (!hit || !hit.a) return null;
@@ -5947,6 +6097,9 @@ function jvAct(q){
   /* <b>묻는 말</b>인데 값이 하나도 안 잡혔으면 시킨 것이 아니다 — 「뭘 챙겨야 해?」 가
      「도와줄 것 적기」 로 걸리던 자리. 「체크해줘」 처럼 시키는 말은 그대로 되묻습니다 */
   var got = (a.v || []).some(function(k){ return hit.args && hit.args[k]; });
+  /* 고객에게 하는 일(연락 기록 · 다음 할 일 · 전화)은 <b>이름이 잡혔을 때만</b> — 「전화했는데 지금 바빠요」 는
+     거절 처리를 묻는 말이지 기록하라는 말이 아닙니다 (판 X280 시뮬레이션에서 잡음) */
+  if ((a.v || []).indexOf('who') >= 0 && !(hit.args && hit.args.who)) return null;
   if ((a.v || []).length && !got && JV_QWORD.test(q)) return null;
   if (JV_ACT_SKIP.indexOf(a.k) >= 0) return null;
   if (!a.w && !a.c && !(a.v || []).length) return null;           /* 읽기만 하는 일은 일꾼(jvWork)이 */
@@ -6678,7 +6831,9 @@ function ask(raw){
   var pen = jvPenWant(q) ? jvPenNew(q) : null;
   if (pen){ act = null; found = found.filter(function(f){ return !f.waitSay; }); if (JV_EXT.pend === q) JV_EXT.pend = ''; }
   if (act){
-    found = found.filter(function(f){ return !f.waitSay; });
+    /* 시키신 일에는 <b>찾은 자료를 안 붙입니다</b> — 「전화 체크해줘」 밑에 TA 단계 카드가 서던 자리(판 X280).
+       고객 줄(누구에게 하는 일인지)만 남깁니다 */
+    found = found.filter(function(f){ return !f.waitSay && !f.know; });
     if (JV_EXT.pend === q) JV_EXT.pend = '';
   }
   r0.found = found;

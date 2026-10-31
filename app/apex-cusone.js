@@ -781,6 +781,9 @@
   w.cusTouchSms = cusTouchSms;
   w.cusTouchTel = cusTouchTel;
   w.cusMeOf = cusMeOf;
+  /* 🤖 자비스도 같은 자리채움을 씁니다 — {나}·{이름}·{서명} 을 따로 채우면 서명이 둘이 됩니다 (판 X280 · 5번) */
+  w.cusFill = cusFill;
+  w.cusMeNorm = cusMeNorm;
   w.cusTouchText = cusTouchText;
   w.cusApptText = cusApptText;
   w.cusApptParts = cusApptParts;

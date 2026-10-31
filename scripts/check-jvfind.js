@@ -499,11 +499,13 @@ const SEED = () => {
   ['data1','data2','lesson','analysis','health','cases','cases2','disease1','disease2','source'].forEach(n =>
     new Function('window', fs.readFileSync(path.join(ROOT, 'app/보험아카데미/' + n + '.js'), 'utf8'))(AX));
   let wantTalk = 0;
-  AX.CURRICULUM.forEach(c => (c.scripts || []).forEach(x => { if (x.q && x.a) wantTalk++; }));
-  AX.LESSONS.forEach(l => { if (l.talk && l.talk.q && l.talk.a) wantTalk++; });
-  if (AX.HEALTH && AX.HEALTH.talk && AX.HEALTH.talk.q) wantTalk++;
-  AX.CASES.forEach(c => (c.script || []).forEach(x => { if (x.q && x.a) wantTalk++; }));
-  AX.DISEASE.forEach(d => { if (d.talk && d.talk.q && d.talk.a) wantTalk++; (d.qna || []).forEach(x => { if (x.q && x.a) wantTalk++; }); });
+  /* 고객 말에 글자가 있는 줄만 — 「—」 뿐인 줄은 자비스도 안 셉니다 (판 X280) */
+  const okQ = x => x && x.q && x.a && /[가-힣A-Za-z]/.test(String(x.q).replace(/<[^>]+>/g, ''));
+  AX.CURRICULUM.forEach(c => (c.scripts || []).forEach(x => { if (okQ(x)) wantTalk++; }));
+  AX.LESSONS.forEach(l => { if (okQ(l.talk)) wantTalk++; });
+  if (AX.HEALTH && okQ(AX.HEALTH.talk)) wantTalk++;
+  AX.CASES.forEach(c => (c.script || []).forEach(x => { if (okQ(x)) wantTalk++; }));
+  AX.DISEASE.forEach(d => { if (okQ(d.talk)) wantTalk++; (d.qna || []).forEach(x => { if (okQ(x)) wantTalk++; }); });
   const wantLesson = AX.CURRICULUM.length + AX.LESSONS.length + AX.ANALYSIS.length;
   const CNT = await f.evaluate(() => ({ talk: jvTalkRows().length, lesson: jvLessonRows().length, slide: (JV_EXT.A.SOURCE || []).length }));
   is(CNT.talk === wantTalk && CNT.lesson === wantLesson && CNT.slide === AX.SOURCE.length,
@@ -709,6 +711,42 @@ const SEED = () => {
      '「↩ 계산기 값 되돌리기」 → 계산기가 <b>넘기기 전 값으로</b>(빈칸은 빈칸으로) — ' + JSON.stringify(FIN2));
   await p.evaluate(() => { jvDockEnd(); go('apexmap'); }); await p.waitForTimeout(500);
   outside.splice(OUT2);
+
+  sec('[16] 🧑‍🏫 <b>신입이 TA 부터 CS 까지 묻는다</b> — 시뮬레이션에서 잡은 자리 (판 X280 · 사장님 말씀 「고객을 만난다는 가정하에 신입이 물어보면 ta 부터 cs 까지 … 시뮬레이션」)');
+  /* 견줄 글은 <b>apex-stage.js 에서 직접</b> 꺼냅니다 */
+  const ST = {}; new Function('window', fs.readFileSync(path.join(ROOT, 'apex-stage.js'), 'utf8'))(ST);
+  const SS = ST.APEX_STAGE, sp = t => String(t || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  const SIM = [
+    ['DB 받았는데 처음 전화 뭐라고 해?', '전화를 여는 다섯 마디', sp(SS.taFrame[0].s)],
+    ['부재중이면 문자 뭐라고 보내?', sp(SS.say['부재'].t), sp(SS.say['부재'].say).slice(0, 30)],
+    ['만나기 전에 뭐 준비해?', sp(SS.chk.filter(c => c.k === 'AP')[0].t), sp(SS.chk.filter(c => c.k === 'AP')[0].ask)],
+    ['청약할 때 뭐 챙겨', 'CS 단계', sp(SS.map.CS.way)],
+    ['증권 전달할 때 뭐라고 해', '증권 전달 — 말하는 차례', sp(SS.pdel[0].say).slice(0, 20)],
+    ['실비 청구만 해달래', '실비청구만 해주세요', ''],
+    ['협심증 있는 고객 가입돼?', '가입(인수) 여부는 보험사 심사가 정합니다', '예외질환 인수확인'],
+    ['갈아타라는 거 아니냐고 의심해', '승환계약(갈아타기)', '']
+  ];
+  for (const [q, title, line] of SIM){
+    const r = await best(q);
+    is(r.best.indexOf(title) >= 0 && (!line || r.best.replace(/\s+/g, ' ').indexOf(line) >= 0), '「' + q + '」 → ' + title + (line ? ' — 「' + line.slice(0, 24) + '…」' : '') + ' (앱의 표 그대로)');
+  }
+  /* 헛짚던 일 카드 — 「전화했는데 지금 바빠요」 는 기록하라는 말이 아니고, 「제안서 어떻게 만들어」 는 만드는 법을 묻는 말 */
+  const FA = await f.evaluate(() => ['전화했는데 지금 바빠요 라고 끊으려고 해', '제안서 어떻게 만들어', '통화했어'].map(q => !!jvAct(q)));
+  is(FA.every(x => !x), '이름 없는 「전화했는데…」 · 만드는 법을 묻는 「제안서 어떻게 만들어」 에 <b>일 카드가 안 선다</b>');
+  const SPL = await f.evaluate(() => [jvSplit('계약하고 나서 뭐 해야 돼').length, jvSplit('보장분석 하고 제안서까지 만들고 싶어').length]);
+  is(SPL[0] === 1 && SPL[1] === 2, '「계약하고 나서」 는 <b>때</b>라 안 가르고, 「보장분석 하고 제안서까지」 는 그대로 둘로 — ' + SPL.join(' · '));
+  const NO = await f.evaluate(() => jvFind('다른 설계사도 만나본대').filter(x => (x.rows || []).length).map(x => x.n + ':' + x.rows[0].t));
+  is(NO.length === 0, '「다른 설계사도 만나본대」 의 「다른」 이 엉뚱한 강의를 끌고 오지 않는다' + (NO.length ? ' ← ' + NO.join(' · ') : ''));
+  const UZ = await f.evaluate(() => [jvIsUse('보장분석 어떻게 해?'), jvIsUse('제안서 어떻게 만들어'), jvIsUse('소개 부탁 어떻게 해'), jvIsUse('질병코드 찾기')]);
+  is(UZ.join(',') === 'true,true,false,true', '「어떻게 해」 는 <b>물은 것이 화면 이름일 때만</b> 앱 쓰는 법 — 보장분석·제안서·질병코드 찾기는 길, 소개 부탁은 영업');
+  /* 보낼 글 — {나}·{서명} 은 앱의 cusFill 로 · 모르는 자리는 [일시] 로 보이게 · 광고 동의 문구 */
+  const TG = await f.evaluate(async () => { jLog.innerHTML = ''; window.__cp3 = []; const P = window.parent, k = P.copyText; P.copyText = function(t){ window.__cp3.push(t); };
+    ask('처음 연락드리는 분 문자 뭐라고 보내'); await new Promise(r => setTimeout(r, 400));
+    const b = document.querySelector('#jLog .jf-best'); const btn = b && b.querySelector('.jr-copy'); if (btn) btn.click();
+    P.copyText = k; return { t: b ? b.textContent : '', cp: window.__cp3.slice(), fill: typeof P.cusFill === 'function' }; });
+  is(TG.fill && /처음 연락드리는 분/.test(TG.t) && TG.cp.length === 1 && !/\{[^{}]{1,8}\}/.test(TG.cp[0]) && /담당 설계사/.test(TG.cp[0]),
+     '「처음 연락드리는 분」 문자 — 복사하는 글에 {나} 가 안 남고 <b>앱의 cusFill</b> 로 「담당 설계사 …」 가 들어간다');
+  is(/광고 수신 동의가 있는 분께만/.test(TG.t), '보낼 글에는 「상품 권유를 넣으면 광고 수신 동의가 있는 분께만」 을 붙인다');
 
   sec('[8] 🧼 꺾쇠 0 · 콘솔 오류 0 · 바깥 주소 0');
   const tags = [C1, K1, T1, Z1, Z4, Z7].filter(x => /&lt;\/?[a-z]/i.test(x.html)).length;
