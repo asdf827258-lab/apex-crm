@@ -39,6 +39,27 @@ var HAS_DB=false;        /* dbs 에 addr/lat/lng 칸이 있나 */
 var HAS_CALL=false;      /* calls 에 appt_place 칸이 있나 */
 var HAS_STD=false;       /* dbs 에 region_code/sigungu 칸이 있나 (migration_47) */
 var MINE_N=0;            /* 내 이름으로 배정된 고객이 몇 명인가 — 0이면 전체로 연다 */
+/* ══ 🧑 <b>담당자 칸이 비어 있던 까닭</b> (판 X274) ════════════════════
+   사장님 말씀 2026-10-31 — 「<b>담당자가 안나오고</b>, 지역만 정해도
+   추천해서 알려줘」.
+
+   ⚠ 재어 보니 <b>자료가 아니라 때</b> 였습니다. 사장님 서버에는 담당자가
+     <b>37명</b> · 고객 <b>1,943명</b> · 통화 <b>2,026건</b> 이 멀쩡히
+     있습니다. 그런데 칸을 채우는 fillPickers() 는 <b>창을 열 때 딱 한 번</b>
+     돌았습니다. 1,943명을 다 읽기 전에 창을 열면 그 칸은 「담당자 전체」
+     하나로 굳고, 자료가 와도 <b>영영 안 채워졌습니다</b>(재서 확인했습니다 —
+     열 때 1개 · 자료 온 뒤에도 1개). 시(市) 고르개도 같은 자리입니다.
+
+   고친 것 둘 —
+     ① render() 가 돌 때마다 칸을 <b>다시 채웁니다.</b> 자료가 늦게 와도
+        따라옵니다.
+     ② 아직 못 읽었으면 <b>그렇다고 적고 기다렸다가</b> 채웁니다. 기다림에는
+        끝이 있습니다(15초) — 스피너만 도는 일을 안 만듭니다 (4-1번).      */
+/* 사장님이 <b>손으로</b> 담당자를 고르셨나. 「담당자 전체」(빈 값)를 고르신
+   것과 「아직 안 고르셨다」 를 가르는 자리입니다 — 안 가르면 다시 그릴
+   때마다 제 이름으로 되돌아갑니다 (1번).                                 */
+var OWN_SET=false;
+var WAITN=0;
 var KEY="";              /* 카카오 JavaScript 키 */
 var KEY_TEAM=false;      /* 팀이 같이 쓰는 키인가(app_config) */
 var GC=null, PS=null;    /* 카카오 주소검색 · 장소검색 */
@@ -1480,6 +1501,9 @@ function styles(){
   ".rt-arow:last-child{border-bottom:0}",
   ".rt-who{flex:1;min-width:150px}.rt-who b{color:var(--navy)}",
   ".rt-who small{display:block;color:var(--muted);font-size:12px;margin-top:2px}",
+  /* 🧑 누구 고객인지 — 색은 .rt-move 가 쓰던 파랑 그대로입니다 (판 X274 · 5번) */
+  ".rt-own{display:inline-block;margin-left:5px;font-size:11.5px;font-weight:800;"+
+    "color:#245ea8;background:#eef6ff;border-radius:7px;padding:2px 7px;vertical-align:1px}",
   ".rt-act{display:flex;gap:5px;flex-wrap:wrap}",
   ".rt-i .rt-act{margin-top:7px}",
   ".rt-act .btn{text-decoration:none}",
@@ -1594,6 +1618,43 @@ function styles(){
    동선 창의 그날 칸에서 고르셔도, 홈(오늘 칸)에서 고르셔도 이 문을
    지납니다. 두 곳에서 각자 담으면 한쪽은 60분으로 짜고 다른 쪽은
    45분으로 짜서, 같은 하루에 두 스케줄표가 섭니다.                     */
+/* ══ 📥 <b>자료를 다 읽었나</b> — 묻는 곳은 여기 하나입니다 (5번) ══════
+   ★ 틀(db-crm.html)이 제 입으로 답합니다(window.apexCrmReady). 못 물으면
+     <b>지어내지 않고</b> 손에 든 것으로 봅니다 (1번).                    */
+/* 이 고객의 <b>담당자 이름</b> — 못 찾으면 <b>지어내지 않습니다</b> (1번).
+   ★ 찾는 곳은 여기 하나입니다 (5번).                                     */
+function ownName(d){
+  var id=d&&d.assigned_to; if(!id)return "";
+  try{ var p=profiles.filter(function(x){return x.id===id})[0];
+       return (p&&p.name)||"" }catch(e){ return "" }
+}
+function ownTag(d){
+  var n=ownName(d);
+  if(n)return '<span class="rt-own">'+E(n)+' 고객</span>';
+  if(d&&d.assigned_to)return '<span class="rt-own">담당자 이름 모름</span>';
+  return '<span class="rt-own">배정 안 됨</span>';
+}
+
+function crmReady(){
+  try{ if(typeof window.apexCrmReady==="function")return !!window.apexCrmReady() }catch(e){}
+  try{ return !!(dbs&&dbs.length) }catch(e2){ return false }
+}
+/* 아직이면 <b>기다렸다가 칸을 다시 채웁니다</b> (판 X274).
+   ★ 기다림에는 <b>끝</b>이 있습니다 — 15초. 끝나면 그렇다고 적고 멈춥니다.
+     스피너만 영영 도는 자리를 안 만듭니다 (4-1번).
+   ★ 창이 닫히면 그만둡니다 — 안 보는 화면을 되풀이해 그리지 않습니다 (7번). */
+function waitData(){
+  if(WAITN)return;
+  var n=0, tick=function(){
+    var w=q("rtWrap");
+    if(!w||!w.classList.contains("on")){ WAITN=0; return }
+    if(crmReady()){ WAITN=0; render(); return }
+    if(++n>60){ WAITN=2; render(); return }     /* 60 × 250ms = 15초 */
+    setTimeout(tick,250);
+  };
+  WAITN=1; setTimeout(tick,250);
+}
+
 function stayPut(v){
   v=+v||60; if(v===STAY)return STAY;
   STAY=v; try{ localStorage.setItem("apexRouteStayV1",STAY) }catch(e){}
@@ -1646,7 +1707,9 @@ function wrap(){
     '</div>';
   document.body.appendChild(w);
   q("rtX").onclick=function(){ w.classList.remove("on") };
-  q("rtDate").onchange=render; q("rtRegion").onchange=render; q("rtOwner").onchange=render;
+  q("rtDate").onchange=render; q("rtRegion").onchange=render;
+  /* 담당자를 <b>손으로</b> 고르셨다는 사실을 적어 둡니다 (판 X274 · 위 쪽지) */
+  q("rtOwner").onchange=function(){ OWN_SET=true; render() };
   q("rtMapT").onclick=mapToggle;
   mapPaint();
   q("rtHome").onclick=setHome;
@@ -1967,9 +2030,14 @@ function fillPickers(){
      아래에서 화면에 적습니다 — 조용히 바꾸면 그것도 못 믿을 일이 됩니다. */
   MINE_N=0;
   try{ if(me)dbs.forEach(function(d){ if(d.assigned_to===me)MINE_N++ }) }catch(e){}
-  var want=keep2||(MINE_N?me:"")||"";
+  /* ★ <b>손으로 고르신 것이 이깁니다</b> (판 X274). 여태는 빈 값(「담당자
+     전체」)을 「아직 안 고르셨다」 와 같은 것으로 보아, 다시 그릴 때마다
+     제 이름으로 되돌렸습니다. 이제 이 칸은 render 마다 다시 채워지므로,
+     안 가르면 사장님이 「전체」 를 고르셔도 1초 뒤에 제 이름으로
+     돌아갑니다 — 고른 것을 몰래 바꾸지 않습니다 (1번).                 */
+  var want=OWN_SET?keep2:(keep2||(MINE_N?me:"")||"");
   os.value=want;
-  if(os.value!==want)os.value="";
+  if(os.value!==want)os.value=OWN_SET?"":"";
   var owner=os.value||"";
 
   /* 「순천」·「순천시」·「전남순천」·「순천(하나로마트)」가 목록에 네 번 뜨지
@@ -1992,12 +2060,37 @@ function fillPickers(){
 }
 
 function render(){
+  /* ★ <b>칸을 다시 채웁니다</b> (판 X274). 여태는 창을 열 때 한 번뿐이라,
+     고객 1,943명을 다 읽기 전에 열면 담당자·시 칸이 <b>빈 채로 굳었습니다</b>.
+     고르신 것은 그대로 지킵니다(fillPickers 안쪽 쪽지).                 */
+  fillPickers();
   var date=q("rtDate").value||todayKey();
   var region=q("rtRegion").value||"";
   var owner=q("rtOwner").value||"";
   var stops=stopsOf(date,region,owner);
   var L=legs(stops);
   var side=[];
+
+  /* ══ 📥 <b>아직 다 못 읽었으면 그렇다고 적습니다</b> (판 X274 · 1번) ══
+     여태는 아무 말 없이 빈 칸만 섰습니다 — 사장님 눈에는 <b>고장</b>으로
+     보였습니다(「담당자가 안나오고」). 읽는 중이라고 적고, 다 읽으면
+     그 자리에서 칸을 채웁니다.                                          */
+  if(!crmReady()){
+    side.push('<div class="rt-card" style="background:#fff4e6;border-color:#ffd8a8;'+
+      'color:#a8730f;font-size:13px;line-height:1.65">'+
+      '<b>고객 자료를 아직 다 못 읽었습니다.</b><br>'+
+      '다 읽으면 <b>담당자</b>·<b>시(市)</b> 칸이 그 자리에서 채워집니다 — '+
+      '창을 닫지 마시고 잠시만 기다려 주십시오.</div>');
+    waitData();
+  }else if(WAITN===2&&(!profiles||!profiles.length)){
+    /* 15초를 기다렸는데도 안 왔습니다 — <b>모르면 모른다고</b> 합니다 (1번) */
+    side.push('<div class="rt-card" style="background:#fff4e6;border-color:#ffd8a8;'+
+      'color:#a8730f;font-size:13px;line-height:1.65">'+
+      '<b>담당자 명단을 못 받았습니다.</b> 15초를 기다렸는데 안 왔습니다 — '+
+      '인터넷이 끊겼거나 서버가 느린 것입니다. <b>지역(시)만 골라도</b> '+
+      '아래 추천은 그대로 섭니다. 담당자로 걸러 보시려면 화면을 한 번 '+
+      '새로 고쳐 주십시오.</div>');
+  }
 
   /* ── 시(市)별로 한 줄 ────────────────────────────────────────
      지역 전체를 한꺼번에 보면 복잡합니다. 시 하나를 누르면 그 시만
@@ -2014,10 +2107,17 @@ function render(){
   });
   /* 내 앞으로 배정된 고객이 없어 팀 전체를 보고 있다면 <b>그렇다고 적습니다.</b>
      이 줄이 없으면 「왜 남의 고객이 뜨지?」 하고 한참을 헤맵니다. */
-  if(!MINE_N&&!owner&&cityAll){
-    side.push('<div class="rt-card" style="background:#EEF6FF;border-color:#BBD9FF;font-size:12.5px;color:#245ea8">'+
-      '<b>팀 전체를 보고 있습니다.</b> '+E(myName())+' 님 이름으로 <b>직접 배정된 고객이 없어서</b>입니다 — '+
-      '위 <b>담당자</b> 칸에서 한 사람을 고르면 그 사람 고객만 남습니다.</div>');
+  /* ★ <b>누구 고객을 보고 있는지</b> 는 늘 적습니다 (판 X274 · 1번).
+     여태는 「내 앞으로 배정된 고객이 0명일 때」 만 적었습니다. 그런데
+     사장님이 <b>손으로</b> 「담당자 전체」 를 고르셔도 똑같이 팀 전체가
+     뜹니다 — 그때는 아무 말이 없어서, 남의 고객에게 거실 뻔한 자리입니다. */
+  if(!owner&&cityAll){
+    side.push('<div class="rt-card" style="background:#EEF6FF;border-color:#BBD9FF;font-size:12.5px;color:#245ea8;line-height:1.65">'+
+      '<b>팀 전체를 보고 있습니다.</b> '+
+      (MINE_N
+        ? ('위 <b>담당자</b> 칸이 「전체」 라서입니다 — 그중 '+E(myName())+' 님 고객은 <b>'+MINE_N+'명</b>입니다. ')
+        : (E(myName())+' 님 이름으로 <b>직접 배정된 고객이 없어서</b>입니다. '))+
+      '아래 줄의 <b>괄호 안이 그 고객의 담당자</b>입니다 — 남의 고객에게 걸지 않도록 보고 거십시오.</div>');
   }
   var ck=Object.keys(city).sort(function(a,b){return city[b].n-city[a].n||(a<b?-1:1)});
   if(ck.length||cityNone){
@@ -2290,6 +2390,12 @@ function missCard(region,owner,top){
       var did=missDone(d);
       return '<div class="rt-row'+(did?' done':'')+'" id="rtCand'+i+'"><div class="rt-no">'+(i+1)+'</div>'+
         '<div class="rt-who"><b>'+E(d.customer_name)+'</b>'+
+        /* ★ <b>담당자 전체</b>로 보고 있을 때만 괄호로 누구 고객인지 적습니다
+           (판 X274). 대표가 지역만 골라 보면 팀 전체가 뜨는데, 그 줄이
+           누구 고객인지 모르면 <b>남의 고객에게 전화를 겁니다</b> (1번).
+           한 사람만 보고 있을 때는 안 적습니다 — 같은 말을 줄마다 되풀이하면
+           이름이 묻힙니다.                                               */
+        (owner?'':ownTag(d))+
         '<small>'+E(placeOf(d)||"동네 미입력")+(d.phone?" · "+E(d.phone):"")+'</small>'+
         '<div style="margin-top:5px">'+tag+
           (did?'<span class="badge green" style="margin-left:4px">오늘 걸었음</span>':'')+
