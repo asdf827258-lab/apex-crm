@@ -97,8 +97,12 @@ const LOOK = () => {
   try { go('home'); } catch (e) {}
   const card = document.getElementById('hmFlow');
   const 글 = card ? (card.textContent || '').replace(/\s+/g, ' ') : '';
-  /* 🕗 칸은 <b>단추</b>입니다 — 다른 칩은 적어 둔 수라 span 입니다 */
-  const 칩 = card ? [].slice.call(card.querySelectorAll('button.t-chip'))
+  /* 🕗 칸은 <b>단추</b>입니다 — ⬆ 판 X275 부터 단계 칩과 함께 맨 위 📇 <b>한 장
+     띠</b>(#hmBand)에 섭니다(사장님 말씀 「이 한 장으로 모든 고객을 연락부터
+     관리까지」). 재는 것은 그대로, <b>집는 자리만</b> 띠로 옮깁니다. 문장
+     「그중 N명은 약속이 지났습니다」 는 그대로 카드에 있습니다. */
+  const band = document.getElementById('hmBand');
+  const 칩 = band ? [].slice.call(band.querySelectorAll('button.t-chip'))
     .filter(e => (e.textContent || '').indexOf('지남') >= 0)[0] : null;
   const pane = document.getElementById('dynPane');
   return {
@@ -116,9 +120,11 @@ const LOOK = () => {
       ? (function () { const L = arApptPast(typeof arMyId === 'function' ? arMyId() : null);
           return L ? { n: L.length, first: L[0] ? { id: L[0].id, stage: L[0].stage } : null } : null; })()
       : undefined,
-    단추: card ? [].slice.call(card.querySelectorAll('button'))
+    /* 판 X275 — 🕗 칸이 띠로 올라가 카드 단추가 셋 → 둘이 되었습니다. 그 칸도
+       <b>같이</b> 잽니다(카드 단추 + 🕗 칸) — 수를 2 로 내려 칸을 빼먹지 않게 (8번). */
+    단추: (card ? [].slice.call(card.querySelectorAll('button')) : []).concat(칩 ? [칩] : [])
       .map(b => ({ t: (b.textContent || '').replace(/\s+/g, ' ').trim(),
-                   h: Math.round(b.getBoundingClientRect().height) })) : []
+                   h: Math.round(b.getBoundingClientRect().height) }))
   };
 };
 
