@@ -490,6 +490,22 @@ body.in-crm{padding-bottom:84px}
   font-weight:700; border-radius:10px; cursor:pointer; text-decoration:none}
 .jr-copy, .jr-say, .jr-img{border:1px solid #DCE4F1; background:#fff; color:#33425C}
 .jf-more{margin-top:6px}
+/* 🧮 연금 계산 (판 X276) — 칸은 44px · 색은 이 쪽에 이미 있는 것만 */
+.j-pen{margin-top:10px; background:#F3F6FB; border:1px solid #DCE4F1; border-radius:11px; padding:9px 11px; white-space:normal}
+.j-pen > b{display:block; font-size:var(--t6); color:var(--blue); margin-bottom:6px}
+.jp-f{display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:7px; margin-bottom:6px}
+.jp-l, .jp-sex{display:flex; align-items:center; gap:6px; font-size:var(--t6); color:#33425C; background:#fff;
+  border:1px solid #DCE4F1; border-radius:10px; padding:0 8px; min-height:44px}
+.jp-l span, .jp-sex span{white-space:nowrap; font-weight:700}
+.jp-l, .jp-sex{min-width:0; overflow:hidden}
+.jp-l input{flex:1; min-width:2.5em; width:100%; min-height:42px; border:0; font:inherit; font-size:var(--t5); text-align:right; background:transparent}
+.jp-l i{font-style:normal; color:#4A5670}
+.jp-miss{border-color:var(--blue); box-shadow:0 0 0 2px var(--blue-bg)}
+.jp-sex button{min-height:36px; min-width:44px; border:1px solid #DCE4F1; background:#fff; border-radius:9px; font:inherit; font-weight:700; color:#33425C; cursor:pointer}
+.jp-sex button.on{background:var(--blue); border-color:var(--blue); color:#fff}
+.jp-go{grid-column:1 / -1; min-height:44px; border:0; border-radius:10px; background:var(--blue); color:#fff; font:inherit; font-weight:800; cursor:pointer}
+.jp-big{font-size:var(--t3); font-weight:800; color:var(--blue); margin:2px 0}
+.j-pen .jr-b button{border:1px solid #DCE4F1; background:#fff; color:#33425C}
 .jf-more > summary{cursor:pointer; font-size:var(--t6); font-weight:700; color:var(--blue); min-height:44px; display:flex; align-items:center; list-style:none}
 .jf-more > summary::-webkit-details-marker{display:none}
 /* 🛠 시키신 일 (판 X271) — 색은 이 쪽에 이미 있는 것만 */
@@ -4174,7 +4190,8 @@ function addJ(res, isErr){
   /* 🔎 <b>찾아 온 값이 맨 위</b> — 길보다 먼저 (판 X270) */
   var fd = res.found || [], anyRow = fd.some(function(f){ return (f.rows || []).length; });
   var hasFound = fd.some(function(f){ return f.strong && (f.rows || []).length; }) || (anyRow && res.how === 'none') || (anyRow && res.how === 'ext');
-  if (res.act){ h += jvActHtml(res.act); hasFound = true; }      /* 🛠 시키신 일이 맨 위 (판 X271) */
+  if (res.act){ h += jvActHtml(res.act); hasFound = true; }
+  if (res.pen){ h += jvPenHtml(res.pen); hasFound = true; }    /* 🧮 연금 계산 (판 X276) */      /* 🛠 시키신 일이 맨 위 (판 X271) */
   if (fd.length) h += jvFoundHtml(fd, !hasFound);
   /* 🧑‍🔧 일꾼이 지금 읽어 온 것 — 「어디로 가세요」 보다 먼저 「지금 이렇습니다」 (판 X221) */
   var wk = (res.work || []).filter(function(x){ return x && (x.say || x.wait); });
@@ -4300,7 +4317,7 @@ function addJ(res, isErr){
   if (!isErr){
     var say = res.answer || '';
     var named = hasFound ? [] : steps.filter(function(s){ return s.id; });
-    if (res.act) named = [];
+    if (res.act || res.pen) named = [];
     if (named.length){
       /* 같은 화면의 다른 칸을 이어 쓰는 순서가 많다. 소리로 읽을 때
          「재무설계 계산기, 재무설계 계산기」 하면 우습다 — 칸 이름으로 읽는다. */
@@ -4963,12 +4980,13 @@ function jvHello(){
           '보험 아카데미 · 실전화법서도 읽어 와 찾습니다.\n' +
           /* 🛠 시킬 수 있는 일 — 음성 비서 사전을 <b>세어</b> 말합니다 (판 X271) */
           (jvActCount() ? '시키시면 하기도 합니다 — 일 ' + jvActCount() + '가지.\n' : '') +
+          '연금도 말로 셉니다.\n' +                                   /* 🧮 판 X276 */
           '앱에 있는 화면 ' + Object.keys(MENU).length + '개와 상황별 안내 ' + ways + '가지를 압니다.\n' +
           '못 찾으면 「어디서 · 어떤 순서로」 를 짚어 드립니다.' +
           (s.app ? '\n남은 할 일 · 챙길 고객은 앱에 직접 물어봅니다.\n읽어 온 값과 순서를 한 번에 같이 띄웁니다.' : '');
   if (!s.app) a += '\n(지금은 앱 밖에서 열려 사용가이드를 못 읽었습니다 — 화면 사전과 순서표로만 답합니다.)';
   return {answer:a, steps:[], real:'', next:[],
-    pick:['오늘 브리핑해줘', '뇌졸중 화법', '전화 체크해줘', '고객 등록은 어디서 해?'], how:'hello'};
+    pick:['오늘 브리핑해줘', '뇌졸중 화법', '전화 체크해줘', '50세 남자 월 50만원 10년납 65세부터 연금 얼마'], how:'hello'};
 }
 
 /* 키가 없어도 · AI 가 못 와도 — 앱에 담긴 것으로 답한다.
@@ -6034,6 +6052,212 @@ document.addEventListener('keydown', function(e){
   var b = e.target.parentNode.querySelector('.ja-put'); if (b) b.click();
 });
 
+/* ══ 🧮 <b>연금 계산 — 말하면 바로</b> (판 X276) ══════════════════════════════════
+   사장님 말씀 2026-10-31 — 「연금 계산도 말하면 바로 가능하니」 → 「응 만들어줘」.
+
+   「50세 남자, 월 50만원 10년 납, 65세부터 받으면 연금 얼마야?」 → 그 자리에서 셉니다.
+   ★ <b>셈은 계산기와 같은 엔진</b>(app/pension-engine.js · 엑셀 연금비교표 254 경우 대조)을
+     그대로 부릅니다 — 자비스가 따로 셈하면 계산기와 다른 숫자가 나옵니다 (5번).
+     돈 글은 <b>apex-won.js</b> 한 곳으로 적습니다 (4번 · 억·만).
+   ★ 엔진은 <b>물을 때 한 번만</b> 읽습니다(합쳐 약 40KB · 7번). 둘 다 자비스 창을 안 더럽히게
+     빈 그릇(JV_PEN.box)에 읽습니다.
+   ★ <b>지어내지 않습니다</b> (1번) — 말씀에 없는 값은 빈 칸으로 두고 묻습니다. 「월 50」 처럼
+     단위가 없으면 만원으로 읽되 <b>그렇게 읽었다고</b> 적습니다. 엔진이 안 된다고 하는
+     상품은 <b>그 까닭</b>을 같이 적습니다.
+   ★ 계산기와 같은 말을 붙입니다 — 「최저보증 금액 기준입니다. 물가상승률은 반영하지 않았습니다」 ·
+     「변액은 실적배당」 · 「실제 지급은 약관과 보험사 심사 결과에 따릅니다」(2번).
+   ★ 「계산기 열기」 는 <b>화면만</b> 엽니다 — 계산기의 연금 칸(납입기간 · 월 납입 · 상품)으로
+     값을 넘기는 다리가 없습니다. 반만 넘기면 반쯤 빈 계산기가 섭니다. 그렇다고 적습니다. */
+var JV_PEN = {box:null, pr:null, why:'', n:0, S:{}};
+function jvPenLoad(){
+  if (JV_PEN.box) return Promise.resolve(JV_PEN.box);
+  if (JV_PEN.pr) return JV_PEN.pr;
+  if (!jvFetch0) return Promise.resolve(null);
+  var box = {};
+  JV_PEN.pr = Promise.all([jvGet('pension-engine.js'), jvGet('../apex-won.js')]).then(function(T){
+    (new Function('window', T[0]))(box); (new Function('window', T[1]))(box);
+    if (!box.PENSION || !box.APEX_WON) throw new Error('엔진이 비었습니다');
+    JV_PEN.box = box; JV_PEN.why = ''; return box;
+  }).catch(function(e){ JV_PEN.why = (e && e.message) || '까닭 모름'; JV_PEN.pr = null; return null; });
+  return JV_PEN.pr;
+}
+var JV_PEN_DO = /계산|얼마|받(?:을|나|아|으면|는)|시뮬|나와|나오|되나|넣으면|모으면|수령액/;
+/* 말씀에서 값을 읽는다 — 못 읽은 것은 null (0 이 아닙니다 · 1번) */
+function jvPenParse(q){
+  var s = String(q || ''), v = {sex:null, age:null, start:null, pay:null, monthly:null}, m, guess = '';
+  if (/여자|여성|아내|엄마|어머니|부인|(\d{2})\s*(?:세|살)\s*여(?![가-힣])/.test(s)) v.sex = '여성';
+  else if (/남자|남성|남편|아빠|아버지|(\d{2})\s*(?:세|살)\s*남(?![가-힣])/.test(s)) v.sex = '남성';
+  var sm = /(\d{2})\s*(?:세|살)\s*(?:부터|에서부터|때부터|개시|은퇴|퇴직|에\s*(?:받|개시|연금|은퇴)|연금\s*(?:개시|시작|받)|수령)/.exec(s) ||
+           /(?:개시|시작|수령)\s*(?:나이|연령)?\s*(\d{2})/.exec(s);
+  if (sm) v.start = +sm[1];
+  var re = /(\d{2})\s*(?:세|살)/g, am;
+  while ((am = re.exec(s))){ if (!sm || am.index !== sm.index){ v.age = +am[1]; break; } }
+  if (v.age == null && (m = /(?:나이|현재)\s*(\d{2})/.exec(s))) v.age = +m[1];
+  if ((m = /(\d{1,2})\s*년\s*(?:납|동안|간|넣|만|짜리|납입)/.exec(s))) v.pay = +m[1];
+  m = /(?:월|매달|매월|한\s*달(?:에)?|달마다)\s*(\d[\d,]*(?:\.\d+)?)\s*(만\s*원?|원)?/.exec(s) ||
+      /(\d[\d,]*(?:\.\d+)?)\s*(만\s*원?|원)\s*(?:씩|을|를)?\s*(?:매달|매월|월)/.exec(s);
+  if (m){
+    var num = parseFloat(m[1].replace(/,/g, ''));
+    if (/만/.test(m[2] || '')) v.monthly = Math.round(num * 10000);
+    else if (m[2]) v.monthly = Math.round(num);
+    else if (num <= 1000){ v.monthly = Math.round(num * 10000); guess = '「월 ' + m[1] + '」 은 단위가 없어 <만원>으로 읽었습니다.'; }
+    else v.monthly = Math.round(num);
+  }
+  /* 말이 안 되는 값은 버리고 묻습니다 */
+  if (v.age != null && (v.age < 15 || v.age > 85)) v.age = null;
+  if (v.start != null && (v.start < 30 || v.start > 90)) v.start = null;
+  if (v.pay != null && (v.pay < 1 || v.pay > 40)) v.pay = null;
+  if (v.monthly != null && (v.monthly < 10000 || v.monthly > 100000000)) v.monthly = null;
+  return {v:v, guess:guess.replace(/[<>]/g, '')};
+}
+/* 상품 이름 — 엔진의 상품 이름에서 흔한 말을 걷어 낸 것으로 견줍니다(이름을 따로 적지 않습니다 · 5번) */
+function jvPenKey(name){ return kbN(name).replace(/pro변액연금|변액연금|연금보험|연금|pro|限|57년납/g, ''); }
+function jvPenPick(q, P){
+  var nq = kbN(q), hit = [];
+  (P.products || []).forEach(function(p){ var k = jvPenKey(p.name); if (k.length >= 2 && nq.indexOf(k) >= 0) hit.push(p.id); });
+  if (!hit.length) jvWords(q).map(kbN).filter(function(w){ return w.length >= 3 && !/연금|변액|보험/.test(w); }).forEach(function(w){
+    (P.products || []).forEach(function(p){ if (jvPenKey(p.name).indexOf(w) >= 0 && hit.indexOf(p.id) < 0) hit.push(p.id); });
+  });
+  return hit.length === 1 ? hit[0] : '';
+}
+function jvPenWant(q){
+  if (!/연금/.test(q) || JV_USE.test(q)) return false;
+  var v = jvPenParse(q).v, n = ['age', 'start', 'pay', 'monthly'].filter(function(k){ return v[k] != null; }).length;
+  return JV_PEN_DO.test(q) || n >= 2;
+}
+function jvPenNew(q){
+  var id = 'p' + (++JV_PEN.n), r = jvPenParse(q);
+  JV_PEN.S[id] = {id:id, q:q, v:r.v, guess:r.guess, pid:'', out:''};
+  return JV_PEN.S[id];
+}
+function jvPenMiss(S){ return ['sex', 'age', 'start', 'pay', 'monthly'].filter(function(k){ return S.v[k] == null; }); }
+/* 셈 — 엔진 그대로. 안 되는 상품은 까닭과 함께 */
+function jvPenCalc(S, B){
+  var P = B.PENSION, v = S.v, inp = {sex:v.sex, age:v.age, start:v.start, pay:v.pay, monthly:v.monthly}, ok = [], no = [];
+  P.products.forEach(function(p){
+    var r = null; try { r = P.calc(p, inp); } catch(e){ r = null; }
+    if (r && r.eligible && r.hasRate && r.yearly > 0) ok.push(r);
+    else no.push({p:p, why:(r && r.reason) || (v.pay > v.start - v.age ? '납입 기간이 연금 시작까지의 기간보다 깁니다' : '이 조건으로는 셀 수 없습니다')});
+  });
+  ok.sort(function(a, b){ return b.monthlyPay - a.monthlyPay; });
+  return {ok:ok, no:no};
+}
+function jvPenHtml(S){
+  var v = S.v, miss = jvPenMiss(S), B = JV_PEN.box, h = '<div class="j-pen" data-pen="' + S.id + '"><b>🧮 연금 계산 — 재무설계 계산기와 같은 엔진</b>';
+  var f = function(k, lab, val, unit){
+    return '<label class="jp-l' + (miss.indexOf(k) >= 0 ? ' jp-miss' : '') + '"><span>' + lab + '</span><input data-k="' + k +
+           '" type="number" inputmode="numeric" value="' + (val == null ? '' : val) + '">' + (unit ? '<i>' + unit + '</i>' : '') + '</label>';
+  };
+  h += '<div class="jp-f"><div class="jp-sex' + (miss.indexOf('sex') >= 0 ? ' jp-miss' : '') + '"><span>성별</span>' +
+       '<button type="button" data-sex="남성" class="' + (v.sex === '남성' ? 'on' : '') + '">남</button>' +
+       '<button type="button" data-sex="여성" class="' + (v.sex === '여성' ? 'on' : '') + '">여</button></div>' +
+       f('age', '지금 나이', v.age, '세') + f('start', '연금 시작', v.start, '세') + f('pay', '납입 기간', v.pay, '년') +
+       f('monthly', '월 납입', v.monthly == null ? null : Math.round(v.monthly / 10000 * 100) / 100, '만원') +
+       '<button type="button" class="jp-go">🧮 계산하기</button></div>';
+  if (S.guess) h += '<div class="jw-s jw-wait">' + esc(S.guess) + '</div>';
+  if (miss.length){
+    var nm = {sex:'성별', age:'지금 나이', start:'연금 시작 나이', pay:'납입 기간', monthly:'월 납입'};
+    h += '<div class="jw-s">' + miss.map(function(k){ return nm[k]; }).join(' · ') + ' 을(를) 채우고 「계산하기」 를 누르세요 — 짐작해 넣지 않습니다.</div>';
+    return h + '</div>';
+  }
+  if (!B){
+    h += '<div class="jw-s">' + (JV_PEN.why ? '연금 엔진을 못 읽었습니다(' + esc(JV_PEN.why) + ') — 숫자를 지어내지 않습니다. 재무설계 계산기에서 셈해 주십시오.' : '셈하는 중입니다…') + '</div>';
+    return h + jvPenTail(S, '') + '</div>';
+  }
+  var R = jvPenCalc(S, B), W = B.APEX_WON.txt, one = null, i;
+  var head = (v.age + '세 ' + v.sex + ' · 월 ' + W(v.monthly) + ' · ' + v.pay + '년 납 · ' + v.start + '세부터');
+  h += '<div class="jf-from">' + esc(head) + '</div>';
+  if (S.pid){ for (i = 0; i < R.ok.length; i++) if (R.ok[i].p.id === S.pid) one = R.ok[i]; }
+  if (S.pid && !one){
+    var nb = R.no.filter(function(x){ return x.p.id === S.pid; })[0];
+    if (nb) h += '<div class="jw-s jw-wait">「' + esc(nb.p.name) + '」 은 이 조건으로 안 됩니다 — ' + esc(nb.why) + '</div>';
+  }
+  if (!one) one = R.ok[0];
+  if (!one){
+    /* 왜 없는지를 <b>숫자로</b> 말합니다 — 「납입 20년인데 시작까지 15년」 이면 어떤 상품도 안 됩니다 (1번) */
+    var gap = v.start - v.age;
+    h += '<div class="jw-s jw-wait">' + (v.pay > gap
+      ? '납입 기간(' + v.pay + '년)이 연금 시작까지 남은 기간(' + gap + '년 · ' + v.age + '세 → ' + v.start + '세)보다 깁니다. 어떤 상품도 이 조합은 안 됩니다 — 납입 기간을 ' + gap + '년 아래로 줄이시거나 시작 나이를 늦추십시오.'
+      : '이 조건으로 가입되는 상품이 없습니다. 아래 「안 되는 상품」 에서 상품마다 까닭을 보십시오.') + '</div>';
+  } else {
+    var txt = one.p.name + ' — ' + v.start + '세부터 매달 ' + W(one.monthlyPay) + ' (보증) · 총 납입 ' + W(one.principal) +
+              ' · 원금은 약 ' + (Math.round(one.breakEven * 10) / 10) + '년 받으면 돌려받습니다 · ' + (one.p.omega || 100) + '세까지 받으면 ' + W(one.total100);
+    S.out = head + '\n' + txt;
+    h += '<div class="jw-row jf-best"><div class="jf-from">⭐ ' + (S.pid && one.p.id === S.pid ? '말씀하신 상품' : '매달 가장 많이 받는 상품') + ' · ' + esc(one.p.type) + '</div>' +
+         '<div class="jw-n">' + esc(one.p.name) + '</div>' +
+         '<div class="jp-big">매달 ' + esc(W(one.monthlyPay)) + '</div>' +
+         '<div class="jw-s">' + v.start + '세부터 · 최저보증 기준</div>' +
+         '<div class="jw-s">총 납입 — ' + esc(W(one.principal)) + '</div>' +
+         '<div class="jw-s">연금을 셈하는 바탕 금액 — ' + esc(W(one.base)) + '</div>' +
+         '<div class="jw-s">원금은 — 약 ' + (Math.round(one.breakEven * 10) / 10) + '년 받으면 돌려받습니다</div>' +
+         '<div class="jw-s">' + (one.p.omega || 100) + '세까지 받으면 — ' + esc(W(one.total100)) + '</div></div>';
+    var rest = R.ok.filter(function(r){ return r !== one; });
+    if (rest.length){
+      h += '<details class="jf-more"><summary>다른 상품 ' + rest.length + '개 ▾</summary>';
+      rest.forEach(function(r){ h += '<div class="jw-row"><div class="jw-n">' + esc(r.p.name) + ' · ' + esc(r.p.type) + '</div><div class="jw-s">매달 ' + esc(W(r.monthlyPay)) +
+        ' · 원금 약 ' + (Math.round(r.breakEven * 10) / 10) + '년</div></div>'; S.out += '\n' + r.p.name + ' — 매달 ' + W(r.monthlyPay); });
+      h += '</details>';
+    }
+  }
+  if (R.no.length){
+    h += '<details class="jf-more"><summary>이 조건으로 안 되는 상품 ' + R.no.length + '개 ▾</summary>';
+    R.no.forEach(function(x){ h += '<div class="jw-row"><div class="jw-n">' + esc(x.p.name) + '</div><div class="jw-s">' + esc(x.why) + '</div></div>'; });
+    h += '</details>';
+  }
+  h += '<div class="jf-note">※ 최저보증 금액 기준입니다. 물가상승률은 반영하지 않았습니다. 변액은 실적배당이라 더 받을 수도 있지만 여기서는 보증분만 셉니다. 실제 지급은 약관과 보험사 심사 결과에 따릅니다.</div>';
+  if (S.out) S.out += '\n※ 최저보증 금액 기준 · 물가상승률 미반영 · 실제 지급은 약관과 보험사 심사 결과에 따릅니다.';
+  return h + jvPenTail(S, one ? one.p.name + '이 ' + v.start + '세부터 매달 ' + W(one.monthlyPay) + '로 가장 많습니다. 최저보증 기준입니다.' : '') + '</div>';
+}
+function jvPenTail(S, say){
+  S.say = say;
+  var b = '';
+  if (S.out) b += '<button type="button" class="jp-copy">📋 결과 복사</button>';
+  if (say) b += '<button type="button" class="jp-say">🔊 읽어 주기</button>';
+  if (MENU.finance) b += '<button type="button" class="jp-fin" title="값은 넘어가지 않습니다 — 계산기에서 한 번 더 넣으셔야 합니다">📊 재무설계 계산기 열기</button>';
+  return b ? '<div class="st-b jr-b">' + b + '</div>' + (MENU.finance ? '<div class="jf-note">계산기를 열면 값은 넘어가지 않습니다 — 그 화면에서 한 번 더 넣으셔야 합니다.</div>' : '') : '';
+}
+function jvPenPaint(S){
+  var el = document.querySelector('[data-pen="' + S.id + '"]');
+  if (!el) return;
+  var t = document.createElement('div'); t.innerHTML = jvPenHtml(S);
+  el.parentNode.replaceChild(t.firstChild, el);
+}
+/* 셈하기 — 엔진을 손에 쥔 뒤에 그린다 */
+function jvPenRun(S, talk){
+  jvPenPaint(S);
+  if (jvPenMiss(S).length) return;
+  jvPenLoad().then(function(B){
+    if (B && !S.pidTried){ S.pidTried = 1; S.pid = jvPenPick(S.q, B.PENSION); }
+    jvPenPaint(S);
+    if (talk && S.say) speak(S.say);
+  });
+}
+document.addEventListener('click', function(e){
+  var t = e.target, box = t.closest && t.closest('[data-pen]');
+  if (!box) return;
+  var S = JV_PEN.S[box.getAttribute('data-pen')];
+  if (!S) return;
+  var sx = t.closest('[data-sex]');
+  if (sx){ e.preventDefault(); S.v.sex = sx.getAttribute('data-sex'); jvPenRead(S, box); jvPenPaint(S); return; }
+  if (t.closest('.jp-go')){ e.preventDefault(); jvPenRead(S, box); S.guess = ''; jvPenRun(S, true); return; }
+  if (t.closest('.jp-copy')){
+    e.preventDefault();
+    var P = inCrm ? window.parent : null, b2 = t.closest('.jp-copy');
+    try { if (P && typeof P.copyText === 'function') P.copyText(S.out); else if (navigator.clipboard) navigator.clipboard.writeText(S.out); } catch(err){}
+    b2.textContent = '✅ 복사했습니다'; setTimeout(function(){ b2.textContent = '📋 결과 복사'; }, 1800); return;
+  }
+  if (t.closest('.jp-say')){ e.preventDefault(); speak(S.say); return; }
+  if (t.closest('.jp-fin')){ e.preventDefault(); jvHere('finance'); }
+});
+/* 칸에 적힌 값을 다시 읽는다 — 월 납입은 만원으로 적고 원으로 담습니다(4번) */
+function jvPenRead(S, box){
+  [].slice.call(box.querySelectorAll('input[data-k]')).forEach(function(inp){
+    var k = inp.getAttribute('data-k'), n = parseFloat(String(inp.value).replace(/,/g, ''));
+    if (!isFinite(n) || n <= 0){ S.v[k] = null; return; }
+    S.v[k] = (k === 'monthly') ? Math.round(n * 10000) : Math.round(n);
+  });
+}
+
 /* AI 에게 보낼 근거 — 물은 말에 가까운 것만, 짧게.
    AI 가 <b>앱에 있는 것</b>에서 출발하게 합니다 (1번 · 지어내지 않는다). */
 function jvGround(q){
@@ -6416,6 +6640,9 @@ function ask(raw){
   /* 🛠 시키신 일인가 — 음성 비서의 사전(VA_ACT)으로 알아듣는다 (판 X271).
      시키신 일에는 「아카데미 읽는 중」 을 안 세웁니다 — 찾으신 것이 아니라 시키신 것입니다 */
   var act = jvAct(q);
+  /* 🧮 연금을 셈해 달라는 말인가 (판 X276) — 그러면 일 카드보다 먼저, 그 자리에서 셉니다 */
+  var pen = jvPenWant(q) ? jvPenNew(q) : null;
+  if (pen){ act = null; found = found.filter(function(f){ return !f.waitSay; }); if (JV_EXT.pend === q) JV_EXT.pend = ''; }
   if (act){
     found = found.filter(function(f){ return !f.waitSay; });
     if (JV_EXT.pend === q) JV_EXT.pend = '';
@@ -6424,14 +6651,19 @@ function ask(raw){
   var strong = found.some(function(f){ return f.strong && (f.rows || []).length; });
   if (fsay && (strong || r0.how === 'none')){ r0.wayAns = r0.how === 'none' ? '' : r0.answer; r0.answer = fsay; }
   /* 시키신 일의 머리가 <b>맨 나중에</b> — 찾은 것의 머리(「고객 명단 1명」)가 덮지 않게 */
+  if (pen){
+    r0.pen = pen; if (!r0.wayAns) r0.wayAns = r0.how === 'none' ? '' : r0.answer;
+    r0.answer = '🧮 연금 계산 — ' + (jvPenMiss(pen).length ? '빈 칸만 채워 주시면 바로 셉니다.' : '계산기와 같은 엔진으로 셈했습니다.');
+  }
   if (act){
     r0.act = act; if (!r0.wayAns) r0.wayAns = r0.how === 'none' ? '' : r0.answer;
     r0.answer = '「' + act.n + '」 — ' + (jvActNeed(act).k ? '하나만 더 여쭙겠습니다.' : (act.ask ? '아래에서 확인하시면 바로 합니다.' : '바로 합니다.'));
   }
   /* 회사 표 · AI 로 가는 물음은 고객 이름을 가린 것 (3번) */
   var qs = jvSafeQ(q, found);
-  if (!hasAI() || act){
-    logAsk(qs, r0, act ? '앱(일)' : '앱'); addJ(r0);
+  if (!hasAI() || act || pen){
+    logAsk(qs, r0, act ? '앱(일)' : (pen ? '앱(연금 계산)' : '앱')); addJ(r0);
+    if (pen) jvPenRun(pen, true);
     /* 읽기만 하는 일(전화 걸 단추 · 화면 열기)은 값이 다 있으면 <b>바로</b> 한다 */
     if (act && !act.ask && !jvActNeed(act).k) jvActRun(act);
     return;

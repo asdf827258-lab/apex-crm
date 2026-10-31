@@ -78,8 +78,9 @@ const SEED = () => {
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
-  const outside = [], GOT = {};
+  const outside = [], GOT = {}, PENGOT = [];
   await ctx.route('**://**', rt => { const u = rt.request().url();
+    if (/pension-engine\.js$|apex-won\.js$/.test(u) && /apex-map/.test(rt.request().headers()['referer'] || '')) PENGOT.push(u.split('/').pop());
     if (/보험아카데미\/(terms|terms2|disease1|disease2|surgery|design|costs)\.js$|실전화법서\.html$/.test(decodeURIComponent(u)) && /apex-map/.test(rt.request().headers()['referer'] || ''))
       GOT[decodeURIComponent(u).split('/').pop()] = (GOT[decodeURIComponent(u).split('/').pop()] || 0) + 1;
     if (u.indexOf('127.0.0.1:' + PORT) >= 0) return rt.continue();
@@ -605,6 +606,70 @@ const SEED = () => {
   await w3.close();
   is(W3.mark === DID && !/\boff\b/.test(W3.d) && /\boff\b/.test(W3.w), '트랙 안의 장(' + DID + ') → <b>달러 트랙으로 바꾸고</b> 그 장으로 (연금 트랙은 접힘)');
   outside.splice(OUT1);
+
+  sec('[14] 🧮 <b>연금 계산 — 말하면 바로</b> (판 X276 · 사장님 말씀 「연금 계산도 말하면 바로 가능하니」 → 「응 만들어줘」)');
+  /* 견줄 숫자는 <b>엔진을 직접</b> 돌려 얻습니다 — 자비스가 낸 숫자를 자비스로 견주지 않습니다 */
+  const QEB = {};
+  new Function('window', fs.readFileSync(path.join(ROOT, 'app/pension-engine.js'), 'utf8'))(QEB);
+  new Function('window', fs.readFileSync(path.join(ROOT, 'apex-won.js'), 'utf8'))(QEB);
+  const QEW = QEB.APEX_WON.txt;
+  const engQ = (inp) => { const ok = [], no = []; QEB.PENSION.products.forEach(p => { const r = QEB.PENSION.calc(p, inp);
+    (r && r.eligible && r.hasRate && r.yearly > 0 ? ok : no).push(r); }); ok.sort((a, b) => b.monthlyPay - a.monthlyPay); return { ok, no }; };
+  const QPP = await f.evaluate(() => [
+    jvPenParse('50세 남자 월 50만원 10년납 65세부터 연금 얼마').v,
+    jvPenParse('여자 45살, 매달 30만원씩 20년 동안 넣고 60세에 연금 받으면?').v,
+    jvPenParse('55세 남성 월 1,000,000원 5년납 70세 개시').v ]);
+  is(JSON.stringify(QPP[0]) === JSON.stringify({sex:'남성', age:50, start:65, pay:10, monthly:500000}) &&
+     JSON.stringify(QPP[1]) === JSON.stringify({sex:'여성', age:45, start:60, pay:20, monthly:300000}) &&
+     JSON.stringify(QPP[2]) === JSON.stringify({sex:'남성', age:55, start:70, pay:5, monthly:1000000}),
+     '말에서 값을 읽는다 — 「50세 남자 월 50만원 10년납 65세부터」 · 「여자 45살 매달 30만원씩 20년 동안 60세에」 · 「월 1,000,000원」(원 그대로)');
+  const penQ = (q, wait) => f.evaluate(async ([q, wait]) => { jLog.innerHTML = ''; ask(q); await new Promise(r => setTimeout(r, wait || 1500));
+    const c = document.querySelector('#jLog .j-pen'); const card = [].slice.call(document.querySelectorAll('#jLog .msg.j')).pop();
+    return { t: c ? c.textContent.replace(/\s+/g, ' ') : '', best: c && c.querySelector('.jf-best') ? c.querySelector('.jf-best').textContent.replace(/\s+/g, ' ') : '',
+             over: c ? c.scrollWidth - c.clientWidth : -1, ai: !!(card && card.querySelector('.j-ai')) }; }, [q, wait]);
+  const QE1 = engQ({sex:'남성', age:50, start:65, pay:10, monthly:500000});
+  const topQ = QE1.ok[0];
+  const QK1 = await penQ('50세 남자 월 50만원 10년납 65세부터 연금 얼마');
+  is(QK1.best.indexOf(topQ.p.name) >= 0 && QK1.best.indexOf('매달 ' + QEW(topQ.monthlyPay)) >= 0 && QK1.best.indexOf(QEW(topQ.principal)) >= 0 &&
+     QK1.best.indexOf(QEW(topQ.base)) >= 0 && QK1.best.indexOf(QEW(topQ.total100)) >= 0,
+     '셈이 <b>계산기 엔진과 한 원도 다르지 않다</b> — ' + topQ.p.name + ' 매달 ' + QEW(topQ.monthlyPay) + ' · 총 납입 ' + QEW(topQ.principal));
+  is(QE1.ok.slice(1).every(r => QK1.t.indexOf(r.p.name) >= 0 && QK1.t.indexOf('매달 ' + QEW(r.monthlyPay)) >= 0) &&
+     QE1.no.every(r => QK1.t.indexOf(r.p.name) >= 0 && QK1.t.indexOf(r.reason) >= 0),
+     '다른 상품 ' + (QE1.ok.length - 1) + '개 · 안 되는 상품 ' + QE1.no.length + '개(엔진이 말한 <b>까닭 그대로</b>)도 같이 선다');
+  is(/최저보증 금액 기준입니다/.test(QK1.t) && /물가상승률은 반영하지 않았습니다/.test(QK1.t) && /약관과 보험사 심사 결과에 따릅니다/.test(QK1.t),
+     '계산기와 같은 말을 붙인다 — 최저보증 기준 · 물가 미반영 · 약관과 심사 결과 (2번)');
+  is(!/NaN|undefined|Infinity/.test(QK1.t) && !/\d{5,}만원/.test(QK1.t), '부서진 숫자 0 · 「50,000만원」 꼴 0 (억·만으로 · 4번)');
+  is(QK1.over <= 0, '폰 폭(390)에서 연금 칸이 <b>옆으로 안 넘친다</b> (' + QK1.over + 'px)');
+  is(!QK1.ai, '연금 셈에는 AI 를 안 부른다 — 숫자는 엔진만');
+  /* 빈 칸 → 채우고 계산하기 */
+  const QK2 = await penQ('연금 계산해줘');
+  is(/채우고 「계산하기」 를 누르세요/.test(QK2.t) && !QK2.best, '「연금 계산해줘」 → 숫자를 <b>짐작해 넣지 않고</b> 빈 칸을 묻는다');
+  const QK2b = await f.evaluate(async () => { const c = document.querySelector('#jLog .j-pen');
+    c.querySelector('[data-sex="여성"]').click(); await new Promise(r => setTimeout(r, 50));
+    const c2 = document.querySelector('#jLog .j-pen'), set = (k, v) => { c2.querySelector('input[data-k="' + k + '"]').value = v; };
+    set('age', 50); set('start', 65); set('pay', 10); set('monthly', 50);
+    c2.querySelector('.jp-go').click(); await new Promise(r => setTimeout(r, 1200));
+    const b = document.querySelector('#jLog .j-pen .jf-best'); return b ? b.textContent.replace(/\s+/g, ' ') : ''; });
+  const QE2 = engQ({sex:'여성', age:50, start:65, pay:10, monthly:500000});
+  is(QK2b.indexOf(QE2.ok[0].p.name) >= 0 && QK2b.indexOf('매달 ' + QEW(QE2.ok[0].monthlyPay)) >= 0, '칸을 채우고 「계산하기」 → 그 값으로 셈한다 — ' + QE2.ok[0].p.name + ' ' + QEW(QE2.ok[0].monthlyPay));
+  const QK3 = await penQ('여자 45살, 매달 30만원씩 20년 동안 넣고 60세에 연금 받으면?');
+  is(/납입 기간\(20년\)이 연금 시작까지 남은 기간\(15년/.test(QK3.t) && !QK3.best, '안 되는 조합은 <b>왜 안 되는지 숫자로</b> — 납입 20년 · 남은 15년');
+  const QK4 = await penQ('월 50 10년 넣으면 연금 얼마 나와 50세 여자 65세부터');
+  is(/「월 50」 은 단위가 없어 만원으로 읽었습니다/.test(QK4.t), '「월 50」 처럼 단위가 없으면 만원으로 읽고 <b>그렇게 읽었다고</b> 적는다 (1번)');
+  const QK5 = await penQ('50세 남자 월 50만원 10년납 65세부터 스타트로 연금 얼마');
+  const stQ = QE1.no.filter(r => r.p.id === 'im_start')[0];
+  is(QK5.t.indexOf('「PRO변액연금 스타트」 은 이 조건으로 안 됩니다 — ' + stQ.reason) >= 0, '말씀하신 상품이 안 되면 <b>엔진이 말한 까닭</b>을 적고 되는 상품을 보인다');
+  const QNP = await f.evaluate(() => ['연금 화법', '연금 상담 하려면?', '재무설계 계산기 어떻게 써?', '국민연금은 노후의 전부가 될 수 없다', '연금 계산기 어디 있어?'].filter(q => jvPenWant(q)));
+  is(QNP.length === 0, '연금 이야기 · 계산기 쓰는 법 물음에는 연금 칸이 <b>안 선다</b>' + (QNP.length ? ' ← ' + QNP.join(' · ') : ''));
+  await p.evaluate(() => { window.__cp2 = []; window.__keepCP2 = window.copyText; window.copyText = function(t){ window.__cp2.push(t); }; });
+  await penQ('50세 남자 월 50만원 10년납 65세부터 연금 얼마');
+  await f.evaluate(async () => { document.querySelector('#jLog .j-pen .jp-copy').click(); await new Promise(r => setTimeout(r, 100)); });
+  const QCP2 = await p.evaluate(() => { window.copyText = window.__keepCP2; return window.__cp2.slice(); });
+  is(QCP2.length === 1 && QCP2[0].indexOf(topQ.p.name + ' — 65세부터 매달 ' + QEW(topQ.monthlyPay)) >= 0 && /최저보증 금액 기준/.test(QCP2[0]),
+     '📋 결과 복사 — 카톡에 붙일 글에도 「최저보증 기준 · 약관과 심사」 가 같이 간다');
+  is(/값은 넘어가지 않습니다/.test(QK1.t), '「재무설계 계산기 열기」 는 값이 안 넘어간다고 <b>밝힌다</b>');
+  const QPG = PENGOT.reduce((m, x) => (m[x] = (m[x] || 0) + 1, m), {});
+  is(QPG['pension-engine.js'] === 1 && QPG['apex-won.js'] === 1, '연금 엔진 · 돈 글자는 <b>한 번씩만</b> 받는다 — ' + JSON.stringify(QPG));
 
   sec('[8] 🧼 꺾쇠 0 · 콘솔 오류 0 · 바깥 주소 0');
   const tags = [C1, K1, T1, Z1, Z4, Z7].filter(x => /&lt;\/?[a-z]/i.test(x.html)).length;
