@@ -21301,7 +21301,7 @@ function owCss(){
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
 var APP_BUILD='2026-10-31 15:11';
-var APP_BUILD_NOTE="🧮 <b>자비스가 연금을 말로 셉니다</b> (판 X276) · 사장님 말씀 「연금 계산도 말하면 바로 가능하니」 → 「응 만들어줘」. ◾ 「50세 남자 월 50만원 10년납 65세부터 연금 얼마」 → 재무설계 계산기와 같은 엔진으로 상품마다 매달 받는 연금(최저보증)을 셉니다. 빠진 값만 묻고, 안 되는 상품은 까닭을 적습니다. ◾ 같이 실려 나가는 판 — X273(상담자료 덱) · X272(하나만 크게 · 말 복사 · 아카데미 화법·강의·슬라이드) · X271(시키면 한다) · X269 · X268 · X270(자비스 찾기 · 질병코드 찾기 칸 고침).";
+var APP_BUILD_NOTE="🧮 <b>자비스가 연금을 말로 셉니다</b> (판 X276) · 사장님 말씀 「연금 계산도 말하면 바로 가능하니」 → 「응 만들어줘」. ◾ 「50세 남자 월 50만원 10년납 65세부터 연금 얼마」 → 재무설계 계산기와 같은 엔진으로 상품마다 매달 받는 연금(최저보증)을 셉니다. 빠진 값만 묻고, 안 되는 상품은 까닭을 적습니다. ◾ 같이 실려 나가는 판 — X273(상담자료 덱) · X277(하나만 크게 · 말 복사 · 아카데미 화법·강의·슬라이드) · X271(시키면 한다) · X269 · X268 · X270(자비스 찾기 · 질병코드 찾기 칸 고침).";
 
 
 
@@ -35533,7 +35533,11 @@ function hmRtHtml(){
   hmRtCss();
   h='<div class="card hm-rt"><div class="card-body">'+
     '<div class="hm-rt-h"><span class="ci">🚗</span><b>오늘 어디로 가시나</b>'+
-      '<button type="button" class="hm-rt-go" onclick="hmRtOpen()">🗺️ 지역 동선 →</button></div>';
+      '<button type="button" class="hm-rt-go" onclick="hmRtOpen()">🗺️ 지역 동선 →</button>'+
+      /* ⏱ <b>상담 한 건에 몇 분</b> (판 X272) — 사장님 말씀 2026-10-31
+         「<b>오늘 칸에서 예상 소요시간 정하고</b>」. 머리줄은 이미 44px 이라
+         <b>홈은 1px 도 안 길어집니다</b> — 재어 보고 넣었습니다.         */
+      hmRtStayHtml()+'</div>';
   if(ap.length){
     h+='<div class="hm-rt-ap">';
     for(i=0;i<ap.length;i++)
@@ -35783,6 +35787,41 @@ function hmRtOpen(){
   };
   setTimeout(tick,60);
 }
+/* ══ ⏱ <b>상담 한 건에 몇 분</b> (판 X272) ════════════════════════════
+   사장님 말씀 2026-10-31 — 「<b>오늘 칸에서 예상 소요시간 정하고</b>」.
+   이 수 하나로 🗺️ 지역 동선의 <b>상담 끝 시각</b> · <b>다음까지 몇 분 비는지</b>
+   · <b>몇 시에 나서야 하는지</b> 가 전부 달라집니다. 여태는 동선 창 위
+   도구 띠의 여덟째 칸이라, 거기까지 가야 고칠 수 있었습니다.
+
+   ★★ <b>이 수를 담는 자리는 하나</b>입니다 (5번) — 이 브라우저의
+     apexRouteStayV1. 동선 창(apex-route.js · STAY)이 그 자리를 읽고 쓰고,
+     홈은 <b>같은 자리</b>를 읽고 씁니다. 홈이 제 칸을 따로 두면 홈은
+     45분으로 보여 주고 동선은 60분으로 하루를 짜는 날이 옵니다.
+   ★ 틀(CRM)이 이미 떠 있으면 <b>그쪽 문(apexRouteStay)으로</b> 넣습니다 —
+     그러면 열려 있던 스케줄표가 그 자리에서 다시 짜입니다. 안 떠 있으면
+     담아만 두고, 열 때 동선이 읽어 갑니다.
+   ★ <b>서버를 안 부릅니다</b> (7번) — 이 브라우저에만 남습니다.          */
+function hmRtStayNow(){
+  var v=60; try{ v=+(localStorage.getItem('apexRouteStayV1')||60)||60 }catch(e){}
+  return v;
+}
+function hmRtStayHtml(){
+  var now=hmRtStayNow(), out='', i, V=[30,45,60,90];
+  for(i=0;i<V.length;i++)
+    out+='<option value="'+V[i]+'"'+(now===V[i]?' selected':'')+'>⏱ '+V[i]+'분</option>';
+  return '<select class="hm-rt-stay" aria-label="상담 한 건에 몇 분" '+
+    'title="상담 한 건에 쓰는 시간 — 지역 동선이 이 수로 하루를 짭니다" '+
+    'onchange="hmRtStaySet(this.value)">'+out+'</select>';
+}
+function hmRtStaySet(v){
+  v=+v||60;
+  try{ localStorage.setItem('apexRouteStayV1',String(v)) }catch(e){}
+  try{ var f=document.getElementById('crmFrame');
+       if(f&&f.contentWindow&&typeof f.contentWindow.apexRouteStay==='function')
+         f.contentWindow.apexRouteStay(v); }catch(e2){}
+  try{ toast('상담 한 건을 '+v+'분으로 잡았습니다 — 🗺️ 지역 동선이 이 수로 하루를 짭니다',3200) }catch(e3){}
+}
+
 function hmRtCss(){
   if(document.getElementById('hmRtCss'))return;
   var st=document.createElement('style');st.id='hmRtCss';
@@ -35798,6 +35837,15 @@ function hmRtCss(){
    '.hm-fold-b>.card>.card-body{padding:0}'+
    '.hm-fold-b .hm-rt-h>.ci,.hm-fold-b .hm-rt-h>b{display:none}'+
    '.hm-fold-b .hm-rt-h:has(>.hm-rt-go:only-child){margin-bottom:6px}'+
+   /* ⏱ 상담 분 고르개 — 곁단추(.hm-rt-go)와 <b>같은 꼴</b>입니다 (판 X272).
+      새 색·새 둥글기를 만들지 않습니다 (5번). ★ 44px 은 손가락 바닥이고,
+      머리줄이 이미 44px 이라 홈은 안 길어집니다. ★ 제목이 길어 줄이
+      넘치려 하면 <b>제목이 줄어듭니다</b>(아래 min-width:0) — 고르개가
+      아래로 떨어지면 홈이 44px 길어집니다.                              */
+   '.hm-rt-stay{margin-left:6px;border:1px solid var(--ink-7);background:var(--bg-1);'+
+     'border-radius:var(--r-pill);padding:4px 8px;font-size:var(--t6);font-weight:800;'+
+     'color:var(--ink-3);cursor:pointer;font-family:inherit;min-height:44px;flex:none}'+
+   '.hm-rt-h>b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
    '.hm-rt-go{margin-left:auto;border:1px solid var(--ink-7);background:var(--bg-1);'+
      'border-radius:var(--r-pill);padding:4px 11px;font-size:var(--t6);font-weight:800;color:var(--ink-3);'+
      /* ⚠ ★★ <b>30px 였습니다.</b> 「누르는 것은 44px」 이 철칙인데 이 곁단추

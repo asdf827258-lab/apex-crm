@@ -277,7 +277,7 @@ const SEED = () => {
   const FP = await f.evaluate(() => {
     const none = ['거절한 고객 다시 연락하고 싶어', '화면이 이상해', '영업이 안 돼', 'DB 배정 받은 거 어디서 봐']
       .map(q => ({ q, n: jvFind(q).filter(x => (x.rows || []).length).length })).filter(x => x.n);
-    /* 「교통사고 슬라이드」 — 약하게 맞은 장에 「원하는 답」 표가 점수를 얹어도 굳으면 안 됩니다 (판 X272) */
+    /* 「교통사고 슬라이드」 — 약하게 맞은 장에 「원하는 답」 표가 점수를 얹어도 굳으면 안 됩니다 (판 X277) */
     const weak = ['보험료 비교해달래', '교통사고 났대', '질병코드 찾기', '교통사고 슬라이드']
       .map(q => ({ q, n: jvFind(q).filter(x => x.strong && (x.rows || []).length).length })).filter(x => x.n);
     return none.concat(weak);
@@ -490,10 +490,10 @@ const SEED = () => {
   const HL = await f.evaluate(() => ({ h: jvHello().answer, n: jvActCount(),
     want: window.parent.VA_ACT.filter(a => JV_ACT_SKIP.indexOf(a.k) < 0).length, fb: !!jvAct('피드백 남겨줘') }));
   is(HL.n > 0 && HL.n === HL.want && HL.h.indexOf('일 ' + HL.n + '가지') >= 0, '첫 인사가 시킬 수 있는 일 수를 <b>사전을 세어</b> 말한다 — ' + HL.n + '가지');
-  is(!HL.fb, '「피드백」 은 자비스가 안 한다 (판 X272 · 사장님 말씀 「피드백은 필요없고」) — 음성 비서에는 그대로');
+  is(!HL.fb, '「피드백」 은 자비스가 안 한다 (판 X277 · 사장님 말씀 「피드백은 필요없고」) — 음성 비서에는 그대로');
   is(NA.voice.join(',') === '연락기록,전화걸기,고객할일', '🎙️ 음성 비서도 같은 사전으로 새 일을 알아듣는다 — ' + NA.voice.join(','));
 
-  sec('[12] ⭐ <b>가장 쉽게 · 모든 담긴 내용</b> (판 X272 · 사장님 말씀 「여기 안에 있는 모든 담긴 내용을 찾고 바로 사용할수 있도록 … 가장 쉬워야만해」)');
+  sec('[12] ⭐ <b>가장 쉽게 · 모든 담긴 내용</b> (판 X277 · 사장님 말씀 「여기 안에 있는 모든 담긴 내용을 찾고 바로 사용할수 있도록 … 가장 쉬워야만해」)');
   /* 견줄 수는 <b>파일에서 직접</b> 셉니다 */
   const AX = {};
   ['data1','data2','lesson','analysis','health','cases','cases2','disease1','disease2','source'].forEach(n =>
@@ -556,7 +556,7 @@ const SEED = () => {
 
   /* ★ 열린 덱이 <b>제 글꼴</b>을 받는 것은 그 덱의 몫이라 [8] 의 「바깥 주소 0」 에서 뺍니다 */
   const OUT1 = outside.length;
-  sec('[13] 🎞 <b>상담자료 덱</b> — 그 장을 찾고 그 장을 바로 연다 (판 X273 · 사장님 말씀 「응응」 — 판 X272 에서 남은 덱)');
+  sec('[13] 🎞 <b>상담자료 덱</b> — 그 장을 찾고 그 장을 바로 연다 (판 X273 · 사장님 말씀 「응응」 — 판 X277 에서 남은 덱)');
   /* 견줄 수는 <b>색인을 뽑는 자</b>에게 직접 묻습니다 */
   const DK = require(path.join(ROOT, 'scripts/deck-index.js')).build();
   const DJ = await f.evaluate(() => jvDecks().map(d => ({ k: d.k, n: d.slides.length, t0: d.slides[0].t })));
