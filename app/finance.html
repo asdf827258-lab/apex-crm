@@ -11017,6 +11017,33 @@ function psOneHtml(name,target,now,plus,gap,rage,years){
   return g+'<div style="margin-top:12px;background:#F8FAFC;border-radius:12px;padding:13px 15px;'+
     'font-size:var(--t6,13px);line-height:1.85;color:var(--ink-2)">'+name+'님, '+line+'</div>';
 }
+/* ══ 🤖 <b>자비스가 셈한 연금을 그대로 받는다</b> (판 X278) ══════════════════════
+   사장님 말씀 2026-10-31 「응 계산기로 값도 넘어가게 해줘」.
+   자비스 모드에서 「50세 남자 월 50만원 10년납 65세부터 연금 얼마」 를 셈한 뒤
+   「📊 계산기로 이 값 넘기기」 를 누르면 여기로 옵니다.
+   ★ 연금 칸(월 납입 · 납입 기간 · 상품)은 PSIM 에 살아 id 가 없어 apexFinLoad 로는
+     못 닿습니다. 그래서 이 한 갈래를 둡니다. 사이드바 셋(나이 · 성별 · 은퇴 나이)도 같이.
+   ★ <b>덮기 전 값을 돌려보냅니다</b> — 계산기에 다른 고객 숫자가 있었을 수 있습니다.
+     자비스가 무엇이 바뀌었는지 말하고 「되돌리기」 로 그 값을 다시 보냅니다(소리 없이
+     덮지 않는다 · 앱 규칙). 되돌릴 때는 빈 칸도 빈 칸으로 돌아가야 하므로 '' 도 받습니다.
+   ★ 같은 주소에서 온 것만 받습니다.                                                  */
+window.addEventListener('message', function(e){
+  var d = e && e.data;
+  if(!d || d.type !== 'apexFinPension') return;
+  if(e.origin !== location.origin) return;
+  var v = d.v || {}, el = function(id){ return document.getElementById(id); };
+  var before = { age:(el('s_age') || {}).value || '', sex:(el('s_gender') || {}).value || '', start:(el('s_rage') || {}).value || '',
+                 prem:PSIM.prem, pay:PSIM.pay, pid:PSIM.pid };
+  var put = function(id, val){ var x = el(id); if(x && val !== undefined && val !== null) x.value = String(val); };
+  put('s_age', v.age); put('s_gender', v.sex); put('s_rage', v.start);
+  if(isFinite(+v.prem) && +v.prem > 0) PSIM.prem = +v.prem;
+  if(isFinite(+v.pay) && +v.pay > 0) PSIM.pay = +v.pay;
+  if(v.pid !== undefined) PSIM.pid = v.pid || null;
+  try{ switchTab('pension', document.querySelector('.report-tab[onclick*="\'pension\'"]')); }catch(x){}
+  try{ renderPensionSim(); }catch(x){}
+  try{ e.source.postMessage({type:'apexFinPensionOk', before:before}, location.origin); }catch(x){}
+}, false);
+
 function renderPensionSim(){
   var host=document.getElementById('pension-sim');
   if(!host || !window.PENSION) return;
