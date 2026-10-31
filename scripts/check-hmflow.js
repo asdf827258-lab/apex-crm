@@ -70,7 +70,7 @@ const SEED = () => {
   try{ osHideLoginGate(); }catch(e){}
 };
 
-/* ⬆ 판 X275 — 단계 칩 · 🕗 지남 · 막힌 데는 맨 위 📇 <b>한 장 띠</b>(#hmBand)로
+/* ⬆ 판 X279 — 단계 칩 · 🕗 지남 · 막힌 데는 맨 위 📇 <b>한 장 띠</b>(#hmBand)로
    올라갔습니다(사장님 말씀 2026-10-31 「이 한 장으로 모든 고객을 연락부터
    관리까지」). 재는 것은 그대로 두고 <b>읽는 자리만</b> 띠까지 넓힙니다 —
    글은 두 칸을 이어 읽고, 칩은 띠에서 집습니다(카드에는 이제 칩이 없습니다). */
@@ -227,7 +227,7 @@ const CARD = () => {
   const F = await p.evaluate(() => {
     const 담 = AR.db.map(r => r.days);
     AR.db.forEach(r => { r.days = 2; });          /* 다 이틀째로 */
-    const h = hmBandHtml() + hmFlowHtml();     /* 막힌 데는 띠에 섭니다 (판 X275) */
+    const h = hmBandHtml() + hmFlowHtml();     /* 막힌 데는 띠에 섭니다 (판 X279) */
     AR.db.forEach((r, i) => { r.days = 담[i]; });
     return h.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ');
   });

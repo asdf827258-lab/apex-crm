@@ -97,7 +97,7 @@ const SEED = (일) => {
 /* 네 수를 한 번에 — <b>카드 하나에서</b> 집어 옵니다 */
 const LOOK = () => {
   try { go('home'); } catch (e) {}
-  /* ⬆ 판 X275 — 단계 칩 · 🕗 지남은 맨 위 📇 <b>한 장 띠</b>(#hmBand)로
+  /* ⬆ 판 X279 — 단계 칩 · 🕗 지남은 맨 위 📇 <b>한 장 띠</b>(#hmBand)로
      올라갔습니다. 두 칸을 <b>한 몸</b>으로 읽습니다 — 둘 다 같은 hwhoFor 에게
      묻는지가 이 자의 물음이라, 자리만 바뀌었지 재는 것은 같습니다. */
   const c = document.getElementById('hmFlow'), bd = document.getElementById('hmBand');
@@ -224,7 +224,7 @@ const LOOK = () => {
      '  ★ hmFlowMe() 는 <b>되돌아갈 자리로만</b> 남는다 — 카드 ' +
      셈(카드, 'hmFlowMe()') + '곳 · 업적줄 ' + 셈(줄, 'hmFlowMe()') + '곳');
   is(/function hmFlowMe\(/.test(src), '  ⚠ hmFlowMe 를 <b>안 지웠다</b> (사장님 ★)');
-  /* 📇 판 X275 — <b>띠도 같은 자에게 한 번</b> 묻습니다. 띠가 제 손으로 「누구」 를
+  /* 📇 판 X279 — <b>띠도 같은 자에게 한 번</b> 묻습니다. 띠가 제 손으로 「누구」 를
      고르면 고르개를 눌러도 띠만 내 것으로 남습니다 (5번). */
   const 띠 = 토막('hmBandHtml');
   is(!!띠.trim() && 셈(띠, 'hwhoFor()') === 1 && 셈(띠, 'hwhoPick()') === 0,
