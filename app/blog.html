@@ -339,7 +339,13 @@ const BAN = [
 ];
 const NOTNAME = {'고객님':1,'사장님':1,'선생님':1,'어머님':1,'아버님':1,'부모님':1,'따님':1,'아드님':1,
  '형님':1,'누님':1,'과장님':1,'부장님':1,'대표님':1,'회원님':1,'단장님':1,'지점장님':1,'팀장님':1,
- '실장님':1,'원장님':1,'이사님':1,'여러분':1,'홍길동':1};
+ '실장님':1,'원장님':1,'이사님':1,'여러분':1,'홍길동':1,
+ /* ★ 조사가 붙은 꼴까지 보게 되면서(아래 names) <b>이름이 아닌 말</b>이 걸리기
+    시작했다 — 「날씨가」 「아저씨가」 「손님이」. 헛것을 잡는 자는 안 잡는 자보다
+    나쁘다(8번). 그래서 사람 아닌 것을 여기 적어 둔다. */
+ '아저씨':1,'마음씨':1,'글씨':1,'말씨':1,'솜씨':1,'맵씨':1,'볍씨':1,'홀씨':1,'눈씨':1,'오늘날씨':1,
+ '손님':1,'할머님':1,'할아버님':1,'사모님':1,'여사님':1,'기사님':1,'선배님':1,'후배님':1,
+ '작가님':1,'의사님':1,'목사님':1,'주인님':1};
 /* 빠져서 걸리는 것은 <b>넣는 것이 정답</b>이라 고를 여지가 없다 — 자동으로 붙인다.
    fix 문구는 여기 한 곳에만 둔다(두 곳에 두면 한쪽만 고쳐진다). */
 const NEED = [
@@ -373,13 +379,19 @@ function save(){ try{ localStorage.setItem(KEY,JSON.stringify({rows:S.rows,perwe
   catch(e){ toast('글이 많아 다 저장하지 못했습니다. 만든 글은 복사해 두세요.'); } }
 function mine(k){ try{ const v=JSON.parse(localStorage.getItem(MINE(k))||'[]'); return v.push?v:[]; }catch(e){ return []; } }
 function mineSave(k,a){ try{ localStorage.setItem(MINE(k),JSON.stringify(a)); }catch(e){} }
-function mineAdd(k){
-  const el=$('mine_'+k); if(!el) return;
+/* 담는 자는 <b>하나</b>다 — 「오늘」 칸에서도 글감 목록에서도 이것을 부른다.
+   칸만 달라지므로 어느 칸에서 읽을지를 받는다. 따로 만들면 이름 검사·길이
+   검사가 한쪽에만 붙어, 한 길로는 실명이 들어갑니다 (5번·3번). */
+function mineAdd(k,id){
+  const el=$(id||('mine_'+k)); if(!el) return;
   const q=(el.value||'').trim();
   if(q.length<5){ toast('조금 더 적어 주세요.'); return; }
   const nm=names(q);
   if(nm.length){ toast('이름 같은 말이 있습니다('+nm[0]+'). 이름은 빼고 적어 주세요.'); return; }
-  const a=mine(k); a.unshift({q,at:ymd(0)}); mineSave(k,a); el.value=''; paint();
+  const a=mine(k); a.unshift({q,at:ymd(0)}); mineSave(k,a); el.value='';
+  const now=seedToday();   /* 오늘 갈래면 그 자리에서 붙는다 — 한 번 더 누르게 하지 않는다 */
+  paint();
+  if(now) toast('담았습니다 — 오늘 줄에 붙었습니다. 「오늘 것 한 편 만들기」 를 누르세요');
 }
 function mineDel(k,i){ const a=mine(k); a.splice(i,1); mineSave(k,a); paint(); }
 
@@ -758,8 +770,17 @@ async function draft(i){
 }
 
 /* ══════════ 발행 게이트 ══════════ */
+/* ★★ 2026-10-31 · <b>조사가 붙으면 다 놓치고 있었습니다.</b> 「임꺽정님」 은 잡는데
+   「임꺽정님<b>이</b> 물으신」 은 못 잡았습니다 — 뒤에 한글이 오면 안 보게 되어
+   있었습니다. 그런데 사람은 거의 언제나 조사를 붙여 씁니다. 아침에 한 줄 담는
+   칸이 생기면서 그 길로 실명이 들어가면 <b>AI 에게 그대로 갑니다</b> (3번).
+   ★ 그렇다고 한글이면 다 보게 넓히면 「날씨가」 「아저씨가」 를 고발합니다.
+     그래서 <b>조사만</b> 봅니다. 그래도 남는 헛것은 NOTNAME 에 적어 둡니다.
+   ⚠ <b>새로 지어낸 이름은 못 잡습니다</b> — 「님」 「씨」 가 안 붙은 이름도
+     못 잡습니다. 이 자는 그물이지 벽이 아닙니다 (1번). */
 function names(t){
-  const out=[]; let m; const re=/([가-힣]{2,4})(님|씨)(?![가-힣])/g;
+  const out=[]; let m;
+  const re=/([가-힣]{2,4})(님|씨)(?:(?![가-힣])|(?=이|가|은|는|을|를|의|도|만|과|와|께|에|로|랑|요))/g;
   while((m=re.exec(t))){ const w=m[1]+m[2];
     if(NOTNAME[w]||NOTNAME[m[1]]) continue;
     if(!out.includes(w)) out.push(w); }
@@ -999,6 +1020,15 @@ function freshSeed(kind){
   const un=pool.filter(x=>!done[x.title]);
   return un.length?un[0]:pool[0];   /* 담은 것은 맨 앞이 최신이다 — 오늘 아침 적은 것부터 쓴다 */
 }
+/* 오늘 줄에 글감을 붙인다 — <b>담자마자</b> 「오늘」 칸이 바뀌어야 한다.
+   붙이는 자를 한 곳에 둔다: 담기(mineAdd)와 만들기(today1)가 같은 것을 쓴다 (5번).
+   초안이 이미 나온 줄은 안 건드린다 — 쓴 글의 글감을 바꾸면 딛고 선 것이 어긋난다. */
+function seedToday(){
+  const i=todayAt(); if(i<0) return false;
+  const row=S.rows[i]; if(row.out) return false;
+  const sd=freshSeed(row.kind); if(!sd) return false;
+  row.seed=sd; save(); return true;
+}
 async function today1(){
   if(S.busy>=0){ toast('한 편씩 만듭니다.'); return; }
   if(todayAt()<0) plan();
@@ -1007,7 +1037,7 @@ async function today1(){
   const row=S.rows[i], d=KINDS[row.kind];
   /* 뉴스 갈래인데 어제 것이면 오늘 것으로 다시 받는다 — 날짜가 틀린 글이 나가면 안 된다 */
   if(d.cat && !newsFresh()) await pullNews();
-  if(!row.out){ const sd=freshSeed(row.kind); if(sd) row.seed=sd; save(); }
+  seedToday();
   if(!S.rows[i].seed){
     paint();
     toast('오늘 갈래는 「'+d.t+'」 인데 글감이 없습니다. 아래에 한 줄 적어 주세요.');
@@ -1045,6 +1075,21 @@ async function tomorrow1(){
     paint(); $('seeds').scrollIntoView({behavior:'smooth',block:'center'}); return; }
   save(); await draft(i);
 }
+/* ══ 오늘 한 줄 담기 ══ 사장님 말씀 2026-10-31 「응 아침에 오늘 한줄 담기 띄워주」
+   아침 8시 알람이 깨워 주고(alm-slots 의 blog 칸), 들어오시면 <b>여기서 바로</b>
+   적으십니다. 여태는 「글감이 없습니다」 라고만 하고 적으려면 아래로 내려가야
+   했습니다 — 아침에 한 줄 적는 일에 손이 두 번 가면 안 담으십니다.
+   ★ 오늘 갈래가 <b>적어 넣는 갈래일 때만</b> 섭니다. 뉴스 갈래는 받아 오는
+     것이지 적는 것이 아니라, 없는 칸을 띄우지 않습니다 (8번). */
+function todayOne(kind,d){
+  if(!d||!d.mine) return '';
+  return '<div class="tt">오늘 한 줄 — '+d.mine.label+'</div>'+
+    '<div class="row"><input id="mine_today_'+kind+'" placeholder="'+esc(d.mine.ph)+'" '+
+      'style="flex:1;min-width:220px" onkeydown="if(event.key===\'Enter\')mineAdd(\''+kind+'\',\'mine_today_'+kind+'\')">'+
+    '<button class="p" onclick="mineAdd(\''+kind+'\',\'mine_today_'+kind+'\')">담기</button></div>'+
+    '<div class="note" style="margin:6px 0 0">담으시면 바로 오늘 줄에 붙습니다. '+
+      '<b>이름은 빼고</b> 적어 주세요 — 이름 같은 말이 있으면 담기지 않습니다.</div>';
+}
 function paintToday(){
   const i=todayAt(), late=lateRows(), n=streak();
   const dots='<span class="dots">'+[6,5,4,3,2,1,0].map(b=>{
@@ -1063,7 +1108,8 @@ function paintToday(){
   else if(row.out) st='<div class="gate ok">오늘 초안이 <b>나와 있습니다</b>. 아래 단추로 이어서 올리세요.</div>';
   else if(has)     st='<div class="gate ok">오늘 글감이 <b>있습니다</b> — 「'+esc(row.seed.title.slice(0,44))+'」</div>';
   else             st='<div class="gate no"><b>오늘 글감이 없습니다.</b><ul><li>'+d.empty+'</li>'+
-                      '<li>없는 것을 만들어 쓰지 않습니다 — 한 줄만 적어 주시면 나머지는 만듭니다.</li></ul></div>';
+                      '<li>없는 것을 만들어 쓰지 않습니다 — 한 줄만 적어 주시면 나머지는 만듭니다.</li></ul></div>'+
+                      todayOne(row.kind,d);
   $('today').innerHTML='<h2>📅 오늘 — '+dlabel(0)+' · '+d.ic+' '+esc(d.t)+' '+whoChip(d.reader)+'</h2>'+
     st+
     (d.cat&&!newsFresh()

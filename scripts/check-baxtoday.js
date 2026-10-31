@@ -155,7 +155,10 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   });
   is(!!alm.slot, '알람 칸이 표에 있다');
   is(alm.slot && alm.slot.on === false, '<b>기본은 꺼져 있다</b> — 켜져 있는 알람을 안 늘린다');
-  is(alm.onN === 3, '켜져 있는 알람 수가 그대로다 — ' + alm.onN + '개');
+  /* 2026-10-31 · 아침 블로그 한 줄이 켜진 채로 들어와 셋 → 넷이 되었습니다
+     (판 X275 · 사장님 말씀 「응 아침에 오늘 한줄 담기 띄워주」). 이 자가 보는
+     것은 <b>보장분석 칸이 조용히 켜지지 않았나</b> 이고, 그것은 그대로 봅니다. */
+  is(alm.onN === 4, '켜져 있는 알람 수가 그대로다 — ' + alm.onN + '개');
   is(!!alm.line && alm.line.n > 0, '켜면 건수를 적는다 (받음 ' + (alm.line && alm.line.n) + '건)');
   const NAMES = ['홍○동', '홍○순', '홍○돌', '홍○복', '홍길동'];
   const txt = alm.line ? ((alm.line.title || '') + ' ' + (alm.line.body || '')) : '';
