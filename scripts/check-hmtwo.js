@@ -909,22 +909,31 @@ const SEED = () => {
      ① 카드와 활동 <b>사이에 아무것도 안 낀다</b>(바로 밑이라는 뜻),
      ② 내려간 셋이 활동 <b>바로 뒤에 그대로</b> 있다(지운 것이 아니다 · 6번).
      ★ 하나라도 사라지면 그 자리에서 빨간불입니다 — 느슨해진 데가 없습니다. */
-  is(!one.no && (one.사이 || []).length === 0,
-     '  ★★ 「지금 할 것」 테두리와 곁칸 <b>사이에 아무것도 안 낀다</b> — ' +
-     ((one.사이 || []).join(' · ') || '(없음)'));
-  /* 판 X278 — 📅 약속+📆 이번 주(#hmUpHost)는 「지금 할 것」 카드 안으로 갔습니다.
-     그래서 뒤에 남는 것은 <b>둘</b>이고, 약속은 카드 안에 있는지 따로 봅니다. */
-  var 와야 = ['hm-two', 'hm-pdf'];
-  var 선것 = (one.뒤 || []).join(',');
-  is(!one.no && (one.뒤 || []).length === 와야.length &&
-     와야.every(function (k) { return 선것.indexOf(k) >= 0; }),
-     '  ★ 활동 <b>바로 뒤에 둘이 그대로</b> 있다 — ' +
-     ((one.뒤 || []).join(' · ') || '(못 셌습니다)') +
-     ' (판 X217 · 세 칸 · 📄 — 📅 약속+📆 이번 주는 판 X278 에서 카드 안으로)');
+  /* ⬆ <b>판 X280 — ➕ 세 칸 · 📄 한 줄이 테두리 바로 밑</b>으로 올라왔습니다 (사장님 말씀
+     「응」 → 「둘 다」). 활동(🚗·📅·📊·💌)은 이미 테두리 <b>안</b>이라 판 X250 의 「활동
+     먼저」 는 그대로 지켜집니다. 그래서 묻는 것을 <b>정확히</b> 바꿉니다 —
+     테두리와 곁칸 사이에 <b>세 칸 · 📄 둘만</b>, 이 차례로. 다른 것이 끼거나 하나라도
+     빠지면 빨간불입니다 (느슨해진 데가 없습니다 · 8번). */
+  is(!one.no && (one.사이 || []).join(' · ') === 'hm-two · hm-pdf',
+     '  ★★ 「지금 할 것」 테두리와 곁칸 사이에 <b>➕ 세 칸 · 📄 둘만</b> 선다 — ' +
+     ((one.사이 || []).join(' · ') || '(없음)') + ' (판 X280)');
+  /* 곁칸 뒤에는 세 칸 · 📄 가 <b>또</b> 서면 안 됩니다 — 두 벌이면 한쪽이 빈 칸입니다 (5번) */
+  is(!one.no && !/hm-two|hm-pdf/.test((one.뒤 || []).join(',')),
+     '  ★ 곁칸 <b>뒤에는</b> 세 칸 · 📄 가 안 남았다 — ' + ((one.뒤 || []).join(' · ') || '(없음)'));
   const 약속안 = await PH.evaluate(() => { const u = document.getElementById('hmUpHost');
     return !!(u && u.closest('#hmStack') && document.getElementById('hmWkHost') &&
               document.getElementById('hmWkHost').closest('#hmStack')); });
   is(약속안, '  ★ 📅 약속 · 📆 이번 주가 <b>「지금 할 것」 카드 안</b>에 있다 (판 X278)');
+  /* 📊 <b>판 X280 — 상담현황은 폭마다 한 자리</b>: 폰은 아래(#hmFlowHost), 컴퓨터는
+     오른쪽 기둥 맨 밑(#hmSideUp). 카드 id(#hmFlow)는 늘 <b>하나</b>입니다 (5번). */
+  const 흐름자리 = async (P) => P.evaluate(() => { const f = document.querySelectorAll('#hmFlow');
+    return { n: f.length, side: !!(f[0] && f[0].closest('#hmSideUp')),
+             host: !!(f[0] && f[0].closest('#hmFlowHost')) }; });
+  const 폰흐름 = await 흐름자리(PH), 컴흐름 = await 흐름자리(PC);
+  is(폰흐름.n === 1 && 폰흐름.host && !폰흐름.side,
+     '  ★ 폰에서 📊 상담현황은 <b>아래 자리(#hmFlowHost) 한 곳</b> — ' + JSON.stringify(폰흐름));
+  is(컴흐름.n === 1 && 컴흐름.side && !컴흐름.host,
+     '  ★★ 컴퓨터에서 📊 상담현황은 <b>오른쪽 기둥 한 곳</b> — 비던 자리를 채웁니다 · ' + JSON.stringify(컴흐름));
   /* ★★ <b>두 자리에 같이 세우지 않는다</b> — id 가 겹치면 앞엣것이 빈 칸이다 */
   is(!one.no && one.오른글 === 0,
      '  ★★ 폰에서 <b>오른쪽 기둥은 비어 있다</b> — 글자 ' + one.오른글 + '자' +

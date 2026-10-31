@@ -1726,6 +1726,8 @@ body.jv-dock:not(.apexmap-mode) #osVaFab{display:none}
   .tz>#hmBandHost~#hmSideUp{grid-row:3/span 99}
   /* 폰에서는 카드 <b>안</b>이라 테두리를 뺐습니다 — 여기서는 제 칸으로 섭니다 */
   .tz>#hmSideUp>.card{border:1px solid var(--t-line);box-shadow:var(--shadow);margin:14px 0 0}
+  /* 📊 판 X280 — 오른쪽 기둥 맨 밑 상담현황도 이웃 카드와 같은 테두리·틈 */
+  .tz>#hmSideUp>#hmFlowSide>.t-card{border:1px solid var(--t-line);box-shadow:var(--shadow);margin:14px 0 0}
   .tz>#hmSideUp>.card:first-child{margin-top:0}
   .tz>#hmSideUp>.card+.card{border-top:1px solid var(--t-line)}
   .tz>#hmSideUp>.card>.card-body{padding:16px 18px}
@@ -35154,7 +35156,16 @@ function hmSidePlace(){
   var up=document.getElementById('hmSideUp'),rt=document.getElementById('hmSideHost');
   if(!up&&!rt)return;                       /* 홈이 아니면 할 일이 없다 */
   if(rt&&rt.innerHTML)rt.innerHTML='';
-  if(up)up.innerHTML=hmSideHtml();
+  /* 📊 <b>판 X280 — 넓을 때는 상담현황이 오른쪽 기둥 맨 밑</b> (사장님 말씀 「응」 · 「둘 다」).
+     「지금 할 것」 이 넷을 품고 길어져(1,493px) 오른쪽(📈·🔔 337px) 아래가 비었습니다.
+     ★ 짓는 자는 <b>hmFlowHtml 하나</b>, 자리를 정하는 자는 <b>여기 하나</b>입니다 (5번) —
+       넓으면 곁칸 밑에 짓고 아래 #hmFlowHost 는 비우고, 좁으면 그 반대입니다.
+       id(#hmFlow)는 늘 <b>한 곳</b>에만 섭니다.
+     ★ 좁은지 묻는 자는 <b>navWide 하나</b>입니다 — 1101 을 여기 또 안 적습니다. */
+  var 넓F=(typeof navWide==='function')?navWide():true, fh=document.getElementById('hmFlowHost'), fl='';
+  try{ fl=(typeof hmFlowHtml==='function')?hmFlowHtml():''; }catch(eF){ fl=''; }
+  if(up)up.innerHTML=hmSideHtml()+(넓F&&fl?('<div id="hmFlowSide">'+fl+'</div>'):'');
+  if(fh)fh.innerHTML=넓F?'':fl;
   /* 🧺 「지금 할 것」 카드 안의 차례도 같은 자가 세웁니다 (판 X278) — 아래에서
      #hmUpHost · #hmRtHost · #hmActHost 를 id 로 찾아 칠하므로 먼저 세워야 합니다. */
   try{ var sk=document.getElementById('hmStack'); if(sk)sk.innerHTML=hmStackHtml(); }catch(eSk){}
@@ -37714,6 +37725,12 @@ function hmTossHtml(){
          약속 칸도 그대로, 바로 아래로 내려올 뿐입니다.
        ★ <b>컴퓨터는 한 줄도 안 바뀝니다</b> — 거기서 이 칸은 .tz 의
          <b>오른쪽 기둥</b>(grid-column:2)이라 왼쪽 차례와 무관합니다.   */
+    /* ⬆ <b>판 X280 — ➕ 세 칸 · 📄 한 줄이 「지금 할 것」 테두리 바로 밑</b>으로 다시
+       올라왔습니다(사장님 말씀 2026-10-31 「응」 — 폰에서 세 칸이 y2,023 으로 밀린 것을
+       여쭈니 「둘 다」). 판 X250 의 「활동 먼저」 는 그대로입니다 — 활동(🚗·📅·📊·💌)은
+       이제 테두리 <b>안</b>이라 세 칸보다 위입니다. 곁칸(📈·🔔)은 세 칸 밑으로.
+       ★ 컴퓨터는 안 바뀝니다 — 곁칸은 오른쪽 기둥(grid-row 3~)에 따로 섭니다. */
+    hmTossHero()+
     '<div id="hmSideUp"></div>'+
     /* ⬆ <b>세 칸(➕ 고객 추가)과 📄 한 줄을 카드 바로 밑으로</b> (판 X199).
        카드가 622px 라 그 사이에 칩·인사·바(140px)가 끼면 세 칸이 <b>첫 화면
@@ -37722,7 +37739,6 @@ function hmTossHtml(){
        밀려나면 그 말씀이 깨집니다(check-hmsum 이 그것을 봅니다).
        ★ <b>아무것도 안 지웠습니다</b> — 칩·인사·바는 <b>세 칸 밑으로</b>
          내려왔을 뿐입니다 (6번). 차례만 바꿨습니다.                     */
-    hmTossHero()+
     /* ⬆ <b>📅 오늘 약속 · 📆 이번 주 캘린더도 맨 위로</b> (판 X217 · 사장님 말씀
        2026-10-26 「오늘 약속 캘린더 이번주 / 오늘어디로가시나 / 이번달 고객관리
        이거 칸도 <b>다 맨 위로</b> 올려야지」).
