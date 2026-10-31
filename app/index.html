@@ -34716,6 +34716,8 @@ var HM_STACK = [
   { e:'📅', t:'오늘 약속 · 이번 주', host:'hmUpHost' },
   /* 🕗 판 X281 — 약속이 지난 분을 <b>한 분씩</b> (사장님 말씀 「고객 관리를 위해」 → 고르심) */
   { e:'🕗', t:'약속이 지난 분',      host:'hmLateHost' },
+  /* 💬 판 X283 — 증권을 전해 드린 분께 <b>소개 한 분</b>을 여쭐 차례 */
+  { e:'💬', t:'소개 여쭐 차례',      host:'hmReferHost' },
   { e:'📊', t:'오늘 기록',          host:'hmActHost' },
   { e:'💌', t:'이번 달 고객 관리',   w:'이번 달 마디(보낼 말)', fn:'hmMadiSideHtml' }
 ];
@@ -34735,17 +34737,20 @@ var HM_STACK = [
    ★ 없는 날도 <b>자리를 남깁니다</b>(사장님 규칙 2026-09-26 「있다 없다 하는 칸을 없앱니다」). */
 var HM_LATE_KEY='apex_hm_late_skip_v1';
 var HM_LATE_OPEN='';                    /* 📅 날짜 칸을 편 분 (한 번에 한 분) */
-function hmLateSkips(){
+/* ⏭ <b>「오늘은 넘기기」 는 한 자가 답합니다</b> — 🕗 와 💬 가 같이 씁니다 (5번).
+   이 기기에서 <b>오늘만</b>입니다. 날이 바뀌면 다시 앞으로 — 서버에 아무것도 안 씁니다. */
+function hmDaySkips(key){
   var t=(typeof arToday==='function')?arToday():'',o=null;
-  try{ o=JSON.parse(localStorage.getItem(HM_LATE_KEY)||'null'); }catch(e){ o=null; }
-  return (o&&o.d===t&&o.ids)?o.ids:[];   /* 날이 바뀌면 다시 앞으로 — 오늘만 미룹니다 */
+  try{ o=JSON.parse(localStorage.getItem(key)||'null'); }catch(e){ o=null; }
+  return (o&&o.d===t&&o.ids)?o.ids:[];
 }
-function hmLateSkip(id){
-  var t=(typeof arToday==='function')?arToday():'',L=hmLateSkips();
+function hmDaySkip(key,id){
+  var t=(typeof arToday==='function')?arToday():'',L=hmDaySkips(key);
   if(L.indexOf(id)<0)L.push(id);
-  try{ localStorage.setItem(HM_LATE_KEY,JSON.stringify({d:t,ids:L})); }catch(e){}
-  HM_LATE_OPEN=''; hmLatePaint();
+  try{ localStorage.setItem(key,JSON.stringify({d:t,ids:L})); }catch(e){}
 }
+function hmLateSkips(){ return hmDaySkips(HM_LATE_KEY); }
+function hmLateSkip(id){ hmDaySkip(HM_LATE_KEY,id); HM_LATE_OPEN=''; hmLatePaint(); }
 function hmLateDay(v){
   var d=(''+(v||'')).slice(0,10),t=(typeof arToday==='function')?arToday():'',n=0;
   if(!d)return '';
@@ -34832,6 +34837,89 @@ function hmLateEnd(id){
   if(!r)return;
   if(!confirm(osMaskName(r.name)+' 님을 「거절」 단계로 옮길까요?\n약속이 지난 분 줄에서 빠집니다. 나중에 CRM 에서 단계를 다시 바꿀 수 있습니다.'))return;
   hdbTo(id,'거절');
+}
+/* ══ 💬 <b>소개 여쭐 차례</b> (판 X283) ═══════════════════════════════════════
+   사장님 말씀 (2026-10-31) 「고객 관리를 위해 어떻게 하면 좋을까」 → 고르신 셋째.
+   ★ <b>누가 차례인가를 새로 정하지 않습니다</b> — 단계 표(apex-stage.js)가 이미
+     「증권전달」 의 할 일을 「잘 받으셨는지 확인하고 <b>소개 한 분</b>을 여쭙는다」 로
+     적어 두었습니다. 그래서 <b>증권전달 단계인 분 모두</b>가 차례이고, 며칠 뒤에
+     여쭈라는 수를 지어 넣지 않습니다 (1번). 증권 전한 날이 오래된 분부터 섭니다.
+   ★ 수는 <b>arStageN 의 증권전달 칸과 같은 자</b>가 셉니다 — 📇 띠의 「📬 관리」 칸과
+     갈리면 check-hmrefer 가 그 자리에서 빨간불입니다 (5번).
+   ★ 여쭙는 말은 <b>증권전달 자리의 넷째 걸음(PDEL_STEP · 「한 분만 여쭙는다」)</b>을
+     그대로 씁니다 — 여기 또 적으면 한쪽만 늙습니다 (5번). 「고객님」 으로 나갑니다 (3번).
+   ★ 🤝 소개 받음은 있는 단계 「소개완료」 로 옮기는 hdbTo 그대로 · ⏭ 는 오늘만(hmDaySkip). */
+var HM_REFER_KEY='apex_hm_refer_skip_v1';
+function hmReferRows(who){
+  if(typeof AR==='undefined'||!AR.db)return null;   /* 못 읽었다 — 「0분」 이 아닙니다 (1번) */
+  var L=AR.db,out=[],i,r;
+  for(i=0;i<L.length;i++){ r=L[i];
+    if(who&&r.who!==who)continue;
+    if(r.stage!=='증권전달')continue;
+    out.push(r); }
+  /* 전한 날이 오래된 분부터 — 날을 모르는 분은 맨 뒤(모르는 것을 오래됐다고 치지 않습니다) */
+  out.sort(function(a,b){ var x=a.pAt||'9999',y=b.pAt||'9999'; return x<y?-1:(x>y?1:0); });
+  return out;
+}
+function hmReferSay(){
+  try{
+    var P=(typeof APEX_STAGE!=='undefined'&&APEX_STAGE.pdel)||[],i;
+    for(i=0;i<P.length;i++)if(P[i].n===4)return P[i].say||'';
+  }catch(e){}
+  return '';
+}
+function hmReferHtml(){
+  if(!OS.profile)return '';
+  var who=(typeof hwhoFor==='function')?hwhoFor():'',all=hmReferRows(who),
+      sk=hmDaySkips(HM_REFER_KEY),L=[],i,r,can,tel,h,d='',n=0,t=(typeof arToday==='function')?arToday():'';
+  h='<div class="hm-late hm-refer"><div class="hm-late-h">💬 <b>소개 여쭐 차례</b>';
+  if(all===null)
+    return h+'</div><div class="hm-late-s">배정 DB 를 아직 못 읽었습니다 — 몇 분인지는 읽은 뒤에 적습니다.</div></div>';
+  for(i=0;i<all.length;i++)if(sk.indexOf(all[i].id)<0)L.push(all[i]);
+  h+=' <span data-ask="소개여쭐분">'+all.length+'분</span>'+
+     (sk.length?(' <span class="hm-late-k">· 오늘 넘긴 '+sk.length+'분</span>'):'')+'</div>';
+  if(!all.length)
+    return h+'<div class="hm-late-s">증권을 전해 드린 분이 <b>지금은 없습니다</b>. 전해 드리면 이 자리에 섭니다.</div></div>';
+  if(!L.length)
+    return h+'<div class="hm-late-s">남은 분은 모두 <b>오늘 넘기셨습니다</b> — 내일 다시 이 자리에 섭니다.</div></div>';
+  r=L[0];
+  if(r.pAt){
+    try{ n=Math.round((new Date(t+'T00:00:00')-new Date(r.pAt+'T00:00:00'))/864e5); }catch(e){ n=0; }
+    d='증권 전한 지 <b>'+Math.max(0,n)+'일</b>';
+  }else d='증권 전한 날 <b>모름</b>';
+  can=(typeof hdbCan==='function')?hdbCan(r):false;
+  tel=(typeof hmTelHref==='function')?hmTelHref(r.id):'';
+  h+='<div class="hm-late-p"><b>'+osEsc(osMaskName(r.name))+'</b>님 · '+d+'</div>'+
+     '<div class="hm-late-b">'+
+     (tel?('<a class="t-chip" href="'+osEsc(tel)+'">📞 걸기</a>')
+         :'<span class="t-chip off" title="번호가 안 적혀 있습니다">📞 번호 없음</span>')+
+     (hmReferSay()?'<button type="button" class="t-chip" onclick="hmReferCopy()">💬 여쭙는 말 복사</button>':'');
+  if(can)
+    h+='<button type="button" class="t-chip" onclick="hmReferGot(\''+osEsc(r.id)+'\')">🤝 소개 받음</button>';
+  h+='<button type="button" class="t-chip" onclick="hmReferSkip(\''+osEsc(r.id)+'\')">⏭ 오늘은 넘기기</button></div>';
+  if(!can)
+    h+='<div class="hm-late-s">'+(((typeof hdbWhyNot==='function')&&hdbWhyNot(r))||
+       '내 고객이 아니라 단계는 담당 설계사가 바꿉니다.')+'</div>';
+  h+='<div class="hm-late-s">한 분만 여쭙습니다 — <b>오늘 안 주셔도 됩니다</b>. 조르면 다음 자리가 없어집니다.'+
+     (L.length>1?(' · 남은 '+(L.length-1)+'분'):'')+'</div>';
+  return h+'</div>';
+}
+function hmReferPaint(){
+  var el=document.getElementById('hmReferHost'); if(!el)return;
+  try{ el.innerHTML=hmReferHtml(); }catch(e){}
+}
+function hmReferCopy(){
+  var t=hmReferSay();
+  if(!t){ toast('여쭙는 말을 못 찾았습니다.'); return; }
+  if(typeof copyText==='function')copyText(t);
+}
+function hmReferSkip(id){ hmDaySkip(HM_REFER_KEY,id); hmReferPaint(); }
+/* 🤝 소개를 받으셨으면 — 있는 단계 「소개완료」 로 (hdbTo). 한 번 더 묻습니다 */
+function hmReferGot(id){
+  var r=(typeof hdbRow==='function')?hdbRow(id):null;
+  if(!r)return;
+  if(!confirm(osMaskName(r.name)+' 님께 소개를 받으셨나요?\n「소개완료」 로 옮기면 이 줄에서 빠지고, 소개해 주신 분께 결과를 알려 드릴 차례가 됩니다.'))return;
+  hdbTo(id,'소개완료');
 }
 function hmStackHtml(){
   var h='',i,s,one,넓=((typeof navWide==='function')?navWide():true);
@@ -35450,6 +35538,7 @@ function hmSidePlace(){
   try{ var r=document.getElementById('hmRtHost'); if(r&&typeof hmRtHtml==='function')r.innerHTML=hmRtHtml(); }catch(e1){}
   try{ if(typeof hmActPaint==='function')hmActPaint(); }catch(e2){}
   try{ hmLatePaint(); }catch(e3){}
+  try{ hmReferPaint(); }catch(e4){}
 }
 /* 폭이 바뀌면 자리도 따라옵니다 — 가로로 돌리거나 창을 넓히시는 그때입니다.
    ★ 수(1101)를 여기 안 적습니다 — navWide 가 쓰는 그 질문을 그대로 씁니다 (5번) */

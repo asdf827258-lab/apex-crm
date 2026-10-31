@@ -67,7 +67,10 @@ const SEED = () => {
       is:function(){return a;}, neq:function(){return a;}, not:function(){return a;},
       single:function(){return a;}, maybeSingle:function(){return a;},
       then:function(ok,no){ if(!st.op) return Promise.resolve({data:[],error:null}).then(ok,no);
-        SRV.push({t:st.t,op:st.op,row:st.row,eq:st.eq});
+        /* 이 칸이 쓰는 표(dbs · calls · clients)만 적습니다 — 앱이 켜질 때 따로 도는 출발
+           점검(health_checks)이 재는 사이에 끼어 「서버를 두 번 불렀다」 고 헛 빨간불을
+           켰습니다(8번 · 재어 보고 알았습니다). 이 칸이 다른 표에 쓰면 그것은 따로 봅니다. */
+        if(['dbs','calls','clients'].indexOf(st.t)>=0) SRV.push({t:st.t,op:st.op,row:st.row,eq:st.eq});
         return Promise.resolve({data:[{id:'x'}],error:null}).then(ok,no); } };
     return a; }; return { from:mk, rpc:function(){ return Promise.resolve({data:null,error:null}); } }; };
   try{ osHideLoginGate(); }catch(e){}
@@ -105,7 +108,8 @@ const LOOK = () => {
   console.log('\n[1] 칸이 <b>「지금 할 것」 테두리 안</b> · 📅 약속 바로 밑');
   const A = await p.evaluate(LOOK);
   is(A.있나 && A.안, '  🕗 칸이 테두리(#hmJobWrap) 안에 선다');
-  is(/hmUpHost · hmLateHost · hmActHost/.test(A.kids), '  차례가 📅 약속 → 🕗 → 📊 오늘 기록 — ' + A.kids);
+  /* 판 X283 부터 🕗 밑에 💬 소개 여쭐 차례가 섭니다 — 🕗 가 📅 <b>바로 밑</b>인지만 봅니다 */
+  is(/hmUpHost · hmLateHost · /.test(A.kids), '  차례가 📅 약속 → 🕗 — ' + A.kids);
 
   console.log('\n[2] 수 · 차례 · 이름');
   const want = await p.evaluate(() => arApptPast(hwhoFor()).length);

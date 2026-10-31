@@ -203,8 +203,9 @@ const SEED = () => {
   is(!two.no && two.wk === 'hmJobHost · hmTodayHd · hmStack',
      '  ★★ 「지금 할 것」 테두리 안이 <b>카드 → 📋 오늘 할 일 머리 → 넷</b> — ' + (two.wk || '(없음)'));
   /* 판 X281 — 🕗 약속이 지난 분이 📅 바로 밑에 들어왔습니다(사장님이 고르신 「고객 관리」 첫째) */
-  is(!two.no && two.sk === 'hmRtHost · hmUpHost · hmLateHost · hmActHost · card',
-     '  ★★ 그 안이 <b>🚗 동선 → 📅 약속·이번 주 → 🕗 약속 지난 분 → 📊 오늘 기록 → 💌 이번 달 관리</b> — ' + (two.sk || '(없음)'));
+  /* 판 X283 — 💬 소개 여쭐 차례가 🕗 바로 밑에 들어왔습니다(사장님이 고르신 「고객 관리」 셋째) */
+  is(!two.no && two.sk === 'hmRtHost · hmUpHost · hmLateHost · hmReferHost · hmActHost · card',
+     '  ★★ 그 안이 <b>🚗 동선 → 📅 약속·이번 주 → 🕗 약속 지난 분 → 💬 소개 여쭐 차례 → 📊 오늘 기록 → 💌 이번 달 관리</b> — ' + (two.sk || '(없음)'));
   is(!two.no && /이번 주/.test(two.rtx) && /알람/.test(two.rtx) &&
      !/오늘 어디로|오늘 기록|이번 달 고객 관리/.test(two.rtx),
      '  ★ 오른쪽에는 <b>📈 이번 주 · 🔔 알람</b>만 남았다 — 넷은 두 벌로 안 섭니다 (5번)');
