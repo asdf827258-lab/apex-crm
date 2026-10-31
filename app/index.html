@@ -1787,13 +1787,22 @@ body.jv-dock:not(.apexmap-mode) #osVaFab{display:none}
      옅은 윗선 하나로 가릅니다. 둥글기(20px)는 <b>안 건드립니다</b>(check-hmexact).
    ★ 값은 토큰에서만 옵니다 — hex 를 적지 않습니다.                         */
 #hmJobWrap{margin-bottom:12px}
+/* 카드 밑으로 붙는 조각(📋 머리 · 🧺 넷)은 <b>옆선</b>을 잇고, <b>맨 끝 조각</b>만 바닥선과
+   둥근 귀를 가집니다 — 조각이 늘거나 비어도 테두리가 끊기지 않습니다. */
+#hmJobWrap:has(>#hmTodayHd:not(:empty)) .hm-now,
 #hmJobWrap:has(>#hmStack:not(:empty)) .hm-now{border-bottom-left-radius:0;
   border-bottom-right-radius:0;border-bottom-color:var(--t-line)}
-#hmStack{border:1px solid var(--t-point);border-top:0;border-radius:0 0 20px 20px;
-  background:var(--t-card);overflow:hidden}
-#hmStack:empty,#hmStack>:empty{display:none}
+#hmJobWrap>#hmTodayHd,#hmJobWrap>#hmStack{border:1px solid var(--t-point);border-top:0;
+  border-bottom:0;background:var(--t-card)}
+#hmJobWrap>:not(#hmJobHost):not(:empty):last-child,
+#hmJobWrap>#hmTodayHd:has(+#hmStack:empty){border-bottom:1px solid var(--t-point);
+  border-radius:0 0 20px 20px;overflow:hidden}
+#hmJobWrap>#hmTodayHd{padding:14px 14px 12px}
+#hmJobWrap>#hmTodayHd .tz-greet{padding:0 0 8px}
+#hmJobWrap>#hmStack{border-top:1px solid var(--t-line)}
+#hmTodayHd:empty,#hmStack:empty,#hmStack>:empty{display:none}
 #hmStack>*+*{border-top:1px solid var(--t-line)}
-#hmStack .card{border:0;box-shadow:none;margin:0;background:transparent}
+#hmStack .card{border:0;box-shadow:none;margin:0}
 #hmStack .card>.card-body{padding:12px 14px}
 #hmStack>.hm-fold{margin:0;border-radius:0;box-shadow:none}
 /* 📆 이번 주 · 📊 오늘 기록은 제 상자를 들고 와서 테두리에 붙습니다 — 찍어 보니
@@ -37664,7 +37673,13 @@ function hmTossHtml(){
          넣으면 누를 때마다 넷이 지워집니다 — 그래서 <b>곁에 #hmStack</b> 을 두고
          둘을 <b>한 테두리(#hmJobWrap)</b>로 묶습니다. 짓는 자는 hmStackHtml 하나 · 자리를
          채우는 자는 그대로 hmSidePlace 하나입니다 (5번).                   */
-    '<div id="hmJobWrap"><div id="hmJobHost">'+hmTopHtml()+'</div><div id="hmStack"></div></div>'+
+    /* 📋 <b>「홍길동님, 오늘 N개예요」 + 진행 막대가 그 안의 머리</b>입니다 — 「오늘 할 일」
+       그 자체라 넷의 머리로 섭니다(사장님 말씀 「오늘 할일등이 지금 할것에 포함」).
+       여태 두 기둥 밑(y2,054)이라 홈 두 화면 밖이었습니다(check-homeday).
+       짓는 자는 그대로 hmTossGreet · hmTossBarHtml 하나씩입니다 (5번).     */
+    '<div id="hmJobWrap"><div id="hmJobHost">'+hmTopHtml()+'</div>'+
+      '<div id="hmTodayHd">'+hmTossGreet()+hmTossBarHtml()+'</div>'+
+      '<div id="hmStack"></div></div>'+
     /* ══ 🔲 <b>활동이 「지금 할 것」 바로 밑</b> (판 X250) ════════════════
        사장님 말씀 (2026-10-30) — <b>「응 폰도 활동 먼저 올리고」</b>.
        ★★ <b>재어 보여 드리고 고르신 것입니다.</b> 라이브를 열어 재니
@@ -37715,7 +37730,7 @@ function hmTossHtml(){
          가 칩과 같은 go('me') 입니다. 길을 지우지 않았습니다 (6번).
        ★ hmAlmChipHtml · hmRunChipHtml 은 <b>안 지웠습니다</b> — 부르는 자리만
          거둡니다 (사장님 규칙 「함수를 지우지 마십시오」).            */
-    hmTossGreet()+hmTossBarHtml()+
+    /* 📋 인사·진행 막대는 「지금 할 것」 테두리 안(#hmTodayHd)으로 올라갔습니다 (판 X278) */
     (wk||(done?hmTossDone():''))+'</div>';
 }
 function renderHome(){

@@ -163,7 +163,11 @@ const m = SRC.match(/HM_SIDE\s*=\s*\[([\s\S]*?)\];/);
 is(!!m, '  HM_SIDE 표를 <b>찾았다</b>' + (m ? '' : ' ← 표 이름이 바뀌었으면 이 자도 고쳐야 합니다'));
 if (m) {
   const 칸 = [];
-  (m[1].match(/\{[^{}]*\}/g) || []).forEach(d => {
+  /* 판 X278 — 💌 이번 달 관리는 「지금 할 것」 카드 안 표(HM_STACK)로 옮겼습니다. 같은
+     「못 세는 칸」(hmSideTodoHtml)으로 떨어지는 자리라 <b>두 표를 같이</b> 읽습니다 —
+     한 표만 읽으면 옮긴 칸의 fn 이 죽어도 이 자가 못 봅니다 (8번). */
+  const m2 = SRC.match(/HM_STACK\s*=\s*\[([\s\S]*?)\];/);
+  ((m[1] + (m2 ? m2[1] : '')).match(/\{[^{}]*\}/g) || []).forEach(d => {
     const fn = (d.match(/fn\s*:\s*'([^']*)'/) || [])[1];
     const t = (d.match(/t\s*:\s*'([^']*)'/) || [])[1] || '?';
     if (fn) 칸.push({ t: t, fn: fn, 있: new RegExp('function\\s+' + fn + '\\s*\\(').test(SRC) });
