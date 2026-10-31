@@ -40,7 +40,8 @@ async function 곁칸펴기(p) {
     try {
       /* 곁칸은 폰이면 #hmSideUp, 컴퓨터면 #hmSideHost 에 섭니다 —
          두 곳 다 봅니다. 자리를 정하는 자는 앱의 hmSidePlace 입니다. */
-      const 상자 = ['hmSideUp', 'hmSideHost']
+      /* 판 X278 — 💌 이번 달 관리는 「지금 할 것」 카드 안(#hmStack)에 섭니다 */
+      const 상자 = ['hmSideUp', 'hmSideHost', 'hmStack']
         .map(id => document.getElementById(id)).filter(Boolean);
       for (const b of 상자) {
         for (const f of b.querySelectorAll('.hm-fold[id^="hmFold_side_"]')) {

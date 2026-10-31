@@ -112,7 +112,9 @@ const LOOK = () => {
      세울 자리를 정하는 곳은 app 쪽 hmSidePlace 하나입니다 (5번).        */
   const 곁칸 = [].concat(
     [].slice.call(document.querySelectorAll('#hmSideUp>*')),
-    [].slice.call(document.querySelectorAll('#hmSideHost>*')));
+    [].slice.call(document.querySelectorAll('#hmSideHost>*')),
+    /* 판 X278 — 💌·🚗·📅·📊 는 「지금 할 것」 카드 안(#hmStack)으로 갔습니다 */
+    [].slice.call(document.querySelectorAll('#hmStack>*')));
   const card = 곁칸.length ? 곁칸
     .filter(e => (e.innerText || '').indexOf('이번 주') >= 0)[0] : null;
   /* ★ <b>이번 주 칸에서 바로</b> 읽습니다 — 접혔으면 접이 머리, 펴졌으면

@@ -93,7 +93,9 @@ const LOOK = () => {
      (카드 머리) <b>그 칸의 수</b>를 집습니다 (8번). */
   const 알람칸 = [].concat(
     [].slice.call(document.querySelectorAll('#hmSideUp>*')),
-    [].slice.call(document.querySelectorAll('#hmSideHost>*')))
+    [].slice.call(document.querySelectorAll('#hmSideHost>*')),
+    /* 판 X278 — 💌·🚗·📅·📊 는 「지금 할 것」 카드 안(#hmStack)으로 갔습니다 */
+    [].slice.call(document.querySelectorAll('#hmStack>*')))
     .filter(e => (e.innerText || '').indexOf('알람') >= 0)[0] || null;
   const chip = 알람칸 ? (알람칸.querySelector('.hm-fold-h .t span')
                       || 알람칸.querySelector('.hm-rt-h[data-sum]')) : null;
@@ -104,7 +106,9 @@ const LOOK = () => {
      세울 자리를 정하는 곳은 app 쪽 hmSidePlace 하나입니다 (5번).        */
   const 곁칸 = [].concat(
     [].slice.call(document.querySelectorAll('#hmSideUp>*')),
-    [].slice.call(document.querySelectorAll('#hmSideHost>*')));
+    [].slice.call(document.querySelectorAll('#hmSideHost>*')),
+    /* 판 X278 — 💌·🚗·📅·📊 는 「지금 할 것」 카드 안(#hmStack)으로 갔습니다 */
+    [].slice.call(document.querySelectorAll('#hmStack>*')));
   const R = 곁칸.length ? { children: 곁칸 } : null;
   const card = R ? [].slice.call(R.children)
     .filter(e => (e.innerText || '').indexOf('알람') >= 0)[0] : null;

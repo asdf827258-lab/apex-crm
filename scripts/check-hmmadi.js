@@ -105,7 +105,9 @@ const LOOK = () => {
      세울 자리를 정하는 곳은 app 쪽 hmSidePlace 하나입니다 (5번).        */
   const 곁칸 = [].concat(
     [].slice.call(document.querySelectorAll('#hmSideUp>*')),
-    [].slice.call(document.querySelectorAll('#hmSideHost>*')));
+    [].slice.call(document.querySelectorAll('#hmSideHost>*')),
+    /* 판 X278 — 💌·🚗·📅·📊 는 「지금 할 것」 카드 안(#hmStack)으로 갔습니다 */
+    [].slice.call(document.querySelectorAll('#hmStack>*')));
   const card = 곁칸.length ? 곁칸
     .filter(e => (e.innerText || '').indexOf('이번 달 고객 관리') >= 0)[0] : null;
   const btn = card ? [].slice.call(card.querySelectorAll('button'))
@@ -304,7 +306,9 @@ const LOOK = () => {
     /* ★ 곁칸은 자리를 옮깁니다 — #hmSideUp(폰) 또는 #hmSideHost(컴퓨터) */
     const card = [].concat(
       [].slice.call(document.querySelectorAll('#hmSideUp>*')),
-      [].slice.call(document.querySelectorAll('#hmSideHost>*')))
+      [].slice.call(document.querySelectorAll('#hmSideHost>*')),
+    /* 판 X278 — 💌·🚗·📅·📊 는 「지금 할 것」 카드 안(#hmStack)으로 갔습니다 */
+    [].slice.call(document.querySelectorAll('#hmStack>*')))
       .filter(e => (e.innerText || '').indexOf('이번 달 고객 관리') >= 0)[0];
     const btn = [].slice.call(card.querySelectorAll('button'))
       .filter(e => (e.textContent || '').indexOf('보낼 말') >= 0)[0];
