@@ -27659,6 +27659,8 @@ function hmQdoneClear(){
 }
 function hmQfin(key){
   if(!key)return;
+  /* 📝 판 X282 — 끝낸 분의 빈칸을 <b>끝내기 전에</b> 집어 둡니다(끝내면 그 분이 줄에서 빠집니다) */
+  var 빈=null; try{ 빈=hmBlankFor(key); }catch(eB){ 빈=null; }
   hmQdoneSet(key);
   /* ★ 남은 수는 <b>hmLeft() 한 곳</b>에 묻습니다 (5번). 여기서 또 세던 탓에
      사람 아닌 줄(할 일·도와줄 것·내 일정)까지 「분」 으로 세어, 띠에 적힌
@@ -27667,6 +27669,123 @@ function hmQfin(key){
   if(typeof toast==='function')
     toast(left?('다음 분으로 갑니다 — '+left+'분 남았습니다'):('오늘 '+Q.all+'분을 다 보셨습니다'));
   hmPaint();
+  if(빈)hmBlankShow(빈);
+}
+/* ══ 📝 <b>한 분씩 빈칸 하나</b> (판 X282) ═════════════════════════════════
+   사장님 말씀 (2026-10-31) 「고객 관리를 위해 어떻게 하면 좋을까」 → 고르신 둘째.
+   서버를 재어 보니 <b>고객 162분 중 생년을 아는 분이 33분</b>(2026-10-13)이라 나이에
+   맞춘 접촉포인트가 거의 안 섰습니다. 한꺼번에 채우라 하지 않고, 「이분 끝」 을 누를
+   때 <b>그 분의 빈칸 하나만</b> 여쭙니다 — 만날 때마다 한 칸씩 찹니다.
+   ★ 무엇을 어떤 차례로 묻는지는 <b>이 표 한 곳</b>입니다 (5번 · 삼항 사슬 없음).
+     on — 'cli' 고객 365일(clients) · 'db' 배정 DB(dbs).
+   ★★ <b>배정 DB 에는 생년 칸이 아예 없습니다</b> — 그 분께 생년을 여쭤도 담을 곳이 없어
+     <b>묻지 않습니다</b>. 지어 담지 않습니다 (1번).
+   ★ 비워 둔 것은 「모름」(null)이고, 「다음에」 는 <b>오늘만</b> 안 묻습니다 — 0 이나 빈
+     글을 서버에 넣어 「없다」 로 만들지 않습니다 (1번).
+   ★ 가족 한 줄은 <b>서버로 갑니다</b> — 그래서 「이름은 적지 마세요」 를 칸에 적어 둡니다 (3번). */
+var HM_BLANK=[
+  { k:'by', on:'cli', col:'birth_year',      t:'출생년도', type:'year',
+    why:'적으시면 나이에 맞는 접촉포인트가 섭니다', ph:'예: 1978' },
+  { k:'hn', on:'cli', col:'household_notes', t:'가족 한 줄', type:'text',
+    why:'가족 상황에 맞는 소식·마디가 섭니다 · 이름은 적지 마세요(서버로 갑니다)', ph:'예: 배우자 · 자녀 둘(초등)' },
+  { k:'cAt', on:'db', col:'contracted_at',   t:'계약일', type:'date', stages:['계약완료','증권전달','소개완료'],
+    why:'계약 마디(한 달 뒤 · 석 달마다)가 이 날로 섭니다' }
+];
+var HM_BLANK_KEY='apex_hm_blank_skip_v1';
+/* 「다음에」 는 <b>그 분께 오늘은 더 안 묻기</b>입니다 — 칸 하나만 넘기면 바로 다음 칸을
+   또 여쭈게 되어, 「하나만」 이 아니라 조르기가 됩니다(점검이 잡았습니다 · 판 X282). */
+function hmBlankSkipped(id){
+  var t=(typeof arToday==='function')?arToday():'',o=null;
+  try{ o=JSON.parse(localStorage.getItem(HM_BLANK_KEY)||'null'); }catch(e){ o=null; }
+  return !!(o&&o.d===t&&o.s&&o.s[id]);
+}
+function hmBlankCliOf(id){
+  var L=(typeof AR!=='undefined'&&AR.cliRows)||[],i;
+  for(i=0;i<L.length;i++)if(L[i].id===id)return L[i];
+  return null;
+}
+/* 「지금 할 것」 의 그 분(key) → 비어 있는 칸 <b>하나</b>. 없으면 null */
+function hmBlankFor(key){
+  var r=null,x=null,L=[],i,c,d,f,me=(typeof arMyId==='function')?arMyId():'';
+  /* 오늘 줄은 <b>hmSteps 한 곳</b>이 압니다(hmNext 와 같은 자 · 5번) */
+  try{ L=(typeof hmSteps==='function')?(hmSteps()||[]):[]; }catch(e){ L=[]; }
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].key===key){ x=L[i]; break; }
+  if(!x||!x.id)return null;
+  if(hmBlankSkipped(x.id))return null;
+  c=hmBlankCliOf(x.id);
+  d=(!c&&typeof hdbRow==='function')?hdbRow(x.id):null;
+  for(i=0;i<HM_BLANK.length;i++){
+    f=HM_BLANK[i];
+    if(f.on==='cli'&&c){
+      /* 내 고객만 — 남의 고객 칸은 서버가 안 받습니다 */
+      if(!(c.who===me||(typeof hdbEditAll==='function'&&hdbEditAll())))return null;
+      if(f.k==='by'&&c.by==null)return {f:f,id:x.id,nm:c.name};
+      if(f.k==='hn'&&!(''+(c.hn||'')).trim())return {f:f,id:x.id,nm:c.name};
+    }
+    if(f.on==='db'&&d){
+      if(!(typeof hdbCan==='function'&&hdbCan(d)))return null;
+      if(f.stages&&f.stages.indexOf(d.stage)<0)continue;
+      if(f.k==='cAt'&&!d.cAt)return {f:f,id:x.id,nm:d.name};
+    }
+  }
+  return null;
+}
+function hmBlankShow(b){
+  var el=document.getElementById('hmBlankBox');
+  if(!el){ el=document.createElement('div'); el.id='hmBlankBox'; document.body.appendChild(el); }
+  var f=b.f,inp=(f.type==='year')
+      ?'<input id="hmBlankIn" type="number" inputmode="numeric" min="1900" max="'+new Date().getFullYear()+'" placeholder="'+osEsc(f.ph||'')+'">'
+      :(f.type==='date')?'<input id="hmBlankIn" type="date">'
+      :'<input id="hmBlankIn" type="text" maxlength="80" placeholder="'+osEsc(f.ph||'')+'">';
+  el.innerHTML='<div class="hm-blank" role="dialog" aria-label="빈칸 하나">'+
+    '<div class="hm-blank-h">📝 <b>'+osEsc(osMaskName(b.nm||''))+'</b>님 — 하나만 여쭐게요</div>'+
+    '<div class="hm-blank-q"><b>'+osEsc(f.t)+'</b>'+hmJo(f.t,'이','가').slice(f.t.length)+' 비어 있습니다</div>'+
+    '<div class="hm-blank-f">'+inp+
+      '<button type="button" class="t-btn sm" onclick="hmBlankSave()">저장</button>'+
+      '<button type="button" class="t-btn g sm" onclick="hmBlankLater()">다음에</button></div>'+
+    '<div class="hm-blank-s">'+osEsc(f.why)+'</div></div>';
+  el.setAttribute('data-id',b.id); el.setAttribute('data-k',f.k);
+  el.classList.add('on');
+}
+function hmBlankClose(){ var el=document.getElementById('hmBlankBox'); if(el){ el.classList.remove('on'); el.innerHTML=''; } }
+function hmBlankLater(){
+  var el=document.getElementById('hmBlankBox'),t=(typeof arToday==='function')?arToday():'',o=null;
+  if(el){
+    try{ o=JSON.parse(localStorage.getItem(HM_BLANK_KEY)||'null'); }catch(e){ o=null; }
+    if(!o||o.d!==t)o={d:t,s:{}};
+    o.s[el.getAttribute('data-id')]=1;
+    try{ localStorage.setItem(HM_BLANK_KEY,JSON.stringify(o)); }catch(e2){}
+  }
+  hmBlankClose();
+}
+function hmBlankSave(){
+  var el=document.getElementById('hmBlankBox'),inp=document.getElementById('hmBlankIn'),
+      sb=(typeof osClient==='function')?osClient():null,f=null,i,id,k,v,patch={},y;
+  if(!el||!inp)return;
+  id=el.getAttribute('data-id'); k=el.getAttribute('data-k');
+  for(i=0;i<HM_BLANK.length;i++)if(HM_BLANK[i].k===k)f=HM_BLANK[i];
+  if(!f)return;
+  v=(''+(inp.value||'')).replace(/^\s+|\s+$/g,'');
+  /* 비운 채 저장은 「모름」 을 「없음」 으로 바꾸는 일입니다 — 안 받습니다 (1번) */
+  if(!v){ toast('비어 있습니다 — 모르시면 「다음에」 를 눌러 주세요.'); return; }
+  if(f.type==='year'){
+    y=Math.round(Number(v));
+    if(!(y>=1900&&y<=new Date().getFullYear())){ toast('출생년도를 네 자리로 적어 주세요.'); return; }
+    v=y;
+  }
+  if(!sb){ toast('서버에 연결되어 있지 않습니다.'); return; }
+  patch[f.col]=v;
+  if(f.on==='db')patch.updated_at=new Date().toISOString();
+  sb.from(f.on==='cli'?'clients':'dbs').update(patch).eq('id',id).select('id').then(function(res){
+    var w=(typeof hdbWrote==='function')?hdbWrote(res):{ok:!res.error};
+    if(w.ok!==true){ toast(f.t+' 저장 — '+((w&&w.why)||'서버가 받지 않았습니다')); return; }
+    /* 손에 든 줄도 같이 — 다시 부르지 않습니다 (7번) */
+    if(f.on==='cli'){ var c=hmBlankCliOf(id); if(c)c[f.k]=v; }
+    else if(typeof hdbLocal==='function'){ var pp={}; pp[f.k]=(''+v).slice(0,10); hdbLocal(id,pp); }
+    hmBlankClose();
+    toast(hmJo(f.t,'을','를')+' 적었습니다');
+    try{ hmPaint(); }catch(e){}
+  },function(e){ toast(f.t+' 저장 실패 — '+((e&&e.message)||'알 수 없는 오류')); });
 }
 /* <b>여기서 하루가 넘어갑니다</b> — 끝낸 분과 미룰 분을 <b>한 줄</b>에 둡니다.
    따로 두 줄로 세웠더니 116px 이었습니다. 무엇보다 「끝」 과 「뒤로」 는
@@ -30203,6 +30322,13 @@ function hmRo(w){
   if(!(c>=0xAC00&&c<=0xD7A3))return s+'로';      /* 한글이 아니면 손대지 않습니다 */
   j=(c-0xAC00)%28;                                /* 0 = 받침 없음 · 8 = ㄹ */
   return s+((j===0||j===8)?'로':'으로');
+}
+/* 「계약일가」 · 「계약일를」 이 찍혔습니다 (판 X282) — hmRo 와 같은 결로 <b>받침</b>을 봅니다.
+   a 는 받침이 있을 때(이·을·은), b 는 없을 때(가·를·는). 한글이 아니면 b 입니다. */
+function hmJo(w,a,b){
+  var s=''+(w||''),c=s.charCodeAt(s.length-1);
+  if(!(c>=0xAC00&&c<=0xD7A3))return s+b;
+  return s+(((c-0xAC00)%28)?a:b);
 }
 function hmPicks(x){
   var k=(x&&x.k==='db')?x.tk:(x&&x.k),
