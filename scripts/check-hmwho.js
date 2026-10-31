@@ -97,14 +97,17 @@ const SEED = (일) => {
 /* 네 수를 한 번에 — <b>카드 하나에서</b> 집어 옵니다 */
 const LOOK = () => {
   try { go('home'); } catch (e) {}
-  const c = document.getElementById('hmFlow');
-  const t = c ? (c.textContent || '').replace(/\s+/g, ' ') : '';
-  const 칩 = c ? [].slice.call(c.querySelectorAll('button.t-chip'))
+  /* ⬆ 판 X275 — 단계 칩 · 🕗 지남은 맨 위 📇 <b>한 장 띠</b>(#hmBand)로
+     올라갔습니다. 두 칸을 <b>한 몸</b>으로 읽습니다 — 둘 다 같은 hwhoFor 에게
+     묻는지가 이 자의 물음이라, 자리만 바뀌었지 재는 것은 같습니다. */
+  const c = document.getElementById('hmFlow'), bd = document.getElementById('hmBand');
+  const t = ((bd ? bd.textContent : '') + ' ' + (c ? c.textContent : '')).replace(/\s+/g, ' ');
+  const 칩 = bd ? [].slice.call(bd.querySelectorAll('button.t-chip'))
     .filter(e => (e.textContent || '').indexOf('지남') >= 0)[0] : null;
   const num = (re) => { const m = t.match(re); return m ? +m[1] : null; };
   return {
     있나: !!c,
-    ap: num(/(\d+) 🤝 AP/), pc: num(/(\d+) 📄 PC/), cs: num(/(\d+) ✍️ CS/),
+    ap: num(/(\d+) 🤝 (?:\S+ )?AP/), pc: num(/(\d+) 📄 (?:\S+ )?PC/), cs: num(/(\d+) ✍️ (?:\S+ )?CS/),
     길위: num(/모두 (\d+)분/),
     지남: 칩 ? +((칩.textContent || '').match(/\d+/) || [0])[0] : null,
     업적: num(/이번 달 (\d+)만원/),
@@ -221,6 +224,11 @@ const LOOK = () => {
      '  ★ hmFlowMe() 는 <b>되돌아갈 자리로만</b> 남는다 — 카드 ' +
      셈(카드, 'hmFlowMe()') + '곳 · 업적줄 ' + 셈(줄, 'hmFlowMe()') + '곳');
   is(/function hmFlowMe\(/.test(src), '  ⚠ hmFlowMe 를 <b>안 지웠다</b> (사장님 ★)');
+  /* 📇 판 X275 — <b>띠도 같은 자에게 한 번</b> 묻습니다. 띠가 제 손으로 「누구」 를
+     고르면 고르개를 눌러도 띠만 내 것으로 남습니다 (5번). */
+  const 띠 = 토막('hmBandHtml');
+  is(!!띠.trim() && 셈(띠, 'hwhoFor()') === 1 && 셈(띠, 'hwhoPick()') === 0,
+     '  ★★ 📇 한 장 띠도 <b>hwhoFor() 에게 한 번</b> 묻는다 — ' + 셈(띠, 'hwhoFor()') + '곳');
 
   /* ══ [5] 화면의 약속과 맞는다 ═════════════════════════════════ */
   console.log('\n[5] 🤝 <b>화면이 적어 둔 약속과 맞는다</b> (1번)');
