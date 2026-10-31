@@ -1778,6 +1778,30 @@ body.jv-dock:not(.apexmap-mode) #osVaFab{display:none}
 #hmSideUp>.card{border:0;box-shadow:none;margin:0}
 #hmSideUp>.card+.card{border-top:1px solid var(--t-line)}
 #hmSideUp>.card>.card-body{padding:12px 20px}
+/* ══ 🧺 <b>「지금 할 것」 한 테두리 안에 오늘 할 일</b> (판 X276) ═════════════
+   사장님 말씀 (2026-10-31) — 「지역동선하고, 오늘 할일등이 <b>지금 할것에 포함</b>」.
+   ★ 카드(.hm-now)는 <b>한 글자도 안 바꾸고</b> 아래 두 귀만 펴서, 바로 밑 #hmStack 이
+     같은 파란 테두리로 <b>이어 붙습니다</b> — 눈에는 한 장입니다. 넷이 비면(:empty)
+     카드는 제 꼴 그대로입니다.
+   ★ 안의 칸들은 곁칸에서처럼 <b>네모를 또 그리지 않습니다</b> — 테두리·그림자를 빼고
+     옅은 윗선 하나로 가릅니다. 둥글기(20px)는 <b>안 건드립니다</b>(check-hmexact).
+   ★ 값은 토큰에서만 옵니다 — hex 를 적지 않습니다.                         */
+#hmJobWrap{margin-bottom:12px}
+#hmJobWrap:has(>#hmStack:not(:empty)) .hm-now{border-bottom-left-radius:0;
+  border-bottom-right-radius:0;border-bottom-color:var(--t-line)}
+#hmStack{border:1px solid var(--t-point);border-top:0;border-radius:0 0 20px 20px;
+  background:var(--t-card);overflow:hidden}
+#hmStack:empty,#hmStack>:empty{display:none}
+#hmStack>*+*{border-top:1px solid var(--t-line)}
+#hmStack .card{border:0;box-shadow:none;margin:0;background:transparent}
+#hmStack .card>.card-body{padding:12px 14px}
+#hmStack>.hm-fold{margin:0;border-radius:0;box-shadow:none}
+/* 📆 이번 주 · 📊 오늘 기록은 제 상자를 들고 와서 테두리에 붙습니다 — 찍어 보니
+   이번 주의 일요일 칸이 테두리 밖으로 잘렸습니다. 안쪽 여백만 줍니다. */
+#hmStack #hmWkHost{padding:0 14px 12px}
+/* 📊 오늘 기록은 여백을 주면 폰에서 칩이 세 줄로 접혀(찍어 보고 알았습니다) 대신
+   <b>제 상자를 내려놓습니다</b> — 이미 카드 안이라 네모를 또 그릴 까닭이 없습니다. */
+#hmStack .hm-act{border-color:transparent;background:transparent;box-shadow:none}
 .hm-card{margin:14px 0 0}
 .hm-top{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .hm-d{font-size:var(--t6);font-weight:700;color:var(--ink-4)}
@@ -34516,12 +34540,38 @@ function hmEtcHtml(){
 var HM_SIDE = [
   { at:0, e:'📈', t:'이번 주',          w:'이번 주 예상업적', fn:'hmRunSideHtml' },
   /* ① 과 ② 사이에 「오늘 동선」(hmRtHost)이 들어갑니다 — 목각 차례 그대로 */
-  { at:2, e:'💌', t:'이번 달 고객 관리', w:'이번 달 마디(보낼 말)', fn:'hmMadiSideHtml' },
+  /* 💌 이번 달 고객 관리는 「지금 할 것」 카드 안으로 갔습니다 — 아래 HM_STACK (판 X276) */
   /* fn — <b>그 칸을 그리는 함수</b>. 적혀 있으면 그것을 부르고, 없으면
      「아직 세는 자리가 없습니다」 한 장입니다. 삼항 사슬로 늘어놓지
      않습니다 — 칸이 늘어도 빠뜨릴 자리가 없습니다 (5번).              */
   { at:3, e:'🔔', t:'알람',             w:'오늘 남은 알람', fn:'hmAlmSideHtml' }
 ];
+/* ══ 🧺 <b>「지금 할 것」 카드 안의 차례</b> (판 X276) ═══════════════════════
+   사장님 말씀 (2026-10-31) — 「지역동선하고, 오늘 할일등이 지금 할것에 포함 되게」
+   → 「카드 안에 차례로 쌓기」. 이 표 <b>한 곳</b>이 차례를 정합니다 (5번 · 삼항 사슬 없음).
+     host — 그 칸을 <b>칠하는 자가 따로 있는</b> 빈 자리(id). 칠하는 자는 그대로입니다
+            (hmRtHtml · hmTossAppt+hmWeekHtml · hmActPaint) — 한 곳도 안 건드립니다.
+     fn   — 여기서 <b>그려 넣는</b> 칸. 곁칸에 있던 그 함수 그대로이고, 폰에서 접이
+            열쇠(side_함수이름)도 그대로라 접어 두신 기억이 안 날아갑니다.
+   ★ 차례는 사장님이 고르신 그림 그대로 — 지금 이 분 → 🚗 동선 → 📅 오늘 약속 → 그 밑에
+     📊 오늘 한 것 · 💌 이번 달 관리.                                         */
+var HM_STACK = [
+  { e:'🚗', t:'오늘 동선',          host:'hmRtHost' },
+  { e:'📅', t:'오늘 약속 · 이번 주', host:'hmUpHost' },
+  { e:'📊', t:'오늘 기록',          host:'hmActHost' },
+  { e:'💌', t:'이번 달 고객 관리',   w:'이번 달 마디(보낼 말)', fn:'hmMadiSideHtml' }
+];
+function hmStackHtml(){
+  var h='',i,s,one,넓=((typeof navWide==='function')?navWide():true);
+  for(i=0;i<HM_STACK.length;i++){
+    s=HM_STACK[i];
+    if(s.host){ h+='<div id="'+s.host+'"></div>'; continue; }
+    one=(s.fn&&typeof window[s.fn]==='function')?window[s.fn]():hmSideTodoHtml(s);
+    /* 접는 꼴은 곁칸과 <b>같은 자</b>(hmFoldWrap · 열쇠 side_함수이름)입니다 */
+    h+=넓?one:hmFoldWrap('side_'+(s.fn||s.t), s.e, s.t, hmSideSum(one), one);
+  }
+  return h;
+}
 /* ══ 📆 <b>이번 주</b> — 「오늘 챙길 것」 맨 밑에 (2026-10-02) ═══════════
    사장님 말씀 — <b>「오늘 칸에, 이번주 캘린더 주간만 짤라서 맨 밑에 띄어주고」</b>.
 
@@ -35029,20 +35079,10 @@ function hmSideHtml(){
      글을 감추는 쪽으로 기울지 않습니다 (1번). */
   var h='',i,one,s,넓=((typeof navWide==='function')?navWide():true),좁=!넓;
   for(i=0;i<HM_SIDE.length;i++){
-    if(HM_SIDE[i].at===2){
-      /* 🚗 <b>넓을 때는 두 기둥 아래</b>로 내려갑니다 (판 X248 · 2026-10-30).
-         사장님 말씀 — 「지역동선하고 <b>내가 추천 띄우고</b> … 오늘 한칸에서
-         다 할 수 있도록」. 추천을 펴 두니 <b>곁기둥이 1,209~1,360px</b> 로
-         주기둥(797px)보다 길어져, 두 기둥을 세운 까닭(「곁은 본문 그늘에
-         든다」 · check-hmtwo)이 깨졌습니다. 재어 보여 드리고 사장님이
-         <b>「두 기둥 아래 한 줄로 내리기」</b> 를 고르셨습니다.
-         ★ <b>폰에서는 그대로</b>입니다 — 거기선 기둥이 위아래로 쌓여
-           「아래로 내리기」 가 이미 참입니다. 자리를 정하는 곳은
-           hmSidePlace 하나입니다 (5번).
-         ★ <b>id 는 한 곳에만</b> 섭니다 — 양쪽에 두면 앞엣것이 빈 칸으로
-           남습니다(곁칸·약속 칸과 같은 규칙).                          */
-      h+='<div id="hmRtHost"></div><div id="hmActHost"></div>';
-    }
+    /* 🚗 동선 · 📊 오늘 기록은 「지금 할 것」 카드 안(#hmStack)으로 들어갔습니다
+       (판 X276). 여태 여기 ②번 자리에 끼워 넣던 #hmRtHost · #hmActHost 는 이제
+       hmStackHtml 이 세웁니다 — id 는 한 곳에만 섭니다. 판 X248 의 「넓을 때는 두
+       기둥 아래」 쪽지는 그 자리를 거둔 뒤의 일이라 여기서 끝납니다.          */
     s=HM_SIDE[i];
     one=(s.fn&&typeof window[s.fn]==='function')
         ? window[s.fn]() : hmSideTodoHtml(s);
@@ -35087,6 +35127,9 @@ function hmSidePlace(){
   if(!up&&!rt)return;                       /* 홈이 아니면 할 일이 없다 */
   if(rt&&rt.innerHTML)rt.innerHTML='';
   if(up)up.innerHTML=hmSideHtml();
+  /* 🧺 「지금 할 것」 카드 안의 차례도 같은 자가 세웁니다 (판 X276) — 아래에서
+     #hmUpHost · #hmRtHost · #hmActHost 를 id 로 찾아 칠하므로 먼저 세워야 합니다. */
+  try{ var sk=document.getElementById('hmStack'); if(sk)sk.innerHTML=hmStackHtml(); }catch(eSk){}
   /* 🚗 는 이제 <b>활동 묶음 안</b>입니다 (판 X249) — 두 기둥 아래 자리는 비웁니다. */
   try{
     var wd=document.getElementById('hmRtWide');
@@ -37613,7 +37656,15 @@ function hmTossHtml(){
     /* 📇 <b>한 장 띠</b> (판 X275) — 고르개 바로 밑, 「지금 할 것」 바로 위.
        고르개가 「누구 것」 을 정하므로 그 밑입니다. 짓는 자는 hmBandHtml 하나 */
     '<div id="hmBandHost">'+(function(){ try{ return hmBandHtml(); }catch(e){ return ''; } })()+'</div>'+
-    '<div id="hmJobHost">'+hmTopHtml()+'</div>'+
+    /* 🧺 <b>「지금 할 것」 한 카드 안에 오늘 할 일을 차례로</b> (판 X276 · 사장님 말씀
+       2026-10-31 「지역동선하고, 오늘 할일등이 <b>지금 할것에 포함</b> 되게」 → 여쭈니
+       <b>「카드 안에 차례로 쌓기」</b> · 넣을 것 🚗 동선 · 📅 오늘 약속·이번 주 ·
+       📊 오늘 기록 · 💌 이번 달 고객 관리).
+       ★ #hmJobHost 는 「이분 끝」 마다 통째로 다시 그려집니다(hmJobPaint). 그 안에
+         넣으면 누를 때마다 넷이 지워집니다 — 그래서 <b>곁에 #hmStack</b> 을 두고
+         둘을 <b>한 테두리(#hmJobWrap)</b>로 묶습니다. 짓는 자는 hmStackHtml 하나 · 자리를
+         채우는 자는 그대로 hmSidePlace 하나입니다 (5번).                   */
+    '<div id="hmJobWrap"><div id="hmJobHost">'+hmTopHtml()+'</div><div id="hmStack"></div></div>'+
     /* ══ 🔲 <b>활동이 「지금 할 것」 바로 밑</b> (판 X250) ════════════════
        사장님 말씀 (2026-10-30) — <b>「응 폰도 활동 먼저 올리고」</b>.
        ★★ <b>재어 보여 드리고 고르신 것입니다.</b> 라이브를 열어 재니
@@ -37647,7 +37698,8 @@ function hmTossHtml(){
          안에 <b>이미</b> 올라와 있습니다 — 그 둘은 자리를 안 바꿉니다.
        ⚠ 달력이 늦게 실려 와도 따라가야 합니다 — 칠하는 자는 <b>mcalPaint 하나</b>
          입니다(이미 #hmWkHost 를 칠하고 있었습니다). 약속 칸도 거기에 붙입니다. */
-    '<div id="hmUpHost"></div>'+
+    /* 📅 #hmUpHost 는 「지금 할 것」 카드 안(#hmStack)으로 들어갔습니다 (판 X276).
+       id 는 <b>한 곳</b>에만 둡니다 — 두 곳에 두면 앞엣것이 빈 칸이 됩니다. */
     /* 📍 <b>곁칸 넷은 위로 올라갔습니다</b> (판 X250) — 「지금 할 것」 바로
        밑입니다. 판 X199 에서 사장님 말씀 「끌어올려」 로 여기까지 왔던 것을
        한 걸음 더 올렸습니다.
