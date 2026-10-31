@@ -102,7 +102,14 @@ const 증인 = [
        사장님 말씀을 모르고 입힌 날</b>입니다. 그때 빨간불이 켜지는 것이 맞습니다 —
        자가 적어 주는 「대장을 고치십시오」 를 <b>「사장님께 먼저 여쭈십시오」</b> 로 읽으십시오. */
   { 키: 'X02-팩파', 뜻: 'fact_find 는 사장님이 「팩트파인딩 빼고」 라고 하셔서 옷을 안 입혔다', 옷입음: ['fact_find'] },
+  /* 🤖 판 X272 (2026-10-31) — 자비스가 <b>상담자료 덱은 아직 안 찾습니다</b>(반만). 덱마다 짜임이 달라
+     따로 한 판으로 합니다. 그 판의 함수 이름을 <b>미리 정해 둡니다</b> — jvDeckRows(덱의 장을 찾는 줄로) ·
+     jvDeckOpen(그 장으로 바로 열기). 둘이 서면 이 말은 거짓이 되므로 대장 X272 를 고치십시오.
+     ★ 자비스는 app/apex-map.html 에 있어, 함수 증인은 그 파일도 같이 봅니다(SRC_FN). */
+  { 키: 'X272-덱', 뜻: '자비스가 상담자료 덱(메인 상담자료 · 보험의 기준 · 통합상담 · demo · KB 보장분석 · 재무설계 상담자료)을 아직 안 찾는다', 함수: ['jvDeckRows', 'jvDeckOpen'] },
 ];
+/* 함수 증인은 본체와 <b>자비스 모드(apex-map.html)</b>를 같이 봅니다 — 판 X272 의 증인이 그쪽에 섭니다 */
+const SRC_FN = SRC + '\n' + (fs.existsSync('app/apex-map.html') ? fs.readFileSync('app/apex-map.html', 'utf8') : '');
 /* 옷 입은 화면 — <b>T_SKIN 한 곳</b>에게 묻습니다 (5번) */
 const SKIN = (() => {
   const m = SRC.match(/var\s+T_SKIN\s*=\s*\{([^}]*)\}/);
@@ -127,7 +134,7 @@ let 재것 = 0;
   const 종류 = w.함수 ? '함수' : '옷입음';
   const 다 = w.함수 || w.옷입음;
   const 있는것 = w.함수
-    ? w.함수.filter(f => new RegExp('function\\s+' + f + '\\s*\\(').test(SRC))
+    ? w.함수.filter(f => new RegExp('function\\s+' + f + '\\s*\\(').test(SRC_FN))
     : w.옷입음.filter(id => SKIN.indexOf(id) >= 0);
   is(있는것.length < 다.length,
      '  ' + 말씀 + ' ⛔[' + w.키 + '] — ' + w.뜻 + ' · ' + 종류 + ' ' +
