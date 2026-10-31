@@ -479,6 +479,19 @@ body.in-crm{padding-bottom:84px}
 .j-find > b{display:block; font-size:var(--t6); color:var(--blue); margin-bottom:4px}
 .jf-src{font-size:var(--t6); font-weight:800; color:#33425C; margin-top:6px}
 .jf-note{font-size:var(--t6); color:#4A5670; line-height:1.6; margin:4px 0}
+/* ⭐ 바로 쓰실 것 (판 X272) — 하나만 크게. 색은 이 쪽에 이미 있는 것만 */
+.jf-best{background:#fff; border:1px solid #DCE4F1; border-radius:11px; padding:10px 12px; margin:4px 0 6px}
+.jf-best .jw-n{font-size:var(--t5)}
+.jf-best .jw-s{font-size:var(--t5); line-height:1.7}
+.jf-from{font-size:var(--t6); font-weight:800; color:var(--blue); margin-bottom:2px}
+.jf-img img{display:block; max-width:100%; border-radius:9px; border:1px solid #DCE4F1; margin:6px 0}
+.jr-b{display:flex; flex-wrap:wrap; gap:7px; margin-top:6px}
+.jr-b button, .jr-b a{min-height:44px; display:inline-flex; align-items:center; padding:6px 14px; font:inherit; font-size:var(--t6);
+  font-weight:700; border-radius:10px; cursor:pointer; text-decoration:none}
+.jr-copy, .jr-say, .jr-img{border:1px solid #DCE4F1; background:#fff; color:#33425C}
+.jf-more{margin-top:6px}
+.jf-more > summary{cursor:pointer; font-size:var(--t6); font-weight:700; color:var(--blue); min-height:44px; display:flex; align-items:center; list-style:none}
+.jf-more > summary::-webkit-details-marker{display:none}
 /* 🛠 시키신 일 (판 X271) — 색은 이 쪽에 이미 있는 것만 */
 .j-act{margin-top:10px; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:11px; padding:9px 11px; white-space:normal}
 .j-act > b{display:block; font-size:var(--t6); color:#14532D; margin-bottom:4px}
@@ -490,7 +503,10 @@ body.in-crm{padding-bottom:84px}
   font:inherit; font-size:var(--t6); font-weight:700; border-radius:10px; cursor:pointer}
 .ja-no, .ja-in button{border:1px solid #DCE4F1; background:#fff; color:#33425C}
 .ja-tel{border:1px solid var(--blue); background:var(--blue); color:#fff; text-decoration:none}
-.j-way{margin-top:10px; white-space:normal}
+.j-way, .j-extra{margin-top:10px; white-space:normal}
+.j-extra > summary{cursor:pointer; font-size:var(--t6); font-weight:700; color:var(--blue);
+  min-height:44px; display:flex; align-items:center; list-style:none}
+.j-extra > summary::-webkit-details-marker{display:none}
 .j-way > summary{cursor:pointer; font-size:var(--t6); font-weight:700; color:var(--blue);
   min-height:44px; display:flex; align-items:center; list-style:none}
 .j-way > summary::-webkit-details-marker{display:none}
@@ -4216,6 +4232,11 @@ function addJ(res, isErr){
     h += '</ol>';
     if (hasFound) h += '</details>';
   }
+  /* ★ 찾은 것이 굳으면 길의 곁말(해 보기 · 짚는 말 · 그다음 · 이어서 물을 것)도 <b>접어</b> 둡니다 —
+     답 한 장에 바로 쓰실 것만 보이게 (판 X272 · 「가장 쉬워야만해」). 지우지는 않습니다 (6번) */
+  var nx0 = (res.next || []).filter(function(x){ return x; }), mo0 = (res.more || []).filter(function(x){ return x; });
+  var foldX = hasFound && !!(res.tip || res.real || nx0.length || mo0.length);
+  if (foldX) h += '<details class="j-extra"><summary>도움말 더 보기 ▾</summary>';
   if (res.tip){
     h += '<div class="j-try"><b>👉 직접 해 보십시오</b>' + esc(res.tip) + '</div>';
   }
@@ -4249,6 +4270,7 @@ function addJ(res, isErr){
     h += '</div></div>';
   }
   if (res.from) h += '<div class="j-src">근거 — ' + esc(res.from) + (res.title ? ' 「' + esc(res.title) + '」' : '') + '</div>';
+  if (foldX) h += '</details>';
   /* 🤖 AI 의견 자리 — 같은 카드 안에서 기다렸다가 채운다 (한 번에 · 판 X221) */
   if (res.aiWait) h += '<div class="j-ai" data-ai="1"><b>🤖 AI 의견</b><span class="think"><i></i><i></i><i></i></span></div>';
   h += '</div>';
@@ -5368,7 +5390,8 @@ JV_FIND.push(
       if (tk.open) s.push('여는 말 — ' + jvPlain(tk.open));
       if (tk.bi) s.push('비유 — ' + jvPlain(tk.bi));
       if (tr) s.push('놓치는 자리 — ' + jvPlain(tr.t) + ': ' + jvPlain(tr.d));
-      return {t:(x.ic || '') + ' ' + jvPlain(x.name), s:s};
+      return {t:(x.ic || '') + ' ' + jvPlain(x.name), s:s, say:tk.open ? jvPlain(tk.open) : '',
+              open:{fn:'dzGuideOpen', to:x.id, label:'📖 질병 가이드에서 이 병 열기'}};
     }, JV_PAYNOTE),
   jvKnowSrc('cov', 'dz_guide', '담보', function(P){ return jvDz(P).cov; },
     {t:function(x){ return x.k; }, k:function(x){ return x.area; }},
@@ -5398,12 +5421,13 @@ JV_FIND.push(
     function(x, P){
       var fill = function(t){ try { return P.APEX_STAGE.objFill(t); } catch(e){ return t; } };
       return {t:'🛡 「' + jvPlain(x.title) + '」', s:['속마음 — ' + jvPlain(x.heart), '첫 마디 — 「' + jvPlain(fill(x.one)) + '」',
-        '이어서 — 「' + jvPlain(fill(x.follow)) + '」', '피할 말 — ' + jvPlain(x.avoid), '멈출 때 — ' + jvPlain(x.stop)]};
+        '이어서 — 「' + jvPlain(fill(x.follow)) + '」', '피할 말 — ' + jvPlain(x.avoid), '멈출 때 — ' + jvPlain(x.stop)],
+        say:jvPlain(fill(x.one)) + ' ' + jvPlain(fill(x.follow))};
     }, ''),
   jvKnowSrc('rej', 'dz_guide', '거절 처리 (질병 상담)', function(P){ return (jvDz(P).rej || {}).all; },
     {t:function(x){ return x.q; }, b:function(x){ return x.say; }, strict:1},
     function(x){ return {t:'🛡 「' + jvPlain(x.q) + '」', s:['이렇게 — 「' + jvPlain(x.say) + '」', '이어서 — 「' + jvPlain(x.next) + '」',
-      '피할 말 — ' + jvPlain(x.avoid), '멈출 때 — ' + jvPlain(x.stop)]}; }, '')
+      '피할 말 — ' + jvPlain(x.avoid), '멈출 때 — ' + jvPlain(x.stop)], say:jvPlain(x.say) + ' ' + jvPlain(x.next)}; }, '')
 );
 
 /* ══ 🎓 <b>보험 마스터 아카데미 · 📕 재무설계 실전화법서도 찾는다</b> (판 X269) ══════════
@@ -5424,7 +5448,9 @@ JV_FIND.push(
    ★ 읽는 중이면 「읽는 중」, 못 읽었으면 <b>못 읽었다고</b> 적습니다 (1번). 다 읽으면
      기다리시던 물음에 더 찾은 것을 <b>이어서</b> 띄웁니다.                        */
 var JV_EXT = {st:'', A:{}, fp:null, why:'', pend:'', note:''};
-var JV_ACAD = ['terms','terms2','disease1','disease2','surgery','design','costs'];
+var JV_ACAD = ['terms','terms2','disease1','disease2','surgery','design','costs',
+  /* 판 X272 — 화법 · 강의 · 원본 슬라이드까지 (「여기 안에 있는 모든 담긴 내용」) */
+  'data1','data2','lesson','analysis','health','cases','cases2','source'];
 var JV_FPT_URL = '재무설계/실전화법서.html';
 /* 처음 쥔 fetch — 시험이 window.fetch 를 갈아 끼워도 자료 읽기는 흔들리지 않게 */
 var jvFetch0 = (typeof fetch === 'function') ? fetch.bind(window) : null;
@@ -5448,7 +5474,7 @@ function jvFptParse(html){
       return tx(r.querySelector('.who')) + ' — 「' + tx(r.querySelector('.line')) + '」';
     });
     var hs = [].slice.call(ch.querySelectorAll('h3')).map(tx);
-    out.ch.push({t:name, k:hs.join(' '), sub:sub, key:key.replace(/^QUESTION\s*/, ''), talk:talk, h3:hs, b:sub + ' ' + key});
+    out.ch.push({t:name, k:hs.join(' '), sub:sub, key:key.replace(/^QUESTION\s*/, ''), talk:talk, h3:hs, b:sub + ' ' + key, id:ch.id});
     /* 마디 — h3 에서 다음 h3 까지 */
     [].slice.call(ch.querySelectorAll('h3')).forEach(function(h){
       var t = tx(h), body = [], el = h.nextElementSibling;
@@ -5457,11 +5483,12 @@ function jvFptParse(html){
         el = el.nextElementSibling;
       }
       var b = body.join(' ').replace(/\s+/g, ' ');
-      if (b) out.sec.push({t:t, k:name, ch:name, b:b});
+      if (b) out.sec.push({t:t, k:name, ch:name, b:b, id:ch.id});
     });
   });
   [].slice.call(doc.querySelectorAll('.obj')).forEach(function(o){
-    out.obj.push({t:tx(o.querySelector('.oq')), ans:tx(o.querySelector('.ans')), why:tx(o.querySelector('.why'))});
+    var och = o.closest('section.ch');
+    out.obj.push({t:tx(o.querySelector('.oq')), ans:tx(o.querySelector('.ans')), why:tx(o.querySelector('.why')), id:och ? och.id : ''});
   });
   return out;
 }
@@ -5502,6 +5529,26 @@ function jvSurgRows(){
   (S.gap || []).forEach(function(x){ out.push({t:x.t, g:'1-5종에 없는 것', d:x.d, a:x.a}); });
   return out;
 }
+/* 아카데미 화법 — 다섯 곳(커리큘럼 · 1교시 수업 · 헬스케어 · 케이스 · 질병백과)의 「고객 말 → 받는 말」 */
+function jvTalkRows(){
+  if (JV_EXT.st !== 'ok') return [];
+  var A = JV_EXT.A, out = [];
+  var put = function(x, from){ if (x && x.q && x.a) out.push({q:x.q, a:x.a, k:x.k || '', from:from}); };
+  (A.CURRICULUM || []).forEach(function(c){ (c.scripts || []).forEach(function(x){ put(x, '커리큘럼 ' + jvPlain(c.title)); }); });
+  (A.LESSONS || []).forEach(function(l){ put(l.talk, '1교시 ' + jvPlain(l.title)); });
+  if (A.HEALTH) put(A.HEALTH.talk, '헬스케어');
+  (A.CASES || []).forEach(function(c){ (c.script || []).forEach(function(x){ put(x, '케이스 ' + jvPlain(c.tag || c.name)); }); });
+  (A.DISEASE || []).forEach(function(d){ put(d.talk, '질병백과 ' + jvPlain(d.name)); (d.qna || []).forEach(function(x){ put(x, '질병백과 ' + jvPlain(d.name) + ' Q&A'); }); });
+  return out;
+}
+function jvLessonRows(){
+  if (JV_EXT.st !== 'ok') return [];
+  var A = JV_EXT.A, out = [];
+  (A.CURRICULUM || []).forEach(function(c){ out.push({t:c.title, sub:c.sub || '', core:c.core || '', mins:c.mins, g:'커리큘럼 ' + c.id}); });
+  (A.LESSONS || []).forEach(function(l){ out.push({t:l.title, sub:l.sub || '', core:l.one || l.hook || '', g:'1교시 ' + l.n}); });
+  (A.ANALYSIS || []).forEach(function(a){ out.push({t:a.title, sub:a.sub || '', core:a.core || '', mins:a.mins, g:'분석편 ' + a.n}); });
+  return out;
+}
 var JV_WON = function(P, v){ try { return P.APEX_WON.txt(v); } catch(e){ return '—'; } };   /* COSTS 는 원 — APEX_WON.txt 가 받는 단위 */
 var JV_TAXW = /비과세|과세|세금|절세|상속|증여|세액/;
 JV_FIND.push(
@@ -5527,7 +5574,7 @@ JV_FIND.push(
         .concat((c.O || []).length ? ['나오는 담보 — ' + c.O.map(jvPlain).join(' · ')] : [])
         .concat((c.X || []).length ? ['안 나오는 담보 — ' + c.X.map(jvPlain).join(' · ')] : [])
         .concat(c.tip ? ['짚을 것 — ' + jvPlain(c.tip)] : [])
-        .concat(tk.q ? ['고객이 — 「' + jvPlain(tk.q) + '」', '이렇게 — 「' + jvPlain(tk.a) + '」'] : [])};
+        .concat(tk.q ? ['고객이 — 「' + jvPlain(tk.q) + '」', '이렇게 — 「' + jvPlain(tk.a) + '」'] : []), say:tk.a ? jvPlain(tk.a) : ''};
     }, JV_PAYNOTE, 2, 1),
   jvKnowSrc('asurg', 'bohum', '1-5종 수술분류', jvSurgRows,
     {t:function(x){ return x.t; }, k:function(x){ return x.g; }, b:function(x){ return (x.sub || '') + ' ' + (x.d || ''); }},
@@ -5548,7 +5595,7 @@ JV_FIND.push(
         '반드시 — ' + (x.must || []).map(function(m){ return m.n + (m.amt ? ' ' + m.amt : ''); }).join(' · '),
         '여력되면 — ' + (x.opt || []).map(jvPlain).join(' · '), '지금은 아닌 것 — ' + (x.skip || []).map(jvPlain).join(' · '),
         '예산 — ' + jvPlain(x.budget)].concat((x.trap || [])[0] ? ['함정 — ' + jvPlain(x.trap[0])] : [])
-        .concat(x.talk ? ['한 줄 화법 — ' + jvPlain(x.talk)] : [])};
+        .concat(x.talk ? ['한 줄 화법 — ' + jvPlain(x.talk)] : []), say:x.talk ? jvPlain(x.talk) : ''};
     }, '금액·예산은 교재가 든 기준입니다. 보험료와 보장은 심사 결과에 따릅니다.', 2, 1),
   jvKnowSrc('acost', 'bohum', '실제 치료비', function(){ return jvA('COSTS') || []; },
     {t:function(x){ return x.name; }, k:function(x){ return x.dx + ' ' + x.cat; }, b:function(x){ return x.key + ' ' + x.note; }},
@@ -5562,17 +5609,34 @@ JV_FIND.push(
     function(x){
       return {t:'📕 ' + x.t, s:['한 줄 — ' + x.sub, '여는 질문 — ' + x.key].concat(x.talk)
         .concat(x.h3.length ? ['이 장의 마디 — ' + x.h3.join(' · ')] : [])
-        .concat(JV_TAXW.test(x.t + x.b) ? ['⚠ 세금은 요건 충족 시의 이야기입니다 — 판단은 세무 전문가에게 맡기십시오.'] : [])};
+        .concat(JV_TAXW.test(x.t + x.b) ? ['⚠ 세금은 요건 충족 시의 이야기입니다 — 판단은 세무 전문가에게 맡기십시오.'] : []),
+        say:x.key, open:{fn:'fpTalkOpen', to:x.id, label:'📕 화법서 이 장 열기'}};
     }, '', 1, 1),
   jvKnowSrc('fpsec', 'fp_talk', '실전화법서 마디', function(){ return (JV_EXT.st === 'ok' && JV_EXT.fp) ? JV_EXT.fp.sec : []; },
     {t:function(x){ return x.t; }, k:function(x){ return x.k; }, b:function(x){ return x.b; }},
     function(x){
       return {t:'📕 ' + x.t, s:['장 — ' + x.ch, '내용 — ' + (x.b.length > 320 ? x.b.slice(0, 320) + '…' : x.b)]
-        .concat(JV_TAXW.test(x.t + x.b) ? ['⚠ 세금은 요건 충족 시의 이야기입니다 — 판단은 세무 전문가에게 맡기십시오.'] : [])};
+        .concat(JV_TAXW.test(x.t + x.b) ? ['⚠ 세금은 요건 충족 시의 이야기입니다 — 판단은 세무 전문가에게 맡기십시오.'] : []),
+        open:{fn:'fpTalkOpen', to:x.id, label:'📕 화법서 이 장 열기'}};
     }, '', 2, 1),
   jvKnowSrc('fpobj', 'fp_talk', '거절 처리 (실전화법서)', function(){ return (JV_EXT.st === 'ok' && JV_EXT.fp) ? JV_EXT.fp.obj : []; },
     {t:function(x){ return x.t; }, b:function(x){ return x.ans; }, strict:1},
-    function(x){ return {t:'🛡 「' + x.t + '」', s:['이렇게 받습니다 — ' + x.ans, '왜 — ' + x.why]}; }, '', 2, 1)
+    function(x){ return {t:'🛡 「' + x.t + '」', s:['이렇게 받습니다 — ' + x.ans, '왜 — ' + x.why], say:x.ans.replace(/^“|”$/g, ''),
+      open:{fn:'fpTalkOpen', to:x.id, label:'📕 화법서 거절 20 열기'}}; }, '', 2, 1),
+  /* 🗣 아카데미 화법 — 고객이 하는 말 → 받는 말. 다섯 곳에 흩어진 것을 한 줄로 모읍니다 (판 X272) */
+  jvKnowSrc('atalk', 'bohum', '아카데미 화법', jvTalkRows,
+    {t:function(x){ return x.q; }, k:function(x){ return x.k + ' ' + x.from; }, b:function(x){ return x.a; }},
+    function(x){ return {t:'🗣 「' + jvPlain(x.q) + '」', s:['이렇게 — 「' + jvPlain(x.a) + '」', '어디서 — ' + x.from + (x.k ? ' · ' + jvPlain(x.k) : '')],
+      say:jvPlain(x.a)}; }, '', 2, 1),
+  /* 📘 아카데미 강의 — 커리큘럼 · 1교시 수업 · 분석편 */
+  jvKnowSrc('alesson', 'bohum', '아카데미 강의', jvLessonRows,
+    {t:function(x){ return x.t; }, k:function(x){ return x.sub + ' ' + x.g; }, b:function(x){ return x.core; }},
+    function(x){ return {t:'📘 ' + jvPlain(x.t) + (x.sub ? ' — ' + jvPlain(x.sub) : ''), s:['핵심 — ' + jvPlain(x.core), '갈래 — ' + x.g + (x.mins ? ' · ' + x.mins + '분' : '')]}; }, '', 2, 1),
+  /* 🖼 원본 자료 슬라이드 — 그림 그대로 보여 드릴 수 있게 */
+  jvKnowSrc('aslide', 'bohum', '원본 자료 슬라이드', function(){ return jvA('SOURCE') || []; },
+    {t:function(x){ return x.title; }, k:function(x){ return x.dn + ' ' + (x.sec || ''); }, b:function(x){ return (x.cap || []).join(' ') + ' ' + (x.kw || ''); }},
+    function(x){ return {t:'🖼 ' + jvPlain(x.title), s:['자료 — ' + x.dn + (x.s ? ' · ' + x.s + '번째 장' : '')],
+      img:(x.im || [])[0] ? '보험아카데미/img/' + x.im[0] : ''}; }, '', 2, 1)
 );
 
 /* 보험 자료가 몇 가지인가 — 갈래마다 표를 센다 (앱 밖이면 0 · 모르면 안 말한다) */
@@ -5591,7 +5655,12 @@ var JV_KWANT = [
   {re:/몇\s*종|종\s*수술|수술\s*분류/, k:['asurg'], add:10},
   {re:/사례|실제로\s*받/, k:['case'], add:6},
   {re:/화법|멘트|대본|뭐라고|어떻게\s*말/, k:['fpch', 'fpobj', 'obj', 'rej', 'dz'], add:4},
-  {re:/설계|얼마\s*넣|가입\s*금액|예산/, k:['adesign'], add:6}
+  {re:/설계|얼마\s*넣|가입\s*금액|예산/, k:['adesign'], add:6},
+  /* 판 X272 — 「뭐예요」 면 뜻부터 · 「그림 · 슬라이드」 면 원본 장 · 「강의」 면 수업 · 「…라고 하면」 이면 받는 말 */
+  {re:/뭐야|뭐예요|뭐에요|뭔가요|뜻|무슨\s*말|이란\s*$|란\s*$/, k:['term', 'aterm', 'adz', 'dz', 'cov'], add:4},
+  {re:/슬라이드|그림|사진|보여\s*줄|자료\s*화면/, k:['aslide'], add:8},
+  {re:/강의|수업|교육|배우|공부/, k:['alesson'], add:6},
+  {re:/라고\s*(?:하면|해|하는|할\s*때)|고객이/, k:['atalk', 'obj', 'rej', 'fpobj'], add:4}
 ];
 /* 표를 한 바퀴 — 걸린 것만 돌려준다 */
 function jvFind(q){
@@ -5602,10 +5671,13 @@ function jvFind(q){
     try { r = f.find(q, P); } catch(e){ r = null; }
     if (!r) return;
     r.k = f.k; r.id = f.id; r.n = f.n; r.know = !!f.know; r.ext = !!f.ext;
+    /* 굳은지는 <b>원래 점수</b>로 정합니다 — 「원하는 답」 표는 차례만 바꿉니다. 약한 것을 굳게 만들면
+       「보험료 비교해달래」 가 거절 처리로 길을 접습니다 (판 X272 에서 자가 잡음) */
+    var base = r.score;
     if (r.score != null) JV_KWANT.forEach(function(w){ if (w.k.indexOf(f.k) >= 0 && w.re.test(q)) r.score += w.add; });
     /* 굳은 것 — 고객 · 코드 · 계약관리, 또는 이름이 딱 맞은 자료(10 이상). 굳은 것만 길을 접습니다.
        약한 것은 「혹시 이것도」 로 세우고 길은 펴 둡니다 — 「교통사고 났대」 의 답은 여전히 길입니다 */
-    r.strong = !r.waitSay && (r.score == null || r.score >= 10);
+    r.strong = !r.waitSay && (base == null || base >= 10);
     out.push(r);
   });
   /* 보험 자료는 <b>더 잘 맞은 갈래가 먼저</b> · 넷까지만 — 다 펼치면 답이 화면을 넘깁니다.
@@ -5641,31 +5713,92 @@ function jvSafeQ(q, F){
 }
 
 /* 찾아 온 것을 그린다 — 글은 모두 esc 를 지납니다 */
+/* ══ ⭐ <b>가장 쉽게 — 바로 쓰실 것 하나를 크게</b> (판 X272) ══════════════════════
+   사장님 말씀 2026-10-31 — 「여기 안에 있는 모든 담긴 내용을 찾고 바로 사용할수 있도록
+   하는게 목표야. 설계사가 쓰는게 가장 중요하니까 가장 쉬워야만해」.
+   ★ 여태는 찾은 것을 갈래마다 다 펼쳐 한 답이 화면 서너 장이었습니다. 이제 <b>제일 잘
+     맞은 하나</b>만 크게 세우고, 나머지는 「더 찾은 것 N개」 에 접어 둡니다(지우지 않습니다).
+   ★ 줄마다 <b>바로 쓰는 단추</b> — 📋 말 복사(카톡에 붙여 넣기) · 🔊 읽어 주기 ·
+     그 자리 열기(화법서 그 장 · 질병 가이드 그 병). 「말」 이 있는 줄(화법 · 거절 처리)은
+     <b>말만</b> 복사합니다 — 「이렇게 — 」 같은 꼬리표는 고객에게 갈 글이 아닙니다.
+   ★ 원본 슬라이드는 <b>그림 그대로</b> — 눌러 크게 보여 드리면 됩니다.               */
+var JV_ROWS = {}, JV_ROW_N = 0;
+function jvRowText(r){ return [r.t].concat(r.s || []).join('\n'); }
+function jvRowHtml(r, f, big){
+  var id = 'r' + (++JV_ROW_N), b = '';
+  JV_ROWS[id] = r;
+  var h = '<div class="jw-row' + (big ? ' jf-best' : '') + '">';
+  if (big) h += '<div class="jf-from">⭐ 바로 쓰실 것 · ' + esc(f.n) + '</div>';
+  h += '<div class="jw-n">' + esc(r.t) + '</div>';
+  if (r.img) h += '<a class="jf-img" href="' + esc(r.img) + '" target="_blank" rel="noopener"><img src="' + esc(r.img) + '" alt="' + esc(r.t) + '" loading="lazy"></a>';
+  (r.s || []).forEach(function(t){ h += '<div class="jw-s">' + esc(t) + '</div>'; });
+  if (r.cli) b += '<button type="button" class="st-here" data-cli="' + esc(r.cli) + '">🪪 이 분 창 열기</button>';
+  if (r.open) b += '<button type="button" class="st-here jr-open" data-r="' + id + '">' + esc(r.open.label) + '</button>';
+  if (!r.cli) b += '<button type="button" class="jr-copy" data-r="' + id + '">📋 ' + (r.say ? '말 복사' : '복사') + '</button>';
+  if (r.say) b += '<button type="button" class="jr-say" data-r="' + id + '">🔊 읽어 주기</button>';
+  if (r.img) b += '<a class="jr-img" href="' + esc(r.img) + '" target="_blank" rel="noopener">🖼 크게 보기</a>';
+  return h + '<div class="st-b jr-b">' + b + '</div></div>';
+}
+/* 갈래 하나의 꼬리 — 외 N건 · 안내 · 그 화면 열기 */
+function jvSrcTail(f){
+  var m = MENU[f.id], nm = m ? m.n : f.n, h = '';
+  if (f.more > 0) h += '<div class="jw-s">외 ' + f.more + (f.unit || '건') + ' — 「' + esc(nm) + '」 에서 다 보실 수 있습니다.</div>';
+  if (f.note && (f.rows || []).length) h += '<div class="jf-note">' + esc(f.note) + '</div>';
+  if (m && !f.waitSay && (f.wait || f.more > 0 || (f.rows || []).length))
+    h += '<div class="st-b"><a href="' + BASE + f.id + '" data-id="' + f.id + '" target="_blank" rel="noopener">' + esc(nm) + ' 열기 ›</a></div>';
+  return h;
+}
 function jvFoundHtml(F, weak){
   var h = '<div class="j-find"><b>' + (weak ? '🔎 혹시 이것도 — 앱 자료에서 찾은 것' : '🔎 앱에서 찾아 온 것') + '</b>';
-  F.forEach(function(f){
-    var m = MENU[f.id], nm = m ? m.n : f.n;
-    h += '<div class="jf-src">' + esc(f.n) + (m && m.n !== f.n ? ' · ' + esc(m.n) : '') + '</div>';
-    if (f.waitSay){
-      h += '<div class="jw-s jw-wait">' + esc(f.waitSay) + '</div>';
-    } else if (f.wait){
-      h += '<div class="jw-s jw-wait">「' + esc(f.wait) + '」 을 아직 안 읽어서 찾을 수 없습니다 — 한 번 열면 찾습니다. (없다고 하지 않습니다)</div>';
-    } else if (!(f.rows || []).length){
-      h += '<div class="jw-s">' + esc(f.none || '찾지 못했습니다.') + '</div>';
+  var withRows = F.filter(function(f){ return (f.rows || []).length; }), notes = F.filter(function(f){ return !(f.rows || []).length; });
+  /* ⭐ 맨 앞 갈래의 맨 앞 줄 — 크게 */
+  if (withRows.length){
+    var f0 = withRows[0];
+    h += jvRowHtml(f0.rows[0], f0, true);
+    var restN = withRows.reduce(function(n, f, i){ return n + f.rows.length - (i ? 0 : 1); }, 0);
+    if (!restN) h += jvSrcTail(f0);
+    else {
+      h += '<details class="jf-more"><summary>더 찾은 것 ' + restN + '개 ▾</summary>';
+      withRows.forEach(function(f, i){
+        var rows = i ? f.rows : f.rows.slice(1), m = MENU[f.id];
+        if (rows.length) h += '<div class="jf-src">' + esc(f.n) + (m && m.n !== f.n ? ' · ' + esc(m.n) : '') + '</div>';
+        rows.forEach(function(r){ h += jvRowHtml(r, f, false); });
+        h += jvSrcTail(f);
+      });
+      h += '</details>';
     }
-    (f.rows || []).forEach(function(r){
-      h += '<div class="jw-row"><div class="jw-n">' + esc(r.t) + '</div>';
-      (r.s || []).forEach(function(t){ h += '<div class="jw-s">' + esc(t) + '</div>'; });
-      if (r.cli) h += '<div class="st-b"><button type="button" class="st-here" data-cli="' + esc(r.cli) + '">🪪 이 분 창 열기</button></div>';
-      h += '</div>';
-    });
-    if (f.more > 0) h += '<div class="jw-s">외 ' + f.more + (f.unit || '건') + ' — 「' + esc(nm) + '」 에서 다 보실 수 있습니다.</div>';
-    if (f.note && (f.rows || []).length) h += '<div class="jf-note">' + esc(f.note) + '</div>';
-    if (m && !f.waitSay && (f.wait || f.more > 0 || (f.rows || []).length))
-      h += '<div class="st-b"><a href="' + BASE + f.id + '" data-id="' + f.id + '" target="_blank" rel="noopener">' + esc(nm) + ' 열기 ›</a></div>';
+  }
+  notes.forEach(function(f){
+    var m = MENU[f.id];
+    h += '<div class="jf-src">' + esc(f.n) + (m && m.n !== f.n ? ' · ' + esc(m.n) : '') + '</div>';
+    if (f.waitSay) h += '<div class="jw-s jw-wait">' + esc(f.waitSay) + '</div>';
+    else if (f.wait) h += '<div class="jw-s jw-wait">「' + esc(f.wait) + '」 을 아직 안 읽어서 찾을 수 없습니다 — 한 번 열면 찾습니다. (없다고 하지 않습니다)</div>';
+    else h += '<div class="jw-s">' + esc(f.none || '찾지 못했습니다.') + '</div>';
+    h += jvSrcTail(f);
   });
   return h + '</div>';
 }
+/* 바로 쓰는 단추 — 복사 · 읽어 주기 · 그 자리 열기 */
+document.addEventListener('click', function(e){
+  var b = e.target.closest && e.target.closest('.jr-copy, .jr-say, .jr-open');
+  if (!b) return;
+  var r = JV_ROWS[b.getAttribute('data-r')];
+  if (!r) return;
+  e.preventDefault();
+  var P = inCrm ? window.parent : null;
+  if (b.classList.contains('jr-copy')){
+    var t = r.say || jvRowText(r);
+    /* 복사는 본체의 copyText 하나로 — 막힌 기기에서 거꾸로 받아 쓰는 길까지 그쪽이 압니다 (5번) */
+    try { if (P && typeof P.copyText === 'function') P.copyText(t); else if (navigator.clipboard) navigator.clipboard.writeText(t); } catch(err){}
+    b.textContent = '✅ 복사했습니다';
+    setTimeout(function(){ b.textContent = '📋 ' + (r.say ? '말 복사' : '복사'); }, 1800);
+  } else if (b.classList.contains('jr-say')){
+    speak(r.say);
+  } else if (b.classList.contains('jr-open') && r.open){
+    if (!P || typeof P[r.open.fn] !== 'function'){ return; }
+    try { P[r.open.fn](r.open.to); if (typeof P.jvDock === 'function') P.jvDock(); } catch(err){}
+  }
+});
 /* 고객 한 분의 창 — 자비스는 아래 띠로 남고 창은 본체가 엽니다 */
 function jvHereCli(id){
   if (!id || !inCrm) return;
@@ -5697,7 +5830,8 @@ function jvHereCli(id){
    ★ 「했습니다」 는 <b>저장이 끝난 뒤에만</b> 말합니다. 못 했으면 못 했다고 (1번).    */
 var JV_OPEN = /열어|열기|띄워|켜\s*줘|켜\s*봐|들어가\s*줘|가\s*줘/;
 var JV_QWORD = /[?？]\s*$|뭘|뭐|무엇|어떻게|어디|누가|누구|언제|왜/;
-var JV_ACT_SKIP = ['어디서', '화법'];             /* 길 · 화법서 찾기가 이미 맡은 일 */
+/* 피드백은 쓰지 않습니다 (사장님 말씀 2026-10-31 「피드백은 필요없고」 · 판 X272) — 음성 비서에는 그대로 둡니다 */
+var JV_ACT_SKIP = ['어디서', '화법', '피드백'];             /* 길 · 화법서 찾기가 이미 맡은 일 */
 var JV_ACT_ASK = ['자료', '발표자료'];            /* 쓰지는 않지만 AI 를 부르는 일 — 누르셔야 */
 var JV_ACTS = {}, JV_ACT_N = 0;
 /* 시킬 수 있는 일이 몇 가지인가 — 사전에서 길 · 화법(이미 맡은 것)만 빼고 센다 */

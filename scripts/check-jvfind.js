@@ -276,7 +276,8 @@ const SEED = () => {
   const FP = await f.evaluate(() => {
     const none = ['거절한 고객 다시 연락하고 싶어', '화면이 이상해', '영업이 안 돼', 'DB 배정 받은 거 어디서 봐']
       .map(q => ({ q, n: jvFind(q).filter(x => (x.rows || []).length).length })).filter(x => x.n);
-    const weak = ['보험료 비교해달래', '교통사고 났대', '질병코드 찾기']
+    /* 「교통사고 슬라이드」 — 약하게 맞은 장에 「원하는 답」 표가 점수를 얹어도 굳으면 안 됩니다 (판 X272) */
+    const weak = ['보험료 비교해달래', '교통사고 났대', '질병코드 찾기', '교통사고 슬라이드']
       .map(q => ({ q, n: jvFind(q).filter(x => x.strong && (x.rows || []).length).length })).filter(x => x.n);
     return none.concat(weak);
   });
@@ -485,9 +486,72 @@ const SEED = () => {
     return { n, voice: ['홍길동 통화했어', '홍길동 전화 걸어줘', '홍길동 다음 할 일 내일 증권 전달'].map(t => (P.vaActHit(t, P.vaNorm(t)) || {a:{}}).a.k) };
   });
   is(NA.n === 0, '시키신 일에는 AI 를 안 부른다 — 앱이 알아들었다');
-  const HL = await f.evaluate(() => ({ h: jvHello().answer, n: jvActCount(), all: window.parent.VA_ACT.length }));
-  is(HL.n > 0 && HL.n === HL.all - 2 && HL.h.indexOf('일 ' + HL.n + '가지') >= 0, '첫 인사가 시킬 수 있는 일 수를 <b>사전을 세어</b> 말한다 — ' + HL.n + '가지');
+  const HL = await f.evaluate(() => ({ h: jvHello().answer, n: jvActCount(),
+    want: window.parent.VA_ACT.filter(a => JV_ACT_SKIP.indexOf(a.k) < 0).length, fb: !!jvAct('피드백 남겨줘') }));
+  is(HL.n > 0 && HL.n === HL.want && HL.h.indexOf('일 ' + HL.n + '가지') >= 0, '첫 인사가 시킬 수 있는 일 수를 <b>사전을 세어</b> 말한다 — ' + HL.n + '가지');
+  is(!HL.fb, '「피드백」 은 자비스가 안 한다 (판 X272 · 사장님 말씀 「피드백은 필요없고」) — 음성 비서에는 그대로');
   is(NA.voice.join(',') === '연락기록,전화걸기,고객할일', '🎙️ 음성 비서도 같은 사전으로 새 일을 알아듣는다 — ' + NA.voice.join(','));
+
+  sec('[12] ⭐ <b>가장 쉽게 · 모든 담긴 내용</b> (판 X272 · 사장님 말씀 「여기 안에 있는 모든 담긴 내용을 찾고 바로 사용할수 있도록 … 가장 쉬워야만해」)');
+  /* 견줄 수는 <b>파일에서 직접</b> 셉니다 */
+  const AX = {};
+  ['data1','data2','lesson','analysis','health','cases','cases2','disease1','disease2','source'].forEach(n =>
+    new Function('window', fs.readFileSync(path.join(ROOT, 'app/보험아카데미/' + n + '.js'), 'utf8'))(AX));
+  let wantTalk = 0;
+  AX.CURRICULUM.forEach(c => (c.scripts || []).forEach(x => { if (x.q && x.a) wantTalk++; }));
+  AX.LESSONS.forEach(l => { if (l.talk && l.talk.q && l.talk.a) wantTalk++; });
+  if (AX.HEALTH && AX.HEALTH.talk && AX.HEALTH.talk.q) wantTalk++;
+  AX.CASES.forEach(c => (c.script || []).forEach(x => { if (x.q && x.a) wantTalk++; }));
+  AX.DISEASE.forEach(d => { if (d.talk && d.talk.q && d.talk.a) wantTalk++; (d.qna || []).forEach(x => { if (x.q && x.a) wantTalk++; }); });
+  const wantLesson = AX.CURRICULUM.length + AX.LESSONS.length + AX.ANALYSIS.length;
+  const CNT = await f.evaluate(() => ({ talk: jvTalkRows().length, lesson: jvLessonRows().length, slide: (JV_EXT.A.SOURCE || []).length }));
+  is(CNT.talk === wantTalk && CNT.lesson === wantLesson && CNT.slide === AX.SOURCE.length,
+     '아카데미를 <b>빠짐없이</b> 찾는다 — 화법 ' + CNT.talk + '/' + wantTalk + ' (커리큘럼·1교시·헬스케어·케이스·질병백과) · 강의 ' + CNT.lesson + '/' + wantLesson + ' · 원본 슬라이드 ' + CNT.slide + '/' + AX.SOURCE.length);
+  const silbiA = strip(AX.CURRICULUM.map(c => (c.scripts || []).filter(x => /실비 있어서 괜찮아요/.test(x.q))[0]).filter(Boolean)[0].a);
+  /* 바로 쓰는 단추를 누르면 무엇을 부르는지 본다 — 본체 함수를 잠깐 갈아 끼웁니다 */
+  await p.evaluate(() => { window.__cp = []; window.__op = []; window.__keepCP = window.copyText;
+    window.copyText = function(t){ window.__cp.push(t); };
+    window.__keepFT = window.fpTalkOpen; window.fpTalkOpen = function(to){ window.__op.push('fp:' + to); };
+    window.__keepDZ = window.dzGuideOpen; window.dzGuideOpen = function(to){ window.__op.push('dz:' + to); }; });
+  const best = (q) => f.evaluate(async (q) => { jLog.innerHTML = ''; window.__spk = []; const k = window.speak; window.speak = function(t){ window.__spk.push(t); };
+    ask(q); await new Promise(r => setTimeout(r, 300)); window.speak = k;
+    const c = [].slice.call(document.querySelectorAll('#jLog .msg.j')).pop();
+    const b = c && c.querySelector('.jf-best'), more = c && c.querySelector('details.jf-more');
+    const xs = c && c.querySelector('details.j-extra');
+    return { best: b ? b.textContent : '', nBest: c ? c.querySelectorAll('.jf-best').length : 0,
+             moreClosed: more ? !more.open : null, img: b && b.querySelector('.jf-img img') ? b.querySelector('.jf-img img').getAttribute('src') : '',
+             nextOut: c ? [].slice.call(c.querySelectorAll('.j-next, .j-more')).filter(e => !e.closest('details')).length : 0,
+             xsClosed: xs ? !xs.open : null }; }, q);
+  const press = (sel) => f.evaluate(async (sel) => { const b = document.querySelector('#jLog .jf-best ' + sel); if (!b) return false;
+    window.__spk = []; const k = window.speak; window.speak = function(t){ window.__spk.push(t); };
+    b.click(); await new Promise(r => setTimeout(r, 200)); window.speak = k; return window.__spk.slice(); }, sel);
+  const S1 = await best('고객이 실비 있어서 괜찮대');
+  is(S1.nBest === 1 && /실비 있어서 괜찮아요/.test(S1.best) && S1.best.indexOf(silbiA) >= 0,
+     '「고객이 실비 있어서 괜찮대」 → <b>받는 말 하나가 크게</b> — 아카데미 커리큘럼의 글 그대로');
+  is(S1.nextOut === 0, '찾은 것이 굳으면 길의 곁말(그다음 · 이어서 물을 것)은 <b>「도움말 더 보기」 에 접힌다</b>');
+  await press('.jr-copy');
+  const CP = await p.evaluate(() => window.__cp.slice());
+  is(CP.length === 1 && CP[0] === silbiA, '📋 말 복사 → <b>받는 말만</b> 복사(「이렇게 — 」 꼬리표 없이 · 본체 copyText 로)');
+  const SP = await press('.jr-say');
+  is(SP && SP.length === 1 && SP[0] === silbiA, '🔊 읽어 주기 → 그 말을 읽는다');
+  const S2 = await best('암 화법');
+  await press('.jr-open'); await p.waitForTimeout(300);
+  const S3 = await best('뇌졸중 화법');
+  await press('.jr-open'); await p.waitForTimeout(300);
+  const OPN = await p.evaluate(() => ({ op: window.__op.slice(), dock: document.body.classList.contains('jv-dock') }));
+  is(OPN.op[0] === 'fp:c11' && /^dz:/.test(OPN.op[1] || '') && OPN.dock,
+     '「그 자리 열기」 → 화법서 <b>그 장</b>(c11 · 암 화법) · 질병 가이드 <b>그 병</b>으로 바로 · 자비스는 띠로 — ' + OPN.op.join(' · '));
+  await p.evaluate(() => { window.copyText = window.__keepCP; window.fpTalkOpen = window.__keepFT; window.dzGuideOpen = window.__keepDZ; jvDockEnd(); go('apexmap'); });
+  await p.waitForTimeout(400);
+  const S4 = await best('암 치료 3가지 방법 슬라이드');
+  const IMG = await f.evaluate(async () => { const im = document.querySelector('#jLog .jf-best .jf-img img'); if (!im) return 0;
+    if (!im.complete) await new Promise(r => { im.onload = r; im.onerror = r; setTimeout(r, 3000); }); return im.naturalWidth; });
+  is(/암을 치료하는 3가지 방법/.test(S4.best) && /an_001\.jpg$/.test(S4.img) && IMG > 0, '「암 치료 3가지 방법 슬라이드」 → 원본 슬라이드 <b>그림이 그대로</b> 선다 (' + IMG + 'px)');
+  is(S4.moreClosed === true, '나머지는 「더 찾은 것 N개」 에 <b>접혀</b> 있다');
+  const S5 = await best('필요액 계산');
+  is(/필요액 계산 공식/.test(S5.best), '「필요액 계산」 → 아카데미 분석편 강의');
+  const S6 = await best('협심증이 뭐예요');
+  is(/아카데미 (용어|질병백과)|용어/.test(S6.best.slice(0, 40)), '「…뭐예요」 면 <b>뜻</b>이 맨 위 — 「' + S6.best.slice(0, 30) + '…」');
 
   sec('[8] 🧼 꺾쇠 0 · 콘솔 오류 0 · 바깥 주소 0');
   const tags = [C1, K1, T1, Z1, Z4, Z7].filter(x => /&lt;\/?[a-z]/i.test(x.html)).length;
