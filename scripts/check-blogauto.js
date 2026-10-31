@@ -1313,6 +1313,73 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
      '  갈래를 주면서 <b>줄(row)을 빠뜨린 자리가 없다</b> — 빠뜨리면 빠진 카드 찾기가 조용히 꺼진다'
      + (bare.length ? ' — ' + bare[0].trim() : ''));
 
+  console.log('\n[22] 아침에 <b>한 줄 담기</b> 가 뜨는가 · 그 길로 이름이 안 새는가 (판 X275)');
+  const AS = fs.readFileSync(path.join(ROOT, 'app/alm-slots.js'), 'utf8');
+  const slots = require(path.join(ROOT, 'app/alm-slots.js'));
+  const blog = slots.almSlotOf('blog');
+  is(!!blog, '  알람 표에 <b>블로그 칸</b>이 있다');
+  if (blog) {
+    is(blog.h === 8 && blog.on === true, '  아침 ' + blog.h + '시에 <b>켜진 채로</b> 선다 — 사장님이 시키신 것');
+    is(blog.cnt === false,
+       '  <b>숫자를 안 적는다</b> — 글감은 이 브라우저에만 있어 서버는 담으셨는지 모른다 (1번)');
+    is(!/[가-힣]{2,4}(님|씨)/.test(blog.body) && !/\d/.test(blog.body),
+       '  글에 <b>이름도 숫자도</b> 없다 — 잠긴 폰 화면에 뜬다 (3번)');
+    const hours = slots.ALM_SLOTS.map(x => x.h);
+    is(new Set(hours).size === hours.length, '  시각이 <b>서로 안 겹친다</b> (' + hours.join('·') + '시)');
+    is(slots.almSlotAt(8) && slots.almSlotAt(8).k === 'blog', '  8시에 물으면 이 칸이 나온다');
+  }
+  is(!/오늘 블로그에 쓸 한 줄/.test(SRC) && !/오늘 블로그에 쓸 한 줄/.test(fs.readFileSync(path.join(ROOT,'app/index.html'),'utf8')),
+     '  그 글을 <b>딴 데 또 적지 않았다</b> — 표 한 곳뿐이다 (5번)');
+
+  const morn = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.comply = null; await comply();
+    S.perweek = 7; plan();
+    const i = todayAt();
+    /* 적어 넣는 갈래로 세운다 — 뉴스 갈래는 받아 오는 것이라 칸이 안 선다 */
+    S.rows[i].kind = 'ask'; S.rows[i].seed = null; S.rows[i].out = ''; paint();
+    out.box = !!document.getElementById('mine_today_ask');
+    out.said = /오늘 글감이 없습니다/.test(document.getElementById('today').innerHTML);
+    /* 칸이 없으면 <b>깨지지 말고</b> 없다고 말한다 — 터진 점검은 빨간불이 아니라
+       그냥 안 보이는 것이다 (8번) */
+    if (!out.box) { out.stopped = '한 줄 칸(mine_today_ask)이 안 서서 나머지를 못 쟀습니다'; return out; }
+    /* ① 한 줄 담으면 <b>그 자리에서</b> 오늘 줄에 붙는다 */
+    document.getElementById('mine_today_ask').value = '암 진단비는 얼마가 적당한가요?';
+    mineAdd('ask', 'mine_today_ask');
+    const r = S.rows[todayAt()];
+    out.stuck = !!r.seed && r.seed.title === '암 진단비는 얼마가 적당한가요?';
+    out.pool = mine('ask').length;
+    out.flipped = /오늘 글감이 <b>있습니다<\/b>/.test(document.getElementById('today').innerHTML);
+    out.boxGone = !document.getElementById('mine_today_ask');
+    /* ② 뉴스 갈래에는 안 세운다 — 없는 칸을 띄우지 않는다 (8번) */
+    S.rows[i].kind = 'econ'; S.rows[i].seed = null; S.rows[i].out = ''; paint();
+    out.newsNoBox = !document.getElementById('mine_today_econ');
+    /* ③ 이름은 <b>조사가 붙어도</b> 막는다 — 글감은 AI 에게 간다 (3번) */
+    S.rows[i].kind = 'ask'; S.rows[i].seed = null; paint();
+    const n0 = mine('ask').length;
+    const tryAdd = t => { const e = document.getElementById('mine_today_ask');
+      if (!e) return false; e.value = t; mineAdd('ask', 'mine_today_ask'); return true; };
+    tryAdd('임꺽정님이 물으신 진단비 질문입니다');
+    out.blockedParticle = mine('ask').length === n0;
+    S.rows[todayAt()].seed = null; paint();
+    tryAdd('성춘향씨가 물으신 보장 질문입니다');
+    out.blockedSsi = mine('ask').length === n0;
+    /* ④ 헛것은 안 막는다 */
+    S.rows[todayAt()].seed = null; paint();
+    tryAdd('오늘 날씨가 추워 손님이 적었습니다');
+    out.notFalse = mine('ask').length === n0 + 1;
+    return out;
+  });
+  is(morn.said && morn.box, '  글감이 없으면 「오늘」 칸에 <b>한 줄 적는 칸</b>이 바로 선다'
+     + (morn.stopped ? ' — ' + morn.stopped : ''));
+  if (morn.stopped) is(false, '  그래서 [22] 의 나머지를 못 봤습니다 — 위를 먼저 고치십시오');
+  is(morn.stuck && morn.pool === 1, '  담으면 <b>그 자리에서</b> 오늘 줄에 붙는다 — 한 번 더 안 누르게');
+  is(morn.flipped && morn.boxGone, '  화면이 「있습니다」 로 바뀌고 칸은 <b>사라진다</b>');
+  is(morn.newsNoBox, '  <b>뉴스 갈래에는 안 세운다</b> — 받아 오는 것이지 적는 것이 아니다 (8번)');
+  is(morn.blockedParticle, '  <b>「임꺽정님이」</b> 처럼 조사가 붙어도 막는다 — 글감은 AI 에게 간다 (3번)');
+  is(morn.blockedSsi, '  <b>「성춘향씨가」</b> 도 막는다');
+  is(morn.notFalse, '  <b>「날씨가」 「손님이」 는 안 막는다</b> — 헛것은 안 잡는 것보다 나쁘다 (8번)');
+
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();
