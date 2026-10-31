@@ -5501,10 +5501,14 @@ function jvExtLoad(){
       try { (new Function('window', t))(JV_EXT.A); } catch(e){ bad.push(f); }
     }, function(e){ bad.push(f + '(' + e.message + ')'); });
   }));
+  /* 🎞 상담자료 덱 색인 — 덱 넷(3MB) 대신 뽑아 둔 글(0.3MB)만 (판 X273 · scripts/deck-index.js) */
+  var deck = jvGet('apex-deck-index.js').then(function(t){
+    try { (new Function('window', t))(JV_EXT.A); } catch(e){ bad.push('덱 색인'); }
+  }, function(e){ bad.push('덱 색인(' + e.message + ')'); });
   var fpt = jvGet(JV_FPT_URL).then(function(t){
     try { JV_EXT.fp = jvFptParse(t); } catch(e){ bad.push('실전화법서'); }
   }, function(e){ bad.push('실전화법서(' + e.message + ')'); });
-  Promise.all([acad, fpt]).then(function(){
+  Promise.all([acad, fpt, deck]).then(function(){
     JV_EXT.why = bad.join(' · ');
     JV_EXT.st = (JV_EXT.fp || JV_EXT.A.TERMS) ? 'ok' : 'fail';
     /* 기다리시던 물음이 있으면 <b>더 찾은 것만</b> 이어서 띄운다 */
@@ -5548,6 +5552,62 @@ function jvLessonRows(){
   (A.LESSONS || []).forEach(function(l){ out.push({t:l.title, sub:l.sub || '', core:l.one || l.hook || '', g:'1교시 ' + l.n}); });
   (A.ANALYSIS || []).forEach(function(a){ out.push({t:a.title, sub:a.sub || '', core:a.core || '', mins:a.mins, g:'분석편 ' + a.n}); });
   return out;
+}
+/* ══ 🎞 <b>상담자료 덱 — 그 장을 찾고, 그 장을 바로 연다</b> (판 X273) ══════════════
+   사장님 말씀 2026-10-31 「여기 안에 있는 모든 담긴 내용을 찾고 바로 사용할수 있도록」 →
+   판 X272 에서 남은 덱(⛔[아직:X272-덱]) · 「응응」.
+   ★ 글은 덱에서 <b>뽑아 둔 색인</b>(app/apex-deck-index.js)에서 — 손으로 안 적습니다.
+     덱 표(파일 · 화면 · 가는 법)도 색인에 실려 옵니다(scripts/deck-index.js 한 곳 · 5번).
+   ★ 「이 장 바로 열기」 — 덱마다 가는 법이 다릅니다.
+       goToId  보장분석 상담자료 — 앱 화면을 열고 그 장으로(자비스는 띠로)
+       scroll  미끼상품 & 접촉전략 — 앱 화면을 열고 그 마디로 굴림
+       apx     보험의 기준 — 앱이 원래 새 창으로 엽니다. 그 장(data-title)이 든 틀로
+       track   통합상담 — 새 창으로 열고, 그 장이 든 트랙으로 바꾼 뒤 그 장으로
+       file    시네마틱 스토리 — 한 파일이 한 장, 그 파일을 새 창으로
+     덱이 다 뜰 때까지 <b>잠깐씩 기다려</b> 봅니다(최대 10초 · 서버는 안 부릅니다). */
+function jvDecks(){ return (JV_EXT.st === 'ok' && JV_EXT.A.APEX_DECKS) || []; }
+function jvDeckRows(){
+  var out = [];
+  jvDecks().forEach(function(d){ (d.slides || []).forEach(function(sl){ out.push({t:sl.t, x:sl.x, id:sl.id, n:sl.n, d:d}); }); });
+  return out;
+}
+function jvDeckJump(w, d, id){
+  if (!w || !w.document || w.document.readyState === 'loading') return false;
+  if (d.jump === 'goToId'){ if (typeof w.goToId !== 'function' || !w.document.getElementById(id)) return false; w.goToId(id); }
+  else if (d.jump === 'scroll'){ var el = w.document.getElementById(id); if (!el) return false; el.scrollIntoView({block:'start'}); }
+  else if (d.jump === 'file'){ /* 한 파일이 한 장 — 연 것이 곧 그 장입니다 */ }
+  else if (d.jump === 'track'){
+    /* 통합상담 — 그 장이 든 트랙(trackW · trackD …)으로 바꾸고 굴립니다 */
+    var el2 = w.document.getElementById(id), tr = el2 && el2.closest('[id^="track"]');
+    if (!el2 || typeof w.__go !== 'function') return false;
+    if (tr) w.__go(tr.id.slice(5).toLowerCase());
+    el2.scrollIntoView({block:'start'});
+  }
+  else if (d.jump === 'apx'){
+    if (typeof w.APXjump !== 'function') return false;
+    var fs = [].slice.call(w.document.querySelectorAll('.frame')), i;
+    for (i = 0; i < fs.length; i++){ var sl = fs[i].querySelector('[data-title]'); if (sl && sl.getAttribute('data-title') === id) break; }
+    if (i >= fs.length) return false;
+    w.APXjump(i);
+  } else return false;
+  try { w.__jvJumped = id; } catch(e){}        /* 자가 「정말 그 장으로 갔나」 를 봅니다 */
+  return true;
+}
+function jvDeckOpen(k, id){
+  var d = jvDecks().filter(function(x){ return x.k === k; })[0], P = kbApp(), w = null, f = null, tries = 0;
+  if (!d) return;
+  if (d.win || !inCrm){
+    var sl0 = (d.slides || []).filter(function(x){ return x.id === id; })[0];
+    w = window.open((sl0 && sl0.f) || d.file, '_blank');
+    if (!w) return;
+  } else {
+    try { P.jvDock(d.screen); f = P.document.getElementById(d.frame); } catch(e){ return; }
+  }
+  (function wait(){
+    tries++;
+    try { if (jvDeckJump(w || (f && f.contentWindow), d, id)) return; } catch(e){}
+    if (tries < 40) setTimeout(wait, 250);
+  })();
 }
 var JV_WON = function(P, v){ try { return P.APEX_WON.txt(v); } catch(e){ return '—'; } };   /* COSTS 는 원 — APEX_WON.txt 가 받는 단위 */
 var JV_TAXW = /비과세|과세|세금|절세|상속|증여|세액/;
@@ -5636,7 +5696,15 @@ JV_FIND.push(
   jvKnowSrc('aslide', 'bohum', '원본 자료 슬라이드', function(){ return jvA('SOURCE') || []; },
     {t:function(x){ return x.title; }, k:function(x){ return x.dn + ' ' + (x.sec || ''); }, b:function(x){ return (x.cap || []).join(' ') + ' ' + (x.kw || ''); }},
     function(x){ return {t:'🖼 ' + jvPlain(x.title), s:['자료 — ' + x.dn + (x.s ? ' · ' + x.s + '번째 장' : '')],
-      img:(x.im || [])[0] ? '보험아카데미/img/' + x.im[0] : ''}; }, '', 2, 1)
+      img:(x.im || [])[0] ? '보험아카데미/img/' + x.im[0] : ''}; }, '', 2, 1),
+  /* 🎞 상담자료 덱의 장 (판 X273) */
+  jvKnowSrc('deck', '', '상담자료 덱', jvDeckRows,
+    {t:function(x){ return x.t; }, k:function(x){ return x.d.n; }, b:function(x){ return x.x; }},
+    function(x){
+      return {t:'🎞 ' + x.t, s:['덱 — ' + x.d.n + ' · ' + x.n + '번째 장', '내용 — ' + (x.x.length > 260 ? x.x.slice(0, 260) + '…' : x.x)]
+        .concat(JV_TAXW.test(x.t + x.x) ? ['⚠ 세금은 요건 충족 시의 이야기입니다 — 판단은 세무 전문가에게 맡기십시오.'] : []),
+        open:{local:1, fn:'jvDeckOpen', to:[x.d.k, x.id], label:'🎞 이 장 바로 열기'}};
+    }, '', 2, 1)
 );
 
 /* 보험 자료가 몇 가지인가 — 갈래마다 표를 센다 (앱 밖이면 0 · 모르면 안 말한다) */
@@ -5658,7 +5726,8 @@ var JV_KWANT = [
   {re:/설계|얼마\s*넣|가입\s*금액|예산/, k:['adesign'], add:6},
   /* 판 X272 — 「뭐예요」 면 뜻부터 · 「그림 · 슬라이드」 면 원본 장 · 「강의」 면 수업 · 「…라고 하면」 이면 받는 말 */
   {re:/뭐야|뭐예요|뭐에요|뭔가요|뜻|무슨\s*말|이란\s*$|란\s*$/, k:['term', 'aterm', 'adz', 'dz', 'cov'], add:4},
-  {re:/슬라이드|그림|사진|보여\s*줄|자료\s*화면/, k:['aslide'], add:8},
+  {re:/슬라이드|그림|사진|보여\s*줄|자료\s*화면/, k:['aslide', 'deck'], add:8},
+  {re:/상담\s*자료|덱|발표|장\s*열|PPT|ppt/, k:['deck'], add:8},
   {re:/강의|수업|교육|배우|공부/, k:['alesson'], add:6},
   {re:/라고\s*(?:하면|해|하는|할\s*때)|고객이/, k:['atalk', 'obj', 'rej', 'fpobj'], add:4}
 ];
@@ -5795,6 +5864,8 @@ document.addEventListener('click', function(e){
   } else if (b.classList.contains('jr-say')){
     speak(r.say);
   } else if (b.classList.contains('jr-open') && r.open){
+    /* 덱은 자비스가 직접 엽니다(jvDeckOpen) — 화면마다 그 장으로 가는 법이 달라서 */
+    if (r.open.local){ try { window[r.open.fn].apply(null, r.open.to); } catch(err){} return; }
     if (!P || typeof P[r.open.fn] !== 'function'){ return; }
     try { P[r.open.fn](r.open.to); if (typeof P.jvDock === 'function') P.jvDock(); } catch(err){}
   }

@@ -553,6 +553,59 @@ const SEED = () => {
   const S6 = await best('협심증이 뭐예요');
   is(/아카데미 (용어|질병백과)|용어/.test(S6.best.slice(0, 40)), '「…뭐예요」 면 <b>뜻</b>이 맨 위 — 「' + S6.best.slice(0, 30) + '…」');
 
+  /* ★ 열린 덱이 <b>제 글꼴</b>을 받는 것은 그 덱의 몫이라 [8] 의 「바깥 주소 0」 에서 뺍니다 */
+  const OUT1 = outside.length;
+  sec('[13] 🎞 <b>상담자료 덱</b> — 그 장을 찾고 그 장을 바로 연다 (판 X273 · 사장님 말씀 「응응」 — 판 X272 에서 남은 덱)');
+  /* 견줄 수는 <b>색인을 뽑는 자</b>에게 직접 묻습니다 */
+  const DK = require(path.join(ROOT, 'scripts/deck-index.js')).build();
+  const DJ = await f.evaluate(() => jvDecks().map(d => ({ k: d.k, n: d.slides.length, t0: d.slides[0].t })));
+  is(DJ.length === DK.length && DK.every((d, i) => DJ[i] && DJ[i].n === d.slides.length && DJ[i].t0 === d.slides[0].t),
+     '덱 다섯의 장을 <b>빠짐없이</b> 찾는다 — ' + DK.map(d => d.n + ' ' + d.slides.length + '장').join(' · '));
+  /* ★ 「말 한마디가 4000만원」 만 치면 같은 이름의 <b>시네마틱 스토리</b>(demo_case4000)도 맞습니다 — 둘 다 맞는 답이라
+     여기서는 장 이름을 끝까지 칩니다 */
+  const D1 = await best('말 한마디가 4,000만 원을 만듭니다');
+  is(/말 한마디가 4,000만 원 을 만듭니다/.test(D1.best), '「말 한마디가 4,000만 원을 만듭니다」 → 보장분석 상담자료의 그 장이 맨 위');
+  await f.evaluate(() => document.querySelector('#jLog .jf-best .jr-open').click());
+  await p.waitForTimeout(3500);
+  const J1 = await p.evaluate(() => { const fr = document.getElementById('sangdamFrame'), w = fr && fr.contentWindow;
+    const a = w && w.document.querySelector('.slide.active'); return { act: a ? a.id : '', mark: w ? w.__jvJumped : '', tab: currentTab(), dock: document.body.classList.contains('jv-dock') }; });
+  is(J1.act === 's5' && J1.mark === 's5' && J1.tab === 'sangdam' && J1.dock, '「이 장 바로 열기」 → 보장분석 상담자료가 열리고 <b>그 장(s5)이 펼쳐진다</b> · 자비스는 띠로 — ' + J1.act);
+  await p.evaluate(() => { jvDockEnd(); go('apexmap'); }); await p.waitForTimeout(500);
+  await best('좋은 미끼의 5가지 조건');
+  await f.evaluate(() => document.querySelector('#jLog .jf-best .jr-open').click());
+  await p.waitForTimeout(3500);
+  const J2 = await p.evaluate(() => { const fr = document.getElementById('mkTalkFrame'), w = fr && fr.contentWindow;
+    const el = w && w.document.getElementById('c4'); return { mark: w ? w.__jvJumped : '', top: el ? Math.round(el.getBoundingClientRect().top) : 9999, tab: currentTab() }; });
+  is(J2.mark === 'c4' && J2.top < 200 && J2.top > -50 && J2.tab === 'mikki_talk', '「좋은 미끼의 5가지 조건」 → 미끼상품 화면이 그 마디(c4)까지 굴러간다 — 위에서 ' + J2.top + 'px');
+  await p.evaluate(() => { jvDockEnd(); go('apexmap'); }); await p.waitForTimeout(500);
+  /* 새 창으로 여는 덱 — 앱이 원래 그렇게 엽니다 */
+  const pop = async (q) => {
+    await best(q);
+    const [w] = await Promise.all([ctx.waitForEvent('page'), f.evaluate(() => document.querySelector('#jLog .jf-best .jr-open').click())]);
+    await w.waitForLoadState('load'); await w.waitForTimeout(3000);
+    const r = await w.evaluate(() => ({ url: decodeURIComponent(location.pathname), mark: window.__jvJumped || '',
+      off: (document.getElementById('gongmu') || {className: ''}).className }));
+    await w.close(); return r;
+  };
+  const W1 = await pop('보험의 기준 선언');
+  is(/보험의기준\.html$/.test(W1.url) && W1.mark === '보험의 기준 선언', '「보험의 기준 선언」 → 보험의 기준 덱이 새 창으로 열리고 <b>그 장으로</b> 간다');
+  const W2 = await pop('공무원 연금 발표');
+  is(/통합상담_APEX\.html$/.test(W2.url) && W2.mark === 'gongmu' && !/\boff\b/.test(W2.off), '「공무원 연금 발표」 → 통합상담 덱이 새 창으로 열리고 그 장(gongmu)이 보인다' +
+     (W2.mark === 'gongmu' ? '' : ' ← ' + JSON.stringify(W2)));
+  /* 시네마틱 스토리 — 한 파일이 한 장 */
+  await best('실비 월세 이야기');
+  const [w4] = await Promise.all([ctx.waitForEvent('page'), f.evaluate(() => document.querySelector('#jLog .jf-best .jr-open').click())]);
+  await w4.waitForLoadState('load'); const U4 = decodeURIComponent(new URL(w4.url()).pathname); await w4.close();
+  is(/demo_silbi\.html$/.test(U4), '「실비 월세 이야기」 → 상담자료 속 <b>시네마틱 스토리</b>(실비 · 월세)가 열린다');
+  /* 트랙 안의 장 — 달러 트랙(trackD)의 첫 장으로 가면 그 트랙이 펴지고 연금 트랙은 접혀야 합니다 */
+  const DID = 'c1';
+  const [w3] = await Promise.all([ctx.waitForEvent('page'), f.evaluate((id) => jvDeckOpen('tonghap', id), DID)]);
+  await w3.waitForLoadState('load'); await w3.waitForTimeout(3000);
+  const W3 = await w3.evaluate(() => ({ mark: window.__jvJumped || '', d: document.getElementById('trackD').className, w: document.getElementById('trackW').className }));
+  await w3.close();
+  is(W3.mark === DID && !/\boff\b/.test(W3.d) && /\boff\b/.test(W3.w), '트랙 안의 장(' + DID + ') → <b>달러 트랙으로 바꾸고</b> 그 장으로 (연금 트랙은 접힘)');
+  outside.splice(OUT1);
+
   sec('[8] 🧼 꺾쇠 0 · 콘솔 오류 0 · 바깥 주소 0');
   const tags = [C1, K1, T1, Z1, Z4, Z7].filter(x => /&lt;\/?[a-z]/i.test(x.html)).length;
   is(tags === 0, '답에 꺾쇠가 글자로 찍히지 않는다');
