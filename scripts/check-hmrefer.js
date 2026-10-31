@@ -80,6 +80,9 @@ const SEED = () => {
     return a; }; return { from:mk, rpc:function(){ return Promise.resolve({data:null,error:null}); } }; };
   try{ osHideLoginGate(); }catch(e){}
   try{ document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x=>x.remove()); }catch(e){}
+  /* 폰에서는 이 칸이 <b>접힌 채</b> 섭니다(판 X281 · 홈 선 안에 들이려고). 속을 재려면 먼저
+     폅니다 — 여닫는 자는 앱의 hmFoldSet 하나입니다. 접힌 머리는 아래 [9] 가 따로 봅니다. */
+  try{ hmFoldSet('stk_hmReferHost',true); }catch(e){}
   HWHO.id=''; go('home');
 };
 
@@ -111,7 +114,7 @@ const LOOK = () => {
   console.log('\n[1] 칸이 테두리 안 · 🕗 바로 밑');
   const A = await p.evaluate(LOOK);
   is(A.있나 && A.안, '  💬 칸이 「지금 할 것」 테두리 안에 선다');
-  is(/hmLateHost · hmReferHost · hmActHost/.test(A.kids), '  차례가 🕗 → 💬 → 📊 — ' + A.kids);
+  is(/(hmFold_stk_)?hmLateHost · (hmFold_stk_)?hmReferHost · hmActHost/.test(A.kids), '  차례가 🕗 → 💬 → 📊 — ' + A.kids);
 
   console.log('\n[2] 수 · 차례 · 이름');
   const N = await p.evaluate(() => { const s = arStageN(hwhoFor()); return s ? (s.c['증권전달'] || 0) : -1; });
@@ -200,6 +203,18 @@ const LOOK = () => {
   const B2 = await p.evaluate(LOOK);
   is(B2.작은.length === 0, '  누르는 자리가 다 44px 이상 — ' + (B2.작은.join(' · ') || '작은 것 없음'));
   is(errs.length === 0, '  오류 없이 선다' + (errs.length ? (' ← ' + errs[0]) : ''));
+
+  console.log('\n[9] 폰에서 <b>접힌 머리</b>에 수가 서나 (판 X281 · 접어도 수가 보여야 접기입니다)');
+  const H9 = await p.evaluate(async () => {
+    hmFoldSet('stk_hmReferHost', false); go('home'); await new Promise(r => setTimeout(r, 300));
+    const f = document.getElementById('hmFold_stk_hmReferHost');
+    const sp = f ? f.querySelector('.hm-fold-h .t span') : null;
+    return { 접힘: !!(f && !f.classList.contains('on')), 머리: sp ? sp.textContent : '',
+             ask: sp ? sp.getAttribute('data-ask') : '', 키: f ? Math.round(f.getBoundingClientRect().height) : 0,
+             속: (document.querySelector('#hmReferHost [data-ask]') || {}).textContent || '' };
+  });
+  is(H9.접힘 && /^\d+분$/.test(H9.머리) && H9.ask === '소개여쭐분' && H9.머리 === H9.속,
+     '  ★ 접힌 머리에 <b>「' + H9.머리 + '」</b> — 속과 같은 수 · 같은 이름표 · 키 ' + H9.키 + 'px');
 
   await b.close(); srv.close();
   console.log('\n' + (bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 💬 소개 여쭐 차례 — 한 분씩, 같은 자가 셉니다'));

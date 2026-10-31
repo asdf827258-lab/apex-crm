@@ -75,6 +75,9 @@ const SEED = () => {
     return a; }; return { from:mk, rpc:function(){ return Promise.resolve({data:null,error:null}); } }; };
   try{ osHideLoginGate(); }catch(e){}
   try{ document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x=>x.remove()); }catch(e){}
+  /* 폰에서는 이 칸이 <b>접힌 채</b> 섭니다(판 X281 · 홈 선 안에 들이려고). 속을 재려면 먼저
+     폅니다 — 여닫는 자는 앱의 hmFoldSet 하나입니다. 접힌 머리는 아래 [9] 가 따로 봅니다. */
+  try{ hmFoldSet('stk_hmLateHost',true); }catch(e){}
   HWHO.id=''; go('home');
 };
 
@@ -109,7 +112,8 @@ const LOOK = () => {
   const A = await p.evaluate(LOOK);
   is(A.있나 && A.안, '  🕗 칸이 테두리(#hmJobWrap) 안에 선다');
   /* 판 X283 부터 🕗 밑에 💬 소개 여쭐 차례가 섭니다 — 🕗 가 📅 <b>바로 밑</b>인지만 봅니다 */
-  is(/hmUpHost · hmLateHost · /.test(A.kids), '  차례가 📅 약속 → 🕗 — ' + A.kids);
+  /* 폰에서는 접이(hmFold_stk_…)에 싸여 섭니다 — 껍데기 이름도 같은 칸으로 봅니다 */
+  is(/hmUpHost · (hmFold_stk_)?hmLateHost · /.test(A.kids), '  차례가 📅 약속 → 🕗 — ' + A.kids);
 
   console.log('\n[2] 수 · 차례 · 이름');
   const want = await p.evaluate(() => arApptPast(hwhoFor()).length);
@@ -218,6 +222,18 @@ const LOOK = () => {
   const B = await p.evaluate(LOOK);
   is(B.작은.length === 0, '  누르는 자리가 다 <b>44px 이상</b> — ' + (B.작은.join(' · ') || '작은 것 없음'));
   is(errs.length === 0, '  오류 없이 선다' + (errs.length ? (' ← ' + errs[0]) : ''));
+
+  console.log('\n[9] 폰에서 <b>접힌 머리</b>에 수가 서나 (판 X281 · 접어도 수가 보여야 접기입니다)');
+  const H9 = await p.evaluate(async () => {
+    hmFoldSet('stk_hmLateHost', false); go('home'); await new Promise(r => setTimeout(r, 300));
+    const f = document.getElementById('hmFold_stk_hmLateHost');
+    const sp = f ? f.querySelector('.hm-fold-h .t span') : null;
+    return { 접힘: !!(f && !f.classList.contains('on')), 머리: sp ? sp.textContent : '',
+             ask: sp ? sp.getAttribute('data-ask') : '', 키: f ? Math.round(f.getBoundingClientRect().height) : 0,
+             속: (document.querySelector('#hmLateHost [data-ask]') || {}).textContent || '' };
+  });
+  is(H9.접힘 && /^\d+분$/.test(H9.머리) && H9.ask === '약속지난분' && H9.머리 === H9.속,
+     '  ★ 접힌 머리에 <b>「' + H9.머리 + '」</b> — 속과 같은 수 · 같은 이름표 · 키 ' + H9.키 + 'px');
 
   await b.close(); srv.close();
   console.log('\n' + (bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 🕗 약속이 지난 분 — 한 분씩 정리됩니다'));

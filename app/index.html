@@ -1810,6 +1810,13 @@ body.jv-dock:not(.apexmap-mode) #osVaFab{display:none}
 /* 📆 이번 주 · 📊 오늘 기록은 제 상자를 들고 와서 테두리에 붙습니다 — 찍어 보니
    이번 주의 일요일 칸이 테두리 밖으로 잘렸습니다. 안쪽 여백만 줍니다. */
 #hmStack #hmWkHost{padding:0 14px 12px}
+/* 🧺 판 X281 — 테두리 안의 카드는 <b>또 큰 여백</b>을 둘 까닭이 없습니다(겉 테두리가 이미
+   감쌉니다). 20 → 12px · 접이 머리·속도 같은 결로. 홈 선 안에 🕗·💬 을 들이려고 재어 줄였습니다. */
+#hmStack .t-card{padding:12px 14px}
+#hmStack .tz-hc{padding:12px 14px;margin:0;border:0;box-shadow:none}
+#hmStack .tz-hc .go{margin-top:8px}
+#hmStack .hm-fold{margin:0;border-radius:0;box-shadow:none}
+#hmStack .hm-fold-b{padding:0}
 /* 📊 오늘 기록은 여백을 주면 폰에서 칩이 세 줄로 접혀(찍어 보고 알았습니다) 대신
    <b>제 상자를 내려놓습니다</b> — 이미 카드 안이라 네모를 또 그릴 까닭이 없습니다. */
 #hmStack .hm-act{border-color:transparent;background:transparent;box-shadow:none}
@@ -27787,6 +27794,227 @@ function hmBlankSave(){
     try{ hmPaint(); }catch(e){}
   },function(e){ toast(f.t+' 저장 실패 — '+((e&&e.message)||'알 수 없는 오류')); });
 }
+/* ══ 🕗 <b>약속이 지난 분 — 한 분씩 정리</b> (판 X281) ═══════════════════════
+   사장님 말씀 (2026-10-31) — 「고객 관리를 위해 어떻게 하면 좋을까」 → 서버에 적힌
+   수를 올려 드리고(AP·PC·CS 188건 중 <b>약속 지난 142건</b> · 앞으로 잡힌 3건 ·
+   2026-10-12 잰 값) 고르신 첫째가 이것입니다.
+   ★ <b>세는 자는 arApptPast 하나</b>입니다 (5번) — 📇 띠의 🕗 칸 · 💡 줄과 같은 자라
+     수가 갈리지 않습니다. 오래된 차례도 그 자가 정렬해 둔 그대로입니다.
+   ★ <b>쓰는 길은 새로 안 냅니다</b> — 📅 다시 잡기는 DB 통합 CRM 의 통화 저장
+     (db-crm.html saveCall)과 <b>같은 표·같은 꼴</b>로 calls 에 「상담 + 약속 일시」
+     한 줄을 넣습니다. 그러면 앱이 약속을 셀 때(next_appt 와 통화 약속 중 늦은 것)
+     새 날이 이기고, CRM 의 수도 같이 움직입니다. ✖ 는 있는 단계 「거절」 로 옮기는
+     hdbTo 그대로입니다. 「보류」 라는 단계는 앱에 없어 <b>지어내지 않았습니다</b> —
+     ⏭ 는 <b>오늘만 이 기기에서</b> 뒤로 미룹니다(서버에 아무것도 안 씁니다 · 1번).
+   ★ 이름은 <b>가립니다</b> (3번) · 내 고객이 아니면 바꾸는 단추를 안 세우고 까닭을 적습니다.
+   ★ 없는 날도 <b>자리를 남깁니다</b>(사장님 규칙 2026-09-26 「있다 없다 하는 칸을 없앱니다」). */
+var HM_LATE_KEY='apex_hm_late_skip_v1';
+var HM_LATE_OPEN='';                    /* 📅 날짜 칸을 편 분 (한 번에 한 분) */
+/* ⏭ <b>「오늘은 넘기기」 는 한 자가 답합니다</b> — 🕗 와 💬 가 같이 씁니다 (5번).
+   이 기기에서 <b>오늘만</b>입니다. 날이 바뀌면 다시 앞으로 — 서버에 아무것도 안 씁니다. */
+function hmDaySkips(key){
+  var t=(typeof arToday==='function')?arToday():'',o=null;
+  try{ o=JSON.parse(localStorage.getItem(key)||'null'); }catch(e){ o=null; }
+  return (o&&o.d===t&&o.ids)?o.ids:[];
+}
+function hmDaySkip(key,id){
+  var t=(typeof arToday==='function')?arToday():'',L=hmDaySkips(key);
+  if(L.indexOf(id)<0)L.push(id);
+  try{ localStorage.setItem(key,JSON.stringify({d:t,ids:L})); }catch(e){}
+}
+function hmLateSkips(){ return hmDaySkips(HM_LATE_KEY); }
+function hmLateSkip(id){ hmDaySkip(HM_LATE_KEY,id); HM_LATE_OPEN=''; hmLatePaint(); }
+function hmLateDay(v){
+  var d=(''+(v||'')).slice(0,10),t=(typeof arToday==='function')?arToday():'',n=0;
+  if(!d)return '';
+  try{ n=Math.round((new Date(t+'T00:00:00')-new Date(d+'T00:00:00'))/864e5); }catch(e){ n=0; }
+  return (+d.slice(5,7))+'월 '+(+d.slice(8,10))+'일 약속'+(n>0?(' · <b>'+n+'일</b> 지남'):'');
+}
+function hmLateHtml(){
+  if(!OS.profile)return '';
+  var who=(typeof hwhoFor==='function')?hwhoFor():'',
+      all=(typeof arApptPast==='function')?arApptPast(who):null,
+      sk=hmLateSkips(),L=[],i,r,can,tel,h;
+  h='<div class="hm-late"><div class="hm-late-h">🕗 <b>약속이 지난 분</b>';
+  /* 못 읽었으면 <b>수를 안 적습니다</b> — 「0분」 이 아닙니다 (1번) */
+  if(all===null)
+    return h+'</div><div class="hm-late-s">배정 DB 를 아직 못 읽었습니다 — 몇 분인지는 읽은 뒤에 적습니다.</div></div>';
+  for(i=0;i<all.length;i++)if(sk.indexOf(all[i].id)<0)L.push(all[i]);
+  h+=' <span data-ask="약속지난분">'+all.length+'분</span>'+
+     (sk.length?(' <span class="hm-late-k">· 오늘 넘긴 '+sk.length+'분</span>'):'')+'</div>';
+  if(!all.length)
+    return h+'<div class="hm-late-s">약속 날짜가 지난 분이 <b>없습니다</b>. 잡아 둔 약속은 모두 앞날입니다.</div></div>';
+  if(!L.length)
+    return h+'<div class="hm-late-s">남은 분은 모두 <b>오늘 넘기셨습니다</b> — 내일 다시 이 자리에 섭니다.</div></div>';
+  r=L[0];
+  can=(typeof hdbCan==='function')?hdbCan(r):false;
+  tel=(typeof hmTelHref==='function')?hmTelHref(r.id):'';
+  h+='<div class="hm-late-p"><b>'+osEsc(osMaskName(r.name))+'</b>님 · '+osEsc(r.stage)+
+     ' · '+hmLateDay(r.appt)+'</div>'+
+     '<div class="hm-late-b">'+
+     (tel?('<a class="t-chip" href="'+osEsc(tel)+'">📞 걸기</a>')
+         :'<span class="t-chip off" title="번호가 안 적혀 있습니다">📞 번호 없음</span>');
+  if(can)
+    h+='<button type="button" class="t-chip" onclick="hmLateOpen(\''+osEsc(r.id)+'\')">📅 다시 잡기</button>'+
+       '<button type="button" class="t-chip" onclick="hmLateSkip(\''+osEsc(r.id)+'\')">⏭ 오늘은 넘기기</button>'+
+       '<button type="button" class="t-chip" onclick="hmLateEnd(\''+osEsc(r.id)+'\')">✖ 거절로 정리</button>';
+  else
+    h+='<button type="button" class="t-chip" onclick="hmLateSkip(\''+osEsc(r.id)+'\')">⏭ 오늘은 넘기기</button>';
+  h+='</div>';
+  /* 왜 못 바꾸는지는 <b>hdbWhyNot 한 곳</b>이 말합니다 (5번) */
+  if(!can)
+    h+='<div class="hm-late-s">'+(((typeof hdbWhyNot==='function')&&hdbWhyNot(r))||
+       '내 고객이 아니라 날짜·단계는 담당 설계사가 바꿉니다.')+'</div>';
+  if(can&&HM_LATE_OPEN===r.id)
+    h+='<div class="hm-late-f"><input type="datetime-local" id="hmLateAt" aria-label="새 약속 일시">'+
+       '<button type="button" class="t-btn sm" onclick="hmLateAgain(\''+osEsc(r.id)+'\')">저장</button>'+
+       '<button type="button" class="t-btn g sm" onclick="hmLateOpen(\'\')">닫기</button></div>';
+  if(L.length>1)h+='<div class="hm-late-s">끝내시면 다음 분(남은 '+(L.length-1)+'분)이 이 자리에 섭니다.</div>';
+  return h+'</div>';
+}
+function hmLatePaint(){
+  var el=document.getElementById('hmLateHost'); if(!el)return;
+  try{ el.innerHTML=hmLateHtml(); }catch(e){}
+  hmStackSumPaint('hmLateHost');
+}
+/* 접힌 머리의 수 — 칸을 세는 <b>그 자</b>(arApptPast)에게 묻습니다. 못 읽었으면 빈 글 (1번) */
+function hmLateSum(){
+  var L=(typeof arApptPast==='function')?arApptPast((typeof hwhoFor==='function')?hwhoFor():''):null;
+  return L===null?'':(L.length+'분');
+}
+/* 접힌 머리 글을 칸과 <b>같이</b> 바꿉니다 — 「다시 잡기」 뒤에도 머리가 옛 수로 남지 않게 (5번) */
+function hmStackSumPaint(host){
+  var i,s,sp,v='';
+  for(i=0;i<HM_STACK.length;i++)if(HM_STACK[i].host===host)s=HM_STACK[i];
+  if(!s||!s.sum)return;
+  sp=document.querySelector('#hmFold_stk_'+host+' .hm-fold-h .t span');
+  if(!sp)return;
+  try{ v=(typeof window[s.sum]==='function')?window[s.sum]():''; }catch(e){ v=''; }
+  sp.textContent=v;
+}
+function hmLateOpen(id){ HM_LATE_OPEN=id||''; hmLatePaint();
+  try{ var f=document.getElementById('hmLateAt'); if(f)f.focus(); }catch(e){} }
+/* 📅 <b>다시 잡기</b> — CRM 통화 저장과 같은 꼴로 calls 에 한 줄 (위 쪽지) */
+function hmLateAgain(id){
+  var r=(typeof hdbRow==='function')?hdbRow(id):null,sb=(typeof osClient==='function')?osClient():null,
+      f=document.getElementById('hmLateAt'),v=f?f.value:'',at,me,row;
+  if(!r)return;
+  if(!hdbCan(r)){ toast('내 고객이 아니면 약속을 바꿀 수 없습니다.'); return; }
+  if(!v){ toast('새 약속 일시를 골라 주세요.'); return; }
+  at=new Date(v);
+  if(isNaN(at.getTime())){ toast('날짜를 읽지 못했습니다.'); return; }
+  /* 지난 날로 「다시 잡기」 하면 그 분은 다시 이 줄에 섭니다 — 묻고 넘어가지 않습니다 */
+  if(at.getTime()<Date.now()){ toast('지난 일시입니다 — 앞날로 골라 주세요.'); return; }
+  if(!sb){ toast('서버에 연결되어 있지 않습니다.'); return; }
+  me=(typeof arMyId==='function')?arMyId():null;
+  row={db_id:id,result:'상담',call_at:new Date().toISOString(),appointment_at:at.toISOString(),
+       memo:'약속 다시 잡음 (홈 🕗)'};
+  if(me)row.created_by=me;
+  sb.from('calls').insert(row).select('id').then(function(res){
+    var w=hdbWrote(res);
+    if(w.ok!==true){ hdbSay(w,'약속 다시 잡기'); return; }
+    hdbLocal(id,{appt:at.toISOString(),n:(r.n||0)+1,res:'상담',
+                 last:(new Date()).toISOString().slice(0,10),days:0});
+    HM_LATE_OPEN='';
+    toast(osMaskName(r.name)+' 님 · 약속을 '+(at.getMonth()+1)+'월 '+at.getDate()+'일로 다시 잡았습니다');
+    hdbPaint();
+  },function(e){ hdbErr(e,'약속 다시 잡기'); });
+}
+/* ✖ <b>거절로 정리</b> — 있는 단계로만 옮깁니다(hdbTo). 되돌릴 수 있지만 한 번 더 묻습니다 */
+function hmLateEnd(id){
+  var r=(typeof hdbRow==='function')?hdbRow(id):null;
+  if(!r)return;
+  if(!confirm(osMaskName(r.name)+' 님을 「거절」 단계로 옮길까요?\n약속이 지난 분 줄에서 빠집니다. 나중에 CRM 에서 단계를 다시 바꿀 수 있습니다.'))return;
+  hdbTo(id,'거절');
+}
+/* ══ 💬 <b>소개 여쭐 차례</b> (판 X283) ═══════════════════════════════════════
+   사장님 말씀 (2026-10-31) 「고객 관리를 위해 어떻게 하면 좋을까」 → 고르신 셋째.
+   ★ <b>누가 차례인가를 새로 정하지 않습니다</b> — 단계 표(apex-stage.js)가 이미
+     「증권전달」 의 할 일을 「잘 받으셨는지 확인하고 <b>소개 한 분</b>을 여쭙는다」 로
+     적어 두었습니다. 그래서 <b>증권전달 단계인 분 모두</b>가 차례이고, 며칠 뒤에
+     여쭈라는 수를 지어 넣지 않습니다 (1번). 증권 전한 날이 오래된 분부터 섭니다.
+   ★ 수는 <b>arStageN 의 증권전달 칸과 같은 자</b>가 셉니다 — 📇 띠의 「📬 관리」 칸과
+     갈리면 check-hmrefer 가 그 자리에서 빨간불입니다 (5번).
+   ★ 여쭙는 말은 <b>증권전달 자리의 넷째 걸음(PDEL_STEP · 「한 분만 여쭙는다」)</b>을
+     그대로 씁니다 — 여기 또 적으면 한쪽만 늙습니다 (5번). 「고객님」 으로 나갑니다 (3번).
+   ★ 🤝 소개 받음은 있는 단계 「소개완료」 로 옮기는 hdbTo 그대로 · ⏭ 는 오늘만(hmDaySkip). */
+var HM_REFER_KEY='apex_hm_refer_skip_v1';
+function hmReferRows(who){
+  if(typeof AR==='undefined'||!AR.db)return null;   /* 못 읽었다 — 「0분」 이 아닙니다 (1번) */
+  var L=AR.db,out=[],i,r;
+  for(i=0;i<L.length;i++){ r=L[i];
+    if(who&&r.who!==who)continue;
+    if(r.stage!=='증권전달')continue;
+    out.push(r); }
+  /* 전한 날이 오래된 분부터 — 날을 모르는 분은 맨 뒤(모르는 것을 오래됐다고 치지 않습니다) */
+  out.sort(function(a,b){ var x=a.pAt||'9999',y=b.pAt||'9999'; return x<y?-1:(x>y?1:0); });
+  return out;
+}
+function hmReferSay(){
+  try{
+    var P=(typeof APEX_STAGE!=='undefined'&&APEX_STAGE.pdel)||[],i;
+    for(i=0;i<P.length;i++)if(P[i].n===4)return P[i].say||'';
+  }catch(e){}
+  return '';
+}
+function hmReferHtml(){
+  if(!OS.profile)return '';
+  var who=(typeof hwhoFor==='function')?hwhoFor():'',all=hmReferRows(who),
+      sk=hmDaySkips(HM_REFER_KEY),L=[],i,r,can,tel,h,d='',n=0,t=(typeof arToday==='function')?arToday():'';
+  h='<div class="hm-late hm-refer"><div class="hm-late-h">💬 <b>소개 여쭐 차례</b>';
+  if(all===null)
+    return h+'</div><div class="hm-late-s">배정 DB 를 아직 못 읽었습니다 — 몇 분인지는 읽은 뒤에 적습니다.</div></div>';
+  for(i=0;i<all.length;i++)if(sk.indexOf(all[i].id)<0)L.push(all[i]);
+  h+=' <span data-ask="소개여쭐분">'+all.length+'분</span>'+
+     (sk.length?(' <span class="hm-late-k">· 오늘 넘긴 '+sk.length+'분</span>'):'')+'</div>';
+  if(!all.length)
+    return h+'<div class="hm-late-s">증권을 전해 드린 분이 <b>지금은 없습니다</b>. 전해 드리면 이 자리에 섭니다.</div></div>';
+  if(!L.length)
+    return h+'<div class="hm-late-s">남은 분은 모두 <b>오늘 넘기셨습니다</b> — 내일 다시 이 자리에 섭니다.</div></div>';
+  r=L[0];
+  if(r.pAt){
+    try{ n=Math.round((new Date(t+'T00:00:00')-new Date(r.pAt+'T00:00:00'))/864e5); }catch(e){ n=0; }
+    d='증권 전한 지 <b>'+Math.max(0,n)+'일</b>';
+  }else d='증권 전한 날 <b>모름</b>';
+  can=(typeof hdbCan==='function')?hdbCan(r):false;
+  tel=(typeof hmTelHref==='function')?hmTelHref(r.id):'';
+  h+='<div class="hm-late-p"><b>'+osEsc(osMaskName(r.name))+'</b>님 · '+d+'</div>'+
+     '<div class="hm-late-b">'+
+     (tel?('<a class="t-chip" href="'+osEsc(tel)+'">📞 걸기</a>')
+         :'<span class="t-chip off" title="번호가 안 적혀 있습니다">📞 번호 없음</span>')+
+     (hmReferSay()?'<button type="button" class="t-chip" onclick="hmReferCopy()">💬 여쭙는 말 복사</button>':'');
+  if(can)
+    h+='<button type="button" class="t-chip" onclick="hmReferGot(\''+osEsc(r.id)+'\')">🤝 소개 받음</button>';
+  h+='<button type="button" class="t-chip" onclick="hmReferSkip(\''+osEsc(r.id)+'\')">⏭ 오늘은 넘기기</button></div>';
+  if(!can)
+    h+='<div class="hm-late-s">'+(((typeof hdbWhyNot==='function')&&hdbWhyNot(r))||
+       '내 고객이 아니라 단계는 담당 설계사가 바꿉니다.')+'</div>';
+  h+='<div class="hm-late-s">한 분만 여쭙습니다 — <b>오늘 안 주셔도 됩니다</b>. 조르면 다음 자리가 없어집니다.'+
+     (L.length>1?(' · 남은 '+(L.length-1)+'분'):'')+'</div>';
+  return h+'</div>';
+}
+function hmReferPaint(){
+  var el=document.getElementById('hmReferHost'); if(!el)return;
+  try{ el.innerHTML=hmReferHtml(); }catch(e){}
+  hmStackSumPaint('hmReferHost');
+}
+function hmReferSum(){
+  var L=hmReferRows((typeof hwhoFor==='function')?hwhoFor():'');
+  return L===null?'':(L.length+'분');
+}
+function hmReferCopy(){
+  var t=hmReferSay();
+  if(!t){ toast('여쭙는 말을 못 찾았습니다.'); return; }
+  if(typeof copyText==='function')copyText(t);
+}
+function hmReferSkip(id){ hmDaySkip(HM_REFER_KEY,id); hmReferPaint(); }
+/* 🤝 소개를 받으셨으면 — 있는 단계 「소개완료」 로 (hdbTo). 한 번 더 묻습니다 */
+function hmReferGot(id){
+  var r=(typeof hdbRow==='function')?hdbRow(id):null;
+  if(!r)return;
+  if(!confirm(osMaskName(r.name)+' 님께 소개를 받으셨나요?\n「소개완료」 로 옮기면 이 줄에서 빠지고, 소개해 주신 분께 결과를 알려 드릴 차례가 됩니다.'))return;
+  hdbTo(id,'소개완료');
+}
 /* <b>여기서 하루가 넘어갑니다</b> — 끝낸 분과 미룰 분을 <b>한 줄</b>에 둡니다.
    따로 두 줄로 세웠더니 116px 이었습니다. 무엇보다 「끝」 과 「뒤로」 는
    같은 물음(<b>이 분을 지금 어떻게 할까</b>)이라 한 자리에 있어야 합니다.
@@ -34715,217 +34943,30 @@ var HM_STACK = [
   { e:'🚗', t:'오늘 동선',          host:'hmRtHost' },
   { e:'📅', t:'오늘 약속 · 이번 주', host:'hmUpHost' },
   /* 🕗 판 X281 — 약속이 지난 분을 <b>한 분씩</b> (사장님 말씀 「고객 관리를 위해」 → 고르심) */
-  { e:'🕗', t:'약속이 지난 분',      host:'hmLateHost' },
+  /* fold — <b>폰에서만</b> 한 줄로 접고 머리에 수를 적습니다(판 X223 곁칸 접이와 같은 꼴).
+     홈 선(check-homeone · 사장님이 정하신 3.56화면)을 넘지 않으려고 재어 보고 고른 셋입니다.
+     sum — 머리에 적을 수를 내는 자(그 칸을 세는 바로 그 자). 못 세면 빈 글 (1번). */
+  { e:'🕗', t:'약속이 지난 분',      host:'hmLateHost',  fold:1, sum:'hmLateSum',  ask:'약속지난분' },
   /* 💬 판 X283 — 증권을 전해 드린 분께 <b>소개 한 분</b>을 여쭐 차례 */
-  { e:'💬', t:'소개 여쭐 차례',      host:'hmReferHost' },
+  { e:'💬', t:'소개 여쭐 차례',      host:'hmReferHost', fold:1, sum:'hmReferSum', ask:'소개여쭐분' },
   { e:'📊', t:'오늘 기록',          host:'hmActHost' },
   { e:'💌', t:'이번 달 고객 관리',   w:'이번 달 마디(보낼 말)', fn:'hmMadiSideHtml' }
 ];
-/* ══ 🕗 <b>약속이 지난 분 — 한 분씩 정리</b> (판 X281) ═══════════════════════
-   사장님 말씀 (2026-10-31) — 「고객 관리를 위해 어떻게 하면 좋을까」 → 서버에 적힌
-   수를 올려 드리고(AP·PC·CS 188건 중 <b>약속 지난 142건</b> · 앞으로 잡힌 3건 ·
-   2026-10-12 잰 값) 고르신 첫째가 이것입니다.
-   ★ <b>세는 자는 arApptPast 하나</b>입니다 (5번) — 📇 띠의 🕗 칸 · 💡 줄과 같은 자라
-     수가 갈리지 않습니다. 오래된 차례도 그 자가 정렬해 둔 그대로입니다.
-   ★ <b>쓰는 길은 새로 안 냅니다</b> — 📅 다시 잡기는 DB 통합 CRM 의 통화 저장
-     (db-crm.html saveCall)과 <b>같은 표·같은 꼴</b>로 calls 에 「상담 + 약속 일시」
-     한 줄을 넣습니다. 그러면 앱이 약속을 셀 때(next_appt 와 통화 약속 중 늦은 것)
-     새 날이 이기고, CRM 의 수도 같이 움직입니다. ✖ 는 있는 단계 「거절」 로 옮기는
-     hdbTo 그대로입니다. 「보류」 라는 단계는 앱에 없어 <b>지어내지 않았습니다</b> —
-     ⏭ 는 <b>오늘만 이 기기에서</b> 뒤로 미룹니다(서버에 아무것도 안 씁니다 · 1번).
-   ★ 이름은 <b>가립니다</b> (3번) · 내 고객이 아니면 바꾸는 단추를 안 세우고 까닭을 적습니다.
-   ★ 없는 날도 <b>자리를 남깁니다</b>(사장님 규칙 2026-09-26 「있다 없다 하는 칸을 없앱니다」). */
-var HM_LATE_KEY='apex_hm_late_skip_v1';
-var HM_LATE_OPEN='';                    /* 📅 날짜 칸을 편 분 (한 번에 한 분) */
-/* ⏭ <b>「오늘은 넘기기」 는 한 자가 답합니다</b> — 🕗 와 💬 가 같이 씁니다 (5번).
-   이 기기에서 <b>오늘만</b>입니다. 날이 바뀌면 다시 앞으로 — 서버에 아무것도 안 씁니다. */
-function hmDaySkips(key){
-  var t=(typeof arToday==='function')?arToday():'',o=null;
-  try{ o=JSON.parse(localStorage.getItem(key)||'null'); }catch(e){ o=null; }
-  return (o&&o.d===t&&o.ids)?o.ids:[];
-}
-function hmDaySkip(key,id){
-  var t=(typeof arToday==='function')?arToday():'',L=hmDaySkips(key);
-  if(L.indexOf(id)<0)L.push(id);
-  try{ localStorage.setItem(key,JSON.stringify({d:t,ids:L})); }catch(e){}
-}
-function hmLateSkips(){ return hmDaySkips(HM_LATE_KEY); }
-function hmLateSkip(id){ hmDaySkip(HM_LATE_KEY,id); HM_LATE_OPEN=''; hmLatePaint(); }
-function hmLateDay(v){
-  var d=(''+(v||'')).slice(0,10),t=(typeof arToday==='function')?arToday():'',n=0;
-  if(!d)return '';
-  try{ n=Math.round((new Date(t+'T00:00:00')-new Date(d+'T00:00:00'))/864e5); }catch(e){ n=0; }
-  return (+d.slice(5,7))+'월 '+(+d.slice(8,10))+'일 약속'+(n>0?(' · <b>'+n+'일</b> 지남'):'');
-}
-function hmLateHtml(){
-  if(!OS.profile)return '';
-  var who=(typeof hwhoFor==='function')?hwhoFor():'',
-      all=(typeof arApptPast==='function')?arApptPast(who):null,
-      sk=hmLateSkips(),L=[],i,r,can,tel,h;
-  h='<div class="hm-late"><div class="hm-late-h">🕗 <b>약속이 지난 분</b>';
-  /* 못 읽었으면 <b>수를 안 적습니다</b> — 「0분」 이 아닙니다 (1번) */
-  if(all===null)
-    return h+'</div><div class="hm-late-s">배정 DB 를 아직 못 읽었습니다 — 몇 분인지는 읽은 뒤에 적습니다.</div></div>';
-  for(i=0;i<all.length;i++)if(sk.indexOf(all[i].id)<0)L.push(all[i]);
-  h+=' <span data-ask="약속지난분">'+all.length+'분</span>'+
-     (sk.length?(' <span class="hm-late-k">· 오늘 넘긴 '+sk.length+'분</span>'):'')+'</div>';
-  if(!all.length)
-    return h+'<div class="hm-late-s">약속 날짜가 지난 분이 <b>없습니다</b>. 잡아 둔 약속은 모두 앞날입니다.</div></div>';
-  if(!L.length)
-    return h+'<div class="hm-late-s">남은 분은 모두 <b>오늘 넘기셨습니다</b> — 내일 다시 이 자리에 섭니다.</div></div>';
-  r=L[0];
-  can=(typeof hdbCan==='function')?hdbCan(r):false;
-  tel=(typeof hmTelHref==='function')?hmTelHref(r.id):'';
-  h+='<div class="hm-late-p"><b>'+osEsc(osMaskName(r.name))+'</b>님 · '+osEsc(r.stage)+
-     ' · '+hmLateDay(r.appt)+'</div>'+
-     '<div class="hm-late-b">'+
-     (tel?('<a class="t-chip" href="'+osEsc(tel)+'">📞 걸기</a>')
-         :'<span class="t-chip off" title="번호가 안 적혀 있습니다">📞 번호 없음</span>');
-  if(can)
-    h+='<button type="button" class="t-chip" onclick="hmLateOpen(\''+osEsc(r.id)+'\')">📅 다시 잡기</button>'+
-       '<button type="button" class="t-chip" onclick="hmLateSkip(\''+osEsc(r.id)+'\')">⏭ 오늘은 넘기기</button>'+
-       '<button type="button" class="t-chip" onclick="hmLateEnd(\''+osEsc(r.id)+'\')">✖ 거절로 정리</button>';
-  else
-    h+='<button type="button" class="t-chip" onclick="hmLateSkip(\''+osEsc(r.id)+'\')">⏭ 오늘은 넘기기</button>';
-  h+='</div>';
-  /* 왜 못 바꾸는지는 <b>hdbWhyNot 한 곳</b>이 말합니다 (5번) */
-  if(!can)
-    h+='<div class="hm-late-s">'+(((typeof hdbWhyNot==='function')&&hdbWhyNot(r))||
-       '내 고객이 아니라 날짜·단계는 담당 설계사가 바꿉니다.')+'</div>';
-  if(can&&HM_LATE_OPEN===r.id)
-    h+='<div class="hm-late-f"><input type="datetime-local" id="hmLateAt" aria-label="새 약속 일시">'+
-       '<button type="button" class="t-btn sm" onclick="hmLateAgain(\''+osEsc(r.id)+'\')">저장</button>'+
-       '<button type="button" class="t-btn g sm" onclick="hmLateOpen(\'\')">닫기</button></div>';
-  if(L.length>1)h+='<div class="hm-late-s">끝내시면 다음 분(남은 '+(L.length-1)+'분)이 이 자리에 섭니다.</div>';
-  return h+'</div>';
-}
-function hmLatePaint(){
-  var el=document.getElementById('hmLateHost'); if(!el)return;
-  try{ el.innerHTML=hmLateHtml(); }catch(e){}
-}
-function hmLateOpen(id){ HM_LATE_OPEN=id||''; hmLatePaint();
-  try{ var f=document.getElementById('hmLateAt'); if(f)f.focus(); }catch(e){} }
-/* 📅 <b>다시 잡기</b> — CRM 통화 저장과 같은 꼴로 calls 에 한 줄 (위 쪽지) */
-function hmLateAgain(id){
-  var r=(typeof hdbRow==='function')?hdbRow(id):null,sb=(typeof osClient==='function')?osClient():null,
-      f=document.getElementById('hmLateAt'),v=f?f.value:'',at,me,row;
-  if(!r)return;
-  if(!hdbCan(r)){ toast('내 고객이 아니면 약속을 바꿀 수 없습니다.'); return; }
-  if(!v){ toast('새 약속 일시를 골라 주세요.'); return; }
-  at=new Date(v);
-  if(isNaN(at.getTime())){ toast('날짜를 읽지 못했습니다.'); return; }
-  /* 지난 날로 「다시 잡기」 하면 그 분은 다시 이 줄에 섭니다 — 묻고 넘어가지 않습니다 */
-  if(at.getTime()<Date.now()){ toast('지난 일시입니다 — 앞날로 골라 주세요.'); return; }
-  if(!sb){ toast('서버에 연결되어 있지 않습니다.'); return; }
-  me=(typeof arMyId==='function')?arMyId():null;
-  row={db_id:id,result:'상담',call_at:new Date().toISOString(),appointment_at:at.toISOString(),
-       memo:'약속 다시 잡음 (홈 🕗)'};
-  if(me)row.created_by=me;
-  sb.from('calls').insert(row).select('id').then(function(res){
-    var w=hdbWrote(res);
-    if(w.ok!==true){ hdbSay(w,'약속 다시 잡기'); return; }
-    hdbLocal(id,{appt:at.toISOString(),n:(r.n||0)+1,res:'상담',
-                 last:(new Date()).toISOString().slice(0,10),days:0});
-    HM_LATE_OPEN='';
-    toast(osMaskName(r.name)+' 님 · 약속을 '+(at.getMonth()+1)+'월 '+at.getDate()+'일로 다시 잡았습니다');
-    hdbPaint();
-  },function(e){ hdbErr(e,'약속 다시 잡기'); });
-}
-/* ✖ <b>거절로 정리</b> — 있는 단계로만 옮깁니다(hdbTo). 되돌릴 수 있지만 한 번 더 묻습니다 */
-function hmLateEnd(id){
-  var r=(typeof hdbRow==='function')?hdbRow(id):null;
-  if(!r)return;
-  if(!confirm(osMaskName(r.name)+' 님을 「거절」 단계로 옮길까요?\n약속이 지난 분 줄에서 빠집니다. 나중에 CRM 에서 단계를 다시 바꿀 수 있습니다.'))return;
-  hdbTo(id,'거절');
-}
-/* ══ 💬 <b>소개 여쭐 차례</b> (판 X283) ═══════════════════════════════════════
-   사장님 말씀 (2026-10-31) 「고객 관리를 위해 어떻게 하면 좋을까」 → 고르신 셋째.
-   ★ <b>누가 차례인가를 새로 정하지 않습니다</b> — 단계 표(apex-stage.js)가 이미
-     「증권전달」 의 할 일을 「잘 받으셨는지 확인하고 <b>소개 한 분</b>을 여쭙는다」 로
-     적어 두었습니다. 그래서 <b>증권전달 단계인 분 모두</b>가 차례이고, 며칠 뒤에
-     여쭈라는 수를 지어 넣지 않습니다 (1번). 증권 전한 날이 오래된 분부터 섭니다.
-   ★ 수는 <b>arStageN 의 증권전달 칸과 같은 자</b>가 셉니다 — 📇 띠의 「📬 관리」 칸과
-     갈리면 check-hmrefer 가 그 자리에서 빨간불입니다 (5번).
-   ★ 여쭙는 말은 <b>증권전달 자리의 넷째 걸음(PDEL_STEP · 「한 분만 여쭙는다」)</b>을
-     그대로 씁니다 — 여기 또 적으면 한쪽만 늙습니다 (5번). 「고객님」 으로 나갑니다 (3번).
-   ★ 🤝 소개 받음은 있는 단계 「소개완료」 로 옮기는 hdbTo 그대로 · ⏭ 는 오늘만(hmDaySkip). */
-var HM_REFER_KEY='apex_hm_refer_skip_v1';
-function hmReferRows(who){
-  if(typeof AR==='undefined'||!AR.db)return null;   /* 못 읽었다 — 「0분」 이 아닙니다 (1번) */
-  var L=AR.db,out=[],i,r;
-  for(i=0;i<L.length;i++){ r=L[i];
-    if(who&&r.who!==who)continue;
-    if(r.stage!=='증권전달')continue;
-    out.push(r); }
-  /* 전한 날이 오래된 분부터 — 날을 모르는 분은 맨 뒤(모르는 것을 오래됐다고 치지 않습니다) */
-  out.sort(function(a,b){ var x=a.pAt||'9999',y=b.pAt||'9999'; return x<y?-1:(x>y?1:0); });
-  return out;
-}
-function hmReferSay(){
-  try{
-    var P=(typeof APEX_STAGE!=='undefined'&&APEX_STAGE.pdel)||[],i;
-    for(i=0;i<P.length;i++)if(P[i].n===4)return P[i].say||'';
-  }catch(e){}
-  return '';
-}
-function hmReferHtml(){
-  if(!OS.profile)return '';
-  var who=(typeof hwhoFor==='function')?hwhoFor():'',all=hmReferRows(who),
-      sk=hmDaySkips(HM_REFER_KEY),L=[],i,r,can,tel,h,d='',n=0,t=(typeof arToday==='function')?arToday():'';
-  h='<div class="hm-late hm-refer"><div class="hm-late-h">💬 <b>소개 여쭐 차례</b>';
-  if(all===null)
-    return h+'</div><div class="hm-late-s">배정 DB 를 아직 못 읽었습니다 — 몇 분인지는 읽은 뒤에 적습니다.</div></div>';
-  for(i=0;i<all.length;i++)if(sk.indexOf(all[i].id)<0)L.push(all[i]);
-  h+=' <span data-ask="소개여쭐분">'+all.length+'분</span>'+
-     (sk.length?(' <span class="hm-late-k">· 오늘 넘긴 '+sk.length+'분</span>'):'')+'</div>';
-  if(!all.length)
-    return h+'<div class="hm-late-s">증권을 전해 드린 분이 <b>지금은 없습니다</b>. 전해 드리면 이 자리에 섭니다.</div></div>';
-  if(!L.length)
-    return h+'<div class="hm-late-s">남은 분은 모두 <b>오늘 넘기셨습니다</b> — 내일 다시 이 자리에 섭니다.</div></div>';
-  r=L[0];
-  if(r.pAt){
-    try{ n=Math.round((new Date(t+'T00:00:00')-new Date(r.pAt+'T00:00:00'))/864e5); }catch(e){ n=0; }
-    d='증권 전한 지 <b>'+Math.max(0,n)+'일</b>';
-  }else d='증권 전한 날 <b>모름</b>';
-  can=(typeof hdbCan==='function')?hdbCan(r):false;
-  tel=(typeof hmTelHref==='function')?hmTelHref(r.id):'';
-  h+='<div class="hm-late-p"><b>'+osEsc(osMaskName(r.name))+'</b>님 · '+d+'</div>'+
-     '<div class="hm-late-b">'+
-     (tel?('<a class="t-chip" href="'+osEsc(tel)+'">📞 걸기</a>')
-         :'<span class="t-chip off" title="번호가 안 적혀 있습니다">📞 번호 없음</span>')+
-     (hmReferSay()?'<button type="button" class="t-chip" onclick="hmReferCopy()">💬 여쭙는 말 복사</button>':'');
-  if(can)
-    h+='<button type="button" class="t-chip" onclick="hmReferGot(\''+osEsc(r.id)+'\')">🤝 소개 받음</button>';
-  h+='<button type="button" class="t-chip" onclick="hmReferSkip(\''+osEsc(r.id)+'\')">⏭ 오늘은 넘기기</button></div>';
-  if(!can)
-    h+='<div class="hm-late-s">'+(((typeof hdbWhyNot==='function')&&hdbWhyNot(r))||
-       '내 고객이 아니라 단계는 담당 설계사가 바꿉니다.')+'</div>';
-  h+='<div class="hm-late-s">한 분만 여쭙습니다 — <b>오늘 안 주셔도 됩니다</b>. 조르면 다음 자리가 없어집니다.'+
-     (L.length>1?(' · 남은 '+(L.length-1)+'분'):'')+'</div>';
-  return h+'</div>';
-}
-function hmReferPaint(){
-  var el=document.getElementById('hmReferHost'); if(!el)return;
-  try{ el.innerHTML=hmReferHtml(); }catch(e){}
-}
-function hmReferCopy(){
-  var t=hmReferSay();
-  if(!t){ toast('여쭙는 말을 못 찾았습니다.'); return; }
-  if(typeof copyText==='function')copyText(t);
-}
-function hmReferSkip(id){ hmDaySkip(HM_REFER_KEY,id); hmReferPaint(); }
-/* 🤝 소개를 받으셨으면 — 있는 단계 「소개완료」 로 (hdbTo). 한 번 더 묻습니다 */
-function hmReferGot(id){
-  var r=(typeof hdbRow==='function')?hdbRow(id):null;
-  if(!r)return;
-  if(!confirm(osMaskName(r.name)+' 님께 소개를 받으셨나요?\n「소개완료」 로 옮기면 이 줄에서 빠지고, 소개해 주신 분께 결과를 알려 드릴 차례가 됩니다.'))return;
-  hdbTo(id,'소개완료');
-}
+/* 🕗 약속이 지난 분 · 💬 소개 여쭐 차례를 짓는 자(hmLate* · hmRefer*)는 「✅ 이분 끝」 곁
+   📝 빈칸 하나 바로 밑에 있습니다 (판 X281 · X283) — 셋이 모두 「고객 관리」 한 묶음이고
+   서버에 쓰는 자(hdbCall · hdbTo)와 가까이 둡니다. 여기 표(HM_STACK)는 자리만 압니다. */
 function hmStackHtml(){
   var h='',i,s,one,넓=((typeof navWide==='function')?navWide():true);
   for(i=0;i<HM_STACK.length;i++){
     s=HM_STACK[i];
-    if(s.host){ h+='<div id="'+s.host+'"></div>'; continue; }
+    if(s.host){
+      var 칸='<div id="'+s.host+'"></div>',sm='';
+      if(s.fold&&!넓){
+        try{ sm=(s.sum&&typeof window[s.sum]==='function')?window[s.sum]():''; }catch(eS){ sm=''; }
+        h+=hmFoldWrap('stk_'+s.host, s.e, s.t, sm, 칸, s.ask);
+      }else h+=칸;
+      continue;
+    }
     one=(s.fn&&typeof window[s.fn]==='function')?window[s.fn]():hmSideTodoHtml(s);
     /* 접는 꼴은 곁칸과 <b>같은 자</b>(hmFoldWrap · 열쇠 side_함수이름)입니다 */
     h+=넓?one:hmFoldWrap('side_'+(s.fn||s.t), s.e, s.t, hmSideSum(one), one);
@@ -35531,7 +35572,11 @@ function hmSidePlace(){
     var uUp=document.getElementById('hmUpHost'), dn=document.getElementById('hmUpDown');
     if(dn&&dn.innerHTML)dn.innerHTML='';
     if(uUp&&typeof hmTossAppt==='function')
-      uUp.innerHTML='<div id="hmApptHost">'+hmTossAppt()+'</div>'+hmWeekHtml();
+      /* 📆 판 X281 — 폰에서는 이번 주 달력을 <b>한 줄로 접습니다</b>(📅 오늘 약속은 펴 둡니다 —
+         시간이 정해진 일이라). 홈 선 안에 🕗·💬 을 들이려고 재어 고른 자리입니다.
+         칠하는 자(mcalPaint)는 #hmWkHost 를 id 로 찾으므로 접이 안에서도 그대로입니다. */
+      uUp.innerHTML='<div id="hmApptHost">'+hmTossAppt()+'</div>'+
+        ((typeof navWide==='function'&&!navWide())?hmFoldWrap('stk_week','📆','이번 주','',hmWeekHtml()):hmWeekHtml());
   }catch(eU){}
   /* 자리를 옮기면 <b>빈 자리도 새로 생깁니다</b> — 칠하는 쪽을 다시 부릅니다.
      둘 다 서버를 안 부르는 그리기입니다 (7번). */
