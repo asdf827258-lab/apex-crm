@@ -6066,8 +6066,8 @@ document.addEventListener('keydown', function(e){
      상품은 <b>그 까닭</b>을 같이 적습니다.
    ★ 계산기와 같은 말을 붙입니다 — 「최저보증 금액 기준입니다. 물가상승률은 반영하지 않았습니다」 ·
      「변액은 실적배당」 · 「실제 지급은 약관과 보험사 심사 결과에 따릅니다」(2번).
-   ★ 「계산기 열기」 는 <b>화면만</b> 엽니다 — 계산기의 연금 칸(납입기간 · 월 납입 · 상품)으로
-     값을 넘기는 다리가 없습니다. 반만 넘기면 반쯤 빈 계산기가 섭니다. 그렇다고 적습니다. */
+   ★ 「📊 계산기로 이 값 넘기기」 — 판 X278 에서 다리를 놓았습니다(finance.html 의 apexFinPension).
+     계산기의 연금 칸 · 사이드바 셋을 채우고 같은 상품을 펴며, 바뀐 것을 말하고 되돌릴 수 있습니다. */
 var JV_PEN = {box:null, pr:null, why:'', n:0, S:{}};
 function jvPenLoad(){
   if (JV_PEN.box) return Promise.resolve(JV_PEN.box);
@@ -6173,6 +6173,7 @@ function jvPenHtml(S){
     if (nb) h += '<div class="jw-s jw-wait">「' + esc(nb.p.name) + '」 은 이 조건으로 안 됩니다 — ' + esc(nb.why) + '</div>';
   }
   if (!one) one = R.ok[0];
+  S.shownPid = one ? one.p.id : '';     /* 계산기로 넘길 때 같은 상품을 펴게 (판 X278) */
   if (!one){
     /* 왜 없는지를 <b>숫자로</b> 말합니다 — 「납입 20년인데 시작까지 15년」 이면 어떤 상품도 안 됩니다 (1번) */
     var gap = v.start - v.age;
@@ -6213,8 +6214,16 @@ function jvPenTail(S, say){
   var b = '';
   if (S.out) b += '<button type="button" class="jp-copy">📋 결과 복사</button>';
   if (say) b += '<button type="button" class="jp-say">🔊 읽어 주기</button>';
-  if (MENU.finance) b += '<button type="button" class="jp-fin" title="값은 넘어가지 않습니다 — 계산기에서 한 번 더 넣으셔야 합니다">📊 재무설계 계산기 열기</button>';
-  return b ? '<div class="st-b jr-b">' + b + '</div>' + (MENU.finance ? '<div class="jf-note">계산기를 열면 값은 넘어가지 않습니다 — 그 화면에서 한 번 더 넣으셔야 합니다.</div>' : '') : '';
+  /* 📊 계산기로 넘기기 (판 X278) — 셈이 선 뒤에만. 넘긴 뒤에는 무엇이 바뀌었는지 · 되돌리기 */
+  var canFin = MENU.finance && S.out && inCrm;
+  if (canFin && S.fin !== 'sent') b += '<button type="button" class="st-here jp-fin">' + (S.fin === 'busy' ? '넘기는 중…' : '📊 계산기로 이 값 넘기기') + '</button>';
+  if (S.fin === 'sent') b += '<button type="button" class="jp-undo">↩ 계산기 값 되돌리기</button>';
+  var note = '';
+  if (S.fin === 'sent') note = '✅ 계산기 「연금 시뮬레이션」 으로 넘겼습니다 — ' + jvPenDiff(S) + '.';
+  else if (S.fin === 'undone') note = '↩ 계산기 값을 넘기기 전으로 되돌렸습니다.';
+  else if (S.fin === 'fail') note = '⚠ 계산기가 답하지 않아 넘기지 못했습니다 — 계산기 화면을 한 번 열고 다시 눌러 주세요.';
+  else if (canFin) note = '계산기의 나이 · 성별 · 은퇴 나이 칸도 이 값으로 바뀝니다 — 넘긴 뒤 「되돌리기」 로 돌릴 수 있습니다.';
+  return (b ? '<div class="st-b jr-b">' + b + '</div>' : '') + (note ? '<div class="jf-note">' + esc(note) + '</div>' : '');
 }
 function jvPenPaint(S){
   var el = document.querySelector('[data-pen="' + S.id + '"]');
@@ -6247,8 +6256,33 @@ document.addEventListener('click', function(e){
     b2.textContent = '✅ 복사했습니다'; setTimeout(function(){ b2.textContent = '📋 결과 복사'; }, 1800); return;
   }
   if (t.closest('.jp-say')){ e.preventDefault(); speak(S.say); return; }
-  if (t.closest('.jp-fin')){ e.preventDefault(); jvHere('finance'); }
+  if (t.closest('.jp-fin')){ e.preventDefault(); jvPenToFin(S, false); return; }
+  if (t.closest('.jp-undo')){ e.preventDefault(); jvPenToFin(S, true); }
 });
+/* 계산기로 넘긴다 · 되돌린다 — 넣는 길은 본체의 osFinPushPen 하나(준비됐다는 답을 기다려 넣음 · 5번) */
+function jvPenToFin(S, undo){
+  var P = inCrm ? window.parent : null;
+  if (!P || typeof P.osFinPushPen !== 'function'){ jvHere('finance'); return; }
+  var v = S.v, B = S.before;
+  var pay = undo ? {age:B.age, sex:B.sex, start:B.start, prem:B.prem, pay:B.pay, pid:B.pid}
+                 : {age:v.age, sex:v.sex, start:v.start, prem:Math.round(v.monthly / 100) / 100, pay:v.pay, pid:S.shownPid || ''};
+  S.fin = 'busy'; jvPenPaint(S);
+  try { if (typeof P.jvDock === 'function') P.jvDock('finance'); } catch(e){}
+  P.osFinPushPen(pay, function(before){
+    if (!before){ S.fin = undo ? 'sent' : 'fail'; jvPenPaint(S); return; }
+    if (!undo) S.before = before;
+    S.fin = undo ? 'undone' : 'sent';
+    jvPenPaint(S);
+  });
+}
+/* 무엇이 바뀌었나 — 계산기가 돌려준 「넣기 전」 과 넘긴 값을 견줍니다 */
+function jvPenDiff(S){
+  var B = S.before || {}, v = S.v, o = [], W = JV_PEN.box ? JV_PEN.box.APEX_WON.txt : function(x){ return x + '원'; };
+  var one = function(lab, a, b){ a = (a === '' || a == null) ? '빈칸' : String(a); b = String(b); o.push(lab + ' ' + (a === b ? b + '(그대로)' : a + ' → ' + b)); };
+  one('나이', B.age, v.age); one('성별', B.sex, v.sex); one('은퇴(연금 시작) 나이', B.start, v.start);
+  one('월 납입', B.prem != null ? W(B.prem * 10000) : '', W(v.monthly)); one('납입 기간', B.pay != null ? B.pay + '년' : '', v.pay + '년');
+  return o.join(' · ');
+}
 /* 칸에 적힌 값을 다시 읽는다 — 월 납입은 만원으로 적고 원으로 담습니다(4번) */
 function jvPenRead(S, box){
   [].slice.call(box.querySelectorAll('input[data-k]')).forEach(function(inp){

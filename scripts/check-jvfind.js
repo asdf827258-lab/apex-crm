@@ -629,6 +629,7 @@ const SEED = () => {
              over: c ? c.scrollWidth - c.clientWidth : -1, ai: !!(card && card.querySelector('.j-ai')) }; }, [q, wait]);
   const QE1 = engQ({sex:'남성', age:50, start:65, pay:10, monthly:500000});
   const topQ = QE1.ok[0];
+  const QtopQ_id = topQ.p.id, QtopQ_name = topQ.p.name;
   const QK1 = await penQ('50세 남자 월 50만원 10년납 65세부터 연금 얼마');
   is(QK1.best.indexOf(topQ.p.name) >= 0 && QK1.best.indexOf('매달 ' + QEW(topQ.monthlyPay)) >= 0 && QK1.best.indexOf(QEW(topQ.principal)) >= 0 &&
      QK1.best.indexOf(QEW(topQ.base)) >= 0 && QK1.best.indexOf(QEW(topQ.total100)) >= 0,
@@ -667,9 +668,47 @@ const SEED = () => {
   const QCP2 = await p.evaluate(() => { window.copyText = window.__keepCP2; return window.__cp2.slice(); });
   is(QCP2.length === 1 && QCP2[0].indexOf(topQ.p.name + ' — 65세부터 매달 ' + QEW(topQ.monthlyPay)) >= 0 && /최저보증 금액 기준/.test(QCP2[0]),
      '📋 결과 복사 — 카톡에 붙일 글에도 「최저보증 기준 · 약관과 심사」 가 같이 간다');
-  is(/값은 넘어가지 않습니다/.test(QK1.t), '「재무설계 계산기 열기」 는 값이 안 넘어간다고 <b>밝힌다</b>');
+  is(/계산기의 나이 · 성별 · 은퇴 나이 칸도 이 값으로 바뀝니다/.test(QK1.t), '「계산기로 이 값 넘기기」 앞에 <b>계산기 칸이 바뀐다고</b> 먼저 밝힌다 (판 X278)');
   const QPG = PENGOT.reduce((m, x) => (m[x] = (m[x] || 0) + 1, m), {});
   is(QPG['pension-engine.js'] === 1 && QPG['apex-won.js'] === 1, '연금 엔진 · 돈 글자는 <b>한 번씩만</b> 받는다 — ' + JSON.stringify(QPG));
+
+  const OUT2 = outside.length;      /* 계산기가 제 글꼴을 받는 것은 그 화면의 몫 */
+  sec('[15] 📊 <b>계산기로 값도 넘어간다</b> (판 X278 · 사장님 말씀 「응 계산기로 값도 넘어가게 해줘」)');
+  /* 계산기를 먼저 열어 <b>다른 고객 값</b>을 넣어 둡니다 — 넘기면 바뀌고, 되돌리면 그대로 돌아와야 합니다 */
+  await p.evaluate(() => { go('finance'); });
+  await p.waitForTimeout(4000);
+  const FIN0 = await p.evaluate(() => { const w = document.getElementById('finFrame').contentWindow, d = w.document;
+    d.getElementById('s_age').value = '35'; d.getElementById('s_gender').value = ''; d.getElementById('s_rage').value = '60';
+    w.PSIM.prem = 30; w.PSIM.pay = 20; w.PSIM.pid = null; return { ok: !!w.PSIM }; });
+  await p.evaluate(() => go('apexmap')); await p.waitForTimeout(500);
+  /* ★ 여성으로 셉니다 — 매달 가장 많은 상품(하나뿐인)이 계산기의 기본(가입되는 첫 상품)과 <b>달라야</b>
+     「같은 상품을 펴나」 를 잴 수 있습니다. 남성 예시는 둘이 같아 상품을 안 넘겨도 초록이었습니다 (8번) */
+  const FT = engQ({sex:'여성', age:50, start:65, pay:10, monthly:500000}).ok[0];
+  await penQ('50세 여자 월 50만원 10년납 65세부터 연금 얼마');
+  await f.evaluate(() => document.querySelector('#jLog .j-pen .jp-fin').click());
+  await p.waitForTimeout(3000);
+  const FIN1 = await p.evaluate(() => { const w = document.getElementById('finFrame').contentWindow, d = w.document, pane = d.getElementById('tab-pension');
+    return { age: d.getElementById('s_age').value, sex: d.getElementById('s_gender').value, rage: d.getElementById('s_rage').value,
+             prem: w.PSIM.prem, pay: w.PSIM.pay, pid: w.PSIM.pid, on: !!(pane && pane.classList.contains('on')), txt: pane ? pane.textContent : '',
+             tab: currentTab(), dock: document.body.classList.contains('jv-dock') }; });
+  is(FIN1.age === '50' && FIN1.sex === '여성' && FIN1.rage === '65' && FIN1.prem === 50 && FIN1.pay === 10 && FIN1.pid === FT.p.id,
+     '「📊 계산기로 이 값 넘기기」 → 계산기에 <b>나이 50 · 여성 · 65세 · 월 50만원 · 10년 · ' + FT.p.name + '</b> 이 그대로 — ' + JSON.stringify({a:FIN1.age, s:FIN1.sex, r:FIN1.rage, m:FIN1.prem, y:FIN1.pay, p:FIN1.pid}));
+  is(FIN1.on && FIN1.txt.indexOf(FT.p.name) >= 0 && FIN1.tab === 'finance' && FIN1.dock, '계산기의 <b>「연금 시뮬레이션」 탭</b>이 그 상품으로 펴지고, 자비스는 아래 띠로 남는다');
+  const NOTE1 = await f.evaluate(() => (document.querySelector('#jLog .j-pen') || {}).textContent || '');
+  is(/계산기 「연금 시뮬레이션」 으로 넘겼습니다/.test(NOTE1) && /나이 35 → 50/.test(NOTE1) && /성별 빈칸 → 여성/.test(NOTE1) &&
+     /은퇴\(연금 시작\) 나이 60 → 65/.test(NOTE1) && /월 납입 30만원 → 50만원/.test(NOTE1) && /납입 기간 20년 → 10년/.test(NOTE1),
+     '넘긴 뒤 <b>무엇이 바뀌었는지</b> 말한다 — 나이 35 → 50 · 성별 빈칸 → 여성 · 월 납입 30만원 → 50만원 …');
+  await f.evaluate(() => document.querySelector('#jLog .j-pen .jp-undo').click());
+  await p.waitForTimeout(3000);
+  const FIN2 = await p.evaluate(() => { const w = document.getElementById('finFrame').contentWindow, d = w.document;
+    return { age: d.getElementById('s_age').value, sex: d.getElementById('s_gender').value, rage: d.getElementById('s_rage').value, prem: w.PSIM.prem, pay: w.PSIM.pay, pid: w.PSIM.pid }; });
+  const NOTE2 = await f.evaluate(() => (document.querySelector('#jLog .j-pen') || {}).textContent || '');
+  /* 상품이 비면 계산기는 <b>스스로</b> 「가입되는 첫 상품」 을 폅니다(renderPensionSim) — 그 기본값이면 되돌린 것입니다 */
+  const defPid = ((EB_el => EB_el.length ? EB_el : QEB.PENSION.products)(QEB.PENSION.eligible(35, 60, 20)))[0].id;
+  is(FIN2.age === '35' && FIN2.sex === '' && FIN2.rage === '60' && FIN2.prem === 30 && FIN2.pay === 20 && (FIN2.pid === null || FIN2.pid === defPid) && /되돌렸습니다/.test(NOTE2),
+     '「↩ 계산기 값 되돌리기」 → 계산기가 <b>넘기기 전 값으로</b>(빈칸은 빈칸으로) — ' + JSON.stringify(FIN2));
+  await p.evaluate(() => { jvDockEnd(); go('apexmap'); }); await p.waitForTimeout(500);
+  outside.splice(OUT2);
 
   sec('[8] 🧼 꺾쇠 0 · 콘솔 오류 0 · 바깥 주소 0');
   const tags = [C1, K1, T1, Z1, Z4, Z7].filter(x => /&lt;\/?[a-z]/i.test(x.html)).length;

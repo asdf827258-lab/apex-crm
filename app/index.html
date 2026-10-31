@@ -21300,8 +21300,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-31 15:11';
-var APP_BUILD_NOTE="🧮 <b>자비스가 연금을 말로 셉니다</b> (판 X276) · 사장님 말씀 「연금 계산도 말하면 바로 가능하니」 → 「응 만들어줘」. ◾ 「50세 남자 월 50만원 10년납 65세부터 연금 얼마」 → 재무설계 계산기와 같은 엔진으로 상품마다 매달 받는 연금(최저보증)을 셉니다. 빠진 값만 묻고, 안 되는 상품은 까닭을 적습니다. ◾ 같이 실려 나가는 판 — X273(상담자료 덱) · X277(하나만 크게 · 말 복사 · 아카데미 화법·강의·슬라이드) · X271(시키면 한다) · X269 · X268 · X270(자비스 찾기 · 질병코드 찾기 칸 고침).";
+var APP_BUILD='2026-10-31 15:48';
+var APP_BUILD_NOTE="📊 <b>자비스가 셈한 연금이 계산기로 그대로 넘어갑니다</b> (판 X278) · 사장님 말씀 「응 계산기로 값도 넘어가게 해줘」. ◾ 연금 카드의 「📊 계산기로 이 값 넘기기」 → 계산기 「연금 시뮬레이션」 탭에 나이 · 성별 · 시작 나이 · 월 납입 · 납입 기간 · 그 상품이 섭니다. 무엇이 바뀌었는지 말하고, 「↩ 되돌리기」 로 넘기기 전 값으로 돌립니다. ◾ 같이 실려 나가는 판 — X276(연금을 말로) · X273(상담자료 덱) · X277(하나만 크게 · 말 복사) · X271(시키면 한다) · X269 · X268 · X270(자비스 찾기).";
 
 
 
@@ -69634,6 +69634,28 @@ function osFinPush(inputs,pain,how){
      곧바로 오므로 늦지 않는다. */
   osFinPoke();
 }
+/* 🧮 <b>자비스 → 계산기 연금 칸</b> (판 X278 · 사장님 말씀 「응 계산기로 값도 넘어가게 해줘」).
+   v = {age, sex, start, prem(만원), pay(년), pid}. 넣는 것은 osFinFlush 한 곳이고, 계산기가
+   덮기 전 값(before)을 돌려주면 cb(before) 로 자비스에게 넘깁니다 — 무엇이 바뀌었는지 말하고
+   되돌릴 수 있게. 30초 안에 답이 없으면 cb(null) — 「못 넘겼다」 고 말하게 합니다 (1번). */
+var FINPEN={cb:null,t:0};
+function osFinPushPen(v,cb){
+  if(!v)return;
+  if(FINPEN.t)clearTimeout(FINPEN.t);
+  FINPEN.cb=cb||null;
+  FINPEN.t=setTimeout(function(){ var c=FINPEN.cb; FINPEN.cb=null; FINPEN.t=0; if(c)c(null); },31000);
+  TOFIN.pend={pen:v,n:0};
+  osFinPoke();
+}
+window.addEventListener('message',function(e){
+  var d=e&&e.data;
+  if(!d||d.type!=='apexFinPensionOk')return;
+  if(e.origin!==location.origin)return;
+  var fr=$('finFrame');
+  if(!fr||!e.source||e.source!==fr.contentWindow)return;
+  var c=FINPEN.cb; FINPEN.cb=null; if(FINPEN.t){clearTimeout(FINPEN.t);FINPEN.t=0;}
+  if(c)c(d.before||{});
+});
 /* 계산기에게 「살아 있냐」고 몇 번 물어본다. 답(apexFinReady)이 오면 넣는다. */
 function osFinPoke(){
   var tries=0;
@@ -69652,8 +69674,10 @@ function osFinFlush(){
   var fr=$('finFrame');
   if(!fr||!fr.contentWindow||!fr._mounted)return;
   try{
-    fr.contentWindow.postMessage({type:'apexFinLoad',inputs:p.inputs},location.origin);
+    if(p.inputs)fr.contentWindow.postMessage({type:'apexFinLoad',inputs:p.inputs},location.origin);
     if(p.pain)fr.contentWindow.postMessage({type:'apexFinFlow',at:0,pain:p.pain},location.origin);
+    /* 🧮 자비스가 셈한 연금 (판 X278) — 같은 「준비됐다」 길로 넣습니다. 길이 둘이면 한쪽만 고쳐집니다 (5번) */
+    if(p.pen)fr.contentWindow.postMessage({type:'apexFinPension',v:p.pen},location.origin);
   }catch(x){ return; }
   TOFIN.pend=null;
   if(p.how==='auto')
