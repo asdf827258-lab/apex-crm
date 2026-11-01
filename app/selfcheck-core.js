@@ -177,6 +177,8 @@
     all('[data-sc="by"]').forEach(function(e){e.textContent=FLOW.by});
     all('[data-sc="hi"]').forEach(function(e){e.textContent=FLOW.hi?'“'+FLOW.hi+'”':''});
     all('[data-sc-show]').forEach(function(e){e.hidden=!FLOW[e.getAttribute('data-sc-show')]});
+    /* 📄 한 장 안내서로 — 보낸 설계사 이름을 그대로 들고 간다 (판 X281) */
+    all('[data-sc-sheet]').forEach(function(e){e.setAttribute('href','kijun-sheet.html'+(FLOW.by?'#by='+encodeURIComponent(FLOW.by):''))});
     all('[data-sc="qs"]').forEach(function(box){
       var from=+(box.getAttribute('data-from')||0), to=+(box.getAttribute('data-to')||Q.length);
       box.innerHTML=Q.slice(from,to).map(function(q,i){return qHtml(q,from+i)}).join('');
