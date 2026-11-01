@@ -1789,19 +1789,19 @@ body.jv-dock:not(.apexmap-mode) #osVaFab{display:none}
      옅은 윗선 하나로 가릅니다. 둥글기(20px)는 <b>안 건드립니다</b>(check-hmexact).
    ★ 값은 토큰에서만 옵니다 — hex 를 적지 않습니다.                         */
 #hmJobWrap{margin-bottom:12px}
-/* 카드 밑으로 붙는 조각(📋 머리 · 🧺 넷)은 <b>옆선</b>을 잇고, <b>맨 끝 조각</b>만 바닥선과
-   둥근 귀를 가집니다 — 조각이 늘거나 비어도 테두리가 끊기지 않습니다. */
-#hmJobWrap:has(>#hmTodayHd:not(:empty)) .hm-now,
+/* 🧭 판 X285 — 맨 위 조각은 <b>머리(#hmTodayHd)</b>입니다. 머리가 윗선·둥근 윗귀를 갖고,
+   카드(.hm-now)는 윗귀를 펴서 그 밑에 이어 붙습니다. 밑으로는 넷이 이어지고 <b>맨 끝 조각</b>만
+   바닥선과 둥근 아랫귀를 가집니다 — 조각이 늘거나 비어도 테두리가 끊기지 않습니다.
+   ★ 카드의 글·단추·크기는 <b>한 자도 안 바꿨습니다</b> — 귀와 선 색만 바꿉니다. */
+#hmJobWrap>#hmTodayHd{border:1px solid var(--t-point);border-bottom:0;border-radius:20px 20px 0 0;
+  background:var(--t-card);padding:12px 14px 10px}
+#hmJobWrap:has(>#hmTodayHd:not(:empty)) .hm-now{border-top-left-radius:0;border-top-right-radius:0;
+  border-top-color:var(--t-line)}
 #hmJobWrap:has(>#hmStack:not(:empty)) .hm-now{border-bottom-left-radius:0;
   border-bottom-right-radius:0;border-bottom-color:var(--t-line)}
-#hmJobWrap>#hmTodayHd,#hmJobWrap>#hmStack{border:1px solid var(--t-point);border-top:0;
-  border-bottom:0;background:var(--t-card)}
-#hmJobWrap>:not(#hmJobHost):not(:empty):last-child,
-#hmJobWrap>#hmTodayHd:has(+#hmStack:empty){border-bottom:1px solid var(--t-point);
-  border-radius:0 0 20px 20px;overflow:hidden}
-#hmJobWrap>#hmTodayHd{padding:14px 14px 12px}
-#hmJobWrap>#hmTodayHd .tz-greet{padding:0 0 8px}
-#hmJobWrap>#hmStack{border-top:1px solid var(--t-line)}
+#hmJobWrap>#hmStack{border:1px solid var(--t-point);border-top:1px solid var(--t-line);
+  border-radius:0 0 20px 20px;background:var(--t-card)}
+#hmJobWrap>#hmTodayHd .tz-greet{padding:0 0 8px;font-size:18px}
 #hmTodayHd:empty,#hmStack:empty,#hmStack>:empty{display:none}
 #hmStack>*+*{border-top:1px solid var(--t-line)}
 #hmStack .card{border:0;box-shadow:none;margin:0}
@@ -1815,6 +1815,14 @@ body.jv-dock:not(.apexmap-mode) #osVaFab{display:none}
 #hmStack .t-card{padding:12px 14px}
 #hmStack .tz-hc{padding:12px 14px;margin:0;border:0;box-shadow:none}
 #hmStack .tz-hc .go{margin-top:8px}
+/* 🧭 판 X285 — 📅 오늘 약속은 테두리 안에서 <b>글 왼쪽 · 단추 오른쪽</b> 한 덩이로 섭니다.
+   글은 한 자도 안 뺐고 자리만 옆으로 — 다섯 걸음 띠를 들이고도 홈 선(3.56화면) 안에 들게
+   재어 고른 자리입니다(155 → 약 90px). */
+#hmStack .tz-hc{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:center}
+#hmStack .tz-hc>.t,#hmStack .tz-hc>.m{grid-column:1}
+#hmStack .tz-hc>.go{grid-column:2;grid-row:1/span 2;margin-top:0;width:auto;padding:0 14px;white-space:nowrap}
+/* 걸음 이름표가 접이 윗금 위로 나오게 — 접이가 넘침을 자르면 이름표 윗반이 잘립니다(찍어 보고 알았습니다) */
+#hmStack>.hm-fold[data-way]{overflow:visible}
 #hmStack .hm-fold{margin:0;border-radius:0;box-shadow:none}
 #hmStack .hm-fold-b{padding:0}
 /* 📊 오늘 기록은 여백을 주면 폰에서 칩이 세 줄로 접혀(찍어 보고 알았습니다) 대신
@@ -34930,6 +34938,117 @@ var HM_SIDE = [
      않습니다 — 칸이 늘어도 빠뜨릴 자리가 없습니다 (5번).              */
   { at:3, e:'🔔', t:'알람',             w:'오늘 남은 알람', fn:'hmAlmSideHtml' }
 ];
+/* ══ 🧭 <b>하루 다섯 걸음</b> — 「지금 할 것」 한 장이 하루의 길잡이 (판 X285) ════════════
+   사장님 말씀 (2026-11-01) — 「조금 더 디자인을 짜보고 보기쉽게 사용할수 있도록 정말 처음부터
+   끝까지 <b>이 한칸으로 모든 방향성</b>을 잡을수 있도록」 → 세 꼴을 올려 드려 <b>「하루 다섯
+   걸음」</b> 을 고르셨습니다.
+   ★ <b>걸음은 이 표 한 곳</b>입니다 (5번 · 삼항 사슬 없음).
+       at  — 그 걸음이 시작하는 칸. 'job' 은 「지금 할 것」 카드, 나머지는 HM_STACK 의 칸
+             (host 또는 fn) 이름 — 칸이 늘거나 자리를 바꿔도 이 표만 고칩니다.
+       n   — 띠에 적을 수를 내는 자. <b>새로 세지 않습니다</b> — 그 칸이 이미 세는 자를
+             그대로 부릅니다. 못 세면 null 이고 띠에는 <b>수를 안 적습니다</b> (1번).
+       go  — 그 걸음에 <b>아직 할 것이 있나</b>. 「지금 걸음」 은 위에서부터 첫 「있다」 입니다.
+   ★ 그림에서는 📆 이번 주를 ⑤ 관리에 두셨는데, 그 칸은 <b>이번 주 약속 달력</b>이고 📅 오늘
+     약속과 한 자리(#hmUpHost)에서 같이 칠해집니다 — 그래서 ② 만남에 둡니다(대장에 적었습니다).
+   ★ 걸음 이름은 칸 사이 <b>금 위에</b> 얹습니다 — 줄을 새로 세우지 않아 홈 선(3.56화면)을
+     거의 안 먹습니다. 머리에 띠 한 줄만 늡니다. */
+var HM_WAY=[
+  { k:'call', no:'①', t:'연락', s:'지금 이 분',            at:'job',
+    n:'hmWayCall', go:function(){ var r=null; try{ r=hmNext(); }catch(e){} return !!(r&&r.x); } },
+  { k:'meet', no:'②', t:'만남', s:'동선 · 오늘 약속 · 이번 주', at:'hmRtHost',
+    n:'hmWayMeet', go:function(){ var v=hmWayMeetN(); return !!v; } },
+  { k:'tidy', no:'③', t:'정리', s:'약속 지난 분 · 소개',     at:'hmLateHost',
+    n:'hmWayTidy', go:function(){ var a=hmWayTidyN(); return !!(a&&(a[0]+a[1])); } },
+  { k:'rec',  no:'④', t:'기록', s:'오늘 한 것',             at:'hmActHost',
+    n:'hmWayRec',  go:function(){ return false; } },        /* 기록은 「할 일」 이 아니라 남는 것 */
+  { k:'care', no:'⑤', t:'관리', s:'이번 달 고객 관리',       at:'hmMadiSideHtml',
+    n:'hmWayCare', go:function(){ var L=null; try{ L=(typeof mstDueList==='function')?mstDueList():null; }catch(e){} return !!(L&&L.monLeft); } }
+];
+/* ① — 「몇 번째 / 몇」 은 진행 막대와 <b>같은 자</b>(hmNext)입니다. 둘이 갈리면 안 됩니다 */
+function hmWayCall(){ var r=null; try{ r=hmNext(); }catch(e){} return (r&&r.n)?((r.i||0)+' / '+r.n):null; }
+/* ② — 오늘 잡힌 약속. 달력 칸(hmTossAppt)이 읽는 <b>그 자</b>(mcalDay)에 묻습니다 */
+function hmWayMeetN(){
+  var it,L,i,n=0;
+  try{ it=mcalItems(); L=mcalDay(it,mcalToday()); }catch(e){ return null; }
+  if(!L)return null;
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].k==='appt')n++;
+  return n;
+}
+function hmWayMeet(){ var n=hmWayMeetN(); return n===null?null:('약속 '+n); }
+/* ③ — 🕗 · 💬 두 칸이 저마다 세는 수를 <b>그대로 나란히</b> 적습니다(더해서 새 수를 만들지 않습니다) */
+function hmWayTidyN(){
+  var w=(typeof hwhoFor==='function')?hwhoFor():'',a=null,b=null;
+  try{ a=(typeof arApptPast==='function')?arApptPast(w):null; }catch(e){}
+  try{ b=(typeof hmReferRows==='function')?hmReferRows(w):null; }catch(e2){}
+  if(a===null||b===null)return null;
+  return [a.length,b.length];
+}
+function hmWayTidy(){ var a=hmWayTidyN(); return a?(a[0]+' · '+a[1]):null; }  /* 🕗 · 💬 차례 — 무엇인지는 aria-label 과 칸 이름이 말합니다 */
+/* ④ — 📊 오늘 기록 칸이 세는 그 자(hmActOf) · ⑤ — 💌 칸이 세는 그 자(mstDueList) */
+function hmWayRec(){ var a=null; try{ a=(typeof hmActOf==='function')?hmActOf():null; }catch(e){}
+  return a?('☎'+a.call+' 🤝'+a.meet):null; }
+function hmWayCare(){ var L=null; try{ L=(typeof mstDueList==='function')?mstDueList():null; }catch(e){}
+  return L?('마디 '+L.monLeft):null; }
+/* 「지금 걸음」 — 위에서부터 <b>할 것이 남은 첫 걸음</b>. 다 비었으면 ④ 기록(오늘 마무리) */
+function hmWayNow(){
+  var i; for(i=0;i<HM_WAY.length;i++){ try{ if(HM_WAY[i].go())return i; }catch(e){} }
+  for(i=0;i<HM_WAY.length;i++)if(HM_WAY[i].k==='rec')return i;
+  return 0;
+}
+function hmWayRail(){
+  var h='<div class="hm-way" role="navigation" aria-label="하루 다섯 걸음">',i,w,v,now=hmWayNow();
+  for(i=0;i<HM_WAY.length;i++){
+    w=HM_WAY[i]; v=null;
+    try{ v=(typeof window[w.n]==='function')?window[w.n]():null; }catch(e){ v=null; }
+    h+='<button type="button" class="hm-way-c'+(i===now?' on':'')+'" onclick="hmWayGo('+i+')" '+
+       'aria-label="'+osEsc(w.no+' '+w.t+' — '+w.s+(v!==null?(' · '+v):''))+'"'+(i===now?' aria-current="step"':'')+'>'+
+       '<span class="t">'+w.no+' '+osEsc(w.t)+'</span>'+
+       '<span class="v">'+(v!==null?osEsc(v):'—')+'</span></button>';
+  }
+  return h+'</div>';
+}
+function hmWayHd(){
+  if(!OS.profile)return '';
+  var g='',b='';
+  try{ g=hmTossGreet(); }catch(e){}
+  try{ b=hmTossBarHtml(); }catch(e2){}
+  return g+hmWayRail()+b;
+}
+/* 걸음이 시작하는 칸 — 표의 at 를 <b>지금 선 칸</b>으로. 접이에 싸였으면 그 껍데기입니다 */
+function hmWayEl(w){
+  var st=document.getElementById('hmStack'),i,c;
+  if(w.at==='job')return document.getElementById('hmJobHost');
+  if(!st)return null;
+  for(i=0;i<HM_STACK.length&&i<st.children.length;i++){
+    c=HM_STACK[i];
+    if(c.host===w.at||c.fn===w.at)return st.children[i];
+  }
+  return null;
+}
+/* 걸음 이름을 그 칸 <b>윗금 위에</b> 얹습니다(줄을 안 늘립니다) · 지금 걸음은 파랗게 */
+function hmWayMark(){
+  var i,e,now=hmWayNow();
+  try{ document.querySelectorAll('#hmJobWrap [data-way]').forEach(function(x){
+    x.removeAttribute('data-way'); x.classList.remove('hm-way-on'); }); }catch(e0){}
+  for(i=0;i<HM_WAY.length;i++){
+    e=hmWayEl(HM_WAY[i]); if(!e)continue;
+    e.setAttribute('data-way',HM_WAY[i].no+' '+HM_WAY[i].t);
+    if(i===now)e.classList.add('hm-way-on');
+  }
+}
+function hmWayPaint(){
+  var el=document.getElementById('hmTodayHd'); if(!el)return;
+  try{ el.innerHTML=hmWayHd(); }catch(e){}
+  hmWayMark();
+}
+/* 띠를 누르면 그 걸음으로 — 접혀 있으면 폅니다(여닫는 자는 hmFoldToggle 하나) */
+function hmWayGo(i){
+  var w=HM_WAY[i],e=w?hmWayEl(w):null,f;
+  if(!e)return;
+  f=(e.classList&&e.classList.contains('hm-fold'))?e:null;
+  if(f&&!f.classList.contains('on')){ try{ hmFoldToggle(f.id.replace('hmFold_','')); }catch(x){} e=hmWayEl(w)||e; }
+  try{ e.scrollIntoView({behavior:'smooth',block:'start'}); }catch(x2){ try{ e.scrollIntoView(); }catch(x3){} }
+}
 /* ══ 🧺 <b>「지금 할 것」 카드 안의 차례</b> (판 X278) ═══════════════════════
    사장님 말씀 (2026-10-31) — 「지역동선하고, 오늘 할일등이 지금 할것에 포함 되게」
    → 「카드 안에 차례로 쌓기」. 이 표 <b>한 곳</b>이 차례를 정합니다 (5번 · 삼항 사슬 없음).
@@ -35584,6 +35703,8 @@ function hmSidePlace(){
   try{ if(typeof hmActPaint==='function')hmActPaint(); }catch(e2){}
   try{ hmLatePaint(); }catch(e3){}
   try{ hmReferPaint(); }catch(e4){}
+  /* 🧭 걸음 띠·이름표는 칸들이 다 선 <b>뒤에</b> 답니다 (판 X285) */
+  try{ hmWayPaint(); }catch(e5){}
 }
 /* 폭이 바뀌면 자리도 따라옵니다 — 가로로 돌리거나 창을 넓히시는 그때입니다.
    ★ 수(1101)를 여기 안 적습니다 — navWide 가 쓰는 그 질문을 그대로 씁니다 (5번) */
@@ -36420,6 +36541,8 @@ function hmPaint(){
   try{ hmWhoPaint(); }catch(eWh){}
   /* 📇 한 장 띠도 같이 — 팀원을 고르거나 DB 가 늦게 실려 와도 따라갑니다 (판 X284) */
   try{ hmBandPaint(); }catch(eBd){}
+  /* 🧭 하루 다섯 걸음 — 「이분 끝」 을 누르면 띠의 수와 지금 걸음이 바로 따라옵니다 (판 X285) */
+  try{ hmWayPaint(); }catch(eWy){}
   /* 📒 이번 달 기록도 같이 — 접촉을 하나 남기면 그 수가 바로 바뀝니다 (판 X130) */
   try{ mlogPaint(); }catch(eMl){}
   /* 📍 <b>곁칸 넷을 어디에 세울지</b> — 오늘 카드를 다시 그리면 그 안의 자리도
@@ -38084,8 +38207,12 @@ function hmTossHtml(){
        그 자체라 넷의 머리로 섭니다(사장님 말씀 「오늘 할일등이 지금 할것에 포함」).
        여태 두 기둥 밑(y2,054)이라 홈 두 화면 밖이었습니다(check-homeday).
        짓는 자는 그대로 hmTossGreet · hmTossBarHtml 하나씩입니다 (5번).     */
-    '<div id="hmJobWrap"><div id="hmJobHost">'+hmTopHtml()+'</div>'+
-      '<div id="hmTodayHd">'+hmTossGreet()+hmTossBarHtml()+'</div>'+
+    /* 🧭 <b>판 X285 — 머리가 맨 위로</b>(사장님 말씀 2026-11-01 「처음부터 끝까지 이 한칸으로
+       모든 방향성을」 → 「하루 다섯 걸음」). 인사 · 다섯 걸음 띠 · 진행 막대가 테두리 맨 위에서
+       <b>오늘 어디쯤인가</b>를 먼저 말하고, 그 밑에 ① 연락(이 카드)부터 ⑤ 관리까지 섭니다.
+       짓는 자는 hmWayHd 하나 · 걸음 표는 HM_WAY 하나입니다 (5번). */
+    '<div id="hmJobWrap"><div id="hmTodayHd">'+hmWayHd()+'</div>'+
+      '<div id="hmJobHost">'+hmTopHtml()+'</div>'+
       '<div id="hmStack"></div></div>'+
     /* ══ 🔲 <b>활동이 「지금 할 것」 바로 밑</b> (판 X250) ════════════════
        사장님 말씀 (2026-10-30) — <b>「응 폰도 활동 먼저 올리고」</b>.
