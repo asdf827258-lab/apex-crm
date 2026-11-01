@@ -193,6 +193,7 @@
      ★ 목업에는 청록이 없습니다 — <b>목업에서 온 색이 아니라 앱에서 온 색</b>
        이라는 사실을 적어 둡니다(--t-neg-d 와 같습니다 · 1번).            */
   --t-teal:#0891B2;     /* 실손·건강 쪽 청록 — 흰 위 3.68 · 담보 칩(실손)에 씀 */
+  --t-teal-l:#ECFEFF;   /* 판 X286 — ④ 기록 걸음의 옅은 바탕(청록 짝) · 흰 위에서 청록 글이 읽히는 밝기 */
   --t-teal-d:#0E7490;   /* 실손·건강 <b>글씨</b> — 흰 위 5.36. --t-teal 은 흰 위 3.68 (판 X169) */
   /* ── <b>영웅 띠 — 한 벌만 둡니다</b> (판 X169) ───────────────────────
      2026-10-23. 세어 보니 같은 남색→파랑 띠가 <b>본체에만 스물넷</b>,
@@ -461,24 +462,45 @@
 .hm-blank-s{margin-top:6px;font-size:14px;color:var(--t-sub);line-height:1.5}
 /* 🧭 <b>하루 다섯 걸음</b> — 「지금 할 것」 머리의 띠와 칸 윗금 위 이름표 (판 X285 · hmWayRail · hmWayMark).
    ★ 띠는 <b>다섯 칸 격자</b> — 폰(358px)에서도 한 줄에 다 섭니다(밀어 보는 줄이 아닙니다 · 판 X227).
-   ★ 글 14px 바닥 · 누르는 자리 44px · 지금 걸음만 파랑(--t-point) · 토큰만. */
+   ★ 글 14px 바닥 · 누르는 자리 44px · 토큰만.
+   🎨 <b>판 X286 — 걸음마다 제 색</b> (사장님 말씀 2026-11-01 「디자인과 색상을 재배치하여 각자 역할이
+   다르다는것을」). 색은 <b>뜻</b>으로 골랐고, 걸음 하나가 <b>세 자리에 같은 색</b>으로 섭니다 —
+   띠 칸 · 윗금 이름표 · 그 걸음에 든 칸들 왼쪽의 <b>세로 띠</b>. 그래서 위에서 내려가며 「지금 무슨
+   걸음 안에 있나」 가 색으로 읽힙니다.
+     ① 연락 파랑(지금 바로 하는 일) · ② 만남 초록(나가서 뵙는 일) · ③ 정리 주황(밀린 것 — 주의) ·
+     ④ 기록 청록(오늘 한 것이 남는 자리) · ⑤ 관리 보라(오래 챙기는 관계).
+   ★ 색 이름은 <b>여기 한 곳</b>(data-wc → --wc 셋)에서만 풉니다 — 앱은 걸음 표(HM_WAY)의 c 만 적습니다 (5번). */
+[data-wc="call"]{--wc:var(--t-point);--wc-l:var(--t-point-l);--wc-d:var(--t-point)}
+[data-wc="meet"]{--wc:var(--t-pos);  --wc-l:var(--t-pos-l);  --wc-d:var(--t-pos-d)}
+[data-wc="tidy"]{--wc:var(--t-warn); --wc-l:var(--t-warn-l); --wc-d:var(--t-warn-d)}
+[data-wc="rec"] {--wc:var(--t-teal); --wc-l:var(--t-teal-l); --wc-d:var(--t-teal-d)}
+[data-wc="care"]{--wc:var(--t-pur);  --wc-l:var(--t-pur-l);  --wc-d:var(--t-pur)}
 .hm-way{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:0 0 8px}
 .hm-way-c{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
   min-height:48px;padding:4px 2px;border:1px solid transparent;border-radius:var(--t-r-sm);
-  background:var(--t-bg-2);color:var(--t-ink);font-family:inherit;cursor:pointer;min-width:0}
-.hm-way-c .t{font-size:14px;font-weight:800;white-space:nowrap}
-.hm-way-c .v{font-size:14px;font-weight:600;color:var(--t-sub);white-space:nowrap;overflow:hidden;
+  background:var(--wc-l,var(--t-bg-2));color:var(--wc-d,var(--t-ink));font-family:inherit;cursor:pointer;min-width:0;
+  border-top:3px solid var(--wc,transparent)}
+.hm-way-c .t{font-size:14px;font-weight:800;white-space:nowrap;color:var(--wc-d,var(--t-ink))}
+.hm-way-c .v{font-size:14px;font-weight:600;color:var(--wc-d,var(--t-sub));opacity:.85;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;max-width:100%}
-.hm-way-c.on{background:var(--t-point-l);border-color:var(--t-point)}
-.hm-way-c.on .t,.hm-way-c.on .v{color:var(--t-point)}
-.hm-way-c:hover{background:var(--t-bg)}
-/* 걸음 이름표 — 칸 <b>윗금 위에</b> 얹어 줄을 늘리지 않습니다 */
+/* 지금 걸음 — 그 걸음 색으로 <b>꽉 채웁니다</b>(다른 넷은 옅은 바탕) */
+/* ⚠ 꽉 찬 바탕은 <b>짙은 짝(--wc-d)</b>입니다 — 흰 글이 주황·청록 위에서는 3:1 남짓이라 14px 글이
+   안 읽힙니다(4.5 바닥). 짙은 짝은 흰 위 5:1 넘게 섭니다. ① 파랑은 그대로(흰 글 6:1). */
+.hm-way-c.on{background:var(--wc-d,var(--t-point));border-color:var(--wc-d,var(--t-point))}
+.hm-way-c.on .t,.hm-way-c.on .v{color:var(--t-card);opacity:1}
+.hm-way-c:hover{filter:brightness(.97)}
+/* 걸음 이름표 — 칸 <b>윗금 위에</b> 얹어 줄을 늘리지 않습니다 · 그 걸음 색 */
 #hmJobWrap [data-way]{position:relative}
 #hmJobWrap [data-way]::before{content:attr(data-way);position:absolute;top:0;left:14px;
   transform:translateY(-50%);z-index:2;padding:1px 8px;border-radius:999px;
-  font-size:13px;font-weight:800;line-height:18px;color:var(--t-sub);background:var(--t-card);
-  border:1px solid var(--t-line);pointer-events:none}
-#hmJobWrap [data-way].hm-way-on::before{color:var(--t-card);background:var(--t-point);border-color:var(--t-point)}
+  font-size:13px;font-weight:800;line-height:18px;color:var(--wc-d,var(--t-sub));background:var(--wc-l,var(--t-card));
+  border:1px solid var(--wc,var(--t-line));pointer-events:none}
+#hmJobWrap [data-way].hm-way-on::before{color:var(--t-card);background:var(--wc-d,var(--t-point));border-color:var(--wc-d,var(--t-point))}
+/* 그 걸음에 든 칸들 — 왼쪽 <b>세로 띠</b> 4px. 칸 속 카드가 제 흰 바탕을 칠하므로 그림자로는
+   가려졌습니다(찍어 보고 알았습니다) — <b>맨 위 겹</b>(::after)에 그어 자리를 안 먹습니다. */
+#hmJobWrap [data-wc]:not(.hm-way-c){position:relative}
+#hmJobWrap [data-wc]:not(.hm-way-c)::after{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
+  background:var(--wc);z-index:1;pointer-events:none}
 /* 칩 바탕(--t-card)은 판 위에서는 하얗게 도드라지지만 <b>카드 안에서는</b>
    카드와 같은 색이라 글자만 남습니다 — 누를 수 있는 줄 모릅니다. 카드 안에서는
    목업이 칩에 쓰는 그 토큰(--t-bg-2)을 씁니다. 색은 여기 한 곳에만 둡니다. */

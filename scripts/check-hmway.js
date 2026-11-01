@@ -11,6 +11,7 @@
      [4] 걸음 이름표가 칸 윗금에 <b>위에서부터 ①→⑤</b> 로 서나
      [5] 띠를 누르면 그 걸음으로 가고, 접혀 있으면 펴나
      [6] 손가락 44px · 글 14px 바닥 · 폰에서 다섯 칸이 <b>한 줄</b>(밀어 보는 줄 아님 · 판 X227)
+     [8] 🎨 걸음마다 제 색(판 X286) — 다섯 가지 · 띠 칸·이름표·칸 왼쪽 띠가 같은 색 · 글 4.5:1
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -170,6 +171,41 @@ const SEED = () => {
   is(F.글 >= 14, '  글이 <b>14px 바닥</b> 위 — ' + F.글 + 'px');
   is(!F.옆샘, '  옆으로 안 샌다');
   is(errs.length === 0, '  오류 없이 선다' + (errs.length ? (' ← ' + errs[0]) : ''));
+
+  console.log('\n[8] 🎨 걸음마다 제 색 (판 X286 · 사장님 말씀 「각자 역할이 다르다는것을」)');
+  const G = await p.evaluate(() => {
+    const lum = (c) => { const m = c.match(/\d+(\.\d+)?/g).map(Number).slice(0, 3).map(v => v / 255)
+      .map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)); return 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]; };
+    const cr = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+    const chips = [...document.querySelectorAll('#hmTodayHd .hm-way-c')];
+    const 띠색 = chips.map(e => { const d = document.createElement('i'); d.setAttribute('data-wc', e.getAttribute('data-wc'));
+      d.style.color = 'var(--wc)'; document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; });
+    const on = chips.filter(e => e.classList.contains('on'))[0];
+    const onCr = on ? cr(getComputedStyle(on).backgroundColor, getComputedStyle(on.querySelector('.t')).color) : 0;
+    const idleCr = Math.min.apply(null, chips.filter(e => !e.classList.contains('on'))
+      .map(e => cr(getComputedStyle(e).backgroundColor, getComputedStyle(e.querySelector('.t')).color)));
+    const st = document.getElementById('hmStack');
+    const 칸 = st ? [...st.children].filter(e => e.getBoundingClientRect().height > 0) : [];
+    const 띠없음 = 칸.filter(e => !e.getAttribute('data-wc')).map(e => e.id || e.className);
+    /* 칸 왼쪽 세로 띠의 색이 <b>그 걸음 띠 칸의 색</b>과 같은가 */
+    /* 걸음의 <b>본 색</b>(--wc)을 그대로 떠 옵니다 — 지금 걸음 칸은 글이 읽히게 짙은 짝으로 칠하므로
+       칸 테두리로 견주면 지금 걸음만 늘 어긋납니다(재어 보고 알았습니다) */
+    const 짝 = {}; chips.forEach(e => { const k = e.getAttribute('data-wc'), d = document.createElement('i');
+      d.setAttribute('data-wc', k); d.style.color = 'var(--wc)'; document.getElementById('hmJobWrap').appendChild(d);
+      짝[k] = getComputedStyle(d).color; d.remove(); });
+    const 어긋 = 칸.filter(e => e.getAttribute('data-wc') && getComputedStyle(e, '::after').backgroundColor !== 짝[e.getAttribute('data-wc')])
+      .map(e => (e.id || e.className) + ':' + e.getAttribute('data-wc'));
+    const job = document.getElementById('hmJobHost');
+    return { 띠색, 다름: new Set(띠색).size, onCr, idleCr, 띠없음, 어긋, n: 칸.length,
+             jobOk: !!job && job.getAttribute('data-wc') === 'call' && getComputedStyle(job, '::after').backgroundColor === 짝.call,
+             표: HM_WAY.map(w => w.k).join(','), 칩: chips.map(e => e.getAttribute('data-wc')).join(',') };
+  });
+  is(G.칩 === G.표, '  띠 칸마다 <b>제 걸음 이름</b>(data-wc)이 달렸다 — ' + G.칩);
+  is(G.다름 === 5, '  ★★ 다섯 걸음이 <b>다섯 가지 색</b>이다 — ' + G.다름 + '가지');
+  is(G.jobOk, '  ① 지금 할 것 카드 왼쪽 띠가 <b>① 연락 색</b>이다');
+  is(G.띠없음.length === 0 && G.n >= 5, '  ★ 넷의 <b>모든 칸</b>이 어느 걸음 색 띠를 단다 — ' + (G.띠없음.join(' · ') || G.n + '칸 다'));
+  is(G.어긋.length === 0, '  ★ 칸 띠 색이 <b>그 걸음 띠 칸 색과 같다</b> — 세 자리 같은 색' + (G.어긋.length ? (' ← ' + G.어긋.join(' · ')) : ''));
+  is(G.onCr >= 4.5 && G.idleCr >= 4.5, '  ★ 글이 읽힌다 — 지금 걸음 ' + G.onCr.toFixed(2) + ':1 · 나머지 가장 낮은 ' + G.idleCr.toFixed(2) + ':1 (4.5 바닥)');
 
   console.log('\n[7] 새로 세지 않는다 (5번)');
   const SRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');

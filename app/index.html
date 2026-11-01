@@ -34952,6 +34952,8 @@ var HM_SIDE = [
      약속과 한 자리(#hmUpHost)에서 같이 칠해집니다 — 그래서 ② 만남에 둡니다(대장에 적었습니다).
    ★ 걸음 이름은 칸 사이 <b>금 위에</b> 얹습니다 — 줄을 새로 세우지 않아 홈 선(3.56화면)을
      거의 안 먹습니다. 머리에 띠 한 줄만 늡니다. */
+/* 🎨 판 X286 — 걸음마다 제 색. 색은 k 이름으로 ui.css 한 곳([data-wc])에서 풀립니다 —
+   여기에 색값을 적지 않습니다 (5번 · 토큰만). */
 var HM_WAY=[
   { k:'call', no:'①', t:'연락', s:'지금 이 분',            at:'job',
     n:'hmWayCall', go:function(){ var r=null; try{ r=hmNext(); }catch(e){} return !!(r&&r.x); } },
@@ -35000,7 +35002,7 @@ function hmWayRail(){
   for(i=0;i<HM_WAY.length;i++){
     w=HM_WAY[i]; v=null;
     try{ v=(typeof window[w.n]==='function')?window[w.n]():null; }catch(e){ v=null; }
-    h+='<button type="button" class="hm-way-c'+(i===now?' on':'')+'" onclick="hmWayGo('+i+')" '+
+    h+='<button type="button" class="hm-way-c'+(i===now?' on':'')+'" data-wc="'+w.k+'" onclick="hmWayGo('+i+')" '+
        'aria-label="'+osEsc(w.no+' '+w.t+' — '+w.s+(v!==null?(' · '+v):''))+'"'+(i===now?' aria-current="step"':'')+'>'+
        '<span class="t">'+w.no+' '+osEsc(w.t)+'</span>'+
        '<span class="v">'+(v!==null?osEsc(v):'—')+'</span></button>';
@@ -35027,13 +35029,24 @@ function hmWayEl(w){
 }
 /* 걸음 이름을 그 칸 <b>윗금 위에</b> 얹습니다(줄을 안 늘립니다) · 지금 걸음은 파랗게 */
 function hmWayMark(){
-  var i,e,now=hmWayNow();
-  try{ document.querySelectorAll('#hmJobWrap [data-way]').forEach(function(x){
-    x.removeAttribute('data-way'); x.classList.remove('hm-way-on'); }); }catch(e0){}
+  var i,e,now=hmWayNow(),st=document.getElementById('hmStack'),kids,j,cur='';
+  try{ document.querySelectorAll('#hmJobWrap [data-way],#hmJobWrap [data-wc]').forEach(function(x){
+    if(x.classList.contains('hm-way-c'))return;
+    x.removeAttribute('data-way'); x.removeAttribute('data-wc'); x.classList.remove('hm-way-on'); }); }catch(e0){}
   for(i=0;i<HM_WAY.length;i++){
     e=hmWayEl(HM_WAY[i]); if(!e)continue;
     e.setAttribute('data-way',HM_WAY[i].no+' '+HM_WAY[i].t);
+    e.setAttribute('data-wc',HM_WAY[i].k);
     if(i===now)e.classList.add('hm-way-on');
+  }
+  /* 🎨 판 X286 — 걸음이 시작한 칸부터 <b>다음 걸음 전까지</b> 같은 색 띠를 답니다.
+     어느 칸이 어느 걸음인지는 표의 at 이 정한 시작점만으로 압니다 — 칸마다 또 적지 않습니다 (5번). */
+  if(st){
+    kids=st.children;
+    for(j=0;j<kids.length;j++){
+      if(kids[j].getAttribute('data-way'))cur=kids[j].getAttribute('data-wc')||'';
+      else if(cur)kids[j].setAttribute('data-wc',cur);
+    }
   }
 }
 function hmWayPaint(){
