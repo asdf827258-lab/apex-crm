@@ -96,6 +96,68 @@ const 입원글 = (S.touchOf('입원') || [])[0];
 is(입원글 && (입원글.msg || []).every(m => !/가입|상품|보험료/.test(m.text)),
    '  <b>입원 중 안부 글</b>에는 파는 말이 한 줄도 없다');
 
+/* ══ 🛡 판 X279 — 무사고 할인 안내 ═══════════════════════════════════════
+   사장님 말씀 (2026-10-31) — 「ta 스크립트에 무사고 스크립트 있는데 그런 내용으로
+   안내 연락 드리고 찾아뵙도록 하는 것도 추가해 줘」.
+   ★ 말은 `app/silson5.html` 에서만 가져옵니다 (5번). 그 화면이 「말하면 안 된다」 고
+     적어 둔 넷을 <b>여기서 잽니다</b> — 안 울리는 알람은 알람이 아닙니다 (8번). */
+head('[8] 🛡 <b>무사고 할인</b> — silson5 가 정한 선을 지킨다');
+const 무 = S.touchOf('무사고') || [];
+is(무.length >= 2, '  무사고 묶음에 상황이 ' + 무.length + '가지 있다 — ' + 무.map(x => x.t).join(' · '));
+/* 입으로 나가는 모든 칸 (「하지 말 것」 칸은 뺍니다 — 거기엔 금지된 말이 적혀 있어야 합니다) */
+const 무말 = [];
+무.forEach(x => {
+  (x.msg || []).forEach((m, i) => 무말.push([x.k + ' 글' + (i + 1), m.text]));
+  (x.call || []).forEach(c => 무말.push([x.k + ' 대본 ' + c.t, c.say]));
+  (x.reply || []).forEach((r, i) => 무말.push([x.k + ' 돌아오는 말' + (i + 1), r.a]));
+});
+const 무글 = 무.reduce((a, x) => a.concat((x.msg || []).map(m => m.text)), []).join('\n');
+const 무피 = 무.map(x => x.avoid || '').join('\n');
+
+/* ① 할인을 주는 곳은 <b>보험회사</b>입니다 — 금감원은 2026-10-05 에 개선을 발표했을 뿐 */
+const 감 = 무말.filter(([, t]) => /금융감독원|금감원/.test(t));
+is(감.length === 0, '  ① 입으로 나가는 말에 <b>금감원</b> 이 없다 — 할인을 주는 곳은 보험회사입니다' +
+   (감.length ? ' ⚠ ' + 감.map(x => x[0]).join(' · ') : ''));
+is(/보험회사가 보험료를 깎/.test(무글), '  ① 글에 <b>보험회사가</b> 깎아 준다고 적혀 있다');
+is(/금융감독원/.test(무피), '  ① 「하지 말 것」 칸에 <b>금감원이라 하지 말라</b>고 적혀 있다');
+
+/* ② 고객님이 보험사에 <b>직접</b> 신청하실 수도 있습니다 — 「저만」 이라 하지 않습니다 (1번) */
+const 저만 = 무말.filter(([, t]) => /저만|제가 아니면|저를 통해서만|저밖에/.test(t));
+is(저만.length === 0, '  ② 「저만 해 드릴 수 있다」 는 말이 없다 (1번)' +
+   (저만.length ? ' ⚠ ' + 저만.map(x => x[0]).join(' · ') : ''));
+is(/보험사에 직접 하셔도 됩니다|직접 신청하/.test(무글), '  ② 글에 <b>직접 신청하셔도 된다</b>고 적혀 있다');
+
+/* ③ 할인은 <b>신청한 뒤부터</b>이고 지난 기간은 <b>소급되지 않습니다</b> */
+is(/소급되지 않습니다/.test(무글) && /신청하신 뒤부터/.test(무글),
+   '  ③ 글에 <b>신청한 뒤부터 · 소급 안 됨</b> 이 적혀 있다 — 늦은 만큼은 그냥 내시게 됩니다');
+
+/* ④ 할인율 숫자를 적지 않습니다 (2번) — 무사고 기간·상품마다 다릅니다 */
+const 율 = 무말.filter(([, t]) => /\d+[\d.,]*\s*(%|퍼센트|할)/.test(t));
+is(율.length === 0, '  ④ <b>할인율 숫자가 한 곳도 없다</b> (2번)' +
+   (율.length ? ' ⚠ ' + 율.map(x => x[0]).join(' · ') : ''));
+is(/무사고 기간과 상품마다 다릅니다/.test(무글),
+   '  ④ 글에 <b>상품마다 다르다</b>고 적혀 있다 — 숫자는 보험사 확인 뒤에');
+
+/* 주민등록번호 — 전화로 안 여쭙는다고 글에 적혀 있다 (3번) */
+is(/주민등록번호는 여쭙지 않습니다/.test(무글), '  주민등록번호를 <b>안 여쭙는다</b>고 글에 적혀 있다 (3번)');
+
+/* ★ 아직 약속이 없는 자리 — 약속 확정 안내 글이 붙으면 안 됩니다 */
+is((S.apptOf('무사고') || []).length === 0,
+   '  ★ <b>약속 안내 글이 안 붙는다</b> — 안 뵙기로 한 분께 「그날 뵙겠습니다」 가 가면 안 됩니다');
+
+/* ★ 광고성이라고 <b>스스로 밝힌다</b> (1번) — 이 묶음만 */
+is(무.every(x => x.ad === true), '  ★ 무사고 상황마다 <b>ad</b> 가 달려 있다 — 광고성으로 볼 수 있는 글입니다');
+const 딴ad = 묶음.filter(k => k !== '무사고' && (S.touch[k] || []).some(x => x.ad));
+is(딴ad.length === 0, '  ★ 다른 묶음에는 ad 가 <b>안</b> 달려 있다 — 안내 글에 광고 딱지를 잘못 붙이지 않습니다 (8번)' +
+   (딴ad.length ? ' ⚠ ' + 딴ad.join(' · ') : ''));
+
+/* ★ 출처가 살아 있나 — silson5 가 그 넷을 아직 그렇게 적고 있나 (5번).
+   그 화면을 고치면 여기도 같이 봐야 한다는 것을 <b>빨간불로</b> 알려 줍니다. */
+const S5 = fs.readFileSync(path.join(ROOT, 'app', 'silson5.html'), 'utf8');
+is(/할인을 주는 곳은 <b>보험회사<\/b>/.test(S5) && /소급되지 않습니다/.test(S5) &&
+   /「저만 해 드릴 수 있다」 고 하지 않습니다/.test(S5),
+   '  ★ 출처(<b>app/silson5.html</b>)가 그 넷을 아직 그렇게 적고 있다 — 고치면 이 글도 같이 봐야 합니다');
+
 head('[6] ★★ 화면이 대본을 <b>제 손으로 다시 적지 않았다</b> (5번)');
 const 화면 = APP.slice(APP.indexOf('function sbkRows('), APP.indexOf('function renderTaScriptPage('));
 is(화면.length > 1000, '  💬 보낼 말 모음 코드를 찾았다 (' + 화면.length + '자)');
@@ -196,6 +258,36 @@ const srv = http.createServer((rq, rs) => {
     (document.body.innerText.match(/[가-힣]{2,4}님/g) || []).filter(h => ok.indexOf(h) < 0), 호칭OK);
   is(실명화면.length === 0, '  화면의 호칭에 <b>사람 이름이 없다</b> (3번)' +
      (실명화면.length ? ' ⚠ ' + [...new Set(실명화면)].slice(0, 3).join(' · ') : ''));
+
+
+  head('[9] 🛡 무사고 묶음이 서고 — <b>광고성 알림은 접혀 있어도 보인다</b>');
+  const C = await pg.evaluate(async () => {
+    const T = s => (s || '').replace(/\s+/g, ' ').trim();
+    sbkType(''); sbkPick('무사고'); await new Promise(r => setTimeout(r, 250));
+    const 폄 = { 상황: document.querySelectorAll('.sbk-sit').length,
+                 글: document.querySelectorAll('.sbk-tx').length,
+                 알림: [...document.querySelectorAll('.sbk-ad')].map(x => T(x.innerText)) };
+    /* ★ 다시 「전체」 로 — 묶음이 <b>접힌</b> 채로도 알림이 떠 있나 (6번) */
+    sbkPick('무사고'); await new Promise(r => setTimeout(r, 250));
+    const V = e => { const q = e.getBoundingClientRect(); return q.width > 0 && q.height > 0 };
+    const 접 = { 편글: document.querySelectorAll('.sbk-tx').length,
+                 알림: [...document.querySelectorAll('.sbk-ad')].filter(V).length,
+                 딴곳: 0 };
+    /* 다른 묶음에는 알림이 안 붙어야 합니다 — 헛것을 잡지 않습니다 (8번) */
+    [...document.querySelectorAll('.sbk-sit')].forEach(s => {
+      const g = T((s.querySelector('.sbk-tag') || {}).innerText);
+      if (g !== '무사고' && s.querySelector('.sbk-ad')) 접.딴곳++;
+    });
+    sbkPick('');
+    return { 폄, 접 };
+  });
+  is(C.폄.상황 === 2 && C.폄.글 === 5,
+     '  묶음 「무사고」 — 상황 <b>' + C.폄.상황 + '가지</b> · 글 <b>' + C.폄.글 + '가지</b>가 선다');
+  is(C.폄.알림.length === 2 && C.폄.알림.every(t => /광고성으로 볼 수 있는 글/.test(t) && /동의 네 갈래/.test(t)),
+     '  📣 상황마다 <b>광고성 알림</b>이 뜬다 — 「' + (C.폄.알림[0] || '').slice(0, 34) + '…」');
+  is(C.접.편글 === 0 && C.접.알림 === 2,
+     '  ★ 접으면 글은 숨지만 <b>알림은 ' + C.접.알림 + '개 그대로 보인다</b> — 접어서 숨으면 안 됩니다 (6번)');
+  is(C.접.딴곳 === 0, '  다른 묶음에는 알림이 <b>안</b> 붙는다 — ' + C.접.딴곳 + '곳');
 
   await ctx.close(); await br.close(); srv.close();
   console.log('\n' + '─'.repeat(30));
