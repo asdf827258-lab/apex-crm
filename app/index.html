@@ -8794,6 +8794,98 @@ function arAll(sb,tbl,cols,key,tune,cap){
     }catch(eA){ return Promise.resolve({error:{message:(eA&&eA.message)||'실패'}}); }
   },cap);
 }
+/* ══ 🔌 <b>같은 물음을 두 번 하지 않습니다</b> (판 X281 · 5번·7번) ═══════════
+   사장님 말씀 (2026-11-01) — 「응 <b>서버켤때 부르는거 줄여줘</b>」.
+
+   재어 보니 홈을 한 번 열면 <b>고객 표를 통째로 두 번</b> 읽고 있었습니다 —
+   「오늘 터치할 사람」(arLoad)과 「고객 목록」(osLoadClients)이 <b>각자</b>
+   읽었습니다. 칸만 조금 달랐지 같은 표, 같은 줄입니다. 사장님 서버에는
+   고객이 <b>1,943분</b> 계십니다. 담당자 표(profiles)도 두 번이었습니다.
+
+   ★ 묻는 곳을 <b>하나</b>로 둡니다 (5번). 칸은 <b>두 쪽이 쓰던 것을 합쳐</b>
+     한 번에 받습니다 — 부르는 횟수가 줄고 칸만 늘어납니다 (7번).
+   ★ <b>잠깐 사이</b>(OSQ_TTL)에 똑같은 물음이 또 오면 그 대답을 같이 받습니다.
+     짧게 둡니다 — 길게 두면 방금 넣으신 고객이 안 보입니다 (1번).
+   ★ 고객·담당자를 <b>고치거나 넣는 자리</b>는 osQDrop 으로 지웁니다.
+     안 지우면 바뀐 것이 한 박자 늦게 보입니다.
+   ★ 줄은 <b>베껴서</b> 돌려줍니다 — 한쪽이 손대면 다른 쪽이 틀어집니다 (5번).
+   ⚠ 이 막이는 <b>읽기</b>에만 씁니다. 쓰기에는 절대 두르지 마십시오.      */
+var OSQ={};
+function osQOnce(key,make){
+  var c=OSQ[key];
+  if(!c||!c.p){
+    c={p:make()}; OSQ[key]=c;
+    /* ★★ <b>답이 오면 바로 지웁니다</b> — 들고 있지 않습니다.
+       처음에 9초쯤 들고 있게 했다가 check-clients 가 셋을 잡았습니다:
+       「저장하면 바로 화면에 뜬다」 · 「끝낸 일이 접촉 기록으로 남는다」 ·
+       「같은 가족이면 상대가 바로가기로 뜬다」. 방금 넣으신 것이 안 보이는
+       것은 서버 요금보다 나쁩니다 (1번).
+       <b>같은 때 나란히 부르는 것만</b> 하나로 묶습니다 — 홈이 바로 그
+       자리라, 그것만으로 고객 표가 네 번에서 한 번이 되었습니다 (7번). */
+    var 치우기=function(){ if(OSQ[key]===c)delete OSQ[key]; };
+    c.p.then(치우기,치우기);
+  }
+  return c.p.then(function(r){
+    if(!r||r.error)return r;
+    return {data:(r.data||[]).slice(),error:null};
+  },function(e){ return {error:e||{message:'실패'}}; });
+}
+function osQDrop(pre){
+  var k; for(k in OSQ){ if(!OSQ.hasOwnProperty(k))continue;
+    if(!pre||k.indexOf(pre)===0)delete OSQ[k]; }
+}
+/* 고객 표를 읽는 <b>단 한 곳</b>. 칸은 두 쪽이 쓰던 것을 합친 것입니다 —
+   id·advisor_id·name_masked·created_at 은 둘 다, birth_year·household_notes 는
+   「오늘 터치할 사람」 이, consent_status·phone 은 「고객 목록」 이 씁니다.
+   ⚠ 옛 서버에는 없는 칸이 있어 <b>한 칸씩 물러섭니다</b> — 한 칸 때문에
+     목록 전체가 안 뜨면 안 됩니다. 물러서는 차례도 여기 한 곳입니다 (5번). */
+var OS_CLI_COLS=['id,advisor_id,name_masked,created_at,consent_status,phone,birth_year,household_notes',
+                 'id,advisor_id,name_masked,created_at,consent_status,birth_year,household_notes',
+                 'id,advisor_id,name_masked,created_at,consent_status,phone',
+                 'id,advisor_id,name_masked,created_at,consent_status'];
+function osCliAll(sb){
+  return osQOnce('clients:all',function(){
+    var step=function(i){
+      return arAll(sb,'clients',OS_CLI_COLS[i],['-created_at','id']).then(function(r){
+        if(!r||!r.error)return r;
+        if(i+1<OS_CLI_COLS.length)return step(i+1);
+        return r;
+      });
+    };
+    return step(0);
+  });
+}
+/* 고객 표의 <b>한 토막</b> — 이미 받아 둔 전체에서 걸러 씁니다 (5번·7번).
+   성장판(gbLoad)과 가동일(actLoad)이 「30일 안에 만든 고객」 을 서버에 따로
+   물었습니다. 그 줄은 <b>osCliAll 이 이미 받아 온 것의 일부</b>라 또 물을
+   까닭이 없습니다.
+   ⚠⚠ <b>자르는 선을 서버와 똑같이</b> 둡니다. 서버에 `gte('created_at',
+     '2026-10-02T00:00:00')` 라고 물으면 그 값을 <b>UTC</b> 로 읽습니다.
+     자바스크립트에서 같은 글을 Date.parse 하면 <b>이 기기 시간</b>으로 읽어
+     아홉 시간이 어긋납니다 — 서른 날 전 그 하루의 수가 달라집니다. 그래서
+     끝에 Z 를 붙여 <b>UTC 로 못 박습니다</b> (1번 · 4번의 결).
+   ★ 못 읽었으면 <b>못 읽었다고 그대로</b> 돌려줍니다 — 빈 손을 「없다」 로
+     바꾸지 않습니다 (1번).                                              */
+function osCliSince(sb,fromDay,who){
+  var t0=(fromDay?Date.parse(fromDay+'T00:00:00Z'):NaN);
+  return osCliAll(sb).then(function(r){
+    if(!r||r.error)return r;
+    return {error:null,data:(r.data||[]).filter(function(c){
+      if(who&&c.advisor_id!==who)return false;
+      if(isNaN(t0))return true;
+      var t=Date.parse(c.created_at||'');
+      return isNaN(t)?false:(t>=t0);
+    })};
+  });
+}
+/* 담당자 표도 한 곳에서. 칸은 성장판이 쓰던 <b>넉넉한 쪽</b>으로 둡니다 —
+   고객 목록은 그중 id·name 만 씁니다 (5번). */
+function osProfAll(sb){
+  return osQOnce('profiles:all',function(){
+    return sb.from('profiles').select('id,name,role,active,workspace').order('name')
+      .then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});
+  });
+}
 /* ── 불러오기 — 체크판·성장판·CRM·고객 365일을 한 번에 ── */
 function arLoad(force){
   var sb=(typeof osClient==='function')?osClient():null;
@@ -8876,17 +8968,17 @@ function arLoad(force){
       return q(sb.from('calls').select('db_id,created_by,call_at,result,memo,appointment_at')
          .order('call_at',{ascending:false}).order('db_id',{ascending:true}).range(a,b));
     },4000),
-    arPageAll(function(a,b){
-      /* <b>birth_year · household_notes</b> 두 칸을 같이 받습니다 — 부르는
-         횟수는 그대로입니다 (7번). 가구 메모는 사장님이 고객 이야기를
-         실제로 적어 두신 곳이라, 여기가 없으면 고객 365일 분들은 읽을
-         글이 <b>한 줄도 없습니다</b>. 실명은 이 브라우저에서만 머물달니다 (3번).
-         나이대 화법은 <b>이 값이 있는 분께만</b> 붙습니다. 배정 DB(dbs)에는
-         이 칸이 아예 없어서, 거기서 올라온 분은 앱이 나이를 알 길이 없습니다 —
-         그때는 짐작하지 않고 <b>모른다고 적습니다</b> (1번). */
-      return q(sb.from('clients').select('id,advisor_id,name_masked,created_at,birth_year,household_notes')
-         .order('id',{ascending:true}).range(a,b));
-    }),
+    /* ★ 판 X281 — 고객 표는 <b>osCliAll 한 곳</b>에서 읽습니다 (5번·7번).
+       여태 여기와 「고객 목록」(osLoadClients)이 <b>각자</b> 통째로 읽어
+       홈 한 번에 두 벌이 내려왔습니다. 칸은 양쪽 것을 합쳐 한 번에 받습니다.
+       <b>birth_year · household_notes</b> 가 거기 들어 있습니다 — 가구 메모는
+       사장님이 고객 이야기를 실제로 적어 두신 곳이라, 없으면 고객 365일
+       분들은 읽을 글이 <b>한 줄도 없습니다</b>. 실명은 이 브라우저에서만
+       머뭅니다 (3번). 나이대 화법은 <b>그 값이 있는 분께만</b> 붙고, 없으면
+       짐작하지 않고 <b>모른다고 적습니다</b> (1번).
+       ⚠ 줄 차례가 id 오름차순 → <b>만든 날 내림차순</b>으로 바뀝니다. 아래는
+         줄을 표(map)로 옮겨 담기만 해서 차례를 안 탑니다 — 보고 옮겼습니다. */
+    osCliAll(sb),
     arPageAll(function(a,b){
       return q(sb.from('saved_reports').select('id,client_id,content').eq('kind','client_meta')
          .order('id',{ascending:true}).range(a,b));
@@ -9966,7 +10058,16 @@ function arLine(e,t,s,right,warn,click){
 function ccTeamRows(){
   var l=(typeof AR!=='undefined'&&AR.cliRows)?AR.cliRows:[];
   var cfg=(typeof ccCfg==='function')?ccCfg():{days:30,vipDays:14,vipMan:100};
-  var mo=(new Date(Date.now()+9*3600*1000)).toISOString().slice(0,7);
+  /* ★ 판 X283 — 「<b>이번 달</b>」 을 여기서 또 셈하지 않습니다 (5번).
+     여태 이 한 줄만 <b>진짜 시계</b>를 봤습니다. 줄에 담긴 날(c.at)과 며칠
+     지났나(c.days)는 arCliCalc 가 <b>arToday()</b> 로 셈한 것이라, 「오늘」 을
+     묻는 곳이 <b>둘</b>이었습니다 — 서로 어긋나면 「이번 달 만난 분」 만
+     0 으로 떨어집니다. 실제로 그랬습니다: check-care30 은 오늘을
+     2026-10-19 로 못 박고 10월 접촉을 심는데, 달이 11월로 넘어간 날(2026-11-01)
+     아침에 이 줄만 「2026-11」 을 보고 <b>0명</b> 을 냈습니다.
+     달이 바뀌는 날에만 터지는 자리라 다섯 달을 아무도 못 봤습니다 (8번).
+     ★ 묻는 곳을 <b>ccToday() 하나</b>로 둡니다. */
+  var mo=((typeof ccToday==='function')?ccToday():arToday()).slice(0,7);
   var by={},i,c,k,o,cy,vip;
   for(i=0;i<l.length;i++){
     c=l[i];k=c.who||'';if(!k)continue;
@@ -21313,8 +21414,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-10-31 09:10';
-var APP_BUILD_NOTE='🛡 <b>무사고 할인 안내 문자·카톡</b> — 전화 대본에 있던 말을 <b>보낼 글</b>로도 (판 X279) · 사장님 말씀 「ta 스크립트에 무사고 스크립트 있는데 그런 내용으로 안내 연락 드리고 찾아뵙도록 하는 것도 추가해 줘」. ◾ ① <b>「💬 보낼 말 모음」 에 🛡 무사고 묶음</b>을 더했습니다 — 상황 둘(「안내 드리고 뵙자고 여쭙기」 · 「확인만 해 주세요 하신 분」), 문자·카톡 <b>5가지</b> · 전화 말머리 <b>5걸음</b> · 돌아오는 말 <b>6가지</b>. 문자·카톡 <b>54 → 59가지</b> · 묶음 <b>9 → 10개</b> · 상황 <b>21 → 23가지</b>. ② <b>📞 30초 TA 화면에서 바로 건너갑니다</b> — 「💬 무사고 안내 문자·카톡 보기」 단추 하나. 전화 대본과 보낼 글이 떨어져 있지 않습니다. ★★ <b>말은 `app/silson5.html` 에서만 가져왔습니다</b>(5번) — 그 화면이 「말하면 안 된다」 고 적어 둔 넷을 그대로 지킵니다. ① 할인을 주는 곳은 <b>보험회사</b>입니다(금감원은 10-05 에 <b>개선</b>을 발표한 것이라, 글·대본·돌아오는 말에 금감원이 <b>0곳</b>입니다). ② 고객님이 <b>보험사에 직접</b> 신청하셔도 됩니다 — 「저만 해 드릴 수 있다」 가 <b>0곳</b>. ③ 할인은 <b>신청한 뒤부터</b>이고 지난 기간은 <b>소급되지 않습니다</b> — 글에 그대로 적었습니다. ④ <b>할인율 숫자 0곳</b>(2번) — 무사고 기간·상품마다 달라, 숫자는 보험사 확인 뒤에만 드립니다. ★ <b>약속 안내 글이 안 붙습니다</b> — 아직 약속이 없는 자리라, 안 뵙기로 한 분께 「그날 뵙겠습니다」 가 가지 않습니다. ⚠ <b>스스로 밝힙니다</b>(1번) — 우리가 먼저 걸어 「할인」 을 꺼내는 글이라 <b>광고성으로 볼 수 있습니다.</b> 그래서 이 묶음에만 <b>📣 광고 수신 동의가 있는 분께</b> 를 띄우고, <b>접어도 그 알림은 숨지 않습니다</b>(6번). 다른 묶음에는 안 붙습니다(8번). 보낼지는 사장님이 정하십니다 — 앱이 막지 않습니다. 새 눈 열다섯을 <b>check-saybook</b> 에 보탰고, <b>되돌림 넷이 다 웁니다</b> — ad 떼기 · 금감원 넣기 · 할인율 적기 · 약속 글 붙이기. ⚠⚠ <b>CI 가 제 것 둘을 잡았습니다</b>(8번) — ① 새 단추에 <b>class=\"btn\" 만</b> 적었더니 `.btn` 은 색을 안 정해 글자가 <b>검정</b>으로 떨어졌습니다(button 은 UA 기본값이라 목각 옷이 닿지 않습니다). <b>.btn-primary</b> 를 같이 달았습니다. ② 📣 알림이 쓰던 글자색이 <b>생 hex(#92400E)</b> 였습니다 — 제가 판 X275 에 박아 둔 것인데, 그때는 <b>표를 못 읽었을 때만</b> 떠서 아무 자도 못 봤습니다. 이제 늘 뜨자 바로 걸렸고, 앱의 경고 글씨 이름(<b>--t-warn-d · --t-warn-d2</b>)으로 고쳤습니다. 둘 다 제 잘못이고 자가 맞았습니다.';
+var APP_BUILD='2026-11-01 09:20';
+var APP_BUILD_NOTE='🔌 <b>켤 때 부르는 서버를 줄입니다</b> + 🛣️ <b>동선 선은 담당자마다 제 고객으로</b> (판 X281·X282) · 사장님 말씀 「응 <b>서버켤때 부르는거 줄여줘</b> , 카카오 동선 선은, <b>모두 각자 고객에게</b> 되도록 만들어줘」. ◾ ⚠⚠ <b>먼저 제가 드린 수를 바로잡습니다</b> — 「켤 때마다 18번」 이 아니라 <b>그날 처음 한 번</b>이었습니다. 제 자가 매번 <b>새 브라우저</b>로 열어 늘 「오늘 처음」 이었고, 서버를 전부 막아 앱의 막이가 안 걸렸습니다. 제대로 재니 — 켤 때 19번 · 홈 처음 28번 · <b>홈 다시 0번</b> · <b>가만히 두면 0번</b>. 되풀이는 이미 잘 막혀 있었습니다. ◾ ① <b>출발 점검을 하루 한 번 → 이레 한 번</b>으로. 켤 때 19번 가운데 <b>17번</b>이 이것이었고, 하는 일은 「표 열일곱이 서버에 있나」 입니다 — 그 답은 SQL 을 돌리실 때만 바뀝니다. 담당자 서른일곱 분이면 하루 600번이 넘었습니다. 「다시 점검」 단추는 그대로라 누르시면 즉시 돕니다(6번). 화면이 뒤에 가 있으면 안 돌고, <b>돌 때만 날짜 도장을 찍습니다</b>(1번). ② <b>고객 표를 홈 한 번에 4번 → 1번</b>. 「오늘 터치할 사람」 과 「고객 목록」 이 <b>각자</b> 통째로 읽고, 성장판·가동일이 30일치를 또 읽었습니다 — 사장님 서버에 고객이 <b>1,943분</b> 계십니다. 읽는 곳을 <b>osCliAll 하나</b>로 모으고 칸은 합쳤습니다(5번). 담당자 표도 <b>2번 → 1번</b>. 홈 처음 <b>28 → 24번</b>. ⚠ 관리 기록(saved_reports)도 묶어 봤다가 <b>되돌렸습니다</b> — 「방금 저장한 것이 바로 안 보인다」 가 되어 check-clients 가 셋을 잡았습니다. 아끼는 것은 한 번이고 잃는 것은 그것이라, <b>안 묶습니다</b>(까닭을 코드에 적었습니다 · 1번). ◾ ③ <b>동선 선</b> — 재어 보니 <b>이미 담당자마다 제 고객으로 그려지고</b> 키도 서버에서 받습니다. 못 하던 것이 아니라 <b>재는 자가 없었습니다</b> — 여태 자들은 카카오를 401 로 막아 지도가 아예 안 떴고, 「Polyline 이라는 글자가 있나」 만 봤습니다. 가짜 카카오 SDK 로 <b>지도를 실제로 그려</b> 선의 좌표까지 세는 자를 세웠습니다. 새 자 둘 — <b>check-boot</b>(켤 때·홈·되풀이를 셉니다) · <b>check-rtline</b>(선을 실제로 긋나). 되돌림 다섯이 다 웁니다. ◾ <b>판 X283 — 달이 바뀌는 날에만 터지던 자리</b>(제가 낸 것이 아니라 오늘 드러났습니다). 「이번 달 만난 분」 을 세는 줄만 <b>진짜 시계</b>를 보고 있었습니다 — 줄에 담긴 날은 arToday() 로 셈한 것이라 「오늘」 을 묻는 곳이 <b>둘</b>이었고(5번), 11월 1일 아침에 이 줄만 11월을 보아 <b>0명</b> 을 냈습니다. 묻는 곳을 <b>ccToday() 하나</b>로 모았습니다. 다섯 달 동안 아무도 못 본 자리입니다. ⚠ 제 자 하나도 고쳤습니다 — check-orgteam 이 gbLoad 의 자리 수를 꼴로 세는데, 제가 읽는 곳을 모으며 늘어난 새 꼴(osProfAll·osCliSince)을 몰라 <b>멀쩡한 맨 끝을 어긋났다고</b> 잡았습니다 (8번).';
 
 
 
@@ -24129,8 +24230,7 @@ function actLoad(force){
   Promise.all([
     arAll(sb,'calls','created_by,call_at',['-call_at','created_by'],
       function(x){return x.eq('created_by',uid).gte('call_at',d0+'T00:00:00');},4000),
-    arAll(sb,'clients','advisor_id,created_at',['-created_at','advisor_id'],
-      function(x){return x.eq('advisor_id',uid).gte('created_at',d0+'T00:00:00');}),
+    osCliSince(sb,d0,uid),   /* ★ 판 X281 — 이미 받아 둔 고객 표에서 거릅니다 (5번) */
     q(sb.from('saved_reports').select('created_at').eq('advisor_id',uid)
        .neq('kind','ai_report').gte('created_at',d0+'T00:00:00')),
     q(sb.from('daily_checks').select('check_date,items').eq('member_id',uid)
@@ -24538,12 +24638,12 @@ function gbLoad(){
   GB.ckFrom=d30;          /* 이 날 <b>앞</b>은 안 읽었다 — 「모른다」 이지 0 이 아니다 (1번) */
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
   Promise.all([
-    q(sb.from('profiles').select('id,name,role,active,workspace').order('name')),
+    osProfAll(sb),   /* ★ 판 X281 — 고객 목록·체크판도 같은 표입니다. 묻는 곳 하나 (5번) */
     q(sb.from('teams').select('id,name,leader_id')),
     q(sb.from('team_members').select('team_id,member_id')),
     arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.gte('att_date',d30);}),
     arAll(sb,'calls','created_by,call_at',['-call_at','created_by'],function(x){return x.gte('call_at',d30+'T00:00:00');},4000),
-    arAll(sb,'clients','advisor_id,created_at',['-created_at','advisor_id'],function(x){return x.gte('created_at',d30+'T00:00:00');}),
+    osCliSince(sb,d30,null),   /* ★ 판 X281 — 이미 받아 둔 고객 표에서 거릅니다 (5번) */
     q(sb.from('saved_reports').select('advisor_id,created_at').neq('kind','ai_report').gte('created_at',d30+'T00:00:00')),
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d30)),
     q(sb.from('daily_checks').select('member_id,items').eq('scope','pass')),
@@ -51907,13 +52007,48 @@ function hxSave(){
     detail:HX.rows.map(function(r){return {g:r.grp,n:r.name,s:r.st,v:r.now};})
   },{onConflict:'member_id,check_date'}).then(function(){},function(){});
 }
-/* 하루 한 번, 로그인하고 처음 들어온 날 조용히 돌린다 */
+/* ── 조용히 도는 출발 점검 — <b>하루 한 번에서 이레 한 번으로</b> (판 X281) ──
+   사장님 말씀 (2026-11-01) — 「응 <b>서버켤때 부르는거 줄여줘</b>」.
+
+   재어 보니 <b>켤 때 부르는 19번 가운데 17번이 이것</b>이었습니다. 하는 일은
+   「표 열일곱이 서버에 있나 · 읽을 수 있나」 를 하나씩 물어보는 것입니다.
+   그런데 그 대답은 <b>사장님이 SQL 을 돌리실 때만</b> 바뀝니다 — 한 달에
+   한 번 있을까 말까 한 일인데 <b>기기마다 날마다</b> 물었습니다.
+   담당자 서른일곱 분이면 하루 600번이 넘습니다 (7번).
+
+   ★ <b>이레에 한 번</b>으로 둡니다. 안 돌아도 대답은 같습니다.
+   ★ <b>단추는 그대로입니다</b> (6번) — 설정 → 출발 점검에서 「다시 점검」 을
+     누르시면 그 자리에서 전부 다시 묻습니다. SQL 을 돌리신 뒤에는 그 화면을
+     보시게 되므로, 늦어지는 일이 없습니다.
+   ★ 화면이 <b>뒤에 가 있으면 안 돕니다</b> (7번) — 보고 계시지도 않은 창이
+     서버를 부르는 것이 사장님이 데였던 바로 그 자리입니다. 돌아오시면 그때
+     봅니다. 그때까지 날짜 도장을 <b>안 찍습니다</b> — 찍어 두면 이레 동안
+     한 번도 안 도는 수가 있습니다 (1번).
+   ⚠ 옛 열쇠(apex_hx_day)는 그대로 씁니다. 값이 <b>날짜</b>라 이레를 세는 데
+     그대로 쓸 수 있고, 이름을 바꾸면 모든 기기가 한 번씩 더 돕니다.      */
+var HX_EVERY=7;                                   /* 이레 */
+function hxAutoDue(){
+  var last='';
+  try{ last=localStorage.getItem('apex_hx_day')||''; }catch(e){ return false; }
+  if(!last)return true;
+  var a=Date.parse(last+'T00:00:00'), b=Date.parse(hxToday()+'T00:00:00');
+  if(isNaN(a)||isNaN(b))return true;              /* 못 읽으면 한 번 돕니다 (1번) */
+  return (b-a)>=HX_EVERY*86400000;
+}
 function hxAuto(){
-  try{
-    if(localStorage.getItem('apex_hx_day')===hxToday())return;
-    localStorage.setItem('apex_hx_day',hxToday());
-  }catch(e){return;}
-  setTimeout(function(){
+  if(!hxAutoDue())return;
+  var 돌기=function(){
+    /* 보고 계시지 않으면 미룹니다 — 날짜 도장은 <b>실제로 돌 때</b> 찍습니다 */
+    if(typeof document!=='undefined'&&document.hidden){
+      try{ document.addEventListener('visibilitychange',function once(){
+        if(document.hidden)return;
+        document.removeEventListener('visibilitychange',once);
+        setTimeout(돌기,1500);
+      }); }catch(e){}
+      return;
+    }
+    if(!hxAutoDue())return;                        /* 그 사이 다른 창이 돌았으면 */
+    try{ localStorage.setItem('apex_hx_day',hxToday()); }catch(e){ return; }
     var keep=HX.rows;
     HX.rows=hxCollect();
     hxServer(function(more){
@@ -51921,7 +52056,8 @@ function hxAuto(){
       hxSave();
       if(keep&&keep.length)HX.rows=keep;
     });
-  },3000);
+  };
+  setTimeout(돌기,3000);
 }
 
 function hxDot(st){
@@ -52603,7 +52739,7 @@ function ctLoad(){
   var t=ckDayK(),w=ckWeekK(),d3=ctDaysAgo(2),d7=ctDaysAgo(6);
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
   Promise.all([
-    q(sb.from('profiles').select('id,name,role,active,workspace').order('name')),
+    osProfAll(sb),   /* ★ 판 X281 — 고객 목록·체크판도 같은 표입니다. 묻는 곳 하나 (5번) */
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d7)),
     arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.gte('att_date',d7);}),
     q(sb.from('teams').select('id,name,leader_id')),
@@ -63644,11 +63780,32 @@ function osLateStart(){
   OS_LATE_T=setInterval(function(){try{osLateScan();}catch(e){}},OS_LATE_TICK);
 }
 try{setTimeout(function(){try{osLateStart();}catch(e){}},3000);}catch(e){}
+/* ★ 판 X281 — <b>쓰면 막이를 지웁니다</b> (5번·1번).
+   osQOnce 로 잠깐 들고 있는 대답이, 그 표에 뭔가 쓰고 나면 거짓이 됩니다 —
+   방금 넣으신 고객이 안 보이면 그것이 제일 나쁩니다. 지우는 자리를 부르는
+   쪽마다 두면 <b>한 곳은 반드시 빠뜨립니다</b>. 그래서 표에 쓰는 길목
+   하나(insert·update·upsert·delete)에서 그 표의 막이를 지웁니다.
+   ⚠ 읽기(select)는 안 건드립니다 — 여기서 막는 것이 아니라 지우기만 합니다. */
+function osQGuard(c){
+  if(!c||typeof c.from!=='function'||c.__qg)return c;
+  c.__qg=1;
+  var f=c.from.bind(c), W=['insert','update','upsert','delete'];
+  c.from=function(t){
+    var b=f(t),i;
+    for(i=0;i<W.length;i++)(function(k){
+      var o=b[k];
+      if(typeof o!=='function')return;
+      b[k]=function(){ try{ osQDrop(t+':'); }catch(e){} return o.apply(b,arguments); };
+    })(W[i]);
+    return b;
+  };
+  return c;
+}
 function osClient(){
   if(OS.sb)return OS.sb;
   if(typeof window==='undefined')return null;
   if(!window.supabase||!window.APEX_SB)return null;
-  try{OS.sb=window.supabase.createClient(window.APEX_SB.url,window.APEX_SB.key);}
+  try{OS.sb=osQGuard(window.supabase.createClient(window.APEX_SB.url,window.APEX_SB.key));}
   catch(e){OS.sb=null;}
   return OS.sb;
 }
@@ -70226,6 +70383,18 @@ function cmOf(id){
   if(m)return m;
   m=cmBlank();CM.meta[id]=m;return m;
 }
+/* ⚠⚠ <b>여기는 묶지 마십시오</b> — 판 X281 에서 해 보고 되돌렸습니다.
+   홈 한 번에 이 읽기가 <b>두 번</b> 나가길래 「먼저 들어온 하나만 보내고
+   나중 것은 그 대답을 같이 받게」 했습니다. 그러자 check-clients 가 셋을
+   잡았습니다 — 「저장하면 바로 화면에 뜬다」·「끝낸 일이 접촉 기록으로
+   남는다」·「같은 가족이면 상대가 바로가기로 뜬다」.
+   까닭은 <b>쓰고 나서 바로 읽는 자리</b>입니다(cmSave 가 넣고 cmLoadAll).
+   앞서 돌던 읽기에 같이 태우면 <b>방금 넣은 줄이 빠진 답</b>을 받습니다.
+   「새로 읽기(force)」 를 붙여도 두 읽기가 겹쳐 <b>늦게 온 옛 답이 덮었습니다</b>.
+   ★ 아끼는 것은 <b>한 번</b>이고, 잃는 것은 「방금 저장한 것이 안 보인다」
+     입니다. 이 앱에서 그것이 제일 나쁩니다 (1번). 그래서 안 묶습니다.
+   ★ 처음에는 <b>CM.busy</b> 를 가로채 썼는데, 그 깃발은 cmFfAsk(AI 에게
+     묻는 자리)의 것이었습니다 — 같은 이름을 두 뜻으로 쓰면 안 됩니다 (5번). */
 function cmLoadAll(then){
   var sb=osClient(),uid=cmUid();
   if(!sb||!OS.profile||!uid){if(then)then();return;}
@@ -74734,29 +74903,25 @@ function osLoadClients(){
   };
   /* 누가 맡은 고객인지 이름으로 보여주려면 담당자 표를 같이 읽어야 한다.
      못 읽어도 목록은 그대로 뜬다 — 담당자 이름만 안 보일 뿐이다. */
-  sb.from('profiles').select('id,name').then(function(r){
+  /* ★ 판 X281 — 담당자 표도 <b>osProfAll 한 곳</b>에서 (5번).
+     성장판(gbLoad)·체크판(ctLoad)이 같은 표를 같은 때 또 읽고 있었습니다.
+     못 읽어도 목록은 그대로 뜹니다 — 담당자 이름만 안 보일 뿐입니다. */
+  osProfAll(sb).then(function(r){
     CM.who={};
     var rows=(r&&r.data)||[],i;
     for(i=0;i<rows.length;i++)CM.who[rows[i].id]=rows[i].name||'';
     if(OSC.list&&OSC.list.length)osRenderList();
   },function(){});
-  arAll(sb,'clients','id,advisor_id,name_masked,consent_status,created_at,phone',
-        ['-created_at','id']).then(function(r){
+  /* ★ 판 X281 — 고객 표는 <b>osCliAll 한 곳</b>에서. 물러서는 차례(연락처 칸이
+     없는 옛 서버 등)도 그 안에 있습니다 — 여기서 또 적지 않습니다 (5번). */
+  osCliAll(sb).then(function(r){
     if(!r.error){done(r.data);return;}
-    /* 연락처 칸이 아직 없는 서버 — 그것 없이 다시 부른다 */
-    arAll(sb,'clients','id,advisor_id,name_masked,consent_status,created_at',
-          ['-created_at','id']).then(function(r2){
-      if(r2.error){
-        /* <b>못 받았다고 적고 다시 부를 자리를 세웁니다.</b> 여태는 까닭만
-           적고 끝이라, 사장님이 하실 수 있는 일이 새로고침밖에 없었습니다 (8번). */
-        OSC.busy=false;OSC.loaded=true;OSC.err=(r2.error.message||'네트워크 오류');
-        try{holdCss();}catch(e3){}
-        osSetList(holdSayOr('fail',{what:'고객 목록',why:OSC.err,again:'OSC.loaded=false;osLoadClients()'}));
-        try{if(typeof hmPaint==='function')hmPaint();}catch(e4){}
-        return;
-      }
-      done(r2.data);
-    },oops);
+    /* <b>못 받았다고 적고 다시 부를 자리를 세웁니다.</b> 여태는 까닭만
+       적고 끝이라, 사장님이 하실 수 있는 일이 새로고침밖에 없었습니다 (8번). */
+    OSC.busy=false;OSC.loaded=true;OSC.err=(r.error.message||'네트워크 오류');
+    try{holdCss();}catch(e3){}
+    osSetList(holdSayOr('fail',{what:'고객 목록',why:OSC.err,again:'osQDrop("clients");OSC.loaded=false;osLoadClients()'}));
+    try{if(typeof hmPaint==='function')hmPaint();}catch(e4){}
   },oops);
 }
 /* ══ 🗂 <b>고객 한 벌로</b> — 목업의 거르개 칩 (cliF*) ════════════════
