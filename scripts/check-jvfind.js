@@ -427,10 +427,13 @@ const SEED = () => {
   is((await p.evaluate(() => (cmOf('c0').touch || [])[0].how)) === '만남', '「만나고 왔어」 는 <b>만남</b>으로 적는다');
   /* ④ 다음 할 일 — 날짜까지 */
   const TM = await p.evaluate(() => { const d = new Date(cmToday() + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); });
-  await actAsk('홍길동 다음 할 일 내일 증권 전달');
+  /* ⚠ 2026-11-02 — 견본(위 69줄)에 「증권 전달 · 2026-11-03」 이 <b>박혀</b> 있어, 오늘이 11-02 인 날에는
+     「내일 증권 전달」 이 그것과 겹쳐 앱이 「이미 그 날에 잡혀 있습니다」 로 (맞게) 막았습니다 — 자가 날짜를
+     탔습니다(8번). 견본과 <b>안 겹치는 일</b>로 묻습니다. 재는 것(「내일」 을 날짜로 읽나)은 그대로입니다. */
+  await actAsk('홍길동 다음 할 일 내일 보장 점검');
   const c6 = await actPress('.ja-ok');
   const NX = await p.evaluate(() => cmNextAll('c0').map(x => x.what + '@' + x.due));
-  is(NX.indexOf('증권 전달@' + TM) >= 0 && /✅/.test(c6), '「홍길동 다음 할 일 내일 증권 전달」 → 다음 할 일 <b>증권 전달 · ' + TM + '</b>');
+  is(NX.indexOf('보장 점검@' + TM) >= 0 && /✅/.test(c6), '「홍길동 다음 할 일 내일 보장 점검」 → 다음 할 일 <b>보장 점검 · ' + TM + '</b>');
   const DU = await p.evaluate(() => [vaDueOf('증권 전달'), vaDueOf('3일 뒤 전화'), vaDueOf('모레 방문')]);
   is(DU[0].due === '' && DU[0].rest === '증권 전달' && /^\d{4}-\d{2}-\d{2}$/.test(DU[1].due) && DU[1].rest === '전화' && DU[2].rest === '방문',
      '날짜를 말 안 하면 <b>지어 넣지 않는다</b> · 「3일 뒤」 · 「모레」 를 읽는다');
