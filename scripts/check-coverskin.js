@@ -51,7 +51,12 @@
    ★ 되돌림 넷이 다 웁니다 — ① DB CRM 의 --bg·--text ② 계산기의 --ink-9·--ink-1
      ③ 자비스 모드가 ui.css 를 안 부르게 ④ 자동차사고의 --ground·--ink.
 
-   ★ 바깥으로 한 글자도 안 나갑니다.                                    */
+   ⚠⚠ <b>처음에 머리글에 「바깥으로 한 글자도 안 나갑니다」 라고 적었는데
+     확인하지 않은 말이었습니다.</b> 이 자는 db-crm · finance 같은 <b>진짜
+     화면</b>을 띄우므로 그 화면이 Supabase·카카오를 부릅니다. CI 에서
+     check-netblock 이 「안 막는 자가 121개 — 기준선 120」 으로 잡았습니다.
+     이제 127.0.0.1 밖은 전부 <b>끊습니다</b>(abort) — check-hmexact 와
+     같은 꼴입니다 (5번). 「점검이 사장님 진짜 서버를 읽지 않는다」.         */
 'use strict';
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -112,8 +117,18 @@ const 바깥 = { onecmp: '바깥 사이트라 우리 파일이 아닙니다' };
      (모르는.length ? ' ⚠ 모르는 것: ' + 모르는.join(', ') + ' — 이 자에 짝을 적어 주십시오' : ''));
 
   /* 색을 재는 틀 — 쪽 바탕 · 글자색 */
+  /* ★ 바깥은 전부 끊습니다 — check-hmexact 와 같은 꼴 (5번).
+     막지 않으면 이 자가 사장님 Supabase·카카오를 실제로 부릅니다.
+     끊지 않고 기다리게 두면 곳마다 다른 순간을 재게 됩니다.            */
+  const 막기 = async (ctx) => {
+    await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0
+                                    ? r.continue() : r.abort());
+  };
+
   const 재기 = async (u) => {
-    const pg = await br.newPage({ viewport: { width: 1280, height: 900 } });
+    const ctx = await br.newContext({ viewport: { width: 1280, height: 900 } });
+    await 막기(ctx);
+    const pg = await ctx.newPage();
     try {
       await pg.goto('http://127.0.0.1:' + PORT + u, { waitUntil: 'domcontentloaded', timeout: 40000 });
       await pg.waitForTimeout(2200);
@@ -123,9 +138,9 @@ const 바깥 = { onecmp: '바깥 사이트라 우리 파일이 아닙니다' };
                  ui: [...document.styleSheets].some(s => (s.href || '').includes('ui.css')),
                  tok: getComputedStyle(document.documentElement).getPropertyValue('--t-ink').trim() };
       });
-      await pg.close();
+      await ctx.close();
       return r;
-    } catch (e) { await pg.close().catch(() => {}); return { bg: '못 열었습니다', fg: '', ui: false, tok: '' }; }
+    } catch (e) { await ctx.close().catch(() => {}); return { bg: '못 열었습니다', fg: '', ui: false, tok: '' }; }
   };
 
   head('[1] ★★ <b>찍히는 색</b>이 본체와 같은가 — 브라우저로 잽니다');
