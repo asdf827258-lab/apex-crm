@@ -21,6 +21,9 @@
    ══════════════════════════════════════════════════════════════════ */
 (function(){
   var S={ok:'괜찮아요',mid:'채우면 좋아요',need:'비어 있어요',chk:'확인해요'};
+  /* 「제 기준」 의 숫자 — APEX 실무 기준(규정 아님). 화면·설계서·덱이 이 값을 말로 옮긴다.
+     cancer: 연소득의 몇 배(아래~위) · brain/heart: 넓은 이름일 때 권하는 금액(만원) · end: 보장 끝 나이 */
+  var TARGET={cancer:[1,2],brain:2000,heart:1000,end:90};
   var ALLQ=[
     {k:'silson',n:'실비 가입 시기',g:'실비',q:'내 실비, 언제 가입하셨어요?',w:'증권 첫 장 · 계약일',
      o:[['1','2009년 10월 이전','ok'],['2','2009 ~ 2017년','ok'],['3','2017 ~ 2021년','ok'],['4','2021년 이후','ok'],['n','실비 없어요','need'],['?','모르겠어요','chk']],
@@ -99,17 +102,20 @@
   function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
   function man(v){v=Math.round(v);if(v>=10000){var e=Math.floor(v/10000),r=v%10000;return e+'억'+(r?' '+r.toLocaleString()+'만':'')+' 원'}return v.toLocaleString()+'만 원'}
   /* 한 문항의 판정 — 답이 없으면 null (아직) */
-  function judge(q){
+  /* 판정은 이 한 곳 — 셀프 점검 쪽과 한 장 설계서(kijun-sheet.html)가 같이 부른다(5번 · 판 X281) */
+  function judge(q){return judgeWith(q,ST.a[q.k],ST.n)}
+  function judgeWith(q,av,nm){
+    nm=nm||{};
     if(q.r){
-      if(ST.a[q.k]==='?')return{s:'chk',a:'모르겠어요'};
-      var c=ST.n.c, i=ST.n.i;
+      if(av==='?')return{s:'chk',a:'모르겠어요'};
+      var c=nm.c, i=nm.i;
       if(c==null||c==='')return null;
       c=+c;if(c===0)return{s:'need',a:'암 진단비 없어요'};
       if(!(+i>0))return{s:'chk',a:man(c)+' · 연소득을 넣으면 배수로 봐요'};
       var m=c/(+i), t=(Math.round(m*10)/10).toFixed(1);
-      return{s:m>=1?'ok':m>=.5?'mid':'need',a:man(c)+' · 연소득의 '+t+'배'};
+      return{s:m>=TARGET.cancer[0]?'ok':m>=.5?'mid':'need',a:man(c)+' · 연소득의 '+t+'배'};
     }
-    var v=ST.a[q.k];if(v==null)return null;
+    var v=av;if(v==null)return null;
     for(var j=0;j<q.o.length;j++)if(q.o[j][0]===v)return{s:q.o[j][2],a:q.o[j][1]};
     return null;
   }
@@ -205,6 +211,12 @@
   });
   window.APXSelf={init:init,paint:paint,text:text,reset:function(){ST={a:{},n:{},p:{}};paint()},
     catalog:function(){return ALLQ.map(function(q){return{k:q.k,n:q.n,g:q.g,q:q.q}})},
-    link:link,parse:parse,checkHi:checkHi,cleanBy:cleanBy,BAN:BAN.slice(),HI_MAX:HI_MAX,BY_MAX:BY_MAX};
+    link:link,parse:parse,checkHi:checkHi,cleanBy:cleanBy,BAN:BAN.slice(),HI_MAX:HI_MAX,BY_MAX:BY_MAX,
+    /* 한 장 설계서가 빌려 쓰는 것 — 문항의 고를 것 · 판정 · 기준 숫자 · 이 폰에 남은 셀프 점검 답 */
+    S:S,TARGET:TARGET,man:man,
+    options:function(k){for(var j=0;j<ALLQ.length;j++)if(ALLQ[j].k===k)return(ALLQ[j].o||[]).map(function(o){return o.slice()});return[]},
+    judge:function(k,v,nums){for(var j=0;j<ALLQ.length;j++)if(ALLQ[j].k===k)return judgeWith(ALLQ[j],v,nums);return null},
+    tip:function(k,s){for(var j=0;j<ALLQ.length;j++)if(ALLQ[j].k===k)return(ALLQ[j].t||{})[s]||'';return''},
+    saved:function(){try{var v=JSON.parse(localStorage.getItem(KEY)||'null');return v&&v.a?v:null}catch(e){return null}}};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
