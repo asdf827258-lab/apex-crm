@@ -27893,14 +27893,16 @@ function hmBlankSave(){
   if(f.on==='db')patch.updated_at=new Date().toISOString();
   sb.from(f.on==='cli'?'clients':'dbs').update(patch).eq('id',id).select('id').then(function(res){
     var w=(typeof hdbWrote==='function')?hdbWrote(res):{ok:!res.error};
-    if(w.ok!==true){ toast(f.t+' 저장 — '+((w&&w.why)||'서버가 받지 않았습니다')); return; }
+    /* 서버가 안 받은 까닭은 <b>hdbSay 한 곳</b>이 말합니다 — 🕗 다시 잡기와 같은 자 (5번) */
+    if(w.ok!==true){ hdbSay(w,f.t+' 저장'); return; }
     /* 손에 든 줄도 같이 — 다시 부르지 않습니다 (7번) */
     if(f.on==='cli'){ var c=hmBlankCliOf(id); if(c)c[f.k]=v; }
     else if(typeof hdbLocal==='function'){ var pp={}; pp[f.k]=(''+v).slice(0,10); hdbLocal(id,pp); }
     hmBlankClose();
     toast(hmJo(f.t,'을','를')+' 적었습니다');
     try{ hmPaint(); }catch(e){}
-  },function(e){ toast(f.t+' 저장 실패 — '+((e&&e.message)||'알 수 없는 오류')); });
+  /* 서버 날글을 그대로 찍지 않습니다 — 사람 말로 옮기는 자는 <b>svFailText 하나</b>입니다(check-failsay · 판 X102) */
+  },function(e){ toast(f.t+' 저장 실패 — '+svFailText(e),8000); });
 }
 /* ══ 🕗 <b>약속이 지난 분 — 한 분씩 정리</b> (판 X287) ═══════════════════════
    사장님 말씀 (2026-10-31) — 「고객 관리를 위해 어떻게 하면 좋을까」 → 서버에 적힌
