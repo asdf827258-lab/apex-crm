@@ -11912,9 +11912,14 @@ ${JSON.stringify(insurances.map(i => ({
       // ★ 분석 기준 날짜 ★ — AI 가 "최근 3개월/10년" 을 정확히 판단하도록 명시
       const _now = new Date();
       const _todayStr = `${_now.getFullYear()}.${String(_now.getMonth()+1).padStart(2,'0')}`;
-      const _3m = new Date(_now.getFullYear(), _now.getMonth()-3, _now.getDate());
+      /* ★ 판 X292 — 그 달에 그 날이 없으면 말일. 손대기 전에는 5월 31일에
+         「최근 3개월 = 2026.03 이후」 라고 적어 보내, 2월 진료가 알릴의무에서
+         통째로 빠질 수 있었습니다(한 해 약 닷새). */
+      const _3mLast = new Date(_now.getFullYear(), _now.getMonth()-3+1, 0).getDate();
+      const _3m = new Date(_now.getFullYear(), _now.getMonth()-3, Math.min(_now.getDate(), _3mLast));
       const _3mStr = `${_3m.getFullYear()}.${String(_3m.getMonth()+1).padStart(2,'0')}`;
-      const _10y = new Date(_now.getFullYear()-10, _now.getMonth(), _now.getDate());
+      const _10yLast = new Date(_now.getFullYear()-10, _now.getMonth()+1, 0).getDate();
+      const _10y = new Date(_now.getFullYear()-10, _now.getMonth(), Math.min(_now.getDate(), _10yLast));
       const _10yStr = `${_10y.getFullYear()}.${String(_10y.getMonth()+1).padStart(2,'0')}`;
 
       const prompt = `다음 파일들은 한국 ★진료기록(HIRA) + 보험증권★ 혼합 자료입니다 (한 명의 동일인 자료).
@@ -12139,8 +12144,11 @@ ${JSON.stringify(insurances.map(i => ({
 
       // ⚠ 날짜 검증 — gj3m 에 잘못 분류된 3개월 이전 항목은 gj10y 로 이동 (AI 오류 보정)
       const _now = new Date();
-      const _3mAgo = new Date(_now.getFullYear(), _now.getMonth() - 3, _now.getDate());
-      const _10yAgo = new Date(_now.getFullYear() - 10, _now.getMonth(), _now.getDate());
+      /* ★ 판 X292 — 위와 같은 까닭으로 말일에서 멈춥니다 */
+      const _3mAgoLast = new Date(_now.getFullYear(), _now.getMonth() - 3 + 1, 0).getDate();
+      const _3mAgo = new Date(_now.getFullYear(), _now.getMonth() - 3, Math.min(_now.getDate(), _3mAgoLast));
+      const _10yAgoLast = new Date(_now.getFullYear() - 10, _now.getMonth() + 1, 0).getDate();
+      const _10yAgo = new Date(_now.getFullYear() - 10, _now.getMonth(), Math.min(_now.getDate(), _10yAgoLast));
       const parseYM = (s) => {
         s = String(s || '');
         // YYYY.MM / YYYY-MM / YYYY/MM / "YYYY년 M월" 등 연+월 우선

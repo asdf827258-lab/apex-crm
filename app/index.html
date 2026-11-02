@@ -7467,6 +7467,9 @@ function osTossClearKey(){setTossKeyVal('');toast('토스 클라이언트 키를
 function osTossSaveConfirm(){var v=(osVal('setTossConfirm')||'').trim();try{localStorage.setItem('apex_toss_confirm_url',v);}catch(e){}toast('결제 확인(승인) 주소를 저장했습니다.');osSetReload();}
 var TOSS_FN_CODE=[
  '// netlify/functions/toss-confirm.js — 토스 결제 최종 승인 + 구독 자동 활성화(서버)',
+ '// ⚠ 이 함수는 이미 저장소에 들어 있어 배포 때 자동으로 올라갑니다 — 손으로 넣을 일이 없습니다.',
+ '//   아래 글은 Netlify 가 저장소와 끊겼을 때만 쓰십니다. 진짜 파일은 저장소의',
+ '//   netlify/functions/toss-confirm.js 이고, 그쪽이 더 많은 일을 합니다(허용 주소·기간 셈).',
  '// Netlify 환경변수: TOSS_SECRET_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY',
  'exports.handler = async function(event){',
  "  var CORS={'Access-Control-Allow-Origin':'*','Content-Type':'application/json'};",
@@ -7485,7 +7488,10 @@ var TOSS_FN_CODE=[
  '    if(res.ok && b.userId && b.plan && process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY){',
  '      try{',
  '        var until=new Date();',
- "        if(b.cycle==='year')until.setFullYear(until.getFullYear()+1);else until.setMonth(until.getMonth()+1);",
+ "        // 그 달에 그 날이 없으면 말일에서 멈춘다 (1/31 +1개월 = 2/28 · 판 X292)",
+ "        var _m=until.getMonth()+(b.cycle==='year'?12:1), _y=until.getFullYear();",
+ "        var _last=new Date(_y,_m+1,0).getDate();",
+ "        until.setFullYear(_y,_m,Math.min(until.getDate(),_last));",
  "        var up=await fetch(process.env.SUPABASE_URL+'/rest/v1/profiles?id=eq.'+encodeURIComponent(b.userId),{",
  "          method:'PATCH',",
  "          headers:{'apikey':process.env.SUPABASE_SERVICE_ROLE_KEY,'Authorization':'Bearer '+process.env.SUPABASE_SERVICE_ROLE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},",
@@ -54116,11 +54122,21 @@ function parseDate(v){if(!v)return null;var d=new Date(v);return isNaN(d.getTime
    ★ 그 날이 있는 달은 <b>한 글자도 안 바뀝니다</b> — 365가지 중 358가지는
      전과 똑같습니다. 바뀌는 것은 미끄러지던 일곱뿐입니다.
    점검 : scripts/check-monthend.js                                      */
-function addMonths(d,n){
-  var y=d.getFullYear(),m=d.getMonth()+n,day=d.getDate();
+/* ★ 판 X292 — <b>그 달에 그 날이 없으면 말일</b>. 이 한 줄을 세는 자리가
+   둘이었습니다 — addMonths 는 판 X290 에서 말일로 멈추게 했는데, 보험나이
+   insAgeOf 는 <b>생일을 다시 지을 때</b> 날이 넘쳤습니다. 2월 29일생의 2026년
+   생일이 <b>3월 1일</b> 이 되어 상령일이 나흘 늦게 찍혔습니다. 묻는 곳을
+   하나로 둡니다 (5번). */
+function monDay(y,m,day){
   var 끝=new Date(y,m+1,0).getDate();            /* 그 달의 마지막 날 */
+  return Math.min(day,끝);
+}
+/* 그 해의 생일 — <b>2월 29일생은 평년에 2월 28일</b> 입니다 (민법 제160조 ③) */
+function bdayIn(b,y){ var m=b.getMonth(); return new Date(y,m,monDay(y,m,b.getDate())); }
+function addMonths(d,n){
+  var y=d.getFullYear(),m=d.getMonth()+n;
   var x=new Date(d.getTime());
-  x.setFullYear(y,m,Math.min(day,끝));
+  x.setFullYear(y,m,monDay(y,m,d.getDate()));
   return x;
 }
 function daysBetween(a,b){return Math.round((b-a)/86400000);}
@@ -54610,15 +54626,17 @@ function insAgeOf(b,ref){
   ref=ref||new Date();
   if(b>ref)return null;
   var age=ref.getFullYear()-b.getFullYear();
-  if(ref.getMonth()<b.getMonth()||(ref.getMonth()===b.getMonth()&&ref.getDate()<b.getDate()))age--;
+  /* ★ 판 X292 — <b>그 해의 생일</b>을 bdayIn 한 곳에 묻습니다. 달·날을 따로
+     견주면 2월 29일생이 평년 2월 28일에 「아직 생일이 안 왔다」 가 됩니다. */
+  if(ref<bdayIn(b,ref.getFullYear()))age--;
   /* 직전 생일 */
-  var lastB=new Date(ref.getFullYear(),b.getMonth(),b.getDate());
-  if(lastB>ref)lastB=new Date(ref.getFullYear()-1,b.getMonth(),b.getDate());
+  var lastB=bdayIn(b,ref.getFullYear());
+  if(lastB>ref)lastB=bdayIn(b,ref.getFullYear()-1);
   var monPassed=(ref.getFullYear()-lastB.getFullYear())*12+(ref.getMonth()-lastB.getMonth());
   if(ref.getDate()<lastB.getDate())monPassed--;
   var ins=age+(monPassed>=6?1:0);
-  var sang=addMonths(new Date(ref.getFullYear(),b.getMonth(),b.getDate()),6);
-  if(sang<=ref)sang=addMonths(new Date(ref.getFullYear()+1,b.getMonth(),b.getDate()),6);
+  var sang=addMonths(bdayIn(b,ref.getFullYear()),6);
+  if(sang<=ref)sang=addMonths(bdayIn(b,ref.getFullYear()+1),6);
   return {age:age,ins:ins,sang:sang,dday:daysBetween(ref,sang)};
 }
 /* 보험나이 */
