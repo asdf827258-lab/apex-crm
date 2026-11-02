@@ -102,7 +102,12 @@ const 증인 = [
        사장님 말씀을 모르고 입힌 날</b>입니다. 그때 빨간불이 켜지는 것이 맞습니다 —
        자가 적어 주는 「대장을 고치십시오」 를 <b>「사장님께 먼저 여쭈십시오」</b> 로 읽으십시오. */
   { 키: 'X02-팩파', 뜻: 'fact_find 는 사장님이 「팩트파인딩 빼고」 라고 하셔서 옷을 안 입혔다', 옷입음: ['fact_find'] },
+  /* 🤖 판 X277 의 「덱은 아직」(⛔[아직:X277-덱])은 <b>판 X273 에서 했습니다</b> — jvDeckRows · jvDeckOpen 이 서자
+     이 자가 울려 대장을 고쳤습니다. 증인을 거뒀습니다. 함수 증인이 자비스 모드(apex-map.html)도
+     같이 보는 것(SRC_FN)은 그대로 둡니다 — 다음 증인이 그쪽에 설 수 있습니다. */
 ];
+/* 함수 증인은 본체와 <b>자비스 모드(apex-map.html)</b>를 같이 봅니다 — 판 X277 의 증인이 그쪽에 섭니다 */
+const SRC_FN = SRC + '\n' + (fs.existsSync('app/apex-map.html') ? fs.readFileSync('app/apex-map.html', 'utf8') : '');
 /* 옷 입은 화면 — <b>T_SKIN 한 곳</b>에게 묻습니다 (5번) */
 const SKIN = (() => {
   const m = SRC.match(/var\s+T_SKIN\s*=\s*\{([^}]*)\}/);
@@ -127,7 +132,7 @@ let 재것 = 0;
   const 종류 = w.함수 ? '함수' : '옷입음';
   const 다 = w.함수 || w.옷입음;
   const 있는것 = w.함수
-    ? w.함수.filter(f => new RegExp('function\\s+' + f + '\\s*\\(').test(SRC))
+    ? w.함수.filter(f => new RegExp('function\\s+' + f + '\\s*\\(').test(SRC_FN))
     : w.옷입음.filter(id => SKIN.indexOf(id) >= 0);
   is(있는것.length < 다.length,
      '  ' + 말씀 + ' ⛔[' + w.키 + '] — ' + w.뜻 + ' · ' + 종류 + ' ' +
