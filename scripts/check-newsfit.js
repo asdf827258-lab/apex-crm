@@ -413,8 +413,13 @@ is(/APEX_STAGE\.ageBand/.test(bandSrc),
    '  나이대를 <b>여기서 안 센다</b> — APEX_STAGE.ageBand 한 곳이 센다 (5번)');
 is(/AR\.cliRows/.test(bandSrc) && !/f_age/.test(bandSrc),
    '  출생연도는 <b>고객 365일</b> 에서만 찾는다 — f_age 에는 「12」 같은 값이 들어 있다');
-is(/select\('id,advisor_id,name_masked,created_at,birth_year,household_notes'\)/.test(ix),
-   '<b>가구 메모를 한 칸 더</b> 받는다 — 부르는 횟수는 그대로다 (7번)');
+/* ⚠ 2026-11-01 (판 X281) — 고객 표를 읽는 자리가 <b>한 곳(osCliAll)</b>으로
+   모였습니다. 여태는 「오늘 터치할 사람」 과 「고객 목록」 이 각자 통째로
+   읽어 홈 한 번에 두 벌이 내려왔습니다. 그래서 글자 그대로 찾던 것을
+   <b>칸 목록 한 곳</b>을 보는 것으로 바꿉니다 — 뜻은 그대로입니다 (5번).  */
+const cliCols = (ix.split('var OS_CLI_COLS=[')[1] || '').split('];')[0];
+is(/household_notes/.test(cliCols) && /birth_year/.test(cliCols) && /name_masked/.test(cliCols),
+   '<b>가구 메모를 한 칸 더</b> 받는다 — 고객 표를 읽는 <b>한 곳</b>(OS_CLI_COLS)에 들어 있다 (7번·5번)');
 const notesSrc = (ix.split('function ccFitNotes(')[1] || '').slice(0, 900);
 /* ── 📋 준비 자료가 <b>실제로 카드에 서는가</b> ──────────────── */
 const brSrc = (ix.split('function ccBriefOf(')[1] || '').slice(0, 900);
