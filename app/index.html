@@ -9134,7 +9134,12 @@ function arMoPrevCut(){ return arMoPrev()+arToday().slice(7); }
 function arCliCalc(clients,metas){
   var byId={},out={},i,c,m,lt,j,tc;
   for(i=0;i<metas.length;i++)byId[metas[i].client_id]=metas[i].content||{};
-  var today=(new Date(Date.now()+9*3600*1000)).toISOString().slice(0,10);
+  /* ★ 판 X290 — 「오늘」 을 <b>여기서 또 셈하지 않습니다</b> (5번). 이 함수가
+     쓰는 달 경계(arMo·arMoPrev·arMoPrevCut)는 모두 <b>arToday()</b> 에서
+     옵니다. 이 한 줄만 진짜 시계를 보고 있어, 한 함수 안에서 「오늘」 을
+     <b>두 곳</b>에 묻고 있었습니다 — 판 X283 에서 ccTeamRows 가 그랬던
+     그 자리와 같은 집안입니다. */
+  var today=arToday();
   for(i=0;i<clients.length;i++){
     c=clients[i];if(!c.advisor_id)continue;
     m=byId[c.id]||{};
@@ -21469,8 +21474,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-01 17:48';
-var APP_BUILD_NOTE='🎨 <b>걸음마다 제 색</b> (판 X286) · 사장님 말씀 「디자인과 색상을 재배치하여 각자 역할이 다르다는것을」. ◾ ① 연락 파랑 · ② 만남 초록 · ③ 정리 주황 · ④ 기록 청록 · ⑤ 관리 보라 — 맨 위 띠 칸 · 칸 윗금 이름표 · 칸 왼쪽 세로 띠가 같은 색이라, 내려가며 지금 어느 걸음인지 색으로 읽힙니다. ◾ 같이 나가는 판 — X285(🧭 하루 다섯 걸음) · X280 · X287~X289(자리 정리 · 🕗 · 📝 · 💬) · X278 · X284(📇 한 장 띠) · X279·X275(다른 갈래).';
+var APP_BUILD='2026-11-02 10:11';
+var APP_BUILD_NOTE='🎨 <b>걸음마다 제 색</b> (판 X286) · 사장님 말씀 「디자인과 색상을 재배치하여 각자 역할이 다르다는것을」. ◾ ① 연락 파랑 · ② 만남 초록 · ③ 정리 주황 · ④ 기록 청록 · ⑤ 관리 보라 — 맨 위 띠 칸 · 칸 윗금 이름표 · 칸 왼쪽 세로 띠가 같은 색이라, 내려가며 지금 어느 걸음인지 색으로 읽힙니다. ◾ 같이 나가는 판 — X285(🧭 하루 다섯 걸음) · X280 · X287~X289(자리 정리 · 🕗 · 📝 · 💬) · X278 · X284(📇 한 장 띠) · X290·X279·X275(다른 갈래).';
 
 
 
@@ -54794,7 +54799,32 @@ function setCalcRes(id,items,note){
 }
 function fmt(n){return Math.round(n).toLocaleString('ko-KR');}
 function parseDate(v){if(!v)return null;var d=new Date(v);return isNaN(d.getTime())?null:d;}
-function addMonths(d,n){var x=new Date(d.getTime());x.setMonth(x.getMonth()+n);return x;}
+/* ══ 📅 <b>달을 더할 때 미끄러지지 않게</b> (판 X290 · 1번) ═══════════════
+   사장님 말씀 (2026-11-02) — 「그럼 매달 1일에 틀리던 수가 또 있는지 찾아봐」.
+
+   ⚠⚠ setMonth 는 <b>없는 날을 다음 달로 넘깁니다.</b> 1월 31일에 한 달을
+     더하면 「2월 31일」 이 되고, 브라우저는 그것을 <b>3월 3일</b> 로 바꿉니다.
+     이 함수가 쓰이는 두 자리가 <b>고객에게 말하는 날짜</b>입니다 —
+       · <b>상령일</b>(보험나이) : 8월 31일생의 상령일이 <b>2027-03-03</b> 으로
+         나왔습니다. 바른 것은 <b>2027-02-28</b> 입니다. 생일 365가지 가운데
+         <b>7가지</b>가 어긋났습니다(3·5·8·10·12월 말일 언저리).
+       · <b>날짜 계산기</b>(면책 종료 · 청약철회 만료 · 갱신일 · 부활 가능일) :
+         1월 31일 + 1개월이 <b>3월 3일</b> 로 나왔습니다. 바른 것은 2월 28일.
+         청약철회 만료일을 사흘 늦게 말씀드리면 <b>고객이 철회를 놓칩니다.</b>
+
+   ★ <b>그 달에 그 날이 없으면 그 달 말일</b>로 둡니다. 민법 제160조 ③ 이
+     「최종의 월에 해당일이 없는 때에는 그 월의 말일로 기간이 만료한다」 고
+     정한 그대로이고, 보험사의 상령일 관행도 같습니다.
+   ★ 그 날이 있는 달은 <b>한 글자도 안 바뀝니다</b> — 365가지 중 358가지는
+     전과 똑같습니다. 바뀌는 것은 미끄러지던 일곱뿐입니다.
+   점검 : scripts/check-monthend.js                                      */
+function addMonths(d,n){
+  var y=d.getFullYear(),m=d.getMonth()+n,day=d.getDate();
+  var 끝=new Date(y,m+1,0).getDate();            /* 그 달의 마지막 날 */
+  var x=new Date(d.getTime());
+  x.setFullYear(y,m,Math.min(day,끝));
+  return x;
+}
 function daysBetween(a,b){return Math.round((b-a)/86400000);}
 function ymd(d){var m=('0'+(d.getMonth()+1)).slice(-2),day=('0'+d.getDate()).slice(-2);return d.getFullYear()+'.'+m+'.'+day;}
 
