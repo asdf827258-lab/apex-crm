@@ -115,10 +115,30 @@ const SEED = () => `
       return parseFloat(getComputedStyle(r).fontSize) < 13;
     }).length;
     const days = new Date(Date.UTC(+ym.slice(0,4), +ym.slice(5,7), 0)).getUTCDate();
+    /* ⚠⚠ <b>「오늘+3일」 은 달 끝 사흘에 이 달 밖으로 나갑니다</b> — 격자에
+       없는 칸이라 빈 글자가 와서 <b>자가 스스로 터집니다.</b> 2026-10-30 에
+       실제로 그랬습니다(코드는 멀쩡했고 main 으로 되돌려도 같은 빨간불).
+       ★ 이 파일 아래 [달끝] 쪽지에 <b>똑같은 함정</b>이 이미 적혀 있습니다
+         (2026-09-29 · 「달 끝 이틀에만 터지니 스물여드레 동안은 초록」).
+         그때는 [달끝] 토막만 고쳤고 여기 [1] 에는 그 버릇이 남아 있었습니다.
+       ★ <b>묻는 것은 그대로입니다</b> — 「앞날을 0/N 으로 적지 않나」.
+         <b>이 달 안의 앞날</b>을 고르고, 오늘이 달의 마지막 날이라 앞날이
+         없으면 [달끝] 이 하는 그대로 <b>하루 전을 흉내 내어</b> 묻고
+         <b>되돌려 놓습니다</b> (5번 · 원래 것을 들고 있다 돌려놓기).      */
+    const eom = new Date(Date.UTC(+ym.slice(0,4), +ym.slice(5,7), 0))
+      .toISOString().slice(0, 10);
+    let 밑 = T, 되돌 = null;
+    if (T >= eom) { 되돌 = window.mcalToday;
+      const 흉내 = mcalShift(eom, -1);
+      window.mcalToday = function () { return 흉내; }; 밑 = 흉내; }
+    const d3 = mcalShift(밑, 3);
+    const 앞날 = (d3 && d3 <= eom) ? d3 : eom;
+    const soon = mcalRtTxt(rt(앞날));
+    if (되돌) window.mcalToday = 되돌;
     return { days, cells: cells.length,
       withRt: txt.filter(t => /\d+\s*\/\s*\d+|✓\d+|·\d+|^\d+\s+\d+$/.test(t)).length,
       today: mcalRtTxt(rt(T)), y1: mcalRtTxt(rt(mcalShift(T, -1))),
-      soon: mcalRtTxt(rt(mcalShift(T, 3))), small,
+      soon: soon, 앞날: 앞날, 흉내냄: !!되돌, ym: ym, small,
       tot: (rt(T) || {}).tot || 0, sample: txt.slice(0, 3) };
   });
   is(A.cells === A.days, '  이 달 <b>' + A.days + '칸</b>이 다 선다 — ' + A.cells + '칸');
@@ -126,7 +146,12 @@ const SEED = () => `
   is(A.y1 === '✓' + A.tot, '  다 한 날은 <b>✓' + A.tot + '</b> — ' + A.y1);
   /* ⚠ 앞날을 「0/11」 로 적으면 <b>「못 했다」</b> 로 읽힌다 (1번) */
   is(A.soon === '' + A.tot && A.soon.indexOf('/') < 0,
-     '  앞날은 <b>가짓수만</b> — 「0/' + A.tot + '」 로 적지 않는다 (1번) — ' + A.soon);
+     '  앞날은 <b>가짓수만</b> — 「0/' + A.tot + '」 로 적지 않는다 (1번) — ' +
+     A.앞날 + ' 「' + A.soon + '」' + (A.흉내냄 ? ' (오늘이 달 마지막 날이라 하루 전을 흉내 냈습니다)' : ''));
+  /* ★ 고른 앞날이 <b>정말 이 달 격자 안</b>인가 — 밖이면 빈 글자가 와서
+     위 줄이 거짓으로 웁니다. 자가 <b>자기 발밑</b>을 봅니다 (8번). */
+  is(A.앞날.slice(0, 7) === A.ym.slice(0, 7),
+     '  ★ 고른 앞날이 <b>이 달(' + A.ym.slice(0, 7) + ') 격자 안</b>이다 — ' + A.앞날);
   is(A.withRt >= A.days - 1,
      '  <b>' + A.withRt + '칸</b>에 글자가 찍힌다 — 점 하나로는 「비어 있다」 로 보인다');
   is(A.small === 0, '  글자가 <b>13px 아래로 안 내려간다</b> — 폰에서 안 읽힌다');

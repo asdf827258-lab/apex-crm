@@ -19,6 +19,7 @@
  * ⚠️ service_role·시크릿 키는 반드시 Netlify 환경변수에만 두세요(앱/브라우저 금지).
  */
 
+const { addPeriod } = require("./_period.js");
 const TOSS_CONFIRM_URL = "https://api.tosspayments.com/v1/payments/confirm";
 // 공개 정보(anon 아님 주의: 여기선 URL만). 시크릿 키는 절대 코드에 넣지 않는다.
 const DEFAULT_SUPABASE_URL = "https://miakdhxtqofpndtlyzxa.supabase.co";
@@ -57,9 +58,12 @@ exports.handler = async function (event) {
       const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
       if (SB_URL && SB_KEY) {
         try {
-          const until = new Date();
-          if (b.cycle === "year") until.setFullYear(until.getFullYear() + 1);
-          else until.setMonth(until.getMonth() + 1);
+          /* ★ 판 X291 — 기간 셈은 <b>_period.js 한 곳</b>이 합니다 (5번).
+             여기 있던 setMonth 는 1월 31일 + 1개월을 <b>3월 3일</b> 로
+             만들었습니다 — 고객이 사흘을 더 쓰고, 다음에도 그만큼 밀립니다.
+             한 번 사는 것이라 기억해 둘 처음 날이 없어, <b>오늘 날</b>을
+             기준으로 그 달에 없으면 말일에서 멈춥니다. */
+          const until = addPeriod(new Date(), b.cycle === "year" ? "year" : "month");
           const up = await fetch(SB_URL + "/rest/v1/profiles?id=eq." + encodeURIComponent(b.userId), {
             method: "PATCH",
             headers: {

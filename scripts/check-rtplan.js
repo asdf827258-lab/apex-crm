@@ -275,6 +275,107 @@ const head = (t) => console.log('\n' + t);
   await pg.waitForTimeout(700);
   is(바깥 - 전 <= 2, '  다시 그려도 바깥을 <b>더 안 부른다</b> — ' + (바깥 - 전) + '번 (받아 둔 것을 씁니다)');
 
+  /* ══ [7] 🧭 <b>판 X260 — 동선이 홈의 추천을 받아 켜나</b> ═══════════════
+     사장님 말씀 (2026-10-30) — 「<b>지역동선 아직도 추천 리스트가 없어..
+     동선 추천하고</b>」. 여쭈니 「<b>홈이 권하는 것을 그대로 받아 켠다</b>」 를
+     고르셨습니다.
+     ⚠ <b>왜 없었나</b> — 권하는 셈은 본체(hmHotOf)에만 있었고 이 파일에는
+       「추천」 이라는 말이 <b>한 번도</b> 없었습니다. 그래서 열면 「걸 분이
+       없습니다 — 위의 <b>시</b>를 하나 골라 보세요」 였습니다.
+     ★ 묻는 것 넷 —
+       ⓐ <b>못 받았으면 추천을 안 적는다</b>(지어내지 않습니다 · 1번)
+       ⓑ 받으면 <b>그 동네로 켜지고 까닭을 적는다</b>
+       ⓒ 사장님이 <b>손으로 고르신 것이 이긴다</b>(추천이 사람을 덮지 않습니다)
+       ⓓ <b>동선이 제 손으로 세지 않는다</b> — 세는 자는 본체 한 곳 (5번) */
+  head('[7] 🧭 <b>홈이 권하는 동네를 받아 켜나</b> (판 X260)');
+  const 재다 = async () => await pg.evaluate(() => {
+    const r = document.querySelector('.rt-rec');
+    const sel = document.getElementById('rtRegion');
+    const t = e => (e ? (e.innerText || '') : '').replace(/\s+/g, ' ').trim();
+    return { 추천줄: !!r, 추천글: t(r),
+             켜진시: sel ? sel.value : '(없음)',
+             후보: document.querySelectorAll('#rtSide .rt-row').length,
+             /* ⚠ <b>잘라서 묻지 않습니다</b> — 처음에 700자로 잘라 두었다가,
+                찾는 글이 그 뒤에 있어 「없다」 고 울었습니다. 자가 아니라
+                제 재는 창이 짧았던 것입니다 (8번).                    */
+             쪽글: t(document.getElementById('rtSide')) };
+  });
+  /* ⓐ 아직 아무것도 안 알려 준 판 */
+  await pg.evaluate(() => { try { window.apexRouteHot(null); } catch (e) {}
+    document.getElementById('rtRegion').value = ''; apexRouteOpen(); });
+  await pg.waitForTimeout(800);
+  const R0 = await 재다();
+  is(!R0.추천줄,
+     '  ⓐ <b>못 받았으면 추천을 안 적는다</b> — 추천 줄 ' + (R0.추천줄 ? '있음 ✗' : '없음'));
+  /* ★ <b>비었을 때 왜 비었는지</b> — 이 씨에는 걸 분이 둘 있어서 그 글이
+     안 나옵니다. 그래서 <b>그 상태를 만들어</b> 묻습니다: 모든 줄에 약속을
+     달면 pool 이 비고(약속 잡힌 분은 TA 대상이 아닙니다), 그때 화면이
+     무슨 말을 하는지가 사장님께서 「추천 리스트가 없다」 고 하신 자리입니다.
+     ⚠ 처음에 이 물음을 <b>걸 분이 있는 판</b>에 걸어 두었다가 빨간불이
+       떴습니다 — <b>제 물음이 틀린 것</b>이었습니다. 자가 아니라 물음을
+       고쳤습니다 (8번 「헛것을 잡는 점검은 안 잡는 점검보다 나쁘다」).  */
+  await pg.evaluate((d) => {
+    try { eval('dbs').forEach(function (r) { r.next_appt = d + 'T10:00:00'; }); } catch (e) {}
+    try { window.apexRouteHot(null); } catch (e) {}
+    document.getElementById('rtRegion').value = ''; apexRouteOpen();
+  }, DAY);
+  await pg.waitForTimeout(800);
+  const R0b = await 재다();
+  is(R0b.후보 === 0 && /AP·PC 약속이 없어/.test(R0b.쪽글),
+     '  ⓐ★★ <b>비면 왜 비었는지 말한다</b> — 후보 ' + R0b.후보 + '분 · ' +
+     (/AP·PC 약속이 없어/.test(R0b.쪽글)
+        ? '「이번 주에 잡힌 AP·PC 약속이 없어 권할 동네가 없습니다」'
+        : '← 「위의 시를 하나 골라 보세요」 만 적습니다 ✗'));
+  /* ★ 그때 <b>권하는 동네는 있는데</b> 그 동네에 걸 분이 없을 때도 말합니다 */
+  await pg.evaluate(() => {
+    window.apexRouteHot({ rg: '순천', n: 3, to: '2026-09-21', more: 0 });
+    document.getElementById('rtRegion').value = ''; apexRouteOpen();
+  });
+  await pg.waitForTimeout(800);
+  const R0c = await 재다();
+  is(/권하는 동네\(/.test(R0c.쪽글) || /에는 지금 걸 분이 없습니다/.test(R0c.쪽글),
+     '  ⓐ 권하는 동네에 <b>걸 분이 없을 때도</b> 그렇다고 말한다 — ' +
+     (/에는 지금 걸 분이 없습니다/.test(R0c.쪽글) ? '「홈이 권하는 동네(순천)에는 지금 걸 분이 없습니다」'
+                                              : '← 그 말이 없습니다'));
+  /* 씨를 <b>되돌립니다</b> — 뒤에 오는 줄이 있으면 엉뚱한 것을 잽니다 */
+  await pg.evaluate(() => {
+    try { eval('dbs').forEach(function (r, i) { if (i >= 4) r.next_appt = null; }); } catch (e) {}
+  });
+  /* ⓑ 홈이 「순천 3건」 을 알려 준 뒤 */
+  await pg.evaluate(() => {
+    window.apexRouteHot({ rg: '순천', n: 3, to: '2026-09-21', more: 1 });
+    document.getElementById('rtRegion').value = ''; apexRouteOpen();
+  });
+  await pg.waitForTimeout(800);
+  const R1 = await 재다();
+  is(R1.켜진시 === '순천시',
+     '  ⓑ <b>권하는 동네로 켜진다</b> — 켜진 시 「' + R1.켜진시 + '」 (「순천」 을 시 이름으로 바꿔 켭니다)');
+  is(R1.추천줄 && /홈이 권하는 동네/.test(R1.추천글) && /3건/.test(R1.추천글),
+     '  ⓑ <b>까닭을 적는다</b> — 「' + R1.추천글.slice(0, 48) + '…」');
+  is(R1.후보 > 0,
+     '  ⓑ★★ <b>걸 분 목록이 선다</b> — ' + R1.후보 + '분 (사장님이 시를 안 고르셔도 섭니다)');
+  /* ⓒ 손으로 고르신 것이 이긴다 — 없는 동네를 권해 두고 순천시를 손으로 고른다 */
+  await pg.evaluate(() => {
+    window.apexRouteHot({ rg: '광주', n: 9, to: '2026-09-21', more: 0 });
+    document.getElementById('rtRegion').value = '순천시'; apexRouteOpen();
+  });
+  await pg.waitForTimeout(800);
+  const R2 = await 재다();
+  is(R2.켜진시 === '순천시',
+     '  ⓒ★★ <b>손으로 고르신 것이 이긴다</b> — 켜진 시 「' + R2.켜진시 +
+     '」 (홈은 「광주」 를 권했습니다)');
+  is(!R2.추천줄,
+     '  ⓒ 그때는 <b>「권하는 동네」 라고 안 적는다</b> — 추천 줄 ' +
+     (R2.추천줄 ? '있음 ✗ (거짓말입니다)' : '없음'));
+  /* ⓓ 동선이 제 손으로 세지 않는가 — 글로 묻습니다 (5번) */
+  {
+    const 글 = require('fs').readFileSync('apex-route.js', 'utf8');
+    const 셈 = /stage\s*===?\s*['"]AP['"]|'AP'\s*,\s*'PC'|AP·PC[^<]{0,12}세/.test(글);
+    is(!셈,
+       '  ⓓ★★ <b>동선이 제 손으로 안 센다</b> — 「이번 주 AP·PC」 를 세는 코드 ' +
+       (셈 ? '있음 ✗ (두 곳에서 세면 홈은 순천, 동선은 광주를 켭니다 · 5번)' : '없음 (받기만 합니다)'));
+  }
+
   await ctx.close();
   console.log('\n──────────────────────────────');
   await br.close(); srv.close();

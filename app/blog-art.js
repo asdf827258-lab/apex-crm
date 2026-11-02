@@ -215,9 +215,16 @@ function clip(t, n){
 
 /* 초안의 <b>첫 비교표</b>를 그대로 가져온다. 칸을 만들어 넣지 않는다 —
    네이버에 붙인 표는 폰에서 글자가 뭉개지고 가로로 잘린다. 그림으로 한 번 더 준다. */
+/* 표를 맞히는 자는 <b>하나</b>만 둔다 — 세는 쪽과 떠 오는 쪽이 따로 놀면
+   한쪽만 고쳐져 「표가 둘인데 하나로 세는」 자리가 생긴다 (5번). */
+const TBLSRC = '(^\\|[^\\n]*\\|\\s*$\\n)+';
+/* 초안에 표가 몇 개인가 — 떠 온 토막을 글에서 뺄지 말지를 가른다. */
+function tableCount(text){
+  return (String(text == null ? '' : text).match(new RegExp(TBLSRC, 'gm')) || []).length;
+}
 function pickTable(row){
   const t = (row && row.out) || '';
-  const m = t.match(/(^\|[^\n]*\|\s*$\n)+/m);
+  const m = t.match(new RegExp(TBLSRC, 'm'));
   if (!m) return null;
   const rows = m[0].trim().split('\n')
     .map(l => l.replace(/^\||\|$/g,'').split('|').map(c => c.trim()))

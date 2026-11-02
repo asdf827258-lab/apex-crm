@@ -202,7 +202,7 @@ const FAKE = { calls: [] };
 global.fetch = async (u, o) => {
   FAKE.calls.push(String(u));
   const J = (b, st) => ({ ok: (st || 200) < 300, status: st || 200, json: async () => b, text: async () => JSON.stringify(b) });
-  if (/generativelanguage/.test(u)) return J({ candidates: [{ content: { parts: [{ text: 'korean doctor hospital' }] } }] });
+  if (/generativelanguage/.test(u)) { FAKE.gem = JSON.parse((o && o.body) || '{}'); return J({ candidates: [{ content: { parts: [{ text: 'korean doctor hospital' }] } }] }); }
   if (/api\.pexels\.com/.test(u)) return J({ photos: [{ id: 1, alt: 'a', photographer: 'Kim P', url: 'https://www.pexels.com/photo/1', src: { medium: 'https://images.pexels.com/m1.jpg', original: 'https://images.pexels.com/o1.jpg' } }] });
   if (/api\.unsplash\.com\/search/.test(u)) return J({ results: [{ id: 'u1', alt_description: 'b', user: { name: 'Lee U', links: { html: 'https://unsplash.com/@lee' } }, urls: { small: 'https://images.unsplash.com/s1', raw: 'https://images.unsplash.com/r1?ixid=1' }, links: { download_location: 'https://api.unsplash.com/photos/u1/download?ixid=1' } }] });
   if (/api\.unsplash\.com\/photos\/.*\/download/.test(u)) return J({ url: 'x' });
@@ -215,6 +215,9 @@ is(R.b.ok && R.b.items.length === 0 && R.b.missing.join(',') === 'PEXELS_API_KEY
 process.env.PEXELS_API_KEY = 'pk'; process.env.UNSPLASH_ACCESS_KEY = 'uk'; process.env.GEMINI_API_KEY = 'gk'; FAKE.calls = [];
 R = await fnRun({ q: '병원 진료비' });
 is(R.b.translated && R.b.query === 'korean doctor hospital', '한글 검색어를 영어 사진 검색어로 바꾼다 (Gemini)');
+const gc = (FAKE.gem && FAKE.gem.generationConfig) || {};
+is(gc.thinkingConfig && gc.thinkingConfig.thinkingBudget === 0 && gc.maxOutputTokens >= 40,
+   '★ 번역 부를 때 「생각」 을 끄고 글자 칸을 넉넉히 준다 (판 X263 — 20 이면 생각에 다 써 MAX_TOKENS · 0자였다, 라이브 실측)');
 is(R.b.items.length === 2 && R.b.items[0].src === 'Pexels' && R.b.items[1].src === 'Unsplash', '두 곳 결과를 번갈아 섞는다');
 is(R.b.items.every(x => x.name && x.link && x.thumb && /w=1080/.test(x.full) && /h=1350/.test(x.full)), '사진마다 사진가 이름·링크가 있고, 1080×1350 으로 잘라 받는다');
 is(FAKE.calls.some(u => /orientation=portrait/.test(u)), '세로 사진만 찾는다');
@@ -246,6 +249,7 @@ ctx.CN.style = 'lime'; ctx.cxField('id', 'apex.test');
 S = steps();
 is(/누르면 실사 사진 찾기/.test(S), '③ 사진 넣기 단계가 실사 사진 찾기로 이어진다');
 is(ctx.renderTodayCard().indexOf('📷 실사 사진 찾기') >= 0, '테마를 켜면 단추 줄에 「📷 실사 사진 찾기」 가 선다');
+is(/if \(keyMsg\(d\) && !PK\.items\.length\)/.test(SRC), '키 없다는 말은 사진이 하나도 안 나왔을 때만 한다 (판 X263 — Unsplash 만으로 잘 나와도 매번 떴다)');
 is(IDX.indexOf(UPBTN) >= 0, '★ 그 단추를 붙이는 자리(「🖼 직접 업로드」 단추 글자)가 index.html 에 그대로 있다 — 글자가 바뀌면 단추가 조용히 사라집니다');
 
 console.log('\n' + (bad ? '✗ ' + bad + '/' + n + ' 실패' : '✓ ' + n + '가지 모두 통과'));

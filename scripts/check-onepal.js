@@ -49,7 +49,36 @@ const srv = http.createServer((q, s) => {
      189 · CI 194 로 갈렸습니다 — 공지 줄이 몇 개 떠 있느냐에 따라 움직여서
      고친 것이 없는데도 빨간불이 켜집니다. <b>색이 문제이니 색 짝으로</b>
      셉니다 (8번).                                                        */
-const BASE = { 묻힌상자: 0, 거의같은색: 165 };
+const BASE = { 묻힌상자: 0, 거의같은색: 142 };
+/* ★ 165 → 142 · 2026-10-30 (판 X262 · 사장님 말씀 「반만 11개중에 지금 고칠수
+   있는거 다 고쳐줘」) — <b>스무 가지(260곳)</b>를 더 모았습니다. 고친 것이 없는데
+   내려 적은 것이 아닙니다: 자가 「142 로 내려 주십시오」 라고 적어 주었습니다.
+   ★ 모은 스무 가지 — <b>뜻으로 갈라</b> 보냈습니다. 한 색이 바탕과 테두리에
+     둘 다 쓰이면 <b>한 이름으로 몰지 않고</b> 두 이름으로 갈랐습니다:
+       #F1F5F9  바탕 31곳 → --t-bg      · 테두리 43곳 → --t-line-2
+       #EEF2F7  테두리 32곳 → --t-line-2 · 바탕 9곳 → --t-bg
+       #EFF6FF(32) · #EFF5FF(8) · #E8F2FF(6) · #EEF4FF(5) · #EAF2FF(3) ·
+       #F1F5FF(3) · #E7EEFF(3) → --t-point-l   (연한 파랑 바탕)
+       #F8FAFD(11) · #F7F9FC(4) → --t-bg-3     · #EEF1F5(10) · #F0F1F3(4) · #EDF0F3(2) → --t-line-2
+       #F0F9FF(5) · #F4F8FF(5) · #F6F9FF(3) → --t-bg-b
+       #FCFDFF(7) · #FFFBFB(7) · #FAFCFF(4) · #FCFDFE(3) → --t-card
+       #EBFAF3(8) → --t-pos-l · #EEF2F8(6) · #F4F5F7(3) → --t-bg
+   ⚠ <b>차이 9 이내만</b> 모았습니다 — 위에 적힌 #BFD4FB(차이 10) 의 교훈 그대로입니다.
+     그래서 #0F172A(69곳 · 차이 20) · #1D4ED8(52곳 · 차이 14) · #BFD4FB(19곳) ·
+     #E6EDF7(12곳 · 11) · #7A5310(11곳 · 11) 은 <b>그대로 둡니다</b>.
+   ⚠ <b>#FFFBEB(139곳) · #FEF9EE(10곳) 도 그대로</b> — --t-seal 은 광고심의 규정이
+     정한 색입니다. 위 2026-10-08 쪽지의 까닭이 그대로 살아 있습니다.
+   ⚠ <b>안 건드린 자리 넷</b> — ① SVG 속성(stroke=·fill=) ② canvas fillStyle
+     ③ meta theme-color ④ OS_TIERS 의 bg. ④ 는 바로 그 자리에 <b>「바탕(bg)은
+     화면마다 쓰임이 달라 그대로 둡니다」</b> 라고 적어 둔 앞 판의 결정이라
+     뒤집지 않았습니다. ①②③ 은 var() 가 안 먹는 자리입니다(위 쪽지).
+   ⚠ <b>가지 수로는 스무 가지만 사라집니다</b> — #F1F5F9(SVG stroke · OS_TIERS bg) ·
+     #EEF2F7(canvas) · #EEF1F5(SVG fill 둘) · #EDF0F3(막대 바탕 한 곳) 은 위 ①②④ 때문에
+     <b>한두 곳이 남아 가지로는 그대로 세어집니다.</b> 162 - 20 = 142 입니다.
+   ★ 되돌려 확인했습니다 — <b>#EBFAF3</b> 를 한 곳 도로 박으니 <b>143 > 142 로 빨간불</b>.
+     ⚠ 처음에 #F1F5F9 로 되돌려 봤는데 <b>안 울렸습니다</b> — 그 색은 위 까닭으로 아직
+     두 곳에 남아 있어 가지 수가 안 늘기 때문입니다. <b>되돌림은 아주 사라진 색으로
+     해야 합니다.</b> 안 울리는 알람을 울린다고 적을 뻔했습니다 (8번). */
 /* ★ 176 → 165 · 2026-10-08 (X08 둘째 판) — 뜻이 맞는 <b>열다섯</b>을 더
    모았습니다(477곳). <b>「가장 가까운 이름」 이 아니라 「뜻이 맞는 이름」</b>
    으로 보냈습니다 — 이 자는 거리만 보므로, 이름 고르기는 사람이 합니다.
@@ -211,13 +240,14 @@ const SCAN = ([tab, page]) => {
     if (solid(cs.backgroundColor)) return num(cs.backgroundColor); e=e.parentElement; }
     return [255,255,255]; };
   const hex = c => '#'+c.map(x=>Math.round(x).toString(16).padStart(2,'0')).join('').toUpperCase();
-  const low = [], buried = [];
+  const low = [], buried = [], 뒤묻힘 = [];
   document.querySelectorAll('#dynPane *').forEach(el => {
     const r = el.getBoundingClientRect();
     if (r.width < 4 || r.height < 4) return;
     if (!el.offsetParent && getComputedStyle(el).position !== 'fixed') return;
     /* ▣ 판에 묻힌 상자 — 제 바탕을 칠했는데 <b>바로 위가 판</b>이고 색이 같다 */
-    const own = getComputedStyle(el).backgroundColor;
+    const cs0 = getComputedStyle(el);
+    const own = cs0.backgroundColor;
     if (solid(own) && r.width > 60 && r.height > 24) {
       const c = num(own), d = Math.abs(c[0]-page[0])+Math.abs(c[1]-page[1])+Math.abs(c[2]-page[2]);
       const pe = el.parentElement;
@@ -226,6 +256,41 @@ const SCAN = ([tab, page]) => {
         const onPage = Math.abs(pc[0]-page[0])+Math.abs(pc[1]-page[1])+Math.abs(pc[2]-page[2]) <= 6;
         if (d > 0 && d <= 10 && onPage)
           buried.push(tab+' · '+String(el.className||el.tagName).slice(0,30)+' '+hex(c)+' (판 '+hex(page)+')');
+      }
+    }
+    /* ▣▣ <b>제 바로 뒤에 묻힌 상자</b> — 2026-10-30 (판 X264 · 사장님 「안되는거 다
+       고쳐줘」). 위 ▣ 는 <b>바로 위가 판일 때만</b> 봅니다. 그래서 <b>연한 회색 칸
+       안에 거의 같은 회색 칩</b>을 아무도 못 봤습니다 — 라이브에서 「🗂 소개 ·
+       📍 순천」 칩이 --t-bg-2(#F5F7F9) 로 --t-bg-3(#F7F9FA) 칸 위에 앉아 <b>차이 5</b>
+       였고, 알약 모양이 아예 안 보이고 글자만 떠 있었습니다.
+       ★ <b>크기 문턱이 달라야 합니다</b> — 위 ▣ 는 60×24 를 넘는 것만 보는데
+         그 칩은 56×28·59×28 이라 문턱만 그대로 쓰면 <b>이 눈을 달아도 못 봅니다.</b>
+         실제로 재서 알았습니다. 그래서 40×20 으로 둡니다.
+       ★ <b>테두리·그림자가 있으면 안 셉니다</b> — 그것으로 모양이 보입니다.
+         (헛것을 잡는 점검은 안 잡는 점검보다 나쁩니다 · 8번)
+       ⚠⚠ <b>이 자의 견본에는 고객이 한 분도 없습니다</b>(OSC.list=[] · AR.db=[]).
+         그래서 「지금 할 것」 칸의 그 칩들은 <b>여기서는 아예 안 그려집니다</b> —
+         되돌려 보고 알았습니다(칩을 도로 묻어도 이 줄이 안 울렸습니다).
+         ★ 그 자리를 <b>정말로</b> 지키는 자는 <b>check-bgsame</b> 입니다 —
+           고객을 넣은 견본으로 홈을 채워 놓고 같은 눈으로 봅니다.
+         ★ 이 줄은 <b>그 밖의 화면</b>을 봅니다 — 공짜로 늘어난 눈이라 둡니다.
+       ★ 그림(그라데이션) 위도 안 셉니다 — 못 재는 자리입니다 (1번).         */
+    if (solid(own) && r.width >= 40 && r.height >= 20
+        && (cs0.backgroundImage||'none') === 'none'
+        && parseFloat(cs0.borderTopWidth||0) === 0
+        && parseFloat(cs0.borderBottomWidth||0) === 0
+        && (cs0.boxShadow||'none') === 'none') {
+      let e2 = el.parentElement, 뒤 = null, 그림 = false;
+      while (e2) { const s2 = getComputedStyle(e2);
+        if ((s2.backgroundImage||'none') !== 'none') { 그림 = true; break; }
+        if (solid(s2.backgroundColor)) { 뒤 = num(s2.backgroundColor); break; }
+        e2 = e2.parentElement; }
+      if (!그림 && 뒤) {
+        const c2 = num(own);
+        const d2 = Math.abs(c2[0]-뒤[0])+Math.abs(c2[1]-뒤[1])+Math.abs(c2[2]-뒤[2]);
+        if (d2 > 0 && d2 <= 10)
+          뒤묻힘.push(hex(c2)+' on '+hex(뒤)+' ('+d2+') — '+tab+' · '+
+                      String(el.className||el.tagName).slice(0,26));
       }
     }
     /* 글자 대비 — <b>이모지·기호만인 칸은 뺍니다</b>(제 색을 가집니다) */
@@ -247,7 +312,7 @@ const SCAN = ([tab, page]) => {
        같은 짝이 열 군데 나와도 <b>한 가지</b>입니다.                       */
     if (v < need) low.push(hex(fg)+' on '+hex(bg)+' ('+need+')');
   });
-  return { low: [...new Set(low)], buried: [...new Set(buried)] };
+  return { low: [...new Set(low)], buried: [...new Set(buried)], 뒤묻힘: [...new Set(뒤묻힘)] };
 };
 
 (async () => {
@@ -305,17 +370,29 @@ const SCAN = ([tab, page]) => {
     const n = (getComputedStyle(document.getElementById('main')||document.querySelector('.main')).backgroundColor.match(/\d+/g)||[242,244,246]);
     return n.slice(0,3).map(Number);
   });
-  let low = [], buried = [];
+  let low = [], buried = [], 뒤묻힘 = [];
   for (const t of tabs) {
     await p.evaluate(x => { try{ go(x); }catch(e){} }, t);
     await p.waitForTimeout(650);
     const r = await p.evaluate(SCAN, [t, page]);
     low = low.concat(r.low); buried = buried.concat(r.buried);
+    뒤묻힘 = 뒤묻힘.concat(r.뒤묻힘 || []);
   }
   is(buried.length <= BASE.묻힌상자,
      '  ★ <b>판에 묻힌 상자</b>가 ' + buried.length + '가지 — 기준선 ' + BASE.묻힌상자 +
      (buried.length ? ('\n      ✗ ' + buried.slice(0,6).join('\n      ✗ ') +
         '\n      → 판 위에 놓을 상자는 판과 다른 색이어야 합니다. --t-card(흰) 이나 --t-bg-3 을 쓰십시오.') : ''));
+  /* ▣▣ 2026-10-30 (판 X264) — <b>제 바로 뒤에 묻힌 상자</b>. 기준선을 안 둡니다:
+     고치고 재어 보니 화면 아홉에 <b>0가지</b>였고, 0 은 「늘면 바로 빨간불」 이라
+     기준선보다 셉니다. 기준선을 두면 그 수를 올리는 것만으로 조용히 느슨해집니다. */
+  is(뒤묻힘.length === 0,
+     '  ★★ <b>제 바로 뒤에 묻힌 상자</b>가 ' + 뒤묻힘.length + '가지 — 0이어야 합니다' +
+     (뒤묻힘.length
+       ? ('\n      ✗ ' + [...new Set(뒤묻힘)].slice(0,8).join('\n      ✗ ') +
+          '\n      → 이 상자는 <b>판이 아니라 제 바로 뒤</b>와 거의 같은 색입니다 — 모양이 안 보이고 ' +
+          '글자만 뜹니다. <b>--t-card(흰)</b> 로 보내거나, 테두리(--t-line)를 주십시오.' +
+          '\n      ⚠ 위 「판에 묻힌 상자」 와 다른 눈입니다 — 그 자는 <b>바로 위가 판일 때만</b> 봅니다.')
+       : ' (위 「판에 묻힌 상자」 는 바로 위가 판일 때만 봅니다 — 이 눈이 그 밖을 봅니다)'));
   const 짝 = [...new Set(low)].sort();
   const 새것 = 짝.filter(x => 봐주는색짝.indexOf(x) < 0);
   is(새것.length === 0,
@@ -324,7 +401,13 @@ const SCAN = ([tab, page]) => {
        '\n      → 목업 색이면 위 봐주는색짝 에 <b>까닭과 함께</b> 적고, 아니면 색을 고치십시오') : ''));
   const 사라진것 = 봐주는색짝.filter(x => 짝.indexOf(x) < 0);
   if (사라진것.length)
-    console.log('      · 이제 안 나오는 짝 ' + 사라진것.length + '가지 — 목록에서 지워 주십시오: ' + 사라진것.join(' | '));
+    /* ⚠ <b>지우라고 적지 않습니다</b> (2026-10-30 · 판 X262). 위 봐주는색짝 쪽지가
+       「이제 안 나오는 짝은 <b>지우지 않습니다</b> — 소식·미션처럼 날마다 내용이
+       바뀌는 화면의 짝은 다른 날 다시 섭니다」 라고 적어 두었는데, 여기서는
+       「목록에서 지워 주십시오」 라고 찍고 있었습니다. <b>한 자가 같은 물음에 두
+       답</b>을 하고 있었고, 찍히는 쪽을 읽은 세션이 지우면 그날 까닭 없이
+       빨개집니다 (5번 · 0-1번).                                            */
+    console.log('      · 오늘은 안 나온 짝 ' + 사라진것.length + '가지 — <b>지우지 마십시오</b>(다른 날 다시 섭니다 · 위 쪽지): ' + 사라진것.join(' | '));
 
   console.log('\n[5] ★ 손으로 박아 둔 <b>「토큰과 거의 같은 색」</b>이 늘지 않았다');
   /* ══ ★★ <b>색표를 app/ui.css 에게 묻습니다</b> (2026-10-08) ══════════

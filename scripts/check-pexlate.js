@@ -97,8 +97,12 @@ const LOOK = () => {
   try { go('home'); } catch (e) {}
   const card = document.getElementById('hmFlow');
   const 글 = card ? (card.textContent || '').replace(/\s+/g, ' ') : '';
-  /* 🕗 칸은 <b>단추</b>입니다 — 다른 칩은 적어 둔 수라 span 입니다 */
-  const 칩 = card ? [].slice.call(card.querySelectorAll('button.t-chip'))
+  /* 🕗 칸은 <b>단추</b>입니다 — ⬆ 판 X284 부터 단계 칩과 함께 맨 위 📇 <b>한 장
+     띠</b>(#hmBand)에 섭니다(사장님 말씀 「이 한 장으로 모든 고객을 연락부터
+     관리까지」). 재는 것은 그대로, <b>집는 자리만</b> 띠로 옮깁니다. 문장
+     「그중 N명은 약속이 지났습니다」 는 그대로 카드에 있습니다. */
+  const band = document.getElementById('hmBand');
+  const 칩 = band ? [].slice.call(band.querySelectorAll('button.t-chip'))
     .filter(e => (e.textContent || '').indexOf('지남') >= 0)[0] : null;
   const pane = document.getElementById('dynPane');
   return {
@@ -116,9 +120,11 @@ const LOOK = () => {
       ? (function () { const L = arApptPast(typeof arMyId === 'function' ? arMyId() : null);
           return L ? { n: L.length, first: L[0] ? { id: L[0].id, stage: L[0].stage } : null } : null; })()
       : undefined,
-    단추: card ? [].slice.call(card.querySelectorAll('button'))
+    /* 판 X284 — 🕗 칸이 띠로 올라가 카드 단추가 셋 → 둘이 되었습니다. 그 칸도
+       <b>같이</b> 잽니다(카드 단추 + 🕗 칸) — 수를 2 로 내려 칸을 빼먹지 않게 (8번). */
+    단추: (card ? [].slice.call(card.querySelectorAll('button')) : []).concat(칩 ? [칩] : [])
       .map(b => ({ t: (b.textContent || '').replace(/\s+/g, ' ').trim(),
-                   h: Math.round(b.getBoundingClientRect().height) })) : []
+                   h: Math.round(b.getBoundingClientRect().height) }))
   };
 };
 
@@ -241,7 +247,7 @@ const LOOK = () => {
      '  ★★ 카드에 <b>이름이 한 자도 없다</b> (3번) — 수와 길만 적습니다');
 
   /* ══ [9] 길이 · 손 · 서버 ═══════════════════════════════════════ */
-  console.log('\n[9] 📏 <b>홈이 사장님 선(4.2화면) 안쪽</b>이다 · 칸이 44px · 서버를 안 부른다');
+  console.log('\n[9] 📏 <b>홈이 사장님 선(기본 3.56 + 무거운 씨 0.1화면) 안쪽</b>이다 · 칸이 44px · 서버를 안 부른다');
   /* ★★ <b>여기가 이 토막의 심장입니다.</b> 처음 판에서 저는 「막힌 데」 처럼
      쪽지 한 상자로 세웠고, <b>제 자는 초록</b>이었습니다 — 제 씨의 홈이
      4.16화면이었기 때문입니다. 그런데 홈 높이를 재는 check-homeone 의 씨에는
@@ -252,7 +258,31 @@ const LOOK = () => {
      그래서 ① check-homeone 의 씨에 <b>약속 날짜를 심고</b> ② 꼴을 넷 재어
      <b>칩 「N 🕗 지남」(0px) + 있던 문장 늘리기(24px)</b> 로 바꿨습니다.
      ★ 이 자도 <b>제 씨로 한 번 더</b> 봅니다 — 지난 약속이 많은 판입니다. */
-  const 선 = 4.2;
+  /* ★ <b>2026-10-30 (판 X248) — 4.2 → 5.6 화면.</b> 「오늘 어디로」 가
+     <b>처음부터 펴진 채로</b> 섭니다 (사장님 말씀 「내가 추천 띄우고」 ·
+     「홈이 길어져도 괜찮다」). 임자는 <b>check-homeone 의 HOME_SCR</b>(4.4)
+     한 곳이고, 왜 올렸는지는 거기 적혀 있습니다 — 저는 느슨하게 하지
+     않았습니다 (8번).
+     ⚠ <b>왜 4.4 가 아니고 5.6 인가</b> — 이 자의 씨는 <b>지난 약속 12건</b>
+       입니다(위 쪽지). 그 열두 분이 한 동네에 모여 동선 칸에 <b>칩 11 · 줄
+       11</b> 로 서서, 펴 둔 속만 <b>1,717px</b> 입니다. 접혀 있을 때 3.46화면
+       이던 것이 <b>5.49화면</b>이 됩니다. 그래서 기본 선(4.4) 위에
+       <b>무거운 씨 몫 +1.2</b> 를 둡니다 — 남은 자리 93px.
+     ★ 이 수가 <b>check-homeone 보다 느슨한</b> 까닭은 씨가 다르기 때문이고,
+       <b>길이의 진짜 선은 거기</b>입니다. 그쪽이 먼저 울립니다.           */
+  /* ⬇ <b>2026-10-30 (판 X249) · 5.6 → 3.9 — 같은 날 크게 내렸습니다.</b>
+     위 쪽지의 「동선 속만 1,717px」 가 <b>없어졌습니다</b> — 사장님께서
+     「오른쪽에 조그만하게」 하셔서 걸 분 전화 줄을 접이 안으로 넣고 이름
+     알약만 밖에 두었습니다. 이 무거운 씨에서도 홈이 4,637 → <b>3,091px
+     (3.66화면)</b> 입니다. 기본 선(3.8) 위에 <b>무거운 씨 몫 0.1</b> 만
+     남습니다. 줄였으면 눈금도 같이 내립니다 (0-1번). 남은 자리 201px. */
+  /* ⬇ 판 X255 · 3.9 → 3.75 — 이 무거운 씨에서도 2,969px(3.52화면).
+     기본 선(3.65) 위에 무거운 씨 몫 0.1 그대로입니다 (0-1번).
+     ⬇ <b>판 X258 · 3.75 → 3.66</b> — 사장님께서 「접이로 — 머리만 두고
+     접기」 를 고르셔서 📰 오늘 보낼 소식을 폰에서 접었습니다. 기본 선이
+     3.65 → <b>3.56</b> 으로 0.09 내려갔으니 이 선도 그대로 0.09 내립니다 —
+     무거운 씨 몫 0.1 은 건드리지 않습니다 (0-1번 · 임자는 HOME_SCR 한 곳). */
+  const 선 = 3.66;
   const 많음 = [];
   for (let i = 0; i < 12; i++)
     많음.push({ id: 'h' + i, stage: ['AP', 'PC', 'CS'][i % 3],
@@ -261,7 +291,7 @@ const LOOK = () => {
   is(H.칩수 === 12, '  12명이 다 세어진다 — 「' + H.칩글 + '」');
   is(H.홈 / 844 <= 선,
      '  ★★ <b>홈이 ' + (H.홈 / 844).toFixed(2) + '화면</b>이다 — 선 ' + 선 +
-     '화면 (' + H.홈 + 'px)');
+     '화면 (' + H.홈 + 'px · 남은 자리 ' + Math.round(844 * 선 - H.홈) + 'px)');
   const G = await p.evaluate(({ rows, put }) => {
     (0, eval)('(' + put + ')')(rows);
     const 재기 = () => { try { go('home'); } catch (e) {}

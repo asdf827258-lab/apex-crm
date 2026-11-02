@@ -69,7 +69,15 @@ const QA = [
   ['인스타 올릴 거 만들기',                   ['insta']],
   ['거절한 고객 다시 연락하고 싶어',          ['rjnews']],
   ['화면이 이상해',                           ['health']],
-  ['상속 증여 상담',                          ['finance']]
+  ['상속 증여 상담',                          ['finance']],
+  /* ↓ 판 X293 — 라이브(10-31 판)를 일흔 가지로 물어 틀린 것 (2026-11-01) */
+  ['로그인이 안 돼',                          ['health']],
+  ['고객등록',                                ['clients']],
+  ['지역 동선 짜줘',                          ['crm']],
+  ['해지하려는 고객 막는 법',                 ['contracts']],
+  ['보장분섞 어떻게해',                       ['bojang']],
+  ['ㅂㅈㅂㅅ',                                ['bojang']],
+  ['신입 교육 뭐부터',                        ['ta_train']]
 ];
 
 const SEED = () => {
@@ -304,6 +312,300 @@ const SEED = () => {
      '안 읽은 자료를 <b>서버에서 새로 받지 않는다</b> (7번) — 성장판 ' + WK.cnt.gb + ' · 달력 ' + WK.cnt.cal + ' · 고객 ' + WK.cnt.cli);
   is(WK.cnt.w === 0, '「전화 체크해줘」 · 「잊지말고 챙겨야 돼」 같은 <b>저장하는 일은 자비스가 혼자 시키지 않는다</b> — 불린 수 ' + WK.cnt.w);
   is(WK.plain.work === '', '상관없는 물음(질병코드)에는 일꾼이 <b>끼어들지 않는다</b>');
+
+  /* ══ [10] 🪟 여기서 표현하고 바로 본다 (판 X245) ════════════════════
+
+     사장님 말씀 2026-10-29 — 「집어만 주지말고 <b>원하는 내용을 여기서
+     표현하고 바로 볼수 있도록</b> 만들자는거야」.
+
+     판 X220·X221 까지는 자비스가 「거기로 가세요」 까지였고, 그 화면을 열면
+     <b>자비스가 사라졌습니다.</b> 이제 열어도 아래 띠로 남습니다.
+     ★ 「이 화면 열기 ›」 는 <b>그대로 있어야 합니다</b> — 길은 안 지웁니다 (6번).
+     ★ 접힌 띠에서 <b>적는 칸이 보여야</b> 합니다 — 처음 지었을 때 머리글이
+       넉 줄로 접히며 적는 칸을 띠 밖으로 밀어냈습니다. 그것이 「여기서
+       표현하고」 가 막힌 자리입니다.                                      */
+  sec('[10] 🪟 <b>여기서 표현하고 바로 본다</b> — 화면을 열어도 자비스가 남나 (판 X245)');
+  /* ★★ <b>폰 폭에서 잽니다.</b> 처음에는 컴퓨터 폭(1280)에서만 재다가
+       되돌림이 안 울렸습니다 — 머리글이 넉 줄로 접혀 적는 칸을 밀어내는
+       것은 <b>폰에서만</b> 생기는 일이기 때문입니다. 자가 안 가 본 자리는
+       자가 못 지킵니다 (8번).                                           */
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.waitForTimeout(600);
+  await f.evaluate(() => { try{ jClear(); }catch(e){} ask('고객 등록은 어디서 해?'); });
+  await p.waitForTimeout(1800);
+  const D0 = await f.evaluate(() => ({
+    here: document.querySelectorAll('#jLog .st-here').length,
+    open: [].slice.call(document.querySelectorAll('#jLog details.st-more')).filter(d => d.open).length,
+    more: document.querySelectorAll('#jLog details.st-more').length,
+    link: document.querySelectorAll('#jLog .st-b a').length
+  }));
+  is(D0.here > 0, '답에 <b>🪟 여기서 보기</b> 가 선다 — ' + D0.here + '개');
+  is(D0.link > 0, '「이 화면 열기 ›」 도 <b>그대로 있다</b> — 길은 안 지웁니다 (6번) · ' + D0.link + '개');
+  is(D0.more === 0 || D0.open >= 1,
+     '첫 걸음의 「이 화면 자세히」 가 <b>펴진 채</b>로 온다 — 접어 두면 한 번 더 눌러야 글이 나옵니다 · 펴짐 '
+     + D0.open + ' / ' + D0.more);
+
+  await f.evaluate(() => { const b = document.querySelector('#jLog .st-here'); if (b) b.click(); });
+  await p.waitForTimeout(1200);
+  const D1 = await p.evaluate(() => {
+    const fr = document.getElementById('apexMapFrame');
+    const r = fr ? fr.getBoundingClientRect() : null;
+    const ap = document.querySelector('.app');
+    return { dock: document.body.classList.contains('jv-dock'),
+             shut: document.body.classList.contains('jv-shut'),
+             full: document.body.classList.contains('apexmap-mode'),
+             app: ap ? getComputedStyle(ap).display : 'none',
+             top: r ? Math.round(r.top) : -1, h: r ? Math.round(r.height) : -1,
+             vh: window.innerHeight, w: window.innerWidth,
+             pane: (document.querySelector('.tab-pane.on') || {}).id || '' };
+  });
+  is(D1.dock && !D1.full, '눌렀더니 자비스가 <b>아래 띠</b>로 내려앉는다 (자비스 모드가 아니다)');
+  is(D1.app !== 'none', '그 화면이 <b>실제로 열린다</b> — 앱이 보인다 (' + D1.app + ')');
+  is(D1.top + D1.h >= D1.vh - 2 && D1.h > 0 && D1.h < D1.vh / 2,
+     '띠가 <b>바닥에 붙어</b> 있고 화면을 안 가린다 — 키 ' + D1.h + 'px / 창 ' + D1.w + '×' + D1.vh);
+  const D2 = await f.evaluate(() => {
+    const v = e => { if (!e) return null; const r = e.getBoundingClientRect(), st = getComputedStyle(e);
+      return (r.width > 1 && r.height > 1 && st.display !== 'none' && st.visibility !== 'hidden')
+        ? { h: Math.round(r.height), bottom: Math.round(r.bottom) } : null; };
+    return { dock: document.body.classList.contains('dock'),
+             say: v(document.getElementById('jSay')), send: v(document.getElementById('jSend')),
+             stage: v(document.getElementById('stage')), bar: v(document.querySelector('.bar')),
+             vh: window.innerHeight };
+  });
+  is(!!D2.say && D2.say.bottom <= D2.vh + 2,
+     '★★ 접힌 띠에서도 <b>적는 칸이 보인다</b> — 「여기서 표현하고」 가 이 칸입니다 ('
+     + (D2.say ? D2.say.h + 'px · 바닥 ' + D2.say.bottom + '/' + D2.vh : '안 보임') + ')');
+  is(!!D2.say && D2.say.h >= 44 && !!D2.send && D2.send.h >= 44,
+     '그 칸과 보내기가 <b>손가락 바닥 44px</b> — 적는 칸 ' + (D2.say ? D2.say.h : 0)
+     + 'px · 보내기 ' + (D2.send ? D2.send.h : 0) + 'px');
+  is(!D2.stage && !D2.bar, '띠에서는 지도 무대·머리 띠를 <b>안 띄운다</b>');
+
+  /* ★★ <b>접힌 띠에서 물으면 답이 보여야 합니다.</b>
+       접힌 띠는 대화 칸을 감춥니다. 그대로 두면 사장님이 적는 칸에 치고
+       보내기를 눌러도 <b>아무 일도 안 일어난 것처럼</b> 보입니다 —
+       「여기서 표현하고 <b>바로 볼수 있도록</b>」 이 거기서 막힙니다.
+       그래서 물으면 띠가 <b>저절로 펴집니다</b> (판 X245).                */
+  await f.evaluate(() => { try{ window.parent.jvDockOpen(false); }catch(e){}
+    const t = document.getElementById('jSay'); if (t) t.value = '청구 서류 어떻게 받아?';
+    const b = document.getElementById('jSend'); if (b) b.click(); });
+  await p.waitForTimeout(1800);
+  const DA = await p.evaluate(() => ({ shut: document.body.classList.contains('jv-shut'),
+    h: Math.round(document.getElementById('apexMapFrame').getBoundingClientRect().height) }));
+  /* ★ 「눈에 들어왔나」 를 <b>굴림 자리로 재지 않습니다</b> — 대화가 길면
+       마지막 줄이 아직 안 굴러와 있어 재는 때에 따라 들쭉날쭉합니다.
+       버그는 <b>대화 칸이 통째로 감춰지는 것</b>이었으니 그것을 바로 묻습니다
+       (헛것을 잡는 자는 안 잡는 자보다 나쁩니다 · 8번).                  */
+  const DB2 = await f.evaluate(() => {
+    const lg = document.getElementById('jLog');
+    const last = document.querySelector('#jLog .msg:last-child');
+    return { shown: !!lg && getComputedStyle(lg).display !== 'none',
+             h: lg ? Math.round(lg.getBoundingClientRect().height) : 0,
+             grown: !!last && last.getBoundingClientRect().height > 1,
+             txt: last ? (last.innerText || '').replace(/\s+/g, ' ').slice(0, 34) : '' };
+  });
+  is(!DA.shut && DB2.shown && DB2.h > 1 && DB2.grown,
+     '★★ 접힌 띠에서 물으면 <b>저절로 펴져 답이 선다</b> — 띠 ' + DA.h + 'px · 대화 칸 '
+     + DB2.h + 'px · 「' + DB2.txt + '…」 (안 펴지면 보내기를 눌러도 아무 일 없어 보입니다)');
+
+  /* ★★ <b>화면을 통째로 덮는 자리에서도 띠가 보여야 합니다.</b>
+       처음에 z-index 를 260 으로 두었더니 계산기(#financeScreen 300) 위에서
+       <b>밑에 깔려 사라졌습니다</b> — 사장님께는 「자비스가 꺼졌다」 로
+       보입니다. ✕ 로 닫으실 수 있으니, 말없이 사라지는 쪽보다 떠 있는
+       쪽이 낫습니다 (1번 · 6번). 모달(덮개 9300)은 위에 있는 것이 맞습니다. */
+  await p.evaluate(() => { try{ jvDock('finance'); }catch(e){} });
+  await p.waitForTimeout(1500);
+  const DF = await p.evaluate(() => {
+    const fr = document.getElementById('apexMapFrame');
+    const top = document.elementFromPoint(Math.round(window.innerWidth / 2), window.innerHeight - 20);
+    return { full: document.body.classList.contains('finance-mode'),
+             onTop: !!(top && (top.id === 'apexMapFrame' || (top.closest && top.closest('#apexMapScreen')))),
+             what: top ? (top.id || top.className || top.tagName) : '(없음)',
+             z: fr ? getComputedStyle(fr.parentElement || fr).zIndex : '-' };
+  });
+  is(DF.full && DF.onTop,
+     '★★ 계산기처럼 <b>화면을 통째로 덮는 자리에서도</b> 띠가 맨 위에 남는다 — 덮은 것 「'
+     + String(DF.what).slice(0, 24) + '」');
+  await p.evaluate(() => { try{ jvDock('clients'); }catch(e){} });
+  await p.waitForTimeout(1200);
+
+  await f.evaluate(() => { const u = document.getElementById('jUp'); if (u) u.click(); });
+  await p.waitForTimeout(700);
+  const D3 = await p.evaluate(() => {
+    const fr = document.getElementById('apexMapFrame');
+    return { shut: document.body.classList.contains('jv-shut'),
+             h: Math.round(fr.getBoundingClientRect().height) };
+  });
+  is(!D3.shut && D3.h > D1.h, '⌃ 를 누르면 <b>펴진다</b> — ' + D1.h + 'px → ' + D3.h + 'px');
+  await f.evaluate(() => { const x = document.getElementById('jDockX'); if (x) x.click(); });
+  await p.waitForTimeout(700);
+  const D4 = await p.evaluate(() => ({ dock: document.body.classList.contains('jv-dock'),
+    fab: !!(document.getElementById('osVaFab')) }));
+  is(!D4.dock, '✕ 를 누르면 <b>띠가 닫힌다</b> — 따라다니지 않는다');
+
+  /* ★ 글로도 못 박혔나 — px 는 글꼴을 탑니다. 이 자는 바깥을 막아
+       웹폰트를 못 받는데 라이브는 받아서 2~5px 낮게 재집니다
+       (판 X239 · 판 X243 에서 두 번 데인 자리 · 8번).                   */
+  const JSRC = fs.readFileSync(path.join(ROOT, 'app', 'apex-map.html'), 'utf8');
+  is(/#ask\{[^}]*min-height:44px/.test(JSRC),
+     '<b>묻는 칸(#ask)</b>에 44px 이 <b>글로</b> 적혀 있다 — 라이브에서 29px 이던 자리');
+  is(/#jSay\{[^}]*min-height:44px/.test(JSRC),
+     '<b>이어 묻는 칸(#jSay)</b>에도 44px 이 <b>글로</b> 적혀 있다 — 라이브에서 40px 이던 자리');
+  is(/body\.jv-dock[^{]*#osVaFab\{display:none/.test(fs.readFileSync(path.join(ROOT,'app','index.html'),'utf8')),
+     '띠가 떠 있는 동안 <b>떠다니는 옛 쪽창은 안 띄운다</b> — 떠다니는 자비스가 둘이 되지 않게 (5번)');
+
+  /* ══ [11] 🙋 되묻고 · 이어 묻게 하고 · 쉽게 (판 X247) ═══════════════
+
+     사장님 말씀 2026-10-29 — 「<b>한번 너가 질문하고</b> 60대 어르신들도
+     물어보면 바로 이해가 되도록 또는 <b>더 파고들지 않도록</b> 만들어서
+     정리해줘야된다. 그리고 <b>추가 질문을 너가 해줌으로써</b> 스스로 이걸
+     쓰는 설계사들이 합리적으로 이해할수 있도록 만들어줘」.
+
+     ── 손대기 전 (재어 본 값) ─────────────────────────────────────
+       애매한 물음 열둘 → 되묻는 것 <b>0개</b>
+         · 짐작해 엉뚱하게 답한 것 6개 (「도와줘」 → 보험금 찾는 4걸음)
+         · 「못 찾았습니다」 로 끝내고 누를 것도 0개인 것 4개
+       「그다음에 하면 좋은 것」 은 <b>글자로만</b> 있어 못 눌렀습니다.
+       쉬운 말은 이미 괜찮았습니다 — 문장 211개 평균 <b>22자</b>.
+
+     ★ <b>좋은 답을 되물음으로 바꾸면 더 나빠집니다.</b> 그래서 정해진 물음
+       22가지와 화면 이름으로 물었을 때는 <b>한 번도 안 되물어야</b> 합니다.
+     ★ 이어서 물을 것은 <b>지어내지 않습니다</b> — 상황별 안내에 적힌 물음
+       그대로여야 합니다 (1번).
+     ══════════════════════════════════════════════════════════════ */
+  sec('[11] 🙋 <b>되묻고 · 이어 묻게 하고 · 쉽게</b> (판 X247)');
+  const JV = await f.evaluate(() => {
+    const 흐림 = ['뭐 해야 돼','도와줘','모르겠어','막혔어','뭐부터 하지',
+                  '요즘 힘들어','어떻게 해야 돼','영업이 안 돼'];
+    /* ★ <b>이름표(how)를 묻지 않습니다 — 약속을 묻습니다.</b>
+       약속은 둘입니다: ① 짐작해서 <b>엉뚱한 걸음을 주지 않는다</b>
+       ② 그러면서 <b>좁혀 갈 길은 같이 준다</b>.
+       「요즘 힘들어」 는 「찾지 못했습니다」 로 답하는 쪽이 더 정직한데,
+       처음에 how==='back' 만 세다가 그것을 빨간불로 적었습니다 —
+       자가 이름표를 묻고 있었습니다 (8번). */
+    const 되물음 = 흐림.map(q => { const r = offline(q);
+      return {q, how:r.how, 걸음:(r.steps || []).length, g:(r.group || []).length}; });
+    const 정해진 = RECIPES.map(r => r.q);
+    const 이름 = Object.keys(MENU).map(id => MENU[id].n);
+    const 안되물어야 = 정해진.concat(이름).map(q => ({q, how:offline(q).how}));
+    const 이어 = RECIPES.map(r => { const o = offline(r.q);
+      return {q:r.q, more:(o.more || [])}; });
+    const 아는물음 = {}; RECIPES.forEach(r => { 아는물음[r.q] = 1; });
+    const 지어낸 = [];
+    이어.forEach(x => x.more.forEach(m => { if (!아는물음[m]) 지어낸.push(m); }));
+    /* 쉬운 말 — <b>우리가 쓴 글만</b> 잽니다. AI 가 쓴 말은 우리 손이
+       아니라 안 잽니다 (헛것을 잡지 않으려고 · 8번). */
+    const 글 = [];
+    RECIPES.forEach(r => { const o = offline(r.q);
+      [o.answer, o.real, o.tip].forEach(t => { if (t) 글.push(String(t)); });
+      (o.steps || []).forEach(st => { if (st && st.do) 글.push(String(st.do)); });
+      (o.next || []).forEach(n => 글.push(String(n))); });
+    글.push(jvHello().answer);
+    글.push(offline('김치찌개 끓이는 법').answer);
+    글.push(offline('뭐 해야 돼').answer);
+    const 문장 = [];
+    글.forEach(t => String(t).split(/(?<=[.!?])\s+|\n+/).forEach(x => {
+      x = x.replace(/\s+/g, ' ').trim(); if (x.length > 1) 문장.push(x); }));
+    /* 풀어 쓰지 않은 영어 약자 — 뒤에 괄호로 우리말을 붙였으면 봐줍니다 */
+    const 봐줌 = {AI:1, PDF:1, APEX:1, CRM:1, SMS:1, DB:1, TA:1, OT:1};
+    const 날것 = [];
+    글.forEach(t => { const T = String(t);
+      (T.match(/\b[A-Z][A-Z0-9]{1,6}\b/g) || []).forEach(w => {
+        if (봐줌[w]) return;
+        const i = T.indexOf(w);
+        if (/^\s*\(/.test(T.slice(i + w.length))) return;   /* 바로 뒤에 괄호 풀이 */
+        날것.push(w); }); });
+    return {
+      되물음:되물음.filter(x => x.걸음 === 0 && x.g >= 3).length, 흐림수:흐림.length,
+      갈래빠짐:되물음.filter(x => x.g < 3).length,
+      샌것:되물음.filter(x => !(x.걸음 === 0 && x.g >= 3))
+        .map(x => x.q + '(걸음 ' + x.걸음 + ' · 갈래 ' + x.g + ')'),
+      되물은수:되물음.filter(x => x.how === 'back').length,
+      헛것:안되물어야.filter(x => x.how === 'back').map(x => x.q), 안되물수:안되물어야.length,
+      이어붙은:이어.filter(x => x.more.length > 0).length, 이어전체:이어.length,
+      지어낸:지어낸.slice(0, 3), 지어낸수:지어낸.length,
+      문장수:문장.length, 평균:Math.round(문장.reduce((a, x) => a + x.length, 0) / 문장.length),
+      넘60:문장.filter(x => x.length > 60).length,
+      넘45:문장.filter(x => x.length > 45).length,
+      넘35:문장.filter(x => x.length > 35).length,
+      제일긴:문장.slice().sort((a, b) => b.length - a.length)[0],
+      날것:Array.from(new Set(날것))
+    };
+  });
+  is(JV.되물음 === JV.흐림수,
+     '★★ 애매하게 물으면 <b>엉뚱한 걸음을 안 주고 되묻는다</b> — ' + JV.되물음 + '/' + JV.흐림수
+     + '가지 (되물음 ' + JV.되물은수 + ' · 나머지는 「찾지 못했습니다」 + 갈래)'
+     + (JV.샌것.length ? ' ← 샌 것: ' + JV.샌것.join(' · ') : ''));
+  is(JV.갈래빠짐 === 0, '그 자리마다 <b>누를 갈래</b>를 같이 준다 — 막다른 길로 안 끝난다');
+  is(JV.헛것.length === 0,
+     '★★ <b>좋은 답은 안 건드린다</b> — 정해진 물음과 화면 이름 ' + JV.안되물수
+     + '가지에서 되물은 것 ' + JV.헛것.length + '개'
+     + (JV.헛것.length ? ' ← ' + JV.헛것.slice(0, 3).join(' · ') : '')
+     + ' (헛것을 잡는 자는 안 잡는 자보다 나쁩니다 · 8번)');
+  is(JV.이어붙은 >= 18,
+     '★★ 답 뒤에 <b>이어서 물어보실 것</b>이 붙는다 — ' + JV.이어붙은 + '/' + JV.이어전체 + '가지');
+  is(JV.지어낸수 === 0,
+     '그 물음을 <b>지어내지 않는다</b> — 상황별 안내에 적힌 것 그대로 (1번) · 지어낸 것 '
+     + JV.지어낸수 + '개' + (JV.지어낸수 ? ' ← ' + JV.지어낸.join(' · ') : ''));
+  is(JV.넘60 === 0,
+     '★★ <b>한 문장이 60자를 안 넘는다</b> — 예순 넘으신 분이 한 번에 읽히게 · 문장 '
+     + JV.문장수 + '개 · 평균 ' + JV.평균 + '자 · 제일 긴 것 ' + (JV.제일긴 || '').length + '자');
+  is(JV.넘45 <= 2 && JV.넘35 <= 9,
+     '긴 문장이 <b>늘지 않았다</b> — 45자 넘는 것 ' + JV.넘45 + '개(선 2) · 35자 넘는 것 '
+     + JV.넘35 + '개(선 9) · 남은 것은 뜻이 든 문장이라 자르지 않았습니다');
+  is(JV.날것.length === 0,
+     '<b>영어 약자를 그냥 던지지 않는다</b> — 풀이 없는 것 ' + JV.날것.length + '개'
+     + (JV.날것.length ? ' ← ' + JV.날것.join(' · ') : '') + ' (ETF 는 괄호로 풀었습니다)');
+  const DQ = await f.evaluate(() => {
+    offline('뭐 해야 돼');
+    const r = offline('뭐 해야 돼');
+    return {g:(r.group || []).length};
+  });
+  is(DQ.g >= 3, '되물을 때 내놓는 갈래가 <b>이미 쓰는 여섯</b> 그대로다 — ' + DQ.g + '개 (5번)');
+
+  sec('[12] 🔎 <b>라이브를 일흔 가지로 물어 틀린 자리</b>가 돌아오지 않았나 (판 X293)');
+  /* 2026-11-01 사장님 말씀 「라이브 자비스 다양한 질문으로 다시 확인해봐」 — 라이브(10-31 09:10
+     판 · main 과 바이트까지 같음)를 일흔 가지로 물으니 스무 가지쯤이 틀렸습니다. 고친 것을
+     여기서 지킵니다. 화면 id 로 갈 것은 위 [2] 표에 보탰습니다. */
+  const R12 = await f.evaluate(async () => {
+    const P = window.parent;
+    const card = async (q) => {
+      jLog.innerHTML = ''; busy = false; ask(q); await new Promise(r => setTimeout(r, 150));
+      const c = [].slice.call(document.querySelectorAll('#jLog .msg.j')).pop();
+      const bub = c.querySelector('.bub');
+      return { head: (bub.childNodes[0] || {}).nodeValue || '', steps: c.querySelectorAll('.steps > li').length,
+               work: [].slice.call(c.querySelectorAll('.jw-row')).map(x => x.textContent), all: c.textContent,
+               group: [].slice.call(c.querySelectorAll('button')).length };
+    };
+    const keep = (P.OSC.list || []).map(x => x.name_masked);
+    /* 고객 이름은 이 기기(실명) 또는 가린 이름으로 읽힙니다 — 견본은 「홍길순」 (3번) */
+    P.OSC.list = [{ id: 'c9', name: '홍길순', name_masked: '홍길순', advisor_id: 'me', stage: 'AP', created_at: '2026-08-01' }];
+    const out = {
+      left: await card('뭐 남았어'), study: await card('오늘 뭐 공부해'), miss: await card('이번 달 며칠 빠뜨렸어'),
+      reg: await card('고객 등록 어떻게 해'), wx: offline('오늘 날씨'), who: await card('홍길순 고객 어디서 찾아'),
+      vague: offline('도와줘'), 
+      guide: (function(){ const d = document.createElement('div'); d.innerHTML = P.manMap(); return d.textContent; })()
+    };
+    return out;
+  });
+  is(/남은 할 일/.test(R12.left.head) && R12.left.steps === 0 && R12.left.work.length >= 1,
+     '「뭐 남았어」 — 답을 알면서 <b>「무엇을 도와드릴까요?」 로 되묻지 않는다</b> — 머리 「' + R12.left.head.slice(0, 30) + '」');
+  is(/배울/.test(R12.study.head) && R12.study.steps === 0,
+     '「오늘 뭐 공부해」 — 하루 차례 네 걸음이 아니라 <b>오늘 배울 것 일꾼</b>이 답한다');
+  is(/빠뜨린/.test(R12.miss.head) && /아직 안 읽어/.test(R12.miss.head) && R12.miss.steps === 0,
+     '「이번 달 며칠 빠뜨렸어」 — 엉뚱한 「내 캘린더」 대신 <b>「아직 안 읽었다」</b> 가 답이다');
+  is(R12.reg.work.length === 0,
+     '「고객 등록 어떻게 해」 에 상관없는 일꾼(「60일 넘게 연락 없는 분」)이 <b>안 끼어든다</b>');
+  is(R12.wx.how === 'none' && !(R12.wx.steps || []).length,
+     '「오늘 날씨」 — 「오늘」 한 글자로 하루 차례를 내밀지 않고 <b>못 찾았다</b>고 한다 (1번)');
+  /* ⚠ #700(판 X270)을 받아 붙인 뒤로 그 분은 「고객 명단」 찾기(마지막 연락 · 다음 할 일까지)가 답합니다.
+     묻는 것은 「대본 화면이 아니라 <b>그 분</b>이 서나 · <b>한 곳만</b> 답하나」 입니다 (0-1번) */
+  is(/홍길순/.test(R12.who.all) && /고객 명단|사람 찾기/.test(R12.who.head) &&
+     !(/고객 명단/.test(R12.who.all) && /사람 찾기/.test(R12.who.all)),
+     '「홍길순 고객 어디서 찾아」 — 대본 화면이 아니라 <b>그 분</b>이 서고, 찾는 곳이 <b>한 곳</b>만 답한다 — 「' + R12.who.head.slice(0, 30) + '」');
+  is(R12.vague.how === 'back',
+     '「도와줘」 는 여전히 <b>되묻는다</b> — 고치다 판 X247 을 깨지 않았다');
+  is(!/<\/?b>/.test(R12.guide) && /팀 할 일/.test(R12.guide),
+     '사용가이드 「메뉴 지도」 에 <b>꺾쇠가 글자로 안 찍힌다</b> (「<b>✅ 팀 할 일</b>」 이 그대로 보이던 자리)');
 
   sec('[8] 🔇 조용히 터지지 않았나');
   const real = errs.filter(x => !/favicon|net::ERR|Failed to load resource/i.test(x));

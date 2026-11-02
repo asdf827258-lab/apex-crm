@@ -159,6 +159,24 @@ const 본 = async (p) => await p.evaluate(() => {
   await p.goto('http://127.0.0.1:' + PORT + '/app/index.html');
   await p.waitForTimeout(2600);
   await p.evaluate(SEED); await p.waitForTimeout(2400);
+  /* ══ 🧷 <b>판 X258 — 📰 소식이 폰에서 접힙니다</b> ═════════════════════
+     사장님 말씀 (2026-10-30) 「<b>접이로 — 머리만 두고 접기</b>」. 그래서
+     🗂 칸·🎂 나이대 고르개가 <b>접이 안</b>으로 들어갔습니다.
+     ⚠ 이 자는 그 전까지 <b>펴진 자리</b>를 재고 있었습니다. 접힌 채로 재면
+       숨은 것이라 누르는 넓이가 <b>0px</b> 로 나와 「손가락이 안 닿는다」 고
+       웁니다 — <b>헛 빨간불</b>입니다(8번).
+     ★ 그래서 <b>사장님처럼 눌러 펴고</b> 잽니다 — 눈금을 낮추는 것이
+       아닙니다. 44px 은 그대로 묻고, <b>닿는 자리에서</b> 묻습니다
+       (판 X254 에서 check-hwho 에 쓴 그 방법).
+     ★ 접이가 없으면(컴퓨터·옛 판) <b>아무것도 안 합니다</b> — 그 자리는
+       원래 펴져 있습니다.                                                */
+  await p.evaluate(() => {
+    var f = document.getElementById('hmFold_nw');
+    if (f && !f.classList.contains('on')) {
+      var h = f.querySelector('.hm-fold-h'); if (h) h.click();
+    }
+  });
+  await p.waitForTimeout(450);
 
   console.log('🎯 「오늘」 칸에서 바로 고르나 — 🗂️ 상황 · 🎂 나이대 (판 X193)');
 

@@ -187,13 +187,44 @@ is(!/setInterval\s*\(/.test(홈코드),
     await pg.waitForTimeout(2300);
     await pg.evaluate(([t, c]) => { eval('(' + t + ')')(c); }, [SEED.toString(), cfg]);
     await pg.waitForTimeout(1500);
-    return {ctx:ctx, pg:pg};
+    /* ══ 👤 <b>판 X254 — 폰에서는 접힌 채로 옵니다</b> (사장님 말씀 「접어」) ══
+       라이브에서 재니 활동 타일이 첫 화면을 <b>44px</b> 넘어, 그것을 메울 자리가
+       이 칸(88px)뿐이라 여쭙고 고르셨습니다.
+       ★ 자는 <b>사장님이 하시는 그대로</b> 해야 합니다 — 접혀 있으면 <b>펴고</b>
+         재야 칩을 누를 수 있습니다. 접혔다고 「고르개가 없다」 고 적으면
+         거짓입니다 (1번).
+       ★ <b>접혔는지</b>도 같이 돌려줍니다 — 아래에서 「폰은 접히고 컴퓨터는
+         안 접힌다」 를 봅니다.                                           */
+    const 접힘 = await pg.evaluate(() => {
+      const h = document.querySelector('#hmFold_who>.hm-fold-h');
+      if (!h) return null;
+      const 였나 = h.getAttribute('aria-expanded') === 'false';
+      const 키 = Math.round(h.getBoundingClientRect().height);
+      h.click();
+      return {접힘: 였나, 키: 키,
+        글: (h.innerText || '').replace(/\s+/g, ' ').trim()};
+    });
+    await pg.waitForTimeout(400);
+    return {ctx:ctx, pg:pg, 접힘:접힘};
   };
 
   try {
     /* ── [2] 홈 창고만으로도 띠가 서나 — <b>폰과 컴퓨터 둘 다</b> ── */
     for (const w of [390, 1280]) {
-      const {ctx, pg} = await 열기({role:'owner', n:18, ar:false, gb:false}, w);
+      const {ctx, pg, 접힘} = await 열기({role:'owner', n:18, ar:false, gb:false}, w);
+      /* ★★ 판 X254 — 폰은 접히고 컴퓨터는 안 접힙니다 (사장님 말씀 「접어」) */
+      if (w === 390) {
+        is(!!접힘 && 접힘.접힘 === true,
+           '  ★★ [2] 390px — 팀 고르개가 <b>접힌 채로</b> 온다 (판 X254) — 「' +
+           (접힘 ? 접힘.글 : '접이가 없습니다') + '」');
+        is(!!접힘 && 접힘.키 >= 44,
+           '  ★ 그 머리글이 <b>손가락 바닥 44px</b> 이다 — ' + (접힘 ? 접힘.키 : 0) + 'px');
+        is(!!접힘 && /내 화면/.test(접힘.글),
+           '  ★ 접힌 채로도 <b>누구 화면인지</b> 말한다 (1번)');
+      } else {
+        is(접힘 === null,
+           '  ★ [2] 1280px — 컴퓨터에서는 <b>안 접는다</b> — 자리가 넉넉하고 칩을 바로 누릅니다');
+      }
       const r = await 본다(pg);
       is(r.띠, '  [2] ' + w + 'px — <b>고르개가 선다</b>' +
          (r.띠 ? ' · 명단 ' + r.명단 + '명 · 칩 ' + r.칩.length + '개' :
@@ -218,6 +249,34 @@ is(!/setInterval\s*\(/.test(홈코드),
       const r2 = await 본다(pg);
       is(r2.칩.length === 19, '  [3] 누르면 <b>열여덟 분 + 팀 전체</b> 가 다 선다 — ' + r2.칩.length + '개');
       is(r2.더.some(x => /접기/.test(x)), '  [3] 펴 놓으면 <b>접기</b> 가 선다');
+      await ctx.close();
+    }
+    /* ── [3-b] ★★ <b>남의 화면이면 폰에서도 안 접힌다</b> (판 X254) ──────
+       「내 것이 아닙니다」 와 「← 내 화면으로」 단추는 <b>숨기면 안 되는
+       것</b>입니다 (1번·6번). 접는 것은 <b>내 화면일 때</b>뿐이고, 그때는
+       경고할 것이 없습니다. 이 줄이 없으면 다음 사람이 「폰에서는 늘
+       접자」 로 바꿔도 아무도 안 봅니다.                                 */
+    {
+      const {ctx, pg} = await 열기({role:'owner', n:18, ar:true, gb:true}, 390);
+      const 남 = await pg.evaluate(() => {
+        const c = [].slice.call(document.querySelectorAll('#hmWhoHost .hwho-c'))
+          .filter(e => !/\(나\)/.test(e.textContent) && !/팀 전체/.test(e.textContent))[0];
+        if (!c) return {no: 1};
+        c.click();
+        return {no: 0};
+      });
+      await pg.waitForTimeout(800);
+      const 뒤 = await pg.evaluate(() => ({
+        접이: !!document.getElementById('hmFold_who'),
+        경고: /내 것이 아닙니다/.test((document.getElementById('hmWhoHost') || {}).innerText || ''),
+        돌아가기: !!document.querySelector('#hmWhoHost .hwho-back')
+      }));
+      is(!남.no && 뒤.접이 === false,
+         '  ★★ [3-b] <b>남의 화면이면 폰에서도 안 접힌다</b> (판 X254 · 1번)');
+      is(!남.no && 뒤.경고 === true,
+         '  ★★ [3-b] 「<b>내 것이 아닙니다</b>」 가 접히지 않고 그대로 보인다');
+      is(!남.no && 뒤.돌아가기 === true,
+         '  ★ [3-b] 「<b>← 내 화면으로</b>」 단추가 그대로 있다 (6번)');
       await ctx.close();
     }
     /* ── [4] 조용한 날에도 사람이 남나 ── */

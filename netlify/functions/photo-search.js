@@ -35,7 +35,10 @@ async function toEnglish(q, key) {
   const prompt = "Turn this Korean card-news topic into ONE short English stock-photo search query (2 to 4 words). " +
     "Prefer a real-life scene with people (add 'korean' or 'asian' when a person fits). No quotes, no punctuation, answer with the query only.\n\nTopic: " + q;
   const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 20 } }) });
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 60, thinkingConfig: { thinkingBudget: 0 } } }) });
+  /* ⚠ 판 X263 · 2026-10-30 실측: gemini-flash-latest 는 「생각」 토큰을 먼저 쓴다 — maxOutputTokens 20 이면
+     생각에 다 써 버려 finishReason MAX_TOKENS · 글 0자였다(한글 검색어가 번역 안 된 채 나감).
+     thinkingBudget 0 으로 끄고 60 을 주니 「worried asian hospital patient」 가 나왔다. */
   if (!r.ok) throw new Error("translate " + r.status);
   const d = await r.json();
   const t = (((d.candidates || [])[0] || {}).content || {}).parts || [];

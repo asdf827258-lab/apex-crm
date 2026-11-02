@@ -80,7 +80,12 @@ const 본 = async (p) => await p.evaluate(() => {
     round: R,
     from: w ? w.from : '', now: (w && w.now) ? w.now.rg : '', next: (w && w.next) ? w.next.rg : '',
     rg: w ? Object.keys(w.rg || {}) : [],
-    머리: g('#hmFold_rt .hm-fold-h'), turn: g('.hm-rt-turn'),
+    /* ⬆ <b>판 X249 — 권하는 동네가 접이 밖으로 나왔습니다.</b> 사장님 말씀
+       (2026-10-30) 「칸을 너무 잡아 먹는거 같아, 오른쪽에 조그만하게」 →
+       추천 한 줄(.hm-rt-why)과 걸 분 이름 알약만 밖에 두고 나머지를 접었
+       습니다. 그러니 「어느 동네를 권하나」 를 보는 자리도 따라갑니다.
+       ★ 묻는 것은 <b>그대로</b>입니다 — 그 동네가 적히나 · 돌면 따라가나. */
+    머리: g('.hm-rt-why'), turn: g('.hm-rt-turn'),
     none: g('.hm-rt .hm-rt-none'), 카드: g('.hm-rt'),
     /* 화면에 적힌 「N분 남았습니다」 — 글에서 그대로 뽑습니다 */
     적힌남음: (function(){ const t = g('.hm-rt-turn');
