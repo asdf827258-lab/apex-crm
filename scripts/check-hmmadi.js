@@ -105,7 +105,9 @@ const LOOK = () => {
      세울 자리를 정하는 곳은 app 쪽 hmSidePlace 하나입니다 (5번).        */
   const 곁칸 = [].concat(
     [].slice.call(document.querySelectorAll('#hmSideUp>*')),
-    [].slice.call(document.querySelectorAll('#hmSideHost>*')));
+    [].slice.call(document.querySelectorAll('#hmSideHost>*')),
+    /* 판 X297 — 💌·🚗·📅·📊 는 「지금 할 것」 카드 안(#hmStack)으로 갔습니다 */
+    [].slice.call(document.querySelectorAll('#hmStack>*')));
   const card = 곁칸.length ? 곁칸
     .filter(e => (e.innerText || '').indexOf('이번 달 고객 관리') >= 0)[0] : null;
   const btn = card ? [].slice.call(card.querySelectorAll('button'))
@@ -280,6 +282,18 @@ const LOOK = () => {
   const wide = await (async () => {
     await p.setViewportSize({ width: 1024, height: 900 });
     await p.waitForTimeout(260);
+    /* 판 X287 — 「지금 할 것」 테두리 안 접이(📆 이번 주 · 🕗 · 💬)는 폭 1,100 아래에서 접힌
+       채 섭니다. 접힌 단추는 키가 0 이라 「작다」 로 잡혔습니다. <b>자를 무르게 하지 않고</b>
+       펴고 잽니다(lib-hmfold 와 같은 결) — 펴서 작으면 그대로 빨간불입니다. 여닫는 자는
+       앱의 hmFoldToggle 하나이고, 잰 뒤 도로 접습니다. */
+    const 편 = await p.evaluate(() => {
+      const k = [];
+      document.querySelectorAll('#hmStack .hm-fold[id^="hmFold_stk_"]').forEach(f => {
+        if (!f.classList.contains('on')) { const id = f.id.replace('hmFold_', ''); hmFoldToggle(id); k.push(id); }
+      });
+      return k;
+    });
+    await p.waitForTimeout(200);
     const o = await p.evaluate(() => {
       const pane = document.getElementById('dynPane');
       const b2 = [].slice.call(pane.querySelectorAll('.hm-rt-go'));
@@ -290,6 +304,7 @@ const LOOK = () => {
                                + 'px 「' + (e.textContent || '').trim() + '」'),
                h: mine ? Math.round(mine.getBoundingClientRect().height) : 0 };
     });
+    await p.evaluate((k) => { k.forEach(id => hmFoldToggle(id)); }, 편);
     await p.setViewportSize({ width: 390, height: 844 });
     await p.waitForTimeout(260);
     return o;
@@ -304,7 +319,9 @@ const LOOK = () => {
     /* ★ 곁칸은 자리를 옮깁니다 — #hmSideUp(폰) 또는 #hmSideHost(컴퓨터) */
     const card = [].concat(
       [].slice.call(document.querySelectorAll('#hmSideUp>*')),
-      [].slice.call(document.querySelectorAll('#hmSideHost>*')))
+      [].slice.call(document.querySelectorAll('#hmSideHost>*')),
+    /* 판 X297 — 💌·🚗·📅·📊 는 「지금 할 것」 카드 안(#hmStack)으로 갔습니다 */
+    [].slice.call(document.querySelectorAll('#hmStack>*')))
       .filter(e => (e.innerText || '').indexOf('이번 달 고객 관리') >= 0)[0];
     const btn = [].slice.call(card.querySelectorAll('button'))
       .filter(e => (e.textContent || '').indexOf('보낼 말') >= 0)[0];

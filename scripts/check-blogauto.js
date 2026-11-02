@@ -1313,7 +1313,7 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
      '  갈래를 주면서 <b>줄(row)을 빠뜨린 자리가 없다</b> — 빠뜨리면 빠진 카드 찾기가 조용히 꺼진다'
      + (bare.length ? ' — ' + bare[0].trim() : ''));
 
-  console.log('\n[22] 아침에 <b>한 줄 담기</b> 가 뜨는가 · 그 길로 이름이 안 새는가 (판 X275)');
+  console.log('\n[22] 아침에 <b>한 줄 담기</b> 가 뜨는가 · 그 길로 이름이 안 새는가 (판 X299)');
   const AS = fs.readFileSync(path.join(ROOT, 'app/alm-slots.js'), 'utf8');
   const slots = require(path.join(ROOT, 'app/alm-slots.js'));
   const blog = slots.almSlotOf('blog');
