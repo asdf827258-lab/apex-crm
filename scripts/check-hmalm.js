@@ -173,10 +173,15 @@ const LOOK = () => {
   is(A.chipH >= 44, '  <b>44px 이상</b>이다 — ' + A.chipH + 'px');
 
   console.log('\n[4] ★ <b>시계를 돌려 정말 세는지</b> 봅니다 (값을 박아 둔 것이 아닙니다)');
-  is(A.n === 3 && /3번/.test(A.chip),
-    '  새벽 6시 — 켠 셋이 <b>다 남았다</b> · ' + A.n + '번 / 칩 「' + A.chip + '」');
+  /* ⚠ 2026-11-02 — 켠 알람 수를 <b>박아 두지 않습니다</b>(5번). 「켠 셋」 이라 적어 두었다가
+     판 X299 가 아침 8시 블로그 한 줄 알람(기본 켬)을 표에 더하자, 앱은 맞게 「4번」 을 세는데
+     자가 3 을 기다리며 울었습니다. 표(ALM_SLOTS)에서 <b>그 시각 뒤에 켜진 것</b>을 따로 셉니다 —
+     「시계를 돌려 정말 세는지」 는 그대로입니다. */
+  const ONAT = await p.evaluate(() => [6, 14].map(hh => ALM_SLOTS.filter(s => s.on && s.h > hh).length));
+  is(A.n === ONAT[0] && new RegExp(ONAT[0] + '번').test(A.chip),
+    '  새벽 6시 — 켠 ' + ONAT[0] + '개가 <b>다 남았다</b> · ' + A.n + '번 / 칩 「' + A.chip + '」');
   const B = await run(14);
-  is(B.n === 1 && /1번/.test(B.chip),
+  is(B.n === ONAT[1] && new RegExp(ONAT[1] + '번').test(B.chip),
     '  오후 2시 — <b>하나만</b> 남았다 · ' + B.n + '번 / 칩 「' + B.chip + '」');
   const C = await run(22);
   /* ⚠ 글자를 통째로 못 박지 않습니다 — 접힌 머리는 칩보다 좁아 말이
@@ -188,7 +193,8 @@ const LOOK = () => {
   console.log('\n[2] ★★ <b>네 때를 갈라 적는다</b> (1번)');
   is(C.ask.length === 0,
     '  ★ 다 지난 때는 <b>숫자를 안 적는다</b> — 이름표 ' + C.ask.length + '개 (0번이라고 적지 않습니다)');
-  const D = await run(6, () => { almSlotSet('call', false); almSlotSet('am', false); almSlotSet('perf', false); });
+  /* 끄는 것도 표 전부를 — 이름을 박아 두면 새 알람 하나가 켜진 채 남아 「다 꺼짐」 을 못 잽니다 */
+  const D = await run(6, () => { ALM_SLOTS.forEach(s => almSlotSet(s.k, false)); });
   is(/다 꺼져/.test(D.chip) && D.chip !== C.chip,
     '  <b>다 꺼 놓으면</b> 그렇게 적는다 — 「' + D.chip + '」 (「' + C.chip + '」 과 다른 말입니다)');
   is(D.ask.length === 0, '  그때도 <b>숫자를 안 적는다</b> — 이름표 ' + D.ask.length + '개');
