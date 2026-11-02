@@ -113,7 +113,7 @@ const BAND = () => {
   console.log('\n[1] 띠가 <b>「지금 할 것」 바로 위</b>에 서나 (폰 390)');
   is(!A.없음, '  📇 <b>한 장 띠</b>가 홈에 선다 — ' + (A.없음 ? '없습니다' : (A.h + 'px')));
   if (A.없음) { console.log('\n✗ 띠가 없어 더 재지 않습니다'); await b.close(); srv.close(); process.exit(1); }
-  /* 판 X278 — 「지금 할 것」 은 이제 한 테두리(#hmJobWrap) 안의 #hmJobHost 입니다 */
+  /* 판 X297 — 「지금 할 것」 은 이제 한 테두리(#hmJobWrap) 안의 #hmJobHost 입니다 */
   is(/hmWhoHost · hmBandHost · (hmJobHost|hmJobWrap)/.test(A.차례),
      '  차례가 <b>팀원 고르개 → 띠 → 지금 할 것</b> — ' + A.차례.split(' · ').slice(0, 3).join(' → '));
   is(A.top + A.h <= 844, '  띠가 <b>폰 첫 화면 안</b>에 다 든다 — y' + A.top + '~' + (A.top + A.h));

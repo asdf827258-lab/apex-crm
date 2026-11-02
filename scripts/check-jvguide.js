@@ -69,7 +69,15 @@ const QA = [
   ['인스타 올릴 거 만들기',                   ['insta']],
   ['거절한 고객 다시 연락하고 싶어',          ['rjnews']],
   ['화면이 이상해',                           ['health']],
-  ['상속 증여 상담',                          ['finance']]
+  ['상속 증여 상담',                          ['finance']],
+  /* ↓ 판 X293 — 라이브(10-31 판)를 일흔 가지로 물어 틀린 것 (2026-11-01) */
+  ['로그인이 안 돼',                          ['health']],
+  ['고객등록',                                ['clients']],
+  ['지역 동선 짜줘',                          ['crm']],
+  ['해지하려는 고객 막는 법',                 ['contracts']],
+  ['보장분섞 어떻게해',                       ['bojang']],
+  ['ㅂㅈㅂㅅ',                                ['bojang']],
+  ['신입 교육 뭐부터',                        ['ta_train']]
 ];
 
 const SEED = () => {
@@ -553,6 +561,51 @@ const SEED = () => {
     return {g:(r.group || []).length};
   });
   is(DQ.g >= 3, '되물을 때 내놓는 갈래가 <b>이미 쓰는 여섯</b> 그대로다 — ' + DQ.g + '개 (5번)');
+
+  sec('[12] 🔎 <b>라이브를 일흔 가지로 물어 틀린 자리</b>가 돌아오지 않았나 (판 X293)');
+  /* 2026-11-01 사장님 말씀 「라이브 자비스 다양한 질문으로 다시 확인해봐」 — 라이브(10-31 09:10
+     판 · main 과 바이트까지 같음)를 일흔 가지로 물으니 스무 가지쯤이 틀렸습니다. 고친 것을
+     여기서 지킵니다. 화면 id 로 갈 것은 위 [2] 표에 보탰습니다. */
+  const R12 = await f.evaluate(async () => {
+    const P = window.parent;
+    const card = async (q) => {
+      jLog.innerHTML = ''; busy = false; ask(q); await new Promise(r => setTimeout(r, 150));
+      const c = [].slice.call(document.querySelectorAll('#jLog .msg.j')).pop();
+      const bub = c.querySelector('.bub');
+      return { head: (bub.childNodes[0] || {}).nodeValue || '', steps: c.querySelectorAll('.steps > li').length,
+               work: [].slice.call(c.querySelectorAll('.jw-row')).map(x => x.textContent), all: c.textContent,
+               group: [].slice.call(c.querySelectorAll('button')).length };
+    };
+    const keep = (P.OSC.list || []).map(x => x.name_masked);
+    /* 고객 이름은 이 기기(실명) 또는 가린 이름으로 읽힙니다 — 견본은 「홍길순」 (3번) */
+    P.OSC.list = [{ id: 'c9', name: '홍길순', name_masked: '홍길순', advisor_id: 'me', stage: 'AP', created_at: '2026-08-01' }];
+    const out = {
+      left: await card('뭐 남았어'), study: await card('오늘 뭐 공부해'), miss: await card('이번 달 며칠 빠뜨렸어'),
+      reg: await card('고객 등록 어떻게 해'), wx: offline('오늘 날씨'), who: await card('홍길순 고객 어디서 찾아'),
+      vague: offline('도와줘'), 
+      guide: (function(){ const d = document.createElement('div'); d.innerHTML = P.manMap(); return d.textContent; })()
+    };
+    return out;
+  });
+  is(/남은 할 일/.test(R12.left.head) && R12.left.steps === 0 && R12.left.work.length >= 1,
+     '「뭐 남았어」 — 답을 알면서 <b>「무엇을 도와드릴까요?」 로 되묻지 않는다</b> — 머리 「' + R12.left.head.slice(0, 30) + '」');
+  is(/배울/.test(R12.study.head) && R12.study.steps === 0,
+     '「오늘 뭐 공부해」 — 하루 차례 네 걸음이 아니라 <b>오늘 배울 것 일꾼</b>이 답한다');
+  is(/빠뜨린/.test(R12.miss.head) && /아직 안 읽어/.test(R12.miss.head) && R12.miss.steps === 0,
+     '「이번 달 며칠 빠뜨렸어」 — 엉뚱한 「내 캘린더」 대신 <b>「아직 안 읽었다」</b> 가 답이다');
+  is(R12.reg.work.length === 0,
+     '「고객 등록 어떻게 해」 에 상관없는 일꾼(「60일 넘게 연락 없는 분」)이 <b>안 끼어든다</b>');
+  is(R12.wx.how === 'none' && !(R12.wx.steps || []).length,
+     '「오늘 날씨」 — 「오늘」 한 글자로 하루 차례를 내밀지 않고 <b>못 찾았다</b>고 한다 (1번)');
+  /* ⚠ #700(판 X270)을 받아 붙인 뒤로 그 분은 「고객 명단」 찾기(마지막 연락 · 다음 할 일까지)가 답합니다.
+     묻는 것은 「대본 화면이 아니라 <b>그 분</b>이 서나 · <b>한 곳만</b> 답하나」 입니다 (0-1번) */
+  is(/홍길순/.test(R12.who.all) && /고객 명단|사람 찾기/.test(R12.who.head) &&
+     !(/고객 명단/.test(R12.who.all) && /사람 찾기/.test(R12.who.all)),
+     '「홍길순 고객 어디서 찾아」 — 대본 화면이 아니라 <b>그 분</b>이 서고, 찾는 곳이 <b>한 곳</b>만 답한다 — 「' + R12.who.head.slice(0, 30) + '」');
+  is(R12.vague.how === 'back',
+     '「도와줘」 는 여전히 <b>되묻는다</b> — 고치다 판 X247 을 깨지 않았다');
+  is(!/<\/?b>/.test(R12.guide) && /팀 할 일/.test(R12.guide),
+     '사용가이드 「메뉴 지도」 에 <b>꺾쇠가 글자로 안 찍힌다</b> (「<b>✅ 팀 할 일</b>」 이 그대로 보이던 자리)');
 
   sec('[8] 🔇 조용히 터지지 않았나');
   const real = errs.filter(x => !/favicon|net::ERR|Failed to load resource/i.test(x));

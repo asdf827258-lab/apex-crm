@@ -168,7 +168,7 @@ const SEED = () => {
              lh: Math.round(bot - top), rh: Math.round(rr.height),
              lk: 왼칸.map(e => e.id || e.className).join(' · '),
              hk: 머리.map(e => e.id || e.className).join(' · '),
-             /* 판 X278 — 「지금 할 것」 테두리 안의 조각 · 오른쪽 기둥 글 */
+             /* 판 X297 — 「지금 할 것」 테두리 안의 조각 · 오른쪽 기둥 글 */
              wk: [...((document.getElementById('hmJobWrap') || {}).children || [])].map(e => e.id).join(' · '),
              sk: [...((document.getElementById('hmStack') || {}).children || [])].map(e => e.id || e.className).join(' · '),
              rtx: (R.innerText || '').replace(/\s+/g, ' '),
@@ -180,7 +180,7 @@ const SEED = () => {
   is(!two.no && two.rw === 344, '  오른쪽 기둥이 <b>목각과 같은 344px</b> — ' + two.rw + 'px');
   is(!two.no && two.lw > two.rw, '  왼쪽이 <b>넓다</b> — ' + two.lw + ' > ' + two.rw);
   /* ★★ 사장님 말씀 그대로 — <b>왼쪽은 「지금 할 것」</b> 입니다 */
-  /* 판 X278 — 「지금 할 것」 은 한 테두리(#hmJobWrap) 안의 #hmJobHost 입니다 */
+  /* 판 X297 — 「지금 할 것」 은 한 테두리(#hmJobWrap) 안의 #hmJobHost 입니다 */
   is(!two.no && /hmJob(Host|Wrap)/.test(two.lk) && two.lk.search(/hmJob(Host|Wrap)/) < 20,
      '  ★★ 왼쪽은 <b>「지금 할 것」</b> — ' + two.lk);
   /* 머리는 <b>이 둘, 이 차례</b>뿐입니다 — 다른 칸이 머리로 올라가면 왼쪽 기둥의
@@ -194,7 +194,7 @@ const SEED = () => {
        사장님께서 「칸을 너무 잡아 먹는거 같아, 오른쪽에 조그만하게」 하셔서
        작게 만들어 오른쪽으로 올렸습니다. #hmRtWide 는 <b>안 지웠고</b>
        빈 채로 둡니다(되돌리실 자리 · 6번).                               */
-  /* ══ 🧺 <b>판 X278 — 활동이 「지금 할 것」 카드 안으로</b> (사장님 말씀 2026-10-31
+  /* ══ 🧺 <b>판 X297 — 활동이 「지금 할 것」 카드 안으로</b> (사장님 말씀 2026-10-31
      「지역동선하고, 오늘 할일등이 <b>지금 할것에 포함</b> 되게」 → 「카드 안에 차례로
      쌓기」 · 🚗 동선 · 📅 오늘 약속·이번 주 · 📊 오늘 기록 · 💌 이번 달 관리).
      ★ 판 X249 의 「오른쪽은 활동」 을 <b>사장님이 바꾸신 것</b>입니다 — 자가 느슨해진
@@ -279,7 +279,7 @@ const SEED = () => {
      않고 <b>화면에 그렇게 적습니다</b> (1번).                            */
   const side = await PC.evaluate(() => {
     const R = document.getElementById('hmSideUp'); if (!R) return { no: 1 };
-    /* 판 X278 — 넷은 「지금 할 것」 카드 안(#hmStack), 둘은 오른쪽(#hmSideUp) */
+    /* 판 X297 — 넷은 「지금 할 것」 카드 안(#hmStack), 둘은 오른쪽(#hmSideUp) */
     const S = document.getElementById('hmStack');
     const cards = [...(S ? S.children : []), ...R.children].map(e => {
       const t = (e.innerText || '').replace(/\s+/g, ' ').trim();
@@ -339,7 +339,7 @@ const SEED = () => {
      '  ★ 두 기둥 아래 자리(#hmRtWide)는 <b>남아 있고 비었다</b> — 지우지 않고 비웁니다 (6번)');
   /* ★ 차례도 목각대로 — 이번 주 → 이번 달 → 알람 (동선은 아래로) */
   const at = (w) => side.no ? -1 : side.cards.findIndex(c => c.t.indexOf(w) >= 0);
-  /* 판 X278 — 카드 안 넷이 먼저(오늘 어디로 → 오늘 기록 → 이번 달 고객 관리), 그다음
+  /* 판 X297 — 카드 안 넷이 먼저(오늘 어디로 → 오늘 기록 → 이번 달 고객 관리), 그다음
      오른쪽 둘(이번 주 → 알람). 사장님이 고르신 그림의 차례입니다. */
   is(at('오늘 어디로') >= 0 && at('오늘 어디로') < at('오늘 기록') &&
      at('오늘 기록') < at('이번 달 고객 관리') &&
@@ -541,7 +541,7 @@ const SEED = () => {
       if (f) return (f.childNodes[0] ? (f.childNodes[0].textContent || '') : '').trim();
       return (e.querySelector('.hm-rt-h b') || {}).textContent || e.id || e.className;
     };
-    /* 판 X278 — 넷은 「지금 할 것」 카드 안(#hmStack)에, 둘은 #hmSideUp 에 섭니다 */
+    /* 판 X297 — 넷은 「지금 할 것」 카드 안(#hmStack)에, 둘은 #hmSideUp 에 섭니다 */
     const sk = document.getElementById('hmStack');
     const 칸들 = [].concat(sk ? [].slice.call(sk.children) : [], up ? [].slice.call(up.children) : []);
     const 넷 = 칸들.length ? 칸들.filter(e => e.getBoundingClientRect().height > 0).map(e => ({
@@ -582,7 +582,7 @@ const SEED = () => {
                 return b2 < 0 ? [] : L.slice(b2 + 1, b2 + 3)
                   .map(c => (c.id || (c.className || '').split(' ')[0] || c.tagName)); })(),
              사이: (() => { const t = document.querySelector('.tz'); if (!t) return [];
-                /* 판 X278 — 카드는 이제 #hmJobWrap 테두리입니다(활동이 그 안). 못 찾으면
+                /* 판 X297 — 카드는 이제 #hmJobWrap 테두리입니다(활동이 그 안). 못 찾으면
                    빈 목록이 아니라 「못 찾음」 을 돌려줍니다 — 빈 목록이면 이 줄이
                    <b>재지 않고 초록</b>이 됩니다 (8번). */
                 const L = [].slice.call(t.children), a = L.indexOf(document.getElementById('hmJobWrap')),
@@ -658,7 +658,7 @@ const SEED = () => {
     kid.forEach(e => { const y = Math.round(e.getBoundingClientRect().top);
       줄[y] = (줄[y] || 0) + 1; });
     const 한줄 = Object.keys(줄).reduce((m, k) => Math.max(m, 줄[k]), 0);
-    /* 판 X278 — 🚗·📊 는 카드 안에 섭니다. <b>제가 선 상자</b>의 폭을 다 쓰는지 봅니다 */
+    /* 판 X297 — 🚗·📊 는 카드 안에 섭니다. <b>제가 선 상자</b>의 폭을 다 쓰는지 봅니다 */
     const 통 = (id) => { const e = document.getElementById(id); if (!e) return null;
       return Math.round(e.getBoundingClientRect().width) >= Math.round(e.parentElement.getBoundingClientRect().width) - 2; };
     return { no: 0, 칸: kid.length, 한줄: 한줄, rt: 통('hmRtHost'), act: 통('hmActHost'),
@@ -913,22 +913,22 @@ const SEED = () => {
      ① 카드와 활동 <b>사이에 아무것도 안 낀다</b>(바로 밑이라는 뜻),
      ② 내려간 셋이 활동 <b>바로 뒤에 그대로</b> 있다(지운 것이 아니다 · 6번).
      ★ 하나라도 사라지면 그 자리에서 빨간불입니다 — 느슨해진 데가 없습니다. */
-  /* ⬆ <b>판 X280 — ➕ 세 칸 · 📄 한 줄이 테두리 바로 밑</b>으로 올라왔습니다 (사장님 말씀
+  /* ⬆ <b>판 X298 — ➕ 세 칸 · 📄 한 줄이 테두리 바로 밑</b>으로 올라왔습니다 (사장님 말씀
      「응」 → 「둘 다」). 활동(🚗·📅·📊·💌)은 이미 테두리 <b>안</b>이라 판 X250 의 「활동
      먼저」 는 그대로 지켜집니다. 그래서 묻는 것을 <b>정확히</b> 바꿉니다 —
      테두리와 곁칸 사이에 <b>세 칸 · 📄 둘만</b>, 이 차례로. 다른 것이 끼거나 하나라도
      빠지면 빨간불입니다 (느슨해진 데가 없습니다 · 8번). */
   is(!one.no && (one.사이 || []).join(' · ') === 'hm-two · hm-pdf',
      '  ★★ 「지금 할 것」 테두리와 곁칸 사이에 <b>➕ 세 칸 · 📄 둘만</b> 선다 — ' +
-     ((one.사이 || []).join(' · ') || '(없음)') + ' (판 X280)');
+     ((one.사이 || []).join(' · ') || '(없음)') + ' (판 X298)');
   /* 곁칸 뒤에는 세 칸 · 📄 가 <b>또</b> 서면 안 됩니다 — 두 벌이면 한쪽이 빈 칸입니다 (5번) */
   is(!one.no && !/hm-two|hm-pdf/.test((one.뒤 || []).join(',')),
      '  ★ 곁칸 <b>뒤에는</b> 세 칸 · 📄 가 안 남았다 — ' + ((one.뒤 || []).join(' · ') || '(없음)'));
   const 약속안 = await PH.evaluate(() => { const u = document.getElementById('hmUpHost');
     return !!(u && u.closest('#hmStack') && document.getElementById('hmWkHost') &&
               document.getElementById('hmWkHost').closest('#hmStack')); });
-  is(약속안, '  ★ 📅 약속 · 📆 이번 주가 <b>「지금 할 것」 카드 안</b>에 있다 (판 X278)');
-  /* 📊 <b>판 X280 — 상담현황은 폭마다 한 자리</b>: 폰은 아래(#hmFlowHost), 컴퓨터는
+  is(약속안, '  ★ 📅 약속 · 📆 이번 주가 <b>「지금 할 것」 카드 안</b>에 있다 (판 X297)');
+  /* 📊 <b>판 X298 — 상담현황은 폭마다 한 자리</b>: 폰은 아래(#hmFlowHost), 컴퓨터는
      오른쪽 기둥 맨 밑(#hmSideUp). 카드 id(#hmFlow)는 늘 <b>하나</b>입니다 (5번). */
   const 흐름자리 = async (P) => P.evaluate(() => { const f = document.querySelectorAll('#hmFlow');
     return { n: f.length, side: !!(f[0] && f[0].closest('#hmSideUp')),
