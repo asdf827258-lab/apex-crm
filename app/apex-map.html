@@ -4576,11 +4576,12 @@ var JV_STOP = ('어떻게 어디 어디서 어디에 어디로 뭐 뭐야 뭐가
   '때 할때 언제 어느 누가 왜 그냥 다 더 잘 쓰는 쓰나 쓰나요 써 써요 사용 사용법 쓰는법 하려면 되는 ' +
   '하면 되요 돼 됩니까 합니까 해야돼 해야해 해야하나 해야되나 필요해 필요 거기 여기 있는 없는 하는데 ' +
   '어떡해 어떡하지 어쩌지 부탁 기능 메뉴 화면 앱 페이지 싶대 싶대요 한대 한대요 하재 봐 봐요 보려면 ' +
-  '하고싶어 할래 볼래').split(' ');
+  '하고싶어 할래 볼래 뭐부터 뭘부터 무엇부터 어디부터').split(' ');   /* 「뭐부터」 는 물음의 꼴이지 주제가 아니다 — 「신입 교육 뭐부터」 가 「오늘 뭐부터」 순서표로 새던 자리 (판 X293) */
 var JV_END = ['하려면','하려고','하는법','하는데','했는데','하나요','할까요','하면서','해야돼','해야','하고',
   '하면','하는','해요','해줘','할때','되나요','되는','돼요','싶어요','싶어','싶은','싶다','려면','는법',
   '에서는','에서','으로','에게','한테','까지','부터','처럼','이랑','은','는','이','가','을','를','에','의',
   '었는데','았는데','는데','하지','하죠','대요','래요','어줘','아줘','싶다는','다는','한지','는지','인지',
+  '하려는','려는',
   '도','만','로','와','과','랑','요','해','할','한','죠','줘',
   '지','대','래','니','냐','고'];
 /* 사람이 쓰는 말 → 앱이 쓰는 말. 넓게 잡지 않습니다 — 엉뚱한 화면이 올라오면
@@ -4602,7 +4603,7 @@ var JV_SYN = {
 var JV_ONE = ['암','뇌','집','돈','빚','병','차','폰'];
 /* 이 앱에서는 <b>거의 모든 화면</b>에 붙는 말 — 이 말로 제목이 맞았다고 그 화면이
    답이 되지는 않습니다(「보험 광고 문구」 가 「보험의 기준」 으로 새던 자리) */
-var JV_COMMON = ['보험','고객','상담','설계사'];
+var JV_COMMON = ['보험','고객','상담','설계사','오늘'];   /* 「오늘」 은 판 X293 — 「오늘 날씨」 가 「오늘 뭐부터」 로 새던 자리 */
 function jvWords(q){
   var raw = String(q || '').toLowerCase().replace(/[?!.,~·「」『』"'()\[\]]/g, ' ').split(/\s+/), out = [];
   raw.forEach(function(w){
@@ -4619,8 +4620,22 @@ function jvWords(q){
     if (w.length < 2 && !/^[a-z0-9]+$/.test(w) && JV_ONE.indexOf(w) < 0) return;
     if (out.indexOf(w) < 0) out.push(w);
   });
-  return out;
+  /* 🔗 붙여 쓴 말을 가른다 (판 X293) — 「고객등록」 은 어느 글에도 없지만 「고객」 ·
+     「등록」 은 있습니다. 통째로 없는 말만, <b>양쪽 다 있는 말</b>로 갈릴 때만 가릅니다
+     (지어내지 않는다 — 있는 낱말로만 나눕니다). */
+  var cut2 = [];
+  out.forEach(function(w){
+    if (w.length >= 4 && KB && jvDf(w) === 0){
+      for (var i = 2; i <= w.length - 2; i++){
+        var a = w.slice(0, i), b = w.slice(i);
+        if (jvDf(a) > 0 && jvDf(b) > 0){ [a, b].forEach(function(x){ if (cut2.indexOf(x) < 0) cut2.push(x); }); return; }
+      }
+    }
+    if (cut2.indexOf(w) < 0) cut2.push(w);
+  });
+  return cut2;
 }
+function jvDf(w){ jvIdf(w); return KB.df[w]; }
 /* 낱말 하나가 문서 몇 개에 나오나 (적게 나올수록 무겁다) */
 function jvIdf(w){
   var K = kb();
@@ -4882,7 +4897,11 @@ function jvTooWide(q, res){
   if (JV_SIGH.test(String(q || '')) && 남은.length > 0 &&
       남은.every(function(w){ return JV_BROAD.indexOf(w) >= 0; })) return true;
   if (jvFirm(res)) return false;                 /* 제 이름으로 맞았으면 답합니다 */
-  return jvWords(q).length <= 1;                 /* 낱말 하나뿐이고 약하면 넓습니다 */
+  /* 낱말 하나뿐이고 약하면 넓습니다 — 단, 그 낱말이 <b>일 전체의 이름</b>(계약 · 영업)이거나
+     아무것도 못 찾았을 때만. 「로그인이 안 돼」 의 「로그인」 은 한 낱말이어도 갈 곳이
+     분명한데 되물어서, 판 X220 에선 답하던 것이 막혔습니다 (판 X293). */
+  var w1 = jvWords(q);
+  return w1.length <= 1 && (res.how === 'none' || !w1.length || JV_BROAD.indexOf(w1[0]) >= 0);
 }
 /* 🧭 <b>이어서 물어보실 것</b> — 방금 짚어 드린 화면을 쓰는 <b>다른 상황</b>을
    물음으로 내놓습니다 (판 X247).
@@ -4951,7 +4970,7 @@ function offline(q){
   }
   var one = jvOne(q);
   /* 🙋 흐린데 맞은 것도 약하면 — <b>답하지 말고 되묻습니다</b> (판 X247) */
-  if (jvTooWide(q, one)) return jvBack(q);
+  if (!one.near && jvTooWide(q, one)) return jvBack(q);
   one.more = jvMore(q, one);
   return one;
 }
@@ -4968,8 +4987,40 @@ function jvSplit(q){
 function jvWhere(q){ return /어디|어딨|위치|찾아|열어|들어가|있나요|있어\?/.test(q); }
 /* 확실한가 — 제목이 맞았거나, 물은 말이 <b>전부</b> 들어 있거나, 넉넉히 맞았거나 */
 function jvStrong(r){ return !!r && (r.hitT > 0 ? r.s >= 7 : (r.cover >= 0.99 ? r.s >= 5 : (r.s >= 12 && r.cover >= 0.5))); }
+/* 🔤 <b>앱의 메뉴 찾기</b>에 그대로 묻는다 (판 X293) — 「보장분섞」 같은 한 글자
+   틀림 · 「ㅂㅈㅂㅅ」 같은 초성은 서랍의 찾기(navHit)가 이미 알아듣습니다.
+   새로 짜지 않고 그 자를 빌립니다 (5번). 흐린 말(「도와줘」)에는 안 씁니다 —
+   그건 되물을 자리입니다 (판 X247). */
+function jvNear(q){
+  var P = kbApp(), out = [];
+  if (!P || typeof P.navHit !== 'function' || JV_WIDE.test(String(q))) return out;
+  var G = [];
+  try { G = (typeof P.visibleTabs === 'function') ? P.visibleTabs() : P.TABS; } catch(e){ return out; }
+  var parts = String(q).replace(/[?!.,~]/g, ' ').split(/\s+/).filter(function(w){
+    return w && (w.length >= 3 || /^[ㄱ-ㅎ]{2,}$/.test(w)) && JV_STOP.indexOf(w) < 0;
+  });
+  [false, true].forEach(function(loose){
+    if (out.length) return;
+    parts.forEach(function(w){
+      G.forEach(function(g){ (g.items || []).forEach(function(it){
+        try { if (it && it.id && MENU[it.id] && out.indexOf(it.id) < 0 && P.navHit(it, w, loose)) out.push(it.id); } catch(e){}
+      }); });
+    });
+  });
+  return out.slice(0, 4);
+}
 function jvOne(q){
   var R = jvRank(q);
+  if (!R.list.length || !jvStrong(R.list[0])){
+    var nr = jvNear(q);
+    if (nr.length){
+      var rn = jvScreenAnswer(nr[0], R);
+      rn.answer = '혹시 「' + MENU[nr[0]].n + '」 을 찾으셨나요? (메뉴 찾기가 알아들은 이름입니다)\n' + rn.answer;
+      if (nr.length > 1) rn.pick = nr.slice(1).map(function(id){ return MENU[id].n; });
+      rn.near = true; rn.str = {hitTU:1, cover:1};
+      return rn;
+    }
+  }
   if (!R.list.length) return jvNotSure(q, R);
   var res = jvOneOf(q, R), t = R.list[0];
   res.str = {hitTU:t.hitTU, cover:t.cover};
@@ -5039,11 +5090,11 @@ function jvActs(){ var P = kbApp(); try { return (P && P.VA_ACT) || []; } catch(
 function jvReady(a){
   var P = kbApp(), src = String(a.run || '');
   try {
-    if (/vaGbWait/.test(src) && !(P.GB && P.GB.loaded)) return '성장판';
-    if (/osLoadClients/.test(src) && !(P.OSC && P.OSC.list && P.OSC.list.length && P.CM && P.CM.loaded)) return '고객 365일';
-    if (/vaCalMiss/.test(src) && !(P.CAL && P.CAL.loaded)) return '실행 체크판의 달력';
-  } catch(e){ return '앱'; }
-  return '';
+    if (/vaGbWait/.test(src) && !(P.GB && P.GB.loaded)) return {n:'성장판', go:'growboard'};
+    if (/osLoadClients/.test(src) && !(P.OSC && P.OSC.list && P.OSC.list.length && P.CM && P.CM.loaded)) return {n:'고객 365일', go:'clients'};
+    if (/vaCalMiss/.test(src) && !(P.CAL && P.CAL.loaded)) return {n:'실행 체크판의 달력', go:'ckboard'};
+  } catch(e){ return {n:'앱', go:''}; }
+  return null;
 }
 /* 일꾼의 답 하나 — 글 또는 {say, go} */
 function jvRun(a, args){
@@ -5084,11 +5135,34 @@ function jvWork(q, steps){
     var byRe = !!(a.re && (a.re.test(key) || a.re.test(kbN(q))));
     var hit = byRe || ws.some(function(w){ return nm.indexOf(w) >= 0; });
     var why = jvReady(a);
-    if (why){ if (hit) out.push({k:a.k, n:a.n, wait:why, byRe:byRe}); return; }
+    /* 안 읽은 자료가 필요하면 시키지 않고 「아직 안 읽었다」 + <b>그 자료를 여는 곳</b> (판 X293) */
+    if (why){ if (hit) out.push({k:a.k, n:a.n, wait:why.n, go:(why.go && MENU[why.go]) ? why.go : '', byRe:byRe}); return; }
     var r = jvRun(a);
     if (!r) return;
-    if (hit || (r.go && ids[r.go])) out.push({k:a.k, n:a.n, say:r.say, go:r.go, byRe:byRe});
+    /* ⚠ 판 X293 — 「화면이 순서에 들었다」 만으로는 부르지 않습니다. 「고객 등록 어떻게 해」
+       에 「60일 넘게 연락 없는 분 3명」 이 끼었습니다 — 물으신 것과 상관없는 말입니다. */
+    if (hit) out.push({k:a.k, n:a.n, say:r.say, go:r.go, byRe:byRe});
   });
+  /* 👤 <b>사람 이름</b>을 물으셨으면 — 서랍의 찾기가 쓰는 사람 찾기(navPeopleFind)에 그대로
+     시킵니다 (판 X293 · 「홍길동 고객 어디서 찾아」 가 대본 화면으로 새던 자리).
+     이미 읽어 둔 목록만 봅니다 — 서버를 안 부릅니다 (7번). 이름은 이 화면에만 (3번). */
+  try {
+    if (typeof P.navPeopleFind === 'function'){
+      var seenP = {};
+      String(q).replace(/[?!.,~]/g, ' ').split(/\s+/).forEach(function(w){
+        w = w.replace(/(님|씨|고객|님이|이|가|을|를|은|는)$/, '');
+        if (!w || w.length < 2 || /[^가-힣a-zA-Z]/.test(w) || JV_STOP.indexOf(w) >= 0 || JV_COMMON.indexOf(w) >= 0 || jvDf(w) > 3) return;
+        var pf = P.navPeopleFind(w, false), nm = [];
+        (pf.cli || []).forEach(function(x){ if (!seenP[x.nm]){ seenP[x.nm] = 1; nm.push(x.nm); } });
+        if (nm.length) out.unshift({k:'사람', n:'사람 찾기', byRe:true, go:'clients',
+          say:'고객 365일에 ' + nm.slice(0, 3).join(', ') + (nm.length > 3 ? ' 외 ' + (nm.length - 3) + '명' : '') + ' 님이 계십니다.'});
+        else if (!pf.cliRead) out.unshift({k:'사람', n:'사람 찾기', byRe:true, go:'clients', wait:'고객 365일'});
+        var tm = (pf.team || []).map(function(x){ return x.nm; });
+        if (tm.length) out.unshift({k:'팀원', n:'팀원 찾기', byRe:true, go:'org',
+          say:'팀원 ' + tm.slice(0, 3).join(', ') + ' 님이 계십니다.'});
+      });
+    }
+  } catch(e){}
   return out.slice(0, 4);
 }
 
@@ -5462,11 +5536,18 @@ function ask(raw){
   /* 일꾼을 <b>제 말버릇으로</b> 부르셨으면(「브리핑해줘」 · 「뭐 남았어」) 그 일꾼이 답입니다.
      자비스가 이름이 닮은 다른 화면(「대표 브리핑」)으로 길을 짜면 같은 물음에 두 답이 됩니다
      (0-1번) — 그 화면은 「찾으신 게 이것이면」 한 줄로 내립니다. */
-  var cmd = r0.work.filter(function(x){ return x.byRe && x.say; })[0];
-  if (cmd && r0.how === 'screen' && r0.top !== cmd.go){
-    var alt = r0.top;
-    r0 = {answer:'「' + cmd.n.split(' — ')[0] + '」 — 앱에 시켜서 지금 읽어 왔습니다.', steps:[], real:'', how:'work',
-          next:['「' + MENU[alt].n + '」 화면을 찾으셨으면 — ' + jvWay(alt).txt], work:r0.work};
+  /* ★ 판 X293 — 화면 답만이 아니라 <b>순서 답 · 되묻기 · 못 찾음</b>에서도 그렇습니다.
+     「뭐 남았어」 에 「무엇을 도와드릴까요?」 가 머리로 서고 그 밑에 남은 일 열한 개가
+     붙었습니다 — 답을 알면서 되물은 꼴입니다. 「오늘 뭐 공부해」 에는 하루 차례 네 걸음이
+     섰습니다. 아직 못 읽은 일꾼(성장판 등)도 그 일꾼이 답입니다 — 「아직 안 읽었다」. */
+  var cmd = r0.work.filter(function(x){ return x.byRe && (x.say || x.wait); })[0];
+  var head3 = (r0.steps || []).filter(function(s){ return s && s.id; }).slice(0, 3).map(function(s){ return s.id; });
+  if (cmd && /^(screen|way|sec|none|back)$/.test(r0.how) && head3.indexOf(cmd.go) < 0){
+    var nx0 = [];
+    if (r0.how === 'screen' && MENU[r0.top]) nx0.push('「' + MENU[r0.top].n + '」 화면을 찾으셨으면 — ' + jvWay(r0.top).txt);
+    else if ((r0.how === 'way' || r0.how === 'sec') && r0.title) nx0.push('「' + r0.title.split(' — ')[0] + '」 순서를 찾으셨으면 — 그 말로 다시 물어 주세요');
+    r0 = {answer:'「' + cmd.n.split(' — ')[0] + '」 — ' + (cmd.say ? '앱에 시켜서 지금 읽어 왔습니다.' : '그 자료를 아직 안 읽어서 셀 수 없습니다.'),
+          steps:[], real:'', how:'work', next:nx0, work:r0.work};
   }
   if (!hasAI()){ logAsk(q, r0, '앱'); addJ(r0); return; }
 
