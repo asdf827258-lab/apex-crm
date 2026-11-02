@@ -69,8 +69,7 @@
      합니다). 사장님 서버는 한 번도 안 부릅니다.                          */
 'use strict';
 const { chromium } = require('playwright');
-const { execFileSync } = require('child_process');
-const http = require('http'), fs = require('fs'), path = require('path'), url = require('url'), os = require('os');
+const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 const ROOT = process.cwd(), PORT = 8989;
 let bad = 0;
 const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
@@ -113,47 +112,45 @@ const 글꼴 = (u) => /pretendard|fonts\.(googleapis|gstatic)/i.test(u);
 (async () => {
   await new Promise(r => srv.listen(PORT, r));
   const br = await chromium.launch({ args: ['--no-sandbox'] });
-  const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'printall-'));
 
   /* ── [1] 원리가 지금도 참인가 ───────────────────────────────── */
-  head('[1] ★★ <b>원리가 지금도 참인가</b> — 통제된 시험 (크롬이 바뀌면 여기서 먼저 울립니다)');
-  let 원리 = null;
+  head('[1] ★★ <b>원리가 지금도 참인가</b> — 인쇄 매체에서 잽니다 (크롬이 바뀌면 여기서 먼저 울립니다)');
+  /* ⚠ 처음에는 여기서 <b>진짜 PDF 를 뽑아 그림으로 바꿔 픽셀을 읽었습니다</b>.
+     그 결과가 이 판의 증거입니다 (배경 끔으로 인쇄 →
+       그 줄 없음 : 255,255,255 · 255,255,255 · 255,255,255
+       그 줄 있음 : 26,86,219   · 14,159,110   · 220,62,68   ← 셋째는 네 겹 안쪽)
+     그런데 그림으로 바꾸는 데 <b>pdftoppm</b>(poppler)을 썼고, 그것이
+     <b>CI 기계에는 없어</b> 「spawnSync pdftoppm ENOENT」 로 빨간불이 났습니다.
+     CLAUDE.md 8번 — 자가 바깥 셈틀에 기대면 안 됩니다(check.yml 도 안 건드립니다).
+     그래서 <b>아무것에도 안 기대는 꼴</b>로 바꿨습니다: 인쇄 매체로 바꾼 뒤
+     <b>계산된 값</b>을 읽고, <b>네 겹 안쪽</b>까지 물려 내려가는지 봅니다.
+     ★ 이 자가 못 잡는 것을 적어 둡니다 (1번) — 크롬이 「값은 exact 인데
+       종이에는 안 칠한다」 로 바뀌면 여기서는 안 울립니다. 픽셀 증거는
+       한 번 재어 위에 적어 두었고, 그 왕복은 사람이 다시 돌려 봐야 합니다. */
   try {
-    const 틀 = (룰) => '<!doctype html><html><head><meta charset="utf-8"><style>' + 룰 +
-      'body{margin:0}.box{height:110px;color:#fff;padding:16px;box-sizing:border-box}' +
-      '.a{background:#1A56DB}.b{background:#0E9F6E}.c{background:#DC3E44}</style></head><body>' +
-      '<div class="box a">①</div><div class="box b">②</div>' +
-      '<div><div><div><div class="box c">③ 네 겹 안쪽</div></div></div></div></body></html>';
     const pg = await br.newPage();
-    const 재기 = async (이름, 룰) => {
-      await pg.setContent(틀(룰), { waitUntil: 'load' });
-      const f = path.join(TMP, 이름 + '.pdf');
-      fs.writeFileSync(f, await pg.pdf({ format: 'A4', printBackground: false, margin: { top: 0, bottom: 0, left: 0, right: 0 } }));
-      execFileSync('pdftoppm', ['-png', '-r', '96', '-f', '1', '-l', '1', f, path.join(TMP, 이름)]);
-      const g = fs.readdirSync(TMP).filter(x => x.startsWith(이름) && x.endsWith('.png'))[0];
-      const b64 = fs.readFileSync(path.join(TMP, g)).toString('base64');
-      return pg.evaluate(async (b64) => {
-        const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
-        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
-        const g2 = c.getContext('2d'); g2.drawImage(img, 0, 0);
-        const 읽 = (y) => { const d = g2.getImageData(Math.round(img.width * 0.3), y, 1, 1).data; return d[0] + ',' + d[1] + ',' + d[2]; };
-        return { 칸1: 읽(55), 칸2: 읽(165), 칸3: 읽(275) };
-      }, b64);
+    await pg.setContent('<!doctype html><html><head><meta charset="utf-8"><style>' +
+      'body{margin:0}.box{height:40px}</style></head><body><div class="box" id="a"></div>' +
+      '<div><div><div><div class="box" id="c">깊은 칸</div></div></div></div></body></html>',
+      { waitUntil: 'load' });
+    const 재 = async (룰) => {
+      await pg.addStyleTag({ content: 룰 });
+      await pg.emulateMedia({ media: 'print' });
+      return pg.evaluate(() => {
+        const g = (id) => { const c = getComputedStyle(document.getElementById(id));
+          return (c.printColorAdjust || c.webkitPrintColorAdjust || '(없음)'); };
+        return { 겉: g('a'), 깊: g('c') };
+      });
     };
-    const 없 = await 재기('none', '');
-    const 있 = await 재기('html', 'html{-webkit-print-color-adjust:exact;print-color-adjust:exact}');
-    원리 = { 없, 있 };
+    const 없 = await 재('/* 아무것도 */');
+    const 있 = await 재('html{-webkit-print-color-adjust:exact;print-color-adjust:exact}');
     await pg.close();
+    is(!/exact/.test(없.겉) && !/exact/.test(없.깊),
+       '  그 줄이 <b>없으면</b> exact 가 아니다 — 겉 ' + 없.겉 + ' · 네 겹 안쪽 ' + 없.깊);
+    is(/exact/.test(있.겉) && /exact/.test(있.깊),
+       '  ★★ <b>html 한 줄</b>이면 <b>네 겹 안쪽까지</b> exact 다(물려 내려갑니다) — 겉 ' +
+       있.겉 + ' · 네 겹 안쪽 ' + 있.깊);
   } catch (e) { is(false, '  통제된 시험을 못 돌렸습니다 — ' + String(e).slice(0, 70)); }
-  if (원리) {
-    const 흰 = (v) => v === '255,255,255';
-    is(흰(원리.없.칸1) && 흰(원리.없.칸2) && 흰(원리.없.칸3),
-       '  그 줄이 <b>없으면</b> 「배경 끔」 인쇄에서 하얗게 떨어진다 — ' +
-       원리.없.칸1 + ' / ' + 원리.없.칸2 + ' / ' + 원리.없.칸3);
-    is(원리.있.칸1 === '26,86,219' && 원리.있.칸2 === '14,159,110' && 원리.있.칸3 === '220,62,68',
-       '  ★★ <b>html 한 줄</b>이면 네 겹 안쪽까지 색이 남는다(물려 내려갑니다) — ' +
-       원리.있.칸1 + ' / ' + 원리.있.칸2 + ' / ' + 원리.있.칸3);
-  }
 
   /* ── [2] 인쇄하는 화면이 모두 exact 인가 ───────────────────── */
   head('[2] ★★ 인쇄하는 화면이 <b>인쇄 매체에서 exact</b> 인가 — 브라우저로 잽니다');
@@ -196,7 +193,46 @@ const 글꼴 = (u) => /pretendard|fonts\.(googleapis|gstatic)/i.test(u);
   is(!/\*\s*,?\s*\*::before/.test(pm),
      '  <b>* 규칙은 안 쓴다</b> — 물려 내려가므로 필요 없습니다(되돌림 ③이 그것을 보여 줍니다)');
 
-  try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {}
+  /* ── [4] 새 창으로 인쇄하는 자리도 옷을 싣나 ─────────────── */
+  head('[4] ★★ 판 X296 — <b>새 창으로 인쇄하는 자리</b>도 옷을 싣나');
+  /* ⚠ 앱에는 window.open('','_blank') 로 <b>빈 창</b>을 열고 글을 써 넣는
+     인쇄 길이 여럿 있습니다. 그 창에는 ui.css 가 <b>없습니다</b> — 그러면
+     써 넣은 css 의 var(--ink-*)·var(--tN) 이 전부 빈 값이 됩니다.
+     통제된 시험으로 재었습니다 (아래 [4-나]).
+     printHeadCss() 가 ui.css 를 절대 주소로 싣고 글자 계단도 넘깁니다. */
+  const 빈창 = [];
+  const APPSRC = fs.readFileSync(path.join(ROOT, 'app', 'index.html'), 'utf8');
+  for (const m of APPSRC.matchAll(/window\.open\(\s*''\s*,\s*'_blank'/g)) {
+    const 뒤 = APPSRC.slice(m.index, m.index + 6000);
+    const 앞 = APPSRC.slice(Math.max(0, m.index - 3000), m.index);
+    const fn = [...앞.matchAll(/function (\w+)\s*\(/g)].map(x => x[1]);
+    if (!/printHeadCss/.test(뒤)) 빈창.push(fn.length ? fn[fn.length - 1] : '(이름 모름)');
+  }
+  is(빈창.length === 0,
+     '  ★★ 빈 창을 열어 인쇄하면서 <b>printHeadCss() 를 안 부르는 자리 ' + 빈창.length + '곳</b>' +
+     (빈창.length ? ' ⚠ ' + 빈창.join(' · ') : ' — 손대기 전에는 다섯이었습니다(waReportPrint · tpPrint · endoPrint · manPrint · bizPrint)'));
+  is(/function printHeadCss\(\)/.test(APPSRC) && /ui\.css/.test(APPSRC.slice(APPSRC.indexOf('function printHeadCss()'), APPSRC.indexOf('function printHeadCss()') + 700)),
+     '  printHeadCss 가 <b>ui.css 를 싣는다</b> — 그래서 판 X295 의 한 줄이 그 창에도 닿는다');
+
+  head('[4-나] ★ <b>옷이 없으면 무엇이 빠지나</b> — 통제된 시험 (왜 고쳐야 하는지의 증거)');
+  try {
+    const pg = await br.newPage();
+    const 틀 = (룰) => '<!doctype html><html><head><meta charset="utf-8"><style>' + 룰 +
+      'body{margin:0;font-size:16px}.box{border:1px solid var(--ink-7);background:var(--white);' +
+      'color:var(--ink-1);font-size:var(--t4);padding:10px}</style></head><body>' +
+      '<div class="box" id="x">칸</div></body></html>';
+    const 재 = async (룰) => { await pg.setContent(틀(룰), { waitUntil: 'load' });
+      return pg.evaluate(() => { const c = getComputedStyle(document.getElementById('x'));
+        return { 선: c.borderTopWidth + ' ' + c.borderTopStyle, 바탕: c.backgroundColor, 크기: c.fontSize }; }); };
+    const 없 = await 재('');
+    const 있 = await 재(':root{--ink-7:#E5E8EB;--white:#FFFFFF;--ink-1:#191F28;--t4:15px}');
+    await pg.close();
+    is(없.선 === '0px none' && 없.바탕 === 'rgba(0, 0, 0, 0)',
+       '  옷이 <b>없으면</b> 표 선이 아예 안 나오고 바탕이 빠진다 — 선 ' + 없.선 + ' · 바탕 ' + 없.바탕 + ' · 크기 ' + 없.크기);
+    is(있.선 === '1px solid' && 있.바탕 === 'rgb(255, 255, 255)' && 있.크기 === '15px',
+       '  옷이 <b>있으면</b> 선·바탕·크기가 제대로 — 선 ' + 있.선 + ' · 바탕 ' + 있.바탕 + ' · 크기 ' + 있.크기);
+  } catch (e) { is(false, '  통제된 시험을 못 돌렸습니다 — ' + String(e).slice(0, 60)); }
+
   await br.close(); srv.close();
   console.log('\n' + '─'.repeat(30));
   if (bad) { console.log('✗ 빨간불 ' + bad + '곳'); process.exit(1); }
