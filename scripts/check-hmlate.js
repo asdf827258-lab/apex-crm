@@ -1,4 +1,4 @@
-/* ══ 🕗 check-hmlate — 약속이 지난 분을 한 분씩 정리 (판 X281) ═══════════════
+/* ══ 🕗 check-hmlate — 약속이 지난 분을 한 분씩 정리 (판 X287) ═══════════════
    사장님 말씀 (2026-10-31) 「고객 관리를 위해 어떻게 하면 좋을까」 → 서버에 적힌 수
    (AP·PC·CS 188건 중 약속 지난 142건)를 올려 드려 고르신 첫째.
 
@@ -75,7 +75,7 @@ const SEED = () => {
     return a; }; return { from:mk, rpc:function(){ return Promise.resolve({data:null,error:null}); } }; };
   try{ osHideLoginGate(); }catch(e){}
   try{ document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x=>x.remove()); }catch(e){}
-  /* 폰에서는 이 칸이 <b>접힌 채</b> 섭니다(판 X281 · 홈 선 안에 들이려고). 속을 재려면 먼저
+  /* 폰에서는 이 칸이 <b>접힌 채</b> 섭니다(판 X287 · 홈 선 안에 들이려고). 속을 재려면 먼저
      폅니다 — 여닫는 자는 앱의 hmFoldSet 하나입니다. 접힌 머리는 아래 [9] 가 따로 봅니다. */
   try{ hmFoldSet('stk_hmLateHost',true); }catch(e){}
   HWHO.id=''; go('home');
@@ -111,7 +111,7 @@ const LOOK = () => {
   console.log('\n[1] 칸이 <b>「지금 할 것」 테두리 안</b> · 📅 약속 바로 밑');
   const A = await p.evaluate(LOOK);
   is(A.있나 && A.안, '  🕗 칸이 테두리(#hmJobWrap) 안에 선다');
-  /* 판 X283 부터 🕗 밑에 💬 소개 여쭐 차례가 섭니다 — 🕗 가 📅 <b>바로 밑</b>인지만 봅니다 */
+  /* 판 X289 부터 🕗 밑에 💬 소개 여쭐 차례가 섭니다 — 🕗 가 📅 <b>바로 밑</b>인지만 봅니다 */
   /* 폰에서는 접이(hmFold_stk_…)에 싸여 섭니다 — 껍데기 이름도 같은 칸으로 봅니다 */
   is(/hmUpHost · (hmFold_stk_)?hmLateHost · /.test(A.kids), '  차례가 📅 약속 → 🕗 — ' + A.kids);
 
@@ -223,7 +223,7 @@ const LOOK = () => {
   is(B.작은.length === 0, '  누르는 자리가 다 <b>44px 이상</b> — ' + (B.작은.join(' · ') || '작은 것 없음'));
   is(errs.length === 0, '  오류 없이 선다' + (errs.length ? (' ← ' + errs[0]) : ''));
 
-  console.log('\n[9] 폰에서 <b>접힌 머리</b>에 수가 서나 (판 X281 · 접어도 수가 보여야 접기입니다)');
+  console.log('\n[9] 폰에서 <b>접힌 머리</b>에 수가 서나 (판 X287 · 접어도 수가 보여야 접기입니다)');
   const H9 = await p.evaluate(async () => {
     hmFoldSet('stk_hmLateHost', false); go('home'); await new Promise(r => setTimeout(r, 300));
     const f = document.getElementById('hmFold_stk_hmLateHost');

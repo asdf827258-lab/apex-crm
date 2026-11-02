@@ -282,7 +282,7 @@ const LOOK = () => {
   const wide = await (async () => {
     await p.setViewportSize({ width: 1024, height: 900 });
     await p.waitForTimeout(260);
-    /* 판 X281 — 「지금 할 것」 테두리 안 접이(📆 이번 주 · 🕗 · 💬)는 폭 1,100 아래에서 접힌
+    /* 판 X287 — 「지금 할 것」 테두리 안 접이(📆 이번 주 · 🕗 · 💬)는 폭 1,100 아래에서 접힌
        채 섭니다. 접힌 단추는 키가 0 이라 「작다」 로 잡혔습니다. <b>자를 무르게 하지 않고</b>
        펴고 잽니다(lib-hmfold 와 같은 결) — 펴서 작으면 그대로 빨간불입니다. 여닫는 자는
        앱의 hmFoldToggle 하나이고, 잰 뒤 도로 접습니다. */

@@ -75,7 +75,7 @@ const SEED = () => {
     return a; }; return { from:mk, rpc:function(){ return Promise.resolve({data:null,error:null}); } }; };
   try{ osHideLoginGate(); }catch(e){}
   try{ document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x=>x.remove()); }catch(e){}
-  /* 폰에서는 이 칸이 <b>접힌 채</b> 섭니다(판 X281 · 홈 선 안에 들이려고). 속을 재려면 먼저
+  /* 폰에서는 이 칸이 <b>접힌 채</b> 섭니다(판 X287 · 홈 선 안에 들이려고). 속을 재려면 먼저
      폅니다 — 여닫는 자는 앱의 hmFoldSet 하나입니다. 접힌 머리는 아래 [9] 가 따로 봅니다. */
   HWHO.id=''; go('home');
 };

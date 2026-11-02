@@ -164,7 +164,11 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   /* 쪽을 나눠 읽는 자리는 <b>arAll(sb, …)</b> 꼴이다 — 그것도 한 자리다.
      q(sb.from 만 세면 자리를 덜 세어, 멀쩡한 맨 끝을 「어긋났다」고 잡는다.
      헛것을 잡는 점검이 안 잡는 점검보다 나쁘다 (8번). */
-  const n = (gbSrc.match(/\n    q\(sb\.from|\n    arAll\(sb\s*,|\n    \(typeof orgSelect/g) || []).length;
+  /* ⚠ 2026-11-01 (판 X281) — 읽는 자리를 <b>한 곳으로 모으면서</b> 꼴이
+     늘었습니다: osProfAll(sb) · osCliSince(sb,…). 그 둘을 안 세면 자리를
+     덜 세어 <b>멀쩡한 맨 끝을 「어긋났다」</b>고 잡습니다. 실제로 그랬습니다.
+     새 꼴을 만들면 <b>여기에도 한 줄 보태십시오</b> (8번). */
+  const n = (gbSrc.match(/\n    q\(sb\.from|\n    arAll\(sb\s*,|\n    osProfAll\(sb|\n    osCliSince\(sb|\n    osCliAll\(sb|\n    \(typeof orgSelect/g) || []).length;
   is(idx !== undefined && Number(idx) === n - 1,
      '  조직도를 <b>맨 끝</b>에서 읽는다 — r[' + idx + '] · 모두 ' + n + '개 ' +
      '(앞에 표가 끼면 위에서 r[3]·r[4] 로 세어 쓰는 자리가 통째로 어긋난다)');

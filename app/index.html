@@ -1810,7 +1810,7 @@ body.jv-dock:not(.apexmap-mode) #osVaFab{display:none}
 /* 📆 이번 주 · 📊 오늘 기록은 제 상자를 들고 와서 테두리에 붙습니다 — 찍어 보니
    이번 주의 일요일 칸이 테두리 밖으로 잘렸습니다. 안쪽 여백만 줍니다. */
 #hmStack #hmWkHost{padding:0 14px 12px}
-/* 🧺 판 X281 — 테두리 안의 카드는 <b>또 큰 여백</b>을 둘 까닭이 없습니다(겉 테두리가 이미
+/* 🧺 판 X287 — 테두리 안의 카드는 <b>또 큰 여백</b>을 둘 까닭이 없습니다(겉 테두리가 이미
    감쌉니다). 20 → 12px · 접이 머리·속도 같은 결로. 홈 선 안에 🕗·💬 을 들이려고 재어 줄였습니다. */
 #hmStack .t-card{padding:12px 14px}
 #hmStack .tz-hc{padding:12px 14px;margin:0;border:0;box-shadow:none}
@@ -8849,6 +8849,98 @@ function arAll(sb,tbl,cols,key,tune,cap){
     }catch(eA){ return Promise.resolve({error:{message:(eA&&eA.message)||'실패'}}); }
   },cap);
 }
+/* ══ 🔌 <b>같은 물음을 두 번 하지 않습니다</b> (판 X281 · 5번·7번) ═══════════
+   사장님 말씀 (2026-11-01) — 「응 <b>서버켤때 부르는거 줄여줘</b>」.
+
+   재어 보니 홈을 한 번 열면 <b>고객 표를 통째로 두 번</b> 읽고 있었습니다 —
+   「오늘 터치할 사람」(arLoad)과 「고객 목록」(osLoadClients)이 <b>각자</b>
+   읽었습니다. 칸만 조금 달랐지 같은 표, 같은 줄입니다. 사장님 서버에는
+   고객이 <b>1,943분</b> 계십니다. 담당자 표(profiles)도 두 번이었습니다.
+
+   ★ 묻는 곳을 <b>하나</b>로 둡니다 (5번). 칸은 <b>두 쪽이 쓰던 것을 합쳐</b>
+     한 번에 받습니다 — 부르는 횟수가 줄고 칸만 늘어납니다 (7번).
+   ★ <b>잠깐 사이</b>(OSQ_TTL)에 똑같은 물음이 또 오면 그 대답을 같이 받습니다.
+     짧게 둡니다 — 길게 두면 방금 넣으신 고객이 안 보입니다 (1번).
+   ★ 고객·담당자를 <b>고치거나 넣는 자리</b>는 osQDrop 으로 지웁니다.
+     안 지우면 바뀐 것이 한 박자 늦게 보입니다.
+   ★ 줄은 <b>베껴서</b> 돌려줍니다 — 한쪽이 손대면 다른 쪽이 틀어집니다 (5번).
+   ⚠ 이 막이는 <b>읽기</b>에만 씁니다. 쓰기에는 절대 두르지 마십시오.      */
+var OSQ={};
+function osQOnce(key,make){
+  var c=OSQ[key];
+  if(!c||!c.p){
+    c={p:make()}; OSQ[key]=c;
+    /* ★★ <b>답이 오면 바로 지웁니다</b> — 들고 있지 않습니다.
+       처음에 9초쯤 들고 있게 했다가 check-clients 가 셋을 잡았습니다:
+       「저장하면 바로 화면에 뜬다」 · 「끝낸 일이 접촉 기록으로 남는다」 ·
+       「같은 가족이면 상대가 바로가기로 뜬다」. 방금 넣으신 것이 안 보이는
+       것은 서버 요금보다 나쁩니다 (1번).
+       <b>같은 때 나란히 부르는 것만</b> 하나로 묶습니다 — 홈이 바로 그
+       자리라, 그것만으로 고객 표가 네 번에서 한 번이 되었습니다 (7번). */
+    var 치우기=function(){ if(OSQ[key]===c)delete OSQ[key]; };
+    c.p.then(치우기,치우기);
+  }
+  return c.p.then(function(r){
+    if(!r||r.error)return r;
+    return {data:(r.data||[]).slice(),error:null};
+  },function(e){ return {error:e||{message:'실패'}}; });
+}
+function osQDrop(pre){
+  var k; for(k in OSQ){ if(!OSQ.hasOwnProperty(k))continue;
+    if(!pre||k.indexOf(pre)===0)delete OSQ[k]; }
+}
+/* 고객 표를 읽는 <b>단 한 곳</b>. 칸은 두 쪽이 쓰던 것을 합친 것입니다 —
+   id·advisor_id·name_masked·created_at 은 둘 다, birth_year·household_notes 는
+   「오늘 터치할 사람」 이, consent_status·phone 은 「고객 목록」 이 씁니다.
+   ⚠ 옛 서버에는 없는 칸이 있어 <b>한 칸씩 물러섭니다</b> — 한 칸 때문에
+     목록 전체가 안 뜨면 안 됩니다. 물러서는 차례도 여기 한 곳입니다 (5번). */
+var OS_CLI_COLS=['id,advisor_id,name_masked,created_at,consent_status,phone,birth_year,household_notes',
+                 'id,advisor_id,name_masked,created_at,consent_status,birth_year,household_notes',
+                 'id,advisor_id,name_masked,created_at,consent_status,phone',
+                 'id,advisor_id,name_masked,created_at,consent_status'];
+function osCliAll(sb){
+  return osQOnce('clients:all',function(){
+    var step=function(i){
+      return arAll(sb,'clients',OS_CLI_COLS[i],['-created_at','id']).then(function(r){
+        if(!r||!r.error)return r;
+        if(i+1<OS_CLI_COLS.length)return step(i+1);
+        return r;
+      });
+    };
+    return step(0);
+  });
+}
+/* 고객 표의 <b>한 토막</b> — 이미 받아 둔 전체에서 걸러 씁니다 (5번·7번).
+   성장판(gbLoad)과 가동일(actLoad)이 「30일 안에 만든 고객」 을 서버에 따로
+   물었습니다. 그 줄은 <b>osCliAll 이 이미 받아 온 것의 일부</b>라 또 물을
+   까닭이 없습니다.
+   ⚠⚠ <b>자르는 선을 서버와 똑같이</b> 둡니다. 서버에 `gte('created_at',
+     '2026-10-02T00:00:00')` 라고 물으면 그 값을 <b>UTC</b> 로 읽습니다.
+     자바스크립트에서 같은 글을 Date.parse 하면 <b>이 기기 시간</b>으로 읽어
+     아홉 시간이 어긋납니다 — 서른 날 전 그 하루의 수가 달라집니다. 그래서
+     끝에 Z 를 붙여 <b>UTC 로 못 박습니다</b> (1번 · 4번의 결).
+   ★ 못 읽었으면 <b>못 읽었다고 그대로</b> 돌려줍니다 — 빈 손을 「없다」 로
+     바꾸지 않습니다 (1번).                                              */
+function osCliSince(sb,fromDay,who){
+  var t0=(fromDay?Date.parse(fromDay+'T00:00:00Z'):NaN);
+  return osCliAll(sb).then(function(r){
+    if(!r||r.error)return r;
+    return {error:null,data:(r.data||[]).filter(function(c){
+      if(who&&c.advisor_id!==who)return false;
+      if(isNaN(t0))return true;
+      var t=Date.parse(c.created_at||'');
+      return isNaN(t)?false:(t>=t0);
+    })};
+  });
+}
+/* 담당자 표도 한 곳에서. 칸은 성장판이 쓰던 <b>넉넉한 쪽</b>으로 둡니다 —
+   고객 목록은 그중 id·name 만 씁니다 (5번). */
+function osProfAll(sb){
+  return osQOnce('profiles:all',function(){
+    return sb.from('profiles').select('id,name,role,active,workspace').order('name')
+      .then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});
+  });
+}
 /* ── 불러오기 — 체크판·성장판·CRM·고객 365일을 한 번에 ── */
 function arLoad(force){
   var sb=(typeof osClient==='function')?osClient():null;
@@ -8931,17 +9023,17 @@ function arLoad(force){
       return q(sb.from('calls').select('db_id,created_by,call_at,result,memo,appointment_at')
          .order('call_at',{ascending:false}).order('db_id',{ascending:true}).range(a,b));
     },4000),
-    arPageAll(function(a,b){
-      /* <b>birth_year · household_notes</b> 두 칸을 같이 받습니다 — 부르는
-         횟수는 그대로입니다 (7번). 가구 메모는 사장님이 고객 이야기를
-         실제로 적어 두신 곳이라, 여기가 없으면 고객 365일 분들은 읽을
-         글이 <b>한 줄도 없습니다</b>. 실명은 이 브라우저에서만 머물달니다 (3번).
-         나이대 화법은 <b>이 값이 있는 분께만</b> 붙습니다. 배정 DB(dbs)에는
-         이 칸이 아예 없어서, 거기서 올라온 분은 앱이 나이를 알 길이 없습니다 —
-         그때는 짐작하지 않고 <b>모른다고 적습니다</b> (1번). */
-      return q(sb.from('clients').select('id,advisor_id,name_masked,created_at,birth_year,household_notes')
-         .order('id',{ascending:true}).range(a,b));
-    }),
+    /* ★ 판 X281 — 고객 표는 <b>osCliAll 한 곳</b>에서 읽습니다 (5번·7번).
+       여태 여기와 「고객 목록」(osLoadClients)이 <b>각자</b> 통째로 읽어
+       홈 한 번에 두 벌이 내려왔습니다. 칸은 양쪽 것을 합쳐 한 번에 받습니다.
+       <b>birth_year · household_notes</b> 가 거기 들어 있습니다 — 가구 메모는
+       사장님이 고객 이야기를 실제로 적어 두신 곳이라, 없으면 고객 365일
+       분들은 읽을 글이 <b>한 줄도 없습니다</b>. 실명은 이 브라우저에서만
+       머뭅니다 (3번). 나이대 화법은 <b>그 값이 있는 분께만</b> 붙고, 없으면
+       짐작하지 않고 <b>모른다고 적습니다</b> (1번).
+       ⚠ 줄 차례가 id 오름차순 → <b>만든 날 내림차순</b>으로 바뀝니다. 아래는
+         줄을 표(map)로 옮겨 담기만 해서 차례를 안 탑니다 — 보고 옮겼습니다. */
+    osCliAll(sb),
     arPageAll(function(a,b){
       return q(sb.from('saved_reports').select('id,client_id,content').eq('kind','client_meta')
          .order('id',{ascending:true}).range(a,b));
@@ -10021,7 +10113,16 @@ function arLine(e,t,s,right,warn,click){
 function ccTeamRows(){
   var l=(typeof AR!=='undefined'&&AR.cliRows)?AR.cliRows:[];
   var cfg=(typeof ccCfg==='function')?ccCfg():{days:30,vipDays:14,vipMan:100};
-  var mo=(new Date(Date.now()+9*3600*1000)).toISOString().slice(0,7);
+  /* ★ 판 X283 — 「<b>이번 달</b>」 을 여기서 또 셈하지 않습니다 (5번).
+     여태 이 한 줄만 <b>진짜 시계</b>를 봤습니다. 줄에 담긴 날(c.at)과 며칠
+     지났나(c.days)는 arCliCalc 가 <b>arToday()</b> 로 셈한 것이라, 「오늘」 을
+     묻는 곳이 <b>둘</b>이었습니다 — 서로 어긋나면 「이번 달 만난 분」 만
+     0 으로 떨어집니다. 실제로 그랬습니다: check-care30 은 오늘을
+     2026-10-19 로 못 박고 10월 접촉을 심는데, 달이 11월로 넘어간 날(2026-11-01)
+     아침에 이 줄만 「2026-11」 을 보고 <b>0명</b> 을 냈습니다.
+     달이 바뀌는 날에만 터지는 자리라 다섯 달을 아무도 못 봤습니다 (8번).
+     ★ 묻는 곳을 <b>ccToday() 하나</b>로 둡니다. */
+  var mo=((typeof ccToday==='function')?ccToday():arToday()).slice(0,7);
   var by={},i,c,k,o,cy,vip;
   for(i=0;i<l.length;i++){
     c=l[i];k=c.who||'';if(!k)continue;
@@ -21369,7 +21470,7 @@ function owCss(){
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
 var APP_BUILD='2026-11-01 17:48';
-var APP_BUILD_NOTE='🎨 <b>걸음마다 제 색</b> (판 X286) · 사장님 말씀 「디자인과 색상을 재배치하여 각자 역할이 다르다는것을」. ◾ ① 연락 파랑 · ② 만남 초록 · ③ 정리 주황 · ④ 기록 청록 · ⑤ 관리 보라 — 맨 위 띠 칸 · 칸 윗금 이름표 · 칸 왼쪽 세로 띠가 같은 색이라, 내려가며 지금 어느 걸음인지 색으로 읽힙니다. ◾ 같이 나가는 판 — X285(🧭 하루 다섯 걸음) · X280~X283(자리 정리 · 🕗 · 📝 · 💬) · X278 · X284(📇 한 장 띠) · X279·X275(다른 갈래).';
+var APP_BUILD_NOTE='🎨 <b>걸음마다 제 색</b> (판 X286) · 사장님 말씀 「디자인과 색상을 재배치하여 각자 역할이 다르다는것을」. ◾ ① 연락 파랑 · ② 만남 초록 · ③ 정리 주황 · ④ 기록 청록 · ⑤ 관리 보라 — 맨 위 띠 칸 · 칸 윗금 이름표 · 칸 왼쪽 세로 띠가 같은 색이라, 내려가며 지금 어느 걸음인지 색으로 읽힙니다. ◾ 같이 나가는 판 — X285(🧭 하루 다섯 걸음) · X280 · X287~X289(자리 정리 · 🕗 · 📝 · 💬) · X278 · X284(📇 한 장 띠) · X279·X275(다른 갈래).';
 
 
 
@@ -24184,8 +24285,7 @@ function actLoad(force){
   Promise.all([
     arAll(sb,'calls','created_by,call_at',['-call_at','created_by'],
       function(x){return x.eq('created_by',uid).gte('call_at',d0+'T00:00:00');},4000),
-    arAll(sb,'clients','advisor_id,created_at',['-created_at','advisor_id'],
-      function(x){return x.eq('advisor_id',uid).gte('created_at',d0+'T00:00:00');}),
+    osCliSince(sb,d0,uid),   /* ★ 판 X281 — 이미 받아 둔 고객 표에서 거릅니다 (5번) */
     q(sb.from('saved_reports').select('created_at').eq('advisor_id',uid)
        .neq('kind','ai_report').gte('created_at',d0+'T00:00:00')),
     q(sb.from('daily_checks').select('check_date,items').eq('member_id',uid)
@@ -24593,12 +24693,12 @@ function gbLoad(){
   GB.ckFrom=d30;          /* 이 날 <b>앞</b>은 안 읽었다 — 「모른다」 이지 0 이 아니다 (1번) */
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
   Promise.all([
-    q(sb.from('profiles').select('id,name,role,active,workspace').order('name')),
+    osProfAll(sb),   /* ★ 판 X281 — 고객 목록·체크판도 같은 표입니다. 묻는 곳 하나 (5번) */
     q(sb.from('teams').select('id,name,leader_id')),
     q(sb.from('team_members').select('team_id,member_id')),
     arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.gte('att_date',d30);}),
     arAll(sb,'calls','created_by,call_at',['-call_at','created_by'],function(x){return x.gte('call_at',d30+'T00:00:00');},4000),
-    arAll(sb,'clients','advisor_id,created_at',['-created_at','advisor_id'],function(x){return x.gte('created_at',d30+'T00:00:00');}),
+    osCliSince(sb,d30,null),   /* ★ 판 X281 — 이미 받아 둔 고객 표에서 거릅니다 (5번) */
     q(sb.from('saved_reports').select('advisor_id,created_at').neq('kind','ai_report').gte('created_at',d30+'T00:00:00')),
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d30)),
     q(sb.from('daily_checks').select('member_id,items').eq('scope','pass')),
@@ -27674,7 +27774,7 @@ function hmQdoneClear(){
 }
 function hmQfin(key){
   if(!key)return;
-  /* 📝 판 X282 — 끝낸 분의 빈칸을 <b>끝내기 전에</b> 집어 둡니다(끝내면 그 분이 줄에서 빠집니다) */
+  /* 📝 판 X288 — 끝낸 분의 빈칸을 <b>끝내기 전에</b> 집어 둡니다(끝내면 그 분이 줄에서 빠집니다) */
   var 빈=null; try{ 빈=hmBlankFor(key); }catch(eB){ 빈=null; }
   hmQdoneSet(key);
   /* ★ 남은 수는 <b>hmLeft() 한 곳</b>에 묻습니다 (5번). 여기서 또 세던 탓에
@@ -27686,7 +27786,7 @@ function hmQfin(key){
   hmPaint();
   if(빈)hmBlankShow(빈);
 }
-/* ══ 📝 <b>한 분씩 빈칸 하나</b> (판 X282) ═════════════════════════════════
+/* ══ 📝 <b>한 분씩 빈칸 하나</b> (판 X288) ═════════════════════════════════
    사장님 말씀 (2026-10-31) 「고객 관리를 위해 어떻게 하면 좋을까」 → 고르신 둘째.
    서버를 재어 보니 <b>고객 162분 중 생년을 아는 분이 33분</b>(2026-10-13)이라 나이에
    맞춘 접촉포인트가 거의 안 섰습니다. 한꺼번에 채우라 하지 않고, 「이분 끝」 을 누를
@@ -27708,7 +27808,7 @@ var HM_BLANK=[
 ];
 var HM_BLANK_KEY='apex_hm_blank_skip_v1';
 /* 「다음에」 는 <b>그 분께 오늘은 더 안 묻기</b>입니다 — 칸 하나만 넘기면 바로 다음 칸을
-   또 여쭈게 되어, 「하나만」 이 아니라 조르기가 됩니다(점검이 잡았습니다 · 판 X282). */
+   또 여쭈게 되어, 「하나만」 이 아니라 조르기가 됩니다(점검이 잡았습니다 · 판 X288). */
 function hmBlankSkipped(id){
   var t=(typeof arToday==='function')?arToday():'',o=null;
   try{ o=JSON.parse(localStorage.getItem(HM_BLANK_KEY)||'null'); }catch(e){ o=null; }
@@ -27802,7 +27902,7 @@ function hmBlankSave(){
     try{ hmPaint(); }catch(e){}
   },function(e){ toast(f.t+' 저장 실패 — '+((e&&e.message)||'알 수 없는 오류')); });
 }
-/* ══ 🕗 <b>약속이 지난 분 — 한 분씩 정리</b> (판 X281) ═══════════════════════
+/* ══ 🕗 <b>약속이 지난 분 — 한 분씩 정리</b> (판 X287) ═══════════════════════
    사장님 말씀 (2026-10-31) — 「고객 관리를 위해 어떻게 하면 좋을까」 → 서버에 적힌
    수를 올려 드리고(AP·PC·CS 188건 중 <b>약속 지난 142건</b> · 앞으로 잡힌 3건 ·
    2026-10-12 잰 값) 고르신 첫째가 이것입니다.
@@ -27935,7 +28035,7 @@ function hmLateEnd(id){
   if(!confirm(osMaskName(r.name)+' 님을 「거절」 단계로 옮길까요?\n약속이 지난 분 줄에서 빠집니다. 나중에 CRM 에서 단계를 다시 바꿀 수 있습니다.'))return;
   hdbTo(id,'거절');
 }
-/* ══ 💬 <b>소개 여쭐 차례</b> (판 X283) ═══════════════════════════════════════
+/* ══ 💬 <b>소개 여쭐 차례</b> (판 X289) ═══════════════════════════════════════
    사장님 말씀 (2026-10-31) 「고객 관리를 위해 어떻게 하면 좋을까」 → 고르신 셋째.
    ★ <b>누가 차례인가를 새로 정하지 않습니다</b> — 단계 표(apex-stage.js)가 이미
      「증권전달」 의 할 일을 「잘 받으셨는지 확인하고 <b>소개 한 분</b>을 여쭙는다」 로
@@ -30559,7 +30659,7 @@ function hmRo(w){
   j=(c-0xAC00)%28;                                /* 0 = 받침 없음 · 8 = ㄹ */
   return s+((j===0||j===8)?'로':'으로');
 }
-/* 「계약일가」 · 「계약일를」 이 찍혔습니다 (판 X282) — hmRo 와 같은 결로 <b>받침</b>을 봅니다.
+/* 「계약일가」 · 「계약일를」 이 찍혔습니다 (판 X288) — hmRo 와 같은 결로 <b>받침</b>을 봅니다.
    a 는 받침이 있을 때(이·을·은), b 는 없을 때(가·를·는). 한글이 아니면 b 입니다. */
 function hmJo(w,a,b){
   var s=''+(w||''),c=s.charCodeAt(s.length-1);
@@ -35074,18 +35174,18 @@ function hmWayGo(i){
 var HM_STACK = [
   { e:'🚗', t:'오늘 동선',          host:'hmRtHost' },
   { e:'📅', t:'오늘 약속 · 이번 주', host:'hmUpHost' },
-  /* 🕗 판 X281 — 약속이 지난 분을 <b>한 분씩</b> (사장님 말씀 「고객 관리를 위해」 → 고르심) */
+  /* 🕗 판 X287 — 약속이 지난 분을 <b>한 분씩</b> (사장님 말씀 「고객 관리를 위해」 → 고르심) */
   /* fold — <b>폰에서만</b> 한 줄로 접고 머리에 수를 적습니다(판 X223 곁칸 접이와 같은 꼴).
      홈 선(check-homeone · 사장님이 정하신 3.56화면)을 넘지 않으려고 재어 보고 고른 셋입니다.
      sum — 머리에 적을 수를 내는 자(그 칸을 세는 바로 그 자). 못 세면 빈 글 (1번). */
   { e:'🕗', t:'약속이 지난 분',      host:'hmLateHost',  fold:1, sum:'hmLateSum',  ask:'약속지난분' },
-  /* 💬 판 X283 — 증권을 전해 드린 분께 <b>소개 한 분</b>을 여쭐 차례 */
+  /* 💬 판 X289 — 증권을 전해 드린 분께 <b>소개 한 분</b>을 여쭐 차례 */
   { e:'💬', t:'소개 여쭐 차례',      host:'hmReferHost', fold:1, sum:'hmReferSum', ask:'소개여쭐분' },
   { e:'📊', t:'오늘 기록',          host:'hmActHost' },
   { e:'💌', t:'이번 달 고객 관리',   w:'이번 달 마디(보낼 말)', fn:'hmMadiSideHtml' }
 ];
 /* 🕗 약속이 지난 분 · 💬 소개 여쭐 차례를 짓는 자(hmLate* · hmRefer*)는 「✅ 이분 끝」 곁
-   📝 빈칸 하나 바로 밑에 있습니다 (판 X281 · X283) — 셋이 모두 「고객 관리」 한 묶음이고
+   📝 빈칸 하나 바로 밑에 있습니다 (판 X287 · X289) — 셋이 모두 「고객 관리」 한 묶음이고
    서버에 쓰는 자(hdbCall · hdbTo)와 가까이 둡니다. 여기 표(HM_STACK)는 자리만 압니다. */
 function hmStackHtml(){
   var h='',i,s,one,넓=((typeof navWide==='function')?navWide():true);
@@ -35704,7 +35804,7 @@ function hmSidePlace(){
     var uUp=document.getElementById('hmUpHost'), dn=document.getElementById('hmUpDown');
     if(dn&&dn.innerHTML)dn.innerHTML='';
     if(uUp&&typeof hmTossAppt==='function')
-      /* 📆 판 X281 — 폰에서는 이번 주 달력을 <b>한 줄로 접습니다</b>(📅 오늘 약속은 펴 둡니다 —
+      /* 📆 판 X287 — 폰에서는 이번 주 달력을 <b>한 줄로 접습니다</b>(📅 오늘 약속은 펴 둡니다 —
          시간이 정해진 일이라). 홈 선 안에 🕗·💬 을 들이려고 재어 고른 자리입니다.
          칠하는 자(mcalPaint)는 #hmWkHost 를 id 로 찾으므로 접이 안에서도 그대로입니다. */
       uUp.innerHTML='<div id="hmApptHost">'+hmTossAppt()+'</div>'+
@@ -52606,13 +52706,48 @@ function hxSave(){
     detail:HX.rows.map(function(r){return {g:r.grp,n:r.name,s:r.st,v:r.now};})
   },{onConflict:'member_id,check_date'}).then(function(){},function(){});
 }
-/* 하루 한 번, 로그인하고 처음 들어온 날 조용히 돌린다 */
+/* ── 조용히 도는 출발 점검 — <b>하루 한 번에서 이레 한 번으로</b> (판 X281) ──
+   사장님 말씀 (2026-11-01) — 「응 <b>서버켤때 부르는거 줄여줘</b>」.
+
+   재어 보니 <b>켤 때 부르는 19번 가운데 17번이 이것</b>이었습니다. 하는 일은
+   「표 열일곱이 서버에 있나 · 읽을 수 있나」 를 하나씩 물어보는 것입니다.
+   그런데 그 대답은 <b>사장님이 SQL 을 돌리실 때만</b> 바뀝니다 — 한 달에
+   한 번 있을까 말까 한 일인데 <b>기기마다 날마다</b> 물었습니다.
+   담당자 서른일곱 분이면 하루 600번이 넘습니다 (7번).
+
+   ★ <b>이레에 한 번</b>으로 둡니다. 안 돌아도 대답은 같습니다.
+   ★ <b>단추는 그대로입니다</b> (6번) — 설정 → 출발 점검에서 「다시 점검」 을
+     누르시면 그 자리에서 전부 다시 묻습니다. SQL 을 돌리신 뒤에는 그 화면을
+     보시게 되므로, 늦어지는 일이 없습니다.
+   ★ 화면이 <b>뒤에 가 있으면 안 돕니다</b> (7번) — 보고 계시지도 않은 창이
+     서버를 부르는 것이 사장님이 데였던 바로 그 자리입니다. 돌아오시면 그때
+     봅니다. 그때까지 날짜 도장을 <b>안 찍습니다</b> — 찍어 두면 이레 동안
+     한 번도 안 도는 수가 있습니다 (1번).
+   ⚠ 옛 열쇠(apex_hx_day)는 그대로 씁니다. 값이 <b>날짜</b>라 이레를 세는 데
+     그대로 쓸 수 있고, 이름을 바꾸면 모든 기기가 한 번씩 더 돕니다.      */
+var HX_EVERY=7;                                   /* 이레 */
+function hxAutoDue(){
+  var last='';
+  try{ last=localStorage.getItem('apex_hx_day')||''; }catch(e){ return false; }
+  if(!last)return true;
+  var a=Date.parse(last+'T00:00:00'), b=Date.parse(hxToday()+'T00:00:00');
+  if(isNaN(a)||isNaN(b))return true;              /* 못 읽으면 한 번 돕니다 (1번) */
+  return (b-a)>=HX_EVERY*86400000;
+}
 function hxAuto(){
-  try{
-    if(localStorage.getItem('apex_hx_day')===hxToday())return;
-    localStorage.setItem('apex_hx_day',hxToday());
-  }catch(e){return;}
-  setTimeout(function(){
+  if(!hxAutoDue())return;
+  var 돌기=function(){
+    /* 보고 계시지 않으면 미룹니다 — 날짜 도장은 <b>실제로 돌 때</b> 찍습니다 */
+    if(typeof document!=='undefined'&&document.hidden){
+      try{ document.addEventListener('visibilitychange',function once(){
+        if(document.hidden)return;
+        document.removeEventListener('visibilitychange',once);
+        setTimeout(돌기,1500);
+      }); }catch(e){}
+      return;
+    }
+    if(!hxAutoDue())return;                        /* 그 사이 다른 창이 돌았으면 */
+    try{ localStorage.setItem('apex_hx_day',hxToday()); }catch(e){ return; }
     var keep=HX.rows;
     HX.rows=hxCollect();
     hxServer(function(more){
@@ -52620,7 +52755,8 @@ function hxAuto(){
       hxSave();
       if(keep&&keep.length)HX.rows=keep;
     });
-  },3000);
+  };
+  setTimeout(돌기,3000);
 }
 
 function hxDot(st){
@@ -53302,7 +53438,7 @@ function ctLoad(){
   var t=ckDayK(),w=ckWeekK(),d3=ctDaysAgo(2),d7=ctDaysAgo(6);
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
   Promise.all([
-    q(sb.from('profiles').select('id,name,role,active,workspace').order('name')),
+    osProfAll(sb),   /* ★ 판 X281 — 고객 목록·체크판도 같은 표입니다. 묻는 곳 하나 (5번) */
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d7)),
     arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.gte('att_date',d7);}),
     q(sb.from('teams').select('id,name,leader_id')),
@@ -64343,11 +64479,32 @@ function osLateStart(){
   OS_LATE_T=setInterval(function(){try{osLateScan();}catch(e){}},OS_LATE_TICK);
 }
 try{setTimeout(function(){try{osLateStart();}catch(e){}},3000);}catch(e){}
+/* ★ 판 X281 — <b>쓰면 막이를 지웁니다</b> (5번·1번).
+   osQOnce 로 잠깐 들고 있는 대답이, 그 표에 뭔가 쓰고 나면 거짓이 됩니다 —
+   방금 넣으신 고객이 안 보이면 그것이 제일 나쁩니다. 지우는 자리를 부르는
+   쪽마다 두면 <b>한 곳은 반드시 빠뜨립니다</b>. 그래서 표에 쓰는 길목
+   하나(insert·update·upsert·delete)에서 그 표의 막이를 지웁니다.
+   ⚠ 읽기(select)는 안 건드립니다 — 여기서 막는 것이 아니라 지우기만 합니다. */
+function osQGuard(c){
+  if(!c||typeof c.from!=='function'||c.__qg)return c;
+  c.__qg=1;
+  var f=c.from.bind(c), W=['insert','update','upsert','delete'];
+  c.from=function(t){
+    var b=f(t),i;
+    for(i=0;i<W.length;i++)(function(k){
+      var o=b[k];
+      if(typeof o!=='function')return;
+      b[k]=function(){ try{ osQDrop(t+':'); }catch(e){} return o.apply(b,arguments); };
+    })(W[i]);
+    return b;
+  };
+  return c;
+}
 function osClient(){
   if(OS.sb)return OS.sb;
   if(typeof window==='undefined')return null;
   if(!window.supabase||!window.APEX_SB)return null;
-  try{OS.sb=window.supabase.createClient(window.APEX_SB.url,window.APEX_SB.key);}
+  try{OS.sb=osQGuard(window.supabase.createClient(window.APEX_SB.url,window.APEX_SB.key));}
   catch(e){OS.sb=null;}
   return OS.sb;
 }
@@ -70925,6 +71082,18 @@ function cmOf(id){
   if(m)return m;
   m=cmBlank();CM.meta[id]=m;return m;
 }
+/* ⚠⚠ <b>여기는 묶지 마십시오</b> — 판 X281 에서 해 보고 되돌렸습니다.
+   홈 한 번에 이 읽기가 <b>두 번</b> 나가길래 「먼저 들어온 하나만 보내고
+   나중 것은 그 대답을 같이 받게」 했습니다. 그러자 check-clients 가 셋을
+   잡았습니다 — 「저장하면 바로 화면에 뜬다」·「끝낸 일이 접촉 기록으로
+   남는다」·「같은 가족이면 상대가 바로가기로 뜬다」.
+   까닭은 <b>쓰고 나서 바로 읽는 자리</b>입니다(cmSave 가 넣고 cmLoadAll).
+   앞서 돌던 읽기에 같이 태우면 <b>방금 넣은 줄이 빠진 답</b>을 받습니다.
+   「새로 읽기(force)」 를 붙여도 두 읽기가 겹쳐 <b>늦게 온 옛 답이 덮었습니다</b>.
+   ★ 아끼는 것은 <b>한 번</b>이고, 잃는 것은 「방금 저장한 것이 안 보인다」
+     입니다. 이 앱에서 그것이 제일 나쁩니다 (1번). 그래서 안 묶습니다.
+   ★ 처음에는 <b>CM.busy</b> 를 가로채 썼는데, 그 깃발은 cmFfAsk(AI 에게
+     묻는 자리)의 것이었습니다 — 같은 이름을 두 뜻으로 쓰면 안 됩니다 (5번). */
 function cmLoadAll(then){
   var sb=osClient(),uid=cmUid();
   if(!sb||!OS.profile||!uid){if(then)then();return;}
@@ -75433,29 +75602,25 @@ function osLoadClients(){
   };
   /* 누가 맡은 고객인지 이름으로 보여주려면 담당자 표를 같이 읽어야 한다.
      못 읽어도 목록은 그대로 뜬다 — 담당자 이름만 안 보일 뿐이다. */
-  sb.from('profiles').select('id,name').then(function(r){
+  /* ★ 판 X281 — 담당자 표도 <b>osProfAll 한 곳</b>에서 (5번).
+     성장판(gbLoad)·체크판(ctLoad)이 같은 표를 같은 때 또 읽고 있었습니다.
+     못 읽어도 목록은 그대로 뜹니다 — 담당자 이름만 안 보일 뿐입니다. */
+  osProfAll(sb).then(function(r){
     CM.who={};
     var rows=(r&&r.data)||[],i;
     for(i=0;i<rows.length;i++)CM.who[rows[i].id]=rows[i].name||'';
     if(OSC.list&&OSC.list.length)osRenderList();
   },function(){});
-  arAll(sb,'clients','id,advisor_id,name_masked,consent_status,created_at,phone',
-        ['-created_at','id']).then(function(r){
+  /* ★ 판 X281 — 고객 표는 <b>osCliAll 한 곳</b>에서. 물러서는 차례(연락처 칸이
+     없는 옛 서버 등)도 그 안에 있습니다 — 여기서 또 적지 않습니다 (5번). */
+  osCliAll(sb).then(function(r){
     if(!r.error){done(r.data);return;}
-    /* 연락처 칸이 아직 없는 서버 — 그것 없이 다시 부른다 */
-    arAll(sb,'clients','id,advisor_id,name_masked,consent_status,created_at',
-          ['-created_at','id']).then(function(r2){
-      if(r2.error){
-        /* <b>못 받았다고 적고 다시 부를 자리를 세웁니다.</b> 여태는 까닭만
-           적고 끝이라, 사장님이 하실 수 있는 일이 새로고침밖에 없었습니다 (8번). */
-        OSC.busy=false;OSC.loaded=true;OSC.err=(r2.error.message||'네트워크 오류');
-        try{holdCss();}catch(e3){}
-        osSetList(holdSayOr('fail',{what:'고객 목록',why:OSC.err,again:'OSC.loaded=false;osLoadClients()'}));
-        try{if(typeof hmPaint==='function')hmPaint();}catch(e4){}
-        return;
-      }
-      done(r2.data);
-    },oops);
+    /* <b>못 받았다고 적고 다시 부를 자리를 세웁니다.</b> 여태는 까닭만
+       적고 끝이라, 사장님이 하실 수 있는 일이 새로고침밖에 없었습니다 (8번). */
+    OSC.busy=false;OSC.loaded=true;OSC.err=(r.error.message||'네트워크 오류');
+    try{holdCss();}catch(e3){}
+    osSetList(holdSayOr('fail',{what:'고객 목록',why:OSC.err,again:'osQDrop("clients");OSC.loaded=false;osLoadClients()'}));
+    try{if(typeof hmPaint==='function')hmPaint();}catch(e4){}
   },oops);
 }
 /* ══ 🗂 <b>고객 한 벌로</b> — 목업의 거르개 칩 (cliF*) ════════════════

@@ -1,4 +1,4 @@
-/* ══ 💬 check-hmrefer — 소개 여쭐 차례 (판 X283) ═══════════════════════════════
+/* ══ 💬 check-hmrefer — 소개 여쭐 차례 (판 X289) ═══════════════════════════════
    사장님 말씀 (2026-10-31) 「고객 관리를 위해 어떻게 하면 좋을까」 → 고르신 셋째.
 
    묻는 것
@@ -80,7 +80,7 @@ const SEED = () => {
     return a; }; return { from:mk, rpc:function(){ return Promise.resolve({data:null,error:null}); } }; };
   try{ osHideLoginGate(); }catch(e){}
   try{ document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x=>x.remove()); }catch(e){}
-  /* 폰에서는 이 칸이 <b>접힌 채</b> 섭니다(판 X281 · 홈 선 안에 들이려고). 속을 재려면 먼저
+  /* 폰에서는 이 칸이 <b>접힌 채</b> 섭니다(판 X287 · 홈 선 안에 들이려고). 속을 재려면 먼저
      폅니다 — 여닫는 자는 앱의 hmFoldSet 하나입니다. 접힌 머리는 아래 [9] 가 따로 봅니다. */
   try{ hmFoldSet('stk_hmReferHost',true); }catch(e){}
   HWHO.id=''; go('home');
@@ -204,7 +204,7 @@ const LOOK = () => {
   is(B2.작은.length === 0, '  누르는 자리가 다 44px 이상 — ' + (B2.작은.join(' · ') || '작은 것 없음'));
   is(errs.length === 0, '  오류 없이 선다' + (errs.length ? (' ← ' + errs[0]) : ''));
 
-  console.log('\n[9] 폰에서 <b>접힌 머리</b>에 수가 서나 (판 X281 · 접어도 수가 보여야 접기입니다)');
+  console.log('\n[9] 폰에서 <b>접힌 머리</b>에 수가 서나 (판 X287 · 접어도 수가 보여야 접기입니다)');
   const H9 = await p.evaluate(async () => {
     hmFoldSet('stk_hmReferHost', false); go('home'); await new Promise(r => setTimeout(r, 300));
     const f = document.getElementById('hmFold_stk_hmReferHost');
