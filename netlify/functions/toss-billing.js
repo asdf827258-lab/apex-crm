@@ -36,12 +36,12 @@ function json(statusCode, body, cors) {
   return { statusCode, headers: cors, body: JSON.stringify(body) };
 }
 
-function addPeriod(from, cycle) {
-  const d = new Date(from);
-  if (cycle === "year") d.setFullYear(d.getFullYear() + 1);
-  else d.setMonth(d.getMonth() + 1);
-  return d;
-}
+/* ★ 판 X291 — 다음 결제일은 <b>_period.js 한 곳</b>이 셉니다 (5번).
+   여기 있던 셈(setMonth)은 없는 날을 다음 달로 넘겨, 31일에 시작한 구독이
+   1/31 → 3/3 → 4/3 … 으로 <b>영영 밀렸습니다.</b> 사장님 말씀 「처음 날짜를
+   기억」 그대로, 이제 <b>처음 날(started_at)</b> 을 기준으로 셉니다 —
+   31일이 없는 달에만 말일로 내려갔다가 <b>다음 달에 31일로 돌아옵니다.</b> */
+const { addPeriod, anchorOf } = require("./_period.js");
 
 async function sb(path, opts, url, key) {
   const res = await fetch(url + "/rest/v1/" + path, {
@@ -132,7 +132,8 @@ async function chargeOne(sub, ctx) {
     return { ok: false, error: failReason };
   }
 
-  const next = addPeriod(now, cycle);
+  /* 처음 날은 <b>started_at</b> 에서 옵니다 — 칸을 새로 안 뒀습니다 (판 X291) */
+  const next = addPeriod(now, cycle, anchorOf(sub, now.getTime()));
   await sb("subscriptions?id=eq." + sub.id, {
     method: "PATCH",
     body: JSON.stringify({
