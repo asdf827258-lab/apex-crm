@@ -71,7 +71,8 @@ console.log('[8] 일정 한 벌 (판 X304) — EM 본부 · 팀 일정이 내 �
 const EC = fs.readFileSync(path.join(ROOT, 'app/apex-em-cal.js'), 'utf8');
 is(/<script src="apex-em-cal\.js\?v=[^"]+"><\/script>/.test(SRC), '본체가 apex-em-cal.js 를 부른다');
 is(/from\('em_events'\)/.test(EC) && /\.eq\('hidden',false\)/.test(EC), 'em_events 를 읽되 「이 달만 뺀」 일정(hidden)은 안 세운다');
-is(/if\(tab==='mycal'\) load\(false\)/.test(EC) && !/load\(false\);\s*\}\)\(\);\s*$/.test(EC), '★ 내 캘린더를 열 때만 받는다 — 켤 때 · 홈에서는 안 부른다(check-boot 기준선 · 7번)');
+is(/if\(opt&&opt\.apps\) load\(false\)/.test(EC) && !/window\.go=function/.test(EC), '★ 내 캘린더 카드(apps)를 그릴 때만 받는다 — 켤 때 · 홈에서는 안 부른다(check-boot 기준선 · 7번) · go 를 감싸지 않는다(check-bamake 가 go 의 글을 읽음)');
+is(/typeof q\.lte==='function'/.test(EC) && /addEventListener\('click',[\s\S]*?,true\)/.test(EC), '서버 손이 모자라도 안 터진다 · 🏢 줄 누름은 잡는 단계에서 막는다');
 is(/Date\.now\(\)-EMC\.at<TTL/.test(EC), '한 번 받으면 10분 동안 다시 안 받는다');
 is(/window\.mcalItems=function/.test(EC) && !/who:/.test(EC), '달력 줄 모으는 자리 하나(mcalItems)에 덧붙이고, 임자(who)를 안 달아 담당자를 골라도 남는다');
 is(!/\.(insert|upsert|update|delete)\(/.test(EC), '보기만 한다 — EM 일정의 원본은 EM 운영센터');

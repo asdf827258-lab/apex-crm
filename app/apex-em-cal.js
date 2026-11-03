@@ -36,9 +36,17 @@ function load(force){
   var a=new Date(),b=new Date();
   a.setDate(a.getDate()-45); b.setDate(b.getDate()+100);
   EMC.busy=true;
-  sb.from('em_events').select('id,scope,edate,edate_end,etime,title,hidden')
-    .gte('edate',ymd(a)).lte('edate',ymd(b)).eq('hidden',false).limit(400)
-    .then(function(r){
+  /* ⚠ 서버 손이 모자라도(점검의 가짜 서버 · 옛 라이브러리) 달력을 안 터뜨린다 — 못 받으면 원래대로 */
+  var q;
+  try{
+    q=sb.from('em_events').select('id,scope,edate,edate_end,etime,title,hidden');
+    if(q&&typeof q.gte==='function') q=q.gte('edate',ymd(a));
+    if(q&&typeof q.lte==='function') q=q.lte('edate',ymd(b));
+    if(q&&typeof q.eq==='function') q=q.eq('hidden',false);
+    if(q&&typeof q.limit==='function') q=q.limit(400);
+  }catch(x){ q=null; }
+  if(!q||typeof q.then!=='function'){ EMC.busy=false; EMC.at=Date.now(); return; }
+  q.then(function(r){
       EMC.busy=false; EMC.at=Date.now();
       if(r&&r.error){ EMC.err=r.error.message||'못 읽음'; return; }   /* 표가 없거나 권한 — 조용히 원래대로 */
       EMC.err=''; EMC.rows=(r&&r.data)||[];
@@ -47,9 +55,12 @@ function load(force){
 }
 
 /* 달력 종류 하나 더 — 색 · 그림 */
+/* ⚠ 받은 일정이 있을 때만 단다 — 범례(mcal-lg)가 MCAL_KIND 를 전부 늘어놓아, 일정이 없는데 달면
+   폰에서 달력이 한 줄 길어진다(check-phonefit 이 잡음 · 판 X304 CI) */
 function kind(){
-  if(typeof MCAL_KIND!=='undefined'&&!MCAL_KIND.em)
-    MCAL_KIND.em={e:'🏢',t:'본부 · 팀 일정',c:'#7C3AED'};
+  if(typeof MCAL_KIND==='undefined') return;
+  if(EMC.rows.length){ if(!MCAL_KIND.em) MCAL_KIND.em={e:'🏢',t:'본부 · 팀 일정',c:'#7C3AED'}; }
+  else if(MCAL_KIND.em) delete MCAL_KIND.em;
 }
 
 /* 달력 줄 모으는 자리(mcalItems) 하나에만 덧붙인다 — 홈 · 내 캘린더 · TFA 스케줄 · 고객 365일이 같이 얻는다(5번).
@@ -79,30 +90,31 @@ function wrapItems(){
   return true;
 }
 
-/* 「내 캘린더」 를 열 때만 받는다 — 받은 것은 다른 달력(홈 · TFA 스케줄)에도 같이 선다 */
-function wrapGo(){
-  if(typeof window.go!=='function'||window.go._em) return !!(window.go&&window.go._em);
-  var g=window.go;
-  window.go=function(tab){
-    /* 🏢 줄은 보기만 — 본체가 그 줄을 누르면 고객 목록으로 보내는데, EM 일정은 고객이 아니다 */
-    if(tab==='clients'){
-      try{ var ev=window.event,it=ev&&ev.target&&ev.target.closest?ev.target.closest('.mcal-it'):null,
-             e=it?it.querySelector('.e'):null;
-           if(e&&e.textContent==='🏢') return; }catch(x){}
-    }
-    var r=g.apply(this,arguments);
-    if(tab==='mycal') load(false);
-    return r;
+/* 「내 캘린더」 를 그릴 때만 받는다 — 받은 것은 다른 달력(홈 · TFA 스케줄)에도 같이 선다.
+   ⚠ go 를 감싸지 않는다 — 다른 자(check-bamake)가 go 의 글을 읽어 길을 확인한다(판 X304 CI 에서 걸림).
+   내 캘린더 카드만 apps 를 켜고 그린다(renderMyCal) — 홈 달력 카드는 안 켠다. */
+function wrapCard(){
+  if(typeof window.mcalCardHtml!=='function'||window.mcalCardHtml._em) return !!(window.mcalCardHtml&&window.mcalCardHtml._em);
+  var o=window.mcalCardHtml;
+  window.mcalCardHtml=function(opt){
+    try{ if(opt&&opt.apps) load(false); }catch(x){}
+    return o.apply(this,arguments);
   };
-  window.go._em=1;
+  window.mcalCardHtml._em=1;
   return true;
 }
+/* 🏢 줄은 보기만 — 본체는 그 줄을 누르면 고객 목록으로 보내는데, EM 일정은 고객이 아니다.
+   잡는 단계(capture)에서 먼저 받아 그 줄의 onclick 까지 안 가게 한다. */
+document.addEventListener('click',function(ev){
+  try{
+    var it=ev.target&&ev.target.closest?ev.target.closest('.mcal-it'):null, e=it?it.querySelector('.e'):null;
+    if(e&&e.textContent==='🏢'){ ev.stopPropagation(); ev.preventDefault(); }
+  }catch(x){}
+},true);
 
 var tries=0;
 (function wait(){
-  var a=wrapItems(), b=wrapGo();
+  var a=wrapItems(), b=wrapCard();
   if((!a||!b)&&(tries+=1)<120) setTimeout(wait,1000);
-  /* 처음부터 내 캘린더로 들어온 경우(#mycal) */
-  if(a&&b&&/#mycal\b/.test(location.hash||'')) setTimeout(function(){ load(false); },2500);
 })();
 })();
