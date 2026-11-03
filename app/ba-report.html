@@ -373,6 +373,19 @@ body,.sl{font-family:'Pretendard Variable',Pretendard,-apple-system,'Malgun Goth
 .carmini b{font-size:21px;font-weight:900;color:#FF8A80;letter-spacing:-.03em;line-height:1.15}.carmini small{font-size:12px;font-weight:700;color:#C9D3E0;line-height:1.3}
 .toc .carmini{width:104px;height:65px;aspect-ratio:auto;border-radius:5px;padding:4px 7px}.toc .carmini b{font-size:13px}.toc .carmini small{display:none}
 .src2 .nwlist{margin:0 0 8px}.src2 .nwlist ol{columns:2;column-gap:28px}.src2 .nwlist li{font-size:12px;margin-bottom:2px}.src2 .nwlist li span{font-size:10px}.src2 .note{font-size:12.5px;margin:4px 0}.src2 .phl li{font-size:11.5px;margin-bottom:1px}.src2 .phl b{font-size:11.5px}
+/* ── v15 정리 · 시술 두 장 · 출처 ── */
+.wr-c{padding:10px 14px}.wr-c svg,.wr-c img,.wr-c .carmini{margin-bottom:8px}
+.wr2{position:absolute;left:36px;right:36px;top:470px;bottom:40px;display:grid;grid-template-columns:1.35fr 1fr;gap:14px}
+.gaps,.next{border-radius:14px;padding:12px 16px}
+.gaps{background:#FFF4F0;border:1.5px solid #E8A598}.next{background:#0F1A2C;color:#fff}
+.gaps h4,.next h4{margin:0 0 8px;font-size:16px;font-weight:900}.gaps h4{color:#B42318}.gaps h4 small{font-size:12.5px;color:#5F6B78;font-weight:700;margin-left:6px}
+.gch{display:flex;flex-wrap:wrap;gap:6px}.gch span{background:#fff;border:1px solid #F0C4BA;border-radius:8px;padding:4px 9px;display:flex;flex-direction:column}
+.gch b{font-size:13.5px;color:#191F28}.gch i{font-style:normal;font-size:11.5px;color:#5F6B78;font-weight:700}
+.next h4{color:#E2C27D}.next ol{margin:0;padding-left:20px}.next li{font-size:14.5px;line-height:1.5;margin:3px 0;color:#E9EEF6;font-weight:600}.next b{color:#fff}
+.pxg.two{grid-template-columns:1fr 1fr;grid-template-rows:1fr}.pxg.two .pxc{flex-direction:column;align-items:stretch}.pxg.two .pxf{width:100%}.pxg.two .pxf svg{width:100%;height:auto;aspect-ratio:16/10}.pxg.two .pxc p{font-size:18px}
+.src .srcs li{margin-bottom:9px}.src .srcs li b{font-size:14px;line-height:1.45}.src .srcs li span{font-size:11.5px}
+.pxg.two .pxc{justify-content:center;gap:18px}.pxg.two .pxc p{font-size:19px;line-height:1.6}.gch{gap:8px}.gch span{padding:6px 11px}.gch b{font-size:15px}.gch i{font-size:12px}.next li{font-size:15.5px;margin:7px 0}
+.gaps{overflow:hidden}.gch{gap:5px}.gch span{flex-direction:row;align-items:baseline;gap:5px;padding:4px 9px}.gch b{font-size:14px}.gch i{font-size:11.5px}.gch .more{background:#B42318;border-color:#B42318}.gch .more b,.gch .more i{color:#fff}
 /* 인쇄 — 한 장에 한 쪽 */
 @page{size:1280px 720px;margin:0}
 @media print{html,body{overflow:visible;height:auto;background:#fff}#bar{display:none}#wrap{position:static;transform:none;width:1280px;height:auto}
@@ -2164,6 +2177,7 @@ function srcSup(k){return k?'<sup class="sn">'+srcNo(k)+'</sup>':'';}
 function pxSvg(s,cls){return '<svg class="'+(cls||'pxs')+'" viewBox="0 0 640 400" xmlns="http://www.w3.org/2000/svg"><defs><marker id="pxar" markerWidth="10" markerHeight="10" refX="6" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8B95A1"/></marker>'+VDEFS+'</defs>'+s+'</svg>';}
 function jTot(j){const o={cost:0,b:0,a:0};J[j].st.forEach(function(s){const c=stageCalc(s);o.cost+=c.cost;o.b+=c.b;o.a+=c.a;});return o;}
 function head(j,sub,right){const J0=J[j];return '<header class="hd"><span class="chip" style="background:'+JC[j]+'">'+J0.ic+' '+J0.t+'</span><h2>'+sub+'</h2>'+(right?'<div class="hr">'+right+'</div>':'')+'</header>';}
+var GMAX=18; /* 정리 장 「아직 비는 자리」 칩 — 넘으면 「+N개 더」 (v15) */
 function gapBox(s){const miss=s.pay.filter(function(p){return p.m!=='none'&&payOf(p,'a')===undefined;}).map(function(p){return NM[p.k]||p.k;});
  if(miss.length)return '<div class="tot gapbox"><span>조정 후에도 비는 자리</span><b>'+miss.join(' · ')+'</b><small>이 단계에서 나올 돈이 없습니다 — 보완을 검토할 담보</small></div>';
  const how=(s.pay[0]||{}).how||'';return '<div class="tot gapbox info"><span>이 단계</span><b>따로 나오는 돈은 없습니다</b><small>'+how+'</small></div>';}
@@ -2197,9 +2211,9 @@ ORDER.forEach(function(j){const J0=J[j],T=jTot(j);
  /* 시술 이해하기 */
  const P=PX[MAINPX[j]],ps=P.steps.filter(function(x){return x.s;}).slice(0,4);
  /* 그림이 넷보다 적으면 같은 여정의 다른 도해 첫 장으로 채운다(재가급여 · 2장뿐이던 자리) */
- [1,2,3].forEach(function(n){const Q=PX[j+'_'+n];if(ps.length<4&&Q&&Q!==P&&Q.steps[0]&&Q.steps[0].s)ps.push(Q.steps[0]);});
+ /* 그림이 둘뿐이면 억지로 채우지 않고 크게 한 줄로 (v15 — 시간표 칸은 글자가 너무 작았다) */
  add('px',head(j,'🎬 '+P.t,'<span class="dur">쉽게 그린 그림</span>')+
-  '<div class="pxg">'+ps.map(function(x,n){return '<div class="pxc"><div class="pxf">'+pxSvg(x.s)+'<i>'+(n+1)+'</i></div><p>'+NMX(x.c)+'</p></div>';}).join('')+'</div>'+foot(''),{j:j});
+  '<div class="pxg'+(ps.length<=2?' two':'')+'">'+ps.map(function(x,n){return '<div class="pxc"><div class="pxf">'+pxSvg(x.s)+'<i>'+(n+1)+'</i></div><p>'+NMX(x.c)+'</p></div>';}).join('')+'</div>'+foot(''),{j:j});
  /* 왜 넓어야 */
  FSK=1;const W=WHY[j].steps();FSK=1.3;const wp=WHYPICK[j].map(function(n){return W[n];}).filter(Boolean);
  add('why',head(j,'🎯 '+WHY[j].t)+
@@ -2220,9 +2234,9 @@ add('wrap','<header class="hd"><h2>정리 — 보장은 「한 번」 이 아니
  '<div class="wr">'+ORDER.map(function(j){const T=jTot(j);return '<div class="wr-c" style="--c:'+JC[j]+'">'+phImg(j,1,'mini')+'<h3>'+J[j].ic+' '+J[j].t+'</h3>'+
   '<div class="wr-n"><span>지금</span><b>'+man(T.b)+'원</b></div><div class="wr-n up"><span>조정 후</span><b>'+man(T.a)+'원</b></div>'+
   '<p>'+J[j].st.map(function(s){return s.k;}).join(' → ')+'</p></div>';}).join('')+'</div>'+
- '<ul class="keys"><li><b>진단비</b>는 문을 여는 돈 — 이름이 넓을수록(뇌혈관 · 허혈성) 열리는 경우가 많습니다</li>'+
- '<li><b>치료비</b>는 해마다 · 회차마다 — 비급여 수술 · 항암은 산정특례 5%가 붙지 않습니다</li>'+
- '<li><b>재활 · 돌봄</b>은 끝나는 날이 없습니다 — 간병 · 매달 나오는 돈이 받침이 됩니다</li></ul>'+foot(''),{sec:'wrap'});
+ (function(){const seen={},G=[];ORDER.forEach(function(j){J[j].st.forEach(function(st){st.pay.forEach(function(p){if(p.m==='none'||payOf(p,'a')!==undefined)return;const n=NM[p.k]||p.k;if(seen[n]){if(seen[n].indexOf(J[j].t)<0)seen[n].push(J[j].t);return;}seen[n]=[J[j].t];G.push(n);});});});
+  return '<div class="wr2"><div class="gaps"><h4>🔎 조정 후에도 아직 비는 자리 <small>'+G.length+'개 — 이 사건이 오면 0원</small></h4><div class="gch">'+G.slice(0,G.length>GMAX?GMAX-1:GMAX).map(function(n){return '<span><b>'+n+'</b><i>'+seen[n].join(' · ')+'</i></span>';}).join('')+(G.length>GMAX?'<span class="more"><b>+ '+(G.length-GMAX+1)+'개 더</b><i>「한눈에 모든 담보」 장</i></span>':'')+'</div></div>'+
+   '<div class="next"><h4>✅ 오늘 정할 것</h4><ol><li><b>진단비 이름 넓히기</b> — 뇌혈관 · 허혈성까지 (문이 열리는 경우가 많아짐)</li><li><b>치료비는 해마다</b> — 비급여 수술 · 항암 · 방사선 칸 채우기</li><li><b>매달 나오는 돈</b> — 돌봄은 끝나는 날이 없음</li></ol></div></div>';})()+foot(''),{sec:'wrap'});
 
 /* 출처 */
 add('src','<header class="hd"><h2>출처 ① — 통계</h2></header><div class="srcs"><ol>'+SRC_ORDER.map(function(k){const S=SRC[k];return '<li><b>'+S.t+'</b><span>'+S.d+' · '+S.u+'</span></li>';}).join('')+'</ol>'+
