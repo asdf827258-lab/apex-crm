@@ -12,6 +12,11 @@
      [6] 내 고객이 아니면 바꾸는 단추가 안 서고 까닭을 적나
      [7] 못 읽었으면 수를 안 적나 · 없으면 「없습니다」 로 자리를 지키나 (1번)
      [8] 누르는 자리 44px · 실명이 안 새나
+     [10] ★ 고른 뒤 홈이 <b>다시 그려져도</b> 저장되나 (판 X306 · 「눌러 봤는데 다시 잡기가 안된다」)
+          — 홈은 열고 1.2초·3.2초 뒤, 자료가 늦게 올 때마다 칸을 통째로 다시 세웁니다.
+          [3] 은 값을 넣자마자 눌러 그 사이를 못 봤습니다. 여기서는 <b>사람처럼</b> 칸에
+          적고(input 이벤트), 홈을 다시 그린 뒤 누릅니다. 날짜 창이 떠 있는 사이 칸이
+          새로 선 때(옛 칸에 값이 들어옴)도 봅니다.
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -234,6 +239,39 @@ const LOOK = () => {
   });
   is(H9.접힘 && /^\d+분$/.test(H9.머리) && H9.ask === '약속지난분' && H9.머리 === H9.속,
      '  ★ 접힌 머리에 <b>「' + H9.머리 + '」</b> — 속과 같은 수 · 같은 이름표 · 키 ' + H9.키 + 'px');
+
+  console.log('\n[10] ★ 고른 뒤 홈이 <b>다시 그려져도</b> 저장되나 (판 X306)');
+  await p.evaluate(async () => {
+    localStorage.removeItem('apex_hm_late_skip_v1');
+    hmFoldSet('stk_hmLateHost', true); go('home'); await new Promise(r => setTimeout(r, 300));
+    SRV.length = 0; TOASTS.length = 0;
+  });
+  await p.locator('#hmLateHost button', { hasText: '다시 잡기' }).first().click();
+  const d10 = new Date(Date.now() + 4 * 864e5), pad10 = n => String(n).padStart(2, '0');
+  const v10 = d10.getFullYear() + '-' + pad10(d10.getMonth() + 1) + '-' + pad10(d10.getDate()) + 'T15:00';
+  await p.locator('#hmLateAt').fill(v10);
+  const R10 = await p.evaluate(async (v) => {
+    const 첫 = document.getElementById('hmLateAt');
+    hmPaint(); await new Promise(r => setTimeout(r, 200));           /* 앱이 스스로 다시 그리는 그 자리 */
+    const 뒤칸 = document.getElementById('hmLateAt');
+    const out = { 새칸: 뒤칸 !== 첫, 남은값: 뒤칸 ? 뒤칸.value : '(칸 없음)' };
+    /* 날짜 창이 떠 있는 사이 칸이 새로 섰다 — 값은 <b>옛 칸</b>으로 들어옵니다 */
+    const 옛 = document.getElementById('hmLateAt');
+    hmPaint(); await new Promise(r => setTimeout(r, 200));
+    옛.value = v; 옛.dispatchEvent(new Event('change', { bubbles: true }));
+    const 지금 = document.getElementById('hmLateAt');
+    out.옛칸값 = 지금 ? 지금.value : '(칸 없음)';
+    return out;
+  }, v10);
+  await p.locator('#hmLateHost button', { hasText: '저장' }).first().click();
+  await p.waitForTimeout(500);
+  const S10 = await p.evaluate(() => ({ srv: SRV.slice(), toast: TOASTS.slice(-1)[0] || '' }));
+  is(R10.새칸 && R10.남은값 === v10, '  ★ 칸이 새로 서도 고르신 값이 <b>남는다</b> — 「' + R10.남은값 + '」');
+  is(R10.옛칸값 === v10, '  ★ 날짜 창이 떠 있는 사이 칸이 새로 서도 <b>지금 칸에 보인다</b> — 「' + R10.옛칸값 + '」');
+  const ins10 = S10.srv.filter(x => x.t === 'calls' && x.op === 'insert');
+  is(ins10.length === 1 && ins10[0].row.db_id === 'd2' &&
+     (ins10[0].row.appointment_at || '').slice(0, 10) === new Date(v10).toISOString().slice(0, 10),
+     '  ★★ 다시 그린 뒤 눌러도 <b>저장된다</b> — 서버 ' + ins10.length + '번 · 「' + S10.toast + '」');
 
   await b.close(); srv.close();
   console.log('\n' + (bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 🕗 약속이 지난 분 — 한 분씩 정리됩니다'));

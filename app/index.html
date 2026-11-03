@@ -3061,6 +3061,12 @@ body.educal-mode #educalScreen{display:block;}
      index.html 을 여러 군데 고치지 않으려고 전부 저 파일 안에서 처리한다.
      이 줄을 지우면 앱은 원래대로 돌아간다. -->
 <script src="apex-bohum-bridge.js?v=20260827j"></script>
+<!-- 이 기기에만 있던 기록(교육 진도 · 4년 유지관리 · 하루 한 장 · 교육 캘린더 …)을 서버로 — 폰과 PC 가 같게 (2026-11-03) -->
+<script src="apex-kv-sync.js?v=20261103a"></script>
+<!-- 업적 한 벌 — 월간보고 실적 두 칸은 ✍️ 내 업적 입력(EM 업적)에서 서버가 셈 · 손으로 안 침 (판 X303 · 2026-11-03) -->
+<script src="apex-perf-link.js?v=20261103a"></script>
+<!-- 일정 한 벌 — EM 운영센터 본부 · 팀 일정(em_events)을 내 캘린더에 🏢 로 · 내 캘린더를 열 때만 받음 (판 X304 · 2026-11-03) -->
+<script src="apex-em-cal.js?v=20261103a"></script>
 <!-- 단계마다 무엇을 할까 — <b>여기 하나</b>에만 적는다(apex-stage.js).
      DB 통합 CRM(db-crm.html)도 <b>같은 파일</b>을 싣는다. 여태 이 지식이 두 곳에
      흩어져 있어, CRM 에서 단계를 눌러도 아무 말이 없었다 (5번).
@@ -15216,6 +15222,11 @@ var TABS=[
  {group:'하루 시작',items:[
    {id:'home',icon:'🏠',title:'홈',cnt:'',ak:'홈'},
    {id:'airep',icon:'🧭',title:'TFA 업무관리',cnt:'',ak:'홈'},
+   /* ✍️ <b>내 업적 입력</b> — 2026-11-03 사장님 말씀 「crm 메뉴에도 넣어주고」.
+      몸은 EM 전용 운영센터의 「내 업적 · 받을 돈」(팀원 모드) — 넣은 업적이 담당 EM 업적 입력에
+      바로 들어가고(EM 확인 후 확정), 다음 달 받을 돈이 EM 화면과 같은 계산으로 보입니다.
+      설계사 누구나 봅니다(ak 홈 = 홈과 같은 문). 주소는 LINKS 의 EM_SITE 한 곳 (check-emcenter 1번). */
+   {id:'myperf',icon:'✍️',title:'내 업적 입력',cnt:'',ak:'홈'},
    {id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:'',ak:'오늘의 AI 비서'},
    {id:'voiceasst',icon:'🎙️',title:'음성 비서',cnt:'',ak:'오늘의 AI 비서'},
    {id:'brain',icon:'🧠',title:'윤시현의 두뇌',cnt:'',ak:'윤시현의 두뇌'}
@@ -15469,6 +15480,7 @@ var TABS=[
 
 ];
 var TAB_META={
+ myperf:{tag:'MY',title:'내 업적 입력',desc:'신계약을 한 번 넣으면 EM · 월간보고 · 리더 화면에 같은 숫자로 섭니다.'},
  emcenter:{tag:'교육시스템EM',title:'EM 전용 운영센터',desc:'아래 단추를 누르면 새 탭으로 열립니다. 주소가 달라 거기서 한 번 더 로그인하십시오.'},
  educal:{tag:'교육시스템EM',title:'APEX 교육 캘린더',desc:'월간 캘린더 · 신입 교육 주간 · 팀별 교육 · 교육매니저 운영표 · 본부장 루틴 · 공지 만들기.'},   /* ⚠ 이 글은 esc() 를 지납니다 — <b> 를 넣으면 글자 그대로 찍힙니다 */
  clients:{tag:'OS',title:'고객 보장분석 프로젝트',desc:'고객별 보장분석 상담을 한 곳에서. 문서 업로드·추출·검수·전후비교·리포트까지 이어집니다.'},
@@ -15561,7 +15573,7 @@ var NAV_WHEN_G=[
 /* 화면 <b>하나하나</b>가 어느 때 것인가 — <b>전부</b> (하나라도 빠지면 check-nav 가 웁니다) */
 var NAV_WHEN={
  /* 🌅 오늘 — 매일 여는 것 */
- home:'today', airep:'today', crm:'today', clients:'today', mycal:'today', rjnews:'today',
+ home:'today', airep:'today', myperf:'today', crm:'today', clients:'today', mycal:'today', rjnews:'today',
  assistant:'today', voiceasst:'today', ckboard:'today',
  /* 🤝 고객 만나기 — 준비하고, 앞에서 쓰는 것 */
  fact_find:'meet', bojang:'meet', frmake:'meet', compare:'meet',
@@ -20586,7 +20598,7 @@ function osFullMode(on){
    ★ <b>표에 적는 것</b>과 <b>정말 그 색이 되는 것</b>은 다릅니다 (판 X02 에서 데인 자리).
    ⚠ 이 표 <b>안</b>에는 주석을 적지 마십시오 — 자가 쉼표로 끊어 읽어서 주석을
      화면 이름으로 셉니다(제가 그렇게 해서 한 번 울렸습니다 · 8번).          */
-var T_SKIN={emcenter:1,home:1,dashboard:1,clients:1,keep4:1,rjnews:1,news_live:1,mycal:1,me:1,tools:1,
+var T_SKIN={myperf:1,emcenter:1,home:1,dashboard:1,clients:1,keep4:1,rjnews:1,news_live:1,mycal:1,me:1,tools:1,
             voiceasst:1,growboard:1,assistant:1,airep:1,brain:1,notice:1,
             academy_notion:1,apexmaster:1,bojang:1,branch_coach:1,calc:1,calendar:1,
             compare:1,cs_assist:1,cs_gso:1,cs_needs:1,ext_naver:1,ext_reply:1,ext_thread:1,
@@ -21484,8 +21496,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-03 20:15';
-var APP_BUILD_NOTE='💸 <b>보험의 기준 — 요즘 암 치료비 · 생활비 담보</b>(판 X309) — 담보 사전에 <b>통합암</b>(부위마다 · 전이) · <b>세기조절 방사선</b> · <b>암 입원·통원 일당</b>과 새 갈래 <b>💸 생활비</b>(암 · 뇌·심장 · 고도 후유장해 — 진단 뒤 다달이)를 보탰고, 요즘 많이 보이는 담보 15가지에 「🆕 요즘」 표지와 고르기를 달았습니다(모든 상품에 있다는 뜻은 아니라고 밝힘). 진단·치료 지도에는 <b>🧭 병을 겪는 길</b> — 암(찾기 → 수술 → 약물 세 갈래 → 방사선 → 재발·전이 → 회복·생활) · 뇌졸중 · 심근경색 · 치매를 단계마다 치료(급여·비급여) · 나가는 돈(병원비·생활비) · 받치는 담보로 그렸습니다. 금액은 적지 않습니다. 설계 가이드의 암 · 치료비 걸음도 통합암 · 생활비 · 요즘 치료로 넓혔습니다. ◾ 함께 실린 판 — X308 <b>🩺 진단·치료 지도</b> · X307 <b>🧭 설계 가이드</b> · X306 <b>📚 담보 사전</b> · X310 <b>📄 한 장 설계서</b>(번호가 다른 세션과 겹쳐 밀었습니다).';
+var APP_BUILD='2026-11-03 21:50';
+var APP_BUILD_NOTE='💸 <b>보험의 기준 — 요즘 암 치료비 · 생활비 담보</b>(판 X309) — 담보 사전에 <b>통합암</b>(부위마다 · 전이) · <b>세기조절 방사선</b> · <b>암 입원·통원 일당</b>과 새 갈래 <b>💸 생활비</b>(암 · 뇌·심장 · 고도 후유장해 — 진단 뒤 다달이)를 보탰고, 요즘 많이 보이는 담보 15가지에 「🆕 요즘」 표지와 고르기를 달았습니다(모든 상품에 있다는 뜻은 아니라고 밝힘). 진단·치료 지도에는 <b>🧭 병을 겪는 길</b> — 암(찾기 → 수술 → 약물 세 갈래 → 방사선 → 재발·전이 → 회복·생활) · 뇌졸중 · 심근경색 · 치매를 단계마다 치료(급여·비급여) · 나가는 돈(병원비·생활비) · 받치는 담보로 그렸습니다. 금액은 적지 않습니다. 설계 가이드의 암 · 치료비 걸음도 통합암 · 생활비 · 요즘 치료로 넓혔습니다. ◾ 함께 실린 판 — X308 <b>🩺 진단·치료 지도</b> · X307 <b>🧭 설계 가이드</b> · X311 <b>📚 담보 사전</b> · X310 <b>📄 한 장 설계서</b>(번호가 다른 세션과 겹쳐 밀었습니다).';
 
 
 
@@ -28035,6 +28047,13 @@ function hmBlankSave(){
    ★ 없는 날도 <b>자리를 남깁니다</b>(사장님 규칙 2026-09-26 「있다 없다 하는 칸을 없앱니다」). */
 var HM_LATE_KEY='apex_hm_late_skip_v1';
 var HM_LATE_OPEN='';                    /* 📅 날짜 칸을 편 분 (한 번에 한 분) */
+/* 📅 <b>고르신 일시는 칸이 아니라 여기에 듭니다</b> (판 X306 · 사장님 말씀 2026-11-03
+   「눌러 봤는데 다시 잡기가 안된다」). 홈은 열고 1.2초·3.2초 뒤, 그리고 자료가 늦게
+   올 때마다 「지금 할 것」 을 <b>통째로 다시 그립니다</b>(hmSidePlace). 그때 날짜 칸도
+   새로 서서 고르신 값이 빈칸이 되었고, 저장을 누르면 「새 약속 일시를 골라 주세요」 만
+   떴습니다 — 서버에는 한 줄도 안 갔습니다. 폰은 날짜 창이 몇 초 걸려 거의 매번 걸렸습니다.
+   ★ 그래서 고르는 그 순간 여기 적고, 다시 그릴 때 <b>이 값으로 칸을 채웁니다</b>. */
+var HM_LATE_V='';
 /* ⏭ <b>「오늘은 넘기기」 는 한 자가 답합니다</b> — 🕗 와 💬 가 같이 씁니다 (5번).
    이 기기에서 <b>오늘만</b>입니다. 날이 바뀌면 다시 앞으로 — 서버에 아무것도 안 씁니다. */
 function hmDaySkips(key){
@@ -28091,7 +28110,8 @@ function hmLateHtml(){
     h+='<div class="hm-late-s">'+(((typeof hdbWhyNot==='function')&&hdbWhyNot(r))||
        '내 고객이 아니라 날짜·단계는 담당 설계사가 바꿉니다.')+'</div>';
   if(can&&HM_LATE_OPEN===r.id)
-    h+='<div class="hm-late-f"><input type="datetime-local" id="hmLateAt" aria-label="새 약속 일시">'+
+    h+='<div class="hm-late-f"><input type="datetime-local" id="hmLateAt" aria-label="새 약속 일시"'+
+       ' value="'+osEsc(HM_LATE_V)+'" oninput="hmLateKeep(this.value)" onchange="hmLateKeep(this.value)">'+
        '<button type="button" class="t-btn sm" onclick="hmLateAgain(\''+osEsc(r.id)+'\')">저장</button>'+
        '<button type="button" class="t-btn g sm" onclick="hmLateOpen(\'\')">닫기</button></div>';
   if(L.length>1)h+='<div class="hm-late-s">끝내시면 다음 분(남은 '+(L.length-1)+'분)이 이 자리에 섭니다.</div>';
@@ -28117,12 +28137,18 @@ function hmStackSumPaint(host){
   try{ v=(typeof window[s.sum]==='function')?window[s.sum]():''; }catch(e){ v=''; }
   sp.textContent=v;
 }
-function hmLateOpen(id){ HM_LATE_OPEN=id||''; hmLatePaint();
+function hmLateOpen(id){ HM_LATE_OPEN=id||''; HM_LATE_V=''; hmLatePaint();
   try{ var f=document.getElementById('hmLateAt'); if(f)f.focus(); }catch(e){} }
+/* 고르신 값을 적어 둡니다. 날짜 창이 떠 있는 사이 칸이 새로 섰으면(옛 칸에 값이 들어옴)
+   <b>지금 서 있는 칸</b>에도 넣어 눈에 보이게 합니다. */
+function hmLateKeep(v){
+  HM_LATE_V=''+(v||'');
+  try{ var f=document.getElementById('hmLateAt'); if(f&&f.value!==HM_LATE_V)f.value=HM_LATE_V; }catch(e){}
+}
 /* 📅 <b>다시 잡기</b> — CRM 통화 저장과 같은 꼴로 calls 에 한 줄 (위 쪽지) */
 function hmLateAgain(id){
   var r=(typeof hdbRow==='function')?hdbRow(id):null,sb=(typeof osClient==='function')?osClient():null,
-      f=document.getElementById('hmLateAt'),v=f?f.value:'',at,me,row;
+      f=document.getElementById('hmLateAt'),v=(f&&f.value)||HM_LATE_V,at,me,row;
   if(!r)return;
   if(!hdbCan(r)){ toast('내 고객이 아니면 약속을 바꿀 수 없습니다.'); return; }
   if(!v){ toast('새 약속 일시를 골라 주세요.'); return; }
@@ -28140,7 +28166,7 @@ function hmLateAgain(id){
     if(w.ok!==true){ hdbSay(w,'약속 다시 잡기'); return; }
     hdbLocal(id,{appt:at.toISOString(),n:(r.n||0)+1,res:'상담',
                  last:(new Date()).toISOString().slice(0,10),days:0});
-    HM_LATE_OPEN='';
+    HM_LATE_OPEN=''; HM_LATE_V='';
     toast(osMaskName(r.name)+' 님 · 약속을 '+(at.getMonth()+1)+'월 '+at.getDate()+'일로 다시 잡았습니다');
     hdbPaint();
   },function(e){ hdbErr(e,'약속 다시 잡기'); });
@@ -45546,6 +45572,8 @@ function manFlow(){
     '<b>아침 (15분)</b> · 🌅 하루 시작 · '+manChip('home','🏠','홈')+'에서 오늘 할 일과 팔로업을 봅니다. '+manChip('airep','🧭','TFA 업무관리')+'에서 오늘 터치할 사람이 뜹니다. 리더는 '+manChip('report','📊','대표 브리핑')+'으로 팀 상태를 확인합니다.',
     '<b>상담 전 (20분)</b> · 🗂 내 고객 → 🛡 증권 분석 · '+manChip('clients','🗂️','고객 365일')+'에서 지난 기록을 확인하고, '+manChip('bojang','📑','AI 보장분석')+'에 증권 PDF 를 넣어 <b>19~21장짜리 리포트</b>를 뽑습니다. 더 파고들 때 '+manChip('interpret','🧠','보험 해석')+' · '+manChip('treatpay','💉','치료비 지급지도')+' · '+manChip('wallets','🗺️','8통장 지도')+'.',
     '<b>상담 중</b> · 💬 상담 도구 · '+manChip('wallets','🗺️','8통장 진단')+'으로 현황을 짚고, '+manChip('cs_needs','⚡','니즈 시뮬레이터')+' · '+manChip('cs_assist','💬','AI 어시스턴트')+'로 니즈를 환기한 뒤 '+manChip('finance','📊','재무설계 계산기')+'의 <b>팩트파인딩 → 재무설계 PPT</b>를 한 장씩 넘기며 설명하고, '+manChip('frmake','🔀','보장분석 전&후 만들기')+'로 전후를 보여줍니다.',
+    /* ✍️ 판 X300 — 계약하면 한 곳에만 넣습니다. 짧게 — 80자 넘는 문단을 늘리지 않습니다(check-read). */
+    '<b>계약하면</b> · '+manChip('myperf','✍️','내 업적 입력')+'에 한 번 넣습니다.',
     /* 💬 판 X275 — 상황마다 보낼 문자를 한자리에서 (보낼 말 모음). */
     '<b>상담 후</b> · 📁 계약·청구 · '+manChip('katalk','💬','제안서 카톡설명')+'으로 요약을 발송(준법 확인)하고, '+manChip('saybook','💬','보낼 말 모음')+'에서 그 상황에 맞는 문자를 골라 보냅니다. '+manChip('contracts','📜','계약관리 판단')+' · '+manChip('endorse','✍️','배서 안내서')+'로 후속 처리합니다.',
     '<b>청구 발생 시</b> · '+manChip('claims','🧾','청구·사후관리')+'에서 접수하고 '+manChip('med_silbi','🧮','AI 실비계산기')+' · '+manChip('med_disclosure','📋','알릴의무 필터')+'로 점검합니다.',
@@ -63483,11 +63511,14 @@ function bjDownload(id) {
 }
 
 /* ── 링크 보드(외부 시스템) ── */
+/* EM 전용 운영센터 주소 — <b>한 곳</b>에만 적습니다 (check-emcenter 1번). 「내 업적 입력」은 그 주소 #mine */
+var EM_SITE='https://apex-hb-em.netlify.app';
 var LINKS=[
  /* ★ 판 X173 · 교육시스템EM — 말하는 일곱은 <b>그 사이트를 열어 본 것</b>입니다
     (2026-10-23 · HTTP 200 · <title>APEX HB · EM 전용 운영센터</title>).
     지어 적지 않습니다 (1번) — 못 본 것은 안 적습니다.                     */
- {tab:'emcenter',icon:'🎓',title:'EM 전용 운영센터',desc:'대시보드 · 주간 마감 · 업적 입력 · 월급 정산 · 시책 관리 · 팀원 · 자료실 · 데이터.',links:[{t:'🎓 EM 전용 운영센터 열기',u:'https://apex-hb-em.netlify.app'}]},
+ {tab:'emcenter',icon:'🎓',title:'EM 전용 운영센터',desc:'대시보드 · 주간 마감 · 업적 입력 · 월급 정산 · 시책 관리 · 팀원 · 자료실 · 데이터.',links:[{t:'🎓 EM 전용 운영센터 열기',u:EM_SITE}]},
+ {tab:'myperf',icon:'✍️',title:'EM 운영센터 · 팀원 화면',desc:'담당 EM 이 확인하면 확정됩니다. 다음 달 받을 돈도 같이 보여요.',links:[{t:'✍️ 새 탭으로 열기',u:EM_SITE+'/#mine'}]},
  {tab:'ref_jeonsan',icon:'🖥️',title:'통합 보험 전산 · 사이버창구 (설계사 로그인)',desc:'각 보험사 전산·사이버창구를 한 곳에서 접속하는 통합 전산 포털입니다. 아래 버튼으로 전산 홈페이지에 들어가 본인 설계사 계정으로 로그인하세요. (계정은 소속 대리점을 통해 발급) · 전산 로그인·조회는 반드시 본인 계정으로, 고객 개인정보는 규정에 따라 취급하세요.',links:[{t:'🏢 설계사닷컴 · 통합 전산 홈페이지 바로가기',u:'http://xn--989an19aika.com/'}]},
  {tab:'ref_jeonsan',icon:'🔐',title:'생명보험사 전산 · 설계사 로그인 (회사별 바로가기)',desc:'각 생명보험사 설계사 전산(사이버창구)으로 바로 이동합니다. 새 탭에서 본인 설계사 계정으로 로그인하세요. (계정은 소속 대리점을 통해 발급) · 로그인·조회는 반드시 본인 계정으로, 고객 개인정보는 규정에 따라 취급하세요.',links:[{t:'삼성생명',u:'https://ga.samsunglife.com'},{t:'한화생명',u:'https://hmp.hanwhalife.com/online/ga'},{t:'교보생명',u:'https://ga.kyobo.com'},{t:'신한라이프',u:'https://ga.shinhanlife.co.kr'},{t:'NH농협생명',u:'https://sfa.nhlife.co.kr:8443/'},{t:'미래에셋생명',u:'http://www.loveageplan.com'},{t:'동양생명',u:'http://1004.myangel.co.kr'},{t:'흥국생명',u:'https://sales.heungkuklife.co.kr/'},{t:'KB라이프',u:'https://sfa.kblife.co.kr/'},{t:'메트라이프',u:'http://metplus.metlife.co.kr'},{t:'푸본현대생명',u:'https://ez.fubonhyundai.com/'},{t:'DB생명',u:'http://etopia.idblife.com'},{t:'iM라이프(구 DGB)',u:'https://fgs.dgbfnlife.com:8443'},{t:'AIA생명',u:'https://imap.aia.co.kr'},{t:'라이나생명',u:'https://ga.lina.co.kr'},{t:'처브라이프',u:'http://esmart.chubblife.co.kr'},{t:'ABL생명',u:'http://ga.abllife.co.kr'},{t:'KDB생명',u:'http://kss.kdblife.co.kr'},{t:'하나생명',u:'https://ga.hanalife.co.kr'},{t:'BNP파리바카디프',u:'http://ga.cardif.co.kr'},{t:'IBK연금보험',u:'https://sf.ibki.co.kr/'}]},
  {tab:'ref_jeonsan',icon:'🔑',title:'손해보험사 전산 · 설계사 로그인 (회사별 바로가기)',desc:'각 손해보험사 설계사 전산으로 바로 이동합니다. 새 탭에서 본인 설계사 계정으로 로그인하세요. · 로그인·조회는 반드시 본인 계정으로, 고객 개인정보는 규정에 따라 취급하세요.',links:[{t:'삼성화재',u:'https://erp.samsungfire.com'},{t:'현대해상',u:'https://sp.hi.co.kr'},{t:'DB손해보험',u:'https://www.mdbins.com'},{t:'KB손해보험',u:'https://nsales.kbinsure.co.kr/'},{t:'메리츠화재',u:'http://sales.meritzfire.com'},{t:'한화손해보험',u:'http://portal.hwgeneralins.com'},{t:'NH농협손해보험',u:'https://ss.nhfire.co.kr/'},{t:'흥국화재',u:'https://sales.heungkukfire.co.kr/'},{t:'롯데손해보험',u:'http://lottero.lotteins.co.kr'},{t:'예별손해보험(구 MG)',u:'https://mganet.mggeneralins.com'},{t:'AIG손해보험',u:'https://sso.aig.co.kr/gaLogin/gaLogin.jsp'},{t:'하나손해보험',u:'https://sfa.saleshana.com/index.html'},{t:'라이나손해보험',u:'https://ga.linagi.com/'}]},
@@ -70106,7 +70137,7 @@ function kjOpenDeck(){var w=window.open(KJ_DECK,'_blank');if(!w)toast('팝업이
 /* 📄 한 장 안내서 (판 X310) — 담보 아홉 칸마다 이런 거예요 · 왜 · 어떻게 나오나 · 제 기준. 고객 앞에서 펴고 A4 한 장으로 뽑는다.
    보내는 사람 이름만 # 뒤에 — 셀프 점검 링크와 같은 거르개(selfcheck-core.js 의 cleanBy)를 지난다 (3번 · 5번) */
 var KJ_SHEET='kijun-sheet.html';
-/* 📚 담보 사전 (판 X306) — 글은 kijun-dict.js 한 벌. 이름도 숫자도 싣지 않는다 */
+/* 📚 담보 사전 (판 X311) — 글은 kijun-dict.js 한 벌. 이름도 숫자도 싣지 않는다 */
 var KJ_DICT_URL='kijun-dict.html';
 function kjOpenDict(){var w=window.open(KJ_DICT_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 허용 후 다시 시도하세요.');}
 /* 🧭 설계 가이드 (판 X307) — 아홉 걸음 · 이렇게 말해요 · 상황별 · 바꾸기 전에 · 하지 않는 말. 기준 숫자는 selfcheck-core.js 의 TARGET */
