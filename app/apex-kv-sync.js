@@ -199,7 +199,12 @@ var waited=0;
 function boot(){
   client=findClient();
   if(!client){ if((waited+=1500)<180000) setTimeout(boot,1500); return; }
-  client.auth.getSession().then(function(r){
+  var ses=null;
+  try{ if(window.OS&&OS.session&&OS.session.user) ses=Promise.resolve({data:{session:OS.session}}); }catch(e){}
+  try{ if(!ses&&window.parent!==window&&parent.OS&&parent.OS.session&&parent.OS.session.user) ses=Promise.resolve({data:{session:parent.OS.session}}); }catch(e){}
+  try{ if(!ses&&client.auth&&typeof client.auth.getSession==='function') ses=client.auth.getSession(); }catch(e){ ses=null; }
+  if(!ses){ if((waited+=3000)<180000) setTimeout(boot,3000); return; }   /* 아직 로그인 전 — 기다림 */
+  ses.then(function(r){
     var s=r&&r.data&&r.data.session;
     if(!s||!s.user){ if((waited+=3000)<180000) setTimeout(boot,3000); return; }
     uid=s.user.id; role=findRole();

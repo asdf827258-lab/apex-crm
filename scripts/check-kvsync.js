@@ -25,7 +25,7 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 
 console.log('[1] 메뉴 다섯 자리');
 is(/\{id:'myperf',icon:'✍️',title:'내 업적 입력',cnt:'',ak:'홈'\}/.test(SRC), 'TABS 「하루 시작」 에 myperf (ak 홈 — 홈과 같은 문)');
-is(/\n myperf:\{tag:'MY',title:'내 업적 입력',desc:'[^']+'\}/.test(SRC), 'TAB_META.myperf');
+is(/\n myperf:\{tag:'MY',title:'내 업적 입력',desc:'[^']{1,80}'\}/.test(SRC), 'TAB_META.myperf');
 is(/airep:'today', myperf:'today'/.test(SRC), "NAV_WHEN.myperf = 'today'");
 is(/var T_SKIN=\{myperf:1,/.test(SRC), 'T_SKIN.myperf');
 is(/\{tab:'myperf',[^\n]*links:\[\{t:'[^']+',u:EM_SITE\+'\/#mine'\}\]\}/.test(SRC), "LINKS — 단추가 EM_SITE+'/#mine'");

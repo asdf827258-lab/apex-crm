@@ -52,7 +52,7 @@ function lock(){
     var box=a.closest?a.closest('.frm'):null; if(!box) return;
     var d=document.createElement('div'); d.id='pfLinkNote';
     d.style.cssText='margin-top:8px;font-size:var(--t6);color:var(--t-sub);line-height:1.6';
-    d.innerHTML='실적은 <b style="color:var(--t-ink)">✍️ 내 업적 입력</b>에 넣은 계약에서 저절로 셉니다 — EM 화면 · 이 화면 · 리더 화면이 같은 숫자를 봅니다. '+
+    d.innerHTML='실적은 <b style="color:var(--t-ink)">✍️ 내 업적 입력</b>의 계약에서 저절로 셉니다. '+   /* 80자 밑 — check-read */
       '<a href="javascript:void 0" onclick="if(typeof go===\'function\')go(\'myperf\')" style="font-weight:800;color:var(--t-ink);text-decoration:underline">업적 넣으러 가기 →</a>';
     box.parentNode.insertBefore(d,box.nextSibling);
   }
