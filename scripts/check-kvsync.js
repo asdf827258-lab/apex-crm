@@ -67,6 +67,19 @@ is(/k!=='act_prem'&&k!=='act_case'/.test(PL), '저장할 때 실적 두 칸을 �
 is(/\['pf_act','pf_acase'\]/.test(PL) && /readOnly=true/.test(PL), '두 칸을 손으로 못 친다');
 is(/finNum\('pf_act'/.test(SRC) && /act_prem:\+finV\('pf_act'/.test(SRC), '본체의 그 칸 · 저장 자리가 그대로 있다 — 이름이 바뀌면 잠금이 헛돕니다');
 
+console.log('[8] 일정 한 벌 (판 X304) — EM 본부 · 팀 일정이 내 캘린더에');
+const EC = fs.readFileSync(path.join(ROOT, 'app/apex-em-cal.js'), 'utf8');
+is(/<script src="apex-em-cal\.js\?v=[^"]+"><\/script>/.test(SRC), '본체가 apex-em-cal.js 를 부른다');
+is(/from\('em_events'\)/.test(EC) && /\.eq\('hidden',false\)/.test(EC), 'em_events 를 읽되 「이 달만 뺀」 일정(hidden)은 안 세운다');
+is(/if\(tab==='mycal'\) load\(false\)/.test(EC) && !/load\(false\);\s*\}\)\(\);\s*$/.test(EC), '★ 내 캘린더를 열 때만 받는다 — 켤 때 · 홈에서는 안 부른다(check-boot 기준선 · 7번)');
+is(/Date\.now\(\)-EMC\.at<TTL/.test(EC), '한 번 받으면 10분 동안 다시 안 받는다');
+is(/window\.mcalItems=function/.test(EC) && !/who:/.test(EC), '달력 줄 모으는 자리 하나(mcalItems)에 덧붙이고, 임자(who)를 안 달아 담당자를 골라도 남는다');
+is(!/\.(insert|upsert|update|delete)\(/.test(EC), '보기만 한다 — EM 일정의 원본은 EM 운영센터');
+is(!/createClient\s*\(/.test(EC), '새 클라이언트를 만들지 않는다 — osClient 를 빌린다');
+console.log('[9] 켤 때 안 부른다 — apex-kv-sync 는 처음 누를 때 받는다');
+is(/function start\(\)/.test(KV) && /EV=\['keydown','pointerdown','touchstart'\]/.test(KV) && /else if\(armed\) armed\(\);/.test(KV), '처음 누르거나 · 치거나 · 창으로 돌아올 때 받는다');
+is(!/ready=true; pull\(true\);\s*\n\s*\}\)\.then/.test(KV), '로그인 끝나자마자 바로 부르지 않는다 (켤 때 21 → 19번)');
+
 console.log('\n──────────────────────────────');
 console.log(bad ? '✗ ' + bad + '개 — 위를 보십시오' : '✓ 내 업적 입력이 메뉴에 서고, 정해 둔 기록만 서버로 갑니다.');
 process.exit(bad ? 1 : 0);

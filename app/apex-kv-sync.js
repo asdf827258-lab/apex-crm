@@ -123,6 +123,7 @@ window.addEventListener('online',flush);
 document.addEventListener('visibilitychange',function(){
   if(document.visibilityState==='hidden') flush();
   else if(ready) pull(false);
+  else if(armed) armed();
 });
 
 /* ── 합치기 — 처음 맞출 때만. 체크(참)는 한쪽만 했어도 남긴다 ── */
@@ -209,8 +210,22 @@ function boot(){
     if(!s||!s.user){ if((waited+=3000)<180000) setTimeout(boot,3000); return; }
     uid=s.user.id; role=findRole();
     try{ who=(window.OS&&OS.profile&&OS.profile.name)||''; }catch(e){}
-    ready=true; pull(true);
+    start();
   }).then(null,function(){ if((waited+=5000)<180000) setTimeout(boot,5000); });
+}
+/* ★ 켜자마자 부르지 않는다 — 켤 때 서버 부름 수(check-boot 기준선 19 · 7번)를 늘리지 않게.
+   처음 누르거나 · 치거나 · 다른 창에서 돌아올 때 한 번 받는다. 그 전에 쓴 것은 dirty 에 모였다가 같이 올라간다. */
+var armed=null, EV=['keydown','pointerdown','touchstart'];
+function start(){
+  if(ready) return;
+  var go1=function(){
+    if(ready) return; ready=true; armed=null;
+    EV.forEach(function(t){ window.removeEventListener(t,go1,true); });
+    pull(true);
+  };
+  if(touched) return go1();
+  armed=go1;
+  EV.forEach(function(t){ window.addEventListener(t,go1,true); });
 }
 setTimeout(boot,800);
 
