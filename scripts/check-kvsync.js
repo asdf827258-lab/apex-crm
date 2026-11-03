@@ -60,6 +60,13 @@ const K = win.APEX_KV;
 is(!!K && K.kindOf('apex_master_done') === 'user' && K.kindOf('apex_edu_cal_v1') === 'org' && K.kindOf('apex_ck_memo_2026-11-03') === 'user', '목록 열쇠는 올림 (사람 · 조직 · 날짜 붙은 메모)');
 is(!!K && K.kindOf('apex_fact_cards_kim') === '' && K.kindOf('apex_cli_real_u1') === '' && K.kindOf('apex_brain_kb') === '' && K.kindOf('apex_kv_meta') === '', '목록 밖(실명 · 상담카드 · 두뇌 · 자기 쪽지)은 안 올림');
 
+console.log('[7] 업적 한 벌 (판 X301) — 월간보고 실적 칸');
+const PL = fs.readFileSync(path.join(ROOT, 'app/apex-perf-link.js'), 'utf8');
+is(/<script src="apex-perf-link\.js\?v=[^"]+"><\/script>/.test(SRC), '본체가 apex-perf-link.js 를 부른다');
+is(/k!=='act_prem'&&k!=='act_case'/.test(PL), '저장할 때 실적 두 칸을 안 보낸다 — 서버가 원본에서 센 값을 덮지 않게');
+is(/\['pf_act','pf_acase'\]/.test(PL) && /readOnly=true/.test(PL), '두 칸을 손으로 못 친다');
+is(/finNum\('pf_act'/.test(SRC) && /act_prem:\+finV\('pf_act'/.test(SRC), '본체의 그 칸 · 저장 자리가 그대로 있다 — 이름이 바뀌면 잠금이 헛돕니다');
+
 console.log('\n──────────────────────────────');
 console.log(bad ? '✗ ' + bad + '개 — 위를 보십시오' : '✓ 내 업적 입력이 메뉴에 서고, 정해 둔 기록만 서버로 갑니다.');
 process.exit(bad ? 1 : 0);
