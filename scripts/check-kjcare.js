@@ -16,6 +16,10 @@
      [5] 맨 위에 「대표적인 경우 · 심평원·병원에서 확인 · 약관과 심사」 를 밝힌다 · 찾기 · 갈래 · 비급여 고르기 · #id
      [6] 담보 사전 · 설계 가이드 · 설계서 · 앱(kjOpenCare)에서 닿는다 · 담보 칩이 사전에 닿는다
      [7] 요청 0(7번) · 폰 390px · 인쇄 tnum 꺼짐(4-1) · 오류 0
+     [8] ★ 판 X309 (사장님 말씀 2026-11-03 「더 자세하게 요즘 나오는 암 치료비, 생활비, 등 전부 개선해줘 담보까지」)
+         병을 겪는 길(KJ_PATH) — 암 · 뇌졸중 · 심근경색 · 치매 · 단계마다 무슨 일 · 치료 표지 · 나가는 돈(병원비/생활비) ·
+         받치는 담보(사전에 있는 것만) · 꼭 볼 것 · 금액 0 · ★★ 암 길은 표적 · 면역 · 세기조절 · 양성자·중입자 · 재발 · 생활비까지 닿고
+         마지막 단계는 「생활비」 를 말한다 · 고르면 그 길만 · 인쇄엔 네 길 다
    ══════════════════════════════════════════════════════════════════ */
 const fs = require('fs'), path = require('path'), http = require('http'), url = require('url'), vm = require('vm');
 const { chromium } = require('playwright');
@@ -28,6 +32,7 @@ vm.runInNewContext(rd('kijun-dict.js'), box); vm.runInNewContext(rd('kijun-care.
 const C = box.window.KJ_CARE || [], DICT = {};
 (box.window.KJ_DICT || []).forEach(g => g.d.forEach(x => { DICT[x.id] = x; }));
 const all = []; C.forEach(g => g.d.forEach(x => all.push(Object.assign({ g: g.g }, x))));
+const PW = box.window.KJ_PATH || [], steps = []; PW.forEach(p => p.d.forEach(st => steps.push(Object.assign({ g: p.g }, st))));
 const byId = {}; all.forEach(x => { byId[x.id] = x; });
 const text = x => [x.n, x.code, x.dx, x.tip].concat((x.tx || []).map(t => t[0])).join(' ');
 const flag = (id, re) => { const x = byId[id]; const t = x && x.tx.find(t => re.test(t[0])); return t ? t[1] : null; };
@@ -67,6 +72,18 @@ is(['stomach', 'thyroid', 'prostate'].every(id => flag(id, /로봇/) === 'b'), '
 is(flag('disc', /도수/) === 'b' && flag('disc', /MRI/) === 'c', '  디스크 — 도수치료는 비급여, MRI 는 조건부(목적에 따라)');
 is(flag('cataract', /다초점/) === 'b', '  백내장 — 다초점 렌즈는 비급여');
 
+console.log('\n[8] 병을 겪는 길 (판 X309)');
+is(PW.length === 4 && ['cancer', 'brain', 'heart', 'dementia'].every(g => PW.some(p => p.g === g)), '  길 넷 — 암 · 뇌졸중 · 심근경색 · 치매');
+is(steps.every(st => st.s && String(st.w || '').length >= 8 && String(st.tip || '').length >= 8 && ['h', 'l', 'b'].indexOf(st.m) >= 0 && st.tx.length >= 1 && st.tx.every(t => t[0] && ['g', 'b', 'c'].indexOf(t[1]) >= 0)), '  단계 ' + steps.length + '개마다 무슨 일 · 치료 표지 · 나가는 돈 · 꼭 볼 것');
+const pghost = []; steps.forEach(st => st.cov.forEach(id => { if (!DICT[id]) pghost.push(st.g + '/' + st.s + ':' + id); }));
+is(steps.every(st => st.cov.length >= 1) && pghost.length === 0, '  단계의 담보도 모두 사전의 담보' + (pghost.length ? ' ← ' + pghost.join(', ') : ''));
+const stext = st => [st.s, st.w, st.tip].concat(st.tx.map(t => t[0])).join(' ');
+const pbad = steps.filter(st => /\d[\d,]*\s*(만\s*원|만원|원\b|억|천만|백만)|\d\s*%|보장됩니다|지급됩니다|나옵니다|나와요|무조건|비과세|절세/.test(stext(st)));
+is(pbad.length === 0, '  길에도 금액 · 비율 · 약속 · 세금 0' + (pbad.length ? ' ← ' + pbad.map(st => st.g + '/' + st.s).join(', ') : ''));
+const ca = PW.find(p => p.g === 'cancer') || { d: [] }, caCov = [].concat.apply([], ca.d.map(st => st.cov));
+is(['target', 'immune', 'imrt', 'proton', 'cancer-re', 'cancer-all', 'cancer-tx', 'cancer-hosp', 'cancer-life'].every(id => caCov.indexOf(id) >= 0), '  암 길이 요즘 치료비 담보까지 닿는다 — 표적 · 면역 · 세기조절 · 양성자·중입자 · 재진단 · 통합암 · 주요치료비 · 통원 · 생활비');
+is(PW.every(p => p.d[p.d.length - 1].m === 'l'), '  길마다 마지막 단계는 「생활비」 — 병원비가 끝나도 끊긴 월급은 남는다');
+is(ca.d.some(st => st.tx.some(t => /중입자/.test(t[0]) && t[1] === 'b')) && ca.d.some(st => st.tx.some(t => /면역/.test(t[0]) && t[1] === 'c')), '  중입자는 비급여, 면역 항암은 조건부');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 const srv = http.createServer((q, s) => {
   const p = decodeURIComponent(url.parse(q.url).pathname), f = path.join(ROOT, p);
@@ -107,6 +124,17 @@ const srv = http.createServer((q, s) => {
   is(covLinks.length > 0 && covLinks.every(h => /^kijun-dict\.html#[a-z-]+$/.test(h)), '  담보 칩 ' + covLinks.length + '개가 모두 사전으로 간다');
   await p.goto(O + 'kijun-care.html#tia', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(300);
   is(await p.getAttribute('.card.hit', 'data-id') === 'tia', '  #tia 로 들어오면 그 카드에 선다');
+
+  await p.goto(O + 'kijun-care.html', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(200);
+  is(await p.locator('[data-way]:not([hidden])').count() === 1 && await p.getAttribute('[data-way]:not([hidden])', 'data-way') === 'cancer', '  길은 처음에 암 하나만 선다');
+  is(await p.locator('[data-way="cancer"] [data-step]').count() === ca.d.length, '  암 길 ' + ca.d.length + '단계가 다 선다');
+  await p.click('[data-ptabs] button[data-pg="brain"]');
+  is(await p.getAttribute('[data-way]:not([hidden])', 'data-way') === 'brain', '  「뇌졸중」 을 고르면 그 길만');
+  const pl = await p.$$eval('[data-way] .cov a', a => a.map(e => e.getAttribute('href')));
+  is(pl.length > 0 && pl.every(h => /^kijun-dict\.html#[a-z-]+$/.test(h)), '  길의 담보 칩 ' + pl.length + '개가 모두 사전으로 간다');
+  await p.emulateMedia({ media: 'print' });
+  is(await p.$$eval('[data-way]', a => a.every(e => getComputedStyle(e).display !== 'none')), '  인쇄에는 네 길이 다 나온다');
+  await p.emulateMedia({ media: 'screen' });
 
   console.log('\n[6] 어디서든 닿는다');
   const IDX = rd('index.html');

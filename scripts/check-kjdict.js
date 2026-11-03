@@ -14,6 +14,9 @@
      [4] ★ 실손형은 「쓴 만큼」, 진단비는 「정해진 금액」, 일당은 「날 수만큼」, 장해는 「비율만큼」
      [5] 찾기 · 갈래 고르기 · #id 로 들어오면 그 담보에 선다 · 설계서의 「자세히」 아홉이 다 닿는다
      [6] 요청 0(7번) · 폰 390px · 인쇄 tnum 꺼짐(4-1) · 오류 0
+     [7] ★ 판 X309 (사장님 말씀 2026-11-03 「더 자세하게 요즘 나오는 암 치료비, 생활비, 등 전부 개선해줘 담보까지」)
+         통합암(부위마다 · 전이) · 세기조절 방사선 · 암 입원·통원 일당(날 수만큼) · 💸 생활비 갈래(암 · 뇌심장 · 고도장해 —
+         다달이) · 「🆕 요즘」 표지가 있는 담보에만 붙고, 고르면 그 담보만 선다 · 「모든 상품에 있다는 뜻은 아니에요」 를 밝힌다
    ══════════════════════════════════════════════════════════════════ */
 const fs = require('fs'), path = require('path'), http = require('http'), url = require('url'), vm = require('vm');
 const { chromium } = require('playwright');
@@ -29,7 +32,7 @@ const byId = {}; all.forEach(x => { byId[x.id] = x; });
 const text = x => [x.n, x.a, x.w, x.y, x.h, x.c].join(' ');
 
 console.log('\n[1] 빠짐없이 · 네 자리');
-is(D.length === 13, '  갈래 ' + D.length + ' — 실손 · 암 · 뇌심장 · 진단비 · 수술 · 일당 · 간병 · 장해 · 사망 · 운전자 · 배상재산 · 치아 · 어린이');
+is(D.length === 14, '  갈래 ' + D.length + ' — 실손 · 암 · 뇌심장 · 진단비 · 수술 · 일당 · 간병 · 생활비 · 장해 · 사망 · 운전자 · 배상재산 · 치아 · 어린이');
 is(all.length >= 60, '  담보 ' + all.length + '가지');
 is(Object.keys(byId).length === all.length, '  id 가 겹치지 않는다');
 is(all.every(x => ['w', 'y', 'h', 'c'].every(f => String(x[f] || '').trim().length >= 8)), '  담보마다 네 자리가 다 찼다');
@@ -54,6 +57,14 @@ is(['cancer', 'similar', 'brain', 'heart', 'surg', 'death'].every(id => byId[id]
 is(['hosp', 'icu', 'care', 'clinic'].every(id => byId[id] && byId[id].k === 'day'), '  입원 · 통원 · 간병인 일당은 「날 수만큼」');
 is(['disab-a', 'disab-d'].every(id => byId[id] && byId[id].k === 'rate'), '  후유장해는 「비율만큼」');
 
+console.log('\n[7] 요즘 담보 · 생활비 (판 X309)');
+is(byId['cancer-all'] && byId['cancer-all'].k === 'fx' && /부위/.test(byId['cancer-all'].a + byId['cancer-all'].h) && /전이/.test(byId['cancer-all'].a + byId['cancer-all'].w), '  통합암 — 부위마다 · 전이까지 말하고 「정해진 금액」');
+is(byId.imrt && byId.imrt.k === 'fx' && byId['cancer-hosp'] && byId['cancer-hosp'].k === 'day' && /통원/.test(byId['cancer-hosp'].y), '  세기조절 방사선(정해진 금액) · 암 입원·통원 일당(날 수만큼 · 통원이 많다는 까닭)');
+const life = D.find(g => g.g === 'life');
+is(!!life && ['cancer-life', 'cv-life', 'disab-life'].every(id => life.d.some(x => x.id === id)) && life.d.every(x => x.k === 'fx' && /다달이/.test(x.h)), '  💸 생활비 갈래 — 암 · 뇌심장 · 고도장해, 셋 다 「이렇게 나와요」 가 다달이');
+is(/월급/.test(byId['cancer-life'].y) && /이름/.test(byId['cv-life'].c), '  암 생활비는 끊기는 월급을, 뇌·심장 생활비는 이름의 범위를 먼저 말한다');
+const nw = all.filter(x => x.nw);
+is(nw.length >= 10 && nw.length < all.length / 2 && all.every(x => x.nw === undefined || x.nw === 1), '  「🆕 요즘」 표지 ' + nw.length + '가지 — 절반이 넘으면 표지가 뜻을 잃는다');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 const srv = http.createServer((q, s) => {
   const p = decodeURIComponent(url.parse(q.url).pathname), f = path.join(ROOT, p);
@@ -86,6 +97,14 @@ const srv = http.createServer((q, s) => {
   is(await p.getAttribute('.card.hit', 'data-id') === 'heart', '  #heart 로 들어오면 허혈성 심장질환 카드에 선다');
   const links = (SHEET.match(/href="kijun-dict\.html#([a-z-]+)"/g) || []).map(s => s.replace(/.*#|"/g, ''));
   is(links.length === 9 && links.every(id => byId[id]), '  설계서의 「자세히」 아홉이 모두 사전의 담보에 닿는다');
+
+  await p.goto(O + 'kijun-dict.html', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(200);
+  await p.click('[data-chips] button[data-nw]');
+  const nwCards = await p.$$eval('.card', a => a.map(e => !!e.querySelector('[data-nwp]')));
+  is(nwCards.length === nw.length && nwCards.every(Boolean), '  「🆕 요즘 많이 보이는 담보」 를 고르면 ' + nw.length + '장만 선다');
+  await p.click('[data-chips] button[data-nw]');
+  is(await p.locator('.card').count() === all.length, '  한 번 더 누르면 풀린다');
+  is(/모든 상품에 있다는 뜻은 아니에요/.test(await p.textContent('.legend')), '  「요즘」 은 모든 상품에 있다는 뜻이 아니라고 밝힌다(1번)');
 
   console.log('\n[6] 폰 · 인쇄 · 요청');
   const m = await ctx.newPage(); await m.setViewportSize({ width: 390, height: 844 });
