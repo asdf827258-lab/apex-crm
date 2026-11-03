@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="ko">
+<head>
+<meta charset="utf-8">
+<!-- ══════════════════════════════════════════════════════════════════
+     보험의 기준 · 한 장 설계서 (판 X310)
+
+     사장님 말씀 2026-11-01 「보험 담보와, 설명 왜 가입해야하는지 어떻게 지급되는지
+     설명할수 있는 한장 보험의 기준과 설명안내서를 만들어줘」 → 2026-11-02 「이미지
+     띄워봐 한장으로 진짜 보험 설계도 스스로하고, 담보에 대한 이해도 정확히 할수 있도록」
+
+     한 줄 = 담보 하나. 왼쪽에서 읽고(이런 거예요 · 왜 · 이렇게 나와요), 가운데에
+     「지금 내 보험」 을 적으면, 오른쪽에 「제 기준 → 내 목표」 와 「내 설계」 가 섭니다.
+     맨 위 「내 설계도」 가 채울 칸을 모읍니다. A4 가로 한 장으로 뽑습니다.
+     ★ 판정·기준 숫자는 selfcheck-core.js 한 곳에서 빌립니다(5번) — 셀프 점검과 같은 말.
+     ★ 적지 않은 칸은 「아직」 — 0 으로 치지 않고 목표도 지어 내지 않습니다(1번).
+     ★ 「얼마 나옵니다」 를 약속하지 않습니다 — 지급은 약관과 심사(1번·2번) · 세금 말 0.
+     ★ 보험료는 다루지 않습니다 — 심사 결과에 따라 달라 이 종이에서 셀 수 없습니다.
+     ★ 아무것도 보내지 않습니다 · 이름 칸 없음(3번). 고객 폰에서는 이 기기에만 기억하고,
+       설계사가 앱에서 열면(#p=1) 기억하지 않습니다 — 다음 고객에게 보이면 안 됩니다.
+     ★ 인쇄는 tnum 을 켜지 않습니다(4-1).
+     재는 자: scripts/check-kjsheet.js
+     ══════════════════════════════════════════════════════════════════ -->
+<meta name="color-scheme" content="light">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta property="og:title" content="보험의 기준 · 한 장 설계서">
+<meta property="og:description" content="담보마다 무엇인지 · 왜 · 어떻게 나오는지 보고, 내 숫자를 넣어 직접 설계해 보세요.">
+<title>보험의 기준 · 한 장 설계서</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="ui.css">
+<style>
+/* 값은 app/ui.css 한 곳에서 옵니다 — 여기서 색을 또 적지 않습니다 (5번) */
+:root{color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-size:14px;line-height:1.5;letter-spacing:-.2px;-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+.sheet{max-width:1240px;margin:0 auto;padding:18px 16px 40px}
+.hd{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin-bottom:10px}
+.hd .tag{display:inline-block;font-size:13px;font-weight:700;color:var(--t-sub);background:var(--t-card);border-radius:var(--t-r-xs);padding:4px 10px}
+.hd h1{margin:6px 0 2px;font-size:25px;font-weight:800;letter-spacing:-.03em}
+.hd h1 b{color:var(--t-point)}
+.hd p{margin:0;font-size:14px;color:var(--t-sub)}
+.act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.act button,.by{min-height:44px;border:0;border-radius:var(--t-r-sm);padding:0 13px;font:700 14px var(--t-font);cursor:pointer;background:var(--t-card);color:var(--t-ink);display:inline-flex;align-items:center}
+.act button.p{background:var(--t-point);color:var(--t-on)}
+.by{cursor:default}
+.act a.dict{min-height:44px;border-radius:var(--t-r-sm);padding:0 13px;font:700 14px var(--t-font);background:var(--t-card);color:var(--t-ink);display:inline-flex;align-items:center;text-decoration:none}
+.cov td.n a.more{display:inline-block;margin-top:3px;font-size:12px;font-weight:700;color:var(--t-point);text-decoration:none}
+.top{display:grid;grid-template-columns:1fr 1.35fr;gap:10px;margin-bottom:10px}
+.me,.plan{background:var(--t-card);border-radius:var(--t-r-sm);padding:12px 14px}
+.me b.k,.plan b.k{display:block;font-size:14px;font-weight:800;margin-bottom:6px}
+.me .f{display:flex;flex-wrap:wrap;gap:8px 16px}
+.me label{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700}
+.me small{display:block;margin-top:6px;font-size:12.5px;color:var(--t-sub)}
+input.n,select{font:600 14px var(--t-font);color:var(--t-ink);background:var(--t-bg-2);border:1.5px solid transparent;border-radius:var(--t-r-xs);padding:7px 8px;min-height:40px}
+input.n{width:92px;text-align:right}
+input.n:focus,select:focus{outline:none;border-color:var(--t-point);background:var(--t-card)}
+.plan .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.plan .tiles div{background:var(--t-bg-3);border-radius:var(--t-r-xs);padding:6px 8px;text-align:center}
+.plan .tiles b{display:block;font-size:22px;font-weight:800;line-height:1.15}
+.plan .tiles small{font-size:12px;font-weight:700;color:var(--t-sub)}
+.t-need b{color:var(--t-neg-d)}.t-mid b{color:var(--t-warn-d)}.t-chk b{color:var(--t-sub)}.t-ok b{color:var(--t-pos-d)}
+.plan ol{margin:8px 0 0;padding-left:18px;font-size:13.5px;line-height:1.6}
+.plan ol li b{font-weight:800}
+.plan .empty{margin:8px 0 0;font-size:13.5px;color:var(--t-sub)}
+table.cov{width:100%;border-collapse:separate;border-spacing:0;background:var(--t-card);border-radius:var(--t-r-sm);overflow:hidden}
+.cov th{font-size:13px;font-weight:700;color:var(--t-sub);text-align:left;padding:8px 9px;background:var(--t-bg-3);border-bottom:1px solid var(--t-line)}
+.cov td{font-size:13px;line-height:1.48;padding:8px 9px;border-bottom:1px solid var(--t-line-2);vertical-align:top}
+.cov tr:last-child td{border-bottom:0}
+.cov td.n{width:15%}
+.cov td.n b{display:block;font-size:14.5px;font-weight:800}
+.cov td.n small{display:block;margin-top:2px;font-size:12.5px;color:var(--t-sub)}
+.cov td.w{width:25%}
+.cov td.w .why{display:block;margin-bottom:3px}
+.cov td.i{width:22%;background:var(--t-bg-b)}
+.cov td.i .row{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;margin-bottom:4px}
+.cov td.i .row:last-child{margin-bottom:0}
+.cov td.i label{font-size:12.5px;font-weight:700;color:var(--t-sub);display:flex;align-items:center;gap:4px}
+.cov td.i select{max-width:100%}
+.cov td.i input.n{width:84px}
+.cov td.i.mini .row{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px}
+.cov td.i.mini .row:first-child{grid-template-columns:1fr}
+.cov td.i.mini label{justify-content:space-between}
+.cov td.i.mini input.n{width:72px}
+input[type=number]{-moz-appearance:textfield}input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.me ol{margin:8px 0 0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--t-sub)}
+.me ol b{color:var(--t-ink)}
+.cov td.g{width:17%}
+.cov td.g b{font-weight:800}
+.cov td.d{width:21%}
+.cov em{font-style:normal;font-weight:700}
+.pill{display:inline-block;font-size:12px;font-weight:800;border-radius:var(--t-r-xs);padding:1px 7px;margin-right:4px;white-space:nowrap}
+.pill.fx{background:var(--t-point-l);color:var(--t-point-d)}
+.pill.rl{background:var(--t-pos-l);color:var(--t-pos-d)}
+.code{font-weight:700;color:var(--t-point-d)}
+.chip{display:inline-block;font-size:12.5px;font-weight:800;border-radius:var(--t-r-xs);padding:2px 8px;margin-bottom:3px}
+.chip.ok{background:var(--t-pos-l);color:var(--t-pos-d)}
+.chip.mid{background:var(--t-warn-l);color:var(--t-warn-d)}
+.chip.need{background:var(--t-neg-l);color:var(--t-neg-d)}
+.chip.chk{background:var(--t-bg-2);color:var(--t-sub)}
+.chip.no{background:var(--t-bg-2);color:var(--t-sub)}
+.d .do{display:block;font-weight:700}
+.d .tip,.g .tip{display:block;font-size:12.5px;color:var(--t-sub)}
+.how{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:10px;margin-top:10px}
+.how>div{background:var(--t-card);border-radius:var(--t-r-sm);padding:10px 14px}
+.how b{display:block;font-size:14px;font-weight:800}
+.how p{margin:3px 0 0;font-size:13px;color:var(--t-sub);line-height:1.5}
+.how p em{font-style:normal;font-weight:700;color:var(--t-ink)}
+.foot{margin-top:10px;font-size:12px;line-height:1.6;color:var(--t-sub)}
+.foot b{color:var(--t-ink)}
+@media (max-width:860px){
+  .hd,.top,.how{grid-template-columns:1fr}
+  .act{justify-content:flex-start}
+  table.cov,.cov tbody,.cov tr,.cov td{display:block;width:auto!important}
+  .cov thead{display:none}
+  .cov tr{border-bottom:8px solid var(--t-bg)}
+  .cov td{border:0;padding:6px 14px}
+  .cov td.n{padding-top:12px}
+  .cov td[data-h]::before{content:attr(data-h);display:block;font-size:12px;font-weight:700;color:var(--t-sub)}
+}
+@media print{
+  @page{size:A4 landscape;margin:6mm}
+  body{background:#fff;font-size:10px}
+  .sheet{max-width:none;padding:0}
+  .act button,.act a.dict,.cov td.n a.more{display:none}
+  .by{min-height:0;padding:3px 8px;font-size:10.5px;border:1px solid var(--t-line)}
+  .hd{margin-bottom:5px}.hd h1{font-size:18px;margin:2px 0 0}.hd p{font-size:10px}.hd .tag{font-size:10px;padding:2px 8px}
+  .top{gap:6px;margin-bottom:5px}
+  .me,.plan,.how>div{padding:5px 9px;border:1px solid var(--t-line)}
+  .me b.k,.plan b.k{font-size:11px;margin-bottom:3px}
+  .me label{font-size:10.5px}.me small{font-size:9.5px;margin-top:3px}
+  .plan .tiles b{font-size:14px}.plan .tiles small{font-size:9.5px}.plan .tiles div{padding:2px 4px}
+  .plan ol{font-size:9.5px;line-height:1.35;margin-top:3px;columns:2;column-gap:14px}.plan .empty{font-size:9.5px}
+  .me ol{display:none}
+  input.n,select{-webkit-appearance:none;appearance:none;background:transparent;border:0;border-bottom:1px solid var(--t-line-3);border-radius:0;min-height:0;height:auto;padding:0 2px;font-size:9px;line-height:1.25}
+  input.n{width:52px!important}
+  .cov td.i .row{margin-bottom:0}
+  .cov{border:1px solid var(--t-line)}
+  .cov th{font-size:9px;padding:2px 5px}
+  .cov td{font-size:9px;line-height:1.28;padding:2px 5px}
+  .cov td.i.mini .row{gap:0 6px}
+  .cov td.w .why{margin-bottom:1px}
+  .cov td.n b{font-size:10px}.cov td.n small,.cov td.i label,.d .tip,.g .tip{font-size:8.5px}
+  .cov td.i .row{margin-bottom:1px;gap:2px 4px}
+  .pill,.chip{font-size:8.5px;padding:0 4px;margin-bottom:0}
+  .how{gap:6px;margin-top:5px}.how b{font-size:10.5px}.how p{font-size:9.5px;line-height:1.35}
+  .foot{font-size:8.8px;margin-top:4px;line-height:1.45}
+  *{font-variant-numeric:normal!important;font-feature-settings:normal!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<main class="sheet">
+  <header class="hd">
+    <div>
+      <span class="tag">📏 보험의 기준 · 한 장 설계서</span>
+      <h1>내 보험, <b>내가 직접</b> 설계해 봐요</h1>
+      <p>줄마다 — 무엇인지 · 왜 필요한지 · 어떻게 나오는지 읽고, 가운데에 지금 내 보험을 적으면 오른쪽에 내 설계가 나와요.</p>
+    </div>
+    <div class="act">
+      <span class="by" data-by hidden>안내 · <b data-by-name></b>&nbsp;설계사</span>
+      <a class="dict" href="kijun-dict.html">📚 담보 사전</a>
+      <a class="dict" href="kijun-guide.html">🧭 설계 가이드</a>
+      <a class="dict" href="kijun-care.html">🩺 진단·치료 지도</a>
+      <button type="button" data-from-self hidden>✍️ 셀프 점검 답 가져오기</button>
+      <button type="button" data-clear>처음부터</button>
+      <button type="button" class="p" data-print>🖨 인쇄</button>
+    </div>
+  </header>
+
+  <section class="top">
+    <div class="me">
+      <b class="k">👤 나</b>
+      <div class="f">
+        <label>💼 연소득 <input class="n" type="number" min="0" step="100" inputmode="numeric" data-k="inc" placeholder="예: 5000"> 만 원</label>
+        <label>🏖️ 은퇴 예정 <input class="n" type="number" min="30" max="99" step="1" inputmode="numeric" data-k="retire" placeholder="예: 60"> 세</label>
+      </div>
+      <ol><li><b>증권을 펴요</b> — 없으면 「내보험다보여」 에서 가입 내역을 봐요</li><li>줄마다 왼쪽을 읽고, <b>지금 내 보험</b> 칸만 적어요</li><li>오른쪽 <b>내 설계</b>와 위 <b>내 설계도</b>에서 채울 것을 봐요</li><li><b>인쇄</b>해서 설계사와 같이 봐요 — 고르는 건 내가 해요</li></ol>
+      <small>이름은 적지 않아요. 모르는 칸은 비워 두세요 — 0 으로 치지 않고 ‘아직’ 으로 남아요.</small>
+    </div>
+    <div class="plan" aria-live="polite">
+      <b class="k">🗺️ 내 설계도</b>
+      <div class="tiles"><div class="t-need"><b data-cnt="need">0</b><small>비어 있어요</small></div><div class="t-mid"><b data-cnt="mid">0</b><small>채우면 좋아요</small></div><div class="t-chk"><b data-cnt="chk">0</b><small>확인해요</small></div><div class="t-ok"><b data-cnt="ok">0</b><small>괜찮아요</small></div></div>
+      <ol data-plan></ol>
+      <p class="empty" data-plan-empty>아래 줄에 지금 내 보험을 적으면, 여기에 <b>채울 것</b>이 차례로 모여요.</p>
+    </div>
+  </section>
+
+  <table class="cov" aria-label="담보마다 읽고 설계하기">
+    <thead><tr><th>담보 · 이런 거예요</th><th>왜 필요하냐면 · 이렇게 나와요</th><th>지금 내 보험</th><th>제 기준 → 내 목표</th><th>내 설계</th></tr></thead>
+    <tbody>
+      <tr data-cov="silson">
+        <td class="n"><b>🏥 실비</b><small>병원에서 쓴 돈을 돌려받는 보험(실손의료비)</small><a class="more" href="kijun-dict.html#silson">📚 자세히</a></td>
+        <td class="w" data-h="왜 · 어떻게"><span class="why">가장 자주 쓰는 보험 — 병원비의 바닥이에요</span><span class="pill rl">쓴 만큼</span>낸 병원비에서 내가 낼 몫을 빼고 돌려받아요. 두 개여도 쓴 돈 안에서 나눠서</td>
+        <td class="i" data-h="지금 내 보험"><div class="row"><select data-k="silson" data-opt="silson" aria-label="실비 가입 시기"></select></div></td>
+        <td class="g" data-h="제 기준"><b>있는지 · 언제 들었는지</b> — 세대마다 내가 내는 몫이 달라요</td>
+        <td class="d" data-h="내 설계" data-out="silson"></td>
+      </tr>
+      <tr data-cov="cancer">
+        <td class="n"><b>🎗️ 암 진단비</b><small>암으로 진단이 확정되면 받는 돈</small><a class="more" href="kijun-dict.html#cancer">📚 자세히</a></td>
+        <td class="w" data-h="왜 · 어떻게"><span class="why">치료하는 동안 <em>월급이 끊겨요</em> — 병원비보다 생활비</span><span class="pill fx">정해진 금액</span>진단 확정 때 한 번에 · 보통 처음 한 번</td>
+        <td class="i" data-h="지금 내 보험"><div class="row"><label>가입 금액 <input class="n" type="number" min="0" step="100" inputmode="numeric" data-k="cancer" placeholder="모름"> 만</label></div></td>
+        <td class="g" data-h="제 기준" data-goal="cancer"></td>
+        <td class="d" data-h="내 설계" data-out="cancer"></td>
+      </tr>
+      <tr data-cov="brain">
+        <td class="n"><b>🧠 뇌 진단비</b><small>뇌혈관 병으로 진단 확정되면 받는 돈</small><a class="more" href="kijun-dict.html#brain">📚 자세히</a></td>
+        <td class="w" data-h="왜 · 어떻게"><span class="why">쓰러지면 <em>재활이 길어요</em></span><span class="pill fx">정해진 금액</span>담보 <em>이름(범위)에 든 병</em>일 때만 — 뇌출혈 <span class="code">I60–I62</span> &lt; 뇌졸중 <span class="code">I60–I63 등</span> &lt; 뇌혈관질환 <span class="code">I60–I69</span></td>
+        <td class="i" data-h="지금 내 보험"><div class="row"><select data-k="brainN" data-opt="brain" aria-label="뇌 보장 이름"></select></div><div class="row"><label>금액 <input class="n" type="number" min="0" step="100" inputmode="numeric" data-k="brain" placeholder="모름"> 만</label></div></td>
+        <td class="g" data-h="제 기준" data-goal="brain"></td>
+        <td class="d" data-h="내 설계" data-out="brain"></td>
+      </tr>
+      <tr data-cov="heart">
+        <td class="n"><b>❤️ 심장 진단비</b><small>심장 병으로 진단 확정되면 받는 돈</small><a class="more" href="kijun-dict.html#heart">📚 자세히</a></td>
+        <td class="w" data-h="왜 · 어떻게"><span class="why">협심증처럼 <em>흔한 병</em>이 빠진 보험이 많아요</span><span class="pill fx">정해진 금액</span>이름에 든 병만 — 급성심근경색 <span class="code">I21–I23</span> &lt; 허혈성 심장질환 <span class="code">I20–I25</span></td>
+        <td class="i" data-h="지금 내 보험"><div class="row"><select data-k="heartN" data-opt="heart" aria-label="심장 보장 이름"></select></div><div class="row"><label>금액 <input class="n" type="number" min="0" step="100" inputmode="numeric" data-k="heart" placeholder="모름"> 만</label></div></td>
+        <td class="g" data-h="제 기준" data-goal="heart"></td>
+        <td class="d" data-h="내 설계" data-out="heart"></td>
+      </tr>
+      <tr data-cov="surg">
+        <td class="n"><b>🔪 수술비</b><small>수술을 받으면 받는 돈</small><a class="more" href="kijun-dict.html#surg">📚 자세히</a></td>
+        <td class="w" data-h="왜 · 어떻게"><span class="why">같은 병도 <em>수술을 여러 번</em> 받아요</span><span class="pill fx">정해진 금액</span>약관의 수술 분류(1~5종 · N대 질병)에 따라, 정한 횟수 안에서</td>
+        <td class="i" data-h="지금 내 보험"><div class="row"><select data-k="surg" data-opt="surg" aria-label="수술비"></select></div></td>
+        <td class="g" data-h="제 기준"><b>할 때마다</b> 나오는 것</td>
+        <td class="d" data-h="내 설계" data-out="surg"></td>
+      </tr>
+      <tr data-cov="nonpay">
+        <td class="n"><b>💊 비싼 암 치료</b><small>건강보험이 안 되는 새 암 치료(표적·면역·중입자 등)</small><a class="more" href="kijun-dict.html#nonpay">📚 자세히</a></td>
+        <td class="w" data-h="왜 · 어떻게"><span class="why">새 치료는 비싸고 실비 한도로는 <em>다 안 돼요</em></span><span class="pill fx">정해진 금액</span>그 치료를 받을 때 · 횟수·한도가 있어요</td>
+        <td class="i" data-h="지금 내 보험"><div class="row"><select data-k="nonpay" data-opt="nonpay" aria-label="비싼 암 치료"></select></div></td>
+        <td class="g" data-h="제 기준"><b>있는지</b> · 몇 번 · 한도</td>
+        <td class="d" data-h="내 설계" data-out="nonpay"></td>
+      </tr>
+      <tr data-cov="care">
+        <td class="n"><b>🤝 간병</b><small>입원했을 때 간병인을 보내 주거나 간병비를 주는 것</small><a class="more" href="kijun-dict.html#care">📚 자세히</a></td>
+        <td class="w" data-h="왜 · 어떻게"><span class="why">간병인 비용은 <em>병원비와 따로</em> 들어요</span>입원한 날 수만큼 — 약관이 정한 일수·조건 안에서</td>
+        <td class="i" data-h="지금 내 보험"><div class="row"><select data-k="care" aria-label="간병"><option value="">고르세요</option><option value="y">간병인 지원이 있어요</option><option value="d">입원일당만 있어요</option><option value="n">없어요</option><option value="?">모르겠어요</option></select></div></td>
+        <td class="g" data-h="제 기준"><b>간병인 지원</b></td>
+        <td class="d" data-h="내 설계" data-out="care"></td>
+      </tr>
+      <tr data-cov="death">
+        <td class="n"><b>👨‍👩‍👧 사망 보장</b><small>돌아가시면 가족이 받는 돈</small><a class="more" href="kijun-dict.html#death">📚 자세히</a></td>
+        <td class="w" data-h="왜 · 어떻게"><span class="why">남은 가족의 생활비 · 대출 · 교육비</span><span class="pill fx">정해진 금액</span>정한 기간(정기) 또는 평생(종신)</td>
+        <td class="i mini" data-h="지금 내 보험">
+          <div class="row"><label>지금 사망 보장 <input class="n" type="number" min="0" step="100" inputmode="numeric" data-k="death" placeholder="모름"> 만</label></div>
+          <div class="row"><label>대출 <input class="n" type="number" min="0" step="100" inputmode="numeric" data-k="loan" placeholder="0"> 만</label><label>월 생활비 <input class="n" type="number" min="0" step="10" inputmode="numeric" data-k="live" placeholder="예: 300"> 만</label></div>
+          <div class="row"><label>막내 독립까지 <input class="n" type="number" min="0" max="40" step="1" inputmode="numeric" data-k="yrs" placeholder="예: 15"> 년</label><label>모아 둔 돈 <input class="n" type="number" min="0" step="100" inputmode="numeric" data-k="save" placeholder="0"> 만</label></div>
+        </td>
+        <td class="g" data-h="제 기준" data-goal="death"></td>
+        <td class="d" data-h="내 설계" data-out="death"></td>
+      </tr>
+      <tr data-cov="liab">
+        <td class="n"><b>🚲 남에게 끼친 피해</b><small>일상생활배상책임 — 대신 물어 주는 보험</small><a class="more" href="kijun-dict.html#liab">📚 자세히</a></td>
+        <td class="w" data-h="왜 · 어떻게"><span class="why">자전거 사고 · 아이가 남의 물건을 깬 일처럼 <em>생활 속 사고</em></span><span class="pill rl">쓴 만큼</span>법으로 물어 줄 책임만큼, 실제 손해 안에서(내 몫이 있어요) · 여러 개여도 나눠서</td>
+        <td class="i" data-h="지금 내 보험"><div class="row"><select data-k="liab" aria-label="일상생활배상책임"><option value="">고르세요</option><option value="1">하나 있어요(가족 모두)</option><option value="2">두 개 이상이에요</option><option value="n">없어요</option><option value="?">모르겠어요</option></select></div></td>
+        <td class="g" data-h="제 기준"><b>가족 모두</b> · 겹치면 하나로 충분</td>
+        <td class="d" data-h="내 설계" data-out="liab"></td>
+      </tr>
+      <tr data-cov="term">
+        <td class="n"><b>⏳ 기간</b><small>보장이 끝나는 나이 · 보험료를 다 내는 나이</small></td>
+        <td class="w" data-h="왜 · 어떻게"><span class="why">큰 병은 나이 들어 많아요 · 보험료는 <em>버는 동안</em> 끝내야 오래 지켜요</span>갱신형이면 갱신 때 보험료가 다시 정해져요</td>
+        <td class="i" data-h="지금 내 보험"><div class="row"><select data-k="end" data-opt="end" aria-label="보장 끝 나이"></select></div><div class="row"><label>보험료 다 내는 나이 <input class="n" type="number" min="20" max="110" step="1" inputmode="numeric" data-k="payend" placeholder="모름"> 세</label></div></td>
+        <td class="g" data-h="제 기준" data-goal="term"></td>
+        <td class="d" data-h="내 설계" data-out="term"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <section class="how" aria-label="보험금이 나오는 길">
+    <div><b>💵 정해진 금액형</b><p>진단비 · 수술비 · 사망. 약관이 정한 일이 생기면 <em>정한 금액</em>. 여러 회사면 원칙적으로 <em>회사마다 각각</em> — 약관에 따라 달라요.</p></div>
+    <div><b>🧾 쓴 만큼형</b><p>실비 · 일상배상. <em>쓴 돈 · 물어 준 돈 안에서</em>만. 여러 개 들어도 합쳐서 그 돈까지, <em>나눠서</em>.</p></div>
+    <div><b>📮 청구는 이렇게</b><p>진단서 · 영수증 · 세부내역서 → 접수 → 심사(필요하면 의료자문) → 지급. 몰라서 못 받은 돈도 <em>3년이 지나면</em> 청구가 어려워요.</p></div>
+  </section>
+
+  <p class="foot">
+    「제 기준」 은 <b>APEX 실무 기준이에요(규정 아님)</b> — 회사·상품마다 다르게 볼 수 있어요 · 질병 범위는 약관의 KCD(한국표준질병사인분류) 표로 확인해요 ·
+    <b>지급 여부와 금액은 약관과 보험사 심사 결과에 따라요</b> · 보험료·보장은 심사 결과에 따라요 — 그래서 이 종이는 보험료를 셈하지 않아요 · 면책·감액 기간, 갱신 조건, 횟수·한도는 상품마다 달라요 ·
+    사망 보장 셈은 물가·이자를 뺀 단순 셈이에요 · 이 설계는 내가 적은 숫자로만 만들었고, 내 보험에 무엇이 있는지는 증권과 약관으로 확인해요.
+  </p>
+</main>
+<script src="selfcheck-core.js"></script>
+<script>
+/* 한 장 설계서 — 판정과 기준 숫자는 selfcheck-core.js(APXSelf)에서 빌린다. 여기서 또 적지 않는다(5번) */
+(function(){
+  var A=window.APXSelf;
+  if(!A){document.querySelector('[data-plan-empty]').textContent='판정 파일을 못 읽었어요 — 새로고침해 주세요. 설계를 지어 내지 않습니다.';return;}
+  var T=A.TARGET, man=A.man, S=A.S;
+  var flow=A.parse(location.hash), PLANNER=/(^#|&)p=1(&|$)/.test(location.hash), KEY='apxDesign';
+  var $=function(s){return document.querySelector(s)}, $$=function(s){return [].slice.call(document.querySelectorAll(s))};
+  var esc=function(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  /* 고를 것은 셀프 점검 문항의 것을 그대로 */
+  $$('select[data-opt]').forEach(function(sel){
+    sel.innerHTML='<option value="">고르세요</option>'+A.options(sel.getAttribute('data-opt')).map(function(o){return '<option value="'+esc(o[0])+'">'+esc(o[1])+'</option>'}).join('');
+  });
+  if(flow.by){$('[data-by-name]').textContent=flow.by;$('[data-by]').hidden=false;}
+  var el=function(k){return $('[data-k="'+k+'"]')};
+  function num(k){var e=el(k),v=e?String(e.value).trim():'';return v===''||!isFinite(+v)?null:Math.max(0,+v)}
+  function val(k){var e=el(k);return e?e.value:''}
+  var RANK={need:0,mid:1,chk:2,ok:3};
+  function worst(a,b){return !a?b:!b?a:(RANK[a.s]<=RANK[b.s]?a:b)}
+  /* 줄마다 — {s, do(할 일), tip} · 답이 없으면 null(아직) */
+  function rows(){
+    var inc=num('inc'), R={}, G={};
+    /* 실비 */
+    var j=A.judge('silson',val('silson')||null);
+    R.silson=j&&{s:j.s,do:j.s==='need'?'실비부터 넣기':j.s==='chk'?'증권 계약일 확인':'지키기 — 갈아타기 전에 꼭 물어보기',tip:A.tip('silson',j.s)};
+    /* 암 — 연소득 1~2배 */
+    var c=num('cancer');
+    G.cancer=inc>0?'<b>연소득의 '+T.cancer[0]+'~'+T.cancer[1]+'배</b> → '+man(inc*T.cancer[0])+' ~ '+man(inc*T.cancer[1]):'<b>연소득의 '+T.cancer[0]+'~'+T.cancer[1]+'배</b> — 연소득을 적으면 목표가 나와요';
+    if(c!=null){
+      var jc=A.judge('cancer',null,{c:c,i:inc});
+      var gap=inc>0?inc*T.cancer[0]-c:null;
+      R.cancer={s:jc.s,do:jc.s==='need'&&c===0?'암 진단비 넣기'+(inc>0?' — 목표 '+man(inc*T.cancer[0])+'부터':''):gap>0?'+'+man(gap)+' 채우기 (목표까지)':inc>0?'그대로 — 연소득의 '+(Math.round(c/inc*10)/10).toFixed(1)+'배':'연소득을 적어 배수 보기',tip:jc.a};
+    }
+    /* 뇌 · 심장 — 이름(범위)과 금액 */
+    function nameAmt(key,keyN,goal,wide){
+      var jn=A.judge(key,val(keyN)||null), a=num(key), out=null;
+      if(jn){
+        if(jn.s==='need')out={s:'need',do:wide+' '+man(goal)+' 넣기',tip:A.tip(key,'need')};
+        else if(jn.s==='chk')out={s:'chk',do:'담보 이름부터 확인',tip:A.tip(key,'chk')};
+        else{
+          out={s:jn.s,do:jn.s==='mid'?wide+'으로 넓히기':'',tip:A.tip(key,jn.s)};
+          if(a==null)out=worst(out,{s:'chk',do:(out.do?out.do+' · ':'')+'가입 금액 확인',tip:out.tip});
+          else if(a<goal)out={s:'mid',do:(out.do?out.do+' · ':'')+'+'+man(goal-a)+' 채우기',tip:out.tip};
+          else if(!out.do)out.do='그대로';
+        }
+      }else if(a!=null)out={s:'chk',do:'담보 이름부터 확인 — 이름에 든 병만 나와요',tip:''};
+      return out;
+    }
+    G.brain='<b>뇌혈관질환</b>(가장 넓은 이름) · '+man(T.brain);
+    R.brain=nameAmt('brain','brainN',T.brain,'뇌혈관질환');
+    G.heart='<b>허혈성 심장질환</b>(협심증 포함) · '+man(T.heart);
+    R.heart=nameAmt('heart','heartN',T.heart,'허혈성 심장질환');
+    /* 수술비 · 비싼 치료 */
+    ['surg','nonpay'].forEach(function(k){var jj=A.judge(k,val(k)||null);
+      R[k]=jj&&{s:jj.s,do:jj.s==='ok'?'그대로':jj.s==='chk'?'증권에서 확인':k==='surg'?(jj.s==='need'?'수술비 넣기':'할 때마다 나오는 것으로'):'비급여 암 치료 대비 넣기',tip:A.tip(k,jj.s)}});
+    /* 간병 · 배상 */
+    var cv=val('care');
+    R.care=cv?{y:{s:'ok',do:'그대로'},d:{s:'mid',do:'간병인 지원으로',tip:'입원일당은 간병비를 다 못 메워요'},n:{s:'need',do:'간병인 지원 넣기'},'?':{s:'chk',do:'증권에서 ‘간병’ 글자 찾기'}}[cv]:null;
+    var lv=val('liab');
+    R.liab=lv?{'1':{s:'ok',do:'그대로'},'2':{s:'mid',do:'하나로 줄이기',tip:'여러 개여도 손해만큼 나눠 나와요 — 겹친 보험료'},n:{s:'need',do:'가족 일상배상 넣기'},'?':{s:'chk',do:'증권에서 ‘배상’ 글자 찾기'}}[lv]:null;
+    /* 사망 — 대출 + 생활비×12×년 − 모아 둔 돈 (단순 셈) */
+    var loan=num('loan'),live=num('live'),yrs=num('yrs'),save=num('save'),dth=num('death');
+    var need=(live!=null&&yrs!=null)?Math.max(0,(loan||0)+live*12*yrs-(save||0)):null;
+    G.death=need!=null?'<b>필요한 돈</b> ≈ '+man(need)+'<span class="tip">대출 '+man(loan||0)+' + 생활비 '+man(live*12*yrs)+' − 모아 둔 돈 '+man(save||0)+'</span>':'<b>막내 독립까지 필요한 돈</b> — 월 생활비와 남은 해를 적으면 셈이 나와요';
+    if(dth!=null&&need!=null)R.death=dth>=need?{s:'ok',do:'그대로 — 필요한 돈만큼 있어요'}:{s:dth===0?'need':'mid',do:'+'+man(need-dth)+' 채우기 (막내 독립까지)'};
+    else if(dth!=null)R.death={s:'chk',do:'월 생활비 · 남은 해를 적어 필요한 돈 보기'};
+    /* 기간 */
+    var je=A.judge('end',val('end')||null), pe=num('payend'), rt=num('retire'), jp=null;
+    if(pe!=null&&rt!=null)jp=pe<=rt?{s:'ok',do:''}:{s:'mid',do:'은퇴 뒤 '+(pe-rt)+'년 더 내요 — 납입 기간 줄이기'};
+    else if(pe!=null)jp={s:'chk',do:'은퇴 예정 나이를 적으면 견줘요'};
+    G.term='<b>보장 '+T.end+'세 이상</b> · 보험료는 은퇴 전에 끝';
+    var te=je&&{s:je.s,do:je.s==='ok'?'':je.s==='chk'?'보험기간 확인':'보장 기간 늘리기',tip:A.tip('end',je.s)};
+    R.term=te&&jp?{s:worst(te,jp).s,do:[te.do,jp.do].filter(Boolean).join(' · ')||'그대로',tip:te.tip}:te?(te.do||(te.do='그대로'),te):jp?(jp.do||(jp.do='그대로'),jp):null;
+    return{R:R,G:G};
+  }
+  var NAME={silson:'실비',cancer:'암 진단비',brain:'뇌 진단비',heart:'심장 진단비',surg:'수술비',nonpay:'비싼 암 치료',care:'간병',death:'사망 보장',liab:'남에게 끼친 피해',term:'기간'};
+  function paint(){
+    var x=rows(), cnt={need:0,mid:0,chk:0,ok:0}, plan=[];
+    Object.keys(x.G).forEach(function(k){var g=$('[data-goal="'+k+'"]');if(g)g.innerHTML=x.G[k]});
+    $$('[data-out]').forEach(function(td){
+      var k=td.getAttribute('data-out'), r=x.R[k];
+      if(!r){td.innerHTML='<span class="chip no">아직</span><span class="tip">지금 내 보험을 적으면 나와요</span>';return}
+      cnt[r.s]++;
+      if(r.s!=='ok')plan.push({k:k,r:r});
+      td.innerHTML='<span class="chip '+r.s+'">'+S[r.s]+'</span><span class="do">'+esc(r.do||'')+'</span>'+(r.tip?'<span class="tip">'+esc(r.tip)+'</span>':'');
+    });
+    Object.keys(cnt).forEach(function(s){$('[data-cnt="'+s+'"]').textContent=String(cnt[s])});
+    plan.sort(function(a,b){return RANK[a.r.s]-RANK[b.r.s]});
+    $('[data-plan]').innerHTML=plan.map(function(p){return '<li><b>'+NAME[p.k]+'</b> — '+esc(p.r.do||S[p.r.s])+'</li>'}).join('');
+    $('[data-plan-empty]').hidden=!!plan.length;
+    if(!plan.length&&cnt.ok)$('[data-plan-empty]').hidden=false,$('[data-plan-empty]').innerHTML='적은 칸은 모두 <b>괜찮아요</b> — 그대로 두셔도 돼요.';
+    else if(!plan.length)$('[data-plan-empty]').innerHTML='아래 줄에 지금 내 보험을 적으면, 여기에 <b>채울 것</b>이 차례로 모여요.';
+    save();
+  }
+  /* 기억 — 고객 폰에서만. 설계사가 앱에서 연 것(#p=1)은 기억하지 않는다 */
+  function save(){if(PLANNER)return;try{var o={},n=0;$$('[data-k]').forEach(function(e){if(e.value!==''){o[e.getAttribute('data-k')]=e.value;n++}});if(n)localStorage.setItem(KEY,JSON.stringify(o));else localStorage.removeItem(KEY)}catch(e){}}
+  function load(){if(PLANNER)return;try{var o=JSON.parse(localStorage.getItem(KEY)||'null');if(o)Object.keys(o).forEach(function(k){var e=el(k);if(e)e.value=o[k]})}catch(e){}}
+  /* 셀프 점검 답(이 폰에 남은 것)을 같은 칸으로 */
+  var sv=PLANNER?null:A.saved();
+  var fromSelf=$('[data-from-self]');
+  if(sv&&sv.a&&Object.keys(sv.a).length)fromSelf.hidden=false;
+  fromSelf.addEventListener('click',function(){
+    var a=sv.a||{},n=sv.n||{};
+    var put=function(k,v){var e=el(k);if(e&&v!=null&&v!==''&&v!=='?'){e.value=v}};
+    ['silson','surg','nonpay','end'].forEach(function(k){put(k,a[k])});
+    put('brainN',a.brain);put('heartN',a.heart);
+    if(a.cancer!=='?'&&n.c!=null)put('cancer',n.c);
+    if(n.i!=null)put('inc',n.i);
+    paint();
+  });
+  document.addEventListener('input',function(e){if(e.target.closest('[data-k]'))paint()});
+  document.addEventListener('change',function(e){if(e.target.closest('[data-k]'))paint()});
+  $('[data-clear]').addEventListener('click',function(){$$('[data-k]').forEach(function(e){e.value=''});try{localStorage.removeItem(KEY)}catch(err){}paint()});
+  $('[data-print]').addEventListener('click',function(){window.print()});
+  load();paint();
+  window.KJS={paint:paint,rows:rows};
+})();
+</script>
+</body>
+</html>

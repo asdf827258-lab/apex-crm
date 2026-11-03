@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="ko">
+<head>
+<meta charset="utf-8">
+<!-- ══════════════════════════════════════════════════════════════════
+     보험의 기준 · 진단·치료 지도 (판 X308)
+     사장님 말씀 2026-11-02 「세부적으로 말해줘 대표적 진단과 치료방법 급여 비급여 치료든」
+     글은 kijun-care.js 한 벌, 담보 이름은 kijun-dict.js 한 벌 — 이 쪽은 그리기만 합니다(5번).
+     ★ 금액·본인부담 비율을 적지 않습니다(1번) · 급여 여부는 「대표적인 경우」 라고 맨 위에 밝힙니다.
+     ★ 아무것도 보내지 않습니다(7번) · 인쇄는 tnum 을 켜지 않습니다(4-1).
+     ★ 판 X309 — 「병을 겪는 길」(암 · 뇌졸중 · 심근경색 · 치매): 단계마다 치료 · 나가는 돈 · 받치는 담보. 글은 KJ_PATH.
+     재는 자: scripts/check-kjcare.js
+     ══════════════════════════════════════════════════════════════════ -->
+<meta name="color-scheme" content="light">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta property="og:title" content="보험의 기준 · 진단·치료 지도">
+<meta property="og:description" content="병마다 — 어떻게 진단하고, 어떻게 치료하고(급여·비급여), 어떤 담보가 받치나.">
+<title>보험의 기준 · 진단·치료 지도</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="ui.css">
+<style>
+/* 값은 app/ui.css 한 곳에서 옵니다 (5번) */
+:root{color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-size:14px;line-height:1.55;letter-spacing:-.2px;-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 48px}
+.hd{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.hd .tag{display:inline-block;font-size:13px;font-weight:700;color:var(--t-sub);background:var(--t-card);border-radius:var(--t-r-xs);padding:4px 10px}
+.hd h1{margin:6px 0 2px;font-size:25px;font-weight:800;letter-spacing:-.03em}
+.hd h1 b{color:var(--t-point)}
+.hd p{margin:0;color:var(--t-sub)}
+.act{display:flex;gap:6px;flex-wrap:wrap}
+.act a,.act button{min-height:44px;border:0;border-radius:var(--t-r-sm);padding:0 13px;font:700 14px var(--t-font);cursor:pointer;background:var(--t-card);color:var(--t-ink);display:inline-flex;align-items:center;text-decoration:none}
+.act button.p{background:var(--t-point);color:var(--t-on)}
+.warn{margin-top:12px;background:var(--t-warn-l);color:var(--t-ink);border-radius:var(--t-r-sm);padding:11px 14px;font-size:13.5px}
+.warn b{color:var(--t-warn-d)}
+.how{margin-top:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.how div{background:var(--t-card);border-radius:var(--t-r-sm);padding:10px 12px;font-size:13px}
+.how div>b{display:block;margin-bottom:3px;font-size:14px}
+.how2{margin-top:8px;background:var(--t-card);border-radius:var(--t-r-sm);padding:10px 12px;font-size:13px}
+.how2 b{color:var(--t-point-d)}
+/* 🧭 병을 겪는 길 (판 X309) */
+.path{margin-top:14px;background:var(--t-card);border-radius:var(--t-r-sm);padding:14px}
+.path>h2{margin:0;font-size:18px;font-weight:800}
+.path>p{margin:2px 0 0;color:var(--t-sub);font-size:13px}
+.ptabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.ptabs button{min-height:40px;border:0;border-radius:var(--t-r-xs);padding:0 12px;font:700 13.5px var(--t-font);background:var(--t-bg);color:var(--t-ink);cursor:pointer}
+.ptabs button.on{background:var(--t-point);color:var(--t-on)}
+.pway{margin-top:10px}
+.pway h3{margin:0 0 6px;font-size:15.5px;font-weight:800}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;counter-reset:st}
+.step{background:var(--t-bg);border-radius:var(--t-r-sm);padding:10px 12px;counter-increment:st;position:relative}
+.step h4{margin:0 0 4px;font-size:14.5px;font-weight:800}
+.step h4::before{content:counter(st);display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--t-point);color:var(--t-on);font-size:12px;margin-right:6px;vertical-align:1px}
+.step p{margin:0 0 6px;font-size:13px}
+.step ul{margin:0 0 6px;padding:0;list-style:none;font-size:13px}
+.step .mo{display:inline-block;font-size:11.5px;font-weight:800;border-radius:var(--t-r-xs);padding:1px 7px;margin-left:4px;vertical-align:1px}
+.step .mo.h{background:var(--t-point-l);color:var(--t-point-d)}
+.step .mo.l{background:var(--t-pur-l);color:var(--t-pur)}
+.step .mo.b{background:var(--t-warn-l);color:var(--t-warn-d)}
+.step .cov a{display:inline-block;font-size:12px;font-weight:700;color:var(--t-point-d);background:var(--t-point-l);border-radius:var(--t-r-xs);padding:1px 7px;margin:0 4px 4px 0;text-decoration:none}
+.step .tip{margin:2px 0 0;font-size:12.5px;font-weight:600}
+.money{margin-top:8px;font-size:12.5px;color:var(--t-sub)}
+.tools{position:sticky;top:0;z-index:5;background:var(--t-bg);padding:10px 0 8px;margin-top:10px}
+.tools input{width:100%;min-height:46px;font:600 15px var(--t-font);color:var(--t-ink);background:var(--t-card);border:1.5px solid var(--t-line);border-radius:var(--t-r-sm);padding:0 14px}
+.tools input:focus{outline:none;border-color:var(--t-point)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chips button{min-height:36px;border:0;border-radius:var(--t-r-xs);padding:0 10px;font:700 13px var(--t-font);background:var(--t-card);color:var(--t-ink);cursor:pointer}
+.chips button.on{background:var(--t-point);color:var(--t-on)}
+.chips .sep{width:1px;background:var(--t-line);margin:4px 2px}
+.f{display:inline-block;font-size:11.5px;font-weight:800;border-radius:var(--t-r-xs);padding:1px 6px;white-space:nowrap;margin-right:5px}
+.f.g{background:var(--t-pos-l);color:var(--t-pos-d)}
+.f.b{background:var(--t-neg-l);color:var(--t-neg-d)}
+.f.c{background:var(--t-warn-l);color:var(--t-warn-d)}
+.grp{margin-top:14px}
+.grp h2{margin:0 0 8px;font-size:18px;font-weight:800}
+.grp h2 small{font-size:13px;font-weight:700;color:var(--t-sub);margin-left:6px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.card{background:var(--t-card);border-radius:var(--t-r-sm);padding:12px 14px;border:2px solid transparent;scroll-margin-top:130px}
+.card.hit{border-color:var(--t-point)}
+.card h3{margin:0;font-size:16px;font-weight:800;letter-spacing:-.02em}
+.card h3 .code{font-size:12px;font-weight:700;color:var(--t-sub);margin-left:6px}
+.card dl{margin:8px 0 0;display:grid;grid-template-columns:auto 1fr;gap:5px 10px}
+.card dt{font-size:12.5px;font-weight:800;color:var(--t-sub);white-space:nowrap}
+.card dd{margin:0;font-size:13.5px}
+.card ul{margin:0;padding:0;list-style:none}
+.card li{padding:1px 0}
+.card .cov a{display:inline-block;font-size:12.5px;font-weight:700;color:var(--t-point-d);background:var(--t-point-l);border-radius:var(--t-r-xs);padding:1px 7px;margin:0 4px 4px 0;text-decoration:none}
+.card dd.c{font-weight:600}
+.none{margin-top:20px;background:var(--t-card);border-radius:var(--t-r-sm);padding:24px;text-align:center;color:var(--t-sub)}
+.foot{margin-top:16px;font-size:12px;line-height:1.6;color:var(--t-sub)}
+.foot b{color:var(--t-ink)}
+@media (max-width:980px){.steps{grid-template-columns:1fr 1fr}}
+@media (max-width:760px){.cards,.how,.steps{grid-template-columns:1fr}}
+@media print{
+  @page{size:A4;margin:9mm}
+  body{background:#fff;font-size:10px}
+  .wrap{max-width:none;padding:0}
+  .act,.tools{display:none}
+  .hd h1{font-size:18px}
+  .warn,.how div,.how2{padding:5px 8px;font-size:9px;border:1px solid var(--t-line)}
+  .how{gap:4px}.how div>b{font-size:10px}
+  .grp{margin-top:6px}.grp h2{font-size:12.5px;margin-bottom:4px}
+  .cards{gap:4px}
+  .card{padding:5px 8px;border:1px solid var(--t-line);break-inside:avoid}
+  .card h3{font-size:11px}.card dt{font-size:8.8px}.card dd{font-size:9.2px;line-height:1.38}
+  .card dl{margin-top:3px;gap:1px 6px}
+  .f,.card .cov a{font-size:8.3px}
+  .foot{font-size:8.8px}
+  .path{padding:6px 8px;border:1px solid var(--t-line)}.path>h2{font-size:12.5px}.path>p,.money{font-size:8.8px}.ptabs{display:none}
+  .pway[hidden]{display:block!important}.pway h3{font-size:11px;margin:6px 0 3px}.steps{grid-template-columns:repeat(3,1fr);gap:4px}
+  .step{padding:5px 7px;border:1px solid var(--t-line);break-inside:avoid}.step h4{font-size:10px}.step p,.step ul,.step .tip{font-size:8.8px;margin-bottom:3px}.step .mo,.step .cov a{font-size:8px}
+  *{font-variant-numeric:normal!important;font-feature-settings:normal!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="hd">
+    <div>
+      <span class="tag">🩺 보험의 기준 · 진단·치료 지도</span>
+      <h1>병마다 — <b>어떻게 찾고, 어떻게 고치나</b></h1>
+      <p>대표적인 병의 진단 · 치료(급여 · 비급여) · 받치는 담보 · 꼭 볼 것. <span data-count></span></p>
+    </div>
+    <div class="act">
+      <a href="kijun-dict.html">📚 담보 사전</a>
+      <a href="kijun-guide.html">🧭 설계 가이드</a>
+      <a href="kijun-sheet.html" data-sheet>📄 한 장 설계서</a>
+      <button type="button" class="p" data-print>🖨 인쇄</button>
+    </div>
+  </header>
+
+  <p class="warn" data-warn>⚠ <b>급여 · 비급여는 「대표적인 경우」예요.</b> 같은 치료도 약 · 적응증 · 횟수 · 시기에 따라 급여가 되기도, 안 되기도 해요 — <b>건강보험심사평가원(심평원) · 병원 원무과에서 확인</b>해요. 이 지도는 금액과 본인부담 비율을 적지 않아요. 보험금 지급 여부는 <b>약관과 보험사 심사 결과에 따라요.</b></p>
+
+  <section class="how" data-how>
+    <div><b><span class="f g">급여</span>건강보험이 정한 치료</b>건강보험공단이 일부를 내고, 나머지를 내가 내요(본인부담). 실손보험은 이 본인부담 몫을 약관 한도 안에서 돌려줘요.</div>
+    <div><b><span class="f b">비급여</span>건강보험 밖의 치료</b>전부 내가 내요. 실손보험은 상품 세대 · 특약 · 한도 · 횟수 안에서만 돌려줘요 — 다 안 메워지는 자리가 여기예요.</div>
+    <div><b><span class="f c">조건부</span>기준에 맞으면 급여</b>적응증 · 횟수 · 목적이 기준에 맞으면 급여, 아니면 비급여예요. 같은 MRI 도 목적에 따라 갈려요.</div>
+  </section>
+  <p class="how2">💡 <b>정해진 금액 담보(진단비 · 수술비)</b>는 급여든 비급여든 상관없이 약관의 조건이 맞는지만 봐요. <b>쓴 만큼 담보(실손)</b>는 급여·비급여에 따라 돌려받는 길이 달라져요. 그래서 두 가지를 함께 봐요.</p>
+
+  <section class="path" data-path>
+    <h2>🧭 병을 겪는 길 — 단계마다 나가는 돈과 받치는 담보</h2>
+    <p>큰 병은 진단 한 번에 끝나지 않아요. 단계마다 무엇을 하고(급여 · 비급여), 어떤 돈이 나가고(병원비 · 생활비), 어떤 담보가 받치는지 차례로 봐요.</p>
+    <div class="ptabs" data-ptabs></div>
+    <div data-ways></div>
+    <p class="money">나가는 돈 — <b>병원비</b>는 실비와 치료비 담보가, <b>생활비</b>(쉬는 동안 끊기는 월급 · 간병 · 식비 · 교통비)는 진단비 · 생활비 · 일당 담보가 받쳐요. 이 지도는 「얼마 드는지」 를 적지 않아요 — 병원 · 약 · 횟수마다 달라요.</p>
+  </section>
+
+  <div class="tools">
+    <input type="search" data-q placeholder="병 · 검사 · 치료 이름으로 찾기 — 예: 스텐트, 도수치료, 로봇, MRI" aria-label="병 찾기">
+    <div class="chips" data-chips></div>
+  </div>
+  <div data-list></div>
+  <p class="none" data-none hidden>찾는 병이 없어요 — 다른 낱말로 찾아보세요. 없는 병을 지어 적지 않습니다.</p>
+  <p class="foot">
+    병의 범위는 약관의 <b>KCD(한국표준질병사인분류)</b> 표로 확인해요 — 여기 적은 코드는 대표 코드예요 ·
+    급여 기준은 고시로 자주 바뀌어요 — <b>심평원 · 병원에서 확인</b> ·
+    담보는 「받칠 수 있는 담보」예요 — <b>지급 여부와 금액은 약관과 보험사 심사 결과에 따라요</b> · 보험료 · 보장은 심사 결과에 따라요 ·
+    진단과 치료는 의사가 정해요 — 이 지도는 이해를 돕는 일반 설명이에요.
+  </p>
+</main>
+<script src="kijun-dict.js"></script>
+<script src="kijun-care.js"></script>
+<script>
+/* 진단·치료 지도 — 글은 KJ_CARE 한 벌, 담보 이름은 KJ_DICT 한 벌. 여기서는 그리고 찾기만 한다 */
+(function(){
+  var C=window.KJ_CARE||[], D=window.KJ_DICT||[], FLAG={g:'급여',b:'비급여',c:'조건부'};
+  var $=function(s){return document.querySelector(s)};
+  var esc=function(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var dn={};D.forEach(function(g){g.d.forEach(function(x){dn[x.id]=x.n})});
+  var n=0;C.forEach(function(g){n+=g.d.length});
+  $('[data-count]').textContent='모두 '+n+'가지 · '+C.length+'갈래';
+  var cur='', fl='';
+  $('[data-chips]').innerHTML='<button type="button" class="on" data-g="">전체</button>'+C.map(function(g){return '<button type="button" data-g="'+esc(g.g)+'">'+esc(g.t)+'</button>'}).join('')+
+    '<span class="sep"></span><button type="button" data-fl="b">비급여가 있는 병</button><button type="button" data-fl="c">조건부가 있는 병</button>';
+  function card(x){
+    return '<article class="card" id="'+esc(x.id)+'" data-id="'+esc(x.id)+'"><h3>'+esc(x.n)+(x.code?'<span class="code">'+esc(x.code)+'</span>':'')+'</h3>'+
+      '<dl><dt>어떻게 진단</dt><dd>'+esc(x.dx)+'</dd>'+
+      '<dt>치료</dt><dd><ul>'+x.tx.map(function(t){return '<li data-f="'+esc(t[1])+'"><span class="f '+esc(t[1])+'">'+esc(FLAG[t[1]]||'')+'</span>'+esc(t[0])+'</li>'}).join('')+'</ul></dd>'+
+      '<dt>받치는 담보</dt><dd class="cov">'+x.cov.map(function(id){return dn[id]?'<a href="kijun-dict.html#'+esc(id)+'">'+esc(dn[id])+'</a>':''}).join('')+'</dd>'+
+      '<dt>꼭 볼 것</dt><dd class="c">'+esc(x.tip)+'</dd></dl></article>';
+  }
+  function hay(x){return (x.n+x.code+x.dx+x.tip+x.tx.map(function(t){return t[0]}).join('')+x.cov.map(function(id){return dn[id]||''}).join('')).replace(/\s+/g,'').toLowerCase()}
+  function draw(){
+    var q=String($('[data-q]').value||'').replace(/\s+/g,'').toLowerCase(), shown=0;
+    var h=C.filter(function(g){return !cur||g.g===cur}).map(function(g){
+      var items=g.d.filter(function(x){
+        if(fl&&!x.tx.some(function(t){return t[1]===fl}))return false;
+        return !q||hay(x).indexOf(q)>=0});
+      shown+=items.length;
+      return items.length?'<section class="grp" data-grp="'+esc(g.g)+'"><h2>'+esc(g.t)+'<small>'+items.length+'가지</small></h2><div class="cards">'+items.map(card).join('')+'</div></section>':'';
+    }).join('');
+    $('[data-list]').innerHTML=h;$('[data-none]').hidden=!!shown;
+  }
+  $('[data-chips]').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;
+    if(b.hasAttribute('data-fl')){var v=b.getAttribute('data-fl');fl=(fl===v)?'':v;
+      [].forEach.call(document.querySelectorAll('[data-chips] button[data-fl]'),function(x){x.classList.toggle('on',x.getAttribute('data-fl')===fl)});}
+    else{cur=b.getAttribute('data-g');[].forEach.call(document.querySelectorAll('[data-chips] button[data-g]'),function(x){x.classList.toggle('on',x===b)});}
+    draw()});
+  $('[data-q]').addEventListener('input',draw);
+  $('[data-print]').addEventListener('click',function(){$('[data-q]').value='';cur='';fl='';
+    [].forEach.call(document.querySelectorAll('[data-chips] button'),function(x){x.classList.toggle('on',x.getAttribute('data-g')==='')});draw();window.print()});
+  draw();
+  /* 🧭 병을 겪는 길 (판 X309) — 글은 KJ_PATH 한 벌. 담보 이름은 KJ_DICT 에서 빌린다(5번) */
+  var PW=window.KJ_PATH||[], MO={h:'병원비',l:'생활비',b:'병원비 · 생활비'}, pcur=PW.length?PW[0].g:'';
+  function way(p){
+    return '<div class="pway" data-way="'+esc(p.g)+'"'+(p.g===pcur?'':' hidden')+'><h3>'+esc(p.t)+'</h3><ol class="steps">'+p.d.map(function(st){
+      return '<li class="step" data-step><h4>'+esc(st.s)+'<span class="mo '+esc(st.m)+'" data-mo="'+esc(st.m)+'">💸 '+esc(MO[st.m]||'')+'</span></h4>'+
+        '<p>'+esc(st.w)+'</p><ul>'+st.tx.map(function(t){return '<li><span class="f '+esc(t[1])+'">'+esc(FLAG[t[1]]||'')+'</span>'+esc(t[0])+'</li>'}).join('')+'</ul>'+
+        '<div class="cov">'+st.cov.map(function(id){return dn[id]?'<a href="kijun-dict.html#'+esc(id)+'">'+esc(dn[id])+'</a>':''}).join('')+'</div>'+
+        '<p class="tip">👉 '+esc(st.tip)+'</p></li>'}).join('')+'</ol></div>';
+  }
+  if(PW.length){
+    $('[data-ptabs]').innerHTML=PW.map(function(p){return '<button type="button" data-pg="'+esc(p.g)+'"'+(p.g===pcur?' class="on"':'')+'>'+esc(p.t.split(' — ')[0])+'</button>'}).join('');
+    $('[data-ways]').innerHTML=PW.map(way).join('');
+    $('[data-ptabs]').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;pcur=b.getAttribute('data-pg');
+      [].forEach.call(document.querySelectorAll('[data-ptabs] button'),function(x){x.classList.toggle('on',x===b)});
+      [].forEach.call(document.querySelectorAll('[data-way]'),function(x){x.hidden=x.getAttribute('data-way')!==pcur})});
+  }else{$('[data-path]').hidden=true}
+  function jump(){var id=decodeURIComponent((location.hash||'').replace(/^#/,'').split('&')[0]);var c=id&&document.getElementById(id);
+    [].forEach.call(document.querySelectorAll('.card.hit'),function(x){x.classList.remove('hit')});
+    if(c){c.classList.add('hit');c.scrollIntoView({block:'center'})}}
+  window.addEventListener('hashchange',jump);jump();
+})();
+</script>
+</body>
+</html>
