@@ -68,6 +68,13 @@ is(/BA_WALK\.map\(/.test(SRC.slice(SRC.indexOf('function guideHtml'), SRC.indexO
   await pg.evaluate(() => { localStorage.clear(); doSample(); S.who.name = '홍길동'; S.deck = false; delete S.walk; save(); go('show'); });
   await pg.waitForTimeout(500);
 
+  head('0. 처음 열면 길잡이는 꺼져 있다 (판 X305 · 사장님 말씀 2026-11-03 「길잡이 기본값을 꺼진상태로」)');
+  const d0 = await pg.evaluate(() => ({ on: baWalkOn(), n: document.querySelectorAll('#app .show > .bawalk').length,
+    btn: [].slice.call(document.querySelectorAll('button')).map(b => b.innerText).filter(t => /길잡이/.test(t)).join(' | ') }));
+  is(d0.on === false && d0.n === 0, '한 번도 안 건드린 기기는 길잡이가 꺼진 채 열린다 (장 사이 길잡이 ' + d0.n + '개)');
+  is(/길잡이 끔/.test(d0.btn), '단추가 「길잡이 끔」 으로 선다 — 누르면 켜진다');
+  await pg.evaluate(() => baWalkSet(true)); await pg.waitForTimeout(300);
+
   head('1 · 3 · 4 · 5. 죽 이어서 — 장마다 길잡이 · 아이콘 · 이름');
   const R = await pg.evaluate(() => {
     const L = deckList(), out = [];

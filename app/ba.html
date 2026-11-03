@@ -1419,7 +1419,7 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 .show.deck>section.cur .anat svg{max-height:330px}
 .show.deck>section.cur .pin{padding:8px 11px;margin-bottom:7px;border-radius:11px}
 .show.deck>section.cur .pin .pt{font-size:13px;margin-bottom:3px}
-.show.deck>section.cur .pin .pv .c span{font-size:10.5px}
+.show.deck>section.cur .pin .pv .c span{font-size:12px}  /* 판 X305 — 10.5px 는 줄인 무대(0.8배)에서 8px 남짓이라 「전 · 후」 가 안 읽혔다 */
 .show.deck>section.cur .pin .pv .c b{font-size:16px}
 .show.deck>section.cur .pin .pb{margin-top:3px}
 .show.deck>section.cur .pin .pb .t{height:5px}
@@ -1475,7 +1475,7 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 /* 두 칸으로 설 때는 글자를 <b>한 호흡 줄여</b> 여덟 줄이 다 들어오게 한다 */
 .show.deck>section.cur .stwrap.two table{font-size:13px}
 .show.deck>section.cur .stwrap.two td{padding:6px 9px}
-.show.deck>section.cur .stwrap.two th{font-size:11px;padding:5px 9px}
+.show.deck>section.cur .stwrap.two th{font-size:12px;padding:5px 9px}
 .show.deck>section.cur .stwrap.two .dsc{display:none}
 .show.deck>section.cur .dl{max-height:none}
 /* 첫 장의 큰 숫자 — 궁금한 것 하나만 크게 */
@@ -6001,6 +6001,12 @@ function deckFit(){
   wrap.classList.add('deck-fit');
   var avW=wrap.clientWidth,avH=wrap.clientHeight;
   if(!avW||!avH)return;
+  /* 판 X305 — 높이를 <b>실제로</b> 잰다. .deck-fit 의 「100vh - 232px」 는 위 띠가 두 줄일 때의 어림이라,
+     위 띠(분석 모드 · 보는 방식 · 목차)가 254px 를 넘고 아래 진행 띠(55px)까지 덮으면
+     무대 아랫단 — 그 장의 <b>따옴표 한 줄</b> — 이 70px 남짓 가려졌다(1440×900 에서 확인). */
+  var bar=document.querySelector('.deckbar'),bh=(bar&&bar.offsetHeight&&getComputedStyle(bar).position==='fixed')?bar.offsetHeight:0;
+  var top=wrap.getBoundingClientRect().top,room=window.innerHeight-Math.max(0,top)-bh-12;
+  if(room>200)avH=Math.min(avH,room);
   var k=Math.min(avW/1280,avH/720,1);
   box.style.transform='scale('+k+')';
   /* 줄인 만큼 자리도 줄여 준다 — 안 그러면 밑에 빈 자리가 남는다 */
@@ -6152,8 +6158,9 @@ function baWalkOf(id){
     if(w.k===id||(w.k.charAt(w.k.length-1)==='_'&&id.indexOf(w.k)===0))return w;}
   return null;
 }
-/* 길잡이를 켰는가 — 처음 여는 분께는 <b>켜져 있다</b>. 끄면 그 기기에 남는다 */
-function baWalkOn(){return S.walk!==false;}
+/* 길잡이를 켰는가 — 판 X305 부터 <b>처음엔 꺼져 있다</b>(사장님 말씀 2026-11-03 「길잡이 기본값을 꺼진상태로」 —
+   고객 화면 왼쪽 아래를 가렸다). 켜면 그 기기에 남는다. 예전에 한 번도 안 건드린 기기(S.walk 없음)도 꺼짐으로 연다 */
+function baWalkOn(){return S.walk===true;}
 function baWalkSet(on){S.walk=!!on;save();render();}
 function baWalkHtml(sec,deck){
   var w=sec?baWalkOf(sec.id):null;
