@@ -153,11 +153,16 @@ const is = (c, m) => c ? ok(m) : no(m);
         goal_prem: 300, act_prem: 200 + k * 30, goal_case: 5, act_case: 4
       });
     }
+    /* ★ 판 X303 (2026-11-03 「업적 합쳐주고」) — 이번 달 <b>실적은 손으로 안 친다</b>.
+       ✍️ 내 업적 입력(em_contracts)이 바뀌면 서버(EM migration_66)가 act_prem · act_case 를
+       세어 넣는다. 그래서 서버가 센 값을 먼저 심어 두고, 저장이 그것을 <b>덮지 않는지</b> 본다. */
+    window.__db.monthly_perf.push({ owner_id: 'u1', period: ym, act_prem: 620, act_case: 8 });
     go('airep'); await new Promise(r => setTimeout(r, 500));
     arGoCat('perf'); await new Promise(r => setTimeout(r, 900));
-    /* 이번 달 값을 적고 저장 */
+    /* 이번 달 값을 적고 저장 — 실적 칸에 다른 값을 쳐 봐도(잠겨 있어야 함) 서버 값이 이긴다 */
     document.getElementById('pf_goal').value = '500';
-    document.getElementById('pf_act').value = '620';
+    window.__actRO = !!(document.getElementById('pf_act') || {}).readOnly;
+    document.getElementById('pf_act').value = '999';
     document.getElementById('pf_gcase').value = '6';
     document.getElementById('pf_acase').value = '8';
     document.getElementById('pf_plan').value = '기존 고객 30명 재점검';
@@ -167,10 +172,13 @@ const is = (c, m) => c ? ok(m) : no(m);
     return {
       saved: JSON.parse(JSON.stringify(window.__db.monthly_perf.filter(x => x.period === pfYm()))),
       text: (host.innerText || ''),
-      svg: host.querySelectorAll('svg').length
+      svg: host.querySelectorAll('svg').length,
+      ro: window.__actRO
     };
   });
-  is(R.saved.length === 1 && +R.saved[0].act_prem === 620, '적은 값이 그대로 저장된다 (' + (R.saved[0] || {}).act_prem + '만원)');
+  is(R.saved.length === 1 && +R.saved[0].goal_prem === 500, '적은 목표가 저장된다 (' + (R.saved[0] || {}).goal_prem + '만원)');
+  is(R.saved.length === 1 && +R.saved[0].act_prem === 620, '★ 서버가 센 실적이 저장 뒤에도 그대로다 (' + (R.saved[0] || {}).act_prem + '만원) — 손으로 친 999 가 덮지 않는다 (판 X303)');
+  is(R.ro, '실적 칸은 손으로 못 친다 — ✍️ 내 업적 입력에서 저절로 센다');
   is(/달성률 124%/.test(R.text), '달성률을 스스로 계산한다 — 620/500 = 124%');
   is(/목표를 120만원 넘겼습니다/.test(R.text), '얼마나 넘겼는지 말로도 알려 준다');
   is(R.svg >= 2, '목표 대비 막대와 열두 달 흐름이 그려진다 (svg ' + R.svg + '개)');
