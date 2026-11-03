@@ -21484,8 +21484,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-02 18:25';
-var APP_BUILD_NOTE="👤 <b>보장 전·후 3D — 사람 모델을 「폴더째」 넣습니다 · zip(glTF) 도 받습니다</b> (판 X246). ◾ 스케치팹에서 받은 파일을 한 폴더에 모아 「📁 폴더째 넣기」 를 누르면 파일 이름을 보고 역할 칸(의사 · 간호사 · 환자 …)에 알아서 넣습니다. ◾ 스케치팹 기본 받기인 glTF(zip) · 풀어 둔 glTF 폴더도 읽습니다(예전엔 .glb 만 받아 zip 을 넣으면 거절됐습니다). ◾ 「폴더에 넣어 두기만 하면 화면이 모른다」 는 안내를 창 맨 위에. ◾ (먼저 나간 판 X242) 그대로 들어 있습니다. · 함께 실려 나가는 main 판 X268~X299(자비스가 앱 안의 값을 찾아 내놓기 · 「지금 할 것」 하루 다섯 걸음 · 아침 8시 블로그 한 줄 · 날짜 미끄러짐 · 메뉴 색 · 인쇄 백지 등)도 그대로 들어 있습니다.";
+var APP_BUILD='2026-11-03 16:40';
+var APP_BUILD_NOTE="🕗 <b>약속이 지난 분 — 「📅 다시 잡기」 가 저장되지 않던 것을 고쳤습니다</b> (판 X300). ◾ 날짜를 고르는 사이 홈이 스스로 한 번 다시 그려지면서 고르신 일시가 빈칸이 되어, 저장을 누르면 「새 약속 일시를 골라 주세요」 만 떴습니다. ◾ 이제 고르신 일시를 따로 적어 두어, 다시 그려져도 그대로 남고 저장됩니다.";
 
 
 
@@ -28035,6 +28035,13 @@ function hmBlankSave(){
    ★ 없는 날도 <b>자리를 남깁니다</b>(사장님 규칙 2026-09-26 「있다 없다 하는 칸을 없앱니다」). */
 var HM_LATE_KEY='apex_hm_late_skip_v1';
 var HM_LATE_OPEN='';                    /* 📅 날짜 칸을 편 분 (한 번에 한 분) */
+/* 📅 <b>고르신 일시는 칸이 아니라 여기에 듭니다</b> (판 X300 · 사장님 말씀 2026-11-03
+   「눌러 봤는데 다시 잡기가 안된다」). 홈은 열고 1.2초·3.2초 뒤, 그리고 자료가 늦게
+   올 때마다 「지금 할 것」 을 <b>통째로 다시 그립니다</b>(hmSidePlace). 그때 날짜 칸도
+   새로 서서 고르신 값이 빈칸이 되었고, 저장을 누르면 「새 약속 일시를 골라 주세요」 만
+   떴습니다 — 서버에는 한 줄도 안 갔습니다. 폰은 날짜 창이 몇 초 걸려 거의 매번 걸렸습니다.
+   ★ 그래서 고르는 그 순간 여기 적고, 다시 그릴 때 <b>이 값으로 칸을 채웁니다</b>. */
+var HM_LATE_V='';
 /* ⏭ <b>「오늘은 넘기기」 는 한 자가 답합니다</b> — 🕗 와 💬 가 같이 씁니다 (5번).
    이 기기에서 <b>오늘만</b>입니다. 날이 바뀌면 다시 앞으로 — 서버에 아무것도 안 씁니다. */
 function hmDaySkips(key){
@@ -28091,7 +28098,8 @@ function hmLateHtml(){
     h+='<div class="hm-late-s">'+(((typeof hdbWhyNot==='function')&&hdbWhyNot(r))||
        '내 고객이 아니라 날짜·단계는 담당 설계사가 바꿉니다.')+'</div>';
   if(can&&HM_LATE_OPEN===r.id)
-    h+='<div class="hm-late-f"><input type="datetime-local" id="hmLateAt" aria-label="새 약속 일시">'+
+    h+='<div class="hm-late-f"><input type="datetime-local" id="hmLateAt" aria-label="새 약속 일시"'+
+       ' value="'+osEsc(HM_LATE_V)+'" oninput="hmLateKeep(this.value)" onchange="hmLateKeep(this.value)">'+
        '<button type="button" class="t-btn sm" onclick="hmLateAgain(\''+osEsc(r.id)+'\')">저장</button>'+
        '<button type="button" class="t-btn g sm" onclick="hmLateOpen(\'\')">닫기</button></div>';
   if(L.length>1)h+='<div class="hm-late-s">끝내시면 다음 분(남은 '+(L.length-1)+'분)이 이 자리에 섭니다.</div>';
@@ -28117,12 +28125,18 @@ function hmStackSumPaint(host){
   try{ v=(typeof window[s.sum]==='function')?window[s.sum]():''; }catch(e){ v=''; }
   sp.textContent=v;
 }
-function hmLateOpen(id){ HM_LATE_OPEN=id||''; hmLatePaint();
+function hmLateOpen(id){ HM_LATE_OPEN=id||''; HM_LATE_V=''; hmLatePaint();
   try{ var f=document.getElementById('hmLateAt'); if(f)f.focus(); }catch(e){} }
+/* 고르신 값을 적어 둡니다. 날짜 창이 떠 있는 사이 칸이 새로 섰으면(옛 칸에 값이 들어옴)
+   <b>지금 서 있는 칸</b>에도 넣어 눈에 보이게 합니다. */
+function hmLateKeep(v){
+  HM_LATE_V=''+(v||'');
+  try{ var f=document.getElementById('hmLateAt'); if(f&&f.value!==HM_LATE_V)f.value=HM_LATE_V; }catch(e){}
+}
 /* 📅 <b>다시 잡기</b> — CRM 통화 저장과 같은 꼴로 calls 에 한 줄 (위 쪽지) */
 function hmLateAgain(id){
   var r=(typeof hdbRow==='function')?hdbRow(id):null,sb=(typeof osClient==='function')?osClient():null,
-      f=document.getElementById('hmLateAt'),v=f?f.value:'',at,me,row;
+      f=document.getElementById('hmLateAt'),v=(f&&f.value)||HM_LATE_V,at,me,row;
   if(!r)return;
   if(!hdbCan(r)){ toast('내 고객이 아니면 약속을 바꿀 수 없습니다.'); return; }
   if(!v){ toast('새 약속 일시를 골라 주세요.'); return; }
@@ -28140,7 +28154,7 @@ function hmLateAgain(id){
     if(w.ok!==true){ hdbSay(w,'약속 다시 잡기'); return; }
     hdbLocal(id,{appt:at.toISOString(),n:(r.n||0)+1,res:'상담',
                  last:(new Date()).toISOString().slice(0,10),days:0});
-    HM_LATE_OPEN='';
+    HM_LATE_OPEN=''; HM_LATE_V='';
     toast(osMaskName(r.name)+' 님 · 약속을 '+(at.getMonth()+1)+'월 '+at.getDate()+'일로 다시 잡았습니다');
     hdbPaint();
   },function(e){ hdbErr(e,'약속 다시 잡기'); });
