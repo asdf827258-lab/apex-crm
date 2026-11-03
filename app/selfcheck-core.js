@@ -102,7 +102,7 @@
   function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
   function man(v){v=Math.round(v);if(v>=10000){var e=Math.floor(v/10000),r=v%10000;return e+'억'+(r?' '+r.toLocaleString()+'만':'')+' 원'}return v.toLocaleString()+'만 원'}
   /* 한 문항의 판정 — 답이 없으면 null (아직) */
-  /* 판정은 이 한 곳 — 셀프 점검 쪽과 한 장 설계서(kijun-sheet.html)가 같이 부른다(5번 · 판 X298) */
+  /* 판정은 이 한 곳 — 셀프 점검 쪽과 한 장 설계서(kijun-sheet.html)가 같이 부른다(5번 · 판 X305) */
   function judge(q){return judgeWith(q,ST.a[q.k],ST.n)}
   function judgeWith(q,av,nm){
     nm=nm||{};
@@ -183,7 +183,7 @@
     all('[data-sc="by"]').forEach(function(e){e.textContent=FLOW.by});
     all('[data-sc="hi"]').forEach(function(e){e.textContent=FLOW.hi?'“'+FLOW.hi+'”':''});
     all('[data-sc-show]').forEach(function(e){e.hidden=!FLOW[e.getAttribute('data-sc-show')]});
-    /* 📄 한 장 안내서로 — 보낸 설계사 이름을 그대로 들고 간다 (판 X298) */
+    /* 📄 한 장 안내서로 — 보낸 설계사 이름을 그대로 들고 간다 (판 X305) */
     all('[data-sc-sheet]').forEach(function(e){e.setAttribute('href','kijun-sheet.html'+(FLOW.by?'#by='+encodeURIComponent(FLOW.by):''))});
     all('[data-sc="qs"]').forEach(function(box){
       var from=+(box.getAttribute('data-from')||0), to=+(box.getAttribute('data-to')||Q.length);
