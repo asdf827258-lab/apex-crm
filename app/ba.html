@@ -979,6 +979,13 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 .show.deck>section.cur.ba3d .b3f{position:absolute;inset:0 0 34px 0;aspect-ratio:auto;border:0;border-radius:0}  /* 아래 34px 은 발표 진행 막대 자리 */
 .show.deck:has(>section.cur.ba3d)::after{display:none}
 @media print{.ba3d{display:none!important}}
+/* 보고서 묶음 장(판 X316) — 무대 가득 · 손은 안 닿게(넘기기 · 쓸기는 바깥 무대가 든다) · 죽 이어서에서는 안 선다 */
+.show:not(.deck)>section.rp{display:none}
+.show.deck>section.cur.rp{background:#fff}
+.show.deck>section.cur.rp .b3f{inset:0}
+.ba3d iframe.rpf{pointer-events:none}
+.show.deck:has(>section.cur.rp)::after{display:none}
+.deckbar .dt .dsub{font-weight:600;color:var(--gy2);font-size:.86em}
 /* ── 치료 한 바퀴 — 네 단계를 <b>옆으로</b> 한 장에. 직접 그린 것이다 (9번) ──
    아래로 쌓으면 카드 안쪽에서 잘렸다(그래서 두 장이었다). 옆으로 세우면
    1280 무대에 네 칸이 앉는다. 점선 고리는 <b>마지막 → 첫 단계</b>로 돌아간다. */
@@ -3170,23 +3177,84 @@ function cycCard(x,i,mx,C){
    「캐릭터가 허접 · 신뢰감 있게 · 다 되었다면 본판에 넣어」. 4번(mode why)은 같은 보고서를 「보장 이해 ③」 장부터 연다.
    고객 이름 · 나이 · 지금/조정 후 보장(calc 의 만원 값)을 주소의 <b># 뒤</b>에 싣는다 — # 뒤는 서버로 안 간다.
    <b>종이(인쇄 · PDF)에는 3D 가 안 찍힌다</b> — printAll 일 때는 아래 「한 바퀴 한 장」 을 그대로 그린다. */
-function ba3dSrc(mode,C){
-  var d={n:S.who.name||'',age:S.who.age||'',sex:S.who.sex||'',b:C.b,a:C.a,j:S.sim||'cancer',embed:0,mode:mode};
+/* 계약을 한 줄씩 — 보고서가 「어느 회사에서 · 어떻게 나오나」 를 그린다 (판 X316 · 사장님 말씀
+   「어디 보험회사에서 어떻게 지급되는지도」). 유지는 지금 담보 그대로, 배서는 후 칸(cov2), 해지는 없음,
+   새 설계는 조정 후에만. 값이 없는 담보는 싣지 않는다 — 0 으로 적으면 「없다」 가 된다 (1번). */
+function baPolicies(){
+  var P=[];
+  function nums(o){var r={},k,v;o=o||{};for(k in o)if(o.hasOwnProperty(k)){v=num(o[k]);if(v!==null&&v>0)r[k]=v;}return r;}
+  S.before.forEach(function(p){var act=p.act||'keep',b=nums(p.cov);
+    P.push({c:p.co||'회사 미상',n:p.nm||'',s:act,b:b,a:act==='keep'?b:(act==='endo'?nums(p.cov2):{})});});
+  S.after.forEach(function(q){P.push({c:q.co||'회사 미상',n:q.nm||'',s:'new',b:{},a:nums(q.cov)});});
+  return P;
+}
+function ba3dSrc(mode,C,more){
+  var d={n:S.who.name||'',age:S.who.age||'',sex:S.who.sex||'',b:C.b,a:C.a,j:S.sim||'cancer',embed:0,mode:mode,
+    p:baPolicies(),man:!!(Object.keys(S.man.b||{}).length||Object.keys(S.man.a||{}).length)},k;
+  for(k in (more||{}))d[k]=more[k];
   return 'ba-report.html#d='+encodeURIComponent(JSON.stringify(d));
 }
+/* ── 보고서를 <b>묶음마다 한 장</b>으로 (판 X316) ──────────────────────
+   사장님 말씀 「내가 아까 만든 이미지 넣은 것들은 다 어디 가고? 전체적으로 다시 재구성해」.
+   예전에는 보고서 47쪽이 「보장 분석 보고서」 한 장 안에 숨어 있어서, 넘기다 보면 사진 장은
+   한 번 지나가고 파란 표 장만 남았다. 이제 한 장씩 넘기기에서는 묶음(보장 이해 · 한눈에 · 암 ·
+   뇌 · 심 · 재가 · 정리)이 각각 한 장으로 서고, ← → 가 그 안의 쪽을 한 쪽씩 넘긴다(deckMove →
+   보고서 REP.step). 죽 이어서 볼 때는 예전처럼 보고서 한 벌(s4_3d · 제 목차와 넘김 막대)이 선다. */
+var BA_RP=[
+  {id:'r_u',secs:['u'],nm:'보장 이해',sub:'보험금이 나오는 모양 · 나오는 자리 · 넓은 이름',
+   say:'보험금은 <b>모양</b>이 다릅니다 — 한 번에 · 할 때마다 · 하루마다 · 매달. 이름이 <b>넓을수록</b> 열리는 문이 많습니다.'},
+  {id:'r_all',secs:['all','body'],nm:'한눈에 모든 담보',sub:'담보 전체 · 몸으로 보는 내 보장',
+   say:'지금 들고 계신 담보와 조정 후 담보를 <b>한 장에</b> 놓았습니다. 비어 있는 자리부터 보시죠.'},
+  {id:'r_cancer',secs:['cancer'],nm:'암 — 치료 한 바퀴',sub:'진단 · 항암약물 · 수술 · 방사선 · 추적 — 어느 회사에서 얼마가',
+   say:'암은 <b>진단 → 항암 → 수술 → 방사선 → 추적</b>으로 옵니다. 단계마다 어느 회사에서 얼마가 나오는지 보시죠.'},
+  {id:'r_brain',secs:['brain'],nm:'뇌혈관 — 치료 한 바퀴',sub:'발병 · 시술 · 재활 · 후유장해 — 어느 회사에서 얼마가',
+   say:'뇌혈관은 <b>이름이 좁으면</b> 같은 병에도 0원입니다. 단계마다 어느 회사가 받쳐 주는지 보시죠.'},
+  {id:'r_heart',secs:['heart'],nm:'심혈관 — 치료 한 바퀴',sub:'발병 · 시술 · 입원 · 재발 관리 — 어느 회사에서 얼마가',
+   say:'심장도 <b>급성심근경색만</b>이면 협심증에는 안 나옵니다. 단계마다 보시죠.'},
+  {id:'r_care',secs:['care'],nm:'재가급여 — 돌봄 한 바퀴',sub:'등급 · 하루 4시간의 벽 · 한도 밖 · 5년 — 어느 회사에서 얼마가',
+   say:'돌봄은 <b>끝나는 날이 없습니다</b>. 나라 이용권 밖의 돈을 어디서 받으실지 보시죠.'},
+  {id:'r_wrap',secs:['wrap'],nm:'정리 — 아직 비는 자리',sub:'조정 후에도 비는 담보 · 오늘 정할 것',
+   say:'조정한 뒤에도 <b>아직 비는 자리</b>를 그대로 적었습니다. 오늘 다 정하실 필요는 없습니다.'},
+  {id:'r_src',tail:1,secs:['src'],nm:'출처 — 통계 · 기사 · 사진',sub:'숫자 · 기사 제목 · 사진 · 그림의 출처',
+   say:'오늘 보여 드린 숫자와 사진은 <b>전부 출처가 있습니다</b>. 필요하시면 원문을 보내 드리겠습니다.'}
+];
+/* 출처는 맨 뒤(적어 둘 것 바로 앞)에 — 보고서 묶음 사이를 끊지 않게 */
+function baRpTail(C){
+  if(S.printAll)return '';
+  return BA_RP.filter(function(r){return r.tail;}).map(function(r){
+    return '<section id="'+r.id+'" class="ba3d rp" data-grp="정리" data-nm="'+r.nm+'"><h3>'+r.nm+'<small>'+r.sub+'</small></h3>'+
+      '<div class="b3f"><iframe src="'+ba3dSrc('sec',C,{secs:r.secs})+'" loading="lazy" class="rpf" tabindex="-1" aria-hidden="true" onload="rpLoad(this)" title="'+esc(r.nm)+'"></iframe></div>'+
+      sayLine(r.say)+'</section>';
+  }).join('');
+}
 function ba3dHtml(C){
-  function sec(id,grp,nm,ttl,sub,src,say){
-    return '<section id="'+id+'" class="ba3d" data-grp="'+grp+'" data-nm="'+nm+'">'+
+  function sec(id,grp,nm,ttl,sub,src,say,cls,ifc){
+    return '<section id="'+id+'" class="ba3d'+(cls?' '+cls:'')+'" data-grp="'+grp+'" data-nm="'+nm+'">'+
       '<h3>'+ttl+'<small>'+sub+'</small></h3>'+
-      '<div class="b3f"><iframe src="'+src+'" loading="lazy" allow="fullscreen" title="'+esc(ttl)+'"></iframe></div>'+
+      '<div class="b3f"><iframe src="'+src+'" loading="lazy" allow="fullscreen" title="'+esc(ttl)+'"'+(ifc||'')+'></iframe></div>'+
       sayLine(say)+'</section>';
   }
-  return sec('s4_3d','이 일이 생기면','보장 분석 보고서','보장 분석 보고서 — 치료 한 바퀴',
-      '보장 이해 · 한눈에 모든 담보 · 암 · 뇌혈관 · 심혈관 · 재가급여 — 실제 사진 · 드는 돈 · 지금 → 조정 후',ba3dSrc('',C),
-      '병은 한 번에 오지 않고 <b>단계로</b> 옵니다. 단계마다 <b>무엇을 하고, 얼마가 들고, 지금 · 조정 후 얼마가 나오는지</b> 같이 보시죠.')+
-    sec('s4_why','왜 보장이 넓어야','질병코드 · 통계','왜 보장이 「넓어야」 하나',
-      '질병코드 범위 · 실제 통계 · 지금 → 조정 후',ba3dSrc('why',C),
-      '진단비는 이름이 비슷해도 <b>열리는 코드 범위</b>가 다릅니다. 범위가 좁으면 <b>같은 병에도 0원</b>일 수 있습니다.');
+  /* 죽 이어서 볼 때 — 보고서 한 벌 (한 장씩 넘기기에서는 아래 묶음 장들이 대신 선다 · deckList) */
+  return sec('s4_3d','보장 분석 보고서','보장 분석 보고서','보장 분석 보고서 — 치료 한 바퀴',
+      '보장 이해 · 한눈에 모든 담보 · 암 · 뇌혈관 · 심혈관 · 재가급여 — 실제 사진 · 드는 돈 · 어느 회사에서 얼마가',ba3dSrc('',C),
+      '병은 한 번에 오지 않고 <b>단계로</b> 옵니다. 단계마다 <b>무엇을 하고, 얼마가 들고, 지금 · 조정 후 얼마가 나오는지</b> 같이 보시죠.','one')+
+    BA_RP.filter(function(r){return !r.tail;}).map(function(r){
+      return sec(r.id,'보장 분석 보고서',r.nm,r.nm,r.sub,ba3dSrc('sec',C,{secs:r.secs}),r.say,'rp',
+        ' class="rpf" tabindex="-1" aria-hidden="true" onload="rpLoad(this)"');
+    }).join('');
+}
+/* 묶음 장 안의 보고서 — 넘기기는 바깥 무대가 든다. 같은 곳(origin)이라 바로 부른다 */
+var RP_AT='';
+function rpWin(sec){
+  var f=sec&&sec.querySelector&&sec.querySelector('iframe.rpf');
+  try{return (f&&f.contentWindow&&f.contentWindow.REP)?f.contentWindow:null;}catch(e){return null;}
+}
+function rpLoad(f){
+  var w=null;try{w=(f.contentWindow&&f.contentWindow.REP)?f.contentWindow:null;}catch(e){w=null;}   /* file:// 로 열면 막힌다 */
+  if(!w)return;
+  var sec=f.closest('section');
+  if(sec&&sec.getAttribute('data-at')==='end')w.REP.last();
+  if(sec&&sec.classList.contains('cur'))deckPaint();
 }
 function simHtml(C){
   if(!S.printAll)return ba3dHtml(C);   /* 화면 = 3D · 종이 = 아래 한 장 */
@@ -5821,6 +5889,7 @@ function showHtml(){
     if(r.rateA===null)return;
     (r.rateA>=100?okEv:noEv).push({t:ev.t,ic:ev.ic,b:r.rateB,a:r.rateA,gap:r.gapA});
   });
+  h+=baRpTail(C);
   h+='<section id="sEnd" data-grp="정리" class="foot" data-nm="적어 둘 것">'+
     '<div class="fh">적어 둘 것</div><div class="fx">'+
     '담보 목록·표준금액·괄호 % 는 <b>사장님 기준표</b>를 따랐습니다. 괄호 % 는 그 사건에서 <b>이 담보가 열릴 확률</b>입니다.<br>'+
@@ -5965,7 +6034,16 @@ function deckList(){
   var box=document.querySelector('#app .show'),out=[],i,ns;
   if(!box)return out;
   ns=box.children;
-  for(i=0;i<ns.length;i++)if(ns[i].tagName==='SECTION')out.push(ns[i]);
+  /* 판 X316 — 한 장씩 넘기기(발표)에서는 보고서를 <b>묶음 장</b>(.rp)으로 세우고, 사진 없는 표 장
+     (보고서 한 벌 s4_3d · 내 몸 어디에 s5 · 담보 하나하나 s8_*)은 뺀다 — 같은 것을 보고서가
+     사진과 함께 보여 준다. 죽 이어서 · 가로로 뽑기에서는 거꾸로 묶음 장을 빼고 표 장을 세운다. */
+  var live=!!S.deck&&!BA_LAND;
+  for(i=0;i<ns.length;i++){
+    if(ns[i].tagName!=='SECTION')continue;
+    var rp=ns[i].classList.contains('rp'),tb=/^(s4_3d|s5|s8_)/.test(ns[i].id||'');
+    if(live?tb:rp)continue;
+    out.push(ns[i]);
+  }
   return out;
 }
 function deckAt(L){
@@ -6009,6 +6087,8 @@ function deckPaint(){
   if(cur<0){cur=0;S.slide=L.length?L[0].id:'';save();}
   if(on)box.classList.add('deck');else box.classList.remove('deck');
   if(on)document.body.classList.add('deck-on');else document.body.classList.remove('deck-on');
+  /* 목록 밖으로 빠진 장(판 X316 — 발표에서 빼는 표 장)에 남은 .cur 를 걷는다 — 가로로 뽑은 뒤 그대로 서 있지 않게 */
+  [].forEach.call(box.children,function(el){if(el.tagName==='SECTION'&&L.indexOf(el)<0)el.classList.remove('cur');});
   for(i=0;i<L.length;i++){
     /* 가로로 뽑는 중에는 <b>전부</b> 세운다 — 한 쪽에 한 장씩 나가야 한다.
        무대 모양(.cur)이 안 붙으면 칸이 무너져 글자가 한 자씩 줄바꿈된다.
@@ -6056,7 +6136,8 @@ function deckPaint(){
   if(bar)bar.innerHTML=(!on||!L.length)?'':(
     '<button class="dnav" onclick="deckMove(-1)"'+(cur<=0?' disabled':'')+' aria-label="앞 장">◀</button>'+
     '<div class="dbar"><i style="width:'+Math.round((cur+1)/L.length*100)+'%"></i></div>'+
-    '<span class="dt">'+esc(secName(L[cur]))+'</span>'+
+    '<span class="dt">'+esc(secName(L[cur]))+(function(){var w=rpWin(L[cur]),p=w&&w.REP.pos();
+      return p&&p[1]>1?' <small class="dsub">· '+p[0]+' / '+p[1]+'쪽</small>':'';})()+'</span>'+
     '<span class="dn"><b>'+(cur+1)+'</b> / '+L.length+'</span>'+
     '<button class="dnav" onclick="deckMove(1)"'+(cur>=L.length-1?' disabled':'')+' aria-label="다음 장">▶</button>'+
     '<button class="dnav kk" onclick="baKakao()" aria-label="이 장을 카톡으로 복사" title="보고 계신 이 장을 글로 복사합니다">💬</button>'+
@@ -6103,9 +6184,9 @@ var BA_WALK=[
  {k:'s4_3d',nm:'보장 분석 보고서',ic:'stethoscope',pt:'아래 ☰ 목차에서 장을 고르고 ← → 로 넘겨요 — 실제 사진 · 치료 예시 · 드는 돈 · 지금/조정 후',
   q:'실손 있는데 또 들어야 해요?',a:'실손은 영수증, 진단비는 월급입니다. 일을 못 하는 동안의 생활비는 실손이 내지 않습니다.',
   tip:'「한눈에 모든 담보」 로 전체를 먼저 보여 주고, 단계 장의 빈 칸(없음)에서 멈춰 기다려요 — 고객 상황에 맞는 병 1~2개만'},
- {k:'s4_why',nm:'왜 보장이 넓어야',ic:'search',pt:'질병코드 자 — 같은 「뇌」 진단비도 열리는 칸 수가 다름 · 통계 · 지금/조정 후',
-  q:'저는 뇌졸중 진단비 있어요',a:'있으십니다. 다만 뇌졸중은 보통 I60~I63 네 칸이라, 협착 · 동맥류 같은 나머지 뇌혈관질환에서는 안 나옵니다.',
-  tip:'약관마다 범위가 달라요 — 고객 증권의 질병분류표를 같이 펴 보면 신뢰가 올라갑니다'},
+ {k:'r_',nm:'보장 분석 보고서',ic:'stethoscope',pt:'← → 로 한 쪽씩 — 실제 사진 · 치료 예시 · 드는 돈 · 지금/조정 후 · 마지막 쪽은 「어느 회사에서 · 어떻게 나오나」',
+  q:'이거 어느 보험에서 나오는 거예요?',a:'각 단계 표 아래에 회사 이름을 적어 두었습니다. 묶음 마지막 장에 회사마다 무엇이 · 어떻게 나오는지 모아 두었습니다.',
+  tip:'고객 상황에 맞는 병 1~2개만 끝까지 넘기고, 나머지는 첫 장(한 바퀴)만 보여 줘요 — 회사별 장에서 「청구는 회사마다 따로」 를 꼭 짚어요'},
  {k:'s4_',nm:'이 병이 오면',ic:'stethoscope',pt:'위에서 병을 고르고, 단계마다 드는 돈 · 지금 나옴 · 조정 후 세 막대',
   q:'실손 있는데 또 들어야 해요?',a:'실손은 영수증, 진단비는 월급입니다. 일을 못 하는 동안의 생활비는 실손이 내지 않습니다.',
   tip:'모자라는 단계에서 “이 돈은 어디서 만드십니까?” 묻고 기다려요 — 가장 오래 머무는 장'},
@@ -6225,12 +6306,17 @@ function baKakao(){
   if(!t){toast('이 장에서 옮길 글이 없습니다');return;}
   baCopy(t,'이 장을 복사했습니다 — 카톡에 붙여넣으세요');
 }
-function deckJump(i){
+function deckJump(i,at){
   var L=deckList();
   if(!L[i])return true;
   S.slide=L[i].id;save();
   /* 죽 이어서 볼 때는 <b>그 자리로 내려간다</b> — 앵커를 그대로 살린다 */
   if(!S.deck)return true;
+  /* 보고서 묶음 장 — 뒤로 들어오면 그 묶음의 <b>마지막 쪽</b>부터, 그 밖에는 첫 쪽부터 (판 X316) */
+  if(L[i].classList.contains('rp')){
+    L[i].setAttribute('data-at',at==='end'?'end':'start');
+    var w=rpWin(L[i]);if(w){if(at==='end')w.REP.last();else w.REP.first();}
+  }
   deckPaint();
   try{window.scrollTo(0,0);}catch(e){}
   return false;
@@ -6238,9 +6324,12 @@ function deckJump(i){
 function deckMove(d){
   var L=deckList(),cur=deckAt(L);
   if(cur<0)cur=0;
+  /* 보고서 묶음 장이면 <b>그 안에서 한 쪽</b> 먼저 넘긴다 — 묶음 끝에서만 다음 장으로 */
+  var w=rpWin(L[cur]);
+  if(w&&w.REP.step(d)){deckPaint();return;}
   /* 처음·끝의 마개는 <b>deckJump 한 곳</b>이 든다 — 없는 장이면 안 움직인다.
      여기서 또 자르면 마개가 두 곳이 되고, 한쪽만 고치는 날이 온다 (5번). */
-  deckJump(cur+d);
+  deckJump(cur+d,d<0?'end':'');
 }
 function setDeck(on){
   S.deck=!!on;save();render();
