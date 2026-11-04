@@ -121,6 +121,12 @@ const 증인 = [
        없습니다 (check-homeone 의 HOME_SCR 쪽지를 보십시오).                 */
   { 키: 'X312-한화면', 뜻: '홈이 844px 한 화면에는 아직 안 든다 (지금 2.98화면)',
     선: { 파일: 'scripts/check-homeone.js', 이름: 'HOME_SCR', 아래로: 1.0 } },
+  /* 🛰 판 X333 (2026-11-05) — 「메인세션에 있는 모든 내용을 연결해서 찾아줘」 를 <b>반만</b> 했습니다.
+     공지까지 이었고, <b>일정·약속 · 상담카드 · 코칭 기록</b>은 아직 자비스가 안 찾습니다.
+     그 셋을 잇는 함수 이름을 <b>미리 정해 둡니다</b> — jvCalRows(본체 달력의 약속) ·
+     jvFactRows(상담카드 FACT) · jvCoachRows(코칭 CO·MC). 셋이 다 서면 「아직 안 이었다」 는
+     말이 거짓이 되므로, 그때 대장 X333 과 이 이름표를 고치십시오. */
+  { 키: 'X333-이음', 뜻: '자비스가 일정·약속 · 상담카드 · 코칭 기록은 아직 안 찾는다', 함수: ['jvCalRows', 'jvFactRows', 'jvCoachRows'] },
 ];
 /* 함수 증인은 본체와 <b>자비스 모드(apex-map.html)</b>를 같이 봅니다 — 판 X277 의 증인이 그쪽에 섭니다 */
 const SRC_FN = SRC + '\n' + (fs.existsSync('app/apex-map.html') ? fs.readFileSync('app/apex-map.html', 'utf8') : '');
