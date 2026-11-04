@@ -1837,6 +1837,17 @@ body.presenting .show:not(.deck){border:0;box-shadow:none}
 /* 보장분석 기준 · 연령대별 — 같은 읽기 옷 */
 .st2 li,.st2 p{line-height:1.8}
 .st2 .sd3 li{font-size:14.5px}.st2 .sh3{font-size:16px}.st2>p{font-size:15.5px;color:var(--nv)}
+/* 판 X325 — 두뇌 카드 · 흐름 · 여는 말의 「자세히」 */
+.gd2-more>summary small{font-size:13px;font-weight:600;color:var(--gy2);margin-left:6px}
+.br2 .bmore{margin-top:8px;border-top:1px dashed var(--ln)}
+.br2 .bmore[open]{padding-bottom:4px}.br2 .bmore>div{margin-top:6px}
+.br2 .fwmore,.br2 .pta .gd2-more,.br2 .ptc .gd2-more,.br2 .pto .gd2-more{margin-top:2px}
+.br2 .gd2-more>summary{min-height:44px}
+/* 판 X325 — 긴 줄을 두 칸으로 */
+.br2 .fwrows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.br2 .ptodays{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.br2 .bhotmore{margin-top:10px}.br2 .bhotmore>summary{font-size:15px}
+@media (max-width:900px){.br2 .fwrows,.br2 .ptodays{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -4490,13 +4501,13 @@ function pointHtml(){
   h+='<div class="ptsec"><div class="pth">① 이렇게 엽니다 <em>아이스브레이킹</em></div><div class="ptcards">'+
     ice.map(function(x){
       return '<div class="ptc"><div class="pct">'+esc(x.t)+'</div>'+
-        '<div class="pcs">'+x.say+'</div><div class="pcw">'+x.why+'</div></div>';
+        '<div class="pcs">'+x.say+'</div><details class="gd2-more"><summary>왜</summary><div class="pcw">'+x.why+'</div></details></div>';
     }).join('')+'</div></div>';
   /* ② 물어볼 것 */
   var ask=askList(o);
   h+='<div class="ptsec"><div class="pth">② 이것부터 물어봅니다</div><div class="ptasks">'+
     ask.map(function(x){
-      return '<div class="pta"><div class="paq">'+x.q+'</div><div class="paw">'+x.why+'</div></div>';
+      return '<div class="pta"><div class="paq">'+x.q+'</div><details class="gd2-more"><summary>왜</summary><div class="paw">'+x.why+'</div></details></div>';
     }).join('')+'</div></div>';
   /* ③ 오늘 짚을 것 */
   var td=todayList(o);
@@ -4504,7 +4515,7 @@ function pointHtml(){
   if(!td.length)h+='<div class="note g">지금 자료로는 <b>크게 비는 곳이 없습니다.</b> 기준 치료비와 계약을 더 채우시면 다시 셉니다.</div>';
   else h+='<div class="ptodays">'+td.map(function(x){
     return '<div class="pto"><div class="pon">'+x.n+'</div><div class="pob">'+
-      '<b>'+x.ic+' '+x.t+'</b><div class="pod">'+x.d+'</div><div class="pos">'+x.say+'</div></div></div>';
+      '<b>'+x.ic+' '+x.t+'</b><div class="pos">'+x.say+'</div><details class="gd2-more"><summary>자세히</summary><div class="pod">'+x.d+'</div></details></div></div>';
   }).join('')+'</div>';
   h+='</div>';
   /* ④ 상담 방향 */
@@ -5163,11 +5174,13 @@ function brainCard(d,you,why){
     '<div class="bh2">'+d.ic+' <b>'+esc(d.t)+'</b><em>'+esc(d.tag)+'</em></div>'+
     '<div class="bq">'+esc(d.q)+'</div>'+
     '<div class="bfig">'+d.fig+'</div>'+
+    (you?('<div class="byou"><span>이 고객에게</span>'+you+'</div>'):'')+
+    /* 판 X325 — 핵심 다섯 줄만 보이고 나머지는 「자세히」 안으로 (글은 그대로) */
+    '<details class="gd2-more bmore"><summary>자세히 <small>비유 · 그래서 · 두루 쓰는 말'+(d.rp&&d.rp.length?' · 되받아침':'')+'</small></summary>'+
     '<div class="bex"><span>비유</span>'+d.ex+'</div>'+
     '<div class="bso"><span>그래서</span>'+d.so+'</div>'+
-    (you?('<div class="byou"><span>이 고객에게</span>'+you+'</div>'):'')+
     '<div class="bback'+(you?' sub':'')+'">'+(you?'<em>두루 쓰는 말</em> ':'')+d.back+'</div>'+
-    brainRp(d)+'</div>';
+    brainRp(d)+'</details></div>';
 }
 /* ── 롤플레잉 — <b>고객이 되받아쳤을 때</b> ──────────────────────────
    한 방향 대본은 첫 마디까지만 도와준다. 현장에서 막히는 자리는 늘
@@ -5399,13 +5412,15 @@ function flowHtml(){
       '<div class="fwrows">'+st.rows.map(function(r,i){
         return '<div class="fwr"><div class="fwn">'+(i+1)+'</div>'+
           '<div class="fwb"><div class="fwtt"><b>'+esc(r.t)+'</b><span>'+esc(r.m)+'</span></div>'+
-          '<div class="fwd">'+r.d+'</div>'+
           /* <b>실제로 뭐라고 말하는가</b> — 여기가 혼자 공부하는 자리다.
              「무엇을 보여준다」까지만 적어 두면, 정작 입이 안 떨어진다. */
           (r.say?('<div class="fwsay">'+r.say+'</div>'):'')+
+          /* 판 X325 — 그대로 읽을 말만 보이고, 나머지는 「자세히」 안으로 */
+          '<details class="gd2-more fwmore"><summary>자세히 <small>무엇을 · 이렇게 나오면 · 보여줄 화면</small></summary>'+
+          '<div class="fwd">'+r.d+'</div>'+
           (r.if1?('<div class="fwif"><span>'+esc(r.if1)+'</span>'+r.if2+'</div>'):'')+
           '<div class="fwmeta"><span class="sh">보여줄 화면 · '+esc(r.show)+'</span>'+
-          '<span class="gl">이 칸의 목표 · '+r.goal+'</span></div></div></div>';
+          '<span class="gl">이 칸의 목표 · '+r.goal+'</span></div></details></div></div>';
       }).join('')+'</div></div>';
   });
   if(f.care.length)
@@ -5426,7 +5441,12 @@ function brainHtml(){
     '<b>아는 것에 빗대야</b> 압니다.</p>'+
     gdJump([['bq1','🎯','바로 걸리는 말'],['bq2','👋','이렇게 여십시오'],['bq3','🗺','상담 흐름'],['bq4','🏥','병원비 공부방'],['bq5','📚','그 밖의 비유']]);
   h+='<section id="bq1" class="gd2-sec">'+gdHead(1,'이 고객에게 바로 걸리는 말','진단에서 실제로 잡힌 것만 골랐습니다');
-  if(B.hot.length)h+='<div class="brains">'+B.hot.map(function(x){return brainCard(x.d,x.you,x.why);}).join('')+'</div>';
+  /* 급한 여섯 장만 펴 두고 나머지는 「더 보기」 안에 (판 X325 — 글은 그대로) */
+  if(B.hot.length){
+    h+='<div class="brains">'+B.hot.slice(0,6).map(function(x){return brainCard(x.d,x.you,x.why);}).join('')+'</div>';
+    if(B.hot.length>6)h+='<details class="gd2-more bhotmore"><summary>바로 걸리는 말 '+(B.hot.length-6)+'개 더 보기</summary>'+
+      '<div class="brains">'+B.hot.slice(6).map(function(x){return brainCard(x.d,x.you,x.why);}).join('')+'</div></details>';
+  }
   else h+='<div class="note i">계약과 고객 정보를 넣으시면 <b>이 고객에게 바로 걸리는 말</b>이 여기 먼저 섭니다.</div>';
   h+='</section>';
   h+='<section id="bq2" class="gd2-sec">'+gdHead(2,'이렇게 여십시오','여는 말 · 먼저 물어볼 것 · 오늘 짚을 것')+pointHtml()+'</section>';
