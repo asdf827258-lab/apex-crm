@@ -7,7 +7,7 @@
 
    쓰는 법
      node scripts/jvmock-shot.js           결과를 새로 뽑아 적습니다
-     node scripts/jvmock-shot.js --check   지금 자비스와 적힌 결과가 같은지만 봅니다(CI · web)
+     node scripts/jvmock-shot.js --check   지금 자비스와 적힌 결과가 같은지만 봅니다(CI 에서는 check-jvshot.js 가 이것을 부릅니다 · web)
        — 물음마다 <b>맨 위 답의 갈래 · 제목</b>만 견줍니다. 생일까지 며칠 같은 날마다 바뀌는 값은
          견주지 않습니다(헛것을 잡지 않게 · 8번). 다르면 위 명령을 다시 돌리라고 적어 줍니다.
    ★ 견본 고객은 홍길동 한 분(시험용 번호) · AI 는 끄고 앱 자료만으로 뽑습니다(3번). */

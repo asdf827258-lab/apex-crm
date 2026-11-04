@@ -12,7 +12,7 @@
      [4] 견본 고객은 홍길동뿐 — 다른 이름 · 진짜 번호가 없다 (3번)
      [5] 그림이 「앱이 아닙니다」 를 밝히고, /docs 는 밖으로 안 나간다(_redirects)
      [6] 「결과물」 칸이 싣는 결과 파일(자비스-결과.js)이 있고, 견본 고객뿐이고, 못 읽으면 아무것도 안 그린다
-   ★ 결과가 <b>지금 자비스와 같은지</b>는 node scripts/jvmock-shot.js --check (web) 가 잽니다.               */
+   ★ 결과가 <b>지금 자비스와 같은지</b>는 node scripts/check-jvshot.js (web) 가 잽니다.               */
 const fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..');
 let bad = 0;
@@ -64,7 +64,7 @@ const RD = fs.existsSync(path.join(ROOT, '_redirects')) ? rd('_redirects') : '';
 is(/^\/docs\/\*\s+\S+\s+404/m.test(RD), '/docs/* 가 _redirects 에서 404 — 그림이 라이브 주소로 안 나간다');
 
 console.log('\n[6] 「결과물」 칸 — scripts/jvmock-shot.js 가 앱을 띄워 뽑은 것');
-/* 결과가 지금 자비스와 같은지는 브라우저가 있어야 잽니다 — jvmock-shot --check (web) 이 맡습니다. 여기서는 파일만 봅니다 */
+/* 결과가 지금 자비스와 같은지는 브라우저가 있어야 잽니다 — check-jvshot (web · jvmock-shot --check) 이 맡습니다. 여기서는 파일만 봅니다 */
 const SHOTF = path.join(ROOT, 'docs/mokgak/자비스-결과.js');
 const SW = {}; try { new Function('window', fs.readFileSync(SHOTF, 'utf8'))(SW); } catch (e) {}
 const SR = (SW.JV_SHOT && SW.JV_SHOT.r) || [];
