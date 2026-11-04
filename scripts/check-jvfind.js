@@ -756,8 +756,11 @@ const SEED = () => {
   is(FA.every(x => !x), '이름 없는 「전화했는데…」 · 만드는 법을 묻는 「제안서 어떻게 만들어」 에 <b>일 카드가 안 선다</b>');
   const SPL = await f.evaluate(() => [jvSplit('계약하고 나서 뭐 해야 돼').length, jvSplit('보장분석 하고 제안서까지 만들고 싶어').length]);
   is(SPL[0] === 1 && SPL[1] === 2, '「계약하고 나서」 는 <b>때</b>라 안 가르고, 「보장분석 하고 제안서까지」 는 그대로 둘로 — ' + SPL.join(' · '));
-  const NO = await f.evaluate(() => jvFind('다른 설계사도 만나본대').filter(x => (x.rows || []).length).map(x => x.n + ':' + x.rows[0].t));
-  is(NO.length === 0, '「다른 설계사도 만나본대」 의 「다른」 이 엉뚱한 강의를 끌고 오지 않는다' + (NO.length ? ' ← ' + NO.join(' · ') : ''));
+  /* ⚠ 판 X312 — 여기는 「아무것도 안 선다」 를 쟀습니다. 그때 앱에 이 대본이 <b>없어서</b>였습니다. 이제 질병 상담 거절 표에
+     「다른 설계사도 만나 볼게요」 가 있으니 <b>그것이 맨 앞</b>이고, 엉뚱한 강의(「크기가 다른 그물」)는 여전히 안 서야 합니다 */
+  const NO = await f.evaluate(() => jvFind('다른 설계사도 만나본대').filter(x => (x.rows || []).length).map(x => x.k + ':' + x.rows[0].t));
+  is(NO.length && /^rej:.*다른 설계사도 만나 볼게요/.test(NO[0]) && !NO.some(x => /^alesson:/.test(x)),
+     '「다른 설계사도 만나본대」 → 질병 상담 거절의 그 대본이 맨 앞 · 「다른」 이 엉뚱한 강의를 끌고 오지 않는다 — ' + NO.join(' · '));
   const UZ = await f.evaluate(() => [jvIsUse('보장분석 어떻게 해?'), jvIsUse('제안서 어떻게 만들어'), jvIsUse('소개 부탁 어떻게 해'), jvIsUse('질병코드 찾기')]);
   is(UZ.join(',') === 'true,true,false,true', '「어떻게 해」 는 <b>물은 것이 화면 이름일 때만</b> 앱 쓰는 법 — 보장분석·제안서·질병코드 찾기는 길, 소개 부탁은 영업');
   /* 보낼 글 — {나}·{서명} 은 앱의 cusFill 로 · 모르는 자리는 [일시] 로 보이게 · 광고 동의 문구 */
@@ -768,6 +771,63 @@ const SEED = () => {
   is(TG.fill && /처음 연락드리는 분/.test(TG.t) && TG.cp.length === 1 && !/\{[^{}]{1,8}\}/.test(TG.cp[0]) && /담당 설계사/.test(TG.cp[0]),
      '「처음 연락드리는 분」 문자 — 복사하는 글에 {나} 가 안 남고 <b>앱의 cusFill</b> 로 「담당 설계사 …」 가 들어간다');
   is(/광고 수신 동의가 있는 분께만/.test(TG.t), '보낼 글에는 「상품 권유를 넣으면 광고 수신 동의가 있는 분께만」 을 붙인다');
+
+  sec('[17] 🗣 <b>남은 것도 다</b> — 고객의 말을 옮겨 물어도 · 「거절 화법」 만 물어도 · 증권 안 가져온대 · 연금 꺼내기 (판 X312 · 사장님 말씀 「응 남은것도다 고쳐줘」)');
+  /* JV_SAID 는 <b>표에 있는 이름</b>만 가리킵니다 — 없는 이름을 가리키면 아무 대본도 안 서거나, 누군가 그 자리에 대본을 지어 넣게 됩니다 */
+  const SAY = await f.evaluate(() => { const P = window.parent, D = P.DZ_DATA;
+    const names = (P.APEX_STAGE.obj || []).map(o => jvPlain(o.title)).concat(((D.rej || {}).all || []).reduce((a, o) => a.concat(jvPlain(o.q).split(' · ')), []));
+    return { bad: JV_SAID.filter(x => names.indexOf(x.to) < 0).map(x => x.to), n: JV_SAID.length }; });
+  is(SAY.n >= 5 && !SAY.bad.length, '옮겨 말한 꼴이 가리키는 ' + SAY.n + '가지가 모두 <b>앱의 거절 표에 있는 이름</b>이다' + (SAY.bad.length ? ' ← 없음: ' + SAY.bad.join(' · ') : ''));
+  const SAID = [
+    ['보험 필요 없다고 거절해', '필요 없어요'], ['고객이 보험 필요 없대', '필요 없어요'],
+    ['다른 설계사도 만나본대', '다른 설계사도 만나 볼게요'], ['다른 데서도 알아본대', '다른 설계사도 만나 볼게요'], ['비교해보고 연락준대', '다른 설계사도 만나 볼게요'],
+    ['남편이랑 상의해본대', '가족과 상의할게요'], ['담당 설계사 있대', '담당자 있어요'], ['보험 많대', '보험 이미 있어요']
+  ];
+  for (const [q, title] of SAID){
+    const r = await best(q);
+    is(r.best.indexOf('🛡 「' + title) >= 0, '「' + q + '」 → 🛡 「' + title + '」 (고객이 한 말을 옮겨 물어도)');
+  }
+  /* 넓게 잡지 않는다 — 거절이 아닌 말에 거절 대본이 끼지 않게 (8번) */
+  const NEG = await f.evaluate(() => ['청구 필요 서류 뭐야', '보험 있는 고객 가입돼?', '필요한 서류 없어?', '다른 화면 어디 있어', '증권 PDF 를 받았어'].filter(q => jvSaidOf(q)));
+  is(NEG.length === 0, '거절이 아닌 말(「청구 필요 서류」 · 「보험 있는 고객 가입돼?」 …)은 고객의 말로 읽지 않는다' + (NEG.length ? ' ← ' + NEG.join(' · ') : ''));
+  /* 새 대본 — 질병 상담 거절 표 한 곳에만 (5번) · 숫자 0 · 남 깎기 0 은 check-dzrej 가 표 전부를 잽니다 */
+  const CMP = await f.evaluate(() => (((window.parent.DZ_DATA || {}).rej || {}).all || []).filter(o => /다른 설계사도 만나 볼게요/.test(o.q)).map(o => o.say + ' ' + o.avoid));
+  is(CMP.length === 1 && /같은 기준/.test(CMP[0]) && /깎아내리는/.test(CMP[0]), '「다른 설계사도 만나 볼게요」 대본은 표에 <b>한 번</b> — 비교를 막지 않고 같은 기준을 드리며, 남을 깎지 않는다');
+
+  /* 「거절 화법」 만 물으면 — 고를 것을 늘어놓고, 누르면 그 대본 */
+  const RI = await f.evaluate(async () => { jLog.innerHTML = ''; ask('거절 화법'); await new Promise(r => setTimeout(r, 400));
+    const c = [].slice.call(document.querySelectorAll('#jLog .msg.j')).pop(), b = c && c.querySelector('.jf-best');
+    const chips = b ? [].slice.call(b.querySelectorAll('.jr-ask')).map(x => x.getAttribute('data-q')) : [];
+    const one = b && b.querySelector('.jr-ask[data-q="필요 없어요"]'); if (one) one.click();
+    await new Promise(r => setTimeout(r, 400));
+    const c2 = [].slice.call(document.querySelectorAll('#jLog .msg.j')).pop(), b2 = c2 && c2.querySelector('.jf-best');
+    const tall = chips.length ? Math.min.apply(null, [].slice.call(b.querySelectorAll('.jr-ask')).map(x => x.getBoundingClientRect().height)) : 0;
+    return { t: b ? b.textContent : '', chips, after: b2 ? b2.textContent : '', tall,
+             not: ['거절당했어 다시 전화해도 돼?', '보험 필요 없다고 거절해', '거절한 고객 다시 연락하고 싶어'].filter(q => jvFind(q).some(x => x.k === 'rejidx')) }; });
+  is(/고객이 뭐라고 하셨나요/.test(RI.t) && RI.chips.length >= 10 && RI.chips.indexOf('필요 없어요') >= 0 && RI.chips.indexOf('생각해 볼게요') >= 0,
+     '「거절 화법」 → 앱 표에 있는 고객의 말 ' + RI.chips.length + '가지를 늘어놓는다 (지어내지 않음)');
+  is(/🛡 「필요 없어요」/.test(RI.after), '그중 「필요 없어요」 를 누르면 <b>그 대본이 바로</b> 선다');
+  is(RI.tall >= 44, '고르는 단추는 손가락 하나 — 높이 ' + Math.round(RI.tall) + 'px (44 이상)');
+  is(RI.not.length === 0, '「다시 연락」 · 고객의 말을 옮긴 물음에는 이 목록이 안 끼어든다' + (RI.not.length ? ' ← ' + RI.not.join(' · ') : ''));
+
+  /* 증권 안 가져온대 — 「아직 안 읽었으면」 줄이 먼저 · 증권을 가져온 자리는 그대로 */
+  const PL = await f.evaluate(() => ['고객이 증권 안 가져온대', '만나기 전에 뭐 준비해?'].map(q => {
+    const r = jvFind(q).filter(x => x.k === 'stage')[0]; return r ? (r.rows[0].s || [])[0] || '' : ''; }));
+  is(/^아직 안 읽었으면/.test(PL[0]) && /^증권을 읽었으면/.test(PL[1]), '「증권 안 가져온대」 는 <b>아직 안 읽었으면</b> 줄부터 · 그 밖에는 원래 차례 — ' + PL.map(x => x.slice(0, 10)).join(' / '));
+
+  /* 연금 꺼내기 — 찾기 말이 백 개인 「60분 완결 상담 대본」 보다 이름이 곧 그 말인 「연금 화법」 */
+  await f.evaluate(() => jvExtLoad()); await p.waitForTimeout(3000);
+  const PN = await best('노후 걱정하는 고객한테 연금 얘기 어떻게 꺼내');
+  is(/📕 연금 화법/.test(PN.best), '「노후 걱정하는 고객한테 연금 얘기 어떻게 꺼내」 → 📕 연금 화법 (넓은 장이 앞에 안 선다)');
+  const P60 = await best('60분 상담 대본');
+  is(/60분 완결 상담 대본/.test(P60.best), '그래도 「60분 상담 대본」 이라고 물으면 그 장이 선다 — 넓은 장을 <b>버리지 않는다</b>');
+
+  /* 맞는 답이 「혹시 이것도」 로만 서던 넷 — 굳은 답으로 (시뮬레이션 4 · 10 · 28 · 30번) */
+  const FIRM = await f.evaluate(() => [['실비 청구만 해달래', 'obj', '실비청구만'], ['고객이 증권 안 가져온대', 'stage', '만나기로 한 분'],
+    ['계약하고 나서 뭐 해야 돼', 'stage', '계약완료 단계'], ['소개 부탁 어떻게 해', 'stagesay', '증권 전달']].map(([q, k, t]) => {
+      const r = jvFind(q).filter(x => (x.rows || []).length)[0]; return { q, ok: !!(r && r.k === k && r.strong && r.rows[0].t.indexOf(t) >= 0), got: r ? r.k + (r.strong ? '·굳음' : '·약함') : '없음' }; }));
+  is(FIRM.every(x => x.ok), '띄어 쓴 찾기 말(「계약하고 나서」 · 「소개 부탁」) · 이름 머리(「실비 청구만」) · 「안 가져온대」 → <b>굳은 답</b> — ' +
+     FIRM.map(x => x.q.slice(0, 8) + ':' + x.got).join(' / '));
 
   sec('[8] 🧼 꺾쇠 0 · 콘솔 오류 0 · 바깥 주소 0');
   const tags = [C1, K1, T1, Z1, Z4, Z7].filter(x => /&lt;\/?[a-z]/i.test(x.html)).length;
