@@ -648,6 +648,17 @@
       '.cxk-it span{font-size:13px;color:var(--t-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px}',
       '.cxk-ft{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.cxk-ft .btn{min-height:44px}',
       '.cxk-nt{margin-top:9px;font-size:13px;line-height:1.55;color:var(--t-sub)}',
+      '.cxs-sh{position:fixed;inset:0;z-index:2147483000;background:rgba(17,20,26,.88);overflow:auto;-webkit-overflow-scrolling:touch;padding:14px 12px 40px}',
+      '.cxs-sh-in{max-width:560px;margin:0 auto;background:var(--t-card,#fff);border-radius:16px;padding:14px}',
+      '.cxs-sh-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:15px;color:var(--t-ink,#191F28);margin-bottom:10px}',
+      '.cxs-sh-x{min-height:44px;padding:0 16px;border:1px solid var(--t-line,#E5E8EB);border-radius:10px;background:var(--t-card,#fff);color:var(--t-ink,#191F28);font:inherit;font-size:14px;cursor:pointer}',
+      '.cxs-sh-go,.cxs-sh-ext{display:block;width:100%;min-height:52px;border:none;border-radius:12px;font:inherit;font-size:16px;font-weight:800;cursor:pointer;margin-top:6px}',
+      '.cxs-sh-go{background:#7C3AED;color:#fff}.cxs-sh-ext{background:var(--t-ink,#191F28);color:#fff}',
+      '.cxs-sh-sm{font-size:13px;line-height:1.5;color:var(--t-sub,#636C78);margin:6px 2px 4px}',
+      '.cxs-sh-tip{font-size:14px;line-height:1.55;color:var(--t-ink,#191F28);background:var(--t-bg-b,#F5F9FF);border-radius:10px;padding:10px 12px;margin:10px 0}',
+      '.cxs-sh-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.cxs-sh-grid figure{margin:0}',
+      '.cxs-sh-grid img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:10px;display:block;-webkit-touch-callout:default;user-select:auto}',
+      '.cxs-sh-grid figcaption{font-size:13px;color:var(--t-sub,#636C78);text-align:center;margin-top:3px}',
       '.cxp-nt{margin-top:9px;font-size:13px;line-height:1.55;color:#8A6A2F;background:#FFF9EC;border:1px solid #F3E2B8;border-radius:8px;padding:7px 10px}'
     ].join('\n');
     document.head.appendChild(s);
@@ -1032,6 +1043,7 @@
     toast('이 장을 굽는 중입니다…');
     bake(slides[i], i, slides.length).then(function (c) {
       cnDownload(c, cnFileName(i));
+      if (isPhone() || isInApp()) { toast('카드를 띄웠습니다 — 길게 눌러 「이미지 저장」 하세요.', 4000); return; }
       var empty = !(CN.imgs && CN.imgs[i]);
       toast(empty ? '이 장을 저장했습니다 (1080×1350) — 사진이 빈 칸입니다. 「AI 사진 생성」 이나 「직접 업로드」 로 채우면 더 좋습니다.' : '이 장을 저장했습니다 (1080×1350).', empty ? 8000 : 1900);
     }).catch(function (e) { toast('이미지를 굽지 못했습니다 — ' + failSay(e), 8000); });
@@ -1043,12 +1055,72 @@
     var slides = cardnewsSlides(), n = slides.length, i = 0;
     toast((typeof cnSaveSay === 'function') ? cnSaveSay(slides, n + '장을 차례로 굽습니다. 여러 파일 저장 안내가 뜨면 허용하세요.') : n + '장을 굽습니다.', 6000);
     (function step() {
-      if (i >= n) { toast(n + '장을 모두 저장했습니다 (1080×1350).', 2600); return; }
+      if (i >= n) { toast((isPhone() || isInApp()) ? (n + '장을 띄웠습니다 — 「📤 한 번에 저장」 또는 길게 눌러 저장하세요.') : (n + '장을 모두 저장했습니다 (1080×1350).'), 4000); return; }
       var k = i;
       bake(slides[k], k, n).then(function (c) { cnDownload(c, cnFileName(k)); i++; setTimeout(step, 350); })
         .catch(function (e) { toast((k + 1) + '번째 장을 굽지 못했습니다 — ' + failSay(e), 8000); });
     })();
   };
+
+  /* ── 📱 폰에서 저장 (판 X324) ─────────────────────────────────────────
+     2026-11-04 · 사장님 폰 캡처 — 「핸드폰으로는 이렇게 해서 저장이 안되어!」.
+     카톡 안에서 CRM 을 열면(카톡 인앱 브라우저) 「지원하지 않는 파일 형식입니다」
+     가 뜨고 아무것도 안 남습니다. PC 의 저장은 <a download> 로 파일을 내려받는
+     방식인데, 카톡·인스타·네이버 앱 안의 브라우저는 그 내려받기를 막습니다.
+     그래서 <b>폰에서는 내려받지 않고</b> 다 구운 카드를 한 판에 띄웁니다 —
+       ① 「📤 한 번에 저장」 : 폰의 공유 창(navigator.share 파일)을 엽니다 —
+          「갤러리에 저장」 · 인스타로 바로 보내기가 됩니다(크롬·사파리).
+       ② 카드 사진을 <b>길게 눌러 「이미지 저장」</b> — 공유가 안 되는 곳에서도.
+       ③ 카톡 안이면 「🌐 크롬으로 열기」(kakaotalk://web/openExternal) —
+          ⚠ 크롬은 기록이 따로라 거기서 처음부터 다시 만들어야 할 수 있다고 적습니다.
+     PC 는 그대로 내려받습니다.                                                    */
+  function UA() { try { return navigator.userAgent || ''; } catch (e) { return ''; } }
+  function isKakao() { return /KAKAOTALK/i.test(UA()); }
+  function isInApp() { return /KAKAOTALK|Instagram|FBAN|FBAV|NAVER\(inapp|Line\/|DaumApps|; wv\)/i.test(UA()); }
+  function isPhone() { return /Android|iPhone|iPad|iPod/i.test(UA()); }
+  var SHEET = { items: [], t: null };
+  function dataToFile(it) { return fetch(it.url).then(function (r) { return r.blob(); }).then(function (b) { return new File([b], it.name + '.png', { type: 'image/png' }); }); }
+  function canShareFiles() { try { return !!(navigator.canShare && navigator.share && window.File && navigator.canShare({ files: [new File([new Blob(['x'], { type: 'image/png' })], 'x.png', { type: 'image/png' })] })); } catch (e) { return false; } }
+  function sheetHtml() {
+    var n = SHEET.items.length, share = canShareFiles(), kk = isKakao(), inApp = isInApp();
+    var tip = inApp
+      ? '<b>' + (kk ? '카카오톡' : '앱') + ' 안의 브라우저</b>는 파일 내려받기를 막아 「지원하지 않는 파일 형식」 이 뜹니다. <b>아래 카드를 길게 눌러 「이미지 저장」</b> 하세요.'
+      : '아래 카드를 <b>길게 눌러 「이미지 저장」</b> 하셔도 됩니다.';
+    return '<div class="cxs-sh-in"><div class="cxs-sh-hd"><b>📥 카드 ' + n + '장이 준비됐습니다</b><button type="button" class="cxs-sh-x" onclick="cxSheetClose()">닫기</button></div>' +
+      (share ? '<button type="button" class="cxs-sh-go" onclick="cxSheetShare()">📤 ' + n + '장 한 번에 저장 · 공유</button><div class="cxs-sh-sm">공유 창에서 「갤러리에 저장」 또는 인스타그램을 고르세요.</div>' : '') +
+      '<div class="cxs-sh-tip">' + tip + '</div>' +
+      (kk ? '<button type="button" class="cxs-sh-ext" onclick="cxOpenExternal()">🌐 크롬(기본 브라우저)으로 열기</button><div class="cxs-sh-sm">⚠ 크롬은 기록이 따로라 거기서 처음부터 다시 만들어야 할 수 있습니다.</div>' : '') +
+      '<div class="cxs-sh-grid">' + SHEET.items.map(function (it, i) {
+        return '<figure><img src="' + it.url + '" alt="' + (i + 1) + '번째 카드"><figcaption>' + (i + 1) + ' / ' + n + '</figcaption></figure>';
+      }).join('') + '</div></div>';
+  }
+  function sheetPaint() {
+    var o = document.getElementById('cxSheet');
+    if (!o) { o = document.createElement('div'); o.id = 'cxSheet'; o.className = 'cxs-sh'; document.body.appendChild(o); }
+    o.innerHTML = sheetHtml();
+  }
+  window.cxSheetClose = function () { var o = document.getElementById('cxSheet'); if (o) o.remove(); SHEET.items = []; };
+  window.cxSheetShare = function () {
+    Promise.all(SHEET.items.map(dataToFile)).then(function (files) {
+      return navigator.share({ files: files, title: 'APEX 카드뉴스' });
+    })['catch'](function (e) {
+      if (e && e.name === 'AbortError') return; /* 사용자가 공유 창을 닫음 */
+      toast('공유 창을 못 열었습니다 — 카드를 길게 눌러 「이미지 저장」 하세요.', 6000);
+    });
+  };
+  window.cxOpenExternal = function () {
+    try { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href); } catch (e) {}
+  };
+  var _origDl = window.cnDownload;
+  if (typeof _origDl === 'function') window.cnDownload = function (canvas, name) {
+    if (!(isPhone() || isInApp())) return _origDl.apply(this, arguments);
+    var url = '';
+    try { url = canvas.toDataURL('image/png'); } catch (e) { return _origDl.apply(this, arguments); }
+    SHEET.items.push({ url: url, name: '' + name });
+    /* 「모두 저장」 은 한 장씩 구워 넘어온다 — 첫 장부터 판을 띄우고, 오는 대로 덧붙인다 */
+    clearTimeout(SHEET.t); SHEET.t = setTimeout(sheetPaint, 120);
+  };
+  window.cxSheetState = function () { return { n: SHEET.items.length, phone: isPhone(), inApp: isInApp(), kakao: isKakao() }; }; /* 점검용 */
 
   /* 이미 그려져 있으면 다시 그린다 (이 파일이 늦게 붙었을 때) */
   try { var hh = document.getElementById('cnHost'); if (hh && hh.innerHTML) hh.innerHTML = window.renderTodayCard(); } catch (e) {}
