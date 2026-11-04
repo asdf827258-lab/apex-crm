@@ -16,6 +16,7 @@
 <title>보험의 기준 · 담보 사전</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="stylesheet" href="ui.css">
+<script src="kijun-font.js"></script>
 <style>
 /* 값은 app/ui.css 한 곳에서 옵니다 (5번) */
 :root{color-scheme:light}
@@ -45,6 +46,10 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
 .pill.day{background:var(--t-warn-l);color:var(--t-warn-d)}
 .pill.rate{background:var(--t-pur-l);color:var(--t-pur)}
 .pill.wv{background:var(--t-bg-2);color:var(--t-ink)}
+.pill .kjp{vertical-align:-3px;margin-right:3px}
+.src{margin-top:8px;padding:8px 10px;background:var(--t-bg);border-radius:var(--t-r-xs);font-size:12.5px;display:flex;flex-direction:column;gap:2px}
+.src b{font-size:12.5px}.src a{color:var(--t-point-d);font-weight:700;text-decoration:none}.src span{color:var(--t-sub);margin-bottom:3px}.src small{color:var(--t-sub)}
+.card a.more{display:inline-block;margin-top:8px;font-size:13px;font-weight:800;color:var(--t-point-d);text-decoration:none}
 .pill.nw{background:var(--t-neg-l);color:var(--t-neg-d);margin-left:4px}
 .chips .sep{width:1px;background:var(--t-line);margin:4px 2px}
 .grp{margin-top:14px}
@@ -92,6 +97,8 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
       <a href="kijun-sheet.html" data-sheet>📄 한 장 설계서로</a>
       <a href="kijun-guide.html">🧭 설계 가이드</a>
       <a href="kijun-care.html">🩺 진단·치료 지도</a>
+      <a href="kijun-silson.html">🏥 실비 이야기</a>
+      <a href="kijun-compare.html">📑 담보 대조표</a>
       <button type="button" class="p" data-print>🖨 인쇄</button>
     </div>
   </header>
@@ -114,27 +121,37 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
     <b>지급 여부와 금액은 약관과 보험사 심사 결과에 따라요</b> · 보험료·보장은 심사 결과에 따라요 · 이 사전은 이해를 돕는 일반 설명이고, 금액을 적지 않아요.
   </p>
 </main>
+<script src="kijun-pics.js"></script>
 <script src="kijun-dict.js"></script>
 <script>
 /* 담보 사전 — 글은 KJ_DICT 한 벌(kijun-dict.js). 여기서는 그리고 찾기만 한다 */
 (function(){
   var D=window.KJ_DICT||[], KIND={fx:'정해진 금액',rl:'쓴 만큼',day:'날 수만큼',rate:'비율만큼',wv:'보험료 면제'};
   var $=function(s){return document.querySelector(s)};
+  /* 🎴 나오는 길 그림 · 더 자세한 화면 (판 X318) — 그림은 kijun-pics.js 한 벌 */
+  var PIC=window.KJ_PIC, MORE={silson:['kijun-silson.html','🏥 실비 이야기 — 세대 · 역사 · 보장 자세히 →'],'silson-np':['kijun-silson.html','🏥 실비 이야기 — 비급여 3종이 세대마다 어떻게 바뀌었나 →']};
+  if(PIC)[].forEach.call(document.querySelectorAll('.legend .pill'),function(e){var k=['fx','rl','day','rate','wv'].filter(function(c){return e.classList.contains(c)})[0];if(k)e.innerHTML=PIC.kind(k,14)+e.innerHTML});
   var esc=function(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var n=0;D.forEach(function(g){n+=g.d.length});
   $('[data-count]').textContent='모두 '+n+'가지 · '+D.length+'갈래';
   var cur='';
   $('[data-chips]').innerHTML='<button type="button" class="on" data-g="">전체</button>'+D.map(function(g){return '<button type="button" data-g="'+esc(g.g)+'">'+esc(g.t.split(' — ')[0])+'</button>'}).join('')+
-    '<span class="sep"></span><button type="button" data-nw>🆕 요즘 많이 보이는 담보</button>';
-  var nwOnly=false;
+    '<span class="sep"></span><button type="button" data-nw>🆕 요즘 많이 보이는 담보</button><button type="button" data-srcf>📰 기사로 확인한 새 담보</button>';
+  var nwOnly=false, srcOnly=false;
+  /* 📰 기사로 확인한 담보 (판 X323) — 제목 · 언론사 · 날짜 · 주소를 그대로(9번). 금액은 옮기지 않는다(1번) */
+  function srcHtml(x){
+    if(!x.src||!x.src.length)return '';
+    return '<div class="src" data-src><b>📰 기사로 확인</b>'+x.src.map(function(r){return '<a href="'+esc(r.u)+'" target="_blank" rel="noopener">'+esc(r.t)+'</a><span>'+esc(r.pub)+' · '+esc(r.d)+'</span>'}).join('')+
+      '<small>기사 날짜 기준이에요 — 지금 파는지 · 조건 · 금액은 보험사 상품설명서와 약관으로 확인해요.</small></div>';
+  }
   function card(x){
-    return '<article class="card" id="'+esc(x.id)+'" data-id="'+esc(x.id)+'"><div class="top"><div><h3>'+esc(x.n)+'</h3>'+(x.a?'<span class="aka">'+esc(x.a)+'</span>':'')+'</div><span><span class="pill '+esc(x.k)+'">'+esc(KIND[x.k]||'')+'</span>'+(x.nw?'<span class="pill nw" data-nwp>🆕 요즘</span>':'')+'</span></div>'+
-      '<dl><dt>이런 거예요</dt><dd>'+esc(x.w)+'</dd><dt>왜 필요하냐면</dt><dd>'+esc(x.y)+'</dd><dt>이렇게 나와요</dt><dd>'+esc(x.h)+'</dd><dt>꼭 볼 것</dt><dd class="c">'+esc(x.c)+'</dd></dl></article>';
+    return '<article class="card" id="'+esc(x.id)+'" data-id="'+esc(x.id)+'"><div class="top"><div><h3>'+esc(x.n)+'</h3>'+(x.a?'<span class="aka">'+esc(x.a)+'</span>':'')+'</div><span><span class="pill '+esc(x.k)+'">'+(PIC?PIC.kind(x.k,14):'')+esc(KIND[x.k]||'')+'</span>'+(x.nw?'<span class="pill nw" data-nwp>🆕 요즘</span>':'')+'</span></div>'+
+      '<dl><dt>이런 거예요</dt><dd>'+esc(x.w)+'</dd><dt>왜 필요하냐면</dt><dd>'+esc(x.y)+'</dd><dt>이렇게 나와요</dt><dd>'+esc(x.h)+'</dd><dt>꼭 볼 것</dt><dd class="c">'+esc(x.c)+'</dd></dl>'+(MORE[x.id]?'<a class="more" data-more href="'+MORE[x.id][0]+'">'+MORE[x.id][1]+'</a>':'')+srcHtml(x)+'</article>';
   }
   function draw(){
     var q=String($('[data-q]').value||'').replace(/\s+/g,'').toLowerCase(), shown=0;
     var h=D.filter(function(g){return !cur||g.g===cur}).map(function(g){
-      var items=g.d.filter(function(x){if(nwOnly&&!x.nw)return false;return !q||(x.n+x.a+x.w+x.y+x.h+x.c).replace(/\s+/g,'').toLowerCase().indexOf(q)>=0});
+      var items=g.d.filter(function(x){if(nwOnly&&!x.nw)return false;if(srcOnly&&!(x.src&&x.src.length))return false;return !q||(x.n+x.a+x.w+x.y+x.h+x.c).replace(/\s+/g,'').toLowerCase().indexOf(q)>=0});
       shown+=items.length;
       return items.length?'<section class="grp" data-grp="'+esc(g.g)+'"><h2>'+esc(g.t)+'<small>'+items.length+'가지</small></h2><div class="cards">'+items.map(card).join('')+'</div></section>':'';
     }).join('');
@@ -142,9 +159,10 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
   }
   $('[data-chips]').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;
     if(b.hasAttribute('data-nw')){nwOnly=!nwOnly;b.classList.toggle('on',nwOnly);draw();return}
+    if(b.hasAttribute('data-srcf')){srcOnly=!srcOnly;b.classList.toggle('on',srcOnly);draw();return}
     cur=b.getAttribute('data-g');[].forEach.call(document.querySelectorAll('[data-chips] button[data-g]'),function(x){x.classList.toggle('on',x===b)});draw()});
   $('[data-q]').addEventListener('input',draw);
-  $('[data-print]').addEventListener('click',function(){$('[data-q]').value='';cur='';nwOnly=false;
+  $('[data-print]').addEventListener('click',function(){$('[data-q]').value='';cur='';nwOnly=false;srcOnly=false;
     [].forEach.call(document.querySelectorAll('[data-chips] button'),function(x){x.classList.toggle('on',x.getAttribute('data-g')==='')});draw();window.print()});
   draw();
   /* #뇌혈관 처럼 들어오면 그 담보로 */
