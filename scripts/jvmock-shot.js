@@ -81,7 +81,9 @@ const SEED = () => {
       const out = { head: '' };
       const bub = c.querySelector('.bub'); if (bub && bub.firstChild) out.head = T(bub.firstChild).slice(0, 160);
       const act = c.querySelector('.j-act');
-      if (act) out.act = { t: T(act.querySelector('b')), line: [].slice.call(act.querySelectorAll('div')).map(T).filter(Boolean)[0] || '' };
+      /* 판 X332 — 확인 판이 칸(누구 · 무엇 · 언제)으로 나뉘었습니다. 한 줄 요약은 .ja-q 에 그대로 있습니다 */
+      if (act) out.act = { t: T(act.querySelector('b')), line: T(act.querySelector('.ja-q')) || [].slice.call(act.querySelectorAll('div')).map(T).filter(Boolean)[0] || '',
+        f: [].slice.call(act.querySelectorAll('.ja-fld')).map(x => [T(x.querySelector('span')), T(x.querySelector('b'))]) };
       const pen = c.querySelector('.j-pen .jf-best');
       if (pen) out.pen = (pen.innerText || '').split('\n').map(s => s.trim()).filter(Boolean).slice(0, 14);
       const find = c.querySelector('.j-find');
