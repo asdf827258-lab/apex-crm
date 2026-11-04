@@ -166,16 +166,25 @@ const key = (page, k) => page.evaluate(k =>
       const el = document.elementFromPoint(x, y);
       return !!(el && /pvHit/.test(el.id || ''));
     }).length;
-    const secs = [...document.querySelectorAll('section.wrap')].filter(s => s.id !== 'toc' && s.id !== 'cover');
+    /* ⚠⚠ <b>여기서 한 번 틀렸습니다 (2026-11-04).</b> 판 X326 에서 한 장을
+       여러 <b>쪽</b>으로 쪼갠 뒤에도 이 자는 <b>장</b>을 세어 돌았습니다
+       (secs.length = 40). 쪽은 246개라 <b>앞 40쪽만</b> 보고 「넘치는 쪽이
+       하나도 없다」 고 읽어 빨간불이 됐습니다 — 코드가 아니라 <b>이 자가</b>
+       틀린 것이었습니다. go·index 와 같은 단위(쪽)로 돌고, 재는 것도
+       <b>지금 보이는 쪽</b>(section.wrap.pon)으로 바꿨습니다.
+       ★ 쪽 수는 앱에게 묻습니다(P.total) — 여기서 또 세지 않습니다 (5번). */
+    const 쪽수 = P.total;
     let over = 0, tall = -1;
-    for (let i = 0; i < secs.length; i++) {
-      P.go(i); await new Promise(r => setTimeout(r, 30));
-      if (secs[i].scrollHeight > secs[i].clientHeight + 8) { over++; if (tall < 0) tall = i; }
+    for (let i = 0; i < 쪽수; i++) {
+      P.go(i); await new Promise(r => setTimeout(r, 24));
+      const cur = document.querySelector('section.wrap.pon');
+      if (cur && cur.scrollHeight > cur.clientHeight + 8) { over++; if (tall < 0) tall = i; }
     }
     /* 넘기는 띠는 <b>남아 있어야</b> 한다 — 없애면 마우스로 못 넘기신다 */
     const L = document.getElementById('pvHitL'), R = document.getElementById('pvHitR');
     const lw = L ? L.getBoundingClientRect().width : 0, rw = R ? R.getBoundingClientRect().width : 0;
-    return { covered, over, tall, n: secs.length, lw: Math.round(lw), rw: Math.round(rw) };
+    /* 장 수도 <b>앱에게</b> 묻습니다 — 여기서 또 세면 두 벌이 됩니다 (5번) */
+    return { covered, over, tall, n: 쪽수, 장: P.sections, lw: Math.round(lw), rw: Math.round(rw) };
   });
   is(!mp.err && mp.covered === 0,
      '  가운데 세 자리가 <b>안 덮여 있다</b> — 덮인 곳 ' + mp.covered + '군데 ' +
@@ -183,14 +192,18 @@ const key = (page, k) => page.evaluate(k =>
   is(mp.lw > 20 && mp.rw > 20 && (mp.lw + mp.rw) < 1440 * 0.35,
      '  넘기는 띠는 <b>양옆에 남아 있다</b> — 왼 ' + mp.lw + 'px · 오른 ' + mp.rw + 'px ' +
      '(마우스로 넘기는 길을 없애지 않는다)');
-  is(mp.over > 0, '  한 화면을 넘는 장이 있다 — ' + mp.over + ' / ' + mp.n + '장');
+  /* 넘치는 쪽이 <b>하나는 있어야</b> [4] 가 내려 보는 시험을 할 수 있습니다.
+     ★ 0 이 되는 날은 <b>자료를 다 손본 날</b>입니다 — 그때는 이 줄을 지우지
+       말고 「넘치는 쪽이 없어 [4] 를 건너뜁니다」 로 바꾸십시오 (6번). */
+  is(mp.over > 0, '  한 화면을 넘는 쪽이 있다 — ' + mp.over + ' / ' + mp.n + '쪽 ' +
+     '(장 ' + mp.장 + '개를 쪼갠 것입니다 · 판 X326)');
 
   console.log('\n[4] 미끼상품 — ↓ 로 내려가고, 바닥에서 다음 장');
   const mk = await p2.evaluate(async (tall) => {
     const P = window.__present;
-    const secs = [...document.querySelectorAll('section.wrap')].filter(s => s.id !== 'toc' && s.id !== 'cover');
+    /* 재는 것은 <b>지금 보이는 쪽</b>입니다 — 장을 번호로 집으면 쪽과 어긋납니다 */
     P.go(tall); await new Promise(r => setTimeout(r, 200));
-    const s = secs[tall];
+    const s = document.querySelector('section.wrap.pon');
     const hint = document.body.classList.contains('pvmore');
     const t0 = s.scrollTop;
     const room = s.scrollHeight - s.clientHeight;
@@ -206,13 +219,14 @@ const key = (page, k) => page.evaluate(k =>
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     await new Promise(r => setTimeout(r, 300));
     const next = P.index !== tall;
-    const topOnNew = secs[P.index].scrollTop;
+    const 새쪽 = document.querySelector('section.wrap.pon');
+    const topOnNew = 새쪽 ? 새쪽.scrollTop : 0;
     const at = P.index;
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
     await new Promise(r => setTimeout(r, 200));
     return { hint, moved, same, backUp, hintEnd, next, topOnNew, left: P.index !== at, room, want };
   }, mp.tall);
-  is(mk.hint, '  넘치는 장에 <b>「더 있습니다」</b>가 뜬다');
+  is(mk.hint, '  넘치는 쪽에 <b>「더 있습니다」</b>가 뜬다');
   is(mk.moved >= mk.want - 2 && mk.moved > 0 && mk.same,
      '  ↓ 를 누르면 <b>' + mk.moved + 'px 내려가고</b> 장은 그대로다 — ' +
      '남은 ' + mk.room + 'px 중 내려야 할 ' + mk.want + 'px ' +
@@ -220,8 +234,8 @@ const key = (page, k) => page.evaluate(k =>
   is(mk.backUp, '  ↑ 를 누르면 <b>올라온다</b>');
   is(!mk.hintEnd, '  바닥에 닿으면 <b>「더 있습니다」가 사라진다</b>');
   is(mk.next, '  바닥에서 ↓ 를 누르면 <b>다음 장</b>으로 간다');
-  is(mk.topOnNew === 0, '  새 장은 <b>맨 위부터</b> 보인다');
-  is(mk.left, '  ← 는 <b>그대로 장을 넘긴다</b>');
+  is(mk.topOnNew === 0, '  새 쪽은 <b>맨 위부터</b> 보인다');
+  is(mk.left, '  ← 는 <b>그대로 쪽을 넘긴다</b>');
   await p2.close();
 
   console.log('\n[5] 콘솔이 조용하다');
