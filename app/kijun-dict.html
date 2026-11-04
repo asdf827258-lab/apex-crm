@@ -45,6 +45,8 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
 .pill.day{background:var(--t-warn-l);color:var(--t-warn-d)}
 .pill.rate{background:var(--t-pur-l);color:var(--t-pur)}
 .pill.wv{background:var(--t-bg-2);color:var(--t-ink)}
+.pill .kjp{vertical-align:-3px;margin-right:3px}
+.card a.more{display:inline-block;margin-top:8px;font-size:13px;font-weight:800;color:var(--t-point-d);text-decoration:none}
 .pill.nw{background:var(--t-neg-l);color:var(--t-neg-d);margin-left:4px}
 .chips .sep{width:1px;background:var(--t-line);margin:4px 2px}
 .grp{margin-top:14px}
@@ -92,6 +94,7 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
       <a href="kijun-sheet.html" data-sheet>📄 한 장 설계서로</a>
       <a href="kijun-guide.html">🧭 설계 가이드</a>
       <a href="kijun-care.html">🩺 진단·치료 지도</a>
+      <a href="kijun-silson.html">🏥 실비 이야기</a>
       <button type="button" class="p" data-print>🖨 인쇄</button>
     </div>
   </header>
@@ -114,12 +117,16 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
     <b>지급 여부와 금액은 약관과 보험사 심사 결과에 따라요</b> · 보험료·보장은 심사 결과에 따라요 · 이 사전은 이해를 돕는 일반 설명이고, 금액을 적지 않아요.
   </p>
 </main>
+<script src="kijun-pics.js"></script>
 <script src="kijun-dict.js"></script>
 <script>
 /* 담보 사전 — 글은 KJ_DICT 한 벌(kijun-dict.js). 여기서는 그리고 찾기만 한다 */
 (function(){
   var D=window.KJ_DICT||[], KIND={fx:'정해진 금액',rl:'쓴 만큼',day:'날 수만큼',rate:'비율만큼',wv:'보험료 면제'};
   var $=function(s){return document.querySelector(s)};
+  /* 🎴 나오는 길 그림 · 더 자세한 화면 (판 X318) — 그림은 kijun-pics.js 한 벌 */
+  var PIC=window.KJ_PIC, MORE={silson:['kijun-silson.html','🏥 실비 이야기 — 세대 · 역사 · 보장 자세히 →'],'silson-np':['kijun-silson.html','🏥 실비 이야기 — 비급여 3종이 세대마다 어떻게 바뀌었나 →']};
+  if(PIC)[].forEach.call(document.querySelectorAll('.legend .pill'),function(e){var k=['fx','rl','day','rate','wv'].filter(function(c){return e.classList.contains(c)})[0];if(k)e.innerHTML=PIC.kind(k,14)+e.innerHTML});
   var esc=function(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var n=0;D.forEach(function(g){n+=g.d.length});
   $('[data-count]').textContent='모두 '+n+'가지 · '+D.length+'갈래';
@@ -128,8 +135,8 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
     '<span class="sep"></span><button type="button" data-nw>🆕 요즘 많이 보이는 담보</button>';
   var nwOnly=false;
   function card(x){
-    return '<article class="card" id="'+esc(x.id)+'" data-id="'+esc(x.id)+'"><div class="top"><div><h3>'+esc(x.n)+'</h3>'+(x.a?'<span class="aka">'+esc(x.a)+'</span>':'')+'</div><span><span class="pill '+esc(x.k)+'">'+esc(KIND[x.k]||'')+'</span>'+(x.nw?'<span class="pill nw" data-nwp>🆕 요즘</span>':'')+'</span></div>'+
-      '<dl><dt>이런 거예요</dt><dd>'+esc(x.w)+'</dd><dt>왜 필요하냐면</dt><dd>'+esc(x.y)+'</dd><dt>이렇게 나와요</dt><dd>'+esc(x.h)+'</dd><dt>꼭 볼 것</dt><dd class="c">'+esc(x.c)+'</dd></dl></article>';
+    return '<article class="card" id="'+esc(x.id)+'" data-id="'+esc(x.id)+'"><div class="top"><div><h3>'+esc(x.n)+'</h3>'+(x.a?'<span class="aka">'+esc(x.a)+'</span>':'')+'</div><span><span class="pill '+esc(x.k)+'">'+(PIC?PIC.kind(x.k,14):'')+esc(KIND[x.k]||'')+'</span>'+(x.nw?'<span class="pill nw" data-nwp>🆕 요즘</span>':'')+'</span></div>'+
+      '<dl><dt>이런 거예요</dt><dd>'+esc(x.w)+'</dd><dt>왜 필요하냐면</dt><dd>'+esc(x.y)+'</dd><dt>이렇게 나와요</dt><dd>'+esc(x.h)+'</dd><dt>꼭 볼 것</dt><dd class="c">'+esc(x.c)+'</dd></dl>'+(MORE[x.id]?'<a class="more" data-more href="'+MORE[x.id][0]+'">'+MORE[x.id][1]+'</a>':'')+'</article>';
   }
   function draw(){
     var q=String($('[data-q]').value||'').replace(/\s+/g,'').toLowerCase(), shown=0;
