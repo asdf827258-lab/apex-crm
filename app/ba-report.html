@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light">
-<title>보장 분석 보고서</title>
+<title>보험 자산 운용보고서</title>
 <!-- ★ 판 X295 — 인쇄할 때 색·바탕이 하얗게 떨어지지 않게. 그 한 줄은
      app/ui.css 의 @media print <b>한 곳</b>에 있습니다 (CLAUDE.md 5번).
      ui.css 의 전역 선택자는 :root(토큰) 하나뿐이고 나머지는 전부 .t- 접두사라
@@ -17,6 +17,9 @@
 html,body{margin:0;height:100%;background:#E9EDF2;color:var(--nv);font-family:'Pretendard Variable',Pretendard,'Malgun Gothic',sans-serif;letter-spacing:-.02em;overflow:hidden}
 #wrap{position:absolute;left:50%;top:calc(50% - 22px);width:1280px;height:720px;transform:translate(-50%,-50%) scale(var(--k));transform-origin:center}
 body.embed #wrap{top:50%}
+/* 본판 표지 자리(mode cover) — 표지 한 장만, 넘김 막대 없이 · 화면 가득 */
+body.embed #bar{display:none}
+body.one{background:#0F1A2C}body.one .sl{border-radius:0}
 #deck{position:absolute;inset:0}
 .sl{position:absolute;inset:0;background:#fff;display:none;overflow:hidden;border-radius:6px}
 .sl.on{display:block}
@@ -2136,8 +2139,8 @@ function coverSlides(){
  let tb=0,ta=0;ORDER.forEach(function(j){const T=jTot(j);tb+=T.b;ta+=T.a;});
  const who=NMX('홍길동 님'),age=(BA&&BA.age)?BA.age+'세':'45세',sx=(BA&&BA.sex)?(BA.sex==='여'?'여성':'남성'):'남성';
  add('cover2',
-  '<div class="cv-top"><span class="brand">APEX <i>사업단</i></span><span class="rno">PRIVATE COVERAGE REPORT · No. '+new Date().toISOString().slice(0,10).replace(/-/g,'')+'</span></div>'+
-  '<div class="cv-l2"><p class="kick">보장 분석 보고서</p><h1>치료 한 바퀴로 본<br><span>나의 보장</span></h1>'+
+  '<div class="cv-top"><span class="brand">APEX <i>사업단</i></span><span class="rno">PRIVATE INSURANCE ASSET REPORT · No. '+new Date().toISOString().slice(0,10).replace(/-/g,'')+'</span></div>'+
+  '<div class="cv-l2"><p class="kick">보장 분석 보고서</p><h1>보험 자산<br><span>운용보고서</span></h1>'+
   '<p class="lead2">병이 왔을 때 — 진단부터 치료 · 입원 · 재활 · 돌봄까지,<br>단계마다 <b>드는 돈</b>과 <b>보험에서 나오는 돈</b>을 함께 정리했습니다.</p>'+
   '<table class="cid"><tr><th>고객</th><td><b>'+who+'</b></td></tr><tr><th>기준</th><td>'+age+' · '+sx+'</td></tr><tr><th>작성일</th><td>'+today()+'</td></tr><tr><th>작성</th><td>APEX 사업단</td></tr></table></div>'+
   '<div class="cv-r2"><figure class="hero">'+ringCover()+'<figcaption>4대 위험을 한 바퀴씩 — 안쪽 지금 · 바깥 조정 후</figcaption></figure>'+
@@ -2268,9 +2271,11 @@ document.addEventListener('DOMContentLoaded',function(){build();fit();
  window.addEventListener('beforeprint',finish);
  const m=/[#&]s=(\d+)/.exec(location.hash);let st0=m?(+m[1]-1):0;
  /* 본판 4번(왜 넓어야)에서 열면 「보장 이해 ③ 넓은 이름」 부터 */
+ /* 본판 표지(mode cover) — 표지 한 장만 세운다. 넘김 막대 · 넘기기 없이 (판 X314) */
+ if(BA&&BA.mode==='cover'){BA.embed=1;document.body.classList.add('one');st0=0;}
  if(!m&&BA&&BA.mode==='why'){const w=SLIDES.findIndex(function(x){return x.cls==='u3';});if(w>=0)st0=w;}
  show(st0);
- if(BA&&BA.embed)document.body.classList.add('embed');});
+ if(BA&&BA.embed){document.body.classList.add('embed');fit();}});
 
 </script>
 </body>
