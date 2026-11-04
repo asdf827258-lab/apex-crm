@@ -75,7 +75,7 @@ is(!/\bC\.prem[AB]\b/.test(SRC), 'C.premB · C.premA 로 월 보험료를 찍는
   const show = await pg.evaluate(() => {
     const t = id => { const el = document.getElementById(id); return el ? el.innerText : ''; };
     const hero = [].slice.call(document.querySelectorAll('#s1 .hero .hn b')).map(x => x.textContent.trim());
-    const m2 = t('s2').match(/월 납입\s*([\d,]+원)\s*([\d,]+원)/) || [];
+    const m2 = t('s2').match(/월 납입\s*([\d,]+원)\s*→?\s*([\d,]+원)/) || [];   /* 판 X319 — 위 띠는 「117,500원 → 159,600원」 */
     const m3 = t('s3').match(/매달 ([\d,]+원)을 내고/) || [];
     const m0 = t('s0').match(/조정 후 ([\d,]+원)/) || [];
     return { heroNow: hero[0] || '', heroAfter: hero[1] || '',

@@ -57,7 +57,8 @@ const head = (t) => console.log('\n' + t);
   });
   await pg.waitForTimeout(300);
   /* 2026-10 — 비급여 암주요치료비 1 · 골절·화상 5 가 늘어 59 → 65 */
-  is(all.want === 65, '표준 담보가 <65가지>다 (지금 ' + all.want + '가지)');
+  /* 2026-11 판 X319 — 요즘 담보 6(통합암 · 암 생활비 · 세기조절 방사선 · 암 로봇수술 · 뇌심 생활비 · 후유장해 생활자금) 65 → 71 */
+  is(all.want === 71, '표준 담보가 <71가지>다 (지금 ' + all.want + '가지)');
   const miss = all.out.filter(x => x.got !== all.want);
   is(miss.length === 0, miss.length ? ('담보가 빠지는 나이대 — ' + miss.map(x => x.k + ' ' + x.got + '개').join(' / ')) :
      '여섯 나이대 <전부> ' + all.want + '가지가 다 나온다');
