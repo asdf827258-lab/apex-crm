@@ -3396,14 +3396,30 @@ body.pv section.wrap.pon .pvhead{display:block;font-size:19px;font-weight:800;
   /* ── 아래에 더 있나 · 그것을 말하나 ────────────────────────────────
      판정은 <b>한 곳</b>에서만 한다 — 키도 화면 표시도 같은 답을 본다
      (CLAUDE.md 5번). 두 곳에서 세면 한쪽만 고쳐진다. */
+  /* ── ⬇ <b>지금 내릴 칸은 한 곳에서 묻습니다</b> ───────────────────────
+     ⚠⚠ 여기 <b>secs[idx]</b> 라고 적혀 있었습니다. 판 X326 에서 idx 가
+       <b>장</b> 번호에서 <b>쪽</b> 번호로 바뀌었는데 이 두 줄이 안 따라와,
+       쪽 247개 중 <b>41쪽부터는 secs[idx] 가 아예 없어</b> ↓ 가 0px 움직이고
+       「↓ 아래로 더 있습니다」 도 안 떴습니다 — 넘치는 51쪽의 아래쪽을
+       <b>한 번도 못 보여 드리는</b> 상태였습니다. check-deckscroll 이 잡았습니다.
+     ★ 그래서 <b>묻는 곳을 하나로</b> 두었습니다 (5번) — 내릴 칸은 「지금
+       켜진 쪽의 장」 입니다. 다시 세어 답하지 않습니다.                    */
+  function 내릴칸(){
+    var pg=온쪽[idx];
+    return (pg&&pg.s) || document.querySelector('section.wrap.pon') || null;
+  }
   function canScroll(down){
-    var s=secs[idx]; if(!s) return false;
+    var s=내릴칸(); if(!s) return false;
     return down ? (s.scrollTop+s.clientHeight)<(s.scrollHeight-4) : s.scrollTop>4;
   }
   function more(){ document.body.classList.toggle('pvmore', on&&canScroll(true)); }
   function scrollBy(down){
-    var s=secs[idx]; if(!s) return;
-    s.scrollTo({top:s.scrollTop+(down?1:-1)*Math.round(s.clientHeight*0.86),behavior:'smooth'});
+    var s=내릴칸(); if(!s) return;
+    /* 남은 만큼만 내립니다 — 한 쪽이 조금 넘칠 때 86% 를 그대로 밀면
+       바닥을 지나쳐 다음 누름에서 장이 넘어가 버립니다 */
+    var 걸음=Math.round(s.clientHeight*0.86), 남=s.scrollHeight-s.clientHeight-s.scrollTop;
+    if(down&&남<걸음)걸음=남;
+    s.scrollTo({top:s.scrollTop+(down?1:-1)*걸음,behavior:'smooth'});
     setTimeout(more,320);
   }
   function buildList(){
@@ -3538,7 +3554,18 @@ body.pv section.wrap.pon .pvhead{display:block;font-size:19px;font-weight:800;
 
   /* 주소 뒤에 ?present=1 을 붙이면 열자마자 발표로 시작한다 */
   if(/[?&]present=1/.test(location.search))setTimeout(enter,120);
-  window.__present={enter:enter,exit:exit,go:show,get index(){return idx;},get total(){return secs.length;}};
+  /* ── 🔭 <b>바깥(점검)에서 보는 창</b> ───────────────────────────────────
+     ⚠⚠ total 이 <b>거짓말을 하고 있었습니다.</b> go·index 는 <b>쪽</b> 번호인데
+       total 은 <b>장</b> 수(40)를 돌려주었습니다. 판 X326 에서 한 장을 여러
+       쪽으로 쪼갠 뒤로, 바깥에서 total 만큼 돌면 <b>앞 40쪽만</b> 보고 「넘치는
+       쪽이 하나도 없다」 고 읽습니다 — check-deckscroll 이 실제로 그렇게
+       빨간불이 됐습니다. 이름이 거짓말하면 부르는 쪽이 틀립니다 (4번).
+     ★ total 은 <b>지금 코스의 쪽 수</b>입니다 — go·index 와 같은 단위입니다.
+       장 수가 필요하면 sections 를 보십시오. 세는 곳은 코스쪽() 한 곳입니다 (5번). */
+  window.__present={enter:enter,exit:exit,go:show,
+    get index(){return idx;},
+    get total(){return 코스쪽().length;},
+    get sections(){return secs.length;}};
 })();
 </script>
 
