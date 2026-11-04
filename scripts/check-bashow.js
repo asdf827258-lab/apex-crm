@@ -315,31 +315,32 @@ const PRINTED = `[].slice.call(document.querySelectorAll('#app .show > section:n
     svg: document.querySelectorAll('#app svg').length
   }));
   is(pics.st8 >= 1 && pics.cmpb >= 1, '담보표 장 ' + pics.st8 + '개에 <표준 대비 막대>가 서 있다');
-  is(pics.pbars >= 1, '보험료 장에 <길이로 견주는 막대>가 있다');
-  /* 막대 옆 금액이 <b>카드 밖으로 밀려나면</b> 「30,731,600원」이
-     「30,731,6」 으로 잘려 보인다 — 고객에게는 그 값이 <b>없는 것</b>이 된다.
-     여섯 줄이 <b>같은 폭</b>의 막대 자리를 쓰는지도 같이 본다. 줄마다 다르면
-     길이를 서로 견줄 수 없어 막대가 <b>거짓말</b>을 한다. */
+  /* 판 X319 — 보험료 장은 「해마다 내는 보험료」 그래프(.pr2c svg) + 계약별 표(.pr2t) 다.
+     그래프의 해마다 합이 <b>앞으로 낼 돈과 같은지</b>(같은 자로 그렸는지), 표의 계약 줄 수가 계약 수와
+     같은지, 표의 금액이 <b>카드 밖으로 밀려나지 않았는지</b>를 잰다 — 잘려 보이면 없는 값이 된다. */
   const pb = await pg.evaluate(() => {
     var sec = document.getElementById('s2'); if (!sec) return null;
     var w = sec.className; sec.classList.add('cur');
-    var card = sec.querySelector('.pbars'), R = card.getBoundingClientRect().right;
-    /* 글자가 <b>칸 밖으로 넘쳐도</b> 칸 자체는 안에 있을 수 있다. 칸이 아니라
-       <b>글자</b>를 잰다(Range) — 잘려 보이는 것은 글자이지 칸이 아니다. */
-    var out = [].slice.call(card.querySelectorAll(':scope > span')).map(function (s) {
+    var P = premCalc(), T = premYears(P), sumB = 0, sumA = 0;
+    T.ys.forEach(function (o) { sumB += o.b; sumA += o.a; });
+    var tb = sec.querySelector('.pr2t'), R = tb ? tb.getBoundingClientRect().right : 0;
+    var out = tb ? [].slice.call(tb.querySelectorAll('td.n')).map(function (s) {
       var g = document.createRange(); g.selectNodeContents(s);
       return { t: (s.textContent || '').trim(), over: Math.round(g.getBoundingClientRect().right - R) };
-    });
-    var tw = [].slice.call(card.querySelectorAll('.pbg')).map(function (g) { return Math.round(g.getBoundingClientRect().width); });
-    sec.className = w;
-    return { out: out, tw: tw };
+    }) : [];
+    var r = { svg: !!sec.querySelector('.pr2c svg path'), rows: tb ? tb.querySelectorAll('tbody tr').length : 0,
+      want: S.before.length + S.after.length, out: out,
+      sumB: Math.round(sumB), sumA: Math.round(sumA), leftB: Math.round(P.leftB), leftA: Math.round(P.leftA), skip: T.skip };
+    sec.className = w; return r;
   });
-  const cut = pb ? pb.out.filter(x => x.over > -2) : [];
-  is(pb && cut.length === 0, !pb ? '보험료 장이 없다' : (cut.length ?
-     ('금액이 카드 밖으로 밀려났다 — ' + cut.map(x => x.t + '(' + x.over + 'px)').join(' / ')) :
-     '막대 옆 금액 ' + pb.out.length + '개가 <전부 카드 안에> 있다 — 잘려 보이면 없는 값이 된다'));
-  is(pb && pb.tw.length > 1 && pb.tw.every(w => w === pb.tw[0]),
-     pb ? ('막대 자리 ' + pb.tw.length + '줄이 <같은 폭>이다 (' + pb.tw[0] + 'px) — 달라지면 길이를 못 견준다') : '—');
+  is(pb && pb.svg, '보험료 장에 <해마다 내는 보험료> 그래프가 있다');
+  is(pb && pb.skip === 0 && pb.sumB === pb.leftB && pb.sumA === pb.leftA,
+     pb ? ('그래프의 해마다 합 = 앞으로 낼 돈 — 지금 ' + pb.sumB + '/' + pb.leftB + ' · 조정 후 ' + pb.sumA + '/' + pb.leftA + '만원 (같은 자로 그렸다)') : '—');
+  is(pb && pb.rows === pb.want, pb ? ('계약별 표가 <계약마다 한 줄> — ' + pb.rows + '/' + pb.want) : '—');
+  const cut = pb ? pb.out.filter(x => x.over > 1) : [];
+  is(pb && pb.out.length && cut.length === 0, !pb ? '보험료 장이 없다' : (cut.length ?
+     ('금액이 표 밖으로 밀려났다 — ' + cut.map(x => x.t + '(' + x.over + 'px)').join(' / ')) :
+     '표의 금액 ' + pb.out.length + '칸이 <전부 표 안에> 있다 — 잘려 보이면 없는 값이 된다'));
   is(pics.nfill >= 3, '모자란 담보마다 <얼마나 찼는지> 막대가 있다 (' + pics.nfill + '개)');
   is(pics.svg >= 1, '직접 그린 그림(SVG)이 ' + pics.svg + '개 있다');
   /* 3번 · 4번 — 화면에서는 3D(ba-3d.html) 두 장, 종이에서는 「한 바퀴 한 장」 (판 X232).
