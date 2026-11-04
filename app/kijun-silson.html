@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="ko">
+<head>
+<meta charset="utf-8">
+<!-- ══════════════════════════════════════════════════════════════════
+     보험의 기준 · 실비 이야기 (판 X318)
+     사장님 말씀 2026-11-04 「실비 역사와 보장내용도 자세히 알려줘」
+     글은 kijun-silson.js 한 벌 · 그림은 kijun-pics.js 한 벌 — 이 쪽은 그리기만 합니다(5번).
+     ★ 자기부담 비율은 대표적인 표준약관 기준 · 내 비율은 증권 · 공제 · 한도 금액은 적지 않음(1번).
+     ★ 「내 실비는 몇 세대?」 는 이 화면 안에서만 셉니다 — 아무것도 보내지 않고, 기억하지 않습니다(3번 · 7번).
+     ★ 인쇄는 tnum 을 켜지 않습니다(4-1).   재는 자: scripts/check-kjsilson.js
+     ══════════════════════════════════════════════════════════════════ -->
+<meta name="color-scheme" content="light">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta property="og:title" content="보험의 기준 · 실비 이야기">
+<meta property="og:description" content="실비 1세대부터 4세대까지 — 무엇이 바뀌었고, 무엇을 돌려받고, 무엇은 안 되나.">
+<title>보험의 기준 · 실비 이야기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="ui.css">
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-size:14px;line-height:1.55;letter-spacing:-.2px;-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 48px}
+.hd{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.hd .tag{display:inline-block;font-size:13px;font-weight:700;color:var(--t-sub);background:var(--t-card);border-radius:var(--t-r-xs);padding:4px 10px}
+.hd h1{margin:6px 0 2px;font-size:25px;font-weight:800;letter-spacing:-.03em}
+.hd h1 b{color:var(--t-point)}
+.hd p{margin:0;color:var(--t-sub)}
+.act{display:flex;gap:6px;flex-wrap:wrap}
+.act a,.act button{min-height:44px;border:0;border-radius:var(--t-r-sm);padding:0 13px;font:700 14px var(--t-font);cursor:pointer;background:var(--t-card);color:var(--t-ink);display:inline-flex;align-items:center;text-decoration:none}
+.act button.p{background:var(--t-point);color:var(--t-on)}
+.box{margin-top:12px;background:var(--t-card);border-radius:var(--t-r-sm);padding:14px 16px}
+.box>h2{margin:0 0 6px;font-size:18px;font-weight:800}
+.box>p.sd{margin:0 0 10px;color:var(--t-sub);font-size:13.5px}
+.warn{margin-top:12px;background:var(--t-warn-l);border-radius:var(--t-r-sm);padding:11px 14px;font-size:13.5px}
+.warn b{color:var(--t-warn-d)}
+.tl svg{display:block;width:100%;height:auto}
+.mine{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+.mine label{font-weight:800}
+.mine input{min-height:44px;font:600 15px var(--t-font);border:1.5px solid var(--t-line);border-radius:var(--t-r-sm);padding:0 12px;background:var(--t-bg)}
+.mine .out{font-weight:700}
+.mine .out b{color:var(--t-point-d)}
+.eras{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.era{background:var(--t-bg);border-radius:var(--t-r-sm);padding:12px;border:2px solid transparent}
+.era.on{border-color:var(--t-point);background:var(--t-point-l)}
+.era h3{margin:0;font-size:17px;font-weight:800}
+.era h3 small{display:block;font-size:12.5px;font-weight:700;color:var(--t-sub)}
+.era .when{display:inline-block;margin:4px 0 6px;font-size:12.5px;font-weight:800;color:var(--t-point-d);background:var(--t-card);border-radius:var(--t-r-xs);padding:1px 7px}
+.era dl{margin:0;display:grid;gap:5px}
+.era dt{font-size:12px;font-weight:800;color:var(--t-sub)}
+.era dd{margin:0;font-size:13px}
+.next{margin-top:8px;font-size:13px;background:var(--t-bg-2);border-radius:var(--t-r-sm);padding:9px 12px}
+.covs{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.cov{background:var(--t-pos-l);border-radius:var(--t-r-sm);padding:10px 12px}
+.cov b{display:block;font-size:15px;color:var(--t-pos-d)}
+.cov p{margin:3px 0 0;font-size:13px}
+.cov small{display:block;margin-top:4px;font-size:12px;color:var(--t-sub)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+ul.x{margin:0;padding:0;list-style:none}
+ul.x li{padding:5px 0;border-bottom:1px dashed var(--t-line);font-size:13.5px}
+ul.x li::before{content:'✕ ';color:var(--t-neg-d);font-weight:800}
+ul.chk li::before{content:'✔ ';color:var(--t-point-d)}
+.claim{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;counter-reset:c}
+.claim div{background:var(--t-bg);border-radius:var(--t-r-sm);padding:10px 12px;counter-increment:c}
+.claim b::before{content:counter(c) '. ';color:var(--t-point)}
+.claim p{margin:3px 0 0;font-size:13px}
+.kjp-note{margin:4px 0 0;font-size:12px;color:var(--t-sub)}
+.kjp{vertical-align:-3px;flex:none}
+.kjp-bill{display:block;max-width:760px}
+.foot{margin-top:16px;font-size:12px;line-height:1.6;color:var(--t-sub)}
+.foot b{color:var(--t-ink)}
+@media (max-width:900px){.eras{grid-template-columns:1fr 1fr}.covs{grid-template-columns:1fr 1fr}}
+@media (max-width:640px){.eras,.covs,.two,.claim{grid-template-columns:1fr}}
+@media print{
+  @page{size:A4;margin:9mm}
+  body{background:#fff;font-size:10px}
+  .wrap{max-width:none;padding:0}
+  .act,.mine{display:none}
+  .hd h1{font-size:18px}
+  .box,.warn{padding:6px 9px;border:1px solid var(--t-line);margin-top:6px;break-inside:avoid}
+  .box>h2{font-size:12.5px}.box>p.sd,.era dd,.cov p,ul.x li,.claim p,.next{font-size:9px}.era dt,.cov small,.kjp-note,.foot{font-size:8.5px}
+  .era{padding:6px}.era h3{font-size:12px}
+  *{font-variant-numeric:normal!important;font-feature-settings:normal!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="hd">
+    <div>
+      <span class="tag">🏥 보험의 기준 · 실비 이야기</span>
+      <h1>실비, <b>언제 들었느냐</b>가 다 달라요</h1>
+      <p>1세대부터 4세대까지 — 무엇이 바뀌었고, 무엇을 돌려받고, 무엇은 안 되나.</p>
+    </div>
+    <div class="act">
+      <a href="kijun-dict.html#silson">📚 담보 사전</a>
+      <a href="kijun-care.html">🩺 진단·치료 지도</a>
+      <a href="kijun-sheet.html">📄 한 장 설계서</a>
+      <button type="button" class="p" data-print>🖨 인쇄</button>
+    </div>
+  </header>
+
+  <p class="warn" data-warn>⚠ 자기부담 비율은 <b>그 세대의 대표적인 표준약관 기준</b>이에요. 같은 세대 안에서도 가입 시기 · 회사 · 선택형에 따라 달라요 — <b>내 비율은 증권과 약관으로 확인</b>해요. 공제 · 한도 금액은 적지 않아요. 돌려받는지와 얼마인지는 <b>약관과 보험사 심사 결과에 따라요.</b></p>
+
+  <section class="box tl" data-timeline>
+    <h2>🛣️ 실비가 걸어온 길</h2>
+    <p class="sd">표준약관이 바뀐 달마다 세대가 갈려요. 오른쪽으로 갈수록 보험료는 낮게 시작하고, 내가 내는 몫은 커졌어요.</p>
+    <div data-tl></div>
+    <div class="mine">
+      <label for="joinYm">📅 내 실비 가입 달</label>
+      <input id="joinYm" type="month" data-join min="1990-01" max="2099-12" aria-label="실비 가입 연월">
+      <span class="out" data-mine>증권의 가입일을 넣으면 몇 세대인지 알려 드려요 — 이 화면 밖으로 보내지도, 기억하지도 않아요.</span>
+    </div>
+  </section>
+
+  <section class="box" data-eras-box>
+    <h2>🔎 세대마다 무엇이 다른가</h2>
+    <div class="eras" data-eras></div>
+    <p class="next" data-next></p>
+  </section>
+
+  <section class="box">
+    <h2>🧾 실비는 병원비의 어느 칸을 받치나</h2>
+    <p class="sd">실비는 병원에서 <b>쓴 돈 안에서</b> 돌려받는 보험이에요. 끊긴 월급 · 간병 · 생활비는 실비 밖이에요.</p>
+    <div data-bill></div>
+  </section>
+
+  <section class="box">
+    <h2>✅ 무엇을 돌려받나</h2>
+    <div class="covs" data-covs></div>
+  </section>
+
+  <section class="two">
+    <div class="box"><h2>🚫 실비로 안 되는 것</h2><ul class="x" data-out></ul><p class="next" data-many></p></div>
+    <div class="box"><h2>🔁 갈아타기 전에 꼭</h2><ul class="x chk" data-swap></ul></div>
+  </section>
+
+  <section class="box">
+    <h2>📮 청구는 이렇게</h2>
+    <div class="claim" data-claim></div>
+  </section>
+
+  <p class="foot">
+    세대를 가르는 달은 표준약관이 바뀐 달이에요(2009년 10월 · 2017년 4월 · 2021년 7월) · 같은 세대라도 회사 · 상품 · 가입 시기마다 다를 수 있어요 — <b>내 실비는 증권과 약관으로 확인</b>해요 ·
+    <b>돌려받는지와 얼마인지는 약관과 보험사 심사 결과에 따라요</b> · 보험료 · 보장은 심사 결과에 따라요 · 개편 논의는 금융당국 발표로 확인해요 · 이 화면은 이해를 돕는 일반 설명이에요.
+  </p>
+</main>
+<script src="kijun-pics.js"></script>
+<script src="kijun-silson.js"></script>
+<script>
+/* 실비 이야기 — 글은 KJ_SILSON 한 벌, 그림은 KJ_PIC 한 벌. 여기서는 그리기만 한다 */
+(function(){
+  var S=window.KJ_SILSON||{eras:[]}, P=window.KJ_PIC;
+  var $=function(s){return document.querySelector(s)};
+  var esc=function(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  /* 🛣️ 길 그림 — 세대 넷이 한 줄로 */
+  function tl(on){
+    var n=S.eras.length, W=1000, w=(W-40)/n, h='<svg viewBox="0 0 '+W+' 150" role="img" aria-label="실비 1세대부터 '+n+'세대까지" style="font-family:var(--t-font)">';
+    h+='<defs><marker id="ar" markerWidth="10" markerHeight="10" refX="6" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="var(--t-sub)"/></marker></defs>';
+    h+='<line x1="10" y1="118" x2="'+(W-8)+'" y2="118" stroke="var(--t-sub)" stroke-width="2.5" marker-end="url(#ar)"/>';
+    S.eras.forEach(function(e,i){
+      var x=20+w*i, c=(on===e.g)?'var(--t-point)':'var(--t-point-l)', tc=(on===e.g)?'var(--t-on)':'var(--t-point-d)';
+      h+='<g data-era-g="'+e.g+'"><rect x="'+(x+4)+'" y="14" width="'+(w-8)+'" height="88" rx="14" fill="'+c+'"/>'+
+        '<text x="'+(x+w/2)+'" y="46" text-anchor="middle" font-size="21" font-weight="800" fill="'+tc+'">'+esc(e.t)+'</text>'+
+        '<text x="'+(x+w/2)+'" y="70" text-anchor="middle" font-size="13.5" font-weight="700" fill="'+tc+'">'+esc(e.nick)+'</text>'+
+        '<text x="'+(x+w/2)+'" y="90" text-anchor="middle" font-size="12" fill="'+tc+'">'+esc(e.when)+'</text>'+
+        '<circle cx="'+(x+4)+'" cy="118" r="5" fill="var(--t-sub)"/></g>';
+    });
+    h+='<text x="20" y="142" font-size="12" font-weight="700" fill="var(--t-sub)">보장 넓고 · 자기부담 적고 · 갱신 보험료 큼</text>';
+    h+='<text x="'+(W-20)+'" y="142" text-anchor="end" font-size="12" font-weight="700" fill="var(--t-sub)">보험료 낮게 시작 · 자기부담 큼 · 비급여 할증</text>';
+    return h+'</svg>';
+  }
+  function eras(on){
+    $('[data-eras]').innerHTML=S.eras.map(function(e){
+      return '<article class="era'+(on===e.g?' on':'')+'" data-era="'+e.g+'"><h3>'+esc(e.t)+'<small>'+esc(e.nick)+'</small></h3><span class="when">'+esc(e.when)+'</span>'+
+        '<dl><dt>💳 내가 내는 몫</dt><dd>'+esc(e.pay)+'</dd><dt>🔎 무엇을 보나</dt><dd>'+esc(e.cover)+'</dd><dt>💰 보험료</dt><dd>'+esc(e.prem)+'</dd>'+
+        '<dt>🔄 갱신 · 재가입</dt><dd>'+esc(e.renew)+'</dd><dt>👉 이런 분은</dt><dd>'+esc(e.keep)+'</dd></dl></article>';
+    }).join('');
+    $('[data-tl]').innerHTML=tl(on);
+  }
+  /* 📅 내 실비는 몇 세대? — 화면 안에서만 센다 */
+  function which(ym){
+    var m=/^(\d{4})-(\d{2})$/.exec(ym||''); if(!m)return null;
+    var v=(+m[1])*100+(+m[2]), hit=null;
+    S.eras.forEach(function(e){if(v>=e.from&&v<=e.to)hit=e});
+    return hit;
+  }
+  $('[data-join]').addEventListener('input',function(){
+    var e=which(this.value);
+    if(!e){$('[data-mine]').textContent='가입 달을 다시 확인해 주세요 — 모르면 비워 두세요. 지어서 세대를 정하지 않아요.';eras(0);return}
+    $('[data-mine]').innerHTML='<b>'+esc(e.t)+'</b>('+esc(e.nick)+')일 가능성이 커요 — 단체 실비 · 전환한 계약은 다를 수 있어 증권으로 확인해요.';
+    eras(e.g);
+  });
+  eras(0);
+  $('[data-next]').textContent=S.next||'';
+  $('[data-bill]').innerHTML=P?P.bill():'';
+  $('[data-covs]').innerHTML=(S.cover||[]).map(function(c){return '<div class="cov">'+(P?P.kind('rl',22):'')+'<b>'+esc(c.ic)+' '+esc(c.t)+'</b><p>'+esc(c.d)+'</p><small>'+esc(c.c)+'</small></div>'}).join('');
+  $('[data-out]').innerHTML=(S.out||[]).map(function(t){return '<li>'+esc(t)+'</li>'}).join('');
+  $('[data-many]').textContent='🧮 '+(S.many||'');
+  $('[data-swap]').innerHTML=(S.swap||[]).map(function(t){return '<li>'+esc(t)+'</li>'}).join('');
+  $('[data-claim]').innerHTML=(S.claim||[]).map(function(c){return '<div><b>'+esc(c.t)+'</b><p>'+esc(c.d)+'</p></div>'}).join('');
+  $('[data-print]').addEventListener('click',function(){window.print()});
+})();
+</script>
+</body>
+</html>

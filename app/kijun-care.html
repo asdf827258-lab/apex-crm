@@ -9,7 +9,8 @@
      ★ 금액·본인부담 비율을 적지 않습니다(1번) · 급여 여부는 「대표적인 경우」 라고 맨 위에 밝힙니다.
      ★ 아무것도 보내지 않습니다(7번) · 인쇄는 tnum 을 켜지 않습니다(4-1).
      ★ 판 X309 — 「병을 겪는 길」(암 · 뇌졸중 · 심근경색 · 치매): 단계마다 치료 · 나가는 돈 · 받치는 담보. 글은 KJ_PATH.
-     재는 자: scripts/check-kjcare.js
+     ★ 판 X318 — 🧍 몸 지도(apex-body.js 한 벌 · KJ_BODY) · 🧾 병원비 한 막대 · 🎴 나오는 길 다섯 · 🛣️ 길 그림(kijun-pics.js) · 📋 보상 기준(KJ_RULE).
+     재는 자: scripts/check-kjcare.js · scripts/check-kjpics.js
      ══════════════════════════════════════════════════════════════════ -->
 <meta name="color-scheme" content="light">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -63,6 +64,43 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
 .step .cov a{display:inline-block;font-size:12px;font-weight:700;color:var(--t-point-d);background:var(--t-point-l);border-radius:var(--t-r-xs);padding:1px 7px;margin:0 4px 4px 0;text-decoration:none}
 .step .tip{margin:2px 0 0;font-size:12.5px;font-weight:600}
 .money{margin-top:8px;font-size:12.5px;color:var(--t-sub)}
+/* 🖼 그림 (판 X318) — 몸 지도 · 병원비 한 막대 · 나오는 길 다섯 · 길 그림 · 보상 기준 */
+.pbox{margin-top:12px;background:var(--t-card);border-radius:var(--t-r-sm);padding:14px}
+.pbox>h2{margin:0;font-size:18px;font-weight:800}
+.pbox>p.sd{margin:2px 0 10px;color:var(--t-sub);font-size:13px}
+.bodymap{display:grid;grid-template-columns:1fr 240px 1fr;gap:10px;align-items:center}
+.bodymap .col{display:flex;flex-direction:column;gap:6px}
+.bodymap .col.L{align-items:flex-end}
+.bodymap .col.R{align-items:flex-start}
+.bodymap svg text{pointer-events:none}
+.bodymap button{min-height:40px;border:1.5px solid var(--t-line);border-radius:var(--t-r-xs);padding:0 12px;font:700 13.5px var(--t-font);background:var(--t-bg);color:var(--t-ink);cursor:pointer}
+.bodymap button small{font-weight:700;color:var(--t-sub);margin-left:4px}
+.bodymap button.on{background:var(--t-point);border-color:var(--t-point);color:var(--t-on)}
+.bodymap button.on small{color:var(--t-on)}
+.bodymap svg{width:100%;height:auto;max-height:520px}
+.bodymap svg [data-bp]{cursor:pointer}
+.bodymap svg [data-bp].on circle.c{fill:var(--t-point)}
+.bpick{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 0;font-size:13.5px;font-weight:700}
+.bpick button{min-height:36px;border:0;border-radius:var(--t-r-xs);padding:0 10px;font:700 13px var(--t-font);background:var(--t-neg-l);color:var(--t-neg-d);cursor:pointer}
+.kjp{vertical-align:-3px;flex:none}
+.kjp-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.kjp-card{border-radius:var(--t-r-sm);padding:10px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px}
+.kjp-card b{font-size:15px}.kjp-card span{font-size:12px}
+.kjp-bill{display:block;max-width:760px}
+.kjp-note{margin:4px 0 0;font-size:12px;color:var(--t-sub)}
+.kjp-road{display:block;margin:4px 0 8px}
+.kjp-road .kjp-st:focus{outline:none}
+.kjp-road .kjp-st:focus circle,.kjp-road .kjp-st.on circle{stroke:var(--t-ink);stroke-width:3}
+.step.hit{outline:2.5px solid var(--t-point)}
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rule{background:var(--t-bg);border-radius:var(--t-r-sm);padding:10px 12px}
+.rule h3{margin:0 0 4px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:6px}
+.rule dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 8px}
+.rule dt{font-size:12px;font-weight:800;color:var(--t-sub);white-space:nowrap}
+.rule dd{margin:0;font-size:13px}
+.rule dd.m{color:var(--t-neg-d);font-weight:600}
+.rule .cov a{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;color:var(--t-point-d);background:var(--t-point-l);border-radius:var(--t-r-xs);padding:1px 7px;margin:0 4px 4px 0;text-decoration:none}
+.card .cov a .kjp,.step .cov a .kjp{margin-right:3px}
 .tools{position:sticky;top:0;z-index:5;background:var(--t-bg);padding:10px 0 8px;margin-top:10px}
 .tools input{width:100%;min-height:46px;font:600 15px var(--t-font);color:var(--t-ink);background:var(--t-card);border:1.5px solid var(--t-line);border-radius:var(--t-r-sm);padding:0 14px}
 .tools input:focus{outline:none;border-color:var(--t-point)}
@@ -93,7 +131,7 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
 .foot{margin-top:16px;font-size:12px;line-height:1.6;color:var(--t-sub)}
 .foot b{color:var(--t-ink)}
 @media (max-width:980px){.steps{grid-template-columns:1fr 1fr}}
-@media (max-width:760px){.cards,.how,.steps{grid-template-columns:1fr}}
+@media (max-width:760px){.cards,.how,.steps,.rules{grid-template-columns:1fr}.kjp-strip{grid-template-columns:1fr 1fr}.bodymap{grid-template-columns:1fr 150px 1fr;gap:6px}.bodymap button{padding:0 7px;font-size:12px;min-height:38px}.bodymap button small{display:none}}
 @media print{
   @page{size:A4;margin:9mm}
   body{background:#fff;font-size:10px}
@@ -109,6 +147,9 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
   .card dl{margin-top:3px;gap:1px 6px}
   .f,.card .cov a{font-size:8.3px}
   .foot{font-size:8.8px}
+  .pbox{padding:6px 8px;border:1px solid var(--t-line);break-inside:avoid}.pbox>h2{font-size:12.5px}.pbox>p.sd,.kjp-note{font-size:8.8px}
+  .bodymap{grid-template-columns:1fr 150px 1fr}.bodymap button{min-height:0;padding:2px 6px;font-size:8.8px}.bodymap svg{max-height:300px}.bpick{display:none}
+  .kjp-card{padding:4px}.kjp-card b{font-size:10px}.kjp-card span{font-size:8px}.rule{padding:5px 7px;border:1px solid var(--t-line);break-inside:avoid}.rule h3{font-size:10.5px}.rule dt,.rule dd{font-size:8.8px}
   .path{padding:6px 8px;border:1px solid var(--t-line)}.path>h2{font-size:12.5px}.path>p,.money{font-size:8.8px}.ptabs{display:none}
   .pway[hidden]{display:block!important}.pway h3{font-size:11px;margin:6px 0 3px}.steps{grid-template-columns:repeat(3,1fr);gap:4px}
   .step{padding:5px 7px;border:1px solid var(--t-line);break-inside:avoid}.step h4{font-size:10px}.step p,.step ul,.step .tip{font-size:8.8px;margin-bottom:3px}.step .mo,.step .cov a{font-size:8px}
@@ -128,11 +169,19 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
       <a href="kijun-dict.html">📚 담보 사전</a>
       <a href="kijun-guide.html">🧭 설계 가이드</a>
       <a href="kijun-sheet.html" data-sheet>📄 한 장 설계서</a>
+      <a href="kijun-silson.html">🏥 실비 이야기</a>
       <button type="button" class="p" data-print>🖨 인쇄</button>
     </div>
   </header>
 
   <p class="warn" data-warn>⚠ <b>급여 · 비급여는 「대표적인 경우」예요.</b> 같은 치료도 약 · 적응증 · 횟수 · 시기에 따라 급여가 되기도, 안 되기도 해요 — <b>건강보험심사평가원(심평원) · 병원 원무과에서 확인</b>해요. 이 지도는 금액과 본인부담 비율을 적지 않아요. 보험금 지급 여부는 <b>약관과 보험사 심사 결과에 따라요.</b></p>
+
+  <section class="pbox" data-bodybox>
+    <h2>🧍 몸 지도 — 아픈 곳을 누르면</h2>
+    <p class="sd">병 이름을 몰라도 괜찮아요. 몸에서 고르면 그 자리의 병 카드(진단 · 치료 · 받치는 담보)만 아래에 서요.</p>
+    <div class="bodymap" data-bodymap></div>
+    <p class="bpick" data-bpick hidden></p>
+  </section>
 
   <section class="how" data-how>
     <div><b><span class="f g">급여</span>건강보험이 정한 치료</b>건강보험공단이 일부를 내고, 나머지를 내가 내요(본인부담). 실손보험은 이 본인부담 몫을 약관 한도 안에서 돌려줘요.</div>
@@ -141,12 +190,25 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
   </section>
   <p class="how2">💡 <b>정해진 금액 담보(진단비 · 수술비)</b>는 급여든 비급여든 상관없이 약관의 조건이 맞는지만 봐요. <b>쓴 만큼 담보(실손)</b>는 급여·비급여에 따라 돌려받는 길이 달라져요. 그래서 두 가지를 함께 봐요.</p>
 
+  <section class="pbox" data-picbox>
+    <h2>🧾 병원비 한 막대 · 🎴 담보가 나오는 길 다섯</h2>
+    <p class="sd">병원비 한 번을 막대 하나로 나눠 어느 칸을 어느 보험이 받치는지, 그리고 담보마다 「어떻게 나오나」 를 그림 하나로 봐요. 담보 칩 앞의 작은 그림이 이 다섯 가지예요.</p>
+    <div data-bill></div>
+    <div data-strip style="margin-top:10px"></div>
+  </section>
+
   <section class="path" data-path>
     <h2>🧭 병을 겪는 길 — 단계마다 나가는 돈과 받치는 담보</h2>
     <p>큰 병은 진단 한 번에 끝나지 않아요. 단계마다 무엇을 하고(급여 · 비급여), 어떤 돈이 나가고(병원비 · 생활비), 어떤 담보가 받치는지 차례로 봐요.</p>
     <div class="ptabs" data-ptabs></div>
     <div data-ways></div>
     <p class="money">나가는 돈 — <b>병원비</b>는 실비와 치료비 담보가, <b>생활비</b>(쉬는 동안 끊기는 월급 · 간병 · 식비 · 교통비)는 진단비 · 생활비 · 일당 담보가 받쳐요. 이 지도는 「얼마 드는지」 를 적지 않아요 — 병원 · 약 · 횟수마다 달라요.</p>
+  </section>
+
+  <section class="pbox" data-rulebox>
+    <h2>📋 치료 과정에서 담보가 나오는 기준</h2>
+    <p class="sd">같은 병이라도 「언제 · 무엇으로 확인되면」 담보가 나오는지가 정해져 있어요. 단계마다 무엇을 보고, 무엇이 필요하고, 흔히 어디서 안 나오는지 봐요. 기간 · 일수 · 횟수는 상품마다 달라 적지 않아요 — 약관으로 확인해요.</p>
+    <div class="rules" data-rules></div>
   </section>
 
   <div class="tools">
@@ -162,6 +224,8 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
     진단과 치료는 의사가 정해요 — 이 지도는 이해를 돕는 일반 설명이에요.
   </p>
 </main>
+<script src="apex-body.js"></script>
+<script src="kijun-pics.js"></script>
 <script src="kijun-dict.js"></script>
 <script src="kijun-care.js"></script>
 <script>
@@ -170,7 +234,9 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
   var C=window.KJ_CARE||[], D=window.KJ_DICT||[], FLAG={g:'급여',b:'비급여',c:'조건부'};
   var $=function(s){return document.querySelector(s)};
   var esc=function(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
-  var dn={};D.forEach(function(g){g.d.forEach(function(x){dn[x.id]=x.n})});
+  var dn={},dk={};D.forEach(function(g){g.d.forEach(function(x){dn[x.id]=x.n;dk[x.id]=x.k})});
+  var PIC=window.KJ_PIC, kp=function(id){return PIC&&dk[id]?PIC.kind(dk[id],14):''};
+  var bp='', BODY=window.KJ_BODY||[];
   var n=0;C.forEach(function(g){n+=g.d.length});
   $('[data-count]').textContent='모두 '+n+'가지 · '+C.length+'갈래';
   var cur='', fl='';
@@ -180,7 +246,7 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
     return '<article class="card" id="'+esc(x.id)+'" data-id="'+esc(x.id)+'"><h3>'+esc(x.n)+(x.code?'<span class="code">'+esc(x.code)+'</span>':'')+'</h3>'+
       '<dl><dt>어떻게 진단</dt><dd>'+esc(x.dx)+'</dd>'+
       '<dt>치료</dt><dd><ul>'+x.tx.map(function(t){return '<li data-f="'+esc(t[1])+'"><span class="f '+esc(t[1])+'">'+esc(FLAG[t[1]]||'')+'</span>'+esc(t[0])+'</li>'}).join('')+'</ul></dd>'+
-      '<dt>받치는 담보</dt><dd class="cov">'+x.cov.map(function(id){return dn[id]?'<a href="kijun-dict.html#'+esc(id)+'">'+esc(dn[id])+'</a>':''}).join('')+'</dd>'+
+      '<dt>받치는 담보</dt><dd class="cov">'+x.cov.map(function(id){return dn[id]?'<a href="kijun-dict.html#'+esc(id)+'">'+kp(id)+esc(dn[id])+'</a>':''}).join('')+'</dd>'+
       '<dt>꼭 볼 것</dt><dd class="c">'+esc(x.tip)+'</dd></dl></article>';
   }
   function hay(x){return (x.n+x.code+x.dx+x.tip+x.tx.map(function(t){return t[0]}).join('')+x.cov.map(function(id){return dn[id]||''}).join('')).replace(/\s+/g,'').toLowerCase()}
@@ -189,6 +255,7 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
     var h=C.filter(function(g){return !cur||g.g===cur}).map(function(g){
       var items=g.d.filter(function(x){
         if(fl&&!x.tx.some(function(t){return t[1]===fl}))return false;
+        if(bp){var P0=BODY.filter(function(b){return b.p===bp})[0];if(P0&&P0.ids.indexOf(x.id)<0)return false}
         return !q||hay(x).indexOf(q)>=0});
       shown+=items.length;
       return items.length?'<section class="grp" data-grp="'+esc(g.g)+'"><h2>'+esc(g.t)+'<small>'+items.length+'가지</small></h2><div class="cards">'+items.map(card).join('')+'</div></section>':'';
@@ -201,16 +268,16 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
     else{cur=b.getAttribute('data-g');[].forEach.call(document.querySelectorAll('[data-chips] button[data-g]'),function(x){x.classList.toggle('on',x===b)});}
     draw()});
   $('[data-q]').addEventListener('input',draw);
-  $('[data-print]').addEventListener('click',function(){$('[data-q]').value='';cur='';fl='';
+  $('[data-print]').addEventListener('click',function(){$('[data-q]').value='';cur='';fl='';bp='';if(typeof bodyDraw==='function')bodyDraw();
     [].forEach.call(document.querySelectorAll('[data-chips] button'),function(x){x.classList.toggle('on',x.getAttribute('data-g')==='')});draw();window.print()});
   draw();
   /* 🧭 병을 겪는 길 (판 X309) — 글은 KJ_PATH 한 벌. 담보 이름은 KJ_DICT 에서 빌린다(5번) */
   var PW=window.KJ_PATH||[], MO={h:'병원비',l:'생활비',b:'병원비 · 생활비'}, pcur=PW.length?PW[0].g:'';
   function way(p){
-    return '<div class="pway" data-way="'+esc(p.g)+'"'+(p.g===pcur?'':' hidden')+'><h3>'+esc(p.t)+'</h3><ol class="steps">'+p.d.map(function(st){
-      return '<li class="step" data-step><h4>'+esc(st.s)+'<span class="mo '+esc(st.m)+'" data-mo="'+esc(st.m)+'">💸 '+esc(MO[st.m]||'')+'</span></h4>'+
+    return '<div class="pway" data-way="'+esc(p.g)+'"'+(p.g===pcur?'':' hidden')+'><h3>'+esc(p.t)+'</h3>'+(PIC?PIC.road(p):'')+'<ol class="steps">'+p.d.map(function(st,i){
+      return '<li class="step" data-step data-si="'+i+'"><h4>'+esc(st.s)+'<span class="mo '+esc(st.m)+'" data-mo="'+esc(st.m)+'">💸 '+esc(MO[st.m]||'')+'</span></h4>'+
         '<p>'+esc(st.w)+'</p><ul>'+st.tx.map(function(t){return '<li><span class="f '+esc(t[1])+'">'+esc(FLAG[t[1]]||'')+'</span>'+esc(t[0])+'</li>'}).join('')+'</ul>'+
-        '<div class="cov">'+st.cov.map(function(id){return dn[id]?'<a href="kijun-dict.html#'+esc(id)+'">'+esc(dn[id])+'</a>':''}).join('')+'</div>'+
+        '<div class="cov">'+st.cov.map(function(id){return dn[id]?'<a href="kijun-dict.html#'+esc(id)+'">'+kp(id)+esc(dn[id])+'</a>':''}).join('')+'</div>'+
         '<p class="tip">👉 '+esc(st.tip)+'</p></li>'}).join('')+'</ol></div>';
   }
   if(PW.length){
@@ -219,7 +286,46 @@ body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-si
     $('[data-ptabs]').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;pcur=b.getAttribute('data-pg');
       [].forEach.call(document.querySelectorAll('[data-ptabs] button'),function(x){x.classList.toggle('on',x===b)});
       [].forEach.call(document.querySelectorAll('[data-way]'),function(x){x.hidden=x.getAttribute('data-way')!==pcur})});
+    /* 🛣️ 길 그림의 동그라미를 누르면 그 단계 카드로 */
+    var pick=function(g){var w=g.closest('[data-way]'),i=g.getAttribute('data-si');if(!w)return;
+      [].forEach.call(w.querySelectorAll('.kjp-st'),function(x){x.classList.toggle('on',x===g)});
+      [].forEach.call(w.querySelectorAll('.step'),function(x){x.classList.toggle('hit',x.getAttribute('data-si')===i)});
+      var t=w.querySelector('.step[data-si="'+i+'"]');if(t&&t.scrollIntoView)t.scrollIntoView({block:'nearest'})};
+    $('[data-ways]').addEventListener('click',function(e){var g=e.target.closest&&e.target.closest('.kjp-st');if(g)pick(g)});
+    $('[data-ways]').addEventListener('keydown',function(e){if(e.key!=='Enter'&&e.key!==' ')return;var g=e.target.closest&&e.target.closest('.kjp-st');if(g){e.preventDefault();pick(g)}});
   }else{$('[data-path]').hidden=true}
+  /* 🧾 🎴 그림 (판 X318) — 그림은 KJ_PIC 한 벌 */
+  if(PIC){$('[data-bill]').innerHTML=PIC.bill();$('[data-strip]').innerHTML=PIC.strip()}else{$('[data-picbox]').hidden=true}
+  /* 📋 보상 기준 (판 X318) — 글은 KJ_RULE 한 벌 */
+  var RU=window.KJ_RULE||[];
+  if(RU.length){$('[data-rules]').innerHTML=RU.map(function(r){
+    return '<article class="rule" data-rule>'+'<h3>'+(PIC?PIC.kind(r.pic,22):'')+esc(r.ic)+' '+esc(r.s)+'</h3><dl>'+
+      '<dt>언제</dt><dd>'+esc(r.when)+'</dd><dt>무엇으로</dt><dd>'+esc(r.need)+'</dd><dt>흔히 안 되는 때</dt><dd class="m">'+esc(r.miss)+'</dd>'+
+      '<dt>담보</dt><dd class="cov">'+r.cov.map(function(id){return dn[id]?'<a href="kijun-dict.html#'+esc(id)+'">'+kp(id)+esc(dn[id])+'</a>':''}).join('')+'</dd></dl></article>'}).join('')}
+  else{$('[data-rulebox]').hidden=true}
+  /* 🧍 몸 지도 (판 X318) — 몸은 apex-body.js 한 벌(보장 전·후와 같은 몸 · 5번), 부위는 KJ_BODY */
+  var cnt=function(b){return b.ids.length};
+  function bodyDraw(){
+    if(!window.APXBody||!BODY.length){$('[data-bodybox]').hidden=true;return}
+    var btn=function(b){return '<button type="button" data-bp="'+esc(b.p)+'"'+(bp===b.p?' class="on"':'')+'>'+esc(b.t)+'<small>'+cnt(b)+'</small></button>'};
+    var pins=BODY.map(function(b){return '<g data-bp="'+esc(b.p)+'"'+(bp===b.p?' class="on"':'')+' role="button" aria-label="'+esc(b.t)+'"><circle cx="'+b.dot[0]+'" cy="'+b.dot[1]+'" r="12" fill="var(--t-point)" opacity=".18"/><circle class="c" cx="'+b.dot[0]+'" cy="'+b.dot[1]+'" r="6.5" fill="var(--t-neg)"/><circle cx="'+b.dot[0]+'" cy="'+b.dot[1]+'" r="6.5" fill="none" stroke="#fff" stroke-width="2"/>'+
+      '<text x="'+(b.dot[0]+(b.side==='L'?-11:11))+'" y="'+(b.dot[1]+4)+'" text-anchor="'+(b.side==='L'?'end':'start')+'" font-size="11">'+esc(b.t.split(' ')[0])+'</text></g>'}).join('');
+    $('[data-bodymap]').innerHTML='<div class="col L">'+BODY.filter(function(b){return b.side==='L'}).map(btn).join('')+'</div>'+
+      window.APXBody.svg(pins,'role="img" aria-label="몸 지도 — 부위를 누르면 그 자리의 병"')+
+      '<div class="col R">'+BODY.filter(function(b){return b.side==='R'}).map(btn).join('')+'</div>';
+    var B0=BODY.filter(function(b){return b.p===bp})[0];
+    $('[data-bpick]').hidden=!B0;
+    if(B0)$('[data-bpick]').innerHTML='🧍 <span>'+esc(B0.t)+' — '+cnt(B0)+'가지 병만 보고 있어요</span><button type="button" data-bclear>✕ 풀기</button>';
+  }
+  $('[data-bodybox]').addEventListener('click',function(e){
+    if(e.target.closest('[data-bclear]')){bp='';bodyDraw();draw();return}
+    var g=e.target.closest('[data-bp]');if(!g)return;
+    var v=g.getAttribute('data-bp');bp=(bp===v)?'':v;
+    cur='';[].forEach.call(document.querySelectorAll('[data-chips] button[data-g]'),function(x){x.classList.toggle('on',x.getAttribute('data-g')==='')});
+    bodyDraw();draw();
+    if(bp){var L=$('[data-list]');if(L&&L.scrollIntoView)L.scrollIntoView({block:'start'})}
+  });
+  bodyDraw();
   function jump(){var id=decodeURIComponent((location.hash||'').replace(/^#/,'').split('&')[0]);var c=id&&document.getElementById(id);
     [].forEach.call(document.querySelectorAll('.card.hit'),function(x){x.classList.remove('hit')});
     if(c){c.classList.add('hit');c.scrollIntoView({block:'center'})}}
