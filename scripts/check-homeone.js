@@ -71,8 +71,8 @@ const srv = http.createServer((rq, rs) => {
        그래서 선은 <b>진짜 홈(4.34)</b> 위에 둡니다. 남은 자리 — 이 씨로는
        <b>138px</b>, 세 토막이 선 씨로는 <b>33px</b>.
      ★ 선을 쓰는 자는 넷입니다 — 이 자 · `check-phonefit`(home.screens) ·
-       `check-hmpoint`(선화면) · 그리고 씨가 무거운 둘(`check-pexlate` 3.22 ·
-       `check-msfive` 4.17)은 <b>여기에 제 씨 몫을 더해</b> 씁니다. 까닭은
+       `check-hmpoint`(선화면) · 그리고 씨가 무거운 둘(`check-pexlate` 3.50 ·
+       `check-msfive` 4.45)은 <b>여기에 제 씨 몫을 더해</b> 씁니다. 까닭은
        <b>여기 한 곳</b>에만 적습니다 (5번).
      ★ <b>다음에 또 올리지 마십시오.</b> 줄이면 그때는 같이 내리십시오 (0-1번).
 
@@ -95,18 +95,27 @@ const srv = http.createServer((rq, rs) => {
        판 X249 와 같습니다 — 🎯·🤝 칩이 서는 씨에서는 세 토막이 더 붙고,
        글자 한 줄만 길어져도 헛 빨간불이 켜집니다 (8번). 남은 자리 203px. */
 /* 잰 값 — 세 때 모두 2,878px · 3.41화면. 남은 자리 203px. */
-/* ⬇⬇ <b>2026-11-04 · 3.56 → 3.12</b> (판 X312). 사장님 말씀 <b>「홈 화면에
+/* ⬇⬇ <b>2026-11-04 · 3.56 → 3.40</b> (판 X312). 사장님 말씀 <b>「홈 화면에
      들게하는거 해줘」</b> (대장 X03). 폰에서 수를 읽는 칸 셋 — 📇 고객 띠
      246 · 📊 상담현황 225 · 📥 읽어 둔 보장분석 119 — 을 <b>접이로</b> 돌리고,
      「지금 할 것」 안의 잇따른 접이를 <b>나란히</b> 세웠습니다(판 X249 꼴).
-     홈이 <b>2,973 → 2,514~2,518px(3.52 → 2.98화면)</b> 입니다.
+     홈이 <b>2,973 → 2,759~2,769px(3.52 → 3.28화면)</b> 입니다.
      ★ <b>줄였으면 눈금도 같이 내립니다</b> (0-1번) — 0.54화면 줄었으니
-       선도 0.44 내립니다.
-     ★ 2.98 에 딱 붙이지 않고 <b>3.12</b> 로 두는 까닭은 판 X249·X258 과
-       같습니다. 이번에 임자가 된 자는 <b>check-msfive</b> 입니다 — 그 씨에서
-       홈이 4.05화면(제 몫 1.05 를 빼면 3.00)이라, 선을 3.00 에 붙이면 글자
-       한 줄만 길어져도 헛 빨간불입니다 (8번). 남은 자리 — 이 씨로 116px ·
-       msfive 씨로 101px · hmpoint 씨로 274px.
+       선도 0.16 내립니다.
+     ⚠⚠ <b>처음에 2.98화면(3.12 선)까지 줄였다가 되돌렸습니다.</b> 📇 고객
+       띠(246px)까지 셋을 접고 「지금 할 것」 안의 접이를 나란히 세웠는데,
+       CI 가 <b>점검 여섯 자리</b>에서 울었습니다 — check-hmglance ·
+       check-pexlate(📇 의 단계 칸 다섯이 0px) · check-hmway · check-hmrefer ·
+       check-hmlate(「지금 할 것」 안 차례). 파 보니 <b>자가 맞고 제가
+       틀렸습니다</b> — 그 칸들은 사장님이 「첫 화면에 보이게」 라고 콕 집어
+       시키신 것들입니다(판 X158 「토스어플처럼 칸을 활용해보자」 · 판 X285
+       「처음부터 끝까지 이 한칸으로」 · 판 X289). <b>42px·179px 과 바꿀 것이
+       아닙니다.</b> 되돌린 까닭은 그 자리마다 적어 두었습니다.
+     ★ 그래서 남긴 것은 <b>접어도 어느 말씀과도 안 부딪히는 둘</b>입니다 —
+       📊 상담현황 · 📥 읽어 둔 보장분석. 잰 값 <b>2,759~2,769px(3.27~3.28화면)</b>.
+     ★ 3.28 에 딱 붙이지 않고 <b>3.40</b> 으로 둡니다 — 까닭은 판 X249·X258 과
+       같습니다(글자 한 줄만 길어져도 헛 빨간불 · 8번). 남은 자리 — 이 씨로
+       101px · pexlate 씨로 185px.
    ⚠⚠ <b>「한 화면(844px)」 은 이 선으로 아직 못 갑니다 — 모르는 척하지
      않습니다 (1번).</b> 재어 보니 「지금 할 것」 한 장이 <b>609px</b>, 인사·
      다섯 걸음 띠가 <b>158px</b>, 팀 고르개가 <b>53px</b> — <b>셋만 820px</b>
@@ -115,8 +124,8 @@ const srv = http.createServer((rq, rs) => {
      한칸으로 모든 방향성을」</b>(판 X285) · <b>「지금 할 것 위에 팀원들
      누구꺼인지 선택」</b>(판 X219) 이라고 콕 집어 세우신 것들입니다.
      <b>제가 정하지 않았습니다.</b>                                       */
-/* 잰 값 — 아침·낮 2,514px · 저녁 2,518px · 2.98화면. 남은 자리 116px. */
-const HOME_SCR = 3.12;
+/* 잰 값 — 아침 2,759px · 낮·저녁 2,769px · 3.27~3.28화면. 남은 자리 101px. */
+const HOME_SCR = 3.40;
 const HOME_MAX = Math.round(844 * HOME_SCR);
 
 let bad = 0;
@@ -729,25 +738,35 @@ const tall = (p) => p.evaluate(() => {
   is((await A.p.evaluate(() => ((document.querySelector('.hm-now-m .m b') || {}).innerText || '').trim())) === w0,
      '  누르면 <b>미뤄 둔 분이 도로</b> 올라온다 — ' + w0);
 
-  /* ══ [8] 📱 <b>폰에서 수를 읽는 칸 셋이 접이로 선다</b> (판 X312) ══════════
+  /* ══ [8] 📱 <b>폰에서 수를 읽는 칸 둘이 접이로 선다</b> (판 X312) ══════════
      사장님 말씀 (2026-11-04) <b>「홈 화면에 들게하는거 해줘」</b> (대장 X03).
-     📇 고객 띠(246px) · 📊 상담현황(225px) · 📥 읽어 둔 보장분석(119px) 을
-     폰에서 접이로 돌렸습니다 — 홈이 2,973 → 2,514px 입니다.
+     📊 상담현황(225px) · 📥 읽어 둔 보장분석(119px) 을 폰에서 접이로 돌렸습니다 —
+     홈이 2,973 → 2,769px 입니다.
 
-     ★★ <b>길이 선([2])만으로는 이 셋을 못 지킵니다.</b> 되돌려 보니 📇·📊 를
-       되돌리면 선을 넘어 울지만, <b>📥(52px)와 타일(42px)은 선 안쪽</b>이라
-       조용히 통과합니다. 「안 울리는 알람은 알람이 아니다」(8번) 라서 여기를
-       따로 둡니다 — 접이가 걷히면 <b>칸 이름으로</b> 바로 잡힙니다.
+     ★★ <b>길이 선([2])만으로는 이 둘을 못 지킵니다.</b> 되돌려 보니 📊 를
+       되돌리면 선을 넘어 울지만 <b>📥(52px)는 선 안쪽</b>이라 조용히 통과합니다.
+       「안 울리는 알람은 알람이 아니다」(8번) 라서 여기를 따로 둡니다.
      ★★ <b>다시 칠해도 접이가 안 날아가나</b> — 이것이 진짜 버그 자리였습니다.
-       hmBandPaint · hmKbPaint · hmSidePlace 가 제 손으로 innerHTML 을 갈아
-       끼우므로, 한 곳만 감싸면 칠하는 순간 그 칸만 날글로 돌아갑니다 (5번).
+       hmKbPaint · hmSidePlace 가 제 손으로 innerHTML 을 갈아 끼우므로, 한 곳만
+       감싸면 칠하는 순간 그 칸만 날글로 돌아갑니다 (5번).
      ★ <b>지운 것이 아닙니다</b> — 펴면 속이 다 있는지까지 봅니다 (6번).
      ★ <b>컴퓨터에서는 접이가 아닙니다</b> — 기둥이 넓어 접을 까닭이 없습니다.
-     ⚠ 🌅 아침 미션은 <b>나란히 안 세웁니다</b> — 반 칸(160px)에서 머리글이
-       넉 줄로 접혀 묶음이 152 → 188px 로 <b>길어졌습니다</b>(재어 보고
-       되돌렸습니다). 그 자리를 자가 지킵니다 — 또 해 보지 않게.          */
-  console.log('\n[8] 📱 <b>폰에서 수를 읽는 칸 셋이 접이로</b> (판 X312)');
-  const 셋 = [['band','📇 고객 띠'],['flow','📊 상담현황'],['kb','📥 읽어 둔 보장분석']];
+
+     ⚠⚠ <b>📇 고객 띠는 접이가 아니어야 합니다 — 접어 봤다가 되돌린 자리입니다.</b>
+       246px 이라 접으면 179px 를 버는데, 그 띠의 <b>단계 칸 다섯</b>은 사장님
+       말씀(2026-10-22 · 판 X158) <b>「핸드폰으로 보니 한눈에 안들어와 …
+       토스어플처럼 칸을 활용해보자」</b> 로 폰 첫 화면에 격자로 세운 것이고,
+       판 X284 「이 한 장으로 모든 고객을 연락부터 관리까지」 가 그 위에 또
+       얹혀 있습니다. 접으니 CI 가 <b>세 자리</b>에서 울었습니다(check-hmglance ·
+       check-pexlate · check-hmband). <b>자가 맞고 제가 틀렸습니다.</b>
+       그래서 「접혔나」 가 아니라 <b>「접이가 아닌가」</b> 를 묻습니다 — 다음
+       세션이 홈을 줄이려고 또 접으면 <b>여기서 먼저</b> 걸립니다 (8번).
+     ⚠ 🌅 아침 미션 · 🕗 약속이 지난 분도 <b>나란히 안 세웁니다</b> — 반 칸에서
+       머리글이 접혀 오히려 길어지고(🌅 152 → 188px), 「지금 할 것」 안의 차례를
+       읽는 자가 셋이라 깨집니다(check-hmway · check-hmrefer · check-hmlate).
+       그 자리도 자가 지킵니다 — 또 해 보지 않게.                            */
+  console.log('\n[8] 📱 <b>폰에서 수를 읽는 칸 둘이 접이로</b> (판 X312)');
+  const 둘 = [['flow', '📊 상담현황'], ['kb', '📥 읽어 둔 보장분석']];
   const 접이재기 = (pg) => pg.evaluate(() => {
     const o = {};
     for (const f of document.querySelectorAll('.tab-pane.on .hm-fold')) {
@@ -762,7 +781,7 @@ const tall = (p) => p.evaluate(() => {
     return o;
   });
   let F = await 접이재기(A.p);
-  for (const [k, 이름] of 셋) {
+  for (const [k, 이름] of 둘) {
     const f = F[k];
     is(!!f && !f.펴짐 && f.속높이 === 0 && f.높이 > 0 && f.높이 < 110,
        '  ' + 이름 + ' 이 <b>접힌 채</b>로 선다 — ' + (f ? (f.높이 + 'px · 속 ' + f.속높이 + 'px') : '접이가 없습니다'));
@@ -770,43 +789,35 @@ const tall = (p) => p.evaluate(() => {
        눌러 봐야 압니다. 「모름」 이라고 적는 것도 적은 것입니다 (1번). */
     is(!!f && !!f.머리, '  ' + 이름 + ' 머리에 <b>수가 적힌다</b> — 「' + ((f && f.머리) || '') + '」');
   }
-  /* ★ 머리의 수가 <b>카드 속의 수와 같은가</b> (0-1번) — 펴서 견줍니다 */
-  const 띠머리 = (F.band || {}).머리 || '';
-  await A.p.evaluate(() => { try { hmFoldToggle('band'); } catch (e) {} });
-  await A.p.waitForTimeout(500);
-  const 띠속 = await A.p.evaluate(() => {
-    const e = document.querySelector('#hmBand [data-ask="맡은고객몇분"]');
-    return e ? (e.innerText || '').replace(/\s+/g, ' ').trim() : '';
+  /* ★★ 📇 고객 띠는 <b>접이가 아니다</b> — 판 X158 의 그 칸 다섯이 첫 화면에 서야 합니다 */
+  const 띠 = await A.p.evaluate(() => {
+    const h = document.getElementById('hmBandHost');
+    if (!h) return { 없음: true };
+    const 칸 = [].map.call(h.querySelectorAll('.hm-flow .t-chip'),
+      e => Math.round(e.getBoundingClientRect().height));
+    return { 접이: !!h.querySelector('.hm-fold'), 칸수: 칸.length, 작은칸: 칸.filter(x => x < 44).length };
   });
-  const 수뽑기 = (t) => (String(t).match(/\d+/) || [''])[0];
-  is(!!띠속 && 수뽑기(띠머리) === 수뽑기(띠속),
-     '  📇 머리의 수와 <b>카드 속의 수가 같다</b> — 「' + 띠머리 + '」 ↔ 「' + 띠속 + '」');
-  is((await 접이재기(A.p)).band.속높이 > 100,
+  is(!띠.없음 && !띠.접이 && 띠.칸수 >= 5 && 띠.작은칸 === 0,
+     '  ★★ 📇 <b>고객 띠는 접이가 아니다</b> — 단계 칸 ' + (띠.칸수 || 0) +
+     '개가 다 44px 위 (사장님 말씀 판 X158 「토스어플처럼 칸을 활용해보자」)' +
+     (띠.접이 ? ' ← ★★ <b>접었습니다. 되돌리십시오</b> — 까닭은 이 자리 쪽지와 #hmBandHost 쪽지에 있습니다' : ''));
+  /* ★ 펴면 속이 다 있나 — 지운 것이 아닙니다 (6번) */
+  await A.p.evaluate(() => { try { hmFoldToggle('kb'); } catch (e) {} });
+  await A.p.waitForTimeout(500);
+  is((await 접이재기(A.p)).kb.속높이 > 40,
      '  <b>펴면 속이 다 있다</b> — 지운 것이 아닙니다 (6번)');
-  /* ★★ <b>다시 칠해도 접이가 그대로인가</b> — 세 자가 각자 innerHTML 을 갈아
-     끼웁니다. 감싸는 자를 한 곳만 고치면 칠하는 순간 그 칸이 날글이 됩니다. */
-  await A.p.evaluate(() => { try { hmFoldToggle('band'); } catch (e) {}
-    try { hmBandPaint(); } catch (e) {} try { hmKbPaint(); } catch (e) {}
-    try { hmSidePlace(); } catch (e) {} });
+  /* ★★ <b>다시 칠해도 접이가 그대로인가</b> — 두 자가 각자 innerHTML 을 갈아 끼웁니다 */
+  await A.p.evaluate(() => { try { hmFoldToggle('kb'); } catch (e) {}
+    try { hmKbPaint(); } catch (e) {} try { hmSidePlace(); } catch (e) {} });
   await A.p.waitForTimeout(700);
   F = await 접이재기(A.p);
-  is(셋.every(([k]) => F[k] && !F[k].펴짐 && F[k].속높이 === 0),
-     '  <b>다시 칠해도 셋이 그대로 접힌다</b> — ' +
-     셋.map(([k, n]) => n.split(' ')[0] + (F[k] ? (F[k].속높이 === 0 ? '✓' : '✗펴짐') : '✗없음')).join(' '));
-  /* ⚠ 🌅 아침 미션은 나란히 안 세운다 — 재어 보고 되돌린 자리 */
-  is(await A.p.evaluate(() => !document.querySelector('.hm-tiles #hmFold_ms, .hm-tiles #hmFold_night')),
-     '  🌅 아침 미션 · 🌙 돌아보기는 <b>나란히 안 세운다</b> — 반 칸에서 길어집니다');
-  /* 🔲 「지금 할 것」 안의 <b>잇따른 접이</b>는 나란히 — 판 X249 꼴 */
-  const 타일 = await A.p.evaluate(() => {
-    const t = document.querySelector('#hmStack .hm-tiles'); if (!t) return null;
-    const k = [...t.children].filter(e => e.getBoundingClientRect().height > 0);
-    return { 수: k.length, 같은줄: k.length > 1 &&
-      Math.abs(k[0].getBoundingClientRect().top - k[1].getBoundingClientRect().top) < 4,
-      이름: k.map(e => e.id).join(' · ') };
-  });
-  is(!!타일 && 타일.수 >= 2 && 타일.같은줄,
-     '  🔲 「지금 할 것」 안의 <b>잇따른 접이가 나란히</b> 선다 (판 X249 꼴) — ' +
-     (타일 ? 타일.이름 : '타일이 없습니다'));
+  is(둘.every(([k]) => F[k] && !F[k].펴짐 && F[k].속높이 === 0),
+     '  <b>다시 칠해도 둘이 그대로 접힌다</b> — ' +
+     둘.map(([k, n]) => n.split(' ')[0] + (F[k] ? (F[k].속높이 === 0 ? '✓' : '✗펴짐') : '✗없음')).join(' '));
+  /* ⚠ 🌅 아침 미션 · 「지금 할 것」 안 접이는 <b>나란히 안 세운다</b> — 재어 보고 되돌린 자리 */
+  is(await A.p.evaluate(() => !document.querySelector('.hm-tiles')),
+     '  ⚠ 접이를 <b>두 칸 타일로 안 세운다</b> — 🌅 는 반 칸에서 152 → 188px 로 길어지고, ' +
+     '「지금 할 것」 안은 차례를 읽는 자가 셋이라 깨집니다 (판 X312 에서 되돌린 자리)');
   /* 🖥 <b>컴퓨터에서는 접이가 아니다</b> — 날글 그대로 섭니다 */
   const W = await (async () => {
     const ctx = await b.newContext(Object.assign({}, CLK.ctxOpt(), { viewport: { width: 1280, height: 900 } }));
@@ -819,13 +830,9 @@ const tall = (p) => p.evaluate(() => {
     return { ctx, pg };
   })();
   const 넓F = await 접이재기(W.pg);
-  is(셋.every(([k]) => !넓F[k]),
-     '  🖥 <b>컴퓨터에서는 셋이 접이가 아니다</b> — ' +
-     셋.map(([k, n]) => n.split(' ')[0] + (넓F[k] ? '✗접힘' : '✓날글')).join(' '));
-  is(await W.pg.evaluate(() => {
-       const t = document.querySelector('.hm-tiles');
-       return !t || getComputedStyle(t).display === 'block';
-     }), '  🖥 컴퓨터에서는 <b>타일을 풀어</b> 한 줄로 선다');
+  is(둘.every(([k]) => !넓F[k]),
+     '  🖥 <b>컴퓨터에서는 둘이 접이가 아니다</b> — ' +
+     둘.map(([k, n]) => n.split(' ')[0] + (넓F[k] ? '✗접힘' : '✓날글')).join(' '));
   await W.ctx.close();
 
   is(A.errs.length === 0 && B.errs.length === 0 && C.errs.length === 0,
