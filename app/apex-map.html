@@ -4347,7 +4347,7 @@ function modeLabel(){
      차분한 남자 목소리(Charon)를 받아, 이 기기에서 <b>울림</b>(짧은 금속성 메아리 ·
      잔향 · 압축)을 입혀 냅니다. <b>서버 코드는 한 줄도 안 바꿨습니다</b> — 그 통로는
      모델 이름만 받아 넘깁니다.
-   ★ 서버를 아낍니다 (7번) — 답마다 <b>머리 한두 문장</b>(220자까지)만 읽고, 같은 말은
+   ★ 서버를 아낍니다 (7번) — 답마다 <b>머리 한두 문장</b>(160자까지)만 읽고, 같은 말은
      <b>다시 받지 않습니다</b>(이 창 안 기억 열두 마디). 한도·권한에 막히면 그 창에서는
      더 부르지 않고 <b>기기 목소리로</b> 돌아갑니다 — 막힌 까닭은 「AI 연결」 창에 적습니다.
    ★ <b>고객 실명·전화번호는 서버로 안 보냅니다</b> (3번) — 그런 말이 섞였거나 앱에
@@ -4393,7 +4393,8 @@ var JV_VOX = {
   model:LS.get('jv_vox_model', ''), dead:'', ok:false, slow:0, wait:false, armed:false,
   cache:{}, keys:[], ctx:null, an:null, src:null, seq:0, via:''
 };
-var JV_VOX_STYLE = '차분하고 낮은 목소리의 정중한 AI 비서처럼, 또박또박 자신 있게 읽어 주세요: ';
+/* 말투 지시는 <b>영어로</b> 둡니다 — 읽을 글(한국어)과 갈라져, 지시문까지 소리 내 읽는 일이 없습니다 */
+var JV_VOX_STYLE = 'Read the following Korean text aloud in a calm, low, composed voice, like a refined AI butler. Text: ';
 function voxAiName(){ var m = /^ai:(\w+)$/.exec(JV_VOX.pick || ''); return m ? m[1] : ''; }
 /* ★ <b>누르신 뒤에만</b> 부릅니다 — 창을 열자마자 서는 인사말까지 AI 목소리로 받으면 자비스를 열
    때마다 서버를 부르고, 폰은 누르기 전 소리를 막아 그 소리는 버려집니다 (7번) */
@@ -4414,10 +4415,10 @@ function voxPrivate(t){
   } catch(e){}
   return false;
 }
-/* 머리 한두 문장 — 220자까지, 문장 끝에서 자릅니다 */
+/* 머리 한두 문장 — 160자까지, 문장 끝에서 자릅니다. 회사 통로가 10초에 끊으므로 짧게 둡니다 */
 function voxCut(t){
-  if (t.length <= 220) return t;
-  var c = t.slice(0, 220), at = Math.max(c.lastIndexOf('. '), c.lastIndexOf('다 '), c.lastIndexOf('요 '), c.lastIndexOf('? '));
+  if (t.length <= 160) return t;
+  var c = t.slice(0, 160), at = Math.max(c.lastIndexOf('. '), c.lastIndexOf('다 '), c.lastIndexOf('요 '), c.lastIndexOf('? '));
   return at >= 60 ? c.slice(0, at + 1) : c;
 }
 function voxCtx(){
@@ -4554,9 +4555,11 @@ function speak(text, opt){
       JV_VOX.wait = false;
       if (seq !== JV_VOX.seq) return;
       /* 한도 · 권한 · 시간 초과 — 이 창에서는 더 안 부릅니다 (7번). 까닭은 남깁니다 */
-      /* 시간 초과는 <b>두 번째</b>에야 막힘으로 칩니다 — 한 번 느린 것은 막힌 것이 아닙니다 */
-      if (!(e && e.name === 'AbortError')) JV_VOX.dead = (e && e.status ? e.status + ' · ' : '') + ((e && e.message) || '막혔습니다');
-      else if (++JV_VOX.slow >= 2) JV_VOX.dead = '시간이 너무 걸렸습니다';
+      /* 시간 초과(우리 쪽 14초 · 회사 통로의 502·503·504)는 <b>두 번째</b>에야 막힘으로 칩니다 —
+         한 번 느린 것은 막힌 것이 아닙니다 */
+      var slow = (e && e.name === 'AbortError') || (e && /^50[234]$/.test(String(e.status)));
+      if (!slow) JV_VOX.dead = (e && e.status ? e.status + ' · ' : '') + ((e && e.message) || '막혔습니다');
+      else if (++JV_VOX.slow >= 2) JV_VOX.dead = (e && e.status ? e.status + ' · ' : '') + '시간이 너무 걸렸습니다';
       hudStats(); speakDev(t, seq);
     });
     return;
@@ -7736,7 +7739,7 @@ function kVoxPaint(){
   if (!voxAiName()) t = '기기에 깔린 목소리로 읽습니다' + (TTS.v ? ' — ' + TTS.v.name : '') + '. 서버를 부르지 않습니다.';
   else if (!(getGKey() || getGProxy())) t = 'AI 목소리는 Gemini 키나 회사 서버(/api/gemini)가 있어야 납니다 — 지금은 기기 목소리로 읽습니다.';
   else if (JV_VOX.dead) t = 'AI 목소리가 막혔습니다(' + JV_VOX.dead + ') — 이 창에서는 기기 목소리로 읽습니다. 다시 고르시면 한 번 더 해 봅니다.';
-  else t = 'AI 목소리(' + (JV_VOX.ok ? JV_VOX.model : 'Gemini') + ')로 읽고 울림을 입힙니다. 답마다 머리 한두 문장만 읽고, 고객 이름·번호가 든 말은 기기 목소리가 읽습니다.';
+  else t = 'AI 목소리(' + (JV_VOX.ok ? JV_VOX.model : 'Gemini') + ')로 읽고 울림을 입힙니다. 답마다 머리 한두 문장(160자)만 읽고, 고객 이름·번호가 든 말은 기기 목소리가 읽습니다.';
   if (say) say.textContent = t;
 }
 document.getElementById('kVox').onchange = function(){

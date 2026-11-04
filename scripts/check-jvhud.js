@@ -11,7 +11,7 @@
      [2] 고객 수 · 보험 자료 수는 <b>읽은 뒤에만</b> — 안 읽었으면 「아직 안 읽음」 (0 이 아니다 · 1번)
      [3] ★★ AI 목소리로 <b>고객 실명 · 전화번호를 안 보낸다</b> (3번) — 그런 말 · 앱에 시켜
          읽어 온 값이 든 답은 서버를 안 부른다. 보낸 글에도 실명 0
-     [4] ★ 서버를 아낀다 (7번) — 같은 말은 다시 안 받는다 · 220자까지만 보낸다 ·
+     [4] ★ 서버를 아낀다 (7번) — 같은 말은 다시 안 받는다 · 160자까지만 보낸다 ·
          한도(429)에 막히면 그 창에서는 더 안 부르고 <b>기기 목소리로</b> 돌아간다
      [5] 모델 이름이 「없다」(404 not found) 면 <b>다음 모델</b>로 — 막힘과 없음은 다르다
      [6] 받은 소리(PCM)를 <b>울림 사슬</b>로 낸다 · 기기 목소리는 남자 목소리를 먼저 고른다
@@ -88,6 +88,7 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
       TTS.push(body);
       if (ttsMode === '404' && body.model === 'gemini-2.5-flash-preview-tts')
         return rt.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: { message: 'models/gemini-2.5-flash-preview-tts is not found for API version v1beta' } }) });
+      if (ttsMode === '504') return rt.fulfill({ status: 504, contentType: 'application/json', body: JSON.stringify({ message: 'Task timed out after 10.00 seconds' }) });
       if (ttsMode === '429') return rt.fulfill({ status: 429, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Resource has been exhausted' } }) });
       return rt.fulfill({ status: 200, contentType: 'application/json', body: TTS_OK });
     }
@@ -159,8 +160,8 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
      TTS[0].generationConfig.responseModalities[0] === 'AUDIO' &&
      TTS[0].generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName === 'Charon',
      '처음 한 번 — 회사 통로로 AI 목소리(' + (TTS[0] ? TTS[0].model + ' · Charon' : '없음') + ')');
-  const body = sent.replace(/^[^:]*:\s*/, '');
-  is(body.length <= 220 && body.length >= 30, '보낸 글 <b>' + body.length + '</b>자 — 머리 한두 문장만(220자까지 · 원래 ' + LONG.length + '자)');
+  const body = sent.replace(/^[\s\S]*?Text:\s*/, '');
+  is(body.length <= 160 && body.length >= 30, '보낸 글 <b>' + body.length + '</b>자 — 머리 한두 문장만(160자까지 · 원래 ' + LONG.length + '자)');
   await f.evaluate((t) => speak(t), LONG);
   await p.waitForTimeout(500);
   is(TTS.length === 1, '같은 말을 다시 읽어도 서버 부름 그대로 <b>' + TTS.length + '</b> — 받아 둔 소리를 씁니다');
@@ -174,6 +175,14 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
   const D = await f.evaluate(() => ({ dead: JV_VOX.dead, st: document.getElementById('hudStat').innerText }));
   is(TTS.length === 1 && /429/.test(D.dead), '한도(429)에 막히면 그 창에서는 더 안 부른다 — 부름 <b>' + TTS.length + '</b> · 까닭 「' + D.dead + '」');
   is(/목소리 기기\(AI 막힘\)/.test(D.st), 'HUD 에 「목소리 기기(AI 막힘)」 — 막힌 것을 숨기지 않습니다');
+  ttsMode = '504'; TTS.length = 0;
+  await f.evaluate(() => { JV_VOX.dead = ''; JV_VOX.slow = 0; JV_VOX.cache = {}; JV_VOX.keys = []; speak('느린 첫 마디입니다.'); });
+  await p.waitForTimeout(600);
+  const D1 = await f.evaluate(() => JV_VOX.dead);
+  await f.evaluate(() => speak('느린 둘째 마디입니다.'));
+  await p.waitForTimeout(600);
+  const D2 = await f.evaluate(() => JV_VOX.dead);
+  is(!D1 && /504/.test(D2) && TTS.length === 2, '회사 통로가 늦어 끊으면(504) 한 번은 봐주고 두 번째에 막힘 — 「' + D1 + '」 → 「' + D2 + '」');
 
   sec('[5] 모델이 「없다」 면 다음 모델로 — 막힘과 없음은 다르다');
   ttsMode = '404'; TTS.length = 0;
