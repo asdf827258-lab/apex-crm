@@ -10,7 +10,9 @@
      [2] 거절 고르기의 말이 <b>두 거절 표</b>(apex-stage.js 의 obj · 질병가이드의 rej)에 있는 이름이다
      [3] 연금 문구가 자비스(app/apex-map.html)의 문구와 같다 — 접지 않고 늘 보인다고 적은 그 문구
      [4] 견본 고객은 홍길동뿐 — 다른 이름 · 진짜 번호가 없다 (3번)
-     [5] 그림이 「앱이 아닙니다」 를 밝히고, /docs 는 밖으로 안 나간다(_redirects)               */
+     [5] 그림이 「앱이 아닙니다」 를 밝히고, /docs 는 밖으로 안 나간다(_redirects)
+     [6] 「결과물」 칸이 싣는 결과 파일(자비스-결과.js)이 있고, 견본 고객뿐이고, 못 읽으면 아무것도 안 그린다
+   ★ 결과가 <b>지금 자비스와 같은지</b>는 node scripts/jvmock-shot.js --check (web) 가 잽니다.               */
 const fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..');
 let bad = 0;
@@ -60,6 +62,20 @@ console.log('\n[5] 그림이라고 밝히고, 밖으로 안 나간다');
 is(/목각\(그림\)입니다 — 앱이 아닙니다/.test(MK), '「목각(그림)입니다 — 앱이 아닙니다」 를 머리에 적었다');
 const RD = fs.existsSync(path.join(ROOT, '_redirects')) ? rd('_redirects') : '';
 is(/^\/docs\/\*\s+\S+\s+404/m.test(RD), '/docs/* 가 _redirects 에서 404 — 그림이 라이브 주소로 안 나간다');
+
+console.log('\n[6] 「결과물」 칸 — scripts/jvmock-shot.js 가 앱을 띄워 뽑은 것');
+/* 결과가 지금 자비스와 같은지는 브라우저가 있어야 잽니다 — jvmock-shot --check (web) 이 맡습니다. 여기서는 파일만 봅니다 */
+const SHOTF = path.join(ROOT, 'docs/mokgak/자비스-결과.js');
+const SW = {}; try { new Function('window', fs.readFileSync(SHOTF, 'utf8'))(SW); } catch (e) {}
+const SR = (SW.JV_SHOT && SW.JV_SHOT.r) || [];
+is(/<script src="자비스-결과\.js"><\/script>/.test(MK) && SR.length >= 10, '목각이 결과 파일을 싣는다 · 물음 ' + SR.length + '개');
+is(/손으로 고치지 마십시오/.test(fs.existsSync(SHOTF) ? fs.readFileSync(SHOTF, 'utf8') : '') && /아무 결과도 그리지 않습니다/.test(MK),
+   '결과 파일은 손으로 안 고친다고 밝히고, 못 읽으면 목각이 <b>아무 결과도 안 그린다</b> (1번)');
+const ST2 = JSON.stringify(SR);
+const odd = (ST2.match(/01[016789]-\d{3,4}-\d{4}/g) || []).filter(x => x !== '010-1234-5678');
+is(!odd.length && !/성춘향/.test(ST2), '결과에도 견본 고객 홍길동뿐 · 시험용 아닌 번호 0');
+is(SR.every(r => r.st && r.q) && SR.some(r => r.act) && SR.some(r => r.pen) && SR.some(r => (r.steps || []).length),
+   '결과에 찾은 답 · 시키는 일 · 연금 셈 · 앱 쓰는 법이 다 있다');
 
 console.log('\n' + (bad ? '✗ ' + bad + '곳이 어긋났습니다' : '✓ 목각의 글이 앱의 글 그대로입니다'));
 process.exit(bad ? 1 : 0);

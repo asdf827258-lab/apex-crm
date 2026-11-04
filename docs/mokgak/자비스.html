@@ -148,17 +148,55 @@ table{width:100%;border-collapse:collapse;background:var(--card);border-radius:1
 th,td{text-align:left;padding:9px 11px;border-top:1px solid var(--line2);vertical-align:top}
 th{background:var(--bg2);font-size:12.5px;color:var(--sub)}
 .foot{color:var(--sub);font-size:12.5px;margin-top:24px}
+
+/* ── 컴퓨터 화면 ── */
+.wrap.pcm{grid-template-columns:1fr}
+.pcwrap{overflow-x:auto;padding-bottom:4px}
+.pcw{min-width:980px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(17,24,39,.08);overflow:hidden;position:relative}
+.pcbar{display:flex;gap:6px;align-items:center;padding:9px 12px;background:#EEF1F4;border-bottom:1px solid var(--line)}
+.pcbar i{width:11px;height:11px;border-radius:50%;background:#D1D5DB;display:inline-block}
+.pcbar span{flex:1;margin-left:10px;background:#fff;border-radius:8px;font-size:12px;color:var(--sub);padding:5px 10px}
+.pcapp{position:relative}
+.pcgrid{display:grid;grid-template-columns:minmax(0,1fr) 330px;height:700px;background:var(--bg)}
+.pcmain{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)}
+.pcmain .scr{padding:18px 20px;min-height:0}
+.col{max-width:680px;margin:0 auto}
+.pcmain .bot{padding:10px 20px 14px}
+.pcmain .bot > *{max-width:680px;margin-left:auto;margin-right:auto}
+.pcmain .grid{grid-template-columns:repeat(4,1fr)}
+.pcaside{overflow-y:auto;padding:16px 14px;background:var(--bg2)}
+.pcaside .ans{box-shadow:none;border:1px solid var(--line)}
+.pcaside h4{font-size:12.5px;color:var(--sub);margin:0 2px 7px;font-weight:800}
+.mini{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:7px;font-size:13.5px;line-height:1.5}
+.mini small{display:block;font-size:11.5px;font-weight:800;color:var(--sub);margin-bottom:2px}
+.hint{font-size:11.5px;color:var(--sub);margin-top:6px;text-align:center}
+.pcw .dim{align-items:center;justify-content:center}
+.pcw .sheet{max-width:440px;border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.pcw .sheet .grab{display:none}
+
+/* ── 결과물 ── */
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;align-items:start}
+.rbox{background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:12px 10px 4px}
+.rbox .st{display:inline-block;font-size:11.5px;font-weight:900;color:#fff;background:var(--ink);border-radius:6px;padding:1px 7px;margin:0 0 6px 4px}
+.wk{display:inline-block;margin-left:6px;font-size:11.5px;font-weight:800;color:var(--warnd);background:var(--warnl);border-radius:6px;padding:1px 6px}
+.fix{font-size:12px;color:var(--posd);background:var(--posl);border-radius:10px;padding:7px 10px;margin:-2px 0 10px;line-height:1.5}
 </style>
 </head>
 <body>
 <div class="page">
   <h1>🤖 자비스 새 판 — 목각</h1>
   <p class="lead">그림입니다 — 앱이 아닙니다. <b>찾는 두뇌는 그대로</b> 두고 겉모습만 새로 그렸습니다. 화면의 글은 지금 자비스가 실제로 띄우는 글 그대로이고, 견본 고객은 홍길동 한 분입니다.</p>
+  <div class="ctl"><b>기기</b><div class="seg" id="dev"><button data-d="ph" class="on">📱 폰</button><button data-d="pc">🖥 컴퓨터</button></div></div>
   <div class="ctl"><b>화면</b><div class="seg" id="seg"></div></div>
-  <div class="wrap">
+  <div class="wrap" id="wrap">
     <div class="phone" id="phone"></div>
     <div class="side" id="side"></div>
   </div>
+
+  <h2 id="res">📸 결과물 — 지금 자비스의 실제 답을 새 판 카드에</h2>
+  <p class="lead">아래는 견본이 아닙니다. 지금 자비스(app/apex-map.html)를 띄워 열다섯 물음을 <b>실제로 묻고</b>, 내놓은 답을 그대로 새 판 카드에 부었습니다 — <span id="rday"></span>. 어떤 답이 맨 위에 서는지, 줄에 무엇이 적히는지는 하나도 고치지 않았습니다. 새 판이 바꾸는 것은 <b>그리는 법</b>뿐입니다.</p>
+  <div class="ctl"><b>단계</b><div class="seg" id="rseg"></div></div>
+  <div class="rgrid" id="rgrid"></div>
 
   <h2>한눈에 — 무엇이 바뀌나</h2>
   <table>
@@ -169,6 +207,8 @@ th{background:var(--bg2);font-size:12.5px;color:var(--sub)}
     <tr><td><b>화면 길</b></td><td>답 아래에 「순서 N걸음 ▾」 · 「도움말 더 보기 ▾」 가 늘 붙습니다.</td><td>앱 쓰는 법을 물었을 때만 <b>걸음 카드</b>로 — 걸음마다 「여기서 열기」.</td></tr>
     <tr><td><b>시키면 하기</b></td><td>답 사이에 확인 상자가 끼어 「홍길동님 · 길동 고객 내일 3시 통화」 처럼 한 줄로.</td><td>아래에서 <b>확인 판</b>이 올라옵니다 — 누구 · 무엇 · 언제 세 칸을 따로, 칸마다 「바꾸기」.</td></tr>
     <tr><td><b>연금 셈</b></td><td>셈 카드 밑에 「전립선비대증 보상기준(50세…)」 같은 엉뚱한 장이 붙습니다(「50세」 가 걸림).</td><td>셈을 물으면 <b>셈 카드만</b>. 문구(최저보증 · 물가 · 약관과 심사)는 접지 않고 늘 보입니다.</td></tr>
+    <tr><td><b>홈 단추</b></td><td>홈의 「🤖 무엇을 도울까요?」 꼬리글이 「물으면 길 안내」 — 자비스가 길이 아니라 답을 내놓게 된 뒤(판 X270)에도 그대로입니다.</td><td>「물으면 바로 답」 — 한 줄 그대로(두 줄이 되면 홈 칸 키가 95 → 139px 로 뜁니다).</td></tr>
+    <tr><td><b>컴퓨터 화면</b></td><td>폰과 같은 한 줄 기둥이 화면 가운데에 길게 — 옆은 비어 있습니다.</td><td>가운데 대화(680px) + <b>오른쪽 칸</b>(같이 찾은 것 · 오늘 챙길 것 · 그 분 카드). 확인 판은 가운데 창으로.</td></tr>
     <tr><td><b>못 찾을 때</b></td><td>비슷한 낱말로 엉뚱한 대본이 서던 자리가 있었습니다(「외계인 보험 있어?」 → 「보험 이미 있어요」 · 판 X313 에서 고침).</td><td>「앱 자료에서 찾지 못했습니다 — 지어내지 않습니다」 를 먼저, 그다음 이렇게 물으면 찾는다는 칩.</td></tr>
   </table>
 
@@ -191,6 +231,7 @@ th{background:var(--bg2);font-size:12.5px;color:var(--sub)}
   <p class="foot">이 그림을 보시고 고르시면, 그다음에 본체(app/apex-map.html)에 옷만 갈아입힙니다 — 찾는 셈과 점검은 그대로 갑니다.</p>
 </div>
 
+<script src="자비스-결과.js"></script>
 <script>
 /* 화면 일곱 — 글은 지금 자비스가 실제로 띄우는 글 그대로 (2026-11-04) */
 var BOT_CHIPS = ['☎️ 첫 전화 뭐라고', '📵 부재중 문자', '📅 약속 문자', '🛡 거절 화법', '📮 증권 전달', '🧮 연금 셈'];
@@ -287,26 +328,119 @@ var S = [
         now:['<b>못 찾았다고 먼저</b> 말합니다 — 지어내지 않습니다(1번).','어떻게 물으면 찾는지 칩 넷.','AI 의견은 켜져 있을 때만, 맨 아래, 앱 자료가 아니라는 표시와 함께. 이름은 가립니다(3번).'],
         keep:['못 찾음은 지금도 「찾지 못했습니다」 로 말합니다 — 새 판은 그것을 맨 앞에 크게 둡니다.']}}
 ];
-var cur = 0;
+/* 🖥 컴퓨터 화면 — 오른쪽 칸 (폰에서는 대화 안에 있던 것들이 옆으로 갑니다) */
+var PC = {
+  home:{scr:function(){ var i = S[0].scr.indexOf('<div class="ans today">'), j = S[0].scr.indexOf('<div class="more">');
+          return S[0].scr.slice(0, i) + S[0].scr.slice(j); },
+        aside:function(){ var i = S[0].scr.indexOf('<div class="ans today">'), j = S[0].scr.indexOf('<div class="more">');
+          return '<h4>📌 오늘 챙길 것</h4>' + S[0].scr.slice(i, j) + '<h4 style="margin-top:14px">🕘 방금 물은 것</h4><div class="mini" style="color:var(--sub)">아직 없습니다 — 물으시면 여기 쌓입니다.</div>'; }},
+  answer:{aside:'<h4>같이 찾은 것</h4><div class="mini"><small>✉️ 보낼 글</small><b>처음 연락드리는 분 · 문자 → 전화</b><br>걸기 전에 문자로 누구인지 · 왜 연락드리는지를 먼저 밝힙니다.</div><div class="mini"><small>🧭 영업 단계</small><b>TA 단계 — 만날 날짜를 잡는다</b><br>상품 설명을 전화로 하지 않는다. 날짜 두 개를 드리고 고르시게 한다.</div><h4 style="margin-top:14px">이 대본이 있는 곳</h4><div class="mini">☎️ TA 스크립트 — 「오늘 터치할 사람」 에서 그 분을 고릅니다 <a class="go" style="display:inline;margin:0">열기 ›</a></div>'},
+  rej:{aside:'<h4>이 말들은 어디서 왔나</h4><div class="mini"><small>📞 전화(TA) — apex-stage.js</small>거절 처리 표 28가지 — 그중 자주 받는 여덟</div><div class="mini"><small>🤝 마주 앉아서 — 질병 보험가이드</small>공통 거절 일곱 — 어느 병을 설명하든 나오는 말</div><h4 style="margin-top:14px">익히려면</h4><div class="mini">🥊 거절 근육 훈련 — 10일 과정 · 역할극 · 거절 일기 <a class="go" style="display:inline;margin:0">열기 ›</a></div>'},
+  act:{scr:function(){ var x = S[3].scr, i = x.indexOf('<div class="ans">'); return x.slice(0, i); },
+       aside:function(){ var x = S[3].scr, i = x.indexOf('<div class="ans">'); return '<h4>그 분</h4>' + x.slice(i); }},
+  pen:{aside:'<h4>더 볼 것</h4><div class="mini"><small>⭐ 같은 조건</small>다른 상품 5개 ▾ — 펴면 상품마다 매달 받는 돈(같은 엔진)</div><div class="mini"><small>⚠ 이 조건으로는</small>안 되는 상품 4개 ▾ — 펴면 왜 안 되는지(나이 · 납입 기간)</div><h4 style="margin-top:14px">계산기로 넘기면</h4><div class="mini">계산기의 나이 · 성별 · 은퇴 나이 칸도 이 값으로 바뀝니다 — 넘긴 뒤 「되돌리기」 로 돌릴 수 있습니다.</div>'},
+  route:{aside:'<h4>AI 보장분석 — 사용가이드에서</h4><div class="mini"><small>PDF 넣기</small>증권·보장분석표를 올립니다. 글자가 없는 스캔본이면 페이지 이미지로 읽습니다.</div><div class="mini"><small>집중 포인트 고르기</small>과잉/중복·부족·갱신/납입 등 이 고객에서 특히 볼 것을 눌러 둡니다.</div><div class="mini"><small>만들고 확인</small>처음 누르면 고객 자료를 AI 로 보내도 되는지 확인 창이 한 번 뜹니다.</div>'},
+  none:{aside:'<h4>이렇게 물으면 찾습니다</h4><div class="mini">상품 이름 · 담보 이름 · 고객이 한 말 · 하려는 일 — 화면 이름은 몰라도 됩니다.</div><h4 style="margin-top:14px">찾는 곳</h4><div class="mini">고객 · 질병코드 · 계약관리 · 질병 보험가이드 · 거절 처리 · 🎓 아카데미 · 📕 실전화법서 · 🎞 상담자료 덱</div>'}
+};
+var cur = 0, dev = 'ph';
+function v(x){ return typeof x === 'function' ? x() : x; }
 function paint(){
   var s = S[cur];
   document.getElementById('seg').innerHTML = S.map(function(x, i){ return '<button' + (i === cur ? ' class="on"' : '') + ' data-i="' + i + '">' + x.n + '</button>'; }).join('');
+  [].forEach.call(document.querySelectorAll('#dev button'), function(b){ b.classList.toggle('on', b.getAttribute('data-d') === dev); });
   var sub = s.k === 'act' ? '앱 자료로 답합니다 · 확인 뒤에만 합니다' : '앱 자료로 답합니다';
-  document.getElementById('phone').innerHTML = jvTop(sub) + '<div class="scr">' + s.scr + '</div>' + jvBot() + (s.over || '');
+  var ph = document.getElementById('phone'), wrap = document.getElementById('wrap');
+  wrap.classList.toggle('pcm', dev === 'pc');
+  if (dev === 'pc'){
+    var pc = PC[s.k] || {}, scr = pc.scr ? v(pc.scr) : s.scr;
+    ph.className = 'pcwrap';
+    ph.innerHTML = '<div class="pcw"><div class="pcbar"><i></i><i></i><i></i><span>apex-os-yunpro.netlify.app/app/#apexmap</span></div><div class="pcapp">' + jvTop(sub) +
+      '<div class="pcgrid"><div class="pcmain"><div class="scr"><div class="col">' + scr + '</div></div>' +
+      jvBot().replace('</div></div>', '</div></div>') + '</div><div class="pcaside">' + v(pc.aside || '') + '</div></div>' + (s.over || '') + '</div></div>';
+    var bt = ph.querySelector('.bot'); if (bt) bt.insertAdjacentHTML('beforeend', '<div class="hint">Enter 로 보내기 · 🎤 로 말하기</div>');
+  } else {
+    ph.className = 'phone';
+    ph.innerHTML = jvTop(sub) + '<div class="scr">' + s.scr + '</div>' + jvBot() + (s.over || '');
+  }
   var sd = s.side, li = function(a, c){ return a.map(function(t){ return '<li class="' + c + '">' + t + '</li>'; }).join(''); };
   document.getElementById('side').innerHTML =
     '<div class="card"><h3><span class="tag was">지금</span>무엇이 걸리나</h3><ul>' + li(sd.was, '') + '</ul></div>' +
     '<div class="card"><h3><span class="tag now">새 판</span>이렇게</h3><ul>' + li(sd.now, '') + '</ul></div>' +
     '<div class="card"><h3><span class="tag keep">그대로</span>안 바뀌는 것</h3><ul>' + li(sd.keep, '') + '</ul></div>' +
-    (s.over ? '<div class="card" style="font-size:13px;color:var(--sub)">▲ 폰 그림을 한 번 누르면 확인 판이 닫히고 「적은 뒤」 화면이 보입니다.</div>' : '');
+    (s.over ? '<div class="card" style="font-size:13px;color:var(--sub)">▲ ' + (dev === 'pc' ? '화면' : '폰 그림') + '을 한 번 누르면 확인 판이 닫히고 「적은 뒤」 화면이 보입니다.</div>' : '');
+}
+
+/* 📸 결과물 — 자비스-결과.js(scripts/jvmock-shot.js 가 앱을 띄워 뽑은 것)를 새 판 카드로 그립니다.
+   ★ 글은 한 글자도 고치지 않습니다 — 줄을 「꼬리표 · 말」 로 <b>나눠 그리기만</b> 합니다 */
+var PEN_NOTE = '※ 최저보증 금액 기준입니다. 물가상승률은 반영하지 않았습니다. 변액은 실적배당이라 더 받을 수도 있지만 여기서는 보증분만 셉니다. 실제 지급은 약관과 보험사 심사 결과에 따릅니다.';
+function esc(t){ return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+var NUM = /^\s*([①②③④⑤⑥⑦⑧⑨]|\d{1,2}\.)\s*/;
+function lineHtml(t, i){
+  var m = NUM.exec(t), n = m ? m[1].replace('.', '') : '', rest = m ? t.slice(m[0].length) : t, lab = '', say = rest;
+  var q = rest.indexOf('「');
+  if (q > 0 && /—\s*$/.test(rest.slice(0, q))){ lab = rest.slice(0, q).replace(/\s*—\s*$/, ''); say = rest.slice(q); }
+  else { var d = rest.indexOf(' — '); if (d > 0 && d < 24){ lab = rest.slice(0, d); say = rest.slice(d + 3); } }
+  var nn = n ? n.replace(/[①②③④⑤⑥⑦⑧⑨]/, function(c){ return '①②③④⑤⑥⑦⑧⑨'.indexOf(c) + 1; }) : '';
+  return '<div class="ln">' + (nn ? '<span class="n">' + nn + '</span>' : '') + '<span class="t">' + (lab ? '<small>' + esc(lab) + '</small>' : '') +
+    '<span' + (/^「/.test(say) ? ' class="q"' : '') + '>' + esc(say) + '</span></span></div>';
+}
+function cardHtml(src, row, weak){
+  var h = '<div class="ans"><span class="src">' + esc(src.n) + '</span>' + (weak ? '<span class="wk">약하게 맞음</span>' : '') + '<h3>' + esc(row.t) + '</h3>';
+  h += (row.s || []).map(lineHtml).join('');
+  if ((row.asks || []).length) h += '<div class="grid" style="margin-top:8px">' + row.asks.map(function(t){ return '<button class="chip">「' + esc(t) + '」</button>'; }).join('') + '</div>';
+  else h += row.say ? btns('📋 말 복사', '🔊 읽어 주기') : '<div class="btns"><button class="btn s w">📋 복사</button></div>';
+  if (row.open) h += '<a class="go">' + esc(row.open.replace(/^\S+\s/, '')) + ' ›</a>';
+  return h + '</div>';
+}
+function resHtml(r){
+  var h = '<div class="rbox"><span class="st">' + esc(r.st) + '</span>' + me(esc(r.q));
+  if (r.act){
+    h += '<div class="say">' + esc(r.head) + '</div><div class="ans"><span class="src k">🛠 시키신 일</span><h3>' + esc(r.act.t.replace(/^🛠\s*시키신 일 —\s*/, '')) + '</h3>' +
+      '<div class="ln"><span class="t">' + esc(r.act.line) + '</span></div>' + btns('✅ 이대로 하기', '취소') + '</div>' +
+      '<div class="fix">새 판 — 이 한 줄을 확인 판의 <b>누구 · 무엇 · 언제</b> 세 칸으로 나눕니다(지금은 이름 꼬리 「길동」 이 할 일 글에 남습니다).</div>';
+    var c = (r.src || [])[0]; if (c) h += cardHtml(c, c.rows[0], false);
+  } else if (r.pen){
+    var L = r.pen, big = L.filter(function(t){ return /^매달 /.test(t); })[0] || '', kv = L.filter(function(t){ return / — /.test(t); });
+    h += '<div class="say">' + esc(r.head) + '</div><div class="ans"><span class="src w">🧮 연금 셈 — 계산기와 같은 엔진</span>' +
+      '<div style="font-size:13px;color:var(--sub);font-weight:700">' + esc(L[0].replace(/^⭐\s*/, '')) + ' · ' + esc(L[1]) + '</div>' +
+      '<div class="big">' + esc(big.replace(/^매달\s*/, '')) + '<small>매달 · 최저보증</small></div>' +
+      kv.map(function(t){ var d = t.indexOf(' — '); return '<div class="kv"><span>' + esc(t.slice(0, d)) + '</span><b>' + esc(t.slice(d + 3)) + '</b></div>'; }).join('') +
+      '<div class="note">' + PEN_NOTE + '</div><div class="btns"><button class="btn p w">📊 계산기로 이 값 넘기기</button></div></div>' +
+      '<div class="fix">새 판 — 셈 카드만. 지금은 그 밑에 「' + esc(((r.src || [])[0] || {rows:[{t:''}]}).rows[0].t) + '」 가 붙습니다(물음 속 「50세」 가 걸림).</div>';
+  } else if ((r.steps || []).length && !(r.src || []).some(function(x){ return x.strong; })){
+    h += '<div class="say">' + esc(r.head) + '</div><div class="ans"><span class="src">🧭 화면 길</span>' +
+      r.steps.map(function(x, i){ return '<div class="step"><span class="n">' + (i + 1) + '</span><span class="t"><b>' + esc(x.n) + '</b><small>' + esc(x.d) + '</small></span><button class="o">열기</button></div>'; }).join('') + '</div>';
+  } else if ((r.src || []).length){
+    var s0 = r.src[0];
+    h += '<div class="say">' + esc(r.head) + '</div>' + cardHtml(s0, s0.rows[0], r.weak);
+    var more = s0.rows.slice(1).map(function(x){ return {n:s0.n, t:x.t}; }).concat(r.src.slice(1).map(function(x){ return {n:x.n, t:x.rows[0].t}; }));
+    if (more.length) h += '<div class="more"><b>같이 찾은 것</b><div class="hs">' + more.map(function(x){ return '<button class="chip"><small>' + esc(x.n) + '</small>' + esc(x.t) + '</button>'; }).join('') + '</div></div>';
+  } else {
+    h += '<div class="ans"><span class="src w">🔎 앱 자료</span><h3>앱 자료에서 찾지 못했습니다</h3></div>';
+  }
+  return h + '</div>';
+}
+var rst = '';
+function paintRes(){
+  var J = window.JV_SHOT, box = document.getElementById('rgrid');
+  if (!J || !(J.r || []).length){ box.innerHTML = '<div class="card" style="background:var(--warnl);border-radius:14px;padding:14px">결과 파일(자비스-결과.js)을 못 읽었습니다 — <b>아무 결과도 그리지 않습니다.</b> node scripts/jvmock-shot.js 를 한 번 돌려 주십시오.</div>'; return; }
+  document.getElementById('rday').textContent = J.day + ' 에 뽑음 · 견본 고객 홍길동 · AI 끔';
+  var sts = ['전체'].concat(J.r.map(function(x){ return x.st; }).filter(function(x, i, a){ return a.indexOf(x) === i; }));
+  document.getElementById('rseg').innerHTML = sts.map(function(t){ var k = t === '전체' ? '' : t; return '<button data-r="' + k + '"' + (k === rst ? ' class="on"' : '') + '>' + t + '</button>'; }).join('');
+  box.innerHTML = J.r.filter(function(x){ return !rst || x.st === rst; }).map(resHtml).join('');
 }
 document.addEventListener('click', function(e){
   var b = e.target.closest('#seg button');
-  if (b){ cur = +b.getAttribute('data-i'); paint(); try { history.replaceState(null, '', '?v=' + S[cur].k); } catch(err){} return; }
+  if (b){ cur = +b.getAttribute('data-i'); paint(); try { history.replaceState(null, '', '?v=' + S[cur].k + (dev === 'pc' ? '&d=pc' : '')); } catch(err){} return; }
+  var dv = e.target.closest('#dev button');
+  if (dv){ dev = dv.getAttribute('data-d'); paint(); try { history.replaceState(null, '', '?v=' + S[cur].k + (dev === 'pc' ? '&d=pc' : '')); } catch(err){} return; }
+  var rb = e.target.closest('#rseg button');
+  if (rb){ rst = rb.getAttribute('data-r'); paintRes(); return; }
   var d = e.target.closest('.dim');
   if (d){ d.remove(); }
 });
-(function(){ var m = /[?&]v=([a-z]+)/.exec(location.search); if (m) S.forEach(function(x, i){ if (x.k === m[1]) cur = i; }); paint(); })();
+(function(){ var m = /[?&]v=([a-z]+)/.exec(location.search); if (m) S.forEach(function(x, i){ if (x.k === m[1]) cur = i; });
+  if (/[?&]d=pc/.test(location.search)) dev = 'pc'; paint(); paintRes(); })();
 </script>
 </body>
 </html>
