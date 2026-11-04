@@ -45,6 +45,12 @@ const PLAN = '<!doctype html><html lang="ko"><meta charset="utf-8"><body style="
   await mk.pdf({ path: blankPdf, format: 'A4' }); await mk.close();
 
   const pg = await br.newPage({ viewport: { width: 1440, height: 900 } });
+  /* ★ 바깥은 끊습니다(check-netblock) — 사장님 Supabase 를 부르지 않게. PDF 글자를 뽑는 pdf.js 만
+     cdnjs 에서 받습니다: 이 자가 재는 것이 바로 그 글자 뽑기라 막으면 아무것도 못 잽니다. */
+  await pg.route('**://**', r => {
+    const u = r.request().url();
+    return (u.indexOf('127.0.0.1:' + port) >= 0 || /cdnjs\.cloudflare\.com\/ajax\/libs\/pdf\.js\//.test(u)) ? r.continue() : r.abort();
+  });
   const errs = [];
   pg.on('pageerror', e => errs.push(String(e).slice(0, 160)));
   await pg.goto('http://127.0.0.1:' + port + '/app/ba.html', { waitUntil: 'domcontentloaded' });
