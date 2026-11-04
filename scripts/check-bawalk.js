@@ -106,7 +106,7 @@ is(/BA_WALK\.map\(/.test(SRC.slice(SRC.indexOf('function guideHtml'), SRC.indexO
     const pre = /_$/.test(BAK(r.id));
     return pre ? !(r.grp === r.w.nm || r.h3.indexOf(r.w.nm) >= 0) : r.nm !== r.w.nm;
   }).map(r => r.id + '(' + r.w.nm + ' ≠ ' + (r.nm || r.grp) + ')');
-  function BAK(id) { return /^s4_|^s8_/.test(id) ? 'x_' : 'x'; }
+  function BAK(id) { return /^s4_|^s8_|^r_/.test(id) ? 'x_' : 'x'; }
   is(badNm.length === 0, '표 이름이 장 이름과 같다' + (badNm.length ? ' — ' + badNm.slice(0, 3).join(' · ') : ''));
   const noIc = R.rows.filter(r => r.hasH3 && !r.ic).map(r => r.id);
   const noSvg = R.rows.filter(r => r.hasH3 && !r.svg).map(r => r.id);

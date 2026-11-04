@@ -35,13 +35,19 @@ const srv = http.createServer((rq, rs) => {
 });
 
 const TOSS = 'rgb(49, 130, 246)';   /* 토스 블루 #3182F6 */
+/* 판 X315 부터 무대(보여주기)는 보험 자산 운용보고서 색 — 남색 · 보고서 파랑 */
+const NAVY = 'rgb(15, 26, 44)';     /* #0F1A2C */
+const RBL = 'rgb(42, 91, 215)';     /* #2A5BD7 — ba-report.html 의 --bl */
 let bad = 0;
 const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
 const head = (t) => console.log('\n' + t);
 
 /* 화면에서 재는 것 — 「보이나」 는 offsetParent 로 묻는다.
    display:none 이면 offsetParent 가 null 이다. */
-const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`;
+/* 「선 장」 은 앱이 세는 목록(deckList) 그대로 — 판 X316 부터 한 장씩 넘기기에서는 보고서 묶음 장(.rp)이
+   서고 표 장(s4_3d · s5 · s8_*)은 빠지며, 죽 이어서에서는 거꾸로다. 종이에는 묶음 장(iframe)이 안 나간다. */
+const SHOWN = `deckList()`;
+const PRINTED = `[].slice.call(document.querySelectorAll('#app .show > section:not(.rp)'))`;
 
 (async () => {
   await new Promise(r => srv.listen(0, r));
@@ -125,7 +131,7 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
   await pg.emulateMedia({ media: 'print' });
   await pg.waitForTimeout(250);
   const pr = await pg.evaluate(`(function(){
-    var all=${SHOWN};
+    var all=${PRINTED};
     return { n: all.length,
       vis: all.filter(function(s){return getComputedStyle(s).display!=='none';}).length,
       bar: getComputedStyle(document.getElementById('deckBar')).display };
@@ -345,11 +351,16 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
   const flow = await pg.evaluate(async () => {
     var keep = { deck: S.deck, sim: S.sim, view: S.view, slide: S.slide }, bad = [], n = 0, steps = 0;
     S.deck = true; S.view = 'full'; S.printAll = 0; save(); render();
-    var f3 = document.querySelector('#s4_3d iframe'), fw = document.querySelector('#s4_why iframe');
-    var scr = { d3: !!f3, why: !!fw, hash: !!(f3 && /ba-report\.html#d=/.test(f3.getAttribute('src'))),   /* 판 X257 — 3D 대신 보장 분석 보고서 */
+    /* 판 X316 — 보고서가 <b>묶음마다 한 장</b>(BA_RP)으로 선다. 묶음 장 주소는 mode sec + 그 묶음 이름 +
+       계약 한 줄씩(p — 「어느 회사에서 · 어떻게 나오나」) 을 싣는다. */
+    var f3 = document.querySelector('#r_cancer iframe'), fw = document.querySelector('#r_u iframe');
+    var scr = { d3: !!f3, why: BA_RP.every(function (r) { return !!document.querySelector('#' + r.id + ' iframe.rpf'); }),
+      hash: !!(f3 && /ba-report\.html#d=/.test(f3.getAttribute('src'))),
       noQuery: !!(f3 && f3.getAttribute('src').indexOf('?') < 0),
-      whyMode: !!(fw && /%22mode%22%3A%22why%22/.test(fw.getAttribute('src'))), cov: false };
-    try { var d = JSON.parse(decodeURIComponent(f3.getAttribute('src').split('#d=')[1])); scr.cov = !!(d.a && d.b && Object.keys(d.a).length > 3); } catch (e) {}
+      whyMode: false, cov: false, pol: false };
+    try { var d = JSON.parse(decodeURIComponent(f3.getAttribute('src').split('#d=')[1])); scr.cov = !!(d.a && d.b && Object.keys(d.a).length > 3);
+      scr.whyMode = d.mode === 'sec' && d.secs && d.secs[0] === 'cancer';
+      scr.pol = !!(d.p && d.p.length === S.before.length + S.after.length && d.p.every(function (q) { return q.c && q.s && q.a && q.b; })); } catch (e) {}
     S.printAll = 1; render();
     for (var e = 0; e < EVENTS.length; e++) {
       var ev = EVENTS[e], s = document.getElementById('s4_' + ev.k);
@@ -362,9 +373,10 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
     S.printAll = 0; S.deck = keep.deck; S.sim = keep.sim; S.view = keep.view; S.slide = keep.slide; save(); render();
     return { scr: scr, n: n, bad: bad, steps: steps, printBa3d: printBa3d, img: document.querySelectorAll('#app img').length };
   });
-  is(flow.scr.d3 && flow.scr.why, '화면에 <3번 치료 한 바퀴(3D) · 4번 왜 넓어야> 두 장이 선다');
-  is(flow.scr.hash && flow.scr.noQuery && flow.scr.cov, '3D 에 이 고객의 지금 · 조정 후 보장이 <# 뒤로> 실린다(서버로 안 감)');
-  is(flow.scr.whyMode, '4번 장은 「왜 넓어야」 모드로 연다');
+  is(flow.scr.d3 && flow.scr.why, '화면에 <보고서 묶음 장 ' + 8 + '개>(보장 이해 · 한눈에 · 암 · 뇌 · 심 · 재가 · 정리 · 출처)가 선다');
+  is(flow.scr.hash && flow.scr.noQuery && flow.scr.cov, '보고서에 이 고객의 지금 · 조정 후 보장이 <# 뒤로> 실린다(서버로 안 감)');
+  is(flow.scr.whyMode, '묶음 장은 <제 묶음만> 연다 (mode sec · 암 장은 암)');
+  is(flow.scr.pol, '계약이 <한 줄씩> 실린다 — 회사 · 상태 · 지금/조정 후 담보 (어느 회사에서 · 어떻게 나오나)');
   is(flow.n > 0 && flow.bad.length === 0 && flow.printBa3d === 0,
      flow.bad.length ? ('종이용 한 바퀴가 어긋난 장 — ' + flow.bad.join(' / ')) :
      '종이에는 3D 대신 사건 ' + flow.n + '개가 <각각 한 장>에 ' + flow.steps + '단계 전부 선다 (3D 장 ' + flow.printBa3d + '개)');
@@ -397,19 +409,40 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
   await pg.waitForTimeout(300);
   const d3 = await pg.evaluate(() => {
     var L = deckList(), i;
-    for (i = 0; i < L.length; i++) if (L[i].id === 's4_3d') { deckJump(i); break; }
-    var s = document.getElementById('s4_3d'), f = s && s.querySelector('iframe');
+    for (i = 0; i < L.length; i++) if (L[i].id === 'r_cancer') { deckJump(i); break; }
+    var s = document.getElementById('r_cancer'), f = s && s.querySelector('iframe');
     var sr = s && s.getBoundingClientRect(), fr = f && f.getBoundingClientRect();
     return { slide: S.slide, shown: [].slice.call(document.querySelectorAll('#app .show > section')).filter(x => x.offsetParent !== null).map(x => x.id),
       presenting: document.body.className.indexOf('presenting') >= 0, iframe: !!(f && f.offsetParent),
       fill: sr && fr ? Math.round(fr.width / sr.width * 100) : 0,
-      badge: getComputedStyle(document.getElementById('deckShow'), '::after').display };
+      badge: getComputedStyle(document.getElementById('deckShow'), '::after').display,
+      hand: f ? getComputedStyle(f).pointerEvents : '' };
   });
-  await pg.waitForTimeout(250);
-  is(d3.slide === 's4_3d' && d3.shown.length === 1 && d3.shown[0] === 's4_3d', '3D 장으로 옮기면 <그 장 하나>만 보인다 — ' + d3.shown.join(' '));
-  is(d3.iframe && d3.fill >= 98, '3D 가 장 폭을 <가득> 쓴다 (' + d3.fill + '%)');
-  is(d3.badge === 'none', '3D 장에서는 오른쪽 위 알약을 걷는다 — 3D 머리와 겹치지 않게');
+  await pg.waitForTimeout(2500);   /* 보고서가 읽히기를 기다린다 */
+  is(d3.slide === 'r_cancer' && d3.shown.length === 1 && d3.shown[0] === 'r_cancer', '암 묶음 장으로 옮기면 <그 장 하나>만 보인다 — ' + d3.shown.join(' '));
+  is(d3.iframe && d3.fill >= 98, '보고서가 장 폭을 <가득> 쓴다 (' + d3.fill + '%)');
+  is(d3.badge === 'none', '보고서 장에서는 오른쪽 위 알약을 걷는다 — 보고서 머리와 겹치지 않게');
+  is(d3.hand === 'none', '보고서에 손이 안 닿는다 — 넘기기 · 쓸기는 바깥 무대가 든다');
   is(d3.presenting, '<화면 가득>이 그대로 유지된다 — 발표가 안 끊긴다');
+  /* 묶음 안에서는 → 가 <한 쪽>, 묶음 끝에서만 다음 장 · 뒤로 들어오면 마지막 쪽부터 (판 X316) */
+  const walk = await pg.evaluate(() => {
+    var w = rpWin(document.getElementById('r_cancer'));
+    if (!w) return { ok: false };
+    var p0 = w.REP.pos(), n = p0[1], seen = [];
+    deckMove(1); seen.push(S.slide + ':' + w.REP.pos()[0]);
+    for (var k = 0; k < n + 2 && S.slide === 'r_cancer'; k++) deckMove(1);
+    var after = S.slide;
+    deckMove(-1);
+    var w2 = rpWin(document.getElementById('r_cancer'));
+    return { ok: true, n: n, p0: p0[0], seen: seen, after: after, backSlide: S.slide, backPos: w2 ? w2.REP.pos()[0] : -1,
+      bar: (document.getElementById('deckBar').textContent || '').replace(/\s+/g, ' '),
+      cop: !!w.document.querySelector('.sl.copay .cpt') };
+  });
+  is(walk.ok && walk.p0 === 1 && walk.seen[0] === 'r_cancer:2', '묶음 안에서 → 는 <한 쪽>만 넘긴다 — ' + (walk.seen || []).join(' '));
+  is(walk.ok && walk.after === 'r_brain', '묶음 끝(' + walk.n + '쪽)에서 → 는 <다음 묶음>으로 간다 — ' + walk.after);
+  is(walk.ok && walk.backSlide === 'r_cancer' && walk.backPos === walk.n, '뒤로 들어오면 <마지막 쪽>부터 — ' + walk.backSlide + ' ' + walk.backPos + '/' + walk.n);
+  is(walk.ok && /\d+ \/ \d+쪽/.test(walk.bar), '띠가 묶음 안 <몇 쪽째>인지도 말한다 — 「' + (walk.bar || '').slice(0, 40) + '」');
+  is(walk.ok && walk.cop, '암 묶음에 <어느 회사에서 · 어떻게 나오나> 장이 있다');
   await pg.keyboard.press('Escape');
   await pg.waitForTimeout(300);
 
@@ -418,7 +451,7 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
   await pg.waitForTimeout(400);
   const th = await pg.evaluate(() => {
     var box = document.querySelector('#app .show');
-    var L = [].slice.call(document.querySelectorAll('#app .show > section'));
+    var L = deckList();   /* 번호는 앱이 세는 장에만 붙는다 (판 X316) */
     /* 내용 장 하나를 실제로 세워 잰다 — 안 보이는 장은 크기가 0 이다 */
     /* 파랑 전면은 <b>지금 보이는 장</b>에만 입는다 — 재려면 잠깐 세워야 한다 */
     function cur(el, k) { var w = el.className; el.classList.add('cur');
@@ -427,7 +460,7 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
     var was = body.className; body.classList.add('cur');
     var h3 = body.querySelector(':scope > h3');
     var st = document.querySelector('#app .show > section.cur .st') ||
-             (function () { var t = L.filter(function (s) { return s.querySelector('.st'); })[0]; return t ? t.querySelector('.st') : null; })();
+             (function () { var t = [].slice.call(document.querySelectorAll('#app .show > section')).filter(function (s) { return s.querySelector('.st'); })[0]; return t ? t.querySelector('.st') : null; })();
     var stIn = null;
     if (st) { var sec = st.closest('section'), w2 = sec.className; sec.classList.add('cur'); stIn = st.offsetLeft; sec.className = w2; }
     var r = {
@@ -446,36 +479,38 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
       appBl: (function () {
         var d = document.createElement('div');
         d.style.cssText = 'position:absolute;left:-9999px;width:2px;height:2px;background:var(--bl)';
-        document.body.appendChild(d);
+        box.appendChild(d);   /* 무대 안에서 잰다 — 무대 파랑은 판 X315 부터 무대가 따로 든다 */
         var v = getComputedStyle(d).backgroundColor; d.remove(); return v;
       })()
     };
     body.className = was;
     return r;
   });
-  is(/^['"]?GmarketSans/.test(th.fam),
-     '무대 글씨체가 <G마켓 산스>로 적혀 있다 — 「' + th.fam.split(',')[0] + '」');
-  /* 토스 블루 <b>한 가지</b>다 — 무대와 본문이 다른 파랑을 쓰면 같은 화면에서
-     색이 두 번 튄다. 값을 그대로 적어 둔다(토큰을 읽어 견주면 「CSS 가 그렇게
-     적혀 있다」를 확인할 뿐이라 아무것도 안 잡는다). */
-  is(th.bandBg === TOSS && th.bandFg === 'rgb(255, 255, 255)',
-     '제목이 <파랑 머리띠> 위에 흰 글씨로 선다 — ' + th.bandBg + ' / ' + th.bandFg);
-  is(th.bandPic.indexOf('svg') > 0, '머리띠 왼쪽 위에 <직접 그린 「+」> 가 있다 (남의 그림을 안 쓴다)');
+  /* 판 X315 — 무대 전체가 <b>보험 자산 운용보고서</b>(ba-report.html) 와 같은 꼴이다
+     (사장님 말씀 「머지해 바꿔줘」). 글씨는 보고서와 같은 프리텐다드, 장 머리는
+     흰 바탕 · 남색 제목 · 맨 위 남색→금색 띠. 값을 그대로 적어 둔다(토큰을 읽어
+     견주면 「CSS 가 그렇게 적혀 있다」를 확인할 뿐이라 아무것도 안 잡는다). */
+  is(/^['"]?Pretendard/.test(th.fam),
+     '무대 글씨체가 <보고서와 같은 프리텐다드>로 적혀 있다 — 「' + th.fam.split(',')[0] + '」');
+  is(th.bandBg === 'rgb(255, 255, 255)' && th.bandFg === NAVY,
+     '제목이 <흰 바탕 · 남색 글씨> 로 선다 (보고서 장 머리) — ' + th.bandBg + ' / ' + th.bandFg);
+  is(/linear-gradient/.test(th.bandPic) && th.bandPic.indexOf('url(') < 0,
+     '장 머리 맨 위에 <남색→금색 띠> 가 있다 — 남의 그림을 안 쓴다');
   is(th.no[0] === '""' && th.no[1] === '"01."' &&
      th.no[th.no.length - 1] === '"' + String(th.no.length - 1).padStart(2, '0') + '."',
      '제목 앞 번호가 <표지는 없이 01. 부터> 붙는다 — 지금 ' + th.no.slice(0, 3).join(' ') + ' … ' + th.no[th.no.length - 1]);
   is(th.badge.indexOf(th.name) >= 0 && th.badge.indexOf('+') === 0 && th.badgeShown.indexOf(th.name) >= 0,
      '오른쪽 위 알약이 <이 고객의 자료>라고 말한다 — 「' + th.badge + '」');
   /* 표지는 판 X314 부터 <b>남색 · 금색</b> — 보험 자산 운용보고서 표지와 같은 한 장 (사장님 말씀) */
-  is(th.endBg === TOSS, '마무리는 <파랑 전면>이다 — 표지는 남색 보고서 표지([11-1])');
-  is(th.appBl === TOSS, '무대 파랑이 <본문 파랑과 같다> — 한 화면에 파랑이 두 번 안 튄다 (' + th.appBl + ')');
+  is(th.endBg === NAVY, '마무리는 <남색 전면>이다 — 표지([11-1]) · 오늘 순서와 같은 바탕 (' + th.endBg + ')');
+  is(th.appBl === RBL, '무대 파랑이 <보고서 파랑(#2A5BD7) 한 가지>다 — 토스 파랑이 섞이지 않는다 (' + th.appBl + ')');
   is(th.stIn !== null && th.stIn >= 30,
      '담보표가 <가장자리로 벌어지지 않는다> — 안쪽 여백 ' + th.stIn + 'px (0 이면 표만 화면 끝까지 벌어진다)');
   /* 「오늘 순서」는 <b>화면에 선 장</b>에서 그린다. 손으로 적어 두면 장을
      하나 늘리는 날 순서가 어긋나고, 고객은 <b>없는 장</b>을 기다린다.
      그래서 <b>줄 수</b>와 <b>번호</b>를 장 자신과 맞대어 본다. */
   const toc2 = await pg.evaluate(() => {
-    var L = [].slice.call(document.querySelectorAll('#app .show > section'));
+    var L = deckList();   /* 판 X316 — 앱이 세는 장 */
     var a = [].slice.call(document.querySelectorAll('#deckToc a'));
     return {
       n: a.length, want: L.length - 2,
