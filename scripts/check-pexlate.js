@@ -105,26 +105,47 @@ const LOOK = () => {
   const 칩 = band ? [].slice.call(band.querySelectorAll('button.t-chip'))
     .filter(e => (e.textContent || '').indexOf('지남') >= 0)[0] : null;
   const pane = document.getElementById('dynPane');
+  /* ══ 📊 <b>판 X312 — 상담현황이 폰에서 접이가 되었습니다</b> ════════════
+     접힌 채로 단추를 재면 <b>0px</b> 이 나와 「44px 이 아니다」 고 거짓
+     고발을 합니다 — 속이 hidden 이라서입니다. 실제로 2026-11-04 에 이 자가
+     「칸반으로 펴 보기 0 · 이 자리에서 할 것 0」 으로 울었습니다.
+     ★ 그래서 <b>펴고 재고 제자리로 돌려 놓습니다</b> — lib-hmfold 의
+       「자를 속이지 않습니다 … 자가 펴고 잽니다」 와 같은 길이고,
+       check-hmpick 이 2026-10-30 에 똑같은 고침을 받았습니다 (8번).
+     ★ 여는 자는 앱의 <b>hmFoldToggle 하나</b>입니다 — hidden 이나 창고를
+       직접 쥐지 않습니다 (5번). 두 번 눌러 <b>접은 기억까지</b> 되돌립니다.
+     ⚠⚠ <b>홈 길이와 카드 키는 펴기 전 값</b>입니다 — 그것이 사장님 화면이
+       실제로 치르는 값입니다. 펴고 재면 158px 이 더 붙어 홈 선이 거짓이
+       됩니다. 그래서 <b>재는 차례</b>를 지켜 먼저 담아 둡니다.          */
+  const 홈px = pane ? Math.round(pane.scrollHeight) : 0;
+  const 카드px = card ? Math.round(card.getBoundingClientRect().height) : 0;
+  const 접이 = card ? card.closest('.hm-fold') : null;
+  const 접혀 = !!(접이 && !접이.classList.contains('on'));
+  if (접혀) { try { hmFoldToggle(접이.id.replace('hmFold_', '')); } catch (e) {} }
+  const 단추들 = (card ? [].slice.call(card.querySelectorAll('button')) : []).concat(칩 ? [칩] : [])
+    .map(b => ({ t: (b.textContent || '').replace(/\s+/g, ' ').trim(),
+                 h: Math.round(b.getBoundingClientRect().height) }));
+  if (접혀) { try { hmFoldToggle(접이.id.replace('hmFold_', '')); } catch (e) {} }
   return {
     있나: !!card, 글: 글,
+    접혔나: 접혀,
     칩글: 칩 ? (칩.textContent || '').replace(/\s+/g, ' ').trim() : '',
     칩수: 칩 ? +((칩.textContent || '').match(/\d+/) || [0])[0] : null,
     칩말: 칩 ? (칩.getAttribute('aria-label') || '') : '',
     칩높이: 칩 ? Math.round(칩.getBoundingClientRect().height) : 0,
     칩가는곳: 칩 ? (칩.getAttribute('onclick') || '') : '',
     문장: (글.match(/그중 \d+명은 약속이 지났습니다/) || [])[0] || '',
-    카드: card ? Math.round(card.getBoundingClientRect().height) : 0,
-    홈: pane ? Math.round(pane.scrollHeight) : 0,
+    카드: 카드px,
+    홈: 홈px,
     셈: (typeof pexSum === 'function') ? pexSum() : undefined,
     지난셈: (typeof arApptPast === 'function')
       ? (function () { const L = arApptPast(typeof arMyId === 'function' ? arMyId() : null);
           return L ? { n: L.length, first: L[0] ? { id: L[0].id, stage: L[0].stage } : null } : null; })()
       : undefined,
     /* 판 X284 — 🕗 칸이 띠로 올라가 카드 단추가 셋 → 둘이 되었습니다. 그 칸도
-       <b>같이</b> 잽니다(카드 단추 + 🕗 칸) — 수를 2 로 내려 칸을 빼먹지 않게 (8번). */
-    단추: (card ? [].slice.call(card.querySelectorAll('button')) : []).concat(칩 ? [칩] : [])
-      .map(b => ({ t: (b.textContent || '').replace(/\s+/g, ' ').trim(),
-                   h: Math.round(b.getBoundingClientRect().height) }))
+       <b>같이</b> 잽니다(카드 단추 + 🕗 칸) — 수를 2 로 내려 칸을 빼먹지 않게 (8번).
+       ⚠ 판 X312 부터 <b>펴고 잰 것</b>입니다(위 쪽지) */
+    단추: 단추들
   };
 };
 
@@ -247,7 +268,7 @@ const LOOK = () => {
      '  ★★ 카드에 <b>이름이 한 자도 없다</b> (3번) — 수와 길만 적습니다');
 
   /* ══ [9] 길이 · 손 · 서버 ═══════════════════════════════════════ */
-  console.log('\n[9] 📏 <b>홈이 사장님 선(기본 3.56 + 무거운 씨 0.1화면) 안쪽</b>이다 · 칸이 44px · 서버를 안 부른다');
+  console.log('\n[9] 📏 <b>홈이 사장님 선(기본 3.40 + 무거운 씨 0.1화면) 안쪽</b>이다 · 칸이 44px · 서버를 안 부른다');
   /* ★★ <b>여기가 이 토막의 심장입니다.</b> 처음 판에서 저는 「막힌 데」 처럼
      쪽지 한 상자로 세웠고, <b>제 자는 초록</b>이었습니다 — 제 씨의 홈이
      4.16화면이었기 때문입니다. 그런데 홈 높이를 재는 check-homeone 의 씨에는
@@ -282,7 +303,10 @@ const LOOK = () => {
      접기」 를 고르셔서 📰 오늘 보낼 소식을 폰에서 접었습니다. 기본 선이
      3.65 → <b>3.56</b> 으로 0.09 내려갔으니 이 선도 그대로 0.09 내립니다 —
      무거운 씨 몫 0.1 은 건드리지 않습니다 (0-1번 · 임자는 HOME_SCR 한 곳). */
-  const 선 = 3.66;
+  /* ⬇ 판 X312 — 3.66 → 3.22. 임자(HOME_SCR)가 3.56 → 3.12 로 0.44 내려갔으니
+     그대로 0.44 내립니다 — <b>무거운 씨 몫 0.1 은 안 건드립니다</b> (0-1번).
+     이 씨로 잰 값 2,524px · 2.99화면. 남은 자리 194px. */
+  const 선 = 3.50;
   const 많음 = [];
   for (let i = 0; i < 12; i++)
     많음.push({ id: 'h' + i, stage: ['AP', 'PC', 'CS'][i % 3],
@@ -312,7 +336,8 @@ const LOOK = () => {
      '  ★ 내 칸·글 몫이 <b>' + (G.지금 - G.전) + 'px</b> 다 — ' + 더늘어도 +
      'px 까지 (떼면 ' + G.전 + ' → 붙이면 ' + G.지금 + ')');
   is(H.단추.length >= 3 && H.단추.every(x => x.h >= 44),
-     '  ★ 카드의 단추가 다 <b>44px 이상</b>이다 — ' +
+     '  ★ 카드의 단추가 다 <b>44px 이상</b>이다' +
+     (H.접혔나 ? ' <b>(펴서 쟀습니다 · 판 X312)</b>' : '') + ' — ' +
      H.단추.map(x => x.t + ' ' + x.h).join(' · '));
   is(hits === hits0, '  🌐 <b>서버를 안 부른다</b> (7번) — 밖으로 ' + (hits - hits0) + '번');
   is(errs.length === 0, '  💥 터진 것이 없다 — ' + JSON.stringify(errs.slice(0, 3)));
