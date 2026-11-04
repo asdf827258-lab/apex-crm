@@ -189,12 +189,37 @@ const 본 = async (p) => await p.evaluate(() => {
 
   /* ── [3] 📥 빈 칸이 자리를 안 먹는다 ──────────────────────────── */
   head('[3] 📥 <b>띄워 둔 것이 없는 날, 그 칸이 자리를 안 먹는다</b> — 고치기 전 197px');
+  /* ══ 📥 <b>판 X312 — 이 칸이 폰에서 접이가 되었습니다</b> ═══════════════════
+     사장님 말씀 (2026-11-04) 「홈 화면에 들게하는거 해줘」 로 119 → 67px.
+     ⚠ 접힌 채로 글을 읽으면 속이 hidden 이라 innerText 가 <b>머리글만</b>
+       옵니다 — 그대로 재면 「없다고 안 적는다」 고 <b>거짓 고발</b>을 합니다.
+       실제로 2026-11-04 에 이 자가 그렇게 울었습니다.
+     ★ 그래서 <b>키는 접힌 채로</b>(홈이 실제로 치르는 값), <b>글과 길은
+       펴서</b> 읽습니다 — lib-hmfold 의 「자가 펴고 잽니다」 와 같은 길이고
+       check-hmpick 이 같은 고침을 받았습니다 (8번).
+     ★ 여는 자는 앱의 <b>hmFoldToggle 하나</b>입니다 (5번). 접이가 아니면
+       (컴퓨터) 아무것도 안 하고 접힌 값 그대로 씁니다.                   */
+  const kb = await p.evaluate(() => {
+    const host = document.getElementById('hmKbHost');
+    if (!host) return { 글: '', 길: [], 폈나: false };
+    const f = host.querySelector('.hm-fold') || (host.classList.contains('hm-fold') ? host : null);
+    let 폈 = false;
+    if (f && !f.classList.contains('on')) {
+      try { hmFoldToggle(f.id.replace('hmFold_', '')); 폈 = true; } catch (e) {}
+    }
+    const 글 = (host.innerText || '').replace(/\s+/g, ' ').trim();
+    const 길 = [].map.call(host.querySelectorAll('[onclick]'), e => e.getAttribute('onclick'));
+    if (폈) { try { hmFoldToggle(f.id.replace('hmFold_', '')); } catch (e) {} }  /* 제자리로 */
+    return { 글: 글, 길: 길, 폈나: 폈 };
+  });
+  const 폈말 = kb.폈나 ? ' <b>(펴서 읽었습니다 · 판 X312)</b>' : '';
   is(a.kb키 > 0 && a.kb키 <= 130,
-     '  빈 날의 칸이 <b>' + a.kb키 + 'px</b> — 130px 이하 (고치기 전 197px)');
+     '  빈 날의 칸이 <b>' + a.kb키 + 'px</b> — 130px 이하 (고치기 전 197px)' +
+     (kb.폈나 ? ' · <b>접힌 값</b>입니다 (판 X312)' : ''));
   is(a.kb이름표, '  <b>칸은 그대로 선다</b> — 「📥 읽어 둔 보장분석」 이름표가 있다 (「있다 없다 하는 칸을 없앱니다」)');
-  is(/없습니다/.test(a.kb글), '  <b>없다고 사실대로</b> 적는다 — 「' + a.kb글.slice(0, 46) + '…」');
-  is(/8통장|고객에게 붙이기/.test(a.kb글),
-     '  <b>무엇을 하면 되는지</b> 적는다 — 「🙌 고객에게 붙이기」 를 말해 준다 (6번)');
+  is(/없습니다|없음/.test(kb.글), '  <b>없다고 사실대로</b> 적는다' + 폈말 + ' — 「' + kb.글.slice(0, 46) + '…」');
+  is(/8통장|고객에게 붙이기/.test(kb.글),
+     '  <b>무엇을 하면 되는지</b> 적는다 — 「🙌 고객에게 붙이기」 를 말해 준다 (6번)' + 폈말);
   is(a.kb길.some(x => /wallets/.test(x)),
      '  <b>가는 길이 그대로</b>다 — 8통장 진단으로 간다 (' + (a.kb길[0] || '없음') + ')');
   is(a.kb누를키 >= 44,
