@@ -466,7 +466,8 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
      '제목 앞 번호가 <표지는 없이 01. 부터> 붙는다 — 지금 ' + th.no.slice(0, 3).join(' ') + ' … ' + th.no[th.no.length - 1]);
   is(th.badge.indexOf(th.name) >= 0 && th.badge.indexOf('+') === 0 && th.badgeShown.indexOf(th.name) >= 0,
      '오른쪽 위 알약이 <이 고객의 자료>라고 말한다 — 「' + th.badge + '」');
-  is(th.hdBg === TOSS && th.endBg === TOSS, '표지와 마무리는 <파랑 전면>이다');
+  /* 표지는 판 X314 부터 <b>남색 · 금색</b> — 보험 자산 운용보고서 표지와 같은 한 장 (사장님 말씀) */
+  is(th.endBg === TOSS, '마무리는 <파랑 전면>이다 — 표지는 남색 보고서 표지([11-1])');
   is(th.appBl === TOSS, '무대 파랑이 <본문 파랑과 같다> — 한 화면에 파랑이 두 번 안 튄다 (' + th.appBl + ')');
   is(th.stIn !== null && th.stIn >= 30,
      '담보표가 <가장자리로 벌어지지 않는다> — 안쪽 여백 ' + th.stIn + 'px (0 이면 표만 화면 끝까지 벌어진다)');
@@ -527,20 +528,21 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
      그 뒤로 무엇을 말해도 반쯤만 듣는다 —
 
        ① 안 적힌 것을 <b>「0 건」</b>이라 적으면 「없다」는 뜻이 된다 (1번).
-       ② 캐릭터는 <b>직접 그린 SVG</b> 여야 한다. 남의 삽화를 가져다 쓰면
-          안 되고, 사진은 인쇄에서 뭉갠다 (9번).
+       ② 만화 캐릭터는 <b>없다</b> (판 X314 — 「만화캐릭터 없애고, 보험 자산
+          운용보고서로」). 적힌 담보가 있으면 보고서 표지를 그대로 띄운다.
        ③ 알약·흰 칸·아래 띠가 <b>같은 값을 세 번</b> 적으면 한 화면에서
           같은 글자를 세 번 읽게 된다 (5번). 그래서 <b>알약에는 숫자를
           두지 않는다</b> — 숫자는 흰 칸이, 날짜는 아래 띠가 든다.      */
-  head('[11-1] 표지 — 흰 칸 · 직접 그린 캐릭터 · 같은 값을 두 곳에 안 적는다');
+  head('[11-1] 표지 — 보험 자산 운용보고서 · 캐릭터 없음 · 같은 값을 두 곳에 안 적는다');
   const cov = await pg.evaluate(() => {
     doSample(); S.deck = true; S.slide = 'sHd'; go('show');
     var hd = document.getElementById('sHd'); if (!hd) return null;
     var was = hd.className; hd.classList.add('cur');
-    var f = hd.querySelector('svg.hdfig');
+    var f = hd.querySelector('svg.hdfig'), fr = hd.querySelector('iframe.hdrep');
     var r = {
       cards: hd.querySelectorAll('.hdks .hdk').length,
-      fig: !!f, figShown: f ? getComputedStyle(f).display : '없음',
+      fig: !!f, h1: ((hd.querySelector('h1') || {}).textContent || '').replace(/\s+/g, ' ').trim(),
+      rep: fr ? decodeURIComponent(fr.getAttribute('src') || '') : '', repShown: fr ? getComputedStyle(fr).display : '없음',
       img: hd.querySelectorAll('img').length,
       bg: [].slice.call(hd.querySelectorAll('*')).filter(function (el) {
         return /url\((?!["']?data:image\/svg)/.test(getComputedStyle(el).backgroundImage); }).length,
@@ -551,9 +553,11 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
   });
   await pg.waitForTimeout(200);
   is(!!cov && cov.cards === 3, '표지에 <흰 칸 셋>이 선다 — 이 종이가 무엇을 담고 있는지');
-  is(!!cov && cov.fig && cov.img === 0 && cov.bg === 0,
-     '캐릭터가 <직접 그린 SVG> 다 — 남의 삽화도 사진도 안 쓴다 (9번)');
-  is(!!cov && cov.figShown === 'block', '그 캐릭터가 무대에서 <실제로 보인다>');
+  is(!!cov && !cov.fig && cov.img === 0 && cov.bg === 0,
+     '표지에 <만화 캐릭터가 없다> — 남의 삽화도 사진도 안 쓴다 (9번)');
+  is(!!cov && cov.h1 === '보험 자산 운용보고서', '표지 제목이 <보험 자산 운용보고서> 다 — 「' + ((cov && cov.h1) || '') + '」');
+  is(!!cov && /^ba-report\.html#d=/.test(cov.rep) && /"mode":"cover"/.test(cov.rep) && cov.repShown === 'block',
+     '적힌 담보가 있으면 <보고서 표지>를 그대로 띄운다 (mode cover)');
   is(!!cov && !/\d/.test(cov.pill),
      '알약에 <숫자가 없다> — 숫자는 흰 칸이, 날짜는 아래 띠가 든다 (「' + ((cov && cov.pill) || '').slice(0, 34) + '…」)');
   is(!!cov && /\d{4}-\d{2}-\d{2}/.test(cov.ft),
@@ -562,9 +566,10 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
   const cov0 = await pg.evaluate(() => {
     localStorage.clear(); S = blank(); save(); S.deck = true; go('show');
     var k = document.querySelector('#sHd .hdks');
-    return { txt: k ? (k.textContent || '').replace(/\s+/g, ' ') : '(칸이 없음)' };
+    return { txt: k ? (k.textContent || '').replace(/\s+/g, ' ') : '(칸이 없음)', rep: !!document.querySelector('#sHd iframe.hdrep') };
   });
   await pg.waitForTimeout(200);
+  is(!cov0.rep, '아무것도 안 적혔으면 보고서 표지를 <안 띄운다> — 띄우면 「0개 → 0개」 가 그려진다 (1번)');
   is(/아직 안 적음/.test(cov0.txt) && !/\b0\s*[건개]/.test(cov0.txt),
      '안 적힌 것은 <「아직 안 적음」> 이다 — 「0건」이라 적으면 「없다」는 뜻이 된다 (1번) · 「' + cov0.txt.slice(0, 52) + '」');
 
