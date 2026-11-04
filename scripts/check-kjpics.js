@@ -6,7 +6,7 @@
 
    ── 보는 것 ───────────────────────────────────────────────────────
      [1] ★★ 몸 그림은 한 벌 — app/apex-body.js 에만 몸 윤곽이 있고, 보장 전·후(ba.html)와 진단·치료 지도가
-         둘 다 그것을 부른다(5번). ba.html 에 몸 윤곽이 되살아나면 빨간불.
+         둘 다 그것을 부른다(5번). ba.html · index.html(babaBodySvg)에 몸 윤곽이 되살아나면 빨간불 — 아는 예외 없음(판 X321).
      [2] ★ 그림 한 벌(kijun-pics.js) — 나오는 길 다섯 그림이 다 서고 모르는 길엔 안 그린다 · 직접 그린 SVG 만
          (바깥 그림 · <img> 0 · 9번) · 그림에 금액 숫자 0 · 막대 밑에 「비율이 아니에요」(1번)
      [3] ★ 몸 지도 부위(KJ_BODY) — 열 곳 이상 · 병 id 가 모두 KJ_CARE 에 있다 · 점이 그림 안에 있다
@@ -33,10 +33,12 @@ const BODY = W.KJ_BODY || [], RULE = W.KJ_RULE || [], PIC = W.KJ_PIC;
 console.log('\n[1] 몸 그림은 한 벌 (5번)');
 const SIL = 'M66 82 Q100 74 134 82';   /* 몸통 윤곽의 첫 마디 — 이 글자가 있는 곳이 몸을 그리는 곳 */
 const holders = fs.readdirSync(path.join(ROOT, 'app')).filter(f => /\.(html|js)$/.test(f)).filter(f => rd(f).indexOf(SIL) >= 0);
-/* ⚠ 아는 예외 하나 — index.html 의 babaBodySvg(비포&애프터 · 보장분석 갈래 baba*)는 장기 자리가 조금 다른 옛 판입니다.
-     남의 갈래 함수라 이 판에서 바꾸지 않고, 따로 할 일로 넘겼습니다(CLAUDE.md 11번). 그 한 곳만 봐 주고, 더 늘면 빨간불. */
-const IDX = rd('index.html'), idxN = IDX.split(SIL).length - 1, idxOk = idxN === 0 || (idxN === 1 && /function babaBodySvg\(\)\{[\s\S]{0,1500}M66 82 Q100 74 134 82/.test(IDX));
-is(holders.filter(f => f !== 'index.html').join() === 'apex-body.js' && idxOk, '  몸 윤곽이 apex-body.js 한 곳에만 — 아는 예외 index.html babaBodySvg 하나 (' + holders.join(', ') + ')');
+/* 아는 예외는 없습니다 — index.html 의 babaBodySvg(비포&애프터 · baba*)도 이제 apex-body.js 를 부릅니다(판 X321).
+   옛 판의 몸 윤곽을 되붙이면 holders 에 index.html 이 섞여 빨간불입니다. */
+const IDX = rd('index.html');
+is(holders.join() === 'apex-body.js', '  몸 윤곽이 apex-body.js 한 곳에만 (' + holders.join(', ') + ')');
+is(/<script src="apex-body\.js(\?v=\d+)?"><\/script>/.test(IDX) && /function babaBodySvg\(\)\{[\s\S]{0,300}window\.APXBody\.svg\(''/.test(IDX) && !/bbSkin/.test(IDX),
+  '  비포&애프터(index.html babaBodySvg)도 apex-body.js 를 불러 같은 몸을 그린다');
 const BA = rd('ba.html'), CH = rd('kijun-care.html');
 is(/<script src="apex-body\.js"><\/script>/.test(BA) && /function anatSvg\(C\)\{[\s\S]{0,900}window\.APXBody\.svg\(pins\)/.test(BA), '  보장 전·후(ba.html)가 apex-body.js 를 불러 그 몸에 점을 얹는다');
 is(/<script src="apex-body\.js"><\/script>/.test(CH) && /window\.APXBody\.svg\(/.test(CH), '  진단·치료 지도도 같은 몸을 쓴다');
