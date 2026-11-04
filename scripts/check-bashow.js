@@ -35,6 +35,9 @@ const srv = http.createServer((rq, rs) => {
 });
 
 const TOSS = 'rgb(49, 130, 246)';   /* 토스 블루 #3182F6 */
+/* 판 X315 부터 무대(보여주기)는 보험 자산 운용보고서 색 — 남색 · 보고서 파랑 */
+const NAVY = 'rgb(15, 26, 44)';     /* #0F1A2C */
+const RBL = 'rgb(42, 91, 215)';     /* #2A5BD7 — ba-report.html 의 --bl */
 let bad = 0;
 const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
 const head = (t) => console.log('\n' + t);
@@ -446,29 +449,31 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
       appBl: (function () {
         var d = document.createElement('div');
         d.style.cssText = 'position:absolute;left:-9999px;width:2px;height:2px;background:var(--bl)';
-        document.body.appendChild(d);
+        box.appendChild(d);   /* 무대 안에서 잰다 — 무대 파랑은 판 X315 부터 무대가 따로 든다 */
         var v = getComputedStyle(d).backgroundColor; d.remove(); return v;
       })()
     };
     body.className = was;
     return r;
   });
-  is(/^['"]?GmarketSans/.test(th.fam),
-     '무대 글씨체가 <G마켓 산스>로 적혀 있다 — 「' + th.fam.split(',')[0] + '」');
-  /* 토스 블루 <b>한 가지</b>다 — 무대와 본문이 다른 파랑을 쓰면 같은 화면에서
-     색이 두 번 튄다. 값을 그대로 적어 둔다(토큰을 읽어 견주면 「CSS 가 그렇게
-     적혀 있다」를 확인할 뿐이라 아무것도 안 잡는다). */
-  is(th.bandBg === TOSS && th.bandFg === 'rgb(255, 255, 255)',
-     '제목이 <파랑 머리띠> 위에 흰 글씨로 선다 — ' + th.bandBg + ' / ' + th.bandFg);
-  is(th.bandPic.indexOf('svg') > 0, '머리띠 왼쪽 위에 <직접 그린 「+」> 가 있다 (남의 그림을 안 쓴다)');
+  /* 판 X315 — 무대 전체가 <b>보험 자산 운용보고서</b>(ba-report.html) 와 같은 꼴이다
+     (사장님 말씀 「머지해 바꿔줘」). 글씨는 보고서와 같은 프리텐다드, 장 머리는
+     흰 바탕 · 남색 제목 · 맨 위 남색→금색 띠. 값을 그대로 적어 둔다(토큰을 읽어
+     견주면 「CSS 가 그렇게 적혀 있다」를 확인할 뿐이라 아무것도 안 잡는다). */
+  is(/^['"]?Pretendard/.test(th.fam),
+     '무대 글씨체가 <보고서와 같은 프리텐다드>로 적혀 있다 — 「' + th.fam.split(',')[0] + '」');
+  is(th.bandBg === 'rgb(255, 255, 255)' && th.bandFg === NAVY,
+     '제목이 <흰 바탕 · 남색 글씨> 로 선다 (보고서 장 머리) — ' + th.bandBg + ' / ' + th.bandFg);
+  is(/linear-gradient/.test(th.bandPic) && th.bandPic.indexOf('url(') < 0,
+     '장 머리 맨 위에 <남색→금색 띠> 가 있다 — 남의 그림을 안 쓴다');
   is(th.no[0] === '""' && th.no[1] === '"01."' &&
      th.no[th.no.length - 1] === '"' + String(th.no.length - 1).padStart(2, '0') + '."',
      '제목 앞 번호가 <표지는 없이 01. 부터> 붙는다 — 지금 ' + th.no.slice(0, 3).join(' ') + ' … ' + th.no[th.no.length - 1]);
   is(th.badge.indexOf(th.name) >= 0 && th.badge.indexOf('+') === 0 && th.badgeShown.indexOf(th.name) >= 0,
      '오른쪽 위 알약이 <이 고객의 자료>라고 말한다 — 「' + th.badge + '」');
   /* 표지는 판 X314 부터 <b>남색 · 금색</b> — 보험 자산 운용보고서 표지와 같은 한 장 (사장님 말씀) */
-  is(th.endBg === TOSS, '마무리는 <파랑 전면>이다 — 표지는 남색 보고서 표지([11-1])');
-  is(th.appBl === TOSS, '무대 파랑이 <본문 파랑과 같다> — 한 화면에 파랑이 두 번 안 튄다 (' + th.appBl + ')');
+  is(th.endBg === NAVY, '마무리는 <남색 전면>이다 — 표지([11-1]) · 오늘 순서와 같은 바탕 (' + th.endBg + ')');
+  is(th.appBl === RBL, '무대 파랑이 <보고서 파랑(#2A5BD7) 한 가지>다 — 토스 파랑이 섞이지 않는다 (' + th.appBl + ')');
   is(th.stIn !== null && th.stIn >= 30,
      '담보표가 <가장자리로 벌어지지 않는다> — 안쪽 여백 ' + th.stIn + 'px (0 이면 표만 화면 끝까지 벌어진다)');
   /* 「오늘 순서」는 <b>화면에 선 장</b>에서 그린다. 손으로 적어 두면 장을
