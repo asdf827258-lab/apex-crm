@@ -96,7 +96,18 @@ pick.forEach((x, i) => {
     const body = ((e.stdout || '') + (e.stderr || '')).replace(/\n+$/, '');
     console.log('✗ ' + head + '  (' + Math.round((Date.now() - s) / 1000) + '초)');
     console.log('   └ ' + x.cmd);
-    /* 왜 틀렸는지 <b>그 자리에서</b> 보여 준다 — 로그를 따로 뒤지지 않게 */
+    /* 왜 틀렸는지 <b>그 자리에서</b> 보여 준다 — 로그를 따로 뒤지지 않게.
+       ★★ <b>운 줄을 먼저 모아 적습니다</b> (판 X345 · 2026-11-05).
+         여태 <b>마지막 40줄만</b> 남겼는데, 긴 자(check-deck5 는 60줄이 넘습니다)는
+         <b>빨간 줄이 그 40줄 앞</b>에 있어 <b>무엇이 울었는지 로그에 안 남았습니다.</b>
+         실제로 이 판에서 CI 가 울었는데 까닭을 로그에서 못 찾았습니다 — 자는
+         울렸는데 <b>무엇이</b> 인지를 안 알려 주면 반쪽입니다 (8번). */
+    const 운줄 = body.split('\n').filter(l => l.indexOf('✗') >= 0);
+    if (운줄.length) {
+      console.log('   ├ 운 줄 ' + 운줄.length + '개 —');
+      운줄.slice(0, 20).forEach(l => console.log('   │✗' + l.replace(/✗/, '')));
+      console.log('   ├ 그리고 끝 40줄 —');
+    }
     body.split('\n').slice(-40).forEach(l => console.log('   │ ' + l));
     console.log('');
     failed.push(x);
