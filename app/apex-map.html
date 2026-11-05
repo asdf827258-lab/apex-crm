@@ -4908,7 +4908,7 @@ function addJ(res, isErr){
     if (res.real) say += ' 솔직히 말씀드리면, ' + res.real;
     if (wk.length && wk[0].say) say = wk[0].say + ' ' + say;
     /* 앱에 시켜 읽어 온 값 · 고객 줄이 든 답은 기기 목소리로 — 서버로 안 보냅니다 (3번 · 판 X336) */
-    speak(say, {priv:wk.length > 0 || fd.some(function(f){ return f.k === 'cli' && (f.rows || []).length; })});
+    speak(say, {priv:wk.length > 0 || fd.some(function(f){ return (f.k === 'cli' || f.priv) && (f.rows || []).length; })});
   }
 }
 
@@ -6584,6 +6584,194 @@ JV_FIND.push({k:'ntc', id:'notice', n:'공지',
             none:rows.length ? '' : (ws.length ? '「' + ws.join(' ') + '」 이 들어간 공지는 없습니다.' : '지금 걸려 있는 공지가 없습니다.')};
   }});
 
+/* ══ 📅 📝 🌱 <b>일정 · 상담카드 · 코칭도 찾는다</b> (판 X337) ══════════════════
+   사장님 말씀 2026-11-05 「일정이랑 상담카드 코칭도 자비스에 연결해줘」 — 판 X336 에서
+   「아직 안 이었다」 고 적어 둔 셋입니다(check-stale 증인 X336-이음).
+   ★ <b>본체가 이미 들고 있는 것만</b> 읽습니다 — 자비스가 서버를 따로 부르지 않습니다 (7번).
+     · 📅 일정 — 내 캘린더와 <b>같은 한 벌</b>(mcalItems · 거르는 자리 mcalMine). 달력이
+       보여 주는 것과 자비스가 말하는 것이 갈리지 않습니다 (5번).
+     · 📝 상담카드 — 이 기기에 담긴 카드(factLoad). 카드는 원래 이 브라우저에만 있습니다.
+     · 🌱 코칭 — 「내 코칭」(MC) · 「팀 코칭」(CO) 화면이 받아 둔 기록. 그 화면을 아직
+       안 열었으면 <b>「안 읽음」</b> 이라고 합니다 — 「없다」 가 아닙니다 (1번).
+   ★ 셋 다 <b>사람 이야기</b>라 AI 로 안 보내고(know 가 아닙니다), 읽어 줄 때도
+     <b>기기 목소리</b>가 읽습니다(priv · 3번). 물음에 든 이름은 AI 로 가기 전에 가립니다(used).
+   ★ 「넣기 · 잡기 · 만들기 · 어떻게 · 어디서」 처럼 <b>쓰는 법</b>을 물으면 서지 않습니다 —
+     그 답은 길입니다(「약속 잡힌 고객 일정 넣기」 · 8번).                           */
+var JV_CAL_Q = /일정|약속|스케줄|캘린더|달력|미팅/;
+var JV_CAL_NO = /교육|넣|잡(?:기|는|아|을|으|고)|만들|등록|추가|화법|멘트|어떻게|어디|하려면|안\s*잡|내보내|연동|설정|지우|지워|삭제|바꾸|옮기/;
+var JV_WD = ['일', '월', '화', '수', '목', '금', '토'];
+function jvWdOf(ds){ return new Date(Date.UTC(+ds.slice(0, 4), +ds.slice(5, 7) - 1, +ds.slice(8, 10))).getUTCDay(); }
+function jvDayLabel(ds, TD, P){
+  var rel = ds === TD ? '오늘 · ' : (ds === P.mcalShift(TD, 1) ? '내일 · ' : (ds === P.mcalShift(TD, 2) ? '모레 · ' : ''));
+  return rel + (+ds.slice(5, 7)) + '월 ' + (+ds.slice(8, 10)) + '일 (' + JV_WD[jvWdOf(ds)] + ')';
+}
+/* 물음이 가리키는 날 — 오늘 · 내일 · 모레 · 이번 주 · 다음 주 · 무슨 요일 · 며칠 · 이번 달 */
+function jvCalDays(q, TD, P){
+  var out = [], sh = function(n){ return P.mcalShift(TD, n); }, wd = jvWdOf(TD), i;
+  var put = function(ds){ if (ds && out.indexOf(ds) < 0) out.push(ds); };
+  var nextWk = /다음\s*주/.test(q), wdm = /([월화수목금토일])요일/.exec(q);
+  if (/오늘/.test(q)) put(TD);
+  if (/내일/.test(q)) put(sh(1));
+  if (/모레/.test(q)) put(sh(2));
+  if (wdm){
+    var want = JV_WD.indexOf(wdm[1]), gap = (want - wd + 7) % 7;
+    if (nextWk) gap = (wd === 0 ? 1 : 8 - wd) + (want === 0 ? 6 : want - 1);
+    put(sh(gap));
+  } else if (nextWk){
+    var st = wd === 0 ? 1 : 8 - wd;
+    for (i = 0; i < 7; i++) put(sh(st + i));
+  } else if (/이번\s*주|이번주|금주/.test(q)){
+    for (i = 0; i <= (wd === 0 ? 0 : 7 - wd); i++) put(sh(i));
+  }
+  var md = /(\d{1,2})\s*월\s*(\d{1,2})\s*일/.exec(q), dd = md ? null : /(?:^|[^\d])(\d{1,2})\s*일(?!\s*(?:동안|뒤|후|전|째))/.exec(q);
+  if (md) put(TD.slice(0, 4) + '-' + ('0' + md[1]).slice(-2) + '-' + ('0' + md[2]).slice(-2));
+  else if (dd && +dd[1] >= 1 && +dd[1] <= 31){
+    var ds = TD.slice(0, 8) + ('0' + dd[1]).slice(-2);
+    if (ds < TD){ var y = +TD.slice(0, 4), m = +TD.slice(5, 7) + 1; if (m > 12){ m = 1; y++; } ds = y + '-' + ('0' + m).slice(-2) + '-' + ('0' + dd[1]).slice(-2); }
+    put(ds);
+  }
+  if (!out.length && /이번\s*달|이번달/.test(q)){
+    var last = new Date(Date.UTC(+TD.slice(0, 4), +TD.slice(5, 7), 0)).getUTCDate();
+    for (i = +TD.slice(8, 10); i <= last; i++) put(TD.slice(0, 8) + ('0' + i).slice(-2));
+  }
+  return out.length ? out : [TD];
+}
+function jvCalLine(x, K){
+  var e = (K[x.k] || {}).e || '·', s = kbTxt(String(x.s || '')), t = kbTxt(String(x.t || ''));
+  var late = x.late ? ' (' + (+x.late.slice(5, 7)) + '/' + (+x.late.slice(8, 10)) + '부터 밀림)' : '';
+  if (x.k === 'appt') return e + ' 약속 ' + (s ? s + ' — ' : '— ') + t;
+  if (x.k === 'my') return e + ' 내 일정 — ' + t + (s ? ' ' + s : '');
+  if (x.k === 'next') return e + ' 할 일 — ' + t + (s ? ': ' + s : '') + late;
+  if (x.k === 'help') return e + ' 도와줄 것 — ' + t + late;
+  if (x.k === 'bd') return e + ' 생일 — ' + t;
+  return e + ' ' + ((K[x.k] || {}).t || '') + ' — ' + t + (s ? ' ' + s : '');
+}
+/* 한 날의 줄 — 연락(☎️)은 여럿이라 한 줄로 접습니다. 매일 하는 일(📋)은 일정이 아니라 뺍니다 */
+function jvCalRow(ds, L, TD, P){
+  var K = P.MCAL_KIND || {}, ord = {appt:0, my:1, next:2, help:3, bd:4};
+  var main = L.filter(function(x){ return x && ord[x.k] != null; })
+              .sort(function(a, b){ return ord[a.k] - ord[b.k] || String(a.s || '').localeCompare(String(b.s || '')); });
+  var tc = L.filter(function(x){ return x && x.k === 'touch'; });
+  var s = main.slice(0, 8).map(function(x){ return jvCalLine(x, K); });
+  if (main.length > 8) s.push('외 ' + (main.length - 8) + '건 — 내 캘린더에서 다 보실 수 있습니다');
+  if (tc.length) s.push('☎️ 연락할 분 ' + tc.length + '명 — ' + tc.slice(0, 3).map(function(x){ return kbTxt(String(x.t || '')); }).join(' · ') + (tc.length > 3 ? ' 외' : ''));
+  return {t:'📅 ' + jvDayLabel(ds, TD, P) + ' — ' + (main.length + tc.length ? (main.length + tc.length) + '건' : '잡힌 일정 없음'),
+          s:s.length ? s : ['잡힌 일정이 없습니다.'], n:main.length + tc.length};
+}
+function jvCalRows(q, P){
+  if (!P || typeof P.mcalItems !== 'function' || typeof P.mcalToday !== 'function' || typeof P.mcalShift !== 'function') return null;
+  if (!JV_CAL_Q.test(q) || JV_CAL_NO.test(q)) return null;
+  var TD = P.mcalToday(), I = {}, mine = function(L){ try { return typeof P.mcalMine === 'function' ? P.mcalMine(L || []) : (L || []); } catch(e){ return L || []; } };
+  try { I = P.mcalItems() || {}; } catch(e){ I = {}; }
+  /* 이름으로 물으면(「홍길동 약속 언제야」) — 앞으로 서른 날에서 그 분 것만 */
+  var who = [], d0, i, k;
+  for (i = 0; i <= 30; i++){
+    d0 = P.mcalShift(TD, i);
+    mine(I[d0]).forEach(function(x){
+      var t = kbTxt(String(x.t || '')).replace(/\s+/g, '');
+      if (x.k !== 'rt' && t.length >= 2 && !/○/.test(t) && q.replace(/\s+/g, '').indexOf(t) >= 0 && who.indexOf(t) < 0) who.push(t);
+    });
+  }
+  var rows = [], days;
+  if (who.length){
+    for (i = 0; i <= 30 && rows.length < 5; i++){
+      d0 = P.mcalShift(TD, i);
+      var L = mine(I[d0]).filter(function(x){ return who.indexOf(kbTxt(String(x.t || '')).replace(/\s+/g, '')) >= 0; });
+      if (L.length) rows.push(jvCalRow(d0, L, TD, P));
+    }
+  } else {
+    days = jvCalDays(q, TD, P);
+    var many = days.length > 1;
+    days.forEach(function(ds){ var r = jvCalRow(ds, mine(I[ds]), TD, P); if (!many || r.n) rows.push(r); });
+    if (!rows.length) rows.push(jvCalRow(days[0], [], TD, P));
+  }
+  var more = rows.length > 5 ? rows.length - 5 : 0;
+  rows = rows.slice(0, 5);
+  /* 아직 안 읽은 갈래는 <b>빠졌다고</b> 밝힙니다 — 「없음」 으로 읽히면 안 됩니다 (1번) */
+  var miss = [];
+  try { if (!(P.OSC && P.OSC.loaded)) miss.push('고객 365일(연락 · 할 일 · 생일)'); } catch(e){}
+  try { if (!(P.AR && P.AR.db)) miss.push('배정 DB 약속'); } catch(e){}
+  return {rows:rows, more:more, unit:'일', priv:1, used:who,
+          note:miss.length ? '⚠ ' + miss.join(' · ') + ' 은 아직 안 읽어 여기 빠져 있습니다 — 그 화면을 한 번 열면 같이 셉니다.' : ''};
+}
+/* 📝 상담카드 — 이름이 물음에 통째로 들었거나, 「상담카드 · 팩트파인딩」 을 물었을 때 */
+var JV_FACT_Q = /상담\s*카드|팩트\s*파인딩|팩파|상담지|니즈\s*분석/;
+var JV_FACT_NO = /만들|새로|작성|쓰는|넣|등록|어떻게|어디|하려면|인쇄|뽑/;
+function jvFactRows(q, P){
+  if (!P || typeof P.factLoad !== 'function') return null;
+  var L = []; try { L = P.factLoad() || []; } catch(e){ L = []; }
+  var nq = q.replace(/\s+/g, ''), asks = JV_FACT_Q.test(q) && !JV_FACT_NO.test(q);
+  var byName = L.filter(function(c){ var n = String(c.name || '').replace(/\s+/g, ''); return n.length >= 2 && nq.indexOf(n) >= 0; });
+  if (!byName.length && !asks) return null;
+  var got = (byName.length ? byName : L).slice().sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
+  var cats = P.FACT_CATS || [], cut = function(t){ t = String(t || '').replace(/\s+/g, ' ').trim(); return t.length > 120 ? t.slice(0, 120) + '…' : t; };
+  var rows = got.slice(0, 3).map(function(c){
+    var when = ''; try { when = c.ts ? new Date(c.ts + 9 * 3600 * 1000).toISOString().slice(0, 10) : ''; } catch(e){}
+    var cs = (c.cats || []).map(function(id){ var f = cats.filter(function(x){ return x.id === id; })[0]; return f ? f.e + ' ' + f.t : ''; }).filter(Boolean);
+    var s = [];
+    if (cs.length) s.push('관심 — ' + cs.join(' · '));
+    [['goal', '상담 목표'], ['family', '가족'], ['budget', '월 예산'], ['exist', '기존 보험·연금'], ['asset', '자산'], ['debt', '부채'], ['health', '건강·가족력']]
+      .forEach(function(p){ if (c[p[0]]) s.push(p[1] + ' — ' + cut(c[p[0]])); });
+    if (c.ai) s.push('AI 니즈분석이 붙어 있습니다 — 상담카드 화면에서 보실 수 있습니다.');
+    return {t:'📝 ' + (c.name || '(이름 없음)') + (when ? ' · ' + when : ''), s:s.length ? s : ['적어 둔 칸이 없습니다.']};
+  });
+  return {rows:rows, more:got.length - rows.length, unit:'장', priv:1,
+          used:byName.map(function(c){ return String(c.name || ''); }).filter(function(n){ return n.length >= 2; }),
+          none:rows.length ? '' : '이 기기에 저장된 상담카드가 없습니다 — 상담카드는 이 기기(브라우저)에만 담깁니다.',
+          note:'상담카드는 이 기기에만 있습니다 — 다른 기기에서 쓴 카드는 여기 안 섭니다.'};
+}
+/* 🌱 코칭 — 「내 코칭」 · 「팀 코칭」 화면이 받아 둔 기록만 */
+var JV_COACH_Q = /코칭|코치/;
+var JV_COACH_NO = /남기|남겨|적어|적기|쓰기|하려면|어떻게\s*해|어디서|어디/;
+function jvCoachRows(q, P){
+  if (!P || !JV_COACH_Q.test(q) || JV_COACH_NO.test(q)) return null;
+  var D = function(s){ return String(s || '').slice(0, 10); }, cut = function(t){ t = String(t || '').replace(/\s+/g, ' ').trim(); return t.length > 140 ? t.slice(0, 140) + '…' : t; };
+  var logRow = function(g, head){
+    var s = [];
+    if (g.strength) s.push('잘한 것 — ' + cut(g.strength));
+    if (g.weak) s.push('보완할 것 — ' + cut(g.weak));
+    if (g.todo) s.push('할 일 — ' + cut(g.todo));
+    if (g.recheck_date) s.push('다시 볼 날 — ' + D(g.recheck_date));
+    return {t:head, s:s.length ? s : ['적힌 칸이 없습니다.']};
+  };
+  if (/팀\s*코칭|팀원/.test(q)){
+    var C = P.CO;
+    if (!C) return null;
+    if (!C.loaded) return {id:'branch_coach', wait:'팀 코칭'};
+    if (C.err) return {id:'branch_coach', rows:[], none:'팀 코칭을 읽지 못했습니다 — ' + C.err};
+    var nq = q.replace(/\s+/g, ''), R = (C.rows || []);
+    var named = R.filter(function(r){ var n = String(r.name || '').replace(/\s+/g, ''); return n.length >= 2 && nq.indexOf(n) >= 0; });
+    var pick = (named.length ? named : R.filter(function(r){ return r.last; }))
+                 .slice().sort(function(a, b){ return D(b.last && b.last.coach_date).localeCompare(D(a.last && a.last.coach_date)); });
+    var rows = pick.slice(0, 4).map(function(r){
+      var row = r.last ? logRow(r.last, '🧑‍🏫 ' + r.name + (r.team ? ' · ' + r.team : '') + ' — 마지막 코칭 ' + D(r.last.coach_date))
+                       : {t:'🧑‍🏫 ' + r.name + (r.team ? ' · ' + r.team : ''), s:['코칭 기록이 아직 없습니다.']};
+      var say = (r.says || []).filter(function(n){ return n.share !== false && n.body; })[0];
+      if (say) row.s.push('팀원이 적은 말 — ' + cut(say.body));
+      return row;
+    });
+    return {id:'branch_coach', rows:rows, more:pick.length - rows.length, unit:'명', priv:1,
+            used:named.map(function(r){ return String(r.name || ''); }).filter(function(n){ return n.length >= 2; }),
+            none:rows.length ? '' : '코칭 기록이 있는 팀원이 아직 없습니다.'};
+  }
+  var M = P.MC;
+  if (!M) return null;
+  if (!M.loaded) return {wait:'내 코칭'};
+  if (M.err) return {rows:[], none:'내 코칭을 읽지 못했습니다 — ' + M.err};
+  var rows2 = (M.logs || []).slice(0, 2).map(function(g){
+    var row = logRow(g, '🌱 ' + D(g.coach_date) + ' 코칭');
+    var mine = (M.notes || []).filter(function(n){ return n.log_id === g.id && n.body; })[0];
+    if (mine) row.s.push('내가 적은 말 — ' + cut(mine.body) + (mine.share === false ? ' (나만 봄)' : ''));
+    return row;
+  });
+  if ((M.sig || []).length) rows2.push({t:'🔔 지금 짚을 것', s:M.sig.slice(0, 3).map(function(g){ return g.t + ' ' + (g.a || ''); })});
+  return {rows:rows2, more:Math.max(0, (M.logs || []).length - 2), unit:'건', priv:1,
+          none:rows2.length ? '' : '받은 코칭 기록이 아직 없습니다.'};
+}
+JV_FIND.push({k:'cal', id:'mycal', n:'일정', find:jvCalRows},
+             {k:'fact', id:'fact_find', n:'상담카드', find:jvFactRows},
+             {k:'coach', id:'mycoach', n:'코칭', find:jvCoachRows});
+
 function jvKnowCount(){
   var P = kbApp(), D = jvDz(P), n = 0;
   if (!D) return 0;
@@ -6633,7 +6821,8 @@ function jvFind(q){
     var r = null;
     try { r = f.find(q, P); } catch(e){ r = null; }
     if (!r) return;
-    r.k = f.k; r.id = f.id; r.n = f.n; r.know = !!f.know; r.ext = !!f.ext;
+    /* 갈래가 <b>제 화면</b>을 말하면 그것을 씁니다 — 팀 코칭은 「내 코칭」 이 아니라 「팀 코칭」 화면 (판 X337) */
+    r.k = f.k; r.id = r.id || f.id; r.n = f.n; r.know = !!f.know; r.ext = !!f.ext;
     /* 굳은지는 <b>원래 점수</b>로 정합니다 — 「원하는 답」 표는 차례만 바꿉니다. 약한 것을 굳게 만들면
        「보험료 비교해달래」 가 거절 처리로 길을 접습니다 (판 X277 에서 자가 잡음) */
     var base = r.score;
