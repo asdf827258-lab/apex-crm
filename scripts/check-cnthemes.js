@@ -57,7 +57,8 @@ const ctx = {
   osEsc: s => ('' + (s == null ? '' : s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
   cnDateStr: () => '2026.10.28',
   CN: { i: 0, imgs: {}, ai: null, aiPlan: null, style: 'news' },
-  toast() {}, cnDownload() {}, cnFileName: i => 'f' + i,
+  toast() {}, cnDownload() { ctx._dl = (ctx._dl || 0) + 1; }, cnFileName: i => 'f' + i,
+  navigator: { userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130' },
   renderTodayCard: () => '<div class="cn-head">📅 오늘의 카드뉴스 <span class="cn-badge">뉴스 카드 스타일</span></div>' + UPBTN + '<div class="cn2-stage">X</div>',
   cnSlidePreview: () => 'ORIG', cnSrcOf: () => SRCVAL, cnImgPrompt: () => 'P',
   cardnewsSaveOne() {}, cardnewsSaveAll() {},
@@ -251,6 +252,23 @@ is(/누르면 실사 사진 찾기/.test(S), '③ 사진 넣기 단계가 실사
 is(ctx.renderTodayCard().indexOf('📷 실사 사진 찾기') >= 0, '테마를 켜면 단추 줄에 「📷 실사 사진 찾기」 가 선다');
 is(/if \(keyMsg\(d\) && !PK\.items\.length\)/.test(SRC), '키 없다는 말은 사진이 하나도 안 나왔을 때만 한다 (판 X263 — Unsplash 만으로 잘 나와도 매번 떴다)');
 is(IDX.indexOf(UPBTN) >= 0, '★ 그 단추를 붙이는 자리(「🖼 직접 업로드」 단추 글자)가 index.html 에 그대로 있다 — 글자가 바뀌면 단추가 조용히 사라집니다');
+
+head('⑩ 폰에서 저장 (판 X335)');
+const cv = { toDataURL: () => 'data:image/png;base64,AAAA' };
+ctx._dl = 0; ctx.cnDownload(cv, 'a');
+is(ctx._dl === 1 && ctx.cxSheetState().n === 0, 'PC 는 그대로 파일로 내려받는다');
+ctx.navigator.userAgent = 'Mozilla/5.0 (Linux; Android 14; SM-S918N; wv) AppleWebKit/537.36 Chrome/129 Mobile Safari/537.36;KAKAOTALK 2410380';
+const k = ctx.cxSheetState();
+is(k.phone && k.inApp && k.kakao, '카톡 인앱 브라우저를 알아본다');
+ctx._dl = 0; ctx.cnDownload(cv, 'a'); ctx.cnDownload(cv, 'b');
+is(ctx._dl === 0 && ctx.cxSheetState().n === 2, '★ 카톡 안에서는 내려받지 않고(「지원하지 않는 파일 형식」 이 뜨던 자리) 카드를 판에 모은다 — 모두 저장이면 장 수만큼');
+ctx.cxSheetClose();
+ctx.navigator.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1';
+ctx._dl = 0; ctx.cnDownload(cv, 'a');
+is(ctx._dl === 0 && ctx.cxSheetState().n === 1 && !ctx.cxSheetState().kakao, '아이폰 사파리도 판으로 — 공유 창에서 「사진에 저장」');
+ctx.cxSheetClose();
+is(/kakaotalk:\/\/web\/openExternal\?url=/.test(SRC) && /navigator\.share\(\{ files: files/.test(SRC), '카톡이면 「크롬으로 열기」 · 되는 곳이면 파일 공유 창');
+ctx.navigator.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130';
 
 console.log('\n' + (bad ? '✗ ' + bad + '/' + n + ' 실패' : '✓ ' + n + '가지 모두 통과'));
 process.exit(bad ? 1 : 0);
