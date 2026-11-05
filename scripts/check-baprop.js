@@ -101,7 +101,7 @@ const PLAN = '<!doctype html><html lang="ko"><meta charset="utf-8"><body style="
   const sc = await pg.evaluate(() => ({ t: (document.getElementById('ppBox') || {}).textContent || '', n: S.after.length, pv: !!document.querySelector('.ppv') }));
   is(sc.n === n1 && !sc.pv && /손으로|스캔|그림|제안 더하기/.test(sc.t), '스캔 PDF — 표를 안 띄우고 「손으로 적어 주세요」 라고 말한다 (「' + sc.t.slice(0, 40) + '…」)');
 
-  /* [4-1] 판 X345 — 실제 제안서 8부에서 틀렸던 모양을 그대로 흉내 낸다(실제 고객 서류는 저장소에 넣지 않는다).
+  /* [4-1] 판 X346 — 실제 제안서 8부에서 틀렸던 모양을 그대로 흉내 낸다(실제 고객 서류는 저장소에 넣지 않는다).
      ① 설명 문단 · 예시표의 금액을 담보로 잡던 것 → <b>담보 표(가입금액 + 보험료 머리줄)만</b> 읽는다
      ② 담보 이름이 꺾여 금액 줄과 떨어진 것 ③ 「1천5백만원 · 5천만원 · 1백만원」
      ④ 1~5종처럼 같은 담보가 여러 줄 → 큰 금액 하나만 체크 ⑤ 「암진단비(유사암 제외)」 가 유사암으로 가던 것
