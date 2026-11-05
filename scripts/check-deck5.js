@@ -27,6 +27,9 @@
      5. 쪼갠 뒤에도 <b>장 수가 전보다 많다</b> — 쪼갠다고 해 놓고 글을 버리면
         장 수가 줄어듭니다.
      6. 콘솔에 <b>터진 자리</b>가 없다.
+     8. ★★ <b>발표 중에 인쇄해도 긴 표가 안 잘린다.</b> 표를 쪽 안에서 굴리게
+        했더니(.tw-long), 발표 중에 그대로 인쇄하면 522px 만 찍히고 나머지
+        1,191px 이 <b>종이에서 사라졌습니다.</b> 화면에서만 굴립니다 (4-1).
      7. ★★ <b>track 안에 있는 장은 차례에 다 있다.</b> 장을 만들어 두고 차례에
         안 적으면 그 쪽은 <b>조용히 안 나옵니다</b> — 되돌려 보니 [1]~[6] 이
         그것을 못 봤습니다(차례에서 calc2~calc8 을 빼도 전부 초록이었습니다).
@@ -204,6 +207,28 @@ const 갈래 = {
        '  ' + 갈래[k].이름 + ' — track 안 장 ' + 안.length + '개 중 차례에 없는 장 ' + 고아.length +
        (고아.length ? (' ← ' + 고아.join(', ')) : '') +
        (봐줌.length ? ('   (일부러 뺀 것: ' + 봐줌.join(', ') + ')') : ''));
+  }
+
+  head('[8] ★★ <b>발표 중에 인쇄해도</b> 긴 표가 안 잘린다 (4-1 · 6번)');
+  {
+    await pg.evaluate(() => {
+      window.__go('d'); presEnter();
+      const L = presList();
+      for (let i = 0; i < L.length; i++) if (L[i].id === 'dcalc5') { presGo(i); break; }
+    });
+    await pg.emulateMedia({ media: 'print' });
+    const r = await pg.evaluate(() => {
+      const e = document.querySelector('.tw-long');
+      if (!e) return null;
+      return { 발표중: document.body.classList.contains('present'),
+               보임: Math.round(e.getBoundingClientRect().height),
+               속: e.scrollHeight, 잘림: e.scrollHeight > e.clientHeight + 10 };
+    });
+    await pg.emulateMedia({ media: 'screen' });
+    is(!!r && r.발표중, '  발표 중에 인쇄 상태로 들어갔다');
+    is(!!r && !r.잘림, '  긴 표가 종이에 <b>전부</b> 나온다 — 보이는 높이 ' +
+       (r ? r.보임 : '?') + 'px · 속 ' + (r ? r.속 : '?') + 'px' +
+       (r && r.잘림 ? ('  ← ' + (r.속 - r.보임) + 'px 이 사라집니다') : ''));
   }
 
   head('[6] 콘솔에 터진 자리가 없다 (우리가 막은 바깥 요청은 뺍니다)');
