@@ -23,6 +23,7 @@
           안 읽은 갈래는 「빠졌다」 고 밝힌다 · 상담카드 · 내 코칭 · 팀 코칭 · 안 열었으면 「안 읽음」 ·
           「쓰는 법」 물음 스물넷에 안 낀다 · ★★ AI · AI 목소리로 그 글(병력 · 이름)이 안 간다 (3번)
      [11] 🗂 메뉴(TABS)의 화면 <b>전부</b>를 이름만 말해도 자비스가 그 화면을 연다 — 메뉴를 줄이는 전제
+     [12] 🛰 MARK II(판 X347 · 「아이언맨처럼 !!」) — 판 셋 · 시계 · 부팅 장면(센 수 그대로 · 한 창에 한 번) · 말로 묻기 단추
      [9] 콘솔 오류 0 · 바깥 주소 0
    ★ 이름은 「홍길동」 (3번).                                                     */
 const { chromium } = require('playwright');
@@ -133,8 +134,10 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
 
   sec('[2] 안 읽은 것은 「아직 안 읽음」 (1번)');
   const U = await f.evaluate(() => { var P = kbApp(), o = P.OSC.loaded, d = P.DZ_DATA;
-    P.OSC.loaded = false; P.DZ_DATA = null; hudStats(); var t = document.getElementById('hudStat').innerText;
-    P.OSC.loaded = o; P.DZ_DATA = d; hudStats(); return {off:t, on:document.getElementById('hudStat').innerText}; });
+    /* 판 X347 — 시스템 판은 이름과 값을 양 끝에 세워 innerText 에 줄바꿈이 섞입니다. 빈칸을 하나로 접어 잽니다 */
+    var T = function(){ return document.getElementById('hudStat').innerText.replace(/\s+/g, ' '); };
+    P.OSC.loaded = false; P.DZ_DATA = null; hudStats(); var t = T();
+    P.OSC.loaded = o; P.DZ_DATA = d; hudStats(); return {off:t, on:T()}; });
   is(/고객 아직 안 읽음/.test(U.off) && /보험 자료 아직 안 읽음/.test(U.off) && !/고객 0/.test(U.off), '안 읽었을 때 — 「고객 아직 안 읽음 · 보험 자료 아직 안 읽음」 (0 이 아닙니다)');
   is(/고객 1명/.test(U.on), '읽은 뒤에는 센 수 — 「고객 1명」');
 
@@ -178,7 +181,7 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
   await p.waitForTimeout(700);
   await f.evaluate(() => speak('한도 시험 둘째 마디입니다.'));
   await p.waitForTimeout(500);
-  const D = await f.evaluate(() => ({ dead: JV_VOX.dead, st: document.getElementById('hudStat').innerText }));
+  const D = await f.evaluate(() => ({ dead: JV_VOX.dead, st: document.getElementById('hudStat').innerText.replace(/\s+/g, ' ') }));
   is(TTS.length === 1 && /429/.test(D.dead), '한도(429)에 막히면 그 창에서는 더 안 부른다 — 부름 <b>' + TTS.length + '</b> · 까닭 「' + D.dead + '」');
   is(/목소리 기기\(AI 막힘\)/.test(D.st), 'HUD 에 「목소리 기기(AI 막힘)」 — 막힌 것을 숨기지 않습니다');
   ttsMode = '504'; TTS.length = 0;
@@ -317,6 +320,37 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
     var r2 = offline(x.t + ' 열어줘'), st2 = (r2.steps || []).map(s => s.id).filter(Boolean);
     return !(st[0] === x.id || r.top === x.id || st2[0] === x.id || r2.top === x.id); }).map(x => x.id + '(' + x.t + ')'), TB);
   is(TB.length >= 100 && CV.length === 0, '메뉴 ' + TB.length + '칸 전부 — 이름만 말해도 그 화면이 첫 걸음' + (CV.length ? ' ← 못 여는 것 ' + CV.length + ': ' + CV.slice(0, 6).join(' · ') : ''));
+
+  sec('[12] 🛰 MARK II — 판 셋 · 시계 · 부팅 장면 · 말로 묻기 (판 X347 · 2026-11-05 「아이언맨처럼 !!」)');
+  const MK = await f.evaluate(async () => {
+    var d = document.getElementById('deck');
+    var o = { deck:!!d, l:!!(d && d.querySelector('.pane-l #hudStat')), c:!!(d && d.querySelector('.hud #ask')),
+              r:!!(d && d.querySelector('.pane-r #chips')), chips:document.querySelectorAll('#chips .chip').length };
+    /* 시계 — 이 기기 시각 · 한 번 더 그리면 바뀐다 */
+    var c0 = document.getElementById('hudClock').textContent;
+    await new Promise(r => setTimeout(r, 1150));
+    o.c0 = c0; o.c1 = document.getElementById('hudClock').textContent;
+    /* 부팅 — 센 수 그대로 · 한 창에 한 번 */
+    try { sessionStorage.removeItem('jv_boot'); } catch(e){}
+    hudBoot();
+    var b = document.getElementById('hudBoot'); o.bootOn = b.classList.contains('on'); o.bootTxt = b.textContent;
+    var scr = 0, src = {}; kb().docs.forEach(x => { if (x.kind === 'scr') scr++; }); JV_FIND.forEach(x => src[x.n] = 1);
+    o.scr = scr; o.src = Object.keys(src).length;
+    await new Promise(r => setTimeout(r, 3000));
+    o.bootOff = !b.classList.contains('on');
+    hudBoot(); o.again = b.classList.contains('on');
+    /* 말로 묻기 — 위 띠의 🎤 를 그대로 누른다(듣는 길은 하나) */
+    var m = document.getElementById('jMic'), hit = 0;
+    if (m){ var keep = m.onclick; m.onclick = function(){ hit++; }; document.getElementById('hudMic').click(); m.onclick = keep; }
+    o.mic = m ? hit : -1;
+    return o; });
+  is(MK.deck && MK.l && MK.c && MK.r, '판 셋 — 왼쪽 시스템(#hudStat) · 가운데 원자로와 명령 칸(#ask) · 오른쪽 명령(#chips)');
+  is(MK.chips >= 4, '명령 판에 상황 단추 ' + MK.chips + '개');
+  is(/^\d{4}\.\d{2}\.\d{2} \([일월화수목금토]\) \d{2}:\d{2}:\d{2}$/.test(MK.c0) && MK.c0 !== MK.c1, '시계가 돈다 — 「' + MK.c0 + '」 → 「' + MK.c1 + '」 (이 기기 시각 · 서버 0)');
+  is(MK.bootOn && MK.bootTxt.indexOf('화면 ' + MK.scr + '개') >= 0 && MK.bootTxt.indexOf('자료 갈래 ' + MK.src + '곳') >= 0 && /ONLINE/.test(MK.bootTxt),
+     '부팅 장면이 <b>센 수 그대로</b> — 화면 ' + MK.scr + '개 · 자료 갈래 ' + MK.src + '곳 (지어 적지 않음 · 1번)');
+  is(MK.bootOff && !MK.again, '부팅 장면은 잠깐 서고 걷힌다 · 한 창에 <b>한 번</b>만');
+  is(MK.mic === 1 || MK.mic === -1, '「말로 묻기」 큰 단추는 위 띠의 🎤 를 그대로 누른다 — 듣는 길은 하나 (5번)' + (MK.mic === -1 ? ' (이 브라우저는 듣기가 없어 단추가 감춰짐)' : ''));
   sec('[9] 콘솔 오류 · 바깥 주소');
   is(errs.length === 0, '콘솔 오류 0' + (errs.length ? ' ← ' + errs.slice(0, 3).join(' · ') : ''));
   is(outside.length === 0, '바깥 주소 0' + (outside.length ? ' ← ' + outside.slice(0, 3).join(' · ') : ''));
