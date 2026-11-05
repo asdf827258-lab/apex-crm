@@ -16178,8 +16178,19 @@ function tlpNowTools(x){
 }
 /* 여섯 묶음 — <b>열 수 있는 것만</b> 세운다. 등급에 막힌 화면을 세우면
    눌러도 「이용할 수 없습니다」 만 뜬다 (8번). */
+/* 🔤 <b>오타도 봐 줍니다</b> (판 X340) — 사장님 말씀 2026-11-05 「도구에서 검색 기능 오타 자꾸 나온다 고치고」.
+   서랍 찾기와 <b>같은 규칙</b>입니다(navPaintBody): 먼저 엄하게 찾고, 하나도 없을 때만 한 글자 틀린
+   것까지 봅니다 — 처음부터 넓게 잡으면 엉뚱한 화면이 위에 섭니다. 판정은 navHit 하나입니다 (5번). */
+var TLP_LOOSE=false;
 function tlpGroups(){
-  var q=TLP_Q.replace(/^\s+|\s+$/g,''),out=[],gi,id,it,g,rows;
+  var q=TLP_Q.replace(/^\s+|\s+$/g,''),out=[];
+  TLP_LOOSE=false;
+  out=tlpGroupsBy(q,false);
+  if(q&&!out.length){ out=tlpGroupsBy(q,true); TLP_LOOSE=out.length>0; }
+  return out;
+}
+function tlpGroupsBy(q,loose){
+  var out=[],gi,id,it,g,rows;
   for(gi=0;gi<NAV_WHEN_G.length;gi++){
     g=NAV_WHEN_G[gi]; rows=[];
     for(id in NAV_WHEN){
@@ -16187,7 +16198,7 @@ function tlpGroups(){
       if(NAV_WHEN[id]!==g.k)continue;
       it=(typeof navItemOf==='function')?navItemOf(id):null;
       if(!it||!it.id)continue;                    /* 못 여는 화면은 안 세운다 */
-      if(q&&!(typeof navHit==='function'&&navHit(it,q,false)))continue;
+      if(q&&!(typeof navHit==='function'&&navHit(it,q,loose)))continue;
       rows.push(it);
     }
     if(rows.length)out.push({g:g,rows:rows});
@@ -16275,7 +16286,7 @@ function tlpNowHtml(){
 }
 function renderToolsPage(){
   tlpCss();
-  var q=TLP_Q.replace(/^\s+|\s+$/g,''),L=tlpGroups(),h='',i,j,it,g;
+  var h='';
   /* ⚠ 2026-09-26 · 이 화면만 <b>왼쪽 여백이 0</b>이라 제목이 화면
      가장자리에 붙었습니다 — 설계사처럼 몰아 보다 잡았습니다.
      ★ 여백을 여기서 새로 만들지 않습니다 (5번). 다른 화면이 모두 쓰는
@@ -16287,7 +16298,25 @@ function renderToolsPage(){
      '그 분 카드에서 바로 따라옵니다.</div>'+
      '<input class="tlp-q" id="tlpQ" value="'+osEsc(TLP_Q)+'" '+
        'oninput="tlpSetQ(this.value)" placeholder="🔎 하려는 것을 그냥 적으세요 — 연금 · 알릴의무 · 실비">';
+  h+='<div id="tlpBody">'+tlpBodyHtml()+'</div>';
+  /* ★ <b>길을 남깁니다</b> — 서랍은 그대로 있습니다 (1번) */
+  h+='<div class="tlp-note">여기 있는 것이 <b>전부</b>입니다 — <b>지운 것은 하나도 없습니다.</b> '+
+     '등급에 막힌 화면만 안 섭니다(눌러도 안 열리기 때문입니다). '+
+     '옛 이름으로 찾으시려면 아래 <b>메뉴 전체</b>를 여세요.</div>'+
+     '<button type="button" class="tlp-more" onclick="toggleNav()">☰ 메뉴 전체</button>'+
+     '</div>';
+  return h;
+}
+/* ⌨️ <b>찾기 칸 밑만</b> 다시 그립니다 (판 X340).
+   ⚠ 여태는 한 글자 칠 때마다 <b>화면 전체</b>(찾기 칸까지)를 지우고 다시 세웠습니다. 칸이
+     새로 생기면 <b>한글 조합이 끊겨</b> 「연금」 이 「ㅇ여연ㄱ금」 처럼 쪼개집니다 — 사장님이
+     「오타 자꾸 나온다」 하신 그 자리입니다. 서랍 찾기도 같은 일을 겪고 목록만 다시 그리게
+     고쳤습니다(navFind 쪽지). <b>같은 규칙</b>입니다 (5번). check-tlpfind 가 칸이 안 바뀌는지 봅니다. */
+function tlpBodyHtml(){
+  var q=TLP_Q.replace(/^\s+|\s+$/g,''),L=tlpGroups(),h='',i,j,it,g;
   h+=tlpNowHtml();
+  if(q&&TLP_LOOSE)
+    h+='<div class="tlp-none tlp-loose">「'+osEsc(q)+'」 그대로는 없어서 <b>비슷한 이름</b>을 찾았습니다.</div>';
   /* 📦 칸 여섯을 <b>접어서</b> 세웁니다 (판 X181 · 위 TLP_OPEN 쪽지).
      ★ 단추의 onclick 은 <b>tlpToggle</b> 입니다 — check-toolfold 가 그것으로
        이 줄을 찾습니다. 건드리지 마십시오. */
@@ -16317,12 +16346,6 @@ function renderToolsPage(){
   h+='</div>';
   if(q&&!L.length)
     h+='<div class="tlp-none">그런 이름은 없습니다.<br>다른 말로 찾아보세요.</div>';
-  /* ★ <b>길을 남깁니다</b> — 서랍은 그대로 있습니다 (1번) */
-  h+='<div class="tlp-note">여기 있는 것이 <b>전부</b>입니다 — <b>지운 것은 하나도 없습니다.</b> '+
-     '등급에 막힌 화면만 안 섭니다(눌러도 안 열리기 때문입니다). '+
-     '옛 이름으로 찾으시려면 아래 <b>메뉴 전체</b>를 여세요.</div>'+
-     '<button type="button" class="tlp-more" onclick="toggleNav()">☰ 메뉴 전체</button>'+
-     '</div>';
   return h;
 }
 function tlpPaint(){
@@ -16330,6 +16353,9 @@ function tlpPaint(){
   /* 이 화면이 지금 떠 있을 때만 다시 그린다 — 찾기 칸이 그 표시다.
      다른 화면에서 부르면 남의 화면을 도구로 덮어 버린다 (5번). */
   if(!el||!document.getElementById('tlpQ'))return;
+  /* 찾기 칸은 <b>그대로 두고</b> 그 밑만 — 칸을 다시 세우면 한글 조합이 끊깁니다 (위 tlpBodyHtml 쪽지) */
+  var body=document.getElementById('tlpBody');
+  if(body){ body.innerHTML=tlpBodyHtml(); return; }
   var f=document.activeElement,keep=(f&&f.id==='tlpQ');
   el.innerHTML=renderToolsPage();
   if(keep){ var e2=document.getElementById('tlpQ');
@@ -21505,8 +21531,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-05 16:30';
-var APP_BUILD_NOTE='🎬 <b>발표 덱 다섯 갈래를 전부 쪼갰습니다 — 한 쪽에 한 가지</b>(판 X338 · 사장님 말씀 「<b>응 나머지 트랙도 전부 같이 쪼개줘</b>」). ★★ 재어 보니 말씀이 그대로 숫자였습니다 — <b>₩ 연금</b>의 정밀 계산 장 하나가 창을 <b>5,930px</b>(화면 일곱) 넘었습니다. <b>$ 달러</b> 3,510px · <b>🏢 일시납·쿠폰</b> 1,765px · <b>📈 투자·세금</b> 1,413px. 고객 앞에서 한 장을 일곱 번 긁어내렸다는 뜻입니다. ★ 넷을 교육자금과 같은 방식으로 쪼갰습니다 — <b>연금 13→28장 · 달러 10→16장 · 투자·세금 9→16장 · 일시납·쿠폰 12→17장</b>(교육자금은 6→15장). 이제 <b>다섯 갈래 전부 제일 넘치는 쪽이 400px 안</b>입니다 — 한 번 내리면 끝입니다. ★★ <b>글은 한 글자도 안 버렸고, 계산기는 한 줄도 안 건드렸습니다</b> — 셈하는 칸 이름이 그대로라 쓰시던 자리를 그대로 찾습니다. 옮긴 것은 「어느 장에 서는가」 뿐이고, 새 자가 <b>칸마다 값이 찍히는지</b>까지 봅니다. ★ 열 상품 목록은 <b>두 칸</b>으로 세웠고, 제안서 원본 환급률표는 발표에서만 <b>표 안에서</b> 굴립니다(머리줄은 붙여 둡니다) — 줄은 하나도 안 숨깁니다. ⚠ <b>제 자가 한 번 못 잡았습니다</b> — 차례에서 장 일곱을 빼도 전부 초록이었습니다. 자에 「track 안 장은 차례에 다 있다」를 보태고 다시 재니 울었습니다(8번). ⚠ <b>안 고친 것</b> — 책(스크롤) 보기에서 달러를 골라도 연금 장이 그대로 보입니다. <b>고치기 전 판도 똑같았습니다</b>(원래 있던 자리). 발표는 멀쩡합니다. ⚠ <b>밀기 직전에 하나 더 찾았습니다</b> — 발표 중에 그대로 인쇄하면 그 긴 표가 <b>522px 로 잘려 1,191px 이 종이에서 사라졌습니다.</b> 굴리는 것은 화면에서만 하게 고치고, 그것을 보는 자도 같이 넣었습니다(4-1번). ⚠⚠ <b>CI 가 저를 두 번 잡았습니다</b> — ① 쪼개면서 <b>단서를 숫자에서 떼어</b> 놓았습니다. 「비례 환산한 참고치」 · 「제안서를 다시 뽑아」 가 금액과 다른 쪽으로 넘어갔습니다 — 그 말이 없으면 고객은 그 숫자를 <b>확정 금액으로 믿습니다.</b> 숫자 옆으로 되돌렸습니다(1번). ② 닫기 줄을 하나씩 더 두어 <b>트랙 칸이 일찍 닫혔고</b>, 뒤따르던 장 일곱이 칸 밖으로 밀려나 <b>세금 단서가 트랙에서 사라졌습니다.</b> 발표는 멀쩡해 보였고 제 자도 못 봤습니다 — 자에 「차례의 장이 제 칸 안에 있나」 를 보태고 되돌려 보니 웁니다(8번). ★ 이 판에는 다른 세션이 먼저 올린 <b>판 X335(폰에서 카드뉴스 저장)</b> 와 <b>판 X336(자비스 HUD·목소리)</b> · <b>판 X337(자비스가 일정·상담카드·코칭도 찾음)</b> 도 함께 실려 있습니다 — 라이브에 무엇이 들어 있는지 쪽지가 거짓말하면 안 됩니다(11번 ①). ⚠ 제 판 번호가 그 둘과 겹쳐 <b>X335 → X337 → X338</b> 로 두 번 밀었습니다(11번 ③).';
+var APP_BUILD='2026-11-05 16:35';
+var APP_BUILD_NOTE='⌨️ <b>도구 화면 찾기 칸 — 치는 중에 글자가 안 쪼개집니다</b>(판 X340) — 글자마다 화면 전체를 다시 그려 한글 조합이 끊기던 것을, 찾기 칸은 그대로 두고 그 밑만 다시 그리게 고쳤습니다. 오타도 봐 줍니다(엄하게 찾아 없으면 한 글자 틀린 것까지 · 「비슷한 이름을 찾았습니다」). 자비스는 메뉴 113칸 전부를 이름만 말해도 엽니다(「홈」 하나 고침). ◾ 함께 들어 있는 판: 🎬 발표 덱 다섯 갈래 — 한 쪽에 한 가지(판 X338) · 📅📝🌱 자비스 일정·상담카드·코칭(판 X337) — 먼저 나간 것입니다.';
 
 
 

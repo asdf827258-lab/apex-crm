@@ -22,6 +22,7 @@
           — 일정은 내 캘린더와 <b>같은 한 벌</b>(mcalItems) · 이름으로 물으면 그 분 것만 ·
           안 읽은 갈래는 「빠졌다」 고 밝힌다 · 상담카드 · 내 코칭 · 팀 코칭 · 안 열었으면 「안 읽음」 ·
           「쓰는 법」 물음 스물넷에 안 낀다 · ★★ AI · AI 목소리로 그 글(병력 · 이름)이 안 간다 (3번)
+     [11] 🗂 메뉴(TABS)의 화면 <b>전부</b>를 이름만 말해도 자비스가 그 화면을 연다 — 메뉴를 줄이는 전제
      [9] 콘솔 오류 0 · 바깥 주소 0
    ★ 이름은 「홍길동」 (3번).                                                     */
 const { chromium } = require('playwright');
@@ -306,6 +307,16 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
   const TOPEN = await f.evaluate(() => { var n = jvFind('팀 코칭 성춘향').filter(x => x.k === 'coach')[0]; return n ? n.id : ''; });
   is(TOPEN === 'branch_coach', '팀 코칭 답은 「팀 코칭」 화면으로 잇는다 — ' + TOPEN);
 
+
+  sec('[11] 🗂 메뉴의 화면 전부를 <b>이름만 말해도</b> 자비스가 여는가 (메뉴 간소화의 전제 · 2026-11-05)');
+  /* 사장님 말씀 「이제 메뉴 간소화해줘 자비스에서 모두 부를수 있다면」 — 그 「~라면」 을 잽니다.
+     메뉴(TABS)의 화면 하나하나를 그 이름으로 물어, 자비스가 <b>그 화면</b>을 첫 걸음으로 세우나.
+     처음 재었을 때 113칸 중 「홈」 하나가 한 글자라 걸러져 못 열었습니다(JV_ONE 에 더함). */
+  const TB = await p.evaluate(() => { var o = []; TABS.forEach(g => g.items.forEach(it => o.push({id:it.id, t:it.title}))); return o; });
+  const CV = await f.evaluate((L) => L.filter(x => { var r = offline(x.t), st = (r.steps || []).map(s => s.id).filter(Boolean);
+    var r2 = offline(x.t + ' 열어줘'), st2 = (r2.steps || []).map(s => s.id).filter(Boolean);
+    return !(st[0] === x.id || r.top === x.id || st2[0] === x.id || r2.top === x.id); }).map(x => x.id + '(' + x.t + ')'), TB);
+  is(TB.length >= 100 && CV.length === 0, '메뉴 ' + TB.length + '칸 전부 — 이름만 말해도 그 화면이 첫 걸음' + (CV.length ? ' ← 못 여는 것 ' + CV.length + ': ' + CV.slice(0, 6).join(' · ') : ''));
   sec('[9] 콘솔 오류 · 바깥 주소');
   is(errs.length === 0, '콘솔 오류 0' + (errs.length ? ' ← ' + errs.slice(0, 3).join(' · ') : ''));
   is(outside.length === 0, '바깥 주소 0' + (outside.length ? ' ← ' + outside.slice(0, 3).join(' · ') : ''));
