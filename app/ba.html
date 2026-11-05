@@ -1456,6 +1456,7 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 /* 📄 상품 제안서 읽기 (판 X330) */
 .ppc{display:flex;flex-direction:column;gap:3px;margin:0 0 8px;font-size:13px}
 .ppc span{border-radius:8px;padding:4px 10px}.ppc .g{background:#E7F6EF;color:#0B6B4B}.ppc .y{background:#FFF7E0;color:#8A6A2F}.ppc .r{background:#FDECEC;color:#B4232A}
+.ppt.hidedup tr.dupr{display:none}.ppdt{margin-top:6px}
 .ppw{margin:0 0 8px}.ppt em.dup{font-style:normal;font-size:11.5px;font-weight:800;color:#8A6A2F;background:#FFF7E0;border-radius:6px;padding:0 6px;margin-left:4px}
 .kb.pp{margin-bottom:12px}
 .ppv{border:1px solid var(--ln);border-radius:12px;padding:10px 12px;background:#fff;margin-top:8px}
@@ -7333,7 +7334,7 @@ function ppTables(lines){
       if(M.length&&(M[0].v!==null||M[0].usd)){amt=M[0];tail=L.slice(0,amt.i);}
       else if(manCol){var mm=L.match(/^(.*?\D)\s([0-9][0-9,]*)\s+(?:종신|\d{2,3}\s*세|\d{1,2}\s*년)/);if(mm){amt={t:mm[2]+'만원',v:parseFloat(mm[2].replace(/,/g,'')),i:mm[1].length};tail=mm[1];}}
       /* 꺾인 이름만 잇는다 — 설명 문장(「~경우」 「지급」 「합니다」)은 이름이 아니다 */
-      if(!amt){if(L.length<70&&!/^\d+$/.test(L)&&!/경우|지급하|지급합|지급사유|합니다|입니다|약관|※|보험금을|정의|세부/.test(L))buf.push(L);else buf=[];if(buf.length>3)buf.shift();continue;}
+      if(!amt){if(/^[,.\d\s%\/년세|~\-]+$/.test(L)||/^,/.test(L)){continue;}if(L.length<70&&!/^\d+$/.test(L)&&!/경우|지급하|지급합|지급사유|합니다|입니다|약관|※|보험금을|정의|세부/.test(L))buf.push(L);else buf=[];if(buf.length>3)buf.shift();continue;}
       var name=(buf.join('')+tail).replace(/^\s*(?:기본계약|입원일당|치료비|진단비|수술비|재물\/배상|배상책임|화재손해|건물|주계약|선택특약)?\s*\d{0,4}\s*/,'').replace(/\s+/g,' ').trim();
       buf=[];
       if(name.length<2||name.length>80||/납입면제|납입지원|보험료자동|대리청구|제도성|보험료|해약환급금(?!형)|환급률|환율|원화환산|경우|지급합니다|약관|있습니다|남성|여성|기준|상령일/.test(name))continue;
@@ -7476,7 +7477,7 @@ function ppOpts(sel){
 function ppPreview(){
   var X=window.__PP;if(!X)return '';var P=X.P;
   function inp(f,ph,w){return '<input value="'+esc(P[f]||'')+'" placeholder="'+ph+'" style="width:'+(w||140)+'px" oninput="__PP.P.'+f+'=this.value">';}
-  function row(r,i,arr){return '<tr class="'+(r.on?'':'off')+'"><td><input type="checkbox"'+(r.on?' checked':'')+' onchange="ppTog(\''+arr+'\','+i+',this.checked)"></td>'+
+  function row(r,i,arr){return '<tr class="'+(r.on?'':'off')+(r.dup?' dupr':'')+'"><td><input type="checkbox"'+(r.on?' checked':'')+' onchange="ppTog(\''+arr+'\','+i+',this.checked)"></td>'+
     '<td class="raw">'+esc(r.raw)+(r.dup?' <em class="dup">같은 담보 · 조건만 다름</em>':'')+(r.usd?' <em class="dup">달러 $'+r.usd+'</em>':'')+'</td>'+
     '<td><select onchange="ppKey(\''+arr+'\','+i+',this.value)">'+ppOpts(r.k)+'</select></td>'+
     '<td><input class="amt" value="'+(r.v===null||r.v===undefined?'':(Math.round(r.v*100)/100))+'" inputmode="decimal" oninput="ppAmt(\''+arr+'\','+i+',this.value)"> <i>만원</i></td></tr>';}
@@ -7490,8 +7491,10 @@ function ppPreview(){
     (nUsd||P.usd?'<div class="note w ppw">💵 <b>달러 상품</b>입니다 — 달러 금액은 칸에 안 넣었습니다. 원화로 바꾼 금액을 직접 적어 주세요.</div>':'')+
     '<div class="ppf"><label>회사 '+inp('co','예) 삼성화재')+'</label><label>상품 '+inp('nm','상품명',260)+'</label>'+
      '<label>월 보험료 '+inp('premMan','만원',80)+' 만원</label><label>납입 '+inp('years','년',50)+' 년</label><label>만기 '+inp('term','예) 100세만기',100)+'</label></div>'+
-    '<table class="ppt"><thead><tr><th></th><th>제안서 원문 줄</th><th>우리가 알아본 담보</th><th>가입금액</th></tr></thead><tbody>'+
+    /* 같은 담보 · 조건만 다른 줄은 <b>접어 둔다</b> — 다 펴면 표가 세 배로 길어져 고칠 곳이 안 보인다 (판 X345) */
+    '<table class="ppt'+(nDup?' hidedup':'')+'"><thead><tr><th></th><th>제안서 원문 줄</th><th>우리가 알아본 담보</th><th>가입금액</th></tr></thead><tbody>'+
      P.rows.map(function(r,i){return row(r,i,'rows');}).join('')+'</tbody></table>'+
+    (nDup?'<button class="mini ppdt" onclick="var t=document.querySelector(\'.ppv .ppt\');t.classList.toggle(\'hidedup\');this.textContent=t.classList.contains(\'hidedup\')?\'조건만 다른 줄 '+nDup+'개 보기 ▾\':\'조건만 다른 줄 접기 ▴\';">조건만 다른 줄 '+nDup+'개 보기 ▾</button>':'')+
     (P.other.length?'<details class="ppo"><summary>담보처럼 보이지만 <b>못 알아본 줄 '+P.other.length+'개</b> — 담보를 골라 체크하면 같이 들어갑니다</summary><table class="ppt"><tbody>'+
       P.other.map(function(r,i){return row(r,i,'other');}).join('')+'</tbody></table></details>':'')+
     '<div class="ppa"><button class="btn" onclick="ppGo()">이대로 ③ 추가 보험에 넣기</button><button class="mini" onclick="ppCancel()">취소</button>'+
