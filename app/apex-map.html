@@ -552,6 +552,220 @@ body.in-crm{padding-bottom:84px}
   .ask{padding:0 14px}
   .askrow{flex-wrap:wrap}
 }
+
+/* ══ 🛰 <b>J.A.R.V.I.S HUD</b> — 판 X336 ════════════════════════════════════
+   사장님 말씀 2026-11-04 — 「자비스를 완전 대폭 업그레이드 해줘, 마치 아이언맨
+   나오는 자비스처럼 화면을 만들고 목소리를 개조해」.
+   ★ <b>이 화면만 어둡게 고정</b>합니다 — 2026-11-04 사장님이 「자비스만 검은 HUD」 를
+     고르셨습니다. 「흰색 고정」(2026-10-03)의 까닭이던 <b>테마가 바뀌지 않는다</b>는
+     그대로 지킵니다: 폰이 다크든 라이트든 <b>같은 색</b>입니다(check-lightmode [5] ·
+     그 자의 「어둡게 그린 화면」 면제 목록에 이 화면을 올렸습니다).
+   ★ 자리(id · class)는 <b>한 글자도 안 바꿨습니다</b> — 색과 모양만 덮습니다.
+     엔진 · 자(check-jvguide · check-jvfind …)가 보는 자리는 그대로입니다.
+   ★ 글씨 13px · 단추 44px · <b>대비 4.5</b> 바닥은 그대로 지킵니다 (check-read).
+     그래서 바탕은 <b>단색</b>(그러데이션은 아주 옅게 겹치기만)으로 두었습니다 —
+     자가 단색 바탕으로 대비를 잽니다.                                         */
+:root{
+  --h-bg:#030B16; --h-bg2:#061527; --h-panel:#071A2C; --h-panel2:#0A2239;
+  --h-line:#14486E; --h-line2:#1E6A9A;
+  --h-cy:#3FE0FF; --h-cy2:#8AF0FF; --h-cy-d:#0B6A8E;
+  --h-ink:#E8F8FF; --h-sub:#AFC8DB; --h-amb:#FFCB70; --h-ok:#66F2B4; --h-red:#FF7A7A; --h-vio:#C9B8FF;
+  --h-glow:0 0 0 1px rgba(63,224,255,.22), 0 0 22px rgba(63,224,255,.16);
+}
+html{background-color:var(--h-bg)}
+body{
+  color:var(--h-ink); background-color:var(--h-bg);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(63,224,255,.10), rgba(63,224,255,0) 70%),
+    linear-gradient(rgba(63,224,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(63,224,255,.035) 1px, transparent 1px);
+  background-size:auto, 34px 34px, 34px 34px;
+  background-attachment:fixed;
+  font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic','맑은 고딕','Noto Sans KR',sans-serif;
+}
+body.dock{background-color:transparent; background-image:none}
+/* 위 띠 */
+.bar{background:rgba(3,11,22,.94); border-bottom:1px solid var(--h-line); box-shadow:0 1px 0 rgba(63,224,255,.18), 0 8px 24px rgba(0,0,0,.45)}
+.bar h1{color:var(--h-ink); letter-spacing:.5px}
+.bar h1 b{color:var(--h-cy)}
+.bar h1 small{color:var(--h-sub)}
+.btn{background:var(--h-panel); color:var(--h-ink); border:1px solid var(--h-line2); box-shadow:none}
+.btn:hover{color:var(--h-cy2); border-color:var(--h-cy); box-shadow:var(--h-glow)}
+.btn:active{box-shadow:none}
+.btn.go{background:var(--h-cy); color:#021320; border-color:var(--h-cy); box-shadow:0 0 18px rgba(63,224,255,.35)}
+.btn.go:hover{color:#021320; border-color:var(--h-cy2); background:var(--h-cy2)}
+#aiBtn .dot{background:#4A6278}
+#aiBtn.on .dot{background:var(--h-ok); box-shadow:0 0 0 3px rgba(102,242,180,.22), 0 0 10px rgba(102,242,180,.7)}
+
+/* ── 아크 원자로 · 이름 · 상태 ───────────────────────────────── */
+.hud{max-width:880px; margin:18px auto 0; padding:0 20px; display:flex; align-items:center; gap:22px}
+.hud-core{position:relative; width:168px; height:168px; flex:0 0 168px}
+.hud-svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible}
+.hud-svg .r1{transform-origin:100px 100px; animation:hudSpin 26s linear infinite}
+.hud-svg .r2{transform-origin:100px 100px; animation:hudSpin 14s linear infinite reverse}
+.hud-svg .r3{transform-origin:100px 100px; animation:hudSpin 9s linear infinite}
+.hud-svg .core{transform-origin:100px 100px; transition:transform .08s linear}
+.hud[data-st="think"] .r1{animation-duration:3.2s}
+.hud[data-st="think"] .r2{animation-duration:1.8s}
+.hud[data-st="think"] .r3{animation-duration:1.1s}
+.hud[data-st="listen"] .r2{animation-duration:4s}
+.hud[data-st="listen"] .hud-svg .glow{fill:rgba(255,203,112,.20)}
+@keyframes hudSpin{to{transform:rotate(360deg)}}
+.hud-wave{display:block; width:100%; max-width:380px; height:34px; margin-top:8px}
+.hud-id{flex:1; min-width:0}
+.hud-name{font-size:var(--t1); font-weight:800; letter-spacing:6px; color:var(--h-cy);
+  text-shadow:0 0 14px rgba(63,224,255,.55); line-height:1.2}
+.hud-sub{font-size:var(--t5); color:var(--h-sub); margin-top:4px; letter-spacing:.3px}
+.hud-sub b{color:var(--h-ink)}
+.hud-st{display:inline-flex; align-items:center; gap:7px; margin-top:10px; font-size:var(--t6); font-weight:800;
+  color:var(--h-cy2); letter-spacing:.5px}
+.hud-st i{width:8px; height:8px; border-radius:50%; background:var(--h-ok); box-shadow:0 0 10px var(--h-ok)}
+.hud[data-st="think"] .hud-st i{background:var(--h-cy); box-shadow:0 0 10px var(--h-cy); animation:lamp .5s infinite}
+.hud[data-st="talk"] .hud-st i{background:var(--h-cy2); box-shadow:0 0 12px var(--h-cy2); animation:lamp .35s infinite}
+.hud[data-st="listen"] .hud-st i{background:var(--h-amb); box-shadow:0 0 12px var(--h-amb); animation:lamp .6s infinite}
+.hud-stat{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+.hud-stat span{font-size:var(--t6); color:var(--h-sub); border:1px solid var(--h-line); background:var(--h-panel);
+  border-radius:8px; padding:4px 9px; white-space:nowrap}
+.hud-stat span b{color:var(--h-cy2); font-weight:800}
+@media (max-width:520px){
+  .hud{gap:14px; padding:0 14px; margin-top:12px}
+  .hud-core{width:112px; height:112px; flex:0 0 112px}
+  .hud-name{font-size:var(--t2); letter-spacing:4px}
+}
+
+/* ── 묻는 칸 · 상황 단추 ────────────────────────────────────── */
+.ask-h{color:var(--h-ink)}
+.ask-h small{color:var(--h-sub)}
+.askrow{background:var(--h-panel); border:1px solid var(--h-line2); box-shadow:var(--h-glow)}
+.askrow:focus-within{border-color:var(--h-cy); box-shadow:0 0 0 1px rgba(63,224,255,.5), 0 0 26px rgba(63,224,255,.25)}
+#ask{color:var(--h-ink)}
+#ask::placeholder{color:#7F9AB1}
+.lamp{background:var(--h-cy); box-shadow:0 0 0 4px rgba(63,224,255,.18), 0 0 12px rgba(63,224,255,.7)}
+.chip{background:var(--h-panel); color:var(--h-sub); border:1px solid var(--h-line); box-shadow:none}
+.chip:hover{border-color:var(--h-cy); color:var(--h-cy2); background:var(--h-panel2)}
+.chip.big{background:var(--h-panel); box-shadow:none}
+.chip.big .cw b{color:var(--h-ink)}
+.chip.big .cw i{color:var(--h-sub)}
+.chip.big:hover{border-color:var(--h-cy); box-shadow:var(--h-glow)}
+.chip.back{background:var(--h-panel2); color:var(--h-cy2)}
+
+/* ── 자비스 창 ──────────────────────────────────────────────── */
+#jarvis{background:var(--h-bg2); border:1px solid var(--h-line2);
+  box-shadow:0 0 0 1px rgba(63,224,255,.10), 0 0 40px rgba(63,224,255,.10), 0 24px 50px -12px rgba(0,0,0,.7)}
+body.dock #jarvis{background:var(--h-bg2); box-shadow:0 -1px 0 var(--h-cy), 0 -10px 30px rgba(63,224,255,.12)}
+.j-top{background:var(--h-panel); border-bottom:1px solid var(--h-line)}
+.j-top .t{color:var(--h-cy); letter-spacing:2px}
+.j-top .t small{color:var(--h-sub); letter-spacing:0}
+.j-x{background:var(--h-panel2); color:var(--h-ink); border:1px solid var(--h-line)}
+.j-x:hover{background:var(--h-panel2); color:var(--h-cy2); border-color:var(--h-cy)}
+.msg.me .bub{background:var(--h-cy-d); color:#fff; border:1px solid var(--h-line2)}
+.msg.j .bub{background:var(--h-panel); border:1px solid var(--h-line); color:var(--h-ink);
+  box-shadow:inset 3px 0 0 var(--h-cy), 0 0 24px rgba(63,224,255,.05)}
+.msg.j.err .bub{background:#2A0E14; border-color:#7A2430; color:#FFD3D3}
+.think i{background:var(--h-cy)}
+#jFoot{background:var(--h-panel); border-top:1px solid var(--h-line)}
+#jSay{background:var(--h-bg2); color:var(--h-ink); border:1px solid var(--h-line2)}
+#jSay::placeholder{color:#7F9AB1}
+#jSay:focus{border-color:var(--h-cy)}
+.j-tip{color:var(--h-sub)}
+
+/* 순서 */
+.steps li{border-bottom:1px dashed var(--h-line)}
+.sn{background:var(--h-panel2); color:var(--h-cy2); border:1px solid var(--h-line2)}
+.steps li.now .sn{background:var(--h-cy); color:#021320; box-shadow:0 0 0 5px rgba(63,224,255,.18)}
+.st-n{color:var(--h-ink)}
+.st-g{color:var(--h-sub)}
+.st-d{color:var(--h-sub)}
+.st-way{background:var(--h-bg2); border:1px solid var(--h-line); color:var(--h-sub)}
+.st-way b{color:var(--h-cy2)}
+.st-more summary{color:var(--h-cy2)}
+.st-more li{color:var(--h-sub)}
+.st-b a{background:var(--h-panel2); color:var(--h-cy2); border-color:var(--h-line2)}
+.st-b a:hover{background:var(--h-panel2); border-color:var(--h-cy); color:var(--h-cy2)}
+.st-b button{background:var(--h-panel); color:var(--h-ink); border-color:var(--h-line2)}
+.st-b button:hover{color:var(--h-cy2)}
+.st-b .st-here{background:var(--h-cy); color:#021320; border-color:var(--h-cy)}
+.st-b .st-here:hover{background:var(--h-cy2); color:#021320}
+
+/* 상자들 — 한 벌의 판(패널)로 모읍니다. 갈래는 <b>왼쪽 줄의 색</b>으로만 가릅니다 */
+.j-real, .j-more, .j-next, .j-try, .j-work, .j-ai, .j-find, .j-pen, .j-act{
+  background:var(--h-bg2); border:1px solid var(--h-line); border-left:3px solid var(--h-cy); color:var(--h-ink)}
+.j-real{border-left-color:var(--h-amb); color:var(--h-ink)}
+.j-real b{color:var(--h-amb)}
+.j-try{border-left-color:var(--h-amb); color:var(--h-ink)}
+.j-try b{color:var(--h-amb)}
+.j-more > b, .j-next b, .j-find > b, .j-pen > b{color:var(--h-cy2)}
+.j-next div{color:var(--h-sub)}
+.j-work, .j-act{border-left-color:var(--h-ok)}
+.j-work > b, .j-act > b{color:var(--h-ok)}
+.j-ai{border-left-color:var(--h-vio)}
+.j-ai > b{color:var(--h-vio)}
+.jw-row{border-top:1px dashed var(--h-line)}
+.jw-n{color:var(--h-ink)}
+.jw-s{color:var(--h-sub)}
+.jw-wait{color:var(--h-amb)}
+.ja-ok-t{color:var(--h-ok)}
+.jf-src{color:var(--h-cy2)}
+.jf-note{color:var(--h-sub)}
+.jf-best{background:var(--h-panel); border:1px solid var(--h-line2); box-shadow:inset 0 0 0 1px rgba(63,224,255,.06)}
+.jf-from{color:var(--h-cy)}
+.jf-img img{border-color:var(--h-line2)}
+.jr-copy, .jr-say, .jr-img, .jr-open{border:1px solid var(--h-line2); background:var(--h-panel); color:var(--h-ink)}
+.jr-copy:hover, .jr-say:hover, .jr-img:hover, .jr-open:hover{border-color:var(--h-cy); color:var(--h-cy2)}
+.jf-more > summary, .j-extra > summary, .j-way > summary{color:var(--h-cy2)}
+.j-pick button{background:var(--h-panel); color:var(--h-cy2); border:1px solid var(--h-line2)}
+.j-pick button:hover{background:var(--h-panel2); border-color:var(--h-cy)}
+.j-src{color:var(--h-sub)}
+.j-ai-st li{color:var(--h-sub)}
+.j-ai-st a{color:var(--h-cy2)}
+.jp-l, .jp-sex{background:var(--h-panel); border:1px solid var(--h-line2); color:var(--h-sub)}
+.jp-l input{color:var(--h-ink)}
+.jp-l i{color:var(--h-sub)}
+.jp-miss{border-color:var(--h-cy); box-shadow:0 0 0 2px rgba(63,224,255,.25)}
+.jp-sex button{background:var(--h-bg2); border:1px solid var(--h-line2); color:var(--h-ink)}
+.jp-sex button.on{background:var(--h-cy); border-color:var(--h-cy); color:#021320}
+.jp-go{background:var(--h-cy); color:#021320}
+.jp-big{color:var(--h-cy)}
+.j-pen .jr-b button{border:1px solid var(--h-line2); background:var(--h-panel); color:var(--h-ink)}
+.ja-in input{background:var(--h-panel); color:var(--h-ink); border:1px solid var(--h-line2)}
+.ja-no, .ja-in button{border:1px solid var(--h-line2); background:var(--h-panel); color:var(--h-ink)}
+.ja-tel{border:1px solid var(--h-cy); background:var(--h-cy); color:#021320}
+
+/* 🔭 <b>찾아본 곳</b> — 물음 하나로 앱의 어디까지 훑었는지 (판 X336) */
+.j-scan{margin-top:10px; border:1px solid var(--h-line); border-radius:11px; background:var(--h-bg2);
+  padding:8px 11px; white-space:normal; font-size:var(--t6); color:var(--h-sub); line-height:1.6}
+.j-scan > summary{cursor:pointer; list-style:none; min-height:44px; display:flex; align-items:center; gap:8px; color:var(--h-sub)}
+.j-scan > summary::-webkit-details-marker{display:none}
+.j-scan > summary b{color:var(--h-cy2)}
+.j-scan .js-bar{flex:0 0 46px; height:4px; border-radius:2px; background:var(--h-line); overflow:hidden}
+.j-scan .js-bar i{display:block; height:100%; background:var(--h-cy); animation:hudScan 1.1s ease-out 1 both}
+@keyframes hudScan{from{width:0} to{width:100%}}
+.js-list{display:flex; flex-wrap:wrap; gap:5px; padding:4px 0 6px}
+.js-list span{border:1px solid var(--h-line); border-radius:7px; padding:2px 8px; color:var(--h-sub); background:var(--h-panel)}
+.js-list span.hit{border-color:var(--h-cy); color:var(--h-cy2)}
+.js-list span.wait{border-color:#7A5A1E; color:var(--h-amb)}
+
+/* AI 연결 창 */
+#keyBox{background:rgba(1,6,14,.78)}
+.kb{background:var(--h-bg2); color:var(--h-ink); border:1px solid var(--h-line2); box-shadow:0 0 40px rgba(63,224,255,.12), 0 30px 60px rgba(0,0,0,.6)}
+.kb h3{color:var(--h-cy)}
+.kb p{color:var(--h-sub)}
+.kb label{color:var(--h-sub)}
+.kb input, .kb select{background:var(--h-panel); color:var(--h-ink); border:1px solid var(--h-line2)}
+.kb input:focus, .kb select:focus{border-color:var(--h-cy)}
+.kb .warn{background:#1E1606; border-color:#6B5218; color:var(--h-amb)}
+.kb .free{background:#06201A; border-color:#1C6B52; color:#BFF5DF}
+.kb .free b, .kb .free a{color:var(--h-ok)}
+.kb .free span{color:#BFF5DF}
+.kb a{color:var(--h-cy2)}
+.kb .vtest{margin-top:8px}
+
+/* 띠(독)에서는 원자로를 감춥니다 — 적는 칸이 먼저입니다 (판 X245) */
+body.dock .hud{display:none}
+/* 움직임을 줄이라 하신 기기에서는 돌리지 않습니다 */
+@media (prefers-reduced-motion:reduce){
+  .hud-svg .r1, .hud-svg .r2, .hud-svg .r3, .j-scan .js-bar i{animation:none}
+}
 </style>
 </head>
 <body>
@@ -567,6 +781,46 @@ body.in-crm{padding-bottom:84px}
   <span class="zoom">
     <button class="btn" id="zOut">작게</button><span id="zVal">100%</span><button class="btn" id="zIn">크게</button>
   </span>
+</div>
+
+<!-- 🛰 J.A.R.V.I.S HUD (판 X336) — 원자로는 직접 그린 SVG 입니다 (9번). 상태는 hudSet 한 곳이 칠합니다 -->
+<div class="hud" id="hud" data-st="idle">
+  <div class="hud-core" aria-hidden="true">
+    <svg class="hud-svg" viewBox="0 0 200 200">
+      <defs>
+        <radialGradient id="hudG" cx="50%" cy="50%" r="50%">
+          <stop offset="0" stop-color="#E8FDFF"/><stop offset=".35" stop-color="#8AF0FF"/>
+          <stop offset=".7" stop-color="#1FA9D6" stop-opacity=".55"/><stop offset="1" stop-color="#0B6A8E" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle class="glow" cx="100" cy="100" r="58" fill="rgba(63,224,255,.10)"/>
+      <g class="r1" fill="none" stroke="#3FE0FF">
+        <circle cx="100" cy="100" r="95" stroke-width="1" stroke-opacity=".45" stroke-dasharray="2 5"/>
+        <path d="M100 5 A95 95 0 0 1 182 52" stroke-width="3" stroke-opacity=".9"/>
+        <path d="M100 195 A95 95 0 0 1 18 148" stroke-width="3" stroke-opacity=".9"/>
+      </g>
+      <g class="r2" fill="none" stroke="#3FE0FF">
+        <circle cx="100" cy="100" r="81" stroke-width="5" stroke-opacity=".55" stroke-dasharray="46 18"/>
+      </g>
+      <g class="r3" fill="none" stroke="#8AF0FF">
+        <circle cx="100" cy="100" r="67" stroke-width="7" stroke-opacity=".35" stroke-dasharray="2 4"/>
+        <circle cx="100" cy="100" r="58" stroke-width="1" stroke-opacity=".7"/>
+      </g>
+      <g class="core">
+        <circle cx="100" cy="100" r="46" fill="url(#hudG)"/>
+        <circle cx="100" cy="100" r="33" fill="none" stroke="#CFFBFF" stroke-width="3"/>
+        <path d="M100 74 L123 113 L77 113 Z" fill="none" stroke="#E8FDFF" stroke-width="3" stroke-linejoin="round"/>
+        <circle cx="100" cy="100" r="11" fill="#F4FEFF"/>
+      </g>
+    </svg>
+  </div>
+  <div class="hud-id">
+    <div class="hud-name">J.A.R.V.I.S</div>
+    <div class="hud-sub">APEX 자비스 — 앱에 담긴 <b>모든 자료</b>를 이어서 찾습니다</div>
+    <div class="hud-st"><i></i><span id="hudStT">대기 중 — 무엇이든 물어보십시오</span></div>
+    <canvas class="hud-wave" id="hudWave" width="380" height="34" aria-hidden="true"></canvas>
+    <div class="hud-stat" id="hudStat"></div>
+  </div>
 </div>
 
 <div class="ask">
@@ -668,6 +922,11 @@ body.in-crm{padding-bottom:84px}
       <label>회사 서버를 거쳐 쓰는 경우에만 (선택)</label>
       <input id="kGProxy" type="text" placeholder="/api/gemini  — 비워 두면 위 키로 직접 연결" autocomplete="off">
     </div>
+    <!-- 🎙 자비스 목소리 (판 X336) — 고르는 표는 JV_VOX_OPTS 하나입니다 -->
+    <label for="kVox">자비스 목소리</label>
+    <select id="kVox"></select>
+    <div class="row vtest"><button class="btn" id="kVoxTry" type="button">목소리 들어 보기</button></div>
+    <p id="kVoxSay" style="margin:8px 0 0"></p>
     <div class="warn">키는 이 브라우저에만 저장되고 다른 곳으로 보내지 않습니다.
       발급은 <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com → API Keys</a>
       에서 하고, Billing 에 <b>월 상한</b>을 걸어 두면 과금 걱정이 없습니다. 쓴 만큼 요금이 나갑니다.</div>
@@ -4081,9 +4340,24 @@ function modeLabel(){
 
 /* ══ 목소리 ═══════════════════════════════
    자비스는 읽어 주는 편이 낫다 — 운전 중이거나 고객 앞이라 화면을 못 볼 때가 있다.
-   같은 한국어라도 또렷한 목소리가 있다. CRM 이 쓰는 차례를 그대로 따른다. */
-var VOICE_PREF = ['Google 한국의','Google 한국어','Google Korean','Yuna','유나',
-                  'SunHi','선히','Heami','혜미','InJoon','인준','Microsoft'];
+
+   ══ 🎙 <b>자비스 목소리 개조</b> (판 X336) ══════════════════════════════
+   사장님 말씀 2026-11-04 — 「목소리를 개조해」 · 고르신 것 「AI 남자 목소리」.
+   ★ <b>AI 목소리</b> — 회사 Gemini 통로(/api/gemini · 이미 있는 얇은 통과 프록시)로
+     차분한 남자 목소리(Charon)를 받아, 이 기기에서 <b>울림</b>(짧은 금속성 메아리 ·
+     잔향 · 압축)을 입혀 냅니다. <b>서버 코드는 한 줄도 안 바꿨습니다</b> — 그 통로는
+     모델 이름만 받아 넘깁니다.
+   ★ 서버를 아낍니다 (7번) — 답마다 <b>머리 한두 문장</b>(160자까지)만 읽고, 같은 말은
+     <b>다시 받지 않습니다</b>(이 창 안 기억 열두 마디). 한도·권한에 막히면 그 창에서는
+     더 부르지 않고 <b>기기 목소리로</b> 돌아갑니다 — 막힌 까닭은 「AI 연결」 창에 적습니다.
+   ★ <b>고객 실명·전화번호는 서버로 안 보냅니다</b> (3번) — 그런 말이 섞였거나 앱에
+     시켜 읽어 온 값(일꾼)이 든 답은 <b>기기 목소리</b>가 읽습니다. 이름을 가려 읽으면
+     「홍○○ 님」 이 되어 쓸모가 없고, 기기 목소리는 이 기기 밖으로 안 나갑니다.
+   ★ 기기 목소리도 <b>남자 목소리를 먼저</b> 고르고(InJoon 등), 없으면 낮춰 읽습니다.  */
+var VOICE_PREF = ['InJoon','인준','Minsu','민수','Hyunsu','현수','Male','남성',
+                  'Google 한국의','Google 한국어','Google Korean','Yuna','유나',
+                  'SunHi','선히','Heami','혜미','Microsoft'];
+var VOICE_MALE = /InJoon|인준|Minsu|민수|Hyunsu|현수|Male|남성/i;
 var TTS = {on:(LS.get('map_voice','1') === '1'), v:null};
 function ttsVoices(){
   try { return window.speechSynthesis ? (window.speechSynthesis.getVoices() || []) : []; }
@@ -4105,23 +4379,289 @@ function ttsClean(s){
     .replace(/[「」『』·▸▾›└]/g, ' ')
     .replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
 }
-function speak(text){
-  if (!TTS.on || !window.speechSynthesis) return;
-  var t = ttsClean(text);
-  if (!t) return;
+/* 목소리 고르개 — 「ai:Charon」 처럼 적습니다. 고르는 표는 이것 하나입니다 (5번) */
+var JV_VOX_OPTS = [
+  {v:'ai:Charon',  t:'AI 남자 — 차분하고 또렷하게 (추천)'},
+  {v:'ai:Orus',    t:'AI 남자 — 낮고 단단하게'},
+  {v:'ai:Iapetus', t:'AI 남자 — 맑고 부드럽게'},
+  {v:'dev',        t:'기기 목소리 — 서버를 부르지 않습니다'}
+];
+var JV_VOX = {
+  pick:LS.get('jv_vox', 'ai:Charon'),
+  /* 모델 이름은 구글이 바꿉니다 — 앞의 것이 「없다」 고 하면 다음 것으로 (막힘과 「없음」 은 다릅니다) */
+  models:['gemini-2.5-flash-preview-tts', 'gemini-2.5-flash-tts', 'gemini-2.5-pro-preview-tts'],
+  model:LS.get('jv_vox_model', ''), dead:'', ok:false, slow:0, wait:false, armed:false,
+  cache:{}, keys:[], ctx:null, an:null, src:null, seq:0, via:''
+};
+/* 말투 지시는 <b>영어로</b> 둡니다 — 읽을 글(한국어)과 갈라져, 지시문까지 소리 내 읽는 일이 없습니다 */
+var JV_VOX_STYLE = 'Read the following Korean text aloud in a calm, low, composed voice, like a refined AI butler. Text: ';
+function voxAiName(){ var m = /^ai:(\w+)$/.exec(JV_VOX.pick || ''); return m ? m[1] : ''; }
+/* ★ <b>누르신 뒤에만</b> 부릅니다 — 창을 열자마자 서는 인사말까지 AI 목소리로 받으면 자비스를 열
+   때마다 서버를 부르고, 폰은 누르기 전 소리를 막아 그 소리는 버려집니다 (7번) */
+function voxCan(){
+  return JV_VOX.armed && !!voxAiName() && !JV_VOX.dead && !!(getGKey() || getGProxy()) && typeof fetch === 'function' &&
+         !!(window.AudioContext || window.webkitAudioContext);
+}
+/* 이 말을 서버로 보내도 되나 — 전화번호 꼴이나 고객 이름이 들었으면 안 됩니다 (3번) */
+function voxPrivate(t){
+  if (/\d{2,4}[-\s.]?\d{3,4}[-\s.]?\d{4}/.test(t)) return true;
+  var P = kbApp();
   try {
-    window.speechSynthesis.cancel();
+    var L = (P && P.OSC && P.OSC.list) || [];
+    for (var i = 0; i < L.length; i++){
+      var nm = String((typeof P.cmName === 'function' ? P.cmName(L[i]) : L[i].name) || '').replace(/\s+/g, '');
+      if (nm.length >= 2 && t.replace(/\s+/g, '').indexOf(nm) >= 0) return true;
+    }
+  } catch(e){}
+  return false;
+}
+/* 머리 한두 문장 — 160자까지, 문장 끝에서 자릅니다. 회사 통로가 10초에 끊으므로 짧게 둡니다 */
+function voxCut(t){
+  if (t.length <= 160) return t;
+  var c = t.slice(0, 160), at = Math.max(c.lastIndexOf('. '), c.lastIndexOf('다 '), c.lastIndexOf('요 '), c.lastIndexOf('? '));
+  return at >= 60 ? c.slice(0, at + 1) : c;
+}
+function voxCtx(){
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  if (!JV_VOX.ctx){ try { JV_VOX.ctx = new AC(); } catch(e){ return null; } }
+  try { if (JV_VOX.ctx.state === 'suspended') JV_VOX.ctx.resume(); } catch(e){}
+  return JV_VOX.ctx;
+}
+/* 소리판은 <b>누르신 뒤에만</b> 깨울 수 있습니다(폰 브라우저의 규칙) — 첫 누름에 깨워 둡니다 */
+function voxWake(){ JV_VOX.armed = true; if (TTS.on && voxCan()) voxCtx(); }
+document.addEventListener('pointerdown', voxWake, true);
+document.addEventListener('keydown', voxWake, true);
+
+function voxReq(text, model){
+  var gkey = getGKey(), url, headers = {'Content-Type':'application/json'};
+  var payload = {contents:[{role:'user', parts:[{text:JV_VOX_STYLE + text}]}],
+    generationConfig:{responseModalities:['AUDIO'],
+      speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:voxAiName() || 'Charon'}}}}};
+  if (gkey) url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(gkey);
+  else { url = getGProxy(); payload.model = model; var tok = getAppToken(); if (tok) headers['X-App-Token'] = tok; }
+  var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var timer = setTimeout(function(){ if (ctl) ctl.abort(); }, 14000);
+  var opt = {method:'POST', headers:headers, body:JSON.stringify(payload)};
+  if (ctl) opt.signal = ctl.signal;
+  return fetch(url, opt).then(function(r){ clearTimeout(timer); return r.text().then(function(txt){ return {st:r.status, ok:r.ok, txt:txt}; }); },
+                              function(e){ clearTimeout(timer); throw e; });
+}
+/* 받은 소리 — base64 의 16비트 PCM(작은 끝)을 −1~1 로 */
+function voxPcm(b64){
+  var bin = atob(b64), n = bin.length >> 1, out = new Float32Array(n);
+  for (var i = 0; i < n; i++){
+    var v = bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8);
+    if (v >= 32768) v -= 65536;
+    out[i] = v / 32768;
+  }
+  return out;
+}
+function voxFetch(text){
+  var hit = JV_VOX.cache[text];
+  if (hit) return Promise.resolve(hit);
+  var list = JV_VOX.model ? [JV_VOX.model].concat(JV_VOX.models.filter(function(m){ return m !== JV_VOX.model; })) : JV_VOX.models.slice();
+  function next(i){
+    if (i >= list.length) return Promise.reject(new Error('AI 목소리 모델을 찾지 못했습니다'));
+    return voxReq(text, list[i]).then(function(r){
+      var msg = r.txt;
+      try { var j0 = JSON.parse(r.txt); msg = (j0.error && j0.error.message) || j0.message || r.txt; } catch(e){}
+      if (!r.ok){
+        /* 「그런 모델 없음」 만 다음 모델로 — 한도(429) · 권한(401·403) 은 막힌 것입니다 */
+        if ((r.st === 404 || r.st === 400) && /not\s*found|not\s*supported|unknown|is not|does not/i.test(msg)) return next(i + 1);
+        var e2 = new Error(String(msg).slice(0, 120)); e2.status = r.st; throw e2;
+      }
+      var parts = [];
+      try { parts = JSON.parse(r.txt).candidates[0].content.parts || []; } catch(e){ parts = []; }
+      var d = parts.filter(function(p){ return p.inlineData && p.inlineData.data; })[0];
+      if (!d) throw new Error('소리 없이 답이 왔습니다');
+      var rate = +((/rate=(\d+)/.exec(d.inlineData.mimeType || '') || [0, 24000])[1]) || 24000;
+      var a = {pcm:voxPcm(d.inlineData.data), rate:rate};
+      JV_VOX.model = list[i]; JV_VOX.ok = true; LS.set('jv_vox_model', list[i]);
+      JV_VOX.cache[text] = a; JV_VOX.keys.push(text);
+      if (JV_VOX.keys.length > 12) delete JV_VOX.cache[JV_VOX.keys.shift()];
+      return a;
+    });
+  }
+  return next(0);
+}
+/* 잔향 — 짧게 사그라드는 소리를 이 자리에서 만듭니다(파일을 안 받습니다) */
+function voxVerb(ctx){
+  var len = Math.floor(ctx.sampleRate * 0.5), b = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (var c = 0; c < 2; c++){
+    var d = b.getChannelData(c);
+    for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2);
+  }
+  return b;
+}
+/* 🎛 울림 사슬 — 낮은 웅웅거림 걷기 → 몸통 → 또렷함 → (짧은 금속성 메아리 + 잔향) → 압축 */
+function voxPlay(a, seq){
+  var ctx = voxCtx();
+  if (!ctx) throw new Error('소리판을 못 엽니다');
+  var buf = ctx.createBuffer(1, a.pcm.length, a.rate);
+  if (buf.copyToChannel) buf.copyToChannel(a.pcm, 0); else buf.getChannelData(0).set(a.pcm);
+  var src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = 0.97;
+  var hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 85;
+  var body = ctx.createBiquadFilter(); body.type = 'lowshelf'; body.frequency.value = 220; body.gain.value = 3;
+  var pres = ctx.createBiquadFilter(); pres.type = 'peaking'; pres.frequency.value = 2900; pres.Q.value = 0.9; pres.gain.value = 3.5;
+  var dry = ctx.createGain(); dry.gain.value = 0.9;
+  var dl = ctx.createDelay(0.1); dl.delayTime.value = 0.014;
+  var fb = ctx.createGain(); fb.gain.value = 0.24;
+  var wet = ctx.createGain(); wet.gain.value = 0.15;
+  var cv = ctx.createConvolver(); cv.buffer = voxVerb(ctx);
+  var rv = ctx.createGain(); rv.gain.value = 0.11;
+  var comp = ctx.createDynamicsCompressor(); comp.threshold.value = -20; comp.ratio.value = 3;
+  var an = ctx.createAnalyser(); an.fftSize = 512;
+  src.connect(hp); hp.connect(body); body.connect(pres);
+  pres.connect(dry); dry.connect(comp);
+  pres.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(comp);
+  pres.connect(cv); cv.connect(rv); rv.connect(comp);
+  comp.connect(an); an.connect(ctx.destination);
+  JV_VOX.src = src; JV_VOX.an = an; JV_VOX.via = 'ai';
+  src.onended = function(){ if (seq === JV_VOX.seq){ JV_VOX.an = null; JV_VOX.src = null; hudSet(busy ? 'think' : 'idle'); } };
+  hudSet('talk');
+  src.start(0);
+}
+/* 기기 목소리 — 이 기기 밖으로 안 나갑니다 */
+function speakDev(t, seq){
+  if (!window.speechSynthesis) return;
+  try {
     var u = new SpeechSynthesisUtterance(t.slice(0, 400));
     if (!TTS.v) TTS.v = ttsPick();
     if (TTS.v){ u.voice = TTS.v; u.lang = TTS.v.lang; } else { u.lang = 'ko-KR'; }
-    u.rate = 1.0; u.pitch = 1.03; u.volume = 1;
+    /* 남자 목소리가 없으면 낮춰 읽습니다 — 자비스는 차분해야 합니다 */
+    var male = !!(TTS.v && VOICE_MALE.test(TTS.v.name || ''));
+    u.rate = 1.02; u.pitch = male ? 0.95 : 0.8; u.volume = 1;
+    u.onstart = function(){ if (seq === JV_VOX.seq){ JV_VOX.via = 'dev'; hudSet('talk'); } };
+    u.onend = u.onerror = function(){ if (seq === JV_VOX.seq) hudSet(busy ? 'think' : 'idle'); };
     window.speechSynthesis.speak(u);
   } catch(e){}
 }
-function ttsStop(){ try{ window.speechSynthesis.cancel(); }catch(e){} }
+/* opt.priv — 앱에 시켜 읽어 온 값(고객·팀원)이 든 답. 서버로 안 보냅니다 (3번) */
+function speak(text, opt){
+  if (!TTS.on) return;
+  var t = ttsClean(text);
+  if (!t) return;
+  ttsStop();
+  var seq = JV_VOX.seq;
+  if (voxCan() && !(opt && opt.priv) && !voxPrivate(t)){
+    var s = voxCut(t);
+    hudSay('목소리를 만드는 중…'); JV_VOX.wait = true;
+    voxFetch(s).then(function(a){
+      JV_VOX.wait = false;
+      if (seq !== JV_VOX.seq) return;
+      try { voxPlay(a, seq); } catch(e){ speakDev(t, seq); }
+    }, function(e){
+      JV_VOX.wait = false;
+      if (seq !== JV_VOX.seq) return;
+      /* 한도 · 권한 · 시간 초과 — 이 창에서는 더 안 부릅니다 (7번). 까닭은 남깁니다 */
+      /* 시간 초과(우리 쪽 14초 · 회사 통로의 502·503·504)는 <b>두 번째</b>에야 막힘으로 칩니다 —
+         한 번 느린 것은 막힌 것이 아닙니다 */
+      var slow = (e && e.name === 'AbortError') || (e && /^50[234]$/.test(String(e.status)));
+      if (!slow) JV_VOX.dead = (e && e.status ? e.status + ' · ' : '') + ((e && e.message) || '막혔습니다');
+      else if (++JV_VOX.slow >= 2) JV_VOX.dead = (e && e.status ? e.status + ' · ' : '') + '시간이 너무 걸렸습니다';
+      hudStats(); speakDev(t, seq);
+    });
+    return;
+  }
+  speakDev(t, seq);
+}
+function ttsStop(){
+  JV_VOX.seq++;
+  try { window.speechSynthesis.cancel(); } catch(e){}
+  try { if (JV_VOX.src) JV_VOX.src.stop(); } catch(e){}
+  JV_VOX.src = null; JV_VOX.an = null;
+  if (typeof hudSet === 'function' && HUD.st === 'talk') hudSet(busy ? 'think' : 'idle');
+}
 if (window.speechSynthesis){
   try { window.speechSynthesis.onvoiceschanged = function(){ TTS.v = ttsPick(); }; } catch(e){}
   TTS.v = ttsPick();
+}
+/* 묻는 순간 「삐빅」 — 들었다는 표시. 이 기기에서 만든 소리라 서버를 안 부릅니다 */
+function hudBeep(){
+  if (!TTS.on) return;
+  var ctx = voxCtx(); if (!ctx) return;
+  try {
+    [[880, 0], [1320, 0.07]].forEach(function(p){
+      var o = ctx.createOscillator(), g = ctx.createGain(), t0 = ctx.currentTime + p[1];
+      o.type = 'sine'; o.frequency.value = p[0];
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.05, t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.09);
+      o.connect(g); g.connect(ctx.destination); o.start(t0); o.stop(t0 + 0.1);
+    });
+  } catch(e){}
+}
+
+/* ══ 🛰 HUD — 원자로 · 상태 · 파형 (판 X336) ══════════════════════════
+   ★ 「지금 무엇을 하나」 는 <b>hudSet 한 곳</b>이 칠합니다 (5번) — 대기 · 찾는 중 ·
+     말하는 중 · 듣는 중. 여기저기서 따로 칠하면 원자로와 글이 서로 다른 말을 합니다.
+   ★ 그림은 <b>움직일 때만</b> 돕니다 — 대기 중에는 한 번 그리고 멈춥니다. 창이 뒤로
+     가면(document.hidden) 쉽니다.                                            */
+var HUD = {el:document.getElementById('hud'), st:'idle', raf:0, t:0, say:''};
+var HUD_SAY = {idle:'대기 중 — 무엇이든 물어보십시오', think:'찾는 중 — 앱 자료를 훑고 있습니다',
+               talk:'말하는 중', listen:'듣고 있습니다 — 말씀하십시오'};
+function hudSay(t){ var e = document.getElementById('hudStT'); if (e) e.textContent = t; }
+function hudSet(st){
+  HUD.st = st;
+  if (HUD.el) HUD.el.setAttribute('data-st', st);
+  hudSay(HUD_SAY[st] || '');
+  hudRun();
+}
+function hudRun(){
+  if (HUD.raf || !HUD.el) return;
+  var cv = document.getElementById('hudWave');
+  if (!cv || !cv.getContext) return;
+  var cx = cv.getContext('2d'), core = HUD.el.querySelector('.core'), buf = null;
+  function frame(){
+    HUD.raf = 0;
+    var W = cv.width, H = cv.height, mid = H / 2, amp = 0, i;
+    cx.clearRect(0, 0, W, H);
+    cx.lineWidth = 2; cx.strokeStyle = '#3FE0FF'; cx.shadowColor = '#3FE0FF'; cx.shadowBlur = 8;
+    cx.beginPath();
+    if (HUD.st === 'talk' && JV_VOX.an){
+      if (!buf || buf.length !== JV_VOX.an.fftSize) buf = new Uint8Array(JV_VOX.an.fftSize);
+      JV_VOX.an.getByteTimeDomainData(buf);
+      for (i = 0; i < buf.length; i++){
+        var v = (buf[i] - 128) / 128; amp = Math.max(amp, Math.abs(v));
+        var x = i / (buf.length - 1) * W, y = mid + v * mid * 0.95;
+        if (i) cx.lineTo(x, y); else cx.moveTo(x, y);
+      }
+    } else {
+      HUD.t += 0.06;
+      var k = HUD.st === 'talk' ? 0.75 : (HUD.st === 'think' ? 0.4 : (HUD.st === 'listen' ? 0.3 : 0.06));
+      for (i = 0; i <= 96; i++){
+        var xx = i / 96 * W, env = Math.sin(Math.PI * i / 96);
+        var yy = mid + Math.sin(i * 0.42 + HUD.t * 3) * Math.sin(i * 0.11 - HUD.t) * mid * k * env;
+        if (i) cx.lineTo(xx, yy); else cx.moveTo(xx, yy);
+      }
+      amp = HUD.st === 'talk' ? 0.35 + 0.25 * Math.abs(Math.sin(HUD.t * 5)) : 0;
+    }
+    cx.stroke();
+    if (core) core.setAttribute('transform', 'translate(100 100) scale(' + (1 + amp * 0.14).toFixed(3) + ') translate(-100 -100)');
+    if (HUD.st !== 'idle' && !document.hidden) HUD.raf = requestAnimationFrame(frame);
+  }
+  HUD.raf = requestAnimationFrame(frame);
+}
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) hudRun(); });
+/* 답이 섰으면 잠깐 뒤 대기로 — AI 의견이나 목소리를 기다리는 중이면 그대로 둡니다 */
+function hudCalm(){ setTimeout(function(){ if (HUD.st === 'think' && !busy && !JV_VOX.wait) hudSet('idle'); }, 900); }
+/* 이어 둔 곳을 센 수로 — 세는 곳은 이미 있는 셈(kb · jvKnowCount · JV_FIND)을 부릅니다 (5번).
+   고객 수는 <b>읽은 뒤에만</b> 적습니다 — 안 읽었으면 「아직 안 읽음」 (0 이 아닙니다 · 1번) */
+function hudStats(){
+  var el = document.getElementById('hudStat');
+  if (!el) return;
+  var K = kb(), P = kbApp(), scr = 0, cli = null;
+  K.docs.forEach(function(d){ if (d.kind === 'scr') scr++; });
+  try { if (P && P.OSC && P.OSC.loaded) cli = (P.OSC.list || []).length; } catch(e){}
+  var src = {}; JV_FIND.forEach(function(f){ src[f.n] = 1; });
+  var kn = jvDz(P) ? jvKnowCount() : null;   /* 질병 가이드 표를 못 읽었으면 0 이 아니라 「안 읽음」 (1번) */
+  var vx = !TTS.on ? '끔' : (voxCan() ? 'AI' : (voxAiName() && JV_VOX.dead ? '기기(AI 막힘)' : '기기'));
+  var p = ['화면 <b>' + scr + '</b>', '자료 갈래 <b>' + Object.keys(src).length + '</b>',
+           '보험 자료 ' + (kn == null ? '<b>아직 안 읽음</b>' : '<b>' + kn + '</b>'),
+           '고객 ' + (cli == null ? '<b>아직 안 읽음</b>' : '<b>' + cli + '</b>명'),
+           hasAI() ? 'AI <b>연결</b>' : 'AI <b>끔</b> · 앱 자료로 답함',
+           '목소리 <b>' + vx + '</b>'];
+  el.innerHTML = p.map(function(x){ return '<span>' + x + '</span>'; }).join('');
 }
 
 function openJ(){ jarvis.classList.add('on');
@@ -4151,6 +4691,7 @@ document.getElementById('jX').onclick = function(){
   function stop(){
     listening = false;
     b.textContent = '🎤'; b.style.background = ''; b.style.color = '';
+    if (HUD.st === 'listen') hudSet('idle');
     try { if (rec) rec.stop(); } catch(e){}
   }
   b.onclick = function(){
@@ -4178,6 +4719,7 @@ document.getElementById('jX').onclick = function(){
       rec.start();
       listening = true;
       b.textContent = '⏹'; b.style.background = '#DC2626'; b.style.color = '#fff';
+      hudSet('listen');
       openJ();
     } catch(e){ stop(); }
   };
@@ -4191,6 +4733,7 @@ document.getElementById('jX').onclick = function(){
     paint();
     if (!TTS.on) ttsStop();
     else speak('네, 듣고 있습니다.');
+    hudStats();
   };
   paint();
 })();
@@ -4218,6 +4761,7 @@ function addJ(res, isErr){
   var d = document.createElement('div');
   d.className = 'msg j' + (isErr ? ' err' : '');
   var h = '<div class="bub">' + esc(res.answer || '');
+  if (res.scan) h += jvScanHtml(res.scan);
   /* 🔎 <b>찾아 온 값이 맨 위</b> — 길보다 먼저 (판 X270) */
   var fd = res.found || [], anyRow = fd.some(function(f){ return (f.rows || []).length; });
   var hasFound = fd.some(function(f){ return f.strong && (f.rows || []).length; }) || (anyRow && res.how === 'none') || (anyRow && res.how === 'ext');
@@ -4363,7 +4907,8 @@ function addJ(res, isErr){
     }
     if (res.real) say += ' 솔직히 말씀드리면, ' + res.real;
     if (wk.length && wk[0].say) say = wk[0].say + ' ' + say;
-    speak(say);
+    /* 앱에 시켜 읽어 온 값 · 고객 줄이 든 답은 기기 목소리로 — 서버로 안 보냅니다 (3번 · 판 X336) */
+    speak(say, {priv:wk.length > 0 || fd.some(function(f){ return (f.k === 'cli' || f.priv) && (f.rows || []).length; })});
   }
 }
 
@@ -6009,6 +6554,224 @@ JV_SS.find = function(q, P){
 JV_FIND.push(JV_SS);
 
 /* 보험 자료가 몇 가지인가 — 갈래마다 표를 센다 (앱 밖이면 0 · 모르면 안 말한다) */
+/* ══ 📢 <b>공지도 찾는다</b> (판 X336) ══════════════════════════════════
+   사장님 말씀 2026-11-04 「어떤 질문을 하든 메인세션에 있는 모든 내용을 연결해서 찾아줘」.
+   ★ 본체가 <b>이미 받아 둔 공지</b>(OS_NTC.list)만 읽습니다 — 자비스가 서버를 따로
+     부르지 않습니다 (7번). 아직 안 받았으면 「안 읽음」 이라고 합니다 (1번).
+   ★ 「공지 · 알림 · 소식」 을 물으셨을 때만 섭니다 — 공지 본문의 흔한 낱말(교육 · 오늘)로
+     다른 물음에 끼어들면 헛것입니다 (8번).
+   ★ 공지는 팀이 같이 보는 글이라 AI 로 안 보냅니다(know 가 아닙니다).            */
+var JV_NTC_Q = /공지|알림\s*(?:뭐|있|왔|온)|새\s*소식|소식\s*(?:뭐|있)/;
+JV_FIND.push({k:'ntc', id:'notice', n:'공지',
+  find:function(q, P){
+    var N = P && P.OS_NTC;
+    if (!N || !JV_NTC_Q.test(q)) return null;
+    if (!N.loaded) return {wait:'공지사항'};
+    var L = (N.list || []).filter(function(x){ return x && x.on !== false && String(x.text || '').replace(/\s+/g, ''); });
+    var ws = jvWords(q).filter(function(w){ return w.length >= 2 && !/^(공지|공지사항|알림|소식|새소식|최근|요즘|새로|오늘|이번)/.test(w) &&
+                                             JV_FIELD.indexOf(w) < 0 && JV_STOP.indexOf(w) < 0; });
+    var got = ws.length ? L.filter(function(x){ var b = kbN(x.text); return ws.some(function(w){ return b.indexOf(kbN(w)) >= 0; }); }) : L.slice();
+    got.sort(function(a, b){ return String(b.ts || '').localeCompare(String(a.ts || '')); });
+    var rows = got.slice(0, 3).map(function(x){
+      var t = String(x.text || '').replace(/\r/g, ''), one = t.split('\n')[0].slice(0, 60), rest = t.slice(one.length).replace(/\s+/g, ' ').trim();
+      var s = [];
+      if (x.ts) s.push('올린 날 — ' + String(x.ts).slice(0, 10) + (x.by ? ' · ' + x.by : ''));
+      if (rest) s.push(rest.length > 200 ? rest.slice(0, 200) + '…' : rest);
+      if (x.mustAck) s.push('확인 요청이 붙은 공지입니다 — 홈 공지 칸에서 「확인」 을 눌러 주세요.');
+      return {t:'📢 ' + one, s:s};
+    });
+    return {rows:rows, more:got.length - rows.length, unit:'건', used:[],
+            none:rows.length ? '' : (ws.length ? '「' + ws.join(' ') + '」 이 들어간 공지는 없습니다.' : '지금 걸려 있는 공지가 없습니다.')};
+  }});
+
+/* ══ 📅 📝 🌱 <b>일정 · 상담카드 · 코칭도 찾는다</b> (판 X337) ══════════════════
+   사장님 말씀 2026-11-05 「일정이랑 상담카드 코칭도 자비스에 연결해줘」 — 판 X336 에서
+   「아직 안 이었다」 고 적어 둔 셋입니다(check-stale 증인 X336-이음).
+   ★ <b>본체가 이미 들고 있는 것만</b> 읽습니다 — 자비스가 서버를 따로 부르지 않습니다 (7번).
+     · 📅 일정 — 내 캘린더와 <b>같은 한 벌</b>(mcalItems · 거르는 자리 mcalMine). 달력이
+       보여 주는 것과 자비스가 말하는 것이 갈리지 않습니다 (5번).
+     · 📝 상담카드 — 이 기기에 담긴 카드(factLoad). 카드는 원래 이 브라우저에만 있습니다.
+     · 🌱 코칭 — 「내 코칭」(MC) · 「팀 코칭」(CO) 화면이 받아 둔 기록. 그 화면을 아직
+       안 열었으면 <b>「안 읽음」</b> 이라고 합니다 — 「없다」 가 아닙니다 (1번).
+   ★ 셋 다 <b>사람 이야기</b>라 AI 로 안 보내고(know 가 아닙니다), 읽어 줄 때도
+     <b>기기 목소리</b>가 읽습니다(priv · 3번). 물음에 든 이름은 AI 로 가기 전에 가립니다(used).
+   ★ 「넣기 · 잡기 · 만들기 · 어떻게 · 어디서」 처럼 <b>쓰는 법</b>을 물으면 서지 않습니다 —
+     그 답은 길입니다(「약속 잡힌 고객 일정 넣기」 · 8번).                           */
+var JV_CAL_Q = /일정|약속|스케줄|캘린더|달력|미팅/;
+var JV_CAL_NO = /교육|넣|잡(?:기|는|아|을|으|고)|만들|등록|추가|화법|멘트|어떻게|어디|하려면|안\s*잡|내보내|연동|설정|지우|지워|삭제|바꾸|옮기/;
+var JV_WD = ['일', '월', '화', '수', '목', '금', '토'];
+function jvWdOf(ds){ return new Date(Date.UTC(+ds.slice(0, 4), +ds.slice(5, 7) - 1, +ds.slice(8, 10))).getUTCDay(); }
+function jvDayLabel(ds, TD, P){
+  var rel = ds === TD ? '오늘 · ' : (ds === P.mcalShift(TD, 1) ? '내일 · ' : (ds === P.mcalShift(TD, 2) ? '모레 · ' : ''));
+  return rel + (+ds.slice(5, 7)) + '월 ' + (+ds.slice(8, 10)) + '일 (' + JV_WD[jvWdOf(ds)] + ')';
+}
+/* 물음이 가리키는 날 — 오늘 · 내일 · 모레 · 이번 주 · 다음 주 · 무슨 요일 · 며칠 · 이번 달 */
+function jvCalDays(q, TD, P){
+  var out = [], sh = function(n){ return P.mcalShift(TD, n); }, wd = jvWdOf(TD), i;
+  var put = function(ds){ if (ds && out.indexOf(ds) < 0) out.push(ds); };
+  var nextWk = /다음\s*주/.test(q), wdm = /([월화수목금토일])요일/.exec(q);
+  if (/오늘/.test(q)) put(TD);
+  if (/내일/.test(q)) put(sh(1));
+  if (/모레/.test(q)) put(sh(2));
+  if (wdm){
+    var want = JV_WD.indexOf(wdm[1]), gap = (want - wd + 7) % 7;
+    if (nextWk) gap = (wd === 0 ? 1 : 8 - wd) + (want === 0 ? 6 : want - 1);
+    put(sh(gap));
+  } else if (nextWk){
+    var st = wd === 0 ? 1 : 8 - wd;
+    for (i = 0; i < 7; i++) put(sh(st + i));
+  } else if (/이번\s*주|이번주|금주/.test(q)){
+    for (i = 0; i <= (wd === 0 ? 0 : 7 - wd); i++) put(sh(i));
+  }
+  var md = /(\d{1,2})\s*월\s*(\d{1,2})\s*일/.exec(q), dd = md ? null : /(?:^|[^\d])(\d{1,2})\s*일(?!\s*(?:동안|뒤|후|전|째))/.exec(q);
+  if (md) put(TD.slice(0, 4) + '-' + ('0' + md[1]).slice(-2) + '-' + ('0' + md[2]).slice(-2));
+  else if (dd && +dd[1] >= 1 && +dd[1] <= 31){
+    var ds = TD.slice(0, 8) + ('0' + dd[1]).slice(-2);
+    if (ds < TD){ var y = +TD.slice(0, 4), m = +TD.slice(5, 7) + 1; if (m > 12){ m = 1; y++; } ds = y + '-' + ('0' + m).slice(-2) + '-' + ('0' + dd[1]).slice(-2); }
+    put(ds);
+  }
+  if (!out.length && /이번\s*달|이번달/.test(q)){
+    var last = new Date(Date.UTC(+TD.slice(0, 4), +TD.slice(5, 7), 0)).getUTCDate();
+    for (i = +TD.slice(8, 10); i <= last; i++) put(TD.slice(0, 8) + ('0' + i).slice(-2));
+  }
+  return out.length ? out : [TD];
+}
+function jvCalLine(x, K){
+  var e = (K[x.k] || {}).e || '·', s = kbTxt(String(x.s || '')), t = kbTxt(String(x.t || ''));
+  var late = x.late ? ' (' + (+x.late.slice(5, 7)) + '/' + (+x.late.slice(8, 10)) + '부터 밀림)' : '';
+  if (x.k === 'appt') return e + ' 약속 ' + (s ? s + ' — ' : '— ') + t;
+  if (x.k === 'my') return e + ' 내 일정 — ' + t + (s ? ' ' + s : '');
+  if (x.k === 'next') return e + ' 할 일 — ' + t + (s ? ': ' + s : '') + late;
+  if (x.k === 'help') return e + ' 도와줄 것 — ' + t + late;
+  if (x.k === 'bd') return e + ' 생일 — ' + t;
+  return e + ' ' + ((K[x.k] || {}).t || '') + ' — ' + t + (s ? ' ' + s : '');
+}
+/* 한 날의 줄 — 연락(☎️)은 여럿이라 한 줄로 접습니다. 매일 하는 일(📋)은 일정이 아니라 뺍니다 */
+function jvCalRow(ds, L, TD, P){
+  var K = P.MCAL_KIND || {}, ord = {appt:0, my:1, next:2, help:3, bd:4};
+  var main = L.filter(function(x){ return x && ord[x.k] != null; })
+              .sort(function(a, b){ return ord[a.k] - ord[b.k] || String(a.s || '').localeCompare(String(b.s || '')); });
+  var tc = L.filter(function(x){ return x && x.k === 'touch'; });
+  var s = main.slice(0, 8).map(function(x){ return jvCalLine(x, K); });
+  if (main.length > 8) s.push('외 ' + (main.length - 8) + '건 — 내 캘린더에서 다 보실 수 있습니다');
+  if (tc.length) s.push('☎️ 연락할 분 ' + tc.length + '명 — ' + tc.slice(0, 3).map(function(x){ return kbTxt(String(x.t || '')); }).join(' · ') + (tc.length > 3 ? ' 외' : ''));
+  return {t:'📅 ' + jvDayLabel(ds, TD, P) + ' — ' + (main.length + tc.length ? (main.length + tc.length) + '건' : '잡힌 일정 없음'),
+          s:s.length ? s : ['잡힌 일정이 없습니다.'], n:main.length + tc.length};
+}
+function jvCalRows(q, P){
+  if (!P || typeof P.mcalItems !== 'function' || typeof P.mcalToday !== 'function' || typeof P.mcalShift !== 'function') return null;
+  if (!JV_CAL_Q.test(q) || JV_CAL_NO.test(q)) return null;
+  var TD = P.mcalToday(), I = {}, mine = function(L){ try { return typeof P.mcalMine === 'function' ? P.mcalMine(L || []) : (L || []); } catch(e){ return L || []; } };
+  try { I = P.mcalItems() || {}; } catch(e){ I = {}; }
+  /* 이름으로 물으면(「홍길동 약속 언제야」) — 앞으로 서른 날에서 그 분 것만 */
+  var who = [], d0, i, k;
+  for (i = 0; i <= 30; i++){
+    d0 = P.mcalShift(TD, i);
+    mine(I[d0]).forEach(function(x){
+      var t = kbTxt(String(x.t || '')).replace(/\s+/g, '');
+      if (x.k !== 'rt' && t.length >= 2 && !/○/.test(t) && q.replace(/\s+/g, '').indexOf(t) >= 0 && who.indexOf(t) < 0) who.push(t);
+    });
+  }
+  var rows = [], days;
+  if (who.length){
+    for (i = 0; i <= 30 && rows.length < 5; i++){
+      d0 = P.mcalShift(TD, i);
+      var L = mine(I[d0]).filter(function(x){ return who.indexOf(kbTxt(String(x.t || '')).replace(/\s+/g, '')) >= 0; });
+      if (L.length) rows.push(jvCalRow(d0, L, TD, P));
+    }
+  } else {
+    days = jvCalDays(q, TD, P);
+    var many = days.length > 1;
+    days.forEach(function(ds){ var r = jvCalRow(ds, mine(I[ds]), TD, P); if (!many || r.n) rows.push(r); });
+    if (!rows.length) rows.push(jvCalRow(days[0], [], TD, P));
+  }
+  var more = rows.length > 5 ? rows.length - 5 : 0;
+  rows = rows.slice(0, 5);
+  /* 아직 안 읽은 갈래는 <b>빠졌다고</b> 밝힙니다 — 「없음」 으로 읽히면 안 됩니다 (1번) */
+  var miss = [];
+  try { if (!(P.OSC && P.OSC.loaded)) miss.push('고객 365일(연락 · 할 일 · 생일)'); } catch(e){}
+  try { if (!(P.AR && P.AR.db)) miss.push('배정 DB 약속'); } catch(e){}
+  return {rows:rows, more:more, unit:'일', priv:1, used:who,
+          note:miss.length ? '⚠ ' + miss.join(' · ') + ' 은 아직 안 읽어 여기 빠져 있습니다 — 그 화면을 한 번 열면 같이 셉니다.' : ''};
+}
+/* 📝 상담카드 — 이름이 물음에 통째로 들었거나, 「상담카드 · 팩트파인딩」 을 물었을 때 */
+var JV_FACT_Q = /상담\s*카드|팩트\s*파인딩|팩파|상담지|니즈\s*분석/;
+var JV_FACT_NO = /만들|새로|작성|쓰는|넣|등록|어떻게|어디|하려면|인쇄|뽑/;
+function jvFactRows(q, P){
+  if (!P || typeof P.factLoad !== 'function') return null;
+  var L = []; try { L = P.factLoad() || []; } catch(e){ L = []; }
+  var nq = q.replace(/\s+/g, ''), asks = JV_FACT_Q.test(q) && !JV_FACT_NO.test(q);
+  var byName = L.filter(function(c){ var n = String(c.name || '').replace(/\s+/g, ''); return n.length >= 2 && nq.indexOf(n) >= 0; });
+  if (!byName.length && !asks) return null;
+  var got = (byName.length ? byName : L).slice().sort(function(a, b){ return (b.ts || 0) - (a.ts || 0); });
+  var cats = P.FACT_CATS || [], cut = function(t){ t = String(t || '').replace(/\s+/g, ' ').trim(); return t.length > 120 ? t.slice(0, 120) + '…' : t; };
+  var rows = got.slice(0, 3).map(function(c){
+    var when = ''; try { when = c.ts ? new Date(c.ts + 9 * 3600 * 1000).toISOString().slice(0, 10) : ''; } catch(e){}
+    var cs = (c.cats || []).map(function(id){ var f = cats.filter(function(x){ return x.id === id; })[0]; return f ? f.e + ' ' + f.t : ''; }).filter(Boolean);
+    var s = [];
+    if (cs.length) s.push('관심 — ' + cs.join(' · '));
+    [['goal', '상담 목표'], ['family', '가족'], ['budget', '월 예산'], ['exist', '기존 보험·연금'], ['asset', '자산'], ['debt', '부채'], ['health', '건강·가족력']]
+      .forEach(function(p){ if (c[p[0]]) s.push(p[1] + ' — ' + cut(c[p[0]])); });
+    if (c.ai) s.push('AI 니즈분석이 붙어 있습니다 — 상담카드 화면에서 보실 수 있습니다.');
+    return {t:'📝 ' + (c.name || '(이름 없음)') + (when ? ' · ' + when : ''), s:s.length ? s : ['적어 둔 칸이 없습니다.']};
+  });
+  return {rows:rows, more:got.length - rows.length, unit:'장', priv:1,
+          used:byName.map(function(c){ return String(c.name || ''); }).filter(function(n){ return n.length >= 2; }),
+          none:rows.length ? '' : '이 기기에 저장된 상담카드가 없습니다 — 상담카드는 이 기기(브라우저)에만 담깁니다.',
+          note:'상담카드는 이 기기에만 있습니다 — 다른 기기에서 쓴 카드는 여기 안 섭니다.'};
+}
+/* 🌱 코칭 — 「내 코칭」 · 「팀 코칭」 화면이 받아 둔 기록만 */
+var JV_COACH_Q = /코칭|코치/;
+var JV_COACH_NO = /남기|남겨|적어|적기|쓰기|하려면|어떻게\s*해|어디서|어디/;
+function jvCoachRows(q, P){
+  if (!P || !JV_COACH_Q.test(q) || JV_COACH_NO.test(q)) return null;
+  var D = function(s){ return String(s || '').slice(0, 10); }, cut = function(t){ t = String(t || '').replace(/\s+/g, ' ').trim(); return t.length > 140 ? t.slice(0, 140) + '…' : t; };
+  var logRow = function(g, head){
+    var s = [];
+    if (g.strength) s.push('잘한 것 — ' + cut(g.strength));
+    if (g.weak) s.push('보완할 것 — ' + cut(g.weak));
+    if (g.todo) s.push('할 일 — ' + cut(g.todo));
+    if (g.recheck_date) s.push('다시 볼 날 — ' + D(g.recheck_date));
+    return {t:head, s:s.length ? s : ['적힌 칸이 없습니다.']};
+  };
+  if (/팀\s*코칭|팀원/.test(q)){
+    var C = P.CO;
+    if (!C) return null;
+    if (!C.loaded) return {id:'branch_coach', wait:'팀 코칭'};
+    if (C.err) return {id:'branch_coach', rows:[], none:'팀 코칭을 읽지 못했습니다 — ' + C.err};
+    var nq = q.replace(/\s+/g, ''), R = (C.rows || []);
+    var named = R.filter(function(r){ var n = String(r.name || '').replace(/\s+/g, ''); return n.length >= 2 && nq.indexOf(n) >= 0; });
+    var pick = (named.length ? named : R.filter(function(r){ return r.last; }))
+                 .slice().sort(function(a, b){ return D(b.last && b.last.coach_date).localeCompare(D(a.last && a.last.coach_date)); });
+    var rows = pick.slice(0, 4).map(function(r){
+      var row = r.last ? logRow(r.last, '🧑‍🏫 ' + r.name + (r.team ? ' · ' + r.team : '') + ' — 마지막 코칭 ' + D(r.last.coach_date))
+                       : {t:'🧑‍🏫 ' + r.name + (r.team ? ' · ' + r.team : ''), s:['코칭 기록이 아직 없습니다.']};
+      var say = (r.says || []).filter(function(n){ return n.share !== false && n.body; })[0];
+      if (say) row.s.push('팀원이 적은 말 — ' + cut(say.body));
+      return row;
+    });
+    return {id:'branch_coach', rows:rows, more:pick.length - rows.length, unit:'명', priv:1,
+            used:named.map(function(r){ return String(r.name || ''); }).filter(function(n){ return n.length >= 2; }),
+            none:rows.length ? '' : '코칭 기록이 있는 팀원이 아직 없습니다.'};
+  }
+  var M = P.MC;
+  if (!M) return null;
+  if (!M.loaded) return {wait:'내 코칭'};
+  if (M.err) return {rows:[], none:'내 코칭을 읽지 못했습니다 — ' + M.err};
+  var rows2 = (M.logs || []).slice(0, 2).map(function(g){
+    var row = logRow(g, '🌱 ' + D(g.coach_date) + ' 코칭');
+    var mine = (M.notes || []).filter(function(n){ return n.log_id === g.id && n.body; })[0];
+    if (mine) row.s.push('내가 적은 말 — ' + cut(mine.body) + (mine.share === false ? ' (나만 봄)' : ''));
+    return row;
+  });
+  if ((M.sig || []).length) rows2.push({t:'🔔 지금 짚을 것', s:M.sig.slice(0, 3).map(function(g){ return g.t + ' ' + (g.a || ''); })});
+  return {rows:rows2, more:Math.max(0, (M.logs || []).length - 2), unit:'건', priv:1,
+          none:rows2.length ? '' : '받은 코칭 기록이 아직 없습니다.'};
+}
+JV_FIND.push({k:'cal', id:'mycal', n:'일정', find:jvCalRows},
+             {k:'fact', id:'fact_find', n:'상담카드', find:jvFactRows},
+             {k:'coach', id:'mycoach', n:'코칭', find:jvCoachRows});
+
 function jvKnowCount(){
   var P = kbApp(), D = jvDz(P), n = 0;
   if (!D) return 0;
@@ -6042,14 +6805,24 @@ var JV_KWANT = [
   {re:/꺼내|얘기\s*어떻게|말을\s*어떻게|부탁/, k:['fpch', 'atalk', 'dz', 'stagesay'], add:4}
 ];
 /* 표를 한 바퀴 — 걸린 것만 돌려준다 */
+/* 🔭 <b>찾아본 곳</b> — 물음 하나가 앱의 어느 갈래까지 훑었는지 (판 X336).
+   사장님 말씀 2026-11-04 「어떤 질문을 하든 메인세션에 있는 모든 내용을 연결해서 찾아줘」.
+   ★ 갈래 이름은 <b>JV_FIND 에서 그대로</b> 셉니다 — 따로 적은 목록이 아닙니다 (5번).
+   ★ 아직 안 읽은 갈래는 「안 읽음」 으로 — 「없음」 이 아닙니다 (1번).            */
+var JV_SCAN = null;
 function jvFind(q){
   var P = kbApp(), out = [];
+  var sc = {src:[], hit:{}, wait:{}, scr:0};
+  JV_FIND.forEach(function(f){ if (sc.src.indexOf(f.n) < 0) sc.src.push(f.n); });
+  try { kb().docs.forEach(function(d){ if (d.kind === 'scr') sc.scr++; }); } catch(e){}
+  JV_SCAN = sc;
   if (!P) return out;
   JV_FIND.forEach(function(f){
     var r = null;
     try { r = f.find(q, P); } catch(e){ r = null; }
     if (!r) return;
-    r.k = f.k; r.id = f.id; r.n = f.n; r.know = !!f.know; r.ext = !!f.ext;
+    /* 갈래가 <b>제 화면</b>을 말하면 그것을 씁니다 — 팀 코칭은 「내 코칭」 이 아니라 「팀 코칭」 화면 (판 X337) */
+    r.k = f.k; r.id = r.id || f.id; r.n = f.n; r.know = !!f.know; r.ext = !!f.ext;
     /* 굳은지는 <b>원래 점수</b>로 정합니다 — 「원하는 답」 표는 차례만 바꿉니다. 약한 것을 굳게 만들면
        「보험료 비교해달래」 가 거절 처리로 길을 접습니다 (판 X277 에서 자가 잡음) */
     var base = r.score;
@@ -6067,8 +6840,35 @@ function jvFind(q){
   kn = kn.filter(function(r){ return r.score >= kn[0].score * 0.6; });
   /* 「어디서 · 어떻게 써」 — 앱 쓰는 법을 물으면 답은 길이다. 이름이 딱 맞은 자료만 곁에 둔다 */
   if (jvIsUse(q)) kn = kn.filter(function(r){ return r.strong; });
-  return fix.concat(kn.slice(0, Math.max(0, 4 - fix.length)), hold);
+  var fin = fix.concat(kn.slice(0, Math.max(0, 4 - fix.length)), hold);
+  fin.forEach(function(r){
+    var n = (r.rows || []).length + (r.more || 0);
+    if (r.wait || r.waitSay) sc.wait[r.n] = 1; else if (n) sc.hit[r.n] = (sc.hit[r.n] || 0) + n;
+  });
+  return fin;
 }
+var JV_SCANS = {}, JV_SCAN_N = 0;
+function jvScanHtml(sc){
+  var id = 's' + (++JV_SCAN_N), k = Object.keys(sc.hit).length;
+  JV_SCANS[id] = sc;
+  /* 갈래 이름은 <b>펼칠 때</b> 채웁니다 — 답 글 속에 갈래 이름이 늘 서면 「고객 명단」 같은 말이
+     답에 있는 것처럼 읽힙니다(자 · 사람 둘 다) */
+  return '<details class="j-scan" data-scan="' + id + '"><summary><span class="js-bar"><i></i></span>' +
+         '<span>찾아본 곳 <b>' + sc.src.length + '갈래</b> · 화면 <b>' + sc.scr + '</b> — 걸린 곳 <b>' + k + '</b></span></summary>' +
+         '<div class="js-list"></div></details>';
+}
+document.addEventListener('toggle', function(e){
+  var d = e.target;
+  if (!d || !d.getAttribute || !d.open) return;
+  var sc = JV_SCANS[d.getAttribute('data-scan') || ''];
+  if (!sc) return;
+  var box = d.querySelector('.js-list');
+  if (!box || box.childNodes.length) return;
+  box.innerHTML = sc.src.map(function(n){
+    var c = sc.hit[n] ? 'hit' : (sc.wait[n] ? 'wait' : '');
+    return '<span class="' + c + '">' + esc(n) + (sc.hit[n] ? ' ' + sc.hit[n] : (sc.wait[n] ? ' · 안 읽음' : '')) + '</span>';
+  }).join('');
+}, true);
 /* 찾은 것을 한 줄로 — 답의 머리와 읽어 주기에 같이 쓴다 (한 곳 · 5번) */
 function jvFoundSay(F){
   var p = [];
@@ -6301,7 +7101,7 @@ function jvActRun(A){
   var P = kbApp(), a = P.vaActOf(A.k);
   if (!a || A.st === 'busy' || A.st === 'done') return;
   if (jvActNeed(A).k){ jvActPaint(A); return; }
-  if (a.w){ var bad = P.vaRisky(JSON.stringify(A.args)); if (bad){ A.st = 'done'; A.out = {say:bad, fail:1}; jvActPaint(A); speak(bad); return; } }
+  if (a.w){ var bad = P.vaRisky(JSON.stringify(A.args)); if (bad){ A.st = 'done'; A.out = {say:bad, fail:1}; jvActPaint(A); speak(bad, {priv:1}); return; } }
   var fin = function(r){
     if (typeof r === 'string') r = {say:r, fail:/못|없습니다|열어 주세요/.test(r) ? 1 : 0};
     r = r || {};
@@ -6309,7 +7109,7 @@ function jvActRun(A){
     /* 길 표(VA_ACT)는 「찾지 못했습니다 · 열어 주세요」 를 글로만 돌려줍니다 — 그것도 못 한 것 */
     if (!r.fail && /찾지 못했|못했습니다|열어 주세요|걸립니다/.test(r.say || '')) r.fail = 1;
     A.st = 'done'; A.out = r; jvActPaint(A);
-    if (!r.quiet) speak(r.say || '');
+    if (!r.quiet) speak(r.say || '', {priv:1});
     /* 화면 열기는 <b>시키신 것</b>이라 바로 엽니다 — 자비스는 아래 띠로 남습니다 */
     if (A.k === '열기' && r.go && !r.fail) jvHere(r.go);
   };
@@ -6945,6 +7745,7 @@ function ask(raw){
   var q = (raw || '').replace(/^\s+|\s+$/g,'');
   if (!q || busy) return;
   openJ();
+  hudSet('think'); hudBeep();
   addMe(q);
   document.getElementById('ask').value = '';
   document.getElementById('jSay').value = '';
@@ -6993,6 +7794,7 @@ function ask(raw){
     if (JV_EXT.pend === q) JV_EXT.pend = '';
   }
   r0.found = found;
+  r0.scan = JV_SCAN;
   var strong = found.some(function(f){ return f.strong && (f.rows || []).length; });
   if (fsay && (strong || r0.how === 'none')){ r0.wayAns = r0.how === 'none' ? '' : r0.answer; r0.answer = fsay; }
   /* 시키신 일의 머리가 <b>맨 나중에</b> — 찾은 것의 머리(「고객 명단 1명」)가 덮지 않게 */
@@ -7008,6 +7810,7 @@ function ask(raw){
   var qs = jvSafeQ(q, found);
   if (!hasAI() || act || pen){
     logAsk(qs, r0, act ? '앱(일)' : (pen ? '앱(연금 계산)' : '앱')); addJ(r0);
+    hudCalm(); hudStats();
     if (pen) jvPenRun(pen, true);
     /* 읽기만 하는 일(전화 걸 단추 · 화면 열기)은 값이 다 있으면 <b>바로</b> 한다 */
     if (act && !act.ask && !jvActNeed(act).k) jvActRun(act);
@@ -7030,17 +7833,17 @@ function ask(raw){
   r0.aiWait = true;
   addJ(r0);
   var card = jLog.lastChild;
-  busy = true;
+  busy = true; hudStats();
   (getEngine() === 'gemini' ? askGemini(qs, gr) : askClaude(qs, gr)).then(function(res){
     busy = false;
-    if (!res.answer && !(res.steps || []).length){ logAsk(qs, r0, '앱(AI 빈답)'); jvFillAI(card, null, 'AI 가 빈 답을 보냈습니다.'); return; }
+    if (!res.answer && !(res.steps || []).length){ logAsk(qs, r0, '앱(AI 빈답)'); jvFillAI(card, null, 'AI 가 빈 답을 보냈습니다.'); hudCalm(); return; }
     logAsk(qs, res, getEngine());
-    jvFillAI(card, res);
+    jvFillAI(card, res); hudCalm();
   }).catch(function(e){
     busy = false;
     chatLog.pop();
     logAsk(qs, r0, '앱(AI 실패)');
-    jvFillAI(card, null, whyFailed(e));
+    jvFillAI(card, null, whyFailed(e)); hudCalm();
   });
 }
 
@@ -7093,6 +7896,7 @@ function chipsIn(g){
 chipsTop();
 /* 처음 열면 <b>무엇을 할 줄 아는지</b>부터 — 센 수로 말한다 (5번) */
 addJ(jvHello());
+hudStats(); hudRun();
 
 /* ══ AI 연결 ═══════════════════════════════ */
 var keyBox = document.getElementById('keyBox');
@@ -7111,7 +7915,32 @@ document.getElementById('aiBtn').onclick = function(){
   document.getElementById('kGProxy').value = getGProxy();
   document.getElementById('kGModel').value = getGModel();
   kPaintEngine();
+  kVoxPaint();
   keyBox.classList.add('on');
+};
+/* 🎙 목소리 칸 — 고르면 바로 씁니다. 막혔던 까닭은 새로 고르시면 지웁니다(다시 해 봅니다) */
+function kVoxPaint(){
+  var sel = document.getElementById('kVox'), say = document.getElementById('kVoxSay');
+  if (!sel) return;
+  if (!sel.options.length) sel.innerHTML = JV_VOX_OPTS.map(function(o){ return '<option value="' + o.v + '">' + esc(o.t) + '</option>'; }).join('');
+  sel.value = JV_VOX.pick;
+  var t;
+  if (!voxAiName()) t = '기기에 깔린 목소리로 읽습니다' + (TTS.v ? ' — ' + TTS.v.name : '') + '. 서버를 부르지 않습니다.';
+  else if (!(getGKey() || getGProxy())) t = 'AI 목소리는 Gemini 키나 회사 서버(/api/gemini)가 있어야 납니다 — 지금은 기기 목소리로 읽습니다.';
+  else if (JV_VOX.dead) t = 'AI 목소리가 막혔습니다(' + JV_VOX.dead + ') — 이 창에서는 기기 목소리로 읽습니다. 다시 고르시면 한 번 더 해 봅니다.';
+  else t = 'AI 목소리(' + (JV_VOX.ok ? JV_VOX.model : 'Gemini') + ')로 읽고 울림을 입힙니다. 답마다 머리 한두 문장(160자)만 읽고, 고객 이름·번호가 든 말은 기기 목소리가 읽습니다.';
+  if (say) say.textContent = t;
+}
+document.getElementById('kVox').onchange = function(){
+  JV_VOX.pick = this.value; JV_VOX.dead = ''; JV_VOX.slow = 0;
+  LS.set('jv_vox', this.value);
+  kVoxPaint(); hudStats();
+};
+document.getElementById('kVoxTry').onclick = function(){
+  if (!TTS.on){ TTS.on = true; LS.set('map_voice', '1'); }
+  voxCtx();
+  speak('네, 준비됐습니다. 무엇을 도와드릴까요?');
+  setTimeout(kVoxPaint, 600); setTimeout(kVoxPaint, 8000);
 };
 document.getElementById('kCancel').onclick = function(){ keyBox.classList.remove('on'); };
 keyBox.addEventListener('click', function(e){ if (e.target === keyBox) keyBox.classList.remove('on'); });
