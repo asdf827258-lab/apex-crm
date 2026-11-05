@@ -30,11 +30,27 @@
      5. 쪼갠 뒤에도 <b>장 수가 전보다 많다</b> — 쪼갠다고 해 놓고 글을 버리면
         장 수가 줄어듭니다.
      6. 콘솔에 <b>터진 자리</b>가 없다.
-    11. ★★ <b>폰에서 발표 띠가 화면 안에 있고 단추가 44px 이다.</b> 사장님 말씀
+    13. ★★ <b>노트북 발표가 강렬하다.</b> 사장님 말씀 (2026-11-05)
+        「<b>우선 강렬하게 만들어줘</b>」 · 「<b>우선 노트북으로 보이니까,
+        노트북 위주면 된다</b>」 — 제목이 <b>46px</b> 이라 문서처럼 읽히고
+        한 방이 없었습니다. 1440px 에서 <b>60px</b> 로 올리고, 짧은 쪽은
+        <b>세로 가운데</b>로 세웁니다(위로 쏠려 「글이 모자란 문서」 같았습니다).
+        ★ 제목에 쓴 자리는 <b>여백에서 되찾아</b> 넘침 눈금(400px)을 안 올렸습니다.
+        ★ 내용이 창보다 긴 쪽은 <b>위가 잘리면 안 됩니다</b> — 제목이 사라집니다.
+        ★★ <b>제가 더 나쁘게 만든 자리가 있었습니다.</b> 전·후를 나란히 놓고 보니
+        제목을 키우자 <b>낱말 가운데서</b> 잘렸습니다 — 「다릅니 / 다.」 「일입니 / 다」.
+        고치기 전 1개였던 것이 <b>10개</b>로 늘었습니다. 숫자만 보고 있었으면 못 봤습니다.
+        `word-break:keep-all`(한글은 띄어쓰기에서만 자름) + `text-wrap:balance` 로
+        <b>0개</b>가 되었습니다 — 고치기 전보다도 적습니다.
+        ⚠ 이 수는 <b>글꼴 CDN 을 막은 채</b> 잰 것이라 사장님 화면보다 깁니다.
+        진짜 글꼴을 받아 다시 재면 <b>키우기 전 0개 · 키우니 3개</b>(dcalc4 「까?」 ·
+        cp2 「니다」 · cpmoney 「집니다」) <b>· 고친 뒤 0개</b> 였습니다. 수는 다르지만
+        <b>고객 앞에서 깨지던 것은 진짜</b>였습니다 (1번).
+     11. ★★ <b>폰에서 발표 띠가 화면 안에 있고 단추가 44px 이다.</b> 사장님 말씀
         (2026-11-05) 「<b>폰에서도 확인해줘</b>」 — 390px 화면에서 띠가 <b>482px</b>
         였습니다. 왼쪽 「‹」 와 오른쪽 「✕ 종료」 가 잘려 <b>앞으로도 못 가고
         끝낼 수도 없었습니다.</b> 단추도 35px 로 앱이 지키는 44px 에 못 미쳤습니다.
-    12. 폰에서 <b>세 화면을 넘는 쪽</b>이 늘지 않는다 — 지금 <b>11장</b>입니다
+    12. 폰에서 <b>세 화면을 넘는 쪽</b>이 늘지 않는다 — 지금 <b>10장</b>입니다
         (92장 중 88%는 한 번만 내리면 끝). 폰은 세로라 칸이 둘·셋인 격자가
         한 줄로 접혀 2~3배가 됩니다. ★ 이 수는 <b>줄이면 같이 내립니다</b>.
     10. ★★ <b>책(스크롤) 보기에서 고른 갈래의 장만 보인다.</b> 사장님 말씀
@@ -66,7 +82,17 @@
      ⓑ 닫기 줄을 한 줄 지워 장이 장 안에 들어가게 → [2] 가 「안 보이는 쪽」 으로 울음
      ⓒ 차례에 없는 id 적기 → [3] 이 울음
      ⓓ .wonly 이름표를 떼기 → [10] 이 「아직 보이는 것 9」 로 울음 (판 X339)
-     ⓔ 폰 띠 규칙을 빼기 → [11] 이 「482px / 창 390px」 로 울음 (판 X342)        */
+     ⓔ 폰 띠 규칙을 빼기 → [11] 이 「482px / 창 390px」 로 울음 (판 X342)
+     ⓖ keep-all·balance 를 빼기 → [13] 이 「낱말 가운데서 잘린 제목 10/92」 로 울음 (판 X345)
+     ⓗ ★★ <b>CI 기계에서만</b> 달러 갈래 switch 가 <b>+411px</b> 였습니다 (판 X354) —
+       제 기계에서는 341px 이라 안 보였습니다. CI 의 기본 글꼴이 더 넓어 글 많은 쪽만
+       길어집니다(다른 네 갈래는 CI 와 제 기계가 <b>한 픽셀도 안 달랐습니다</b>).
+       <b>눈금을 안 올리고</b> 타임라인을 switch1b 로 쪼갰습니다 — 달러 341 → <b>330px</b>,
+       폰에서 세 화면 넘는 쪽도 11 → <b>10장</b>.
+     ⓕ 노트북 제목·가운데 규칙을 빼기 → [13] 의 <b>셋이 다</b> 울음 (판 X345) —
+       「제목 54px」 · 「자리 남는 쪽 6/92」 · 「6쪽 전부 가운데 아님」.
+       `margin:auto` 만 떼어도 울립니다 — 떼면 `.wrap` 이 늘어나 남는 자리가 40→5 쪽.
+       위만 0 으로 하면 40쪽 중 가운데가 <b>1쪽</b>으로 떨어집니다.  */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 
@@ -89,6 +115,13 @@ const head = (t) => console.log('\n' + t);
 
 /* 한 번 내리면 끝 — 그 선 */
 const 넘침선 = 400;
+/* ★★ <b>끝에 수를 한 줄로 남깁니다</b> (판 X345 · 2026-11-05).
+   CI 는 자의 <b>마지막 40줄만</b> 로그에 남기는데, 이 자는 60줄이 넘어
+   <b>[1] 넘침</b>처럼 앞쪽에서 운 줄이 로그에 안 남았습니다. 실제로 이 판에서
+   두 번 울었는데 까닭을 못 봤습니다 — 울리기만 하고 무엇이 울었는지를
+   안 알려 주면 반쪽입니다 (8번). run-checks 쪽도 같이 고쳤습니다. */
+const 넘침표 = [];
+const 끝수 = { 제목: 0, 가운데: 0, 남는쪽: 0, 흩날림: 0, 폰셋: 0 };
 /* 쪽이 정말 섰는지 — 이보다 낮으면 「안 보이는 쪽」 으로 봅니다 */
 const 보임선 = 120;
 /* ★ <b>일부러</b> 고객 발표에서 뺀 장 (판 X334) — 설계사용 229개 시·군·구
@@ -109,7 +142,7 @@ const 갈래넘어서도되는장 = ['hero', 'close'];
 const 폰 = { width: 390, height: 844 };
 /* ★ 폰에서 <b>세 화면을 넘는 쪽</b>의 수. 2026-11-05 에 11장이었습니다.
    늘면 빨간불이고, 줄이면 이 수도 같이 내립니다 (CLAUDE.md 0-1). */
-const 폰세화면 = 11;
+const 폰세화면 = 10;   /* 판 X354 — switch 를 쪼개 11 → 10. 줄면 눈금도 같이 내립니다 */
 const 칸밖이어도되는장 = {
   w: ['hero','gap','nps','nps2','gongmu','gongmu2','math','math2','time','faq','close'],
   d: ['close'], t: ['close'], e: ['close'], c: ['close']
@@ -189,6 +222,7 @@ const 갈래 = {
     잰것[k] = r;
     let 제일 = 0, 누구 = '', 넘 = 0;
     r.forEach(x => { if (x.넘침 > 8) { 넘++; if (x.넘침 > 제일) { 제일 = x.넘침; 누구 = x.id; } } });
+    넘침표.push(k + ' ' + 제일 + (누구 ? ('(' + 누구 + ')') : ''));
     is(제일 <= 넘침선,
        '  ' + g.이름 + ' — ' + r.length + '장 · 창 넘는 쪽 ' + 넘 + '/' + r.length +
        ' · 제일 <b>+' + 제일 + 'px</b>' + (누구 ? (' (' + 누구 + ')') : '') +
@@ -255,6 +289,91 @@ const 갈래 = {
        (봐줌.length ? ('   (일부러 뺀 것: ' + 봐줌.join(', ') + ')') : ''));
   }
 
+  head('[13] ★★ 노트북(1440) 발표가 <b>강렬하다</b> — 제목 · 세로 가운데 · 위가 안 잘림');
+  {
+    /* ⚠ 「가운데에 서나」를 재는 법을 두 번 틀렸습니다 — 앱이 아니라 자가 틀렸습니다 (8번).
+       ① 처음엔 연금 갈래만 봤는데, 그 갈래엔 「자리 남는 쪽」이 0개라 가운데를
+          <b>아무것도 안 재고</b> 초록이었습니다. 안 울리는 알람은 알람이 아닙니다.
+          그래서 다섯 갈래를 다 봅니다.
+       ② 그 다음엔 `document.scrollHeight <= clientHeight` 로 「한 화면에 드는 쪽」을
+          골랐는데, `section.pon{min-height:100vh}` 에 아래 여백이 붙어 문서는
+          <b>언제나</b> 창보다 깁니다 — 또 0쪽이라 아무것도 못 쟀습니다.
+          문서에 묻지 말고 <b>쪽 자신</b>에게 물어야 합니다: 쪽 안쪽 높이에서 `.wrap`
+          을 뺀 「남는 자리」가 있으면 그것이 한 화면에 드는 쪽이고, 그런 쪽은
+          `margin:auto` 가 그 자리를 위아래로 반씩 나눠 주어야 가운데에 선 것입니다. */
+    const r = await pg.evaluate(갈래들 => {
+      let 제목 = 0, 잘림 = 0, 가운데 = 0, 남는쪽 = 0, 수 = 0;
+      const 쏠린것 = [], 흩날림 = [];
+      for (const k of 갈래들) {
+        window.__go(k); presEnter();
+        const L = presList(); 수 += L.length;
+        for (let i = 0; i < L.length; i++) {
+          presGo(i); scrollTo(0, 0);
+          const s = L[i], q = s.getBoundingClientRect(), cs = getComputedStyle(s);
+          const h = s.querySelector('h2') || s.querySelector('h1');
+          if (h) 제목 = Math.max(제목, parseFloat(getComputedStyle(h).fontSize));
+          if (q.top < -2 || (h && h.getBoundingClientRect().top < 0)) 잘림++;
+          if (h) {
+            /* 제목이 <b>낱말 가운데서</b> 잘리면 마지막 줄에 글자 한두 개만 남습니다 —
+               「다릅니 / 다.」 「일입니 / 다」. 글자마다 자리를 재어 줄로 묶습니다. */
+            const 줄 = [];
+            (function walk(n) {
+              if (n.nodeType === 3) {
+                const t = n.nodeValue;
+                for (let j = 0; j < t.length; j++) {
+                  if (!t[j].trim()) continue;
+                  const rg = document.createRange(); rg.setStart(n, j); rg.setEnd(n, j + 1);
+                  const z = rg.getBoundingClientRect(); if (!z.height) continue;
+                  const y = Math.round(z.top);
+                  let v = 줄.find(x => Math.abs(x.y - y) < 6);
+                  if (!v) { v = { y: y, 글: '', l: z.left, r: z.right }; 줄.push(v); }
+                  v.글 += t[j]; v.l = Math.min(v.l, z.left); v.r = Math.max(v.r, z.right);
+                }
+              } else [].forEach.call(n.childNodes, walk);
+            })(h);
+            줄.sort((x, y) => x.y - y.y);
+            if (줄.length >= 2) {
+              const 넓 = Math.max.apply(null, 줄.map(z => z.r - z.l));
+              const 끝 = 줄[줄.length - 1], 끝폭 = 끝.r - 끝.l;
+              if (끝폭 < 넓 * 0.22)
+                흩날림.push(k + ':' + s.id + ' 「' + 끝.글 + '」 ' + Math.round(끝폭) +
+                            'px / 가장 긴 줄 ' + Math.round(넓) + 'px');
+            }
+          }
+          const w = s.querySelector(':scope > .wrap');
+          if (!w) continue;
+          const pt = parseFloat(cs.paddingTop), pb = parseFloat(cs.paddingBottom);
+          const r2 = w.getBoundingClientRect();
+          const 남 = (q.height - pt - pb) - r2.height;   /* 쪽 안쪽에 남는 자리 */
+          if (남 <= 40) continue;                        /* 넘치는 쪽 — 나눠 줄 자리가 없다 */
+          남는쪽++;
+          const 위 = r2.top - (q.top + pt), 아래 = (q.bottom - pb) - r2.bottom;
+          if (위 > 남 * 0.35 && Math.abs(위 - 아래) < 24) 가운데++;
+          else 쏠린것.push(k + ':' + s.id + ' 남' + Math.round(남) +
+                           ' 위' + Math.round(위) + ' 아래' + Math.round(아래));
+        }
+        if (typeof presExit === 'function') presExit();
+      }
+      return { 제목: 제목, 잘림: 잘림, 가운데: 가운데,
+               남는쪽: 남는쪽, 수: 수, 쏠린것: 쏠린것, 흩날림: 흩날림 };
+    }, Object.keys(갈래));
+    끝수.제목 = Math.round(r.제목); 끝수.가운데 = r.가운데;
+    끝수.남는쪽 = r.남는쪽; 끝수.흩날림 = r.흩날림.length;
+    is(r.제목 >= 56, '  제목이 <b>' + Math.round(r.제목) + 'px</b> 이다 (고치기 전 54px — 쪽 제목 h2 는 46px · 56 이상)');
+    is(r.잘림 === 0, '  위가 잘린 쪽 ' + r.잘림 + '/' + r.수 +
+       ' — 넘치는 쪽도 제목부터 보인다');
+    is(r.남는쪽 >= 20, '  자리가 <b>남는 쪽</b>이 ' + r.남는쪽 + '/' + r.수 +
+       '쪽 있다 (0쪽이면 가운데를 못 잽니다)');
+    is(r.남는쪽 > 0 && r.가운데 === r.남는쪽,
+       '  그 ' + r.남는쪽 + '쪽이 <b>전부</b> 세로 가운데에 선다 (위로 안 쏠림)' +
+       (r.쏠린것.length ? ('  ← ' + r.쏠린것.slice(0, 4).join(' · ')) : ''));
+    is(r.흩날림.length === 0,
+       '  제목이 <b>낱말 가운데서 안 잘린다</b> — 마지막 줄에 글자 한두 개만 남은 제목 ' +
+       r.흩날림.length + '/' + r.수 + '개 — 제목을 키우기 전 1개 · 키우니 10개로 늘어 고쳤습니다. ' +
+       '⚠ 이 자는 글꼴 CDN 을 막아 재므로 사장님 화면보다 길게 잽니다 — 진짜 글꼴로는 0 → 3 → 0 이었습니다' +
+       (r.흩날림.length ? ('  ← ' + r.흩날림.slice(0, 5).join(' · ')) : ''));
+  }
+
   head('[11] ★★ 폰(390×844)에서 <b>발표 띠가 화면 안</b>에 있고 단추가 44px 이다');
   {
     const ph = await br.newContext({ viewport: 폰, isMobile: true, hasTouch: true });
@@ -304,6 +423,7 @@ const 갈래 = {
       }, k);
       r.forEach(x => { if (x.화면 > 2.05) { 셋++; 긴것.push(x.id + '(' + x.화면.toFixed(1) + ')'); } });
     }
+    끝수.폰셋 = 셋;
     is(셋 <= 폰세화면, '  세 화면 넘는 쪽 <b>' + 셋 + '장</b> (선 ' + 폰세화면 + ') ← ' +
        긴것.slice(0, 6).join(' / '));
     await ph.close();
@@ -376,6 +496,9 @@ const 갈래 = {
 
   await br.close(); srv.close();
   console.log('\n──────────────────────────────');
+  console.log('잰 수 — 넘침(눈금 ' + 넘침선 + ') ' + 넘침표.join(' · ') +
+              ' · 제목 ' + 끝수.제목 + 'px · 가운데 ' + 끝수.가운데 + '/' + 끝수.남는쪽 +
+              ' · 낱말 잘린 제목 ' + 끝수.흩날림 + ' · 폰 세 화면 ' + 끝수.폰셋);
   console.log(bad ? ('발표덱 다섯 갈래 점검 — 어긋난 것 ' + bad + '가지')
                   : '발표덱 다섯 갈래 점검 통과 — 다섯 갈래 전부 한 쪽에 한 가지입니다.');
   process.exit(bad ? 1 : 0);

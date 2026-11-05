@@ -1163,6 +1163,28 @@ svg.ico{display:block;flex:none;vertical-align:-3px}
    고른 노랑이라 흰 바탕에서는 거의 안 보입니다. 색표에 이미 있는 주황을
    씁니다 — 노란 계열 그대로이고 새로 고른 색이 아닙니다.            */
 .nav-star.on{color:var(--t-warn-d);}
+/* 🎯 <b>상담 자리로 보내기</b> (판 X356) — 별표와 같은 44px.
+   ★ 색·둥글기는 <b>이미 있는 토큰만</b> 씁니다 — 여기에 hex 를 적으면
+     색을 바꿀 때 이 자리만 옛 색으로 남습니다 (5번).
+   보낸 자리가 있으면 그 단계 이름이 작게 적힙니다(「TA」 「AP」 …). */
+.nav-stg{flex:0 0 auto;min-height:44px;min-width:44px;border:0;background:transparent;
+  color:var(--t-sub3);cursor:pointer;font-size:var(--t6);font-weight:700;line-height:1;
+  padding:0 6px;border-radius:var(--r-sm);white-space:nowrap;
+  transition:color var(--dur) var(--ease),background var(--dur) var(--ease);}
+.nav-stg:hover{color:var(--t-point);background:var(--t-bg);}
+.nav-stg.on{color:var(--t-point-d);background:var(--t-point-l);}
+@media (hover:none){.nav-stg{color:var(--t-sub2);}}
+/* 고르개 — 단계 하나가 한 줄. 44px 를 지킵니다 (판 X146·X147) */
+.stg-ops{display:grid;gap:6px}
+.stg-op{display:flex;align-items:center;gap:10px;min-height:44px;width:100%;
+  text-align:left;border:1px solid var(--t-line);background:var(--t-card);
+  border-radius:var(--r-sm);padding:8px 12px;cursor:pointer;font-family:inherit;}
+.stg-op b{flex:0 0 80px;font-size:var(--t5);color:var(--t-ink)}
+.stg-op span{flex:1;min-width:0;font-size:var(--t6);color:var(--t-sub);line-height:1.5}
+.stg-op:hover{border-color:var(--t-point);background:var(--t-bg)}
+.stg-op.on{border-color:var(--t-point);background:var(--t-point-l)}
+.stg-off{margin-top:10px;width:100%;min-height:44px}
+.stg-none{font-size:var(--t6);color:var(--t-sub)}
 .nav-none{margin:10px 12px;font-size:var(--t6);line-height:1.7;color:var(--t-sub);font-weight:500;}
 /* 손가락으로 누르는 화면에서는 별표를 늘 보이게 — 마우스가 없으니 hover 가 없다 */
 @media (hover:none){.nav-star{color:var(--t-sub2);padding:0 10px;}}
@@ -11012,7 +11034,18 @@ function tdoWait(k){
    가져오고, <b>메뉴에 없으면 빼 버린다</b> — 못 여는 단추를 세우면 눌렀는데
    아무 일도 안 일어나고, 그때부터 다른 단추도 안 믿게 된다 (8번). */
 function tdoTools(k){
-  var L=(TDO[k]&&TDO[k].tools)||[],out=[],i,it;
+  /* ★★ <b>물을 때 묻습니다</b> (판 X356 · 5번). 여태는 켤 때 한 번 베껴 둔
+     사본(TDO[k].tools)만 읽었습니다. 그래서 사장님이 메뉴 옆 🎯 로 자리를
+     바꾸셔도 <b>새로고침 전에는 고객 카드에 안 따라왔습니다</b> — 베낀 사본은
+     언제나 늙습니다. 이제 apex-stage 의 boxIds 에 <b>그때그때</b> 묻습니다.
+     ★ 켤 때 베껴 둔 것도 <b>버리지 않고 합칩니다</b> — 생일·기고객처럼
+       단계 표(BOX)에 없고 TDO 에만 적힌 자리가 있습니다 (6번). */
+  var L=[],out=[],seen={},i,it,B=[];
+  try{ B=(typeof APEX_STAGE!=='undefined'&&APEX_STAGE.toolIds)?(APEX_STAGE.toolIds(k)||[]):[]; }
+  catch(e){ B=[]; }
+  for(i=0;i<B.length;i++)if(!seen[B[i]]){seen[B[i]]=1;L.push(B[i]);}
+  B=(TDO[k]&&TDO[k].tools)||[];
+  for(i=0;i<B.length;i++)if(!seen[B[i]]){seen[B[i]]=1;L.push(B[i]);}
   for(i=0;i<L.length;i++){
     it=(typeof navItemOf==='function')?navItemOf(L[i]):null;
     if(it&&it.id)out.push(it);
@@ -16137,6 +16170,89 @@ function navFavToggle(id,ev){
   if(typeof toast==='function')
     toast(i>=0?'즐겨찾기에서 뺐습니다':'⭐ 즐겨찾기 맨 위에 올렸습니다');
 }
+/* ══ 🎯 <b>메뉴를 상담 자리로 보내기</b> — stg* (판 X356) ══════════════════
+   사장님 말씀 (2026-11-05) — 「그냥 <b>내가 메뉴옆에 ta_cs 로 보내고 싶은곳을
+   선택하면 보내지도록</b> 해줘」.
+
+   ── 왜 ──────────────────────────────────────────────────────────
+   재어 보니 메뉴 <b>113칸 중 53칸</b>만 상담 순서(apex-stage.js 의 BOX)에
+   묶여 있었습니다. 나머지 60칸은 고객 카드에서 <b>한 번도 안 따라옵니다</b>.
+   제가 그 60칸을 단계에 배정할 수도 있었지만, 어느 도구를 어느 자리에서
+   쓰는지는 <b>설계사가 압니다</b> — 제가 정하면 엉뚱한 때에 따라오고
+   그것은 지어내는 것과 같습니다 (1번). 그래서 <b>고르는 손</b>을 드립니다.
+
+   ★ <b>이 기기에만</b> 남습니다 — 즐겨찾기(navFav)와 같은 자리입니다 (3번).
+   ★ 합치는 곳은 <b>apex-stage.js 의 boxIds 하나</b>입니다 (5번) — 여기서는
+     읽어서 넣어 주기만 합니다. 그래서 고객 카드 · 「도구」 화면 · 홈 띠의
+     「맞는 메뉴」 가 <b>한꺼번에</b> 같이 바뀝니다.
+   ★ 단계 차례는 <b>APEX_STAGE.order</b> 에서 옵니다 — 여기 또 적으면
+     단계가 늘 때 한쪽이 낡습니다 (5번).
+   ★ 원래 있던 것은 <b>하나도 안 빠집니다</b> — 사장님이 보내신 것은 뒤에
+     붙습니다 (6번).                                                     */
+function stgKey(){ return 'apex_tool_stage_'+navWho(); }
+function stgMap(){
+  try{ var v=JSON.parse(localStorage.getItem(stgKey())||'{}');
+       return (v&&typeof v==='object'&&!v.push)?v:{}; }
+  catch(e){ return {}; }
+}
+function stgOf(id){ var m=stgMap(); return (m&&m[id])||''; }
+/* 읽어서 <b>한 곳에 넣어 줍니다</b> — 켤 때 한 번, 고르실 때마다 한 번 */
+function stgApply(){
+  try{ if(typeof APEX_STAGE!=='undefined'&&APEX_STAGE.setMine)APEX_STAGE.setMine(stgMap()); }
+  catch(e){}
+}
+function stgSet(id,st){
+  var m=stgMap();
+  if(st)m[id]=st; else delete m[id];
+  try{ localStorage.setItem(stgKey(),JSON.stringify(m)); }catch(e){}
+  stgApply();
+  try{ renderNav(); }catch(e2){}
+  try{ if(typeof hmBandPaint==='function')hmBandPaint(); }catch(e3){}
+  try{ if(typeof hmPickPaint==='function')hmPickPaint(); }catch(e4){}
+  if(typeof toast==='function')
+    toast(st?('🎯 '+st+' 자리로 보냈습니다 — 그 단계 고객 카드에서 따라옵니다')
+            :'그 자리에서 뺐습니다');
+}
+function stgList(){
+  try{ return (typeof APEX_STAGE!=='undefined'&&APEX_STAGE.order)?APEX_STAGE.order.slice(0):[]; }
+  catch(e){ return []; }
+}
+/* 그 단계가 <b>무슨 자리인지</b> 한 줄 — 말은 apex-stage 에서 옵니다 (5번).
+   말이 없으면 <b>빈 줄</b>로 둡니다. 지어 적지 않습니다 (1번). */
+function stgSay(st){
+  try{ var m=APEX_STAGE.of(st); return (m&&m.aim)?String(m.aim).replace(/<[^>]*>/g,''):''; }
+  catch(e){ return ''; }
+}
+function stgOpen(id,ev){
+  if(ev&&ev.stopPropagation)ev.stopPropagation();
+  var it=(typeof navItemOf==='function')?navItemOf(id):null,
+      now=stgOf(id),L=stgList(),h='',i,st,ovl;
+  ovl=document.getElementById('osOvl');
+  if(!ovl){ ovl=document.createElement('div'); ovl.id='osOvl'; ovl.className='os-ovl';
+            document.body.appendChild(ovl);
+            ovl.addEventListener('click',function(e){ if(e.target===ovl)osCloseModal(); }); }
+  for(i=0;i<L.length;i++){
+    st=L[i];
+    h+='<button type="button" class="stg-op'+(now===st?' on':'')+'" '+
+       'onclick="stgPick(\''+esc(id)+'\',\''+esc(st)+'\')">'+
+       '<b>'+esc(st)+'</b><span>'+esc(stgSay(st))+'</span></button>';
+  }
+  if(!L.length)h='<div class="stg-none">단계 표를 아직 못 읽었습니다.</div>';
+  ovl.innerHTML='<div class="os-modal">'+
+    '<button class="os-x" onclick="osCloseModal()">&times;</button>'+
+    '<div class="hd"><h3>🎯 어느 자리로 보낼까요</h3>'+
+      '<p><b>'+esc((it&&it.title)||id)+'</b> 를 그 단계 고객 카드에서 바로 쥐실 수 있게 합니다. '+
+      '이 기기에만 담기고, 원래 있던 도구는 그대로 있습니다.</p></div>'+
+    '<div class="bd"><div class="stg-ops">'+h+'</div>'+
+      (now?('<button type="button" class="t-btn stg-off" '+
+            'onclick="stgPick(\''+esc(id)+'\',\'\')">지금 자리(<b>'+esc(now)+'</b>)에서 빼기</button>'):'')+
+    '</div></div>';
+  ovl.classList.add('on');
+}
+function stgPick(id,st){
+  stgSet(id,st);
+  try{ if(typeof osCloseModal==='function')osCloseModal(); }catch(e){}
+}
 /* 최근 쓴 것 — 열 때마다 앞으로 당긴다 */
 function navRec(){
   try{ var v=JSON.parse(localStorage.getItem(navRecKey())||'[]'); return (v&&v.push)?v:[]; }
@@ -16608,9 +16724,9 @@ function navPeopleHtml(q,loose){
   if(p.team.length)h+=navPplGrpHtml('👥','팀원',p.team,'팀원 관리','navGoTeam',"navGoIn('team')",'팀원 관리');
   return {h:h,n:p.cli.length+p.team.length,cliRead:p.cliRead,teamRead:p.teamRead};
 }
-/* 메뉴 한 줄 — 별표를 같이 단다 */
+/* 메뉴 한 줄 — 별표와 <b>🎯 자리 보내기</b>를 같이 단다 (판 X356) */
 function navBtnHtml(it,star){
-  var fav=navIsFav(it.id);
+  var fav=navIsFav(it.id),st=(typeof stgOf==='function')?stgOf(it.id):'';
   return '<div class="nav-row'+(fav?' fav':'')+'">'+
     '<button class="tab-btn" data-tab="'+it.id+'" onclick="go(\''+it.id+'\')">'+
       '<span class="ti">'+((typeof icoFromEmoji==='function')?icoFromEmoji(it.icon,20):it.icon)+'</span>'+
@@ -16621,6 +16737,17 @@ function navBtnHtml(it,star){
         'title="'+(fav?'즐겨찾기에서 빼기':'즐겨찾기에 올리기')+'" '+
         'aria-label="'+(fav?'즐겨찾기에서 빼기':'즐겨찾기에 올리기')+'" '+
         'onclick="navFavToggle(\''+it.id+'\',event)">'+(fav?'★':'☆')+'</button>')+
+    /* 🎯 <b>어느 상담 자리에서 쓰나</b> — 고르시면 그 단계 고객 카드에서 따라옵니다.
+       보낸 자리가 있으면 <b>그 단계 이름</b>(TA · AP …)이 적히고, 없으면 ◎ 만 흐리게 섭니다.
+       ⚠ 🎯 <b>이모지를 안 씁니다</b> — 메뉴가 백 줄이 넘어 줄마다 빨간 과녁이 서면
+         그것만 눈에 들어옵니다. ◎ 는 글자라 바로 옆 ☆ 와 <b>같은 색·같은 무게</b>로
+         흐려집니다(이모지는 색이 안 먹습니다). 무슨 단추인지는 title·aria-label
+         이 말합니다 (판 X356). */
+    (star===false?'':
+      '<button type="button" class="nav-stg'+(st?' on':'')+'" '+
+        'title="'+(st?esc(st+' 자리에서 쥡니다 — 바꾸기'):'상담 자리로 보내기')+'" '+
+        'aria-label="'+(st?esc(it.title+' — 지금 '+st+' 자리 · 바꾸기'):esc(it.title+' — 상담 자리로 보내기'))+'" '+
+        'onclick="stgOpen(\''+it.id+'\',event)">'+(st?esc(st):'◎')+'</button>')+
   '</div>';
 }
 /* ══════════ 위 띠 — ⭐ 즐겨찾기만 <b>상시 고정</b> ══════════════════
@@ -21607,8 +21734,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-05 21:35';
-var APP_BUILD_NOTE='💬 <b>자비스 답 칸을 흰 바탕으로 · 도현체 · 토스 글꼴과 아이콘</b>(판 X353 · 사장님 말씀 「대답 하는 부분은 흰색 배경으로 가독성을 올리고 배달의 민족 도현체, 토스 글씨체 및 아이콘을 활용해줘」) — 답은 토스 회색 바탕 위 흰 카드에 짙은 글씨로 · 제목 줄은 배달의민족 도현체 · 본문은 Pretendard(토스 글씨체는 밖에 배포되지 않아 앱 전체가 쓰는 Pretendard) · 그림글자는 토스 Tossface. 위 원자로 · 판 셋은 검은 HUD 그대로입니다. ◾ 함께 들어 있는 판: 🔎 라이브에 여든여덟 가지를 물어 고친 일곱 자리(판 X352 — 「도구」 · 「너는 누구야」 · 「읽는 중」 쪽지 · 연금 곁가지 · DB/GMDB · 「얼마 넣」 · 팀 코칭 잠김) · 다시 물어 고친 두 자리(일꾼 답의 「읽는 중」 쪽지 · 「오늘 뭐부터 해야 해?」). 먼저 나간 판 X351(보장 전·후 발표 개선 열두 가지)도 들어 있습니다.';
+var APP_BUILD='2026-11-06 03:45';
+var APP_BUILD_NOTE='💬 <b>자비스 답 칸을 흰 바탕으로 · 도현체 · 토스 글꼴과 아이콘</b>(판 X353 · 사장님 말씀 「대답 하는 부분은 흰색 배경으로 가독성을 올리고 배달의 민족 도현체, 토스 글씨체 및 아이콘을 활용해줘」) — 답은 토스 회색 바탕 위 흰 카드에 짙은 글씨로 · 제목 줄은 배달의민족 도현체 · 본문은 Pretendard(토스 글씨체는 밖에 배포되지 않아 앱 전체가 쓰는 Pretendard) · 그림글자는 토스 Tossface. 위 원자로 · 판 셋은 검은 HUD 그대로입니다. ◾ 함께 들어 있는 판: 🔎 라이브에 여든여덟 가지를 물어 고친 일곱 자리(판 X352 — 「도구」 · 「너는 누구야」 · 「읽는 중」 쪽지 · 연금 곁가지 · DB/GMDB · 「얼마 넣」 · 팀 코칭 잠김) · 다시 물어 고친 두 자리(일꾼 답의 「읽는 중」 쪽지 · 「오늘 뭐부터 해야 해?」). 먼저 나간 판 X351(보장 전·후 발표 개선 열두 가지) · X345 · X354 · X355(적립식 여섯 장) · X356(메뉴를 상담 자리로)도 들어 있습니다.';
 
 
 
@@ -38294,8 +38421,92 @@ function hmBandHtml(){
        '<span class="s">'+osEsc(m?m.t:x.s)+'</span></button>';
   }
   h+='</div>';
+  /* ⚠ ⭐ 내가 고른 메뉴는 <b>띠 안이 아니라 띠 바로 아래</b>입니다 (판 X356).
+     처음에 문 넷 밑에 넣었더니 띠가 <b>260px 예산</b>을 넘어 358px 이 되었고
+     (check-hmband), 그만큼 「지금 할 것」 이 첫 화면 밖으로 밀렸습니다.
+     띠는 「지금 몇 분이 어디에 있나」 를 말하는 자리이지 바로가기 자리가
+     아닙니다 — 세우는 곳은 renderHome 의 #hmPickHost 입니다. */
   if(N)h+=hmBandAskHtml(who);
   return h+'</div>';
+}
+/* ══ ⭐ <b>내가 고른 메뉴</b> — 오늘에서 넣고 뺍니다 (판 X356) ═══════════
+   사장님 말씀 (2026-11-05) — 「<b>내가 추가하고 오늘에서 뺄수 있도록</b> 만들어」.
+
+   ★ <b>어떤 칸이 내 것인지는 navFav() 한 곳</b>이 압니다 (5번) — 위 띠의
+     ⭐ 줄과 서랍의 ☆ 가 쓰는 바로 그 목록입니다. 여기서 또 담으면
+     위 띠와 오늘이 <b>다른 말</b>을 하게 됩니다.
+   ★ 이름·아이콘도 <b>navItemOf()</b> 에서 옵니다 — 여기 적지 않습니다.
+   ★ 없어진 메뉴는 <b>조용히 건너뜁니다</b> — 눌러도 안 열리는 칸을
+     세우면 사장님이 고장으로 보십니다.
+   ★ 고르신 것이 없으면 <b>빈 자리를 지킵니다</b> — 「있다 없다 하는 칸을
+     없앱니다」(사장님 말씀 2026-09-26).                                */
+function hmPickHtml(){
+  var L=(typeof navFav==='function')?navFav():[],h,i,it,n=0,b='';
+  for(i=0;i<L.length;i++){
+    it=(typeof navItemOf==='function')?navItemOf(L[i]):null;
+    if(!it||!it.id)continue;
+    n++;
+    b+='<span class="hm-pick-i">'+
+       '<button type="button" class="hm-pick-g" onclick="go(\''+osEsc(it.id)+'\')">'+
+         '<span class="e">'+(it.icon||'•')+'</span>'+osEsc(it.title||it.id)+'</button>'+
+       '<button type="button" class="hm-pick-x" title="오늘에서 빼기" '+
+         'aria-label="'+osEsc((it.title||it.id)+' 를 오늘에서 빼기')+'" '+
+         'onclick="hmPickOff(\''+osEsc(it.id)+'\',event)">✕</button></span>';
+  }
+  /* ★ 머리글은 <b>한 줄</b>입니다 — 고르신 것이 없을 때 안내를 두 번째 줄로
+     내렸더니 홈이 2,872px 가 되어 눈금(2,870px)을 <b>2px</b> 넘었습니다.
+     폰 홈은 자리가 그만큼 빠듯합니다 (check-homeone · check-msfive).
+     긴 설명은 ＋ 넣기 창이 합니다 — 여기서는 <b>없다고만</b> 적습니다 (1번). */
+  h='<div class="hm-pick"><div class="hm-pick-h">⭐ <b>내가 고른 메뉴</b>'+
+    '<span class="tag">'+(n?(n+'칸'):'아직 없습니다')+'</span>'+
+    '<button type="button" class="hm-pick-add" onclick="hmPickAdd()">＋ 넣기</button></div>';
+  if(n)h+='<div class="hm-pick-l">'+b+'</div>';
+  return h+'</div>';
+}
+/* 칠하는 곳은 <b>여기 하나</b>입니다 (5번) — 띠(hmBandPaint)와 따로입니다 */
+function hmPickPaint(){
+  var el=document.getElementById('hmPickHost'); if(!el)return;
+  try{ el.innerHTML=hmPickHtml(); }catch(e){}
+}
+function hmPickOff(id,ev){
+  if(ev&&ev.stopPropagation)ev.stopPropagation();
+  try{ navFavToggle(id,ev); }catch(e){}
+  hmPickPaint();
+}
+/* ＋ 넣기 — 서랍과 <b>같은 묶음</b>(navVisGroups)을 그대로 보여 줍니다.
+   ★ 목록을 여기서 새로 만들지 않습니다 (5번) — 숨은 갈래·등급 제한이
+     서랍과 한 치도 안 갈립니다.                                        */
+function hmPickAdd(){
+  var G=(typeof navVisGroups==='function')?navVisGroups():[],h='',i,j,it,fav,ovl;
+  for(i=0;i<G.length;i++){
+    if(!G[i]||!G[i].items||!G[i].items.length)continue;
+    h+='<div class="hm-pk-g"><b>'+osEsc(G[i].group||G[i].t||'')+'</b><div class="hm-pk-r">';
+    for(j=0;j<G[i].items.length;j++){
+      it=G[i].items[j]; if(!it||!it.id)continue;
+      fav=(typeof navIsFav==='function')&&navIsFav(it.id);
+      h+='<button type="button" class="hm-pk-b'+(fav?' on':'')+'" '+
+         'aria-pressed="'+(fav?'true':'false')+'" '+
+         'onclick="hmPickTog(\''+osEsc(it.id)+'\')">'+(fav?'★':'☆')+' '+
+         (it.icon||'')+' '+osEsc(it.title||it.id)+'</button>';
+    }
+    h+='</div></div>';
+  }
+  if(!h)h='<div class="stg-none">메뉴를 아직 못 읽었습니다.</div>';
+  ovl=document.getElementById('osOvl');
+  if(!ovl){ ovl=document.createElement('div'); ovl.id='osOvl'; ovl.className='os-ovl';
+            document.body.appendChild(ovl);
+            ovl.addEventListener('click',function(e){ if(e.target===ovl)osCloseModal(); }); }
+  ovl.innerHTML='<div class="os-modal hm-pk-m">'+
+    '<button class="os-x" onclick="osCloseModal()">&times;</button>'+
+    '<div class="hd"><h3>⭐ 오늘에 둘 메뉴 고르기</h3>'+
+      '<p>누르면 <b>오늘</b> 과 위 띠에 같이 섭니다. 다시 누르면 빠집니다. 이 기기에만 담깁니다.</p></div>'+
+    '<div class="bd hm-pk-bd">'+h+'</div></div>';
+  ovl.classList.add('on');
+}
+function hmPickTog(id){
+  try{ navFavToggle(id); }catch(e){}
+  hmPickPaint();
+  hmPickAdd();   /* 창을 그대로 다시 그려 ★ 가 바로 바뀝니다 */
 }
 function hmBandPaint(){
   var el=document.getElementById('hmBandHost'); if(!el)return;
@@ -38685,6 +38896,7 @@ function hmTossHtml(){
        ★ <b>그래서 펴 둡니다.</b> 홈을 줄이는 것보다 사장님 말씀이 먼저입니다.
          줄일 자리를 더 찾아야 한다면 이 칸은 <b>사장님이 고르실 때</b>입니다.  */
     '<div id="hmBandHost">'+(function(){ try{ return hmBandHtml(); }catch(e){ return ''; } })()+'</div>'+
+
     /* 🧺 <b>「지금 할 것」 한 카드 안에 오늘 할 일을 차례로</b> (판 X297 · 사장님 말씀
        2026-10-31 「지역동선하고, 오늘 할일등이 <b>지금 할것에 포함</b> 되게」 → 여쭈니
        <b>「카드 안에 차례로 쌓기」</b> · 넣을 것 🚗 동선 · 📅 오늘 약속·이번 주 ·
@@ -38726,6 +38938,18 @@ function hmTossHtml(){
        ★ 컴퓨터는 안 바뀝니다 — 곁칸은 오른쪽 기둥(grid-row 3~)에 따로 섭니다. */
     hmTossHero()+
     '<div id="hmSideUp"></div>'+
+    /* ⭐ <b>내가 고른 메뉴</b> — 곁칸 바로 밑 (판 X356 · 사장님 말씀
+       「내가 추가하고 오늘에서 뺄수 있도록 만들어」).
+       ⚠ <b>자리를 네 번 옮겼습니다.</b> 홈은 자리가 빠듯해 자 셋이 저마다
+         차례를 못 박고 있습니다 — ① 띠 안 → 띠가 <b>260px 예산</b>을 넘어
+         358px(check-hmband) · ② 띠 바로 아래 → <b>띠 → 지금 할 것</b> 차례가
+         끊김(같은 자) · ③ 테두리 안 → 「지금 할 것」 속이 <b>머리 → 카드 →
+         넷</b> 이 아니게 됨(check-hmtwo) · ④ 테두리 바로 밑 → 거기는
+         <b>➕ 세 칸 · 📄 둘만</b> 서는 자리(같은 자 · 판 X298). 다섯 번째가
+         여기입니다. 자들이 저를 <b>네 번</b> 세웠습니다 (8번).
+       ★ 고르신 것이 없어도 <b>자리를 지킵니다</b> — 「있다 없다 하는 칸을
+         없앱니다」 (2026-09-26). */
+    '<div id="hmPickHost">'+(function(){ try{ return hmPickHtml(); }catch(e){ return ''; } })()+'</div>'+
     /* ⬆ <b>세 칸(➕ 고객 추가)과 📄 한 줄을 카드 바로 밑으로</b> (판 X199).
        카드가 622px 라 그 사이에 칩·인사·바(140px)가 끼면 세 칸이 <b>첫 화면
        밖(y880)</b> 으로 밀립니다 — 사장님이 판 X194 에서 <b>「무엇을 도울까요
@@ -55958,6 +56182,10 @@ function calcInherit(){
 
 /* ════════ 초기화 ════════ */
 applyEmbeddedConfig();
+/* 🎯 메뉴 옆에서 보내 두신 자리를 <b>한 곳에 넣어 줍니다</b> (판 X356) —
+   renderNav 보다 <b>먼저</b>라야 메뉴 칸에 그 단계 이름이 같이 섭니다.
+   로그인 전에는 'local' 열쇠라 비어 있고, 로그인 뒤 osProfileApply 가 다시 부릅니다. */
+try{ stgApply(); }catch(e){}
 renderNav();
 /* 접어 두셨던 대로 세웁니다 — 안 부르면 새로고침마다 도로 펴집니다.
    <b>기본은 펼침</b>이라, 고르신 적이 없으면 늘 서 있습니다. */
@@ -66351,6 +66579,9 @@ function osProfileApply(sb,uid,r){
     osCheckApproval(sb,uid,function(gate,extra){
       if(gate&&prof.role!=='admin'){OS.profile=null;osRenderPill();osShowPending(gate,(OS.session&&OS.session.user&&OS.session.user.email)||'',extra);return;}
       OS.profile=prof;
+      /* 🎯 로그인하면 <b>그분 것</b>으로 다시 넣어 줍니다 (판 X356) — 열쇠가
+         사람마다 다릅니다(navWho). 안 부르면 로그인 전 'local' 것이 남습니다. */
+      try{ stgApply(); }catch(eStg){}
       /* 보조 조회 결과는 값이 있을 때만 덮어쓴다(없는 값으로 등급을 지우지 않도록) */
       if(extra){
         if(extra.status!=null)OS.profile.status=extra.status;
