@@ -24,7 +24,7 @@
           「쓰는 법」 물음 스물넷에 안 낀다 · ★★ AI · AI 목소리로 그 글(병력 · 이름)이 안 간다 (3번)
      [11] 🗂 메뉴(TABS)의 화면 <b>전부</b>를 이름만 말해도 자비스가 그 화면을 연다 — 메뉴를 줄이는 전제
      [12] 🛰 MARK II(판 X347 · 「아이언맨처럼 !!」) — 판 셋 · 시계 · 부팅 장면(센 수 그대로 · 한 창에 한 번) · 말로 묻기 단추
-     [13] 🔎 라이브에서 물어 보고 고친 것(판 X348) — 「읽는 중」 쪽지 · 연금 물음의 곁가지 · DB/GMDB · 「도구」 · 인사/고마워/감사로그
+     [13] 🔎 라이브에서 물어 보고 고친 것(판 X352) — 「읽는 중」 쪽지 · 연금 물음의 곁가지 · DB/GMDB · 「도구」 · 인사/고마워/감사로그
      [9] 콘솔 오류 0 · 바깥 주소 0
    ★ 이름은 「홍길동」 (3번).                                                     */
 const { chromium } = require('playwright');
@@ -281,7 +281,7 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
   const M1 = await f.evaluate(() => { var n = jvFind('내 코칭 뭐 받았어').filter(x => x.k === 'coach')[0];
     return n ? n.rows.map(r => r.t + ' | ' + r.s.join(' | ')).join(' || ') : ''; });
   is(/2026-11-03 코칭/.test(M1) && /하루 통화 서른 통/.test(M1) && /내가 적은 말/.test(M1), '「내 코칭 뭐 받았어」 → 받은 코칭 · 할 일 · 내가 적은 말');
-  /* 판 X348 — 팀 코칭은 <b>그 화면을 여는 계정</b>(지점장)으로 잽니다. 설계사는 그 화면이 잠겨 있어 「한 번 열면 찾습니다」
+  /* 판 X352 — 팀 코칭은 <b>그 화면을 여는 계정</b>(지점장)으로 잽니다. 설계사는 그 화면이 잠겨 있어 「한 번 열면 찾습니다」
      라고 하면 거짓 길이라 아예 안 섭니다 — 아래 M4 가 봅니다 */
   const LOCK = await f.evaluate(() => { var P = kbApp(), r0 = P.OS.profile.role, p0 = P.OS.profile.plan;
     var a = jvWay('branch_coach').locked, n = jvFind('팀 코칭 보여줘').filter(x => x.k === 'coach').length;
@@ -363,7 +363,7 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
   is(MK.bootOff && !MK.again, '부팅 장면은 잠깐 서고 걷힌다 · 한 창에 <b>한 번</b>만');
   is(MK.mic === 1 || MK.mic === -1, '「말로 묻기」 큰 단추는 위 띠의 🎤 를 그대로 누른다 — 듣는 길은 하나 (5번)' + (MK.mic === -1 ? ' (이 브라우저는 듣기가 없어 단추가 감춰짐)' : ''));
 
-  sec('[13] 🔎 라이브에서 물어 보고 고친 것 (판 X348 · 2026-11-05 「라이브 자비스 다양한 질문으로 확인해봐」)');
+  sec('[13] 🔎 라이브에서 물어 보고 고친 것 (판 X352 · 2026-11-05 「라이브 자비스 다양한 질문으로 확인해봐」)');
   const LV = await f.evaluate(async () => {
     var P = kbApp(), o = {};
     var card = async (q) => { while (busy) await new Promise(r => setTimeout(r, 50)); ask(q); await new Promise(r => setTimeout(r, 150));
