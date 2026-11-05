@@ -37,6 +37,11 @@
         <b>세로 가운데</b>로 세웁니다(위로 쏠려 「글이 모자란 문서」 같았습니다).
         ★ 제목에 쓴 자리는 <b>여백에서 되찾아</b> 넘침 눈금(400px)을 안 올렸습니다.
         ★ 내용이 창보다 긴 쪽은 <b>위가 잘리면 안 됩니다</b> — 제목이 사라집니다.
+        ★★ <b>제가 더 나쁘게 만든 자리가 있었습니다.</b> 전·후를 나란히 놓고 보니
+        제목을 키우자 <b>낱말 가운데서</b> 잘렸습니다 — 「다릅니 / 다.」 「일입니 / 다」.
+        고치기 전 1개였던 것이 <b>10개</b>로 늘었습니다. 숫자만 보고 있었으면 못 봤습니다.
+        `word-break:keep-all`(한글은 띄어쓰기에서만 자름) + `text-wrap:balance` 로
+        <b>0개</b>가 되었습니다 — 고치기 전보다도 적습니다.
      11. ★★ <b>폰에서 발표 띠가 화면 안에 있고 단추가 44px 이다.</b> 사장님 말씀
         (2026-11-05) 「<b>폰에서도 확인해줘</b>」 — 390px 화면에서 띠가 <b>482px</b>
         였습니다. 왼쪽 「‹」 와 오른쪽 「✕ 종료」 가 잘려 <b>앞으로도 못 가고
@@ -74,6 +79,7 @@
      ⓒ 차례에 없는 id 적기 → [3] 이 울음
      ⓓ .wonly 이름표를 떼기 → [10] 이 「아직 보이는 것 9」 로 울음 (판 X339)
      ⓔ 폰 띠 규칙을 빼기 → [11] 이 「482px / 창 390px」 로 울음 (판 X342)
+     ⓖ keep-all·balance 를 빼기 → [13] 이 「낱말 가운데서 잘린 제목 10/92」 로 울음 (판 X345)
      ⓕ 노트북 제목·가운데 규칙을 빼기 → [13] 의 <b>셋이 다</b> 울음 (판 X345) —
        「제목 54px」 · 「자리 남는 쪽 6/92」 · 「6쪽 전부 가운데 아님」.
        `margin:auto` 만 떼어도 울립니다 — 떼면 `.wrap` 이 늘어나 남는 자리가 40→5 쪽.
@@ -280,7 +286,7 @@ const 갈래 = {
           `margin:auto` 가 그 자리를 위아래로 반씩 나눠 주어야 가운데에 선 것입니다. */
     const r = await pg.evaluate(갈래들 => {
       let 제목 = 0, 잘림 = 0, 가운데 = 0, 남는쪽 = 0, 수 = 0;
-      const 쏠린것 = [];
+      const 쏠린것 = [], 흩날림 = [];
       for (const k of 갈래들) {
         window.__go(k); presEnter();
         const L = presList(); 수 += L.length;
@@ -290,6 +296,33 @@ const 갈래 = {
           const h = s.querySelector('h2') || s.querySelector('h1');
           if (h) 제목 = Math.max(제목, parseFloat(getComputedStyle(h).fontSize));
           if (q.top < -2 || (h && h.getBoundingClientRect().top < 0)) 잘림++;
+          if (h) {
+            /* 제목이 <b>낱말 가운데서</b> 잘리면 마지막 줄에 글자 한두 개만 남습니다 —
+               「다릅니 / 다.」 「일입니 / 다」. 글자마다 자리를 재어 줄로 묶습니다. */
+            const 줄 = [];
+            (function walk(n) {
+              if (n.nodeType === 3) {
+                const t = n.nodeValue;
+                for (let j = 0; j < t.length; j++) {
+                  if (!t[j].trim()) continue;
+                  const rg = document.createRange(); rg.setStart(n, j); rg.setEnd(n, j + 1);
+                  const z = rg.getBoundingClientRect(); if (!z.height) continue;
+                  const y = Math.round(z.top);
+                  let v = 줄.find(x => Math.abs(x.y - y) < 6);
+                  if (!v) { v = { y: y, 글: '', l: z.left, r: z.right }; 줄.push(v); }
+                  v.글 += t[j]; v.l = Math.min(v.l, z.left); v.r = Math.max(v.r, z.right);
+                }
+              } else [].forEach.call(n.childNodes, walk);
+            })(h);
+            줄.sort((x, y) => x.y - y.y);
+            if (줄.length >= 2) {
+              const 넓 = Math.max.apply(null, 줄.map(z => z.r - z.l));
+              const 끝 = 줄[줄.length - 1], 끝폭 = 끝.r - 끝.l;
+              if (끝폭 < 넓 * 0.22)
+                흩날림.push(k + ':' + s.id + ' 「' + 끝.글 + '」 ' + Math.round(끝폭) +
+                            'px / 가장 긴 줄 ' + Math.round(넓) + 'px');
+            }
+          }
           const w = s.querySelector(':scope > .wrap');
           if (!w) continue;
           const pt = parseFloat(cs.paddingTop), pb = parseFloat(cs.paddingBottom);
@@ -305,7 +338,7 @@ const 갈래 = {
         if (typeof presExit === 'function') presExit();
       }
       return { 제목: 제목, 잘림: 잘림, 가운데: 가운데,
-               남는쪽: 남는쪽, 수: 수, 쏠린것: 쏠린것 };
+               남는쪽: 남는쪽, 수: 수, 쏠린것: 쏠린것, 흩날림: 흩날림 };
     }, Object.keys(갈래));
     is(r.제목 >= 56, '  제목이 <b>' + Math.round(r.제목) + 'px</b> 이다 (고치기 전 54px — 쪽 제목 h2 는 46px · 56 이상)');
     is(r.잘림 === 0, '  위가 잘린 쪽 ' + r.잘림 + '/' + r.수 +
@@ -315,6 +348,10 @@ const 갈래 = {
     is(r.남는쪽 > 0 && r.가운데 === r.남는쪽,
        '  그 ' + r.남는쪽 + '쪽이 <b>전부</b> 세로 가운데에 선다 (위로 안 쏠림)' +
        (r.쏠린것.length ? ('  ← ' + r.쏠린것.slice(0, 4).join(' · ')) : ''));
+    is(r.흩날림.length === 0,
+       '  제목이 <b>낱말 가운데서 안 잘린다</b> — 마지막 줄에 글자 한두 개만 남은 제목 ' +
+       r.흩날림.length + '/' + r.수 + '개 (제목을 키우기 전 1개 · 키우니 10개로 늘어 고쳤습니다)' +
+       (r.흩날림.length ? ('  ← ' + r.흩날림.slice(0, 5).join(' · ')) : ''));
   }
 
   head('[11] ★★ 폰(390×844)에서 <b>발표 띠가 화면 안</b>에 있고 단추가 44px 이다');
