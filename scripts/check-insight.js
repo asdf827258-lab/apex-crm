@@ -1,7 +1,7 @@
 /* 🧭 <b>상품전략기 · 월간 상품 인사이트</b> — 덮개로 열리나 · 쪽이 성한가 ·
    고객 제시 금지 자료가 검색에 안 걸리나 · 색을 또 적지 않나.
 
-   판 X349 · 사장님 말씀 2026-11-05 —
+   판 X350 · 사장님 말씀 2026-11-05 —
    「이걸 디자인을 다시 짜서 메인세션과 넣자. 메인세션과 동일하게 테마 폰트를 짜봐」
    → 「메뉴에 따로 상품전략기 어때」
 
@@ -28,7 +28,7 @@ const SRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
 const DIR = path.join(ROOT, 'app/insight');
 const PAGE = path.join(DIR, 'index.html');
 
-console.log('🧭 상품전략기 · 월간 상품 인사이트 (판 X349)');
+console.log('🧭 상품전략기 · 월간 상품 인사이트 (판 X350)');
 
 sec('[1] 덮개로 열리고 다시 벗겨진다');
 is(/\{group:'상품전략기',items:\[\s*\{id:'insight'/.test(SRC), '메뉴에 <b>「상품전략기」</b> 묶음이 있고 그 안에 insight 가 선다');
