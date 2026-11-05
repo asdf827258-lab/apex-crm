@@ -99,7 +99,44 @@ const PLAN = '<!doctype html><html lang="ko"><meta charset="utf-8"><body style="
   try { const [fc2] = await Promise.all([pg.waitForEvent('filechooser', { timeout: 5000 }), pg.evaluate(() => ppPick())]); await fc2.setFiles(blankPdf); } catch (e) {}
   await pg.waitForTimeout(4000);
   const sc = await pg.evaluate(() => ({ t: (document.getElementById('ppBox') || {}).textContent || '', n: S.after.length, pv: !!document.querySelector('.ppv') }));
-  is(sc.n === n1 && !sc.pv && /손으로|스캔|그림/.test(sc.t), '스캔 PDF — 표를 안 띄우고 「손으로 적어 주세요」 라고 말한다 (「' + sc.t.slice(0, 40) + '…」)');
+  is(sc.n === n1 && !sc.pv && /손으로|스캔|그림|제안 더하기/.test(sc.t), '스캔 PDF — 표를 안 띄우고 「손으로 적어 주세요」 라고 말한다 (「' + sc.t.slice(0, 40) + '…」)');
+
+  /* [4-1] 판 X345 — 실제 제안서 8부에서 틀렸던 모양을 그대로 흉내 낸다(실제 고객 서류는 저장소에 넣지 않는다).
+     ① 설명 문단 · 예시표의 금액을 담보로 잡던 것 → <b>담보 표(가입금액 + 보험료 머리줄)만</b> 읽는다
+     ② 담보 이름이 꺾여 금액 줄과 떨어진 것 ③ 「1천5백만원 · 5천만원 · 1백만원」
+     ④ 1~5종처럼 같은 담보가 여러 줄 → 큰 금액 하나만 체크 ⑤ 「암진단비(유사암 제외)」 가 유사암으로 가던 것
+     ⑥ 「간병인사용 질병입원일당」 은 입원일당이 아니라 간병인 일당 ⑦ 합계 보험료는 「보장보험료 합계」 줄에서 */
+  head('[4-1] 실제 제안서 모양 — 표만 · 꺾인 이름 · 천/백만원 · 1~5종 · 유사암 제외 · 간병인사용');
+  const KBLIKE = '<!doctype html><html lang="ko"><meta charset="utf-8"><body style="font-family:sans-serif;font-size:12px;padding:30px">' +
+    '<p>KB 5.10.10 Young 플러스 건강보험(무배당)(26.07)</p><p>※ 예시 : 40세 남성, 가입금액 1천만원 기준 — 암진단비 1천만원</p>' +
+    '<p>보장명 가입금액 보험료(원) 보험료비중(%) 납입|보험기간</p>' +
+    '<p>44 암진단비(유사암 제외)(감액없음)(맞춤고지) 5천만원 55,400 22.1 20년/90세</p>' +
+    '<p>89 뇌혈관질환진단비(감액없음)(맞춤고지) 2천만원 19,360 7.7 20년/90세</p>' +
+    '<p>93 심장질환(특정I)진단비(감액없음)(맞춤고지) 1천5백만원 16,410 6.5 20년/90세</p>' +
+    '<p>195 질병1~5종수술비II(매회지급)(맞춤고지)_5종 1천만원 9,800 3.9 20년/90세</p>' +
+    '<p>196 질병1~5종수술비II(매회지급)(맞춤고지)_4종 5백만원 950 0.4 20년/90세</p>' +
+    '<p>400</p><p>간병인사용 질병입원일당(1일이상 180일한도)(요양병원제외)(건</p><p>강가입)</p><p>15만원 6,390 20년/90세</p>' +
+    '<p>- MRI촬영(급여) : 5만원</p><p>보장보험료 합계 250,740 원</p><p>※ 상품제안서_가입담보는 요약 안내입니다</p></body></html>';
+  const kbPdf = path.join(tmp, 'kblike.pdf');
+  { const m2 = await br.newPage(); await m2.setContent(KBLIKE); await m2.pdf({ path: kbPdf, format: 'A4' }); await m2.close(); }
+  await pg.evaluate(() => { window.__PP = null; go('edit'); });
+  try { const [fc3] = await Promise.all([pg.waitForEvent('filechooser', { timeout: 5000 }), pg.evaluate(() => ppPick())]); await fc3.setFiles(kbPdf); } catch (e) {}
+  let got2 = false; try { await pg.waitForSelector('.ppv', { timeout: 30000 }); got2 = true; } catch (e) {}
+  if (got2) {
+    const Q = await pg.evaluate(() => ({ prem: __PP.P.premMan, nm: __PP.P.nm,
+      on: __PP.P.rows.filter(r => r.on).map(r => [r.k, r.v]), all: __PP.P.rows.map(r => r.k),
+      oth: __PP.P.other.map(r => r.raw), dupTag: !!document.querySelector('.ppv em.dup') }));
+    const O = Object.fromEntries(Q.on);
+    is(O.cancer === 5000 && Q.all.indexOf('cancer2') < 0, '「암진단비(유사암 제외)」 5천만원 → <일반암 5,000만원> — 유사암으로 안 간다');
+    is(O.brain === 2000, '「2천만원」 → 2,000만원');
+    is(O.surg5D === 1000 && Q.all.filter(k => k === 'surg5D').length === 2, '1~5종 두 줄 중 <큰 금액(1,000만원) 하나만> 체크 — 더하면 부풀려진다');
+    is(Q.dupTag, '빼 둔 줄에 「같은 담보 · 조건만 다름」 이라고 적어 둔다');
+    is(O.nurUD === 15 && O.inpD === undefined, '꺾인 이름 「간병인사용 질병입원일당 …」 + 다음 줄 「15만원」 → <간병인 일당 15만원> (입원일당 아님)');
+    is(Q.oth.some(r => /심장질환\(특정I\)/.test(r) && /1천5백만원/.test(r)), '못 알아본 담보(심장질환 특정I)는 「못 알아본 줄」 에 금액(1천5백만원)과 함께 — 사람이 고른다');
+    is(Object.keys(O).indexOf('silD') < 0 && !Q.oth.some(r => /MRI/.test(r)) && !Q.on.some(r => r[1] === 1000 && r[0] === 'cancer'), '설명 줄(「- MRI촬영 : 5만원」 · 「예시 … 1천만원 기준」)은 담보로 안 잡는다');
+    is(Q.prem === '25.074', '월 보험료는 「보장보험료 합계 250,740 원」 → 25.074만원');
+    is(/Young 플러스 건강보험/.test(Q.nm), '상품명 — 「' + Q.nm + '」');
+  } else is(false, 'KB 모양 PDF 의 표가 안 떴다');
 
   head('[5] 「맡겨 주시면」 — 약속 여섯 · 장담하는 말 없음');
   await pg.evaluate(() => { S.deck = true; go('show'); });
