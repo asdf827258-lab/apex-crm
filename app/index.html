@@ -1163,7 +1163,7 @@ svg.ico{display:block;flex:none;vertical-align:-3px}
    고른 노랑이라 흰 바탕에서는 거의 안 보입니다. 색표에 이미 있는 주황을
    씁니다 — 노란 계열 그대로이고 새로 고른 색이 아닙니다.            */
 .nav-star.on{color:var(--t-warn-d);}
-/* 🎯 <b>상담 자리로 보내기</b> (판 X350) — 별표와 같은 44px.
+/* 🎯 <b>상담 자리로 보내기</b> (판 X356) — 별표와 같은 44px.
    ★ 색·둥글기는 <b>이미 있는 토큰만</b> 씁니다 — 여기에 hex 를 적으면
      색을 바꿀 때 이 자리만 옛 색으로 남습니다 (5번).
    보낸 자리가 있으면 그 단계 이름이 작게 적힙니다(「TA」 「AP」 …). */
@@ -2483,6 +2483,14 @@ body.dzguide-mode #dzGuideScreen{display:block;}
 body.educal-mode .app{display:none;}
 body.educal-mode #educalScreen{display:block;}
 #educalScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 🧭 상품전략기 · 월간 상품 인사이트 (교육 캘린더와 같은 패턴 · app/insight/index.html)
+   ★ 몸은 <b>따로 선 한 쪽</b>입니다 — 보험사 GA 소식지·약관을 달마다 분석해 뽑은 것.
+     색·글꼴은 그 쪽이 <b>../ui.css</b> 를 물어 옵니다 (5번).
+   ⚠ 소식지는 <b>고객 제시 금지</b> 자료라 그 쪽에 noindex 를 달았습니다 — check-insight 가 봅니다. */
+#insightScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.insight-mode .app{display:none;}
+body.insight-mode #insightScreen{display:block;}
+#insightScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* 상담자료는 화면 아래에 자기 버튼이 있다 — 그 위로 올린다 */
 #fpDeckScreen .fin-float{bottom:88px;}
 @media(max-width:880px){#fpDeckScreen .fin-float{bottom:96px;}}
@@ -3010,6 +3018,16 @@ body.educal-mode #educalScreen{display:block;}
     <button class="ff-back" onclick="exitEducal()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadEducal()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openEducalNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 🧭 상품전략기 · 월간 상품 인사이트 (앱 폴더에 번들: app/insight/) -->
+<div id="insightScreen">
+  <iframe id="insightFrame" class="fin-frame" title="월간 상품 인사이트"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitInsight()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadInsight()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openInsightNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
 
@@ -11016,7 +11034,7 @@ function tdoWait(k){
    가져오고, <b>메뉴에 없으면 빼 버린다</b> — 못 여는 단추를 세우면 눌렀는데
    아무 일도 안 일어나고, 그때부터 다른 단추도 안 믿게 된다 (8번). */
 function tdoTools(k){
-  /* ★★ <b>물을 때 묻습니다</b> (판 X350 · 5번). 여태는 켤 때 한 번 베껴 둔
+  /* ★★ <b>물을 때 묻습니다</b> (판 X356 · 5번). 여태는 켤 때 한 번 베껴 둔
      사본(TDO[k].tools)만 읽었습니다. 그래서 사장님이 메뉴 옆 🎯 로 자리를
      바꾸셔도 <b>새로고침 전에는 고객 카드에 안 따라왔습니다</b> — 베낀 사본은
      언제나 늙습니다. 이제 apex-stage 의 boxIds 에 <b>그때그때</b> 묻습니다.
@@ -15314,6 +15332,14 @@ var TABS=[
    {id:'wallets',tk:'8통장 지도',icon:'🗺️',title:'8통장 진단지도',cnt:'8',ak:'8통장 지도 빈 공백 진단 보장분석'}
  ]},
  {group:'상담 도구',items:[
+   /* 🧭 <b>상품전략기</b> — 2026-11-05 (판 X350) · 사장님 말씀 「메뉴에 따로 상품전략기 어때」.
+      매달 보험사 GA 소식지(·약관)로 만드는 월간 상품 인사이트입니다 — 이번 달 결론 ·
+      고객 맞춤 찾기 · 추천 순위 · 조합 세트 · 약관 비교 · 조합 빌더. 몸은 app/insight/ 한 폴더.
+      ★ 처음엔 <b>묶음을 따로</b> 세웠는데 다 접은 서랍이 <b>951px</b> 가 되어 한 화면(900px)을
+        넘었습니다(check-navgrp · 교육시스템EM 때와 같은 자리). 그래서 <b>이름을 단 칸 하나</b>로
+        상담 도구 맨 위에 둡니다 — 상품을 고르는 일은 상담 앞에서 하는 일입니다.
+      ★ 판매인 교육용입니다 — 고객에게 띄우는 것은 그 안의 「📱 고객에게 보여주기」 화면뿐입니다. */
+   {id:'insight',icon:'🧭',title:'상품전략기',cnt:'',ak:'상품전략기 월간 상품 인사이트 신상품 소식지 약관 비교 추천 순위 조합 GA 이번 달 상품'},
    {id:'cs_assist',icon:'💬',title:'AI 상담 어시스턴트',cnt:'',ak:'상담 AI 코치'},
    {id:'cs_needs',icon:'⚡',title:'니즈 시뮬레이터',cnt:'',ak:'상담 AI 코치'},
    {id:'ins_asst',icon:'🩺',title:'보험 비서',cnt:'',ak:'상담 AI 코치'},
@@ -15530,6 +15556,7 @@ var TABS=[
 var TAB_META={
  myperf:{tag:'MY',title:'내 업적 입력',desc:'신계약을 한 번 넣으면 EM · 월간보고 · 리더 화면에 같은 숫자로 섭니다.'},
  emcenter:{tag:'교육시스템EM',title:'EM 전용 운영센터',desc:'아래 단추를 누르면 새 탭으로 열립니다. 주소가 달라 거기서 한 번 더 로그인하십시오.'},
+ insight:{tag:'상품전략기',title:'상품전략기 · 월간 상품 인사이트',desc:'보험사 GA 소식지·약관을 달마다 읽어 이번 달 결론 · 추천 순위 · 조합 세트 · 약관 비교를 한 쪽에 모았습니다.'},
  educal:{tag:'교육시스템EM',title:'APEX 교육 캘린더',desc:'월간 캘린더 · 신입 교육 주간 · 팀별 교육 · 교육매니저 운영표 · 본부장 루틴 · 공지 만들기.'},   /* ⚠ 이 글은 esc() 를 지납니다 — <b> 를 넣으면 글자 그대로 찍힙니다 */
  clients:{tag:'OS',title:'고객 보장분석 프로젝트',desc:'고객별 보장분석 상담을 한 곳에서. 문서 업로드·추출·검수·전후비교·리포트까지 이어집니다.'},
  cs_assist:{tag:'CONSULT',title:'AI 통합상담 어시스턴트',desc:'윤시현 「고객이익 통합상담」 방법론으로 상담 준비 브리핑과 녹취 복기를 돕습니다. 녹취는 텍스트 붙여넣기(길이 제한 없음) 또는 오디오 업로드.'},
@@ -15627,6 +15654,7 @@ var NAV_WHEN={
  fact_find:'meet', bojang:'meet', frmake:'meet', compare:'meet',
  onecmp:'meet', ai_prop:'meet', katalk:'meet', interpret:'meet', treatpay:'meet',
  wallets:'meet', cs_assist:'meet', cs_needs:'meet', ins_asst:'meet', cs_gso:'meet',
+ insight:'meet',  /* 🧭 상품전략기 — 상담 앞에서 이번 달 상품을 고르는 자리 */
  sangdam:'meet', kijun:'meet', utphoto:'meet', fp_deck:'meet', fp_talk:'meet', mikki_talk:'meet',
  ta_script:'meet', saybook:'meet', ta_say:'meet', ta_train:'meet', silson5:'meet', rej_gym:'meet', jiin_grow:'meet', bcd_lec:'meet',
  finance:'meet', calc:'meet', brain:'meet',
@@ -16142,7 +16170,7 @@ function navFavToggle(id,ev){
   if(typeof toast==='function')
     toast(i>=0?'즐겨찾기에서 뺐습니다':'⭐ 즐겨찾기 맨 위에 올렸습니다');
 }
-/* ══ 🎯 <b>메뉴를 상담 자리로 보내기</b> — stg* (판 X350) ══════════════════
+/* ══ 🎯 <b>메뉴를 상담 자리로 보내기</b> — stg* (판 X356) ══════════════════
    사장님 말씀 (2026-11-05) — 「그냥 <b>내가 메뉴옆에 ta_cs 로 보내고 싶은곳을
    선택하면 보내지도록</b> 해줘」.
 
@@ -16696,7 +16724,7 @@ function navPeopleHtml(q,loose){
   if(p.team.length)h+=navPplGrpHtml('👥','팀원',p.team,'팀원 관리','navGoTeam',"navGoIn('team')",'팀원 관리');
   return {h:h,n:p.cli.length+p.team.length,cliRead:p.cliRead,teamRead:p.teamRead};
 }
-/* 메뉴 한 줄 — 별표와 <b>🎯 자리 보내기</b>를 같이 단다 (판 X350) */
+/* 메뉴 한 줄 — 별표와 <b>🎯 자리 보내기</b>를 같이 단다 (판 X356) */
 function navBtnHtml(it,star){
   var fav=navIsFav(it.id),st=(typeof stgOf==='function')?stgOf(it.id):'';
   return '<div class="nav-row'+(fav?' fav':'')+'">'+
@@ -16714,7 +16742,7 @@ function navBtnHtml(it,star){
        ⚠ 🎯 <b>이모지를 안 씁니다</b> — 메뉴가 백 줄이 넘어 줄마다 빨간 과녁이 서면
          그것만 눈에 들어옵니다. ◎ 는 글자라 바로 옆 ☆ 와 <b>같은 색·같은 무게</b>로
          흐려집니다(이모지는 색이 안 먹습니다). 무슨 단추인지는 title·aria-label
-         이 말합니다 (판 X350). */
+         이 말합니다 (판 X356). */
     (star===false?'':
       '<button type="button" class="nav-stg'+(st?' on':'')+'" '+
         'title="'+(st?esc(st+' 자리에서 쥡니다 — 바꾸기'):'상담 자리로 보내기')+'" '+
@@ -20552,7 +20580,7 @@ var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode','bohum-mode','pdel-m
                       멀쩡히 떠 있는데 눈에는 안 보인다. 바로 위 주석이 「여기 이름만
                       적으면 된다」 고 적어 두었는데, 칸을 만들면서 그 한 줄을
                       빠뜨린 것이다. check-stayput 이 이제 이것을 센다. */
-                   'onecmp-mode','educal-mode'];
+                   'onecmp-mode','educal-mode','insight-mode'];
 function osFullMode(on){
   var b=document.body,i;
   for(i=0;i<OS_FULL_MODES.length;i++)
@@ -21192,6 +21220,13 @@ function go(tab){
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
+  if(tab==='insight'){
+    mountInsight();
+    osFullMode('insight-mode');
+    navMark('insight');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
   if(tab==='pdel'){
     mountPdel();
     osFullMode('pdel-mode');
@@ -21700,7 +21735,7 @@ function owCss(){
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
 var APP_BUILD='2026-11-06 03:40';
-var APP_BUILD_NOTE='📈 <b>투자·세금 갈래에 「적립식」 여섯 장</b>(판 X352 · 사장님이 주신 PPT 를 들여왔습니다). ① 한 번에 넣을까 나눠 넣을까 ② 같은 상품인데 결과가 다릅니다 ③ 네 가지 장세 ④ 실제 지수(나스닥 1년) ⑤ 10년(코스피·코스닥·나스닥) ⑥ 끝까지 가는 사람과 중간에 그만두는 사람. ★★ <b>검산하니 PPT 의 수 넷이 제 셈과 달랐습니다</b> — 상승 +46%(제 셈 <b>+34.2%</b>) · 폭락 −8.7%(<b>−28.7%</b>) · 나스닥 일시금 1,346만원(<b>1,365만원</b>) · 5회 예시 22.6%(<b>22.5%</b>). 그래서 <b>결과를 베껴 적지 않습니다</b> — 가격 수열만 두고 주수·평균단가·결과를 <b>화면이 그 자리에서</b> 셉니다. 고객이 「왜 그렇죠?」 하면 그 자리에서 풀어 보입니다. ★ <b>안 들여온 것 둘</b> — 「담당자가 연 수익률 30%를 만들어냈다」(특정인의 과거 실적을 수익률로 말하는 문장) · 인물 사진(남의 자료). ★ <b>S&amp;P 500 은 비워 두었습니다</b> — 주신 값(152 → 442)이 그 시점 지수와 맞지 않아, 확인 전에는 안 적고 왜 비었는지를 화면에 적습니다. ★ 장마다 <b>지나간 수치</b>이고 환율·수수료·세금이 빠져 있음을 밝힙니다. 투자·세금 갈래가 16 → <b>22장</b>이 되었습니다. ◾ 같이 나가는 판: 🖥 <b>노트북 발표를 강렬하게</b>(판 X345 · X351 · 사장님 말씀 「우선 강렬하게 만들어줘」 「노트북으로 보이니까, 노트북 위주면 된다」) — 900px 이상에서 쪽 제목 44~60px · 쪽마다 세로 가운데 · 낱말이 중간에서 안 끊기게 · 글 많은 「언제 갈아타야 하는가」 를 두 장으로 나눔. 🎯 <b>메뉴 옆에서 상담 자리로 보내기 · ⭐ 오늘에서 넣고 빼기</b>(판 X350 · 사장님 말씀 「내가 메뉴 옆에 TA·CS 로 보내고 싶은 곳을 선택하면 보내지도록」) — 메뉴마다 ◎ 를 눌러 열 자리(미접촉~소개완료) 가운데 하나로 보내면 그 자리 고객 카드와 홈 띠에 바로 섭니다. 홈에 ⭐ 내가 고른 메뉴 칸. ◾ <b>먼저 나간 판도 그대로 들어 있습니다</b> — 판 X349 · X348(보장 전·후 발표: 고객이 같이 고르기 · 장마다 한 줄 결론 · 숨은·미청구 보험금 · 어려운 말 한 줄 풀이 · 💬 요약 한 장 이미지) · 판 X347(자비스 MARK II) · 판 X346(상품 제안서 읽기) · 판 X344(사용가이드 카드 뺌).';
+var APP_BUILD_NOTE='📈 <b>투자·세금 갈래에 「적립식」 여섯 장</b>(판 X355 · 사장님이 주신 PPT 를 들여왔습니다). ① 한 번에 넣을까 나눠 넣을까 ② 같은 상품인데 결과가 다릅니다 ③ 네 가지 장세 ④ 실제 지수(나스닥 1년) ⑤ 10년(코스피·코스닥·나스닥) ⑥ 끝까지 가는 사람과 중간에 그만두는 사람. ★★ <b>검산하니 PPT 의 수 넷이 제 셈과 달랐습니다</b> — 상승 +46%(제 셈 <b>+34.2%</b>) · 폭락 −8.7%(<b>−28.7%</b>) · 나스닥 일시금 1,346만원(<b>1,365만원</b>) · 5회 예시 22.6%(<b>22.5%</b>). 그래서 <b>결과를 베껴 적지 않습니다</b> — 가격 수열만 두고 주수·평균단가·결과를 <b>화면이 그 자리에서</b> 셉니다. 고객이 「왜 그렇죠?」 하면 그 자리에서 풀어 보입니다. ★ <b>안 들여온 것 둘</b> — 「담당자가 연 수익률 30%를 만들어냈다」(특정인의 과거 실적을 수익률로 말하는 문장) · 인물 사진(남의 자료). ★ <b>S&amp;P 500 은 비워 두었습니다</b> — 주신 값(152 → 442)이 그 시점 지수와 맞지 않아, 확인 전에는 안 적고 왜 비었는지를 화면에 적습니다. ★ 장마다 <b>지나간 수치</b>이고 환율·수수료·세금이 빠져 있음을 밝힙니다. 투자·세금 갈래가 16 → <b>22장</b>이 되었습니다. ◾ 같이 나가는 판: 🖥 <b>노트북 발표를 강렬하게</b>(판 X345 · X354 · 사장님 말씀 「우선 강렬하게 만들어줘」 「노트북으로 보이니까, 노트북 위주면 된다」) — 900px 이상에서 쪽 제목 44~60px · 쪽마다 세로 가운데 · 낱말이 중간에서 안 끊기게 · 글 많은 「언제 갈아타야 하는가」 를 두 장으로 나눔. 🎯 <b>메뉴 옆에서 상담 자리로 보내기 · ⭐ 오늘에서 넣고 빼기</b>(판 X356 · 사장님 말씀 「내가 메뉴 옆에 TA·CS 로 보내고 싶은 곳을 선택하면 보내지도록」) — 메뉴마다 ◎ 를 눌러 열 자리(미접촉~소개완료) 가운데 하나로 보내면 그 자리 고객 카드와 홈 띠에 바로 섭니다. 홈에 ⭐ 내가 고른 메뉴 칸. ◾ <b>먼저 나간 판도 그대로 들어 있습니다</b> — 판 X350(🧭 상품전략기 — 월간 상품 인사이트가 「💬 상담 도구」 맨 위에) · 판 X349 · X348(보장 전·후 발표: 고객이 같이 고르기 · 장마다 한 줄 결론 · 숨은·미청구 보험금 · 어려운 말 한 줄 풀이 · 💬 요약 한 장 이미지) · 판 X347(자비스 MARK II) · 판 X346(상품 제안서 읽기) · 판 X344(사용가이드 카드 뺌).';
 
 
 
@@ -22180,6 +22215,18 @@ function mountEducal(){
 function reloadEducal(){var f=$('educalFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountEducal,30);toast('교육 캘린더 새로고침');}}
 function openEducalNewTab(){var w=window.open(EDUCAL_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitEducal(){go(prevTab||'home');}
+
+/* ════════ 🧭 상품전략기 · 월간 상품 인사이트 (앱 폴더에 번들: app/insight/) ════════
+   달마다 Desktop 의 apex-insight 빌드가 뽑는 crm/ 폴더를 그대로 옮겨 놓습니다.
+   ★ 서버를 안 부릅니다 — 정적 파일 한 쪽 + 그림 (7번).                     */
+var INSIGHT_URL='insight/index.html';
+function mountInsight(){
+  var f=$('insightFrame');if(!f||f._mounted)return;
+  f.src=INSIGHT_URL;f._mounted=true;
+}
+function reloadInsight(){var f=$('insightFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountInsight,30);toast('상품 인사이트 새로고침');}}
+function openInsightNewTab(){var w=window.open(INSIGHT_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitInsight(){go(prevTab||'home');}
 
 /* ════════ 증권 전달 (앱 폴더에 번들: app/증권전달/index.html) ════════
    계약이 성립된 뒤 증권을 고객에게 전하는 자리에서 쓰는 한 벌.
@@ -26670,6 +26717,7 @@ document.addEventListener('keydown',function(e){
   else if(document.body.classList.contains('crm-mode'))exitCrm();
   else if(document.body.classList.contains('sangdam-mode'))exitSangdam();
   else if(document.body.classList.contains('educal-mode'))exitEducal();
+  else if(document.body.classList.contains('insight-mode'))exitInsight();
   else if(document.body.classList.contains('pdel-mode'))exitPdel();
   else if(document.body.classList.contains('bohum-mode'))exitBohum();
   else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
@@ -31103,6 +31151,7 @@ function hmSheetUrl(id){
   if(typeof BA_URL      !=='undefined')M.frmake    =BA_URL;
   if(typeof SANGDAM_URL !=='undefined')M.sangdam   =SANGDAM_URL;
   if(typeof EDUCAL_URL  !=='undefined')M.educal    =EDUCAL_URL;
+  if(typeof INSIGHT_URL !=='undefined')M.insight   =INSIGHT_URL;
   if(typeof FP_DECK_URL !=='undefined')M.fp_deck   =FP_DECK_URL;
   if(typeof FP_TALK_URL !=='undefined')M.fp_talk   =FP_TALK_URL;
   if(typeof PDEL_URL    !=='undefined')M.pdel      =PDEL_URL;
@@ -38372,7 +38421,7 @@ function hmBandHtml(){
        '<span class="s">'+osEsc(m?m.t:x.s)+'</span></button>';
   }
   h+='</div>';
-  /* ⚠ ⭐ 내가 고른 메뉴는 <b>띠 안이 아니라 띠 바로 아래</b>입니다 (판 X350).
+  /* ⚠ ⭐ 내가 고른 메뉴는 <b>띠 안이 아니라 띠 바로 아래</b>입니다 (판 X356).
      처음에 문 넷 밑에 넣었더니 띠가 <b>260px 예산</b>을 넘어 358px 이 되었고
      (check-hmband), 그만큼 「지금 할 것」 이 첫 화면 밖으로 밀렸습니다.
      띠는 「지금 몇 분이 어디에 있나」 를 말하는 자리이지 바로가기 자리가
@@ -38380,7 +38429,7 @@ function hmBandHtml(){
   if(N)h+=hmBandAskHtml(who);
   return h+'</div>';
 }
-/* ══ ⭐ <b>내가 고른 메뉴</b> — 오늘에서 넣고 뺍니다 (판 X350) ═══════════
+/* ══ ⭐ <b>내가 고른 메뉴</b> — 오늘에서 넣고 뺍니다 (판 X356) ═══════════
    사장님 말씀 (2026-11-05) — 「<b>내가 추가하고 오늘에서 뺄수 있도록</b> 만들어」.
 
    ★ <b>어떤 칸이 내 것인지는 navFav() 한 곳</b>이 압니다 (5번) — 위 띠의
@@ -38889,7 +38938,7 @@ function hmTossHtml(){
        ★ 컴퓨터는 안 바뀝니다 — 곁칸은 오른쪽 기둥(grid-row 3~)에 따로 섭니다. */
     hmTossHero()+
     '<div id="hmSideUp"></div>'+
-    /* ⭐ <b>내가 고른 메뉴</b> — 곁칸 바로 밑 (판 X350 · 사장님 말씀
+    /* ⭐ <b>내가 고른 메뉴</b> — 곁칸 바로 밑 (판 X356 · 사장님 말씀
        「내가 추가하고 오늘에서 뺄수 있도록 만들어」).
        ⚠ <b>자리를 네 번 옮겼습니다.</b> 홈은 자리가 빠듯해 자 셋이 저마다
          차례를 못 박고 있습니다 — ① 띠 안 → 띠가 <b>260px 예산</b>을 넘어
@@ -45985,6 +46034,8 @@ function manFlow(){
   h+=manUL([
     '<b>아침 (15분)</b> · 🌅 하루 시작 · '+manChip('home','🏠','홈')+'에서 오늘 할 일과 팔로업을 봅니다. '+manChip('airep','🧭','TFA 업무관리')+'에서 오늘 터치할 사람이 뜹니다. 리더는 '+manChip('report','📊','대표 브리핑')+'으로 팀 상태를 확인합니다.',
     '<b>상담 전 (20분)</b> · 🗂 내 고객 → 🛡 증권 분석 · '+manChip('clients','🗂️','고객 365일')+'에서 지난 기록을 확인하고, '+manChip('bojang','📑','AI 보장분석')+'에 증권 PDF 를 넣어 <b>19~21장짜리 리포트</b>를 뽑습니다. 더 파고들 때 '+manChip('interpret','🧠','보험 해석')+' · '+manChip('treatpay','💉','치료비 지급지도')+' · '+manChip('wallets','🗺️','8통장 지도')+'.',
+    /* 🧭 판 X350 — 짧게(check-read 80자). */
+    '<b>상품 고를 때</b> · '+manChip('insight','🧭','상품전략기')+'에서 이번 달 신상품·추천 순위를 봅니다.',
     '<b>상담 중</b> · 💬 상담 도구 · '+manChip('wallets','🗺️','8통장 진단')+'으로 현황을 짚고, '+manChip('cs_needs','⚡','니즈 시뮬레이터')+' · '+manChip('cs_assist','💬','AI 어시스턴트')+'로 니즈를 환기한 뒤 '+manChip('finance','📊','재무설계 계산기')+'의 <b>팩트파인딩 → 재무설계 PPT</b>를 한 장씩 넘기며 설명하고, '+manChip('frmake','🔀','보장분석 전&후 만들기')+'로 전후를 보여줍니다.',
     /* ✍️ 판 X300 — 계약하면 한 곳에만 넣습니다. 짧게 — 80자 넘는 문단을 늘리지 않습니다(check-read). */
     '<b>계약하면</b> · '+manChip('myperf','✍️','내 업적 입력')+'에 한 번 넣습니다.',
@@ -56131,7 +56182,7 @@ function calcInherit(){
 
 /* ════════ 초기화 ════════ */
 applyEmbeddedConfig();
-/* 🎯 메뉴 옆에서 보내 두신 자리를 <b>한 곳에 넣어 줍니다</b> (판 X350) —
+/* 🎯 메뉴 옆에서 보내 두신 자리를 <b>한 곳에 넣어 줍니다</b> (판 X356) —
    renderNav 보다 <b>먼저</b>라야 메뉴 칸에 그 단계 이름이 같이 섭니다.
    로그인 전에는 'local' 열쇠라 비어 있고, 로그인 뒤 osProfileApply 가 다시 부릅니다. */
 try{ stgApply(); }catch(e){}
@@ -66528,7 +66579,7 @@ function osProfileApply(sb,uid,r){
     osCheckApproval(sb,uid,function(gate,extra){
       if(gate&&prof.role!=='admin'){OS.profile=null;osRenderPill();osShowPending(gate,(OS.session&&OS.session.user&&OS.session.user.email)||'',extra);return;}
       OS.profile=prof;
-      /* 🎯 로그인하면 <b>그분 것</b>으로 다시 넣어 줍니다 (판 X350) — 열쇠가
+      /* 🎯 로그인하면 <b>그분 것</b>으로 다시 넣어 줍니다 (판 X356) — 열쇠가
          사람마다 다릅니다(navWho). 안 부르면 로그인 전 'local' 것이 남습니다. */
       try{ stgApply(); }catch(eStg){}
       /* 보조 조회 결과는 값이 있을 때만 덮어쓴다(없는 값으로 등급을 지우지 않도록) */
