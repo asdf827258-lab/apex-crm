@@ -2461,6 +2461,14 @@ body.dzguide-mode #dzGuideScreen{display:block;}
 body.educal-mode .app{display:none;}
 body.educal-mode #educalScreen{display:block;}
 #educalScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 🧭 상품전략기 · 월간 상품 인사이트 (교육 캘린더와 같은 패턴 · app/insight/index.html)
+   ★ 몸은 <b>따로 선 한 쪽</b>입니다 — 보험사 GA 소식지·약관을 달마다 분석해 뽑은 것.
+     색·글꼴은 그 쪽이 <b>../ui.css</b> 를 물어 옵니다 (5번).
+   ⚠ 소식지는 <b>고객 제시 금지</b> 자료라 그 쪽에 noindex 를 달았습니다 — check-insight 가 봅니다. */
+#insightScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.insight-mode .app{display:none;}
+body.insight-mode #insightScreen{display:block;}
+#insightScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* 상담자료는 화면 아래에 자기 버튼이 있다 — 그 위로 올린다 */
 #fpDeckScreen .fin-float{bottom:88px;}
 @media(max-width:880px){#fpDeckScreen .fin-float{bottom:96px;}}
@@ -2988,6 +2996,16 @@ body.educal-mode #educalScreen{display:block;}
     <button class="ff-back" onclick="exitEducal()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadEducal()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openEducalNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 🧭 상품전략기 · 월간 상품 인사이트 (앱 폴더에 번들: app/insight/) -->
+<div id="insightScreen">
+  <iframe id="insightFrame" class="fin-frame" title="월간 상품 인사이트"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitInsight()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadInsight()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openInsightNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
 
@@ -15335,6 +15353,14 @@ var TABS=[
    {id:'finance',tk:'재무설계',icon:'📊',title:'재무설계 계산기',cnt:'',ak:'재무설계 연금 노후 은퇴 저축 목돈 현금흐름 상속'},
    {id:'calc',icon:'🧮',title:'실무 계산기',cnt:'7',ak:'재무설계'}
  ]},
+ /* 🧭 <b>상품전략기</b> — 2026-11-05 (판 X349) · 사장님 말씀 「메뉴에 따로 상품전략기 어때」.
+    매달 보험사 GA 소식지(·약관)로 만드는 월간 상품 인사이트입니다 — 이번 달 결론 ·
+    고객 맞춤 찾기 · 추천 순위 · 조합 세트 · 약관 비교 · 조합 빌더.
+    몸은 app/insight/ 한 폴더이고 달이 바뀌면 그 폴더만 갈아 끼웁니다.
+    ★ 판매인 교육용입니다 — 고객에게 띄우는 것은 그 안의 「📱 고객에게 보여주기」 화면뿐입니다. */
+ {group:'상품전략기',items:[
+   {id:'insight',icon:'🧭',title:'월간 상품 인사이트',cnt:'',ak:'상품전략기 상품 인사이트 신상품 소식지 약관 비교 추천 순위 조합 GA 이번 달 상품'}
+ ]},
  {group:'투자·경제',items:[
    {id:'inv_stock',icon:'📈',title:'주식관리',cnt:'',ak:'투자·경제'},
    {id:'inv_fund',icon:'💠',title:'펀드관리',cnt:'',ak:'투자·경제'},
@@ -15497,6 +15523,7 @@ var TABS=[
 var TAB_META={
  myperf:{tag:'MY',title:'내 업적 입력',desc:'신계약을 한 번 넣으면 EM · 월간보고 · 리더 화면에 같은 숫자로 섭니다.'},
  emcenter:{tag:'교육시스템EM',title:'EM 전용 운영센터',desc:'아래 단추를 누르면 새 탭으로 열립니다. 주소가 달라 거기서 한 번 더 로그인하십시오.'},
+ insight:{tag:'상품전략기',title:'월간 상품 인사이트',desc:'보험사 GA 소식지·약관을 달마다 읽어 이번 달 결론 · 추천 순위 · 조합 세트 · 약관 비교를 한 쪽에 모았습니다.'},
  educal:{tag:'교육시스템EM',title:'APEX 교육 캘린더',desc:'월간 캘린더 · 신입 교육 주간 · 팀별 교육 · 교육매니저 운영표 · 본부장 루틴 · 공지 만들기.'},   /* ⚠ 이 글은 esc() 를 지납니다 — <b> 를 넣으면 글자 그대로 찍힙니다 */
  clients:{tag:'OS',title:'고객 보장분석 프로젝트',desc:'고객별 보장분석 상담을 한 곳에서. 문서 업로드·추출·검수·전후비교·리포트까지 이어집니다.'},
  cs_assist:{tag:'CONSULT',title:'AI 통합상담 어시스턴트',desc:'윤시현 「고객이익 통합상담」 방법론으로 상담 준비 브리핑과 녹취 복기를 돕습니다. 녹취는 텍스트 붙여넣기(길이 제한 없음) 또는 오디오 업로드.'},
@@ -15613,6 +15640,7 @@ var NAV_WHEN={
  inv_stock:'know', inv_fund:'know', inv_perf:'know', inv_econ:'know',
  bohum:'know', manual:'know', apexmap:'know', apexmaster:'know', helpme:'know',
  academy_notion:'know', academy:'know', mycoach:'know', growboard:'know',
+ insight:'know',        /* 「월간 상품 인사이트」 · 상품전략기 — 이번 달 상품을 찾아보고 배우는 자리입니다 */
  /* ⚙️ 팀 · 설정 */
  org:'run', attend:'run', audit:'run', teamhub:'run', daily:'run',
  report:'run', branch_coach:'run', hq:'run',
@@ -20425,7 +20453,7 @@ var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode','bohum-mode','pdel-m
                       멀쩡히 떠 있는데 눈에는 안 보인다. 바로 위 주석이 「여기 이름만
                       적으면 된다」 고 적어 두었는데, 칸을 만들면서 그 한 줄을
                       빠뜨린 것이다. check-stayput 이 이제 이것을 센다. */
-                   'onecmp-mode','educal-mode'];
+                   'onecmp-mode','educal-mode','insight-mode'];
 function osFullMode(on){
   var b=document.body,i;
   for(i=0;i<OS_FULL_MODES.length;i++)
@@ -21065,6 +21093,13 @@ function go(tab){
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
+  if(tab==='insight'){
+    mountInsight();
+    osFullMode('insight-mode');
+    navMark('insight');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
   if(tab==='pdel'){
     mountPdel();
     osFullMode('pdel-mode');
@@ -21572,8 +21607,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-05 21:25';
-var APP_BUILD_NOTE='🛰 <b>자비스 MARK II — 아이언맨 작전 화면처럼</b>(판 X347 · 사장님 말씀 「자비스 디자인을 완전 혁신적으로 만들어줘 아이언맨처럼 !!」) — 판이 셋입니다: 왼쪽 시스템 판(화면 · 자료 갈래 · 보험 자료 · 고객 · AI · 목소리) · 가운데 더 커진 아크 원자로(눈금 고리 · 훑는 빛 · 도는 점)와 「말로 묻기」 큰 단추 · 명령 칸 · 오른쪽 명령 판(상황 단추). 처음 열면 부팅 장면(센 수 그대로) · 위 띠에 실시간 시계 · 답은 모서리 괄호를 단 홀로그램 패널로 섭니다. ◾ 함께 들어 있는 판: 먼저 나간 판 그대로입니다(판 X346 상품 제안서 읽기 · 판 X344 사용가이드 카드 뺌).';
+var APP_BUILD='2026-11-05 21:30';
+var APP_BUILD_NOTE='🧭 <b>상품전략기 — 월간 상품 인사이트</b>(판 X349 · 사장님 말씀 「메뉴에 따로 상품전략기 어때」) — 메뉴에 「상품전략기」 묶음이 새로 서고, 보험사 31곳 GA 소식지·약관으로 만든 2026년 11월 상품 인사이트(이번 달 결론 · 고객 맞춤 찾기 · 추천 순위 · 조합 세트 · 약관 비교 · 조합 빌더)가 앱 안 덮개로 열립니다. 색·글꼴은 ui.css 와 같습니다. 판매인 교육용이라 검색에는 안 걸리게 두었습니다.';
 
 
 
@@ -22053,6 +22088,18 @@ function mountEducal(){
 function reloadEducal(){var f=$('educalFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountEducal,30);toast('교육 캘린더 새로고침');}}
 function openEducalNewTab(){var w=window.open(EDUCAL_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitEducal(){go(prevTab||'home');}
+
+/* ════════ 🧭 상품전략기 · 월간 상품 인사이트 (앱 폴더에 번들: app/insight/) ════════
+   달마다 Desktop 의 apex-insight 빌드가 뽑는 crm/ 폴더를 그대로 옮겨 놓습니다.
+   ★ 서버를 안 부릅니다 — 정적 파일 한 쪽 + 그림 (7번).                     */
+var INSIGHT_URL='insight/index.html';
+function mountInsight(){
+  var f=$('insightFrame');if(!f||f._mounted)return;
+  f.src=INSIGHT_URL;f._mounted=true;
+}
+function reloadInsight(){var f=$('insightFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountInsight,30);toast('상품 인사이트 새로고침');}}
+function openInsightNewTab(){var w=window.open(INSIGHT_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitInsight(){go(prevTab||'home');}
 
 /* ════════ 증권 전달 (앱 폴더에 번들: app/증권전달/index.html) ════════
    계약이 성립된 뒤 증권을 고객에게 전하는 자리에서 쓰는 한 벌.
@@ -26543,6 +26590,7 @@ document.addEventListener('keydown',function(e){
   else if(document.body.classList.contains('crm-mode'))exitCrm();
   else if(document.body.classList.contains('sangdam-mode'))exitSangdam();
   else if(document.body.classList.contains('educal-mode'))exitEducal();
+  else if(document.body.classList.contains('insight-mode'))exitInsight();
   else if(document.body.classList.contains('pdel-mode'))exitPdel();
   else if(document.body.classList.contains('bohum-mode'))exitBohum();
   else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
@@ -30976,6 +31024,7 @@ function hmSheetUrl(id){
   if(typeof BA_URL      !=='undefined')M.frmake    =BA_URL;
   if(typeof SANGDAM_URL !=='undefined')M.sangdam   =SANGDAM_URL;
   if(typeof EDUCAL_URL  !=='undefined')M.educal    =EDUCAL_URL;
+  if(typeof INSIGHT_URL !=='undefined')M.insight   =INSIGHT_URL;
   if(typeof FP_DECK_URL !=='undefined')M.fp_deck   =FP_DECK_URL;
   if(typeof FP_TALK_URL !=='undefined')M.fp_talk   =FP_TALK_URL;
   if(typeof PDEL_URL    !=='undefined')M.pdel      =PDEL_URL;
