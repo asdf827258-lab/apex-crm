@@ -1,4 +1,4 @@
-/* 🛰 <b>자비스 HUD · 목소리 · 「모든 내용을 이어서」</b> (판 X335)
+/* 🛰 <b>자비스 HUD · 목소리 · 「모든 내용을 이어서」</b> (판 X336)
 
    사장님 말씀 2026-11-04 —
    「자비스를 완전 대폭 업그레이드 해줘, 마치 아이언맨 나오는 자비스처럼 화면을 만들고
@@ -72,7 +72,7 @@ const PCM_B64 = Buffer.alloc(4800).toString('base64');
 const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'audio/L16;codec=pcm;rate=24000', data: PCM_B64 } }] } }] });
 
 (async () => {
-  console.log('자비스 HUD · 목소리 · 모든 내용을 이어서 (판 X335)');
+  console.log('자비스 HUD · 목소리 · 모든 내용을 이어서 (판 X336)');
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
