@@ -601,10 +601,10 @@ body.dock{background-color:transparent; background-image:none}
 .hud{max-width:880px; margin:18px auto 0; padding:0 20px; display:flex; align-items:center; gap:22px}
 .hud-core{position:relative; width:168px; height:168px; flex:0 0 168px}
 .hud-svg{position:absolute; inset:0; width:100%; height:100%; overflow:visible}
-.hud-svg .r1{transform-origin:100px 100px; animation:hudSpin 26s linear infinite}
-.hud-svg .r2{transform-origin:100px 100px; animation:hudSpin 14s linear infinite reverse}
-.hud-svg .r3{transform-origin:100px 100px; animation:hudSpin 9s linear infinite}
-.hud-svg .core{transform-origin:100px 100px; transition:transform .08s linear}
+.hud-svg .r1{transform-origin:110px 110px; animation:hudSpin 26s linear infinite}
+.hud-svg .r2{transform-origin:110px 110px; animation:hudSpin 14s linear infinite reverse}
+.hud-svg .r3{transform-origin:110px 110px; animation:hudSpin 9s linear infinite}
+.hud-svg .core{transform-origin:110px 110px; transition:transform .08s linear}
 .hud[data-st="think"] .r1{animation-duration:3.2s}
 .hud[data-st="think"] .r2{animation-duration:1.8s}
 .hud[data-st="think"] .r3{animation-duration:1.1s}
@@ -766,6 +766,122 @@ body.dock .hud{display:none}
 @media (prefers-reduced-motion:reduce){
   .hud-svg .r1, .hud-svg .r2, .hud-svg .r3, .j-scan .js-bar i{animation:none}
 }
+
+/* ══ 🛰 <b>J.A.R.V.I.S — MARK II</b> (판 X347) ═══════════════════════════════
+   사장님 말씀 2026-11-05 「자비스 디자인을 완전 혁신적으로 만들어줘 아이언맨처럼 !!」.
+   ★ 판을 <b>세 줄</b>로 — 왼쪽 시스템 판 · 가운데 아크 원자로와 명령 칸 · 오른쪽 명령 판.
+     처음 열면 부팅 장면(센 수 그대로 · 지어 적지 않음 · 1번) · 위 띠에 실시간 시계 ·
+     답 카드는 모서리 괄호를 단 홀로그램 패널 · 주사선.
+   ★ 자리(id)는 그대로 — #ask · #askGo · #chips · #jLog · #jSay 는 옮기기만 했습니다.
+     엔진 · 자(check-jvguide · check-jvhud …)가 보는 자리는 같습니다.
+   ★ 글씨 13px · 단추 44px · 대비 4.5 바닥 그대로(check-read) · 이모지를 새로 안 씁니다(그림은 SVG).
+   ★ 움직임을 줄이라 하신 기기에서는 돌리지 않고 부팅 장면도 건너뜁니다.                */
+body{background-image:
+    repeating-linear-gradient(180deg, rgba(63,224,255,0) 0 2px, rgba(63,224,255,.03) 2px 3px),
+    radial-gradient(ellipse 70% 55% at 50% 30%, rgba(63,224,255,.12), rgba(63,224,255,0) 70%),
+    linear-gradient(rgba(63,224,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(63,224,255,.035) 1px, transparent 1px);
+  background-size:auto, auto, 34px 34px, 34px 34px}
+.bar{z-index:60}
+.hud-clock{font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace; font-size:var(--t6); font-weight:700;
+  color:var(--h-cy2); letter-spacing:1px; padding:6px 10px; border:1px solid var(--h-line); border-radius:8px; background:var(--h-panel);
+  white-space:nowrap}
+
+/* 판 셋 */
+.deck{max-width:1180px; margin:16px auto 0; padding:0 18px; display:grid; gap:16px;
+  grid-template-columns:minmax(200px,250px) minmax(0,1fr) minmax(220px,270px); grid-template-areas:'l c r'; align-items:start; position:relative}
+.pane{grid-area:l; position:relative; border:1px solid var(--h-line); background:rgba(7,26,44,.92); background-color:var(--h-panel);
+  border-radius:4px; padding:12px 13px 14px; box-shadow:inset 0 0 30px rgba(63,224,255,.05)}
+.pane-r{grid-area:r}
+/* 모서리 괄호 — 영화 속 표적 상자 */
+.pane::before, .pane::after, .msg.j .bub::after{content:''; position:absolute; width:14px; height:14px; pointer-events:none;
+  border:2px solid var(--h-cy)}
+.pane::before{top:-2px; left:-2px; border-right:0; border-bottom:0}
+.pane::after{bottom:-2px; right:-2px; border-left:0; border-top:0}
+.pane-h{font-size:var(--t6); font-weight:800; letter-spacing:3px; color:var(--h-cy); margin:2px 0 9px;
+  display:flex; align-items:baseline; gap:8px; border-bottom:1px solid var(--h-line); padding-bottom:6px}
+.pane-h span{letter-spacing:0; color:var(--h-sub); font-weight:700}
+.pane-h + .hud-stat{margin-top:0}
+.pane .hud-stat{display:flex; flex-direction:column; gap:6px; margin:0 0 12px}
+.pane .hud-stat span{display:flex; justify-content:space-between; gap:8px; white-space:normal; border-radius:3px;
+  border:0; border-left:3px solid var(--h-cy); background:var(--h-bg2); padding:7px 9px}
+.pane .hud-stat span b{font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace}
+.pane-note{font-size:var(--t6); color:var(--h-sub); line-height:1.6}
+.pane-r .chips{display:flex; flex-direction:column; gap:7px; margin:0}
+.pane-r .chip{width:100%; border-radius:3px; text-align:left; justify-content:flex-start; border-left:3px solid var(--h-line2)}
+.pane-r .chip:hover{border-left-color:var(--h-cy)}
+.pane-r .chip.big{padding:9px 11px}
+
+/* 가운데 — 원자로 · 이름 · 명령 칸 */
+.deck .hud{grid-area:c; max-width:none; margin:0; padding:0; display:flex; flex-direction:column; align-items:center; gap:4px; text-align:center}
+.deck .hud-core{width:250px; height:250px; flex:0 0 auto; margin:2px auto 0}
+.hud-svg .r0, .hud-svg .r1, .hud-svg .r2, .hud-svg .r3, .hud-svg .sweep, .hud-svg .core{transform-origin:110px 110px}
+.hud-svg .r0{animation:hudSpin 60s linear infinite reverse}
+.hud-svg .sweep{animation:hudSpin 4.5s linear infinite}
+.hud[data-st="think"] .sweep{animation-duration:1.2s}
+.hud[data-st="idle"] .sweep{opacity:.55}
+.hud-svg .glow{animation:hudGlow 2.8s ease-in-out infinite}
+@keyframes hudGlow{0%,100%{opacity:.6} 50%{opacity:1}}
+.deck .hud-id{width:100%; display:flex; flex-direction:column; align-items:center}
+.deck .hud-name{font-size:30px; letter-spacing:10px; margin-top:2px}
+.deck .hud-st{justify-content:center}
+.deck .hud-wave{max-width:420px; margin:8px auto 0}
+.hud-mic{margin:10px auto 4px; min-height:56px; padding:0 22px 0 16px; display:inline-flex; align-items:center; gap:10px;
+  border-radius:999px; border:1px solid var(--h-cy); background:var(--h-bg2); color:var(--h-cy2); font:inherit; font-size:var(--t5);
+  font-weight:800; cursor:pointer; box-shadow:0 0 0 0 rgba(63,224,255,.0), 0 0 18px rgba(63,224,255,.18)}
+.hud-mic svg{width:26px; height:26px}
+.hud-mic:hover{background:var(--h-panel2)}
+.hud[data-st="listen"] .hud-mic{border-color:var(--h-amb); color:var(--h-amb); animation:hudPing 1.1s ease-out infinite}
+@keyframes hudPing{0%{box-shadow:0 0 0 0 rgba(255,203,112,.45)} 100%{box-shadow:0 0 0 18px rgba(255,203,112,0)}}
+.hud-mic[hidden]{display:none}
+.deck .ask{width:100%; max-width:640px; margin:8px auto 0; padding:0}
+.deck .ask-h{text-align:center}
+.deck .askrow{border-radius:4px}
+.deck .askrow::before{content:'>'; font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace; font-weight:800; color:var(--h-cy); font-size:var(--t4)}
+.deck .askrow .lamp{display:none}
+
+/* 부팅 장면 — 센 수 그대로 한 줄씩 */
+.hud-boot{position:absolute; inset:0; z-index:5; display:none; align-items:center; justify-content:center; pointer-events:none;
+  background:var(--h-bg)}
+.hud-boot.on{display:flex; animation:hudBootOut .5s ease-in 2.1s forwards}
+.hud-boot pre{margin:0; font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace; font-size:var(--t5); line-height:1.9;
+  color:var(--h-cy2); white-space:pre-wrap; text-align:left}
+.hud-boot pre span{display:block; opacity:0; animation:hudLine .25s ease-out forwards}
+.hud-boot pre span b{color:var(--h-ok)}
+@keyframes hudLine{from{opacity:0; transform:translateX(-6px)} to{opacity:1; transform:none}}
+@keyframes hudBootOut{to{opacity:0; visibility:hidden}}
+
+/* 답 — 홀로그램 패널 */
+#jarvis{max-width:1180px; border-radius:4px}
+.j-top{border-radius:4px 4px 0 0}
+#jFoot{border-radius:0 0 4px 4px}
+.msg.j .bub{position:relative; border-radius:3px; animation:hudIn .35s ease-out both;
+  background-image:linear-gradient(180deg, rgba(63,224,255,.07), rgba(63,224,255,0) 46px)}
+.msg.j .bub::before{content:'J.A.R.V.I.S  ▸  응답'; display:block; font-size:var(--t6); font-weight:800; letter-spacing:2px;
+  color:var(--h-cy); margin:-2px 0 6px; white-space:normal}
+.msg.j .bub::after{bottom:-2px; right:-2px; border-left:0; border-top:0}
+.msg.me .bub{border-radius:3px; font-family:inherit}
+.msg.me .bub::before{content:'> '; font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace; font-weight:800; color:var(--h-cy2)}
+@keyframes hudIn{from{opacity:0; transform:translateY(8px); filter:brightness(1.6)} to{opacity:1; transform:none; filter:none}}
+
+/* 폰 — 가운데가 먼저, 시스템 판은 한 줄로 */
+@media (max-width:900px){
+  .deck{grid-template-columns:1fr; grid-template-areas:'c' 'r' 'l'; padding:0 14px}
+  .deck .hud-core{width:190px; height:190px}
+  .deck .hud-name{font-size:var(--t2); letter-spacing:6px}
+  .pane .hud-stat{flex-direction:row; flex-wrap:wrap}
+  .pane .hud-stat span{flex:1 1 140px}
+  .pane-r .chips{display:grid; grid-template-columns:1fr 1fr}
+}
+@media (max-width:520px){
+  .deck .hud-core{width:160px; height:160px}
+  .hud-clock{display:none}
+}
+body.dock .deck{display:none}
+@media (prefers-reduced-motion:reduce){
+  .hud-svg .r0, .hud-svg .sweep, .hud-svg .glow, .msg.j .bub, .hud[data-st="listen"] .hud-mic{animation:none}
+  .hud-boot{display:none !important}
+}
 </style>
 </head>
 <body>
@@ -773,6 +889,7 @@ body.dock .hud{display:none}
 <div class="bar">
   <h1>APEX <b>자비스 모드</b><small>물으시면 앱 안에서 찾아 그 값을 보여 드립니다</small></h1>
   <span class="sp"></span>
+  <span class="hud-clock" id="hudClock" aria-label="지금 시각"></span>
   <button class="btn" id="aiBtn"><span class="dot"></span>AI 연결</button>
   <button class="btn" id="bFit">한눈에</button>
   <button class="btn" id="bOpen">다 열기</button>
@@ -783,54 +900,77 @@ body.dock .hud{display:none}
   </span>
 </div>
 
-<!-- 🛰 J.A.R.V.I.S HUD (판 X336) — 원자로는 직접 그린 SVG 입니다 (9번). 상태는 hudSet 한 곳이 칠합니다 -->
-<div class="hud" id="hud" data-st="idle">
-  <div class="hud-core" aria-hidden="true">
-    <svg class="hud-svg" viewBox="0 0 200 200">
+<!-- 🛰 J.A.R.V.I.S HUD — MARK II (판 X347) · 원자로는 직접 그린 SVG 입니다 (9번).
+     세 줄 판: 왼쪽 시스템 · 가운데 원자로와 명령 칸 · 오른쪽 명령. 상태는 hudSet 한 곳이 칠합니다 (5번) -->
+<div class="deck" id="deck">
+  <aside class="pane pane-l" aria-label="시스템 상태">
+    <div class="pane-h">SYSTEM <span>시스템</span></div>
+    <div class="hud-stat" id="hudStat"></div>
+    <div class="pane-h">LINK <span>연결</span></div>
+    <div class="pane-note" id="hudLink">앱 자료 · 화면 · 사용가이드를 한 줄로 잇습니다</div>
+  </aside>
+  <div class="hud" id="hud" data-st="idle">
+    <div class="hud-core" aria-hidden="true">
+    <svg class="hud-svg" viewBox="0 0 220 220">
       <defs>
         <radialGradient id="hudG" cx="50%" cy="50%" r="50%">
-          <stop offset="0" stop-color="#E8FDFF"/><stop offset=".35" stop-color="#8AF0FF"/>
+          <stop offset="0" stop-color="#F2FEFF"/><stop offset=".35" stop-color="#8AF0FF"/>
           <stop offset=".7" stop-color="#1FA9D6" stop-opacity=".55"/><stop offset="1" stop-color="#0B6A8E" stop-opacity="0"/>
         </radialGradient>
+        <linearGradient id="hudSweep" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#3FE0FF" stop-opacity="0"/><stop offset="1" stop-color="#3FE0FF" stop-opacity=".55"/>
+        </linearGradient>
       </defs>
-      <circle class="glow" cx="100" cy="100" r="58" fill="rgba(63,224,255,.10)"/>
+      <circle class="glow" cx="110" cy="110" r="64" fill="rgba(63,224,255,.10)"/>
+      <g class="r0" fill="none" stroke="#3FE0FF">
+        <circle cx="110" cy="110" r="106" stroke-width="7" stroke-opacity=".28" stroke-dasharray="1.2 4.35"/>
+      </g>
+      <g class="sweep"><path d="M110 110 L110 6 A104 104 0 0 1 200 58 Z" fill="url(#hudSweep)" opacity=".5"/></g>
       <g class="r1" fill="none" stroke="#3FE0FF">
-        <circle cx="100" cy="100" r="95" stroke-width="1" stroke-opacity=".45" stroke-dasharray="2 5"/>
-        <path d="M100 5 A95 95 0 0 1 182 52" stroke-width="3" stroke-opacity=".9"/>
-        <path d="M100 195 A95 95 0 0 1 18 148" stroke-width="3" stroke-opacity=".9"/>
+        <circle cx="110" cy="110" r="96" stroke-width="1" stroke-opacity=".45" stroke-dasharray="2 5"/>
+        <path d="M110 14 A96 96 0 0 1 193 62" stroke-width="3" stroke-opacity=".95"/>
+        <path d="M110 206 A96 96 0 0 1 27 158" stroke-width="3" stroke-opacity=".95"/>
+        <circle class="orbit" cx="110" cy="14" r="3.4" fill="#E8FDFF" stroke="none"/>
       </g>
       <g class="r2" fill="none" stroke="#3FE0FF">
-        <circle cx="100" cy="100" r="81" stroke-width="5" stroke-opacity=".55" stroke-dasharray="46 18"/>
+        <circle cx="110" cy="110" r="84" stroke-width="5" stroke-opacity=".55" stroke-dasharray="40 12"/>
       </g>
       <g class="r3" fill="none" stroke="#8AF0FF">
-        <circle cx="100" cy="100" r="67" stroke-width="7" stroke-opacity=".35" stroke-dasharray="2 4"/>
-        <circle cx="100" cy="100" r="58" stroke-width="1" stroke-opacity=".7"/>
+        <circle cx="110" cy="110" r="72" stroke-width="8" stroke-opacity=".32" stroke-dasharray="2 4"/>
+        <circle cx="110" cy="110" r="63" stroke-width="1" stroke-opacity=".75"/>
       </g>
       <g class="core">
-        <circle cx="100" cy="100" r="46" fill="url(#hudG)"/>
-        <circle cx="100" cy="100" r="33" fill="none" stroke="#CFFBFF" stroke-width="3"/>
-        <path d="M100 74 L123 113 L77 113 Z" fill="none" stroke="#E8FDFF" stroke-width="3" stroke-linejoin="round"/>
-        <circle cx="100" cy="100" r="11" fill="#F4FEFF"/>
+        <circle cx="110" cy="110" r="50" fill="url(#hudG)"/>
+        <circle cx="110" cy="110" r="36" fill="none" stroke="#CFFBFF" stroke-width="3"/>
+        <path d="M110 81 L135 124 L85 124 Z" fill="none" stroke="#F2FEFF" stroke-width="3" stroke-linejoin="round"/>
+        <circle cx="110" cy="110" r="12" fill="#F4FEFF"/>
       </g>
     </svg>
+    </div>
+    <div class="hud-id">
+      <div class="hud-name">J.A.R.V.I.S</div>
+      <div class="hud-sub">APEX 자비스 — 앱에 담긴 <b>모든 자료</b>를 이어서 찾습니다</div>
+      <div class="hud-st"><i></i><span id="hudStT">대기 중 — 무엇이든 물어보십시오</span></div>
+      <canvas class="hud-wave" id="hudWave" width="380" height="34" aria-hidden="true"></canvas>
+      <button type="button" class="hud-mic" id="hudMic" aria-label="말로 물어보기">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>말로 묻기</span>
+      </button>
+    </div>
+    <div class="ask">
+      <div class="ask-h">무엇을 도와드릴까요?<small>화면 이름을 몰라도 됩니다 — 지금 하려는 일을 그대로 적어 주세요</small></div>
+      <div class="askrow">
+        <span class="lamp"></span>
+        <input id="ask" type="text" placeholder="예: 고객 등록은 어디서 해? · 증권 PDF 를 받았어">
+        <button class="btn go" id="askGo">물어보기</button>
+      </div>
+    </div>
   </div>
-  <div class="hud-id">
-    <div class="hud-name">J.A.R.V.I.S</div>
-    <div class="hud-sub">APEX 자비스 — 앱에 담긴 <b>모든 자료</b>를 이어서 찾습니다</div>
-    <div class="hud-st"><i></i><span id="hudStT">대기 중 — 무엇이든 물어보십시오</span></div>
-    <canvas class="hud-wave" id="hudWave" width="380" height="34" aria-hidden="true"></canvas>
-    <div class="hud-stat" id="hudStat"></div>
-  </div>
-</div>
-
-<div class="ask">
-  <div class="ask-h">무엇을 도와드릴까요?<small>화면 이름을 몰라도 됩니다 — 지금 하려는 일을 그대로 적어 주세요</small></div>
-  <div class="askrow">
-    <span class="lamp"></span>
-    <input id="ask" type="text" placeholder="예: 고객 등록은 어디서 해? · 증권 PDF 를 받았어">
-    <button class="btn go" id="askGo">물어보기</button>
-  </div>
-  <div class="chips" id="chips"></div>
+  <aside class="pane pane-r" aria-label="명령">
+    <div class="pane-h">COMMAND <span>상황으로 고르기</span></div>
+    <div class="chips" id="chips"></div>
+  </aside>
+  <div class="hud-boot" id="hudBoot" aria-hidden="true"></div>
 </div>
 
 <div id="jarvis" class="on">
@@ -4637,12 +4777,55 @@ function hudRun(){
       amp = HUD.st === 'talk' ? 0.35 + 0.25 * Math.abs(Math.sin(HUD.t * 5)) : 0;
     }
     cx.stroke();
-    if (core) core.setAttribute('transform', 'translate(100 100) scale(' + (1 + amp * 0.14).toFixed(3) + ') translate(-100 -100)');
+    if (core) core.setAttribute('transform', 'translate(110 110) scale(' + (1 + amp * 0.14).toFixed(3) + ') translate(-110 -110)');
     if (HUD.st !== 'idle' && !document.hidden) HUD.raf = requestAnimationFrame(frame);
   }
   HUD.raf = requestAnimationFrame(frame);
 }
 document.addEventListener('visibilitychange', function(){ if (!document.hidden) hudRun(); });
+/* ══ 🛰 MARK II (판 X347) — 시계 · 부팅 장면 · 말로 묻기 단추 ══════════════════════
+   ★ 시계는 <b>이 기기 시각</b>만 씁니다 — 서버를 안 부릅니다 (7번). 창이 뒤로 가면 쉽니다.
+   ★ 부팅 장면의 수는 <b>센 그대로</b>(kb · JV_FIND · jvKnowCount) — 지어 적지 않습니다 (1번).
+     한 창에 <b>한 번만</b> · 띠(독)에서는 안 섭니다 · 움직임을 줄이라 하신 기기에서는 건너뜁니다.
+   ★ 「말로 묻기」 큰 단추는 <b>위 띠의 🎤 를 그대로 누릅니다</b> — 듣는 길은 하나입니다 (5번).
+     브라우저가 못 알아들어 🎤 가 없으면 이 단추도 감춥니다 — 눌리지 않는 단추는 없느니만 못합니다. */
+var HUD_WD = ['일', '월', '화', '수', '목', '금', '토'];
+function hudClock(){
+  var el = document.getElementById('hudClock');
+  if (!el || document.hidden) return;
+  var d = new Date(), p = function(n){ return (n < 10 ? '0' : '') + n; };
+  el.textContent = d.getFullYear() + '.' + p(d.getMonth() + 1) + '.' + p(d.getDate()) + ' (' + HUD_WD[d.getDay()] + ') ' +
+                   p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+}
+function hudBoot(){
+  var el = document.getElementById('hudBoot');
+  if (!el || document.body.classList.contains('dock')) return;
+  try { if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch(e){}
+  try { if (sessionStorage.getItem('jv_boot') === '1') return; sessionStorage.setItem('jv_boot', '1'); } catch(e){}
+  var K = kb(), scr = 0, src = {}, P = kbApp(), kn = null;
+  K.docs.forEach(function(d){ if (d.kind === 'scr') scr++; });
+  JV_FIND.forEach(function(f){ src[f.n] = 1; });
+  try { kn = jvDz(P) ? jvKnowCount() : null; } catch(e){ kn = null; }
+  var L = ['INITIALIZING  J.A.R.V.I.S …',
+           '화면 ' + scr + '개 연결 … <b>OK</b>',
+           '자료 갈래 ' + Object.keys(src).length + '곳 연결 … <b>OK</b>',
+           '보험 자료 ' + (kn == null ? '… 아직 안 읽음' : kn + '개 … <b>OK</b>'),
+           'AI ' + (hasAI() ? '연결 … <b>OK</b>' : '꺼짐 — 앱 자료로 답합니다'),
+           'SYSTEM  <b>ONLINE</b>'];
+  el.innerHTML = '<pre>' + L.map(function(t, i){ return '<span style="animation-delay:' + (i * 0.28).toFixed(2) + 's">' + t + '</span>'; }).join('') + '</pre>';
+  el.classList.add('on');
+  setTimeout(function(){ el.classList.remove('on'); el.innerHTML = ''; }, 2800);
+}
+(function(){
+  var b = document.getElementById('hudMic');
+  if (!b) return;
+  /* 🎤 를 지우는 자리(아래 「말로 물어보기」)와 <b>같은 물음</b>으로 가립니다 — 이 줄이 그보다 먼저 돕니다 */
+  if (!(window.SpeechRecognition || window.webkitSpeechRecognition)){ b.hidden = true; return; }
+  b.onclick = function(){ var m2 = document.getElementById('jMic'); if (m2) m2.click(); };
+})();
+hudClock();
+setInterval(hudClock, 1000);
+document.addEventListener('visibilitychange', hudClock);
 /* 답이 섰으면 잠깐 뒤 대기로 — AI 의견이나 목소리를 기다리는 중이면 그대로 둡니다 */
 function hudCalm(){ setTimeout(function(){ if (HUD.st === 'think' && !busy && !JV_VOX.wait) hudSet('idle'); }, 900); }
 /* 이어 둔 곳을 센 수로 — 세는 곳은 이미 있는 셈(kb · jvKnowCount · JV_FIND)을 부릅니다 (5번).
@@ -4658,8 +4841,8 @@ function hudStats(){
   var vx = !TTS.on ? '끔' : (voxCan() ? 'AI' : (voxAiName() && JV_VOX.dead ? '기기(AI 막힘)' : '기기'));
   var p = ['화면 <b>' + scr + '</b>', '자료 갈래 <b>' + Object.keys(src).length + '</b>',
            '보험 자료 ' + (kn == null ? '<b>아직 안 읽음</b>' : '<b>' + kn + '</b>'),
-           '고객 ' + (cli == null ? '<b>아직 안 읽음</b>' : '<b>' + cli + '</b>명'),
-           hasAI() ? 'AI <b>연결</b>' : 'AI <b>끔</b> · 앱 자료로 답함',
+           '고객 ' + (cli == null ? '<b>아직 안 읽음</b>' : '<b>' + cli + '명</b>'),
+           hasAI() ? 'AI <b>연결</b>' : 'AI <b>끔 · 앱 자료로 답함</b>',
            '목소리 <b>' + vx + '</b>'];
   el.innerHTML = p.map(function(x){ return '<span>' + x + '</span>'; }).join('');
 }
@@ -7898,7 +8081,7 @@ function chipsIn(g){
 chipsTop();
 /* 처음 열면 <b>무엇을 할 줄 아는지</b>부터 — 센 수로 말한다 (5번) */
 addJ(jvHello());
-hudStats(); hudRun();
+hudStats(); hudRun(); hudBoot();
 
 /* ══ AI 연결 ═══════════════════════════════ */
 var keyBox = document.getElementById('keyBox');
