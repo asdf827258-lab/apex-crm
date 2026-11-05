@@ -177,11 +177,20 @@ const is = (c, m) => c ? ok(m) : no(m);
       tab: (typeof lastTab !== 'undefined') ? lastTab : '' };
   });
   await page.waitForTimeout(400);
-  is(pin.has, '왼쪽 맨 위에 고정 버튼이 있다');
-  is(pin.has && /APEX 사용가이드/.test(pin.text), '이름이 「APEX 사용가이드」 다 — ' + (pin.text || ''));
-  is(pin.aboveGroups === true, '메뉴 칸들보다 위에 있다 (고정 단추 ' + (pin.n || 0) + '개 중)');
-  const after = await page.evaluate(() => (typeof lastTab !== 'undefined') ? lastTab : '');
-  is(after === 'manual', '누르면 사용가이드로 간다 (' + after + ')');
+  /* ⚠⚠ 판 X344 (2026-11-05) — 사장님 말씀 <b>「사용가이드는 빼줘」</b>. 서랍 맨 위 고정 카드는 이제
+     <b>없어야</b> 합니다. 대신 <b>길이 남았는지</b>를 봅니다 — 「🗂 전체」 메뉴 칸 · 찾기 · ?go= (아래) ·
+     자비스(check-jvhud [11]). 길까지 지우면 「없어진 것」 이 됩니다 (1번 · 6번). */
+  is(!pin.has, '서랍 맨 위 고정 카드는 <b>없다</b> — 사장님 말씀 「사용가이드는 빼줘」' + (pin.has ? ' ← ' + pin.text : ''));
+  const via = await page.evaluate(async () => {
+    try { ezSet(true); } catch (e) {}
+    navFind('사용가이드'); await new Promise(r => setTimeout(r, 300));
+    const found = !!document.querySelector('#navBody .tab-btn[data-tab="manual"]');
+    navFind(''); go('manual'); await new Promise(r => setTimeout(r, 300));
+    return { found, tab: (typeof lastTab !== 'undefined') ? lastTab : '' };
+  });
+  is(via.found, '간편 서랍에서도 <b>찾기로</b> 사용가이드가 나온다');
+  is(via.tab === 'manual', '사용가이드 화면은 <b>그대로 열린다</b> (' + via.tab + ')');
+  await page.evaluate(() => { try { ezSet(false); } catch (e) {} });
 
   /* 메뉴 안에도 새 이름으로 있는가 */
   const inMenu = await page.evaluate(() => {
