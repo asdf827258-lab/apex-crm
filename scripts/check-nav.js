@@ -551,7 +551,14 @@ async function boot(page) {
   console.log('\n[10] <b>간편 버전</b> — 쓰는 때로 분류하고, 매일 여는 것만');
   const EZ = await page.evaluate(() => {
     const src = { };
-    const rows = () => document.querySelectorAll('#navBody .nav-group .nav-row').length;
+    /* ★ 판 X341 — 간편에서 <b>서는 칸</b>은 「오늘 하루」 기둥(#navMain) + 「자주 여는 것」 입니다.
+       기둥은 간편·전체 모두 서 있으므로, <b>간편일 때만</b> 기둥 칸을 같이 셉니다(같은 화면은 한 번). */
+    const rows = () => { const ids = {};
+      [].slice.call(document.querySelectorAll('#navBody .nav-group .nav-row .tab-btn[data-tab]')).forEach(b => ids[b.getAttribute('data-tab')] = 1);
+      const n0 = document.querySelectorAll('#navBody .nav-group .nav-row').length;
+      if (!ezOn()) return n0;
+      [].slice.call(document.querySelectorAll('#navMain .t-nav[data-go]')).forEach(b => { const id = b.getAttribute('data-go'); if (navItemOf(id)) ids[id] = 1; });
+      return Object.keys(ids).length; };
     const bar  = () => (document.querySelector('.nav-ez-n') || {}).textContent || '';
     const gs   = () => [].slice.call(document.querySelectorAll('#navBody .nav-group'))
       .map(g => ((g.querySelector('.ngl-t') || {}).textContent || '') + ':' +
@@ -566,7 +573,8 @@ async function boot(page) {
     src.badBucket = ids.filter(id => src.buckets.indexOf(NAV_WHEN[id]) < 0);
     /* 간편에 세운 것이 <b>진짜 있는 화면</b>인가 */
     src.pickGhost = EZ_PICK.filter(id => ids.indexOf(id) < 0);
-    src.pickAsked = ['home','airep','crm','frmake','bohum'].filter(id => EZ_PICK.indexOf(id) < 0);
+    /* 판 X341 — 홈은 이제 「오늘 하루」 기둥(TB)에 섭니다. 다섯이 <b>간편 서랍 어딘가에</b> 서면 됩니다 */
+    src.pickAsked = ['home','airep','crm','frmake','bohum'].filter(id => EZ_PICK.indexOf(id) < 0 && navMainIds().indexOf(id) < 0);
     ezSet(false); renderNav();
     src.allRows = rows(); src.allBar = bar(); src.allNote = !!document.querySelector('.nav-ez-note');
     ezSet(true);  renderNav();
@@ -599,8 +607,10 @@ async function boot(page) {
     '간편으로 바꾸면 <b>정말 줄어든다</b> — ' + EZ.allRows + '줄 → ' + EZ.ezRows + '줄');
   is(EZ.ezBar === EZ.ezRows + ' / ' + EZ.allRows,
     '간편에서도 <b>숫자와 줄이 같다</b> — ' + EZ.ezBar);
-  is(EZ.ezGroups.length >= 4 && /오늘/.test(EZ.ezGroups.join(' ')),
-    '<b>쓰는 때로 묶여</b> 선다 — ' + EZ.ezGroups.join(' · '));
+  /* ⚠ 판 X341 (2026-11-05) — 사장님이 「핵심 11칸 + 자비스」 를 고르셨습니다. 간편은 이제 쓰는 때 여섯
+     갈래가 아니라 <b>「자주 여는 것」 한 묶음</b>입니다(오늘 하루는 위 기둥에). 「전체」 는 그대로 여섯 갈래입니다. */
+  is(EZ.ezGroups.length === 1 && /자주 여는 것/.test(EZ.ezGroups[0] || ''),
+    '간편은 <b>「자주 여는 것」 한 묶음</b>으로 선다 — ' + EZ.ezGroups.join(' · '));
   is(/없어진 것이 아닙니다/.test(EZ.ezNote) && /찾기/.test(EZ.ezNote),
     '<b>없어진 것이 아니라고</b> 그 자리에서 말한다 (1번)');
   is(EZ.findRows > 0 && /법인/.test(EZ.findG.join(' ')),
