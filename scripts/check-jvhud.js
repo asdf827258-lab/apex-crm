@@ -18,6 +18,10 @@
      [7] 📢 공지 — 본체가 받아 둔 공지(OS_NTC)를 찾는다 · 「공지」 를 물었을 때만 ·
          안 받았으면 「안 읽음」 · 다른 물음(스물네 가지)에 끼지 않는다 (8번)
      [8] 🔭 찾아본 곳 — 갈래 수가 JV_FIND 와 같다 · 갈래 이름은 <b>펼칠 때</b>만 채운다
+     [10] 📅 📝 🌱 (판 X337 · 사장님 말씀 2026-11-05 「일정이랑 상담카드 코칭도 자비스에 연결해줘」)
+          — 일정은 내 캘린더와 <b>같은 한 벌</b>(mcalItems) · 이름으로 물으면 그 분 것만 ·
+          안 읽은 갈래는 「빠졌다」 고 밝힌다 · 상담카드 · 내 코칭 · 팀 코칭 · 안 열었으면 「안 읽음」 ·
+          「쓰는 법」 물음 스물넷에 안 낀다 · ★★ AI · AI 목소리로 그 글(병력 · 이름)이 안 간다 (3번)
      [9] 콘솔 오류 0 · 바깥 주소 0
    ★ 이름은 「홍길동」 (3번).                                                     */
 const { chromium } = require('playwright');
@@ -76,13 +80,14 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
-  const outside = [], TTS = [];
+  const outside = [], TTS = [], CHAT = [];
   let ttsMode = 'ok';
   await ctx.route('**://**', rt => { const u = rt.request().url();
     if (u.indexOf('127.0.0.1:' + PORT + '/api/gemini') >= 0) {
       let body = {}; try { body = JSON.parse(rt.request().postData() || '{}'); } catch (e) {}
       /* 목소리 부름만 셉니다 — AI 의견을 묻는 부름(글)은 check-jvfind 가 봅니다 */
       const audio = !!(body.generationConfig && (body.generationConfig.responseModalities || []).indexOf('AUDIO') >= 0);
+      if (!audio) CHAT.push(JSON.stringify(body));
       if (!audio) return rt.fulfill({ status: 200, contentType: 'application/json',
         body: JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"answer":"","steps":[],"next":[]}' }] } }] }) });
       TTS.push(body);
@@ -229,6 +234,77 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
   });
   is(new RegExp('찾아본 곳 ' + SC.n + '갈래').test(SC.sum), '머리 — 「' + SC.sum + '」 · 갈래 수가 JV_FIND 와 같다(' + SC.n + ')');
   is(!SC.before && SC.after === SC.n, '갈래 이름은 펼칠 때만 — 펴기 전 「고객 명단」 글 0 · 편 뒤 ' + SC.after + '갈래');
+
+
+  sec('[10] 📅 📝 🌱 일정 · 상담카드 · 코칭 (판 X337)');
+  /* 본 화면이 들고 있을 자료를 넣어 둡니다 — 이름은 홍길동 · 성춘향 (3번) */
+  const DAY = await f.evaluate(() => { var P = kbApp(), TD = P.mcalToday(), T1 = P.mcalShift(TD, 1);
+    P.CM.meta = {c0:{bd:'', nx:[{k:'nx1', what:'홍길순 서류 받기', due:T1}], touch:[]}};
+    P.AR.db = [{name:'홍길동', appt:T1 + 'T14:00', region:'강남', who:'me'}];
+    P.FACT.list = [{id:'fc1', name:'홍길동', goal:'은퇴자금 준비', family:'배우자 · 자녀 1', budget:'월 50만원',
+                    health:'고혈압약 복용', cats:['pension'], ts:Date.now(), ai:''}];
+    P.MC.loaded = true; P.MC.err = '';
+    P.MC.logs = [{id:'l1', coach_date:'2026-11-03', strength:'첫 마디가 좋아졌습니다', weak:'약속으로 잇기', todo:'하루 통화 서른 통', recheck_date:'2026-11-10'}];
+    P.MC.notes = [{log_id:'l1', body:'다음 주까지 해 보겠습니다', share:true}]; P.MC.sig = [];
+    P.CO.loaded = true; P.CO.err = '';
+    P.CO.rows = [{id:'m1', name:'성춘향', team:'A', says:[{body:'대본 연습 중입니다', share:true}], logs:[],
+                  last:{coach_date:'2026-11-04', todo:'TA 대본 연습', recheck_date:'2026-11-11'}}];
+    return {TD:TD, T1:T1}; });
+  const C1 = await f.evaluate(() => { var n = jvFind('내일 일정 뭐 있어').filter(x => x.k === 'cal')[0];
+    return n ? {rows:(n.rows || []).map(r => r.t + ' | ' + (r.s || []).join(' | ')), priv:n.priv} : null; });
+  is(C1 && C1.rows.length === 1 && /내일/.test(C1.rows[0]) && /📌 약속 14:00 · 강남 — 홍길동/.test(C1.rows[0]) && /▶ 할 일 — 홍길동: 홍길순 서류 받기/.test(C1.rows[0]),
+     '「내일 일정 뭐 있어」 → 내일 한 장 — 약속(14:00 · 강남) · 할 일(서류 받기)' + (C1 ? ' ← ' + C1.rows[0].slice(0, 90) : ''));
+  const C2 = await f.evaluate((T1) => { var P = kbApp(), L = P.mcalMine(P.mcalItems()[T1] || []).filter(x => x.k !== 'rt');
+    var n = jvFind('내일 일정 뭐 있어').filter(x => x.k === 'cal')[0]; var t = n ? n.rows[0].t : '';
+    return {app:L.length, jv:+((/(\d+)건/.exec(t) || [0, -1])[1])}; }, DAY.T1);
+  is(C2.app === C2.jv && C2.app >= 2, '내 캘린더와 같은 한 벌 — 캘린더 ' + C2.app + '건 · 자비스 ' + C2.jv + '건 (mcalItems · 5번)');
+  const C3 = await f.evaluate(() => { var n = jvFind('홍길동 약속 언제야').filter(x => x.k === 'cal')[0];
+    return n ? {rows:n.rows.map(r => r.t + ' | ' + r.s.join(' | ')), used:n.used} : null; });
+  is(C3 && C3.rows.length >= 1 && C3.rows.every(r => /홍길동/.test(r)) && C3.used.indexOf('홍길동') >= 0,
+     '「홍길동 약속 언제야」 → 그 분 것만 ' + (C3 ? C3.rows.length : 0) + '일 · 물음의 이름은 AI 로 가기 전에 가린다');
+  const C4 = await f.evaluate(() => { var P = kbApp(), o = P.OSC.loaded; P.OSC.loaded = false;
+    var n = jvFind('오늘 일정 알려줘').filter(x => x.k === 'cal')[0]; P.OSC.loaded = o; return n ? n.note : ''; });
+  is(/고객 365일/.test(C4) && /안 읽어/.test(C4), '고객 목록을 안 읽었으면 「빠져 있습니다」 — 「없음」 으로 읽히지 않게 (1번)');
+  const C5 = await f.evaluate(() => { var n = jvFind('이번 주 일정').filter(x => x.k === 'cal')[0]; return n ? n.rows.length : -1; });
+  is(C5 >= 1, '「이번 주 일정」 → 일정이 있는 날만 ' + C5 + '일');
+  const F1 = await f.evaluate(() => { var n = jvFind('상담카드 보여줘').filter(x => x.k === 'fact')[0];
+    return n ? n.rows.map(r => r.t + ' | ' + r.s.join(' | ')).join(' || ') : ''; });
+  is(/📝 홍길동/.test(F1) && /은퇴자금 준비/.test(F1) && /연금/.test(F1), '「상담카드 보여줘」 → 이 기기의 카드 — 이름 · 관심 · 목표');
+  const F2 = await f.evaluate(() => { var F = jvFind('홍길동 상담 준비'), n = F.filter(x => x.k === 'fact')[0];
+    return {hit:!!(n && n.rows.length), safe:jvSafeQ('홍길동 상담 준비', F)}; });
+  is(F2.hit && !/홍길동/.test(F2.safe), '이름만 물어도 그 분 카드가 선다 · AI 로 갈 물음에서는 이름을 가린다 — 「' + F2.safe + '」');
+  const M1 = await f.evaluate(() => { var n = jvFind('내 코칭 뭐 받았어').filter(x => x.k === 'coach')[0];
+    return n ? n.rows.map(r => r.t + ' | ' + r.s.join(' | ')).join(' || ') : ''; });
+  is(/2026-11-03 코칭/.test(M1) && /하루 통화 서른 통/.test(M1) && /내가 적은 말/.test(M1), '「내 코칭 뭐 받았어」 → 받은 코칭 · 할 일 · 내가 적은 말');
+  const M2 = await f.evaluate(() => { var n = jvFind('팀 코칭 성춘향').filter(x => x.k === 'coach')[0];
+    return n ? n.rows.map(r => r.t + ' | ' + r.s.join(' | ')).join(' || ') : ''; });
+  is(/성춘향/.test(M2) && /TA 대본 연습/.test(M2) && /팀원이 적은 말/.test(M2), '「팀 코칭 성춘향」 → 그 팀원의 마지막 코칭');
+  const M3 = await f.evaluate(() => { var P = kbApp(); P.MC.loaded = false; P.CO.loaded = false;
+    var a = (jvFind('내 코칭 뭐 받았어').filter(x => x.k === 'coach')[0] || {}).wait, b = (jvFind('팀 코칭 보여줘').filter(x => x.k === 'coach')[0] || {}).wait;
+    P.MC.loaded = true; P.CO.loaded = true; return [a, b]; });
+  is(M3[0] === '내 코칭' && M3[1] === '팀 코칭', '그 화면을 아직 안 열었으면 「안 읽음」 — 서버를 따로 부르지 않습니다 (1번 · 7번)');
+  const X = await f.evaluate((L) => L.filter(q => jvFind(q).some(x => x.k === 'cal' || x.k === 'fact' || x.k === 'coach')), HOWTO);
+  is(X.length === 0, '「쓰는 법」 물음 ' + HOWTO.length + '가지에 안 낀다' + (X.length ? ' ← ' + X.join(' · ') : ''));
+  /* ★★ 사람 이야기는 AI 로도 AI 목소리로도 안 간다 (3번)
+     ⚠ 재는 말은 <b>이 자리에만 있는 글</b>로 둡니다 — 「증권 전달」 처럼 화면 이름과 같은 말로 재면
+       시스템 안내 글에 원래 있는 그 낱말을 새어 나간 것으로 잘못 읽습니다(처음에 그렇게 헛것을 잡았습니다 · 8번).
+       「홍길동」 도 사용가이드의 견본 이름이라 같은 까닭으로 안 씁니다 — 이름이 가려지는지는 위의 jvSafeQ 줄이 봅니다 */
+  TTS.length = 0; CHAT.length = 0;
+  await f.evaluate(async () => { JV_VOX.dead = ''; JV_VOX.armed = true; TTS.on = true; LS.set('gproxy', '/api/gemini');
+    for (const q of ['내일 일정 뭐 있어', '상담카드 보여줘', '내 코칭 뭐 받았어', '홍길동 상담 준비']) {
+      while (busy) await new Promise(r => setTimeout(r, 50));
+      ask(q); await new Promise(r => setTimeout(r, 400)); } });
+  await p.waitForTimeout(800);
+  const leak = CHAT.filter(t => /홍길순 서류|고혈압약|하루 통화 서른 통|은퇴자금 준비|다음 주까지 해 보겠습니다/.test(t));
+  is(CHAT.length >= 1 && leak.length === 0, 'AI 로 간 물음 ' + CHAT.length + '번 — 이름 · 병력 · 코칭 · 일정 글 0' + (leak.length ? ' ← ' + leak[0].slice(0, 120) : ''));
+  is(TTS.length === 0, '그 답을 읽을 때 AI 목소리 부름 <b>' + TTS.length + '</b> — 기기 목소리가 읽습니다');
+  const OPEN = await f.evaluate(async () => { ask('내일 일정 뭐 있어'); await new Promise(r => setTimeout(r, 300));
+    var c = [].slice.call(document.querySelectorAll('#jLog .msg.j')).pop();
+    var a = [].slice.call(c.querySelectorAll('.j-find a[data-id]')), n = (c.innerText.match(/내 캘린더 열기/g) || []).length;
+    return {ids:a.map(x => x.getAttribute('data-id')), n:n}; });
+  is(OPEN.ids.length === 1 && OPEN.ids[0] === 'mycal' && OPEN.n === 1, '「내 캘린더 열기」 단추 <b>하나</b> — 그 화면(mycal)으로 · 두 번 서지 않습니다 (' + OPEN.n + ')');
+  const TOPEN = await f.evaluate(() => { var n = jvFind('팀 코칭 성춘향').filter(x => x.k === 'coach')[0]; return n ? n.id : ''; });
+  is(TOPEN === 'branch_coach', '팀 코칭 답은 「팀 코칭」 화면으로 잇는다 — ' + TOPEN);
 
   sec('[9] 콘솔 오류 · 바깥 주소');
   is(errs.length === 0, '콘솔 오류 0' + (errs.length ? ' ← ' + errs.slice(0, 3).join(' · ') : ''));
