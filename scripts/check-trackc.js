@@ -138,10 +138,15 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(/보여 드릴 기사가 없습니다/.test(r.txt), '  없다고 말해 준다');
 
   console.log('\n[4] cp5 — 결론이 아니라 요건을 보여 준다');
+  /* 판 X335 에서 6장 세금이 두 쪽으로 갈렸습니다 — cp5(결론을 안 내린다) ·
+     cp5b(어떤 요건인가 · 세 갈래 표). <b>고객은 이어서 봅니다</b>. 그래서
+     두 쪽을 합쳐서 봅니다. ★ 다만 「요건 충족 시」 같은 조건부 표기는
+     check-coupon 이 트랙 전체에서 따로 봅니다 (5번 · 묻는 곳을 하나로). */
   const cp5 = await page.evaluate(() => {
-    const s = document.getElementById('cp5');
-    const t = s ? s.textContent.replace(/\s+/g, ' ') : '';
-    const tb = s ? s.querySelector('table.cmp.wrapcell') : null;
+    const a = document.getElementById('cp5'), b = document.getElementById('cp5b');
+    const t = ((a ? a.textContent : '') + ' ' + (b ? b.textContent : '')).replace(/\s+/g, ' ');
+    const tb = (a && a.querySelector('table.cmp.wrapcell'))
+            || (b && b.querySelector('table.cmp.wrapcell'));
     return { txt: t,
              heads: tb ? [].map.call(tb.querySelectorAll('thead th'), x => x.textContent.trim()) : [],
              rows: tb ? tb.querySelectorAll('tbody tr').length : 0,
@@ -174,13 +179,16 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 
   console.log('\n[4c] 1장 — 건물과 금융상품을 나란히 놓고, 한쪽 편만 들지 않는다');
   const rvs = await page.evaluate(() => {
-    const t = document.querySelector('#cp1 .rvs');
+    /* 판 X335 에서 1장이 두 쪽으로 갈렸습니다 — cp1(무엇이 다른가) ·
+       cp1x(나란히 표). 표는 뒤쪽에 섭니다. */
+    const t = document.querySelector('#cp1 .rvs') || document.querySelector('#cp1x .rvs');
     if (!t) return null;
     const rows = [].map.call(t.querySelectorAll('.rw'), r => ({
       k: (r.querySelector('.k') || {}).textContent || '',
       re: r.classList.contains('o')   /* o = 기회 · 부동산이 이기는 자리 */
     }));
-    return { rows, txt: document.getElementById('cp1').textContent.replace(/\s+/g, ' ') };
+    const a = document.getElementById('cp1'), b = document.getElementById('cp1x');
+    return { rows, txt: ((a ? a.textContent : '') + ' ' + (b ? b.textContent : '')).replace(/\s+/g, ' ') };
   });
   is(!!rvs, '  대조표가 선다');
   if (rvs) {
@@ -220,9 +228,20 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     const man = t => Number(String(t).replace(/[^0-9]/g, ''));
     const c1 = cpm.cards[0] || { rows: [] };
     is(man(c1.rows[0]) > man(c1.rows[2]), '  한 번에 받는 돈은 5년형이 크다');
-    is(/받는 총액은 20년형이 큽니다/.test(cpm.txt), '  받는 총액은 20년형이 크다고 적는다');
-    is(/비례 환산한 참고치/.test(cpm.txt), '  「비례 환산한 참고치」 라고 밝힌다 — 없는 표를 만들지 않는다');
-    is(/제안서를 다시 뽑아/.test(cpm.txt), '  확정 금액은 제안서로 확인하라고 적는다');
+    /* ★★ <b>단서는 숫자와 같은 쪽에</b> 있어야 합니다 (판 X335 · 1번).
+       쪼개면서 이 단서를 다음 쪽으로 넘겼다가 이 자에게 잡혔습니다 —
+       「비례 환산한 참고치」 라는 말이 없으면 고객은 그 숫자를
+       <b>확정 금액으로 믿습니다.</b> 그래서 이 둘은 #cpmoney 안에서 찾습니다. */
+    is(/비례 환산한 참고치/.test(cpm.txt), '  「비례 환산한 참고치」 라고 밝힌다 — 숫자와 같은 쪽에');
+    is(/제안서를 다시 뽑아/.test(cpm.txt), '  확정 금액은 제안서로 확인하라고 적는다 — 숫자와 같은 쪽에');
+    /* 「받는 총액은 20년형이 큽니다」 는 단서가 아니라 <b>견주는 말</b>이라
+       다음 쪽(cpmoney2 · 「같은 1억인데 왜 다릅니까」)에 서도 됩니다.
+       그래서 두 쪽을 합쳐서 찾습니다 — 다만 <b>있기는 해야</b> 합니다. */
+    const cpm2 = await page.evaluate(() => {
+      const a = document.getElementById('cpmoney'), b = document.getElementById('cpmoney2');
+      return ((a ? a.textContent : '') + ' ' + (b ? b.textContent : '')).replace(/\s+/g, ' ');
+    });
+    is(/받는 총액은 20년형이 큽니다/.test(cpm2), '  받는 총액은 20년형이 크다고 적는다 (금액 장 두 쪽 안에)');
   }
 
   console.log('\n[4e] 달러를 적은 자리에는 언제나 원화가 붙는다');
@@ -296,8 +315,14 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     presExit();
     return out;
   });
-  const want = ['coverC', 'cp1', 'cp1a', 'cp1b', 'cp1c', 'cp2', 'cp3',
-                'cpmoney', 'cpcalc', 'cp5', 'cp6', 'close'];
+  /* 판 X335 에서 열둘 → <b>열일곱</b>으로 쪼갰습니다 (사장님 말씀
+     「응 나머지 트랙도 전부 같이 쪼개줘」). 한 쪽에 한 가지로 가르면서
+     cp1x · cpmoney2 · cpcalc2 · cpcalc3 · cp5b 다섯이 늘었습니다.
+     ★ 여기 차례를 못 박아 두는 까닭은 그대로입니다 — 쿠폰 트랙이 두 번
+       조용히 빠진 적이 있어, <b>차례가 바뀌면 사람이 한 번 보게</b> 합니다. */
+  const want = ['coverC', 'cp1', 'cp1x', 'cp1a', 'cp1b', 'cp1c', 'cp2', 'cp3',
+                'cpmoney', 'cpmoney2', 'cpcalc', 'cpcalc2', 'cpcalc3',
+                'cp5', 'cp5b', 'cp6', 'close'];
   is(deck.length === want.length,
      '  ' + want.length + '장이다 — ' + deck.length + '장 (' + deck.map(d => d.id).join(' ') + ')');
   want.forEach((id, i) => {
