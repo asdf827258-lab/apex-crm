@@ -30,6 +30,13 @@
      5. 쪼갠 뒤에도 <b>장 수가 전보다 많다</b> — 쪼갠다고 해 놓고 글을 버리면
         장 수가 줄어듭니다.
      6. 콘솔에 <b>터진 자리</b>가 없다.
+    11. ★★ <b>폰에서 발표 띠가 화면 안에 있고 단추가 44px 이다.</b> 사장님 말씀
+        (2026-11-05) 「<b>폰에서도 확인해줘</b>」 — 390px 화면에서 띠가 <b>482px</b>
+        였습니다. 왼쪽 「‹」 와 오른쪽 「✕ 종료」 가 잘려 <b>앞으로도 못 가고
+        끝낼 수도 없었습니다.</b> 단추도 35px 로 앱이 지키는 44px 에 못 미쳤습니다.
+    12. 폰에서 <b>세 화면을 넘는 쪽</b>이 늘지 않는다 — 지금 <b>11장</b>입니다
+        (92장 중 88%는 한 번만 내리면 끝). 폰은 세로라 칸이 둘·셋인 격자가
+        한 줄로 접혀 2~3배가 됩니다. ★ 이 수는 <b>줄이면 같이 내립니다</b>.
     10. ★★ <b>책(스크롤) 보기에서 고른 갈래의 장만 보인다.</b> 사장님 말씀
         (2026-11-05) 「<b>응 그것도 고쳐줘</b>」 — 달러를 고르셨는데 국민연금·
         공무원연금 장이 그대로 서 있었습니다. 그 아홉 장이 #trackW 가 열리기
@@ -58,7 +65,8 @@
        (처음에는 ⓐ 가 <b>안 울었습니다</b> — 그래서 [7] 을 보탰습니다)
      ⓑ 닫기 줄을 한 줄 지워 장이 장 안에 들어가게 → [2] 가 「안 보이는 쪽」 으로 울음
      ⓒ 차례에 없는 id 적기 → [3] 이 울음
-     ⓓ .wonly 이름표를 떼기 → [10] 이 「아직 보이는 것 9」 로 울음 (판 X339)     */
+     ⓓ .wonly 이름표를 떼기 → [10] 이 「아직 보이는 것 9」 로 울음 (판 X339)
+     ⓔ 폰 띠 규칙을 빼기 → [11] 이 「482px / 창 390px」 로 울음 (판 X342)        */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 
@@ -97,6 +105,11 @@ const 일부러뺀장 = { e: ['erg'] };
              발표에서만 서므로, 이것까지 숨기면 다른 갈래는 머리가 없어집니다.
    · close : 다섯 갈래가 같이 쓰는 마지막 장입니다(차례마다 들어 있습니다). */
 const 갈래넘어서도되는장 = ['hero', 'close'];
+/* 폰 — 사장님이 고객 앞에서 꺼내 보이는 크기 */
+const 폰 = { width: 390, height: 844 };
+/* ★ 폰에서 <b>세 화면을 넘는 쪽</b>의 수. 2026-11-05 에 11장이었습니다.
+   늘면 빨간불이고, 줄이면 이 수도 같이 내립니다 (CLAUDE.md 0-1). */
+const 폰세화면 = 11;
 const 칸밖이어도되는장 = {
   w: ['hero','gap','nps','nps2','gongmu','gongmu2','math','math2','time','faq','close'],
   d: ['close'], t: ['close'], e: ['close'], c: ['close']
@@ -240,6 +253,60 @@ const 갈래 = {
        '  ' + 갈래[k].이름 + ' — track 안 장 ' + 안.length + '개 중 차례에 없는 장 ' + 고아.length +
        (고아.length ? (' ← ' + 고아.join(', ')) : '') +
        (봐줌.length ? ('   (일부러 뺀 것: ' + 봐줌.join(', ') + ')') : ''));
+  }
+
+  head('[11] ★★ 폰(390×844)에서 <b>발표 띠가 화면 안</b>에 있고 단추가 44px 이다');
+  {
+    const ph = await br.newContext({ viewport: 폰, isMobile: true, hasTouch: true });
+    await ph.route('**://**', r => {
+      const u = r.request().url();
+      if (u.startsWith('http://127.0.0.1:' + PORT) || u.startsWith('http://localhost:' + PORT))
+        return r.continue();
+      return r.abort();
+    });
+    const pp = await ph.newPage();
+    await pp.goto('http://127.0.0.1:' + PORT + '/' + FILE.split('/').map(encodeURIComponent).join('/'),
+                  { waitUntil: 'load' });
+    await pp.waitForTimeout(1600);
+    const bar = await pp.evaluate(() => {
+      window.__go('d'); presEnter(); presGo(2);
+      const b = document.querySelector('.pbar');
+      if (!b) return null;
+      const q = b.getBoundingClientRect();
+      const 칸 = [].slice.call(b.querySelectorAll('button')).map(x => {
+        const t = x.getBoundingClientRect();
+        return { h: Math.round(t.height), 안: t.left >= -1 && t.right <= window.innerWidth + 1 };
+      });
+      return { 폭: Math.round(q.width), 창: window.innerWidth,
+               밖: 칸.filter(x => !x.안).length, 작: 칸.filter(x => x.h < 44).length,
+               수: 칸.length };
+    });
+    is(!!bar, '  발표 띠가 선다');
+    if (bar) {
+      is(bar.폭 <= bar.창, '  띠가 화면 안이다 — ' + bar.폭 + 'px / 창 ' + bar.창 + 'px (고치기 전 482px)');
+      is(bar.밖 === 0, '  화면 밖으로 나간 단추 ' + bar.밖 + '개 (고치기 전 2개)');
+      is(bar.작 === 0, '  44px 못 미치는 단추 ' + bar.작 + '/' + bar.수 + '개 (고치기 전 5개)');
+    }
+
+    head('[12] 폰에서 <b>세 화면을 넘는 쪽</b>이 ' + 폰세화면 + '장을 안 넘는다');
+    let 셋 = 0; const 긴것 = [];
+    for (const k of Object.keys(갈래)) {
+      const r = await pp.evaluate(k => {
+        window.__go(k); presEnter();
+        const L = presList(), out = [];
+        for (let i = 0; i < L.length; i++) {
+          presGo(i);
+          const de = document.documentElement;
+          out.push({ id: L[i].id, 화면: de.scrollHeight / de.clientHeight });
+        }
+        if (typeof presExit === 'function') presExit();
+        return out;
+      }, k);
+      r.forEach(x => { if (x.화면 > 2.05) { 셋++; 긴것.push(x.id + '(' + x.화면.toFixed(1) + ')'); } });
+    }
+    is(셋 <= 폰세화면, '  세 화면 넘는 쪽 <b>' + 셋 + '장</b> (선 ' + 폰세화면 + ') ← ' +
+       긴것.slice(0, 6).join(' / '));
+    await ph.close();
   }
 
   head('[10] ★★ 책 보기에서 <b>고른 갈래의 장만</b> 보인다 (사장님 말씀 「응 그것도 고쳐줘」)');
