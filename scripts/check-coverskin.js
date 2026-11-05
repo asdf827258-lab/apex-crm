@@ -91,7 +91,7 @@ for (const m of APP.matchAll(/var ([A-Z_0-9]*URL)\s*=\s*'([^']*)'/g)) URLS[m[1]]
 const 짝 = {
   finance: 'FIN_URL', crm: 'CRM_URL', apexmap: 'APEXMAP_URL', onecmp: 'ONECMP_URL',
   mikki: 'MIKKI_URL', car_fault: 'CARFAULT_URL', mikki_talk: 'MKTALK_URL',
-  sangdam: 'SANGDAM_URL', educal: 'EDUCAL_URL', pdel: 'PDEL_URL',
+  sangdam: 'SANGDAM_URL', educal: 'EDUCAL_URL', pdel: 'PDEL_URL', insight: 'INSIGHT_URL',
   bohum: 'BOHUM_URL', frmake: 'BA_URL',
 };
 /* 메뉴에 적힌 한국말 이름 */
