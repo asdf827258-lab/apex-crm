@@ -25,6 +25,7 @@
      [11] 🗂 메뉴(TABS)의 화면 <b>전부</b>를 이름만 말해도 자비스가 그 화면을 연다 — 메뉴를 줄이는 전제
      [12] 🛰 MARK II(판 X347 · 「아이언맨처럼 !!」) — 판 셋 · 시계 · 부팅 장면(센 수 그대로 · 한 창에 한 번) · 말로 묻기 단추
      [13] 🔎 라이브에서 물어 보고 고친 것(판 X352) — 「읽는 중」 쪽지 · 연금 물음의 곁가지 · DB/GMDB · 「도구」 · 인사/고마워/감사로그
+     [14] 💬 답 칸 흰 바탕 · 도현체 · Pretendard · Tossface(판 X353 · 「대답 하는 부분은 흰색 배경으로 … 도현체, 토스 글씨체 및 아이콘」)
      [9] 콘솔 오류 0 · 바깥 주소 0
    ★ 이름은 「홍길동」 (3번).                                                     */
 const { chromium } = require('playwright');
@@ -394,6 +395,23 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
   is(!LV.gmdb && LV.kcd, '짧은 영문은 통째로만 — 「DB 통합 CRM」 에 GMDB 0 · 「I20」 질병코드는 그대로');
   is(LV.toolTab === 'tools' && /도구/.test(LV.toolSay), '「도구」 라고만 해도 도구 화면이 열린다 — ' + LV.toolTab);
   is(LV.who && LV.thx && LV.audit, '「너는 누구야」 → 자기소개 · 「감사합니다」 → 짧은 답 · 「감사로그」 는 화면 이름으로 (갈린다)');
+
+  sec('[14] 💬 답 칸은 흰 바탕 · 도현체 · 토스 글꼴 · Tossface (판 X353)');
+  const FT = await f.evaluate(() => {
+    var c = [].slice.call(document.querySelectorAll('#jLog .msg.j .bub')).pop(), cs = c ? getComputedStyle(c) : null;
+    var links = [].slice.call(document.querySelectorAll('link[rel=stylesheet]')).map(l => l.href);
+    return { bub:cs ? cs.backgroundColor : '', ink:cs ? cs.color : '', log:getComputedStyle(document.getElementById('jLog')).backgroundColor,
+             name:getComputedStyle(document.querySelector('.hud-name')).fontFamily, body:getComputedStyle(document.body).fontFamily,
+             head:getComputedStyle(document.querySelector('.ask-h')).fontFamily,
+             pre:links.some(h => /pretendard/.test(h)), tf:links.some(h => /tossface/.test(h)), dh:links.some(h => /Do\+Hyeon/.test(h)),
+             bodyBg:getComputedStyle(document.documentElement).backgroundColor };   /* 띠(독)에서는 body 가 투명이라 쪽 바탕(html)을 잽니다 */
+  });
+  is(FT.bub === 'rgb(255, 255, 255)' && /rgb\(25, 31, 40\)/.test(FT.ink) && FT.log === 'rgb(242, 244, 246)',
+     '답 카드는 <b>흰 바탕</b> · 토스 잉크 글자 · 답 칸은 토스 회색 — ' + FT.bub + ' / ' + FT.ink + ' / ' + FT.log);
+  is(/rgb\(3, 11, 22\)/.test(FT.bodyBg), '위(원자로 · 판 셋)는 검은 HUD 그대로 — ' + FT.bodyBg);
+  is(/Do Hyeon/.test(FT.name) && /Do Hyeon/.test(FT.head), '제목은 <b>도현체</b> — 이름 · 묻는 말');
+  is(/Pretendard/.test(FT.body) && /Tossface/.test(FT.body), '본문은 Pretendard · 그림글자는 Tossface');
+  is(FT.pre && FT.tf && FT.dh, '글꼴은 앱이 이미 쓰는 그 주소에서 받는다 — Pretendard · Tossface · Do Hyeon');
   sec('[9] 콘솔 오류 · 바깥 주소');
   is(errs.length === 0, '콘솔 오류 0' + (errs.length ? ' ← ' + errs.slice(0, 3).join(' · ') : ''));
   is(outside.length === 0, '바깥 주소 0' + (outside.length ? ' ← ' + outside.slice(0, 3).join(' · ') : ''));
