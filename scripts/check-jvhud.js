@@ -24,6 +24,8 @@
           「쓰는 법」 물음 스물넷에 안 낀다 · ★★ AI · AI 목소리로 그 글(병력 · 이름)이 안 간다 (3번)
      [11] 🗂 메뉴(TABS)의 화면 <b>전부</b>를 이름만 말해도 자비스가 그 화면을 연다 — 메뉴를 줄이는 전제
      [12] 🛰 MARK II(판 X347 · 「아이언맨처럼 !!」) — 판 셋 · 시계 · 부팅 장면(센 수 그대로 · 한 창에 한 번) · 말로 묻기 단추
+     [13] 🔎 라이브에서 물어 보고 고친 것(판 X352) — 「읽는 중」 쪽지 · 연금 물음의 곁가지 · DB/GMDB · 「도구」 · 인사/고마워/감사로그
+     [14] 💬 답 칸 흰 바탕 · 도현체 · Pretendard · Tossface(판 X353 · 「대답 하는 부분은 흰색 배경으로 … 도현체, 토스 글씨체 및 아이콘」)
      [9] 콘솔 오류 0 · 바깥 주소 0
    ★ 이름은 「홍길동」 (3번).                                                     */
 const { chromium } = require('playwright');
@@ -280,6 +282,15 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
   const M1 = await f.evaluate(() => { var n = jvFind('내 코칭 뭐 받았어').filter(x => x.k === 'coach')[0];
     return n ? n.rows.map(r => r.t + ' | ' + r.s.join(' | ')).join(' || ') : ''; });
   is(/2026-11-03 코칭/.test(M1) && /하루 통화 서른 통/.test(M1) && /내가 적은 말/.test(M1), '「내 코칭 뭐 받았어」 → 받은 코칭 · 할 일 · 내가 적은 말');
+  /* 판 X352 — 팀 코칭은 <b>그 화면을 여는 계정</b>(지점장)으로 잽니다. 설계사는 그 화면이 잠겨 있어 「한 번 열면 찾습니다」
+     라고 하면 거짓 길이라 아예 안 섭니다 — 아래 M4 가 봅니다 */
+  const LOCK = await f.evaluate(() => { var P = kbApp(), r0 = P.OS.profile.role, p0 = P.OS.profile.plan;
+    var a = jvWay('branch_coach').locked, n = jvFind('팀 코칭 보여줘').filter(x => x.k === 'coach').length;
+    /* 팀 코칭은 지점장 · VIP 등급에서 열립니다(visibleTabs) — 둘 다 맞춰 엽니다 */
+    P.OS.profile.role = 'branch_manager'; P.OS.profile.plan = 'vip'; var b = jvWay('branch_coach').locked;
+    P.__jvRole = [r0, p0]; return {fp:a, fpN:n, mgr:b}; });
+  is(LOCK.fp === true && LOCK.fpN === 0 && !LOCK.mgr,   /* 열린 길은 locked 를 아예 안 답니다 */
+     '팀 코칭이 잠긴 계정(설계사)에는 코칭 갈래가 <b>안 선다</b> — 「한 번 열면」 이라는 거짓 길 0 · 지점장은 열림');
   const M2 = await f.evaluate(() => { var n = jvFind('팀 코칭 성춘향').filter(x => x.k === 'coach')[0];
     return n ? n.rows.map(r => r.t + ' | ' + r.s.join(' | ')).join(' || ') : ''; });
   is(/성춘향/.test(M2) && /TA 대본 연습/.test(M2) && /팀원이 적은 말/.test(M2), '「팀 코칭 성춘향」 → 그 팀원의 마지막 코칭');
@@ -309,6 +320,7 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
   is(OPEN.ids.length === 1 && OPEN.ids[0] === 'mycal' && OPEN.n === 1, '「내 캘린더 열기」 단추 <b>하나</b> — 그 화면(mycal)으로 · 두 번 서지 않습니다 (' + OPEN.n + ')');
   const TOPEN = await f.evaluate(() => { var n = jvFind('팀 코칭 성춘향').filter(x => x.k === 'coach')[0]; return n ? n.id : ''; });
   is(TOPEN === 'branch_coach', '팀 코칭 답은 「팀 코칭」 화면으로 잇는다 — ' + TOPEN);
+  await f.evaluate(() => { var P = kbApp(); if (P.__jvRole){ P.OS.profile.role = P.__jvRole[0]; P.OS.profile.plan = P.__jvRole[1]; } });
 
 
   sec('[11] 🗂 메뉴의 화면 전부를 <b>이름만 말해도</b> 자비스가 여는가 (메뉴 간소화의 전제 · 2026-11-05)');
@@ -351,6 +363,62 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
      '부팅 장면이 <b>센 수 그대로</b> — 화면 ' + MK.scr + '개 · 자료 갈래 ' + MK.src + '곳 (지어 적지 않음 · 1번)');
   is(MK.bootOff && !MK.again, '부팅 장면은 잠깐 서고 걷힌다 · 한 창에 <b>한 번</b>만');
   is(MK.mic === 1 || MK.mic === -1, '「말로 묻기」 큰 단추는 위 띠의 🎤 를 그대로 누른다 — 듣는 길은 하나 (5번)' + (MK.mic === -1 ? ' (이 브라우저는 듣기가 없어 단추가 감춰짐)' : ''));
+
+  sec('[13] 🔎 라이브에서 물어 보고 고친 것 (판 X352 · 2026-11-05 「라이브 자비스 다양한 질문으로 확인해봐」)');
+  const LV = await f.evaluate(async () => {
+    var P = kbApp(), o = {};
+    var card = async (q) => { while (busy) await new Promise(r => setTimeout(r, 50)); ask(q); await new Promise(r => setTimeout(r, 150));
+      return [].slice.call(document.querySelectorAll('#jLog .msg.j')).pop(); };
+    /* ① 제 갈래가 답했으면 「읽는 중」 쪽지 0 */
+    var st0 = JV_EXT.st; JV_EXT.st = 'busy';
+    o.cliWait = jvFind('홍길동 연락처 알려줘').filter(x => x.waitSay).length;
+    o.calWait = jvFind('내일 일정 뭐 있어').filter(x => x.waitSay).length;
+    o.knowWait = jvFind('뇌졸중 화법').filter(x => x.waitSay).length;   /* 보험 자료를 묻는 말에는 그대로 선다 */
+    JV_EXT.st = st0; JV_EXT.pend = '';
+    /* ② 연금을 셈하는 물음에는 보험 자료를 안 붙인다 */
+    var c = await card('50세 남자 월 50만원 10년납 65세부터 연금 얼마');
+    o.pen = !!c.querySelector('.j-pen'); o.penKnow = c.querySelectorAll('.j-find').length;
+    /* ③ 짧은 영문은 통째로만 — DB 가 GMDB 에 안 걸린다 · 질병코드(I20)는 그대로 */
+    o.gmdb = jvFind('DB 통합 CRM').some(x => (x.rows || []).some(r => /GMDB/.test(r.t)));
+    o.kcd = jvFind('I20 이 뭐야').some(x => x.k === 'kcd' && (x.rows || []).length);
+    /* ④ 「도구」 는 그 화면을 연다 */
+    c = await card('도구'); o.toolSay = c.innerText; await new Promise(r => setTimeout(r, 300));
+    o.toolTab = P.currentTab ? P.currentTab() : '';
+    try { P.go('apexmap'); } catch(e){} await new Promise(r => setTimeout(r, 300));
+    /* ⑤ 인사 · 고맙다는 말 · 화면 이름(감사로그)은 갈린다 */
+    o.who = /저는 자비스입니다/.test(offline('너는 누구야').answer);
+    o.thx = /언제든/.test(offline('감사합니다').answer);
+    o.audit = !/언제든/.test(offline('감사로그').answer);
+    /* ⑥ 「오늘 뭐부터」 는 「아침에 뭐부터」 와 같은 답 · 흐린 「뭐부터 하지」 는 그대로 되묻기 */
+    var r1 = offline('오늘 뭐부터 해야 해?'), r2 = offline('뭐부터 하지');
+    o.today = (r1.steps || []).filter(s => s.id)[0] ? (r1.steps || []).filter(s => s.id)[0].id : r1.how; o.vague = r2.how;
+    /* ⑦ 일꾼이 답한 물음에는 「읽는 중」 쪽지 0 */
+    JV_EXT.st = 'busy'; c = await card('오늘 남은 할 일'); o.workWait = /읽는 중/.test(c.innerText); JV_EXT.st = st0; JV_EXT.pend = '';
+    return o; });
+  is(LV.cliWait === 0 && LV.calWait === 0 && LV.knowWait === 1, '제 갈래(고객 · 일정)가 답했으면 「읽는 중」 쪽지 0 — 보험 자료를 묻는 말에는 그대로 선다 (' + [LV.cliWait, LV.calWait, LV.knowWait].join('·') + ')');
+  is(LV.pen && LV.penKnow === 0, '연금을 셈하는 물음 — 계산 카드만 · 보험 자료 0 (「50세」 로 전립선비대증 슬라이드가 서던 자리)');
+  is(!LV.gmdb && LV.kcd, '짧은 영문은 통째로만 — 「DB 통합 CRM」 에 GMDB 0 · 「I20」 질병코드는 그대로');
+  is(LV.toolTab === 'tools' && /도구/.test(LV.toolSay), '「도구」 라고만 해도 도구 화면이 열린다 — ' + LV.toolTab);
+  is(LV.today === 'home' && LV.vague === 'back', '「오늘 뭐부터 해야 해?」 → 하루 시작(홈) · 흐린 「뭐부터 하지」 는 그대로 고르게 (' + LV.today + ' · ' + LV.vague + ')');
+  is(!LV.workWait, '일꾼이 답한 물음(「오늘 남은 할 일」)에 「읽는 중」 쪽지 0');
+  is(LV.who && LV.thx && LV.audit, '「너는 누구야」 → 자기소개 · 「감사합니다」 → 짧은 답 · 「감사로그」 는 화면 이름으로 (갈린다)');
+
+  sec('[14] 💬 답 칸은 흰 바탕 · 도현체 · 토스 글꼴 · Tossface (판 X353)');
+  const FT = await f.evaluate(() => {
+    var c = [].slice.call(document.querySelectorAll('#jLog .msg.j .bub')).pop(), cs = c ? getComputedStyle(c) : null;
+    var links = [].slice.call(document.querySelectorAll('link[rel=stylesheet]')).map(l => l.href);
+    return { bub:cs ? cs.backgroundColor : '', ink:cs ? cs.color : '', log:getComputedStyle(document.getElementById('jLog')).backgroundColor,
+             name:getComputedStyle(document.querySelector('.hud-name')).fontFamily, body:getComputedStyle(document.body).fontFamily,
+             head:getComputedStyle(document.querySelector('.ask-h')).fontFamily,
+             pre:links.some(h => /pretendard/.test(h)), tf:links.some(h => /tossface/.test(h)), dh:links.some(h => /Do\+Hyeon/.test(h)),
+             bodyBg:getComputedStyle(document.documentElement).backgroundColor };   /* 띠(독)에서는 body 가 투명이라 쪽 바탕(html)을 잽니다 */
+  });
+  is(FT.bub === 'rgb(255, 255, 255)' && /rgb\(25, 31, 40\)/.test(FT.ink) && FT.log === 'rgb(242, 244, 246)',
+     '답 카드는 <b>흰 바탕</b> · 토스 잉크 글자 · 답 칸은 토스 회색 — ' + FT.bub + ' / ' + FT.ink + ' / ' + FT.log);
+  is(/rgb\(3, 11, 22\)/.test(FT.bodyBg), '위(원자로 · 판 셋)는 검은 HUD 그대로 — ' + FT.bodyBg);
+  is(/Do Hyeon/.test(FT.name) && /Do Hyeon/.test(FT.head), '제목은 <b>도현체</b> — 이름 · 묻는 말');
+  is(/Pretendard/.test(FT.body) && /Tossface/.test(FT.body), '본문은 Pretendard · 그림글자는 Tossface');
+  is(FT.pre && FT.tf && FT.dh, '글꼴은 앱이 이미 쓰는 그 주소에서 받는다 — Pretendard · Tossface · Do Hyeon');
   sec('[9] 콘솔 오류 · 바깥 주소');
   is(errs.length === 0, '콘솔 오류 0' + (errs.length ? ' ← ' + errs.slice(0, 3).join(' · ') : ''));
   is(outside.length === 0, '바깥 주소 0' + (outside.length ? ' ← ' + outside.slice(0, 3).join(' · ') : ''));
