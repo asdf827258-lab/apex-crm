@@ -31,7 +31,7 @@ const PAGE = path.join(DIR, 'index.html');
 console.log('🧭 상품전략기 · 월간 상품 인사이트 (판 X350)');
 
 sec('[1] 덮개로 열리고 다시 벗겨진다');
-is(/\{group:'상품전략기',items:\[\s*\{id:'insight'/.test(SRC), '메뉴에 <b>「상품전략기」</b> 묶음이 있고 그 안에 insight 가 선다');
+is(/\{group:'상담 도구',items:\[[\s\S]{0,900}?\{id:'insight',icon:'🧭',title:'상품전략기'/.test(SRC), '「상담 도구」 맨 위에 <b>「🧭 상품전략기」</b> 칸이 선다 (따로 선 묶음은 서랍 900px 를 넘어 걷었습니다)');
 is(/'insight-mode'\]/.test(SRC), '덮개 이름(insight-mode)이 OS_FULL_MODES 끝에 있다 — 빠지면 「← 워크스페이스」 가 껍데기를 못 벗깁니다');
 is(/if\(tab==='insight'\)\{\s*mountInsight\(\);\s*osFullMode\('insight-mode'\);/.test(SRC), 'go(\'insight\') 가 덮개를 연다');
 is(/contains\('insight-mode'\)\)exitInsight\(\)/.test(SRC), 'ESC 로 닫힌다');
