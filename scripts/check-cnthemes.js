@@ -253,7 +253,7 @@ is(ctx.renderTodayCard().indexOf('📷 실사 사진 찾기') >= 0, '테마를 �
 is(/if \(keyMsg\(d\) && !PK\.items\.length\)/.test(SRC), '키 없다는 말은 사진이 하나도 안 나왔을 때만 한다 (판 X263 — Unsplash 만으로 잘 나와도 매번 떴다)');
 is(IDX.indexOf(UPBTN) >= 0, '★ 그 단추를 붙이는 자리(「🖼 직접 업로드」 단추 글자)가 index.html 에 그대로 있다 — 글자가 바뀌면 단추가 조용히 사라집니다');
 
-head('⑩ 폰에서 저장 (판 X324)');
+head('⑩ 폰에서 저장 (판 X335)');
 const cv = { toDataURL: () => 'data:image/png;base64,AAAA' };
 ctx._dl = 0; ctx.cnDownload(cv, 'a');
 is(ctx._dl === 1 && ctx.cxSheetState().n === 0, 'PC 는 그대로 파일로 내려받는다');

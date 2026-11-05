@@ -17,6 +17,9 @@
      [7] ★ 판 X309 (사장님 말씀 2026-11-03 「더 자세하게 요즘 나오는 암 치료비, 생활비, 등 전부 개선해줘 담보까지」)
          통합암(부위마다 · 전이) · 세기조절 방사선 · 암 입원·통원 일당(날 수만큼) · 💸 생활비 갈래(암 · 뇌심장 · 고도장해 —
          다달이) · 「🆕 요즘」 표지가 있는 담보에만 붙고, 고르면 그 담보만 선다 · 「모든 상품에 있다는 뜻은 아니에요」 를 밝힌다
+     [8] ★★ 판 X323 (사장님 말씀 2026-11-04 「요즘 나온 암생활비 이런 새로운 담보 내용들을 찾아서 추가로 기재해줘」)
+         기사로 확인한 담보 — 출처마다 제목 · 언론사 · 날짜(YYYY-MM-DD · 오늘을 넘지 않음) · https 주소(9번) ·
+         새로 넣은 담보는 모두 출처와 「🆕 요즘」 을 단다 · 카드에 출처와 「지금 파는지는 보험사에 확인」 이 선다 · 고르면 그 담보만
    ══════════════════════════════════════════════════════════════════ */
 const fs = require('fs'), path = require('path'), http = require('http'), url = require('url'), vm = require('vm');
 const { chromium } = require('playwright');
@@ -61,10 +64,19 @@ console.log('\n[7] 요즘 담보 · 생활비 (판 X309)');
 is(byId['cancer-all'] && byId['cancer-all'].k === 'fx' && /부위/.test(byId['cancer-all'].a + byId['cancer-all'].h) && /전이/.test(byId['cancer-all'].a + byId['cancer-all'].w), '  통합암 — 부위마다 · 전이까지 말하고 「정해진 금액」');
 is(byId.imrt && byId.imrt.k === 'fx' && byId['cancer-hosp'] && byId['cancer-hosp'].k === 'day' && /통원/.test(byId['cancer-hosp'].y), '  세기조절 방사선(정해진 금액) · 암 입원·통원 일당(날 수만큼 · 통원이 많다는 까닭)');
 const life = D.find(g => g.g === 'life');
-is(!!life && ['cancer-life', 'cv-life', 'disab-life'].every(id => life.d.some(x => x.id === id)) && life.d.every(x => x.k === 'fx' && /다달이/.test(x.h)), '  💸 생활비 갈래 — 암 · 뇌심장 · 고도장해, 셋 다 「이렇게 나와요」 가 다달이');
+is(!!life && ['cancer-life', 'cv-life', 'disab-life'].every(id => { const x = life.d.find(y => y.id === id); return x && x.k === 'fx' && /다달이/.test(x.h); }) && life.d.every(x => x.k === 'fx' && /다달이|해마다/.test(x.h)), '  💸 생활비 갈래 — 암 · 뇌심장 · 고도장해는 「다달이」, 치료 생활비는 「해마다」');
 is(/월급/.test(byId['cancer-life'].y) && /이름/.test(byId['cv-life'].c), '  암 생활비는 끊기는 월급을, 뇌·심장 생활비는 이름의 범위를 먼저 말한다');
 const nw = all.filter(x => x.nw);
 is(nw.length >= 10 && nw.length < all.length / 2 && all.every(x => x.nw === undefined || x.nw === 1), '  「🆕 요즘」 표지 ' + nw.length + '가지 — 절반이 넘으면 표지가 뜻을 잃는다');
+console.log('\n[8] 기사로 확인한 요즘 담보 (판 X323 · 9번)');
+const withSrc = all.filter(x => x.src && x.src.length), TODAY = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);   /* 한국 날짜 — 기사 날짜가 오늘(+9)을 넘지 않나 */
+is(withSrc.length >= 12, '  출처가 달린 담보 ' + withSrc.length + '가지');
+const badSrc = []; withSrc.forEach(x => x.src.forEach(r => { if (!(String(r.t || '').length >= 8 && r.pub && /^\d{4}-\d{2}-\d{2}$/.test(r.d) && r.d >= '2025-01-01' && r.d <= TODAY && /^https:\/\/[^\s]+$/.test(r.u))) badSrc.push(x.id); }));
+is(badSrc.length === 0, '  출처마다 제목 · 언론사 · 날짜(오늘을 넘지 않음) · https 주소' + (badSrc.length ? ' ← ' + badSrc.join(', ') : ''));
+const NEWIDS = ['tx-life', 'tx-carry', 'cancer-test', 'mdt', 'sel-pay', 'embo', 'pc-gel', 'care-top', 'dem-drug', 'antiviral'];
+is(NEWIDS.every(id => byId[id] && byId[id].nw === 1 && byId[id].src && byId[id].src.length), '  새로 넣은 담보 ' + NEWIDS.length + '가지 — 모두 출처와 「🆕 요즘」');
+is(byId['tx-life'] && /가짓수|가지/.test(byId['tx-life'].a + byId['tx-life'].h) && byId['tx-life'].k === 'fx' && D.find(g => g.g === 'life').d.some(x => x.id === 'tx-life'), '  암 · 순환계 치료 생활비 — 그해 받은 치료 가짓수로 · 생활비 갈래 안');
+is(byId['dem-drug'] && /부작용/.test(byId['dem-drug'].w) && byId['tx-carry'] && /다음 해/.test(byId['tx-carry'].w), '  표적 치매약물(부작용까지) · 한도이연형(안 쓴 한도를 다음 해로)');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 const srv = http.createServer((q, s) => {
   const p = decodeURIComponent(url.parse(q.url).pathname), f = path.join(ROOT, p);
@@ -105,6 +117,12 @@ const srv = http.createServer((q, s) => {
   await p.click('[data-chips] button[data-nw]');
   is(await p.locator('.card').count() === all.length, '  한 번 더 누르면 풀린다');
   is(/모든 상품에 있다는 뜻은 아니에요/.test(await p.textContent('.legend')), '  「요즘」 은 모든 상품에 있다는 뜻이 아니라고 밝힌다(1번)');
+
+  await p.goto(O + 'kijun-dict.html', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(200);
+  await p.click('[data-chips] button[data-srcf]');
+  const sc = await p.$$eval('.card', a => a.map(e => [e.dataset.id, e.querySelectorAll('[data-src] a[href^="https://"][target="_blank"]').length, /보험사 상품설명서와 약관으로 확인/.test((e.querySelector('[data-src]') || {}).textContent || '')]));
+  is(sc.length === withSrc.length && sc.every(([id, n, ok]) => n === byId[id].src.length && ok), '  「📰 기사로 확인한 새 담보」 — ' + sc.length + '장 · 출처 주소 · 「지금 파는지는 보험사에 확인」');
+  await p.click('[data-chips] button[data-srcf]');
 
   console.log('\n[6] 폰 · 인쇄 · 요청');
   const m = await ctx.newPage(); await m.setViewportSize({ width: 390, height: 844 });

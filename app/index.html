@@ -3077,6 +3077,10 @@ body.educal-mode #educalScreen{display:block;}
      흩어져 있어, CRM 에서 단계를 눌러도 아무 말이 없었다 (5번).
      저장소 뿌리에 있으므로 이 파일에서는 한 칸 위다. -->
 <script src="../apex-stage.js"></script>
+<!-- 🎬 발표 덱 트랙 표 — 계산기와 <b>같은 한 파일</b>을 봅니다 (판 X333).
+     사장님 말씀 「오늘 에서 AP, PC 에서 각자 뜰 수 있도록 각 파트별로 다
+     넣어줘」 — 트랙 이름을 여기 또 적으면 두 벌이 됩니다 (5번). -->
+<script src="../apex-track.js"></script>
 <!-- 🔥 TA 첫 화제 — <b>ta-trend.js 한 곳</b>. ☎️ TA 스크립트가 쓰는 그 파일을 홈 「오늘」 의
      TA 칸도 그대로 읽습니다. 고른 화제도 그 파일이 쥡니다 (5번). -->
 <script src="../ta-trend.js"></script>
@@ -21501,8 +21505,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-04 19:20';
-var APP_BUILD_NOTE="📱 <b>폰에서 카드뉴스 저장</b> (판 X324). ◾ 카톡 안에서 CRM 을 열고 「저장」 을 누르면 「지원하지 않는 파일 형식입니다」 만 뜨고 아무것도 안 남았습니다 — 카톡·인스타·네이버 앱 안의 브라우저는 파일 내려받기를 막습니다. ◾ 이제 <b>폰에서는 다 구운 카드를 한 판에 띄웁니다</b>. 「📤 한 번에 저장 · 공유」 를 누르면 폰의 공유 창이 열려 「갤러리에 저장」 이나 인스타로 바로 보낼 수 있고(크롬·사파리), 안 되는 곳에서는 <b>카드를 길게 눌러 「이미지 저장」</b> 하면 됩니다. 카톡 안이면 「🌐 크롬으로 열기」 단추도 섭니다. ◾ PC 는 그대로 파일로 내려받습니다.";
+var APP_BUILD='2026-11-05 09:20';
+var APP_BUILD_NOTE="📱 <b>폰에서 카드뉴스 저장</b> (판 X335). ◾ 카톡 안에서 CRM 을 열고 「저장」 을 누르면 「지원하지 않는 파일 형식입니다」 만 뜨고 아무것도 안 남았습니다 — 카톡·인스타·네이버 앱 안의 브라우저는 파일 내려받기를 막습니다. ◾ 이제 <b>폰에서는 다 구운 카드를 한 판에 띄웁니다</b>. 「📤 한 번에 저장 · 공유」 를 누르면 폰의 공유 창이 열려 「갤러리에 저장」 이나 인스타로 바로 보낼 수 있고(크롬·사파리), 안 되는 곳에서는 <b>카드를 길게 눌러 「이미지 저장」</b> 하면 됩니다. 카톡 안이면 「🌐 크롬으로 열기」 단추도 섭니다. ◾ PC 는 그대로 파일로 내려받습니다.";
 
 
 
@@ -31600,8 +31604,18 @@ function hmWorryHtml(x){
 function stKnowHtml(know){
   if(!know||!know.length)return '';
   var i,k,it,on=[],h='',g='';
+  /* ▶️ <b>발표 덱 트랙 줄</b> (판 X333) — 단계표에 track 이 적힌 줄입니다.
+     이름은 <b>apex-track.js 한 곳</b>에서 옵니다. 표를 못 읽으면 <b>안 세웁니다</b>
+     — 「발표 덱」 이라고만 적힌 단추가 다섯 개 서면 어느 트랙인지 모릅니다 (1번). */
+  var TK=(window.APEX_TRACK&&window.APEX_TRACK.name)||{};
   for(i=0;i<know.length;i++){
     k=know[i];
+    if(k.track){
+      if(!TK[k.track])continue;            /* 트랙 표를 못 읽었으면 안 세웁니다 */
+      on.push({tab:k.tab,track:k.track,g:k.g||'',w:k.w||'',
+               t:TK[k.track]+' 발표 덱',ic:'▶️'});
+      continue;
+    }
     it=(typeof navItemOf==='function')?navItemOf(k.tab):null;
     if(!it)continue;                       /* 메뉴에 없으면 안 세웁니다 */
     on.push({tab:k.tab,g:k.g||'',w:k.w||'',t:it.title||k.tab,ic:it.icon||'·'});
@@ -31610,7 +31624,9 @@ function stKnowHtml(know){
   h='<div class="t-sub">앱이 이미 아는 것 — <b>'+on.length+'가지</b>. 눌러서 바로 보십니다.</div>';
   for(i=0;i<on.length;i++){
     if(on[i].g&&on[i].g!==g){ g=on[i].g; h+='<div class="t-sub">'+osEsc(g)+'</div>'; }
-    h+='<button type="button" class="t-row" onclick="go(\''+osEsc(on[i].tab)+'\')">'+
+    h+='<button type="button" class="t-row" onclick="'+
+         (on[i].track?('osDeckGo(\''+osEsc(on[i].track)+'\')')
+                     :('go(\''+osEsc(on[i].tab)+'\')'))+'">'+
          '<span class="av">'+osEsc(on[i].ic)+'</span>'+
          '<span class="m"><span class="nm">'+osEsc(on[i].t)+'</span>'+
          (on[i].w?('<span class="mt">'+osEsc(on[i].w)+'</span>'):'')+'</span></button>';
@@ -70162,7 +70178,8 @@ function renderKijunPage(){
         '<button class="btn btn-ghost" onclick="kjOpenDict()">📚 담보 사전 (모든 담보)</button>'+
         '<button class="btn btn-ghost" onclick="kjOpenGuide()">🧭 설계 가이드 (순서 · 설명 대본)</button>'+
         '<button class="btn btn-ghost" onclick="kjOpenCare()">🩺 진단·치료 지도 (급여 · 비급여)</button>'+
-        '<button class="btn btn-ghost" onclick="kjOpenSilson()">🏥 실비 이야기 (1~4세대 · 보장)</button></div>'+
+        '<button class="btn btn-ghost" onclick="kjOpenSilson()">🏥 실비 이야기 (1~4세대 · 보장)</button>'+
+        '<button class="btn btn-ghost" onclick="kjOpenCompare()">📑 담보 대조표 (뽑아서 견주기)</button></div>'+
     '</div></div>'+
     '<div class="card kj-card"><div class="card-body">'+
       '<div class="kj-h">✍️ 내 셀프 점검 링크</div>'+
@@ -70257,6 +70274,9 @@ function kjOpenCare(){var w=window.open(KJ_CARE_URL,'_blank');if(!w)toast('팝�
 /* 🏥 실비 이야기 (판 X318) — 1~4세대 · 보장 · 안 되는 것 · 청구 · 갈아타기 전. 글은 kijun-silson.js 한 벌 */
 var KJ_SILSON_URL='kijun-silson.html';
 function kjOpenSilson(){var w=window.open(KJ_SILSON_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 허용 후 다시 시도하세요.');}
+/* 📑 담보 대조표 (판 X323) — 지금 보험 · 새 제안을 담보마다 나란히 적어 뽑는 종이. 고객 이름 칸 없음 · 적은 값은 기억하지 않음 */
+var KJ_COMPARE_URL='kijun-compare.html';
+function kjOpenCompare(){var w=window.open(KJ_COMPARE_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 허용 후 다시 시도하세요.');}
 function kjOpenSheet(){
   var by='';
   try{var el=$('kjBy');by=el?el.value:'';if(!by){var me=advGet()||{};by=me.name||'';}}catch(e){by='';}
@@ -71017,6 +71037,12 @@ function osFinFlush(){
     if(p.pain)fr.contentWindow.postMessage({type:'apexFinFlow',at:0,pain:p.pain},location.origin);
     /* 🧮 자비스가 셈한 연금 (판 X278) — 같은 「준비됐다」 길로 넣습니다. 길이 둘이면 한쪽만 고쳐집니다 (5번) */
     if(p.pen)fr.contentWindow.postMessage({type:'apexFinPension',v:p.pen},location.origin);
+    /* ▶️ <b>발표 덱 트랙</b> (판 X333 · 사장님 말씀 「오늘 에서 AP, PC 에서 각자
+       뜰 수 있도록 각 파트별로 다 넣어줘」) — <b>같은 「준비됐다」 길</b>로 보냅니다.
+       길을 따로 내면 한쪽만 고쳐지는 날이 옵니다 (5번).
+       ★ 값(inputs)이 같이 실려 있으면 <b>값을 먼저</b> 넣고 덱을 엽니다 —
+         순서가 거꾸로면 덱이 빈 숫자로 섭니다. */
+    if(p.deck)fr.contentWindow.postMessage({type:'apexFinDeck',track:p.deck},location.origin);
   }catch(x){ return; }
   TOFIN.pend=null;
   if(p.how==='auto')
@@ -71030,6 +71056,26 @@ window.addEventListener('message',function(e){
   if(!fr||!e.source||e.source!==fr.contentWindow)return;
   osFinFlush();
 });
+/* ▶️ <b>「오늘」 에서 발표 덱 트랙으로 바로 간다</b> (판 X333)
+   사장님 말씀 (2026-11-05) 「오늘 에서 <b>AP, PC 에서 각자 뜰 수 있도록 각
+   파트별로</b> 다 넣어줘」 · 「재무설계 계산기에서 <b>발표덱이 바로 보이게</b>」.
+
+   ★ 트랙 이름은 <b>apex-track.js 한 곳</b>에서, 덱 주소는 <b>계산기 한 곳</b>
+     (apexDeckUrl)에서 옵니다 — 여기서는 <b>열쇠만</b> 넘깁니다 (5번).
+   ★ 넘기는 길도 <b>이미 있는 한 길</b>(TOFIN.pend → apexFinReady → osFinFlush)
+     을 씁니다. 계산기 틀은 뜨는 데 시간이 걸려, 바로 보내면 빈 문서로 날아갑니다.
+   ★ 상담자료에서 들고 온 값이 이미 기다리고 있으면 <b>그 값을 지우지 않고</b>
+     트랙만 얹습니다 — 안 그러면 애써 적은 칸이 사라집니다 (6번).
+   ★ 모르는 트랙이면 <b>아무것도 안 합니다</b> — 지어 열지 않습니다 (1번).  */
+function osDeckGo(track){
+  var T=(window.APEX_TRACK&&window.APEX_TRACK.name)||{};
+  if(!track||!T[track]){ toast('트랙 표를 못 읽었습니다 — 새로고침해 주세요'); return; }
+  TOFIN.pend=TOFIN.pend||{n:0};
+  TOFIN.pend.deck=track;
+  try{ go('finance'); }catch(e){}
+  try{ osFinPoke(); }catch(e){}
+  toast('▶️ '+T[track]+' 발표 덱을 엽니다');
+}
 /* 계산기를 열 때마다 한 번 — 상담자료에 새로 적힌 게 있으면 들고 온다 */
 function osAutoToFin(){
   var df=$('fpDeckFrame');

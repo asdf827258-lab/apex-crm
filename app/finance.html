@@ -1127,6 +1127,17 @@ a { color: inherit; text-decoration: none; }
    ★ 하나 고르면 <b>저절로 다시 접힌다</b> — 고른 보고서가 바로 보이게.
    ★ display:none 으로만 가린다 — 칸은 그대로 있어 switchTab 이 계속 찾는다.
    ★ 인쇄에는 안 걸린다(@media screen) — 인쇄 CSS 가 이미 제 몫을 한다. */
+/* ▶️ <b>발표 덱 단추는 폰·컴퓨터 둘 다 보입니다</b> (판 X333) — 사장님이
+   「감춰져 있어서 안 보인다」 고 하신 자리입니다. 카테고리 접이와 상관없이
+   머리줄에 섭니다(머리줄은 sticky 라 어디를 보고 있어도 따라옵니다).
+   ★ 누르는 자리는 <b>44px</b> 입니다 (사장님 계약 · 판 X225·X266).
+   ★ 인쇄에는 안 나옵니다 — 인쇄 CSS 가 머리띄를 이미 치웁니다. */
+.dkm-btn { display: inline-flex; align-items: center; gap: 6px; flex: none;
+  min-height: 44px; padding: 10px 15px; border: 0; border-radius: 999px;
+  font-family: inherit; font-size: var(--t6,13px); font-weight: 900; cursor: pointer;
+  background: #0F172A; color: #FFD66B; box-shadow: 0 6px 16px rgba(15,23,42,.26); }
+.dkm-btn:hover { background: #1B2740; }
+@media print { .dkm-btn { display: none !important; } }
 .tbm-btn { display: none; }
 @media screen and (max-width: 980px) {
   body.tbm-shut .top-tab-grid { display: none; }
@@ -1492,6 +1503,9 @@ input.fin-lock{background:rgba(49,130,246,.10)!important}
 .wk-nav button{flex:1;min-height:52px;border:0;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit}
 .wk-prev{background:#F2F4F6;color:#4E5968}.wk-prev:disabled{opacity:.45}.wk-next{background:#3182F6;color:#fff;flex:2!important}
 </style>
+<!-- 🎬 발표 덱 트랙 표 — 이름·언제 쓰나를 아는 <b>한 곳</b>. 본체(오늘)와
+     같은 파일을 봅니다 (판 X333 · CLAUDE.md 5번). -->
+<script src="../apex-track.js"></script>
 <script src="pension-engine.js"></script>
 <script src="apex_report_icons.js"></script>
 <script src="apex_report_engine.js"></script>
@@ -2213,6 +2227,19 @@ function ipBand(age){ age=Number(age)||0; for(var i=0;i<IP_AGE.length;i++) if(ag
       <button type="button" class="sbm-btn" id="sbmBtn" onclick="sbmToggle()" aria-expanded="false">✏️ 고객정보 입력</button>
       <!-- 폰에서만 — 카테고리 열두 칸이 첫 화면을 통째로 잡아먹던 자리 -->
       <button type="button" class="tbm-btn" id="tbmBtn" onclick="tbmToggle()" aria-expanded="false">📂 카테고리</button>
+      <!-- ▶️ <b>발표 덱 — 늘 보이는 자리</b> (판 X333)
+           사장님 말씀 (2026-11-05) 「우선 재무설계 계산기에서 <b>발표덱이 바로
+           보이게</b> 하라니까 안되고 있어」 · 「바로 펴서 볼 수 있도록 만들어
+           <b>감춰져 있어서 안 보인다</b>」.
+           ★★ 까닭을 찾았습니다 — 발표 덱 단추는 <b>있었습니다</b>. 그런데
+             카테고리 열네 칸 중 <b>맨 끝</b>이고, 폰에서는 그 칸들이 통째로
+             「📂 카테고리」 <b>안에 접혀</b> 있습니다(판 X254 에서 제가 접었습니다).
+             그래서 접이를 펴지 않으면 <b>아예 안 보입니다.</b>
+           ★ 카테고리 안의 그 칸은 <b>그대로 둡니다</b> — 문을 하나 더 다는
+             것입니다 (6번 · 판 X205 에서 한 것과 같습니다).
+           ★ 누르면 가는 곳은 <b>apexPickTrack 하나</b>입니다 — 여는 자를
+             두 벌로 만들지 않습니다 (5번). -->
+      <button type="button" class="dkm-btn" id="dkmBtn" onclick="apexPickTrack()" title="발표 덱 — 연금·달러·투자·교육·쿠폰 트랙을 오늘 숫자 그대로">▶️ 발표 덱</button>
     </div>
     <div class="top-tab-grid">
       <button class="report-tab on" onclick="switchTab('dashboard',this)"><div class="rt-ico">📊</div><div class="rt-title">종합 대시보드</div><div class="rt-sub">핵심 요약</div></button>
@@ -9810,6 +9837,15 @@ window.addEventListener('message',function(e){
   if(d.type==='apexFinAsk'){        /* 부모가 「살아 있냐」고 물으면 답한다 */
     if(window.parent!==window){try{parent.postMessage({type:'apexFinReady'},'*');}catch(x){}}
   }
+  /* ▶️ <b>「오늘」 에서 트랙을 보내 오면</b> 그 트랙 덱을 엽니다 (판 X333).
+     사장님 말씀 「오늘 에서 AP, PC 에서 각자 뜰 수 있도록 각 파트별로」.
+     ★ <b>여는 자는 apexPresent 하나</b>입니다 — 주소를 여기서 또 만들지
+       않습니다 (5번). 모르는 트랙이면 <b>안 엽니다</b> (1번). */
+  if(d.type==='apexFinDeck'){
+    var tk=String(d.track||'');
+    if(tk && APEX_TRACK_NAME[tk] && typeof apexPresent==='function'){ apexPresent(tk); }
+    return;
+  }
   if(d.type==='apexFinLoad'){
     var ins=d.inputs||{};var ks=Object.keys(ins);
     /* 판 X202 — 다른 고객이 들어오면 앞 고객의 점검 답을 비웁니다. 저장본(wk_state 가 실려 옴)은 그 답으로 돌아갑니다 */
@@ -10216,8 +10252,14 @@ function renderEduFund(){
 var APEX_DECK_URL = '상담자료/통합상담_APEX.html';
 var APEX_TRACK_OF = { invest:'t', edufund:'e', pension:'w', realestate:'c' };
                                                 /* 나머지는 전부 ₩연금 트랙 */
-var APEX_TRACK_NAME = {w:'₩ 연금', d:'$ 달러', t:'📈 투자·세금', e:'🎓 교육자금',
-                       c:'🏢 일시납·쿠폰 vs 부동산'};
+/* ★★ 트랙 이름·언제 쓰나는 <b>../apex-track.js 한 곳</b>에서 옵니다 (판 X333).
+   사장님 말씀 「오늘 에서 AP, PC 에서 각자 뜰 수 있도록 각 파트별로 다
+   넣어줘」 — 그러려면 본체(오늘)도 이 이름을 알아야 하는데, 여태 이 표는
+   이 파일 안에만 있었습니다. 여기 또 적으면 두 벌이 되어, 판 X224 처럼
+   쿠폰 트랙이 조용히 사라집니다 (5번).
+   ⚠ 표를 못 읽으면 <b>지어 채우지 않고 비워 둡니다</b> — 고르개가 「트랙 표를
+     못 읽었습니다」 라고 제 입으로 말합니다 (1번). */
+var APEX_TRACK_NAME = (window.APEX_TRACK && window.APEX_TRACK.name) || {};
 
 /* 위 칸의 「투자 컨설팅」 — 투자 포트폴리오 안 컨설팅으로 바로 들어간다.
    전에는 달러 시뮬레이션이 있던 자리다. 달러만 따로 떼어 놓으니
@@ -10356,13 +10398,7 @@ function apexPaintBtn(){
    네 트랙 어느 것이든 지금 화면의 고객 데이터를 그대로 들고 열린다.
    무엇을 보여 줄지는 고객이 정하지, 내가 지금 어느 탭을 보고 있느냐가
    정하는 게 아니다. */
-var APEX_TRACK_WHEN = {
-  w:'노후 생활비가 걱정이라고 하실 때',
-  d:'환율·비과세·달러 자산 이야기가 나올 때',
-  t:'투자 수익률과 세금을 같이 볼 때',
-  e:'자녀 교육비·유학 이야기가 나올 때',
-  c:'"차라리 상가 하나 사지" 라고 하실 때 · 목돈을 한 번에 넣고 매달 받는 이야기'
-};
+var APEX_TRACK_WHEN = (window.APEX_TRACK && window.APEX_TRACK.when) || {};
 function apexPickTrack(){
   if(document.getElementById('apexTrackSheet')){ apexClosePick(); return; }
   var now = apexTrack();
@@ -10406,12 +10442,21 @@ function apexPickTrack(){
        안 적힌 트랙은 <b>뒤에 저절로 붙습니다</b> — 빠뜨릴 자리가 없습니다.
      ★ 거꾸로 여기 적혔는데 표에 없는 것은 <b>안 세웁니다</b>(이름이
        없으니 빈 칸이 섭니다 · 1번).                                   */
-  var 차례=['w','d','t','e','c'];
-  var order=Object.keys(APEX_TRACK_NAME).sort(function(a,b){
-    var i=차례.indexOf(a), j=차례.indexOf(b);
-    if(i<0)i=차례.length; if(j<0)j=차례.length;
-    return i-j;
-  });
+  /* 차례도 <b>그 표에게</b> 묻습니다 — 여기서 또 정렬하지 않습니다 (5번) */
+  var order=(window.APEX_TRACK&&window.APEX_TRACK.keys)?window.APEX_TRACK.keys()
+            :Object.keys(APEX_TRACK_NAME);
+  if(!order.length){
+    w.innerHTML='<div class="tk-h">어느 트랙으로 발표할까요</div>'+
+      '<div class="tk" style="cursor:default"><span class="n">트랙 표를 못 읽었습니다</span>'+
+      '<span class="w">apex-track.js 가 안 실렸습니다 — 새로고침해 주세요. '+
+      '<b>아무 트랙도 지어 세우지 않습니다.</b></span></div>'+
+      '<button type="button" class="tk-x">닫기</button>';
+    document.body.appendChild(w);
+    w.addEventListener('click',function(e){
+      if(e.target.classList&&e.target.classList.contains('tk-x'))apexClosePick(); });
+    document.addEventListener('keydown', apexPickEsc);
+    return;
+  }
   var h='<div class="tk-h">어느 트랙으로 발표할까요</div>'+
     '<label class="tk-inf">발표 물가상승률 <input id="apexInf" type="number" step="0.1" min="0" max="15" value="'+apexInf()+'"> %</label>';
   order.forEach(function(k){
