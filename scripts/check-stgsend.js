@@ -57,7 +57,10 @@ const srv = http.createServer((rq, rs) => {
   rs.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream' });
   fs.createReadStream(f).pipe(rs);
 });
-const 메뉴선 = 90;   /* 재어 보니 103칸 — 등급에 따라 좀 줄어들 수 있어 낮게 잡습니다 (8번) */
+const 메뉴선 = 90;
+/* 폰에서 ⭐ 칸이 홈을 얼마나 늘려도 되나 — 재어 보니 여덟 칸에 +54px 입니다.
+   홈 눈금은 2,870px 이고 지금 2,726px 이라 남은 자리가 144px 뿐입니다. */
+const 폰늘선 = 90;   /* 재어 보니 103칸 — 등급에 따라 좀 줄어들 수 있어 낮게 잡습니다 (8번) */
 const head = (m) => console.log('\n' + m);
 let bad = 0;
 const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
@@ -235,6 +238,43 @@ const SEED = () => {
   is(m.묶음 === m.묶음수 && m.칸 === m.서랍칸,
      '  묶음 ' + m.묶음 + '/' + m.묶음수 + ' · 칸 ' + m.칸 + '/' + m.서랍칸 + ' — 목록을 따로 안 만든다');
   is(m.작 === 0, '  44px 못 미치는 칸 ' + m.작 + '개');
+
+  head('[10] ★★ 폰에서 <b>여덟 칸을 넣어도 한 줄</b> — 홈이 고른 수에 안 끌려간다');
+  {
+    /* ⚠⚠ <b>안 울리는 알람이 될 뻔한 자리입니다</b> (8번). 홈 길이를 지키는
+       자들(check-homeone · check-msfive)은 <b>빈 저장소</b>로 재므로 ⭐ 칸이
+       비어 있습니다. 그런데 사장님 폰에는 고르신 칸이 들어 있습니다 —
+       처음에 줄이 겹겹이 쌓이게 두었더니 넷만 넣어도 폰 홈이 <b>+210px</b>,
+       눈금(2,870px)을 넘었습니다. 자는 초록인데 <b>진짜 화면은 넘는</b> 꼴입니다.
+       그래서 여기서 <b>채워 놓고</b> 잽니다. */
+    const ph = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    await ph.addInitScript(PIN, 못박은날);
+    await ph.addInitScript(() => { try { localStorage.clear(); } catch (e) {} });
+    const pp = await ph.newPage();
+    await pp.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded', timeout: 90000 });
+    await pp.waitForFunction(() => typeof renderHome === 'function', { timeout: 60000 });
+    await pp.evaluate(SEED);
+    await pp.waitForTimeout(2600);
+    const r2 = await pp.evaluate(() => {
+      const 전 = Math.round(document.querySelector('#dynPane .tab-pane').scrollHeight);
+      ['calc','sangdam','frmake','bohum','crm','clients','mycal','settings']
+        .forEach(id => { try { navFavToggle(id); } catch (e) {} });
+      try { hmPickPaint(); } catch (e) {}
+      const el = document.querySelector('.hm-pick');
+      const 칸 = [].slice.call(document.querySelectorAll('.hm-pick-i'));
+      /* 한 줄인가 — 칩들의 윗선이 다 같은가 (겹겹이 쌓이면 달라집니다) */
+      const 윗선 = {}; 칸.forEach(x => { 윗선[Math.round(x.getBoundingClientRect().top)] = 1; });
+      return { 전: 전, 후: Math.round(document.querySelector('#dynPane .tab-pane').scrollHeight),
+               칸: 칸.length, 줄: Object.keys(윗선).length,
+               높이: el ? Math.round(el.getBoundingClientRect().height) : 0 };
+    });
+    is(r2.칸 === 8, '  여덟 칸을 넣었다 — ' + r2.칸 + '칸');
+    is(r2.줄 === 1, '  칩이 <b>한 줄</b>에 선다 (줄 ' + r2.줄 + ' · 겹겹이 쌓이면 홈이 길어집니다)');
+    is(r2.후 - r2.전 <= 폰늘선,
+       '  여덟 칸을 넣어 홈이 <b>+' + (r2.후 - r2.전) + 'px</b> (선 +' + 폰늘선 +
+       'px · ⭐ 칸 ' + r2.높이 + 'px) — 고치기 전에는 넷만 넣어도 +210px 였습니다');
+    await ph.close();
+  }
 
   head('[9] <b>사장님 서버를 한 번도 안 부른다</b> (7번) · 콘솔 터짐 0');
   is(바깥.length === 0, '  Supabase · Netlify · api 요청 ' + 바깥.length + '건 (글꼴·라이브러리 CDN 은 안 셉니다 — 8번)' + (바깥.length ? (' ← ' + 바깥[0]) : ''));
