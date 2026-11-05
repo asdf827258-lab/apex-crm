@@ -202,7 +202,7 @@ const SEED = () => {
     const 빈 = document.querySelector('.hm-pick');
     const 빈글 = 빈 ? 빈.textContent.replace(/\s+/g, ' ').trim() : '';
     ['calc', 'sangdam'].forEach(id => { try { navFavToggle(id); } catch (e) {} });
-    try { hmBandPaint(); } catch (e) {}
+    try { hmPickPaint(); } catch (e) {}
     return { 빈자리: !!빈, 빈글: 빈글.slice(0, 60),
              오늘: document.querySelectorAll('.hm-pick-i').length,
              위띠: document.querySelectorAll('#tnFav .tn-fi').length,
