@@ -389,11 +389,18 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
     o.who = /저는 자비스입니다/.test(offline('너는 누구야').answer);
     o.thx = /언제든/.test(offline('감사합니다').answer);
     o.audit = !/언제든/.test(offline('감사로그').answer);
+    /* ⑥ 「오늘 뭐부터」 는 「아침에 뭐부터」 와 같은 답 · 흐린 「뭐부터 하지」 는 그대로 되묻기 */
+    var r1 = offline('오늘 뭐부터 해야 해?'), r2 = offline('뭐부터 하지');
+    o.today = (r1.steps || []).filter(s => s.id)[0] ? (r1.steps || []).filter(s => s.id)[0].id : r1.how; o.vague = r2.how;
+    /* ⑦ 일꾼이 답한 물음에는 「읽는 중」 쪽지 0 */
+    JV_EXT.st = 'busy'; c = await card('오늘 남은 할 일'); o.workWait = /읽는 중/.test(c.innerText); JV_EXT.st = st0; JV_EXT.pend = '';
     return o; });
   is(LV.cliWait === 0 && LV.calWait === 0 && LV.knowWait === 1, '제 갈래(고객 · 일정)가 답했으면 「읽는 중」 쪽지 0 — 보험 자료를 묻는 말에는 그대로 선다 (' + [LV.cliWait, LV.calWait, LV.knowWait].join('·') + ')');
   is(LV.pen && LV.penKnow === 0, '연금을 셈하는 물음 — 계산 카드만 · 보험 자료 0 (「50세」 로 전립선비대증 슬라이드가 서던 자리)');
   is(!LV.gmdb && LV.kcd, '짧은 영문은 통째로만 — 「DB 통합 CRM」 에 GMDB 0 · 「I20」 질병코드는 그대로');
   is(LV.toolTab === 'tools' && /도구/.test(LV.toolSay), '「도구」 라고만 해도 도구 화면이 열린다 — ' + LV.toolTab);
+  is(LV.today === 'home' && LV.vague === 'back', '「오늘 뭐부터 해야 해?」 → 하루 시작(홈) · 흐린 「뭐부터 하지」 는 그대로 고르게 (' + LV.today + ' · ' + LV.vague + ')');
+  is(!LV.workWait, '일꾼이 답한 물음(「오늘 남은 할 일」)에 「읽는 중」 쪽지 0');
   is(LV.who && LV.thx && LV.audit, '「너는 누구야」 → 자기소개 · 「감사합니다」 → 짧은 답 · 「감사로그」 는 화면 이름으로 (갈린다)');
 
   sec('[14] 💬 답 칸은 흰 바탕 · 도현체 · 토스 글꼴 · Tossface (판 X353)');
