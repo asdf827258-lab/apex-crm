@@ -514,7 +514,7 @@ const PRINTED = `[].slice.call(document.querySelectorAll('#app .show > section:n
     var L = deckList();   /* 판 X316 — 앱이 세는 장 */
     var a = [].slice.call(document.querySelectorAll('#deckToc a'));
     return {
-      n: a.length, want: L.length - 2,
+      n: a.length, want: L.length - 2 - (L.some(function (x) { return x.id === 'sSee'; }) ? 1 : 0),   /* 판 X349 — 「오늘 같이 볼 것」(고르는 장)도 목차에 안 적는다 */
       /* 목차에 적힌 번호가 그 장이 제 이마에 달고 있는 번호와 같은가 */
       same: a.every(function (x, k) {
         var el = document.querySelector(x.getAttribute('href'));
