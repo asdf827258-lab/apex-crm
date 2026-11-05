@@ -30,7 +30,14 @@
      5. 쪼갠 뒤에도 <b>장 수가 전보다 많다</b> — 쪼갠다고 해 놓고 글을 버리면
         장 수가 줄어듭니다.
      6. 콘솔에 <b>터진 자리</b>가 없다.
-    11. ★★ <b>폰에서 발표 띠가 화면 안에 있고 단추가 44px 이다.</b> 사장님 말씀
+    13. ★★ <b>노트북 발표가 강렬하다.</b> 사장님 말씀 (2026-11-05)
+        「<b>우선 강렬하게 만들어줘</b>」 · 「<b>우선 노트북으로 보이니까,
+        노트북 위주면 된다</b>」 — 제목이 <b>46px</b> 이라 문서처럼 읽히고
+        한 방이 없었습니다. 1440px 에서 <b>60px</b> 로 올리고, 짧은 쪽은
+        <b>세로 가운데</b>로 세웁니다(위로 쏠려 「글이 모자란 문서」 같았습니다).
+        ★ 제목에 쓴 자리는 <b>여백에서 되찾아</b> 넘침 눈금(400px)을 안 올렸습니다.
+        ★ 내용이 창보다 긴 쪽은 <b>위가 잘리면 안 됩니다</b> — 제목이 사라집니다.
+     11. ★★ <b>폰에서 발표 띠가 화면 안에 있고 단추가 44px 이다.</b> 사장님 말씀
         (2026-11-05) 「<b>폰에서도 확인해줘</b>」 — 390px 화면에서 띠가 <b>482px</b>
         였습니다. 왼쪽 「‹」 와 오른쪽 「✕ 종료」 가 잘려 <b>앞으로도 못 가고
         끝낼 수도 없었습니다.</b> 단추도 35px 로 앱이 지키는 44px 에 못 미쳤습니다.
@@ -66,7 +73,11 @@
      ⓑ 닫기 줄을 한 줄 지워 장이 장 안에 들어가게 → [2] 가 「안 보이는 쪽」 으로 울음
      ⓒ 차례에 없는 id 적기 → [3] 이 울음
      ⓓ .wonly 이름표를 떼기 → [10] 이 「아직 보이는 것 9」 로 울음 (판 X339)
-     ⓔ 폰 띠 규칙을 빼기 → [11] 이 「482px / 창 390px」 로 울음 (판 X342)        */
+     ⓔ 폰 띠 규칙을 빼기 → [11] 이 「482px / 창 390px」 로 울음 (판 X342)
+     ⓕ 노트북 제목·가운데 규칙을 빼기 → [13] 의 <b>셋이 다</b> 울음 (판 X345) —
+       「제목 54px」 · 「자리 남는 쪽 6/92」 · 「6쪽 전부 가운데 아님」.
+       `margin:auto` 만 떼어도 울립니다 — 떼면 `.wrap` 이 늘어나 남는 자리가 40→5 쪽.
+       위만 0 으로 하면 40쪽 중 가운데가 <b>1쪽</b>으로 떨어집니다.  */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 
@@ -253,6 +264,57 @@ const 갈래 = {
        '  ' + 갈래[k].이름 + ' — track 안 장 ' + 안.length + '개 중 차례에 없는 장 ' + 고아.length +
        (고아.length ? (' ← ' + 고아.join(', ')) : '') +
        (봐줌.length ? ('   (일부러 뺀 것: ' + 봐줌.join(', ') + ')') : ''));
+  }
+
+  head('[13] ★★ 노트북(1440) 발표가 <b>강렬하다</b> — 제목 · 세로 가운데 · 위가 안 잘림');
+  {
+    /* ⚠ 「가운데에 서나」를 재는 법을 두 번 틀렸습니다 — 앱이 아니라 자가 틀렸습니다 (8번).
+       ① 처음엔 연금 갈래만 봤는데, 그 갈래엔 「자리 남는 쪽」이 0개라 가운데를
+          <b>아무것도 안 재고</b> 초록이었습니다. 안 울리는 알람은 알람이 아닙니다.
+          그래서 다섯 갈래를 다 봅니다.
+       ② 그 다음엔 `document.scrollHeight <= clientHeight` 로 「한 화면에 드는 쪽」을
+          골랐는데, `section.pon{min-height:100vh}` 에 아래 여백이 붙어 문서는
+          <b>언제나</b> 창보다 깁니다 — 또 0쪽이라 아무것도 못 쟀습니다.
+          문서에 묻지 말고 <b>쪽 자신</b>에게 물어야 합니다: 쪽 안쪽 높이에서 `.wrap`
+          을 뺀 「남는 자리」가 있으면 그것이 한 화면에 드는 쪽이고, 그런 쪽은
+          `margin:auto` 가 그 자리를 위아래로 반씩 나눠 주어야 가운데에 선 것입니다. */
+    const r = await pg.evaluate(갈래들 => {
+      let 제목 = 0, 잘림 = 0, 가운데 = 0, 남는쪽 = 0, 수 = 0;
+      const 쏠린것 = [];
+      for (const k of 갈래들) {
+        window.__go(k); presEnter();
+        const L = presList(); 수 += L.length;
+        for (let i = 0; i < L.length; i++) {
+          presGo(i); scrollTo(0, 0);
+          const s = L[i], q = s.getBoundingClientRect(), cs = getComputedStyle(s);
+          const h = s.querySelector('h2') || s.querySelector('h1');
+          if (h) 제목 = Math.max(제목, parseFloat(getComputedStyle(h).fontSize));
+          if (q.top < -2 || (h && h.getBoundingClientRect().top < 0)) 잘림++;
+          const w = s.querySelector(':scope > .wrap');
+          if (!w) continue;
+          const pt = parseFloat(cs.paddingTop), pb = parseFloat(cs.paddingBottom);
+          const r2 = w.getBoundingClientRect();
+          const 남 = (q.height - pt - pb) - r2.height;   /* 쪽 안쪽에 남는 자리 */
+          if (남 <= 40) continue;                        /* 넘치는 쪽 — 나눠 줄 자리가 없다 */
+          남는쪽++;
+          const 위 = r2.top - (q.top + pt), 아래 = (q.bottom - pb) - r2.bottom;
+          if (위 > 남 * 0.35 && Math.abs(위 - 아래) < 24) 가운데++;
+          else 쏠린것.push(k + ':' + s.id + ' 남' + Math.round(남) +
+                           ' 위' + Math.round(위) + ' 아래' + Math.round(아래));
+        }
+        if (typeof presExit === 'function') presExit();
+      }
+      return { 제목: 제목, 잘림: 잘림, 가운데: 가운데,
+               남는쪽: 남는쪽, 수: 수, 쏠린것: 쏠린것 };
+    }, Object.keys(갈래));
+    is(r.제목 >= 56, '  제목이 <b>' + Math.round(r.제목) + 'px</b> 이다 (고치기 전 54px — 쪽 제목 h2 는 46px · 56 이상)');
+    is(r.잘림 === 0, '  위가 잘린 쪽 ' + r.잘림 + '/' + r.수 +
+       ' — 넘치는 쪽도 제목부터 보인다');
+    is(r.남는쪽 >= 20, '  자리가 <b>남는 쪽</b>이 ' + r.남는쪽 + '/' + r.수 +
+       '쪽 있다 (0쪽이면 가운데를 못 잽니다)');
+    is(r.남는쪽 > 0 && r.가운데 === r.남는쪽,
+       '  그 ' + r.남는쪽 + '쪽이 <b>전부</b> 세로 가운데에 선다 (위로 안 쏠림)' +
+       (r.쏠린것.length ? ('  ← ' + r.쏠린것.slice(0, 4).join(' · ')) : ''));
   }
 
   head('[11] ★★ 폰(390×844)에서 <b>발표 띠가 화면 안</b>에 있고 단추가 44px 이다');
