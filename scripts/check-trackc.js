@@ -138,7 +138,7 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(/보여 드릴 기사가 없습니다/.test(r.txt), '  없다고 말해 준다');
 
   console.log('\n[4] cp5 — 결론이 아니라 요건을 보여 준다');
-  /* 판 X337 에서 6장 세금이 두 쪽으로 갈렸습니다 — cp5(결론을 안 내린다) ·
+  /* 판 X338 에서 6장 세금이 두 쪽으로 갈렸습니다 — cp5(결론을 안 내린다) ·
      cp5b(어떤 요건인가 · 세 갈래 표). <b>고객은 이어서 봅니다</b>. 그래서
      두 쪽을 합쳐서 봅니다. ★ 다만 「요건 충족 시」 같은 조건부 표기는
      check-coupon 이 트랙 전체에서 따로 봅니다 (5번 · 묻는 곳을 하나로). */
@@ -179,7 +179,7 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 
   console.log('\n[4c] 1장 — 건물과 금융상품을 나란히 놓고, 한쪽 편만 들지 않는다');
   const rvs = await page.evaluate(() => {
-    /* 판 X337 에서 1장이 두 쪽으로 갈렸습니다 — cp1(무엇이 다른가) ·
+    /* 판 X338 에서 1장이 두 쪽으로 갈렸습니다 — cp1(무엇이 다른가) ·
        cp1x(나란히 표). 표는 뒤쪽에 섭니다. */
     const t = document.querySelector('#cp1 .rvs') || document.querySelector('#cp1x .rvs');
     if (!t) return null;
@@ -228,7 +228,7 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     const man = t => Number(String(t).replace(/[^0-9]/g, ''));
     const c1 = cpm.cards[0] || { rows: [] };
     is(man(c1.rows[0]) > man(c1.rows[2]), '  한 번에 받는 돈은 5년형이 크다');
-    /* ★★ <b>단서는 숫자와 같은 쪽에</b> 있어야 합니다 (판 X337 · 1번).
+    /* ★★ <b>단서는 숫자와 같은 쪽에</b> 있어야 합니다 (판 X338 · 1번).
        쪼개면서 이 단서를 다음 쪽으로 넘겼다가 이 자에게 잡혔습니다 —
        「비례 환산한 참고치」 라는 말이 없으면 고객은 그 숫자를
        <b>확정 금액으로 믿습니다.</b> 그래서 이 둘은 #cpmoney 안에서 찾습니다. */
@@ -315,7 +315,7 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     presExit();
     return out;
   });
-  /* 판 X337 에서 열둘 → <b>열일곱</b>으로 쪼갰습니다 (사장님 말씀
+  /* 판 X338 에서 열둘 → <b>열일곱</b>으로 쪼갰습니다 (사장님 말씀
      「응 나머지 트랙도 전부 같이 쪼개줘」). 한 쪽에 한 가지로 가르면서
      cp1x · cpmoney2 · cpcalc2 · cpcalc3 · cp5b 다섯이 늘었습니다.
      ★ 여기 차례를 못 박아 두는 까닭은 그대로입니다 — 쿠폰 트랙이 두 번
