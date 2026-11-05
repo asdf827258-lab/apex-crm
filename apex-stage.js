@@ -95,14 +95,41 @@ var BOX=[
  {when:'투자 · 경제', sub:'자산 이야기를 하는 분께', st:[],
   items:['inv_stock','inv_fund','inv_perf','inv_econ']}
 ];
+/* ══ 🎯 <b>설계사가 손수 보낸 자리</b> — 메뉴 옆에서 고르신 것 (판 X350) ══
+   사장님 말씀 (2026-11-05) — 「그냥 <b>내가 메뉴옆에 ta_cs 로 보내고 싶은곳을
+   선택하면 보내지도록</b> 해줘」.
+
+   재어 보니 메뉴 <b>113칸 중 53칸</b>만 위 표에 묶여 있었습니다. 나머지 60칸은
+   어느 단계에서도 안 따라옵니다. 제가 그 60칸을 단계에 배정할 수도 있지만,
+   <b>어느 도구를 어느 자리에서 쓰는지는 설계사가 압니다</b> — 제가 정하면
+   엉뚱한 때에 따라오고, 그것은 지어내는 것과 같습니다 (1번).
+
+   ★ <b>합치는 곳은 boxIds 한 곳</b>입니다 (5번). 부르는 자리가 셋입니다 —
+     고객 카드의 「손에 쥘 도구」 · 「도구」 화면 · 홈 띠의 「맞는 메뉴」.
+     저마다 더하면 한쪽만 늙습니다.
+   ★ 위 BOX 는 <b>한 글자도 안 바꿉니다</b> — 원래 있던 것이 빠지지 않습니다 (6번).
+     사장님이 보내신 것은 <b>그 뒤에</b> 붙습니다.
+   ★ 이 파일은 저장소를 <b>안 읽습니다</b> — 본체(app/index.html)가 읽어
+     setMine 으로 넣어 줍니다. 열쇠 이름과 「누구 것인가」 는 본체만 알고,
+     이 파일은 db-crm.html 도 함께 싣기 때문입니다.                      */
+var MINE={};
+function setMine(m){ MINE=(m&&typeof m==='object')?m:{}; }
+function mineIds(s){
+  var out=[],k;
+  for(k in MINE)if(MINE.hasOwnProperty(k)&&MINE[k]===s)out.push(k);
+  return out;
+}
 /* 그 단계에 걸린 묶음들의 도구를 <b>차례대로</b> 모은다 (중복은 한 번만) */
 function boxIds(s){
-  var out=[],seen={},i,j,g;
+  var out=[],seen={},i,j,g,M;
   for(i=0;i<BOX.length;i++){
     g=BOX[i];
     if(g.st.indexOf(s)<0)continue;
     for(j=0;j<g.items.length;j++)if(!seen[g.items[j]]){seen[g.items[j]]=1;out.push(g.items[j]);}
   }
+  /* 사장님이 손수 보내신 것 — <b>뒤에</b> 붙입니다. 이미 있으면 두 번 안 넣습니다 */
+  M=mineIds(s);
+  for(i=0;i<M.length;i++)if(!seen[M[i]]){seen[M[i]]=1;out.push(M[i]);}
   return out;
 }
 
@@ -1967,6 +1994,10 @@ g.APEX_STAGE={
   toolIds:function(s){ return boxIds(s); },
   /* 열 묶음 그대로 — 「도구」 화면이 이것을 그립니다. 베껴 가지 않습니다 (5번) */
   box:BOX,
+  /* 🎯 설계사가 메뉴 옆에서 보내신 자리 — 본체가 넣어 주고 boxIds 가 합칩니다 */
+  setMine:setMine,
+  mine:function(){ return MINE; },
+  mineIds:mineIds,
   /* 그 단계를 아는가 */
   of:function(s){ return MAP[s]||null; },
   /* ── 이 단계가 <b>무엇을 들고 있나</b> ─────────────────────────────
