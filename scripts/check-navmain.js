@@ -69,7 +69,9 @@ const SEED = () => {
     const rows = el ? [].slice.call(el.querySelectorAll('.t-nav')) : [];
     const labs = el ? [].slice.call(el.querySelectorAll('.t-glab')).map(x => x.textContent.trim()) : [];
     const lab = labs[0] || '';
-    const card = document.querySelector('#navFix .sb-guide');
+    /* 판 X341 — 🛰 자비스 칸은 이제 <b>기둥보다 위</b>입니다(사장님이 고르신 「핵심 11칸 + 자비스」).
+       「큰 카드가 메뉴보다 아래」 는 나머지 카드(내 폰에 설치 · 사용가이드)에 그대로 묻습니다. */
+    const card = document.querySelector('#navFix .sb-guide:not(.jarv)');
     const top = x => x ? Math.round(x.getBoundingClientRect().top) : null;
     return { 있나: !!el, 칸수: rows.length,
              이름: rows.map(x => x.textContent.replace(/\s+/g, ' ').trim()),

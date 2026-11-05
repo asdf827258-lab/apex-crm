@@ -260,7 +260,9 @@ const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
        그래서 (1) 이름이 「내 폰에 설치」 이고 (2) 분류에서 빠져 있고
        (3) 사용가이드보다 위에 있고 (4) 그래도 찾기·?go= 로는 열리는지 넷을 다 본다. */
     const it = (function () { let f = null; TABS.forEach(g => g.items.forEach(i => { if (i.id === 'phone_app') f = { group: g.group, title: i.title, hide: !!i.hide }; })); return f; })();
-    const gs = Array.prototype.map.call(document.querySelectorAll('#navHost .sb-guide'), e => (e.querySelector('.sbg-t') || {}).textContent || '');
+    /* 판 X341 (2026-11-05) — 사장님이 「핵심 11칸 + 자비스」 를 고르셔서 🛰 자비스 칸이 서랍 <b>맨 위</b>로
+       올라갔습니다. 「내 폰에 설치」 가 설정 속에 묻히지 않고 <b>나머지 큰 카드 중 첫째</b>인지는 그대로 봅니다. */
+    const gs = Array.prototype.map.call(document.querySelectorAll('#navHost .sb-guide:not(.jarv)'), e => (e.querySelector('.sbg-t') || {}).textContent || '');
     return {
       title: (document.querySelector('.page-title') || {}).textContent || '',
       ios: /홈 화면에 추가/.test(t),
