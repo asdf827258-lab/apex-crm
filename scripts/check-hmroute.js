@@ -119,7 +119,11 @@ const SEED=(opt)=>`
   is(A.shown, '홈에 <b>「오늘 어디로 가시나」</b> 칸이 선다 — '+A.title);
   is(A.times.join(' · ')==='09:30 · 14:00',
      '<b>이른 약속부터</b> 선다 — '+A.times.join(' · ')+' (뒤죽박죽이면 하루를 못 짠다)');
-  is(A.names.join(' · ')==='홍말순 · 홍길순', '이름이 그 시간에 붙는다 — '+A.names.join(' · '));
+  /* 🙈 판 X359 — 이름은 <b>가려서</b> 섭니다. 가린 꼴은 자리마다 같아(홍*순) 「어느 분인가」 를
+     못 가르므로, 홈이 쓰는 그 줄(hmRtAppts)의 이름을 시간 차례로 앱에게 가려 받아 견줍니다. */
+  const 가린=await page.evaluate(()=>['홍말순','홍길순'].map(n=>osMaskName(n)));
+  is(A.names.join(' · ')===가린.join(' · ')&&!/홍말순|홍길순/.test(A.names.join('')),
+     '이름이 그 시간에 붙는다 · <b>가려서</b> — '+A.names.join(' · '));
   is(A.regs.every(x=>/순천/.test(x)), '<b>어디인지</b>도 그 줄에 적는다 — '+A.regs.join(' · '));
 
   console.log('\n[2] 그 지역에서 <b>오늘 걸 분</b>이 같이 뜬다');
@@ -261,7 +265,9 @@ const SEED=(opt)=>`
       ask:[].slice.call(c.querySelectorAll('[data-ask="권한동네몇분"]'))
              .map(e=>(e.textContent.match(/\d+/)||[''])[0]),
       topn:(hmRtWhere().top[0]||{}).n, meetn:hmRtMeet().length,
-      real:AR.db.map(x=>x.name) };
+      /* 🙈 판 X359 — 홈은 배정 DB 이름을 <b>가려서</b> 세웁니다(3번). 「실제로 있는 분인가」 는
+         <b>앱이 가린 꼴</b>(osMaskName)로 견줍니다 — 가리는 법을 여기서 흉내 내지 않습니다 (5번). */
+      real:AR.db.map(x=>x.name).concat(AR.db.map(x=>osMaskName(x.name))) };
   },SEED({}));
   is(Y.shown&&Y.apr===0&&!Y.hhmm,
      '약속이 없으니 <b>시간 줄도 시각도 안 짓는다</b> (1번) — 줄 '+Y.apr+' · 시각 '+(Y.hhmm?'있음':'없음'));
