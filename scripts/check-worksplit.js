@@ -12,6 +12,11 @@
      [5] ★★ 조직 한 벌로 올라간다 — ORG_KEYS 에 열쇠 · 두 기기 첫 맞춤에 담당자 줄이 두 벌로 안 붙는다
      [6] 다른 기기에서 고친 표가 오면 다시 그린다 (storage 소식)
      [7] 종이 — 띠·단추가 안 나오고 tnum 이 없다 (4-1번) · 흰색 고정 · 서버를 따로 안 부른다 (7번)
+     [8] ★★ 「무엇을 문의하시나요?」 — 설계사가 「누구에게 묻지?」 를 바로 찾나
+           청구 → 이미라 실장 · 박주미 매니저 · 띄어 친 「고객 등록」 도 찾나 · 이름으로도 · 단추는 표에 있는 일만 ·
+           담당이 아직 안 정해진 일(제안서 출력)은 「안 정해졌다」 고 말하나 · 없는 말은 「없습니다」 · #q= 주소
+     [9] ★★ 내보내기 — 한 파일로 받아, 인터넷을 다 막고 열어도 같은 표 · 찾기가 되나 · 고치는 단추가 없나 ·
+           이 기기 저장소를 안 쓰나 · ui.css 없이도 색이 서나
    ⚠ 되돌려 보았습니다(8번) — canOrg 를 빼면 [4] · 감싸기(doc)를 풀면 [5] · ORG_KEYS 에서 빼면 [5]
      · OS_FULL_MODES 에서 빼면 [1] 이 웁니다.                                                     */
 const { chromium } = require('playwright');
@@ -215,8 +220,95 @@ const sec = t=>console.log('\n'+t);
   is(/<link rel="stylesheet" href="ui\.css">/.test(WS), '색표는 app/ui.css 한 곳에서');
   is(!/fetch\(|XMLHttpRequest|supabase|createClient/.test(WS), '서버를 따로 안 부른다 — 올리고 받는 것은 apex-kv-sync (7번)');
   is(net.length===0, '바깥 주소를 하나도 안 부른다 — '+(net[0]||''));
-  is(errs.length===0, '터진 것 0 — '+(errs[0]||''));
 
+
+  sec('[8] ★★ 무엇을 문의하시나요?');
+  {
+    const q = await ctx.newPage(); q.on('pageerror',e=>errs.push('찾기: '+String(e).slice(0,90)));
+    await q.goto('http://127.0.0.1:'+PORT+'/'+PAGE,{waitUntil:'load'});
+    await q.evaluate(()=>{ localStorage.removeItem('apex_worksplit_v1'); }); await q.reload({waitUntil:'load'});
+    const 본 = () => q.evaluate(()=>({
+      사람:[].map.call(document.querySelectorAll('.ws-card .ws-name'),e=>e.textContent),
+      줄:document.querySelectorAll('.ws-card .ws-it').length,
+      형광:document.querySelectorAll('.ws-card mark').length,
+      머리:(document.querySelector('.ws-res .big')||{}).textContent||'',
+      말:[].map.call(document.querySelectorAll('.ws-res .sub'),e=>e.textContent).join(' / '),
+      요약숨음:document.querySelector('.ws-sum').hidden,
+      정할:document.querySelectorAll('.ws-extra .ws-it').length }));
+    await q.fill('#wsQ','청구');
+    let r = await 본();
+    is(r.사람.join('|')==='이미라 실장|박주미 매니저' && r.줄===2 && r.형광>=2,
+       '「청구」 → 이미라 실장 · 박주미 매니저 (그 줄만 · 형광) — '+r.사람.join(' · ')+' · '+r.줄+'줄');
+    is(/맡은 분 2명/.test(r.머리) && /이분들께 문의하세요/.test(r.말) && r.요약숨음, '「맡은 분 2명 · 할 일 2줄 · 이분들께 문의하세요」 · 찾는 동안 요약판은 접힌다');
+    await q.fill('#wsQ','고객 등록');
+    r = await 본();
+    is(r.줄>=4 && r.사람.indexOf('이미라 실장')>=0 && r.사람.indexOf('TFA·팀장님')>=0, '띄어 친 「고객 등록」 도 「고객등록」 을 찾는다 — '+r.줄+'줄');
+    await q.fill('#wsQ','이미라');
+    r = await 본();
+    is(r.사람.join('|')==='이미라 실장' && r.줄===8, '이름으로 치면 그분 할 일 여덟 줄이 다 선다');
+    await q.fill('#wsQ','제안서 출력');
+    r = await 본();
+    is(r.사람.length===0 && /적힌 담당이 없습니다/.test(r.머리) && /안 정해졌습니다/.test(r.말) && r.정할===1,
+       '★ 「제안서 출력」 — 담당이 아직 안 정해진 일은 「안 정해졌습니다」 라고 말한다 (지어 세우지 않음 · 1번)');
+    await q.fill('#wsQ','보험료 환급');
+    r = await 본();
+    is(r.사람.length===0 && r.정할===0 && /적힌 담당이 없습니다/.test(r.머리), '표에 없는 말은 「없습니다」 — 아무나 세우지 않는다');
+    await q.fill('#wsQ','');
+    const 단추 = await q.evaluate(()=>[].map.call(document.querySelectorAll('#wsTopics .ws-topic'),e=>e.textContent));
+    const 표글 = await q.evaluate(()=>JSON.stringify(WS.seed().rows));
+    is(단추.length>=10 && 단추.every(t=>/\d+명$/.test(t)), '자주 묻는 것 단추 '+단추.length+'개 — 저마다 맡은 분 수');
+    const 헛단추 = await q.evaluate(()=>{ var n=0; [].forEach.call(document.querySelectorAll('#wsTopics .ws-topic'),function(b){ b.click(); if(!document.querySelectorAll('.ws-card').length) n++; }); return n; });
+    is(헛단추===0, '★ 어느 단추를 눌러도 맡은 분이 한 명 이상 선다 — 표에 없는 일로 단추를 안 세운다');
+    await q.evaluate(()=>WS.setQ(''));
+    await q.click('#wsTopics .ws-topic:first-child');
+    const 첫 = await q.evaluate(()=>({v:document.getElementById('wsQ').value,h:location.hash,on:!!document.querySelector('#wsTopics .ws-topic.on')}));
+    is(첫.v==='청구' && 첫.h==='#q='+encodeURIComponent('청구') && 첫.on, '단추 「청구」 를 누르면 찾기 칸에 들어가고 주소가 #q=청구 가 된다');
+    await q.goto('http://127.0.0.1:'+PORT+'/'+PAGE+'#q='+encodeURIComponent('시상·업적'),{waitUntil:'load'}); await q.reload({waitUntil:'load'});   /* 주소 뒤 #만 바뀌면 새로 안 열립니다 */
+    r = await 본();
+    is(r.사람.length>=3 && /시상·업적/.test(r.머리), '#q=시상·업적 주소로 열면 찾아 둔 채 선다 — '+r.사람.join(' · '));
+    await q.evaluate(()=>WS.setQ('청구')); await q.click('#wsEdit');
+    const 고침 = await q.evaluate(()=>({q:document.getElementById('wsQ').value, 카드:document.querySelectorAll('.ws-card').length}));
+    is(고침.q==='' && 고침.카드===8, '「고치기」 를 누르면 찾기를 풀고 전부 보인다 (걸러진 채 고치지 않게)');
+    await q.close();
+  }
+
+  sec('[9] ★★ 내보내기 — 카톡으로 돌려 보는 한 파일');
+  {
+    const q = await ctx.newPage();
+    await q.goto('http://127.0.0.1:'+PORT+'/'+PAGE,{waitUntil:'load'});
+    await q.evaluate(()=>{ localStorage.removeItem('apex_worksplit_v1'); }); await q.reload({waitUntil:'load'});
+    await q.click('.ws-card[data-row="0"] .ws-it:nth-child(1) .ws-ck');
+    const [dl] = await Promise.all([q.waitForEvent('download'), q.click('#wsExport')]);
+    const 이름 = dl.suggestedFilename();
+    const html = fs.readFileSync(await dl.path(),'utf8');
+    is(/^APEX_worksplit_\d{4}-\d\d-\d\d\.html$/.test(이름), '파일 이름이 .html 로 끝난다(영문 — 한글이면 「download」 로 떨어짐) — '+이름);
+    is(!/<link rel="stylesheet" href="ui\.css">/.test(html) && /window\.WS_EMBED=/.test(html) && /--t-point:/.test(html),
+       'ui.css 없이 서도록 색 값을 파일 안에 담았다 · 표도 파일 안에');
+    is(!/홍길동|\d{2,3}-\d{3,4}-\d{4}/.test(html), '파일에 고객 이름·전화번호가 없다 (3번)');
+    /* 인터넷을 다 막은 새 창에서 — 카톡으로 받아 연 것처럼 */
+    const off = await br.newContext({viewport:{width:390,height:844}});
+    const 바깥=[]; await off.route('**/*', r=>{ 바깥.push(r.request().url()); r.abort(); });
+    const o = await off.newPage(); const oe=[]; o.on('pageerror',e=>oe.push(String(e).slice(0,90)));
+    await o.setContent(html,{waitUntil:'load'});
+    const v = await o.evaluate(()=>{
+      var g=function(s){ return document.querySelectorAll(s).length; };
+      var r={ 카드:g('.ws-card'), 줄:g('.ws-card .ws-it'), 완료:document.querySelector('.ws-sum .ws-stat.ok .n').textContent,
+        고치기:getComputedStyle(document.getElementById('wsEdit')).display, 내보내기:getComputedStyle(document.getElementById('wsExport')).display,
+        체크잠김:document.querySelector('.ws-ck').disabled, 말:document.getElementById('wsWho').textContent,
+        띠색:getComputedStyle(document.querySelector('.ws-card')).borderTopColor, 저장:0 };
+      try{ r.저장=localStorage.length; }catch(e){ r.저장=-1; }
+      WS.setQ('청구'); r.찾기=[].map.call(document.querySelectorAll('.ws-card .ws-name'),function(e){return e.textContent;}).join('|');
+      return r; });
+    is(v.카드===8 && v.줄===47 && v.완료==='1', '받은 파일을 열면 같은 표 — 카드 8 · 할 일 47 · 내보낼 때 건 완료 1');
+    is(v.찾기==='이미라 실장|박주미 매니저', '받은 파일에서도 「청구」 찾기가 된다');
+    is(v.고치기==='none' && v.내보내기==='none' && v.체크잠김 && /보기용 파일/.test(v.말), '받은 파일은 보기 전용 — 고치기·내보내기가 없고 체크가 잠김 · 「보기용 파일」 이라고 적힘');
+    is(v.띠색!=='rgba(0, 0, 0, 0)' && v.띠색!=='rgb(0, 0, 0)', 'ui.css 없이도 사람 색 띠가 선다 — '+v.띠색);
+    is(v.저장<=0, '받은 파일은 그 기기 저장소에 안 쓴다');
+    is(oe.length===0 && 바깥.length===0, '인터넷을 다 막아도 터지지 않고 · 바깥을 하나도 안 부른다 — '+(oe[0]||바깥[0]||''));
+    await off.close(); await q.close();
+  }
+
+  is(errs.length===0, '터진 것 0 — '+(errs[0]||''));
   await br.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? '✗ '+bad+'개 — 위를 보십시오' : '✓ 업무구분 — 회의 표가 그대로 서고, 눌러 고친 것이 남고, EM 이 고치면 팀이 같이 봅니다.');
