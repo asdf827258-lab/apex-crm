@@ -30,7 +30,11 @@ const srv = http.createServer((q, rs) => {
   await pg.waitForTimeout(3500);
   if (PRE) { await pg.evaluate(PRE).catch(e => errs.push('PRE ' + e.message)); await pg.waitForTimeout(1500); }
   const out = path.join(OUTD, (NAME || path.basename(PAGE, '.html')) + '.png');
-  if (SEL) await (await pg.$(SEL)).screenshot({ path: out });
+  if (SEL) {
+    const vis = await pg.evaluate(sel => { const e = document.querySelector(sel); if (!e) return 'none'; const r = e.getBoundingClientRect(); return r.width + 'x' + r.height + ' ' + getComputedStyle(e).display; }, SEL);
+    console.log('칸', SEL, vis, errs);
+    await (await pg.$(SEL)).screenshot({ path: out, timeout: 60000 });
+  }
   else await pg.screenshot({ path: out });
   console.log('→ ' + out, errs.length ? errs : '');
   await b.close(); srv.close();
