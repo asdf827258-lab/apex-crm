@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>APEX 리쿠르팅 릴스</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+/* 1080×1920 세로 · 30fps 로 render.js 가 한 장씩 찍는다.
+   시간은 전부 render(t) 하나가 정한다 — CSS 애니메이션은 쓰지 않는다(프레임마다 같은 그림이 나와야 한다). */
+:root{--bg:#0B0F17;--ink:#fff;--blue:#2F6BFF;--sky:#5AC8FA;--red:#FF3B4E;--gold:#FFC83D;--sub:rgba(255,255,255,.62)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg)}
+body{font-family:Pretendard,'WenQuanYi Zen Hei',sans-serif;color:var(--ink);letter-spacing:-.04em;word-break:keep-all}
+#stage{position:absolute;inset:0;overflow:hidden}
+#bg{position:absolute;inset:-200px;background:
+  radial-gradient(900px 900px at 20% 15%,rgba(47,107,255,.35),transparent 60%),
+  radial-gradient(800px 800px at 85% 80%,rgba(90,200,250,.22),transparent 60%),var(--bg)}
+#bg.red{background:radial-gradient(900px 900px at 50% 30%,rgba(255,59,78,.32),transparent 60%),var(--bg)}
+#grid{position:absolute;inset:0;opacity:.09;background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);background-size:90px 90px}
+#cam{position:absolute;inset:0;transform-origin:50% 45%}
+.scene{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:300px 70px 420px;text-align:center}
+.el{display:block;will-change:transform,opacity;white-space:nowrap}
+.big{font-weight:900;line-height:1.02}
+.mid{font-weight:800;line-height:1.15}
+.sub{font-weight:600;color:var(--sub)}
+.hl{color:var(--blue);text-shadow:0 0 60px rgba(47,107,255,.6)}
+.hr{color:var(--red);text-shadow:0 0 50px rgba(255,59,78,.55)}
+.hg{color:var(--gold)}
+.box{display:inline-block;background:var(--ink);color:var(--bg);padding:0 .18em;border-radius:.12em}
+.boxr{display:inline-block;background:var(--red);color:#fff;padding:0 .18em;border-radius:.12em}
+.stamp{border:14px solid var(--red);color:var(--red);font-weight:900;padding:10px 40px;border-radius:24px;font-size:120px}
+.chip{display:inline-block;margin:14px 10px;padding:22px 40px;border-radius:999px;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.25);font-size:56px;font-weight:800}
+/* 위쪽 진행 막대 · 아래쪽 브랜드 */
+#bar{position:absolute;left:60px;right:60px;top:90px;height:8px;border-radius:8px;background:rgba(255,255,255,.18)}
+#bar i{display:block;height:100%;width:0;border-radius:8px;background:#fff}
+#brand{position:absolute;left:0;right:0;top:130px;text-align:center;font-size:34px;font-weight:800;letter-spacing:.18em;color:rgba(255,255,255,.55)}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+#grain{position:absolute;inset:0;opacity:.06;pointer-events:none;mix-blend-mode:overlay}
+/* 폰 목업 */
+#phone{position:absolute;left:50%;top:270px;width:620px;height:1170px;margin-left:-310px;border-radius:84px;background:#05070B;border:14px solid #2A2F3A;box-shadow:0 60px 140px rgba(0,0,0,.6),0 0 0 3px #3a4150 inset;overflow:hidden}
+#phone .notch{position:absolute;top:18px;left:50%;width:180px;height:44px;margin-left:-90px;border-radius:30px;background:#000;z-index:5}
+.scr{position:absolute;inset:0;padding:96px 34px 40px;background:#F4F6FA;color:#191F28;letter-spacing:-.03em}
+.scr h4{font-size:40px;font-weight:900;margin-bottom:6px}
+.scr .cap{font-size:25px;color:#6B7684;font-weight:600;margin-bottom:26px}
+.card{background:#fff;border-radius:28px;padding:26px;margin-bottom:20px;box-shadow:0 4px 18px rgba(25,31,40,.06)}
+.row{display:flex;align-items:center;gap:14px;margin:16px 0;font-size:27px;font-weight:700}
+.row .nm{width:150px;text-align:left}
+.track{flex:1;height:26px;border-radius:13px;background:#E8EBF0;position:relative;overflow:hidden}
+.track b{position:absolute;left:0;top:0;bottom:0;border-radius:13px}
+.ok{color:#1A56DB}.no{color:#F04452}
+.tag{position:absolute;top:70px;right:30px;font-size:20px;font-weight:800;color:#8B95A1;background:#E8EBF0;padding:6px 14px;border-radius:10px;z-index:4}
+.sk{height:22px;border-radius:11px;background:#E8EBF0;margin:12px 0}
+.todo{display:flex;align-items:center;gap:18px;font-size:29px;font-weight:700;padding:20px 0;border-bottom:2px solid #F0F2F5;text-align:left}
+.ck{width:44px;height:44px;border-radius:14px;border:4px solid #C9D0DA;flex:none;display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff}
+.ck.on{background:#1A56DB;border-color:#1A56DB}
+.todo small{display:block;font-size:22px;color:#8B95A1;font-weight:600;margin-top:4px}
+#plabel{position:absolute;left:0;right:0;top:1490px;text-align:center}
+#plabel .n{display:inline-block;font-size:44px;font-weight:900;background:var(--blue);border-radius:16px;padding:6px 20px;margin-right:16px;vertical-align:middle}
+#plabel .t{font-size:62px;font-weight:900;vertical-align:middle}
+.fine{position:absolute;left:70px;right:70px;bottom:430px;font-size:26px;line-height:1.5;color:rgba(255,255,255,.45);font-weight:500;text-align:center;white-space:normal}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"></div><div id="grid"></div>
+  <div id="cam">
+
+    <!-- ① 후킹 — 타깃마다 다르다(VARIANTS). 처음 3초가 스크롤을 멈추게 한다. -->
+    <div class="scene" id="s0" data-t="0,3"></div>
+
+    <!-- ② 편견 깨기 -->
+    <div class="scene" id="s1" data-t="3,5.5">
+      <span class="el mid" style="font-size:96px" data-a="up" data-in="3.0">보험설계사 =</span>
+      <span class="el big" style="font-size:150px;margin-top:10px" data-a="slam" data-in="3.5">지인 영업?</span>
+      <span class="el" style="margin-top:70px;transform-origin:50% 50%" data-a="stamp" data-in="4.5"><span class="stamp">✕ 옛날 얘기</span></span>
+    </div>
+
+    <!-- ③ 한 방 -->
+    <div class="scene" id="s2" data-t="5.5,7.5">
+      <span class="el mid sub" style="font-size:90px" data-a="up" data-in="5.5">우리는</span>
+      <span class="el big hl" style="font-size:190px" data-a="slam" data-in="6.0">무기부터</span>
+      <span class="el big" style="font-size:190px" data-a="slam" data-in="6.5">준다.</span>
+    </div>
+
+    <!-- ④ 앱 몽타주 — 예시 화면(견본 이름 홍길동 · 나머지는 가림) · 금액은 일부러 안 적는다 -->
+    <div class="scene" id="s3" data-t="7.5,14">
+      <div id="phone">
+        <div class="notch"></div>
+        <div class="tag">예시 화면</div>
+        <div class="scr" id="p0">
+          <h4>보장분석 전 · 후</h4><div class="cap">홍길동 님 · 기존 계약 vs 제안</div>
+          <div class="card">
+            <div class="row" style="font-size:22px;color:#8B95A1"><span class="nm"></span><span style="flex:1">지금</span><span style="flex:1">제안 후</span></div>
+            <div class="row"><span class="nm">암 진단</span><span class="track"><b data-w="35" style="background:#F04452"></b></span><span class="track"><b data-w="92" style="background:#1A56DB"></b></span></div>
+            <div class="row"><span class="nm">뇌혈관</span><span class="track"><b data-w="12" style="background:#F04452"></b></span><span class="track"><b data-w="85" style="background:#1A56DB"></b></span></div>
+            <div class="row"><span class="nm">심장</span><span class="track"><b data-w="20" style="background:#F04452"></b></span><span class="track"><b data-w="80" style="background:#1A56DB"></b></span></div>
+            <div class="row"><span class="nm">수술비</span><span class="track"><b data-w="55" style="background:#F04452"></b></span><span class="track"><b data-w="90" style="background:#1A56DB"></b></span></div>
+            <div class="row"><span class="nm">입원 일당</span><span class="track"><b data-w="60" style="background:#F04452"></b></span><span class="track"><b data-w="60" style="background:#1A56DB"></b></span></div>
+          </div>
+          <div class="card" style="font-size:27px;font-weight:800;text-align:left"><span class="no">● 빈 곳 3군데</span> &nbsp;→&nbsp; <span class="ok">● 채움</span></div>
+        </div>
+        <div class="scr" id="p1">
+          <h4>제안서 한 장</h4><div class="cap">고객 앞에서 바로 · PDF 로 저장</div>
+          <div class="card" style="background:linear-gradient(135deg,#191F28,#1A56DB);color:#fff;text-align:left">
+            <div style="font-size:20px;font-weight:800;letter-spacing:.12em;opacity:.8">APEX · YUNPRO 보장설계 리포트</div>
+            <div style="font-size:38px;font-weight:900;margin-top:10px">홍길동 님을 위한 제안</div>
+          </div>
+          <div class="card"><div class="sk" style="width:70%"></div><div class="sk"></div><div class="sk" style="width:85%"></div></div>
+          <div class="card"><div class="sk" style="width:55%"></div><div class="sk"></div><div class="sk" style="width:90%"></div><div class="sk" style="width:40%"></div></div>
+          <div class="card" style="font-size:24px;color:#6B7684;font-weight:700">보험료·보장은 심사 결과에 따릅니다</div>
+        </div>
+        <div class="scr" id="p2">
+          <h4>재무 계산기</h4><div class="cap">은퇴까지 — 고객과 같이 움직여 본다</div>
+          <div class="card">
+            <svg viewBox="0 0 520 300" width="100%" height="300">
+              <line x1="20" y1="270" x2="510" y2="270" stroke="#E8EBF0" stroke-width="4"/>
+              <path id="cv" d="M20 260 C 140 250, 230 200, 320 130 S 450 40, 510 30" fill="none" stroke="#1A56DB" stroke-width="10" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+              <path d="M20 260 C 140 255, 260 240, 350 215 S 460 185, 510 175" fill="none" stroke="#C9D0DA" stroke-width="8" stroke-dasharray="14 12" stroke-linecap="round"/>
+            </svg>
+            <div style="display:flex;justify-content:space-between;font-size:22px;color:#8B95A1;font-weight:700"><span>지금</span><span>은퇴</span><span>노후</span></div>
+          </div>
+          <div class="card" style="text-align:left">
+            <div style="font-size:24px;font-weight:800;color:#6B7684">매달 더 모으면?</div>
+            <div class="track" style="margin-top:22px;height:18px"><b id="sl" style="background:#1A56DB;width:30%"></b></div>
+          </div>
+          <div class="card" style="font-size:24px;color:#6B7684;font-weight:700">예시 그래프 · 실제 값은 고객 자료로</div>
+        </div>
+        <div class="scr" id="p3">
+          <h4>오늘 할 일</h4><div class="cap">누구를 언제 만날지 — 앱이 정리</div>
+          <div class="card" style="padding:8px 26px">
+            <div class="todo"><span class="ck" data-ck="0">✓</span><div>홍길동 님 · 14:00<small>보장분석 상담</small></div></div>
+            <div class="todo"><span class="ck" data-ck="1">✓</span><div>김○○ 님<small>갱신 안내</small></div></div>
+            <div class="todo"><span class="ck" data-ck="2">✓</span><div>이○○ 님<small>생일 · 안부 연락</small></div></div>
+            <div class="todo" style="border:0"><span class="ck" data-ck="3">✓</span><div>박○○ 님<small>청구 서류 챙기기</small></div></div>
+          </div>
+        </div>
+      </div>
+      <div id="plabel"><span class="n" id="pn">1</span><span class="t" id="pt">보장분석</span></div>
+    </div>
+
+    <!-- ⑤ 처음이어도 -->
+    <div class="scene" id="s4" data-t="14,16.5">
+      <span class="el big" style="font-size:150px" data-a="slam" data-in="14.0">처음이어도</span>
+      <span class="el big hl" style="font-size:150px" data-a="slam" data-in="14.5">괜찮다.</span>
+      <div style="margin-top:70px;white-space:normal">
+        <span class="el chip" style="display:inline-block" data-a="pop" data-in="15.0">🎓 보험아카데미</span>
+        <span class="el chip" style="display:inline-block" data-a="pop" data-in="15.25">🗣 실전 화법서</span>
+        <span class="el chip" style="display:inline-block" data-a="pop" data-in="15.5">🧭 코칭</span>
+      </div>
+    </div>
+
+    <!-- ⑥ 정직한 한 방 — 수입은 약속하지 않는다(모집 광고에서 소득을 장담하지 않는다) -->
+    <div class="scene" id="s5" data-t="16.5,19.5">
+      <span class="el mid" style="font-size:110px" data-a="up" data-in="16.5">수입은</span>
+      <span class="el mid" style="font-size:110px" data-a="up" data-in="17.0">약속 <span class="hr">안</span> 한다.</span>
+      <span class="el big" style="font-size:168px;margin-top:80px" data-a="slam" data-in="18.0"><span class="hl">무기</span>는</span>
+      <span class="el big" style="font-size:168px" data-a="slam" data-in="18.0">약속한다.</span>
+    </div>
+
+    <!-- ⑦ 행동 -->
+    <div class="scene" id="s6" data-t="19.5,23.5">
+      <span class="el mid" style="font-size:84px" data-a="up" data-in="19.5">댓글에</span>
+      <span class="el big" style="font-size:180px;margin:30px 0 40px" data-a="stamp" data-rot="-3" data-in="20.0"><span class="box">「무기」</span></span>
+      <span class="el mid" style="font-size:76px" data-a="up" data-in="20.75">남기면 DM 드려요 📩</span>
+      <span class="el" style="font-size:44px;font-weight:900;letter-spacing:.2em;margin-top:90px;color:rgba(255,255,255,.8)" data-a="up" data-in="21.25">APEX · YUN PRO</span>
+      <div class="fine el" data-a="up" data-in="21.5">보험설계사로 일하려면 자격시험 합격과 등록 절차가 필요합니다.<br>수입은 활동과 성과에 따라 사람마다 다릅니다.</div>
+    </div>
+
+  </div>
+  <div id="bar"><i></i></div>
+  <div id="brand">APEX · YUN PRO</div>
+  <canvas id="grain" width="540" height="960"></canvas>
+  <div id="flash"></div>
+</div>
+
+<script>
+// ───────── 타깃별 후킹(0~3초) ─────────
+var VARIANTS = {
+  A: { // 20~30대 직장인 · 이직 고민
+    bg:'red',
+    lines:[
+      {h:'<span class="el big" style="font-size:170px" data-a="slam" data-in="0.05">월급 <span class="hr">빼고</span></span>'},
+      {h:'<span class="el big" style="font-size:170px" data-a="slam" data-in="0.6">다 오른다.</span>'},
+      {h:'<span class="el sub" style="font-size:64px;margin-top:60px" data-a="type" data-in="1.3" data-dur="0.9">언제까지 버틸 건데?</span>'}
+    ]},
+  B: { // 30~40대 · 경력 단절 · 육아
+    bg:'',
+    lines:[
+      {h:'<span class="el mid" style="font-size:110px" data-a="up" data-in="0.05">아이 하원 시간,</span>'},
+      {h:'<span class="el big" style="font-size:150px;margin-top:10px" data-a="slam" data-in="0.6"><span class="hl">내가</span> 정하는</span>'},
+      {h:'<span class="el big" style="font-size:150px" data-a="slam" data-in="1.1">직업.</span>'},
+      {h:'<span class="el sub" style="font-size:64px;margin-top:60px" data-a="type" data-in="1.7" data-dur="0.7">…있긴 할까?</span>'}
+    ]},
+  C: { // 영업 경험자 · 다른 곳 설계사
+    bg:'red',
+    lines:[
+      {h:'<span class="el mid" style="font-size:120px" data-a="up" data-in="0.05">아직도</span>'},
+      {h:'<span class="el big" style="font-size:150px" data-a="slam" data-in="0.55"><span class="boxr">감</span>으로 영업해?</span>'},
+      {h:'<span class="el sub" style="font-size:60px;margin-top:60px" data-a="type" data-in="1.3" data-dur="0.9">엑셀 · 메모장 · 기억력으로?</span>'}
+    ]}
+};
+var V = VARIANTS[(location.hash||'#A').slice(1)] || VARIANTS.A;
+document.getElementById('s0').innerHTML = V.lines.map(function(l){return l.h;}).join('');
+var TOTAL = 23.5, BEAT = 0.5;
+window.REEL = {total:TOTAL, fps:30};
+
+// ───────── 쉬운 함수들 ─────────
+function clamp(x,a,b){return x<a?a:x>b?b:x;}
+function eo(x){return 1-Math.pow(1-x,3);}                 // ease-out cubic
+function back(x){var c=1.9;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2);}
+function rnd(n){var x=Math.sin(n*12.9898)*43758.5453;return x-Math.floor(x);}
+
+var scenes=[].slice.call(document.querySelectorAll('.scene')).map(function(s){
+  var r=s.getAttribute('data-t').split(',').map(Number);
+  return {el:s,a:r[0],b:r[1],items:[].slice.call(s.querySelectorAll('.el'))};
+});
+// 글자 하나씩 찍히는 줄 — 원래 글을 기억해 둔다
+[].slice.call(document.querySelectorAll('[data-a="type"]')).forEach(function(e){e._txt=e.textContent;});
+
+var IMPACTS=[]; // 화면을 흔들 순간(쾅 들어오는 글)
+scenes.forEach(function(s){s.items.forEach(function(e){
+  var a=e.getAttribute('data-a'); if(a==='slam'||a==='stamp') IMPACTS.push(+e.getAttribute('data-in'));
+});});
+
+function anim(e,t){
+  var a=e.getAttribute('data-a'), t0=+e.getAttribute('data-in'), d=t-t0;
+  if(d<0){e.style.opacity=0;e.style.transform='none';return;}
+  var tf='',op=1;
+  if(a==='slam'){var p=clamp(d/0.16,0,1);var s=2.3-1.3*eo(p);op=p;tf='scale('+s+')';
+    if(d>0.16&&d<0.4){var k=(0.4-d)/0.24;tf+=' translate('+((rnd(t*97)-.5)*22*k)+'px,'+((rnd(t*31)-.5)*22*k)+'px)';}}
+  else if(a==='stamp'){var p2=clamp(d/0.18,0,1),rt=e.hasAttribute('data-rot')?+e.getAttribute('data-rot'):-12;tf='rotate('+((rt+2)*eo(p2)-2)+'deg) scale('+(3-2*eo(p2))+')';op=p2;}
+  else if(a==='up'){var p3=clamp(d/0.28,0,1);tf='translateY('+(70*(1-eo(p3)))+'px)';op=p3;}
+  else if(a==='pop'){var p4=clamp(d/0.3,0,1);tf='scale('+(0.4+0.6*back(p4))+')';op=clamp(p4*2,0,1);}
+  else if(a==='type'){var dur=+e.getAttribute('data-dur')||0.8;var n=Math.floor(clamp(d/dur,0,1)*e._txt.length);
+    e.textContent=e._txt.slice(0,n)+(n<e._txt.length&&Math.floor(t*6)%2===0?'▌':'');op=1;}
+  e.style.opacity=op;e.style.transform=tf||'none';
+}
+
+var cam=document.getElementById('cam'), flash=document.getElementById('flash'), bg=document.getElementById('bg');
+var bar=document.querySelector('#bar i');
+var phone=document.getElementById('phone'), pscr=[0,1,2,3].map(function(i){return document.getElementById('p'+i);});
+var PL=[['1','보장분석 — 빈 곳이 보인다'],['2','제안서 — 한 장으로 끝'],['3','계산기 — 고객 앞에서 바로'],['4','오늘 할 일 — 앱이 정리']];
+var pn=document.getElementById('pn'), pt=document.getElementById('pt'), plabel=document.getElementById('plabel');
+var gctx=document.getElementById('grain').getContext('2d'), gimg=gctx.createImageData(540,960);
+
+function phoneAt(t){
+  var d=t-7.5; // 폰이 아래에서 튀어 오른다
+  var p=clamp(d/0.35,0,1); phone.style.transform='translateY('+(900*(1-eo(p)))+'px) rotate('+(6*(1-eo(p)))+'deg)';
+  var idx=clamp(Math.floor((t-7.75)/1.5),0,3), local=(t-7.75)-idx*1.5;
+  pscr.forEach(function(s,i){
+    if(i===idx){var q=clamp(local/0.22,0,1);s.style.display='block';s.style.transform=(idx===0?'none':'translateX('+(100*(1-eo(q)))+'%)');}
+    else if(i===idx-1&&local<0.22){s.style.display='block';s.style.transform='translateX('+(-30*eo(local/0.22))+'%)';}
+    else s.style.display='none';
+  });
+  pn.textContent=PL[idx][0]; pt.textContent=PL[idx][1];
+  var lq=clamp(local/0.25,0,1); plabel.style.opacity=t<7.75?0:lq; plabel.style.transform='translateY('+(40*(1-eo(lq)))+'px)';
+  // 화면마다 움직이는 것
+  [].slice.call(pscr[0].querySelectorAll('b[data-w]')).forEach(function(b,i){
+    b.style.width=(+b.getAttribute('data-w')*eo(clamp((t-7.9-i*0.06)/0.5,0,1)))+'%';});
+  document.getElementById('cv').setAttribute('stroke-dashoffset',100-100*eo(clamp((t-10.9)/0.9,0,1)));
+  document.getElementById('sl').style.width=(30+55*eo(clamp((t-11.4)/0.6,0,1)))+'%';
+  [].slice.call(pscr[3].querySelectorAll('.ck')).forEach(function(c,i){
+    if(t>12.55+i*0.28)c.classList.add('on');else c.classList.remove('on');});
+}
+
+function render(t){
+  bar.style.width=(100*t/TOTAL)+'%';
+  var red=(t<3&&V.bg==='red')||(t>=3&&t<5.5)||(t>=16.5&&t<18);
+  bg.classList.toggle('red',!!red);
+  bg.style.transform='translate('+(Math.sin(t*0.6)*60)+'px,'+(Math.cos(t*0.45)*60)+'px)';
+  scenes.forEach(function(s){
+    var on=t>=s.a&&t<s.b; s.el.style.display=on?'flex':'none';
+    if(!on)return;
+    // 장면이 바뀔 때 휙 — 0.12초 동안 옆에서 밀려 들어온다
+    var w=clamp((t-s.a)/0.12,0,1);
+    s.el.style.transform=s.a>0?'translateX('+(160*(1-eo(w)))+'px)':'none';
+    s.el.style.filter=s.a>0&&w<1?'blur('+(14*(1-w))+'px)':'none';
+    s.items.forEach(function(e){anim(e,t);});
+  });
+  if(t>=7.5&&t<14)phoneAt(t);
+  // 비트마다 살짝 숨 쉬는 카메라 + 쾅 들어올 때 펀치
+  var ph=(t%BEAT)/BEAT, pulse=0.012*Math.exp(-ph*6), punch=0;
+  IMPACTS.forEach(function(i){var d=t-i;if(d>=0&&d<0.35)punch=Math.max(punch,0.05*Math.exp(-d*12));});
+  if(t>=17.75&&t<18)pulse=0; // 소리가 멎는 반 박자 — 화면도 멈춘다
+  cam.style.transform='scale('+(1+pulse+punch)+')';
+  var f=0; [3,5.5,7.5,14,18,19.5].forEach(function(c){var d=t-c;if(d>=0&&d<0.15)f=Math.max(f,0.55*(1-d/0.15));});
+  flash.style.opacity=f;
+  // 필름 알갱이
+  var seed=Math.floor(t*30), d8=gimg.data;
+  for(var i=0;i<d8.length;i+=4){var v=rnd(i*0.37+seed*7.1)*255;d8[i]=d8[i+1]=d8[i+2]=v;d8[i+3]=255;}
+  gctx.putImageData(gimg,0,0);
+}
+window.render=render;
+render(0);
+</script>
+</body>
+</html>
