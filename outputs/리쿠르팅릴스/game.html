@@ -53,6 +53,19 @@ body{font-family:Pretendard,sans-serif;color:var(--ink);letter-spacing:-.03em;wo
 .pop{position:absolute;left:0;right:0;top:760px;text-align:center;pointer-events:none;z-index:9}
 .pop span{display:inline-block;font-size:96px;color:var(--y);text-shadow:6px 6px 0 #000,-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000;transform-origin:50% 50%}
 .xpf{position:absolute;left:0;right:0;top:960px;text-align:center;font-size:54px;color:var(--g);text-shadow:4px 4px 0 #000;pointer-events:none;z-index:9}
+/* 인벤토리 공개 — 맨 앞 8초, 가장 센 장비부터 */
+.inv-it{position:absolute;left:0;right:0;top:330px;text-align:center}
+.inv-it .rar{display:inline-block;font-size:44px;padding:10px 26px 6px;color:#0A0E1F;box-shadow:5px 5px 0 #000}
+.inv-it .nm{font-size:78px;margin-top:18px;text-shadow:6px 6px 0 #000;white-space:nowrap}
+.inv-it .im{position:relative;margin:30px auto 0;width:988px;height:556px;border:6px solid #fff;box-shadow:0 0 0 6px #0A0E1F,0 0 0 12px var(--c),0 0 90px var(--c);overflow:hidden;background:#fff}
+.inv-it .im.ph{width:300px;height:620px}
+.inv-it .im img{width:100%;height:100%;object-fit:cover;object-position:top center}
+.inv-it .sub{font-size:40px;margin-top:22px;font-family:Pretendard;font-weight:900;color:#fff;text-shadow:3px 3px 0 #000}
+.grid{position:absolute;left:40px;right:40px;top:400px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid .tl{height:170px;border:4px solid var(--c);background:#0A0E1F;position:relative;overflow:hidden;box-shadow:5px 5px 0 #000}
+.grid .tl img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;opacity:.55}
+.grid .tl span{position:absolute;left:0;right:0;bottom:0;padding:8px 8px 6px;background:rgba(10,14,31,.88);font-size:24px;color:#fff;text-align:center;white-space:nowrap;overflow:hidden}
+.grid .tl b{position:absolute;left:8px;top:6px;font-size:18px;color:#0A0E1F;background:var(--c);padding:3px 8px 1px;font-weight:400}
 /* 고르는 창 */
 .menu{margin-top:70px;text-align:left;font-size:46px;line-height:1.9;background:rgba(6,9,22,.85);border:5px solid #fff;padding:26px 46px;box-shadow:8px 8px 0 #000}
 .menu .on{color:var(--y)}
@@ -108,7 +121,8 @@ var C={y:'#FFD84D',g:'#59F0A0',p:'#C38CFF',r:'#FF5C6C',b:'#6EC3FF'};
 // ───────── 걸음 ─────────
 // who: hud 1P/2P/길드 · lv/xp: 이 걸음이 끝날 때 · pop: 가운데 팝업 · fx: 효과음(lvup coin hit fanfare)
 var STEPS=[
- {kind:'title',hud:0,nar:'새 게임을 시작하시겠습니까? 설계사라는 게임입니다.',min:5},
+ {kind:'inv',hud:0,nar:'첫날부터, 이 장비를 전부 들고 시작합니다. 신입도, 경력도.',min:9.4},
+ {kind:'title',hud:0,nar:'자, 새 게임을 시작하시겠습니까? 설계사라는 게임입니다.',min:4.6},
  {kind:'select',hud:0,nar:'신입은 1회차, 경력은 2회차로 시작합니다.',min:5},
  // 1회차 — 신입
  {kind:'win',hud:1,c:C.g,tag:'QUEST 01',ti:'첫 주 — 순서만 알면 된다',img:'ed_guide',bar:'신입 가이드',below:'배우기 → 연습 → 만나기 → 기록',
@@ -152,6 +166,18 @@ var STEPS=[
 ];
 var T=0;STEPS.forEach(function(s,i){var syl=s.nar.replace(/[\s.,·「」?]/g,'').length;s.dur=Math.max(s.min||4.4,syl*0.19+1.2);s.a=T;s.b=T+s.dur;T=s.b;s.no=i+1;});
 var TOTAL=Math.round(T*10)/10;
+// 인벤토리 — 앞 여섯은 하나씩 꽂고(가장 센 것부터), 끝에 열두 칸으로 정리한다
+var INV=[
+ {r:'LEGENDARY',c:'#FFD84D',nm:'보장 전 · 후 리포트',im:'ba_sHd',sub:'고객 이름이 박힌 운용보고서'},
+ {r:'LEGENDARY',c:'#FFD84D',nm:'치료 한 바퀴',im:'tx_rep09',sub:'아프면 언제, 어떤 돈이 — 사진으로'},
+ {r:'EPIC',c:'#C38CFF',nm:'연금 계산기',im:'fin_step3',sub:'65세부터 평생 매달 얼마 (최저보증)'},
+ {r:'EPIC',c:'#C38CFF',nm:'자비스',im:'jv_2',ph:1,sub:'「연금 얼마?」 그 자리에서'},
+ {r:'RARE',c:'#6EC3FF',nm:'소식지 145상품',im:'em_ins_home',sub:'보험사 31곳을 매달 다시 비교'},
+ {r:'RARE',c:'#6EC3FF',nm:'4년 · 48개월 관리',im:'em_keep4',ph:1,sub:'계약 뒤에도 한 달도 비지 않게'}];
+var GRID=[['보장 전·후 리포트','ba_sHd','#FFD84D'],['치료 한 바퀴','tx_rep07','#FFD84D'],['연금 계산기','fin_step3','#C38CFF'],['자비스','jv_1','#C38CFF'],
+ ['소식지 145상품','em_ins_home','#6EC3FF'],['약관 원문 비교','em_ins_terms','#6EC3FF'],['미끼 레이더','em_mikki','#6EC3FF'],['접촉전략 38강','em_mktalk','#6EC3FF'],
+ ['아카데미 10단계','ed_academy','#59F0A0'],['TA 5단계 대본','ed_ta_script','#59F0A0'],['지인 8주','ed_plan','#59F0A0'],['4년 유지관리','em_keep4','#59F0A0']];
+var INV0=0.1, INVL=0.95, GRID0=INV0+INV.length*INVL+0.1;
 var LEVELS=['L0','L1','L2','L3','L4','L5','L6','L7','L8','L9','L10'];
 var LVN=['파는 사람 vs 위험을 관리하는 사람','아플 때 돈은 어디서 새는가','실손의료보험 완전정복','진단비 — 암 · 뇌 · 심장','치료비 — 항암 · 방사선','수술비 — 종수술비 · N대수술비','입원 · 간병 · 후유장해','생활 담보 — 운전자 · 배상책임','보상 실무 — 고지 · 면책 · 청구','저축 · 연금 · 세금 기초','종합 설계 — 5단계 프로세스'];
 
@@ -159,7 +185,13 @@ function ims(s){return [].concat(s.img).map(function(src){return '<img src="shot
 function head(s){return '<span class="el tag px" data-a="pop" data-d="0" style="--c:'+s.c+'">'+s.tag+'</span><span class="el ti px" data-a="type8" data-d="0.15">'+s.ti+'</span>';}
 var H='';
 STEPS.forEach(function(s,i){var x='';
-  if(s.kind==='title')x='<span class="el px" style="font-size:40px;color:#6EC3FF" data-a="up" data-d="0.1">— 교육시스템 EM 이 만든 게임 —</span>'+
+  if(s.kind==='inv')x=INV.map(function(it,k){var d0=INV0+k*INVL;
+      return '<div class="inv-it el" data-a="slam" data-d="'+d0.toFixed(2)+'" data-o="'+(d0+INVL).toFixed(2)+'" style="--c:'+it.c+'"><span class="rar px" style="background:'+it.c+'">★ '+it.r+'</span>'+
+        '<div class="nm px">'+it.nm+'</div><div class="im'+(it.ph?' ph':'')+'"><img src="shots/'+it.im+'.jpg"></div><div class="sub">'+it.sub+'</div></div>';}).join('')+
+    '<span class="el px" style="position:absolute;left:0;right:0;top:260px;font-size:56px;color:#FFD84D;text-shadow:5px 5px 0 #000" data-a="pop" data-d="'+GRID0.toFixed(2)+'">INVENTORY · 첫날 지급</span>'+
+    '<div class="grid">'+GRID.map(function(g,k){return '<div class="tl el" data-a="pop" data-d="'+(GRID0+0.15+k*0.07).toFixed(2)+'" style="--c:'+g[2]+'"><b class="px">'+(k+1)+'</b><img src="shots/'+g[1]+'.jpg"><span class="px">'+g[0]+'</span></div>';}).join('')+'</div>'+
+    '<span class="el px" style="position:absolute;left:0;right:0;top:1168px;font-size:48px;text-shadow:5px 5px 0 #000" data-a="up" data-d="'+(GRID0+1.2).toFixed(2)+'">신입도, 경력도 — <span style="color:#59F0A0">첫날부터 전부</span></span>';
+  else if(s.kind==='title')x='<span class="el px" style="font-size:40px;color:#6EC3FF" data-a="up" data-d="0.1">— 교육시스템 EM 이 만든 게임 —</span>'+
     '<span class="el px" style="font-size:150px;line-height:1.1;margin-top:30px;color:#FFD84D;text-shadow:8px 8px 0 #000" data-a="slam" data-d="0.5">APEX</span>'+
     '<span class="el px" style="font-size:96px;text-shadow:6px 6px 0 #000" data-a="slam" data-d="0.9">: 설계사</span>'+
     '<div class="menu px el" data-a="up" data-d="1.6"><div class="on" id="m1">▶ 새 게임 — 1회차 (신입)</div><div id="m2">&nbsp;&nbsp;이어하기 — 2회차 (경력)</div></div>'+
@@ -204,12 +236,12 @@ function back(x){var c=2.2;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2);}
 function rnd(n){var x=Math.sin(n*12.9898)*43758.5453;return x-Math.floor(x);}
 function stepq(x,n){return Math.floor(x*n)/n;}   // 픽셀 게임처럼 뚝뚝 끊어 움직인다
 var scenes=[].slice.call(document.querySelectorAll('.scene')).map(function(el){var s=STEPS[+el.getAttribute('data-i')];
-  var items=[].slice.call(el.querySelectorAll('.el'));items.forEach(function(e){e._in=s.a+(+e.getAttribute('data-d')||0);if(e.getAttribute('data-a')==='type8')e._txt=e.textContent;});
+  var items=[].slice.call(el.querySelectorAll('.el'));items.forEach(function(e){e._in=s.a+(+e.getAttribute('data-d')||0);if(e.hasAttribute('data-o'))e._out=s.a+(+e.getAttribute('data-o'));if(e.getAttribute('data-a')==='type8')e._txt=e.textContent;});
   return {el:el,s:s,items:items,ims:[].slice.call(el.querySelectorAll('.ims img')),pop:el.querySelector('[data-pop] span'),popW:el.querySelector('[data-pop]'),xpf:el.querySelector('[data-xpf]'),
     tree:[].slice.call(el.querySelectorAll('.tree b')),hp:el.querySelector('.boss .hp i'),ch:el.querySelector('.choice')};});
 function anim(e,t){
   var a=e.getAttribute('data-a'),d=t-e._in;
-  if(d<0){e.style.opacity=0;e.style.transform='none';if(a==='type8')e.textContent='';return;}
+  if(d<0||(e._out!=null&&t>=e._out)){e.style.opacity=0;e.style.transform='none';if(a==='type8'&&d<0)e.textContent='';return;}
   var tf='',op=1;
   if(a==='slam'){var p=stepq(clamp(d/0.24,0,1),6);op=p>0?1:0;tf='scale('+(2-1*p)+')';}
   else if(a==='up'){var p3=stepq(clamp(d/0.3,0,1),5);tf='translateY('+(50*(1-p3))+'px)';op=p3>0?1:0;}
@@ -265,14 +297,14 @@ function render(t){
   dlg.style.opacity=s.kind==='party'&&ds>2.4?0.0:1;
   var ph=(t%BEAT)/BEAT,pulse=0.006*(ph<0.15?1:0),punch=0;IMP.forEach(function(i){var dd=t-i;if(dd>=0&&dd<0.2)punch=0.03;});
   cam.style.transform='scale('+(1+pulse+punch)+') translate('+(punch?((Math.floor(t*30)%2)?6:-6):0)+'px,0)';
-  var f=0;STEPS.forEach(function(x){var dd=t-x.a;if(x.a>0&&dd>=0&&dd<0.1)f=0.35;});flash.style.opacity=f;
+  var f=0;STEPS.forEach(function(x){var dd=t-x.a;if(x.a>0&&dd>=0&&dd<0.1)f=0.35;});INV.forEach(function(it,k){var dd=t-(INV0+k*INVL);if(dd>=0&&dd<0.08)f=0.5;});flash.style.opacity=f;
 }
 function fmt(x){var m=Math.floor(x/60),s=(x-m*60);return m+':'+(s<10?'0':'')+s.toFixed(1);}
 window.REEL={total:TOTAL,fps:30,prefix:'설계사게임',narr:'game',
  script:function(){return STEPS.map(function(s){return {no:s.no,a:+s.a.toFixed(2),dur:+s.dur.toFixed(2),trk:HUD[s.hud].who,text:s.nar,at:fmt(s.a)};});},
  cues:function(){var by=function(f){return STEPS.filter(function(s){return s.fx===f;}).map(function(s){return s.a+1.6;});};
   return {total:TOTAL,style:'chip',impacts:[],cuts:[],pops:[],ticks:[],types:[],soft:[],sparse:[],uhoh:[],dings:[],
-    lvup:by('lvup'),coin:by('coin'),hit:[].concat.apply([],STEPS.filter(function(s){return s.fx==='hit';}).map(function(s){return [s.a+1.4,s.a+2.4,s.a+3.4];})),fanfare:by('fanfare'),
+    lvup:by('lvup'),coin:by('coin').concat(INV.map(function(it,k){return INV0+k*INVL;})),hit:[].concat.apply([],STEPS.filter(function(s){return s.fx==='hit';}).map(function(s){return [s.a+1.4,s.a+2.4,s.a+3.4];})),fanfare:by('fanfare').concat([GRID0]),
     hush:[TOTAL-0.6,TOTAL-0.55],riser:[0,0.01]};},
  ready:function(){return Promise.all([document.fonts.ready].concat([].slice.call(document.images).map(function(i){return i.decode().catch(function(){});}))).then(function(){render(0);});}};
 window.render=render;

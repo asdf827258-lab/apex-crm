@@ -19,7 +19,7 @@ fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(TMP, { recursive: true });
 const NAMES = { A: 'A_직장인', B: 'B_육아맘', C: 'C_경력설계사', D: 'D_나를알리기',
   cancer: '1_암', brain: '2_뇌혈관', heart: '3_심혈관', care: '4_돌봄',   // story 는 상황 넷
-  main: '교육시스템EM', full: '자세히', play: '1회차_2회차', clean: '1회차_2회차_자막없음' };                                                    // expert 는 한 편
+  main: '교육시스템EM', full: '자세히', play: '1회차_2회차', clean: '1회차_2회차_자막없음', nosub: '자막없음' };                                                    // expert 는 한 편
 let args = process.argv.slice(2);
 const PAGE = /^(reel|story|expert|edu|game)$/.test(args[0] || '') ? args.shift() : 'reel';
 const want = args.length ? args : (PAGE === 'story' ? ['cancer', 'brain', 'heart', 'care'] : PAGE === 'expert' ? ['main'] : PAGE === 'edu' ? ['full'] : PAGE === 'game' ? ['play'] : ['A', 'B', 'C']);

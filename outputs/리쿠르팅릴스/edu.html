@@ -90,6 +90,8 @@ body{font-family:Pretendard,sans-serif;color:var(--ink);letter-spacing:-.04em;wo
   <div id="flash"></div>
 </div>
 <script>
+// #nosub — 캡컷에서 녹음 · 자동 캡션을 달 판: 내레이션 자막을 빼고 그 자리를 비워 둔다
+var CLEAN=/clean|nosub/.test(location.hash);
 var PROFILE={name:'윤시현',title:'에이플러스에셋 온탑본부 사업단장',career:'보험·재무설계 10년',
   slogan:'보험을 파는 설계사가 아닌,<br>삶을 설계하는 설계사',channels:['▶ 유튜브 「윤단장의 보험시선」','📷 인스타그램'],
   ask:'📩 DM 으로 면담 신청',handle:'',photo:''};
@@ -253,7 +255,7 @@ function render(t){
   });
   // 내레이션 자막 — 그 걸음 동안 · 앞뒤로 살짝 페이드
   var ds=t-cur.s.a, so=clamp(ds/0.25,0,1)*clamp((cur.s.dur-ds)/0.25,0,1);
-  sub.textContent=cur.s.nar; subBox.style.opacity=so; subBox.style.transform='translateY('+(16*(1-so))+'px)';
+  sub.textContent=cur.s.nar; subBox.style.opacity=CLEAN?0:so; subBox.style.transform='translateY('+(16*(1-so))+'px)';
   var ph=(t%BEAT)/BEAT,pulse=0.006*Math.exp(-ph*6),punch=0;
   IMPACTS.forEach(function(i){var dd=t-i;if(dd>=0&&dd<0.35)punch=Math.max(punch,0.025*Math.exp(-dd*12));});
   cam.style.transform='scale('+(1+pulse+punch)+')';
