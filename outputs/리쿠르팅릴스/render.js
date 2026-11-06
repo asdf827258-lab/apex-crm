@@ -13,10 +13,11 @@ const OUT = path.join(DIR, 'out');
 const TMP = process.env.REEL_TMP || path.join(require('os').tmpdir(), 'reel');
 fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(TMP, { recursive: true });
-const NAMES = { A: 'A_직장인', B: 'B_육아맘', C: 'C_경력설계사', D: 'D_나를알리기' };
+const NAMES = { A: 'A_직장인', B: 'B_육아맘', C: 'C_경력설계사', D: 'D_나를알리기',
+  cancer: '1_암', brain: '2_뇌혈관', heart: '3_심혈관', care: '4_돌봄' };   // story 는 상황 넷
 let args = process.argv.slice(2);
 const PAGE = /^(reel|story)$/.test(args[0] || '') ? args.shift() : 'reel';
-const want = args.length ? args : ['A', 'B', 'C'];
+const want = args.length ? args : (PAGE === 'story' ? ['cancer', 'brain', 'heart', 'care'] : ['A', 'B', 'C']);
 
 (async () => {
   const browser = await chromium.launch();
