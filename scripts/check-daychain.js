@@ -150,11 +150,15 @@ const SEED = (o) => `
   const 그분 = await A.p.evaluate(() => { try{ hmMsPick(0); }catch(e){}
     try{ const w = hmMsWho(); return w ? (w.nm || w.name || '') : ''; }catch(e){ return ''; } });
   is(!!그분, '  아침 큐에 한 분이 섰다 — ' + (그분 || '(아무도 없음)'));
+  /* 🙈 판 X359 — 홈은 배정 DB 이름을 <b>가려서</b> 세웁니다(3번 「새 자리에 세울 때는 가린다」).
+     그래서 그 분을 <b>앱이 가린 꼴</b>(osMaskName)로 찾습니다. 가린 꼴을 앱에게 묻습니다 —
+     여기서 가리는 법을 따로 흉내 내면 앱이 바꿀 때 이 자만 낡습니다 (5번). */
+  const 가린 = await A.p.evaluate(n => { try { return osMaskName(n) || n; } catch (e) { return n; } }, 그분);
   const 이름 = ['① 오늘의 알림','② 어떻게 연락할지','③ 전화','④ 카톡'];
   for (let j = 0; j < 4; j++) {
     await 걸음(A.p, j);
     const t = await 글(A.p);
-    is(!!그분 && t.indexOf(그분) >= 0,
+    is(!!그분 && (t.indexOf(가린) >= 0 || t.indexOf(그분) >= 0),
       '  ' + 이름[j] + ' 에 <b>그 분</b>이 있다 (' + t.replace(/\s+/g,' ').trim().length + '자)');
   }
 

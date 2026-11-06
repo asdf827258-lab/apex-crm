@@ -266,7 +266,9 @@ const SEED = (o) => `
   });
   await B.p.waitForTimeout(300);
   is(jump.ok, '  줄을 누르면 <b>그 분</b>으로 옮겨간다 — ' + (jump.why || ('' + jump.at + '번째')));
-  is(jump.body.indexOf(jump.nm) >= 0, '  ② 도 <b>그 분</b>을 편다 — ' + jump.nm);
+  /* 🙈 판 X359 — 홈은 배정 DB 이름을 가려서 세웁니다(3번). 가린 꼴은 앱의 osMaskName 에게 묻습니다 */
+  const 가린 = await B.p.evaluate(n => { try { return osMaskName(n) || n; } catch (e) { return n; } }, jump.nm);
+  is(jump.body.indexOf(가린) >= 0 || jump.body.indexOf(jump.nm) >= 0, '  ② 도 <b>그 분</b>을 편다 — ' + 가린);
 
   console.log('\n[5] 아침 미션이 <b>「오늘 챙길 것」 안</b>에 있다 · 없어도 안 사라진다');
   /* ★ <b>#hmToday 안인지만 보면 안 됩니다.</b> #hmToday 는 카드를 감싸는
