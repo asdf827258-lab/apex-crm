@@ -54,6 +54,8 @@ const sec = t=>console.log('\n'+t);
 
   const br = await chromium.launch();
   const ctx = await br.newContext({viewport:{width:1200,height:900}});
+  /* 127.0.0.1 밖은 전부 끊습니다 — 점검이 사장님 진짜 서버를 읽지 않게 (check-netblock) */
+  await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
   const errs = [];
 
   /* 덮개로 열리고 벗겨진다 — 본체를 실제로 띄워 봅니다 */
