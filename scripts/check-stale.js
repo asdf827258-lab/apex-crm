@@ -133,6 +133,9 @@ const 증인 = [
        다시 세웠습니다(아래). ⓒ 는 재는 자가 없습니다 — <b>없다고 적습니다</b> (1번). */
   { 키: 'X326-넘치는쪽', 뜻: '발표에서 아직 한 화면을 넘는 쪽이 있다 (노트 켠 채 285쪽 중 119쪽 · 막고 잰 값)',
     선: { 파일: 'scripts/check-pvnote.js', 이름: 'PV_OVER_NOTE', 아래로: 1 } },
+  /* 🛰 판 X336 의 「일정·상담카드·코칭은 아직 안 찾는다」(⛔[아직:X336-이음])는 <b>판 X337 에서 했습니다</b> —
+     jvCalRows · jvFactRows · jvCoachRows 셋이 서자 이 자가 울려 대장을 고쳤습니다. 증인을 거뒀습니다.
+     그 셋은 이제 check-jvhud [10] 이 「했다」 쪽에서 지킵니다 (0-1번). */
 ];
 /* 함수 증인은 본체와 <b>자비스 모드(apex-map.html)</b>를 같이 봅니다 — 판 X277 의 증인이 그쪽에 섭니다 */
 const SRC_FN = SRC + '\n' + (fs.existsSync('app/apex-map.html') ? fs.readFileSync('app/apex-map.html', 'utf8') : '');

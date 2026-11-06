@@ -192,17 +192,39 @@ const CARD = () => {
      답 칩(내일 전화 · 이번 주 안에 만남 …)도 t-chip 이라, 카드 전체에서
      긁으면 그것들이 「go 로 안 간다」 며 빨간불이 켜집니다 — 그 칩들은
      답하는 것이지 화면으로 가는 것이 아닙니다 (8번).                  */
-  const 아는줄 = B.줄.filter(c => /^go\('[a-z_]+'\)$/.test(c.go.trim()));
-  is(아는줄.length === K.length && 아는줄.length > 0,
-     '  <b>아는 것 줄</b>이 표만큼 선다 — ' + 아는줄.length + '/' + K.length +
+  /* ══ ▶️ <b>발표 덱 트랙 줄은 다른 꼴입니다</b> (판 X333 · 사장님 말씀
+     「오늘 에서 AP, PC 에서 각자 뜰 수 있도록 각 파트별로 다 넣어줘」) ══════
+     트랙 줄은 화면으로 가지 않고 <b>osDeckGo(트랙)</b> 로 갑니다. 그래서
+     ⓐ 세는 자리를 <b>둘로</b> 나눕니다(화면 줄 · 트랙 줄)
+     ⓑ 이름은 메뉴가 아니라 <b>트랙 표</b>(apex-track.js)에서 옵니다.
+     ⚠ 처음에 이 자가 「7/12」 로 울었습니다 — <b>이 자가 트랙 줄을 몰랐을
+       뿐</b>이고 코드는 멀쩡했습니다. 자를 고쳤습니다 (8번 · 헛것 금지). */
+  const 아는줄   = B.줄.filter(c => /^go\('[a-z_]+'\)$/.test(c.go.trim()));
+  const 트랙줄   = B.줄.filter(c => /^osDeckGo\('[a-z]'\)$/.test(c.go.trim()));
+  const 화면칸수 = K.filter(x => !x.track).length;
+  const 트랙칸수 = K.filter(x => x.track).length;
+  is(아는줄.length === 화면칸수 && 아는줄.length > 0,
+     '  <b>아는 것 줄</b>이 표만큼 선다 — ' + 아는줄.length + '/' + 화면칸수 +
      ' (' + 아는줄.map(c => c.이름).join(' · ') + ')');
+  is(트랙줄.length === 트랙칸수 && 트랙칸수 > 0,
+     '  ★ <b>발표 덱 트랙 줄</b>도 표만큼 선다 — ' + 트랙줄.length + '/' + 트랙칸수 +
+     ' (' + 트랙줄.map(c => c.이름).join(' · ') + ')');
+  const 트랙이름 = await p.evaluate(() => {
+    const T = (window.APEX_TRACK && window.APEX_TRACK.name) || {};
+    return ((APEX_STAGE.map.AP || {}).know || []).filter(x => x.track)
+             .map(x => (T[x.track] || '') + ' 발표 덱');
+  });
+  is(트랙줄.length === 트랙이름.length && 트랙줄.every((c, i) => c.이름 === 트랙이름[i]),
+     '  ★ 트랙 줄 이름이 <b>트랙 표(apex-track.js)와 같다</b> — 여기 또 적지 않습니다 (5번)');
   is(아는줄.every(c => c.쓸때 && c.쓸때.length > 4),
      '  ★ 줄마다 <b>「쓸 때」 한 줄</b>이 화면에 보인다 — 빈 줄 '
        + 아는줄.filter(c => !c.쓸때).length + '개');
   /* ★ <b>이름이 메뉴와 글자까지 같은가.</b> 표에 또 적으면 메뉴에서 이름을
      고쳤을 때 여기만 옛 이름으로 남습니다 — 실제로 treatpay 가 표에서는
      「급여·비급여 화법」, 메뉴에서는 「치료비 지급지도」 였습니다 (5번). */
+  /* 화면 줄만 — 트랙 줄 이름은 바로 위에서 트랙 표와 견줬습니다 */
   const 이름같나 = await p.evaluate(() => (APEX_STAGE.map.AP.know || [])
+    .filter(x => !x.track)
     .map(x => { const it = navItemOf(x.tab); return it ? it.title : ''; }));
   is(아는줄.length === 이름같나.length && 아는줄.every((c, i) => c.이름 === 이름같나[i]),
      '  ★ 줄 이름이 <b>메뉴와 글자까지 같다</b> — ' + 이름같나.join(' · '));

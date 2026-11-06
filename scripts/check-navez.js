@@ -94,18 +94,29 @@ const SEED = `
   is(C.keepFull === false, '  「전체」 를 고르면 <b>다시 열어도 전체</b> — 기본값은 안 고르셨을 때만 쓴다');
   is(C.keepEz === true, '  「간편」 을 고르면 <b>다시 열어도 간편</b>');
 
-  console.log('\n[3] <b>빈 갈래가 없다</b> — 여섯이 다 선다 (대표 기준)');
+  /* ⚠⚠ 판 X341 (2026-11-05) — <b>이 자리를 바꿨습니다.</b> 사장님 말씀 「이제 메뉴 간소화해줘 자비스에서
+     모두 부를수 있다면」 → 고르신 것 「핵심 11칸 + 자비스」. 2026-09-24 의 「여섯 갈래가 다 선다」 는 그때
+     📣 고객 늘리기가 비던 자리를 막은 것이었는데, 이제 간편은 갈래로 안 나누고 <b>맨 위 자비스 ·
+     「오늘 하루」 기둥 · 「자주 여는 것」 넷</b>입니다. 나머지는 자비스(이름만 말해도 엶 · check-jvhud [11]) ·
+     찾기 · 「전체」 로 엽니다. 재는 것은 그 꼴이 <b>그대로 서는가</b>입니다. */
+  console.log('\n[3] 간편 = 🛰 자비스 맨 위 · 「오늘 하루」 기둥 · 「자주 여는 것」 (판 X341)');
   const G = await page.evaluate(() => {
-    const all = NAV_WHEN_G.map(w => w.t);
-    const got = ezGroups().map(g => g.group);
-    return { all, got, empty: all.filter(t => got.indexOf(t) < 0),
-             n: ezGroups().reduce((a, g) => a + g.items.length, 0) };
+    const E = ezGroups(), main = navMainIds();
+    const fix = document.getElementById('navFix'), jv = fix && fix.querySelector('.sb-guide.jarv');
+    const nm = document.getElementById('navMain');
+    return { groups: E.map(g => g.group), ids: E.length ? E[0].items.map(it => it.id) : [], main,
+             jvTop: !!(jv && nm && (jv.compareDocumentPosition(nm) & Node.DOCUMENT_POSITION_FOLLOWING)),
+             jvSay: jv ? jv.innerText.replace(/\s+/g, ' ') : '', tabs: TABS.reduce((a, g) => a + g.items.length, 0),
+             /* EZ_PICK 차례대로 — 열 수 있는 것만(등급에 막힌 화면은 안 섭니다 · 8번) */
+             want: EZ_PICK.filter(id => !!navItemOf(id)),
+             dupe: E.length ? E[0].items.map(it => it.id).filter(id => main.indexOf(id) >= 0) : [] };
   });
-  is(G.empty.length === 0,
-     '  여섯 갈래가 <b>다 선다</b> — ' + G.got.join(' · ') +
-     (G.empty.length ? (' ← 빈 갈래: ' + G.empty.join(',')) : ''));
-  is(G.n >= 10 && G.n <= 20,
-     '  세우는 것은 <b>매일 여는 것만</b> — ' + G.n + '개 (너무 적으면 못 쓰고, 많으면 간편이 아니다)');
+  is(G.groups.length === 1 && G.groups[0] === '자주 여는 것', '  간편 목록은 <b>「자주 여는 것」 한 묶음</b> — ' + G.groups.join(' · '));
+  is(G.ids.join(',') === G.want.join(','), '  그 묶음은 <b>EZ_PICK 그대로</b>(차례까지) — ' + G.ids.join(' · ') + (G.ids.join(',') === G.want.join(',') ? '' : ' ← 바라는 것 ' + G.want.join(' · ')));
+  is(G.ids.length >= 3 && G.ids.length <= 8, '  세우는 것은 <b>몇 개만</b> — ' + G.ids.length + '개');
+  is(G.dupe.length === 0, '  「오늘 하루」 기둥과 <b>같은 화면을 두 번</b> 세우지 않는다' + (G.dupe.length ? ' ← ' + G.dupe.join(',') : ''));
+  is(G.jvTop && new RegExp('화면 ' + G.tabs + '개').test(G.jvSay),
+     '  🛰 자비스 칸이 <b>맨 위</b>(기둥보다 위) · 화면 수는 TABS 에서 센 그대로 — 「' + G.jvSay + '」');
 
   console.log('\n[4] 뽑아 둔 것이 <b>실제로 다 선다</b>');
   const P = await page.evaluate(() => {

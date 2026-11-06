@@ -69,7 +69,9 @@ const SEED = () => {
     const rows = el ? [].slice.call(el.querySelectorAll('.t-nav')) : [];
     const labs = el ? [].slice.call(el.querySelectorAll('.t-glab')).map(x => x.textContent.trim()) : [];
     const lab = labs[0] || '';
-    const card = document.querySelector('#navFix .sb-guide');
+    /* 판 X341 — 🛰 자비스 칸은 이제 <b>기둥보다 위</b>입니다(사장님이 고르신 「핵심 11칸 + 자비스」).
+       「큰 카드가 메뉴보다 아래」 는 나머지 카드(내 폰에 설치 · 사용가이드)에 그대로 묻습니다. */
+    const card = document.querySelector('#navFix .sb-guide:not(.jarv)');
     const top = x => x ? Math.round(x.getBoundingClientRect().top) : null;
     return { 있나: !!el, 칸수: rows.length,
              이름: rows.map(x => x.textContent.replace(/\s+/g, ' ').trim()),
@@ -138,7 +140,9 @@ const SEED = () => {
              찾기: !!document.getElementById('navFind') };
   });
   is(C.설치,   '  「내 폰에 설치」 가 그대로 있다');
-  is(C.가이드, '  「APEX 사용가이드」 가 그대로 있다');
+  /* ⚠ 판 X344 (2026-11-05) — 사장님 말씀 「사용가이드는 빼줘」. 큰 카드는 <b>없어야</b> 합니다 —
+     화면으로 가는 길이 남았는지는 check-guide [4] 가 봅니다(찾기 · ?go=manual · 「🗂 전체」). */
+  is(!C.가이드, '  「APEX 사용가이드」 큰 카드는 <b>뺐다</b> (사장님 말씀 「사용가이드는 빼줘」)');
   is(C.자비스, '  「' + C.자비스이름 + '」 가 그대로 있다 — 이름은 <b>앱에 물어</b> 썼습니다 (5번)');
   is(C.강조,   '  ★ 그 칸이 <b>강조</b>되어 있다 (사장님 말씀 「뭐든 도울수 있는 아이콘으로 강조해줘」)');
   is(!C.도움단추, '  ★ 「무엇을 할지 모르겠다면」 <b>단추는 뺐다</b> (사장님 말씀 「이건 삭제하고」)');

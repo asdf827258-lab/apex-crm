@@ -79,7 +79,16 @@ const 말씀 = {
           이름:(x.querySelector('.nm')||{}).textContent||'',
           쓸때:(x.querySelector('.mt')||{}).textContent||'',
           go:(x.getAttribute('onclick')||'') })),
-        메뉴이름: L.map(x => { const it = navItemOf(x.tab); return it ? it.title : ''; }) });
+        /* ▶️ <b>발표 덱 트랙 줄은 이름이 메뉴에서 안 옵니다</b> (판 X333) —
+           트랙 표(apex-track.js)에서 옵니다. 그래서 견줄 이름도 거기서 꺼냅니다.
+           ⚠ 이 자가 처음에 「메뉴와 글자까지 같다」 에서 울었습니다 — <b>이 자가
+             트랙 줄을 몰랐을 뿐</b>이고 코드는 멀쩡했습니다 (8번 · 헛것 금지). */
+        메뉴이름: L.map(x => {
+          if (x.track) {
+            const T = (window.APEX_TRACK && window.APEX_TRACK.name) || {};
+            return (T[x.track] || '') + ' 발표 덱';
+          }
+          const it = navItemOf(x.tab); return it ? it.title : ''; }) });
     });
     return out;
   });

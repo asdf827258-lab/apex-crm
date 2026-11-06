@@ -1,4 +1,4 @@
-/* 🪵 <b>자비스 새 판이 그림대로 섰나</b> (판 X332)
+/* 🪵 <b>자비스 새 판이 그림대로 섰나</b> (판 X360)
 
    사장님 말씀 2026-11-04 — 「자비스 목각 버전으로 우선 만들자」 → 「응 그림에 그린쪽으로 해서 다 적용해줘」.
    그림(docs/mokgak/자비스.html)에서 고르신 넷 — 묻는 칸은 아래 · 첫 화면은 오늘 챙길 것 + 단계마다 물어볼 말 ·
@@ -67,7 +67,7 @@ const ASK = (f, q) => f.evaluate(async (q) => { jLog.innerHTML = ''; ask(q); awa
   return [].slice.call(document.querySelectorAll('#jLog .msg.j')).pop(); }, q);
 
 (async () => {
-  console.log('🪵 자비스 새 판 — 그림대로 섰나 (판 X332)');
+  console.log('🪵 자비스 새 판 — 그림대로 섰나 (판 X360)');
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
   const { p, f, errs } = await openJv(b, 390, 844);
@@ -94,7 +94,10 @@ const ASK = (f, q) => f.evaluate(async (q) => { jLog.innerHTML = ''; ask(q); awa
              todayTxt: today ? today.textContent : '', due: t.due.map(x => P.cmName(x)), n: t.n,
              cs: c ? [].slice.call(c.querySelectorAll('.jv-sq [data-tq]')).map(x => x.getAttribute('data-tq')) : [],
              csWant: JV_STAGE_Q.CS, know: !!(c && c.querySelector('details.jv-know')), menuIn: c ? c.textContent.indexOf(String(Object.keys(MENU).length)) >= 0 : false }; });
-  is(H.hi && H.can === 3, '첫 인사 카드 — 「무엇을 도와드릴까요?」 + 할 수 있는 것 셋(찾기 · 하기 · 셈하기)');
+  /* 섞기(판 X359) — 인사 머리 · 할 수 있는 것 셋은 HUD(원자로 · SYSTEM 판)가 말합니다. 같은 수를 두 번 말하지 않게 카드 머리는 감춥니다 */
+  const HUD = await f.evaluate(() => { const hi = document.querySelector('#jLog .jv-hello .jv-hi'), core = document.querySelector('.deck .hud .hud-core');
+    return { hud: !!(core && core.offsetParent !== null), cmd: document.querySelectorAll('.pane-r #chips .chip').length, hiHidden: !hi || getComputedStyle(hi).display === 'none' }; });
+  is(HUD.hud && HUD.cmd >= 4 && HUD.hiHidden, '첫 화면은 <b>HUD 그대로</b> — 원자로 · COMMAND 상황 단추 ' + HUD.cmd + '개 · 인사 카드 머리는 HUD 와 겹치지 않게 감춤');
   is(H.n > 0 && H.due.every(nm => H.todayTxt.indexOf(nm) >= 0) && /오늘 챙길 것/.test(H.todayTxt),
      '오늘 챙길 것이 <b>본체의 cmTodo 와 같은 분</b>을 말한다 — ' + H.due.join(', ') + ' (새로 세지 않음 · 5번)');
   is(H.cs.join('|') === H.csWant.join('|'), '단계 단추(CS)를 누르면 그 단계의 물을 말로 바뀐다');
@@ -189,12 +192,19 @@ const ASK = (f, q) => f.evaluate(async (q) => { jLog.innerHTML = ''; ask(q); awa
   const PH = await f.evaluate(() => ({ side: getComputedStyle(document.getElementById('jvSide')).display, ov: document.documentElement.scrollWidth - innerWidth }));
   is(PH.side === 'none' && PH.ov <= 0, '폰(390) — 곁 칸 없음 · 옆으로 넘침 ' + PH.ov + 'px');
   is(errs.length === 0, '스크립트 오류 0' + (errs.length ? ' ← ' + errs.slice(0, 2).join(' | ') : ''));
-  const PC = await openJv(b, 1280, 860);
+  /* 섞기 — 곁 칸은 HUD 판 셋이 나란히 설 자리가 남는 넓은 화면(1,500px 부터)에서만. 1,280 에서는 오늘 챙길 것이 첫 답 안에 */
+  const MD = await openJv(b, 1280, 860);
+  const MS = await MD.f.evaluate(() => ({ side: getComputedStyle(document.getElementById('jvSide')).display,
+    hiToday: (() => { const t = document.querySelector('.jv-today-in'); return t ? getComputedStyle(t).display : 'none'; })(),
+    cmdRight: (() => { const r = document.querySelector('.deck .pane-r'), c = document.querySelector('.deck .hud'); return r && c ? r.getBoundingClientRect().left > c.getBoundingClientRect().left : false; })() }));
+  is(MS.side === 'none' && MS.hiToday !== 'none' && MS.cmdRight, '컴퓨터(1280) — 곁 칸 없이 HUD 판 셋이 나란히(COMMAND 가 오른쪽) · 오늘 챙길 것은 첫 답 안에');
+  await MD.p.context().close();
+  const PC = await openJv(b, 1680, 950);
   await ASK(PC.f, '처음 전화 뭐라고 해?');
   const PS = await PC.f.evaluate(() => { const sd = document.getElementById('jvSide'), r = sd.getBoundingClientRect(), a = document.querySelector('.ask').getBoundingClientRect();
     return { side: getComputedStyle(sd).display, w: Math.round(r.width), today: /오늘 챙길 것/.test(sd.textContent), asked: /처음 전화 뭐라고 해/.test(sd.textContent),
              chips: sd.querySelectorAll('.jf-chip').length, askRight: Math.round(a.right), left: Math.round(r.left), hiToday: (() => { const t = document.querySelector('.jv-today-in'); return t ? getComputedStyle(t).display : 'none'; })() }; });
-  is(PS.side === 'block' && PS.w >= 300 && PS.today && PS.asked, '컴퓨터(1280) — 오른쪽 곁 칸에 오늘 챙길 것 · 방금 물은 것 (' + PS.w + 'px)');
+  is(PS.side === 'block' && PS.w >= 300 && PS.today && PS.asked, '넓은 화면(1680) — 오른쪽 곁 칸에 오늘 챙길 것 · 방금 물은 것 (' + PS.w + 'px)');
   is(PS.chips >= 1 && PS.askRight <= PS.left + 1, '곁 칸에 마지막 답의 「같이 찾은 것」 · 묻는 칸은 곁 칸을 안 덮는다');
   is(PS.hiToday === 'none', '컴퓨터에서는 오늘 챙길 것이 곁 칸에만 — 한 화면에 <b>두 번 안 선다</b>');
   is(PC.errs.length === 0, '컴퓨터 — 스크립트 오류 0');
