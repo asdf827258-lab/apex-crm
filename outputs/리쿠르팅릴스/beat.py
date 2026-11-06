@@ -123,6 +123,12 @@ for k in range(nb):
     if hush[0] <= t < hush[1] or t >= T - 0.5:
         continue
     full = t >= 3.0
+    # 감동 구간(아플 때 · 고마움 · 끝까지) — 북을 줄이고 화음·피아노가 앞으로 나온다
+    if any(a <= t < b for a, b in cues.get("soft", [])):
+        if k % 2 == 0:
+            put(kick(), t, 0.32)
+            put(bass_note(ROOTS[int(t // 2) % 4], 0.9), t, 0.12)
+        continue
     # 고민 구간은 북만 남겨 가라앉힌다 — 해법에서 다시 꽉 찬다
     if any(a <= t < b for a, b in cues.get("sparse", [])):
         put(kick(), t, 0.55)
@@ -175,7 +181,35 @@ for t in cues.get("dings", []):  # 해법 — 맑은 종 두 번
     put(bell(1568), t + 0.12, 0.22)
     put(boom(), t, 0.5)
 
-# 「수입은 약속 안 한다」 뒤 반 박자는 완전히 비운다 — 꼬리까지 잘라야 「무기는」 이 꽂힌다
+# 화음 깔개 — 마디(2초)마다 Am · F · C · G. 감동 구간에서는 크게, 그 밖에서는 낮게 깐다
+CHORDS = [[220.0, 261.63, 329.63], [174.61, 220.0, 261.63], [261.63, 329.63, 392.0], [196.0, 246.94, 293.66]]
+
+
+def soft_at(t):
+    return any(a <= t < b for a, b in cues.get("soft", []))
+
+
+def pad(freqs, length):
+    n = int(length * SR)
+    tt = np.arange(n) / SR
+    s = sum(np.sin(2 * np.pi * f * tt) + 0.35 * np.sin(2 * np.pi * f * 2.003 * tt) + 0.5 * np.sin(2 * np.pi * f * 0.997 * tt) for f in freqs)
+    a = np.minimum(1, tt / 0.5) * np.minimum(1, (length - tt) / 0.5)
+    return s * a / len(freqs)
+
+
+for bar in range(int(T // 2) + 1):
+    t0 = bar * 2.0
+    if t0 >= T - 0.8:
+        break
+    put(pad(CHORDS[bar % 4], 2.1), t0, 0.22 if soft_at(t0 + 1) else 0.07)
+    if soft_at(t0 + 0.01):  # 피아노 같은 오르내림
+        notes = CHORDS[bar % 4] + [CHORDS[bar % 4][1] * 2, CHORDS[bar % 4][2] * 2, CHORDS[bar % 4][1] * 2, CHORDS[bar % 4][0] * 2]
+        for j, f in enumerate(notes[:8]):
+            if soft_at(t0 + j * 0.25):
+                put(bell(f), t0 + j * 0.25, 0.10)
+
+
+# 한 줄 앞 반 박자는 완전히 비운다 — 꼬리까지 잘라야 다음 말이 꽂힌다
 h0, h1 = int(hush[0] * SR), int(hush[1] * SR)
 r = int(0.01 * SR)
 mix[h0 - r:h0] *= np.linspace(1, 0, r)

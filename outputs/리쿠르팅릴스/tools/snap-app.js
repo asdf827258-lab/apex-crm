@@ -49,7 +49,7 @@ const server = http.createServer((req, res) => {
     });
   });
   await page.waitForTimeout(1500); await clean();
-  const tabs = want.length ? want : ['home', 'ta_script', 'fp_talk', 'bojang', 'assistant'];
+  const tabs = want.length ? want : ['keep4'];
   for (const t of tabs) {
     await page.evaluate(t => { go(t); window.scrollTo(0, 0); }, t);
     await page.waitForTimeout(900);
@@ -59,6 +59,30 @@ const server = http.createServer((req, res) => {
     await clean();
     await page.screenshot({ path: path.join(OUT, t + '.png') });
     process.stdout.write(t + ' ');
+  }
+  // 4년 유지관리 — 48개월 차례를 펼쳐 <b>길게</b> 한 장 (영상에서 폰 안을 굴려 내려간다)
+  if (tabs.includes('keep4')) {
+    await page.evaluate(() => { KP4.plan = true; go('keep4'); window.scrollTo(0, 0); });
+    await page.waitForTimeout(900); await clean();
+    await page.screenshot({ path: path.join(OUT, 'keep4.png') });
+    // 앱은 안쪽 칸이 굴러간다 — 칸 밖은 그려지지 않아 하얗게 찍힌다. 창을 아주 길게 늘려 전부 한 화면에 세운 뒤
+    // 「48개월 차례」 칸만 찍는다. 길이가 커서 배율은 1.5 로 낮춘다(영상 속 폰 화면 폭 456px 에는 충분).
+    const ctx2 = await b.newContext({ viewport: { width: 430, height: 9800 }, deviceScaleFactor: 1.5 });
+    await ctx2.route('**://**', r => { const u = r.request().url();
+      if (u.includes('127.0.0.1:' + PORT) || /fonts\.(googleapis|gstatic)\.com|cdn\.jsdelivr\.net\/gh\/orioncactus/.test(u)) return r.continue();
+      return r.fulfill({ status: 200, contentType: 'application/javascript', body: '' }); });
+    const p3 = await ctx2.newPage(); await p3.addInitScript(STUB);
+    await p3.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded', timeout: 90000 });
+    await p3.waitForTimeout(3000);
+    await p3.evaluate(() => { document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide,#arBriefOvl').forEach(x => x.remove());
+      OS.profile = { id: 'smoke', name: '홍길동', role: 'owner', plan: 'vip' }; OS.session = { user: { id: 'smoke' } }; OS.cfg = { schema_version: '29' };
+      window.toast = function () {}; KP4.plan = true; go('keep4'); });
+    await p3.waitForTimeout(1500);
+    const hgt = await p3.evaluate(() => document.getElementById('kp4Plan').getBoundingClientRect().bottom);
+    if (hgt > 9790) console.log('\n⚠ 48개월 칸이 창보다 깁니다 (' + Math.round(hgt) + 'px) — 창 높이를 늘리십시오');
+    await (await p3.$('#kp4Plan')).screenshot({ path: path.join(OUT, 'keep4_long.png') });
+    await ctx2.close();
+    process.stdout.write('(keep4 길게) ');
   }
   // 앱 안의 따로 된 페이지(iframe 으로 붙는 것)는 그 페이지를 직접 연다 — 같은 화면, 같은 폭
   const SUB = { insight: '/app/insight/index.html' };
