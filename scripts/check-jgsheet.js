@@ -22,6 +22,10 @@
      [8] 놓치는 청구 장이 <b>「지급된다」고 단정하지 않는다</b>
      [9] 글씨 크기를 <b>토큰 한 곳</b>에서만 정한다
      [10] 견본 고객 이름이 <b>홍길동</b> 이다 (3번)
+     [11] <b>따뜻한 가족을 지키는 색</b>이다 — 고객용 장에 파란 자리 0 (판 X362)
+     [12] 가족 그림을 <b>직접 그렸다</b> — 인라인 SVG, 남의 삽화·사진이 아니다 (9번)
+     [13] 그림글자(Tossface)를 <b>저장소가 쓰는 그 주소</b>로 한 번만 받는다 (5번)
+     [14] <b>상담 도구 장·설계사 매뉴얼은 파란 그대로</b>다 — 고객용만 따뜻해진다
 
    ★ 되돌려 보고 빨간불을 확인했습니다 (8번)
      ⓐ --ss-body 를 11.5px 로 되돌림      → [3] 이 「14px 미만 …곳」 으로 욺
@@ -31,6 +35,10 @@
      ⓔ 쪽 번호를 날글로 도로 적음          → [5] 가 욺
      ⓕ 서류 장에서 「보험사·상품마다」 뺌  → [7] 이 욺
      ⓖ 새 장을 지움                       → [1] 이 욺
+     ⓗ 고객용 장에 파란색을 도로 박음      → [11] 이 욺
+     ⓘ 가족 그림을 <img> 로 바꿈           → [12] 가 욺
+     ⓙ 토스페이스 줄을 지움                → [13] 이 욺
+     ⓚ 따뜻한 색을 :root 로 올림           → [14] 가 욺(도구 장이 같이 따뜻해집니다)
 
    ⚠ 바깥을 한 번도 안 부릅니다 — 파일만 엽니다 (8번).
    ══════════════════════════════════════════════════════════════════ */
@@ -93,6 +101,21 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
   /* ── [10] 견본 이름 ───────────────────────────────────── */
   console.log('[10] 견본 고객 이름이 홍길동인가');
   ok(/홍길동/.test(src), '홍길동을 쓴다 (3번)');
+
+  /* ── [12] 가족 그림 · [13] 그림글자 ──────────────────────── */
+  console.log('[12] 가족 그림을 직접 그렸나 (9번)');
+  const fam = (src.match(/<svg class="jgfam"/g) || []).length;
+  ok(fam >= 1, '인라인 SVG 가족 그림 ' + fam + '개');
+  ok(!/<img[^>]+(jgfam|family|가족)/i.test(src), '그림을 <img> 로 불러오지 않는다 (남의 삽화 금지)');
+  ok(/stroke-linecap:round/.test(src), '선으로 그렸다 — 인쇄에서 안 뭉개집니다');
+
+  console.log('[13] 그림글자를 저장소가 쓰는 그 주소로 한 번만 받나');
+  const tf = (src.match(/tossface@[0-9.]+\/dist\/tossface\.css/g) || []);
+  ok(tf.length === 1, 'Tossface 를 ' + tf.length + '번 받는다 (1번이어야 합니다 · 5번)');
+  const other = fs.readFileSync(path.resolve(__dirname, '..', 'app', 'apex-map.html'), 'utf8');
+  const 남의것 = (/tossface@[0-9.]+/.exec(other) || [''])[0];
+  ok(tf.length === 1 && tf[0].indexOf(남의것) === 0,
+     '다른 화면(apex-map)과 <b>같은 판</b>을 받는다 — ' + (남의것 || '(못 읽음)'));
 
   /* ── 브라우저로 재는 것 ─────────────────────────────────── */
   const b = await chromium.launch();
@@ -157,8 +180,29 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
       t13.classList.remove('off');
       try { markFirst(); } catch (e) {}
     }
+    /* 🧡 파란 자리를 셉니다 — 고객용은 0, 도구 장은 그대로여야 합니다 (판 X362) */
+    const 파랑 = (c) => { const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c || '');
+      if (!m) return false; const R = +m[1], G = +m[2], B2 = +m[3];
+      return B2 > R + 28 && B2 > 100; };
+    const 푸른곳 = (sel) => { const out = [];
+      document.querySelectorAll(sel).forEach(s => {
+        if (s.classList.contains('off')) return;
+        const cs0 = getComputedStyle(s);
+        if (파랑(cs0.backgroundColor) || 파랑(cs0.backgroundImage)) out.push(s.id + ' · 장 바탕');
+        s.querySelectorAll('*').forEach(e => { const cs = getComputedStyle(e);
+          ['color','backgroundColor','backgroundImage','borderTopColor','borderRightColor',
+           'borderBottomColor','borderLeftColor'].forEach(k => {
+            if (파랑(cs[k])) out.push(s.id + ' · ' + (e.className || e.tagName) + ' · ' + k); }); }); });
+      return out; };
+    const 고객파랑 = 푸른곳('.sheet[data-kind="ins"],.sheet[data-kind="let"]');
+    const chk2 = [...document.querySelectorAll('.sheet[data-kind="chk"]')];
+    const was2 = chk2.map(s => s.classList.contains('off'));
+    chk2.forEach(s => s.classList.remove('off'));
+    const 도구파랑 = 푸른곳('.sheet[data-kind="chk"]').length;
+    chk2.forEach((s, i) => { if (was2[i]) s.classList.add('off'); });
     const 글 = (id) => { const e = document.getElementById(id); return e ? (e.innerText || '') : ''; };
-    return { 장, 작은, 도구, 다시, s12: 글('s12'), s13: 글('s13') };
+    return { 장, 작은, 도구, 다시, s12: 글('s12'), s13: 글('s13'),
+             고객파랑: [...new Set(고객파랑)], 도구파랑 };
   }, { 바닥 });
 
   console.log('[1] 고객용이 열 장이고 담당자가 계약보다 먼저 오나');
@@ -191,6 +235,18 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
   ok(/모두 지급된다는 뜻은 아닙니다/.test(r.s13), '「모두 지급된다는 뜻은 아닙니다」 를 말한다');
   ok(/약관과 보험회사의 심사/.test(r.s13), '「약관과 보험회사의 심사」 를 말한다');
   ok(/상법 제662조/.test(r.s13), '3년은 법조문을 그대로 적는다 (상법 제662조)');
+
+  console.log('[11] 따뜻한 가족을 지키는 색인가 — 고객용에 파란 자리가 없나');
+  ok(r.고객파랑.length === 0, '고객용 장에 남은 파란 자리 ' + r.고객파랑.length + '곳'
+     + (r.고객파랑.length ? ('\n        ' + r.고객파랑.slice(0, 5).join('\n        ')) : ''));
+
+  console.log('[14] 상담 도구 장은 파란 그대로인가 (고객용만 따뜻해진다)');
+  /* ★ 눈금을 <b>재어서</b> 놓았습니다 (판 X362) — 따뜻한 색을 :root 로 올려
+     보니 도구 장의 파란 자리가 <b>255 → 111</b> 로 떨어졌습니다. 처음에 「20곳
+     이상」 으로 두었더니 그 되돌림이 <b>안 울었습니다</b>. 안 울리는 알람은
+     알람이 아닙니다 (8번). 도구 장이 줄면 빨간불입니다. */
+  ok(r.도구파랑 >= 250, '도구 장의 파란 자리 ' + r.도구파랑 + '곳 (눈금 250 · 잰 값 255)'
+     + (r.도구파랑 >= 250 ? ' — 그대로 남아 있다' : ' ← 따뜻한 색이 전역으로 샜습니다'));
 
   console.log('[끝] 조용한가');
   ok(터짐.length === 0, '터진 자리 ' + 터짐.length + (터짐.length ? (' ← ' + 터짐[0]) : ''));
