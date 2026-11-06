@@ -17,6 +17,8 @@
            담당이 아직 안 정해진 일(제안서 출력)은 「안 정해졌다」 고 말하나 · 없는 말은 「없습니다」 · #q= 주소
      [9] ★★ 내보내기 — 한 파일로 받아, 인터넷을 다 막고 열어도 같은 표 · 찾기가 되나 · 고치는 단추가 없나 ·
            이 기기 저장소를 안 쓰나 · ui.css 없이도 색이 서나
+     [10] ★★ 내 수정용 — 받은 파일에서 고치고 · 다시 열어도 남고 · 앱의 팀 표 열쇠와 안 섞이고 ·
+           거기서 고친 표로 설계사용(보기 전용)을 다시 뽑나 · 인터넷 0
    ⚠ 되돌려 보았습니다(8번) — canOrg 를 빼면 [4] · 감싸기(doc)를 풀면 [5] · ORG_KEYS 에서 빼면 [5]
      · OS_FULL_MODES 에서 빼면 [1] 이 웁니다.                                                     */
 const { chromium } = require('playwright');
@@ -259,6 +261,10 @@ const sec = t=>console.log('\n'+t);
     is(단추.length>=10 && 단추.every(t=>/\d+명$/.test(t)), '자주 묻는 것 단추 '+단추.length+'개 — 저마다 맡은 분 수');
     const 헛단추 = await q.evaluate(()=>{ var n=0; [].forEach.call(document.querySelectorAll('#wsTopics .ws-topic'),function(b){ b.click(); if(!document.querySelectorAll('.ws-card').length) n++; }); return n; });
     is(헛단추===0, '★ 어느 단추를 눌러도 맡은 분이 한 명 이상 선다 — 표에 없는 일로 단추를 안 세운다');
+    await q.evaluate(()=>WS.setQ('설계·병력 재고지'));
+    const 설계 = await q.evaluate(()=>[].map.call(document.querySelectorAll('.ws-card .ws-t'),e=>e.textContent));
+    is(설계.length>=4 && !설계.some(t=>/^대전 설계매니저와/.test(t)) && 설계.some(t=>/병력 재고지/.test(t)),
+       '「설계·병력 재고지」 단추에 「대전 설계매니저와 …연락」 이 안 걸린다 — 사람 이름 속 「설계」 는 뺍니다');
     await q.evaluate(()=>WS.setQ(''));
     await q.click('#wsTopics .ws-topic:first-child');
     const 첫 = await q.evaluate(()=>({v:document.getElementById('wsQ').value,h:location.hash,on:!!document.querySelector('#wsTopics .ws-topic.on')}));
@@ -278,7 +284,10 @@ const sec = t=>console.log('\n'+t);
     await q.goto('http://127.0.0.1:'+PORT+'/'+PAGE,{waitUntil:'load'});
     await q.evaluate(()=>{ localStorage.removeItem('apex_worksplit_v1'); }); await q.reload({waitUntil:'load'});
     await q.click('.ws-card[data-row="0"] .ws-it:nth-child(1) .ws-ck');
-    const [dl] = await Promise.all([q.waitForEvent('download'), q.click('#wsExport')]);
+    await q.click('#wsExport');
+    const 패널 = await q.evaluate(()=>!document.getElementById('wsExpPanel').hidden);
+    is(패널, '「내보내기」 를 누르면 두 갈래(설계사용 · 내 수정용)가 선다');
+    const [dl] = await Promise.all([q.waitForEvent('download'), q.click('#wsExpView')]);
     const 이름 = dl.suggestedFilename();
     const html = fs.readFileSync(await dl.path(),'utf8');
     is(/^APEX_worksplit_\d{4}-\d\d-\d\d\.html$/.test(이름), '파일 이름이 .html 로 끝난다(영문 — 한글이면 「download」 로 떨어짐) — '+이름);
@@ -306,6 +315,50 @@ const sec = t=>console.log('\n'+t);
     is(v.저장<=0, '받은 파일은 그 기기 저장소에 안 쓴다');
     is(oe.length===0 && 바깥.length===0, '인터넷을 다 막아도 터지지 않고 · 바깥을 하나도 안 부른다 — '+(oe[0]||바깥[0]||''));
     await off.close(); await q.close();
+  }
+
+  sec('[10] ★★ 내 수정용 — 어디서든 열어 고치는 파일');
+  {
+    const q = await ctx.newPage();
+    await q.goto('http://127.0.0.1:'+PORT+'/'+PAGE,{waitUntil:'load'});
+    await q.evaluate(()=>{ localStorage.removeItem('apex_worksplit_v1'); }); await q.reload({waitUntil:'load'});
+    await q.click('#wsExport');
+    const [dl] = await Promise.all([q.waitForEvent('download'), q.click('#wsExpOwn')]);
+    const 이름 = dl.suggestedFilename(); const html = fs.readFileSync(await dl.path(),'utf8');
+    is(/^APEX_worksplit_edit_\d{4}-\d\d-\d\d\.html$/.test(이름) && /"mode":"own"/.test(html), '내 수정용 파일 — '+이름);
+    await q.close();
+    /* 받은 파일을 따로 선 주소에서 엽니다 — 인터넷은 다 막습니다 */
+    const off = await br.newContext({viewport:{width:1100,height:900}});
+    const 바깥=[];
+    await off.route('**/*', r=>{ const u=r.request().url();
+      if(u.startsWith('http://own.test/')){ r.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}); return; }
+      바깥.push(u); r.abort(); });
+    const o = await off.newPage(); const oe=[]; o.on('pageerror',e=>oe.push(String(e).slice(0,90)));
+    await o.goto('http://own.test/w.html',{waitUntil:'load'});
+    const a0 = await o.evaluate(()=>({ p:WS.perm(), 고치기:getComputedStyle(document.getElementById('wsEdit')).display,
+      잠김:document.getElementById('wsEdit').disabled, 말:document.getElementById('wsWho').textContent,
+      단추:document.getElementById('wsExpOwn').textContent }));
+    is(a0.p==='own' && a0.고치기!=='none' && !a0.잠김 && /내 수정용 파일/.test(a0.말), '열면 「내 수정용 파일」 — 「고치기」 가 선다');
+    await o.click('#wsEdit');
+    await o.click('.ws-card[data-row="0"] .ws-it:nth-child(1) .ws-t'); await o.keyboard.press('Control+End'); await o.keyboard.type(' (사장님 고침)');
+    await o.click('#wsEdit'); await o.waitForTimeout(500);
+    await o.reload({waitUntil:'load'});
+    const a1 = await o.evaluate(()=>({ t:document.querySelector('.ws-card[data-row="0"] .ws-it .ws-t').textContent,
+      열쇠:Object.keys(localStorage) }));
+    is(/\(사장님 고침\)$/.test(a1.t), '고친 글이 다시 열어도 남는다 — '+a1.t);
+    is(a1.열쇠.indexOf('apex_worksplit_own_v1')>=0 && a1.열쇠.indexOf('apex_worksplit_v1')<0, '★ 따로 된 열쇠(apex_worksplit_own_v1)에만 — 앱의 팀 표 열쇠와 안 섞인다');
+    /* 여기서 설계사용을 다시 뽑습니다 */
+    await o.click('#wsExport');
+    const [d2] = await Promise.all([o.waitForEvent('download'), o.click('#wsExpView')]);
+    const v2 = fs.readFileSync(await d2.path(),'utf8');
+    is(/"mode":"view"/.test(v2) && /\(사장님 고침\)/.test(v2) && (v2.match(/<script id="wsEmbed">/g)||[]).length===1 && (v2.match(/id="wsVars"/g)||[]).length===1,
+       '★ 수정용에서 뽑은 설계사용 — 고친 글이 담기고 · 담긴 표·색은 한 벌씩');
+    const o2 = await off.newPage(); await o2.setContent(v2,{waitUntil:'load'});
+    const v3 = await o2.evaluate(()=>({ p:WS.perm(), 고치기:getComputedStyle(document.getElementById('wsEdit')).display,
+      띠:getComputedStyle(document.querySelector('.ws-card')).borderTopColor, 카드:document.querySelectorAll('.ws-card').length }));
+    is(v3.p==='export' && v3.고치기==='none' && v3.카드===8 && v3.띠!=='rgba(0, 0, 0, 0)', '그 파일을 열면 보기 전용 · 카드 8 · 색 띠가 선다');
+    is(oe.length===0 && 바깥.length===0, '인터넷을 다 막아도 터지지 않고 · 바깥을 안 부른다 — '+(oe[0]||바깥[0]||''));
+    await off.close();
   }
 
   is(errs.length===0, '터진 것 0 — '+(errs[0]||''));

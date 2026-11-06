@@ -9,7 +9,7 @@
 <title>업무구분</title>
 <!-- 색·글꼴은 app/ui.css 한 곳에서 옵니다 — 여기서 색을 또 적지 않습니다 (5번) -->
 <link rel="stylesheet" href="ui.css">
-<style>
+<style id="wsCss">
 /* ══════════════════════════════════════════════════════════════════
    🗂 업무구분 — 담당자별 할 일 (판 X361)
 
@@ -156,6 +156,11 @@ body.undone .ws-card.alldone .ws-fin{display:block}
 .ws-res.none{background:var(--warn-l)}
 mark{background:var(--t-warn-l);color:var(--t-warn-d);font-weight:800;border-radius:3px;padding:0 1px}
 .ws-extra .ws-tag.none{color:var(--neg)}
+.ws-exp{max-width:1180px;margin:0 auto;padding:0 16px 12px}
+.ws-exp-in{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--pt-l);border-radius:var(--t-r-sm);padding:12px}
+.ws-exp-in .ws-btn{background:var(--card)}
+.ws-exp-note{flex:1 1 100%;margin:2px 2px 0;font-size:13px;color:var(--ink2)}
+#wsExport.on{background:var(--pt-l);border-color:var(--pt);color:var(--pt-d)}
 body.edit .ws-find,body.exp #wsEdit,body.exp #wsUndo,body.exp #wsReset,body.exp #wsExport,body.exp .ws-help{display:none!important}
 
 /* ── 고치기 ── */
@@ -176,6 +181,9 @@ body.edit .ws-addrow{display:block}
   background:var(--pt-l);color:var(--ink2);font-size:13px}
 body.edit .ws-help{display:block}
 body.edit .ws-it.done{display:flex}
+/* 고칠 때는 카드를 넓게 — ↑↓✕ 셋이 서면 세 칸짜리 카드에서 글이 낱말마다 꺾였습니다 */
+body.edit .ws-grid{grid-template-columns:repeat(auto-fill,minmax(480px,1fr))}
+body.edit .ws-card.big .ws-list{columns:1}
 .ws-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--t-on);
   border-radius:12px;padding:10px 16px;font-size:14px;font-weight:700;z-index:50}
 
@@ -207,7 +215,7 @@ body.edit .ws-it.done{display:flex}
 @page{size:A4;margin:10mm}
 @media print{
   body{background:#fff;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .ws-bar,.ws-perm,.ws-help,.ws-tool,.ws-add,.ws-addrow,.ws-toast,.ws-chips,.ws-find{display:none!important}
+  .ws-bar,.ws-perm,.ws-help,.ws-exp,.ws-tool,.ws-add,.ws-addrow,.ws-toast,.ws-chips,.ws-find{display:none!important}
   .ws-paper{padding:0;max-width:none}
   body.edit [data-ed]{outline:0;background:none}
   body.undone .ws-it.done{display:flex}
@@ -231,6 +239,13 @@ body.edit .ws-it.done{display:flex}
   <button type="button" class="ws-btn" id="wsExport" title="지금 표를 한 파일로 내려받습니다 — 카톡으로 돌려 보는 보기 전용">내보내기</button>
   <button type="button" class="ws-btn" id="wsReset">처음 표로</button>
 </div>
+<div class="ws-exp" id="wsExpPanel" hidden><div class="ws-exp-in">
+  <button type="button" class="ws-btn" id="wsExpView">설계사용 — 보기 전용 파일</button>
+  <button type="button" class="ws-btn" id="wsExpOwn">내 수정용 — 고칠 수 있는 파일</button>
+  <p class="ws-exp-note"><b>설계사용</b>은 카톡으로 돌려 보는 파일입니다(찾기만 · 못 고침).
+    <b>내 수정용</b>은 어디서든 열어 고치는 파일이고, 거기서 다시 설계사용을 뽑을 수 있습니다.
+    둘 다 앱의 팀 표와는 <b>따로</b>입니다 — 팀이 같이 보는 표는 앱에서 고칩니다.</p>
+</div></div>
 <div class="ws-perm" id="wsWho"></div></div>
 
 <div class="ws-help" id="wsHelp">
@@ -372,10 +387,14 @@ function snap(){
    'view'  : 보기 권한 — 고치지 않습니다(이 기기에만 다르게 남으면 팀 표와 어긋납니다)
    'wait'  : 앱 안인데 권한을 아직 못 읽음 — 모른다고 적습니다 (1번)
    'local' : 앱 밖에서 엶 — 이 기기에만 남습니다 */
-/* 내보낸 보기용 파일 — 표가 파일 안에 담겨 옵니다. 이 기기 저장소를 읽지도 쓰지도 않습니다 */
+/* 내보낸 파일 — 표가 파일 안에 담겨 옵니다.
+   'export' : 설계사용 보기 전용 — 이 기기 저장소를 읽지도 쓰지도 않습니다
+   'own'    : 내 수정용 — 고칠 수 있고, 고친 것은 따로 된 열쇠(apex_worksplit_own_v1)에 이 브라우저에만 남습니다.
+              앱의 팀 표(apex_worksplit_v1)와 섞이지 않습니다 */
 var EMB=window.WS_EMBED||null;
+var OWN=!!(EMB&&EMB.mode==='own');
 function perm(){
-  if(EMB) return 'export';
+  if(EMB) return OWN?'own':'export';
   try{
     if(window.parent!==window && parent.APEX_KV){
       var c=typeof parent.APEX_KV.canOrg==='function'?parent.APEX_KV.canOrg():null;
@@ -384,7 +403,7 @@ function perm(){
   }catch(e){}
   return 'local';
 }
-function canEdit(){ var p=perm(); return p!=='view'&&p!=='export'; }
+function canEdit(){ var p=perm(); return p!=='view'&&p!=='export'; }   /* own 은 고칩니다 */
 
 function $(id){ return document.getElementById(id); }
 function el(tag,cls,txt){
@@ -419,8 +438,9 @@ function move(arr,i,d){ var j=i+d; if(j<0||j>=arr.length) return false; var t=ar
      그 낱말이 실제 할 일 글에 <b>한 줄이라도 있을 때만</b> 단추가 섭니다 (1번).
    ★ 띄어쓰기·가운뎃점을 지우고 견줍니다 — 「고객 등록」 으로 쳐도 「고객등록」 을 찾습니다.
    ★ 담당이 아직 안 정해진 일(추가 확정할 사항)에 걸리면 <b>안 정해졌다고</b> 말합니다. */
+/* 셋째 칸은 <b>빼는 말</b> — 「설계」 가 「대전 설계매니저와 연락」 같은 사람 이름에 걸리지 않게 */
 var TOPICS=[
-  ['청구',['청구']],['고객등록',['고객등록']],['설계·병력 재고지',['설계','병력','재고지']],
+  ['청구',['청구']],['고객등록',['고객등록']],['설계·병력 재고지',['설계','병력','재고지'],['설계매니저']],
   ['시상·업적',['시상','업적']],['수수료·시책',['수수료','시책']],['교육',['교육']],
   ['신입·위촉·시험',['신입','위촉','시험']],['수금·실효·연체',['수금','실효','연체']],
   ['공지·톡방',['공지','톡방']],['누적·모니터링·동시가입',['누적','모니터링','동시가입']],
@@ -432,16 +452,17 @@ function norm(x){ return String(x||'').toLowerCase().replace(/[\s·・,.\-\/&()�
 /* 지금 무엇을 찾나 — 단추 이름이면 그 낱말 중 하나라도(할 일 글만), 친 말이면 낱말이 모두(이름 포함) */
 function query(){
   var q=(Q||'').trim(); if(!q||document.body.classList.contains('edit')) return null;
-  for(var i=0;i<TOPICS.length;i++) if(TOPICS[i][0]===q) return {q:q,any:TOPICS[i][1],words:TOPICS[i][1]};
+  for(var i=0;i<TOPICS.length;i++) if(TOPICS[i][0]===q) return {q:q,any:TOPICS[i][1],ex:TOPICS[i][2]||[],words:TOPICS[i][1]};
   var w=q.split(/\s+/).filter(function(x){ return norm(x); });
   return w.length?{q:q,all:w.map(norm),words:w}:null;
 }
 function hitItem(Qo,who,t){
-  if(Qo.any){ var h=norm(t); return Qo.any.some(function(w){ return h.indexOf(norm(w))>=0; }); }
+  if(Qo.any){ var h=norm(t); (Qo.ex||[]).forEach(function(x){ h=h.split(norm(x)).join('|'); });
+    return Qo.any.some(function(w){ return h.indexOf(norm(w))>=0; }); }
   var hh=norm(who+' '+t); return Qo.all.every(function(w){ return hh.indexOf(w)>=0; });
 }
-function topicCount(words){
-  var Qo={any:words}, n=0;
+function topicCount(words,ex){
+  var Qo={any:words,ex:ex||[]}, n=0;
   S.rows.forEach(function(r){ if(r.items.some(function(it){ return hitItem(Qo,r.who,it.t); })) n++; });
   return n;
 }
@@ -486,7 +507,7 @@ function render(){
   /* 자주 묻는 것 단추 — 표에 실제로 있는 것만 · 맡은 분 수 */
   var tp=$('wsTopics'); tp.innerHTML='';
   TOPICS.forEach(function(x){
-    var n=topicCount(x[1]); if(!n) return;
+    var n=topicCount(x[1],x[2]); if(!n) return;
     var b=el('button','ws-topic'+(Qo&&Qo.q===x[0]?' on':''),x[0]); b.type='button';
     b.appendChild(el('span','k',n+'명'));
     b.addEventListener('click',function(){ setQ(Qo&&Qo.q===x[0]?'':x[0]); });
@@ -666,6 +687,7 @@ function who(){
   if(p==='export'){ w.innerHTML='<b>보기용 파일</b>입니다 — '+(AT?AT+' 에 내보낸':'회의 때')+' 업무구분입니다. 바뀐 내용은 앱의 「업무구분」 에서 보십시오.'; return; }
   if(p==='team') t='<b>EM 권한</b> — 고치면 팀 전체 화면이 같이 바뀝니다.';
   else if(p==='view') t='<b>보기 전용</b> — 팀이 함께 보는 표라 EM 권한만 고칩니다.';
+  else if(p==='own') t='<b>내 수정용 파일</b> — 고친 것은 이 브라우저에 바로 남습니다. 다른 기기로 옮기려면 「내보내기 → 내 수정용」 으로 다시 받으십시오. 앱의 팀 표와는 따로입니다.';
   else if(p==='wait') t='권한을 아직 못 읽었습니다 — 고친 것이 팀에 올라가는지 <b>모릅니다</b>. 잠시 뒤 다시 열어 보십시오.';
   else t='앱 밖에서 열었습니다 — 고친 것은 <b>이 기기에만</b> 남습니다.';
   t+=AT?' · 마지막 고침 '+AT:' · 아직 고친 적 없음 (회의 표 그대로)';
@@ -697,34 +719,44 @@ $('wsPrint').addEventListener('click',function(){ if(saveT) saveNow(); window.pr
 /* ── 📤 내보내기 — 지금 표를 한 파일로 (카톡으로 돌려 보는 보기 전용) ──
    ★ 색은 ui.css 에서 <b>지금 이 화면이 쓰는 값</b>만 읽어 파일 안에 적습니다 — 받는 쪽엔 ui.css 가 없습니다.
    ★ 서버를 안 부릅니다. 고객 정보는 표에 없습니다(담당자·할 일뿐). */
-function exportHtml(){
+function exportHtml(mode){
+  mode=mode==='own'?'own':'view';
   if(saveT) saveNow();
-  var css=(document.querySelector('style')||{}).textContent||'', seen={}, vars=[], m, re=/var\((--t-[a-z0-9-]+)/g;
+  var css=($('wsCss')||{}).textContent||'', seen={}, vars=[], m, re=/var\((--t-[a-z0-9-]+)/g;
   var cs=getComputedStyle(document.documentElement);
   while((m=re.exec(css))){ if(seen[m[1]]) continue; seen[m[1]]=1; var v=cs.getPropertyValue(m[1]).trim(); if(v) vars.push(m[1]+':'+v); }
   var root=document.documentElement.cloneNode(true);
-  var lk=root.querySelector('link[href="ui.css"]'); if(lk) lk.parentNode.removeChild(lk);
+  ['link[href="ui.css"]','#wsVars','#wsEmbed','#wsToast'].forEach(function(q){ var x=root.querySelector(q); if(x) x.parentNode.removeChild(x); });
   var head=root.querySelector('head'), st=document.createElement('style');
-  st.textContent=':root{'+vars.join(';')+'}'; head.insertBefore(st,head.firstChild);
-  var tt=root.querySelector('title'); if(tt) tt.textContent='업무구분 · 문의 안내';
+  st.id='wsVars'; st.textContent=':root{'+vars.join(';')+'}'; head.insertBefore(st,head.firstChild);
+  var tt=root.querySelector('title'); if(tt) tt.textContent=mode==='own'?'업무구분 · 수정용':'업무구분 · 문의 안내';
   var body=root.querySelector('body'); body.removeAttribute('class');
   ['wsPaper','wsTopics','wsWho'].forEach(function(id){ var x=root.querySelector('#'+id); if(x) x.innerHTML=''; });
-  var tq=root.querySelector('#wsToast'); if(tq) tq.parentNode.removeChild(tq);
+  ['wsExpPanel','wsQx'].forEach(function(id){ var x=root.querySelector('#'+id); if(x) x.setAttribute('hidden',''); });
+  var ex=root.querySelector('#wsExport'); if(ex) ex.classList.remove('on');
+  var ed0=root.querySelector('#wsEdit'); if(ed0){ ed0.classList.remove('on'); ed0.textContent='고치기'; }
   var main=root.querySelector('body script'), emb=document.createElement('script');
-  emb.textContent='window.WS_EMBED='+JSON.stringify({at:AT||'',doc:S}).replace(/</g,'\\u003c')+';';
+  emb.id='wsEmbed';
+  emb.textContent='window.WS_EMBED='+JSON.stringify({mode:mode,at:AT||'',doc:S}).replace(/</g,'\\u003c')+';';
   main.parentNode.insertBefore(emb,main);
   var html='<!DOCTYPE html>\n'+root.outerHTML;
   var d=new Date(), p=function(n){ return (n<10?'0':'')+n; };
   /* ⚠ 파일 이름은 영문으로 — 한글 이름을 주면 브라우저에 따라 「download」(확장자 없음)로 떨어져
-     폰에서 안 열립니다(점검 브라우저에서 실제로 그랬습니다). 안의 제목은 「업무구분 · 문의 안내」 입니다. */
-  var name='APEX_worksplit_'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'.html';
+     폰에서 안 열립니다(점검 브라우저에서 실제로 그랬습니다). 안의 제목은 한글입니다. */
+  var name='APEX_worksplit_'+(mode==='own'?'edit_':'')+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'.html';
   var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
   a.download=name; document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(a.href); a.parentNode.removeChild(a); },1500);
-  toast('「'+name+'」 를 내려받았습니다 — 카톡으로 보내면 받는 분이 바로 찾아봅니다');
+  toast(mode==='own'?'「'+name+'」 — 내 수정용 파일을 받았습니다. 열면 바로 고칠 수 있습니다':
+    '「'+name+'」 — 설계사용 파일을 받았습니다. 카톡으로 보내면 받는 분이 바로 찾아봅니다');
+  $('wsExpPanel').hidden=true; $('wsExport').classList.remove('on');
   return html;
 }
-$('wsExport').addEventListener('click',exportHtml);
+$('wsExport').addEventListener('click',function(){
+  var P=$('wsExpPanel'); P.hidden=!P.hidden; this.classList.toggle('on',!P.hidden);
+});
+$('wsExpView').addEventListener('click',function(){ exportHtml('view'); });
+$('wsExpOwn').addEventListener('click',function(){ exportHtml('own'); });
 $('wsQ').addEventListener('input',function(){ setQ(this.value,true); });
 $('wsQx').addEventListener('click',function(){ setQ(''); $('wsQ').focus(); });
 
@@ -743,14 +775,22 @@ window.addEventListener('storage',function(e){
 window.addEventListener('beforeunload',function(){ if(saveT) saveNow(); });
 document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='hidden'&&saveT) saveNow(); });
 
-if(EMB){ S=EMB.doc; AT=EMB.at||''; document.body.classList.add('exp'); }
+if(OWN){
+  /* 내 수정용 — 이 브라우저에 고쳐 둔 것이 파일보다 늦으면 그것을, 아니면 파일에 담긴 표를 */
+  KEY='apex_worksplit_own_v1';
+  var LO=load();
+  if(LO&&String(LO.at||'')>=String(EMB.at||'')){ S=LO.doc; AT=LO.at; } else { S=EMB.doc; AT=EMB.at||''; }
+  document.body.classList.add('own');
+  $('wsExpOwn').textContent='내 수정용 — 고친 표로 이 파일 다시 받기';
+}
+else if(EMB){ S=EMB.doc; AT=EMB.at||''; document.body.classList.add('exp'); }
 else{ var L0=load(); if(L0){ S=L0.doc; AT=L0.at; } else { S=seed(); AT=''; } }
 /* 주소 뒤 #q=청구 로 열면 그 말로 찾아 둔 채 섭니다 — 「청구는 여기」 링크를 돌릴 수 있게 */
 try{ var hq=/[#&]q=([^&]*)/.exec(location.hash); if(hq){ Q=decodeURIComponent(hq[1]); $('wsQ').value=Q; $('wsQx').hidden=!Q; } }catch(e){}
 render(); who();
 /* 바깥 창이 권한을 늦게 읽는 일이 있어 — 몇 번만 다시 묻습니다(서버는 안 부릅니다) */
 var tries=0, iv=EMB?0:setInterval(function(){ who(); if(perm()!=='wait'||++tries>10) clearInterval(iv); },1500);
-window.WS={seed:seed,perm:perm,key:KEY,exportHtml:exportHtml,setQ:setQ};
+window.WS={seed:seed,perm:perm,key:KEY,exportHtml:exportHtml,setQ:setQ,own:OWN};
 })();
 </script>
 </body>
