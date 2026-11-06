@@ -1,4 +1,6 @@
-// 릴스 굽기 — node render.js [A B C]
+// 릴스 굽기 — node render.js [reel|story] [A B C]
+//   reel  : 23.5초 글자형 (reel.html)
+//   story : 37.5초 막막이 이야기형 (story.html)
 // reel.html 을 1080×1920 으로 열어 render(t) 를 한 장씩 부르고 찍어 ffmpeg 로 넘긴다.
 // 비트는 beat.py 가 화면의 순간(쾅·휙·딸깍)에 맞춰 합성한다.
 const { chromium } = require('playwright');
@@ -12,16 +14,19 @@ const TMP = process.env.REEL_TMP || path.join(require('os').tmpdir(), 'reel');
 fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(TMP, { recursive: true });
 const NAMES = { A: 'A_직장인', B: 'B_육아맘', C: 'C_경력설계사' };
-const want = process.argv.slice(2).length ? process.argv.slice(2) : ['A', 'B', 'C'];
+let args = process.argv.slice(2);
+const PAGE = /^(reel|story)$/.test(args[0] || '') ? args.shift() : 'reel';
+const want = args.length ? args : ['A', 'B', 'C'];
 
 (async () => {
   const browser = await chromium.launch();
   for (const v of want) {
     const page = await browser.newPage({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
-    await page.goto('file://' + path.join(DIR, 'reel.html') + '#' + v);
+    await page.goto('file://' + path.join(DIR, PAGE + '.html') + '#' + v);
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(300);
     const cues = await page.evaluate(() => {
+      if (REEL.cues) return REEL.cues();
       const ins = s => [...document.querySelectorAll(s)].map(e => +e.getAttribute('data-in'));
       return {
         total: REEL.total,
@@ -37,12 +42,13 @@ const want = process.argv.slice(2).length ? process.argv.slice(2) : ['A', 'B', '
         riser: [16.5, 17.75],
       };
     });
-    const cueFile = path.join(TMP, v + '.json'), wav = path.join(TMP, v + '.wav');
+    const cueFile = path.join(TMP, PAGE + v + '.json'), wav = path.join(TMP, PAGE + v + '.wav');
+    const prefix = await page.evaluate(() => REEL.prefix || '리쿠르팅릴스');
     fs.writeFileSync(cueFile, JSON.stringify(cues));
     execFileSync('python3', [path.join(DIR, 'beat.py'), cueFile, wav], { stdio: 'inherit' });
 
     const fps = 30, n = Math.round(cues.total * fps);
-    const mp4 = path.join(OUT, `리쿠르팅릴스_${NAMES[v]}.mp4`);
+    const mp4 = path.join(OUT, `${prefix}_${NAMES[v]}.mp4`);
     const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error',
       '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-',
       '-i', wav,
@@ -61,7 +67,7 @@ const want = process.argv.slice(2).length ? process.argv.slice(2) : ['A', 'B', '
     console.log(`${v} → ${mp4} (${((Date.now() - t0) / 1000).toFixed(0)}초)`);
     // 썸네일(표지) 한 장 — 후킹 글이 다 선 순간
     await page.evaluate(() => render(2.6));
-    await page.screenshot({ path: path.join(OUT, `표지_${NAMES[v]}.jpg`), type: 'jpeg', quality: 90 });
+    await page.screenshot({ path: path.join(OUT, `표지_${prefix}_${NAMES[v]}.jpg`), type: 'jpeg', quality: 90 });
     await page.close();
   }
   await browser.close();

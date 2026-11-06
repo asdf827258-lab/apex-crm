@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>막막이 릴스</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+/* 이야기형 리쿠르팅 릴스 — 신입 설계사 「막막이」 가 영업의 다섯 고비에서 막히고, 앱으로 넘긴다.
+   1080×1920 · 30fps. 시간은 전부 render(t) 하나가 정한다(CSS 애니메이션 없음 — 프레임마다 같은 그림).
+   고비마다 붙인 해법은 앱에 실제로 있는 메뉴 이름이다(app/index.html 의 TABS). 지어낸 기능을 넣지 않는다. */
+:root{--bg:#0B0F17;--ink:#fff;--blue:#2F6BFF;--sky:#5AC8FA;--red:#FF3B4E;--gold:#FFC83D;--green:#2BD67B;--sub:rgba(255,255,255,.62)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg)}
+body{font-family:Pretendard,'WenQuanYi Zen Hei',sans-serif;color:var(--ink);letter-spacing:-.04em;word-break:keep-all}
+#stage{position:absolute;inset:0;overflow:hidden}
+#bg{position:absolute;inset:-200px;background:
+  radial-gradient(900px 900px at 20% 15%,rgba(47,107,255,.35),transparent 60%),
+  radial-gradient(800px 800px at 85% 80%,rgba(90,200,250,.22),transparent 60%),var(--bg)}
+#bg.red{background:radial-gradient(900px 900px at 50% 30%,rgba(255,59,78,.30),transparent 60%),radial-gradient(700px 700px at 80% 90%,rgba(120,60,200,.18),transparent 60%),#0A0A12}
+#grid{position:absolute;inset:0;opacity:.08;background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);background-size:90px 90px}
+#cam{position:absolute;inset:0;transform-origin:50% 45%}
+.scene{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:320px 70px 420px;text-align:center}
+.scene.mid{justify-content:center}
+.ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:320px 70px 0}
+.el{display:block;will-change:transform,opacity;white-space:nowrap}
+.big{font-weight:900;line-height:1.04}
+.mdl{font-weight:800;line-height:1.15}
+.sub{font-weight:600;color:var(--sub)}
+.hl{color:var(--blue);text-shadow:0 0 60px rgba(47,107,255,.6)}
+.hr{color:var(--red);text-shadow:0 0 50px rgba(255,59,78,.55)}
+.hgr{color:var(--green);text-shadow:0 0 50px rgba(43,214,123,.45)}
+.box{display:inline-block;background:var(--ink);color:var(--bg);padding:0 .18em;border-radius:.12em}
+.boxr{display:inline-block;background:var(--red);color:#fff;padding:0 .18em;border-radius:.12em}
+.chipk{display:inline-block;font-size:44px;font-weight:900;padding:12px 30px;border-radius:999px;background:rgba(255,59,78,.18);border:3px solid var(--red);color:#FF8A95}
+.chipk.ok{background:rgba(43,214,123,.15);border-color:var(--green);color:#7CF0B0}
+.bub{position:relative;display:inline-block;background:#fff;color:#191F28;font-weight:900;font-size:84px;padding:34px 54px;border-radius:56px;margin-top:40px;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+.bub:after{content:'';position:absolute;left:50%;bottom:-38px;margin-left:-30px;border:30px solid transparent;border-top:40px solid #fff;border-bottom:0}
+.mono{font-size:52px;font-weight:700;color:rgba(255,255,255,.7);margin-top:46px}
+.core{font-size:92px;font-weight:900;line-height:1.1;margin-top:34px}
+.tags{margin-top:26px;font-size:36px;font-weight:800;color:var(--sky);letter-spacing:-.02em}
+.chip{display:inline-block;margin:12px 10px;padding:20px 36px;border-radius:999px;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.25);font-size:54px;font-weight:800}
+.chip b{color:var(--green)}
+.fine{position:absolute;left:70px;right:70px;bottom:430px;font-size:26px;line-height:1.5;color:rgba(255,255,255,.45);font-weight:500;text-align:center;white-space:normal}
+/* 위 띠 */
+#bar{position:absolute;left:60px;right:60px;top:90px;height:8px;border-radius:8px;background:rgba(255,255,255,.18)}
+#bar i{display:block;height:100%;width:0;border-radius:8px;background:#fff}
+#brand{position:absolute;left:0;right:0;top:130px;text-align:center;font-size:34px;font-weight:800;letter-spacing:.18em;color:rgba(255,255,255,.55)}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+#grain{position:absolute;inset:0;opacity:.06;pointer-events:none;mix-blend-mode:overlay}
+/* 앱 화면 카드(예시) */
+.card2{width:900px;border-radius:48px;background:#F4F6FA;color:#191F28;padding:40px 40px 34px;text-align:left;white-space:normal;letter-spacing:-.03em;box-shadow:0 50px 120px rgba(0,0,0,.55);position:relative}
+.card2 .tag{position:absolute;top:30px;right:34px;font-size:22px;font-weight:800;color:#8B95A1;background:#E8EBF0;padding:6px 14px;border-radius:10px}
+.card2 h4{font-size:44px;font-weight:900}
+.card2 .cap{font-size:27px;color:#6B7684;font-weight:600;margin:6px 0 22px}
+.in{background:#fff;border-radius:28px;padding:22px 26px;margin-top:16px;box-shadow:0 4px 18px rgba(25,31,40,.06)}
+.r{display:flex;align-items:center;gap:16px;font-size:31px;font-weight:700;padding:10px 0}
+.r .k{width:46px;height:46px;border-radius:14px;background:#1A56DB;color:#fff;font-size:26px;font-weight:900;display:flex;align-items:center;justify-content:center;flex:none}
+.r small{color:#8B95A1;font-weight:600;font-size:25px;margin-left:auto}
+.ck{width:46px;height:46px;border-radius:14px;border:4px solid #C9D0DA;flex:none;display:flex;align-items:center;justify-content:center;font-size:28px;color:transparent}
+.ck.on{background:#1A56DB;border-color:#1A56DB;color:#fff}
+.tr{flex:1;height:26px;border-radius:13px;background:#E8EBF0;position:relative;overflow:hidden}
+.tr b{position:absolute;left:0;top:0;bottom:0;border-radius:13px;width:0}
+.tabs span{display:inline-block;font-size:26px;font-weight:800;padding:10px 20px;border-radius:999px;background:#E8EBF0;color:#6B7684;margin-right:8px}
+.tabs span.on{background:#191F28;color:#fff}
+.sk{height:22px;border-radius:11px;background:#E8EBF0;margin:12px 0}
+.lb{display:inline-block;max-width:80%;padding:18px 26px;border-radius:28px;font-size:30px;font-weight:800;margin:8px 0}
+.lb.l{background:#E8EBF0;border-top-left-radius:8px}
+.lb.rr{background:#1A56DB;color:#fff;border-top-right-radius:8px}
+.doc{font-size:28px;line-height:1.75;font-weight:600;color:#333D4B}
+.mk{position:relative;display:inline}
+.mk i{position:absolute;left:-4px;right:-4px;top:12%;bottom:4%;background:#FFE14D;border-radius:6px;z-index:0;transform-origin:0 50%;transform:scaleX(0)}
+.mk span{position:relative;z-index:1}
+.pdf{display:inline-flex;align-items:center;gap:14px;background:#fff;border:3px dashed #C9D0DA;border-radius:22px;padding:18px 26px;font-size:30px;font-weight:800}
+.btn{display:block;text-align:center;background:#1A56DB;color:#fff;border-radius:22px;padding:20px;font-size:31px;font-weight:900;margin-top:18px}
+/* 캐릭터 */
+#chr{position:absolute;left:0;top:0;width:400px;height:500px;transform-origin:0 0;overflow:visible}
+#chr svg{overflow:visible}
+.fx{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"></div><div id="grid"></div>
+  <div id="cam">
+    <div class="scene" id="s0" data-t="0,3"></div>
+
+    <div class="scene" id="s1" data-t="3,5">
+      <span class="el mdl" style="font-size:86px" data-a="up" data-in="3.0">설계사가 그만두는</span>
+      <span class="el big hr" style="font-size:156px;margin-top:6px" data-a="slam" data-in="3.5">다섯 번의 고비</span>
+      <span class="el sub" style="font-size:58px;margin-top:40px" data-a="type" data-in="4.1" data-dur="0.7">신입 「막막이」의 하루</span>
+    </div>
+
+    <div id="pains"></div>
+
+    <div class="scene" id="s7" data-t="27.5,30.5">
+      <span class="el big" style="font-size:120px" data-a="slam" data-in="27.5"><span style="color:rgba(255,255,255,.45);text-decoration:line-through;text-decoration-thickness:10px">막막이</span> → <span class="hgr">척척이</span></span>
+      <div style="margin-top:40px;white-space:normal;max-width:940px">
+        <span class="el chip" style="display:inline-block" data-a="pop" data-in="28.0"><b>✔</b> 찾기</span>
+        <span class="el chip" style="display:inline-block" data-a="pop" data-in="28.2"><b>✔</b> 연락</span>
+        <span class="el chip" style="display:inline-block" data-a="pop" data-in="28.4"><b>✔</b> 상담</span>
+        <span class="el chip" style="display:inline-block" data-a="pop" data-in="28.6"><b>✔</b> 제안</span>
+        <span class="el chip" style="display:inline-block" data-a="pop" data-in="28.8"><b>✔</b> 관리</span>
+      </div>
+      <span class="el mdl" style="font-size:76px;margin-top:36px" data-a="up" data-in="29.2">처음부터 끝까지, <span class="hl">앱 하나.</span></span>
+    </div>
+
+    <div class="scene mid" id="s8" data-t="30.5,33.5">
+      <span class="el mdl" style="font-size:110px" data-a="up" data-in="30.5">수입은</span>
+      <span class="el mdl" style="font-size:110px" data-a="up" data-in="31.0">약속 <span class="hr">안</span> 한다.</span>
+      <span class="el big" style="font-size:168px;margin-top:80px" data-a="slam" data-in="32.0"><span class="hl">무기</span>는</span>
+      <span class="el big" style="font-size:168px" data-a="slam" data-in="32.0">약속한다.</span>
+    </div>
+
+    <div class="scene" id="s9" data-t="33.5,37.5">
+      <span class="el mdl" style="font-size:84px" data-a="up" data-in="33.5">댓글에</span>
+      <span class="el big" style="font-size:180px;margin:24px 0 34px" data-a="stamp" data-rot="-3" data-in="34.0"><span class="box">「무기」</span></span>
+      <span class="el mdl" style="font-size:76px" data-a="up" data-in="34.75">남기면 DM 드려요 📩</span>
+      <span class="el" style="font-size:44px;font-weight:900;letter-spacing:.2em;margin-top:40px;color:rgba(255,255,255,.8)" data-a="up" data-in="35.25">APEX · YUN PRO</span>
+      <div class="fine el" data-a="up" data-in="35.5">보험설계사로 일하려면 자격시험 합격과 등록 절차가 필요합니다.<br>수입은 활동과 성과에 따라 사람마다 다릅니다.</div>
+    </div>
+
+    <!-- 막막이 — 직접 그린 SVG(남의 캐릭터를 쓰지 않는다). 발끝이 (200,490). -->
+    <div id="chr"><svg viewBox="0 0 400 500" width="400" height="500">
+      <ellipse cx="200" cy="492" rx="112" ry="14" fill="rgba(0,0,0,.4)"/>
+      <g id="cAll">
+        <g id="cloud" class="fx">
+          <g id="rain" stroke="#7FB6FF" stroke-width="7" stroke-linecap="round"></g>
+          <path d="M110 -40 a46 46 0 0 1 80 -30 a58 58 0 0 1 104 22 a40 40 0 0 1 -4 80 h-170 a38 38 0 0 1 -10 -72z" fill="#4A5163"/>
+          <path d="M215 32 l-24 40 h24 l-14 40 l40 -56 h-26 l14 -24z" fill="#FFC83D"/>
+        </g>
+        <rect x="150" y="428" width="38" height="52" rx="16" fill="#1B2335"/>
+        <rect x="212" y="428" width="38" height="52" rx="16" fill="#1B2335"/>
+        <ellipse cx="166" cy="482" rx="30" ry="12" fill="#0E131D"/><ellipse cx="234" cy="482" rx="30" ry="12" fill="#0E131D"/>
+        <g id="armL" transform="translate(132,322)"><path d="M0 0 L0 84" stroke="#2557E6" stroke-width="34" stroke-linecap="round"/><circle cx="0" cy="94" r="20" fill="#FFE3C8"/></g>
+        <g id="armR" transform="translate(268,322)"><path d="M0 0 L0 84" stroke="#2557E6" stroke-width="34" stroke-linecap="round"/><circle cx="0" cy="94" r="20" fill="#FFE3C8"/></g>
+        <path d="M120 312 Q120 290 152 287 L248 287 Q280 290 280 312 L294 440 Q294 454 280 454 L120 454 Q106 454 106 440 Z" fill="#2F6BFF"/>
+        <path d="M172 287 L200 342 L228 287 Z" fill="#fff"/>
+        <path d="M193 296 L207 296 L213 362 L200 378 L187 362 Z" fill="#FF3B4E"/>
+        <path d="M172 287 L192 350 M228 287 L208 350" stroke="#1E46C7" stroke-width="6"/>
+        <rect x="214" y="372" width="70" height="30" rx="7" fill="#fff"/>
+        <text id="badge" x="249" y="394" text-anchor="middle" font-size="19" font-weight="900" fill="#191F28" font-family="Pretendard">막막이</text>
+        <g id="cHead">
+          <circle cx="80" cy="185" r="24" fill="#FFD3B0"/><circle cx="320" cy="185" r="24" fill="#FFD3B0"/>
+          <circle cx="200" cy="175" r="126" fill="#FFE3C8"/>
+          <path d="M76 168 Q78 46 200 44 Q322 46 324 168 Q300 112 236 104 Q206 132 152 110 Q102 118 76 168 Z" fill="#232838"/>
+          <path d="M198 48 Q210 10 244 22" stroke="#232838" stroke-width="11" fill="none" stroke-linecap="round"/>
+          <g class="fx f-happy f-point f-proud"><ellipse cx="128" cy="218" rx="24" ry="13" fill="#FF8FA3" opacity=".55"/><ellipse cx="272" cy="218" rx="24" ry="13" fill="#FF8FA3" opacity=".55"/></g>
+          <!-- 슬픔 -->
+          <g class="fx f-sad" stroke="#191F28" stroke-width="8" stroke-linecap="round" fill="none">
+            <path d="M128 140 L172 126"/><path d="M228 126 L272 140"/>
+            <path d="M172 246 Q200 224 228 246"/>
+          </g>
+          <g class="fx f-sad" fill="#191F28"><circle cx="152" cy="180" r="11"/><circle cx="248" cy="180" r="11"/></g>
+          <g class="fx f-sad" id="tears" fill="#5AC8FA"><path d="M146 196 q-8 18 0 26 q8 -8 0 -26z"/><path d="M254 196 q-8 18 0 26 q8 -8 0 -26z"/></g>
+          <!-- 당황 -->
+          <g class="fx f-panic">
+            <path d="M126 128 Q150 104 174 122 M226 122 Q250 104 274 128" stroke="#191F28" stroke-width="8" fill="none" stroke-linecap="round"/>
+            <circle cx="150" cy="176" r="27" fill="#fff" stroke="#191F28" stroke-width="5"/><circle cx="250" cy="176" r="27" fill="#fff" stroke="#191F28" stroke-width="5"/>
+            <circle id="pupL" cx="150" cy="176" r="7" fill="#191F28"/><circle id="pupR" cx="250" cy="176" r="7" fill="#191F28"/>
+            <path d="M168 236 Q176 226 184 236 Q192 246 200 236 Q208 226 216 236 Q224 246 232 236" stroke="#191F28" stroke-width="7" fill="none" stroke-linecap="round"/>
+            <path d="M302 96 q-14 24 0 32 q14 -8 0 -32z" fill="#8FD3FF"/><path d="M96 120 q-10 18 0 24 q10 -6 0 -24z" fill="#8FD3FF"/>
+          </g>
+          <!-- 멍 -->
+          <g class="fx f-blank">
+            <circle cx="150" cy="178" r="25" fill="#fff" stroke="#191F28" stroke-width="5"/><circle cx="250" cy="178" r="25" fill="#fff" stroke="#191F28" stroke-width="5"/>
+            <path d="M150 178 m-12 0 a12 12 0 1 1 12 12 a7 7 0 1 1 -6 -8" stroke="#191F28" stroke-width="4" fill="none"/>
+            <path d="M250 178 m-12 0 a12 12 0 1 1 12 12 a7 7 0 1 1 -6 -8" stroke="#191F28" stroke-width="4" fill="none"/>
+            <circle cx="200" cy="244" r="13" fill="none" stroke="#191F28" stroke-width="6"/>
+            <text x="320" y="70" font-size="70" font-weight="900" fill="#FFC83D" font-family="Pretendard">?</text>
+            <text x="40" y="96" font-size="52" font-weight="900" fill="#FFC83D" font-family="Pretendard">?</text>
+          </g>
+          <!-- 지침 -->
+          <g class="fx f-tired" stroke-linecap="round" fill="none">
+            <path d="M130 180 L172 180 M228 180 L270 180" stroke="#191F28" stroke-width="8"/>
+            <path d="M134 196 Q152 208 170 196 M230 196 Q248 208 266 196" stroke="#B98E7A" stroke-width="6"/>
+            <path d="M178 244 L222 244" stroke="#191F28" stroke-width="7"/>
+            <text x="300" y="80" font-size="54" font-weight="900" fill="#9FB4FF" stroke="none" font-family="Pretendard">z</text>
+            <text x="334" y="40" font-size="40" font-weight="900" fill="#9FB4FF" stroke="none" font-family="Pretendard">z</text>
+          </g>
+          <!-- 기쁨 -->
+          <g class="fx f-happy">
+            <path d="M132 184 Q152 158 172 184 M228 184 Q248 158 268 184" stroke="#191F28" stroke-width="8" fill="none" stroke-linecap="round"/>
+            <path d="M158 226 Q200 286 242 226 Z" fill="#191F28"/><path d="M178 250 Q200 270 222 250 Q200 240 178 250z" fill="#FF6B81"/>
+          </g>
+          <!-- 가리키기 -->
+          <g class="fx f-point">
+            <circle cx="152" cy="178" r="13" fill="#191F28"/><circle cx="157" cy="172" r="4" fill="#fff"/>
+            <path d="M228 182 Q248 164 268 182" stroke="#191F28" stroke-width="8" fill="none" stroke-linecap="round"/>
+            <path d="M166 232 Q200 264 234 232" stroke="#191F28" stroke-width="8" fill="none" stroke-linecap="round"/>
+          </g>
+          <!-- 척척이 — 선글라스 -->
+          <g class="fx f-proud">
+            <path d="M116 158 H186 Q190 200 152 204 Q118 202 116 158Z M214 158 H284 Q282 202 248 204 Q210 200 214 158Z" fill="#11141B"/>
+            <path d="M186 166 H214" stroke="#11141B" stroke-width="8"/>
+            <path d="M132 166 l22 0 M230 166 l22 0" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".7"/>
+            <path d="M172 238 Q206 262 236 230" stroke="#191F28" stroke-width="8" fill="none" stroke-linecap="round"/>
+          </g>
+        </g>
+        <g id="spark" class="fx" fill="#FFC83D">
+          <path d="M40 120 l10 -26 l10 26 l26 10 l-26 10 l-10 26 l-10 -26 l-26 -10z"/>
+          <path d="M344 220 l7 -18 l7 18 l18 7 l-18 7 l-7 18 l-7 -18 l-18 -7z"/>
+          <path d="M330 30 l6 -15 l6 15 l15 6 l-15 6 l-6 15 l-6 -15 l-15 -6z"/>
+        </g>
+      </g>
+    </svg></div>
+  </div>
+  <div id="bar"><i></i></div>
+  <div id="brand">APEX · YUN PRO</div>
+  <canvas id="grain" width="540" height="960"></canvas>
+  <div id="flash"></div>
+</div>
+
+<script>
+// ───────── 타깃별 후킹(0~3초) — 글은 위, 막막이는 아래 ─────────
+var VARIANTS = {
+  A:{bg:'red',mood:'sad',lines:[
+    '<span class="el big" style="font-size:170px" data-a="slam" data-in="0.05">월급 <span class="hr">빼고</span></span>',
+    '<span class="el big" style="font-size:170px" data-a="slam" data-in="0.6">다 오른다.</span>',
+    '<span class="el sub" style="font-size:64px;margin-top:40px" data-a="type" data-in="1.3" data-dur="0.9">언제까지 버틸 건데?</span>']},
+  B:{bg:'',mood:'tired',lines:[
+    '<span class="el mdl" style="font-size:110px" data-a="up" data-in="0.05">아이 하원 시간,</span>',
+    '<span class="el big" style="font-size:150px;margin-top:10px" data-a="slam" data-in="0.6"><span class="hl">내가</span> 정하는</span>',
+    '<span class="el big" style="font-size:150px" data-a="slam" data-in="1.1">직업.</span>',
+    '<span class="el sub" style="font-size:64px;margin-top:40px" data-a="type" data-in="1.7" data-dur="0.7">…있긴 할까?</span>']},
+  C:{bg:'red',mood:'panic',lines:[
+    '<span class="el mdl" style="font-size:120px" data-a="up" data-in="0.05">아직도</span>',
+    '<span class="el big" style="font-size:150px" data-a="slam" data-in="0.55"><span class="boxr">감</span>으로 영업해?</span>',
+    '<span class="el sub" style="font-size:60px;margin-top:40px" data-a="type" data-in="1.3" data-dur="0.9">엑셀 · 메모장 · 기억력으로?</span>']}
+};
+var VK=(location.hash||'#A').slice(1); var V=VARIANTS[VK]||VARIANTS.A;
+document.getElementById('s0').innerHTML=V.lines.join('');
+
+// ───────── 다섯 고비 — 고민(1.75초) → 해법(2.75초) ─────────
+// 해법 꼬리표(tags)는 앱 메뉴 이름 그대로. 화면 카드는 「예시 화면」 — 금액은 적지 않고, 이름은 홍길동 · 김○○ 로 가린다.
+var P0=5, PL=4.5, PA=1.75;
+var PAINS=[
+ {k:'찾기',mood:'sad',say:'만날 사람이 없어…',mono:'지인 명단, 벌써 바닥',
+  core:'누굴·어디서 만날지<br><span class="hl">앱이 짜 준다</span>',tags:'DB 통합 CRM · 지역 동선 · 미끼상품 접촉전략',
+  card:function(t){return '<h4>오늘 동선</h4><div class="cap">DB 통합 CRM — 만날 순서대로</div>'+
+   '<div class="in" style="padding:0;overflow:hidden"><svg viewBox="0 0 820 300" width="100%" height="300" style="display:block;background:#EAF0F7">'+
+   '<path d="M0 90 H820 M0 210 H820 M180 0 V300 M430 0 V300 M640 0 V300" stroke="#fff" stroke-width="22"/>'+
+   '<ellipse cx="540" cy="150" rx="70" ry="44" fill="#CDEBD3"/>'+
+   '<path class="draw" data-in="'+(t+0.25)+'" d="M180 230 L180 90 L430 90 L430 210 L640 210 L640 90" fill="none" stroke="#1A56DB" stroke-width="9" stroke-dasharray="100" stroke-dashoffset="100" pathLength="100" stroke-linecap="round"/>'+
+   ['180,230','430,90','640,90'].map(function(p,i){var xy=p.split(',');return '<g class="el" data-a="pop" data-in="'+(t+0.3+i*0.25)+'" style="transform-origin:'+xy[0]+'px '+xy[1]+'px;transform-box:view-box"><circle cx="'+xy[0]+'" cy="'+(xy[1]-26)+'" r="26" fill="#F04452"/><path d="M'+(xy[0]-14)+' '+(xy[1]-16)+' L'+xy[0]+' '+xy[1]+' L'+(+xy[0]+14)+' '+(xy[1]-16)+'z" fill="#F04452"/><text x="'+xy[0]+'" y="'+(xy[1]-17)+'" text-anchor="middle" font-size="26" font-weight="900" fill="#fff">'+(i+1)+'</text></g>';}).join('')+
+   '</svg></div><div class="in">'+
+   [['1','김○○ 님','10:30 · ○○동'],['2','이○○ 님','13:00 · ○○동'],['3','홍길동 님','15:30 · ○○동']].map(function(r,i){return '<div class="r el" data-a="up" data-in="'+(t+0.35+i*0.2)+'"><span class="k">'+r[0]+'</span>'+r[1]+'<small>'+r[2]+'</small></div>';}).join('')+'</div>';}},
+ {k:'연락',mood:'panic',say:'전화 걸기가 무서워…',mono:'뭐라고 말하지? 또 거절이면?',
+  core:'첫 마디는 대본에,<br>거절은 <span class="hl">연습으로</span>',tags:'TA 스크립트 · 거절 근육 훈련 · 신입 TA 교육',
+  card:function(t){return '<h4>TA 대본</h4><div class="cap">첫 마디부터 약속 잡기까지</div>'+
+   '<div class="tabs"><span class="on">첫 마디</span><span>거절 받을 때</span><span>약속 잡기</span></div>'+
+   '<div class="in"><div class="sk" style="width:80%"></div><div class="sk"></div><div class="sk" style="width:60%"></div></div>'+
+   '<div class="in"><div style="font-size:26px;font-weight:800;color:#6B7684">🥊 거절 근육 훈련</div>'+
+   '<div class="el" data-a="up" data-in="'+(t+0.3)+'"><span class="lb l">“보험 많아요.”</span></div>'+
+   '<div class="el" data-a="up" data-in="'+(t+0.7)+'" style="text-align:right"><span class="lb rr">받아치기 연습 ▶</span></div>'+
+   '<div class="r"><span style="font-size:25px;color:#8B95A1">오늘 연습</span><span class="tr"><b class="grow" data-w="70" data-in="'+(t+0.9)+'" style="background:#2BD67B"></b></span></div></div>';}},
+ {k:'상담',mood:'blank',say:'질문 하나에 머리가 하얘져',mono:'이 약관… 무슨 뜻이지?',
+  core:'답은 <span class="hl">약관 원문</span>에서,<br>형광펜까지',tags:'상품전략기 · 재무설계 실전화법서 · AI 상담 어시스턴트',
+  card:function(t){return '<h4>약관 원문 발췌</h4><div class="cap">상품전략기 — 원문 그대로, 핵심에 형광펜</div>'+
+   '<div class="in doc">제○조(보험금의 지급사유) 회사는 피보험자에게 다음 중 어느 하나의 사유가 생긴 경우에는 '+
+   '<span class="mk"><i data-in="'+(t+0.3)+'"></i><span>보험수익자에게 약정한 보험금을 지급합니다.</span></span> '+
+   '다만, <span class="mk"><i data-in="'+(t+0.75)+'"></i><span>보장개시일 이전에 생긴 경우</span></span>에는…</div>'+
+   '<div class="in el" data-a="up" data-in="'+(t+1.05)+'"><div style="font-size:26px;font-weight:800;color:#1A56DB">💬 실전 화법서 · 이렇게 풀어 말하기</div><div class="sk" style="width:90%"></div><div class="sk" style="width:65%"></div></div>';}},
+ {k:'제안',mood:'tired',say:'분석·제안서에 밤샌다',mono:'새벽 2시, 아직 엑셀',
+  core:'<span class="hl">PDF 넣으면</span><br>전·후가 한 장에',tags:'AI 보장분석 · 보장분석 전&후 만들기 · AI 제안서 생성',
+  card:function(t){var rows=[['암 진단',35,92],['뇌혈관',12,85],['심장',20,80],['수술비',55,90]];
+   return '<h4>보장분석 전 · 후</h4><div class="cap">기존 보장분석 PDF 를 넣으면</div>'+
+   '<div class="el" data-a="drop" data-in="'+(t+0.1)+'"><span class="pdf">📄 기존보장분석_홍길동.pdf</span></div>'+
+   '<div class="in"><div class="r" style="font-size:22px;color:#8B95A1;padding:0"><span style="width:140px"></span><span style="flex:1">지금</span><span style="flex:1">제안 후</span></div>'+
+   rows.map(function(r,i){return '<div class="r"><span style="width:140px">'+r[0]+'</span><span class="tr"><b class="grow" data-w="'+r[1]+'" data-in="'+(t+0.45+i*0.06)+'" style="background:#F04452"></b></span><span class="tr"><b class="grow" data-w="'+r[2]+'" data-in="'+(t+0.6+i*0.06)+'" style="background:#1A56DB"></b></span></div>';}).join('')+
+   '</div><span class="btn el" data-a="pop" data-in="'+(t+1.1)+'">🧾 제안서 PDF 만들기</span>';}},
+ {k:'관리',mood:'sad',say:'계약 뒤가 더 막막해',mono:'갱신·생일·청구… 다 놓쳐',
+  core:'챙길 날은<br><span class="hl">앱이 먼저</span> 부른다',tags:'오늘의 AI 비서 · 4년 유지관리 · 청구·사후관리',
+  card:function(t){var rows=[['🎂','이○○ 님 생일','안부 연락'],['🔁','김○○ 님','갱신 안내'],['🧾','박○○ 님','청구 서류'],['📆','4년 유지관리','이번 달 점검']];
+   return '<h4>오늘의 AI 비서</h4><div class="cap">오늘 챙길 것 — 앱이 먼저 알려 준다</div><div class="in">'+
+   rows.map(function(r,i){return '<div class="r el" data-a="up" data-in="'+(t+0.15+i*0.15)+'" style="border-bottom:2px solid #F0F2F5;padding:16px 0"><span class="ck" data-on="'+(t+0.7+i*0.25)+'">✓</span>'+r[0]+' '+r[1]+'<small>'+r[2]+'</small></div>';}).join('')+'</div>';}}
+];
+var phtml='';
+PAINS.forEach(function(p,i){
+  var a=P0+i*PL, b=a+PA, e=a+PL;
+  p.a=a;p.b=b;p.e=e;
+  phtml+='<div class="scene pain" data-t="'+a+','+e+'" data-red="'+a+','+b+'">'+
+   '<div class="ph">'+
+    '<span class="el" data-a="up" data-in="'+a+'" data-out="'+b+'"><span class="chipk">고비 '+(i+1)+' · '+p.k+'</span></span>'+
+    '<span class="el" data-a="pop" data-in="'+(a+0.2)+'" data-out="'+b+'"><span class="bub">'+p.say+'</span></span>'+
+    '<span class="el mono" data-a="type" data-in="'+(a+0.6)+'" data-dur="0.8" data-out="'+b+'">'+p.mono+'</span>'+
+   '</div>'+
+   '<div class="ph" style="padding-top:250px">'+
+    '<span class="el" data-a="up" data-in="'+b+'" style="margin-bottom:22px"><span class="chipk ok">고비 '+(i+1)+' → 이렇게 넘긴다</span></span>'+
+    '<div class="card2 el" data-a="drop" data-in="'+b+'"><span class="tag">예시 화면</span>'+p.card(b)+'</div>'+
+    '<span class="el core" data-a="slam" data-in="'+(b+0.45)+'">'+p.core+'</span>'+
+    '<span class="el tags" data-a="up" data-in="'+(b+0.75)+'">'+p.tags+'</span>'+
+   '</div></div>';
+});
+document.getElementById('pains').innerHTML=phtml;
+
+var TOTAL=37.5, BEAT=0.5;
+function clamp(x,a,b){return x<a?a:x>b?b:x;}
+function eo(x){return 1-Math.pow(1-x,3);}
+function eio(x){return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;}
+function back(x){var c=1.9;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2);}
+function rnd(n){var x=Math.sin(n*12.9898)*43758.5453;return x-Math.floor(x);}
+
+var scenes=[].slice.call(document.querySelectorAll('.scene')).map(function(s){
+  var r=s.getAttribute('data-t').split(',').map(Number);
+  return {el:s,a:r[0],b:r[1],items:[].slice.call(s.querySelectorAll('.el')),
+    draws:[].slice.call(s.querySelectorAll('.draw')),grows:[].slice.call(s.querySelectorAll('.grow')),
+    marks:[].slice.call(s.querySelectorAll('.mk i')),checks:[].slice.call(s.querySelectorAll('.ck[data-on]'))};
+});
+[].slice.call(document.querySelectorAll('[data-a="type"]')).forEach(function(e){e._txt=e.textContent;});
+
+function anim(e,t){
+  var a=e.getAttribute('data-a'), t0=+e.getAttribute('data-in'), d=t-t0, out=e.getAttribute('data-out');
+  if(d<0){e.style.opacity=0;e.style.transform='none';return;}
+  var tf='',op=1;
+  if(a==='slam'){var p=clamp(d/0.16,0,1);op=p;tf='scale('+(2.3-1.3*eo(p))+')';
+    if(d>0.16&&d<0.4){var k=(0.4-d)/0.24;tf+=' translate('+((rnd(t*97)-.5)*22*k)+'px,'+((rnd(t*31)-.5)*22*k)+'px)';}}
+  else if(a==='stamp'){var p2=clamp(d/0.18,0,1),rt=e.hasAttribute('data-rot')?+e.getAttribute('data-rot'):-12;tf='rotate('+((rt+2)*eo(p2)-2)+'deg) scale('+(3-2*eo(p2))+')';op=p2;}
+  else if(a==='up'){var p3=clamp(d/0.28,0,1);tf='translateY('+(70*(1-eo(p3)))+'px)';op=p3;}
+  else if(a==='drop'){var p5=clamp(d/0.32,0,1);tf='translateY('+(-160*(1-eo(p5)))+'px) rotate('+(-3*(1-eo(p5)))+'deg)';op=clamp(p5*1.6,0,1);}
+  else if(a==='pop'){var p4=clamp(d/0.3,0,1);tf='scale('+(0.4+0.6*back(p4))+')';op=clamp(p4*2,0,1);}
+  else if(a==='type'){var dur=+e.getAttribute('data-dur')||0.8;var n=Math.floor(clamp(d/dur,0,1)*e._txt.length);
+    e.textContent=e._txt.slice(0,n)+(n<e._txt.length&&Math.floor(t*6)%2===0?'▌':'');}
+  if(out!==null){var o=t-(+out);if(o>=0){op*=clamp(1-o/0.12,0,1);tf+=' translateY('+(-60*clamp(o/0.12,0,1))+'px)';}}
+  e.style.opacity=op;e.style.transform=tf||'none';
+}
+
+// ───────── 막막이 — 자리·크기·표정을 시간표로 ─────────
+// {t, x(발 가운데), y(발끝), s, m(표정), arm:[왼,오른 각도]}
+var ARMS={sad:[14,-14],panic:[158,-158],blank:[30,-30],tired:[6,-6],happy:[140,-140],point:[18,-132],proud:[22,-150],wave:[18,-150]};
+var CH=[{t:0,x:540,y:1520,s:0.95,m:V.mood},{t:3,x:540,y:1500,s:0.95,m:'tired'},{t:4.1,x:540,y:1500,s:0.95,m:'sad'}];
+PAINS.forEach(function(p){
+  CH.push({t:p.a,x:540,y:1500,s:1.0,m:p.mood});
+  CH.push({t:p.b,x:540,y:1600,s:0.38,m:'happy'});      // 해법 때는 글 아래로 — 카드·핵심 줄을 가리지 않게
+  CH.push({t:p.b+0.6,x:540,y:1600,s:0.38,m:'point'});
+});
+CH.push({t:27.5,x:540,y:1520,s:0.9,m:'proud'});
+CH.push({t:30.5,x:540,y:2300,s:0.9,m:'proud'});   // 「수입은…」 동안은 화면 밖으로
+CH.push({t:33.5,x:540,y:1400,s:0.5,m:'wave'});
+var chr=document.getElementById('chr'), cAll=document.getElementById('cAll'), cHead=document.getElementById('cHead');
+var armL=document.getElementById('armL'), armR=document.getElementById('armR'), badge=document.getElementById('badge');
+var cloud=document.getElementById('cloud'), rain=document.getElementById('rain'), spark=document.getElementById('spark');
+var fxs=[].slice.call(document.querySelectorAll('#chr .fx[class*="f-"]'));
+var MOVE=0.32;
+function charAt(t){
+  var i=0; while(i+1<CH.length&&CH[i+1].t<=t)i++;
+  var k=CH[i], prev=CH[Math.max(0,i-1)], q=i===0?1:eio(clamp((t-k.t)/MOVE,0,1));
+  var x=prev.x+(k.x-prev.x)*q, y=prev.y+(k.y-prev.y)*q, s=prev.s+(k.s-prev.s)*q, m=k.m, d=t-k.t;
+  var bob=0, sx=1, sy=1, shx=0, rot=0, hr=0;
+  var ph=(t%BEAT)/BEAT;
+  if(m==='sad'){bob=Math.sin(t*3)*4;hr=Math.sin(t*2)*3;}
+  else if(m==='panic'||m==='blank'){shx=(rnd(Math.floor(t*30)*1.7)-.5)*(m==='panic'?14:6);hr=m==='blank'?Math.sin(t*5)*6:0;}
+  else if(m==='tired'){rot=Math.sin(t*2.2)*3;hr=-8+Math.sin(t*2.2)*4;bob=Math.sin(t*2.2)*3;}
+  else if(m==='happy'){var j=Math.abs(Math.sin(Math.PI*d/0.3));bob=-j*60;sy=1+0.08*(1-j);sx=1-0.06*(1-j);}
+  else {bob=-Math.exp(-ph*5)*10;sy=1+0.03*Math.exp(-ph*5);}
+  // 표정이 바뀌는 순간 찌그러졌다 편다
+  if(d>=0&&d<0.18){var sq=Math.sin(Math.PI*d/0.18);sy*=1-0.12*sq;sx*=1+0.1*sq;}
+  chr.style.transform='translate('+(x-200*s+shx)+'px,'+(y-490*s+bob)+'px) scale('+s+')';
+  cAll.setAttribute('transform','rotate('+rot+' 200 490) translate(200 490) scale('+sx+' '+sy+') translate(-200 -490)');
+  cHead.setAttribute('transform','rotate('+hr+' 200 300)');
+  var A=ARMS[m]||[10,-10], w=(m==='wave')?Math.sin(t*12)*22:(m==='happy'?Math.sin(t*14)*10:(m==='panic'?Math.sin(t*20)*8:0));
+  armL.setAttribute('transform','translate(132,322) rotate('+(A[0]+(m==='happy'?-w:0))+')');
+  armR.setAttribute('transform','translate(268,322) rotate('+(A[1]+w)+')');
+  fxs.forEach(function(g){g.style.display=(' '+g.getAttribute('class')+' ').indexOf(' f-'+m+' ')>=0?'inline':'none';});
+  var gloomy=(m==='sad'||m==='panic'||m==='blank'||m==='tired')&&t>=3;
+  cloud.style.display=gloomy?'inline':'none';
+  if(gloomy){var h='';for(var r=0;r<7;r++){var ry=((t*700+r*53)%110);h+='<path d="M'+(125+r*25)+' '+(60+ry)+' l-6 18"/>';}rain.innerHTML=h;}
+  cloud.setAttribute('transform','translate(0 '+(-150+Math.sin(t*2)*6)+')');
+  spark.style.display=(m==='happy'||m==='proud'||m==='point'||m==='wave')?'inline':'none';
+  spark.setAttribute('opacity',0.6+0.4*Math.sin(t*9));
+  var tears=document.getElementById('tears');tears.setAttribute('transform','translate(0 '+((t*90)%30)+')');
+  if(m==='panic'){document.getElementById('pupL').setAttribute('cx',150+Math.sin(t*25)*9);document.getElementById('pupR').setAttribute('cx',250+Math.sin(t*25)*9);}
+  badge.textContent=t>=27.75?'척척이':'막막이';
+  chr.style.opacity=t>=30.5&&t<33.5?0:1;
+}
+
+var cam=document.getElementById('cam'),flash=document.getElementById('flash'),bg=document.getElementById('bg'),bar=document.querySelector('#bar i');
+var gctx=document.getElementById('grain').getContext('2d'),gimg=gctx.createImageData(540,960);
+var IMPACTS=[];
+scenes.forEach(function(s){s.items.forEach(function(e){var a=e.getAttribute('data-a');if(a==='slam'||a==='stamp'){var v=+e.getAttribute('data-in');if(IMPACTS.indexOf(v)<0)IMPACTS.push(v);}});});
+var CUTS=[3,5].concat(PAINS.map(function(p){return p.a;}).slice(1)).concat([27.5,30.5,33.5]);
+var SOLS=PAINS.map(function(p){return p.b;});
+var FLASHES=CUTS.concat(SOLS,[32]);
+
+function render(t){
+  bar.style.width=(100*t/TOTAL)+'%';
+  var red=(t<3&&V.bg==='red')||(t>=3&&t<5)||(t>=30.5&&t<32);
+  PAINS.forEach(function(p){if(t>=p.a&&t<p.b)red=true;});
+  bg.classList.toggle('red',!!red);
+  bg.style.transform='translate('+(Math.sin(t*0.6)*60)+'px,'+(Math.cos(t*0.45)*60)+'px)';
+  scenes.forEach(function(s){
+    var on=t>=s.a&&t<s.b; s.el.style.display=on?'flex':'none'; if(!on)return;
+    var w=clamp((t-s.a)/0.12,0,1);
+    s.el.style.transform=s.a>0?'translateX('+(160*(1-eo(w)))+'px)':'none';
+    s.el.style.filter=s.a>0&&w<1?'blur('+(14*(1-w))+'px)':'none';
+    s.items.forEach(function(e){anim(e,t);});
+    s.draws.forEach(function(e){e.setAttribute('stroke-dashoffset',100-100*eo(clamp((t-(+e.getAttribute('data-in')))/0.8,0,1)));});
+    s.grows.forEach(function(e){e.style.width=(+e.getAttribute('data-w')*eo(clamp((t-(+e.getAttribute('data-in')))/0.5,0,1)))+'%';});
+    s.marks.forEach(function(e){e.style.transform='scaleX('+eo(clamp((t-(+e.getAttribute('data-in')))/0.35,0,1))+')';});
+    s.checks.forEach(function(e){e.classList.toggle('on',t>=+e.getAttribute('data-on'));});
+  });
+  charAt(t);
+  var ph=(t%BEAT)/BEAT,pulse=0.012*Math.exp(-ph*6),punch=0;
+  IMPACTS.forEach(function(i){var d=t-i;if(d>=0&&d<0.35)punch=Math.max(punch,0.05*Math.exp(-d*12));});
+  if(t>=31.75&&t<32)pulse=0;
+  cam.style.transform='scale('+(1+pulse+punch)+')';
+  var f=0;FLASHES.forEach(function(c){var d=t-c;if(d>=0&&d<0.15)f=Math.max(f,0.55*(1-d/0.15));});
+  flash.style.opacity=f;
+  var seed=Math.floor(t*30),d8=gimg.data;
+  for(var i=0;i<d8.length;i+=4){var v=rnd(i*0.37+seed*7.1)*255;d8[i]=d8[i+1]=d8[i+2]=v;d8[i+3]=255;}
+  gctx.putImageData(gimg,0,0);
+}
+
+// render.js 가 소리를 맞출 순간들
+window.REEL={total:TOTAL,fps:30,prefix:'스토리릴스',cues:function(){
+  var ins=function(sel){return [].slice.call(document.querySelectorAll(sel)).map(function(e){return +e.getAttribute('data-in');});};
+  return {total:TOTAL,impacts:IMPACTS,cuts:CUTS.concat(SOLS),
+    pops:ins('[data-a="pop"],[data-a="drop"]'),
+    ticks:[].slice.call(document.querySelectorAll('.ck[data-on]')).map(function(e){return +e.getAttribute('data-on');}),
+    types:[].slice.call(document.querySelectorAll('[data-a="type"]')).map(function(e){var a=+e.getAttribute('data-in'),d=+e.getAttribute('data-dur')||0.8;return [a,a+d,e._txt.length];}),
+    sparse:PAINS.map(function(p){return [p.a,p.b];}),uhoh:PAINS.map(function(p){return p.a+0.2;}),dings:SOLS,
+    hush:[31.75,32.0],riser:[30.5,31.75]};
+}};
+window.render=render;
+render(0);
+</script>
+</body>
+</html>

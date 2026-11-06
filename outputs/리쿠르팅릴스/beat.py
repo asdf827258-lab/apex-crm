@@ -123,6 +123,12 @@ for k in range(nb):
     if hush[0] <= t < hush[1] or t >= T - 0.5:
         continue
     full = t >= 3.0
+    # 고민 구간은 북만 남겨 가라앉힌다 — 해법에서 다시 꽉 찬다
+    if any(a <= t < b for a, b in cues.get("sparse", [])):
+        put(kick(), t, 0.55)
+        if k % 2 == 0:
+            put(bass_note(ROOTS[3], 0.9), t, 0.2)
+        continue
     put(kick(), t, 0.95)
     if full and k % 2 == 1:
         put(snare(), t, 0.45)
@@ -145,6 +151,29 @@ for a, b, nch in cues["types"]:
     for i in range(nch):
         put(tick(3200 + 300 * (i % 3), 0.006), a + (b - a) * i / max(1, nch), 0.25)
 put(riser(cues["riser"][0], cues["riser"][1]), cues["riser"][0], 0.35)
+
+
+def tone(f0, f1, length, dec):
+    n = int(length * SR)
+    t = np.arange(n) / SR
+    f = f0 + (f1 - f0) * t / length
+    return np.sin(2 * np.pi * np.cumsum(f) / SR) * env(n, 0.004, dec)
+
+
+def bell(f):
+    n = int(0.9 * SR)
+    t = np.arange(n) / SR
+    s = sum(a * np.sin(2 * np.pi * f * m * t) for m, a in ((1, 1), (2, 0.5), (3, 0.25), (4.2, 0.15)))
+    return s * env(n, 0.002, 0.35)
+
+
+for t in cues.get("uhoh", []):  # 고민 — 내려가는 두 음 「어-오」
+    put(tone(523, 500, 0.18, 0.12), t, 0.35)
+    put(tone(415, 370, 0.32, 0.2), t + 0.2, 0.35)
+for t in cues.get("dings", []):  # 해법 — 맑은 종 두 번
+    put(bell(1046.5), t, 0.28)
+    put(bell(1568), t + 0.12, 0.22)
+    put(boom(), t, 0.5)
 
 # 「수입은 약속 안 한다」 뒤 반 박자는 완전히 비운다 — 꼬리까지 잘라야 「무기는」 이 꽂힌다
 h0, h1 = int(hush[0] * SR), int(hush[1] * SR)
