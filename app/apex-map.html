@@ -503,6 +503,10 @@ body.in-crm{padding-bottom:84px}
 .jr-b button, .jr-b a{min-height:44px; display:inline-flex; align-items:center; padding:6px 14px; font:inherit; font-size:var(--t6);
   font-weight:700; border-radius:10px; cursor:pointer; text-decoration:none}
 .jr-copy, .jr-say, .jr-img{border:1px solid #DCE4F1; background:#fff; color:#33425C}
+/* 🗣 그 말로 다시 묻기 (판 X329) — 손가락 하나 44px */
+.jr-asks{display:flex; flex-wrap:wrap; gap:7px; margin-top:8px}
+.jr-ask{min-height:44px; padding:6px 12px; font:inherit; font-size:var(--t6); font-weight:700; border-radius:10px; cursor:pointer;
+  border:1px solid #D5E3FA; background:#F3F8FF; color:var(--blue); text-align:left; max-width:100%}
 .jf-more{margin-top:6px}
 /* 🧮 연금 계산 (판 X276) — 칸은 44px · 색은 이 쪽에 이미 있는 것만 */
 .j-pen{margin-top:10px; background:#F3F6FB; border:1px solid #DCE4F1; border-radius:11px; padding:9px 11px; white-space:normal}
@@ -849,15 +853,177 @@ body.dock .deck{display:none}
   .hud-svg .r0, .hud-svg .sweep, .hud-svg .glow, .msg.j .bub, .hud[data-st="listen"] .hud-mic{animation:none}
   .hud-boot{display:none !important}
 }
+/* ══ 🪵 <b>자비스 새 판</b> (판 X360 · docs/mokgak/자비스.html 그대로) ══════════════════════
+   ★ 모양만 바꿉니다 — 칸 이름(class)은 그대로라 자(check-jvfind · check-jvguide)가 보던 자리가 그대로입니다.
+   ★ 늘어놓기(위 띠 · 아래 묻는 칸 · 곁 칸)는 <b>자비스 모드에서만</b>(body:not(.dock)) — 아래 띠(독)는 그대로입니다.
+   ★ 글씨 13px · 단추 44px 바닥은 그대로 지킵니다 (check-read). 색은 이 쪽에 이미 있는 것만 씁니다. */
+:root{--jv-card:#FFFFFF; --jv-bg:#F2F4F6; --jv-bg2:#F5F7F9; --jv-line:#E5E8EB; --jv-sub:#4E5968}
+body:not(.dock){padding-bottom:170px}
+body:not(.dock) .bar{padding:10px 14px; gap:8px; flex-wrap:nowrap}
+body:not(.dock) .bar h1{font-size:var(--t4); min-width:0}
+body:not(.dock) .bar h1 small{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.jvb{min-height:44px; padding:0 12px; font-weight:800}
+.jvb.jvi{min-width:44px; padding:0 8px}
+/* 아래 묻는 칸 — 늘 바닥에 */
+body:not(.dock) .ask{position:fixed; left:0; right:0; bottom:0; z-index:65; max-width:none; margin:0;
+  padding:8px 12px calc(10px + env(safe-area-inset-bottom, 0px)); background:rgba(3,11,22,.96); border-top:1px solid var(--h-line2);
+  box-shadow:0 -1px 0 rgba(63,224,255,.18), 0 -10px 28px rgba(0,0,0,.45)}
+body:not(.dock) .ask > *{max-width:760px; margin-left:auto; margin-right:auto}
+/* 섞기 — 상황 단추(#chips)는 HUD 오른쪽 COMMAND 판에 그대로 섭니다 */
+body:not(.dock) .ask-h, body:not(.dock) .ask .lamp{display:none !important}
+body:not(.dock) .askrow{padding:0 0 0 12px; gap:7px; border-radius:14px}
+body:not(.dock) .askrow::before{content:'>'; font-family:ui-monospace,Menlo,Consolas,monospace; font-weight:800; color:var(--h-cy); font-size:var(--t4)}
+body:not(.dock) #ask{background:transparent; border:0; border-radius:14px; min-height:48px; font-size:var(--t5); color:var(--h-ink)}
+#askMic{min-width:52px; min-height:48px; border-radius:14px; background:var(--blue); color:#fff; border:0; font-size:20px}
+#askMic.on{background:#DC2626}
+body:not(.dock) #askGo{min-height:48px; border-radius:12px}
+.jv-quick{display:flex; gap:7px; overflow-x:auto; padding:0 0 8px; scrollbar-width:none}
+.jv-quick::-webkit-scrollbar{display:none}
+.jv-quick button, .jv-sq button, .jv-hs2 button, .jv-nf .j-pick button{flex:none; min-height:44px; padding:6px 12px; border-radius:12px;
+  border:1px solid var(--jv-line); background:var(--jv-bg2); font:inherit; font-size:var(--t6); font-weight:700; color:var(--ink); cursor:pointer; text-align:left}
+/* 아래 묻는 칸의 자주 묻는 말 — HUD 판 색 (읽는 자리 밖이라 어둡게) */
+.ask .jv-quick button{background:var(--h-panel); border-color:var(--h-line); color:var(--h-ink)}
+.ask .jv-quick button:hover{border-color:var(--h-cy); color:var(--h-cy2)}
+body.dock .jv-quick, body.dock #jvSide{display:none}
+/* 대화 판 — 상자 없이 */
+/* 섞기 — 답 자리(#jarvis)는 HUD 아래 토스 회색 판 그대로(판 X353), 머리 · 이어 묻는 칸은 위 띠 · 아래 묻는 칸으로 */
+body:not(.dock) #jarvis{max-width:880px; margin:16px auto 20px}
+body:not(.dock) .j-top, body:not(.dock) #jFoot{display:none}
+body:not(.dock) #jLog{padding:4px 10px}
+.msg.me .bub{border-radius:16px 16px 4px 16px; padding:9px 13px; font-size:var(--t5)}
+/* 말풍선은 걷고 ⭐ 한 장이 카드 — 「J.A.R.V.I.S · 자비스의 답」 머리는 그대로 둡니다 */
+.msg.j .bub{background:transparent; border:0; box-shadow:none; padding:0 2px; color:#191F28}
+/* 섞기 — 카드가 <b>없는</b> 답(글만 · 길만)은 판 X353 의 흰 말풍선 그대로 두고, 카드가 든 답만 말풍선을 걷습니다(겹 하나) */
+.msg.j .bub:not(:has(.jf-best, .j-act, .j-pen, .jv-today, .jv-hi)){background:#fff; border-radius:16px; padding:14px 16px;
+  box-shadow:0 1px 2px rgba(0,27,55,.06), 0 6px 18px rgba(0,27,55,.06)}
+/* 답 하나 = 카드 하나 — 바깥 두 겹(.j-find)은 걷고 ⭐ 한 장(.jf-best)이 카드입니다 */
+.j-find{background:transparent; border:0; padding:0}
+.j-find > b{display:none}
+.jf-best{background:var(--jv-card); border:0; border-radius:18px; padding:14px 14px 12px; margin:6px 0 8px; box-shadow:0 1px 3px rgba(18,42,85,.08)}
+.jf-from{display:inline-block; background:var(--blue-bg); color:var(--blue); border-radius:7px; padding:2px 8px; font-size:var(--t6); margin-bottom:6px}
+.jf-best .jw-n{font-size:var(--t4); line-height:1.4; margin-bottom:6px}
+.jw-split{display:flex; gap:9px; padding:7px 0; border-top:1px solid #F1F3F5; margin:0}
+.jw-split:first-of-type{border-top:0}
+.jw-no{flex:none; min-width:24px; height:24px; border-radius:8px; background:var(--jv-bg2); color:#33425C; font-weight:900; display:inline-flex; align-items:center; justify-content:center; font-size:var(--t6)}
+.jw-t{flex:1; min-width:0}
+.jw-l{display:block; font-size:var(--t6); color:var(--jv-sub); font-weight:700}
+.jw-d{display:none}
+.jw-say{color:var(--ink); font-weight:700}
+.jf-best .jr-b{display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-top:10px}
+.jf-best .jr-b > *{justify-content:center; min-height:48px; border-radius:13px; font-size:var(--t5)}
+.jf-best .jr-copy{background:var(--blue); color:#fff; border-color:var(--blue)}
+.jf-best .jr-say{background:var(--jv-bg2); border-color:transparent; color:var(--ink)}
+.jf-best .jr-open, .jf-best .jr-b > [data-cli]{grid-column:1 / -1; order:3; background:transparent; border:0; color:var(--blue); min-height:44px}
+.jf-best .jr-b > .jr-copy:only-child{grid-column:1 / -1}
+.jf-chips{margin:2px 0 8px}
+.jf-chips > b{display:block; font-size:var(--t6); color:var(--jv-sub); margin:0 2px 6px}
+.jf-hs{display:flex; gap:7px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none}
+.jf-hs::-webkit-scrollbar{display:none}
+.jf-chip{flex:none; max-width:240px; text-align:left; min-height:48px; padding:7px 11px; border-radius:12px; border:1px solid var(--jv-line); background:#fff;
+  font:inherit; font-size:var(--t6); font-weight:700; color:var(--ink); cursor:pointer; white-space:normal}
+.jf-chip small{display:block; font-size:var(--t6); color:var(--jv-sub); font-weight:700}
+.jf-more > summary{color:var(--jv-sub)}
+.jw-row.jv-flash{box-shadow:0 0 0 3px var(--blue-br); border-radius:12px; transition:box-shadow .3s}
+.j-way > summary, .j-extra > summary{color:var(--jv-sub)}
+/* 길(앱 쓰는 법) — 걸음 카드 */
+.msg.j .steps{background:var(--jv-card); border-radius:18px; padding:8px 12px; box-shadow:0 1px 3px rgba(18,42,85,.08)}
+/* 연금 · 일 · 일꾼 · AI — 카드 하나씩 */
+.j-pen, .j-act, .j-work{background:var(--jv-card); border:0; border-radius:18px; padding:14px; box-shadow:0 1px 3px rgba(18,42,85,.08)}
+.jp-big{font-size:var(--t2)}
+.ja-flds{margin:6px 0 4px}
+.ja-fld{display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid #F1F3F5}
+.ja-fld span{flex:none; width:44px; font-size:var(--t6); color:var(--jv-sub); font-weight:700}
+.ja-fld b{flex:1; font-size:var(--t5); min-width:0; word-break:keep-all}
+.ja-fld button, .ja-undo{min-height:44px; border:0; border-radius:10px; background:var(--jv-bg2); font:inherit; font-size:var(--t6); font-weight:800; color:#33425C; padding:0 12px; cursor:pointer}
+.ja-q{color:var(--jv-sub)}
+.j-act .st-b{display:grid; grid-template-columns:1fr 1fr; gap:7px}
+.j-act .ja-ok{justify-content:center; background:var(--blue); color:#fff; border-color:var(--blue)}
+.j-act .ja-no{justify-content:center}
+/* 아직 안 한 일은 <b>아래 확인 판</b>처럼 — 묻는 칸 바로 위에 붙어 있다가, 하고 나면 제자리로 (판 X360) */
+body:not(.dock) .msg:last-child .j-act:has(.ja-ok){position:sticky; bottom:150px; z-index:5; box-shadow:0 -10px 30px rgba(18,42,85,.18), 0 0 0 1px var(--jv-line)}
+.j-aiw{margin-top:10px}
+.j-aiw > summary{cursor:pointer; font-size:var(--t6); font-weight:700; color:var(--jv-sub); min-height:44px; display:flex; align-items:center; list-style:none}
+.j-aiw > summary::-webkit-details-marker{display:none}
+.jv-nf{margin-top:10px}
+.jv-nf > b{display:block; font-size:var(--t6); color:var(--jv-sub); margin-bottom:6px}
+.jv-nf .j-pick{display:grid; grid-template-columns:1fr 1fr; gap:7px}
+/* 첫 화면 */
+.jv-hello .bub{white-space:normal}
+/* 섞기 — 인사 머리 · 할 수 있는 것 셋은 HUD(원자로 · SYSTEM 판)가 이미 말합니다. 한 화면이 같은 수를 두 번 말하지 않게 감춥니다(0-1번) */
+.jv-hello .jv-hi{display:none}
+.jv-hi{background:var(--jv-card); border-radius:18px; padding:16px 14px; margin-bottom:10px; box-shadow:0 1px 3px rgba(18,42,85,.08)}
+.jv-hi h3{font-size:var(--t3); margin:0 0 4px; color:var(--ink); letter-spacing:-.3px}
+.jv-hi p{margin:0; color:var(--jv-sub); font-size:var(--t6)}
+.jv-can{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px; margin-top:12px}
+.jv-can div{background:var(--jv-bg2); border-radius:12px; padding:9px 8px; font-size:var(--t6); color:#33425C; line-height:1.45}
+.jv-can b{display:block; color:var(--ink); font-size:var(--t5)}
+.jv-today{background:var(--jv-card); border-radius:18px; padding:12px 14px; margin-bottom:10px; box-shadow:0 1px 3px rgba(18,42,85,.08)}
+.jv-th{display:inline-block; font-size:var(--t6); font-weight:800; color:#065F46; background:#ECFDF5; border-radius:7px; padding:2px 8px; margin-bottom:4px}
+.jv-tr{display:flex; align-items:center; gap:9px; padding:8px 0; border-top:1px solid #F1F3F5; font-size:var(--t6); color:var(--ink)}
+.jv-tr:first-of-type{border-top:0}
+.jv-tr i{font-style:normal; flex:none; width:30px; height:30px; border-radius:10px; background:var(--jv-bg2); display:flex; align-items:center; justify-content:center}
+.jv-tr i:empty{display:none}
+.jv-tr span{flex:1; min-width:0}
+.jv-tr small{display:block; color:var(--jv-sub); font-size:var(--t6)}
+.jv-tr button{min-height:44px; min-width:44px; border:0; border-radius:10px; background:var(--blue-bg); color:var(--blue); font:inherit; font-size:var(--t6); font-weight:800; padding:0 10px; cursor:pointer}
+.jv-wait{color:#78350F}
+.jv-stg > b{display:block; font-size:var(--t6); color:var(--jv-sub); margin:0 2px 7px}
+.jv-stab{display:flex; gap:6px; margin-bottom:7px}
+.jv-stab button{min-height:44px; min-width:52px; border:0; border-radius:10px; background:#fff; font:inherit; font-size:var(--t6); font-weight:900; color:var(--jv-sub); cursor:pointer}
+.jv-stab button.on{background:var(--ink); color:#fff}
+.jv-sq{display:grid; grid-template-columns:1fr 1fr; gap:7px}
+.jv-sq button{background:#fff; width:100%}
+.jv-hello .j-pick{margin-top:10px}
+.jv-know{margin-top:8px}
+.jv-know > summary{cursor:pointer; font-size:var(--t6); font-weight:700; color:var(--jv-sub); min-height:44px; display:flex; align-items:center; list-style:none}
+.jv-know > summary::-webkit-details-marker{display:none}
+.jv-know-t{white-space:pre-wrap; font-size:var(--t6); color:#33425C; line-height:1.65}
+#jvSide{display:none}
+/* 🖥 컴퓨터 — 가운데 대화 + 오른쪽 곁 칸 (그림의 「컴퓨터」 그대로).
+   섞기(판 X359) — HUD 판 셋(SYSTEM · 원자로 · COMMAND)이 나란히 서려면 1,180px 가 듭니다. 곁 칸(340px)은 그 자리가 남는
+   <b>넓은 화면(1,500px 부터)</b>에만 세우고, 그보다 좁으면 오늘 챙길 것은 폰처럼 첫 답 안에 둡니다 */
+@media (min-width:1500px){
+  body:not(.dock){padding-right:340px}
+  body:not(.dock) #jvSide{display:block; position:fixed; top:70px; right:0; bottom:0; width:340px; overflow-y:auto; padding:14px;
+    background:#F2F4F6; border-left:1px solid var(--h-line2); z-index:50}
+  body:not(.dock) .ask{right:340px}
+  body:not(.dock) .bar{position:sticky}
+  body:not(.dock) .jv-today-in{display:none !important}
+  .jv-sbox{margin-bottom:12px}
+  .jv-sbox.jv-today{box-shadow:none; border:1px solid var(--jv-line)}
+  .jv-sbox .jv-th{margin-bottom:6px}
+  .jv-hs2{display:flex; flex-direction:column; gap:6px}
+  .jv-hs2 button, .jv-hs2 .jf-chip{max-width:none; width:100%; background:#fff}
+  .jv-sq{grid-template-columns:repeat(4, minmax(0, 1fr))}
+}
+body:not(.dock) .bar .sp{display:none}
+body:not(.dock) .bar h1{flex:1 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.j-pen.jp-has:not(.jp-open) .jp-f{display:none}
+.jp-cond{display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:2px 0 6px}
+.jp-cond .jf-from{margin:0}
+.jp-edit{min-height:44px; border:0; border-radius:10px; background:var(--jv-bg2); font:inherit; font-size:var(--t6); font-weight:800; color:#33425C; padding:0 12px; cursor:pointer}
+@media (max-width:520px){
+  /* 폰 — 이름은 「자비스 모드」 한 줄, 새로고침 · 새 탭은 폰에서 안 씁니다(당겨서 새로고침 · 탭이 없음) */
+  body:not(.dock) .bar{padding:8px 10px; gap:6px}
+  body:not(.dock) .bar h1 small, body:not(.dock) .jv-ap, body:not(.dock) #jvRe, body:not(.dock) #jvTab{display:none}
+  body:not(.dock) #aiBtn{padding:0 9px}
+  .jv-can{grid-template-columns:1fr 1fr 1fr}
+}
 </style>
 </head>
 <body>
 
 <div class="bar">
-  <h1>APEX <b>자비스 모드</b><small>물으시면 앱 안에서 찾아 그 값을 보여 드립니다</small></h1>
+  <!-- 🪵 판 X360 — 「← 워크스페이스」 떠 있는 띠가 답을 가리던 것을 여기 위 띠로 (앱 안에서만 섭니다) -->
+  <button class="btn jvb" id="jvBack" hidden>← 업무</button>
+  <h1><span class="jv-ap">APEX </span><b>자비스 모드</b><small>물으시면 앱 안에서 찾아 그 값을 보여 드립니다</small></h1>
   <span class="sp"></span>
   <span class="hud-clock" id="hudClock" aria-label="지금 시각"></span>
   <button class="btn" id="aiBtn"><span class="dot"></span>AI 연결</button>
+  <button class="btn jvb" id="jvTts" title="답이 서면 바로 읽기 — 켜고 끄기">🔈</button>
+  <button class="btn jvb" id="jvNew" title="대화를 새로">새로</button>
+  <button class="btn jvb jvi" id="jvRe" hidden title="새로고침">↺</button>
+  <button class="btn jvb jvi" id="jvTab" hidden title="새 탭에서 열기">↗</button>
   <button class="btn" id="bFit">한눈에</button>
   <button class="btn" id="bOpen">다 열기</button>
   <button class="btn" id="bShut">다 닫기</button>
@@ -924,20 +1090,25 @@ body.dock .deck{display:none}
         <span>말로 묻기</span>
       </button>
     </div>
-    <div class="ask">
-      <div class="ask-h">무엇을 도와드릴까요?<small>화면 이름을 몰라도 됩니다 — 지금 하려는 일을 그대로 적어 주세요</small></div>
-      <div class="askrow">
-        <span class="lamp"></span>
-        <input id="ask" type="text" placeholder="예: 고객 등록은 어디서 해? · 증권 PDF 를 받았어">
-        <button class="btn go" id="askGo">물어보기</button>
-      </div>
-    </div>
   </div>
   <aside class="pane pane-r" aria-label="명령">
     <div class="pane-h">COMMAND <span>상황으로 고르기</span></div>
     <div class="chips" id="chips"></div>
   </aside>
   <div class="hud-boot" id="hudBoot" aria-hidden="true"></div>
+</div>
+
+<!-- 🪵 섞기(판 X359) — 묻는 칸은 판 셋 <b>밖</b>, 늘 바닥에(판 X360 새 판). 자리(id)는 그대로입니다 -->
+<div class="ask">
+  <div class="ask-h">무엇을 도와드릴까요?<small>화면 이름을 몰라도 됩니다 — 지금 하려는 일을 그대로 적어 주세요</small></div>
+  <!-- 자주 묻는 말 (누르면 그대로 묻습니다 · 자비스가 진짜 답할 줄 아는 물음만 — check-jvskin 이 잽니다) -->
+  <div class="jv-quick" id="jvQuick"></div>
+  <div class="askrow">
+    <span class="lamp"></span>
+    <input id="ask" type="text" placeholder="무엇이든 물어보세요 — 예: 처음 전화 뭐라고 해?">
+    <button class="btn mic" id="askMic" title="말로 물어보기">🎤</button>
+    <button class="btn go" id="askGo">보내기</button>
+  </div>
 </div>
 
 <div id="jarvis" class="on">
@@ -959,6 +1130,9 @@ body.dock .deck{display:none}
     <div class="j-tip">「이 화면 열기」 를 누르면 그 화면으로 바로 갑니다 · 이어서 물으시면 앞의 이야기를 이어 갑니다</div>
   </div>
 </div>
+
+<!-- 🖥 판 X360 — 컴퓨터에서 오른쪽 칸: 오늘 챙길 것 · 방금 물은 것 · 같이 찾은 것 (폰에서는 안 섭니다) -->
+<aside id="jvSide" aria-label="자비스 곁 칸"></aside>
 
 <div id="stage">
   <div id="map">
@@ -4475,7 +4649,9 @@ var VOICE_PREF = ['InJoon','인준','Minsu','민수','Hyunsu','현수','Male','�
                   'Google 한국의','Google 한국어','Google Korean','Yuna','유나',
                   'SunHi','선히','Heami','혜미','Microsoft'];
 var VOICE_MALE = /InJoon|인준|Minsu|민수|Hyunsu|현수|Male|남성/i;
-var TTS = {on:(LS.get('map_voice','1') === '1'), v:null};
+/* 🔊 판 X360 — 답이 서면 <b>저절로 읽지 않습니다</b>(사장님이 고르신 「누를 때만」). 🔊 단추를 누르면 그 줄을 읽고,
+   위 띠의 🔈 를 켜 두면 예전처럼 답마다 읽습니다(AI 남자 목소리 · 판 X336 그대로) */
+var TTS = {on:(LS.get('map_voice','0') === '1'), v:null};
 function ttsVoices(){
   try { return window.speechSynthesis ? (window.speechSynthesis.getVoices() || []) : []; }
   catch(e){ return []; }
@@ -4655,8 +4831,9 @@ function speakDev(t, seq){
   } catch(e){}
 }
 /* opt.priv — 앱에 시켜 읽어 온 값(고객·팀원)이 든 답. 서버로 안 보냅니다 (3번) */
+/* opt === true — 🔊 를 <b>누른 것</b>은 저절로 읽기를 꺼 둬도 읽습니다 (판 X360) */
 function speak(text, opt){
-  if (!TTS.on) return;
+  if (!TTS.on && opt !== true && !(opt && opt.force)) return;
   var t = ttsClean(text);
   if (!t) return;
   ttsStop();
@@ -4920,10 +5097,16 @@ function addJ(res, isErr){
   dropThinking();
   var d = document.createElement('div');
   d.className = 'msg j' + (isErr ? ' err' : '');
-  var h = '<div class="bub">' + esc(res.answer || '');
+  /* 👋 첫 인사 (판 X360) — 여덟 줄을 다 읽어야 시작하던 것을 <b>한 줄 + 할 수 있는 것 셋 + 오늘 챙길 것 + 단계마다 물어볼 말</b>로.
+     ★ 인사 글(jvHello().answer)은 지우지 않고 「자비스가 아는 것」 에 접어 둡니다 — 세어 말하는 수가 그대로 남습니다 (5번) */
+  var h = '<div class="bub">' + (res.how === 'hello' ? jvHiHtml(res) : esc(res.answer || ''));
   if (res.scan) h += jvScanHtml(res.scan);
   /* 🔎 <b>찾아 온 값이 맨 위</b> — 길보다 먼저 (판 X270) */
-  var fd = res.found || [], anyRow = fd.some(function(f){ return (f.rows || []).length; });
+  var fd = res.found || [], anyRow;
+  /* 🧮 연금을 셈했으면 <b>셈 카드만</b> (판 X360) — 「50세」 가 장 제목에 걸려 「전립선비대증 보상기준」 이 셈 밑에 붙던 자리.
+     고객 · 코드 · 계약관리(고정 갈래)는 그대로 둡니다 */
+  if (res.pen) fd = fd.filter(function(f){ return !f.know; });
+  anyRow = fd.some(function(f){ return (f.rows || []).length; });
   var hasFound = fd.some(function(f){ return f.strong && (f.rows || []).length; }) || (anyRow && res.how === 'none') || (anyRow && res.how === 'ext');
   if (res.act){ h += jvActHtml(res.act); hasFound = true; }
   if (res.pen){ h += jvPenHtml(res.pen); hasFound = true; }    /* 🧮 연금 계산 (판 X276) */      /* 🛠 시키신 일이 맨 위 (판 X271) */
@@ -5023,11 +5206,18 @@ function addJ(res, isErr){
   }
   if (res.from) h += '<div class="j-src">근거 — ' + esc(res.from) + (res.title ? ' 「' + esc(res.title) + '」' : '') + '</div>';
   if (foldX) h += '</details>';
-  /* 🤖 AI 의견 자리 — 같은 카드 안에서 기다렸다가 채운다 (한 번에 · 판 X221) */
-  if (res.aiWait) h += '<div class="j-ai" data-ai="1"><b>🤖 AI 의견</b><span class="think"><i></i><i></i><i></i></span></div>';
+  /* 🔎 못 찾았으면 <b>못 찾았다고 먼저</b>, 그다음 이렇게 물으면 찾는다는 칩 (판 X360) — 칩은 자비스가 정말 답하는 물음만 */
+  if (res.how === 'none' && !anyRow && !res.act && !res.pen)
+    h += '<div class="jv-nf"><b>이렇게 물어보시면 찾습니다</b><div class="j-pick">' + JV_NF_Q.map(function(t){
+      return '<button type="button" data-q="' + esc(t[1]).replace(/"/g, '&quot;') + '">' + esc(t[0]) + '</button>'; }).join('') + '</div></div>';
+  /* 🤖 AI 의견 자리 — 같은 카드 안에서 기다렸다가 채운다 (한 번에 · 판 X221).
+     판 X360 — 맨 아래에 <b>접어</b> 둡니다(사장님이 고르신 쪽). AI 의 말은 앱 자료가 아니라서 앱의 답 뒤에 섭니다 */
+  if (res.aiWait) h += '<details class="j-aiw"><summary>🤖 AI 의견 보기 ▾</summary><div class="j-ai" data-ai="1"><b>🤖 AI 의견</b><span class="think"><i></i><i></i><i></i></span></div></details>';
   h += '</div>';
   d.innerHTML = h;
+  if (res.how === 'hello') d.classList.add('jv-hello');
   jLog.appendChild(d);
+  try { jvSidePaint(); } catch(e){}
 
   Array.prototype.forEach.call(d.querySelectorAll('[data-q]'), function(b){
     b.onclick = function(){ ask(b.getAttribute('data-q')); };
@@ -6199,13 +6389,42 @@ function jvKnowWords(q){
   }).map(function(w){ return [w].concat(JV_KSYN[w] || []); });
 }
 /* 한 벌의 셈 — f.t 이름 · f.k 찾기 말 · f.b 본문 */
+/* 🗣 <b>고객이 한 말을 옮겨 물을 때</b> — 「보험 필요 없다고 해」 · 「필요 없대」 · 「다른 데서도 알아본대」.
+   거절 처리 표의 이름은 고객의 한 마디 그대로(「필요 없어요」)라, 옮겨 말한 꼴(…다고 해 · …대)로는 낱말이
+   안 맞아 엉뚱한 설계 가이드가 서거나 빈손이었습니다 (판 X329).
+   ★ 여기는 <b>표에 이미 있는 이름</b>만 가리킵니다 — 새 대본을 만들지 않습니다. to 는 표의 이름 그대로이고,
+     check-jvfind 가 그 이름이 표에 정말 있는지 잽니다(없는 이름을 가리키면 빨간불).
+   ★ 넓게 잡지 않습니다 — 끝말(…어 · 다 · 대 · 댔 · 으)까지 맞아야 합니다. 「필요 서류」 같은 말은 안 걸립니다 (8번). */
+/* ⚠ 끝말은 <b>옮겨 말한 꼴</b>(…대 · …다고 · …단다 · …어요)만 — 맨 「…어?」 는 묻는 말입니다. 「외계인 보험 있어?」 ·
+   「진단서 필요 없어?」 가 「보험 이미 있어요」 · 「필요 없어요」 대본을 끌고 오던 자리 (판 X329 · 목각을 그리다 잡음) */
+var JV_SAID_E = '(?:대|댔|다고|단|답|다는|다며|어요|으시|다\\s*(?:하|해|그러))';
+var JV_SAID = [
+  {re:new RegExp('필요\\s*(?:가|는|도)?\\s*없' + JV_SAID_E), to:'필요 없어요'},
+  {re:/다른\s*(?:설계사|데|곳|회사|분|사람)\S*\s*(?:도\s*)?(?:만나|알아|비교|받아|들어\s*보|상담)|비교\s*(?:해|하)\s*(?:보|볼|본)|여러\s*(?:군데|곳|명)/, to:'다른 설계사도 만나 볼게요'},
+  {re:/생각\s*(?:좀\s*)?(?:해|하)\s*(?:보|볼|본)/, to:'생각해 볼게요'},
+  {re:/(?:가족|남편|아내|와이프|부모님?)\S*\s*(?:상의|의논|물어\s*보|얘기해\s*보)/, to:'가족과 상의할게요'},
+  {re:new RegExp('(?:돈|여유)\\s*(?:이|가)?\\s*없' + JV_SAID_E + '|보험료\\s*(?:가|이)?\\s*(?:부담|비싸)'), to:'돈 여유 없어요'},
+  {re:new RegExp('보험\\s*(?:은|이|도)?\\s*(?:(?:이미|벌써|충분히)\\s*(?:있|많)(?:어|다)|(?:다\\s*)?(?:있|많)' + JV_SAID_E + ')'), to:'보험 이미 있어요'},
+  {re:new RegExp('(?:담당|아는)\\s*(?:설계사|자|분|사람)?\\s*(?:가|이)?\\s*있' + JV_SAID_E), to:'담당자 있어요'}
+];
+function jvSaidOf(q){
+  var s = String(q || ''), out = [];
+  JV_SAID.forEach(function(x){ if (x.re.test(s)) out.push(x.to); });
+  return out.join(' ');
+}
 function jvKnowPick(q, list, f, max){
-  var W = jvKnowWords(q), out = [], nq = kbN(q);
+  var said = jvSaidOf(q);
+  if (said) q = q + ' ' + said;
+  var W = jvKnowWords(q), out = [], nq = kbN(q), raw = String(q).split(/\s+/).map(kbN).filter(Boolean);
   if (!W.length || !list || !list.length) return out;
   var jw = W.length >= 2 ? W.map(function(ws){ return ws[0]; }).join('') : '';
   list.forEach(function(x){
     var al = jvAlias(f.t(x)), keys = f.k ? String(f.k(x) || '').split(/[\s·,\/]+/).map(kbN).filter(Boolean) : [];
     var body = null, sc = 0, firm = 0, got = 0;
+    /* 찾기 말이 <b>쉰 개 넘는</b> 장(「60분 완결 상담 대본」 101개 · 「보상 사례」 64개)은 무슨 말에든 걸립니다.
+       그런 장은 찾기 말로는 가볍게(3) 칩니다 — 「연금 얘기 어떻게 꺼내」 에 이름이 곧 그 말인 「연금 화법」 보다
+       60분 대본이 먼저 서던 자리 (판 X329 · 시뮬레이션 17번). 이름 · 본문은 그대로 칩니다 */
+    var kcap = keys.length > 50 ? 3 : 99;
     W.forEach(function(ws){
       var best = 0;
       ws.forEach(function(w){
@@ -6222,10 +6441,10 @@ function jvKnowPick(q, list, f, max){
           else if (a.length >= 2 && JV_KBROAD.indexOf(a) < 0 && w.indexOf(a) >= 0) best = Math.max(best, 7);
         });
         keys.forEach(function(k){
-          if (k === w) best = Math.max(best, 5);
+          if (k === w) best = Math.max(best, Math.min(kcap, 5));
           else if (w.length >= 2 && k.indexOf(w) === 0) best = Math.max(best, 3);
           /* 찾기 말이 물은 낱말의 <b>머리</b>면 — 「부재중이면」 의 「부재중」 (판 X280) */
-          else if (k.length >= 2 && w.indexOf(k) === 0) best = Math.max(best, JV_TAIL.test(w.slice(k.length)) ? 5 : 4);
+          else if (k.length >= 2 && w.indexOf(k) === 0) best = Math.max(best, Math.min(kcap, JV_TAIL.test(w.slice(k.length)) ? 5 : 4));
         });
         if (!best && w.length >= 2 && f.b){
           if (body === null) body = kbN(f.b(x));
@@ -6245,6 +6464,18 @@ function jvKnowPick(q, list, f, max){
                 (jw.length >= 3 && al.some(function(a){ if (al.frag[a]) return false; var at = a.indexOf(jw); return at === 0 || (at > 0 && jw.length * 2 >= a.length); }));
     /* ↑ 붙인 말이 이름의 <b>머리</b>이거나 <b>반은</b> 돼야 통째로 칩니다 — 「청구 서류」 가 「치아보험금 청구서류」 장을
        굳은 답으로 세워 청구 화면 길을 접던 자리 (판 X280 · check-jvfind [5] 가 잡음) */
+    /* 🧷 <b>띄어 쓴 두 낱말이 붙은 찾기 말</b> — 「계약하고 나서」 → 계약하고나서 · 「소개 부탁」 → 소개부탁. 낱말 하나로는
+       못 쓰는 찾기 말을 물은 사람이 <b>그 말 그대로</b> 친 것이라 굳은 답입니다. 낱말 하나 안에 든 것(「보장분석」)은 안 칩니다.
+       ⚠ <b>영업 단계 표(f.phrase)에만</b> — 그 찾기 말은 일부러 붙여 적은 말입니다. 아카데미 장의 「청구서류」 같은 낱말에
+       걸면 「청구 서류 어떻게 받아?」 가 굳은 장이 되어 청구 화면 길을 접습니다(판 X280 의 자가 잡음).
+       또 이름의 <b>머리</b>를 두 낱말로 띄어 친 것(「실비 청구만」 → 실비청구만해주세요) — 다섯 글자부터 (판 X329) */
+    if (!whole && raw.length >= 2){
+      var phrase = f.phrase && kcap > 5 && keys.some(function(k){ return k.length >= 4 && nq.indexOf(k) >= 0 && !raw.some(function(w){ return w.indexOf(k) >= 0; }); });
+      var head = al.some(function(a){ if (al.frag[a]) return false;
+        for (var i = 0; i + 1 < raw.length; i++){ var j2 = raw[i] + raw[i + 1]; if (j2.length >= 5 && a.indexOf(j2) === 0) return true; } return false; });
+      if (phrase || head) sc += 8;
+      if (phrase || head) firm = Math.max(firm, 2);
+    }
     if (whole) sc += 12;
     /* 이름·찾기 말에 <b>한 번은</b> 걸려야 하고, 물은 낱말의 반은 어딘가에 맞아야 한다.
        f.strict(거절 처리) — 이름이 고객의 한 마디라 낱말 하나로는 안 맞춥니다.
@@ -6323,6 +6554,23 @@ JV_FIND.push(
     function(x){ return {t:'🛡 「' + jvPlain(x.q) + '」', s:['이렇게 — 「' + jvPlain(x.say) + '」', '이어서 — 「' + jvPlain(x.next) + '」',
       '피할 말 — ' + jvPlain(x.avoid), '멈출 때 — ' + jvPlain(x.stop)], say:jvPlain(x.say) + ' ' + jvPlain(x.next)}; }, '')
 );
+/* 🛡 <b>「거절 화법」 · 「거절 처리」 만 물으면</b> — 어떤 거절인지가 빠져 있어 낱말이 하나도 안 남고 빈손이었습니다
+   (판 X329). 지어내지 않고 <b>앱의 두 표</b>(전화 TA · 마주 앉아서)에 있는 고객의 말을 그대로 늘어놓고, 누르면
+   그 말로 다시 물어 그 대본이 섭니다. 거절을 익히는 화면(거절 근육 훈련)도 엽니다 */
+var JV_REJQ = /^\s*(?:고객\s*(?:의|이)?\s*)?거절\s*(?:화법|처리|대본|대응|응대|멘트|모음|받는\s*법|받을\s*때)?\s*(?:은|는|을)?\s*(?:어떻게\s*(?:해|받아|해요|하지|하나요|받나요)|뭐라고\s*(?:해|하지|해요))?\s*[?？]?\s*$/;
+JV_FIND.push({k:'rejidx', id:'rej_gym', n:'거절 처리 — 어떤 거절인가요', find:function(q, P){
+  if (!JV_REJQ.test(q)) return null;
+  var ta = [], dz = [];
+  try { ta = ((P.APEX_STAGE && P.APEX_STAGE.obj) || []).map(function(o){ return jvPlain(o.title); }); } catch(e){ ta = []; }
+  try { dz = ((jvDz(P) || {}).rej || {}).all.map(function(o){ return jvPlain(o.q); }); } catch(e){ dz = []; }
+  if (!ta.length && !dz.length) return null;
+  var s = [];
+  if (ta.length) s.push('📞 전화(TA)에서 — ' + ta.length + '가지 · 아래에서 그 말을 누르세요');
+  if (dz.length) s.push('🤝 마주 앉아서 — ' + dz.join(' · '));
+  return {rows:[{t:'🛡 고객이 뭐라고 하셨나요? — 그 말을 누르시면 그 대본이 바로 섭니다', s:s,
+    asks:ta.slice(0, 12).concat(dz.map(function(t){ return t.split(' · ')[0]; })),
+    open:MENU.rej_gym ? {local:1, fn:'jvHere', to:['rej_gym'], label:'🪟 ' + MENU.rej_gym.n + ' 열기'} : null}], more:0, unit:'건'};
+}});
 
 /* ══ 🎓 <b>보험 마스터 아카데미 · 📕 재무설계 실전화법서도 찾는다</b> (판 X269) ══════════
    사장님 말씀 2026-10-31 — 「아카데미랑 실전화법서도 찾게 붙여줘」.
@@ -6640,18 +6888,22 @@ function jvStageRows(){
   if (!S) return out;
   var W = function(st){ return st + ' ' + (JV_STAGE_W[st] || ''); };
   Object.keys(S.map || {}).forEach(function(st){ var m = S.map[st];
-    out.push({kind:'map', st:st, t:st + ' 단계 — ' + jvPlain(m.aim), k:W(st) + ' 단계 목표', b:jvPlain(m.way) + ' ' + (m.q || []).join(' '), m:m}); });
+    /* 「청약할 때 뭐 챙겨」 — 「챙겨 · 챙기」 도 단계 지도의 찾기 말로 (판 X360 · 새 판 단계 칩이 약하게 서던 자리) */
+    out.push({kind:'map', st:st, t:st + ' 단계 — ' + jvPlain(m.aim), k:W(st) + ' 단계 목표 챙겨 챙기', b:jvPlain(m.way) + ' ' + (m.q || []).join(' '), m:m}); });
   Object.keys(S.touch || {}).forEach(function(st){ (S.touch[st] || []).forEach(function(x){
     out.push({kind:'touch', st:st, t:x.t, k:W(st) + ' ' + (x.ch || '') + ' 문자 카톡 보낼 글', b:jvPlain(x.when) + ' ' + jvPlain(x.how), x:x}); }); });
   Object.keys(S.say || {}).forEach(function(k){ var x = S.say[k];
     out.push({kind:'say', t:x.t, k:k + ' ' + (JV_STAGE_W[k] || '') + ' ' + (x.chip || ''), b:x.say + ' ' + (x.next || ''), x:x}); });
   (S.appt || []).forEach(function(x){ out.push({kind:'appt', t:x.t, k:'약속 안내 문자 약속문자 ' + (x.k || ''), b:x.text, x:x}); });
-  (S.chk || []).forEach(function(c){ out.push({kind:'chk', st:c.k, t:c.t, k:W(c.k) + ' 점검 챙길 준비 증권 사진 가져 안가져', b:jvPlain(c.aim) + ' ' + c.none + ' ' + c.ask, x:c}); });
-  if ((S.pdel || []).length) out.push({kind:'pdel', t:'증권 전달 — 말하는 차례', k:'증권 전달 증권전달 전할때 소개 가족 계약후', b:S.pdel.map(function(p){ return jvPlain(p.t) + ' ' + p.say; }).join(' '), x:S.pdel});
+  (S.chk || []).forEach(function(c){ out.push({kind:'chk', st:c.k, t:c.t, k:W(c.k) + ' 점검 챙길 준비 증권 사진 가져 안가져 안가져온 안가져왔 못가져온 깜빡', b:jvPlain(c.aim) + ' ' + c.none + ' ' + c.ask, x:c}); });
+  if ((S.pdel || []).length) out.push({kind:'pdel', t:'증권 전달 — 말하는 차례', k:'증권 전달 증권전달 전할때 소개 가족 계약후 소개부탁 소개받기 소개요청', b:S.pdel.map(function(p){ return jvPlain(p.t) + ' ' + p.say; }).join(' '), x:S.pdel});
   if ((S.taFrame || []).length) out.push({kind:'frame', t:'전화를 여는 다섯 마디', k:'TA 첫통화 첫마디 처음 전화 여는말 전화대본 첫 전화 DB 디비', b:S.taFrame.map(function(f){ return f.t + ' ' + f.s; }).join(' '), x:S.taFrame});
   return out;
 }
-function jvStageRow(r){
+/* 「증권 안 가져온대 · 없대 · 못 받았어」 — 그 자리의 답은 <b>아직 안 읽었으면</b> 줄입니다. 「읽었으면」 이 먼저 서서
+   신입이 「[비어 있는 담보] 쪽이 비어 있습니다」 를 읽게 되던 자리 (판 X329 · 시뮬레이션 10번) */
+var JV_NOPOL = /증권\S*\s*(?:을|은|이)?\s*(?:안|못|없|깜빡|두고|놓고)/;
+function jvStageRow(r, q){
   var x = r.x, open = function(tab, lab){ return (tab && MENU[tab]) ? {local:1, fn:'jvHere', to:[tab], label:'🪟 ' + (lab || MENU[tab].n) + ' 열기'} : null; };
   if (r.kind === 'map'){
     var kn = (r.m.know || []).filter(function(k){ return MENU[k.tab]; }).slice(0, 3);
@@ -6671,7 +6923,8 @@ function jvStageRow(r){
   }
   if (r.kind === 'appt'){ var at = jvStageFill(x.text); return {t:'📅 ' + jvPlain(x.t), s:['보낼 글 — ' + at, JV_ADNOTE], say:at}; }
   if (r.kind === 'chk'){
-    return {t:'✅ ' + jvPlain(x.t) + ' — ' + jvPlain(x.aim), s:['증권을 읽었으면 — ' + jvStageFill(x.had), '아직 안 읽었으면 — ' + jvStageFill(x.none), '여쭐 말 — 「' + jvStageFill(x.ask) + '」'],
+    var had = '증권을 읽었으면 — ' + jvStageFill(x.had), none = '아직 안 읽었으면 — ' + jvStageFill(x.none), askL = '여쭐 말 — 「' + jvStageFill(x.ask) + '」';
+    return {t:'✅ ' + jvPlain(x.t) + ' — ' + jvPlain(x.aim), s:JV_NOPOL.test(q || '') ? [none, askL, had] : [had, none, askL],
       say:jvStageFill(x.ask), open:open(x.tool)};
   }
   if (r.kind === 'pdel'){
@@ -6698,13 +6951,13 @@ JV_FIND.push({k:'uw', id:'ref_underwrite', n:'가입(인수) 확인', find:funct
    한 갈래로 두면 「증권 전달할 때 뭐라고 해」 에 말 없는 단계 카드가 먼저 섰습니다 (판 X280) */
 var JV_STAGE_SAY = ['touch', 'say', 'appt', 'pdel', 'frame'];
 JV_FIND.push(jvKnowSrc('stage', '', '영업 단계', function(){ return jvStageRows().filter(function(r){ return JV_STAGE_SAY.indexOf(r.kind) < 0; }); },
-  {t:function(x){ return x.t; }, k:function(x){ return x.k; }, b:function(x){ return x.b; }},
-  function(x){ return jvStageRow(x); }, '', 2));
+  {t:function(x){ return x.t; }, k:function(x){ return x.k; }, b:function(x){ return x.b; }, phrase:1},
+  function(x, P, q){ return jvStageRow(x, q); }, '', 2));
 function jvSsList(mid){ return function(){ return jvStageRows().filter(function(r){
   return JV_STAGE_SAY.indexOf(r.kind) >= 0 && (!mid || ((r.kind === 'touch' || r.kind === 'appt') ? 'text' : 'call') === mid); }); }; }
 function jvSsSrc(mid){ return jvKnowSrc('stagesay', '', '할 말 · 보낼 글', jvSsList(mid),
-  {t:function(x){ return x.t; }, k:function(x){ return x.k; }, b:function(x){ return x.b; }},
-  function(x){ return jvStageRow(x); }, '', 2); }
+  {t:function(x){ return x.t; }, k:function(x){ return x.k; }, b:function(x){ return x.b; }, phrase:1},
+  function(x, P, q){ return jvStageRow(x, q); }, '', 2); }
 /* 📞 / ✉️ — <b>무엇으로 하나</b>를 물은 대로. main 판 X275 가 미접촉 · 부재에 보낼 글을 더한 뒤로
    「처음 전화 뭐라고 해?」 에 「배정받고 못 건 분 · 문자 → 전화」 글이 다섯 마디보다 먼저 섰습니다.
    문자도 좋은 답이지만 물은 것은 <b>전화에서 할 말</b>입니다 — 전화만 물으면 대본 · 차례(☎️ 📵 📮)
@@ -7084,19 +7337,38 @@ function jvSafeQ(q, F){
    ★ 원본 슬라이드는 <b>그림 그대로</b> — 눌러 크게 보여 드리면 됩니다.               */
 var JV_ROWS = {}, JV_ROW_N = 0;
 function jvRowText(r){ return [r.t].concat(r.s || []).join('\n'); }
+/* 🪵 판 X360 (자비스 새 판) — 「① 첫 3초 — 밝게 — 「고객님…」」 를 <b>번호 · 꼬리표(언제) · 말(무엇을)</b> 셋으로 나눠 그립니다.
+   보면서 그대로 말하기 쉽게. ★ 글자는 하나도 바꾸지 않습니다 — 나눈 조각을 이어 붙이면 원래 글 그대로입니다
+   (자가 견주는 글 · 복사 · 읽어 주기가 그대로). 꼬리표 뒤의 「 — 」 는 눈에서만 감춥니다. */
+var JV_LNUM = /^\s*(?:[①②③④⑤⑥⑦⑧⑨]|\d{1,2}\.)\s*/;
+function jvLineHtml(t){
+  t = String(t == null ? '' : t);
+  var m = JV_LNUM.exec(t), no = m ? m[0] : '', rest = m ? t.slice(no.length) : t, lab = '', sep = '', say = rest, q = rest.indexOf(' — 「');
+  if (q > 0 && q <= 30){ lab = rest.slice(0, q); sep = ' — '; say = rest.slice(q + 3); }
+  else { var d = rest.indexOf(' — '); if (d > 0 && d <= 20){ lab = rest.slice(0, d); sep = ' — '; say = rest.slice(d + 3); } }
+  return '<div class="jw-s' + (lab || no ? ' jw-split' : '') + '">' + (no ? '<span class="jw-no">' + esc(no) + '</span>' : '') +
+    '<span class="jw-t">' + (lab ? '<small class="jw-l">' + esc(lab) + '<i class="jw-d">' + sep + '</i></small>' : '') +
+    '<span class="jw-q' + (/^「/.test(say) ? ' jw-say' : '') + '">' + esc(say) + '</span></span></div>';
+}
 function jvRowHtml(r, f, big){
   var id = 'r' + (++JV_ROW_N), b = '';
   JV_ROWS[id] = r;
-  var h = '<div class="jw-row' + (big ? ' jf-best' : '') + '">';
+  var h = '<div class="jw-row' + (big ? ' jf-best' : '') + '" id="jv' + id + '">';
   if (big) h += '<div class="jf-from">⭐ 바로 쓰실 것 · ' + esc(f.n) + '</div>';
   h += '<div class="jw-n">' + esc(r.t) + '</div>';
   if (r.img) h += '<a class="jf-img" href="' + esc(r.img) + '" target="_blank" rel="noopener"><img src="' + esc(r.img) + '" alt="' + esc(r.t) + '" loading="lazy"></a>';
-  (r.s || []).forEach(function(t){ h += '<div class="jw-s">' + esc(t) + '</div>'; });
+  (r.s || []).forEach(function(t){ h += jvLineHtml(t); });
   if (r.cli) b += '<button type="button" class="st-here" data-cli="' + esc(r.cli) + '">🪪 이 분 창 열기</button>';
   if (r.open) b += '<button type="button" class="st-here jr-open" data-r="' + id + '">' + esc(r.open.label) + '</button>';
   if (!r.cli) b += '<button type="button" class="jr-copy" data-r="' + id + '">📋 ' + (r.say ? '말 복사' : '복사') + '</button>';
   if (r.say) b += '<button type="button" class="jr-say" data-r="' + id + '">🔊 읽어 주기</button>';
   if (r.img) b += '<a class="jr-img" href="' + esc(r.img) + '" target="_blank" rel="noopener">🖼 크게 보기</a>';
+  /* 🗣 그 말로 다시 묻기 — 고를 것을 늘어놓는 줄(「거절 화법」 · 판 X329)은 <b>누르면 묻습니다</b>. 그 줄은 복사할 말이 없습니다.
+     누르는 길은 답 카드의 [data-q] 를 묶는 <b>한 곳</b>(그 아래 「되물음」 단추와 같은 길)이 맡습니다 — 여기서 또 묶지 않습니다 (5번) */
+  if ((r.asks || []).length){
+    b = (r.open ? '<button type="button" class="st-here jr-open" data-r="' + id + '">' + esc(r.open.label) + '</button>' : '');
+    h += '<div class="jr-asks">' + r.asks.map(function(t){ return '<button type="button" class="jr-ask" data-q="' + esc(t).replace(/"/g, '&quot;') + '">「' + esc(t) + '」</button>'; }).join('') + '</div>';
+  }
   return h + '<div class="st-b jr-b">' + b + '</div></div>';
 }
 /* 갈래 하나의 꼬리 — 외 N건 · 안내 · 그 화면 열기 */
@@ -7118,14 +7390,17 @@ function jvFoundHtml(F, weak){
     var restN = withRows.reduce(function(n, f, i){ return n + f.rows.length - (i ? 0 : 1); }, 0);
     if (!restN) h += jvSrcTail(f0);
     else {
-      h += '<details class="jf-more"><summary>더 찾은 것 ' + restN + '개 ▾</summary>';
+      /* 🪵 판 X360 — 「같이 찾은 것」 은 <b>칩</b>으로 바로 보이고, 누르면 접힌 칸을 펴 그 줄로 갑니다. 줄은 그대로 접혀 있습니다 */
+      var mh = '', chips = [];
       withRows.forEach(function(f, i){
         var rows = i ? f.rows : f.rows.slice(1), m = MENU[f.id];
-        if (rows.length) h += '<div class="jf-src">' + esc(f.n) + (m && m.n !== f.n ? ' · ' + esc(m.n) : '') + '</div>';
-        rows.forEach(function(r){ h += jvRowHtml(r, f, false); });
-        h += jvSrcTail(f);
+        if (rows.length) mh += '<div class="jf-src">' + esc(f.n) + (m && m.n !== f.n ? ' · ' + esc(m.n) : '') + '</div>';
+        rows.forEach(function(r){ mh += jvRowHtml(r, f, false); chips.push({id:'jvr' + JV_ROW_N, n:f.n, t:r.t}); });
+        mh += jvSrcTail(f);
       });
-      h += '</details>';
+      h += '<div class="jf-chips"><b>같이 찾은 것</b><div class="jf-hs">' + chips.map(function(c){
+        return '<button type="button" class="jf-chip" data-to="' + c.id + '"><small>' + esc(c.n) + '</small>' + esc(c.t) + '</button>'; }).join('') + '</div></div>';
+      h += '<details class="jf-more"><summary>더 찾은 것 ' + restN + '개 ▾</summary>' + mh + '</details>';
     }
   }
   notes.forEach(function(f){
@@ -7138,6 +7413,17 @@ function jvFoundHtml(F, weak){
   });
   return h + '</div>';
 }
+/* 같이 찾은 것 칩 — 그 줄이 든 접힌 칸을 펴고 그 줄로 (판 X360) */
+document.addEventListener('click', function(e){
+  var c = e.target.closest && e.target.closest('.jf-chip');
+  if (!c) return;
+  e.preventDefault();
+  var row = document.getElementById(c.getAttribute('data-to'));
+  if (!row) return;
+  var dt = row.closest('details'); if (dt) dt.open = true;
+  try { row.scrollIntoView({behavior:'smooth', block:'center'}); } catch(err){ row.scrollIntoView(); }
+  row.classList.add('jv-flash'); setTimeout(function(){ row.classList.remove('jv-flash'); }, 1600);
+});
 /* 바로 쓰는 단추 — 복사 · 읽어 주기 · 그 자리 열기 */
 document.addEventListener('click', function(e){
   var b = e.target.closest && e.target.closest('.jr-copy, .jr-say, .jr-open');
@@ -7153,7 +7439,7 @@ document.addEventListener('click', function(e){
     b.textContent = '✅ 복사했습니다';
     setTimeout(function(){ b.textContent = '📋 ' + (r.say ? '말 복사' : '복사'); }, 1800);
   } else if (b.classList.contains('jr-say')){
-    speak(r.say);
+    speak(r.say, true);                  /* 누른 것은 늘 읽습니다 (판 X360) */
   } else if (b.classList.contains('jr-open') && r.open){
     /* 덱은 자비스가 직접 엽니다(jvDeckOpen) — 화면마다 그 장으로 가는 법이 달라서 */
     if (r.open.local){ try { window[r.open.fn].apply(null, r.open.to); } catch(err){} return; }
@@ -7254,6 +7540,9 @@ function jvActHtml(A){
     if (o.tel) b += '<a class="ja-tel" href="tel:' + esc(String(o.tel).replace(/[^0-9+]/g, '')) + '">📞 ' + esc(o.tel) + ' 걸기</a>';
     if (o.cli) b += '<button type="button" class="st-here" data-cli="' + esc(o.cli) + '">🪪 이 분 창 열기</button>';
     else if (o.go && MENU[o.go]) b += '<button type="button" class="st-here" data-here="' + o.go + '">🪟 ' + esc(MENU[o.go].n) + ' 여기서 보기</button>';
+    /* ↩ 되돌리기 — 그 일이 <b>되돌리는 길을 돌려줄 때만</b> 섭니다(지금은 고객 다음 할 일). 길이 없는 일에 단추를 세우지 않습니다 (6번) */
+    if (A.st === 'done' && o.undo && !o.undone && !o.fail && P && typeof P[o.undo.fn] === 'function') b += '<button type="button" class="ja-undo">↩ 되돌리기</button>';
+    if (o.undone) h += '<div class="jw-s">↩ ' + esc(o.undo.say || '되돌렸습니다.') + '</div>';
     if (b) h += '<div class="st-b">' + b + '</div>';
     return h + '</div>';
   }
@@ -7266,10 +7555,33 @@ function jvActHtml(A){
   var a = P.vaActOf(A.k), vals = [];
   (a.v || []).forEach(function(k){ if (A.args[k]) vals.push(k === 'who' && nd.who ? nd.who + '님' : A.args[k]); });
   if (!A.ask){ return h + '<div class="jw-s">하는 중입니다…</div></div>'; }
-  h += '<div class="jw-s">' + esc(vals.join(' · ') || A.n) + ' — 이대로 할까요?</div>' +
+  /* 🪵 판 X360 — 한 줄(「홍길동님 · 내일 3시 통화」)을 <b>칸마다</b> 나눠 보여 드리고, 칸마다 「바꾸기」.
+     칸은 그 일이 <b>실제로 읽는 값</b>입니다(VA_ACT 의 v) — 「언제」 는 그 일이 날짜를 읽는 경우에만(jvActFields) */
+  h += '<div class="ja-flds">' + jvActFields(A, a, nd).map(function(f){
+    return '<div class="ja-fld"><span>' + esc(f.l) + '</span><b>' + esc(f.v) + '</b>' +
+      (f.k ? '<button type="button" class="ja-edit" data-k="' + f.k + '">바꾸기</button>' : '') + '</div>'; }).join('') + '</div>';
+  h += '<div class="jw-s ja-q">' + esc(vals.join(' · ') || A.n) + ' — 이대로 할까요?</div>' +
        '<div class="st-b"><button type="button" class="st-here ja-ok">✅ 이대로 하기</button>' +
        '<button type="button" class="ja-no">취소</button></div>';
   return h + '</div>';
+}
+/* 확인 판의 칸 — 그 일이 읽는 값(v) 그대로. 「고객할일」 은 무엇 안의 날짜를 읽으므로(vaDueOf) 무엇 · 언제로 나눠 보입니다.
+   ★ 나눠 <b>보이기만</b> 합니다 — 넘기는 값(A.args)은 그대로라 하는 일이 바뀌지 않습니다 */
+var JV_FLD_L = {who:'누구', what:'무엇', due:'언제', how:'어떻게', note:'메모', n:'몇'};
+function jvActFields(A, a, nd){
+  var P = kbApp(), out = [];
+  (a.v || []).forEach(function(k){
+    var v = A.args[k]; if (!v) return;
+    if (k === 'who'){ out.push({k:k, l:'누구', v:(nd.who || v) + '님'}); return; }
+    if (k === 'what' && A.k === '고객할일' && P && typeof P.vaDueOf === 'function'){
+      var d = {}; try { d = P.vaDueOf(v) || {}; } catch(e){ d = {}; }
+      out.push({k:k, l:'무엇', v:d.rest || v});
+      out.push({k:'', l:'언제', v:d.due ? (typeof P.vaDayName === 'function' ? P.vaDayName(d.due) : d.due) : '날짜를 말씀 안 하셔서 오늘로 잡습니다'});
+      return;
+    }
+    out.push({k:k, l:JV_FLD_L[k] || '내용', v:v});
+  });
+  return out;
 }
 function jvActPaint(A){
   var el = document.querySelector('[data-act="' + A.id + '"]');
@@ -7313,6 +7625,18 @@ document.addEventListener('click', function(e){
   /* 결과 단추는 카드가 선 <b>뒤에</b> 그려져 addJ 가 붙인 손잡이가 없습니다 — 여기서 받습니다 */
   if (t.closest('[data-cli]')){ e.preventDefault(); jvHereCli(t.closest('[data-cli]').getAttribute('data-cli')); return; }
   if (t.closest('.ja-ok')){ e.preventDefault(); jvActRun(A); }
+  else if (t.closest('.ja-edit')){
+    /* 바꾸기 — 그 칸을 비우면 원래 있던 「무엇을 할까요?」 묻는 칸이 섭니다(jvActNeed) · 새 길을 만들지 않습니다 */
+    e.preventDefault(); A.args[t.closest('.ja-edit').getAttribute('data-k')] = ''; jvActPaint(A);
+    var iv = document.querySelector('[data-act="' + A.id + '"] .ja-v'); if (iv) try { iv.focus(); } catch(err){}
+  }
+  else if (t.closest('.ja-undo')){
+    e.preventDefault();
+    var P0 = kbApp(), u = A.out && A.out.undo;
+    if (!u || !P0 || typeof P0[u.fn] !== 'function') return;
+    try { P0[u.fn].apply(P0, u.args || []); A.out.undone = 1; } catch(err){ A.out.undone = 0; }
+    jvActPaint(A);
+  }
   else if (t.closest('.ja-no')){ e.preventDefault(); A.st = 'no'; jvActPaint(A); }
   else if (t.closest('.ja-put')){
     e.preventDefault();
@@ -7443,7 +7767,9 @@ function jvPenHtml(S){
   }
   var R = jvPenCalc(S, B), W = B.APEX_WON.txt, one = null, i;
   var head = (v.age + '세 ' + v.sex + ' · 월 ' + W(v.monthly) + ' · ' + v.pay + '년 납 · ' + v.start + '세부터');
-  h += '<div class="jf-from">' + esc(head) + '</div>';
+  /* 🪵 판 X360 — 셈이 서면 입력 칸은 접고 <b>조건 한 줄</b>만(바꿀 때만 「✏️ 바꾸기」). 값은 칸에 그대로 있습니다 */
+  h = h.replace('<div class="j-pen" data-pen=', '<div class="j-pen jp-has" data-pen=');
+  h += '<div class="jp-cond"><span class="jf-from">' + esc(head) + '</span><button type="button" class="jp-edit">✏️ 바꾸기</button></div>';
   if (S.pid){ for (i = 0; i < R.ok.length; i++) if (R.ok[i].p.id === S.pid) one = R.ok[i]; }
   if (S.pid && !one){
     var nb = R.no.filter(function(x){ return x.p.id === S.pid; })[0];
@@ -7532,7 +7858,8 @@ document.addEventListener('click', function(e){
     try { if (P && typeof P.copyText === 'function') P.copyText(S.out); else if (navigator.clipboard) navigator.clipboard.writeText(S.out); } catch(err){}
     b2.textContent = '✅ 복사했습니다'; setTimeout(function(){ b2.textContent = '📋 결과 복사'; }, 1800); return;
   }
-  if (t.closest('.jp-say')){ e.preventDefault(); speak(S.say); return; }
+  if (t.closest('.jp-say')){ e.preventDefault(); speak(S.say, true); return; }
+  if (t.closest('.jp-edit')){ e.preventDefault(); var pb = t.closest('.j-pen'); if (pb) pb.classList.toggle('jp-open'); return; }
   if (t.closest('.jp-fin')){ e.preventDefault(); jvPenToFin(S, false); return; }
   if (t.closest('.jp-undo')){ e.preventDefault(); jvPenToFin(S, true); }
 });
@@ -7937,6 +8264,7 @@ function ask(raw){
   openJ();
   hudSet('think'); hudBeep();
   addMe(q);
+  JV_ASKED = [q].concat(JV_ASKED.filter(function(x){ return x !== q; })).slice(0, 6);     /* 🕘 방금 물은 것 (판 X360) */
   document.getElementById('ask').value = '';
   document.getElementById('jSay').value = '';
   var hub = jvHub(q);
@@ -8099,6 +8427,116 @@ function chipsIn(g){
 }
 chipsTop();
 /* 처음 열면 <b>무엇을 할 줄 아는지</b>부터 — 센 수로 말한다 (5번) */
+/* ══ 🪵 <b>자비스 새 판</b> (판 X360) ══════════════════════════════════════════
+   사장님 말씀 2026-11-04 — 「자비스 목각 버전으로 우선 만들자」 → 「응 그림에 그린쪽으로 해서 다 적용해줘」.
+   그림(docs/mokgak/자비스.html)대로 <b>겉모습만</b> 바꿉니다. 찾는 두뇌(jvFind · 고르기 · JV_SAID)는 그대로입니다.
+   ★ 고르신 넷 — 묻는 칸은 아래 · 첫 화면은 오늘 챙길 것 + 단계마다 물어볼 말 · 읽어 주기는 누를 때만 · AI 의견은 맨 아래 접어서.
+   ★ 칩의 물음은 <b>자비스가 정말 답하는 물음만</b> 적습니다 — check-jvskin 이 하나하나 물어 맞는 답이 굳게 서는지 잽니다 (1번). */
+var JV_QUICK = [['☎️ 첫 전화 뭐라고', '처음 전화 뭐라고 해?'], ['📵 부재중 문자', '부재중이면 문자 뭐라고 보내?'],
+  ['📅 약속 문자', '약속 잡고 문자 뭐라고 보내'], ['🛡 거절 화법', '거절 화법'], ['📮 증권 전달', '증권 전달할 때 뭐라고 해'],
+  ['🧮 연금 셈', '50세 남자 월 50만원 10년납 65세부터 연금 얼마']];
+var JV_STAGE_Q = {
+  TA:['처음 전화 뭐라고 해?', '부재중이면 문자 뭐라고 보내?', '지금 바빠요 라고 끊으려 해', '고객이 거절했는데 다시 연락해도 돼'],
+  AP:['만나기 전에 뭐 준비해?', '고객이 증권 안 가져온대', '약속 잡고 문자 뭐라고 보내', '보험 필요 없다고 해'],
+  PC:['협심증 있는 고객 가입돼?', '다른 설계사도 만나본대', '노후 걱정하는 고객한테 연금 얘기 어떻게 꺼내', '유사암 진단비가 뭐야?'],
+  CS:['청약할 때 뭐 챙겨', '증권 전달할 때 뭐라고 해', '소개 부탁 어떻게 해', '계약하고 나서 뭐 해야 돼']
+};
+/* 못 찾았을 때 — 어떻게 물으면 찾는지 (보기도 진짜 답하는 물음) */
+var JV_NF_Q = [['담보 이름으로 — 「유사암 진단비」', '유사암 진단비가 뭐야?'], ['고객이 한 말로 — 「필요 없대」', '고객이 보험 필요 없대'],
+  ['하려는 일로 — 「첫 전화」', '처음 전화 뭐라고 해?'], ['조건으로 — 「연금 얼마」', '50세 남자 월 50만원 10년납 65세부터 연금 얼마']];
+var JV_ASKED = [];
+function jvChipsHtml(L, attr){ return L.map(function(t){ var q = typeof t === 'string' ? t : t[1], n = typeof t === 'string' ? t : t[0];
+  return '<button type="button" ' + attr + '="' + esc(q).replace(/"/g, '&quot;') + '">' + esc(n) + '</button>'; }).join(''); }
+function jvHiHtml(res){
+  var kn = jvKnowCount(), an = jvActCount(), mn = Object.keys(MENU).length;
+  return '<div class="jv-hi"><h3>무엇을 도와드릴까요?</h3><p>화면 이름을 몰라도 됩니다 — 하려는 일을 그대로 말씀하세요.</p>' +
+    '<div class="jv-can"><div><b>🔎 찾기</b>' + (kn ? '보험 자료 ' + kn + '가지 · ' : '') + '화면 ' + mn + '개</div>' +
+    '<div><b>🛠 하기</b>' + (an ? '일 ' + an + '가지 · ' : '') + '확인 뒤에만</div><div><b>🧮 셈하기</b>연금 · 계산기로</div></div></div>' +
+    '<div class="jv-today jv-today-in"></div>' +
+    '<div class="jv-stg"><b>이렇게 물어보세요 — 단계마다</b><div class="jv-stab">' + Object.keys(JV_STAGE_Q).map(function(k, i){
+      return '<button type="button" data-stg="' + k + '"' + (i ? '' : ' class="on"') + '>' + k + '</button>'; }).join('') + '</div>' +
+    '<div class="jv-sq">' + jvChipsHtml(JV_STAGE_Q.TA, 'data-tq') + '</div></div>' +
+    '<details class="jv-know"><summary>자비스가 아는 것 ▾</summary><div class="jv-know-t">' + esc(res.answer || '') + '</div></details>';
+}
+/* 📌 오늘 챙길 것 — 본체의 cmTodo <b>한 곳</b>이 셉니다(「오늘 챙길 고객」 일꾼 · 고객 화면과 같은 셈 · 5번). 여기서 또 세지 않습니다.
+   고객 명단을 아직 안 읽었으면 <b>0 이라 하지 않고</b> 안 읽었다고 말합니다 (1번). 서버를 안 부릅니다 — 읽어 둔 것만 (7번).
+   이름은 이 화면에만 섭니다 — AI 로는 안 갑니다 (3번) */
+function jvTodayHtml(){
+  var P = kbApp();
+  if (!P || typeof P.cmTodo !== 'function') return '';
+  var h = '<b class="jv-th">📌 오늘 챙길 것 — 고객 명단에서</b>';
+  if (!P.OSC || !P.OSC.loaded || !P.CM || !P.CM.loaded) return h + '<div class="jv-tr jv-wait">고객 명단을 아직 안 읽었습니다 — 고객 365일을 한 번 열면 셉니다. (없다고 하지 않습니다)</div>';
+  var t; try { t = P.cmTodo(P.OSC.list || []); } catch(e){ return ''; }
+  if (!t || !t.n) return h + '<div class="jv-tr">오늘 급히 챙길 고객은 없습니다.</div>';
+  var nm = function(c){ try { return P.cmName(c); } catch(e){ return c.name_masked || ''; } };
+  var today = ''; try { today = P.cmToday(); } catch(e){}
+  var row = function(ic, t1, t2, btn){ return '<div class="jv-tr"><i>' + ic + '</i><span><b>' + esc(t1) + '</b>' + (t2 ? '<small>' + esc(t2) + '</small>' : '') + '</span>' + (btn || '') + '</div>'; };
+  var cliB = function(c){ return '<button type="button" data-cli="' + esc(c.id) + '">창</button>'; };
+  (t.due || []).slice(0, 3).forEach(function(c){
+    var x = null; try { x = (P.cmNextAll(c.id) || []).filter(function(n){ return n.due && n.due <= today; })[0]; } catch(e){}
+    h += row('📌', nm(c) + (x ? ' — ' + x.what : ''), x ? x.due + (x.due < today ? ' · 날이 지났습니다' : ' · 오늘') : '할 일 날짜가 됐습니다', cliB(c));
+  });
+  if ((t.due || []).length > 3) h += row('', '기한이 된 일 외 ' + (t.due.length - 3) + '명', '', '');
+  (t.bd || []).slice(0, 2).forEach(function(c){
+    var d = -1; try { d = P.cmBdIn(P.cmOf(c.id).bd); } catch(e){}
+    h += row('🎂', nm(c) + ' — 생일', d === 0 ? '오늘' : (d > 0 ? d + '일 뒤' : '이번 주'), cliB(c));
+  });
+  if ((t.cold || []).length) h += row('❄️', '예순 날 넘게 연락 없는 분 ' + t.cold.length + '명', '다시 연락드릴 때 보낼 글',
+    '<button type="button" data-tq="오랜만에 기존 고객한테 연락">글</button>');
+  return h;
+}
+function jvTodayPaint(){
+  var h = jvTodayHtml();
+  [].forEach.call(document.querySelectorAll('.jv-today'), function(el){ el.innerHTML = h; el.style.display = h ? '' : 'none'; });
+}
+/* 🖥 곁 칸 — 컴퓨터에서만 보입니다(폰에서는 CSS 로 감춥니다). 오늘 챙길 것 · 방금 물은 것 · 마지막 답의 같이 찾은 것 */
+function jvSidePaint(){
+  var sd = document.getElementById('jvSide');
+  if (!sd) return;
+  var chips = [].slice.call(document.querySelectorAll('#jLog .jf-chips .jf-hs')).pop();
+  sd.innerHTML = '<div class="jv-sbox jv-today"></div>' +
+    '<div class="jv-sbox"><b class="jv-th">🕘 방금 물은 것</b>' + (JV_ASKED.length ? '<div class="jv-hs2">' + jvChipsHtml(JV_ASKED, 'data-tq') + '</div>'
+      : '<div class="jv-tr jv-wait">아직 없습니다 — 물으시면 여기 쌓입니다.</div>') + '</div>' +
+    (chips ? '<div class="jv-sbox"><b class="jv-th">같이 찾은 것 — 마지막 답</b><div class="jv-hs2">' + chips.innerHTML + '</div></div>' : '');
+  jvTodayPaint();
+}
+/* 칩 손잡이 — 자주 묻는 말 · 단계마다 물어볼 말 · 방금 물은 것 · 오늘 챙길 것의 「창」 (한 곳 · 5번) */
+document.addEventListener('click', function(e){
+  var t = e.target.closest && e.target.closest('[data-tq], [data-stg], .jv-today [data-cli]');
+  if (!t) return;
+  e.preventDefault();
+  if (t.hasAttribute('data-tq')){ ask(t.getAttribute('data-tq')); return; }
+  if (t.hasAttribute('data-cli')){ jvHereCli(t.getAttribute('data-cli')); return; }
+  var box = t.closest('.jv-stg'), k = t.getAttribute('data-stg');
+  [].forEach.call(box.querySelectorAll('[data-stg]'), function(b){ b.classList.toggle('on', b === t); });
+  box.querySelector('.jv-sq').innerHTML = jvChipsHtml(JV_STAGE_Q[k] || [], 'data-tq');
+});
+/* 위 띠 · 아래 묻는 칸의 단추 — 원래 단추(jX · jVoice · jMic)를 그대로 누릅니다. 새 길을 만들지 않습니다 */
+(function(){
+  var g = function(id){ return document.getElementById(id); };
+  var Q = g('jvQuick'); if (Q) Q.innerHTML = jvChipsHtml(JV_QUICK, 'data-tq');
+  if (inCrm){
+    ['jvBack', 'jvRe', 'jvTab'].forEach(function(id){ if (g(id)) g(id).hidden = false; });
+    g('jvBack').onclick = function(){ try { window.parent.exitApexMap(); } catch(e){} };
+    g('jvRe').onclick = function(){ try { window.parent.reloadApexMap(); } catch(e){} };
+    g('jvTab').onclick = function(){ try { window.parent.openApexMapNewTab(); } catch(e){} };
+  }
+  g('jvNew').onclick = function(){ g('jX').click(); };
+  var tts = g('jvTts');
+  var tp = function(){ tts.textContent = TTS.on ? '🔊' : '🔈'; tts.setAttribute('aria-pressed', TTS.on ? 'true' : 'false');
+    tts.title = TTS.on ? '답마다 읽기 — 켜짐 (누르면 끕니다)' : '답마다 읽기 — 꺼짐 · 🔊 읽어 주기 단추는 언제나 읽습니다'; };
+  tts.onclick = function(){ if (g('jVoice')) g('jVoice').click(); tp(); };
+  tp();
+  var mic = g('askMic'), jm = g('jMic');
+  if (!jm){ if (mic) mic.parentNode.removeChild(mic); }
+  else if (mic){
+    mic.onclick = function(){ jm.click(); };
+    try { new MutationObserver(function(){ mic.textContent = jm.textContent; mic.classList.toggle('on', jm.textContent !== '🎤'); }).observe(jm, {childList:true, characterData:true, subtree:true}); } catch(e){}
+  }
+  /* 본체가 고객 명단을 늦게 읽어 오면 오늘 챙길 것을 한 번씩 다시 그립니다 — 서버는 안 부릅니다(읽어 둔 것만 · 7번) */
+  setTimeout(jvSidePaint, 2500); setTimeout(jvSidePaint, 7000);
+})();
+
 addJ(jvHello());
 hudStats(); hudRun(); hudBoot();
 

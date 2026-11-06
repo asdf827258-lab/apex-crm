@@ -1,0 +1,447 @@
+<!doctype html>
+<html data-theme="light" lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light"/>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>자비스 새 판</title>
+<!-- 목각(그림)입니다 — 앱이 아닙니다. 사장님 말씀 2026-11-04 「자비스 목각 버전으로 우선 만들자. 우선」.
+     지금 자비스(app/apex-map.html)는 <b>두뇌는 그대로</b> 두고, 겉모습만 새로 그립니다.
+     ★ 화면에 찍힌 글은 <b>지금 자비스가 실제로 띄우는 글 그대로</b>입니다(2026-11-04 브라우저에서 뽑음).
+       연금 숫자도 계산기 엔진(pension-engine.js)이 셈한 값 그대로이고, 조건만 견본입니다.
+     ★ 견본 고객은 홍길동 한 분 · 전화번호는 시험용입니다. 날짜는 견본입니다. -->
+<style>
+:root{
+  --ink:#191F28;--ink2:#4E5968;--sub:#6B7684;--sub3:#B0B8C1;
+  --line:#E5E8EB;--line2:#F1F3F5;--bg:#F2F4F6;--bg2:#F5F7F9;--card:#FFFFFF;
+  --pt:#1A56DB;--ptl:#EBF3FF;--ptd:#123A96;
+  --pos:#059669;--posl:#ECFDF5;--posd:#065F46;
+  --warn:#D97706;--warnl:#FFF7ED;--warnd:#7A4E0A;
+  --neg:#DC2626;--negl:#FEF2F2;--negd:#B91C1C;
+  --pur:#7C3AED;--purl:#F5F3FF;
+  --f:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);font-size:14px;line-height:1.45;letter-spacing:-.015em}
+button{font:inherit;letter-spacing:inherit;cursor:pointer}
+.page{max-width:1240px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:23px;margin:0 0 3px;letter-spacing:-.03em}
+h2{font-size:18px;margin:30px 0 10px;letter-spacing:-.02em}
+.lead{color:var(--sub);margin:0 0 14px;font-size:13.5px}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 16px}
+.ctl b{font-size:13px;color:var(--sub)}
+.seg{display:inline-flex;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:3px;gap:2px}
+.seg button{border:0;background:none;font-size:13px;font-weight:700;color:var(--sub);padding:6px 10px;border-radius:8px;min-height:36px}
+.seg button.on{background:var(--ink);color:#fff}
+.wrap{display:grid;grid-template-columns:400px 1fr;gap:24px;align-items:start}
+@media (max-width:920px){.wrap{grid-template-columns:1fr}}
+
+/* ── 폰 ── */
+.phone{width:100%;max-width:400px;margin:0 auto;background:var(--bg);border:8px solid #111827;border-radius:38px;
+  overflow:hidden;height:820px;position:relative;display:flex;flex-direction:column}
+.top{background:var(--card);box-shadow:0 1px 0 var(--line);display:flex;align-items:center;gap:8px;padding:10px 12px;flex:none}
+.top .back{border:0;background:var(--bg2);border-radius:10px;font-size:13px;font-weight:800;color:var(--ink2);min-height:36px;padding:0 10px}
+.top .ttl{flex:1;min-width:0}
+.top .ttl b{display:block;font-size:17px;font-weight:900;letter-spacing:-.03em}
+.top .ttl span{display:block;font-size:11.5px;color:var(--sub)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--pos);margin-right:4px;vertical-align:1px}
+.top .new{border:0;background:none;color:var(--sub);font-size:13px;font-weight:800;min-height:36px;padding:0 6px}
+.scr{flex:1;overflow-y:auto;padding:12px 10px 14px}
+
+/* 묻는 말 · 답 */
+.me{display:flex;justify-content:flex-end;margin:4px 0 10px}
+.me span{background:var(--ink);color:#fff;border-radius:16px 16px 4px 16px;padding:9px 13px;font-size:15px;font-weight:600;max-width:84%}
+.say{font-size:13px;color:var(--sub);margin:0 4px 6px}
+.ans{background:var(--card);border-radius:18px;padding:14px 14px 12px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.src{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:var(--ptd);background:var(--ptl);border-radius:7px;padding:2px 7px;margin-bottom:7px}
+.src.k{color:var(--posd);background:var(--posl)}
+.src.w{color:var(--warnd);background:var(--warnl)}
+.ans h3{font-size:18px;margin:0 0 8px;letter-spacing:-.03em;line-height:1.35}
+.ln{display:flex;gap:9px;padding:7px 0;border-top:1px solid var(--line2);font-size:15px;line-height:1.55}
+.ln:first-of-type{border-top:0}
+.ln .n{flex:none;width:22px;height:22px;border-radius:7px;background:var(--bg2);color:var(--ink2);font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.ln .t small{display:block;font-size:12px;color:var(--sub);font-weight:700}
+.q{color:var(--ink);font-weight:700}
+.mut{background:var(--bg2);border-radius:12px;padding:9px 11px;margin-top:8px;font-size:13px;color:var(--ink2);line-height:1.55}
+.mut b{color:var(--ink)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:11px}
+.btn{border:0;border-radius:13px;min-height:48px;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:5px}
+.btn.p{background:var(--pt);color:#fff}
+.btn.s{background:var(--bg2);color:var(--ink)}
+.btn.w{grid-column:1/-1}
+.go{display:block;text-align:center;margin-top:9px;font-size:13.5px;font-weight:800;color:var(--pt);text-decoration:none;min-height:30px;line-height:30px}
+.more{margin:2px 0 12px}
+.more > b{display:block;font-size:12.5px;color:var(--sub);margin:0 4px 6px}
+.hs{display:flex;gap:7px;overflow-x:auto;padding:0 2px 2px}
+.hs::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:8px 11px;font-size:13.5px;font-weight:700;color:var(--ink);min-height:44px;text-align:left;max-width:230px}
+.chip small{display:block;font-size:11.5px;color:var(--sub);font-weight:700}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.grid .chip{max-width:none;width:100%}
+.lbl{font-size:12.5px;font-weight:800;color:var(--sub);margin:12px 2px 6px}
+.lbl:first-child{margin-top:0}
+.ok{background:var(--posl);color:var(--posd);border-radius:14px;padding:11px 13px;font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.ok button{margin-left:auto;border:0;background:#fff;color:var(--posd);font-weight:800;border-radius:9px;min-height:36px;padding:0 10px}
+.big{font-size:30px;font-weight:900;letter-spacing:-.04em;margin:2px 0}
+.big small{font-size:15px;font-weight:800;color:var(--sub);margin-left:4px}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line2);font-size:14px}
+.kv span{color:var(--sub)}
+.kv b{font-weight:800;text-align:right}
+.note{font-size:12px;color:var(--warnd);background:var(--warnl);border-radius:10px;padding:8px 10px;margin-top:9px;line-height:1.5}
+.cond{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.cond span{font-size:12.5px;font-weight:800;background:var(--bg2);border-radius:8px;padding:4px 8px}
+.cond span.x{background:var(--ptl);color:var(--ptd)}
+.step{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line2)}
+.step:first-of-type{border-top:0}
+.step .n{flex:none;width:26px;height:26px;border-radius:9px;background:var(--ink);color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .t{flex:1;font-size:14.5px}
+.step .t small{display:block;color:var(--sub);font-size:12.5px;margin-top:2px}
+.step .o{flex:none;border:0;background:var(--ptl);color:var(--ptd);font-weight:800;border-radius:10px;min-height:40px;padding:0 10px;font-size:13px}
+.hi{background:var(--card);border-radius:18px;padding:16px 14px;margin-bottom:10px}
+.hi h3{font-size:21px;margin:0 0 4px;letter-spacing:-.03em}
+.hi p{margin:0;color:var(--sub);font-size:13.5px}
+.can{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
+.can div{background:var(--bg2);border-radius:12px;padding:9px 8px;font-size:12.5px;color:var(--ink2);line-height:1.4}
+.can div b{display:block;font-size:14px;color:var(--ink);margin-bottom:1px}
+.today .row{display:flex;align-items:center;gap:9px;padding:9px 0;border-top:1px solid var(--line2);font-size:14px}
+.today .row:first-of-type{border-top:0}
+.today .row i{font-style:normal;flex:none;width:30px;height:30px;border-radius:10px;background:var(--bg2);display:flex;align-items:center;justify-content:center}
+.today .row span{flex:1}
+.today .row small{color:var(--sub);font-size:12px;display:block}
+.today .row button{border:0;background:var(--ptl);color:var(--ptd);font-weight:800;border-radius:10px;min-height:38px;padding:0 10px;font-size:13px}
+.stg{display:flex;gap:6px;margin:0 0 7px}
+.stg button{border:0;background:var(--card);border-radius:10px;font-size:13px;font-weight:900;color:var(--sub);min-height:38px;padding:0 12px}
+.stg button.on{background:var(--ink);color:#fff}
+
+/* 아래 — 묻는 칸 (늘 아래에 붙어 있음) */
+.bot{flex:none;background:var(--card);box-shadow:0 -1px 0 var(--line);padding:8px 10px 12px}
+.bot .hs{margin-bottom:7px}
+.bot .hs .chip{min-height:38px;padding:6px 10px;font-size:13px;background:var(--bg2);border:0}
+.inp{display:flex;gap:7px;align-items:center}
+.inp .box{flex:1;min-height:48px;border-radius:14px;background:var(--bg2);display:flex;align-items:center;padding:0 13px;font-size:15px;color:var(--sub3)}
+.inp .mic{flex:none;width:52px;height:48px;border:0;border-radius:14px;background:var(--pt);color:#fff;font-size:20px}
+.inp .snd{flex:none;height:48px;border:0;border-radius:14px;background:var(--ink);color:#fff;font-weight:800;padding:0 13px}
+
+/* 아래에서 올라오는 확인 판 */
+.dim{position:absolute;inset:0;background:rgba(17,24,39,.42);display:flex;align-items:flex-end}
+.sheet{background:var(--card);border-radius:22px 22px 0 0;width:100%;padding:8px 16px 18px}
+.sheet .grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px}
+.sheet h3{font-size:19px;margin:0 0 3px;letter-spacing:-.03em}
+.sheet p{margin:0 0 10px;color:var(--sub);font-size:13px}
+.fld{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line2)}
+.fld span{flex:none;width:52px;font-size:13px;color:var(--sub);font-weight:700}
+.fld b{flex:1;font-size:16px}
+.fld button{border:0;background:var(--bg2);border-radius:9px;font-size:12.5px;font-weight:800;color:var(--ink2);min-height:36px;padding:0 10px}
+
+/* ── 오른쪽 쪽지 ── */
+.side .card{background:var(--card);border-radius:16px;padding:14px 16px;margin-bottom:10px}
+.side h3{font-size:16px;margin:0 0 8px}
+.side ul{margin:0;padding-left:18px}
+.side li{margin:5px 0;font-size:14px;line-height:1.55}
+.side .was{color:var(--negd)}
+.side .now{color:var(--posd)}
+.tag{display:inline-block;font-size:11.5px;font-weight:800;border-radius:6px;padding:1px 6px;margin-right:4px;vertical-align:1px}
+.tag.was{background:var(--negl);color:var(--negd)}
+.tag.now{background:var(--posl);color:var(--posd)}
+.tag.keep{background:var(--ptl);color:var(--ptd)}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:14px;overflow:hidden;font-size:13.5px}
+th,td{text-align:left;padding:9px 11px;border-top:1px solid var(--line2);vertical-align:top}
+th{background:var(--bg2);font-size:12.5px;color:var(--sub)}
+.foot{color:var(--sub);font-size:12.5px;margin-top:24px}
+
+/* ── 컴퓨터 화면 ── */
+.wrap.pcm{grid-template-columns:1fr}
+.pcwrap{overflow-x:auto;padding-bottom:4px}
+.pcw{min-width:980px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(17,24,39,.08);overflow:hidden;position:relative}
+.pcbar{display:flex;gap:6px;align-items:center;padding:9px 12px;background:#EEF1F4;border-bottom:1px solid var(--line)}
+.pcbar i{width:11px;height:11px;border-radius:50%;background:#D1D5DB;display:inline-block}
+.pcbar span{flex:1;margin-left:10px;background:#fff;border-radius:8px;font-size:12px;color:var(--sub);padding:5px 10px}
+.pcapp{position:relative}
+.pcgrid{display:grid;grid-template-columns:minmax(0,1fr) 330px;height:700px;background:var(--bg)}
+.pcmain{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)}
+.pcmain .scr{padding:18px 20px;min-height:0}
+.col{max-width:680px;margin:0 auto}
+.pcmain .bot{padding:10px 20px 14px}
+.pcmain .bot > *{max-width:680px;margin-left:auto;margin-right:auto}
+.pcmain .grid{grid-template-columns:repeat(4,1fr)}
+.pcaside{overflow-y:auto;padding:16px 14px;background:var(--bg2)}
+.pcaside .ans{box-shadow:none;border:1px solid var(--line)}
+.pcaside h4{font-size:12.5px;color:var(--sub);margin:0 2px 7px;font-weight:800}
+.mini{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:7px;font-size:13.5px;line-height:1.5}
+.mini small{display:block;font-size:11.5px;font-weight:800;color:var(--sub);margin-bottom:2px}
+.hint{font-size:11.5px;color:var(--sub);margin-top:6px;text-align:center}
+.pcw .dim{align-items:center;justify-content:center}
+.pcw .sheet{max-width:440px;border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.pcw .sheet .grab{display:none}
+
+/* ── 결과물 ── */
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px;align-items:start}
+.rbox{background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:12px 10px 4px}
+.rbox .st{display:inline-block;font-size:11.5px;font-weight:900;color:#fff;background:var(--ink);border-radius:6px;padding:1px 7px;margin:0 0 6px 4px}
+.wk{display:inline-block;margin-left:6px;font-size:11.5px;font-weight:800;color:var(--warnd);background:var(--warnl);border-radius:6px;padding:1px 6px}
+.fix{font-size:12px;color:var(--posd);background:var(--posl);border-radius:10px;padding:7px 10px;margin:-2px 0 10px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>🤖 자비스 새 판 — 목각</h1>
+  <div class="fix" style="font-size:13.5px;margin:0 0 12px">✅ <b>2026-11-05 앱에 적용했습니다 (판 X360)</b> — 사장님 말씀 「응 그림에 그린쪽으로 해서 다 적용해줘」. 고르신 넷(묻는 칸은 아래 · 첫 화면은 오늘 챙길 것 + 단계마다 물어볼 말 · 읽어 주기는 누를 때만 · AI 의견은 맨 아래 접어서)과 아래 「새 판」 자리들이 app/apex-map.html 에 섰습니다 — check-jvskin 이 잽니다. 아래 「지금」 칸은 고치기 전 모습입니다.</div>
+  <p class="lead">그림입니다 — 앱이 아닙니다. <b>찾는 두뇌는 그대로</b> 두고 겉모습만 새로 그렸습니다. 화면의 글은 지금 자비스가 실제로 띄우는 글 그대로이고, 견본 고객은 홍길동 한 분입니다.</p>
+  <div class="ctl"><b>기기</b><div class="seg" id="dev"><button data-d="ph" class="on">📱 폰</button><button data-d="pc">🖥 컴퓨터</button></div></div>
+  <div class="ctl"><b>화면</b><div class="seg" id="seg"></div></div>
+  <div class="wrap" id="wrap">
+    <div class="phone" id="phone"></div>
+    <div class="side" id="side"></div>
+  </div>
+
+  <h2 id="res">📸 결과물 — 지금 자비스의 실제 답을 새 판 카드에</h2>
+  <p class="lead">아래는 견본이 아닙니다. 지금 자비스(app/apex-map.html)를 띄워 열다섯 물음을 <b>실제로 묻고</b>, 내놓은 답을 그대로 새 판 카드에 부었습니다 — <span id="rday"></span>. 어떤 답이 맨 위에 서는지, 줄에 무엇이 적히는지는 하나도 고치지 않았습니다. 새 판이 바꾸는 것은 <b>그리는 법</b>뿐입니다.</p>
+  <div class="ctl"><b>단계</b><div class="seg" id="rseg"></div></div>
+  <div class="rgrid" id="rgrid"></div>
+
+  <h2>한눈에 — 무엇이 바뀌나</h2>
+  <table>
+    <tr><th style="width:22%">자리</th><th>지금</th><th>새 판</th></tr>
+    <tr><td><b>묻는 칸</b></td><td>맨 위에 있어 답이 쌓이면 화면 밖으로 밀려납니다. 아래에는 「워크스페이스」 띠가 떠서 답을 가립니다.</td><td><b>늘 맨 아래</b>에 붙어 있습니다(채팅처럼). 🎤 단추가 엄지 자리에 크게. 「← 업무」 는 위 띠로 옮겨 아무것도 가리지 않습니다.</td></tr>
+    <tr><td><b>답의 겹</b></td><td>「🔎 앱에서 찾아 온 것」 상자 안에 「⭐ 바로 쓰실 것」 상자, 그 안에 단추 — <b>세 겹</b>.</td><td><b>답 하나 = 카드 하나.</b> 위에 어디서 왔는지 딱지 하나, 제목, 줄, 큰 단추 둘.</td></tr>
+    <tr><td><b>더 찾은 것</b></td><td>「더 찾은 것 N개 ▾」 를 눌러야 펼쳐집니다.</td><td>카드 바로 아래 <b>옆으로 넘기는 칩</b> — 누르면 그 답이 카드로 섭니다.</td></tr>
+    <tr><td><b>화면 길</b></td><td>답 아래에 「순서 N걸음 ▾」 · 「도움말 더 보기 ▾」 가 늘 붙습니다.</td><td>앱 쓰는 법을 물었을 때만 <b>걸음 카드</b>로 — 걸음마다 「여기서 열기」.</td></tr>
+    <tr><td><b>시키면 하기</b></td><td>답 사이에 확인 상자가 끼어 「홍길동님 · 길동 고객 내일 3시 통화」 처럼 한 줄로.</td><td>아래에서 <b>확인 판</b>이 올라옵니다 — 누구 · 무엇 · 언제 세 칸을 따로, 칸마다 「바꾸기」.</td></tr>
+    <tr><td><b>연금 셈</b></td><td>셈 카드 밑에 「전립선비대증 보상기준(50세…)」 같은 엉뚱한 장이 붙습니다(「50세」 가 걸림).</td><td>셈을 물으면 <b>셈 카드만</b>. 문구(최저보증 · 물가 · 약관과 심사)는 접지 않고 늘 보입니다.</td></tr>
+    <tr><td><b>홈 단추</b></td><td>홈의 「🤖 무엇을 도울까요?」 꼬리글이 「물으면 길 안내」 — 자비스가 길이 아니라 답을 내놓게 된 뒤(판 X270)에도 그대로입니다.</td><td>「물으면 바로 답」 — 한 줄 그대로(두 줄이 되면 홈 칸 키가 95 → 139px 로 뜁니다).</td></tr>
+    <tr><td><b>컴퓨터 화면</b></td><td>폰과 같은 한 줄 기둥이 화면 가운데에 길게 — 옆은 비어 있습니다.</td><td>가운데 대화(680px) + <b>오른쪽 칸</b>(같이 찾은 것 · 오늘 챙길 것 · 그 분 카드). 확인 판은 가운데 창으로.</td></tr>
+    <tr><td><b>못 찾을 때</b></td><td>비슷한 낱말로 엉뚱한 대본이 서던 자리가 있었습니다(「외계인 보험 있어?」 → 「보험 이미 있어요」 · 판 X329 에서 고침).</td><td>「앱 자료에서 찾지 못했습니다 — 지어내지 않습니다」 를 먼저, 그다음 이렇게 물으면 찾는다는 칩.</td></tr>
+  </table>
+
+  <h2>그대로 두는 것</h2>
+  <table>
+    <tr><th style="width:22%">무엇</th><th>왜</th></tr>
+    <tr><td><span class="tag keep">두뇌</span> 찾기 · 고르기</td><td>jvFind · jvKnowPick · JV_SAID … 서른 물음이 맞는 답을 맨 위에 세우는 셈은 손대지 않습니다. 새 판은 <b>그 결과를 그리는 법</b>만 바꿉니다 — check-jvfind 가 그대로 잽니다.</td></tr>
+    <tr><td><span class="tag keep">표</span> 대본 · 보낼 글</td><td>apex-stage.js · 질병가이드 · 실전화법서 · 아카데미 — 자비스는 옮겨 적지 않고 그 표를 읽습니다 (5번).</td></tr>
+    <tr><td><span class="tag keep">규칙</span> 1 · 2 · 3번</td><td>지어내지 않음 · 세금·가입은 조건부 · 실명은 이 브라우저에만(AI 로는 홍○○).</td></tr>
+  </table>
+
+  <h2>사장님이 정하실 것</h2>
+  <table>
+    <tr><th style="width:22%">물음</th><th>그림에 그린 쪽</th><th>다른 쪽</th></tr>
+    <tr><td>묻는 칸 자리</td><td><b>아래</b> (엄지가 닿는 곳 · 채팅처럼)</td><td>지금처럼 위</td></tr>
+    <tr><td>첫 화면</td><td>「오늘 챙길 것」 셋 + 단계별 물어볼 말 칩</td><td>지금의 고민 여섯 칸(사람이 없어요 · 약속이 안 잡혀요 …)</td></tr>
+    <tr><td>읽어 주기</td><td>누를 때만 🔊</td><td>답이 서면 바로 읽기(운전 중 쓰기 좋음)</td></tr>
+    <tr><td>AI 의견</td><td>켜져 있을 때만 맨 아래 접어서</td><td>늘 보이게</td></tr>
+  </table>
+  <p class="foot">이 그림을 보시고 고르시면, 그다음에 본체(app/apex-map.html)에 옷만 갈아입힙니다 — 찾는 셈과 점검은 그대로 갑니다.</p>
+</div>
+
+<script src="자비스-결과.js"></script>
+<script>
+/* 화면 일곱 — 글은 지금 자비스가 실제로 띄우는 글 그대로 (2026-11-04) */
+var BOT_CHIPS = ['☎️ 첫 전화 뭐라고', '📵 부재중 문자', '📅 약속 문자', '🛡 거절 화법', '📮 증권 전달', '🧮 연금 셈'];
+function jvTop(sub){ return '<div class="top"><button class="back">← 업무</button><div class="ttl"><b>자비스</b><span><i class="dot"></i>' + sub + '</span></div><button class="new">새로</button></div>'; }
+function jvBot(){ return '<div class="bot"><div class="hs">' + BOT_CHIPS.map(function(c){ return '<button class="chip">' + c + '</button>'; }).join('') +
+  '</div><div class="inp"><div class="box">무엇이든 물어보세요</div><button class="mic" aria-label="말로 묻기">🎤</button><button class="snd">보내기</button></div></div>'; }
+function me(t){ return '<div class="me"><span>' + t + '</span></div>'; }
+function btns(a, b){ return '<div class="btns"><button class="btn p">' + a + '</button><button class="btn s">' + b + '</button></div>'; }
+
+var S = [
+ {k:'home', n:'① 첫 화면',
+  scr:'<div class="hi"><h3>무엇을 도와드릴까요?</h3><p>화면 이름을 몰라도 됩니다 — 하려는 일을 그대로 말씀하세요.</p>' +
+    '<div class="can"><div><b>🔎 찾기</b>대본 · 질병 · 약관 자료</div><div><b>🛠 하기</b>할 일 · 연락 기록</div><div><b>🧮 셈하기</b>연금 · 계산기로</div></div></div>' +
+    '<div class="ans today"><span class="src k">📌 오늘 챙길 것 — 고객 명단에서</span>' +
+      '<div class="row"><i>📮</i><span><b>홍길동</b> — 증권 전달<small>11-03 · 하루 지남</small></span><button>대본</button></div>' +
+      '<div class="row"><i>🎂</i><span><b>홍길동</b> — 생일<small>11-02 · 안부 문자</small></span><button>문자</button></div>' +
+      '<div class="row"><i>❄️</i><span>마지막 연락 기록 없는 분 <b>1</b><small>다시 걸기 전에 보낼 글</small></span><button>글</button></div></div>' +
+    '<div class="more"><b>이렇게 물어보세요 — 단계마다</b><div class="stg"><button class="on">TA</button><button>AP</button><button>PC</button><button>CS</button></div>' +
+      '<div class="grid"><button class="chip">처음 전화 뭐라고 해?</button><button class="chip">부재중이면 문자 뭐라고 보내?</button><button class="chip">지금 바빠요 라고 끊으려 해</button><button class="chip">거절했는데 다시 연락해도 돼?</button></div></div>',
+  side:{was:['인사 글이 여덟 줄 — 「고객 · 질병코드 · 계약관리 · 보험 자료 303가지를 찾습니다 …」 를 다 읽어야 시작합니다.','고민 여섯 칸(사람이 없어요 · 약속이 안 잡혀요 …)은 눌러도 또 고르는 칸이 나옵니다.','묻는 칸이 위에 있고, 아래 「워크스페이스」 띠가 첫 답을 가립니다.'],
+        now:['한 줄 인사 + 할 수 있는 것 셋(찾기 · 하기 · 셈하기).','<b>오늘 챙길 것</b> — 고객 명단에서 날짜가 된 일만 셋. 누르면 그 대본 · 그 글이 바로.','<b>단계(TA · AP · PC · CS)마다 물어볼 말</b> — 신입 시뮬레이션 서른 물음에서 골랐습니다. 누르면 그대로 묻습니다.','묻는 칸 · 🎤 은 늘 맨 아래.'],
+        keep:['「오늘 챙길 것」 은 이미 있는 고객 명단(CM.meta 의 다음 할 일 · 생일 · 마지막 연락)을 읽기만 합니다 — 새로 세지 않습니다(5번 · 「지금 됐나」 는 한 곳).']}},
+ {k:'answer', n:'② 찾은 답',
+  scr:me('처음 전화 뭐라고 해?') + '<div class="say">앱에서 찾았습니다 — 할 말 · 보낼 글 2건</div>' +
+    '<div class="ans"><span class="src">☎️ 할 말 · TA 스크립트</span><h3>전화를 여는 다섯 마디</h3>' +
+      '<div class="ln"><span class="n">1</span><span class="t"><small>첫 3초 — 밝게</small><span class="q">「고객님, 안녕하세요!」</span></span></div>' +
+      '<div class="ln"><span class="n">2</span><span class="t"><small>누구인지</small><span class="q">「APEX 윤시현입니다.」</span></span></div>' +
+      '<div class="ln"><span class="n">3</span><span class="t"><small>용건 한 줄</small><span class="q">「(아래 첫 마디)」</span></span></div>' +
+      '<div class="ln"><span class="n">4</span><span class="t"><small>망설이시면</small><span class="q">「이번 주에 화요일 오전하고 목요일 오후가 비는데, 어느 쪽이 편하실까요?」</span></span></div>' +
+      '<div class="ln"><span class="n">5</span><span class="t"><small>마무리</small><span class="q">「네, 그럼 그때 뵙겠습니다. 전화 받아 주셔서 감사합니다!」</span></span></div>' +
+      btns('📋 말 복사', '🔊 읽어 주기') + '<a class="go">TA 스크립트에서 열기 ›</a></div>' +
+    '<div class="more"><b>같이 찾은 것</b><div class="hs"><button class="chip"><small>✉️ 보낼 글</small>처음 연락드리는 분 · 문자 → 전화</button><button class="chip"><small>🧭 영업 단계</small>TA 단계 — 만날 날짜를 잡는다</button></div></div>',
+  side:{was:['「🔎 앱에서 찾아 온 것」 → 「⭐ 바로 쓰실 것」 → 단추, <b>세 겹 상자</b>.','대본이 「① 첫 3초 — 밝게 — 「고객님…」」 처럼 한 줄에 붙어 있어 읽으며 말하기 어렵습니다.','「더 찾은 것 1개 ▾」 · 「순서 2걸음 ▾」 · 「도움말 더 보기 ▾」 · 「🤖 AI 의견」 이 답마다 붙습니다.'],
+        now:['답 하나 = 카드 하나 — 딱지(어디서 왔나) · 제목 · 줄 · 큰 단추 둘.','줄마다 <b>작은 꼬리표(언제)</b>와 <b>굵은 말(무엇을)</b>을 나눠 — 보면서 그대로 말합니다.','「📋 말 복사」 는 꼬리표 없이 <b>말만</b> 복사합니다(지금과 같음).','같이 찾은 것은 옆으로 넘기는 칩 — 전화를 물었으니 대본이 앞, 문자는 둘째(판 X280 의 차례 그대로).'],
+        keep:['어느 답이 맨 위에 서는지는 지금 두뇌 그대로입니다.']}},
+ {k:'rej', n:'③ 거절 고르기',
+  scr:me('거절 화법') + '<div class="ans"><span class="src">🛡 거절 처리</span><h3>고객이 뭐라고 하셨나요?</h3><p style="margin:0 0 8px;color:var(--sub);font-size:13px">누르시면 그 대본이 바로 섭니다 — 앱의 거절 표 두 벌에 있는 말 그대로입니다.</p>' +
+      '<div class="lbl">📞 전화(TA)에서</div><div class="grid">' + ['지금 바빠요','필요 없어요','보험 이미 있어요','생각해 볼게요','가족과 상의할게요','돈 여유 없어요','담당자 있어요','문자로 보내주세요'].map(function(t){ return '<button class="chip">「' + t + '」</button>'; }).join('') + '</div>' +
+      '<div class="lbl">🤝 마주 앉아서</div><div class="grid">' + ['보험 많아요','보험료가 부담돼요','저는 안 걸려요','나라에서(건강보험) 다 해 주잖아요','다른 설계사도 만나 볼게요'].map(function(t){ return '<button class="chip">「' + t + '」</button>'; }).join('') + '</div>' +
+      '<a class="go">🥊 거절 근육 훈련 열기 ›</a></div>' +
+    me('「필요 없어요」') +
+    '<div class="ans"><span class="src">🛡 거절 처리 · 전화</span><h3>「필요 없어요」</h3>' +
+      '<div class="ln"><span class="n">1</span><span class="t"><small>첫 마디</small><span class="q">「네, 그렇게 생각하실 수 있어요.」</span></span></div>' +
+      '<div class="ln"><span class="n">2</span><span class="t"><small>이어서</small><span class="q">「정리표만 한번 받아 보세요. 제가 비워 둔 두 시간 중에 언제가 괜찮으세요?」</span></span></div>' +
+      '<div class="mut"><b>속마음</b> — “결국 뭐 팔려는 거잖아. 지금 있는 걸로 충분해.”<br><b>피할 말</b> — “들어 보시면 생각이 바뀌세요”, “지금 아니면 안 돼요” 같은 압박.<br><b>멈출 때</b> — 두 번째로 분명히 필요 없다고 하면 감사 인사 후 종료.</div>' +
+      btns('📋 말 복사', '🔊 읽어 주기') + '</div>',
+  side:{was:['고르는 말 19가지가 한 줄로 길게 늘어서 「생각해 볼게요」 · 「가족과 상의할게요」 가 두 번 보입니다(전화 · 마주 앉아서 두 표에 다 있어서).','대본 카드에 속마음 · 첫 마디 · 이어서 · 피할 말 · 멈출 때 다섯 줄이 같은 무게입니다.'],
+        now:['<b>어디서(전화 · 마주 앉아서)</b>로 나눈 두 칸 — 같은 말이 두 번 서지 않습니다.','대본은 <b>할 말 둘(첫 마디 · 이어서)</b>만 굵게, 속마음 · 피할 말 · 멈출 때는 회색 상자 하나에.','「📋 말 복사」 는 할 말 둘만.'],
+        keep:['고를 말은 두 표(apex-stage.js 의 obj · 질병가이드의 rej)에서 그대로 읽습니다 — 지어내지 않습니다.']}},
+ {k:'act', n:'④ 시키면 하기',
+  sheet:true,
+  scr:me('홍길동 고객 내일 3시 통화 할 일 넣어줘') + '<div class="say">아래에서 확인하시면 바로 적습니다.</div>' +
+    '<div class="ok">✅ 홍길동님 할 일을 적었습니다 — 내일 오후 3시 통화<button>되돌리기</button></div>' +
+    '<div class="ans"><span class="src k">🪪 고객 명단</span><h3>홍길동</h3><div class="kv"><span>📞 전화</span><b>010-1234-5678</b></div><div class="kv"><span>📌 다음 할 일</span><b>통화 · 내일 15:00</b></div><div class="kv"><span>❄️ 마지막 연락</span><b>기록 없음</b></div>' +
+      btns('📞 전화 걸기', '🪟 이 분 창') + '</div>',
+  over:'<div class="dim"><div class="sheet"><div class="grab"></div><h3>🛠 고객 다음 할 일 잡기</h3><p>이대로 적을까요? 칸을 눌러 바꿀 수 있습니다.</p>' +
+    '<div class="fld"><span>누구</span><b>홍길동</b><button>바꾸기</button></div>' +
+    '<div class="fld"><span>무엇</span><b>통화</b><button>바꾸기</button></div>' +
+    '<div class="fld"><span>언제</span><b>내일 오후 3시</b><button>바꾸기</button></div>' +
+    '<div class="btns"><button class="btn p">✅ 이대로 하기</button><button class="btn s">취소</button></div></div></div>',
+  side:{was:['확인 상자가 답 사이에 끼어 있고, 내용이 「홍길동님 · 길동 고객 내일 3시 통화」 한 줄 — 이름 꼬리(길동)가 할 일 글에 남습니다.','적은 뒤 되돌리는 길이 눈에 안 띕니다.'],
+        now:['<b>아래에서 확인 판</b>이 올라옵니다 — 누구 · 무엇 · 언제 세 칸, 칸마다 「바꾸기」.','「✅ 이대로 하기」 를 눌러야 적습니다(지금과 같음 · 묻지 않고 하는 일 0).','적은 뒤 초록 띠에 <b>「되돌리기」</b>.','그 분 카드가 아래 — 바로 전화 걸기.'],
+        keep:['일은 지금과 같은 VA_ACT 한 표가 합니다. 그 분을 못 찾으면 카드를 세우지 않습니다(판 X280 · 이름 없는 「전화했는데…」 에 일 카드 0).']}},
+ {k:'pen', n:'⑤ 연금 셈',
+  scr:me('50세 남자 월 50만원 10년납 65세부터 연금 얼마') +
+    '<div class="ans"><span class="src w">🧮 연금 셈 — 계산기와 같은 엔진</span>' +
+      '<div class="cond"><span class="x">50세</span><span class="x">남성</span><span class="x">월 50만원</span><span class="x">10년 납</span><span class="x">65세부터</span><span>✏️ 바꾸기</span></div>' +
+      '<div style="font-size:13px;color:var(--sub);font-weight:700">매달 가장 많이 받는 상품 · 평생 보증받는 변액연금</div>' +
+      '<div class="big">42만 3,783원<small>매달 · 최저보증</small></div>' +
+      '<div class="kv"><span>총 납입</span><b>6,000만원</b></div><div class="kv"><span>연금을 셈하는 바탕 금액</span><b>1억 820만원</b></div>' +
+      '<div class="kv"><span>원금을 돌려받는 때</span><b>약 11.8년 받으면</b></div><div class="kv"><span>100세까지 받으면</span><b>1억 7,798만원</b></div>' +
+      '<div class="note">※ 최저보증 금액 기준입니다. 물가상승률은 반영하지 않았습니다. 변액은 실적배당이라 더 받을 수도 있지만 여기서는 보증분만 셉니다. 실제 지급은 약관과 보험사 심사 결과에 따릅니다.</div>' +
+      '<div class="btns"><button class="btn p w">📊 계산기로 이 값 넘기기</button><button class="btn s">📋 결과 복사</button><button class="btn s">🔊 읽어 주기</button></div></div>' +
+    '<div class="more"><b>다른 상품 5개 · 이 조건으로 안 되는 상품 4개</b><div class="hs"><button class="chip">다른 상품 보기</button><button class="chip">안 되는 까닭</button></div></div>',
+  side:{was:['셈 카드 밑에 「🖼 p.71 — 전립선비대증 보상기준 (50세 …)」 이 따라붙습니다 — 물음 속 「50세」 가 장 제목에 걸린 것입니다.','입력칸(성별 · 나이 · 시작 · 기간 · 월 납입)이 결과 위에 늘 펼쳐져 결과가 아래로 밀립니다.'],
+        now:['<b>셈을 물으면 셈 카드만</b> — 엉뚱한 장을 붙이지 않습니다.','조건은 <b>칩 한 줄</b>, 바꿀 때만 「✏️ 바꾸기」.','큰 숫자 하나(매달 · 최저보증) + 넷 줄. 문구는 <b>접지 않고</b> 늘 보입니다(1번 · 2번).','「📊 계산기로 이 값 넘기기」 가 맨 앞 단추.'],
+        keep:['숫자는 계산기 엔진(pension-engine.js) 그대로 — 화면에 찍힌 값은 이 조건으로 엔진이 셈한 값입니다. 짐작해 채우는 칸 0.']}},
+ {k:'route', n:'⑥ 앱 쓰는 법',
+  scr:me('보장분석 어떻게 해?') + '<div class="say">앱 쓰는 법을 물으셨습니다 — 그 화면으로 가는 걸음입니다.</div>' +
+    '<div class="ans"><span class="src">🧭 화면 길</span><h3>증권 PDF 로 보장분석</h3>' +
+      '<div class="step"><span class="n">1</span><span class="t"><b>AI 보장분석</b> 에 PDF 를 올립니다<small>계약과 담보가 그대로 섭니다 · 글자 없는 스캔본은 그림으로 읽습니다</small></span><button class="o">여기서 열기</button></div>' +
+      '<div class="step"><span class="n">2</span><span class="t"><b>보험 해석</b> 에서 담보 하나하나<small>숫자가 이상하면 여기서 봅니다</small></span><button class="o">열기</button></div>' +
+      '<div class="step"><span class="n">3</span><span class="t"><b>보장분석 전&amp;후 만들기</b><small>고객 앞에 보여 줄 한 장</small></span><button class="o">열기</button></div>' +
+      '<div class="mut"><b>PDF 판독은 원본과 꼭 대조하세요.</b> 이 화면 자세한 설명(사용가이드 14줄)은 「여기서 열기」 안에 있습니다.</div></div>',
+  side:{was:['걸음마다 「가는 길: 「🧰 도구」 → 「🤝 고객 만나기」 칸을 눌러 펴고 → …」 긴 글 + 「이 화면 자세히 — 사용가이드 14줄」 이 펼쳐져 화면 넉 장 길이(3,700px)입니다.'],
+        now:['<b>걸음 카드</b> — 걸음마다 한 줄 + 작은 설명 + 「열기」.','가는 길 글(메뉴 어디에 있나)은 지우지 않고 「여기서 열기」 가 대신합니다 — 누르면 그 화면으로 갑니다.','긴 사용가이드는 그 화면 안에서.'],
+        keep:['앱 쓰는 법인지 아닌지(jvIsUse)는 그대로 — 「소개 부탁 어떻게 해」 는 길이 아니라 영업 대본입니다.']}},
+ {k:'none', n:'⑦ 못 찾음',
+  scr:me('외계인 보험 있어?') +
+    '<div class="ans"><span class="src w">🔎 앱 자료</span><h3>앱 자료에서 찾지 못했습니다</h3><p style="margin:0;color:var(--ink2);font-size:14.5px;line-height:1.6">비슷한 말로 짐작해 아무 대본이나 세우지 않습니다. 이렇게 물어보시면 찾습니다 —</p>' +
+      '<div class="grid" style="margin-top:10px"><button class="chip">상품 이름으로 — 「간병보험」</button><button class="chip">담보 이름으로 — 「유사암 진단비」</button><button class="chip">고객이 한 말로 — 「필요 없대」</button><button class="chip">하려는 일로 — 「제안서 만들기」</button></div></div>' +
+    '<div class="ans" style="background:var(--purl)"><span class="src" style="background:#fff;color:var(--pur)">🤖 AI 의견 · 켜져 있을 때만</span><div style="font-size:14px;color:var(--ink2);line-height:1.6">AI 에게는 고객 이름을 <b>홍○○</b> 으로 가려 보냅니다. AI 의 말은 앱 자료가 아니라는 표시를 늘 붙입니다.</div></div>',
+  side:{was:['「외계인 보험 있어?」 에 「🛡 「보험 이미 있어요」」 거절 대본이 섰습니다 — 「보험 … 있어」 를 고객의 말로 읽었습니다. <b>판 X329 에서 고쳤습니다</b>(맨 「…어?」 는 묻는 말).','AI 가 꺼져 있으면 「고른 머리(모델) 이름이 맞지 않습니다」 가 답마다 붙습니다.'],
+        now:['<b>못 찾았다고 먼저</b> 말합니다 — 지어내지 않습니다(1번).','어떻게 물으면 찾는지 칩 넷.','AI 의견은 켜져 있을 때만, 맨 아래, 앱 자료가 아니라는 표시와 함께. 이름은 가립니다(3번).'],
+        keep:['못 찾음은 지금도 「찾지 못했습니다」 로 말합니다 — 새 판은 그것을 맨 앞에 크게 둡니다.']}}
+];
+/* 🖥 컴퓨터 화면 — 오른쪽 칸 (폰에서는 대화 안에 있던 것들이 옆으로 갑니다) */
+var PC = {
+  home:{scr:function(){ var i = S[0].scr.indexOf('<div class="ans today">'), j = S[0].scr.indexOf('<div class="more">');
+          return S[0].scr.slice(0, i) + S[0].scr.slice(j); },
+        aside:function(){ var i = S[0].scr.indexOf('<div class="ans today">'), j = S[0].scr.indexOf('<div class="more">');
+          return '<h4>📌 오늘 챙길 것</h4>' + S[0].scr.slice(i, j) + '<h4 style="margin-top:14px">🕘 방금 물은 것</h4><div class="mini" style="color:var(--sub)">아직 없습니다 — 물으시면 여기 쌓입니다.</div>'; }},
+  answer:{aside:'<h4>같이 찾은 것</h4><div class="mini"><small>✉️ 보낼 글</small><b>처음 연락드리는 분 · 문자 → 전화</b><br>걸기 전에 문자로 누구인지 · 왜 연락드리는지를 먼저 밝힙니다.</div><div class="mini"><small>🧭 영업 단계</small><b>TA 단계 — 만날 날짜를 잡는다</b><br>상품 설명을 전화로 하지 않는다. 날짜 두 개를 드리고 고르시게 한다.</div><h4 style="margin-top:14px">이 대본이 있는 곳</h4><div class="mini">☎️ TA 스크립트 — 「오늘 터치할 사람」 에서 그 분을 고릅니다 <a class="go" style="display:inline;margin:0">열기 ›</a></div>'},
+  rej:{aside:'<h4>이 말들은 어디서 왔나</h4><div class="mini"><small>📞 전화(TA) — apex-stage.js</small>거절 처리 표 28가지 — 그중 자주 받는 여덟</div><div class="mini"><small>🤝 마주 앉아서 — 질병 보험가이드</small>공통 거절 일곱 — 어느 병을 설명하든 나오는 말</div><h4 style="margin-top:14px">익히려면</h4><div class="mini">🥊 거절 근육 훈련 — 10일 과정 · 역할극 · 거절 일기 <a class="go" style="display:inline;margin:0">열기 ›</a></div>'},
+  act:{scr:function(){ var x = S[3].scr, i = x.indexOf('<div class="ans">'); return x.slice(0, i); },
+       aside:function(){ var x = S[3].scr, i = x.indexOf('<div class="ans">'); return '<h4>그 분</h4>' + x.slice(i); }},
+  pen:{aside:'<h4>더 볼 것</h4><div class="mini"><small>⭐ 같은 조건</small>다른 상품 5개 ▾ — 펴면 상품마다 매달 받는 돈(같은 엔진)</div><div class="mini"><small>⚠ 이 조건으로는</small>안 되는 상품 4개 ▾ — 펴면 왜 안 되는지(나이 · 납입 기간)</div><h4 style="margin-top:14px">계산기로 넘기면</h4><div class="mini">계산기의 나이 · 성별 · 은퇴 나이 칸도 이 값으로 바뀝니다 — 넘긴 뒤 「되돌리기」 로 돌릴 수 있습니다.</div>'},
+  route:{aside:'<h4>AI 보장분석 — 사용가이드에서</h4><div class="mini"><small>PDF 넣기</small>증권·보장분석표를 올립니다. 글자가 없는 스캔본이면 페이지 이미지로 읽습니다.</div><div class="mini"><small>집중 포인트 고르기</small>과잉/중복·부족·갱신/납입 등 이 고객에서 특히 볼 것을 눌러 둡니다.</div><div class="mini"><small>만들고 확인</small>처음 누르면 고객 자료를 AI 로 보내도 되는지 확인 창이 한 번 뜹니다.</div>'},
+  none:{aside:'<h4>이렇게 물으면 찾습니다</h4><div class="mini">상품 이름 · 담보 이름 · 고객이 한 말 · 하려는 일 — 화면 이름은 몰라도 됩니다.</div><h4 style="margin-top:14px">찾는 곳</h4><div class="mini">고객 · 질병코드 · 계약관리 · 질병 보험가이드 · 거절 처리 · 🎓 아카데미 · 📕 실전화법서 · 🎞 상담자료 덱</div>'}
+};
+var cur = 0, dev = 'ph';
+function v(x){ return typeof x === 'function' ? x() : x; }
+function paint(){
+  var s = S[cur];
+  document.getElementById('seg').innerHTML = S.map(function(x, i){ return '<button' + (i === cur ? ' class="on"' : '') + ' data-i="' + i + '">' + x.n + '</button>'; }).join('');
+  [].forEach.call(document.querySelectorAll('#dev button'), function(b){ b.classList.toggle('on', b.getAttribute('data-d') === dev); });
+  var sub = s.k === 'act' ? '앱 자료로 답합니다 · 확인 뒤에만 합니다' : '앱 자료로 답합니다';
+  var ph = document.getElementById('phone'), wrap = document.getElementById('wrap');
+  wrap.classList.toggle('pcm', dev === 'pc');
+  if (dev === 'pc'){
+    var pc = PC[s.k] || {}, scr = pc.scr ? v(pc.scr) : s.scr;
+    ph.className = 'pcwrap';
+    ph.innerHTML = '<div class="pcw"><div class="pcbar"><i></i><i></i><i></i><span>apex-os-yunpro.netlify.app/app/#apexmap</span></div><div class="pcapp">' + jvTop(sub) +
+      '<div class="pcgrid"><div class="pcmain"><div class="scr"><div class="col">' + scr + '</div></div>' +
+      jvBot().replace('</div></div>', '</div></div>') + '</div><div class="pcaside">' + v(pc.aside || '') + '</div></div>' + (s.over || '') + '</div></div>';
+    var bt = ph.querySelector('.bot'); if (bt) bt.insertAdjacentHTML('beforeend', '<div class="hint">Enter 로 보내기 · 🎤 로 말하기</div>');
+  } else {
+    ph.className = 'phone';
+    ph.innerHTML = jvTop(sub) + '<div class="scr">' + s.scr + '</div>' + jvBot() + (s.over || '');
+  }
+  var sd = s.side, li = function(a, c){ return a.map(function(t){ return '<li class="' + c + '">' + t + '</li>'; }).join(''); };
+  document.getElementById('side').innerHTML =
+    '<div class="card"><h3><span class="tag was">지금</span>무엇이 걸리나</h3><ul>' + li(sd.was, '') + '</ul></div>' +
+    '<div class="card"><h3><span class="tag now">새 판</span>이렇게</h3><ul>' + li(sd.now, '') + '</ul></div>' +
+    '<div class="card"><h3><span class="tag keep">그대로</span>안 바뀌는 것</h3><ul>' + li(sd.keep, '') + '</ul></div>' +
+    (s.over ? '<div class="card" style="font-size:13px;color:var(--sub)">▲ ' + (dev === 'pc' ? '화면' : '폰 그림') + '을 한 번 누르면 확인 판이 닫히고 「적은 뒤」 화면이 보입니다.</div>' : '');
+}
+
+/* 📸 결과물 — 자비스-결과.js(scripts/jvmock-shot.js 가 앱을 띄워 뽑은 것)를 새 판 카드로 그립니다.
+   ★ 글은 한 글자도 고치지 않습니다 — 줄을 「꼬리표 · 말」 로 <b>나눠 그리기만</b> 합니다 */
+var PEN_NOTE = '※ 최저보증 금액 기준입니다. 물가상승률은 반영하지 않았습니다. 변액은 실적배당이라 더 받을 수도 있지만 여기서는 보증분만 셉니다. 실제 지급은 약관과 보험사 심사 결과에 따릅니다.';
+function esc(t){ return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+var NUM = /^\s*([①②③④⑤⑥⑦⑧⑨]|\d{1,2}\.)\s*/;
+function lineHtml(t, i){
+  var m = NUM.exec(t), n = m ? m[1].replace('.', '') : '', rest = m ? t.slice(m[0].length) : t, lab = '', say = rest;
+  var q = rest.indexOf('「');
+  if (q > 0 && /—\s*$/.test(rest.slice(0, q))){ lab = rest.slice(0, q).replace(/\s*—\s*$/, ''); say = rest.slice(q); }
+  else { var d = rest.indexOf(' — '); if (d > 0 && d < 24){ lab = rest.slice(0, d); say = rest.slice(d + 3); } }
+  var nn = n ? n.replace(/[①②③④⑤⑥⑦⑧⑨]/, function(c){ return '①②③④⑤⑥⑦⑧⑨'.indexOf(c) + 1; }) : '';
+  return '<div class="ln">' + (nn ? '<span class="n">' + nn + '</span>' : '') + '<span class="t">' + (lab ? '<small>' + esc(lab) + '</small>' : '') +
+    '<span' + (/^「/.test(say) ? ' class="q"' : '') + '>' + esc(say) + '</span></span></div>';
+}
+function cardHtml(src, row, weak){
+  var h = '<div class="ans"><span class="src">' + esc(src.n) + '</span>' + (weak ? '<span class="wk">약하게 맞음</span>' : '') + '<h3>' + esc(row.t) + '</h3>';
+  h += (row.s || []).map(lineHtml).join('');
+  if ((row.asks || []).length) h += '<div class="grid" style="margin-top:8px">' + row.asks.map(function(t){ return '<button class="chip">「' + esc(t) + '」</button>'; }).join('') + '</div>';
+  else h += row.say ? btns('📋 말 복사', '🔊 읽어 주기') : '<div class="btns"><button class="btn s w">📋 복사</button></div>';
+  if (row.open) h += '<a class="go">' + esc(row.open.replace(/^\S+\s/, '')) + ' ›</a>';
+  return h + '</div>';
+}
+function resHtml(r){
+  var h = '<div class="rbox"><span class="st">' + esc(r.st) + '</span>' + me(esc(r.q));
+  if (r.act){
+    h += '<div class="say">' + esc(r.head) + '</div><div class="ans"><span class="src k">🛠 시키신 일</span><h3>' + esc(r.act.t.replace(/^🛠\s*시키신 일 —\s*/, '')) + '</h3>' +
+      ((r.act.f || []).length ? r.act.f.map(function(x){ return '<div class="kv"><span>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b></div>'; }).join('') : '<div class="ln"><span class="t">' + esc(r.act.line) + '</span></div>') + btns('✅ 이대로 하기', '취소') + '</div>' +
+      '<div class="fix">✅ 앱에도 이렇게(판 X360) — 확인 판이 <b>누구 · 무엇 · 언제</b> 세 칸 · 칸마다 바꾸기 · 한 뒤에 ↩ 되돌리기. 이름이 한 글자(「홍」)로 잡혀 「길동」 이 할 일 글에 남던 것도 고쳤습니다.</div>';
+    var c = (r.src || [])[0]; if (c) h += cardHtml(c, c.rows[0], false);
+  } else if (r.pen){
+    var L = r.pen, big = L.filter(function(t){ return /^매달 /.test(t); })[0] || '', kv = L.filter(function(t){ return / — /.test(t); });
+    h += '<div class="say">' + esc(r.head) + '</div><div class="ans"><span class="src w">🧮 연금 셈 — 계산기와 같은 엔진</span>' +
+      '<div style="font-size:13px;color:var(--sub);font-weight:700">' + esc(L[0].replace(/^⭐\s*/, '')) + ' · ' + esc(L[1]) + '</div>' +
+      '<div class="big">' + esc(big.replace(/^매달\s*/, '')) + '<small>매달 · 최저보증</small></div>' +
+      kv.map(function(t){ var d = t.indexOf(' — '); return '<div class="kv"><span>' + esc(t.slice(0, d)) + '</span><b>' + esc(t.slice(d + 3)) + '</b></div>'; }).join('') +
+      '<div class="note">' + PEN_NOTE + '</div><div class="btns"><button class="btn p w">📊 계산기로 이 값 넘기기</button></div></div>' +
+      '<div class="fix">✅ 앱에도 셈 카드만(판 X360) — 물음 속 「50세」 에 걸리던 「' + esc(((r.src || [])[0] || {rows:[{t:''}]}).rows[0].t) + '」 는 이제 셈 밑에 안 붙습니다.</div>';
+  } else if ((r.steps || []).length && !(r.src || []).some(function(x){ return x.strong; })){
+    h += '<div class="say">' + esc(r.head) + '</div><div class="ans"><span class="src">🧭 화면 길</span>' +
+      r.steps.map(function(x, i){ return '<div class="step"><span class="n">' + (i + 1) + '</span><span class="t"><b>' + esc(x.n) + '</b><small>' + esc(x.d) + '</small></span><button class="o">열기</button></div>'; }).join('') + '</div>';
+  } else if ((r.src || []).length){
+    var s0 = r.src[0];
+    h += '<div class="say">' + esc(r.head) + '</div>' + cardHtml(s0, s0.rows[0], r.weak);
+    var more = s0.rows.slice(1).map(function(x){ return {n:s0.n, t:x.t}; }).concat(r.src.slice(1).map(function(x){ return {n:x.n, t:x.rows[0].t}; }));
+    if (more.length) h += '<div class="more"><b>같이 찾은 것</b><div class="hs">' + more.map(function(x){ return '<button class="chip"><small>' + esc(x.n) + '</small>' + esc(x.t) + '</button>'; }).join('') + '</div></div>';
+  } else {
+    h += '<div class="ans"><span class="src w">🔎 앱 자료</span><h3>앱 자료에서 찾지 못했습니다</h3></div>';
+  }
+  return h + '</div>';
+}
+var rst = '';
+function paintRes(){
+  var J = window.JV_SHOT, box = document.getElementById('rgrid');
+  if (!J || !(J.r || []).length){ box.innerHTML = '<div class="card" style="background:var(--warnl);border-radius:14px;padding:14px">결과 파일(자비스-결과.js)을 못 읽었습니다 — <b>아무 결과도 그리지 않습니다.</b> node scripts/jvmock-shot.js 를 한 번 돌려 주십시오.</div>'; return; }
+  document.getElementById('rday').textContent = J.day + ' 에 뽑음 · 견본 고객 홍길동 · AI 끔';
+  var sts = ['전체'].concat(J.r.map(function(x){ return x.st; }).filter(function(x, i, a){ return a.indexOf(x) === i; }));
+  document.getElementById('rseg').innerHTML = sts.map(function(t){ var k = t === '전체' ? '' : t; return '<button data-r="' + k + '"' + (k === rst ? ' class="on"' : '') + '>' + t + '</button>'; }).join('');
+  box.innerHTML = J.r.filter(function(x){ return !rst || x.st === rst; }).map(resHtml).join('');
+}
+document.addEventListener('click', function(e){
+  var b = e.target.closest('#seg button');
+  if (b){ cur = +b.getAttribute('data-i'); paint(); try { history.replaceState(null, '', '?v=' + S[cur].k + (dev === 'pc' ? '&d=pc' : '')); } catch(err){} return; }
+  var dv = e.target.closest('#dev button');
+  if (dv){ dev = dv.getAttribute('data-d'); paint(); try { history.replaceState(null, '', '?v=' + S[cur].k + (dev === 'pc' ? '&d=pc' : '')); } catch(err){} return; }
+  var rb = e.target.closest('#rseg button');
+  if (rb){ rst = rb.getAttribute('data-r'); paintRes(); return; }
+  var d = e.target.closest('.dim');
+  if (d){ d.remove(); }
+});
+(function(){ var m = /[?&]v=([a-z]+)/.exec(location.search); if (m) S.forEach(function(x, i){ if (x.k === m[1]) cur = i; });
+  if (/[?&]d=pc/.test(location.search)) dev = 'pc'; paint(); paintRes(); })();
+</script>
+</body>
+</html>

@@ -336,7 +336,8 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
   sec('[12] 🛰 MARK II — 판 셋 · 시계 · 부팅 장면 · 말로 묻기 (판 X347 · 2026-11-05 「아이언맨처럼 !!」)');
   const MK = await f.evaluate(async () => {
     var d = document.getElementById('deck');
-    var o = { deck:!!d, l:!!(d && d.querySelector('.pane-l #hudStat')), c:!!(d && d.querySelector('.hud #ask')),
+    var o = { deck:!!d, l:!!(d && d.querySelector('.pane-l #hudStat')), /* 섞기(판 X359) — 묻는 칸은 판 셋 밖 <b>바닥</b>(새 판 · 사장님이 고르심). 가운데 판에 있거나 바닥 묻는 칸에 있으면 됩니다 */
+             c:!!(d && (d.querySelector('.hud #ask') || (document.querySelector('body > .ask #ask') && getComputedStyle(document.querySelector('body > .ask')).position === 'fixed'))),
               r:!!(d && d.querySelector('.pane-r #chips')), chips:document.querySelectorAll('#chips .chip').length };
     /* 시계 — 이 기기 시각 · 한 번 더 그리면 바뀐다 */
     var c0 = document.getElementById('hudClock').textContent;
@@ -356,7 +357,7 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
     if (m){ var keep = m.onclick; m.onclick = function(){ hit++; }; document.getElementById('hudMic').click(); m.onclick = keep; }
     o.mic = m ? hit : -1;
     return o; });
-  is(MK.deck && MK.l && MK.c && MK.r, '판 셋 — 왼쪽 시스템(#hudStat) · 가운데 원자로와 명령 칸(#ask) · 오른쪽 명령(#chips)');
+  is(MK.deck && MK.l && MK.c && MK.r, '판 셋 — 왼쪽 시스템(#hudStat) · 가운데 원자로 · 오른쪽 명령(#chips) · 명령 칸(#ask)은 바닥 묻는 칸에(판 X359 섞기)');
   is(MK.chips >= 4, '명령 판에 상황 단추 ' + MK.chips + '개');
   is(/^\d{4}\.\d{2}\.\d{2} \([일월화수목금토]\) \d{2}:\d{2}:\d{2}$/.test(MK.c0) && MK.c0 !== MK.c1, '시계가 돈다 — 「' + MK.c0 + '」 → 「' + MK.c1 + '」 (이 기기 시각 · 서버 0)');
   is(MK.bootOn && MK.bootTxt.indexOf('화면 ' + MK.scr + '개') >= 0 && MK.bootTxt.indexOf('자료 갈래 ' + MK.src + '곳') >= 0 && /ONLINE/.test(MK.bootTxt),
@@ -405,7 +406,8 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
 
   sec('[14] 💬 답 칸은 흰 바탕 · 도현체 · 토스 글꼴 · Tossface (판 X353)');
   const FT = await f.evaluate(() => {
-    var c = [].slice.call(document.querySelectorAll('#jLog .msg.j .bub')).pop(), cs = c ? getComputedStyle(c) : null;
+    /* 섞기(판 X359) — 말풍선은 걷고 ⭐ 한 장(.jf-best)이 흰 카드입니다. 카드가 있으면 카드를, 없으면 말풍선을 잽니다 */
+    var m0 = [].slice.call(document.querySelectorAll('#jLog .msg.j')).pop(), c = m0 ? (m0.querySelector('.jf-best, .jv-today, .j-act, .j-pen') || m0.querySelector('.bub')) : null, cs = c ? getComputedStyle(c) : null;
     var links = [].slice.call(document.querySelectorAll('link[rel=stylesheet]')).map(l => l.href);
     return { bub:cs ? cs.backgroundColor : '', ink:cs ? cs.color : '', log:getComputedStyle(document.getElementById('jLog')).backgroundColor,
              name:getComputedStyle(document.querySelector('.hud-name')).fontFamily, body:getComputedStyle(document.body).fontFamily,
