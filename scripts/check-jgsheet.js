@@ -26,6 +26,9 @@
      [12] 가족 그림을 <b>직접 그렸다</b> — 인라인 SVG, 남의 삽화·사진이 아니다 (9번)
      [13] 그림글자(Tossface)를 <b>저장소가 쓰는 그 주소</b>로 한 번만 받는다 (5번)
      [14] <b>상담 도구 장·설계사 매뉴얼은 파란 그대로</b>다 — 고객용만 따뜻해진다
+     [2] 어느 장도 A4 를 안 넘고, <b>바닥에 25px 여유</b>를 남긴다 (판 X364) —
+          제 기계에서는 들어가고 CI 에서만 넘친 적이 있습니다(s14 +22px).
+          글꼴이 다르면 줄 수가 달라지므로 「안 넘쳤다」 로는 모자랍니다.
      [16] <b>어려운 말에 풀이가 그 장 안에</b> 붙어 있다 (판 X364) — 사장님 말씀
           2026-11-06 「어른들도 이해하기 쉽게 알려주는 말투로 해」. 다른 장에
           풀이를 적어 두면 그 장을 들고 병원에 가신 분은 못 봅니다.
@@ -63,6 +66,8 @@ const FILE = path.resolve(__dirname, '..', 'app', '증권전달', 'index.html');
 const 차례 = ['s1','s6','s5','s2','s3','s12','s14','s13','s4','s10','s11'];
 /* 글씨 바닥 — 고객용 장의 어떤 글도 이 밑으로 안 갑니다 (법정 꼬리글만 예외) */
 const 바닥 = 13;
+/* ★ A4 바닥에 남겨 둘 여유 — 글꼴이 바뀌면 줄 수가 달라집니다 (판 X364) */
+const 여유바닥 = 25;
 /* ★ 사다리 값이 <b>뒤로 가지 않는지</b>를 봅니다 — 낱낱의 글을 세는 것보다
    이쪽이 튼튼합니다. 한 곳(--ss-…)만 고치면 전부 따라오게 해 두었으니,
    그 한 곳이 작아지지 않는지만 지키면 됩니다 (5번). */
@@ -168,7 +173,14 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
       if (s.classList.contains('off')) return;
       const q = s.getBoundingClientRect();
       const no = s.querySelector('.sh-top .r');
+      /* ★ 여유도 같이 잽니다 (판 X364) — min-height 를 잠깐 풀면 글이 실제로
+         차지하는 높이가 나옵니다. A4 에서 그만큼 뺀 것이 남는 자리입니다. */
+      const mh = s.style.minHeight;
+      s.style.minHeight = '0';
+      const 민높이 = s.getBoundingClientRect().height;
+      s.style.minHeight = mh;
       장.push({ id: s.id, 높이: Math.round(q.height), 넘침: Math.max(0, Math.round(q.height - A4)),
+                여유: Math.round(A4 - 민높이),
                 쪽: no ? (no.textContent || '').trim() : '' });
     });
     /* 작은 글 — 읽는 글만 셉니다 */
@@ -264,6 +276,15 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
   console.log('[2] 어느 장도 A4 를 안 넘나');
   const 넘 = r.장.filter(x => x.넘침 > 0);
   ok(넘.length === 0, '넘치는 장 ' + 넘.length + '개' + (넘.length ? (' — ' + 넘.map(x => x.id + ' +' + x.넘침 + 'px').join(' · ')) : ''));
+  /* ★★ <b>여유를 남겨 둡니다</b> (판 X364) — 2026-11-06 에 제 기계에서는 들어가고
+     CI 에서만 s14 가 +22px 넘쳤습니다. 글꼴이 다르면 줄 수가 달라지기 때문입니다.
+     그래서 「안 넘쳤다」 로는 모자랍니다 — <b>재는 그 자리에서</b> 바닥 여유를
+     요구합니다. 눈금은 그때 벌어진 22px 보다 조금 넉넉한 25px 입니다. */
+  const 빠듯 = r.장.filter(x => x.여유 < 여유바닥);
+  ok(빠듯.length === 0, '바닥 여유가 ' + 여유바닥 + 'px 안 되는 장 ' + 빠듯.length + '개'
+     + (빠듯.length ? (' — ' + 빠듯.map(x => x.id + ' ' + x.여유 + 'px').join(' · ')) : '')
+     + ' (지금 가장 빠듯한 장 ' + (function(){ const m = r.장.slice().sort((a,c)=>a.여유-c.여유)[0];
+         return m ? m.id + ' ' + m.여유 + 'px' : '?'; })() + ')');
 
   console.log('[3] 고객이 읽는 글이 ' + 바닥 + 'px 바닥을 지키나');
   ok(r.작은.length === 0, '바닥 밑으로 떨어진 글 ' + r.작은.length + '곳'
