@@ -22,6 +22,12 @@
      ⓓ 파란색을 도로 박기            → [5] 가 욺
      ⓔ 삽화를 <img> 로 바꾸기        → [6] 이 욺
      ⓕ 이름을 기본값 그대로 찍기     → [8] 이 욺
+     ⓖ 인쇄 여백 줄인 것을 되돌리기   → [12] 가 욺
+
+   ★★ [12] 는 <b>진짜 PDF 로 뽑아 쪽을 셉니다.</b> 화면에서는 A4(1123px) 에
+     딱 맞게 서 있었는데, 인쇄는 위아래 14mm 여백을 뺀 <b>269mm</b> 안에
+     들어가야 해서 법정 꼬리글이 <b>다음 쪽으로 혼자 넘어갔습니다</b> —
+     14장이 15쪽으로 나왔습니다. 화면만 봐서는 못 봅니다 (4-1번).
 
    ⚠ 바깥을 한 번도 안 부릅니다 — 파일만 엽니다 (7번 · 8번).
    ══════════════════════════════════════════════════════════════════ */
@@ -190,6 +196,26 @@ const ok = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) �
   ok(끝.가로넘침 === 0, '가로로 삐져나간 곳 ' + 끝.가로넘침 + 'px');
   ok(끝.작은.length === 0, 글바닥 + 'px 밑으로 떨어진 글 ' + 끝.작은.length + '곳'
      + (끝.작은.length ? ('\n        ' + 끝.작은.slice(0, 4).join('\n        ')) : ''));
+
+  /* ── [12] 진짜로 뽑아 쪽을 센다 ──────────────────────────── */
+  console.log('[12] ★ 인쇄하면 한 장이 한 쪽으로 나오나 (4-1번)');
+  /* 앱이 하는 그대로 — 속지 화면을 켜고 .printing 을 걸고 뽑습니다.
+     이 길을 안 거치면 <b>빈 쪽</b>이 나옵니다 (보고 있는 쪽만 인쇄하므로). */
+  await p.evaluate(() => {
+    showView('view-print');
+    const cur = document.querySelector('.view.on');
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('printing', v === cur));
+  });
+  await p.waitForTimeout(600);
+  await p.emulateMedia({ media: 'print' });
+  const 켠장 = await p.evaluate(() =>
+    [...document.querySelectorAll('.sheet')].filter(x => !x.classList.contains('off')).length);
+  const pdfBuf = await p.pdf({ format: 'A4', printBackground: true });
+  /* 쪽 수는 PDF 안의 /Type /Page 를 셉니다 — 바깥 도구를 안 부릅니다 */
+  const 쪽수 = (pdfBuf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+  ok(쪽수 === 켠장, '켜진 장 ' + 켠장 + '개 → 인쇄 ' + 쪽수 + '쪽'
+     + (쪽수 === 켠장 ? ' — 한 장이 한 쪽입니다' : ' ← 한 장이 두 쪽으로 쪼개졌습니다'));
+  await p.emulateMedia({ media: 'screen' });
 
   console.log('[끝] 조용한가');
   ok(터짐.length === 0, '터진 자리 ' + 터짐.length + (터짐.length ? (' ← ' + 터짐[0]) : ''));
