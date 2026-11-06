@@ -119,7 +119,10 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
 
   /* ── [9] 크기를 토큰 한 곳에서만 정하나 ───────────────────── */
   console.log('[9] 글씨 크기를 토큰 한 곳에서 정하나');
-  const 토큰블록 = /\.sheet\[data-kind="ins"\],\.sheet\[data-kind="let"\]\{([^}]*)\}/.exec(src);
+  /* ⚠ 판 X372 에서 고객용 갈래가 셋이 되었습니다(ins · let · <b>mag</b> = 붙이는 한 장).
+     묶음은 <b>여전히 한 곳</b>이고 선택자만 길어졌습니다 — 토큰을 또 적었다면
+     여기가 아니라 #s18 쪽에서 걸립니다 (check-jgmag [4]). */
+  const 토큰블록 = /\.sheet\[data-kind="ins"\],\.sheet\[data-kind="let"\](?:,\.sheet\[data-kind="mag"\])?\{([^}]*)\}/.exec(src);
   ok(!!토큰블록, '고객용 장에만 거는 토큰 묶음이 있다');
   if (토큰블록) {
     Object.keys(사다리).forEach(k => {
@@ -278,13 +281,13 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
     /* 📑 표지 차례 — 장에서 읽어 세우나 (판 X369) */
     const 켜진 = [...document.querySelectorAll('.sheet[data-kind="ins"],.sheet[data-kind="let"]')]
       .filter(x => !x.classList.contains('off') && x.id !== 's1');
-    const 차례 = { 줄: document.querySelectorAll('#v_cvtoc div').length, 켜진: 켜진.length,
+    const 차례 = { 줄: document.querySelectorAll('#v_cvtoc div:not(.ex)').length, 켜진: 켜진.length,
                    머리: (document.getElementById('v_cvtoch') || {}).textContent || '', 끈뒤: -1 };
     (function () {
       const c = document.querySelector('.chip input[data-s="s13"]');
       if (!c) return;
       c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true }));
-      차례.끈뒤 = document.querySelectorAll('#v_cvtoc div').length;
+      차례.끈뒤 = document.querySelectorAll('#v_cvtoc div:not(.ex)').length;
       c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true }));
     })();
     /* ✅ 오늘 함께 확인한 것 — 켠 것만 찍히나 (판 X369 · 1번) */
