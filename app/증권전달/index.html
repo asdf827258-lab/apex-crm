@@ -88,8 +88,37 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
 .sheet{
   width:210mm;min-height:297mm;background:#fff;margin:0 auto 22px;padding:17mm 16mm;
   box-shadow:0 8px 34px rgba(0,0,0,.08);position:relative;display:flex;flex-direction:column;
+  /* ⚠ 틀·리본을 z-index:-1 로 뒤에 두려면 <b>장이 쌓임 맥락</b>이어야 합니다.
+     position:relative 만으로는 안 만들어져서, 틀이 장의 흰 바탕 <b>뒤로</b>
+     떨어져 s6·s12 에서 아예 안 보였습니다 (판 X377). */
+  isolation:isolate;
 }
 .sheet.off{display:none}
+
+/* ══ 🎀 <b>네 귀퉁이 리본 틀</b> — A+ 자료의 표식 (판 X377) ══
+   사장님이 주신 배포물은 쪽마다 <b>파란 테두리 + 네 귀퉁이 빗금 리본</b>으로
+   묶여 있습니다. 삽화는 복제하지 않고 <b>직접 SVG 로</b> 그렸습니다 (9번).
+   ★ 그리는 자는 <b>apFrame() 하나</b>입니다 — 장마다 손으로 적으면 열네 벌이
+     되고, 하나만 고치면 나머지가 낡습니다 (5번).
+   ⚠ 상담 도구 장(chk)에는 안 붙입니다 — 고객에게 가는 종이만 두릅니다. */
+.apfr{position:absolute;inset:7mm;border:3px solid var(--navy);border-radius:14px;
+  z-index:0;pointer-events:none}
+.aprib{position:absolute;width:24mm;height:24mm;z-index:1;pointer-events:none}
+ /* ⚠ 귀퉁이 이름에 <b>ap-</b> 를 답니다 — 처음에 tl·tr·bl·br 로 지었다가
+      이 파일이 이미 쓰고 있던 <b>.tl(되짚기 타임라인 · position:relative;height:44px)</b>
+      과 부딪혀 왼쪽 위 리본만 자리를 벗어났습니다. 짧은 이름은 남의 것일 수 있습니다 (5번). */
+.aprib.ap-tl{top:0;left:0}
+.aprib.ap-tr{top:0;right:0;transform:scaleX(-1)}
+.aprib.ap-bl{bottom:0;left:0;transform:scaleY(-1)}
+.aprib.ap-br{bottom:0;right:0;transform:scale(-1,-1)}
+/* ⚠ 처음에는 「틀·리본 말고 나머지는 전부 position:relative」 로 적었다가
+     <b>표지가 +640px 넘쳤습니다</b> — 표지의 덮개층(.cv-scrim·.cv-glow)은
+     position:absolute 로 떠 있어야 하는데 흐름 안으로 끌어내렸습니다.
+     남의 자리를 건드리지 않는 쪽으로 바꿉니다 — 틀과 리본만 <b>뒤로</b> 보냅니다.
+     z-index:-1 은 장의 흰 바탕보다는 앞, 글보다는 뒤입니다. */
+.apfr,.aprib{z-index:-1}
+/* 표지는 사진이 장 전체를 덮으므로 리본을 <b>위로</b> 올립니다 */
+.cover-sheet .apfr,.cover-sheet .aprib{z-index:3}
 
 /* ══ 속지·안내장 <b>글씨 사다리</b> — 한 곳에서만 정합니다 (판 X361) ══
    사장님 말씀 2026-11-06 「글씨를 키우고」.
@@ -117,20 +146,29 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
      그대로 둡니다. 위 17mm 는 머리 사진이 -17mm 로 물고 있어 안 건드립니다. */
   padding-bottom:13mm;
 
-  /* ══ 🧡 <b>따뜻한 가족을 지키는 색</b> (판 X362) ══
-     사장님 말씀 2026-11-06 「따뜻한 가족을 지키는 느낌으로」.
+  /* ══ 🎨 <b>A+ 자료의 색</b> (판 X377) ══
+     사장님 말씀 2026-11-06 「내가 보낸 속지 테마로 전체적으로 다 바꿔줘」 →
+     색을 여쭈니 <b>「A+ 자료처럼 파랑으로」</b> 를 고르셨습니다.
+     ★★ <b>눈대중으로 고르지 않았습니다.</b> 사장님이 주신 A+에셋 배포물 6쪽을
+       그림으로 펼쳐 <b>화소값을 그대로 뽑았습니다</b> (9번) —
+       틀·리본 파랑 #0B60B0 (9%) · 알약 머리줄 #B9E9FF (9~12%) ·
+       진한 띠 #2F3D86 · 밝은 하늘 #61C2EC · 리본 빨강 #D81818 · 노랑 #F0C000 ·
+       ✔ 빨강 #FE0000 · 표 머리줄 #FE9F29 · 표 행 #D9FCF8 / #CDD2F0 / #FDCCBE.
      ★ 이름을 새로 만들지 않고 <b>:root 의 토큰을 이 자리에서 다시 정의</b>합니다 —
        낱장 규칙이 전부 var(--navy)·var(--gold) 로 적혀 있어 저절로 따라옵니다 (5번).
        상담 도구 장(chk)·설계사 매뉴얼은 :root 값을 그대로 써서 안 바뀝니다.
-     ★★ <b>눈대중으로 고르지 않았습니다</b> — 종이(흰 바탕)에서 대비를 재어
-       본문에 쓰는 색은 모두 4.5:1 위, 벽돌 바탕 위 흰 글씨는 5.73:1 입니다.
-       호박(--gold)은 2.16:1 이라 <b>글자로는 안 씁니다</b> — 선과 바탕으로만. */
-  --navy:#A04F34;   --navy2:#7F3B24;  --navy3:#C47A58;   /* 따뜻한 벽돌 */
-  --gold:#E8A33D;   --gold-d:#8A5310;  --gold-l:#F6E3D4;  /* 호박 */
-  --cream:#FBF2E8;
-  --ink:#2A241E;    --g800:#473B31;    --g700:#5B4E43;
-  --g600:#75655A;   --g500:#7F6F62;    --g400:#B6A697;
-  --line:#EBE0D4;   --line2:#F6EFE6;
+     ★ 흰 바탕에서 대비를 재었습니다 — #0B60B0 은 5.8:1, #2F3D86 은 10.4:1,
+       #595959 는 7.0:1 로 모두 4.5:1 위입니다. 노랑(--gold #F0C000)은 1.9:1 이라
+       <b>글자로는 안 씁니다</b> — 선과 바탕으로만. 주황(#FE9F29)도 바탕으로만. */
+  --navy:#0B60B0;   --navy2:#2F3D86;  --navy3:#61C2EC;   /* A+ 파랑 */
+  --gold:#F0C000;   --gold-d:#0B60B0;  --gold-l:#B9E9FF;  /* 노랑 선 · 하늘 알약 */
+  --cream:#EAF7FF;
+  --ink:#1A1A1A;    --g800:#323232;    --g700:#4A4A4A;
+  --g600:#595959;   --g500:#7A7A7A;    --g400:#ABABAB;
+  --line:#D7E7F3;   --line2:#EDF5FB;
+  /* A+ 자료의 그 밖의 색 — 쓰는 자리가 정해져 있습니다 */
+  --ap-red:#D81818;  --ap-chk:#FE0000;  --ap-th:#FE9F29;
+  --ap-r1:#D9FCF8;   --ap-r2:#CDD2F0;   --ap-r3:#FDCCBE;
 }
 
 /* 🧡 그림글자 — 이 자리만 Tossface 가 잡습니다 (글자는 Pretendard) */
@@ -156,12 +194,12 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
 
 /* S1 표지 */
 .cover-sheet{background:linear-gradient(162deg,var(--navy) 0%,var(--navy2) 54%,#B9603C 100%);color:#fff;padding:0;overflow:hidden}
-.cv-in{padding:19mm 18mm 11mm;display:flex;flex-direction:column;height:100%;flex:1;position:relative;z-index:1}
+.cv-in{padding:16mm 18mm 9mm;display:flex;flex-direction:column;height:100%;flex:1;position:relative;z-index:1}
 .cv-glow{position:absolute;right:-90mm;top:-40mm;width:180mm;height:180mm;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 62%)}
 .cv-brand{display:flex;align-items:center;gap:9px}
 .cv-brand .mk{width:30px;height:30px;border:1.4px solid var(--gold);display:grid;place-items:center;color:var(--gold);font-weight:800;font-size:14px}
 .cv-brand span{font-size:var(--ss-sm,12px);font-weight:700;letter-spacing:.18em;color:var(--gold-l)}
-.cv-mid{margin-top:auto;margin-bottom:auto;padding:6.5mm 0}
+.cv-mid{margin-top:auto;margin-bottom:auto;padding:5mm 0}
 .cv-mid .who{font-size:var(--ss-lead,15px);color:rgba(255,255,255,.62);letter-spacing:.02em}
 .cv-mid h1{font-size:var(--ss-h1,40px);font-weight:800;letter-spacing:-.045em;line-height:1.26;margin-top:8px}
 .cv-mid h1 em{font-style:normal;color:var(--gold-l)}
@@ -172,7 +210,7 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
 .cv-toc{margin-top:9px;border-top:1px solid rgba(255,255,255,.18);padding-top:8px}
 .cv-toc .h{font-size:var(--ss-sm,11px);font-weight:800;letter-spacing:.14em;color:var(--gold-l)}
 .cv-toc .ls{display:grid;grid-template-columns:1fr 1fr;gap:1px 20px;margin-top:7px;max-width:158mm}
-.cv-toc .ls div{display:flex;gap:8px;align-items:baseline;font-size:var(--ss-sm,13px);
+.cv-toc .ls div{display:flex;gap:7px;align-items:baseline;font-size:var(--ss-sm,12.5px);
   color:rgba(255,255,255,.88);line-height:1.46}
 .cv-toc .ls i{font-style:normal;font-size:var(--ss-sm,11px);font-weight:800;color:var(--gold);
   letter-spacing:.04em;flex:none;width:17px}
@@ -203,7 +241,7 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
 .oksign .s{text-align:right;font-size:var(--ss-sm,11px);color:var(--g600);line-height:1.6}
 .oksign .s b{display:block;font-size:var(--ss-h3,15px);color:var(--ink);font-weight:700;letter-spacing:-.03em;margin-top:2px}
 .cv-mid .lead{font-size:var(--ss-lead,14px);color:rgba(255,255,255,.72);line-height:1.72;max-width:132mm}
-.cv-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid rgba(255,255,255,.16);border-bottom:1px solid rgba(255,255,255,.16);margin-top:8mm}
+.cv-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid rgba(255,255,255,.16);border-bottom:1px solid rgba(255,255,255,.16);margin-top:6mm}
 .cv-facts div{padding:14px 0}
 .cv-facts .k{font-size:var(--ss-sm,10px);letter-spacing:.12em;color:rgba(255,255,255,.45);font-weight:700}
 .cv-facts .v{font-size:var(--ss-h3,16px);font-weight:700;margin-top:5px;color:#fff}
@@ -234,7 +272,7 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
 .callout b{color:var(--g800)}
 
 /* S3 청구 3단계 */
-.steps3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.steps3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:12px}
 .st{border:1px solid var(--line);border-radius:10px;padding:15px 14px;position:relative}
 .st .n{width:26px;height:26px;border-radius:50%;background:var(--navy);color:var(--gold-l);display:grid;place-items:center;font-size:var(--ss-sm,12px);font-weight:800}
 .st .h{font-size:var(--ss-h3,14px);font-weight:800;margin-top:10px;letter-spacing:-.03em}
@@ -248,13 +286,17 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
 /* ══ 📄 <b>상황별 챙기실 서류</b> (판 X361) ══
    사장님 말씀 2026-11-06 「청구 관리 안내 방법 필요서류 등」.
    ★ 크기는 한 톨도 안 박습니다 — 위 글씨 사다리(--ss-…)만 가리킵니다 (5번). */
-.docsit{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.docsit{margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .ds{border:1px solid var(--line);border-radius:11px;overflow:hidden;page-break-inside:avoid;break-inside:avoid}
-.ds .h{background:var(--cream);color:var(--navy2);padding:6px 13px;font-size:var(--ss-lab,12px);font-weight:800;letter-spacing:-.02em}
-.ds ul{list-style:none;padding:7px 13px 8px}
-.ds li{font-size:var(--ss-body,11.5px);color:var(--g700);line-height:1.55;padding-left:13px;position:relative;margin-top:3px}
+.ds .h{background:var(--gold-l);color:var(--navy2);padding:5px 13px;font-size:var(--ss-lab,12px);font-weight:800;letter-spacing:-.02em}
+.ds ul{list-style:none;padding:6px 13px 6px}
+.ds li{font-size:var(--ss-body,11.5px);color:var(--g700);line-height:1.5;padding-left:13px;position:relative;margin-top:2px}
 .ds li:first-child{margin-top:0}
-.ds li::before{content:'';position:absolute;left:0;top:9px;width:4px;height:4px;border-radius:50%;background:var(--navy)}
+/* ✔ A+ 자료의 빨강 체크 — 동그란 점 대신 (판 X377) */
+.ds li{padding-left:19px}
+.ds li::before{content:'';position:absolute;left:3px;top:4px;width:5px;height:10px;
+  border:solid var(--ap-chk);border-width:0 2.2px 2.2px 0;transform:rotate(42deg);
+  background:none;border-radius:0}
 .ds li b{color:var(--ink);font-weight:700}
 .ds.all{grid-column:1/-1;border-color:var(--navy);border-width:1.5px}
 .ds.all .h{background:var(--navy);color:#fff}
@@ -264,13 +306,17 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
      <b>같은 이름이 이미 있었습니다</b>(상담 도구 쪽 · 아래 874줄 어름). 뒤에 선
      그쪽이 제 규칙을 통째로 눌러 이겨서, 15.5px 로 설 자리에 12.5px 가 섰습니다.
      자가 그것을 잡아 주었습니다 — <b>안 울리는 알람은 알람이 아닙니다</b> (8번 · 5번). */
-.saybox{margin-top:13px;border:1.5px solid var(--navy);border-radius:12px;background:var(--cream);padding:11px 16px}
+.saybox{margin-top:11px;border:1.5px solid var(--navy);border-radius:12px;background:var(--cream);padding:11px 16px}
 .saybox .lb{font-size:var(--ss-sm,11px);font-weight:800;letter-spacing:.04em;color:var(--navy2)}
 .saybox p{font-size:var(--ss-h2,22px);font-weight:700;color:var(--ink);line-height:1.45;margin-top:6px;letter-spacing:-.03em}
 .saybox .sub{font-size:var(--ss-body,11.5px);color:var(--g600);line-height:1.65;margin-top:7px}
 .saybox .sub b{color:var(--g800)}
 .jgtip{margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}
-.jgtip-r{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--line2)}
+/* A+ 식 ✔ 를 이름표 앞에 둡니다 (판 X377) */
+.jgtip-r{display:flex;gap:10px;align-items:flex-start;padding:4px 0 4px 18px;
+  border-top:1px solid var(--line2);position:relative}
+.jgtip-r::before{content:'';position:absolute;left:3px;top:9px;width:5px;height:10px;
+  border:solid var(--ap-chk);border-width:0 2.2px 2.2px 0;transform:rotate(42deg)}
 .jgtip-r .lb{flex:none;width:22mm;font-size:var(--ss-lab,12px);font-weight:800;color:var(--navy2);letter-spacing:-.02em;line-height:1.5}
 .jgtip-r p{font-size:var(--ss-body,11.5px);color:var(--g700);line-height:1.6}
 .jgtip-r p b{color:var(--ink);font-weight:700}
@@ -288,19 +334,23 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
      여덟 장 모두 A4 안에 듭니다(제일 빡빡한 담당자 장이 여유 101px · +79px).
    ★ <b>사진이 없으면 빈 구멍을 두지 않습니다</b> — 따뜻한 바탕에 직접 그린
      가족 그림이 섭니다. 지어내지도, 비워 두지도 않습니다 (1번). */
-.jg-hero{position:relative;margin:-17mm -16mm 12px;height:170px;overflow:hidden;
-  background:linear-gradient(145deg,var(--navy) 0%,var(--navy2) 62%,#B9603C 100%);
+/* 🖼 사진 띠 — <b>틀 안쪽</b>에 들어오게 물립니다 (판 X377).
+   ⚠ 안으로 들이면 밑의 글이 7mm(26px) 내려가 A4 여유를 먹습니다.
+     그래서 띠 높이를 170 → 144px 로 줄여 <b>그만큼 돌려받습니다</b>. */
+.jg-hero{position:relative;margin:-10mm -9mm 10px;height:112px;overflow:hidden;
+  border-radius:11px 11px 0 0;
+  background:linear-gradient(145deg,var(--navy) 0%,var(--navy2) 62%,var(--navy3) 100%);
   background-size:cover;background-position:center;display:flex;flex-direction:column}
-.jg-hero .sh-top{position:relative;z-index:2;border-bottom:none;padding:13px 16mm 0;color:#fff}
+.jg-hero .sh-top{position:relative;z-index:2;border-bottom:none;padding:11px 9mm 0;color:#fff}
 .jg-hero .sh-top .nm{color:#fff}
 .jg-hero .sh-top .r{color:rgba(255,255,255,.82)}
 .jg-hero .sh-top .mk{border-color:rgba(255,255,255,.85);color:#fff}
 .jg-hero-scrim{position:absolute;inset:0;z-index:1;
-  background:linear-gradient(180deg,rgba(42,36,30,.42) 0%,rgba(42,36,30,.18) 38%,rgba(42,36,30,.78) 100%)}
+  background:linear-gradient(180deg,rgba(10,30,58,.44) 0%,rgba(10,30,58,.20) 38%,rgba(10,30,58,.80) 100%)}
 .jg-hero-fam{position:absolute;right:16mm;top:50%;transform:translateY(-50%);z-index:1;opacity:.5}
 .jg-hero-fam .jgfam{stroke:var(--gold-l)}
 .jg-hero.has .jg-hero-fam{display:none}     /* 사진이 들어오면 그림은 물러납니다 */
-.jg-hero-tx{position:relative;z-index:2;margin-top:auto;padding:0 16mm 16px}
+.jg-hero-tx{position:relative;z-index:2;margin-top:auto;padding:0 9mm 14px}
 .jg-hero-tx .eyebrow{color:var(--gold-l);display:flex;align-items:center;gap:6px;
   font-size:var(--ss-sm,11px);font-weight:800;letter-spacing:.1em}
 .jg-hero-tx .eyebrow .tf{font-size:16px}
@@ -347,6 +397,7 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
 .misslist .h{font-size:var(--ss-h3,12.5px);font-weight:800;letter-spacing:-.02em}
 .miss{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-top:9px}
 .miss div{background:var(--cream);border-radius:7px;padding:9px 11px;font-size:var(--ss-body,11.5px);color:var(--g700);line-height:1.6}
+.miss div:nth-child(4n+2),.miss div:nth-child(4n+3){background:var(--ap-r1)}
 .miss div b{color:var(--ink);font-weight:700;display:block;font-size:var(--ss-lab,12px);margin-bottom:1px}
 
 /* S4 전화주세요 */
@@ -382,24 +433,24 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
 .memo .lines div{border-bottom:1px solid var(--line2);height:20px}
 
 /* S6 안내장 */
-.letter{padding-top:3mm;display:flex;flex-direction:column;flex:1}
-.lt-hd{text-align:center;padding-bottom:13px;border-bottom:1px solid var(--line)}
+.letter{padding-top:1mm;display:flex;flex-direction:column;flex:1}
+.lt-hd{text-align:center;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .lt-hd .mk{width:34px;height:34px;border:1.4px solid var(--gold-d);display:grid;place-items:center;color:var(--gold-d);font-weight:800;font-size:15px;margin:0 auto}
 .lt-hd .nm{font-size:var(--ss-sm,11px);font-weight:800;letter-spacing:.2em;color:var(--navy);margin-top:9px}
 .lt-hd h2{font-size:var(--ss-h2,22px);font-weight:800;letter-spacing:-.04em;margin-top:11px}
-.lt-body{margin-top:14px;font-size:var(--ss-lead,13.5px);color:var(--g800);line-height:1.76;letter-spacing:-.02em;flex:1}
-.lt-body p{margin-bottom:10px}
+.lt-body{margin-top:11px;font-size:var(--ss-lead,13.5px);color:var(--g800);line-height:1.76;letter-spacing:-.02em;flex:1}
+.lt-body p{margin-bottom:8px}
 .lt-body .to{font-size:var(--ss-h3,15px);font-weight:700;color:var(--ink);margin-bottom:13px}
 .lt-body strong{color:var(--ink);font-weight:700}
-.lt-list{background:var(--cream);border-radius:9px;padding:12px 18px;margin:5px 0 13px}
+.lt-list{background:var(--cream);border-radius:9px;padding:10px 18px;margin:4px 0 11px}
 .lt-list .h{font-size:var(--ss-lab,12px);font-weight:800;color:var(--gold-d);letter-spacing:-.02em}
 .lt-list ol{margin-top:8px;padding-left:16px}
 .lt-list li{font-size:var(--ss-body,12.5px);color:var(--g800);line-height:1.75;margin-bottom:2px}
-.lt-sign{margin-top:13px;padding-top:13px;border-top:1px solid var(--line2);display:flex;justify-content:space-between;align-items:flex-end}
+.lt-sign{margin-top:11px;padding-top:11px;border-top:1px solid var(--line2);display:flex;justify-content:space-between;align-items:flex-end}
 .lt-sign .d{font-size:var(--ss-sm,12px);color:var(--g600)}
 .lt-sign .s{text-align:right;font-size:var(--ss-sm,12px);color:var(--g600);line-height:1.7}
 .lt-sign .s b{display:block;font-size:var(--ss-h3,18px);color:var(--ink);font-weight:700;letter-spacing:-.03em;margin-top:2px}
-.lt-contact{margin-top:12px;background:var(--navy);color:#fff;border-radius:9px;padding:11px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.lt-contact{margin-top:10px;background:var(--navy);color:#fff;border-radius:9px;padding:11px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
 .lt-contact .k{font-size:var(--ss-sm,9.5px);letter-spacing:.12em;color:var(--gold-l);font-weight:700}
 .lt-contact .v{font-size:var(--ss-h3,14px);font-weight:700;margin-top:2px}
 
@@ -500,6 +551,16 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
 .ladsame .h{display:block;font-size:10px;font-weight:800;letter-spacing:.08em;
   color:var(--navy);margin-bottom:3px}
 .subhead{font-size:var(--ss-h3,12.5px);font-weight:800;letter-spacing:-.03em;margin-top:17px;display:flex;align-items:center;gap:7px}
+/* 🔵 고객용 장의 머리줄은 <b>A+ 식 알약</b>입니다 (판 X377) —
+   도구 장(chk)·매뉴얼은 위 규칙 그대로 왼쪽 막대 꼴로 둡니다. */
+.sheet[data-kind="ins"] .subhead,.sheet[data-kind="let"] .subhead,
+.sheet[data-kind="mag"] .subhead{
+  display:block;text-align:center;background:var(--gold-l);border-radius:999px;
+  padding:6px 20px;margin-top:12px;color:var(--navy2);gap:0}
+.sheet[data-kind="ins"] .subhead::before,.sheet[data-kind="let"] .subhead::before,
+.sheet[data-kind="mag"] .subhead::before{display:none}
+.sheet[data-kind="ins"] .subhead .mini,.sheet[data-kind="let"] .subhead .mini,
+.sheet[data-kind="mag"] .subhead .mini{color:var(--navy);display:inline;margin-left:4px}
 #s7 .subhead,#s8 .subhead{margin-top:14px}
 .subhead::before{content:'';width:3px;height:13px;background:var(--gold);border-radius:2px}
 .subhead .mini{font-size:var(--ss-sm,10.5px);font-weight:600;color:var(--g500);letter-spacing:-.02em}
@@ -529,14 +590,7 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
    ★ 삽화는 <b>복제하지 않고 직접 SVG 로</b> 그렸습니다 (CLAUDE.md 9번).
    ★ 색은 고객용 토큰 그대로입니다 — 따로 적지 않습니다 (5번). */
 #s18{padding:0;overflow:hidden;position:relative;background:var(--cream);display:flex}
-#s18 .mgpaper{position:absolute;inset:7mm;border:3px solid var(--navy);border-radius:14px;
-  background:var(--paper);z-index:0}
-/* 네 귀퉁이 리본 — 직접 그린 빗금 다발 */
-#s18 .mgrib{position:absolute;width:26mm;height:26mm;z-index:1}
-#s18 .mgrib.tl{top:0;left:0}
-#s18 .mgrib.tr{top:0;right:0;transform:scaleX(-1)}
-#s18 .mgrib.bl{bottom:0;left:0;transform:scaleY(-1)}
-#s18 .mgrib.br{bottom:0;right:0;transform:scale(-1,-1)}
+#s18 .apfr{background:var(--paper)}
 /* ⚠ .sheet 는 <b>min-height</b> 라 자식의 height:100% 가 안 풀립니다 —
    그래서 꼬리글의 margin-top:auto 가 안 먹고 글이 가운데에서 끝났습니다.
    부모를 flex 로 두고 여기서 flex:1 로 늘립니다. */
@@ -598,14 +652,19 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
   .sheet.firstsheet{page-break-before:avoid;break-before:avoid}
   .cover-sheet{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  @page{size:A4;margin:14mm}
+  /* ⚠ 인쇄 쪽 상자는 297mm 에서 위아래 여백을 뺀 만큼입니다. 14mm 씩이면
+     269mm(1017px) 인데, 장은 화면에서 1123px 로 짜여 있어 <b>106px 이 모자랍니다</b>.
+     A+ 테마를 입히며 그 모자람이 드러나 표지와 붙이는 한 장이 두 쪽으로 쪼개졌습니다.
+     여백을 10mm 로 줄여 상자를 277mm(1047px)로 넓힙니다 — 틀이 7mm 안쪽에 있어
+     종이 가장자리에서 17mm 라, A+ 자료와 같은 꼴입니다 (판 X377 · 4-1번). */
+  @page{size:A4;margin:10mm}
   .cover-sheet .cv-in{padding:10mm 6mm}
   /* 🧲 붙이는 한 장 — 화면에서는 A4(1123px) 에 맞춰 두었지만, 인쇄는 위아래
      14mm 여백을 뺀 <b>269mm</b> 안에 들어가야 합니다. 그 차이 때문에 법정
      꼬리글이 <b>다음 쪽으로 혼자 넘어가</b> 15쪽이 되었습니다 (판 X376).
      ⚠ 눈으로는 못 봅니다 — 진짜 PDF 로 뽑아 쪽을 세어야 보입니다 (4-1번). */
-  #s18 .mgin{padding:10mm 11mm 8mm}
-  #s18 .mgpaper{inset:4mm}
+  #s18 .mgin{padding:8mm 11mm 6mm}
+  #s18 .apfr{inset:4mm}
 }
 .stage-hd{max-width:210mm;margin:0 auto 14px;font-size:12px;color:var(--g600);display:flex;justify-content:space-between;align-items:center}
 .stage-hd b{color:var(--g800)}
@@ -1201,7 +1260,7 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
 .mytel .fax .blank{display:inline-block;min-width:96px;border-bottom:1px solid var(--line);height:15px}
 .mytel .none{padding:16px;text-align:center;color:var(--g500);font-size:var(--ss-body,12px)}
 
-.ways{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:11px}
+.ways{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:9px}
 .way{border:1px solid var(--line);border-radius:12px;padding:8px 11px}
 .way .n{width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;
   font-size:var(--ss-sm,11.5px);font-weight:800}
@@ -1211,11 +1270,14 @@ textarea{resize:vertical;min-height:62px;line-height:1.6}
 
 .tellist{margin-top:9px}
 .tellist h4{font-size:var(--ss-lab,11px);font-weight:800;color:var(--navy2);letter-spacing:.04em;
-  padding-bottom:3px;border-bottom:1.5px solid var(--navy);margin:0 0 2px}
+  border-bottom:none;margin:0 0 4px}
 .tellist h4:nth-of-type(2){margin-top:9px}
 .tellist .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 14px}
-.tellist .it{display:flex;align-items:baseline;gap:6px;padding:2px 2px;border-bottom:1px solid var(--line2);
-  font-size:var(--ss-body,11px);line-height:1.35}
+/* A+ 자료의 표처럼 — <b>한 줄 걸러 파스텔</b>이라 눈이 줄을 안 놓칩니다 (판 X377) */
+.tellist .it{display:flex;align-items:baseline;gap:6px;padding:2px 7px;border-bottom:1px solid var(--line2);
+  font-size:var(--ss-body,11px);line-height:1.35;border-radius:4px}
+.tellist .grid3 .it:nth-child(2n){background:var(--ap-r1)}
+.tellist h4{background:var(--gold-l);border-radius:999px;padding:4px 14px;text-align:center}
 .tellist .it:last-child{border-bottom:none}
 .tellist .grid3 .it:nth-last-child(-n+1){border-bottom:none}
 .tellist .it .n{flex:1;color:var(--g800);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -3086,19 +3148,7 @@ body{letter-spacing:-.02em}
   <!-- S7 연금점검 -->
   <!-- S18 🧲 냉장고에 붙이는 한 장 — 보관 안내서의 쪽을 안 먹는 「떼어 내는 한 장」 (판 X376) -->
   <div class="sheet" data-kind="mag" id="s18">
-    <div class="mgpaper"></div>
-    <svg class="mgrib tl" viewBox="0 0 90 90" aria-hidden="true"><g stroke-width="9" stroke-linecap="round">
-      <path d="M2 30 L30 2" stroke="var(--navy)"/><path d="M2 50 L50 2" stroke="var(--gold)"/>
-      <path d="M2 70 L70 2" stroke="var(--navy3)"/></g></svg>
-    <svg class="mgrib tr" viewBox="0 0 90 90" aria-hidden="true"><g stroke-width="9" stroke-linecap="round">
-      <path d="M2 30 L30 2" stroke="var(--navy)"/><path d="M2 50 L50 2" stroke="var(--gold)"/>
-      <path d="M2 70 L70 2" stroke="var(--navy3)"/></g></svg>
-    <svg class="mgrib bl" viewBox="0 0 90 90" aria-hidden="true"><g stroke-width="9" stroke-linecap="round">
-      <path d="M2 30 L30 2" stroke="var(--navy)"/><path d="M2 50 L50 2" stroke="var(--gold)"/>
-      <path d="M2 70 L70 2" stroke="var(--navy3)"/></g></svg>
-    <svg class="mgrib br" viewBox="0 0 90 90" aria-hidden="true"><g stroke-width="9" stroke-linecap="round">
-      <path d="M2 30 L30 2" stroke="var(--navy)"/><path d="M2 50 L50 2" stroke="var(--gold)"/>
-      <path d="M2 70 L70 2" stroke="var(--navy3)"/></g></svg>
+    <!-- 틀과 리본은 apFrame() 이 붙입니다 (판 X377 · 5번) -->
 
     <div class="mgin">
       <div class="mghd">
@@ -4741,10 +4791,36 @@ function jgphTake(i){
 }
 function jgphClear(id){ delete JGPH[id]; jgphPaint(); jgphPanel(); save(); }
 
+/* ══ 🎀 <b>네 귀퉁이 리본 틀을 그려 붙이는 자</b> (판 X377) ══════
+   사장님 말씀 2026-11-06 「내가 보낸 속지 테마로 전체적으로 다 바꿔줘」.
+
+   ★★ <b>한 자가 열네 장에 다 붙입니다.</b> 장마다 SVG 를 손으로 적으면
+     열네 벌이 되고, 리본 하나를 고치면 나머지 열셋이 낡습니다 (5번).
+   ★ 삽화는 <b>복제하지 않고 직접 그렸습니다</b> — 빗금 세 줄입니다 (9번).
+     색은 A+ 자료에서 뽑은 값입니다 — 파랑 #0B60B0 · 빨강 #D81818 · 노랑 #F0C000.
+   ⚠ 고객에게 가는 장(ins · let · mag)에만 붙입니다. 상담 도구 장(chk)은
+     설계사가 보는 종이라 그대로 둡니다.
+   ⚠ 두 번 붙지 않습니다 — 이미 있으면 건너뜁니다. */
+const AP_RIB = '<svg class="aprib %C%" viewBox="0 0 90 90" aria-hidden="true">'
+  + '<g stroke-width="9" stroke-linecap="round">'
+  + '<path d="M2 30 L30 2" stroke="var(--ap-red)"/>'
+  + '<path d="M2 50 L50 2" stroke="var(--gold)"/>'
+  + '<path d="M2 70 L70 2" stroke="var(--navy)"/></g></svg>';
+function apFrame(){
+  document.querySelectorAll('.sheet[data-kind="ins"],.sheet[data-kind="let"],.sheet[data-kind="mag"]')
+    .forEach(function(sh){
+      if(sh.querySelector(':scope > .apfr')) return;      /* 이미 둘렀습니다 */
+      var html = '<div class="apfr"></div>'
+        + ['ap-tl','ap-tr','ap-bl','ap-br'].map(function(c){ return AP_RIB.replace('%C%', c); }).join('');
+      sh.insertAdjacentHTML('afterbegin', html);
+    });
+}
+
 /* 인쇄할 첫 장에는 앞 페이지 나눔을 걸지 않는다 */
 function markFirst(){
   try{ shNum(); }catch(e){}   /* 켜고 끌 때마다 쪽 번호를 다시 셉니다 (판 X361) */
   try{ cvTocFill(); }catch(e){}  /* 표지 차례도 같이 — 장을 끄면 차례도 빠집니다 (판 X369) */
+  try{ apFrame(); }catch(e){}    /* 🎀 리본 틀 (판 X377) */
   let done=false;
   document.querySelectorAll('.sheet').forEach(s=>{
     const on=!s.classList.contains('off');

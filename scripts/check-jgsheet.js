@@ -54,6 +54,15 @@
      ⓘ 가족 그림을 <img> 로 바꿈           → [12] 가 욺
      ⓙ 토스페이스 줄을 지움                → [13] 이 욺
      ⓚ 따뜻한 색을 :root 로 올림           → [14] 가 욺(도구 장이 같이 따뜻해집니다)
+     ⓛ 색을 옛 벽돌로 되돌림               → [11] 이 욺
+     ⓜ 리본 틀을 안 부름                   → [20] 이 욺
+     ⓝ 알약 머리줄을 지움                  → [20] 이 욺
+     ⓞ 빨강 ✔ 를 옛 점으로 되돌림          → [20] 이 욺
+
+   ★★ 2026-11-06 사장님 말씀 「내가 보낸 속지 테마로 전체적으로 다 바꿔줘」 →
+     색을 여쭈니 <b>「A+ 자료처럼 파랑으로」</b>. 그래서 [11] 의 판정을
+     <b>뒤집었습니다</b> — 전에는 「고객용에 파란 자리가 0」 이었습니다.
+     말씀이 바뀌면 자도 같이 바뀝니다. 옛 눈금을 남겨 두면 그 자가 거짓말을 합니다.
      ⓛ 사진 자리(.jg-hero)를 지움           → [15] 가 욺
      ⓝ 풀이 한 마디를 지움(s14 원무과)      → [16] 이 욺 — 실제로 돌려 봤습니다
      ⓞ 새 장(s14)을 지움                   → [1]·[15] 가 욺 — 실제로 돌려 봤습니다
@@ -77,7 +86,11 @@ const 차례 = ['s1','s6','s5','s15','s2','s3','s16','s12','s14','s13','s4','s10
 /* 글씨 바닥 — 고객용 장의 어떤 글도 이 밑으로 안 갑니다 (법정 꼬리글만 예외) */
 const 바닥 = 13;
 /* ★ A4 바닥에 남겨 둘 여유 — 글꼴이 바뀌면 줄 수가 달라집니다 (판 X364) */
-const 여유바닥 = 25;
+/* ⚠ 눈금을 <b>25 → 45px 로 올립니다</b> (판 X377). 25px 로는 못 막았습니다 —
+   제 통에서 s14 가 29px 남았는데 <b>CI 에서는 +1px 넘쳤습니다</b>. 글꼴이 달라
+   줄 수가 달라지는데, 그 차이가 이번에 30px 이었습니다. 느슨한 눈금은 알람이
+   아닙니다 (8번 · 판 X364 에서 한 번 데인 그 자리입니다). */
+const 여유바닥 = 45;
 /* ★ 사다리 값이 <b>뒤로 가지 않는지</b>를 봅니다 — 낱낱의 글을 세는 것보다
    이쪽이 튼튼합니다. 한 곳(--ss-…)만 고치면 전부 따라오게 해 두었으니,
    그 한 곳이 작아지지 않는지만 지키면 됩니다 (5번). */
@@ -254,6 +267,27 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
             if (파랑(cs[k])) out.push(s.id + ' · ' + (e.className || e.tagName) + ' · ' + k); }); }); });
       return out; };
     const 고객파랑 = 푸른곳('.sheet[data-kind="ins"],.sheet[data-kind="let"]');
+    /* 🎨 고객용 장의 <b>토큰 값</b>을 그대로 읽습니다 (판 X377) — 색 세기보다
+       정확합니다. A+ 파랑 #0B60B0 이어야 하고, 옛 벽돌 #A04F34 면 안 됩니다. */
+    const 고객토큰 = (() => { const s0 = document.querySelector('.sheet[data-kind="ins"]');
+      if (!s0) return ''; const cs = getComputedStyle(s0);
+      return ['--navy','--navy2','--gold-l','--ap-chk','--ap-red']
+        .map(k => k + '=' + cs.getPropertyValue(k).trim()).join(' '); })();
+    /* 🎀 A+ 의 표식이 장마다 붙었나 */
+    const 틀 = [...document.querySelectorAll('.sheet[data-kind="ins"],.sheet[data-kind="let"],.sheet[data-kind="mag"]')]
+      .filter(x => !x.classList.contains('off'))
+      .map(x => x.id + ':' + x.querySelectorAll(':scope > .apfr').length + '틀'
+                 + x.querySelectorAll(':scope > .aprib').length + '리본');
+    const 알약머리 = [...document.querySelectorAll('.sheet[data-kind="ins"] .subhead,.sheet[data-kind="let"] .subhead')]
+      .filter(e => getComputedStyle(e).textAlign === 'center'
+                && /rgb\(185, 233, 255\)/.test(getComputedStyle(e).backgroundColor)).length;
+    const 머리모두 = document.querySelectorAll('.sheet[data-kind="ins"] .subhead,.sheet[data-kind="let"] .subhead').length;
+    /* ⚠ 처음에는 「빨강 ✔ 가 한 곳이라도 있으면 된다」 로 적었다가, 서류 목록의
+       ✔ 를 옛 점으로 되돌려도 <b>안 울었습니다</b> — 떼는 요령 쪽 ✔ 가 남아
+       통과시켰습니다. 알람이 아닙니다 (8번). 이제 <b>줄마다</b> 있는지 봅니다. */
+    const 체크줄 = [...document.querySelectorAll('.sheet[data-kind="ins"] .ds li,.sheet[data-kind="ins"] .jgtip-r')];
+    const 빨강체크 = 체크줄.filter(e => /rgb\(254, 0, 0\)/.test(getComputedStyle(e, '::before').borderBottomColor)).length;
+    const 체크모두 = 체크줄.length;
     const chk2 = [...document.querySelectorAll('.sheet[data-kind="chk"]')];
     const was2 = chk2.map(s => s.classList.contains('off'));
     chk2.forEach(s => s.classList.remove('off'));
@@ -307,7 +341,8 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
     document.querySelectorAll('.sheet[data-kind="ins"],.sheet[data-kind="let"]')
       .forEach(sh => { 장글[sh.id] = sh.innerText || ''; });
     return { 장, 작은, 도구, 다시, s12: 글('s12'), s13: 글('s13'), 장글, 차례, 확인,
-             고객파랑: [...new Set(고객파랑)], 도구파랑, 띠 };
+             고객파랑: [...new Set(고객파랑)], 도구파랑, 띠,
+             고객토큰, 틀, 알약머리, 머리모두, 빨강체크, 체크모두 };
   }, { 바닥 });
 
   console.log('[1] 고객용이 열세 장이고 담당자가 계약보다 먼저 오나');
@@ -350,9 +385,14 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
   ok(/약관과 보험회사의 심사/.test(r.s13), '「약관과 보험회사의 심사」 를 말한다');
   ok(/상법 제662조/.test(r.s13), '3년은 법조문을 그대로 적는다 (상법 제662조)');
 
-  console.log('[11] 따뜻한 가족을 지키는 색인가 — 고객용에 파란 자리가 없나');
-  ok(r.고객파랑.length === 0, '고객용 장에 남은 파란 자리 ' + r.고객파랑.length + '곳'
-     + (r.고객파랑.length ? ('\n        ' + r.고객파랑.slice(0, 5).join('\n        ')) : ''));
+  console.log('[11] 🎨 A+ 자료의 파랑인가 (판 X377)');
+  /* ⚠ 판 X362 에서는 <b>거꾸로</b> 「고객용에 파란 자리가 0이어야 한다」 였습니다.
+     사장님이 2026-11-06 에 「내가 보낸 속지 테마로 전체적으로 다 바꿔줘」 →
+     색을 여쭈니 <b>「A+ 자료처럼 파랑으로」</b> 를 고르셔서 판정을 뒤집었습니다.
+     말씀이 바뀌면 자도 같이 바뀝니다 — 옛 눈금을 남겨 두면 그 자가 거짓말을 합니다. */
+  ok(/--navy=#0B60B0/i.test(r.고객토큰), '고객용 --navy 가 A+ 파랑(#0B60B0)이다 — ' + r.고객토큰);
+  ok(!/A04F34|7F3B24|C47A58|E8A33D/i.test(r.고객토큰), '옛 벽돌·호박 토큰이 남아 있지 않다');
+  ok(r.고객파랑.length >= 300, '고객용 장의 파란 자리 ' + r.고객파랑.length + '곳 (눈금 300 · 잰 값 454)');
 
   console.log('[14] 상담 도구 장은 파란 그대로인가 (고객용만 따뜻해진다)');
   /* ★ 눈금을 <b>재어서</b> 놓았습니다 (판 X362) — 따뜻한 색을 :root 로 올려
@@ -428,6 +468,22 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
   ok(!/주민등록번호\s*(:|：)?\s*(입력|적어|써)/.test(s16) && (s16.match(/주민등록번호/g) || []).length === 1,
      '주민번호를 적는 칸을 두지 않는다');
   ok(/약관과 보험회사의 심사 결과/.test(s16), '지급은 약관과 심사에 따른다고 말한다');
+
+  console.log('[20] 🎀 A+ 테마가 장마다 입혀졌나 (판 X377)');
+  const 틀모자람 = r.틀.filter(t => !/:1틀4리본$/.test(t));
+  ok(틀모자람.length === 0, '켜진 고객용 장 ' + r.틀.length + '장에 틀 1 + 리본 4가 다 있다'
+     + (틀모자람.length ? ' ← ' + 틀모자람.join(' · ') : ''));
+  ok((src.match(/function apFrame\(/g) || []).length === 1, '그려 붙이는 자(apFrame)가 한 벌이다 (5번)');
+  /* ⚠ 처음에는 「<svg class="aprib 가 하나도 없어야 한다」 로 적었다가
+     <b>그리는 자의 본보기 글귀</b>를 제가 잡았습니다 — 헛것입니다 (8번).
+     본보기는 딱 한 벌이고, 장 안에 손으로 적으면 둘이 됩니다. */
+  const 리본글 = (src.match(/<svg class="aprib/g) || []).length;
+  ok(리본글 === 1, '리본 SVG 글귀가 ' + 리본글 + '벌 — 그리는 자의 본보기 하나뿐이다 (5번)');
+  ok(r.머리모두 > 0 && r.알약머리 === r.머리모두,
+     '고객용 머리줄 ' + r.머리모두 + '개가 모두 <b>A+ 알약</b>이다 (' + r.알약머리 + '개)');
+  ok(r.체크모두 > 0 && r.빨강체크 === r.체크모두,
+     '서류·요령 줄 ' + r.체크모두 + '곳이 <b>모두</b> A+ 의 빨강 ✔ 다 (' + r.빨강체크 + '곳)');
+  ok(/aprib ap-tl/.test(src) || /ap-tl/.test(src), '귀퉁이 이름에 ap- 접두사가 붙어 있다 (.tl 과 안 부딪히게)');
 
   console.log('[끝] 조용한가');
   ok(터짐.length === 0, '터진 자리 ' + 터짐.length + (터짐.length ? (' ← ' + 터짐[0]) : ''));
