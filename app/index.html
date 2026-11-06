@@ -19254,8 +19254,7 @@ function mcalItems(){
   for(i=0;i<D.length;i++){
     var r=D[i];if(!r||!r.appt)continue;
     var ds=(''+r.appt).slice(0,10);if(ds<TD)continue;
-    /* 🙈 배정 DB 이름은 <b>가려서</b> 세웁니다 (판 X359 · 3번) — 홈 「이번 주」·「오늘 약속」 도 이 줄을 씁니다 */
-    (out[ds]=out[ds]||[]).push({k:'appt',t:(osMaskName(r.name)||'고객'),who:r.who||'',
+    (out[ds]=out[ds]||[]).push({k:'appt',t:(r.name||'고객'),who:r.who||'',
       s:(''+r.appt).slice(11,16)+(r.region?(' · '+r.region):'')});
   }
   /* <b>내가 직접 넣은 일정</b>도 같은 달력에 찍습니다. 이미 잡아 둔 시간이라
@@ -19863,7 +19862,8 @@ function mcalWeekHtml(){
     if(!n.length)h+='<span class="wn">—</span>';
     for(j=0;j<n.length&&j<4;j++){
       var K=MCAL_KIND[n[j].k]||{e:'•',c:'#8B95A1'};
-      var wt=mcalWhoTag(n[j],wMany)+(n[j].t||'');
+      /* 🙈 배정 DB 약속(appt)은 <b>그릴 때</b> 가립니다 (판 X359 · 3번) — 자료는 그대로(이름으로 찾는 길) */
+      var wt=mcalWhoTag(n[j],wMany)+((n[j].k==='appt'?osMaskName(n[j].t):n[j].t)||'');
       h+='<span class="wi"'+(n[j].late?' data-late="1"':'')+' title="'+osEsc(wt)+'">'+
          '<i style="background:'+K.c+'"></i>'+K.e+' '+osEsc(wt.slice(0,12))+
          (n[j].s?('<u>'+osEsc((''+n[j].s).slice(0,9))+'</u>'):'')+'</span>';
@@ -31949,7 +31949,8 @@ function hmNowHtml(ext){
      아닙니다. 사람인지는 <b>HM_ACT 한 곳</b>이 압니다 (5번). */
   /* 🙈 배정 DB 에서 온 분은 <b>가립니다</b> (판 X359 · 3번 「새 자리에 세울 때는 가린다」) —
      실명은 「한 장으로 보기」 를 한 번 더 누르면 CRM 에서 봅니다. */
-  if(x.k==='db'&&x.t)nm=osMaskName(x.t)||nm;
+  /* appt 는 달력이 배정 DB 약속에서 세운 줄입니다(mcalItems · AR.db) — 같은 이름입니다 */
+  if((x.k==='db'||x.k==='appt')&&x.t)nm=osMaskName(x.t)||nm;
   var nmT=(A.ba&&nm)?(nm+'님'):nm;
   return '<div class="hm-now">'+
     /* <b>「지금 할 것」</b> — 목업 .one 의 .lab 자리입니다. 위에 있던 얇은
@@ -38275,7 +38276,9 @@ function hmTossAppt(){
   try{ it=mcalItems(); ds=mcalToday(); L=mcalDay(it,ds)||[]; }catch(e){ L=null; }
   if(L)for(i=0;i<L.length;i++)if(L[i]&&L[i].k==='appt'){
     var hm=(''+(L[i].s||'')).slice(0,5);
-    return hmTossCard((hm||'오늘')+' 약속', osEsc(L[i].t||'고객')+'님',
+    /* 🙈 배정 DB 약속(appt)의 이름은 <b>홈에 그릴 때</b> 가립니다 (판 X359 · 3번).
+       달력 자료 자체는 그대로 둡니다 — 자비스 「홍길동 약속 언제야」 가 이름으로 찾습니다. */
+    return hmTossCard((hm||'오늘')+' 약속', osEsc(osMaskName(L[i].t)||'고객')+'님',
       (''+(L[i].s||'')).slice(8), '자료 열기','go(\'clients\')',true);
   }
   /* ⚠ <b>달력을 못 읽었으면 「없다」고 말하지 않습니다</b> (1번) —
