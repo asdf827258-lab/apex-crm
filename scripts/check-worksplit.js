@@ -17,6 +17,7 @@
            담당이 아직 안 정해진 일(제안서 출력)은 「안 정해졌다」 고 말하나 · 없는 말은 「없습니다」 · #q= 주소
      [9] ★★ 내보내기 — 한 파일로 받아, 인터넷을 다 막고 열어도 같은 표 · 찾기가 되나 · 고치는 단추가 없나 ·
            이 기기 저장소를 안 쓰나 · ui.css 없이도 색이 서나
+     [11] 🖼 이미지 — 폭 1080 세로 한 장 · 사람 여덟 · 찾는 중이면 걸린 사람만 · PNG 로 내려받나 · 바깥 0
      [10] ★★ 내 수정용 — 받은 파일에서 고치고 · 다시 열어도 남고 · 앱의 팀 표 열쇠와 안 섞이고 ·
            거기서 고친 표로 설계사용(보기 전용)을 다시 뽑나 · 인터넷 0
    ⚠ 되돌려 보았습니다(8번) — canOrg 를 빼면 [4] · 감싸기(doc)를 풀면 [5] · ORG_KEYS 에서 빼면 [5]
@@ -112,10 +113,12 @@ const sec = t=>console.log('\n'+t);
   const 판 = await p.evaluate(()=>({
     수:[].map.call(document.querySelectorAll('.ws-sum .ws-stat .n'),e=>e.textContent).join(' '),
     이름표:document.querySelectorAll('.ws-chips .ws-chip').length,
-    큰:[].map.call(document.querySelectorAll('.ws-card.big .ws-name'),e=>e.textContent).join(' ') }));
+    큰:[].map.call(document.querySelectorAll('.ws-card.cols .ws-name'),e=>e.textContent).join(' '),
+    옆:!!document.querySelector('.ws-side .ws-chips') && getComputedStyle(document.querySelector('.ws-side')).position }));
   is(판.수==='47 0 47 3', '★ 요약판 — 할 일 47 · 끝낸 것 0 · 남은 것 47 · 아직 정할 것 3 ('+판.수+') — 셈은 tally() 한 곳');
   is(판.이름표===8, '사람 이름표 여덟 — 누르면 그 카드로 — '+판.이름표);
-  is(판.큰==='EM·EM센터', '할 일이 많은 카드(EM·EM센터 21)만 넓게 두 줄로 — '+판.큰);
+  is(판.큰==='EM·EM센터 이미라 실장 현아/다정프로', '할 일 6줄 넘는 카드는 두 줄로 — '+판.큰);
+  is(판.옆==='sticky', '컴퓨터에서는 왼쪽에 담당자 목록이 붙어 선다(내려도 따라옴)');
   await p.click('.ws-chip:nth-child(5)'); await p.waitForTimeout(700);
   const 내려 = await p.evaluate(()=>{ var r=document.querySelector('.ws-card[data-row="4"]').getBoundingClientRect(); return r.top>=0 && r.top<innerHeight/2; });
   is(내려, '이름표 「현아/다정프로」 를 누르면 그 카드가 화면 위쪽으로 온다');
@@ -359,6 +362,26 @@ const sec = t=>console.log('\n'+t);
     is(v3.p==='export' && v3.고치기==='none' && v3.카드===8 && v3.띠!=='rgba(0, 0, 0, 0)', '그 파일을 열면 보기 전용 · 카드 8 · 색 띠가 선다');
     is(oe.length===0 && 바깥.length===0, '인터넷을 다 막아도 터지지 않고 · 바깥을 안 부른다 — '+(oe[0]||바깥[0]||''));
     await off.close();
+  }
+
+  sec('[11] 🖼 이미지(PNG) — 카톡 사진으로');
+  {
+    const q = await ctx.newPage(); const qe=[]; q.on('pageerror',e=>qe.push(String(e).slice(0,90)));
+    await q.goto('http://127.0.0.1:'+PORT+'/'+PAGE,{waitUntil:'load'});
+    await q.evaluate(()=>{ localStorage.removeItem('apex_worksplit_v1'); }); await q.reload({waitUntil:'load'});
+    const 전부 = await q.evaluate(()=>{ var r=WS.poster(); return {w:r.canvas.width,h:r.h,ch:r.canvas.height,n:r.names.join('|')}; });
+    is(전부.w===1080 && 전부.h>2500 && 전부.h===전부.ch && 전부.n.split('|').length===8, '전부 — 폭 1080 · 높이 '+전부.h+' · 사람 여덟');
+    await q.evaluate(()=>WS.setQ('청구'));
+    const 청구 = await q.evaluate(()=>{ var r=WS.poster(); return {h:r.h,n:r.names.join('|'),q:r.q}; });
+    is(청구.n==='이미라 실장|박주미 매니저' && 청구.h<전부.h/2 && 청구.q==='청구', '찾는 중이면 그 결과만 — 「청구」 → '+청구.n+' · 높이 '+청구.h);
+    await q.click('#wsExport');
+    const [dl] = await Promise.all([q.waitForEvent('download'), q.click('#wsExpImg')]);
+    const buf = fs.readFileSync(await dl.path());
+    const png = buf.slice(1,4).toString()==='PNG', w=buf.readUInt32BE(16), h=buf.readUInt32BE(20);
+    is(png && w===1080 && h===청구.h && /^APEX_worksplit_\d{4}-\d\d-\d\d_search\.png$/.test(dl.suggestedFilename()),
+       'PNG 로 내려받는다 — '+dl.suggestedFilename()+' · '+w+'×'+h);
+    is(qe.length===0, '이미지를 그리다 터진 것 0 — '+(qe[0]||''));
+    await q.close();
   }
 
   is(errs.length===0, '터진 것 0 — '+(errs[0]||''));
