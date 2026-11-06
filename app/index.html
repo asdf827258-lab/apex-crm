@@ -2491,6 +2491,12 @@ body.educal-mode #educalScreen{display:block;}
 body.insight-mode .app{display:none;}
 body.insight-mode #insightScreen{display:block;}
 #insightScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 🗂 업무구분 — 담당자별 할 일 (교육 캘린더와 같은 패턴 · app/worksplit.html · 판 X361)
+   ★ 고친 것은 열쇠 apex_worksplit_v1 하나 — 이 창의 apex-kv-sync 가 조직 한 벌로 올립니다(EM 만). */
+#worksplitScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.worksplit-mode .app{display:none;}
+body.worksplit-mode #worksplitScreen{display:block;}
+#worksplitScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* 상담자료는 화면 아래에 자기 버튼이 있다 — 그 위로 올린다 */
 #fpDeckScreen .fin-float{bottom:88px;}
 @media(max-width:880px){#fpDeckScreen .fin-float{bottom:96px;}}
@@ -3021,6 +3027,16 @@ body.insight-mode #insightScreen{display:block;}
   </div>
 </div>
 
+<!-- 🗂 업무구분 — 담당자별 할 일 (앱 폴더에 번들: app/worksplit.html) -->
+<div id="worksplitScreen">
+  <iframe id="worksplitFrame" class="fin-frame" title="업무구분"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitWorksplit()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadWorksplit()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openWorksplitNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
 <!-- 🧭 상품전략기 · 월간 상품 인사이트 (앱 폴더에 번들: app/insight/) -->
 <div id="insightScreen">
   <iframe id="insightFrame" class="fin-frame" title="월간 상품 인사이트"></iframe>
@@ -3113,7 +3129,7 @@ body.insight-mode #insightScreen{display:block;}
      이 줄을 지우면 앱은 원래대로 돌아간다. -->
 <script src="apex-bohum-bridge.js?v=20260827j"></script>
 <!-- 이 기기에만 있던 기록(교육 진도 · 4년 유지관리 · 하루 한 장 · 교육 캘린더 …)을 서버로 — 폰과 PC 가 같게 (2026-11-03) -->
-<script src="apex-kv-sync.js?v=20261103a"></script>
+<script src="apex-kv-sync.js?v=20261106a"></script>
 <!-- 업적 한 벌 — 월간보고 실적 두 칸은 ✍️ 내 업적 입력(EM 업적)에서 서버가 셈 · 손으로 안 침 (판 X303 · 2026-11-03) -->
 <script src="apex-perf-link.js?v=20261103a"></script>
 <!-- 일정 한 벌 — EM 운영센터 본부 · 팀 일정(em_events)을 내 캘린더에 🏢 로 · 내 캘린더를 열 때만 받음 (판 X304 · 2026-11-03) -->
@@ -15451,6 +15467,10 @@ var TABS=[
    {id:'org',icon:'🏢',title:'조직도',cnt:'',ak:'조직'},
    {id:'attend',icon:'🗓️',title:'출근 현황',cnt:'',ak:'DB CRM'},
    {id:'audit',icon:'🛡️',title:'감사로그',cnt:'',ak:'매니저 관리'},
+   /* 🗂 <b>업무구분</b> — 2026-11-06 (판 X361) · 사장님 말씀 「이 부분을 업무구분으로 짓고,
+      html로 수정할 수 있도록 만들어」(10월 29일 회의 「담당자별 할 일」 표). 몸은 app/worksplit.html —
+      덮개(worksplitScreen)로 엽니다. 고치는 것은 EM 권한, 보는 것은 누구나. */
+   {id:'worksplit',tk:'조직',icon:'🗂️',title:'업무구분',cnt:'',ak:'조직 업무구분 담당자별 할 일 업무분담 회의 역할 실장 매니저 EM센터 프로'},
    /* ── 아래 여섯은 눈에서만 뺀다. <b>지우지 않는다.</b> ──────────────
       같은 일이 TFA 업무관리 안에 있어서 메뉴에 두 번 서 있었다.
       hide 를 달면 왼쪽 목록에서는 안 보이지만
@@ -15557,6 +15577,7 @@ var TAB_META={
  myperf:{tag:'MY',title:'내 업적 입력',desc:'신계약을 한 번 넣으면 EM · 월간보고 · 리더 화면에 같은 숫자로 섭니다.'},
  emcenter:{tag:'교육시스템EM',title:'EM 전용 운영센터',desc:'아래 단추를 누르면 새 탭으로 열립니다. 주소가 달라 거기서 한 번 더 로그인하십시오.'},
  insight:{tag:'상품전략기',title:'상품전략기 · 월간 상품 인사이트',desc:'보험사 GA 소식지·약관을 달마다 읽어 이번 달 결론 · 추천 순위 · 조합 세트 · 약관 비교를 한 쪽에 모았습니다.'},
+ worksplit:{tag:'조직 관리',title:'업무구분 · 담당자별 할 일',desc:'회의에서 정한 담당자별 할 일을 한 장에 — 칸을 눌러 고치고 할 일마다 완료를 겁니다.'},
  educal:{tag:'교육시스템EM',title:'APEX 교육 캘린더',desc:'월간 캘린더 · 신입 교육 주간 · 팀별 교육 · 교육매니저 운영표 · 본부장 루틴 · 공지 만들기.'},   /* ⚠ 이 글은 esc() 를 지납니다 — <b> 를 넣으면 글자 그대로 찍힙니다 */
  clients:{tag:'OS',title:'고객 보장분석 프로젝트',desc:'고객별 보장분석 상담을 한 곳에서. 문서 업로드·추출·검수·전후비교·리포트까지 이어집니다.'},
  cs_assist:{tag:'CONSULT',title:'AI 통합상담 어시스턴트',desc:'윤시현 「고객이익 통합상담」 방법론으로 상담 준비 브리핑과 녹취 복기를 돕습니다. 녹취는 텍스트 붙여넣기(길이 제한 없음) 또는 오디오 업로드.'},
@@ -15677,6 +15698,7 @@ var NAV_WHEN={
  /* ⚙️ 팀 · 설정 */
  org:'run', attend:'run', audit:'run', teamhub:'run', daily:'run',
  report:'run', branch_coach:'run', hq:'run',
+ worksplit:'run',      /* 🗂 업무구분 — 누가 무엇을 맡았나, 조직을 돌리는 자리 (판 X361) */
  emcenter:'run',        /* 「EM 전용 운영센터」 · 교육시스템EM — 업적·시책·월급은 조직을 돌리는 일입니다 */
  educal:'run',          /* 「APEX 교육 캘린더」 · 교육시스템EM — 교육 일정을 짜는 것도 조직을 돌리는 일입니다 */
  /* 📢 공지사항 — 2026-09-30. 팀에 알리는 것이라 <b>팀 · 설정</b> 입니다
@@ -20581,7 +20603,7 @@ var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode','bohum-mode','pdel-m
                       멀쩡히 떠 있는데 눈에는 안 보인다. 바로 위 주석이 「여기 이름만
                       적으면 된다」 고 적어 두었는데, 칸을 만들면서 그 한 줄을
                       빠뜨린 것이다. check-stayput 이 이제 이것을 센다. */
-                   'onecmp-mode','educal-mode','insight-mode'];
+                   'onecmp-mode','educal-mode','insight-mode','worksplit-mode'];
 function osFullMode(on){
   var b=document.body,i;
   for(i=0;i<OS_FULL_MODES.length;i++)
@@ -21228,6 +21250,13 @@ function go(tab){
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
+  if(tab==='worksplit'){
+    mountWorksplit();
+    osFullMode('worksplit-mode');
+    navMark('worksplit');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
   if(tab==='pdel'){
     mountPdel();
     osFullMode('pdel-mode');
@@ -21735,8 +21764,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-06 10:40';
-var APP_BUILD_NOTE='🧭 <b>🗺️ 지역 동선이 홈이 권한 동네로 열립니다 · 홈의 고객 이름은 가려서 섭니다</b> (판 X359). ◾ 홈 🚗 칸은 「순천으로 권합니다」 라 적어 놓고 🗺️ 지역 동선 단추는 「시 전체」 로 열던 것을 고쳤습니다. ◾ 폰에서 그 단추로 들어가면 「고객 관리부터 시작하시죠?」 창이 동선 창을 덮던 것도 고쳤습니다. ◾ 지금 할 것 · 🚗 · 아침 미션 · 이번 주 · 오늘 약속에 서던 배정 DB 실명을 가립니다(「막힌 데」 처럼). 실명은 「한 장으로 보기」 로 한 번 더 눌러 봅니다.';
+var APP_BUILD='2026-11-06 14:00';
+var APP_BUILD_NOTE='🗂 <b>업무구분 — 담당자별 할 일</b> (판 X361). ◾ 「조직 관리」 에 🗂️ 업무구분이 섭니다 — 10월 29일 회의 「담당자별 할 일」 표를 그림이 아니라 글로 옮겼습니다(담당자 여덟 · 할 일 47 · 추가 확정할 사항 셋). ◾ 「고치기」 를 누르면 칸을 눌러 바로 고치고 · 줄을 더하고 · 지우고 · 옮기고 · 할 일마다 완료를 겁니다. 인쇄도 됩니다. ◾ EM 권한이 고치면 폰·PC·팀 모두 같은 표를 봅니다. ◾ 함께 들어 있는 판: 먼저 나간 판 그대로입니다(판 X359 지역 동선 · 홈 이름 가리기).';
 
 
 
@@ -22216,6 +22245,19 @@ function mountEducal(){
 function reloadEducal(){var f=$('educalFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountEducal,30);toast('교육 캘린더 새로고침');}}
 function openEducalNewTab(){var w=window.open(EDUCAL_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitEducal(){go(prevTab||'home');}
+
+/* ════════ 🗂 업무구분 — 담당자별 할 일 (앱 폴더에 번들: app/worksplit.html · 판 X361) ════════
+   회의에서 정한 「누가 무엇을」 한 장. 칸을 눌러 고치고 할 일마다 완료를 겁니다.
+   ★ 서버를 따로 부르지 않습니다 — 그 쪽이 localStorage 에 쓰면 이 창의 apex-kv-sync 가
+     storage 소식을 받아 조직 한 벌(apex_org_kv)로 올립니다. 고치는 권한은 APEX_KV.canOrg() 한 곳 (5번). */
+var WORKSPLIT_URL='worksplit.html';
+function mountWorksplit(){
+  var f=$('worksplitFrame');if(!f||f._mounted)return;
+  f.src=WORKSPLIT_URL;f._mounted=true;
+}
+function reloadWorksplit(){var f=$('worksplitFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountWorksplit,30);toast('업무구분 새로고침');}}
+function openWorksplitNewTab(){var w=window.open(WORKSPLIT_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitWorksplit(){go(prevTab||'home');}
 
 /* ════════ 🧭 상품전략기 · 월간 상품 인사이트 (앱 폴더에 번들: app/insight/) ════════
    달마다 Desktop 의 apex-insight 빌드가 뽑는 crm/ 폴더를 그대로 옮겨 놓습니다.
@@ -26719,6 +26761,7 @@ document.addEventListener('keydown',function(e){
   else if(document.body.classList.contains('sangdam-mode'))exitSangdam();
   else if(document.body.classList.contains('educal-mode'))exitEducal();
   else if(document.body.classList.contains('insight-mode'))exitInsight();
+  else if(document.body.classList.contains('worksplit-mode'))exitWorksplit();
   else if(document.body.classList.contains('pdel-mode'))exitPdel();
   else if(document.body.classList.contains('bohum-mode'))exitBohum();
   else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
@@ -31153,6 +31196,7 @@ function hmSheetUrl(id){
   if(typeof SANGDAM_URL !=='undefined')M.sangdam   =SANGDAM_URL;
   if(typeof EDUCAL_URL  !=='undefined')M.educal    =EDUCAL_URL;
   if(typeof INSIGHT_URL !=='undefined')M.insight   =INSIGHT_URL;
+  if(typeof WORKSPLIT_URL!=='undefined')M.worksplit =WORKSPLIT_URL;
   if(typeof FP_DECK_URL !=='undefined')M.fp_deck   =FP_DECK_URL;
   if(typeof FP_TALK_URL !=='undefined')M.fp_talk   =FP_TALK_URL;
   if(typeof PDEL_URL    !=='undefined')M.pdel      =PDEL_URL;

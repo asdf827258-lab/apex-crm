@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="ko">
+<head>
+<meta charset="utf-8">
+<!-- 🤍 흰색 고정 — 앱에 어두운 판이 없습니다 (check-lightmode) -->
+<meta name="color-scheme" content="light">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>업무구분</title>
+<!-- 색·글꼴은 app/ui.css 한 곳에서 옵니다 — 여기서 색을 또 적지 않습니다 (5번) -->
+<link rel="stylesheet" href="ui.css">
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   🗂 업무구분 — 담당자별 할 일 (판 X361)
+
+   사장님 말씀 2026-11-06 — 회의 「담당자별 할 일」 표(그림)를 주시며
+   「이 부분을 업무구분으로 짓고, html로 수정할 수 있도록 만들어」.
+
+   ★ 그림이던 표를 <b>글로</b> 옮겼습니다 — 칸을 눌러 바로 고칩니다.
+     담당자·할 일을 더하고 · 지우고 · 올리고 · 내리고, 할 일마다 완료를 겁니다.
+   ★ 적은 것은 열쇠 <b>apex_worksplit_v1</b> 하나에 담깁니다. 앱 안에서 열면
+     바깥 창의 apex-kv-sync.js 가 그 열쇠를 <b>조직 한 벌(apex_org_kv)</b>로 올려
+     폰·PC·팀 모두 같은 표를 봅니다. 고칠 수 있는 사람은 <b>EM 권한</b>뿐이고
+     (서버 정책 em_is_em() 과 같은 자리), 그 판단은 <b>APEX_KV.canOrg() 한 곳</b>이
+     합니다 — 여기서 권한 목록을 또 적지 않습니다 (5번).
+   ★ 서버를 따로 부르지 않습니다 — 올리고 받는 것은 apex-kv-sync 가 합니다 (7번).
+   ★ 인쇄는 A4 한 장 꼴 · 숫자 글꼴 tnum 을 안 씁니다 (4-1번).
+   점검 : scripts/check-worksplit.js
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+  color-scheme:light;
+  --ink:var(--t-ink); --ink2:var(--t-ink-2); --sub:var(--t-sub);
+  --line:var(--t-line); --line2:var(--t-line-2);
+  --bg:var(--t-bg); --card:var(--t-card); --soft:var(--t-bg-2);
+  --pt:var(--t-point); --pt-d:var(--t-point-d); --pt-l:var(--t-point-l);
+  --pos:var(--t-pos-d); --pos-l:var(--t-pos-l);
+  --neg:var(--t-neg-d); --neg-l:var(--t-neg-l);
+  --warn:var(--t-warn-d); --warn-l:var(--t-warn-l);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--t-font);font-size:15px;line-height:1.55;
+  -webkit-text-size-adjust:100%;letter-spacing:-.2px}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--pt);outline-offset:2px;border-radius:6px}
+[hidden]{display:none!important}
+
+/* ── 위 띠 ── */
+.ws-bar{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line)}
+.ws-bar-in{max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ws-bar h1{font-size:18px;margin:0 auto 0 0;font-weight:800}
+.ws-btn{min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:var(--t-r-btn);background:var(--card);
+  font-size:14px;font-weight:700}
+.ws-btn:hover{background:var(--soft)}
+.ws-btn.on{background:var(--pt);border-color:var(--pt);color:var(--t-on)}
+.ws-btn:disabled{opacity:.45;cursor:not-allowed}
+.ws-who{max-width:1080px;margin:0 auto;padding:0 16px 10px;font-size:13px;color:var(--sub)}
+.ws-who b{color:var(--ink2)}
+.ws-who.view{color:var(--warn)}
+
+/* ── 종이 ── */
+.ws-paper{max-width:1080px;margin:16px auto 40px;padding:28px 24px;background:var(--card);
+  border:1px solid var(--line);border-radius:var(--t-r)}
+.ws-title{font-size:30px;font-weight:900;text-align:center;margin:0 0 4px;letter-spacing:-.6px}
+.ws-sub{font-size:16px;text-align:center;color:var(--ink2);margin:0 0 18px;white-space:pre-wrap}
+.ws-tbl{width:100%;border-collapse:collapse;border:2px solid var(--ink2)}
+.ws-tbl th{background:var(--soft);font-size:17px;font-weight:800;padding:8px;border:1px solid var(--ink2)}
+.ws-tbl td{border:1px solid var(--ink2);vertical-align:middle;padding:8px 12px}
+.ws-tbl td.who{width:22%;font-size:19px;font-weight:800;white-space:pre-wrap}
+.ws-cnt{display:block;font-size:13px;font-weight:600;color:var(--sub);margin-top:2px}
+.ws-cnt.all{color:var(--pos)}
+.ws-list{list-style:none;margin:0;padding:0}
+.ws-it{display:flex;align-items:flex-start;gap:8px;padding:2px 0}
+.ws-no{flex:0 0 auto;min-width:22px;height:22px;margin-top:1px;border:1.5px solid var(--ink2);border-radius:50%;
+  font-size:13px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.ws-ck{flex:0 0 auto;width:20px;height:20px;margin:2px 0 0;accent-color:var(--pos);cursor:pointer}
+.ws-t{flex:1 1 auto;min-width:0;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere}
+.ws-it.done .ws-t{color:var(--sub);text-decoration:line-through}
+.ws-extra{margin-top:20px;border:2px solid var(--ink2)}
+.ws-extra h2{margin:0;padding:8px 14px;font-size:19px;font-weight:800;background:var(--soft);border-bottom:1px solid var(--ink2)}
+.ws-extra .ws-list{padding:8px 14px}
+.ws-dot{flex:0 0 auto;width:8px;height:8px;margin-top:9px;border-radius:50%;background:var(--ink)}
+.ws-note{margin:14px 0 0;font-size:15px;font-weight:700;white-space:pre-wrap}
+
+/* ── 고치기 ── */
+body.edit [data-ed]{outline:1px dashed var(--line);border-radius:4px;min-height:1.4em;cursor:text}
+body.edit [data-ed]:focus{outline:2px solid var(--pt);background:var(--pt-l)}
+[data-ed]:empty:before{content:attr(data-ph);color:var(--sub)}
+.ws-tool{display:none;flex:0 0 auto;gap:2px}
+body.edit .ws-tool{display:inline-flex}
+.ws-mini{min-width:32px;min-height:32px;border:1px solid var(--line);border-radius:8px;background:var(--card);font-size:13px;font-weight:700}
+.ws-mini:hover{background:var(--soft)}
+.ws-mini.x{color:var(--neg)}
+.ws-add{display:none;margin-top:6px;min-height:36px;padding:0 12px;border:1px dashed var(--pt);border-radius:8px;
+  background:var(--card);color:var(--pt-d);font-size:13px;font-weight:700}
+body.edit .ws-add{display:inline-block}
+.ws-addrow{display:none;margin-top:10px}
+body.edit .ws-addrow{display:block}
+.ws-help{display:none;max-width:1080px;margin:10px auto 0;padding:10px 14px;border-radius:var(--t-r-sm);
+  background:var(--pt-l);color:var(--ink2);font-size:13px}
+body.edit .ws-help{display:block}
+.ws-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--t-on);
+  border-radius:12px;padding:10px 16px;font-size:14px;font-weight:700;z-index:50}
+
+@media(max-width:640px){
+  .ws-paper{padding:18px 12px;margin:10px 8px 32px;border-radius:var(--t-r-sm)}
+  .ws-title{font-size:23px}
+  .ws-sub{font-size:14px}
+  .ws-tbl,.ws-tbl tbody,.ws-tbl tr,.ws-tbl td{display:block;width:100%}
+  .ws-tbl thead{display:none}
+  .ws-tbl td.who{width:100%;background:var(--soft);font-size:17px;border-bottom:0}
+}
+
+/* ── 인쇄 — 띠·단추는 안 나옵니다. tnum 을 켜지 않습니다 (4-1번) ── */
+@page{size:A4;margin:12mm}
+@media print{
+  body{background:#fff;font-size:12.5px}
+  .ws-bar,.ws-who,.ws-help,.ws-tool,.ws-add,.ws-addrow,.ws-toast{display:none!important}
+  .ws-paper{border:0;margin:0;padding:0;max-width:none}
+  body.edit [data-ed]{outline:0;background:none}
+  .ws-tbl tr{break-inside:avoid}
+  .ws-title{font-size:24px}
+}
+</style>
+</head>
+<body>
+<div class="ws-bar"><div class="ws-bar-in">
+  <h1>업무구분</h1>
+  <button type="button" class="ws-btn" id="wsEdit">고치기</button>
+  <button type="button" class="ws-btn" id="wsUndo" disabled>되돌리기</button>
+  <button type="button" class="ws-btn" id="wsPrint">인쇄</button>
+  <button type="button" class="ws-btn" id="wsReset">처음 표로</button>
+</div>
+<div class="ws-who" id="wsWho"></div></div>
+
+<div class="ws-help" id="wsHelp">
+  칸을 눌러 바로 고칩니다. <b>Enter</b> — 아래에 할 일 한 줄 · <b>Shift+Enter</b> — 칸 안에서 줄바꿈 ·
+  빈 줄에서 <b>Backspace</b> — 그 줄 지우기. 고친 것은 바로 저장됩니다.
+</div>
+
+<div class="ws-paper" id="wsPaper"></div>
+
+<script>
+/* ES5 로 씁니다 — 본체와 같은 손버릇 */
+(function(){
+'use strict';
+var KEY='apex_worksplit_v1';
+
+/* ── 처음 표 — 2026-10-29 회의 그림을 그대로 옮긴 것 (지어 넣은 줄 없음 · 1번) ── */
+function seed(){
+  return {
+    title:'업무구분',
+    sub:'10월 29일 회의 · 담당자별 할 일\n안건 1~13 기준 · 공통 업무는 함께 표기 · 완료 여부 별도 확인',
+    rows:[
+      {who:'다정 EM·프로',items:[
+        '주미님 업무분담 및 순천 지원 범위 협의',
+        '대전 설계매니저와 업계누적·모니터링·동시가입 연락',
+        '설계 요청·수정·병력 재고지 직접 전달 경로 안내',
+        '공지방 운영 정리 및 중요 공지 개별 재전달',
+        '현아 프로와 시상 대상자 확인·집계 후 실장 전달']},
+      {who:'EM·EM센터',items:[
+        '단장님과 팀장 TO DO LIST·직접 처리 기준 마련',
+        '신입·경력 교육 체크리스트, 웰컴박스·90일 관리 준비',
+        'TA 개별 실습 및 설계·보장분석 교육·연습 체크',
+        '캘린더 확인 후 PC 대상자 고객등록 안내',
+        '나인톡·출근현황·CRM 체크',
+        '아침 9시 TA 문화 만들기',
+        '회사별 시상안 요청 및 화법과 함께 공지방 배포',
+        '업적입력 및 중간업적 확인',
+        '시상 확인 후 터치',
+        '업적수수료 개별 전달',
+        '주마감 보고서 올리기',
+        '인스타 카드뉴스',
+        '미기상품',
+        '월간 상품 정리 및 교육안내',
+        '수수료 관리 & 시책관리 문의',
+        '월초 소식지 준비',
+        '월마감 교육일정: 20일까지 확정, 25일까지 본부 이윤우 EM 전달\n25일 최종확정',
+        'EM 달력·동행일지 작성',
+        '월간 상품교육 진행 및 약관상 유리한 점 확인',
+        '세일즈플러스·라인업 보기 쉽게 정리',
+        'DB 배정분 확인']},
+      {who:'이미라 실장',items:[
+        '12시 전 종결·고등 업무 확인 후 주미님 안내',
+        '청구자료 스캔·보케어 청구 및 처리 절차 인수인계',
+        '세일즈플러스 교육·교육자료 요청·고등 매뉴얼 정리',
+        '고등 가능 회사 구분 및 지점장 고객등록 매뉴얼 수집',
+        '인슈아이 신입 교육 및 박주미 매니저 인수인계',
+        '실적 시상 포스터 제작, 지점장 교육 일정 확정·승인',
+        '증권전달 완료 체크 및 인증샷 받기',
+        '미용실 앞 미니배너 제작']},
+      {who:'박주미 매니저',items:[
+        '고객등록·청구 처리 절차 및 인슈아이 인수인계 받기',
+        '고객등록 대행은 제외']},
+      {who:'현아/다정프로',items:[
+        '다정·현아 프로 시상 대상자 확인·집계 후 실장 전달',
+        '신입 등록·시험 신청·변액시험 확인, 4종 서류·신입 핸들링 연계',
+        '3종 서류는 다정·현아 프로가 주기적 공지',
+        '위촉은 TFA → 다정으로 축소',
+        '수금·실효 총무 교육자료 전달',
+        '로이치점 전체 팀장 수금 현황은 프로 확인·관리',
+        '매일 오전 9시 모니터링 보안확인, 대전·순천 톡방',
+        '연체기준일 확인, 필요자료 출력·지점 전달 및 이미지 공유']},
+      {who:'단장님',items:[
+        'EM센터와 팀장 직접 처리 기준·TO DO LIST 검토 및 프로그램·업무 안내 마련']},
+      {who:'대전 설계매니저',items:[
+        '다정 EM과 업무분담 협의, 설계·수정·병력 재고지 직접 접수, 누적·모니터링·동시가입 소통']},
+      {who:'TFA·팀장님',items:[
+        '설계·병력 재고지 직접 전달, 업무 기준에 따른 직접 처리 및 PC 고객등록']}
+    ].map(function(r){ return {who:r.who,items:r.items.map(function(t){ return {t:t,done:false}; })}; }),
+    extraTitle:'추가 확정할 사항',
+    extra:[
+      '누적 확인·제안서 출력·보장분석표 프로그램의 처리 담당',
+      '웰컴박스·신입 90일 관리의 EM·프로·총무 세부 분담',
+      '실적 시상 합산 기준·집계·공지 담당'
+    ].map(function(t){ return {t:t}; }),
+    note:'※ 첨부 자료의 중복 페이지는 제외하여 정리했습니다.'
+  };
+}
+
+/* ── 담는 꼴 ──────────────────────────────────────────────────────
+   {v:1, at:'고친 시각', doc:'<표 JSON 을 글자로>'}
+   ★ 표를 <b>글자 하나(doc)</b>로 감싸 둡니다. apex-kv-sync 는 두 기기의 기록을
+     처음 맞출 때 객체·배열을 <b>합칩니다</b> — 표를 그대로 두면 담당자 줄이
+     두 벌로 붙습니다. 글자 하나면 합칠 것이 없어 <b>서버 쪽 한 벌</b>이 섭니다. */
+function load(){
+  try{
+    var raw=localStorage.getItem(KEY); if(!raw) return null;
+    var o=JSON.parse(raw); var d=JSON.parse(o.doc);
+    if(!d||!d.rows) return null;
+    return {doc:d,at:o.at||''};
+  }catch(e){ return null; }
+}
+var S=null, AT='', lastRaw=null;
+function now(){
+  var d=new Date(), p=function(n){ return (n<10?'0':'')+n; };
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+}
+var saveT=null;
+function save(){
+  clearTimeout(saveT);
+  saveT=setTimeout(saveNow,400);
+}
+function saveNow(){
+  clearTimeout(saveT); saveT=null;
+  AT=now();
+  var raw=JSON.stringify({v:1,at:AT,doc:JSON.stringify(S)});
+  lastRaw=raw;
+  try{ localStorage.setItem(KEY,raw); }catch(e){ toast('저장하지 못했습니다 — 이 브라우저가 저장을 막았습니다'); }
+  who();
+}
+
+/* ── 되돌리기 — 줄을 더하고 · 지우고 · 옮기기 전 모습 (이 창에서만 · 20번까지) ── */
+var UNDO=[];
+function snap(){
+  UNDO.push(JSON.stringify(S)); if(UNDO.length>20) UNDO.shift();
+  $('wsUndo').disabled=false;
+}
+
+/* ── 누가 고칠 수 있나 — 판단은 바깥 창의 APEX_KV.canOrg() 한 곳 (5번) ──
+   'team'  : EM 권한 — 고치면 조직 한 벌로 올라갑니다
+   'view'  : 보기 권한 — 고치지 않습니다(이 기기에만 다르게 남으면 팀 표와 어긋납니다)
+   'wait'  : 앱 안인데 권한을 아직 못 읽음 — 모른다고 적습니다 (1번)
+   'local' : 앱 밖에서 엶 — 이 기기에만 남습니다 */
+function perm(){
+  try{
+    if(window.parent!==window && parent.APEX_KV){
+      var c=typeof parent.APEX_KV.canOrg==='function'?parent.APEX_KV.canOrg():null;
+      return c===true?'team':c===false?'view':'wait';
+    }
+  }catch(e){}
+  return 'local';
+}
+function canEdit(){ return perm()!=='view'; }
+
+function $(id){ return document.getElementById(id); }
+function el(tag,cls,txt){
+  var e=document.createElement(tag); if(cls) e.className=cls;
+  if(txt!=null) e.textContent=txt;
+  return e;
+}
+function ed(e,get,set,ph,opt){
+  e.setAttribute('data-ed','1'); e.setAttribute('data-ph',ph||'');
+  e.textContent=get();
+  if(document.body.classList.contains('edit')){
+    e.contentEditable='true'; e.spellcheck=false;
+  }
+  e.addEventListener('input',function(){ set(e.innerText.replace(/\n$/,'')); save(); });
+  e.addEventListener('paste',function(ev){
+    var t=(ev.clipboardData||window.clipboardData); if(!t) return;
+    ev.preventDefault();
+    document.execCommand('insertText',false,t.getData('text/plain')||t.getData('Text')||'');
+  });
+  if(opt&&opt.keys) e.addEventListener('keydown',opt.keys);
+  return e;
+}
+function mini(txt,title,fn,x){
+  var b=el('button','ws-mini'+(x?' x':''),txt); b.type='button'; b.title=title; b.setAttribute('aria-label',title);
+  b.addEventListener('click',fn); return b;
+}
+var FOCUS=null;   /* 다시 그린 뒤 눈을 둘 자리 [줄, 할일] */
+function move(arr,i,d){ var j=i+d; if(j<0||j>=arr.length) return false; var t=arr[i]; arr[i]=arr[j]; arr[j]=t; return true; }
+
+function render(){
+  var P=$('wsPaper'); P.innerHTML='';
+  var h=el('h2','ws-title'); P.appendChild(ed(h,function(){return S.title;},function(v){S.title=v;},'제목'));
+  var sb=el('p','ws-sub'); P.appendChild(ed(sb,function(){return S.sub;},function(v){S.sub=v;},'부제 — 회의 날짜 · 기준'));
+
+  var tb=el('table','ws-tbl'), th=el('thead'), tr=el('tr');
+  tr.appendChild(el('th',null,'담당자')); tr.appendChild(el('th',null,'실행할 일'));
+  th.appendChild(tr); tb.appendChild(th);
+  var body=el('tbody');
+  S.rows.forEach(function(r,ri){
+    var row=el('tr'), w=el('td','who'), wt=el('div');
+    w.appendChild(ed(wt,function(){return r.who;},function(v){r.who=v;},'담당자'));
+    var n=r.items.length, dn=r.items.filter(function(x){return x.done;}).length;
+    if(n) w.appendChild(el('span','ws-cnt'+(dn===n?' all':''),dn+'/'+n+' 완료'));
+    var wtool=el('div','ws-tool');
+    wtool.appendChild(mini('↑','담당자 위로',function(){ snap(); if(move(S.rows,ri,-1)){ saveNow(); render(); } }));
+    wtool.appendChild(mini('↓','담당자 아래로',function(){ snap(); if(move(S.rows,ri,1)){ saveNow(); render(); } }));
+    wtool.appendChild(mini('✕','담당자 지우기',function(){
+      if(!confirm('「'+(r.who||'이름 없음')+'」 줄을 할 일 '+n+'개와 함께 지울까요? (되돌리기로 살릴 수 있습니다)')) return;
+      snap(); S.rows.splice(ri,1); saveNow(); render();
+    },1));
+    w.appendChild(wtool);
+    row.appendChild(w);
+
+    var td=el('td'), ul=el('ol','ws-list');
+    r.items.forEach(function(it,ii){
+      var li=el('li','ws-it'+(it.done?' done':''));
+      var ck=el('input','ws-ck'); ck.type='checkbox'; ck.checked=!!it.done; ck.disabled=!canEdit();
+      ck.setAttribute('aria-label','완료');
+      ck.addEventListener('change',function(){ it.done=ck.checked; saveNow(); render(); });
+      li.appendChild(ck);
+      if(n>1) li.appendChild(el('span','ws-no',String(ii+1)));
+      var t=el('div','ws-t');
+      li.appendChild(ed(t,function(){return it.t;},function(v){it.t=v;},'할 일',{keys:function(ev){
+        if(ev.key==='Enter'&&!ev.shiftKey&&!ev.isComposing){
+          ev.preventDefault(); snap(); r.items.splice(ii+1,0,{t:'',done:false}); FOCUS=[ri,ii+1]; saveNow(); render();
+        }else if(ev.key==='Backspace'&&!t.innerText.replace(/\n/g,'')&&!ev.isComposing){
+          ev.preventDefault(); snap(); r.items.splice(ii,1); FOCUS=ii>0?[ri,ii-1]:null; saveNow(); render();
+        }
+      }}));
+      t.setAttribute('data-ri',ri); t.setAttribute('data-ii',ii);
+      var tool=el('div','ws-tool');
+      tool.appendChild(mini('↑','위로',function(){ snap(); if(move(r.items,ii,-1)){ saveNow(); render(); } }));
+      tool.appendChild(mini('↓','아래로',function(){ snap(); if(move(r.items,ii,1)){ saveNow(); render(); } }));
+      tool.appendChild(mini('✕','이 할 일 지우기',function(){ snap(); r.items.splice(ii,1); saveNow(); render(); },1));
+      li.appendChild(tool);
+      ul.appendChild(li);
+    });
+    td.appendChild(ul);
+    var add=el('button','ws-add','+ 할 일'); add.type='button';
+    add.addEventListener('click',function(){ snap(); r.items.push({t:'',done:false}); FOCUS=[ri,r.items.length-1]; saveNow(); render(); });
+    td.appendChild(add);
+    row.appendChild(td);
+    body.appendChild(row);
+  });
+  tb.appendChild(body); P.appendChild(tb);
+  var ar=el('div','ws-addrow'), ab=el('button','ws-add','+ 담당자 줄 더하기'); ab.type='button';
+  ab.addEventListener('click',function(){ snap(); S.rows.push({who:'',items:[{t:'',done:false}]}); saveNow(); render();
+    var ws=P.querySelectorAll('td.who [data-ed]'); if(ws.length) ws[ws.length-1].focus(); });
+  ar.appendChild(ab); P.appendChild(ar);
+
+  var ex=el('div','ws-extra'), eh=el('h2');
+  ex.appendChild(ed(eh,function(){return S.extraTitle;},function(v){S.extraTitle=v;},'제목'));
+  var eu=el('ul','ws-list');
+  S.extra.forEach(function(it,ii){
+    var li=el('li','ws-it'); li.appendChild(el('span','ws-dot'));
+    var t=el('div','ws-t');
+    li.appendChild(ed(t,function(){return it.t;},function(v){it.t=v;},'정할 것',{keys:function(ev){
+      if(ev.key==='Enter'&&!ev.shiftKey&&!ev.isComposing){ ev.preventDefault(); snap(); S.extra.splice(ii+1,0,{t:''}); FOCUS=['x',ii+1]; saveNow(); render(); }
+      else if(ev.key==='Backspace'&&!t.innerText.replace(/\n/g,'')&&!ev.isComposing){ ev.preventDefault(); snap(); S.extra.splice(ii,1); FOCUS=ii>0?['x',ii-1]:null; saveNow(); render(); }
+    }}));
+    t.setAttribute('data-ri','x'); t.setAttribute('data-ii',ii);
+    var tool=el('div','ws-tool');
+    tool.appendChild(mini('↑','위로',function(){ snap(); if(move(S.extra,ii,-1)){ saveNow(); render(); } }));
+    tool.appendChild(mini('↓','아래로',function(){ snap(); if(move(S.extra,ii,1)){ saveNow(); render(); } }));
+    tool.appendChild(mini('✕','지우기',function(){ snap(); S.extra.splice(ii,1); saveNow(); render(); },1));
+    li.appendChild(tool);
+    eu.appendChild(li);
+  });
+  ex.appendChild(eu);
+  var xa=el('button','ws-add','+ 정할 것'); xa.type='button'; xa.style.margin='0 14px 10px';
+  xa.addEventListener('click',function(){ snap(); S.extra.push({t:''}); FOCUS=['x',S.extra.length-1]; saveNow(); render(); });
+  ex.appendChild(xa);
+  P.appendChild(ex);
+  var nt=el('p','ws-note'); P.appendChild(ed(nt,function(){return S.note;},function(v){S.note=v;},'꼬리말'));
+
+  if(FOCUS){
+    var f=P.querySelector('[data-ri="'+FOCUS[0]+'"][data-ii="'+FOCUS[1]+'"]'); FOCUS=null;
+    if(f){ f.focus(); try{ var rg=document.createRange(); rg.selectNodeContents(f); rg.collapse(false);
+      var sl=window.getSelection(); sl.removeAllRanges(); sl.addRange(rg); }catch(e){} }
+  }
+}
+
+function who(){
+  var p=perm(), w=$('wsWho'), t;
+  w.className='ws-who'+(p==='view'?' view':'');
+  if(p==='team') t='<b>EM 권한</b> — 고치면 팀 전체 화면이 같이 바뀝니다.';
+  else if(p==='view') t='<b>보기 전용</b> — 팀이 함께 보는 표라 EM 권한만 고칩니다.';
+  else if(p==='wait') t='권한을 아직 못 읽었습니다 — 고친 것이 팀에 올라가는지 <b>모릅니다</b>. 잠시 뒤 다시 열어 보십시오.';
+  else t='앱 밖에서 열었습니다 — 고친 것은 <b>이 기기에만</b> 남습니다.';
+  t+=AT?' · 마지막 고침 '+AT:' · 아직 고친 적 없음 (회의 표 그대로)';
+  w.innerHTML=t;
+  $('wsEdit').disabled=!canEdit(); $('wsReset').disabled=!canEdit();
+  if(!canEdit()) document.body.classList.remove('edit');
+}
+
+function toast(m){
+  var d=$('wsToast'); if(!d){ d=el('div','ws-toast'); d.id='wsToast'; document.body.appendChild(d); }
+  d.textContent=m; d.hidden=false; clearTimeout(d._t); d._t=setTimeout(function(){ d.hidden=true; },2200);
+}
+
+$('wsEdit').addEventListener('click',function(){
+  if(!canEdit()) return;
+  var on=!document.body.classList.contains('edit');
+  document.body.classList.toggle('edit',on);
+  this.classList.toggle('on',on); this.textContent=on?'다 고쳤음':'고치기';
+  if(!on&&saveT) saveNow();
+  render();
+});
+$('wsUndo').addEventListener('click',function(){
+  if(!UNDO.length) return;
+  S=JSON.parse(UNDO.pop()); saveNow(); render();
+  this.disabled=!UNDO.length; toast('한 걸음 되돌렸습니다');
+});
+$('wsPrint').addEventListener('click',function(){ if(saveT) saveNow(); window.print(); });
+$('wsReset').addEventListener('click',function(){
+  if(!confirm('회의 때 표(10월 29일)로 되돌릴까요? 고친 것과 완료 표시가 모두 처음으로 돌아갑니다. (되돌리기로 살릴 수 있습니다)')) return;
+  snap(); S=seed(); saveNow(); render(); toast('처음 표로 되돌렸습니다');
+});
+
+/* 다른 기기에서 고친 것이 바깥 창을 거쳐 들어오면 — 고치는 중이 아닐 때만 다시 그립니다 */
+window.addEventListener('storage',function(e){
+  if(e.key!==KEY||e.newValue===lastRaw) return;
+  var a=document.activeElement;
+  if(a&&a.getAttribute&&a.getAttribute('data-ed')){ toast('다른 기기에서 고친 표가 왔습니다 — 다 고친 뒤 새로 열면 보입니다'); return; }
+  var L=load(); if(L){ S=L.doc; AT=L.at; render(); who(); toast('다른 기기에서 고친 표를 받았습니다'); }
+});
+window.addEventListener('beforeunload',function(){ if(saveT) saveNow(); });
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='hidden'&&saveT) saveNow(); });
+
+var L0=load();
+if(L0){ S=L0.doc; AT=L0.at; } else { S=seed(); AT=''; }
+render(); who();
+/* 바깥 창이 권한을 늦게 읽는 일이 있어 — 몇 번만 다시 묻습니다(서버는 안 부릅니다) */
+var tries=0, iv=setInterval(function(){ who(); if(perm()!=='wait'||++tries>10) clearInterval(iv); },1500);
+window.WS={seed:seed,perm:perm,key:KEY};
+})();
+</script>
+</body>
+</html>

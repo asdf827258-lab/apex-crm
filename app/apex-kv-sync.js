@@ -15,6 +15,7 @@
      · 홈 「끝 · 뒤로 · 했음」                  apex_hm_done · apex_hm_skip_v1 · apex_hm_qdone_v1
      · 체크판 오늘 메모                         apex_ck_memo_<날짜>
      · 교육 캘린더 (조직 한 벌)                 apex_edu_cal_v1
+     · 업무구분 — 담당자별 할 일 (조직 한 벌)    apex_worksplit_v1  (판 X361 · app/worksplit.html)
    이 파일이 그 열쇠들만 서버 표(apex_user_kv · apex_org_kv)로 올리고,
    다른 기기에서 열면 내려받습니다. 화면 코드는 한 줄도 안 고칩니다 —
    localStorage 에 쓰는 순간을 잡아서 올리고, 열 때 먼저 채워 둡니다.
@@ -39,7 +40,7 @@ var USER_KEYS=['apex_ac90_v2','apex_master_done','apex_tatrain_v1','apex_rejgym_
                'apex_mst_done','apex_mst_ans','apex_day_log','apex_day_month',
                'apex_hm_done','apex_hm_skip_v1','apex_hm_qdone_v1'];
 var USER_PREFIX=['apex_ck_memo_'];
-var ORG_KEYS=['apex_edu_cal_v1'];
+var ORG_KEYS=['apex_edu_cal_v1','apex_worksplit_v1'];
 var EM_ROLES=['admin','owner','master','manager','lead','leader','branch_manager','education_manager'];
 var META='apex_kv_meta';            /* {열쇠: 이 기기가 마지막으로 맞춘 서버 시각} — 이 기기 것 */
 var RETRY=[5000,15000,60000];
@@ -229,5 +230,8 @@ function start(){
 }
 setTimeout(boot,800);
 
-window.APEX_KV={ keys:USER_KEYS.concat(ORG_KEYS), kindOf:kindOf, flush:flush, _t:{ merge:merge, deep:deep, apply:apply } };
+/* 조직 한 벌을 고칠 수 있나 — 안쪽 화면(업무구분 등)이 권한 목록을 또 적지 않고 여기 묻습니다 (5번).
+   true · false · null(아직 권한을 못 읽음 — 모른다고 답합니다 · 1번) */
+function canOrg(){ var r=role||findRole(); if(!r) return null; return EM_ROLES.indexOf(r)>=0; }
+window.APEX_KV={ keys:USER_KEYS.concat(ORG_KEYS), kindOf:kindOf, flush:flush, canOrg:canOrg, _t:{ merge:merge, deep:deep, apply:apply } };
 })();
