@@ -2,6 +2,8 @@
 //   reel  : 23.5초 글자형 (reel.html)
 //   story : 65초 끝까지 (story.html) — 상황 넷 cancer brain heart care
 //   expert: 56초 전문가를 만듭니다 (expert.html) — 교육시스템 EM 다섯 챕터
+//   edu   : 교육시스템 EM 자세히 (edu.html) — 신입 · 경력 · 공통 + 내레이션 자막
+//           narration/edu/01.wav … (또는 .m4a .mp3) 가 있으면 그 걸음 시작에 소리로 넣는다 · 대본은 내레이션_대본.md
 // reel.html 을 1080×1920 으로 열어 render(t) 를 한 장씩 부르고 찍어 ffmpeg 로 넘긴다.
 // 비트는 beat.py 가 화면의 순간(쾅·휙·딸깍)에 맞춰 합성한다.
 const { chromium } = require('playwright');
@@ -16,10 +18,10 @@ fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(TMP, { recursive: true });
 const NAMES = { A: 'A_직장인', B: 'B_육아맘', C: 'C_경력설계사', D: 'D_나를알리기',
   cancer: '1_암', brain: '2_뇌혈관', heart: '3_심혈관', care: '4_돌봄',   // story 는 상황 넷
-  main: '교육시스템EM' };                                                    // expert 는 한 편
+  main: '교육시스템EM', full: '자세히' };                                                    // expert 는 한 편
 let args = process.argv.slice(2);
-const PAGE = /^(reel|story|expert)$/.test(args[0] || '') ? args.shift() : 'reel';
-const want = args.length ? args : (PAGE === 'story' ? ['cancer', 'brain', 'heart', 'care'] : PAGE === 'expert' ? ['main'] : ['A', 'B', 'C']);
+const PAGE = /^(reel|story|expert|edu)$/.test(args[0] || '') ? args.shift() : 'reel';
+const want = args.length ? args : (PAGE === 'story' ? ['cancer', 'brain', 'heart', 'care'] : PAGE === 'expert' ? ['main'] : PAGE === 'edu' ? ['full'] : ['A', 'B', 'C']);
 
 (async () => {
   const browser = await chromium.launch();
@@ -48,6 +50,27 @@ const want = args.length ? args : (PAGE === 'story' ? ['cancer', 'brain', 'heart
     });
     const cueFile = path.join(TMP, PAGE + v + '.json'), wav = path.join(TMP, PAGE + v + '.wav');
     const prefix = await page.evaluate(() => REEL.prefix || '리쿠르팅릴스');
+    // 내레이션 — 대본을 파일로 내고, 녹음이 있으면 소리로 넣는다
+    const narr = await page.evaluate(() => REEL.narr ? { key: REEL.narr, lines: REEL.script() } : null);
+    if (narr) {
+      const md = ['# 내레이션 대본 — ' + prefix, '',
+        '걸음마다 한 줄입니다. 한 줄씩 따로 녹음해 `narration/' + narr.key + '/01.wav`, `02.wav` … 로 두고 `node render.js ' + PAGE + '` 를 다시 돌리면',
+        '그 걸음이 시작하는 순간에 들어가고, 그동안 배경 음악은 저절로 줄어듭니다. (.m4a · .mp3 도 됩니다)',
+        '시간 칸은 그 줄에 주어진 길이입니다 — 이보다 길면 다음 걸음과 겹칩니다. 천천히, 또박또박.', '',
+        '| # | 시작 | 길이 | 트랙 | 대본 |', '|---|---|---|---|---|']
+        .concat(narr.lines.map(l => `| ${String(l.no).padStart(2, '0')} | ${l.at} | ${l.dur.toFixed(1)}초 | ${l.trk} | ${l.text} |`));
+      fs.writeFileSync(path.join(DIR, '내레이션_대본.md'), md.join('\n') + '\n');
+      cues.narr = [];
+      for (const l of narr.lines) {
+        const base = path.join(DIR, 'narration', narr.key, String(l.no).padStart(2, '0'));
+        const src = ['.wav', '.m4a', '.mp3'].map(e => base + e).find(f => fs.existsSync(f));
+        if (!src) continue;
+        const out = path.join(TMP, narr.key + '_' + l.no + '.wav');
+        execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', src, '-ac', '1', '-ar', '44100', '-sample_fmt', 's16', out]);
+        cues.narr.push([l.a + 0.15, out]);
+      }
+      console.log('내레이션 대본 → 내레이션_대본.md · 녹음 ' + cues.narr.length + ' / ' + narr.lines.length + '줄');
+    }
     fs.writeFileSync(cueFile, JSON.stringify(cues));
     execFileSync('python3', [path.join(DIR, 'beat.py'), cueFile, wav], { stdio: 'inherit' });
 

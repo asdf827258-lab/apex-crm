@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>교육시스템 EM</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+/* 교육시스템 EM — 자세히 (신입 트랙 · 경력 트랙 · 공통 관리) + 내레이션
+   걸음(STEPS)마다 내레이션 한 줄. 그 줄이 ① 자막으로 깔리고 ② 대본 파일(내레이션_대본.md)로 나가며
+   ③ narration/edu/NN.wav 가 있으면 그 자리에 소리로 들어간다(render.js · beat.py — 음악은 그동안 줄어든다).
+   화면은 전부 실제 앱(shots/) · 상품·보험사 이름은 찍을 때 가렸다. 1080×1920 · 30fps. */
+:root{--bg:#06080D;--ink:#fff;--gold:#D9B26A;--gold2:#F3D99A;--mint:#5BE3A0;--blue2:#8FB4FF;--sub:rgba(255,255,255,.68)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg)}
+body{font-family:Pretendard,sans-serif;color:var(--ink);letter-spacing:-.04em;word-break:keep-all}
+#stage{position:absolute;inset:0;overflow:hidden;background:radial-gradient(1200px 1000px at 50% 30%,#121A2B 0%,#07090F 60%,#030407 100%)}
+#tintc{position:absolute;inset:0;pointer-events:none;transition:none}
+#dust,#grain{position:absolute;inset:0;pointer-events:none}
+#grain{opacity:.05;mix-blend-mode:overlay}
+#cam{position:absolute;inset:0;transform-origin:50% 45%}
+.scene{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:300px 60px 420px;text-align:center}
+.scene.mid{justify-content:center;padding-bottom:560px}
+.el{display:block;will-change:transform,opacity;white-space:nowrap}
+.big{font-weight:900;line-height:1.08;text-shadow:0 8px 40px rgba(0,0,0,.6)}
+.mdl{font-weight:800;line-height:1.2}
+.sub{font-weight:600;color:var(--sub)}
+.gd{color:var(--gold2)}.mt{color:var(--mint)}.bl{color:var(--blue2)}
+/* 걸음 머리 */
+.trk{display:inline-flex;align-items:center;gap:14px;font-size:30px;font-weight:900;letter-spacing:.06em;padding:10px 24px;border-radius:999px;border:2px solid currentColor}
+.trk i{font-style:normal;opacity:.75;font-weight:800}
+.dots{display:flex;gap:10px;justify-content:center;margin-top:16px}
+.dots b{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.18)}
+.dots b.on{background:currentColor;box-shadow:0 0 14px currentColor}
+.sti{font-size:80px;font-weight:900;margin-top:18px;line-height:1.1}
+/* 실제 화면 */
+.card{position:absolute;left:50px;top:600px;width:980px;height:551px;border-radius:28px;overflow:hidden;background:#fff;box-shadow:0 60px 140px rgba(0,0,0,.7),0 0 0 2px var(--c),0 0 70px color-mix(in srgb,var(--c) 30%,transparent)}
+.card img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:top center;transform-origin:50% 30%}
+.ph{position:absolute;left:110px;top:585px;width:370px;height:776px;border-radius:54px;background:#05070B;border:10px solid #2A2F3A;box-shadow:0 60px 140px rgba(0,0,0,.7),0 0 0 2px var(--c);overflow:hidden}
+.ph .sc{position:absolute;inset:0;border-radius:44px;overflow:hidden;background:#fff}
+.ph img{position:absolute;left:0;top:0;width:100%;height:auto}
+.tagdz{position:absolute;right:14px;top:12px;z-index:5;font-size:20px;font-weight:800;color:#fff;background:rgba(6,8,13,.78);padding:6px 14px;border-radius:10px}
+.cap{position:absolute;left:40px;right:40px;top:1182px;text-align:center}
+.cap .t{font-size:54px;font-weight:900;line-height:1.24;text-shadow:0 6px 30px rgba(0,0,0,.7)}
+.capR{position:absolute;left:540px;right:40px;top:700px;text-align:left;white-space:normal}
+.capR .t{font-size:52px;font-weight:900;line-height:1.28}
+.capR ul{margin-top:28px;list-style:none}
+.capR li{font-size:34px;font-weight:700;color:var(--sub);margin:12px 0;padding-left:34px;position:relative;line-height:1.35}
+.capR li:before{content:'';position:absolute;left:0;top:14px;width:16px;height:16px;border-radius:50%;background:var(--c)}
+/* 내레이션 자막 */
+#sub{position:absolute;left:60px;right:60px;top:1395px;text-align:center;pointer-events:none}
+#sub span{display:inline-block;max-width:960px;white-space:normal;font-size:38px;line-height:1.5;font-weight:700;color:#fff;background:rgba(4,6,10,.72);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:12px 24px}
+#sub em{font-style:normal;color:var(--gold2)}
+/* 갈림길 · 정리 */
+.split{display:flex;gap:28px;margin-top:50px;white-space:normal;text-align:left}
+.lane{width:470px;border-radius:30px;padding:34px 34px 30px;background:rgba(255,255,255,.04);border:2px solid var(--c)}
+.lane h3{font-size:54px;font-weight:900;color:var(--c)}
+.lane p{font-size:32px;font-weight:700;color:var(--sub);margin-top:8px}
+.lane ol{list-style:none;margin-top:22px}
+.lane li{font-size:31px;font-weight:700;margin:12px 0;display:flex;gap:12px;align-items:flex-start;line-height:1.3}
+.lane li b{flex:none;width:44px;height:44px;border-radius:12px;background:var(--c);color:#06080D;font-size:24px;display:flex;align-items:center;justify-content:center;font-weight:900}
+.lvl{position:absolute;left:60px;right:60px;top:1166px;display:grid;grid-template-columns:1fr 1fr;gap:3px 18px;text-align:left}
+.lvl div{font-size:25px;line-height:1.3;font-weight:700;color:rgba(255,255,255,.86);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lvl div b{display:inline-block;width:62px;color:var(--mint);font-weight:900}
+.pcard{width:920px;border-radius:40px;background:linear-gradient(160deg,#151B2B,#0B0F18);border:1.5px solid rgba(217,178,106,.55);padding:46px 50px;text-align:left;white-space:normal;box-shadow:0 50px 120px rgba(0,0,0,.6)}
+.pcard .top{display:flex;align-items:center;gap:34px}
+.pcard .av{width:170px;height:170px;border-radius:50%;flex:none;background:linear-gradient(135deg,#3A2E15,#D9B26A);color:#06080D;font-size:88px;font-weight:900;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pcard .av img{width:100%;height:100%;object-fit:cover}
+.pcard .nm{font-size:72px;font-weight:900}
+.pcard .tt{font-size:30px;font-weight:700;color:var(--sub);margin-top:10px;line-height:1.35}
+.pcard .qt{margin-top:30px;font-size:42px;font-weight:900;line-height:1.3;color:var(--gold2)}
+.pcard .ch{margin-top:22px;display:flex;flex-wrap:wrap;gap:12px}
+.pcard .ch span{font-size:28px;font-weight:800;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:11px 22px}
+.box{display:inline-block;background:var(--gold);color:#06080D;padding:12px 30px;border-radius:16px}
+.fine{position:absolute;left:70px;right:70px;bottom:400px;font-size:24px;line-height:1.55;color:rgba(255,255,255,.5);font-weight:500;text-align:center;white-space:normal}
+#bar{position:absolute;left:60px;right:60px;top:90px;height:6px;border-radius:6px;background:rgba(255,255,255,.14)}
+#bar i{display:block;height:100%;width:0;border-radius:6px;background:var(--gold)}
+#brand{position:absolute;left:0;right:0;top:126px;text-align:center;font-size:30px;font-weight:800;letter-spacing:.2em;color:rgba(217,178,106,.85)}
+#flash{position:absolute;inset:0;background:#F3D99A;opacity:0;pointer-events:none;mix-blend-mode:screen}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="tintc"></div>
+  <canvas id="dust" width="1080" height="1920"></canvas>
+  <div id="cam"><div id="steps"></div></div>
+  <div id="sub"><span></span></div>
+  <div id="bar"><i></i></div>
+  <div id="brand">APEX · YUN PRO · 교육시스템 EM</div>
+  <canvas id="grain" width="540" height="960"></canvas>
+  <div id="flash"></div>
+</div>
+<script>
+var PROFILE={name:'윤시현',title:'에이플러스에셋 온탑본부 사업단장',career:'보험·재무설계 10년',
+  slogan:'보험을 파는 설계사가 아닌,<br>삶을 설계하는 설계사',channels:['▶ 유튜브 「윤단장의 보험시선」','📷 인스타그램'],
+  ask:'📩 DM 으로 면담 신청',handle:'',photo:''};
+var TRK={intro:{c:'#F3D99A',n:'교육시스템 EM'},new:{c:'#5BE3A0',n:'신입 트랙'},pro:{c:'#D9B26A',n:'경력 트랙'},both:{c:'#8FB4FF',n:'공통 · 관리'}};
+
+// ───────── 걸음 — 화면 · 머리 · 아래 한 줄 · 내레이션 ─────────
+// kind: card(가로 실제 화면) · phone(세로 실제 화면) · text · split · levels · sum · lead · cta
+var STEPS=[
+ {trk:'intro',kind:'text',lines:['<span class="el mdl" style="font-size:86px" data-a="up" data-d="0.1">신입이라 막막하든,</span>',
+   '<span class="el mdl" style="font-size:86px;margin-top:10px" data-a="up" data-d="0.9">경력이라 정체됐든,</span>',
+   '<span class="el big gd" style="font-size:112px;margin-top:60px" data-a="slam" data-d="1.9">교육은 달라야 합니다.</span>'],
+  nar:'신입이라 막막한 분도, 경력이라 정체된 분도 계실 겁니다.'},
+ {trk:'intro',kind:'split',nar:'교육시스템 EM은 두 갈래로 갑니다. 신입은 기초부터, 경력은 한 단계 위로.'},
+ // 신입
+ {trk:'new',kind:'card',img:'ed_guide',ti:'첫 주 — 순서만 알면 됩니다',cap:'선배가 옆에서 짚어 주는 <span class="mt">신입 가이드</span><br>배우기 → 연습 → 만나기 → 기록',
+  nar:'신입은 첫 주부터, 배우기, 연습, 만나기, 기록 순서로 시작합니다.'},
+ {trk:'new',kind:'levels',img:'ed_academy',ti:'보험 마스터 아카데미 · 10단계',
+  nar:'보험 마스터 아카데미 열 단계. 상품명보다 먼저, 돈이 새는 곳부터 배웁니다.'},
+ {trk:'new',kind:'card',img:'em_academy',z:1.18,fx:.55,fy:.8,ti:'신입 6개월, 두 갈래',cap:'<span class="mt">손실 구조부터</span> 익힌 사람이<br>3개월 뒤부터 앞서 갑니다',
+  nar:'신입의 6개월은 두 갈래. 손실 구조부터 익힌 사람이 앞서 갑니다.'},
+ {trk:'new',kind:'phone',img:'ed_ta_script',ti:'전화가 두렵다면',cap:'TA 스크립트',li:['첫 마디부터 약속까지 5단계 연속 대본','단계마다 「고객 속마음」','거절처리 · 문자·카톡까지'],
+  nar:'전화가 두렵다면, 다섯 단계 대본이 첫 마디부터 약속까지 함께 갑니다.'},
+ {trk:'new',kind:'card',img:'ed_plan',ti:'지인 8주 성장 프로그램',cap:'1~3주 계약고객 · 4~6주 가망고객<br><span class="mt">7주 소개 · 8주 돌아보기</span>',
+  nar:'지인 영업은 부탁이 아니라 챙김. 8주 로드맵이 순서를 잡아 줍니다.'},
+ {trk:'new',kind:'card',img:'ed_talk',ti:'화법 · 거절',cap:'고객이 <span class="mt">대본 밖으로</span> 나가도<br>멈추지 않게 — 연습 카드',
+  nar:'고객이 대본 밖으로 나가도, 연습 카드로 익힌 화법이 받쳐 줍니다.'},
+ {trk:'new',kind:'phone',img:'ed_fp_talk',ti:'말이 막히면',cap:'재무설계 실전화법서',li:['상황을 고르면 그 장이 바로','상황별 30장','「매일 아침 30초」 외워야 할 숫자'],
+  nar:'말이 막히면 실전화법서에서 상황만 고르세요. 서른 장이 있습니다.'},
+ // 경력
+ {trk:'pro',kind:'text',lines:['<span class="el mdl" style="font-size:92px" data-a="up" data-d="0.1">경력이라면</span>',
+   '<span class="el mdl" style="font-size:72px;margin-top:40px" data-a="up" data-d="0.8">이제는</span>',
+   '<span class="el big gd" style="font-size:118px;margin-top:14px" data-a="slam" data-d="1.3">정보의 속도가 실력.</span>'],
+  nar:'경력이라면 아실 겁니다. 이제는 정보의 속도가 실력입니다.'},
+ {trk:'pro',kind:'card',img:'em_ins_home',ti:'상품전략 소식지',cap:'보험사 31곳 소식지 → <span class="gd">145개 상품</span><br>매달 고객 입장에서 다시 비교',
+  nar:'매달 보험사 31곳 소식지를, 145개 상품으로 다시 비교합니다.'},
+ {trk:'pro',kind:'card',img:'em_ins_terms',ti:'약관 원문 비교',cap:'같은 조건을 나란히 —<br><span class="gd">설명이 달라집니다</span>',
+  nar:'약관 원문을 나란히 놓으면, 설명이 달라집니다.'},
+ {trk:'pro',kind:'card',img:'em_mikki',ti:'미끼 레이더',cap:'하루 30분 루틴<br><span class="gd">뉴스 · 신상품 1건 · 고객 3명</span>',
+  nar:'미끼 레이더로 하루 30분. 뉴스, 신상품 하나, 고객 세 명.'},
+ {trk:'pro',kind:'card',img:'em_mktalk',ti:'미끼상품 & 접촉전략',cap:'작은 담보로 큰 니즈를 여는 법<br><span class="gd">6파트 38강 + AI 도구</span>',
+  nar:'작은 담보로 큰 니즈를 여는 법, 서른여덟 강으로 정리했습니다.'},
+ {trk:'pro',kind:'card',img:['ba_sHd','ba_r_all'],ti:'보장 전 · 후 리포트',cap:'고객 이름이 박힌 운용보고서<br><span class="gd">모든 담보 21개 → 34개</span>',
+  nar:'고객 앞에서는 보장 전후 리포트로, 지금과 조정 후를 숫자로 보여 드립니다.'},
+ {trk:'pro',kind:'card',img:['cash_1','fin_step4'],ti:'재무설계 계산기',cap:'돈의 흐름부터<br><span class="gd">노후 연금까지</span>',
+  nar:'재무설계 계산기로 돈의 흐름부터 노후 연금까지 함께 셈합니다.'},
+ {trk:'pro',kind:'phone',img:'jv_2',ti:'무엇이든 자비스에게',cap:'APEX 자비스',li:['「연금 얼마?」 그 자리에서 셈','「어디서 해?」 갈 곳을 바로','앱 안의 자료를 이어서 찾음'],
+  nar:'궁금한 건 자비스에게. 앱 안에서 바로 찾아 줍니다.'},
+ // 공통
+ {trk:'both',kind:'text',lines:['<span class="el mdl" style="font-size:88px" data-a="up" data-d="0.1">그리고 신입도, 경력도</span>',
+   '<span class="el big bl" style="font-size:140px;margin-top:40px" data-a="slam" data-d="0.9">혼자 두지 않습니다.</span>'],
+  nar:'그리고 신입도, 경력도 혼자 두지 않습니다.'},
+ {trk:'both',kind:'phone',img:'em_tfa',ti:'TFA 업무관리',cap:'매일',li:['피드백 · 본인 역량 체크','해야 할 일 · 고객 체크','30일 고객관리'],
+  nar:'업무관리에서 매일 할 일과 피드백을 함께 봅니다.'},
+ {trk:'both',kind:'phone',img:'ed_branch_coach',ti:'지점장 코칭',cap:'리더가 먼저',li:['최근 2주 기록에서','오늘 먼저 볼 사람','무엇을 물을지 · 하지 말 것'],
+  nar:'지점장은 최근 2주 기록으로 오늘 먼저 챙길 사람을 봅니다.'},
+ {trk:'both',kind:'phone',img:'em_keep4',ti:'4년 유지관리',cap:'계약 뒤 48개월',li:['매달 안부 한 통','석 달마다 전화','확인할 것 · 전달할 것'],
+  nar:'계약 뒤에도 48개월, 4년 유지관리로 끝까지 갑니다.'},
+ {trk:'intro',kind:'sum',nar:'신입은 기초부터, 경력은 한 단계 위로. 교육시스템 EM입니다.'},
+ {trk:'intro',kind:'lead',nar:'함께 걸어갈 리더, 윤시현 사업단장입니다.',min:4.6},
+ {trk:'intro',kind:'cta',nar:'전문가는 만들어집니다. 신입도 경력도, 함께할 설계사를 찾습니다.',min:6.5}
+];
+var LEVELS=[['L0','파는 사람 vs 위험을 관리하는 사람'],['L1','아플 때 돈은 어디서 새는가'],['L2','실손의료보험 완전정복'],['L3','진단비 — 암 · 뇌 · 심장'],
+ ['L4','치료비 — 항암 · 방사선 · 주요치료비'],['L5','수술비 — 종수술비 · N대수술비'],['L6','입원 · 간병 · 후유장해'],['L7','생활 담보 — 운전자 · 배상책임'],
+ ['L8','보상 실무 — 고지 · 면책 · 청구'],['L9','저축 · 연금 · 세금 기초'],['L10','종합 설계 — 5단계 프로세스']];
+
+// 시간 — 내레이션 길이로 정한다 (한국어 한 글자 ≈ 0.19초 + 숨 1초)
+var T=0;
+STEPS.forEach(function(s,i){var syl=s.nar.replace(/[\s.,·「」]/g,'').length; s.dur=Math.max(s.min||4.2,syl*0.19+1.1); s.a=T; s.b=T+s.dur; T=s.b; s.no=i+1;});
+var TOTAL=Math.round(T*10)/10;
+// 트랙 안 몇 번째인지
+var CNT={};STEPS.forEach(function(s){if(s.kind==='card'||s.kind==='phone'||s.kind==='levels'){CNT[s.trk]=(CNT[s.trk]||0)+1;s.k=CNT[s.trk];}});
+
+function head(s){var tk=TRK[s.trk];if(!s.k)return '';var n=CNT[s.trk],d='';for(var i=1;i<=n;i++)d+='<b class="'+(i<=s.k?'on':'')+'"></b>';
+  return '<span class="el trk" data-a="up" data-d="0" style="color:'+tk.c+'">'+tk.n+' <i>'+s.k+' / '+n+'</i></span>'+
+    '<div class="el dots" data-a="up" data-d="0.05" style="color:'+tk.c+'">'+d+'</div>'+
+    '<span class="el sti" data-a="slam" data-d="0.15">'+s.ti+'</span>';}
+function imgs(s){return [].concat(s.img).map(function(src){return '<img src="shots/'+src+'.jpg">';}).join('');}
+var H='';
+STEPS.forEach(function(s,i){
+  var c=TRK[s.trk].c, x='';
+  if(s.kind==='text')x=s.lines.join('');
+  else if(s.kind==='split')x='<span class="el" data-a="pop" data-d="0.1"><span class="trk" style="color:#F3D99A">교육시스템 EM</span></span>'+
+    '<span class="el big" style="font-size:96px;margin-top:30px" data-a="slam" data-d="0.4">두 갈래의 길</span>'+
+    '<div class="split"><div class="lane el" data-a="up" data-d="1.0" style="--c:#5BE3A0"><h3>신입 트랙</h3><p>기초부터</p><ol>'+
+      ['신입 가이드','아카데미 10단계','TA 대본','지인 8주','화법 · 거절 · 화법서'].map(function(t,k){return '<li><b>'+(k+1)+'</b>'+t+'</li>';}).join('')+'</ol></div>'+
+    '<div class="lane el" data-a="up" data-d="1.5" style="--c:#D9B26A"><h3>경력 트랙</h3><p>한 단계 위로</p><ol>'+
+      ['상품전략 소식지','약관 원문 비교','미끼 레이더','보장 전·후 리포트','계산기 · 자비스'].map(function(t,k){return '<li><b>'+(k+1)+'</b>'+t+'</li>';}).join('')+'</ol></div></div>';
+  else if(s.kind==='card')x=head(s)+'<div class="card el" data-a="tilt" data-d="0.3" style="--c:'+c+'"><span class="tagdz">실제 앱 · 견본</span><div class="ims">'+imgs(s)+'</div></div>'+
+    '<div class="cap el" data-a="up" data-d="0.8"><div class="t">'+s.cap+'</div></div>';
+  else if(s.kind==='levels')x=head(s)+'<div class="card el" data-a="tilt" data-d="0.3" style="--c:'+c+'"><span class="tagdz">실제 앱</span><div class="ims">'+imgs(s)+'</div></div>'+
+    '<div class="lvl">'+LEVELS.map(function(l,k){return '<div class="el" data-a="up" data-d="'+(0.8+k*0.22).toFixed(2)+'"><b>'+l[0]+'</b>'+l[1]+'</div>';}).join('')+'</div>';
+  else if(s.kind==='phone')x=head(s)+'<div class="ph el" data-a="tilt" data-d="0.3" style="--c:'+c+'"><div class="sc ims">'+imgs(s)+'</div></div>'+
+    '<div class="capR el" data-a="up" data-d="0.7" style="--c:'+c+'"><div class="t" style="color:'+c+'">'+s.cap+'</div><ul>'+s.li.map(function(l){return '<li>'+l+'</li>';}).join('')+'</ul></div>';
+  else if(s.kind==='sum')x='<span class="el big" style="font-size:84px" data-a="slam" data-d="0.1">신입은 <span class="mt">기초부터</span>,</span>'+
+    '<span class="el big" style="font-size:84px" data-a="slam" data-d="0.7">경력은 <span class="gd">한 단계 위로</span>.</span>'+
+    '<div class="split" style="margin-top:56px"><div class="lane el" data-a="up" data-d="1.3" style="--c:#5BE3A0"><h3>✔ 신입</h3><ol>'+
+      ['첫 주 신입 가이드','아카데미 L0 → L10','TA 5단계 대본','지인 8주 로드맵','화법 · 거절 · 화법서 30장'].map(function(t){return '<li><b>✓</b>'+t+'</li>';}).join('')+'</ol></div>'+
+    '<div class="lane el" data-a="up" data-d="1.6" style="--c:#D9B26A"><h3>✔ 경력</h3><ol>'+
+      ['소식지 31곳 · 145상품','약관 원문 비교','미끼 레이더 · 38강','보장 전·후 리포트','계산기 · 자비스'].map(function(t){return '<li><b>✓</b>'+t+'</li>';}).join('')+'</ol></div></div>';
+  else if(s.kind==='lead')x='<span class="el mdl" style="font-size:66px" data-a="up" data-d="0">함께 걸어갈</span>'+
+    '<span class="el big" style="font-size:104px;margin-bottom:46px" data-a="slam" data-d="0.4">리더를 소개합니다</span>'+
+    '<div class="pcard el" data-a="drop" data-d="0.9"><div class="top"><div class="av" id="pAv"></div><div><div class="nm" id="pNm"></div><div class="tt" id="pTt"></div></div></div><div class="qt" id="pQt"></div><div class="ch" id="pCh"></div></div>';
+  else if(s.kind==='cta')x='<span class="el mdl" style="font-size:78px" data-a="up" data-d="0">전문가는 타고나지 않습니다.</span>'+
+    '<span class="el big gd" style="font-size:150px;margin-top:20px" data-a="slam" data-d="0.7">만들어집니다.</span>'+
+    '<span class="el big" style="font-size:84px;margin-top:60px" data-a="slam" data-d="1.8">신입도 경력도,</span>'+
+    '<span class="el big" style="font-size:84px" data-a="slam" data-d="2.2">함께할 설계사를 찾습니다.</span>'+
+    '<span class="el" style="margin-top:40px" data-a="stamp" data-d="2.9"><span class="box" style="font-size:56px;font-weight:900" id="ctaAsk"></span></span>'+
+    '<div class="fine el" data-a="up" data-d="3.4">보험설계사로 일하려면 자격시험 합격과 등록 절차가 필요합니다. 수입은 활동과 성과에 따라 사람마다 다릅니다.<br>화면의 고객·숫자는 견본이며, 상품·보험사 이름은 가렸습니다.</div>';
+  H+='<div class="scene'+((s.kind==='text'||s.kind==='sum'||s.kind==='cta')?' mid':'')+'" data-i="'+i+'">'+x+'</div>';
+});
+document.getElementById('steps').innerHTML=H;
+(function(){var av=document.getElementById('pAv');
+  if(PROFILE.photo)av.innerHTML='<img src="'+PROFILE.photo+'">';else av.textContent=PROFILE.name.charAt(0);
+  document.getElementById('pNm').textContent=PROFILE.name;
+  document.getElementById('pTt').innerHTML=PROFILE.title+'<br>'+PROFILE.career;
+  document.getElementById('pQt').innerHTML='“'+PROFILE.slogan+'”';
+  document.getElementById('pCh').innerHTML=PROFILE.channels.concat(PROFILE.handle?[PROFILE.handle]:[]).map(function(c){return '<span>'+c+'</span>';}).join('');
+  document.getElementById('ctaAsk').textContent=PROFILE.ask;})();
+
+var BEAT=0.5;
+function clamp(x,a,b){return x<a?a:x>b?b:x;}
+function eo(x){return 1-Math.pow(1-x,3);}
+function back(x){var c=1.9;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2);}
+function rnd(n){var x=Math.sin(n*12.9898)*43758.5453;return x-Math.floor(x);}
+var scenes=[].slice.call(document.querySelectorAll('.scene')).map(function(el){var s=STEPS[+el.getAttribute('data-i')];
+  var items=[].slice.call(el.querySelectorAll('.el'));items.forEach(function(e){e._in=s.a+(+e.getAttribute('data-d')||0);});
+  return {el:el,s:s,items:items,ims:[].slice.call(el.querySelectorAll('.ims img'))};});
+function anim(e,t){
+  var a=e.getAttribute('data-a'),d=t-e._in;
+  if(d<0){e.style.opacity=0;e.style.transform='none';return;}
+  var tf='',op=1;
+  if(a==='slam'){var p=clamp(d/0.2,0,1);op=p;tf='scale('+(1.7-0.7*eo(p))+')';}
+  else if(a==='stamp'){var p2=clamp(d/0.2,0,1);tf='rotate('+(-2*eo(p2)+0)+'deg) scale('+(2.2-1.2*eo(p2))+')';op=p2;}
+  else if(a==='up'){var p3=clamp(d/0.35,0,1);tf='translateY('+(50*(1-eo(p3)))+'px)';op=p3;}
+  else if(a==='pop'){var p4=clamp(d/0.32,0,1);tf='scale('+(0.5+0.5*back(p4))+')';op=clamp(p4*2,0,1);}
+  else if(a==='drop'){var p5=clamp(d/0.4,0,1);tf='translateY('+(-110*(1-eo(p5)))+'px)';op=clamp(p5*1.6,0,1);}
+  else if(a==='tilt'){var p6=clamp(d/0.6,0,1);tf='perspective(1800px) translateY('+(240*(1-eo(p6))+Math.sin(t*1.3)*5)+'px) rotateX('+(16*(1-eo(p6)))+'deg) rotateY('+(-12*(1-eo(p6)))+'deg)';op=clamp(p6*1.8,0,1);}
+  e.style.opacity=op;e.style.transform=tf||'none';
+}
+var dctx=document.getElementById('dust').getContext('2d');
+function dust(t,col){dctx.clearRect(0,0,1080,1920);
+  for(var i=0;i<60;i++){var x=rnd(i*3.1)*1080+Math.sin(t*0.3+i)*30,y=(rnd(i*7.7)*2200-(t*(16+rnd(i)*36)))%2200;if(y<0)y+=2200;y-=140;
+    var r=1+rnd(i*1.3)*3,a=0.12+0.45*rnd(i*5.1)*(0.6+0.4*Math.sin(t*2+i));dctx.fillStyle='rgba('+col+','+a.toFixed(3)+')';dctx.beginPath();dctx.arc(x,y,r,0,6.283);dctx.fill();}}
+var RGB={intro:'243,217,154',new:'91,227,160',pro:'243,217,154',both:'143,180,255'};
+var gctx=document.getElementById('grain').getContext('2d'),gimg=gctx.createImageData(540,960);
+var cam=document.getElementById('cam'),flash=document.getElementById('flash'),bar=document.querySelector('#bar i'),sub=document.querySelector('#sub span'),subBox=document.getElementById('sub'),tintc=document.getElementById('tintc');
+var IMPACTS=[];scenes.forEach(function(sc){sc.items.forEach(function(e){var a=e.getAttribute('data-a');if(a==='slam'||a==='stamp')IMPACTS.push(e._in);});});
+function render(t){
+  bar.style.width=(100*t/TOTAL)+'%';
+  var cur=scenes[0];scenes.forEach(function(sc){if(t>=sc.s.a)cur=sc;});
+  dust(t,RGB[cur.s.trk]);
+  tintc.style.background='radial-gradient(900px 900px at 50% 25%,rgba('+RGB[cur.s.trk]+',.10),transparent 70%)';
+  scenes.forEach(function(sc){var on=sc===cur;sc.el.style.display=on?'flex':'none';if(!on)return;
+    var w=clamp((t-sc.s.a)/0.2,0,1);sc.el.style.opacity=sc.s.a>0?eo(w):1;sc.el.style.filter=sc.s.a>0&&w<1?'blur('+(12*(1-w))+'px)':'none';
+    sc.items.forEach(function(e){anim(e,t);});
+    // 한 걸음에 화면이 둘이면 반씩 나눠 넘긴다 · 넘어온 화면은 천천히 다가오고(z) 핵심 자리(fx·fy)로 간다
+    var n=sc.ims.length,d=t-sc.s.a-0.3,half=(sc.s.dur-0.3)/Math.max(1,n),k=clamp(Math.floor(d/half),0,n-1);
+    sc.ims.forEach(function(im,j){var dd=d-j*half;im.style.display=j===k||(j===k-1&&dd<half+0.4)?'block':'none';
+      var z=sc.s.z||1.06,q=clamp(dd/half,0,1);im.style.transformOrigin=((sc.s.fx||.5)*100)+'% '+((sc.s.fy||.3)*100)+'%';
+      im.style.transform='scale('+(1+(z-1)*eo(q))+')';im.style.opacity=j===k&&j>0?clamp((d-k*half)/0.4,0,1):1;im.style.zIndex=j===k?2:1;});
+  });
+  // 내레이션 자막 — 그 걸음 동안 · 앞뒤로 살짝 페이드
+  var ds=t-cur.s.a, so=clamp(ds/0.25,0,1)*clamp((cur.s.dur-ds)/0.25,0,1);
+  sub.textContent=cur.s.nar; subBox.style.opacity=so; subBox.style.transform='translateY('+(16*(1-so))+'px)';
+  var ph=(t%BEAT)/BEAT,pulse=0.006*Math.exp(-ph*6),punch=0;
+  IMPACTS.forEach(function(i){var dd=t-i;if(dd>=0&&dd<0.35)punch=Math.max(punch,0.025*Math.exp(-dd*12));});
+  cam.style.transform='scale('+(1+pulse+punch)+')';
+  var f=0;STEPS.forEach(function(s){var dd=t-s.a;if(s.a>0&&dd>=0&&dd<0.2)f=Math.max(f,0.2*(1-dd/0.2));});flash.style.opacity=f;
+  var seed=Math.floor(t*30),d8=gimg.data;for(var i=0;i<d8.length;i+=4){var v=rnd(i*0.37+seed*7.1)*255;d8[i]=d8[i+1]=d8[i+2]=v;d8[i+3]=255;}gctx.putImageData(gimg,0,0);
+}
+function fmt(x){var m=Math.floor(x/60),s=(x-m*60);return m+':'+(s<10?'0':'')+s.toFixed(1);}
+window.REEL={total:TOTAL,fps:30,prefix:'교육시스템EM',narr:'edu',
+ script:function(){return STEPS.map(function(s){return {no:s.no,a:+s.a.toFixed(2),dur:+s.dur.toFixed(2),trk:TRK[s.trk].n,text:s.nar,at:fmt(s.a)};});},
+ cues:function(){
+  return {total:TOTAL,impacts:IMPACTS,cuts:STEPS.map(function(s){return s.a;}).slice(1),
+    pops:[].concat.apply([],scenes.map(function(sc){return sc.items.filter(function(e){return /pop|tilt|drop/.test(e.getAttribute('data-a'));}).map(function(e){return e._in;});})),
+    ticks:[],types:[],soft:[[0,TOTAL]],sparse:[],uhoh:[],dings:STEPS.filter(function(s,i){return i>0&&STEPS[i-1].trk!==s.trk;}).map(function(s){return s.a;}),
+    hush:[TOTAL-0.6,TOTAL-0.55],riser:[0,0.01]};
+ },
+ ready:function(){return Promise.all([].slice.call(document.images).map(function(i){return i.decode().catch(function(){});})).then(function(){render(0);});}};
+window.render=render;
+render(0);
+</script>
+</body>
+</html>

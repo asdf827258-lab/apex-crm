@@ -215,6 +215,24 @@ r = int(0.01 * SR)
 mix[h0 - r:h0] *= np.linspace(1, 0, r)
 mix[h0:h1] = 0
 
+# 내레이션 — 녹음이 있으면 넣고, 그동안 음악을 줄인다(덕킹)
+voice = np.zeros(N)
+for t0, f in cues.get("narr", []):
+    with wave.open(f) as w:
+        v = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(np.float64) / 32768.0
+    i = int(t0 * SR)
+    j = min(N, i + len(v))
+    if i < N:
+        voice[i:j] += v[: j - i]
+if np.abs(voice).max() > 0:
+    lvl = np.abs(voice)
+    k = int(0.25 * SR)
+    cs = np.concatenate([[0.0], np.cumsum(lvl)])              # 말소리 덩어리 — 0.25초 이동 평균(누적합으로 빠르게)
+    lo = np.clip(np.arange(N) - k // 2, 0, N); hi = np.clip(np.arange(N) + k // 2, 0, N)
+    lvl = (cs[hi] - cs[lo]) / np.maximum(hi - lo, 1)
+    duck = 1 - 0.7 * np.clip(lvl / (lvl.max() * 0.15 + 1e-9), 0, 1)
+    mix = mix / (np.abs(mix).max() + 1e-9) * 0.5 * duck + voice / (np.abs(voice).max() + 1e-9) * 0.95
+
 # 끝은 0.8초 동안 사라진다 · 소리 크기 맞추기
 fade = int(0.8 * SR)
 mix[-fade:] *= np.linspace(1, 0, fade)
