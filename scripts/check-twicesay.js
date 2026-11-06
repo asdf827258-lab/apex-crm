@@ -144,14 +144,15 @@ const BASE = 17;
   const 두뇌 = await pg.evaluate(()=>{ go('brain');
     var d=document.getElementById('dynPane'); if(!d)return null;
     var hd=d.querySelector('.page-hd'); if(!hd)return null;
-    var ta=d.querySelector('#brainQ'); if(!ta)return null;
+    /* 판 X372 — 묻는 칸은 자비스로 옮겼습니다. 이 화면 맨 위에는 「🛰 자비스에게 묻기」 가 섭니다 — 그것이 머리글 가까이 있어야 합니다 */
+    var ta=d.querySelector('button[onclick*="apexmap"]'); if(!ta)return null;
     return { 위:Math.round(ta.getBoundingClientRect().top - hd.getBoundingClientRect().top),
              길이:Math.round(d.scrollHeight) };
   });
   /* ⚠ 600 으로 두었더니 띄를 도로 넣고도 초로였습니다(되돌림 328px).
      지금 168px 이므로 <b>300</b> 으로 조립니다 — 안 울리는 알람은 알람이 아닙니다 (8번). */
   is(!!두뇌 && 두뇌.위<300,
-     '물어보는 칸이 머리글에서 <b>'+((두뇌&&두뇌.위)||'?')+'px</b> 안에 있다 (300 밑)' +
+     '물어보는 곳(자비스에게 묻기)이 머리글에서 <b>'+((두뇌&&두뇌.위)||'?')+'px</b> 안에 있다 (300 밑)' +
      ' — 전에는 영웅 띠·DB·상담·지식 칸에 밀려 2,900px 아래였습니다');
 
   sec('[4] 조용한가');

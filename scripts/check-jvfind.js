@@ -212,6 +212,9 @@ const SEED = () => {
   sec('[7] 🙈 회사 표 · AI 로 가는 물음에 <b>고객 실명 0</b> (3번)');
   const M = await f.evaluate(async () => {
     const P = window.parent, rows = [], keepC = P.osClient;
+    /* 판 X371 — 앱 안에서는 두뇌(brainAnswer)가 답합니다. 여기는 <b>두뇌가 없을 때(앱 밖)</b> 자비스 따로의 AI 길을 잽니다.
+       두뇌 길의 가림 · 근거는 check-jvbrain 이 잽니다 */
+    const BA = P.brainAnswer; P.brainAnswer = null;
     P.osClient = function(){ return { from: function(){ return { insert: function(r){ rows.push(r); return Promise.resolve({}); } }; } }; };
     LS.set('map_engine', 'gemini'); LS.set('gproxy', '/api/gemini');
     const sent = [], keep = window.fetch;
@@ -223,7 +226,7 @@ const SEED = () => {
     };
     jLog.innerHTML = ''; ask('홍길동 연락처 알려줘');
     await new Promise(r => setTimeout(r, 500));
-    window.fetch = keep; LS.del('gproxy'); LS.del('map_engine'); P.osClient = keepC;
+    window.fetch = keep; LS.del('gproxy'); LS.del('map_engine'); P.osClient = keepC; P.brainAnswer = BA;
     const shown = (document.querySelector('#jLog .j-find') || {}).textContent || '';
     return { rows: rows.map(r => r.title), sent: sent.join(' '), n: sent.length, shown, mk: P.osMaskName('홍길동') };
   });
@@ -297,6 +300,7 @@ const SEED = () => {
   is(/백내장/.test(BR.cat) && !/보조항암/.test(BR.cat), '「백내장 수술」 에 「보조항암(수술 후)」 가 안 낀다');
   /* AI 에게는 찾은 <b>보험 자료</b>만 — 고객 줄은 안 간다 (3번) */
   const AG = await f.evaluate(async () => {
+    const P0 = window.parent, BA = P0.brainAnswer; P0.brainAnswer = null;   /* 두뇌 없는 길 — 두뇌 길은 check-jvbrain (판 X371) */
     LS.set('map_engine', 'gemini'); LS.set('gproxy', '/api/gemini');
     const sent = [], keep = window.fetch;
     window.fetch = function(u, o){ sent.push(o.body);
@@ -307,7 +311,7 @@ const SEED = () => {
     const a = sent.join(' '); sent.length = 0;
     ask('홍길동 연락처'); await new Promise(r => setTimeout(r, 400));
     const b = sent.join(' ');
-    window.fetch = keep; LS.del('gproxy'); LS.del('map_engine');
+    window.fetch = keep; LS.del('gproxy'); LS.del('map_engine'); P0.brainAnswer = BA;
     return { a: /앱 자료/.test(a) && /뇌졸중/.test(a), b: /앱 자료/.test(b) || /010-1234/.test(b) };
   });
   is(AG.a, 'AI 에게 찾은 보험 자료를 근거로 쥐여 보낸다 — 앱의 글에서 출발하게');
