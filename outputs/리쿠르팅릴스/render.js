@@ -2,6 +2,7 @@
 //   reel  : 23.5초 글자형 (reel.html)
 //   story : 65초 끝까지 (story.html) — 상황 넷 cancer brain heart care
 //   expert: 56초 전문가를 만듭니다 (expert.html) — 교육시스템 EM 다섯 챕터
+//   game  : 「APEX : 설계사」 게임판 (game.html) — 1회차 신입 · 2회차 경력 · 길드 · 칩튠 · 내레이션 대화창
 //   edu   : 교육시스템 EM 자세히 (edu.html) — 신입 · 경력 · 공통 + 내레이션 자막
 //           narration/edu/01.wav … (또는 .m4a .mp3) 가 있으면 그 걸음 시작에 소리로 넣는다 · 대본은 내레이션_대본.md
 // reel.html 을 1080×1920 으로 열어 render(t) 를 한 장씩 부르고 찍어 ffmpeg 로 넘긴다.
@@ -18,10 +19,10 @@ fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(TMP, { recursive: true });
 const NAMES = { A: 'A_직장인', B: 'B_육아맘', C: 'C_경력설계사', D: 'D_나를알리기',
   cancer: '1_암', brain: '2_뇌혈관', heart: '3_심혈관', care: '4_돌봄',   // story 는 상황 넷
-  main: '교육시스템EM', full: '자세히' };                                                    // expert 는 한 편
+  main: '교육시스템EM', full: '자세히', play: '1회차_2회차' };                                                    // expert 는 한 편
 let args = process.argv.slice(2);
-const PAGE = /^(reel|story|expert|edu)$/.test(args[0] || '') ? args.shift() : 'reel';
-const want = args.length ? args : (PAGE === 'story' ? ['cancer', 'brain', 'heart', 'care'] : PAGE === 'expert' ? ['main'] : PAGE === 'edu' ? ['full'] : ['A', 'B', 'C']);
+const PAGE = /^(reel|story|expert|edu|game)$/.test(args[0] || '') ? args.shift() : 'reel';
+const want = args.length ? args : (PAGE === 'story' ? ['cancer', 'brain', 'heart', 'care'] : PAGE === 'expert' ? ['main'] : PAGE === 'edu' ? ['full'] : PAGE === 'game' ? ['play'] : ['A', 'B', 'C']);
 
 (async () => {
   const browser = await chromium.launch();
@@ -59,7 +60,7 @@ const want = args.length ? args : (PAGE === 'story' ? ['cancer', 'brain', 'heart
         '시간 칸은 그 줄에 주어진 길이입니다 — 이보다 길면 다음 걸음과 겹칩니다. 천천히, 또박또박.', '',
         '| # | 시작 | 길이 | 트랙 | 대본 |', '|---|---|---|---|---|']
         .concat(narr.lines.map(l => `| ${String(l.no).padStart(2, '0')} | ${l.at} | ${l.dur.toFixed(1)}초 | ${l.trk} | ${l.text} |`));
-      fs.writeFileSync(path.join(DIR, '내레이션_대본.md'), md.join('\n') + '\n');
+      fs.writeFileSync(path.join(DIR, narr.key === 'edu' ? '내레이션_대본.md' : '내레이션_대본_' + narr.key + '.md'), md.join('\n') + '\n');
       cues.narr = [];
       for (const l of narr.lines) {
         const base = path.join(DIR, 'narration', narr.key, String(l.no).padStart(2, '0'));

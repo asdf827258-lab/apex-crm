@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>APEX 설계사 게임</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.39.3/dist/galmuri.css">
+<style>
+/* 「APEX : 설계사」 — 교육시스템 EM 을 게임으로. 신입 = 1회차, 경력 = 2회차(NEW GAME+), 공통 = 길드.
+   화면은 전부 실제 앱(shots/) · 상품·보험사 이름은 찍을 때 가렸다. 내레이션은 아래 RPG 대화창(윤단장)에 찍히고,
+   narration/game/NN.wav 가 있으면 소리로 들어간다. 1080×1920 · 30fps · 시간은 render(t) 하나가 정한다. */
+:root{--bg:#0A0E1F;--ink:#fff;--y:#FFD84D;--g:#59F0A0;--p:#C38CFF;--r:#FF5C6C;--b:#6EC3FF;--sub:rgba(255,255,255,.72)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg)}
+body{font-family:Pretendard,sans-serif;color:var(--ink);letter-spacing:-.03em;word-break:keep-all}
+.px{font-family:Galmuri11,Galmuri14,monospace;letter-spacing:0}
+#stage{position:absolute;inset:0;overflow:hidden;background:linear-gradient(180deg,#0A0E1F 0%,#141A3A 55%,#1F1446 100%)}
+#sky{position:absolute;inset:0;image-rendering:pixelated}
+#cam{position:absolute;inset:0;transform-origin:50% 45%}
+.scene{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:300px 50px 420px;text-align:center}
+.scene.mid{justify-content:center;padding-bottom:640px}
+.el{display:block;will-change:transform,opacity;white-space:nowrap}
+/* HUD */
+#hud{position:absolute;left:40px;right:40px;top:150px;height:96px;display:flex;align-items:center;gap:20px;padding:0 22px;background:rgba(6,9,22,.82);border:4px solid #fff;box-shadow:0 0 0 4px #0A0E1F,0 0 0 8px var(--y)}
+#hud .who{font-size:30px;color:var(--y);white-space:nowrap}
+#hud .lv{font-size:44px;color:#fff;white-space:nowrap}
+#hud .xp{flex:1;height:26px;border:3px solid #fff;background:#1B2142;position:relative}
+#hud .xp i{position:absolute;left:0;top:0;bottom:0;background:repeating-linear-gradient(90deg,var(--g) 0 14px,#3CCB84 14px 18px)}
+#hud .st{font-size:28px;color:var(--sub);white-space:nowrap}
+/* 걸음 머리 */
+.tag{display:inline-block;font-size:34px;color:#0A0E1F;background:var(--c);padding:8px 20px 6px;box-shadow:4px 4px 0 #000}
+.ti{font-size:70px;margin-top:20px;line-height:1.2;text-shadow:5px 5px 0 #000;white-space:normal;max-width:980px}
+/* 게임 창 — 실제 화면 */
+.win{position:absolute;left:46px;top:560px;width:988px;height:600px;background:#0A0E1F;border:6px solid #fff;box-shadow:0 0 0 6px #0A0E1F,0 0 0 12px var(--c),14px 18px 0 12px rgba(0,0,0,.5)}
+.win .bar{height:44px;background:var(--c);color:#0A0E1F;font-size:24px;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+.win .scr{position:absolute;left:0;right:0;top:44px;bottom:0;overflow:hidden;background:#fff}
+.win .scr img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:top center;transform-origin:50% 30%}
+.winP{position:absolute;left:70px;top:540px;width:400px;height:720px;background:#0A0E1F;border:6px solid #fff;box-shadow:0 0 0 6px #0A0E1F,0 0 0 12px var(--c),14px 18px 0 12px rgba(0,0,0,.5)}
+.winP .bar{height:40px;background:var(--c);color:#0A0E1F;font-size:22px;display:flex;align-items:center;padding:0 12px}
+.winP .scr{position:absolute;left:0;right:0;top:40px;bottom:0;overflow:hidden;background:#fff}
+.winP .scr img{position:absolute;left:0;top:0;width:100%;height:auto}
+.stat{position:absolute;left:510px;right:46px;top:560px;text-align:left;white-space:normal;background:rgba(6,9,22,.85);border:5px solid #fff;padding:26px 26px 22px;box-shadow:8px 8px 0 rgba(0,0,0,.5)}
+.stat h4{font-size:36px;color:var(--c);margin-bottom:16px;line-height:1.3}
+.stat div{font-size:30px;line-height:1.55;color:#fff;font-family:Pretendard;font-weight:700}
+.stat div:before{content:'▸ ';color:var(--c)}
+.below{position:absolute;left:40px;right:40px;top:1188px;text-align:center;font-size:44px;line-height:1.3;font-weight:900;white-space:normal;text-shadow:4px 4px 0 #000}
+/* 대화창 — 내레이션 */
+#dlg{position:absolute;left:40px;right:40px;top:1290px;height:230px;background:rgba(6,9,22,.92);border:5px solid #fff;box-shadow:0 0 0 5px #0A0E1F,0 0 0 10px #fff;padding:22px 30px}
+#dlg .nm{position:absolute;left:24px;top:-34px;background:var(--y);color:#0A0E1F;font-size:28px;padding:6px 18px 4px;box-shadow:4px 4px 0 #000}
+#dlg .tx{font-size:38px;line-height:1.55;font-weight:700;text-align:left;white-space:normal;font-family:Pretendard}
+#dlg .nx{position:absolute;right:22px;bottom:12px;font-size:30px;color:var(--y)}
+/* 팝업 */
+.pop{position:absolute;left:0;right:0;top:760px;text-align:center;pointer-events:none;z-index:9}
+.pop span{display:inline-block;font-size:96px;color:var(--y);text-shadow:6px 6px 0 #000,-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000;transform-origin:50% 50%}
+.xpf{position:absolute;left:0;right:0;top:960px;text-align:center;font-size:54px;color:var(--g);text-shadow:4px 4px 0 #000;pointer-events:none;z-index:9}
+/* 고르는 창 */
+.menu{margin-top:70px;text-align:left;font-size:46px;line-height:1.9;background:rgba(6,9,22,.85);border:5px solid #fff;padding:26px 46px;box-shadow:8px 8px 0 #000}
+.menu .on{color:var(--y)}
+.sel{display:flex;gap:30px;margin-top:60px;white-space:normal}
+.chr{width:460px;border:6px solid #fff;background:rgba(6,9,22,.88);padding:30px 28px;text-align:left;box-shadow:10px 10px 0 #000}
+.chr .ic{font-size:110px;line-height:1;text-align:center;font-family:Pretendard}
+.chr h3{font-size:46px;margin-top:14px;text-align:center}
+.chr p{font-size:28px;line-height:1.6;margin-top:16px;font-family:Pretendard;font-weight:700;color:var(--sub)}
+.chr.on{border-color:var(--y);box-shadow:0 0 0 6px var(--y),10px 10px 0 #000}
+.tree{position:absolute;left:46px;right:46px;top:1176px;display:flex;justify-content:space-between;align-items:center}
+.tree b{width:72px;height:72px;border:4px solid #fff;background:#1B2142;color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;font-weight:400}
+.tree b.on{background:var(--g);color:#0A0E1F;box-shadow:0 0 18px var(--g)}
+.choice{position:absolute;left:120px;right:120px;top:800px;background:rgba(6,9,22,.95);border:5px solid #fff;padding:22px 34px;text-align:left;font-size:40px;line-height:1.8;box-shadow:10px 10px 0 #000;z-index:8}
+.boss{position:absolute;left:46px;right:46px;top:520px;display:flex;align-items:center;gap:16px}
+.boss .nm{font-size:30px;color:var(--r);white-space:nowrap}
+.boss .hp{flex:1;height:28px;border:4px solid #fff;background:#2A0E14}
+.boss .hp i{display:block;height:100%;background:var(--r)}
+.res{margin-top:40px;text-align:left;background:rgba(6,9,22,.88);border:5px solid #fff;padding:26px 40px;box-shadow:8px 8px 0 #000;white-space:normal}
+.res div{font-size:36px;line-height:1.75;font-family:Pretendard;font-weight:800}
+.res div b{color:var(--y);font-family:Galmuri11;font-weight:400;margin-right:14px}
+.pcard{width:940px;border:6px solid var(--y);background:rgba(6,9,22,.92);padding:34px 40px;text-align:left;white-space:normal;box-shadow:12px 12px 0 #000;margin-top:34px}
+.pcard .top{display:flex;align-items:center;gap:30px}
+.pcard .av{width:150px;height:150px;flex:none;background:var(--y);color:#0A0E1F;font-size:84px;display:flex;align-items:center;justify-content:center;font-family:Pretendard;font-weight:900;overflow:hidden}
+.pcard .av img{width:100%;height:100%;object-fit:cover}
+.pcard .nm{font-size:58px}
+.pcard .tt{font-size:28px;color:var(--sub);margin-top:10px;line-height:1.4;font-family:Pretendard;font-weight:700}
+.pcard .ch{margin-top:18px;display:flex;flex-wrap:wrap;gap:10px}
+.pcard .ch span{font-size:26px;font-family:Pretendard;font-weight:800;border:2px solid rgba(255,255,255,.4);padding:8px 16px}
+.btn{display:inline-block;background:var(--y);color:#0A0E1F;font-size:54px;padding:16px 36px 12px;box-shadow:6px 6px 0 #000}
+.fine{position:absolute;left:60px;right:60px;top:1560px;font-size:22px;line-height:1.5;color:rgba(255,255,255,.5);font-weight:500;text-align:center;white-space:normal;font-family:Pretendard}
+#bar{position:absolute;left:40px;right:40px;top:96px;height:10px;background:#1B2142;border:2px solid #fff}
+#bar i{display:block;height:100%;width:0;background:var(--y)}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+#scan{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.10) 0 2px,transparent 2px 5px)}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="sky" width="270" height="480"></canvas>
+  <div id="cam"><div id="steps"></div></div>
+  <div id="hud" class="px"><span class="who" id="hWho"></span><span class="lv" id="hLv"></span><span class="xp"><i id="hXp"></i></span><span class="st" id="hSt"></span></div>
+  <div id="dlg"><span class="nm px">윤단장</span><div class="tx" id="dTx"></div><span class="nx px" id="dNx">▼</span></div>
+  <div id="bar"><i></i></div>
+  <div id="scan"></div>
+  <div id="flash"></div>
+</div>
+<script>
+var PROFILE={name:'윤시현',title:'에이플러스에셋 온탑본부 사업단장',career:'보험·재무설계 10년',
+  channels:['▶ 유튜브 「윤단장의 보험시선」','📷 인스타그램'],ask:'📩 DM = 파티 신청',handle:'',photo:''};
+var C={y:'#FFD84D',g:'#59F0A0',p:'#C38CFF',r:'#FF5C6C',b:'#6EC3FF'};
+// ───────── 걸음 ─────────
+// who: hud 1P/2P/길드 · lv/xp: 이 걸음이 끝날 때 · pop: 가운데 팝업 · fx: 효과음(lvup coin hit fanfare)
+var STEPS=[
+ {kind:'title',hud:0,nar:'새 게임을 시작하시겠습니까? 설계사라는 게임입니다.',min:5},
+ {kind:'select',hud:0,nar:'신입은 1회차, 경력은 2회차로 시작합니다.',min:5},
+ // 1회차 — 신입
+ {kind:'win',hud:1,c:C.g,tag:'QUEST 01',ti:'첫 주 — 순서만 알면 된다',img:'ed_guide',bar:'신입 가이드',below:'배우기 → 연습 → 만나기 → 기록',
+  nar:'첫 퀘스트, 첫 주. 배우기, 연습, 만나기, 기록 순서만 따라가면 됩니다.',pop:'QUEST CLEAR!',xp:'+120 XP',fx:'coin',lv:1},
+ {kind:'tree',hud:1,c:C.p,tag:'SKILL TREE',ti:'보험 마스터 아카데미',img:'ed_academy',bar:'L0 → L10',
+  nar:'스킬 트리는 열 단계. 상품명보다 먼저, 돈이 새는 곳부터 열립니다.',pop:'SKILL ×11',fx:'lvup',lv:2},
+ {kind:'event',hud:1,c:C.b,tag:'EVENT · D+90',ti:'3개월째, 갈림길',img:'em_academy',bar:'신입 6개월 — 두 갈래',
+  nar:'3개월째 갈림길. 손실 구조부터 익힌 쪽이 앞서 갑니다.',pop:'GOOD CHOICE!',fx:'coin',lv:3},
+ {kind:'phone',hud:1,c:C.p,tag:'SKILL GET',ti:'전화 스킬 — TA 5단계 대본',img:'ed_ta_script',bar:'TA 스크립트',st:['첫 마디 → 약속까지 5단계','단계마다 「고객 속마음」','거절처리 · 문자·카톡'],
+  nar:'전화 스킬 획득. 첫 마디부터 약속까지, 다섯 단계 대본이 함께 갑니다.',pop:'SKILL GET!',fx:'lvup',lv:4},
+ {kind:'win',hud:1,c:C.g,tag:'QUEST 02',ti:'지인 8주 — 명단 한 바퀴',img:'ed_plan',bar:'8주 로드맵',below:'1~3주 계약고객 · 4~6주 가망 · 7주 소개 · 8주 돌아보기',
+  nar:'지인 퀘스트는 8주. 부탁 대신 챙김으로, 명단을 한 바퀴 돕니다.',pop:'QUEST CLEAR!',xp:'+300 XP',fx:'coin',lv:5},
+ {kind:'boss',hud:1,c:C.r,tag:'BOSS',ti:'「보험 많아요」',img:'ed_talk',img2:'ed_fp_talk',bar:'화법 · 거절 연습 카드',
+  nar:'보스 등장, 「보험 많아요」. 연습 카드와 실전화법서 서른 장으로 공략합니다.',pop:'K.O.!',popAt:3.6,fx:'hit',lv:6},
+ {kind:'clear',hud:1,nar:'1회차 클리어. 이제 2회차의 문이 열립니다.',fx:'fanfare',lv:6,min:4.8},
+ // 2회차 — 경력
+ {kind:'ng',hud:2,nar:'경력이라면 2회차입니다. 실력은 그대로, 대신 시장이 빨라졌죠.',min:5},
+ {kind:'win',hud:2,c:C.y,tag:'BUFF · 정보 속도',ti:'상품전략 소식지',img:'em_ins_home',bar:'보험사 31곳 · 145개 상품',below:'매달 고객 입장에서 다시 비교',
+  nar:'정보 속도 버프. 매달 보험사 31곳 소식지를, 145개 상품으로 비교합니다.',pop:'BUFF ON!',fx:'lvup'},
+ {kind:'win',hud:2,c:C.y,tag:'BUFF · 약관 투시',ti:'약관 원문 비교',img:'em_ins_terms',bar:'같은 조건 · 나란히',below:'원문을 보면 설명이 달라진다',
+  nar:'약관 투시. 같은 조건을 원문으로 나란히 봅니다.',pop:'BUFF ON!',fx:'coin'},
+ {kind:'win',hud:2,c:C.b,tag:'MINIMAP',ti:'미끼 레이더',img:'em_mikki',bar:'하루 30분 루틴',below:'뉴스 5분 · 신상품 1건 10분 · 고객 3명 15분',
+  nar:'미니맵, 미끼 레이더. 하루 30분, 뉴스와 신상품 하나, 고객 세 명.',fx:'coin'},
+ {kind:'win',hud:2,c:C.p,tag:'SKILL BOOK ×38',ti:'미끼상품 & 접촉전략',img:'em_mktalk',bar:'6파트 38강 + AI 도구',below:'작은 담보로 큰 니즈를 여는 법',
+  nar:'스킬북 서른여덟 권. 작은 담보로 큰 니즈를 여는 법입니다.',pop:'SKILL ×38',fx:'lvup'},
+ {kind:'win',hud:2,c:C.y,tag:'LEGENDARY ITEM',ti:'보장 전 · 후 리포트',img:['ba_sHd','ba_r_all'],bar:'운용보고서 · 모든 담보 21 → 34',below:'지금과 조정 후를 숫자로',
+  nar:'전설 아이템, 보장 전후 리포트. 지금과 조정 후를 숫자로 보여 줍니다.',pop:'ITEM GET!',fx:'fanfare'},
+ {kind:'win',hud:2,c:C.b,tag:'EQUIPMENT',ti:'재무설계 계산기',img:['cash_1','fin_step4'],bar:'돈의 흐름 → 노후 연금',below:'견본 고객 · 가정 수익률 · 상품명 가림',
+  nar:'장비, 재무설계 계산기. 돈의 흐름부터 노후 연금까지 셈합니다.',pop:'EQUIP!',fx:'coin'},
+ {kind:'phone',hud:2,c:C.g,tag:'PARTY NPC',ti:'동료 — 자비스',img:'jv_2',bar:'APEX 자비스',st:['「연금 얼마?」 그 자리에서','「어디서 해?」 갈 곳을 바로','앱 안의 자료를 이어서'],
+  nar:'막히면 동료 자비스에게. 앱 안에서 바로 찾아 줍니다.',pop:'NPC JOIN!',fx:'coin'},
+ // 길드 — 공통
+ {kind:'guild',hud:3,nar:'그리고 이 게임에는 솔로 플레이가 없습니다.',min:4.4},
+ {kind:'phone',hud:3,c:C.b,tag:'GUILD BOARD',ti:'길드 퀘스트판',img:'em_tfa',bar:'TFA 업무관리',st:['피드백 · 본인 역량 체크','해야 할 일 · 고객 체크','30일 고객관리'],
+  nar:'길드 퀘스트판, 업무관리. 매일 할 일과 피드백을 같이 봅니다.',fx:'coin'},
+ {kind:'phone',hud:3,c:C.b,tag:'GUILD MASTER',ti:'지점장 코칭',img:'ed_branch_coach',bar:'최근 2주 기록',st:['오늘 먼저 볼 사람','무엇을 물을지','하지 말 것까지'],
+  nar:'길드마스터는 최근 2주 기록으로 오늘 먼저 챙길 사람을 봅니다.',fx:'coin'},
+ {kind:'phone',hud:3,c:C.g,tag:'LONG QUEST · 48',ti:'4년 유지관리',img:'em_keep4',bar:'계약 뒤 48개월',st:['매달 안부 한 통','석 달마다 전화','확인할 것 · 전달할 것'],
+  nar:'그리고 48개월짜리 장기 퀘스트, 4년 유지관리. 끝까지 함께 갑니다.',pop:'QUEST ×48',fx:'lvup'},
+ {kind:'party',hud:3,nar:'파티원 모집 중입니다. 1회차도 2회차도, 함께할 설계사를 찾습니다.',fx:'fanfare',min:7}
+];
+var T=0;STEPS.forEach(function(s,i){var syl=s.nar.replace(/[\s.,·「」?]/g,'').length;s.dur=Math.max(s.min||4.4,syl*0.19+1.2);s.a=T;s.b=T+s.dur;T=s.b;s.no=i+1;});
+var TOTAL=Math.round(T*10)/10;
+var LEVELS=['L0','L1','L2','L3','L4','L5','L6','L7','L8','L9','L10'];
+var LVN=['파는 사람 vs 위험을 관리하는 사람','아플 때 돈은 어디서 새는가','실손의료보험 완전정복','진단비 — 암 · 뇌 · 심장','치료비 — 항암 · 방사선','수술비 — 종수술비 · N대수술비','입원 · 간병 · 후유장해','생활 담보 — 운전자 · 배상책임','보상 실무 — 고지 · 면책 · 청구','저축 · 연금 · 세금 기초','종합 설계 — 5단계 프로세스'];
+
+function ims(s){return [].concat(s.img).map(function(src){return '<img src="shots/'+src+'.jpg">';}).join('');}
+function head(s){return '<span class="el tag px" data-a="pop" data-d="0" style="--c:'+s.c+'">'+s.tag+'</span><span class="el ti px" data-a="type8" data-d="0.15">'+s.ti+'</span>';}
+var H='';
+STEPS.forEach(function(s,i){var x='';
+  if(s.kind==='title')x='<span class="el px" style="font-size:40px;color:#6EC3FF" data-a="up" data-d="0.1">— 교육시스템 EM 이 만든 게임 —</span>'+
+    '<span class="el px" style="font-size:150px;line-height:1.1;margin-top:30px;color:#FFD84D;text-shadow:8px 8px 0 #000" data-a="slam" data-d="0.5">APEX</span>'+
+    '<span class="el px" style="font-size:96px;text-shadow:6px 6px 0 #000" data-a="slam" data-d="0.9">: 설계사</span>'+
+    '<div class="menu px el" data-a="up" data-d="1.6"><div class="on" id="m1">▶ 새 게임 — 1회차 (신입)</div><div id="m2">&nbsp;&nbsp;이어하기 — 2회차 (경력)</div></div>'+
+    '<span class="el px" id="pstart" style="font-size:40px;margin-top:50px;color:#fff" data-a="up" data-d="2.3">PRESS START</span>';
+  else if(s.kind==='select')x='<span class="el px" style="font-size:66px;text-shadow:5px 5px 0 #000" data-a="type8" data-d="0">캐릭터를 고르세요</span>'+
+    '<div class="sel"><div class="chr el" id="c1" data-a="up" data-d="0.4"><div class="ic">🌱</div><h3 class="px" style="color:#59F0A0">1회차 · 신입</h3><p>Lv.0 에서 시작<br>보유 스킬 0<br>특성 — 배우는 속도</p></div>'+
+    '<div class="chr el" id="c2" data-a="up" data-d="0.7"><div class="ic">⚔️</div><h3 class="px" style="color:#FFD84D">2회차 · 경력</h3><p>NEW GAME+<br>실력은 이어서<br>특성 — 정보 속도</p></div></div>';
+  else if(s.kind==='win'||s.kind==='tree'||s.kind==='event'||s.kind==='boss')
+    x=head(s)+(s.kind==='boss'?'<div class="boss el" data-a="up" data-d="0.3"><span class="nm px">BOSS</span><span class="hp"><i id="bhp'+i+'"></i></span></div>':'')+
+     '<div class="win el" data-a="drop8" data-d="0.3" style="--c:'+s.c+';'+(s.kind==='boss'?'top:600px':'')+'"><div class="bar px"><span>'+s.bar+'</span><span>실제 앱 · 견본</span></div><div class="scr ims">'+ims(s)+'</div></div>'+
+     (s.kind==='boss'?'<div class="winP el" data-a="drop8" data-d="2.2" style="--c:#FF5C6C;left:auto;right:60px;top:760px;width:300px;height:540px"><div class="bar px">실전화법서 30장</div><div class="scr"><img src="shots/'+s.img2+'.jpg"></div></div>':'')+
+     (s.below?'<div class="below el" data-a="up" data-d="0.9">'+s.below+'</div>':'')+
+     (s.kind==='tree'?'<div class="tree">'+LEVELS.map(function(l,k){return '<b class="px" data-n="'+k+'">'+l+'</b>';}).join('')+'</div>':'')+
+     (s.kind==='event'?'<div class="choice px el" data-a="up" data-d="1.0"><div class="ch0">▶ 손실 구조부터 익힌다</div><div class="ch1">&nbsp;&nbsp;상품명부터 외운다</div></div>':'');
+  else if(s.kind==='phone')x=head(s)+'<div class="winP el" data-a="drop8" data-d="0.3" style="--c:'+s.c+'"><div class="bar px">'+s.bar+'</div><div class="scr ims">'+ims(s)+'</div></div>'+
+     '<div class="stat el" data-a="up" data-d="0.8" style="--c:'+s.c+'"><h4 class="px">'+s.tag+'</h4>'+s.st.map(function(t){return '<div>'+t+'</div>';}).join('')+'</div>';
+  else if(s.kind==='clear')x='<span class="el px" style="font-size:120px;color:#FFD84D;text-shadow:8px 8px 0 #000" data-a="slam" data-d="0.1">1회차 CLEAR!</span>'+
+    '<div class="res el" data-a="up" data-d="0.8"><div><b>QUEST</b>첫 주 · 지인 8주</div><div><b>SKILL</b>아카데미 L0~L10 · TA 5단계</div><div><b>BOSS</b>「보험 많아요」 공략</div><div><b>LEVEL</b>Lv.0 → Lv.6</div></div>';
+  else if(s.kind==='ng')x='<span class="el px" style="font-size:54px;color:#6EC3FF" data-a="up" data-d="0">경력이라면</span>'+
+    '<span class="el px" style="font-size:150px;color:#FFD84D;margin-top:20px;text-shadow:8px 8px 0 #000" data-a="slam" data-d="0.5">NEW GAME+</span>'+
+    '<div class="res el" data-a="up" data-d="1.3"><div><b>✔</b>실력 · 경험치 — 그대로</div><div><b>!</b>시장 — 더 빨라짐</div><div><b>+</b>새 버프 · 아이템 · 동료</div></div>';
+  else if(s.kind==='guild')x='<span class="el px" style="font-size:60px;color:#6EC3FF" data-a="up" data-d="0">길드 시스템</span>'+
+    '<span class="el px" style="font-size:112px;margin-top:30px;text-shadow:8px 8px 0 #000" data-a="slam" data-d="0.5">솔로 플레이</span>'+
+    '<span class="el px" style="font-size:112px;color:#FF5C6C;text-shadow:8px 8px 0 #000" data-a="slam" data-d="1.0">금지</span>';
+  else if(s.kind==='party')x='<span class="el px" style="font-size:96px;color:#FFD84D;text-shadow:8px 8px 0 #000" data-a="slam" data-d="0">⚔ 파티원 모집 중</span>'+
+    '<span class="el px" style="font-size:44px;margin-top:24px" data-a="up" data-d="0.5">1회차(신입) · 2회차(경력) 모두</span>'+
+    '<div class="pcard el" data-a="drop8" data-d="1.0"><div class="top"><div class="av" id="pAv"></div><div><div class="nm px">길드장 '+PROFILE.name+'</div><div class="tt">'+PROFILE.title+'<br>'+PROFILE.career+'</div></div></div>'+
+      '<div class="ch">'+PROFILE.channels.concat(PROFILE.handle?[PROFILE.handle]:[]).map(function(c){return '<span>'+c+'</span>';}).join('')+'</div></div>'+
+    '<span class="el" style="margin-top:44px" data-a="pop" data-d="2.0"><span class="btn px">'+PROFILE.ask+'</span></span>'+
+    '<div class="fine el" data-a="up" data-d="2.6">보험설계사로 일하려면 자격시험 합격과 등록 절차가 필요합니다. 수입은 활동과 성과에 따라 사람마다 다릅니다.<br>게임은 비유입니다. 화면의 고객·숫자는 견본이며, 상품·보험사 이름은 가렸습니다.</div>';
+  var pop=s.pop?'<div class="pop px" data-pop="1"><span>'+s.pop+'</span></div>':'';
+  var xpf=s.xp?'<div class="xpf px" data-xpf="1">'+s.xp+'</div>':'';
+  H+='<div class="scene'+(/title|select|clear|ng|guild/.test(s.kind)?' mid':'')+'" data-i="'+i+'">'+x+pop+xpf+'</div>';
+});
+document.getElementById('steps').innerHTML=H;
+(function(){var av=document.getElementById('pAv');if(PROFILE.photo)av.innerHTML='<img src="'+PROFILE.photo+'">';else av.textContent=PROFILE.name.charAt(0);})();
+
+var BEAT=0.5;
+function clamp(x,a,b){return x<a?a:x>b?b:x;}
+function eo(x){return 1-Math.pow(1-x,3);}
+function back(x){var c=2.2;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2);}
+function rnd(n){var x=Math.sin(n*12.9898)*43758.5453;return x-Math.floor(x);}
+function stepq(x,n){return Math.floor(x*n)/n;}   // 픽셀 게임처럼 뚝뚝 끊어 움직인다
+var scenes=[].slice.call(document.querySelectorAll('.scene')).map(function(el){var s=STEPS[+el.getAttribute('data-i')];
+  var items=[].slice.call(el.querySelectorAll('.el'));items.forEach(function(e){e._in=s.a+(+e.getAttribute('data-d')||0);if(e.getAttribute('data-a')==='type8')e._txt=e.textContent;});
+  return {el:el,s:s,items:items,ims:[].slice.call(el.querySelectorAll('.ims img')),pop:el.querySelector('[data-pop] span'),popW:el.querySelector('[data-pop]'),xpf:el.querySelector('[data-xpf]'),
+    tree:[].slice.call(el.querySelectorAll('.tree b')),hp:el.querySelector('.boss .hp i'),ch:el.querySelector('.choice')};});
+function anim(e,t){
+  var a=e.getAttribute('data-a'),d=t-e._in;
+  if(d<0){e.style.opacity=0;e.style.transform='none';if(a==='type8')e.textContent='';return;}
+  var tf='',op=1;
+  if(a==='slam'){var p=stepq(clamp(d/0.24,0,1),6);op=p>0?1:0;tf='scale('+(2-1*p)+')';}
+  else if(a==='up'){var p3=stepq(clamp(d/0.3,0,1),5);tf='translateY('+(50*(1-p3))+'px)';op=p3>0?1:0;}
+  else if(a==='pop'){var p4=clamp(d/0.25,0,1);tf='scale('+stepq(0.4+0.6*back(p4),8)+')';op=p4>0?1:0;}
+  else if(a==='drop8'){var p5=stepq(clamp(d/0.4,0,1),8);tf='translateY('+(-140*(1-p5))+'px)';op=p5>0?1:0;}
+  else if(a==='type8'){var n=Math.floor(clamp(d/0.6,0,1)*e._txt.length);e.textContent=e._txt.slice(0,n);}
+  e.style.opacity=op;e.style.transform=tf||'none';
+}
+// 배경 — 픽셀 별과 도시가 천천히 흐른다
+var sky=document.getElementById('sky').getContext('2d');
+function bg(t,col){sky.fillStyle='#0A0E1F';sky.fillRect(0,0,270,480);
+  var g=sky.createLinearGradient(0,0,0,480);g.addColorStop(0,'#0A0E1F');g.addColorStop(.6,'#141A3A');g.addColorStop(1,col);sky.fillStyle=g;sky.fillRect(0,0,270,480);
+  for(var i=0;i<80;i++){var x=Math.floor((rnd(i)*270-t*(4+rnd(i*2)*10))%270);if(x<0)x+=270;var y=Math.floor(rnd(i*3.3)*330);
+    sky.fillStyle=(Math.floor(t*4+i)%7===0)?'#FFD84D':'rgba(255,255,255,'+(0.3+rnd(i*5)*0.6)+')';sky.fillRect(x,y,1+(i%9===0),1+(i%9===0));}
+  for(var L=0;L<2;L++){var sp=L?18:8,base=L?470:440,col2=L?'#0D1230':'#19204A';sky.fillStyle=col2;
+    for(var b=0;b<40;b++){var w=8+Math.floor(rnd(b*7+L)*14),h=20+Math.floor(rnd(b*3+L*9)*(L?60:110));var x=Math.floor((b*16-t*sp)%(40*16));if(x<-20)x+=40*16;
+      sky.fillRect(x,base-h,w,h+20);if(!L)for(var wy=base-h+4;wy<base-4;wy+=6)for(var wx=x+2;wx<x+w-2;wx+=4)if(rnd(wx*1.3+wy+b)>0.7){sky.fillStyle='#FFD84D';sky.fillRect(wx,wy,1,2);sky.fillStyle=col2;}}}
+}
+var HUD=[{who:'APEX',lv:'',c:'#6EC3FF'},{who:'1P · 1회차 신입',c:'#59F0A0'},{who:'2P · 2회차 경력 · NG+',c:'#FFD84D'},{who:'GUILD · 길드',c:'#6EC3FF'}];
+var GRD={0:'#2A1A5A',1:'#0F3A35',2:'#4A3410',3:'#12305A'};
+var hWho=document.getElementById('hWho'),hLv=document.getElementById('hLv'),hXp=document.getElementById('hXp'),hSt=document.getElementById('hSt'),hud=document.getElementById('hud');
+var dTx=document.getElementById('dTx'),dNx=document.getElementById('dNx'),dlg=document.getElementById('dlg');
+var cam=document.getElementById('cam'),flash=document.getElementById('flash'),bar=document.querySelector('#bar i');
+var IMP=[];scenes.forEach(function(sc){sc.items.forEach(function(e){if(e.getAttribute('data-a')==='slam')IMP.push(e._in);});if(sc.s.pop)IMP.push(sc.s.a+(sc.s.popAt||1.6));});
+function lvAt(t){var lv=0;STEPS.forEach(function(s){if(s.lv!=null&&t>=s.a+(s.popAt||1.6))lv=s.lv;});return lv;}
+function render(t){
+  bar.style.width=(100*t/TOTAL)+'%';
+  var cur=scenes[0];scenes.forEach(function(sc){if(t>=sc.s.a)cur=sc;});var s=cur.s,ds=t-s.a;
+  bg(t,GRD[s.hud]);
+  // HUD
+  var h=HUD[s.hud];hud.style.opacity=s.hud?1:0;hWho.textContent=h.who;hWho.style.color=h.c;
+  if(s.hud===1){var lv=lvAt(t);hLv.textContent='Lv.'+lv;var nx=STEPS.filter(function(x){return x.lv!=null;});hXp.style.width=((t>=s.a+1.6&&s.lv!=null?1:clamp(ds/2,0,0.85))*100)+'%';}
+  else if(s.hud===2){hLv.textContent='Lv.★';var nb=STEPS.filter(function(x){return x.hud===2&&x.kind!=='ng'&&t>=x.a+1.6;}).length;hXp.style.width=(nb/7*100)+'%';}
+  else {hLv.textContent='♥ ×∞';hXp.style.width='100%';}
+  var idx=STEPS.filter(function(x){return x.hud===s.hud;}).indexOf(s)+1,tot=STEPS.filter(function(x){return x.hud===s.hud;}).length;
+  hSt.textContent=s.hud?('STAGE '+s.hud+'-'+idx+'/'+tot):'';
+  scenes.forEach(function(sc){var on=sc===cur;sc.el.style.display=on?'flex':'none';if(!on)return;
+    var w=stepq(clamp((t-sc.s.a)/0.25,0,1),5);sc.el.style.opacity=sc.s.a>0?w:1;
+    sc.items.forEach(function(e){anim(e,t);});
+    var n=sc.ims.length,d=t-sc.s.a-0.4,half=(sc.s.dur-0.4)/Math.max(1,n),k=clamp(Math.floor(d/half),0,n-1);
+    sc.ims.forEach(function(im,j){im.style.display=j===k?'block':'none';im.style.transform='scale('+(1+0.05*clamp((d-k*half)/half,0,1))+')';});
+    if(sc.pop){var pd=t-sc.s.a-(sc.s.popAt||1.6),pq=clamp(pd/0.25,0,1),po=pd<0?0:(pd<1.3?1:clamp(1-(pd-1.3)/0.3,0,1));sc.popW.style.opacity=po;sc.pop.style.transform='scale('+stepq(0.3+0.7*back(pq),8)+') rotate(-4deg)';}
+    if(sc.xpf){var xd=t-sc.s.a-1.9;sc.xpf.style.opacity=xd<0?0:clamp(1-xd/1.4,0,1);sc.xpf.style.transform='translateY('+(-stepq(clamp(xd/1.4,0,1),10)*120)+'px)';}
+    sc.tree.forEach(function(b,k){b.classList.toggle('on',t>=sc.s.a+0.8+k*0.28);});
+    if(sc.hp){var hd=t-sc.s.a;var hpv=hd<1.4?1:hd<2.4?0.6:hd<3.4?0.25:0;sc.hp.style.width=(hpv*100)+'%';}
+    if(sc.ch){var cd=t-sc.s.a-1.0;sc.ch.querySelector('.ch0').style.color=cd>0.5?'#FFD84D':'#fff';}
+  });
+  // 타이틀 화면 · 캐릭터 고르기 — 커서가 깜빡이며 움직인다
+  var ps=document.getElementById('pstart');if(ps&&cur.s.kind==='title')ps.style.visibility=Math.floor(t*3)%2?'hidden':'visible';
+  var c1=document.getElementById('c1'),c2=document.getElementById('c2');if(cur.s.kind==='select'){var sd=t-cur.s.a;var on1=sd<2.2||sd>3.6;c1.classList.toggle('on',on1);c2.classList.toggle('on',!on1);}
+  // 대화창 — 내레이션이 한 글자씩
+  var nn=Math.floor(clamp((ds-0.2)/(s.dur*0.62),0,1)*s.nar.length);dTx.textContent=s.nar.slice(0,nn);dNx.style.visibility=(nn>=s.nar.length&&Math.floor(t*3)%2)?'visible':'hidden';
+  dlg.style.opacity=s.kind==='party'&&ds>2.4?0.0:1;
+  var ph=(t%BEAT)/BEAT,pulse=0.006*(ph<0.15?1:0),punch=0;IMP.forEach(function(i){var dd=t-i;if(dd>=0&&dd<0.2)punch=0.03;});
+  cam.style.transform='scale('+(1+pulse+punch)+') translate('+(punch?((Math.floor(t*30)%2)?6:-6):0)+'px,0)';
+  var f=0;STEPS.forEach(function(x){var dd=t-x.a;if(x.a>0&&dd>=0&&dd<0.1)f=0.35;});flash.style.opacity=f;
+}
+function fmt(x){var m=Math.floor(x/60),s=(x-m*60);return m+':'+(s<10?'0':'')+s.toFixed(1);}
+window.REEL={total:TOTAL,fps:30,prefix:'설계사게임',narr:'game',
+ script:function(){return STEPS.map(function(s){return {no:s.no,a:+s.a.toFixed(2),dur:+s.dur.toFixed(2),trk:HUD[s.hud].who,text:s.nar,at:fmt(s.a)};});},
+ cues:function(){var by=function(f){return STEPS.filter(function(s){return s.fx===f;}).map(function(s){return s.a+1.6;});};
+  return {total:TOTAL,style:'chip',impacts:[],cuts:[],pops:[],ticks:[],types:[],soft:[],sparse:[],uhoh:[],dings:[],
+    lvup:by('lvup'),coin:by('coin'),hit:[].concat.apply([],STEPS.filter(function(s){return s.fx==='hit';}).map(function(s){return [s.a+1.4,s.a+2.4,s.a+3.4];})),fanfare:by('fanfare'),
+    hush:[TOTAL-0.6,TOTAL-0.55],riser:[0,0.01]};},
+ ready:function(){return Promise.all([document.fonts.ready].concat([].slice.call(document.images).map(function(i){return i.decode().catch(function(){});}))).then(function(){render(0);});}};
+window.render=render;
+render(0);
+</script>
+</body>
+</html>

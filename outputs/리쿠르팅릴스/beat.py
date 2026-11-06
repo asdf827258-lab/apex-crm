@@ -117,7 +117,8 @@ def bass_note(f, length):
 
 
 hush = (cues["hush"][0], cues["hush"][1])  # 소리가 멎는 반 박자
-nb = int(T / BEAT)
+CHIP = cues.get("style") == "chip"   # 게임판 — 8비트 칩튠
+nb = 0 if CHIP else int(T / BEAT)
 for k in range(nb):
     t = k * BEAT
     if hush[0] <= t < hush[1] or t >= T - 0.5:
@@ -197,7 +198,7 @@ def pad(freqs, length):
     return s * a / len(freqs)
 
 
-for bar in range(int(T // 2) + 1):
+for bar in range(0 if CHIP else int(T // 2) + 1):
     t0 = bar * 2.0
     if t0 >= T - 0.8:
         break
@@ -208,6 +209,60 @@ for bar in range(int(T // 2) + 1):
             if soft_at(t0 + j * 0.25):
                 put(bell(f), t0 + j * 0.25, 0.10)
 
+
+# ───────── 칩튠 (게임판) — 네모파 베이스 · 네모파 아르페지오 · 잡음 하이햇 · 효과음 ─────────
+def sq(f, length, duty=0.5, dec=0.12, vib=0.0):
+    n = int(length * SR)
+    t = np.arange(n) / SR
+    ph = (f * t + vib * np.sin(2 * np.pi * 6 * t) / 6) % 1.0
+    return np.where(ph < duty, 1.0, -1.0) * env(n, 0.002, dec)
+
+
+def nz8(length, dec):
+    n = int(length * SR)
+    step = 8   # 낮은 해상도 잡음 — 옛 게임기 소리
+    v = np.repeat(rng.choice([-1.0, 1.0], size=n // step + 1), step)[:n]
+    return v * env(n, 0.0005, dec)
+
+
+if CHIP:
+    LEAD = [[440.0, 523.25, 659.25, 880.0], [349.23, 440.0, 523.25, 698.46], [523.25, 659.25, 783.99, 1046.5], [392.0, 493.88, 587.33, 783.99]]
+    BASS = [110.0, 87.31, 130.81, 98.0]
+    for k in range(int(T / BEAT)):
+        t = k * BEAT
+        if hush[0] <= t < hush[1] or t >= T - 0.5:
+            continue
+        bar = int(t // 2) % 4
+        put(sq(BASS[bar], 0.22, 0.5, 0.09), t, 0.16)
+        put(sq(BASS[bar] * 2, 0.12, 0.5, 0.05), t + BEAT / 2, 0.10)
+        for q in range(4):   # 16분음표 아르페지오
+            put(sq(LEAD[bar][(k * 4 + q) % 4], 0.11, 0.25, 0.05), t + q * BEAT / 4, 0.055)
+        put(nz8(0.05, 0.012), t + BEAT / 2, 0.10)
+        if k % 2 == 1:
+            put(nz8(0.12, 0.04), t, 0.13)
+        if k % 4 == 0:
+            put(sq(60, 0.18, 0.5, 0.06), t, 0.22)
+
+    def lvup(t0):   # 레벨업 — 올라가는 다섯 음
+        for i, f in enumerate([523.25, 659.25, 783.99, 1046.5, 1318.5]):
+            put(sq(f, 0.12, 0.25, 0.08), t0 + i * 0.07, 0.22)
+
+    def coin(t0):
+        put(sq(987.77, 0.07, 0.5, 0.05), t0, 0.2)
+        put(sq(1318.5, 0.25, 0.5, 0.14), t0 + 0.07, 0.2)
+
+    def hit(t0):
+        put(nz8(0.25, 0.08), t0, 0.35)
+        put(tone(300, 60, 0.2, 0.1), t0, 0.4)
+
+    def fanfare(t0):
+        for i, f in enumerate([523.25, 523.25, 523.25, 659.25, 783.99, 1046.5]):
+            put(sq(f, 0.16 if i < 5 else 0.6, 0.5, 0.1 if i < 5 else 0.35), t0 + [0, .12, .24, .36, .6, .84][i], 0.22)
+
+    for t0 in cues.get("lvup", []): lvup(t0)
+    for t0 in cues.get("coin", []): coin(t0)
+    for t0 in cues.get("hit", []): hit(t0)
+    for t0 in cues.get("fanfare", []): fanfare(t0)
 
 # 한 줄 앞 반 박자는 완전히 비운다 — 꼬리까지 잘라야 다음 말이 꽂힌다
 h0, h1 = int(hush[0] * SR), int(hush[1] * SR)
@@ -236,7 +291,7 @@ if np.abs(voice).max() > 0:
 # 끝은 0.8초 동안 사라진다 · 소리 크기 맞추기
 fade = int(0.8 * SR)
 mix[-fade:] *= np.linspace(1, 0, fade)
-mix = np.tanh(mix * 1.1)
+mix = np.tanh(mix * (2.6 if CHIP else 1.1))   # 칩튠은 소리가 가늘어 더 눌러 키운다
 mix = mix / (np.abs(mix).max() + 1e-9) * 0.89
 pcm = (mix * 32767).astype(np.int16)
 stereo = np.stack([pcm, pcm], axis=1).ravel()
