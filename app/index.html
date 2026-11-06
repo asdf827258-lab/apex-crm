@@ -17821,7 +17821,17 @@ function almAsk(){
 function almSubscribe(){
   if(!ALM.reg||!ALM.reg.pushManager){almPaint();return;}
   almKeyLoad(function(key){
-    if(!key){almPaint();return;}
+    /* ★ <b>조용히 끝내지 않습니다</b> (판 X381 · 1번). 여기서 아무 말도 안 하면
+       홈에서 「담기」 를 눌러도 화면이 그대로라 고장으로 보입니다. 무엇이
+       없는지, 누가 담을 수 있는지 그대로 적습니다. */
+    if(!key){
+      ALM.busy='';
+      ALM.err=(almkCan()
+        ? '서버에 <b>알람 열쇠</b>가 아직 없습니다 — 📲 내 폰에 설치 맨 위 🔑 칸에서 단추 두 번이면 끝납니다.'
+        : '서버에 <b>알람 열쇠</b>가 아직 없습니다 — 대표·관리자가 담아야 켜집니다. 앱이 열려 있을 때(①)는 지금도 울립니다.');
+      try{ toast(ALM.err.replace(/<[^>]*>/g,''),8000); }catch(eT){}
+      almPaint();return;
+    }
     ALM.busy='sub';almPaint();
     var pm=ALM.reg.pushManager;
     var done=function(s){ ALM.busy=''; ALM.sub=s; almSave(s); };
@@ -17927,22 +17937,67 @@ function almSync(){
      · 닫으신 적이 없을 때
    허용하시든 차단하시든 닫으시든, 그 뒤로는 <b>다시 안 뜹니다</b>.
    헛것을 세우지 않습니다 (8번).                                     */
-var ALM_BYE_KEY='apex_alm_bye';
-function almNudgeOn(){
+/* ── 이 기기에 <b>아직 남은 일</b>이 무엇인가 — 묻는 곳은 여기 하나 (판 X381) ──
+   ★ 돌려주는 말은 셋입니다 —
+       ''      남은 일이 없다 (또는 <b>아직 모른다</b> — 모르면 재촉하지 않습니다 · 1번)
+       'ask'   아직 허락을 안 받았다            → 「🔔 켜기」
+       'save'  허락은 받았는데 <b>서버가 이 기기를 모른다</b> → 「📡 담기」
+   ★ <b>카드 단추도 홈 한 줄도 이것을 부릅니다</b> (5번). 여태 카드만 제 손으로
+     세고 있었고, 홈 한 줄은 <b>「아직 한 번도 안 물어봤나」 하나</b>로만 갈랐습니다.
+     그래서 <b>한 번 허락한 기기</b>에는 홈에서 다시 권하는 줄이 영영 안 떴고,
+     서버에는 안 담긴 채로 남았습니다 — 사장님 폰이 그러했습니다(서버에 담긴
+     3대가 전부 컴퓨터). 「다 됐다로 보이는 상태에서 고칠 단추를 감추지 않는다」
+     (CLAUDE.md 6번)가 <b>카드에만</b> 적용돼 있던 자리입니다.              */
+function almTodo(){
   var c=almCan();
-  if(!c.sw||!c.notif)return false;          /* 못 받는 브라우저에 권하지 않는다 */
-  if(c.perm!=='default')return false;       /* 이미 정하셨다 */
-  if(almSolo())return false;                /* 바탕화면 아이콘 — 여기서 켜면 두 번 울린다 */
-  try{ if(localStorage.getItem(ALM_BYE_KEY))return false; }catch(e){}
-  return true;
+  if(c.perm!=='granted')return 'ask';
+  if(!almPhoneOn())return 'save';          /* 허락은 했는데 이 브라우저가 구독조차 안 했다 */
+  return (almServerOn()===false)?'save':'';
 }
+var ALM_BYE_KEY='apex_alm_bye';
+/* ★ <b>얼굴마다 따로</b> 묻습니다 — 「켜 볼까요」 를 예전에 닫으셨다고 해서
+   「서버에 안 담겼습니다」 까지 묻어 버리면, 그때와 <b>다른 물음</b>을 못 드립니다. */
+var ALM_BYE_SAVE_KEY='apex_alm_bye_save';
+function almByeKey(k){ return (k==='save')?ALM_BYE_SAVE_KEY:ALM_BYE_KEY; }
+function almBye(k){ try{ return !!localStorage.getItem(almByeKey(k)); }catch(e){ return false; } }
+/* 홈 한 줄을 <b>세울까 말까</b> — 「남은 일」 위에 「여기서 권해도 되나」 를 얹습니다 */
+function almNudgeKind(){
+  var c=almCan();
+  if(!c.sw||!c.notif)return '';             /* 못 받는 브라우저에 권하지 않는다 (8번) */
+  if(almSolo())return '';                   /* 바탕화면 아이콘 — 여기서 켜면 두 번 울린다 */
+  if(c.perm==='denied')return '';           /* 막으셨다 — 앱이 풀 수 없습니다 */
+  var t=almTodo();
+  if(!t||almBye(t))return '';
+  /* ★★ <b>홈에서는 서버에 안 묻습니다</b> (7번) — 「칩 하나 때문에 홈이 서버를
+     깨우지 않는다」 는 check-hmalm [6] 이 못 박아 둔 규칙이고, 무료 한도를 세 배로
+     넘겨 로그인까지 막혔던 자리가 그것입니다. 그래서 <b>묻지 않고 아는 것</b>으로만
+     세웁니다 — 허락은 받았는데 <b>이 브라우저에 구독이 아예 없으면</b> 서버에
+     담겼을 리가 없습니다(그 답은 서비스워커가 공짜로 줍니다 · almSync).
+     구독은 있는데 <b>서버가 아는지</b>는 여기서 알 수 없으므로 <b>안 적습니다</b>
+     (1번) — 그 자리는 알람 카드(📲 내 폰에 설치 · 🙋 나)가 서버에 물어 말합니다. */
+  if(t==='save'&&almPhoneOn())return '';
+  return t;
+}
+function almNudgeOn(){ return !!almNudgeKind(); }
 function almNudgeOff(){
-  try{ localStorage.setItem(ALM_BYE_KEY,'1'); }catch(e){}
+  var k=almNudgeKind(); if(!k)return;
+  try{ localStorage.setItem(almByeKey(k),'1'); }catch(e){}
   almNudgePaint();
 }
 function almNudgeHtml(){
-  if(!OS.profile||!almNudgeOn())return '';
+  if(!OS.profile)return '';
+  var k=almNudgeKind(); if(!k)return '';
   almCss();
+  /* 📡 <b>허락은 했는데 서버가 이 기기를 모른다</b> — 지금은 앱을 열고 있을
+     때만 울립니다. 무엇이 안 되는지 그대로 적습니다 (1번). */
+  if(k==='save')
+    return '<div class="alm-nudge alm-nudge-save">'+
+      '<span class="ic">📡</span>'+
+      '<span class="tx"><b>이 기기는 아직 서버에 안 담겼습니다.</b> 지금은 <b>앱을 열고 있을 때만</b> 울립니다 — '+
+        '담으시면 앱이 꺼져 있어도 울립니다. <span>한 번 누르시면 끝납니다</span></span>'+
+      '<button type="button" class="ok" onclick="almAskFromHome()">담기</button>'+
+      '<button type="button" class="no" onclick="almNudgeOff()" aria-label="다시 안 보기">✕</button>'+
+    '</div>';
   return '<div class="alm-nudge">'+
     '<span class="ic">🔔</span>'+
     '<span class="tx"><b>아침에 폰이 알려 드릴까요?</b> 오늘 챙길 분이 있는 날만 울립니다. '+
@@ -18052,6 +18107,10 @@ function almPaint(){
      그리면 열쇠를 담은 뒤에도 한쪽이 남아 「아직 안 됐다」 고 거짓말한다 (5번) */
   try{ almkCardPaint(); }catch(e){}
   try{ almkBandPaint(); }catch(e){}
+  /* ★ <b>홈 한 줄도 여기서</b> (판 X381) — 담은 바로 뒤 almDevsLoad 가 서버에
+     다시 묻고 almPaint 를 부르므로, 담기면 그 줄이 저절로 사라집니다. 따로
+     칠하면 담은 뒤에도 「안 담겼습니다」 가 남아 거짓말을 합니다 (1번·5번). */
+  try{ almNudgePaint(); }catch(e){}
 }
 /* ══ 알람 <b>네 번</b> 줄 — 목업 「나」 화면의 그 칸 ═══════════════════
    ★ <b>무엇이 몇 시인지는 alm-slots.js 한 곳</b>이 압니다 — 여기서 늘어놓지
@@ -18298,7 +18357,9 @@ function almCardHtml(){
        셋 중 하나라도 빠지면 <b>켠 일이 남은 것</b>이니 단추를 세우고,
        모를 때(srv===null)는 <b>재촉하지 않습니다</b> — ② 줄이 「확인하는 중」
        이라고 이미 말합니다 (1번).                                    */
-  var todo=(!on)||(!ph)||(srv===false);
+  /* ★ 여기서 또 세지 않습니다 — almTodo() 한 곳이 답합니다 (5번 · 판 X381).
+     (!on)||(!ph)||(srv===false) 를 그대로 옮긴 것이라 보이는 것은 같습니다. */
+  var todo=!!almTodo();
   h+='<div class="btn-row">'+
      (todo?('<button class="btn btn-primary"'+(w?' disabled':'')+' onclick="almAsk()">'+
           (ALM.busy?'켜는 중…':(on?'📡 이 기기를 서버에 담기':'🔔 지금 이 기기에 알람 켜기'))+'</button>'):'')+
@@ -18330,7 +18391,7 @@ function almCardHtml(){
         :(!ph?(ALM.key?'서버는 <b>준비됐습니다</b> — 위 「🔔 지금 이 기기에 알람 켜기」 만 누르시면 됩니다'
                       :(ALM.keyErr?osEsc(ALM.keyErr):'아직입니다'))
         :(srv===null?'서버에 <b>확인하는 중</b>입니다…'
-                    :'이 기기는 브라우저에서만 켜져 있고 <b>서버에는 안 담겼습니다</b> — 아래에서 다시 켜 주세요')))+'</span></div>'+
+                    :'이 기기는 브라우저에서만 켜져 있고 <b>서버에는 안 담겼습니다</b> — <b>위 「📡 이 기기를 서버에 담기」</b> 를 눌러 주세요')))+'</span></div>'+
      '</div>'+almDevsHtml()+almDiagHtml();
   /* ⚠ 열쇠 만드는 칸을 <b>여기서 그리지 않습니다</b> — 이 줄까지 오려면
      폰에서 1,656px 를 내려야 했고, 그래서 세 번 「안 보인다」 셨습니다.
@@ -18956,6 +19017,9 @@ function almCss(){
      'padding:6px 14px;font-size:var(--t6);font-weight:800;cursor:pointer;font-family:inherit}'+
    '.alm-nudge .no{flex:none;border:0;background:transparent;color:var(--t-sub);'+
      'font-size:var(--t6);cursor:pointer;padding:4px 2px;font-family:inherit}'+
+   /* 📡 <b>담기</b> 얼굴 — 권하는 줄이 아니라 <b>아직 안 끝났다</b>는 줄이라
+      열쇠 칸과 같은 색을 씁니다 (판 X381). 모양은 그대로입니다. */
+   '.alm-nudge-save{background:var(--t-warn-l)}'+
    /* 열쇠 칸은 <b>눈에 띄어야</b> 합니다 — 설치 화면 맨 위에서 한 걸음
       남았다고 말하는 자리입니다. 담고 나면 통째로 사라집니다. */
    '.almk-card{border-color:var(--t-line);background:var(--t-warn-l)}'+
@@ -21877,8 +21941,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-07 05:10';
-var APP_BUILD_NOTE='🎓 <b>교육을 도구 바로 밑의 큰 갈래로</b>(판 X379 · 사장님 말씀 「<b>큰 카테고리에서 교육도 하나 만들어줘 도구 밑에 거기에 교육자료 쓸것들 다 정리해서 넣어주고</b>」) · ✍️ <b>콘텐츠도 분류해서 한 번에</b>(판 X380 · 「<b>콘텐츠도 안 복잡하게 클릭하면 한번에 분류해서 보고 들어갈 수 있게 만들어</b>」). ◾ 「교육 자료」 묶음은 서랍 <b>맨 아래</b>에 있었고 교재·강의·훈련 <b>일곱</b>은 상담 도구 안에 섞여 있었습니다. 묶음을 <b>상담 도구 바로 밑</b>으로 올려 <b>교육</b>으로 하고, 보험 마스터 아카데미·신입 TA 교육·지인 8주·TA 전체 대본·거절 근육 훈련·B·C·D 강의·실전화법서를 여기로 모았습니다. 맨 위 <b>🎓 교육 한 자리</b>를 열면 다섯 갈래로 묶어 한 번에 보고 바로 들어갑니다. ◾ 콘텐츠는 큰 칸 셋 + 칩 다섯이던 것을 <b>갈래 셋 · 줄 여덟</b>로 바꿨습니다 — 칩은 분류가 없는 자루였습니다. 표는 직접 SVG 로 그렸습니다(9번). ★ <b>분류판은 한 벌</b>입니다(5번) — 교육과 콘텐츠가 같은 표(HUB_MAP)·같은 그리개를 씁니다. ★ <b>아무것도 안 없어졌습니다</b>(6번) — id·길·음성·?go= 주소 그대로이고 「언제 쓰는지」 분류를 안 건드려 🧰 도구 화면이 그대로입니다. ★★ 콘텐츠는 처음에 1,083px 이라 폰 한 화면(844px)을 넘었습니다. 글씨를 줄이는 대신 <b>설명 줄을 폰에서만 접어</b> 797px 로 맞췄습니다. ⚠ 제 자가 저를 잡았습니다 — check-edu 가 표에 안 적은 화면(academy_notion)을 그 자리에서 찾아냈습니다. ⚠ 번호를 X378 → X379 로 밀었습니다(PR #757 이 먼저 썼습니다). ◾ 이 판에는 <b>판 X377</b>(증권전달 속지 열네 장 A+ 테마)도 함께 들어 있습니다.';
+var APP_BUILD='2026-11-07 07:20';
+var APP_BUILD_NOTE='🔔 <b>폰을 알람 서버에 사장님이 직접 담으실 수 있게</b>(판 X381 · 사장님 말씀 「<b>이것도 내가 담을 수 있도록</b>」). ◾ 재어 보니 서버에 담긴 기기가 <b>3대 전부 컴퓨터</b>이고 폰은 0대였습니다. 까닭은 홈 한 줄이 「아직 한 번도 안 물어봤나」 <b>하나</b>로만 갈려서, 한 번 허락하신 기기에는 다시 권하는 줄이 <b>영영 안 떴기</b> 때문입니다. ◾ 이제 홈 소식 칸에 <b>「📡 이 기기는 아직 서버에 안 담겼습니다 — 담기」</b> 한 줄이 섭니다. 한 번 누르면 그 자리에서 담기고, 담기면 <b>저절로 사라집니다</b>. ★ 「남은 일」 을 묻는 곳을 <b>almTodo() 하나</b>로 모았습니다 — 카드 단추도 같은 답을 씁니다(5번). ★ ✕ 는 <b>얼굴마다 따로</b>라, 예전에 「켜 볼까요」 를 닫으셨어도 이 줄은 한 번 섭니다. ★ 서버에 <b>알람 열쇠가 없을 때 조용히 끝나던 것</b>을 말하게 했습니다(1번). 카드 ② 줄의 「아래에서」 도 단추가 있는 <b>위</b>로 고쳤습니다. ⚠ <b>홈에서는 서버에 안 묻습니다</b>(7번) — 처음에 홈에서 push_subs 를 묻게 했다가 check-hmalm 이 못 박아 둔 규칙과 부딪혀 제 방식을 고쳤습니다. 묻지 않고 아는 것만으로 세웁니다. ⚠ 점검 [6-2] 가 엉뚱한 까닭으로 초록이던 것도 같이 고쳤습니다(앞 토막이 남긴 가짜 구독 · 8번).';
 
 
 
