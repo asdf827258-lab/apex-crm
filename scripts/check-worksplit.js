@@ -91,10 +91,10 @@ const sec = t=>console.log('\n'+t);
   await p.goto('http://127.0.0.1:'+PORT+'/'+PAGE,{waitUntil:'load',timeout:45000});
   await p.evaluate(()=>{ localStorage.removeItem('apex_worksplit_v1'); }); await p.reload({waitUntil:'load'});
   const 셈 = () => p.evaluate(()=>({
-    줄:document.querySelectorAll('.ws-tbl tbody tr').length,
-    일:document.querySelectorAll('.ws-tbl .ws-it').length,
+    줄:document.querySelectorAll('.ws-card').length,
+    일:document.querySelectorAll('.ws-card .ws-it').length,
     정할:document.querySelectorAll('.ws-extra .ws-it').length,
-    담당:[].map.call(document.querySelectorAll('td.who [data-ed]'),e=>e.textContent),
+    담당:[].map.call(document.querySelectorAll('.ws-card .ws-name'),e=>e.textContent),
     제목:document.querySelector('.ws-title').textContent }));
   const c0 = await 셈();
   is(c0.제목==='업무구분', '제목이 「업무구분」');
@@ -102,6 +102,16 @@ const sec = t=>console.log('\n'+t);
      '담당자 여덟이 그림 차례대로 — '+c0.담당.join(' · '));
   is(c0.일===47, '할 일 47줄 (5 · 21 · 8 · 2 · 8 · 1 · 1 · 1) — '+c0.일);
   is(c0.정할===3, '추가 확정할 사항 셋 — '+c0.정할);
+  const 판 = await p.evaluate(()=>({
+    수:[].map.call(document.querySelectorAll('.ws-sum .ws-stat .n'),e=>e.textContent).join(' '),
+    이름표:document.querySelectorAll('.ws-chips .ws-chip').length,
+    큰:[].map.call(document.querySelectorAll('.ws-card.big .ws-name'),e=>e.textContent).join(' ') }));
+  is(판.수==='47 0 47 3', '★ 요약판 — 할 일 47 · 끝낸 것 0 · 남은 것 47 · 아직 정할 것 3 ('+판.수+') — 셈은 tally() 한 곳');
+  is(판.이름표===8, '사람 이름표 여덟 — 누르면 그 카드로 — '+판.이름표);
+  is(판.큰==='EM·EM센터', '할 일이 많은 카드(EM·EM센터 21)만 넓게 두 줄로 — '+판.큰);
+  await p.click('.ws-chip:nth-child(5)'); await p.waitForTimeout(700);
+  const 내려 = await p.evaluate(()=>{ var r=document.querySelector('.ws-card[data-row="4"]').getBoundingClientRect(); return r.top>=0 && r.top<innerHeight/2; });
+  is(내려, '이름표 「현아/다정프로」 를 누르면 그 카드가 화면 위쪽으로 온다');
   const 처음 = await p.evaluate(()=>JSON.stringify(WS.seed()));
   is(!/홍길동|\d{2,3}-\d{3,4}-\d{4}/.test(처음), '처음 표에 고객 이름·전화번호가 없다 (3번)');
 
@@ -109,8 +119,8 @@ const sec = t=>console.log('\n'+t);
   is(await p.evaluate(()=>document.querySelectorAll('[contenteditable="true"]').length)===0, '보기일 때는 칸이 안 고쳐진다 (잘못 눌러 지우지 않게)');
   await p.click('#wsEdit');
   is(await p.evaluate(()=>document.querySelectorAll('[contenteditable="true"]').length)>50, '「고치기」 를 누르면 칸이 모두 고쳐진다');
-  const 첫 = '.ws-tbl tbody tr:nth-child(1) .ws-it:nth-child(1) .ws-t';
-  await p.click(첫); await p.keyboard.press('End'); await p.keyboard.type(' (11월 중)');
+  const 첫 = '.ws-card[data-row="0"] .ws-it:nth-child(1) .ws-t';
+  await p.click(첫); await p.keyboard.press('Control+End');   /* End 는 꺾인 줄의 끝으로 갑니다 — 칸 끝은 Control+End */ await p.keyboard.type(' (11월 중)');
   await p.keyboard.press('Enter'); await p.keyboard.type('홍길동 팀장과 일정 맞추기');
   await p.waitForTimeout(600);
   let c1 = await 셈();
@@ -119,16 +129,16 @@ const sec = t=>console.log('\n'+t);
   await p.waitForTimeout(100);
   c1 = await 셈();
   is(c1.일===47, '빈 줄에서 Backspace 면 그 줄이 지워진다 — '+c1.일);
-  await p.click('.ws-tbl tbody tr:nth-child(2) .ws-it:nth-child(3) .ws-ck');
+  await p.click('.ws-card[data-row="1"] .ws-it:nth-child(3) .ws-ck');
   await p.click('.ws-addrow .ws-add'); await p.keyboard.type('총무');
   await p.waitForTimeout(700);
   await p.reload({waitUntil:'load'});
   const r = await p.evaluate(()=>{
     var raw=localStorage.getItem('apex_worksplit_v1'), o=JSON.parse(raw), d=JSON.parse(o.doc);
     return { 첫:d.rows[0].items[0].t, 둘:d.rows[0].items[1].t, 완료:d.rows[1].items[2].done, 끝:d.rows[d.rows.length-1].who,
-             줄:document.querySelectorAll('.ws-tbl tbody tr').length,
-             셈:document.querySelector('.ws-tbl tbody tr:nth-child(2) .ws-cnt').textContent,
-             줄그음:getComputedStyle(document.querySelector('.ws-tbl tbody tr:nth-child(2) .ws-it:nth-child(3) .ws-t')).textDecorationLine,
+             줄:document.querySelectorAll('.ws-card').length,
+             셈:document.querySelector('.ws-card[data-row="1"] .ws-cnt').textContent,
+             줄그음:getComputedStyle(document.querySelector('.ws-card[data-row="1"] .ws-it:nth-child(3) .ws-t')).textDecorationLine,
              at:o.at, 겉:typeof o.doc };
   });
   is(r.첫==='주미님 업무분담 및 순천 지원 범위 협의 (11월 중)', '고친 글이 다시 열어도 그대로 — '+r.첫);
@@ -136,12 +146,18 @@ const sec = t=>console.log('\n'+t);
   is(r.완료===true && r.셈==='1/21 완료' && r.줄그음==='line-through', '완료를 걸면 남고 · 그 줄은 그어지고 · 담당자 칸에 「1/21 완료」');
   is(r.끝==='총무' && r.줄===9, '「+ 담당자 줄 더하기」 로 새 담당자가 선다');
   is(/^\d{4}-\d\d-\d\d \d\d:\d\d$/.test(r.at) && r.겉==='string', '언제 고쳤는지 남고 · 표는 글자 하나(doc)로 감싸 담긴다');
+  /* 안 끝난 것만 */
+  await p.click('#wsOnly');
+  const 거름 = await p.evaluate(()=>({ 보임:[].filter.call(document.querySelectorAll('.ws-card .ws-it'),e=>getComputedStyle(e).display!=='none').length,
+    전부:document.querySelectorAll('.ws-card .ws-it').length, 요약:document.querySelector('.ws-sum .ws-stat.ok .n').textContent }));
+  is(거름.전부===48 && 거름.보임===47 && 거름.요약==='1', '「안 끝난 것만」 — 끝낸 1줄이 숨고 나머지가 남는다(총무 한 줄 더해 48 → 47) · 요약판 「끝낸 것 1」 — '+거름.전부+' → '+거름.보임);
+  await p.click('#wsOnly');
   /* 되돌리기 */
   await p.click('#wsEdit');
-  await p.click('.ws-tbl tbody tr:nth-child(9) td.who .ws-mini.x');
-  const 지운뒤 = await p.evaluate(()=>document.querySelectorAll('.ws-tbl tbody tr').length);
+  await p.click('.ws-card[data-row="8"] .ws-chead .ws-mini.x');
+  const 지운뒤 = await p.evaluate(()=>document.querySelectorAll('.ws-card').length);
   await p.click('#wsUndo');
-  const 살린뒤 = await p.evaluate(()=>document.querySelectorAll('.ws-tbl tbody tr').length);
+  const 살린뒤 = await p.evaluate(()=>document.querySelectorAll('.ws-card').length);
   is(지운뒤===8 && 살린뒤===9, '담당자 줄을 지워도 「되돌리기」 로 살아난다');
   await p.click('#wsReset');
   is((await 셈()).일===47 && (await 셈()).줄===8, '「처음 표로」 — 회의 표로 돌아간다');
@@ -154,7 +170,7 @@ const sec = t=>console.log('\n'+t);
   for(const [c,want] of [['true','team'],['false','view'],['null','wait']]){
     const h = await ctx.newPage(); h.on('pageerror',e=>errs.push('host '+c+': '+String(e).slice(0,90)));
     await h.goto('http://127.0.0.1:'+PORT+'/__host?c='+c,{waitUntil:'load'});
-    const f = h.frame({url:/worksplit\.html/}); await f.waitForSelector('.ws-tbl');
+    const f = h.frame({url:/worksplit\.html/}); await f.waitForSelector('.ws-card');
     const o = await f.evaluate(()=>({ p:WS.perm(), 고치기:document.getElementById('wsEdit').disabled,
       체크:document.querySelector('.ws-ck').disabled, 말:document.getElementById('wsWho').textContent }));
     if(want==='team') is(o.p==='team' && !o.고치기 && !o.체크 && /EM 권한/.test(o.말) && /팀 전체/.test(o.말), 'EM → 고치고 체크하며 「팀 전체 화면이 같이 바뀝니다」');
@@ -179,11 +195,11 @@ const sec = t=>console.log('\n'+t);
   {
     const h = await ctx.newPage();
     await h.goto('http://127.0.0.1:'+PORT+'/__host?c=true',{waitUntil:'load'});
-    const f = h.frame({url:/worksplit\.html/}); await f.waitForSelector('.ws-tbl');
+    const f = h.frame({url:/worksplit\.html/}); await f.waitForSelector('.ws-card');
     await h.evaluate(()=>{ var d={title:'업무구분',sub:'',rows:[{who:'홍길동 EM',items:[{t:'받은 줄',done:false}]}],extraTitle:'추가 확정할 사항',extra:[],note:''};
       localStorage.setItem('apex_worksplit_v1',JSON.stringify({v:1,at:'2026-11-06 12:00',doc:JSON.stringify(d)})); });
     await h.waitForTimeout(400);
-    const o = await f.evaluate(()=>({ n:document.querySelectorAll('.ws-tbl tbody tr').length, w:document.querySelector('td.who [data-ed]').textContent }));
+    const o = await f.evaluate(()=>({ n:document.querySelectorAll('.ws-card').length, w:document.querySelector('.ws-card .ws-name').textContent }));
     is(o.n===1 && o.w==='홍길동 EM', '바깥 창이 받아 쓴 표가 안쪽 화면에 바로 선다');
     await h.close();
   }
