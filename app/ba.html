@@ -638,6 +638,38 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}button{c
 .padclose{text-align:center;font-size:var(--t6);font-weight:800;color:var(--gyd);background:#F8FAFC;
   border-radius:8px;padding:6px;margin-top:7px;cursor:pointer}
 .padclose:hover{background:#EEF1F5}
+/* ── ✍️ 한 번에 적기 (판 X366) ── */
+.qk{background:#F5F9FF;border:1px solid #CFE0FE;border-radius:10px;padding:9px 11px;margin-bottom:10px}
+.qkh{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px;font-size:var(--t6)}
+.qkh b{color:var(--blt);font-weight:800}
+.qkh span{color:var(--gyd)}
+.qk textarea{width:100%;box-sizing:border-box;border:1px solid #CFE0FE;border-radius:8px;padding:8px 10px;font:inherit;
+  font-size:var(--t5,15px);resize:vertical;min-height:46px;background:#fff;color:var(--nv)}
+.qk textarea:focus{outline:2px solid var(--blt);outline-offset:0}
+.qkv:empty{display:none}
+.qkv{margin-top:7px;display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.qkm,.qka,.qkr.no{grid-column:1/-1}
+@media (max-width:760px){.qkv{grid-template-columns:1fr}}
+.qkm{font-size:var(--t6);color:var(--gyd);background:#fff;border:1px dashed #CFE0FE;border-radius:7px;padding:5px 9px}
+.qkm i{font-style:normal;color:var(--gy2)}
+.qkr{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:var(--t6);background:#fff;border:1px solid var(--ln);
+  border-left:3px solid var(--gr);border-radius:7px;padding:5px 9px}
+.qkr .a{color:var(--gyd)}
+.qkr .ar{color:var(--gy2)}
+.qkr b{color:var(--nv);font-weight:800}
+.qkr em{font-style:normal;font-weight:800;color:var(--blt)}
+.qkr i{font-style:normal;color:var(--gy2)}
+.qkr .mini{margin-left:auto}
+.qkr.dup{border-left-color:#CBD5E1;opacity:.75}
+.qkr.nov{border-left-color:var(--or)}
+.qkr.nov em{color:var(--or)}
+.qkr.ext{border-left-color:#7C3AED}
+.qkr.no{border-left-color:var(--rd,#DC2626)}
+.qkr.no select{flex:1;min-width:220px;min-height:44px}
+.qka{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:3px}
+.qka span{font-size:var(--t6);color:var(--gy2)}
+.qka .btn[disabled]{opacity:.45;cursor:default}
+tr.stmore td{text-align:center;background:#FAFBFC;padding:6px}
 /* ── 연령대별 기준 ── */
 .ordbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:8px;margin-bottom:10px}
 .ord{display:flex;gap:9px;border:1px solid var(--ln);border-radius:11px;padding:10px 12px;background:#fff}
@@ -2271,7 +2303,7 @@ function blank(){
     /* 적정 금액을 셈할 때 쓰는 <b>가정치</b> — 전부 고치실 수 있다 */
     assume:{deathPct:'70',depAge:'22',disabPct:'25',disabYears:'20',
             careMon:'150',careMonths:'24',premPct:'30'},
-    src:'APEX 기본 시나리오 (평균 예시)',pick:{},open:{},padOpen:{},polOpen:{},brainMore:false,mode:'edit',view:'full',
+    src:'APEX 기본 시나리오 (평균 예시)',pick:{},open:{},padOpen:{},polOpen:{},stEmpty:{},brainMore:false,mode:'edit',view:'full',
     /* 고객에게 보여주는 판은 <b>한 장씩</b>이 기본이다 — 스크롤을 내리면
        고객 눈이 아직 설명 안 한 숫자로 먼저 달아난다. 위 단추로 바꾸신다. */
     deck:true,slide:'sHd',
@@ -2350,11 +2382,11 @@ function wonRaw(v){              /* 칸에 친 글자에서 쉼표·공백·「�
   return String(v===null||v===undefined?'':v).replace(/[,\s원]/g,'');
 }
 function manOfWon(v){            /* 칸에 친 <b>원</b> 글자 → 담을 <b>만원</b> 값 */
-  var n=num(wonRaw(v)); if(n===null)return '';
+  var w=krWon(v),n=(w!==null)?w:num(wonRaw(v)); if(n===null)return '';
   return String(n/10000);
 }
 function wonEcho(v){             /* 되읽기 — 「= 12만 4,000원」 (지어내지 않고 친 수 그대로) */
-  var n=num(wonRaw(v)); if(n===null||!isFinite(n))return '';
+  var w=krWon(v),n=(w!==null)?w:num(wonRaw(v)); if(n===null||!isFinite(n))return '';
   var neg=n<0; n=Math.round(Math.abs(n));
   if(!n)return '= 0원';
   var e=Math.floor(n/100000000), m=Math.floor((n%100000000)/10000), r=n%10000, t='';
@@ -2363,6 +2395,39 @@ function wonEcho(v){             /* 되읽기 — 「= 12만 4,000원」 (지어
   if(r||!t)t+=(t?' ':'')+r.toLocaleString();
   return '= '+(neg?'-':'')+t+'원';
 }
+/* ── 금액을 <b>말하듯</b> 적어도 됩니다 (판 X366 · 사장님 말씀 2026-11-06 「입력하는 부분들 조금 더 쉽게」) ──
+   돈 칸에 「4500000」 을 치려면 0 을 세야 했습니다. 이제 「450만」 · 「5만2천」 · 「1억2천만」 도 받습니다.
+   ★ <b>담는 단위는 그대로</b>입니다 — 보험료 칸은 원으로 적고 만원으로 담고, 담보 칸은 만원 (2026-10-23 사장님 결정).
+     글자를 읽는 법만 넓혔습니다. 되읽기(「= 450만원」)가 친 그대로를 말하니 틀리면 그 자리에서 보입니다.
+   ★ 담보 칸의 「3천」 은 <b>3천만원</b>입니다 — 담보는 만원으로 말하는 것이 버릇이라(「암진단 3천」).
+     「3만원」 · 「30,000원」 처럼 <b>원</b> 을 붙이면 원으로 읽습니다(일당 3만원 → 3).
+   ★ 쉼표를 지웁니다 — 담보 칸에 「5,000」 을 치면 전에는 5 가 됐습니다(천 배). */
+function krWon(v){               /* 「450만」「1억2천만」「5만2천원」 → 원. 억 · 만 · 천 · 백 · 십 이 없으면 null */
+  var t=String(v===null||v===undefined?'':v).replace(/[,\s]/g,'').replace(/원$/,'');
+  if(!/[억만천백십]/.test(t)||!/^[0-9.억만천백십]+$/.test(t))return null;
+  var tot=0,sec=0,re=/(\d+(?:\.\d+)?)?([억만천백십])?/g,m;
+  while((m=re.exec(t))&&m[0]){
+    var x=(m[1]===undefined)?null:parseFloat(m[1]),u=m[2];
+    if(!isFinite(x)&&x!==null)return null;
+    if(u==='억'||u==='만'){tot+=(sec+(x===null?(sec?0:1):x))*(u==='억'?1e8:1e4);sec=0;}
+    else if(u==='천')sec+=(x===null?1:x)*1000;
+    else if(u==='백')sec+=(x===null?1:x)*100;
+    else if(u==='십')sec+=(x===null?1:x)*10;
+    else sec+=x;
+  }
+  tot+=sec;
+  return isFinite(tot)?Math.round(tot):null;
+}
+function covIn(v){               /* 담보 칸에 친 글자 → 담을 <b>만원</b> 글자. 못 읽으면 친 그대로 */
+  var s0=String(v===null||v===undefined?'':v).trim(); if(s0==='')return '';
+  var t=s0.replace(/[,\s]/g,'');
+  if(/^\d+(?:\.\d+)?$/.test(t))return t;                                   /* 맨 숫자 = 만원 (전과 같음) */
+  var a=t.match(/^(\d+(?:\.\d+)?)원$/);if(a)return String(Math.round(parseFloat(a[1])/100)/100);
+  var w=/^[0-9.천백십]+$/.test(t)?krWon(t+'만'):krWon(t);                  /* 「3천」 = 3천만원 */
+  if(w===null)return s0;
+  return String(Math.round(w/100)/100);
+}
+function covFix(el){var c=covIn(el.value);if(c!==el.value)el.value=c;}
 /* 되읽기 글만 갈아 끼운다 — 칸은 다시 안 그린다(커서가 튄다) */
 function wonEchoPut(id,v){
   var e=document.getElementById(id); if(e)e.textContent=wonEcho(v);
@@ -2377,7 +2442,7 @@ function wonBox(lb,manVal,id,oninput,ph){
      눈금을 올리는 대신 자리를 옮겼습니다 (8번).                        */
   return '<div class="uw"><label>'+lb+'<em class="wec" id="'+id+'">'+esc(wonEcho(w))+'</em></label>'+
     '<div class="uwr">'+
-    '<input value="'+esc(w)+'" placeholder="'+esc(ph||'미입력')+'" inputmode="numeric" '+
+    '<input value="'+esc(w)+'" placeholder="'+esc(ph||'예) 450만')+'" inputmode="text" '+
     'onfocus="this.select()" oninput="'+oninput+'"><i>원</i></div></div>';
 }
 function amt(k,v){if(v===null||v===undefined||!isFinite(v))return '—';
@@ -2853,7 +2918,7 @@ function extHtml(p,sd,i){
   if(!p.ext||!p.ext.length)return '';
   return '<div class="pext"><b>📚 참고 담보 '+p.ext.length+'개</b><span>표준표에 칸이 없어 계산에는 안 넣었습니다 — 최종 보고서 「계약 한눈에」 에는 적힙니다.</span><div>'+
     p.ext.map(function(x,j){var D=ppDict(x.d);
-      return '<em title="'+esc(D?D.w:x.raw)+'">'+esc(x.n||x.raw)+(x.v>0?' <b>'+fee(x.v*10000)+'</b>':'')+
+      return '<em title="'+esc(D?D.w:x.raw)+'">'+esc(x.n||x.raw)+(x.v>0?' <b>'+man(x.v)+'원'+'</b>':'')+
         '<button class="mini" onclick="extDel(\''+sd+'\','+i+','+j+')" aria-label="빼기">✕</button></em>';}).join('')+'</div></div>';
 }
 function extDel(sd,i,j){var p=S[sd][i];if(!p||!p.ext)return;p.ext.splice(j,1);save();render();}
@@ -2905,10 +2970,11 @@ function padHtml(p,sd,i,field){
     return '<div class="padshut" onclick="padOpen(\''+key+'\')">'+
       (field==='cov2'?'<b style="color:var(--or)">배서 후 담보</b>':'<b>보장내용</b>')+
       '<em>'+(nn?(nn+'개 적혀 있습니다'):'아직 안 적으셨습니다')+'</em>'+
-      '<span>담보 적기 ▾</span></div>'+
+      '<span>✍️ 담보 적기 ▾</span></div>'+
       (nn?('<div class="padsum">'+padSum(bag)+'</div>'):'');
   var h='<div style="border-top:1px solid #F1F3F5;padding-top:10px;margin-top:4px">'+
     (field==='cov2'?'<div style="font-size:var(--t6,13px);font-weight:800;color:var(--or);margin-bottom:7px">배서 후 담보 — 여기 적은 것만 남습니다</div>':'')+
+    qkHtml(sd,i,field,key)+
     '<div class="gsel">'+
     STD.map(function(g,gi){
       var n=0;g.rows.forEach(function(r){if(num(bag[r.k])!==null)n++;});
@@ -2926,7 +2992,7 @@ function padHtml(p,sd,i,field){
       h+='<div class="pr'+(num(v)!==null?' has':'')+'" title="'+esc((r.d||'').replace(/<[^>]*>/g,''))+'">'+
         '<div class="nm">'+esc(r.n)+(r.cov?('<i>'+r.cov+'%</i>'):'')+
         '<em>표준 '+(r.std?man(r.std):'—')+' · '+UNIT_FULL[r.u]+'</em></div>'+
-        '<input value="'+esc(v===undefined?'':v)+'" placeholder="—" inputmode="decimal" onfocus="this.select()" '+
+        '<input value="'+esc(v===undefined?'':v)+'" placeholder="—" inputmode="text" onfocus="this.select()" onchange="covFix(this)" '+
           'oninput="setCov(\''+sd+'\','+i+',\''+field+'\',\''+r.k+'\',this.value)">'+
         '<span class="un">'+UNIT_LB[r.u]+'</span></div>';
     });
@@ -2955,7 +3021,8 @@ function addPol(sd){
      한 번 더 눌러야 한다. */
   var p={id:nid(),co:'',nm:'',term:'',start:'',years:'',
     premMan:'',premMan2:'',act:'keep',kb:false,cov:{},cov2:{}};
-  S[sd].push(p);S.polOpen[p.id]=true;save();render();}
+  /* 판 X366 — 담보판도 펴고 「한 번에 적기」 칸에 바로 커서를 둔다: 누르자마자 칠 수 있게 */
+  S[sd].push(p);S.polOpen[p.id]=true;S.padOpen[sd+(S[sd].length-1)]=true;save();render();qkFocus(sd+(S[sd].length-1));}
 function delPol(sd,i){if(!confirm('이 계약을 목록에서 뺍니다.'))return;S[sd].splice(i,1);save();render();}
 /* ══ 치는 대로 <b>계약 머리의 납입 칩</b>도 같이 바뀝니다 ═══════════════
    2026-10-23 · 판 X168 · 사장님 말씀 「고쳐줘」.
@@ -2989,10 +3056,122 @@ function setAct(i,a){
 function setCov(sd,i,field,k,v){
   var p=S[sd][i];
   if(!p[field])p[field]={};
-  if((''+v).trim()==='')delete p[field][k];else p[field][k]=v;
+  v=covIn(v);
+  if(v==='')delete p[field][k];else p[field][k]=v;
   save();stOnly();
 }
 
+/* ══ ✍️ 한 번에 적기 (판 X366 · 사장님 말씀 2026-11-06 「만들기나 입력하는 부분들 조금 더 쉽게 작성할 수 있도록」) ══
+   담보 하나를 넣으려면 부위 단추를 찾고 → 칸을 찾고 → 숫자를 쳐야 했습니다. 77칸 중 어디에 있는지 알아야 했습니다.
+   이제는 <b>말하듯 한 줄</b>로 적습니다 — 「암진단 3천, 뇌혈관 1000, 입원일당 3만」.
+   ■ 이름은 제안서 읽기와 <b>같은 규칙</b>(ppRule · 담보사전)으로 칸을 찾습니다 — 두 벌로 두면 한쪽만 고쳐 어긋납니다.
+     사람들이 줄여 부르는 말 몇 개(「입원일당」 「수술비」 「간병인」)만 QK_ALIAS 로 보탭니다.
+   ■ 바로 넣지 않습니다 — 어느 칸으로 가는지 <b>아래에 먼저 보여 주고</b>, 「칸에 넣기」 를 눌러야 들어갑니다.
+     못 알아본 줄은 칸을 고르게 합니다. 지어내서 채우지 않습니다(1번).
+   ■ 「월 보험료 52,300원 · 20년납 · 100세만기 · 회사 이름」 이 섞여 있으면 계약 칸에도 넣습니다(빈 칸만). */
+var QK_ALIAS={'입원일당':'inpD','질병입원':'inpD','상해입원':'inpA','수술비':'surg','종수술':'surg5D','1-5종수술':'surg5D','1~5종수술':'surg5D',
+  '허혈성':'heart','허혈성심장':'heart','허혈':'heart','심혈관':'heartA','심혈관질환':'heartA','뇌경색':'braini','간병인':'nurUD','간병':'nurUD',
+  '간호간병':'nurNS','치매':'dem2','중증치매':'dem2','후유장해':'disabA','상해후유':'disabA','질병후유':'disabD',
+  '배상책임':'liab','일상배상':'liab','중환자실':'icu','암입원':'inpC','암통원':'outC','깁스':'cast','화상':'burn'};
+function qkRule(name){
+  var c=String(name||'').replace(/\s+/g,''),bare=c.replace(/(비|금)$/,'');
+  if(QK_ALIAS[c])return {k:QK_ALIAS[c],d:PP_K2D[QK_ALIAS[c]]||''};
+  if(QK_ALIAS[bare])return {k:QK_ALIAS[bare],d:PP_K2D[QK_ALIAS[bare]]||''};
+  return ppRule(name);
+}
+function qkParse(txt){
+  var items=[],meta={};
+  String(txt||'').split(/\n|[;；]|,(?!\d{3}(?!\d))/).forEach(function(s){
+    s=s.replace(/\s+/g,' ').trim(); if(!s)return;
+    var co='';PP_CO.forEach(function(c){if(!co&&s.indexOf(c)>=0)co=c.replace(/손보$/,'손해보험');});
+    var y=s.match(/(\d{1,2})\s*년\s*납/),tm=s.match(/(\d{2,3})\s*세\s*만기/)||s.match(/(\d{1,2})\s*년\s*만기/);
+    if(co)meta.co=co; if(y)meta.years=y[1];
+    if(tm)meta.term=/년\s*만기/.test(tm[0])?(tm[1]+'년만기'):(tm[1]+'세만기'); else if(/종신/.test(s))meta.term='종신';
+    if(/보험료/.test(s)){
+      var pm=s.match(/보험료\s*[:：=]?\s*(\d[\d,.]*(?:\s*[억만천백십](?:\s*\d[\d,.]*)?)*\s*원?)/);
+      if(pm){var w=krWon(pm[1]),q=(w!==null)?w:num(wonRaw(pm[1]));if(q!==null&&q>0)meta.prem=String(q/10000);}
+      /* 보험료 뒤에 담보가 이어 적혔으면 그것은 담보로 읽는다 — 「월 보험료 5만원 20년납」 은 여기서 끝 */
+      s=s.replace(/^.*?보험료\s*[:：=]?\s*\d[\d,.]*(?:\s*[억만천백십](?:\s*\d[\d,.]*)?)*\s*원?/,'').trim();
+      if(!s||/^(?:\d{1,2}\s*년\s*납입?|\d{2,3}\s*세\s*만기|\d{1,2}\s*년\s*만기|종신|\s)*$/.test(s.replace(co,'')))return;
+    }
+    var rest=s;if(co)rest=rest.replace(co,'');
+    rest=rest.replace(/\d{1,2}\s*년\s*납입?|\d{2,3}\s*세\s*만기|\d{1,2}\s*년\s*만기|종신/g,'').trim();
+    if(!rest)return;
+    var m=rest.match(/^(.+?)\s*[:：=]?\s*(\d[\d,.]*(?:\s*[억만천백십](?:\s*\d[\d,.]*)?)*\s*원?)\s*(?:\/\s*일)?$/);
+    var name=(m?m[1]:rest).replace(/[\-–·:：=]+$/,'').trim(),v=null,plain=false;
+    if(m){var c=covIn(m[2]);v=num(c);plain=/^\d[\d,.]*$/.test(m[2].replace(/\s/g,''));}
+    if(!/[가-힣A-Za-z]/.test(name))return;
+    var R=qkRule(name),k=R.k||'';
+    /* 일당 · 매달 칸에 「30000」 처럼 원으로 친 맨 숫자 — 만원으로 보면 3억원/일이 된다. 원으로 다시 읽는다 */
+    if(k&&plain&&v!==null&&!ppFits(k,v)&&ppFits(k,v/10000))v=Math.round(v/100)/100;
+    if(k&&!ppFits(k,v))k='';
+    items.push({raw:s,name:name,k:k,d:R.d||(k?(PP_K2D[k]||''):''),v:v});
+  });
+  /* 같은 칸이 두 번이면 큰 금액 하나만 — 더하면 부풀려진다(제안서 읽기와 같음) */
+  var best={};items.forEach(function(x){if(x.k&&x.v>0&&(!best[x.k]||x.v>best[x.k].v))best[x.k]=x;});
+  items.forEach(function(x){x.dup=!!(x.k&&best[x.k]&&best[x.k]!==x);});
+  return {items:items,meta:meta};
+}
+function qkHtml(sd,i,field,key){
+  return '<div class="qk"><div class="qkh"><b>✍️ 한 번에 적기</b><span>담보 이름과 금액을 <b>말하듯</b> 적으세요 — 줄마다 또는 쉼표로. 어느 칸에 들어갈지 아래에 먼저 보여 드립니다.</span></div>'+
+    '<textarea id="qk_'+key+'" rows="2" placeholder="예) 암진단 3천, 뇌혈관 1000, 급성심근경색 1천, 입원일당 3만, 월 보험료 5만2천원" '+
+      'oninput="this.style.height=\'auto\';this.style.height=(this.scrollHeight+2)+\'px\';qkLive(\''+sd+'\','+i+',\''+field+'\')" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key===\'Enter\'){event.preventDefault();qkGo(\''+sd+'\','+i+',\''+field+'\');}"></textarea>'+
+    '<div class="qkv" id="qkv_'+key+'"></div></div>';
+}
+function qkLive(sd,i,field){
+  var key=sd+i,ta=document.getElementById('qk_'+key);if(!ta)return;
+  var Q=qkParse(ta.value);(window.__QK=window.__QK||{})[key]=Q;qkPaint(sd,i,field);
+}
+function qkPaint(sd,i,field){
+  var key=sd+i,Q=(window.__QK||{})[key],box=document.getElementById('qkv_'+key);if(!box)return;
+  if(!Q||(!Q.items.length&&!Object.keys(Q.meta).length)){box.innerHTML='';return;}
+  var nOk=0,M=Q.meta,h='';
+  var mt=[];if(M.co)mt.push('회사 <b>'+esc(M.co)+'</b>');if(M.prem)mt.push('월 보험료 <b>'+fee(num(M.prem))+'</b>');
+  if(M.years)mt.push('<b>'+esc(M.years)+'년</b> 납');if(M.term)mt.push('<b>'+esc(M.term)+'</b>');
+  if(mt.length)h+='<div class="qkm">📌 계약 칸 — '+mt.join(' · ')+' <i>(비어 있는 칸만 채웁니다'+(field==='cov2'?' · 보험료는 「배서 후」 로':'')+')</i></div>';
+  h+=Q.items.map(function(x,j){
+    var ok=x.k&&x.v>0&&!x.dup;if(ok)nOk++;
+    var D=ppDict(x.d);
+    if(x.k)return '<div class="qkr'+(x.dup?' dup':'')+(x.v>0?'':' nov')+'"><span class="a">'+esc(x.name)+'</span><span class="ar">→</span>'+
+      '<b>'+esc(SNAME[x.k]||NAME[x.k]||x.k)+'</b><em>'+(x.v>0?amt(x.k,x.v):'금액이 없습니다')+'</em>'+
+      (x.dup?'<i>같은 칸이 또 있어 큰 금액만 넣습니다</i>':'')+
+      '<button class="mini" title="다른 칸으로" onclick="qkEdit(\''+sd+'\','+i+',\''+field+'\','+j+')">바꾸기</button></div>';
+    if(x.d&&D&&!x.pick){if(x.v>0)nOk++;
+      return '<div class="qkr ext"><span class="a">'+esc(x.name)+'</span><span class="ar">→</span><b title="'+esc(D.n+' — '+D.w)+'">📚 참고 담보</b><em>'+(x.v>0?(man(x.v)+'원'):'')+'</em>'+
+      '<i>표준표에 칸이 없어 <b>참고 담보</b>로 남깁니다(계산 제외)</i>'+
+      '<button class="mini" onclick="qkEdit(\''+sd+'\','+i+',\''+field+'\','+j+')">칸 고르기</button></div>';}
+    return '<div class="qkr no"><span class="a">'+esc(x.name)+(x.v>0?(' '+man(x.v)+'원'):'')+'</span><span class="ar">→</span>'+
+      '<select onchange="qkKey(\''+sd+'\','+i+',\''+field+'\','+j+',this.value)">'+ppOpts('').replace('— 넣지 않음 —','❓ 못 알아봤습니다 — 칸을 골라 주세요')+'</select></div>';
+  }).join('');
+  var nAll=nOk+(mt.length?1:0);
+  h+='<div class="qka"><button class="btn" '+(nAll?'':'disabled ')+'onclick="qkGo(\''+sd+'\','+i+',\''+field+'\')">칸에 넣기'+(nOk?(' · '+nOk+'개'):'')+'</button>'+
+    '<span>Ctrl + Enter 로도 넣습니다 · 넣은 뒤에도 아래 칸에서 고치실 수 있습니다</span></div>';
+  box.innerHTML=h;
+}
+function qkEdit(sd,i,field,j){var Q=(window.__QK||{})[sd+i];if(!Q)return;Q.items[j].k='';Q.items[j].pick=true;qkPaint(sd,i,field);}
+function qkKey(sd,i,field,j,k){var Q=(window.__QK||{})[sd+i];if(!Q)return;var x=Q.items[j];x.k=k;x.pick=true;if(k){x.d=PP_K2D[k]||x.d;
+  if(x.v>0&&!ppFits(k,x.v)&&ppFits(k,x.v/10000))x.v=Math.round(x.v/100)/100;}
+  var best={};Q.items.forEach(function(y){if(y.k&&y.v>0&&(!best[y.k]||y.v>best[y.k].v))best[y.k]=y;});Q.items.forEach(function(y){y.dup=!!(y.k&&best[y.k]&&best[y.k]!==y);});
+  qkPaint(sd,i,field);}
+function qkGo(sd,i,field){
+  var key=sd+i,ta=document.getElementById('qk_'+key);
+  var Q=(window.__QK||{})[key]||qkParse(ta?ta.value:''),p=S[sd]&&S[sd][i];if(!p)return;
+  if(!p[field])p[field]={};
+  var n=0,e=0,M=Q.meta;
+  Q.items.forEach(function(x){
+    if(x.k&&x.v>0&&!x.dup){p[field][x.k]=String(x.v);n++;return;}
+    var D=ppDict(x.d);
+    if(!x.k&&D&&!x.pick){(p.ext=p.ext||[]).push({d:x.d,n:x.name.slice(0,60),raw:x.raw,v:(x.v>0?x.v:null)});e++;}
+  });
+  if(M.co&&!p.co)p.co=M.co;
+  if(M.prem){if(field==='cov2'){if(!p.premMan2)p.premMan2=M.prem;}else if(!p.premMan)p.premMan=M.prem;}
+  if(M.years&&!p.years)p.years=M.years;
+  if(M.term&&!p.term)p.term=M.term;
+  if(!n&&!e&&!M.co&&!M.prem&&!M.years&&!M.term){toast('넣을 것이 없습니다 — 담보 이름과 금액을 확인해 주세요');return;}
+  delete window.__QK[key];save();render();
+  toast('✍️ 담보 '+n+'개를 칸에 넣었습니다'+(e?(' · 참고 담보 '+e+'개'):''));
+}
+function qkFocus(key){setTimeout(function(){var t=document.getElementById('qk_'+key);if(t){t.focus();try{t.scrollIntoView({block:'center'});}catch(x){}}},30);}
 
 /* ── 납입 보험료가 어떻게 달라지는가 (엑셀 「리모델링요약」 왼쪽 두 표) ── */
 function premHtml(){
@@ -3096,8 +3275,13 @@ function stBody(){
       '<span class="dot" style="background:'+g.c+'"></span><span class="big">'+esc(g.big)+'</span>'+
       g.ic+' '+esc(g.mid)+'<span class="cnt">'+(n?('적힌 담보 '+n+'개 · '):'')+(open?'접기 ▴':'펴기 ▾')+'</span></div>';
     if(open){
+      /* 판 X366 — <b>빈 담보는 접어 둔다.</b> 77줄을 다 펴 두니 이 표만 화면 여덟 장이었다.
+         적힌 담보만 보이고, 「빈 담보 N개 보기」 를 누르면 그 묶음만 다 편다. 숨긴 것이 아니라 단추에 수가 있다. */
+      var SE=S.stEmpty||(S.stEmpty={}),showE=!!SE[g.mid],nE=0;
       h+='<table><tr><th>담보</th><th>표준</th><th>전 (지금)</th><th>후 (조정)</th><th>차이</th><th>결과</th></tr>';
       g.rows.forEach(function(r){
+        var filled=(C.b[r.k]!==undefined||C.a[r.k]!==undefined||S.man.b[r.k]!==undefined||S.man.a[r.k]!==undefined);
+        if(!filled){nE++;if(!showE)return;}
         var k=r.k,ab=C.auto.b[k],aa=C.auto.a[k],mb=S.man.b[k],ma=S.man.a[k];
         var vb=(mb!==undefined)?mb:(ab===undefined?'':ab), va=(ma!==undefined)?ma:(aa===undefined?'':aa);
         var fb=C.b[k],fa=C.a[k],d=((fa||0)-(fb||0));
@@ -3114,6 +3298,8 @@ function stBody(){
           '<td class="df '+(d>0?'up':(d<0?'dn':'same'))+'">'+(d===0?'—':((d>0?'+':'')+man(d)))+'</td>'+
           '<td class="rd '+rc+'">'+res+'</td></tr>';
       });
+      if(nE)h+='<tr class="stmore"><td colspan="6"><button class="mini" onclick="stEmp(\''+g.mid+'\')">'+
+        (showE?'빈 담보 접기 ▴':((n?'':'아직 적힌 담보가 없습니다 · ')+'빈 담보 '+nE+'개도 보기 ▾'))+'</button></td></tr>';
       h+='</table>';
     }
     h+='</div>';
@@ -3125,9 +3311,10 @@ function stBody(){
   return h;
 }
 function stFold(g){S.open[g]=(S.open[g]===false);save();stOnly();}
+function stEmp(g){var SE=S.stEmpty||(S.stEmpty={});SE[g]=!SE[g];save();stOnly();}
 function stAll(on){STD.forEach(function(g){S.open[g.mid]=!!on;});save();stOnly();}
 function setMan(sd,k,v){
-  var t=(sd==='b')?S.man.b:S.man.a,A=autoCalc(),auto=(sd==='b')?A.b[k]:A.a[k],s=(''+v).trim();
+  var t=(sd==='b')?S.man.b:S.man.a,A=autoCalc(),auto=(sd==='b')?A.b[k]:A.a[k],s=covIn(v);
   if(s===''&&auto===undefined)delete t[k];
   else if(s!==''&&num(s)===auto)delete t[k];
   else t[k]=s;
@@ -6686,7 +6873,7 @@ function frHtml(){
     return '<div class="frp2"><div class="frph"><b>'+esc(q.c)+'</b> '+esc(q.n)+'<span class="tg '+q.s+'">'+LB[q.s]+'</span></div>'+
       '<div class="frpc">'+(keys.length?keys.map(function(k){var v=(q.s==='cancel'?q.b:q.a)[k];
         return '<span'+(q.s==='cancel'?' class="x"':'')+'>'+esc(SNAME[k]||NAME[k]||k)+' <b>'+amt(k,v)+'</b></span>';}).join(''):'<span class="n">적힌 담보 없음</span>')+
-        (q.x||[]).map(function(e){return '<span class="r">'+esc(e.n)+(e.v>0?' <b>'+fee(e.v*10000)+'</b>':'')+' <i>참고</i></span>';}).join('')+'</div></div>';}).join('');
+        (q.x||[]).map(function(e){return '<span class="r">'+esc(e.n)+(e.v>0?' <b>'+man(e.v)+'원'+'</b>':'')+' <i>참고</i></span>';}).join('')+'</div></div>';}).join('');
   page('계약 한눈에 — 어느 회사에서 무엇이','조정 후 남는 담보 · 해지하는 계약은 없어지는 담보',
     pols+'<p class="frn">보험금은 계약한 회사마다 따로 청구합니다. 같은 진단서 · 영수증으로 회사마다 냅니다(원본 · 사본 기준은 회사마다 다름).</p>');
   /* ⑤ 담보 전체 표 */
@@ -8060,7 +8247,7 @@ function ppKey(a,i,k){var r=__PP.P[a][i];r.k=k;if(k)r.d=PP_K2D[k]||r.d;if(k&&a!=
 /* 그 줄이 무엇인지 — 담보사전의 한 줄(w) 그대로. 사전에 없으면 안 적는다(지어내지 않음) */
 function ppExp(r){var D=ppDict(r.d);if(!D)return '';
   return '<small class="ppx">📚 <b>'+esc(D.n)+'</b> — '+esc(D.w)+(D.c?'<i> 꼭 볼 것: '+esc(D.c)+'</i>':'')+'</small>';}
-function ppAmt(a,i,v){var n=parseFloat((''+v).replace(/,/g,''));__PP.P[a][i].v=isFinite(n)?n:null;}
+function ppAmt(a,i,v){var n=parseFloat(covIn(v));__PP.P[a][i].v=isFinite(n)?n:null;}
 function ppCancel(){window.__PP=null;ppSet('');}
 function ppGo(){
   var X=window.__PP;if(!X)return;var P=X.P,cov={},n=0;
