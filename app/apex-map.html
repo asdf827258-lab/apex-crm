@@ -414,6 +414,20 @@ body.dock #jFoot{flex:0 0 auto}
 }
 .kb input:focus, .kb select:focus, .kb textarea:focus{border-color:#8FA9D6}
 .kb textarea{min-height:200px; line-height:1.65; resize:vertical}
+/* 🧠 두뇌 창 (판 X377) — 13px 바닥 · 누르는 곳 44px */
+.kb .bsec{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin:18px 0 6px; font-size:var(--t5)}
+.kb .bsec span{font-size:var(--t6); font-weight:700}
+.kb .bhint{font-size:var(--t6); line-height:1.6; margin:0 0 8px; opacity:.9}
+.kb .bx-r{display:flex; gap:8px; align-items:center; border:1px solid var(--line); border-radius:10px; padding:6px 6px 6px 10px; margin:0 0 6px}
+.kb .bx-r .m{flex:1; min-width:0; font-size:var(--t6); line-height:1.5}
+.kb .bx-r .m b{display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.kb .bx-r button{min-width:44px; min-height:44px; border-radius:10px; border:1px solid var(--line); background:transparent; color:inherit; font-size:var(--t5); cursor:pointer}
+.kb .bopts{display:flex; flex-direction:column; gap:6px}
+.kb .bopts button{min-height:44px; text-align:left; padding:6px 12px; border-radius:10px; border:1px solid var(--line); background:transparent; color:inherit; font-size:var(--t6); line-height:1.5; cursor:pointer}
+.kb .bopts button.on{border-color:var(--h-cy, #3FE0FF); font-weight:800}
+.kb .btools{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+.kb .btools .btn{min-height:44px; font-size:var(--t6); text-align:center; justify-content:center; white-space:normal; line-height:1.4}
+@media (max-width:420px){ .kb .btools{grid-template-columns:1fr} }
 .kb .row{display:flex; gap:8px; margin-top:18px}
 .kb .row .btn{flex:1; text-align:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
 .kb .warn{background:#FFFBEB; border:1px solid #FDE68A; border-radius:10px; padding:10px 12px;
@@ -1089,10 +1103,26 @@ body.dock .deck{display:none}
     <label for="bKb">두뇌에 넣을 지식</label>
     <textarea id="bKb" placeholder="예) 나의 상담 철학 · 자주 쓰는 반론 처리 화법 · 상품 설명 말투 · 고객 유형별 접근법 · 나만의 카톡 어투"></textarea>
     <p id="bKbSay" style="margin:8px 0 0"></p>
+    <!-- 판 X377 — 사장님 말씀 2026-11-06 「자비스에 두뇌지식 돌려보고 업그레이드해 자비스에서 다 해낼수 있도록」.
+         두뇌 화면에만 있던 것을 이 창에서 합니다 — 고치는 곳은 본체의 그 함수 하나입니다 (5번) -->
+    <div class="bsec"><b>⭐ 모범 답안</b><span id="bBxN"></span></div>
+    <div class="bhint">잘 나온 답의 「⭐ 이렇게 답해」 를 누르면 여기 쌓이고, 다음부터 그 길이 · 구성 · 말투를 따라 씁니다.</div>
+    <div id="bBx"></div>
+    <div class="bsec"><b>🎓 두뇌 키우기</b></div>
+    <div class="bopts" id="bOpts"></div>
+    <div class="bsec"><b>🧰 두뇌 도구</b></div>
+    <div class="btools">
+      <button type="button" class="btn" data-btool="call">🗄 우리 DB로 오늘 전화 순서</button>
+      <button type="button" class="btn" data-btool="consult">🎯 고객 컨설팅 · 팩트파인딩</button>
+      <button type="button" class="btn" data-btool="deck">📊 주제로 발표자료(PPT)</button>
+      <button type="button" class="btn" data-btool="thread">🗂 지난 대화 · Word · PPT</button>
+      <button type="button" class="btn" data-btool="logo">🖼 Word · PPT 로고 넣기</button>
+      <button type="button" class="btn" data-btool="gpt">🤖 다른 AI 로 가져가기(복사)</button>
+    </div>
+    <input type="file" id="bLogo" accept="image/*" hidden>
     <div class="warn">이 글은 답할 때마다 AI 로 함께 갑니다 — <b>고객 이름 · 연락처 · 병력은 적지 마세요.</b>
       답이 마음에 들면 그 답의 <b>⭐ 이렇게 답해</b> 를 누르세요 — 다음부터 그 결을 따라 씁니다.</div>
     <div class="row">
-      <button class="btn" id="bMore" type="button">지난 대화 · 발표자료</button>
       <button class="btn" id="bCancel" type="button">닫기</button>
       <button class="btn go" id="bSave" type="button">저장</button>
     </div>
@@ -2464,7 +2494,7 @@ var DATA = {
     "n": "윤시현의 두뇌",
     "g": "하루 시작",
     "d": "일하는 방식과 기준을 모아 둔 곳 — 묻기는 자비스에서(판 X372) · 지식 · 지난 대화 · 발표자료",
-    "k": [],
+    "k": ["🗂 지난 대화 · Word · PPT", "🗄 우리 DB 로 오늘 전화 순서", "🎯 고객 컨설팅 · 팩트파인딩", "📊 발표자료 만들기(PPT)", "📚 두뇌 지식 · ⭐ 모범 답안 · 두뇌 키우기 — 자비스 「🧠 두뇌 지식」 창에서도"],
     "hide": true
    },
    "clients": {
@@ -5211,7 +5241,63 @@ function jvBrainBox(){
   var t = ''; try { t = P.brainKbGet() || ''; } catch(e){}
   document.getElementById('bKb').value = t;
   jvBrainKbSay(P, t);
+  jvBrainBxPaint(P); jvBrainOptPaint(P);
   box.classList.add('on');
+}
+/* ⭐ 모범 답안 — 읽고 지우는 곳은 본체의 bxGet · bxDel 하나 (5번 · 판 X377) */
+function jvBrainBxPaint(P){
+  var el = document.getElementById('bBx'), n = document.getElementById('bBxN'); if (!el) return;
+  var L = []; try { L = P.bxGet() || []; } catch(e){}
+  if (n) n.textContent = L.length + '개';
+  if (!L.length){ el.innerHTML = '<div class="bhint">아직 없습니다.</div>'; return; }
+  el.innerHTML = L.map(function(x, i){
+    return '<div class="bx-r"><div class="m"><b>' + esc(String(x.q || '').slice(0, 60)) + '</b>' + esc(String(x.a || '').replace(/[#*>|`-]/g, ' ').replace(/\s+/g, ' ').slice(0, 70)) + '</div>' +
+      '<button type="button" data-bxdel="' + i + '" aria-label="이 모범 답안 지우기">✕</button></div>';
+  }).join('');
+  Array.prototype.forEach.call(el.querySelectorAll('[data-bxdel]'), function(b){
+    b.onclick = function(){ try { P.bxDel(+b.getAttribute('data-bxdel')); } catch(e){} jvBrainBxPaint(P); jvBrainKbSay(P, document.getElementById('bKb').value); };
+  });
+}
+/* 🎓 켜고 끄기 — 본체의 bxOpt · bxOptSet 하나. 이름과 기본값은 두뇌 화면의 그 셋 그대로 */
+var JV_BRAIN_OPTS = [
+  {k:'geminix', d:true,  n:'엔진에 맞춘 지시문', s:'Gemini 일 때 짧은 명령형 규칙을 붙입니다 — 켜 두세요'},
+  {k:'know',    d:false, n:'회사 지식 통째로',   s:'업무 흐름 · 화법서 목차를 매번 함께 보냅니다 — 답이 느려질 수 있습니다'},
+  {k:'polish',  d:false, n:'두 번 태우기',       s:'초안을 한 번 더 다듬습니다 — 시간이 두 배 걸립니다'}
+];
+function jvBrainOptPaint(P){
+  var el = document.getElementById('bOpts'); if (!el) return;
+  el.innerHTML = JV_BRAIN_OPTS.map(function(o){
+    var on = false; try { on = P.bxOpt(o.k, o.d); } catch(e){}
+    return '<button type="button" data-bopt="' + o.k + '" class="' + (on ? 'on' : '') + '" aria-pressed="' + on + '"><b>' + (on ? '✓ 켜짐' : '꺼짐') + ' · ' + esc(o.n) + '</b><br>' + esc(o.s) + '</button>';
+  }).join('');
+  Array.prototype.forEach.call(el.querySelectorAll('[data-bopt]'), function(b){
+    b.onclick = function(){
+      var k = b.getAttribute('data-bopt'), o = JV_BRAIN_OPTS.filter(function(x){ return x.k === k; })[0];
+      try { P.bxOptSet(k, !P.bxOpt(k, o.d)); } catch(e){}
+      jvBrainOptPaint(P);
+    };
+  });
+}
+/* 🧰 두뇌 도구 — 두뇌 화면에만 있던 칸으로 바로 갑니다(그 칸이 그 일을 합니다) · 전화 순서는 자비스가 묻습니다 */
+var JV_BRAIN_CARD = {consult:'고객 컨설팅', deck:'발표자료 만들기', thread:'지난 대화'};
+function jvBrainGoCard(P, k){
+  try { P.go('brain'); if (typeof P.jvDock === 'function') P.jvDock(); } catch(e){ return; }
+  setTimeout(function(){
+    try {
+      var d = P.document.getElementById('dynPane'), want = JV_BRAIN_CARD[k], hit = null;
+      if (k === 'thread') hit = P.document.getElementById('brainThread');
+      if (!hit && d) [].slice.call(d.querySelectorAll('.card-title')).some(function(x){ if ((x.textContent || '').indexOf(want) >= 0){ hit = x; return true; } return false; });
+      if (hit) hit.scrollIntoView({block:'start', behavior:'smooth'});
+    } catch(e){}
+  }, 350);
+}
+function jvBrainTool(k){
+  var P = jvBrainHost(), box = document.getElementById('brainBox'); if (!P) return;
+  if (k === 'logo'){ document.getElementById('bLogo').click(); return; }
+  if (k === 'gpt'){ try { P.bgptCopy(); } catch(e){} return; }
+  box.classList.remove('on');
+  if (k === 'call'){ ask('오늘 전화 순서 짜줘'); return; }
+  jvBrainGoCard(P, k);
 }
 function jvBrainKbSay(P, t){
   var el = document.getElementById('bKbSay'); if (!el) return;
@@ -8165,7 +8251,9 @@ function ask(raw){
     addJ(r0);
     var bcard = jLog.lastChild;
     busy = true; hudStats();
-    BP.brainAnswer(qs, {ground:bg, from:'jarvis'}).then(function(r){
+    /* 판 X377 — 「오늘 전화 순서」 같은 물음엔 우리 DB 숫자(이름 없이)를 다 쥐여 줍니다. 가르는 줄은 본체의 BRAIN_DBQ 하나 */
+    var bcrm = ''; try { bcrm = (BP.BRAIN_DBQ && BP.BRAIN_DBQ.test(q)) ? 'full' : ''; } catch(e){}
+    BP.brainAnswer(qs, {ground:bg, from:'jarvis', crm:bcrm}).then(function(r){
       busy = false; logAsk(qs, r0, '두뇌'); jvFillBrain(bcard, BP, r); hudCalm();
     }).catch(function(e){
       busy = false; logAsk(qs, r0, '앱(두뇌 실패)');
@@ -8293,12 +8381,11 @@ document.getElementById('kEngine').onchange = kPaintEngine;
     try { P.toast('두뇌 지식을 저장했습니다 — 다음 답부터 반영됩니다.'); } catch(e){}
     box.classList.remove('on');
   };
-  /* 지난 대화 · Word · PPT · 발표자료(덱)는 본체 화면이 그립니다 — 그 화면을 엽니다 */
-  document.getElementById('bMore').onclick = function(){
-    var P = jvBrainHost(); if (!P) return;
-    box.classList.remove('on');
-    try { P.go('brain'); if (typeof P.jvDock === 'function') P.jvDock(); } catch(e){}
-  };
+  Array.prototype.forEach.call(box.querySelectorAll('[data-btool]'), function(b){
+    b.onclick = function(){ jvBrainTool(b.getAttribute('data-btool')); };
+  });
+  /* 로고는 본체의 brainSetLogoFile 하나가 담습니다(이 기기에만) */
+  document.getElementById('bLogo').onchange = function(){ var P = jvBrainHost(); if (P) try { P.brainSetLogoFile(this); } catch(e){} };
   box.addEventListener('click', function(e){ if (e.target === box) box.classList.remove('on'); });
 })();
 document.getElementById('aiBtn').onclick = function(){

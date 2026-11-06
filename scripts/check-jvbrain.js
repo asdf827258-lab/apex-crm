@@ -19,6 +19,11 @@
          자비스에서 물은 것도 두뇌의 지난 대화에 선다
      [10] 앱 밖에서 열면 두뇌가 없다 — 두뇌 단추 · 자리를 세우지 않는다 (1번)
      [11] 콘솔 오류 0 · 바깥 주소 0
+     [12] 🔎 라이브 AI 로 물어 보고 고친 것 (판 X377 · 「자비스에 두뇌지식 돌려보고 업그레이드해」) —
+          ★★ 받은 적 없는 출처(「현장 가이드 기준」)를 지어 붙이지 말라 · 가린 이름을 채우지 말라 · 「오늘 전화 순서」 엔
+          우리 DB 숫자(이름 없이)를 다 쥐여 주고, 못 받았으면 못 받았다고 쥐여 준다 (1번 · 3번)
+     [13] 🧠 두뇌 창에서 다 한다 — ⭐ 모범 답안 보기 · 지우기 · 켜고 끄기 셋 · 두뇌 도구 여섯(전화 순서 · 컨설팅 ·
+          발표자료 · 지난 대화 · 로고 · 다른 AI) — 고치는 곳은 본체의 그 함수 하나 (5번)
    ★ 이름은 「홍길동」 (3번).                                                     */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -188,6 +193,60 @@ const MD = '## 결론\n첫 마디는 **질문**으로 엽니다.\n\n| 단계 | �
   is(AB.hide === true, '두뇌는 메뉴에서 숨는다(찾기 칸 · 자비스로 연다)');
   is(AB.noQ && AB.jv, '두뇌 화면에 묻는 칸 대신 「🛰 자비스에게 묻기」 — 묻는 곳은 하나');
   is(AB.th, '자비스에서 물은 것이 두뇌의 지난 대화에 선다(Word · PPT · ⭐ 를 거기서도)');
+
+  sec('[12] 🔎 라이브 AI 로 물어 보고 고친 것 (판 X377)');
+  const SY = await p.evaluate(() => { const t = brainSys(); return { src: /받은 적 없는 출처를 지어 붙이지 않는다/.test(t), mask: /가린 이름[^\n]*지어내지 않는다/.test(t), gem: !/어디서 나온 숫자인지 괄호로 밝힌다/.test(BX_GEM) && /받은 글에 없는 숫자/.test(BX_GEM) }; });
+  is(SY.src, '두뇌 지침 — 받은 적 없는 출처(「현장 가이드 기준」 같은 것)를 지어 붙이지 않는다');
+  is(SY.mask, '두뇌 지침 — 가린 이름(홍*동)을 채워 이름을 지어내지 않는다 (라이브에서 「홍길동 고객님」 으로 불렀습니다)');
+  is(SY.gem, 'Gemini 규칙 넷째 — 「괄호로 밝힌다」 만 두지 않고 받은 글에 없는 숫자 · 출처를 막는다');
+  await p.evaluate(() => { window.__crmKeep = window.brainCrmCtx; window.__crmMode = []; window.brainCrmCtx = function(m){ window.__crmMode.push(m || ''); return ''; }; });
+  const D1 = await askQ('오늘 전화 순서 짜줘'), D2 = await askQ('반론 처리 화법 다시');
+  const MODES = await p.evaluate(() => window.__crmMode.slice());
+  is(D1.n === 1 && MODES[0] === 'full', '「오늘 전화 순서」 는 우리 DB 숫자를 <b>다</b>(full) 달라고 한다 — ' + MODES.join(','));
+  is(/\[우리 DB — 이번 물음에는 DB 통합 CRM 숫자를 받지 못했습니다/.test(D1.user), '숫자를 못 받았으면 「못 받았다 · 지어내지 말라」 를 쥐여 보낸다 (라이브에서 시간표를 지어냈습니다)');
+  is(MODES[1] === '' && !/\[우리 DB — 이번 물음에는/.test(D2.user), 'DB 와 상관없는 물음엔 그 말을 안 붙인다 (헛것 0 · 8번)');
+  await p.evaluate(() => { window.brainCrmCtx = function(){ return '[지금 우리 DB — 시험]\n- 오늘 손댈 사람 3명\n\n'; }; });
+  const D3 = await askQ('오늘 전화 순서 다시 짜줘');
+  is(/오늘 손댈 사람 3명/.test(D3.user) && !/받지 못했습니다/.test(D3.user), '숫자를 받았으면 그 숫자를 보내고 「못 받았다」 는 안 붙인다');
+  await p.evaluate(() => { window.brainCrmCtx = window.__crmKeep; });
+
+  sec('[13] 🧠 두뇌 창에서 다 한다 (판 X377)');
+  const BX = await f.evaluate(async () => {
+    const P = window.parent, o = {};
+    P.bxSet([{ q:'첫 상담 여는 법', a:'질문으로 엽니다', at:'2026-11-06' }, { q:'반론 처리', a:'안 바꾸셔도 되면', at:'2026-11-06' }]);
+    ['geminix','know','polish'].forEach(k => P.bxOptSet(k, k === 'geminix'));
+    jvBrainBox();
+    o.rows = document.querySelectorAll('#bBx .bx-r').length; o.n = (document.getElementById('bBxN') || {}).textContent;
+    document.querySelector('#bBx [data-bxdel="0"]').click();
+    o.after = P.bxGet().length; o.rows2 = document.querySelectorAll('#bBx .bx-r').length; o.left = (P.bxGet()[0] || {}).q;
+    o.opts = [].map.call(document.querySelectorAll('#bOpts [data-bopt]'), b => b.getAttribute('data-bopt')).join(',');
+    document.querySelector('#bOpts [data-bopt="polish"]').click();
+    o.polish = P.bxOpt('polish', false); o.polishOn = document.querySelector('#bOpts [data-bopt="polish"]').classList.contains('on');
+    document.querySelector('#bOpts [data-bopt="polish"]').click(); o.polish2 = P.bxOpt('polish', false);
+    o.tools = [].map.call(document.querySelectorAll('#brainBox [data-btool]'), b => b.getAttribute('data-btool')).join(',');
+    const cp = []; const kc = P.copyText; P.copyText = function(t){ cp.push(t); };
+    document.querySelector('#brainBox [data-btool="gpt"]').click(); P.copyText = kc;
+    o.gpt = cp.length === 1 && /윤시현의 두뇌/.test(cp[0]) && !/sk-ant|AIza/.test(cp[0]);
+    const n0 = P.__sent.length;
+    document.querySelector('#brainBox [data-btool="call"]').click();
+    o.closed = !document.getElementById('brainBox').classList.contains('on');
+    await new Promise(r => setTimeout(r, 120)); while (busy) await new Promise(r => setTimeout(r, 30));
+    o.called = P.__sent.length - n0; o.callQ = /전화 순서/.test((P.__sent[P.__sent.length - 1] || {}).user || '');
+    jvBrainBox(); document.querySelector('#brainBox [data-btool="consult"]').click();
+    await new Promise(r => setTimeout(r, 700));
+    o.tab = P.currentTab(); o.consult = !!P.document.getElementById('dynPane') && /고객 컨설팅/.test(P.document.getElementById('dynPane').textContent);
+    o.closed2 = !document.getElementById('brainBox').classList.contains('on');
+    return o;
+  });
+  is(BX.rows === 2 && /2/.test(BX.n), '⭐ 모범 답안이 창에 선다 — ' + BX.rows + '개 (본체 bxGet 그대로)');
+  is(BX.after === 1 && BX.rows2 === 1 && BX.left === '반론 처리', '✕ 를 누르면 본체(bxDel)에서 지워지고 창도 따라온다');
+  is(BX.opts === 'geminix,know,polish', '켜고 끄기 셋 — 두뇌 화면의 그 셋 그대로 (' + BX.opts + ')');
+  is(BX.polish === true && BX.polishOn && BX.polish2 === false, '누르면 본체(bxOptSet)에 켜지고 · 다시 누르면 꺼진다');
+  is(BX.tools === 'call,consult,deck,thread,logo,gpt', '두뇌 도구 여섯 — ' + BX.tools);
+  is(BX.gpt, '「다른 AI 로 가져가기」 는 본체의 그 지침 글을 복사한다(열쇠 0)');
+  is(BX.closed && BX.called === 1 && BX.callQ, '「우리 DB로 오늘 전화 순서」 는 창을 닫고 자비스가 그 물음을 두뇌에게 묻는다');
+  is(BX.closed2 && BX.tab === 'brain' && BX.consult, '「고객 컨설팅」 은 그 칸이 있는 두뇌 화면을 연다 — 메뉴에서 숨었어도 길이 있다');
+  await p.evaluate(() => go('apexmap')); await p.waitForTimeout(1500);
 
   sec('[10] 앱 밖에서 열면 두뇌가 없다 (1번)');
   const p2 = await ctx.newPage(); p2.on('pageerror', e => errs.push(e.message));
