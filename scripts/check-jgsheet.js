@@ -26,6 +26,9 @@
      [12] 가족 그림을 <b>직접 그렸다</b> — 인라인 SVG, 남의 삽화·사진이 아니다 (9번)
      [13] 그림글자(Tossface)를 <b>저장소가 쓰는 그 주소</b>로 한 번만 받는다 (5번)
      [14] <b>상담 도구 장·설계사 매뉴얼은 파란 그대로</b>다 — 고객용만 따뜻해진다
+     [15] 🖼 <b>사진이 눈에 확 들어온다</b> (판 X363) — 장마다 사진 자리가 있고,
+          사진은 <b>캐러셀과 같은 길</b>(/api/photo-search)로 찾고, 켤 때 서버를
+          안 부르고, 사진이 없으면 <b>가족 그림</b>이 서고, 있으면 <b>사진가 이름</b>이 찍힌다
 
    ★ 되돌려 보고 빨간불을 확인했습니다 (8번)
      ⓐ --ss-body 를 11.5px 로 되돌림      → [3] 이 「14px 미만 …곳」 으로 욺
@@ -39,6 +42,9 @@
      ⓘ 가족 그림을 <img> 로 바꿈           → [12] 가 욺
      ⓙ 토스페이스 줄을 지움                → [13] 이 욺
      ⓚ 따뜻한 색을 :root 로 올림           → [14] 가 욺(도구 장이 같이 따뜻해집니다)
+     ⓛ 사진 자리(.jg-hero)를 지움           → [15] 가 욺
+     ⓜ 사진 찾는 길을 제 것으로 새로 만듦    → [15] 가 욺(/api/photo-search 가 아니면)
+     ⓝ 켤 때 사진을 미리 받게 함             → 「서버를 부른 횟수」 가 욺 (7번)
 
    ⚠ 바깥을 한 번도 안 부릅니다 — 파일만 엽니다 (8번).
    ══════════════════════════════════════════════════════════════════ */
@@ -200,9 +206,27 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
     chk2.forEach(s => s.classList.remove('off'));
     const 도구파랑 = 푸른곳('.sheet[data-kind="chk"]').length;
     chk2.forEach((s, i) => { if (was2[i]) s.classList.add('off'); });
+    /* 🖼 사진 자리 — 없을 때와 있을 때를 둘 다 봅니다 (판 X363).
+       진짜 사진 API 는 안 부릅니다(바깥을 막아 두었습니다) — 길만 돌립니다. */
+    const hero = document.querySelector('.jg-hero[data-ph="s3"]');
+    const 띠 = { 사진없을때: { 가족그림: !!(hero && getComputedStyle(hero.querySelector('.jg-hero-fam')).display !== 'none') },
+                 사진넣으면: { 참: false, 말: '', 출처: '' } };
+    try {
+      const c = document.createElement('canvas'); c.width = 60; c.height = 40;
+      const x = c.getContext('2d'); x.fillStyle = '#C4714A'; x.fillRect(0, 0, 60, 40);
+      const u = c.toDataURL('image/jpeg', 0.7);
+      JGPH.s3 = { url: u, by: '홍길동', src: 'Pexels' };
+      jgphPaint();
+      띠.사진넣으면.참 = hero.classList.contains('has') && /data:image/.test(hero.style.backgroundImage)
+                        && getComputedStyle(hero.querySelector('.jg-hero-fam')).display === 'none';
+      띠.사진넣으면.말 = '띠가 차고 가족 그림은 물러난다';
+      const cr = document.querySelector('#s3 .jg-credit');
+      띠.사진넣으면.출처 = cr ? cr.textContent.trim() : '';
+      delete JGPH.s3; jgphPaint();
+    } catch (e) { 띠.사진넣으면.말 = '터졌습니다 — ' + ((e && e.message) || ''); }
     const 글 = (id) => { const e = document.getElementById(id); return e ? (e.innerText || '') : ''; };
     return { 장, 작은, 도구, 다시, s12: 글('s12'), s13: 글('s13'),
-             고객파랑: [...new Set(고객파랑)], 도구파랑 };
+             고객파랑: [...new Set(고객파랑)], 도구파랑, 띠 };
   }, { 바닥 });
 
   console.log('[1] 고객용이 열 장이고 담당자가 계약보다 먼저 오나');
@@ -247,6 +271,18 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
      알람이 아닙니다 (8번). 도구 장이 줄면 빨간불입니다. */
   ok(r.도구파랑 >= 250, '도구 장의 파란 자리 ' + r.도구파랑 + '곳 (눈금 250 · 잰 값 255)'
      + (r.도구파랑 >= 250 ? ' — 그대로 남아 있다' : ' ← 따뜻한 색이 전역으로 샜습니다'));
+
+  console.log('[15] 사진이 눈에 확 들어오나 (판 X363)');
+  const 띠 = (src.match(/class="jg-hero" data-ph=/g) || []).length;
+  ok(띠 === 8, '사진 띠가 ' + 띠 + '장에 있다 (표지는 장 전체라 따로)');
+  ok(/data-ph="s1"/.test(src), '표지도 사진 자리를 가졌다');
+  ok(/\/api\/photo-search\?q=/.test(src), '사진을 캐러셀과 같은 길로 찾는다 (/api/photo-search · 5번)');
+  ok(!/api\.pexels\.com|api\.unsplash\.com/.test(src), '사진 서버를 직접 안 부른다 (열쇠가 새지 않게 · 10번)');
+  ok(/d\.missing/.test(src), '서버에 사진 키가 없으면 없다고 말한다 (1번)');
+  ok(/jg-credit/.test(src), '사진가 이름을 찍는 자리가 있다 (라이선스)');
+  ok(r.띠.사진없을때.가족그림, '사진이 없으면 가족 그림이 선다 — 빈 구멍을 안 둡니다 (1번)');
+  ok(r.띠.사진넣으면.참, '사진을 넣으면 띠가 찬다 — ' + r.띠.사진넣으면.말);
+  ok(r.띠.사진넣으면.출처, '사진가 이름이 꼬리글에 찍힌다 — ' + (r.띠.사진넣으면.출처 || '(없음)'));
 
   console.log('[끝] 조용한가');
   ok(터짐.length === 0, '터진 자리 ' + 터짐.length + (터짐.length ? (' ← ' + 터짐[0]) : ''));
