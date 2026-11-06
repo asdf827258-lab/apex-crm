@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>전문가를 만듭니다</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+/* 「전문가를 만듭니다」 — 교육시스템 EM 의 다섯 시스템. 끝까지 릴스(story.html)와 다른 결:
+   캐릭터·사무실 없이 검정 + 금색의 다큐형 다섯 챕터. 화면은 전부 <b>실제 앱</b>(shots/em_*) 이고
+   상품·보험사 이름은 찍을 때 ○○ 로 가렸다. 1080×1920 · 30fps · 시간은 render(t) 하나가 정한다. */
+:root{--bg:#06080D;--ink:#fff;--gold:#D9B26A;--gold2:#F3D99A;--sub:rgba(255,255,255,.66);--blue:#6E9BFF;--green:#5BE3A0;--red:#FF6B7A}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg)}
+body{font-family:Pretendard,sans-serif;color:var(--ink);letter-spacing:-.04em;word-break:keep-all}
+#stage{position:absolute;inset:0;overflow:hidden;background:radial-gradient(1200px 1000px at 50% 30%,#141A2A 0%,#07090F 60%,#030407 100%)}
+#dust,#grain{position:absolute;inset:0;pointer-events:none}
+#grain{opacity:.05;mix-blend-mode:overlay}
+#sweep{position:absolute;top:-400px;left:-600px;width:500px;height:2800px;background:linear-gradient(90deg,transparent,rgba(243,217,154,.10),transparent);transform:rotate(18deg);pointer-events:none}
+#bignum{position:absolute;right:-30px;top:170px;font-size:520px;font-weight:900;line-height:1;color:transparent;-webkit-text-stroke:3px rgba(217,178,106,.18);letter-spacing:-.06em;pointer-events:none}
+#cam{position:absolute;inset:0;transform-origin:50% 45%}
+.scene{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:330px 70px 420px;text-align:center}
+.scene.mid{justify-content:center}
+.el{display:block;will-change:transform,opacity;white-space:nowrap}
+.big{font-weight:900;line-height:1.06;text-shadow:0 8px 40px rgba(0,0,0,.6)}
+.mdl{font-weight:800;line-height:1.18}
+.sub{font-weight:600;color:var(--sub)}
+.gd{color:var(--gold2);text-shadow:0 0 50px rgba(217,178,106,.45)}
+.hl{color:var(--blue)}.hgr{color:var(--green)}.hr{color:var(--red)}
+.rule{width:120px;height:4px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:34px auto}
+.em{display:inline-block;font-size:44px;font-weight:900;letter-spacing:.3em;color:var(--gold);border:2px solid rgba(217,178,106,.6);padding:14px 34px 14px 46px;border-radius:999px}
+.chips{margin-top:46px;white-space:normal;max-width:960px}
+.chip{display:inline-block;margin:10px 8px;padding:18px 28px;border-radius:18px;background:rgba(255,255,255,.05);border:1.5px solid rgba(217,178,106,.4);font-size:42px;font-weight:800}
+.chip b{color:var(--gold);margin-right:12px;font-weight:900}
+.chip.on{background:rgba(217,178,106,.16);border-color:var(--gold2);box-shadow:0 0 40px rgba(217,178,106,.35)}
+/* 챕터 머리 */
+.chno{font-size:34px;font-weight:900;letter-spacing:.32em;color:var(--gold)}
+.chti{font-size:92px;font-weight:900;margin-top:10px}
+.chsub{font-size:46px;font-weight:700;color:var(--sub);margin-top:14px}
+/* 실제 화면 — 가로 카드 / 세로 폰 */
+.card{position:absolute;left:50px;top:640px;width:980px;height:551px;border-radius:30px;overflow:hidden;background:#fff;box-shadow:0 60px 140px rgba(0,0,0,.7),0 0 0 2px rgba(217,178,106,.5),0 0 80px rgba(217,178,106,.18);transform-origin:50% 50%}
+.card img,.ph .sc img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:top center}
+.ph{position:absolute;left:110px;top:610px;width:400px;height:840px;border-radius:56px;background:#05070B;border:10px solid #2A2F3A;box-shadow:0 60px 140px rgba(0,0,0,.7),0 0 0 2px rgba(217,178,106,.5);overflow:hidden}
+.ph .sc{position:absolute;inset:0;border-radius:46px;overflow:hidden;background:#fff}
+.tagdz{position:absolute;right:14px;top:12px;z-index:5;font-size:20px;font-weight:800;color:#fff;background:rgba(6,8,13,.78);padding:6px 14px;border-radius:10px}
+.cap{position:absolute;left:50px;right:50px;top:1240px;text-align:center}
+.cap .n{display:inline-block;font-size:30px;font-weight:900;color:var(--bg);background:var(--gold);border-radius:12px;padding:4px 14px;margin-bottom:14px}
+.cap .t{font-size:58px;font-weight:900;line-height:1.22;text-shadow:0 6px 30px rgba(0,0,0,.7)}
+.capR{position:absolute;left:560px;right:50px;top:760px;text-align:left}
+.capR .n{display:inline-block;font-size:30px;font-weight:900;color:var(--bg);background:var(--gold);border-radius:12px;padding:4px 14px;margin-bottom:18px}
+.capR .t{font-size:54px;font-weight:900;line-height:1.25;white-space:normal}
+.fine{position:absolute;left:70px;right:70px;bottom:400px;font-size:25px;line-height:1.55;color:rgba(255,255,255,.5);font-weight:500;text-align:center;white-space:normal}
+.pcard{width:920px;border-radius:40px;background:linear-gradient(160deg,#151B2B,#0B0F18);border:1.5px solid rgba(217,178,106,.55);padding:46px 50px;text-align:left;white-space:normal;box-shadow:0 50px 120px rgba(0,0,0,.6)}
+.pcard .top{display:flex;align-items:center;gap:34px}
+.pcard .av{width:180px;height:180px;border-radius:50%;flex:none;background:linear-gradient(135deg,#3A2E15,#D9B26A);color:#06080D;font-size:92px;font-weight:900;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pcard .av img{width:100%;height:100%;object-fit:cover}
+.pcard .nm{font-size:74px;font-weight:900}
+.pcard .tt{font-size:31px;font-weight:700;color:var(--sub);margin-top:10px;line-height:1.35}
+.pcard .qt{margin-top:32px;font-size:44px;font-weight:900;line-height:1.3;color:var(--gold2)}
+.pcard .ch{margin-top:24px;display:flex;flex-wrap:wrap;gap:12px}
+.pcard .ch span{font-size:29px;font-weight:800;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:12px 22px}
+.box{display:inline-block;background:var(--gold);color:#06080D;padding:12px 30px;border-radius:16px}
+#bar{position:absolute;left:60px;right:60px;top:90px;height:6px;border-radius:6px;background:rgba(255,255,255,.14)}
+#bar i{display:block;height:100%;width:0;border-radius:6px;background:var(--gold)}
+#brand{position:absolute;left:0;right:0;top:126px;text-align:center;font-size:32px;font-weight:800;letter-spacing:.2em;color:rgba(217,178,106,.85)}
+#flash{position:absolute;inset:0;background:#F3D99A;opacity:0;pointer-events:none;mix-blend-mode:screen}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="dust" width="1080" height="1920"></canvas>
+  <div id="sweep"></div>
+  <div id="bignum"></div>
+  <div id="cam">
+    <div class="scene mid" id="s0" data-t="0,3.2">
+      <span class="el mdl" style="font-size:96px" data-a="up" data-in="0.1">우리는 설계사를</span>
+      <span class="el big" style="font-size:150px;margin-top:14px" data-a="slam" data-in="0.75">뽑지 않습니다.</span>
+    </div>
+    <div class="scene mid" id="s1" data-t="3.2,6.4">
+      <span class="el big gd" style="font-size:190px" data-a="slam" data-in="3.3">전문가를</span>
+      <span class="el big" style="font-size:190px" data-a="slam" data-in="3.9">만듭니다.</span>
+    </div>
+    <div class="scene" id="s2" data-t="6.4,10">
+      <span class="el" data-a="pop" data-in="6.5"><span class="em">교육시스템 EM</span></span>
+      <div class="rule el" data-a="up" data-in="6.8"></div>
+      <span class="el mdl" style="font-size:70px" data-a="up" data-in="7.0">다섯 개의 시스템이</span>
+      <span class="el big" style="font-size:96px" data-a="slam" data-in="7.4">한 사람을 바꿉니다</span>
+      <div class="chips" id="chips0"></div>
+    </div>
+    <div id="chapters"></div>
+    <div class="scene mid" id="s8" data-t="41,45">
+      <div class="chips" id="chips1" style="margin:0 0 60px"></div>
+      <span class="el mdl" style="font-size:84px" data-a="up" data-in="42.4">다섯 개의 시스템,</span>
+      <span class="el big gd" style="font-size:132px;margin-top:10px" data-a="slam" data-in="43.0">한 사람의 전문가.</span>
+    </div>
+    <div class="scene" id="s9" data-t="45,49">
+      <span class="el mdl" style="font-size:66px" data-a="up" data-in="45.0">함께 걸어갈</span>
+      <span class="el big" style="font-size:104px;margin-bottom:46px" data-a="slam" data-in="45.4">리더를 소개합니다</span>
+      <div class="pcard el" data-a="drop" data-in="45.9">
+        <div class="top"><div class="av" id="pAv"></div><div><div class="nm" id="pNm"></div><div class="tt" id="pTt"></div></div></div>
+        <div class="qt" id="pQt"></div>
+        <div class="ch" id="pCh"></div>
+      </div>
+    </div>
+    <div class="scene mid" id="s10" data-t="49,51.8">
+      <span class="el mdl" style="font-size:92px" data-a="up" data-in="49.0">전문가는</span>
+      <span class="el mdl" style="font-size:92px" data-a="up" data-in="49.5">타고나지 않습니다.</span>
+      <span class="el big gd" style="font-size:170px;margin-top:40px" data-a="slam" data-in="50.3">만들어집니다.</span>
+    </div>
+    <div class="scene" id="s11" data-t="51.8,56">
+      <span class="el big" style="font-size:112px" data-a="slam" data-in="51.8">함께할 <span class="gd">설계사</span>를</span>
+      <span class="el big" style="font-size:112px" data-a="slam" data-in="52.2">찾습니다.</span>
+      <span class="el sub" style="font-size:54px;margin-top:30px" data-a="up" data-in="52.8">처음이어도 괜찮습니다.</span>
+      <span class="el" style="margin-top:44px" data-a="stamp" data-rot="-2" data-in="53.3"><span class="box" style="font-size:60px;font-weight:900" id="ctaAsk"></span></span>
+      <span class="el" id="ctaWho" style="font-size:38px;font-weight:900;letter-spacing:.04em;margin-top:30px;color:rgba(255,255,255,.88)" data-a="up" data-in="53.8"></span>
+      <div class="fine el" data-a="up" data-in="54.1">보험설계사로 일하려면 자격시험 합격과 등록 절차가 필요합니다. 수입은 활동과 성과에 따라 사람마다 다릅니다.<br>화면의 고객·숫자는 견본이며, 상품·보험사 이름은 가렸습니다.</div>
+    </div>
+  </div>
+  <div id="bar"><i></i></div>
+  <div id="brand">APEX · YUN PRO</div>
+  <canvas id="grain" width="540" height="960"></canvas>
+  <div id="flash"></div>
+</div>
+<script>
+// ───────── 나를 알리는 칸 (story.html 과 같은 값) ─────────
+var PROFILE={name:'윤시현',title:'에이플러스에셋 온탑본부 사업단장',career:'보험·재무설계 10년',
+  slogan:'보험을 파는 설계사가 아닌,<br>삶을 설계하는 설계사',channels:['▶ 유튜브 「윤단장의 보험시선」','📷 인스타그램'],
+  ask:'📩 DM 으로 면담 신청',handle:'',photo:''};
+
+// ───────── 다섯 챕터 — 실제 앱 화면 (kind: card 가로 · phone 세로) ─────────
+var CH=[
+ {no:'01',ti:'성장 방식',sub:'상품명이 아니라, 위험을 관리하는 사람으로',a:10,b:16,kind:'card',
+  it:[{src:'em_academy',t:'보험 마스터 아카데미 — 10단계<br><span class="gd">신입 6개월, 두 갈래로 갈립니다</span>'},
+      {src:'em_jiin',   t:'지인 8주 성장 프로그램<br><span class="gd">부탁하지 않고, 챙겨서</span> 가까워지는 법'}]},
+ {no:'02',ti:'관리 방식',sub:'오늘 할 일부터 4년 뒤까지',a:16,b:22,kind:'phone',
+  it:[{src:'em_tfa',  t:'TFA 업무관리<br>피드백 · 할 일 · 고객 체크<br><span class="gd">팀원 관리까지 한 칸에</span>'},
+      {src:'em_keep4',t:'4년 유지관리<br><span class="gd">48개월, 한 달도<br>비지 않게</span>'}]},
+ {no:'03',ti:'비대면 상담자료',sub:'만나지 않아도, 신뢰는 전해집니다',a:22,b:28,kind:'card',
+  it:[{src:'em_sd0',t:'내 이름 · 사진이 박힌<br><span class="gd">고객 상담자료</span>'},
+      {src:'em_sd1',t:'「가입까지가 아니라,<br><span class="gd">받으실 때까지</span>」'},
+      {src:'em_sd3',t:'고객이 직접 누르며 답하는<br><span class="gd">질문지</span>'}]},
+ {no:'04',ti:'미끼 레이더',sub:'작은 담보로, 큰 니즈를 엽니다',a:28,b:34,kind:'card',
+  it:[{src:'em_mikki', t:'하루 30분 루틴<br><span class="gd">뉴스 · 신상품 1건 · 고객 3명</span>'},
+      {src:'em_mktalk',t:'미끼상품&접촉전략 — 6파트 38강<br><span class="gd">기획·제작 윤시현 사업단장</span>'}]},
+ {no:'05',ti:'상품전략 소식지',sub:'소식지를 넣으면 — 전부 비교합니다',a:34,b:41,kind:'card',
+  it:[{src:'em_ins_home', t:'보험사 31곳 · 145개 상품을<br><span class="gd">고객 입장에서 다시 읽었습니다</span>'},
+      {src:'em_ins_terms',t:'같은 조건을 나란히 —<br><span class="gd">약관 원문으로 비교</span>'}]}
+];
+var CHIPS=CH.map(function(c){return '<span class="el chip" style="display:inline-block" data-a="pop"><b>'+c.no+'</b>'+c.ti+'</span>';}).join('');
+document.getElementById('chips0').innerHTML=CHIPS; document.getElementById('chips1').innerHTML=CHIPS;
+[].slice.call(document.querySelectorAll('#chips0 .chip')).forEach(function(e,i){e.setAttribute('data-in',(7.9+i*0.18).toFixed(2));});
+[].slice.call(document.querySelectorAll('#chips1 .chip')).forEach(function(e,i){e.setAttribute('data-in',(41.1+i*0.22).toFixed(2));});
+var h='';
+CH.forEach(function(c,k){
+  var a=c.a,b=c.b,n=c.it.length,t0=a+0.7,dl=(b-t0-0.1)/n; c.t0=t0; c.dl=dl;
+  h+='<div class="scene" id="ch'+k+'" data-t="'+a+','+b+'">'+
+    '<span class="el chno" data-a="up" data-in="'+a+'">CHAPTER '+c.no+'</span>'+
+    '<span class="el chti" data-a="slam" data-in="'+(a+0.15)+'">'+c.ti+'</span>'+
+    '<span class="el chsub" data-a="up" data-in="'+(a+0.45)+'">'+c.sub+'</span>'+
+    (c.kind==='card'
+      ? '<div class="card el" data-a="tilt" data-in="'+(a+0.3)+'"><span class="tagdz">실제 앱 · 견본</span><div id="cd'+k+'"></div></div>'+
+        '<div class="cap" id="cp'+k+'"><span class="n" id="cn'+k+'"></span><div class="t" id="ct'+k+'"></div></div>'
+      : '<div class="ph el" data-a="tilt" data-in="'+(a+0.3)+'"><div class="sc" id="cd'+k+'"></div></div>'+
+        '<div class="capR" id="cp'+k+'"><span class="n" id="cn'+k+'"></span><div class="t" id="ct'+k+'"></div></div>')+
+    '</div>';
+});
+document.getElementById('chapters').innerHTML=h;
+CH.forEach(function(c,k){
+  var box=document.getElementById('cd'+k);
+  box.innerHTML=c.it.map(function(d){return '<img src="shots/'+d.src+'.jpg">';}).join('');
+  c.imgs=[].slice.call(box.querySelectorAll('img'));
+});
+(function(){var av=document.getElementById('pAv');
+  if(PROFILE.photo)av.innerHTML='<img src="'+PROFILE.photo+'">';else av.textContent=PROFILE.name.charAt(0);
+  document.getElementById('pNm').textContent=PROFILE.name;
+  document.getElementById('pTt').innerHTML=PROFILE.title+'<br>'+PROFILE.career;
+  document.getElementById('pQt').innerHTML='“'+PROFILE.slogan+'”';
+  document.getElementById('pCh').innerHTML=PROFILE.channels.concat(PROFILE.handle?[PROFILE.handle]:[]).map(function(c){return '<span>'+c+'</span>';}).join('');
+  document.getElementById('ctaAsk').textContent=PROFILE.ask;
+  document.getElementById('ctaWho').textContent=(PROFILE.handle?PROFILE.handle+' · ':'')+PROFILE.name+' · '+PROFILE.title;})();
+
+var TOTAL=56, BEAT=0.5;
+function clamp(x,a,b){return x<a?a:x>b?b:x;}
+function eo(x){return 1-Math.pow(1-x,3);}
+function eio(x){return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;}
+function back(x){var c=1.9;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2);}
+function rnd(n){var x=Math.sin(n*12.9898)*43758.5453;return x-Math.floor(x);}
+var scenes=[].slice.call(document.querySelectorAll('.scene')).map(function(s){var r=s.getAttribute('data-t').split(',').map(Number);
+  return {el:s,a:r[0],b:r[1],items:[].slice.call(s.querySelectorAll('.el'))};});
+
+function anim(e,t){
+  var a=e.getAttribute('data-a'),t0=+e.getAttribute('data-in'),d=t-t0;
+  if(d<0){e.style.opacity=0;e.style.transform='none';return;}
+  var tf='',op=1;
+  if(a==='slam'){var p=clamp(d/0.2,0,1);op=p;tf='scale('+(1.9-0.9*eo(p))+')';}
+  else if(a==='stamp'){var p2=clamp(d/0.2,0,1),rt=+(e.getAttribute('data-rot')||-6);tf='rotate('+((rt+2)*eo(p2)-2)+'deg) scale('+(2.4-1.4*eo(p2))+')';op=p2;}
+  else if(a==='up'){var p3=clamp(d/0.35,0,1);tf='translateY('+(60*(1-eo(p3)))+'px)';op=p3;}
+  else if(a==='pop'){var p4=clamp(d/0.32,0,1);tf='scale('+(0.5+0.5*back(p4))+')';op=clamp(p4*2,0,1);}
+  else if(a==='drop'){var p5=clamp(d/0.4,0,1);tf='translateY('+(-120*(1-eo(p5)))+'px)';op=clamp(p5*1.6,0,1);}
+  else if(a==='tilt'){var p6=clamp(d/0.6,0,1);   // 실제 화면이 비스듬히 떠올라 바로 선다 · 그 뒤 천천히 숨 쉰다
+    tf='perspective(1800px) translateY('+(260*(1-eo(p6))+Math.sin(t*1.3)*6)+'px) rotateX('+(18*(1-eo(p6)))+'deg) rotateY('+(-14*(1-eo(p6))+Math.sin(t*0.9)*1.5)+'deg)';op=clamp(p6*1.8,0,1);}
+  e.style.opacity=op;e.style.transform=tf||'none';
+}
+// 한 장씩 넘기고, 넘어온 장은 천천히 다가온다
+function flip(c,k,t){
+  var L=c.it,i=clamp(Math.floor((t-c.t0)/c.dl),0,L.length-1),d=t-c.t0-i*c.dl;
+  c.imgs.forEach(function(im,j){
+    if(j===i){var p=clamp(d/0.4,0,1);im.style.display='block';im.style.opacity=i?eo(p):1;im.style.transform='scale('+(1.0+0.06*clamp(d/c.dl,0,1))+')';im.style.zIndex=2;}
+    else if(j===i-1&&d<0.4){im.style.display='block';im.style.opacity=1;im.style.zIndex=1;}
+    else im.style.display='none';});
+  document.getElementById('cn'+k).textContent=(i+1)+' / '+L.length; document.getElementById('ct'+k).innerHTML=L[i].t;
+  var cp=document.getElementById('cp'+k),q=clamp(d/0.3,0,1); cp.style.opacity=t<c.t0?0:q; cp.style.transform='translateY('+(30*(1-eo(q)))+'px)';
+}
+// 금빛 먼지 — 늘 천천히 떠오른다 (배경이 멈춰 있지 않게)
+var dctx=document.getElementById('dust').getContext('2d');
+function dust(t){dctx.clearRect(0,0,1080,1920);
+  for(var i=0;i<70;i++){var x=rnd(i*3.1)*1080+Math.sin(t*0.3+i)*30, y=(rnd(i*7.7)*2200-(t*(18+rnd(i)*40)))%2200; if(y<0)y+=2200; y-=140;
+    var r=1+rnd(i*1.3)*3.2, a=0.15+0.5*rnd(i*5.1)*(0.6+0.4*Math.sin(t*2+i));
+    dctx.fillStyle='rgba(243,217,154,'+a.toFixed(3)+')';dctx.beginPath();dctx.arc(x,y,r,0,6.283);dctx.fill();}}
+var gctx=document.getElementById('grain').getContext('2d'),gimg=gctx.createImageData(540,960);
+var cam=document.getElementById('cam'),flash=document.getElementById('flash'),bar=document.querySelector('#bar i'),sweep=document.getElementById('sweep'),bignum=document.getElementById('bignum');
+var IMPACTS=[];scenes.forEach(function(s){s.items.forEach(function(e){var a=e.getAttribute('data-a');if(a==='slam'||a==='stamp'){var v=+e.getAttribute('data-in');if(IMPACTS.indexOf(v)<0)IMPACTS.push(v);}});});
+var CUTS=[3.2,6.4,10,16,22,28,34,41,45,49,51.8];
+function render(t){
+  bar.style.width=(100*t/TOTAL)+'%';
+  dust(t);
+  var sw=((t%6)/6); sweep.style.transform='translateX('+(sw*2600)+'px) rotate(18deg)';
+  var cur=null;CH.forEach(function(c,k){if(t>=c.a&&t<c.b)cur=c;});
+  bignum.textContent=cur?cur.no:''; bignum.style.opacity=cur?clamp((t-cur.a)/0.5,0,1)*0.9:0;
+  bignum.style.transform='translateY('+(cur?(-30*(t-cur.a)):0)+'px)';
+  scenes.forEach(function(s){var on=t>=s.a&&t<s.b;s.el.style.display=on?'flex':'none';if(!on)return;
+    var w=clamp((t-s.a)/0.18,0,1);s.el.style.opacity=s.a>0?eo(w):1;s.el.style.filter=s.a>0&&w<1?'blur('+(12*(1-w))+'px)':'none';
+    s.items.forEach(function(e){anim(e,t);});});
+  CH.forEach(function(c,k){if(t>=c.a&&t<c.b)flip(c,k,t);});
+  // 끝에서 다섯 칩이 하나씩 켜진다
+  [].slice.call(document.querySelectorAll('#chips1 .chip')).forEach(function(e,i){e.classList.toggle('on',t>=41.6+i*0.22);});
+  var ph=(t%BEAT)/BEAT,pulse=0.008*Math.exp(-ph*6),punch=0;
+  IMPACTS.forEach(function(i){var d=t-i;if(d>=0&&d<0.35)punch=Math.max(punch,0.035*Math.exp(-d*12));});
+  cam.style.transform='scale('+(1+pulse+punch)+')';
+  var f=0;CUTS.forEach(function(c){var d=t-c;if(d>=0&&d<0.2)f=Math.max(f,0.28*(1-d/0.2));});flash.style.opacity=f;
+  var seed=Math.floor(t*30),d8=gimg.data;for(var i=0;i<d8.length;i+=4){var v=rnd(i*0.37+seed*7.1)*255;d8[i]=d8[i+1]=d8[i+2]=v;d8[i+3]=255;}gctx.putImageData(gimg,0,0);
+}
+window.REEL={total:TOTAL,fps:30,prefix:'전문가릴스',cues:function(){
+  var ins=function(sel){return [].slice.call(document.querySelectorAll(sel)).map(function(e){return +e.getAttribute('data-in');});};
+  return {total:TOTAL,impacts:IMPACTS,cuts:CUTS,pops:ins('[data-a="pop"],[data-a="drop"],[data-a="tilt"]'),ticks:[],types:[],
+    soft:[[0,10],[41,51.8]],sparse:[],uhoh:[],dings:CH.map(function(c){return c.a;}).concat([43.0,50.3]),
+    hush:[50.05,50.3],riser:[49.0,50.05]};
+},ready:function(){return Promise.all([].slice.call(document.images).map(function(i){return i.decode().catch(function(){});})).then(function(){render(0);});}};
+window.render=render;
+render(0);
+</script>
+</body>
+</html>

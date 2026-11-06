@@ -28,7 +28,7 @@ const srv = http.createServer((q, rs) => {
   pg.on('dialog', d => d.accept());
   await pg.goto('http://127.0.0.1:' + port + '/' + PAGE, { waitUntil: 'load', timeout: 90000 });
   await pg.waitForTimeout(3500);
-  if (PRE) { await pg.evaluate(PRE).catch(e => errs.push('PRE ' + e.message)); await pg.waitForTimeout(1500); }
+  if (PRE) { const rv = await pg.evaluate(PRE).catch(e => { errs.push('PRE ' + e.message); }); if (rv !== undefined) console.log('미리 할 일 →', rv); await pg.waitForTimeout(1500); }
   const out = path.join(OUTD, (NAME || path.basename(PAGE, '.html')) + '.png');
   if (SEL) {
     const vis = await pg.evaluate(sel => { const e = document.querySelector(sel); if (!e) return 'none'; const r = e.getBoundingClientRect(); return r.width + 'x' + r.height + ' ' + getComputedStyle(e).display; }, SEL);

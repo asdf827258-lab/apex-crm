@@ -1,6 +1,7 @@
 // 릴스 굽기 — node render.js [reel|story] [A B C]
 //   reel  : 23.5초 글자형 (reel.html)
-//   story : 43.5초 막막이 이야기형 (story.html) — A B C D (D 는 나를 알리기)
+//   story : 65초 끝까지 (story.html) — 상황 넷 cancer brain heart care
+//   expert: 56초 전문가를 만듭니다 (expert.html) — 교육시스템 EM 다섯 챕터
 // reel.html 을 1080×1920 으로 열어 render(t) 를 한 장씩 부르고 찍어 ffmpeg 로 넘긴다.
 // 비트는 beat.py 가 화면의 순간(쾅·휙·딸깍)에 맞춰 합성한다.
 const { chromium } = require('playwright');
@@ -14,10 +15,11 @@ const TMP = process.env.REEL_TMP || path.join(require('os').tmpdir(), 'reel');
 fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(TMP, { recursive: true });
 const NAMES = { A: 'A_직장인', B: 'B_육아맘', C: 'C_경력설계사', D: 'D_나를알리기',
-  cancer: '1_암', brain: '2_뇌혈관', heart: '3_심혈관', care: '4_돌봄' };   // story 는 상황 넷
+  cancer: '1_암', brain: '2_뇌혈관', heart: '3_심혈관', care: '4_돌봄',   // story 는 상황 넷
+  main: '교육시스템EM' };                                                    // expert 는 한 편
 let args = process.argv.slice(2);
-const PAGE = /^(reel|story)$/.test(args[0] || '') ? args.shift() : 'reel';
-const want = args.length ? args : (PAGE === 'story' ? ['cancer', 'brain', 'heart', 'care'] : ['A', 'B', 'C']);
+const PAGE = /^(reel|story|expert)$/.test(args[0] || '') ? args.shift() : 'reel';
+const want = args.length ? args : (PAGE === 'story' ? ['cancer', 'brain', 'heart', 'care'] : PAGE === 'expert' ? ['main'] : ['A', 'B', 'C']);
 
 (async () => {
   const browser = await chromium.launch();
