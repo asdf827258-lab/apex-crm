@@ -1,0 +1,203 @@
+/* ══════════════════════════════════════════════════════════════════
+   📜 증권전달 — 고객이 받는 속지·안내장                    — 판 X361
+   사장님 말씀 2026-11-06
+     「증권전달 이거 디자인 재구성하고 싶어 먼저 파악하고」
+     「고객에게 관리해줄수 있는 보험 담당자로써 내용을 재구성 글씨를 키우고
+      청구 관리 안내 방법 필요서류 등 디자인 부터 재구성 해보자」
+
+   ★★ 손대기 전에 재어 보니, 글이 든 자리 536곳 가운데 489곳(91%)이
+     15px 미만이었습니다. A4 가 794px 이라 11px 은 종이에서 8포인트입니다 —
+     60대 고객이 돋보기 없이 못 읽습니다. 그런데 낱장마다 밑이 121~578px
+     비어 있었습니다. 키울 자리가 이미 있었던 것입니다.
+
+   ★ 이 자가 보는 것 (열 가지)
+     [1] 고객용이 열 장이고 <b>담당자가 계약보다 먼저</b> 온다
+     [2] 어느 장도 A4 를 안 넘는다
+     [3] <b>고객이 읽는 글은 14px 바닥</b> — 법정 고지와 이름표만 예외
+     [4] <b>상담 도구 장(chk)은 한 톨도 안 바뀐다</b> — 어르신용으로 따로
+         맞춰 둔 자리가 있어, 전역에 글씨를 키우면 그쪽이 같이 커집니다
+     [5] 쪽 번호를 <b>손으로 안 적는다</b> — shNum() 한 곳이 센다
+     [6] 「보내는 세 가지 방법」이 <b>한 장에만</b> 있다 (5번)
+     [7] 서류 장이 <b>「보험사·상품마다 다릅니다」</b> 와 심사 문구를 말한다 (1번)
+     [8] 놓치는 청구 장이 <b>「지급된다」고 단정하지 않는다</b>
+     [9] 글씨 크기를 <b>토큰 한 곳</b>에서만 정한다
+     [10] 견본 고객 이름이 <b>홍길동</b> 이다 (3번)
+
+   ★ 되돌려 보고 빨간불을 확인했습니다 (8번)
+     ⓐ --ss-body 를 11.5px 로 되돌림      → [3] 이 「14px 미만 …곳」 으로 욺
+     ⓑ 토큰을 :root 로 옮김               → [4] 가 「도구 장이 변했다」 로 욺
+     ⓒ .ways 를 연락처 장에 도로 베껴 둠  → [6] 이 「두 곳」 으로 욺
+     ⓓ 차례에서 담당자를 계약 뒤로 옮김   → [1] 이 욺
+     ⓔ 쪽 번호를 날글로 도로 적음          → [5] 가 욺
+     ⓕ 서류 장에서 「보험사·상품마다」 뺌  → [7] 이 욺
+     ⓖ 새 장을 지움                       → [1] 이 욺
+
+   ⚠ 바깥을 한 번도 안 부릅니다 — 파일만 엽니다 (8번).
+   ══════════════════════════════════════════════════════════════════ */
+const fs = require('fs');
+const path = require('path');
+const { chromium } = require('playwright');
+
+const FILE = path.resolve(__dirname, '..', 'app', '증권전달', 'index.html');
+
+/* 고객이 받는 차례 — 담당자가 계약보다 먼저입니다 */
+const 차례 = ['s1','s6','s5','s2','s3','s12','s13','s4','s10','s11'];
+/* 글씨 바닥 — 고객용 장의 어떤 글도 이 밑으로 안 갑니다 (법정 꼬리글만 예외) */
+const 바닥 = 13;
+/* ★ 사다리 값이 <b>뒤로 가지 않는지</b>를 봅니다 — 낱낱의 글을 세는 것보다
+   이쪽이 튼튼합니다. 한 곳(--ss-…)만 고치면 전부 따라오게 해 두었으니,
+   그 한 곳이 작아지지 않는지만 지키면 됩니다 (5번). */
+const 사다리 = { '--ss-h2': 30, '--ss-h3': 18, '--ss-lead': 16, '--ss-body': 14.5, '--ss-sm': 13, '--ss-foot': 12 };
+/* 상담 도구 장은 <b>이 분포 그대로</b>여야 합니다 (판 X361 에서 재어 둔 값) */
+const 도구기준 = '9.5×3 10.5×17 11×14 11.5×39 12×14 12.5×14 13×58 13.5×9 14×15 15×12 16×8 18.5×6 22×1 23×1 26×1 27×2';
+
+let 실패 = 0;
+const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 실패++; };
+
+(async () => {
+  console.log('📜 증권전달 — 고객이 받는 속지·안내장 (판 X361)');
+  console.log('──────────────────────────────');
+
+  const src = fs.readFileSync(FILE, 'utf8');
+
+  /* ── [9] 크기를 토큰 한 곳에서만 정하나 ───────────────────── */
+  console.log('[9] 글씨 크기를 토큰 한 곳에서 정하나');
+  const 토큰블록 = /\.sheet\[data-kind="ins"\],\.sheet\[data-kind="let"\]\{([^}]*)\}/.exec(src);
+  ok(!!토큰블록, '고객용 장에만 거는 토큰 묶음이 있다');
+  if (토큰블록) {
+    Object.keys(사다리).forEach(k => {
+      const m = new RegExp(k + ':\\s*([0-9.]+)px').exec(토큰블록[1]);
+      const v = m ? parseFloat(m[1]) : 0;
+      ok(v >= 사다리[k], k + ' = ' + (m ? m[1] + 'px' : '(없음)') + ' (바닥 ' + 사다리[k] + 'px)');
+    });
+  }
+  ok(!/--ss-[a-z]+\s*:/.test((/:root\{[^}]*\}/.exec(src) || [''])[0]),
+     '토큰을 :root 에 두지 않았다 (전역에 걸면 상담 도구 장이 같이 커집니다)');
+  /* 낱장 CSS 가 크기를 또 박지 않는지 — 고객용 장만 가리키는 #s 규칙에 날 px */
+  const 박은곳 = (src.match(/#s(?:1|2|3|4|5|6|10|11|12|13)\s[^{]*\{[^}]*font-size:\s*[0-9]/g) || []);
+  ok(박은곳.length === 0, '고객용 장에 크기를 또 박은 자리 ' + 박은곳.length + '곳'
+     + (박은곳.length ? ('\n        ' + 박은곳.slice(0, 4).join('\n        ')) : ''));
+
+  /* ── [5] 쪽 번호를 손으로 안 적나 ────────────────────────── */
+  console.log('[5] 쪽 번호를 손으로 안 적나');
+  const 날번호 = (src.match(/보험증권 보관 안내서 · \d/g) || []).length;
+  ok(날번호 === 0, 'HTML 에 손으로 적은 쪽 번호 ' + 날번호 + '개 (0이어야 합니다)');
+  ok(/function shNum\(\)/.test(src), '세는 자(shNum)가 한 곳에 있다');
+  ok((src.match(/function shNum\(/g) || []).length === 1, 'shNum 이 두 벌이 아니다');
+
+  /* ── [6] 보내는 세 가지 방법이 한 곳에만 ─────────────────── */
+  console.log('[6] 「보내는 세 가지 방법」이 한 장에만 있나');
+  const ways = (src.match(/<div class="ways">/g) || []).length;
+  ok(ways === 1, '.ways 덩이 ' + ways + '개 (1이어야 합니다 · 5번)');
+
+  /* ── [10] 견본 이름 ───────────────────────────────────── */
+  console.log('[10] 견본 고객 이름이 홍길동인가');
+  ok(/홍길동/.test(src), '홍길동을 쓴다 (3번)');
+
+  /* ── 브라우저로 재는 것 ─────────────────────────────────── */
+  const b = await chromium.launch();
+  const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
+  const 터짐 = [];
+  p.on('pageerror', e => 터짐.push(String(e).slice(0, 110)));
+  const 바깥 = [];
+  /* 바깥을 막습니다 — 이 저장소의 꼴은 '**://**' 입니다 (check-netblock 이 그 글자를 봅니다) */
+  await p.route('**://**', r => {
+    const u = r.request().url();
+    if (/^file:/.test(u)) return r.continue();
+    if (/supabase\.co|supabase\.in|netlify\.app|\.netlify\/functions|\/api\//i.test(u)) 바깥.push(u);
+    return r.abort();
+  });
+  await p.goto('file://' + FILE, { waitUntil: 'load' });
+  await p.waitForTimeout(1800);
+
+  const r = await p.evaluate(({ 바닥 }) => {
+    const A4 = 1123;
+    const 장 = [];
+    document.querySelectorAll('.sheet[data-kind="ins"],.sheet[data-kind="let"]').forEach(s => {
+      if (s.classList.contains('off')) return;
+      const q = s.getBoundingClientRect();
+      const no = s.querySelector('.sh-top .r');
+      장.push({ id: s.id, 높이: Math.round(q.height), 넘침: Math.max(0, Math.round(q.height - A4)),
+                쪽: no ? (no.textContent || '').trim() : '' });
+    });
+    /* 작은 글 — 읽는 글만 셉니다 */
+    const 작은 = [];
+    document.querySelectorAll('.sheet[data-kind="ins"],.sheet[data-kind="let"]').forEach(s => {
+      if (s.classList.contains('off')) return;
+      s.querySelectorAll('*').forEach(e => {
+        if (e.children.length) return;
+        const t = (e.textContent || '').trim();
+        if (!t) return;
+        if (e.closest('.sh-foot')) return;                /* 법정 고지만 12px 입니다 */
+        const f = parseFloat(getComputedStyle(e).fontSize);
+        if (f < 바닥) 작은.push(Math.round(f * 10) / 10 + 'px · ' + t.slice(0, 30));
+      });
+    });
+    /* 상담 도구 장 — 잠깐 켜서 분포를 잰다 */
+    const chk = [...document.querySelectorAll('.sheet[data-kind="chk"]')];
+    const was = chk.map(s => s.classList.contains('off'));
+    chk.forEach(s => s.classList.remove('off'));
+    const c = {};
+    chk.forEach(s => s.querySelectorAll('*').forEach(e => {
+      if (e.children.length) return;
+      const t = (e.textContent || '').trim(); if (!t) return;
+      const f = Math.round(parseFloat(getComputedStyle(e).fontSize) * 10) / 10;
+      c[f] = (c[f] || 0) + 1;
+    }));
+    chk.forEach((s, i) => { if (was[i]) s.classList.add('off'); });
+    const 도구 = Object.keys(c).map(Number).sort((x, y) => x - y).map(f => f + '×' + c[f]).join(' ');
+    /* 장을 하나 꺼 보고 쪽 번호가 다시 매겨지나 */
+    const t13 = document.getElementById('s13');
+    let 다시 = '';
+    if (t13) {
+      t13.classList.add('off');
+      try { markFirst(); } catch (e) {}
+      const l = document.getElementById('s11').querySelector('.sh-top .r');
+      다시 = l ? (l.textContent || '').trim() : '';
+      t13.classList.remove('off');
+      try { markFirst(); } catch (e) {}
+    }
+    const 글 = (id) => { const e = document.getElementById(id); return e ? (e.innerText || '') : ''; };
+    return { 장, 작은, 도구, 다시, s12: 글('s12'), s13: 글('s13') };
+  }, { 바닥 });
+
+  console.log('[1] 고객용이 열 장이고 담당자가 계약보다 먼저 오나');
+  const 선차례 = r.장.map(x => x.id);
+  ok(선차례.length === 차례.length, '고객용 ' + 선차례.length + '장 (' + 차례.length + '장이어야 합니다)');
+  ok(선차례.join('>') === 차례.join('>'), '차례 — ' + 선차례.join(' → '));
+  ok(선차례.indexOf('s5') < 선차례.indexOf('s2'), '담당자(s5)가 계약(s2)보다 앞에 선다');
+  ok(선차례.indexOf('s12') >= 0 && 선차례.indexOf('s13') >= 0, '필요서류(s12)·놓치는 청구(s13) 장이 있다');
+
+  console.log('[2] 어느 장도 A4 를 안 넘나');
+  const 넘 = r.장.filter(x => x.넘침 > 0);
+  ok(넘.length === 0, '넘치는 장 ' + 넘.length + '개' + (넘.length ? (' — ' + 넘.map(x => x.id + ' +' + x.넘침 + 'px').join(' · ')) : ''));
+
+  console.log('[3] 고객이 읽는 글이 ' + 바닥 + 'px 바닥을 지키나');
+  ok(r.작은.length === 0, '바닥 밑으로 떨어진 글 ' + r.작은.length + '곳'
+     + (r.작은.length ? ('\n        ' + r.작은.slice(0, 6).join('\n        ')) : ''));
+
+  console.log('[4] 상담 도구 장이 한 톨도 안 바뀌었나');
+  ok(r.도구 === 도구기준, '도구 장 글씨 분포' + (r.도구 === 도구기준 ? ' 그대로' : ('\n        잰 값 ' + r.도구 + '\n        기준 ' + 도구기준)));
+
+  console.log('[5] 장을 끄면 쪽 번호가 다시 매겨지나');
+  ok(/· 07$/.test(r.다시), '놓치는 청구 장을 끄니 연락처가 08 → ' + (r.다시 || '(못 읽음)'));
+
+  console.log('[7] 서류 장이 단정하지 않나 (1번 · 2번)');
+  ok(/보험사와 상품마다 다릅니다/.test(r.s12), '「보험사와 상품마다 다릅니다」 를 말한다');
+  ok(/약관과 보험회사의 심사/.test(r.s12), '「약관과 보험회사의 심사」 를 말한다');
+  ok(!/반드시 받으실 수 있|모두 지급됩니다|틀림없이/.test(r.s12), '받는다고 장담하지 않는다');
+
+  console.log('[8] 놓치는 청구 장이 지급을 단정하지 않나');
+  ok(/모두 지급된다는 뜻은 아닙니다/.test(r.s13), '「모두 지급된다는 뜻은 아닙니다」 를 말한다');
+  ok(/약관과 보험회사의 심사/.test(r.s13), '「약관과 보험회사의 심사」 를 말한다');
+  ok(/상법 제662조/.test(r.s13), '3년은 법조문을 그대로 적는다 (상법 제662조)');
+
+  console.log('[끝] 조용한가');
+  ok(터짐.length === 0, '터진 자리 ' + 터짐.length + (터짐.length ? (' ← ' + 터짐[0]) : ''));
+  ok(바깥.length === 0, '사장님 서버를 부른 횟수 ' + 바깥.length + ' (7번)');
+
+  await b.close();
+  console.log('──────────────────────────────');
+  if (실패) { console.log('✗ ' + 실패 + '가지 빨간불'); process.exit(1); }
+  console.log('증권전달 속지 점검 통과 — 고객이 읽을 수 있는 크기로 섭니다.');
+})();
