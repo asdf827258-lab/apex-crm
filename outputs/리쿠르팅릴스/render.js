@@ -19,7 +19,7 @@ fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(TMP, { recursive: true });
 const NAMES = { A: 'A_직장인', B: 'B_육아맘', C: 'C_경력설계사', D: 'D_나를알리기',
   cancer: '1_암', brain: '2_뇌혈관', heart: '3_심혈관', care: '4_돌봄',   // story 는 상황 넷
-  main: '교육시스템EM', full: '자세히', play: '1회차_2회차' };                                                    // expert 는 한 편
+  main: '교육시스템EM', full: '자세히', play: '1회차_2회차', clean: '1회차_2회차_자막없음' };                                                    // expert 는 한 편
 let args = process.argv.slice(2);
 const PAGE = /^(reel|story|expert|edu|game)$/.test(args[0] || '') ? args.shift() : 'reel';
 const want = args.length ? args : (PAGE === 'story' ? ['cancer', 'brain', 'heart', 'care'] : PAGE === 'expert' ? ['main'] : PAGE === 'edu' ? ['full'] : PAGE === 'game' ? ['play'] : ['A', 'B', 'C']);
@@ -61,6 +61,11 @@ const want = args.length ? args : (PAGE === 'story' ? ['cancer', 'brain', 'heart
         '| # | 시작 | 길이 | 트랙 | 대본 |', '|---|---|---|---|---|']
         .concat(narr.lines.map(l => `| ${String(l.no).padStart(2, '0')} | ${l.at} | ${l.dur.toFixed(1)}초 | ${l.trk} | ${l.text} |`));
       fs.writeFileSync(path.join(DIR, narr.key === 'edu' ? '내레이션_대본.md' : '내레이션_대본_' + narr.key + '.md'), md.join('\n') + '\n');
+      // 자막 파일(.srt) — 캡컷 · 프리미어에서 불러오거나, 녹음할 때 보면서 읽는다
+      const ts = x => { const ms = Math.round(x * 1000), h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, sec = Math.floor(ms / 1000) % 60;
+        return [h, m, sec].map(v => String(v).padStart(2, '0')).join(':') + ',' + String(ms % 1000).padStart(3, '0'); };
+      const srt = narr.lines.map((l, i) => (i + 1) + '\n' + ts(l.a + 0.2) + ' --> ' + ts(l.a + l.dur - 0.15) + '\n' + l.text + '\n').join('\n');
+      fs.writeFileSync(path.join(DIR, '내레이션_' + narr.key + '.srt'), srt);
       cues.narr = [];
       for (const l of narr.lines) {
         const base = path.join(DIR, 'narration', narr.key, String(l.no).padStart(2, '0'));
@@ -70,7 +75,7 @@ const want = args.length ? args : (PAGE === 'story' ? ['cancer', 'brain', 'heart
         execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', src, '-ac', '1', '-ar', '44100', '-sample_fmt', 's16', out]);
         cues.narr.push([l.a + 0.15, out]);
       }
-      console.log('내레이션 대본 → 내레이션_대본.md · 녹음 ' + cues.narr.length + ' / ' + narr.lines.length + '줄');
+      console.log('내레이션 대본 · 자막(.srt) → ' + narr.key + ' · 녹음 ' + cues.narr.length + ' / ' + narr.lines.length + '줄');
     }
     fs.writeFileSync(cueFile, JSON.stringify(cues));
     execFileSync('python3', [path.join(DIR, 'beat.py'), cueFile, wav], { stdio: 'inherit' });

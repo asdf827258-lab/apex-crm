@@ -100,6 +100,8 @@ body{font-family:Pretendard,sans-serif;color:var(--ink);letter-spacing:-.03em;wo
   <div id="flash"></div>
 </div>
 <script>
+// #clean — 캡컷에서 직접 녹음 · 자동 캡션을 달 판: 대화창 칸은 두고 글자만 뺀다(자막이 겹치지 않게)
+var CLEAN=/clean/.test(location.hash);
 var PROFILE={name:'윤시현',title:'에이플러스에셋 온탑본부 사업단장',career:'보험·재무설계 10년',
   channels:['▶ 유튜브 「윤단장의 보험시선」','📷 인스타그램'],ask:'📩 DM = 파티 신청',handle:'',photo:''};
 var C={y:'#FFD84D',g:'#59F0A0',p:'#C38CFF',r:'#FF5C6C',b:'#6EC3FF'};
@@ -259,7 +261,7 @@ function render(t){
   var ps=document.getElementById('pstart');if(ps&&cur.s.kind==='title')ps.style.visibility=Math.floor(t*3)%2?'hidden':'visible';
   var c1=document.getElementById('c1'),c2=document.getElementById('c2');if(cur.s.kind==='select'){var sd=t-cur.s.a;var on1=sd<2.2||sd>3.6;c1.classList.toggle('on',on1);c2.classList.toggle('on',!on1);}
   // 대화창 — 내레이션이 한 글자씩
-  var nn=Math.floor(clamp((ds-0.2)/(s.dur*0.62),0,1)*s.nar.length);dTx.textContent=s.nar.slice(0,nn);dNx.style.visibility=(nn>=s.nar.length&&Math.floor(t*3)%2)?'visible':'hidden';
+  var nn=Math.floor(clamp((ds-0.2)/(s.dur*0.62),0,1)*s.nar.length);dTx.textContent=CLEAN?'':s.nar.slice(0,nn);if(CLEAN)nn=0;dNx.style.visibility=(nn>=s.nar.length&&Math.floor(t*3)%2)?'visible':'hidden';
   dlg.style.opacity=s.kind==='party'&&ds>2.4?0.0:1;
   var ph=(t%BEAT)/BEAT,pulse=0.006*(ph<0.15?1:0),punch=0;IMP.forEach(function(i){var dd=t-i;if(dd>=0&&dd<0.2)punch=0.03;});
   cam.style.transform='scale('+(1+pulse+punch)+') translate('+(punch?((Math.floor(t*30)%2)?6:-6):0)+'px,0)';
