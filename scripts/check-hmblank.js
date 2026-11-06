@@ -10,6 +10,10 @@
      [5] 차례가 표(HM_BLANK) 그대로 — 생년 → 가족 → (배정 DB 는) 계약일
      [6] ★ 배정 DB 분께는 생년을 <b>안 묻나</b>(담을 칸이 없음 · 1번) · 남의 고객이면 안 묻나
      [7] 누르는 자리 44px
+     [8] 🏘 배정 DB 분께 <b>사시는 동네</b>를 여쭙나 (판 X367 · 사장님 말씀 2026-11-06 「지역동선으로
+         설계사의 상담 효율을 높여」 → 「동네(동) 모으기」) — 통화가 닿은 단계만 · 이미 있으면 안 물음 ·
+         동네 칸을 못 읽은 서버면 안 물음(1번) · 「순천」 처럼 동네가 아닌 글은 안 받음 ·
+         「순천시 조례동 12-3」 은 <b>조례동만</b> 담음(번지 버림 · 3번) · dbs.dong 하나만 · 서버 한 번
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -144,7 +148,7 @@ const SEED = () => {
     window.hmSteps = 원;
     return { f1, f2, f3, 남, db생년, 표: HM_BLANK.map(x => x.k + ':' + x.on).join(' · ') };
   });
-  is(C.표 === 'by:cli · hn:cli · cAt:db', '  표가 한 곳 — ' + C.표);
+  is(C.표 === 'by:cli · hn:cli · cAt:db · dong:db', '  표가 한 곳 — ' + C.표);
   is(C.f1 === 'by' && C.f2 === 'hn' && C.f3 === null, '  ★ 고객 365일 분은 <b>생년 → 가족</b> 차례로 하나씩, 다 차면 안 묻는다 — ' + [C.f1, C.f2, C.f3].join(' → '));
   is(C.db생년 === null, '  ★★ 배정 DB 분께는 <b>생년을 안 묻는다</b> — 담을 칸이 없습니다(지어 담지 않음 · 1번)');
   is(C.남 === null, '  ★ 남의 고객이면 <b>안 묻는다</b> — 서버가 안 받습니다');
@@ -169,6 +173,43 @@ const SEED = () => {
   });
   is(D.해.srv === 0 && /네 자리/.test(D.해.toast), '  이상한 해(1800)는 <b>안 받는다</b> — 「' + D.해.toast + '」');
   is(D.다음.srv === 0 && !D.다음.on && D.다음.again === null, '  ★ 「다음에」 는 서버를 안 부르고, <b>오늘은 다시 안 묻는다</b>');
+
+  console.log('\n[8] 🏘 배정 DB 분께 <b>사시는 동네</b> (판 X367)');
+  const E8 = await p.evaluate(async () => {
+    const me = arMyId(), 원 = window.hmSteps;
+    window.hmSteps = function () { return [{ key: 'db:d8', id: 'd8' }, { key: 'db:d9', id: 'd9' }, { key: 'db:da', id: 'da' }]; };
+    AR.cliRows = [];
+    AR.db.push({ id: 'd8', who: me, name: '홍길동H', stage: 'TA', cAt: '', dong: '', days: 3 });
+    AR.db.push({ id: 'd9', who: me, name: '홍길동I', stage: 'AP', cAt: '', dong: '연향동', days: 3 });
+    AR.db.push({ id: 'da', who: me, name: '홍길동J', stage: '미접촉', cAt: '', dong: '', days: 3 });
+    const o = {};
+    const b8 = hmBlankFor('db:d8'); o.k8 = b8 && b8.f.k;
+    o.있음 = hmBlankFor('db:d9'); o.미접촉 = hmBlankFor('db:da');
+    AR.noDong = true; o.못읽음 = hmBlankFor('db:d8'); AR.noDong = false;
+    hmBlankShow(b8);
+    o.글 = document.getElementById('hmBlankBox').innerText.replace(/\s+/g, ' ');
+    const save = () => [...document.querySelectorAll('#hmBlankBox button')].find(e => /저장/.test(e.textContent)).click();
+    SRV.length = 0; TOASTS.length = 0;
+    document.getElementById('hmBlankIn').value = '순천'; save(); await new Promise(r => setTimeout(r, 150));
+    o.아님 = { srv: SRV.length, toast: TOASTS.slice(-1)[0] || '' };
+    /* 「순천」 이 들어가 버리면 칸이 닫힙니다 — 다시 열어 다음 물음을 잇습니다(멈추면 「무엇이」 틀렸는지 못 적습니다) */
+    if (!document.getElementById('hmBlankIn')) { AR.db.forEach(r => { if (r.id === 'd8') r.dong = ''; }); hmBlankShow(b8); }
+    SRV.length = 0;
+    document.getElementById('hmBlankIn').value = '순천시 조례동 12-3'; save(); await new Promise(r => setTimeout(r, 300));
+    o.넣음 = SRV.slice(); o.손 = (hdbRow('d8') || {}).dong; o.toast = TOASTS.slice(-1)[0] || '';
+    window.hmSteps = 원;
+    return o;
+  });
+  is(E8.k8 === 'dong' && /사시는 동네/.test(E8.글) && /지역 동선/.test(E8.글), '  ★ TA 분께 <b>사시는 동네</b>를 여쭙는다 · 왜 묻는지 적는다 — ' + E8.글.slice(0, 70));
+  is(!/홍길동/.test(E8.글), '  이름을 가린다 (3번)');
+  is(E8.있음 === null && E8.미접촉 === null, '  이미 동네가 있으면 · 미접촉이면 <b>안 묻는다</b>');
+  is(E8.못읽음 === null, '  ★ 동네 칸을 못 읽은 서버면 <b>안 묻는다</b> — 담을 곳을 모릅니다 (1번)');
+  is(E8.아님.srv === 0 && /동·읍·면/.test(E8.아님.toast), '  ★ 「순천」 처럼 동네가 아닌 글은 <b>안 받는다</b> — 「' + E8.아님.toast + '」');
+  const up8 = E8.넣음.filter(x => x.t === 'dbs' && x.op === 'update');
+  is(up8.length === 1 && up8[0].row.dong === '조례동' && Object.keys(up8[0].row).sort().join(',') === 'dong,updated_at' &&
+     up8[0].eq && up8[0].eq[1] === 'd8',
+     '  ★★ 「순천시 조례동 12-3」 → <b>dbs.dong = 조례동</b> 하나만(번지 버림) · 서버 ' + E8.넣음.length + '번 — ' + JSON.stringify(up8[0] ? up8[0].row : null).slice(0, 80));
+  is(E8.손 === '조례동', '  손에 든 줄도 바뀐다 — ' + E8.손);
 
   console.log('\n[7] 손가락');
   is(A.작은 === 0, '  누르는 자리가 다 44px 이상 — 작은 것 ' + A.작은 + '개');

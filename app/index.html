@@ -9059,10 +9059,21 @@ function arLoad(force){
          적는 자리를 한 곳에 둡니다 (5번).                               */
     var full=cols+',source,stage,next_appt,contracted_at,policy_sent_at'+pexCols;
     AR.noLink=false;
-    return read(full+',client_id').then(function(rL){
+    /* 🏘 <b>동네(dong) 칸도 같이 받습니다</b> (판 X367 · 사장님 말씀 2026-11-06 「지역동선으로
+       설계사의 상담 효율을 높여」). 🗺️ 지역 동선이 이미 쓰는 칸입니다(📍 동네 찍기가 적음).
+       ★ 부르는 횟수는 그대로 — 같은 물음에 칸만 하나 늘렸습니다 (7번).
+       ★ 그 칸이 없는 서버면 <b>한 번만 내려가</b> 예전 그대로 읽고 AR.noDong 으로 적어 둡니다 —
+         그때 홈은 동네를 <b>안 여쭙니다</b>(담을 곳이 없습니다 · 1번). */
+    AR.noDong=false;
+    return read(full+',client_id,dong').then(function(rD){
+      if(!rD||!rD.error)return rD;
+      if(!down((rD.error||{}).message))return rD;
+      AR.noDong=true;
+      return read(full+',client_id');
+    }).then(function(rL){
       if(!rL||!rL.error)return rL;
       if(!down((rL.error||{}).message))return rL;
-      AR.noLink=true;
+      AR.noLink=true; AR.noDong=true;
       return read(full);
     }).then(function(r0){
       if(!r0||!r0.error)return r0;
@@ -9947,6 +9958,8 @@ function arDbCalc(dbs,calls){
     var ap=(''+(x.next_appt||''));
     if(a.appt>ap)ap=a.appt;
     out.push({id:x.id,who:x.assigned_to,name:x.customer_name||'(이름 없음)',region:x.region||'',
+      /* 🏘 동네 — 안 적혀 있으면 <b>빈 글</b>(모름)입니다. 지역(시)에서 짐작해 채우지 않습니다 (1번 · 판 X367) */
+      dong:(''+(x.dong||'')).replace(/^\s+|\s+$/g,''),
       /* 📞 번호 — 없으면 <b>빈 글</b>입니다. 0 이나 '-' 로 채우지 않습니다 (1번) */
       phone:''+(x.phone||''),
       src:(''+(x.source||'')).trim()||'일반',
@@ -21735,8 +21748,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-06 21:06';
-var APP_BUILD_NOTE='✍️ <b>보장 전·후 만들기 — 적는 것이 쉬워졌습니다</b>(판 X366 · 사장님 말씀 「만들기나 입력하는 부분들 조금 더 쉽게 작성할 수 있도록」) — <b>한 번에 적기</b>: 계약을 펴면 맨 위 칸에 「암진단 3천, 뇌혈관 1000, 입원일당 3만, 월 보험료 5만2천원 20년납」 처럼 말하듯 적으면 어느 칸에 들어갈지 먼저 보여 주고 「칸에 넣기」 로 넣습니다(못 알아본 줄은 칸을 고르게 · 같은 칸 두 번이면 큰 금액만 · 보험료 · 납입 · 만기 · 회사는 빈 칸만). 「+ 손으로 적기 / + 제안 더하기」 를 누르면 그 칸에 바로 커서. <b>금액 줄임말</b>: 보험료 칸에 「450만 · 5만2천 · 1억2천만」, 담보 칸에 「3천(=3천만원) · 1억 · 3만원」 — 담는 단위는 그대로, 담보 칸 「5,000」 이 5 가 되던 천 배 사고도 막음. ⑤ 표준 담보표는 <b>빈 담보를 접어</b> 적힌 것만(「빈 담보 N개도 보기」) — 견본 화면이 10,600 → 8,500px. 함께: 참고 담보 금액이 1만 배(300만원 → 300억원)로 적히던 것(판 X357)을 고침. ◾ 함께 들어 있는 판: 📑✅ <b>증권전달 속지 — 받자마자 「꼼꼼히 챙겨 주는구나」</b>(판 X369 · 사장님 말씀 「디자인을 확 와닿고 정말 꼼꼼히 관리해준다 라는 생각을 하게 해줘」). ① <b>표지에 차례</b>가 섰습니다 — 가운데가 크게 비어 있던 자리에 「이 안에 들어 있는 것 — 모두 N장」 과 장 제목이 번호와 함께 늘어섭니다. <b>받자마자 두께가 눈에 들어옵니다.</b> 제목은 <b>장에서 그대로 읽어</b> 오므로 장을 끄면 차례에서도 같이 빠집니다 — 손으로 적지 않았습니다. ② <b>새 장 「오늘 이것까지 확인해 드렸습니다」</b> — 성함 · 통장과 이체일 · 보장 대조 · 보험금 받으실 분 · 아프실 때 할 일 · 캘린더 · 연락처 · 어려운 말, 여덟 가지 가운데 <b>그 자리에서 켜신 것만</b> ✓ 로 찍힙니다. ★★ <b>안 하신 것은 안 찍힙니다</b> — 미리 찍어 두면 그 종이가 거짓말을 하고 고객은 그것을 사실로 믿습니다. 하나도 안 켜시면 줄을 지어내지 않고 <b>무엇을 켜시면 되는지</b>만 적습니다. ◾ 왼쪽 패널 「✅ 오늘 함께 확인한 것」 칸에서 고객과 하나씩 보며 켜시면 됩니다. ★ 열두 장 모두 A4 안에 서고, 바닥 여유도 그대로 지킵니다. ⚠ 설계사 매뉴얼 · 상담 도구는 한 줄도 안 건드렸습니다.';
+var APP_BUILD='2026-11-06 21:10';
+var APP_BUILD_NOTE='🏘 <b>지역 동선 — 동네를 모으고, 약속 없는 날엔 「오늘 코스」 를 짭니다</b> (판 X367). ◾ 「이분 끝」 을 누르면 📝 에서 그 분 「사시는 동네(예: 조례동)」 를 한 번 여쭙습니다. ◾ 🗺️ 지역 동선에서 약속이 없는 날에는 후보를 동네별로 묶어 제일 많은 동네부터 「오늘 코스」 한 장으로 보여 드립니다 — 📞 전화 · 약속 잡기가 그 자리에서 됩니다. ◾ 같이 실려 나가는 판: 청구서류 한 자리 · 증권전달 속지(판 X368 · X369) · 보장 전·후 만들기 쉽게 적기(판 X366).';
 
 
 
@@ -28183,7 +28196,16 @@ var HM_BLANK=[
   { k:'hn', on:'cli', col:'household_notes', t:'가족 한 줄', type:'text',
     why:'가족 상황에 맞는 소식·마디가 섭니다 · 이름은 적지 마세요(서버로 갑니다)', ph:'예: 배우자 · 자녀 둘(초등)' },
   { k:'cAt', on:'db', col:'contracted_at',   t:'계약일', type:'date', stages:['계약완료','증권전달','소개완료'],
-    why:'계약 마디(한 달 뒤 · 석 달마다)가 이 날로 섭니다' }
+    why:'계약 마디(한 달 뒤 · 석 달마다)가 이 날로 섭니다' },
+  /* 🏘 <b>사시는 동네</b> (판 X367 · 사장님 말씀 2026-11-06 「지역동선으로 설계사의 상담 효율을
+     높여」 → 고르신 「동네(동) 모으기」). 재어 보니 사장님 고객 94분은 지역이 「순천」 같은
+     <b>시 이름뿐</b>이고 주소·위치가 0분이라, 🗺️ 지역 동선이 같은 동네끼리 묶을 수가 없었습니다.
+     ★ 담는 칸은 <b>dbs.dong 한 곳</b> — 지역 동선의 「📍 동네」 가 적는 그 칸입니다 (5번).
+     ★ 통화가 닿은 단계만 여쭙니다 — 미접촉·부재는 아직 물어볼 수 없습니다. 거절은 안 여쭙니다. */
+  { k:'dong', on:'db', col:'dong', t:'사시는 동네', type:'dong',
+    stages:['TA','AP','PC','CS','계약완료','증권전달','소개완료'],
+    why:'적으시면 🗺️ 지역 동선이 같은 동네 분을 묶어 「오늘 코스」 를 짭니다 — 동·읍·면까지만(번지는 안 적습니다)',
+    ph:'예: 조례동 · 해룡면' }
 ];
 var HM_BLANK_KEY='apex_hm_blank_skip_v1';
 /* 「다음에」 는 <b>그 분께 오늘은 더 안 묻기</b>입니다 — 칸 하나만 넘기면 바로 다음 칸을
@@ -28220,6 +28242,8 @@ function hmBlankFor(key){
       if(!(typeof hdbCan==='function'&&hdbCan(d)))return null;
       if(f.stages&&f.stages.indexOf(d.stage)<0)continue;
       if(f.k==='cAt'&&!d.cAt)return {f:f,id:x.id,nm:d.name};
+      /* 동네 칸을 못 읽은 서버(AR.noDong)면 <b>안 여쭙니다</b> — 담을 곳을 모릅니다 (1번) */
+      if(f.k==='dong'&&!AR.noDong&&d.dong!==undefined&&!d.dong)return {f:f,id:x.id,nm:d.name};
     }
   }
   return null;
@@ -28230,6 +28254,7 @@ function hmBlankShow(b){
   var f=b.f,inp=(f.type==='year')
       ?'<input id="hmBlankIn" type="number" inputmode="numeric" min="1900" max="'+new Date().getFullYear()+'" placeholder="'+osEsc(f.ph||'')+'">'
       :(f.type==='date')?'<input id="hmBlankIn" type="date">'
+      :(f.type==='dong')?'<input id="hmBlankIn" type="text" maxlength="24" autocomplete="off" placeholder="'+osEsc(f.ph||'')+'">'
       :'<input id="hmBlankIn" type="text" maxlength="80" placeholder="'+osEsc(f.ph||'')+'">';
   el.innerHTML='<div class="hm-blank" role="dialog" aria-label="빈칸 하나">'+
     '<div class="hm-blank-h">📝 <b>'+osEsc(osMaskName(b.nm||''))+'</b>님 — 하나만 여쭐게요</div>'+
@@ -28252,6 +28277,17 @@ function hmBlankLater(){
   }
   hmBlankClose();
 }
+/* 🏘 적으신 글에서 <b>동·읍·면 이름 하나</b>만 꺼냅니다 (판 X367). 「순천시 조례동」 처럼 적으셔도
+   조례동만 담고, 「순천」·「아파트 앞」 처럼 동네가 아닌 글은 <b>안 받습니다</b> — 엉뚱한 글이 담기면
+   지역 동선이 그 글로 묶습니다 (1번). 번지·호수는 버립니다(동네까지만 · 3번). */
+function hmDongOf(v){
+  var L=(''+(v||'')).replace(/[(),·]/g,' ').split(/\s+/),i,w;
+  for(i=L.length-1;i>=0;i--){
+    w=L[i];
+    if(/^[가-힣]{1,8}[0-9]{0,2}(동|읍|면|리|가)$/.test(w)&&!/^[0-9]/.test(w))return w;
+  }
+  return '';
+}
 function hmBlankSave(){
   var el=document.getElementById('hmBlankBox'),inp=document.getElementById('hmBlankIn'),
       sb=(typeof osClient==='function')?osClient():null,f=null,i,id,k,v,patch={},y;
@@ -28267,6 +28303,10 @@ function hmBlankSave(){
     if(!(y>=1900&&y<=new Date().getFullYear())){ toast('출생년도를 네 자리로 적어 주세요.'); return; }
     v=y;
   }
+  if(f.type==='dong'){
+    v=hmDongOf(v);
+    if(!v){ toast('동·읍·면 이름으로 적어 주세요 — 예: 조례동 · 해룡면'); return; }
+  }
   if(!sb){ toast('서버에 연결되어 있지 않습니다.'); return; }
   patch[f.col]=v;
   if(f.on==='db')patch.updated_at=new Date().toISOString();
@@ -28276,7 +28316,7 @@ function hmBlankSave(){
     if(w.ok!==true){ hdbSay(w,f.t+' 저장'); return; }
     /* 손에 든 줄도 같이 — 다시 부르지 않습니다 (7번) */
     if(f.on==='cli'){ var c=hmBlankCliOf(id); if(c)c[f.k]=v; }
-    else if(typeof hdbLocal==='function'){ var pp={}; pp[f.k]=(''+v).slice(0,10); hdbLocal(id,pp); }
+    else if(typeof hdbLocal==='function'){ var pp={}; pp[f.k]=(f.type==='dong')?v:(''+v).slice(0,10); hdbLocal(id,pp); }
     hmBlankClose();
     toast(hmJo(f.t,'을','를')+' 적었습니다');
     try{ hmPaint(); }catch(e){}
