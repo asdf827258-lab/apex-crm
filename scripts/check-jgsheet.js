@@ -11,7 +11,7 @@
      비어 있었습니다. 키울 자리가 이미 있었던 것입니다.
 
    ★ 이 자가 보는 것 (열 가지)
-     [1] 고객용이 <b>열한 장</b>이고 <b>담당자가 계약보다 먼저</b> 온다
+     [1] 고객용이 <b>열두 장</b>이고 <b>담당자가 계약보다 먼저</b> 온다
      [2] 어느 장도 A4 를 안 넘는다
      [3] <b>고객이 읽는 글은 13px 바닥</b> — 법정 고지만 예외
      [4] <b>상담 도구 장(chk)은 한 톨도 안 바뀐다</b> — 어르신용으로 따로
@@ -29,6 +29,10 @@
      [2] 어느 장도 A4 를 안 넘고, <b>바닥에 25px 여유</b>를 남긴다 (판 X364) —
           제 기계에서는 들어가고 CI 에서만 넘친 적이 있습니다(s14 +22px).
           글꼴이 다르면 줄 수가 달라지므로 「안 넘쳤다」 로는 모자랍니다.
+     [17] 📑 <b>표지 차례를 장에서 읽어</b> 세운다 (판 X369) — 손으로 적어 두면
+          장을 끄고 켤 때마다 거짓말이 됩니다.
+     [18] ✅ <b>「오늘 확인한 것」 은 켠 것만 찍힌다</b> (판 X369) — 안 하신 것을
+          미리 찍어 두면 그 종이가 거짓말을 하고, 고객은 그것을 사실로 믿습니다.
      [16] <b>어려운 말에 풀이가 그 장 안에</b> 붙어 있다 (판 X364) — 사장님 말씀
           2026-11-06 「어른들도 이해하기 쉽게 알려주는 말투로 해」. 다른 장에
           풀이를 적어 두면 그 장을 들고 병원에 가신 분은 못 봅니다.
@@ -51,6 +55,8 @@
      ⓛ 사진 자리(.jg-hero)를 지움           → [15] 가 욺
      ⓝ 풀이 한 마디를 지움(s14 원무과)      → [16] 이 욺 — 실제로 돌려 봤습니다
      ⓞ 새 장(s14)을 지움                   → [1]·[15] 가 욺 — 실제로 돌려 봤습니다
+     ⓟ 표지 차례를 손으로 적음              → [17] 이 욺 — 실제로 돌려 봤습니다
+     ⓠ 안 고른 것까지 찍히게 함             → [18] 이 욺 — 실제로 돌려 봤습니다
      ⓜ 사진 찾는 길을 제 것으로 새로 만듦    → [15] 가 욺(/api/photo-search 가 아니면)
      ⓝ 켤 때 사진을 미리 받게 함             → 「서버를 부른 횟수」 가 욺 (7번)
 
@@ -63,7 +69,7 @@ const { chromium } = require('playwright');
 const FILE = path.resolve(__dirname, '..', 'app', '증권전달', 'index.html');
 
 /* 고객이 받는 차례 — 담당자가 계약보다 먼저입니다 */
-const 차례 = ['s1','s6','s5','s2','s3','s12','s14','s13','s4','s10','s11'];
+const 차례 = ['s1','s6','s5','s15','s2','s3','s12','s14','s13','s4','s10','s11'];
 /* 글씨 바닥 — 고객용 장의 어떤 글도 이 밑으로 안 갑니다 (법정 꼬리글만 예외) */
 const 바닥 = 13;
 /* ★ A4 바닥에 남겨 둘 여유 — 글꼴이 바뀌면 줄 수가 달라집니다 (판 X364) */
@@ -259,14 +265,39 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
       delete JGPH.s3; jgphPaint();
     } catch (e) { 띠.사진넣으면.말 = '터졌습니다 — ' + ((e && e.message) || ''); }
     const 글 = (id) => { const e = document.getElementById(id); return e ? (e.innerText || '') : ''; };
+    /* 📑 표지 차례 — 장에서 읽어 세우나 (판 X369) */
+    const 켜진 = [...document.querySelectorAll('.sheet[data-kind="ins"],.sheet[data-kind="let"]')]
+      .filter(x => !x.classList.contains('off') && x.id !== 's1');
+    const 차례 = { 줄: document.querySelectorAll('#v_cvtoc div').length, 켜진: 켜진.length,
+                   머리: (document.getElementById('v_cvtoch') || {}).textContent || '', 끈뒤: -1 };
+    (function () {
+      const c = document.querySelector('.chip input[data-s="s13"]');
+      if (!c) return;
+      c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true }));
+      차례.끈뒤 = document.querySelectorAll('#v_cvtoc div').length;
+      c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true }));
+    })();
+    /* ✅ 오늘 함께 확인한 것 — 켠 것만 찍히나 (판 X369 · 1번) */
+    const 확인 = { 처음줄: document.querySelectorAll('.okl .r').length,
+                   처음안내: !!document.querySelector('.oknone'),
+                   켠뒤: -1, 켠뒤안내: true, 패널: document.querySelectorAll('#okHost input[data-ok]').length };
+    (function () {
+      const ks = ['nm', 'ac', 'cal'];
+      ks.forEach(k => { const el = document.querySelector('#okHost input[data-ok="' + k + '"]');
+        if (el) { el.checked = true; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+      확인.켠뒤 = document.querySelectorAll('.okl .r').length;
+      확인.켠뒤안내 = !!document.querySelector('.oknone');
+      ks.forEach(k => { const el = document.querySelector('#okHost input[data-ok="' + k + '"]');
+        if (el) { el.checked = false; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    })();
     const 장글 = {};
     document.querySelectorAll('.sheet[data-kind="ins"],.sheet[data-kind="let"]')
       .forEach(sh => { 장글[sh.id] = sh.innerText || ''; });
-    return { 장, 작은, 도구, 다시, s12: 글('s12'), s13: 글('s13'), 장글,
+    return { 장, 작은, 도구, 다시, s12: 글('s12'), s13: 글('s13'), 장글, 차례, 확인,
              고객파랑: [...new Set(고객파랑)], 도구파랑, 띠 };
   }, { 바닥 });
 
-  console.log('[1] 고객용이 열한 장이고 담당자가 계약보다 먼저 오나');
+  console.log('[1] 고객용이 열두 장이고 담당자가 계약보다 먼저 오나');
   const 선차례 = r.장.map(x => x.id);
   ok(선차례.length === 차례.length, '고객용 ' + 선차례.length + '장 (' + 차례.length + '장이어야 합니다)');
   ok(선차례.join('>') === 차례.join('>'), '차례 — ' + 선차례.join(' → '));
@@ -294,7 +325,7 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
   ok(r.도구 === 도구기준, '도구 장 글씨 분포' + (r.도구 === 도구기준 ? ' 그대로' : ('\n        잰 값 ' + r.도구 + '\n        기준 ' + 도구기준)));
 
   console.log('[5] 장을 끄면 쪽 번호가 다시 매겨지나');
-  ok(/· 08$/.test(r.다시), '놓치는 청구 장을 끄니 연락처가 09 → ' + (r.다시 || '(못 읽음)'));
+  ok(/· 09$/.test(r.다시), '놓치는 청구 장을 끄니 연락처가 10 → ' + (r.다시 || '(못 읽음)'));
 
   console.log('[7] 서류 장이 단정하지 않나 (1번 · 2번)');
   ok(/보험사와 상품마다 다릅니다/.test(r.s12), '「보험사와 상품마다 다릅니다」 를 말한다');
@@ -320,7 +351,7 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
 
   console.log('[15] 사진이 눈에 확 들어오나 (판 X363)');
   const 띠 = (src.match(/class="jg-hero" data-ph=/g) || []).length;
-  ok(띠 === 9, '사진 띠가 ' + 띠 + '장에 있다 (표지는 장 전체라 따로)');
+  ok(띠 === 10, '사진 띠가 ' + 띠 + '장에 있다 (표지는 장 전체라 따로)');
   ok(/data-ph="s1"/.test(src), '표지도 사진 자리를 가졌다');
   ok(/\/api\/photo-search\?q=/.test(src), '사진을 캐러셀과 같은 길로 찾는다 (/api/photo-search · 5번)');
   ok(!/api\.pexels\.com|api\.unsplash\.com/.test(src), '사진 서버를 직접 안 부른다 (열쇠가 새지 않게 · 10번)');
@@ -343,6 +374,27 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
     const 있나 = 풀.some(p => t.indexOf(p) >= 0);
     ok(있나, 장 + ' · 「' + 말 + '」 옆에 풀이' + (있나 ? ' 있음 — 「' + 풀.find(p => t.indexOf(p) >= 0) + '」' : ' 없음 ← 「' + 풀[0] + '」 같은 말을 붙여 주십시오'));
   });
+
+  console.log('[17] 표지 차례를 장에서 읽어 세우나 (판 X369 · 5번)');
+  /* ★ 표지에 손으로 적어 두면 장을 끄고 켤 때마다 <b>거짓말</b>이 됩니다.
+     그래서 「장에서 제목을 읽어」 세우고, 끄면 따라 빠지는지 봅니다. */
+  ok(r.차례.줄 === r.차례.켜진, '차례 ' + r.차례.줄 + '줄 = 켜진 장 ' + r.차례.켜진 + '개(표지 빼고)');
+  ok(/모두 \d+장/.test(r.차례.머리), '머리글이 장 수를 말한다 — ' + (r.차례.머리 || '(빈 칸)'));
+  ok(r.차례.끈뒤 === r.차례.켜진 - 1,
+     '장을 하나 끄니 차례가 ' + r.차례.줄 + ' → ' + r.차례.끈뒤 + '줄로 따라 빠진다');
+  ok(/function cvTocFill\(/.test(src) && (src.match(/function cvTocFill\(/g) || []).length === 1,
+     '세우는 자(cvTocFill)가 한 곳에 있다');
+
+  console.log('[18] 「오늘 확인한 것」 은 켠 것만 찍히나 (판 X369 · 1번)');
+  /* ★★ 안 하신 것을 미리 찍어 두면 그 종이가 거짓말을 합니다. 고객은
+     그것을 사실로 믿습니다. 그래서 <b>기본은 한 줄도 안 찍힘</b>입니다. */
+  ok(r.확인.패널 === 8, '패널에 고를 것 ' + r.확인.패널 + '가지 (8가지)');
+  ok(r.확인.처음줄 === 0, '아무것도 안 골랐을 때 찍히는 줄 ' + r.확인.처음줄 + '개 (0이어야 합니다)');
+  ok(r.확인.처음안내, '대신 무엇을 고르면 되는지 적는다 (빈 구멍을 안 둡니다)');
+  ok(r.확인.켠뒤 === 3, '셋을 고르니 ' + r.확인.켠뒤 + '줄이 찍힌다 (고른 수 그대로)');
+  ok(!r.확인.켠뒤안내, '고르고 나면 안내 글이 물러난다');
+  ok(/var OKITEMS\s*=/.test(src) && (src.match(/var OKITEMS\s*=/g) || []).length === 1,
+     '고를 것 목록(OKITEMS)이 한 곳에만 있다 (5번)');
 
   console.log('[끝] 조용한가');
   ok(터짐.length === 0, '터진 자리 ' + 터짐.length + (터짐.length ? (' ← ' + 터짐[0]) : ''));
