@@ -148,8 +148,11 @@ const wonNum = (t) => {
     const t = (s) => { const e = document.querySelector(s); return e ? (e.innerText || '').replace(/\s+/g, ' ').trim() : ''; };
     return { big: t('#eRes .big.g') || t('#eRes .split .big:last-of-type') || t('#eRes .big'),
              all: t('#eRes'),
-             hot: t('#eMonBox .b.hot'),
-             ths: [...document.querySelectorAll('#eMonBox table.mile thead th')].map(x => (x.innerText || '').replace(/\s+/g, ' ')) };
+             /* ★★ 묻는 곳을 하나로 (5번) — 칸 이름을 외우지 않고 data-emon 으로 찾습니다.
+                  판 X383 에서 표가 eMonBox → eMonBox2 로 옮겨 가자 이 두 줄이
+                  울었습니다. 표는 그대로 있었습니다(헛것 · 8번). */
+             hot: t('[data-emon] .b.hot'),
+             ths: [...document.querySelectorAll('[data-emon] table.mile thead th')].map(x => (x.innerText || '').replace(/\s+/g, ' ')) };
   });
   is(/달러 상품에서 찾을 때[^$]*만원/.test(E.all),
      '<b>달러 상품에서 찾을 때</b>의 큰 글자가 원화다');
