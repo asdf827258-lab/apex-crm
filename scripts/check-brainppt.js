@@ -122,8 +122,8 @@ const PLAN = JSON.stringify({
 
   /* ── 화면 ── */
   const shape = await page.evaluate(() => ({
-    ask: !!document.getElementById('bdAsk'),
-    askTxt: (document.getElementById('bdAsk') || {}).textContent || '',
+    ask: !document.getElementById('brainQ') && !!document.querySelector('#dynPane button[onclick*="apexmap"]'),
+    askTxt: (document.querySelector('#dynPane button[onclick*="apexmap"]') || {}).textContent || '',
     now: !!document.getElementById('bdNow'),
     nowOff: !!(document.getElementById('bdNow') || {}).disabled,
     line: (document.getElementById('bdLastLine') || {}).textContent || '',
@@ -131,7 +131,8 @@ const PLAN = JSON.stringify({
     topic: !!document.getElementById('bdTopic'),
     go: !!document.getElementById('bdGo')
   }));
-  ok(shape.ask && shape.askTxt.indexOf('발표자료') >= 0, '질문칸에 "물어보고 발표자료까지" 단추가 있다');
+  /* 판 X372 — 묻는 칸은 자비스 하나입니다. 「물어보고 발표자료까지」 는 자비스 답 카드의 「🎞 발표자료로」 가 잇습니다(check-jvbrain) */
+  ok(shape.ask && shape.askTxt.indexOf('자비스') >= 0, '두뇌 화면에는 묻는 칸 대신 "자비스에게 묻기" 가 선다 — 묻는 곳은 자비스 하나');
   ok(shape.now, '카드에 "방금 답을 발표자료로" 단추가 있다');
   ok(shape.nowOff, '대화가 없으면 그 단추는 눌리지 않는다');
   ok(shape.line.indexOf('아직 대화가 없습니다') >= 0, '대화가 없다고 알려 준다');
@@ -140,15 +141,17 @@ const PLAN = JSON.stringify({
 
   /* ── 한 번에: 물어보고 발표자료까지 ── */
   const mid = await page.evaluate(() => {
-    document.getElementById('brainQ').value = '40대 자영업 대표에게 치료비 통장 설명';
-    brainAskPpt();
+    /* 판 X372 — 묻는 칸은 자비스로 옮겼습니다(두뇌 화면에는 「자비스에게 묻기」 하나). 길(brainAskPpt)은 그대로 */
+    brainAskPpt('40대 자영업 대표에게 치료비 통장 설명');
+    const n1 = BRAIN.hist.length;
+    brainAskPpt('40대 자영업 대표에게 치료비 통장 설명');
     return {
       busy: BRAIN.busy,
-      askOff: !!(document.getElementById('bdAsk') || {}).disabled
+      askOff: BRAIN.hist.length === n1
     };
   });
   ok(mid.busy, '누르면 두뇌가 생각하기 시작한다');
-  ok(mid.askOff, '생각하는 동안에는 단추가 잠긴다 — 두 번 눌러도 두 번 만들지 않는다');
+  ok(mid.askOff, '생각하는 동안에는 또 눌러도 잠겨 있다 — 두 번 눌러도 두 번 만들지 않는다');
 
   await page.waitForTimeout(2500);
   const one = await page.evaluate(() => ({
@@ -279,7 +282,6 @@ const PLAN = JSON.stringify({
       return new Promise(r => setTimeout(() => r(first
         ? ('초안입니다. '.repeat(30)) : '다듬은 글입니다. 결론이 먼저 옵니다.'), 40));
     };
-    document.getElementById('brainQ') && (document.getElementById('brainQ').value = '');
     brainAsk('거절 처리');
   });
   await page.waitForTimeout(900);

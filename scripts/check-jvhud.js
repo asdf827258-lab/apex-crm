@@ -339,8 +339,11 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
     var o = { deck:!!d, l:!!(d && d.querySelector('.pane-l #hudStat')), c:!!(d && d.querySelector('.hud #ask')),
               r:!!(d && d.querySelector('.pane-r #chips')), chips:document.querySelectorAll('#chips .chip').length };
     /* 시계 — 이 기기 시각 · 한 번 더 그리면 바뀐다 */
+    /* ⚠ 바쁜 CI 에서는 1.15초 안에 setInterval 이 한 번도 안 돌아 같은 초가 두 번 찍힌 적이 있습니다(판 X371 PR).
+       그래서 「초가 바뀐 뒤 한 번 더 그리면 바뀐다」 를 직접 그려 재고, 1초마다 그리는지는 글자로 봅니다 */
     var c0 = document.getElementById('hudClock').textContent;
-    await new Promise(r => setTimeout(r, 1150));
+    await new Promise(r => setTimeout(r, 1100));
+    hudClock();
     o.c0 = c0; o.c1 = document.getElementById('hudClock').textContent;
     /* 부팅 — 센 수 그대로 · 한 창에 한 번 */
     try { sessionStorage.removeItem('jv_boot'); } catch(e){}
@@ -358,7 +361,8 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
     return o; });
   is(MK.deck && MK.l && MK.c && MK.r, '판 셋 — 왼쪽 시스템(#hudStat) · 가운데 원자로와 명령 칸(#ask) · 오른쪽 명령(#chips)');
   is(MK.chips >= 4, '명령 판에 상황 단추 ' + MK.chips + '개');
-  is(/^\d{4}\.\d{2}\.\d{2} \([일월화수목금토]\) \d{2}:\d{2}:\d{2}$/.test(MK.c0) && MK.c0 !== MK.c1, '시계가 돈다 — 「' + MK.c0 + '」 → 「' + MK.c1 + '」 (이 기기 시각 · 서버 0)');
+  is(/^\d{4}\.\d{2}\.\d{2} \([일월화수목금토]\) \d{2}:\d{2}:\d{2}$/.test(MK.c0) && MK.c0 !== MK.c1 && /setInterval\(hudClock,\s*1000\)/.test(SRC),
+     '시계가 돈다 — 「' + MK.c0 + '」 → 「' + MK.c1 + '」 · 1초마다 그린다 (이 기기 시각 · 서버 0)');
   is(MK.bootOn && MK.bootTxt.indexOf('화면 ' + MK.scr + '개') >= 0 && MK.bootTxt.indexOf('자료 갈래 ' + MK.src + '곳') >= 0 && /ONLINE/.test(MK.bootTxt),
      '부팅 장면이 <b>센 수 그대로</b> — 화면 ' + MK.scr + '개 · 자료 갈래 ' + MK.src + '곳 (지어 적지 않음 · 1번)');
   is(MK.bootOff && !MK.again, '부팅 장면은 잠깐 서고 걷힌다 · 한 창에 <b>한 번</b>만');
