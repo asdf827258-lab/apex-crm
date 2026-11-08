@@ -102,6 +102,18 @@ const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; chars
                '.css':'text/css; charset=utf-8', '.json':'application/json; charset=utf-8' };
 const srv = http.createServer((rq, rs) => {
   let p = decodeURIComponent(url.parse(rq.url).pathname.split('?')[0]);
+  /* 📰 <b>뉴스 칸이 부르는 자리</b>에 빈 답을 둡니다 (판 X383).
+     ⚠ 이 자는 전에 쪽이 <b>떠오르는 동안</b> 재느라 120ms 만에 다음 쪽으로 넘어갔고,
+       그래서 뉴스 칸의 요청이 <b>날아가기 전에</b> 창이 닫혔습니다. 뜸(420ms)을
+       기다리게 하자 요청이 실제로 나가 <b>우리 서버 404</b> 가 찍혔습니다 —
+       앱이 고장 난 것이 아니라 <b>견본 서버에 그 자리가 없던 것</b>입니다.
+     ★ 바깥(진짜 서버)은 <b>한 번도 안 부릅니다</b> (7번 · 10번) — 여기서 빈 목록으로
+       답하고 끝냅니다. 기사를 지어내지 않습니다 (1번 · 9번). */
+  if (p === '/api/market') {
+    rs.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    rs.end(JSON.stringify({ ok: true, items: [] }));
+    return;
+  }
   let f = path.join(ROOT, p);
   if (fs.existsSync(f) && fs.statSync(f).isDirectory()) f = path.join(f, 'index.html');
   if (!fs.existsSync(f)) { rs.writeHead(404); rs.end('no'); return; }
@@ -148,7 +160,7 @@ const 갈래넘어서도되는장 = ['hero', 'close'];
 const 폰 = { width: 390, height: 844 };
 /* ★ 폰에서 <b>세 화면을 넘는 쪽</b>의 수. 2026-11-05 에 11장이었습니다.
    늘면 빨간불이고, 줄이면 이 수도 같이 내립니다 (CLAUDE.md 0-1). */
-const 폰세화면 = 9;    /* 판 X382 — 교육자금 조건 입력 폼(ecalc)을 고객 앞에서 빼며 10 → 9.
+const 폰세화면 = 7;    /* 판 X383 — 교육자금 계산 장 넷을 쪼개 9 → 7. 앞서 판 X382 — 교육자금 조건 입력 폼(ecalc)을 고객 앞에서 빼며 10 → 9.
                           앞서 판 X354 에서 switch 를 쪼개 11 → 10 이었습니다.
                           ★ 줄었으니 눈금도 같이 내립니다 (CLAUDE.md 0-1) */
 const 칸밖이어도되는장 = {
@@ -164,7 +176,14 @@ const 갈래 = {
   d: { 이름:'$ 달러',      전장:10, 전넘침:3510,
        칸:['dFxBar','resBox','decompBox','fullTable'] },
   t: { 이름:'📈 투자·세금', 전장:9,  전넘침:1413, 칸:[] },
-  e: { 이름:'🎓 교육자금',  전장:6,  전넘침:2969,
+  /* ★ 교육자금만 <b>제 눈금</b>이 있습니다 (판 X383 · 사장님 말씀 「넘치는 계산 장
+     넷도 쪼개서 해줘」). 재어 보니 <b>18쪽 전부가 창 안</b>에 들어옵니다(+0px).
+     ⚠ 그렇다고 눈금을 <b>0 으로 두지 않습니다</b> — CI 의 기본 글꼴이 더 넓어
+       글 많은 쪽이 제 기계보다 길어집니다(판 X354 에서 달러가 제 기계 341 ·
+       CI 411 이었습니다). 0 으로 두면 <b>CI 에서만 빨간불</b>이 납니다.
+       <b>120px</b> — 오늘 잰 값(0)에서 넉넉히 떨어뜨리되 공통선(400)보다 훨씬
+       낮게 두어, 되돌아가면 그 자리에서 울게 합니다 (0-1번 · 8번). */
+  e: { 이름:'🎓 교육자금',  전장:6,  전넘침:2969, 선:120,
        칸:['eRes','eMonBox','eWhenBox','eSplit'] },
   c: { 이름:'🏢 일시납·쿠폰', 전장:12, 전넘침:1765,
        칸:['cpFxBar','cpRes'] }
@@ -215,11 +234,18 @@ const 갈래 = {
   const 잰것 = {};
   for (const k of Object.keys(갈래)) {
     const g = 갈래[k];
-    const r = await pg.evaluate(k => {
+    const r = await pg.evaluate(async k => {
       window.__go(k); presEnter();
       const L = presList(), out = [];
+      /* ⚠⚠ <b>떠오르는 동안 재면 14px 이 더 잡힙니다</b> (판 X383).
+         쪽이 바뀔 때 @keyframes pfade 가 <b>translateY(14px)</b> 에서 시작하는데,
+         그 동안은 문서가 그만큼 길어 보입니다. 기다리지 않고 재던 탓에 이 자는
+         <b>한 쪽도 안 넘치는 갈래까지 「창 넘는 쪽 14/14」</b> 라고 적고 있었습니다 —
+         수가 거짓이면 사람이 자를 안 믿게 됩니다 (8번). 뜸이 끝난 뒤에 잽니다. */
+      const 뜸 = () => new Promise(r => setTimeout(r, 420));
       for (let i = 0; i < L.length; i++) {
         presGo(i);
+        await 뜸();
         const de = document.documentElement;
         const el = L[i], q = el.getBoundingClientRect();
         out.push({ id: el.id || '?', 넘침: Math.max(0, de.scrollHeight - de.clientHeight),
@@ -233,10 +259,11 @@ const 갈래 = {
     let 제일 = 0, 누구 = '', 넘 = 0;
     r.forEach(x => { if (x.넘침 > 8) { 넘++; if (x.넘침 > 제일) { 제일 = x.넘침; 누구 = x.id; } } });
     넘침표.push(k + ' ' + 제일 + (누구 ? ('(' + 누구 + ')') : ''));
-    is(제일 <= 넘침선,
+    const 선 = (g.선 != null) ? g.선 : 넘침선;
+    is(제일 <= 선,
        '  ' + g.이름 + ' — ' + r.length + '장 · 창 넘는 쪽 ' + 넘 + '/' + r.length +
        ' · 제일 <b>+' + 제일 + 'px</b>' + (누구 ? (' (' + 누구 + ')') : '') +
-       ' — 고치기 전 +' + g.전넘침 + 'px');
+       ' — 고치기 전 +' + g.전넘침 + 'px' + (g.선 != null ? (' · 이 갈래 눈금 ' + g.선) : ''));
   }
 
   head('[2] ★★ 쪽이 <b>진짜로 보인다</b> — 장이 장 안에 들어가면 조용히 사라집니다');

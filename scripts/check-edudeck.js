@@ -114,7 +114,8 @@ const 계산칸 = ['eRes', 'eMonBox', 'eWhenBox', 'eSplit', 'eFee'];
     });
     if (r.넘침 > 8) { 넘.push(r.id + ' +' + r.넘침 + 'px'); 제일 = Math.max(제일, r.넘침); }
     await pg.keyboard.press('ArrowRight');
-    await pg.waitForTimeout(120);
+    /* ⚠ 420ms — 쪽이 떠오르는 동안(translateY 14px) 재면 14px 이 더 잡힙니다 (판 X383) */
+    await pg.waitForTimeout(420);
   }
   is(n >= 14, '  발표가 <b>' + n + '쪽</b> 선다');
   /* ★ <b>넘침은 여기서 안 묻습니다</b> (판 X338 · CLAUDE.md 5번 「묻는 곳을 하나로」).
