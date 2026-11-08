@@ -736,6 +736,55 @@ body.present .panel{display:none}
 body.present.showpanel .panel{display:block;position:fixed;left:18px;bottom:88px;top:auto;
   width:330px;max-height:72vh;overflow:auto;z-index:200;box-shadow:0 24px 60px rgba(10,22,40,.3)}
 body.present .calc-shell{grid-template-columns:1fr}
+/* ══ 🎓 <b>교육자금의 「⚙ 조건」</b> (판 X382) ═══════════════════════════
+   ⚠ 재어 보니 <b>교육자금만 .panel 이 0개</b>였습니다(나머지 넷은 1개씩).
+     그래서 발표 중 「⚙ 조건」 을 눌러도 <b>아무 일도 안 일어났습니다</b> —
+     죽은 단추입니다. 그 탓에 조건 입력 폼이 <b>고객 앞 발표 쪽</b>으로 서
+     있어야 했습니다(DECK.e 쪽지).
+   ★ 폼을 <b>새로 만들지 않습니다</b> (5번) — 이미 있는 #ecalc 을 그 자리에
+     띄웁니다. 칸 이름(eAge·eFxOut…)이 그대로라 <b>계산기는 한 줄도 안
+     건드립니다</b> (사장님 말씀 「계산기 자체는 그대로 둬」).
+   ★ 다른 네 갈래는 <b>그 갈래 계산 장에 있을 때만</b> 열립니다(.panel 이 그
+     장 안에 삽니다). 교육자금은 <b>어느 쪽에서나</b> 열립니다 — 쪽이 아니라
+     장 전체를 띄우기 때문입니다.
+   ⚠ body.present section{display:none} 이 먼저라 <b>!important 가 아니라
+     더 센 선택자</b>로 켭니다 — body.present.showpanel 이 한 칸 더 셉니다. */
+body.present.showpanel #ecalc{display:block;position:fixed;left:18px;bottom:88px;top:auto;
+  width:min(420px,calc(100vw - 36px));max-height:72vh;overflow:auto;z-index:200;
+  padding:0;margin:0;min-height:0;background:var(--card);border-radius:22px;
+  box-shadow:0 24px 60px rgba(10,22,40,.3);animation:none}
+body.present.showpanel #ecalc > .wrap{max-width:none;padding:18px;width:auto}
+body.present.showpanel #ecalc select,
+body.present.showpanel #ecalc input{min-width:0;width:100%}
+body.present.showpanel #ecalc .sec-head{display:none}   /* 큰 제목은 패널에 필요 없습니다 */
+body.present.showpanel #ecalc .card{box-shadow:none;border:0;margin:0;padding:0;background:none}
+body.present.showpanel #ecalc .grid.g4{grid-template-columns:1fr 1fr;gap:12px}
+body.present.showpanel #ecalc .fxbar{margin-top:14px}
+
+/* ══ 🎓 <b>교육자금 — 한 쪽이 창 안에 들어오게</b> (판 X382) ═══════════════
+   ★ 재어 보고 고릅니다 — 1440×900 발표에서 계산 장 다섯이 <b>+74~+349px</b>
+     넘었습니다. 그만큼 고객 앞에서 스크롤합니다.
+   ★ <b>제목은 안 줄입니다</b> — 60px 은 사장님 말씀(판 X345 「강렬하게」)입니다.
+     줄이는 것은 <b>여백과 표 행</b>뿐이고, <b>글·숫자는 한 글자도 안 바꿉니다</b> (1번).
+   ★ <b>발표 모드에서만</b>입니다 — 스크롤로 읽는 자리는 그대로입니다.
+   ★ 폰은 안 건드립니다(min-width:900px) — 판 X345 와 같은 까닭입니다. */
+@media(min-width:900px){
+  /* 바닥 104px 은 발표 띠(57px)를 비키는 자리입니다 — 19px 만 더 남깁니다 */
+  body.present #trackE section{padding-bottom:76px}
+  /* ⚠ 쪽마다 제 글로 margin-top 을 달고 있어(eimf2 는 56px) 센 규칙이 필요합니다.
+     발표에서는 쪽이 저마다 한 장이라 위 여백이 쓸모가 없습니다. */
+  body.present #trackE .sec-head{margin-top:0!important;margin-bottom:14px}
+  body.present #trackE .card{padding:20px}
+  body.present #trackE .mile-wrap{margin-top:14px}
+  body.present #trackE .mile td{padding:8px 10px}
+  body.present #trackE .mile th{padding:0 10px 8px}
+  body.present #trackE .eduflow{margin-top:4px;gap:8px}
+  /* 리드 줄간 1.72 → 1.55 · 글자 크기는 그대로(13px 바닥을 안 건드립니다) */
+  body.present #trackE .sec-head .lead{line-height:1.55}
+  /* 쪽마다 제 글로 margin-top:16px 을 달고 있습니다 — 발표에서는 10px 이면 넉넉합니다 */
+  body.present #trackE .card[style*="margin-top:16px"]{margin-top:10px!important}
+  body.present #trackE .grid.g2{gap:12px}
+}
 .pbar{display:none}
 body.present .pbar{display:flex;position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:210;
   align-items:center;gap:6px;background:rgba(10,22,40,.94);backdrop-filter:blur(14px);
@@ -3458,7 +3507,9 @@ h2 em.e{color:var(--edu-d)}
     <div class="sec-head rv">
       <span class="ch e"><b>3장</b> 계산 — 나온 값</span>
       <h2>새로 내는 돈 없이<br><em class="e">유학 갈 때 이만큼</em> 됩니다.</h2>
-      <p class="lead">위에서 넣으신 값으로 <b>그 자리에서</b> 셈한 것입니다.
+      <!-- ⚠ 「위에서」 라고 적었는데 발표에서는 <b>위가 없습니다</b> — 조건 폼이
+           「⚙ 조건」 으로 떠서 열립니다 (판 X382). 두 자리에서 다 참인 말로 고칩니다 (1번). -->
+      <p class="lead">넣으신 값으로 <b>그 자리에서</b> 셈한 것입니다.
         원화로 모았을 때와 <b>나란히</b> 보십시오.</p>
     </div>
     <div class="card rv" style="margin-top:16px">
@@ -7994,7 +8045,17 @@ const DECK = {
      ★ <b>erg(우리 지역 취합 표)는 여기 없습니다</b> — 설계사용 도구라
        고객 앞에 띄우지 않습니다. 화면은 그대로 있어 스크롤로 쓰십니다 (6번).
      ★ 늘릴 때는 <b>여기 한 줄</b>입니다 (5번). */
-  e:['coverE','ewhy','e1','e2','ecalc','ecalc2','ecalc2b','ecalc3','ecalc3b',
+  /* ★★ <b>ecalc(조건 입력 폼)도 여기 없습니다</b> (판 X382 · 사장님 말씀
+       「교육자금 발표덱 수정까지 마무리해줘」). 재어 보니 발표 <b>5쪽째가
+       설계사용 입력 폼</b>이었습니다 — 자녀 나이 · 출생 순서 · 지역 · 상품 ·
+       이율 시나리오 · 환율 슬라이더. erg(설계사용 표)를 뺀 것과 <b>같은
+       종류</b>인데 그때 못 본 자리입니다. 고객 앞에 입력 폼을 안 세웁니다.
+     ★ <b>길은 그대로입니다</b> (6번) — 화면은 남아 스크롤로 쓰고, 발표
+       중에는 <b>「⚙ 조건」</b> 단추로 띄웁니다(아래 CSS).
+     ⚠ 뺄 수 있게 된 까닭 — 교육자금은 다섯 갈래 중 <b>혼자 .panel 이
+       없어</b> 발표 중 「⚙ 조건」 이 <b>죽은 단추</b>였습니다. 그래서 입력
+       폼이 쪽으로 서 있어야 했습니다. 단추를 살리고 쪽을 뺍니다. */
+  e:['coverE','ewhy','e1','e2','ecalc2','ecalc2b','ecalc3','ecalc3b',
      'eimf','eimf2','eimf3','eplan','eplan2','close'],
   c:['coverC','cp1','cp1x','cp1a','cp1b','cp1c','cp2','cp3','cpmoney','cpmoney2',
      'cpcalc','cpcalc2','cpcalc3','cp5','cp5b','cp6','close']

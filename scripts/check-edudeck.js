@@ -140,6 +140,51 @@ const 계산칸 = ['eRes', 'eMonBox', 'eWhenBox', 'eSplit', 'eFee'];
   is(빈칸.length === 0, '  칸마다 <b>값이 찍혀 있다</b>' +
      (빈칸.length ? (' ← 빈 칸: ' + 빈칸.join(' ') + ' (장을 가르다 셈을 끊은 것입니다)') : ''));
 
+  head('[7] ★★ <b>조건 입력 폼은 고객 앞에 안 세운다</b> (판 X382)');
+  /* ⚠ 재어 보니 발표 <b>5쪽째가 설계사용 입력 폼</b>이었습니다 — 자녀 나이 ·
+     출생 순서 · 지역 · 상품 · 이율 시나리오 · 환율 슬라이더. erg(설계사용 표)를
+     뺀 것과 <b>같은 종류</b>인데 판 X334 에서 못 본 자리입니다. */
+  is(D.차례.indexOf('ecalc') < 0,
+     '발표 차례에 <b>ecalc(조건 입력 폼)이 없다</b> — 고객 앞에 입력 폼을 안 세웁니다');
+  const 폼있나 = await pg.evaluate(() => {
+    const s = document.getElementById('ecalc');
+    return { 장: !!s, 칸: ['eFxOut', 'eMon'].filter(i => document.getElementById(i)).length };
+  });
+  is(폼있나.장, '  그래도 <b>화면은 그대로 있다</b> — 스크롤로 내려오면 쓰십니다 (6번 · 길을 안 지웁니다)');
+
+  head('[8] ★★ 그래도 발표 중 <b>「⚙ 조건」 으로 열린다</b> — 죽은 단추가 아니다');
+  /* ⚠⚠ 교육자금은 다섯 갈래 중 <b>혼자 .panel 이 없어</b>, 발표에서 「⚙ 조건」 을
+     눌러도 <b>아무 일도 안 일어났습니다</b>. 입력 폼을 쪽에서 빼려면 먼저 이 단추가
+     살아 있어야 합니다 — 안 그러면 발표 중에 조건을 바꿀 길이 <b>끊깁니다</b> (6번).
+     ★ 보이기만 해서는 모릅니다. <b>값을 바꿔 메아리가 따라오는지</b>까지 봅니다. */
+  const 조건 = await pg.evaluate(() => {
+    const 보임 = id => { const e = document.getElementById(id);
+      if (!e) return 0; const r = e.getBoundingClientRect();
+      return (r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden') ? Math.round(r.width) : 0; };
+    const out = {};
+    presGo(3);                                   /* 계산 장이 아닌 아무 쪽에서나 */
+    out.전 = 보임('eFxOut');
+    document.getElementById('pPanel').click();
+    out.후 = 보임('eFxOut');
+    const i = document.getElementById('eFxOut');
+    out.메아리전 = (document.getElementById('eFxOutEcho') || {}).textContent || '';
+    if (i) { i.value = String(Number(i.value) + 120);
+             i.dispatchEvent(new Event('input', { bubbles: true })); }
+    out.메아리후 = (document.getElementById('eFxOutEcho') || {}).textContent || '';
+    if (i) { i.value = String(Number(i.value) - 120);
+             i.dispatchEvent(new Event('input', { bubbles: true })); }
+    document.getElementById('pPanel').click();
+    out.닫은뒤 = 보임('eFxOut');
+    return out;
+  });
+  is(조건.전 === 0, '  누르기 전에는 <b>안 보인다</b> — 고객은 조건 칸을 안 봅니다');
+  is(조건.후 > 0, '  「⚙ 조건」 을 누르면 <b>뜬다</b> — 너비 ' + 조건.후 + 'px' +
+     (조건.후 ? '' : ' ← 죽은 단추입니다(교육자금만 .panel 이 없던 자리)'));
+  is(!!조건.메아리전 && 조건.메아리후 !== 조건.메아리전,
+     '  ★ 떠 있는 칸이 <b>정말 만져진다</b> — 환율을 움직이니 ' +
+     (조건.메아리전 || '(빈칸)') + ' → ' + (조건.메아리후 || '(빈칸)'));
+  is(조건.닫은뒤 === 0, '  다시 누르면 <b>닫힌다</b>');
+
   head('[6] 조용한가');
   is(errs.length === 0, errs.length ? ('콘솔 에러 — ' + errs.slice(0, 2).join(' / ')) : '콘솔에 에러가 없다');
 
