@@ -175,17 +175,24 @@ const near = (a, b, tol) => Math.abs(a - b) <= (tol || 1);
   await ph.close();
 
   console.log('\n[8] 교육자금 — 월 얼마 넣으면 얼마');
+  /* ★★ 묻는 곳을 하나로 (5번) — 결과가 그려지는 칸은 data-emon 이 답합니다.
+       전에는 '#eMonBox' 라고 칸 이름을 외우고 있었는데, 판 X383 에서 표를
+       eMonBox2 로 옮기자 이 자가 울었습니다 — 글은 그대로 있는데 「없다」 고
+       읽은 것입니다(헛것 · 8번). 칸이 또 늘면 이름표만 달면 됩니다. */
   const edu = await page.evaluate(() => {
     window.__go('e');
+    const emon = () => [...document.querySelectorAll('[data-emon]')]
+      .map(x => x.textContent || '').join(' ').replace(/\s+/g, ' ');
     window.__apexE.set({ mon: 30, fxIn: 1484, fxOut: 1484, prod: 'met', age: 0, go: 19 });
-    const on = (document.getElementById('eMonBox').textContent || '').replace(/\s+/g, ' ');
+    const on = emon();
     window.__apexE.set({ mon: 60 });
-    const dbl = (document.getElementById('eMonBox').textContent || '').replace(/\s+/g, ' ');
+    const dbl = emon();
     window.__apexE.set({ mon: 0 });
-    const zero = (document.getElementById('eMonBox').textContent || '').replace(/\s+/g, ' ');
+    const zero = emon();
     window.__apexE.set({ mon: 30 });
-    return { on, dbl, zero };
+    return { on, dbl, zero, boxes: document.querySelectorAll('[data-emon]').length };
   });
+  is(edu.boxes >= 1, '  결과를 그리는 칸을 data-emon 으로 찾았다 — ' + edu.boxes + '칸');
   is(/월 30만원씩 5년 넣으면/.test(edu.on), '  월 납입액을 적으면 계산된다');
   is(/1,800만원/.test(edu.on), '  30만 × 60개월 = 1,800만원');
   is(/3,600만원/.test(edu.dbl), '  60만으로 바꾸면 3,600만원 — 숫자만 바뀐다');
