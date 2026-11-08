@@ -17,6 +17,13 @@
    ★ 바깥을 한 번도 안 부릅니다 (7번). 견본 이름은 홍길동 집안 (3번).
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
+/* ⚠ <b>시계를 못 박습니다</b> (lib-clock 한 곳 · 5번). 2026-11-06 15:00Z 에 CI 가
+   [6] 에서 빨간불이 됐습니다 — 자는 약속 날짜를 <b>한국 날짜</b>로 지어 넣는데
+   창은 못 박히지 않아 <b>CI 가 도는 진짜 시계</b>(UTC)를 봤습니다. 15:00Z 를 넘으면
+   두 날짜가 <b>하루 갈려</b> 「오늘 약속」 이 내일 것이 되고, 코스 칸이 서서 웁니다.
+   코드는 멀쩡했고 origin/main 에서도 같은 빨간불이었습니다. lib-clock 쪽지가
+   미리 적어 둔 바로 그 함정입니다(check-day · check-team 이 겪은 자리).        */
+const CLK = require('./lib-clock.js');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css' };
@@ -35,8 +42,7 @@ const ROWS_A = [
   "D('s7','u1','순천','TA')", "D('y1','u1','여수','TA',{dong:'학동'})"
 ].join(',');
 const ROWS_NONE = ["D('s1','u1','순천','TA')", "D('s2','u1','순천','AP')"].join(',');
-const today = () => { const d = new Date(Date.now() + 9 * 3600e3); return d.toISOString().slice(0, 10); };
-const ROWS_APPT = ROWS_A + ",D('s8','u1','순천','AP',{dong:'조례동',next_appt:'" + today() + "T14:00:00',next_appt_place:'순천시청',next_appt_lat:34.95,next_appt_lng:127.48})";
+const ROWS_APPT = ROWS_A + ",D('s8','u1','순천','AP',{dong:'조례동',next_appt:'" + CLK.kstDay(14) + "T14:00:00',next_appt_place:'순천시청',next_appt_lat:34.95,next_appt_lng:127.48})";
 
 (async () => {
   const srv = http.createServer((q, s) => {
@@ -49,7 +55,8 @@ const ROWS_APPT = ROWS_A + ",D('s8','u1','순천','AP',{dong:'조례동',next_ap
   const br = await chromium.launch();
   const 바깥 = [];
   const open = async (rows) => {
-    const ctx = await br.newContext({ viewport: { width: 390, height: 844 } });
+    const ctx = await br.newContext(CLK.ctxOpt());
+    await CLK.pin(ctx, 14);          /* 창이 열리기 전에 — 나중에 박으면 늦습니다 */
     const pg = await ctx.newPage();
     const errs = []; pg.on('pageerror', e => errs.push(String(e.message || e)));
     await ctx.route('**://**', async r => {

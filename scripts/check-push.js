@@ -902,18 +902,21 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   is(!/createECDH|createCipheriv|WebPush: info/.test(fnHttp+fnCron),
      '봉하는 법이 <b>두 벌이 안 된다</b> — 함수 안에 암호가 안 적혀 있다');
 
-  console.log('\n[6-2] 홈에서 <b>한 번만</b> 알려 드린다 — 재촉이 아니라 소개');
+  console.log('\n[6-2] 홈 한 줄 — <b>두 얼굴</b> (판 X381) · 재촉이 아니라 알림');
+  /* ⚠ <b>여기는 전에 엉뚱한 까닭으로 초록이었습니다.</b> 「켜셨으면 안 뜬다」 를
+     재면서 ALM.sub 를 안 정해, 앞 토막([4-3])이 남겨 둔 가짜 구독이 그대로
+     있었습니다. 그래서 <b>구독이 있어서</b> 안 뜬 것을 <b>허락했으니</b> 안 뜬
+     것으로 읽었습니다 — 안 울리는 알람입니다 (8번). 이제 얼굴마다 <b>구독과
+     서버 답을 또렷이 정하고</b> 잽니다.
+     ★ 두 얼굴 — 「🔔 켜기」(아직 안 물어봄) · 「📡 담기」(허락은 받았는데 이
+       브라우저에 구독조차 없음). 구독은 있는데 <b>서버가 아는지</b>는 홈에서
+       안 묻습니다 (7번 · [6] 과 check-hmalm 이 그 규칙을 지킵니다). */
   const N=await page.evaluate(async(seed)=>{
     (0,eval)(seed);
     const out={},mk=(perm,sw)=>{
       window.almCan=()=>({sw:sw!==false,notif:sw!==false,push:true,ios:false,stand:true,perm:perm});
     };
-    /* <b>시간을 세지 않고, 앱이 칠할 때까지</b> 기다린다. 홈 칸은 hmArm()
-       이 1.2초 뒤에 칠하므로 「700밀리초면 됐겠지」 는 CI 에서만 빨간불이
-       납니다. 그렇다고 옆 칸이 차기를 기다려도 안 됩니다 — #hmCliHost 는
-       renderHome() 이 <b>그 자리에서</b> 채워 기다림이 0초가 되고, 그러면
-       한 줄이 <b>안 떠야</b> 하는 자리가 <b>헛되게 통과</b>합니다 (8번).
-       hmPaint 를 한 겹 싸서 <b>실제로 칠해진 것</b>을 셉니다. */
+    const sub=(v)=>{ ALM.sub=v?{endpoint:'E'}:null; };
     const wait=(fn,ms)=>new Promise(done=>{ const t0=Date.now();
       (function tick(){ let v=null; try{ v=fn(); }catch(e){}
         if(v||Date.now()-t0>(ms||8000))return done(v||null);
@@ -923,43 +926,63 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
       window.hmPaint=function(){const r=real.apply(this,arguments);painted++;return r;};})();
     const shown=async()=>{ const n=painted; go('home');
       await wait(()=>painted>n?true:null);
-      /* <b>뜰 자리면 뜰 때까지</b> 기다린다 — 칠하기가 한 번 더 남아 있을 수
-         있습니다. 안 뜰 자리는 이미 한 번 칠해진 뒤라 「없다」 가 참입니다.
-         이렇게 해야 타이밍에 기대지 않습니다 (8번). */
       if(almNudgeOn())await wait(()=>document.querySelector('#dynPane .alm-nudge'));
       const e=document.querySelector('#dynPane .alm-nudge');
       return e?e.textContent.replace(/\s+/g,' ').trim():''; };
-    try{ localStorage.removeItem('apex_alm_bye'); }catch(e){}
-    mk('default'); out.first=await shown();
-    mk('granted'); out.on=await shown();
-    mk('denied');  out.no=await shown();
-    mk('default',false); out.cant=await shown();
-    /* 닫으면 <b>다시 안 뜬다</b> */
-    mk('default'); await shown(); almNudgeOff();
-    out.afterBye=(document.querySelector('#dynPane .alm-nudge')||{}).textContent||'';
-    out.afterByeReopen=await shown();
-    try{ localStorage.removeItem('apex_alm_bye'); }catch(e){}
-    /* 홈에서 눌러 <b>그 자리에서</b> 켜진다 */
-    mk('default');
-    await shown();
+    const 비움=()=>{ try{ localStorage.removeItem('apex_alm_bye');
+                          localStorage.removeItem('apex_alm_bye_save'); }catch(e){} };
+    비움();
+    mk('default'); sub(false); out.first=await shown();
+    mk('granted'); sub(false); out.noSub=await shown();          /* 📡 담기 */
+    mk('granted'); sub(true);  out.hasSub=await shown();         /* 홈은 서버에 안 묻는다 */
+    mk('denied');  sub(false); out.no=await shown();
+    mk('default',false); sub(false); out.cant=await shown();
+    /* ✕ 는 <b>얼굴마다 따로</b> */
+    mk('granted'); sub(false); await shown(); almNudgeOff();
+    out.byeSave=(document.querySelector('#dynPane .alm-nudge')||{}).textContent||'';
+    out.byeSaveReopen=await shown();
+    mk('default'); sub(false); out.askStillOn=await shown();     /* 담기를 닫아도 켜기는 산다 */
+    비움();
+    /* 홈에서 눌러 <b>그 자리에서</b> 끝낸다 — 두 얼굴 다 */
     let went='',asked=0;
     const g=window.go,a=window.almAsk;
+    mk('granted'); sub(false); await shown();
     window.go=function(t){went=t;}; window.almAsk=function(){asked++;};
     const btn=document.querySelector('#dynPane .alm-nudge .ok');
+    out.btnTx=btn?btn.textContent.trim():'';
     if(btn)btn.click();
     window.go=g; window.almAsk=a;
     out.asked=asked; out.went=went; out.btn=!!btn;
+    /* <b>묻는 곳이 하나인가</b> (5번) — 카드 단추도 almTodo 를 본다 */
+    mk('granted'); sub(false); ALM.devs=null;  out.todoNoSub=almTodo();
+    mk('granted'); sub(true);  ALM.devs=[];    out.todoSrv0=almTodo();
+    mk('granted'); sub(true);  ALM.devs=[{endpoint:'E'}]; out.todoOk=almTodo();
+    mk('default'); sub(false); ALM.devs=null;  out.todoAsk=almTodo();
+    비움();
     delete window.almCan;
     return out;
   },SEED);
   is(/아침에 폰이 알려 드릴까요/.test(N.first),
-     '아직 한 번도 안 물어본 분께 <b>한 줄</b>이 뜬다 — 「'+N.first.slice(0,30)+'…」');
+     '아직 한 번도 안 물어본 분께 <b>🔔 켜기</b> 한 줄이 뜬다 — 「'+N.first.slice(0,26)+'…」');
   is(/고객 이름은 안 담/.test(N.first), '거기서도 <b>이름은 안 담는다</b>고 먼저 말한다 (3번)');
-  is(N.on===''&&N.no==='', '이미 정하신 분께는 <b>안 뜬다</b> — 켜셨든 막으셨든');
+  is(/서버에 안 담겼습니다/.test(N.noSub),
+     '★★ 허락은 받았는데 <b>구독조차 없는 기기</b>에는 「📡 담기」 가 뜬다 — 여태 이 자리가 비어 '+
+     '사장님 폰이 서버에 못 담겼습니다 ← 「'+(N.noSub||'(안 뜸)').slice(0,26)+'…」');
+  is(N.hasSub==='', '구독이 있는 기기에는 <b>안 뜬다</b> — 서버가 아는지는 홈에서 안 묻습니다 (7번·1번)');
+  is(N.no==='', '<b>막아 두셨으면 안 뜬다</b> — 앱이 풀 수 없는 일을 권하지 않는다');
   is(N.cant==='', '<b>못 받는 브라우저에는 안 권한다</b> — 못 할 일을 권하면 헛것이다 (8번)');
-  is(N.afterBye===''&&N.afterByeReopen==='', '✕ 를 누르시면 <b>다시 안 뜬다</b>');
-  is(N.btn&&N.asked===1&&N.went==='', '홈에서 <b>그 자리에서</b> 켠다 — 설치 화면까지 안 가신다'+
-     (N.btn?'':' ← 단추가 안 섰다'));
+  is(N.byeSave===''&&N.byeSaveReopen==='', '✕ 를 누르시면 <b>그 얼굴은</b> 다시 안 뜬다');
+  is(/아침에 폰이 알려 드릴까요/.test(N.askStillOn),
+     '★ 담기를 닫아도 <b>켜기는 그대로</b> 뜬다 — 다른 물음이라 따로 묻습니다');
+  is(N.btn&&N.asked===1&&N.went===''&&N.btnTx==='담기',
+     '홈에서 <b>그 자리에서</b> 담는다 — 설치 화면까지 안 가신다 ← 단추 「'+N.btnTx+'」');
+  is(N.todoAsk==='ask'&&N.todoNoSub==='save'&&N.todoSrv0==='save'&&N.todoOk==='',
+     '★ <b>남은 일을 묻는 곳이 하나</b>다 (5번) — almTodo: '+
+     N.todoAsk+' · '+N.todoNoSub+' · '+N.todoSrv0+' · (담김→'+(N.todoOk||'없음')+')');
+  /* 카드가 <b>제 손으로 또 세지 않는가</b> — 글에서 봅니다 (5번) */
+  const 카드몸 = SRC.slice(SRC.indexOf('function almCardHtml('), SRC.indexOf('function almCardHtml(')+6000);
+  is(/var todo=!!almTodo\(\)/.test(카드몸),
+     '  알람 카드 단추도 <b>almTodo() 한 곳</b>에 묻는다 — 두 곳에서 세면 카드와 홈이 다른 말을 합니다');
 
   console.log('\n[6-4] <b>어플로 들어가도 된다</b> · 바탕화면 아이콘은 두 번 안 울린다');
   /* 사장님 물음 — 「어플로 들어가도 이렇게 할 수 있는 거지?」
