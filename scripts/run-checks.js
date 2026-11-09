@@ -88,7 +88,9 @@ pick.forEach((x, i) => {
   const head = '[' + (i + 1) + '/' + pick.length + '] ' + x.name;
   const s = Date.now();
   try {
-    const out = cp.execSync(x.cmd, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+    /* ⏱ 자 하나가 <b>8분을 넘기면 그 자의 빨간불</b>로 적습니다 (판 X389). 여태는 하나가 멈추면
+       갈래 전체가 25분에 잘려 「취소됨」 만 남고 <b>어느 자가 멈췄는지</b> 안 남았습니다 (8번). */
+    const out = cp.execSync(x.cmd, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 480000,
       env: Object.assign({}, process.env, { PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1' }) });
     console.log('✓ ' + head + '  (' + Math.round((Date.now() - s) / 1000) + '초)');
     void out;
@@ -110,6 +112,13 @@ pick.forEach((x, i) => {
     }
     body.split('\n').slice(-40).forEach(l => console.log('   │ ' + l));
     console.log('');
+    /* 📌 CI 에서는 <b>주석(annotation)</b>으로도 남깁니다 (판 X389) — 로그는 로그인해야 보이지만
+       주석은 PR 의 Checks 화면과 공개 API 에 그대로 뜹니다. 무엇이 울었는지 바로 보입니다. */
+    if (process.env.GITHUB_ACTIONS) {
+      const 첫 = (운줄[0] || (e.killed ? '8분을 넘겨 멈췄습니다' : '') ||
+                  body.split('\n').filter(l => /Error/.test(l))[0] || body.split('\n').slice(-1)[0] || '').replace(/[\r\n%]/g, ' ').trim().slice(0, 300);
+      console.log('::error title=✗ ' + x.cmd.replace(/[\r\n:,]/g, ' ') + '::' + 첫);
+    }
     failed.push(x);
   }
 });
