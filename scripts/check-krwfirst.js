@@ -154,7 +154,7 @@ const wonNum = (t) => {
              hot: t('[data-emon] .b.hot'),
              ths: [...document.querySelectorAll('[data-emon] table.mile thead th')].map(x => (x.innerText || '').replace(/\s+/g, ' ')) };
   });
-  /* ⚠⚠ <b>자가 옛 글자를 못 박고 있었습니다</b> (판 X387 · 8번).
+  /* ⚠⚠ <b>자가 옛 글자를 못 박고 있었습니다</b> (판 X388 · 8번).
        「달러 상품에서 찾을 때」 라는 <b>그 글자 그대로</b>를 찾고 있었는데,
        사장님이 「상담자료가 어렵다」 하셔서 이름표를 「그 2,600만원이 아이 19살에」 로
        쉽게 바꾸자 울었습니다. 글은 더 쉬워졌고 <b>원화가 먼저</b>라는 뜻은 그대로입니다.
