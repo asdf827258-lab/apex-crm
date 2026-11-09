@@ -50,7 +50,7 @@
         (2026-11-05) 「<b>폰에서도 확인해줘</b>」 — 390px 화면에서 띠가 <b>482px</b>
         였습니다. 왼쪽 「‹」 와 오른쪽 「✕ 종료」 가 잘려 <b>앞으로도 못 가고
         끝낼 수도 없었습니다.</b> 단추도 35px 로 앱이 지키는 44px 에 못 미쳤습니다.
-    12. 폰에서 <b>세 화면을 넘는 쪽</b>이 늘지 않는다 — 지금 <b>10장</b>입니다
+    12. 폰에서 <b>세 화면을 넘는 쪽</b>이 늘지 않는다 — 지금 <b>9장</b>입니다
         (92장 중 88%는 한 번만 내리면 끝). 폰은 세로라 칸이 둘·셋인 격자가
         한 줄로 접혀 2~3배가 됩니다. ★ 이 수는 <b>줄이면 같이 내립니다</b>.
     10. ★★ <b>책(스크롤) 보기에서 고른 갈래의 장만 보인다.</b> 사장님 말씀
@@ -73,8 +73,8 @@
      7. ★★ <b>track 안에 있는 장은 차례에 다 있다.</b> 장을 만들어 두고 차례에
         안 적으면 그 쪽은 <b>조용히 안 나옵니다</b> — 되돌려 보니 [1]~[6] 이
         그것을 못 봤습니다(차례에서 calc2~calc8 을 빼도 전부 초록이었습니다).
-        일부러 뺀 것은 <b>여기 이름으로</b> 적어 둡니다 — 지금은 erg(설계사용
-        지역 표) 하나뿐입니다.
+        일부러 뺀 것은 <b>여기 이름으로</b> 적어 둡니다 — erg(설계사용 지역 표 ·
+        판 X334)와 ecalc(설계사용 조건 입력 폼 · 판 X382) 둘입니다.
 
    ★ 되돌려 보았습니다 (8번) — 넷을 깨뜨려 보고 전부 울었습니다:
      ⓐ 차례에서 calc2~calc8 빼기 → [7] 이 「차례에 없는 장 7」 로 울음
@@ -102,6 +102,18 @@ const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; chars
                '.css':'text/css; charset=utf-8', '.json':'application/json; charset=utf-8' };
 const srv = http.createServer((rq, rs) => {
   let p = decodeURIComponent(url.parse(rq.url).pathname.split('?')[0]);
+  /* 📰 <b>뉴스 칸이 부르는 자리</b>에 빈 답을 둡니다 (판 X383).
+     ⚠ 이 자는 전에 쪽이 <b>떠오르는 동안</b> 재느라 120ms 만에 다음 쪽으로 넘어갔고,
+       그래서 뉴스 칸의 요청이 <b>날아가기 전에</b> 창이 닫혔습니다. 뜸(420ms)을
+       기다리게 하자 요청이 실제로 나가 <b>우리 서버 404</b> 가 찍혔습니다 —
+       앱이 고장 난 것이 아니라 <b>견본 서버에 그 자리가 없던 것</b>입니다.
+     ★ 바깥(진짜 서버)은 <b>한 번도 안 부릅니다</b> (7번 · 10번) — 여기서 빈 목록으로
+       답하고 끝냅니다. 기사를 지어내지 않습니다 (1번 · 9번). */
+  if (p === '/api/market') {
+    rs.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    rs.end(JSON.stringify({ ok: true, items: [] }));
+    return;
+  }
   let f = path.join(ROOT, p);
   if (fs.existsSync(f) && fs.statSync(f).isDirectory()) f = path.join(f, 'index.html');
   if (!fs.existsSync(f)) { rs.writeHead(404); rs.end('no'); return; }
@@ -126,7 +138,13 @@ const 끝수 = { 제목: 0, 가운데: 0, 남는쪽: 0, 흩날림: 0, 폰셋: 0 
 const 보임선 = 120;
 /* ★ <b>일부러</b> 고객 발표에서 뺀 장 (판 X334) — 설계사용 229개 시·군·구
    지역 표입니다. 화면에는 그대로 있어 스크롤로 씁니다 (6번 · 길을 안 지웁니다). */
-const 일부러뺀장 = { e: ['erg'] };
+/* ★ <b>고객 앞에 안 세우기로 한 장</b>만 여기 적습니다 — 여기 적지 않으면 [7] 이
+   「차례에서 조용히 빠진 장」 으로 웁니다(쿠폰 트랙이 두 번 그렇게 사라졌습니다).
+     · erg   설계사용 지역 표 — 229개 시·군·구 (판 X334)
+     · ecalc 설계사용 <b>조건 입력 폼</b> — 자녀 나이·지역·상품·환율 슬라이더 (판 X382).
+             발표 중에는 「⚙ 조건」 단추로 떠서 열립니다 — check-edudeck [8] 이
+             그 단추가 <b>죽은 단추가 아닌지</b>까지 봅니다. */
+const 일부러뺀장 = { e: ['erg', 'ecalc'] };
 /* ★ <b>트랙 칸 바깥에 있어도 되는 장</b> — 고치기 전부터 그랬던 자리입니다.
    · close 는 다섯 갈래가 같이 쓰는 마지막 장이라 칸 밖에 한 번만 섭니다.
    · 연금의 hero·gap·nps·gongmu·math·time·faq 는 #trackW 가 열리기 <b>전</b>에
@@ -142,19 +160,30 @@ const 갈래넘어서도되는장 = ['hero', 'close'];
 const 폰 = { width: 390, height: 844 };
 /* ★ 폰에서 <b>세 화면을 넘는 쪽</b>의 수. 2026-11-05 에 11장이었습니다.
    늘면 빨간불이고, 줄이면 이 수도 같이 내립니다 (CLAUDE.md 0-1). */
-const 폰세화면 = 10;   /* 판 X354 — switch 를 쪼개 11 → 10. 줄면 눈금도 같이 내립니다 */
+const 폰세화면 = 7;    /* 판 X383 — 교육자금 계산 장 넷을 쪼개 9 → 7. 앞서 판 X382 — 교육자금 조건 입력 폼(ecalc)을 고객 앞에서 빼며 10 → 9.
+                          앞서 판 X354 에서 switch 를 쪼개 11 → 10 이었습니다.
+                          ★ 줄었으니 눈금도 같이 내립니다 (CLAUDE.md 0-1) */
 const 칸밖이어도되는장 = {
   w: ['hero','gap','nps','nps2','gongmu','gongmu2','math','math2','time','faq','close'],
   d: ['close'], t: ['close'], e: ['close'], c: ['close']
 };
 
+/* ⚠ 교육자금은 판 X382 에서 <b>14장</b>이 됐습니다 — 조건 입력 폼(ecalc)을
+   고객 앞에서 뺐습니다. 넘침도 같이 줄었습니다(+349 → +194px). */
 const 갈래 = {
   w: { 이름:'₪ 연금'.replace('₪','₩'), 전장:13, 전넘침:5930,
        칸:['resHero','ladder','accumCard','varCard','deathCard','gmCard'] },
   d: { 이름:'$ 달러',      전장:10, 전넘침:3510,
        칸:['dFxBar','resBox','decompBox','fullTable'] },
   t: { 이름:'📈 투자·세금', 전장:9,  전넘침:1413, 칸:[] },
-  e: { 이름:'🎓 교육자금',  전장:6,  전넘침:2969,
+  /* ★ 교육자금만 <b>제 눈금</b>이 있습니다 (판 X383 · 사장님 말씀 「넘치는 계산 장
+     넷도 쪼개서 해줘」). 재어 보니 <b>18쪽 전부가 창 안</b>에 들어옵니다(+0px).
+     ⚠ 그렇다고 눈금을 <b>0 으로 두지 않습니다</b> — CI 의 기본 글꼴이 더 넓어
+       글 많은 쪽이 제 기계보다 길어집니다(판 X354 에서 달러가 제 기계 341 ·
+       CI 411 이었습니다). 0 으로 두면 <b>CI 에서만 빨간불</b>이 납니다.
+       <b>120px</b> — 오늘 잰 값(0)에서 넉넉히 떨어뜨리되 공통선(400)보다 훨씬
+       낮게 두어, 되돌아가면 그 자리에서 울게 합니다 (0-1번 · 8번). */
+  e: { 이름:'🎓 교육자금',  전장:6,  전넘침:2969, 선:120,
        칸:['eRes','eMonBox','eWhenBox','eSplit'] },
   c: { 이름:'🏢 일시납·쿠폰', 전장:12, 전넘침:1765,
        칸:['cpFxBar','cpRes'] }
@@ -201,15 +230,48 @@ const 갈래 = {
     차례[k] = m ? (m[1].match(/'[^']+'/g) || []).map(s => s.slice(1, -1)) : null;
   }
 
+  head('[14] ★★ 장마다 <b>&lt;div&gt; 짝이 맞는다</b> — 하나 빠지면 브라우저가 대신 닫아 줘서 안 보입니다');
+  /* ★★ 판 X383 에서 찾았습니다 — 교육 갈래 <b>여덟 장</b>에 </div> 가 하나씩 빠져
+       있었습니다(나머지 88장은 맞았습니다). 화면은 멀쩡합니다: 브라우저가
+       </section> 에서 열린 것을 대신 닫아 주기 때문입니다. 그래서 눈으로도,
+       넘침을 재는 자로도 안 보입니다 — 짝을 맞춘 전·후에 잰 수가 <b>한 자리도
+       안 달랐습니다</b>(w 362 · d 316 · t 357 · e 0 · c 362 · 폰 7).
+     ⚠ 그래도 덫입니다 — 그 장 <b>카드 뒤에 뭘 붙이면 카드 안으로</b> 들어갑니다.
+       판 X383 에서 제가 쪼갠 넷도 그 꼴을 그대로 베꼈습니다.
+     ⚠ 헛것을 안 잡습니다 (8번) — <b>주석을 먼저 지웁니다</b>. 열두 장이 주석을
+       품고 있어, 주석 안의 &lt;div&gt; 글자를 세면 멀쩡한 장을 고발합니다.
+       장 안에는 script 도 백틱도 없어 그것은 셀 거리가 없습니다. */
+  {
+    const 깬장 = [];
+    const 장RE = /<section id="([^"]*)"[^>]*>([\s\S]*?)<\/section>/g;
+    let m, 장수 = 0;
+    while ((m = 장RE.exec(src))) {
+      장수++;
+      const body = m[2].replace(/<!--[\s\S]*?-->/g, '');
+      const o = (body.match(/<div\b/g) || []).length;
+      const c = (body.match(/<\/div>/g) || []).length;
+      if (o !== c) 깬장.push(m[1] + '(' + (o - c > 0 ? '+' : '') + (o - c) + ')');
+    }
+    is(장수 > 80, '  장을 찾았다 — ' + 장수 + '장');
+    is(깬장.length === 0, '  짝이 안 맞는 장 ' + 깬장.length + (깬장.length ? ' — ' + 깬장.join(' · ') : '개'));
+  }
+
   head('[1] ★ 다섯 갈래 전부 — 제일 넘치는 쪽이 <b>' + 넘침선 + 'px 안</b>');
   const 잰것 = {};
   for (const k of Object.keys(갈래)) {
     const g = 갈래[k];
-    const r = await pg.evaluate(k => {
+    const r = await pg.evaluate(async k => {
       window.__go(k); presEnter();
       const L = presList(), out = [];
+      /* ⚠⚠ <b>떠오르는 동안 재면 14px 이 더 잡힙니다</b> (판 X383).
+         쪽이 바뀔 때 @keyframes pfade 가 <b>translateY(14px)</b> 에서 시작하는데,
+         그 동안은 문서가 그만큼 길어 보입니다. 기다리지 않고 재던 탓에 이 자는
+         <b>한 쪽도 안 넘치는 갈래까지 「창 넘는 쪽 14/14」</b> 라고 적고 있었습니다 —
+         수가 거짓이면 사람이 자를 안 믿게 됩니다 (8번). 뜸이 끝난 뒤에 잽니다. */
+      const 뜸 = () => new Promise(r => setTimeout(r, 420));
       for (let i = 0; i < L.length; i++) {
         presGo(i);
+        await 뜸();
         const de = document.documentElement;
         const el = L[i], q = el.getBoundingClientRect();
         out.push({ id: el.id || '?', 넘침: Math.max(0, de.scrollHeight - de.clientHeight),
@@ -223,10 +285,11 @@ const 갈래 = {
     let 제일 = 0, 누구 = '', 넘 = 0;
     r.forEach(x => { if (x.넘침 > 8) { 넘++; if (x.넘침 > 제일) { 제일 = x.넘침; 누구 = x.id; } } });
     넘침표.push(k + ' ' + 제일 + (누구 ? ('(' + 누구 + ')') : ''));
-    is(제일 <= 넘침선,
+    const 선 = (g.선 != null) ? g.선 : 넘침선;
+    is(제일 <= 선,
        '  ' + g.이름 + ' — ' + r.length + '장 · 창 넘는 쪽 ' + 넘 + '/' + r.length +
        ' · 제일 <b>+' + 제일 + 'px</b>' + (누구 ? (' (' + 누구 + ')') : '') +
-       ' — 고치기 전 +' + g.전넘침 + 'px');
+       ' — 고치기 전 +' + g.전넘침 + 'px' + (g.선 != null ? (' · 이 갈래 눈금 ' + g.선) : ''));
   }
 
   head('[2] ★★ 쪽이 <b>진짜로 보인다</b> — 장이 장 안에 들어가면 조용히 사라집니다');
@@ -303,6 +366,7 @@ const 갈래 = {
           `margin:auto` 가 그 자리를 위아래로 반씩 나눠 주어야 가운데에 선 것입니다. */
     const r = await pg.evaluate(갈래들 => {
       let 제목 = 0, 잘림 = 0, 가운데 = 0, 남는쪽 = 0, 수 = 0;
+      const 제목들 = [];
       const 쏠린것 = [], 흩날림 = [];
       for (const k of 갈래들) {
         window.__go(k); presEnter();
@@ -311,7 +375,11 @@ const 갈래 = {
           presGo(i); scrollTo(0, 0);
           const s = L[i], q = s.getBoundingClientRect(), cs = getComputedStyle(s);
           const h = s.querySelector('h2') || s.querySelector('h1');
-          if (h) 제목 = Math.max(제목, parseFloat(getComputedStyle(h).fontSize));
+          if (h) {
+            const px = parseFloat(getComputedStyle(h).fontSize);
+            제목 = Math.max(제목, px);
+            제목들.push({ id: s.id || '?', px: Math.round(px) });   /* ★ 쪽마다 모읍니다 (판 X385) */
+          }
           if (q.top < -2 || (h && h.getBoundingClientRect().top < 0)) 잘림++;
           if (h) {
             /* 제목이 <b>낱말 가운데서</b> 잘리면 마지막 줄에 글자 한두 개만 남습니다 —
@@ -354,12 +422,31 @@ const 갈래 = {
         }
         if (typeof presExit === 'function') presExit();
       }
-      return { 제목: 제목, 잘림: 잘림, 가운데: 가운데,
+      return { 제목: 제목, 제목들: 제목들, 잘림: 잘림, 가운데: 가운데,
                남는쪽: 남는쪽, 수: 수, 쏠린것: 쏠린것, 흩날림: 흩날림 };
     }, Object.keys(갈래));
     끝수.제목 = Math.round(r.제목); 끝수.가운데 = r.가운데;
     끝수.남는쪽 = r.남는쪽; 끝수.흩날림 = r.흩날림.length;
-    is(r.제목 >= 56, '  제목이 <b>' + Math.round(r.제목) + 'px</b> 이다 (고치기 전 54px — 쪽 제목 h2 는 46px · 56 이상)');
+    /* ⚠⚠ <b>여태 제일 큰 제목 하나만 봤습니다</b> (판 X385 · 사장님 말씀 「고쳐주고」).
+         Math.max 로 모아 56px 과 견주었으니, 제목 <b>하나만</b> 크면 나머지가 다 작아도
+         초록이었습니다 — 안 울리는 알람입니다 (8번). 실제로 라이브에서 재어 보니
+         eimf2 가 30px, close 가 38px 이었는데 자는 「제목 60px」 이라고 적고 있었습니다.
+         이제 <b>쪽마다</b> 봅니다.
+       ★ 작은 제목 둘은 <b>일부러</b> 그렇게 적혀 있습니다 — 마크업에 제 크기가
+         박혀 있고(clamp), 그 둘만 그렇습니다. 까닭과 함께 여기 적어 두어야
+         [7] 처럼 「조용히 작아진 제목」 을 잡을 수 있습니다. */
+    const 작아도되는제목 = {
+      eimf2: '28년 환율 그림 한 장 — 제목이 아니라 <b>그림이 주인공</b>인 쪽입니다 (clamp(22px,3vw,30px))',
+      close: '맺는 질문 — 흰 글자로 <b>조용히 묻는</b> 쪽입니다 (clamp(24px,3.8vw,38px))'
+    };
+    const 작은제목 = r.제목들.filter(x => x.px < 56 && !작아도되는제목[x.id]);
+    is(r.제목 >= 56, '  제일 큰 제목이 <b>' + Math.round(r.제목) + 'px</b> 이다 (고치기 전 54px — 쪽 제목 h2 는 46px · 56 이상)');
+    is(작은제목.length === 0,
+       '  ★★ <b>쪽마다</b> 56px 이상이다 — 작은 제목 ' + 작은제목.length + '/' + r.제목들.length +
+       (작은제목.length ? ('  ← ' + 작은제목.slice(0, 6).map(x => x.id + ' ' + x.px + 'px').join(' · ')) : '') +
+       '   (일부러 작은 둘 ' + Object.keys(작아도되는제목).join(' · ') + ' 는 까닭을 적고 뺐습니다)');
+    is(Object.keys(작아도되는제목).every(id => r.제목들.some(x => x.id === id)),
+       '  ★ 「일부러 작게」 적어 둔 쪽이 <b>아직 실제로 있다</b> — 없어진 이름을 봐주고 있으면 예외가 조용히 쌓입니다 (8번)');
     is(r.잘림 === 0, '  위가 잘린 쪽 ' + r.잘림 + '/' + r.수 +
        ' — 넘치는 쪽도 제목부터 보인다');
     is(r.남는쪽 >= 20, '  자리가 <b>남는 쪽</b>이 ' + r.남는쪽 + '/' + r.수 +

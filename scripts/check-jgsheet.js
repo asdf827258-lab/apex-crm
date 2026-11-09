@@ -11,7 +11,7 @@
      비어 있었습니다. 키울 자리가 이미 있었던 것입니다.
 
    ★ 이 자가 보는 것 (열 가지)
-     [1] 고객용이 <b>열두 장</b>이고 <b>담당자가 계약보다 먼저</b> 온다
+     [1] 고객용이 <b>열세 장</b>이고 <b>담당자가 계약보다 먼저</b> 온다
      [2] 어느 장도 A4 를 안 넘는다
      [3] <b>고객이 읽는 글은 13px 바닥</b> — 법정 고지만 예외
      [4] <b>상담 도구 장(chk)은 한 톨도 안 바뀐다</b> — 어르신용으로 따로
@@ -29,6 +29,8 @@
      [2] 어느 장도 A4 를 안 넘고, <b>바닥에 25px 여유</b>를 남긴다 (판 X364) —
           제 기계에서는 들어가고 CI 에서만 넘친 적이 있습니다(s14 +22px).
           글꼴이 다르면 줄 수가 달라지므로 「안 넘쳤다」 로는 모자랍니다.
+     [19] 🛎 <b>간병인 장이 단정하지 않고 주민번호를 안 받는다</b> (판 X374) —
+          「모든 보험사에서 가족간병이 된다」 는 확인할 수 없는 말입니다.
      [17] 📑 <b>표지 차례를 장에서 읽어</b> 세운다 (판 X369) — 손으로 적어 두면
           장을 끄고 켤 때마다 거짓말이 됩니다.
      [18] ✅ <b>「오늘 확인한 것」 은 켠 것만 찍힌다</b> (판 X369) — 안 하신 것을
@@ -52,11 +54,22 @@
      ⓘ 가족 그림을 <img> 로 바꿈           → [12] 가 욺
      ⓙ 토스페이스 줄을 지움                → [13] 이 욺
      ⓚ 따뜻한 색을 :root 로 올림           → [14] 가 욺(도구 장이 같이 따뜻해집니다)
+     ⓛ 색을 옛 벽돌로 되돌림               → [11] 이 욺
+     ⓜ 리본 틀을 안 부름                   → [20] 이 욺
+     ⓝ 알약 머리줄을 지움                  → [20] 이 욺
+     ⓞ 빨강 ✔ 를 옛 점으로 되돌림          → [20] 이 욺
+
+   ★★ 2026-11-06 사장님 말씀 「내가 보낸 속지 테마로 전체적으로 다 바꿔줘」 →
+     색을 여쭈니 <b>「A+ 자료처럼 파랑으로」</b>. 그래서 [11] 의 판정을
+     <b>뒤집었습니다</b> — 전에는 「고객용에 파란 자리가 0」 이었습니다.
+     말씀이 바뀌면 자도 같이 바뀝니다. 옛 눈금을 남겨 두면 그 자가 거짓말을 합니다.
      ⓛ 사진 자리(.jg-hero)를 지움           → [15] 가 욺
      ⓝ 풀이 한 마디를 지움(s14 원무과)      → [16] 이 욺 — 실제로 돌려 봤습니다
      ⓞ 새 장(s14)을 지움                   → [1]·[15] 가 욺 — 실제로 돌려 봤습니다
      ⓟ 표지 차례를 손으로 적음              → [17] 이 욺 — 실제로 돌려 봤습니다
      ⓠ 안 고른 것까지 찍히게 함             → [18] 이 욺 — 실제로 돌려 봤습니다
+     ⓡ 간병인 장에 「모두 가능」 이라 적음     → [19] 가 욺 — 실제로 돌려 봤습니다
+     ⓢ 간병인 장에 주민번호 칸을 둠           → [19] 가 욺 — 실제로 돌려 봤습니다
      ⓜ 사진 찾는 길을 제 것으로 새로 만듦    → [15] 가 욺(/api/photo-search 가 아니면)
      ⓝ 켤 때 사진을 미리 받게 함             → 「서버를 부른 횟수」 가 욺 (7번)
 
@@ -69,16 +82,26 @@ const { chromium } = require('playwright');
 const FILE = path.resolve(__dirname, '..', 'app', '증권전달', 'index.html');
 
 /* 고객이 받는 차례 — 담당자가 계약보다 먼저입니다 */
-const 차례 = ['s1','s6','s5','s15','s2','s3','s12','s14','s13','s4','s10','s11'];
+const 차례 = ['s1','s6','s5','s15','s2','s3','s16','s12','s14','s13','s4','s10','s11'];
 /* 글씨 바닥 — 고객용 장의 어떤 글도 이 밑으로 안 갑니다 (법정 꼬리글만 예외) */
 const 바닥 = 13;
 /* ★ A4 바닥에 남겨 둘 여유 — 글꼴이 바뀌면 줄 수가 달라집니다 (판 X364) */
-const 여유바닥 = 25;
+/* ⚠ 눈금을 <b>25 → 45px 로 올립니다</b> (판 X377). 25px 로는 못 막았습니다 —
+   제 통에서 s14 가 29px 남았는데 <b>CI 에서는 +1px 넘쳤습니다</b>. 글꼴이 달라
+   줄 수가 달라지는데, 그 차이가 이번에 30px 이었습니다. 느슨한 눈금은 알람이
+   아닙니다 (8번 · 판 X364 에서 한 번 데인 그 자리입니다). */
+const 여유바닥 = 45;
 /* ★ 사다리 값이 <b>뒤로 가지 않는지</b>를 봅니다 — 낱낱의 글을 세는 것보다
    이쪽이 튼튼합니다. 한 곳(--ss-…)만 고치면 전부 따라오게 해 두었으니,
    그 한 곳이 작아지지 않는지만 지키면 됩니다 (5번). */
 const 사다리 = { '--ss-h2': 30, '--ss-h3': 19, '--ss-lead': 17.5, '--ss-lab': 17, '--ss-body': 16, '--ss-sm': 14, '--ss-foot': 13 };
-/* 상담 도구 장은 <b>이 분포 그대로</b>여야 합니다 (판 X361 에서 재어 둔 값) */
+/* 상담 도구 장은 <b>이 분포 그대로</b>여야 합니다.
+   ⚠ 판 X375 에서 <b>다시 쟀습니다</b> — 도구 장이 셋에서 넷으로 늘었기 때문입니다
+     (연금 사다리 s17). 기준선을 조용히 올리지 않았습니다: 되돌림 ⓑ(토큰을 :root 로)
+     가 새 기준에서도 우는지 다시 확인하고 적었습니다 (8번).
+   처음 잰 값은 판 X361 의
+     9.5×3 10.5×17 11×14 11.5×39 12×14 12.5×14 13×58 13.5×9 14×15 15×12 16×8 18.5×6 22×1 23×1 26×1 27×2
+   입니다 — s17 을 빼면 이 값으로 돌아가야 합니다. */
 /* ★ 어려운 말 → 그 말 <b>옆에 반드시 있어야 할 풀이</b> (판 X364)
    [장, 어려운 말, 받아 주는 풀이들] — 그 장에 그 말이 없으면 묻지 않습니다. */
 const 풀이 = [
@@ -96,7 +119,7 @@ const 풀이 = [
   ['s12', '진료비 세부내역서',['치료 항목마다 얼마가 들었는지', '항목마다 얼마']],
   ['s4',  '계약 후 알릴 의무',['가입한 뒤에 바뀐 일을 보험사에 알리셔야 하는 의무', '가입한 뒤에 바뀐 일']]
 ];
-const 도구기준 = '9.5×3 10.5×17 11×14 11.5×39 12×14 12.5×14 13×58 13.5×9 14×15 15×12 16×8 18.5×6 22×1 23×1 26×1 27×2';
+const 도구기준 = '9.5×23 10×15 10.5×27 11×26 11.5×46 12×15 12.5×14 13×60 13.5×28 14×15 15×12 16×8 18.5×6 20×1 21×1 22×1 23×1 26×1 27×2';
 
 let 실패 = 0;
 const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 실패++; };
@@ -109,7 +132,10 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
 
   /* ── [9] 크기를 토큰 한 곳에서만 정하나 ───────────────────── */
   console.log('[9] 글씨 크기를 토큰 한 곳에서 정하나');
-  const 토큰블록 = /\.sheet\[data-kind="ins"\],\.sheet\[data-kind="let"\]\{([^}]*)\}/.exec(src);
+  /* ⚠ 판 X376 에서 고객용 갈래가 셋이 되었습니다(ins · let · <b>mag</b> = 붙이는 한 장).
+     묶음은 <b>여전히 한 곳</b>이고 선택자만 길어졌습니다 — 토큰을 또 적었다면
+     여기가 아니라 #s18 쪽에서 걸립니다 (check-jgmag [4]). */
+  const 토큰블록 = /\.sheet\[data-kind="ins"\],\.sheet\[data-kind="let"\](?:,\.sheet\[data-kind="mag"\])?\{([^}]*)\}/.exec(src);
   ok(!!토큰블록, '고객용 장에만 거는 토큰 묶음이 있다');
   if (토큰블록) {
     Object.keys(사다리).forEach(k => {
@@ -241,6 +267,27 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
             if (파랑(cs[k])) out.push(s.id + ' · ' + (e.className || e.tagName) + ' · ' + k); }); }); });
       return out; };
     const 고객파랑 = 푸른곳('.sheet[data-kind="ins"],.sheet[data-kind="let"]');
+    /* 🎨 고객용 장의 <b>토큰 값</b>을 그대로 읽습니다 (판 X377) — 색 세기보다
+       정확합니다. A+ 파랑 #0B60B0 이어야 하고, 옛 벽돌 #A04F34 면 안 됩니다. */
+    const 고객토큰 = (() => { const s0 = document.querySelector('.sheet[data-kind="ins"]');
+      if (!s0) return ''; const cs = getComputedStyle(s0);
+      return ['--navy','--navy2','--gold-l','--ap-chk','--ap-red']
+        .map(k => k + '=' + cs.getPropertyValue(k).trim()).join(' '); })();
+    /* 🎀 A+ 의 표식이 장마다 붙었나 */
+    const 틀 = [...document.querySelectorAll('.sheet[data-kind="ins"],.sheet[data-kind="let"],.sheet[data-kind="mag"]')]
+      .filter(x => !x.classList.contains('off'))
+      .map(x => x.id + ':' + x.querySelectorAll(':scope > .apfr').length + '틀'
+                 + x.querySelectorAll(':scope > .aprib').length + '리본');
+    const 알약머리 = [...document.querySelectorAll('.sheet[data-kind="ins"] .subhead,.sheet[data-kind="let"] .subhead')]
+      .filter(e => getComputedStyle(e).textAlign === 'center'
+                && /rgb\(185, 233, 255\)/.test(getComputedStyle(e).backgroundColor)).length;
+    const 머리모두 = document.querySelectorAll('.sheet[data-kind="ins"] .subhead,.sheet[data-kind="let"] .subhead').length;
+    /* ⚠ 처음에는 「빨강 ✔ 가 한 곳이라도 있으면 된다」 로 적었다가, 서류 목록의
+       ✔ 를 옛 점으로 되돌려도 <b>안 울었습니다</b> — 떼는 요령 쪽 ✔ 가 남아
+       통과시켰습니다. 알람이 아닙니다 (8번). 이제 <b>줄마다</b> 있는지 봅니다. */
+    const 체크줄 = [...document.querySelectorAll('.sheet[data-kind="ins"] .ds li,.sheet[data-kind="ins"] .jgtip-r')];
+    const 빨강체크 = 체크줄.filter(e => /rgb\(254, 0, 0\)/.test(getComputedStyle(e, '::before').borderBottomColor)).length;
+    const 체크모두 = 체크줄.length;
     const chk2 = [...document.querySelectorAll('.sheet[data-kind="chk"]')];
     const was2 = chk2.map(s => s.classList.contains('off'));
     chk2.forEach(s => s.classList.remove('off'));
@@ -268,13 +315,13 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
     /* 📑 표지 차례 — 장에서 읽어 세우나 (판 X369) */
     const 켜진 = [...document.querySelectorAll('.sheet[data-kind="ins"],.sheet[data-kind="let"]')]
       .filter(x => !x.classList.contains('off') && x.id !== 's1');
-    const 차례 = { 줄: document.querySelectorAll('#v_cvtoc div').length, 켜진: 켜진.length,
+    const 차례 = { 줄: document.querySelectorAll('#v_cvtoc div:not(.ex)').length, 켜진: 켜진.length,
                    머리: (document.getElementById('v_cvtoch') || {}).textContent || '', 끈뒤: -1 };
     (function () {
       const c = document.querySelector('.chip input[data-s="s13"]');
       if (!c) return;
       c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true }));
-      차례.끈뒤 = document.querySelectorAll('#v_cvtoc div').length;
+      차례.끈뒤 = document.querySelectorAll('#v_cvtoc div:not(.ex)').length;
       c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true }));
     })();
     /* ✅ 오늘 함께 확인한 것 — 켠 것만 찍히나 (판 X369 · 1번) */
@@ -294,10 +341,11 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
     document.querySelectorAll('.sheet[data-kind="ins"],.sheet[data-kind="let"]')
       .forEach(sh => { 장글[sh.id] = sh.innerText || ''; });
     return { 장, 작은, 도구, 다시, s12: 글('s12'), s13: 글('s13'), 장글, 차례, 확인,
-             고객파랑: [...new Set(고객파랑)], 도구파랑, 띠 };
+             고객파랑: [...new Set(고객파랑)], 도구파랑, 띠,
+             고객토큰, 틀, 알약머리, 머리모두, 빨강체크, 체크모두 };
   }, { 바닥 });
 
-  console.log('[1] 고객용이 열두 장이고 담당자가 계약보다 먼저 오나');
+  console.log('[1] 고객용이 열세 장이고 담당자가 계약보다 먼저 오나');
   const 선차례 = r.장.map(x => x.id);
   ok(선차례.length === 차례.length, '고객용 ' + 선차례.length + '장 (' + 차례.length + '장이어야 합니다)');
   ok(선차례.join('>') === 차례.join('>'), '차례 — ' + 선차례.join(' → '));
@@ -325,7 +373,7 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
   ok(r.도구 === 도구기준, '도구 장 글씨 분포' + (r.도구 === 도구기준 ? ' 그대로' : ('\n        잰 값 ' + r.도구 + '\n        기준 ' + 도구기준)));
 
   console.log('[5] 장을 끄면 쪽 번호가 다시 매겨지나');
-  ok(/· 09$/.test(r.다시), '놓치는 청구 장을 끄니 연락처가 10 → ' + (r.다시 || '(못 읽음)'));
+  ok(/· 10$/.test(r.다시), '놓치는 청구 장을 끄니 연락처가 11 → ' + (r.다시 || '(못 읽음)'));
 
   console.log('[7] 서류 장이 단정하지 않나 (1번 · 2번)');
   ok(/보험사와 상품마다 다릅니다/.test(r.s12), '「보험사와 상품마다 다릅니다」 를 말한다');
@@ -337,9 +385,14 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
   ok(/약관과 보험회사의 심사/.test(r.s13), '「약관과 보험회사의 심사」 를 말한다');
   ok(/상법 제662조/.test(r.s13), '3년은 법조문을 그대로 적는다 (상법 제662조)');
 
-  console.log('[11] 따뜻한 가족을 지키는 색인가 — 고객용에 파란 자리가 없나');
-  ok(r.고객파랑.length === 0, '고객용 장에 남은 파란 자리 ' + r.고객파랑.length + '곳'
-     + (r.고객파랑.length ? ('\n        ' + r.고객파랑.slice(0, 5).join('\n        ')) : ''));
+  console.log('[11] 🎨 A+ 자료의 파랑인가 (판 X377)');
+  /* ⚠ 판 X362 에서는 <b>거꾸로</b> 「고객용에 파란 자리가 0이어야 한다」 였습니다.
+     사장님이 2026-11-06 에 「내가 보낸 속지 테마로 전체적으로 다 바꿔줘」 →
+     색을 여쭈니 <b>「A+ 자료처럼 파랑으로」</b> 를 고르셔서 판정을 뒤집었습니다.
+     말씀이 바뀌면 자도 같이 바뀝니다 — 옛 눈금을 남겨 두면 그 자가 거짓말을 합니다. */
+  ok(/--navy=#0B60B0/i.test(r.고객토큰), '고객용 --navy 가 A+ 파랑(#0B60B0)이다 — ' + r.고객토큰);
+  ok(!/A04F34|7F3B24|C47A58|E8A33D/i.test(r.고객토큰), '옛 벽돌·호박 토큰이 남아 있지 않다');
+  ok(r.고객파랑.length >= 300, '고객용 장의 파란 자리 ' + r.고객파랑.length + '곳 (눈금 300 · 잰 값 454)');
 
   console.log('[14] 상담 도구 장은 파란 그대로인가 (고객용만 따뜻해진다)');
   /* ★ 눈금을 <b>재어서</b> 놓았습니다 (판 X362) — 따뜻한 색을 :root 로 올려
@@ -351,7 +404,7 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
 
   console.log('[15] 사진이 눈에 확 들어오나 (판 X363)');
   const 띠 = (src.match(/class="jg-hero" data-ph=/g) || []).length;
-  ok(띠 === 10, '사진 띠가 ' + 띠 + '장에 있다 (표지는 장 전체라 따로)');
+  ok(띠 === 11, '사진 띠가 ' + 띠 + '장에 있다 (표지는 장 전체라 따로)');
   ok(/data-ph="s1"/.test(src), '표지도 사진 자리를 가졌다');
   ok(/\/api\/photo-search\?q=/.test(src), '사진을 캐러셀과 같은 길로 찾는다 (/api/photo-search · 5번)');
   ok(!/api\.pexels\.com|api\.unsplash\.com/.test(src), '사진 서버를 직접 안 부른다 (열쇠가 새지 않게 · 10번)');
@@ -395,6 +448,42 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
   ok(!r.확인.켠뒤안내, '고르고 나면 안내 글이 물러난다');
   ok(/var OKITEMS\s*=/.test(src) && (src.match(/var OKITEMS\s*=/g) || []).length === 1,
      '고를 것 목록(OKITEMS)이 한 곳에만 있다 (5번)');
+
+  console.log('[19] 간병인 장이 단정하지 않고 주민번호를 안 받나 (판 X374 · 1번 · 3번)');
+  /* ★★ 사장님께서 「모두 가족간병 가능」 이라 하셨지만 제 자료로는 회사별로
+     그렇다는 것을 확인할 수 없습니다. 고객 종이에 단정해 적었다가 한 건만
+     안 돼도 그 자리에서 무너집니다. 그래서 <b>「되는 계약이 있습니다 ·
+     제가 확인해 드립니다」</b> 로 적기로 했습니다(사장님이 고르신 길).
+     ★ 주민등록번호는 <b>안 받습니다</b> — 필요하면 보험사 서식에 고객이
+     직접 적으실 자리입니다 (3번). */
+  const s16 = (r.장글 && r.장글.s16) || '';
+  ok(!!s16, '간병인 장(s16)이 선다');
+  ok(/부르시기 전|쓰시기 전|미리/.test(s16), '「미리 · 부르시기 전」 을 말한다');
+  ok(/되는 계약이 있습니다/.test(s16), '「되는 계약이 있습니다」 로 적는다 (단정하지 않음)');
+  ok(!/모든 보험사|전부 가능|모두 가능|언제나 됩니다/.test(s16),
+     '「모든 보험사에서 된다」 고 단정하지 않는다');
+  ok(/확인해 말씀드리겠습니다|확인해서 말씀드리겠습니다/.test(s16), '「제가 확인해 드립니다」 로 잇는다');
+  ok(/주민등록번호는 안 알려 주셔도|주민등록번호는 알려 주지 않으셔도/.test(s16),
+     '주민등록번호를 받지 않는다고 적는다 (3번)');
+  ok(!/주민등록번호\s*(:|：)?\s*(입력|적어|써)/.test(s16) && (s16.match(/주민등록번호/g) || []).length === 1,
+     '주민번호를 적는 칸을 두지 않는다');
+  ok(/약관과 보험회사의 심사 결과/.test(s16), '지급은 약관과 심사에 따른다고 말한다');
+
+  console.log('[20] 🎀 A+ 테마가 장마다 입혀졌나 (판 X377)');
+  const 틀모자람 = r.틀.filter(t => !/:1틀4리본$/.test(t));
+  ok(틀모자람.length === 0, '켜진 고객용 장 ' + r.틀.length + '장에 틀 1 + 리본 4가 다 있다'
+     + (틀모자람.length ? ' ← ' + 틀모자람.join(' · ') : ''));
+  ok((src.match(/function apFrame\(/g) || []).length === 1, '그려 붙이는 자(apFrame)가 한 벌이다 (5번)');
+  /* ⚠ 처음에는 「<svg class="aprib 가 하나도 없어야 한다」 로 적었다가
+     <b>그리는 자의 본보기 글귀</b>를 제가 잡았습니다 — 헛것입니다 (8번).
+     본보기는 딱 한 벌이고, 장 안에 손으로 적으면 둘이 됩니다. */
+  const 리본글 = (src.match(/<svg class="aprib/g) || []).length;
+  ok(리본글 === 1, '리본 SVG 글귀가 ' + 리본글 + '벌 — 그리는 자의 본보기 하나뿐이다 (5번)');
+  ok(r.머리모두 > 0 && r.알약머리 === r.머리모두,
+     '고객용 머리줄 ' + r.머리모두 + '개가 모두 <b>A+ 알약</b>이다 (' + r.알약머리 + '개)');
+  ok(r.체크모두 > 0 && r.빨강체크 === r.체크모두,
+     '서류·요령 줄 ' + r.체크모두 + '곳이 <b>모두</b> A+ 의 빨강 ✔ 다 (' + r.빨강체크 + '곳)');
+  ok(/aprib ap-tl/.test(src) || /ap-tl/.test(src), '귀퉁이 이름에 ap- 접두사가 붙어 있다 (.tl 과 안 부딪히게)');
 
   console.log('[끝] 조용한가');
   ok(터짐.length === 0, '터진 자리 ' + 터짐.length + (터짐.length ? (' ← ' + 터짐[0]) : ''));

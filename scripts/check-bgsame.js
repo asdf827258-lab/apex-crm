@@ -27,7 +27,20 @@
    ★ 되돌림 — .hm-q-t 의 바탕을 --t-card 에서 --t-bg-2 로 도로 박으면
      이 자가 <b>울립니다</b>(확인했습니다). 안 울리는 알람은 알람이 아닙니다.
    ⚠ 사장님 진짜 서버를 한 번도 안 부릅니다 (10번) — 견본은 「홍길동」 집안 (3번).
+
+   ⚠⚠ <b>시계를 못 박습니다</b> (판 X383 · lib-clock 한 곳 · 5번).
+     2026-11-08 에 <b>같은 판(a4b6658)에서 CI 두 판이 엇갈렸습니다</b> —
+     하나는 초록, 하나는 「#F7F9FA on #F5F9FF (7) … ⏳ 7일째」 로 빨간불.
+     까닭은 견본 날짜를 <b>Date.now()</b> 로 짓고 창도 <b>CI 가 도는 진짜
+     시계</b>를 보기 때문입니다. 날이 바뀌면 고객의 「며칠째」 가 달라지고,
+     그에 따라 칸 바탕(단계 색)이 바뀌어 <b>칩이 묻히는 날과 안 묻히는
+     날</b>이 갈립니다. 코드는 멀쩡했습니다.
+     ★ 때에 따라 갈리는 자는 <b>안 잡는 자보다 나쁩니다</b> — 사람이 자를
+       안 믿게 됩니다 (8번). 날을 박아 <b>언제 돌아도 같은 것</b>을 재게
+       합니다. lib-clock 쪽지가 미리 적어 둔 그 함정입니다.
    ══════════════════════════════════════════════════════════════════ */
+/* 🕰 시계를 박는 길은 <b>이 한 곳</b>입니다 (5번) */
+const CLK = require('./lib-clock.js');
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = process.cwd(), PORT = 9342;
@@ -63,6 +76,9 @@ const SEED = () => {
       select:function(){ return chain({data:[],count:0}); }, update:function(){ return chain({}); },
       insert:function(){ return chain({}); }, upsert:function(){ return chain({}); },
       delete:function(){ return chain({}); } }; } }; };
+  /* ★ 이 둘은 <b>창 안</b>에서 돕니다 — CLK.pin 이 창의 Date 를 못 박아 두었으므로
+     Date.now() 가 이미 <b>박힌 시각</b>입니다. 여기서 Node 의 날짜를 넘기면
+     창과 Node 가 <b>하루 갈릴</b> 수 있습니다(lib-clock 쪽지의 그 자리). */
   const ago = n => new Date(Date.now()-n*864e5).toISOString().slice(0,10);
   const soon = n => new Date(Date.now()+n*864e5).toISOString().slice(0,10);
   OSC.loaded = true; OSC.busy = false; OSC.err = ''; OSC.reps = [{id:'me',name:'홍길동'}];
@@ -122,7 +138,8 @@ const SCAN = tab => {
   const errs = [];
   let 묻힘 = [], 식구첫 = 0;
   for (const [w, h] of [[390,844], [1280,1000]]) {
-    const ctx = await b.newContext({ viewport:{ width:w, height:h } });
+    const ctx = await b.newContext(CLK.ctxOpt({ viewport:{ width:w, height:h } }));
+    await CLK.pin(ctx, 14);        /* ★ 창이 열리기 전에 — 나중에 박으면 늦습니다 */
     const p = await ctx.newPage();
     p.on('pageerror', e => errs.push('' + (e && e.message)));
     await p.route('**://**', r => {

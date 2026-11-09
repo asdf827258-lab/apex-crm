@@ -41,7 +41,12 @@ is(kj.length > 1000 && !/fetch\(|XMLHttpRequest|sbFetch|supabase/i.test(kj), '  
 console.log('\n[2] 메뉴 · 분류 · 옷 · go()');
 is(/\{id:'sangdam',[^\n]*\n\s*\{id:'kijun',tk:'고객',icon:'📏',title:'보험의 기준 · 셀프 점검'/.test(IDX), '  상담 도구 · 「보장분석 상담자료」 바로 뒤');
 is(/ kijun:'meet',/.test(IDX), '  간편 분류 — 고객 만나기(meet)');
-is(/jiin_grow:1,kijun:1\}/.test(IDX), '  목업 옷(T_SKIN)을 입는다');
+/* ⚠ 여기는 전에 <b>「…,kijun:1}」</b> 으로 옆 칸과 닫는 괄호까지 묶어 보았습니다.
+   T_SKIN 맨 끝에 다른 화면(edu)이 한 줄 붙자 <b>kijun 은 그대로인데</b> 빨간불이
+   켜졌습니다 — 헛것을 잡는 점검은 안 잡는 점검보다 나쁩니다(8번). 묻고 싶은 것은
+   「kijun 이 옷 표에 있나」 하나이므로 <b>그것만</b> 묻습니다. */
+const SKINBLK = (IDX.match(/var T_SKIN=\{[\s\S]*?\};/) || [''])[0];
+is(/[,{]\s*kijun:1\s*[,}]/.test(SKINBLK), '  목업 옷(T_SKIN)을 입는다');
 is(/else if\(tab==='kijun'\)\{dyn\.innerHTML=renderKijunPage\(\);kjAfter\(\);\}/.test(IDX), '  go() 가 그린다');
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.webmanifest': 'application/json' };
