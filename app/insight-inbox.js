@@ -64,10 +64,11 @@
   '.iib-up.ok{color:var(--t-pos)}.iib-up.no{color:var(--t-neg)}'+
   '.iib-lh{display:flex;align-items:center;justify-content:space-between;margin:4px 0 6px;font-size:var(--t4);font-weight:800}'+
   '.iib-lh span{font-size:var(--t6);font-weight:600;color:var(--t-sub)}'+
-  '.iib-it{display:flex;gap:10px;align-items:center;padding:11px 0;border-top:1px solid var(--t-line)}'+
+  '.iib-it{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:11px 0;border-top:1px solid var(--t-line)}'+
+  '.iib-acts{display:flex;align-items:center;gap:4px;margin-left:auto}'+
   '.iib-chip{flex-shrink:0;font-size:var(--t6);font-weight:800;padding:4px 8px;border-radius:8px;background:var(--t-point-l);color:var(--t-point)}'+
   '.iib-chip.terms{background:var(--t-ind-l);color:var(--t-ind-d)}.iib-chip.etc{background:var(--t-bg);color:var(--t-sub)}'+
-  '.iib-mid{flex:1;min-width:0}'+
+  '.iib-mid{flex:1 1 220px;min-width:0}'+
   '.iib-fn{font-size:var(--t5);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
   '.iib-meta{font-size:var(--t6);color:var(--t-sub);margin-top:2px;line-height:1.5}'+
   '.iib-st{flex-shrink:0;font-size:var(--t6);font-weight:700;text-align:right;line-height:1.5}'+
@@ -75,7 +76,7 @@
   '.iib-btn{border:1px solid var(--t-line);background:var(--t-card);font:inherit;font-size:var(--t6);font-weight:700;color:var(--t-ink);border-radius:10px;padding:0 10px;min-height:44px;min-width:44px;cursor:pointer;margin-left:4px}'+
   '.iib-btn:hover{background:var(--t-bg)}'+
   '.iib-empty{font-size:var(--t5);color:var(--t-sub);padding:14px 0;border-top:1px solid var(--t-line)}'+
-  '@media(max-width:520px){.iib-open .t{display:none}.iib-card{padding:18px 16px 14px}}';
+  '@media(max-width:520px){.iib-card{padding:18px 16px 14px}}';
 
   function iibMount(){
     var fl=document.querySelector('#insightScreen .fin-float');
@@ -145,7 +146,7 @@
       return '<div class="iib-it"><span class="iib-chip '+r.kind+'">'+IIB_KIND[r.kind]+'</span>'+
         '<div class="iib-mid"><div class="iib-fn">'+iibEsc(r.file_name)+'</div>'+
         '<div class="iib-meta">'+iibEsc(r.month)+(r.note?' · '+iibEsc(r.note):'')+' · '+iibEsc(r.uploader_name||'')+' · '+iibWhen(r.created_at)+(r.size?' · '+iibSize(r.size):'')+'</div></div>'+
-        st+btn+'</div>';
+        '<div class="iib-acts">'+st+btn+'</div></div>';
     }).join('');
   }
   function iibRow(id){var rows=IIB.rows||[];for(var i=0;i<rows.length;i++)if(rows[i].id===id)return rows[i];return null;}
