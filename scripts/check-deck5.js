@@ -378,7 +378,7 @@ const 갈래 = {
           if (h) {
             const px = parseFloat(getComputedStyle(h).fontSize);
             제목 = Math.max(제목, px);
-            제목들.push({ id: s.id || '?', px: Math.round(px) });   /* ★ 쪽마다 모읍니다 (판 X384) */
+            제목들.push({ id: s.id || '?', px: Math.round(px) });   /* ★ 쪽마다 모읍니다 (판 X385) */
           }
           if (q.top < -2 || (h && h.getBoundingClientRect().top < 0)) 잘림++;
           if (h) {
@@ -427,7 +427,7 @@ const 갈래 = {
     }, Object.keys(갈래));
     끝수.제목 = Math.round(r.제목); 끝수.가운데 = r.가운데;
     끝수.남는쪽 = r.남는쪽; 끝수.흩날림 = r.흩날림.length;
-    /* ⚠⚠ <b>여태 제일 큰 제목 하나만 봤습니다</b> (판 X384 · 사장님 말씀 「고쳐주고」).
+    /* ⚠⚠ <b>여태 제일 큰 제목 하나만 봤습니다</b> (판 X385 · 사장님 말씀 「고쳐주고」).
          Math.max 로 모아 56px 과 견주었으니, 제목 <b>하나만</b> 크면 나머지가 다 작아도
          초록이었습니다 — 안 울리는 알람입니다 (8번). 실제로 라이브에서 재어 보니
          eimf2 가 30px, close 가 38px 이었는데 자는 「제목 60px」 이라고 적고 있었습니다.
