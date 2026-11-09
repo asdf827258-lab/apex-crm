@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>윤단장의 보험시선 — 편집 틀</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+/* 채널 「윤단장의 보험시선」 편집 틀 한 벌 — kit-render.js 가 #모드 로 열어 render(t) 를 한 장씩 찍는다.
+   모드: intro169 · intro916 · lower(초록 · 크로마키) · lowerpng(투명) · chapterNN · end169 · send916 · thumb(시리즈|큰말|작은말)
+   색은 남색 + 금색 하나. 초록(#00B140)은 크로마키 판에만 쓴다 — 디자인 안에는 초록을 넣지 않는다(지워지므로). */
+:root{--navy:#0B1220;--navy2:#141E33;--gold:#D9B26A;--gold2:#F3D99A;--ink:#fff;--sub:rgba(255,255,255,.72)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{overflow:hidden;background:transparent}
+body{font-family:Pretendard,sans-serif;color:var(--ink);letter-spacing:-.035em;word-break:keep-all}
+#st{position:absolute;left:0;top:0;overflow:hidden}
+.bgN{position:absolute;inset:0;background:radial-gradient(1200px 900px at 50% 40%,#1A2742 0%,#0B1220 60%,#05080F 100%)}
+.abs{position:absolute}
+.gold{color:var(--gold2)}
+canvas{position:absolute;left:0;top:0}
+</style>
+</head>
+<body>
+<div id="st"></div>
+<script>
+var PROFILE={name:'윤시현',title:'에이플러스에셋 온탑본부 사업단장',career:'보험·재무설계 10년',channel:'윤단장의 보험시선',
+  slogan:'보험을 파는 설계사가 아닌, 삶을 설계하는 설계사',photo:''};
+var H=decodeURIComponent((location.hash||'#intro169').slice(1)), MODE=H.split('|')[0], ARG=H.split('|').slice(1);
+var SIZE={intro169:[1920,1080],intro916:[1080,1920],lower:[1920,1080],lowerpng:[1920,1080],end169:[1920,1080],send916:[1080,1920],thumb:[1280,720]};
+var WH=SIZE[MODE]||[1920,1080]; if(/^chapter/.test(MODE))WH=[1920,1080];
+var W=WH[0],Hh=WH[1],st=document.getElementById('st');st.style.width=W+'px';st.style.height=Hh+'px';
+document.documentElement.style.width=W+'px';document.documentElement.style.height=Hh+'px';
+function clamp(x,a,b){return x<a?a:x>b?b:x;}
+function eo(x){return 1-Math.pow(1-x,3);}
+function eio(x){return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;}
+function rnd(n){var x=Math.sin(n*12.9898)*43758.5453;return x-Math.floor(x);}
+function q(a,b,t){return clamp((t-a)/(b-a),0,1);}
+
+// 「시선」 — 금빛 렌즈 고리 (SVG). p: 그려진 정도 0~1 · r: 반지름
+function lens(r,p,t){
+  var c=2*Math.PI*r, s='<svg width="'+(r*2+40)+'" height="'+(r*2+40)+'" viewBox="'+(-r-20)+' '+(-r-20)+' '+(r*2+40)+' '+(r*2+40)+'">';
+  s+='<circle r="'+r+'" fill="none" stroke="#D9B26A" stroke-width="'+(r*0.07)+'" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+(c*(1-p))+'" transform="rotate(-90)"/>';
+  s+='<circle r="'+(r*0.78)+'" fill="none" stroke="rgba(243,217,154,.35)" stroke-width="2" stroke-dasharray="6 10" transform="rotate('+(t*40)+')" opacity="'+p+'"/>';
+  // 안쪽 조리개 — 여섯 날
+  var iris='';for(var i=0;i<6;i++){var a=i*60+t*25;iris+='<path d="M0 0 L'+(r*0.55)+' '+(-r*0.18)+' A'+(r*0.58)+' '+(r*0.58)+' 0 0 1 '+(r*0.42*Math.cos(1.05))+' '+(r*0.42*Math.sin(1.05))+' Z" fill="rgba(217,178,106,'+(0.10+0.08*(i%2))+')" transform="rotate('+a+')"/>';}
+  s+='<g opacity="'+eo(q(0.35,1,p))+'">'+iris+'</g>';
+  s+='<circle r="'+(r*0.2)+'" fill="#F3D99A" opacity="'+eo(q(0.6,1,p))+'"/><circle cx="'+(-r*0.07)+'" cy="'+(-r*0.07)+'" r="'+(r*0.06)+'" fill="#fff" opacity="'+eo(q(0.7,1,p))+'"/>';
+  return s+'</svg>';
+}
+function dustCanvas(){var c=document.createElement('canvas');c.width=W;c.height=Hh;st.appendChild(c);return c.getContext('2d');}
+function dust(g,t,n){g.clearRect(0,0,W,Hh);for(var i=0;i<n;i++){var x=rnd(i*3.1)*W+Math.sin(t*0.4+i)*20,y=((rnd(i*7.7)*Hh*1.2)-t*(14+rnd(i)*30))%(Hh*1.2);if(y<0)y+=Hh*1.2;
+  var a=0.1+0.45*rnd(i*5.1)*(0.6+0.4*Math.sin(t*2+i));g.fillStyle='rgba(243,217,154,'+a.toFixed(3)+')';g.beginPath();g.arc(x,y,1+rnd(i*1.3)*2.6,0,6.283);g.fill();}}
+
+var R={};
+// ── 인트로 (가로 4초 · 세로 3.4초) ──
+R.intro=function(vert){
+  st.innerHTML='<div class="bgN"></div>';var g=dustCanvas();
+  var box=document.createElement('div');box.className='abs';st.appendChild(box);
+  var rr=vert?190:170;
+  box.innerHTML='<div class="abs" id="ln"></div><div class="abs" id="tx" style="text-align:'+(vert?'center':'left')+'">'+
+    '<div id="t1" style="font-size:'+(vert?64:58)+'px;font-weight:800;color:var(--sub)">윤단장의</div>'+
+    '<div id="t2" style="font-size:'+(vert?170:156)+'px;font-weight:900;line-height:1.02;color:var(--gold2);text-shadow:0 0 60px rgba(217,178,106,.45)">보험시선</div></div>'+
+    '<div class="abs" id="t3" style="left:0;right:0;width:'+W+'px;text-align:center;font-size:'+(vert?40:38)+'px;font-weight:700;color:var(--sub)">'+PROFILE.slogan+'</div>'+
+    '<div class="abs" id="sw" style="top:0;width:260px;height:'+Hh+'px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);transform:skewX(-18deg)"></div>';
+  var ln=box.querySelector('#ln'),tx=box.querySelector('#tx'),t1=box.querySelector('#t1'),t2=box.querySelector('#t2'),t3=box.querySelector('#t3'),sw=box.querySelector('#sw');
+  if(vert){ln.style.left=(W/2-rr-20)+'px';ln.style.top='520px';tx.style.left='0';tx.style.width=W+'px';tx.style.top='1000px';t3.style.top='1420px';}
+  else{ln.style.left='430px';ln.style.top=(Hh/2-rr-20-40)+'px';tx.style.left='860px';tx.style.top='330px';t3.style.top='760px';}
+  var TOT=vert?3.4:4.0;
+  return function(t){dust(g,t,70);
+    ln.innerHTML=lens(rr,eio(q(0.05,1.05,t)),t);ln.style.transform='scale('+(0.85+0.15*eo(q(0,1.2,t)))+')';
+    var a=eo(q(0.9,1.4,t));t1.style.opacity=a;t1.style.transform='translateY('+(30*(1-a))+'px)';
+    var b=eo(q(1.15,1.6,t));t2.style.opacity=b;t2.style.transform='scale('+(1.25-0.25*b)+')';t2.style.transformOrigin=vert?'50% 50%':'0 50%';
+    var c=eo(q(1.9,2.5,t));t3.style.opacity=c;
+    sw.style.left=(-400+(W+800)*q(1.5,2.3,t))+'px';
+    st.style.opacity=1-q(TOT-0.45,TOT,t);
+  };
+};
+// ── 이름표 (6초 · 초록 배경판 / 투명 PNG) ──
+R.lower=function(png){
+  st.innerHTML=png?'':'<div class="abs" style="inset:0;background:#00B140"></div>';
+  var b=document.createElement('div');b.className='abs';b.style.left='110px';b.style.top='800px';st.appendChild(b);
+  b.innerHTML='<div class="abs" id="bar" style="left:0;top:0;width:12px;height:150px;background:var(--gold)"></div>'+
+    '<div class="abs" id="pl" style="left:12px;top:0;height:150px;background:linear-gradient(90deg,rgba(11,18,32,.96),rgba(20,30,51,.92));overflow:hidden;white-space:nowrap">'+
+    '<div style="padding:18px 46px 0 34px"><span style="font-size:62px;font-weight:900">'+PROFILE.name+'</span>'+
+    '<span style="font-size:30px;font-weight:800;color:var(--gold2);margin-left:22px">'+PROFILE.channel+'</span>'+
+    '<div style="font-size:30px;font-weight:700;color:var(--sub);margin-top:6px">'+PROFILE.title+' · '+PROFILE.career+'</div></div></div>';
+  var pl=b.querySelector('#pl'),bar=b.querySelector('#bar');
+  return function(t){var i=eo(q(0.05,0.55,t)),o=eio(q(5.2,5.8,t));
+    bar.style.transform='scaleY('+(png?1:i*(1-o))+')';bar.style.transformOrigin='50% 100%';
+    pl.style.width=(png?980:980*i*(1-o))+'px';};
+};
+// ── 챕터 카드 (2.6초) ──
+R.chapter=function(no){
+  st.innerHTML='<div class="bgN"></div>';var g=dustCanvas();
+  var b=document.createElement('div');b.className='abs';b.style.inset='0';st.appendChild(b);
+  b.innerHTML='<div class="abs" id="num" style="left:150px;top:250px;font-size:460px;font-weight:900;line-height:1;color:transparent;-webkit-text-stroke:5px rgba(217,178,106,.75)">'+no+'</div>'+
+    '<div class="abs" id="lab" style="left:880px;top:420px;font-size:44px;font-weight:900;letter-spacing:.32em;color:var(--gold)">CHAPTER '+no+'</div>'+
+    '<div class="abs" id="ln" style="left:880px;top:500px;height:6px;background:linear-gradient(90deg,var(--gold),transparent)"></div>'+
+    '<div class="abs" style="left:880px;top:540px;font-size:30px;font-weight:700;color:rgba(255,255,255,.35)">— 제목은 캡컷 텍스트로 이 자리에 —</div>'+
+    '<div class="abs" style="right:70px;bottom:50px;font-size:28px;font-weight:800;letter-spacing:.12em;color:rgba(217,178,106,.7)">'+PROFILE.channel+'</div>';
+  var num=b.querySelector('#num'),lab=b.querySelector('#lab'),ln=b.querySelector('#ln');
+  return function(t){dust(g,t,50);var a=eo(q(0,0.5,t));num.style.opacity=a;num.style.transform='translateX('+(-80*(1-a))+'px)';
+    lab.style.opacity=eo(q(0.25,0.6,t));ln.style.width=(900*eio(q(0.35,0.9,t)))+'px';st.style.opacity=1-q(2.25,2.6,t);};
+};
+// ── 끝 화면 (가로 20초) — 유튜브 「최종 화면」 자리를 맞춰 둔다: 영상 둘 · 구독 하나 ──
+R.end=function(){
+  st.innerHTML='<div class="bgN"></div>';var g=dustCanvas();
+  var b=document.createElement('div');b.className='abs';b.style.inset='0';st.appendChild(b);
+  var vbox=function(x,lab){return '<div class="abs vb" style="left:'+x+'px;top:300px;width:720px;height:405px;border:4px dashed rgba(217,178,106,.75);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;color:rgba(243,217,154,.8);background:rgba(255,255,255,.03)">'+lab+'</div>';};
+  b.innerHTML='<div class="abs" style="left:120px;top:150px;font-size:64px;font-weight:900">다음 영상도 <span class="gold">같이 보세요</span></div>'+
+    vbox(120,'▶ 영상 자리 1 (유튜브 최종 화면 요소)')+vbox(870,'▶ 영상 자리 2')+
+    '<div class="abs" style="left:1640px;top:400px;width:220px;height:220px;border-radius:50%;border:4px dashed rgba(217,178,106,.75);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:rgba(243,217,154,.85);text-align:center">구독<br>자리</div>'+
+    '<div class="abs" id="ln" style="left:1650px;top:640px;width:200px;text-align:center"></div>'+
+    '<div class="abs" style="left:120px;top:800px;font-size:40px;font-weight:800">'+PROFILE.channel+' · <span style="color:var(--sub)">'+PROFILE.slogan+'</span></div>'+
+    '<div class="abs" style="left:120px;top:870px;font-size:30px;font-weight:700;color:var(--sub)">📩 상담 신청은 설명란 링크 · 영상은 일반 정보이며 보장·보험료는 심사 결과에 따릅니다</div>';
+  var ln=b.querySelector('#ln');
+  return function(t){dust(g,t,80);ln.innerHTML=lens(80,1,t);[].slice.call(b.querySelectorAll('.vb')).forEach(function(e,i){e.style.opacity=0.6+0.4*Math.sin(t*1.6+i);});
+    st.style.opacity=eo(q(0,0.6,t))*(1-q(19.4,20,t));};
+};
+// ── 쇼츠 끝 카드 (세로 3초) ──
+R.send=function(){
+  st.innerHTML='<div class="bgN"></div>';var g=dustCanvas();
+  var b=document.createElement('div');b.className='abs';b.style.inset='0';st.appendChild(b);
+  b.innerHTML='<div class="abs" id="ln" style="left:'+(W/2-150)+'px;top:470px"></div>'+
+    '<div class="abs" style="left:0;width:'+W+'px;top:860px;text-align:center"><div style="font-size:70px;font-weight:900">전체 영상은</div><div style="font-size:96px;font-weight:900;color:var(--gold2)">채널에서</div>'+
+    '<div style="font-size:46px;font-weight:800;margin-top:40px;color:var(--sub)">'+PROFILE.channel+'</div></div>'+
+    '<div class="abs" id="ar" style="left:140px;top:1300px;font-size:120px;color:var(--gold2)">↙</div>';
+  var ln=b.querySelector('#ln'),ar=b.querySelector('#ar');
+  return function(t){dust(g,t,60);ln.innerHTML=lens(130,eio(q(0,0.8,t)),t);ar.style.transform='translate('+(-20*Math.abs(Math.sin(t*4)))+'px,'+(20*Math.abs(Math.sin(t*4)))+'px)';st.style.opacity=eo(q(0,0.3,t));};
+};
+// ── 썸네일 (1280×720) — 시리즈|큰말|작은말 ──
+R.thumb=function(){
+  var series=ARG[0]||'시리즈',big=ARG[1]||'큰 말',small=ARG[2]||'';
+  st.innerHTML='<div class="bgN"></div>';
+  var b=document.createElement('div');b.className='abs';b.style.inset='0';st.appendChild(b);
+  var face=PROFILE.photo?'<img src="'+PROFILE.photo+'" style="width:100%;height:100%;object-fit:cover">':
+    '<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#22304F,#0B1220);color:rgba(243,217,154,.7);font-size:30px;font-weight:800"><div style="font-size:150px">👤</div>얼굴 사진 자리</div>';
+  b.innerHTML='<div class="abs" style="right:0;top:0;width:520px;height:720px;overflow:hidden">'+face+'<div class="abs" style="inset:0;background:linear-gradient(90deg,#0B1220 0%,transparent 35%)"></div></div>'+
+    '<div class="abs" style="left:60px;top:70px"><span style="display:inline-block;font-size:34px;font-weight:900;color:#0B1220;background:var(--gold);padding:8px 22px;border-radius:10px">'+series+'</span></div>'+
+    '<div class="abs" style="left:60px;top:160px;width:780px;height:440px;display:flex;flex-direction:column;justify-content:center;white-space:normal">'+
+      '<div style="font-size:112px;font-weight:900;line-height:1.05;color:var(--gold2);text-shadow:0 6px 0 rgba(0,0,0,.6),0 0 50px rgba(217,178,106,.4)">'+big+'</div>'+
+      '<div style="font-size:66px;font-weight:900;line-height:1.15;margin-top:22px;text-shadow:0 5px 0 rgba(0,0,0,.6)">'+small+'</div></div>'+
+    '<div class="abs" style="left:60px;bottom:40px;display:flex;align-items:center;gap:14px;font-size:30px;font-weight:800;color:rgba(243,217,154,.9)"><span id="lns"></span>'+PROFILE.channel+'</div>';
+  b.querySelector('#lns').innerHTML=lens(22,1,0);
+  return function(){};
+};
+var MAKE={intro169:function(){return R.intro(false);},intro916:function(){return R.intro(true);},lower:function(){return R.lower(false);},lowerpng:function(){return R.lower(true);},
+  end169:R.end,send916:R.send,thumb:R.thumb};
+var DUR={intro169:4,intro916:3.4,lower:6,lowerpng:0,end169:20,send916:3,thumb:0};
+var fn=/^chapter/.test(MODE)?R.chapter(MODE.replace('chapter','')):MAKE[MODE]();
+window.KIT={w:W,h:Hh,dur:/^chapter/.test(MODE)?2.6:DUR[MODE],transparent:MODE==='lowerpng'};
+window.render=function(t){fn(t);};
+render(0);
+</script>
+</body>
+</html>
