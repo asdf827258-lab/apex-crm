@@ -1523,7 +1523,7 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 .pext>div{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}.pext em{font-style:normal;display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid #D6DEF0;border-radius:99px;padding:2px 4px 2px 10px}
 .pext em .mini{min-height:28px;padding:0 8px}
 .frpc span.r{background:#EEF2FB;color:#2A4A9B}.frpc span.r i{font-style:normal;font-size:10px;color:#8B95A1}
-.ppw{margin:0 0 8px}.ppt em.dup{font-style:normal;font-size:11.5px;font-weight:800;color:#8A6A2F;background:#FFF7E0;border-radius:6px;padding:0 6px;margin-left:4px}
+.ppw{margin:0 0 8px}.ppt em.dup.add{color:#1B6E45;background:#E6F4EC}.ppt em.dup{font-style:normal;font-size:11.5px;font-weight:800;color:#8A6A2F;background:#FFF7E0;border-radius:6px;padding:0 6px;margin-left:4px}
 .kb.pp{margin-bottom:12px}
 .ppv{border:1px solid var(--ln);border-radius:12px;padding:10px 12px;background:#fff;margin-top:8px}
 .pph{font-size:13.5px;margin-bottom:8px}
@@ -7934,11 +7934,14 @@ function ppTables(lines){
       else if(manCol){var mm=L.match(/^(.*?\D)\s([0-9][0-9,]*)\s+(?:종신|\d{2,3}\s*세|\d{1,2}\s*년)/);if(mm){amt={t:mm[2]+'만원',v:parseFloat(mm[2].replace(/,/g,'')),i:mm[1].length};tail=mm[1];}}
       /* 꺾인 이름만 잇는다 — 설명 문장(「~경우」 「지급」 「합니다」)은 이름이 아니다 */
       if(!amt){if(/^[,.\d\s%\/년세|~\-]+$/.test(L)||/^,/.test(L)){continue;}if(L.length<70&&!/^\d+$/.test(L)&&!/경우|지급하|지급합|지급사유|합니다|입니다|약관|※|보험금을|정의|세부/.test(L))buf.push(L);else buf=[];if(buf.length>3)buf.shift();continue;}
-      var name=(buf.join('')+tail).replace(/^\s*(?:기본계약|입원일당|치료비|진단비|수술비|재물\/배상|배상책임|화재손해|건물|주계약|선택특약)?\s*\d{0,4}\s*/,'').replace(/\s+/g,' ').trim();
+      var nm0=buf.join('')+tail,isMain=/^\s*(?:\d{1,3}\s+)?(?:주계약|주보험)/.test(nm0);
+      /* 판 X373 — 금액 칸이 「안내참조」 인 줄은 금액이 없다 — 뒤에 붙은 다음 줄(메리츠 화재 「풍수재손해 1억5천만원」)만 담보로 */
+      if(/안내참조/.test(nm0))nm0=nm0.replace(/^.*안내참조.*?\d+\s*년\s*\/\s*\d+\s*(?:년|세)\s*/,'');
+      var name=(nm0).replace(/^\s*(?:기본계약|입원일당|치료비|진단비|수술비|재물\/배상|배상책임|화재손해|건물|주계약|선택특약)?\s*\d{0,4}\s*/,'').replace(/\s+/g,' ').trim();
       buf=[];
-      if(name.length<2||name.length>80||/납입면제|납입지원|보험료자동|대리청구|제도성|보험료|해약환급금(?!형)|환급률|환율|원화환산|경우|지급합니다|약관|있습니다|남성|여성|기준|상령일/.test(name))continue;
+      if(name.length<2||name.length>80||/납입면제|납입지원|보험료자동|대리청구|제도성|보험료|해약환급금(?!형)|환급률|환율|원화환산|경우|지급합니다|약관|있습니다|남성|여성|기준|상령일|사용금액|미만|초과|손실|예시|차액|(?:은|는)$/.test(name))continue;   /* 판 X373 — 「지급받는 사망보험금은 3,815만원으로 … 손실」 · 「1일당 간병인 사용금액 7만원」 은 설명 문장 */
       if(/^[-·•]|\s:\s|:$|^\(|^\//.test(name))continue;                  /* 「- MRI촬영(급여) : 5만원」 같은 설명 줄 */
-      rows.push({raw:name+' · '+amt.t,name:name,v:amt.v,usd:amt.usd||null});got++;
+      rows.push({raw:name+' · '+amt.t,name:name,v:amt.v,usd:amt.usd||null,main:isMain});got++;
     }
   }
   return rows;}
@@ -7975,7 +7978,7 @@ var PP_RULES=[
  [/(순환계|심뇌|뇌심|뇌[·∙ㆍ]?심장|뇌혈관|뇌졸중|심장|심혈관|심근경색).{0,12}(생활비|생활자금|생활보장|생활연금)/, 'bhLiv', 'cv-life'],
  [/암.{0,12}(생활비|생활자금|생활보장|생활연금)/, 'canLiv', 'cancer-life'],
  /* ── 유사암 치료 · 수술 — 칸이 없다(유사암 「진단」 만 칸이 있다) ── */
- [/(갑상선|기타피부|유사암|제자리|경계성)(?!.{0,2}제외).{0,24}(치료|수술|방사선|약물)/, '', 'similar'],
+ [/(갑상선|기타피부|유사암|제자리|경계성)(?!.{0,2}제외).{0,24}(치료|수술|방사선|약물)/, '', 'similar'],   /* 판 X373 — 사전 id 는 유사암 그대로, 풀이는 ppExp 가 「치료비」 로 따로 (「유사암 진단비」 로 풀던 것) */
  /* ── 순환계 치료비 — 뇌 · 심장보다 먼저(「심뇌혈관」 안에 「뇌혈관」 이 들어 있다) ── */
  [/(뇌졸중|뇌경색|뇌혈관).{0,8}(혈전용해|혈전제거|혈전절제)/, 'brainT', 'cv-tx'],
  [/(혈전용해|혈전제거|혈전절제|색전제거)/, 'circT', 'cv-tx'],
@@ -8020,6 +8023,7 @@ var PP_RULES=[
  [/(뇌혈관|뇌졸중|뇌).{0,6}수술/, 'brainS', 'surg-c'],
  [/(순환계|심뇌혈관).{0,8}중환자실/, 'icuC', 'icu'],
  [/중환자실/, 'icu', 'icu'],
+ [/허혈성?심장질환/, 'heart', 'heart'],   /* 판 X373 — 「허혈심장질환」(성 없이) 도 */
  /* ── 특정 심장질환(Ⅰ·Ⅱ) 은 따로 ── */
  [/심장질환\(?특정|특정[ⅠⅡI]{1,2}.{0,4}심장|주요심장질환|(심부전|판막|심근병증).{0,6}진단/, 'heartW', 'heart-w'],
  [/부정맥/, 'arrhy', 'heart-w'],
@@ -8035,12 +8039,16 @@ var PP_RULES=[
  [/(말기|장기이식|조혈모)/, '', 'organ'],
  [/중대한/, '', 'ci'],
  /* ── 수술 ── */
+ /* 판 X373 — 생보식 「질병 및 재해수술비」 */
+ [/(질병및재해|재해및질병).{0,12}([1-5]종|1[~\-∼]5종)/, 'surg5D', 'surg'],
+ [/(질병및재해|재해및질병).{0,4}수술/, 'surg', 'surg'],
  [/질병.{0,4}1[~\-∼]5종|질병.{0,4}[1-5]종수술/, 'surg5D', 'surg'],
  [/(상해|재해).{0,4}1[~\-∼]5종|(상해|재해).{0,4}[1-5]종수술/, 'surg5A', 'surg'],
  [/[0-9]{1,3}대.{0,6}질병.{0,4}수술|특정질병.{0,4}수술/, 'surgN', 'surg-n'],
  [/외모.{0,6}수술/, '', 'surg'],
  [/로봇.{0,4}수술/, '', 'robot'],
  /* ── 입원 · 통원 ── */
+ [/^(질병및재해|재해및질병|질병|재해)?입원급여금/, 'inpD', 'hosp'],   /* 판 X373 — 생보식 「입원급여금」 */
  [/(상급종합|1인실|상급병실).{0,10}입원/, '', 'room'],
  [/요양병원.{0,10}입원일당/, '', 'nursing-h'],
  [/응급실/, '', 'er'],
@@ -8099,6 +8107,56 @@ function ppRule(name){
 function ppKeyOf(name){return ppRule(name).k;}
 /* 금액이 그 칸의 단위로 말이 안 되면(하루 100만원 넘는 일당 · 매달 500만원 넘는 월 지급) 고르지 않고 사람에게 맡긴다 */
 function ppFits(k,v){if(!k||!(v>0))return true;var u=UNIT[k];if(u==='D')return v<=100;if(u==='M')return v<=300;return true;}
+/* ══ 판 X373 — 실제 제안서 8부를 원문과 한 줄씩 맞춰 보고 고친 것 (사장님 말씀 2026-11-06 「어떻게 읽어내는지 실수는 없는지」 → 「고쳐줘」) ══
+   ■ 같은 칸에 걸린 줄 나누기 (ppGroup)
+     ① 조건이 붙은 줄(상급종합병원 · 181일 이상 · 요양병원)은 조건 없는 줄이 있으면 <b>기본 칸에서 뺀다</b>
+        — KB 「질병수술비 30만」 대신 「질병수술비(상급종합병원) 100만」, 메리츠 간호간병 「1~180일 5만」 대신 「181일 이상 7만」 을 집던 것
+     ② 이름이 같은 줄(상해/질병 · I/II · _N종 · 괄호 조건만 다름 · 요약표에 한 번 더)은 <b>큰 금액 하나만</b>
+     ③ 이름이 다른 특약은 <b>더한다</b> — 삼성 「암직접치료 500 + 암주요치료 1,000」, NH 「장기요양 1~2등급 · 1~5등급 · 1~인지」 는 따로 나온다
+        단 매달 받는 칸(장기요양 급여)은 서비스마다 갈리는 특약이라 큰 것 하나만
+   ■ 보장내용 지급금액 (ppBenefit) — NH 는 표 「가입금액(만원)」 3,000 인데 보장내용은 「300만원」 · 재가급여 2,000 → 「1회당 20만원」.
+     보장내용(급부명 · 지급사유 · 지급금액)에 그 특약 금액이 있으면 그것을 따르고, 표 금액은 옆에 적어 둔다.
+   ■ 주보험 · 주계약 (ppMainDeath) — 보장내용이 사망보험금이면 사망 담보로(삼성 주보험 300만 · NH 주계약 300만) */
+var PP_COND=/상급종합|181일|요양병원(?!제외)/;
+function ppBase(raw){
+  var t=(''+raw).split(' · ')[0].replace(/\s+/g,'').replace(/\[[^\]]*\]/g,'');
+  for(var z=0;z<2;z++)t=t.replace(/\(([^()]*)\)/g,function(m,x){return /맞춤|건강|감액|요양|정신|한방|일이상|일한도|시간이상|\d+[-~∼]\d+일|상급종합|종합병원|plus|매회|무배당|^무$|해약|간편|갱신|고급형|특정|기본|선택/i.test(x)?'':m;});
+  return t.replace(/_?[1-5]종/g,'').replace(/일반상해|상해|질병|재해|일반/g,'').replace(/III|II|I|Ⅲ|Ⅱ|Ⅰ/g,'').replace(/plus/ig,'').replace(/^\d+/,'');}
+function ppGroup(rows){
+  var G={};rows.forEach(function(r){r.on=false;r.dup=false;r.why='';if(r.v>0)(G[r.k]=G[r.k]||[]).push(r);});
+  Object.keys(G).forEach(function(k){
+    var g=G[k],plain=g.filter(function(r){return !PP_COND.test((''+r.raw).split(' · ')[0]);});
+    if(plain.length&&plain.length<g.length)g.forEach(function(r){if(plain.indexOf(r)<0){r.dup=true;r.why='cond';}});
+    var cl=[];
+    (plain.length?plain:g).forEach(function(r){var b=ppBase(r.raw),c=null;
+      for(var i=0;i<cl.length&&!c;i++)if(cl[i].b.indexOf(b)>=0||b.indexOf(cl[i].b)>=0)c=cl[i];
+      if(c){c.m.push(r);if(b.length<c.b.length)c.b=b;}else cl.push({b:b,m:[r]});});
+    cl.forEach(function(c){c.top=c.m.reduce(function(a,r){return r.v>a.v?r:a;});});
+    if(UNIT[k]==='M'&&cl.length>1){var best=cl.reduce(function(a,c){return c.top.v>a.top.v?c:a;});
+      cl.forEach(function(c){if(c!==best)c.m.forEach(function(r){r.dup=true;r.why='alt';});});cl=[best];}
+    cl.forEach(function(c){c.m.forEach(function(r){if(r===c.top){r.on=true;if(cl.length>1)r.why='add';}else{r.dup=true;r.why=r.why||'same';}});});});}
+function ppBenefit(lines,T){
+  var idx={};lines.forEach(function(L,i){var t=L.replace(/\s+/g,'');if(t.length>=6&&t.length<=90)(idx[t]=idx[t]||[]).push(i);});
+  T.forEach(function(r){if(r.usd||!(r.v>0))return;var at=idx[(''+r.name).replace(/\s+/g,'')];if(!at)return;
+    for(var a=0;a<at.length;a++){var i=at[a],h=-1,j,q;
+      for(j=i+1;j<=i+3&&j<lines.length;j++)if(/급부명.*지급금액/.test(lines[j])){h=j;break;}
+      if(h<0)continue;
+      for(q=h+1;q<=h+16&&q<lines.length;q++){
+        if(/급부명/.test(lines[q]))break;
+        var m=lines[q].match(/^(1회당\s*)?([0-9][0-9,]*\s*만\s*원)$/);if(!m)continue;
+        var v=ppKr(m[2]),per=!!m[1]||/1회당$/.test(lines[q-1]||'');
+        if(v!==null&&Math.abs(v-r.v)>0.001){r.tv=r.v;r.v=v;r.raw=r.name+' · '+(per?'1회당 ':'')+m[2].replace(/\s/g,'');}
+        r.per=per;return;}}});}
+function ppMainDeath(all){var i=all.search(/주\s*(?:보험|계약)[^\n]{0,40}보장\s*내용/);return i>=0&&/사망보험금/.test(all.slice(i,i+700));}
+/* 미리보기 줄 옆 꼬리표 — 왜 체크했는지 · 왜 뺐는지 */
+function ppWhy(r){
+  var t='';
+  if(r.why==='cond')t+=' <em class="dup">조건이 붙은 줄(상급종합병원 · 181일 이상 · 요양병원) — 기본 칸에서 뺌</em>';
+  else if(r.why==='alt')t+=' <em class="dup">다른 급여 특약 — 매달 칸이라 큰 것 하나만</em>';
+  else if(r.why==='add')t+=' <em class="dup add">따로 붙는 특약 — 더해서 넣음</em>';
+  else if(r.dup)t+=' <em class="dup">같은 담보 · 조건만 다름</em>';
+  if(r.tv!=null)t+=' <em class="dup">표 가입금액 '+(Math.round(r.tv*100)/100).toLocaleString()+'만 → 보장내용 지급액</em>';
+  return t;}
 function ppParse(txt,fname,ocr){
   var lines=(''+txt).split(/\r?\n/).map(function(l){return l.replace(/\s+/g,' ').trim();}).filter(Boolean);
   var all=lines.join('\n'),o={co:'',nm:'',term:'',years:'',premMan:'',rows:[],other:[],ext:[],usd:false};
@@ -8108,34 +8166,42 @@ function ppParse(txt,fname,ocr){
   /* 상품명 — (무)/무배당 이 붙은 <b>짧은 줄</b>(문장이 아닌 것) */
   for(var i=0;i<lines.length&&!o.nm;i++){var L=lines[i];
     if(L.length>90||/^[,·]|다\.|입니다|합니다|가입금액|보험료는|예시|기준|개요|안내|설명|특징|담보명|,\s*보험기간/.test(L))continue;
-    var m=L.match(/((?:무배당|\(무\))\s*\S.{1,70})/)||L.match(/(\S.{2,60}보험\s*\(무\S*\).{0,30})/);if(m&&/보험/.test(m[1]))o.nm=m[1].replace(/\s*[·|]\s*$/,'').trim().slice(0,70);}
+    var m=L.match(/((?:무배당|\(무\))\s*\S.{1,70})/)||L.match(/(\S.{2,60}보험\s*\(무\S*\).{0,30})/);if(m&&/보험/.test(m[1]))o.nm=m[1].replace(/\s*[·|]\s*$/,'').trim().slice(0,70).replace(/\s*\([^)]*$/,'').trim();}   /* 70자에서 잘려 「(건강고지형(」 처럼 열린 괄호가 남으면 떼어 낸다 */
   if(!o.nm){var mm=all.match(/상품명\s*[:：]\s*([^\n,]{2,60})/);if(mm)o.nm=mm[1].trim();}
   if(!o.nm){var m2=all.match(/([A-Za-z가-힣0-9][A-Za-z가-힣0-9. ]{1,40}보험\s*\(무배당[^)\n]{0,30}\))/);if(m2)o.nm=m2[1].trim();}
   if(!o.nm){for(var i2=0;i2<lines.length&&!o.nm;i2++){var m3=lines[i2].match(/^([가-힣A-Za-z0-9][가-힣A-Za-z0-9. ]{2,40}보험)(?:\s|$)/);if(m3&&!/계약|안내|가입/.test(m3[1]))o.nm=m3[1];}}
   /* 그래도 없으면 <b>파일 이름</b>에서 — 「홍길동_제안서_OO보험(무)_…」 처럼 보험 이름이 들어 있는 일이 많다 */
   if((!o.nm||o.nm.length<4)&&fname){var fp=(''+fname).replace(/\.pdf$/i,'').split(/_/).filter(function(x){return /보험/.test(x);});if(fp.length)o.nm=fp[0].slice(0,70);}
   /* 월 보험료 — 합계를 먼저, 없으면 1회차 · 보험료 한 줄 */
-  var PR=[/합\s*계\s*보\s*험\s*료\s*[:：]?\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,})\s*원?/,/보장보험료\s*합계\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,})\s*원/,
-    /실납입\s*보험료\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,})/,/(?:월\s*보험료|1회차\s*보험료[^0-9\n]{0,8}|초회\s*보험료)\s*[:：]?\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,})\s*원/,
+  var PR=[/합\s*계\s*보\s*험\s*료\s*[:：]?\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,})\s*원?/,
+    /실납입\s*보험료\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,})/,/(?:월\s*보험료|1회차\s*보험료[^0-9\n]{0,8}|초회\s*보험료)\s*[:：]?\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,})\s*원/,/보장보험료\s*합계\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,})\s*원/,   /* 판 X373 — 1회차 보험료가 묶음 소계(「보장보험료 합계」 가 표마다 따로)보다 먼저 */
     /^보험료\s*([0-9]{1,3}(?:,[0-9]{3})+)\s*원/m,/합계보험료\s*\$\s?([0-9.,]+)\s*\(₩\s*([0-9,]+)\)/];
   for(var p=0;p<PR.length&&!o.premMan;p++){var q=all.match(PR[p]);if(q){var w=q[2]||q[1];o.premMan=String(Math.round(parseInt(w.replace(/[,.]/g,''),10))/10000);}}
   if(/\$\s?[0-9]/.test(all)&&/달러|외화/.test(all))o.usd=true;
-  var yc={},ym,yre=/([0-9]{1,2})\s*년\s*납|([0-9]{1,2})\s*년\s*\/\s*[0-9]{2,3}\s*세/g;while((ym=yre.exec(all))){var yk=ym[1]||ym[2];yc[yk]=(yc[yk]||0)+1;}
+  var yc={},ym,yre=/([1-9][0-9]?)\s*년\s*납|([1-9][0-9]?)\s*년\s*\/\s*[0-9]{2,3}\s*세/g;while((ym=yre.exec(all))){var yk=ym[1]||ym[2];yc[yk]=(yc[yk]||0)+1;}
   var yb=0;Object.keys(yc).forEach(function(k){if(yc[k]>yb){yb=yc[k];o.years=k;}});
-  var tm=all.match(/([0-9]{2,3})\s*세\s*만기/)||all.match(/[0-9]{1,2}\s*년\s*\/\s*([0-9]{2,3})\s*세/)||all.match(/([0-9]{1,2})\s*년\s*만기/);
-  if(tm)o.term=/년\s*만기/.test(tm[0])?(tm[1]+'년만기'):(tm[1]+'세만기');
+  /* 판 X373 — 만기는 「보험기간 … 종신」 · 「N년납 N년만기」 를 먼저 (안내문 견본 「00년납 00세 만기」 · 비교표의 「100세만기」 를 집던 것) */
+  var tm=null;
+  if(/보험기간[^\n]{0,16}?(?:19|20)[0-9]{2}\s*[-.년][^\n]{0,24}종신/.test(all))o.term='종신';   /* 날짜가 붙은 계약 줄만(「2026-10-15부터 종신까지」) — 상품 안내의 「보험기간 종신」 은 고를 수 있는 것일 뿐 */
+  else tm=all.match(/[1-9][0-9]?\s*년\s*납\s*,?\s*([1-9][0-9]{0,2})\s*(년|세)\s*만기/)||all.match(/([1-9][0-9]{1,2})\s*세\s*만기/)||all.match(/[1-9][0-9]?\s*년\s*\/\s*([1-9][0-9]{1,2})\s*세/)||all.match(/([1-9][0-9]?)\s*년\s*만기/);
+  if(tm)o.term=(tm[2]==='년'||(!tm[2]&&/년\s*만기/.test(tm[0])))?(tm[1]+'년만기'):(tm[1]+'세만기');
   if(!o.term&&/종신/.test(all))o.term='종신';
   /* 담보 — 표에서만 */
   /* 사진(글자 인식)은 칸이 섞여 표 머리를 믿을 수 없다 — 줄 단위로 */
-  var T=ocr?[]:ppTables(lines),seen={};if(!T.length){T=ppLoose(lines);o.loose=true;}
+  var T=ocr?[]:ppTables(lines);if(!T.length){T=ppLoose(lines);o.loose=true;}
+  ppBenefit(lines,T);var mainDeath=ppMainDeath(all);
   T.forEach(function(r,n){
     var R=ppRule(r.name),k=R.k;if(!ppFits(k,r.v))k='';   /* 판 X357 — 단위가 안 맞으면 칸은 비우고 사전 id 는 남긴다 */
-    var row={n:n,raw:r.raw,k:k,d:R.d||(k?(PP_K2D[k]||''):''),v:r.v,on:false,usd:r.usd};
+    var row={n:n,raw:r.raw,k:k,d:R.d||(k?(PP_K2D[k]||''):''),v:r.v,on:false,usd:r.usd,tv:r.tv,per:!!r.per,tbl:!!r.tbl};
+    if(!k&&!row.d&&r.main&&mainDeath){row.d='death';row.raw=(''+r.raw).replace(' · ',' (주계약 = 사망보험금) · ');}
     if(!k&&row.d)row.on=PP_EXT_OFF.indexOf(row.d)<0;   /* 칸 없는 사전 담보는 「참고 담보」 로 남기는 것이 기본 — 재산 · 법률 담보는 꺼 둔다(보장분석과 상관없음) */
     (k?o.rows:(row.d?o.ext:o.other)).push(row);});
-  /* 같은 담보가 여럿이면 큰 금액 하나만 체크 — 조건만 다른 줄(1~5종 · 181일 이상 · 요양병원)을 더하면 부풀려진다 */
-  o.rows.forEach(function(r){if(!(r.v>0))return;var b=seen[r.k];if(!b||r.v>b.v)seen[r.k]=r;});
-  o.rows.forEach(function(r){r.on=(seen[r.k]===r);r.dup=!r.on&&!!seen[r.k];});
+  /* 같은 칸에 걸린 줄 — 조건 붙은 줄은 빼고 · 같은 이름은 큰 것 하나 · 다른 특약은 더한다 (판 X373 · ppGroup) */
+  ppGroup(o.rows);
+  /* 판 X373 — 사진은 짐작이라 하나도 체크하지 않는다(일반암 5,000 이 유사암 7,000 으로 읽혔다).
+     표 머리줄이 없는 글자 PDF 는 <b>표 모양 줄</b>(납입 · 만기가 같이 적힌 줄)만 체크 — 설명지의 「10구역 백혈병 · 림프종 1억원」 같은 줄은 빼 둔다 */
+  if(ocr)o.rows.concat(o.ext).forEach(function(r){r.on=false;});
+  else if(o.loose)o.rows.concat(o.ext).forEach(function(r){if(!r.tbl)r.on=false;});
   /* 참고 담보도 같은 줄이 두 번 잡힌다(「기본계약1 …」 머리말만 다른 줄) — 하나만 켜고 나머지는 접는다 */
   var es={};o.ext.forEach(function(r){var c=(''+r.raw).split(' · ')[0].replace(/^(기본계약|선택계약)\S*\s+/,'').replace(/\s+/g,'')+'|'+r.v;if(es[c]){r.dup=true;r.on=false;}else es[c]=1;});
   o.ok=(o.rows.length+o.other.length+o.ext.length>0);
@@ -8201,7 +8267,7 @@ function ppLoose(lines){
   var rows=[];
   lines.forEach(function(L){
     var M=ppMoney(L).filter(function(x){return x.v!==null;});if(!M.length)return;
-    if(/보험료|해약환급|환급률|예시|기준|합계|납입면제|경우|입니다|합니다/.test(L))return;
+    if(/보험료|해약환급|환급률|예시|기준|합계|납입면제|경우|입니다|합니다|포함|이론상|최대|까지/.test(L))return;
     /* 사진은 옆 칸 글자가 한 줄로 섞인다 — 담보는 <b>금액 바로 앞 낱말</b>로 고른다(「… 경계성종양 500만원」 → 경계성종양) */
     var last=M[M.length-1],pre=L.slice(0,last.i).replace(/[|ㅣ\[\]]/g,' ').trim().split(/\s+/),name='';
     for(var w=1;w<=3&&w<=pre.length;w++){var cand=pre.slice(pre.length-w).join(' ');if(ppKeyOf(cand)){name=cand;break;}}
@@ -8209,7 +8275,7 @@ function ppLoose(lines){
     if(!name)name=ppKeyOf(full)?full:pre.slice(-3).join(' ');
     else if(/순환계/.test(full))name=full;          /* 「특정순환계질환 혈전용해치료비」 — 앞 낱말이 담보를 바꾼다 */
     if(name.length<2||name.length>80)return;
-    rows.push({raw:L.slice(0,90),name:name,v:last.v,usd:null});});
+    rows.push({raw:L.slice(0,90),name:name,v:last.v,usd:null,tbl:/\d\s*년\s*납|\d\s*세\s*만기|\d\s*년\s*\/\s*\d|종신/.test(L.slice(last.i))});});
   return rows;}
 function ppOpts(sel){
   return '<option value="">— 넣지 않음 —</option>'+STD.map(function(g){return '<optgroup label="'+esc(g.mid)+'">'+
@@ -8218,17 +8284,18 @@ function ppPreview(){
   var X=window.__PP;if(!X)return '';var P=X.P;
   function inp(f,ph,w){return '<input value="'+esc(P[f]||'')+'" placeholder="'+ph+'" style="width:'+(w||140)+'px" oninput="__PP.P.'+f+'=this.value">';}
   function row(r,i,arr){return '<tr class="'+(r.on?'':'off')+(r.dup?' dupr':'')+'"><td><input type="checkbox"'+(r.on?' checked':'')+' onchange="ppTog(\''+arr+'\','+i+',this.checked)"'+(arr==='ext'?' title="참고 담보로 남기기"':'')+'></td>'+
-    '<td class="raw">'+esc(r.raw)+(r.dup?' <em class="dup">같은 담보 · 조건만 다름</em>':'')+(r.usd?' <em class="dup">달러 $'+r.usd+'</em>':'')+'</td>'+
+    '<td class="raw">'+esc(r.raw)+ppWhy(r)+(r.usd?' <em class="dup">달러 $'+r.usd+'</em>':'')+'</td>'+
     '<td><select onchange="ppKey(\''+arr+'\','+i+',this.value)">'+ppOpts(r.k)+'</select>'+ppExp(r)+'</td>'+
     '<td><input class="amt" value="'+(r.v===null||r.v===undefined?'':(Math.round(r.v*100)/100))+'" inputmode="decimal" oninput="ppAmt(\''+arr+'\','+i+',this.value)"> <i>만원</i></td></tr>';}
-  var nExt=P.ext.filter(function(r){return !r.dup;}).length,nOn=P.rows.filter(function(r){return r.on;}).length,nDup=P.rows.filter(function(r){return r.dup;}).length,nUsd=P.rows.concat(P.other).filter(function(r){return r.usd;}).length;
+  var nExt=P.ext.filter(function(r){return !r.dup;}).length,nOn=P.rows.filter(function(r){return r.on;}).length,nDup=P.rows.filter(function(r){return r.dup;}).length,nUsd=P.rows.concat(P.other).filter(function(r){return r.usd;}).length,nAdd=P.rows.filter(function(r){return r.why==='add';}).length,nTv=P.rows.concat(P.ext).filter(function(r){return r.tv!=null;}).length;
   return '<div class="ppv"><div class="pph">📄 <b>'+esc(X.name)+'</b> — 읽었습니다 · <b>틀린 칸은 여기서 고치고</b> 넣으세요</div>'+
     /* 무엇을 확인해야 하는지 — 세 줄로 먼저 (판 X346) */
     '<div class="ppc"><span class="g">✓ 알아본 담보 <b>'+P.rows.length+'</b>줄 — 체크된 <b>'+nOn+'</b>줄이 들어갑니다</span>'+
-      (nDup?'<span class="y">같은 담보 · 조건만 다른 줄 <b>'+nDup+'</b>줄은 <b>큰 금액 하나만</b> 체크해 두었습니다</span>':'')+
+      (nDup?'<span class="y">같은 담보 · 조건만 다른 줄 <b>'+nDup+'</b>줄은 <b>큰 금액 하나만</b> 체크해 두었습니다</span>':'')+(nAdd?'<span class="g">따로 붙는 특약 <b>'+nAdd+'</b>줄은 <b>더해서</b> 넣습니다</span>':'')+(nTv?'<span class="y">표 가입금액과 보장내용 지급액이 달라 <b>보장내용</b> 금액으로 읽은 줄 <b>'+nTv+'</b> — 원문을 꼭 보세요</span>':'')+
       (nExt?'<span class="b">📚 담보사전에는 있지만 표준표에 칸이 없는 담보 <b>'+nExt+'</b>줄 — 계산에는 안 넣고 이 계약의 「참고 담보」 로 남깁니다</span>':'')+
       (P.other.length?'<span class="r">못 알아본 줄 <b>'+P.other.length+'</b> — 아래 「못 알아본 줄」 에서 담보를 고르면 들어갑니다</span>':'')+'</div>'+
-    (P.ocr?'<div class="note w ppw">🔎 <b>사진(또는 스캔)에서 글자를 짐작해 읽었습니다.</b> 숫자 · 담보 이름이 틀릴 수 있으니 <b>원문 줄과 꼭 맞춰</b> 보세요.</div>':'')+
+    (P.loose&&!P.ocr?'<div class="note w ppw">🔎 <b>담보 표(가입금액 · 보험료 머리줄)를 찾지 못해 줄마다 읽었습니다</b> — <b>납입 · 만기가 같이 적힌 표 모양 줄만</b> 체크했습니다. 원문과 꼭 맞춰 보세요.</div>':'')+
+    (P.ocr?'<div class="note w ppw">🔎 <b>사진(또는 스캔)에서 글자를 짐작해 읽었습니다.</b> 숫자 · 담보 이름이 틀릴 수 있어 <b>하나도 체크하지 않았습니다</b> — 원문과 맞춰 본 줄만 체크해 넣으세요.</div>':'')+
     (nUsd||P.usd?'<div class="note w ppw">💵 <b>달러 상품</b>입니다 — 달러 금액은 칸에 안 넣었습니다. 원화로 바꾼 금액을 직접 적어 주세요.</div>':'')+
     '<div class="ppf"><label>회사 '+inp('co','예) 삼성화재')+'</label><label>상품 '+inp('nm','상품명',260)+'</label>'+
      '<label>월 보험료 '+inp('premMan','만원',80)+' 만원</label><label>납입 '+inp('years','년',50)+' 년</label><label>만기 '+inp('term','예) 100세만기',100)+'</label></div>'+
@@ -8245,7 +8312,7 @@ function ppPreview(){
 function ppTog(a,i,on){__PP.P[a][i].on=on;var t=document.querySelector('.ppv .ppt[data-a="'+a+'"]');if(t){var tr=t.querySelectorAll('tbody tr')[i];if(tr)tr.className=on?'':'off';}}
 function ppKey(a,i,k){var r=__PP.P[a][i];r.k=k;if(k)r.d=PP_K2D[k]||r.d;if(k&&a!=='rows')r.on=true;ppSet(ppPreview());if(k&&a==='other'){var d=document.querySelector('.ppo');if(d)d.open=true;}}
 /* 그 줄이 무엇인지 — 담보사전의 한 줄(w) 그대로. 사전에 없으면 안 적는다(지어내지 않음) */
-function ppExp(r){var D=ppDict(r.d);if(!D)return '';
+function ppExp(r){if(r.d==='similar'&&/치료|수술|방사선|약물/.test((''+r.raw).split(' · ')[0]))return '<small class="ppx">📚 <b>유사암(갑상선암 · 기타피부암 등) 치료비</b> — 진단비가 아니라 <b>치료를 받을 때</b>의 담보입니다(담보사전에는 따로 없음).</small>';var D=ppDict(r.d);if(!D)return '';
   return '<small class="ppx">📚 <b>'+esc(D.n)+'</b> — '+esc(D.w)+(D.c?'<i> 꼭 볼 것: '+esc(D.c)+'</i>':'')+'</small>';}
 function ppAmt(a,i,v){var n=parseFloat(covIn(v));__PP.P[a][i].v=isFinite(n)?n:null;}
 function ppCancel(){window.__PP=null;ppSet('');}
@@ -8253,7 +8320,7 @@ function ppGo(){
   var X=window.__PP;if(!X)return;var P=X.P,cov={},n=0;
   var ext=[];
   P.rows.concat(P.other,P.ext).forEach(function(r){if(!r.on||!r.k||!(r.v>0))return;cov[r.k]=String(Math.round(((parseFloat(cov[r.k])||0)+r.v)*100)/100);n++;});
-  P.ext.forEach(function(r){if(!r.on||r.k)return;ext.push({d:r.d,n:(''+r.raw).split(' · ')[0].slice(0,60),raw:r.raw,v:(r.v>0?r.v:null)});});   /* 이름은 제안서 원문 — 「80% 이상」 같은 조건이 사라지지 않게 */
+  P.ext.forEach(function(r){if(!r.on||r.k)return;ext.push({d:r.d,n:(''+r.raw).split(' · ')[0].slice(0,60)+(r.per?' (1회당)':''),raw:r.raw,v:(r.v>0?r.v:null)});});   /* 이름은 제안서 원문 — 「80% 이상」 같은 조건이 사라지지 않게 */
   if(!n&&!ext.length){alert('넣을 담보가 없습니다 — 체크와 금액을 확인해 주세요.');return;}
   var d=new Date(),st=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2);
   var p={id:nid(),co:P.co||'',nm:P.nm||'',term:P.term||'',start:st,years:P.years||'',premMan:P.premMan||'',premMan2:'',act:'keep',kb:false,cov:cov,cov2:{},pp:X.name,ext:ext};
