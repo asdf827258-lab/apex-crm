@@ -366,6 +366,7 @@ const 갈래 = {
           `margin:auto` 가 그 자리를 위아래로 반씩 나눠 주어야 가운데에 선 것입니다. */
     const r = await pg.evaluate(갈래들 => {
       let 제목 = 0, 잘림 = 0, 가운데 = 0, 남는쪽 = 0, 수 = 0;
+      const 제목들 = [];
       const 쏠린것 = [], 흩날림 = [];
       for (const k of 갈래들) {
         window.__go(k); presEnter();
@@ -374,7 +375,11 @@ const 갈래 = {
           presGo(i); scrollTo(0, 0);
           const s = L[i], q = s.getBoundingClientRect(), cs = getComputedStyle(s);
           const h = s.querySelector('h2') || s.querySelector('h1');
-          if (h) 제목 = Math.max(제목, parseFloat(getComputedStyle(h).fontSize));
+          if (h) {
+            const px = parseFloat(getComputedStyle(h).fontSize);
+            제목 = Math.max(제목, px);
+            제목들.push({ id: s.id || '?', px: Math.round(px) });   /* ★ 쪽마다 모읍니다 (판 X385) */
+          }
           if (q.top < -2 || (h && h.getBoundingClientRect().top < 0)) 잘림++;
           if (h) {
             /* 제목이 <b>낱말 가운데서</b> 잘리면 마지막 줄에 글자 한두 개만 남습니다 —
@@ -417,12 +422,31 @@ const 갈래 = {
         }
         if (typeof presExit === 'function') presExit();
       }
-      return { 제목: 제목, 잘림: 잘림, 가운데: 가운데,
+      return { 제목: 제목, 제목들: 제목들, 잘림: 잘림, 가운데: 가운데,
                남는쪽: 남는쪽, 수: 수, 쏠린것: 쏠린것, 흩날림: 흩날림 };
     }, Object.keys(갈래));
     끝수.제목 = Math.round(r.제목); 끝수.가운데 = r.가운데;
     끝수.남는쪽 = r.남는쪽; 끝수.흩날림 = r.흩날림.length;
-    is(r.제목 >= 56, '  제목이 <b>' + Math.round(r.제목) + 'px</b> 이다 (고치기 전 54px — 쪽 제목 h2 는 46px · 56 이상)');
+    /* ⚠⚠ <b>여태 제일 큰 제목 하나만 봤습니다</b> (판 X385 · 사장님 말씀 「고쳐주고」).
+         Math.max 로 모아 56px 과 견주었으니, 제목 <b>하나만</b> 크면 나머지가 다 작아도
+         초록이었습니다 — 안 울리는 알람입니다 (8번). 실제로 라이브에서 재어 보니
+         eimf2 가 30px, close 가 38px 이었는데 자는 「제목 60px」 이라고 적고 있었습니다.
+         이제 <b>쪽마다</b> 봅니다.
+       ★ 작은 제목 둘은 <b>일부러</b> 그렇게 적혀 있습니다 — 마크업에 제 크기가
+         박혀 있고(clamp), 그 둘만 그렇습니다. 까닭과 함께 여기 적어 두어야
+         [7] 처럼 「조용히 작아진 제목」 을 잡을 수 있습니다. */
+    const 작아도되는제목 = {
+      eimf2: '28년 환율 그림 한 장 — 제목이 아니라 <b>그림이 주인공</b>인 쪽입니다 (clamp(22px,3vw,30px))',
+      close: '맺는 질문 — 흰 글자로 <b>조용히 묻는</b> 쪽입니다 (clamp(24px,3.8vw,38px))'
+    };
+    const 작은제목 = r.제목들.filter(x => x.px < 56 && !작아도되는제목[x.id]);
+    is(r.제목 >= 56, '  제일 큰 제목이 <b>' + Math.round(r.제목) + 'px</b> 이다 (고치기 전 54px — 쪽 제목 h2 는 46px · 56 이상)');
+    is(작은제목.length === 0,
+       '  ★★ <b>쪽마다</b> 56px 이상이다 — 작은 제목 ' + 작은제목.length + '/' + r.제목들.length +
+       (작은제목.length ? ('  ← ' + 작은제목.slice(0, 6).map(x => x.id + ' ' + x.px + 'px').join(' · ')) : '') +
+       '   (일부러 작은 둘 ' + Object.keys(작아도되는제목).join(' · ') + ' 는 까닭을 적고 뺐습니다)');
+    is(Object.keys(작아도되는제목).every(id => r.제목들.some(x => x.id === id)),
+       '  ★ 「일부러 작게」 적어 둔 쪽이 <b>아직 실제로 있다</b> — 없어진 이름을 봐주고 있으면 예외가 조용히 쌓입니다 (8번)');
     is(r.잘림 === 0, '  위가 잘린 쪽 ' + r.잘림 + '/' + r.수 +
        ' — 넘치는 쪽도 제목부터 보인다');
     is(r.남는쪽 >= 20, '  자리가 <b>남는 쪽</b>이 ' + r.남는쪽 + '/' + r.수 +
