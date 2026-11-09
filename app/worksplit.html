@@ -100,6 +100,25 @@ button{font:inherit;color:inherit;cursor:pointer}
 .ws-chip .k{flex:0 0 auto;color:var(--sub);font-weight:600;font-size:13px}
 .ws-only{width:100%;margin-top:6px}
 
+/* ── 보기 바꾸개 ── */
+.ws-view{display:inline-flex;gap:4px;background:var(--line2);border-radius:14px;padding:4px;margin:0 0 16px}
+.ws-vbtn{min-height:44px;padding:0 16px;border:0;border-radius:11px;background:none;font-size:15px;font-weight:800;color:var(--ink2)}
+.ws-vbtn.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+/* ── 업무별 카드 — 갈래는 한 색, 사람 색은 사람에만 ── */
+.ws-tcard{--c:var(--t-point);--cl:var(--t-point-l)}
+.ws-tcard.other{--c:var(--t-sub);--cl:var(--t-bg-2)}
+.ws-tchip{--c:var(--t-point);--cl:var(--t-point-l)}
+.ws-to{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:2px 0 10px;padding:10px 12px;background:var(--pt-l);border-radius:12px}
+.ws-tcard.other .ws-to{background:var(--soft)}
+.ws-to .l{font-size:14px;font-weight:900;color:var(--pt-d);margin-right:2px}
+.ws-pill{min-height:34px;padding:0 12px;border:0;border-radius:99px;background:var(--card);color:var(--c);font-size:14px;font-weight:800;
+  box-shadow:inset 0 0 0 1.5px var(--c)}
+.ws-pill:hover{background:var(--cl)}
+.ws-tb{flex:1 1 auto;min-width:0}
+.ws-ptag{display:inline-block;font-size:13px;font-weight:800;color:var(--c);background:var(--cl);border-radius:6px;padding:1px 7px;margin-bottom:3px}
+.ws-tcard .ws-t{display:block}
+
 /* ── 사람별 카드 — 한 줄에 한 사람, 한 줄짜리 셋은 나란히 ── */
 .ws-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start;grid-auto-flow:row dense}
 .ws-card{grid-column:1/-1;background:var(--card);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:var(--t-r);
@@ -233,7 +252,7 @@ body.edit .ws-card.cols .ws-list{columns:1}
 @page{size:A4;margin:10mm}
 @media print{
   body{background:#fff;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .ws-bar,.ws-perm,.ws-help,.ws-exp,.ws-tool,.ws-add,.ws-addrow,.ws-toast,.ws-chips,.ws-find{display:none!important}
+  .ws-view,.ws-bar,.ws-perm,.ws-help,.ws-exp,.ws-tool,.ws-add,.ws-addrow,.ws-toast,.ws-chips,.ws-find{display:none!important}
   .ws-paper{padding:0;max-width:none}
   body.edit [data-ed]{outline:0;background:none}
   body.undone .ws-it.done{display:flex}
@@ -469,9 +488,37 @@ var TOPICS=[
   ['신입·위촉·시험',['신입','위촉','시험']],['수금·실효·연체',['수금','실효','연체']],
   ['공지·톡방',['공지','톡방']],['누적·모니터링·동시가입',['누적','모니터링','동시가입']],
   ['증권전달',['증권']],['인수인계',['인수인계']],['DB 배정',['DB']],['CRM·출근',['CRM','출근']],
-  ['상품·약관',['상품','약관']]
+  ['상품·약관',['상품','약관']],
+  /* 2026-11-09 — 업무별로 묶자 열한 줄이 어느 갈래에도 안 들었습니다. 그 줄 글에 <b>실제로 있는</b> 낱말로만 더합니다 */
+  ['업무분담·처리 기준',['업무분담','처리기준','TO DO']],['홍보물·소식지',['카드뉴스','소식지','배너','포스터']],
+  ['보고·일지',['보고서','동행일지','달력']],['TA',['TA 문화','TA 개별']],
+  ['세일즈플러스·라인업',['세일즈플러스','라인업']],['고등',['고등']]
 ];
 var Q='';
+/* 보기 — 'topic'(업무별 · 처음) · 'person'(사람별). 고칠 때·찾을 때는 사람별로 섭니다(고치는 단위가 사람 줄이라) */
+var VIEW='topic';
+function tview(){ return VIEW==='topic' && !query() && !document.body.classList.contains('edit'); }
+/* 업무별 묶음 — 화면도 이미지도 <b>이 한 곳</b>에 묻습니다 (5번).
+   ★ 낱말로 묶어 한 줄이 여러 갈래에 설 수 있습니다. 어느 갈래에도 안 든 줄은 「그 밖의 일」 에 그대로 섭니다 — 빠뜨리지 않습니다 */
+function groups(){
+  var G=TOPICS.map(function(x){ return {label:x[0],q:{any:x[1],ex:x[2]||[]},words:x[1],items:[]}; });
+  var other={label:'그 밖의 일',q:null,words:[],items:[],other:true};
+  S.rows.forEach(function(r,ri){ r.items.forEach(function(it,ii){
+    var any=false;
+    G.forEach(function(g){ if(hitItem(g.q,r.who,it.t)){ g.items.push({ri:ri,ii:ii}); any=true; } });
+    if(!any) other.items.push({ri:ri,ii:ii});
+  }); });
+  var out=G.filter(function(g){ return g.items.length; });
+  if(other.items.length) out.push(other);
+  out.forEach(function(g){ var seen={}; g.ppl=[]; g.done=0;
+    g.items.forEach(function(z){ if(!seen[z.ri]){ seen[z.ri]=1; g.ppl.push(z.ri); } if(S.rows[z.ri].items[z.ii].done) g.done++; }); });
+  return out;
+}
+function hashSync(){
+  var a=[]; if(Q) a.push('q='+encodeURIComponent(Q)); if(VIEW==='person') a.push('v=person');
+  try{ history.replaceState(null,'',a.length?'#'+a.join('&'):location.pathname+location.search); }catch(e){}
+}
+function setView(v){ VIEW=v==='person'?'person':'topic'; hashSync(); render(); }
 function norm(x){ return String(x||'').toLowerCase().replace(/[\s·・,.\-\/&()「」:~→]+/g,''); }
 /* 지금 무엇을 찾나 — 단추 이름이면 그 낱말 중 하나라도(할 일 글만), 친 말이면 낱말이 모두(이름 포함) */
 function query(){
@@ -515,8 +562,46 @@ function setQ(v,fromInput){
   Q=String(v||'');
   if(!fromInput) $('wsQ').value=Q;
   $('wsQx').hidden=!Q;
-  try{ history.replaceState(null,'',Q?'#q='+encodeURIComponent(Q):location.pathname+location.search); }catch(e){}
+  hashSync();
   render();
+}
+
+/* ── 업무별 카드 — 「무엇을」 이 머리, 「누구에게」 가 바로 밑 ──
+   ★ 사람 색(.c0~.c5)은 <b>사람</b>에만 씁니다 — 갈래 카드는 한 색이라 색이 곧 사람을 뜻합니다 */
+function topicCards(g,GR){
+  GR.forEach(function(G,gi){
+    var n=G.items.length;
+    var cd=el('section','ws-card ws-tcard'+(G.other?' other':'')+(n>=6?' cols':'')+(n&&G.done===n?' alldone':''));
+    cd.setAttribute('data-g',gi); cd.setAttribute('data-topic',G.label);
+    var hh=el('div','ws-chead'); hh.appendChild(el('div','ws-av',first(G.label)));
+    var hb=el('div','ws-hb'); hb.appendChild(el('div','ws-name',G.label));
+    var mt=el('div','ws-meta'); mt.appendChild(el('span','ws-cnt'+(n&&G.done===n?' all':''),'할 일 '+n+'줄 · '+G.done+' 끝냄'));
+    if(n>1) mt.appendChild(bar(G.done/n));
+    hb.appendChild(mt); hh.appendChild(hb); cd.appendChild(hh);
+    /* 누구에게 — 사람을 누르면 사람별 보기에서 그분 카드로 */
+    var wr=el('div','ws-to'); wr.appendChild(el('span','l',G.other?'맡은 분':'문의 →'));
+    G.ppl.forEach(function(ri){
+      var b=el('button','ws-pill c'+(ri%6),S.rows[ri].who||'이름 없음'); b.type='button';
+      b.addEventListener('click',function(){ setView('person');
+        var cd2=document.querySelector('.ws-card[data-row="'+ri+'"]'); if(cd2){ cd2.scrollIntoView({block:'start'}); cd2.classList.add('flash'); setTimeout(function(){ cd2.classList.remove('flash'); },1200); } });
+      wr.appendChild(b);
+    });
+    cd.appendChild(wr);
+    var ul=el('ul','ws-list');
+    G.items.forEach(function(z){
+      var r=S.rows[z.ri], it=r.items[z.ii];
+      var li=el('li','ws-it'+(it.done?' done':''));
+      var ck=el('input','ws-ck'); ck.type='checkbox'; ck.checked=!!it.done; ck.disabled=!canEdit(); ck.setAttribute('aria-label','완료');
+      ck.addEventListener('change',function(){ it.done=ck.checked; saveNow(); render(); });
+      li.appendChild(ck);
+      var bx=el('div','ws-tb'); bx.appendChild(el('span','ws-ptag c'+(z.ri%6),r.who||'이름 없음'));
+      var t=el('div','ws-t'); marked(t,it.t,G.words); bx.appendChild(t);
+      li.appendChild(bx); ul.appendChild(li);
+    });
+    cd.appendChild(ul);
+    cd.appendChild(el('div','ws-fin','✓ 다 끝냈습니다'));
+    g.appendChild(cd);
+  });
 }
 
 /* 이름에서 첫 글자 — 카드 머리의 동그라미에 */
@@ -586,9 +671,32 @@ function render(){
   if(Qo) pg.hidden=true;
   P.appendChild(pg);
 
-  /* 이름표 줄 */
-  var ch=el('div','ws-chips');
-  S.rows.forEach(function(r,ri){
+  /* 보기 바꾸개 — 업무별 | 사람별 */
+  var TV=tview();
+  var vw=el('div','ws-view'); vw.setAttribute('role','tablist');
+  [['topic','업무별 — 무엇을 누구에게'],['person','사람별 — 누가 무엇을']].forEach(function(z){
+    var b=el('button','ws-vbtn'+((z[0]==='topic')===TV?' on':''),z[1]); b.type='button'; b.id=z[0]==='topic'?'wsVTopic':'wsVPerson';
+    b.setAttribute('role','tab'); b.setAttribute('aria-selected',(z[0]==='topic')===TV?'true':'false');
+    b.addEventListener('click',function(){ setView(z[0]); });
+    vw.appendChild(b);
+  });
+  if(Qo||document.body.classList.contains('edit')) vw.hidden=true;
+  P.appendChild(vw);
+
+  /* 이름표 줄 — 업무별이면 갈래 목록, 사람별이면 사람 목록 */
+  var ch=el('div','ws-chips'), GR=TV?groups():null;
+  if(GR) GR.forEach(function(G,gi){
+    var c=el('button','ws-chip ws-tchip'); c.type='button';
+    c.appendChild(el('span','d',first(G.label))); c.appendChild(el('span','w',G.label));
+    c.appendChild(el('span','k',G.ppl.length+'명'));
+    c.addEventListener('click',function(){
+      var cd=P.querySelector('.ws-card[data-g="'+gi+'"]'); if(!cd) return;
+      cd.scrollIntoView({behavior:'smooth',block:'start'});
+      cd.classList.add('flash'); setTimeout(function(){ cd.classList.remove('flash'); },1200);
+    });
+    ch.appendChild(c);
+  });
+  else S.rows.forEach(function(r,ri){
     var c=el('button','ws-chip c'+(ri%6)); c.type='button';
     c.appendChild(el('span','d',first(r.who))); c.appendChild(el('span','w',r.who||'이름 없음'));
     c.appendChild(el('span','k',T.per[ri].d+'/'+T.per[ri].n));
@@ -604,14 +712,15 @@ function render(){
   only.addEventListener('click',function(){ document.body.classList.toggle('undone'); render(); });
   ch.appendChild(only);
   var main=el('div','ws-main'+(Qo?' q':'')), side=el('aside','ws-side');
-  side.appendChild(el('div','ws-side-h','담당자 — 누르면 그 카드로'));
+  side.appendChild(el('div','ws-side-h',TV?'업무 — 누르면 그 칸으로':'담당자 — 누르면 그 카드로'));
   side.appendChild(ch);
   if(Qo) side.hidden=true;
   main.appendChild(side); P.appendChild(main);
 
-  /* 사람별 카드 */
+  /* 카드 — 업무별이면 갈래 카드, 사람별이면 사람 카드 */
   var g=el('div','ws-grid');
-  S.rows.forEach(function(r,ri){
+  if(GR) topicCards(g,GR);
+  else S.rows.forEach(function(r,ri){
     var n=r.items.length, dn=T.per[ri].d;
     var vis=HIT?HIT[ri].filter(Boolean).length:n;
     if(HIT&&!vis) return;
@@ -797,7 +906,7 @@ $('wsExpImg').addEventListener('click',function(){ exportPng(); });
    ★ 숫자 글꼴 tnum 을 안 씁니다(4-1번) — 캔버스 글자는 그림이라 다시 읽히지 않으니 표의 원본은 HTML 파일입니다. */
 function poster(){
   if(saveT) saveNow();
-  var Qo=query(), T=tally(), HT=Qo?hits(Qo):null;
+  var Qo=query(), T=tally(), HT=Qo?hits(Qo):null, GR=tview()?groups():null;
   var W=1080, PAD=56, CP=40, cs=getComputedStyle(document.documentElement);
   function tk(n){ return cs.getPropertyValue(n).trim(); }
   var C={bg:tk('--t-bg'),card:tk('--t-card'),ink:tk('--t-ink'),ink2:tk('--t-ink-2'),sub:tk('--t-sub'),line:tk('--t-line-2'),
@@ -850,8 +959,41 @@ function poster(){
         if(draw){ rr(X,y,sw,130,26,z[3]); txt(String(z[0]),X+26,y+20,56,900,z[2]); txt(z[1],X+26,y+86,24,700,C.sub); } });
       y+=130+36;
     }
+    /* 업무별 — 「무엇을 → 누구에게」 문의처 한 장.
+       ★ 할 일 글은 안 싣습니다 — 한 줄이 여러 갈래에 서서 글까지 실으면 14,000px 가까이 되어
+         카톡 사진으로는 못 읽습니다(실제로 재어 봤습니다). 글은 사람별 이미지 · HTML 에 있습니다. */
+    if(GR){
+      var LW=300, RX=PAD+CP+LW+24, RW=W-PAD-CP-RX;
+      var rows=GR.map(function(G){
+        fo(34,900); var ll=wrap(G.label,LW);
+        fo(28,800); var pr=[], cx=0, line=[];
+        G.ppl.forEach(function(ri){ var nm=S.rows[ri].who||'이름 없음', w=x.measureText(nm).width+32;
+          if(cx&&cx+w>RW){ pr.push(line); line=[]; cx=0; } line.push({ri:ri,nm:nm,w:w}); cx+=w+10; });
+        if(line.length) pr.push(line);
+        var h=Math.max(ll.length*44+34, pr.length*56)+36;
+        return {G:G,ll:ll,pr:pr,h:h};
+      });
+      var th=CP+56; rows.forEach(function(r){ th+=r.h; }); th+=CP-10;
+      if(draw){
+        rr(PAD,y,IW,th,30,C.card);
+        txt('무엇을',PAD+CP,y+CP,26,900,C.sub); txt('누구에게 문의하나',RX,y+CP,26,900,C.sub);
+      }
+      var yy=y+CP+56;
+      rows.forEach(function(r,k){
+        names.push(r.G.label);
+        if(draw){
+          x.fillStyle=C.line; x.fillRect(PAD+CP,yy,IW-2*CP,2);
+          r.ll.forEach(function(l,li){ txt(l,PAD+CP,yy+18+li*44,34,900,r.G.other?C.sub:C.ink); });
+          txt('할 일 '+r.G.items.length+'줄',PAD+CP,yy+18+r.ll.length*44+2,22,700,C.sub);
+          r.pr.forEach(function(line,li){ var px=RX;
+            line.forEach(function(z){ var P=PAL[z.ri%6]; rr(px,yy+18+li*56,z.w,46,23,P.l); txt(z.nm,px+16,yy+26+li*56,28,800,P.c); px+=z.w+10; }); });
+        }
+        yy+=r.h;
+      });
+      y+=th+20;
+    }
     /* 사람별 카드 */
-    S.rows.forEach(function(r,ri){
+    else S.rows.forEach(function(r,ri){
       var idx=[]; r.items.forEach(function(it,ii){ if(!HT||HT[ri][ii]) idx.push(ii); });
       if(HT&&!idx.length) return;
       names.push(r.who);
@@ -951,10 +1093,11 @@ else if(EMB){ S=EMB.doc; AT=EMB.at||''; document.body.classList.add('exp'); }
 else{ var L0=load(); if(L0){ S=L0.doc; AT=L0.at; } else { S=seed(); AT=''; } }
 /* 주소 뒤 #q=청구 로 열면 그 말로 찾아 둔 채 섭니다 — 「청구는 여기」 링크를 돌릴 수 있게 */
 try{ var hq=/[#&]q=([^&]*)/.exec(location.hash); if(hq){ Q=decodeURIComponent(hq[1]); $('wsQ').value=Q; $('wsQx').hidden=!Q; } }catch(e){}
+try{ if(/[#&]v=person/.test(location.hash)) VIEW='person'; }catch(e){}   /* #v=person 이면 사람별로 엽니다 */
 render(); who();
 /* 바깥 창이 권한을 늦게 읽는 일이 있어 — 몇 번만 다시 묻습니다(서버는 안 부릅니다) */
 var tries=0, iv=EMB?0:setInterval(function(){ who(); if(perm()!=='wait'||++tries>10) clearInterval(iv); },1500);
-window.WS={seed:seed,perm:perm,key:KEY,exportHtml:exportHtml,exportPng:exportPng,poster:poster,setQ:setQ,own:OWN};
+window.WS={groups:groups,setView:setView,view:function(){ return tview()?'topic':'person'; },seed:seed,perm:perm,key:KEY,exportHtml:exportHtml,exportPng:exportPng,poster:poster,setQ:setQ,own:OWN};
 })();
 </script>
 </body>

@@ -18,6 +18,11 @@
      [9] ★★ 내보내기 — 한 파일로 받아, 인터넷을 다 막고 열어도 같은 표 · 찾기가 되나 · 고치는 단추가 없나 ·
            이 기기 저장소를 안 쓰나 · ui.css 없이도 색이 서나
      [11] 🖼 이미지 — 폭 1080 세로 한 장 · 사람 여덟 · 찾는 중이면 걸린 사람만 · PNG 로 내려받나 · 바깥 0
+     [12] ★★ 업무별 보기(처음 서는 보기) — 「무엇을 → 누구에게」
+           47줄이 한 줄도 안 빠지고 갈래에 서나(빠지면 「그 밖의 일」) · 갈래 단추는 표 글에 있는 낱말만 ·
+           청구 → 이미라 실장 · 박주미 매니저 · 사람을 누르면 사람별 그 카드로 · 완료 체크가 같은 줄에 걸리나 ·
+           업무별 이미지는 문의처 한 장(4,000px 밑 · 갈래마다 한 줄)
+     ⚠ [1]~[11] 은 사람별 보기에서 잽니다(주소 #v=person) — 사람 카드 자리를 보는 자들입니다
      [10] ★★ 내 수정용 — 받은 파일에서 고치고 · 다시 열어도 남고 · 앱의 팀 표 열쇠와 안 섞이고 ·
            거기서 고친 표로 설계사용(보기 전용)을 다시 뽑나 · 인터넷 0
    ⚠ 되돌려 보았습니다(8번) — canOrg 를 빼면 [4] · 감싸기(doc)를 풀면 [5] · ORG_KEYS 에서 빼면 [5]
@@ -62,6 +67,9 @@ const sec = t=>console.log('\n'+t);
 
   const br = await chromium.launch();
   const ctx = await br.newContext({viewport:{width:1200,height:900}});
+  /* [1]~[11] 은 사람별 보기에서 — 처음 서는 보기는 업무별입니다([12] 가 잽니다) */
+  await ctx.addInitScript(()=>{ try{ if(/worksplit\.html/.test(location.pathname)&&!/v=person/.test(location.hash))
+    history.replaceState(null,'',location.pathname+location.search+(location.hash?location.hash+'&':'#')+'v=person'); }catch(e){} });
   /* 127.0.0.1 밖은 전부 끊습니다 — 점검이 사장님 진짜 서버를 읽지 않게 (check-netblock) */
   await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
   const errs = [];
@@ -271,7 +279,7 @@ const sec = t=>console.log('\n'+t);
     await q.evaluate(()=>WS.setQ(''));
     await q.click('#wsTopics .ws-topic:first-child');
     const 첫 = await q.evaluate(()=>({v:document.getElementById('wsQ').value,h:location.hash,on:!!document.querySelector('#wsTopics .ws-topic.on')}));
-    is(첫.v==='청구' && 첫.h==='#q='+encodeURIComponent('청구') && 첫.on, '단추 「청구」 를 누르면 찾기 칸에 들어가고 주소가 #q=청구 가 된다');
+    is(첫.v==='청구' && 첫.h.indexOf('q='+encodeURIComponent('청구'))>=0 && 첫.on, '단추 「청구」 를 누르면 찾기 칸에 들어가고 주소가 #q=청구 가 된다');
     await q.goto('http://127.0.0.1:'+PORT+'/'+PAGE+'#q='+encodeURIComponent('시상·업적'),{waitUntil:'load'}); await q.reload({waitUntil:'load'});   /* 주소 뒤 #만 바뀌면 새로 안 열립니다 */
     r = await 본();
     is(r.사람.length>=3 && /시상·업적/.test(r.머리), '#q=시상·업적 주소로 열면 찾아 둔 채 선다 — '+r.사람.join(' · '));
@@ -302,19 +310,19 @@ const sec = t=>console.log('\n'+t);
     const 바깥=[]; await off.route('**/*', r=>{ 바깥.push(r.request().url()); r.abort(); });
     const o = await off.newPage(); const oe=[]; o.on('pageerror',e=>oe.push(String(e).slice(0,90)));
     await o.setContent(html,{waitUntil:'load'});
-    const v = await o.evaluate(()=>{
+    const v = await o.evaluate(()=>{ WS.setView('person');
       var g=function(s){ return document.querySelectorAll(s).length; };
       var r={ 카드:g('.ws-card'), 줄:g('.ws-card .ws-it'), 완료:document.querySelector('.ws-sum .ws-stat.ok .n').textContent,
         고치기:getComputedStyle(document.getElementById('wsEdit')).display, 내보내기:getComputedStyle(document.getElementById('wsExport')).display,
         체크잠김:document.querySelector('.ws-ck').disabled, 말:document.getElementById('wsWho').textContent,
-        띠색:getComputedStyle(document.querySelector('.ws-card')).borderTopColor, 저장:0 };
+        띠색:getComputedStyle(document.querySelector('.ws-card')).borderLeftColor, 테:getComputedStyle(document.querySelector('.ws-card')).borderTopColor, 저장:0 };
       try{ r.저장=localStorage.length; }catch(e){ r.저장=-1; }
       WS.setQ('청구'); r.찾기=[].map.call(document.querySelectorAll('.ws-card .ws-name'),function(e){return e.textContent;}).join('|');
       return r; });
     is(v.카드===8 && v.줄===47 && v.완료==='1', '받은 파일을 열면 같은 표 — 카드 8 · 할 일 47 · 내보낼 때 건 완료 1');
     is(v.찾기==='이미라 실장|박주미 매니저', '받은 파일에서도 「청구」 찾기가 된다');
     is(v.고치기==='none' && v.내보내기==='none' && v.체크잠김 && /보기용 파일/.test(v.말), '받은 파일은 보기 전용 — 고치기·내보내기가 없고 체크가 잠김 · 「보기용 파일」 이라고 적힘');
-    is(v.띠색!=='rgba(0, 0, 0, 0)' && v.띠색!=='rgb(0, 0, 0)', 'ui.css 없이도 사람 색 띠가 선다 — '+v.띠색);
+    is(v.띠색!=='rgba(0, 0, 0, 0)' && v.띠색!=='rgb(0, 0, 0)' && v.띠색!==v.테, 'ui.css 없이도 사람 색 띠(왼쪽)가 선다 — '+v.띠색+' (테두리 '+v.테+' 와 다름)');
     is(v.저장<=0, '받은 파일은 그 기기 저장소에 안 쓴다');
     is(oe.length===0 && 바깥.length===0, '인터넷을 다 막아도 터지지 않고 · 바깥을 하나도 안 부른다 — '+(oe[0]||바깥[0]||''));
     await off.close(); await q.close();
@@ -345,7 +353,7 @@ const sec = t=>console.log('\n'+t);
     await o.click('#wsEdit');
     await o.click('.ws-card[data-row="0"] .ws-it:nth-child(1) .ws-t'); await o.keyboard.press('Control+End'); await o.keyboard.type(' (사장님 고침)');
     await o.click('#wsEdit'); await o.waitForTimeout(500);
-    await o.reload({waitUntil:'load'});
+    await o.reload({waitUntil:'load'}); await o.evaluate(()=>WS.setView('person'));
     const a1 = await o.evaluate(()=>({ t:document.querySelector('.ws-card[data-row="0"] .ws-it .ws-t').textContent,
       열쇠:Object.keys(localStorage) }));
     is(/\(사장님 고침\)$/.test(a1.t), '고친 글이 다시 열어도 남는다 — '+a1.t);
@@ -357,9 +365,10 @@ const sec = t=>console.log('\n'+t);
     is(/"mode":"view"/.test(v2) && /\(사장님 고침\)/.test(v2) && (v2.match(/<script id="wsEmbed">/g)||[]).length===1 && (v2.match(/id="wsVars"/g)||[]).length===1,
        '★ 수정용에서 뽑은 설계사용 — 고친 글이 담기고 · 담긴 표·색은 한 벌씩');
     const o2 = await off.newPage(); await o2.setContent(v2,{waitUntil:'load'});
+    await o2.evaluate(()=>WS.setView('person'));
     const v3 = await o2.evaluate(()=>({ p:WS.perm(), 고치기:getComputedStyle(document.getElementById('wsEdit')).display,
-      띠:getComputedStyle(document.querySelector('.ws-card')).borderTopColor, 카드:document.querySelectorAll('.ws-card').length }));
-    is(v3.p==='export' && v3.고치기==='none' && v3.카드===8 && v3.띠!=='rgba(0, 0, 0, 0)', '그 파일을 열면 보기 전용 · 카드 8 · 색 띠가 선다');
+      띠:getComputedStyle(document.querySelector('.ws-card')).borderLeftColor, 테:getComputedStyle(document.querySelector('.ws-card')).borderTopColor, 카드:document.querySelectorAll('.ws-card').length }));
+    is(v3.p==='export' && v3.고치기==='none' && v3.카드===8 && v3.띠!=='rgba(0, 0, 0, 0)' && v3.띠!==v3.테, '그 파일을 열면 보기 전용 · 카드 8 · 색 띠가 선다');
     is(oe.length===0 && 바깥.length===0, '인터넷을 다 막아도 터지지 않고 · 바깥을 안 부른다 — '+(oe[0]||바깥[0]||''));
     await off.close();
   }
@@ -382,6 +391,54 @@ const sec = t=>console.log('\n'+t);
        'PNG 로 내려받는다 — '+dl.suggestedFilename()+' · '+w+'×'+h);
     is(qe.length===0, '이미지를 그리다 터진 것 0 — '+(qe[0]||''));
     await q.close();
+  }
+
+  sec('[12] ★★ 업무별 보기 — 무엇을 → 누구에게');
+  {
+    const c2 = await br.newContext({viewport:{width:1200,height:900}});
+    await c2.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
+    const q = await c2.newPage(); const qe=[]; q.on('pageerror',e=>qe.push(String(e).slice(0,90)));
+    await q.goto('http://127.0.0.1:'+PORT+'/'+PAGE,{waitUntil:'load'});
+    const a = await q.evaluate(()=>{
+      var G=WS.groups(), 덮음={}, 줄=0;
+      G.forEach(function(g){ g.items.forEach(function(z){ 덮음[z.ri+':'+z.ii]=1; }); });
+      WS.seed().rows.forEach(function(r){ 줄+=r.items.length; });
+      var 청구=document.querySelector('.ws-card[data-topic="청구"]');
+      return { 보기:WS.view(), 줄:줄, 덮음:Object.keys(덮음).length, 그밖:G.some(function(g){ return g.other; }),
+        카드:document.querySelectorAll('.ws-card[data-topic]').length, 갈래:G.length,
+        청구:청구?[].map.call(청구.querySelectorAll('.ws-to .ws-pill'),function(e){ return e.textContent; }).join('|'):'',
+        청구줄:청구?청구.querySelectorAll('.ws-it').length:0,
+        꼬리표:청구?[].map.call(청구.querySelectorAll('.ws-ptag'),function(e){ return e.textContent; }).join('|'):'',
+        옆:[].map.call(document.querySelectorAll('.ws-side .ws-chip'),function(e){ return e.querySelector('.w').textContent; }).length,
+        단추:document.getElementById('wsVTopic').classList.contains('on') };
+    });
+    is(a.보기==='topic' && a.단추, '처음 열면 업무별 보기 — 「업무별 — 무엇을 누구에게」 가 눌려 있다');
+    is(a.덮음===a.줄 && a.줄===47, '★ 47줄이 모두 한 갈래 이상에 선다 — '+a.덮음+'/'+a.줄+(a.그밖?' (그 밖의 일 칸 있음)':''));
+    is(a.카드===a.갈래 && a.옆===a.갈래, '갈래 카드 '+a.카드+'개 · 왼쪽 목록도 같은 수');
+    is(a.청구==='이미라 실장|박주미 매니저' && a.청구줄===2 && a.꼬리표==='이미라 실장|박주미 매니저', '「청구」 칸 — 문의 → 이미라 실장 · 박주미 매니저 · 줄마다 맡은 분 꼬리표');
+    const 헛 = await q.evaluate(()=>{
+      var norm=function(x){ return String(x||'').toLowerCase().replace(/[\s·・,.\-\/&()「」:~→]+/g,''); };
+      var 글=norm(JSON.stringify(WS.seed().rows)); var bad=[];
+      WS.groups().forEach(function(g){ if(g.other) return; if(!g.words.some(function(w){ return 글.indexOf(norm(w))>=0; })) bad.push(g.label); });
+      return bad; });
+    is(헛.length===0, '★ 갈래 낱말은 표 글에 실제로 있는 것만 — '+(헛.join(',')||'0개 어긋남'));
+    /* 완료 체크 — 업무별에서 건 체크가 사람별 그 줄에 */
+    await q.click('.ws-card[data-topic="청구"] .ws-it:nth-child(1) .ws-ck');
+    await q.click('#wsVPerson');
+    const b = await q.evaluate(()=>({ 보기:WS.view(), 완료:document.querySelector('.ws-card[data-row="2"] .ws-it:nth-child(2) .ws-ck').checked, h:location.hash }));
+    is(b.보기==='person' && b.완료 && /v=person/.test(b.h), '업무별에서 건 완료가 사람별 「이미라 실장 ②」 에 그대로 · 주소에 #v=person');
+    await q.click('#wsVTopic');
+    await q.click('.ws-card[data-topic="청구"] .ws-pill:nth-child(3)');
+    const c = await q.evaluate(()=>{ var cd=document.querySelector('.ws-card[data-row="3"]'); var r=cd.getBoundingClientRect();
+      return { 보기:WS.view(), 위:r.top>=0&&r.top<innerHeight/2 }; });
+    is(c.보기==='person' && c.위, '「박주미 매니저」 를 누르면 사람별 그분 카드로 간다');
+    await q.click('#wsVTopic');
+    const im = await q.evaluate(()=>{ var r=WS.poster(); return {h:r.h,n:r.names.length,첫:r.names[0]}; });
+    is(im.h<4000 && im.n===a.갈래 && im.첫==='청구', '업무별 이미지는 문의처 한 장 — 갈래 '+im.n+'줄 · 높이 '+im.h+'px');
+    await q.click('#wsEdit');
+    is(await q.evaluate(()=>WS.view()==='person' && document.querySelector('.ws-view').hidden), '「고치기」 를 누르면 사람별로 선다(고치는 단위가 사람 줄)');
+    is(qe.length===0, '업무별에서 터진 것 0 — '+(qe[0]||''));
+    await c2.close();
   }
 
   is(errs.length===0, '터진 것 0 — '+(errs[0]||''));
