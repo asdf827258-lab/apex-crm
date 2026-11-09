@@ -2633,11 +2633,11 @@ body.insight-mode #insightScreen{display:block;}
   border-radius:0 3px 3px 0;}
 .tn-fx:hover{background:#B91C1C;color:#fff;}
 /* ☰ 로 가는 마지막 딱지 — 나머지 갈래가 어디 있는지 <b>말해 준다</b> */
-.tn-more{flex:0 0 auto;min-height:44px;border-radius:var(--r-xs);cursor:pointer;white-space:nowrap;font-family:inherit;
+.tn-more,.tn-nm{flex:0 0 auto;min-height:44px;border-radius:var(--r-xs);cursor:pointer;white-space:nowrap;font-family:inherit;
   font-size:var(--t6);font-weight:700;padding:7px 11px;display:inline-flex;align-items:center;gap:5px;
   background:var(--t-bg-2);border:1px solid var(--t-line);
   color:var(--t-ink-2);}
-.tn-more:hover{background:var(--t-line-2);color:var(--t-ink);}
+.tn-more:hover,.tn-nm:hover{background:var(--t-line-2);color:var(--t-ink);}
 /* <b>inline-flex 로 두면 안 된다</b> — 안쪽 글자들이 각각 flex 칸이 되면서
    <b>사이의 띄어쓰기가 사라진다.</b> 「칸 옆의☆를 누르면여기 위에」 처럼
    붙어 나왔다. 글은 글로 흐르게 둔다. */
@@ -16975,8 +16975,11 @@ function tnPaint(){
      ★ <b>글자는 그대로</b> 둡니다 — 껍데기만 걷었습니다 (6번).        */
   if(!n)h='<span class="tn-fnone">⭐ ☰ 메뉴에서 칸 옆의 <b>☆</b> 를 누르면 '+
           '여기 위에 늘 떠 있습니다</span>';
+  /* 🙈 이름 가리기 — 오늘 화면에서만 섭니다 (판 X388 · hmNmBtnSync) */
+  try{ if(typeof hmNmBtnHtml==='function')h+=hmNmBtnHtml(); }catch(eNm){}
   h+='<button type="button" class="tn-more" onclick="toggleNav()">☰ 메뉴 전체</button>';
   bar.innerHTML=h;
+  try{ if(typeof hmNmBtnSync==='function')hmNmBtnSync(); }catch(eNs){}
   /* 새로 그린 단추에 지금 화면 강조를 다시 입힌다 — 강조를 아는 곳은 한 곳뿐이다 */
   if(typeof navMark==='function'&&typeof currentTab==='function'){try{navMark(currentTab());}catch(e){}}
   try{tnEdges();}catch(e){}
@@ -21314,6 +21317,7 @@ function go(tab){
   }
   if(tab!==lastTab)prevTab=lastTab;
   lastTab=tab;
+  try{ if(typeof hmNmBtnSync==='function')hmNmBtnSync(); }catch(eNm){}
   /* 🎨 <b>목업 옷을 입는 화면 — 표 하나</b> (5번).
      늘릴 때는 T_SKIN 에 한 줄입니다. 화면을 그리는 자리(dyn.innerHTML)는
      <b>쉰네 군데</b>라 거기마다 붙이면 반드시 빠뜨립니다. 옷은 #dynPane 에
@@ -21967,8 +21971,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-09 19:40';
-var APP_BUILD_NOTE='✍️ <b>예상업적을 오늘(홈)에서 바로 적습니다</b>(판 X387 · 사장님 말씀 「<b>팀원들이 편하게 입력하도록 조치를 취해 오늘에서 할 순 없나</b>」). ◾ 홈 📊 상담현황의 <b>「✍️ 진행중 예상」</b> 글자를 누르면 <b>「예상업적 적기」</b> 가 덮개로 열립니다 — 고객 <b>한 분 = 한 줄</b>, 안 적힌 분이 위, 「15」 라고 치면 15만원입니다. Enter 를 누르면 다음 분 칸으로 가고, 치는 대로 저장됩니다. 위에는 이번 달 <b>월간목표</b> 칸도 같이 섭니다. 팀장님은 고르개로 팀원 것까지 적으실 수 있습니다. ★ <b>새 저장 길을 만들지 않았습니다</b> — 🧭 TFA 업무관리 → 📊 DB · 업적관리와 <b>같은 칸</b>이라, 거기와 EM 운영센터 상담 보드 「예상 월납」 에 같은 금액이 뜹니다. ★ 단추를 더하지 않고 <b>있던 글자</b>를 누르게 했습니다 — 홈 길이는 한 px 도 안 늘었습니다. ◾ 먼저 나간 판 X373(📄 상품 제안서 읽기) · X384(🏘 같은 동네 약속) · X385 · X386 도 들어 있습니다.';
+var APP_BUILD='2026-11-09 20:30';
+var APP_BUILD_NOTE='👤 <b>오늘 화면에 고객 이름이 실명으로 섭니다</b>(판 X388 · 사장님 말씀 「<b>고객들의 이름을 풀로 보여주게 해줘</b>」). ◾ 고객 앞에서 폰을 보여 주실 때는 맨 위 띠의 <b>「🙈 이름 가리기」</b> 를 한 번 누르세요 — 다시 누르실 때까지 이 폰에서 「홍*순」 으로 가립니다. ★ 폰 달력·카톡 그림처럼 <b>밖으로 나가는 이름은 그대로 가립니다</b>. ◾ 같이 들어간 판 X387 — ✍️ <b>예상업적을 오늘(홈)에서 바로 적습니다</b>: 📊 상담현황의 「✍️ 진행중 예상」 을 누르면 고객 한 분 = 한 줄로 열리고, 「15」 = 15만원, 치는 대로 저장됩니다. ◾ 먼저 나간 판 X373 · X384 · X385 · X386 도 들어 있습니다.';
 
 
 
@@ -28476,7 +28480,7 @@ function hmBlankShow(b){
       :(f.type==='dong')?'<input id="hmBlankIn" type="text" maxlength="24" autocomplete="off" placeholder="'+osEsc(f.ph||'')+'">'
       :'<input id="hmBlankIn" type="text" maxlength="80" placeholder="'+osEsc(f.ph||'')+'">';
   el.innerHTML='<div class="hm-blank" role="dialog" aria-label="빈칸 하나">'+
-    '<div class="hm-blank-h">📝 <b>'+osEsc(osMaskName(b.nm||''))+'</b>님 — 하나만 여쭐게요</div>'+
+    '<div class="hm-blank-h">📝 <b>'+osEsc(hmFullNm(b.nm||''))+'</b>님 — 하나만 여쭐게요</div>'+
     '<div class="hm-blank-q"><b>'+osEsc(f.t)+'</b>'+hmJo(f.t,'이','가').slice(f.t.length)+' 비어 있습니다</div>'+
     '<div class="hm-blank-f">'+inp+
       '<button type="button" class="t-btn sm" onclick="hmBlankSave()">저장</button>'+
@@ -28604,7 +28608,7 @@ function hmLateHtml(){
   r=L[0];
   can=(typeof hdbCan==='function')?hdbCan(r):false;
   tel=(typeof hmTelHref==='function')?hmTelHref(r.id):'';
-  h+='<div class="hm-late-p"><b>'+osEsc(osMaskName(r.name))+'</b>님 · '+osEsc(r.stage)+
+  h+='<div class="hm-late-p"><b>'+osEsc(hmFullNm(r.name))+'</b>님 · '+osEsc(r.stage)+
      ' · '+hmLateDay(r.appt)+'</div>'+
      '<div class="hm-late-b">'+
      (tel?('<a class="t-chip" href="'+osEsc(tel)+'">📞 걸기</a>')
@@ -28678,7 +28682,7 @@ function hmLateAgain(id){
     hdbLocal(id,{appt:at.toISOString(),n:(r.n||0)+1,res:'상담',
                  last:(new Date()).toISOString().slice(0,10),days:0});
     HM_LATE_OPEN=''; HM_LATE_V='';
-    toast(osMaskName(r.name)+' 님 · 약속을 '+(at.getMonth()+1)+'월 '+at.getDate()+'일로 다시 잡았습니다');
+    toast(hmFullNm(r.name)+' 님 · 약속을 '+(at.getMonth()+1)+'월 '+at.getDate()+'일로 다시 잡았습니다');
     hdbPaint();
   },function(e){ hdbErr(e,'약속 다시 잡기'); });
 }
@@ -28686,7 +28690,7 @@ function hmLateAgain(id){
 function hmLateEnd(id){
   var r=(typeof hdbRow==='function')?hdbRow(id):null;
   if(!r)return;
-  if(!confirm(osMaskName(r.name)+' 님을 「거절」 단계로 옮길까요?\n약속이 지난 분 줄에서 빠집니다. 나중에 CRM 에서 단계를 다시 바꿀 수 있습니다.'))return;
+  if(!confirm(hmFullNm(r.name)+' 님을 「거절」 단계로 옮길까요?\n약속이 지난 분 줄에서 빠집니다. 나중에 CRM 에서 단계를 다시 바꿀 수 있습니다.'))return;
   hdbTo(id,'거절');
 }
 /* ══ 💬 <b>소개 여쭐 차례</b> (판 X289) ═══════════════════════════════════════
@@ -28741,7 +28745,7 @@ function hmReferHtml(){
   }else d='증권 전한 날 <b>모름</b>';
   can=(typeof hdbCan==='function')?hdbCan(r):false;
   tel=(typeof hmTelHref==='function')?hmTelHref(r.id):'';
-  h+='<div class="hm-late-p"><b>'+osEsc(osMaskName(r.name))+'</b>님 · '+d+'</div>'+
+  h+='<div class="hm-late-p"><b>'+osEsc(hmFullNm(r.name))+'</b>님 · '+d+'</div>'+
      '<div class="hm-late-b">'+
      (tel?('<a class="t-chip" href="'+osEsc(tel)+'">📞 걸기</a>')
          :'<span class="t-chip off" title="번호가 안 적혀 있습니다">📞 번호 없음</span>')+
@@ -28775,7 +28779,7 @@ function hmReferSkip(id){ hmDaySkip(HM_REFER_KEY,id); hmReferPaint(); }
 function hmReferGot(id){
   var r=(typeof hdbRow==='function')?hdbRow(id):null;
   if(!r)return;
-  if(!confirm(osMaskName(r.name)+' 님께 소개를 받으셨나요?\n「소개완료」 로 옮기면 이 줄에서 빠지고, 소개해 주신 분께 결과를 알려 드릴 차례가 됩니다.'))return;
+  if(!confirm(hmFullNm(r.name)+' 님께 소개를 받으셨나요?\n「소개완료」 로 옮기면 이 줄에서 빠지고, 소개해 주신 분께 결과를 알려 드릴 차례가 됩니다.'))return;
   hdbTo(id,'소개완료');
 }
 /* <b>여기서 하루가 넘어갑니다</b> — 끝낸 분과 미룰 분을 <b>한 줄</b>에 둡니다.
@@ -31215,7 +31219,7 @@ function hdbStripHtml(x){
   hdbCss();
   var can=hdbCan(r),to=hdbNextOf(r.stage),busy=(HDB.busy===r.id);
   var v=function(t){ return (typeof osEsc==='function')?osEsc(t):t; };
-  var h='<div class="hdb"><div class="hdb-h">📇 <b>'+v(osMaskName(r.name))+'</b> 님 — 지금 단계와 오늘 기록</div>';
+  var h='<div class="hdb"><div class="hdb-h">📇 <b>'+v(hmFullNm(r.name))+'</b> 님 — 지금 단계와 오늘 기록</div>';
   if(HDB.err)h+='<div class="hdb-err">'+v(HDB.err)+'</div>';
   /* 딱지 자체가 단추다 — DB 통합 CRM 이 그렇게 합니다. <b>새 단추를 옆에
      세우지 않습니다</b>: 옆에 세우면 줄이 또 길어지고 「어디를 눌러야 하나」
@@ -31521,6 +31525,53 @@ function hmPexOpen(){
   if(top)top.innerHTML=
     '<div class="hmsh-m"><b>✍️ 예상업적 적기</b><span>적으면 바로 저장됩니다 · 「15」 = 15만원</span></div>'+
     '<button type="button" class="hmsh-b hmsh-did" onclick="hmPexClose()">다 적었습니다</button>';
+}
+/* 👤 <b>오늘 화면에 보이는 고객 이름 — 실명 그대로</b> (판 X388 · 사장님 말씀 2026-11-09
+   「고객들의 이름을 풀로 보여주게 해줘」). 여태는 홈도 「홍*동」 으로 가렸습니다.
+   ★ <b>보이는 자리만</b>입니다. 폰 달력(mcalOutName)·나가는 그림(pfCardNextHtml)·
+     계산기로 미는 값(hmOutNm)·서버에 두는 이름(name_masked)은 그대로 가립니다 (3번).
+   ★ 이미 가려진 이름(고객 365일 서버본 「홍○○」)은 이 브라우저가 아는 실명으로
+     되돌립니다 — 담당자 DB 에서 <b>한 사람으로만</b> 맞을 때만. 모르면 가린 채로 둡니다
+     (지어내지 않습니다 · 1번).
+   🙈 <b>고객 앞에서는 한 번 눌러 가립니다</b> — 홈은 고객 앞에서 여는 화면이라 다른 분
+     실명이 보이면 안 됩니다. 맨 위 띠 「🙈 이름 가리기」 (오늘 화면에서만 섭니다).
+     누른 것은 <b>이 폰에만</b> 기억합니다(localStorage apex_hm_hidenm) — 서버를 안 부릅니다 (7번). */
+function hmNmHidden(){ try{ return localStorage.getItem('apex_hm_hidenm')==='1'; }catch(e){ return false; } }
+function hmNmBtnHtml(){
+  var on=hmNmHidden();
+  return '<button type="button" class="tn-nm" id="hmNmBtn" aria-pressed="'+(on?'true':'false')+'"'+
+    ' onclick="hmNmToggle()" title="고객 앞에서 다른 분 실명이 안 보이게 가립니다">'+
+    (on?'👤 이름 보이기':'🙈 이름 가리기')+'</button>';
+}
+/* 오늘 화면에서만 섭니다 — 띠는 모든 화면에 떠 있으므로 (go 가 부릅니다) */
+function hmNmBtnSync(){
+  var b=document.getElementById('hmNmBtn'); if(!b)return;
+  var tab=(typeof currentTab==='function')?currentTab():'';
+  b.style.display=(tab==='home')?'':'none';
+}
+function hmNmToggle(){
+  var on=!hmNmHidden();
+  try{ if(on)localStorage.setItem('apex_hm_hidenm','1'); else localStorage.removeItem('apex_hm_hidenm'); }catch(e){}
+  try{ tnPaint(); }catch(e1){}
+  try{ hmNmBtnSync(); }catch(e2){}
+  try{ if(typeof renderHome==='function'&&currentTab()==='home')renderHome(); }catch(e3){}
+  try{ toast(on?'🙈 이름을 가렸습니다 — 이 폰에서 다시 누르실 때까지':'👤 이름을 다시 보여 드립니다'); }catch(e4){}
+}
+function hmFullNm(s){
+  var t=(''+(s==null?'':s)).replace(/^\s+|\s+$/g,'');
+  if(!t)return '';
+  if(hmNmHidden()){
+    try{ if(typeof chkMasked==='function'&&chkMasked(t))return t; }catch(e0){}
+    try{ return (typeof osMaskName==='function')?osMaskName(t):t.charAt(0)+'○○'; }catch(e1){ return t.charAt(0)+'○○'; }
+  }
+  try{ if(typeof chkMasked!=='function'||!chkMasked(t))return t; }catch(e){ return t; }
+  try{
+    var m=(typeof mcalRealMap==='function')?mcalRealMap():{},k,hit='',key=t.replace(/\s/g,''),n=0;
+    for(k in m){ if(!Object.prototype.hasOwnProperty.call(m,k))continue;
+      if(k.slice(k.indexOf('|')+1)===key&&m[k]){ if(hit!==m[k]){ hit=m[k]; n++; } } }
+    if(n===1)return hit;
+  }catch(e2){}
+  return t;
 }
 function hmPexClose(){
   var re=HMPEX.saved; HMPEX.saved=false;
@@ -32250,7 +32301,7 @@ function hmNowHtml(ext){
   /* 🙈 배정 DB 에서 온 분은 <b>가립니다</b> (판 X359 · 3번 「새 자리에 세울 때는 가린다」) —
      실명은 「한 장으로 보기」 를 한 번 더 누르면 CRM 에서 봅니다. */
   /* appt 는 달력이 배정 DB 약속에서 세운 줄입니다(mcalItems · AR.db) — 같은 이름입니다 */
-  if((x.k==='db'||x.k==='appt')&&x.t)nm=osMaskName(x.t)||nm;
+  if((x.k==='db'||x.k==='appt')&&x.t)nm=hmFullNm(x.t)||nm;
   var nmT=(A.ba&&nm)?(nm+'님'):nm;
   return '<div class="hm-now">'+
     /* <b>「지금 할 것」</b> — 목업 .one 의 .lab 자리입니다. 위에 있던 얇은
@@ -32843,7 +32894,7 @@ function rjnTodayHtml(){
   return h;
 }
 function rjnRowHtml(x){
-  var nm=(typeof osMaskName==='function')?osMaskName(x.nm):'',own=rjnOwn(x.id);
+  var nm=hmFullNm(x.nm),own=rjnOwn(x.id);
   return '<div class="rjn-row">'+
     '<div class="rjn-rh"><b>'+osEsc(nm||'고객')+'</b>'+(x.src?('<i>'+osEsc(x.src)+'</i>'):'')+
       '<span class="rjn-d">'+osEsc(tdoDays(x))+'째 연락 없음</span></div>'+
@@ -32878,7 +32929,7 @@ function rjnInner(){
     if(y.stop.length){
       h+='<details class="rjn-stops"><summary>🔕 그만 받으신 분 '+y.stop.length+'</summary>';
       for(var j=0;j<y.stop.length;j++)
-        h+='<div class="rjn-st">'+osEsc((typeof osMaskName==='function')?osMaskName(y.stop[j].name):'')+
+        h+='<div class="rjn-st">'+osEsc(hmFullNm(y.stop[j].name))+
            ' <span>'+osEsc(RJN.stop[y.stop[j].id]||'')+'</span>'+
            '<button type="button" class="rjn-b" onclick="rjnUnstop(\''+osEsc(y.stop[j].id)+'\')">↩ 되돌리기</button></div>';
       h+='</details>';
@@ -33122,7 +33173,7 @@ function hmMsWhoHtml(x,n,tot){
   if(x.sub)p.push(osEsc(x.sub));
   if(x.src)p.push(osEsc(x.src));
   p.push(osEsc(x.k));
-  return '<div class="hm-ms-who"><b>'+osEsc(osMaskName(x.nm)||'고객')+'</b>'+
+  return '<div class="hm-ms-who"><b>'+osEsc(hmFullNm(x.nm)||'고객')+'</b>'+
     '<span>'+p.join(' · ')+'</span>'+
     '<i>'+n+' / '+tot+'번째 분</i></div>';
 }
@@ -33469,7 +33520,7 @@ function hmBaGo(cid){
    이름이 비슷하다고 남의 카드에 붙이면 <b>다른 분 증권</b>이 됩니다. */
 function hmBaAdd(nm){
   if(typeof toast==='function')
-    toast((nm?('「'+osMaskName(nm)+'」 '):'')+'고객 365일에 카드가 없습니다 — 카드를 먼저 만들어 주십시오');
+    toast((nm?('「'+hmFullNm(nm)+'」 '):'')+'고객 365일에 카드가 없습니다 — 카드를 먼저 만들어 주십시오');
   try{ go('clients'); }catch(e){}
 }
 /* 받아 오는 것은 <b>한 번만</b> (7번). 이미 hmChkHtml 이 부르고 있어도
@@ -33536,7 +33587,7 @@ function hmMsAlmRow(x,i){
     : '';
   return '<button type="button" class="hm-ma'+(on?' on':'')+'" '+
       'onclick="hmMsPick('+i+')">'+
-    '<span class="hm-ma-h"><i>'+(i+1)+'</i><b>'+osEsc(osMaskName(x.nm)||'고객')+'</b>'+
+    '<span class="hm-ma-h"><i>'+(i+1)+'</i><b>'+osEsc(hmFullNm(x.nm)||'고객')+'</b>'+
       '<em>'+osEsc(x.k)+'</em></span>'+
     '<span class="hm-ma-g">'+t+'</span>'+
     aimLine+
@@ -34070,7 +34121,7 @@ function mlogBodyHtml(){
     if(x.d!==cur){ cur=x.d; rows+='<div class="mlog-d">'+osEsc(mlogDayKo(cur))+'</div>'; }
     rows+='<div class="mlog-r'+(x.src==='db'?' db':'')+'">'+
       '<span class="e">'+mlogKe(x.how)+'</span>'+
-      '<span class="n">'+osEsc(x.src==='db'?osMaskName(x.nm):x.nm)+'</span>'+
+      '<span class="n">'+osEsc(hmFullNm(x.nm))+'</span>'+
       '<span class="h">'+osEsc(x.how)+'</span>'+
       '<span class="m">'+osEsc(x.note)+'</span>'+
       '</div>';
@@ -36937,7 +36988,7 @@ function hmRtHtml(){
     for(i=0;i<ap.length;i++)
       h+='<button type="button" class="hm-rt-r" onclick="hmRtPerson(\''+osEsc(ap[i].id)+'\')">'+
          '<span class="tm">'+osEsc(ap[i].hm||'시간 미정')+'</span>'+
-         '<span class="nm">'+osEsc(osMaskName(ap[i].nm)||'고객')+'</span>'+
+         '<span class="nm">'+osEsc(hmFullNm(ap[i].nm)||'고객')+'</span>'+
          '<span class="rg">'+osEsc(ap[i].rg||'지역 모름')+'</span>'+
          '<span class="ar">›</span></button>';
     h+='</div>';
@@ -36993,7 +37044,7 @@ function hmRtHtml(){
         '<button type="button" class="hm-rt-c '+
           ((typeof tdoColor==='function')?tdoColor(near[i].k):'')+'" '+
           'onclick="hmRtPerson(\''+osEsc(near[i].id)+'\')">'+
-          osEsc(osMaskName(near[i].nm)||'고객')+'<i>'+osEsc((typeof tdoLabel==='function')?tdoLabel(near[i].k):near[i].k)+'</i>'+
+          osEsc(hmFullNm(near[i].nm)||'고객')+'<i>'+osEsc((typeof tdoLabel==='function')?tdoLabel(near[i].k):near[i].k)+'</i>'+
         '</button>'+hmTelBtnHtml(near[i].id)+'</div>';
     }
     if(near.length>HM_RT_SHOW)
@@ -37019,7 +37070,7 @@ function hmRtHtml(){
        (ap.length?' 더':'')+' 계십니다.</div>';
     for(i=0;i<meet.length&&i<HM_RT_SHOW;i++)
       inner+='<div class="t-row"><span class="m">'+
-           '<span class="nm">'+osEsc(osMaskName(meet[i].nm)||'고객')+'</span>'+
+           '<span class="nm">'+osEsc(hmFullNm(meet[i].nm)||'고객')+'</span>'+
            '<span class="mt">'+osEsc(meet[i].st)+' · '+osEsc(meet[i].rg)+'</span>'+
          '</span><span class="r">'+
            (meet[i].ap
@@ -37096,7 +37147,7 @@ function hmRtHtml(){
         h+='<button type="button" class="hm-rt-p '+
              ((typeof tdoColor==='function')?tdoColor(near[i].k):'')+'" '+
              'onclick="hmRtPerson(\''+osEsc(near[i].id)+'\')">'+
-             osEsc(osMaskName(near[i].nm)||'고객')+'</button>';
+             osEsc(hmFullNm(near[i].nm)||'고객')+'</button>';
       if(near.length>HM_RT_SHOW)
         h+='<button type="button" class="hm-rt-p more" onclick="hmRtOpen()">+'+
            (near.length-HM_RT_SHOW)+'명 더 →</button>';
@@ -38578,7 +38629,7 @@ function hmTossAppt(){
     var hm=(''+(L[i].s||'')).slice(0,5);
     /* 🙈 배정 DB 약속(appt)의 이름은 <b>홈에 그릴 때</b> 가립니다 (판 X359 · 3번).
        달력 자료 자체는 그대로 둡니다 — 자비스 「홍길동 약속 언제야」 가 이름으로 찾습니다. */
-    return hmTossCard((hm||'오늘')+' 약속', osEsc(osMaskName(L[i].t)||'고객')+'님',
+    return hmTossCard((hm||'오늘')+' 약속', osEsc(hmFullNm(L[i].t)||'고객')+'님',
       (''+(L[i].s||'')).slice(8), '자료 열기','go(\'clients\')',true);
   }
   /* ⚠ <b>달력을 못 읽었으면 「없다」고 말하지 않습니다</b> (1번) —
@@ -38677,7 +38728,7 @@ function hmBandMenu(){
   }
   if(L.length&&L[0].id)
     return {id:L[0].id,t:(L[0].title||L[0].id),e:L[0].icon||'🧭',
-            why:(x&&x.name)?(osMaskName(x.name)+'님 상황에 맞는 도구'):'지금 할 것에 맞는 도구'};
+            why:(x&&x.name)?(hmFullNm(x.name)+'님 상황에 맞는 도구'):'지금 할 것에 맞는 도구'};
   return {id:'tools',t:'도구 모음',e:'🧰',why:'지금 할 것에 맞춘 도구가 없어 도구 모음으로 갑니다'};
 }
 function hmBandGo(i){
@@ -38701,13 +38752,13 @@ function hmBandAskHtml(who){
   var st=null,late=null,pt='';
   try{ st=hmFlowStuck(who); }catch(e){}
   if(st)
-    return '<div class="hm-band-ask"><span class="q">💡 막힌 데 — <b>'+osEsc(osMaskName(st.name))+
+    return '<div class="hm-band-ask"><span class="q">💡 막힌 데 — <b>'+osEsc(hmFullNm(st.name))+
       '</b>님이 '+osEsc(st.stage)+'에서 <b>'+st.days+'일째</b>입니다. 오늘 한 번 여쭤 보시겠어요?</span>'+
       '<button type="button" class="t-btn sm" onclick="hmRtPerson(\''+osEsc(st.id)+'\')">그 분으로</button></div>';
   try{ late=(typeof arApptPast==='function')?arApptPast(who):null; }catch(e2){}
   if(late&&late.length)
     return '<div class="hm-band-ask"><span class="q">💡 약속 날짜가 지난 분이 <b>'+late.length+
-      '명</b>입니다. <b>'+osEsc(osMaskName(late[0].name))+'</b>님께 다시 날짜를 여쭤 보시겠어요?</span>'+
+      '명</b>입니다. <b>'+osEsc(hmFullNm(late[0].name))+'</b>님께 다시 날짜를 여쭤 보시겠어요?</span>'+
       '<button type="button" class="t-btn sm" onclick="hmRtPerson(\''+osEsc(late[0].id)+'\')">그 분으로</button></div>';
   try{ pt=(typeof hmPtClause==='function')?hmPtClause(who):''; }catch(e3){}
   if(pt)

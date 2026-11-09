@@ -74,6 +74,9 @@ const SEED = () => {
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+  /* 🙈 판 X388 — 홈은 이제 <b>실명이 기본</b>이고, 고객 앞에서 「🙈 이름 가리기」 를 누르면 가립니다.
+     이 자는 <b>누른 뒤</b>를 봅니다 — 가리는 길이 무너지면 여기서 웁니다. 기본(실명)은 check-hmfullnm. */
+  await ctx.addInitScript(() => { try { localStorage.setItem('apex_hm_hidenm', '1'); } catch (e) {} });
   await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
   const p = await ctx.newPage();
   const errs = []; p.on('pageerror', e => errs.push('' + (e && e.message)));
