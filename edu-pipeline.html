@@ -225,6 +225,39 @@ table.cx .z{color:#D1D6DB} table.cx .g{color:var(--green);font-weight:800;font-s
 #toast.on{opacity:1;transform:translate(-50%,0)}
 #gate{padding:60px 20px;text-align:center;color:var(--tx3);font-weight:600}
 #gate b{color:var(--tx)}
+/* ✍️ <b>간편 입력</b> (?quick=1) — 홈 「상담현황」 의 「예상업적 적기」 가 이 판을 덮개로 엽니다.
+   폰에서 표(14칸)를 옆으로 밀지 않고 <b>고객 한 분 = 한 줄</b>로 적게 합니다.
+   ★ 저장은 표와 <b>같은 길</b>(queueSave → pipeline_save)입니다 — 새 저장 길이 없습니다 (5번). */
+body.quick #tab-db,body.quick #tab-share,body.quick #kpis,body.quick .filters,body.quick #allteams{display:none}
+body.quick main{max-width:640px;padding-top:12px}
+.qk-top{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:14px 16px;margin-bottom:12px}
+.qk-top h2{margin:0 0 4px;font-size:var(--t3);font-weight:800}
+.qk-top p{margin:0;font-size:var(--t6);color:var(--tx3);font-weight:600}
+.qk-top select{margin-top:10px;width:100%;min-height:44px;border:1px solid var(--grey2);border-radius:var(--r3);padding:8px 10px;background:#fff;font-weight:700}
+.qk-goal{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.qk-goal .goal{font-size:var(--t6);font-weight:700;color:var(--blue-d);background:#EAF2FF;border-radius:8px;padding:6px 9px;white-space:nowrap}
+.qk-goal .goal input{width:104px;min-height:32px;border:0;background:#fff;border-radius:6px;padding:2px 6px;text-align:right;font-weight:800;font-size:var(--t5);color:var(--blue-d);outline:none;margin:0 3px}
+.qk-goal .goal.cs{color:var(--purple)}.qk-goal .goal.cs input{width:56px}
+.qk-goal .goal.per{color:var(--tx2);background:var(--grey)}
+.qk-goal .goal.per i{font-style:normal;font-weight:600;color:var(--tx3)}
+.qk-goal .gpct{font-size:var(--t6);font-weight:800;align-self:center}
+.qk-sum{margin-top:8px;font-size:var(--t6);color:var(--tx3);font-weight:600}
+.qk-chips{display:flex;gap:8px;margin:0 0 10px}
+.qk-chips button{flex:1;min-height:44px;border:1px solid var(--grey2);background:#fff;border-radius:999px;font-weight:700;font-size:var(--t5);color:var(--tx2);cursor:pointer}
+.qk-chips button.on{background:var(--tx);border-color:var(--tx);color:#fff}
+.qk-r{display:flex;align-items:center;gap:10px;background:#fff;border-radius:var(--r2);box-shadow:var(--sh);padding:11px 12px;margin-bottom:8px}
+.qk-r.need{box-shadow:inset 3px 0 0 var(--blue),var(--sh)}
+.qk-m{flex:1;min-width:0}
+.qk-m b{display:block;font-size:var(--t4);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qk-m span{display:block;font-size:var(--t6);color:var(--tx3);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qk-st{display:inline-block;font-style:normal;font-size:var(--t6);font-weight:800;color:var(--blue-d);background:var(--blue-l);border-radius:6px;padding:0 6px;margin-right:5px}
+.qk-in{flex:0 0 auto;display:flex;align-items:center;gap:4px;font-size:var(--t6);font-weight:700;color:var(--tx3)}
+.qk-in input{width:84px;min-height:44px;border:1.5px solid var(--grey2);border-radius:10px;padding:6px 8px;text-align:right;font-weight:800;font-size:var(--t4);color:var(--tx);background:#fff;outline:none}
+.qk-in input::placeholder{color:#B0B8C1;font-weight:600}   /* 안내 글이 적힌 금액처럼 안 보이게 */
+.qk-in input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
+.qk-r.need .qk-in input{border-style:dashed;border-color:#93B7F5}
+.qk-foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.qk-foot .btn{min-height:44px}
 </style>
 </head>
 <body>
@@ -359,6 +392,10 @@ const goalMonth = () => FILTER.month || TODAY_S.slice(0, 7);
 /* 이 화면은 AP·PC 를 밀도 있게 보는 자리다 — 처음부터 그 눈으로 연다.
    위 「전체 단계」로 언제든 넓힐 수 있다. */
 let FILTER = { month: '', team: '', mem: '', stage: '__appc', q: '' };
+/* ✍️ <b>간편 입력</b> — 주소에 ?quick=1 이 붙으면 표 대신 「한 분 = 한 줄」 판을 세웁니다.
+   QWHO = 누구 것을 적나(처음엔 나) · QALL = 미접촉까지 보나 */
+const QUICK = new URLSearchParams(location.search).get('quick') === '1';
+let QWHO = '', QALL = false;
 /* ── <b>팀은 접어 둡니다</b> ─────────────────────────────────────────
    사장님 말씀 — 「팀 별로 따로 보고, <b>전체적으로 따로</b> 볼 수 있도록
    하고, <b>접어두기 칸</b>을 만들어서 한번에 관리하자」.
@@ -562,6 +599,8 @@ async function flush() {
   }
   if (bad) toast('저장 실패 — ' + bad);
   else if (ok) toast(`${ok}건 저장했습니다`);
+  /* 홈 덮개에 「적은 것이 있다」 고 알립니다 — 닫을 때 홈이 그때만 다시 읽습니다 (7번) */
+  if (ok && window.parent !== window) { try { window.parent.postMessage({ apex: 'pex-saved' }, location.origin); } catch (e) { } }
 }
 window.addEventListener('beforeunload', () => { if (Object.keys(pend).length) flush(); });
 
@@ -874,6 +913,7 @@ function renderAllTeams() {
     `</tbody></table></div></div>`;
 }
 function renderBoard() {
+  if (QUICK) return renderQuick();
   renderFilters(); renderKpi(); renderAllTeams();
   const L = rowsFiltered();
   const teams = FILTER.team ? TEAMS.filter(t => t.id === FILTER.team) : TEAMS;
@@ -1081,6 +1121,11 @@ board.addEventListener('blur', e => {
   if (el.dataset && el.dataset.goal) {
     const v = (GOALS[el.dataset.goal] || 0) * 10000;
     el.value = v ? won(v) : '';
+    /* 간편 입력에서는 판을 다시 세우지 않습니다 — 폰에서 다음 칸을 누르는 순간
+       판이 갈리면 누른 칸을 잃습니다. 체결 % 만 그 자리에서 다시 적습니다. */
+    /* ★ 한 박자 뒤에 갈아 끼웁니다 — blur 도중에 갈면 터집니다(pexLater 와 같은 자리) */
+    if (QUICK) { const q = el.closest('.qk-goal'), mid = el.dataset.goal;
+      setTimeout(() => { if (q && !q.contains(document.activeElement)) q.innerHTML = goalHTML(mid, false); }, 0); return; }
     renderBoard();
     return;
   }
@@ -1127,6 +1172,88 @@ board.addEventListener('click', async e => {
   const el = document.querySelector(`tr[data-id="${data}"] [data-f="region"]`);
   if (el) { el.focus(); el.scrollIntoView({ block: 'center' }); }
 });
+
+/* ============================================================
+   ✍️ 간편 입력 (?quick=1) — 2026-11-09 사장님 말씀
+   「팀원들이 편하게 입력하도록 조치를 취해 오늘에서 할 순 없나」.
+   홈(오늘) 「상담현황」 카드의 「✍️ 예상업적 적기」 가 이 판을 덮개로 엽니다.
+   ★ 새 화면이 아니라 <b>이 화면의 다른 모양</b>입니다. 저장은 표와 같은
+     queueSave(→ pipeline_save) 이고, 목표 두 칸은 goalHTML 을 그대로 씁니다
+     — 그래서 표에서 적은 것과 여기서 적은 것이 언제나 같습니다 (5번).
+   ★ 금액은 <b>만원</b>으로 받습니다(「50」 = 50만원) — 칸 옆에 「만원」 을
+     적어 둡니다 (4번). 담는 값(r.expect)은 원입니다.
+   ★ 칸을 비우면 <b>「안 적음」</b> 으로 돌아갑니다. 0 으로 적지 않습니다 (1번).
+   ============================================================ */
+const QSTG = { PC: 0, AP: 1, CS: 2, TA: 3, '미접촉': 4 };
+function quickRows() {
+  return ROWS.filter(r => r.mid === QWHO && isLive(r) && (QALL || r.stage !== '미접촉'))
+    .sort((a, b) => (!!a.expect - !!b.expect)
+      || ((QSTG[a.stage] ?? 9) - (QSTG[b.stage] ?? 9))
+      || (a.date || '9999').localeCompare(b.date || '9999'));
+}
+function quickRowHTML(r) {
+  const man = r.expect ? Math.round(r.expect / 10000) : '';
+  const n = dnum(r.date);
+  const when = r.date ? (n === 0 ? '오늘 약속' : n > 0 ? `${r.date.slice(5).replace('-', '/')} 약속` : `약속 ${-n}일 지남`) : '약속 없음';
+  return `<div class="qk-r${r.expect ? '' : ' need'}" data-qid="${r.id}">
+    <div class="qk-m"><b>${esc(r.client || '이름 없음')}</b>
+      <span><i class="qk-st">${esc(r.stage)}</i>${esc([r.region, r.dbtype, when].filter(Boolean).join(' · '))}</span></div>
+    <label class="qk-in"><input type="text" inputmode="numeric" data-qx="${r.id}" value="${man}"
+      placeholder="예: 15" aria-label="${esc(r.client || '')} 예상업적(만원)">만원</label></div>`;
+}
+function renderQuick() {
+  document.body.classList.add('quick');
+  const mine = MEMBERS.filter(m => canEdit({ mid: m.id }));
+  if (!QWHO || !mine.some(m => m.id === QWHO)) QWHO = mine.some(m => m.id === ME.id) ? ME.id : ((mine[0] || {}).id || '');
+  if (!QWHO) { $('#board').innerHTML = `<div class="empty">적을 수 있는 고객이 없습니다.</div>`; return; }
+  const L = quickRows();
+  const need = L.filter(r => !r.expect).length;
+  const pick = mine.length > 1
+    ? `<select id="qk-who" aria-label="누구 것을 적나">${mine.map(m =>
+        `<option value="${m.id}"${m.id === QWHO ? ' selected' : ''}>${esc(m.name)}${m.id === ME.id ? ' (나)' : ''}</option>`).join('')}</select>` : '';
+  let h = `<div class="qk-top"><h2>✍️ 예상업적 적기</h2>
+    <p>계약될 것 같은 <b>월 보험료</b>를 만원으로 적으세요 — 「15」 = 15만원. 적으면 바로 저장되고 홈·EM 상담 보드에 같은 금액이 뜹니다.</p>
+    ${pick}<div class="qk-goal">${goalHTML(QWHO, !canEdit({ mid: QWHO }))}</div>
+    <div class="qk-sum">${memSum(QWHO)}</div></div>
+    <div class="qk-chips"><button type="button" data-qall="0" class="${QALL ? '' : 'on'}">상담 중 (TA·AP·PC·CS)</button>
+      <button type="button" data-qall="1" class="${QALL ? 'on' : ''}">미접촉까지</button></div>`;
+  h += L.length
+    ? (need ? `<p class="qk-sum" style="margin:0 2px 8px">파란 줄 <b>${need}분</b>이 아직 안 적혔습니다 — 위에서부터 적으시면 됩니다.</p>` : '')
+      + L.map(quickRowHTML).join('')
+    : `<div class="empty">${QALL ? '진행 중인 고객이 없습니다.' : '상담 중(TA·AP·PC·CS)인 고객이 없습니다. 「미접촉까지」 를 눌러 보세요.'}</div>`;
+  h += `<div class="qk-foot">${canEdit({ mid: QWHO }) ? `<button type="button" class="btn gh" data-addmid="${QWHO}">+ 새 고객 추가</button>` : ''}
+    <button type="button" class="btn gh" id="qk-full">전체 표로 보기</button></div>`;
+  $('#board').innerHTML = h;
+}
+/* 금액 한 칸 — 칠 때마다 담고 표와 같은 길로 저장합니다 */
+function quickPut(el) {
+  const r = ROWS.find(z => z.id === el.dataset.qx); if (!r || !canEdit(r)) return;
+  const man = Math.round(+String(el.value).replace(/[^\d]/g, '') || 0);
+  r.expect = man * 10000;                /* 0 → queueSave 가 빈 글로 보내 「안 적음」(null) 이 됩니다 */
+  const row = el.closest('.qk-r'); if (row) row.classList.toggle('need', !man);
+  const s = document.querySelector('#board .qk-sum'); if (s) s.innerHTML = memSum(r.mid);
+  queueSave(r, 'expect');
+}
+if (QUICK) {
+  board.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.qx) quickPut(e.target); });
+  /* Enter = 다음 분 칸으로 — 폰 키보드의 「다음」 도 같은 키입니다 */
+  board.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || !e.target.dataset || !e.target.dataset.qx) return;
+    e.preventDefault();
+    const all = [...document.querySelectorAll('#board [data-qx]')];
+    const nx = all[all.indexOf(e.target) + 1];
+    if (nx) { nx.focus(); nx.select(); } else { e.target.blur(); flush(); }
+  });
+  board.addEventListener('change', e => { if (e.target.id === 'qk-who') { flush(); QWHO = e.target.value; renderQuick(); } });
+  board.addEventListener('click', e => {
+    const c = e.target.closest('[data-qall]');
+    if (c) { QALL = c.dataset.qall === '1'; renderQuick(); return; }
+    if (e.target.closest('#qk-full')) { flush(); location.href = location.pathname; }
+  });
+  /* 덮개를 닫을 때 남은 것을 바로 보냅니다 — 700ms 를 기다리다 닫히면 잃습니다 */
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
+  window.addEventListener('pagehide', () => flush());
+}
 
 /* ============================================================
    DB 배정 (월별)
