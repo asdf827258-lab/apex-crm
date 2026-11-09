@@ -3580,9 +3580,15 @@ h2 em.e{color:var(--edu-d)}
         <div class="f" style="margin:0"><label>들어갈 때 환율 (납입)</label>
           <input id="eFxIn" type="number" step="10" value="1484"></div>
       </div>
-      <div class="f" style="margin:14px 0 0;max-width:260px"><label>월 납입액 (만원)</label>
-        <input id="eMon" type="number" step="5" min="0" value="100">
-        <div class="hint">지원금 말고 <b>따로 넣는 돈</b>이 있다면 적어 주십시오</div></div>
+      <div class="grid g2" style="margin-top:14px">
+        <div class="f" style="margin:0"><label>월 납입액 (만원)</label>
+          <input id="eMon" type="number" step="5" min="0" value="100">
+          <div class="hint">지원금 말고 <b>따로 넣는 돈</b>이 있다면 적어 주십시오</div></div>
+        <!-- 🏦 예금 금리 (판 X388) — 지어낸 값이 아니라 공시값입니다. 바꾸시면 바로 따라옵니다. -->
+        <div class="f" style="margin:0"><label>예금 금리 (연 %)</label>
+          <input id="eDepRate" type="number" step="0.1" min="0" value="3.5">
+          <div class="hint">2026-09-21 <b>KB국민 1년 만기 3.50%</b> 공시값입니다</div></div>
+      </div>
       <div class="f" style="margin:14px 0 0;max-width:520px">
         <label>나올 때 환율 (유학 시점) &mdash; <b id="eFxOutEcho">1,484</b>원</label>
         <input class="rr" id="eFxOut" type="range" min="1000" max="2100" step="1" value="1484">
@@ -3710,6 +3716,28 @@ h2 em.e{color:var(--edu-d)}
     </div>
     <div class="card rv" style="margin-top:16px">
       <div id="eFxGain"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 🏦 <b>예금과 나란히</b> (판 X388 · 사장님 말씀 「<b>예금과 비교해서</b> 보기 쉽게 하는게 목표야」).
+     ★★ 고객은 반드시 묻습니다 — 「그 돈 그냥 <b>예금</b>에 넣으면 되지 않나요?」
+       그 자리에 답이 없으면 상담이 거기서 멈춥니다.
+     ★★ <b>예금 쪽을 깎지 않습니다</b> (1번) — 복리로 제값을 다 쳐 주고, 금리는 실제
+       공시값(2026-09-21 · KB국민 1년 3.50%)을 출처와 함께 적고 사장님이 바꾸실 수 있게 둡니다.
+     ★★ 그 대신 <b>세 가지를 또렷이</b> — 19년 뒤 금리는 아무도 모른다 · 이자소득세 15.4% ·
+       우리 상품 쪽은 세금 결론을 말하지 않는다(2번).
+     ★ 셈은 eduDeposit · eduMonths 하나가 합니다 (5번). -->
+<section id="ecalc2dep">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="ch e"><b>3장</b> 계산 &mdash; 예금과 나란히</span>
+      <h2>그냥 <em class="e">예금에 넣으면</em> 안 됩니까?</h2>
+      <p class="lead">됩니다. <b>그래서 나란히 놓고</b> 보십니다 &mdash;
+        같은 돈을 세 군데에 두었을 때 아이 유학 갈 때 <b>각각 얼마</b>가 되는지.</p>
+    </div>
+    <div class="card rv" style="margin-top:16px">
+      <div id="eDepBox"></div>
     </div>
   </div>
 </section>
@@ -6894,7 +6922,12 @@ window.__apexT = {
    ═══════════════════════════════════════════════ */
 const EDU = {age:0, order:2000000, region:100000, local:0,
              go:19, prod:'met', scen:'cur', fxIn:1484, fxOut:1484,
-             costUsd:50000, years:4, spread:2, mon:100};   /* 월 100만원에서 시작 — 배수로 셈하기 쉽게 */
+             costUsd:50000, years:4, spread:2, mon:100,   /* 월 100만원에서 시작 — 배수로 셈하기 쉽게 */
+             depRate:3.5};  /* 🏦 <b>예금 금리</b> (판 X388 · 사장님 말씀 「예금과 비교해서 보기 쉽게」).
+                 ★★ <b>지어낸 값이 아닙니다</b> — 2026-09-21 헤럴드경제 「1년 만기 정기예금 3.5%까지」 ·
+                   KB국민은행 KB Star 정기예금 12개월 이상 24개월 미만 <b>연 3.50%</b> 입니다.
+                   출처 · 날짜 · 링크를 화면에 그대로 적고, 사장님이 그 자리에서 바꾸실 수 있게 둡니다 (9번).
+                 ⚠ 11월 기준 한국은행 공표 평균은 <b>못 찾았습니다</b> — 못 찾은 것은 못 찾았다고 적습니다 (1번). */
 
 const $e = s=>document.querySelector(s);
 const enf = n=>Math.round(n).toLocaleString('ko-KR');
@@ -7030,6 +7063,59 @@ function eduMonCalc(){
 /* 지원금 재원을 월납으로 바꾸면 얼마인가 — 나란히 보여 주려고 */
 function eduAidPerMonth(c){
   return c.premWon / (12*EDU_PAYYEARS);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   🏦 <b>예금과 나란히</b> (판 X388 · 사장님 말씀 「<b>예금과 비교해서</b> 보기 쉽게 하는게 목표야」)
+
+   고객은 반드시 묻습니다 — <b>「그 돈 그냥 예금에 넣으면 되지 않나요?」</b>
+   그 자리에 답이 없으면 상담이 거기서 멈춥니다. 그래서 세 갈래를 <b>같은 표</b>에 놓습니다.
+
+     ① 그냥 통장에   — 이자 0. 모은 돈 그대로.
+     ② 은행 예금에   — 지금 금리로 굴린 것.
+     ③ 달러 상품에   — 제안서 환급률 + 환율.
+
+   ★★ <b>예금 쪽을 깎지 않습니다</b> (1번) — 우리 상품에 유리하게 기울이면 그 한 번으로
+     신뢰가 끝납니다. 예금은 <b>복리로 제값을 다</b> 쳐 줍니다.
+   ★★ 다만 <b>세 가지를 또렷이 밝힙니다</b>:
+     ⓐ <b>19년 뒤 금리는 아무도 모릅니다.</b> 지금 금리가 그대로 간다고 <b>가정</b>한 것입니다.
+       정기예금은 1년 만기라 해마다 다시 맡겨야 하고 그때 금리는 달라집니다.
+     ⓑ 예금 이자에는 <b>이자소득세 15.4%</b>가 붙습니다 — 세전·세후를 <b>둘 다</b> 보여 줍니다.
+     ⓒ 우리 상품 쪽은 <b>세금 결론을 말하지 않습니다</b> (2번) — 「비과세」 라고 단정하지 않고
+       「요건 충족 시」 만 적고 판단은 세무 전문가에게 넘깁니다.
+   ★ 셈하는 곳은 <b>여기 하나</b>입니다 (5번).
+   ═══════════════════════════════════════════════════════════════ */
+const EDU_TAX = 15.4;   /* 이자소득세 — 일반 과세 상품의 원천징수율 */
+function eduDeposit(wonIn, years){
+  /* ⚠⚠ <b>처음에 저는 불공정하게 셌습니다</b> (판 X388 · 찍어서 눈으로 보고 찾았습니다).
+       6,000만원을 <b>첫날에 통째로</b> 예금에 넣은 것으로 19년 복리를 태웠는데,
+       달러 상품은 <b>월 100만원씩 5년에 걸쳐</b> 들어갑니다. 같은 조건이 아닙니다 —
+       예금 쪽에 <b>없는 돈을 14년 더 굴려 준</b> 셈이었습니다.
+     ★ 이제 <b>똑같이</b> 셉니다 — 월납으로 5년 적립(월 복리) → 남은 해는 거치.
+     ★ 어느 쪽에도 유리하게 기울이지 않습니다 (1번). 예금은 제값을 다 쳐 줍니다. */
+  const r = Math.max(0, EDU.depRate) / 100;
+  const pay = Math.min(EDU_PAYYEARS, years);          /* 넣는 기간 — 상품과 같은 5년 */
+  const hold = Math.max(0, years - pay);              /* 그 뒤 거치 */
+  const monWon = (EDU.mon || 0) * 10000;
+  if(!(wonIn > 0) || !(years > 0)) return {gross: wonIn || 0, net: wonIn || 0, interest: 0, tax: 0, pay, hold};
+  let bal;
+  if(monWon > 0){
+    const i = r / 12, n = Math.round(pay * 12);        /* 월 적립 — 월 복리 */
+    bal = i > 0 ? monWon * (Math.pow(1 + i, n) - 1) / i : monWon * n;
+  } else {
+    bal = wonIn * Math.pow(1 + r, pay);                /* 월납이 0이면 목돈으로 봅니다 */
+  }
+  const gross = bal * Math.pow(1 + r, hold);
+  const interest = gross - wonIn;
+  const tax = Math.max(0, interest) * EDU_TAX / 100;
+  return {gross, net: gross - tax, interest, tax, pay, hold};
+}
+/* 🎓 <b>학비 몇 달치</b> — 제일 와닿는 비교입니다.
+   달러로 쥐고 있으면 환율이 어디로 가든 이 수가 안 변하고,
+   원화로 쥐고 있으면 환율이 오를수록 줄어듭니다. */
+function eduMonths(usd){
+  const perYear = Math.max(1, EDU.costUsd);
+  return usd / perYear * 12;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -7256,6 +7342,95 @@ function renderEduMon(){
       <p class="hint" style="margin:14px 0 0">
         ※ 「낮을 때 &middot; 높을 때」 는 넣으신 가입환율에서 <b>&plusmn;12%</b> 로 잡았습니다 &mdash;
         2026년에 실제로 그만큼 움직였기 때문입니다. <b>앞날의 환율을 예측한 값이 아닙니다.</b></p>`;
+  }
+
+  /* 🏦 <b>예금과 나란히</b>(ecalc2dep) 를 그립니다 (판 X388).
+     ★ m·at 은 위에서 이미 센 값입니다 — 두 번 안 셉니다 (5번).
+     ★ 세 갈래를 <b>같은 막대 자</b>로 그려 길이가 그대로 비교가 되게 합니다. */
+  const depBox = $e('#eDepBox');
+  if(depBox){
+    const yrs  = at.t;                                  /* 유학까지 몇 해 */
+    const D    = eduDeposit(m.won, yrs);                /* 은행 예금 */
+    const keep = m.won;                                 /* 그냥 통장에 — 이자 0 */
+    const usdD = EDU.fxOut>0 ? D.net/EDU.fxOut : 0;     /* 그때 달러로 바꾸면 */
+    const usdK = EDU.fxOut>0 ? keep/EDU.fxOut : 0;
+    const rows = [
+      {k:'그냥 통장에',  s:'이자 없이 모으기만',           won:keep,   usd:usdK,     cls:'' },
+      {k:'은행 예금에',  s:'연 '+EDU.depRate+'% · 세후',  won:D.net,  usd:usdD,     cls:'' },
+      {k:'달러 상품에',  s:'제안서 환급률 + 환율',        won:at.won, usd:at.usd,   cls:'hot'}
+    ];
+    const mx = Math.max.apply(null, rows.map(r=>r.won)) || 1;
+    /* ★★ <b>뒤집히는 환율</b> (판 X388) — 이것이 이 쪽의 주인공입니다.
+         달러 상품의 달러(at.usd)는 환율과 무관하고, 원화 예금은 환율이 오를수록
+         달러로 바꿀 때 줄어듭니다. 그래서 <b>딱 한 점에서 뒤집힙니다</b>:
+           at.usd × fx = 예금 세후   →   fx = 예금 세후 ÷ at.usd
+         ⚠⚠ <b>지금 환율에서는 예금이 더 클 수 있습니다.</b> 그래도 그대로 적습니다 —
+           숨기면 고객 앞에서 그 한 번으로 끝납니다 (1번). 대신 <b>언제 뒤집히는지</b>와
+           <b>어떤 가정이 깔려 있는지</b>를 같이 보여 드립니다. */
+    const flip  = at.usd > 0 ? D.net / at.usd : 0;
+    const 달러우위 = at.won >= D.net;
+    depBox.innerHTML = `
+      <div style="background:${달러우위?'var(--edu-l,#f3f0ff)':'#fff8ec'};border-radius:14px;padding:14px 18px;margin-bottom:16px">
+        <div style="font-size:15px;line-height:1.75;color:var(--ink1)">
+          같은 <b>${ewon(m.won)}</b>을 월 ${enf(EDU.mon)}만원씩 ${EDU_PAYYEARS}년 넣고
+          아이 ${EDU.go}살까지 <b>${yrs}년</b> 두면 &mdash;
+          통장 <b>${ewon(keep)}</b> &middot; 예금 <b>${ewon(D.net)}</b> &middot;
+          달러 상품 <b style="color:var(--edu-d)">${ewon(at.won)}</b>.<br>
+          ${flip>0 ? `★ 유학 시점 환율이 <b style="color:var(--edu-d);font-size:19px">${enf(flip)}원</b>을 넘으면
+            <b>달러 쪽이 앞섭니다</b> &mdash; 지금 넣으신 값은 ${enf(EDU.fxOut)}원입니다.`
+          : ''}
+        </div>
+      </div>
+
+      <!-- 📊 <b>같은 자로 그린 막대</b> — 길이가 그대로 비교입니다. 직접 그립니다 (9번). -->
+      <div style="display:grid;gap:10px">
+        ${rows.map(r=>`
+          <div style="display:grid;grid-template-columns:132px 1fr;gap:14px;align-items:center">
+            <div style="text-align:right">
+              <div style="font-size:14px;font-weight:800;letter-spacing:-.02em;color:${r.cls?'var(--edu-d)':'var(--ink2)'}">${r.k}</div>
+              <div style="font-size:11.5px;color:var(--ink4);line-height:1.5;margin-top:2px">${r.s}</div>
+            </div>
+            <div>
+              <div style="height:34px;border-radius:10px;background:${r.cls?'linear-gradient(90deg,var(--edu-d),var(--edu))':'#d8dee8'};
+                          width:${Math.max(6,r.won/mx*100).toFixed(1)}%;display:flex;align-items:center;justify-content:flex-end;
+                          padding-right:12px;box-sizing:border-box">
+                <b style="color:#fff;font-size:15px;letter-spacing:-.02em">${ewon(r.won)}</b></div>
+              <div style="font-size:11.5px;color:var(--ink4);margin-top:4px">
+                달러로는 <b>${eusd(r.usd)}</b> &middot; 학비 <b>${eduMonths(r.usd).toFixed(1)}개월</b>치</div>
+            </div>
+          </div>`).join('')}
+      </div>
+
+      <div style="margin-top:14px;background:#fff4f4;border:1px solid #f3c9c9;border-radius:12px;padding:13px 15px">
+        <div style="font-size:12.5px;font-weight:800;color:var(--red);margin-bottom:5px">다만 <b>두 가지 가정</b>이 깔려 있습니다</div>
+        <div style="font-size:12.5px;color:var(--ink2);line-height:1.8">
+          ① 정기예금은 <b>1년 만기</b>라 해마다 다시 맡겨야 하고, 그때 금리는 달라집니다 &mdash;
+          위 수는 <b>지금 금리가 ${yrs}년 내내 그대로</b>라고 본 것입니다.
+          ② 이자 <b>${ewon(D.interest)}</b> 에서 이자소득세 <b>${EDU_TAX}%</b>
+          (<b style="color:var(--red)">${ewon(D.tax)}</b>)를 뺀 <b>세후</b> 금액입니다.
+        </div>
+      </div>
+
+      <div style="margin-top:12px;background:#fbfaff;border:1px solid #e6e0f2;border-radius:12px;padding:13px 15px">
+        <div style="font-size:12.5px;color:var(--ink2);line-height:1.8">
+          <b>왜 뒤집히나</b> &mdash; 유학비는 <b>달러</b>로 냅니다.
+          달러 상품은 ${eusd(at.usd)} 를 <b>달러로 쥐고</b> 있어 환율이 어디로 가든
+          학비 <b>${eduMonths(at.usd).toFixed(1)}개월</b>치 그대로입니다.
+          예금은 원화라 환율이 오를수록 <b>달러로 바꿀 때 줄어듭니다</b> &mdash;
+          ${enf(EDU.fxOut)}원이면 ${eduMonths(usdD).toFixed(1)}개월치,
+          ${enf(Math.round(EDU.fxOut*1.2))}원이면 ${eduMonths(D.net/(EDU.fxOut*1.2)).toFixed(1)}개월치입니다.
+        </div>
+      </div>
+
+      <p class="hint" style="margin:14px 0 0">
+        ※ 예금 금리 <b>연 ${EDU.depRate}%</b> 는
+        <a href="https://biz.heraldcorp.com/article/10879928" target="_blank" rel="noopener">헤럴드경제
+        「1년 만기 정기예금 3.5%까지…」 2026.09.21</a> 의 KB국민은행 1년 만기 공시값입니다 &mdash;
+        <b>지어낸 값이 아닙니다.</b> 「⚙ 조건」 에서 바꾸시면 위 수가 그 자리에서 따라옵니다.
+        ⚠ 11월 기준 한국은행 공표 평균은 <b>찾지 못했습니다.</b><br>
+        ※ 달러 상품 쪽은 <b>세금 결론을 적지 않습니다</b> &mdash; 보험차익 비과세는
+        <b>요건을 충족할 때</b>만 적용되므로 세무 전문가와 확인하셔야 합니다.
+        보험료·보장은 심사 결과에 따릅니다.</p>`;
   }
 
   const monBox2 = $e('#eMonBox2');
@@ -7901,6 +8076,8 @@ $e('#eFxIn').oninput   = e=>{
 $e('#eFxOut').oninput  = e=>{ EDU.fxOut=+e.target.value||1484;
   $e('#eFxOutEcho').textContent=enf(EDU.fxOut); renderEdu(); };
 $e('#eCostUsd').oninput= e=>{ EDU.costUsd=Math.max(0,+e.target.value||0); renderEdu(); };
+/* 🏦 예금 금리 (판 X388) — 없는 판에서도 안 터지게 있을 때만 묶습니다 */
+if($e('#eDepRate')) $e('#eDepRate').oninput = e=>{ EDU.depRate=Math.max(0,+e.target.value||0); renderEdu(); };
 $e('#eYears').oninput  = e=>{ EDU.years=ecl(+e.target.value,1,10); renderEdu(); };
 $e('#eSpread').oninput = e=>{ EDU.spread=Math.max(0,+e.target.value||0); renderEdu(); };
 $e('#eMon').oninput    = e=>{ EDU.mon=Math.max(0,+e.target.value||0); renderEdu(); };
@@ -8533,7 +8710,7 @@ const DECK = {
      ⚠ 뺄 수 있게 된 까닭 — 교육자금은 다섯 갈래 중 <b>혼자 .panel 이
        없어</b> 발표 중 「⚙ 조건」 이 <b>죽은 단추</b>였습니다. 그래서 입력
        폼이 쪽으로 서 있어야 했습니다. 단추를 살리고 쪽을 뺍니다. */
-  e:['coverE','eprob','enews','ewhy','e1','e2','ecalc2','ecalc2k','ecalc2b','ecalc2t','ecalc2sum','ecalc2fx','ecalc2fx2',
+  e:['coverE','eprob','enews','ewhy','e1','e2','ecalc2','ecalc2k','ecalc2b','ecalc2t','ecalc2sum','ecalc2fx','ecalc2fx2','ecalc2dep',
      'ecalc3','ecalc3n','ecalc3b','eimf','eimf2','eimf2b','eimf3',
      'eplan','eplan2','close'],
   c:['coverC','cp1','cp1x','cp1a','cp1b','cp1c','cp2','cp3','cpmoney','cpmoney2',
