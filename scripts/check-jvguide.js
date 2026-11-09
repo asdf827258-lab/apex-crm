@@ -246,6 +246,9 @@ const SEED = () => {
   await p.evaluate(() => go('apexmap'));
   await p.waitForTimeout(700);
   const AI = await f.evaluate(async () => {
+    /* 판 X371 — 앱 안에서는 두뇌(brainAnswer)가 답합니다. 여기는 <b>두뇌가 없을 때(앱 밖)</b> 자비스 따로의 AI 길 —
+       두뇌 길의 근거 · 같은 카드는 check-jvbrain 이 잽니다 */
+    const P0 = window.parent, BA = P0.brainAnswer; P0.brainAnswer = null;
     LS.set('map_engine', 'gemini'); LS.set('gproxy', '/api/gemini');
     const sent = [], keep = window.fetch;
     window.fetch = function(u, o){
@@ -260,7 +263,7 @@ const SEED = () => {
     const one = { way: !!card.querySelector('.st-way'), ai: ((card.querySelector('.j-ai') || {}).textContent || '') };
     ask('그다음은?');
     await new Promise(r => setTimeout(r, 400));
-    window.fetch = keep; LS.del('gproxy'); LS.del('map_engine');
+    window.fetch = keep; LS.del('gproxy'); LS.del('map_engine'); P0.brainAnswer = BA;
     const c1 = sent[0] ? sent[0].contents : [], c2 = sent[1] ? sent[1].contents : [];
     const t = m => ((m || {}).parts || []).map(x => x.text).join('');
     return { n: sent.length,

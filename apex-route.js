@@ -994,7 +994,7 @@ function addrTag(p){
                 :'';
 }
 
-/* ══ 🏘 <b>약속도 같은 동네로 몰기</b> (판 X382) ═══════════════════════
+/* ══ 🏘 <b>약속도 같은 동네로 몰기</b> (판 X384) ═══════════════════════
    사장님 말씀 (2026-11-08) 「약속잡을때도 같은 동네로 몰아줘」.
    약속을 잡는 그 자리(통화 기록 → 결과 「상담」)에, 이분과 <b>같은 동네</b>에 앞으로
    2주 안에 이미 잡힌 약속을 띄웁니다. 누르면 <b>그날 그 약속이 끝나는 시각</b>으로
@@ -1073,7 +1073,7 @@ if(typeof origToggle==="function"){
     var r=origToggle.apply(this,arguments);
     var af=q("appointmentField"), pf=q("apptPlaceField");
     if(af&&pf) pf.classList.toggle("hidden",af.classList.contains("hidden"));
-    /* 🏘 같은 동네 약속 — 상담일 때만 섭니다 (판 X382) */
+    /* 🏘 같은 동네 약속 — 상담일 때만 섭니다 (판 X384) */
     try{ apptNearPaint() }catch(eN){}
     return r;
   };
@@ -1680,7 +1680,7 @@ function styles(){
   ".rt-stay label{font-size:13px;font-weight:800;color:#245ea8}",
   ".rt-stay select{flex:1;min-width:120px;max-width:180px;min-height:44px;padding:9px 10px;border-radius:9px}",
   ".rt-stay small{flex:1 1 100%;font-size:11.5px;color:#7089ad;line-height:1.5}",
-  /* 🏘 같은 동네 약속 (판 X382) — 누르는 것은 44px · 글은 13px 바닥 */
+  /* 🏘 같은 동네 약속 (판 X384) — 누르는 것은 44px · 글은 13px 바닥 */
   ".apn{border:1px solid #b7e4c7;background:#f3fbf6;border-radius:12px;padding:10px 12px;font-size:13.5px;color:var(--text)}",
   ".apn small{font-size:13px;color:var(--muted);font-weight:600}",
   ".apn-s{margin-top:6px;font-size:13px;color:var(--muted);line-height:1.6}",

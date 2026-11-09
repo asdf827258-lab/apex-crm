@@ -5524,7 +5524,7 @@ var BX_GEM='\n\n[반드시 지키는 규칙 — 하나씩 확인하며 쓴다]\n
  '1. 결론을 첫 줄에 한 문장으로 쓴다.\n'+
  '2. 근거는 번호를 붙여 셋 이내로 쓴다.\n'+
  '3. 바로 읽을 수 있는 화법·문구를 반드시 하나 이상 넣는다.\n'+
- '4. 숫자가 나오면 어디서 나온 숫자인지 괄호로 밝힌다.\n'+
+ '4. 숫자는 받은 글([앱 자료] · [우리 DB] · 지식)에 있는 것만 쓰고, 그 이름을 괄호로 밝힌다. 받은 글에 없는 숫자 · 통계 · 출처는 쓰지 않는다.\n'+   /* 판 X378 — 「괄호로 밝힌다」 만 있으니 없는 출처를 지어 괄호에 넣었습니다 */
  '5. 모르는 것은 "확인 필요" 라고 쓴다. 지어내지 않는다.\n'+
  '6. 확정 수익·원금 보장·지급 보장 표현을 쓰지 않는다.\n'+
  '7. 미사여구를 넣지 않는다. 한 문장을 40자 안쪽으로 끊는다.\n'+
@@ -5596,28 +5596,51 @@ function bxCss(){
   document.head.appendChild(st);
 }
 
-function brainSys(){var kb=brainKbGet();var base='너는 "윤시현의 두뇌" — 윤시현 사업단장의 제2의 두뇌다. 보험·재무설계 상담, 세일즈 심리, 반론 처리, 화법, 마케팅, 팀 관리, 자기경영까지 — 어떤 질문이든 윤시현의 관점·전략·화법으로 실전적으로 답한다.\n[답변 원칙]\n- 두괄식으로 핵심 결론을 먼저, 그다음 근거·단계·바로 쓸 수 있는 예시(화법/문구)를 준다.\n- 애매하게 원론만 말하지 말고 구체적으로.\n- 표·번호목록·콜아웃으로 구조화.\n- 보험 관련은 치료비 통장·8통장 프레임 활용.\n- 준법: 확정 수익·지급 보장·과장 표현 금지. 고객 발송/게시용 문구는 "게시 전 준법감시 확인" 덧붙임.\n- 모르는 사실/수치는 지어내지 말고 "확인 필요".';if(kb)base+='\n\n[윤시현이 축적한 지식·프롬프트 — 최우선 지침·지식으로 삼아 답한다]\n'+kb;
+function brainSys(){var kb=brainKbGet();var base='너는 "윤시현의 두뇌" — 윤시현 사업단장의 제2의 두뇌다. 보험·재무설계 상담, 세일즈 심리, 반론 처리, 화법, 마케팅, 팀 관리, 자기경영까지 — 어떤 질문이든 윤시현의 관점·전략·화법으로 실전적으로 답한다.\n[답변 원칙]\n- 두괄식으로 핵심 결론을 먼저, 그다음 근거·단계·바로 쓸 수 있는 예시(화법/문구)를 준다.\n- 애매하게 원론만 말하지 말고 구체적으로.\n- 표·번호목록·콜아웃으로 구조화.\n- 보험 관련은 치료비 통장·8통장 프레임 활용.\n- 준법: 확정 수익·지급 보장·과장 표현 금지. 고객 발송/게시용 문구는 "게시 전 준법감시 확인" 덧붙임.\n- 모르는 사실/수치는 지어내지 말고 "확인 필요".\n- 출처는 <받은 글>에 있는 이름만 쓴다 — [앱 안내] · [앱 자료] · [윤시현이 축적한 지식] · [우리 DB]. "현장 가이드 기준" · "설계 가이드 출처" · "통계에 따르면" 처럼 받은 적 없는 출처를 지어 붙이지 않는다. 경험에서 나온 말이면 "현장 경험상(확인 필요)" 이라고 쓴다.\n- 가린 이름(홍*동 · 김○○ 같은 꼴)은 가린 그대로 쓴다 — 빈 글자를 채워 이름을 지어내지 않는다.';/* ★ 판 X378 — 라이브 AI 로 물어 보니 「(현장 가이드 기준)」 · 「(아카데미 설계 가이드 출처)」 처럼 없는 출처를 지어 붙였고, 가린 「홍*동」 을 「홍길동」 으로 채워 불렀습니다 (1번 · 3번) */if(kb)base+='\n\n[윤시현이 축적한 지식·프롬프트 — 최우선 지침·지식으로 삼아 답한다]\n'+kb;
   try{
     if(bxOpt('know',false)){var kn=bxKnow();if(kn)base+='\n\n[이 앱과 우리 회사가 굴러가는 방식 — 답할 때 이 흐름 위에서 말한다]\n'+kn;}
     base+=bxPrompt();
     if(bxOpt('geminix',true)&&bxEngine()==='gemini')base+=BX_GEM;
   }catch(e){}
   return sys(base);}
-function brainAsk(q,opt){if(BRAIN.busy)return;opt=opt||{};var ta=$('brainQ');q=(q||(ta?ta.value:'')||'').trim();if(!q){toast('궁금한 것을 입력하세요');return;}if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 두뇌가 답합니다.');osSetReload();return;}BRAIN.busy=true;if(ta)ta.value='';BRAIN.hist.push({q:q,a:null});brainRenderThread();if(typeof bdPaint==='function')bdPaint();var ctx='';var prev=BRAIN.hist.slice(-4,-1);if(prev.length){ctx='[직전 대화 맥락]\n'+prev.map(function(t){return 'Q: '+t.q+'\nA: '+((t.a||'').slice(0,600));}).join('\n---\n')+'\n\n';}var crm=(typeof brainCrmCtx==='function')?brainCrmCtx(opt.crm):'';var user=ctx+crm+'[질문]\n'+q+'\n\n윤시현의 두뇌로서, 바로 실전에 쓸 수 있게 구체적으로 답해줘.';callAI(brainSys(),user,6000,'brain').then(function(out){
+/* ════════ 🧠 두뇌에게 묻는 길은 <b>이 하나</b> (판 X371) ════════════════════
+   사장님 말씀 2026-11-06 「자비스 이제 윤시현의 두뇌랑 합쳐서, 어떤 것이든 정말 자세하게
+   도와주고 쓸수 있도록」 · 고르신 것 「늘 같이」 · 「자비스로 흡수」.
+   ★ 두뇌 화면(brainAsk)과 자비스가 <b>같은 길</b>로 묻습니다 — 지침(brainSys · 두뇌 지식 ·
+     ⭐ 예시) · 엔진 · 대체 · 다듬기 · 동의 창이 한 벌입니다. 자비스가 따로 지침을 지으면
+     두 곳이 다르게 답합니다 (5번).
+   ★ 대화도 한 줄(BRAIN.hist)입니다 — 자비스에서 물은 것도 지난 대화 · Word · PPT · ⭐ 에 섭니다.
+   ★ 화면을 안 만집니다 — 그리는 일은 부르는 쪽이 합니다. opt.ground 는 자비스가 붙이는
+     「앱 안내」(화면 · 가는 길 · 찾은 보험 자료) 이고, 고객 이름은 들어 있지 않습니다 (3번).  */
+/* DB 숫자가 필요한 물음 — 자비스(jvBrainCrm)와 두뇌가 이 한 줄을 같이 봅니다 (5번 · 판 X378) */
+var BRAIN_DBQ=/전화\s*(?:순서|돌릴|걸)|콜\s*순서|누구(?:부터|한테)?\s*(?:전화|걸)|(?:DB|디비|배정)\s*(?:숫자|순서|관리|정리|돌)|오늘\s*(?:전화|콜|걸)/i;
+function brainAnswer(q,opt){
+  opt=opt||{};q=(''+(q||'')).replace(/^\s+|\s+$/g,'');
+  if(!q)return Promise.reject(new Error('물음이 비었습니다'));
+  if(typeof aiReady==='function'&&!aiReady())return Promise.reject(new Error('AI 가 연결되어 있지 않습니다 — 설정 → AI 연결에서 Claude 나 Gemini 를 연결하면 두뇌가 답합니다.'));
+  var prev=BRAIN.hist.filter(function(t){return typeof t.a==='string'&&t.a.indexOf('__ERR__')!==0;}).slice(-3);
+  var ctx=prev.length?('[직전 대화 맥락]\n'+prev.map(function(t){return 'Q: '+t.q+'\nA: '+((t.a||'').slice(0,600));}).join('\n---\n')+'\n\n'):'';
+  var crm=(typeof brainCrmCtx==='function')?brainCrmCtx(opt.crm):'';
+  /* 판 X378 — 「오늘 전화 순서 짜줘」 에 DB 숫자가 없으면 두뇌가 시간표를 지어냈습니다. 못 받았으면 못 받았다고 쥐여 줍니다 (1번) */
+  if(!crm&&(opt.crm||BRAIN_DBQ.test(q)))crm='[우리 DB — 이번 물음에는 DB 통합 CRM 숫자를 받지 못했습니다(아직 안 읽었거나 오늘 손댈 사람이 0). 숫자 · 무리 · 시간대를 지어내지 말고, 일반 원칙과 확인할 화면(「DB 통합 CRM」 · 「오늘」)을 안내한다]\n\n';
+  var gr=opt.ground?('[앱 안내 — 이 앱 안에서 할 길. 화면 · 단추 이름은 여기 있는 것만 쓴다]\n'+(''+opt.ground).slice(0,3000)+'\n\n'):'';
+  var row={q:q,a:null,from:opt.from||''};BRAIN.hist.push(row);
+  var user=ctx+crm+gr+'[질문]\n'+q+'\n\n윤시현의 두뇌로서, 바로 실전에 쓸 수 있게 구체적으로 답해줘.';
+  function done(txt){row.a=txt;row.eng=engBadge();row.note=engNotice();return {i:BRAIN.hist.indexOf(row),a:txt,row:row};}
+  return callAI(brainSys(),user,6000,'brain').then(function(out){
     if(bxOpt('polish',false)&&out&&(''+out).length>200){
-      var l0=BRAIN.hist[BRAIN.hist.length-1];
-      l0.a=null;l0.note='<div class="notice" style="margin:0">초안을 한 번 더 다듬는 중…</div>';
-      brainRenderThread();
-      bxRefine(''+out,function(fin){
-        var lz=BRAIN.hist[BRAIN.hist.length-1];
-        lz.a=fin;lz.eng=engBadge();lz.note=engNotice();lz.polished=1;
-        BRAIN.busy=false;brainRenderThread();
-        if(typeof bdPaint==='function')bdPaint();
-        if(opt.ppt&&typeof bdMake==='function')setTimeout(function(){bdMake(fin,q,'물어보고 바로');},350);
-      });
-      return;
+      row.note='<div class="notice" style="margin:0">초안을 한 번 더 다듬는 중…</div>';
+      if(typeof opt.onDraft==='function')try{opt.onDraft(row);}catch(e){}
+      return new Promise(function(res){bxRefine(''+out,function(fin){row.polished=1;res(done(fin));});});
     }
-    var last=BRAIN.hist[BRAIN.hist.length-1];last.a=out;last.eng=engBadge();last.note=engNotice();BRAIN.busy=false;brainRenderThread();if(typeof bdPaint==='function')bdPaint();if(opt.ppt&&typeof bdMake==='function')setTimeout(function(){bdMake(out,q,'물어보고 바로');},350);}).catch(function(e){BRAIN.hist[BRAIN.hist.length-1].a='__ERR__'+((e&&e.message)||'오류');BRAIN.busy=false;brainRenderThread();if(typeof bdPaint==='function')bdPaint();});}
+    return done(out);
+  }).catch(function(e){row.a='__ERR__'+((e&&e.message)||'오류');throw e;});
+}
+function brainAsk(q,opt){if(BRAIN.busy)return;opt=opt||{};var ta=$('brainQ');q=(q||(ta?ta.value:'')||'').trim();if(!q){toast('궁금한 것을 입력하세요');return;}if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 두뇌가 답합니다.');osSetReload();return;}BRAIN.busy=true;if(ta)ta.value='';
+  var p=brainAnswer(q,{crm:opt.crm,onDraft:function(){brainRenderThread();}});
+  brainRenderThread();if(typeof bdPaint==='function')bdPaint();
+  p.then(function(r){BRAIN.busy=false;brainRenderThread();if(typeof bdPaint==='function')bdPaint();if(opt.ppt&&typeof bdMake==='function')setTimeout(function(){bdMake(r.a,q,'물어보고 바로');},350);})
+   .catch(function(){BRAIN.busy=false;brainRenderThread();if(typeof bdPaint==='function')bdPaint();});}
 /* 묻고 나서 답이 오면 그대로 발표자료까지. 주제를 다시 칠 일이 없다. */
 function brainAskPpt(q){brainAsk(q,{ppt:true});}
 function brainRenderThread(){var el=$('brainThread');if(!el)return;var h='';BRAIN.hist.forEach(function(t,i){h+='<div style="margin:0 0 6px;display:flex;justify-content:flex-end"><div style="max-width:86%;background:var(--t-point);color:#fff;padding:10px 14px;border-radius:14px 14px 4px 14px;font-size:var(--t6);line-height:1.6;white-space:pre-wrap">'+esc(t.q)+'</div></div>';if(t.a===null){h+='<div style="margin:0 0 16px"><div class="loading" style="padding:12px"><div class="spinner"></div>두뇌가 생각하는 중…</div></div>';}else if(typeof t.a==='string'&&t.a.indexOf('__ERR__')===0){h+='<div style="margin:0 0 16px"><div class="err-box">⚠️ '+esc(t.a.slice(7))+' — 잠시 후 다시 시도하거나 <a style="color:var(--t-point);font-weight:800;text-decoration:underline;cursor:pointer" onclick="go(\'settings\')">설정</a>에서 연결을 확인하세요.</div></div>';}else{h+='<div style="margin:0 0 16px"><div style="background:#fff;border:1px solid var(--t-line);border-radius:14px 14px 14px 4px;overflow:hidden"><div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--t-bg-b);border-bottom:1px solid var(--t-line)"><span style="font-size:var(--t6);font-weight:800;color:var(--t-point)">🧠 윤시현의 두뇌</span><span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+(t.eng||'')+'<button class="btn btn-ghost" style="padding:3px 8px;font-size:var(--t6)" onclick="copyText((BRAIN.hist['+i+']||{}).a||\'\')">📋 복사</button><button class="btn btn-ghost" style="padding:3px 8px;font-size:var(--t6)" onclick="brainExportWord('+i+')">📄 Word</button><button class="btn btn-ghost" style="padding:3px 8px;font-size:var(--t6)" onclick="brainExportPpt('+i+')">📊 PPT</button><button class="btn btn-ghost" style="padding:3px 8px;font-size:var(--t6)" onclick="brainStar('+i+')" title="이 답의 결을 다음부터 따라 쓰게 합니다">⭐ 이렇게</button></span></div>'+(t.note||'')+'<div class="result-body" style="padding:12px 14px">'+renderMd(t.a)+'</div></div></div>';}});el.innerHTML=h;el.scrollTop=el.scrollHeight;}
@@ -5698,7 +5721,10 @@ function bgptCardHtml(){
       '<b>「두뇌에 지식 추가」</b> 에 넣으십시오 — 여기서 뽑는 글에도 그대로 따라 나갑니다.</div>'+
     '</div></div>';
 }
-function renderBrain(){var chips=['오늘 상담 예정 고객, 어떤 순서로 상담할까?','기존 보험 해지 안 하려는 고객 반론 처리 화법','치료비 통장을 40대 가장에게 쉽게 설명하는 스크립트','종신보험 vs 정기보험, 자산가에게 어떻게 제안?','건강검진 앞둔 고객에게 보낼 카톡 문구','신입 팀원 1주차 코칭 계획','블로그 글감 10개 뽑아줘','상속·증여 관심 고객 첫 상담 질문 리스트'];var chipH=chips.map(function(c){return '<button type="button" class="chip-opt" onclick="brainAsk(this.textContent)">'+esc(c)+'</button>';}).join('');/* ★ 판 X169 · 영웅 띄를 뺀 자리 — 머리글이 한 말을 바로 밑에서 그대로 또 했습니다(낱말 열 중 열). 사장님 말씀 「윤시현의 두뇌도 그렇고 다 가독성이 떨어져 보기 쉽게 정리해야된」. 물어보는 칸을 맨 위로 올렸습니다 — 이 화면이 하는 일입니다. */var kb='<div class="card" style="margin-top:14px"><div class="card-hd" style="cursor:pointer" onclick="brainKbToggle()"><div class="card-title"><span class="ci">📚</span>두뇌에 지식 추가 <span id="brainKbState">'+brainKbBadge()+'</span></div><div class="card-desc">평소 쓰던 프롬프트·상담 노하우·자주 쓰는 문구를 저장하면 답변에 반영됩니다 (이 기기에만 저장)</div></div><div class="card-body" id="brainKbBox" style="display:none"><textarea id="brainKb" style="width:100%;min-height:160px;font-size:var(--t6);line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box" placeholder="예) 나의 상담 철학, 자주 쓰는 반론 처리 스크립트, 상품 설명 화법, 고객 유형별 접근법, 나만의 카톡 어투 샘플 등">'+osEsc(brainKbGet())+'</textarea><div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="brainSaveKb()">💾 지식 저장</button><button class="btn btn-ghost" onclick="brainSetLogoPick()">🖼 내보내기 로고</button><input type="file" id="brainLogoInput" accept="image/*" style="display:none" onchange="brainSetLogoFile(this)"><span style="font-size:var(--t6);color:var(--ink-5)">여러 번 나눠 추가해도 됩니다. 저장한 지식은 모든 답변의 최우선 지침이 됩니다. 로고를 넣으면 Word·PPT 문서 상단에 표시됩니다.</span></div></div></div>';var ask='<div class="card" style="margin-top:14px"><div class="card-body"><div id="brainThread" style="max-height:52vh;overflow-y:auto;margin-bottom:12px"></div><div class="fld span2"><textarea id="brainQ" style="width:100%;min-height:76px;font-size:var(--t6);line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box" placeholder="예) 오늘 만나는 50대 사업가 고객, 첫 마디를 어떻게 열까?" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key===\'Enter\')brainAsk()"></textarea></div><div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="brainAsk()">🧠 두뇌에게 물어보기</button><button class="btn btn-primary" id="bdAsk" style="background:#0F172A" onclick="brainAskPpt()">📊 물어보고 발표자료까지</button><button class="btn btn-ghost" onclick="BRAIN.hist=[];brainRenderThread();toast(\'대화를 비웠습니다\')">🗑 대화 비우기</button><span style="font-size:var(--t6);color:var(--ink-5)">Ctrl+Enter로 전송</span></div><div style="font-size:var(--t6);font-weight:700;color:var(--ink-3);margin:14px 0 7px">빠른 질문</div><div class="chips">'+chipH+'</div></div></div>';bxCss();return osPage('두뇌','윤시현의 두뇌','상담·세일즈·화법·마케팅·팀관리 — 무엇이든 물어보세요. 답은 그대로 발표자료(.pptx)로도 만듭니다.',ask+bcrCardHtml()+renderConsult()+kb+bgptCardHtml()+bxCardHtml()+bdCardHtml());}
+function renderBrain(){/* ★ 판 X169 · 영웅 띄를 뺀 자리 — 머리글이 한 말을 바로 밑에서 그대로 또 했습니다(낱말 열 중 열). 사장님 말씀 「윤시현의 두뇌도 그렇고 다 가독성이 떨어져 보기 쉽게 정리해야된」. 물어보는 칸을 맨 위로 올렸습니다 — 이 화면이 하는 일입니다. */var kb='<div class="card" style="margin-top:14px"><div class="card-hd" style="cursor:pointer" onclick="brainKbToggle()"><div class="card-title"><span class="ci">📚</span>두뇌에 지식 추가 <span id="brainKbState">'+brainKbBadge()+'</span></div><div class="card-desc">평소 쓰던 프롬프트·상담 노하우·자주 쓰는 문구를 저장하면 답변에 반영됩니다 (이 기기에만 저장)</div></div><div class="card-body" id="brainKbBox" style="display:none"><textarea id="brainKb" style="width:100%;min-height:160px;font-size:var(--t6);line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box" placeholder="예) 나의 상담 철학, 자주 쓰는 반론 처리 스크립트, 상품 설명 화법, 고객 유형별 접근법, 나만의 카톡 어투 샘플 등">'+osEsc(brainKbGet())+'</textarea><div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="brainSaveKb()">💾 지식 저장</button><button class="btn btn-ghost" onclick="brainSetLogoPick()">🖼 내보내기 로고</button><input type="file" id="brainLogoInput" accept="image/*" style="display:none" onchange="brainSetLogoFile(this)"><span style="font-size:var(--t6);color:var(--ink-5)">여러 번 나눠 추가해도 됩니다. 저장한 지식은 모든 답변의 최우선 지침이 됩니다. 로고를 넣으면 Word·PPT 문서 상단에 표시됩니다.</span></div></div></div>';/* ★ 판 X372 — 사장님 말씀 2026-11-06 「자비스 이제 윤시현의 두뇌랑 합쳐서」 · 고르신 것 「자비스로 흡수」.
+     묻는 칸은 자비스 <b>하나</b>입니다 — 자비스가 화면 길과 이 두뇌의 자세한 답을 한 카드에 띄웁니다.
+     이 화면은 지난 대화(Word · PPT · ⭐) · 지식 · 발표자료를 두는 곳으로 남습니다.
+     묻는 길(brainAnswer)은 한 벌이라 자비스에서 물은 것도 아래 지난 대화에 섭니다 (5번). */var ask='<div class="card" style="margin-top:14px"><div class="card-body"><div class="notice" style="margin:0 0 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between"><span style="font-size:var(--t5);line-height:1.6">🛰 <b>물어보기는 이제 자비스에서</b> — 자비스가 화면 길과 두뇌의 자세한 답(화법 · 순서 · 표)을 한 번에 띄웁니다.</span><button class="btn btn-primary" style="min-height:44px" onclick="go(\'apexmap\')">🛰 자비스에게 묻기</button></div><div style="font-size:var(--t6);font-weight:700;color:var(--ink-3);margin:0 0 7px">지난 대화 — 자비스에서 물은 것도 여기 섭니다</div><div id="brainThread" style="max-height:52vh;overflow-y:auto;margin-bottom:12px"></div><div class="btn-row" style="margin-top:10px"><button class="btn btn-ghost" onclick="BRAIN.hist=[];brainRenderThread();toast(\'대화를 비웠습니다\')">🗑 대화 비우기</button></div></div></div>';bxCss();return osPage('두뇌','윤시현의 두뇌','상담·세일즈·화법·마케팅·팀관리 — 무엇이든 물어보세요. 답은 그대로 발표자료(.pptx)로도 만듭니다.',ask+bcrCardHtml()+renderConsult()+kb+bgptCardHtml()+bxCardHtml()+bdCardHtml());}
 function osBrainAfterRender(){var t=$('brainQ');if(t)t.focus();brainRenderThread();if(typeof bdPaint==='function')bdPaint();if(typeof bcrEnsure==='function')bcrEnsure();}
 /* ════════ 두뇌 → DB 통합 CRM — 뇌를 따라가면 우리 DB 가 열린다 ════════
    두뇌는 잘 답했다. 그런데 그 답이 늘 허공에 떴다. 오늘 누구에게 걸어야
@@ -15308,7 +15334,7 @@ var TABS=[
    {id:'myperf',icon:'✍️',title:'내 업적 입력',cnt:'',ak:'홈'},
    {id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:'',ak:'오늘의 AI 비서'},
    {id:'voiceasst',icon:'🎙️',title:'음성 비서',cnt:'',ak:'오늘의 AI 비서'},
-   {id:'brain',icon:'🧠',title:'윤시현의 두뇌',cnt:'',ak:'윤시현의 두뇌'}
+   {id:'brain',icon:'🧠',title:'윤시현의 두뇌',cnt:'',hide:true,ak:'윤시현의 두뇌'}   /* 판 X372 — 자비스로 흡수 · 묻기는 자비스에서 · 이 화면은 찾기 칸 · 자비스 「두뇌 지식」 창에서 엽니다 */
  ]},
  {group:'내 고객',items:[
    {id:'clients',icon:'🗂️',title:'고객 365일',cnt:'',ak:'고객'},
@@ -21941,8 +21967,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-09 06:05';
-var APP_BUILD_NOTE='🏘 <b>약속을 잡을 때 같은 동네로 몰아 드립니다</b> (판 X382). ◾ 통화 기록에서 「상담」 을 고르면 그 분과 <b>같은 동네에 이미 잡힌 약속</b>(앞으로 2주)이 바로 밑에 섭니다. ◾ 누르면 그날 그 약속이 끝나는 시각으로 약속 칸이 채워집니다 — 같은 날 같은 동네에 붙여 잡으시면 길 위 시간이 줄어듭니다. ◾ 오가는 시간은 따로 보세요(지어 적지 않습니다).';
+var APP_BUILD='2026-11-09 06:20';
+var APP_BUILD_NOTE='🏘 <b>약속을 잡을 때 같은 동네로 몰아 드립니다</b> (판 X384). ◾ 통화 기록에서 「상담」 을 고르면 그 분과 <b>같은 동네에 이미 잡힌 약속</b>(앞으로 2주)이 바로 밑에 섭니다. ◾ 누르면 그날 그 약속이 끝나는 시각으로 약속 칸이 채워집니다 — 같은 날 같은 동네에 붙여 잡으시면 길 위 시간이 줄어듭니다. ◾ 오가는 시간은 따로 보세요(지어 적지 않습니다). ◾ 같이 실려 나가는 판: 교육자금 발표덱(판 X382 · X383) · 자비스 + 두뇌(판 X371).';
 
 
 
