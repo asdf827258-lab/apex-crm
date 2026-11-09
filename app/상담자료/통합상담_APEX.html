@@ -621,6 +621,11 @@ table.cmp.own tr.pt td.w:last-child{background:#bfe8d4}
 .lgd i.o s{background:#cfe0fb;border-color:#7fa9ee}
 .lgd i.x s{background:#fbd0d4;border-color:#ef8f98}
 .mini{font-size:11.5px;color:var(--ink3);font-weight:500;display:block}
+/* ⚠⚠ <b>칸(td·th) 자체에 .mini 를 달면 표가 깨집니다</b> (판 X386).
+   .mini 는 display:block 이라 칸이 <b>줄 밖으로 튀어나와</b> 흰 네모가 글자 위에
+   겹쳐 찍혔습니다 — 라이브 그림을 눈으로 보고 찾았습니다. 숫자만 봤으면 못 봅니다 (8번).
+   달러 칸이 든 쪽 셋(ecalc2t · ecalc2fx · ecalc3)에서 그랬습니다. */
+td.mini,th.mini{display:table-cell}
 #dcalc{background:linear-gradient(180deg,#eef1f4,#f2f4f6)}
 
 /* ═══ 통합 셸 ═══ */
@@ -789,6 +794,11 @@ body.present.showpanel #ecalc .fxbar{margin-top:14px}
   body.present #trackE .mile-wrap{margin-top:14px}
   body.present #trackE .mile td{padding:6px 10px}
   body.present #trackE .mile th{padding:0 10px 8px}
+  /* 🗣 줄마다 붙인 <b>작은 글씨</b>(환급률 · 까닭)를 발표에서는 <b>같은 줄로</b> 올립니다
+     (판 X386). .mini 는 display:block 이라 여덟 줄이면 여덟 줄이 더 생깁니다.
+     ★ 글자를 <b>버리지 않고</b> 자리만 바꿉니다 (6번) — 사장님은 제안서와 맞대 보셔야 합니다. */
+  body.present #trackE .mile td .mini{display:inline;margin-left:7px}
+  body.present #trackE .mile td:first-child .mini{display:inline;margin-left:6px}
   body.present #trackE .eduflow{margin-top:4px;gap:8px}
   /* 리드 줄간 1.72 → 1.55 · 글자 크기는 그대로(13px 바닥을 안 건드립니다) */
   body.present #trackE .sec-head .lead{line-height:1.5}
@@ -3655,10 +3665,27 @@ h2 em.e{color:var(--edu-d)}
     <div class="sec-head rv">
       <span class="ch e"><b>3장</b> 계산 &mdash; 시점마다</span>
       <h2>같은 돈인데 <em class="e">언제 찾느냐</em>로 갈립니다.</h2>
-      <p class="lead">위 금액을 <b>찾는 시점</b>별로 펼친 표입니다.</p>
+      <p class="lead">같은 돈이라도 <b>몇 년 두느냐</b>에 따라 이만큼 갈립니다.</p>
     </div>
     <div class="card rv" style="margin-top:16px">
       <div id="eMonBox2" data-emon="1"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 💰 <b>둘을 합치면 얼마</b> — 「언제 찾느냐」 표와 갈랐습니다 (판 X386).
+     ★ 한 쪽에 같이 두자 창을 넘었고, <b>묻는 것도 달랐습니다</b>.
+       글은 한 자도 안 버리고 쪽을 하나 더 두었습니다 (1번 · 6번).
+     ★ 셈은 위에서 이미 한 값을 그립니다 (5번). -->
+<section id="ecalc2sum">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="ch e"><b>3장</b> 계산 &mdash; 합치면</span>
+      <h2>나라가 주는 돈에 <em class="e">조금만 더하면</em> 이렇게 됩니다.</h2>
+      <p class="lead">지원금만으로도 되지만, <b>월 얼마</b>를 더하면 얼마가 되는지 나란히 보십니다.</p>
+    </div>
+    <div class="card rv" style="margin-top:16px">
+      <div id="eSumBox" data-emon="1"></div>
     </div>
   </div>
 </section>
@@ -3678,8 +3705,8 @@ h2 em.e{color:var(--edu-d)}
     <div class="sec-head rv">
       <span class="ch e"><b>3장</b> 계산 &mdash; 환차익</span>
       <h2>원화로 모았으면 여기까지입니다.<br><em class="e">달러로 모으면</em> 환율이 더 보탭니다.</h2>
-      <p class="lead">바닥에 깐 것은 <b>원화로 그냥 모았을 때</b>입니다 &mdash;
-        거기서 <b>상품이 불린 몫</b>과 <b>환율이 보탠 몫</b>을 갈라서 보십니다.</p>
+      <p class="lead">낸 돈에서 <b>상품이 불려 준 돈</b>과 <b>환율이 더해 준 돈</b>을
+        <b>따로 떼어</b> 보십니다.</p>
     </div>
     <div class="card rv" style="margin-top:16px">
       <div id="eFxGain"></div>
@@ -3714,8 +3741,7 @@ h2 em.e{color:var(--edu-d)}
     <div class="sec-head rv">
       <span class="ch e"><b>3장</b> 계산 — 언제 얼마</span>
       <h2>언제 얼마가 되는지,<br><em class="e">무엇으로 만들어진</em> 돈인지.</h2>
-      <p class="lead">같은 돈이 <b>해마다</b> 어떻게 쌓이는지, 그리고 그 금액이
-        <b>어느 지원금에서</b> 나온 것인지 쪼개서 보여 드립니다.</p>
+      <p class="lead">같은 돈이라도 <b>몇 해 두느냐</b>에 따라 손에 쥐는 돈이 달라집니다.</p>
     </div>
     <div class="card rv" style="margin-top:16px">
       <div id="eWhenBox"></div>
@@ -7030,6 +7056,49 @@ function eduAidPerMonth(c){
      거기서 얼마가 늘었나로 말한다 — 부모님은 원으로 셈하신다.
    ★ 셈하는 곳은 <b>여기 하나</b>다 (5번). 표·쪽·요약이 다 이것을 부른다.
    ═══════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   🗣 <b>설계사 말을 고객 말로</b> (판 X386 · 사장님 말씀
+   「내가 보았을때 <b>상담자료가 어렵다</b> 확 와닿고 쉽게 설명할수 있도록 해야지」)
+
+   라이브 그림을 눈으로 보고 찾았습니다 — 계산 쪽이 <b>설계사 말</b>로 적혀
+   있었습니다: 「환급률 133.74%」 「납입 재원」 「납입완료」 「원금 회복」
+   「5년 + 하루 ★」 「확정이율」 「유지보너스」. 고객은 이 말을 모릅니다.
+
+   ★ <b>말을 버리지 않습니다</b> (6번) — 고객 말을 <b>앞에</b> 세우고 설계사 말은
+     작은 글씨로 <b>그 자리에 남깁니다.</b> 사장님은 제안서와 맞대 보셔야 합니다.
+   ★ 옮기는 곳은 <b>여기 하나</b>입니다 (5번) — 쪽마다 따로 적으면 한쪽만 낡습니다.
+   ═══════════════════════════════════════════════════════════════ */
+/* 한 줄 요약에 쓰는 <b>짧은 시점 이름</b> — 태그 없이, 말하듯이. */
+function eWhenPlain(r){
+  const g = String(r && r.l).match(/유학 시점 \((\d+)세\)/);
+  return g ? ('아이 ' + g[1] + '살') : String((r && r.l) || '').replace(/\s*[·★].*$/, '');
+}
+/* 「환급률 133.74%」 → 「<b>1.34배</b>」. 백분율보다 배수가 바로 읽힙니다. */
+function eBae(rate){
+  /* ⚠ 1 미만을 「0.38배」 라고 적으면 한 박자 늦게 읽힙니다 — 「38%만」 이 바로 들어옵니다.
+     찍어서 눈으로 보고 고쳤습니다 (판 X386).
+     ⚠⚠ <b>반올림하면 거짓말이 됩니다</b> — 99.69% 를 「100%만」 이라 적어 버렸습니다.
+       100 을 못 넘었는데 100 이라 적으면 <b>원금을 넘었다</b>는 뜻이 됩니다 (1번).
+       <b>내림</b>합니다 — 99.69% → 「99%만」. 정확한 값은 바로 옆에 그대로 둡니다. */
+  return (rate < 100) ? (Math.floor(rate) + '%만') : ((rate/100).toFixed(2) + '배');
+}
+/* 시점 이름 — 설계사 말을 고객 말로. 뜻이 더 또렷해지는 자리만 손댑니다. */
+function eWhenName(label){
+  const M = {
+    '5년 · 납입완료'  : ['5년째', '다 넣은 해'],
+    '5년 + 하루 ★'   : ['5년하고 <b>하루 더</b>', '하루 차이로 뜁니다'],
+    '7년 · 원금 회복' : ['7년째', '낸 돈을 넘어섭니다'],
+    '8년 · 원금 회복' : ['8년째', '낸 돈을 넘어섭니다'],
+    '10년 + 하루 ★'  : ['10년하고 <b>하루 더</b>', '여기서 또 뜁니다'],
+    '15년 · 연금개시' : ['15년째', '연금으로 바꿀 수 있는 때']
+  };
+  if(M[label]) return M[label][0] + ' <span class="mini">' + M[label][1] + '</span>';
+  /* 「유학 시점 (19세)」 → 「아이 19살 — 유학 가는 해」 */
+  const g = String(label).match(/유학 시점 \((\d+)세\)/);
+  if(g) return '아이 <b>' + g[1] + '살</b> <span class="mini">유학 가는 해</span>';
+  return label;
+}
+
 function eduFxSplit(wonIn, rate, fxOut){
   const fin = EDU.fxIn > 0 ? EDU.fxIn : 0;
   const out = (fxOut == null) ? EDU.fxOut : fxOut;
@@ -7119,13 +7188,24 @@ function renderEduMon(){
     const now  = band.find(x=>x.now) || band[1];
     const 손 = now.fx < 0;
     fxBox.innerHTML = `
+      <!-- 🗣 <b>결론을 맨 위로</b> (판 X386). 처음에 「= 손에 쥐는 돈」 을 흐름의 넷째 칸으로
+           붙였더니 <b>네 칸이 한 줄에 안 들어가</b> 둘째 줄로 떨어져 어색하게 떠 있었습니다 —
+           찍어서 눈으로 보고 찾았습니다 (8번). 결론은 <b>맨 위 한 줄</b>이 제자리입니다. -->
+      <div style="background:var(--edu-l,#f3f0ff);border-radius:14px;padding:14px 18px;margin-bottom:16px">
+        <div style="font-size:15px;line-height:1.75;color:var(--ink1)">
+          낸 돈 <b>${ewon(m.won)}</b>이 ${eWhenPlain(at)}에
+          <b style="color:var(--edu-d);font-size:19px">${ewon(now.wonOut)}</b>이 됩니다.<br>
+          그중 <b>${now.fx>=0?'':'&minus;'}${ewon(Math.abs(now.fx))}</b>은
+          <b>${손?'환율이 깎은':'환율이 더해 준'}</b> 몫입니다.
+        </div>
+      </div>
       <div class="eduflow rv" style="margin-top:0">
-        <div class="b"><b>${ewon(m.won)}</b><span>원화로 그냥 모으면<br>월 ${enf(EDU.mon)}만원 &times; 60개월</span></div>
+        <div class="b"><b>${ewon(m.won)}</b><span>내가 낸 돈<br>월 ${enf(EDU.mon)}만원 &times; 60개월</span></div>
         <div class="ar">&rarr;</div>
-        <div class="b"><b>${now.prod>=0?'+':''}${ewon(now.prod)}</b><span>상품이 불린 몫<br>환급률 ${at.rt.toFixed(2)}%</span></div>
+        <div class="b"><b>${now.prod>=0?'+':''}${ewon(now.prod)}</b><span>상품이 불려 준 돈<br>낸 돈의 ${eBae(at.rt)}</span></div>
         <div class="ar">&rarr;</div>
-        <div class="b${손?'':' hot'}"${손?' style="background:#fff4f4;border-color:#f3c9c9"':''}><b>${now.fx>=0?'+':''}${ewon(now.fx)}</b>
-          <span>${손?'환율이 <b>깎은</b> 몫':'환율이 <b>보탠</b> 몫 &mdash; 환차익'}<br>
+        <div class="b${손?'':' hot'}"${손?' style="background:#fff4f4;border-color:#f3c9c9"':''}><b${손?' style="color:var(--red)"':''}>${now.fx>=0?'+':''}${ewon(now.fx)}</b>
+          <span>${손?'환율이 깎은 돈':'환율이 더해 준 돈'}<br>
           ${enf(EDU.fxIn)}원 &rarr; ${enf(now.fxOut)}원</span></div>
       </div>
       ${Math.round(now.fx)===0 ? `<div class="hint" style="margin:12px 0 0">
@@ -7134,8 +7214,8 @@ function renderEduMon(){
         움직이시면 아래 세 줄이 그 자리에서 따라옵니다.</div>` : ''}
 
       <div class="mile-wrap" style="margin-top:16px"><table class="mile">
-        <thead><tr><th>유학 시점 환율</th><th>받는 금액 <span class="mini">원화</span></th>
-          <th>달러</th><th>상품이 불린 몫</th><th>환율이 보탠 몫 <span class="mini">환차익</span></th></tr></thead>
+        <thead><tr><th>아이 ${EDU.go}살 때 환율이</th><th>그때 손에 쥐는 돈 <span class="mini">원화</span></th>
+          <th>달러로는</th><th>상품이 불려 준 돈</th><th>환율이 더해 준 돈 <span class="mini">환차익</span></th></tr></thead>
         <tbody>${band.map(r=>`
           <tr class="${r.now?'key':''}">
             <td>${r.k} <span class="mini">${enf(r.fxOut)}원</span></td>
@@ -7181,17 +7261,27 @@ function renderEduMon(){
   const monBox2 = $e('#eMonBox2');
   if(monBox2) monBox2.innerHTML = `
     <div class="card rv" style="margin-top:16px;background:#fbfaff;border:1px solid #e6e0f2">
+      <!-- 🗣 <b>한 줄 요약</b> (판 X386) — 표를 들여다보기 전에 <b>무엇을 보라는 것인지</b>
+           한 문장으로 못 박습니다. 여덟 줄 × 여섯 칸을 그냥 펼치면 고객은 어디를 볼지
+           모릅니다. 숫자는 아래 표에서 그대로 가져옵니다 — 두 번 안 셉니다 (5번). -->
+      <div style="background:var(--edu-l,#f3f0ff);border-radius:14px;padding:14px 18px;margin-bottom:14px">
+        <div style="font-size:15px;line-height:1.75;color:var(--ink1)">
+          <b>5년만 두면 ${ewon(rows[0].won)}</b>입니다. 그런데 <b style="color:var(--edu-d)">${eWhenPlain(at)}까지 두면 ${ewon(at.won)}</b>이 됩니다.<br>
+          <b>같은 돈입니다 &mdash; 넣은 시간만 다릅니다.</b>
+        </div>
+      </div>
       <div class="mile-wrap" style="margin-top:0"><table class="mile">
         <!-- <b>원화가 먼저</b>입니다 — 부모님은 「달러로 얼마」가 아니라 「원으로 얼마」로 셈하십니다.
              달러는 그 뒤에 그대로 둡니다. 없애지 않습니다 — 제안서가 달러로 적혀 있어
              둘을 맞대 보셔야 합니다 (1번). -->
-        <thead><tr><th>찾는 시점</th><th>환급률</th><th>받는 금액 <span class="mini">원화 (${enf(EDU.fxOut)}원)</span></th>
-          <th>달러</th><th>상품이 불린 몫</th><th>환율이 보탠 몫 <span class="mini">환차익</span></th></tr></thead>
+        <thead><tr><th>언제 찾느냐</th><th>낸 돈의 <span class="mini">환급률</span></th>
+          <th>그때 손에 쥐는 돈 <span class="mini">원화 · ${enf(EDU.fxOut)}원 기준</span></th>
+          <th>달러로는</th><th>상품이 불려 준 돈</th><th>환율이 더해 준 돈 <span class="mini">환차익</span></th></tr></thead>
         <tbody>${rows.map(r=>`
           <tr class="${r.key?'key':''}">
-            <td>${r.l}${r.est?' <span class="mini">표 범위 밖</span>':''}</td>
+            <td>${eWhenName(r.l)}${r.est?' <span class="mini">표 범위 밖</span>':''}</td>
             <td class="${r.rt>=100?'up':''}" ${r.rt<100?'style="color:var(--red)"':''}>
-              <b>${r.rt.toFixed(2)}%</b>${r.est?'<span class="mini">추정</span>':''}</td>
+              <b>${eBae(r.rt)}</b><span class="mini">환급률 ${r.rt.toFixed(2)}%${r.est?' · 추정':''}</span></td>
             <td><b>${ewon(r.won)}</b></td>
             <td class="mini">${eusd(r.usd)}</td>
             <td class="${r.prod>=0?'up':''}" ${r.prod<0?'style="color:var(--red)"':''}>
@@ -7200,25 +7290,39 @@ function renderEduMon(){
               <b>${r.fx>=0?'+':''}${ewon(r.fx)}</b></td></tr>`).join('')}</tbody>
       </table></div>
 
-      <div style="margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 15px">
-        <div style="font-size:12.5px;font-weight:800;color:var(--edu-d);margin-bottom:6px">지원금과 나란히 보면</div>
-        <div style="font-size:12.5px;color:var(--ink2);line-height:1.8">
-          지원금으로 넣는 재원 ${ewon(c.premWon)} 은 5년으로 나누면 <b>월 ${ewon(aid)}</b> 꼴입니다.
-          여기에 <b>월 ${enf(EDU.mon)}만원</b>을 더하면 실제로는
-          <b style="color:var(--edu-d)">월 ${ewon(aid + EDU.mon*10000)}</b> 짜리 설계가 됩니다.<br>
-          유학 시점(${c.years}년)에 받는 금액은
-          지원금 몫 ${eusd(c.usd)} + 추가납입 몫 ${eusd(at.usd)}
-          = <b style="color:var(--edu-d)">${eusd(c.usd + at.usd)}</b>
-          <span class="kw">약 ${ewon((c.usd + at.usd)*EDU.fxOut)}</span> 입니다.
-        </div>
-      </div>
-
-      <div style="margin-top:12px;font-size:11.5px;color:var(--ink4);line-height:1.7">
-        ※ 환급률은 <b>메트 보험나이 45세 &middot; AIA 40세 제안서</b> 기준을 그대로 쓴 것입니다.
-        나이와 가입금액이 다르면 곡선도 달라지므로 <b>구조를 보는 용도</b>이고 확정 금액이 아닙니다.
-        정확한 금액은 해당 조건으로 제안서를 다시 뽑아 확인하십시오.
-        외화보험은 환율에 따라 원금 손실이 생길 수 있습니다.</div>
     </div>`;
+
+  /* 💰 <b>둘을 합치면 얼마</b> — 제 쪽(ecalc2sum)으로 보냈습니다 (판 X386).
+     ★ 한 쪽에 「언제 찾느냐」 표와 「지원금과 합치면」 을 같이 두자 창을 넘었고,
+       <b>묻는 것도 달랐습니다</b> — 앞은 「시점」, 여기는 「합치면 얼마」.
+       <b>글은 한 자도 안 버리고</b> 쪽을 하나 더 두었습니다 (1번 · 6번).
+     ★ aid·at·c 는 위에서 이미 센 값입니다 — 두 번 안 셉니다 (5번).
+     ★ <b>원화가 먼저</b>입니다 — 전에는 「$23,432 + $54,073 = $77,504」 로
+       달러가 큰 글자였습니다. 부모님은 원으로 셈하십니다 (사장님 말씀). */
+  const sumBox = $e('#eSumBox');
+  if(sumBox) sumBox.innerHTML = `
+    <div class="eduflow rv" style="margin-top:0">
+      <div class="b"><b>월 ${ewon(aid)}</b><span>나라가 주는 돈에서<br>${ewon(c.premWon)} &divide; 5년</span></div>
+      <div class="ar">+</div>
+      <div class="b"><b>월 ${enf(EDU.mon)}만원</b><span>내가 더 넣는 돈</span></div>
+      <div class="ar">=</div>
+      <div class="b hot"><b>월 ${ewon(aid + EDU.mon*10000)}</b><span>실제로는 이만큼짜리<br>설계가 됩니다</span></div>
+    </div>
+
+    <div style="margin-top:18px;background:#fbfaff;border:1px solid #e6e0f2;border-radius:14px;padding:16px 18px">
+      <div style="font-size:14.5px;color:var(--ink1);line-height:1.85">
+        그래서 아이 <b>${EDU.go}살</b>에 손에 쥐는 돈은 &mdash;<br>
+        나라가 준 몫 <b>${ewon(c.usd*EDU.fxOut)}</b> + 내가 넣은 몫 <b>${ewon(at.usd*EDU.fxOut)}</b>
+        = <b style="color:var(--edu-d);font-size:19px">${ewon((c.usd + at.usd)*EDU.fxOut)}</b>
+        <span class="kw">설계사용 · ${eusd(c.usd)} + ${eusd(at.usd)} = ${eusd(c.usd + at.usd)}</span>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;font-size:11.5px;color:var(--ink4);line-height:1.7">
+      ※ 환급률은 <b>메트 보험나이 45세 &middot; AIA 40세 제안서</b> 기준을 그대로 쓴 것입니다.
+      나이와 가입금액이 다르면 곡선도 달라지므로 <b>구조를 보는 용도</b>이고 확정 금액이 아닙니다.
+      정확한 금액은 해당 조건으로 제안서를 다시 뽑아 확인하십시오.
+      외화보험은 환율에 따라 원금 손실이 생길 수 있습니다.</div>`;
 }
 
 /* 언제 찾느냐 — 같은 돈인데 시점 하나로 금액이 갈린다 */
@@ -7255,19 +7359,24 @@ function renderEdu(){
     <div class="pn">국가 지원금만으로 만드는 유학 자금</div>
     <div class="sub2">새로 내는 돈 없이, 받는 돈의 방향만 바꿉니다</div>
     <div class="split">
-      <div><div class="lbl">받게 될 지원금 총액</div>
+      <!-- ⚠⚠ <b>두 숫자가 서로 다른 돈이었습니다</b> (판 X386 · 라이브 그림을 눈으로 보고 찾았습니다).
+           왼쪽은 19년간 받는 지원금 <b>전부</b>, 오른쪽은 그중 <b>5년치만</b> 상품에 넣었을 때입니다.
+           그런데 나란히 큰 글자로 서 있어 「3,080 → 3,983」 한 덩어리로 읽혔습니다.
+           숫자는 한 자도 안 바꾸고, <b>무엇을 넣은 것인지 이름표에 먼저</b> 적습니다 (1번). -->
+      <div><div class="lbl">${EDU.age}세~${EDU.go}세에 나라에서 받는 돈</div>
         <div class="big">${ewon(c.paid)}</div>
-        <div class="sm">${EDU.age}세부터 ${EDU.go}세까지 실제로 통장에 들어올 돈입니다.</div></div>
+        <div class="sm">${EDU.age}세부터 ${EDU.go}세까지 실제로 통장에 들어올 돈입니다.<br>
+          이 중 <b style="color:#fff">처음 5년치 ${ewon(c.premWon)}</b>을 달러로 옮겨 둡니다.</div></div>
       <!-- <b>원화가 큰 글자</b>입니다 — 부모님이 유학비를 셈하시는 단위는 원입니다.
            달러는 바로 아래 괄호로 그대로 둡니다. 없애지 않습니다 — 제안서가 달러라
            둘을 맞대 보셔야 합니다 (1번). 환율을 움직이면 큰 글자가 같이 바뀝니다. -->
-      <div><div class="lbl">달러 상품에서 찾을 때 (${EDU.go}세 · ${c.years}년 경과)</div>
+      <div><div class="lbl">그 ${ewon(c.premWon)}이 아이 ${EDU.go}살에</div>
         <div class="big ${c.rate>=100?'g':''}" ${c.rate<100?'style="color:var(--red)"':''}>${ewon(c.usd*EDU.fxOut)}</div>
-        <div class="sm"><b style="color:#fff">(${eusd(c.usd)})</b>
-          <span class="kw">· 나올 때 ${enf(EDU.fxOut)}원 기준</span><br>
-          환급률 <b>${c.rate.toFixed(2)}%</b> 적용
-          &mdash; ${EDU.prod==='met'?'메트라이프 백만달러':'AIA 글로벌 파워'} 5년납 제안서 표<br>
-          납입 재원 ${ewon(c.premWon)} (넣을 때 ${enf(fxNow)}원 → ${eusd(c.premUsd)})</div></div>
+        <div class="sm"><b style="color:#fff">낸 돈의 ${eBae(c.rate)}</b>
+          <span class="kw">· ${eusd(c.usd)} · 나올 때 ${enf(EDU.fxOut)}원 기준</span><br>
+          <span class="kw" style="display:block;line-height:1.65">설계사용 &middot; 환급률 ${c.rate.toFixed(2)}%
+          &middot; ${EDU.prod==='met'?'메트 백만달러':'AIA 글로벌 파워'} 5년납 제안서 표<br>
+          납입 재원 ${ewon(c.premWon)} &rarr; ${eusd(c.premUsd)} (넣을 때 ${enf(fxNow)}원)</span></div></div>
     </div>
     `;
 
@@ -7333,22 +7442,29 @@ function renderEdu(){
     <div class="card" style="margin-top:22px;background:#fbfaff;border:1px solid #e6e0f2">
       <div style="font-size:16px;font-weight:800;letter-spacing:-.03em">
         언제 찾느냐가 얼마를 받느냐를 정합니다</div>
-      <div style="font-size:12.5px;color:var(--ink3);margin:6px 0 16px;line-height:1.7">
-        납입 재원 <b>${ewon(c.premWon)}</b>(= ${eusd(c.premUsd)} · 넣을 때 ${enf(EDU.fxIn)}원)를 넣었을 때,
-        <b>찾는 시점</b>별 환급률과 수령액입니다. ${scenTxt} 기준.
-        ${EDU.prod==='met'?'메트는 <b>5년 + 하루</b>와 <b>10년 + 하루</b>에 유지보너스가 붙어 환급률이 계단처럼 뜁니다 &mdash; 하루 차이로 갈립니다.':''}
+      <!-- 🗣 <b>쉬운 말로</b> (판 X386) — 전에는 「납입 재원 2,600만원(= $17,520 · 넣을 때
+           1,484원)를 넣었을 때, 찾는 시점별 환급률과 수령액입니다. 확정이율 기준.」 이었습니다.
+           고객이 읽고 알 수 없는 말입니다. 설계사 말은 <b>작은 글씨로 그 자리에</b> 남깁니다 (6번). -->
+      <div style="font-size:14.5px;color:var(--ink1);margin:8px 0 14px;line-height:1.8">
+        지원금에서 <b>${ewon(c.premWon)}</b>을 떼어 달러로 옮겨 두면,
+        <b>언제 찾느냐</b>에 따라 손에 쥐는 돈이 이렇게 달라집니다.
+        ${EDU.prod==='met'?'<br><b style="color:var(--edu-d)">「5년하고 하루 더」 가 중요합니다</b> &mdash; 그 하루에 보너스가 붙어 돈이 <b>한 번에 뜁니다.</b>':''}
+      </div>
+      <div style="font-size:11.5px;color:var(--ink4);margin:-6px 0 10px;line-height:1.6">
+        설계사용 &middot; 납입 재원 ${ewon(c.premWon)} = ${eusd(c.premUsd)} (넣을 때 ${enf(EDU.fxIn)}원) &middot; ${scenTxt} 기준${EDU.prod==='met'?' &middot; 5년+1일 · 10년+1일 유지보너스로 환급률 계단 상승':''}
       </div>
       <div class="mile-wrap"><table class="mile">
         <!-- <b>원화가 먼저</b>입니다 — 부모님은 「달러로 얼마」가 아니라 「원으로 얼마」로 셈하십니다.
              달러는 그 뒤에 그대로 둡니다. 없애지 않습니다 — 제안서가 달러로 적혀 있어
              둘을 맞대 보셔야 합니다 (1번). -->
-        <thead><tr><th>찾는 시점</th><th>환급률</th><th>받는 금액 <span class="mini">원화 (${enf(EDU.fxOut)}원)</span></th>
-          <th>달러</th><th>납입 재원 대비</th></tr></thead>
+        <thead><tr><th>언제 찾느냐</th><th>낸 돈의 <span class="mini">환급률</span></th>
+          <th>그때 손에 쥐는 돈 <span class="mini">원화 · ${enf(EDU.fxOut)}원 기준</span></th>
+          <th>달러로는</th><th>낸 돈보다 <span class="mini">${ewon(c.premWon)} 기준</span></th></tr></thead>
         <tbody>${W.map(r=>{
           const diff = r.won - c.premWon;
           return `<tr class="${r.key?'key':''}">
-            <td>${r.l}${r.est?' <span class="mini">표 범위 밖</span>':''}</td>
-            <td class="${r.rt>=100?'up':''}" ${r.rt<100?'style="color:var(--red)"':''}><b>${r.rt.toFixed(2)}%</b>${r.est?'<span class="mini">추정</span>':''}</td>
+            <td>${eWhenName(r.l)}${r.est?' <span class="mini">표 범위 밖</span>':''}</td>
+            <td class="${r.rt>=100?'up':''}" ${r.rt<100?'style="color:var(--red)"':''}><b>${eBae(r.rt)}</b><span class="mini">환급률 ${r.rt.toFixed(2)}%${r.est?' · 추정':''}</span></td>
             <td><b>${ewon(r.won)}</b></td>
             <td class="mini">${eusd(r.usd)}</td>
             <td class="${diff>=0?'up':''}" ${diff<0?'style="color:var(--red)"':''}>
@@ -8417,7 +8533,7 @@ const DECK = {
      ⚠ 뺄 수 있게 된 까닭 — 교육자금은 다섯 갈래 중 <b>혼자 .panel 이
        없어</b> 발표 중 「⚙ 조건」 이 <b>죽은 단추</b>였습니다. 그래서 입력
        폼이 쪽으로 서 있어야 했습니다. 단추를 살리고 쪽을 뺍니다. */
-  e:['coverE','eprob','enews','ewhy','e1','e2','ecalc2','ecalc2k','ecalc2b','ecalc2t','ecalc2fx','ecalc2fx2',
+  e:['coverE','eprob','enews','ewhy','e1','e2','ecalc2','ecalc2k','ecalc2b','ecalc2t','ecalc2sum','ecalc2fx','ecalc2fx2',
      'ecalc3','ecalc3n','ecalc3b','eimf','eimf2','eimf2b','eimf3',
      'eplan','eplan2','close'],
   c:['coverC','cp1','cp1x','cp1a','cp1b','cp1c','cp2','cp3','cpmoney','cpmoney2',
