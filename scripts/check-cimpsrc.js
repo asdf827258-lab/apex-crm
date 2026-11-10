@@ -165,7 +165,7 @@ const 판 = async (b, PORT, withGrp) => {
      (S.쓴글['insert saved_reports'] || 0) + '번)');
   is(S.meta.length === 6,
      '  여섯 분의 갈래가 다 적혔다 (받음 ' + S.meta.length + ')');
-  const 적힌갈래 = S.meta.map(x => (x.content || {}).src || '(빈)').sort();
+  const 적힌갈래 = S.meta.map(x => (x.content || {}).xsrc || '(빈)').sort();
   is(JSON.stringify(적힌갈래) === JSON.stringify(GRP.slice().sort()),
      '  ★ 갈래가 <b>제 사람에게</b> 붙었다 — ' + 적힌갈래.join(','));
 
@@ -203,7 +203,7 @@ const 판 = async (b, PORT, withGrp) => {
     const r = window.__ROWS();
     return { ok: true, n: r.n, t: r.t, f: (typeof CLI_F !== 'undefined') ? CLI_F : '?' };
   });
-  is(F.ok && F.f === 'src:세미나' && F.n === 2,
+  is(F.ok && F.f === 'xsrc:세미나' && F.n === 2,
      '  ★★ 「세미나」 를 누르면 <b>두 줄만</b> 남는다 (칸 ' + F.f + ' · 줄 ' + F.n + ')');
   is(F.ok && F.t.indexOf('홍길동') < 0 && /이몽룡|성춘향/.test(F.t),
      '  ★ 남은 두 줄이 <b>그 갈래 분들</b>이다 — ' + String(F.t || '').slice(0, 70));
@@ -220,6 +220,43 @@ const 판 = async (b, PORT, withGrp) => {
   });
   is(Q.n === 2, '  「인터넷DB」 라고 치면 <b>두 분</b>이 뜬다 (받음 ' + Q.n + ')');
   is(/홍말순|임꺽정/.test(Q.t), '  ★ 그 갈래 분들이다 — ' + String(Q.t || '').slice(0, 60));
+
+  /* ⚠⚠ <b>하마터면 줄과 카드가 다른 말을 할 뻔했습니다</b> (판 X394) —
+     처음에 갈래를 client_meta 의 <b>'src'</b> 에 썼는데, 그 칸은 이미
+     「어디서 오셨나(소개·지인·개척)」 가 쓰는 <b>열쇠 칸</b>이었습니다.
+     고객 카드는 cregSrcName(m.src) 로 그 열쇠를 사람 말로 바꿔 적으므로,
+     「지인소개」 같은 날글을 넣으면 카드가 <b>빈칸</b>이 됩니다.
+     칸을 'xsrc' 로 갈랐고, 여기서 <b>카드도 같은 말을 하는지</b> 봅니다 (5번). */
+  console.log('\n[9] ★★ 고객 카드도 줄과 <b>같은 말</b>을 하는가');
+  const K = await A.p.evaluate(async () => {
+    const id = (window.__DB.clients[0] || {}).id;
+    /* 여는 함수는 <b>cusGo 하나</b>입니다 (판 X161) */
+    /* 「어디서 오셨나」·「엑셀 갈래」 는 <b>정보</b> 탭에 섭니다 (CUS_TABS) */
+    try { cusGo({ cli: id, tab: 'info' }); } catch (e) {}
+    await new Promise(r => setTimeout(r, 2400));
+    /* ⚠ 창(#cusWin) <b>안에서만</b> 읽습니다 — body 를 통째로 읽으면 서랍
+       메뉴 글이 잡혀 헛것이 됩니다 (이 판에서 두 번 밟은 자리입니다 · 8번) */
+    const w = document.getElementById('cusWin');
+    const t = w ? (w.innerText || '').replace(/\s+/g, ' ') : '';
+    return { 창: !!w, 갈래: /엑셀 갈래 지인소개/.test(t),
+             어디: (t.match(/어디서 오셨나[^·]{0,16}/) || [''])[0],
+             /* ★ 제가 실제로 저지른 그 실수 — 날글을 'src' 에 쓰지 않았나 */
+             src: ((CM.meta || {})[id] || {}).src || '',
+             토막: (t.match(/엑셀 갈래[^·]{0,16}/) || [''])[0],
+             글: t.slice(0, 160) };
+  });
+  is(K.창, '  고객 창이 열린다 (#cusWin)');
+  is(K.갈래, '  ★★ 카드가 「<b>엑셀 갈래 — 지인소개</b>」 라고 적는다 — 「' +
+     (K.토막 || ('(한 자도 안 적습니다) · 창 글: ' + K.글)) + '」');
+  /* ⚠⚠ <b>제가 실제로 저지른 실수를 그대로 묻습니다</b> (판 X394) — 갈래를
+     'src' 에 쓰면 그 칸은 CREG_SRC 의 <b>열쇠</b>(ref·kin·new·old)를 담는
+     자리라 cregSrcName 이 빈 글자를 돌려주고, 카드의 「어디서 오셨나」 가
+     <b>빈칸</b>으로 섭니다. 엑셀 갈래는 'xsrc' 에만 적혀야 합니다 (5번). */
+  is(K.src === '',
+     '  ★★ 엑셀 갈래를 <b>「어디서 오셨나」 칸(src)에 쓰지 않는다</b> — 거기 쓰면 '
+     + '카드가 빈칸이 됩니다 (받음 「' + K.src + '」)');
+  is(!/어디서 오셨나\s*$/.test(K.어디.trim()),
+     '  ★ 「어디서 오셨나」 가 <b>빈칸으로 서지 않는다</b> — 「' + (K.어디 || '(엑셀로 넣은 분이라 그 줄 자체가 없습니다 — 맞습니다)') + '」');
 
   console.log('\n[7] 조용한가');
   is(A.errs.length === 0, A.errs.length ? ('  콘솔 에러 — ' + A.errs.slice(0, 2).join(' / ')) : '  콘솔에 에러가 없다');
@@ -242,6 +279,53 @@ const 판 = async (b, PORT, withGrp) => {
   is(!/🗂/.test(N.글), '  ★ 줄에도 「🗂」 가 안 붙는다 — ' + N.글.slice(0, 60));
   is(B.errs.length === 0, B.errs.length ? ('  콘솔 에러 — ' + B.errs.slice(0, 2).join(' / ')) : '  콘솔에 에러가 없다');
   await B.ctx.close();
+
+  /* ══ [8] 새로 켰을 때 — 갈래가 <b>서버에서 돌아오나</b> ═══════════════
+     가져온 직후에만 보이고 다음 날 아침에 사라지면 못 쓰는 기능입니다.
+     여기서는 <b>가져오기를 아예 안 하고</b>, 서버에 이미 갈래가 적혀 있는
+     판으로 고객 365일을 엽니다 — 켤 때마다 지나는 길 그대로입니다. */
+  console.log('\n[8] ★★ 새로 켜도 갈래가 돌아오는가 (서버에서 읽어 오나)');
+  const Cx = await b.newContext({ viewport: { width: 430, height: 950 } });
+  await Cx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
+  const px = await Cx.newPage();
+  const ex = [];
+  px.on('pageerror', e => ex.push(String(e).slice(0, 160)));
+  await px.goto('http://127.0.0.1:' + PORT + '/app/index.html');
+  await px.waitForTimeout(2500);
+  await px.evaluate(() => document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove()));
+  await px.evaluate(SEED);
+  await px.waitForTimeout(900);
+  await 줄글심기(px);
+  await px.evaluate((g) => {
+    /* 어제 넣어 둔 세 분 — clients 와 client_meta 가 서버에 이미 있습니다 */
+    g.forEach((v, i) => {
+      const id = 'old-' + i;
+      window.__DB.clients.push({ id: id, advisor_id: 'me', name_masked: '홍○○',
+        created_at: '2026-11-01T00:00:00.000Z', consent_status: 'none' });
+      window.__DB.saved_reports.push({ id: 'r-' + i, advisor_id: 'me', client_id: id,
+        kind: 'client_meta', title: '고객 관리', content: { xsrc: v } });
+    });
+    OSC.loaded = false; OSC.busy = false; CM.loaded = false;
+    try { osLoadClients(); } catch (e) {}
+    try { cmLoadAll(); } catch (e) {}
+  }, UNIQ);
+  await px.waitForTimeout(1200);
+  await px.evaluate(() => { try { go('clients'); } catch (e) {} });
+  await px.waitForTimeout(2400);
+  const X = await px.evaluate((g) => {
+    const r = window.__ROWS();
+    const row = document.getElementById('cliFSrcChips');
+    return { n: r.n, 칩: row ? [...row.querySelectorAll('.t-chip')].map(x => (x.innerText || '').replace(/\s+/g, ' ')) : [],
+             보임: g.filter(x => r.t.indexOf('🗂 ' + x) >= 0), 글: r.t.slice(0, 120) };
+  }, UNIQ);
+  is(X.n === 3, '  어제 넣은 세 분이 선다 (받음 ' + X.n + ')');
+  is(X.보임.length === 3,
+     '  ★★ 가져오기를 안 했는데도 줄에 <b>갈래가 돌아온다</b> — ' +
+     (X.보임.join(',') || '(안 돌아옵니다 · 「' + X.글 + '」)'));
+  is(JSON.stringify(X.칩) === JSON.stringify(UNIQ.map(x => x + ' 1')),
+     '  ★ 갈래 칩도 선다 — ' + (X.칩.join(' / ') || '(없음)'));
+  is(ex.length === 0, ex.length ? ('  콘솔 에러 — ' + ex.slice(0, 2).join(' / ')) : '  콘솔에 에러가 없다');
+  await Cx.close();
 
   await b.close(); srv.close();
   console.log('\n──────────────────────────────');
