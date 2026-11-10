@@ -237,7 +237,8 @@ node scripts/run-checks.js --only nav,공지   # 이름에 그 글자가 든 것
 - `scripts/check-egress.js` 가 이것을 본다.
 - **점검도 진짜 서버를 부르지 않는다.** CI 점검이 가짜 id 로 하루 수천 번 불렀다(2026-11-10).
   `run-checks` 로 돌리면 `scripts/lib-netguard.js` 가 점검 브라우저의 `*.supabase.co` 를
-  한 곳에서 끊는다 — 자를 `node scripts/check-x.js` 로 바로 돌리면 **안 끊긴다**.
+  한 곳에서 끊는다(주소 단계 — 창 묶음 route 로 막으면 인쇄용 빈 창이 깨진다) —
+  자를 `node scripts/check-x.js` 로 바로 돌리면 **안 끊긴다**.
   가짜 서버는 `route.fulfill` 로 짓는다(그것은 그대로 된다). `check-ciguard` 가 본다.
 
 ## 8. 점검을 먼저 쓴다

@@ -12,10 +12,11 @@
          supabase.com 안내 주소 · localhost 는 안 끊는다 (8번 — 헛것을 막지 않게)
      [3] ★★ <b>막은 판</b> — 진짜 브라우저로 다섯 길(손잡이 없음 · 자가 다 흘림 · fallback ·
          창 안 fetch · route.fetch)을 다 해 봐도 <b>서버에 0번</b> 닿는다
-         · 자가 지어 준 가짜 답(fulfill)은 그대로 · localhost 도 그대로
+         · 자가 지어 준 가짜 답(fulfill)은 그대로 · localhost 도 그대로 · 인쇄용 빈 창도 그대로
      [4] ★ <b>안 막은 판</b> — 같은 시험이 <b>닿는 것을 본다</b> (안 울리는 알람이 아니게 · 8번)
    ★ 진짜 서버를 <b>한 번도 안 부릅니다</b> — 브라우저에게 「*.supabase.co 는 이 컴퓨터」 라고
      일러 두고(host-resolver-rules) 여기 세운 작은 서버가 받습니다. 프록시도 끕니다.
+     막개는 제 규칙을 <b>맨 앞</b>에 두므로 막은 판에서는 그 「이 컴퓨터」 약속이 집니다.
    ⚠ 되돌림 — run-checks 에서 NODE_OPTIONS 줄을 빼면 [1] 이, lib-netguard 의 끊개를 빼면 [3] 이 웁니다.
    ══════════════════════════════════════════════════════════════════ */
 const http = require('http'), fs = require('fs'), path = require('path'), cp = require('child_process');
@@ -64,12 +65,19 @@ const go = (p, u) => p.goto(u, { timeout: 8000 }).then(x => 'ok ' + x.status()).
     catch (e) { R.fWhy = String(e.message).slice(0, 80); try { await r.abort(); } catch (x) {} } });
   R.f = await go(p5, H + '/f');
   }
+  /* 인쇄용 빈 창(about:blank) — 창 묶음에 가로채기를 걸면 여기서 ui.css 가 안 내려옵니다(check-uiprint · 판 X398 에서 물림) */
+  const c6 = await b.newContext(); const p6 = await c6.newPage(); await p6.goto('http://127.0.0.1:' + P + '/ok');
+  const [pop] = await Promise.all([p6.waitForEvent('popup'), p6.evaluate(P => { const w = window.open('', '_blank');
+    w.document.write('<link rel=stylesheet href="http://127.0.0.1:' + P + '/pop.css"><p id=x>x</p>'); w.document.close(); }, P)]);
+  R.pop = await pop.waitForFunction(() => getComputedStyle(document.getElementById('x')).color === 'rgb(255, 0, 0)', null, { timeout: 6000 }).then(() => 'ok').catch(() => 'X');
   await b.close(); console.log('@@' + JSON.stringify(R));
 })().catch(e => { console.log('@@' + JSON.stringify({ err: String(e.message || e) })); });`;
 
 (async () => {
   const hits = [];
-  const srv = http.createServer((q, s) => { if (q.url !== '/ok') hits.push(q.url); s.writeHead(200, { 'content-type': 'text/plain' }); s.end('ok'); });
+  const srv = http.createServer((q, s) => {
+    if (q.url === '/pop.css') { s.writeHead(200, { 'content-type': 'text/css' }); s.end('#x{color:#f00}'); return; }
+    if (q.url !== '/ok') hits.push(q.url); s.writeHead(200, { 'content-type': 'text/plain' }); s.end('ok'); });
   await new Promise(r => srv.listen(0, '127.0.0.1', r));
   const PORT = srv.address().port;
   const run = (guard) => new Promise(res => {
@@ -93,6 +101,7 @@ const go = (p, u) => p.goto(u, { timeout: 8000 }).then(x => 'ok ' + x.status()).
   is(/lib-netguard/.test(A.R.fWhy || ''), '  route.fetch()(node 쪽에서 부르는 길) — 끊김 · ' + (A.R.fWhy || ''));
   is(/^ok 200/.test(A.R.d || '') && A.R.dBody === 'stub', '  자가 지어 준 가짜 답(fulfill)은 그대로 — 「' + (A.R.dBody || '') + '」');
   is(/^ok 200/.test(A.R.local || ''), '  localhost 는 그대로 — ' + (A.R.local || ''));
+  is(A.R.pop === 'ok', '  ★ 인쇄용 빈 창(about:blank)이 제 CSS 를 받는다 — 창 묶음 가로채기로 막으면 여기가 깨집니다(check-uiprint 에서 물림) · ' + (A.R.pop || ''));
 
   console.log('\n[4] ★ 안 막은 판 — 같은 시험이 <b>닿는 것을 본다</b> (안 울리는 알람이 아니게)');
   const B = await run(false);

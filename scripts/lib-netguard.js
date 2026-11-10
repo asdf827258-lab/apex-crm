@@ -9,15 +9,18 @@
 
    ★ 그래서 <b>브라우저 쪽에서 한 번에</b> 막습니다 — run-checks 가 모든 점검을
      `node --require lib-netguard.js` 로 돌리고, 이 파일은 playwright 를 부르는 순간
-     chromium 이 여는 <b>모든 창(context)</b>에 「supabase.co 로 가는 것은 끊는다」 를 겁니다.
-       · 자가 제 route 에서 route.continue() 로 흘려도 supabase.co 면 <b>끊습니다</b>
-         (route.fetch() 도 — 그것은 node 쪽에서 진짜 서버를 부릅니다).
+     chromium.launch 에 「*.supabase.co 는 주소가 없다」(--host-resolver-rules) 를 <b>맨 앞에</b> 얹습니다.
+       · 망(DNS) 단계라 브라우저 <b>전체</b>가 막힙니다 — 창 · 팝업 · 인쇄용 빈 창 · fetch · 실시간(wss).
        · 자가 route.fulfill 로 지어 준 답(가짜 서버)은 망에 안 나가므로 <b>그대로 됩니다</b>.
        · localhost 와 CDN(jsdelivr 등)은 그대로입니다 — 막을 것은 사장님 서버뿐입니다 (8번).
-       · 실시간(wss) 도 끊습니다 (routeWebSocket 이 있는 판에서).
-       · 둘째 겹으로 「*.supabase.co 는 주소가 없다」(--host-resolver-rules) 도 얹습니다 —
-         ⚠ 이 겹은 <b>프록시를 쓰는 곳(이 컨테이너)에서는 안 먹습니다</b>(주소를 프록시가 찾음).
-         재어 보고 알았습니다 — 그래서 첫째 겹이 주인입니다.
+       · 프록시를 쓰는 곳(이 컨테이너)에서는 주소를 프록시가 찾아 규칙이 안 먹으므로,
+         사장님 서버만 프록시를 안 거치게(no_proxy) 합니다. CI 는 프록시가 없습니다.
+       · 자의 route 손잡이도 감쌉니다 — route.fetch() 는 <b>node 쪽에서</b> 부르므로 브라우저
+         규칙이 안 닿습니다. supabase.co 면 continue/fetch 를 끊습니다.
+   ⚠ 걸어 본 길 둘을 버렸습니다(재어 보고) —
+       ① 창 묶음(context)에 route 끊개 → <b>인쇄용 빈 창이 ui.css 를 못 받음</b>
+          (check-uiprint 머리글이 미리 적어 둔 함정 · CI 에서 물림).
+       ② CDP Network.setBlockedURLs → 이 Chromium 판에서 <b>아예 안 먹음</b>.
    ⚠ 이 자는 <b>브라우저</b>만 막습니다. node 쪽에서 fetch 하는 자는 따로 봐야 합니다.
    check-ciguard 가 이것을 지킵니다 (막은 판 · 안 막은 판을 둘 다 돌려 견줍니다).
    ══════════════════════════════════════════════════════════════════ */
@@ -33,7 +36,8 @@ function withRules(o) {
   const x = Object.assign({}, o || {});
   const args = (x.args || []).slice();
   const i = args.findIndex(a => /^--host-resolver-rules=/.test(a));
-  if (i >= 0) args[i] = args[i] + ', ' + RULES;     /* 자가 제 규칙을 가졌으면 이어 붙입니다 */
+  /* ★ 맨 앞에 둡니다 — 규칙은 먼저 맞는 것이 이깁니다. 자가 제 규칙을 가졌어도 사장님 서버는 못 갑니다 */
+  if (i >= 0) args[i] = '--host-resolver-rules=' + RULES + ', ' + args[i].slice('--host-resolver-rules='.length);
   else args.push('--host-resolver-rules=' + RULES);
   x.args = args;
   return x;
@@ -63,12 +67,9 @@ function wrapRouteFn(o) {
   Object.defineProperty(o, '__apexNetGuard', { value: true });
 }
 function guardPage(p) { try { wrapRouteFn(p); } catch (e) {} return p; }
-async function guardContext(c) {
+function guardContext(c) {
   if (!c || c.__apexNetGuardCtx) return c;
   Object.defineProperty(c, '__apexNetGuardCtx', { value: true });
-  /* ① 맨 먼저 거는 끊개 — 다른 손잡이가 다 흘려보낸(fallback) 것은 여기서 끊깁니다 */
-  await c.route(BAD, r => r.abort('blockedbyclient'));
-  if (typeof c.routeWebSocket === 'function') { try { await c.routeWebSocket(BAD, ws => ws.close()); } catch (e) {} }
   wrapRouteFn(c);
   const NP = c.newPage;
   c.newPage = async function () { return guardPage(await NP.apply(this, arguments)); };
@@ -76,13 +77,24 @@ async function guardContext(c) {
   c.pages().forEach(guardPage);
   return c;
 }
+
+/* 프록시를 쓰는 곳(이 컨테이너)에서는 주소를 프록시가 찾아 위 규칙이 안 먹습니다 —
+   사장님 서버만 프록시를 <b>안 거치게</b>(no_proxy) 해서 브라우저가 직접 찾다 「없음」 을 받게 합니다.
+   CI 는 프록시가 없어 규칙이 바로 먹습니다. */
+(function () {
+  const add = BLOCK.map(h => h.replace(/^\*\./, '.')).join(',');
+  for (const k of ['no_proxy', 'NO_PROXY']) {
+    const v = process.env[k] || '';
+    if (v.indexOf('.supabase.co') < 0) process.env[k] = v ? v + ',' + add : add;
+  }
+})();
 function guardBrowser(b) {
   if (!b || b.__apexNetGuard) return b;
   Object.defineProperty(b, '__apexNetGuard', { value: true });
   const NC = b.newContext, NP = b.newPage;
   b.newContext = async function () { return guardContext(await NC.apply(this, arguments)); };
   /* newPage 는 제 창을 따로 만듭니다 — 만든 뒤 그 창에 겁니다(아직 아무 데도 안 갔을 때) */
-  b.newPage = async function () { const p = await NP.apply(this, arguments); await guardContext(p.context()); return guardPage(p); };
+  b.newPage = async function () { const p = await NP.apply(this, arguments); guardContext(p.context()); return guardPage(p); };
   return b;
 }
 function guard(chromium) {

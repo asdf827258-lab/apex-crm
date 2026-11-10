@@ -132,6 +132,11 @@ const strip = t => t.replace(/\/\*[\s\S]*?\*\//g, ' ')
   const errs = []; p.on('pageerror', e => errs.push('' + (e && e.message)));
   /* 바깥으로 나간 요청을 <b>전부</b> 적어 둡니다 — [4] 에서 셉니다 */
   const net = [];
+  /* ★ 서버는 <b>가짜 빈 답</b>으로 지어 줍니다 (판 X398). 여태는 CI 에서 <b>사장님의 진짜 서버</b>가
+     답해 공지가 「다 읽었다」 로 섰습니다. 막개(lib-netguard)로 진짜 서버를 끊자 공지 읽기가
+     실패하고, 공지는 실패하면 홈을 다시 그릴 때마다 또 읽어서 [4] 의 창 안에 들어왔습니다 —
+     이 카드가 부른 것이 아닌데 웁니다(8번). 서버가 「답했다」 는 같은 조건을 여기서 짓습니다. */
+  await p.route(/^https?:\/\/[^/]*\.supabase\.co\//, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   p.on('request', q => { const u = q.url();
     if (u.indexOf('http://127.0.0.1:' + PORT) !== 0 && u.indexOf('data:') !== 0 && u.indexOf('blob:') !== 0) net.push(u); });
   await p.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
