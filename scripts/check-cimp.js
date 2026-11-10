@@ -441,15 +441,33 @@ const CSVTXT = '고객명,연락처,성별\n홍길동,010-1111-2222,남\n홍길�
   await p.evaluate(() => { window.__W = []; cimpGo(); });
   await p.waitForTimeout(1200);
   const G = await p.evaluate(() => {
-    const W = window.__W.slice(), rows = [];
-    W.forEach(w => [].concat(w.pay || []).forEach(x => rows.push(x)));
-    return { tabs: W.map(w => w.t + '.' + w.op), rows: rows,
+    const W = window.__W.slice(), rows = [], cli = [];
+    W.forEach(w => [].concat(w.pay || []).forEach(x => {
+      rows.push(x);
+      if (w.t === 'clients') cli.push(x);   /* 고객 줄만 — 아래 셋이 보는 것 */
+    }));
+    return { tabs: W.map(w => w.t + '.' + w.op), rows: rows, cli: cli,
              real: JSON.parse(localStorage.getItem('apex_cli_real_me') || '{}'),
              step: CIMP.step, res: CIMP.res, html: (document.querySelector('.cimp-box') || {}).innerText || '' };
   });
-  is(G.tabs.every(t => t === 'clients.insert'), '나간 글이 <b>clients insert 뿐</b>이다 — ' + G.tabs.join(' · '));
-  is(G.rows.length === CNT.pick, '넣은 줄이 ' + CNT.pick + '줄이다 (받음 ' + G.rows.length + ')');
-  const names = G.rows.map(r => r.name_masked || '');
+  /* ⚠⚠ <b>이 자가 「clients insert 뿐」 이라고 못 박고 있었습니다.</b> 판 X394 에서
+     갈래(client_meta)를 같이 적게 되자 울었는데, <b>앱이 틀린 것이 아니었습니다</b> —
+     사장님 말씀대로 갈래를 고객 365일까지 들고 가려면 그 한 줄은 나가야 합니다.
+     ★ 지키려던 것은 <b>글 목록</b>이 아니라 <b>서버를 아껴 쓰는 것</b>(7번)이었습니다.
+       그래서 그렇게 고칩니다 — 쓰는 표는 clients 와 saved_reports 둘뿐이고,
+       <b>갈래는 사람 수만큼 나가지 않고 한 번</b>에 나가야 합니다. 쉰 분을 넣을 때
+       쉰 번 두드리면 무료 한도를 넘겨 로그인까지 막힙니다 (실제로 그랬습니다).
+     ★ 「실명이 안 나간다」 는 아래에서 <b>나간 글 전부</b>를 두고 봅니다 —
+       표를 하나 늘려도 그 자는 그대로 지킵니다.                              */
+  const 쓴표 = {};
+  G.tabs.forEach(t => { 쓴표[t] = (쓴표[t] || 0) + 1; });
+  is(Object.keys(쓴표).every(t => t === 'clients.insert' || t === 'saved_reports.insert'),
+     '나간 글이 <b>고객 줄과 갈래 줄뿐</b>이다 — ' + G.tabs.join(' · '));
+  is((쓴표['saved_reports.insert'] || 0) <= 1,
+     '★ 갈래는 <b>한 번에</b> 나간다 — 사람 수만큼 두드리지 않습니다 (받음 ' +
+     (쓴표['saved_reports.insert'] || 0) + '번 · 7번)');
+  is(G.cli.length === CNT.pick, '넣은 줄이 ' + CNT.pick + '줄이다 (받음 ' + G.cli.length + ')');
+  const names = G.cli.map(r => r.name_masked || '');
   /* ⚠ 가린 꼴(홍*동 / 홍○○)은 <b>apex-cusone.js 의 cusMask 한 곳</b>이 정합니다 (5번).
      처음에 /○/ 를 박아 두었다가 실제 꼴이 홍*동 이어서 헛 빨간불이 켜졌습니다.
      재야 하는 것은 <b>실명이 아니고 가려져 있다</b> 입니다 — 꼴을 여기 또 박아
@@ -463,10 +481,10 @@ const CSVTXT = '고객명,연락처,성별\n홍길동,010-1111-2222,남\n홍길�
   const rv = Object.keys(G.real).map(k => G.real[k]);
   is(rv.indexOf('홍길동') >= 0 && rv.indexOf('홍말순') >= 0,
      '실명은 <b>이 기기에</b> 담겼다 — ' + rv.join('|'));
-  const noTel = G.rows.filter(r => !r.phone);
+  const noTel = G.cli.filter(r => !r.phone);
   is(noTel.length === 1, '번호 없는 분은 phone 칸을 <b>아예 안 보낸다</b> (받음 ' + noTel.length + '줄) — 빈 글자를 보내면 「없다」 가 됩니다 (1번)');
-  is(G.rows.some(r => r.birth_year === 1985) && G.rows.some(r => r.birth_year === 1990),
-     '생년이 그대로 담긴다 — ' + G.rows.map(r => r.birth_year).join('|'));
+  is(G.cli.some(r => r.birth_year === 1985) && G.cli.some(r => r.birth_year === 1990),
+     '생년이 그대로 담긴다 — ' + G.cli.map(r => r.birth_year).join('|'));
   is(G.step === 'done' && G.res && G.res.ok === CNT.pick, '마친 화면이 <b>몇 명 넣었는지</b> 적는다 (' + (G.res && G.res.ok) + ')');
   is(/안 넣음|안 넣었/.test(G.html), '<b>안 넣은 것도 적는다</b> — 「넣었습니다」 만 적으면 빠뜨린 줄 모르십니다');
 
