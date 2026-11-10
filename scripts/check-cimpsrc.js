@@ -277,6 +277,25 @@ const 판 = async (b, PORT, withGrp) => {
   is(!N.줄있나, '  ★★ 갈래 줄이 <b>안 선다</b> — 빈 줄을 세우면 「뭐가 사라졌나」 하십니다');
   is(N.메모 === 0, '  ★ 갈래 줄도 <b>한 줄도 안 나간다</b> — 빈 값을 적지 않습니다 (받음 ' + N.메모 + ' · 1번)');
   is(!/🗂/.test(N.글), '  ★ 줄에도 「🗂」 가 안 붙는다 — ' + N.글.slice(0, 60));
+  /* ⚠⚠ cmOf 는 쪽지가 없으면 <b>만들어 넣습니다</b>(판 X126·X130 에서 데인 자리).
+     갈래를 묻는 자리는 목록을 그릴 때마다 <b>모든 고객</b>을 지나므로 거기서
+     그것을 부르면 한 번 열 때마다 빈 쪽지가 쌓입니다.
+     ⚠ <b>처음에 「CM.meta 가 비었나」 로 쟀다가 되돌렸습니다</b> — 줄을 그리는
+       cmRowHtml·cmHit 이 <b>전부터</b> cmOf 를 부르고 있어, 고치기 전에도 고친
+       뒤에도 똑같이 여섯이었습니다. 그것은 <b>헛것을 잡는 자</b>입니다 (8번).
+       여기서는 <b>갈래를 묻는 두 자리만</b> 따로 불러 봅니다 — 아직 아무도 안
+       건드린 번호로 물었을 때 쪽지가 생기면 빨간불입니다. */
+  const 빈쪽지 = await B.p.evaluate(() => {
+    const id = 'nobody-' + Date.now();
+    const before = Object.keys(CM.meta || {}).length;
+    try { cliFSrc([{ id: id }]); } catch (e) {}
+    try { cliFHit({ id: id }, 'xsrc:세미나', {}); } catch (e) {}
+    const after = Object.keys(CM.meta || {}).length;
+    return { 늘었나: after - before, 생겼나: !!(CM.meta || {})[id] };
+  });
+  is(빈쪽지.늘었나 === 0 && !빈쪽지.생겼나,
+     '  ★★ 갈래를 물어도 <b>빈 쪽지를 안 만든다</b> — cmOf 가 아니라 cmMetaOf 로 묻습니다 ' +
+     '(늘어난 쪽지 ' + 빈쪽지.늘었나 + '개 · 판 X126)');
   is(B.errs.length === 0, B.errs.length ? ('  콘솔 에러 — ' + B.errs.slice(0, 2).join(' / ')) : '  콘솔에 에러가 없다');
   await B.ctx.close();
 
