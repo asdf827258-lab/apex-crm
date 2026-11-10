@@ -424,6 +424,57 @@ const 계산칸 = ['eRes', 'eMonBox', 'eWhenBox', 'eSplit', 'eFee'];
   is(/찾지 못했습니다/.test(예금.a),
      '  ★ <b>못 찾은 것은 못 찾았다고</b> 적는다 — 11월 기준 한국은행 공표 평균 (1번)');
 
+  head('[14] ★★ <b>제목이 내용과 맞나</b> · 원화가 먼저인가 (판 X391 · 사장님 말씀 「거기도 고쳐줘」)');
+  /* ⚠⚠ ecalc3b 의 제목은 「이 돈은 <b>어느 지원금</b>에서 왔습니까? · 지원금별로 쪼개서」
+       였는데, 화면은 <b>① 상품이 불려 준 돈 ② 환율이 더해 준 돈</b> 쪼개기였습니다.
+       제목이 거짓말을 하고 있었습니다 — 찍어서 눈으로 보고 찾았습니다 (8번).
+     ★ 지원금별 쪼개기는 <b>5쪽(e1)에 이미 있습니다</b>(첫만남이용권 · 부모급여 · 아동수당).
+       여기서 또 하면 쌍둥이라(5번) <b>제목을 내용에 맞췄습니다.</b>
+     ★★ 그리고 이 쪽은 12쪽(ecalc2fx)과 <b>그림이 같고 기준만 다릅니다</b>
+       (12쪽 = 내가 더 넣는 돈 · 여기 = 나라가 준 돈). 제목이 그 차이를 말해야
+       고객 눈에 같은 그림이 두 번 나오지 않습니다. */
+  const 지원 = await pg.evaluate(async () => {
+    window.__go('e');
+    window.__apexE.set({ mon: 100, fxIn: 1484, fxOut: 1700, prod: 'met', age: 0, go: 19 });
+    await new Promise(r => setTimeout(r, 340));
+    const sec = document.getElementById('ecalc3b');
+    const h = sec ? sec.querySelector('h2') : null;
+    const lead = sec ? sec.querySelector('.lead') : null;
+    const ths = [...document.querySelectorAll('#eTable thead th')].map(x => (x.innerText || '').replace(/\s+/g, ' '));
+    const r1 = [...document.querySelectorAll('#eTable tbody tr')].map(tr =>
+      [...tr.children].map(td => (td.innerText || '').replace(/\s+/g, ' ')));
+    return { h: h ? h.innerText.replace(/\s+/g, ' ') : '',
+             lead: lead ? lead.innerText.replace(/\s+/g, ' ') : '',
+             split: (document.getElementById('eSplit') || {}).innerText || '',
+             why: (document.getElementById('eTableWhy') || {}).innerText || '', ths, r1 };
+  });
+  is(!/어느 지원금/.test(지원.h) && !/지원금별로 쪼개서/.test(지원.lead),
+     '  ★★ 제목이 <b>「어느 지원금에서」 라고 거짓말하지 않는다</b> — 지금 「' + 지원.h.slice(0, 30) + '」');
+  is(/나라가 준 돈만|한 푼도 더 안 넣어도/.test(지원.h + 지원.lead),
+     '  ★★ 제목이 <b>이 쪽의 기준</b>을 말한다 — 나라가 준 돈만 (12쪽은 내가 더 넣는 돈)');
+  is(/내가 더 넣는 돈/.test(지원.lead),
+     '  ★ 리드가 <b>앞 쪽과의 차이</b>를 밝힌다 — 같은 그림이 두 번 나오는 것처럼 안 보이게');
+  is(/상품이 불려 준 돈/.test(지원.split) && /환율이 더해 준 돈/.test(지원.split),
+     '  ★ 쪼갠 이름이 <b>고객 말</b>이다 — 「상품이 만든 이익 / 환차익」 이 아니라');
+  is(지원.ths.some(x => /원화로 모았으면/.test(x)) && 지원.ths.some(x => /달러로 모았으면/.test(x)),
+     '  ★ 표 머리가 <b>원화 · 달러를 나란히</b> 놓는다');
+  is(지원.r1.length > 0 && /개월/.test(지원.r1[0][1] || '') && /개월/.test(지원.r1[0][2] || ''),
+     '  ★★ <b>학비 몇 달치가 큰 글자</b>다 — 전에는 달러가 크고 개월수가 회색 작은 글씨였습니다');
+  /* ⚠ 처음에 칸 글자를 공백으로 잘라 읽었는데, innerText 가 줄바꿈 없이 붙어 나와
+       「5.6개월2,812만원」 이 되었습니다 — 자가 아니라 <b>제 읽는 법</b>이 틀렸습니다.
+       <b>개월수만</b> 떼어 봅니다 (8번). */
+  const 달치 = t => ((String(t).match(/([\d.]+)개월/) || [])[1] || '');
+  const 달러첫 = 달치(지원.r1[0] && 지원.r1[0][2]), 달러끝 = 달치(지원.r1[지원.r1.length-1] && 지원.r1[지원.r1.length-1][2]);
+  const 원화첫 = 달치(지원.r1[0] && 지원.r1[0][1]), 원화끝 = 달치(지원.r1[지원.r1.length-1] && 지원.r1[지원.r1.length-1][1]);
+  is(!!달러첫 && 달러첫 === 달러끝,
+     '  ★★ <b>달러 쪽 개월수가 환율이 달라도 같다</b> — ' + 달러첫 + ' → ' + 달러끝 +
+     '개월 (학비를 달러로 내기 때문입니다)');
+  is(!!원화첫 && !!원화끝 && parseFloat(원화첫) > parseFloat(원화끝),
+     '  ★★ <b>원화 쪽은 환율이 오를수록 줄어든다</b> — ' + 원화첫 + ' → ' + 원화끝 +
+     '개월 (같은 돈인데 살 수 있는 학기가 줄어듭니다)');
+  is(/그대로입니다/.test(지원.why) && /줄어듭니다/.test(지원.why),
+     '  ★ 표 밑에 <b>무슨 말인지 한 줄</b>이 있다 — 표만 두면 어디를 볼지 모릅니다');
+
   head('[6] 조용한가');
   is(errs.length === 0, errs.length ? ('콘솔 에러 — ' + errs.slice(0, 2).join(' / ')) : '콘솔에 에러가 없다');
 
