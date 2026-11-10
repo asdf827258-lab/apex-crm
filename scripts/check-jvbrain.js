@@ -24,6 +24,9 @@
           우리 DB 숫자(이름 없이)를 다 쥐여 주고, 못 받았으면 못 받았다고 쥐여 준다 (1번 · 3번)
      [13] 🧠 두뇌 창에서 다 한다 — ⭐ 모범 답안 보기 · 지우기 · 켜고 끄기 셋 · 두뇌 도구 여섯(전화 순서 · 컨설팅 ·
           발표자료 · 지난 대화 · 로고 · 다른 AI) — 고치는 곳은 본체의 그 함수 하나 (5번)
+     [14] 🔎 라이브에 다양한 질문으로 물어 보고 고친 것 (판 X404 · 「라이브 자비스 다양한 질문으로 해봐」) —
+          「블로그 글감 뽑아줘」 같은 글 맡기기는 숨은 두뇌 화면으로 안 보내고 이 카드에서 두뇌가 쓴다 ·
+          기다리는 사이 밑에 카드가 붙으면 두뇌의 답으로 옮겨 준다 · 「DB 정리」 가 계약 정리 순서로 새지 않는다
    ★ 이름은 「홍길동」 (3번).                                                     */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -247,6 +250,28 @@ const MD = '## 결론\n첫 마디는 **질문**으로 엽니다.\n\n| 단계 | �
   is(BX.closed && BX.called === 1 && BX.callQ, '「우리 DB로 오늘 전화 순서」 는 창을 닫고 자비스가 그 물음을 두뇌에게 묻는다');
   is(BX.closed2 && BX.tab === 'brain' && BX.consult, '「고객 컨설팅」 은 그 칸이 있는 두뇌 화면을 연다 — 메뉴에서 숨었어도 길이 있다');
   await p.evaluate(() => go('apexmap')); await p.waitForTimeout(1500);
+
+  sec('[14] 🔎 라이브에 다양한 질문으로 물어 보고 고친 것 (판 X404)');
+  const W1 = await askQ('블로그 글감 5개 뽑아줘');
+  const W1x = await f.evaluate(() => { const c = [].slice.call(document.querySelectorAll('#jLog .msg.j')).pop(); return { act: !!c.querySelector('.j-act'), tab: window.parent.currentTab() }; });
+  is(W1.n === 1 && W1.brain && !W1x.act && W1x.tab === 'apexmap', '「블로그 글감 5개 뽑아줘」 — 두뇌가 이 카드에서 바로 쓴다(숨은 두뇌 화면으로 안 보냄) · 부름 ' + W1.n + ' · 화면 ' + W1x.tab);
+  await p.evaluate(() => { window.__aiKeep = window.aiReady; window.aiReady = function(){ return false; }; });
+  const W2 = await f.evaluate(() => { const a = jvAct('블로그 글감 5개 뽑아줘'); return !!(a && a.k === '자료') && !jvBrainReady(); });
+  await p.evaluate(() => { window.aiReady = window.__aiKeep; });
+  is(W2, 'AI 가 꺼져 있으면 예전 길(두뇌에게 글 맡기기) 그대로 — 쓸 수 없는 두뇌로 안 보낸다');
+  const SC = await f.evaluate(async () => {
+    const P = window.parent, k = Element.prototype.scrollIntoView; let hit = 0;
+    Element.prototype.scrollIntoView = function(){ if (this.classList && this.classList.contains('j-brain')) hit++; };
+    const kc = P.callAI; P.callAI = function(){ return new Promise(r => setTimeout(() => r('## 결론\n늦게 온 답'), 250)); };
+    ask('반론 처리 화법 한 번 더'); await new Promise(r => setTimeout(r, 60));
+    addJ({answer:'아카데미 · 실전화법서를 다 읽었습니다 — 거기서 더 찾은 것입니다.', steps:[], how:'ext'});
+    while (busy) await new Promise(r => setTimeout(r, 30)); await new Promise(r => setTimeout(r, 50));
+    P.callAI = kc; Element.prototype.scrollIntoView = k; return hit;
+  });
+  is(SC === 1, '기다리는 사이 밑에 카드가 더 붙으면, 두뇌의 답이 서는 자리로 옮겨 준다 (' + SC + '번)');
+  const DB = await f.evaluate(() => ['DB 정리', '고객이 보험을 정리하고 싶대'].map(q => { const o = offline(q); return o.how + ':' + (o.top || o.title || ''); }));
+  is(/^screen:crm$/.test(DB[0]), '「DB 정리」 → DB 통합 CRM (계약 정리 순서로 새던 자리 · ' + DB[0] + ')');
+  is(/^way:/.test(DB[1]) && /정리/.test(DB[1]), '「보험을 정리하고 싶대」 는 그대로 정리 순서 (헛것 0 · ' + DB[1] + ')');
 
   sec('[10] 앱 밖에서 열면 두뇌가 없다 (1번)');
   const p2 = await ctx.newPage(); p2.on('pageerror', e => errs.push(e.message));
