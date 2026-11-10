@@ -189,6 +189,25 @@ const SEED = (renum) => {
   is(!/밀린 분/.test(C.mis),
      '  ★ <b>「밀린 분」 과 섞어 세지 않는다</b> — 엑셀로 막 넣은 분은 밀린 것이 아닙니다 (1번)');
   is(/첫 연락 전 6명/.test(C.mis), '  ★ 미션 머리에 <b>첫 연락 전 6명</b> 이라 적는다');
+  /* ⚠⚠ <b>그림을 찍어 보고 찾았습니다</b> (판 X394) — 줄 아랫글이 「아직 / 한 번도 /
+     연락 안 하셨습니다」 <b>세 조각</b>으로 쪼개져 한 줄이어야 할 자리가 넉 줄이었습니다.
+     까닭은 CSS 「.mcal-it .m b{display:block}」 가 <b>.m 안의 아무 b</b>나 잡은 것입니다.
+     글자로만 재던 자들은 <b>전부 통과했습니다</b> — 글은 다 거기 있었으니까요 (8번).
+     이제 <b>몇 줄로 그려졌는지</b>를 봅니다. */
+  /* ⚠ 처음에 getClientRects().length 로 쟀다가 <b>안 울었습니다</b> — 이 span 은
+     그 자체가 블록이라 몇 줄이 들어 있든 상자는 늘 하나입니다. <b>높이</b>로
+     재야 합니다. 안 울리는 알람은 알람이 아닙니다 (8번).                    */
+  const 줄수 = await p.evaluate(() => {
+    const card = [...document.querySelectorAll('.card')].find(x => /오늘의 미션/.test(x.innerText || ''));
+    if (!card) return [];
+    return [...card.querySelectorAll('.mcal-it .m > span')].map(e => {
+      const lh = parseFloat(getComputedStyle(e).lineHeight) || 16;
+      return Math.max(1, Math.round(e.getBoundingClientRect().height / lh));
+    });
+  });
+  is(줄수.length >= 6 && 줄수.every(n => n === 1),
+     '  ★★ 줄 아랫글이 <b>한 줄</b>로 붙는다 — 몇 줄로 그려졌나 (받음 ' +
+     (줄수.join(',') || '(줄을 못 찾았습니다)') + ')');
 
   console.log('\n[5] ★★ 세 곳이 같은 답을 하는가 (5번 · 0-1번)');
   is(H.볼분 === '6' && /첫 연락 전 6명/.test(C.mis) && /6명/.test((C.all.match(/아직 첫 연락 전[^.]*/) || [''])[0] + (C.all.match(/다만 <?b?>?(\d+)명/) || [''])[0]),
