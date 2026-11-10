@@ -21973,8 +21973,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-10 15:11';
-var APP_BUILD_NOTE='🥇 <b>제안서를 넣으면 1순위 · 2순위 · 3순위, 없으면 추가 제안과 이유</b>(판 X396 · 사장님 말씀 「내가 제안서를 넣으면 1순위 2순위 3순위를 넣어줘 · 제안서가 없다면 추가 제안과 그 이유를 타당하게」) — 보장 전·후 ③ 추가 보험 위에 「🥇 제안 순위」: 유지 · 배서로 남는 계약의 <b>빈자리</b>를 얼마나, 얼마나 <b>급한 자리부터</b> 채우는지로 매기고(채우는 담보 · 지금 → 기준 · 채우는 금액), 카드에도 「1순위」. 제안서가 없으면 「💡 추가 제안」: 비어 있는 묶음을 급한 순서로 세 개 — 모자란 담보 · 권장 금액 · 이유. 기준은 이미 있는 <b>연령대별 담보안</b>(표준 × 나이 배수 · 순위 · 이유, 사장님이 고친 값 그대로) · 나이를 안 적었으면 설계 순서. 뇌혈관이 있으면 뇌출혈을 따로 권하지 않음(넓은 담보가 좁은 담보를 덮음). 발표 화면에도 「오늘 제안 드리는 순서」 장(짧게 보기에도 남음). ◾ 함께 들어 있는 판: 🔎 <b>상품전략기에서 약관 분석을 끝까지 합니다</b>(판 X395 · 사장님 말씀 「앞으로는 메인세션 CRM 에서 다 되도록」) — 약관이 없는 상품을 열고 「🔎 약관 분석하기」를 누르면 공시실에서 약관을 받아 읽고, AI가 지급기준 5줄·발췌를 만든 뒤 <b>원문 그대로인지 컴퓨터가 대조</b>해 저장합니다(1~2분). 저장한 결과는 팀 모두에게 바로 보입니다. 보험사 26곳 자동, 나머지는 받아 둔 약관 PDF 를 고르면 됩니다.';
+var APP_BUILD='2026-11-10 16:15';
+var APP_BUILD_NOTE='🚦 <b>서버가 거절하던 쓰기 셋을 고쳤습니다</b>(판 X397 · 사장님 말씀 「오늘에서 안되는 것들 찾아서 다시 하고 다시 확인해줄래」) — ① 홈 「💬 소개 받음」 · 「🕗 ✖ 거절로 정리」 · CRM 에서 부재·거절·소개완료 단계를 고르면 서버 단계 규칙(일곱 가지만 받음)이 통째로 거절했습니다(11-09 하루 9번) → 서버 규칙을 앱의 열 단계로 넓혔습니다(migration_55 · 서버에 적용함). ② CRM DB 등록에서 단계 「자동」 이면 빈 단계를 보내 막혔습니다 → 「자동」 은 단계를 안 보내 서버 기본값(미접촉)을 씁니다. ③ 출근 기록이 하루 두 번째부터 권한 오류로 막히던 것 → 이미 있으면 건너뜁니다.';
 
 
 
@@ -26970,8 +26970,11 @@ document.addEventListener('keydown',function(e){
 var ATTEND={month:null,profiles:[],att:[]};
 function osAttToday(){var d=new Date(),p=function(n){return(n<10?'0':'')+n;};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
 /* 로그인(접속)만 해도 오늘 출근이 자동 기록되게 — 앱과 같은 Supabase attendance 테이블 */
+/* ⚠ 판 X397 — 이미 오늘 줄이 있으면 <b>고치지 않고 건너뜁니다</b>(ignoreDuplicates). 서버에는 출근 줄을
+   고치는 권한 규칙이 없어(넣기·읽기만 · 맞는 설계입니다), 예전 upsert 는 하루 두 번째 접속부터
+   매번 권한 오류로 막혔습니다 — 2026-11-10 하루에 206번(postgres 로그). 첫 출근 기록은 그대로입니다. */
 function osBackupBoot(){try{if(typeof osBackupTick==='function')setTimeout(osBackupTick,4000);}catch(e){}}
-function osAttendMark(){try{var sb=(typeof osClient==='function')?osClient():null;var uid=(typeof OS!=='undefined'&&OS.profile)?OS.profile.id:null;if(sb&&uid)sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date'}).then(function(){},function(){});}catch(e){}}
+function osAttendMark(){try{var sb=(typeof osClient==='function')?osClient():null;var uid=(typeof OS!=='undefined'&&OS.profile)?OS.profile.id:null;if(sb&&uid)sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date',ignoreDuplicates:true}).then(function(){},function(){});}catch(e){}}
 function renderAttend(){
   if(!OS.profile){return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">DB CRM</div><div class="page-title">출근 현황</div></div><div class="card"><div class="card-body"><div class="notice" style="color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">🔒 로그인 후 이용할 수 있습니다.</div></div></div></div>';}
   return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">DB CRM</div><div class="page-title">출근 현황</div>'+
@@ -26992,7 +26995,7 @@ function osAttendLoad(){
   var cal=document.getElementById('attendCal');var sb=osClient();
   if(!sb){if(cal)cal.innerHTML='<div class="notice" style="color:var(--ink-4)">서버에 연결되어 있지 않습니다.</div>';return;}
   var uid=OS.profile&&OS.profile.id;
-  if(uid){try{sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date'}).then(function(){},function(){});}catch(e){}}
+  if(uid){try{sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date',ignoreDuplicates:true}).then(function(){},function(){});}catch(e){}}
   osBackupBoot();
   Promise.all([sb.from('profiles').select('id,name,role,active,status').order('name'),arAll(sb,'attendance','member_id,att_date',['-att_date','member_id']),sb.from('profiles').select('id,workspace')]).then(function(res){
     var pr=res[0],at=res[1],ws=res[2];
