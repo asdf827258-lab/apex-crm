@@ -21973,8 +21973,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-10 16:45';
-var APP_BUILD_NOTE='🧱 <b>점검이 사장님의 진짜 서버를 더는 부르지 않습니다</b>(판 X398 · 사장님 말씀 「병합되면 ci 진짜 서버 부르는것도 해줘」) — 점검 브라우저가 가짜 이름으로 Supabase 를 하루 수천 번 불러 무료 한도를 갉아먹던 것을 한 곳(lib-netguard)에서 끊었습니다. <b>앱 화면은 바뀐 것이 없습니다</b> — 바로 앞 판 X397(서버가 거절하던 쓰기 셋: 단계 규칙 · DB 등록 「자동」 · 출근 기록)이 그대로 들어 있습니다.';
+var APP_BUILD='2026-11-10 17:20';
+var APP_BUILD_NOTE='🧱 <b>점검이 사장님의 진짜 서버를 더는 부르지 않습니다</b>(판 X399 · 사장님 말씀 「병합되면 ci 진짜 서버 부르는것도 해줘」) — 점검 브라우저가 가짜 이름으로 Supabase 를 하루 수천 번 불러 무료 한도를 갉아먹던 것을 한 곳(lib-netguard)에서 끊었습니다. <b>앱 화면은 바뀐 것이 없습니다</b> — 바로 앞 판 X397(서버가 거절하던 쓰기 셋: 단계 규칙 · DB 등록 「자동」 · 출근 기록)이 그대로 들어 있습니다.';
 
 
 
@@ -30093,6 +30093,10 @@ function cimpMan(v,unit){
 /* ── 지금 무엇을 들고 있나 — <b>한 자리</b>입니다 (5번) ── */
 var CIMP={open:false,step:'pick',fname:'',enc:'',bad:0,sheets:[],sheet:0,
           head:[],rows:[],map:{},unit:{},grp:-1,off:{},maybe:false,_names:null,_namesAt:-1,
+          /* 🗂 <b>이미 계신 분에게도 갈래를 붙일까</b> (판 X398 · 사장님 말씀
+             「전에 넣은 고객들도 갈래 붙일수 있게 해줘」). 기본은 <b>꺼짐</b>입니다 —
+             이미 계신 분의 기록에 쓰는 일이라 사람이 한 번 누르게 합니다 (3번·6번). */
+          fill:false,
           sort:null,err:'',note:'',busy:'',at:0,of:0,res:null,_z:null,_ss:null};
 var CIMP_MAX=500;
 var CIMP_OK_EXT=/\.(xlsx|xlsm|csv|tsv|txt)$/i;
@@ -30207,7 +30211,10 @@ function cimpSort(){
     t=cimpTail(o.ex.ph); n=o.nm.replace(/\s/g,'');
     if((t&&sT[t])||(!t&&sN[n])){ o.why='이 파일 안에 같은 분이 또 있습니다'; S.dupFile.push(o); continue; }
     if(t)sT[t]=1; if(n)sN[n]=1;
-    if(t&&H.tel[t]){ o.why='번호가 같은 분이 이미 계십니다'; S.dupHave.push(o); continue; }
+    /* ★ 그 분이 <b>누구인지</b>도 들고 있습니다 (판 X398) — 번호가 같다는 것은
+       같은 분이라는 뜻이고, 그래야 나중에 그 분께 갈래를 붙일 수 있습니다.
+       이름만 같은 분(maybe)에게는 <b>안 붙입니다</b> — 다른 분일 수 있습니다 (1번). */
+    if(t&&H.tel[t]){ o.why='번호가 같은 분이 이미 계십니다'; o.have=H.tel[t]; S.dupHave.push(o); continue; }
     if(o.g){ if(S.grp[o.g]==null){S.grp[o.g]=0;S.gl.push(o.g);} S.grp[o.g]++; }
     if(n&&H.nm[n]){ o.why='이름이 같은 분이 이미 계십니다 — 번호가 달라 같은 분인지 모릅니다'; S.maybe.push(o); continue; }
     if(!t)S.noTel.push(o);
@@ -30223,6 +30230,34 @@ function cimpPickList(){
   if(CIMP.maybe)for(i=0;i<S.maybe.length;i++){ o=S.maybe[i]; if(o.g&&CIMP.off[o.g])continue; out.push(o); }
   return out;
 }
+/* ── 🗂 <b>이미 계신 분에게 갈래 붙이기</b> (판 X398) ──────────────────
+   사장님 말씀 — 「<b>전에 넣은 고객들도 갈래 붙일수 있게</b> 해줘」.
+   판 X394 로 새로 넣는 분은 갈래가 따라가는데, 전에 넣으신 분은 길이
+   없었습니다. 같은 엑셀을 다시 넣으시면 그 분들은 「이미 계신 분」 으로
+   걸러지기만 했습니다 — 이제 그 자리에서 <b>갈래만</b> 붙여 드립니다.
+
+   ★ <b>덮어쓰지 않습니다</b> (1번) — 이미 갈래가 적힌 분은 그대로 두고,
+     몇 명을 그대로 두는지 화면에 적습니다. 한 분을 고치시는 것은 고객
+     카드(가족·소개 고치기)에서 하십니다.
+   ★ <b>번호가 같은 분만</b>입니다 — 이름만 같은 분은 다른 분일 수 있습니다.
+   ★ <b>끈 갈래는 안 붙입니다</b> — 위에서 갈래를 끄시면 거기도 따릅니다.
+   ★ 세는 곳은 여기 하나입니다 — 화면에 적는 수와 실제로 적히는 줄이
+     따로 세면 「3명」 이라 해 놓고 5명이 바뀝니다 (5번).             */
+function cimpFill(){
+  var S=CIMP.sort||(CIMP.sort=cimpSort()),put=[],keep=0,i,o,m;
+  for(i=0;i<S.dupHave.length;i++){
+    o=S.dupHave[i];
+    if(!o||!o.have||!o.have.id||!o.g)continue;
+    if(CIMP.off[o.g])continue;
+    /* ⚠ cmOf 가 아니라 <b>묻기만 하는</b> 자입니다 — 여기서 쪽지를 만들면
+       화면을 그릴 때마다 빈 쪽지가 쌓입니다 (판 X126·X394). */
+    m=null; try{ m=(typeof cmMetaOf==='function')?cmMetaOf(o.have.id):null; }catch(e){}
+    if(m&&m.xsrc){ if(m.xsrc!==o.g)keep++; continue; }
+    put.push({id:o.have.id,g:o.g});
+  }
+  return {put:put,keep:keep};
+}
+function cimpFillSet(on){ CIMP.fill=!!on;cimpPaint(); }
 function cimpGrpGuess(){
   var j,i,v,seen,cnt,best=-1,bestN=99;
   for(j=0;j<CIMP.head.length;j++){
@@ -30522,15 +30557,39 @@ function cimpSortHtml(){
     }
     h+='</div>';
   }
-  if(S.all.length&&!S.ok.length&&!S.maybe.length){
+  /* ── 🗂 <b>이미 계신 분에게도 갈래를</b> (판 X398 · 사장님 말씀
+     「전에 넣은 고객들도 갈래 붙일수 있게 해줘」) ────────────────────
+     ★ 붙일 분이 한 분도 없으면 <b>칸 자체를 안 세웁니다</b> — 늘 세워 두면
+       「0명에게 붙입니다」 라는 빈 줄이 남습니다 (헛것 금지 · 8번).
+     ★ 이미 갈래가 적힌 분은 <b>그대로 둔다</b>고 그 자리에 적습니다 (1번). */
+  var FI=cimpFill();
+  if(FI.put.length||FI.keep){
+    h+='<label class="cimp-ck"><input type="checkbox"'+(CIMP.fill?' checked':'')+
+       ' onchange="cimpFillSet(this.checked)"'+(FI.put.length?'':' disabled')+'/><span>'+
+       '♻️ <b>이미 계신 '+FI.put.length+'분</b>에게도 <b>갈래를 붙입니다</b>'+
+       (FI.keep?(' <i>(이미 다른 갈래가 적힌 '+FI.keep+'명은 그대로 둡니다 — 고치시려면 그 분 카드에서)</i>')
+               :' <i>(새로 넣지 않고 갈래만 적습니다)</i>')+'</span></label>';
+  }
+  /* ⚠ 「새로 넣을 분이 없습니다」 는 <b>갈래 붙일 분도 없을 때만</b> 적습니다 —
+     같은 엑셀을 다시 넣으시면 다 「이미 계신 분」 이라 새로 넣을 분이 0명인데,
+     그때가 바로 <b>갈래를 붙이러</b> 오신 때입니다 (판 X398 · 1번). */
+  if(S.all.length&&!S.ok.length&&!S.maybe.length&&!FI.put.length){
     h+='<div class="cimp-bad">새로 넣을 분이 <b>없습니다</b> — 아무 숫자도 만들지 않습니다. '+
        '칸 맞추기로 돌아가 이름 칸을 다시 보시겠습니까?</div>';
   }
   h+=cimpList(P);
   h+='<div class="cimp-btns">'+
      '<button type="button" class="cimp-b2" onclick="CIMP.step=\'map\';cimpPaint()">‹ 칸 맞추기</button>'+
-     '<button type="button" class="cimp-b1"'+((P.length&&S.have.loaded&&!CIMP.busy)?'':' disabled')+
-     ' onclick="cimpGo()">'+(CIMP.busy==='save'?('넣는 중… '+CIMP.at+'/'+CIMP.of):('👤 내 고객으로 '+P.length+'명 넣기'))+'</button>'+
+     /* ★ <b>넣을 분이 0명이어도</b> 갈래 붙일 분이 있으면 눌립니다 (판 X398) —
+        같은 엑셀을 다시 넣으시는 그때가 갈래를 붙이러 오신 때입니다.
+        단추 글도 <b>그때 하는 일</b>을 말합니다 — 「0명 넣기」 라고 적으면
+        아무 일도 안 하는 단추로 보입니다 (1번).                        */
+     '<button type="button" class="cimp-b1"'+
+       (((P.length||(CIMP.fill&&FI.put.length))&&S.have.loaded&&!CIMP.busy)?'':' disabled')+
+     ' onclick="cimpGo()">'+(CIMP.busy==='save'
+        ?('넣는 중… '+CIMP.at+'/'+CIMP.of)
+        :(P.length?('👤 내 고객으로 '+P.length+'명 넣기'+((CIMP.fill&&FI.put.length)?(' · 갈래 '+FI.put.length+'분'):''))
+                  :('🗂 이미 계신 '+FI.put.length+'분에게 <b>갈래 붙이기</b>')))+'</button>'+
      '</div>'+
      '<div class="cimp-n">들어가는 곳: <b>고객 365일</b>. 서버에는 <b>가린 이름</b>만 가고 '+
      '실명은 이 기기에만 둡니다. 배정 DB 한도에는 <b>안 셉니다</b>.</div>';
@@ -30562,27 +30621,51 @@ window.cimpGrpOff=function(ix,off){
 /* ── 넣기 — <b>cliMakeMany 하나</b>를 부릅니다 (5번) ── */
 window.cimpGo=function(){
   var P=cimpPickList();
-  if(!P.length){ CIMP.err='넣을 분이 없습니다.';cimpPaint();return; }
+  /* 🗂 <b>이미 계신 분에게 갈래만</b> 붙이러 오셨을 수도 있습니다 (판 X398) */
+  var FI=cimpFill(),fill=(CIMP.fill&&FI.put.length)?FI.put:[];
+  if(!P.length&&!fill.length){ CIMP.err='넣을 분이 없습니다.';cimpPaint();return; }
   if(!(CIMP.sort&&CIMP.sort.have.loaded)){ CIMP.err='이미 계신 분 명단을 아직 못 읽었습니다 — 잠시 뒤 다시 눌러 주십시오.';cimpPaint();return; }
   if(P.length>CIMP_MAX){ CIMP.err='한 번에 '+CIMP_MAX+'명까지 넣습니다 — 파일을 나눠 주십시오 (지금 '+P.length+'명).';cimpPaint();return; }
   if(CIMP.busy)return;
-  CIMP.busy='save';CIMP.at=0;CIMP.of=P.length;CIMP.err='';cimpPaint();
-  cliMakeMany(P,function(at,of){ CIMP.at=at;CIMP.of=of;cimpPaint(); },function(res){
+  /* 갈래 붙이기가 끝나야 화면이 맞습니다 — 두 길이 같은 끝으로 모입니다 (5번) */
+  var after=function(res){
     CIMP.busy='';CIMP.res=res;CIMP.step='done';cimpPaint();
+    var later=function(){
+      try{ if(typeof osLoadClients==='function'){ OSC.loaded=false;OSC.busy=false;osLoadClients(); } }catch(e){}
+      try{ if(typeof hmPaint==='function')hmPaint(); }catch(e2){}
+      try{ if(typeof osRenderList==='function'&&document.getElementById('oscList'))osRenderList(); }catch(e4){}
+      try{ cimpPaint(); }catch(e3){}
+    };
+    if(!fill.length){ later(); return; }
+    /* ♻️ 이미 계신 분 — 갈래만 적습니다 */
+    cmSrcFillMany(fill,null,function(fr){
+      if(CIMP.res){ CIMP.res.fill=fr.ok; CIMP.res.fillFail=fr.fail;
+                    if(fr.why)CIMP.res.fillWhy=fr.why; if(fr.note)CIMP.res.fillNote=fr.note; }
+      later();
+    });
+  };
+  CIMP.busy='save';CIMP.at=0;CIMP.of=P.length||fill.length;CIMP.err='';cimpPaint();
+  /* 새로 넣을 분이 없으면 <b>넣기를 아예 안 부릅니다</b> — 부르면 「넣을 분이
+     없습니다」 가 돌아와 사장님은 갈래도 안 붙은 줄 아십니다 (1번) */
+  if(!P.length){ after({ok:0,fail:0,noid:0,why:'',note:'',ids:[],put:[]}); return; }
+  cliMakeMany(P,function(at,of){ CIMP.at=at;CIMP.of=of;cimpPaint(); },function(res){
     /* ★ <b>갈래도 같이 적습니다</b> (판 X394) — 안 적으면 가져오기 화면에서만
        나뉘고 고객 365일에서는 한 글자도 안 보입니다. 한 번에 넣습니다 (7번). */
     try{ if(typeof cmSrcSaveMany==='function')cmSrcSaveMany(res&&res.put,function(why){
       if(why&&CIMP.res){ CIMP.res.srcWhy=why; }
       try{ cimpPaint(); }catch(e3){}
-      try{ if(typeof osRenderList==='function'&&document.getElementById('oscList'))osRenderList(); }catch(e4){}
     }); }catch(e5){}
-    try{ if(typeof osLoadClients==='function'){ OSC.loaded=false;OSC.busy=false;osLoadClients(); } }catch(e){}
-    try{ if(typeof hmPaint==='function')hmPaint(); }catch(e2){}
+    after(res);
   });
 };
 function cimpDoneHtml(){
   var r=CIMP.res||{ok:0,fail:0,noid:0},S=CIMP.sort||{dupHave:[],dupFile:[],noName:[],maybe:[]};
-  var h='<div class="cimp-t">'+(r.ok?'✅ ':'⚠️ ')+'<b>'+r.ok+'명</b>을 내 고객으로 넣었습니다</div>';
+  /* ★ 머리글이 <b>그때 한 일</b>을 말합니다 (판 X398 · 1번) — 갈래만 붙이러
+     오셨는데 「0명을 넣었습니다」 라고 적으면 아무것도 안 된 줄 아십니다. */
+  var fl=r.fill||0;
+  var h='<div class="cimp-t">'+((r.ok||fl)?'✅ ':'⚠️ ')+
+    (r.ok?('<b>'+r.ok+'명</b>을 내 고객으로 넣었습니다')
+         :('이미 계신 <b>'+fl+'분</b>에게 갈래를 붙였습니다'))+'</div>';
   h+='<div class="cimp-d">고객 365일 에서 바로 보입니다.</div>';
   h+='<div class="cimp-bks">'+
     cimpBucket('✅','넣었습니다',r.ok,'','ok')+
@@ -30591,9 +30674,13 @@ function cimpDoneHtml(){
     cimpBucket('📄','파일 안 중복으로 안 넣음',S.dupFile.length,'','dup')+
     (CIMP.maybe?'':cimpBucket('🤔','같은 이름이라 안 넣음',S.maybe.length,'','may'))+
     cimpBucket('⛔','못 넣었습니다',r.fail,r.why||'','bad')+
+    cimpBucket('🗂','이미 계신 분께 갈래를 붙임',fl,'새로 넣지 않고 갈래만 적었습니다','ok')+
+    cimpBucket('⛔','갈래를 못 적음',r.fillFail||0,r.fillWhy||'','bad')+
     cimpBucket('🔢','넣었지만 번호를 못 받음',r.noid,'실명이 이 기기에 안 담겼습니다 — 고객 365일에서 이름을 고쳐 주십시오','warn')+
     '</div>';
   if(r.note)h+='<div class="cimp-note">'+osEsc(r.note)+'</div>';
+  if(r.fillNote)h+='<div class="cimp-note">'+osEsc(r.fillNote)+'</div>';
+  if(r.fillWhy&&r.fillFail)h+='<div class="cimp-bad">갈래를 못 적었습니다 — '+osEsc(r.fillWhy)+'</div>';
   if(r.why&&r.fail)h+='<div class="cimp-bad">'+osEsc(r.why)+'</div>';
   h+='<div class="cimp-btns">'+
      '<button type="button" class="cimp-b2" onclick="cimpReset();cimpPaint()">또 가져오기</button>'+
@@ -72289,6 +72376,66 @@ function cmSrcSaveMany(put,then){
   },function(e){ fin((e&&e.message)||'네트워크 오류'); });
 }
 
+/* ── 🗂 <b>이미 계신 분의 갈래를 채운다</b> (판 X398) ─────────────────
+   사장님 말씀 — 「전에 넣은 고객들도 갈래 붙일수 있게 해줘」.
+
+   위 cmSrcSaveMany 와 <b>다른 자리</b>입니다 — 저쪽은 <b>갓 넣은</b> 분이라
+   쪽지가 아직 없어 넣기만 하면 되지만, 여기는 <b>이미 계신</b> 분이라
+   쪽지가 있을 수도 없을 수도 있습니다. 있는 분에게 또 넣으면 한 분에게
+   쪽지가 두 장이 되고, 그러면 어느 것이 맞는지 아무도 모릅니다 (5-1번).
+
+   ★ <b>두 번</b>에 끝냅니다 (7번) — 쪽지가 없는 분은 한 번에 insert,
+     있는 분은 한 번에 upsert. 쉰 분이어도 서버를 두 번 두드립니다.
+   ★ 서버가 <b>묶음 고치기를 안 받으면</b> 한 줄씩 갑니다 — cliMakeMany 가
+     쓰는 그 길입니다(판 X138). 안 되면 <b>안 된다고 적습니다</b> (1번).
+   ★ 글 모양은 <b>cmBody 하나</b>가 정합니다 (5번).
+   ★ 실패해도 <b>고객은 그대로</b>입니다 — 갈래를 못 적었다고 아무것도
+     되돌리지 않습니다.                                                 */
+function cmSrcFillMany(list,step,done){
+  var out={ok:0,fail:0,why:'',note:''};
+  var fin=function(){ try{ if(typeof cmLoadAll==='function'){ cmLoadAll(function(){ if(done)done(out); }); return; } }catch(e){}
+                      if(done)done(out); };
+  var tick=function(){ if(typeof step==='function')step(out.ok+out.fail,(list||[]).length); };
+  var sb=(typeof osClient==='function')?osClient():null,uid=cmUid();
+  if(!sb||!uid){ out.why='로그인 후 적습니다'; if(done)done(out); return; }
+  var ins=[],upd=[],i,o,m,row;
+  for(i=0;i<(list||[]).length;i++){
+    o=list[i];
+    if(!o||!o.id||!o.g)continue;
+    /* 여기서는 쪽지를 <b>만들어도 됩니다</b> — 바로 적을 참입니다 */
+    m=cmOf(o.id);
+    m.xsrc=(''+o.g).slice(0,30); m.up=new Date().getTime();
+    row={advisor_id:uid,client_id:o.id,kind:CM_KIND,title:'고객 관리',content:cmBody(m)};
+    if(m._rid){ row.id=m._rid; upd.push(row); } else ins.push(row);
+  }
+  if(!ins.length&&!upd.length){ if(done)done(out); return; }
+  /* 쪽지가 있는 분 — 한 줄씩 고칩니다(묶음이 막혔을 때) */
+  var one=function(k,after){
+    if(k>=upd.length){ after(); return; }
+    sb.from('saved_reports').update({content:upd[k].content}).eq('id',upd[k].id).then(function(r){
+      if(r&&r.error){ out.fail++; if(!out.why)out.why=(''+(r.error.message||'')).slice(0,60); }
+      else out.ok++;
+      tick(); one(k+1,after);
+    },function(e){ out.fail++; if(!out.why)out.why=(e&&e.message)||'네트워크 오류'; tick(); one(k+1,after); });
+  };
+  var doUpd=function(){
+    if(!upd.length){ fin(); return; }
+    sb.from('saved_reports').upsert(upd).then(function(r){
+      if(r&&r.error){
+        out.note='묶어 고치기가 막혀 한 줄씩 적습니다';
+        one(0,fin); return;
+      }
+      out.ok+=upd.length; tick(); fin();
+    },function(){ out.note='묶어 고치기가 막혀 한 줄씩 적습니다'; one(0,fin); });
+  };
+  if(!ins.length){ doUpd(); return; }
+  sb.from('saved_reports').insert(ins).then(function(r){
+    if(r&&r.error){ out.fail+=ins.length; out.why=(''+(r.error.message||'')).slice(0,60); }
+    else out.ok+=ins.length;
+    tick(); doUpd();
+  },function(e){ out.fail+=ins.length; out.why=(e&&e.message)||'네트워크 오류'; tick(); doUpd(); });
+}
+
 /* ── 찾기 ──
    사람은 "홍길동" 이라고 치지 "홍○○" 이라고 치지 않는다.
    실명·마스킹 이름·초성·연락처 뒷자리·가족 이름 어느 것으로도 찾히게 한다. */
@@ -78201,8 +78348,46 @@ function cusFindCrm(id){
 
    여기 적는 줄은 <b>서버에 저장된다</b>(saved_reports 의 JSON). 그래서
    실명을 적지 말라고 화면에 적어 둔다(CLAUDE.md 3번).               */
-function cusFamPanelHtml(id){
+/* ── 🗂 <b>한 분의 갈래를 고칩니다</b> (판 X398) ──────────────────────
+   사장님 말씀 — 「전에 넣은 고객들도 갈래 붙일수 있게 해줘」. 엑셀로
+   한꺼번에 붙이는 길은 가져오기에 냈고, 여기는 <b>한 분</b>을 고치는 자리
+   입니다 — 엑셀에 없던 분, 갈래가 바뀐 분, 잘못 적힌 분.
+   ★ 「어디서 오셨나(소개·지인·개척)」 와 <b>다른 칸</b>입니다 — 그쪽은 넉 장
+     짜리 열쇠이고 이쪽은 사장님이 적으시는 말입니다 (판 X394 · 5번).
+   ★ 비워서 저장하면 <b>지워집니다</b> — 잘못 붙은 갈래를 떼는 길입니다 (6번). */
+function cusXsrcHtml(id){
+  var v=(cmOf(id).xsrc||'');
   return '<div class="t-card" style="margin-bottom:16px">'+
+    '<div class="t-lab">🗂 엑셀 갈래</div>'+
+    '<div class="t-big">이 분은 어느 갈래입니까<small>고객 365일 목록에 '+
+      '「🗂 지인소개」 처럼 서고, 맨 위 갈래 칩으로 묶여 걸러집니다.</small></div>'+
+    /* ⚠⚠ <b>그림을 찍어 보고 고쳤습니다</b> (판 X398) — 처음에 칸과 단추를
+       t-row2 로 나란히 두었더니 단추가 줄을 다 먹어 <b>칸이 「소가」 만큼</b>
+       으로 눌렸습니다. 적는 글이 안 보이는 칸은 못 쓰는 칸입니다.
+       앱의 다른 고치기 칸(📇 사람 · 돈 · 메모)과 <b>같은 꼴</b>로 둡니다 —
+       칸은 한 줄을 다 쓰고 단추는 그 아래. 새 CSS 를 안 만듭니다 (5번). */
+    '<div class="t-fld"><span class="l">갈래</span>'+
+      '<input id="cusXsrc" type="text" placeholder="지인소개 · 인터넷DB · 세미나" '+
+      'value="'+osEsc(v)+'" maxlength="30"></div>'+
+    '<button type="button" class="t-btn sm" style="margin-top:10px" '+
+      'onclick="cusXsrcSave(\''+id+'\')">갈래 저장</button>'+
+    '<div class="t-note">엑셀로 넣으실 때 고른 갈래 칸이 여기 들어옵니다. '+
+      '<b>비워서 저장하면 지워집니다.</b></div>'+
+  '</div>';
+}
+window.cusXsrcSave=function(id){
+  var e=document.getElementById('cusXsrc');
+  if(!e)return;
+  var v=(''+(e.value==null?'':e.value)).replace(/^\s+|\s+$/g,'').slice(0,30);
+  cmSave(id,{xsrc:v},function(){
+    toast(v?('갈래를 「'+v+'」 로 적었습니다'):'갈래를 지웠습니다');
+    try{ cusPaint(); }catch(e2){}
+    try{ if(typeof osRenderList==='function'&&document.getElementById('oscList'))osRenderList(); }catch(e3){}
+  });
+};
+function cusFamPanelHtml(id){
+  return cusXsrcHtml(id)+
+    '<div class="t-card" style="margin-bottom:16px">'+
     '<div class="t-lab">👨‍👩‍👧 가족 — 줄로 적습니다</div>'+
     '<div class="t-big">고객으로 등록되지 않은 가족<small>배우자·자녀를 여기 적으면 위 한 장 카드에 그대로 섭니다. 등록된 가족은 아래 <b>가족으로 묶기</b>로 묶으십시오.</small></div>'+
     '<div id="cusFamRows">'+cusFamRowsHtml(id)+'</div>'+
