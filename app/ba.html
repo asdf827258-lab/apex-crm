@@ -206,6 +206,31 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}button{c
 .tag{font-size:var(--t6);font-weight:800;border-radius:6px;padding:2px 7px}
 .tag.kb{color:#1B64DA;background:var(--bl2)}.tag.hand{color:var(--gyd);background:#F2F4F6}.tag.pp{color:#1B6E45;background:#E6F4EC}   /* 판 X390 — 제안서에서 읽어 넣은 계약 */
 .tag.h{color:var(--pu);background:var(--pu2)}
+/* 판 X396 — 🥇 제안 순위 · 💡 추가 제안 */
+.prk{border:1px solid #E5E8EB;border-radius:12px;padding:12px 14px;margin:10px 0;background:#fff}
+.prk h4{margin:0 0 2px;font-size:var(--t4);font-weight:800;color:var(--nv)}
+.prk h4 small{display:block;font-weight:600;color:var(--gyd);font-size:var(--t6);margin-top:2px}
+.prk .pk-i{display:flex;gap:10px;padding:10px 0;border-top:1px solid #F2F4F6}
+.prk .pk-i:first-of-type{border-top:0}
+.prk .pk-n{flex:0 0 auto;min-width:56px;height:26px;border-radius:13px;font-weight:800;font-size:var(--t6);display:flex;align-items:center;justify-content:center;color:#fff;background:#4E5968}
+.prk .pk-n.r1{background:#DC2626}.prk .pk-n.r2{background:#2563EB}.prk .pk-n.r3{background:#B45309}
+.prk .pk-b{flex:1;min-width:0}
+.prk .pk-t{font-weight:800;color:var(--nv);font-size:var(--t5)}
+.prk .pk-t em{font-style:normal;font-weight:700;color:var(--gyd);font-size:var(--t6);margin-left:6px}
+.prk .pk-w{font-size:var(--t6);color:var(--gyd);margin-top:3px;line-height:1.6}
+.prk .pk-w b{color:var(--nv)}
+.prk ul{margin:4px 0 0;padding-left:18px;font-size:var(--t6);color:var(--gyd);line-height:1.7}
+.prk ul b{color:var(--nv)}.prk ul i{font-style:normal;color:var(--gyd)}
+.prk .pk-s{font-size:var(--t6);color:var(--gyd);margin:8px 0 0;line-height:1.6}
+/* 만들기 화면은 담보를 <b>한 줄로 이어</b> 적는다 — 견본(계약 6건) 화면이 9,000px 을 넘지 않게 · 발표 장은 줄마다 */
+.prk ul.in{padding-left:0;list-style:none}.prk ul.in li{display:inline}.prk ul.in li+li:before{content:' · ';color:var(--gyd)}
+.prk.ed{padding:10px 12px}.prk.ed h4 small{display:none}.prk.ed .pk-i{padding:6px 0}
+/* 만들기 화면에서는 <b>한 줄로 접어</b> 둔다(계약 카드처럼) — 순위만 보이고, 펴면 이유 */
+.prk.ed>summary{cursor:pointer;list-style:none}.prk.ed>summary::-webkit-details-marker{display:none}
+.prk.ed>summary h4{margin:0}.prk.ed>summary h4:before{content:'▸ ';color:var(--gyd)}.prk.ed[open]>summary h4:before{content:'▾ '}
+.prk .pk-q{font-weight:700;color:var(--gyd);font-size:var(--t6);margin-left:8px}.prk .pk-q b{color:var(--nv)}
+.prk.ed[open]>summary{margin-bottom:4px}
+.tag.rk1{color:#fff;background:#DC2626}.tag.rk2{color:#fff;background:#2563EB}.tag.rk3{color:#fff;background:#B45309}.tag.rkn{color:#fff;background:#4E5968}
 /* ── 담보 입력판 — 한눈에 ── */
 .gsel{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
 .gsel button{appearance:none;border:1px solid var(--ln);background:#fff;color:var(--gy);border-radius:999px;padding:5px 12px;font-size:var(--t6);font-weight:700}
@@ -2855,6 +2880,7 @@ function afterHtml(){
     '<p>후 = <b>「유지·배서」로 두신 기존 계약</b> + 여기 적으신 <b>추가 보험</b>입니다. '+
     '<b>상품명 · 가입시기 · 납입기간 · 월보험료 · 담보금액</b>을 한 화면에 적습니다 — 몇 개든 만들어 견주셔도 됩니다.</p>';
   h+=ppHtml();   /* 판 X330 — 상품 제안서 PDF 를 읽어 표로 띄우고, 고쳐서 넣는다 */
+  h+=rankHtml(false);   /* 판 X396 — 제안이 있으면 1 · 2 · 3순위, 없으면 추가 제안 */
   if(!S.after.length)h+='<div class="note i">새 설계가 없어도 됩니다 — <b>유지·배서·해지만 눌러도</b> 전·후 비교는 나옵니다.</div>';
   else h+=S.after.map(function(p,i){return polHtml(p,'after',i);}).join('');
   return h+'</div>';
@@ -2885,6 +2911,7 @@ function polHtml(p,sd,i){
       '<b onclick="polFold(\''+key+'\')" style="cursor:pointer">'+esc(p.nm||(isB?'계약 '+(i+1):'새 제안 '+(i+1)))+'</b>'+
       (p.co?('<span class="sub">'+esc(p.co)+'</span>'):'')+'<span class="sub">담보 '+n+'개'+((p.ext&&p.ext.length)?(' · 참고 '+p.ext.length+'개'):'')+'</span>'+
       (p.kb?'<span class="tag kb">KB에서 읽음</span>':p.pp?'<span class="tag pp" title="'+esc(p.pp)+'">제안서에서 읽음</span>':'<span class="tag hand">손으로 적음</span>')+
+      (isB?'':rankTag(p))+   /* 판 X396 */
       payLine(p,sd,i,true)+
       '<span class="rt">'+
         (isB?('<span class="tg">'+
@@ -3903,6 +3930,162 @@ function gapHtml(C){
      '표준 금액은 사내 상담 기준이며 정답이 아닙니다 — 고객 사정에 맞게 고르십시오.</p>';
   return h+sayLine('담보 '+all.length+'가지를 하나씩 짚었습니다. 조정 후에도 <b>'+cnt.a.x+'가지</b>가 비어 있습니다 — '+
     '<b>오른쪽 줄</b>이 왜 보시는지입니다. 오늘 다 채우실 필요는 없습니다.')+'</section>';
+}
+/* ══ 🥇 제안 순위 · 💡 추가 제안 — 판 X396 ═════════════════════════════════════════════
+   사장님 말씀 2026-11-10 「내가 제안서를 넣으면 1순위 2순위 3순위를 넣어줘 · 만약 제안서가 없다면
+   추가 제안과 그 이유를 타당하게 만들어서 알려주고」.
+
+   ■ 기준은 <b>이 도구에 이미 있는 것</b>만 쓴다 — 표준 금액(STD) × 연령대별 담보안(AGE_PLAN 의 순위 · 배수 · 이유,
+     사장님이 고치신 값 포함 — agePlanOf). 나이를 안 적었으면 설계 순서(DESIGN_ORDER)로 매긴다. 새 숫자를 지어내지 않는다 (1번).
+   ■ 「지금」 = 유지 · 배서로 <b>남는</b> 기존 계약만이다(새 제안은 뺀다). 제안마다 그 「지금」 의 빈자리를 얼마나 채우는지 센다.
+       채움 = 기준까지 모자란 몫 중 이 제안이 메우는 비율(0~1)
+              실손(한도)은 없던 것을 새로 넣으면 1 · 표준이 없는 담보는 없던 것을 새로 넣을 때만 0.3(기준이 없어 가볍게)
+       점수 = Σ 채움 × 그 묶음의 급함(지금 바로 3 · 그다음 2 · 나중에 1 · 이 나이엔 굳이 0.25)
+     점수가 같으면 월 보험료가 적은 쪽이 앞이다.
+   ■ <b>범위가 넓은 담보가 좁은 담보를 덮는다</b> — 뇌혈관질환이 있으면 뇌출혈 자리는 이미 찬 것으로 본다(RANK_UP).
+     안 그러면 뇌혈관 2,000 이 있는 분께 「뇌출혈이 비었습니다」 라고 말하게 된다.
+   ■ 제안이 없으면 — 비어 있는 <b>묶음</b>을 급한 순서(순위 → 빈 비율 → 설계 순서)로 세 개 고르고,
+     묶음마다 모자란 담보 · 권장 금액 · 이유를 적는다. 뇌 · 심장과 순환계(뇌+심장)는 같은 자리라 함께 고르지 않는다.
+   ■ 권장 금액은 사내 상담 기준이지 정답이 아니다 — 화면에 그렇게 적는다.                                 */
+var RANK_W={1:3,2:2,3:1,0:0.25};
+/* 나이를 모를 때 — 설계 순서 번호(DESIGN_ORDER 의 n). 1~2 → 지금 바로 · 3~4 → 그다음 · 5~6 → 나중에 */
+var RANK_DO={'실손의료비':1,'암':2,'뇌':2,'심장':2,'순환계 (뇌+심장)':2,'암 치료비':2,'수술비':3,'입원 · 간병':3,'사망 · 장해':4,'골절 · 화상':6,'배상 · 운전자':6};
+/* 이 담보를 덮는 <b>더 넓은</b> 담보 — 뇌혈관 ⊃ 뇌졸중 ⊃ 뇌출혈 · 뇌경색, 심혈관 ⊃ 허혈성 ⊃ 급성심근경색, 순환계 ⊃ 둘 다 */
+var RANK_UP={brain:['circD'],stroke:['brain','circD'],brainh:['stroke','brain','circD'],braini:['stroke','brain','circD'],
+             heartA:['circD'],heart:['heartA','circD'],mi:['heart','heartA','circD']};
+function rankPri(mid){
+  var b=ageBand();
+  if(b){var o=agePlanOf(b.k,mid);return {p:o.p,why:o.why,src:b.t+' 담보안'};}
+  var n=RANK_DO[mid]||5,d=DESIGN_ORDER[n-1]||{};
+  return {p:(n<=2?1:(n<=4?2:3)),why:d.d||'',src:'설계 순서 '+n+'번'};
+}
+function rankBase(){
+  var a={},i,k;
+  function add(cov){for(k in cov)if(cov.hasOwnProperty(k)){var v=num(cov[k]);if(v===null)continue;a[k]=(a[k]||0)+v;}}
+  for(i=0;i<S.before.length;i++){var p=S.before[i],act=p.act||'keep';
+    if(act==='keep')add(p.cov);else if(act==='endo')add(p.cov2||{});}
+  return a;
+}
+/* 넓은 담보까지 쳐서 「지금 얼마 있는가」 — 순환계 진단은 뇌혈관 · 심혈관이 <b>둘 다</b> 있으면 작은 쪽만큼 있는 것으로 본다 */
+function rankHave(k,base){
+  var v=base[k]||0;
+  (RANK_UP[k]||[]).forEach(function(u){if((base[u]||0)>v)v=base[u];});
+  if(k==='circD'){var bh=Math.min(rankHave('brain',base),rankHave('heartA',base));if(bh>v)v=bh;}
+  return v;
+}
+function rankTarget(k){
+  var sd=SSTD[k];if(!(sd>0))return null;
+  var b=ageBand();return agePlanAmt(sd,b?agePlanOf(b.k,MID[k]).m:1);
+}
+function rankFill(k,v,base){
+  if(!(v>0))return null;
+  var have=rankHave(k,base);
+  if(UNIT[k]==='A')return have>0?null:{k:k,f:1,have:0,t:null,add:v};
+  var t=rankTarget(k);
+  if(t===null)return have>0?null:{k:k,f:0.3,have:0,t:null,add:v};
+  var gap=t-have;if(gap<=0)return null;
+  var add=Math.min(v,gap);return {k:k,f:add/t,have:have,t:t,add:add};
+}
+function rankProps(){
+  var base=rankBase();
+  var L=S.after.map(function(p,i){
+    var parts=[],sc=0,k;
+    for(k in p.cov)if(p.cov.hasOwnProperty(k)&&MID[k]){
+      var x=rankFill(k,num(p.cov[k]),base);if(!x)continue;
+      var pr=rankPri(MID[k]);x.p=pr.p;x.s=x.f*RANK_W[pr.p];sc+=x.s;parts.push(x);}
+    parts.sort(function(a,b){return b.s-a.s;});
+    return {p:p,i:i,sc:Math.round(sc*1000)/1000,parts:parts,prem:num(p.premMan)};});
+  L.sort(function(a,b){return (b.sc-a.sc)||((a.prem===null?1e9:a.prem)-(b.prem===null?1e9:b.prem))||(a.i-b.i);});
+  L.forEach(function(x,j){x.rank=j+1;x.tie=(j>0&&L[j-1].sc===x.sc&&x.sc>0);});
+  return L;
+}
+function rankOf(id){var L=rankProps(),j;for(j=0;j<L.length;j++)if(L[j].p.id===id)return L[j];return null;}
+function rankTag(p){var x=rankOf(p.id);if(!x)return '';
+  return '<span class="tag rk'+(x.rank<=3?x.rank:'n')+'" title="제안 순위 — ③ 추가 보험 위 「🥇 제안 순위」 에 이유가 있습니다">'+x.rank+'순위</span>';}
+function rankSuggest(){
+  var base=rankBase(),out=[];
+  STD.forEach(function(g){
+    var pr=rankPri(g.mid);if(pr.p===0)return;
+    var rows=[],tot=0,miss=0;
+    g.rows.forEach(function(r){
+      if(!(r.std>0))return;tot++;
+      var have=rankHave(r.k,base);
+      if(r.u==='A'){if(have>0)return;miss+=1;rows.push({k:r.k,have:0,t:null,need:null});return;}
+      var t=rankTarget(r.k);if(t===null||have>=t)return;
+      miss+=(t-have)/t;rows.push({k:r.k,have:have,t:t,need:t-have});});
+    /* 더 넓은 담보가 같이 비어 있으면 좁은 것은 따로 권하지 않는다 — 넓은 것 하나로 같이 찬다 */
+    var gap={};rows.forEach(function(r){gap[r.k]=1;});
+    rows=rows.filter(function(r){return !(RANK_UP[r.k]||[]).some(function(u){return gap[u];});});
+    if(!rows.length)return;
+    out.push({g:g,pr:pr,rows:rows,miss:miss/tot});});
+  out.sort(function(a,b){return (a.pr.p-b.pr.p)||(b.miss-a.miss)||((RANK_DO[a.g.mid]||9)-(RANK_DO[b.g.mid]||9));});
+  var pick=[],has={},circ=out.some(function(x){return x.g.mid==='순환계 (뇌+심장)';});
+  out.forEach(function(x){if(pick.length>=3)return;var m=x.g.mid;
+    if(m==='순환계 (뇌+심장)'&&(has['뇌']||has['심장']))return;
+    if((m==='뇌'||m==='심장')&&has['순환계 (뇌+심장)'])return;
+    x.circ=(circ&&(m==='뇌'||m==='심장'));has[m]=1;pick.push(x);});
+  pick.forEach(function(x,j){x.rank=j+1;});
+  return {pick:pick,n:out.length,all:out};
+}
+function rankLi(x){
+  var k=x.k,nm='<b>'+MIC[k]+' '+esc(SNAME[k])+'</b>';
+  var now=(x.have>0)?('지금 '+amt(k,x.have)):'지금 없음';
+  var what=(x.t!==null)?(now+' → 기준 '+amt(k,x.t)+' 중 <b>'+amt(k,x.add)+'</b> 채움'):
+    (UNIT[k]==='A'?(now+' → <b>새로 생김</b>'):(now+' → <b>새로 생김</b> '+amt(k,x.add)+' <i>(표준 금액이 없는 담보)</i>'));
+  return '<li>'+nm+' — '+what+' <i>· '+agePriOf(x.p).t+'</i></li>';
+}
+function rankHtml(show){
+  var b=ageBand(),h,sum='';
+  var src=b?('<b>'+b.t+' 담보안</b>(표준 금액 × 나이 배수 · 묶음별 순위)'):'<b>표준 금액 · 설계 순서</b>(고객 나이를 적으시면 나이대 기준으로 다시 매깁니다)';
+  if(S.after.length){
+    var L=rankProps(),top=show?L.slice(0,3):L;
+    sum=L.slice(0,3).map(function(x){return '<b>'+x.rank+'순위</b> '+esc(x.p.nm||('새 제안 '+(x.i+1)));}).join(' · ');
+    h='<div class="prk'+(show?'':' ed')+'" id="baRank"><h4>🥇 제안 순위 — '+L.length+'건'+
+      '<small>지금 남는 보장의 <b>빈자리</b>를 <b>얼마나</b>, <b>얼마나 급한 자리부터</b> 채우는지로 매겼습니다</small></h4>';
+    top.forEach(function(x){
+      var nm=esc(x.p.nm||('새 제안 '+(x.i+1))),n1=x.parts.filter(function(q){return q.p===1;}).length;
+      var head=(x.sc>0)?('빈자리 <b>'+x.parts.length+'곳</b>을 채웁니다'+(n1?(' — 그중 「지금 바로」 자리 <b>'+n1+'곳</b>'):'')+
+          (x.rank===1&&L.length>1?' · 급한 빈자리를 <b>가장 많이</b> 채워 1순위입니다':'')+
+          (x.tie?' · 앞 순위와 채우는 정도가 같아 <b>월 보험료가 적은 쪽</b>을 앞에 두었습니다':'')):
+        '지금 계약으로 이미 기준을 채운 담보뿐이라 <b>새로 채우는 빈자리가 없습니다</b> — 순위가 뒤입니다';
+      h+='<div class="pk-i"><span class="pk-n r'+(x.rank<=3?x.rank:'n')+'">'+x.rank+'순위</span><div class="pk-b">'+
+        '<div class="pk-t">'+nm+'<em>'+(x.p.co?esc(x.p.co):'')+(x.prem!==null?(' · 월 '+fee(x.prem)):'')+'</em></div>'+
+        '<div class="pk-w">'+head+'</div>'+
+        (x.parts.length?('<ul'+(show?'':' class="in"')+'>'+x.parts.slice(0,show?3:2).map(rankLi).join('')+(x.parts.length>(show?3:2)?('<li>그 밖에 '+(x.parts.length-(show?3:2))+'곳</li>'):'')+'</ul>'):'')+
+        '</div></div>';});
+    if(show&&L.length>3)h+='<p class="pk-s">4순위부터 '+(L.length-3)+'건은 만들기 화면에 있습니다.</p>';
+  }else{
+    var G=rankSuggest();
+    sum=G.pick.length?G.pick.map(function(x){return '<b>'+x.rank+'순위</b> '+esc(x.g.mid);}).join(' · '):'비어 있는 묶음 없음';
+    h='<div class="prk'+(show?'':' ed')+'" id="baRank"><h4>💡 추가 제안 — 넣으신 제안서가 없어 <b>빈자리</b>로 골랐습니다'+
+      '<small>유지 · 배서로 남는 계약 기준으로 비어 있는 묶음을 <b>급한 순서</b>로 세 개 — 제안서를 넣으시면 그 제안들의 순위로 바뀝니다</small></h4>';
+    if(!G.pick.length)h+='<div class="note g">기준으로 <b>비어 있는 묶음이 없습니다</b> — 지금 계약을 지키시는 것이 먼저입니다.</div>';
+    G.pick.forEach(function(x){
+      var pri=agePriOf(x.pr.p);
+      h+='<div class="pk-i"><span class="pk-n r'+x.rank+'">'+x.rank+'순위</span><div class="pk-b">'+
+        '<div class="pk-t">'+x.g.ic+' '+esc(x.g.mid)+'<em>'+pri.t+' · '+esc(x.pr.src)+'</em></div>'+
+        '<div class="pk-w">'+(x.pr.why||'')+(x.circ?' <b>뇌 · 심장을 한 담보로 덮는 순환계 상품</b>이면 같이 채울 수 있습니다.':'')+'</div>'+
+        '<ul'+(show?'':' class="in"')+'>'+x.rows.slice(0,show?4:3).map(function(r){
+          return '<li><b>'+esc(SNAME[r.k])+'</b> — '+(r.t===null?'지금 없음 → <b>가입 권장</b>':
+            ((r.have>0?('지금 '+amt(r.k,r.have)):'지금 없음')+' → 권장 '+amt(r.k,r.t)+' (<b>'+amt(r.k,r.need)+'</b> 더)'))+'</li>';}).join('')+
+          (x.rows.length>(show?4:3)?('<li>그 밖에 '+(x.rows.length-(show?4:3))+'가지</li>'):'')+'</ul></div></div>';});
+    if(show&&G.n>G.pick.length)h+='<p class="pk-s">비어 있는 묶음은 모두 <b>'+G.n+'개</b>입니다 — 나머지는 「지금 더 넣으셔야 할 것」 장에 있습니다.</p>';
+  }
+  h+='<p class="pk-s">기준: '+src+' — 사내 상담 기준이며 정답이 아닙니다. 소득 · 병력 · 심사에 맞게 고르십시오.</p></div>';
+  if(show)return h;
+  /* 만들기 화면 — 머리줄을 summary 로 올리고 순위 한 줄을 붙인다 */
+  var m=h.match(/^<div class="prk ed" id="baRank">(<h4>[\s\S]*?<\/h4>)([\s\S]*)<\/div>$/);
+  if(!m)return h;
+  return '<details class="prk ed" id="baRank"'+(S.rankOpen?' open':'')+' ontoggle="S.rankOpen=this.open;save()">'+
+    '<summary>'+m[1].replace('</h4>','<span class="pk-q">'+sum+' — 눌러서 이유 보기</span></h4>')+'</summary>'+m[2]+'</details>';
+}
+function rankShow(){
+  var has=S.after.length,L=has?rankProps():null;
+  var say=has?('제안 드린 것 중 <b>'+esc(L[0].p.nm||'1순위')+'</b>부터 보시면 됩니다 — 지금 비어 있는 자리 중 <b>급한 곳</b>을 가장 많이 채웁니다.'):
+    '오늘 다 하실 필요는 없습니다. <b>1순위</b>부터 보시고, 나머지는 다음에 같이 보셔도 됩니다.';
+  return '<section id="sRank" data-grp="돈은 이렇게 됩니다" data-nm="'+(has?'제안 순위':'추가 제안')+'"><h3>'+(has?'오늘 제안 드리는 순서':'더 넣으신다면 이 순서로')+
+    '<small>'+(has?'빈자리를 얼마나 · 얼마나 급한 자리부터 채우는지로 매겼습니다':'지금 계약에서 비어 있는 자리 중 급한 것부터')+'</small></h3>'+
+    rankHtml(true)+sayLine(say)+'</section>';
 }
 function needHtml(C){
   var L=needList(C);
@@ -6689,6 +6872,7 @@ function showHtml(){
   h+=premShow();
   h+=saveHtml(C);
   h+=needHtml(C);
+  h+=rankShow();   /* 판 X396 — 제안 순위 · 추가 제안 */
   h+=gapHtml(C);
   h+=stShow(C);
   var apxAt=h.length;   /* 판 X351 — 「셈한 근거」 두 장이 들어갈 자리(한 줄 요약 바로 앞) */
@@ -7254,6 +7438,9 @@ var BA_WALK=[
  {k:'s6',nm:'더 넣을 것',ic:'target',pt:'급한 순서 — 붉은 카드가 지금 아예 없는 담보',
   q:'이걸 다 해야 해요?',a:'한 번에 다 하실 필요 없습니다. 이 순서로 채우시면 됩니다.',
   tip:'합계를 앞세우지 말고 맨 위 카드부터 하나씩'},
+ {k:'sRank',nm:'제안 순위',ic:'list',pt:'1순위부터 — 지금 → 기준 · 채우는 금액, 제안이 없으면 비어 있는 묶음 세 개와 이유',   /* 판 X396 */
+  q:'왜 이게 1순위예요?',a:'지금 계약에서 비어 있는 자리 중 이 나이에 가장 급한 자리를 가장 많이 채워서입니다. 줄마다 지금 얼마 → 기준 얼마가 적혀 있습니다.',
+  tip:'1순위 하나만 먼저 — 나머지는 다음에 같이 보셔도 된다고 말해요'},
  {k:'sGap',nm:'빠진 담보 점검',ic:'search',pt:'77가지 전부 — 왼쪽 표시가 지금, 오른쪽이 조정 후 · 오른쪽 주황 칸이 조정 후에도 빈 자리와 그 이유',
   q:'이것도 다 들어야 해요?',a:'아닙니다. 비어 있다는 것을 아시고 정하시는 것이 중요합니다. 급한 것은 앞 장 「더 넣을 것」 순서입니다.',
   tip:'✗ 가 많은 묶음 하나만 짚고 넘어가요 — 표준이 없는 새 담보(생활비 등)는 있으면 ✓ 로만 섭니다'},
@@ -7698,7 +7885,7 @@ var BA_TRUST=[
 var BA_SEE=[
  {g:'지금 내 보장',it:[['s1','💳','한눈에 — 매달 보험료'],['s0','🧭','왜 나에게 맞는가'],['r_u','📘','보험금이 나오는 모양'],['r_all','🗂','한눈에 모든 담보']]},
  {g:'병이 오면 — 치료 한 바퀴',worry:1,it:[['r_cancer','🎗️','암'],['r_brain','🧠','뇌혈관'],['r_heart','❤️','심혈관'],['r_care','🏠','재가급여 · 돌봄']]},
- {g:'돈은 이렇게 됩니다',it:[['s7','⏳','경제활동기'],['s2','📈','보험료 변화'],['sSave','💰','이 돈이 무엇이 되는가'],['s6','➕','더 넣을 것'],['sGap','🔎','빠진 담보 점검']]},
+ {g:'돈은 이렇게 됩니다',it:[['s7','⏳','경제활동기'],['s2','📈','보험료 변화'],['sSave','💰','이 돈이 무엇이 되는가'],['s6','➕','더 넣을 것'],['sRank','🥇','제안 순위 · 추가 제안'],['sGap','🔎','빠진 담보 점검']]},
  {g:'정리',it:[['r_wrap','📌','아직 비는 자리'],['s3','📝','한 줄 요약'],['sFam','👨‍👩‍👧','가족에게 남는 것'],['sClaim','🧾','숨은 · 미청구 보험금'],['sTrust','🤝','맡겨 주시면']]}
 ];
 var BA_WORRY={cancer:'r_cancer',brain:'r_brain',heart:'r_heart',care:'r_care'};
@@ -7725,7 +7912,7 @@ function baBrief(){S.brief=!S.brief;baSeeKeep();}
 function baSeePreset(kind){
   S.see={};
   if(kind==='short'){
-    var keep={s1:1,s2:1,sSave:1,sTrust:1,sClaim:1};
+    var keep={s1:1,s2:1,sSave:1,sRank:1,sTrust:1,sClaim:1};   /* 판 X396 — 제안 순위는 짧게 볼 때도 */
     keep[BA_WORRY[S.worry||'cancer']]=1;
     BA_SEE.forEach(function(g){g.it.forEach(function(x){if(!keep[x[0]])S.see[x[0]]=false;});});
     S.brief=true;
