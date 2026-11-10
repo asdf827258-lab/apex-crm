@@ -210,7 +210,8 @@
     paint();
   });
   window.APXSelf={init:init,paint:paint,text:text,reset:function(){ST={a:{},n:{},p:{}};paint()},
-    catalog:function(){return ALLQ.map(function(q){return{k:q.k,n:q.n,g:q.g,q:q.q}})},
+    /* w(증권 어디를 보나) · r(숫자로 묻는 문항)도 빌려 준다 — 팩트파인딩 · 함께 점검표가 같은 문항을 그린다 (판 X405) */
+    catalog:function(){return ALLQ.map(function(q){return{k:q.k,n:q.n,g:q.g,q:q.q,w:q.w,r:!!q.r}})},
     link:link,parse:parse,checkHi:checkHi,cleanBy:cleanBy,BAN:BAN.slice(),HI_MAX:HI_MAX,BY_MAX:BY_MAX,
     /* 한 장 설계서가 빌려 쓰는 것 — 문항의 고를 것 · 판정 · 기준 숫자 · 이 폰에 남은 셀프 점검 답 */
     S:S,TARGET:TARGET,man:man,
