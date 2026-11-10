@@ -258,6 +258,11 @@ body.quick main{max-width:640px;padding-top:12px}
 .qk-r.need .qk-in input{border-style:dashed;border-color:#93B7F5}
 .qk-foot{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .qk-foot .btn{min-height:44px}
+/* ✍️ <b>홈 칸 안</b>(&embed=1 · 판 X394) — 머리띠·제목은 홈이 이미 적습니다. 배경은 홈 것 그대로 */
+body.embed{background:transparent}
+body.embed nav,body.embed .qk-top h2,body.embed .qk-top>p{display:none}
+body.embed main{padding:0 0 4px}
+body.embed #gate{padding:28px 12px}
 </style>
 </head>
 <body>
@@ -395,6 +400,9 @@ let FILTER = { month: '', team: '', mem: '', stage: '__appc', q: '' };
 /* ✍️ <b>간편 입력</b> — 주소에 ?quick=1 이 붙으면 표 대신 「한 분 = 한 줄」 판을 세웁니다.
    QWHO = 누구 것을 적나(처음엔 나) · QALL = 미접촉까지 보나 */
 const QUICK = new URLSearchParams(location.search).get('quick') === '1';
+/* ✍️ 홈 칸 안에 끼워졌나 (판 X394) — 그러면 키를 알려 주고, 칠 때마다 금액을 알려 줍니다 */
+const EMBED = QUICK && new URLSearchParams(location.search).get('embed') === '1' && window.parent !== window;
+if (EMBED) document.body.classList.add('embed');
 let QWHO = '', QALL = false;
 /* ── <b>팀은 접어 둡니다</b> ─────────────────────────────────────────
    사장님 말씀 — 「팀 별로 따로 보고, <b>전체적으로 따로</b> 볼 수 있도록
@@ -588,6 +596,11 @@ function queueSave(r, field) {
     r.cdate = (r.stage === '계약완료' || r.stage === '증권전달') ? TODAY_S : '';
   }
   clearTimeout(saveT); saveT = setTimeout(flush, 700);
+  /* ✍️ 예상업적은 <b>칠 때마다</b> 홈에 알립니다 (판 X394 · 「같이 소통되도록」) — 홈은 손에 든
+     그 줄만 고쳐 합계를 바로 바꿉니다. 표에서 적어도 간편 판에서 적어도 같은 말입니다 (5번). */
+  if (field === 'expect' && window.parent !== window) {
+    try { window.parent.postMessage({ apex: 'pex-put', id: r.id, expect: r.expect || null }, location.origin); } catch (e) { }
+  }
 }
 async function flush() {
   const ids = Object.keys(pend); if (!ids.length) return;
@@ -599,8 +612,6 @@ async function flush() {
   }
   if (bad) toast('저장 실패 — ' + bad);
   else if (ok) toast(`${ok}건 저장했습니다`);
-  /* 홈 덮개에 「적은 것이 있다」 고 알립니다 — 닫을 때 홈이 그때만 다시 읽습니다 (7번) */
-  if (ok && window.parent !== window) { try { window.parent.postMessage({ apex: 'pex-saved' }, location.origin); } catch (e) { } }
 }
 window.addEventListener('beforeunload', () => { if (Object.keys(pend).length) flush(); });
 
@@ -1248,11 +1259,36 @@ if (QUICK) {
   board.addEventListener('click', e => {
     const c = e.target.closest('[data-qall]');
     if (c) { QALL = c.dataset.qall === '1'; renderQuick(); return; }
-    if (e.target.closest('#qk-full')) { flush(); location.href = location.pathname; }
+    if (e.target.closest('#qk-full')) { flush();
+      /* 홈 칸 안이면 표는 홈이 덮개로 엽니다 — 칸 안에서 14칸 표로 바뀌면 폰에서 옆으로 밀립니다 */
+      if (EMBED) { try { window.parent.postMessage({ apex: 'pex-full' }, location.origin); } catch (x) { } return; }
+      location.href = location.pathname; }
   });
   /* 덮개를 닫을 때 남은 것을 바로 보냅니다 — 700ms 를 기다리다 닫히면 잃습니다 */
   document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
   window.addEventListener('pagehide', () => flush());
+}
+/* ✍️ 홈 칸 안 (판 X394) — 키를 알려 홈이 칸을 딱 맞게 늘이고, 「접기」 를 누르면 남은 것을 바로 보냅니다 */
+if (EMBED) {
+  /* 칸을 떠나면 기다리지 않고 바로 보냅니다 — 홈에서 접거나 다른 화면으로 가면 700ms 를 못 기다립니다 */
+  board.addEventListener('change', e => { if (e.target.dataset && e.target.dataset.qx) flush(); });
+  window.addEventListener('message', e => {
+    if (e.origin === location.origin && e.data && e.data.apex === 'pex-flush') flush();
+  });
+  let lastH = 0;
+  const tell = () => {
+    let h = 0;
+    for (const el of document.body.children) {
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.position === 'fixed' || el.tagName === 'SCRIPT') continue;
+      h = Math.max(h, el.getBoundingClientRect().bottom + window.scrollY);
+    }
+    h = Math.ceil(h);
+    if (h && h !== lastH) { lastH = h; try { window.parent.postMessage({ apex: 'pex-h', h }, location.origin); } catch (e) { } }
+  };
+  try { new ResizeObserver(tell).observe(document.body); } catch (e) { }
+  new MutationObserver(tell).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+  tell();
 }
 
 /* ============================================================

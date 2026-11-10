@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   check-pexquick.js — ✍️ <b>예상업적을 오늘(홈)에서 바로 적나</b> (판 X388)
+   check-pexquick.js — ✍️ <b>예상업적을 오늘(홈)에서 바로 적나</b> (판 X394)
 
    사장님 말씀 (2026-11-09) — 「팀원들이 <b>편하게 입력</b>하도록 조치를 취해
    <b>오늘에서</b> 할 순 없나」.
@@ -18,11 +18,14 @@
      [4] ★ 팀원은 <b>제 것만</b> · 팀장은 제 팀원까지 고르개로 · 남의 팀은 없다
      [5] ★ 폰에서 옆으로 안 밀리고 · 13px 밑 글씨 0 · 금액 칸 44px 이상
      [6] ★ ?quick 이 없으면 <b>원래 표 그대로</b>다
-     [7] ★★ 홈 📊 상담현황에 <b>누르는 토막</b>이 서고, 누르면 덮개로 간편 입력이 열린다
+     [7] ★★ 홈 📊 상담현황에 <b>누르는 토막</b>이 서고, 누르면 <b>그 칸 바로 밑에</b> 펼쳐진다
+         (판 X394 · 사장님 말씀 2026-11-10 「하나로 만들자. 두개로 나누지말고 같이 소통되도록」)
      [8] ★★★ 홈이 <b>한 px 도 안 길어진다</b> — 상담현황 단추 줄에 셋째 단추를 세우면
          390px 한 줄에 안 들어 4.2화면 선을 넘습니다(판 X193 에서 재어 본 자리).
          그래서 글 속 토막입니다. 토막을 맨글로 바꿔 그린 홈과 키를 견줍니다.
-     [9] ★★ 닫을 때 <b>적은 것이 있을 때만</b> 다시 읽는다 (7번) · 안 적었으면 서버 0번
+     [9] ★★★ <b>같이 소통</b> — 칸 안에서 치면 <b>위 「진행중 예상」 이 바로</b> 바뀐다 ·
+         서버를 다시 읽지 않는다(7번) · 홈이 다시 그려져도 치던 판이 안 새로 뜬다 ·
+         「접기」 하면 남은 것을 바로 보내고 칸이 비워진다
 
    ⚠ 서버는 가짜입니다 — 이 자는 「어느 문으로 무엇을 보내나」 를 봅니다.
      문이 실제로 적는지는 pipeline_save 의 일입니다(표가 이미 쓰는 문).
@@ -61,7 +64,7 @@ const FAKE = (rows) => `window.__CALLS=[];window.supabase={createClient:function
     teams:[{id:'T1',name:'한팀',leader_id:'ld'},{id:'T2',name:'두팀',leader_id:null}],
     team_members:[{team_id:'T1',member_id:'me'},{team_id:'T1',member_id:'ld'},{team_id:'T2',member_id:'zz'}],
     org_members:[], dbs:${JSON.stringify(rows)}};
-  function Q(t){var q={select:function(){return q;},order:function(){return q;},eq:function(){return q;},range:function(){return q;},
+  function Q(t){var q={select:function(){return q;},order:function(){return q;},eq:function(){return q;},range:function(){return q;},limit:function(){return q;},
     upsert:function(v){__CALLS.push({upsert:t,v:v});return Promise.resolve({error:null});},
     then:function(ok,no){return Promise.resolve({data:T[t]||[],error:null}).then(ok,no);}};return q;}
   return {auth:{getSession:function(){return Promise.resolve({data:{session:{user:{id:ME}}}});}},
@@ -187,10 +190,10 @@ const ROWS = [
     AR.loaded = true; AR.busy = ''; AR.cliRows = []; AR.calls = []; AR.noPex = false; AR.noLink = false;
     const mk = (id, stage, cAt) => ({ id, who: 'me', name: '홍길동', region: '순천', src: '일반', stage, expect: null, contract: null,
       closed: '', cAt: cAt || '', pAt: '', got: '2026-06-01', n: 1, last: '', res: '미진행', client_id: undefined, appt: '', memo: '', days: 10 });
-    AR.db = [mk('d1', '계약완료', 이번달), mk('d2', '증권전달', 지난달), mk('d4', 'AP'), mk('d5', 'PC')];
+    /* a1 은 끼운 판(가짜 서버 ROWS)의 그 줄과 <b>같은 id</b> — 판에서 치면 이 줄이 바뀌어야 합니다 */
+    AR.db = [mk('d1', '계약완료', 이번달), mk('d2', '증권전달', 지난달), mk('a1', 'AP'), mk('d5', 'PC')];
     const wait = ms => new Promise(r => setTimeout(r, ms));
     try { go('home'); } catch (e) {}
-    try { renderHome(); } catch (e) {}
     await wait(500);
     const pane = document.getElementById('dynPane');
     const 키 = () => pane.scrollHeight;
@@ -198,28 +201,28 @@ const ROWS = [
     /* 토막을 맨글로 바꿔 다시 그린 홈 — 토막이 줄을 늘리는지 본다 */
     const 원래 = window.hmPexTap;
     window.hmPexTap = function (t) { return t; };
-    try { renderHome(); } catch (e) {}
+    try { go('home'); } catch (e) {}
     await wait(400);
     const 맨글 = 키();
     window.hmPexTap = 원래;
-    try { renderHome(); } catch (e) {}
+    try { go('home'); } catch (e) {}
     await wait(400);
     const card = document.getElementById('hmFlow');
     const fold = card && card.closest('.hm-fold');
     if (fold && !fold.classList.contains('on')) { try { hmFoldToggle(fold.id.replace('hmFold_', '')); } catch (e) {} }
     const taps = [...document.querySelectorAll('#hmFlow [data-hmpex]')];
-    const r = { 있는, 맨글, 토막: taps.map(t => t.textContent), 높이: taps.map(t => Math.round(t.getBoundingClientRect().height)) };
+    const line = () => ((document.querySelector('#hmFlow [data-pexline]') || {}).textContent || '');
+    const r = { 있는, 맨글, 토막: taps.map(t => t.textContent), 높이: taps.map(t => Math.round(t.getBoundingClientRect().height)),
+      빈칸: (document.getElementById('hmPexHost') || {}).innerHTML, 전줄: line() };
     if (taps[0]) {
       taps[0].click();
-      const sh = document.getElementById('hmSheet');
-      r.열림 = !!(sh && sh.classList.contains('on'));
-      r.주소 = (document.getElementById('hmShFrame') || {}).getAttribute ? document.getElementById('hmShFrame').getAttribute('src') : '';
-      r.머리 = (document.getElementById('hmShTop') || {}).textContent || '';
-      hmPexClose(); r.안적고 = window.__AR; r.닫힘 = !sh.classList.contains('on');
-      document.querySelector('#hmFlow [data-hmpex]').click();
-      window.postMessage({ apex: 'pex-saved' }, location.origin);
-      await wait(80);
-      hmPexClose(); r.적고 = window.__AR;
+      await wait(300);
+      const fr = document.getElementById('hmPexFr'), sh = document.getElementById('hmSheet');
+      r.펼침 = !!fr; r.덮개 = !!(sh && sh.classList.contains('on'));
+      r.주소 = fr ? fr.getAttribute('src') : '';
+      /* 상담현황 카드 바로 밑에 섰나 — 카드 아래 끝과 칸 위 끝 사이 */
+      const fh = document.getElementById('hmFlowHost'), ph = document.getElementById('hmPexHost');
+      r.붙음 = !!(fh && ph && fh.nextElementSibling === ph);
     }
     return r;
   }, { 이번달, 지난달 });
@@ -227,13 +230,58 @@ const ROWS = [
   is(H.토막.length >= 1 && /진행중 예상/.test(H.토막[0]), '★★ 「✍️ 진행중 예상」 토막이 선다');
   is(H.토막.some(t => /DB · 업적관리/.test(t)), '금액이 다 안 적혔으면 「「DB · 업적관리」」 도 누르는 토막이다(말만 하지 않는다 · 6번)');
   is(H.높이.length && Math.min(...H.높이) >= 44, '누르는 넓이 ' + JSON.stringify(H.높이) + 'px ≥ 44');
-  is(H.열림 && /edu-pipeline\.html\?quick=1/.test(H.주소 || ''), '★★ 누르면 덮개로 간편 입력이 열린다 (' + H.주소 + ')');
-  is(/예상업적 적기/.test(H.머리) && !/했습니다/.test(H.머리), '덮개 머리는 이 일의 말 — 「✓ 했습니다」 가 아니다');
-  console.log('\n[8] 홈이 한 px 도 안 길어진다');
+  is(H.펼침 && !H.덮개 && /edu-pipeline\.html\?quick=1&embed=1/.test(H.주소 || ''),
+    '★★ 누르면 덮개가 아니라 <b>칸 안에</b> 펼쳐진다 (' + H.주소 + ')');
+  is(H.붙음, '★ 펼친 칸은 📊 상담현황 바로 밑 — 그러나 #hmFlowHost 밖(다시 그려도 안 지워짐)');
+  console.log('\n[8] 홈이 한 px 도 안 길어진다 (접힌 때)');
   is(H.있는 === H.맨글, '★★★ 토막이 있는 홈 ' + H.있는 + 'px = 맨글 홈 ' + H.맨글 + 'px');
-  console.log('\n[9] 닫을 때 — 적은 것이 있을 때만 다시 읽는다 (7번)');
-  is(H.닫힘 && H.안적고 === 0, '안 적고 닫으면 서버를 안 부른다 (' + H.안적고 + '번)');
-  is(H.적고 === 1, '적고 닫으면 한 번 다시 읽는다 (' + (H.적고 - H.안적고) + '번)');
+  is(H.빈칸 === '', '접힌 때 적는 칸은 빈 칸이다');
+
+  console.log('\n[9] 같이 소통 — 치면 위 합계가 바로');
+  const fr = p.frameLocator('#hmPexFr');
+  await fr.locator('[data-qx="a1"]').waitFor({ timeout: 30000 });
+  const 판 = await p.evaluate(async () => {
+    await new Promise(r => setTimeout(r, 600));
+    const f = document.getElementById('hmPexFr'), w = f.contentWindow;
+    return { 키: Math.round(f.getBoundingClientRect().height),
+      속키: Math.ceil(w.document.querySelector('main').getBoundingClientRect().bottom),
+      띠: w.getComputedStyle(w.document.querySelector('nav')).display,
+      제목: w.getComputedStyle(w.document.querySelector('.qk-top h2')).display,
+      옆: w.document.documentElement.scrollWidth - w.innerWidth };
+  });
+  is(판.띠 === 'none' && 판.제목 === 'none', '칸 안에서는 판의 머리띠·제목을 안 세운다(홈이 이미 적음)');
+  is(Math.abs(판.키 - 판.속키) <= 8, '★ 칸 키가 판 키에 맞춰 늘어난다 — 칸 안 스크롤 없음 (' + 판.키 + ' ≈ ' + 판.속키 + 'px)');
+  is(판.옆 <= 1, '칸 안에서도 옆으로 안 밀린다 (' + 판.옆 + 'px)');
+  await p.evaluate(() => { document.getElementById('hmPexFr').contentWindow.__첫판 = 1; });
+  await fr.locator('[data-qx="a1"]').click();
+  await p.keyboard.type('20');
+  await p.waitForTimeout(250);
+  const 후 = await p.evaluate(() => ({ 줄: ((document.querySelector('#hmFlow [data-pexline]') || {}).textContent || ''),
+    db: (AR.db.find(x => x.id === 'a1') || {}).expect, ar: window.__AR }));
+  console.log('    전: ' + H.전줄.replace(/\s+/g, ' ').slice(0, 90));
+  console.log('    후: ' + 후.줄.replace(/\s+/g, ' ').slice(0, 90));
+  is(후.db === 200000, '★★ 칸에서 「20」 → 홈 손의 그 줄이 200,000원 (' + 후.db + ')');
+  is(/진행중 예상\s*20만원/.test(후.줄) && !/진행중 예상\s*금액 안 적힘/.test(후.줄),
+    '★★★ 치자마자 위 「진행중 예상」 이 「금액 안 적힘」 → 20만원 — 닫지 않아도');
+  is(후.ar === 0, '★ 서버를 다시 읽지 않는다 (7번) — arLoad ' + 후.ar + '번');
+  /* 홈이 다시 그려져도(hmPaint) 판이 새로 안 뜬다 — 치던 칸을 잃지 않는다 */
+  await p.evaluate(() => { try { hmPaint(); } catch (e) {} try { hmSidePlace(); } catch (e) {} });
+  await p.waitForTimeout(300);
+  const 같은판 = await p.evaluate(() => { const f = document.getElementById('hmPexFr'); return !!(f && f.contentWindow.__첫판 === 1); });
+  is(같은판, '★★ 홈이 다시 그려져도 칸 안 판은 그대로 (치던 칸을 잃지 않음)');
+  is(await p.evaluate(() => /20만원/.test((document.querySelector('#hmFlow [data-pexline]') || {}).textContent || '')),
+    '다시 그려도 합계는 20만원 그대로(손의 줄을 고쳤으므로)');
+  /* 접기 — 남은 것을 바로 보내고 칸을 비운다 */
+  await fr.locator('[data-qx="a3"]').click();
+  await p.keyboard.type('5');
+  await p.evaluate(() => { const b = [...document.querySelectorAll('#hmPexIn button')].find(x => /접기/.test(x.textContent)); b.click(); });
+  await p.waitForTimeout(400);
+  const 보냄 = await p.evaluate(() => { const w = document.getElementById('hmPexFr').contentWindow;
+    return w.__CALLS.filter(c => c.rpc === 'pipeline_save').map(c => c.a.p_id + '=' + c.a.p.expect_premium); });
+  console.log('    보낸 것: ' + JSON.stringify(보냄));
+  is(보냄.includes('a1=200000') && 보냄.includes('a3=50000'), '★★ 접는 순간 남은 것(a3 「5」)까지 바로 보낸다 — 700ms 를 안 기다림');
+  await p.waitForTimeout(2600);
+  is(await p.evaluate(() => (document.getElementById('hmPexHost') || {}).innerHTML === ''), '접으면 칸이 비워진다');
   await p.context().close();
 
   is(!errs.length, '페이지 오류 0 ' + (errs.length ? JSON.stringify(errs.slice(0, 3)) : ''));
