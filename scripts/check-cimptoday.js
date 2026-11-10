@@ -158,7 +158,11 @@ const SEED = (renum) => {
     const card = [...document.querySelectorAll('.card')].find(x => /오늘의 미션/.test(x.innerText || ''));
     const mis = card ? (card.innerText || '').replace(/\s+/g, ' ') : '';
     const pills = [...document.querySelectorAll('.cc-pill')].map(x => (x.innerText || '').replace(/\s+/g, ' '));
-    return { all, mis, pills };
+    /* ⚠ 머리글은 <b>그 칸만</b> 읽습니다 — 화면 글을 통째로 regex 로 긁으면
+       바로 뒤 알약의 「6 첫 연락 전」 이 걸려들어, 머리글을 되돌려도
+       <b>통과합니다</b>. 두 번째로 밟은 자리입니다 (8번). */
+    const em = document.querySelector('.cc-hd em');
+    return { all, mis, pills, head: em ? (em.innerText || '').replace(/\s+/g, ' ').trim() : '' };
   });
   console.log('\n[1]·[2] 📇 고객 365일 — 오늘 미션에 서는가');
   is(/🆕/.test(C.mis), '  ★★ 첫 연락 전인 분이 <b>미션에 선다</b>');
@@ -173,6 +177,13 @@ const SEED = (renum) => {
   is(!/오늘 급히 챙길 고객은 없습니다/.test(C.all),
      '  ★★ 「<b>오늘 급히 챙길 고객은 없습니다</b>」 라고도 안 한다 (0-1번)');
   is(/아직 첫 연락 전/.test(C.all), '  ★ 「N명은 아직 첫 연락 전입니다」 라고 적는다');
+  /* ⚠⚠ <b>그림을 찍어 보고 찾았습니다</b> (판 X394) — 보드 머리글이 「고객 6명 중
+     <b>6명이 주기 안에</b> 있습니다」 · <b>100%</b> 라고 적고, 그 바로 아래에
+     「다만 6명은 아직 첫 연락 전입니다」 가 섰습니다. 글자로만 재던 위 두 줄은
+     <b>둘 다 통과했습니다</b> — 한 화면이 같은 물음에 두 답을 하는데 자는
+     조용했습니다 (0-1번 · 8번). 이제 머리글까지 같이 묻습니다.           */
+  is(/^고객 \d+명 중/.test(C.head) && /첫 연락 전/.test(C.head),
+     '  ★★ 머리글이 <b>말을 끝까지 한다</b> — 「' + (C.head || '(머리글 칸을 못 찾았습니다)') + '」');
   const pil = C.pills.find(x => /첫 연락 전/.test(x)) || '';
   is(/^6/.test(pil.replace(/\s/g, '')), '  ★ <b>「첫 연락 전」 칩</b>이 서고 그 수가 6 이다 — 「' + pil + '」');
   is(!/밀린 분/.test(C.mis),

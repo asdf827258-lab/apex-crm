@@ -300,7 +300,12 @@ window.supabase={createClient:function(){
       vip: document.querySelectorAll('.cc-vip').length,
       mark: document.querySelectorAll('.cc-b.go').length,
       news: document.querySelectorAll('.cc-b.news').length,
-      sorts: Array.prototype.map.call(document.querySelectorAll('.cm-sb'), e => e.textContent.trim())
+      sorts: Array.prototype.map.call(document.querySelectorAll('.cm-sb'), e => e.textContent.trim()),
+      /* 🎨 알약마다 <b>제 색이 있나</b> — 바탕이 흰색이면 규칙이 없는 것입니다 */
+      색: Array.prototype.map.call(document.querySelectorAll('.cc-pill'), e => {
+        const c = getComputedStyle(e);
+        return (e.textContent || '').replace(/\s+/g, ' ').trim() + '|' + c.backgroundColor + '|' + c.borderTopColor;
+      })
     };
   });
   ok(r.board === true, '맨 위에 30일 판이 선다');
@@ -312,6 +317,16 @@ window.supabase={createClient:function(){
   var 빠짐 = 알약.filter(k => !r.pills.some(x => x.indexOf(k) >= 0));
   ok(빠짐.length === 0, '알약이 다 뜬다 (' + r.pills.length + '개) — ' + r.pills.join(' / ') +
      (빠짐.length ? ('  ← 빠짐 ' + 빠짐.join(' · ')) : ''));
+  /* ⚠⚠ <b>그림을 찍어 보고 찾았습니다</b> (판 X394) — 「첫 연락 전」 알약에 색
+     규칙(.cc-pill.first)이 없어 <b>혼자 흰 알약</b>으로 섰습니다. 수가 6 인데 가장
+     흐려서, 제일 할 일이 많은 칸이 제일 안 중요해 보였습니다. 글자만 재던 위
+     토막은 그대로 통과했습니다 (8번). 이제 <b>다섯이 다 제 색을 가졌나</b>를
+     같이 봅니다 — 흰 바탕(255,255,255)이면 규칙이 없는 것입니다.
+     ★ 색값 자체는 안 못 박습니다 — ui.css 를 고치는 날 거짓말이 됩니다 (8번). */
+  var 흰 = (r.색 || []).filter(x => /\|rgb\(255, 255, 255\)\|/.test(x))
+                       .map(x => x.split('|')[0]);
+  ok(흰.length === 0,
+     '★ 알약 다섯이 <b>저마다 제 색</b>을 가졌다' + (흰.length ? (' ← 흰 알약: ' + 흰.join(' · ')) : ''));
   ok(/지금 연락해야 함/.test(r.pills.join('|')), '「지금 연락해야 함」 이 있다');
   ok(/VIP/.test(r.pills.join('|')), '「VIP」 칸이 있다');
   ok(r.dd.length >= 3, '고객 줄마다 며칠 됐는지 붙는다 — ' + r.dd.join(' / '));
