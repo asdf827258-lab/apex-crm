@@ -20,6 +20,7 @@
    나누는 방법은 <b>번갈아(round-robin)</b>입니다. 앞에서부터 뭉텅이로
    자르면 느린 것끼리 한 갈래에 몰려 그 갈래만 오래 걸립니다.           */
 const fs = require('fs'), path = require('path'), cp = require('child_process');
+const NETGUARD = require('./lib-netguard.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const LIST = path.join(__dirname, 'checks.tsv');
@@ -89,7 +90,9 @@ pick.forEach((x, i) => {
   const s = Date.now();
   try {
     const out = cp.execSync(x.cmd, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
-      env: Object.assign({}, process.env, { PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1' }) });
+      env: Object.assign({}, process.env, { PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
+        /* 🧱 점검 브라우저는 사장님 Supabase 에 못 닿습니다 — lib-netguard 한 곳 (7번 · check-ciguard) */
+        NODE_OPTIONS: NETGUARD.nodeOptions(process.env.NODE_OPTIONS) }) });
     console.log('✓ ' + head + '  (' + Math.round((Date.now() - s) / 1000) + '초)');
     void out;
   } catch (e) {
