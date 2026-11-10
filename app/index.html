@@ -29646,7 +29646,10 @@ function cliMake(name,ex,then){
    cliMake 로 돌아갑니다 — 길을 지웁지 않습니다.                        */
 function cliMakeMany(list,step,done){
   var sb=(typeof osClient==='function')?osClient():null;
-  var out={ok:0,fail:0,noid:0,why:'',note:'',ids:[]};
+  /* put — <b>번호와 갈래를 짝지어</b> 돌려줍니다 (판 X394). ids 는 번호만
+     있어 차례로 맞춰야 하는데, 차례를 믿으면 한 칸 밀려 <b>남의 갈래</b>가
+     붙습니다 (판 X138 에서 실명으로 데인 그 자리입니다).                */
+  var out={ok:0,fail:0,noid:0,why:'',note:'',ids:[],put:[]};
   var fin=function(){ if(typeof done==='function')done(out); };
   var tick=function(){ if(typeof step==='function')step(out.ok+out.fail+out.noid,L.length); };
   if(!sb||!OS.session||!OS.session.user){ out.why='로그인 후 이용하세요'; fin(); return; }
@@ -29654,7 +29657,7 @@ function cliMakeMany(list,step,done){
   for(i=0;i<(list||[]).length;i++){
     nm=(''+((list[i]&&list[i].nm)||'')).replace(/^\s+|\s+$/g,'');
     if(!nm)continue;
-    L.push({nm:nm,ex:(list[i].ex||null)});
+    L.push({nm:nm,ex:(list[i].ex||null),g:(list[i].g||'')});
   }
   if(!L.length){ out.why='넣을 분이 없습니다'; fin(); return; }
   /* ★★ <b>첫 묶음은 한 줄만</b> 넣어 봅니다 (판 X138). 우리가 지은 번호를
@@ -29668,7 +29671,7 @@ function cliMakeMany(list,step,done){
   var one=function(k,after){                      /* 묶음이 안 되는 서버 — 한 줄씩 */
     if(k>=L.length){ after(); return; }
     cliMake(L[k].nm,L[k].ex,function(id,msk,why){
-      if(id){ out.ok++; out.ids.push(id); }
+      if(id){ out.ok++; out.ids.push(id); out.put.push({id:id,g:L[k].g}); }
       else if(msk){ out.noid++; if(!out.note)out.note=why||'번호를 못 받았습니다'; }
       else { out.fail++; if(!out.why)out.why=why||'저장하지 못했습니다'; }
       tick(); one(k+1,after);
@@ -29678,7 +29681,7 @@ function cliMakeMany(list,step,done){
     var j;
     for(j=0;j<part.length;j++){
       try{ if(typeof cmRealSet==='function')cmRealSet(part[j].id,part[j].nm); }catch(e){}
-      out.ok++; out.ids.push(part[j].id);
+      out.ok++; out.ids.push(part[j].id); out.put.push({id:part[j].id,g:part[j].g});
     }
     tick();
   };
@@ -30557,6 +30560,13 @@ window.cimpGo=function(){
   CIMP.busy='save';CIMP.at=0;CIMP.of=P.length;CIMP.err='';cimpPaint();
   cliMakeMany(P,function(at,of){ CIMP.at=at;CIMP.of=of;cimpPaint(); },function(res){
     CIMP.busy='';CIMP.res=res;CIMP.step='done';cimpPaint();
+    /* ★ <b>갈래도 같이 적습니다</b> (판 X394) — 안 적으면 가져오기 화면에서만
+       나뉘고 고객 365일에서는 한 글자도 안 보입니다. 한 번에 넣습니다 (7번). */
+    try{ if(typeof cmSrcSaveMany==='function')cmSrcSaveMany(res&&res.put,function(why){
+      if(why&&CIMP.res){ CIMP.res.srcWhy=why; }
+      try{ cimpPaint(); }catch(e3){}
+      try{ if(typeof osRenderList==='function'&&document.getElementById('oscList'))osRenderList(); }catch(e4){}
+    }); }catch(e5){}
     try{ if(typeof osLoadClients==='function'){ OSC.loaded=false;OSC.busy=false;osLoadClients(); } }catch(e){}
     try{ if(typeof hmPaint==='function')hmPaint(); }catch(e2){}
   });
@@ -72053,6 +72063,21 @@ var CM_FIELDS=[
       칸을 남겨 두는 까닭은 하나 — 이 쪽지가 없으면 <b>왜 안 쓰는지</b>
       다음 세션이 모릅니다.                                              */
  ['db',   'str', 0, null],
+ /* ── 🗂 <b>엑셀로 넣을 때의 갈래</b> (판 X394) ───────────────────────
+    사장님 말씀 — 「엑셀 파일을 넣으면 고객을 <b>자동분류해서 고객 365에
+    분류하는</b>」. 재어 보니 가져오기 화면은 「유입경로 · 지인소개 2 ·
+    인터넷DB 2 · 세미나 2」 로 잘 나누고 갈래마다 빼고 넣을 수도 있는데,
+    <b>넣은 뒤 고객 365일에서는 그 갈래가 한 글자도 안 보였습니다</b> —
+    줄에도, 고객 카드에도. 값은 household_notes 메모 안에 「유입경로:
+    지인소개」 로 섞여 들어가 있을 뿐, <b>아무도 꺼내 쓰지 않았습니다.</b>
+    ★ 위 'db' 와 <b>같은 모양</b>입니다 — 여쭙는 칸이 아니고(넷째가 null)
+      넣을 때 조용히 적힙니다. 「오늘 이분」 줄을 세우면 안 되는 값입니다.
+    ★ <b>새 표를 안 만듭니다</b> (7번) — client_meta 는 saved_reports 안이라
+      SQL 도 마이그레이션도 필요 없습니다.
+    ★ <b>메모는 그대로 둡니다</b> (6번) — 사장님이 거기서 읽고 계실 수
+      있습니다. 메모를 쪼개 읽지 않습니다 — 어느 줄이 갈래인지 나중에는
+      알 길이 없어 <b>지어내는 짓</b>이 됩니다 (1번).                   */
+ ['src',  'str', 0, null],
  /* ── ❓ <b>여쭤서 알게 된 것</b> — {물음열쇠:고른 답} ────────────────
     2026-09-28 · 판 ⑥. 이것은 <b>여쭙는 칸이 아닙니다</b>(넷째가 null) —
     답이 쌓이는 자리입니다. 여기에 ask 를 안 넣으면 cmSave 가 통째로
@@ -72214,6 +72239,39 @@ function cmSave(id,patch,then,no){
   },bad);
 }
 
+/* ── 🗂 <b>갈래를 한 번에 적는다</b> (판 X394) ──────────────────────────
+   엑셀로 쉰 분을 넣으면 갈래도 쉰 줄입니다. cmSave 를 쉰 번 부르면 서버를
+   <b>쉰 번</b> 두드립니다 — 무료 한도를 세 배 넘겨 로그인까지 막힌 적이
+   있는 그 자리입니다 (7번). <b>한 번</b>에 넣습니다.
+
+   ★ <b>글 모양은 cmBody 하나</b>가 정합니다 (5번) — 여기서 손으로 지으면
+     CM_FIELDS 에 칸이 하나 늘 때마다 두 벌이 갈라집니다.
+   ★ <b>갓 넣은 분들</b>에게만 씁니다 — client_meta 줄이 아직 없으니 두 줄이
+     될 일이 없습니다. 이미 있는 분의 갈래를 고치는 것은 cmSave 쪽입니다.
+   ★ 갈래가 빈 분은 <b>건너뜁니다</b> — 빈 값을 적으면 「갈래 없음」 이라는
+     줄만 쌓입니다. 모르는 것은 안 적습니다 (1번).
+   ★ 실패해도 <b>넣기는 이미 끝났습니다</b> — 갈래를 못 적었다고 고객을
+     되돌리지 않습니다. 못 적었으면 그렇다고 돌려줍니다 (1번).         */
+function cmSrcSaveMany(put,then){
+  var fin=function(why){ if(typeof then==='function')then(why||''); };
+  var sb=(typeof osClient==='function')?osClient():null,uid=cmUid();
+  if(!sb||!uid){ fin('로그인 후 적습니다'); return; }
+  var rows=[],i,o,m;
+  for(i=0;i<(put||[]).length;i++){
+    o=put[i];
+    if(!o||!o.id||!o.g)continue;
+    m=cmBlank(); m.src=(''+o.g).slice(0,30); m.up=new Date().getTime();
+    rows.push({advisor_id:uid,client_id:o.id,kind:CM_KIND,title:'고객 관리',content:cmBody(m)});
+  }
+  if(!rows.length){ fin(''); return; }
+  sb.from('saved_reports').insert(rows).then(function(r){
+    if(r&&r.error){ fin((''+(r.error.message||'')).slice(0,60)); return; }
+    /* 방금 넣은 줄을 <b>다시 읽습니다</b> — 안 읽으면 목록이 갈래를 모릅니다 */
+    try{ if(typeof cmLoadAll==='function'){ cmLoadAll(function(){ fin(''); }); return; } }catch(e){}
+    fin('');
+  },function(e){ fin((e&&e.message)||'네트워크 오류'); });
+}
+
 /* ── 찾기 ──
    사람은 "홍길동" 이라고 치지 "홍○○" 이라고 치지 않는다.
    실명·마스킹 이름·초성·연락처 뒷자리·가족 이름 어느 것으로도 찾히게 한다. */
@@ -72229,6 +72287,10 @@ function cmHit(c,q){
   var m=cmOf(c.id),real=cmRealOf(c.id);
   /* 담당자 이름으로도 찾힌다 — "홍길순" 이라고 치면 그 사람이 맡은 고객이 나온다 */
   var pool=[c.name_masked||'',real,m.fam||'',(m.fp&&m.fp.f_job)||'',
+            /* 🗂 <b>갈래로도 찾힙니다</b> (판 X394) — 「세미나」 라고 치면
+               세미나에서 오신 분들이 섭니다. 거르개 칩과 <b>같은 값</b>을
+               봅니다 (5번).                                            */
+            m.src||'',
             (typeof cmWhoName==='function'?cmWhoName(c):'')];
   /* 견주는 셈은 apex-cusone.js 한 벌을 쓴다 — DB 통합 CRM 의 dbHit 과
      거의 같은 것을 따로 갖고 있었다. 한쪽만 고쳐지면 「여기선 찾히는데
@@ -73065,10 +73127,15 @@ function ccBoardHtml(all){
     h+='<div class="cc-say vip">👑 <b>VIP '+vipOver.length+'명</b>이 '+cfg.vipDays+'일을 넘겼습니다 — '+ccNames(vipOver)+'</div>';
   /* ★ 위 줄이 이미 「첫 연락 전 N명」 을 말했으면 <b>여기서 또 안 적습니다</b> (5번 · 판 X393).
      주기를 넘긴 분이 있을 때는 위가 그 이야기를 하므로 여기서 이름을 적어 줍니다. */
+  /* ⚠⚠ <b>이름을 두 번 적고 있었습니다</b> (판 X393 에서 제가 낸 어긋남 ·
+     check-phonefit 이 잡았습니다) — 위가 「N명은 아직 첫 연락 전입니다」 라고
+     말하는데 여기서 그 <b>이름까지</b> 또 적어, 폰 고객 365일이 3.0 → 3.3화면
+     으로 길어졌습니다. 그리고 바로 아래 <b>오늘의 미션</b>이 그분들을 이름과
+     🆕 로 한 줄씩 세우고 있습니다 — <b>같은 것이 세 곳</b>이었습니다 (5번).
+     주기를 넘긴 분이 있을 때만 이름을 적습니다 — 그때는 위 줄이 넘긴 분
+     이야기를 하므로 첫 연락 전인 분은 여기서 처음 나옵니다.            */
   if(never.length&&over.length)
     h+='<div class="cc-say none"><b>'+never.length+'명</b>은 등록 뒤 <b>한 번도</b> 연락 기록이 없습니다 — '+ccNames(never)+'</div>';
-  else if(never.length)
-    h+='<div class="cc-say none">'+ccNames(never)+'</div>';
   /* 조용히 세지 않는다 — 뺀 사람이 있으면 몇 명인지 적는다 */
   if(unk.length)
     h+='<div class="cc-say unk">월납 보험료를 못 읽은 고객이 <b>'+unk.length+'명</b> 있습니다. '+
@@ -73904,6 +73971,10 @@ function cmRowHtml(c){
   var m=cmOf(c.id),tp=cmTemp(c.id),nm=cmName(c),cs=c.consent_status||'none';
   var sub=[],bd=cmBdIn(m.bd);
   sub.push(tp.e+' '+tp.t);
+  /* 🗂 <b>엑셀로 넣을 때의 갈래</b> (판 X394) — 가져오기 화면에서만 나뉘고
+     여기서는 안 보이던 자리입니다. <b>새 CSS 를 한 줄도 안 만듭니다</b>
+     (5번) — 글자로만 들어갑니다 (아래 .m 쪽지 그대로).                 */
+  if(m.src)sub.push('🗂 '+m.src);
   if(m.rel)sub.push(m.rel);
   if(bd>=0&&bd<=30)sub.push('🎂 '+(bd===0?'오늘':('D-'+bd)));
   /* ── 🙋 <b>아는 것 N/M</b> · 📋 <b>팩트파인딩</b> — 두 수는 <b>아래 줄</b>에
@@ -76802,6 +76873,8 @@ var CLI_FD2=[['over','약속 넘김'],['never','한 번도'],
              ['noplan','다음 할 일 없음'],['run','진행 중'],['won','계약·증권']];
 var CLI_FMORE=false;
 function cliFAll(){ return CLI_FD.concat(CLI_FD2); }
+/* 🗂 갈래까지 <b>지금 명단으로</b> 센 전부 (판 X394) */
+function cliFAllOf(rows){ return cliFAll().concat(cliFSrc(rows)); }
 function cliFMore(){ CLI_FMORE=!CLI_FMORE; try{ osRenderList(); }catch(e){} }
 var CLI_RUN=['TA','AP','PC','CS'];
 var CLI_WON=['계약완료','증권전달','소개완료'];
@@ -76825,6 +76898,9 @@ function cliFHit(c,f,tod){
   if(f==='noplan'){
     return (typeof cmNextN==='function')?(cmNextN(c.id)===0):false;
   }
+  /* 🗂 <b>갈래</b> (판 X394) — 「src:지인소개」. 고를 수 있는 갈래는
+     cliFSrc 가 <b>지금 명단에서</b> 만들므로, 여기서 목록을 또 안 듭니다. */
+  if(f.indexOf('src:')===0)return (cmOf(c.id).src||'')===f.slice(4);
   if(f==='run')return CLI_RUN.indexOf(cliFStage(c))>=0;
   if(f==='won')return CLI_WON.indexOf(cliFStage(c))>=0;
   /* ── 목각의 넷 — <b>세는 자를 새로 안 만듭니다</b> (5번) ───────────── */
@@ -76874,7 +76950,45 @@ function cliFHtml(rows){
   h+='<button type="button" class="t-chip" id="cliFMoreBtn" onclick="cliFMore()">'+
      (open?'접기':('더 '+CLI_FD2.length))+'</button>';
   if(open)for(i=0;i<CLI_FD2.length;i++)h+=cliFChip(rows,CLI_FD2[i]);
-  return h+'</div>';
+  h+='</div>';
+  /* ── 🗂 <b>갈래 줄</b> (판 X394) ────────────────────────────────────
+     사장님 말씀 「고객을 자동분류해서 <b>고객 365에 분류하는</b>」. 엑셀로
+     넣을 때 나눈 갈래가 여기 섭니다 — 누르면 그 갈래만 남습니다.
+     ★ <b>갈래가 하나도 없으면 줄 자체가 안 섭니다</b> — 빈 줄을 세우면
+       「여기 뭐가 있었는데 사라졌나」 하십니다. 엑셀을 넣기 전에는
+       갈래가 없으므로 여태 보던 화면과 똑같습니다.
+     ★ 고른 갈래가 사라졌으면(그 분들을 다 지우셨으면) <b>그 칩만</b>
+       남겨 둡니다 — 안 그러면 아무것도 안 걸러지는 칸에 갇히십니다.    */
+  var G=cliFSrc(rows);
+  if(G.length){
+    h+='<div class="t-chips" id="cliFSrcChips"><span class="cm-lab" '+
+       'style="align-self:center;margin:0 2px 0 0">🗂 엑셀 갈래</span>';
+    for(i=0;i<G.length;i++)h+=cliFChip(rows,G[i]);
+    h+='</div>';
+  }
+  return h;
+}
+/* 🗂 <b>지금 명단에 있는 갈래</b> — 많은 쪽부터 여덟까지 (판 X394).
+   ★ <b>세는 곳은 cliFPass 하나</b>입니다 (5번) — 칩에 적는 수는 cliFChip
+     이 그 자에게 물어 적습니다. 여기서는 <b>어떤 갈래가 있나</b>만 셉니다. */
+function cliFSrc(rows){
+  var cnt={},L=[],i,v,m;
+  for(i=0;i<(rows||[]).length;i++){
+    if(!rows[i]||!rows[i].id)continue;
+    try{ m=cmOf(rows[i].id); }catch(e){ continue; }
+    v=(m&&m.src)||''; if(!v)continue;
+    if(cnt[v]==null){ cnt[v]=0; L.push(v); }
+    cnt[v]++;
+  }
+  L.sort(function(a,b){ return (cnt[b]-cnt[a])||(a<b?-1:1); });
+  /* 고른 갈래가 셈에서 빠졌으면 끝에 붙입니다 — 갇히지 않게 */
+  if(CLI_F.indexOf('src:')===0){
+    v=CLI_F.slice(4);
+    if(L.indexOf(v)<0)L.push(v);
+  }
+  var out=[];
+  for(i=0;i<L.length&&i<8;i++)out.push(['src:'+L[i],L[i]]);
+  return out;
 }
 function osRenderList(){
   var q=(OSC.q||'').replace(/^\s+|\s+$/g,'');
