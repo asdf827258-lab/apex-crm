@@ -26964,8 +26964,11 @@ document.addEventListener('keydown',function(e){
 var ATTEND={month:null,profiles:[],att:[]};
 function osAttToday(){var d=new Date(),p=function(n){return(n<10?'0':'')+n;};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
 /* 로그인(접속)만 해도 오늘 출근이 자동 기록되게 — 앱과 같은 Supabase attendance 테이블 */
+/* ⚠ 판 X394 — 이미 오늘 줄이 있으면 <b>고치지 않고 건너뜁니다</b>(ignoreDuplicates). 서버에는 출근 줄을
+   고치는 권한 규칙이 없어(넣기·읽기만 · 맞는 설계입니다), 예전 upsert 는 하루 두 번째 접속부터
+   매번 권한 오류로 막혔습니다 — 2026-11-10 하루에 206번(postgres 로그). 첫 출근 기록은 그대로입니다. */
 function osBackupBoot(){try{if(typeof osBackupTick==='function')setTimeout(osBackupTick,4000);}catch(e){}}
-function osAttendMark(){try{var sb=(typeof osClient==='function')?osClient():null;var uid=(typeof OS!=='undefined'&&OS.profile)?OS.profile.id:null;if(sb&&uid)sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date'}).then(function(){},function(){});}catch(e){}}
+function osAttendMark(){try{var sb=(typeof osClient==='function')?osClient():null;var uid=(typeof OS!=='undefined'&&OS.profile)?OS.profile.id:null;if(sb&&uid)sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date',ignoreDuplicates:true}).then(function(){},function(){});}catch(e){}}
 function renderAttend(){
   if(!OS.profile){return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">DB CRM</div><div class="page-title">출근 현황</div></div><div class="card"><div class="card-body"><div class="notice" style="color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">🔒 로그인 후 이용할 수 있습니다.</div></div></div></div>';}
   return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">DB CRM</div><div class="page-title">출근 현황</div>'+
@@ -26986,7 +26989,7 @@ function osAttendLoad(){
   var cal=document.getElementById('attendCal');var sb=osClient();
   if(!sb){if(cal)cal.innerHTML='<div class="notice" style="color:var(--ink-4)">서버에 연결되어 있지 않습니다.</div>';return;}
   var uid=OS.profile&&OS.profile.id;
-  if(uid){try{sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date'}).then(function(){},function(){});}catch(e){}}
+  if(uid){try{sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date',ignoreDuplicates:true}).then(function(){},function(){});}catch(e){}}
   osBackupBoot();
   Promise.all([sb.from('profiles').select('id,name,role,active,status').order('name'),arAll(sb,'attendance','member_id,att_date',['-att_date','member_id']),sb.from('profiles').select('id,workspace')]).then(function(res){
     var pr=res[0],at=res[1],ws=res[2];

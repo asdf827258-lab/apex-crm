@@ -101,7 +101,9 @@ begin
   execute $chk$
     alter table public.dbs add constraint dbs_stage_chk
       check (stage is null or stage in
-        ('미접촉','TA','AP','PC','CS','계약완료','증권전달'))
+        ('미접촉','부재','거절','TA','AP','PC','CS','계약완료','증권전달','소개완료'))
+        /* ↑ 판 X394 (migration_55) — 앱의 단계 표 열 가지와 맞췄습니다. 이 파일을 다시
+             돌려도 그 셋이 다시 막히지 않게 여기도 같이 적습니다 (5번). */
   $chk$;
 end
 $blk$;

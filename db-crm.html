@@ -982,9 +982,11 @@ async function startApp(){
   $("teamNav").classList.toggle("hidden",!canViewAll());$("newDbBtn").classList.remove("hidden");$("ownerFilter").classList.toggle("hidden",!canViewAll());
   $("dashboardTitle").textContent=canViewAll()?"전체 배정 DB 현황":`${profile.name} 담당 DB 현황`;
   $("dbScopeText").textContent=canViewAll()?"전체 담당자의 배정·TA 현황입니다.":"본인에게 배정된 DB만 조회됩니다.";
-  try{await sb.from("attendance").upsert({member_id:profile.id,att_date:crmToday()},{onConflict:"member_id,att_date"});}catch(e){}
-  /* 최근 접속시각 갱신(베스트에포트) — last_seen 컬럼이 있으면 기록, 없으면 조용히 무시(출근 기록엔 영향 없음) */
-  try{await sb.from("attendance").update({last_seen:new Date().toISOString()}).eq("member_id",profile.id).eq("att_date",crmToday());}catch(e){}
+  /* ⚠ 판 X394 — 오늘 줄이 이미 있으면 <b>건너뜁니다</b>(ignoreDuplicates). 출근 줄을 고치는 권한 규칙이
+     서버에 없어(넣기·읽기만) 예전 upsert 는 하루 두 번째 접속부터 매번 막혔습니다(2026-11-10 하루 206번).
+     ★ 「최근 접속시각(last_seen)」 고치기는 <b>뺐습니다</b> — 서버에 그 칸도, 고치는 권한도 없어 접속마다
+       헛걸음 한 번이었습니다(7번). 칸을 만들 때 다시 넣으십시오. */
+  try{await sb.from("attendance").upsert({member_id:profile.id,att_date:crmToday()},{onConflict:"member_id,att_date",ignoreDuplicates:true});}catch(e){}
   await loadAll();
 }
 let crmTeams=[],crmTeamOf={};
@@ -1994,9 +1996,15 @@ function stagePick(){
 }
 async function saveDb(){
   const id=$("dbId").value,payload={assigned_date:$("assignedDate").value,assigned_to:$("assignedTo").value,customer_name:$("customerName").value.trim(),phone:$("phone").value.trim(),source:srcSafe($("dbSource").value),region:$("region").value.trim(),report_name:$("reportName").value.trim()||"보장분석 3DB",memo:$("dbMemo").value.trim(),created_by:profile.id,updated_at:new Date().toISOString()};
-  /* 단계는 고른 것만 보낸다. 「자동」이면 null 로 지워서 예전처럼 짐작하게 둔다 */
+  /* 단계는 고른 것만 보낸다.
+     ⚠ 판 X394 — 「자동」 이면 예전에는 null 을 보냈는데, 서버의 단계 칸은 처음부터
+       <b>빈칸을 못 받는 칸</b>(migration_03 · not null default '미접촉')이라 통째로 거절됐습니다.
+       2026-11-10 아침 「DB 등록」 이 세 번 연달아 그렇게 실패했습니다(postgres 로그).
+       서버 규칙은 그대로 둡니다 — 트리거·함수 여섯이 이 칸에 값이 있다고 믿습니다.
+     ★ 그래서 「자동」 이면 <b>단계를 아예 안 보냅니다</b>: 새 줄은 서버 기본값(미접촉)으로,
+       고칠 때는 <b>지금 단계 그대로</b> 둡니다. 없는 값을 지어 보내지 않습니다 (1번). */
   const stg=$("dbStage")?.value||"";
-  payload.stage=STAGES.indexOf(stg)>=0?stg:null;
+  if(STAGES.indexOf(stg)>=0)payload.stage=stg;
   /* 터치 횟수 — <b>빈칸은 null</b>(통화 건수로 셈), 0 은 0 이다 (1번) */
   {
     const tv=($("dbTouch")?.value||"").trim();
@@ -2007,7 +2015,9 @@ async function saveDb(){
     /* 계약일·증권일·증권번호를 <b>어느 단계에서 들고 있나</b> — 한 곳에서 정한다 (5번).
        소개완료는 증권전달 다음 자리라 둘 다 그대로 들고 있어야 한다.
        여기서 빠뜨리면 단계를 올리는 순간 계약일이 <b>null 로 지워진다</b>. */
-    const st=payload.stage,k=stageNeeds(st),won=k.won,pol=k.pol;
+    /* 「자동」 으로 단계를 안 보낼 때는 <b>지금 단계</b>로 셉니다 — 안 그러면 계약일·증권일이
+       null 로 지워집니다(새 줄이면 서버 기본값 미접촉) */
+    const st=payload.stage||(id?((dbs.find(x=>x.id===id)||{}).stage||""):"")||"미접촉",k=stageNeeds(st),won=k.won,pol=k.pol;
     payload.contracted_at=won?($("contractedAt")?.value||null):null;
     payload.policy_sent_at=pol?($("policySentAt")?.value||null):null;
     payload.policy_no=won?(($("policyNo")?.value||"").trim()||null):null;
