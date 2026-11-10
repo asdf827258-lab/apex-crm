@@ -30,7 +30,7 @@ const head = (t) => console.log('\n' + t);
   const br = await chromium.launch();
   const pg = await br.newPage({ viewport: { width: 1400, height: 1000 } });
   const errs = []; pg.on('pageerror', e => errs.push(e.message));
-  await pg.route('**/*', r => /^http:\/\/127\.0\.0\.1/.test(r.request().url()) ? r.continue() : r.abort());
+  await pg.route('**://**', r => /^http:\/\/127\.0\.0\.1/.test(r.request().url()) ? r.continue() : r.abort());
   await pg.goto('http://127.0.0.1:' + port + '/app/ba.html', { waitUntil: 'domcontentloaded' });
   await pg.waitForTimeout(800);
 
