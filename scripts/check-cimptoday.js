@@ -183,6 +183,30 @@ const SEED = (renum) => {
   is(H.볼분 === '6' && /첫 연락 전 6명/.test(C.mis) && /6명/.test((C.all.match(/아직 첫 연락 전[^.]*/) || [''])[0] + (C.all.match(/다만 <?b?>?(\d+)명/) || [''])[0]),
      '  홈 「오늘 볼 분 ' + H.볼분 + '분」 · 미션 「첫 연락 전 6명」 · 보드 「6명은 아직 첫 연락 전」');
 
+  console.log('\n[9] ★★ 「오늘」 칸 — 사장님이 거기서 바로 관리하실 수 있는가');
+  const T = await p.evaluate(async (names) => {
+    const chip = [...document.querySelectorAll('.t-chip[data-f=\"today\"]')][0];
+    const lab = chip ? (chip.innerText || '').replace(/\s+/g, ' ') : '(칩이 없습니다)';
+    if (chip) chip.click();
+    await new Promise(r => setTimeout(r, 1400));
+    const host = document.getElementById('oscList');
+    /* ⚠⚠ 처음에 저는 <b>목록 칸의 글 전체</b>를 읽었습니다 — 거기에는 보드의
+       「첫 연락 전」 이름줄도 들어 있어, 거르기를 일부러 깨뜨려도 여섯 이름이
+       그대로 보였습니다. <b>안 울리는 알람</b>이었습니다 (8번). 이제 <b>줄
+       안에서만</b> 읽습니다. */
+    const its = host ? [...host.querySelectorAll('[onclick*=\"osOpenClient\"]')] : [];
+    const txt = its.map(x => (x.innerText || '')).join(' ').replace(/\s+/g, ' ');
+    return { lab: lab, f: (typeof CLI_F !== 'undefined') ? CLI_F : '?',
+             shown: names.filter(x => txt.indexOf(x) >= 0), open: its.length,
+             txt: txt.slice(0, 150) };
+  }, NAMES);
+  is(/^오늘 6$/.test(T.lab), '  ★ 「오늘」 칩에 <b>6</b> 이라 적힌다 — 「' + T.lab + '」');
+  is(T.f === 'today', '  칩을 누르면 그 칸으로 간다 (받음 ' + T.f + ')');
+  is(T.shown.length === 6,
+     '  ★★ 「오늘」 칸에 여섯 분이 <b>실명으로</b> 선다 — ' +
+     (T.shown.join(',') || '(한 분도 안 뜹니다 · 「' + T.txt + '」)'));
+  is(T.open >= 6, '  ★ 줄마다 <b>고객 카드를 여는 자리</b>가 있다 (받음 ' + T.open + ')');
+
   console.log('\n[8] 한 번 연락하면 그 자리에서 빠지는가 (헛것을 안 잡는다 · 8번)');
   const after = await p.evaluate(async () => {
     const id = (window.__DB.clients[0] || {}).id;
