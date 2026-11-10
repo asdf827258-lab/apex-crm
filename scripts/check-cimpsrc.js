@@ -87,6 +87,26 @@ const SEED = () => {
           if (!st.sel) return Promise.resolve({ error: null }).then(o, n);
           return Promise.resolve({ data: put.map(r => ({ id: r.id, name_masked: r.name_masked })), error: null }).then(o, n);
         }
+        /* ⚠⚠ 처음에 이 가짜 서버가 upsert·update 를 <b>아무 일도 안 하고
+           성공</b>이라 답했습니다 — 그래서 「갈래를 적었다」 는데 쪽지는
+           그대로였고, 저는 앱을 의심했습니다. <b>자가 거짓말한 것</b>입니다 (8번).
+           진짜 서버처럼 <b>제 자리에 써 넣습니다.</b>                     */
+        if (st.op === 'upsert') {
+          if (window.__NOUPSERT) return Promise.resolve({ error: { message: 'upsert 막힘' } }).then(o, n);
+          [].concat(st.pay || []).forEach(x => {
+            const k = T.findIndex(y => y.id === x.id);
+            if (k >= 0) T[k] = Object.assign({}, T[k], x); else T.push(Object.assign({}, x));
+          });
+          return Promise.resolve({ data: [], error: null }).then(o, n);
+        }
+        if (st.op === 'update') {
+          T.forEach((y, k) => {
+            let hit = true;
+            Object.keys(st.eq).forEach(kk => { if (y[kk] !== st.eq[kk]) hit = false; });
+            if (hit) T[k] = Object.assign({}, y, st.pay);
+          });
+          return Promise.resolve({ data: [], error: null }).then(o, n);
+        }
         return Promise.resolve({ data: [], error: null }).then(o, n);
       } }; return a; };
     return { from: (t) => mk(t), rpc: () => Promise.resolve({ data: null, error: null }) };
