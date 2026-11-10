@@ -304,7 +304,14 @@ window.supabase={createClient:function(){
     };
   });
   ok(r.board === true, '맨 위에 30일 판이 선다');
-  ok(r.pills.length === 4, '알약 넷이 뜬다 — ' + r.pills.join(' / '));
+  /* ⚠ 전에는 「<b>넷</b>이 뜬다」 고 수를 못 박고 있었습니다. 판 X393 에서
+     「<b>첫 연락 전</b>」 을 더하자 그 자리에서 울었습니다 — 자가 지키려던 것은
+     <b>수가 아니라 무엇이 서는가</b>입니다. 있어야 할 알약이 다 있나로 고쳤습니다.
+     하나라도 사라지면 그대로 웁니다 (8번). */
+  var 알약 = ['지금 연락해야 함', '첫 연락 전', '곧 때가 됩니다', 'VIP', '이번 달 연락함'];
+  var 빠짐 = 알약.filter(k => !r.pills.some(x => x.indexOf(k) >= 0));
+  ok(빠짐.length === 0, '알약이 다 뜬다 (' + r.pills.length + '개) — ' + r.pills.join(' / ') +
+     (빠짐.length ? ('  ← 빠짐 ' + 빠짐.join(' · ')) : ''));
   ok(/지금 연락해야 함/.test(r.pills.join('|')), '「지금 연락해야 함」 이 있다');
   ok(/VIP/.test(r.pills.join('|')), '「VIP」 칸이 있다');
   ok(r.dd.length >= 3, '고객 줄마다 며칠 됐는지 붙는다 — ' + r.dd.join(' / '));
