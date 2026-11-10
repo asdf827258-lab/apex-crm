@@ -8,6 +8,7 @@
      [3] 제안서가 셋이면 — 급한 빈자리를 많이 채우는 순 · 빈자리를 안 채우면 맨 뒤 · 같으면 보험료 적은 쪽
      [4] 계약 카드에 「1순위」 표시 · 발표 화면에 「제안 순위」 장(짧게 보기에도 남는다)
      [5] 나이를 안 적었으면 설계 순서로 매기고 그렇게 밝힌다
+     [7] 이유는 큰 자리부터(판 X401) · 💰 보험료 대비 줄 — 순위는 그대로
      [6] 조용한가                                                                                   */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -112,6 +113,30 @@ const head = (t) => console.log('\n' + t);
   });
   is(E.src.length && E.src.every(s => /설계 순서/.test(s)), '설계 순서 번호로 매김 — ' + E.src.join(' · '));
   is(/나이를 적으시면/.test(E.html), '「고객 나이를 적으시면 나이대 기준으로 다시 매깁니다」');
+
+  head('[7] 이유는 큰 자리부터 · 💰 보험료 대비 (판 X401)');
+  const R = await pg.evaluate(() => {
+    localStorage.clear(); doSample(); S.rankOpen = true;
+    const K = n => Object.keys(SNAME).find(k => SNAME[k] === n);
+    /* 실제 KB 제안서와 같은 꼴 — 유사암 · 질병 수술비(작은 것, 100% 채움)가 앞에 놓여 있다 */
+    const cov = {}; cov[K('유사암')] = '1000'; cov[K('질병 수술비')] = '30'; cov[K('일반암')] = '5000'; cov[K('급여 암주요치료비')] = '10000'; cov[K('뇌혈관질환 진단')] = '2000';
+    S.after = [{ id: 'big', co: 'K손보', nm: '넓은 플랜', premMan: '25', cov, ext: [] },
+               { id: 'cheap', co: 'M손보', nm: '알뜰 플랜', premMan: '1', cov: { cancer2: '1000' }, ext: [] }];
+    save(); go('edit');
+    const L = rankProps(), big = L.find(x => x.p.id === 'big');
+    const keys = { 유사암: K('유사암'), 질병수술비: K('질병 수술비'), 일반암: K('일반암'), 급여: K('급여 암주요치료비'), 뇌혈관: K('뇌혈관질환 진단') };
+    return { keys, first2: big.parts.slice(0, 2).map(x => SNAME[x.k]), allK: big.parts.map(x => SNAME[x.k] + ':' + x.p + ':' + x.add),
+      order: L.map(x => x.p.id + ':' + x.rank), eff: L.map(x => x.p.id + ':' + (x.eff || 0).toFixed(2) + ':' + x.effN), top: L.effTop && L.effTop.p.id,
+      html: document.getElementById('baRank').innerText };
+  });
+  is(Object.values(R.keys).every(Boolean), '담보 이름표 다섯 개를 찾았다 — ' + JSON.stringify(R.keys));
+  is(!R.first2.includes('유사암') && !R.first2.includes('질병 수술비'), '1순위 이유 앞 두 줄이 유사암 · 질병 수술비가 아니다 — 「' + R.first2.join(' · ') + '」 (전부: ' + R.allK.join(' / ') + ')');
+  is(R.first2.every(n => /일반암|급여 암주요치료비|뇌혈관/.test(n)), '큰 자리(일반암 · 급여 암주요치료비 · 뇌혈관)가 앞에 선다');
+  is(R.order[0] === 'big:1', '순위는 그대로 — 넓게 채우는 쪽이 1순위 (' + R.order.join(' / ') + ')');
+  is(R.top === 'cheap' && /보험료 대비/.test(R.html) && /1만원당/.test(R.html), '💰 보험료 대비로는 2순위 알뜰 플랜이 앞이라고 적는다 — ' + R.eff.join(' / '));
+  is(/알뜰 플랜.* 쪽이 1만원당 가장 많이 채웁니다/.test(R.html) && /채움 점수 = 채우는 비율 × 급함/.test(R.html), '안내 문장 · 점수 풀이가 화면에 있다');
+  const R2 = await pg.evaluate(() => { S.after = [S.after[0]]; save(); go('edit'); return document.getElementById('baRank').innerText; });
+  is(!/가장 많이 채웁니다/.test(R2) && !/건 중/.test(R2), '제안이 하나면 비교 문장을 안 붙인다');
 
   head('[6] 조용한가');
   is(errs.length === 0, '페이지 에러 ' + errs.length + '건' + (errs.length ? ' — ' + errs.join(' / ') : ''));
