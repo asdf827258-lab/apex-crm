@@ -334,6 +334,63 @@ FILES.forEach(f => {
       : ' — 없음'));
 });
 
+/* ── ⑦ <b>칸 표에 같은 열쇠가 두 줄</b> (판 X394) ─────────────────────
+   ⚠⚠ 이 자리에서 실제로 데였습니다. CM_FIELDS 에 「엑셀 갈래」 칸을
+   <b>'src' 라는 이름으로</b> 새로 더했는데, 그 표에는 <b>이미 'src' 가
+   있었습니다</b> — 「어디서 오셨나(소개·지인·개척)」 입니다. 같은 이름,
+   <b>다른 뜻</b>이었습니다. 담는 것도 다릅니다: 있던 쪽은 CREG_SRC 의
+   <b>열쇠</b>이고 새 쪽은 사장님 엑셀 칸 이름 <b>날글</b>입니다. 그래서
+   고객 카드의 「어디서 오셨나」 가 <b>빈칸</b>이 될 참이었습니다.
+   ★ 아무도 안 울렸습니다 — check-html 은 <b>함수</b> 이름만 보고,
+     자바스크립트는 배열에 같은 글자가 두 번 있어도 아무 말을 안 합니다.
+     <b>여기가 그것을 볼 자리</b>입니다 (5번 · 8번).
+   ★ 보는 표는 <b>열쇠가 첫 칸인 표</b>들입니다 — 늘면 여기 이름만 보탭니다. */
+const 열쇠표 = ['CM_FIELDS', 'CLI_EX', 'CREG_SRC', 'CLI_FD', 'CLI_FD2', 'CC_RULES'];
+function dupKeys(src, name) {
+  /* 표 한 덩어리를 떼어 냅니다 — var NAME=[ … ]; 까지 */
+  const i = src.search(new RegExp('(var|const)\\s+' + name + '\\s*=\\s*\\['));
+  if (i < 0) return null;
+  let d = 0, j = src.indexOf('[', i), k = j;
+  for (; k < src.length; k++) {
+    if (src[k] === '[') d++;
+    else if (src[k] === ']') { d--; if (!d) break; }
+  }
+  /* ⚠ 주석을 먼저 걷습니다 — 쪽지 안의 「['src'」 를 세면 헛것입니다 (8번) */
+  const body = src.slice(j, k + 1).replace(/\/\*[\s\S]*?\*\//g, ' ');
+  /* ⚠⚠ 처음에 줄머리 regex 로 쟀다가 <b>CM_FIELDS 를 0개로 읽고</b> 「겹침
+     없음」 이라 했습니다 — 0개는 겹칠 수가 없으니 <b>영영 안 우는 알람</b>
+     이었습니다 (8번). 이제 괄호 깊이를 세어 <b>맨 바깥 칸만</b> 집습니다. */
+  const keys = [];
+  let d2 = 0;
+  for (let q = 1; q < body.length - 1; q++) {
+    const ch = body[q];
+    if (ch === "'" || ch === '"') {                 /* 글 안은 건너뜁니다 */
+      const quote = ch;
+      while (++q < body.length && body[q] !== quote) if (body[q] === '\\') q++;
+      continue;
+    }
+    if (ch === '[' || ch === '{') {
+      if (d2 === 0) {                               /* 칸 하나가 시작됩니다 */
+        const rest = body.slice(q, q + 200);
+        const m1 = /^\[\s*'([^']+)'/.exec(rest) || /^\{\s*k\s*:\s*'([^']+)'/.exec(rest);
+        if (m1) keys.push(m1[1]);
+      }
+      d2++;
+    } else if (ch === ']' || ch === '}') d2--;
+  }
+  const seen = {}, dup = [];
+  keys.forEach(x => { if (seen[x]) { if (dup.indexOf(x) < 0) dup.push(x); } else seen[x] = 1; });
+  return { n: keys.length, dup };
+}
+console.log('\n[6] 칸 표에 <b>같은 열쇠가 두 줄</b> 있지 않은가 (판 X394 에서 데인 자리)');
+열쇠표.forEach(name => {
+  const src = read('app/index.html');
+  const r = src ? dupKeys(src, name) : null;
+  if (!r) { is(false, '  ' + name + ' — ✗ 표를 못 찾았습니다 (이름이 바뀌었으면 이 자도 고치십시오)'); return; }
+  is(r.dup.length === 0, '  ' + name + ' 열쇠 ' + r.n + '개' +
+    (r.dup.length ? ' — ✗ 두 번 적힌 것: ' + r.dup.join(' · ') : ' — 겹침 없음'));
+});
+
 console.log(bad ? '\n✗ ' + bad + '개 어긋남 — 같은 것이 두 곳에 있습니다\n'
                 : '\n──────────────────────────────\n쌍둥이 점검 통과 — 고칠 자리가 하나씩입니다.\n');
 process.exit(bad ? 1 : 0);
