@@ -1,7 +1,7 @@
-/* 🧭 상품전략기 「🔎 약관 분석」 공시실 어댑터 21곳 — 사장님 PC APEX_상품인사이트/_스킬/apex-insight/edge 의 bundle.mjs 가 만든다(adapters/*.mjs 를 Node 로 시험한 뒤). 여기서 고치지 말 것. */
+/* 🧭 상품전략기 「🔎 약관 분석」 공시실 어댑터 26곳 — 사장님 PC APEX_상품인사이트/_스킬/apex-insight/edge 의 bundle.mjs 가 만든다(adapters/*.mjs 를 Node 로 시험한 뒤). 여기서 고치지 말 것. */
 const a_abl_life = (() => {
 const BASE = 'https://www.abllife.co.kr';
-const UA = { 'user-agent': 'Mozilla/5.0' };
+const UA = { 'user-agent': 'APEX-insight/1.0' };
 const txt = (s) => String(s || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
 const core = (s) => String(s || '').replace(/\s+/g, '').replace(/\([^)]*\)|\[[^\]]*\]/g, '').replace(/_?\d{4}$/, '').toLowerCase();
 function groupsFor(q) {
@@ -44,7 +44,7 @@ return fetch(BASE + path, { headers: UA });
 })();
 const a_aia_life = (() => {
 const B = 'https://mypage.aia.co.kr';
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36';
+const UA = 'APEX-insight/1.0';
 const LIST = B + '/AIAHomepage/disclosure/our-products/selling/individual.do';
 const strip = (s) => String(s || '').replace(/<br\s*\/?>/gi, '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
 const ROMAN = { 'Ⅰ': 'I', 'Ⅱ': 'II', 'Ⅲ': 'III', 'Ⅳ': 'IV', 'Ⅴ': 'V', 'Ⅵ': 'VI', 'Ⅶ': 'VII', 'Ⅷ': 'VIII' };
@@ -175,7 +175,7 @@ return fetch(BASE + '/downloadFile.do', { method: 'POST', headers: FORM, body: n
 })();
 const a_db_fire = (() => {
 const U = 'https://www.idbins.com';
-const H = { 'user-agent': 'Mozilla/5.0', referer: U + '/FWMAIV1534.do' };
+const H = { 'user-agent': 'APEX-insight/1.0', referer: U + '/FWMAIV1534.do' };
 const unent = (s) => String(s || '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 const ymd = (s) => String(s || '').replace(/\D/g, '');
 return {
@@ -240,11 +240,85 @@ return fetch(`${BASE}/download/${ref.id}`, { headers: { referer: PAGE } });
 },
 };
 })();
+const a_hana_life = (() => {
+const BASE = 'https://www.hanalife.co.kr';
+const NRM = (s) => String(s || '').normalize('NFKC').toLowerCase()
+.replace(/\(무\)|\(무\/갱\)|무배당/g, '').replace(/[\s·.,_\-–—/()[\]{}<>'"]/g, '');
+const unparen = (s) => { let p; do { p = s; s = s.replace(/\([^()]*\)|\[[^\][]*\]/g, ' '); } while (s !== p); return s; };
+function terms(q) {
+let s = String(q || '').normalize('NFKC').split(/\s+[—–/]\s+|\s+-\s+/)[0].replace(/\(무\)|\(무\/갱\)|무배당/g, ' ');
+const opt = [], req = [];
+let p;   // 괄호 안(겹괄호는 안쪽부터) → 가산점
+do { p = s; s = s.replace(/\(([^()]*)\)|\[([^\][]*)\]/g, (_, a, b) => { opt.push(...(a ?? b).split(/[·,]/)); return ' '; }); } while (s !== p);
+for (let w of s.split(/\s+/)) {
+const v = w.match(/^(.*[가-힣a-zA-Z])_?(2\d(?:0[1-9]|1[0-2]))$/);   // 판번호 꼬리
+if (v) { opt.push(v[2]); w = v[1]; }
+if (/^_?2\d(?:0[1-9]|1[0-2])$/.test(w)) { opt.push(w); continue; }
+if (NRM(w)) req.push(NRM(w));
+}
+return { req, opt: opt.map(NRM).filter(Boolean) };
+}
+function hits(name, t) {
+let best = { n: 0, len: 0 };
+for (const n of [NRM(name), NRM(unparen(String(name || '')))]) {
+let pos = 0, k = 0, len = 0;
+for (const w of t.req) { const i = n.indexOf(w, pos); if (i < 0) break; k++; len += w.length; pos = i + w.length; }
+if (k > best.n) best = { n: k, len };
+}
+const full = NRM(name);
+return { ...best, opt: t.opt.filter((o) => full.includes(o)).length };
+}
+function pick(rows, q, nameOf) {
+const t = terms(q);
+if (!t.req.length) return [];
+const sc = rows.map((r, i) => ({ r, i, w: NRM(nameOf(r)).length, ...hits(nameOf(r), t) }));
+const top = Math.max(0, ...sc.map((x) => x.n));
+return sc.filter((x) => x.n === top && x.n > 0 && x.len >= 4).sort((a, b) => b.opt - a.opt || a.w - b.w || a.i - b.i).map((x) => x.r);
+}
+const unesc = (s) => s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+const isDate = (s) => /^\d{4}\.\d{2}\.\d{2}\s*-/.test(s);
+async function list(status) {
+const r = await fetch(`${BASE}/anm/product/allProduct.do?status=${status}`);
+if (!r.ok) throw new Error(`하나생명 목록 ${r.status}`);
+const html = await r.text();
+const body = html.slice(html.indexOf('<tbody'));
+const out = [];
+let name = '';
+for (const tr of body.split(/<tr>/).slice(1)) {
+const tds = [...tr.matchAll(/<td([^>]*)>([\s\S]*?)<\/td>/g)];
+if (!tds.length) continue;
+const nm = tds.find((m) => /txt-l/.test(m[1]) && !isDate(unesc(m[2])));
+if (nm) name = unesc(nm[2]);
+const pd = tds.find((m) => isDate(unesc(m[2])));
+const last = tds[tds.length - 1][2];
+if (!name || !pd) continue;
+const period = unesc(pd[2]).replace(/\s*-\s*/, '~');
+for (const m of last.matchAll(/\/anm\/product\/download\.do\?code=(\d+)&(?:amp;)?seq=(\d+)/g)) {
+out.push({ title: name, period, ref: { code: m[1], seq: m[2] } });
+}
+}
+return out;
+}
+return {
+company: '하나생명',
+hosts: ['www.hanalife.co.kr'],
+async find(q) {
+const [on, off] = await Promise.all([list('on'), list('off').catch(() => [])]);
+const offHit = pick(off, q, (x) => x.title).sort((a, b) => b.period.localeCompare(a.period));
+return [...pick(on, q, (x) => x.title), ...offHit];
+},
+async pdf(ref) {
+if (!/^\d+$/.test(ref.code || '') || !/^\d+$/.test(ref.seq || '')) throw new Error('하나생명 약관 번호가 이상함');
+return fetch(`${BASE}/anm/product/download.do?` + new URLSearchParams({ code: ref.code, seq: ref.seq }));
+},
+};
+})();
 const a_hanwha_life = (() => {
 const WWW = 'https://www.hanwhalife.com/main/disclosure/goods/goodslist/';
 const FILE = 'https://file.hanwhalife.com/www/announce/goods/download_chk.asp';
 const H = {
-'user-agent': 'Mozilla/5.0',
+'user-agent': 'APEX-insight/1.0',
 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
 'x-requested-with': 'XMLHttpRequest',
 accept: 'application/json',
@@ -317,7 +391,7 @@ const name = String(ref.file_name || '');
 if (!name || /[\\/]|\.\./.test(name)) throw new Error('한화생명 파일명 형식 오류');
 return fetch(FILE, {
 method: 'POST',
-headers: { 'user-agent': 'Mozilla/5.0', 'content-type': 'application/x-www-form-urlencoded' },
+headers: { 'user-agent': 'APEX-insight/1.0', 'content-type': 'application/x-www-form-urlencoded' },
 body: `file_name=${eucPct(name)}`,
 });
 },
@@ -361,6 +435,83 @@ method: 'POST',
 headers: FORM,
 body: new URLSearchParams({ filePath: ref.path, fileRealName: ref.name, fileSaveName: ref.save, mode: 'View' }),
 });
+},
+};
+})();
+const a_heungkuk_life = (() => {
+const BASE = 'https://www.heungkuklife.co.kr';
+const FORM = { 'content-type': 'application/x-www-form-urlencoded' };
+const NRM = (s) => String(s || '').normalize('NFKC').toLowerCase()
+.replace(/\(무\)|\(무\/갱\)|무배당/g, '').replace(/[\s·.,_\-–—/()[\]{}<>'"]/g, '');
+const unparen = (s) => { let p; do { p = s; s = s.replace(/\([^()]*\)|\[[^\][]*\]/g, ' '); } while (s !== p); return s; };
+function terms(q) {
+let s = String(q || '').normalize('NFKC').split(/\s+[—–/]\s+|\s+-\s+/)[0].replace(/\(무\)|\(무\/갱\)|무배당/g, ' ');
+const opt = [], req = [];
+let p;   // 괄호 안(겹괄호는 안쪽부터) → 가산점
+do { p = s; s = s.replace(/\(([^()]*)\)|\[([^\][]*)\]/g, (_, a, b) => { opt.push(...(a ?? b).split(/[·,]/)); return ' '; }); } while (s !== p);
+for (let w of s.split(/\s+/)) {
+const v = w.match(/^(.*[가-힣a-zA-Z])_?(2\d(?:0[1-9]|1[0-2]))$/);   // 판번호 꼬리
+if (v) { opt.push(v[2]); w = v[1]; }
+if (/^_?2\d(?:0[1-9]|1[0-2])$/.test(w)) { opt.push(w); continue; }
+if (NRM(w)) req.push(NRM(w));
+}
+return { req, opt: opt.map(NRM).filter(Boolean) };
+}
+function hits(name, t) {
+let best = { n: 0, len: 0 };
+for (const n of [NRM(name), NRM(unparen(String(name || '')))]) {
+let pos = 0, k = 0, len = 0;
+for (const w of t.req) { const i = n.indexOf(w, pos); if (i < 0) break; k++; len += w.length; pos = i + w.length; }
+if (k > best.n) best = { n: k, len };
+}
+const full = NRM(name);
+return { ...best, opt: t.opt.filter((o) => full.includes(o)).length };
+}
+function pick(rows, q, nameOf) {
+const t = terms(q);
+if (!t.req.length) return [];
+const sc = rows.map((r, i) => ({ r, i, w: NRM(nameOf(r)).length, ...hits(nameOf(r), t) }));
+const top = Math.max(0, ...sc.map((x) => x.n));
+return sc.filter((x) => x.n === top && x.n > 0 && x.len >= 4).sort((a, b) => b.opt - a.opt || a.w - b.w || a.i - b.i).map((x) => x.r);
+}
+const enc2 = (s) => escape(encodeURIComponent(s));
+async function ajax(flg, type1, type3) {
+const body = `searchFlgSale=${flg}&beforeYn=${flg === 'N' ? 'N' : ''}&searchCdPublicPrtType1=${type1}&searchCdPublicPrtType2=`
++ `&searchCdPublicPrtType3=${enc2(type3.replace(/_/g, ' ').replace(/[+]/g, '%2b'))}&searchText=`;
+const r = await fetch(BASE + '/front/public/saleProductAjax.do', { method: 'POST', headers: FORM, body });
+if (!r.ok) throw new Error(`흥국생명 목록 ${r.status}`);
+return new TextDecoder('euc-kr').decode(new Uint8Array(await r.arrayBuffer())).split('%||%');
+}
+const names = async (flg, type1) =>
+(await ajax(flg, type1, ''))[0].split('%|%').map((x) => x.split('%,%')[0]).filter((x) => x && x !== 'null')
+.map((name) => ({ name, flg, type1 }));
+const dot = (s) => String(s || '').trim();
+return {
+company: '흥국생명',
+hosts: ['www.heungkuklife.co.kr'],
+async find(q) {
+const [sale, stop] = await Promise.all([names('Y', 'I101'), names('N', 'I101')]);
+let prods = [...pick(sale, q, (x) => x.name), ...pick(stop, q, (x) => x.name)];
+if (!prods.length) prods = pick(await names('Y', 'I103'), q, (x) => x.name);
+const out = [];
+for (const [pi, p] of prods.slice(0, 2).entries()) {
+const d = await ajax(p.flg, p.type1, p.name);
+const rank = new Map();   // 판매판(시작일) 순번 — 같은 판의 주계약·갱신형 파일은 같은 순번
+for (const row of String(d[2] || '').split('%|%')) {
+const c = row.split('%,%');
+if (c.length < 6 || !c[4] || c[4] === 'null') continue;
+if (!rank.has(c[0])) rank.set(c[0], rank.size);
+const tag = c[2].replace(/<[^>]*>/g, ' ').replace(/^[\sP\d~]+/, '').trim();   // 상품코드 칸의 「갱신형」 같은 구분
+out.push({ title: p.name.trim() + (tag ? ` (${tag})` : ''), period: `${dot(c[0])}~${dot(c[1]) === 'null' ? '' : dot(c[1])}`, ref: { t: c[4] }, _o: rank.get(c[0]) * 10 + pi });
+}
+}
+return out.sort((a, b) => a._o - b._o).map(({ _o, ...c }) => c);
+},
+async pdf(ref) {
+if (!/^[A-Za-z0-9+/=]{20,600}$/.test(ref.t || '')) throw new Error('흥국생명 약관 토큰이 이상함');
+const r = await fetch(BASE + '/servlet/DownLoadEnc.do', { method: 'POST', headers: FORM, body: new URLSearchParams({ encValue: ref.t }) });
+if (/DOWN_LIMIT/.test(r.headers.get('content-disposition') || '')) throw new Error('흥국생명 공시실 하루 다운로드 횟수 초과');
+return r;
 },
 };
 })();
@@ -409,10 +560,82 @@ return fetch(`${BASE}/FileActionServlet/download/0${f.savPath}/${encodeURICompon
 },
 };
 })();
+const a_ibk_annuity = (() => {
+const BASE = 'https://www.ibki.co.kr';
+const NRM = (s) => String(s || '').normalize('NFKC').toLowerCase()
+.replace(/\(무\)|\(무\/갱\)|무배당/g, '').replace(/[\s·.,_\-–—/()[\]{}<>'"]/g, '');
+const unparen = (s) => { let p; do { p = s; s = s.replace(/\([^()]*\)|\[[^\][]*\]/g, ' '); } while (s !== p); return s; };
+function terms(q) {
+let s = String(q || '').normalize('NFKC').split(/\s+[—–/]\s+|\s+-\s+/)[0].replace(/\(무\)|\(무\/갱\)|무배당/g, ' ');
+const opt = [], req = [];
+let p;   // 괄호 안(겹괄호는 안쪽부터) → 가산점
+do { p = s; s = s.replace(/\(([^()]*)\)|\[([^\][]*)\]/g, (_, a, b) => { opt.push(...(a ?? b).split(/[·,]/)); return ' '; }); } while (s !== p);
+for (let w of s.split(/\s+/)) {
+const v = w.match(/^(.*[가-힣a-zA-Z])_?(2\d(?:0[1-9]|1[0-2]))$/);   // 판번호 꼬리
+if (v) { opt.push(v[2]); w = v[1]; }
+if (/^_?2\d(?:0[1-9]|1[0-2])$/.test(w)) { opt.push(w); continue; }
+if (NRM(w)) req.push(NRM(w));
+}
+return { req, opt: opt.map(NRM).filter(Boolean) };
+}
+function hits(name, t) {
+let best = { n: 0, len: 0 };
+for (const n of [NRM(name), NRM(unparen(String(name || '')))]) {
+let pos = 0, k = 0, len = 0;
+for (const w of t.req) { const i = n.indexOf(w, pos); if (i < 0) break; k++; len += w.length; pos = i + w.length; }
+if (k > best.n) best = { n: k, len };
+}
+const full = NRM(name);
+return { ...best, opt: t.opt.filter((o) => full.includes(o)).length };
+}
+function pick(rows, q, nameOf) {
+const t = terms(q);
+if (!t.req.length) return [];
+const sc = rows.map((r, i) => ({ r, i, w: NRM(nameOf(r)).length, ...hits(nameOf(r), t) }));
+const top = Math.max(0, ...sc.map((x) => x.n));
+return sc.filter((x) => x.n === top && x.n > 0 && x.len >= 4).sort((a, b) => b.opt - a.opt || a.w - b.w || a.i - b.i).map((x) => x.r);
+}
+const unesc = (s) => s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+const isDate = (s) => /^\d{4}-\d{2}-\d{2}\s*~/.test(s);
+async function list(page) {
+const r = await fetch(`${BASE}/process/${page}`);
+if (!r.ok) throw new Error(`IBK연금보험 목록 ${r.status}`);
+const html = new TextDecoder('euc-kr').decode(new Uint8Array(await r.arrayBuffer()));
+const out = [];
+let name = '';
+for (const tr of html.split(/<tr[\s>]/).slice(1)) {
+const tds = [...tr.matchAll(/<td([^>]*)>([\s\S]*?)<\/td>/g)];
+const nm = tds.find((m) => /txt_l/.test(m[1]));
+if (nm) name = unesc(nm[2]);
+const pd = tds.find((m) => isDate(unesc(m[2])));
+const f = tr.match(/onDownload\('(HP_PBANO_PDT_SP)',\s*'(\d+)',\s*'#3'\)/);
+if (name && pd && f) out.push({ title: name, period: unesc(pd[2]).replace(/\s*~\s*/, '~').replace(/~현재$/, '~'), ref: { seq: f[2] } });
+}
+return out;
+}
+return {
+company: 'IBK연금보험',
+hosts: ['www.ibki.co.kr'],
+async find(q) {
+const [on, off] = await Promise.all([list('HP_PBANO_PDT_SP_INDV'), list('HP_PBANO_PDT_NSP_INDV').catch(() => [])]);
+const offHit = pick(off, q, (x) => x.title).sort((a, b) => b.period.localeCompare(a.period));
+return [...pick(on, q, (x) => x.title), ...offHit];
+},
+async pdf(ref) {
+if (!/^\d+$/.test(ref.seq || '')) throw new Error('IBK연금보험 약관 번호가 이상함');
+return fetch(BASE + '/process/mFileDownload', {
+method: 'POST',
+headers: { 'content-type': 'application/x-www-form-urlencoded' },
+body: new URLSearchParams({ pFidwSeq: ref.seq + '#3', pFilePath: 'HP_PBANO_PDT_SP' }),
+});
+},
+};
+})();
 const a_im_life = (() => {
 const BASE = 'https://www.imlifeins.co.kr';
 const PAGE = `${BASE}/BA/BA_A020.do`;
-const UA = { 'user-agent': 'Mozilla/5.0' };
+const UA = { 'user-agent': 'APEX-insight/1.0' };
 const cookieOf = (r) => (r.headers.getSetCookie?.() || []).map((c) => c.split(';')[0]).join('; ');
 const txt = (s) => s.replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 async function search(q, sellType) {
@@ -478,7 +701,7 @@ body: new URLSearchParams({ fileName }),
 })();
 const a_kb_fire = (() => {
 const U = 'https://www.kbinsure.co.kr';
-const H = { 'user-agent': 'Mozilla/5.0', referer: U + '/CG802030001.ec' };
+const H = { 'user-agent': 'APEX-insight/1.0', referer: U + '/CG802030001.ec' };
 const FORM = { 'content-type': 'application/x-www-form-urlencoded' };
 const dec = new TextDecoder('euc-kr');
 const norm = (s) => String(s || '').toLowerCase().replace(/[\s·.\-_()\[\]]/g, '');
@@ -556,7 +779,7 @@ async function list(tabType) {
 const body = new URLSearchParams({ pageSize: '2000', paGroupCnt: '10', pageIndex: '1', tabType, srchType: '', pdNm: '' });
 const r = await fetch(`${BASE}/customer-common/API/productList1.do`, {
 method: 'POST',
-headers: { 'user-agent': 'Mozilla/5.0', 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8', 'x-requested-with': 'XMLHttpRequest' },
+headers: { 'user-agent': 'APEX-insight/1.0', 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8', 'x-requested-with': 'XMLHttpRequest' },
 body,
 });
 return (await r.json()).list || [];
@@ -586,14 +809,14 @@ return out.map(({ _o, ...c }) => c);
 },
 async pdf(ref) {
 return fetch(`${BASE}/api/archive/archives/download/product-terms/${encodeURIComponent(ref.seq)}/${encodeURIComponent(ref.box)}`, {
-headers: { 'user-agent': 'Mozilla/5.0' },
+headers: { 'user-agent': 'APEX-insight/1.0' },
 });
 },
 };
 })();
 const a_kyobo_life = (() => {
 const BASE = 'https://www.kyobo.com';
-const JSONH = { 'user-agent': 'Mozilla/5.0', 'content-type': 'application/json; charset=UTF-8', 'x-requested-with': 'XMLHttpRequest' };
+const JSONH = { 'user-agent': 'APEX-insight/1.0', 'content-type': 'application/json; charset=UTF-8', 'x-requested-with': 'XMLHttpRequest' };
 const squash = (s) => String(s || '').replace(/\s+/g, '').toLowerCase();
 const core = (s) => squash(s).replace(/\([^)]*\)|\[[^\]]*\]/g, '');   // 괄호 묶음(무배당·간편·D 등) 제거
 const post = async (path, body) => (await (await fetch(BASE + path, { method: 'POST', headers: JSONH, body: JSON.stringify(body) })).json()).body || {};
@@ -632,7 +855,147 @@ out.push({ title: x.dgtPdtAtrNm, period: `${okDate(p.saleStDt)} ~ ${okDate(p.sal
 return out.sort((p, r) => p._i - r._i).map(({ _i, ...c }) => c);
 },
 async pdf(ref) {
-return fetch(`${BASE}/file/ajax/download?` + new URLSearchParams({ fName: '/dtc/pdf/mm/' + ref.f }), { headers: { 'user-agent': 'Mozilla/5.0' } });
+return fetch(`${BASE}/file/ajax/download?` + new URLSearchParams({ fName: '/dtc/pdf/mm/' + ref.f }), { headers: { 'user-agent': 'APEX-insight/1.0' } });
+},
+};
+})();
+const a_lina_fire = (() => {
+const BASE = 'https://ec.aceinsurance.co.kr';
+const NRM = (s) => String(s || '').normalize('NFKC').toLowerCase()
+.replace(/\(무\)|\(무\/갱\)|무배당/g, '').replace(/[\s·.,_\-–—/()[\]{}<>'"]/g, '');
+const unparen = (s) => { let p; do { p = s; s = s.replace(/\([^()]*\)|\[[^\][]*\]/g, ' '); } while (s !== p); return s; };
+function terms(q) {
+let s = String(q || '').normalize('NFKC').split(/\s+[—–/]\s+|\s+-\s+/)[0].replace(/\(무\)|\(무\/갱\)|무배당/g, ' ');
+const opt = [], req = [];
+let p;   // 괄호 안(겹괄호는 안쪽부터) → 가산점
+do { p = s; s = s.replace(/\(([^()]*)\)|\[([^\][]*)\]/g, (_, a, b) => { opt.push(...(a ?? b).split(/[·,]/)); return ' '; }); } while (s !== p);
+for (let w of s.split(/\s+/)) {
+const v = w.match(/^(.*[가-힣a-zA-Z])_?(2\d(?:0[1-9]|1[0-2]))$/);   // 판번호 꼬리
+if (v) { opt.push(v[2]); w = v[1]; }
+if (/^_?2\d(?:0[1-9]|1[0-2])$/.test(w)) { opt.push(w); continue; }
+if (NRM(w)) req.push(NRM(w));
+}
+return { req, opt: opt.map(NRM).filter(Boolean) };
+}
+function hits(name, t) {
+let best = { n: 0, len: 0 };
+for (const n of [NRM(name), NRM(unparen(String(name || '')))]) {
+let pos = 0, k = 0, len = 0;
+for (const w of t.req) { const i = n.indexOf(w, pos); if (i < 0) break; k++; len += w.length; pos = i + w.length; }
+if (k > best.n) best = { n: k, len };
+}
+const full = NRM(name);
+return { ...best, opt: t.opt.filter((o) => full.includes(o)).length };
+}
+function pick(rows, q, nameOf) {
+const t = terms(q);
+if (!t.req.length) return [];
+const sc = rows.map((r, i) => ({ r, i, w: NRM(nameOf(r)).length, ...hits(nameOf(r), t) }));
+const top = Math.max(0, ...sc.map((x) => x.n));
+return sc.filter((x) => x.n === top && x.n > 0 && x.len >= 4).sort((a, b) => b.opt - a.opt || a.w - b.w || a.i - b.i).map((x) => x.r);
+}
+const unesc = (s) => s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+async function list(status) {
+const r = await fetch(`${BASE}/jsp/acelimited/notice/productNoticeV2.jsp?status=${status}`);
+if (!r.ok) throw new Error(`라이나손보 목록 ${r.status}`);
+const html = await r.text();
+const out = [];
+let name = '';
+for (const tr of html.split(/<tr>/).slice(1)) {
+const tds = [...tr.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((m) => m[1]);
+if (!tds.length) continue;
+const lead = unesc(tds[0]);
+if (!/^\d{4}\.\d{2}\.\d{2}\s*~/.test(lead)) { name = lead; tds.shift(); }
+const period = unesc(tds[0] || '');
+const f = tr.match(/WebProductFiledown\.jsp\?fileType=2&(?:amp;)?fileName=([^'"&]+)/);
+if (name && f) out.push({ title: name, period, ref: { f: decodeURIComponent(f[1].replace(/\+/g, ' ')) } });
+}
+return out;
+}
+return {
+company: '라이나손해보험',
+hosts: ['ec.aceinsurance.co.kr'],
+async find(q) {
+const hit = pick(await list('Y'), q, (x) => x.title);
+const first = new Map();
+hit.forEach((x, i) => { if (!first.has(x.title)) first.set(x.title, i); });
+return hit.map((x, i) => ({ x, g: first.get(x.title), i }))
+.sort((a, b) => a.g - b.g || b.x.period.localeCompare(a.x.period) || a.i - b.i).map((o) => o.x);
+},
+async pdf(ref) {
+const f = String(ref.f || '');
+if (!/\.pdf$/i.test(f) || /[\/]|\.\./.test(f)) throw new Error('라이나손보 약관 파일명이 이상함');
+return fetch(`${BASE}/jsp/file/WebProductFiledown.jsp?` + new URLSearchParams({ fileType: '2', fileName: f }));
+},
+};
+})();
+const a_lina_life = (() => {
+const API = 'https://api.lina.co.kr/public/contents/v1/disclosure';
+const WWW = 'https://www.lina.co.kr';
+const NRM = (s) => String(s || '').normalize('NFKC').toLowerCase()
+.replace(/\(무\)|\(무\/갱\)|무배당/g, '').replace(/[\s·.,_\-–—/()[\]{}<>'"]/g, '');
+const unparen = (s) => { let p; do { p = s; s = s.replace(/\([^()]*\)|\[[^\][]*\]/g, ' '); } while (s !== p); return s; };
+function terms(q) {
+let s = String(q || '').normalize('NFKC').split(/\s+[—–/]\s+|\s+-\s+/)[0].replace(/\(무\)|\(무\/갱\)|무배당/g, ' ');
+const opt = [], req = [];
+let p;   // 괄호 안(겹괄호는 안쪽부터) → 가산점
+do { p = s; s = s.replace(/\(([^()]*)\)|\[([^\][]*)\]/g, (_, a, b) => { opt.push(...(a ?? b).split(/[·,]/)); return ' '; }); } while (s !== p);
+for (let w of s.split(/\s+/)) {
+const v = w.match(/^(.*[가-힣a-zA-Z])_?(2\d(?:0[1-9]|1[0-2]))$/);   // 판번호 꼬리
+if (v) { opt.push(v[2]); w = v[1]; }
+if (/^_?2\d(?:0[1-9]|1[0-2])$/.test(w)) { opt.push(w); continue; }
+if (NRM(w)) req.push(NRM(w));
+}
+return { req, opt: opt.map(NRM).filter(Boolean) };
+}
+function hits(name, t) {
+let best = { n: 0, len: 0 };
+for (const n of [NRM(name), NRM(unparen(String(name || '')))]) {
+let pos = 0, k = 0, len = 0;
+for (const w of t.req) { const i = n.indexOf(w, pos); if (i < 0) break; k++; len += w.length; pos = i + w.length; }
+if (k > best.n) best = { n: k, len };
+}
+const full = NRM(name);
+return { ...best, opt: t.opt.filter((o) => full.includes(o)).length };
+}
+function pick(rows, q, nameOf) {
+const t = terms(q);
+if (!t.req.length) return [];
+const sc = rows.map((r, i) => ({ r, i, w: NRM(nameOf(r)).length, ...hits(nameOf(r), t) }));
+const top = Math.max(0, ...sc.map((x) => x.n));
+return sc.filter((x) => x.n === top && x.n > 0 && x.len >= 4).sort((a, b) => b.opt - a.opt || a.w - b.w || a.i - b.i).map((x) => x.r);
+}
+const ymd = (s) => (s && /^\d{8}$/.test(s) && !s.startsWith('9999') ? `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}` : '');
+const getJson = async (path, q) => {
+const r = await fetch(`${API}/${path}?` + new URLSearchParams(q));
+if (!r.ok) throw new Error(`라이나생명 ${path} ${r.status}`);
+const j = await r.json();
+return j.resultCode === '0' ? j.listDisclosure || [] : [];
+};
+const listQ = (mtrtDcd, searchKey) => ({ mtrtDcd, KliaProdClcd: '', KcisInsKcd: '', searchKey, inscd: '', prodPbanGrpCd: '', tabTitle: '' });
+return {
+company: '라이나생명',
+hosts: ['api.lina.co.kr', 'www.lina.co.kr'],
+async find(q) {
+let prods = pick(await getJson('get-product-list', listQ('B', '')), q, (x) => x.insNm);
+if (!prods.length) {
+const w = [...terms(q).req].sort((a, b) => b.length - a.length)[0] || '';
+if (w) prods = pick(await getJson('get-product-list', listQ('R', w.slice(0, 4))), q, (x) => x.insNm);
+}
+const out = [];
+for (const [pi, p] of prods.slice(0, 3).entries()) {
+const rows = await getJson('product-list-detail', { insureCd: p.insureCd, prodPbanGrpCd: p.prodPbanGrpCd || '' });
+for (const [k, d] of rows.entries()) {
+if (!/^[A-Z]\d+_\d+_P\.pdf$/.test(d.productProvision || '')) continue;
+out.push({ title: d.insNm || p.insNm, period: `${ymd(d.sellOpnDt)}~${ymd(d.sellEndDt)}`, ref: { f: d.productProvision }, _o: k * 10 + pi });
+}
+}
+return out.sort((a, b) => a._o - b._o).map(({ _o, ...c }) => c);
+},
+async pdf(ref) {
+if (!/^[A-Z]\d+_\d+_P\.pdf$/.test(ref.f || '')) throw new Error('라이나생명 약관 파일명이 이상함');
+return fetch(`${WWW}/cms/upload/upload/docs/disclosure/${ref.f}`);
 },
 };
 })();
@@ -691,7 +1054,7 @@ return fetch(`${BASE}/upload/C/newProduct/${encodeURIComponent(f)}`);
 })();
 const a_metlife = (() => {
 const B = 'https://brand.metlife.co.kr';
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36';
+const UA = 'APEX-insight/1.0';
 const LIST = B + '/pn/mcvrgProd/retrieveMcvrgProdMain.do';
 const strip = (s) => String(s || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
 const base = (s) => String(s || '').replace(/메트라이프생명|\(무\)|무배당/g, '').replace(/\([^)]*\)/g, '').replace(/[\s_]/g, '');
@@ -747,7 +1110,7 @@ return fetch(u, { headers: { 'user-agent': UA, referer: LIST } });
 })();
 const a_miraeasset_life = (() => {
 const B = 'https://life.miraeasset.com';
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36';
+const UA = 'APEX-insight/1.0';
 const PAGE = B + '/micro/disclosure/product/PC-HO-080301-000000.do';
 const clean = (s) => String(s || '')
 .replace(/미래에셋생명/g, ' ')
@@ -826,7 +1189,7 @@ pathType: 'gongci_u1', fileName: ref.file, orgFileName: ref.file, filePath: '/up
 })();
 const a_nh_fire = (() => {
 const U = 'https://www.nhfire.co.kr';
-const H = { 'user-agent': 'Mozilla/5.0', referer: U + '/announce/productAnnounce/retrieveInsuranceProductsAnnounce.nhfire' };
+const H = { 'user-agent': 'APEX-insight/1.0', referer: U + '/announce/productAnnounce/retrieveInsuranceProductsAnnounce.nhfire' };
 const FORM = { ...H, 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8' };
 const norm = (s) => String(s || '').toLowerCase().replace(/[\s·.\-_()\[\]]/g, '');
 const unent = (s) => String(s || '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
@@ -887,7 +1250,7 @@ return fetch(U + '/imageView/downloadFile.ajax', { method: 'POST', headers: FORM
 })();
 const a_nh_life = (() => {
 const BASE = 'https://www.nhlife.co.kr';
-const UA = 'Mozilla/5.0';
+const UA = 'APEX-insight/1.0';
 const FORM = { 'user-agent': UA, 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8' };
 const dec = (s) => s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
 .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
@@ -936,7 +1299,7 @@ headers: { 'user-agent': UA },
 })();
 const a_samsung_fire = (() => {
 const U = 'https://www.samsungfire.com';
-const H = { 'user-agent': 'Mozilla/5.0', referer: U + '/' };
+const H = { 'user-agent': 'APEX-insight/1.0', referer: U + '/' };
 const norm = (s) => String(s || '').toLowerCase().replace(/[\s·.\-_()\[\]]/g, '');
 const ymd = (s) => (s && s.length === 8 && !s.startsWith('9999') ? `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}` : '');
 return {
@@ -961,7 +1324,7 @@ return fetch(U + ref.path, { headers: H });
 };
 })();
 const a_samsung_life = (() => {
-const UA = { 'user-agent': 'Mozilla/5.0', accept: 'application/json' };
+const UA = { 'user-agent': 'APEX-insight/1.0', accept: 'application/json' };
 const LIST = 'https://www.samsunglife.com/gw/api/product/disclosure/product/prdt/salesAllPrdtList';
 const PCMS = 'https://pcms.samsunglife.com';
 const d = (s) => (s && /^\d{8}$/.test(s) && s !== '99999999' ? `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6)}` : '');
@@ -992,11 +1355,11 @@ ref: { docID: x.filename3 },
 async pdf(ref) {
 const id = String(ref.docID || '');
 if (!/^\d+$/.test(id)) throw new Error('삼성생명 docID 형식 오류');
-const v = await fetch(`${PCMS}/XView.do?docID=${id}`, { headers: { 'user-agent': 'Mozilla/5.0' } });
+const v = await fetch(`${PCMS}/XView.do?docID=${id}`, { headers: { 'user-agent': 'APEX-insight/1.0' } });
 const html = await v.text();
 const m = html.match(/uploadDir\/doc\/[0-9A-Za-z_\/.-]+?\.pdf/);
 if (!m) throw new Error('삼성생명 약관 경로를 찾지 못함');
-return fetch(`${PCMS}/${m[0]}`, { headers: { 'user-agent': 'Mozilla/5.0' } });
+return fetch(`${PCMS}/${m[0]}`, { headers: { 'user-agent': 'APEX-insight/1.0' } });
 },
 };
 })();
@@ -1004,7 +1367,7 @@ const a_shinhan_life = (() => {
 const BASE = 'https://www.shinhanlife.co.kr';
 const CAT = 'M160991914330045272'; // 공시실 > 상품공시 > 전체상품 > 판매중
 const H = {
-'user-agent': 'Mozilla/5.0',
+'user-agent': 'APEX-insight/1.0',
 'content-type': 'application/json; charset=UTF-8',
 'X-AJAX-CALL': 'true',
 'Proworks-Body': 'Y',
@@ -1052,13 +1415,13 @@ let p = String(ref.path || '');
 const ws = String(ref.wsId || 'DigitalPlattform');
 if (!p.startsWith(`/repo/${ws}/`) || p.includes('..')) throw new Error('신한라이프 약관 경로 형식 오류');
 p = p.replace(`/repo/${ws}`, '/bizxpress');
-return fetch(BASE + encodeURI(p), { headers: { 'user-agent': 'Mozilla/5.0' } });
+return fetch(BASE + encodeURI(p), { headers: { 'user-agent': 'APEX-insight/1.0' } });
 },
 };
 })();
 const a_tongyang_life = (() => {
 const BASE = 'https://pbano.myangel.co.kr';
-const UA = 'Mozilla/5.0';
+const UA = 'APEX-insight/1.0';
 const FORM = { 'user-agent': UA, 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8' };
 const txt = (s) => String(s || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
 const ymd = (s) => (s && s.length >= 8 ? `${s.slice(0, 4)}.${s.slice(4, 6)}.${s.slice(6, 8)}` : '');
@@ -1113,4 +1476,4 @@ body: new URLSearchParams({ _biz_op_code: 'FDL', FILE_GRP_ID: ref.id, FILE_PATH:
 },
 };
 })();
-export default { 'abl-life': a_abl_life, 'aia-life': a_aia_life, 'chubb': a_chubb, 'db-fire': a_db_fire, 'hana-fire': a_hana_fire, 'hanwha-life': a_hanwha_life, 'heungkuk-fire': a_heungkuk_fire, 'hyundai-marine': a_hyundai_marine, 'im-life': a_im_life, 'kb-fire': a_kb_fire, 'kb-life': a_kb_life, 'kyobo-life': a_kyobo_life, 'lotte-fire': a_lotte_fire, 'metlife': a_metlife, 'miraeasset-life': a_miraeasset_life, 'nh-fire': a_nh_fire, 'nh-life': a_nh_life, 'samsung-fire': a_samsung_fire, 'samsung-life': a_samsung_life, 'shinhan-life': a_shinhan_life, 'tongyang-life': a_tongyang_life };
+export default { 'abl-life': a_abl_life, 'aia-life': a_aia_life, 'chubb': a_chubb, 'db-fire': a_db_fire, 'hana-fire': a_hana_fire, 'hana-life': a_hana_life, 'hanwha-life': a_hanwha_life, 'heungkuk-fire': a_heungkuk_fire, 'heungkuk-life': a_heungkuk_life, 'hyundai-marine': a_hyundai_marine, 'ibk-annuity': a_ibk_annuity, 'im-life': a_im_life, 'kb-fire': a_kb_fire, 'kb-life': a_kb_life, 'kyobo-life': a_kyobo_life, 'lina-fire': a_lina_fire, 'lina-life': a_lina_life, 'lotte-fire': a_lotte_fire, 'metlife': a_metlife, 'miraeasset-life': a_miraeasset_life, 'nh-fire': a_nh_fire, 'nh-life': a_nh_life, 'samsung-fire': a_samsung_fire, 'samsung-life': a_samsung_life, 'shinhan-life': a_shinhan_life, 'tongyang-life': a_tongyang_life };
