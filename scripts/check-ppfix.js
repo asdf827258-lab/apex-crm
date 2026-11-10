@@ -173,7 +173,7 @@ const DOCS = {
   is(A.added && A.added.cov.cantx === '1500' && A.added.ext.some(e => e.d === 'death' && e.v === 300), '삼성 모양 → 계약에 암주요치료비 1,500 · 참고 담보 사망 300');
   is(N.added && N.added.cov.ltcD === '1100' && N.added.cov.ltcF === '35', 'NH 모양 → 계약에 장기요양 진단 1,100 · 장기요양 급여 35');
   is(K.added && K.added.cov.surg === '30' && K.added.cov.nurNS === '7', 'KB 모양 → 질병수술비 30 · 간호간병 7');
-  is(K.tag, '제안서에서 넣은 계약은 「제안서에서 읽음」 표시(「손으로 적음」 아님 · 판 X388)');
+  is(K.tag, '제안서에서 넣은 계약은 「제안서에서 읽음」 표시(「손으로 적음」 아님 · 판 X390)');
 
   head('[9] 조용한가');
   is(errs.length === 0, '페이지 에러 ' + errs.length + '건' + (errs.length ? ' — ' + errs.join(' / ') : ''));
