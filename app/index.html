@@ -21977,8 +21977,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-10 15:40';
-var APP_BUILD_NOTE='✍️ <b>예상업적을 오늘 칸 안에서 바로 적습니다</b>(판 X398 · 사장님 말씀 「<b>하나로 만들자. 두개로 나누지말고 같이 소통되도록</b>」). ◾ 📊 상담현황의 「✍️ 진행중 예상」 을 누르면 <b>그 칸 바로 밑에</b> 고객 한 분 = 한 줄이 펼쳐집니다 — 화면을 가리는 덮개가 아닙니다. 「15」 = 15만원, 치는 대로 저장되고 <b>위 「진행중 예상」 합계가 그 자리에서 같이 바뀝니다</b>. 다 적으면 「접기」. ◾ 같이 들어간 판 X399 — 👤 <b>오늘 화면 고객 이름은 실명</b>입니다. 고객 앞에서는 맨 위 띠의 <b>「🙈 이름 가리기」</b> 를 한 번 — 이 폰에서 「홍*순」 으로 가립니다. ★ 폰 달력·카톡 그림처럼 <b>밖으로 나가는 이름은 그대로 가립니다</b>. ◾ 먼저 나간 판 X387 · X388 · X389 · X390 · X391 · X392 · X393 · X394 · X395 · X396(🥇 제안 순위) 도 들어 있습니다.';
+var APP_BUILD='2026-11-10 16:30';
+var APP_BUILD_NOTE='✍️ <b>예상업적을 오늘 칸 안에서 바로 적습니다</b>(판 X398 · 사장님 말씀 「<b>하나로 만들자. 두개로 나누지말고 같이 소통되도록</b>」). ◾ 📊 상담현황의 「✍️ 진행중 예상」 을 누르면 <b>그 칸 바로 밑에</b> 고객 한 분 = 한 줄이 펼쳐집니다 — 화면을 가리는 덮개가 아닙니다. 「15」 = 15만원, 치는 대로 저장되고 <b>위 「진행중 예상」 합계가 그 자리에서 같이 바뀝니다</b>. 다 적으면 「접기」. ◾ 같이 들어간 판 X399 — 👤 <b>오늘 화면 고객 이름은 실명</b>입니다. 고객 앞에서는 맨 위 띠의 <b>「🙈 이름 가리기」</b> 를 한 번 — 이 폰에서 「홍*순」 으로 가립니다. ★ 폰 달력·카톡 그림처럼 <b>밖으로 나가는 이름은 그대로 가립니다</b>. ◾ 먼저 나간 판 X387 · X388 · X389 · X390 · X391 · X392 · X393 · X394 · X395 · X396 · X397(🚦 서버가 거절하던 쓰기) 도 들어 있습니다.';
 
 
 
@@ -26974,8 +26974,11 @@ document.addEventListener('keydown',function(e){
 var ATTEND={month:null,profiles:[],att:[]};
 function osAttToday(){var d=new Date(),p=function(n){return(n<10?'0':'')+n;};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
 /* 로그인(접속)만 해도 오늘 출근이 자동 기록되게 — 앱과 같은 Supabase attendance 테이블 */
+/* ⚠ 판 X397 — 이미 오늘 줄이 있으면 <b>고치지 않고 건너뜁니다</b>(ignoreDuplicates). 서버에는 출근 줄을
+   고치는 권한 규칙이 없어(넣기·읽기만 · 맞는 설계입니다), 예전 upsert 는 하루 두 번째 접속부터
+   매번 권한 오류로 막혔습니다 — 2026-11-10 하루에 206번(postgres 로그). 첫 출근 기록은 그대로입니다. */
 function osBackupBoot(){try{if(typeof osBackupTick==='function')setTimeout(osBackupTick,4000);}catch(e){}}
-function osAttendMark(){try{var sb=(typeof osClient==='function')?osClient():null;var uid=(typeof OS!=='undefined'&&OS.profile)?OS.profile.id:null;if(sb&&uid)sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date'}).then(function(){},function(){});}catch(e){}}
+function osAttendMark(){try{var sb=(typeof osClient==='function')?osClient():null;var uid=(typeof OS!=='undefined'&&OS.profile)?OS.profile.id:null;if(sb&&uid)sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date',ignoreDuplicates:true}).then(function(){},function(){});}catch(e){}}
 function renderAttend(){
   if(!OS.profile){return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">DB CRM</div><div class="page-title">출근 현황</div></div><div class="card"><div class="card-body"><div class="notice" style="color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">🔒 로그인 후 이용할 수 있습니다.</div></div></div></div>';}
   return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">DB CRM</div><div class="page-title">출근 현황</div>'+
@@ -26996,7 +26999,7 @@ function osAttendLoad(){
   var cal=document.getElementById('attendCal');var sb=osClient();
   if(!sb){if(cal)cal.innerHTML='<div class="notice" style="color:var(--ink-4)">서버에 연결되어 있지 않습니다.</div>';return;}
   var uid=OS.profile&&OS.profile.id;
-  if(uid){try{sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date'}).then(function(){},function(){});}catch(e){}}
+  if(uid){try{sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date',ignoreDuplicates:true}).then(function(){},function(){});}catch(e){}}
   osBackupBoot();
   Promise.all([sb.from('profiles').select('id,name,role,active,status').order('name'),arAll(sb,'attendance','member_id,att_date',['-att_date','member_id']),sb.from('profiles').select('id,workspace')]).then(function(res){
     var pr=res[0],at=res[1],ws=res[2];
