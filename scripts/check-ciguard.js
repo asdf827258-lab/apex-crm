@@ -1,4 +1,4 @@
-/* ══ 🧱 check-ciguard — 점검이 <b>사장님의 진짜 Supabase</b> 를 부르지 않는가 (판 X399) ══════
+/* ══ 🧱 check-ciguard — 점검이 <b>사장님의 진짜 Supabase</b> 를 부르지 않는가 (판 X401) ══════
    사장님 말씀 (2026-11-10) 「병합되면 ci 진짜 서버 부르는것도 해줘」.
 
    ⚠ 재어 보니 (2026-11-10 서버 로그) CI 점검이 가짜 id(me · u1 · c1)로 진짜 서버를 하루
@@ -65,7 +65,7 @@ const go = (p, u) => p.goto(u, { timeout: 8000 }).then(x => 'ok ' + x.status()).
     catch (e) { R.fWhy = String(e.message).slice(0, 80); try { await r.abort(); } catch (x) {} } });
   R.f = await go(p5, H + '/f');
   }
-  /* 인쇄용 빈 창(about:blank) — 창 묶음에 가로채기를 걸면 여기서 ui.css 가 안 내려옵니다(check-uiprint · 판 X399 에서 물림) */
+  /* 인쇄용 빈 창(about:blank) — 창 묶음에 가로채기를 걸면 여기서 ui.css 가 안 내려옵니다(check-uiprint · 판 X401 에서 물림) */
   const c6 = await b.newContext(); const p6 = await c6.newPage(); await p6.goto('http://127.0.0.1:' + P + '/ok');
   const [pop] = await Promise.all([p6.waitForEvent('popup'), p6.evaluate(P => { const w = window.open('', '_blank');
     w.document.write('<link rel=stylesheet href="http://127.0.0.1:' + P + '/pop.css"><p id=x>x</p>'); w.document.close(); }, P)]);
