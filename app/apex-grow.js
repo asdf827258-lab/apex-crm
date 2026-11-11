@@ -419,7 +419,7 @@ function grCss(){
     '.gr-why p b{color:var(--t-ink)}'+
     '.gr-ax{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}'+
     '.gr-ax span{font-size:var(--t6);color:var(--t-ink);background:var(--t-bg);border-radius:10px;padding:6px 10px;line-height:1.45}'+
-    '.gr-no{background:var(--t-bg);border-radius:var(--t-r);padding:14px}'+
+    '.gr-no ul{margin:8px 0 0;padding:0 0 0 20px}'+
     '.gr-no .gr-hd i{color:var(--t-sub)}'+
     '.gr-no li{font-size:var(--t6);color:var(--t-ink);line-height:1.6;margin:4px 0}';
   document.head.appendChild(st);
