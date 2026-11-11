@@ -242,9 +242,9 @@ body.quick main{max-width:640px;padding-top:12px}
 .qk-goal .goal.per i{font-style:normal;font-weight:600;color:var(--tx3)}
 .qk-goal .gpct{font-size:var(--t6);font-weight:800;align-self:center}
 .qk-sum{margin-top:8px;font-size:var(--t6);color:var(--tx3);font-weight:600}
-.qk-chips{display:flex;gap:8px;margin:0 0 10px}
-.qk-chips button{flex:1;min-height:44px;border:1px solid var(--grey2);background:#fff;border-radius:999px;font-weight:700;font-size:var(--t5);color:var(--tx2);cursor:pointer}
-.qk-chips button.on{background:var(--tx);border-color:var(--tx);color:#fff}
+.qk-g{display:flex;align-items:baseline;gap:8px;margin:14px 2px 8px;font-size:var(--t5);font-weight:800;color:var(--tx)}
+.qk-g .qk-st{font-size:var(--t5);padding:1px 8px}
+.qk-g span{margin-left:auto;font-size:var(--t6);font-weight:700;color:var(--tx3)}
 .qk-r{display:flex;align-items:center;gap:10px;background:#fff;border-radius:var(--r2);box-shadow:var(--sh);padding:11px 12px;margin-bottom:8px}
 .qk-r.need{box-shadow:inset 3px 0 0 var(--blue),var(--sh)}
 .qk-m{flex:1;min-width:0}
@@ -398,12 +398,12 @@ const goalMonth = () => FILTER.month || TODAY_S.slice(0, 7);
    위 「전체 단계」로 언제든 넓힐 수 있다. */
 let FILTER = { month: '', team: '', mem: '', stage: '__appc', q: '' };
 /* ✍️ <b>간편 입력</b> — 주소에 ?quick=1 이 붙으면 표 대신 「한 분 = 한 줄」 판을 세웁니다.
-   QWHO = 누구 것을 적나(처음엔 나) · QALL = 미접촉까지 보나 */
+   QWHO = 누구 것을 적나(처음엔 나) */
 const QUICK = new URLSearchParams(location.search).get('quick') === '1';
 /* ✍️ 홈 칸 안에 끼워졌나 (판 X400) — 그러면 키를 알려 주고, 칠 때마다 금액을 알려 줍니다 */
 const EMBED = QUICK && new URLSearchParams(location.search).get('embed') === '1' && window.parent !== window;
 if (EMBED) document.body.classList.add('embed');
-let QWHO = '', QALL = false;
+let QWHO = '';
 /* ── <b>팀은 접어 둡니다</b> ─────────────────────────────────────────
    사장님 말씀 — 「팀 별로 따로 보고, <b>전체적으로 따로</b> 볼 수 있도록
    하고, <b>접어두기 칸</b>을 만들어서 한번에 관리하자」.
@@ -1195,12 +1195,24 @@ board.addEventListener('click', async e => {
      적어 둡니다 (4번). 담는 값(r.expect)은 원입니다.
    ★ 칸을 비우면 <b>「안 적음」</b> 으로 돌아갑니다. 0 으로 적지 않습니다 (1번).
    ============================================================ */
-const QSTG = { PC: 0, AP: 1, CS: 2, TA: 3, '미접촉': 4 };
+/* ★ <b>AP · PC 만</b>, 단계별 묶음 (사장님 말씀 2026-11-10 「예상업적은 AP-PC중인
+     사람들에 한해서」 · 「기존에 분류했던 카테고리가 좋았는데」 → 여쭈니
+     「AP·PC만, 단계별 묶음」 · 좋았던 것 = 📊 DB·업적관리 전체 표).
+     거르는 자는 위 isAppc 하나 — 전체 표 「AP · PC (상담 진행중)」 · 팀 한눈에와 <b>같은 자</b>
+     입니다 — 두 화면이 다른 사람을 세면 안 됩니다 (5번).
+     PC(계약에 더 가까움)가 위, 묶음 안에서는 안 적힌 분 → 약속 빠른 분. */
+const QGRP = ['PC', 'AP'];
 function quickRows() {
-  return ROWS.filter(r => r.mid === QWHO && isLive(r) && (QALL || r.stage !== '미접촉'))
-    .sort((a, b) => (!!a.expect - !!b.expect)
-      || ((QSTG[a.stage] ?? 9) - (QSTG[b.stage] ?? 9))
+  return ROWS.filter(r => r.mid === QWHO && isAppc(r))
+    .sort((a, b) => (QGRP.indexOf(a.stage) - QGRP.indexOf(b.stage))
+      || (!!a.expect - !!b.expect)
       || (a.date || '9999').localeCompare(b.date || '9999'));
+}
+/* 묶음 머리 — 몇 분 · 적힌 예상 합계(만원). 칠 때마다 이것만 다시 씁니다 */
+function quickGrpSum(st) {
+  const L = quickRows().filter(r => r.stage === st);
+  const man = Math.round(APEX_PEX.liveWon(L) / 10000);   /* 더하는 자는 apex-pex.js 한 곳 (check-pex) */
+  return `${L.length}분 · 예상 ${man.toLocaleString()}만원`;
 }
 function quickRowHTML(r) {
   const man = r.expect ? Math.round(r.expect / 10000) : '';
@@ -1225,15 +1237,16 @@ function renderQuick() {
   let h = `<div class="qk-top"><h2>✍️ 예상업적 적기</h2>
     <p>계약될 것 같은 <b>월 보험료</b>를 만원으로 적으세요 — 「15」 = 15만원. 적으면 바로 저장되고 홈·EM 상담 보드에 같은 금액이 뜹니다.</p>
     ${pick}<div class="qk-goal">${goalHTML(QWHO, !canEdit({ mid: QWHO }))}</div>
-    <div class="qk-sum">${memSum(QWHO)}</div></div>
-    <div class="qk-chips"><button type="button" data-qall="0" class="${QALL ? '' : 'on'}">상담 중 (TA·AP·PC·CS)</button>
-      <button type="button" data-qall="1" class="${QALL ? 'on' : ''}">미접촉까지</button></div>`;
+    <div class="qk-sum">${memSum(QWHO)}</div></div>`;
   h += L.length
     ? (need ? `<p class="qk-sum" style="margin:0 2px 8px">파란 줄 <b>${need}분</b>이 아직 안 적혔습니다 — 위에서부터 적으시면 됩니다.</p>` : '')
-      + L.map(quickRowHTML).join('')
-    : `<div class="empty">${QALL ? '진행 중인 고객이 없습니다.' : '상담 중(TA·AP·PC·CS)인 고객이 없습니다. 「미접촉까지」 를 눌러 보세요.'}</div>`;
-  h += `<div class="qk-foot">${canEdit({ mid: QWHO }) ? `<button type="button" class="btn gh" data-addmid="${QWHO}">+ 새 고객 추가</button>` : ''}
-    <button type="button" class="btn gh" id="qk-full">전체 표로 보기</button></div>`;
+      + QGRP.filter(st => L.some(r => r.stage === st)).map(st =>
+        `<div class="qk-g" data-qg="${st}"><i class="qk-st">${st}</i>상담 진행중<span>${quickGrpSum(st)}</span></div>`
+        + L.filter(r => r.stage === st).map(quickRowHTML).join('')).join('')
+    : `<div class="empty">AP · PC 로 상담 중인 고객이 없습니다. 단계는 「전체 표로 보기」 에서 바꿉니다.</div>`;
+  /* 「+ 새 고객 추가」 는 여기 두지 않습니다 — 새 줄은 미접촉으로 들어가 이 판(AP·PC)에
+     <b>안 보입니다</b>. 눌렀는데 안 생긴 것처럼 보이면 두 번 넣습니다. 표에서 넣습니다. */
+  h += `<div class="qk-foot"><button type="button" class="btn gh" id="qk-full">전체 표로 보기 · 고객 추가</button></div>`;
   $('#board').innerHTML = h;
 }
 /* 금액 한 칸 — 칠 때마다 담고 표와 같은 길로 저장합니다 */
@@ -1243,6 +1256,7 @@ function quickPut(el) {
   r.expect = man * 10000;                /* 0 → queueSave 가 빈 글로 보내 「안 적음」(null) 이 됩니다 */
   const row = el.closest('.qk-r'); if (row) row.classList.toggle('need', !man);
   const s = document.querySelector('#board .qk-sum'); if (s) s.innerHTML = memSum(r.mid);
+  const g = document.querySelector(`#board [data-qg="${r.stage}"] span`); if (g) g.textContent = quickGrpSum(r.stage);
   queueSave(r, 'expect');
 }
 if (QUICK) {
@@ -1257,8 +1271,6 @@ if (QUICK) {
   });
   board.addEventListener('change', e => { if (e.target.id === 'qk-who') { flush(); QWHO = e.target.value; renderQuick(); } });
   board.addEventListener('click', e => {
-    const c = e.target.closest('[data-qall]');
-    if (c) { QALL = c.dataset.qall === '1'; renderQuick(); return; }
     if (e.target.closest('#qk-full')) { flush();
       /* 홈 칸 안이면 표는 홈이 덮개로 엽니다 — 칸 안에서 14칸 표로 바뀌면 폰에서 옆으로 밀립니다 */
       if (EMBED) { try { window.parent.postMessage({ apex: 'pex-full' }, location.origin); } catch (x) { } return; }

@@ -11,7 +11,10 @@
 
    ── 보는 것 ─────────────────────────────────────────────────────────
      [1] ★★ 간편 입력(edu-pipeline.html?quick=1) — 표 대신 <b>한 분 = 한 줄</b>
-         · 상담 중(TA·AP·PC·CS)만 · <b>안 적힌 분이 위</b> · 미접촉·계약완료 빠짐
+         · <b>AP · PC 만</b>, PC 묶음 → AP 묶음 · 묶음 안에서 <b>안 적힌 분이 위</b>
+         · TA·CS·미접촉·계약완료·보류 빠짐 · 묶음 머리 합계가 치는 대로 바뀜
+         (판 X402 · 사장님 말씀 2026-11-10 「예상업적은 AP-PC중인 사람들에 한해서」
+          「기존에 분류했던 카테고리가 좋았는데」 → 여쭈니 「AP·PC만, 단계별 묶음」)
      [2] ★★ 「15」 를 치면 <b>150,000원</b>으로 표와 같은 문(pipeline_save)에 간다
          (만원으로 받고 원으로 담는다 · 4번) · Enter 는 다음 분 칸으로
      [3] ★★ 칸을 비우면 <b>빈 글</b>로 간다 — 서버에서 null(안 적음). 0 을 적지 않는다 (1번)
@@ -77,8 +80,10 @@ const D = (id, who, stage, expect, extra) => Object.assign({ id, assigned_to: wh
 const ROWS = [
   D('a1', 'me', 'AP', null, { next_appt: 며칠뒤(2) + 'T01:00:00Z' }),
   D('a2', 'me', 'PC', 150000),
-  D('a3', 'me', 'TA', null),
+  D('a3', 'me', 'PC', null),
   D('a4', 'me', '미접촉', null),
+  D('a7', 'me', 'TA', null),
+  D('a8', 'me', 'CS', null),
   D('a5', 'me', '계약완료', 300000, { contract_premium: 300000, contracted_at: 며칠뒤(-1) + 'T00:00:00Z' }),
   D('a6', 'me', 'AP', null, { closed_reason: '보류' }),
   D('b1', 'ld', 'AP', null),
@@ -111,6 +116,10 @@ const ROWS = [
     quick: document.body.classList.contains('quick'),
     표: !!document.querySelector('table.gx'),
     줄: [...document.querySelectorAll('.qk-r')].map(r => r.dataset.qid + (r.classList.contains('need') ? '*' : '') + '=' + r.querySelector('[data-qx]').value),
+    묶음: [...document.querySelectorAll('[data-qg]')].map(g => g.dataset.qg + ':' + g.querySelector('span').textContent),
+    묶음줄: [...document.querySelectorAll('.qk-r')].map(r => { let g = r.previousElementSibling;
+      while (g && !g.dataset.qg) g = g.previousElementSibling; return r.dataset.qid + '@' + (g ? g.dataset.qg : '-'); }).join(),
+    칩: !!document.querySelector('[data-qall],.qk-chips,[data-addmid]'),
     고르개: !!document.getElementById('qk-who'),
     목표: !!document.querySelector('.qk-goal [data-goal="me"]'),
     옆: document.documentElement.scrollWidth - window.innerWidth,
@@ -120,7 +129,11 @@ const ROWS = [
   }));
   console.log('    줄: ' + A.줄.join(' · '));
   is(A.quick && !A.표, '표 대신 간편 판이 선다');
-  is(A.줄.join(',') === 'a1*=,a3*=,a2=15', '★★ 상담 중만 · 안 적힌 분(a1 AP·a3 TA)이 위 · 적힌 분(a2 15만)이 아래 — 미접촉·계약완료·보류 빠짐');
+  console.log('    묶음: ' + A.묶음.join(' · '));
+  is(A.줄.join(',') === 'a3*=,a2=15,a1*=', '★★ AP · PC 만 — PC(a3 안 적힘 → a2 15만) 다음 AP(a1) · TA·CS·미접촉·계약완료·보류 빠짐');
+  is(A.묶음.join('|') === 'PC:2분 · 예상 15만원|AP:1분 · 예상 0만원', '★★ 단계별 묶음 머리 — PC 위 · AP 아래 · 몇 분 · 예상 합계');
+  is(A.묶음줄 === 'a3@PC,a2@PC,a1@AP', '★ 줄은 제 단계 묶음 밑에 선다 (' + A.묶음줄 + ')');
+  is(!A.칩, '「미접촉까지」 칩 · 「+ 새 고객 추가」 없음(새 줄은 미접촉이라 이 판에 안 보임 — 표에서 넣음)');
   is(A.목표, '월간목표 칸이 위에 선다(goalHTML 그대로 · 5번)');
   console.log('\n[4] 팀원은 제 것만');
   is(!A.고르개, '팀원에게는 담당자 고르개가 없다');
@@ -130,25 +143,25 @@ const ROWS = [
   is(A.칸 >= 44, '금액 칸 ' + A.칸 + 'px ≥ 44');
 
   console.log('\n[2] 「15」 → 150,000원 · 표와 같은 문');
-  await p.focus('[data-qx="a1"]'); await p.keyboard.type('20'); await p.keyboard.press('Enter');
+  await p.focus('[data-qx="a3"]'); await p.keyboard.type('20'); await p.keyboard.press('Enter');
   const 다음 = await p.evaluate(() => document.activeElement && document.activeElement.dataset.qx);
-  is(다음 === 'a3', 'Enter → 다음 분 칸 (' + 다음 + ')');
+  is(다음 === 'a2', 'Enter → 다음 분 칸 (' + 다음 + ')');
   await p.keyboard.type('7');
   await p.waitForTimeout(1300);
   const C = await p.evaluate(() => __CALLS.filter(c => c.rpc === 'pipeline_save').map(c => c.a));
   console.log('    보낸 것: ' + JSON.stringify(C));
-  is(C.some(c => c.p_id === 'a1' && c.p.expect_premium === '200000'), '★★ a1 「20」 → 200,000원 (pipeline_save)');
-  is(C.some(c => c.p_id === 'a3' && c.p.expect_premium === '70000'), '★★ a3 「7」 → 70,000원');
+  is(C.some(c => c.p_id === 'a3' && c.p.expect_premium === '200000'), '★★ a3 「20」 → 200,000원 (pipeline_save)');
+  is(C.some(c => c.p_id === 'a2' && c.p.expect_premium === '70000'), '★★ a2 「7」 → 70,000원 (Enter 로 넘어가면 칸이 골라져 있어 고쳐 쓴다)');
   is(C.every(c => Object.keys(c.p).join() === 'expect_premium'), '★ 예상업적 칸 하나만 보낸다(단계·이름은 안 건드린다)');
-  is(await p.evaluate(() => !document.querySelector('[data-qid="a1"]').classList.contains('need')), '적으면 「안 적힘」 표시가 빠진다');
+  is(await p.evaluate(() => !document.querySelector('[data-qid="a3"]').classList.contains('need')), '적으면 「안 적힘」 표시가 빠진다');
+  const 머리 = await p.evaluate(() => document.querySelector('[data-qg="PC"] span').textContent);
+  is(머리 === '2분 · 예상 27만원', '★★ 치는 대로 PC 묶음 머리 합계가 바뀐다 (' + 머리 + ')');
 
   console.log('\n[3] 비우면 「안 적음」 — 0 을 적지 않는다 (1번)');
   await p.evaluate(() => { const e = document.querySelector('[data-qx="a2"]'); e.value = ''; e.dispatchEvent(new Event('input', { bubbles: true })); });
   await p.waitForTimeout(1100);
   const E = await p.evaluate(() => __CALLS.filter(c => c.rpc === 'pipeline_save' && c.a.p_id === 'a2').map(c => c.a.p.expect_premium));
   is(E.length && E[E.length - 1] === '', '★★ 빈 글로 보낸다 → 서버 null (' + JSON.stringify(E) + ')');
-  await p.click('[data-qall="1"]');
-  is(await p.evaluate(() => [...document.querySelectorAll('.qk-r')].some(r => r.dataset.qid === 'a4')), '「미접촉까지」 를 누르면 미접촉도 선다');
   await p.context().close();
 
   console.log('\n[4] 팀장 — 제 팀원까지, 남의 팀은 없다');
