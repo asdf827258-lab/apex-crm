@@ -317,8 +317,11 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
     } catch (e) { 띠.사진넣으면.말 = '터졌습니다 — ' + ((e && e.message) || ''); }
     const 글 = (id) => { const e = document.getElementById(id); return e ? (e.innerText || '') : ''; };
     /* 📑 표지 차례 — 장에서 읽어 세우나 (판 X369) */
+    /* ★ s0(담당 설계사 소개)도 뺍니다 (판 X412) — 표지(s1) 앞에 서는 장이라
+       「이 안에 들어 있는 것」 의 본문 장이 아닙니다. 넣으면 머리글의
+       「모두 N장」 이 안내서 본문 수와 어긋납니다. */
     const 켜진 = [...document.querySelectorAll('.sheet[data-kind="ins"],.sheet[data-kind="let"]')]
-      .filter(x => !x.classList.contains('off') && x.id !== 's1');
+      .filter(x => !x.classList.contains('off') && x.id !== 's1' && x.id !== 's0');
     const 차례 = { 줄: document.querySelectorAll('#v_cvtoc div:not(.ex)').length, 켜진: 켜진.length,
                    머리: (document.getElementById('v_cvtoch') || {}).textContent || '', 끈뒤: -1 };
     (function () {
