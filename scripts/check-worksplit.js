@@ -22,6 +22,8 @@
            47줄이 한 줄도 안 빠지고 갈래에 서나(빠지면 「그 밖의 일」) · 갈래 단추는 표 글에 있는 낱말만 ·
            청구 → 이미라 실장 · 박주미 매니저 · 사람을 누르면 사람별 그 카드로 · 완료 체크가 같은 줄에 걸리나 ·
            업무별 이미지는 문의처 한 장(4,000px 밑 · 갈래마다 한 줄)
+     [13] ★★ 업무별에서 글 고치기 — 갈래 이름 · 찾는 말 · 할 일 글 · 갈래 더하기/지우기가 남나 · 옛 표(갈래 칸 없음)도 서나
+     [1] 에 조직도 — 조직도 카드 뒤에 업무구분 칸이 같은 파일로 서나 (판 X420 「crm에 조직도에 삽입하자」)
      ⚠ [1]~[11] 은 사람별 보기에서 잽니다(주소 #v=person) — 사람 카드 자리를 보는 자들입니다
      [10] ★★ 내 수정용 — 받은 파일에서 고치고 · 다시 열어도 남고 · 앱의 팀 표 열쇠와 안 섞이고 ·
            거기서 고친 표로 설계사용(보기 전용)을 다시 뽑나 · 인터넷 0
@@ -95,6 +97,13 @@ const sec = t=>console.log('\n'+t);
     is(o.물음, '본체의 APEX_KV 가 canOrg 를 내놓는다 — 안쪽 화면이 권한을 여기 묻습니다');
     const 뒤 = await pg.evaluate(()=>{ exitWorksplit(); return document.body.classList.contains('worksplit-mode'); });
     is(!뒤, '「← 워크스페이스」 로 다시 벗겨진다');
+    /* 조직도 안에 (판 X420 · 「crm에 조직도에 삽입하자」) */
+    const og = await pg.evaluate(()=>{ go('org');
+      var c=document.getElementById('orgWorksplit'), f=document.getElementById('orgWorksplitFrame'), box=document.getElementById('orgChartBox');
+      return { 카드:!!c, 주소:f?f.getAttribute('src'):'', 뒤:!!(c&&box&&(box.compareDocumentPosition(c)&Node.DOCUMENT_POSITION_FOLLOWING)),
+               크게:c?/go\('worksplit'\)/.test(c.innerHTML):false, 한벌:/WORKSPLIT_URL/.test(orgWorksplitHtml.toString()) }; });
+    is(og.카드 && og.주소==='worksplit.html' && og.뒤, '★ 조직도 화면 — 조직도 카드 바로 뒤에 「업무구분」 칸이 서고 같은 파일(worksplit.html)을 띄운다');
+    is(og.크게 && og.한벌, '「크게 열기」 는 메뉴의 덮개로 · 주소는 WORKSPLIT_URL 한 곳에서 (5번)');
     await pg.close();
   }
 
@@ -345,7 +354,7 @@ const sec = t=>console.log('\n'+t);
       if(u.startsWith('http://own.test/')){ r.fulfill({status:200,contentType:'text/html; charset=utf-8',body:html}); return; }
       바깥.push(u); r.abort(); });
     const o = await off.newPage(); const oe=[]; o.on('pageerror',e=>oe.push(String(e).slice(0,90)));
-    await o.goto('http://own.test/w.html',{waitUntil:'load'});
+    await o.goto('http://own.test/w.html',{waitUntil:'load'}); await o.evaluate(()=>WS.setView('person'));
     const a0 = await o.evaluate(()=>({ p:WS.perm(), 고치기:getComputedStyle(document.getElementById('wsEdit')).display,
       잠김:document.getElementById('wsEdit').disabled, 말:document.getElementById('wsWho').textContent,
       단추:document.getElementById('wsExpOwn').textContent }));
@@ -436,9 +445,55 @@ const sec = t=>console.log('\n'+t);
     const im = await q.evaluate(()=>{ var r=WS.poster(); return {h:r.h,n:r.names.length,첫:r.names[0]}; });
     is(im.h<4000 && im.n===a.갈래 && im.첫==='청구', '업무별 이미지는 문의처 한 장 — 갈래 '+im.n+'줄 · 높이 '+im.h+'px');
     await q.click('#wsEdit');
-    is(await q.evaluate(()=>WS.view()==='person' && document.querySelector('.ws-view').hidden), '「고치기」 를 누르면 사람별로 선다(고치는 단위가 사람 줄)');
+    is(await q.evaluate(()=>WS.view()==='topic' && !document.querySelector('.ws-view').hidden && document.querySelectorAll('.ws-tcard .ws-kw').length>=20),
+       '「고치기」 를 눌러도 업무별 그대로 — 갈래마다 찾는 말 칸이 서고 사람별로 바꿀 수도 있다');
+    await q.click('#wsEdit');
     is(qe.length===0, '업무별에서 터진 것 0 — '+(qe[0]||''));
     await c2.close();
+  }
+
+  sec('[13] ★★ 업무별에서 글 고치기 (판 X420 · 「내가 글도 수정할 수 있게」)');
+  {
+    const c3 = await br.newContext({viewport:{width:1200,height:900}});
+    await c3.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
+    const q = await c3.newPage(); const qe=[]; q.on('pageerror',e=>qe.push(String(e).slice(0,90))); q.on('dialog',d=>d.accept());
+    /* 예전에 저장해 둔 표(갈래 칸 없음)로 시작 — 처음 값으로 서야 합니다 */
+    await q.goto('http://127.0.0.1:'+PORT+'/'+PAGE,{waitUntil:'load'});
+    await q.evaluate(()=>{ var d=WS.seed(); delete d.topics; localStorage.setItem('apex_worksplit_v1',JSON.stringify({v:1,at:'2026-11-09 10:00',doc:JSON.stringify(d)})); });
+    await q.reload({waitUntil:'load'});
+    const 옛 = await q.evaluate(()=>({ n:document.querySelectorAll('.ws-card[data-topic]').length, 표:JSON.parse(JSON.parse(localStorage.getItem('apex_worksplit_v1')).doc).topics }));
+    is(옛.n===21 && 옛.표===undefined, '갈래 칸이 없는 옛 표도 처음 갈래 21로 선다 — 보기만 해서는 표를 안 바꾼다');
+    await q.click('#wsEdit');
+    /* 갈래 이름 · 찾는 말 · 할 일 글 */
+    await q.click('.ws-tcard[data-topic="고등"] .ws-name'); await q.keyboard.press('Control+A'); await q.keyboard.type('고지·등록'); await q.keyboard.press('Enter');
+    await q.click('.ws-tcard[data-topic="청구"] .ws-kwr:nth-child(1) .ws-kwv'); await q.keyboard.press('Control+End'); await q.keyboard.type(', 보험금'); await q.keyboard.press('Enter');
+    await q.click('.ws-tcard[data-topic="청구"] .ws-it:nth-child(1) .ws-t'); await q.keyboard.press('Control+End'); await q.keyboard.type(' (보험금)'); await q.keyboard.press('Enter');
+    await q.waitForTimeout(500);
+    /* 갈래 더하기 — 표 글에 있는 말로 */
+    await q.click('.ws-tcard ~ .ws-addrow .ws-add'); await q.keyboard.type('미용실 배너'); await q.keyboard.press('Enter');
+    await q.click('.ws-tcard[data-topic="미용실 배너"] .ws-kwr:nth-child(1) .ws-kwv'); await q.keyboard.type('미용실'); await q.keyboard.press('Enter');
+    await q.waitForTimeout(500);
+    /* 갈래 지우기 — 할 일은 안 지워진다 */
+    await q.click('.ws-tcard[data-topic="TA"] .ws-chead .ws-mini.x'); await q.waitForTimeout(300);
+    await q.click('#wsEdit'); await q.reload({waitUntil:'load'});
+    const r = await q.evaluate(()=>{
+      var d=JSON.parse(JSON.parse(localStorage.getItem('apex_worksplit_v1')).doc), lab=d.topics.map(function(t){ return t.label; });
+      var 청구=document.querySelector('.ws-card[data-topic="청구"]'), 미용=document.querySelector('.ws-card[data-topic="미용실 배너"]');
+      var 줄=0; d.rows.forEach(function(r){ 줄+=r.items.length; });
+      var 덮음={}; WS.groups().forEach(function(g){ g.items.forEach(function(z){ 덮음[z.ri+':'+z.ii]=1; }); });
+      return { 고등:lab.indexOf('고지·등록')>=0&&lab.indexOf('고등')<0, 청구말:d.topics[lab.indexOf('청구')].words.join(','),
+        글:d.rows[2].items[1].t, 미용:미용?[].map.call(미용.querySelectorAll('.ws-pill'),function(e){ return e.textContent; }).join('|'):'',
+        TA:lab.indexOf('TA')<0, 줄:줄, 덮음:Object.keys(덮음).length,
+        단추:[].some.call(document.querySelectorAll('#wsTopics .ws-topic'),function(b){ return /^고지·등록/.test(b.textContent); }) };
+    });
+    is(r.고등 && r.단추, '갈래 이름을 고치면(고등 → 고지·등록) 남고 · 찾기 단추도 새 이름으로');
+    is(r.청구말==='청구,보험금', '찾는 말을 쉼표로 더하면 남는다 — '+r.청구말);
+    is(r.글==='청구자료 스캔·보케어 청구 및 처리 절차 인수인계 (보험금)', '업무별에서 고친 할 일 글이 그 사람 줄에 그대로 — '+r.글);
+    is(r.미용==='이미라 실장', '「+ 갈래 더하기」 · 찾는 말 「미용실」 → 「미용실 앞 미니배너 제작」 의 이미라 실장이 선다');
+    is(r.TA && r.줄===47 && r.덮음===47, '갈래를 지워도 할 일은 47줄 그대로 · 모두 어딘가(그 밖의 일 포함)에 선다');
+    is(await q.evaluate(()=>document.getElementById('wsUndo').disabled && !document.querySelector('.ws-card[data-topic="TA"]')), '되돌리기는 이 창에서 한 일만 — 다시 연 뒤엔 잠겨 있고, 지운 갈래는 그대로 지워져 있다');
+    is(qe.length===0, '업무별 고치기에서 터진 것 0 — '+(qe[0]||''));
+    await c3.close();
   }
 
   is(errs.length===0, '터진 것 0 — '+(errs[0]||''));

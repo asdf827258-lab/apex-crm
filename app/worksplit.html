@@ -119,6 +119,13 @@ button{font:inherit;color:inherit;cursor:pointer}
 .ws-ptag{display:inline-block;font-size:13px;font-weight:800;color:var(--c);background:var(--cl);border-radius:6px;padding:1px 7px;margin-bottom:3px}
 .ws-tcard .ws-t{display:block}
 
+/* 갈래 찾는 말 · 빼는 말 (고칠 때만) */
+.ws-kw{margin:0 0 10px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;background:var(--soft)}
+.ws-kwr{display:flex;gap:8px;align-items:flex-start;margin:2px 0}
+.ws-kwr .l{flex:0 0 auto;width:64px;font-size:13px;font-weight:800;color:var(--sub);padding-top:2px}
+.ws-kwv{flex:1 1 auto;min-width:0;font-size:14px}
+.ws-kwn{font-size:13px;color:var(--sub);margin-top:4px}
+
 /* ── 사람별 카드 — 한 줄에 한 사람, 한 줄짜리 셋은 나란히 ── */
 .ws-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start;grid-auto-flow:row dense}
 .ws-card{grid-column:1/-1;background:var(--card);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:var(--t-r);
@@ -292,8 +299,9 @@ body.edit .ws-card.cols .ws-list{columns:1}
 <div class="ws-perm" id="wsWho"></div></div>
 
 <div class="ws-help" id="wsHelp">
-  칸을 눌러 바로 고칩니다. <b>Enter</b> — 아래에 할 일 한 줄 · <b>Shift+Enter</b> — 칸 안에서 줄바꿈 ·
-  빈 줄에서 <b>Backspace</b> — 그 줄 지우기. 고친 것은 바로 저장됩니다.
+  칸을 눌러 바로 고칩니다. 고친 것은 바로 저장됩니다.<br>
+  <b>업무별</b> — 갈래 이름 · <b>찾는 말</b>(쉼표로 가름) · 할 일 글을 고치고, 갈래를 더하고 · 옮기고 · 지웁니다. 칸을 떠나면 다시 묶습니다.<br>
+  <b>사람별</b> — <b>Enter</b> 아래에 할 일 한 줄 · <b>Shift+Enter</b> 칸 안 줄바꿈 · 빈 줄에서 <b>Backspace</b> 그 줄 지우기 · 담당자 더하기.
 </div>
 
 <!-- 🔎 무엇을 문의하시나요 — 설계사가 「누구에게 묻지?」 를 바로 찾는 칸 (판 X420) -->
@@ -467,6 +475,7 @@ function ed(e,get,set,ph,opt){
     document.execCommand('insertText',false,t.getData('text/plain')||t.getData('Text')||'');
   });
   if(opt&&opt.keys) e.addEventListener('keydown',opt.keys);
+  if(opt&&opt.blur) e.addEventListener('blur',opt.blur);
   return e;
 }
 function mini(txt,title,fn,x){
@@ -494,21 +503,28 @@ var TOPICS=[
   ['보고·일지',['보고서','동행일지','달력']],['TA',['TA 문화','TA 개별']],
   ['세일즈플러스·라인업',['세일즈플러스','라인업']],['고등',['고등']]
 ];
+/* ★ 2026-11-11 · 사장님 말씀 「내가 글도 수정할 수 있게」 — 갈래 이름·찾는 말도 <b>표(S.topics)</b>에 담아 고칩니다.
+     위 TOPICS 는 이제 <b>처음 값</b>일 뿐입니다. 예전에 저장한 표(갈래 없음)는 처음 값으로 섭니다.
+     갈래를 처음 고치는 순간 처음 값을 표 안으로 옮겨 적고, 그다음부터는 표 안의 것만 봅니다 (5번 — 한 곳). */
+function topicsDef(){ return TOPICS.map(function(x){ return {label:x[0],words:x[1].slice(),ex:(x[2]||[]).slice()}; }); }
+function topics(){ return (S&&S.topics&&S.topics.length)?S.topics:topicsDef(); }
+function ownTopics(){ if(!S.topics||!S.topics.length) S.topics=topicsDef(); return S.topics; }
+function words(str){ return String(str||'').split(/[,，、\n]+/).map(function(w){ return w.trim(); }).filter(Boolean); }
 var Q='';
 /* 보기 — 'topic'(업무별 · 처음) · 'person'(사람별). 고칠 때·찾을 때는 사람별로 섭니다(고치는 단위가 사람 줄이라) */
 var VIEW='topic';
-function tview(){ return VIEW==='topic' && !query() && !document.body.classList.contains('edit'); }
+function tview(){ return VIEW==='topic' && !query(); }   /* 고칠 때도 업무별 그대로 — 갈래 이름·찾는 말을 거기서 고칩니다 */
 /* 업무별 묶음 — 화면도 이미지도 <b>이 한 곳</b>에 묻습니다 (5번).
    ★ 낱말로 묶어 한 줄이 여러 갈래에 설 수 있습니다. 어느 갈래에도 안 든 줄은 「그 밖의 일」 에 그대로 섭니다 — 빠뜨리지 않습니다 */
-function groups(){
-  var G=TOPICS.map(function(x){ return {label:x[0],q:{any:x[1],ex:x[2]||[]},words:x[1],items:[]}; });
+function groups(withEmpty){
+  var G=topics().map(function(x,ti){ return {ti:ti,label:x.label,q:{any:x.words,ex:x.ex||[]},words:x.words,items:[]}; });
   var other={label:'그 밖의 일',q:null,words:[],items:[],other:true};
   S.rows.forEach(function(r,ri){ r.items.forEach(function(it,ii){
     var any=false;
     G.forEach(function(g){ if(hitItem(g.q,r.who,it.t)){ g.items.push({ri:ri,ii:ii}); any=true; } });
     if(!any) other.items.push({ri:ri,ii:ii});
   }); });
-  var out=G.filter(function(g){ return g.items.length; });
+  var out=withEmpty?G:G.filter(function(g){ return g.items.length; });   /* 고칠 때는 빈 갈래도 세워 찾는 말을 적게 */
   if(other.items.length) out.push(other);
   out.forEach(function(g){ var seen={}; g.ppl=[]; g.done=0;
     g.items.forEach(function(z){ if(!seen[z.ri]){ seen[z.ri]=1; g.ppl.push(z.ri); } if(S.rows[z.ri].items[z.ii].done) g.done++; }); });
@@ -523,7 +539,8 @@ function norm(x){ return String(x||'').toLowerCase().replace(/[\s·・,.\-\/&()�
 /* 지금 무엇을 찾나 — 단추 이름이면 그 낱말 중 하나라도(할 일 글만), 친 말이면 낱말이 모두(이름 포함) */
 function query(){
   var q=(Q||'').trim(); if(!q||document.body.classList.contains('edit')) return null;
-  for(var i=0;i<TOPICS.length;i++) if(TOPICS[i][0]===q) return {q:q,any:TOPICS[i][1],ex:TOPICS[i][2]||[],words:TOPICS[i][1]};
+  var TP=topics();
+  for(var i=0;i<TP.length;i++) if(TP[i].label===q&&TP[i].words.length) return {q:q,any:TP[i].words,ex:TP[i].ex||[],words:TP[i].words};
   var w=q.split(/\s+/).filter(function(x){ return norm(x); });
   return w.length?{q:q,all:w.map(norm),words:w}:null;
 }
@@ -573,11 +590,36 @@ function topicCards(g,GR){
     var n=G.items.length;
     var cd=el('section','ws-card ws-tcard'+(G.other?' other':'')+(n>=6?' cols':'')+(n&&G.done===n?' alldone':''));
     cd.setAttribute('data-g',gi); cd.setAttribute('data-topic',G.label);
+    var EDIT=document.body.classList.contains('edit'), TP=G.other?null:ownTopicsIf(EDIT)[G.ti];
     var hh=el('div','ws-chead'); hh.appendChild(el('div','ws-av',first(G.label)));
-    var hb=el('div','ws-hb'); hb.appendChild(el('div','ws-name',G.label));
+    var hb=el('div','ws-hb'), nm=el('div','ws-name');
+    if(TP) ed(nm,function(){ return TP.label; },function(v){ TP.label=v; },'갈래 이름',{keys:noEnter,blur:function(){ render(); }});
+    else nm.textContent=G.label;
+    hb.appendChild(nm);
     var mt=el('div','ws-meta'); mt.appendChild(el('span','ws-cnt'+(n&&G.done===n?' all':''),'할 일 '+n+'줄 · '+G.done+' 끝냄'));
     if(n>1) mt.appendChild(bar(G.done/n));
-    hb.appendChild(mt); hh.appendChild(hb); cd.appendChild(hh);
+    hb.appendChild(mt); hh.appendChild(hb);
+    if(TP){
+      var tl=el('div','ws-tool'), ti=G.ti;
+      tl.appendChild(mini('↑','갈래 위로',function(){ snap(); if(move(ownTopics(),ti,-1)){ saveNow(); render(); } }));
+      tl.appendChild(mini('↓','갈래 아래로',function(){ snap(); if(move(ownTopics(),ti,1)){ saveNow(); render(); } }));
+      tl.appendChild(mini('✕','갈래 지우기',function(){
+        if(!confirm('「'+(TP.label||'이름 없는 갈래')+'」 갈래를 지울까요? 할 일은 안 지워집니다 — 다른 갈래나 「그 밖의 일」 로 옮겨 섭니다. (되돌리기로 살릴 수 있습니다)')) return;
+        snap(); ownTopics().splice(ti,1); saveNow(); render(); },1));
+      hh.appendChild(tl);
+    }
+    cd.appendChild(hh);
+    /* 찾는 말 · 빼는 말 — 고칠 때만 섭니다. 쉼표로 가릅니다. 칸을 떠나면 다시 묶습니다 */
+    if(TP&&EDIT){
+      var kw=el('div','ws-kw');
+      [['찾는 말','words','예) 청구, 보험금'],['빼는 말','ex','예) 설계매니저 — 이 말 속에서는 안 찾음']].forEach(function(z){
+        var row=el('div','ws-kwr'); row.appendChild(el('span','l',z[0]));
+        var f=el('div','ws-kwv'); ed(f,function(){ return (TP[z[1]]||[]).join(', '); },function(v){ TP[z[1]]=words(v); },z[2],{keys:noEnter,blur:function(){ render(); }});
+        row.appendChild(f); kw.appendChild(row);
+      });
+      kw.appendChild(el('div','ws-kwn','할 일 글에 이 말이 있으면 이 갈래에 섭니다. 한 줄이 여러 갈래에 설 수 있습니다.'));
+      cd.appendChild(kw);
+    }
     /* 누구에게 — 사람을 누르면 사람별 보기에서 그분 카드로 */
     var wr=el('div','ws-to'); wr.appendChild(el('span','l',G.other?'맡은 분':'문의 →'));
     G.ppl.forEach(function(ri){
@@ -595,14 +637,26 @@ function topicCards(g,GR){
       ck.addEventListener('change',function(){ it.done=ck.checked; saveNow(); render(); });
       li.appendChild(ck);
       var bx=el('div','ws-tb'); bx.appendChild(el('span','ws-ptag c'+(z.ri%6),r.who||'이름 없음'));
-      var t=el('div','ws-t'); marked(t,it.t,G.words); bx.appendChild(t);
+      var t=el('div','ws-t');
+      if(EDIT){ ed(t,function(){ return it.t; },function(v){ it.t=v; },'할 일',{keys:noEnter,blur:function(){ render(); }}); }
+      else marked(t,it.t,G.words);
+      bx.appendChild(t);
       li.appendChild(bx); ul.appendChild(li);
     });
     cd.appendChild(ul);
     cd.appendChild(el('div','ws-fin','✓ 다 끝냈습니다'));
     g.appendChild(cd);
   });
+  /* 갈래 더하기 — 고칠 때만 */
+  var ar=el('div','ws-addrow'), ab=el('button','ws-add','+ 갈래 더하기'); ab.type='button';
+  ab.addEventListener('click',function(){ snap(); ownTopics().push({label:'',words:[],ex:[]}); saveNow(); render();
+    var ns=document.querySelectorAll('.ws-tcard:not(.other) .ws-name'); if(ns.length) ns[ns.length-1].focus(); });
+  ar.appendChild(ab); g.appendChild(ar);
 }
+/* 갈래를 고치는 순간에만 처음 값을 표 안으로 옮겨 적습니다 — 보기만 해서는 표가 안 바뀝니다 */
+function ownTopicsIf(edit){ return edit?ownTopics():topics(); }
+/* 갈래 이름·찾는 말·할 일 글 칸에서 Enter 는 줄을 안 바꾸고 칸을 떠납니다(떠나면 다시 묶음) */
+function noEnter(ev){ if(ev.key==='Enter'&&!ev.isComposing){ ev.preventDefault(); ev.target.blur(); } }
 
 /* 이름에서 첫 글자 — 카드 머리의 동그라미에 */
 function first(w){ var m=String(w||'').replace(/^[^가-힣A-Za-z0-9]+/,''); return m?m.charAt(0):'?'; }
@@ -622,11 +676,11 @@ function render(){
 
   /* 자주 묻는 것 단추 — 표에 실제로 있는 것만 · 맡은 분 수 */
   var tp=$('wsTopics'); tp.innerHTML='';
-  TOPICS.forEach(function(x){
-    var n=topicCount(x[1],x[2]); if(!n) return;
-    var b=el('button','ws-topic'+(Qo&&Qo.q===x[0]?' on':''),x[0]); b.type='button';
+  topics().forEach(function(x){
+    var n=topicCount(x.words,x.ex); if(!n) return;
+    var b=el('button','ws-topic'+(Qo&&Qo.q===x.label?' on':''),x.label); b.type='button';
     b.appendChild(el('span','k',n+'명'));
-    b.addEventListener('click',function(){ setQ(Qo&&Qo.q===x[0]?'':x[0]); });
+    b.addEventListener('click',function(){ setQ(Qo&&Qo.q===x.label?'':x.label); });
     tp.appendChild(b);
   });
 
@@ -680,11 +734,11 @@ function render(){
     b.addEventListener('click',function(){ setView(z[0]); });
     vw.appendChild(b);
   });
-  if(Qo||document.body.classList.contains('edit')) vw.hidden=true;
+  if(Qo) vw.hidden=true;   /* 고칠 때도 업무별 ↔ 사람별을 오갑니다 */
   P.appendChild(vw);
 
   /* 이름표 줄 — 업무별이면 갈래 목록, 사람별이면 사람 목록 */
-  var ch=el('div','ws-chips'), GR=TV?groups():null;
+  var ch=el('div','ws-chips'), GR=TV?groups(document.body.classList.contains('edit')):null;
   if(GR) GR.forEach(function(G,gi){
     var c=el('button','ws-chip ws-tchip'); c.type='button';
     c.appendChild(el('span','d',first(G.label))); c.appendChild(el('span','w',G.label));
