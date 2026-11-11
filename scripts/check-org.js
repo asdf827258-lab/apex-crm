@@ -106,6 +106,10 @@ window.supabase={createClient:function(){
   const errs = [];
   page.on('pageerror', e => errs.push(e.message));
   await page.addInitScript(() => {
+    /* ★ 판 X420 — 조직도 화면 안에 업무구분(iframe)이 섭니다. 이 초기화는 <b>모든 창</b>에서 돌므로,
+       안쪽 창이 실릴 때마다 저장소를 비워 이 자가 심어 둔 조직도를 지웠습니다(사장님 화면에선 안 일어남).
+       바깥 창에서만 비웁니다. */
+    if (window.top !== window) return;
     try {
       localStorage.clear();
       localStorage.setItem('apex_ar_auto_off', '1'); localStorage.setItem('apex_ar_brief_off', '1');
