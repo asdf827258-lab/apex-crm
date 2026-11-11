@@ -142,7 +142,8 @@
         if(r.error){IIB.rows=[];iibRender('목록을 못 불러왔습니다 — '+(r.error.message||''));return;}
         IIB.rows=r.data||[];iibRender();
         // 소식지마다 CRM 에서 만든 상품 수
-        sb.from('insight_products').select('source_id').not('source_id','is',null).limit(1000).then(function(m){
+        var ids=IIB.rows.map(function(x){return x.id;});if(!ids.length)return;
+        sb.from('insight_products').select('source_id').in('source_id',ids).range(0,4999).then(function(m){
           var c={};((m&&m.data)||[]).forEach(function(x){c[x.source_id]=(c[x.source_id]||0)+1;});IIB.made=c;iibRender();
         });
       });
