@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════
-   🌱 <b>성장</b> — 입사부터 경력자까지 한 길로 (판 X405)
+   🌱 <b>성장</b> — 입사부터 경력자까지 한 길로 (판 X409)
 
    사장님 말씀 (2026-11-10) — 「교육 내용들이 너무 적나라하게 흩어져 있어서
    입사부터, 과정, 경력자까지 레벨업이 되도록 … 교육이나 지식에 관련된
@@ -373,7 +373,7 @@ function grCss(){
 
 function renderGrow(){
   grCss();
-  var h='<div class="tab-pane on gr-board"><div class="page-hd">'+
+  var h='<div class="tab-pane on"><div class="page-hd">'+
     '<div class="page-tag">성장</div>'+
     '<div class="page-title">🌱 성장 로드맵</div>'+
     '<div class="page-desc">입사부터 경력자까지 한 길로 — 지금 레벨에서 할 것 하나만 봅니다.</div></div>'+

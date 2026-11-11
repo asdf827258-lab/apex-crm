@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="ko">
+<head>
+<meta charset="utf-8">
+<!-- ══════════════════════════════════════════════════════════════════
+     보험의 기준 · 팩트파인딩 · 함께 점검표 (판 X405)
+     사장님 말씀 2026-11-10 「이 기준으로 팩트파인딩, 고객의 상황을 이해하고 같이 점검할수 있는표 별도로 만들어줘」
+     ① 고객 이해 — kijun-ff.js 한 벌 · ② 보장 같이 점검 — selfcheck-core.js(APXSelf) 한 벌(문항 · 고를 것 · 판정 · 기준 숫자)
+     ③ 함께 정리 — 두 칸의 답에서 셉니다. 이 쪽은 그리기만 합니다(5번).
+     ★ 고객 이름 칸 없음 · 적은 것은 이 화면에만, 기억하지 않음(3번) · 요청 0(7번) · 인쇄 tnum 꺼짐(4-1).
+     재는 자: scripts/check-kjff.js
+     ══════════════════════════════════════════════════════════════════ -->
+<meta name="color-scheme" content="light">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta property="og:title" content="보험의 기준 · 팩트파인딩 · 함께 점검표">
+<meta property="og:description" content="고객의 상황을 먼저 듣고, 보장을 같이 점검하고, 함께 정리해요.">
+<title>보험의 기준 · 팩트파인딩 · 함께 점검표</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="ui.css">
+<script src="kijun-font.js"></script>
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--t-bg);color:var(--t-ink);font-family:var(--t-font);font-size:15px;line-height:1.6;letter-spacing:-.2px;-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 48px}
+.hd{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.hd .tag{display:inline-block;font-size:13px;font-weight:700;color:var(--t-sub);background:var(--t-card);border-radius:var(--t-r-xs);padding:4px 10px}
+.hd h1{margin:6px 0 2px;font-size:27px;font-weight:800;letter-spacing:-.03em}
+.hd h1 b{color:var(--t-point)}
+.hd p{margin:0;color:var(--t-sub)}
+.act{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.act a,.act button.pr{min-height:44px;border:0;border-radius:var(--t-r-sm);padding:0 14px;font:700 15px var(--t-font);cursor:pointer;background:var(--t-card);color:var(--t-ink);display:inline-flex;align-items:center;text-decoration:none}
+.act button.pr{background:var(--t-point);color:var(--t-on)}
+.warn{margin-top:12px;background:var(--t-warn-l);border-radius:var(--t-r-sm);padding:11px 14px;font-size:14px}
+.warn b{color:var(--t-warn-d)}
+.box{margin-top:12px;background:var(--t-card);border-radius:var(--t-r-sm);padding:14px 16px}
+.box>h2{margin:0 0 4px;font-size:21px;font-weight:800}
+.box>h2 .no{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--t-point);color:var(--t-on);font-size:16px;margin-right:8px;vertical-align:2px}
+.box>p.sd{margin:0 0 10px;color:var(--t-sub);font-size:14px}
+.meta{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+.meta label{display:flex;flex-direction:column;gap:4px;font-weight:800;font-size:14.5px;min-width:220px}
+.meta input{min-height:42px;font:600 15px var(--t-font);border:0;border-bottom:2px solid var(--t-line);background:transparent;padding:0 4px}
+.std{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.std div{background:var(--t-point-l);border-radius:var(--t-r-sm);padding:10px 12px;font-size:14px}
+.std div b{display:block;font-size:17px;color:var(--t-point-d)}
+.grp{margin-top:10px;border-top:2px solid var(--t-line);padding-top:10px}
+.grp h3{margin:0 0 6px;font-size:18px;font-weight:800}
+.grp .note{margin:0 0 8px;font-size:13.5px;color:var(--t-warn-d);background:var(--t-warn-l);border-radius:var(--t-r-xs);padding:6px 10px}
+.it{padding:8px 0;border-bottom:1px dashed var(--t-line)}
+.it .q{font-size:16.5px;font-weight:800}
+.it .why{margin:3px 0 0;font-size:13.5px;color:var(--t-sub)}
+.it .to a{font-size:13px;font-weight:700;color:var(--t-point-d);text-decoration:none;margin-right:10px}
+.ops{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.op{min-height:42px;border:1.5px solid var(--t-line);border-radius:var(--t-r-xs);padding:0 12px;font:700 15px var(--t-font);background:var(--t-bg);color:var(--t-ink);cursor:pointer}
+.op::before{content:'□ ';font-weight:800}
+.op.on{background:var(--t-point);border-color:var(--t-point);color:var(--t-on)}
+.op.on::before{content:'☑ '}
+.ln{width:100%;min-height:40px;font:600 15px var(--t-font);border:0;border-bottom:1.5px solid var(--t-line);background:transparent;padding:0 4px;margin-top:6px}
+.memo{width:100%;min-height:60px;margin-top:8px;font:600 14.5px var(--t-font);border:1.5px dashed var(--t-line);border-radius:var(--t-r-xs);background:transparent;padding:6px 8px;resize:vertical}
+table.chk{width:100%;border-collapse:collapse;table-layout:fixed}
+.chk th{font-size:13.5px;font-weight:800;color:var(--t-sub);text-align:left;padding:8px;border-bottom:2px solid var(--t-ink)}
+.chk td{vertical-align:top;padding:10px 8px;border-bottom:1px solid var(--t-line);font-size:15px}
+.chk td.q b{display:block;font-size:16px}
+.chk td.q .g{display:inline-block;font-size:12px;font-weight:800;color:var(--t-point-d);background:var(--t-point-l);border-radius:var(--t-r-xs);padding:0 6px;margin-bottom:3px}
+.chk td.q small{display:block;color:var(--t-sub);font-size:13px;margin-top:2px}
+.chk .num{display:flex;gap:8px;flex-wrap:wrap}
+.chk .num label{font-size:14px;font-weight:700}
+.chk .num input{width:110px;min-height:40px;font:600 15px var(--t-font);border:0;border-bottom:1.5px solid var(--t-line);background:transparent;padding:0 4px}
+.badge{display:inline-block;min-width:88px;text-align:center;font-size:14px;font-weight:800;border-radius:var(--t-r-xs);padding:4px 8px;background:var(--t-bg);color:var(--t-sub)}
+.badge.ok{background:var(--t-pos-l);color:var(--t-pos-d)}
+.badge.mid{background:var(--t-warn-l);color:var(--t-warn-d)}
+.badge.need{background:var(--t-neg-l);color:var(--t-neg-d)}
+.badge.chk{background:var(--t-point-l);color:var(--t-point-d)}
+.chk td.r small{display:block;margin-top:4px;font-size:13px;color:var(--t-sub)}
+.sum{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.sum div{border-radius:var(--t-r-sm);padding:10px;text-align:center;background:var(--t-bg)}
+.sum div b{display:block;font-size:26px;font-weight:800}
+.first ol{margin:6px 0 0;padding-left:22px;font-size:15.5px}
+.first li{margin:4px 0}
+.first li small{display:block;color:var(--t-sub);font-size:13.5px}
+.worry{margin-top:8px;font-size:15px}
+.foot{margin-top:16px;font-size:13.5px;line-height:1.7;color:var(--t-sub)}
+.foot b{color:var(--t-ink)}
+.col-q{width:34%}.col-o{width:36%}.col-r{width:30%}
+@media (max-width:760px){
+  .std,.sum{grid-template-columns:1fr 1fr}
+  table.chk,.chk thead,.chk tbody,.chk tr,.chk td{display:block;width:100%}
+  .chk thead{display:none}
+  .chk tr{border-bottom:2px solid var(--t-ink);padding:6px 0}
+  .chk td{border:0;padding:5px 2px}
+}
+@media print{
+  @page{size:A4 portrait;margin:10mm}
+  body{background:#fff;font-size:13px}
+  .wrap{max-width:none;padding:0}
+  .act,.it .to,.noprint{display:none!important}
+  .box,.warn{padding:6px 0;border-radius:0;margin-top:8px}
+  .box{break-inside:auto}
+  .box>h2{font-size:17px;border-bottom:2px solid var(--t-ink);padding-bottom:3px}
+  .grp,.it,.chk tr{break-inside:avoid}
+  .op{min-height:0;border:0;background:none!important;color:var(--t-ink)!important;padding:1px 6px 1px 0;font-size:13px}
+  .chk thead{display:table-header-group}
+  .chk td{font-size:12.5px;padding:6px}
+  .chk td.q b{font-size:13.5px}
+  .ln,.chk .num input{border-bottom:1px solid #777}
+  .memo{border:1px dashed #777}
+  ::placeholder{color:transparent!important}
+  *{font-variant-numeric:normal!important;font-feature-settings:normal!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="hd">
+    <div>
+      <span class="tag">🗂 보험의 기준 · 팩트파인딩</span>
+      <h1>고객을 먼저 알고, <b>같이 점검해요</b></h1>
+      <p>① 고객 이해 → ② 보장 같이 점검 → ③ 함께 정리. 고객과 마주 앉아 하나씩 고르거나, 뽑아서 펜으로 적어요.</p>
+    </div>
+    <div class="act">
+      <a href="kijun-sheet.html">📄 한 장 설계서</a>
+      <a href="kijun-compare.html">📑 담보 대조표</a>
+      <a href="kijun-dict.html">📚 담보 사전</a>
+      <button type="button" class="pr" data-print>🖨 이 표 뽑기</button>
+    </div>
+  </header>
+
+  <p class="warn" data-warn>⚠ 이 표는 <b>고객의 상황을 이해하고 같이 점검하는 대화용</b>이에요. 고객 이름은 적지 않아요 · 적은 것은 이 화면에만 있고 닫으면 사라져요 ·
+    가입할 때 알릴 의무(고지)는 청약서 질문에 그대로 · <b>보험료 · 보장은 심사 결과에 따라요 · 지급은 약관과 보험사 심사 결과에 따라요.</b></p>
+
+  <section class="box">
+    <div class="meta"><label>📅 만난 날<input type="text" data-meta="d" placeholder="예: 11월 10일" autocomplete="off"></label></div>
+  </section>
+
+  <section class="box" data-stdbox>
+    <h2>📏 제 기준</h2>
+    <p class="sd">아래 「② 보장 같이 점검」 의 판정이 이 기준으로 나와요. 셀프 점검 · 한 장 설계서와 같은 기준이에요.</p>
+    <div class="std" data-std></div>
+  </section>
+
+  <section class="box" data-know>
+    <h2><span class="no">1</span>고객 이해 — 먼저 들어요</h2>
+    <p class="sd">숫자보다 사람을 먼저 들어요. 「💡」 줄은 설계사가 왜 묻는지 — 고객에게 그대로 읽어 줘도 돼요.</p>
+    <div data-groups></div>
+  </section>
+
+  <section class="box" data-checkbox>
+    <h2><span class="no">2</span>보장 같이 점검 — 증권을 펴고 함께</h2>
+    <p class="sd">증권의 「어디를 보나」 를 같이 찾아 고르면, 제 기준으로 판정이 바로 서요.</p>
+    <table class="chk"><colgroup><col class="col-q"><col class="col-o"><col class="col-r"></colgroup>
+      <thead><tr><th>무엇을 · 어디를 보나</th><th>고르기</th><th>판정 · 한마디</th></tr></thead>
+      <tbody data-rows></tbody></table>
+  </section>
+
+  <section class="box" data-wrapbox>
+    <h2><span class="no">3</span>함께 정리</h2>
+    <div class="sum" data-sum></div>
+    <div class="first" data-first></div>
+    <p class="worry" data-worry></p>
+    <div data-wrap></div>
+    <textarea class="memo" data-memo aria-label="함께 정리 메모" placeholder="오늘 고객이 한 말 · 약속한 것"></textarea>
+  </section>
+
+  <p class="foot">
+    ① 의 물음은 kijun-ff.js, ② 의 문항 · 판정 · 기준은 셀프 점검과 같은 한 벌(selfcheck-core.js)이에요 ·
+    판정은 이해를 돕는 일반 기준이고, <b>내 보험의 범위 · 금액은 증권과 약관으로 확인</b>해요 · 보험료 · 보장은 심사 결과에 따라요 ·
+    이 표에는 고객 이름을 적지 않아요 · 화면에 적은 것은 기억하지 않아요.
+  </p>
+</main>
+<script src="selfcheck-core.js"></script>
+<script src="kijun-ff.js"></script>
+<script>
+/* 팩트파인딩 · 함께 점검표 — ① KJ_FF 한 벌 · ② APXSelf 한 벌. 여기서는 그리고 세기만 한다(5번) */
+(function(){
+  var F=window.KJ_FF||{know:[],wrap:[]}, A=window.APXSelf;
+  var $=function(s){return document.querySelector(s)};
+  var esc=function(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var ST={k:{},a:{},n:{c:null,i:null}};   /* 화면에만 — 저장하지 않는다(3번) */
+
+  /* 📏 제 기준 — TARGET 에서 채운다. 못 읽으면 숫자를 지어 넣지 않는다(1번) */
+  (function(){
+    var T=A&&A.TARGET;
+    if(!T){$('[data-std]').innerHTML='<div><b>기준 파일을 못 읽었어요</b>판정을 세우지 않아요 — 숫자를 지어 넣지 않아요.</div>';return}
+    /* 이름도 셀프 점검이 「괜찮아요」 로 판정하는 고를 것에서 가져온다 — 기준 글자를 또 적지 않는다(5번) */
+    var okName=function(k){var o=A.options(k).filter(function(x){return x[2]==='ok'})[0];return o?o[1].replace(/\s*\(.*\)\s*$/,''):''};
+    $('[data-std]').innerHTML=
+      '<div><b>암 진단비</b>연소득의 '+T.cancer[0]+'~'+T.cancer[1]+'배</div>'+
+      '<div><b>뇌</b>'+esc(okName('brain'))+' 이름 · '+esc(A.man(T.brain))+'</div>'+
+      '<div><b>심장</b>'+esc(okName('heart'))+' 이름 · '+esc(A.man(T.heart))+'</div>'+
+      '<div><b>보장 끝</b>'+T.end+'세까지</div>';
+  })();
+
+  /* ① 고객 이해 */
+  function opHtml(scope,k,o,i,many){return '<button type="button" class="op" data-op="'+scope+'" data-k="'+esc(k)+'" data-i="'+i+'" data-many="'+(many?1:0)+'">'+esc(o)+'</button>'}
+  function itemHtml(scope,it){
+    var h='<div class="it" data-it="'+esc(it.k)+'"><div class="q">'+esc(it.q)+'</div>';
+    if(it.how==='line')h+='<input class="ln" type="text" data-line="'+esc(it.k)+'" autocomplete="off" aria-label="'+esc(it.q)+'">';
+    else h+='<div class="ops">'+it.o.map(function(o,i){return opHtml(scope,it.k,o,i,it.how==='many')}).join('')+'</div>';
+    if(it.why)h+='<p class="why">💡 '+esc(it.why)+'</p>';
+    if(it.to&&it.to.length)h+='<div class="to">'+it.to.map(function(u){return '<a href="'+esc(u)+'" target="_blank" rel="noopener">자세히 →</a>'}).join('')+'</div>';
+    return h+'</div>';
+  }
+  $('[data-groups]').innerHTML=F.know.map(function(g){
+    return '<div class="grp" data-grp="'+esc(g.g)+'"><h3>'+esc(g.ic)+' '+esc(g.t)+'</h3>'+(g.note?'<p class="note">⚠ '+esc(g.note)+'</p>':'')+
+      g.items.map(function(it){return itemHtml('k',it)}).join('')+'<textarea class="memo" aria-label="'+esc(g.t)+' 메모" placeholder="메모"></textarea></div>';
+  }).join('');
+
+  /* ② 보장 같이 점검 — 문항 · 고를 것 · 판정은 APXSelf 한 벌 */
+  var CAT=A?A.catalog():[];
+  function rowHtml(q){
+    var h='<tr data-row="'+esc(q.k)+'"><td class="q"><span class="g">'+esc(q.g)+'</span><b>'+esc(q.q)+'</b><small>📍 '+esc(q.w||'')+'</small></td><td>';
+    if(q.r)h+='<div class="num"><label>암 진단비 <input type="number" min="0" step="100" inputmode="numeric" data-num="c"> 만 원</label><label>연소득 <input type="number" min="0" step="100" inputmode="numeric" data-num="i"> 만 원</label></div>';
+    else h+='<div class="ops">'+A.options(q.k).map(function(o){return '<button type="button" class="op" data-op="a" data-k="'+esc(q.k)+'" data-v="'+esc(o[0])+'">'+esc(o[1])+'</button>'}).join('')+'</div>';
+    return h+'</td><td class="r" data-res="'+esc(q.k)+'"><span class="badge">아직</span></td></tr>';
+  }
+  $('[data-rows]').innerHTML=CAT.map(rowHtml).join('');
+  if(!CAT.length)$('[data-checkbox]').hidden=true;
+
+  function verdict(k){
+    var q=CAT.filter(function(x){return x.k===k})[0];if(!q)return null;
+    return q.r?A.judge(k,ST.a[k],ST.n):(ST.a[k]==null?null:A.judge(k,ST.a[k],ST.n));
+  }
+  function paint(){
+    var cnt={ok:0,mid:0,need:0,chk:0,none:0}, list=[];
+    CAT.forEach(function(q){
+      var j=verdict(q.k), td=$('[data-res="'+q.k+'"]');
+      if(!j){cnt.none++;td.innerHTML='<span class="badge">아직</span>';return}
+      cnt[j.s]=(cnt[j.s]||0)+1;
+      var tip=A.tip(q.k,j.s);
+      td.innerHTML='<span class="badge '+esc(j.s)+'" data-s="'+esc(j.s)+'">'+esc(A.S[j.s]||'')+'</span><small>'+esc(j.a||'')+'</small>'+(tip?'<small>👉 '+esc(tip)+'</small>':'');
+      list.push({q:q,j:j,tip:tip});
+    });
+    $('[data-sum]').innerHTML=[['need','🔴'],['mid','🟡'],['chk','🔵'],['ok','🟢'],['none','⚪']].map(function(x){
+      var lab=x[0]==='none'?'아직 안 봤어요':A.S[x[0]];
+      return '<div data-cnt="'+x[0]+'"><b>'+cnt[x[0]]+'</b>'+x[1]+' '+esc(lab)+'</div>'}).join('');
+    var ORD={need:0,mid:1,chk:2};
+    var top=list.filter(function(x){return ORD[x.j.s]!=null}).sort(function(a,b){return ORD[a.j.s]-ORD[b.j.s]}).slice(0,3);
+    $('[data-first]').innerHTML='<b>👀 먼저 같이 볼 것</b>'+(top.length?'<ol>'+top.map(function(x){return '<li data-first-k="'+esc(x.q.k)+'"><b>'+esc(x.q.n)+'</b> — '+esc(A.S[x.j.s])+'<small>'+esc(x.tip||x.j.a||'')+'</small></li>'}).join('')+'</ol>':'<p class="why" style="margin:4px 0 0">② 를 고르면 여기에 먼저 볼 것이 서요.</p>');
+    var w=(ST.k.top||[]).map(function(i){return (F.know.filter(function(g){return g.g==='worry'})[0]||{items:[]}).items.filter(function(it){return it.k==='top'})[0].o[i]});
+    $('[data-worry]').innerHTML=w.length?'😟 고객이 고른 걱정 — <b>'+w.map(esc).join(' · ')+'</b> · 이 걱정과 위 「먼저 볼 것」 이 겹치는 곳부터 이야기해요.':'';
+  }
+  $('[data-wrap]').innerHTML=F.wrap.map(function(it){return itemHtml('w',it)}).join('');
+
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('.op');if(!b)return;
+    var sc=b.getAttribute('data-op'), k=b.getAttribute('data-k');
+    if(sc==='a'){var v=b.getAttribute('data-v');ST.a[k]=(ST.a[k]===v)?null:v;
+      [].forEach.call(document.querySelectorAll('.op[data-op="a"][data-k="'+k+'"]'),function(x){x.classList.toggle('on',ST.a[k]===x.getAttribute('data-v'))});
+    }else{
+      var i=+b.getAttribute('data-i'), many=b.getAttribute('data-many')==='1', cur=ST.k[k]||[];
+      if(many){cur=cur.indexOf(i)>=0?cur.filter(function(x){return x!==i}):cur.concat([i])}else{cur=(cur[0]===i)?[]:[i]}
+      ST.k[k]=cur;
+      [].forEach.call(document.querySelectorAll('.op[data-op="'+sc+'"][data-k="'+k+'"]'),function(x){x.classList.toggle('on',cur.indexOf(+x.getAttribute('data-i'))>=0)});
+    }
+    paint();
+  });
+  document.addEventListener('input',function(e){
+    var n=e.target.closest&&e.target.closest('[data-num]');if(!n)return;
+    var v=String(n.value).trim();ST.n[n.getAttribute('data-num')]=(v===''||!isFinite(+v))?null:Math.max(0,+v);
+    paint();
+  });
+  $('[data-print]').addEventListener('click',function(){window.print()});
+  paint();
+})();
+</script>
+</body>
+</html>
