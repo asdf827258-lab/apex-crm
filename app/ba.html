@@ -222,6 +222,9 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}button{c
 .prk ul{margin:4px 0 0;padding-left:18px;font-size:var(--t6);color:var(--gyd);line-height:1.7}
 .prk ul b{color:var(--nv)}.prk ul i{font-style:normal;color:var(--gyd)}
 .prk .pk-s{font-size:var(--t6);color:var(--gyd);margin:8px 0 0;line-height:1.6}
+/* 판 X410 — 💰 보험료 대비(순위는 그대로, 한 줄 덧붙임) */
+.prk .pk-e{font-size:var(--t6);color:var(--gyd);margin-top:3px;line-height:1.6}.prk .pk-e b{color:var(--nv)}
+.prk .pk-x{font-size:var(--t6);color:#7A4B00;background:#FFF7E6;border-radius:8px;padding:7px 10px;margin:8px 0 0;line-height:1.6}.prk .pk-x b{color:#5C3800}
 /* 만들기 화면은 담보를 <b>한 줄로 이어</b> 적는다 — 견본(계약 6건) 화면이 9,000px 을 넘지 않게 · 발표 장은 줄마다 */
 .prk ul.in{padding-left:0;list-style:none}.prk ul.in li{display:inline}.prk ul.in li+li:before{content:' · ';color:var(--gyd)}
 .prk.ed{padding:10px 12px}.prk.ed h4 small{display:none}.prk.ed .pk-i{padding:6px 0}
@@ -3993,10 +3996,20 @@ function rankProps(){
     for(k in p.cov)if(p.cov.hasOwnProperty(k)&&MID[k]){
       var x=rankFill(k,num(p.cov[k]),base);if(!x)continue;
       var pr=rankPri(MID[k]);x.p=pr.p;x.s=x.f*RANK_W[pr.p];sc+=x.s;parts.push(x);}
-    parts.sort(function(a,b){return b.s-a.s;});
+    /* 판 X410 — 이유는 <b>큰 자리부터</b> 보인다. 채움 비율(s)로만 줄 세우면 유사암 1,000 · 질병 수술비 30만원처럼
+       작은 담보가 100% 라서 앞에 서고, 급여 암주요치료비 · 뇌혈관 같은 큰 자리가 「그 밖에」 로 묻혔다(실제 제안서로 확인).
+       점수(sc)는 그대로 — 보이는 순서만: 급함 → 기준 있는 담보 → 설계 순서 → 채우는 금액 */
+    parts.sort(function(a,b){return (RANK_W[b.p]-RANK_W[a.p])||((a.t===null?1:0)-(b.t===null?1:0))||
+      ((RANK_DO[MID[a.k]]||9)-(RANK_DO[MID[b.k]]||9))||((UNIT[a.k]==='L'?b.add:0)-(UNIT[b.k]==='L'?a.add:0))||(b.s-a.s);});
     return {p:p,i:i,sc:Math.round(sc*1000)/1000,parts:parts,prem:num(p.premMan)};});
   L.sort(function(a,b){return (b.sc-a.sc)||((a.prem===null?1e9:a.prem)-(b.prem===null?1e9:b.prem))||(a.i-b.i);});
   L.forEach(function(x,j){x.rank=j+1;x.tie=(j>0&&L[j-1].sc===x.sc&&x.sc>0);});
+  /* 판 X410 — 💰 보험료 대비 = 채움 점수 ÷ 월 보험료(만원). 순위는 바꾸지 않고 줄만 덧붙인다 —
+     넓게 채우는 비싼 제안이 1순위가 될 때 「비싸서 1순위」 로 들리지 않게 */
+  var E=L.filter(function(x){return x.sc>0&&x.prem>0;});
+  E.forEach(function(x){x.eff=x.sc/x.prem;});
+  E.slice().sort(function(a,b){return (b.eff-a.eff)||(a.rank-b.rank);}).forEach(function(x,j){x.effN=j+1;if(!j)L.effTop=x;});
+  L.effCnt=E.length;
   return L;
 }
 function rankOf(id){var L=rankProps(),j;for(j=0;j<L.length;j++)if(L[j].p.id===id)return L[j];return null;}
@@ -4051,9 +4064,15 @@ function rankHtml(show){
       h+='<div class="pk-i"><span class="pk-n r'+(x.rank<=3?x.rank:'n')+'">'+x.rank+'순위</span><div class="pk-b">'+
         '<div class="pk-t">'+nm+'<em>'+(x.p.co?esc(x.p.co):'')+(x.prem!==null?(' · 월 '+fee(x.prem)):'')+'</em></div>'+
         '<div class="pk-w">'+head+'</div>'+
+        (x.eff?('<div class="pk-e">💰 보험료 대비 — 채움 점수 <b>'+x.sc.toFixed(1)+'</b> ÷ 월 '+(Math.round(x.prem*10)/10)+'만원 = 1만원당 <b>'+x.eff.toFixed(2)+'</b>'+
+          (L.effCnt>1?(' · '+L.effCnt+'건 중 <b>'+x.effN+'번째</b>'):'')+'</div>'):'')+
         (x.parts.length?('<ul'+(show?'':' class="in"')+'>'+x.parts.slice(0,show?3:2).map(rankLi).join('')+(x.parts.length>(show?3:2)?('<li>그 밖에 '+(x.parts.length-(show?3:2))+'곳</li>'):'')+'</ul>'):'')+
         '</div></div>';});
     if(show&&L.length>3)h+='<p class="pk-s">4순위부터 '+(L.length-3)+'건은 만들기 화면에 있습니다.</p>';
+    var et=L.effTop;
+    if(L.effCnt>1&&et&&et.rank!==1)
+      h+='<p class="pk-x">💰 <b>보험료 대비</b>로는 <b>'+et.rank+'순위 '+esc(et.p.nm||('새 제안 '+(et.i+1)))+'</b>'+(et.prem!==null?(' (월 '+fee(et.prem)+')'):'')+
+        ' 쪽이 1만원당 가장 많이 채웁니다. 1순위는 더 넓게 채우는 대신 월 '+fee(L[0].prem)+'입니다 — 예산이 먼저면 이쪽부터 보셔도 됩니다.</p>';
   }else{
     var G=rankSuggest();
     sum=G.pick.length?G.pick.map(function(x){return '<b>'+x.rank+'순위</b> '+esc(x.g.mid);}).join(' · '):'비어 있는 묶음 없음';
@@ -4071,7 +4090,7 @@ function rankHtml(show){
           (x.rows.length>(show?4:3)?('<li>그 밖에 '+(x.rows.length-(show?4:3))+'가지</li>'):'')+'</ul></div></div>';});
     if(show&&G.n>G.pick.length)h+='<p class="pk-s">비어 있는 묶음은 모두 <b>'+G.n+'개</b>입니다 — 나머지는 「지금 더 넣으셔야 할 것」 장에 있습니다.</p>';
   }
-  h+='<p class="pk-s">기준: '+src+' — 사내 상담 기준이며 정답이 아닙니다. 소득 · 병력 · 심사에 맞게 고르십시오.</p></div>';
+  h+='<p class="pk-s">기준: '+src+(S.after.length?' · 채움 점수 = 채우는 비율 × 급함(지금 바로 3 · 그다음 2 · 나중에 1)':'')+' — 사내 상담 기준이며 정답이 아닙니다. 소득 · 병력 · 심사에 맞게 고르십시오.</p></div>';
   if(show)return h;
   /* 만들기 화면 — 머리줄을 summary 로 올리고 순위 한 줄을 붙인다 */
   var m=h.match(/^<div class="prk ed" id="baRank">(<h4>[\s\S]*?<\/h4>)([\s\S]*)<\/div>$/);
