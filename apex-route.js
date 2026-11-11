@@ -994,6 +994,78 @@ function addrTag(p){
                 :'';
 }
 
+/* ══ 🏘 <b>약속도 같은 동네로 몰기</b> (판 X384) ═══════════════════════
+   사장님 말씀 (2026-11-08) 「약속잡을때도 같은 동네로 몰아줘」.
+   약속을 잡는 그 자리(통화 기록 → 결과 「상담」)에, 이분과 <b>같은 동네</b>에 앞으로
+   2주 안에 이미 잡힌 약속을 띄웁니다. 누르면 <b>그날 그 약속이 끝나는 시각</b>으로
+   약속 칸이 채워집니다 — 같은 날 같은 동네에 두 건이 붙으면 오가는 길이 줄어듭니다.
+   ★ <b>같은 사람의 약속만</b> 봅니다(담당자가 같은 줄) — 남의 약속 옆에 붙이면 안 됩니다.
+   ★ 이분 동네를 모르면 <b>같은 시</b>로 보고 그렇다고 적습니다 — 동네를 짐작하지 않습니다 (1번).
+   ★ <b>이동 시간을 지어 적지 않습니다</b> (1번) — 채우는 시각은 「앞 약속 시작 + 상담 한 건(STAY)」
+     이고, 오가는 시간은 따로 보시라고 적습니다. 저장은 사장님이 「통화 저장」 을 누를 때입니다.
+   ★ 약속을 세는 자는 <b>nextAppt 한 곳</b>(db-crm.html)입니다 — 여기서 다시 세지 않습니다 (5번). */
+function apptNear(d){
+  var my, city, now=Date.now(), lim, L=[];
+  if(!d)return {lv:"",key:"",L:L};
+  my=String(d.dong||"").trim(); city=cityOf(d)||""; lim=now+14*864e5;
+  dbs.forEach(function(x){
+    if(!x||x.id===d.id)return;
+    if(d.assigned_to&&x.assigned_to!==d.assigned_to)return;
+    var a=nextAppt(x); if(!a)return;
+    var t=new Date(a).getTime(); if(isNaN(t)||t<now||t>lim)return;
+    if(my){ if(String(x.dong||"").trim()!==my)return; }
+    else{ if(!city||cityOf(x)!==city)return; }
+    L.push({x:x,at:new Date(t)});
+  });
+  L.sort(function(a,b){ return a.at-b.at });
+  return {lv:my?"dong":(city?"city":""), key:my||city, L:L.slice(0,4), n:L.length};
+}
+function apptLocal(t){
+  var d=new Date(t);
+  return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes());
+}
+function apptNearPaint(){
+  var af=q("appointmentField"), pf=q("apptPlaceField")||af, box=q("apptNear"), d, o, h;
+  if(!af)return;
+  /* 옷은 동선 창을 열 때 실립니다 — 통화 창이 먼저 열려도 이 칸이 벌거벗지 않게 여기서도 싣습니다 */
+  styles();
+  if(!box){
+    box=document.createElement("div"); box.id="apptNear"; box.className="field full hidden";
+    pf.parentNode.insertBefore(box,pf.nextSibling);
+  }
+  box.classList.toggle("hidden",af.classList.contains("hidden"));
+  if(af.classList.contains("hidden"))return;
+  d=findDb(((q("callDbId")||{}).value)||"");
+  o=apptNear(d);
+  if(!o.lv){
+    box.innerHTML='<div class="apn"><b>🏘 같은 동네 약속</b><div class="apn-s">이분은 <b>동네도 시도</b> 안 적혀 있어 '+
+      '근처 약속을 찾을 수 없습니다 — 지역 동선의 📍 동네 로 한 번 적어 주시면 다음부터 섭니다.</div></div>';
+    return;
+  }
+  h='<div class="apn"><b>🏘 '+(o.lv==="dong"?'같은 동네('+E(o.key)+')':'같은 시('+E(o.key)+')')+'에 잡힌 약속</b>'+
+    (o.lv==="city"?' <small>이분 동네를 몰라 시로 봅니다</small>':'');
+  if(!o.L.length){
+    h+='<div class="apn-s">앞으로 2주 안에 '+(o.lv==="dong"?'이 동네':'이 시')+'에 잡힌 약속이 <b>없습니다</b> — 편한 날로 잡으셔도 됩니다.</div></div>';
+    box.innerHTML=h; return;
+  }
+  h+='<div class="apn-s">같은 날 붙여 잡으시면 오가는 길이 줄어듭니다. 누르면 <b>그 약속이 끝나는 시각</b>으로 채웁니다 '+
+     '(상담 한 건 '+STAY+'분 기준 · <b>오가는 시간은 따로 보세요</b>).</div><div class="apn-k">';
+  o.L.forEach(function(it){
+    var end=new Date(it.at.getTime()+STAY*60000);
+    h+='<button type="button" class="apn-b" data-apn="'+E(apptLocal(end))+'">'+
+      (it.at.getMonth()+1)+'/'+it.at.getDate()+'('+wday(it.at)+') '+hm(it.at)+' '+E(it.x.customer_name||"고객")+' 약속 뒤 → <b>'+hm(end)+'</b></button>';
+  });
+  h+='</div>'+(o.n>o.L.length?'<div class="apn-s">이 밖에 '+(o.n-o.L.length)+'건 더 — 🗺️ 지역 동선에서 날짜별로 보실 수 있습니다.</div>':'')+'</div>';
+  box.innerHTML=h;
+  Array.prototype.forEach.call(box.querySelectorAll("[data-apn]"),function(b){
+    b.onclick=function(){
+      var v=b.getAttribute("data-apn"), f=q("appointmentAt");
+      if(f){ f.value=v; try{ f.dispatchEvent(new Event("change",{bubbles:true})) }catch(e){} }
+      say("약속을 "+v.slice(5,10).replace("-","/")+" "+v.slice(11,16)+" 로 채웠습니다 — 「통화 저장」 을 누르셔야 들어갑니다.",4200);
+    };
+  });
+}
+
 /* 상담을 고르면 장소 칸도 같이 열린다 */
 var origToggle=window.toggleAppointment;
 if(typeof origToggle==="function"){
@@ -1001,6 +1073,8 @@ if(typeof origToggle==="function"){
     var r=origToggle.apply(this,arguments);
     var af=q("appointmentField"), pf=q("apptPlaceField");
     if(af&&pf) pf.classList.toggle("hidden",af.classList.contains("hidden"));
+    /* 🏘 같은 동네 약속 — 상담일 때만 섭니다 (판 X384) */
+    try{ apptNearPaint() }catch(eN){}
     return r;
   };
 }
@@ -1605,7 +1679,29 @@ function styles(){
     "padding:9px 11px;border:1px solid #c9ddff;border-radius:11px;background:#eef6ff}",
   ".rt-stay label{font-size:13px;font-weight:800;color:#245ea8}",
   ".rt-stay select{flex:1;min-width:120px;max-width:180px;min-height:44px;padding:9px 10px;border-radius:9px}",
-  ".rt-stay small{flex:1 1 100%;font-size:11.5px;color:#7089ad;line-height:1.5}"
+  ".rt-stay small{flex:1 1 100%;font-size:11.5px;color:#7089ad;line-height:1.5}",
+  /* 🏘 같은 동네 약속 (판 X384) — 누르는 것은 44px · 글은 13px 바닥 */
+  ".apn{border:1px solid #b7e4c7;background:#f3fbf6;border-radius:12px;padding:10px 12px;font-size:13.5px;color:var(--text)}",
+  ".apn small{font-size:13px;color:var(--muted);font-weight:600}",
+  ".apn-s{margin-top:6px;font-size:13px;color:var(--muted);line-height:1.6}",
+  ".apn-k{display:flex;flex-direction:column;gap:6px;margin-top:8px}",
+  ".apn-b{min-height:44px;padding:8px 12px;text-align:left;border:1px solid #cfd8e3;border-radius:10px;background:#fff;"+
+    "font-family:inherit;font-size:13.5px;color:#334155;cursor:pointer}",
+  ".apn-b b{color:#0f9d58}",
+  /* 🗓 오늘 코스 (판 X367) — 누르는 것은 44px · 글은 13px 바닥 */
+  ".rt-course{border-color:#b7e4c7;background:#f3fbf6}",
+  ".rt-cs-h{font-size:15px;font-weight:900;color:var(--navy);margin-bottom:8px}",
+  ".rt-cs-k{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}",
+  ".rt-cs-k .rt-mini{min-height:44px;padding:0 13px;border:1px solid #cfd8e3;border-radius:22px;background:#fff;"+
+    "font-family:inherit;font-size:13px;font-weight:800;color:#334155;cursor:pointer}",
+  ".rt-cs-k .rt-mini.on{background:#0f9d58;border-color:#0f9d58;color:#fff}",
+  ".rt-cs-l{margin:0;padding-left:20px}",
+  ".rt-cs-l li{padding:8px 0;border-top:1px solid #e3efe7;font-size:13.5px}",
+  ".rt-cs-l li:first-child{border-top:0}",
+  ".rt-cs-n{display:block;margin-bottom:6px;color:var(--text)}",
+  ".rt-cs-a{display:flex;gap:6px;flex-wrap:wrap}",
+  ".rt-cs-a .btn{min-height:44px;display:inline-flex;align-items:center}",
+  ".rt-cs-s{margin-top:8px;font-size:13px;color:var(--muted);line-height:1.6}"
   ].join("");
   document.head.appendChild(s);
 }
@@ -2059,6 +2155,63 @@ function fillPickers(){
   }
 }
 
+/* ══ 🗓 <b>오늘 코스 한 장</b> (판 X367) ═══════════════════════════════
+   사장님 말씀 (2026-11-06) 「지역동선으로 설계사의 상담 효율을 높여 !」 → 고르신 둘
+   「동네(동) 모으기」 · 「하루 코스 한 장」.
+   ⚠ 재어 보니 사장님 고객 94분은 지역이 「순천」 같은 <b>시 이름뿐</b>이고 주소·위치가
+     0분이었습니다. 시 하나에 79분이 한 덩어리라 「오늘 어디부터」 가 안 섰습니다.
+   ★ 그래서 약속이 없는 날에는 후보를 <b>동네(dbs.dong)로 묶어</b> 제일 많은 동네부터
+     한 장으로 보여 드립니다 — 한 동네를 모아 도시면 이동이 줄어 하루에 더 만나십니다.
+   ★ <b>새로 세지 않습니다</b> (5번) — 후보는 아래 「추가로 연락 드릴 고객님」 과 같은
+     cands(pool) 그대로이고, 차례도 그 차례입니다. 동네만 묶습니다.
+   ★ <b>시각·거리를 지어 적지 않습니다</b> (1번) — 동네만 알고 위치를 모르는 분은 몇 분
+     걸리는지 모릅니다. 위치를 아는 분이면 그 줄에 「🧭 내비」 가 섭니다.
+   ★ 동네를 모르는 분은 <b>몇 분인지</b> 적고 어디서 적는지 말합니다 — 지역(시)에서
+     동네를 짐작해 넣지 않습니다 (1번).                                  */
+var COURSE="";
+function courseHtml(cands,region){
+  var g={}, unk=0, keys, cur, L, more;
+  (cands||[]).forEach(function(c){
+    var d=c&&c.d, dn=String((d&&d.dong)||"").trim();
+    if(!d)return;
+    if(!dn){ unk++; return }
+    (g[dn]=g[dn]||[]).push(d);
+  });
+  keys=Object.keys(g).sort(function(a,b){ return (g[b].length-g[a].length)||a.localeCompare(b,"ko") });
+  var h='<div class="rt-h">🗓 오늘 코스 <small style="font-weight:700;color:var(--muted)">— 약속이 없는 날 · 한 동네를 모아 도십시오</small></div>';
+  if(!keys.length){
+    return h+'<div class="rt-card rt-course" style="color:var(--muted);line-height:1.65">'+
+      (unk?('<b>동네를 아는 분이 아직 없어</b> 코스를 못 짭니다 — '+(region?E(region)+'의 ':'')+'후보 <b>'+unk+'분</b> 모두 동네 미입력입니다.<br>'):
+           '걸 분이 없어 코스가 없습니다.<br>')+
+      (unk?'아래 줄의 <b>📍 동네</b>를 누르시거나, 홈에서 <b>「이분 끝」</b> 뒤 📝 에 「사시는 동네」 를 적으시면 이 자리에 동네별로 묶여 섭니다.':'')+
+      '</div>';
+  }
+  cur=(COURSE&&g[COURSE])?COURSE:keys[0];
+  L=g[cur]; more=L.length>6?L.length-6:0;
+  h+='<div class="rt-card rt-course">'+
+    '<div class="rt-cs-h"><b>'+E(cur)+'</b> '+L.length+'분'+
+      (cur===keys[0]?' <span class="badge green">제일 많은 동네</span>':'')+'</div>';
+  if(keys.length>1)
+    h+='<div class="rt-cs-k">'+keys.map(function(k){
+      return '<button type="button" class="rt-mini'+(k===cur?' on':'')+'" data-course="'+E(k)+'">'+E(k)+' '+g[k].length+'분</button>';
+    }).join("")+'</div>';
+  h+='<ol class="rt-cs-l">'+L.slice(0,6).map(function(d){
+    var st="";
+    try{ st=stageOf(d) }catch(e){ st=(d&&d.stage)||"" }
+    return '<li><span class="rt-cs-n"><b>'+E(d.customer_name)+'</b>'+(st?' · '+E(st):'')+'</span>'+
+      '<span class="rt-cs-a">'+
+        (telHref(d)?'<a class="btn btn-primary btn-sm" href="'+E(telHref(d))+'">📞 전화</a>':'<span class="badge gray">번호 없음</span>')+
+        (ptOf(d)?'<a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="'+naviUrl(d)+'">🧭 내비</a>':'')+
+        '<button class="btn btn-dark btn-sm" data-rcall="'+E(d.id)+'">약속 잡기</button>'+
+      '</span></li>';
+  }).join("")+'</ol>'+
+  (more?'<div class="rt-cs-s">'+E(cur)+'에 '+more+'분 더 계십니다 — 아래 「추가로 연락 드릴 고객님」 에 다 있습니다.</div>':'')+
+  '<div class="rt-cs-s">순서는 아래 후보와 같습니다(오래 방치된 분부터). 몇 분 걸리는지는 <b>위치를 아는 분만</b> 셉니다 — 동네만으로는 짐작하지 않습니다.'+
+    (unk?' · 동네를 모르는 분 <b>'+unk+'분</b>은 📍 동네 로 적으시면 이 자리에 들어옵니다.':'')+'</div>'+
+  '</div>';
+  return h;
+}
+
 function render(){
   /* ★ <b>칸을 다시 채웁니다</b> (판 X274). 여태는 창을 열 때 한 번뿐이라,
      고객 1,943명을 다 읽기 전에 열면 담당자·시 칸이 <b>빈 채로 굳었습니다</b>.
@@ -2346,6 +2499,8 @@ function missCard(region,owner,top){
      「자세한 주소가 안되어있는건, 입력권유 할수 있도록 하고」.
      ★ 적는 창은 <b>이미 있는 것</b>(pinOne)을 부릅니다 (5번).           */
   side.push(needAddrHtml(stops,cands));
+  /* 🗓 <b>오늘 코스</b> — 약속이 없는 날에만 (판 X367 · 아래 쪽지) */
+  if(!stops.length)side.push(courseHtml(cands,region));
   side.push('<div class="rt-h">추가로 연락 드릴 고객님 '+
     (stops.length?'<small style="font-weight:700;color:var(--muted)">— 약속 사이 빈틈 기준</small>'
                  :'<small style="font-weight:700;color:var(--muted)">— 오래 방치된 순</small>')+'</div>');
@@ -2456,6 +2611,10 @@ function missCard(region,owner,top){
 
   Array.prototype.forEach.call(q("rtSide").querySelectorAll("[data-pin]"),function(b){
     b.onclick=function(){ pinOne(b.getAttribute("data-pin")) };
+  });
+  /* 🗓 코스 동네 바꾸기 — 고른 동네는 COURSE 한 곳에만 둡니다 (5번) */
+  Array.prototype.forEach.call(q("rtSide").querySelectorAll("[data-course]"),function(b){
+    b.onclick=function(){ COURSE=b.getAttribute("data-course")||""; render() };
   });
   /* 「다음 → 홍길동」 — 그 줄로 데려가고 <b>멘트를 펴 준다</b>. 이름만
      알려 주고 끝내면 다시 눈으로 찾아야 한다. */

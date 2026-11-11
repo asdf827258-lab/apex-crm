@@ -15,7 +15,7 @@
      · 홈 「끝 · 뒤로 · 했음」                  apex_hm_done · apex_hm_skip_v1 · apex_hm_qdone_v1
      · 체크판 오늘 메모                         apex_ck_memo_<날짜>
      · 교육 캘린더 (조직 한 벌)                 apex_edu_cal_v1
-     · 업무구분 — 담당자별 할 일 (조직 한 벌)    apex_worksplit_v1  (판 X361 · app/worksplit.html)
+     · 업무구분 — 담당자별 할 일 (조직 한 벌)    apex_worksplit_v1  (판 X420 · app/worksplit.html)
    이 파일이 그 열쇠들만 서버 표(apex_user_kv · apex_org_kv)로 올리고,
    다른 기기에서 열면 내려받습니다. 화면 코드는 한 줄도 안 고칩니다 —
    localStorage 에 쓰는 순간을 잡아서 올리고, 열 때 먼저 채워 둡니다.

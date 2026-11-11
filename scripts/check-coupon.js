@@ -175,22 +175,38 @@ const near = (a, b, tol) => Math.abs(a - b) <= (tol || 1);
   await ph.close();
 
   console.log('\n[8] 교육자금 — 월 얼마 넣으면 얼마');
+  /* ★★ 묻는 곳을 하나로 (5번) — 결과가 그려지는 칸은 data-emon 이 답합니다.
+       전에는 '#eMonBox' 라고 칸 이름을 외우고 있었는데, 판 X383 에서 표를
+       eMonBox2 로 옮기자 이 자가 울었습니다 — 글은 그대로 있는데 「없다」 고
+       읽은 것입니다(헛것 · 8번). 칸이 또 늘면 이름표만 달면 됩니다. */
   const edu = await page.evaluate(() => {
     window.__go('e');
+    const emon = () => [...document.querySelectorAll('[data-emon]')]
+      .map(x => x.textContent || '').join(' ').replace(/\s+/g, ' ');
     window.__apexE.set({ mon: 30, fxIn: 1484, fxOut: 1484, prod: 'met', age: 0, go: 19 });
-    const on = (document.getElementById('eMonBox').textContent || '').replace(/\s+/g, ' ');
+    const on = emon();
     window.__apexE.set({ mon: 60 });
-    const dbl = (document.getElementById('eMonBox').textContent || '').replace(/\s+/g, ' ');
+    const dbl = emon();
     window.__apexE.set({ mon: 0 });
-    const zero = (document.getElementById('eMonBox').textContent || '').replace(/\s+/g, ' ');
+    const zero = emon();
     window.__apexE.set({ mon: 30 });
-    return { on, dbl, zero };
+    return { on, dbl, zero, boxes: document.querySelectorAll('[data-emon]').length };
   });
+  is(edu.boxes >= 1, '  결과를 그리는 칸을 data-emon 으로 찾았다 — ' + edu.boxes + '칸');
   is(/월 30만원씩 5년 넣으면/.test(edu.on), '  월 납입액을 적으면 계산된다');
   is(/1,800만원/.test(edu.on), '  30만 × 60개월 = 1,800만원');
   is(/3,600만원/.test(edu.dbl), '  60만으로 바꾸면 3,600만원 — 숫자만 바뀐다');
-  is(/환급률/.test(edu.on) && /찾는 시점/.test(edu.on), '  찾는 시점별 환급률·수령액이 표로 나온다');
-  is(/지원금과 나란히/.test(edu.on), '  지원금 재원과 나란히 놓는다');
+  /* ⚠⚠ <b>자가 옛 글자를 못 박고 있었습니다</b> (판 X388 · 8번) —
+       「찾는 시점」 「지원금과 나란히」 라는 그 글자 그대로를 찾았는데, 사장님이
+       「상담자료가 어렵다」 하셔서 「언제 찾느냐」 로 바꾸고 지원금 비교는
+       <b>제 쪽(ecalc2sum)</b> 으로 갈라 나가자 울었습니다. 글은 그대로 다 있습니다.
+     ★ 지킬 것은 <b>뜻</b>입니다 — ⓐ 시점마다 환급률과 금액이 표로 서나
+       ⓑ 지원금과 내가 넣는 돈을 <b>나란히</b> 놓나. 갈라 나간 칸도 data-emon 식구라
+       같은 자리에서 읽힙니다 (5번). */
+  is(/환급률/.test(edu.on) && /(찾는 시점|언제 찾느냐)/.test(edu.on),
+     '  시점마다 환급률·받는 돈이 표로 나온다');
+  is(/(지원금과 나란히|나라가 주는 돈)/.test(edu.on) && /내가 더 넣는 돈|추가납입|내가 넣은 몫/.test(edu.on),
+     '  지원금과 내가 넣는 돈을 <b>나란히</b> 놓는다');
   is(/금액을 적으면 여기 계산됩니다/.test(edu.zero), '  0 이면 억지로 계산하지 않고 안내만 한다');
 
   console.log('\n[9] 금융소비자보호 — 반드시 적을 것을 적었는가');

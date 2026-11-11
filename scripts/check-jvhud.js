@@ -14,7 +14,9 @@
      [4] ★ 서버를 아낀다 (7번) — 같은 말은 다시 안 받는다 · 160자까지만 보낸다 ·
          한도(429)에 막히면 그 창에서는 더 안 부르고 <b>기기 목소리로</b> 돌아간다
      [5] 모델 이름이 「없다」(404 not found) 면 <b>다음 모델</b>로 — 막힘과 없음은 다르다
-     [6] 받은 소리(PCM)를 <b>울림 사슬</b>로 낸다 · 기기 목소리는 남자 목소리를 먼저 고른다
+     [6] 받은 소리(PCM)를 <b>울림 사슬</b>로 낸다 · 기기 목소리는 남자 목소리를 먼저 고른다 ·
+         🤖 사이보그 결(판 X413 · 「목소리만 조금 더 사이보그 같이」) — 금속 공명 · 링 변조 · 디지털 결 · 「삐릭」 ·
+         소리가 찢어지지 않고(최대 < 1) 은은하게보다 너무 크거나 작지 않다 · 결 고르개 둘 · 고른 결이 담긴다
      [7] 📢 공지 — 본체가 받아 둔 공지(OS_NTC)를 찾는다 · 「공지」 를 물었을 때만 ·
          안 받았으면 「안 읽음」 · 다른 물음(스물네 가지)에 끼지 않는다 (8번)
      [8] 🔭 찾아본 곳 — 갈래 수가 JV_FIND 와 같다 · 갈래 이름은 <b>펼칠 때</b>만 채운다
@@ -212,6 +214,38 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
   const O = await f.evaluate(() => { document.getElementById('aiBtn').click(); var s = document.getElementById('kVox');
     var r = {n:s.options.length, v:s.value, say:document.getElementById('kVoxSay').textContent}; document.getElementById('kCancel').click(); return r; });
   is(O.n === 4 && O.v === 'ai:Charon' && O.say.length > 10, '「AI 연결」 창에 목소리 고르개 ' + O.n + '가지 · 지금 「' + O.v + '」');
+  /* 🤖 사이보그 결 (판 X413) — 같은 소리를 두 결로 <b>실제로 그려</b> 견줍니다(OfflineAudioContext) */
+  const CY = await f.evaluate(async () => {
+    const o = { def: JV_VOX.fx, cy: voxCyborg() };
+    const n = 24000, pcm = new Float32Array(n);
+    for (let i = 0; i < n; i++){ const t = i / 24000; pcm[i] = 0.5 * Math.sin(2 * Math.PI * 140 * t) * (0.6 + 0.4 * Math.sin(2 * Math.PI * 4 * t)) + 0.2 * Math.sin(2 * Math.PI * 1100 * t); }
+    const keep = voxCtx, kHud = hudSet, used = {};
+    const render = async (fx) => {
+      JV_VOX.fx = fx; const ctx = new OfflineAudioContext(1, 24000 * 1.3, 24000);
+      ['createWaveShaper', 'createOscillator', 'createConvolver', 'createDelay'].forEach(k => { const f0 = ctx[k].bind(ctx); ctx[k] = function(){ used[fx + ':' + k] = (used[fx + ':' + k] || 0) + 1; return f0.apply(null, arguments); }; });
+      voxCtx = function(){ return ctx; }; hudSet = function(){};
+      voxPlay({ pcm, rate: 24000 }, JV_VOX.seq);
+      const b = await ctx.startRendering(), d = b.getChannelData(0);
+      let pk = 0, ss = 0; for (let i = 0; i < d.length; i++){ const v = Math.abs(d[i]); if (v > pk) pk = v; ss += d[i] * d[i]; }
+      return { pk, rms: Math.sqrt(ss / d.length) };
+    };
+    try { o.c = await render('cyborg'); o.s = await render('soft'); } finally { voxCtx = keep; hudSet = kHud; JV_VOX.fx = o.def; }
+    o.used = used;
+    /* 고르개 */
+    document.getElementById('aiBtn').click();
+    const fx = document.getElementById('kVoxFx'); o.opts = [].map.call(fx.options, x => x.value).join(','); o.sel = fx.value;
+    fx.value = 'soft'; fx.onchange.call(fx); o.saved = LS.get('jv_vox_fx', ''); o.now = JV_VOX.fx; o.say = document.getElementById('kVoxSay').textContent;
+    fx.value = 'cyborg'; fx.onchange.call(fx); o.back = LS.get('jv_vox_fx', '');
+    document.getElementById('kCancel').click();
+    return o;
+  });
+  is(CY.def === 'cyborg' && CY.cy, '처음 결은 「사이보그」 (사장님 말씀대로)');
+  is(CY.used['cyborg:createWaveShaper'] === 1 && CY.used['cyborg:createOscillator'] >= 2 && !CY.used['soft:createWaveShaper'] && !CY.used['soft:createOscillator'],
+     '사이보그 — 디지털 결(WaveShaper) · 링 변조 · 「삐릭」(Oscillator) 을 얹고, 은은하게는 예전 그대로 (' + JSON.stringify(CY.used) + ')');
+  is(CY.c.pk > 0.05 && CY.c.pk < 1 && CY.c.pk <= CY.s.pk * 1.15, '사이보그 소리가 찢어지지 않는다 — 최대 ' + CY.c.pk.toFixed(3) + ' (< 1 · 은은하게 ' + CY.s.pk.toFixed(3) + ' 의 1.15배 안)');
+  is(CY.c.rms / CY.s.rms > 0.7 && CY.c.rms / CY.s.rms < 1.3, '은은하게보다 너무 크거나 작지 않다 — 소리 크기 비 ' + (CY.c.rms / CY.s.rms).toFixed(2) + ' (0.7~1.3)');
+  is(CY.opts === 'cyborg,soft' && CY.sel === 'cyborg', '「AI 연결」 창에 목소리 결 고르개 둘 — ' + CY.opts);
+  is(CY.saved === 'soft' && CY.now === 'soft' && /울림/.test(CY.say) && CY.back === 'cyborg', '고르면 그 결이 이 기기에 담기고 안내 글도 따라온다');
 
   sec('[7] 📢 공지 — 받아 둔 것에서 · 물었을 때만');
   const N1 = await f.evaluate(() => { var F = jvFind('공지 뭐 있어'); var n = F.filter(x => x.k === 'ntc')[0]; return n ? {rows:(n.rows || []).map(r => r.t + ' | ' + (r.s || []).join(' | '))} : null; });
@@ -339,8 +373,11 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
     var o = { deck:!!d, l:!!(d && d.querySelector('.pane-l #hudStat')), c:!!(d && d.querySelector('.hud #ask')),
               r:!!(d && d.querySelector('.pane-r #chips')), chips:document.querySelectorAll('#chips .chip').length };
     /* 시계 — 이 기기 시각 · 한 번 더 그리면 바뀐다 */
+    /* ⚠ 바쁜 CI 에서는 1.15초 안에 setInterval 이 한 번도 안 돌아 같은 초가 두 번 찍힌 적이 있습니다(판 X371 PR).
+       그래서 「초가 바뀐 뒤 한 번 더 그리면 바뀐다」 를 직접 그려 재고, 1초마다 그리는지는 글자로 봅니다 */
     var c0 = document.getElementById('hudClock').textContent;
-    await new Promise(r => setTimeout(r, 1150));
+    await new Promise(r => setTimeout(r, 1100));
+    hudClock();
     o.c0 = c0; o.c1 = document.getElementById('hudClock').textContent;
     /* 부팅 — 센 수 그대로 · 한 창에 한 번 */
     try { sessionStorage.removeItem('jv_boot'); } catch(e){}
@@ -358,7 +395,8 @@ const TTS_OK = JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: 
     return o; });
   is(MK.deck && MK.l && MK.c && MK.r, '판 셋 — 왼쪽 시스템(#hudStat) · 가운데 원자로와 명령 칸(#ask) · 오른쪽 명령(#chips)');
   is(MK.chips >= 4, '명령 판에 상황 단추 ' + MK.chips + '개');
-  is(/^\d{4}\.\d{2}\.\d{2} \([일월화수목금토]\) \d{2}:\d{2}:\d{2}$/.test(MK.c0) && MK.c0 !== MK.c1, '시계가 돈다 — 「' + MK.c0 + '」 → 「' + MK.c1 + '」 (이 기기 시각 · 서버 0)');
+  is(/^\d{4}\.\d{2}\.\d{2} \([일월화수목금토]\) \d{2}:\d{2}:\d{2}$/.test(MK.c0) && MK.c0 !== MK.c1 && /setInterval\(hudClock,\s*1000\)/.test(SRC),
+     '시계가 돈다 — 「' + MK.c0 + '」 → 「' + MK.c1 + '」 · 1초마다 그린다 (이 기기 시각 · 서버 0)');
   is(MK.bootOn && MK.bootTxt.indexOf('화면 ' + MK.scr + '개') >= 0 && MK.bootTxt.indexOf('자료 갈래 ' + MK.src + '곳') >= 0 && /ONLINE/.test(MK.bootTxt),
      '부팅 장면이 <b>센 수 그대로</b> — 화면 ' + MK.scr + '개 · 자료 갈래 ' + MK.src + '곳 (지어 적지 않음 · 1번)');
   is(MK.bootOff && !MK.again, '부팅 장면은 잠깐 서고 걷힌다 · 한 창에 <b>한 번</b>만');
