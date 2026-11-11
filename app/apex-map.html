@@ -5811,7 +5811,7 @@ function jvUsedIn(id){
   });
 }
 
-/* 화면(top)이 맞춘 낱말을 순서(way)가 하나도 못 맞췄나 — 점수는 jvScore 한 곳에서 (5번 · 판 X404) */
+/* 앞선 것(top)이 맞춘 낱말을 뒤의 것이 하나도 못 맞췄나 — 순서(판 X404) · 화면(판 X415)이 같이 씁니다. 점수는 jvScore 한 곳에서 (5번) */
 function jvMissesTop(way, top, words){
   var hitTop = (words || []).filter(function(w){ return jvScore(top, [w], JV_SYN).s > 0; });
   return hitTop.length > 0 && !hitTop.some(function(w){ return jvScore(way, [w], JV_SYN).s > 0; });
@@ -6152,7 +6152,9 @@ function jvOneOf(q, R){
      「인스타 올릴 거」 는 「SNS 활용법」 편보다 「인스타그램」 화면입니다. 편의 줄은
      그 화면의 「자세히」 에 이미 붙어 있습니다. */
   if (top.d.kind === 'sec'){
-    if (bestScr && bestScr.hitTU > 0 && bestScr.s >= top.s * 0.8) return jvScreenAnswer(bestScr.d.id, R);
+    /* 판 X415 — 「치료비 통장을 40대 가장에게 설명하는 스크립트」 가 「TA 스크립트」 로 샜습니다: 편(치료비 통장 & 8통장)이
+       맞춘 낱말을 화면은 하나도 못 맞추고(「스크립트」 만) 점수만 80% 를 넘었습니다. 그때는 편을 둡니다 (판 X404 와 같은 자) */
+    if (bestScr && bestScr.hitTU > 0 && bestScr.s >= top.s * 0.8 && !jvMissesTop(bestScr.d, top.d, R.words)) return jvScreenAnswer(bestScr.d.id, R);
     return jvSecAnswer(top.d, R);
   }
   /* ④ 화면이 맨 위인데 상황 안내가 거의 같으면 상황 쪽(순서가 있다)이 더 쓸모 있다 */
