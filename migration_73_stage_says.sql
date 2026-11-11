@@ -14,7 +14,11 @@ create table if not exists public.stage_says (
   say          text,
   tip          text,
   updated_at   timestamptz not null default now(),
-  updated_by   uuid        references auth.users(id) on delete set null,
+  /* ⚠ <b>외래키를 걸지 않습니다</b> — 앱은 이 칸을 쓰지 않고(누가 고쳤는지는
+     updated_name 으로 적습니다), 앱 안 SQL(OS_REPAIR_SQL)도 외래키 없이
+     만듭니다. 세 곳(이 파일 · 서버 · 앱 안 SQL)의 꼴이 <b>같아야</b> 합니다 —
+     파일이 서버와 다르면 그 파일은 거짓말입니다 (1번 · 5번). */
+  updated_by   uuid,
   updated_name text
 );
 
