@@ -19,15 +19,21 @@
      [1] 「성장」 묶음이 <b>상담 도구 바로 밑</b>이다 — 옛 이름 「교육」 이 안 남았다.
      [2] 교재 일곱이 <b>성장</b>에 있고, 현장에서 쥐는 일곱은 <b>상담 도구</b>에 남았다.
      [3] ★ <b>길이 하나도 안 사라졌다</b> (6번) — 일곱과 90일 아카데미가 그대로 열린다.
-     [4] 🌱 성장 로드맵이 선다 — 세 장(한 길 · 익히기 · 지식 창고) · 레벨 다섯.
+     [4] 🌱 성장 로드맵이 선다 — 네 장(한 길 · 익히기 · 매번 · 고객 앞) · 레벨 다섯.
+         사장님 말씀 (2026-11-11) — 「…순차적으로 성장 가능하고 매번 사용할 수 있는 것들에
+         분류까지」 · 「고객에게 필요한 내용들을 선별해서」.
      [5] ★ 표가 <b>성장 묶음을 다 들고</b> 있다 — 빠짐 0 · 헛것 0 · 겹침 0 (5번).
          교재 장 이름은 <b>교재 원본</b>(data1 · data2 · EXTRA)과 같다 (1번).
      [6] ★ <b>단순화</b> — 「지금 할 것 하나」 가 서고, 끝냈다고 하면 다음으로 넘어간다.
          체크는 <b>이 브라우저</b>에만 — 서버로 안 간다.
      [7] ★ <b>숙지</b> — 열두 주제를 GB_CUR 에서 <b>그대로</b> 읽고, 합격은 성장판과
          <b>같은 도장</b>(gbStamp)이다. 저장 자리를 따로 만들지 않았다 (5번).
-     [8] ★ <b>지식 창고</b> — 병 이름으로 찾으면 질병 보험가이드가 서고, 「암」 은 교재
-         진단비 장을 찾는다. 못 찾으면 못 찾았다고 한다 (1번).
+     [8] ★ <b>매번</b> — 병 이름으로 찾으면 질병 보험가이드가 서고, 「암」 은 교재
+         진단비 장을 찾는다. 찾기는 고객 앞도 같이 본다. 못 찾으면 못 찾았다고 한다 (1번).
+    [12] ★ <b>분류</b> — 한 화면은 「매번」 과 「고객 앞」 중 <b>한쪽</b>에만. 고객 앞은 상담
+         순서 다섯 마디이고, 설계사만 보는 것(소식지 · 대본 · 화법)은 고객 앞에 안 선다.
+         한 길의 걸음에는 끝낸 뒤 어디로 가는지 꼬리표가 붙는다. 「왜 이렇게 나눴나」 는
+         성장판 여섯 축(GB_AX)과 90일 구간(AC_ROAD)을 <b>그 표에서</b> 읽는다.
      [9] <b>등급 문</b>이 산다 — 설계사에게는 EM 두 칸이 안 서고, 교육매니저에게는 선다.
     [10] 「언제 쓰는지」 분류(NAV_WHEN)는 <b>안 건드렸다</b>.
     [11] 누르는 칸 44px 이상 · 글씨 13px 이상 · 그림 파일 0 · 서버는 합격 한 줄을
@@ -144,7 +150,7 @@ const SEED = () => {
   const 옛낱말 = await pg.evaluate(() => /본인 점검란/.test((navItemOf('academy') || {}).ak || ''));
   is(옛낱말, '  옛 이름은 <b>찾기 낱말</b>에 남았다 — 옛 이름으로 찾아도 열린다');
 
-  sec('[4] 🌱 성장 로드맵이 선다 — 세 장 · 레벨 다섯');
+  sec('[4] 🌱 성장 로드맵이 선다 — 네 장 · 레벨 다섯');
   const E = await pg.evaluate(() => new Promise(r => {
     go('edu');
     setTimeout(() => r({
@@ -158,8 +164,8 @@ const SEED = () => {
       sw: document.documentElement.scrollWidth, iw: innerWidth }), 900);
   }));
   is(/성장 로드맵/.test(E.제목), '  화면이 선다 ← ' + E.제목);
-  is(E.장.length === 3 && /한 길/.test(E.장[0]) && /익히기/.test(E.장[1]) && /지식 창고/.test(E.장[2]),
-     '  세 장 — ' + E.장.join(' · '));
+  is(E.장.length === 4 && /한 길/.test(E.장[0]) && /익히기/.test(E.장[1]) && /매번/.test(E.장[2]) && /고객 앞/.test(E.장[3]),
+     '  네 장 — ' + E.장.join(' · '));
   is(E.층 === 5, '  레벨 <b>다섯</b>(Lv.0~4) ← ' + E.층);
   is(E.목표 === 0, '  레벨마다 이름 · 한 줄 · 목표가 있다');
   is(!/undefined|NaN|\[object/.test(E.글), '  화면에 <b>부서진 값</b>이 없다');
@@ -174,21 +180,26 @@ const SEED = () => {
     const 길 = [], 창고 = [], 길판 = [], 구간 = [];
     GR_LV.forEach(L => L.st.forEach(s => { if (s.go) 길.push(s.go); if (s.acad) 길판.push(s.acad); if (s.road != null) 구간.push(s.road); }));
     GR_KNOW.forEach(k => k.it.forEach(s => { 창고.push(s.go ? 'go:' + s.go : 'acad:' + s.acad); if (s.acad) 길판.push(s.acad); }));
+    const 고객 = []; GR_CUST.forEach(k => k.it.forEach(s => { 고객.push(s.go ? 'go:' + s.go : 'acad:' + s.acad); }));
     const 창고go = 창고.filter(x => /^go:/.test(x)).map(x => x.slice(3));
-    const 다 = 길.concat(창고go);
+    const 다 = 길.concat(창고go, 고객.filter(x => /^go:/.test(x)).map(x => x.slice(3)));
     return { 메뉴: 메뉴,
              빠진: 메뉴.filter(x => 다.indexOf(x) < 0),
              헛것: 다.filter(x => !모든[x]),
              겹침: 창고.filter((x, i) => 창고.indexOf(x) !== i),
+             고객겹침: 고객.filter((x, i) => 고객.indexOf(x) !== i),
+             양쪽: 고객.filter(x => 창고.indexOf(x) >= 0),
              판: 길판.filter((x, i) => 길판.indexOf(x) === i),
              없는판: 길판.filter(x => !GR_ACAD[x]),
              없는구간: 구간.filter(x => !AC_ROAD[x]),
              구간수: AC_ROAD.length, 쓴구간: 구간.filter((x, i) => 구간.indexOf(x) === i).length };
   });
-  is(D.빠진.length === 0, '  성장 묶음의 ' + D.메뉴.length + '칸이 <b>전부</b> 한 길 · 지식 창고에 섰다' +
+  is(D.빠진.length === 0, '  성장 묶음의 ' + D.메뉴.length + '칸이 <b>전부</b> 한 길 · 매번 · 고객 앞에 섰다' +
      (D.빠진.length ? ' ← 빠짐: ' + D.빠진.join(', ') : ''));
   is(D.헛것.length === 0, '  표에 <b>메뉴에 없는 화면</b>이 없다' + (D.헛것.length ? ' ← ' + D.헛것.join(', ') : ''));
-  is(D.겹침.length === 0, '  지식 창고에서 같은 것이 <b>두 갈래에</b> 서지 않는다' + (D.겹침.length ? ' ← ' + D.겹침.join(', ') : ''));
+  is(D.겹침.length === 0 && D.고객겹침.length === 0, '  「매번」 · 「고객 앞」 안에서 같은 것이 <b>두 갈래에</b> 서지 않는다' +
+     (D.겹침.length || D.고객겹침.length ? ' ← ' + D.겹침.concat(D.고객겹침).join(', ') : ''));
+  is(D.양쪽.length === 0, '  ★ 한 화면은 「매번」 과 「고객 앞」 중 <b>한쪽</b>에만 선다' + (D.양쪽.length ? ' ← ' + D.양쪽.join(', ') : ''));
   is(D.없는판.length === 0 && D.없는구간.length === 0, '  교재 장 · 90일 구간이 <b>있는 것만</b> 가리킨다' +
      (D.없는판.length || D.없는구간.length ? ' ← ' + D.없는판.concat(D.없는구간).join(', ') : ''));
   is(D.쓴구간 === D.구간수, '  90일 아카데미 <b>' + D.구간수 + '구간이 다</b> 한 길에 섰다 ← ' + D.쓴구간);
@@ -252,18 +263,20 @@ const SEED = () => {
   is(!/upsert|daily_checks'\)\.insert/.test(GROW), '  apex-grow.js 가 <b>저장 자리를 따로</b> 안 만든다 (5번)');
   is(L.책 >= L.n, '  주제마다 <b>교재 · 화법서</b>로 가는 단추가 있다');
 
-  sec('[8] ★ <b>지식 창고</b> — 찾기');
+  sec('[8] ★ <b>매번</b> — 찾기');
   const K = await pg.evaluate(() => new Promise(r => {
     grTab('know');
     const 줄 = () => [].slice.call(document.querySelectorAll('#grKnow .gr-row')).map(x => x.innerText.replace(/\s+/g, ' '));
     const 전체 = 줄().length;
     grFind('갑상선'); const a = 줄();
     grFind('암'); const b = 줄();
+    grFind('명함'); const d = [].slice.call(document.querySelectorAll('#grKnow .t-card')).map(x => x.innerText.replace(/\s+/g, ' '));
     grFind('ㅋㅋㅋ없는말'); const c = (document.querySelector('#grKnow .gr-none') || {}).innerText || '';
     grFind('');
-    r({ 전체, a, b, c });
+    r({ 전체, a, b, c, d });
   }));
-  is(K.전체 >= 40, '  흩어진 지식이 <b>한 칸</b>에 — ' + K.전체 + '줄');
+  is(K.전체 >= 35, '  매번 꺼내는 것이 <b>한 칸</b>에 — ' + K.전체 + '줄');
+  is(K.d.some(x => /명함/.test(x) && /고객 앞/.test(x)), '  찾기는 <b>고객 앞</b>도 같이 본다 — 「명함」 → 디지털 명함(🤝 고객 앞)');
   is(K.a.some(x => /질병 보험가이드/.test(x) && /찾은 병/.test(x)), '  「갑상선」 → <b>질병 보험가이드</b> 와 찾은 병 이름');
   is(K.b.some(x => /진단비/.test(x)), '  「암」 → 교재 <b>진단비</b> 장도 선다');
   is(/찾은 것이 없습니다/.test(K.c), '  못 찾으면 <b>못 찾았다</b>고 한다 (1번)');
@@ -293,6 +306,37 @@ const SEED = () => {
      (바뀜.length ? ' ← ' + 바뀜.map(x => x + '→' + W.분류[x]).join(', ') : ''));
   is(W.edu === 'know', '  🌱 성장 로드맵은 <b>찾아보고 배우기</b> 다 ← ' + W.edu);
 
+  sec('[12] ★ <b>분류</b> — 고객 앞 · 꼬리표 · 왜 이렇게 나눴나');
+  const C = await pg.evaluate(() => new Promise(r => {
+    OS.profile.role = 'fp'; go('edu'); grTab('cust');
+    setTimeout(() => {
+      const 마디 = [].slice.call(document.querySelectorAll('#grHost .t-card .gr-hd')).map(x => x.firstChild ? x.firstChild.textContent : '');
+      const 글 = (document.querySelector('#grHost') || { innerText: '' }).innerText;
+      const 줄 = [].slice.call(document.querySelectorAll('#grHost .gr-row b')).map(x => x.innerText);
+      const 안됨 = (document.querySelector('#grHost .gr-no') || { innerText: '' }).innerText;
+      const 표안됨 = GR_CUST.some(g => g.it.some(s => ['insight', 'ta_script', 'ta_say', 'dz_guide', 'keep4', 'growboard', 'emcenter'].indexOf(s.go) >= 0));
+      grTab('path'); grLv(1);
+      const 꼬리 = [].slice.call(document.querySelectorAll('#grHost .gr-use')).map(x => x.innerText);
+      const why = document.querySelector('#grHost details.gr-why');
+      const 축 = why ? why.querySelectorAll('.gr-ax')[0] : null;
+      r({ 마디, 줄: 줄.length, 안됨, 표안됨, 꼬리, why: !!why, 접힘: why ? !why.open : false,
+          축: 축 ? 축.querySelectorAll('span').length : 0, 축수: GB_AX.length,
+          구간: why ? (why.querySelectorAll('.gr-ax')[1] || { children: [] }).children.length : 0,
+          구간수: AC_ROAD.filter(x => /→/.test(x.grow || '')).length, 글 });
+    }, 300);
+  }));
+  const 마디 = C.마디.filter(x => /^[①②③④⑤]/.test(x));
+  is(마디.length === 5 && 마디.every((x, i) => x.indexOf('①②③④⑤'[i]) === 0), '  고객 앞이 <b>상담 순서 다섯 마디</b>로 선다 ← ' + 마디.join(' · '));
+  is(C.줄 >= 15, '  고객과 같이 보거나 보내는 화면 ' + C.줄 + '개');
+  is(/고객 제시 불가/.test(C.안됨), '  상품전략기는 <b>그 화면에 적힌 말</b>(「고객 제시 불가」)로 막는다');
+  is(!C.표안됨, '  ★ 설계사만 보는 것(소식지 · 대본 · 화법 · 팀 숫자)은 <b>고객 앞 표에 없다</b>');
+  is(/상품전략기/.test(C.안됨) && /대본/.test(C.안됨), '  「고객 앞에 꺼내지 않는 것」 을 <b>까닭과 함께</b> 적는다');
+  is(C.꼬리.some(x => /매번/.test(x)), '  한 길의 걸음에 <b>끝낸 뒤 어디로 가나</b> 꼬리표 — ' + (C.꼬리[0] || '(없음)'));
+  is(C.why && C.접힘, '  「왜 이렇게 나눴나」 가 한 길 밑에 <b>접혀</b> 있다');
+  is(C.축 === C.축수 && C.구간 === C.구간수 && C.구간 > 0,
+     '  성장 기준은 <b>성장판 여섯 축 · 90일 구간</b>을 그 표에서 읽는다 ← 축 ' + C.축 + '/' + C.축수 + ' · 구간 ' + C.구간 + '/' + C.구간수);
+  is(!/undefined|NaN|\[object/.test(C.글), '  고객 앞에 <b>부서진 값</b>이 없다');
+
   sec('[11] 읽히나 · 누를 수 있나 · 조용한가');
   const R = await pg.evaluate(() => new Promise(r => {
     const out = { h: [], fs: [] };
@@ -303,12 +347,13 @@ const SEED = () => {
         if (e.offsetParent && [].some.call(e.childNodes, n => n.nodeType === 3 && n.textContent.trim()))
           out.fs.push(parseFloat(getComputedStyle(e).fontSize)); });
     };
-    ['path', 'learn', 'know'].forEach(t => { grTab(t); 잰다(); });
+    ['path', 'learn', 'know', 'cust'].forEach(t => { grTab(t); 잰다(); });
+    grTab('path'); const w = document.querySelector('#grHost details.gr-why'); if (w) { w.open = true; 잰다(); w.open = false; }
     r({ h: Math.min.apply(null, out.h), fs: Math.min.apply(null, out.fs) });
   }));
   is(R.h >= 44, '  누르는 칸이 <b>44px 이상</b> — 가장 낮은 칸 ' + R.h + 'px');
   is(R.fs >= 13, '  글씨가 <b>13px 이상</b> — 가장 작은 글씨 ' + R.fs + 'px');
-  const 그리개 = ['renderGrow', 'grInnerHtml', 'grPathHtml', 'grLearnHtml', 'grKnowHtml', 'grKnowList', 'grStamp'];
+  const 그리개 = ['renderGrow', 'grInnerHtml', 'grPathHtml', 'grLearnHtml', 'grKnowHtml', 'grKnowList', 'grStamp', 'grCustHtml', 'grWhyHtml', 'grUseOf'];
   const 조용 = 그리개.filter(n => {
     const i = GROW.indexOf('function ' + n + '(');
     if (i < 0) return true;
@@ -321,5 +366,5 @@ const SEED = () => {
   await br.close(); srv.close();
   console.log('\n──────────────────────────────');
   if (bad) { console.log('✗ ' + bad + '가지가 어긋납니다'); process.exit(1); }
-  console.log('✓ 성장 — 도구 바로 밑에 서고, 한 길 · 익히기 · 지식 창고가 한 화면에 섰고, 길은 하나도 안 사라졌습니다.');
+  console.log('✓ 성장 — 도구 바로 밑에 서고, 한 길 · 익히기 · 매번 · 고객 앞이 한 화면에 섰고, 길은 하나도 안 사라졌습니다.');
 })();
