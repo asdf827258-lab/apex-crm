@@ -22,11 +22,25 @@
  * ★ 서버는 자료함을 열 때 <b>한 번</b>만 부른다(7번). 되풀이 없음.
  *
  * app/index.html 은 여럿이 고치므로 거기엔 <script> 한 줄만 둔다. 이름은 iib*.
+ *
+ * ── 2026-11-10 판 X403 · 사장님 말씀 「어디서든 소식지를 넣어도 누구나 볼 수 있도록」
+ * ★ 소식지를 넣으면 PC 를 기다리지 않는다 — 넣은 그 화면에서 상품전략기(app/insight 의
+ *   nwStartSources)가 바로 읽어 상품 카드를 만들고 Supabase insight_products(migration_72)에
+ *   저장한다 → 로그인한 팀 모두에게 보인다. 목록엔 「✓ 분석됨 · 상품 N개」 / 「분석」 단추.
+ * ★ 분석은 소식지 PDF 를 저장하지 않는다(만든 상품 카드만). 서버 사본은 지금처럼 PC 가 받을 때 지운다.
  */
 (function(){
   var IIB_BUCKET='insight-src';
   var IIB_KIND={news:'소식지',terms:'약관',etc:'기타'};
-  var IIB={kind:'news',rows:null,busy:0};
+  var IIB={kind:'news',rows:null,busy:0,made:{}};
+  /* 상품전략기 덮개 안 iframe 의 소식지 분석을 부른다 — 덮개를 아직 안 열었으면 false */
+  function iibAnalyze(ids){
+    try{
+      var f=document.querySelector('#insightScreen iframe'),w=f&&f.contentWindow;
+      if(w&&typeof w.nwStartSources==='function'){iibClose();w.nwStartSources(ids);return true;}
+    }catch(e){}
+    iibToast('상품전략기 화면이 아직 준비되지 않았어요 — 잠시 뒤 「이번 달」 맨 위 「분석」을 눌러 주세요',6000);return false;
+  }
 
   function iibEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function iibSb(){try{return (typeof osClient==='function')?osClient():null;}catch(e){return null;}}
@@ -97,8 +111,8 @@
     var w=document.getElementById('iibWrap');
     w.innerHTML='<div class="iib-card">'+
       '<div class="iib-hd"><h3>📥 상품전략기 자료함</h3><button class="iib-x" type="button" aria-label="닫기" onclick="iibClose()">×</button></div>'+
-      '<p class="iib-sub">다음 달 상품 인사이트에 쓸 <b>소식지·약관 PDF</b>를 넣어 주세요. 어느 컴퓨터·폰에서 넣어도 됩니다. '+
-        '사장님 PC가 가져가면 <b>서버 사본은 바로 지워지고</b> 목록만 남아요.</p>'+
+      '<p class="iib-sub">보험사 <b>소식지 PDF</b>를 넣으면 그 자리에서 <b>바로 분석해 상품 카드</b>를 만들고, 팀 모두의 상품전략기에 보여요. '+
+        '어느 컴퓨터·폰에서 넣어도 됩니다. 약관은 상품마다 「🔎 약관 분석하기」가 공시실에서 받아 대조해요.</p>'+
       '<div class="iib-row"><span class="iib-lab">무엇</span><div class="iib-seg" id="iibSeg">'+
         ['news','terms','etc'].map(function(k){return '<button type="button" data-k="'+k+'" class="'+(IIB.kind===k?'on':'')+'" onclick="iibKind(\''+k+'\')">'+IIB_KIND[k]+'</button>';}).join('')+
       '</div></div>'+
@@ -127,6 +141,11 @@
       .order('created_at',{ascending:false}).limit(60).then(function(r){
         if(r.error){IIB.rows=[];iibRender('목록을 못 불러왔습니다 — '+(r.error.message||''));return;}
         IIB.rows=r.data||[];iibRender();
+        // 소식지마다 CRM 에서 만든 상품 수
+        var ids=IIB.rows.map(function(x){return x.id;});if(!ids.length)return;
+        sb.from('insight_products').select('source_id').in('source_id',ids).range(0,4999).then(function(m){
+          var c={};((m&&m.data)||[]).forEach(function(x){c[x.source_id]=(c[x.source_id]||0)+1;});IIB.made=c;iibRender();
+        });
       });
   }
   function iibRender(err){
@@ -138,7 +157,11 @@
     if(!rows.length){el.innerHTML='<div class="iib-empty">아직 올라온 자료가 없어요.</div>';return;}
     el.innerHTML=rows.map(function(r){
       var st=r.pulled_at?'<div class="iib-st done">✓ PC가 가져감<br>'+iibWhen(r.pulled_at)+'</div>':'<div class="iib-st wait">가져가길<br>기다리는 중</div>';
-      var btn='';
+      var btn='',made=IIB.made[r.id];
+      if(r.kind==='news'){
+        if(made)st='<div class="iib-st done">✓ 분석됨<br>상품 '+made+'개</div>';
+        else if(!r.pulled_at){st='<div class="iib-st wait">분석 전</div>';btn+='<button class="iib-btn" type="button" onclick="iibAnalyzeOne(\''+r.id+'\')" title="지금 분석해 상품 카드 만들기">분석</button>';}
+      }
       if(!r.pulled_at){
         btn+='<button class="iib-btn" type="button" onclick="iibView(\''+r.id+'\')" title="열어 보기">열기</button>';
         if(r.uploaded_by===me||adm)btn+='<button class="iib-btn" type="button" onclick="iibDel(\''+r.id+'\')" title="지우기" aria-label="지우기">🗑</button>';
@@ -188,7 +211,11 @@
     var mEl=document.getElementById('iibMonth'),month=(mEl&&mEl.value)||iibMonthNow();
     if(!/^\d{4}-\d{2}$/.test(month)){iibToast('어느 달인지 골라 주세요');return;}
     var note=((document.getElementById('iibNote')||{}).value||'').trim(),kind=IIB.kind;
-    var next=function(k){if(k>=pdf.length){iibLoad();return;}iibUpOne(pdf[k],month,kind,note,function(){next(k+1);});};
+    var news=[];
+    var next=function(k){
+      if(k>=pdf.length){iibLoad();if(news.length)setTimeout(function(){iibAnalyze(news);},700);return;}   // 소식지는 넣자마자 분석(X403)
+      iibUpOne(pdf[k],month,kind,note,function(id){if(id&&kind==='news')news.push(id);next(k+1);});
+    };
     next(0);
   }
   function iibUpOne(file,month,kind,note,done){
@@ -205,15 +232,16 @@
           if(ur.error){iibUpEnd(line,false,file.name+' — 올리지 못했습니다: '+(ur.error.message||''));done();return;}
           var nm='';try{nm=(OS.profile&&OS.profile.name)||(OS.session.user.email||'').split('@')[0];}catch(e){}
           sb.from('insight_sources').insert({month:month,kind:kind,file_name:file.name,storage_path:path,size:file.size,
-            checksum:sum,note:note||null,uploaded_by:me,uploader_name:nm}).then(function(ir){
+            checksum:sum,note:note||null,uploaded_by:me,uploader_name:nm}).select('id').then(function(ir){
             if(ir.error){sb.storage.from(IIB_BUCKET).remove([path]);iibUpEnd(line,false,file.name+' — 목록에 적지 못했습니다: '+ir.error.message);done();return;}
-            iibUpEnd(line,true,file.name+' — 넣었어요 ('+IIB_KIND[kind]+' · '+month+')');done();
+            iibUpEnd(line,true,file.name+' — 넣었어요 ('+IIB_KIND[kind]+' · '+month+')'+(kind==='news'?' · 곧 분석을 시작해요':''));done(ir.data&&ir.data[0]&&ir.data[0].id);
           });
         });
       });
     });
   }
 
-  window.iibOpen=iibOpen;window.iibClose=iibClose;window.iibKind=iibKind;window.iibView=iibView;window.iibDel=iibDel;
+  function iibAnalyzeOne(id){iibAnalyze([id]);}
+  window.iibAnalyzeOne=iibAnalyzeOne;window.iibOpen=iibOpen;window.iibClose=iibClose;window.iibKind=iibKind;window.iibView=iibView;window.iibDel=iibDel;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',iibMount);else iibMount();
 })();

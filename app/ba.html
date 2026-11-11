@@ -222,6 +222,17 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}button{c
 .prk ul{margin:4px 0 0;padding-left:18px;font-size:var(--t6);color:var(--gyd);line-height:1.7}
 .prk ul b{color:var(--nv)}.prk ul i{font-style:normal;color:var(--gyd)}
 .prk .pk-s{font-size:var(--t6);color:var(--gyd);margin:8px 0 0;line-height:1.6}
+/* 판 X410 — 💰 보험료 대비(순위는 그대로, 한 줄 덧붙임) */
+.prk .pk-e{font-size:var(--t6);color:var(--gyd);margin-top:3px;line-height:1.6}.prk .pk-e b{color:var(--nv)}
+.prk .pk-x{font-size:var(--t6);color:#7A4B00;background:#FFF7E6;border-radius:8px;padding:7px 10px;margin:8px 0 0;line-height:1.6}.prk .pk-x b{color:#5C3800}
+/* 판 X411 — ✏️ 1차안 고치기(순서 · 이유 · 발표 한 마디) */
+.prk .rk-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 2px;padding:8px 10px;background:#F2F6FF;border-radius:8px;font-size:var(--t6);color:var(--gyd);line-height:1.6}
+.prk .rk-bar b{color:var(--nv)}.prk .rk-bar .mini{min-height:44px;padding:4px 10px}
+.prk .rk-c{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}.prk .rk-c .mini{min-height:44px;padding:4px 10px}
+.prk textarea.rk-t{width:100%;box-sizing:border-box;margin-top:6px;border:1px solid #CFE0FE;border-radius:8px;padding:7px 9px;font:inherit;font-size:var(--t6);line-height:1.6;resize:vertical;color:var(--nv)}
+.prk textarea.rk-t:focus{outline:2px solid var(--blt);outline-offset:0}
+.prk .rk-m{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;background:#EEF2FF;color:#3730A3;font-size:var(--t6);font-weight:700;font-style:normal}
+.prk .rk-add{margin-top:8px;font-size:var(--t6);color:var(--gyd)}.prk .rk-add .mini{min-height:44px;padding:4px 10px;margin:4px 4px 0 0}
 /* 만들기 화면은 담보를 <b>한 줄로 이어</b> 적는다 — 견본(계약 6건) 화면이 9,000px 을 넘지 않게 · 발표 장은 줄마다 */
 .prk ul.in{padding-left:0;list-style:none}.prk ul.in li{display:inline}.prk ul.in li+li:before{content:' · ';color:var(--gyd)}
 .prk.ed{padding:10px 12px}.prk.ed h4 small{display:none}.prk.ed .pk-i{padding:6px 0}
@@ -2332,7 +2343,7 @@ function blank(){
     /* 고객에게 보여주는 판은 <b>한 장씩</b>이 기본이다 — 스크롤을 내리면
        고객 눈이 아직 설명 안 한 숫자로 먼저 달아난다. 위 단추로 바꾸신다. */
     deck:true,slide:'sHd',
-    panel:'',pin:'',sim:'cancer',scenOpen:false,kbInfo:null,kbRaw:null};
+    panel:'',pin:'',sim:'cancer',scenOpen:false,kbInfo:null,kbRaw:null,rankEd:{}};
 }
 /* ── 예전에 저장된 자료에 <b>새 칸이 없어</b> 화면이 통째로 안 뜨던 자리 ──
    판을 올릴 때마다 새 칸(padOpen·sim·scenOpen…)이 생기는데, 그 전에 저장된
@@ -3993,10 +4004,25 @@ function rankProps(){
     for(k in p.cov)if(p.cov.hasOwnProperty(k)&&MID[k]){
       var x=rankFill(k,num(p.cov[k]),base);if(!x)continue;
       var pr=rankPri(MID[k]);x.p=pr.p;x.s=x.f*RANK_W[pr.p];sc+=x.s;parts.push(x);}
-    parts.sort(function(a,b){return b.s-a.s;});
+    /* 판 X410 — 이유는 <b>큰 자리부터</b> 보인다. 채움 비율(s)로만 줄 세우면 유사암 1,000 · 질병 수술비 30만원처럼
+       작은 담보가 100% 라서 앞에 서고, 급여 암주요치료비 · 뇌혈관 같은 큰 자리가 「그 밖에」 로 묻혔다(실제 제안서로 확인).
+       점수(sc)는 그대로 — 보이는 순서만: 급함 → 기준 있는 담보 → 설계 순서 → 채우는 금액 */
+    parts.sort(function(a,b){return (RANK_W[b.p]-RANK_W[a.p])||((a.t===null?1:0)-(b.t===null?1:0))||
+      ((RANK_DO[MID[a.k]]||9)-(RANK_DO[MID[b.k]]||9))||((UNIT[a.k]==='L'?b.add:0)-(UNIT[b.k]==='L'?a.add:0))||(b.s-a.s);});
     return {p:p,i:i,sc:Math.round(sc*1000)/1000,parts:parts,prem:num(p.premMan)};});
   L.sort(function(a,b){return (b.sc-a.sc)||((a.prem===null?1e9:a.prem)-(b.prem===null?1e9:b.prem))||(a.i-b.i);});
   L.forEach(function(x,j){x.rank=j+1;x.tie=(j>0&&L[j-1].sc===x.sc&&x.sc>0);});
+  /* 판 X411 — 위가 프로그램의 <b>1차안</b>이다. 사장님이 ✏️ 로 순서를 고치셨으면 그 순서로 다시 세운다(점수 · 이유 숫자는 그대로).
+     x.auto = 1차안 순위 — 「급한 빈자리를 가장 많이 채워 1순위」 같은 문장은 1차안 순위가 맞을 때만 쓴다 */
+  L.forEach(function(x){x.auto=x.rank;});
+  var L2=rkOrder(L,function(x){return 'p:'+x.p.id;},'op');
+  if(L2!==L){L.length=0;L2.forEach(function(x,j){x.rank=j+1;if(x.rank!==x.auto)x.tie=false;L.push(x);});}
+  /* 판 X410 — 💰 보험료 대비 = 채움 점수 ÷ 월 보험료(만원). 순위는 바꾸지 않고 줄만 덧붙인다 —
+     넓게 채우는 비싼 제안이 1순위가 될 때 「비싸서 1순위」 로 들리지 않게 */
+  var E=L.filter(function(x){return x.sc>0&&x.prem>0;});
+  E.forEach(function(x){x.eff=x.sc/x.prem;});
+  E.slice().sort(function(a,b){return (b.eff-a.eff)||(a.rank-b.rank);}).forEach(function(x,j){x.effN=j+1;if(!j)L.effTop=x;});
+  L.effCnt=E.length;
   return L;
 }
 function rankOf(id){var L=rankProps(),j;for(j=0;j<L.length;j++)if(L[j].p.id===id)return L[j];return null;}
@@ -4024,7 +4050,15 @@ function rankSuggest(){
     if(m==='순환계 (뇌+심장)'&&(has['뇌']||has['심장']))return;
     if((m==='뇌'||m==='심장')&&has['순환계 (뇌+심장)'])return;
     x.circ=(circ&&(m==='뇌'||m==='심장'));has[m]=1;pick.push(x);});
-  pick.forEach(function(x,j){x.rank=j+1;});
+  pick.forEach(function(x,j){x.rank=j+1;x.auto=j+1;});
+  /* 판 X411 — ✏️ 로 묶음을 빼고 · 넣고 · 순서를 바꾸셨으면 그대로(아직 비어 있는 묶음만 — 채워진 묶음은 저절로 빠진다) */
+  var e=rkEd();
+  if(e.og&&e.og.length){
+    var by={};out.forEach(function(x){by[x.g.mid]=x;});
+    var mine=[];e.og.forEach(function(m){if(by[m]&&mine.indexOf(by[m])<0)mine.push(by[m]);});
+    mine.forEach(function(x,j){x.rank=j+1;if(pick.indexOf(x)<0){x.auto=null;x.circ=false;}});
+    pick=mine;
+  }
   return {pick:pick,n:out.length,all:out};
 }
 function rankLi(x){
@@ -4042,46 +4076,143 @@ function rankHtml(show){
     sum=L.slice(0,3).map(function(x){return '<b>'+x.rank+'순위</b> '+esc(x.p.nm||('새 제안 '+(x.i+1)));}).join(' · ');
     h='<div class="prk'+(show?'':' ed')+'" id="baRank"><h4>🥇 제안 순위 — '+L.length+'건'+
       '<small>지금 남는 보장의 <b>빈자리</b>를 <b>얼마나</b>, <b>얼마나 급한 자리부터</b> 채우는지로 매겼습니다</small></h4>';
-    top.forEach(function(x){
+    h+=show?'':rkBar(true);
+    top.forEach(function(x,j){
       var nm=esc(x.p.nm||('새 제안 '+(x.i+1))),n1=x.parts.filter(function(q){return q.p===1;}).length;
       var head=(x.sc>0)?('빈자리 <b>'+x.parts.length+'곳</b>을 채웁니다'+(n1?(' — 그중 「지금 바로」 자리 <b>'+n1+'곳</b>'):'')+
-          (x.rank===1&&L.length>1?' · 급한 빈자리를 <b>가장 많이</b> 채워 1순위입니다':'')+
+          (x.rank===1&&x.auto===1&&L.length>1?' · 급한 빈자리를 <b>가장 많이</b> 채워 1순위입니다':'')+
           (x.tie?' · 앞 순위와 채우는 정도가 같아 <b>월 보험료가 적은 쪽</b>을 앞에 두었습니다':'')):
         '지금 계약으로 이미 기준을 채운 담보뿐이라 <b>새로 채우는 빈자리가 없습니다</b> — 순위가 뒤입니다';
+      var key='p:'+x.p.id;
       h+='<div class="pk-i"><span class="pk-n r'+(x.rank<=3?x.rank:'n')+'">'+x.rank+'순위</span><div class="pk-b">'+
-        '<div class="pk-t">'+nm+'<em>'+(x.p.co?esc(x.p.co):'')+(x.prem!==null?(' · 월 '+fee(x.prem)):'')+'</em></div>'+
-        '<div class="pk-w">'+head+'</div>'+
+        '<div class="pk-t">'+nm+'<em>'+(x.p.co?esc(x.p.co):'')+(x.prem!==null?(' · 월 '+fee(x.prem)):'')+'</em>'+(show?'':rkMark(x))+'</div>'+
+        rkWhyHtml(show,key,head,j,L.length)+
+        (x.eff?('<div class="pk-e">💰 보험료 대비 — 채움 점수 <b>'+x.sc.toFixed(1)+'</b> ÷ 월 '+(Math.round(x.prem*10)/10)+'만원 = 1만원당 <b>'+x.eff.toFixed(2)+'</b>'+
+          (L.effCnt>1?(' · '+L.effCnt+'건 중 <b>'+x.effN+'번째</b>'):'')+'</div>'):'')+
         (x.parts.length?('<ul'+(show?'':' class="in"')+'>'+x.parts.slice(0,show?3:2).map(rankLi).join('')+(x.parts.length>(show?3:2)?('<li>그 밖에 '+(x.parts.length-(show?3:2))+'곳</li>'):'')+'</ul>'):'')+
         '</div></div>';});
     if(show&&L.length>3)h+='<p class="pk-s">4순위부터 '+(L.length-3)+'건은 만들기 화면에 있습니다.</p>';
+    var et=L.effTop;
+    if(L.effCnt>1&&et&&et.rank!==1)
+      h+='<p class="pk-x">💰 <b>보험료 대비</b>로는 <b>'+et.rank+'순위 '+esc(et.p.nm||('새 제안 '+(et.i+1)))+'</b>'+(et.prem!==null?(' (월 '+fee(et.prem)+')'):'')+
+        ' 쪽이 1만원당 가장 많이 채웁니다. '+(L[0].auto===1?'1순위는 더 넓게 채우는 대신':'지금 1순위는')+' 월 '+fee(L[0].prem)+'입니다 — 예산이 먼저면 이쪽부터 보셔도 됩니다.</p>';
+    if(!show&&rkEd().on)h+=rkSayHtml('sayP');
   }else{
     var G=rankSuggest();
     sum=G.pick.length?G.pick.map(function(x){return '<b>'+x.rank+'순위</b> '+esc(x.g.mid);}).join(' · '):'비어 있는 묶음 없음';
     h='<div class="prk'+(show?'':' ed')+'" id="baRank"><h4>💡 추가 제안 — 넣으신 제안서가 없어 <b>빈자리</b>로 골랐습니다'+
       '<small>유지 · 배서로 남는 계약 기준으로 비어 있는 묶음을 <b>급한 순서</b>로 세 개 — 제안서를 넣으시면 그 제안들의 순위로 바뀝니다</small></h4>';
-    if(!G.pick.length)h+='<div class="note g">기준으로 <b>비어 있는 묶음이 없습니다</b> — 지금 계약을 지키시는 것이 먼저입니다.</div>';
-    G.pick.forEach(function(x){
-      var pri=agePriOf(x.pr.p);
-      h+='<div class="pk-i"><span class="pk-n r'+x.rank+'">'+x.rank+'순위</span><div class="pk-b">'+
-        '<div class="pk-t">'+x.g.ic+' '+esc(x.g.mid)+'<em>'+pri.t+' · '+esc(x.pr.src)+'</em></div>'+
-        '<div class="pk-w">'+(x.pr.why||'')+(x.circ?' <b>뇌 · 심장을 한 담보로 덮는 순환계 상품</b>이면 같이 채울 수 있습니다.':'')+'</div>'+
+    h+=(show||!G.n)?'':rkBar(false);
+    if(!G.pick.length)h+=G.n?'<div class="note g">고른 묶음이 없습니다 — 아래 <b>「+ 넣기」</b>로 고르시거나 <b>「↺ 1차안으로」</b>를 누르십시오.</div>':
+      '<div class="note g">기준으로 <b>비어 있는 묶음이 없습니다</b> — 지금 계약을 지키시는 것이 먼저입니다.</div>';
+    G.pick.forEach(function(x,j){
+      var pri=agePriOf(x.pr.p),key='g:'+x.g.mid;
+      h+='<div class="pk-i"><span class="pk-n r'+(x.rank<=3?x.rank:'n')+'">'+x.rank+'순위</span><div class="pk-b">'+
+        '<div class="pk-t">'+x.g.ic+' '+esc(x.g.mid)+'<em>'+pri.t+' · '+esc(x.pr.src)+'</em>'+(show?'':rkMark(x))+'</div>'+
+        rkWhyHtml(show,key,(x.pr.why||'')+(x.circ?' <b>뇌 · 심장을 한 담보로 덮는 순환계 상품</b>이면 같이 채울 수 있습니다.':''),j,G.pick.length,true)+
         '<ul'+(show?'':' class="in"')+'>'+x.rows.slice(0,show?4:3).map(function(r){
           return '<li><b>'+esc(SNAME[r.k])+'</b> — '+(r.t===null?'지금 없음 → <b>가입 권장</b>':
             ((r.have>0?('지금 '+amt(r.k,r.have)):'지금 없음')+' → 권장 '+amt(r.k,r.t)+' (<b>'+amt(r.k,r.need)+'</b> 더)'))+'</li>';}).join('')+
           (x.rows.length>(show?4:3)?('<li>그 밖에 '+(x.rows.length-(show?4:3))+'가지</li>'):'')+'</ul></div></div>';});
+    if(!show&&rkEd().on){
+      var rest=G.all.filter(function(x){return G.pick.indexOf(x)<0;});
+      if(rest.length)h+='<div class="rk-add">아직 비어 있는 다른 묶음 — 넣으시면 맨 뒤에 붙습니다<br>'+rest.map(function(x){
+        return '<button class="mini" onclick="rkAdd(\''+esc(x.g.mid).replace(/'/g,'&#39;')+'\')">+ '+x.g.ic+' '+esc(x.g.mid)+'</button>';}).join('')+'</div>';
+      h+=rkSayHtml('sayG');
+    }
     if(show&&G.n>G.pick.length)h+='<p class="pk-s">비어 있는 묶음은 모두 <b>'+G.n+'개</b>입니다 — 나머지는 「지금 더 넣으셔야 할 것」 장에 있습니다.</p>';
   }
-  h+='<p class="pk-s">기준: '+src+' — 사내 상담 기준이며 정답이 아닙니다. 소득 · 병력 · 심사에 맞게 고르십시오.</p></div>';
+  h+='<p class="pk-s">기준: '+src+(S.after.length?' · 채움 점수 = 채우는 비율 × 급함(지금 바로 3 · 그다음 2 · 나중에 1)':'')+' — 사내 상담 기준이며 정답이 아닙니다. 소득 · 병력 · 심사에 맞게 고르십시오.'+
+    (rkTouched(S.after.length?'p':'g')?' 순서와 설명은 상담자가 고객님 상황에 맞게 다듬었습니다.':'')+'</p></div>';
   if(show)return h;
   /* 만들기 화면 — 머리줄을 summary 로 올리고 순위 한 줄을 붙인다 */
   var m=h.match(/^<div class="prk ed" id="baRank">(<h4>[\s\S]*?<\/h4>)([\s\S]*)<\/div>$/);
   if(!m)return h;
   return '<details class="prk ed" id="baRank"'+(S.rankOpen?' open':'')+' ontoggle="S.rankOpen=this.open;save()">'+
-    '<summary>'+m[1].replace('</h4>','<span class="pk-q">'+sum+' — 눌러서 이유 보기</span></h4>')+'</summary>'+m[2]+'</details>';
+    '<summary>'+m[1].replace('</h4>','<span class="pk-q">'+(rkTouched(S.after.length?'p':'g')?'✏️ ':'')+sum+' — 눌러서 이유 보기</span></h4>')+'</summary>'+m[2]+'</details>';
+}
+/* ── 판 X411 — ✏️ 1차안 고치기 ──────────────────────────────────────────
+   위 순위 · 추가 제안은 프로그램이 매긴 <b>1차안</b>이다. 상담자가 고객을 더 잘 안다 —
+   ✏️ 를 누르면 순서(▲▼) · 이유 문장 · 발표 화면 한 마디를 고치고, 추가 제안은 묶음을 빼고 넣는다.
+   고친 것은 S.rankEd 에만 둔다 — 점수 · 채움 금액 · 보험료 대비 숫자는 손대지 않는다(지어낸 숫자 금지).
+     op = 제안 순서('p:'+id) · og = 추가 제안 묶음 순서(mid) · why[key] = 이유 문장 · sayP/sayG = 발표 한 마디
+   「↺ 1차안으로」 는 지금 보고 있는 쪽(제안 순위 또는 추가 제안)만 되돌린다.                         */
+function rkEd(){if(!S.rankEd||typeof S.rankEd!=='object')S.rankEd={};if(!S.rankEd.why||typeof S.rankEd.why!=='object')S.rankEd.why={};return S.rankEd;}
+function rkOrder(L,keyOf,nm){
+  var o=rkEd()[nm];if(!o||!o.length)return L;
+  var by={},out=[];L.forEach(function(x){by[keyOf(x)]=x;});
+  o.forEach(function(k){if(by[k]){out.push(by[k]);delete by[k];}});
+  L.forEach(function(x){if(by[keyOf(x)])out.push(x);});   /* 나중에 넣은 제안은 1차안 순서대로 뒤에 */
+  return out;
+}
+function rkTouched(t){
+  var e=S.rankEd;if(!e||typeof e!=='object')return false;
+  var w=e.why||{},k;for(k in w)if(w.hasOwnProperty(k)&&k.charAt(0)===t)return true;
+  return !!((t==='p'?e.op:e.og)||[]).length||(rkSayOf(t==='p'?'sayP':'sayG')!==null);
+}
+function rkSayOf(nm){var e=S.rankEd;var v=e&&typeof e==='object'?e[nm]:null;return (typeof v==='string'&&v.trim())?esc(v.trim()).replace(/\n/g,'<br>'):null;}
+function rkPlain(h){var d=document.createElement('div');d.innerHTML=h;return (d.textContent||'').replace(/\s+/g,' ').trim();}
+function rkMark(x){
+  var e=S.rankEd,w=e&&e.why&&e.why[x.p?('p:'+x.p.id):('g:'+x.g.mid)];
+  if(x.auto===null)return '<span class="rk-m">✏️ 넣은 묶음</span>';
+  if(x.auto!==undefined&&x.auto!==x.rank)return '<span class="rk-m">✏️ 1차안 '+x.auto+'순위</span>';
+  return w?'<span class="rk-m">✏️ 문장 고침</span>':'';
+}
+function rkWhyHtml(show,key,auto,j,n,isG){
+  var e=rkEd(),mine=e.why[key];
+  if(show||!e.on)return '<div class="pk-w">'+((typeof mine==='string'&&mine.trim())?esc(mine.trim()).replace(/\n/g,'<br>'):auto)+'</div>';
+  var k=esc(key).replace(/'/g,'&#39;'),a=rkPlain(auto);
+  return '<textarea class="rk-t" rows="2" data-a="'+esc(a)+'" oninput="rkWhy(\''+k+'\',this)" aria-label="이유 문장">'+esc(typeof mine==='string'?mine:a)+'</textarea>'+
+    '<div class="rk-c"><button class="mini" '+(j?'':'disabled ')+'onclick="rkMv(\''+k+'\',-1)">▲ 위로</button>'+
+    '<button class="mini" '+(j<n-1?'':'disabled ')+'onclick="rkMv(\''+k+'\',1)">▼ 아래로</button>'+
+    (isG?'<button class="mini" onclick="rkDrop(\''+k+'\')">빼기</button>':'')+
+    (typeof mine==='string'?'<button class="mini" onclick="rkWhyBack(\''+k+'\')">↺ 이 문장만 1차안</button>':'')+'</div>';
+}
+function rkBar(isP){
+  var e=rkEd(),t=isP?'p':'g',touched=rkTouched(t);
+  if(!e.on)return '<div class="rk-bar">'+(touched?'✏️ <b>고친 순위</b>입니다 — 발표 화면에도 이대로 나갑니다.':'프로그램이 매긴 <b>1차안</b>입니다 — 순서 · 이유를 고치시면 발표 화면에도 그대로 나갑니다.')+
+    '<button class="mini" onclick="rkOn(1)">✏️ 고치기</button>'+(touched?'<button class="mini" onclick="rkReset(\''+t+'\')">↺ 1차안으로</button>':'')+'</div>';
+  return '<div class="rk-bar">✏️ <b>고치는 중</b> — ▲▼ 로 순서를, 칸에서 이유 문장을 고칩니다'+(isP?'':' · 묶음은 빼거나 아래에서 넣습니다')+'. 숫자(채움 · 보험료 대비)는 그대로입니다.'+
+    '<button class="btn" style="padding:4px 12px" onclick="rkOn(0)">✓ 다 고쳤습니다</button>'+
+    '<button class="mini" onclick="rkReset(\''+t+'\')">↺ 1차안으로</button></div>';
+}
+function rkSayHtml(nm){
+  var e=rkEd(),v=e[nm];
+  return '<div class="rk-add"><b>🗣 발표 화면 한 마디</b> — 비워 두시면 1차안 문장이 나갑니다'+
+    '<textarea class="rk-t" rows="2" oninput="rkEd()[\''+nm+'\']=this.value;save()" placeholder="예) 오늘은 1순위만 보시고, 2순위는 다음에 같이 보셔도 됩니다.">'+esc(typeof v==='string'?v:'')+'</textarea></div>';
+}
+function rkRe(){S.rankOpen=true;save();render();}
+function rkOn(v){rkEd().on=!!v;rkRe();}
+function rkWhy(key,el){
+  var e=rkEd();
+  if(el.value.replace(/\s+/g,' ').trim()===(el.getAttribute('data-a')||''))delete e.why[key];else e.why[key]=el.value;
+  save();
+}
+function rkWhyBack(key){delete rkEd().why[key];rkRe();}
+function rkKeys(){
+  if(S.after.length)return {nm:'op',keys:rankProps().map(function(x){return 'p:'+x.p.id;})};
+  return {nm:'og',keys:rankSuggest().pick.map(function(x){return 'g:'+x.g.mid;})};
+}
+function rkSet(nm,keys){rkEd()[nm]=keys.map(function(k){return nm==='op'?k:k.slice(2);});}
+function rkMv(key,d){
+  var r=rkKeys(),i=r.keys.indexOf(key),j=i+d;if(i<0||j<0||j>=r.keys.length)return;
+  var t=r.keys[i];r.keys[i]=r.keys[j];r.keys[j]=t;rkSet(r.nm,r.keys);rkRe();
+}
+function rkDrop(key){var r=rkKeys();rkSet('og',r.keys.filter(function(k){return k!==key;}));
+  if(!rkEd().og.length)rkEd().og=['__none__'];   /* 다 빼도 「빈 목록」 으로 남는다(1차안으로 돌아가지 않게) */
+  rkRe();}
+function rkAdd(mid){var r=rkKeys();r.keys.push('g:'+mid);rkSet('og',r.keys.filter(function(k){return k!=='g:__none__';}));rkRe();}
+function rkReset(t){
+  if(!confirm('프로그램이 매긴 1차안으로 되돌릴까요? 고치신 순서 · 문장'+(t==='p'?'':' · 고른 묶음')+'이 지워집니다.'))return;
+  var e=rkEd(),k;
+  if(t==='p'){delete e.op;delete e.sayP;}else{delete e.og;delete e.sayG;}
+  for(k in e.why)if(e.why.hasOwnProperty(k)&&k.charAt(0)===t)delete e.why[k];
+  rkRe();
 }
 function rankShow(){
   var has=S.after.length,L=has?rankProps():null;
-  var say=has?('제안 드린 것 중 <b>'+esc(L[0].p.nm||'1순위')+'</b>부터 보시면 됩니다 — 지금 비어 있는 자리 중 <b>급한 곳</b>을 가장 많이 채웁니다.'):
+  var say=rkSayOf(has?'sayP':'sayG');
+  if(say===null)say=has?(L.length?('제안 드린 것 중 <b>'+esc(L[0].p.nm||'1순위')+'</b>부터 보시면 됩니다'+(L[0].auto===1?' — 지금 비어 있는 자리 중 <b>급한 곳</b>을 가장 많이 채웁니다.':'.')):''):
     '오늘 다 하실 필요는 없습니다. <b>1순위</b>부터 보시고, 나머지는 다음에 같이 보셔도 됩니다.';
   return '<section id="sRank" data-grp="돈은 이렇게 됩니다" data-nm="'+(has?'제안 순위':'추가 제안')+'"><h3>'+(has?'오늘 제안 드리는 순서':'더 넣으신다면 이 순서로')+
     '<small>'+(has?'빈자리를 얼마나 · 얼마나 급한 자리부터 채우는지로 매겼습니다':'지금 계약에서 비어 있는 자리 중 급한 것부터')+'</small></h3>'+
