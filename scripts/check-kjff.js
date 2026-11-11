@@ -186,7 +186,16 @@ const srv = http.createServer((q, s) => {
   is(unglossed.length === 0, '  화면의 어려운 말은 모두 풀이가 붙었다' + (unglossed.length ? ' ← ' + unglossed.slice(0, 3).join(' · ') : ''));
   const firstsW = await q7.$$eval('.page', a => a.map(pg => { const seen = {}, bad = []; pg.querySelectorAll('abbr.kjw').forEach(e => { const w = e.getAttribute('data-kjw'), g = e.nextSibling && e.nextSibling.classList && e.nextSibling.classList.contains('kjw-g'); if (!seen[w] && !g) bad.push(w); if (seen[w] && g) bad.push(w + '×2'); seen[w] = 1; }); return bad; }).flat());
   is(firstsW.length === 0, '  장마다 처음 나온 자리에만 풀이가 서고 다음부터는 밑줄만' + (firstsW.length ? ' ← ' + firstsW.join(', ') : ''));
-  is(!/\)\)/.test(await q7.evaluate(() => document.body.innerText)), '  「))」 처럼 겹친 괄호가 화면에 없다');
+  /* innerText 는 지금 보이는 장만 읽습니다 — 숨은 장 · 접힌 메모까지 textContent 로 봅니다.
+     「알릴 의무(고지)」 에 풀이가 붙어 「(고지 (…))」 가 된 자리를 이 자가 처음엔 못 봤습니다 */
+  const nest = await q7.$$eval('.page', a => a.map(e => e.textContent.replace(/\s+/g, ' ')).map(t => (t.match(/\([^()]*\([^()]*\)[^()]*\)/) || [])[0]).filter(Boolean));
+  is(!nest.length, '  괄호 안에 괄호가 겹친 자리가 어느 장에도 없다' + (nest.length ? ' ← ' + nest.slice(0, 3).join(' · ') : ''));
+  /* 폰에서 「다음」 을 누르면 새 장의 머리가 화면 위쪽에 와야 합니다 — 맨 위(머리글)로 가면 머리글이 한 화면을 다 먹어 물음이 안 보였습니다.
+     지금 장의 단추도 띠 안에 보여야 합니다(7장 단추가 화면 밖에 있었습니다) */
+  await q7.setViewportSize({ width: 390, height: 844 });
+  await q7.click('[data-stepbar] .sb[data-go="5"]'); await q7.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); await q7.click('[data-next]'); await q7.waitForTimeout(150);
+  const landed = await q7.evaluate(() => { const st = document.querySelector('.step:not(.off)').getBoundingClientRect(), bar = document.querySelector('[data-stepbar]').getBoundingClientRect(), on = document.querySelector('[data-stepbar] .sb.on').getBoundingClientRect(); return { top: Math.round(st.top), inBar: on.left >= bar.left - 1 && on.right <= bar.right + 1 }; });
+  is(landed.top >= 0 && landed.top <= 160 && landed.inBar, '  폰에서 「다음」 → 새 장이 화면 위쪽(' + landed.top + 'px)에 · 지금 장 단추가 띠 안에 보인다');
   const notTest = await q7.evaluate(() => { const d = document.createElement('div'); d.textContent = '고지혈증 약을 먹어요 · 고지는 청약서에'; window.KJ_WORDS.mark(d, {}); return d.querySelectorAll('abbr[data-kjw="고지"]').length; });
   is(notTest === 1, '  「고지혈증」 의 「고지」 는 잡지 않고, 「고지」 만 잡는다');
   const ph = await ctx.newPage(); await ph.setViewportSize({ width: 390, height: 844 }); await ph.goto(O + 'kijun-ff.html', { waitUntil: 'domcontentloaded' }); await ph.waitForTimeout(200);

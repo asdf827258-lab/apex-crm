@@ -307,9 +307,16 @@ table.chk{width:100%;border-collapse:collapse;table-layout:fixed}
     $('[data-prev]').disabled=allView||cur===0;$('[data-next]').disabled=allView||cur===PAGES.length-1;
     $('[data-next]').textContent=cur===PAGES.length-2?'정리로 ▶':'다음 ▶';
   }
-  $('[data-stepbar]').addEventListener('click',function(e){var b=e.target.closest('[data-go]');if(!b)return;allView=false;$('[data-allview]').setAttribute('aria-pressed','false');show(+b.getAttribute('data-go'));window.scrollTo(0,0)});
-  $('[data-prev]').addEventListener('click',function(){show(cur-1);window.scrollTo(0,0)});
-  $('[data-next]').addEventListener('click',function(){show(cur+1);window.scrollTo(0,0)});
+  /* 넘긴 뒤에는 머리글이 아니라 단계 띠로 — 폰에서 머리글이 한 화면을 다 먹어, 맨 위로 가면 새 장의 물음이 안 보입니다.
+     지금 장의 단추도 띠 안에서 보이게 옆으로 밉니다(7장 단추가 화면 밖에 있었습니다) */
+  function land(){var bar=$('[data-stepbar]'),on=bar.querySelector('.sb.on');
+    if(on)bar.scrollLeft=Math.max(0,on.offsetLeft-bar.offsetLeft-(bar.clientWidth-on.offsetWidth)/2);
+    var st=document.querySelector('.step:not(.off)');if(!st)return;
+    /* 띠는 sticky 라 붙은 뒤엔 제 자리를 0 으로 답합니다 — 보이는 장을 기준으로, 띠 높이만큼 위로 */
+    window.scrollTo(0,Math.max(0,st.getBoundingClientRect().top+window.pageYOffset-bar.offsetHeight-8))}
+  $('[data-stepbar]').addEventListener('click',function(e){var b=e.target.closest('[data-go]');if(!b)return;allView=false;$('[data-allview]').setAttribute('aria-pressed','false');show(+b.getAttribute('data-go'));land()});
+  $('[data-prev]').addEventListener('click',function(){show(cur-1);land()});
+  $('[data-next]').addEventListener('click',function(){show(cur+1);land()});
   $('[data-allview]').addEventListener('click',function(){allView=!allView;this.setAttribute('aria-pressed',String(allView));show(cur)});
   /* 👓 설계사 메모 — 고객 앞에서는 접어 둔다. 저장하지 않는다(3번) */
   $('[data-coach]').addEventListener('click',function(){var on=document.documentElement.classList.toggle('coach');this.setAttribute('aria-pressed',String(on))});
