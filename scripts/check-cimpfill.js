@@ -281,6 +281,58 @@ const 판 = async (b, PORT, withGrp) => {
 
   /* ══ [5] 카드에서 한 분 ═══════════════════════════════════════════ */
   console.log('\n[5] ★★ 고객 카드에서 <b>한 분</b>을 고칠 수 있는가');
+  await p.evaluate(async () => {
+    const id = window.__DB.clients[0].id;
+    try { cusGo({ cli: id, tab: 'info' }); } catch (e) {}
+    await new Promise(r => setTimeout(r, 2200));
+    try { cuwSheet('fam'); } catch (e) {}
+    await new Promise(r => setTimeout(r, 1500));
+  });
+  /* ── 🔎 <b>눈에 띄는가</b> (판 X406 · 사장님 말씀 「고객 카드에서 갈래
+     고치는 칸 좀 더 눈에 띄게해줘」) ────────────────────────────────
+     여태 가족 칸 <b>안</b>에 들어 있어, 주황 쪽지 둘과 저장 단추 다섯을
+     지나 <b>스크롤해야</b> 나왔습니다. 그리고 적는 칸이 밑줄뿐이라
+     「지인소개」 가 <b>적힌 글</b>처럼 읽혔습니다 — 그림을 찍어 보고
+     알았습니다. 이제 ① 시트 <b>맨 위</b> ② 「지금 ○○」 알약 ③ 쓰시던
+     갈래를 <b>칩</b>으로(누르면 그 자리에서 바뀝니다).               */
+  const V = await p.evaluate(() => {
+    const w = document.getElementById('cuwXsrc');
+    if (!w) return { 있나: false };
+    const cards = [...document.querySelectorAll('#cusWin [data-sec="sh-fam"] .t-card, #cusWin .t-card')]
+      .filter(x => x.getBoundingClientRect().height > 0);
+    const r = w.getBoundingClientRect();
+    return { 있나: true, 윗변: Math.round(r.top),
+             첫칸: cards.length ? (cards[0] === w || w.contains(cards[0])) : null,
+             칩: [...w.querySelectorAll('.t-chip')].map(x => (x.innerText || '').replace(/\s+/g, ' ')),
+             켜짐: [...w.querySelectorAll('.t-chip.on')].map(x => (x.innerText || '').trim()),
+             지금: ((w.innerText || '').match(/지금\s+\S+/) || [''])[0],
+             파란띠: !!w.querySelector('.t-note.b') };
+  });
+  is(V.첫칸 === true, '  ★★ 「가족 · 소개 고치기」 의 <b>맨 위 칸</b>이다 — 스크롤해야 나오면 안 됩니다');
+  is(/지금\s+지인소개/.test(V.지금), '  ★ 「<b>지금 ○○</b>」 가 알약으로 먼저 선다 — 「' + V.지금 + '」');
+  is(V.칩.length >= 3, '  ★★ 쓰시던 갈래가 <b>칩으로</b> 선다 — ' + (V.칩.join(' / ') || '(없음)'));
+  is(V.켜짐.length === 1 && V.켜짐[0] === '지인소개',
+     '  ★ 지금 갈래의 칩이 <b>켜져</b> 있다 (받음 ' + (V.켜짐.join(',') || '(하나도 안 켜짐)') + ')');
+  is(V.칩.some(x => /갈래 없음/.test(x)), '  ★ <b>떼는 길</b>도 있다 — 「✕ 갈래 없음」 (6번)');
+  is(V.파란띠, '  ★ 설명이 <b>파란 띠</b>다 — 이 시트의 다른 쪽지는 다 주황입니다');
+  /* 칩을 눌러 봅니다 — 그 자리에서 바뀌어야 합니다 */
+  const P2 = await p.evaluate(async () => {
+    const w = document.getElementById('cuwXsrc');
+    const c = [...w.querySelectorAll('.t-chip')].find(x => /세미나/.test(x.innerText));
+    if (!c) return { ok: false };
+    c.click();
+    await new Promise(r => setTimeout(r, 2200));
+    const w2 = document.getElementById('cuwXsrc');
+    const id = window.__DB.clients[0].id;
+    const row = (window.__DB.saved_reports || []).find(x => x.client_id === id && x.kind === 'client_meta');
+    return { ok: true, 적힘: (row && row.content && row.content.xsrc) || '(없음)',
+             지금: ((w2.innerText || '').match(/지금\s+\S+/) || [''])[0],
+             켜짐: [...w2.querySelectorAll('.t-chip.on')].map(x => (x.innerText || '').trim()).join(','),
+             칸: (document.getElementById('cusXsrc') || {}).value || '' };
+  });
+  is(P2.적힘 === '세미나', '  ★★ 칩을 누르면 <b>그 자리에서 적힌다</b> (받음 「' + P2.적힘 + '」)');
+  is(/지금\s+세미나/.test(P2.지금) && P2.켜짐 === '세미나' && P2.칸 === '세미나',
+     '  ★★ 알약 · 켜진 칩 · 적는 칸이 <b>한꺼번에</b> 따라온다 (「' + P2.지금 + '」 · 칩 ' + P2.켜짐 + ' · 칸 ' + P2.칸 + ')');
   const C = await p.evaluate(async () => {
     const id = window.__DB.clients[0].id;
     try { cusGo({ cli: id, tab: 'info' }); } catch (e) {}
@@ -294,8 +346,16 @@ const 판 = async (b, PORT, withGrp) => {
        글자로만 재던 자는 통과했습니다 — 칸은 거기 있었으니까요 (8번).
        <b>얼마나 넓은지</b>를 같이 봅니다. */
     const w = Math.round(e.getBoundingClientRect().width);
-    const before = e.value;
-    e.value = '소개자리';
+    /* 위에서 칩으로 「세미나」 로 바꿔 두었으니 되돌리고 시작합니다.
+       ⚠ 칩을 누르면 이 칸이 <b>다시 그려집니다</b> — 앞서 집어 둔 e 는
+         떨어져 나간 옛 칸이라, 거기 적으면 저장이 못 읽습니다. 제 시험이
+         낡았던 자리입니다. <b>다시 집어</b> 옵니다 (8번). */
+    try { cusXsrcPick(id, '지인소개'); } catch (err) {}
+    await new Promise(r => setTimeout(r, 2000));
+    const e2 = document.getElementById('cusXsrc');
+    if (!e2) return { 칸: false };
+    const before = e2.value;
+    e2.value = '소개자리';
     try { cusXsrcSave(id); } catch (err) {}
     await new Promise(r => setTimeout(r, 2200));
     const row = (window.__DB.saved_reports || []).find(x => x.client_id === id && x.kind === 'client_meta');
@@ -304,6 +364,7 @@ const 판 = async (b, PORT, withGrp) => {
              가족: (row && row.content && row.content.fam) || '(없음)', 줄수: n };
   });
   is(C.칸, '  갈래 고치는 칸이 <b>카드에 선다</b> (가족 · 소개 고치기)');
+
   is(C.처음 === '지인소개', '  ★ 지금 갈래가 <b>칸에 미리 들어 있다</b> (받음 「' + C.처음 + '」)');
   is(C.w >= 240, '  ★★ 칸이 <b>눌리지 않는다</b> — 폰 430px 에서 ' + C.w + 'px (적는 글이 보여야 씁니다)');
   is(C.적힘 === '소개자리', '  ★★ 고쳐 저장하면 <b>그대로 적힌다</b> (받음 「' + C.적힘 + '」)');
