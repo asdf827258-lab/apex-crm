@@ -8,7 +8,7 @@
      [3] 제안서가 셋이면 — 급한 빈자리를 많이 채우는 순 · 빈자리를 안 채우면 맨 뒤 · 같으면 보험료 적은 쪽
      [4] 계약 카드에 「1순위」 표시 · 발표 화면에 「제안 순위」 장(짧게 보기에도 남는다)
      [5] 나이를 안 적었으면 설계 순서로 매기고 그렇게 밝힌다
-     [7] 이유는 큰 자리부터(판 X406) · 💰 보험료 대비 줄 — 순위는 그대로
+     [7] 이유는 큰 자리부터(판 X410) · 💰 보험료 대비 줄 — 순위는 그대로
      [6] 조용한가                                                                                   */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -114,7 +114,7 @@ const head = (t) => console.log('\n' + t);
   is(E.src.length && E.src.every(s => /설계 순서/.test(s)), '설계 순서 번호로 매김 — ' + E.src.join(' · '));
   is(/나이를 적으시면/.test(E.html), '「고객 나이를 적으시면 나이대 기준으로 다시 매깁니다」');
 
-  head('[7] 이유는 큰 자리부터 · 💰 보험료 대비 (판 X406)');
+  head('[7] 이유는 큰 자리부터 · 💰 보험료 대비 (판 X410)');
   const R = await pg.evaluate(() => {
     localStorage.clear(); doSample(); S.rankOpen = true;
     const K = n => Object.keys(SNAME).find(k => SNAME[k] === n);
