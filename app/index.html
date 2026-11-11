@@ -21977,8 +21977,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-11 22:30';
-var APP_BUILD_NOTE='✍️ <b>예상업적은 AP · PC 고객만, 단계별로 묶어 적습니다</b>(판 X402 · 사장님 말씀 「예상업적은 AP-PC중인 사람들에 한해서 · <b>기존에 분류했던 카테고리가 좋았는데</b>」). ◾ 📊 상담현황의 「✍️ 진행중 예상」 을 누르면 그 칸 바로 밑에 <b>PC 묶음 → AP 묶음</b>으로 고객이 섭니다 — 📊 DB · 업적관리 표의 「AP · PC (상담 진행중)」 와 같은 분들입니다. 묶음 머리에 「몇 분 · 예상 ○만원」 이 치는 대로 바뀝니다. 고객은 배정 DB 에서 <b>저절로</b> 불러옵니다 — 한 분씩 따로 넣지 않습니다. 「15」 = 15만원. ◾ 먼저 나간 판 X400(✍️ 오늘 칸 안에서 바로 적기) · X399(👤 오늘 화면 실명 + 🙈 가리기) · X387~X398 · X403~X411 · X413 · X414 도 들어 있습니다.';
+var APP_BUILD='2026-11-11 22:44';
+var APP_BUILD_NOTE='✏️ <b>첫 마디를 사장님이 고치시면 팀 모두가 그 말을 씁니다</b>(판 X412 · 사장님 말씀 「<b>보장분석 신청 한 사람들 멘트가 너무 별로여서 내가 수정하고 공유할수 있도록 만들어, 수정은 오직 운영자만 가능하도록</b>」) — 멘트 카드 머리의 <b>✏️</b> 를 누르시면 갈래 여섯(보장분석 · 소개 · 방송 · 농협 · 개척 · 일반)을 그 자리에서 고치실 수 있습니다. 저장하면 <b>홈 한 줄 · 긴 멘트 카드 · 📋 복사</b>가 한꺼번에 바뀌고, 팀원 화면에도 같은 말이 섭니다. 마음에 안 드시면 「<b>원래 말로</b>」 한 번이면 처음 말이 돌아옵니다. <b>팀원은 못 고칩니다</b> — 단추가 아예 안 서고, 서버도 대표만 쓰게 막혀 있습니다(진짜 서버에서 걸어 보았습니다). 고치신 말은 <b>하루에 한 번</b> 받아 옵니다 — 사장님 기기에는 저장하신 그 자리에서 바로 섭니다. ◾ 🧭 <b>오늘 할 일 도움말과 멘트 한 줄</b>(판 X408)도 그대로 들어 있습니다. ◾ <b>같이 실려 나가는 판</b> — ✍️ 예상업적을 AP·PC 만 단계별로(X402) · 🤖 자비스 목소리(X413) · 🖼 화면 이미지(X414) · 병합 뒤 수정(X411). 먼저 나간 💰 제안 순위(X410) · 📄 약관 발췌와 쪽 번호(X407)도 그대로입니다.';
 
 
 
@@ -32087,6 +32087,216 @@ function hmTaPickHtml(x){
     (own?'<button type="button" class="hm-tap-b" onclick="hmTaMine()">↩ 이 분 상태로</button>':'')+
     '</div>';
 }
+/* ══ ✏️ <b>첫 마디를 사장님이 고치십니다</b> — 고치면 팀 모두가 (판 X412) ══
+   사장님 말씀 (2026-11-11) — 「<b>보장분석 신청 한 사람들 멘트가 너무
+   별로여서 내가 수정하고 공유</b>할수 있도록 만들어, <b>수정은 오직
+   운영자만</b> 가능하도록」
+
+   ★ <b>말을 새로 짓지 않습니다</b> (5번) — 원래 말은 apex-stage.js 의
+     TA_SRC 에 그대로 있고, 여기는 <b>덮개 한 겹</b>입니다. 묻는 자도
+     taSay 하나라 한 번 고치시면 홈 한 줄 · 긴 멘트 카드 · 📋 복사 ·
+     고객 카드가 <b>한꺼번에</b> 바뀝니다.
+   ★ <b>화면만 가리지 않습니다</b> — 서버(stage_says)도 is_owner() 만
+     쓰게 막혀 있습니다. 팀원이 몰래 고칠 길이 없습니다.
+   ★ <b>되돌릴 길</b>을 둡니다 (6번) — 「원래 말로」 를 누르면 그 줄을
+     지우고 apex-stage.js 의 말이 다시 섭니다.
+   ★ 서버는 <b>하루 한 번</b>만 두드립니다 (7번). 받아 둔 것은 이 기기에
+     남겨 두어 다음에 바로 뜹니다. 고객 이름은 한 글자도 안 담깁니다 (3번). */
+var TSAY={map:null,loaded:false,busy:false,err:'',at:'',pick:'',tick:0};
+var TSAY_LS='apex_tsay_v1';
+/* 「고칠 수 있는 사람인가」 는 <b>한 곳</b>만 압니다 — osIsOwner 를 부릅니다 (5번) */
+function tsayCan(){ try{ return !!(typeof osIsOwner==='function'&&osIsOwner()); }catch(e){ return false; } }
+/* 고칠 수 있는 갈래 — <b>apex-stage 가 쥔 목록 그대로</b>입니다. 여기서 또 적으면
+   말이 늘었을 때 한쪽만 늘어납니다 (5번). */
+function tsayKeys(){
+  var L=[],i,T;
+  try{ T=(typeof APEX_STAGE!=='undefined')?APEX_STAGE.taSrc:null; }catch(e){ T=null; }
+  if(!T)return L;
+  for(i=0;i<T.length;i++)L.push(T[i].k);
+  try{ if(APEX_STAGE.taAny&&APEX_STAGE.taAny.k)L.push(APEX_STAGE.taAny.k); }catch(e2){}
+  return L;
+}
+function tsayApply(){
+  try{ if(typeof APEX_STAGE!=='undefined'&&APEX_STAGE.taSayOver)APEX_STAGE.taSayOver(TSAY.map); }catch(e){}
+}
+/* 받아 둔 것을 먼저 끼웁니다 — 서버가 느려도 고치신 말이 바로 섭니다 */
+function tsayBoot(){
+  try{
+    var r=JSON.parse(localStorage.getItem(TSAY_LS)||'null');
+    if(r&&r.map){ TSAY.map=r.map; TSAY.at=r.at||''; tsayApply(); }
+  }catch(e){}
+}
+/* 오늘 이미 받아 두었나 — <b>하루에 한 번</b>이면 넉넉합니다. 사장님이 말을
+   고치시는 일은 하루에 몇 번씩 있는 일이 아니고, 고치신 그 기기는 저장 직후
+   바로 다시 받습니다. 다른 분 화면에는 <b>다음 날</b> 섭니다 (7번).
+   ⚠ 「오늘 받았나」 를 묻는 곳도 <b>한 곳</b>입니다 (5번). */
+/* ⚠ <b>맨 UTC 날짜를 쓰지 않습니다</b> — toISOString() 은 UTC 라 한국 새벽
+   0~9시에는 <b>전날</b>이 됩니다. 그 시각에 켜면 어제 받은 것을 「오늘 것」 으로
+   읽어 고치신 말이 하루 늦게 섭니다. 날을 아는 자는 앱에 이미 있습니다 (5번). */
+function tsayDay(){
+  try{ if(typeof mcalToday==='function')return mcalToday(); }catch(e){}
+  try{ if(typeof osTodayStr==='function')return osTodayStr(); }catch(e2){}
+  return '';
+}
+function tsayFresh(){
+  try{
+    var r=JSON.parse(localStorage.getItem(TSAY_LS)||'null');
+    return !!(r&&r.day===tsayDay());
+  }catch(e){ return false; }
+}
+function tsayLoad(force,cb){
+  if(TSAY.busy){ if(cb)cb(false); return; }
+  /* 안 보는 화면에서 되풀이해 부르지 않습니다 (7번) */
+  if(!force&&TSAY.loaded){ if(cb)cb(true); return; }
+  if(!force&&tsayFresh()){ TSAY.loaded=true; if(cb)cb(true); return; }
+  if(!force){ try{ if(document.hidden){ if(cb)cb(false); return; } }catch(e){} }
+  var sb=null; try{ sb=osClient(); }catch(e2){ sb=null; }
+  if(!sb){ if(cb)cb(false); return; }
+  TSAY.busy=true; TSAY.err='';
+  sb.from('stage_says').select('k,t,say,tip,updated_at,updated_name').then(function(r){
+    TSAY.busy=false;
+    if(r&&r.error){ TSAY.err=(r.error.message||'못 읽었습니다'); if(cb)cb(false); return; }
+    var M={},i,x,L=(r&&r.data)||[],at='';
+    for(i=0;i<L.length;i++){ x=L[i]; if(!x||!x.k)continue;
+      M[x.k]={t:x.t||'',say:x.say||'',tip:x.tip||'',at:(''+(x.updated_at||'')).slice(0,10),by:x.updated_name||''};
+      if((x.updated_at||'')>at)at=x.updated_at||''; }
+    TSAY.map=M; TSAY.at=at.slice(0,10); TSAY.loaded=true;
+    try{ localStorage.setItem(TSAY_LS,JSON.stringify(
+      {map:M,at:TSAY.at,day:tsayDay()})); }catch(e3){}
+    tsayApply();
+    if(cb)cb(true);
+  },function(){ TSAY.busy=false; TSAY.err='서버에 닿지 못했습니다'; if(cb)cb(false); });
+}
+function tsayCss(){
+  if(document.getElementById('tsayCss'))return;
+  var st=document.createElement('style');st.id='tsayCss';
+  st.textContent='#tsaySheet{position:fixed;inset:0;z-index:4200;display:none;background:rgba(0,0,0,.42)}'+
+    '#tsaySheet.on{display:block}'+
+    '#tsaySheet .tsay-box{position:absolute;left:0;right:0;bottom:0;max-height:92vh;overflow-y:auto;'+
+      'background:var(--t-card,#fff);border-radius:20px 20px 0 0;padding:18px 16px 28px}'+
+    '@media(min-width:720px){#tsaySheet .tsay-box{left:50%;right:auto;bottom:auto;top:50%;'+
+      'transform:translate(-50%,-50%);width:660px;border-radius:20px}}'+
+    '.tsay-t{font-size:var(--t3);font-weight:800;color:var(--t-ink);margin:0 0 4px}'+
+    '.tsay-s{font-size:var(--t6);color:var(--t-sub);line-height:1.6;margin:0 0 12px}'+
+    '.tsay-x{position:absolute;right:12px;top:12px;width:40px;height:40px;border:0;border-radius:12px;'+
+      'background:var(--t-bg,#F2F4F6);font-size:20px;cursor:pointer}'+
+    '.tsay-ks{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 14px}'+
+    '.tsay-l{display:block;font-size:var(--t6);font-weight:700;color:var(--ink-2);margin:12px 0 5px}'+
+    '.tsay-in,.tsay-ta{width:100%;min-height:44px;padding:11px 12px;border:1px solid var(--t-line);'+
+      'border-radius:11px;font-family:inherit;font-size:var(--t5);color:var(--t-ink);'+
+      'background:var(--t-card,#fff);box-sizing:border-box}'+
+    '.tsay-ta{min-height:132px;line-height:1.65;resize:vertical}'+
+    '.tsay-in[readonly],.tsay-ta[readonly]{background:var(--t-bg,#F2F4F6);color:var(--t-sub,#6B7684)}'+
+    '.tsay-b{display:flex;gap:8px;margin-top:16px}'+
+    '.tsay-b button{flex:1;min-height:48px;border:0;border-radius:12px;font-family:inherit;'+
+      'font-size:var(--t5);font-weight:800;cursor:pointer}'+
+    '.tsay-go{background:var(--t-point);color:#fff}'+
+    '.tsay-undo{background:var(--t-bg,#F2F4F6);color:var(--t-sub,#6B7684)}'+
+    '.tsay-who{font-size:var(--t7);color:var(--t-sub2);margin-top:9px;line-height:1.6}';
+  document.head.appendChild(st);
+}
+function tsayOpen(k){
+  tsayCss();
+  var e=document.getElementById('tsaySheet');
+  if(!e){ e=document.createElement('div'); e.id='tsaySheet'; document.body.appendChild(e); }
+  var K=tsayKeys();
+  TSAY.pick=(k&&K.indexOf(k)>=0)?k:(K[0]||'');
+  e.classList.add('on');
+  tsayPaint();
+  /* 열 때 한 번만 새로 받습니다 — 다른 기기에서 고치셨을 수 있습니다 (7번) */
+  tsayLoad(true,function(){ tsayPaint(); });
+}
+function tsayClose(){ var e=document.getElementById('tsaySheet'); if(e)e.classList.remove('on'); }
+function tsayPick(k){ TSAY.pick=k; tsayPaint(); }
+function tsayPaint(){
+  var e=document.getElementById('tsaySheet'); if(!e)return;
+  var K=tsayKeys(),k=TSAY.pick,i,can=tsayCan();
+  var B=null; try{ B=APEX_STAGE.taSayBase(k); }catch(e1){ B=null; }
+  var O=(TSAY.map&&TSAY.map[k])||null;
+  var val=function(a,b){ a=(a==null?'':(''+a)); return a?a:(b==null?'':(''+b)); };
+  var ro=can?'':' readonly';
+  var h='<div class="tsay-box" role="dialog" aria-label="첫 마디 고치기">'+
+    '<button type="button" class="tsay-x" onclick="tsayClose()" aria-label="닫기">&times;</button>'+
+    '<div class="tsay-t">✏️ 첫 마디 고치기</div>'+
+    '<p class="tsay-s">'+(can
+      ? '고치시면 <b>팀 모두가</b> 같은 말을 씁니다. 「원래 말로」 를 누르면 처음 말이 다시 섭니다.'
+      : '<b>대표만 고칠 수 있습니다.</b> 여기서는 지금 쓰는 말을 읽으실 수 있습니다.')+'</p>'+
+    '<div class="tsay-ks">';
+  for(i=0;i<K.length;i++)
+    h+='<button type="button" class="t-chip'+(K[i]===k?' on':'')+'" onclick="tsayPick(\''+osEsc(K[i])+'\')">'+
+       osEsc(K[i])+((TSAY.map&&TSAY.map[K[i]])?' ✏️':'')+'</button>';
+  h+='</div>';
+  if(!B){
+    h+='<p class="tsay-s">이 갈래의 <b>원래 말을 못 찾았습니다</b> — 아무 말도 만들지 않습니다.</p>';
+    e.innerHTML=h+'</div>'; return;
+  }
+  h+='<label class="tsay-l" for="tsayT">이 분을 뭐라고 부를까요 — 멘트 카드 머리에 섭니다</label>'+
+     '<input class="tsay-in" id="tsayT" maxlength="40"'+ro+' value="'+osEsc(val(O&&O.t,B.t))+'">'+
+     '<label class="tsay-l" for="tsaySay">첫 마디 — 줄을 바꾸면 화면에서도 줄이 바뀝니다</label>'+
+     '<textarea class="tsay-ta" id="tsaySay" maxlength="900"'+ro+'>'+osEsc(val(O&&O.say,B.say))+'</textarea>'+
+     '<label class="tsay-l" for="tsayTip">한 줄 조언 — 설계사에게만 보입니다(고객에게 안 갑니다)</label>'+
+     '<input class="tsay-in" id="tsayTip" maxlength="160"'+ro+' value="'+osEsc((''+val(O&&O.tip,B.tip)).replace(/<[^>]*>/g,''))+'">';
+  if(can)
+    h+='<div class="tsay-b">'+
+       '<button type="button" class="tsay-go" onclick="tsaySave()"'+(TSAY.busy?' disabled':'')+'>'+
+         (TSAY.busy?'보내는 중…':'저장 — 팀 모두에게')+'</button>'+
+       (O?('<button type="button" class="tsay-undo" onclick="tsayReset()"'+(TSAY.busy?' disabled':'')+'>원래 말로</button>'):'')+
+       '</div>';
+  h+='<div class="tsay-who">'+
+     (O?('✏️ '+osEsc(O.by||'대표')+'님이 '+osEsc(O.at||'')+' 에 고치셨습니다.')
+       :'아직 고친 적이 없습니다 — <b>처음 말</b> 그대로입니다.')+
+     (TSAY.err?('<br>⚠ '+osEsc(TSAY.err)):'')+
+     '</div></div>';
+  e.innerHTML=h;
+}
+function tsayVal(id){ var n=document.getElementById(id); return n?(''+n.value).replace(/^\s+|\s+$/g,''):''; }
+function tsaySave(){
+  if(!tsayCan()){ toast('대표만 고칠 수 있습니다'); return; }
+  var k=TSAY.pick,B=null; try{ B=APEX_STAGE.taSayBase(k); }catch(e){ B=null; }
+  if(!B)return;
+  var say=tsayVal('tsaySay');
+  if(!say){ toast('첫 마디를 비워 두실 수는 없습니다 — 「원래 말로」 를 눌러 주십시오'); return; }
+  var sb=null; try{ sb=osClient(); }catch(e2){ sb=null; }
+  if(!sb){ toast('서버에 닿지 못했습니다'); return; }
+  var me=''; try{ me=(OS.profile&&OS.profile.name)||''; }catch(e3){}
+  var row={k:k,t:tsayVal('tsayT'),say:say,tip:tsayVal('tsayTip'),
+           updated_at:new Date().toISOString(),updated_name:me};
+  TSAY.busy=true; TSAY.err=''; tsayPaint();
+  sb.from('stage_says').upsert(row).then(function(r){
+    TSAY.busy=false;
+    if(r&&r.error){
+      /* ★ 서버가 막으면 <b>막혔다고 적습니다</b> — 조용히 성공한 척하지 않습니다 (1번) */
+      TSAY.err='서버가 받지 않았습니다 — '+(r.error.message||'대표만 고칠 수 있습니다');
+      tsayPaint(); return;
+    }
+    TSAY.loaded=false;
+    tsayLoad(true,function(){ tsayPaint(); tsayAfter(); });
+    toast('고치셨습니다 — 팀 모두가 이 말을 씁니다');
+  },function(){ TSAY.busy=false; TSAY.err='서버에 닿지 못했습니다'; tsayPaint(); });
+}
+function tsayReset(){
+  if(!tsayCan()){ toast('대표만 고칠 수 있습니다'); return; }
+  var k=TSAY.pick,sb=null; try{ sb=osClient(); }catch(e){ sb=null; }
+  if(!sb){ toast('서버에 닿지 못했습니다'); return; }
+  TSAY.busy=true; TSAY.err=''; tsayPaint();
+  sb.from('stage_says')['delete']().eq('k',k).then(function(r){
+    TSAY.busy=false;
+    if(r&&r.error){ TSAY.err='서버가 받지 않았습니다 — '+(r.error.message||'대표만 고칠 수 있습니다'); tsayPaint(); return; }
+    TSAY.loaded=false;
+    tsayLoad(true,function(){ tsayPaint(); tsayAfter(); });
+    toast('처음 말로 되돌렸습니다');
+  },function(){ TSAY.busy=false; TSAY.err='서버에 닿지 못했습니다'; tsayPaint(); });
+}
+/* 고친 뒤 <b>지금 보고 계신 화면</b>도 같이 바뀌게 — 다시 그리는 자는 그 화면 것입니다 (5번) */
+function tsayAfter(){
+  try{ if(typeof OS!=='undefined'&&OS.tab==='home'&&typeof go==='function')go('home'); }catch(e){}
+}
+/* ✏️ 단추 — <b>대표에게만</b> 섭니다. 아닌 분께는 안 세웁니다(눌러도 안 되는 단추는 안 세웁니다) */
+function tsayEditBtn(k){
+  if(!tsayCan())return '';
+  return '<button type="button" class="hm-ta-ed" onclick="tsayOpen(\''+osEsc(k||'')+'\')" '+
+         'aria-label="첫 마디 고치기">✏️</button>';
+}
 function hmTaHtml(x){
   var k=hmTaKind(x);
   var sv=hmSrcOf(x);
@@ -32105,8 +32315,14 @@ function hmTaHtml(x){
   var part=function(cls,lab,txt){
     return txt?('<div class="hm-ta-p '+cls+'"><span class="lb">'+lab+'</span>'+txt+'</div>'):'';
   };
+  /* ✏️ <b>고치신 말인지</b> 밝힙니다 (1번) — 앱이 쥔 말인지 사장님이 고치신
+     말인지 모르면, 이상할 때 어디를 고쳐야 할지 알 수 없습니다. */
+  var ek='',ed=false;
+  try{ var SS=APEX_STAGE.taSay(sv); ek=SS.k||''; ed=!!SS.edited; }catch(ee){}
   return '<div class="hm-ta">'+
-    '<div class="hm-ta-h">☎️ <b>'+osEsc(S.t)+'</b>'+(src?('<span>'+src+'</span>'):'')+'</div>'+
+    '<div class="hm-ta-h">☎️ <b>'+osEsc(S.t)+'</b>'+(src?('<span>'+src+'</span>'):'')+
+      (ed?'<span class="hm-ta-ed-m">✏️ 고치신 말</span>':'')+
+      (S.src?tsayEditBtn(ek):'')+'</div>'+
     '<div class="hm-ta-t">'+osEsc(S.say)+'</div>'+
     hmTaTrendHtml(S,x)+
     '<div class="hm-ta-b"><button type="button" onclick="hmTaCopy(\''+osEsc((x&&x.key)||'')+'\')">📋 복사</button>'+
@@ -32159,6 +32375,7 @@ function hmTaCopy(key){
     (S.next?('\n\n다음 한마디\n'+S.next.replace(/<[^>]*>/g,'')):''));
 }
 function hmTaCss(){
+  tsayMarkCss();          /* ✏️ 단추와 「고치신 말」 표시 — 이 카드가 쓰니 여기서 부릅니다 (5번) */
   if(document.getElementById('hmTaCss'))return;
   var st=document.createElement('style');st.id='hmTaCss';
   st.textContent=
@@ -32360,6 +32577,17 @@ function hmMoreCss(){
      화법이 없는 갈래(생일·주년)면 ② 를 안 세우고 어디서 고르는지 말합니다.
    ★ 첫 마디는 <b>한 줄만</b> 보여 드립니다 — 전부는 「이분 자세히」 안에
      그대로 있습니다. 여기서 다 펴면 홈이 한 화면을 넘습니다 (재 보았습니다). */
+/* ✏️ 첫 마디 고치기 단추 · 「고치신 말」 표시 (판 X412) */
+function tsayMarkCss(){
+  if(document.getElementById('tsayMarkCss'))return;
+  var st=document.createElement('style');st.id='tsayMarkCss';
+  st.textContent='.hm-ta-ed{margin-left:auto;min-width:44px;min-height:44px;border:0;border-radius:11px;'+
+      'background:var(--t-bg,#F2F4F6);font-size:15px;cursor:pointer;line-height:1}'+
+    '.hm-ta-ed-m{margin-left:6px;padding:2px 7px;border-radius:999px;background:var(--t-pur-l,#F3EEFF);'+
+      'color:var(--t-pur,#7C3AED);font-size:var(--t7);font-weight:800}'+
+    '.hm-ta-h{display:flex;align-items:center;gap:4px;flex-wrap:wrap}';
+  document.head.appendChild(st);
+}
 function hmHowCss(){
   if(document.getElementById('hmHowCss'))return;
   var st=document.createElement('style');st.id='hmHowCss';
@@ -32617,6 +32845,9 @@ function hmJudgeHtml(m,x){
 function hmNowHtml(ext){
   ext=ext||{};
   try{ hmKtCss(); hmTaCss(); hmPdCss(); }catch(e){}   /* 옷을 쓰는 화면에서 부른다 (5번) */
+  /* ✏️ 사장님이 고치신 첫 마디 — 받아 둔 것을 먼저 끼우고, <b>한 세션에 한 번</b>만
+     서버에 묻습니다. 안 보는 화면에서는 안 묻습니다 (7번 · 판 X412). */
+  try{ tsayBoot(); tsayLoad(false,null); }catch(e9){}
   var r=hmNext();
   if(!r.n)return '';
   if(!r.x)
@@ -68143,6 +68374,26 @@ var OS_REPAIR_SQL=[
  'create policy audit_logs_select on public.audit_logs for select to authenticated',
  '  using (public.is_admin() or public.is_owner());',
  'grant select, insert on public.audit_logs to authenticated;',
+ '',
+ /* ✏️ 첫 마디 덮개 — 사장님이 고치신 말을 팀이 함께 씁니다 (판 X412).
+    원래 말은 apex-stage.js 에 그대로 있고 이 표는 덮개 한 겹입니다 —
+    줄을 지우면 처음 말이 다시 섭니다. <b>쓰기는 대표만</b>입니다. */
+ 'create table if not exists public.stage_says(',
+ '  k text primary key,',
+ '  t text,',
+ '  say text,',
+ '  tip text,',
+ '  updated_at timestamptz not null default now(),',
+ '  updated_by uuid,',
+ '  updated_name text',
+ ');',
+ 'alter table public.stage_says enable row level security;',
+ 'drop policy if exists stage_says_read on public.stage_says;',
+ 'create policy stage_says_read on public.stage_says for select to authenticated using (auth.uid() is not null);',
+ 'drop policy if exists stage_says_write on public.stage_says;',
+ 'create policy stage_says_write on public.stage_says for all to authenticated',
+ '  using (public.is_owner()) with check (public.is_owner());',
+ 'grant select, insert, update, delete on public.stage_says to authenticated;',
  '',
  'create or replace function public.bump_ai_usage() returns int language plpgsql security definer set search_path=public as $fn$',
  'declare v int;',
