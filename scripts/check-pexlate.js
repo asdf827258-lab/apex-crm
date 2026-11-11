@@ -268,7 +268,7 @@ const LOOK = () => {
      '  ★★ 카드에 <b>이름이 한 자도 없다</b> (3번) — 수와 길만 적습니다');
 
   /* ══ [9] 길이 · 손 · 서버 ═══════════════════════════════════════ */
-  console.log('\n[9] 📏 <b>홈이 사장님 선(기본 3.40 + 무거운 씨 0.1화면) 안쪽</b>이다 · 칸이 44px · 서버를 안 부른다');
+  console.log('\n[9] 📏 <b>홈이 사장님 선(check-homeone 의 HOME_SCR + 무거운 씨 0.1화면) 안쪽</b>이다 · 칸이 44px · 서버를 안 부른다');
   /* ★★ <b>여기가 이 토막의 심장입니다.</b> 처음 판에서 저는 「막힌 데」 처럼
      쪽지 한 상자로 세웠고, <b>제 자는 초록</b>이었습니다 — 제 씨의 홈이
      4.16화면이었기 때문입니다. 그런데 홈 높이를 재는 check-homeone 의 씨에는
@@ -306,7 +306,17 @@ const LOOK = () => {
   /* ⬇ 판 X312 — 3.66 → 3.22. 임자(HOME_SCR)가 3.56 → 3.12 로 0.44 내려갔으니
      그대로 0.44 내립니다 — <b>무거운 씨 몫 0.1 은 안 건드립니다</b> (0-1번).
      이 씨로 잰 값 2,524px · 2.99화면. 남은 자리 194px. */
-  const 선 = 3.50;
+  /* ★★ 판 X408 — <b>베끼지 않고 임자에게 묻습니다</b> (5번).
+     여태 여기·check-msfive·check-hmpoint 가 저마다 HOME_SCR 값을 <b>손으로
+     베껴</b> 두고 있었습니다. 임자가 움직일 때마다 세 곳을 같이 고쳐야 하고,
+     한 곳을 잊으면 <b>헛 빨간불</b>이 켜집니다(이번에 여기가 그랬습니다).
+     이제 check-homeone 에서 <b>그 줄을 읽어</b> 씁니다 — 무거운 씨 몫 0.1 만
+     제 몫으로 더합니다. 못 읽으면 <b>짐작하지 않고</b> 멈춥니다 (1번). */
+  const HSRC = require('fs').readFileSync(
+    require('path').join(__dirname, 'check-homeone.js'), 'utf8');
+  const HM = /^const HOME_SCR = ([\d.]+);/m.exec(HSRC);
+  if (!HM) { console.log('  ✗ check-homeone 의 HOME_SCR 을 못 읽었습니다 — 선을 짐작하지 않습니다 (1번)'); process.exit(1); }
+  const 선 = Math.round((parseFloat(HM[1]) + 0.1) * 100) / 100;   /* 무거운 씨 몫 0.1 */
   const 많음 = [];
   for (let i = 0; i < 12; i++)
     많음.push({ id: 'h' + i, stage: ['AP', 'PC', 'CS'][i % 3],
