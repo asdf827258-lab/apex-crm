@@ -133,6 +133,12 @@ const FEED = () => {
       telH: a ? Math.round(a.getBoundingClientRect().height) : 0,
       cp: c ? (c.getAttribute('onclick') || '') : '', cpT: c ? c.innerText.trim() : '',
       cpH: c ? Math.round(c.getBoundingClientRect().height) : 0,
+      /* ★★ <b>말이 잘렸나</b> — 여기서 두 번 데였습니다. 글자로 읽으면
+         (innerText) 잘려도 <b>전문이 나와</b> 멀쩡해 보입니다. 라이브를
+         찍어 보고서야 「신청해…」 에서 끊긴 것을 봤습니다. 이제 <b>그려진
+         높이</b>로 잽니다 — 속이 겉보다 크면 잘린 것입니다 (8번). */
+      cut: t ? (t.scrollHeight - t.clientHeight > 2) : false,
+      cutPx: t ? (t.scrollHeight - t.clientHeight) : 0,
       /* 「이분 끝」 단추가 <b>제 이름(.hm-nx-f)</b>으로 찾아지나 — 내 글이 남의 눈을
          가리면 안 됩니다. check-hmblank 가 글자로 찾다 제 도움말을 눌렀습니다 (8번). */
       fin: !!document.querySelector('#dynPane .hm-nx-f') };
@@ -146,6 +152,23 @@ const FEED = () => {
   is(how.telH >= 44 && how.cpH >= 44, '  단추가 <b>손가락에 닿는다</b> — ' + how.telH + '·' + how.cpH + 'px (≥44)');
   is(how.h <= 80, '  ★★ <b>한 줄을 넘지 않는다</b> — ' + how.h + 'px ≤ 80 (카드에 예산을 쥔 자가 넷입니다)');
   is(how.fin, '  ★★ 「이분 끝」 단추가 <b>제 이름(.hm-nx-f)</b>으로 찾아진다 — 내 글이 남의 눈을 안 가린다');
+  is(!how.cut, '  ★★ 첫 마디가 <b>안 잘린다</b> — 그려진 높이로 잽니다(넘친 ' + how.cutPx + 'px). ' +
+     '글자로 읽으면 잘려도 전문이 나와 멀쩡해 보입니다 (8번)');
+  /* 출처마다 길이가 다릅니다 — <b>제일 긴 것</b>으로도 재야 합니다 (1번) */
+  const cutAll = await pg.evaluate(() => {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;left:16px;top:0;width:328px;visibility:hidden';
+    document.body.appendChild(d);
+    const out = [];
+    ['보장분석', '지인소개', '홈쇼핑', '농협', '개척', ''].forEach(v => {
+      d.innerHTML = hmHowHtml({ id: 'db-1', k: 'db', tk: 'TA', key: 'db-1', src: v });
+      const t = d.querySelector('.hm-how-t');
+      if (t) out.push({ v: v || '(없음)', px: t.scrollHeight - t.clientHeight });
+    });
+    d.remove(); return out;
+  });
+  console.log('      ' + cutAll.map(x => x.v + (x.px > 2 ? ('✗넘침' + x.px) : '✓')).join(' · '));
+  is(cutAll.every(x => x.px <= 2), '  ★★ <b>출처 여섯 갈래 어느 것도</b> 안 잘린다 — 제일 긴 말로도 잽니다');
 
   console.log('\n[3] 💬 <b>멘트는 apex-stage 한 곳에서</b> 온다 (5번 · 1번)');
   /* ⚠ 처음엔 「다음 분」 을 세 번 눌러 견주었는데, 그러면 <b>줄이 다 뒤로

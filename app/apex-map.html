@@ -1079,6 +1079,9 @@ body.dock .deck{display:none}
     <!-- 🎙 자비스 목소리 (판 X336) — 고르는 표는 JV_VOX_OPTS 하나입니다 -->
     <label for="kVox">자비스 목소리</label>
     <select id="kVox"></select>
+    <!-- 🤖 목소리 결 (판 X413) — 고르는 표는 JV_VOX_FX 하나입니다 -->
+    <label for="kVoxFx">목소리 결</label>
+    <select id="kVoxFx"></select>
     <div class="row vtest"><button class="btn" id="kVoxTry" type="button">목소리 들어 보기</button></div>
     <p id="kVoxSay" style="margin:8px 0 0"></p>
     <div class="warn">키는 이 브라우저에만 저장되고 다른 곳으로 보내지 않습니다.
@@ -4602,8 +4605,19 @@ var JV_VOX_OPTS = [
   {v:'ai:Iapetus', t:'AI 남자 — 맑고 부드럽게'},
   {v:'dev',        t:'기기 목소리 — 서버를 부르지 않습니다'}
 ];
+/* 🤖 목소리 결 (판 X413) — 사장님 말씀 2026-11-11 「목소리만 조금 더 사이보그 같이 다듬자」.
+   ★ 사이보그 — 받은 목소리(또렷한 말)는 그대로 두고 그 위에 <b>얹습니다</b>: 빠른 금속 공명(짧은 메아리 겹침) ·
+     링 변조(52Hz 디지털 떨림) · 살짝 깨진 디지털 결 · 헬멧 공명(1.4kHz) · 조금 낮은 음 · 말머리 「삐릭」.
+     말이 묻히지 않게 얹는 소리는 원음보다 작게 둡니다.
+   ★ 은은하게 — 판 X336 그대로(짧은 메아리 · 잔향). 언제든 되돌리실 수 있게 남깁니다.
+   ★ 소리는 전부 <b>이 기기에서</b> 입힙니다 — 서버를 더 부르지 않습니다 (7번). 표는 이것 하나 (5번) */
+var JV_VOX_FX = [
+  {v:'cyborg', t:'사이보그 — 금속 공명 · 디지털 떨림 (추천)'},
+  {v:'soft',   t:'은은하게 — 짧은 메아리 · 잔향만 (예전)'}
+];
 var JV_VOX = {
   pick:LS.get('jv_vox', 'ai:Charon'),
+  fx:LS.get('jv_vox_fx', 'cyborg'),
   /* 모델 이름은 구글이 바꿉니다 — 앞의 것이 「없다」 고 하면 다음 것으로 (막힘과 「없음」 은 다릅니다) */
   models:['gemini-2.5-flash-preview-tts', 'gemini-2.5-flash-tts', 'gemini-2.5-pro-preview-tts'],
   model:LS.get('jv_vox_model', ''), dead:'', ok:false, slow:0, wait:false, armed:false,
@@ -4611,6 +4625,9 @@ var JV_VOX = {
 };
 /* 말투 지시는 <b>영어로</b> 둡니다 — 읽을 글(한국어)과 갈라져, 지시문까지 소리 내 읽는 일이 없습니다 */
 var JV_VOX_STYLE = 'Read the following Korean text aloud in a calm, low, composed voice, like a refined AI butler. Text: ';
+/* 사이보그 결은 말투도 고르게 — 높낮이를 덜 싣고 또박또박 (판 X413) */
+var JV_VOX_STYLE_CY = 'Read the following Korean text aloud in a calm, low, precise voice with an even, slightly mechanical cadence and little emotional inflection, like an advanced AI system. Text: ';
+function voxCyborg(){ return JV_VOX.fx !== 'soft'; }
 function voxAiName(){ var m = /^ai:(\w+)$/.exec(JV_VOX.pick || ''); return m ? m[1] : ''; }
 /* ★ <b>누르신 뒤에만</b> 부릅니다 — 창을 열자마자 서는 인사말까지 AI 목소리로 받으면 자비스를 열
    때마다 서버를 부르고, 폰은 누르기 전 소리를 막아 그 소리는 버려집니다 (7번) */
@@ -4651,7 +4668,7 @@ document.addEventListener('keydown', voxWake, true);
 
 function voxReq(text, model){
   var gkey = getGKey(), url, headers = {'Content-Type':'application/json'};
-  var payload = {contents:[{role:'user', parts:[{text:JV_VOX_STYLE + text}]}],
+  var payload = {contents:[{role:'user', parts:[{text:(voxCyborg() ? JV_VOX_STYLE_CY : JV_VOX_STYLE) + text}]}],
     generationConfig:{responseModalities:['AUDIO'],
       speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:voxAiName() || 'Charon'}}}}};
   if (gkey) url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(gkey);
@@ -4674,7 +4691,8 @@ function voxPcm(b64){
   return out;
 }
 function voxFetch(text){
-  var hit = JV_VOX.cache[text];
+  /* 결마다 말투 지시가 달라 기억도 따로 둡니다 (판 X413) */
+  var ck = (voxCyborg() ? 'c|' : 's|') + text, hit = JV_VOX.cache[ck];
   if (hit) return Promise.resolve(hit);
   var list = JV_VOX.model ? [JV_VOX.model].concat(JV_VOX.models.filter(function(m){ return m !== JV_VOX.model; })) : JV_VOX.models.slice();
   function next(i){
@@ -4694,7 +4712,7 @@ function voxFetch(text){
       var rate = +((/rate=(\d+)/.exec(d.inlineData.mimeType || '') || [0, 24000])[1]) || 24000;
       var a = {pcm:voxPcm(d.inlineData.data), rate:rate};
       JV_VOX.model = list[i]; JV_VOX.ok = true; LS.set('jv_vox_model', list[i]);
-      JV_VOX.cache[text] = a; JV_VOX.keys.push(text);
+      JV_VOX.cache[ck] = a; JV_VOX.keys.push(ck);
       if (JV_VOX.keys.length > 12) delete JV_VOX.cache[JV_VOX.keys.shift()];
       return a;
     });
@@ -4710,33 +4728,67 @@ function voxVerb(ctx){
   }
   return b;
 }
-/* 🎛 울림 사슬 — 낮은 웅웅거림 걷기 → 몸통 → 또렷함 → (짧은 금속성 메아리 + 잔향) → 압축 */
+/* 살짝 깨진 디지털 결 — 부드러운 꺾임(tanh). 세게 걸면 말이 뭉개지니 조금만 (판 X413) */
+function voxCurve(k){
+  var n = 1024, c = new Float32Array(n), d = Math.tanh(k);
+  for (var i = 0; i < n; i++){ var x = i * 2 / n - 1; c[i] = Math.tanh(k * x) / d; }
+  return c;
+}
+/* 말머리 「삐릭」 — 높은 데서 내려오는 짧은 디지털 신호. 이 기기에서 만듭니다 */
+function voxChirp(ctx, out, t0){
+  var o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'square'; o.frequency.setValueAtTime(1900, t0); o.frequency.exponentialRampToValueAtTime(620, t0 + 0.06);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.035, t0 + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07);
+  o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.08);
+}
+/* 🎛 울림 사슬 — 낮은 웅웅거림 걷기 → 몸통 → 또렷함 → (짧은 금속성 메아리 + 잔향) → 압축
+   🤖 사이보그(판 X413) — 그 위에 헬멧 공명 · 디지털 결 · 빠른 금속 공명 · 링 변조를 <b>얹습니다</b>.
+   원음(dry)이 늘 가장 크게 남아 말은 또렷합니다. 고르는 곳은 voxCyborg 하나입니다 (5번). */
 function voxPlay(a, seq){
   var ctx = voxCtx();
   if (!ctx) throw new Error('소리판을 못 엽니다');
+  var cy = voxCyborg();
   var buf = ctx.createBuffer(1, a.pcm.length, a.rate);
   if (buf.copyToChannel) buf.copyToChannel(a.pcm, 0); else buf.getChannelData(0).set(a.pcm);
-  var src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = 0.97;
-  var hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 85;
-  var body = ctx.createBiquadFilter(); body.type = 'lowshelf'; body.frequency.value = 220; body.gain.value = 3;
-  var pres = ctx.createBiquadFilter(); pres.type = 'peaking'; pres.frequency.value = 2900; pres.Q.value = 0.9; pres.gain.value = 3.5;
-  var dry = ctx.createGain(); dry.gain.value = 0.9;
-  var dl = ctx.createDelay(0.1); dl.delayTime.value = 0.014;
-  var fb = ctx.createGain(); fb.gain.value = 0.24;
-  var wet = ctx.createGain(); wet.gain.value = 0.15;
+  var src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = cy ? 0.94 : 0.97;
+  var hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = cy ? 110 : 85;
+  var body = ctx.createBiquadFilter(); body.type = 'lowshelf'; body.frequency.value = 220; body.gain.value = cy ? 2 : 3;
+  var pres = ctx.createBiquadFilter(); pres.type = 'peaking'; pres.frequency.value = 2900; pres.Q.value = 0.9; pres.gain.value = cy ? 5 : 3.5;
+  var dry = ctx.createGain(); dry.gain.value = cy ? 0.78 : 0.9;
+  var dl = ctx.createDelay(0.1); dl.delayTime.value = cy ? 0.0065 : 0.014;
+  var fb = ctx.createGain(); fb.gain.value = cy ? 0.42 : 0.24;
+  var wet = ctx.createGain(); wet.gain.value = cy ? 0.22 : 0.15;
   var cv = ctx.createConvolver(); cv.buffer = voxVerb(ctx);
-  var rv = ctx.createGain(); rv.gain.value = 0.11;
-  var comp = ctx.createDynamicsCompressor(); comp.threshold.value = -20; comp.ratio.value = 3;
+  var rv = ctx.createGain(); rv.gain.value = cy ? 0.07 : 0.11;
+  var comp = ctx.createDynamicsCompressor(); comp.threshold.value = cy ? -22 : -20; comp.ratio.value = cy ? 4 : 3;
   var an = ctx.createAnalyser(); an.fftSize = 512;
+  var tail = pres, osc = null;
   src.connect(hp); hp.connect(body); body.connect(pres);
-  pres.connect(dry); dry.connect(comp);
-  pres.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(comp);
-  pres.connect(cv); cv.connect(rv); rv.connect(comp);
-  comp.connect(an); an.connect(ctx.destination);
+  if (cy){
+    /* 헬멧 공명 → 디지털 결 */
+    var helm = ctx.createBiquadFilter(); helm.type = 'peaking'; helm.frequency.value = 1400; helm.Q.value = 2.2; helm.gain.value = 3;
+    var crush = ctx.createWaveShaper(); crush.curve = voxCurve(2.2); crush.oversample = '2x';
+    pres.connect(helm); helm.connect(crush); tail = crush;
+    /* 링 변조 — 52Hz 로 소리를 떨게 한 것을 조금만 섞습니다 */
+    var ring = ctx.createGain(); ring.gain.value = 0;
+    osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 52; osc.connect(ring.gain);
+    var rmix = ctx.createGain(); rmix.gain.value = 0.16;
+    tail.connect(ring); ring.connect(rmix); rmix.connect(comp);
+  }
+  tail.connect(dry); dry.connect(comp);
+  tail.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(comp);
+  tail.connect(cv); cv.connect(rv); rv.connect(comp);
+  /* 얹은 소리만큼 마지막에 한 번 낮춥니다 — 찢어지지 않고(최대 < 1) 예전 결과 비슷한 크기로 (판 X413 · check-jvhud [6]) */
+  var outG = ctx.createGain(); outG.gain.value = cy ? 0.72 : 1;
+  comp.connect(outG); outG.connect(an); an.connect(ctx.destination);
   JV_VOX.src = src; JV_VOX.an = an; JV_VOX.via = 'ai';
-  src.onended = function(){ if (seq === JV_VOX.seq){ JV_VOX.an = null; JV_VOX.src = null; hudSet(busy ? 'think' : 'idle'); } };
+  src.onended = function(){ try { if (osc) osc.stop(); } catch(e){} if (seq === JV_VOX.seq){ JV_VOX.an = null; JV_VOX.src = null; hudSet(busy ? 'think' : 'idle'); } };
   hudSet('talk');
-  src.start(0);
+  var t0 = ctx.currentTime;
+  if (cy){ voxChirp(ctx, comp, t0); t0 += 0.09; }
+  if (osc) osc.start(t0);
+  src.start(t0);
 }
 /* 기기 목소리 — 이 기기 밖으로 안 나갑니다 */
 function speakDev(t, seq){
@@ -4747,7 +4799,9 @@ function speakDev(t, seq){
     if (TTS.v){ u.voice = TTS.v; u.lang = TTS.v.lang; } else { u.lang = 'ko-KR'; }
     /* 남자 목소리가 없으면 낮춰 읽습니다 — 자비스는 차분해야 합니다 */
     var male = !!(TTS.v && VOICE_MALE.test(TTS.v.name || ''));
-    u.rate = 1.02; u.pitch = male ? 0.95 : 0.8; u.volume = 1;
+    /* 기기 목소리에는 효과를 못 입힙니다 — 사이보그 결이면 더 낮고 고르게만 (판 X413) */
+    if (voxCyborg()){ u.rate = 0.98; u.pitch = male ? 0.82 : 0.7; } else { u.rate = 1.02; u.pitch = male ? 0.95 : 0.8; }
+    u.volume = 1;
     u.onstart = function(){ if (seq === JV_VOX.seq){ JV_VOX.via = 'dev'; hudSet('talk'); } };
     u.onend = u.onerror = function(){ if (seq === JV_VOX.seq) hudSet(busy ? 'think' : 'idle'); };
     window.speechSynthesis.speak(u);
@@ -8431,17 +8485,24 @@ function kVoxPaint(){
   if (!sel) return;
   if (!sel.options.length) sel.innerHTML = JV_VOX_OPTS.map(function(o){ return '<option value="' + o.v + '">' + esc(o.t) + '</option>'; }).join('');
   sel.value = JV_VOX.pick;
+  var fx = document.getElementById('kVoxFx');
+  if (fx){ if (!fx.options.length) fx.innerHTML = JV_VOX_FX.map(function(o){ return '<option value="' + o.v + '">' + esc(o.t) + '</option>'; }).join(''); fx.value = voxCyborg() ? 'cyborg' : 'soft'; }
   var t;
   if (!voxAiName()) t = '기기에 깔린 목소리로 읽습니다' + (TTS.v ? ' — ' + TTS.v.name : '') + '. 서버를 부르지 않습니다.';
   else if (!(getGKey() || getGProxy())) t = 'AI 목소리는 Gemini 키나 회사 서버(/api/gemini)가 있어야 납니다 — 지금은 기기 목소리로 읽습니다.';
   else if (JV_VOX.dead) t = 'AI 목소리가 막혔습니다(' + JV_VOX.dead + ') — 이 창에서는 기기 목소리로 읽습니다. 다시 고르시면 한 번 더 해 봅니다.';
-  else t = 'AI 목소리(' + (JV_VOX.ok ? JV_VOX.model : 'Gemini') + ')로 읽고 울림을 입힙니다. 답마다 머리 한두 문장(160자)만 읽고, 고객 이름·번호가 든 말은 기기 목소리가 읽습니다.';
+  else t = 'AI 목소리(' + (JV_VOX.ok ? JV_VOX.model : 'Gemini') + ')로 읽고 ' + (voxCyborg() ? '사이보그 결(금속 공명 · 디지털 떨림)' : '울림') + '을 입힙니다. 답마다 머리 한두 문장(160자)만 읽고, 고객 이름·번호가 든 말은 기기 목소리가 읽습니다.';
   if (say) say.textContent = t;
 }
 document.getElementById('kVox').onchange = function(){
   JV_VOX.pick = this.value; JV_VOX.dead = ''; JV_VOX.slow = 0;
   LS.set('jv_vox', this.value);
   kVoxPaint(); hudStats();
+};
+document.getElementById('kVoxFx').onchange = function(){
+  JV_VOX.fx = this.value === 'soft' ? 'soft' : 'cyborg';
+  LS.set('jv_vox_fx', JV_VOX.fx);
+  kVoxPaint();
 };
 document.getElementById('kVoxTry').onclick = function(){
   if (!TTS.on){ TTS.on = true; LS.set('map_voice', '1'); }
