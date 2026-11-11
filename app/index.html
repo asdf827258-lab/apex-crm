@@ -21978,7 +21978,7 @@ function owCss(){
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
 var APP_BUILD='2026-11-11 20:41';
-var APP_BUILD_NOTE='✏️ <b>첫 마디를 사장님이 고치시면 팀 모두가 그 말을 씁니다</b>(판 X412 · 사장님 말씀 「<b>보장분석 신청 한 사람들 멘트가 너무 별로여서 내가 수정하고 공유할수 있도록 만들어, 수정은 오직 운영자만 가능하도록</b>」) — 멘트 카드 머리의 <b>✏️</b> 를 누르시면 갈래 여섯(보장분석 · 소개 · 방송 · 농협 · 개척 · 일반)을 그 자리에서 고치실 수 있습니다. 저장하면 <b>홈 한 줄 · 긴 멘트 카드 · 📋 복사</b>가 한꺼번에 바뀌고, 팀원 화면에도 같은 말이 섭니다. 마음에 안 드시면 「<b>원래 말로</b>」 한 번이면 처음 말이 돌아옵니다. <b>팀원은 못 고칩니다</b> — 단추가 아예 안 서고, 서버도 대표만 쓰게 막혀 있습니다. ◾ 🧭 <b>오늘 할 일 도움말과 멘트 한 줄</b>(판 X408)도 그대로 들어 있습니다. ◾ 같이 실려 나간 판 — 💰 제안 순위(X410) · 📄 약관 발췌와 쪽 번호(X407).';
+var APP_BUILD_NOTE='✏️ <b>첫 마디를 사장님이 고치시면 팀 모두가 그 말을 씁니다</b>(판 X412 · 사장님 말씀 「<b>보장분석 신청 한 사람들 멘트가 너무 별로여서 내가 수정하고 공유할수 있도록 만들어, 수정은 오직 운영자만 가능하도록</b>」) — 멘트 카드 머리의 <b>✏️</b> 를 누르시면 갈래 여섯(보장분석 · 소개 · 방송 · 농협 · 개척 · 일반)을 그 자리에서 고치실 수 있습니다. 저장하면 <b>홈 한 줄 · 긴 멘트 카드 · 📋 복사</b>가 한꺼번에 바뀌고, 팀원 화면에도 같은 말이 섭니다. 마음에 안 드시면 「<b>원래 말로</b>」 한 번이면 처음 말이 돌아옵니다. <b>팀원은 못 고칩니다</b> — 단추가 아예 안 서고, 서버도 대표만 쓰게 막혀 있습니다(진짜 서버에서 걸어 보았습니다). 고치신 말은 <b>하루에 한 번</b> 받아 옵니다 — 사장님 기기에는 저장하신 그 자리에서 바로 섭니다. ◾ 🧭 <b>오늘 할 일 도움말과 멘트 한 줄</b>(판 X408)도 그대로 들어 있습니다. ◾ 같이 실려 나간 판 — 💰 제안 순위(X410) · 📄 약관 발췌와 쪽 번호(X407).';
 
 
 
@@ -32126,10 +32126,29 @@ function tsayBoot(){
     if(r&&r.map){ TSAY.map=r.map; TSAY.at=r.at||''; tsayApply(); }
   }catch(e){}
 }
+/* 오늘 이미 받아 두었나 — <b>하루에 한 번</b>이면 넉넉합니다. 사장님이 말을
+   고치시는 일은 하루에 몇 번씩 있는 일이 아니고, 고치신 그 기기는 저장 직후
+   바로 다시 받습니다. 다른 분 화면에는 <b>다음 날</b> 섭니다 (7번).
+   ⚠ 「오늘 받았나」 를 묻는 곳도 <b>한 곳</b>입니다 (5번). */
+/* ⚠ <b>맨 UTC 날짜를 쓰지 않습니다</b> — toISOString() 은 UTC 라 한국 새벽
+   0~9시에는 <b>전날</b>이 됩니다. 그 시각에 켜면 어제 받은 것을 「오늘 것」 으로
+   읽어 고치신 말이 하루 늦게 섭니다. 날을 아는 자는 앱에 이미 있습니다 (5번). */
+function tsayDay(){
+  try{ if(typeof mcalToday==='function')return mcalToday(); }catch(e){}
+  try{ if(typeof osTodayStr==='function')return osTodayStr(); }catch(e2){}
+  return '';
+}
+function tsayFresh(){
+  try{
+    var r=JSON.parse(localStorage.getItem(TSAY_LS)||'null');
+    return !!(r&&r.day===tsayDay());
+  }catch(e){ return false; }
+}
 function tsayLoad(force,cb){
   if(TSAY.busy){ if(cb)cb(false); return; }
   /* 안 보는 화면에서 되풀이해 부르지 않습니다 (7번) */
   if(!force&&TSAY.loaded){ if(cb)cb(true); return; }
+  if(!force&&tsayFresh()){ TSAY.loaded=true; if(cb)cb(true); return; }
   if(!force){ try{ if(document.hidden){ if(cb)cb(false); return; } }catch(e){} }
   var sb=null; try{ sb=osClient(); }catch(e2){ sb=null; }
   if(!sb){ if(cb)cb(false); return; }
@@ -32142,7 +32161,8 @@ function tsayLoad(force,cb){
       M[x.k]={t:x.t||'',say:x.say||'',tip:x.tip||'',at:(''+(x.updated_at||'')).slice(0,10),by:x.updated_name||''};
       if((x.updated_at||'')>at)at=x.updated_at||''; }
     TSAY.map=M; TSAY.at=at.slice(0,10); TSAY.loaded=true;
-    try{ localStorage.setItem(TSAY_LS,JSON.stringify({map:M,at:TSAY.at})); }catch(e3){}
+    try{ localStorage.setItem(TSAY_LS,JSON.stringify(
+      {map:M,at:TSAY.at,day:tsayDay()})); }catch(e3){}
     tsayApply();
     if(cb)cb(true);
   },function(){ TSAY.busy=false; TSAY.err='서버에 닿지 못했습니다'; if(cb)cb(false); });

@@ -202,6 +202,20 @@ const open = async (pg, who) => {
   is(calls === 0, '  홈을 <b>두 번 더 그려도</b> stage_says 를 안 부른다 — ' + calls + '번');
   const cache = await pg.evaluate(() => { try { return !!JSON.parse(localStorage.getItem('apex_tsay_v1') || 'null'); } catch (e) { return false; } });
   is(cache, '  받아 둔 것이 <b>이 기기에 남는다</b> — 다음에 바로 선다');
+  /* ★★ <b>하루에 한 번</b>인가 — 앱을 새로 켜도 그날 두 번째부터는 안 묻습니다.
+     check-boot 의 「홈 처음」 눈금을 하나 쓰는 자리라, 그 한 번이 정말
+     하루치인지 여기서 잽니다 (7번). */
+  const 하루 = await pg.evaluate(() => {
+    TSAY.loaded = false;                 /* 앱을 새로 켠 셈 */
+    window.__CALLS.length = 0;
+    const before = tsayFresh();
+    tsayLoad(false, null);
+    return { fresh: before, n: window.__CALLS.filter(x => /stage_says/.test(x)).length };
+  });
+  await pg.waitForTimeout(500);
+  const 하루n = await pg.evaluate(() => window.__CALLS.filter(x => /stage_says/.test(x)).length);
+  is(하루.fresh && 하루n === 0,
+     '  ★★ <b>하루에 한 번</b>이다 — 앱을 새로 켜도 그날 두 번째부터 ' + 하루n + '번 (7번)');
 
   console.log('\n[2] 🔒 <b>오직 운영자만</b> 고친다');
   const ownerBtn = await pg.evaluate(() => {
