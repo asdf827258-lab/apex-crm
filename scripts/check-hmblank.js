@@ -89,7 +89,12 @@ const SEED = () => {
   const A = await p.evaluate(async () => {
     const r = hmNext(), x = r && r.x;
     const out = { 첫분: x ? x.id : '', key: x ? x.key : '' };
-    const fin = [...document.querySelectorAll('#dynPane button')].find(e => /이분 끝/.test(e.textContent));
+    /* ⚠ 여기서 데였습니다 — 글자(「이분 끝」)로 첫 단추를 찾다가, 판 X408 의
+       걸음 도움말(「… 끝나면 ✅ 이분 끝」)을 눌렀습니다. 그 글도 단추라
+       #dynPane 안에 먼저 섭니다. 이제 <b>제 이름(.hm-nx-f)</b>으로 찾습니다 —
+       단추를 가리키는 글이 늘어도 안 흔들립니다 (8번). */
+    const fin = document.querySelector('#dynPane .hm-nx-f') ||
+      [...document.querySelectorAll('#dynPane button')].find(e => /이분 끝/.test(e.textContent));
     out.단추 = !!fin;
     if (fin) fin.click();
     await new Promise(r2 => setTimeout(r2, 300));

@@ -125,29 +125,27 @@ const FEED = () => {
   const how = await pg.evaluate(() => {
     const e = document.querySelector('.hm-how');
     if (!e) return null;
+    const a = e.querySelector('a.hm-how-b'), c = e.querySelector('button.hm-how-b');
+    const t = e.querySelector('.hm-how-t');
     return { h: Math.round(e.getBoundingClientRect().height),
-      hd: (e.querySelector('.hm-how-h') || {}).innerText || '',
-      rows: [...e.querySelectorAll('.hm-how-r')].map(x => {
-        const b = x.querySelector('.hm-how-b');
-        return { t: (x.querySelector('.hm-how-t') || {}).innerText || '',
-                 b: b ? b.innerText.trim() : '', a: !!(b && b.tagName === 'A'),
-                 href: b && b.tagName === 'A' ? b.getAttribute('href') : '',
-                 oc: b ? (b.getAttribute('onclick') || '') : '',
-                 hb: b ? Math.round(b.getBoundingClientRect().height) : 0 };
-      }) };
+      say: t ? t.innerText.replace(/\s+/g, ' ').trim() : '',
+      tel: a ? a.getAttribute('href') : '', telT: a ? a.innerText.trim() : '',
+      telH: a ? Math.round(a.getBoundingClientRect().height) : 0,
+      cp: c ? (c.getAttribute('onclick') || '') : '', cpT: c ? c.innerText.trim() : '',
+      cpH: c ? Math.round(c.getBoundingClientRect().height) : 0,
+      /* 「이분 끝」 단추가 <b>제 이름(.hm-nx-f)</b>으로 찾아지나 — 내 글이 남의 눈을
+         가리면 안 됩니다. check-hmblank 가 글자로 찾다 제 도움말을 눌렀습니다 (8번). */
+      fin: !!document.querySelector('#dynPane .hm-nx-f') };
   });
-  is(!!how, '  카드에 <b>「✅ 이렇게 하세요」</b> 가 선다 — 펴 보지 않아도 보인다');
-  if (!how) { console.log('\n✗ 상자가 없어 더 못 봅니다'); await br.close(); srv.close(); process.exit(1); }
-  how.rows.forEach((r, i) => console.log('      ' + '①②'[i] + ' ' + r.t.replace(/\s+/g, ' ').slice(0, 54) +
-    (r.b ? ('   [' + r.b + (r.href ? (' → ' + r.href) : '') + ' · ' + r.hb + 'px]') : '')));
-  is(how.rows.length === 2, '  <b>두 걸음</b>이다 — ③ 끝내기는 아래 ✅ 이분 끝 과 머리 도움말이 말한다 (5번)');
-  is(how.rows[0] && how.rows[0].a && /^tel:\d/.test(how.rows[0].href || ''),
-     '  ★★ ① 이 <b>진짜 전화 고리</b>다 — ' + ((how.rows[0] || {}).href || '없음'));
-  is(how.rows[1] && /hmTaCopy\(/.test(how.rows[1].oc || ''),
-     '  ★★ ② 의 📋 복사가 <b>이미 있던 자(hmTaCopy)</b>를 부른다 — 새로 베끼지 않는다 (5번)');
-  is(how.rows.every(r => !r.b || r.hb >= 36), '  단추가 <b>손가락에 닿는다</b> — ' +
-     how.rows.map(r => r.hb).join('·') + 'px (≥36)');
-  is(how.h <= 170, '  상자가 홈을 많이 안 먹는다 — ' + how.h + 'px ≤ 170');
+  is(!!how, '  카드에 <b>한 줄</b>이 선다 — 펴 보지 않아도 번호와 첫 마디가 보인다');
+  if (!how) { console.log('\n✗ 줄이 없어 더 못 봅니다'); await br.close(); srv.close(); process.exit(1); }
+  console.log('      [' + how.telT + ' → ' + how.tel + '] ' + how.say.slice(0, 50) + ' [' + how.cpT + ']');
+  is(/^tel:\d/.test(how.tel || ''), '  ★★ <b>진짜 전화 고리</b>다 — ' + (how.tel || '없음'));
+  is(/hmTaCopy\(/.test(how.cp || ''),
+     '  ★★ 📋 복사가 <b>이미 있던 자(hmTaCopy)</b>를 부른다 — 새로 베끼지 않는다 (5번)');
+  is(how.telH >= 44 && how.cpH >= 44, '  단추가 <b>손가락에 닿는다</b> — ' + how.telH + '·' + how.cpH + 'px (≥44)');
+  is(how.h <= 80, '  ★★ <b>한 줄을 넘지 않는다</b> — ' + how.h + 'px ≤ 80 (카드에 예산을 쥔 자가 넷입니다)');
+  is(how.fin, '  ★★ 「이분 끝」 단추가 <b>제 이름(.hm-nx-f)</b>으로 찾아진다 — 내 글이 남의 눈을 안 가린다');
 
   console.log('\n[3] 💬 <b>멘트는 apex-stage 한 곳에서</b> 온다 (5번 · 1번)');
   /* ⚠ 처음엔 「다음 분」 을 세 번 눌러 견주었는데, 그러면 <b>줄이 다 뒤로
@@ -169,11 +167,11 @@ const FEED = () => {
     const x = r && r.x; if (!x) return null;
     const S = (typeof APEX_STAGE !== 'undefined' && APEX_STAGE.script)
       ? APEX_STAGE.script(hmTaKind(x), hmSrcOf(x)) : null;
-    const e = document.querySelector('.hm-how .hm-how-t.q');
+    const e = document.querySelector('.hm-how .hm-how-t');
     return { one: S ? ('' + S.say).split('\n')[0] : '', scr: e ? e.innerText.replace(/^💬\s*/, '').trim() : '' };
   });
   is(!!cp && !!cp.one && cp.scr.indexOf(cp.one.slice(0, 18)) >= 0,
-     '  ★★ 화면의 ② 와 복사가 <b>같은 자에게</b> 묻는다 (5번)');
+     '  ★★ 화면의 첫 마디와 복사가 <b>같은 자에게</b> 묻는다 (5번)');
 
   console.log('\n[4] 🙈 <b>접은 것이지 지운 것이 아니다</b> (6번)');
   const pre = await pg.evaluate(() => !!document.querySelector('.hm-ta'));
@@ -207,9 +205,12 @@ const FEED = () => {
   is(!tel.d.known && !tel.d.of, '  ★ <b>모르는 분</b>은 「아직 못 물었다」 — 「없다」 와 가린다 (1번)');
   const nophone = await pg.evaluate(() => {
     const h = (typeof hmHowHtml === 'function') ? hmHowHtml({ id: 'db-3', k: 'db', tk: 'TA', key: 'db-3', src: '홈쇼핑' }) : '';
-    return { h: h, tel: /href="tel:/.test(h), say: /안 적혀|못 물었/.test(h) };
+    /* 「번호 없음」(서버가 없다고 함) 과 「번호 확인 중」(아직 못 물음) 을 가립니다 (1번) */
+    const m = /class="hm-how-b g">([^<]*)</.exec(h);
+    return { h: h, tel: /href="tel:/.test(h), say: /번호 없음|번호 확인 중/.test(h), t: m ? m[1] : '' };
   });
-  is(!nophone.tel && nophone.say, '  ★★ 번호를 모르면 <b>빈 고리를 안 세우고 모른다고 적는다</b> (1번)');
+  is(!nophone.tel && nophone.say,
+     '  ★★ 번호를 모르면 <b>빈 고리를 안 세우고 모른다고 적는다</b> (1번) — ' + (nophone.t || '없음'));
 
   console.log('\n[6] 🧨 <b>화면이 터지지 않았다</b>');
   is(errs.length === 0, errs.length ? ('  콘솔 에러 — ' + errs.slice(0, 3).join(' | ')) : '  콘솔 에러 <b>없음</b>');
