@@ -29,6 +29,11 @@
      [9] ★★★ <b>같이 소통</b> — 칸 안에서 치면 <b>위 「진행중 예상」 이 바로</b> 바뀐다 ·
          서버를 다시 읽지 않는다(7번) · 홈이 다시 그려져도 치던 판이 안 새로 뜬다 ·
          「접기」 하면 남은 것을 바로 보내고 칸이 비워진다
+    [10] ★★ <b>그 자리에서 고친다</b> (판 X426 · 사장님 말씀 2026-11-12 「고객 추가 이름도 여기서
+         할수 없나? 본인것들 본인이 수정하게, 단계 바꾸기」) — 단계를 고르면 표와 같은 문으로
+         가고 묶음이 바뀐다 · 보류·무산은 closed 칸으로 · 빠지면 판에서 내려간다 · 이름을 고치면
+         그 칸만 · 비우면 원래 이름 · 새 고객은 AP·PC 중 골라 넣고 넣자마자 제 묶음에 선다 ·
+         홈은 단계·이름·새 줄을 들으면 배정 DB 를 다시 읽는다(금액은 안 읽음)
 
    ⚠ 서버는 가짜입니다 — 이 자는 「어느 문으로 무엇을 보내나」 를 봅니다.
      문이 실제로 적는지는 pipeline_save 의 일입니다(표가 이미 쓰는 문).
@@ -72,7 +77,7 @@ const FAKE = (rows) => `window.__CALLS=[];window.supabase={createClient:function
     then:function(ok,no){return Promise.resolve({data:T[t]||[],error:null}).then(ok,no);}};return q;}
   return {auth:{getSession:function(){return Promise.resolve({data:{session:{user:{id:ME}}}});}},
     from:Q,
-    rpc:function(n,a){__CALLS.push({rpc:n,a:a});return Promise.resolve({data:n==='pipeline_goals'?[]:null,error:null});}};
+    rpc:function(n,a){__CALLS.push({rpc:n,a:a});return Promise.resolve({data:n==='pipeline_goals'?[]:n==='pipeline_new'?'n1':null,error:null});}};
 }};`;
 const D = (id, who, stage, expect, extra) => Object.assign({ id, assigned_to: who, assigned_date: 며칠뒤(-5),
   source: '일반', region: '순천', customer_name: '홍길동' + id, next_appt: null, stage,
@@ -120,6 +125,10 @@ const ROWS = [
     묶음줄: [...document.querySelectorAll('.qk-r')].map(r => { let g = r.previousElementSibling;
       while (g && !g.dataset.qg) g = g.previousElementSibling; return r.dataset.qid + '@' + (g ? g.dataset.qg : '-'); }).join(),
     칩: !!document.querySelector('[data-qall],.qk-chips,[data-addmid]'),
+    단계칸: [...document.querySelectorAll('.qk-r')].map(r => r.dataset.qid + ':' + r.querySelector('[data-qs]').value).join(),
+    이름칸: [...document.querySelectorAll('[data-qn]')].map(e => e.value).join(),
+    넣기: !!document.querySelector('#qk-add') && [...document.querySelectorAll('#qk-ns option')].map(o => o.value).join(),
+    누름: Math.min(...[...document.querySelectorAll('[data-qn],[data-qs],#qk-nn,#qk-add')].map(e => Math.round(e.getBoundingClientRect().height))),
     고르개: !!document.getElementById('qk-who'),
     목표: !!document.querySelector('.qk-goal [data-goal="me"]'),
     옆: document.documentElement.scrollWidth - window.innerWidth,
@@ -133,7 +142,11 @@ const ROWS = [
   is(A.줄.join(',') === 'a3*=,a2=15,a1*=', '★★ AP · PC 만 — PC(a3 안 적힘 → a2 15만) 다음 AP(a1) · TA·CS·미접촉·계약완료·보류 빠짐');
   is(A.묶음.join('|') === 'PC:2분 · 예상 15만원|AP:1분 · 예상 0만원', '★★ 단계별 묶음 머리 — PC 위 · AP 아래 · 몇 분 · 예상 합계');
   is(A.묶음줄 === 'a3@PC,a2@PC,a1@AP', '★ 줄은 제 단계 묶음 밑에 선다 (' + A.묶음줄 + ')');
-  is(!A.칩, '「미접촉까지」 칩 · 「+ 새 고객 추가」 없음(새 줄은 미접촉이라 이 판에 안 보임 — 표에서 넣음)');
+  is(!A.칩, '「미접촉까지」 칩 · 표의 「+ 새 건 추가」(미접촉으로 들어가 이 판에 안 보임) 없음');
+  is(A.단계칸 === 'a3:PC,a2:PC,a1:AP', '★ 줄마다 단계 고르개 — 지금 단계가 골라져 있다 (' + A.단계칸 + ')');
+  is(A.이름칸 === '홍길동a3,홍길동a2,홍길동a1', '★ 이름은 고칠 수 있는 칸이다 (' + A.이름칸 + ')');
+  is(A.넣기 === 'AP,PC', '★ 「+ 새 고객」 — AP · PC 중에 골라 넣는다');
+  is(A.누름 >= 44, '이름 · 단계 · 넣기 누르는 높이 ' + A.누름 + 'px ≥ 44');
   is(A.목표, '월간목표 칸이 위에 선다(goalHTML 그대로 · 5번)');
   console.log('\n[4] 팀원은 제 것만');
   is(!A.고르개, '팀원에게는 담당자 고르개가 없다');
@@ -162,6 +175,48 @@ const ROWS = [
   await p.waitForTimeout(1100);
   const E = await p.evaluate(() => __CALLS.filter(c => c.rpc === 'pipeline_save' && c.a.p_id === 'a2').map(c => c.a.p.expect_premium));
   is(E.length && E[E.length - 1] === '', '★★ 빈 글로 보낸다 → 서버 null (' + JSON.stringify(E) + ')');
+  await p.context().close();
+
+  console.log('\n[10] 그 자리에서 고친다 — 단계 · 이름 · 새 고객');
+  p = await 창();
+  await p.goto('http://127.0.0.1:' + PORT + '/edu-pipeline.html?quick=1', { waitUntil: 'domcontentloaded', timeout: 90000 });
+  await p.waitForSelector('.qk-r', { timeout: 30000 });
+  const 보낸 = () => p.evaluate(() => __CALLS.filter(c => c.rpc === 'pipeline_save' || c.rpc === 'pipeline_new').map(c => c.a));
+  const 묶음 = () => p.evaluate(() => [...document.querySelectorAll('.qk-r')].map(r => { let g = r.previousElementSibling;
+    while (g && !g.dataset.qg) g = g.previousElementSibling; return r.dataset.qid + '@' + (g ? g.dataset.qg : '-'); }).join());
+  await p.selectOption('[data-qs="a1"]', 'PC');
+  await p.waitForTimeout(300);
+  let S = await 보낸();
+  is(S.some(c => c.p_id === 'a1' && c.p.stage === 'PC'), '★★ a1 AP → PC — 표와 같은 문(pipeline_save)으로 stage 를 보낸다 ' + JSON.stringify(S.slice(-1)));
+  const 옮김 = await 묶음();
+  is(옮김.split(',').every(x => /@PC$/.test(x)) && 옮김.indexOf('a1@PC') >= 0, '★★ 고르자마자 a1 이 PC 묶음으로 옮겨 선다 (' + 옮김 + ')');
+  await p.selectOption('[data-qs="a3"]', '무산');
+  await p.waitForTimeout(300);
+  S = await 보낸();
+  is(S.some(c => c.p_id === 'a3' && c.p.closed_reason === '무산' && !('stage' in c.p)), '★★ 무산은 단계가 아니라 closed 칸(closed_reason)으로 간다');
+  is(!(await 묶음()).includes('a3'), '★ AP·PC 가 아니게 된 a3 는 판에서 내려간다');
+  await p.fill('[data-qn="a2"]', '홍길순'); await p.press('[data-qn="a2"]', 'Enter');
+  await p.waitForTimeout(300);
+  S = await 보낸();
+  is(S.some(c => c.p_id === 'a2' && c.p.customer_name === '홍길순' && Object.keys(c.p).join() === 'customer_name'),
+    '★★ 이름을 고치면 이름 칸(customer_name) 하나만 보낸다');
+  const n0 = S.length;
+  await p.fill('[data-qn="a1"]', '  '); await p.press('[data-qn="a1"]', 'Enter');
+  await p.waitForTimeout(300);
+  is((await 보낸()).length === n0 && await p.$eval('[data-qn="a1"]', e => e.value) === '홍길동a1',
+    '★ 이름을 비우면 안 보내고 원래 이름으로 돌린다(「이름없음」 으로 덮지 않음 · 1번)');
+  await p.click('#qk-add'); await p.waitForTimeout(200);
+  is(!(await 보낸()).some(c => c.p_to), '이름 없이 「넣기」 를 누르면 안 만든다');
+  await p.fill('#qk-nn', '홍길동새'); await p.selectOption('#qk-ns', 'PC'); await p.click('#qk-add');
+  await p.waitForTimeout(400);
+  S = await 보낸();
+  const nw = S.find(c => c.p_to);
+  console.log('    새 고객: ' + JSON.stringify(nw));
+  is(nw && nw.p_to === 'me' && nw.p.customer_name === '홍길동새' && nw.p.stage === 'PC', '★★ 새 고객 — 표와 같은 문(pipeline_new)으로 · 나에게 · PC 로');
+  const 새줄 = await p.evaluate(() => ({ 묶음: (() => { const r = document.querySelector('.qk-r[data-qid="n1"]'); let g = r && r.previousElementSibling;
+      while (g && !g.dataset.qg) g = g.previousElementSibling; return g ? g.dataset.qg : ''; })(),
+    칸: document.activeElement && document.activeElement.dataset.qx, 비움: document.querySelector('#qk-nn').value }));
+  is(새줄.묶음 === 'PC' && 새줄.칸 === 'n1', '★★ 넣자마자 PC 묶음에 서고 금액 칸에 손이 간다 (' + JSON.stringify(새줄) + ')');
   await p.context().close();
 
   console.log('\n[4] 팀장 — 제 팀원까지, 남의 팀은 없다');
@@ -284,6 +339,11 @@ const ROWS = [
   is(같은판, '★★ 홈이 다시 그려져도 칸 안 판은 그대로 (치던 칸을 잃지 않음)');
   is(await p.evaluate(() => /20만원/.test((document.querySelector('#hmFlow [data-pexline]') || {}).textContent || '')),
     '다시 그려도 합계는 20만원 그대로(손의 줄을 고쳤으므로)');
+  /* 단계를 고치면 홈이 <b>다시 읽는다</b> — 칸 수가 바뀌므로 (판 X426) */
+  await fr.locator('[data-qs="a1"]').selectOption('PC');
+  await p.waitForTimeout(1100);
+  const 다시 = await p.evaluate(() => window.__AR);
+  is(다시 === 1, '★★ 칸 안에서 단계를 고치면 홈이 배정 DB 를 한 번 다시 읽는다 — arLoad ' + 다시 + '번');
   /* 접기 — 남은 것을 바로 보내고 칸을 비운다 */
   await fr.locator('[data-qx="a3"]').click();
   await p.keyboard.type('5');
