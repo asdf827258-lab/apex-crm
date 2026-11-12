@@ -111,6 +111,71 @@ const srv = http.createServer((rq, rs) => {
     is(inside.alive, '화면 안이 <b>멈추지 않고</b> 살아 있다');
     is(inside.inframe && inside.btn && inside.shown, '워크스페이스 안이라 <b>「고객 365일에 저장」</b> 단추가 선다');
 
+    /* ══ 🔁 갱신주기 — 판 X423 ═══════════════════════════════════════════
+       판 X131 이 「갱신일은 못 합니다」 라고 화면에 적어 둔 자리입니다.
+       보험 한 줄에 그 칸이 없었기 때문입니다. 칸을 만들었으니, 이제
+       <b>적은 것만</b> 셈이 되는지 · <b>안 적은 것은 안 세우는지</b> 를 봅니다.
+       ★ 셈을 여기서 베껴 적지 않습니다 — 「7해 전에 들고 3년마다면
+         <b>2해 뒤</b>」 라는 것은 손으로 셀 수 있는 사실이고, 그것만 견줍니다.
+       ★ 오늘이 언제든 같은 답이 나오게 <b>오늘에서 거꾸로</b> 세웁니다.    */
+    sec('[2-1] 🔁 갱신 — 적어 두신 계약만 · 날짜는 가입일+주기로 (판 X423)');
+    const RN = ready ? await fr.evaluate(() => {
+      const d = new Date(), ty = d.getFullYear(), mm = ('0' + (d.getMonth() + 1)).slice(-2);
+      const put = (rnw, start) => {
+        S.before = [{ id: 'p1', co: '삼성', nm: '암보험', term: '', start: start,
+                      years: '', rnw: rnw, premMan: '', act: 'keep', kb: false,
+                      cov: {}, cov2: {} }];
+        const e = baEndOf();
+        return (e && e.rnw) ? (e.rnw.ym + '/' + e.rnw.every) : null;
+      };
+      /* 칸을 <b>진짜로 그려</b> 봅니다 — 손으로 만든 반쪽 계약이 아니라
+         addPol 이 만드는 그 줄로 (그래야 이 자가 화면과 같은 것을 봅니다) */
+      let row = '';
+      try {
+        S.before = []; addPol('before'); S.before[0].rnw = '5';
+        row = polHtml(S.before[0], 'before', 0);
+      } catch (e) { row = 'ERR ' + e; }
+      return {
+        칸: /갱신주기/.test(row) && /'rnw'/.test(row),
+        줄: row.slice(0, 120),
+        고를것: /value="no"[^>]*>비갱신</.test(row) && /value="3"/.test(row),
+        고른것: /value="5" selected/.test(row),
+        기본모름: (typeof addPol === 'function') ? (function () {
+            const keep = S.before.slice(); addPol('before');
+            const v = S.before[S.before.length - 1].rnw; S.before = keep; return v;
+          })() : 'x',
+        셋:       put('3',  (ty - 7) + '-' + mm),
+        모름:     put('',   (ty - 7) + '-' + mm),
+        비갱신:   put('no', (ty - 7) + '-' + mm),
+        가입일없음: put('3', ''),
+        해지한것: (function () {
+            S.before = [{ id: 'p1', co: '삼성', nm: '암보험', start: (ty - 7) + '-' + mm,
+                          rnw: '3', act: 'cancel', cov: {}, cov2: {} }];
+            const e = baEndOf(); return (e && e.rnw) ? e.rnw.ym : null;
+          })(),
+        바람: (ty + 2) + '-' + mm + '/3'
+      };
+    }) : null;
+    is(!!RN && RN.칸, '계약 적는 칸에 <b>갱신주기</b> 가 선다' +
+       (RN && !RN.칸 ? ' — ' + RN.줄 : ''));
+    is(!!RN && RN.고를것 && RN.고른것,
+       '고를 것에 <b>비갱신</b>·햇수가 있고, 적어 둔 것이 골라져 있다');
+    is(!!RN && RN.기본모름 === '',
+       '새 계약은 <b>「모름」 으로 시작한다</b> — 「비갱신」 으로 짐작해 두지 않는다 (1번)');
+    is(!!RN && RN.셋 === RN.바람,
+       '7해 전 가입 · 3년 갱신 → <b>2해 뒤 그 달</b>이다 (받음 ' +
+       (RN && RN.셋) + ' · 바람 ' + (RN && RN.바람) + ')');
+    is(!!RN && RN.모름 === null,
+       '<b>주기를 안 적으면 아무 날도 안 만든다</b> (1번) — 받음 ' + (RN && RN.모름));
+    is(!!RN && RN.비갱신 === null,
+       '<b>「비갱신」 은 아는 답</b>이라 역시 안 세운다 — 받음 ' + (RN && RN.비갱신));
+    is(!!RN && RN.가입일없음 === null,
+       '가입 달을 모르면 <b>주기만으로 날을 만들지 않는다</b> (1번) — 받음 ' +
+       (RN && RN.가입일없음));
+    is(!!RN && RN.해지한것 === null,
+       '<b>해지할 보험</b>의 갱신은 안 세운다 — 없어질 보험입니다 (받음 ' +
+       (RN && RN.해지한것) + ')');
+
     sec('[3] 저장 — 한 고객에 한 줄, 아무나 못 쓴다');
     const said = await page.evaluate(async () => {
       window.__t = [];
