@@ -1597,6 +1597,8 @@ body.finance-mode #financeScreen{display:block;}
 .fin-float .ff-back{display:inline-flex;align-items:center;gap:6px;background:var(--primary);color:#fff;border:none;border-radius:var(--r-pill);font-size:var(--t6);font-weight:800;padding:8px 15px;cursor:pointer;letter-spacing:-.02em;transition:all var(--dur) var(--ease);}
 .fin-float .ff-back:hover{background:var(--primary-hover);transform:translateY(-1px);}
 .fin-float .ff-ico{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;border:none;font-size:var(--t6);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all var(--dur) var(--ease);}
+/* 📥 아카데미 「자료 넣기」 (판 X427) — 뒤로 단추와 같은 크기, 글자는 흰 바탕 위 파랑 */
+.fin-float .ff-add{display:inline-flex;align-items:center;gap:4px;background:#fff;color:var(--primary);border:none;border-radius:var(--r-pill);font-size:var(--t6);font-weight:800;padding:8px 13px;cursor:pointer;min-height:32px;white-space:nowrap}
 .fin-float .ff-ico:hover{background:rgba(255,255,255,.2);}
 @media(max-width:880px){.fin-float{left:10px;bottom:10px;}}
 /* DB CRM 전용 화면 (재무설계와 동일한 화면전환 패턴) */
@@ -3054,6 +3056,7 @@ body.insight-mode #insightScreen{display:block;}
     <button class="ff-back" onclick="exitBohum()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadBohum()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openBohumNewTab()" title="새 탭에서 열기">↗</button>
+    <button class="ff-add" onclick="alibOpen()" title="팀 자료칸에 그림 · PDF 넣기 — 자비스가 찾습니다">📥 자료 넣기</button>
   </div>
 </div>
 
@@ -22527,6 +22530,328 @@ function mountBohum(){
 function reloadBohum(){var f=$('bohumFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountBohum,30);toast('보험 마스터 아카데미 새로고침');}}
 function openBohumNewTab(){var w=window.open(BOHUM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitBohum(){go(prevTab||'home');}
+/* ══ 📥 <b>마스터 아카데미 「자료 넣기」 — 넣으면 팀 모두가 보고, 자비스가 찾습니다</b> (판 X427) ══════════
+   사장님 말씀 2026-11-12 — 「앞으로 자료를 또는 이미지를 마스터아카데미에 다 넣으면 자동으로 검색이
+   될 수 있니 그리고 마스터아카데미에 넣는 칸을 만들어줘 어디서든 공유 되도록」
+   → 넣는 사람 「팀원 누구나」 · 그림 설명 「AI 가 읽고 자동 설명」.
+
+   ★ 아카데미 교재는 앱 파일에 박혀 있어 새로 넣으려면 코드를 고쳐야 했습니다. 이 칸은 <b>서버</b>
+     (표 bohum_lib · 보관함 bohum-lib · migration_75)에 올려 어느 기기에서든 같은 자료를 봅니다.
+   ★ 서버를 아낍니다 (7번) — 받은 목록은 이 기기에 둡니다(apex_alib_v1). 통째로 받는 것은 <b>12시간에 한 번</b>,
+     그 사이에는 <b>새로 넣은 줄만</b>(created_at 이후) 받습니다. 한 줄은 1~2KB(앞부분 글은 400자까지) —
+     백 개면 통째로 받아도 0.2MB 입니다. 남이 지운 자료는 다음 통째 받기(12시간 안)에 빠집니다.
+     자비스는 본체가 받아 둔 것을 찾을 뿐 따로 부르지 않습니다.
+   ★ 막는 것 — 다 <b>까닭을 말하고</b> 막습니다.
+       · 원수사 약관(보통/특별약관 + 제N조) — 서버에 올리지 않습니다(9번). 미끼 레이더 서재(이 기기)로.
+       · 이 기기에 적힌 <b>고객 이름</b> · 휴대폰 번호가 든 글 · AI 가 개인정보를 본 그림 (3번).
+       · 같은 파일 — 바이트 지문(sha), PDF 는 글자 지문(tsha)까지 (5-1번). 무엇과 겹쳤는지 적습니다.
+   ★ 그림은 넣을 때 AI 가 <b>한 번</b> 읽어 제목 · 설명 · 찾기 말을 채웁니다. 그림 속 글자만 옮기고 없는
+     숫자를 지어내지 말라고 시킵니다(1번). AI 가 없으면 파일 이름으로 넣고 「AI 설명 없이」 라고 적습니다 —
+     넣은 사람이 ✏️ 로 고칩니다.                                                                        */
+var ALIB={loaded:false,busy:false,err:'',missing:false,list:[],url:{},urlAt:0,p:null,log:[],q:'',edit:''};
+var ALIB_BUCKET='bohum-lib',ALIB_MAX=20*1024*1024,ALIB_URL_TTL=6*3600;
+var ALIB_KIND={'image/png':'img','image/jpeg':'img','image/webp':'img','image/gif':'img','application/pdf':'pdf'};
+var ALIB_COLS='id,kind,title,descr,tags,excerpt,path,mime,size,sha,tsha,ai,uploader,uploader_name,created_at';
+function alibSb(){try{return (typeof osClient==='function')?osClient():null;}catch(e){return null;}}
+function alibUid(){try{return (OS.session&&OS.session.user&&OS.session.user.id)||'';}catch(e){return '';}}
+/* 받기 — 세션에 한 번. 넣기 · 지우기 뒤에만 force */
+var ALIB_LS='apex_alib_v1',ALIB_FULL=12*3600*1000;
+function alibCache(){
+  try{var o=JSON.parse(localStorage.getItem(ALIB_LS)||'null');
+    if(o&&o.uid===alibUid()&&o.list&&o.list.push&&Date.now()-(o.at||0)<ALIB_FULL)return o;}catch(e){}
+  return null;
+}
+function alibCacheSet(){try{localStorage.setItem(ALIB_LS,JSON.stringify({uid:alibUid(),at:ALIB.full||Date.now(),list:ALIB.list}));}catch(e){}}
+function alibLoad(force){
+  if(ALIB.loaded&&!force)return Promise.resolve(ALIB.list);
+  if(ALIB.p)return ALIB.p;
+  var sb=alibSb();
+  if(!sb||!alibUid()){ALIB.err='로그인하면 팀이 넣은 자료를 봅니다.';return Promise.resolve([]);}
+  ALIB.busy=true;
+  var c=force?null:alibCache(),newest=c&&c.list[0]?c.list[0].created_at:'';
+  var q=sb.from('bohum_lib').select(ALIB_COLS).order('created_at',{ascending:false});
+  if(c&&newest)q=q.gt('created_at',newest);
+  ALIB.p=new Promise(function(res){
+    q.then(function(r){
+      ALIB.busy=false;ALIB.p=null;
+      if(r&&r.error){
+        var m=r.error.message||'';
+        ALIB.missing=/does not exist|relation|schema cache/i.test(m);
+        ALIB.err=ALIB.missing?'서버에 자료칸(bohum_lib)이 아직 없습니다 — 설정 › 진단의 「복구 SQL」 을 대표님이 한 번 돌리시면 열립니다.':('자료를 못 받았습니다 — '+m);
+        res(ALIB.list);return;
+      }
+      ALIB.err='';ALIB.missing=false;
+      if(c){ALIB.list=((r&&r.data)||[]).concat(c.list);ALIB.full=c.at;}
+      else{ALIB.list=(r&&r.data)||[];ALIB.full=Date.now();}
+      ALIB.loaded=true;alibCacheSet();
+      alibSign().then(function(){res(ALIB.list);},function(){res(ALIB.list);});
+    },function(e){ALIB.busy=false;ALIB.p=null;ALIB.err='자료를 못 받았습니다 — '+((e&&e.message)||e);res(ALIB.list);});
+  });
+  return ALIB.p;
+}
+/* 그림 주소 — 보관함이 비공개라 서명한 주소를 <b>한 번에</b> 받습니다(6시간) */
+function alibSign(){
+  var sb=alibSb(),need=ALIB.list.filter(function(x){return x.kind==='img'&&(!ALIB.url[x.path]||Date.now()-ALIB.urlAt>5*3600*1000);}).map(function(x){return x.path;});
+  if(!sb||!need.length)return Promise.resolve();
+  return sb.storage.from(ALIB_BUCKET).createSignedUrls(need,ALIB_URL_TTL).then(function(r){
+    ((r&&r.data)||[]).forEach(function(u){if(u&&u.path&&u.signedUrl)ALIB.url[u.path]=u.signedUrl;});
+    ALIB.urlAt=Date.now();
+  },function(){});
+}
+function alibUrl(x){return (x&&ALIB.url[x.path])||'';}
+function alibCan(x){
+  if(!x)return false;
+  try{return x.uploader===alibUid()||(typeof osIsOwner==='function'&&osIsOwner())||osRole()==='admin';}catch(e){return false;}
+}
+/* 막는 것 — 까닭을 돌려줍니다. 빈 글이면 통과 */
+var ALIB_YAK=/(보통|특별)\s*약관/;
+function alibBlock(name,text){
+  var t=String(text||''),nm=String(name||'');
+  if(/약관/.test(nm)||(ALIB_YAK.test(t)&&/제\s*\d+\s*조/.test(t)))
+    return '원수사 약관으로 보입니다 — 약관은 서버에 올리지 않습니다(9번). 미끼 레이더의 「서재」 에 넣으시면 이 기기 안에서 찾습니다.';
+  if(/01[016789][-\s.]?\d{3,4}[-\s.]?\d{4}/.test(t+' '+nm))return '휴대폰 번호가 들어 있습니다 — 고객 정보는 팀 자료칸에 올리지 않습니다(3번). 가리고 넣어 주세요.';
+  var names=[],o;
+  try{o=cmReal();Object.keys(o).forEach(function(k){if(o[k])names.push(String(o[k]).trim());});}catch(e){}
+  try{o=cmRefReal();Object.keys(o).forEach(function(k){if(o[k])names.push(String(o[k]).trim());});}catch(e){}
+  for(var i=0;i<names.length;i++){
+    var n=names[i];
+    if(n.length>=2&&(t.indexOf(n)>=0||nm.indexOf(n)>=0))return '이 기기에 적힌 고객 이름(「'+(typeof osMaskName==='function'?osMaskName(n):n.charAt(0)+'○○')+'」)이 들어 있습니다 — 고객 자료는 팀 자료칸에 올리지 않습니다(3번).';
+  }
+  return '';
+}
+/* 글자 지문 — 빈칸 · 줄바꿈을 지우고 잽니다 (5-1번) */
+function alibTextSha(t){
+  var s=String(t||'').replace(/\s+/g,'');
+  if(s.length<200||!window.crypto||!window.crypto.subtle||typeof TextEncoder==='undefined')return Promise.resolve('');
+  return window.crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)).then(function(buf){
+    var a=new Uint8Array(buf),h='';for(var i=0;i<a.length;i++)h+=('0'+a[i].toString(16)).slice(-2);return h;
+  },function(){return '';});
+}
+/* 그림을 1024px JPEG 로 줄여 AI 에 — 크게 보낼 까닭이 없습니다 */
+function alibShrink(file){
+  return new Promise(function(res,rej){
+    var u=URL.createObjectURL(file),im=new Image();
+    im.onload=function(){
+      try{
+        var k=Math.min(1,1024/Math.max(im.naturalWidth||1,im.naturalHeight||1)),c=document.createElement('canvas');
+        c.width=Math.max(1,Math.round(im.naturalWidth*k));c.height=Math.max(1,Math.round(im.naturalHeight*k));
+        var g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(im,0,0,c.width,c.height);
+        URL.revokeObjectURL(u);res({mime:'image/jpeg',data:c.toDataURL('image/jpeg',0.82).split(',')[1]});
+      }catch(e){URL.revokeObjectURL(u);rej(e);}
+    };
+    im.onerror=function(){URL.revokeObjectURL(u);rej(new Error('그림을 못 읽었습니다.'));};
+    im.src=u;
+  });
+}
+var ALIB_AI_SYS='너는 보험 설계사 팀의 교육 자료를 정리하는 사서다. 받은 그림(교재 한 장 · 도표 · 사진)을 보고 '+
+  '팀원이 나중에 찾기 쉽게 제목 · 설명 · 찾기 말을 단다. 그림에 보이는 글자와 내용만 적는다 — 보이지 않는 숫자 · 상품명 · '+
+  '세금 결론을 지어내지 않는다. 세금 이야기면 「요건 충족 시」 를 붙인다. 사람 이름 · 전화번호 · 주민번호 · 증권번호 같은 '+
+  '개인정보가 보이면 pii 를 true 로 한다. 반드시 JSON 하나만 돌려준다: '+
+  '{"title":"25자 이내 제목","descr":"그림 속 핵심 글자와 내용 2~4문장","tags":"찾기 말 6~10개를 쉼표로","pii":false}';
+function alibDescribe(img,name){
+  if(typeof aiReady!=='function'||!aiReady()||typeof callAIVision!=='function')return Promise.resolve(null);
+  return callAIVision(ALIB_AI_SYS,'파일 이름: '+String(name||'').slice(0,80)+'\n이 그림의 제목 · 설명 · 찾기 말을 JSON 으로.',[img],700,'alib').then(function(t){
+    var s=String(t||''),m=s.match(/\{[\s\S]*\}/);
+    if(!m)return null;
+    try{var j=JSON.parse(m[0]);return {title:String(j.title||'').slice(0,60),descr:String(j.descr||'').slice(0,600),tags:String(j.tags||'').slice(0,200),pii:!!j.pii};}catch(e){return null;}
+  },function(){return null;});
+}
+function alibBase(name){return String(name||'자료').replace(/\.[A-Za-z0-9]{2,5}$/,'').replace(/[_\-]+/g,' ').trim().slice(0,60)||'자료';}
+/* 한 장 넣기 — 지문 · 겹침 · 글 · AI · 막기 · 올리기 · 표에 적기. 어느 걸음에서 멈췄는지 돌려줍니다 */
+function alibPut(file){
+  var sb=alibSb(),uid=alibUid(),kind=ALIB_KIND[file&&file.type];
+  if(!sb||!uid)return Promise.resolve({ok:false,msg:'로그인해야 팀 자료칸에 넣을 수 있습니다.'});
+  if(ALIB.missing)return Promise.resolve({ok:false,msg:ALIB.err});
+  if(!kind)return Promise.resolve({ok:false,msg:'그림(PNG · JPG · WEBP · GIF)이나 PDF 만 받습니다.'});
+  if(file.size>ALIB_MAX)return Promise.resolve({ok:false,msg:'20MB 가 넘습니다 — 나눠서 넣어 주세요.'});
+  var nameBlock=alibBlock(file.name,'');
+  if(nameBlock)return Promise.resolve({ok:false,msg:nameBlock});
+  var row={kind:kind,title:alibBase(file.name),descr:'',tags:'',excerpt:'',mime:file.type,size:file.size,ai:false,
+           uploader_name:(OS.profile&&OS.profile.name)||''};
+  return alibLoad().then(function(){return osSha256Hex(file);}).then(function(sha){
+    if(!sha)return {ok:false,msg:'이 브라우저에서는 지문을 잴 수 없어 겹침을 못 봅니다 — https 주소에서 넣어 주세요.'};
+    var dup=ALIB.list.filter(function(x){return x.sha===sha;})[0];
+    if(dup)return {ok:false,msg:'이미 있는 자료입니다 — 「'+dup.title+'」('+(dup.uploader_name||'팀원')+') 와 같은 파일이라 안 받았습니다.'};
+    row.sha=sha;row.path=uid+'/'+sha+'.'+(kind==='pdf'?'pdf':(file.type.split('/')[1]||'img').replace('jpeg','jpg'));
+    var textP=kind==='pdf'?extractPdfText(file).then(null,function(){return '';}):Promise.resolve('');
+    return textP.then(function(txt){
+      /* 글이 있는 PDF 인가 — 숫자가 적어도 교재 글은 글입니다(pdfTextTrust 는 금액 표를 보는 자라 여기엔 안 맞습니다).
+         사용자 지정 글자(U+E0xx)가 많으면 글자가 깨진 PDF 라 안 씁니다 (4-1번) */
+      var body=String(txt||'').replace(/\s/g,''),pua=(String(txt||'').match(new RegExp('[\uE000-\uF8FF]','g'))||[]).length;
+      var good=kind==='pdf'&&body.length>=200&&pua<10;
+      var b=alibBlock(file.name,txt);
+      if(b)return {ok:false,msg:b};
+      row.excerpt=good?String(txt).replace(/\s+/g,' ').trim().slice(0,400):'';
+      return alibTextSha(good?txt:'').then(function(tsha){
+        if(tsha){
+          var d2=ALIB.list.filter(function(x){return x.tsha&&x.tsha===tsha;})[0];
+          if(d2)return {ok:false,msg:'글이 똑같은 자료가 이미 있습니다 — 「'+d2.title+'」 와 내용이 같아 안 받았습니다.'};
+          row.tsha=tsha;
+        }
+        /* 그림 · 글 없는 PDF 는 AI 가 한 번 읽습니다(PDF 는 첫 장만) */
+        var imgP=kind==='img'?alibShrink(file):(row.excerpt?Promise.resolve(null):renderPdfPagesToImages(file,1,1024).then(function(a){return (a&&a[0])?{mime:a[0].mime||'image/jpeg',data:a[0].data||a[0]}:null;},function(){return null;}));
+        return imgP.then(function(img){return img?alibDescribe(img,file.name):null;},function(){return null;}).then(function(d){
+          if(d){
+            if(d.pii)return {ok:false,msg:'AI 가 그림에서 이름 · 번호 같은 개인정보를 보았습니다 — 가리고 넣어 주세요(3번).'};
+            var b2=alibBlock('',d.title+' '+d.descr+' '+d.tags);
+            if(b2)return {ok:false,msg:b2};
+            if(d.title)row.title=d.title;row.descr=d.descr;row.tags=d.tags;row.ai=true;
+          }
+          return sb.storage.from(ALIB_BUCKET).upload(row.path,file,{contentType:file.type,upsert:false}).then(function(u){
+            if(u&&u.error&&!/exists|duplicate/i.test(u.error.message||''))return {ok:false,msg:'올리지 못했습니다 — '+u.error.message};
+            return sb.from('bohum_lib').insert(row).select(ALIB_COLS).then(function(r){
+              if(r&&r.error){
+                sb.storage.from(ALIB_BUCKET).remove([row.path]);
+                return {ok:false,msg:/duplicate|23505/.test(r.error.message||r.error.code||'')?'이미 누가 넣은 파일입니다 — 안 받았습니다.':'적지 못했습니다 — '+r.error.message};
+              }
+              var x=(r&&r.data&&r.data[0])||row;ALIB.list.unshift(x);alibCacheSet();
+              return {ok:true,x:x,msg:(row.ai?'넣었습니다 — AI 가 제목 · 설명을 달았습니다.':(kind==='img'?'넣었습니다 — AI 설명 없이 넣었습니다. ✏️ 로 제목 · 찾기 말을 적어 주세요.':'넣었습니다.'))};
+            });
+          });
+        });
+      });
+    });
+  }).then(function(o){return o;},function(e){return {ok:false,msg:'넣지 못했습니다 — '+((e&&e.message)||e)};});
+}
+function alibFiles(files){
+  var L=[].slice.call(files||[]);
+  if(!L.length)return;
+  /* 한 묶음 안의 같은 파일도 한 번만 — 이름+크기로 먼저 거르고, 지문은 alibPut 이 봅니다 (5-1번) */
+  var seen={};L=L.filter(function(f){var k=f.name+'|'+f.size;if(seen[k])return false;seen[k]=1;return true;});
+  var chain=Promise.resolve();
+  L.forEach(function(f){
+    var it={name:f.name,st:'wait',msg:'기다리는 중'};ALIB.log.unshift(it);
+    chain=chain.then(function(){
+      it.st='busy';it.msg='읽는 중 — 지문 · 글 · AI 설명';alibPaint();
+      return alibPut(f).then(function(o){it.st=o.ok?'ok':'bad';it.msg=o.msg;if(o.ok)alibSign().then(alibPaint);alibPaint();});
+    });
+  });
+  alibPaint();
+  chain.then(function(){alibSign().then(alibPaint);});
+}
+function alibDel(id){
+  var x=ALIB.list.filter(function(y){return y.id===id;})[0],sb=alibSb();
+  if(!x||!sb||!alibCan(x))return;
+  if(!confirm('「'+x.title+'」 을 팀 자료칸에서 지울까요? 팀 모두에게서 사라집니다.'))return;
+  sb.from('bohum_lib')['delete']().eq('id',id).then(function(r){
+    if(r&&r.error){toast('지우지 못했습니다 — '+r.error.message);return;}
+    sb.storage.from(ALIB_BUCKET).remove([x.path]);
+    ALIB.list=ALIB.list.filter(function(y){return y.id!==id;});alibCacheSet();alibPaint();toast('지웠습니다.');
+  });
+}
+function alibEdit(id,on){ALIB.edit=on?id:'';alibPaint();}
+function alibSave(id){
+  var x=ALIB.list.filter(function(y){return y.id===id;})[0],sb=alibSb();
+  if(!x||!sb||!alibCan(x))return;
+  var v=function(k){var e=document.getElementById('alibE_'+k);return e?String(e.value||'').trim():'';};
+  var up={title:v('title').slice(0,60)||x.title,descr:v('descr').slice(0,600),tags:v('tags').slice(0,200)};
+  var b=alibBlock('',up.title+' '+up.descr+' '+up.tags);
+  if(b){toast(b);return;}
+  sb.from('bohum_lib').update(up).eq('id',id).then(function(r){
+    if(r&&r.error){toast('고치지 못했습니다 — '+r.error.message);return;}
+    Object.keys(up).forEach(function(k){x[k]=up[k];});alibCacheSet();ALIB.edit='';alibPaint();toast('고쳤습니다.');
+  });
+}
+/* 열기 — 그림은 받아 둔 주소, PDF 는 그때 한 장만 서명합니다. 창은 <b>먼저</b> 엽니다(팝업 막힘) */
+function alibOpenItem(id){
+  var x=ALIB.list.filter(function(y){return y.id===id;})[0],sb=alibSb();
+  if(!x||!sb)return;
+  if(x.kind==='img'&&alibUrl(x)){window.open(alibUrl(x),'_blank','noopener');return;}
+  var w=window.open('about:blank','_blank');
+  sb.storage.from(ALIB_BUCKET).createSignedUrl(x.path,600).then(function(r){
+    var u=r&&r.data&&r.data.signedUrl;
+    if(u&&w)w.location.href=u;else{if(w)w.close();toast('자료를 열지 못했습니다.');}
+  },function(){if(w)w.close();toast('자료를 열지 못했습니다.');});
+}
+function alibCss(){
+  if(document.getElementById('alibCss'))return;
+  var s=document.createElement('style');s.id='alibCss';
+  s.textContent=
+    '#alibOvl{position:fixed;inset:0;z-index:900;background:rgba(15,23,42,.45);display:none;align-items:flex-start;justify-content:center;padding:max(12px,env(safe-area-inset-top)) 12px 12px;overflow:auto}'+
+    '#alibOvl.on{display:flex}'+
+    '.alib-box{background:var(--t-bg,#fff);color:var(--t-ink,#191F28);width:min(720px,100%);border-radius:16px;padding:16px 16px 20px;box-shadow:0 18px 50px rgba(0,0,0,.25);box-sizing:border-box}'+
+    '.alib-hd{display:flex;align-items:flex-start;gap:10px}.alib-hd h3{margin:0;font-size:var(--t4);flex:1}'+
+    '.alib-x{border:none;background:none;font-size:22px;line-height:1;cursor:pointer;color:inherit;min-width:44px;min-height:44px}'+
+    '.alib-sub{font-size:var(--t6);color:var(--t-sub,#4E5968);line-height:1.6;margin:4px 0 10px}'+
+    '.alib-drop{border:2px dashed #B0BEDA;border-radius:12px;padding:18px 12px;text-align:center;font-size:var(--t5);cursor:pointer;background:#F7FAFF}'+
+    '.alib-drop.on{border-color:var(--primary,#3182F6);background:#EEF4FF}'+
+    '.alib-drop b{display:block;margin-bottom:4px}'+
+    '.alib-log{margin:10px 0 0;font-size:var(--t6);line-height:1.6}.alib-log div{padding:3px 0}.alib-log .ok{color:#047857}.alib-log .bad{color:#B91C1C}.alib-log .busy{color:#1D4ED8}'+
+    '.alib-find{width:100%;box-sizing:border-box;margin:14px 0 8px;padding:10px 12px;border:1px solid #D1D6DB;border-radius:10px;font-size:var(--t5)}'+
+    '.alib-item{display:flex;gap:10px;padding:10px 0;border-top:1px solid #EEF0F3;align-items:flex-start}'+
+    '.alib-th{width:72px;height:54px;flex:none;border-radius:8px;border:1px solid #DCE4F1;background:#fff center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer}'+
+    '.alib-b{flex:1;min-width:0}.alib-t{font-weight:800;font-size:var(--t5);word-break:keep-all}'+
+    '.alib-d{font-size:var(--t6);color:#4E5968;line-height:1.55;margin-top:2px;word-break:keep-all}'+
+    '.alib-m{font-size:var(--t6);color:#8B95A1;margin-top:2px}'+
+    '.alib-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.alib-acts button{min-height:36px;padding:0 12px;border-radius:999px;border:1px solid #D1D6DB;background:#fff;font-size:var(--t6);cursor:pointer}'+
+    '.alib-ed input,.alib-ed textarea{width:100%;box-sizing:border-box;margin:3px 0;padding:8px 10px;border:1px solid #D1D6DB;border-radius:8px;font-size:var(--t6);font-family:inherit}'+
+    '.alib-warn{font-size:var(--t6);background:#FFF7ED;border:1px solid #FED7AA;color:#9A3412;border-radius:10px;padding:8px 10px;margin:8px 0;line-height:1.6}';
+  document.head.appendChild(s);
+}
+function alibOpen(){
+  alibCss();
+  var o=document.getElementById('alibOvl');
+  if(!o){
+    o=document.createElement('div');o.id='alibOvl';document.body.appendChild(o);
+    o.addEventListener('click',function(e){if(e.target===o)alibClose();});
+  }
+  o.classList.add('on');ALIB.q='';alibPaint();
+  alibLoad().then(alibPaint);
+}
+function alibClose(){var o=document.getElementById('alibOvl');if(o)o.classList.remove('on');}
+function alibFindIn(v){ALIB.q=String(v||'');alibPaintList();}
+function alibItemHtml(x){
+  var can=alibCan(x),u=alibUrl(x),esc=osEsc,d=String(x.created_at||'').slice(0,10);
+  var th='<div class="alib-th" onclick="alibOpenItem(\''+esc(x.id)+'\')"'+(x.kind==='img'&&u?' style="background-image:url(\''+esc(u)+'\')"':'')+'>'+(x.kind==='img'?(u?'':'🖼'):'📄')+'</div>';
+  if(ALIB.edit===x.id&&can)
+    return '<div class="alib-item">'+th+'<div class="alib-b alib-ed">'+
+      '<input id="alibE_title" value="'+esc(x.title)+'" placeholder="제목">'+
+      '<textarea id="alibE_descr" rows="3" placeholder="설명">'+esc(x.descr||'')+'</textarea>'+
+      '<input id="alibE_tags" value="'+esc(x.tags||'')+'" placeholder="찾기 말 — 쉼표로">'+
+      '<div class="alib-acts"><button type="button" onclick="alibSave(\''+esc(x.id)+'\')">💾 저장</button><button type="button" onclick="alibEdit(\'\',0)">취소</button></div></div></div>';
+  return '<div class="alib-item">'+th+'<div class="alib-b"><div class="alib-t">'+esc(x.title)+'</div>'+
+    (x.descr?'<div class="alib-d">'+esc(x.descr)+'</div>':'')+
+    (x.tags?'<div class="alib-m">🔎 '+esc(x.tags)+'</div>':'')+
+    '<div class="alib-m">'+esc(x.uploader_name||'팀원')+' · '+esc(d)+(x.ai?' · AI 설명':'')+'</div>'+
+    '<div class="alib-acts"><button type="button" onclick="alibOpenItem(\''+esc(x.id)+'\')">'+(x.kind==='img'?'🖼 크게 보기':'📄 열기')+'</button>'+
+    (can?'<button type="button" onclick="alibEdit(\''+esc(x.id)+'\',1)">✏️ 고치기</button><button type="button" onclick="alibDel(\''+esc(x.id)+'\')">🗑 지우기</button>':'')+
+    '</div></div></div>';
+}
+function alibPaintList(){
+  var box=document.getElementById('alibList');if(!box)return;
+  var q=String(ALIB.q||'').toLowerCase().replace(/\s+/g,''),L=ALIB.list;
+  if(q)L=L.filter(function(x){return (x.title+' '+(x.descr||'')+' '+(x.tags||'')+' '+(x.excerpt||'')).toLowerCase().replace(/\s+/g,'').indexOf(q)>=0;});
+  var h='';
+  if(ALIB.busy&&!ALIB.loaded)h='<div class="alib-sub">팀 자료를 받는 중…</div>';
+  else if(ALIB.err)h='<div class="alib-warn">'+osEsc(ALIB.err)+'</div>';
+  else if(!ALIB.list.length)h='<div class="alib-sub">아직 넣은 자료가 없습니다. 위 칸에 그림이나 PDF 를 넣으면 팀 모두가 보고, 자비스가 찾습니다.</div>';
+  else if(!L.length)h='<div class="alib-sub">「'+osEsc(ALIB.q)+'」 가 든 자료가 없습니다.</div>';
+  else h='<div class="alib-sub">팀 자료 <b>'+ALIB.list.length+'</b>개'+(q?' 중 <b>'+L.length+'</b>개':'')+'</div>'+L.map(alibItemHtml).join('');
+  box.innerHTML=h;
+}
+function alibPaint(){
+  var o=document.getElementById('alibOvl');if(!o||!o.classList.contains('on'))return;
+  var logH=ALIB.log.slice(0,8).map(function(it){return '<div class="'+it.st+'">'+(it.st==='ok'?'✅':it.st==='bad'?'⛔':it.st==='busy'?'⏳':'·')+' '+osEsc(it.name)+' — '+osEsc(it.msg)+'</div>';}).join('');
+  var keepQ=ALIB.q||'';
+  o.innerHTML='<div class="alib-box" role="dialog" aria-label="마스터 아카데미 자료 넣기">'+
+    '<div class="alib-hd"><h3>📥 마스터 아카데미 자료 넣기</h3><button type="button" class="alib-x" onclick="alibClose()" aria-label="닫기">×</button></div>'+
+    '<div class="alib-sub">넣은 자료는 <b>팀 모두가 어느 기기에서든</b> 보고, <b>자비스가 찾아</b> 그림까지 띄웁니다. 그림은 AI 가 읽어 제목 · 설명을 달아 둡니다 — 틀리면 ✏️ 로 고치세요.</div>'+
+    '<div class="alib-warn">⛔ <b>원수사 약관</b>은 안 받습니다(서버에 올리지 않습니다 — 미끼 레이더 「서재」 로). '+
+    '<b>고객 이름 · 연락처</b>가 보이는 자료도 안 받습니다. 같은 파일은 두 번 안 받습니다.</div>'+
+    '<label class="alib-drop" id="alibDrop"><b>여기를 눌러 고르거나, 파일을 끌어다 놓으세요</b>그림(PNG · JPG · WEBP · GIF) · PDF · 한 번에 여러 개 · 20MB 까지'+
+    '<input type="file" id="alibInp" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf" multiple hidden></label>'+
+    (logH?'<div class="alib-log">'+logH+'</div>':'')+
+    '<input class="alib-find" id="alibFind" placeholder="🔎 팀 자료에서 찾기 — 제목 · 설명 · 찾기 말" value="'+osEsc(keepQ)+'" oninput="alibFindIn(this.value)">'+
+    '<div id="alibList"></div></div>';
+  var inp=document.getElementById('alibInp'),dz=document.getElementById('alibDrop');
+  if(inp)inp.onchange=function(){alibFiles(inp.files);inp.value='';};
+  if(dz){
+    dz.ondragover=function(e){e.preventDefault();dz.classList.add('on');};
+    dz.ondragleave=function(){dz.classList.remove('on');};
+    dz.ondrop=function(e){e.preventDefault();dz.classList.remove('on');alibFiles(e.dataTransfer&&e.dataTransfer.files);};
+  }
+  alibPaintList();
+}
 /* ════════ 미끼 레이더 (같은 폴더의 정적 파일) ════════
    약관·판매자료는 서버에 올리지 않는다. 화면 안에서 직접 올려 브라우저(IndexedDB)에 쌓는 구조. */
 /* ════════ APEX 자비스 모드 (같은 폴더의 정적 파일) ════════
@@ -68562,6 +68887,60 @@ var OS_REPAIR_SQL=[
  'create policy stage_says_write on public.stage_says for all to authenticated',
  '  using (public.is_owner()) with check (public.is_owner());',
  'grant select, insert, update, delete on public.stage_says to authenticated;',
+ '',
+ /* 📥 마스터 아카데미 「자료 넣기」 — 팀이 함께 쓰는 자료칸 (판 X427 · migration_75_bohum_lib.sql 과 한 꼴).
+    읽기 로그인 전원 · 넣기 본인 이름 · 지우기 본인/대표/관리자 · 보관함 비공개 · 같은 파일 두 번 안 받음. */
+ 'create table if not exists public.bohum_lib (',
+ '  id         uuid primary key default gen_random_uuid(),',
+ '  kind       text not null check (kind in (\'img\',\'pdf\')),',
+ '  title      text not null,',
+ '  descr      text,',
+ '  tags       text,',
+ '  excerpt    text,',
+ '  path       text not null,',
+ '  mime       text,',
+ '  size       int,',
+ '  sha        text not null,',
+ '  tsha       text,',
+ '  ai         boolean not null default false,',
+ '  uploader   uuid not null default auth.uid(),',
+ '  uploader_name text,',
+ '  created_at timestamptz not null default now()',
+ ');',
+ 'create unique index if not exists bohum_lib_sha on public.bohum_lib(sha);',
+ '',
+ 'alter table public.bohum_lib enable row level security;',
+ '',
+ 'drop policy if exists bohum_lib_read on public.bohum_lib;',
+ 'create policy bohum_lib_read on public.bohum_lib for select to authenticated using (auth.uid() is not null);',
+ 'drop policy if exists bohum_lib_insert on public.bohum_lib;',
+ 'create policy bohum_lib_insert on public.bohum_lib for insert to authenticated with check (uploader = auth.uid());',
+ 'drop policy if exists bohum_lib_update on public.bohum_lib;',
+ 'create policy bohum_lib_update on public.bohum_lib for update to authenticated',
+ '  using (uploader = auth.uid() or public.is_owner() or public.is_admin())',
+ '  with check (uploader = auth.uid() or public.is_owner() or public.is_admin());',
+ 'drop policy if exists bohum_lib_delete on public.bohum_lib;',
+ 'create policy bohum_lib_delete on public.bohum_lib for delete to authenticated',
+ '  using (uploader = auth.uid() or public.is_owner() or public.is_admin());',
+ 'grant select, insert, update, delete on public.bohum_lib to authenticated;',
+ '',
+ 'insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)',
+ 'values (\'bohum-lib\', \'bohum-lib\', false, 20971520,',
+ '        array[\'image/png\',\'image/jpeg\',\'image/webp\',\'image/gif\',\'application/pdf\'])',
+ 'on conflict (id) do nothing;',
+ '',
+ 'drop policy if exists bohum_lib_obj_read on storage.objects;',
+ 'create policy bohum_lib_obj_read on storage.objects for select to authenticated',
+ '  using (bucket_id = \'bohum-lib\' and auth.uid() is not null);',
+ 'drop policy if exists bohum_lib_obj_insert on storage.objects;',
+ 'create policy bohum_lib_obj_insert on storage.objects for insert to authenticated',
+ '  with check (bucket_id = \'bohum-lib\' and (storage.foldername(name))[1] = auth.uid()::text);',
+ 'drop policy if exists bohum_lib_obj_delete on storage.objects;',
+ 'create policy bohum_lib_obj_delete on storage.objects for delete to authenticated',
+ '  using (bucket_id = \'bohum-lib\' and (owner = auth.uid() or public.is_owner() or public.is_admin()));',
+ '',
+ 'comment on table public.bohum_lib is',
+ '  \'마스터 아카데미 자료 넣기 — 읽기 로그인 전원 · 넣기 본인 이름 · 지우기 본인/대표/관리자. 파일은 보관함 bohum-lib(비공개).\';',
  '',
  'create or replace function public.bump_ai_usage() returns int language plpgsql security definer set search_path=public as $fn$',
  'declare v int;',
