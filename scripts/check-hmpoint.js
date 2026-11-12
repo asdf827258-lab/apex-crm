@@ -256,7 +256,7 @@ const SEED = () => {
 
   /* ⚠ 앞 토막이 씨를 흔들어 둡니다 — <b>다시 심고</b> 잽니다 */
   await pg.evaluate(SEED); await pg.evaluate(() => { go('home'); }); await pg.waitForTimeout(500);
-  sec('[4] ★★ 내 글이 몇 px 먹나 — 남은 자리를 <b>그때그때 잽니다</b> (844×3.65 − 지금 홈)');
+  sec('[4] ★★ 내 글이 몇 px 먹나 — 남은 자리를 <b>그때그때 잽니다</b> (844×HOME_SCR − 지금 홈)');
   /* 총 높이의 주인은 <b>check-homeone</b> 입니다. 여기서는 <b>차</b>만 잽니다.
      ★ 2026-10-28 (판 X230) — 남은 자리를 <b>18 로 얼려 두지 않습니다.</b>
        18 은 홈이 3,526px 이던 시절(접이 이전)의 수였습니다. 판 X223 에서
@@ -316,7 +316,18 @@ const SEED = () => {
   /* ⬇ 판 X255 · 3.8 → 3.65 — 이 씨의 세 토막 뺀 홈이 2,693px 입니다 (0-1번) */
   /* ⬇ 판 X312 — 3.56 → 3.12. 임자(check-homeone 의 HOME_SCR)가 내려갔으므로
      여기도 <b>같은 수</b>로 내립니다 (5번 · 0-1번). 이 씨로 잰 값 2,352px. */
-  const 선화면 = 3.40;
+  /* ★★ 판 X420 — <b>베끼지 않고 임자에게 묻습니다</b> (5번).
+     여기와 check-pexlate 가 저마다 HOME_SCR 값을 <b>손으로 베껴</b> 두고
+     있었습니다. 임자가 움직일 때마다 두 곳을 같이 고쳐야 하고, 한 곳을
+     잊으면 <b>헛 빨간불</b>이 켜집니다 — 실제로 이번에 여기가 그랬습니다
+     (임자는 3.62 인데 이 줄은 3.40 이라 남은 자리를 185px 적게 셌습니다).
+     이제 check-homeone 의 그 줄을 <b>읽어</b> 씁니다. 못 읽으면 <b>짐작하지
+     않고</b> 멈춥니다 (1번). */
+  const HSRC = require('fs').readFileSync(
+    require('path').join(__dirname, 'check-homeone.js'), 'utf8');
+  const HM = /^const HOME_SCR = ([\d.]+);/m.exec(HSRC);
+  if (!HM) { console.log('  ✗ check-homeone 의 HOME_SCR 을 못 읽었습니다 — 선을 짐작하지 않습니다 (1번)'); process.exit(1); }
+  const 선화면 = parseFloat(HM[1]);
   const 선 = Math.round(844 * 선화면);
   const 남은 = 선 - D.홈뺌;
   console.log('  · 🎯+🤝 칩 둘 ' + (D.sub넣음 - D.sub뺌) + 'px · 🚗 묶이는 동네 ' +
