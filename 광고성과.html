@@ -166,6 +166,19 @@ button:focus-visible{outline:2px solid var(--b);outline-offset:2px}
   </div>
 
   <div class="card">
+    <h2>노출 자리별</h2>
+    <p class="sub">같은 광고·같은 글인데 <b>자리마다 성적이 다릅니다</b>.
+      <b>광고비는 여기에 안 적습니다</b> — 메타가 자리별 지출을 안 내려 주어
+      지어내지 않습니다.</p>
+    <div class="tw"><table>
+      <thead><tr><th>자리</th><th>방문</th><th>읽음</th><th>카톡</th>
+        <th>카톡율</th><th>3초 안에 나감</th></tr></thead>
+      <tbody id="byPlace"></tbody>
+    </table></div>
+    <div id="placeMsg"></div>
+  </div>
+
+  <div class="card">
     <h2>날짜별</h2>
     <div class="tw"><table>
       <thead><tr><th>날짜</th><th>지출</th><th>클릭</th><th>방문</th>
@@ -212,6 +225,7 @@ async function load() {
   const { data, error } = await sb.from("ad_v_board").select("*").gte("d", since);
   if (error) { $("#verdict").innerHTML = adv("a-bad", "⚠️", "불러오지 못했습니다", esc(error.message)); return; }
   draw(data || []);
+  loadPlace();
 }
 
 function adv(cls, ic, t, d) {
@@ -279,6 +293,53 @@ function box(k, v, n, bad) {
 }
 function bar(v, mx) {
   return '<span class="bar"><i style="width:' + (100 * v / mx).toFixed(1) + '%"></i></span>';
+}
+
+/* 노출 자리별 — ad_v_place 를 읽는다.
+   지출 칸이 없다: 메타 insights 가 자리별 지출을 안 내려 주므로 지어내지 않는다.
+   비율은 합계에서 여기서 한 번만 센다 — 뷰에도 두면 두 곳이 각자 세게 된다. */
+async function loadPlace() {
+  const since = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10);
+  const { data, error } = await sb.from("ad_v_place").select("*").gte("d", since);
+  if (error) {
+    $("#byPlace").innerHTML = '<tr><td colspan="6" class="muted">—</td></tr>';
+    $("#placeMsg").innerHTML = adv("a-wn", "⚠️", "자리별을 못 읽었습니다",
+      "아직 뷰가 안 세워졌을 수 있습니다 — " + esc(error.message));
+    return;
+  }
+  drawPlace(data || []);
+}
+
+function drawPlace(rows) {
+  const by = {};
+  rows.forEach((r) => {
+    const k = r["자리이름"] || "어디서 왔는지 모름";
+    const o = by[k] || (by[k] = { 방문:0, 읽음:0, 카톡:0, 즉시이탈:0, 이탈기록:0 });
+    ["방문","읽음","카톡","즉시이탈","이탈기록"].forEach((f) => o[f] += Number(r[f] || 0));
+  });
+  const ps = Object.entries(by).sort((a, b) => b[1].방문 - a[1].방문);
+  const mx = Math.max(1, ...ps.map((p) => p[1].방문));
+  $("#byPlace").innerHTML = ps.length ? ps.map(([k, o]) =>
+    "<tr><td>" + bar(o.방문, mx) + esc(k) + "</td>" +
+    "<td>" + n0(o.방문) + "</td><td>" + n0(o.읽음) + "</td><td>" + n0(o.카톡) + "</td>" +
+    "<td>" + (o.방문 ? (100 * o.카톡 / o.방문).toFixed(1) + "%" : "—") + "</td>" +
+    "<td>" + (o.이탈기록 ? (100 * o.즉시이탈 / o.이탈기록).toFixed(0) + "%" : "—") +
+    "</td></tr>").join("")
+    : '<tr><td colspan="6" class="muted">기간 안에 방문이 없습니다.</td></tr>';
+  $("#placeMsg").innerHTML = placeSay(ps);
+}
+
+/* 끌 자리를 말해 준다. 기준을 넘는 자리가 없으면 아무 말도 안 한다 */
+function placeSay(ps) {
+  const bad = ps.filter((p) => p[1].방문 >= 200 && p[1].이탈기록 >= 50 &&
+    (100 * p[1].카톡 / p[1].방문) < 1 &&
+    (100 * p[1].즉시이탈 / p[1].이탈기록) >= 60);
+  if (!bad.length) return "";
+  return adv("a-bad", "🛑", esc(bad.map((p) => p[0]).join(" · ")) + " — 글을 안 읽습니다",
+    "방문은 많은데 <b>열에 여섯 이상이 3초 안에 나가고</b> 카톡은 1%도 안 됩니다. " +
+    "누를 뜻이 없이 눌린 자리로 보입니다. 메타에서 <b>자리를 손으로 골라</b> " +
+    "이 자리를 빼면 같은 돈으로 읽는 사람만 받습니다. " +
+    "자리별 지출은 메타가 안 줘서 여기 못 적습니다 — 아낄 금액은 광고관리자에서 보십니다.");
 }
 
 /* 소재 → 랜딩. 모르면 비워 둔다(건수는 그대로 집계된다) */
