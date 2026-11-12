@@ -160,7 +160,7 @@ const SEED = () => {
     for (const pg of pops){ try { await pg.close(); } catch(e){} }
   }
 
-  sec('[7] 같은 장을 두 번 안 세운다 — 「더 찾은 것」 에 접힌 장과 띠 (판 X420 · 5번)');
+  sec('[7] 같은 장을 두 번 안 세운다 — 「더 찾은 것」 에 접힌 장과 띠 (판 X422 · 5번)');
   /* 라이브에서 「영수증 보는 법 자료」 를 물으니 「영수증 어느 칸」 · 「영수증 읽기」 장이 접힌 칸에도, 띠에도 섰습니다 */
   for (const q of ['영수증 보는 법 자료', '치료비 통장 자료']){
     const D = await f.evaluate(async (q) => {
