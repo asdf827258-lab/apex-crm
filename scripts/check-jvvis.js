@@ -160,6 +160,25 @@ const SEED = () => {
     for (const pg of pops){ try { await pg.close(); } catch(e){} }
   }
 
+  sec('[7] 같은 장을 두 번 안 세운다 — 「더 찾은 것」 에 접힌 장과 띠 (판 X422 · 5번)');
+  /* 라이브에서 「영수증 보는 법 자료」 를 물으니 「영수증 어느 칸」 · 「영수증 읽기」 장이 접힌 칸에도, 띠에도 섰습니다 */
+  for (const q of ['영수증 보는 법 자료', '치료비 통장 자료']){
+    const D = await f.evaluate(async (q) => {
+      while (busy) await new Promise(r => setTimeout(r, 30));
+      jLog.innerHTML = ''; ask(q); await new Promise(r => setTimeout(r, 150));
+      const t = Date.now(); while (busy && Date.now() - t < 20000) await new Promise(r => setTimeout(r, 50));
+      const c = [].slice.call(document.querySelectorAll('#jLog .msg.j')).pop();
+      const keyOf = (el) => { const r = JV_ROWS[el.getAttribute('data-r')]; return r ? jvVisKey(r) : ''; };
+      const fold = [].map.call(c.querySelectorAll('.jf-more .jr-open'), keyOf).concat([].map.call(c.querySelectorAll('.jf-more .jf-img img'), x => 'i:' + x.getAttribute('src')));
+      const vis = [].map.call(c.querySelectorAll('.j-vis .jr-open'), keyOf).concat([].map.call(c.querySelectorAll('.j-vis .jv-th img'), x => 'i:' + x.getAttribute('src')));
+      const sum = (c.querySelector('.jf-more > summary') || {}).textContent || '';
+      const n = c.querySelectorAll('.jf-more .jw-row').length;
+      return { vis: vis.filter(Boolean), dup: vis.filter(k => k && fold.indexOf(k) >= 0), sum, n };
+    }, q);
+    is(D.vis.length > 0 && D.dup.length === 0, '「' + q + '」 — 띠에 선 장(' + D.vis.length + ')이 「더 찾은 것」 에 또 안 접힌다 (겹침 ' + D.dup.length + ')');
+    is(!D.sum || D.sum.indexOf('더 찾은 것 ' + D.n + '개') >= 0, '「더 찾은 것 N개」 의 N 이 실제 접힌 줄 수와 같다 (' + D.sum.trim() + ' · 줄 ' + D.n + ')');
+  }
+
   sec('[6] 폰 폭에서 안 넘친다 · 서버 호출 0');
   is(SI.over <= 0 && SI.docOver <= 0, '390px 폭 — 띠가 옆으로 안 넘친다 (띠 ' + SI.over + ' · 문서 ' + SI.docOver + ')');
   is(outAsk.length === 0, '물은 뒤 밖으로 나간 부름 0 — 그림 띠는 앱 안의 파일만 씁니다 (' + outAsk.join(' ') + ')');
