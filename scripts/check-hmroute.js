@@ -387,6 +387,57 @@ const SEED=(opt)=>`
   is(P.mine.indexOf('남의고객')<0&&!/남의고객/.test(P.txt),
      '남에게 배정된 약속은 <b>안 뜬다</b> — '+P.mine.join(' · '));
 
+  console.log('\n[8] 📮 <b>지역이 안 적혀 못 센 분</b>을 말하고, 적는 자리로 보낸다 (판 X421)');
+  /* 사장님 말씀 (2026-11-12) — 「오늘에서 <b>지역동선 추천하고 이름도 뜨니</b>」
+     재어 보니 추천은 섭니다. 다만 <b>이번 주에 상담이 잡혀 있어도 그 줄에
+     지역이 비어 있으면</b> hmHotOf 가 조용히 건너뛰고, 화면은 「약속이 없어
+     평소 차례로 뽑았습니다」 라고만 했습니다 — 사장님은 약속을 잡아 두셨는데
+     앱이 「없다」 고 말한 셈입니다 (1번). */
+  const NR=await page.evaluate(async(seed)=>{
+    (0,eval)(seed);
+    /* 이번 주 AP 약속 셋 — 둘은 <b>지역이 비어</b> 있습니다 */
+    const T=arToday();
+    const fwd=n=>new Date(Date.parse(T+'T00:00:00')+n*864e5).toISOString().slice(0,10);
+    AR.db=[
+      {id:'r1',who:'me',name:'홍길동',region:'서울',sub:'서울',src:'일반',stage:'AP',appt:fwd(1)+'T14:00',days:1,n:1,cAt:'',pAt:'',phone:'010-1000-2000'},
+      {id:'r2',who:'me',name:'홍길순',region:'',   sub:'',   src:'일반',stage:'PC',appt:fwd(2)+'T15:00',days:1,n:1,cAt:'',pAt:'',phone:'010-1001-2001'},
+      {id:'r3',who:'me',name:'홍말순',region:'',   sub:'',   src:'일반',stage:'AP',appt:fwd(3)+'T11:00',days:1,n:1,cAt:'',pAt:'',phone:'010-1002-2002'}
+    ];
+    AR.loaded=true; try{ HM_HOT.d=''; HM_HOT.v=null; }catch(e){}
+    await window.__home();
+    const e=document.querySelector('.hm-rt-norg');
+    return { 있나:!!e, 글:e?e.innerText.replace(/\s+/g,' ').trim():'',
+             단추:e?[...e.querySelectorAll('button')].map(b=>b.getAttribute('onclick')||''):[],
+             키:(hmHotOf().noRg||[]).map(x=>x.id),
+             말:hmHotSay().replace(/<[^>]+>/g,''),
+             px:e?Math.round(e.getBoundingClientRect().height):0 };
+  },SEED({}));
+  is(NR.있나, '  📮 줄이 <b>선다</b> — 조용히 건너뛰지 않는다 (1번)');
+  is(NR.키.length===2, '  ★ 못 센 줄을 <b>정확히</b> 센다 — ' + NR.키.join(' · ') + ' (2분)');
+  is(/2분/.test(NR.글) && /지역이 안 적혀/.test(NR.글),
+     '  ★ <b>몇 분인지</b>와 <b>왜</b> 를 적는다 — 「' + NR.글.slice(0, 48) + '…」');
+  is(NR.단추.length >= 2 && NR.단추.every(x => /hdbOpen\(/.test(x)),
+     '  ★★ 누르면 <b>이미 있는 고치는 창</b>(hdbOpen)으로 간다 — 적는 자리를 새로 안 만든다 (5번)');
+  is(/지역이 안 적혀/.test(NR.말),
+     '  ★ 동네를 골랐더라도 <b>못 센 줄을 밝힌다</b> — 「서울 1건」 만 적으면 그것이 전부인 줄 아신다 (1번)');
+  is(NR.px > 0 && NR.px <= 120, '  줄이 홈을 많이 안 먹는다 — ' + NR.px + 'px ≤ 120');
+  /* ★ 지역이 <b>다 적혀 있으면</b> 안 서야 합니다 — 헛것을 세우면 멀쩡한 날에도 조릅니다 (8번) */
+  const OK=await page.evaluate(async(seed)=>{
+    (0,eval)(seed);
+    const T=arToday();
+    const fwd=n=>new Date(Date.parse(T+'T00:00:00')+n*864e5).toISOString().slice(0,10);
+    AR.db=[
+      {id:'r1',who:'me',name:'홍길동',region:'서울',sub:'서울',src:'일반',stage:'AP',appt:fwd(1)+'T14:00',days:1,n:1,cAt:'',pAt:'',phone:'010-1000-2000'},
+      {id:'r2',who:'me',name:'홍길순',region:'성남',sub:'성남',src:'일반',stage:'PC',appt:fwd(2)+'T15:00',days:1,n:1,cAt:'',pAt:'',phone:'010-1001-2001'}
+    ];
+    AR.loaded=true; try{ HM_HOT.d=''; HM_HOT.v=null; }catch(e){}
+    await window.__home();
+    return { 있나:!!document.querySelector('.hm-rt-norg'),
+             말:hmHotSay().replace(/<[^>]+>/g,'') };
+  },SEED({}));
+  is(!OK.있나, '  ★ 지역이 <b>다 적혀 있으면 안 선다</b> — 멀쩡한 날에 조르지 않는다 (8번)');
+  is(!/지역이 안 적혀/.test(OK.말), '  ★ 그때는 <b>그 말도 안 한다</b>');
+
   console.log('\n[7] 콘솔');
   is(errs.length===0, '터진 곳이 없다'+(errs.length?(' ← '+errs[0]):''));
 
