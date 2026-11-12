@@ -519,6 +519,14 @@ body.in-crm{padding-bottom:84px}
   font-weight:700; border-radius:10px; cursor:pointer; text-decoration:none}
 .jr-copy, .jr-say, .jr-img{border:1px solid #DCE4F1; background:#fff; color:#33425C}
 .jf-more{margin-top:6px}
+/* 🖼 관련 그림 · 덱 장 (판 X417) — 폰에서도 세 장이 한 줄에 */
+.j-vis{margin-top:8px; padding:9px 10px; border:1px solid #DCE4F1; border-radius:11px; background:#F7FAFF}
+.j-vis > b{display:block; font-size:var(--t6); margin-bottom:6px}
+.jv-thumbs{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px}
+.jv-th{display:block; text-decoration:none; color:inherit; min-width:0}
+.jv-th img{display:block; width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid #DCE4F1; background:#fff}
+.jv-th span{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-size:var(--t6); line-height:1.35; margin-top:3px; color:#4E5968}
+.jv-decks{flex-wrap:wrap}
 /* 🧮 연금 계산 (판 X276) — 칸은 44px · 색은 이 쪽에 이미 있는 것만 */
 .j-pen{margin-top:10px; background:#F3F6FB; border:1px solid #DCE4F1; border-radius:11px; padding:9px 11px; white-space:normal}
 .j-pen > b{display:block; font-size:var(--t6); color:var(--blue); margin-bottom:6px}
@@ -5080,7 +5088,8 @@ function addJ(res, isErr){
   var hasFound = fd.some(function(f){ return f.strong && (f.rows || []).length; }) || (anyRow && res.how === 'none') || (anyRow && res.how === 'ext');
   if (res.act){ h += jvActHtml(res.act); hasFound = true; }
   if (res.pen){ h += jvPenHtml(res.pen); hasFound = true; }    /* 🧮 연금 계산 (판 X276) */      /* 🛠 시키신 일이 맨 위 (판 X271) */
-  if (fd.length) h += jvFoundHtml(fd, !hasFound);
+  if (fd.length) h += jvFoundHtml(fd, !hasFound, res.vis);
+  if (res.vis) h += jvVisualHtml(res.vis);                    /* 🖼 관련 그림 · 덱 장 (판 X417) */
   /* 🧑‍🔧 일꾼이 지금 읽어 온 것 — 「어디로 가세요」 보다 먼저 「지금 이렇습니다」 (판 X221) */
   var wk = (res.work || []).filter(function(x){ return x && (x.say || x.wait); });
   if (wk.length){
@@ -5811,7 +5820,7 @@ function jvUsedIn(id){
   });
 }
 
-/* 화면(top)이 맞춘 낱말을 순서(way)가 하나도 못 맞췄나 — 점수는 jvScore 한 곳에서 (5번 · 판 X404) */
+/* 앞선 것(top)이 맞춘 낱말을 뒤의 것이 하나도 못 맞췄나 — 순서(판 X404) · 화면(판 X415)이 같이 씁니다. 점수는 jvScore 한 곳에서 (5번) */
 function jvMissesTop(way, top, words){
   var hitTop = (words || []).filter(function(w){ return jvScore(top, [w], JV_SYN).s > 0; });
   return hitTop.length > 0 && !hitTop.some(function(w){ return jvScore(way, [w], JV_SYN).s > 0; });
@@ -6152,7 +6161,9 @@ function jvOneOf(q, R){
      「인스타 올릴 거」 는 「SNS 활용법」 편보다 「인스타그램」 화면입니다. 편의 줄은
      그 화면의 「자세히」 에 이미 붙어 있습니다. */
   if (top.d.kind === 'sec'){
-    if (bestScr && bestScr.hitTU > 0 && bestScr.s >= top.s * 0.8) return jvScreenAnswer(bestScr.d.id, R);
+    /* 판 X415 — 「치료비 통장을 40대 가장에게 설명하는 스크립트」 가 「TA 스크립트」 로 샜습니다: 편(치료비 통장 & 8통장)이
+       맞춘 낱말을 화면은 하나도 못 맞추고(「스크립트」 만) 점수만 80% 를 넘었습니다. 그때는 편을 둡니다 (판 X404 와 같은 자) */
+    if (bestScr && bestScr.hitTU > 0 && bestScr.s >= top.s * 0.8 && !jvMissesTop(bestScr.d, top.d, R.words)) return jvScreenAnswer(bestScr.d.id, R);
     return jvSecAnswer(top.d, R);
   }
   /* ④ 화면이 맨 위인데 상황 안내가 거의 같으면 상황 쪽(순서가 있다)이 더 쓸모 있다 */
@@ -6562,7 +6573,8 @@ function jvDz(P){ try { return (P && P.DZ_DATA) || null; } catch(e){ return null
 var JV_PAYNOTE = '실제 지급은 가입한 약관과 보험사 심사 결과에 따릅니다.';
 /* 갈래 하나 — 표 · 셈 · 그리는 법을 한 줄로 묶는다 */
 function jvKnowSrc(k, id, n, list, f, row, note, max, ext){
-  return {k:k, id:id, n:n, know:1, ext:!!ext, find:function(q, P){
+  /* list · f · row 를 밖에서도 봅니다 — 🖼 관련 그림 띠(jvVisual)가 <b>같은 표 · 같은 그리는 법</b>을 씁니다 (판 X417 · 5번) */
+  return {k:k, id:id, n:n, know:1, ext:!!ext, list:list, f:f, row:row, find:function(q, P){
     var L = []; try { L = list(P) || []; } catch(e){ L = []; }
     var hit = jvKnowPick(q, L, f, max || 2);
     if (!hit.length) return null;
@@ -7350,6 +7362,119 @@ document.addEventListener('toggle', function(e){
     return '<span class="' + c + '">' + esc(n) + (sc.hit[n] ? ' ' + sc.hit[n] : (sc.wait[n] ? ' · 안 읽음' : '')) + '</span>';
   }).join('');
 }, true);
+/* ══ 🖼 <b>관련 그림 · 상담자료 장 — 자료를 찾으면 그림도 같이</b> (판 X417) ══════════════
+   사장님 말씀 2026-11-11 「내 crm내에서 자료를 찾으면 자료 찾아주고 이미지 띄어주는거까지」.
+   ★ 라이브에서 재어 보니 앱에는 뇌졸중 · 간병 · 실손 · 치료비 통장의 <b>원본 그림 슬라이드</b>와 덱의 장이
+     있는데, 답에는 거의 안 섰습니다. 찾기(jvFind)가 갈래를 <b>넷까지만</b> 세우는데 글 자료(질병 · 담보 · 사례 ·
+     용어)가 그 자리를 다 차지했고, 「간병보험 그림」 의 「그림」 · 「암 진단비 슬라이드」 의 「슬라이드」 가
+     화제 낱말로 세어져 반만 맞은 것으로 떨어졌고, 「실손보험 가입시기별 …」 처럼 이름 <b>안에</b> 든 두 글자
+     (「실손」)는 문턱 아래였습니다.
+   ★ 그래서 그림 · 덱 장은 <b>따로 한 띠</b>로 — 넷까지 세는 자리를 안 다툽니다. 표와 그리는 법은
+     그 갈래의 것(jvKnowSrc 의 list · f · row)을 그대로 씁니다 — 두 벌 안 둡니다 (5번).
+   ★ 세우는 때 — 그림 · 슬라이드 · 자료 · 발표처럼 <b>보여 달라는 말</b>이 있거나, 보험 자료를 이미 찾았을 때.
+     앱 쓰는 법 · 시키신 일 · 연금 셈 · 인사에는 안 세웁니다(부르는 쪽이 거릅니다).
+   ★ 맞추는 법 — 물은 낱말이 <b>하나도 빠짐없이</b> 이름 · 자료 이름 · 본문 어딘가에 있어야 하고, 적어도 하나는
+     이름이나 자료 이름에 있어야 합니다(본문에만 스친 것은 안 세웁니다). 그림 없는 장은 그림 띠에 안 세웁니다.
+   ★ 찾을 것이 없으면 <b>띠를 안 세웁니다</b> — 그림을 지어 붙이지 않습니다 (1번).                      */
+var JV_VISW = /그림|이미지|슬라이드|사진|장표|도해|자료|보여|발표|덱|ppt/i;
+var JV_VIS_SAY = ['atalk', 'fpch', 'fpobj', 'fpsec', 'obj', 'rej', 'stage', 'stagesay'];
+var JV_VISCUT = /그림|이미지|슬라이드|사진|장표|도해|자료|보여\s*줘?|발표|덱|ppt|화면|설명/gi;
+function jvVisPick(q, s, P, max, needImg){
+  var W = jvKnowWords(String(q || '').replace(JV_VISCUT, ' '));
+  if (!W.length) return [];
+  var L = []; try { L = s.list(P) || []; } catch(e){ L = []; }
+  if (needImg) L = L.filter(function(x){ return (x.im || []).length; });
+  /* 한 번 씻어 둡니다 — 이름 · 자료 이름 · 본문 */
+  var N = L.map(function(x){ return {t:kbN(s.f.t(x)), k:s.f.k ? kbN(s.f.k(x)) : '', b:s.f.b ? kbN(s.f.b(x)) : ''}; });
+  var has = function(n, ws){ return ws.some(function(w){ return n.t.indexOf(w) >= 0 || n.k.indexOf(w) >= 0 || n.b.indexOf(w) >= 0; }); };
+  /* 제일 <b>드문</b> 낱말 — 「간병인 비용」 이면 「간병인」. 반만 맞을 때는 이 말이 맞아야 합니다.
+     「비용」 하나로 「법인계약과 비용 인정」 장이 서던 자리입니다 */
+  var df = W.map(function(ws){ return N.filter(function(n){ return has(n, ws); }).length; });
+  var rare = df.indexOf(Math.min.apply(null, df));
+  /* 보여 달라는 말이 있으면 반만 맞아도, 없으면(자료를 찾아서 곁에 붙일 때) <b>다</b> 맞아야 세웁니다 —
+     「보험료가 부담돼요」 에 「본인부담상한제」 장이 붙던 자리 */
+  var half = JV_VISW.test(q);
+  var out = [];
+  N.forEach(function(n, i){
+    var sc = 0, named = 0, got = 0, pos = 999, hitRare = false;
+    W.forEach(function(ws, wi){
+      var best = 0;
+      ws.forEach(function(w){
+        var at = n.t.indexOf(w);
+        if (at >= 0){ best = Math.max(best, 3); pos = Math.min(pos, at); }
+        else if (n.k.indexOf(w) >= 0) best = Math.max(best, 2);
+        else if (n.b.indexOf(w) >= 0) best = Math.max(best, 1);
+      });
+      if (best){ got++; if (wi === rare) hitRare = true; }
+      if (best >= 2) named++;
+      sc += best;
+    });
+    /* 하나는 이름 · 자료 이름에 있어야 합니다(본문에만 스친 것은 안 세웁니다) */
+    var ok = named && (got === W.length || (half && hitRare && got * 2 >= W.length));
+    if (ok) out.push({x:L[i], s:sc, i:i, p:pos});
+  });
+  /* 더 잘 맞은 것 먼저 · 같으면 이름 <b>앞쪽</b>에 그 말이 있는 것(「간병보험의 필요성」 이 「… → 장해 → 간병」 보다) ·
+     그다음 원래 차례(덱 · 교재의 쪽 차례) */
+  out.sort(function(a, b){ return b.s - a.s || a.p - b.p || a.i - b.i; });
+  if (out.length) out = out.filter(function(o){ return o.s >= out[0].s * 0.75; });
+  return out.slice(0, max).map(function(o){ return s.row(o.x, P, q); });
+}
+/* 그림 · 덱 장 하나를 가리키는 열쇠 — 띠(jvVisual)와 접힌 줄(jvFoundHtml)이 <b>같은 셈</b>으로 겹침을 봅니다 (판 X422 · 5번) */
+function jvVisKey(r){
+  if (!r) return '';
+  if (r.img) return 'i:' + r.img;
+  if (r.open && r.open.fn === 'jvDeckOpen') return 'd:' + r.open.to.join('|');
+  return '';
+}
+function jvVisual(q, F){
+  var P = kbApp();
+  if (!P || jvIsUse(q)) return null;
+  F = F || [];
+  /* 곁에 붙이는 것은 <b>보험 자료</b>(질병 · 담보 · 치료비 · 수술 · 용어 · 슬라이드 · 덱)를 찾았을 때만 — 화법 · 거절 처리 ·
+     영업 단계를 찾은 물음(「보험료가 부담돼요」)에 「본인부담상한제」 장이 붙던 자리 */
+  var want = JV_VISW.test(q), know = F.some(function(f){ return f.know && JV_VIS_SAY.indexOf(f.k) < 0 && (f.rows || []).length; });
+  if (!want && !know) return null;
+  /* ⭐ 크게 선 줄(jvFoundHtml 의 맨 앞 줄)과 같은 그림 · 장은 또 안 세웁니다 — 접힌 줄의 그림은 안 보이니 띠에 세웁니다 */
+  var seen = {}, f0 = F.filter(function(f){ return (f.rows || []).length; })[0], r0 = f0 && f0.rows[0];
+  if (jvVisKey(r0)) seen[jvVisKey(r0)] = 1;
+  var V = {img:[], deck:[]};
+  JV_FIND.forEach(function(s){
+    if (s.k !== 'aslide' && s.k !== 'deck') return;
+    var rows = [];
+    try { rows = jvVisPick(q, s, P, s.k === 'aslide' ? 6 : 3, s.k === 'aslide'); } catch(e){ rows = []; }
+    rows.forEach(function(r){
+      var key = jvVisKey(r);
+      if (!key || seen[key]) return;
+      if (s.k === 'aslide' && r.img && V.img.length < 3){ seen[key] = 1; V.img.push(r); }
+      else if (s.k === 'deck' && r.open && V.deck.length < 2){ seen[key] = 1; V.deck.push(r); }
+    });
+  });
+  return (V.img.length || V.deck.length) ? V : null;
+}
+function jvVisualHtml(V){
+  if (!V || !(V.img.length || V.deck.length)) return '';
+  var h = '<div class="j-vis"><b>🖼 관련 그림 · 상담자료 장</b>';
+  if (V.img.length){
+    h += '<div class="jv-thumbs">';
+    V.img.forEach(function(r){
+      var t = String(r.t || '').replace(/^🖼\s*/, '');
+      h += '<a class="jv-th" href="' + esc(r.img) + '" target="_blank" rel="noopener" title="크게 보기">' +
+           '<img src="' + esc(r.img) + '" alt="' + esc(t) + '" loading="lazy"><span>' + esc(t) + '</span></a>';
+    });
+    h += '</div><div class="jf-note">그림을 누르면 크게 열립니다 — 고객께 그대로 보여 드리셔도 됩니다.</div>';
+  }
+  if (V.deck.length){
+    h += '<div class="st-b jv-decks">';
+    V.deck.forEach(function(r){
+      var id = 'r' + (++JV_ROW_N);
+      JV_ROWS[id] = r;
+      var nm = String(r.t || '').replace(/^🎞\s*/, ''), dk = (r.s || [])[0] || '';
+      h += '<button type="button" class="st-here jr-open" data-r="' + id + '" title="' + esc(dk) + '">🎞 ' + esc(nm) + ' — 이 장 열기</button>';
+    });
+    h += '</div>';
+  }
+  return h + '</div>';
+}
 /* 찾은 것을 한 줄로 — 답의 머리와 읽어 주기에 같이 쓴다 (한 곳 · 5번) */
 function jvFoundSay(F){
   var p = [];
@@ -7408,19 +7533,24 @@ function jvSrcTail(f){
     h += '<div class="st-b"><a href="' + BASE + f.id + '" data-id="' + f.id + '" target="_blank" rel="noopener">' + esc(nm) + ' 열기 ›</a></div>';
   return h;
 }
-function jvFoundHtml(F, weak){
+/* V — 🖼 띠에 선 그림 · 덱 장(판 X422). 「더 찾은 것」 에 접힌 같은 장은 <b>빼고</b> 셉니다 —
+   「영수증 보는 법 자료」 에 「영수증 어느 칸」 장이 접힌 칸과 띠에 두 번 서던 자리(라이브에서 재어 봄 · 5번) */
+function jvFoundHtml(F, weak, V){
+  var onVis = {};
+  if (V) V.img.concat(V.deck).forEach(function(r){ var k = jvVisKey(r); if (k) onVis[k] = 1; });
+  var folded = function(f, i){ return (i ? f.rows : f.rows.slice(1)).filter(function(r){ return !onVis[jvVisKey(r)]; }); };
   var h = '<div class="j-find"><b>' + (weak ? '🔎 혹시 이것도 — 앱 자료에서 찾은 것' : '🔎 앱에서 찾아 온 것') + '</b>';
   var withRows = F.filter(function(f){ return (f.rows || []).length; }), notes = F.filter(function(f){ return !(f.rows || []).length; });
   /* ⭐ 맨 앞 갈래의 맨 앞 줄 — 크게 */
   if (withRows.length){
     var f0 = withRows[0];
     h += jvRowHtml(f0.rows[0], f0, true);
-    var restN = withRows.reduce(function(n, f, i){ return n + f.rows.length - (i ? 0 : 1); }, 0);
+    var restN = withRows.reduce(function(n, f, i){ return n + folded(f, i).length; }, 0);
     if (!restN) h += jvSrcTail(f0);
     else {
       h += '<details class="jf-more"><summary>더 찾은 것 ' + restN + '개 ▾</summary>';
       withRows.forEach(function(f, i){
-        var rows = i ? f.rows : f.rows.slice(1), m = MENU[f.id];
+        var rows = folded(f, i), m = MENU[f.id];
         if (rows.length) h += '<div class="jf-src">' + esc(f.n) + (m && m.n !== f.n ? ' · ' + esc(m.n) : '') + '</div>';
         rows.forEach(function(r){ h += jvRowHtml(r, f, false); });
         h += jvSrcTail(f);
@@ -8357,6 +8487,8 @@ function ask(raw){
   /* 인사 · 고맙다는 말에는 찾은 자료를 안 붙입니다 — 「감사합니다」 밑에 「개념 정리」 장이 서던 자리 (판 X352) */
   if (r0.how === 'hello') found = [];
   r0.found = found;
+  /* 🖼 판 X417 — 자료를 찾았으면 그림 · 덱 장도 같이. 시키신 일 · 연금 셈 · 인사에는 안 붙입니다 */
+  if (!act && !pen && r0.how !== 'hello') r0.vis = jvVisual(q, found);
   r0.scan = JV_SCAN;
   var strong = found.some(function(f){ return f.strong && (f.rows || []).length; });
   if (fsay && (strong || r0.how === 'none')){ r0.wayAns = r0.how === 'none' ? '' : r0.answer; r0.answer = fsay; }
