@@ -21983,8 +21983,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-12 10:32';
-var APP_BUILD_NOTE='📒 <b>세 칸에 「이번 달 내가 한 일」 이 한 줄씩 섭니다</b>(판 X420 · 사장님 말씀 2026-10-19 「<b>이번주 / 오늘어디로 가시나 / 30일 약속 [내가 한달동안 진행했던 기록들 여기에 다 표기되게끔 · 월 기준으로]</b>」) — 그때 📒 를 만들어 「📈 이번 달 어떻게 하셨나」 접이 안에만 세우고, 세 칸에도 붙일지는 여쭙겠다고 적어 둔 채 멈춰 있던 자리입니다. 이제 <b>🚗 오늘 어디로</b> 에 「이번 달 며칠 나가셨나」, <b>📅 오늘 약속·이번 주</b> 에 「몇 분 만나셨나」, <b>📇 한 장 띠</b> 에 「몇 번 닿으셨나」 가 섭니다. ★ <b>세는 자는 하나</b>라 세 칸이 같은 수를 세 번 말하지 않고, 한 곳만 고치면 셋이 같이 바뀝니다. ★ <b>홈은 거의 안 길어졌습니다</b> — 단추로 두면 하나가 51px 이라 글줄로 두었고(31px), 띠는 줄을 새로 세우지 않고 이미 접히는 칩 줄에 한 칸만 보탰습니다(246px 그대로). ◾ 먼저 나간 판 X412(첫 마디를 대표만 고치기) · X408(오늘 할 일 도움말과 멘트 한 줄)도 그대로 들어 있습니다.';
+var APP_BUILD='2026-11-12 11:28';
+var APP_BUILD_NOTE='📮 <b>지역이 안 적혀 못 센 분을 말해 드립니다</b>(판 X421 · 사장님 물으심 「<b>오늘에서 지역동선 추천하고 이름도 뜨니</b>」) — 재어 보니 추천은 섭니다(🚗 칸에 「오늘 약속 없음 · ○○로 권합니다」 · 이름도 실명 그대로). <b>다만 조용히 빼는 자리가 있었습니다</b> — 이번 주에 상담을 잡아 두셨어도 그 줄에 <b>지역이 비어 있으면 그냥 건너뛰어</b>, 화면은 「약속이 없어 평소 차례로 뽑았습니다」 라고만 했습니다. 이제 <b>「📮 이번 주 상담 N분은 지역이 안 적혀 있어 못 셌습니다」</b> 라고 말하고, <b>그분 이름을 누르면 지역 적는 칸</b>이 바로 뜹니다. 적으시면 그 동네로 묶어 권해 드립니다. 지역이 다 적혀 있으면 이 줄은 <b>안 섭니다</b>. ◾ 📒 <b>세 칸에 「이번 달 내가 한 일」</b>(판 X420) · ✏️ 첫 마디를 대표만 고치기(X412) · 🧭 오늘 할 일 도움말과 멘트 한 줄(X408)도 그대로 들어 있습니다.';
 
 
 
@@ -27631,7 +27631,7 @@ function hmHotOf(){
   var end='';
   try{ end=mcalShift(t,6); }catch(e2){ end=t; }
   var D=(typeof AR!=='undefined'&&AR.db)?AR.db:[],i,r,ds,rg;
-  var cnt={},who='';
+  var cnt={},who='',noRg=[];
   try{ who=(typeof hwhoFor==='function')?hwhoFor():''; }catch(e3){ who=''; }
   for(i=0;i<D.length;i++){
     r=D[i];
@@ -27641,13 +27641,19 @@ function hmHotOf(){
     ds=(''+r.appt).slice(0,10);
     if(ds<t||ds>end)continue;
     rg=(''+(r.region||'')).replace(/^\s+|\s+$/g,'');
-    if(!rg)continue;                               /* 지역을 안 적어 두신 줄은 못 셉니다 (1번) */
+    /* ★★ <b>조용히 빼지 않습니다</b> (판 X421 · 1번). 여태는 지역이 빈 줄을
+       그냥 건너뛰어서, 이번 주에 상담이 잡혀 있는데도 화면은 「약속이 없어
+       평소 차례로 뽑았습니다」 라고만 했습니다. 사장님은 약속을 잡아 두셨는데
+       앱이 「없다」 고 말한 셈입니다 — <b>못 센 줄이 몇 분인지</b> 말하고,
+       <b>어디서 적는지</b>까지 알려 드립니다 (6번 · 판 X191 의 📮 와 같은 꼴). */
+    if(!rg){ noRg.push({id:r.id||'',nm:r.name||'',d:ds}); continue; }
     cnt[rg]=(cnt[rg]||0)+1;
   }
   var L=[],k;
   for(k in cnt)if(cnt.hasOwnProperty(k))L.push({rg:k,n:cnt[k]});
   L.sort(function(a,b){ return b.n-a.n||(''+a.rg).localeCompare(''+b.rg,'ko'); });
-  HM_HOT.d=t; HM_HOT.v={list:L,to:end};
+  noRg.sort(function(a,b){ return (a.d<b.d)?-1:((a.d>b.d)?1:0); });
+  HM_HOT.d=t; HM_HOT.v={list:L,to:end,noRg:noRg};
   return HM_HOT.v;
 }
 /* 그 동네인가 — <b>한 곳</b>에서만 답합니다 (5번) */
@@ -27660,12 +27666,22 @@ function hmHotHit(region){
 /* 머리에 적을 한 줄 — <b>없으면 없다고</b> 적습니다 (1번) */
 function hmHotSay(){
   var H=hmHotOf(),i,p=[];
+  var nr=(H.noRg||[]).length;
   if(!H.list.length)
-    return '이번 주에 잡힌 <b>AP·PC 약속이 없어</b> 평소 차례(오래 안 닿은 분부터)로 뽑았습니다.';
+    /* ★ <b>약속이 없는 것</b>과 <b>지역을 몰라 못 센 것</b>은 다른 말입니다 (1번) */
+    return nr
+      ? ('이번 주 상담 <b>'+nr+'분</b>이 잡혀 있는데 <b>지역이 안 적혀</b> 있어 동네를 못 골랐습니다 — 아래에서 적으시면 그 동네로 묶어 권해 드립니다.')
+      : '이번 주에 잡힌 <b>AP·PC 약속이 없어</b> 평소 차례(오래 안 닿은 분부터)로 뽑았습니다.';
   for(i=0;i<H.list.length&&i<3;i++)p.push('<b>'+osEsc(H.list[i].rg)+'</b> '+H.list[i].n+'건');
+  /* ★ 동네를 골랐더라도 <b>못 센 줄이 있으면 밝힙니다</b> (1번 · 판 X421) —
+     「서울 1건」 만 적으면 사장님은 그것이 이번 주 전부인 줄 아십니다. */
+  /* ⚠ 꼬리는 <b>문장 끝</b>에 답니다 — 처음에 가운데 끼워 「서울 1건 2분은
+     지역이 안 적혀 있어 못 셌습니다. 잡혀 있습니다」 로 말이 깨졌습니다.
+     찍어 보고 잡았습니다 (8번). */
+  var tail=nr?(' 다만 <b>'+nr+'분</b>은 <b>지역이 안 적혀</b> 있어 못 셌습니다 — 적으시면 같이 묶어 드립니다.'):'';
   return '이번 주 상담이 '+p.join(' · ')+
     (H.list.length>3?(' 외 '+(H.list.length-3)+'곳'):'')+
-    ' 잡혀 있습니다 — <b>그 동네 분을 앞으로</b> 올렸습니다. 가는 김에 한 분 더 잡으십시오.';
+    ' 잡혀 있습니다 — <b>그 동네 분을 앞으로</b> 올렸습니다. 가는 김에 한 분 더 잡으십시오.'+tail;
 }
 /* <b>왜 이분인가</b> — 한 줄. 짐작은 안 적습니다 (1번).
    ★ <b>아래 칩이 이미 말하는 것은 여기 안 적습니다</b> (5번). 예전에는
@@ -37632,7 +37648,21 @@ function hmMovedHtml(){
    고쳐 놓고 「어떤 때는 뜨고 어떤 때는 안 뜬다」 가 됩니다.
    ★ <b>칸이 정말 섰을 때만</b> 답니다 — 빈 자리에 「이번 달 …」 만 떠
      있으면 무엇에 대한 수인지 알 수 없습니다 (1번).                    */
+/* 📮 지역이 안 적힌 분 줄 (판 X421) — 토큰만 씁니다 (hex 0 · ui.css 규약) */
+function hmRtNoRgCss(){
+  if(document.getElementById('hmRtNoRgCss'))return;
+  var st=document.createElement('style');st.id='hmRtNoRgCss';
+  st.textContent='.hm-rt-norg{margin:8px 0 0;padding:8px 10px;border-radius:11px;'+
+      'background:var(--t-warn-l,#FFF7E6);border:1px solid var(--t-warn,#F59E0B)}'+
+    '.hm-rt-norg .q{display:block;font-size:var(--t7);font-weight:600;'+
+      'color:var(--t-warn-d,#8A5A12);line-height:1.45}'+
+    '.hm-rt-norg .q b{font-weight:800}'+
+    '.hm-rt-norg .w{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;align-items:center}'+
+    '.hm-rt-norg .more{font-size:var(--t7);color:var(--t-sub,#6B7684);font-weight:700}';
+  document.head.appendChild(st);
+}
 function hmRtHtml(){
+  hmRtNoRgCss();
   var h=''; try{ h=hmRtBody(); }catch(e){ h=''; }
   if(!h)return '';
   var t=''; try{ t=mlogTail('go'); }catch(e2){ t=''; }
@@ -37837,6 +37867,32 @@ function hmRtBody(){
                       :('그 지역에 만나야 할 분 '+meet.length+'분'))+'</span>')
            :('<span data-ask="동네오늘걸분">'+osEsc('오늘 걸 분 '+near.length+'명')+'</span>'))+
        '</div>';
+    /* ══ 📮 <b>지역이 안 적혀 못 센 분</b> (판 X421) ═══════════════════
+       사장님 말씀 (2026-11-12) — 「<b>오늘에서 지역동선 추천하고 이름도 뜨니</b>」
+       재어 보니 추천은 섭니다. 다만 <b>이번 주에 상담이 잡혀 있어도 그 줄에
+       지역이 비어 있으면</b> 동네를 못 고르고, 화면은 「약속이 없어 평소
+       차례로 뽑았습니다」 라고만 했습니다 — 사장님은 약속을 잡아 두셨는데
+       앱이 「없다」 고 말한 셈입니다.
+       ★ <b>조용히 빼지 않고</b> 몇 분인지 말합니다 (1번).
+       ★ <b>적는 자리를 새로 안 만듭니다</b> (5번) — 지역 칸은 hdbOpen 창에
+         이미 있습니다. 거기로 보냅니다. 저장하면 DB 통합 CRM 에도 그대로
+         뜹니다(그 창이 그렇게 적어 두었습니다).
+       ★ <b>이름은 hmFullNm</b> 으로 적습니다 — 홈은 실명이 기본이고 「🙈 이름
+         가리기」 를 누르면 그것이 가립니다 (3번 · 판 X399).            */
+    (function(){
+      var H=null; try{ H=hmHotOf(); }catch(e){ H=null; }
+      var NR=(H&&H.noRg)||[];
+      if(!NR.length)return;
+      h+='<div class="hm-rt-norg"><span class="q">📮 이번 주 상담 <b>'+NR.length+
+         '분</b>은 <b>지역이 안 적혀</b> 있어 못 셌습니다 — 적으시면 그 동네로 묶어 권해 드립니다</span>'+
+         '<span class="w">';
+      for(var j=0;j<NR.length&&j<4;j++)
+        h+='<button type="button" class="t-chip" onclick="hdbOpen(\''+osEsc(NR[j].id)+'\')" '+
+           'aria-label="'+osEsc(hmFullNm(NR[j].nm||'이름 모름'))+' 지역 적기">📮 '+
+           osEsc(hmFullNm(NR[j].nm||'이름 모름'))+'</button>';
+      if(NR.length>4)h+='<span class="more">외 '+(NR.length-4)+'분</span>';
+      h+='</span></div>';
+    })();
     /* 이름 알약 — <b>누구를 권하는지</b>가 접지 않아도 보입니다.
        ★ 수를 다시 세지 않습니다 — 바로 위 near 그대로입니다 (5번). */
     if(near.length){
