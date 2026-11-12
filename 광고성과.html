@@ -155,6 +155,13 @@ button:focus-visible{outline:2px solid var(--b);outline-offset:2px}
       안 답하면 <b>모름</b>으로 두셔도 건수는 집계됩니다.</p></div></div>
   </div>
 
+  <div class="card" id="revCard" hidden>
+    <h2>어젯밤 판단</h2>
+    <p class="sub">저녁 9시 10분에 스스로 보고 적어 둔 것입니다.
+      <b>못 본 것이 있으면 효율은 재지 않습니다</b> — 멈춘 숫자로 셈하면 그 수가 거짓이 됩니다.</p>
+    <div id="revBody"></div>
+  </div>
+
   <div class="card">
     <h2>소재별</h2>
     <p class="sub">지출이 큰 순서입니다. <b>카톡율</b>이 실질 성적표입니다.</p>
@@ -226,6 +233,7 @@ async function load() {
   if (error) { $("#verdict").innerHTML = adv("a-bad", "⚠️", "불러오지 못했습니다", esc(error.message)); return; }
   draw(data || []);
   loadPlace();
+  loadReview();
 }
 
 function adv(cls, ic, t, d) {
@@ -293,6 +301,74 @@ function box(k, v, n, bad) {
 }
 function bar(v, mx) {
   return '<span class="bar"><i style="width:' + (100 * v / mx).toFixed(1) + '%"></i></span>';
+}
+
+/* 어젯밤 판단 — ad_notes 한 줄. 저녁 함수가 적고 화면은 읽기만 한다.
+   ★ 화면이 판단을 다시 세지 않는다 — 세는 곳이 둘이면 저녁에 적은 것과
+     낮에 보이는 것이 달라진다 (5번). 글자 그대로 보여 준다.
+   ★ 기록이 없으면 칸을 아예 안 세운다 — 빈 칸을 세워 「판단이 없다」 를
+     「문제가 없다」 로 읽히게 하지 않는다 (1번). */
+async function loadReview() {
+  let rows = null;
+  try {
+    const { data, error } = await sb.from("ad_notes")
+      .select("*").order("d", { ascending: false }).limit(1);
+    if (error) throw error;
+    rows = data;
+  } catch (e) { rows = null; }
+  if (!rows || !rows.length) { $("#revCard").hidden = true; return; }
+  $("#revCard").hidden = false;
+  $("#revBody").innerHTML = revHtml(rows[0]);
+}
+
+/* ⚠️ 모르는 상태를 REV_ST["모름"] 으로 꺼내 쓰지 않는다 — 그 꼴은 DB 칸을
+   부르는 꼴(r["지출"])과 똑같아서 check-adsql 이 「없는 칸을 부른다」 고 읽는다.
+   실제로 한 번 걸렸다. 한 벌만 두고 이름으로 가리킨다 (5번). */
+const REV_UNK = ["a-wn", "❔", "돌고 있었는지 알 수 없습니다"];
+const REV_ST = { "멈춤": ["a-bad", "⏸", "광고가 사실상 멈춰 있었습니다"],
+                 "적음": ["a-wn", "⚠️", "들어오는 수가 줄었습니다"],
+                 "돌아감": ["a-ok", "✅", "광고가 돌고 있었습니다"],
+                 "모름": REV_UNK };
+
+function revHtml(n) {
+  const st = REV_ST[n.state] || REV_UNK;
+  let h = '<div class="muted" style="margin-bottom:8px">' + esc(n.d) + ' 저녁</div>';
+  h += adv(st[0], st[1], esc(st[2]), esc(n.state || ""));
+
+  const bl = n.blind || [];
+  if (bl.length) h += adv("a-bad", "🙈", "못 본 것 " + bl.length + "가지",
+    bl.map((b) => "· " + esc(b)).join("<br>"));
+
+  if (n.looked_back) h += adv("a-wn", "↩", "어제를 돌아보면",
+    esc(n.looked_back).replace(/\n/g, "<br>"));
+
+  if (n.verdict) h += adv("a-wn", "📋", "판단",
+    esc(n.verdict).replace(/\n/g, "<br>"));
+
+  const as = n.asks || [];
+  if (as.length) h += adv("a-bad", "🙏", "사장님께 부탁드린 것 " + as.length + "가지",
+    as.map((a) => "· " + esc(a)).join("<br>"));
+
+  /* ★ 문구 초안은 심의 전이다. 딱지를 떼지 말 것 (2번) */
+  const cd = n.copy_draft;
+  if (cd && cd.drafts && cd.drafts.length) {
+    h += '<details style="margin-top:10px"><summary><b>문구 초안 ' + cd.drafts.length +
+      '개 — ⚠️ 심의 전입니다</b></summary>' +
+      '<div class="adv a-bad" style="margin-top:8px"><span class="ic">⚠️</span><div>' +
+      '<b>그냥 쓰시면 안 됩니다</b><p>심의를 받지 않은 초안입니다. ' +
+      '보험 광고는 심의를 통과한 문구만 나갈 수 있습니다. ' +
+      '고치실 거리로만 보시고, 쓰실 것은 심의에 올리십시오.</p></div></div>' +
+      (cd.why ? '<p class="sub">' + esc(cd.why) + '</p>' : '') +
+      cd.drafts.map((d) =>
+        '<div class="card" style="margin:8px 0"><b>' + esc(d.head || "") + '</b>' +
+        '<p>' + esc(d.body || "").replace(/\n/g, "<br>") + '</p>' +
+        (d.why ? '<p class="sub">' + esc(d.why) + '</p>' : '') + '</div>').join("") +
+      '</details>';
+  } else if (n.note) {
+    h += '<p class="sub">문구 초안: ' + esc(n.note) + '</p>';
+  }
+  if (n.model) h += '<p class="sub">초안을 쓴 모델 — ' + esc(n.model) + '</p>';
+  return h;
 }
 
 /* 노출 자리별 — ad_v_place 를 읽는다.
