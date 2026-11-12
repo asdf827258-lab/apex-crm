@@ -133,13 +133,24 @@ const BAND = () => {
      '  ★ 못 읽었으면 <b>수를 안 적는다</b> — 「고객 0분」 이 아닙니다 (1번)');
 
   console.log('\n[3] 단계 칸이 <b>표 그대로</b> · 사람 말로 · 누르면 CRM');
-  const 단계칩 = A.칩.filter(c => !/지남/.test(c.t));
+  /* ⚠ 판 X420 — 📒 <b>이번 달</b> 칸이 칩 줄에 보태졌습니다(사장님 말씀의
+     셋째 칸 · 줄을 새로 안 세우려고 여기 넣었습니다). 🕗 지남처럼 <b>단계
+     칩이 아니므로</b> 견줌에서 뺍니다 — 대신 아래에서 <b>정말 서는지</b>를
+     따로 묻습니다. 빼기만 하면 그 칸이 사라져도 아무도 모릅니다 (8번). */
+  const 단계칩 = A.칩.filter(c => !/지남|📒/.test(c.t));
   is(단계칩.length === A.표.length && A.표.every((x, i) => 단계칩[i] &&
        단계칩[i].t === x.n + ' ' + (단계칩[i].t.split(' ')[1]) + ' ' + x.say + ' ' + x.k),
      '  칸이 <b>HM_FLOW 차례 · 수 · 사람 말</b> 그대로 — ' + 단계칩.map(c => c.t).join(' | '));
   is(A.표.every(x => !!x.say), '  표의 단계마다 <b>사람 말(say)</b>이 있다 — ' + A.표.map(x => x.say).join('·'));
   is(단계칩.every(c => c.tag === 'BUTTON' && /go\('crm'\)/.test(c.on)),
      '  ★ 칸이 <b>단추</b>이고 누르면 <b>DB 통합 CRM</b> 으로 간다');
+  /* 📒 이번 달 — 사장님 말씀의 셋째 칸(☎️ 30일 약속)입니다 (판 X420).
+     수가 맞는지·셋이 갈리지 않는지는 check-monthlog [12] 가 봅니다 (5번). */
+  const 달칩 = A.칩.filter(c => /📒/.test(c.t));
+  is(달칩.length === 1, '  📒 <b>이번 달</b> 칸이 칩 줄에 선다 — ' +
+     (달칩.length ? 달칩[0].t : '(없음)') + ' (판 X420 · 줄을 새로 안 세웁니다)');
+  is(!달칩.length || /hmBandMonth\(\)/.test(달칩[0].on),
+     '  ★ 누르면 <b>📒 이번 달 내가 한 일</b> 로 간다 — 수를 두 곳에 안 그립니다 (5번)');
   const went = await P.p.evaluate(() => { const e = document.querySelector('#hmBand .t-chips.hm-flow .t-chip');
     e.click(); const t = (typeof lastTab !== 'undefined') ? lastTab : ''; go('home'); return t; });
   is(went === 'crm', '  눌러 보니 <b>crm</b> 으로 갔다 — ' + went);

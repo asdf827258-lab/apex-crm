@@ -91,6 +91,9 @@ window.supabase={createClient:function(){
         window.__ai.push({ sys: sys, user: user });
         return Promise.resolve('## 보장분석 결과\n암 진단비가 3천만원 부족합니다.');
       };
+      /* 판 X415 — 기본 AI 가 Gemini 로 바뀌었습니다. 여기서 재는 것은 엔진이 아니라 <b>동의 문</b>이므로
+         엔진을 Claude 로 정해 두고 그 가짜를 지나가게 합니다(어느 엔진이 먼저인지는 check-jvbrain [15] 가 봅니다) */
+      LS.set('provider', 'claude');
       LGL.mine = {}; LGL.waiters = [];
     });
     return { ctx, page, errs };
