@@ -2939,6 +2939,23 @@ function polHtml(p,sd,i){
       '<div class="u"><label>납입기간</label><input value="'+esc(p.years||'')+'" placeholder="예) 20" inputmode="numeric" onfocus="this.select()" oninput="setPol(\''+sd+'\','+i+',\'years\',this.value)"><i>년</i></div>'+
       wonBox('월 보험료',p.premMan,'we_'+sd+'_'+i+'_premMan','setPolWon(&quot;'+sd+'&quot;,'+i+',&quot;premMan&quot;,this)')+
       '<div><label>만기 · 메모</label><input value="'+esc(p.term)+'" placeholder="예) 100세만기" oninput="setPol(\''+sd+'\','+i+',\'term\',this.value)"></div>'+
+      /* ══ 🔁 <b>갱신주기</b> (판 X423) ══════════════════════════════════
+         사장님 말씀 (2026-10-19) — 「<b>새로운 담보 점검</b> / 보험금찾기 /
+         전-후에 입력되신 분, 만들어두고 안 보여드린분」.
+         판 X131 에서 ⛔ 로 남겨 둔 자리입니다 — 「보험 한 줄에 <b>갱신주기
+         칸이 아예 없어</b> 갱신일은 못 합니다. ba.html 이 그 칸을 받기
+         시작하면 그때 바로 붙입니다」. 그 칸을 여기 둡니다.
+         ★★ <b>기본은 「모름」</b> 입니다 — 「비갱신」 이 아닙니다. 안 고르신
+           것을 「비갱신」 으로 읽으면 <b>갱신이 오는 계약을 영영 안 알려</b>
+           드리게 됩니다 (1번).
+         ★★ <b>상품명으로 짐작하지 않습니다</b> — 「갱신형」 이라고 이름에
+           적혀 있어도 몇 년인지는 약관에 있습니다. 모르는 것은 모릅니다.
+         ★ 「비갱신」 은 <b>아는 답</b>입니다 — 그때는 갱신일을 안 세우고,
+           조르지도 않습니다 (8번).                                       */
+      '<div><label>갱신주기</label><select onchange="setPol(\''+sd+'\','+i+',\'rnw\',this.value)">'+
+        BA_RNW.map(function(o){
+          return '<option value="'+o.v+'"'+(((p.rnw||'')===o.v)?' selected':'')+'>'+esc(o.t)+'</option>';
+        }).join('')+'</select></div>'+
     '</div>'+payLine(p,sd,i);
   if(isB&&act==='endo')
     h+='<div class="note w" style="margin-bottom:8px">배서입니다 — 아래 담보판이 <b>「배서 후」</b> 로 바뀝니다. '+
@@ -3054,10 +3071,14 @@ function padSum(bag){
 }
 function padOpen(k){S.padOpen[k]=!S.padOpen[k];save();render();}
 function setPick(k,g){S.pick[k]=g;save();render();}
+/* 🔁 갱신주기 고를 것 — <b>여기 한 곳</b>입니다 (5번 · 판 X423).
+   값은 「해」 숫자이고, 빈 글은 <b>모름</b>, 'no' 는 <b>비갱신</b>입니다. */
+var BA_RNW=[{v:'',t:'모름'},{v:'no',t:'비갱신'},{v:'1',t:'1년'},{v:'3',t:'3년'},
+            {v:'5',t:'5년'},{v:'10',t:'10년'},{v:'15',t:'15년'},{v:'20',t:'20년'}];
 function addPol(sd){
   /* 방금 만든 계약은 <b>펴 놓는다</b> — 적으려고 누른 것이라, 접혀 있으면
      한 번 더 눌러야 한다. */
-  var p={id:nid(),co:'',nm:'',term:'',start:'',years:'',
+  var p={id:nid(),co:'',nm:'',term:'',start:'',years:'',rnw:'',
     premMan:'',premMan2:'',act:'keep',kb:false,cov:{},cov2:{}};
   /* 판 X366 — 담보판도 펴고 「한 번에 적기」 칸에 바로 커서를 둔다: 누르자마자 칠 수 있게 */
   S[sd].push(p);S.polOpen[p.id]=true;S.padOpen[sd+(S[sd].length-1)]=true;save();render();qkFocus(sd+(S[sd].length-1));}
@@ -8780,7 +8801,7 @@ function baEndOf(){
   var today=new Date(), ty=today.getFullYear(), tm=today.getMonth()+1;
   var age=parseInt((''+((S.who&&S.who.age)||'')).replace(/[^0-9]/g,''),10);
   if(!age||age<=0||age>120)age=null;
-  var pay=null,cov=null,i,p,nm;
+  var pay=null,cov=null,rnw=null,i,p,nm;
   for(i=0;i<S.before.length;i++){
     p=S.before[i];
     if(!p||p.act==='cancel')continue;                 /* 없어질 보험은 안 셉니다 */
@@ -8794,6 +8815,23 @@ function baEndOf(){
       if(key>=ty*12+tm&&(pay===null||key<pay.key))
         pay={key:key,ym:ey+'-'+((em<10?'0':'')+em),nm:nm};
     }
+    /* ③ <b>다음 갱신일</b> — 가입 달 + 갱신주기 × n (판 X423).
+       ★ <b>둘 다 알 때만</b> 셉니다 (1번) — 가입 달을 모르거나 주기가
+         「모름」 이면 아무것도 안 돌려줍니다. 날짜를 지어내면 고객 앞에서
+         틀립니다(판 X131 에서 그래서 미뤄 둔 자리입니다).
+       ★ 「비갱신」('no')은 <b>아는 답</b>이라 역시 안 셉니다 — 갱신이
+         없는 것이지 모르는 것이 아닙니다 (8번).
+       ★ 셈은 <b>오늘 뒤로 오는 첫 번째</b>입니다. 지난 갱신은 이미 지났고
+         사장님이 하실 일이 없습니다. */
+    var rv=parseInt((''+(p.rnw||'')).replace(/[^0-9]/g,''),10);
+    if(st&&rv>0&&rv<=30){
+      var bm=(+st[2]), by=(+st[1]), now=ty*12+tm, k2=by*12+bm;
+      while(k2<now)k2+=rv*12;                /* 오늘 뒤로 오는 첫 갱신 */
+      if(rnw===null||k2<rnw.key){
+        var ry=Math.floor((k2-1)/12), rm=k2-ry*12;
+        rnw={key:k2,ym:ry+'-'+((rm<10?'0':'')+rm),nm:nm,every:rv};
+      }
+    }
     /* ② 보장 만기 — 만기 나이 − 지금 나이 (해까지) */
     var ea=baEndAge(p.term);
     if(ea&&age&&ea>age){
@@ -8801,9 +8839,11 @@ function baEndOf(){
       if(cov===null||y2<cov.y)cov={y:y2,nm:nm,age:ea};
     }
   }
-  if(!pay&&!cov)return null;
+  if(!pay&&!cov&&!rnw)return null;
   return {pay:pay?{ym:pay.ym,nm:pay.nm}:null,
           cov:cov?{y:cov.y,age:cov.age,nm:cov.nm}:null,
+          /* 🔁 다음 갱신 — 모르면 <b>아예 안 담습니다</b> (1번 · 판 X423) */
+          rnw:rnw?{ym:rnw.ym,nm:rnw.nm,every:rnw.every}:null,
           src:'보장분석에서 셈'};
 }
 function baSaveToClient(){

@@ -14,7 +14,8 @@
 
    여기서 확인합니다.
 
-     1. 네 갈래가 저마다 서는가 — 안 보여드림 · 납입 만기 · 보장 만기 · 청구 0건
+     1. 다섯 갈래가 저마다 서는가 — 안 보여드림 · 납입 만기 · <b>갱신</b> ·
+        보장 만기 · 청구 0건
      2. ★ <b>기한이 먼 것은 안 세우는가</b> — 10년 뒤 만기로 오늘 전화하지 않는다
      3. ★ <b>지난 것도 안 세우는가</b> — 이미 끝난 만기로 울리지 않는다
      4. ★ 보여 드린 뒤에는 <b>빠지는가</b> — 접촉을 남기면 그 줄이 사라진다
@@ -23,8 +24,9 @@
      7. ★ <b>빈 쪽지를 안 만드는가</b> (판 X126·X130 에서 데인 자리)
      8. ★★ <b>「보험금 받으실 수 있습니다」 라고 안 적는가</b> (1번) —
         청구가 되는지는 병원 기록이 있어야 아는 일이고 앱에 없습니다
-     9. ★★ <b>갱신일을 지어내지 않는가</b> (1번) — 보장분석이 그 칸을 안
-        들고 있습니다. 못 한다고 <b>화면에 적는가</b>
+     9. ★★ <b>갱신일을 지어내지 않는가</b> (1번) — 판 X423 에 보장분석의
+        계약 줄에 <b>갱신주기</b> 칸이 생겨(ba.html 의 BA_RNW) 거기 적힌 것만
+        셉니다. <b>안 적힌 계약은 안 서는가</b> · 그것을 화면에 적는가
     10. ★★ 알람 글에 <b>이름도 금액도 한 자도</b> 안 들어가는가 (3번)
     11. ★ 알람 칸이 <b>기본으로 꺼져 있는가</b> — 사장님 말씀은 「하루 네 번」
         이었습니다. 켜져 있는 넷을 다섯으로 늘리지 않습니다 (6번)
@@ -74,7 +76,9 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
       { id: 'c2', name_masked: '홍○순', advisor_id: 'me', created_at: '2026-01-01' },
       { id: 'c3', name_masked: '홍○돌', advisor_id: 'me', created_at: '2026-01-01' },
       { id: 'c4', name_masked: '홍○복', advisor_id: 'me', created_at: '2026-01-01' },
-      { id: 'c5', name_masked: '홍○순2', advisor_id: 'me', created_at: '2026-01-01' }
+      { id: 'c5', name_masked: '홍○순2', advisor_id: 'me', created_at: '2026-01-01' },
+      { id: 'c6', name_masked: '홍○쇠', advisor_id: 'me', created_at: '2026-01-01' },
+      { id: 'c7', name_masked: '홍○쇠2', advisor_id: 'me', created_at: '2026-01-01' }
     ];
     OSC.loaded = true; CC.calls = {}; CC.loaded = true; CM.loaded = true;
     /* 청구 기록 — c2 만 있습니다 */
@@ -96,7 +100,14 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
             end: { pay: null, cov: { y: 2027, age: 80, nm: '실손' } } } },
       /* ⑤ 먼 것·지난 것 — 한 줄도 안 서야 합니다 */
       c5: { at: '2026-10-10', sum: { name: '홍○순2', top: {},
-            end: { pay: { ym: '2035-05', nm: '먼 것' }, cov: { y: 2019, age: 60, nm: '지난 것' } } } }
+            end: { pay: { ym: '2035-05', nm: '먼 것' }, cov: { y: 2019, age: 60, nm: '지난 것' },
+                   rnw: { ym: '2019-04', nm: '지난 갱신', every: 3 } } } },
+      /* ⑥ 갱신 2달 뒤 — 여기만 🔁 가 서야 합니다 (판 X423) */
+      c6: { at: '2026-10-10', sum: { name: '홍○쇠', top: {},
+            end: { pay: null, cov: null, rnw: { ym: '2026-12', nm: '삼성 암보험', every: 3 } } } },
+      /* ⑦ 갱신이 3해 뒤 — 오늘 전화할 일이 아닙니다 */
+      c7: { at: '2026-10-10', sum: { name: '홍○쇠2', top: {},
+            end: { pay: null, cov: null, rnw: { ym: '2029-12', nm: '먼 갱신', every: 10 } } } }
     };
     const before = Object.keys(CM.meta).sort().join(',');
     const rows = baxRows(), cnt = baxCount();
@@ -105,17 +116,31 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   }, T);
   const byK = {}; F.rows.forEach(r => (byK[r.k] = byK[r.k] || []).push(r.cid));
 
-  console.log('\n[1] 네 갈래가 저마다 선다');
-  is((byK.show || []).join(',') === 'c1,c3,c4,c5',
-     '만들어 두고 안 보여드린 분 — c1·c3·c4·c5 (받음 ' + (byK.show || []).join(',') + ')');
+  console.log('\n[1] 다섯 갈래가 저마다 선다');
+  is((byK.show || []).join(',') === 'c1,c3,c4,c5,c6,c7',
+     '만들어 두고 안 보여드린 분 — c2 만 빠진다 (받음 ' + (byK.show || []).join(',') + ')');
   is((byK.pay || []).join(',') === 'c3', '납입 만기 — c3 만 (받음 ' + (byK.pay || []).join(',') + ')');
+  is((byK.rnw || []).join(',') === 'c6', '🔁 갱신 — c6 만 (받음 ' + (byK.rnw || []).join(',') + ')');
   is((byK.cov || []).join(',') === 'c4', '보장 만기 — c4 만 (받음 ' + (byK.cov || []).join(',') + ')');
-  is((byK.clm || []).join(',') === 'c1,c3,c4,c5',
+  is((byK.clm || []).join(',') === 'c1,c3,c4,c5,c6,c7',
      '청구 기록 0건 — c2 만 빠진다 (받음 ' + (byK.clm || []).join(',') + ')');
+  /* 🔁 줄에 적힌 글 — <b>주기까지</b> 밝힙니다. 「3년마다」 를 안 적으면
+     사장님이 왜 그 달인지 모르십니다. */
+  const R6 = F.rows.filter(r => r.k === 'rnw')[0];
+  is(!!R6 && /2026-12/.test(R6.s) && /2달 뒤/.test(R6.s) && /3년마다/.test(R6.s),
+     '갱신 줄이 <b>달·남은 달·주기</b>를 적는다 — 「' + (R6 ? R6.s : '없음') + '」');
 
   console.log('\n[2]·[3] 먼 것과 지난 것은 안 세운다');
   is(!(byK.pay || []).includes('c5'), '9년 뒤 납입 만기로는 오늘 안 울린다');
   is(!(byK.cov || []).includes('c5'), '이미 지난 보장 만기로는 안 울린다');
+  is(!(byK.rnw || []).includes('c7'), '3해 뒤 갱신으로는 오늘 안 울린다');
+  is(!(byK.rnw || []).includes('c5'), '<b>이미 지난 갱신</b>으로는 안 울린다');
+
+  console.log('\n[9] 갱신주기를 안 적어 두신 계약은 안 센다 — 지어내지 않는다 (1번)');
+  /* c1·c3·c4 는 sum.end 에 rnw 가 아예 없습니다 — 옛 보장분석이 그렇습니다.
+     상품명으로 짐작해 「암보험이니 3년 갱신」 이라고 세우면 그 자리에서 틀립니다. */
+  is(!(byK.rnw || []).some(c => c === 'c1' || c === 'c3' || c === 'c4'),
+     'rnw 칸이 없는 분(c1·c3·c4)은 🔁 에 한 줄도 안 선다');
 
   console.log('\n[4] 보여 드린 뒤에는 빠진다');
   is(!(byK.show || []).includes('c2'), 'c2 는 만든 뒤 접촉을 남겨 「안 보여드림」 에서 빠진다');
@@ -141,8 +166,10 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(!/받으실 수 있습니다|받을 수 있습니다|청구 가능/.test(say),
      '「보험금 받으실 수 있습니다」 라고 안 적는다 (1번)');
   is(/한 번도 여쭤 본 적이 없다/.test(say), '적을 수 있는 데까지만 적는다 — 「여쭤 본 적이 없다」');
-  is(/갱신일<\/b>은[\s\S]{0,40}못 셉니다/.test(say) || /갱신일[\s\S]{0,60}못 셉니다/.test(say),
-     '갱신일은 <b>못 한다고 화면에 적는다</b> (1번)');
+  is(/갱신주기를 적어 두신 계약만<\/b>\s*셉니다/.test(say),
+     '<b>적어 두신 계약만 센다</b>고 화면에 적는다 (1번)');
+  is(/안 적힌 계약은[\s\S]{0,30}안 세웁니다/.test(say) && /짐작해 날짜를 지어내지/.test(say),
+     '<b>안 적힌 계약은 안 세운다</b>고 화면에 적는다 — 짐작하지 않는다 (1번)');
   is(!/보장이 모자|부족합니다/.test(say), '「보장이 모자랍니다」 같은 결론을 안 적는다 (2번)');
 
   console.log('\n[10]·[11] 알람');
@@ -176,11 +203,14 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   const dom = await page.evaluate(() => ({
     box: document.querySelectorAll('.bax').length,
     rows: document.querySelectorAll('.bax-r').length,
-    groups: document.querySelectorAll('.bax-g').length
+    groups: document.querySelectorAll('.bax-g').length,
+    rnw: Array.prototype.filter.call(document.querySelectorAll('.bax-g'),
+           g => /갱신 가까움/.test(g.textContent)).length
   }));
   is(dom.box === 1, '칸이 하나 선다 (받음 ' + dom.box + ')');
   is(dom.rows > 0, '줄이 그려진다 (받음 ' + dom.rows + ')');
   is(dom.groups >= 3, '갈래 머리가 선다 (받음 ' + dom.groups + ')');
+  is(dom.rnw === 1, '🔁 갱신 머리가 한 번 선다 (받음 ' + dom.rnw + ')');
 
   console.log('\n[13] 화면이 안 터진다');
   is(errs.length === 0, '터진 것 없음' + (errs.length ? ' — ' + errs[0] : ''));
