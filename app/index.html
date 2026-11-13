@@ -14320,6 +14320,10 @@ function chkHtml(){
 var BAX_SOON_M=6;      /* 납입 만기 — 몇 달 앞까지 챙기나 */
 var BAX_SOON_Y=2;      /* 보장 만기 — 몇 해 앞까지 챙기나 */
 var BAX_SOON_RNW=6;    /* 갱신 — 몇 달 앞까지 챙기나 (판 X423) */
+/* ⏰ <b>코앞</b> — 홈이 한 줄로 말해 주는 자리 (판 X426).
+   사장님 말씀 X04 는 「D-30」 이었지만 그 글자는 안 씁니다 — 사장님이
+   그렇게 이르셨고, 달력으로 「이번 달·다음 달」 이 설계사에게 더 또렷합니다. */
+var BAX_NOW_M=1;
 var BAX_K={
   show:{e:'📄',t:'만들어 두고 안 보여드림',ord:1,
         why:'전·후를 만들어 두고 그 뒤로 연락 기록이 없습니다'},
@@ -14404,6 +14408,23 @@ function baxCount(){
   for(k in BAX_K)if(BAX_K.hasOwnProperty(k))c[k]=0;
   for(var i=0;i<L.length;i++)c[L[i].k]=(c[L[i].k]||0)+1;
   return c;
+}
+/* ⏰ <b>코앞에 온 것만</b> — 홈이 한 칸으로 말해 주는 자리입니다 (판 X426 · 말씀 X04).
+   ★★ <b>여기서 또 세지 않습니다</b> (5번) — baxRows() 가 세어 둔 줄을 <b>거를</b>
+     뿐입니다. 홈과 🩺 화면이 다른 수를 말하면 그 자리에서 믿음이 깨집니다.
+   ★ 못 읽었으면 <b>null</b> 입니다 — 0 이 아니라 모르는 것입니다 (1번).
+   ★ 보장 만기는 <b>해까지만</b> 압니다(증권에 그렇게 적혀 옵니다). 달을
+     지어내지 않고 「올해 안」 인 것만 셉니다.
+   ★ 한 분이 납입·갱신 둘 다 코앞일 수 있어, <b>줄</b>과 <b>명</b>을 따로 셉니다. */
+function baxSoon(){
+  var L=baxRows(); if(L===null)return null;      /* 모른다 */
+  var out=[],who={},i,x,n=0;
+  for(i=0;i<L.length;i++){ x=L[i];
+    if(!(((x.k==='pay'||x.k==='rnw')&&x.d<=BAX_NOW_M)||(x.k==='cov'&&x.d===0)))continue;
+    out.push(x);
+    if(!who[x.cid]){ who[x.cid]=1; n++; }
+  }
+  return {list:out,n:n};
 }
 /* ── 화면 — 「🩺 고객 체크」 안에 한 묶음 ───────────────────────────────
    ★ <b>새 화면을 안 만듭니다</b> (5번). 「읽은 증권으로 무엇을 터치할지」
@@ -22001,7 +22022,7 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-12 20:10';
+var APP_BUILD='2026-11-13 10:40';
 var APP_BUILD_NOTE='🌱 <b>「교육」 이 「성장」 이 됐습니다</b>(판 X409 · 사장님 말씀 「입사부터, 과정, 경력자까지 레벨업이 되도록 … 단순화하는 과정과 숙지하는 과정을 성장 칸 아래」) — 서랍 「성장」 칸이 레벨 차례(입사 첫 주 → 1개월 → 2~3개월 → 경력자 → 리더)로 섰고, 맨 위 <b>🌱 성장 로드맵</b>이 <b>쓰는 법대로 네 장</b>입니다(사장님 말씀 2026-11-11 「순차적으로 성장 가능하고 매번 사용할 수 있는 것들에 분류까지 · 고객에게 필요한 내용들을 선별해서」): <b>🪜 한 길</b>(한 번 걷는 과정 — 내 레벨에서 지금 할 것 하나만, 걸음마다 끝낸 뒤 어디로 가는지 꼬리표) · <b>🔁 익히기</b>(열두 주제 — 교재 읽고 · 화법서로 써 보고 · 스스로 합격, 성장판과 같은 도장) · <b>🧰 매번</b>(연락 전 · 상담 전날 · 상담 중 · 심사·청구 · 재무 대화 · 대표님 · 매달 · 교재 장별 — 언제 펴나로 묶고, 병 이름으로도 찾힙니다) · <b>🤝 고객 앞</b>(고객과 같이 보거나 보내는 것만 상담 순서 다섯 마디로 — 화면 41개를 열어 <b>그 화면 스스로 고객용이라고 적은 것</b>만 골랐고, 상품전략기 · 대본 · 4년 유지관리처럼 꺼내지 않을 것은 까닭과 함께). 한 길 맨 밑 「왜 이렇게 나눴나」 는 성장판 여섯 축과 90일 구간을 그 표에서 읽습니다. 「APEX 본인 점검란」 은 원래 안에 든 대로 <b>90일 아카데미</b>라고 부릅니다(옛 이름으로 찾아도 열립니다). 화면은 하나도 안 옮겼고 지운 것도 없습니다. 같이 실린 것: 판 X403(소식지 분석)·X404(자비스).';
 
 
@@ -34235,7 +34256,17 @@ var HM_MS_BODY={
       없는 것인지 알 길이 없었습니다. 2026-10-09 에 하루를 몰아 보다
       잡았습니다(124자뿐이었습니다).
       ★ 「다 됐다」로 보이는 상태에서 길을 감추지 않습니다 (6번).      */
-   return '<div id="hmChkHost">'+back+h+'</div>'; },
+   /* ⏰ <b>코앞에 온 만기·갱신</b> (판 X426 · 말씀 X04).
+      ★★ <b>카드(hmChkHtml) 안에 넣지 않았습니다.</b> 그 카드는 AP·PC·CS 가
+        한 분도 없으면 <b>통째로 안 섭니다</b>. 그런데 만기가 코앞인 분은
+        <b>계약을 끝내신 분</b>일 수도, <b>고객 365일에만 있는 분</b>일 수도
+        있습니다(baxRows 는 OSC.list 로 거릅니다). 카드 안에 넣으면 그분들이
+        <b>조용히 빠집니다</b> — 판 X421 에서 데인 바로 그 자리입니다.
+      ★ <b>빈 것을 가르는 자리(위 if(!h))는 한 자도 안 건드렸습니다</b> —
+        줄이 답을 바꾸면 안 된다고 그 위에 적혀 있습니다.               */
+   var soon='';
+   try{ soon=hmBaxHtml(); }catch(e4){ soon=''; }
+   return '<div id="hmChkHost">'+back+soon+h+'</div>'; },
  /* ① 오늘의 알림 — <b>누구인지</b>부터 */
  almn:function(P){
    if(!P.length)
@@ -38669,6 +38700,47 @@ function hmFinHtml(){
     '<div class="hm-chk-b">'+
       '<button type="button" onclick="hmFinGo()">🧮 재무설계 계산기 열기</button>'+
     '</div></div>';
+}
+/* ══ ⏰ <b>코앞에 온 만기·갱신</b> — 판 X426 ═══════════════════════════════
+   사장님 말씀 <b>X04</b> 「납입·보장 만기 신호」 는 오래 <b>보류</b>였습니다.
+   까닭이 대장에 적혀 있었습니다 — 「증권에서 읽은 계약이 그 분 것만 있어,
+   홈이 수백 분 것을 다 읽으면 무료 한도를 넘깁니다(7번). <b>보장분석이 돌 때
+   다음 만기일 한 줄을 적어 두는 것이 먼저</b>입니다」.
+   그 한 줄이 이제 <b>있습니다</b> — sum.end{pay,cov,rnw} 이고, chkLoad 가
+   sum 칸만 집어 <b>한 번</b> 받아 옵니다(7번). 그래서 보류를 풉니다.
+   ★★ <b>세는 곳은 baxRows() 하나</b>입니다 (5번) — 홈과 🩺 화면이 다른 수를
+     말하면 사장님이 어느 쪽을 믿어야 할지 모르십니다. 여기서는 거르기만 합니다.
+   ★ <b>접어 둡니다</b> — 홈은 이미 길고, 펴 두면 한 화면을 또 넘깁니다
+     (check-msfive · check-homeone 이 그 자리를 잽니다).
+   ★ 홈이라 <b>실명이 기본</b>입니다 — hmFullNm 을 부릅니다 (3번 · 판 X399).
+   ★ 코앞이 없으면 <b>아무 칸도 안 세웁니다</b> — 「0명」 은 적지 않습니다.  */
+function hmBaxHtml(){
+  var S=null; try{ S=baxSoon(); }catch(e){ S=null; }
+  if(!S||!S.n)return '';
+  hmBaxCss();
+  var L=S.list,i,x,rows='';
+  for(i=0;i<L.length&&i<4;i++){ x=L[i];
+    rows+='<div class="hm-bax-r">'+
+      '<span class="nm">'+osEsc(hmFullNm(x.nm||'고객'))+'</span>'+
+      '<span class="s">'+baxKe(x.k)+' '+osEsc(x.s)+'</span></div>';
+  }
+  if(L.length>4)
+    rows+='<div class="hm-bax-m">외 <b>'+(L.length-4)+'줄</b> — 🩺 고객 체크에 다 있습니다.</div>';
+  rows+='<div class="hm-chk-b" style="margin-top:9px">'+
+    '<button type="button" onclick="hmChkGo()">🩺 고객 체크 열기 →</button></div>';
+  return hmFoldWrap('baxsoon','⏰','코앞에 온 만기·갱신',
+    S.n+'명 — 이번 달·다음 달',rows,'코앞만기몇분');
+}
+function hmBaxCss(){
+  if(document.getElementById('hmBaxCss'))return;
+  var st=document.createElement('style');st.id='hmBaxCss';
+  st.textContent=
+   '.hm-bax-r{padding:7px 2px;border-bottom:1px solid var(--t-line);font-size:var(--t6)}'+
+   '.hm-bax-r:last-of-type{border-bottom:0}'+
+   '.hm-bax-r .nm{display:block;font-weight:900;color:var(--t-ink)}'+
+   '.hm-bax-r .s{display:block;margin-top:2px;color:var(--t-sub);line-height:1.6}'+
+   '.hm-bax-m{margin-top:6px;font-size:var(--t7);font-weight:700;color:var(--t-sub2)}';
+  document.head.appendChild(st);
 }
 function hmChkHtml(){
   if(!OS.profile)return '';
