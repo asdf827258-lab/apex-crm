@@ -11,7 +11,7 @@
      비어 있었습니다. 키울 자리가 이미 있었던 것입니다.
 
    ★ 이 자가 보는 것 (열 가지)
-     [1] 고객용이 <b>열세 장</b>이고 <b>담당자가 계약보다 먼저</b> 온다
+     [1] 고객용이 <b>열다섯 장</b>이고 <b>소개(s0)가 맨 앞</b> · <b>담당자가 계약보다 먼저</b> 온다
      [2] 어느 장도 A4 를 안 넘는다
      [3] <b>고객이 읽는 글은 13px 바닥</b> — 법정 고지만 예외
      [4] <b>상담 도구 장(chk)은 한 톨도 안 바뀐다</b> — 어르신용으로 따로
@@ -82,7 +82,13 @@ const { chromium } = require('playwright');
 const FILE = path.resolve(__dirname, '..', 'app', '증권전달', 'index.html');
 
 /* 고객이 받는 차례 — 담당자가 계약보다 먼저입니다 */
-const 차례 = ['s1','s6','s5','s15','s2','s3','s16','s12','s14','s13','s4','s10','s11'];
+/* ★ 2026-11-11 (판 X412) — 맨 앞에 <b>s0 · 담당 설계사 소개</b>가 섰습니다.
+   사장님 말씀 「첫 장 나를 소개하고 … 앞으로 관리에 대한 약속을 하고」.
+   s0 은 쪽 번호를 안 먹습니다(shNum 이 .sh-top .r 없는 장을 건너뜁니다) —
+   그래서 [5] 의 쪽 번호 세기는 그대로입니다. */
+/* ★ s19(소중한 가족) 가 간병인 장 <b>바로 뒤</b>에 섭니다 (판 X414) — 간병인 장이
+   「다음 장에 적어 주시면」 이라 말하므로, 사이에 다른 장이 끼면 그 말이 거짓이 됩니다. */
+const 차례 = ['s0','s1','s6','s5','s15','s2','s3','s16','s19','s12','s14','s13','s4','s10','s11'];
 /* 글씨 바닥 — 고객용 장의 어떤 글도 이 밑으로 안 갑니다 (법정 꼬리글만 예외) */
 const 바닥 = 13;
 /* ★ A4 바닥에 남겨 둘 여유 — 글꼴이 바뀌면 줄 수가 달라집니다 (판 X364) */
@@ -313,8 +319,11 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
     } catch (e) { 띠.사진넣으면.말 = '터졌습니다 — ' + ((e && e.message) || ''); }
     const 글 = (id) => { const e = document.getElementById(id); return e ? (e.innerText || '') : ''; };
     /* 📑 표지 차례 — 장에서 읽어 세우나 (판 X369) */
+    /* ★ s0(담당 설계사 소개)도 뺍니다 (판 X412) — 표지(s1) 앞에 서는 장이라
+       「이 안에 들어 있는 것」 의 본문 장이 아닙니다. 넣으면 머리글의
+       「모두 N장」 이 안내서 본문 수와 어긋납니다. */
     const 켜진 = [...document.querySelectorAll('.sheet[data-kind="ins"],.sheet[data-kind="let"]')]
-      .filter(x => !x.classList.contains('off') && x.id !== 's1');
+      .filter(x => !x.classList.contains('off') && x.id !== 's1' && x.id !== 's0');
     const 차례 = { 줄: document.querySelectorAll('#v_cvtoc div:not(.ex)').length, 켜진: 켜진.length,
                    머리: (document.getElementById('v_cvtoch') || {}).textContent || '', 끈뒤: -1 };
     (function () {
@@ -345,7 +354,7 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
              고객토큰, 틀, 알약머리, 머리모두, 빨강체크, 체크모두 };
   }, { 바닥 });
 
-  console.log('[1] 고객용이 열세 장이고 담당자가 계약보다 먼저 오나');
+  console.log('[1] 고객용이 열다섯 장이고 소개가 맨 앞 · 담당자가 계약보다 먼저 오나');
   const 선차례 = r.장.map(x => x.id);
   ok(선차례.length === 차례.length, '고객용 ' + 선차례.length + '장 (' + 차례.length + '장이어야 합니다)');
   ok(선차례.join('>') === 차례.join('>'), '차례 — ' + 선차례.join(' → '));
@@ -373,7 +382,7 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
   ok(r.도구 === 도구기준, '도구 장 글씨 분포' + (r.도구 === 도구기준 ? ' 그대로' : ('\n        잰 값 ' + r.도구 + '\n        기준 ' + 도구기준)));
 
   console.log('[5] 장을 끄면 쪽 번호가 다시 매겨지나');
-  ok(/· 10$/.test(r.다시), '놓치는 청구 장을 끄니 연락처가 11 → ' + (r.다시 || '(못 읽음)'));
+  ok(/· 11$/.test(r.다시), '놓치는 청구 장을 끄니 연락처가 12 → ' + (r.다시 || '(못 읽음)'));
 
   console.log('[7] 서류 장이 단정하지 않나 (1번 · 2번)');
   ok(/보험사와 상품마다 다릅니다/.test(r.s12), '「보험사와 상품마다 다릅니다」 를 말한다');
@@ -404,7 +413,7 @@ const ok  = (c, m) => { console.log((c ? '  ✓   ' : '  ✗   ') + m); if (!c) 
 
   console.log('[15] 사진이 눈에 확 들어오나 (판 X363)');
   const 띠 = (src.match(/class="jg-hero" data-ph=/g) || []).length;
-  ok(띠 === 11, '사진 띠가 ' + 띠 + '장에 있다 (표지는 장 전체라 따로)');
+  ok(띠 === 12, '사진 띠가 ' + 띠 + '장에 있다 (표지는 장 전체라 따로)');
   ok(/data-ph="s1"/.test(src), '표지도 사진 자리를 가졌다');
   ok(/\/api\/photo-search\?q=/.test(src), '사진을 캐러셀과 같은 길로 찾는다 (/api/photo-search · 5번)');
   ok(!/api\.pexels\.com|api\.unsplash\.com/.test(src), '사진 서버를 직접 안 부른다 (열쇠가 새지 않게 · 10번)');
