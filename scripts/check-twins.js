@@ -210,7 +210,14 @@ var EXTERNAL = ['supabase', 'PENSION', 'APEX_REPORT', 'html2canvas', 'PptxGenJS'
   /* alm-slots.js — 알람 네 번(시각·문구) 한 벌. 앱은 <script> 로, <b>서버는
      netlify.toml 의 included_files</b> 로 같은 파일을 읽습니다. 시각이나
      문구를 index.html 에 또 적으면 화면과 알람이 다른 말을 합니다 (5번). */
-  'ALM_SLOTS', 'almSlotOf', 'almSlotAt'];
+  'ALM_SLOTS', 'almSlotOf', 'almSlotAt',
+  /* apex-grow.js — 🌱 성장 로드맵(판 X409). index.html 은 <script src> 로 싣고
+     go('edu') 에서 renderGrow()·grAfter() 를 부릅니다. 이 자는 src 스크립트를
+     일부러 안 읽으므로(아래 scriptsOf) 여기 적어야 합니다.
+     ⚠ 2026-11-13 에 제가 origin/main 을 받아 붙인 뒤 이 둘이 울었습니다 —
+       main 의 CI 는 초록이었는데 제 손에서는 빨간불이었습니다. 코드는 멀쩡합니다
+       (apex-grow.js 428·437줄에 선언이 있습니다). <b>자에게 알려 주지 않은 것</b>뿐입니다. */
+  'renderGrow', 'grAfter'];
 
 function scriptsOf(src) {
   var out = [], re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi, m;
