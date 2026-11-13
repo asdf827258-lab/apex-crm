@@ -411,7 +411,7 @@ function grCss(){
     '.gr-su .ln{font-size:var(--t6);color:var(--t-sub);line-height:1.55;margin-top:2px}'+
     '.gr-su .ln b{color:var(--t-ink)}'+
     '.gr-none{font-size:var(--t6);color:var(--t-sub);line-height:1.6}'+
-    '.gr-foot{font-size:var(--t6);color:var(--t-sub);line-height:1.6;margin-top:12px;word-break:keep-all}'+
+    '.gr-foot{font-size:var(--t6);color:var(--t-sub);line-height:1.6;margin:12px 0 0;padding:0 16px;word-break:keep-all}'+
     '.gr-seg button{padding:0 2px;word-break:keep-all}'+
     '.gr-use{display:inline-block;font-size:var(--t6);font-weight:800;color:var(--t-point);margin-top:3px}'+
     '.gr-why summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:var(--t5);font-weight:800;color:var(--t-ink)}'+
