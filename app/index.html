@@ -14320,6 +14320,10 @@ function chkHtml(){
 var BAX_SOON_M=6;      /* 납입 만기 — 몇 달 앞까지 챙기나 */
 var BAX_SOON_Y=2;      /* 보장 만기 — 몇 해 앞까지 챙기나 */
 var BAX_SOON_RNW=6;    /* 갱신 — 몇 달 앞까지 챙기나 (판 X423) */
+/* ⏰ <b>코앞</b> — 홈이 한 줄로 말해 주는 자리 (판 X426).
+   사장님 말씀 X04 는 「D-30」 이었지만 그 글자는 안 씁니다 — 사장님이
+   그렇게 이르셨고, 달력으로 「이번 달·다음 달」 이 설계사에게 더 또렷합니다. */
+var BAX_NOW_M=1;
 var BAX_K={
   show:{e:'📄',t:'만들어 두고 안 보여드림',ord:1,
         why:'전·후를 만들어 두고 그 뒤로 연락 기록이 없습니다'},
@@ -14404,6 +14408,23 @@ function baxCount(){
   for(k in BAX_K)if(BAX_K.hasOwnProperty(k))c[k]=0;
   for(var i=0;i<L.length;i++)c[L[i].k]=(c[L[i].k]||0)+1;
   return c;
+}
+/* ⏰ <b>코앞에 온 것만</b> — 홈이 한 칸으로 말해 주는 자리입니다 (판 X426 · 말씀 X04).
+   ★★ <b>여기서 또 세지 않습니다</b> (5번) — baxRows() 가 세어 둔 줄을 <b>거를</b>
+     뿐입니다. 홈과 🩺 화면이 다른 수를 말하면 그 자리에서 믿음이 깨집니다.
+   ★ 못 읽었으면 <b>null</b> 입니다 — 0 이 아니라 모르는 것입니다 (1번).
+   ★ 보장 만기는 <b>해까지만</b> 압니다(증권에 그렇게 적혀 옵니다). 달을
+     지어내지 않고 「올해 안」 인 것만 셉니다.
+   ★ 한 분이 납입·갱신 둘 다 코앞일 수 있어, <b>줄</b>과 <b>명</b>을 따로 셉니다. */
+function baxSoon(){
+  var L=baxRows(); if(L===null)return null;      /* 모른다 */
+  var out=[],who={},i,x,n=0;
+  for(i=0;i<L.length;i++){ x=L[i];
+    if(!(((x.k==='pay'||x.k==='rnw')&&x.d<=BAX_NOW_M)||(x.k==='cov'&&x.d===0)))continue;
+    out.push(x);
+    if(!who[x.cid]){ who[x.cid]=1; n++; }
+  }
+  return {list:out,n:n};
 }
 /* ── 화면 — 「🩺 고객 체크」 안에 한 묶음 ───────────────────────────────
    ★ <b>새 화면을 안 만듭니다</b> (5번). 「읽은 증권으로 무엇을 터치할지」
@@ -15454,35 +15475,58 @@ var TABS=[
       (NAV_WHEN)는 손대지 않았으므로 🧰 도구 화면도 그대로입니다.
     ★ 현장에서 고객 앞에 쥐는 것(TA 스크립트 · 보낼 말 모음 · 30초 TA ·
       미끼 화법 · 질병 보험가이드)은 <b>상담 도구에 그대로 둡니다</b> — 배우는
-      자리와 쓰는 자리는 다릅니다.                                        */
- {group:'교육',items:[
-   /* 🎓 <b>문</b> — 분류해서 한 번에 보고 들어가는 자리. 표는 HUB_MAP 한 곳입니다 (5번) */
-   {id:'edu',icon:'🎓',title:'교육 한 자리',cnt:'',ak:'교육 자료 교재 강의 훈련 신입 배우기 공부 한자리 모아보기 분류'},
+      자리와 쓰는 자리는 다릅니다.
+
+    ══ 🌱 <b>성장</b> 으로 (판 X409) ══════════════════════════════════
+    사장님 말씀 (2026-11-10) — 「입사부터, 과정, 경력자까지 레벨업이 되도록 …
+    교육이나 지식에 관련된 엄청난 내용들 싹 정리해서 하나로 만들고, 단순화하는
+    과정과 숙지하는 과정을 「성장」 칸이라는 아래 다 만들고 정리」.
+    ① 묶음 이름 「교육」 → <b>「성장」</b>. 문(등급·역할)은 묶음 이름이 아니라
+       칸마다의 tk/ak 로 판정하므로 이름을 바꿔도 누가 여는지는 그대로입니다.
+    ② 칸 차례를 <b>레벨 차례</b>로 — Lv.0 사용가이드 · 마스터 과정 · 거절 근육 ·
+       교재 → Lv.1 90일 아카데미 · 신입 TA · 대본 · 지인 8주 → Lv.2 화법서 →
+       Lv.3 내 코칭 → Lv.4 강의 · 운영 (운영 둘은 EM 에게만 섭니다).
+    ③ 맨 위 문이 <b>🌱 성장 로드맵</b> — 한 길(순서대로) · 익히기(숙지) ·
+       매번(찾아 쓰기) · 고객 앞(같이 보기) 네 장. 몸은 app/apex-grow.js 한 파일입니다(renderGrow).
+    ★ 지식은 <b>옮기지 않습니다</b> — 현장에서 쥐는 칸은 제자리에 두고, 지식
+      창고가 주제별로 문만 엽니다. 위 「배우는 자리와 쓰는 자리는 다르다」
+      를 그대로 지킵니다.                                                  */
+ {group:'성장',items:[
+   /* 🌱 <b>문</b> — 레벨 · 숙지 · 지식을 한 화면에서. 표는 apex-grow.js 의 GR_LV · GR_KNOW 입니다 (5번).
+      ⚠ tk 는 옛 ak 그대로 — 찾기 낱말을 늘려도 등급 열쇠가 안 움직이게 (check-toolmap) */
+   {id:'edu',tk:'교육 자료 교재 강의 훈련 신입 배우기 공부 한자리 모아보기 분류',icon:'🌱',title:'성장 로드맵',cnt:'',ak:'교육 자료 교재 강의 훈련 신입 배우기 공부 한자리 모아보기 분류 성장 로드맵 레벨 레벨업 입사 경력자 숙지 익히기 지식 창고 교육 한 자리'},
+   {id:'manual',icon:'📘',title:'APEX 사용가이드',cnt:'',ak:'업무매뉴얼'},
+   {id:'apexmaster',icon:'🎓',title:'APEX 마스터 과정',cnt:'14',ak:'업무매뉴얼 마스터 과정 신입 교육 따라하기 익히기 하루한장'},
+   /* 🥊 <b>거절 근육 훈련</b> — 2026-10-07 사장님 말씀 「고객의 거절에 익숙해지는
+      교육과 프로그램」. 몸은 reject-gym.html 한 파일이고, 역할극 멘트는 위 TA
+      스크립트와 <b>같은 표</b>(apex-stage.js)를 읽습니다 (5번). */
+   {id:'rej_gym',tk:'고객',icon:'🥊',title:'거절 근육 훈련',cnt:'10',ak:'고객 거절 두려움 극복 마인드 교육 연습 역할극 거절처리 10일'},
    {id:'bohum',icon:'📕',title:'보험 마스터 아카데미',cnt:'11',ak:'교재 신입 교육 자가학습 아카데미 보험마스터 질병백과 수술분류 치료비 테스트 화법'},
+   /* 📈 이름만 바꿨습니다 (판 X409) — 안에 든 것은 처음부터 <b>90일 아카데미</b>
+      (7구간 로드맵 · 12주 · 졸업 기준)였는데, 「본인 점검란」 이라는 이름 때문에
+      아무도 과정이라고 생각하지 않았습니다. 옛 이름은 찾기 낱말에 남깁니다. */
+   {id:'academy',tk:'업무매뉴얼 점검',icon:'📈',title:'90일 아카데미',cnt:'12주',ak:'업무매뉴얼 점검 본인 점검란 APEX 본인 점검란 90일 로드맵 12주 커리큘럼 졸업'},
    /* 🎓 <b>신입 TA 교육</b> — 2026-10-11 사장님 말씀 「(온탑HB본부 카페 글) 스크립트 /
       질문지 / 고객과 가까워지는 질문 … 신입 교육 TA 로」. 몸은 ta-train.html 한 파일.
       거절에 하는 말은 거기 새로 적지 않고 위 두 칸(같은 표)으로 보냅니다 (5번). */
    {id:'ta_train',tk:'고객',icon:'🎓',title:'신입 TA 교육',cnt:'6',ak:'고객 신입 교육 TA 전화 스크립트 질문지 무사고 할인 전환 5세대 실비 보장분석 DB 라포 질문'},
-   /* 🌱 <b>지인 8주 성장 프로그램</b> — 2026-10-21 사장님 말씀 「(이직한 설계사 성장 프로그램) 수정 / 인쇄 /
-      추가 / 삭제 … 보험금 찾아줌 → 보장분석 받아야 되는 이유를 명확하게 RP 를」 · 「앱에 넣게 명단 비운 판으로」.
-      몸은 jiin-grow.html 한 파일. 명단은 비어서 오고 실명은 그 화면의 이 브라우저에만 남습니다 (3번). */
-   {id:'jiin_grow',tk:'고객',icon:'🌱',title:'지인 8주 성장 프로그램',cnt:'8',ak:'고객 신입 이직 지인 찾아줌 숨은보험금 보장분석 다리 RP 역할극 거절 8주 로드맵 체크리스트 용어'},
    /* 🎙 <b>TA 전체 대본</b> — 2026-10-12 사장님 말씀 「이 내용으로 스크립트 처음부터
       거절처리까지 따로 만들어 … 메뉴에 넣고 … 나로 인해서 이득 전달 보험금을
       찾아준다 … 양자택일 약속 … ? 가 아닌 확신에 ! 로」.
       ★ 띄우는 본은 위 TA 스크립트와 <b>같은 파일</b>입니다 — 새 화면을 안 만듭니다 (5번).
         들어가면 🎙 전체 대본 칸으로 바로 내려갑니다. 글은 ta-trend.js 한 곳입니다. */
    {id:'ta_say',tk:'고객',icon:'🎙',title:'TA 전체 대본',cnt:'7',ak:'고객 전화 TA 대본 스크립트 화제 양자택일 약속 거절처리 멘트'},
-   /* 🥊 <b>거절 근육 훈련</b> — 2026-10-07 사장님 말씀 「고객의 거절에 익숙해지는
-      교육과 프로그램」. 몸은 reject-gym.html 한 파일이고, 역할극 멘트는 위 TA
-      스크립트와 <b>같은 표</b>(apex-stage.js)를 읽습니다 (5번). */
-   {id:'rej_gym',tk:'고객',icon:'🥊',title:'거절 근육 훈련',cnt:'10',ak:'고객 거절 두려움 극복 마인드 교육 연습 역할극 거절처리 10일'},
+   /* 🌱 <b>지인 8주 성장 프로그램</b> — 2026-10-21 사장님 말씀 「(이직한 설계사 성장 프로그램) 수정 / 인쇄 /
+      추가 / 삭제 … 보험금 찾아줌 → 보장분석 받아야 되는 이유를 명확하게 RP 를」 · 「앱에 넣게 명단 비운 판으로」.
+      몸은 jiin-grow.html 한 파일. 명단은 비어서 오고 실명은 그 화면의 이 브라우저에만 남습니다 (3번). */
+   {id:'jiin_grow',tk:'고객',icon:'🌱',title:'지인 8주 성장 프로그램',cnt:'8',ak:'고객 신입 이직 지인 찾아줌 숨은보험금 보장분석 다리 RP 역할극 거절 8주 로드맵 체크리스트 용어'},
+   {id:'fp_talk',icon:'🗣️',title:'재무설계 실전화법서',cnt:'',ak:'고객'},
+   {id:'mycoach',icon:'🌱',title:'내 코칭',cnt:'',ak:'업무매뉴얼 코칭'},
    /* 🎤 <b>B·C·D 영업 강의</b> — 2026-10-23 사장님 말씀 「인생은 b와 d 그리고 가운데 c … 리더로써의 실패 … 증명 … 자존감 …
       자립심 … 왜 선택을 잘해야 하나 … 고객의 삶을 이해하는 것으로 전환 … 재무설계와 상담 고객의 팩트파인딩 … 날 선택할수 있는
       자료 … 타임라인 내가 힘들었던 과정들은 내가 입력할수 있도록 … 마음을 울리는 영업 강의자료 4시간」. 몸은 bcd-lecture.html
       한 파일. 강사 이야기는 비어서 오고, 적은 글은 그 화면의 이 브라우저에만 남습니다 (1번 · 3번 · 7번). */
    {id:'bcd_lec',tk:'고객',icon:'🎤',title:'B·C·D 영업 강의',cnt:'4h',ak:'고객 강의 교육 신입 리더 실패 증명 자존감 자립 선택 타임라인 인생곡선 재무설계 팩트파인딩 생애 마인드 동기부여 4시간'},
-   {id:'fp_talk',icon:'🗣️',title:'재무설계 실전화법서',cnt:'',ak:'고객'},
    /* ★ 2026-10-23 (판 X173) · 사장님 말씀 「교육매니저 em 전용 사이트를
       메뉴 <b>맨 왼쪽 위</b>에다가 넣어줄래 <b>교육시스템EM</b> 이라는 목록으로」.
       <b>따로 선 주소</b>입니다 (APEX HB · EM 전용 운영센터) — 주소는 아래 LINKS 에
@@ -15502,7 +15546,7 @@ var TABS=[
       ★ <b>앱 안에서 덮개로</b> 엽니다(educalScreen) — 새 탭이면 주소가 달라
         또 로그인을 해야 합니다. 여기 로그인 하나로 끝입니다.           */
    {id:'educal',icon:'📅',title:'APEX 교육 캘린더',cnt:'',tk:'교육시스템EM',ak:'교육 캘린더 일정 신입 교육 주간 팀별 교육 운영표 본부장 루틴 공지'},
-   {id:'manual',icon:'📘',title:'APEX 사용가이드',cnt:'',ak:'업무매뉴얼'},
+   {id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:'',ak:'업무매뉴얼'},
    /* 지도는 맨 왼쪽 위 「APEX 사용가이드」 바로 밑에 단추로 세워 두었다(renderNav).
       여기서는 hide 로 눈에서만 뺀다 — 두 번 서면 어수선하다. 지우지 않는 이유는
       숨긴 다른 것들과 같다: 🔎 메뉴 찾기·음성·?go=apexmap 주소로 그대로 열린다. */
@@ -15520,8 +15564,6 @@ var TABS=[
       🔎 찾기·음성·?go=helpme 주소로 그대로 열립니다 (1번). */
    {id:'helpme',icon:'🧭',title:'무엇을 할지 모르겠다면',cnt:'9',hide:true,tk:'업무매뉴얼',
     ak:'업무매뉴얼 길잡이 도움 모르겠다 뭐부터 무엇부터 시작 헤맬 때'},
-   {id:'apexmaster',icon:'🎓',title:'APEX 마스터 과정',cnt:'14',ak:'업무매뉴얼 마스터 과정 신입 교육 따라하기 익히기 하루한장'},
-   {id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:'',ak:'업무매뉴얼'},
    /* ── <b>TFA 에서 뺀 둘을 여기에 세웁니다</b> (2026-09-21) ─────────
       사장님 말씀 — 「TFA 업무관리가 간소화할것 … 내 코칭 없애기 ·
       본인 점검란 없애기」. TFA 왼쪽에서 뺐습니다.
@@ -15541,9 +15583,7 @@ var TABS=[
       오늘 체크·이번 주·업무 루트 세 얼굴로 이미 열립니다(TH_CKMAP). 사이드바에
       또 세우면 같은 것이 두 곳에 섭니다(5번). 지운 것이 아니라 찾기·음성·
       ?go=ckboard 로 그대로 열리고, TFA 「해야 할 일」이 go('ckboard') 로 부릅니다. */
-   {id:'ckboard',icon:'📋',title:'실행 체크판',cnt:'',hide:true,ak:'업무매뉴얼'},
-   {id:'mycoach',icon:'🌱',title:'내 코칭',cnt:'',ak:'업무매뉴얼 코칭'},
-   {id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:'',ak:'업무매뉴얼 점검'}
+   {id:'ckboard',icon:'📋',title:'실행 체크판',cnt:'',hide:true,ak:'업무매뉴얼'}
  ]},
  {group:'투자·경제',items:[
    {id:'inv_stock',icon:'📈',title:'주식관리',cnt:'',ak:'투자·경제'},
@@ -15645,7 +15685,7 @@ var TAB_META={
  myperf:{tag:'MY',title:'내 업적 입력',desc:'신계약을 한 번 넣으면 EM · 월간보고 · 리더 화면에 같은 숫자로 섭니다.'},
  emcenter:{tag:'교육시스템EM',title:'EM 전용 운영센터',desc:'아래 단추를 누르면 새 탭으로 열립니다. 주소가 달라 거기서 한 번 더 로그인하십시오.'},
  insight:{tag:'상품전략기',title:'상품전략기 · 월간 상품 인사이트',desc:'보험사 GA 소식지·약관을 달마다 읽어 이번 달 결론 · 추천 순위 · 조합 세트 · 약관 비교를 한 쪽에 모았습니다.'},
- edu:{tag:'교육',title:'교육 한 자리',desc:'교재·강의·훈련을 갈래로 묶어 한 번에 보고, 눌러서 바로 들어갑니다. 화면은 그대로 있고 여기서 문만 엽니다.'},
+ edu:{tag:'성장',title:'성장 로드맵',desc:'입사부터 경력자까지 레벨 하나씩 — 한 길(순서대로) · 익히기(숙지) · 매번(찾아 쓰기) · 고객 앞(같이 보기). 화면은 제자리에 있고 여기서 문만 엽니다.'},
  educal:{tag:'교육시스템EM',title:'APEX 교육 캘린더',desc:'월간 캘린더 · 신입 교육 주간 · 팀별 교육 · 교육매니저 운영표 · 본부장 루틴 · 공지 만들기.'},   /* ⚠ 이 글은 esc() 를 지납니다 — <b> 를 넣으면 글자 그대로 찍힙니다 */
  clients:{tag:'OS',title:'고객 보장분석 프로젝트',desc:'고객별 보장분석 상담을 한 곳에서. 문서 업로드·추출·검수·전후비교·리포트까지 이어집니다.'},
  cs_assist:{tag:'CONSULT',title:'AI 통합상담 어시스턴트',desc:'윤시현 「고객이익 통합상담」 방법론으로 상담 준비 브리핑과 녹취 복기를 돕습니다. 녹취는 텍스트 붙여넣기(길이 제한 없음) 또는 오디오 업로드.'},
@@ -15674,7 +15714,7 @@ var TAB_META={
    길이는 스크롤로 감당한다 — 안 보이는 것보다 긴 편이 낫다. */
 var NAVG_ICON={'보험전략실':'🎯','하루 시작':'🌅','내 고객':'🗂','증권 분석':'🛡','상담 도구':'💬',
  '계약·청구':'📁','자료 조회':'🔎','법인 컨설팅':'🏭','콘텐츠 제작':'✍️',
- '광고·유입':'📣','조직 관리':'🏢','교육':'🎓','시스템':'⚙️','투자·경제':'📈'};
+ '광고·유입':'📣','조직 관리':'🏢','성장':'🌱','시스템':'⚙️','투자·경제':'📈'};
 /* 색을 흩뿌리면 어수선하다. 한 줄기로 흐르게 한다 —
    맨 위가 가장 짙은 보라, 내려가며 남색·청록·초록을 지나
    맨 아래는 옅은 금빛.
@@ -15761,7 +15801,7 @@ var NAV_WHEN={
  biz_diag:'know', biz_fund:'know', biz_tax:'know', biz_ins:'know',
  biz_retire:'know', biz_staff:'know',
  inv_stock:'know', inv_fund:'know', inv_perf:'know', inv_econ:'know',
- edu:'know',            /* 🎓 교육 한 자리 — 교재를 분류해서 한 번에 보는 문 (판 X379) */
+ edu:'know',            /* 🌱 성장 로드맵 — 레벨 · 숙지 · 매번 · 고객 앞 (판 X379 → X409) */
  bohum:'know', manual:'know', apexmap:'know', apexmaster:'know', helpme:'know',
  academy_notion:'know', academy:'know', mycoach:'know', growboard:'know',
  /* ⚙️ 팀 · 설정 */
@@ -16168,25 +16208,9 @@ var HUB_MAP={
    {t:'내보내기 전에', s:'일정을 짜고, 규정을 한 번 본다', it:[
      {id:'calendar',mk:'cal'},{id:'simui',mk:'shield'}]}
   ]
- },
- edu:{
-  tag:'교육', icon:'🎓', title:'교육 한 자리',
-  say:'교재 · 강의 · 훈련을 <b>갈래</b>로 묶었습니다 — 눌러서 바로 들어갑니다.',
-  g:[
-   {t:'처음 배우는 것', s:'들어와서 먼저 보는 것', it:[
-     {id:'apexmaster'},{id:'bohum'},{id:'ta_train'},{id:'jiin_grow'},{id:'academy_notion'}]},
-   {t:'전화 · 거절 연습', s:'입으로 익히는 것', it:[
-     {id:'ta_say'},{id:'rej_gym'}]},
-   {t:'강의 · 화법 교재', s:'앞에 서서 말할 것', it:[
-     {id:'bcd_lec'},{id:'fp_talk'}]},
-   {t:'앱 쓰는 법', s:'이 앱에서 길 찾기', it:[
-     {id:'manual'},{id:'helpme'},{id:'apexmap'}]},
-   {t:'내 점검 · 코칭', s:'스스로 재고 적는 것', it:[
-     {id:'mycoach'},{id:'academy'},{id:'ckboard'}]},
-   {t:'교육을 운영하는 분', s:'교육매니저 · 지점장 · 대표만 열립니다', it:[
-     {id:'emcenter'},{id:'educal'}]}
-  ]
  }
+ /* edu 판은 🌱 성장 로드맵(app/apex-grow.js 의 GR_LV · GR_KNOW)으로 옮겼습니다 (판 X409).
+    여기 두면 표가 두 벌이 됩니다 (5번). */
 };
 /* 이름은 <b>메뉴 표 한 곳</b>에 묻습니다 (5번) */
 function ctName(id){
@@ -21568,7 +21592,7 @@ function go(tab){
   /* 🎙 전체 대본 — 같은 파일을 대본 칸으로 띄웁니다 (판 X93 · 5번) */
   else if(tab==='ta_say')dyn.innerHTML=renderTaSayPage();
   else if(tab==='content')dyn.innerHTML=renderContentHub();
-  else if(tab==='edu')dyn.innerHTML=renderHubBoard('edu');   /* 🎓 교육 한 자리 (판 X379) */
+  else if(tab==='edu'){dyn.innerHTML=renderGrow();grAfter();}   /* 🌱 성장 로드맵 — app/apex-grow.js (판 X409) */
   else if(tab==='rej_gym')dyn.innerHTML=renderRejGymPage();
   else if(tab==='jiin_grow')dyn.innerHTML=renderJiinGrowPage();
   else if(tab==='bcd_lec')dyn.innerHTML=renderBcdLecPage();
@@ -21998,7 +22022,7 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-13 10:17';
+var APP_BUILD='2026-11-13 20:45';
 var APP_BUILD_NOTE='🔒 <b>자비스 PC 자료 찾기 — 브라우저가 막아도 찾습니다</b>(판 X428 · 사장님 말씀 「이렇게 안뜨는거 같은데 이미지 확인해」) — 라이브에서 물어 보니 PC 도우미가 켜져 있는데도 「꺼져 있어요」 가 섰습니다. 크롬의 「로컬 네트워크 접근」 권한이 막혀 있었습니다. 이제 막혔으면 막혔다고 말하고, 「🖥 PC 도우미 창에서 찾기」 단추로 새 탭에서 같은 답(📄 열기 · 🗂 있는 곳 보기)을 띄웁니다 — 이 길은 그 권한에 안 막힙니다. 이 화면에서 바로 보시려면 주소창 왼쪽 아이콘 › 사이트 설정 › 「로컬 네트워크」 를 허용으로.';
 
 
@@ -22525,6 +22549,17 @@ function mountBohum(){
   f.src=BOHUM_URL;f._mounted=true;
 }
 function reloadBohum(){var f=$('bohumFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountBohum,30);toast('보험 마스터 아카데미 새로고침');}}
+/* 📕 교재를 <b>그 장에서</b> 연다 — 교재는 hashchange 로 장을 옮기므로 주소만 바꾸면 된다.
+   성장판(gbOpenAcad)과 🌱 성장 로드맵이 같이 씁니다 — 한 곳 (5번 · 판 X409) */
+function bohumAt(l){
+  go('bohum');
+  setTimeout(function(){
+    var f=$('bohumFrame');if(!f)return;
+    var want=BOHUM_URL+'#'+l;
+    if(f._mounted){ try{ f.contentWindow.location.hash=l; }catch(e){ f.src=want; } }
+    else { f.src=want; f._mounted=true; }
+  },60);
+}
 function openBohumNewTab(){var w=window.open(BOHUM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitBohum(){go(prevTab||'home');}
 /* ════════ 미끼 레이더 (같은 폴더의 정적 파일) ════════
@@ -25061,13 +25096,7 @@ var GB_ACAD={
 function gbOpenAcad(sid){
   var m=GB_ACAD[sid];
   if(!m){toast('이 주제는 교재에 아직 없습니다 — 없는 자료로 보내 드리지 않습니다');return;}
-  go('bohum');
-  setTimeout(function(){
-    var f=$('bohumFrame');if(!f)return;
-    var want=BOHUM_URL+'#'+m.l;
-    if(f._mounted){ try{ f.contentWindow.location.hash=m.l; }catch(e){ f.src=want; } }
-    else { f.src=want; f._mounted=true; }
-  },60);
+  bohumAt(m.l);
 }
 
 /* 배워서 터치할 것 — 열두 개. 하나씩 끝내고 스스로 합격을 줍니다 */
@@ -34227,7 +34256,17 @@ var HM_MS_BODY={
       없는 것인지 알 길이 없었습니다. 2026-10-09 에 하루를 몰아 보다
       잡았습니다(124자뿐이었습니다).
       ★ 「다 됐다」로 보이는 상태에서 길을 감추지 않습니다 (6번).      */
-   return '<div id="hmChkHost">'+back+h+'</div>'; },
+   /* ⏰ <b>코앞에 온 만기·갱신</b> (판 X426 · 말씀 X04).
+      ★★ <b>카드(hmChkHtml) 안에 넣지 않았습니다.</b> 그 카드는 AP·PC·CS 가
+        한 분도 없으면 <b>통째로 안 섭니다</b>. 그런데 만기가 코앞인 분은
+        <b>계약을 끝내신 분</b>일 수도, <b>고객 365일에만 있는 분</b>일 수도
+        있습니다(baxRows 는 OSC.list 로 거릅니다). 카드 안에 넣으면 그분들이
+        <b>조용히 빠집니다</b> — 판 X421 에서 데인 바로 그 자리입니다.
+      ★ <b>빈 것을 가르는 자리(위 if(!h))는 한 자도 안 건드렸습니다</b> —
+        줄이 답을 바꾸면 안 된다고 그 위에 적혀 있습니다.               */
+   var soon='';
+   try{ soon=hmBaxHtml(); }catch(e4){ soon=''; }
+   return '<div id="hmChkHost">'+back+soon+h+'</div>'; },
  /* ① 오늘의 알림 — <b>누구인지</b>부터 */
  almn:function(P){
    if(!P.length)
@@ -38661,6 +38700,47 @@ function hmFinHtml(){
     '<div class="hm-chk-b">'+
       '<button type="button" onclick="hmFinGo()">🧮 재무설계 계산기 열기</button>'+
     '</div></div>';
+}
+/* ══ ⏰ <b>코앞에 온 만기·갱신</b> — 판 X426 ═══════════════════════════════
+   사장님 말씀 <b>X04</b> 「납입·보장 만기 신호」 는 오래 <b>보류</b>였습니다.
+   까닭이 대장에 적혀 있었습니다 — 「증권에서 읽은 계약이 그 분 것만 있어,
+   홈이 수백 분 것을 다 읽으면 무료 한도를 넘깁니다(7번). <b>보장분석이 돌 때
+   다음 만기일 한 줄을 적어 두는 것이 먼저</b>입니다」.
+   그 한 줄이 이제 <b>있습니다</b> — sum.end{pay,cov,rnw} 이고, chkLoad 가
+   sum 칸만 집어 <b>한 번</b> 받아 옵니다(7번). 그래서 보류를 풉니다.
+   ★★ <b>세는 곳은 baxRows() 하나</b>입니다 (5번) — 홈과 🩺 화면이 다른 수를
+     말하면 사장님이 어느 쪽을 믿어야 할지 모르십니다. 여기서는 거르기만 합니다.
+   ★ <b>접어 둡니다</b> — 홈은 이미 길고, 펴 두면 한 화면을 또 넘깁니다
+     (check-msfive · check-homeone 이 그 자리를 잽니다).
+   ★ 홈이라 <b>실명이 기본</b>입니다 — hmFullNm 을 부릅니다 (3번 · 판 X399).
+   ★ 코앞이 없으면 <b>아무 칸도 안 세웁니다</b> — 「0명」 은 적지 않습니다.  */
+function hmBaxHtml(){
+  var S=null; try{ S=baxSoon(); }catch(e){ S=null; }
+  if(!S||!S.n)return '';
+  hmBaxCss();
+  var L=S.list,i,x,rows='';
+  for(i=0;i<L.length&&i<4;i++){ x=L[i];
+    rows+='<div class="hm-bax-r">'+
+      '<span class="nm">'+osEsc(hmFullNm(x.nm||'고객'))+'</span>'+
+      '<span class="s">'+baxKe(x.k)+' '+osEsc(x.s)+'</span></div>';
+  }
+  if(L.length>4)
+    rows+='<div class="hm-bax-m">외 <b>'+(L.length-4)+'줄</b> — 🩺 고객 체크에 다 있습니다.</div>';
+  rows+='<div class="hm-chk-b" style="margin-top:9px">'+
+    '<button type="button" onclick="hmChkGo()">🩺 고객 체크 열기 →</button></div>';
+  return hmFoldWrap('baxsoon','⏰','코앞에 온 만기·갱신',
+    S.n+'명 — 이번 달·다음 달',rows,'코앞만기몇분');
+}
+function hmBaxCss(){
+  if(document.getElementById('hmBaxCss'))return;
+  var st=document.createElement('style');st.id='hmBaxCss';
+  st.textContent=
+   '.hm-bax-r{padding:7px 2px;border-bottom:1px solid var(--t-line);font-size:var(--t6)}'+
+   '.hm-bax-r:last-of-type{border-bottom:0}'+
+   '.hm-bax-r .nm{display:block;font-weight:900;color:var(--t-ink)}'+
+   '.hm-bax-r .s{display:block;margin-top:2px;color:var(--t-sub);line-height:1.6}'+
+   '.hm-bax-m{margin-top:6px;font-size:var(--t7);font-weight:700;color:var(--t-sub2)}';
+  document.head.appendChild(st);
 }
 function hmChkHtml(){
   if(!OS.profile)return '';
@@ -46422,7 +46502,7 @@ function acCrmLoad(){
 
 function renderAcademy(){
   if(!AC.data&&!AC.loading)setTimeout(acCrmLoad,60);
-  return osPage('점검','APEX 본인 점검란','내가 지금 어디까지 와 있는지 스스로 확인합니다. 주차별로 무엇을 어떤 순서로 하면 되는지 안내하고, 각 항목은 실제 도구로 바로 연결됩니다. 진행 지표는 내 CRM 기록에서 자동으로 채워지므로 혼자서도 순서대로 점검할 수 있습니다.',
+  return osPage('점검','90일 아카데미 · 본인 점검','내가 지금 어디까지 와 있는지 스스로 확인합니다. 주차별로 무엇을 어떤 순서로 하면 되는지 안내하고, 각 항목은 실제 도구로 바로 연결됩니다. 진행 지표는 내 CRM 기록에서 자동으로 채워지므로 혼자서도 순서대로 점검할 수 있습니다.',
     '<div id="acadBody">'+acBody()+'</div>');
 }
 function osAcademyAfterRender(){}
@@ -46955,10 +47035,11 @@ var MAN_CASE=[
 
  {k:'rookie',ic:'🎓',w:'신입이 들어왔다',
   g:'따라만 하면 되도록 <b>순서</b>를 줍니다.',
-  s:['<b>APEX 마스터 과정</b> — 하루 한 장씩 따라 하면 앱에 익숙해집니다.',
+  s:['<b>🌱 성장 로드맵</b> — 레벨(Lv.0~4)을 고르면 그 레벨에서 할 것 하나만 크게 보입니다.',
+     '<b>APEX 마스터 과정</b> — 하루 한 장씩 따라 하면 앱에 익숙해집니다.',
      '<b>보험 마스터 아카데미</b> — 상품명이 아니라 <b>돈이 끊기는 순서</b>부터 배웁니다.',
-     '<b>APEX 본인 점검란</b> 에서 90일 로드맵을 스스로 체크합니다.'],
-  c:[['apexmaster','🚀','APEX 마스터 과정'],['bohum','🎓','보험 마스터 아카데미'],['academy','✅','APEX 본인 점검란'],['manual','📘','이 사용가이드']],
+     '<b>90일 아카데미</b> 에서 90일 로드맵을 스스로 체크합니다.'],
+  c:[['edu','🌱','성장 로드맵'],['apexmaster','🚀','APEX 마스터 과정'],['bohum','🎓','보험 마스터 아카데미'],['academy','📈','90일 아카데미']],
   t:'보험 마스터 아카데미의 <b>LEVEL 0</b> 을 20분만 읽어 보십시오 — 신입 6개월이 어디서 갈리는지가 첫 장에 있습니다.'},
 
  {k:'stuck',ic:'🩺',w:'안 된다 · 화면이 이상하다',
@@ -47269,9 +47350,9 @@ var MAN_MAP=[
     {no:12,ic:'🏢',cat:'조직 관리',when:'팀을 볼 때',
      chips:[['org','🏢','조직도'],['teamhub','📋','실행 체크판'],['attend','🗓️','출근 현황'],['daily','📒','매일 취합'],['report','📊','대표 브리핑']],
      how:'조직도는 서버가 정본이라 어느 컴퓨터에서 봐도 같습니다. 팀 코칭·승인·감사로그는 리더에게만 보입니다.'},
-    {no:13,ic:'🎓',cat:'교육',when:'배울 때',
-     chips:[['edu','🎓','교육 한 자리'],['apexmaster','🎓','APEX 마스터 과정'],['bohum','📕','보험 마스터 아카데미'],['ta_train','🎓','신입 TA 교육'],['jiin_grow','🌱','지인 8주 성장 프로그램'],['ta_say','🎙','TA 전체 대본'],['rej_gym','🥊','거절 근육 훈련'],['bcd_lec','🎤','B·C·D 영업 강의'],['fp_talk','🗣️','재무설계 실전화법서'],['manual','📘','APEX 사용가이드'],['academy_notion','📓','APEX ACADEMY']],
-     how:'<b>도구 바로 밑</b>에 있습니다(판 X379). 교재·강의·훈련이 상담 도구에 섞여 있던 것을 여기로 모았습니다. 맨 위 <b>🎓 교육 한 자리</b>를 열면 갈래로 묶어 한 번에 보고 바로 들어갑니다. 지금 보고 계신 이 가이드도 여기 있습니다.'},
+    {no:13,ic:'🌱',cat:'성장',when:'배울 때',
+     chips:[['edu','🌱','성장 로드맵'],['manual','📘','APEX 사용가이드'],['apexmaster','🎓','APEX 마스터 과정'],['rej_gym','🥊','거절 근육 훈련'],['bohum','📕','보험 마스터 아카데미'],['academy','📈','90일 아카데미'],['ta_train','🎓','신입 TA 교육'],['ta_say','🎙','TA 전체 대본'],['jiin_grow','🌱','지인 8주 성장 프로그램'],['fp_talk','🗣️','재무설계 실전화법서'],['bcd_lec','🎤','B·C·D 영업 강의'],['academy_notion','📓','APEX ACADEMY']],
+     how:'<b>도구 바로 밑</b>에 있습니다. 칸이 <b>레벨 차례</b>(입사 첫 주 → 1개월 → 2~3개월 → 경력자 → 리더)로 서 있습니다(판 X409). 맨 위 <b>🌱 성장 로드맵</b>을 열면 네 장입니다 — <b>한 길</b>(한 번 걷는 과정 · 내 레벨에서 지금 할 것 하나) · <b>익히기</b>(열두 주제를 읽고 써 보고 스스로 합격) · <b>매번</b>(연락 전 · 상담 전날 · 심사 · 청구처럼 그때그때 꺼내 쓰는 것, 병 이름으로도 찾기) · <b>고객 앞</b>(고객과 같이 보거나 보내는 것만 상담 순서대로, 꺼내지 않을 것도 적어 둠). 지금 보고 계신 이 가이드도 여기 있습니다.'},
     {no:14,ic:'⚙️',cat:'시스템',when:'거의 안 보지만 필요할 때',
      chips:[['notice','📢','공지사항'],['settings','⚙️','설정'],['pricing','💳','요금제·구독'],['terms','📜','약관·개인정보'],['ready','🚦','출발 점검'],['health','🩺','시스템 점검']],
      how:'AI 키 연결·팀 권한·요금제가 여기 있습니다. 설정과 출발 점검은 대표만 씁니다.'}
@@ -47689,7 +47770,7 @@ function manSecs(){return [
   {id:'orgops',ic:'🏢',title:'조직 관리 — 조직도는 서버가 정본',fn:manOrgOps},
   {id:'teamops',ic:'👥',title:'팀 운영 — 팀 지정 · 성장판 · 브리핑 · 백업',fn:manTeamOps},
   {id:'lead',ic:'🧑‍🏫',title:'지점장 — 팀을 어떻게 터치하고 관리하나',fn:manLead},
-  {id:'academy',ic:'✅',title:'신입 90일 로드맵 — APEX 본인 점검란',fn:manAcademy},
+  {id:'academy',ic:'📈',title:'신입 90일 로드맵 — 90일 아카데미',fn:manAcademy},
   {id:'brain',ic:'🧠',title:'윤시현의 두뇌 — 연결 · 지식 넣기 · 발표자료(PPT)',fn:manBrain},
   {id:'bizuse',ic:'🏭',title:'법인·사업자 컨설팅 활용법',fn:manBizUse},
   {id:'cardnews',ic:'🃏',title:'카드뉴스 활용법 (인스타 5장)',fn:manCardnews},
@@ -48854,7 +48935,7 @@ var CK_ITEMS={
     ['d8','만난 사람 팩트파인딩 저장','소득·지출·기존보험·걱정','상담카드','fact_find'],
     ['d9','내일 상담 자료 준비','증권 받았으면 판독까지','AI 제안서','ai_prop'],
     ['d10','SNS 1건','주 4회 · 월화목금','',''],
-    ['d11','공부 30분','이번 주 커리큘럼','APEX 본인 점검란','academy']
+    ['d11','공부 30분','이번 주 커리큘럼','90일 아카데미','academy']
   ],
   week:[
     ['w1','SNS 4건','','',''],
@@ -88433,5 +88514,6 @@ try{osNoticeLoad();}catch(e){}
 <script src="apex-aplus-disease.js"></script>
 <script src="apex-cn-themes.js?v=20261104a"></script>
 <script src="insight-inbox.js?v=20261109a"></script>
+<script src="apex-grow.js?v=20261113a"></script>
 </body>
 </html>
