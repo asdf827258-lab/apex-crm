@@ -8372,17 +8372,37 @@ function pcFetch(path, ms){
 function pcSize(n){ return n >= 1073741824 ? (n / 1073741824).toFixed(1) + 'GB' : n >= 1048576 ? (n / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'KB'; }
 function pcAsk(q){
   addThinking();
-  pcFetch('/find?q=' + encodeURIComponent(q)).then(function(j){ pcPaint(j); }, function(){ pcPaint(null); });
+  pcFetch('/find?q=' + encodeURIComponent(q)).then(function(j){ pcPaint(j, q); }, function(){ pcWhy(function(st){ pcPaint(null, q, st); }); });
 }
-function pcPaint(j){
+/* 🔒 <b>왜 못 닿았나</b> (판 X428 · 사장님 말씀 2026-11-13 「이렇게 안뜨는거 같은데 이미지 확인해」)
+   라이브에서 도우미가 <b>켜져 있는데도</b> 「꺼져 있어요」 가 섰습니다 — 크롬의 「로컬 네트워크 접근」 권한이 denied 였습니다.
+   ★ 막힌 것을 「꺼졌다」 고 하지 않습니다(1번). 권한을 물어 보고 막혔으면 막혔다고, 푸는 길을 적습니다.
+   ★ 권한과 상관없이 쓰는 길 — 「🖥 PC 도우미 창에서 찾기」 는 새 탭으로 도우미 화면(127.0.0.1:8766/?q=)을 엽니다.
+     탭을 여는 것은 그 권한에 안 막힙니다. 목록은 그 탭에만 서고 앱에는 안 실립니다. */
+function pcWhy(cb){
+  var P = navigator.permissions, names = ['local-network-access', 'loopback-network'], i = 0;
+  if (!P || !P.query) return cb('');
+  (function next(){
+    if (i >= names.length) return cb('');
+    try { P.query({name:names[i++]}).then(function(s){ cb(s.state); }, next); } catch (e) { next(); }
+  })();
+}
+function pcPaint(j, q, st){
   dropThinking();
   var d = document.createElement('div'), h = '<div class="bub">', say, it = (j && j.items) || [];
   d.className = 'msg j';
   if (!j){
-    say = 'PC 자료 찾기 도우미가 꺼져 있어요.';
-    h += esc(say) + '<div class="j-work"><div class="jw-s">사장님 PC 에서 「바탕화면 › 코드 › PC자료찾기 › <b>PC자료찾기 켜기</b>」를 한 번 누르면 켜져요.</div>'
-       + '<div class="jw-s">폰에서는 PC 자료를 찾을 수 없어요 — 파일 목록은 PC 밖으로 내보내지 않아요.</div>'
-       + '<div class="jw-s">처음 한 번은 브라우저가 「이 사이트가 내 기기의 다른 앱에 접근」을 물을 수 있어요 — 허용을 누르세요.</div></div>';
+    var win = '<div class="st-b"><button type="button" data-pc="win" style="background:var(--blue);color:#fff;border-color:var(--blue)">🖥 PC 도우미 창에서 찾기</button></div>';
+    if (st === 'denied'){
+      say = '브라우저가 이 화면에서 PC 자료 찾기 도우미에 닿는 것을 막고 있어요.';
+      h += esc(say) + '<div class="j-work"><div class="jw-s">아래 단추를 누르면 <b>새 탭</b>에서 같은 답이 떠요 — 거기서 📄 열기 · 🗂 있는 곳 보기를 누르시면 돼요.</div>' + win
+         + '<div class="jw-s">이 화면에서 바로 보시려면 — 주소창 왼쪽 아이콘 › <b>사이트 설정</b> › 「<b>로컬 네트워크</b>」 항목을 <b>허용</b>으로 바꾸고 새로고침하세요.</div></div>';
+    } else {
+      say = 'PC 자료 찾기 도우미에 닿지 못했어요 — 꺼져 있을 수 있어요.';
+      h += esc(say) + '<div class="j-work"><div class="jw-s">사장님 PC 에서 「바탕화면 › 코드 › PC자료찾기 › <b>PC자료찾기 켜기</b>」를 한 번 누르면 켜져요. 켠 뒤 아래 단추를 눌러 보세요.</div>' + win
+         + '<div class="jw-s">처음 한 번은 브라우저가 「이 사이트가 내 기기의 다른 앱에 접근」을 물을 수 있어요 — 허용을 누르세요.</div>'
+         + '<div class="jw-s">폰에서는 PC 자료를 찾을 수 없어요 — 파일 목록은 PC 밖으로 내보내지 않아요.</div></div>';
+    }
   } else if (!it.length){
     say = '「' + (j.words || []).join(' ') + '」 이름이 들어간 파일을 PC 자료에서 못 찾았어요.';
     h += esc(say) + '<div class="j-work"><div class="jw-s">파일 이름의 한 낱말로 다시 물어 주세요 — 예) 「TA 스크립트 파일 찾아줘」 「김경애 제안서 어디 있어」 「교육 폴더 열어줘」</div></div>';
@@ -8400,7 +8420,9 @@ function pcPaint(j){
   d.innerHTML = h + '</div>';
   d.addEventListener('click', function(e){
     var b = e.target.closest && e.target.closest('[data-pc]'); if (!b) return;
-    e.preventDefault(); e.stopPropagation(); b.disabled = true;
+    e.preventDefault(); e.stopPropagation();
+    if (b.getAttribute('data-pc') === 'win'){ window.open(PCF + '/?q=' + encodeURIComponent(q || ''), '_blank', 'noopener'); return; }
+    b.disabled = true;
     pcFetch('/' + b.getAttribute('data-pc') + '?id=' + encodeURIComponent(b.getAttribute('data-id'))).then(function(r){
       b.disabled = false; b.textContent = r.ok ? '✓ PC 에서 열었어요' : '⚠ ' + (r.error || '못 열었어요');
     }, function(){ b.disabled = false; b.textContent = '⚠ 도우미가 꺼져 있어요'; });
