@@ -1576,6 +1576,11 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 .ppt i{font-style:normal;color:var(--gy2);font-size:12px}
 .ppo{margin-top:8px;font-size:13px}.ppo summary{cursor:pointer;color:#8A4B08;padding:4px 0}
 .ppa{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}.ppa span{font-size:12.5px;color:var(--gy)}
+/* 넣기 단추를 표 위로 · 크게 — 표가 길면 맨 아래 단추가 안 보였다 (판 X437) */
+.ppgo{position:sticky;top:0;z-index:6;display:flex;gap:8px;align-items:stretch;background:#fff;padding:6px 0 10px;margin:0 0 8px;border-bottom:1px solid var(--ln)}
+.ppgo .go{flex:1;min-height:60px;font-size:19px;font-weight:900;border-radius:14px;word-break:keep-all}
+.ppgo .mini{min-height:60px;padding:0 18px;font-size:15px}
+.ppa .go{min-height:56px;font-size:17px;padding:0 22px;border-radius:14px}
 /* 🙋 오늘 무엇을 같이 볼까요 · 💡 한 줄 결론 · 🧾 숨은 · 미청구 보험금 (판 X349) */
 .seep{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 .seep .mini{min-height:44px;font-size:14px}.seep .mini.go{background:var(--dkb,#0F1A2C);color:#E2C27D;border-color:var(--dkb,#0F1A2C)}
@@ -8552,7 +8557,10 @@ function ppPick(){var f=document.getElementById('ppFile');
   if(!f){f=document.createElement('input');f.type='file';f.id='ppFile';f.accept='application/pdf,.pdf,image/*';f.style.display='none';
     f.addEventListener('change',function(){var x=this.files&&this.files[0];this.value='';ppRead(x);});document.body.appendChild(f);}
   f.click();}
-function ppSet(h){var e=document.getElementById('ppBox');if(e)e.innerHTML=h;}
+function ppSet(h){var e=document.getElementById('ppBox');if(e)e.innerHTML=h;ppGoTop();}
+/* 넣기 단추는 위 머리 띠(.bar · 폰에선 여러 줄) 바로 밑에 붙는다 (판 X437) */
+function ppGoTop(){var g=document.querySelector('.ppgo'),b=document.querySelector('.bar');if(g&&b)g.style.top=b.offsetHeight+'px';}
+window.addEventListener('resize',ppGoTop);
 /* ── 판 X346 — 사진 · 스캔 PDF 도 읽는다 (사장님 말씀 「상품 이미지를 넣어서 체크하고」) ─────────────────
    글자가 없는 파일(설계서 사진 · 캡처 · 스캔 PDF)은 <b>글자 인식(OCR · tesseract.js 한국어)</b> 으로 글자를 짐작한다.
    짐작이라 <b>틀린 곳이 많을 수 있다</b> — 그래서 표에 「사진에서 짐작해 읽음」 을 크게 밝히고, 원문 줄을 나란히 둔다.
@@ -8631,6 +8639,7 @@ function ppPreview(){
     '<td><input class="amt" value="'+(r.v===null||r.v===undefined?'':(Math.round(r.v*100)/100))+'" inputmode="decimal" oninput="ppAmt(\''+arr+'\','+i+',this.value)"> <i>만원</i></td></tr>';}
   var nExt=P.ext.filter(function(r){return !r.dup;}).length,nOn=P.rows.filter(function(r){return r.on;}).length,nDup=P.rows.filter(function(r){return r.dup;}).length,nUsd=P.rows.concat(P.other).filter(function(r){return r.usd;}).length,nAdd=P.rows.filter(function(r){return r.why==='add';}).length,nTv=P.rows.concat(P.ext).filter(function(r){return r.tv!=null;}).length;
   return '<div class="ppv"><div class="pph">📄 <b>'+esc(X.name)+'</b> — 읽었습니다 · <b>틀린 칸은 여기서 고치고</b> 넣으세요</div>'+
+    '<div class="ppgo"><button class="btn go" onclick="ppGo()">✅ 이대로 ③ 추가 보험에 넣기</button><button class="mini" onclick="ppCancel()">취소</button></div>'+
     /* 무엇을 확인해야 하는지 — 세 줄로 먼저 (판 X346) */
     '<div class="ppc"><span class="g">✓ 알아본 담보 <b>'+P.rows.length+'</b>줄 — 체크된 <b>'+nOn+'</b>줄이 들어갑니다</span>'+
       (nDup?'<span class="y">같은 담보 · 조건만 다른 줄 <b>'+nDup+'</b>줄은 <b>큰 금액 하나만</b> 체크해 두었습니다</span>':'')+(nAdd?'<span class="g">따로 붙는 특약 <b>'+nAdd+'</b>줄은 <b>더해서</b> 넣습니다</span>':'')+(nTv?'<span class="y">표 가입금액과 보장내용 지급액이 달라 <b>보장내용</b> 금액으로 읽은 줄 <b>'+nTv+'</b> — 원문을 꼭 보세요</span>':'')+
@@ -8649,7 +8658,7 @@ function ppPreview(){
       '<table class="ppt hidedup" data-a="ext"><tbody>'+P.ext.map(function(r,i){return row(r,i,'ext');}).join('')+'</tbody></table></div>':'')+
     (P.other.length?'<details class="ppo"><summary>담보처럼 보이지만 <b>못 알아본 줄 '+P.other.length+'개</b> — 담보를 골라 체크하면 같이 들어갑니다</summary><table class="ppt" data-a="other"><tbody>'+
       P.other.map(function(r,i){return row(r,i,'other');}).join('')+'</tbody></table></details>':'')+
-    '<div class="ppa"><button class="btn" onclick="ppGo()">이대로 ③ 추가 보험에 넣기</button><button class="mini" onclick="ppCancel()">취소</button>'+
+    '<div class="ppa"><button class="btn go" onclick="ppGo()">✅ 이대로 ③ 추가 보험에 넣기</button><button class="mini" onclick="ppCancel()">취소</button>'+
      '<span>넣은 뒤에도 <b>③ 추가 보험</b>에서 언제든 고칠 수 있습니다. 회사마다 서식이 달라 <b>틀릴 수 있으니</b> 원문 줄과 꼭 맞춰 보세요.</span></div></div>';}
 function ppTog(a,i,on){__PP.P[a][i].on=on;var t=document.querySelector('.ppv .ppt[data-a="'+a+'"]');if(t){var tr=t.querySelectorAll('tbody tr')[i];if(tr)tr.className=on?'':'off';}}
 function ppKey(a,i,k){var r=__PP.P[a][i];r.k=k;if(k)r.d=PP_K2D[k]||r.d;if(k&&a!=='rows')r.on=true;ppSet(ppPreview());if(k&&a==='other'){var d=document.querySelector('.ppo');if(d)d.open=true;}}
