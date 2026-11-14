@@ -432,8 +432,12 @@ is(/names:nm/.test(brSrc) && /cmRealOf/.test(brSrc),
 const bhSrc = (ix.split('function hmMsBriefHtml(')[1] || '').slice(0, 1400);
 is(/ccBriefOf/.test(bhSrc) && /b\.miss/.test(bhSrc),
    '카드가 그것을 <b>그려 준다</b> — 안 적혀 있는 것까지 같이');
-const planSrc = (ix.split(' plan:function(P){')[1] || '').slice(0, 800);
-const callSrc = (ix.split(' call:function(P){')[1] || '').slice(0, 800);
+/* ⚠ 2026-11-14 (판 X435) — 여태 <b>앞 800자</b> 만 보았습니다. 미션 칸에 TA
+   대본 토막이 앞에 들어가자 hmMsBriefHtml 이 창 밖으로 밀려, 멀쩡한 자리를
+   고발했습니다. 창을 <b>함수 경계</b>로 고쳤습니다 — 안 보던 뒤쪽까지 보므로
+   느슨해지는 것이 아니라 더 조여집니다 (8번).                               */
+const planSrc = (ix.split(' plan:function(P){')[1] || '').split(' call:function(P){')[0];
+const callSrc = (ix.split(' call:function(P){')[1] || '').split('kt:function(P){')[0];
 is(/hmMsBriefHtml\(x\)/.test(planSrc) && !/hmMsBriefHtml/.test(callSrc),
    '<b>② 어떻게 연락할지</b> 칸 <b>한 곳에만</b> 선다 — ③ 전화 칸은 나이대 고르기·다섯 마디 틀·용건으로 이미 <b>844px 꽉</b> 이다');
 /* ★ <b>접힌 채로 여는지</b>도 재다. 펼쳐 두었더니 카드가 1040px 였고, 아침에
