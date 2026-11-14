@@ -71,7 +71,34 @@ var STAY=+(localStorage.getItem("apexRouteStayV1")||60);   /* 한 건 상담에 
 /* 🗺 <b>폰에서 지도를 펴 두셨나</b> (판 X272). 폰에서는 목록과 지도가
    <b>둘 중 하나</b>만 섭니다 — 둘로 가르면 목록이 361px 밖에 안 남아
    열두 화면을 굴려야 했습니다. 고르신 것은 이 브라우저에만 남습니다. */
-var MAPON=false; try{ MAPON=localStorage.getItem("apexRouteMapOnV1")==="1" }catch(e){}
+/* ★★ <b>폰에서도 지도가 기본으로 섭니다</b> (판 X432 · 사장님 말씀 2026-11-14
+     「오늘에서 지도, <b>몇 번을 부탁했으나 아직도 안 되는 것</b> — 지역동선에서 계속 안 떠」).
+   ⚠ <b>까닭은 열쇠도 좌표도 아니었습니다.</b> 재어 보니 카카오 열쇠는 서버에 있고
+     (app_config.kakao_js_key · 32자 · 누구나 읽습니다), 배정 줄 2,109개 중
+     <b>520개에 좌표가 있어</b> 찍을 것도 충분했습니다. 그런데 폰(≤860px)에서는
+     .rt-mapbox 가 <b>height:0</b> 이고 rt-mapon 이 붙어야만 펴지는데,
+     그 값의 기본이 <b>false</b> 였습니다 — 즉 폰에서 지역 동선을 열면
+     <b>지도는 처음부터 0px</b> 이고, 작은 「🗺 지도」 단추를 찾아 누르기 전에는
+     영영 안 보였습니다. 사장님이 「몇 번을 부탁했는데 안 된다」 하신 그 자리입니다.
+   ★ 이제 <b>안 고르셨으면 켜 둡니다.</b> 고르신 적이 있으면 그 뜻이 이깁니다 —
+     목록으로 바꾸신 분에게 지도를 도로 들이밀지 않습니다 (6번).
+   ★ 단추는 그대로 둡니다 — 길을 지우지 않습니다 (6번). */
+/* ★ 폰에서 보는 꼴은 <b>셋</b>입니다 (판 X432) —
+     'both' 지도 띠 + 목록 (기본) · 'map' 지도 가득 · 'list' 목록 가득.
+   ⚠ 처음에 'map' 하나로 뒤집었다가 <b>목록이 통째로 사라져</b> 줄마다 있던
+     📞 전화 · 💬 문자 · 🧭 내비가 안 보였습니다(자 넷이 울었습니다).
+     사장님이 바라신 것은 「지도가 보이는 것」 이지 「목록이 사라지는 것」 이
+     아닙니다 — 그래서 <b>둘 다 보이는 것</b>을 기본으로 둡니다.
+   ★ 고르신 적이 있으면 그 뜻이 이깁니다 (6번). 옛 열쇠(apexRouteMapOnV1)도
+     그대로 읽습니다 — 쓰시던 분의 뜻을 잃지 않습니다. */
+var RTVIEW='both';
+try{
+  var _v=localStorage.getItem("apexRouteViewV1");
+  if(_v==='both'||_v==='map'||_v==='list'){ RTVIEW=_v; }
+  else { var _mo=localStorage.getItem("apexRouteMapOnV1");
+         if(_mo==='1')RTVIEW='map'; else if(_mo==='0')RTVIEW='list'; }
+}catch(e){}
+var MAPON=(RTVIEW!=='list');   /* 지도 판이 살아 있어야 하는가 */
 /* 마지막으로 지도에 담은 테두리 — 접었던 지도를 펼 때 <b>그 자리로</b>
    돌려놓는다. 0 높이에서 그린 지도는 테두리를 모른 채로 선다. */
 var LASTB=null;
@@ -1653,12 +1680,19 @@ function styles(){
        카카오 판이 죽고, 다시 펴도 회색 칸만 남습니다. 높이만 0 으로 두고
        펼 때 relayout 으로 되살립니다.                                     */
   "#rtMapT{display:none}",
+  /* ★★ 판 X432 — 폰에서 보는 꼴이 <b>셋</b>입니다.
+       (기본) rt-maplist  지도 띠 <b>260px</b> + 목록   ← 사장님이 바라신 「지도가 보이는 것」
+             rt-maponly  지도가 창을 다 씀
+             (아무것도 안 붙음) 목록이 창을 다 씀        ← 판 X272 가 약속한 그것
+     ⚠ 접힌 지도는 display:none 이 아니라 <b>높이 0</b> 입니다 — 아예 끄면
+       카카오 판이 죽고 다시 펴도 회색 칸만 남습니다. */
   "@media(max-width:860px){"+
     "#rtMapT{display:inline-flex}"+
     ".rt-side{max-height:none;flex:1 1 auto;border-bottom:0}"+
     ".rt-mapbox{flex:0 0 auto;height:0;min-height:0;overflow:hidden}"+
-    "#rtWrap.rt-mapon .rt-side{display:none}"+
-    "#rtWrap.rt-mapon .rt-mapbox{flex:1 1 auto;height:auto}"+
+    "#rtWrap.rt-maplist .rt-mapbox{flex:0 0 auto;height:260px;min-height:260px}"+
+    "#rtWrap.rt-maponly .rt-side{display:none}"+
+    "#rtWrap.rt-maponly .rt-mapbox{flex:1 1 auto;height:auto;min-height:0}"+
   "}",
   /* ══ 👆 줄마다 <b>제일 많이 누르는 넷</b>을 크게 (판 X272) ═══════════
      여쭈니 「<b>🧭 내비 · 📋 멘트 · 💬 문자 · 📞 전화</b>」 넷 다 라고
@@ -1759,15 +1793,22 @@ function stayPut(v){
   return STAY;
 }
 
+var RT_NEXT={both:'map',map:'list',list:'both'};      /* 누르면 가는 차례 */
+var RT_LABEL={map:"🗺 지도 크게",list:"📋 목록만",both:"🔀 지도+목록"};
 function mapPaint(){
   var w=q("rtWrap"), b=q("rtMapT"); if(!w)return;
-  if(MAPON)w.classList.add("rt-mapon"); else w.classList.remove("rt-mapon");
+  w.classList.remove("rt-mapon","rt-maplist","rt-maponly");
+  if(RTVIEW==='map')w.classList.add("rt-mapon","rt-maponly");
+  else if(RTVIEW==='both')w.classList.add("rt-mapon","rt-maplist");
+  MAPON=(RTVIEW!=='list');
   /* 지금 보고 있는 것이 아니라 <b>누르면 가는 곳</b>을 적습니다 */
-  if(b)b.textContent=MAPON?"📋 목록":"🗺 지도";
+  if(b)b.textContent=RT_LABEL[RT_NEXT[RTVIEW]]||"🔀 지도+목록";
 }
 function mapToggle(){
-  MAPON=!MAPON;
-  try{ localStorage.setItem("apexRouteMapOnV1",MAPON?"1":"0") }catch(e){}
+  RTVIEW=RT_NEXT[RTVIEW]||'both';
+  MAPON=(RTVIEW!=='list');
+  try{ localStorage.setItem("apexRouteViewV1",RTVIEW);
+       localStorage.setItem("apexRouteMapOnV1",MAPON?"1":"0") }catch(e){}
   mapPaint();
   /* 접혀 있던 지도는 <b>제 키를 모릅니다</b> — 펴는 그때 다시 재게 하고,
      마지막으로 담아 둔 테두리로 돌려놓습니다. 안 하면 회색 칸만 섭니다. */
