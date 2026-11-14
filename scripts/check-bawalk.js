@@ -113,7 +113,10 @@ is(/BA_WALK\.map\(/.test(SRC.slice(SRC.indexOf('function guideHtml'), SRC.indexO
   is(noSvg.length === 0, '장 머리 아이콘이 <b>선 그림(svg)</b>이다 — 이모지가 아니다 (#627 · 9번)' + (noSvg.length ? ' — 아님: ' + noSvg.join(', ') : ''));
   const badIc = R.rows.filter(r => r.w && !r.icOk).map(r => r.id);
   is(badIc.length === 0, 'BA_WALK 의 그림 이름이 전부 apex-icon.js 에 있다' + (badIc.length ? ' — 없음: ' + badIc.join(', ') : ''));
-  is(R.rows.every(r => !/\p{Extended_Pictographic}/u.test(r.walk)), '길잡이 글에 이모지가 없다');
+  /* 어느 장의 어느 글자인지 적는다 — 판 X445 · 「★」·「☰」 두 글자가 몇 날 빨간불로 남았는데 자리를 안 말해 찾는 데 한참 걸렸다.
+     ★ · ☰ 같은 기호도 이모지로 셉니다 — 화면 단추를 가리킬 때는 「별표」·「목차」 처럼 말로 적습니다 */
+  const emo = R.rows.filter(r => /\p{Extended_Pictographic}/u.test(r.walk)).map(r => r.id + ': ' + (r.walk.match(/.{0,10}\p{Extended_Pictographic}.{0,10}/u) || [''])[0]);
+  is(!emo.length, '길잡이 글에 이모지가 없다' + (emo.length ? ' ← ' + emo.slice(0, 4).join(' / ') : ''));
   is(noIc.length === 0, '제목이 있는 장마다 아이콘이 붙는다 (' + R.rows.filter(r => r.hasH3).length + '장)' + (noIc.length ? ' — 없음: ' + noIc.join(', ') : ''));
   is(R.rows.every(r => !r.inner), '길잡이가 장 <b>밖</b>에 선다 — 장 글자에 안 섞인다');
   is(R.kk && R.kk.indexOf('길잡이') < 0 && R.kk.indexOf('짚기') < 0, '카톡으로 복사한 글에 길잡이가 안 섞인다');

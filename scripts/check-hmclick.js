@@ -10,12 +10,18 @@
      ① 보장분석 PDF 넣기 (nav kb)          → 우리: 히어로 단추 go('bojang')
      ② 🔔 알람 칩 (nav alm)                → <b>이었습니다</b> (판 X10 · almLeftToday 가 셉니다)
      ③④⑤⑥ 근거 보기 · 내리기 · 관리 멘트 복사 · 한 장으로 보기
-        (읽어 둔 보장분석 카드)             → <b>아직 안 이었습니다</b>
-        ⚠ 2026-11-14 (판 X443) — 여태 「그 개념이 앱에 없습니다」 라고 적어
-        두었는데, 📥 <b>읽어 둔 보장분석 칸이 판 X312 에서 홈에 섰습니다</b>
-        (baxRows · hmBaBtn). 이제 <b>지을 수 있습니다</b> — 다만 그 칸이
-        839px 이라 44px 단추 셋을 붙이면 한 화면(844px)을 넘깁니다.
-        증인은 check-stale 의 X44-바네단추(hmBaWhy · hmBaDown · hmBaSay).
+        (읽어 둔 보장분석 카드)             → <b>넷 다 이었습니다</b>
+          ③ waOpenFor(id)  ④ hmKbDown()  ⑤ hmKbCopy()  ⑥ navGoCli(id)
+        ⚠⚠ 2026-11-14 (판 X446) — <b>제가 두 번 틀리게 적었습니다.</b>
+          ① 처음에는 「그 개념이 앱에 없습니다」.
+          ② 판 X443 에서 「이제 지을 수 있습니다」 로 고치면서 증인 이름을
+             <b>hmBaWhy · hmBaDown · hmBaSay 로 지어냈습니다</b> — 그 칸을
+             열어 보지 않고 적었습니다.
+        재어 보니 <b>네 단추가 이미 다 서 있었습니다</b>. 진단이 담긴 날
+        (hmKbHtml 의 ④ 가지)에 그 차례 그대로 섭니다. 목각이 쥔 함수 이름과
+        우리 함수 이름이 다를 뿐이었습니다.
+        ★ 그래서 이제 <b>[7] 이 실제로 네 단추를 세워 봅니다</b> — 글로만
+          적어 두면 또 낡습니다 (8번).
      ⑦ 전화 걸고/만나고 기록 남기기 (did)   → 우리: hmDoHtml 큰 단추
      ⑧ <b>한 장으로 보기 (open)</b>         → <b>이번 판에 이었습니다</b>
      ⑨ 자료 열기 (nav tool)                → 우리 약속 칸은 「내 캘린더」 로 갑니다
@@ -23,8 +29,9 @@
      ⑪ 동선 줄마다 (open id)               → 우리: hmRtPerson — 이미 이어져 있음
      ⑫ 🗺️ 이 순서로 돌기 (nav rt)           → 우리: hmRtOpen — 이미 이어져 있음
      ⑬ 보낼 말 보기 (nav madi)             → <b>이었습니다</b> (판 X52 · hmMadiSideHtml)
-   ★ ③④⑤⑥ 은 <b>안 세웁니다.</b> 눌러도 안 열리는 단추는 「없는 것」
-     보다 나쁩니다 (1번). 무엇이 없는지는 위에 적어 둡니다.
+   ★ 못 이은 것은 이제 <b>⑨ ⑩ 둘</b>뿐입니다 — ⑨ 「자료 열기」 는 우리 약속
+     칸이 「내 캘린더」 로 가고, ⑩ 「크게 보기」 는 홈에 달력 칸이 없습니다.
+     둘 다 <b>자리가 달라서</b>이지 못 해서가 아닙니다.
 
    ── 보는 것 ───────────────────────────────────────────────────────
      [1] 홈에 누를 것이 <b>몇 개인가</b> — 세어서 적는다
@@ -38,11 +45,10 @@
      [6] <b>손가락이 닿는다</b> — 보이는 것 중 44px 아래 (기준선)
 
    ── ⚠ 이 자가 <b>증명하지 못하는 것</b> ────────────────────────────
-   「목각과 같아졌다」 는 <b>안 잽니다.</b> 위 <b>③④⑤⑥ 넷</b>은 아직 안 이었습니다.
-   그것까지 초록이라고 적으면 이 자가 거짓말입니다 (8번).
-   ⚠ 2026-11-14 — 여태 이 자리에 <b>「여섯」</b> 이라고 적혀 있었습니다. ② 와 ⑬ 은
-     판 X10 · X52 에서 이어졌는데 <b>자의 글만 낡아</b> 있었습니다. 자가 거짓말을
-     하면 사장님이 자를 안 믿게 됩니다 (8번).
+   「목각과 같아졌다」 는 <b>안 잽니다.</b> ⑨ ⑩ 은 우리 홈에 그 자리가 없습니다.
+   ⚠⚠ <b>이 머리글이 세 번 낡았습니다</b> — 「여섯」(② ⑬ 이 이미 이어졌는데) ·
+     「넷」(③④⑤⑥ 이 이미 이어졌는데) · 지어낸 증인 이름. 글로만 적어 두면
+     <b>반드시 낡습니다.</b> 그래서 [7] 을 세워 <b>기계가 보게</b> 했습니다 (8번).
    ══════════════════════════════════════════════════════════════════ */
 
 /* 기준선 — <b>늘면 빨간불, 줄이면 손으로 내립니다.</b>
@@ -75,7 +81,20 @@
      「➕ 고객 넣기」·「📅 내 캘린더」 30px). 이것을 키우는 것은 모양이
      달라지는 일이라 <b>사장님께 여쭐 자리</b>입니다 — 「이분 끝」 을 큰
      단추로 만들면 바로 위 큰 단추와 똑같이 보여 잘못 누릅니다.          */
-const BASE = { 작은것: 4 };
+/* ⬇ 2026-11-14 (판 X446) · 4 → <b>0</b>. 자가 「내려 주십시오」 라고 적어 둔 것을
+     <b>재어 보고 내렸습니다</b> — 그런데 먼저 <b>지워진 것이 아닌지</b> 확인했습니다
+     (6번 · 「단추는 안 지운다」). 넷이 어디로 갔는지 하나씩:
+       · 「✅ 이분 끝 다음 분으로 →」 22 → <b>51px</b>  ← 그대로 있습니다
+       · 「다음 분 → 오늘은 뒤로」    22 → <b>51px</b>  ← 그대로 있습니다
+       · 「➕ 고객 넣기」            30 → <b>44px</b>  ← 「➕ 고객 카드부터」 로 이름만
+       · 「📅 내 캘린더」            30 → <b>h0</b>    ← 접이 안으로 들어갔습니다(펴면 48px)
+     즉 <b>하나도 안 없앴고</b> 두 글줄은 #dynPane button{min-height:44px} 이 들면서
+     저절로 커졌습니다. 그러니 0 은 「다 컸다」 는 뜻입니다.
+   ★ 이제 <b>44px 아래가 하나라도 생기면 빨간불</b>입니다 — 위에 적힌
+     「0 이어야 한다 로 두면 상관없는 다섯이 당장 빨간불」 이던 사정이
+     없어졌습니다. 다시 작은 단추를 세우려면 <b>그 줄에 까닭을 적고</b> 선을
+     올리십시오 (8번).                                                   */
+const BASE = { 작은것: 0 };
 
 const 못박은날 = '2026-09-15T09:00:00Z';
 const PIN = (iso) => {
@@ -238,10 +257,43 @@ const PICK = () => {
   is(errs.length === 0, '  재는 동안 <b>터진 곳이 없다</b>'
     + (errs.length ? (' ← ' + errs.slice(0, 2).join(' / ')) : ''));
 
+  /* ══ [7] ★★ <b>목각 ③④⑤⑥ 네 단추를 실제로 세워 봅니다</b> (판 X446) ══
+     글로만 적어 두면 낡습니다 — 이 머리글이 <b>세 번</b> 낡았습니다 (8번).
+     진단이 담긴 날(hmKbHtml 의 ④ 가지)을 세우고 네 단추를 찾습니다.         */
+  console.log('\n[7] ★★ 목각 <b>③④⑤⑥</b> — 읽어 둔 보장분석 칸의 네 단추 (판 X446)');
+  const KB = await PC.evaluate(async () => {
+    /* 진단이 담긴 날을 만듭니다 — 그 자를 갈아 끼워 ④ 가지를 세웁니다 */
+    const old1 = window.cmWalOf, old2 = window.cmCliOf, old3 = window.hmKbWho;
+    window.cmWalOf = function () { return { at: '2026-11-01',
+      lv: { 1: 'ok', 2: 'low', 3: 'mid', 4: '', 5: 'ok', 6: 'low', 7: '', 8: 'ok' } }; };
+    window.cmCliOf = function () { return { id: 'c1', name_masked: '홍○동' }; };
+    window.hmKbWho = function () { return 'c1'; };
+    try { CM.loaded = true; } catch (e) {}
+    let html = ''; try { html = hmKbHtml(); } catch (e) { html = 'ERR ' + e.message; }
+    const d = document.createElement('div');
+    (document.getElementById('dynPane') || document.body).appendChild(d);
+    d.innerHTML = html;
+    await new Promise(z => setTimeout(z, 150));
+    const B = [].slice.call(d.querySelectorAll('button')).map(x => ({
+      글: (x.textContent || '').replace(/\s+/g, ' ').trim(),
+      누름: x.getAttribute('onclick') || '',
+      키: Math.round(x.getBoundingClientRect().height) }));
+    d.remove();
+    window.cmWalOf = old1; window.cmCliOf = old2; window.hmKbWho = old3;
+    return B;
+  });
+  const 누른다 = (re) => KB.some(x => re.test(x.누름));
+  is(누른다(/waOpenFor\(/), '  ③ <b>근거 보기</b> — waOpenFor 를 부른다');
+  is(누른다(/hmKbDown\(/),  '  ④ <b>내리기</b> — hmKbDown 을 부른다 (waDetach 하나가 지웁니다)');
+  is(누른다(/hmKbCopy\(/),  '  ⑤ <b>관리 멘트 복사</b> — hmKbCopy 를 부른다');
+  is(누른다(/navGoCli\(/),  '  ⑥ <b>한 장으로 보기</b> — navGoCli 를 부른다');
+  is(KB.length > 0 && KB.filter(x => x.키 > 0 && x.키 < 44).length === 0,
+     '  네 단추도 <b>44px 위</b>다 — ' + KB.length + '개');
+  console.log('  못 이은 것은 <b>⑨ ⑩ 둘</b>뿐입니다 — 우리 홈에 그 자리가 없어서입니다. 초록이 「목각과 같아졌다」 는 아닙니다.');
+
   await b.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '개 — 홈에서 누르는 것에 구멍이 있습니다')
                   : '✓ 홈의 누를 것 ' + L.length + '개가 모두 살아 있고 · 있는 화면만 가리킵니다');
-  console.log('  못 이은 것 <b>넷</b>(목각 ③④⑤⑥ — 읽어 둔 보장분석 칸의 네 단추)은 이 파일 머리에 적어 두었습니다 — 초록이 「다 됐다」 가 아닙니다.');
   process.exit(bad ? 1 : 0);
 })().catch(e => { console.log('✗ 점검 자체가 터졌습니다: ' + e.message); srv.close(); process.exit(1); });
