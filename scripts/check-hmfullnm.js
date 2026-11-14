@@ -83,14 +83,39 @@ const LOOK = () => {
   is(/홍말순/.test(parts.ask), '  💡 막힌 데에 실명 — 「' + parts.ask.slice(0, 40) + '」');
   is(/홍(말순|길동|길순)님/.test(parts.job), '  지금 할 것에 실명 — 「' + (parts.job.match(/홍\S*님/) || [''])[0] + '」');
 
-  console.log('\n[2] 맨 위 띠에 「🙈 이름 가리기」 — 오늘 화면에만');
+  /* ⚠⚠ <b>2026-11-14 (판 X441) — 이 자리의 약속이 뒤집혔습니다.</b>
+     여태는 「<b>오늘 화면에만</b>」 이었습니다. 그런데 판 X436 에서 「도구」 화면의
+     「지금 ○○님께」 줄도 <b>실명</b>으로 바뀌었고(사장님 말씀 2026-11-14 「* 이렇게
+     가리는 게 없도록 해. 검색하고 알아보는 데 어려움이 커」), 그 화면에서는 단추가
+     <b>DOM 에 있는데 보이지 않아</b> 고객 앞에서 <b>가릴 길이 없었습니다.</b>
+     CLAUDE.md 6번 — 「단추는 정말로 할 일이 없을 때만 감춘다」.
+     ★ 그래서 이제 재는 것은 「오늘 화면에만」 이 아니라 <b>「실명을 찍는 화면마다」</b>
+       입니다. 어디인지는 <b>HM_NM_TABS 한 곳</b>이 압니다(5번) — 이 자는 그 표를
+       읽어서 묻습니다. 표에 화면이 늘면 이 자도 같이 따라갑니다. */
+  console.log('\n[2] 맨 위 띠에 「🙈 이름 가리기」 — <b>실명을 찍는 화면마다</b> (판 X441)');
   is(!!A.btn && A.btn.shown && /이름 가리기/.test(A.btn.t), '  오늘 화면에 선다 — ' + (A.btn ? A.btn.t : '(없음)'));
   is(!!A.btn && A.btn.h >= 44, '  누르는 자리 44px 이상 — ' + (A.btn ? A.btn.h : 0) + 'px');
-  const other = await p.evaluate(async () => { try { go('tools'); } catch (e) {}
-    await new Promise(r => setTimeout(r, 300));
-    const b = document.getElementById('hmNmBtn'); const s = !!(b && getComputedStyle(b).display !== 'none');
-    try { go('home'); } catch (e) {} await new Promise(r => setTimeout(r, 600)); return s; });
-  is(!other, '  다른 화면(도구)에서는 안 보인다');
+  const TABS = await p.evaluate(async () => {
+    /* 표를 <b>앱에게 물어봅니다</b> — 여기 또 적으면 두 곳이 됩니다 (5번) */
+    let T = null; try { T = Object.keys(HM_NM_TABS); } catch (e) { T = null; }
+    const out = { 표: T, 봄: {} };
+    for (const t of ['home', 'tools', 'clients', 'mycal']) {
+      try { go(t); } catch (e) {}
+      await new Promise(r => setTimeout(r, 420));
+      const b = document.getElementById('hmNmBtn');
+      out.봄[t] = !!(b && getComputedStyle(b).display !== 'none');
+    }
+    try { go('home'); } catch (e) {} await new Promise(r => setTimeout(r, 600));
+    return out;
+  });
+  is(Array.isArray(TABS.표) && TABS.표.length > 0,
+     '  어디에 서는지 <b>묻는 곳이 하나</b>다 — HM_NM_TABS = ' + (TABS.표 || ['없음']).join(' · ') + ' (5번)');
+  is(TABS.봄.tools === true,
+     '  ★★ <b>실명을 찍는 「도구」 화면에도 선다</b> — 실명을 찍으면서 감추면 고객 앞에서 가릴 길이 없다 (6번 · 판 X441)');
+  const 샐자리 = ['clients', 'mycal'].filter(t => TABS.봄[t] && !(TABS.표 || []).includes(t));
+  is(샐자리.length === 0,
+     '  표에 없는 화면에는 <b>안 선다</b> — 할 일이 없는 단추는 감춘다' +
+     (샐자리.length ? (' ← ' + 샐자리.join(' · ') + ' 에 서 있습니다') : ''));
 
   console.log('\n[3] 누르면 <b>가린다</b>');
   const c0 = srvCalls;

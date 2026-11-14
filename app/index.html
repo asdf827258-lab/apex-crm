@@ -16662,7 +16662,8 @@ function tlpNowHtml(){
   var x=tlpNow(); if(!x)return '';
   var T=tlpNowTools(x); if(!T.length)return '';
   var nm=x.t||'', st=(x.k==='db')?(x.tk||''):(x.k||'');
-  var who=nm?((typeof osMaskName==='function')?osMaskName(nm):nm):'';
+  /* 🙈 화면에 찍는 이름은 <b>띠의 스위치 하나</b>를 봅니다 (5번 · 판 X436) */
+  var who=nm?((typeof hmFullNm==='function')?hmFullNm(nm):nm):'';
   var h='<div class="tlp-c"><div class="tlp-lab">지금 '+
     (who?(osEsc(who)+'님께'):'이 분께')+(st?(' <i>— '+osEsc(st)+'</i>'):'')+'</div><div class="tlp-chips">';
   var i;
@@ -17226,8 +17227,11 @@ function hmSumCss(){
        글자가 안 눌리게 합니다. <b>키는 그대로</b>(min-height 86px)라 홈은
        한 줄도 안 길어집니다 — 재어 보고 둔 값입니다.                   */
     '.hm-two{display:grid;grid-template-columns:1fr 68px 1fr;gap:8px;margin-top:10px}'+
-    '.hm-two>button{display:block;width:100%;text-align:left;min-height:86px;'+
-      'padding:11px 12px;border:1px solid var(--ink-7);border-radius:var(--t-r);'+
+    /* ★ 판 X434 — 사장님 말씀 「맨 위에 고객 163분 이 부분을 칸을 효율적으로
+       줄인 뒤 하는 걸 추천한다」. 86 → <b>56px</b> 로 줄여 그 자리에
+       📅 캘린더를 놓습니다. 글은 한 자도 안 지웠습니다 (6번) — 줄만 좁혔습니다. */
+    '.hm-two>button{display:block;width:100%;text-align:left;min-height:56px;'+
+      'padding:8px 10px;border:1px solid var(--ink-7);border-radius:var(--t-r);'+
       'background:var(--t-card);font-family:inherit;cursor:pointer}'+
     '.hm-two>button:hover{background:var(--bg-1)}'+
     /* ⚠ 칸이 셋이 되어 한 칸이 좁아졌습니다 — 글자를 한 치수 줄여야
@@ -17240,9 +17244,12 @@ function hmSumCss(){
        바닥 13px 아래에 <b>새 계단</b>이 하나 생겼습니다. 홈 칸은 서랍보다 넓어
        작게 쓸 까닭도 없습니다. <b>있는 사다리에서만 고릅니다</b> (5번).      */
     '.hm2-s{display:block;font-size:var(--t6);font-weight:700;color:var(--t-sub2);'+
-      'margin-top:3px;line-height:1.45}'+
-    '.hm2-n{display:block;font-size:var(--t1);font-weight:800;color:var(--t-point);'+
-      'margin-top:2px;letter-spacing:-.03em;line-height:1.15}'+
+      'margin-top:1px;line-height:1.3}'+
+    /* ★ 판 X434 — 사장님 말씀 「맨 위에 고객 163분 이 부분을 <b>칸을 효율적으로
+       줄인 뒤</b>」. 수를 --t1 에서 --t3 으로 낮추고 줄 사이를 좁혔습니다.
+       <b>글은 한 자도 안 지웠습니다</b> (6번) — 수도 그대로 보입니다. */
+    '.hm2-n{display:block;font-size:var(--t3);font-weight:800;color:var(--t-point);'+
+      'margin-top:1px;letter-spacing:-.03em;line-height:1.1}'+
     '.hm2-n em{font-style:normal;color:var(--t-sub2);font-weight:700;font-size:var(--t6)}'+
     /* 📄 보장분석 한 줄 — 히어로의 단추 결을 그대로 씁니다 */
     '.hm-pdf{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;'+
@@ -17267,8 +17274,132 @@ function hmSumPaint(){
        「DB통합CRM」 이라 무엇의 미전달인지 흐려지지 않습니다).         */
     '<span class="hm2-s">진행 '+k.run+' · 미전달 '+k.pol+'</span>';
 }
+/* ══ 📅 <b>오늘·이번 주 — 홈에서 바로</b> (판 X434) ══════════════════════
+   사장님 말씀 (2026-11-14) — 「<b>캘린더에 일정 추가 하기가 많이 어렵다.</b>
+   여기서 추가로 <b>고객 일정</b>을 만들 수도 있는 건데 안 되어서 어렵고,
+   <b>오늘에서 캘린더 보기가 쉽지가 않네</b>. 위치의 조정 또는, 다른 칸을
+   줄여서 그 자리에 같이 놔두는 방법을 찾아. <b>맨 위에 고객 163분 이 부분을
+   칸을 효율적으로 줄인 뒤</b> 하는 걸 추천한다」.
+
+   ★★ <b>저장 코드를 한 줄도 새로 안 짭니다</b> (사장님 규칙 · 5번) —
+     일정을 담는 자는 <b>mcalMyAdd 하나</b>이고, 적는 칸도 내 캘린더가 쓰는
+     <b>mcalMyFormHtml·mcalMyPut 그대로</b>입니다. 여기서는 <b>부르기만</b> 합니다.
+   ★ 날짜·건수를 세는 자도 <b>mcalItems·mcalDay 하나</b>입니다 — 홈이 따로
+     세면 달력과 다른 수를 말합니다 (5번).
+   ★ 고객 약속은 <b>여기서 안 담급니다</b> — 배정 줄(next_appt)에 적는 자리는
+     고객 창·동선이고, 본체는 그 칸을 안 씁니다. 길만 열어 드립니다 (6번·1번).
+   ★ 못 읽었으면 <b>0건이라고 안 적습니다</b> (1번).                        */
+/* ══ 📅 <b>＋ 일정 · 폰 달력으로</b> — <b>이미 있던 「📆 이번 주」 안에</b> ══
+   사장님 말씀 (2026-11-14) 「캘린더에 일정추가 하기가 많이 어렵다 / 여기서
+   추가로 <b>고객 일정</b>을 만들 수도 있는 건데 안 되어서 / <b>오늘에서 캘린더
+   보기가 쉽지가 않네</b>」 + 번외 「<b>아이폰이든 갤럭시든</b> 사용할 수 있도록」.
+   ⚠⚠ <b>판 X434 에서 저는 새 칸을 하나 더 세웠습니다 — 두 벌이었습니다.</b>
+     홈에는 이미 <b>📆 이번 주</b>(hmWeekBody · #hmWkHost)가 있었습니다.
+     화면을 재어 보고서야 봤습니다(옛 것 y869 · 제 것 y1,153) — 5번.
+   ★ 제 칸을 거두고, 사장님이 <b>없다고 하신 것만</b> 옛 칸 안으로 옮겼습니다
+     (판 X439) — ＋ 일정 · 👤 고객 약속 · 📲 폰 달력으로, 그리고 <b>접은 채로도
+     보이는 수</b>(여태 그 접이 머리에 아무 말도 없어서 「보기가 쉽지가 않네」
+     였습니다).
+   ★ 「어느 날인가」 는 <b>MCAL.sel</b>, 넣는 자는 <b>mcalMyPut</b>, 내보내는 자는
+     <b>mcalDownload</b> — 저마다 하나입니다 (5번).                        */
+var HM_SCHED={open:false};
+function hmSchedCss(){
+  if(document.getElementById('hmSchedCss'))return;
+  var st=document.createElement('style');st.id='hmSchedCss';
+  st.textContent=
+   '.hm-sch-h{display:flex;align-items:center;gap:5px;min-height:44px;flex-wrap:nowrap;margin-top:6px}'+
+   '.hm-sch-h .go.ok{border-color:var(--t-point);background:var(--t-point);color:#fff}'+
+   '.hm-sch-h .go{flex:1 1 0;min-height:44px;padding:0 9px;white-space:nowrap;'+
+     'border:1px solid var(--t-line);background:#fff;border-radius:11px;font-family:inherit;'+
+     'font-size:var(--t7);font-weight:800;color:var(--t-ink);cursor:pointer}'+
+   '.hm-sch-b{display:flex;gap:6px;margin-top:8px}'+
+   '.hm-sch-b button{flex:1 1 0;min-height:44px;border:1px solid var(--t-line);background:#fff;'+
+     'border-radius:11px;font-family:inherit;font-size:var(--t7);font-weight:800;color:var(--t-ink);cursor:pointer}'+
+   '.hm-sch-f{margin-top:6px}'+
+   '.hm-sch-w{margin-top:8px;font-size:var(--t7);font-weight:700;color:var(--t-sub)}'+
+   '.hm-sch-w b{color:var(--t-point);font-weight:900}';
+  document.head.appendChild(st);
+}
+/* ★★ <b>「어느 날인가」 는 MCAL.sel 한 곳이 답합니다</b> (5번). 처음에 제 칸이
+   날짜를 따로 들었더니 <b>넣기 단추가 둘</b>이 되고 서로 <b>다른 날</b>을
+   봤습니다 — 그림에서 봤습니다. */
+function hmSchedSel(){
+  var d=''; try{ d=MCAL&&MCAL.sel; }catch(e){ d=''; }
+  return d||((typeof mcalToday==='function')?mcalToday():'');
+}
+function hmSchedToggle(){
+  HM_SCHED.open=!HM_SCHED.open;
+  if(HM_SCHED.open)HM_SCHED_CUS=false;      /* 둘이 같이 펴지면 칸이 길어집니다 */
+  try{ hmWeekPaint(); }catch(e){ try{ hmPaint(); }catch(e2){} }
+}
+/* 남겨 둡니다 — 자비스·옛 자리가 부를 수 있습니다 (6번). <b>넣는 자는
+   mcalMyPut 하나</b>이고 여기서는 부르기만 합니다 (5번). */
+function hmSchedPut(){ try{ mcalMyPut(); }catch(e){} }
+/* 👤 <b>고객 일정도 여기서</b> (판 X444 · 사장님 말씀 2026-11-14
+   「여기서 추가로 <b>고객 일정</b>을 만들 수도 있는 건데 <b>안 되어서</b> 어렵고」).
+   ⚠ 판 X439 에서 저는 이 단추를 <b>고객 365일로 보내기만</b> 했습니다 — 그건
+     답이 아니라 미루기입니다. 재어 보니 <b>적는 자리는 이미 있었습니다</b> —
+     판 X121 (사장님 말씀 2026-10-17 「캘린더 달력을 클릭해서 기존 고객의 상태를
+     입력하면 캘린더에 등록이 되도록」)이 만든 <b>mcalCusFormHtml</b> 입니다.
+     내 캘린더 화면에만 서 있어서 홈에서는 못 쓰셨습니다.
+   ★ <b>새로 짓지 않고 그 자리를 여기로 부릅니다</b> (5번 · 사장님 규칙 「홈에
+     저장 코드를 새로 짜지 마십시오 — 기존 화면·기존 함수를 부르기만」).
+     넣는 자도 그대로 <b>mcalCusPut</b> 하나입니다. */
+var HM_SCHED_CUS=false;
+function hmSchedCus(){
+  HM_SCHED_CUS=!HM_SCHED_CUS;
+  if(HM_SCHED_CUS)HM_SCHED.open=false;      /* 둘이 같이 펴지면 칸이 길어집니다 */
+  try{ hmWeekPaint(); }catch(e){ try{ hmPaint(); }catch(e2){} }
+}
+/* 고객 일정을 넣은 뒤에도 이 칸을 그 자리에서 다시 칠합니다 */
+function hmSchedCusPut(){
+  try{ mcalCusPut(); }catch(e){}
+  try{ hmWeekPaint(); }catch(e2){}
+}
+/* ＋ 일정 · 👤 고객 · 📲 폰 달력으로 — <b>옛 「이번 주」 칸 안에</b> 섭니다 */
+function hmSchedRow(){
+  hmSchedCss();
+  var h='<div class="hm-sch-h">'+
+    '<button type="button" class="go ok" onclick="hmSchedToggle()">'+
+      (HM_SCHED.open?'닫기':'＋ 일정')+'</button>'+
+    '<button type="button" class="go'+(HM_SCHED_CUS?' ok':'')+'" onclick="hmSchedCus()">'+
+      (HM_SCHED_CUS?'닫기':'👤 고객 일정')+'</button>'+
+    '<button type="button" class="go" onclick="go(\'mycal\')">달력 크게 ›</button></div>';
+  var sel=hmSchedSel();
+  if(HM_SCHED_CUS){
+    /* 👤 <b>고객 일정</b> — 판 X121 이 만든 그 칸을 그대로 부릅니다 (5번).
+       ★ 그 칸은 <b>MCAL.sel 이 있어야</b> 섭니다 — 안 고르셨으면 오늘로 둡니다.
+       ★ 못 세우면 <b>왜 못 세우는지</b> 적습니다 — 빈 자리를 두지 않습니다 (1번). */
+    try{ if(!MCAL.sel)MCAL.sel=sel; }catch(e0){}
+    var cf=''; try{ cf=mcalCusFormHtml(sel)||''; }catch(e1){ cf=''; }
+    h+='<div class="hm-sch-w">👤 <b>'+osEsc(sel)+'</b> 에 고객 일정을 넣습니다</div>';
+    h+=cf?('<div class="hm-sch-f">'+cf+'</div>')
+         :('<div class="hm-sch-w">아직 <b>고객 명단을 못 읽었습니다</b> — 읽으면 '+
+           '여기서 바로 고르실 수 있습니다. (고객 365일을 한 번 열면 읽어 옵니다)</div>');
+    return h;
+  }
+  if(!HM_SCHED.open)return h;
+  var f='';
+  try{ f=mcalMyFormHtml(sel); }catch(e){ f=''; }
+  /* <b>넣는 단추는 폼에 있는 그것 하나</b>입니다 — 여기 또 세우지 않습니다 (5번) */
+  h+='<div class="hm-sch-w">📌 <b>'+osEsc(sel)+'</b> 에 넣습니다</div>'+
+     '<div class="hm-sch-f">'+f+'</div>'+
+    /* 📲 <b>아이폰·갤럭시·네이버</b> (사장님 말씀 「아이폰이든 갤럭시든」).
+       ★★ 네이버에 <b>직접 꽂지는 않습니다</b> — 앱 등록·열쇠·로그인이 더
+         있어야 합니다. 사장님이 「어렵다면 그냥 이대로」 하셨고, <b>.ics</b> 면
+         아이폰·갤럭시·<b>네이버(가져오기)</b> 가 다 받습니다. 없는 길을 있다고
+         하지 않습니다 (1번).
+       ★ 내보내는 자는 <b>mcalDownload 하나</b> (5번).
+       ★ 이름은 나갈 때 <b>가려집니다</b> — iCloud·구글로 올라갑니다 (3번). */
+     '<div class="hm-sch-b">'+
+       '<button type="button" onclick="mcalDownload(\'today\')">📲 오늘 것만</button>'+
+       '<button type="button" onclick="mcalDownload(\'month\')">📲 이번 달 전부</button></div>'+
+     '<div class="hm-sch-w">받은 파일을 여시면 <b>아이폰·갤럭시</b> 달력이 바로 받아 갑니다. '+
+       '<b>네이버 캘린더</b>는 「가져오기」 에서 그 파일을 고르시면 됩니다.</div>';
+  return h;
+}
 function hmSumHtml(){
-  hmSumCss();
+  hmSchedCss(); hmSumCss();
   return '<div class="hm-two">'+
     '<button type="button" id="hmSumBox" onclick="go(\'crm\')" '+
       'title="DB 통합 CRM — 배정받은 분들을 단계별로"></button>'+
@@ -17302,6 +17433,13 @@ function hmSumHtml(){
          펼쳐집니다」 는 눌러 보시면 바로 아는 말이라 뺐습니다 — <b>가는 길은
          그대로</b>입니다 (6번).                                          */
       '<span class="hm2-s">물으면 길 안내</span>'+
+    /* 📅 <b>캘린더는 여기 안 섭니다</b> (판 X439) — 판 X434 에서 이 자리에
+       새 칸을 세웠더니 <b>홈에 「이번 주」 가 둘</b>이 되었습니다(옛 것은
+       hmStack 안 #hmWkHost · y869, 제 것 y1,153). 5번이 「버그가 가장 많이
+       나온 자리」 라고 적어 둔 그것이라, 제 칸을 거두고 사장님이 없다고 하신
+       것(＋ 일정 · 👤 고객 · 📲 폰 달력)을 <b>옛 칸 안으로</b> 옮겼습니다.
+       ★ 맨 위 칸을 86 → 56px 로 줄인 것은 <b>그대로 둡니다</b> — 사장님이
+         「칸을 효율적으로 줄인뒤」 라고 하셨고, 줄인 만큼 홈이 짧아집니다. */
     '</button></div>';
 }
 /* 🛰 <b>서랍 맨 위 — 자비스</b> (판 X341). 사장님 말씀 2026-11-05 「이제 메뉴 간소화해줘 자비스에서 모두
@@ -20151,7 +20289,14 @@ function mcalWeekHtml(){
     for(j=0;j<n.length&&j<4;j++){
       var K=MCAL_KIND[n[j].k]||{e:'•',c:'#8B95A1'};
       /* 🙈 배정 DB 약속(appt)은 <b>그릴 때</b> 가립니다 (판 X359 · 3번) — 자료는 그대로(이름으로 찾는 길) */
-      var wt=mcalWhoTag(n[j],wMany)+((n[j].k==='appt'?osMaskName(n[j].t):n[j].t)||'');
+      /* 🙈 <b>가릴지는 띠의 스위치 하나</b>가 답합니다 (5번 · 판 X436).
+         사장님 말씀 (2026-11-14) — 「고객의 이름 각자 개인별로 보여주지만
+         <b>* 이렇게 가리는 게 없도록 해. 검색하고 알아보는 데 어려움이 커</b>」.
+         여태 달력 칸만 <b>늘</b> 가려, 약속에 누가 있는지 못 알아보셨습니다.
+         ★ 자료는 그대로입니다 — 가리는 것은 <b>그릴 때</b>뿐입니다.
+         ★ <b>나가는 자리는 안 바뀝니다</b> — 폰 달력으로 실려 가는 이름은
+           mcalOutName 이 따로 답하고 기본이 가림입니다 (3번). */
+      var wt=mcalWhoTag(n[j],wMany)+((n[j].k==='appt'?hmFullNm(n[j].t):n[j].t)||'');
       h+='<span class="wi"'+(n[j].late?' data-late="1"':'')+' title="'+osEsc(wt)+'">'+
          '<i style="background:'+K.c+'"></i>'+K.e+' '+osEsc(wt.slice(0,12))+
          (n[j].s?('<u>'+osEsc((''+n[j].s).slice(0,9))+'</u>'):'')+'</span>';
@@ -20185,6 +20330,9 @@ function mcalMyPut(){
   if(!mcalMyAdd(ds,hm,t))return;
   MCAL.sel=ds;
   mcalPaint();
+  /* 홈 📅 이번 주 칸도 같이 — 둘이 다른 수를 보이면 안 됩니다 (5번 · 판 X434) */
+  /* 넣으신 뒤 「이번 주」 칸을 그 자리에서 다시 칠합니다 (판 X439) */
+  try{ if(typeof hmWeekPaint==='function'&&document.getElementById('hmWkHost'))hmWeekPaint(); }catch(e){}
   toast('일정을 넣었습니다');
 }
 /* ── 줄마다 <b>무엇을 할지</b> 한 줄 ─────────────────────────────────
@@ -22032,8 +22180,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-14 15:31';
-var APP_BUILD_NOTE='🧩 <b>「자료 넣기」 칸의 끌어 놓는 상자를 바로잡았습니다</b>(판 X440) — 폰에서 점선 테두리가 글자 위로 겹쳐 깨져 보였습니다. ◾ 먼저 나간 판 X438(마스터 아카데미 「자료 넣기」 — 넣으면 팀이 보고 자비스가 찾습니다)이 들어 있습니다.';
+var APP_BUILD='2026-11-14 16:30';
+var APP_BUILD_NOTE='🏠 <b>오늘 화면을 네 군데 고쳤습니다</b>(판 X433·X434·X435·X436·X437·X438·X439·X441·X442·X443·X444 · 사장님 말씀 2026-11-14). ◾ 🔦 <b>따라만 가면 됩니다</b> — 맨 위 「🧭 오늘 이 길로」 를 누르면 <b>그 칸만 밝고 둘레가 어두워집니다.</b> 「다음 ›」 만 눌러 다섯 걸음을 끝까지 도시고, 걸음마다 「여기서 하기」 로 바로 들어갑니다. 할 일이 없는 걸음도 「오늘은 없습니다」 라고 적고 섭니다. ◾ 📅 <b>이번 주를 접은 채로도 보시고, 그 자리에서 바로 넣습니다</b> — 「📆 이번 주」 머리에 <b>「오늘 N건 · 이레 N건」</b> 이 적힙니다(여태 접으면 한 자도 안 보였습니다). 펴서 <b>「＋ 일정」</b> 을 누르면 <b>그 자리에서 바로</b> 적어 넣으시고, <b>「📲 폰 달력에」</b> 로 받은 파일은 <b>아이폰·갤럭시</b> 달력이 바로 받아 가며 <b>네이버 캘린더</b>는 「가져오기」 에서 고르시면 됩니다. 맨 위 「고객 N분」 칸을 <b>86 → 56px</b> 로 줄였고, <b>홈이 오히려 125px 짧아졌습니다</b>. ◾ 👤 <b>고객 일정도 여기서 바로 넣습니다</b> — 「👤 고객 일정」 을 누르면 <b>고객 고르개·상태·메모</b> 가 그 자리에 섭니다. 지난 날·오늘에 넣으면 그 분 <b>접촉 기록</b>으로, 앞날에 넣으면 <b>다음 할 일</b>로 들어갑니다. ◾ 🌅 <b>아침 미션이 「오늘」 카드 <b>맨 위</b>로 올라왔습니다</b>(한 장 띠 바로 아래) — 접혀 서고 <b>누르면 펼쳐집니다.</b> TA 걸음에는 <b>그 분 DB 종류에 맞춘 대본이 그 자리에 바로</b> 붙습니다(대본을 찾으러 나가지 않습니다). <b>이틀 이상 거르면 「N일째」</b> 라고 적고, 팀에서 몇 분이 아직인지도 적습니다 — 다만 <b>받아 둔 판이 없으면 수를 지어 적지 않습니다.</b> ◾ 👤 <b>고객 이름이 더는 가려지지 않습니다</b> — 달력의 약속 칩과 「지금 이 분께」 줄이 여태 <b>늘</b> 「홍*동」 이었습니다(판 X399 의 「홈은 실명」 결정을 그 둘만 안 보고 있었습니다). 이제 평소에는 <b>실명</b>이고, 고객 앞에서 맨 위 「🙈 이름 가리기」 를 한 번 누르면 그 자리까지 같이 가려집니다. ★ 핀 가릴 생각이 들면 맨 위 「🙈 이름 가리기」 한 번이며, 그 단추는 이제 <b>사장님이 실명을 보시는 화면마다 함께 설니다</b>(오늘·도구) — 여태는 도구 화면에 이름은 뜨는돐 가릴 단추가 없었습니다(판 X437). ⚠ <b>나가는 자리는 그대로 가립니다</b> — 폰 달력·서버·AI 로 실려 가는 이름은 한 자도 안 건드렸습니다. ◾ 🔦 길잡이 줄이 <b>「✓ 오늘 한 번 도셨습니다 · 다시 보기」</b> 로 바뀝니다 — 어디까지 오셨는지 그 자리에서 보시고, <b>또 누르실 수 있습니다.</b> ◾ ➕ 이 판에는 <b>다른 갈래 넷도 같이</b> 실려 나갑니다 — <b>판 X437</b>(제안서를 넣으면 「추가」 단추가 표 <b>위에 크게</b>) · <b>판 X438</b>(마스터 아카데미에 <b>자료를 넣으면</b> 팀이 보고 자비스가 찾습니다) · <b>판 X440</b>(그 「자료 넣기」 칸의 끌어 놓는 상자) · <b>판 X431</b>(「← 워크스페이스」 를 누르면 늘 홈으로).';
 
 
 
@@ -32111,9 +32259,14 @@ function hmPexLinePaint(){
    ★ 이미 가려진 이름(고객 365일 서버본 「홍○○」)은 이 브라우저가 아는 실명으로
      되돌립니다 — 담당자 DB 에서 <b>한 사람으로만</b> 맞을 때만. 모르면 가린 채로 둡니다
      (지어내지 않습니다 · 1번).
-   🙈 <b>고객 앞에서는 한 번 눌러 가립니다</b> — 홈은 고객 앞에서 여는 화면이라 다른 분
-     실명이 보이면 안 됩니다. 맨 위 띠 「🙈 이름 가리기」 (오늘 화면에서만 섭니다).
-     누른 것은 <b>이 폰에만</b> 기억합니다(localStorage apex_hm_hidenm) — 서버를 안 부릅니다 (7번). */
+   🙈 <b>고객 앞에서는 한 번 눌러 가립니다</b> — 고객 앞에서 여는 화면에 다른 분
+     실명이 보이면 안 됩니다. 맨 위 띠 「🙈 이름 가리기」.
+     누른 것은 <b>이 폰에만</b> 기억합니다(localStorage apex_hm_hidenm) — 서버를 안 부릅니다 (7번).
+   ★★ <b>단추가 서는 자리를 한 곳에만 적습니다</b> (판 X441 · 5번) — 실명을 찍는 화면이
+     늘면 <b>여기 한 줄</b>만 보탭니다. 여태는 hmNmBtnSync 안에 'home' 이 박혀 있어,
+     판 X436 에서 도구 화면이 실명을 찍기 시작했는데 <b>그 화면에는 가릴 단추가 안 섰습니다</b>
+     — 「다 됐다」 로 보이는데 고칠 단추를 감춘 자리입니다 (6번). */
+var HM_NM_TABS={home:1,tools:1};   /* 실명을 찍는 화면 — 늘면 여기에 보탭니다 */
 function hmNmHidden(){ try{ return localStorage.getItem('apex_hm_hidenm')==='1'; }catch(e){ return false; } }
 function hmNmBtnHtml(){
   var on=hmNmHidden();
@@ -32121,18 +32274,23 @@ function hmNmBtnHtml(){
     ' onclick="hmNmToggle()" title="고객 앞에서 다른 분 실명이 안 보이게 가립니다">'+
     (on?'👤 이름 보이기':'🙈 이름 가리기')+'</button>';
 }
-/* 오늘 화면에서만 섭니다 — 띠는 모든 화면에 떠 있으므로 (go 가 부릅니다) */
+/* 실명을 찍는 화면에서만 섭니다 — 띠는 모든 화면에 떠 있으므로 (go 가 부릅니다).
+   어느 화면인지는 <b>HM_NM_TABS 한 곳</b>이 압니다 (5번). */
 function hmNmBtnSync(){
   var b=document.getElementById('hmNmBtn'); if(!b)return;
   var tab=(typeof currentTab==='function')?currentTab():'';
-  b.style.display=(tab==='home')?'':'none';
+  b.style.display=HM_NM_TABS[tab]?'':'none';
 }
 function hmNmToggle(){
   var on=!hmNmHidden();
   try{ if(on)localStorage.setItem('apex_hm_hidenm','1'); else localStorage.removeItem('apex_hm_hidenm'); }catch(e){}
   try{ tnPaint(); }catch(e1){}
   try{ hmNmBtnSync(); }catch(e2){}
-  try{ if(typeof renderHome==='function'&&currentTab()==='home')renderHome(); }catch(e3){}
+  /* 보고 계신 화면을 그 자리에서 다시 칠합니다 — 안 칠하면 눌러도 안 바뀌어
+     사장님은 단추가 고장 난 줄 아십니다 (판 X441 · 판 X219 에서 데인 자리). */
+  try{ var _t=(typeof currentTab==='function')?currentTab():'';
+       if(_t==='home'&&typeof renderHome==='function')renderHome();
+       else if(_t==='tools'&&typeof tlpPaint==='function')tlpPaint(); }catch(e3){}
   try{ toast(on?'🙈 이름을 가렸습니다 — 이 폰에서 다시 누르실 때까지':'👤 이름을 다시 보여 드립니다'); }catch(e4){}
 }
 function hmFullNm(s){
@@ -34075,7 +34233,72 @@ function hmMsJump(i){
   HM_MSP.j=i; HM_MSP.i=0; hmMsPaint();
 }
 /* 머리에 적을 한 줄 — 접어 두셔도 <b>어디까지 왔는지</b>는 보입니다 */
+/* ══ ⚠️ <b>며칠째 안 하셨는지 말해 드립니다</b> (판 X435) ═══════════════
+   사장님 말씀 (2026-11-14) — 「<b>아침 미션을 계속 안 하는 사람은 며칠째
+   안 했다 · 몇 명 안 했다 경고문을 띄워 줘 각자 맞추어서</b>」.
+
+   ★★ <b>서버를 새로 안 부릅니다</b> (7번) — 「며칠째」 는 이 브라우저의
+     체크판 날짜 열쇠를 세고, 「몇 명」 은 <b>이미 받아 둔 팀 판(GB)</b>이
+     있을 때만 셉니다. 안 받아 두었으면 <b>아무 말도 안 합니다</b> (1번) —
+     「0명이 안 했다」 는 「다 했다」 는 뜻이 되어 버립니다.
+   ★ 어제 하루 거른 것으로는 안 나무랍니다 — <b>이틀 이상</b>부터입니다.
+   ★ 날짜는 ckDayK 와 <b>같은 자</b>(한국 시각)로 셉니다 (5번).          */
+var HM_MS_WARN_MAX=14;      /* 이 날수까지만 거슬러 봅니다 */
+function hmMsWarnDays(){
+  var i,k,m,any,d,base;
+  try{ base=ckNow(); }catch(e){ return null; }        /* 못 세면 모릅니다 (1번) */
+  var out=0;
+  for(i=1;i<=HM_MS_WARN_MAX;i++){
+    d=new Date(base.getTime()-i*86400000).toISOString().slice(0,10);
+    try{ m=JSON.parse(localStorage.getItem('apex_ck_day_'+d)||'null'); }catch(e2){ m=null; }
+    if(m===null)break;        /* 그 날 기록이 아예 없으면 <b>모릅니다</b> — 안 셉니다 */
+    any=false;
+    for(k=0;k<HM_MS.length;k++)if(m[HM_MS[k].ck]){ any=true; break; }
+    if(any)break;
+    out++;
+  }
+  return out;
+}
+/* 오늘 팀에서 몇 분이 아직 안 하셨나 — <b>이미 받아 둔 판</b>에만 묻습니다 */
+function hmMsWarnTeam(){
+  try{
+    if(typeof GB==='undefined'||!GB.loaded)return null;
+    var L=(typeof gbScope==='function')?gbScope():[];
+    if(!L||!L.length)return null;
+    var me=(typeof gbMyId==='function')?gbMyId():'',i,n=0,tot=0;
+    for(i=0;i<L.length;i++){
+      if(!L[i]||L[i].id===me)continue;
+      tot++;
+      if(!(L[i].total>0))n++;
+    }
+    return tot?{n:n,tot:tot}:null;
+  }catch(e){ return null; }
+}
+function hmMsWarnTxt(){
+  var d=hmMsWarnDays(),T=hmMsWarnTeam(),p=[];
+  if(d&&d>=2)p.push('<b>'+d+'일째</b> 아침 미션을 안 하셨습니다');
+  if(T&&T.n>0)p.push('오늘 팀에서 <b>'+T.n+'명</b>이 아직 안 하셨습니다');
+  return p.length?p.join(' · '):'';
+}
+function hmMsWarnHtml(){
+  var t=hmMsWarnTxt();
+  if(!t)return '';
+  hmMsWarnCss();
+  return '<div class="hm-ms-wr">⚠️ <span>'+t+
+    ' — <b>다섯 가지 중 하나만</b> 하셔도 오늘은 끊기지 않습니다.</span></div>';
+}
+function hmMsWarnCss(){
+  if(document.getElementById('hmMsWarnCss'))return;
+  var st=document.createElement('style');st.id='hmMsWarnCss';
+  st.textContent='.hm-ms-wr{display:flex;gap:6px;align-items:flex-start;margin:0 0 9px;'+
+      'padding:8px 10px;border-radius:11px;background:var(--t-warn-l);border:1px solid var(--t-warn)}'+
+    '.hm-ms-wr span{font-size:var(--t7);line-height:1.5;color:var(--t-warn-d);font-weight:600}'+
+    '.hm-ms-wr b{font-weight:900}';
+  document.head.appendChild(st);
+}
 function hmMsSub(){
+  /* ⚠️ <b>접어 두셔도 보이게</b> — 경고는 펴야 보이면 뜻이 없습니다 */
+  var w=''; try{ w=hmMsWarnTxt(); }catch(eW){ w=''; }
   var n=hmMsCount(),c=hmMsCur(),ev='';
   try{ ev=hmMsEvSub(); }catch(e){ ev=''; }
   /* 평가 한 줄은 <b>있을 때만</b> 붙인다 — 아직 기록이 없으면 아무 말도 안
@@ -34112,8 +34335,12 @@ function hmMsSub(){
       C+=nd?(' · 📑 보장분석 없음 '+nd+'명'):' · 📑 보장분석 다 있음';
     }
   }catch(e3){}
-  if(c<0)return n+'/'+N+' · 다 하셨습니다'+C+tail;
-  return n+'/'+N+' · '+HM_MS[c].n+' '+HM_MS[c].t+C+tail;
+  /* ⚠️ 경고가 있으면 <b>맨 앞</b>에 — 접어 두셔도 그 한 마디는 보입니다.
+     osEsc 를 지나는 자리라 <b>날글(<b>)을 못 씁니다</b> — 글자로만 적습니다
+     (0-1번 · 접는 칸 꼬리글은 osEsc 를 지납니다). */
+  var W=w?(w.replace(/<[^>]+>/g,'')+' · '):'';
+  if(c<0)return W+n+'/'+N+' · 다 하셨습니다'+C+tail;
+  return W+n+'/'+N+' · '+HM_MS[c].n+' '+HM_MS[c].t+C+tail;
 }
 function hmFoldMsPaint(){
   var box=document.getElementById('hmFold_ms'); if(!box)return;
@@ -34641,9 +34868,31 @@ var HM_MS_BODY={
    /* 준비 자료는 <b>여기 한 곳</b>에만 섭니다. ③ 전화 칸은 나이대 고르기·
       다섯 마디 틀·용건으로 이미 <b>한 화면이 꽉</b> 차, 거기 또 넣으면 844px 를
       넘억니다(재 봤습니다). 아침 차례가 ② 준비 → ③ 전화라 여기서 보시면 됩니다. */
-   return hmMsWhoHtml(x,HM_MSP.i+1,P.length)+hmMsBriefHtml(x)+hmMsNewsLine(x)+
-     (S?('<div class="hm-ms-say"><span class="lb">💬 첫 마디</span>'+osEsc(S.say)+'</div>'):
-        '<div class="hm-ms-nonews">이 상태에는 <b>정해 둔 첫 마디가 없습니다</b> — 지어내지 않습니다.</div>')+
+   /* ☎️ <b>TA 대본을 여기 바로 세웁니다</b> (판 X435 · 사장님 말씀
+        「우리 <b>TA 스크립트</b>가 있는데, 이 부분을 연결해서 할 수 있는
+         멘트로 <b>바로 연결</b>하도록 해야지. <b>디비 종류</b>도 나와 있는데,
+         거기에 맞추어서 스크립트를 띄워」).
+      ★★ <b>대본을 여기서 또 안 만듭니다</b> (5번) — 이미 있는 hmTaHtml 이
+        그 분의 단계(hmTaKind)와 <b>DB 종류</b>(hmSrcOf)로 골라 세웁니다.
+        고치신 말(판 X412)도 그대로 따라옵니다.
+      ★ 대본이 없는 단계면 hmTaHtml 이 <b>스스로 안 세웁니다</b> — 그때는
+        아래 「정해 둔 첫 마디가 없습니다」 가 그대로 섭니다 (1번).     */
+   var TA='';
+   try{
+     var _t=hmTaHtml(x)||'';
+     /* ★ <b>접어 둡니다</b> — 펴 두니 이 칸이 1,556px 로 한 화면(844)을
+        넘었습니다(check-msfive 가 그 자리에서 울었습니다). 사장님 말씀도
+        「<b>클릭하면 펼쳐지고</b> 할 수 있도록」 이었습니다. 머리에 그 분
+        <b>DB 종류</b>를 적어 두어, 펴기 전에도 무엇이 들었는지 보입니다. */
+     if(_t){
+       var _sv=''; try{ _sv=hmSrcOf(x)||''; }catch(e9){}
+       TA=hmFoldWrap('msta','☎️','TA 대본',
+            (_sv?(_sv+' — 이 분께 맞춘 멘트'):'이 분께 맞춘 멘트'),_t);
+     }
+   }catch(eT){ TA=''; }
+   return hmMsWhoHtml(x,HM_MSP.i+1,P.length)+hmMsBriefHtml(x)+hmMsNewsLine(x)+TA+
+     (TA?'':(S?('<div class="hm-ms-say"><span class="lb">💬 첫 마디</span>'+osEsc(S.say)+'</div>'):
+        '<div class="hm-ms-nonews">이 상태에는 <b>정해 둔 첫 마디가 없습니다</b> — 지어내지 않습니다.</div>'))+
      '<div class="hm-ms-b">'+
        (S?'<button type="button" class="btn btn-primary" onclick="hmMsSayCopy()">📋 복사</button>':'')+
        '<button type="button" class="btn btn-ghost" onclick="hmMsOpen()">📇 이분 열기</button>'+
@@ -35326,15 +35575,27 @@ function hmMsHtml(){
   if(!OS.profile)return '';
   hmMsCss();                        /* 옷은 <b>쓰는 화면에서</b> 부른다 (5번) */
   var c=hmMsCur();
-  if(c<0)return hmMsStepsHtml()+hmMsFinHtml()+hmMsEvHtml();
+  /* ⚠️ 며칠째 안 하셨는지는 <b>맨 위</b>에 — 다 하신 날에도 어제까지를 말합니다 */
+  var WR=''; try{ WR=hmMsWarnHtml(); }catch(eW){ WR=''; }
+  if(c<0)return WR+hmMsStepsHtml()+hmMsFinHtml()+hmMsEvHtml();
   var m=HM_MS[c],P=hmMsPeople(),fn=HM_MS_BODY[m.kind];
-  return hmMsStepsHtml()+
+  return WR+hmMsStepsHtml()+
     '<div class="hm-ms-hd"><span class="e">'+m.e+'</span>'+
       '<span class="t"><b>'+osEsc(m.n+' '+m.t)+'</b><span>'+m.d+'</span></span></div>'+
     (fn?fn(P):'')+
     '<div class="hm-ms-done"><button type="button" class="btn btn-primary" '+
       'onclick="hmMsDid(\''+m.ck+'\')">✓ '+osEsc(m.t)+' 했습니다 <span>체크판에도 같이 담깁니다</span></button></div>'+
     hmMsEvHtml();
+}
+/* 🌅 <b>아침 미션 접이를 짓는 곳 — 하나</b> (판 X439).
+   세우는 자리는 「오늘」 카드 맨 위(한 장 띠 바로 아래)입니다. 접힌 채로
+   서고 누르면 펼쳐집니다 — 사장님 말씀 「클릭하면 펼쳐지고」.
+   ★ 속은 쓰던 그대로(hmMsHtml)입니다 — 칸을 다시 만들지 않습니다 (5번). */
+function hmMsFoldHtml(){
+  try{
+    return hmFoldWrap('ms','\uD83C\uDF05','\uC544\uCE68 \uBBF8\uC158',hmMsSub(),
+      '<div id="hmMsHost">'+hmMsHtml()+'</div>','전화로약속잡을분');
+  }catch(e){ return ''; }
 }
 function hmMsPaint(){
   var el=document.getElementById('hmMsHost');
@@ -35577,9 +35838,18 @@ function hmTodayHtml(){
        return 하는 바람에, 오늘 뽑힌 분이 없거나 <b>아직 읽는 중</b>이면
        아침 미션이 통째로 사라졌습니다 — 미션은 사람이 없어도 할 것(SNS·
        고객 보험)이 있고, 무엇보다 「읽는 중」이라고 말해 줄 자리입니다. */
+  /* 🌅 <b>아침 미션은 이제 「오늘」 카드 맨 위에 섭니다</b> (판 X439 ·
+     사장님 말씀 2026-11-14 「맨 밑에 오늘 아침 미션에서도 ta인데 …
+     [<b>아침미션을 오늘 칸에 따로 만들어서</b>] <b>위 쪽에 따로 배치</b>하여서
+     클릭하면 펼쳐지고 할 수 있도록 만들자」).
+     ⚠⚠ 판 X435 에서 저는 이것을 <b>갈래별 줄보다 위</b>로만 옮겼습니다. 그런데
+       그 줄 묶음 자체가 홈 <b>맨 밑</b>(폰에서 y2,254 · 홈 전체 2,493)이라,
+       <b>재어 보니 사장님 말씀이 하나도 안 풀려 있었습니다.</b> 화면을 찍어
+       보고서야 알았습니다 — 자는 「줄보다 위인가」 만 물었기 때문입니다 (8번).
+     ★ 짓는 자는 그대로 하나입니다(hmMsFoldHtml) — 여기서는 <b>안 세우고</b>
+       세우는 자리만 「오늘」 카드로 옮겼습니다 (5번 · 6번 — 글은 한 자도
+       안 지웠습니다).                                                     */
   var ms='';
-  try{ ms=hmFoldWrap('ms','\uD83C\uDF05','\uC544\uCE68 \uBBF8\uC158',hmMsSub(),
-         '<div id="hmMsHost">'+hmMsHtml()+'</div>','전화로약속잡을분'); }catch(eM){ ms=''; }
   /* 🌙 <b>저녁 한 장</b>을 아침 미션 <b>바로 뒤</b>에 둡니다 — 하루의 두 끝이
      나란히 섭니다 (사장님이 지도에서 고르신 ㉠).
      ★ <b>접힌 채로</b> 섭니다 — 홈은 처음에 다 접고 여는 것이 이미 정해진
@@ -35656,7 +35926,13 @@ function hmTodayHtml(){
          /* 📅 약속·이번 주가 설 자리 — <b>폰이면 맨 위, 컴퓨터면 여기</b>입니다.
             정하는 자는 hmSidePlace 하나입니다 (5번 · 곁칸과 같은 방식). */
          '<div id="hmUpDown"></div>'+
-         '<div class="hm-rows">'+rows+'</div>'+ms+nt+'</div></div>';
+         /* 🌅 <b>아침 미션을 위로</b> (판 X435 · 사장님 말씀 2026-11-14
+            「<b>아침 미션을 오늘 칸에 따로 만들어서 위 쪽에 따로 배치</b>하여서
+             클릭하면 펼쳐지고 할 수 있도록 만들자」). 여태 갈래별 줄(rows)
+            <b>아래</b>에 있어 맨 밑이었습니다. 접힌 채로 서므로 홈 길이는
+            그대로이고, 차례만 위로 옵니다 (6번 · 글은 한 자도 안 지웠습니다). */
+         ms+
+         '<div class="hm-rows">'+rows+'</div>'+nt+'</div></div>';
 }
 /* ══ ✅ <b>오늘 할 일</b> — 홈 맨 위, 두 칸 바로 밑 ═══════════════════
    사장님 말씀 (2026-10-21) — 「오늘 에서 <b>db통합 crm 밑에 보장분석pdf
@@ -36958,12 +37234,181 @@ function hmWayTipCss(){
       '-webkit-box-orient:vertical;-webkit-line-clamp:2}';
   document.head.appendChild(st);
 }
+/* ══ 🔦 <b>따라만 가면 되는 길잡이</b> — 판 X433 ══════════════════════════
+   사장님 말씀 (2026-11-14) — 「내가 말한 도움말은, <b>딱 그곳에 동그라미 또는
+   강조</b>, 다른 곳을 <b>흐리게</b> 하면서, <b>따라가면서</b> 할 수 있도록 하는
+   거야. <b>오늘 하루의 루틴</b>을 너가 따라가게 하면서 계속 하게 하는 거지.
+   그래야 <b>따라만 가면 되니깐</b>」.
+
+   ── 여태 어땠나 ────────────────────────────────────────────────
+   판 X408 이 걸음마다 한 줄 도움말을 붙였습니다. 그런데 그것은 <b>읽고 나서
+   스스로 찾아가야</b> 하는 글이었습니다. 사장님이 바라신 것은 <b>화면이
+   데리고 다니는 것</b>입니다 — 그 자리만 밝고 나머지는 흐리고, 「다음」 만
+   누르면 하루가 끝나는 것.
+
+   ★★ <b>걸음과 자리를 새로 안 정합니다</b> (5번) — HM_WAY 가 이미 다섯 걸음과
+     닻(at)·도움말(h)·할 일이 있나(go)·지금 수(n)를 들고 있고, 「그 걸음이
+     화면 어디인가」 는 <b>hmWayEl 한 곳</b>이 답합니다. 여기서는 <b>비추기만</b>
+     합니다. 걸음을 여기 또 적으면 한쪽만 고쳐지는 날이 옵니다.
+   ★ 덮개는 <b>position:fixed</b> 라 홈 높이를 1px 도 안 늘립니다 — 재어 보고
+     넣었습니다(check-homeone · check-msfive 그대로).
+   ★ <b>할 일이 없는 걸음도 건너뛰지 않습니다</b> — 「오늘은 없습니다」 라고
+     적고 넘어갑니다. 조용히 빼면 사장님은 그 걸음을 안 하신 줄 아십니다 (1번).
+   ★ 닻을 못 찾으면 <b>없는 자리를 가리키지 않습니다</b> — 가운데에 글만 띄우고
+     「이 칸은 지금 화면에 없습니다」 라고 적습니다 (1번).
+   ★ 끝나면 <b>오늘 다시 안 엽니다</b>(이 브라우저에만). 매일 아침 한 번만.  */
+var HM_TOUR={i:0,on:false,esc:null};
+var HM_TOUR_LS='apex_tour_done_v1';
+function hmTourCss(){
+  if(document.getElementById('hmTourCss'))return;
+  var st=document.createElement('style');st.id='hmTourCss';
+  st.textContent=
+   /* ⚠ 아래 메뉴 띠(.tabbar)보다 <b>위</b>에 있어야 합니다 — 처음에 9400 으로
+     두었더니 띠만 환하게 남아 「다른 곳을 흐리게」 가 반쪽이었습니다.
+     모달(9998·9999)보다는 아래에 둡니다 — 창이 뜨면 창이 이깁니다. */
+   '#hmTourWrap{position:fixed;inset:0;z-index:9700;pointer-events:none}'+
+   '#hmTourWrap.on{pointer-events:auto}'+
+   /* 🔦 구멍 — 둘레를 9999px 그림자로 덮어 <b>그 자리만</b> 밝습니다 */
+   '.hm-tour-hole{position:absolute;border-radius:16px;pointer-events:none;'+
+     'box-shadow:0 0 0 9999px rgba(10,16,28,.66);'+
+     'outline:3px solid var(--t-point);outline-offset:3px;'+
+     'transition:top .25s,left .25s,width .25s,height .25s}'+
+   '.hm-tour-hole.none{box-shadow:0 0 0 9999px rgba(10,16,28,.66);outline:0;'+
+     'width:0;height:0;left:50%;top:40%}'+
+   '.hm-tour-card{position:absolute;left:12px;right:12px;background:#fff;'+
+     'border-radius:16px;padding:14px 14px 12px;box-shadow:0 14px 40px rgba(10,16,28,.3)}'+
+   '.hm-tour-card .st{display:flex;align-items:center;gap:7px;font-size:var(--t7);'+
+     'font-weight:800;color:var(--t-sub2)}'+
+   '.hm-tour-card .st b{color:var(--t-point)}'+
+   '.hm-tour-card .ti{margin-top:5px;font-size:var(--t4);font-weight:900;color:var(--t-ink)}'+
+   '.hm-tour-card .tx{margin-top:6px;font-size:var(--t6);line-height:1.65;color:var(--t-sub)}'+
+   '.hm-tour-card .tx b{color:var(--t-ink);font-weight:800}'+
+   '.hm-tour-card .no{margin-top:7px;font-size:var(--t7);font-weight:700;color:var(--t-sub2)}'+
+   '.hm-tour-b{display:flex;gap:7px;margin-top:11px}'+
+   '.hm-tour-b button{flex:1 1 0;min-height:46px;border-radius:12px;border:1px solid var(--t-line);'+
+     'background:#fff;font-family:inherit;font-size:var(--t6);font-weight:800;color:var(--t-ink);cursor:pointer}'+
+   '.hm-tour-b button.go{flex:1.4 1 0;border-color:var(--t-point);background:var(--t-point);color:#fff}'+
+   '.hm-tour-b button.x{flex:0 0 72px;color:var(--t-sub2)}';
+  document.head.appendChild(st);
+}
+/* 오늘 이미 끝내셨나 — 날짜는 <b>mcalToday 한 곳</b>에 묻습니다 (5번·UTC 금지) */
+function hmTourDay(){ try{ return mcalToday(); }catch(e){ return ''; } }
+function hmTourDone(){ try{ return localStorage.getItem(HM_TOUR_LS)===hmTourDay(); }catch(e){ return false; } }
+function hmTourMarkDone(){ try{ localStorage.setItem(HM_TOUR_LS,hmTourDay()); }catch(e){} }
+function hmTourOpen(i){
+  hmTourCss();
+  HM_TOUR.on=true; HM_TOUR.i=(typeof i==='number')?i:0;
+  var w=document.getElementById('hmTourWrap');
+  if(!w){ w=document.createElement('div'); w.id='hmTourWrap'; document.body.appendChild(w); }
+  /* ⚠ 닫을 때 속을 비우므로 <b>열 때마다</b> 다시 세웁니다. 처음에 「틀이 없으면」
+     만 보고 세웠더니, 한 번 닫은 뒤로는 틀만 있고 속이 없어 <b>두 번째부터
+     아무것도 안 떴습니다</b> — 자가 그 자리에서 잡았습니다 (8번). */
+  if(!document.getElementById('hmTourHole'))
+    w.innerHTML='<div class="hm-tour-hole" id="hmTourHole"></div>'+
+                '<div class="hm-tour-card" id="hmTourCard"></div>';
+  w.classList.add('on');
+  if(!HM_TOUR.esc){ HM_TOUR.esc=function(e){ if(e.key==='Escape')hmTourClose(); };
+    document.addEventListener('keydown',HM_TOUR.esc); }
+  hmTourPaint();
+}
+function hmTourClose(){
+  HM_TOUR.on=false;
+  var w=document.getElementById('hmTourWrap'); if(w)w.classList.remove('on');
+  if(w)w.innerHTML='';
+  if(HM_TOUR.esc){ document.removeEventListener('keydown',HM_TOUR.esc); HM_TOUR.esc=null; }
+}
+function hmTourNext(){
+  if(HM_TOUR.i>=HM_WAY.length-1){ hmTourMarkDone(); hmTourClose();
+    try{ toast('오늘 길잡이를 끝냈습니다 — 내일 아침에 다시 뵙겠습니다'); }catch(e){}
+    return; }
+  HM_TOUR.i++; hmTourPaint();
+}
+function hmTourPrev(){ if(HM_TOUR.i>0){ HM_TOUR.i--; hmTourPaint(); } }
+/* 이 걸음에 지금 <b>무엇이 몇</b> 있나 — HM_WAY 의 n·go 에게만 묻습니다 (5번) */
+function hmTourNow(w){
+  var v=null; try{ v=(w.n&&typeof window[w.n]==='function')?window[w.n]():null; }catch(e){ v=null; }
+  var has=false; try{ has=!!(w.go&&w.go()); }catch(e2){ has=false; }
+  return {v:v,has:has};
+}
+function hmTourPaint(){
+  if(!HM_TOUR.on)return;
+  var w=HM_WAY[HM_TOUR.i]; if(!w)return hmTourClose();
+  var hole=document.getElementById('hmTourHole'),card=document.getElementById('hmTourCard');
+  if(!hole||!card)return;
+  var el=null; try{ el=hmWayEl(w); }catch(e){ el=null; }
+  /* 접혀 있으면 펴 줍니다 — 비춰 놓고 안 보이면 따라갈 수가 없습니다 */
+  if(el&&el.classList&&el.classList.contains('hm-fold')&&!el.classList.contains('on')){
+    try{ hmFoldToggle(el.id.replace('hmFold_','')); el=hmWayEl(w)||el; }catch(e2){}
+  }
+  if(el){ try{ el.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e3){} }
+  var place=function(){
+    var r=el?el.getBoundingClientRect():null;
+    if(!r||(!r.width&&!r.height)){ hole.className='hm-tour-hole none'; r=null; }
+    else{
+      /* ⚠ <b>아래 메뉴 띠를 넘지 않게 자릅니다.</b> 구멍은 「뚫린 자리」 라
+         그 안에 든 것은 무엇이든 환하게 보입니다 — 띠까지 덮으면 띠만
+         밝게 남아 「다른 곳을 흐리게」 가 반쪽이 됩니다. 그림에서 봤습니다. */
+      var BAR=76, top=Math.max(4,r.top-6), bot=Math.min(window.innerHeight-BAR,r.bottom+6);
+      if(bot-top<40)bot=Math.min(window.innerHeight-BAR,top+40);
+      hole.className='hm-tour-hole';
+      hole.style.left=Math.max(4,r.left-6)+'px';
+      hole.style.top=top+'px';
+      hole.style.width=Math.min(window.innerWidth-8,r.width+12)+'px';
+      hole.style.height=Math.max(0,bot-top)+'px';
+    }
+    /* 글칸은 구멍을 안 가리는 쪽에 둡니다 */
+    var BAR2=76;
+    var below=r?Math.min(r.bottom+14,window.innerHeight-BAR2):(window.innerHeight*0.5);
+    var tall=card.getBoundingClientRect().height||230;
+    if(r&&below+tall>window.innerHeight-10){
+      var up=r.top-tall-14;
+      card.style.top=(up>10?up:Math.max(10,window.innerHeight-tall-BAR2-6))+'px';
+    }else card.style.top=below+'px';
+  };
+  var N=hmTourNow(w);
+  card.innerHTML=
+    '<div class="st"><b>'+w.no+'</b> '+osEsc(w.t)+' · 다섯 걸음 중 <b>'+(HM_TOUR.i+1)+'</b></div>'+
+    '<div class="ti">'+osEsc(w.s)+'</div>'+
+    '<div class="tx">'+w.h+'</div>'+
+    '<div class="no">'+(N.v?('지금 '+osEsc(''+N.v)):(N.has?'오늘 할 것이 있습니다':'<b>오늘은 없습니다</b> — 그냥 다음으로 넘어가셔도 됩니다'))+
+      (el?'':' · <b>이 칸은 지금 화면에 없습니다</b>')+'</div>'+
+    '<div class="hm-tour-b">'+
+      (HM_TOUR.i>0?'<button type="button" class="x" onclick="hmTourPrev()">‹ 앞</button>':'')+
+      '<button type="button" class="go" onclick="hmTourHere()">여기서 하기</button>'+
+      '<button type="button" onclick="hmTourNext()">'+(HM_TOUR.i>=HM_WAY.length-1?'끝내기':'다음 ›')+'</button>'+
+      '<button type="button" class="x" onclick="hmTourClose()">그만</button>'+
+    '</div>';
+  /* ⚠ <b>세 번 잽니다</b> — 부드럽게 굴러가는 동안 재면 비추는 칸이 화면
+     아래에 걸린 채로 멈춥니다. 처음에 두 번만 재다가 그림에서 봤습니다. */
+  place(); setTimeout(place,330); setTimeout(place,760);
+}
+/* 「여기서 하기」 — 덮개를 걷고 그 자리로. 가는 길은 <b>hmWayGo 하나</b>입니다 (5번) */
+function hmTourHere(){
+  var i=HM_TOUR.i;
+  hmTourClose();
+  try{ hmWayGo(i); }catch(e){}
+}
 function hmWayTipHtml(){
   var i=hmWayNow(),w=HM_WAY[i];
   if(!w||!w.h)return '';
   hmWayTipCss();
-  return '<button type="button" class="hm-waytip" onclick="hmWayGo('+i+')" data-waytip="'+w.k+'">'+
-    '<span class="n">'+w.no+' '+osEsc(w.t)+'</span><span class="x">'+w.h+'</span>'+
+  /* 🔦 <b>누르면 길잡이가 시작됩니다</b> (판 X433) — 여태는 그 칸으로 데려다만
+     주고(hmWayGo) 「무엇을 하라」 는 읽고 스스로 찾아가셔야 했습니다.
+     이제 <b>그 자리만 밝히고 나머지를 흐리게</b> 하여 다섯 걸음을 데리고 갑니다.
+     ★ hmWayGo 는 <b>안 지웁니다</b> — 「여기서 하기」 가 그것을 그대로 부릅니다 (6번). */
+  /* ⚠ <b>2026-11-14 (판 X442) — hmTourDone 에게 진짜 할 일을 주었습니다.</b>
+     여태 그 자는 「오늘 한 번 돌았다」 를 <b>적어 두기만</b> 했고 아무도 안
+     읽었습니다. 투어는 스스로 안 열리니 「다시 안 연다」 를 지킬 코드가 없고,
+     자는 <b>울 수 없는 약속</b>을 재고 있었습니다 (8번).
+     ★ 이제 그 자리에 <b>어디까지 오셨는지</b>를 적습니다 — 사장님 말씀
+       「오늘 하루의 루틴을 따라가게 하면서 <b>계속</b> 하게 하는 거지」.
+       한 번 도셨어도 <b>단추는 그대로</b>입니다 — 또 누르실 수 있습니다 (6번). */
+  var done=false; try{ done=hmTourDone(); }catch(e){}
+  return '<button type="button" class="hm-waytip" onclick="hmTourOpen('+i+')" data-waytip="'+w.k+'"'+
+      (done?' data-waydone="1"':'')+'>'+
+    '<span class="n">🔦 '+w.no+' '+osEsc(w.t)+'</span><span class="x">'+w.h+
+      (done?' <b>— ✓ 오늘 한 번 도셨습니다 · 다시 보기</b>'
+           :' <b>— 눌러서 따라가기</b>')+'</span>'+
     '<span aria-hidden="true">›</span></button>';
 }
 function hmWayHd(){
@@ -37089,6 +37534,27 @@ function hmStackHtml(){
 function hmWeekHtml(){
   return '<div id="hmWkHost">'+hmWeekBody()+'</div>';
 }
+/* 이 칸만 다시 칠합니다 — 부르는 자리를 한 곳에 둡니다 (5번) */
+function hmWeekPaint(){
+  var el=document.getElementById('hmWkHost');
+  if(el)el.innerHTML=hmWeekBody();
+}
+/* 📆 <b>접은 채로도 수가 보입니다</b> (판 X439) — 여태 이 접이의 머리글이
+   <b>비어 있어</b>, 접어 두면 이번 주에 무엇이 있는지 한 자도 안 보였습니다.
+   사장님 말씀 「오늘에서 캘린더 보기가 쉽지가 않네」 의 절반이 이것이었습니다.
+   ★ 세는 자는 <b>mcalItems · mcalDay 하나</b>입니다 — 여기서 또 안 셉니다 (5번).
+   ★ 못 읽었으면 <b>「아직 못 읽었습니다」</b> — 0 이라고 안 적습니다 (1번). */
+function hmWeekSub(){
+  var it=null,d0,i,t=0,td=0,ds;
+  try{ it=mcalItems(); d0=mcalToday(); }catch(e){ return '아직 못 읽었습니다'; }
+  if(!it||!d0)return '아직 못 읽었습니다';
+  for(i=0;i<7;i++){
+    ds=mcalShift(d0,i);
+    var L=[]; try{ L=mcalDay(it,ds)||[]; }catch(e2){ L=[]; }
+    t+=L.length; if(i===0)td=L.length;
+  }
+  return '오늘 '+td+'건 · 이레 '+t+'건';
+}
 function hmWeekBody(){
   if(typeof mcalWeekHtml!=='function'||typeof mcalItems!=='function')return '';
   var it=null;
@@ -37100,7 +37566,12 @@ function hmWeekBody(){
   var sel=(typeof MCAL!=='undefined'&&MCAL.sel)||'',h;
   h='<div class="hm-rt-h"><span class="ci">📆</span><b>이번 주</b>'+
     '<button type="button" class="hm-rt-go" onclick="go(\'mycal\')">달력 크게 보기 →</button></div>'+
-    mcalWeekHtml();
+    mcalWeekHtml()+
+    /* ＋ 일정 · 👤 고객 · 📲 폰 달력으로 — 판 X439 (사장님 말씀 2026-11-14).
+       여태 이 칸은 <b>보기만</b> 하는 칸이라 「일정 추가 하기가 많이 어렵다」
+       였습니다. 넣는 자리를 <b>같은 칸 안에</b> 둡니다 — 새 칸을 또 세우면
+       홈에 「이번 주」 가 둘이 됩니다 (5번 · 판 X434 에서 실제로 그랬습니다). */
+    (function(){ try{ return hmSchedRow(); }catch(e){ return ''; } })();
   /* 고른 날만 폅니다 — 안 고르셨으면 어느 날을 펴야 할지 우리가 모릅니다 */
   if(sel&&typeof mcalDayHtml==='function'){
     try{ h+=mcalDayHtml(); }catch(e2){}
@@ -37740,7 +38211,7 @@ function hmSidePlace(){
          시간이 정해진 일이라). 홈 선 안에 🕗·💬 을 들이려고 재어 고른 자리입니다.
          칠하는 자(mcalPaint)는 #hmWkHost 를 id 로 찾으므로 접이 안에서도 그대로입니다. */
       uUp.innerHTML='<div id="hmApptHost">'+hmTossAppt()+'</div>'+
-        ((typeof navWide==='function'&&!navWide())?hmFoldWrap('stk_week','📆','이번 주','',hmWeekHtml()):hmWeekHtml())+
+        ((typeof navWide==='function'&&!navWide())?hmFoldWrap('stk_week','📆','이번 주',hmWeekSub(),hmWeekHtml()):hmWeekHtml())+
         /* 📒 이번 달 — 이 칸이 묻는 것은 「누구를 만나나」 라 <b>만난 분 수</b>입니다 (판 X420) */
         mlogTail('meet');
   }catch(eU){}
@@ -40485,6 +40956,16 @@ function hmTossHtml(){
        ★ <b>그래서 펴 둡니다.</b> 홈을 줄이는 것보다 사장님 말씀이 먼저입니다.
          줄일 자리를 더 찾아야 한다면 이 칸은 <b>사장님이 고르실 때</b>입니다.  */
     '<div id="hmBandHost">'+(function(){ try{ return hmBandHtml(); }catch(e){ return ''; } })()+'</div>'+
+
+    /* 🌅 <b>아침 미션 — 「오늘」 카드 맨 위</b> (판 X439 · 사장님 말씀 2026-11-14
+       「아침미션을 오늘 칸에 따로 만들어서 <b>위 쪽에 따로 배치</b>하여서
+        <b>클릭하면 펼쳐지고</b> 할 수 있도록 만들자」).
+       ★ <b>접힌 채로</b> 섭니다(67px) — 그래서 「지금 할 것」 은 여전히 폰
+         첫 화면 안에 있습니다(판 X187 사장님 말씀 「지금할것을 맨위로」를
+         안 뒤집습니다). 재어 보고 넣었습니다.
+       ★ 아래 묶음에서 <b>옮겨 온 것</b>이라 홈 길이는 그대로입니다 —
+         거기서는 안 세우고 여기서만 세웁니다 (5번 · 6번).                */
+    '<div id="hmMsTop">'+(function(){ try{ return hmMsFoldHtml(); }catch(e){ return ''; } })()+'</div>'+
 
     /* 🧺 <b>「지금 할 것」 한 카드 안에 오늘 할 일을 차례로</b> (판 X297 · 사장님 말씀
        2026-10-31 「지역동선하고, 오늘 할일등이 <b>지금 할것에 포함</b> 되게」 → 여쭈니

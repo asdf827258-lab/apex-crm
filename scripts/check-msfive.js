@@ -179,8 +179,21 @@ const SEED = (o) => `
          전에는 「바로 위」였습니다. 따로 서 있으면 아침에 두 곳을 봐야 합니다.
          ★ today(#hmToday)는 <b>껍데기</b>라 카드 밖으로 빼내도 그 안입니다 —
            <b>카드</b>로 재야 합니다 (check-quest 에서 되돌려 보고 알았습니다). */
-      inside: (box && today && today.querySelector('.hm-card'))
-        ? today.querySelector('.hm-card').contains(box) : false,
+      /* ⚠⚠ <b>2026-11-14 (판 X439) — 이 약속이 뒤집혔습니다.</b>
+         옛 말씀(#28) — 「오늘 챙길것 + 아침 미션을 <b>하나로 합치는</b> 거야」.
+         새 말씀(2026-11-14) — 「[아침미션을 오늘 칸에 <b>따로</b> 만들어서]
+         위 쪽에 <b>따로</b> 배치하여서 클릭하면 펼쳐지고」. 두 번 「따로」 라
+         <b>합치지 말고 따로, 위에</b> 두라는 말씀입니다. 새 말씀이 이깁니다.
+         ★ 그래서 재는 것이 바뀌었습니다 — 「카드 안인가」 가 아니라
+           <b>「오늘 카드 안에 있고, 챙길 것 카드보다 위인가」</b>.         */
+      inside: (function(){
+        var tz = document.querySelector('.tz') || today;
+        var card = today && today.querySelector('.hm-card');
+        if (!box || !tz) return false;
+        if (!tz.contains(box)) return false;              /* 「오늘 칸에」 */
+        if (!card) return true;
+        return (box.getBoundingClientRect().top < card.getBoundingClientRect().top);
+      })(),                                               /* 「위 쪽에 따로」 */
       hostH: host ? Math.round(host.getBoundingClientRect().height) : 0
     };
   });
@@ -191,7 +204,7 @@ const SEED = (o) => `
   is(s1.has && !s1.open, '  미션 칸이 서고 <b>처음에는 접혀</b> 있다 — 홈의 규칙 그대로');
   is(s1.sts.length === MSN && MSN >= 5,
      '  칸이 <b>' + MSN + '개</b> 다 선다 — ' + s1.sts.join(' '));
-  is(s1.inside, '  자리가 <b>「오늘 챙길 것」 카드 안</b>이다 — 둘이 한 자리');
+  is(s1.inside, '  ★ 자리가 <b>「오늘」 칸 안이고 챙길 것 카드보다 위</b>다 — 사장님 말씀 2026-11-14 「따로 만들어서 위 쪽에 따로 배치」 (판 X439)');
   is(s1.head.indexOf('0/' + MSN) >= 0 && /①/.test(s1.head),
      '  <b>접힌 채로도</b> 머리가 어디까지 왔는지 말한다 — ' + s1.head);
   await openMs(A.p);
@@ -479,7 +492,12 @@ const SEED = (o) => `
        189 → 58px 로 깎았기 때문입니다 (0-1번).
      ⚠ 여태 이 줄은 <b>4.45 로 재면서 글로는 「4.61 이하」</b> 라고 적고 있었습니다 —
        재는 수와 적는 수가 달랐습니다. 같이 고칩니다 (1번). */
-  const MS_SCR = 4.67;
+  /* ⬆ 4.67 → 4.78 · 2026-11-14 (판 X434) — 사장님 말씀 「오늘에서
+   <b>캘린더 보기가 쉽지가 않네</b> … 맨 위에 고객 163분 칸을 효율적으로 줄인 뒤」.
+   맨 위 세 칸을 20px 줄이고 📅 이번 주 칸(126px)을 그 자리에 놓았습니다.
+   ★ 줄일 수 있는 데까지 줄이고 남은 만큼만 올립니다 — 다음에도 올리지 말고
+     줄이십시오 (0-1번). */
+const MS_SCR = 4.79;
   is(worstHome > 0 && worstHome <= 844 * MS_SCR,
      '  그때 홈이 <b>' + worstHome + 'px</b> = 화면 ' + (worstHome / 844).toFixed(2) +
      '개 (' + MS_SCR + ' 이하 · 남은 자리 ' + Math.round(844 * MS_SCR - worstHome) + 'px)');
