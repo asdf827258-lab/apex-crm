@@ -91,15 +91,42 @@ is(베낌 === 0, '규칙 쪽에는 그 조건을 <b>한 번도 베껴 적지 않
 is(/grant execute on function public\.is_my_client\(uuid\) to authenticated/i.test(M),
    '앱이 그 자를 부를 수 있게 권한을 준다 — 안 주면 규칙이 통째로 거짓이 된다');
 
-sec('[4] ★★ 청구(claims)는 한 자도 안 건드렸나');
-/* ⚠ 처음에 「is_my_client 가까이에 claims 가 있나」 로 쟀다가 <b>주석의 글귀</b>를
-   잡았습니다 — 「★ claims 는 한 자도 안 건드립니다」 라는 설명 문장이었습니다.
-   헛것을 잡는 점검은 안 잡는 점검보다 나쁩니다 (8번). <b>주석을 지우고 SQL 몸만</b>
-   봅니다 — 그러면 설명을 아무리 적어도 안 울고, 정말로 건드리면 웁니다. */
-const 몸만 = M.replace(/\/\*[\s\S]*?\*\//g, ' ');
-is(!/\bclaims\b/i.test(몸만),
-   'SQL 몸에 claims 가 <b>한 번도 안 나온다</b> — 설계가 「본인 · 관리자」 로 따로 가릅니다 (판 4)');
-is(!/\bon\s+public\.claims\b/i.test(M), 'claims 규칙을 다시 적지 않는다');
+sec('[4] ★★ 청구(claims)를 <b>본인만</b>으로 좁히지 않았나 — 설계는 「본인 · 관리자」 다');
+/* ⚠⚠ <b>2026-11-14 (판 X447) · 이 자의 약속을 뒤집어 적었습니다 — 무르지 않고 더 세게.</b>
+   여태 「SQL 몸에 claims 가 <b>한 번도 안 나온다</b>」 로 물었습니다. 판 X430 이 claims 를
+   건드리면 안 되던 때는 맞는 물음이었습니다. 그런데 <b>판 4 가 바로 그 자리를 좁히는 판</b>이고
+   (migration_76 이 「claims 는 … 판 4 에서 팀장을 뺍니다」 라고 제 손으로 적어 두었습니다),
+   판 X447 이 그 판 4 입니다. 옛 물음을 그대로 두면 <b>설계대로 했는데 자가 웁니다</b> —
+   그러면 사람이 자를 느슨하게 고칩니다 (8번).
+   ★ 그래서 묻는 것을 바꿨습니다. 위험한 쪽은 「건드렸나」 가 아니라 <b>「너무 좁혔나」</b> 입니다 —
+     claims 를 is_my_client <b>단독</b>으로 좁히면 <b>관리자가 청구를 못 봅니다</b>(설계 4장).
+     좁히는 자는 <b>is_my_client_or_admin 하나</b>여야 하고, 그 자는 본인을 또 적지 않고
+     is_my_client 를 부릅니다 (5번).
+   ★ 안 좁힌 상태(claims 가 SQL 에 한 번도 안 나옴)도 <b>그대로 통과</b>합니다 — 판 4 전의
+     저장소에서도 이 자가 울지 않아야 합니다(과거를 고발하지 않습니다 · 8번).
+   ★ aftercare_tasks 를 같이 좁히지 않았나도 봅니다 — 설계가 가르지 않은 자리를 제 손으로
+     정하면 안 됩니다 (1번).                                                               */
+const 청구규칙 = (M.match(/create policy\s+\w+\s+on\s+public\.claims[\s\S]{0,400}?;/gi) || []);
+const 본인만 = 청구규칙.filter(x => /is_my_client\s*\(/.test(x));
+is(본인만.length === 0,
+   '청구 규칙이 is_my_client 를 <b>단독으로</b> 부르지 않는다 (받음 ' + 본인만.length +
+   '곳) ← 단독이면 <b>관리자가 청구를 못 봅니다</b>');
+if (청구규칙.length) {
+  is(청구규칙.every(x => /is_my_client_or_admin\s*\(/.test(x)),
+     '청구 규칙이 <b>is_my_client_or_admin</b> 하나를 부른다 — 본인 · 관리자 (설계 4장)');
+  is(/create or replace function public\.is_my_client_or_admin\(cid uuid\)/i.test(M) &&
+     /select\s+public\.is_admin\(\)\s+or\s+public\.is_my_client\(cid\)/i.test(M),
+     '★ 그 자가 <b>본인을 또 적지 않고</b> is_my_client 를 부른다 (5번) — 「본인이란 무엇인가」 는 한 곳');
+  is(/grant execute on function public\.is_my_client_or_admin\(uuid\) to authenticated/i.test(M),
+     '앱이 그 자를 부를 수 있게 권한을 준다 — 안 주면 규칙이 통째로 거짓이 된다');
+  const 그자리claims = (M.match(/create policy\s+\w+\s+on\s+public\.claims[\s\S]{0,400}?can_see_client/gi) || []);
+  is(그자리claims.length === 0,
+     '★★ 옛 규칙(can_see_client)이 청구 자리에 <b>남아 있지 않다</b> — 남으면 팀장이 병력을 봅니다');
+} else {
+  console.log('    · 저장소에 청구 규칙이 아직 없습니다 — 판 4 전이라 <b>그것이 맞습니다</b> (1번)');
+}
+is(!/create policy\s+\w+\s+on\s+public\.aftercare_tasks/i.test(M),
+   '★ 사후관리 할 일(aftercare_tasks)은 <b>한 자도 안 건드린다</b> — 설계가 가르지 않은 자리입니다 (1번)');
 
 sec('[5] ★ 앱 안 준비 SQL 과 꼴이 같은가 (판 X412 에서 적어 둔 자리)');
 /* ⚠ 처음에는 「create policy X on Y for all」 <b>머리만</b> 견주었습니다.
