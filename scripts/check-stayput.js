@@ -184,14 +184,14 @@ const srv = http.createServer((rq, rs) => {
   is(PP.c === 'home', '  보장분석 전·후 만들기에서 「← 워크스페이스」 = 홈 — 「' + PP.c + '」');
   const SRC3 = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
   const backs = SRC3.match(/<button class="ff-back" onclick="[^"]*">← 워크스페이스<\/button>/g) || [];
-  const bad = backs.filter(b => {
+  const wrong = backs.filter(b => {
     const fn = (b.match(/onclick="(exit[A-Za-z]+)\(\)/) || [])[1];
     if (/go\('home'\)/.test(b)) return false;
     const def = fn && SRC3.match(new RegExp('function ' + fn + '\\(\\)\\{[\\s\\S]*?\\n?\\}'));
     return !(def && /go\('home'\)/.test(def[0]));
   });
-  is(backs.length >= 15 && !bad.length,
-     '  「← 워크스페이스」 단추 ' + backs.length + '개가 모두 홈으로 간다' + (bad.length ? ' — 아닌 것: ' + bad.join(' | ') : ''));
+  is(backs.length >= 15 && !wrong.length,
+     '  「← 워크스페이스」 단추 ' + backs.length + '개가 모두 홈으로 간다' + (wrong.length ? ' — 아닌 것: ' + wrong.join(' | ') : ''));
 
   /* ── 덮개는 <b>제 차례에만</b> 덮는다 ────────────────────────────────
      2026-09-02, 앱이 통째로 <b>하얗게</b> 떴습니다. 로그인해도 흰 판만
