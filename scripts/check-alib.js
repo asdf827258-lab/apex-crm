@@ -231,12 +231,18 @@ const SEED = (IMG) => {
     const o = document.getElementById('alibOvl'), items = [].slice.call(o.querySelectorAll('.alib-item'));
     const other = items.filter(x => /남이 넣은 그림/.test(x.textContent))[0], mine = items.filter(x => /간병보험의 필요성/.test(x.textContent))[0];
     const box = o.querySelector('.alib-box');
-    return { btn: !!btn, on: o.classList.contains('on'), n: items.length, drop: !!o.querySelector('#alibInp'),
+    /* 끌어 놓는 칸이 <b>한 덩이 상자</b>로 서나 — label 은 본디 줄 속(inline) 요소라, 상자 꼴을 안 주면 점선 테두리가
+       글줄마다 끊겨 글자 위로 겹쳐 그려집니다. 라이브 캡처에서 그렇게 깨져 보였습니다(판 X438 · 고친 뒤 판 X440) */
+    const dz = o.querySelector('#alibDrop'), dr = dz.getBoundingClientRect(), dcs = getComputedStyle(dz);
+    const inner = [].slice.call(dz.querySelectorAll('b')).concat([dz]).map(x => x.getBoundingClientRect());
+    const tr = document.createRange(); tr.selectNodeContents(dz); const txt = tr.getBoundingClientRect();
+    return { dzDisp: dcs.display, dzH: Math.round(dr.height), dzIn: txt.left >= dr.left - 1 && txt.right <= dr.right + 1 && txt.top >= dr.top - 1 && txt.bottom <= dr.bottom + 1, btn: !!btn, on: o.classList.contains('on'), n: items.length, drop: !!o.querySelector('#alibInp'),
              otherDel: other ? /지우기/.test(other.textContent) : null, mineDel: mine ? /지우기/.test(mine.textContent) : null,
              warn: /원수사 약관/.test(o.textContent) && /고객 이름/.test(o.textContent),
              over: box.scrollWidth - box.clientWidth, doc: document.documentElement.scrollWidth - document.documentElement.clientWidth };
   });
   is(U.btn && U.on && U.drop, '아카데미 띠의 「📥 자료 넣기」 → 넣는 칸이 열린다(파일 고르기 · 끌어 놓기)');
+  is(U.dzDisp !== 'inline' && U.dzH >= 60 && U.dzIn, '끌어 놓는 칸이 한 덩이 상자로 서고 글이 점선 안에 든다 — 줄 속 label 이면 테두리가 글 위로 겹쳐 깨집니다 (꼴 ' + U.dzDisp + ' · 높이 ' + U.dzH + 'px)');
   is(U.n === 4, '팀 자료 넷이 다 보인다 (' + U.n + ')');
   is(U.mineDel === true && U.otherDel === false, '내가 넣은 것엔 지우기 · 남이 넣은 것엔 없음(서버도 넣은 사람 · 대표만)');
   is(U.warn, '넣기 전에 「원수사 약관 · 고객 이름은 안 받습니다」 를 먼저 말한다');
