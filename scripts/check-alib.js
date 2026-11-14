@@ -1,11 +1,11 @@
-/* 📥 <b>마스터 아카데미 「자료 넣기」 — 넣으면 팀이 보고 자비스가 찾나</b> (판 X427)
+/* 📥 <b>마스터 아카데미 「자료 넣기」 — 넣으면 팀이 보고 자비스가 찾나</b> (판 X432)
 
    사장님 말씀 2026-11-12 — 「앞으로 자료를 또는 이미지를 마스터아카데미에 다 넣으면 자동으로 검색이
    될 수 있니 그리고 마스터아카데미에 넣는 칸을 만들어줘 어디서든 공유 되도록」
    → 넣는 사람 「팀원 누구나」 · 그림 설명 「AI 가 읽고 자동 설명」.
 
    이 자가 보는 것 (서버는 가짜를 세웁니다 — 진짜 Supabase 를 부르지 않습니다)
-   [1] 서버 꼴이 한 벌인가 — migration_75 와 앱 안 복구 SQL(OS_REPAIR_SQL)이 같은 문장 · 보관함은 비공개 ·
+   [1] 서버 꼴이 한 벌인가 — migration_77 와 앱 안 복구 SQL(OS_REPAIR_SQL)이 같은 문장 · 보관함은 비공개 ·
        academy_ 이름 안 씀 · 같은 파일 유일 색인
    [2] 그림을 넣으면 — 보관함에 「내 폴더/지문」 으로 올라가고, AI 가 단 제목 · 설명 · 찾기 말로 표에 적힌다
    [3] 막는다 — 같은 파일(무엇과 겹쳤는지 말함) · 원수사 약관(이름 · 글) · 이 기기의 고객 이름 · 휴대폰 번호 ·
@@ -31,7 +31,7 @@ const srv = http.createServer((q, s) => {
     s.writeHead(200, { 'Content-Type': MT[path.extname(p).toLowerCase()] || 'application/octet-stream' }); s.end(d); });
 });
 const IDX = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
-const MIG = fs.readFileSync(path.join(ROOT, 'migration_75_bohum_lib.sql'), 'utf8');
+const MIG = fs.readFileSync(path.join(ROOT, 'migration_77_bohum_lib.sql'), 'utf8');
 
 /* 가짜 서버 — 표 bohum_lib · 보관함 bohum-lib. 부른 것을 적어 둡니다 */
 const SEED = (IMG) => {
@@ -85,7 +85,7 @@ const SEED = (IMG) => {
 };
 
 (async () => {
-  sec('[1] 서버 꼴이 한 벌인가 — migration_75 · 앱 안 복구 SQL (5번)');
+  sec('[1] 서버 꼴이 한 벌인가 — migration_77 · 앱 안 복구 SQL (5번)');
   const norm = t => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').trim();
   const migStmts = norm(MIG).split(';').map(x => x.trim()).filter(Boolean);
   const i0 = IDX.indexOf("'create table if not exists public.bohum_lib ("), i1 = IDX.indexOf("\n '',", IDX.indexOf("'comment on table public.bohum_lib is", i0));
