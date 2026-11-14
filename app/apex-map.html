@@ -6727,6 +6727,9 @@ function jvExtLoad(){
 /* 읽을 거리가 있는 물음인가 — 「어떻게 써」 처럼 앱 쓰는 법을 묻는 말에는 안 기다리게 한다 */
 function jvExtAsk(q){ return jvKnowWords(q).length > 0; }
 /* 아카데미 표 — 없으면 빈 것 (읽기 전 · 못 읽음) */
+/* 📥 팀이 넣은 자료(판 X438) — 본체 alibLoad 가 세션에 한 번만 받습니다. 받는 동안 물으면 그 물음에는 안 섭니다 —
+   대신 자비스가 열릴 때 미리 한 번 불러 둡니다(아래 jvAlibLoad 부름) */
+function jvAlibLoad(){ var P = kbApp(); try { if (P && typeof P.alibLoad === 'function') P.alibLoad(); } catch(e){} }
 function jvA(k){ return (JV_EXT.st === 'ok' && JV_EXT.A[k]) || null; }
 /* 표 하나를 1~5종 줄로 — 갈래 안의 줄과 「빠른 표」 의 쉼표 낱말을 같이 */
 function jvSurgRows(){
@@ -6911,7 +6914,17 @@ JV_FIND.push(
       return {t:'🎞 ' + x.t, s:['덱 — ' + x.d.n + ' · ' + x.n + '번째 장', '내용 — ' + (x.x.length > 260 ? x.x.slice(0, 260) + '…' : x.x)]
         .concat(JV_TAXW.test(x.t + x.x) ? ['⚠ 세금은 요건 충족 시의 이야기입니다 — 판단은 세무 전문가에게 맡기십시오.'] : []),
         open:{local:1, fn:'jvDeckOpen', to:[x.d.k, x.id], label:'🎞 이 장 바로 열기'}};
-    }, '', 2, 1)
+    }, '', 2, 1),
+  /* 📥 팀이 넣은 자료 — 마스터 아카데미 「자료 넣기」 칸 (판 X438). 본체가 세션에 한 번 받아 둔 것(P.ALIB)을 찾습니다 —
+     자비스가 따로 서버를 부르지 않습니다 (7번 · 5번). 그림은 서명한 주소로, PDF 는 누르면 그때 엽니다 */
+  jvKnowSrc('ulib', '', '팀이 넣은 자료', function(P){ return (P.ALIB && P.ALIB.loaded && P.ALIB.list) || []; },
+    {t:function(x){ return x.title; }, k:function(x){ return x.tags || ''; }, b:function(x){ return (x.descr || '') + ' ' + (x.excerpt || ''); }},
+    function(x, P){
+      var u = ''; try { u = x.kind === 'img' ? (P.alibUrl(x) || '') : ''; } catch(e){ u = ''; }
+      return {t:(x.kind === 'img' ? '🖼 ' : '📄 ') + x.title,
+        s:[].concat(x.descr ? ['내용 — ' + x.descr] : [], ['넣은 사람 — ' + (x.uploader_name || '팀원') + ' · ' + String(x.created_at || '').slice(0, 10) + (x.ai ? ' · 설명은 AI 가 단 것' : '')]),
+        img:u, open:{fn:'alibOpenItem', to:x.id, stay:1, label:x.kind === 'img' ? '🖼 크게 열기' : '📄 이 자료 열기'}};
+    }, '', 3, 0)
 );
 
 /* ══ 🧭 <b>영업 단계 — TA 부터 소개까지, 앱이 이미 아는 것</b> (판 X280) ══════════════════
@@ -7383,7 +7396,8 @@ function jvVisPick(q, s, P, max, needImg){
   var W = jvKnowWords(String(q || '').replace(JV_VISCUT, ' '));
   if (!W.length) return [];
   var L = []; try { L = s.list(P) || []; } catch(e){ L = []; }
-  if (needImg) L = L.filter(function(x){ return (x.im || []).length; });
+  /* 그림이 있는 것만 — 원본 슬라이드는 im, 팀이 넣은 자료(판 X438)는 kind 로 */
+  if (needImg) L = L.filter(function(x){ return s.k === 'ulib' ? x.kind === 'img' : (x.im || []).length; });
   /* 한 번 씻어 둡니다 — 이름 · 자료 이름 · 본문 */
   var N = L.map(function(x){ return {t:kbN(s.f.t(x)), k:s.f.k ? kbN(s.f.k(x)) : '', b:s.f.b ? kbN(s.f.b(x)) : ''}; });
   var has = function(n, ws){ return ws.some(function(w){ return n.t.indexOf(w) >= 0 || n.k.indexOf(w) >= 0 || n.b.indexOf(w) >= 0; }); };
@@ -7439,13 +7453,13 @@ function jvVisual(q, F){
   if (jvVisKey(r0)) seen[jvVisKey(r0)] = 1;
   var V = {img:[], deck:[]};
   JV_FIND.forEach(function(s){
-    if (s.k !== 'aslide' && s.k !== 'deck') return;
-    var rows = [];
-    try { rows = jvVisPick(q, s, P, s.k === 'aslide' ? 6 : 3, s.k === 'aslide'); } catch(e){ rows = []; }
+    if (s.k !== 'aslide' && s.k !== 'deck' && s.k !== 'ulib') return;
+    var rows = [], pic = s.k !== 'deck';
+    try { rows = jvVisPick(q, s, P, pic ? 6 : 3, pic); } catch(e){ rows = []; }
     rows.forEach(function(r){
       var key = jvVisKey(r);
       if (!key || seen[key]) return;
-      if (s.k === 'aslide' && r.img && V.img.length < 3){ seen[key] = 1; V.img.push(r); }
+      if (pic && r.img && V.img.length < 3){ seen[key] = 1; V.img.push(r); }
       else if (s.k === 'deck' && r.open && V.deck.length < 2){ seen[key] = 1; V.deck.push(r); }
     });
   });
@@ -7588,7 +7602,7 @@ document.addEventListener('click', function(e){
     /* 덱은 자비스가 직접 엽니다(jvDeckOpen) — 화면마다 그 장으로 가는 법이 달라서 */
     if (r.open.local){ try { window[r.open.fn].apply(null, r.open.to); } catch(err){} return; }
     if (!P || typeof P[r.open.fn] !== 'function'){ return; }
-    try { P[r.open.fn](r.open.to); if (typeof P.jvDock === 'function') P.jvDock(); } catch(err){}
+    try { P[r.open.fn](r.open.to); if (typeof P.jvDock === 'function' && !r.open.stay) P.jvDock(); } catch(err){}
   }
 });
 /* 고객 한 분의 창 — 자비스는 아래 띠로 남고 창은 본체가 엽니다 */
@@ -8461,6 +8475,7 @@ function ask(raw){
   r0.work = jvWork(q, r0.steps);
   /* 🔎 길을 짜기 전에 <b>앱 안에서 그 값을 찾아 봅니다</b> (판 X270) */
   jvExtLoad();                                   /* 아카데미 · 화법서 — 처음 한 번만 (판 X269) */
+  jvAlibLoad();                                  /* 📥 팀이 넣은 자료 — 본체가 세션에 한 번 (판 X438) */
   var found = jvFind(q), fsay = jvFoundSay(found);
   /* 👤 <b>사람을 두 곳이 답하지 않게</b> — 판 X270 의 「고객 명단」 찾기가 그 분을 이미 찾았으면
      (마지막 연락 · 다음 할 일 · 창 열기까지) 판 X293 의 「사람 찾기」 일꾼 줄은 뺍니다. 둘이 같이 서면
@@ -8754,7 +8769,7 @@ document.getElementById('kClear').onclick = function(){
 
 modeLabel();
 window.addEventListener('resize', function(){ redraw(); if (!zoomTouched) fitAll(); });
-window.addEventListener('load', function(){ redraw(); fitAll(); setTimeout(centerBrain, 340); });
+window.addEventListener('load', function(){ redraw(); fitAll(); setTimeout(centerBrain, 340); setTimeout(jvAlibLoad, 1500); });
 apply();
 redraw();
 /* 글꼴이 자리를 잡은 뒤 한 번 더 재고, 그다음 뇌를 한가운데로 */
