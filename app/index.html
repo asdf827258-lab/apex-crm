@@ -79770,7 +79770,10 @@ function clmLoad(force){
   clmPaint();
   arAll(sb,'claims','id,treated_at,diagnosis,kcd_code,treatment,surgery,admit_type,status,'+
         'payout_amount,reduced_or_denied_reason,premium_waiver',
-        '-treated_at',function(x){return x.eq('client_id',c.id);}).then(function(r){
+        /* ⚠ 못을 <b>둘</b> 박습니다 (arAll 의 쪽 나누기는 자리 수로 셉니다) — treated_at 은
+           <b>빌 수 있고 겹칠 수 있어</b> 그 칸 하나만으로 나누면 쪽 사이에서 줄이 샙니다.
+           뒤에 id 를 두어 못을 박습니다. 그 줄의 주석이 적어 둔 그대로입니다 (5번). */
+        ['-treated_at','id'],function(x){return x.eq('client_id',c.id);}).then(function(r){
     CLMW.busy=false;
     if(r&&r.error){ CLMW.err=(r.error.message||'')+''; CLMW.rows=null; clmPaint(); return; }
     CLMW.rows=(r&&r.data)||[];
