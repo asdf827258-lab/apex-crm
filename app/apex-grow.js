@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════
-   🌱 <b>성장</b> — 입사부터 경력자까지 한 길로 (판 X409)
+   🌱 <b>성장</b> — 입사부터 경력자까지 한 길로 (판 X409 → X433)
 
    사장님 말씀 (2026-11-10) — 「교육 내용들이 너무 적나라하게 흩어져 있어서
    입사부터, 과정, 경력자까지 레벨업이 되도록 … 교육이나 지식에 관련된
@@ -16,11 +16,15 @@
    ③ 지식은 서랍 다섯 갈래(증권 분석 · 상담 도구 · 계약·청구 · 자료 조회 ·
       법인)와 교재 안쪽 장(수술분류표 · 치료비 DB · 용어 사전 …)에 흩어져 있다.
 
-   ── 그래서 네 장 — <b>쓰는 법</b>으로 나눈다 ───────────────────────
-     🪜 한 길   (순서대로) — 한 번 걸어 지나가는 과정. 내 레벨 하나만 펴고 「지금 할 것 하나」 만.
-     🔁 익히기  (숙지)     — 읽는다 → 그날 한 명에게 써 본다 → 30초에 말하면 합격.
+   ── 그래서 세 장 — <b>쓰는 법</b>으로 나눈다 ───────────────────────
+     🪜 한 길   (순서대로) — 교육은 <b>여기 한 칸</b>. 내 레벨 하나만 펴고 「지금 할 것 하나」 만.
+                            열두 주제도 이 길 위의 걸음입니다 — 교재 장 바로 뒤에
+                            「읽는다 → 그날 한 명에게 써 본다 → 30초에 말하면 합격」.
      🧰 매번    (찾아 쓰기) — 지나간 뒤에도 그때그때 꺼내는 것. 주제가 아니라 <b>「언제 펴나」</b>로.
      🤝 고객 앞 (같이 보기) — 고객과 같이 보는 것만, <b>상담 순서대로</b>. 꺼내지 않을 것도 적는다.
+   사장님 말씀 (2026-11-14) — 「교육은 한칸에서 순차적으로 하는건데」 · 「응, 합쳐줘」.
+     그래서 따로 서 있던 🔁 익히기 장을 걷고, 열두 주제를 레벨 안 제자리에 꽂았습니다.
+     합격 도장은 그대로 gbStamp 하나 — 이미 받은 합격은 그 걸음에 ✓ 로 섭니다.
    사장님 말씀 (2026-11-11) — 「어떻게 분리했는지 그 이유와 설계사들이 어떻게 성장하는지 …
    고객에게 필요한 내용들을 선별해서 … 순차적으로 성장 가능하고 매번 사용할 수 있는 것들에 분류까지」.
    ★ 한 화면은 「매번」 과 「고객 앞」 중 <b>한쪽</b>에만 — 한 길의 걸음은 어느 쪽으로 넘어가는지
@@ -67,7 +71,9 @@ var GR_ACAD={
      {go:'화면 id'}   메뉴의 그 화면
      {acad:'L3'}      교재의 그 장
      {road:2}         90일 아카데미의 그 구간 (AC_ROAD — 끝 기준도 거기서)
-     {tab:'learn'}    이 화면의 익히기 장
+     {cur:'s1'}       열두 주제 하나 (GB_CUR — 배울 것 · 이런 고객 · 합격 기준도 거기서)
+                      끝냄은 이 브라우저 체크가 아니라 <b>합격 도장</b>(gbStamp)입니다.
+   ★ 열두 주제는 <b>한 번씩만</b> 섭니다 — 교재 그 장 바로 뒤에 (check-edu [7]).
    d 는 「무엇을 하나」 한 줄. 끝 기준 숫자는 <b>원래 표에 있는 것만</b> 씁니다. */
 var GR_LV=[
  {t:'입사 첫 주',s:'길 익히기',
@@ -85,10 +91,14 @@ var GR_LV=[
    {road:0},
    {go:'ta_train',  d:'무사고 할인 전환 전화 · 보장분석 DB 스크립트 6단계.'},
    {go:'ta_say',    d:'처음부터 거절처리까지 소리 내어. 실제 전화는 ☎️ TA 스크립트를 띄워 놓고.'},
+   {cur:'s12'},
    {road:1},
    {go:'jiin_grow', d:'지인 명단이 있으면 — 찾아줌에서 보장분석으로 넘어가는 8주.'},
    {acad:'L2',      d:'모든 상담의 출발점.'},
-   {acad:'L3',      d:'질병코드로 담보 범위를 읽는다.'}
+   {cur:'s1'},
+   {acad:'L3',      d:'질병코드로 담보 범위를 읽는다.'},
+   {cur:'s2'},
+   {cur:'s3'}
   ]},
  {t:'2~3개월',s:'풀컨셉 설계 · 졸업',
   goal:'상품 설명이 아니라 삶의 순서를 설계한다 — 90일 아카데미 남은 구간.',
@@ -97,13 +107,17 @@ var GR_LV=[
    {acad:'L4',d:'진단 뒤에 실제로 돈이 나가는 곳.'},
    {acad:'L5',d:'평생 가장 자주 쓰이는 담보.'},
    {acad:'L6',d:'치료가 길어질 때 무너지는 지점.'},
+   {cur:'s4'},
    {road:3},
    {go:'fp_talk',d:'상황을 고르면 그 장이 열린다 — 서른 장을 다 외우지 않는다.'},
    {acad:'L9',d:'보장 다음의 대화를 여는 법.'},
+   {cur:'s6'},
+   {cur:'s9'},
    {road:4},
    {road:5},
    {acad:'L7',d:'계약을 완성시키는 마지막 조각.'},
    {acad:'L8',d:'계약을 지키는 기술.'},
+   {cur:'s5'},
    {acad:'L10',d:'배운 것을 한 장으로 조립한다.'},
    {road:6}
   ]},
@@ -111,7 +125,10 @@ var GR_LV=[
   goal:'과정이 아니라 루틴 — 달마다 상품이 바뀌고, 만나는 고객 층이 넓어진다.',
   st:[
    {go:'insight',   d:'소식지가 나오면 이번 달 결론 · 추천 순위 · 약관 비교부터.'},
-   {tab:'learn',    d:'열두 주제를 스스로 합격 — 종이 없이, 고객 앞에서, 30초 안에.'},
+   {cur:'s7'},
+   {cur:'s10'},
+   {cur:'s8'},
+   {cur:'s11'},
    {acad:'TEST',    d:'사람별 테스트로 빈 곳을 찾는다.'},
    {acad:'CASE',    d:'증권 → 담보 지도 → 구멍 진단 → 제안까지 끝까지 푼다.'},
    {go:'mikki_talk',d:'기존 · 거절 고객에게 다시 말을 거는 물꼬.'},
@@ -247,10 +264,10 @@ function grSave(v){ try{ localStorage.setItem(GR_KEY,JSON.stringify(v)); }catch(
 
 /* ── 걸음 하나를 읽는다 — 못 여는 것은 null (세우지 않는다) ── */
 function grKey(s){
-  return s.go?('go:'+s.go):(s.acad?('acad:'+s.acad):(s.road!=null?('road:'+s.road):('tab:'+s.tab)));
+  return s.go?('go:'+s.go):(s.acad?('acad:'+s.acad):(s.road!=null?('road:'+s.road):('cur:'+s.cur)));
 }
 function grStep(s){
-  var it,r;
+  var it,r,c,ac;
   if(s.go){
     it=(typeof navItemOf==='function')?navItemOf(s.go):null;
     if(!it)return null;
@@ -267,9 +284,27 @@ function grStep(s){
     return {k:grKey(s),ic:'📈',n:'90일 아카데미 '+r.r+' · '+r.goal,d:r.focus,done:r.out,
             open:"grOpen('go','academy')",tools:r.tools||[]};
   }
-  if(s.tab)return {k:grKey(s),ic:'🔁',n:'익히기 — 열두 주제',d:s.d||'',open:"grTab('"+s.tab+"')"};
+  if(s.cur){
+    c=grCur(s.cur);
+    if(!c)return null;
+    ac=(typeof GB_ACAD!=='undefined')?GB_ACAD[s.cur]:null;
+    return {k:grKey(s),cur:s.cur,ic:'🔁',n:'익히기 · '+c[1],d:c[3],who:c[4],pass:c[5],ac:ac,talk:c[2],
+            open:ac?"gbOpenAcad('"+s.cur+"')":"fpTalkOpen('"+c[2]+"')"};
+  }
   return null;
 }
+/* 열두 주제 한 줄 — GB_CUR 에서 그대로 */
+function grCur(id){
+  if(typeof GB_CUR==='undefined')return null;
+  for(var i=0;i<GB_CUR.length;i++)if(GB_CUR[i][0]===id)return GB_CUR[i];
+  return null;
+}
+/* 끝냈나 — 열두 주제는 합격 도장, 나머지는 이 브라우저 체크 */
+function grIsOn(x,v){
+  if(x.cur){ var m=grPassMap(); return !!(m&&m[x.cur]); }
+  return !!v.done[x.k];
+}
+function grTickJs(x){ return x.cur?"grStamp('"+x.cur+"')":"grTick('"+x.k+"')"; }
 function grSteps(lv){
   var L=GR_LV[lv],out=[],i,x;
   if(!L)return out;
@@ -285,7 +320,7 @@ function grOpen(k,v){
   }
   go(v);
 }
-function grTab(t){ GR.tab=t; grPaint(); try{ window.scrollTo(0,0); }catch(e){} }
+function grTab(t){ GR.tab=(t==='learn'?'path':t); grPaint(); try{ window.scrollTo(0,0); }catch(e){} }
 function grLv(n){ var v=grState(); v.lv=n; grSave(v); grPaint(); }
 function grTick(k){
   var v=grState();
@@ -398,18 +433,10 @@ function grCss(){
     '.gr-step3{display:flex;gap:8px;margin-top:8px}'+
     '.gr-step3 div{flex:1;background:var(--t-bg);border-radius:12px;padding:10px;font-size:var(--t6);color:var(--t-sub);line-height:1.5}'+
     '.gr-step3 b{display:block;font-size:var(--t5);color:var(--t-ink)}'+
-    '.gr-prog{display:flex;gap:8px;flex-wrap:wrap}'+
-    '.gr-prog button{flex:1 1 140px;min-height:64px;text-align:left;border:1px solid var(--t-line);border-radius:14px;'+
-      'background:var(--t-card);padding:10px 12px;font-family:inherit;cursor:pointer}'+
-    '.gr-prog b{display:block;font-size:var(--t3);color:var(--t-ink);font-weight:800}'+
-    '.gr-prog span{display:block;font-size:var(--t6);color:var(--t-sub)}'+
-    '.gr-su{padding:12px 0;border-top:1px solid var(--t-line)}'+
-    '.gr-su:first-of-type{border-top:0}'+
-    '.gr-su .top{display:flex;gap:10px;align-items:flex-start}'+
-    '.gr-su.on .gr-ck{background:var(--t-pos);border-color:var(--t-pos)}'+
-    '.gr-su .nm{font-size:var(--t4);font-weight:800;color:var(--t-ink);line-height:1.45}'+
-    '.gr-su .ln{font-size:var(--t6);color:var(--t-sub);line-height:1.55;margin-top:2px}'+
-    '.gr-su .ln b{color:var(--t-ink)}'+
+    '.gr-step3{margin:6px 0 4px}'+
+    '.gr-cur .gr-tx .d{margin-top:2px}'+
+    '.gr-cur .gr-tx .d b{color:var(--t-ink)}'+
+    '.gr-now .d b{color:var(--t-ink)}'+
     '.gr-none{font-size:var(--t6);color:var(--t-sub);line-height:1.6}'+
     '.gr-foot{font-size:var(--t6);color:var(--t-sub);line-height:1.6;margin:12px 0 0;padding:0 16px;word-break:keep-all}'+
     '.gr-seg button{padding:0 2px;word-break:keep-all}'+
@@ -434,7 +461,7 @@ function renderGrow(){
     '<div id="grHost">'+grInnerHtml()+'</div></div>';
   return h;
 }
-function grAfter(){ if(GR.tab==='learn')grPassLoad(); }
+function grAfter(){ if(GR.tab==='path')grPassLoad(); }
 function grPaint(){
   var el=document.getElementById('grHost');
   if(!el)return;
@@ -442,12 +469,11 @@ function grPaint(){
   grAfter();
 }
 function grInnerHtml(){
-  var T=[['path','🪜 한 길','순서대로'],['learn','🔁 익히기','숙지'],['know','🧰 매번','찾아 쓰기'],['cust','🤝 고객 앞','같이 보기']],i,h='<div class="gr-seg" role="tablist">';
+  var T=[['path','🪜 한 길','순서대로 · 교육'],['know','🧰 매번','찾아 쓰기'],['cust','🤝 고객 앞','같이 보기']],i,h='<div class="gr-seg" role="tablist">';
   for(i=0;i<T.length;i++)
     h+='<button type="button" role="tab" class="'+(GR.tab===T[i][0]?'on':'')+'" onclick="grTab(\''+T[i][0]+'\')">'+
        T[i][1]+'<i>'+T[i][2]+'</i></button>';
   h+='</div>';
-  if(GR.tab==='learn')return h+grLearnHtml();
   if(GR.tab==='know')return h+grKnowHtml();
   if(GR.tab==='cust')return h+grCustHtml();
   return h+grPathHtml();
@@ -457,18 +483,26 @@ function grInnerHtml(){
 function grLvDone(lv,v){
   var s=grSteps(lv),i;
   if(!s.length)return false;
-  for(i=0;i<s.length;i++)if(!v.done[s[i].k])return false;
+  for(i=0;i<s.length;i++)if(!grIsOn(s[i],v))return false;
   return true;
 }
 function grPathHtml(){
-  var v=grState(),lv=Math.min(v.lv,GR_LV.length-1),L=GR_LV[lv],s=grSteps(lv),i,h='',now=null,nd=0;
+  var v=grState(),lv=Math.min(v.lv,GR_LV.length-1),L=GR_LV[lv],s=grSteps(lv),i,h='',now=null,nd=0,nc=0;
   h+='<div class="t-card"><div class="gr-hd">내 레벨<i>눌러서 옮깁니다 — 이 기기에만 남습니다</i></div><div class="gr-lad">';
   for(i=0;i<GR_LV.length;i++)
     h+='<button type="button" class="'+(i===lv?'on ':'')+(grLvDone(i,v)?'ok':'')+'" onclick="grLv('+i+')">'+
        '<b>Lv.'+i+'</b><span>'+osEsc(GR_LV[i].t)+'</span></button>';
   h+='</div>';
-  for(i=0;i<s.length;i++){ if(v.done[s[i].k])nd++; else if(!now)now=s[i]; }
-  if(now){
+  for(i=0;i<s.length;i++){ if(s[i].cur)nc++; if(grIsOn(s[i],v))nd++; else if(!now)now=s[i]; }
+  if(now&&now.cur){
+    h+='<div class="gr-now"><div class="k">지금 할 것 하나 — 익히기</div>'+
+      '<div class="n">'+osEsc(now.ic)+' '+osEsc(now.n)+'</div>'+
+      '<div class="d"><b>배울 것</b> '+osEsc(now.d)+'</div>'+
+      '<div class="d"><b>합격 기준</b> — '+osEsc(now.pass)+'</div>'+
+      '<div class="gr-btns">'+(now.ac?'<button type="button" class="gr-b" onclick="gbOpenAcad(\''+now.cur+'\')">📕 교재 '+osEsc(now.ac.l)+' 읽기</button>':'')+
+      '<button type="button" class="gr-b'+(now.ac?' ghost':'')+'" onclick="fpTalkOpen(\''+now.talk+'\')">🗣️ 화법서로 써 보기</button>'+
+      '<button type="button" class="gr-b ghost" onclick="'+grTickJs(now)+'">합격 ✓</button></div></div>';
+  }else if(now){
     h+='<div class="gr-now"><div class="k">지금 할 것 하나</div>'+
       '<div class="n">'+osEsc(now.ic)+' '+osEsc(now.n)+'</div>'+
       (now.d?'<div class="d">'+osEsc(now.d)+'</div>':'')+
@@ -487,11 +521,15 @@ function grPathHtml(){
   h+='<div class="t-card"><div class="gr-hd">Lv.'+lv+' · '+osEsc(L.t)+' — '+osEsc(L.s)+
      '<span class="gr-pill">'+nd+' / '+s.length+'</span></div>'+
      '<div class="gr-goal">'+osEsc(L.goal)+'</div>';
+  if(nc)h+='<div class="gr-step3"><div><b>① 읽는다</b>교재 그 장 한 장</div>'+
+     '<div><b>② 써 본다</b>그날 한 명에게</div>'+
+     '<div><b>③ 합격</b>종이 없이 30초에 말하면</div></div>';
   if(!s.length)h+='<div class="gr-none">이 레벨에서 여실 수 있는 화면이 없습니다 — 등급에 막힌 화면만 안 섭니다.</div>';
-  for(i=0;i<s.length;i++)h+=grStepHtml(s[i],!!v.done[s[i].k]);
+  for(i=0;i<s.length;i++)h+=grStepHtml(s[i],grIsOn(s[i],v));
   h+='</div>';
   h+=grWhyHtml();
   h+='<div class="gr-foot">체크는 이 기기에만 남습니다 — 남이 보면 「해야 하는 것」 이 되어 체크만 하게 됩니다. '+
+     '🔁 익히기 걸음의 합격만 성장판과 같은 기록에 남습니다. '+
      '레벨은 건너뛰어도 됩니다 — 이직한 경력자는 Lv.0 의 앱 익히기만 하고 Lv.3 으로 가십시오.</div>';
   return h;
 }
@@ -505,9 +543,21 @@ function grStepHtml(x,on){
     }
   }
   if(x.k==='go:apexmaster'){ var m=grMasterN(); if(m)x.d=x.d+' (지금 '+m.n+' / '+m.of+')'; }
+  if(x.cur){
+    t=(x.ac?'<button type="button" class="gr-tool" onclick="gbOpenAcad(\''+x.cur+'\')">📕 교재 '+osEsc(x.ac.l)+' 읽기</button>'
+           :'<span class="gr-none">교재에 이 주제 장이 없습니다</span>')+
+      '<button type="button" class="gr-tool" onclick="fpTalkOpen(\''+x.talk+'\')">🗣️ 화법서로 써 보기</button>';
+    return '<div class="gr-st gr-cur'+(on?' on':'')+'">'+
+      '<button type="button" class="gr-ck" onclick="'+grTickJs(x)+'" aria-label="합격">'+(on?'✓':'')+'</button>'+
+      '<div class="gr-tx"><button type="button" class="n" onclick="'+x.open+'">'+osEsc(x.ic)+' '+osEsc(x.n)+' ›</button>'+
+      '<div class="d"><b>배울 것</b> '+osEsc(x.d)+'</div>'+
+      '<div class="d"><b>이런 고객에게</b> '+osEsc(x.who)+'</div>'+
+      '<div class="d"><b>합격 기준</b> '+osEsc(x.pass)+'</div>'+
+      '<div class="gr-tools">'+t+'</div></div></div>';
+  }
   var u=grUseOf(x.k);
   return '<div class="gr-st'+(on?' on':'')+'">'+
-    '<button type="button" class="gr-ck" onclick="grTick(\''+x.k+'\')" aria-label="끝냄 표시">'+(on?'✓':'')+'</button>'+
+    '<button type="button" class="gr-ck" onclick="'+grTickJs(x)+'" aria-label="끝냄 표시">'+(on?'✓':'')+'</button>'+
     '<div class="gr-tx"><button type="button" class="n" onclick="'+x.open+'">'+osEsc(x.ic)+' '+osEsc(x.n)+' ›</button>'+
     (x.d?'<div class="d">'+osEsc(x.d)+'</div>':'')+
     (u==='know'?'<div class="gr-use">🧰 끝낸 뒤에도 「매번」 칸에서 꺼내 씁니다</div>':'')+
@@ -528,7 +578,7 @@ function grUseOf(k){
    이미 있는 것만 읽습니다. 여기서 새로 짓지 않습니다 (1번 · 5번) */
 function grWhyHtml(){
   var h='<details class="t-card gr-why"><summary>왜 이렇게 나눴나 · 설계사는 어떻게 크나 ›</summary>'+
-    '<p><b>쓰는 법이 셋이라 셋으로 나눴습니다.</b> 🪜 한 번 걸어 지나가는 과정 · 🧰 상담 때마다 꺼내 쓰는 것 · '+
+    '<p><b>쓰는 법이 셋이라 셋으로 나눴습니다.</b> 🪜 한 번 걸어 지나가는 과정(교육은 전부 여기 — 열두 주제도 교재 장 뒤에 섭니다) · 🧰 상담 때마다 꺼내 쓰는 것 · '+
     '🤝 고객과 같이 보는 것. 한데 섞어 두면 신입은 「이걸 다 해야 하나」 에서 멈추고, '+
     '경력자는 매번 쓰는 것을 과정 사이에서 찾느라 헤맵니다.</p>'+
     '<p><b>순서는 앞 걸음이 뒤 걸음의 재료가 되게 놓았습니다.</b> 앱에서 길을 알아야 연락을 하고, 연락이 돼야 상담이 있고, '+
@@ -546,45 +596,6 @@ function grWhyHtml(){
     if(t)h+='<p><b>90일 동안 바뀌는 것</b> — 90일 아카데미 구간마다 적힌 「달라지는 점」 입니다.</p><div class="gr-ax">'+t+'</div>';
   }
   return h+'</details>';
-}
-
-/* 🔁 익히기 */
-function grLearnHtml(){
-  var h='',m=grMasterN(),pn=grPassN(),pm=grPassMap()||{},i,c,ac,on;
-  h+='<div class="t-card"><div class="gr-hd">익히는 법은 하나<i>읽어서 늘지 않습니다 — 써 봐야 상담에서 나옵니다</i></div>'+
-    '<div class="gr-step3"><div><b>① 읽는다</b>교재 그 장 한 장</div>'+
-    '<div><b>② 써 본다</b>그날 한 명에게</div>'+
-    '<div><b>③ 합격</b>종이 없이 30초에 말하면</div></div></div>';
-
-  h+='<div class="t-card"><div class="gr-hd">내 진도<i>각 화면이 센 수를 그대로 읽습니다</i></div><div class="gr-prog">';
-  if(m&&navItemOf('apexmaster'))
-    h+='<button type="button" onclick="grOpen(\'go\',\'apexmaster\')"><b>'+m.n+' / '+m.of+'</b><span>APEX 마스터 과정</span></button>';
-  if(typeof GB_CUR!=='undefined')
-    h+='<button type="button" onclick="var e=document.getElementById(\'grSubj\');if(e)e.scrollIntoView({behavior:\'smooth\'})"><b>'+(pn==null?'…':pn)+' / '+GB_CUR.length+'</b><span>열두 주제 합격</span></button>';
-  if(navItemOf('academy'))
-    h+='<button type="button" onclick="grOpen(\'go\',\'academy\')"><b>90일</b><span>아카데미 — 진도는 그 안에</span></button>';
-  h+='</div></div>';
-
-  if(typeof GB_CUR==='undefined')return h+'<div class="t-card"><div class="gr-none">열두 주제 표를 못 읽었습니다.</div></div>';
-  h+='<div class="t-card" id="grSubj"><div class="gr-hd">배워서 터치할 열두 주제<span class="gr-pill">'+(pn==null?'…':pn)+' / '+GB_CUR.length+'</span>'+
-     '<i>합격은 스스로 줍니다 — 아무도 대신 눌러 주지 않습니다. 성장판과 같은 기록입니다</i></div>';
-  for(i=0;i<GB_CUR.length;i++){
-    c=GB_CUR[i]; on=!!pm[c[0]];
-    ac=(typeof GB_ACAD!=='undefined')?GB_ACAD[c[0]]:null;
-    h+='<div class="gr-su'+(on?' on':'')+'"><div class="top">'+
-      '<button type="button" class="gr-ck" onclick="grStamp(\''+c[0]+'\')" aria-label="합격">'+(on?'✓':'')+'</button>'+
-      '<div class="gr-tx"><div class="nm">'+osEsc(c[1])+'</div>'+
-      '<div class="ln"><b>배울 것</b> '+osEsc(c[3])+'</div>'+
-      '<div class="ln"><b>이런 고객에게</b> '+osEsc(c[4])+'</div>'+
-      '<div class="ln"><b>합격 기준</b> '+osEsc(c[5])+'</div>'+
-      '<div class="gr-tools">'+
-        (ac?'<button type="button" class="gr-tool" onclick="gbOpenAcad(\''+c[0]+'\')">📕 교재 '+osEsc(ac.l)+' 읽기</button>'
-           :'<span class="gr-none">교재에 이 주제 장이 없습니다</span>')+
-        '<button type="button" class="gr-tool" onclick="fpTalkOpen(\''+c[2]+'\')">🗣️ 화법서로 써 보기</button>'+
-      '</div></div></div></div>';
-  }
-  h+='</div>';
-  return h;
 }
 
 /* 📚 지식 창고 */

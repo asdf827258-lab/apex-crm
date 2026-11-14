@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    check-edu.js — 🌱 <b>성장</b> — 입사부터 경력자까지 한 길로
-   (판 X379 · X380 → X409)
+   (판 X379 · X380 → X409 → X433)
 
    사장님 말씀 (2026-11-06) — 「큰 카테고리에서 <b>교육</b>도 하나 만들어줘
    <b>도구 밑에</b> 거기에 교육자료 쓸것들 다 정리해서 넣어주고」.
@@ -19,14 +19,17 @@
      [1] 「성장」 묶음이 <b>상담 도구 바로 밑</b>이다 — 옛 이름 「교육」 이 안 남았다.
      [2] 교재 일곱이 <b>성장</b>에 있고, 현장에서 쥐는 일곱은 <b>상담 도구</b>에 남았다.
      [3] ★ <b>길이 하나도 안 사라졌다</b> (6번) — 일곱과 90일 아카데미가 그대로 열린다.
-     [4] 🌱 성장 로드맵이 선다 — 네 장(한 길 · 익히기 · 매번 · 고객 앞) · 레벨 다섯.
+     [4] 🌱 성장 로드맵이 선다 — 세 장(한 길 · 매번 · 고객 앞) · 레벨 다섯.
+         사장님 말씀 (2026-11-14) — 「교육은 한칸에서 순차적으로 하는건데」 — 익히기 장을 걷고
+         열두 주제를 한 길 안으로.
          사장님 말씀 (2026-11-11) — 「…순차적으로 성장 가능하고 매번 사용할 수 있는 것들에
          분류까지」 · 「고객에게 필요한 내용들을 선별해서」.
      [5] ★ 표가 <b>성장 묶음을 다 들고</b> 있다 — 빠짐 0 · 헛것 0 · 겹침 0 (5번).
          교재 장 이름은 <b>교재 원본</b>(data1 · data2 · EXTRA)과 같다 (1번).
      [6] ★ <b>단순화</b> — 「지금 할 것 하나」 가 서고, 끝냈다고 하면 다음으로 넘어간다.
          체크는 <b>이 브라우저</b>에만 — 서버로 안 간다.
-     [7] ★ <b>숙지</b> — 열두 주제를 GB_CUR 에서 <b>그대로</b> 읽고, 합격은 성장판과
+     [7] ★ <b>숙지</b> — 열두 주제가 <b>한 길 안에 한 번씩</b>, 교재 그 장 뒤에 선다.
+         GB_CUR 에서 <b>그대로</b> 읽고, 합격은 성장판과
          <b>같은 도장</b>(gbStamp)이다. 저장 자리를 따로 만들지 않았다 (5번).
      [8] ★ <b>매번</b> — 병 이름으로 찾으면 질병 보험가이드가 서고, 「암」 은 교재
          진단비 장을 찾는다. 찾기는 고객 앞도 같이 본다. 못 찾으면 못 찾았다고 한다 (1번).
@@ -95,7 +98,7 @@ const SEED = () => {
 };
 
 (async () => {
-  console.log('🌱 성장 — 입사부터 경력자까지 한 길로 (판 X379 · X380 → X409)');
+  console.log('🌱 성장 — 입사부터 경력자까지 한 길로 (판 X379 · X380 → X409 → X433)');
 
   await new Promise(r => srv.listen(PORT, r));
   const br = await chromium.launch();
@@ -150,7 +153,7 @@ const SEED = () => {
   const 옛낱말 = await pg.evaluate(() => /본인 점검란/.test((navItemOf('academy') || {}).ak || ''));
   is(옛낱말, '  옛 이름은 <b>찾기 낱말</b>에 남았다 — 옛 이름으로 찾아도 열린다');
 
-  sec('[4] 🌱 성장 로드맵이 선다 — 네 장 · 레벨 다섯');
+  sec('[4] 🌱 성장 로드맵이 선다 — 세 장 · 레벨 다섯');
   const E = await pg.evaluate(() => new Promise(r => {
     go('edu');
     setTimeout(() => r({
@@ -164,8 +167,8 @@ const SEED = () => {
       sw: document.documentElement.scrollWidth, iw: innerWidth }), 900);
   }));
   is(/성장 로드맵/.test(E.제목), '  화면이 선다 ← ' + E.제목);
-  is(E.장.length === 4 && /한 길/.test(E.장[0]) && /익히기/.test(E.장[1]) && /매번/.test(E.장[2]) && /고객 앞/.test(E.장[3]),
-     '  네 장 — ' + E.장.join(' · '));
+  is(E.장.length === 3 && /한 길/.test(E.장[0]) && /매번/.test(E.장[1]) && /고객 앞/.test(E.장[2]),
+     '  세 장 — 교육은 한 길 한 칸 ← ' + E.장.join(' · '));
   is(E.층 === 5, '  레벨 <b>다섯</b>(Lv.0~4) ← ' + E.층);
   is(E.목표 === 0, '  레벨마다 이름 · 한 줄 · 목표가 있다');
   is(!/undefined|NaN|\[object/.test(E.글), '  화면에 <b>부서진 값</b>이 없다');
@@ -234,32 +237,55 @@ const SEED = () => {
   is(S.저장 === 1 && S.서버 === 0, '  체크는 <b>이 브라우저</b>에만 — 서버 ' + S.서버 + '번');
   is(/Lv\.1/.test(S.c), '  레벨을 누르면 <b>그 레벨 하나만</b> 펴진다 ← ' + S.c.replace(/\s+/g, ' ') + ' · ' + S.펼친 + '걸음');
 
-  sec('[7] ★ <b>숙지</b> — 열두 주제 · 성장판과 같은 도장');
+  sec('[7] ★ <b>숙지</b> — 열두 주제가 한 길 안에 · 성장판과 같은 도장');
   const L = await pg.evaluate(() => new Promise(r => {
-    grTab('learn');
+    const 꽂힌 = [], 늦은 = [];
+    GR_LV.forEach((Lv, li) => Lv.st.forEach((s, si) => {
+      if (!s.cur) return;
+      꽂힌.push(s.cur);
+      const a = GB_ACAD[s.cur];
+      if (!a) return;
+      /* 읽고 나서 합격 — 교재 그 장이 앞 레벨이나 같은 레벨 앞에 섰나 */
+      let 앞 = false;
+      GR_LV.forEach((L2, lj) => L2.st.forEach((t, tj) => { if (t.acad === a.l && (lj < li || (lj === li && tj < si))) 앞 = true; }));
+      if (!앞) 늦은.push(s.cur);
+    }));
+    const 같다 = 꽂힌.slice().sort().join('|') === GB_CUR.map(c => c[0]).sort().join('|');
+    const 겹 = 꽂힌.filter((x, i) => 꽂힌.indexOf(x) !== i);
+    localStorage.removeItem('apex_grow_v1'); grTab('path'); grLv(1);
     setTimeout(() => {
-      const n = document.querySelectorAll('#dynPane .gr-su').length;
-      const 이름 = [].slice.call(document.querySelectorAll('#dynPane .gr-su .nm')).map(x => x.innerText);
-      const 같다 = 이름.join('|') === GB_CUR.map(c => c[1]).join('|');
       const 첫서버 = window.__sbCalls;
-      grTab('path'); grTab('learn');
+      grTab('know'); grTab('path');
       setTimeout(() => {
         const 둘째서버 = window.__sbCalls;
+        const n = document.querySelectorAll('#dynPane .gr-cur').length;
+        const 이름 = [].slice.call(document.querySelectorAll('#dynPane .gr-cur .n')).map(x => x.innerText).join('|');
+        /* 주제 앞 걸음을 끝내면 「지금 할 것 하나」 가 그 주제 — 합격 단추가 선다 */
+        const st = grSteps(1); for (let i = 0; i < st.length && !st[i].cur; i++) grTick(st[i].k);
+        const 지금 = ((document.querySelector('.gr-now .k') || {}).innerText || '') + ' · ' +
+                     [].slice.call(document.querySelectorAll('.gr-now .gr-b')).map(x => x.innerText).join('/');
+        const id = st.filter(x => x.cur)[0].cur;
         let 부름 = 0; const 원래 = window.gbStamp;
         window.gbStamp = function (s) { 부름++; return 원래.apply(this, arguments); };
-        grStamp(GB_CUR[0][0]);
+        grStamp(id);
         setTimeout(() => {
-          const 켜짐 = document.querySelectorAll('#dynPane .gr-su.on').length;
-          grStamp(GB_CUR[0][0]); window.gbStamp = 원래;
-          r({ n, 같다, 첫서버, 둘째서버, 부름, 켜짐, 꺼짐: document.querySelectorAll('#dynPane .gr-su.on').length,
-              책: document.querySelectorAll('#dynPane .gr-su .gr-tool').length });
+          const 켜짐 = document.querySelectorAll('#dynPane .gr-cur.on').length;
+          const 다음 = (document.querySelector('.gr-now .n') || {}).innerText || '';
+          grStamp(id); window.gbStamp = 원래;
+          r({ 꽂힌: 꽂힌.length, 같다, 겹, 늦은, n, 이름, 지금, 다음, 첫서버, 둘째서버, 부름, 켜짐,
+              꺼짐: document.querySelectorAll('#dynPane .gr-cur.on').length,
+              책: document.querySelectorAll('#dynPane .gr-cur .gr-tool').length });
         }, 150);
       }, 300);
-    }, 400);
+    }, 300);
   }));
-  is(L.n > 0 && L.같다, '  열두 주제를 <b>GB_CUR 그대로</b> 읽는다 ← ' + L.n + '개');
+  is(L.꽂힌 === 12 && L.같다 && L.겹.length === 0, '  열두 주제가 <b>한 길 안에 한 번씩</b> 섰다 — GB_CUR 그대로 ← ' + L.꽂힌 + '개' + (L.겹.length ? ' · 겹침 ' + L.겹.join(',') : ''));
+  is(L.늦은.length === 0, '  교재가 있는 주제는 <b>교재 그 장 뒤에</b> 선다 — 읽고 나서 합격' + (L.늦은.length ? ' ← ' + L.늦은.join(', ') : ''));
+  is(L.n > 0 && /익히기 · 거절처리/.test(L.이름), '  Lv.1 에 주제 걸음 ' + L.n + '개 ← ' + L.이름.replace(/\s+/g, ' '));
+  is(/익히기/.test(L.지금) && /합격/.test(L.지금) && /화법서/.test(L.지금), '  주제가 「지금 할 것 하나」 면 <b>합격 단추</b>가 선다 ← ' + L.지금.replace(/\s+/g, ' '));
   is(L.첫서버 === 1 && L.둘째서버 === 1, '  합격 기록은 <b>처음 한 번만</b> 읽는다 (7번) ← ' + L.첫서버 + ' · ' + L.둘째서버);
   is(L.부름 === 2 && L.켜짐 === 1 && L.꺼짐 === 0, '  합격은 <b>gbStamp</b>(성장판과 같은 도장)로 켜지고 꺼진다 ← 부름 ' + L.부름 + ' · 켜짐 ' + L.켜짐 + ' · 꺼짐 ' + L.꺼짐);
+  is(!/거절처리/.test(L.다음), '  합격하면 <b>다음 걸음</b>으로 넘어간다 ← ' + L.다음.replace(/\s+/g, ' '));
   is(!/upsert|daily_checks'\)\.insert/.test(GROW), '  apex-grow.js 가 <b>저장 자리를 따로</b> 안 만든다 (5번)');
   is(L.책 >= L.n, '  주제마다 <b>교재 · 화법서</b>로 가는 단추가 있다');
 
@@ -347,13 +373,14 @@ const SEED = () => {
         if (e.offsetParent && [].some.call(e.childNodes, n => n.nodeType === 3 && n.textContent.trim()))
           out.fs.push(parseFloat(getComputedStyle(e).fontSize)); });
     };
-    ['path', 'learn', 'know', 'cust'].forEach(t => { grTab(t); 잰다(); });
+    ['path', 'know', 'cust'].forEach(t => { grTab(t); 잰다(); });
+    grLv(1); 잰다();
     grTab('path'); const w = document.querySelector('#grHost details.gr-why'); if (w) { w.open = true; 잰다(); w.open = false; }
     r({ h: Math.min.apply(null, out.h), fs: Math.min.apply(null, out.fs) });
   }));
   is(R.h >= 44, '  누르는 칸이 <b>44px 이상</b> — 가장 낮은 칸 ' + R.h + 'px');
   is(R.fs >= 13, '  글씨가 <b>13px 이상</b> — 가장 작은 글씨 ' + R.fs + 'px');
-  const 그리개 = ['renderGrow', 'grInnerHtml', 'grPathHtml', 'grLearnHtml', 'grKnowHtml', 'grKnowList', 'grStamp', 'grCustHtml', 'grWhyHtml', 'grUseOf'];
+  const 그리개 = ['renderGrow', 'grInnerHtml', 'grPathHtml', 'grStepHtml', 'grKnowHtml', 'grKnowList', 'grStamp', 'grCustHtml', 'grWhyHtml', 'grUseOf'];
   const 조용 = 그리개.filter(n => {
     const i = GROW.indexOf('function ' + n + '(');
     if (i < 0) return true;
@@ -366,5 +393,5 @@ const SEED = () => {
   await br.close(); srv.close();
   console.log('\n──────────────────────────────');
   if (bad) { console.log('✗ ' + bad + '가지가 어긋납니다'); process.exit(1); }
-  console.log('✓ 성장 — 도구 바로 밑에 서고, 한 길 · 익히기 · 매번 · 고객 앞이 한 화면에 섰고, 길은 하나도 안 사라졌습니다.');
+  console.log('✓ 성장 — 도구 바로 밑에 서고, 교육은 한 길 한 칸(열두 주제까지) · 매번 · 고객 앞이 한 화면에 섰고, 길은 하나도 안 사라졌습니다.');
 })();
