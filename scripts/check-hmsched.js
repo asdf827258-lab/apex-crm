@@ -127,7 +127,7 @@ const sec = (t) => console.log('\n' + t);
       넣는칸: !!document.querySelector('.hm-sch-f input, .hm-sch-f textarea'),
       넣기단추: btns.filter(b => /넣기|담기|저장/.test(b.textContent)).length,
       폰달력: btns.filter(b => /폰 달력|이번 달 전부|오늘 것만/.test(b.textContent)).length,
-      고객: btns.filter(b => /고객 약속/.test(b.textContent)).length,
+      고객: btns.filter(b => /고객 일정/.test(b.textContent)).length,
       작은: btns.filter(b => b.getBoundingClientRect().height < 44).length,
       글: (box ? box.innerText : '').replace(/\s+/g, ' ')
     };
@@ -143,11 +143,51 @@ const sec = (t) => console.log('\n' + t);
      !/HM_SCHED\.sel/.test(SRC),
      '  ★★ 「어느 날인가」 를 묻는 곳이 <b>MCAL.sel 하나</b>다 (5번)');
 
-  sec('[8]·[9] 고객 약속은 길만 · 폰 달력은 <b>되는 길만</b>');
-  is(G.고객 === 1, '👤 고객 약속 단추가 선다 — ' + G.고객 + '개');
-  const CUS = SRC.slice(SRC.indexOf('function hmSchedCus()'), SRC.indexOf('function hmSchedCus()') + 420);
-  is(/go\('clients'\)/.test(CUS) && !/\.from\(|insert\(/.test(CUS),
-     '  ★ 여기서 <b>안 담그고 길만 연다</b> — 적는 자리는 고객 창입니다 (1번 · 6번)');
+  sec('[8] ★★ <b>고객 일정도 여기서 넣는다</b> (판 X440)');
+  /* ⚠ 판 X439 에서 저는 이 단추를 <b>고객 365일로 보내기만</b> 했습니다 —
+     그건 답이 아니라 미루기였습니다. 사장님 말씀은 「여기서 추가로 <b>고객
+     일정</b>을 만들 수도 있는 건데 <b>안 되어서</b> 어렵고」 였습니다.
+     적는 자리는 <b>이미 있었습니다</b> — 판 X121 의 mcalCusFormHtml 이
+     내 캘린더 화면에만 서 있었습니다. 그것을 여기로 부릅니다 (5번). */
+  is(G.고객 === 1, '👤 고객 일정 단추가 선다 — ' + G.고객 + '개');
+  const CF = await page.evaluate(async () => {
+    try { OSC.list = [{ id: 'c1', name_masked: '홍○동' }, { id: 'c2', name_masked: '홍○순' }]; } catch (e) {}
+    try { hmSchedCus(); } catch (e) {}
+    await new Promise(z => setTimeout(z, 700));
+    const box = document.getElementById('hmFold_stk_week');
+    const btns = box ? [].slice.call(box.querySelectorAll('button')).filter(b => b.offsetParent) : [];
+    return { 고르개: !!document.getElementById('mcalCusId'),
+             상태: !!document.getElementById('mcalCusHow'),
+             메모: !!document.getElementById('mcalCusNote'),
+             넣기: btns.filter(b => /넣기/.test(b.textContent)).length,
+             작은: btns.filter(b => b.getBoundingClientRect().height < 44).length,
+             /* ⚠ 단추는 머리줄에 늘 섭니다 — 접히는 것은 <b>칸</b>입니다.
+                처음에 단추가 사라지는지를 물어 멀쩡한 자리를 고발했습니다 (8번). */
+             내일정칸: /에 넣습니다/.test(box ? box.innerText : ''),
+             글: (box ? box.innerText : '').replace(/\s+/g, ' ') };
+  });
+  is(CF.고르개 && CF.상태 && CF.메모 && CF.넣기 >= 1,
+     '  ★★ 누르면 <b>고객 고르개 · 상태 · 메모 · 넣기</b> 가 그 자리에 선다 (사장님 「여기서 추가로 고객 일정을」)');
+  const CUS = SRC.slice(SRC.indexOf('function hmSchedCus()'), SRC.indexOf('function hmSchedCusPut()') + 220);
+  is(/mcalCusPut\(/.test(CUS) && !/\.from\(|insert\(|upsert\(/.test(CUS),
+     '  ★★ <b>저장 코드를 새로 안 짰다</b> — 판 X121 의 mcalCusPut 그대로 (사장님 규칙 · 5번)');
+  is(/mcalCusFormHtml\(/.test(SRC.slice(SRC.indexOf('function hmSchedRow()'),
+       SRC.indexOf('function hmSchedRow()') + 2800)),
+     '  ★ 칸도 <b>새로 안 지었다</b> — mcalCusFormHtml 을 그대로 부릅니다 (5번)');
+  is(CF.내일정칸 === false,
+     '  ★ 고객 칸을 펴면 <b>내 일정 칸은 접힌다</b> — 둘이 같이 펴지면 한 화면을 넘깁니다');
+  is(CF.작은 === 0, '  누르는 자리 <b>44px 위</b>다');
+  /* 못 읽었을 때 — 빈 자리를 두지 않습니다 (1번) */
+  const NONE = await page.evaluate(async () => {
+    try { hmSchedCus(); } catch (e) {}                 /* 닫고 */
+    try { OSC.list = []; } catch (e) {}
+    try { hmSchedCus(); } catch (e) {}                 /* 다시 펴고 */
+    await new Promise(z => setTimeout(z, 600));
+    const box = document.getElementById('hmFold_stk_week');
+    return (box ? box.innerText : '').replace(/\s+/g, ' ');
+  });
+  is(/고객 명단을 못 읽었습니다/.test(NONE),
+     '  ★ 명단을 못 읽었으면 <b>왜 못 세우는지 적는다</b> — 빈 자리를 두지 않습니다 (1번)');
   is(G.폰달력 >= 2, '📲 폰 달력으로 내보내는 단추가 선다 — ' + G.폰달력 + '개');
   /* ⚠ 처음에 「ics」 라는 <b>글자</b>를 찾았더니 제가 쪽지에 적어 둔 「.ics 면
      아이폰·갤럭시가 받습니다」 에 걸렸습니다 — 멀쩡한 자리를 고발했습니다.

@@ -17326,16 +17326,32 @@ function hmSchedSel(){
 }
 function hmSchedToggle(){
   HM_SCHED.open=!HM_SCHED.open;
+  if(HM_SCHED.open)HM_SCHED_CUS=false;      /* 둘이 같이 펴지면 칸이 길어집니다 */
   try{ hmWeekPaint(); }catch(e){ try{ hmPaint(); }catch(e2){} }
 }
 /* 남겨 둡니다 — 자비스·옛 자리가 부를 수 있습니다 (6번). <b>넣는 자는
    mcalMyPut 하나</b>이고 여기서는 부르기만 합니다 (5번). */
 function hmSchedPut(){ try{ mcalMyPut(); }catch(e){} }
-/* 👤 고객 약속 — <b>여기서 안 담급니다.</b> 적는 자리는 고객 창·동선입니다.
-   길만 열어 드립니다 (1번 · 6번). */
+/* 👤 <b>고객 일정도 여기서</b> (판 X440 · 사장님 말씀 2026-11-14
+   「여기서 추가로 <b>고객 일정</b>을 만들 수도 있는 건데 <b>안 되어서</b> 어렵고」).
+   ⚠ 판 X439 에서 저는 이 단추를 <b>고객 365일로 보내기만</b> 했습니다 — 그건
+     답이 아니라 미루기입니다. 재어 보니 <b>적는 자리는 이미 있었습니다</b> —
+     판 X121 (사장님 말씀 2026-10-17 「캘린더 달력을 클릭해서 기존 고객의 상태를
+     입력하면 캘린더에 등록이 되도록」)이 만든 <b>mcalCusFormHtml</b> 입니다.
+     내 캘린더 화면에만 서 있어서 홈에서는 못 쓰셨습니다.
+   ★ <b>새로 짓지 않고 그 자리를 여기로 부릅니다</b> (5번 · 사장님 규칙 「홈에
+     저장 코드를 새로 짜지 마십시오 — 기존 화면·기존 함수를 부르기만」).
+     넣는 자도 그대로 <b>mcalCusPut</b> 하나입니다. */
+var HM_SCHED_CUS=false;
 function hmSchedCus(){
-  try{ toast('고객 약속은 그 분 카드에서 잡습니다 — 고객 365일을 엽니다'); }catch(e){}
-  try{ go('clients'); }catch(e2){}
+  HM_SCHED_CUS=!HM_SCHED_CUS;
+  if(HM_SCHED_CUS)HM_SCHED.open=false;      /* 둘이 같이 펴지면 칸이 길어집니다 */
+  try{ hmWeekPaint(); }catch(e){ try{ hmPaint(); }catch(e2){} }
+}
+/* 고객 일정을 넣은 뒤에도 이 칸을 그 자리에서 다시 칠합니다 */
+function hmSchedCusPut(){
+  try{ mcalCusPut(); }catch(e){}
+  try{ hmWeekPaint(); }catch(e2){}
 }
 /* ＋ 일정 · 👤 고객 · 📲 폰 달력으로 — <b>옛 「이번 주」 칸 안에</b> 섭니다 */
 function hmSchedRow(){
@@ -17343,10 +17359,24 @@ function hmSchedRow(){
   var h='<div class="hm-sch-h">'+
     '<button type="button" class="go ok" onclick="hmSchedToggle()">'+
       (HM_SCHED.open?'닫기':'＋ 일정')+'</button>'+
-    '<button type="button" class="go" onclick="hmSchedCus()">👤 고객 약속</button>'+
+    '<button type="button" class="go'+(HM_SCHED_CUS?' ok':'')+'" onclick="hmSchedCus()">'+
+      (HM_SCHED_CUS?'닫기':'👤 고객 일정')+'</button>'+
     '<button type="button" class="go" onclick="go(\'mycal\')">달력 크게 ›</button></div>';
+  var sel=hmSchedSel();
+  if(HM_SCHED_CUS){
+    /* 👤 <b>고객 일정</b> — 판 X121 이 만든 그 칸을 그대로 부릅니다 (5번).
+       ★ 그 칸은 <b>MCAL.sel 이 있어야</b> 섭니다 — 안 고르셨으면 오늘로 둡니다.
+       ★ 못 세우면 <b>왜 못 세우는지</b> 적습니다 — 빈 자리를 두지 않습니다 (1번). */
+    try{ if(!MCAL.sel)MCAL.sel=sel; }catch(e0){}
+    var cf=''; try{ cf=mcalCusFormHtml(sel)||''; }catch(e1){ cf=''; }
+    h+='<div class="hm-sch-w">👤 <b>'+osEsc(sel)+'</b> 에 고객 일정을 넣습니다</div>';
+    h+=cf?('<div class="hm-sch-f">'+cf+'</div>')
+         :('<div class="hm-sch-w">아직 <b>고객 명단을 못 읽었습니다</b> — 읽으면 '+
+           '여기서 바로 고르실 수 있습니다. (고객 365일을 한 번 열면 읽어 옵니다)</div>');
+    return h;
+  }
   if(!HM_SCHED.open)return h;
-  var sel=hmSchedSel(),f='';
+  var f='';
   try{ f=mcalMyFormHtml(sel); }catch(e){ f=''; }
   /* <b>넣는 단추는 폼에 있는 그것 하나</b>입니다 — 여기 또 세우지 않습니다 (5번) */
   h+='<div class="hm-sch-w">📌 <b>'+osEsc(sel)+'</b> 에 넣습니다</div>'+
