@@ -245,7 +245,14 @@ const SEED=(o)=>`
 
   console.log('\n[6] 목록을 <b>두 번 안 읽는다</b> (7번)');
   const SRC=fs.readFileSync(path.join(ROOT,'app/index.html'),'utf8');
-  const fn=SRC.slice(SRC.indexOf('function oscBaRows('),SRC.indexOf('function osClientDetailHtml('));
+  /* ⚠ 2026-11-14 (판 X445) — 이 창이 <b>oscBaRows 부터 osClientDetailHtml 까지</b>
+     라 그 사이에 선 다른 함수를 통째로 삼켰습니다. 판 X445 가 그 사이에 계약
+     적는 자(ctrSave)를 두자, 그 안의 .from( 을 보고 <b>멀쩡한 전·후 칸을 고발</b>
+     했습니다 — check-newsfit 이 앞 800자만 보던 것과 같은 병입니다 (8번).
+     ★ <b>그 함수 하나</b>만 봅니다. */
+  const _i=SRC.indexOf('function oscBaRows(');
+  const _j=SRC.indexOf('\nfunction ', _i+10);
+  const fn=SRC.slice(_i, _j>0?_j:(_i+4000));
   is(!/\.from\(|fetch\(/.test(fn),
      '전·후 칸이 <b>서버를 따로 안 부른다</b> — 저장된 자료 목록을 그대로 쓴다 (5번)');
   const NET=await page.evaluate(async(seed)=>{
