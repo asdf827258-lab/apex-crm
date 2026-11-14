@@ -13,7 +13,8 @@
      [5] 메트 모양 — 설명 문장(「지급받는 사망보험금은 3,815만원으로 … 손실」)은 담보가 아니다
      [6] 사진 · 표 없는 서류는 <b>하나도 체크하지 않는다</b>
      [7] 생보식 이름 · 유사암 치료비 풀이
-     [8] 넣으면 더한 금액 그대로 들어간다(ppGo)                                                              */
+     [8] 넣으면 더한 금액 그대로 들어간다(ppGo)
+     [9] 넣기 단추는 표 위에 크게 · 표를 내려도 머리 띠 밑에 보인다 (판 X437 · 2026-11-14 「밑에 있어서 안 보여」)   */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url'), os = require('os');
 const ROOT = process.cwd();
@@ -175,7 +176,36 @@ const DOCS = {
   is(K.added && K.added.cov.surg === '30' && K.added.cov.nurNS === '7', 'KB 모양 → 질병수술비 30 · 간호간병 7');
   is(K.tag, '제안서에서 넣은 계약은 「제안서에서 읽음」 표시(「손으로 적음」 아님 · 판 X390)');
 
-  head('[9] 조용한가');
+  /* 사장님 말씀 2026-11-14 「추가 버튼이 밑에 있어서 안 보여서 위로 · 크게」 (판 X437) —
+     표가 길면 맨 아래 단추를 못 찾았다. 넣기 단추가 표 위에 크게 있고, 표를 내려도 머리 띠 밑에 붙어 보이는가 */
+  head('[9] 넣기 단추 — 표 위에 · 크게 · 내려도 보인다');
+  for (const vp of [[1440, 900], [390, 800]]) {
+    await pg.setViewportSize({ width: vp[0], height: vp[1] });
+    const G = await pg.evaluate(async (b64) => {
+      const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++)u[i] = bin.charCodeAt(i);
+      const txt = await extractPdfText(new File([u], 'meritz.pdf', { type: 'application/pdf' }));
+      window.__PP = { P: ppParse(txt, 'meritz.pdf'), name: 'meritz.pdf' }; ppSet(ppPreview());
+      const v = document.querySelector('.ppv'), g = v && v.querySelector('.ppgo .go'), t = v && v.querySelector('.ppt');
+      if (!g || !t) return null;
+      const first = v.querySelector('button') === g, above = !!(g.compareDocumentPosition(t) & Node.DOCUMENT_POSITION_FOLLOWING);
+      const h = g.getBoundingClientRect().height, fs = parseFloat(getComputedStyle(g).fontSize);
+      /* 표 한가운데까지 내린 뒤 — 머리 띠(.bar) 밑, 화면 안에 있어야 한다 */
+      const tb = t.getBoundingClientRect(); scrollBy(0, tb.top + tb.height / 2 - innerHeight / 2);
+      await new Promise(r => setTimeout(r, 200));
+      const r = g.getBoundingClientRect(), bar = document.querySelector('.bar').getBoundingClientRect();
+      const seen = r.top >= bar.bottom - 1 && r.bottom <= innerHeight;
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return { first, above, h, fs, seen, onTop: !!hit && g.contains(hit), y: Math.round(r.top), barB: Math.round(bar.bottom) };
+    }, B64.meritz);
+    is(G && G.first && G.above, vp[0] + 'px — 넣기 단추가 미리보기 <b>맨 처음 단추</b> · 표보다 위');
+    is(G && G.h >= 56 && G.fs >= 17, vp[0] + 'px — 크게(높이 ' + (G && Math.round(G.h)) + 'px · 글씨 ' + (G && G.fs) + 'px)');
+    is(G && G.seen && G.onTop, vp[0] + 'px — 표 가운데까지 내려도 머리 띠 밑에 보이고 눌린다(단추 ' + (G && G.y) + ' · 띠 끝 ' + (G && G.barB) + ')');
+    const n0 = await pg.evaluate(() => S.after.length);
+    await pg.locator('.ppgo .go').click();
+    is(await pg.evaluate((n0) => S.after.length === n0 + 1 && !document.querySelector('.ppv'), n0), vp[0] + 'px — 위 단추를 누르면 ③ 추가 보험에 들어가고 미리보기가 닫힌다');
+  }
+
+  head('[10] 조용한가');
   is(errs.length === 0, '페이지 에러 ' + errs.length + '건' + (errs.length ? ' — ' + errs.join(' / ') : ''));
   await br.close(); srv.close();
   console.log('\n──────────────────────────────');
