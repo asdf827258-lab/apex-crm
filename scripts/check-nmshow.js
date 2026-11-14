@@ -109,6 +109,28 @@ const sec = (t) => console.log('\n' + t);
   is(/function bjMaskForSave/.test(SRC) && /osMaskName\(nm\)/.test(SRC),
      'AI 로 보내는 글의 이름도 <b>그대로 가린다</b>');
 
+  sec('[4-1] ★★ <b>실명을 찍는 화면에는 가릴 단추가 선다</b> (판 X437 · 6번)');
+  /* ⚠ 2026-11-14 — 판 X436 에서 도구 화면이 실명을 찍기 시작했는데, 그 화면에는
+     「🙈 이름 가리기」 가 <b>안 섰습니다</b>. 즉 고객 앞에서 가릴 길이 없었습니다.
+     CLAUDE.md 6번이 적어 둔 바로 그 자리입니다 — 「다 됐다」 로 보이는 상태에서
+     고칠 단추를 감추지 않는다. check-toolspage 가 「늘 가린다」 로 울어 드러났습니다. */
+  is(/var HM_NM_TABS=\{/.test(SRC) && /HM_NM_TABS\[tab\]/.test(SRC),
+     '단추가 <b>어디에 서는지 묻는 곳이 하나</b>다 (HM_NM_TABS · 5번)');
+  const B = await page.evaluate(async () => {
+    const out = {};
+    for (const t of ['home', 'tools', 'clients']) {
+      try { go(t); } catch (e) {}
+      await new Promise(z => setTimeout(z, 600));
+      const b = document.getElementById('hmNmBtn');
+      out[t] = !!(b && b.offsetParent);
+    }
+    return out;
+  });
+  is(B.home === true, '  <b>오늘</b> 화면에 선다');
+  is(B.tools === true, '  <b>도구</b> 화면에 선다 — 거기서도 실명을 찍기 때문입니다');
+  is(B.clients === false,
+     '  실명을 안 찍는 화면에는 <b>안 선다</b> — 할 일이 없는 단추는 감춥니다 (6번)');
+
   sec('[5] 스위치는 <b>이 브라우저에만</b> 남는다 (3번)');
   const SW = SRC.slice(SRC.indexOf('function hmNmHidden()'), SRC.indexOf('function hmNmBtnSync'));
   is(!/\.from\(|insert\(|upsert\(|fetch\(/.test(SW),
