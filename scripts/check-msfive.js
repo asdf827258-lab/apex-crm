@@ -179,8 +179,21 @@ const SEED = (o) => `
          전에는 「바로 위」였습니다. 따로 서 있으면 아침에 두 곳을 봐야 합니다.
          ★ today(#hmToday)는 <b>껍데기</b>라 카드 밖으로 빼내도 그 안입니다 —
            <b>카드</b>로 재야 합니다 (check-quest 에서 되돌려 보고 알았습니다). */
-      inside: (box && today && today.querySelector('.hm-card'))
-        ? today.querySelector('.hm-card').contains(box) : false,
+      /* ⚠⚠ <b>2026-11-14 (판 X439) — 이 약속이 뒤집혔습니다.</b>
+         옛 말씀(#28) — 「오늘 챙길것 + 아침 미션을 <b>하나로 합치는</b> 거야」.
+         새 말씀(2026-11-14) — 「[아침미션을 오늘 칸에 <b>따로</b> 만들어서]
+         위 쪽에 <b>따로</b> 배치하여서 클릭하면 펼쳐지고」. 두 번 「따로」 라
+         <b>합치지 말고 따로, 위에</b> 두라는 말씀입니다. 새 말씀이 이깁니다.
+         ★ 그래서 재는 것이 바뀌었습니다 — 「카드 안인가」 가 아니라
+           <b>「오늘 카드 안에 있고, 챙길 것 카드보다 위인가」</b>.         */
+      inside: (function(){
+        var tz = document.querySelector('.tz') || today;
+        var card = today && today.querySelector('.hm-card');
+        if (!box || !tz) return false;
+        if (!tz.contains(box)) return false;              /* 「오늘 칸에」 */
+        if (!card) return true;
+        return (box.getBoundingClientRect().top < card.getBoundingClientRect().top);
+      })(),                                               /* 「위 쪽에 따로」 */
       hostH: host ? Math.round(host.getBoundingClientRect().height) : 0
     };
   });
@@ -191,7 +204,7 @@ const SEED = (o) => `
   is(s1.has && !s1.open, '  미션 칸이 서고 <b>처음에는 접혀</b> 있다 — 홈의 규칙 그대로');
   is(s1.sts.length === MSN && MSN >= 5,
      '  칸이 <b>' + MSN + '개</b> 다 선다 — ' + s1.sts.join(' '));
-  is(s1.inside, '  자리가 <b>「오늘 챙길 것」 카드 안</b>이다 — 둘이 한 자리');
+  is(s1.inside, '  ★ 자리가 <b>「오늘」 칸 안이고 챙길 것 카드보다 위</b>다 — 사장님 말씀 2026-11-14 「따로 만들어서 위 쪽에 따로 배치」 (판 X439)');
   is(s1.head.indexOf('0/' + MSN) >= 0 && /①/.test(s1.head),
      '  <b>접힌 채로도</b> 머리가 어디까지 왔는지 말한다 — ' + s1.head);
   await openMs(A.p);

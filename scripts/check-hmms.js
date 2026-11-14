@@ -66,24 +66,35 @@ const sec = (t) => console.log('\n' + t);
 
   const SRC = fs.readFileSync('app/index.html', 'utf8');
 
-  sec('[1] 미션 접이가 <b>갈래별 줄보다 위</b>에 있다');
-  const 차례 = await page.evaluate(() => {
-    const f = document.getElementById('hmFold_ms');
-    const r = document.querySelector('.hm-rows');
-    if (!f || !r) return { f: !!f, r: !!r, 위: null };
-    return { f: true, r: true,
-             위: !!(f.compareDocumentPosition(r) & Node.DOCUMENT_POSITION_FOLLOWING) };
+  sec('[1] ★★ 미션 접이가 <b>「오늘」 카드 맨 위</b>에 선다 (판 X439)');
+  /* ⚠⚠ <b>판 X435 에서 이 자는 반쪽만 물었습니다.</b> 「갈래별 줄(.hm-rows)보다
+     위인가」 만 물었는데, <b>그 줄 묶음 자체가 홈 맨 밑</b>이라 미션은 여전히
+     폰에서 y2,254(홈 전체 2,493)였습니다 — 사장님 말씀 「맨 밑에 … 위 쪽에
+     따로 배치」 가 하나도 안 풀렸는데 <b>자는 초록이었습니다.</b> 화면을 찍어
+     보고서야 알았습니다. 그래서 이제 <b>진짜 자리를 px 로</b> 묻습니다 (8번). */
+  const P = await page.evaluate(() => {
+    const pane = document.getElementById('dynPane');
+    const top = pane ? pane.getBoundingClientRect().top : 0;
+    const y = (sel) => { const e = document.querySelector(sel); if (!e) return null;
+      const b = e.getBoundingClientRect(); return { 위: Math.round(b.top - top), 키: Math.round(b.height) }; };
+    return { 미션: y('#hmFold_ms'), 띠: y('#hmBandHost'), 지금: y('#hmJobHost'),
+             자리: !!document.getElementById('hmMsTop'),
+             홈: pane ? Math.round(pane.scrollHeight) : 0,
+             보임: Math.round((window.innerHeight - top)) };
   });
-  is(차례.f, '🌅 아침 미션 접이가 홈에 선다');
-  /* ⚠ <b>할 일이 없는 날에는 .hm-rows 가 아예 없습니다</b> — 그 날만 재면
-     「위인지」 를 못 묻습니다. 그래서 <b>짓는 글</b>에서도 봅니다. 처음에
-     DOM 만 보다가 줄이 없는 날을 재어 멀쩡한 자리를 고발했습니다 (8번). */
-  const 글 = SRC.slice(SRC.indexOf('hmUpDown'));
-  const iMs = 글.indexOf('ms+'), iRows = 글.indexOf('hm-rows');
-  is(iMs > 0 && iRows > 0 && iMs < iRows,
-     '★ 짓는 글에서 미션이 <b>갈래별 줄보다 먼저</b> 나온다 (ms ' + iMs + ' · 줄 ' + iRows + ')');
-  if (차례.r) is(차례.위 === true, '★ 그려진 화면에서도 <b>위</b>에 있다');
-  else console.log('  · 오늘은 갈래별 줄이 없는 날이라 화면으로는 못 쟀습니다 (1번)');
+  is(!!P.미션, '🌅 아침 미션 접이가 홈에 선다');
+  is(P.자리, '  세우는 자리가 <b>「오늘」 카드 안</b>이다 (#hmMsTop)');
+  is(!!P.미션 && !!P.띠 && P.미션.위 >= P.띠.위 && P.미션.위 <= P.띠.위 + P.띠.키 + 24,
+     '  ★★ <b>한 장 띠 바로 아래</b>에 선다 — y' + (P.미션 ? P.미션.위 : -1) +
+     ' (띠 y' + (P.띠 ? P.띠.위 : -1) + '+' + (P.띠 ? P.띠.키 : 0) + ')');
+  is(!!P.미션 && P.미션.위 <= P.보임,
+     '  ★★ <b>폰 첫 화면 안</b>에 있다 — y' + (P.미션 ? P.미션.위 : -1) + ' / 보이는 높이 ' + P.보임 + 'px');
+  is(!!P.지금 && P.지금.위 + P.지금.키 <= P.보임,
+     '  ★ 「지금 할 것」 을 <b>첫 화면 밖으로 밀지 않았다</b> — 끝 y' +
+     (P.지금 ? P.지금.위 + P.지금.키 : -1) + ' (판 X187 사장님 말씀 「지금할것을 맨위로」)');
+  /* ★ 짓는 자는 하나인가 — 두 곳에서 세우면 홈에 미션이 둘 섭니다 (5번) */
+  is((SRC.match(/hmMsFoldHtml\(\)/g) || []).length === 2,
+     '  ★ 짓는 자(hmMsFoldHtml)를 <b>한 곳에서만</b> 세운다 (5번)');
 
   sec('[2]·[3] TA 대본 — <b>여기서 또 안 만들고</b> DB 종류로 고른다');
   const 미션토막 = SRC.slice(SRC.indexOf(' plan:function(P){'), SRC.indexOf(' call:function(P){'));
