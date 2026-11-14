@@ -310,6 +310,7 @@ const SEED = () => {
   const 있나 = (w) => !side.no && side.cards.some(c => c.t.indexOf(w) >= 0);
   ['이번 주', '이번 달 고객 관리', '알람', '오늘 어디로'].forEach(w =>
     is(있나(w), '  목각의 <b>「' + w + '」</b> 자리가 있다'));
+
   /* ★★ 🚗 가 <b>작아졌나</b> (판 X249 · 사장님 말씀 「오른쪽에 조그만하게」).
      판 X248 에서 펴 두니 <b>799px</b> 였습니다. 추천 줄과 이름 알약만 밖에
      두고 나머지를 접으니 <b>300px 아래</b>입니다. 전화 줄·만나야 할 분은
@@ -958,6 +959,75 @@ const SEED = () => {
      '  ★★ <b>사장님이 보시는 상태로 잰다</b> — 「이분 자세히」 가 '
        + (one.펴짐 === true ? '<b>펴진 채</b>입니다(수가 부풀려집니다)' : '접힌 기본입니다'));
   is(!one.no && one.over <= 0, '  <b>옆으로 안 넘친다</b> — ' + one.over + 'px');
+
+  /* ── [2-b] ⓐ <b>곁칸이 두 열 타일</b>이고, 접어도 수가 안 사라진다 ──── */
+  console.log('\n[2-b] ★★ ⓐ <b>곁칸이 두 열 타일</b>이고 <b>접어도 사장님이 읽으실 것이 머리에 남는다</b> (말씀 X219)');
+  /* ══ 📏 왜 이 자가 생겼나 — 판 X446 (2026-11-14) ═══════════════════════
+     사장님 말씀 (2026-10-27) — 「지금 할것이 <b>너무 많은 자리</b>를 차지하고
+     있어 / 이 칸이 지금할것 <b>오른쪽</b>에 있는다면 한번에 오늘 할일이 눈에
+     싹 들어올거 같은데」 → 꼴 셋을 올려 드려 <b>「ⓐ 두 열 타일」</b> 을
+     고르셨습니다.
+     ⚠ <b>판 X219 에서 되돌렸습니다.</b> 셋을 접어 곁칸 749 → 462px 까지
+       갔는데 CI 에서 자 넷이 울었습니다 — check-hmwk · check-hmrun ·
+       check-hmmadi · check-mstans. 까닭은 하나였습니다: <b>한 줄로 접으니
+       사장님이 읽으시는 수가 사라졌습니다</b> (1번).
+     ★★ <b>그 뒤에 풀렸는데 대장이 7주 동안 「반만」 이었습니다.</b> 재어 보니
+       폰에서 #hmSideUp 이 <b>79px</b> 이고 안에 타일이 <b>둘, 나란히</b>
+       (x-4 · x199 · 각 195px) 섭니다. 그리고 <b>수가 머리에 남아 있습니다</b> —
+       「📈 이번 주 <b>연속 끊김</b>」 · 「🔔 알람 <b>남은 2번</b>」.
+     ★ 수가 남은 까닭은 <b>hmSideSum 하나</b>가 그 칸의 data-sum 을 그대로
+       꺼내 꼬리글로 쓰기 때문입니다 — <b>두 번째로 세지 않습니다</b> (5번).
+       그래서 이 자는 「수가 보이나」 를 묻지 않고 <b>「꼬리글이 비었나」</b> 를
+       묻습니다. 수가 없는 주에는 「연속 끊김」 이라고 적는 것이 <b>맞습니다</b>
+       (1번 — 모르면 모른다고). 숫자를 요구하면 그 주마다 헛 빨간불입니다 (8번).
+     ★ 폰만 접습니다 — 넓은 화면에서는 세 칸이 통째로 섭니다. 좁은지 묻는
+       자는 navWide 하나입니다 (5번).                                    */
+  const 곁 = await PH.evaluate(async () => {
+    const R = document.getElementById('hmSideUp'); if (!R) return { no: 1 };
+    const K = [...R.children].map(e => { const r = e.getBoundingClientRect();
+      return { id: e.id || e.className, x: Math.round(r.left), y: Math.round(r.top),
+               w: Math.round(r.width), h: Math.round(r.height) }; }).filter(k => k.h > 0);
+    const H = [...R.querySelectorAll('.hm-fold-h')].map(e => {
+      const t = e.querySelector('.t > span');
+      return { 글: (e.innerText || '').replace(/\s+/g, ' ').trim(),
+               꼬리: t ? (t.innerText || '').replace(/\s+/g, ' ').trim() : '',
+               키: Math.round(e.getBoundingClientRect().height),
+               접힘: e.getAttribute('aria-expanded') === 'false' };
+    });
+    /* 눌러서 펴지나 — 접기만 하고 길이 없으면 안 됩니다 (6번) */
+    let 폄 = null;
+    const h0 = R.querySelector('.hm-fold-h');
+    if (h0) { const 전 = Math.round(R.getBoundingClientRect().height);
+      h0.click(); await new Promise(z => setTimeout(z, 220));
+      폄 = Math.round(R.getBoundingClientRect().height) - 전; }
+    return { no: 0, h: Math.round(R.getBoundingClientRect().height), K: K, H: H, 폄: 폄 };
+  });
+  is(!곁.no && 곁.K.length === 2,
+     '  ⓐ 곁칸에 타일이 <b>둘</b> 선다 — ' +
+     (곁.no ? '(#hmSideUp 이 없습니다)' : 곁.K.length + '개 · ' + 곁.K.map(k => k.id).join(' · ')));
+  is(!곁.no && 곁.K.length >= 2 && Math.abs(곁.K[0].y - 곁.K[1].y) <= 8 &&
+     곁.K[1].x - 곁.K[0].x >= 100,
+     '  ⓐ 그 둘이 <b>나란히</b> 선다(두 열) — ' +
+     (곁.no ? '' : 곁.K.slice(0, 2).map(k => 'x' + k.x + ' y' + k.y + ' ' + k.w + 'px').join(' · ')) +
+     ' · 위아래로 쌓이면 빨간불입니다');
+  is(곁.H.length >= 2 && 곁.H.slice(0, 2).every(x => x.꼬리.length > 0),
+     '  ★★ <b>접은 머리에 꼬리글이 남는다</b> — ' +
+     (곁.H.slice(0, 2).map(x => '「' + (x.꼬리 || '(비었습니다)') + '」').join(' · ') || '(머리를 못 찾았습니다)') +
+     ' · <b>판 X219 에서 되돌린 바로 그 까닭</b>입니다(접으니 수가 사라졌습니다 · 1번)');
+  is(곁.H.length >= 2 && 곁.H.slice(0, 2).every(x => x.키 >= 44),
+     '  두 머리가 <b>44px 위</b>다 — ' + 곁.H.slice(0, 2).map(x => x.키 + 'px').join(' · '));
+  is(곁.H.length >= 2 && 곁.H.slice(0, 2).every(x => x.접힘 === true),
+     '  <b>접힌 채로 온다</b> — 그래야 79px 입니다');
+  is(곁.폄 !== null && 곁.폄 > 30,
+     '  <b>눌러서 펴진다</b> — ' + (곁.폄 === null ? '(머리를 못 찾았습니다)' : '+' + 곁.폄 + 'px') +
+     ' · 접기만 하고 펴는 길이 없으면 방해입니다 (6번)');
+  /* ★ 꼬리글을 <b>그 칸이 세는 자</b>에서 꺼내 쓰나 — 두 번째로 세면 갈립니다 (5번) */
+  const sideSrc = (/function hmSideHtml\(\)\{[\s\S]*?\n\}/.exec(
+    fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8')) || [''])[0];
+  is(/hmFoldWrap\([\s\S]{0,80}hmSideSum\(one\)/.test(sideSrc),
+     '  ★ 꼬리글이 <b>그 칸의 data-sum</b> 에서 온다(hmSideSum 하나) — 두 번째로 세지 않습니다 (5번)');
+  is(/navWide\(\)/.test(sideSrc) && /좁\?hmFoldWrap/.test(sideSrc),
+     '  ★ <b>폰에서만 접는다</b> — 좁은지 묻는 자는 navWide 하나다 (5번)');
 
   /* ── [7] 1101px 이 한 곳에서만 ─────────────────────────────────── */
   console.log('\n[7] <b>1101px 이 한 곳에서만 온다</b> (5번)');
