@@ -3061,7 +3061,7 @@ body.insight-mode #insightScreen{display:block;}
 <div id="fpTalkScreen">
   <iframe id="fpTalkFrame" class="fin-frame" title="재무설계 실전화법서"></iframe>
   <div class="fin-float">
-    <button class="ff-back" onclick="exitFpTalk()">← 워크스페이스</button>
+    <button class="ff-back" onclick="exitFpTalk();go('home')">← 워크스페이스</button>
     <button class="ff-ico" onclick="fpTalkReload()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="fpTalkNewTab()" title="새 탭에서 열기">↗</button>
   </div>
@@ -3071,7 +3071,7 @@ body.insight-mode #insightScreen{display:block;}
 <div id="dzGuideScreen">
   <iframe id="dzGuideFrame" class="fin-frame" title="질병 보험가이드"></iframe>
   <div class="fin-float">
-    <button class="ff-back" onclick="exitDzGuide()">← 워크스페이스</button>
+    <button class="ff-back" onclick="exitDzGuide();go('home')">← 워크스페이스</button>
     <button class="ff-ico" onclick="dzGuideReload()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="dzGuideNewTab()" title="새 탭에서 열기">↗</button>
   </div>
@@ -3081,7 +3081,7 @@ body.insight-mode #insightScreen{display:block;}
 <div id="fpDeckScreen">
   <iframe id="fpDeckFrame" class="fin-frame" title="재무&amp;보장 상담자료"></iframe>
   <div class="fin-float">
-    <button class="ff-back" onclick="exitFpDeck()">← 워크스페이스</button>
+    <button class="ff-back" onclick="exitFpDeck();go('home')">← 워크스페이스</button>
     <button class="ff-ico" onclick="fpSaveNow()" title="고객 파일로 저장">💾</button>
     <button class="ff-ico" onclick="fpNowToCalc()" title="재무설계 계산기로 넘기기">🧮</button>
     <button class="ff-ico" onclick="fpDeckReload()" title="새로고침">↺</button>
@@ -20843,7 +20843,14 @@ function navPaintBody(){
 
 /* ════════ 페이지 렌더 ════════ */
 var lastTab='dashboard';
-var prevTab='home';   /* 전체화면에서 「나가기」 를 눌렀을 때 돌아갈 곳 */
+var prevTab='home';   /* 「그 전에 어디」 — 적기만 한다. 「← 워크스페이스」 는 이제 이것을 안 본다 */
+/* 🏠 <b>「← 워크스페이스」 는 늘 홈으로</b> (판 X431 · 사장님 말씀 2026-11-14 「워크스페이스 누르면,
+   우리 홈 화면으로 돌아오도록 만들어 오류걸리더라」)
+   예전에는 「그 전 화면」(prevTab)으로 갔습니다. 그런데 자비스에서 CRM 을 열면 그 전 화면이
+   자비스라, CRM 에서 「← 워크스페이스」 → 자비스, 자비스에서 다시 → CRM … <b>둘 사이를 오가며
+   홈에 못 닿았습니다.</b> 앱을 막 켜서 전체화면부터 열면 그 전 화면은 #dashboard 였습니다.
+   ★ 이름이 「워크스페이스」 이니 가는 곳은 하나 — 홈입니다. exit○○ 열두 곳 · exitBa ·
+     상담자료 세 덮개(화법서·상담자료·질병가이드)의 단추가 모두 go('home') 입니다. */
 /* ── 전체화면은 한 번에 하나만 ────────────────────────────────
    화면을 통째로 덮는 칸이 아홉이다 — 계산기 · CRM · 보장분석 상담자료 ·
    재무&보장 상담자료 · 실전화법서 · 미끼 레이더 · 미끼상품&접촉전략 ·
@@ -21663,7 +21670,7 @@ function go(tab){
   /* 주소는 <b>위에서 이미</b> 적었다 — 여기 또 적으면 두 곳이 된다 (5번) */
   if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
 }
-function exitFinance(){go(prevTab||'home');}
+function exitFinance(){go('home');}
 
 /* ════════ 재무설계 모듈 (iframe) ════════ */
 function b64ToUtf8(b64){
@@ -21709,7 +21716,7 @@ function baNewTab(){
 function exitBa(){
   /* 틀은 그대로 둔다 — 다음에 <b>즉시</b> 뜬다. 적어 두신 것도 안 사라진다 */
   $('baScreen').classList.remove('on');
-  go(lastTab&&lastTab!=='frmake'?lastTab:'home');
+  go('home');
 }
 function openBa(){
   /* 고객을 보던 중이면 <b>그 고객 자료</b>를 들고 연다 */
@@ -22022,8 +22029,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-13 22:03';
-var APP_BUILD_NOTE='🔒 <b>고객의 계약·증권 파일은 이제 담당 설계사 본인만 봅니다</b>(판 X430) — 사장님 말씀 「모두 가능하게 단 <b>본인만 볼 수 있도록</b>」 · 「본인만으로 좁혀」. 여태 서버 규칙이 <b>팀장도 참</b>으로 보고 있어서, 팀장이 남의 고객 계약과 증권 파일을 열 수 있었습니다. ◾ 좁힌 자리 넷 — 📄 계약 · 📎 가입제안서 · 🧾 증권 파일 · 올린 PDF 원문이 담기는 통. ◾ ★ <b>청구는 그대로 둡니다</b> — 설계가 「본인 · 관리자」 로 따로 가릅니다. 고객 <b>명단</b>도 그대로입니다 — 가려진 자리는 계약·서류뿐입니다. ◾ ★ 좁히기 전에 재어 보니 세 표가 <b>모두 0줄</b>이고 고객 166분이 모두 담당이 있었습니다 — <b>지금 좁히면 아무도 잃는 것이 없습니다.</b> 서버에 건 뒤 세 자격으로 <b>실제로 걸어 보아</b> 담당자 본인은 보이고 팀장·관리자는 0 인 것을 확인했습니다. ◾ <b>같이 들어 있는 것</b> — 🙂 보장 전·후를 질문으로 보기(X429) · 🔒 자비스 PC 자료 찾기가 막히면 막혔다고 말하기(X428) · 🌱 「교육」 → 「성장」 네 장(X409) · ⏰ 코앞에 온 만기·갱신을 홈이 먼저 말하기(X426) · 🔁 갱신이 오는 계약 챙기기(X423) · 📍 광고 유입 갈라 보기(X424·X425) · 🌙 광고 저녁 보고(X427) · 📁 자비스가 PC 자료 찾기(X416).';
+var APP_BUILD='2026-11-14 09:50';
+var APP_BUILD_NOTE='🏠 <b>「← 워크스페이스」 는 늘 홈으로</b>(판 X431 · 사장님 말씀 「워크스페이스 누르면, 우리 홈 화면으로 돌아오도록 만들어 오류걸리더라」) — 예전에는 「그 전 화면」 으로 가서, 자비스에서 CRM 을 열고 나가면 자비스 → CRM → 자비스 … 를 오가며 홈에 못 닿았습니다. 이제 자비스 · CRM · 계산기 · 상담자료 · 전·후 만들기 등 16곳의 「← 워크스페이스」 가 모두 홈으로 갑니다.';
 
 
 
@@ -22401,7 +22408,7 @@ function openCrmNewTab(){
   var w=window.open(CRM_URL,'_blank','noopener');
   if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');
 }
-function exitCrm(){go(prevTab||'home');}
+function exitCrm(){go('home');}
 /* ════════ DB 통합 CRM 사용 안내 — 캡처와 함께 접기/펴기로 한눈에 ════════ */
 var CRMG_SECS=[
  {ic:'🚪',t:'시작하기 — 로그인은 APEX 하나',open:true,img:'',steps:[
@@ -22486,7 +22493,7 @@ function mountSangdam(){
 }
 function reloadSangdam(){var f=$('sangdamFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountSangdam,30);toast('보장분석 상담자료 새로고침');}}
 function openSangdamNewTab(){var w=window.open(SANGDAM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitSangdam(){go(prevTab||'home');}
+function exitSangdam(){go('home');}
 
 /* ════════ 📅 APEX 교육 캘린더 (앱 폴더에 번들: app/edu-cal.html) ════════
    교육매니저가 돌리는 자리입니다 — 월간 캘린더 · 신입 교육 주간 · 팀별 교육 ·
@@ -22502,7 +22509,7 @@ function mountEducal(){
 }
 function reloadEducal(){var f=$('educalFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountEducal,30);toast('교육 캘린더 새로고침');}}
 function openEducalNewTab(){var w=window.open(EDUCAL_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitEducal(){go(prevTab||'home');}
+function exitEducal(){go('home');}
 
 /* ════════ 🧭 상품전략기 · 월간 상품 인사이트 (앱 폴더에 번들: app/insight/) ════════
    달마다 Desktop 의 apex-insight 빌드가 뽑는 crm/ 폴더를 그대로 옮겨 놓습니다.
@@ -22514,7 +22521,7 @@ function mountInsight(){
 }
 function reloadInsight(){var f=$('insightFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountInsight,30);toast('상품 인사이트 새로고침');}}
 function openInsightNewTab(){var w=window.open(INSIGHT_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitInsight(){go(prevTab||'home');}
+function exitInsight(){go('home');}
 
 /* ════════ 증권 전달 (앱 폴더에 번들: app/증권전달/index.html) ════════
    계약이 성립된 뒤 증권을 고객에게 전하는 자리에서 쓰는 한 벌.
@@ -22529,7 +22536,7 @@ function mountPdel(){
 }
 function reloadPdel(){var f=$('pdelFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountPdel,30);toast('증권 전달 새로고침');}}
 function openPdelNewTab(){var w=window.open(PDEL_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitPdel(){go(prevTab||'home');}
+function exitPdel(){go('home');}
 /* 증권 전달 안에서 <b>「DB 통합 CRM 열기」</b>를 누르면 여기로 온다.
    새 탭을 또 열면 로그인이 둘이 되므로, 같은 창에서 옮겨 준다.
    ★ <b>우리가 띄운 그 틀에서 온 것</b>만 받는다 — 아무 창이나 화면을 못 바꾼다. */
@@ -22561,7 +22568,7 @@ function bohumAt(l){
   },60);
 }
 function openBohumNewTab(){var w=window.open(BOHUM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitBohum(){go(prevTab||'home');}
+function exitBohum(){go('home');}
 /* ════════ 미끼 레이더 (같은 폴더의 정적 파일) ════════
    약관·판매자료는 서버에 올리지 않는다. 화면 안에서 직접 올려 브라우저(IndexedDB)에 쌓는 구조. */
 /* ════════ APEX 자비스 모드 (같은 폴더의 정적 파일) ════════
@@ -22641,7 +22648,7 @@ function mountApexMap(){var f=$('apexMapFrame');if(!f||f._mounted)return;
   f.src=APEXMAP_URL;f._mounted=true;}
 function reloadApexMap(){var f=$('apexMapFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountApexMap,30);toast('전체 지도 새로고침');}}
 function openApexMapNewTab(){var w=window.open(APEXMAP_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitApexMap(){go(prevTab||'home');}
+function exitApexMap(){go('home');}
 
 /* ════════ 🪟 자비스 독 — 화면을 열어도 자비스가 남는다 (판 X245) ════════
 
@@ -22700,7 +22707,7 @@ var ONECMP_URL='https://apex-hb-onecompare.netlify.app/';
 function mountOneCmp(){var f=$('onecmpFrame');if(!f||f._mounted)return;f.src=ONECMP_URL;f._mounted=true;}
 function reloadOneCmp(){var f=$('onecmpFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountOneCmp,30);toast('한장 보험료 비교 새로고침');}}
 function openOneCmpNewTab(){var w=window.open(ONECMP_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitOneCmp(){go(prevTab||'home');}
+function exitOneCmp(){go('home');}
 
 /* ══════ 고객에게 보내기 — 카톡 문구를 토스 모양으로 ══════════════════
    「한장 보험료 비교」가 만들어 주는 고객 링크는 비교한 자료를 통째로
@@ -22843,7 +22850,7 @@ var CARFAULT_URL='상담자료/자동차사고_과실분석.html';
 function mountCarFault(){var f=$('carFaultFrame');if(!f||f._mounted)return;f.src=CARFAULT_URL;f._mounted=true;}
 function reloadCarFault(){var f=$('carFaultFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountCarFault,30);toast('자동차사고 과실·보상 새로고침');}}
 function openCarFaultNewTab(){var w=window.open(CARFAULT_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitCarFault(){go(prevTab||'home');}
+function exitCarFault(){go('home');}
 
 /* ════════ 미끼상품&접촉전략 (같은 폴더의 정적 문서) ════════
    27장짜리 화법서다. 바깥으로 나가는 것은 글꼴뿐이고 서버에 묻는 것이
@@ -22852,8 +22859,8 @@ var MKTALK_URL='상담자료/미끼상품_접촉전략.html';
 function mountMkTalk(){var f=$('mkTalkFrame');if(!f||f._mounted)return;f.src=MKTALK_URL;f._mounted=true;}
 function reloadMkTalk(){var f=$('mkTalkFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountMkTalk,30);toast('미끼상품&접촉전략 새로고침');}}
 function openMkTalkNewTab(){var w=window.open(MKTALK_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitMkTalk(){go(prevTab||'home');}
-function exitMikki(){go(prevTab||'home');}
+function exitMkTalk(){go('home');}
+function exitMikki(){go('home');}
 /* ════════ 음성 비서 — 불러서 시키면 한다 ════════
    화면이 여든 개다. 운전 중이거나 손이 바쁠 때는 그 중 하나를 찾아 누를 수가 없다.
    이름을 부르고 말로 시키면 되게 한다.

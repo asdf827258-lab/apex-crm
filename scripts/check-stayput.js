@@ -120,7 +120,7 @@ const srv = http.createServer((rq, rs) => {
   });
   is(A3.nowIn === 'finance', '  계산기에 들어가면 <b>계산기라고</b> 답한다 — 「' + A3.nowIn + '」');
   is(A3.back === 'home',
-     '  나가기는 <b>그 전 화면</b>으로 간다 — 「' + A3.back + '」 (제자리로 돌면 안 닫힌다)');
+     '  나가기는 <b>홈</b>으로 간다 — 「' + A3.back + '」 (제자리로 돌면 안 닫힌다)');
   is(A3.back !== A3.nowIn, '  나가기가 <b>자기 자신</b>을 부르지 않는다');
 
   console.log('\n[2-4] 전체화면 껍데기가 빠짐없이 벗겨진다');
@@ -154,8 +154,44 @@ const srv = http.createServer((rq, rs) => {
     return { inn, out: document.body.className.indexOf('onecmp-mode') >= 0, landed: lastTab };
   });
   is(X.inn, '  한장 보험료 비교가 <b>열린다</b>');
-  is(!X.out && X.landed === 'clients',
-     '  「← 워크스페이스」 를 누르면 <b>정말 나온다</b> — 도착 「' + X.landed + '」');
+  /* 🏠 판 X431 — 도착은 <b>그 전 화면(clients)이 아니라 홈</b>입니다 (사장님 말씀 2026-11-14
+     「워크스페이스 누르면, 우리 홈 화면으로 돌아오도록 만들어 오류걸리더라」) */
+  is(!X.out && X.landed === 'home',
+     '  「← 워크스페이스」 를 누르면 <b>정말 나와서 홈</b>에 닿는다 — 도착 「' + X.landed + '」');
+
+  console.log('\n[2-5] 🏠 전체화면 둘을 오가도 「← 워크스페이스」 한 번이면 홈이다 (판 X431)');
+  /* 예전에는 「그 전 화면」 으로 갔습니다. 자비스에서 CRM 을 열면 CRM 의 그 전 화면이 자비스라,
+     라이브에서 CRM → 자비스 → CRM → 자비스 … <b>홈에 못 닿았습니다</b>(2026-11-14 라이브에서 잼). */
+  const PP = await page.evaluate(async () => {
+    const t = ms => new Promise(r => setTimeout(r, ms));
+    go('home'); await t(80);
+    go('apexmap'); await t(200);
+    go('crm'); await t(200);
+    exitCrm(); await t(200);
+    const a = lastTab, aBody = document.body.className;
+    go('crm'); await t(200);
+    go('apexmap'); await t(200);
+    exitApexMap(); await t(200);
+    const b = lastTab;
+    go('clients'); await t(150);
+    go('frmake'); await t(300);
+    exitBa(); await t(200);
+    const c = lastTab;
+    return { a, b, c, full: /-mode\b/.test(aBody) };
+  });
+  is(PP.a === 'home' && !PP.full, '  자비스 → CRM → 「← 워크스페이스」 = 홈 — 「' + PP.a + '」');
+  is(PP.b === 'home', '  CRM → 자비스 → 「← 워크스페이스」 = 홈 — 「' + PP.b + '」');
+  is(PP.c === 'home', '  보장분석 전·후 만들기에서 「← 워크스페이스」 = 홈 — 「' + PP.c + '」');
+  const SRC3 = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  const backs = SRC3.match(/<button class="ff-back" onclick="[^"]*">← 워크스페이스<\/button>/g) || [];
+  const bad = backs.filter(b => {
+    const fn = (b.match(/onclick="(exit[A-Za-z]+)\(\)/) || [])[1];
+    if (/go\('home'\)/.test(b)) return false;
+    const def = fn && SRC3.match(new RegExp('function ' + fn + '\\(\\)\\{[\\s\\S]*?\\n?\\}'));
+    return !(def && /go\('home'\)/.test(def[0]));
+  });
+  is(backs.length >= 15 && !bad.length,
+     '  「← 워크스페이스」 단추 ' + backs.length + '개가 모두 홈으로 간다' + (bad.length ? ' — 아닌 것: ' + bad.join(' | ') : ''));
 
   /* ── 덮개는 <b>제 차례에만</b> 덮는다 ────────────────────────────────
      2026-09-02, 앱이 통째로 <b>하얗게</b> 떴습니다. 로그인해도 흰 판만
