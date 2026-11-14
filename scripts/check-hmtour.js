@@ -155,6 +155,32 @@ const sec = (t) => console.log('\n' + t);
     return { 적힘: v, 오늘: (typeof mcalToday === 'function') ? mcalToday() : '', 끝났나: hmTourDone() };
   });
   is(D.적힘 === D.오늘 && D.끝났나, '오늘 날짜로 적힌다 — ' + D.적힘 + ' (오늘 ' + D.오늘 + ')');
+  /* ⚠⚠ <b>2026-11-14 (판 X442) — 이 자리가 울 수 없는 알람이었습니다.</b>
+     「끝내면 오늘 다시 안 연다」 를 쟀는데, 투어는 <b>스스로 열리지 않습니다</b> —
+     사장님이 🔦 를 누르셔야 열립니다. 즉 막을 것이 없고, hmTourDone 은
+     <b>적어 두기만</b> 하고 아무도 안 읽었습니다. 안 울리는 알람은 알람이
+     아닙니다 (8번). ★ 그래서 그 자에게 <b>진짜 할 일</b>을 주었습니다 —
+     🔦 줄이 「✓ 오늘 한 번 도셨습니다 · 다시 보기」 로 바뀝니다. 이제 이 자는
+     <b>그 글이 실제로 바뀌는지</b> 를 묻습니다.
+     ★★ 그리고 <b>단추는 그대로 선다</b> 를 같이 묻습니다 — 사장님 말씀이
+       「<b>계속</b> 하게 하는 거지」 라, 한 번 돌았다고 길을 닫으면 안 됩니다 (6번). */
+  /* ⚠ 화면에서 찾지 않고 <b>짓는 자를 직접</b> 부릅니다 — 이 자의 씨에는
+     걸음이 설 자료가 없는 때가 있어 DOM 으로만 재면 헛것을 잡습니다 (8번).
+     아래 [12] 도 같은 길입니다. */
+  const AFT = await page.evaluate(() => {
+    const h = (typeof hmWayTipHtml === 'function') ? hmWayTipHtml() : '';
+    try { localStorage.removeItem('apex_tour_done_v1'); } catch (e) {}
+    const h0 = (typeof hmWayTipHtml === 'function') ? hmWayTipHtml() : '';
+    return { 선다: /class="hm-waytip"/.test(h),
+             글: h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(-40),
+             표시: /data-waydone="1"/.test(h),
+             돌기전: /눌러서 따라가기/.test(h0) && !/data-waydone/.test(h0) };
+  });
+  is(AFT.선다, '  ★★ 한 번 도셔도 <b>🔦 단추는 그대로</b> 선다 — 사장님 「계속 하게」 (6번)');
+  is(/오늘 한 번 도셨습니다/.test(AFT.글) && AFT.표시,
+     '  ★ 그 줄이 <b>어디까지 오셨는지</b> 말한다 — 「' + AFT.글 + '」');
+  is(AFT.돌기전,
+     '  ★ 아직 안 도셨으면 <b>「눌러서 따라가기」</b> 라고 적는다 — 두 꼴이 정말로 갈린다 (8번)');
 
   sec('[9] 누르는 자리가 <b>44px 이상</b>이다');
   const B = await page.evaluate(() => {
