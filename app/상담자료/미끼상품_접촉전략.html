@@ -3437,6 +3437,17 @@ body.pv section.wrap.pon .pvhead{display:block;font-size:19px;font-weight:800;
     var 바닥=(칸?칸.clientHeight:(window.innerHeight-52))-28;   /* 아래 여백 몫 */
     if(_was)_r.style.setProperty('--pvnote-cur',_was); else _r.style.removeProperty('--pvnote-cur');
     if(바닥<300)바닥=window.innerHeight-200;
+    /* ★ <b>둘째 쪽부터 붙는 「장 이름」 머리글도 자리를 먹습니다</b> (판 X451).
+         show() 가 .pvhead 를 끼워 넣는데 쪼개는 쪽은 그것을 안 세고 있었습니다 —
+         노트를 끄면 여백이 빠듯해 그 한 줄에 쪽이 넘쳤습니다 (재어 보고). */
+    var 쪽머리키=0;
+    (function(){
+      var hd=document.querySelector('section.wrap .pvhead');
+      if(!hd)return;
+      var 전=hd.style.display; hd.style.display='';
+      쪽머리키=hd.offsetHeight; hd.style.display=전;
+      if(쪽머리키>0)쪽머리키+=14;
+    })();
     var 새=[];
     secs.forEach(function(sec,k){
       var mine=pgs.filter(function(q){return q.s===sec;});
@@ -3459,22 +3470,115 @@ body.pv section.wrap.pon .pvhead{display:block;font-size:19px;font-weight:800;
          ★ 그래서 <b>조각 하나가 혼자 한 화면을 넘으면 그대로 둡니다.</b> 그 쪽만
            스크롤이 남고 「↓ 아래로 더 있습니다」 가 말해 줍니다 — 안 되는 것을
            되는 척하지 않습니다 (1번).                                        */
-      var h={};
-      units.forEach(function(e,ui){ h[ui]=e.offsetHeight+14; });
-      /* 픽셀로 담습니다 */
-      var out=[], cur=머리.slice(), w=머리키, 첫=true;
-      units.forEach(function(e,ui){
-        var g=h[ui]||0, 새쪽=(e.tagName||'')==='H3';
-        if(cur.length>(첫?머리.length:0) && (새쪽 || w+g>바닥)){
-          out.push(cur); cur=[]; w=0; 첫=false;
+      /* ══ ★★ <b>혼자 한 화면을 넘는 덩이는 한 겹 더 쪼갭니다</b> (판 X451) ══
+         사장님 말씀 2026-11-15 「안 끝낸 10개 뭔지 <b>다하고</b>」.
+         ⚠ <b>판 X314 에서 「안까지 쪼개기」 를 해 봤다가 되돌렸습니다.</b> 그때 깨진 것은
+           <b>격자(grid · 줄바꿈 flex)</b> 였습니다 — 칸 하나를 떼어 내면 남은 칸이 다시
+           흘러 더 높아져, 한 화면에 드는 쪽이 154 → 141쪽으로 <b>오히려 줄었습니다.</b>
+           그래서 <b>격자는 그대로 두고</b> 위아래로 쌓이는 보통 칸만 쪼갭니다.
+         ★ 재어 보니 넘치는 쪽의 거의 다가 <b>.pkg 한 덩이(1,750~1,960px)</b> 였습니다 —
+           화법 한 벌이 통째로 한 조각이라 쪼갤 자리가 아예 없었습니다.
+         ★ 부모(.pkg 테두리)는 <b>그대로 섭니다</b> — 숨기는 것은 조각이지 부모가 아닙니다. */
+      var 쪼갤수있나=function(el){
+        if(!el||!el.children||el.children.length<2)return false;
+        var cs=null; try{ cs=getComputedStyle(el); }catch(e1){ return false; }
+        if(!cs)return false;
+        if(cs.display==='grid'||cs.display==='inline-grid')return false;          /* 격자는 안 건드립니다 */
+        if(cs.display==='flex'||cs.display==='inline-flex'){
+          if(cs.flexWrap&&cs.flexWrap!=='nowrap')return false;                    /* 줄바꿈 flex 도 */
+          if(cs.flexDirection&&cs.flexDirection.indexOf('row')===0)return false;  /* 가로 flex 도 */
         }
-        cur.push(e); w+=g;
+        /* ★ <b>글이 직접 들어 있는 칸은 못 쪼갭니다.</b> children 은 글자 조각을 빼고
+             세기 때문에, 쪼개면 그 글이 <b>모든 쪽에 그대로 남습니다.</b> */
+        var i, nd=el.childNodes;
+        for(i=0;i<nd.length;i++){
+          if(nd[i].nodeType===3 && (nd[i].nodeValue||'').trim())return false;
+        }
+        /* ★ 자식이 <b>위아래로 쌓이는 칸</b>이 아니면 못 쪼갭니다 — 줄 안에 나란히
+             선 것(inline)이나 떠 있는 것(float·absolute)을 갈라 놓으면 토막 납니다. */
+        for(i=0;i<el.children.length;i++){
+          var c2=null; try{ c2=getComputedStyle(el.children[i]); }catch(e2){ return false; }
+          if(!c2)return false;
+          if(c2.position==='absolute'||c2.position==='fixed')return false;
+          if(c2.cssFloat&&c2.cssFloat!=='none')return false;
+          if(!/^(block|flex|grid|table|list-item)$/.test(c2.display))return false;
+        }
+        return true;
+      };
+      /* ★ 쪼갠 조각은 <b>부모의 옷(테두리·안여백·사이여백)을 쪽마다 다시 입습니다.</b>
+         그것을 안 세고 재었더니 넘치는 쪽이 42 → <b>86</b> 으로 오히려 늘었습니다
+         (2026-11-15 · 재어 보고). 그래서 조각마다 <b>지나온 부모</b>를 들고 다니며,
+         그 부모가 이 쪽에 처음 서는 것이면 옷값을 함께 셉니다. */
+      var 옷재기=function(x){
+        var cs=null, f=function(v){ return parseFloat(v)||0; };
+        try{ cs=getComputedStyle(x); }catch(e){ return 0; }
+        return cs?(f(cs.paddingTop)+f(cs.paddingBottom)+f(cs.borderTopWidth)+
+                   f(cs.borderBottomWidth)+f(cs.marginTop)+f(cs.marginBottom)):0;
+      };
+      var 폄=[], 깊이=0, 끼움={};
+      units.forEach(function(e){
+        var q=[{el:e}];
+        while(q.length){
+          var it=q.shift(), x=it.el;
+          if(x.offsetHeight+14>바닥 && 쪼갤수있나(x) && 깊이<200){
+            깊이++;
+            var kids=[].slice.call(x.children);
+            q=kids.map(function(k){ return {el:k}; }).concat(q);
+          } else 폄.push(x);
+        }
       });
-      if(cur.length)out.push(cur);
+      units=폄;
+      /* ★★ <b>조각을 감싼 상자(.pkg 테두리 같은 것)를 전부 찾아 둡니다</b> (판 X451).
+         ⚠ <b>이 자리가 오래 새고 있었습니다.</b> 쪼개기는 처음부터 큰 묶음 <b>안까지</b>
+           내려갔는데, 겉 상자는 「그대로 서 있습니다」 였습니다. 그래서 자식이 하나도
+           없는 쪽에서도 <b>빈 상자가 84px 씩 자리를 먹었습니다</b> — 한 쪽에 다섯이면
+           420px 입니다(2026-11-15 · 재어 보고. 09장 4/24 쪽이 +712px 이던 까닭). */
+      units.forEach(function(e,ui){
+        var ch=[], pp=e.parentElement;
+        while(pp&&pp!==sec){ ch.unshift({el:pp,옷:옷재기(pp)}); pp=pp.parentElement; }
+        끼움[ui]=ch;
+      });
+      /* ★ <b>어림(+14)이 아니라 진짜 좌표로 잽니다</b> (판 X451).
+         조각이 깊어지면 사이 여백이 저마다 달라 「+14」 가 거짓이 됩니다. 한 쪽이
+         먹는 자리는 <b>첫 조각 윗변에서 끝 조각 아랫변까지</b> — 그러면 사이 여백·
+         여백 겹침이 <b>재어진 그대로</b> 들어옵니다. */
+      var 자리={};
+      units.forEach(function(e,ui){
+        var r=e.getBoundingClientRect();
+        자리[ui]={t:r.top+window.scrollY, b:r.bottom+window.scrollY};
+      });
+      /* 쪽으로 담습니다 */
+      var out=[], 쪽부모=[], cur=머리.slice(), 첫=true, 선부모=[], 시작=null, 옷총=0;
+      units.forEach(function(e,ui){
+        var 새쪽=(e.tagName||'')==='H3', anc=끼움[ui]||[], 옷=0;
+        anc.forEach(function(a){ if(선부모.indexOf(a.el)<0)옷+=a.옷; });
+        var 몸=(시작===null||자리[ui].b<=자리[ui].t)?(자리[ui].b-자리[ui].t):(자리[ui].b-시작);
+        var w=(첫?머리키:쪽머리키)+옷총+옷+몸+14;
+        if(cur.length>(첫?머리.length:0) && (새쪽 || w>바닥)){
+          out.push(cur); 쪽부모.push(선부모);
+          cur=[]; 첫=false; 선부모=[]; 시작=null; 옷총=0;
+          옷=0; anc.forEach(function(a){ 옷+=a.옷; });
+        }
+        /* 숨어 있는 조각(강사 노트 등 키 0)은 <b>시작을 잡지 않습니다</b> —
+           잡으면 시작이 0 이 되어 그 뒤가 전부 절대 좌표로 재어집니다. */
+        if(시작===null&&자리[ui].b>자리[ui].t)시작=자리[ui].t;
+        anc.forEach(function(a){ if(선부모.indexOf(a.el)<0)선부모.push(a.el); });
+        옷총+=옷; cur.push(e);
+      });
+      if(cur.length){ out.push(cur); 쪽부모.push(선부모); }
       var 장=label(sec);
+      /* ★ 이 장에서 <b>쪼개느라 지나온 부모</b> 전부 — show() 가 자식 없는 쪽에서
+           이 부모를 접습니다. 안 접으면 <b>빈 테두리가 쪽마다 70px 을 먹습니다</b>
+           (2026-11-15 · 재어 보고 — 그래서 넘치는 쪽이 42 → 86 으로 늘었습니다). */
+      var 온부모=[];
+      쪽부모.forEach(function(ps){ ps.forEach(function(a){ if(온부모.indexOf(a)<0)온부모.push(a); }); });
+      머리.forEach(function(e){ var pp=e.parentElement;
+        while(pp&&pp!==sec){ if(온부모.indexOf(pp)<0)온부모.push(pp);
+          if(쪽부모[0]&&쪽부모[0].indexOf(pp)<0)쪽부모[0].push(pp); pp=pp.parentElement; } });
       out.forEach(function(els,n){
         var h3=els.filter(function(x){return (x.tagName||'')==='H3';})[0];
         새.push({ s:sec, els:els, k:k, n:n, of:out.length,
+          anc:쪽부모[n]||[], allAnc:온부모,
           t:(n===0?장:(h3?h3.textContent.replace(/\s+/g,' ').trim():장)) });
       });
     });
@@ -3492,7 +3596,10 @@ body.pv section.wrap.pon .pvhead{display:block;font-size:19px;font-weight:800;
      발표에서 나갈 때도 같은 자를 부릅니다. 한쪽만 고치면 책으로 돌아왔을 때
      글이 사라진 채로 남습니다 (6번). */
   function pvClear(){
-    pgs.forEach(function(q){ q.els.forEach(function(e){ e.style.display=''; }); });
+    pgs.forEach(function(q){
+      q.els.forEach(function(e){ e.style.display=''; });
+      (q.allAnc||[]).forEach(function(a){ a.style.display=''; });   /* 접어 둔 부모도 */
+    });
   }
   /* 🗒 이 쪽의 강사 노트를 띠에 올립니다 — 노트는 그 글 옆(.pvnote)에 있습니다 */
   function 노트글(pg){
@@ -3560,6 +3667,11 @@ body.pv section.wrap.pon .pvhead{display:block;font-size:19px;font-weight:800;
       q.els.forEach(function(e){ if(pg.els.indexOf(e)<0)e.style.display='none'; });
     });
     pg.els.forEach(function(e){ e.style.display=''; });
+    /* ★ <b>자식이 하나도 없는 쪽에서는 부모도 접습니다.</b> 안 접으면 빈 테두리가
+         쪽마다 자리를 먹습니다 (2026-11-15 · 재어 보고). */
+    (pg.allAnc||[]).forEach(function(a){
+      a.style.display=((pg.anc||[]).indexOf(a)>=0)?'':'none';
+    });
     /* 📑 둘째 쪽부터 「어느 장인지」 를 작게 다시 말해 줍니다 */
     var hd=cur.querySelector('.pvhead');
     if(pg.n>0){
