@@ -14,6 +14,7 @@
    [5] 서버를 아낀다 — 두 번 불러도 받기는 한 번 · 다음 세션은 이 기기에 둔 목록 + <b>새 줄만</b>(gt) (7번)
    [6] 자비스가 찾는다 — 「팀이 넣은 자료」 갈래에 서고, 🖼 띠에 그 그림이 뜨고, 누르면 그 자료가 열린다
    [7] 칸 — 아카데미 띠에 「📥 자료 넣기」 · 남이 넣은 것엔 지우기 단추 없음 · 폰 폭에서 안 넘침 · 화면 오류 0
+   [8] 사람이 넣는 두 길 — 「눌러 고르기」 · 「끌어다 놓기」 가 정말 넣나 · 같은 그림을 또 고르면 막히나 (판 X450)
 
    돌리기:  node scripts/check-alib.js                                                                 */
 const { chromium } = require('playwright');
@@ -248,6 +249,40 @@ const SEED = (IMG) => {
   is(U.warn, '넣기 전에 「원수사 약관 · 고객 이름은 안 받습니다」 를 먼저 말한다');
   is(U.over <= 0 && U.doc <= 0, '390px 폭에서 옆으로 안 넘친다 (칸 ' + U.over + ' · 문서 ' + U.doc + ')');
   is(outPut.length === 0 && outBefore.length === 0, '넣기 · 자비스 찾기에서 밖으로 나간 부름 0 — 진짜 서버 · AI 를 안 불렀다 (' + outPut.concat(outBefore).join(' ') + ')');
+
+  sec('[8] 사람이 넣는 두 길 — 「눌러 고르기」 · 「끌어다 놓기」 가 정말 넣나 (판 X450)');
+  /* 위 [2]~[4] 는 alibPut 을 <b>바로</b> 불렀습니다. 사람은 그렇게 안 넣습니다 — 파일 고르기 단추와 끌어 놓기로 넣습니다.
+     라이브에서 손으로 넣어 보기 전에는 이 두 길을 재는 자가 한 곳도 없었습니다(8번). 화면이 다시 그려져도(alibPaint)
+     새 칸에 이어 붙는지, 넣은 뒤 칸이 비워져 같은 파일을 또 고를 수 있는지까지 봅니다 */
+  const waitLog = async (n0) => { const t = Date.now(); let L = null;
+    while (Date.now() - t < 15000){ L = await p.evaluate((n0) => ALIB.log.length > n0 && /^(ok|bad)$/.test(ALIB.log[0].st) ? { st: ALIB.log[0].st, msg: ALIB.log[0].msg, name: ALIB.log[0].name } : null, n0); if (L) return L; await p.waitForTimeout(200); }
+    return { st: 'none', msg: '기록이 안 생김 — 넣기가 안 불림' }; };
+  const before = await p.evaluate(() => { /* [6] 에서 AI 를 꺼 두었습니다 — 다시 가짜 AI 로 */ window.aiReady = function(){ return window.__AI.on; }; window.__AI.on = true; window.__AI.out = JSON.stringify({ title:'간병보험의 이해 — 간병인보험', descr:'간병인 지원 일당과 사용 일당의 차이', tags:'간병인, 간병인보험, 일당', pii:false }); return { log: ALIB.log.length, rows: window.__DB.bohum_lib.length, up: window.__CALLS.filter(x => /^upload /.test(x)).length }; });
+  await p.setInputFiles('#alibInp', { name: '간병인보험_이해.jpg', mimeType: 'image/jpeg', buffer: fs.readFileSync(path.join(ROOT, 'app/보험아카데미/img/bk/bk_060.jpg')) });
+  const G1 = await waitLog(before.log);
+  const g1 = await p.evaluate(() => ({ rows: window.__DB.bohum_lib.length, up: window.__CALLS.filter(x => /^upload /.test(x)).length, inp: (document.getElementById('alibInp') || {}).value,
+    shown: /간병보험의 이해 — 간병인보험/.test((document.getElementById('alibList') || {}).textContent || ''), logTxt: (document.querySelector('#alibOvl .alib-log') || {}).textContent || '' }));
+  is(G1.st === 'ok' && g1.rows === before.rows + 1 && g1.up === before.up + 1, '「눌러 고르기」 — 고른 그림이 보관함에 올라가고 표에 한 줄 적힌다 (' + G1.msg + ')');
+  is(g1.shown && /✅/.test(g1.logTxt) && /간병인보험_이해\.jpg/.test(g1.logTxt), '넣은 뒤 칸에 ✅ 와 파일 이름이 서고, 목록에 AI 가 단 제목으로 바로 선다');
+  /* ⚠ 「넣은 뒤 고르기 칸이 비워지나」 는 재지 않습니다 — 넣으면 칸이 다시 그려져(alibPaint) <b>새 빈 칸</b>이 서므로
+     inp.value='' 를 지워도 그대로 통과했습니다(되돌려 확인 · 안 울리는 알람은 알람이 아닙니다 · 8번). 같은 파일을 또 고르는 길은 아래 줄이 봅니다 */
+  const n2 = await p.evaluate(() => ALIB.log.length);
+  await p.setInputFiles('#alibInp', { name: '간병인보험_이해(1).jpg', mimeType: 'image/jpeg', buffer: fs.readFileSync(path.join(ROOT, 'app/보험아카데미/img/bk/bk_060.jpg')) });
+  const G2 = await waitLog(n2);
+  is(G2.st === 'bad' && /이미 있는 자료/.test(G2.msg), '같은 그림을 이름만 바꿔 또 고르면 — 칸에서도 「이미 있는 자료」 로 막힌다 (' + G2.msg.slice(0, 30) + '…)');
+  const n3 = await p.evaluate(() => { window.__AI.out = JSON.stringify({ title:'치매보험의 이해', descr:'CDR 단계별 진단비', tags:'치매, 치매보험', pii:false }); return ALIB.log.length; });
+  await p.evaluate(async () => {
+    const blob = await (await fetch('/app/보험아카데미/img/bk/bk_061.jpg')).blob();
+    const dt = new DataTransfer(); dt.items.add(new File([blob], '치매보험.jpg', { type: 'image/jpeg' }));
+    const dz = document.getElementById('alibDrop');
+    dz.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    dz.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+  });
+  const G3 = await waitLog(n3);
+  const g3 = await p.evaluate(() => ({ on: (document.getElementById('alibDrop') || {}).className || '', shown: /치매보험의 이해/.test((document.getElementById('alibList') || {}).textContent || '') }));
+  is(G3.st === 'ok' && g3.shown, '「끌어다 놓기」 — 놓은 그림이 들어가 목록에 선다 (' + G3.msg + ')');
+  is(!/\bon\b/.test(g3.on), '놓고 나면 칸의 파란 강조(on)가 풀린다');
+
   is(errs.length === 0, '화면 오류 0 (' + errs.slice(0, 2).join(' | ') + ')');
 
   await b.close(); srv.close();
