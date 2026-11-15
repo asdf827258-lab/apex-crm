@@ -67,11 +67,13 @@ var RETRY=[5000,15000,60000];
 /* ── ⛔ 안 올리는 것 ① <b>이 기기 취향</b> — 올리면 오히려 성가십니다 ── */
 var NEVER_EXACT=[
   'apex_kv_meta','apex_kv_reload','apex_user_kv','apex_org_kv',        /* 이 자의 살림 */
+  'apex_vault_v1',      /* 🔐 금고 — 주민번호입니다. 「서버 호출 0번」 (판 X457 · 3번) */
   'apex_last_tab','apex_ck_tab','apex_th_cat','apex_ar_cat',           /* 어느 탭을 보던 중이었나 */
   'apex_mcal_view','apex_org_view','apex_delivery_view','apex_delivery_learnpane',
   'apex_nav_fold','apex_nav_easy_v1','apex_nav_grp_shut_v1',
   'apex_set_fold','apex_set_scroll','apex_set_scroll_arm','apex_set_sec',
   'apex_hm_fold_v1','apex_ck_help','apex_capture_guard',
+  'apex_hm_short_v1',   /* 🗜 홈 짧게 보기 — 보기 취향이라 기기끼리 안 나눕니다 (판 X456) */
   /* 🙈 이름 가리기 — 사장님이 「<b>그 폰에서</b> 가립니다」 라고 못 박으셨습니다 (판 X399) */
   'apex_hm_hidenm',
   'apex_guide_seen_v2','apex_tour_done_v1','apex_intro_guest',
