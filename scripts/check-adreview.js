@@ -162,6 +162,34 @@ async function callWith(statuses) {
   ok(/🆕 새로 막혔습니다/.test(RV.lookBack(prev, F, ['랜딩 기록이 한 줄도 없습니다'])),
     '새로 막힌 것을 새로 막혔다고 안 합니다');
 
+  /* ══ ①-나. 랜딩이 실제로 카톡까지 보내 주나 ════════════════════
+     ⚠️ 2026-11-13 에 손으로 눌러 보고 찾았습니다 — dbcompare 는 창 안의
+       「카카오톡 열기」까지 같은 가로채기에 걸려 창만 쌓이고 카톡이 안 열립니다.
+       11명이 눌렀는데 넘어간 사람 0명이었고 한 달 동안 아무도 몰랐습니다. */
+  const DB = (o) => Object.assign({ key: 'dbcompare', active: 1, code_ui: true, cta: 11, code: 0,
+    httpOk: true, status: 200, kakao_url: 'https://pf.kakao.com/_bMWrX/chat',
+    liveKakao: 'https://pf.kakao.com/_bMWrX/chat' }, o);
+
+  ok(/못 갑니다/.test(RV.landSay([DB({})]).join('')),
+    '★★ 2단 랜딩에서 11명이 눌렀는데 넘어간 사람 0명인 것을 못 봅니다 — 한 달을 몰랐던 자리입니다');
+  ok(/data-code/.test(RV.landSay([DB({})]).join('')), '어디를 고쳐야 하는지 말하지 않습니다');
+  ok(RV.landSay([DB({ code_ui: false })]).length === 0,
+    '★ 2단이 아닌 랜딩까지 고발합니다 — 거기선 code 를 애초에 안 보냅니다 (8번 · 헛것)');
+  ok(RV.landSay([DB({ code: 4 })]).length === 0, '넘어간 사람이 있는데도 못 간다고 합니다');
+  ok(RV.landSay([DB({ cta: 2 })]).length === 0,
+    '★ 두 명 눌렀을 뿐인데 단정합니다 — 적은 수로 단정하지 않습니다 (1번)');
+  ok(RV.landSay([DB({ active: false, code: 0 })]).length === 0, '꺼 둔 랜딩을 고발합니다');
+  ok(/안 열립니다/.test(RV.landSay([DB({ httpOk: false, status: 500, code_ui: false })]).join('')),
+    '랜딩이 죽은 것을 못 봅니다');
+  ok(/실제로 쓰는 주소가 다릅니다/.test(
+      RV.landSay([DB({ code_ui: false, liveKakao: 'https://open.kakao.com/o/zz' })]).join('')),
+    '★ 적힌 카톡 주소와 실제 주소가 다른 것을 못 봅니다 — 다른 방이면 사장님께 안 옵니다');
+  ok(/하나도 못 찾았습니다/.test(
+      RV.landSay([DB({ code_ui: false, liveKakao: null })]).join('')),
+    '랜딩에 카톡 주소가 아예 없는 것을 못 봅니다');
+  ok(RV.landSay([]).length === 0 && RV.landSay(null).length === 0,
+    '랜딩이 없는데 무슨 말을 합니다');
+
   /* ══ ② 문구 초안이 심의 밖으로 안 나가나 ═══════════════════════ */
   const CS = RV.COPY_SYSTEM;
   ok(/요건 충족 시/.test(CS), '★ 비과세에 「요건 충족 시」 를 붙이라고 안 시킵니다 (2번)');
