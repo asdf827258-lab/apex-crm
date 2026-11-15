@@ -35,20 +35,89 @@
 'use strict';
 if(window.APEX_KV) return;
 
-var USER_KEYS=['apex_ac90_v2','apex_master_done','apex_tatrain_v1','apex_rejgym_v1',
-               'apex_mst_done','apex_mst_ans','apex_day_log','apex_day_month',
-               'apex_hm_done','apex_hm_skip_v1','apex_hm_qdone_v1'];
-var USER_PREFIX=['apex_ck_memo_'];
 var ORG_KEYS=['apex_edu_cal_v1'];
 var EM_ROLES=['admin','owner','master','manager','lead','leader','branch_manager','education_manager'];
 var META='apex_kv_meta';            /* {열쇠: 이 기기가 마지막으로 맞춘 서버 시각} — 이 기기 것 */
 var RETRY=[5000,15000,60000];
+/* ══ 🔁 <b>명단을 뒤집었습니다</b> (판 X449 · 2026-11-15) ══════════════════
+   사장님 말씀 2026-11-15 — 「현재 컴퓨터에서 저장하고, 노트북[다른 곳]에서 열면
+   <b>안 보이는 것들이 있어서는 안 되</b>. 전체적으로 모든 내용이 공유 되도록
+   만들자. 반대로 노트북 핸드폰에서 저장해도, 어디서든 공유되어야 돼.
+   "우리 APEX-PRO" <b>모든게</b>」
+
+   ⚠⚠ <b>재어 보고 까닭을 찾았습니다.</b> apex_ 열쇠 <b>169개</b> 중 올라가는 것이
+     <b>13개</b>, 이 기기에만 남는 것이 <b>156개</b>였습니다. 코드가 틀린 것이
+     아니라 <b>꼴</b>이 틀렸습니다 — 여기가 「<b>올릴 것을 하나씩 적어 두는
+     명단</b>」 이라, 2026-11-03 에 적은 열셋이 그대로 열셋인 동안 화면이 수십 개
+     늘었습니다. 명단은 적는 날만 맞고 그 뒤로 날마다 낡습니다.
+   ★★ 그래서 <b>뒤집습니다</b> — 이제 <b>안 올릴 것만</b> 적습니다. 새 화면이
+     늘면 아무도 손대지 않아도 같이 올라갑니다. <b>이 목록이 짧아야 합니다.</b>
+   ★ apex_user_kv 의 서버 규칙은 <b>user_id = auth.uid()</b> 입니다 — <b>본인만</b>
+     봅니다(재어 확인했습니다). 팀도 관리자도 못 봅니다. 사장님 기기끼리 나누는
+     자리이지 팀에 내놓는 자리가 아닙니다.
+   ★★ 그래서 <b>고객 실명도 올라갑니다</b> — 안 올리면 노트북·폰에서 모든 고객이
+     「홍○동」 으로 보여, 사장님이 2026-11-14 에 고치라 하신 그 불편(「* 이렇게
+     가리는게 없도록해. 검색하고 알아보는데 어려움이 커」)이 <b>다른 기기에서
+     되살아납니다.</b> 팀이 보는 자리(clients.name_masked)는 한 글자도 안 바뀌고,
+     나가는 자리(AI · 폰 달력 · 엑셀 · 인쇄)는 <b>여전히 가립니다</b> (3번).
+   ⛔ <b>주민등록번호는 안 올립니다</b> — 사장님 규칙 「서버로 보내지 말 것 ·
+     서버 호출 0번」 입니다. 그 열쇠(apex_cli_rrn_)는 이름으로도 막고 접두사로도
+     막습니다. 그래서 주민번호만은 <b>그 기기에서 다시 적으셔야</b> 합니다 (1번).  */
+
+/* ── ⛔ 안 올리는 것 ① <b>이 기기 취향</b> — 올리면 오히려 성가십니다 ── */
+var NEVER_EXACT=[
+  'apex_kv_meta','apex_kv_reload','apex_user_kv','apex_org_kv',        /* 이 자의 살림 */
+  'apex_last_tab','apex_ck_tab','apex_th_cat','apex_ar_cat',           /* 어느 탭을 보던 중이었나 */
+  'apex_mcal_view','apex_org_view','apex_delivery_view','apex_delivery_learnpane',
+  'apex_nav_fold','apex_nav_easy_v1','apex_nav_grp_shut_v1',
+  'apex_set_fold','apex_set_scroll','apex_set_scroll_arm','apex_set_sec',
+  'apex_hm_fold_v1','apex_ck_help','apex_capture_guard',
+  /* 🙈 이름 가리기 — 사장님이 「<b>그 폰에서</b> 가립니다」 라고 못 박으셨습니다 (판 X399) */
+  'apex_hm_hidenm',
+  'apex_guide_seen_v2','apex_tour_done_v1','apex_intro_guest',
+  /* 💳 결제 설정 — 기기마다 다를 수 있고 잘못 덮이면 <b>돈이 틀립니다</b>. 한 번 더 적으시는
+     값이 잘못 덮이는 것보다 낫습니다 (1번). 열쇠 자체는 아래 낱말 그물이 또 막습니다. */
+  'apex_toss_confirm_url','apex_pay_cfg',
+  /* 📡 <b>이미 제 길로 서버에 올라갑니다</b> — 또 올리면 한 자료가 두 곳이 됩니다 (5번).
+     공지는 OS_NOTICE · 조직도는 ORGS.srv · 사업자는 business_clients 가 임자입니다. */
+  'apex_notice','apex_org_chart','apex_biz'
+];
+var NEVER_PRE=[
+  'apex_cli_rrn_',      /* ⛔ 주민등록번호 — 사장님 규칙 「서버 호출 0번」 */
+  'apex_studio_',       /* 토큰 · 프록시 설정 */
+  'apex_intro_',        /* 처음 안내를 봤나 — 이 기기 */
+  'apex_fold_',         /* 접힘 */
+  'apex_hide_teams_'    /* 숨긴 팀 — 보기 취향 */
+];
+/* ⛔ ② <b>비밀 낌새는 이름만으로도 막습니다</b> — 목록을 하나 빠뜨려도 새어 나가지
+   않게 하는 두 번째 그물입니다. 재어 보니 이 그물에 걸리는 열쇠는 다섯이고
+   (apex_cli_rrn_ · apex_key · apex_personal_key · apex_studio_apptoken ·
+   apex_toss_client_key) 전부 막아야 하는 것입니다 — 헛것이 없습니다 (8번). */
+var NEVER_WORD=/(key|token|secret|rrn|passw|credential)/i;
+/* ── apex_ 이름 밖인데 <b>사장님 일</b>인 것 — 여기는 하나씩 적습니다 ──
+   우리 이름(apex_)을 안 쓰는 화면이 몇 있습니다. 그쪽은 그물이 못 덮으니
+   적어 둡니다. 적은 수와 전체 수를 check-kvall 이 찍어 <b>낡으면 보이게</b> 합니다. */
+var ALSO_EXACT=['ba_agent_v1','wk_v1','utp_bag','s6_profile',
+                'kdCost','kdLife','kdMe','kdNeed','kdReview'];
+var ALSO_PRE=['mikki_'];
+/* 📦 너무 큰 값은 안 올립니다 — 저장할 때마다 서버로 나가면 무료 한도를 먹습니다 (7번).
+   안 올렸으면 <b>안 올렸다고</b> 남깁니다. 조용히 빠뜨리면 사장님이 노트북에서
+   그것만 비어 있는 까닭을 영영 모르십니다 (1번). */
+var MAX_V=512*1024;
+var tooBig={};
 
 function kindOf(k){
   if(!k||typeof k!=='string') return '';
   if(ORG_KEYS.indexOf(k)>=0) return 'org';
-  if(USER_KEYS.indexOf(k)>=0) return 'user';
-  for(var i=0;i<USER_PREFIX.length;i++) if(k.indexOf(USER_PREFIX[i])===0) return 'user';
+  if(NEVER_WORD.test(k)) return '';                       /* 비밀 낌새 — 제일 먼저 막습니다 */
+  var i;
+  if(k.indexOf('apex_')===0){
+    if(NEVER_EXACT.indexOf(k)>=0) return '';
+    for(i=0;i<NEVER_PRE.length;i++) if(k.indexOf(NEVER_PRE[i])===0) return '';
+    return 'user';
+  }
+  if(ALSO_EXACT.indexOf(k)>=0) return 'user';
+  for(i=0;i<ALSO_PRE.length;i++) if(k.indexOf(ALSO_PRE[i])===0) return 'user';
   return '';
 }
 
@@ -105,6 +174,10 @@ function push(k){
   if(!ready){ return; }                         /* 붙으면 dirty 를 한꺼번에 올림 */
   var kind=kindOf(k); if(!kind) return;
   var v=LS.getItem(k); if(v==null) v='';
+  /* 📦 너무 크면 안 올리고 <b>안 올렸다고 남깁니다</b> (1번 · 7번) — 조용히 빠뜨리면
+     사장님이 노트북에서 그것만 비어 있는 까닭을 영영 모르십니다. */
+  if(v.length>MAX_V){ tooBig[k]=v.length; dirty[k]=false; return; }
+  if(tooBig[k]) delete tooBig[k];
   if(!role) role=findRole();
   if(kind==='org' && EM_ROLES.indexOf(role)<0){ dirty[k]=false; return; }   /* 조직 한 벌은 EM 만 고침 */
   var row = kind==='user' ? {user_id:uid,k:k,v:v} : {k:k,v:v,updated_by:who};
@@ -229,5 +302,10 @@ function start(){
 }
 setTimeout(boot,800);
 
-window.APEX_KV={ keys:USER_KEYS.concat(ORG_KEYS), kindOf:kindOf, flush:flush, _t:{ merge:merge, deep:deep, apply:apply } };
+/* 바깥(점검·화면)이 묻는 자리 — <b>묻는 곳은 kindOf 하나</b>입니다 (5번).
+   never 는 자가 「무엇을 막는지」 를 재려고 내주는 것이고, 판정은 kindOf 가 합니다. */
+window.APEX_KV={ kindOf:kindOf, flush:flush, tooBig:tooBig, maxV:MAX_V,
+  never:{ exact:NEVER_EXACT, pre:NEVER_PRE, word:NEVER_WORD },
+  also:{ exact:ALSO_EXACT, pre:ALSO_PRE }, org:ORG_KEYS,
+  _t:{ merge:merge, deep:deep, apply:apply } };
 })();
