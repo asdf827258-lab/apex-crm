@@ -67,6 +67,7 @@ var RETRY=[5000,15000,60000];
 /* ── ⛔ 안 올리는 것 ① <b>이 기기 취향</b> — 올리면 오히려 성가십니다 ── */
 var NEVER_EXACT=[
   'apex_kv_meta','apex_kv_reload','apex_user_kv','apex_org_kv',        /* 이 자의 살림 */
+  'apex_vault_v1',      /* 🔐 금고 — 주민번호입니다. 「서버 호출 0번」 (판 X452 · 3번) */
   'apex_last_tab','apex_ck_tab','apex_th_cat','apex_ar_cat',           /* 어느 탭을 보던 중이었나 */
   'apex_mcal_view','apex_org_view','apex_delivery_view','apex_delivery_learnpane',
   'apex_nav_fold','apex_nav_easy_v1','apex_nav_grp_shut_v1',
