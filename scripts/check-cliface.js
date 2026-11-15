@@ -170,10 +170,21 @@ const SEED=(o)=>`
                   if(!reps)return false;
                   return !!(host.compareDocumentPosition(reps)&Node.DOCUMENT_POSITION_FOLLOWING);
                 })() };
-    if(rows.length){ rows[0].click(); await new Promise(r=>setTimeout(r,60)); }
-    const ovl=[].slice.call(document.querySelectorAll('div')).filter(e=>/전·후/.test(e.textContent)&&e.style.position==='fixed');
-    out.opened=ovl.length>0;
-    if(ovl.length)ovl[0].remove();
+    /* ⚠⚠ <b>2026-11-15 (판 X458) — 재는 법을 고쳤습니다. 약속은 그대로입니다.</b>
+       여기는 「눌렀더니 <b>그 자리에서</b> 열린다」 를 <b>글 창(markdown)이 떴는가</b>로
+       재고 있었습니다. 그런데 전·후 자료에는 <b>글이 없습니다</b> — 화면으로 담깁니다.
+       그래서 그 글 창은 늘 <b>(내용 없음)</b> 이었고, 사장님이 「보장분석 전후에서
+       어디서든 공유가 안되잖아」 라고 하신 자리가 바로 이것입니다.
+       이제 줄을 누르면 <b>보장 전·후 만들기 화면</b>이 뜹니다 — 그런데 그것도
+       <b>덮개</b>(#baScreen · position:fixed)라 <b>고객 창을 떠나지 않습니다.</b>
+       약속(화면을 옮겨 다니지 않는다)은 그대로이고, <b>무엇을 보는지만</b> 고쳤습니다.
+       ★ 그래서 <b>둘 다</b> 봅니다 — 전·후 화면이 떴는가 · 고객 창이 밑에 그대로인가.
+         하나만 보면 「떠나 버렸는데 떴으니 됐다」 가 됩니다 (8번).            */
+    if(rows.length){ rows[0].click(); await new Promise(r=>setTimeout(r,160)); }
+    const sc=document.getElementById('baScreen');
+    out.opened=!!(sc&&sc.classList.contains('on'));
+    out.stays=!!document.getElementById('oscBaHost');
+    if(sc)sc.classList.remove('on');
     return out;
   },SEED({}));
   is(B.has, '<b>「🔄 보장분석 전·후」</b> 칸이 선다');
@@ -181,7 +192,8 @@ const SEED=(o)=>`
   is(B.titles.join(' · ')==='홍○동 님 비포&애프터 · 두 번째 전·후',
      '<b>최근 것부터</b> 선다 — '+B.titles.join(' · '));
   is(B.above, '<b>저장된 자료 칸보다 위</b>에 있다 — 제일 많이 여는 것이 제일 위다');
-  is(B.opened, '<b>눌렀더니 그 자리에서 열린다</b> — 화면을 옮겨 다니지 않는다');
+  is(B.opened, '<b>눌렀더니 전·후 화면이 열린다</b> — 글 창이 아니라 그 화면입니다 (판 X458)');
+  is(B.stays, '  ★ <b>고객 창은 밑에 그대로</b>다 — 덮개로 뜨므로 화면을 옮겨 다니지 않는다');
 
   console.log('\n[5] <b>지어내지 않는다</b> (1번)');
   const N=await page.evaluate(async(seed)=>{
