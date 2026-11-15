@@ -13907,6 +13907,17 @@ function dbpHtml(){
    읽은 기록이 없으면 말을 만들지 않고 「아직 증권을 안 읽었습니다」 라고
    적고 보장분석으로 모십니다. 이 줄이 이 화면에서 제일 중요합니다.       */
 var CHK_KIND='ba_state';
+/* ★★ <b>꺼낼 때 보는 갈래 — 묻는 곳은 여기 하나입니다</b> (판 X458 · 5번).
+   ⚠⚠ 2026-11-15 사장님 말씀 「보장분석 전후에서 <b>어디서든 공유가 안되잖아</b>」.
+     재어 보니 <b>공유가 안 된 것이 아니었습니다</b> — 자료는 서버에 있었고
+     baHello 가 읽어 내려 주고 있었습니다. 깨진 것은 <b>갈래 이름을 묻는 곳이
+     넷으로 갈린 것</b>이었습니다: 담는 쪽(baSave)과 읽는 쪽(baHello)은
+     'ba_state' 인데, 고객 창의 전·후 칸(oscBaRows)과 서류 목록 이름표는
+     <b>'baba'</b> 를 찾고 있었습니다. 그래서 전·후 칸이 <b>「아직 없습니다」</b> 라고
+     적었습니다 — <b>있는데 없다고 말한 것</b>입니다 (1번).
+   ★ 옛 'baba' 줄도 함께 봅니다 — 예전에 만들어 두신 자료를 못 보게 하지
+     않습니다 (6번). 지키는 자는 check-bakind 입니다.                     */
+var BA_KINDS=[CHK_KIND,'baba'];
 /* ⑩ 재무설계(달러·연금)도 <b>같은 표</b>에 담깁니다 — 계산기의 💾 가
    saved_reports(kind='finance') 로 넣어 둔 그것입니다. 새 표를 안 만듭니다 (5번).
    ★ <b>서버를 한 번 더 안 부릅니다</b> (7번) — 이미 도는 물음에 kind 둘을
@@ -21909,7 +21920,7 @@ function baHello(){
   }
   var sb=(typeof osClient==='function')?osClient():null;
   if(!sb||!BA.cid){ send(null); return; }
-  sb.from('saved_reports').select('id,content').eq('kind','ba_state').eq('client_id',BA.cid)
+  sb.from('saved_reports').select('id,content').eq('kind',CHK_KIND).eq('client_id',BA.cid)
     .order('created_at',{ascending:false}).limit(1).then(function(r){
       var row=(r&&r.data&&r.data[0])||null;
       BA.rid=row?row.id:null;
@@ -21951,7 +21962,7 @@ function baSave(d){
     /* 제목도 <b>가린 이름</b>으로 새로 짓는다 — 화면 제목을 그대로 쓰지 않는다 */
     var title=(masked||'고객')+' 보장 전·후 ('+(new Date()).toISOString().slice(0,10)+')';
     if(typeof osRepMask==='function')title=osRepMask({t:title},cid,nm).t;
-    var row={advisor_id:OS.session.user.id,client_id:cid,kind:'ba_state',title:title,content:content};
+    var row={advisor_id:OS.session.user.id,client_id:cid,kind:CHK_KIND,title:title,content:content};
     var q=BA.rid
       ? sb.from('saved_reports').update({title:title,content:content}).eq('id',BA.rid)
       : sb.from('saved_reports').insert(row).select('id');
@@ -22199,8 +22210,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-15 17:40';
-var APP_BUILD_NOTE='🔐 <b>금고 · 📐 발표 · 🎨 색 — 여섯 판이 함께 나갑니다</b>(판 X451 · X453 · X454 · X455 · X456 · X457 · 사장님 말씀 2026-11-15 「안 끝낸 10개 뭔지 <b>다하고</b> 리스트 띄우고」). ◾ 🔐 <b>금고</b>(판 X457 · 말씀 X161 의 마지막 판) — 주민번호가 여태 브라우저에 <b>날글자</b>로 있었습니다. 「잠깐 보기」 는 화면만 가릴 뿐이라 개발자 도구를 열면 <b>모든 고객의 번호가 한 번에</b> 보였습니다. 고객 창 ▸ 정보 ▸ 🔒 주민등록번호 칸 맨 위 <b>보라 카드</b>에서 비밀번호를 정하시면 알아볼 수 없는 글자로 바뀝니다. <b>복구 코드</b>를 한 번 보여 드리니 종이에 적어 두십시오. 10분 뒤 저절로 잠깁니다. ⚠ 금고는 <b>이 기기에만</b> 섭니다 — 서버로도 백업으로도 안 갑니다(사장님 규칙 「주민번호는 서버 호출 0번」). ◾ 📐 <b>발표</b>(판 X451) — 두 화면짜리 쪽이 사라졌습니다. 제일 심한 쪽 <b>+1,508 → +212px</b>, 한 화면에 드는 쪽 86% → <b>89%</b>. 글은 한 자도 안 없앴습니다. ◾ 🎨 <b>색</b>(판 X453 · X455) — 손으로 박아 둔 색 <b>142 → 83가지</b>를 이름으로 모았습니다. 광고심의 색(--t-seal)은 한 곳도 안 건드렸습니다. ◾ 🗜 <b>홈 짧게 보기</b>(판 X456) — 맨 위 띠의 🗜 를 누르면 홈이 다섯 걸음과 「지금 할 것」 만 남습니다(2,925 → 1,129px). 한 번 더 누르면 그대로 돌아옵니다. ◾ ★ <b>같이 실려 나가는 다른 판</b> — 🧪 「자료 넣기」 점검(판 X450)과 🔍 광고 랜딩 저녁 점검(판 X452)도 이미 라이브에 들어 있습니다. <b>제 번호 둘을 X456 · X457 로 밀었습니다</b>(같은 날 두 세션이 같은 번호를 썼습니다 · 11번 ③).';
+var APP_BUILD='2026-11-15 19:05';
+var APP_BUILD_NOTE='🔄 <b>보장분석 전·후가 고객 창에서 「없습니다」 라고 하던 것을 고쳤습니다</b>(판 X458 · 사장님 말씀 2026-11-15 「보장분석 전후에서 <b>어디서든 공유가 안되잖아</b>」). ◾ ★★ <b>공유가 안 된 것이 아니었습니다</b> — 자료는 처음부터 <b>서버에</b> 있었습니다. 깨진 것은 <b>갈래 이름을 묻는 곳이 넷으로 갈린 것</b>이었습니다: 담는 쪽과 읽는 쪽은 <b>ba_state</b> 인데, 고객 창의 전·후 칸과 서류 목록은 <b>baba</b> 를 찾고 있었습니다. ◾ 그래서 「🔄 보장분석 전·후」 칸이 <b>「아직 없습니다」</b> 라고 적었고, 서류 탭에는 날 이름 <b>📄 ba_state</b> 로 뜨고 「보기」 를 누르면 <b>(내용 없음)</b> 이었습니다 — <b>있는 것을 없다고 말한 자리</b>입니다. ◾ ★ 이제 <b>묻는 곳이 하나</b>입니다 — 갈래도, 사람 말 이름도, 여는 문도. 고객 창 전·후 칸에 그 줄이 서고, 서류 목록에는 <b>「🔄 보장분석 전·후」 · 「전·후 열기」</b> 로 섭니다. 누르면 <b>보장 전·후 만들기 화면</b>이 열리고 그 화면이 서버에서 그 고객 자료를 스스로 읽어 옵니다 — <b>어느 기기에서나</b>. ◾ ★ <b>옛 baba 줄도 그대로 보입니다</b> — 예전에 만들어 두신 자료를 못 보게 하지 않습니다. ◾ ★ 글이 없는 자료에 「(내용 없음)」 이라고만 적지 않습니다 — <b>무엇을 눌러야 하는지</b> 말합니다. ◾ 지키는 자는 <b>check-bakind</b> — 되돌림 넷이 다 웁니다.';
 
 
 
@@ -73607,14 +73618,37 @@ function osRepListLoad(){var sb=osClient(),host=$('oscReps');if(!sb||!OSC.curren
     try{oscBaPaint();}catch(e1){}
     CUS.repN=OSC.reps.length;if(typeof cusPaint==='function')cusPaint();
     if(!OSC.reps.length){host.innerHTML='<div class="osc-empty">아직 저장된 자료가 없습니다. AI 보장분석·비포&애프터 결과의 <b>💾 고객 365일 저장</b>, 재무설계 계산기의 <b>💾</b> 버튼으로 저장하세요.</div>';return;}
-    var lbl={bojang:'📑 AI 보장분석',baba:'🔄 비포&애프터',finance:'📊 재무설계',consult:'🎯 컨설팅',fact_find:'📝 상담카드'};
-    host.innerHTML=OSC.reps.map(function(x,i){var k=lbl[x.kind]||('📄 '+(x.kind||'자료'));
-      var act=(x.kind==='finance')?'<button class="btn btn-primary" style="padding:5px 10px;font-size:var(--t6)" onclick="osFinOpen('+i+')">계산기로 열기</button>':'<button class="btn btn-ghost" style="padding:5px 10px;font-size:var(--t6)" onclick="osRepView('+i+')">보기</button>';
+    /* 이름도 문도 <b>묻는 곳 하나</b>를 부릅니다 (판 X458 · 5번) */
+    host.innerHTML=OSC.reps.map(function(x,i){var k=osRepKindName(x.kind);
+      var act=osRepOpenHtml(x,i);
       return '<div style="display:flex;align-items:center;gap:10px;border:1px solid var(--t-line-2);border-radius:11px;padding:10px 12px;margin:6px 0;flex-wrap:wrap"><div style="flex:1;min-width:180px"><div style="font-size:var(--t6);font-weight:800;color:var(--t-ink)">'+k+' · '+osEsc(x.title||'')+'</div><div style="font-size:var(--t6);color:var(--t-sub2);margin-top:2px">'+osEsc((''+(x.created_at||'')).slice(0,16).replace('T',' '))+'</div></div>'+act+'<button class="btn btn-ghost" style="padding:5px 9px;font-size:var(--t6)" onclick="osRepDel('+i+')">삭제</button></div>';
     }).join('');
   });
 }
-function osRepView(i){var x=OSC.reps&&OSC.reps[i];if(!x)return;var md=(x.content&&x.content.md)||'(내용 없음)';
+/* ── 📛 <b>이 갈래를 사람 말로 뭐라 하나 — 묻는 곳은 하나입니다</b> (판 X458 · 5번)
+   ⚠ 여기가 둘이면 한쪽만 고쳐집니다. 실제로 그랬습니다 — 목록 이름표는 'baba' 만
+     알고 담는 쪽은 'ba_state' 라, 서류 탭에 날 이름 <b>📄 ba_state</b> 가 떴습니다.
+   ★ <b>모르는 갈래는 그대로 적습니다</b> — 지어내지 않습니다 (1번).            */
+var OS_REP_NAME={bojang:'📑 AI 보장분석',baba:'🔄 보장분석 전·후',
+                 finance:'📊 재무설계',consult:'🎯 컨설팅',fact_find:'📝 상담카드'};
+try{ OS_REP_NAME[CHK_KIND]='🔄 보장분석 전·후'; }catch(eRK){}
+function osRepKindName(k){ return OS_REP_NAME[k]||('📄 '+(k||'자료')); }
+/* ── 🚪 <b>어느 갈래를 어느 문으로 여는가</b> — 표 하나 (5번) ─────────── */
+function osRepOpenHtml(x,i){
+  var st='padding:5px 10px;font-size:var(--t6)';
+  if(x.kind==='finance')
+    return '<button class="btn btn-primary" style="'+st+'" onclick="osFinOpen('+i+')">계산기로 열기</button>';
+  if(typeof BA_KINDS!=='undefined'&&BA_KINDS.indexOf(x.kind)>=0)
+    return '<button class="btn btn-primary" style="'+st+'" onclick="oscBaGo()">전·후 열기</button>';
+  return '<button class="btn btn-ghost" style="'+st+'" onclick="osRepView('+i+')">보기</button>';
+}
+function osRepView(i){var x=OSC.reps&&OSC.reps[i];if(!x)return;
+  /* ★ <b>글이 없는 자료가 있습니다</b> — 전·후처럼 <b>화면</b>으로 담긴 것입니다.
+       「(내용 없음)」 이라고만 적으면 사장님은 <b>자료를 잃은 줄</b> 아십니다 (1번). */
+  var md=(x.content&&x.content.md)||'';
+  if(!md)md='이 자료에는 **글로 담긴 내용이 없습니다.**\n\n'+
+    '없어진 것이 아닙니다 — 만든 **화면에서 열어야** 보이는 자료입니다. '+
+    '목록의 **열기** 단추를 눌러 주십시오.';
   var ovl=document.createElement('div');ovl.style.cssText='position:fixed;inset:0;z-index:5200;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:20px';
   ovl.innerHTML='<div style="background:#fff;border-radius:16px;max-width:780px;width:100%;max-height:86vh;display:flex;flex-direction:column;overflow:hidden"><div style="padding:13px 18px;border-bottom:1px solid var(--t-line-2);display:flex;justify-content:space-between;align-items:center"><b style="color:var(--t-ink)">'+osEsc(x.title||'상담 자료')+'</b><button class="btn btn-ghost" style="padding:4px 10px" id="osRepVX">닫기</button></div><div style="overflow-y:auto;padding:18px 22px">'+renderMd(md)+'</div></div>';
   document.body.appendChild(ovl);
@@ -79790,7 +79824,9 @@ function oscTopEdit(){
    없으면 <b>없다고 적고</b> 만들러 가는 길을 보여 줍니다 — 지어내지 않습니다. */
 function oscBaRows(){
   var L=(typeof OSC!=='undefined'&&OSC.reps)||[],out=[],i;
-  for(i=0;i<L.length;i++)if(L[i].kind==='baba')out.push({i:i,x:L[i]});
+  /* ★ 갈래는 <b>대장(BA_KINDS)에게 묻습니다</b> — 여기 글자를 적어 두면
+       담는 쪽이 바뀔 때 이 줄만 낡습니다 (판 X458 · 5번). */
+  for(i=0;i<L.length;i++)if(BA_KINDS.indexOf(L[i].kind)>=0)out.push({i:i,x:L[i]});
   return out;
 }
 function oscBaHtml(){
@@ -79807,11 +79843,15 @@ function oscBaHtml(){
       '</div>';
   h+='<div class="t-big">눌러서 바로 보십니다<small>저장해 두신 전·후 자료입니다.</small></div>';
   for(i=0;i<R.length;i++)
-    h+='<button type="button" class="t-row" onclick="osRepView('+R[i].i+')">'+
+    /* ★★ <b>글 창(osRepView)으로 보내지 않습니다</b> — 전·후는 글이 아니라
+         <b>화면</b>으로 담겨 있어 그 창이 「(내용 없음)」 이었습니다(판 X458).
+         여는 문은 <b>oscBaGo 하나</b>입니다 — 그 화면이 baHello 로 이 고객의
+         서버 줄을 스스로 읽어 옵니다 (5번 · 새 길을 안 만듭니다). */
+    h+='<button type="button" class="t-row" onclick="oscBaGo()">'+
        '<span class="av">🔄</span>'+
        '<div class="m"><b>'+osEsc(R[i].x.title||'비포&애프터')+'</b>'+
        '<span>'+osEsc(osFmtDate(R[i].x.created_at))+'</span></div>'+
-       '<div class="r"><span class="t-tag b">펴 보기</span></div></button>';
+       '<div class="r"><span class="t-tag b">열기</span></div></button>';
   h+='<button type="button" class="t-btn g sm" style="margin-top:14px" onclick="oscBaGo()">보장분석 전&후 만들기</button>';
   return h+'</div>';
 }
