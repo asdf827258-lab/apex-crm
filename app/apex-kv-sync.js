@@ -72,6 +72,7 @@ var NEVER_EXACT=[
   'apex_nav_fold','apex_nav_easy_v1','apex_nav_grp_shut_v1',
   'apex_set_fold','apex_set_scroll','apex_set_scroll_arm','apex_set_sec',
   'apex_hm_fold_v1','apex_ck_help','apex_capture_guard',
+  'apex_hm_short_v1',   /* 🗜 홈 짧게 보기 — 보기 취향이라 기기끼리 안 나눕니다 (판 X450) */
   /* 🙈 이름 가리기 — 사장님이 「<b>그 폰에서</b> 가립니다」 라고 못 박으셨습니다 (판 X399) */
   'apex_hm_hidenm',
   'apex_guide_seen_v2','apex_tour_done_v1','apex_intro_guest',
