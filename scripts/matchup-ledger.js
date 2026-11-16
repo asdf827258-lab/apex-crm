@@ -116,9 +116,10 @@ let 판 = '';
 try { 판 = (/var APP_BUILD\s*=\s*'([^']+)'/.exec(
   fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8').slice(0, 2500000)) || [])[1] || ''; } catch (e) {}
 
+const 칼 = '<colgroup><col class="c1"><col class="c2"><col><col class="c4"></colgroup>';
 const 뱃 = r => {
   const j = r.잼.판정;
-  if (r.상태 !== '됨') return '<i class="b w">' + esc(r.상태) + '</i>';
+  if (r.상태 !== '됨') return '<i class="b half">' + esc(r.상태) + '</i>';
   if (j === '자가운다')  return '<i class="b x">됨이라는데 자가 운다</i>';
   if (j === '잴자없음')  return '<i class="b x">재는 자 없음</i>';
   if (j === '손으로')    return '<i class="b h">됨 · 손으로 봄</i>';
@@ -135,14 +136,15 @@ h1{font-size:27px;margin:0 0 6px} .sub{color:#6B7684;font-size:14px;margin:0 0 1
 .big div{flex:1;min-width:150px;background:#fff;border:1px solid #E5E8EB;border-radius:14px;padding:14px 16px}
 .big b{display:block;font-size:30px;line-height:1.1} .big span{color:#6B7684;font-size:13px}
 .ok b{color:#1763E6} .bad b{color:#E03131} .mid b{color:#C2810B}
-table{width:100%;border-collapse:collapse;font-size:13.5px} th,td{text-align:left;padding:7px 9px;border-bottom:1px solid #EEF1F4;vertical-align:top}
+table{width:100%;border-collapse:collapse;font-size:13.5px;table-layout:fixed} th,td{text-align:left;padding:7px 9px;border-bottom:1px solid #EEF1F4;vertical-align:top;word-break:break-word}
+col.c1{width:66px} col.c2{width:96px} col.c4{width:176px}
 th{color:#6B7684;font-weight:700;font-size:12.5px;background:#FAFBFC}
 td.no{white-space:nowrap;font-weight:800;color:#1763E6;width:62px}
 td.dt{white-space:nowrap;color:#8B95A1;width:94px;font-size:12px}
 td.st{white-space:nowrap;width:168px}
 .b{font-style:normal;display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:800}
 .b.o{background:#E8F3FF;color:#1763E6} .b.x{background:#FFE9E9;color:#E03131}
-.b.w{background:#FFF4E0;color:#B45309} .b.h{background:#EEF1F4;color:#4E5968} .b.n{background:#F5F6F7;color:#8B95A1}
+.b.half{background:#FFF4E0;color:#B45309} .b.h{background:#EEF1F4;color:#4E5968} .b.n{background:#F5F6F7;color:#8B95A1}
 .q{font-weight:600;line-height:1.5}
 .say{background:#F7F9FC;border-left:3px solid #1763E6;padding:10px 12px;border-radius:0 8px 8px 0;margin:6px 0 0;font-size:13px;line-height:1.6;color:#333D4B}
 h2{font-size:17px;margin:22px 0 10px} .foot{color:#8B95A1;font-size:12px;margin-top:18px;line-height:1.7}
@@ -168,7 +170,7 @@ function 요약쪽() {
   </div>`;
   h += `<div class="card"><b>읽는 법</b> — 「됨」 이라고 적힌 줄도 <b>그 재는 자를 실제로 돌려</b> 다시 물었습니다. 자가 울면 그 「됨」 은 거짓입니다. 「손으로 봄」 은 기계가 못 재서 사람이 눈으로 본 줄입니다 — 숨기지 않고 그대로 적습니다.</div>`;
 
-  h += '<h2>⚠ 아직 안 끝난 ' + 안끝.length + '줄 — 사장님께 드리는 그대로</h2><div class="card"><table><tr><th>번호</th><th>날짜</th><th>사장님 말씀</th><th>상태</th></tr>';
+  h += '<h2>⚠ 아직 안 끝난 ' + 안끝.length + '줄 — 사장님께 드리는 그대로</h2><div class="card"><table>' + 칼 + '<tr><th>번호</th><th>날짜</th><th>사장님 말씀</th><th>상태</th></tr>';
   안끝.forEach(r => {
     const 왜 = (r.메모.match(/⛔\[아직:[^\]]*\]\s*([^⚠★]{0,220})/) || [])[1] || '';
     h += `<tr><td class="no">${esc(r.번호)}</td><td class="dt">${esc(r.날짜)}</td>
@@ -187,7 +189,7 @@ function 요약쪽() {
 
 function 목록쪽(목, i, n) {
   let h = 머리('말씀 하나씩 — ' + (i + 1) + ' / ' + n, 목[0].번호 + ' … ' + 목[목.length - 1].번호);
-  h += '<div class="card"><table><tr><th>번호</th><th>날짜</th><th>사장님 말씀</th><th>지금</th></tr>';
+  h += '<div class="card"><table>' + 칼 + '<tr><th>번호</th><th>날짜</th><th>사장님 말씀</th><th>지금</th></tr>';
   목.forEach(r => {
     h += `<tr><td class="no">${esc(r.번호)}</td><td class="dt">${esc(r.날짜)}</td>
       <td class="q">${esc(r.말씀.slice(0, 190))}</td><td class="st">${뱃(r)}</td></tr>`;
