@@ -85,12 +85,22 @@ const 홈 = [
                값:(b?('단추 있음 — '+(b.textContent||'').trim().slice(0,18)):'단추 없음')+
                   ' · 함수 '+(typeof hmTourOpen==='function'?'있음':'없음') }; } },
 
+  /* ⚠⚠ <b>2026-11-16 (판 X462) — 이 자리를 고쳤습니다.</b> 여태 「화면 글에 「이번 주」
+       라는 말이 있나」 만 물었습니다. 그 말은 <b>접힌 머리글에도 적혀 있어</b> 늘 초록이었고,
+       실제로는 ② 를 눌러도 캘린더가 <b>한 번도 안 펴졌습니다</b>. 글자를 세는 자는
+       자가 아닙니다 — <b>눌러 보고</b> 묻습니다 (8번). */
   { 번호:'오늘③', 말씀:'오늘에서 캘린더를 쉽게',
-    원한것:'📆 이번 주 칸이 홈에 서고 ＋일정으로 그 자리에서 넣는다',
+    원한것:'② 만남을 누르면 📆 이번 주가 그 자리에서 펴지고 달력이 그려진다',
     자리:'#hmWkHost',
-    재기:() => { const e=document.getElementById('hmWkHost'); if(!e) return null;
-      const T=(document.getElementById('dynPane')||{}).innerText||'';
-      return { ok:/이번 주/.test(T), 값:'칸 있음 · 「이번 주」 '+((T.match(/이번 주/g)||[]).length)+'곳' }; } },
+    재기:async () => { const k='hmFold_stk_week';
+      const g0=document.getElementById(k); if(g0&&g0.classList.contains('on'))hmFoldToggle('stk_week');
+      await new Promise(r=>setTimeout(r,200));
+      const 칩=document.querySelectorAll('#hmTodayHd .hm-way-c')[1]; if(!칩) return null;
+      칩.click(); await new Promise(r=>setTimeout(r,900));
+      const g=document.getElementById(k), wk=document.getElementById('hmWkHost');
+      const 키=wk?Math.round(wk.getBoundingClientRect().height):-1;
+      return { ok:!!(g&&g.classList.contains('on'))&&키>60,
+               값:'② 를 눌렀더니 '+((g&&g.classList.contains('on'))?'펴짐':'안 펴짐')+' · 달력 키 '+키+'px' }; } },
 
   { 번호:'오늘④', 말씀:'아침 미션 — 위로 · TA 대본 · 며칠째 경고',
     원한것:'🌅 아침 미션이 「지금 할 것」 위에 서고, 며칠째인지 말해 준다',
