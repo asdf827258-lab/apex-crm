@@ -92,6 +92,44 @@ const sec = (t) => console.log('\n' + t);
   is(!!P.지금 && P.지금.위 + P.지금.키 <= P.보임,
      '  ★ 「지금 할 것」 을 <b>첫 화면 밖으로 밀지 않았다</b> — 끝 y' +
      (P.지금 ? P.지금.위 + P.지금.키 : -1) + ' (판 X187 사장님 말씀 「지금할것을 맨위로」)');
+  /* ══ 📏 <b>걸 분이 있는 날에도 재어 봅니다</b> (판 X462 · 2026-11-16) ═════════
+     ⚠⚠ <b>여기까지의 수는 자료가 하나도 없는 화면에서 잰 것입니다.</b> 위의 seed 는
+       AR.db 도 OSC.list 도 안 세웁니다 — 그러면 「지금 할 것」 이 빈 꼴로 서서
+       <b>340px</b> 밖에 안 됩니다. 사장님 화면은 <b>늘 걸 분이 한 분 이상</b>이라,
+       실제로는 630px 로 서고 아랫변이 첫 화면 밖입니다.
+     ★★ 그래서 2026-11-16 까지 위의 「첫 화면 밖으로 밀지 않았다」 는 <b>사장님께
+       한 번도 일어나지 않는 상태에서만</b> 초록이었습니다 — <b>헛초록</b>입니다.
+       「안 울리는 알람은 알람이 아니다」(8번). 사장님 말씀 「<b>오늘 부분이 하나도
+       안되어있는데</b>」 를 재다가 찾았습니다.
+     ★ 고치는 법은 <b>자를 무르게 하는 것이 아니라 또렷하게</b> 하는 것입니다 —
+       걸 분을 넣고 재어, 그 수를 <b>내려가기만 하는 눈금</b>으로 묶습니다 (0-1번).
+       지금은 첫 화면(755px)에 안 듭니다. 그것을 <b>숨기지 않고 수로 적습니다</b>(1번). */
+  const JOB_END_MAX = 1200;   /* ⬇ 내려가기만 합니다 — 줄이면 이 수도 같이 내리십시오 (0-1번) */
+  await page.evaluate(() => {
+    /* 걸 분 둘 — 사장님 화면에 가깝게. 견본 이름은 「홍길동」 입니다 (3번) */
+    try {
+      AR.loaded = true; AR.busy = ''; AR.cliRows = [];
+      AR.db = [{ id:'d0', who:'me', name:'홍길동', region:'순천', src:'일반', stage:'TA', days:3, n:1, res:'' },
+               { id:'d1', who:'me', name:'홍길순', region:'광주', src:'소개', stage:'AP', days:9, n:1, res:'' }];
+      go('home');
+    } catch (e) {}
+  });
+  await page.waitForTimeout(1200);
+  const J = await page.evaluate(() => {
+    const pane = document.getElementById('dynPane');
+    const top = pane ? pane.getBoundingClientRect().top : 0;
+    const w = document.getElementById('hmJobHost');
+    return { 끝: w ? Math.round(w.getBoundingClientRect().bottom - top) : -1,
+             보임: Math.round(window.innerHeight - top),
+             분: (typeof AR !== 'undefined' && AR.db) ? AR.db.length : -1 };
+  });
+  sec('[1-2] 📏 <b>걸 분이 있는 날</b> — 헛초록을 없앤 자리 (판 X462)');
+  is(J.분 >= 1, '  견본에 <b>걸 분이 있다</b> — 없는 날에만 초록인 자는 알람이 아닙니다 (8번)');
+  is(J.끝 > 0 && J.끝 <= JOB_END_MAX,
+     '  ★★ 「지금 할 것」 아랫변이 <b>눈금 안</b>이다 — ' + J.끝 + 'px / 눈금 ' + JOB_END_MAX + 'px');
+  is(J.끝 > J.보임,
+     '  ⚠ <b>첫 화면(' + J.보임 + 'px)에는 아직 안 듭니다 — ' + J.끝 + 'px.</b> 이 줄이 ✗ 가 되는 날은 ' +
+     '<b>들었다</b>는 뜻이니, 그때 위 눈금을 ' + J.보임 + ' 로 내리고 이 줄을 지우십시오 (1번·0-1번)');
   /* ★ 짓는 자는 하나인가 — 두 곳에서 세우면 홈에 미션이 둘 섭니다 (5번) */
   is((SRC.match(/hmMsFoldHtml\(\)/g) || []).length === 2,
      '  ★ 짓는 자(hmMsFoldHtml)를 <b>한 곳에서만</b> 세운다 (5번)');
