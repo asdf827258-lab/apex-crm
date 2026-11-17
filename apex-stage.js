@@ -1955,15 +1955,15 @@ function taSayBase(k){
   return (TA_ANY.k===k)?taOpen(TA_ANY,''):null;
 }
 /* ☎️ <b>말은 TA 스크립트 대본 틀로</b> (판 X469 · 사장님 말씀 2026-11-17 「첫마디가 너무 허접해 - TA스크립트해서 가져와야만해」)
-   글 틀은 ta-open.js 한 곳(TA_OPEN) — ☎️ TA 스크립트가 그리는 ① 출처 · ② 자기소개 · 세 가지 · 양자택일 그대로입니다 (5번).
+   글 틀은 ta-open.js 한 곳(TA_OPENER) — ☎️ TA 스크립트가 그리는 ① 출처 · ② 자기소개 · 세 가지 · 양자택일 그대로입니다 (5번).
    ★ 원래 짧은 말(TA_SRC.say)은 <b>남겨 둡니다</b> — 틀을 못 실은 화면(거절 근육 훈련 등)과 소개·개척(대본에 없는 갈래)이 씁니다.
    ★ 이름은 <b>둘 다 안 넣습니다</b> — 고객은 「고객님」(3번), 설계사 이름 줄(② 자기소개 첫 문장)도 뺍니다.
      홈과 DB 통합 CRM 이 이름을 아는 길이 달라(OS.profile · profile) 같은 분께 <b>다른 글</b>이 섰습니다(check-touch 가 잡음 · 5번).
    ★ 사장님이 고치신 말(✏️ TA_OVR)은 이 위에 그대로 덮입니다 — 고치신 것이 이깁니다. */
 var TA_OPEN_SKIP={'소개':1,'개척':1};
 function taOpen(b,v){
-  if(!b||TA_OPEN_SKIP[b.k]||!g.TA_OPEN||!g.TA_OPEN.say)return b;
-  var s=''; try{ s=g.TA_OPEN.say(v,{}); }catch(e1){ s=''; }
+  if(!b||TA_OPEN_SKIP[b.k]||!g.TA_OPENER||!g.TA_OPENER.say)return b;
+  var s=''; try{ s=g.TA_OPENER.say(v,{}); }catch(e1){ s=''; }
   if(!s)return b;
   return {k:b.k, re:b.re, t:b.t, say:s, tip:b.tip, ta:true};
 }
