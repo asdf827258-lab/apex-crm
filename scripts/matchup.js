@@ -120,6 +120,43 @@ const 홈 = [
       const 가린=(T.match(/[가-힣]\*[가-힣]?/g)||[]).length;
       return { ok:!!b && 가린===0, 값:(b?'🙈 단추 있음':'🙈 단추 없음')+' · 홈에 가린 이름 '+가린+'곳' }; } },
 
+  /* 📒 판 X463 — 눌러도 아무 일이 없던 자리 */
+  { 번호:'X463', 말씀:'(오늘 부분이 하나도 안되어있는데 — 전수로 눌러 보고 찾은 것)',
+    원한것:'📒 이번 달을 누르면 이번 달 셈이 그 자리에서 선다',
+    자리:'#hmBand',
+    재기:async () => {
+      try{ const g=document.getElementById('hmFold_ms');
+           if(g&&g.classList.contains('on'))hmFoldToggle('ms'); }catch(e){}
+      try{ if(typeof HM_MSEV!=='undefined'&&HM_MSEV.open)hmMsEvToggle(); }catch(e){}
+      await new Promise(r=>setTimeout(r,250));
+      const 재=()=>{ const e=document.querySelector('.hm-ev');
+        return e?Math.round(e.getBoundingClientRect().height):-1; };
+      const 전=재();
+      const b=[...document.querySelectorAll('#hmBand .t-chip')]
+        .filter(e=>/hmBandMonth/.test(e.getAttribute('onclick')||''))[0];
+      if(!b) return null;
+      b.click(); await new Promise(r=>setTimeout(r,900));
+      const 후=재();
+      return { ok:후>40, 값:'눌렀더니 이번 달 셈이 '+전+'px → '+후+'px' }; } },
+
+  /* 🖼 판 X464 — 사장님 말씀 2026-11-17 */
+  { 번호:'X464', 말씀:'오늘의 뉴스를 한장으로 매일 만들어줘 그리고 오늘에 띄워줘 / 이미지로 한장으로',
+    원한것:'맨 위 띠의 🖼 오늘 뉴스를 누르면 그날 소식이 한 장으로 선다',
+    자리:'#hmNw1Btn',
+    재기:async () => {
+      const b=document.getElementById('hmNw1Btn');
+      if(!b) return null;
+      const r=b.getBoundingClientRect(), cs=getComputedStyle(b);
+      const 보임=cs.display!=='none'&&r.height>0;
+      b.click(); await new Promise(x=>setTimeout(x,800));
+      const c=document.getElementById('hmNw1Card');
+      const 섬=!!c, 폭=c?Math.round(c.getBoundingClientRect().width):0;
+      const 날=c?/\d+월\s*\d+일/.test(c.innerText||''):false;
+      try{ hmNw1Close(); }catch(e){}
+      return { ok:보임&&섬&&폭>=1000&&날,
+               값:'단추 '+(보임?'보임':'안 보임')+' 키 '+Math.round(r.height)+'px · '+
+                  (섬?('한 장 '+폭+'px'):'한 장 안 섬')+' · 날짜 '+(날?'찍힘':'없음') }; } },
+
   { 번호:'X456', 말씀:'홈이 한 화면에 들게 (X03) + 칸마다 첫 화면에 보이게',
     원한것:'🗜 짧게를 누르면 홈이 한 화면 가까이 줄고, 다시 누르면 돌아온다',
     자리:'#hmShortBtn',

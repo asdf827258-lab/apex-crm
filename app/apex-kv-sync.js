@@ -100,7 +100,20 @@ var NEVER_WORD=/(key|token|secret|rrn|passw|credential)/i;
    우리 이름(apex_)을 안 쓰는 화면이 몇 있습니다. 그쪽은 그물이 못 덮으니
    적어 둡니다. 적은 수와 전체 수를 check-kvall 이 찍어 <b>낡으면 보이게</b> 합니다. */
 var ALSO_EXACT=['ba_agent_v1','wk_v1','utp_bag','s6_profile',
-                'kdCost','kdLife','kdMe','kdNeed','kdReview'];
+                'kdCost','kdLife','kdMe','kdNeed','kdReview',
+  /* ★★ 판 X465 (2026-11-17) — 사장님이 「다시 확인해봐」 하셔서 <b>앱이 쓰는 열쇠
+     157가지를 전부 긁어 이 규칙에 하나씩 걸어</b> 봤습니다. apex_ 이름 밖이라
+     그물이 안 덮는 자리에서 <b>일하는 값 셋</b>이 기기에만 남고 있었습니다 —
+     사장님 말씀 「다른 곳에서 열면 안 보이는 것들이 있어서는 안 되」 그대로
+     고칩니다. 아래 셋은 <b>보기 취향이 아니라 사장님이 정하신 값</b>입니다. */
+  'apexRouteHomeV1',   /* 🏠 출발지 — 컴퓨터에서 넣고 노트북을 열면 비어 있었습니다 */
+  'apexRouteStayV1',   /* ⏱ 상담 한 건에 몇 분 — 지역 동선이 이 수로 하루를 짭니다 */
+  'apexCareLocalV1',   /* ✅ 챙긴 표시 — 서버에 칸이 없을 때의 자리(migration_48) */
+  /* 🎓 보험 아카데미 — <b>배운 것·연습·시험 기록</b>입니다. 노트북에서 열면
+     처음부터 다시였습니다. ⚠ bohum_device(기기 번호)·bohum_tester(시험용 표시)는
+     기기마다 달라야 하므로 <b>앞머리로 묶지 않고 셋만</b> 적습니다. */
+  'bohum_academy_v1', 'bohum_prac_v1', 'bohum_test_v1'
+];
 var ALSO_PRE=['mikki_'];
 /* 📦 너무 큰 값은 안 올립니다 — 저장할 때마다 서버로 나가면 무료 한도를 먹습니다 (7번).
    안 올렸으면 <b>안 올렸다고</b> 남깁니다. 조용히 빠뜨리면 사장님이 노트북에서
