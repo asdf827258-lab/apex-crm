@@ -305,6 +305,37 @@ details.fold>.in{padding:0 20px 18px}
 .bk.on{display:flex}
 .bk iframe{flex:1;width:100%;border:0;background:#fff}
 @media(max-width:480px){.tabs .l{display:none}.tabs .s{display:inline}.tk-ch{grid-template-columns:1fr}}
+/* PC — 고르기 | 한마디·대본 | 이어 갈 상품·책 세 칸, 한 화면에 (판 X468 · 「가로로 더 넓어도 되니까 한눈에」) */
+.tk-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
+.tk-row .tk-dam{margin:0}
+.tk-hd{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:space-between}
+.tk-hd .acts{margin:0}
+.tk-sc .tk-bb + .tk-bb{margin-top:8px}
+@media(min-width:1100px){
+  body.tkw .wrap{max-width:1480px}
+  body.tkw .hd{padding-left:16px;padding-right:16px}
+  body.tkw .tabs .wrap{grid-template-columns:repeat(5,minmax(0,170px))}
+  .tk-grid{display:grid;grid-template-columns:minmax(310px,350px) minmax(0,1fr) minmax(270px,320px);gap:16px;align-items:start}
+  .tk-l,.tk-r{position:sticky;top:72px;max-height:calc(100vh - 84px);overflow-y:auto;overscroll-behavior:contain;padding-bottom:8px}
+  .tk-l .h{margin-top:4px;font-size:21px}
+  .tk-l .d{font-size:14px;margin-bottom:6px}
+  .tk-l .seg button{min-height:40px;padding:0 12px;font-size:14px}
+  .tk-l .li{padding:10px 0}
+  .tk-l .nm{font-size:15px}
+  .tk-c .card{margin-bottom:0;padding:18px 20px}
+  .tk-c .tk-hook{font-size:19px;margin-top:8px;padding:12px 16px}
+  .tk-row .tk-dam span{padding:5px 10px}
+  .tk-sub{margin:14px 0 8px}
+  .tk-sc{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+  .tk-sc .tk-bb + .tk-bb{margin-top:0}
+  .tk-bb{gap:4px}
+  .tk-b,.tk-b.fp,.tk-b.cx{max-width:none;align-self:stretch;display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;border-radius:10px;padding:7px 10px;line-height:1.5}
+  .tk-b i{margin:0;padding-top:1px}
+  .tk-b.cx{background:transparent;color:var(--ink2)}
+  .tk-turn{padding:6px 0 4px;align-self:flex-start}
+  .tk-ch{grid-template-columns:1fr}
+  .tk-r .card,.tk-l .card{padding:16px}
+}
 @media print{.tabs,.acts,.x,.bk{display:none}}
 </style>
 <link rel="stylesheet" href="../ui.css">
@@ -539,7 +570,8 @@ function tkNow() {
 }
 function renderTalk() {
   const M = MKT(); if (!M) { $('s-talk').innerHTML = ''; return; }
-  let h = `<div class="h">어떻게 말을 꺼낼까요?</div>
+  // 왼쪽 — 누구에게 · 무엇으로 (폰에서는 위에서부터 같은 순서)
+  let L = `<div class="h">어떻게 말을 꺼낼까요?</div>
     <div class="d">팔기 전에 작은 담보 하나로 대화를 열어요. 대본은 「미끼상품&amp;접촉전략」 책의 RP 제조기와 같은 것이에요.</div>
     <div class="q">① 누구에게</div>${segHTML(Object.keys(M.TYPE_LABEL).map(k => [k, M.TYPE_LABEL[k]]), TK.type, 'tkType')}
     <div class="q">② 무엇으로 열까요</div>${segHTML([['prod', '이번 달 상품으로'], ['sit', '걱정·상황으로']], TK.mode, 'tkMode')}<div style="height:12px"></div>`;
@@ -547,42 +579,51 @@ function renderTalk() {
     tkNow();
     const all = ranked(P.filter(isCur)), list = all.slice(0, TK.more ? 15 : 5);
     if (!list.some(x => x.p.id === TK.pid) && byId(TK.pid)) list.push({ p: byId(TK.pid) });
-    h += `<div class="card">${list.map(x => { const p = x.p, ks = tkCats(p);
+    L += `<div class="card">${list.map(x => { const p = x.p, ks = tkCats(p);
       return `<div class="li tk-pick ${p.id === TK.pid ? 'on' : ''}" onclick="tkPick('${p.id}')"><div class="ck"></div><div class="bd">
         <div class="nm">${esc(nm(p))}${monthChip(p)}</div><div class="mt">${esc(p.company)} · ${catOf(p).l}</div>
         <div class="tk-sit">${ks.map(k => `<span>🎣 ${esc(M.CATS[k].label)}</span>`).join('')}</div></div></div>`; }).join('')}
       ${!TK.more && all.length > 5 ? `<button class="more" onclick="TK.more=true;renderTalk()">이번 달 상품 ${all.length - 5}개 더 보기</button>` : ''}</div>`;
   } else {
-    h += `<div class="seg">${Object.keys(M.CATS).map(k => `<button class="${TK.cats.includes(k) ? 'on' : ''}" onclick="tkCat('${k}')">${esc(M.CATS[k].label)}</button>`).join('')}</div>
+    L += `<div class="seg">${Object.keys(M.CATS).map(k => `<button class="${TK.cats.includes(k) ? 'on' : ''}" onclick="tkCat('${k}')">${esc(M.CATS[k].label)}</button>`).join('')}</div>
       <div class="note" style="margin:8px 0 12px">여러 개 고르면 첫 번째 걱정으로 말을 열고, 담보는 합쳐서 보여 드려요.</div>`;
   }
-  h += `<div id="tk-out">${tkOutHTML()}</div>`;
-  h += `<div class="card" id="tk-book" style="margin-top:12px"><div class="ct">📖 책에서 더 깊게 <small>미끼상품&amp;접촉전략</small></div><div id="tk-ch" class="mute s13">목차를 불러오는 중…</div></div>`;
-  $('s-talk').innerHTML = h;
+  $('s-talk').innerHTML = `<div class="tk-grid"><div class="tk-l">${L}</div><div class="tk-c" id="tk-out">${tkOutHTML()}</div>
+    <div class="tk-r"><div id="tk-fit">${tkFitHTML()}</div><div class="card" id="tk-book"><div class="ct">📖 책에서 더 깊게</div><div id="tk-ch" class="mute s13">목차를 불러오는 중…</div></div></div></div>`;
   tkToc();
 }
+// 가운데 — 한마디 · 담보 · 5분 대본
 function tkOutHTML() {
   const M = MKT(), n = tkNow(); if (!M || !n) return '';
   const r = M.script(TK.type, n.keys), labs = r.keys.map(k => M.CATS[k].label).join(' + ');
-  let h = `<div class="card"><div class="tk-lb">🎯 미끼 세트 · ${esc(M.TYPE_LABEL[TK.type])} · ${esc(labs)}</div>
-    ${n.p ? `<div class="nm" style="margin-top:6px">${esc(nm(n.p))}<span class="mt" style="font-weight:600"> · ${esc(n.p.company)}</span></div>` : ''}
-    <div class="tk-dam">${r.dambo.map(d => `<span>${esc(d)}</span>`).join('')}</div>
+  const ti = r.lines.findIndex(l => l[0] === 'turn');
+  const line = l => `<div class="tk-b ${l[0]}"><i>${l[0] === 'fp' ? '설계사' : '고객'}</i><span>${esc(l[1])}</span></div>`;
+  const a = ti < 0 ? r.lines : r.lines.slice(0, ti), b = ti < 0 ? [] : r.lines.slice(ti + 1);
+  return `<div class="card"><div class="tk-hd"><div><div class="tk-lb">🎯 미끼 세트 · ${esc(M.TYPE_LABEL[TK.type])} · ${esc(labs)}</div>
+    ${n.p ? `<div class="nm" style="margin-top:4px">${esc(nm(n.p))}<span class="mt" style="font-weight:600"> · ${esc(n.p.company)}</span></div>` : ''}</div>
+    <div class="acts"><button class="btn" onclick="tkCopy()">📋 대본 복사</button>${n.p ? `<button class="btn g" onclick="openP('${n.p.id}')">지급기준·약관 보기</button>` : ''}</div></div>
     <div class="tk-hook"><b>💬 던지는 한마디</b>“${esc(r.prim.hook)}”</div>
-    <div class="acts"><button class="btn" onclick="tkCopy()">📋 대본 복사</button>${n.p ? `<button class="btn g" onclick="openP('${n.p.id}')">지급기준·약관 보기</button>` : ''}</div>
-    <div class="tk-sub">🎬 5분 대본</div><div class="tk-bb">${r.lines.map(l => l[0] === 'turn' ? '<div class="tk-turn">❤️ 여기서 마음이 넘어가요</div>'
-      : `<div class="tk-b ${l[0]}"><i>${l[0] === 'fp' ? '설계사' : '고객'}</i>${esc(l[1])}</div>`).join('')}</div>`;
-  if (!n.p) {   // 걱정·상황으로 골랐으면 — 이어서 권할 이번 달 상품
-    // 상품의 주 분야(첫 칸)가 고른 걱정과 맞는 것부터 — 낱말 하나 걸린 상품이 앞에 서지 않게
-    const fitW = p => tkCats(p).reduce((a, k, i) => a + (r.keys.includes(k) ? (i ? 1 : 3) * (k === r.keys[0] ? 2 : 1) : 0), 0);
-    const fit = ranked(P.filter(p => fitW(p) > 0)).map(x => Object.assign(x, { w: fitW(x.p) })).sort((a, b) => (b.w - a.w) || (isCur(b.p) - isCur(a.p)) || (b.s - a.s)).slice(0, 3);
-    h += `<div class="tk-sub">이 이야기로 이어 갈 상품</div>${fit.length ? fit.map(x => rowHTML(x, { notrust: true })).join('') : '<div class="mute s13">이번 달 소식지에 맞는 상품이 없어요.</div>'}`;
+    <div class="tk-row"><div class="tk-dam">${r.dambo.map(d => `<span>${esc(d)}</span>`).join('')}</div></div>
+    <div class="tk-sub">🎬 5분 대본</div><div class="tk-sc"><div class="tk-bb">${a.map(line).join('')}</div>
+      ${b.length ? `<div class="tk-bb"><div class="tk-turn">❤️ 여기서 마음이 넘어가요</div>${b.map(line).join('')}</div>` : ''}</div>
+    <div class="note">사례는 교육용 예시예요. 보장 범위·금액은 그 상품의 약관·설계서로 확인한 뒤 말하세요.</div></div>`;
+}
+// 오른쪽 — 걱정으로 골랐으면 이어서 권할 이번 달 상품 / 상품으로 골랐으면 그 상품이 여는 다른 이야기
+function tkFitHTML() {
+  const M = MKT(), n = tkNow(); if (!M || !n) return '';
+  const r = M.script(TK.type, n.keys);
+  if (n.p) {
+    const ks = tkCats(n.p);
+    return ks.length > 1 ? `<div class="card"><div class="ct">이 상품으로 여는 다른 이야기</div>${ks.slice(1).map(k => `<div class="cl"><div class="t">🎣 ${esc(M.CATS[k].label)}</div><div class="n">“${esc(M.CATS[k].hook)}”</div></div>`).join('')}</div>` : '';
   }
-  h += `<div class="note">사례는 교육용 예시예요. 보장 범위·금액은 그 상품의 약관·설계서로 확인한 뒤 말하세요.</div></div>`;
-  return h;
+  // 상품의 주 분야(첫 칸)가 고른 걱정과 맞는 것부터 — 낱말 하나 걸린 상품이 앞에 서지 않게
+  const fitW = p => tkCats(p).reduce((a, k, i) => a + (r.keys.includes(k) ? (i ? 1 : 3) * (k === r.keys[0] ? 2 : 1) : 0), 0);
+  const fit = ranked(P.filter(p => fitW(p) > 0)).map(x => Object.assign(x, { w: fitW(x.p) })).sort((a, b) => (b.w - a.w) || (isCur(b.p) - isCur(a.p)) || (b.s - a.s)).slice(0, 3);
+  return `<div class="card"><div class="ct">이 이야기로 이어 갈 상품</div>${fit.length ? fit.map(x => rowHTML(x, { notrust: true })).join('') : '<div class="mute s13">이번 달 소식지에 맞는 상품이 없어요.</div>'}</div>`;
 }
 function tkType(k) { TK.type = k; renderTalk(); }
 function tkMode(k) { TK.mode = k; renderTalk(); }
-function tkPick(id) { TK.pid = id; $('tk-out').innerHTML = tkOutHTML(); document.querySelectorAll('.tk-pick').forEach(e => e.classList.toggle('on', e.getAttribute('onclick') === `tkPick('${id}')`)); $('tk-out').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+function tkPick(id) { TK.pid = id; $('tk-out').innerHTML = tkOutHTML(); $('tk-fit').innerHTML = tkFitHTML(); document.querySelectorAll('.tk-pick').forEach(e => e.classList.toggle('on', e.getAttribute('onclick') === `tkPick('${id}')`)); if (innerWidth < 1100) $('tk-out').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 function tkCat(k) { const i = TK.cats.indexOf(k); if (i >= 0) TK.cats.splice(i, 1); else TK.cats.push(k); renderTalk(); }
 function tkFrom(id) { closeP(); TK.mode = 'prod'; TK.pid = id; go('talk'); }
 function tkCopy() {
@@ -1577,6 +1618,7 @@ const RENDER = { home: renderHome, find: renderFind, talk: renderTalk, terms: re
 function go(t) {
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
   document.querySelectorAll('.sec').forEach(s => s.classList.toggle('on', s.id === 's-' + t));
+  document.body.classList.toggle('tkw', t === 'talk');
   RENDER[t](); window.scrollTo(0, 0);
   try { localStorage.setItem('apex-insight-tab', t); } catch (e) {}
 }
