@@ -51,8 +51,11 @@ window.TA5 = {"DBS": [{"key": "broadcast", "label": "방송", "theme": "save", "
   }
   function theme(d){ return D.THEMES[(d&&d.theme)||'general'] || D.THEMES.general; }
   function verb(d){ return (d&&d.theme==='fire') ? '남겨 주셔서' : '신청해 주셔서'; }
-  /* 글자판 — 홈 「💬 첫 마디」 · 📋 복사 · DB 통합 CRM. 첫 줄에 인사와 ① 출처를 같이 둡니다
-     (홈은 첫 줄만 보여 줍니다 — 「맞으시죠?」 한마디만 서면 무슨 전화인지 안 보입니다). */
+  /* 글자판 — 홈 「💬 첫 마디」 · 📋 복사 · 아침 미션 · DB 통합 CRM. 첫 줄에 인사와 ① 출처를 같이 둡니다
+     (홈은 첫 줄만 보여 줍니다 — 「맞으시죠?」 한마디만 서면 무슨 전화인지 안 보입니다).
+     ★ 기본은 <b>두 줄</b>(인사+① 출처 · ② 쉽게 한 줄)입니다 — 「세 가지」 의 보험사 수와 양자택일 시각이
+       숫자라 홈 말에 못 들어가고(check-msfive · 2번), 아침 미션 칸이 한 화면을 넘었습니다(925px).
+       날짜 고르기는 아침 미션 ④ 「망설이시면」 이 이미 합니다. 전부가 필요하면 {full:true}. */
   function say(label, f){
     f = f || {};
     var d = db(label), th = theme(d), s = D.SLOTS || [];
@@ -61,8 +64,8 @@ window.TA5 = {"DBS": [{"key": "broadcast", "label": "방송", "theme": "save", "
               s1wa:wagwa(f.s1||s[0]||''), s2:f.s2||s[1]||'' };
     var L = [ fill('hello', v)+' '+fill('src', v) ];
     if(v.me) L.push(v.area ? fill('me', v) : ('저는 담당 '+v.me+(fin(v.me)?'이에요':'예요')+'.'));
-    L.push(fill('easy', v), fill('three', v));
-    if(v.s2) L.push(fill('pick', v));
+    L.push(fill('easy', v));
+    if(f.full){ L.push(fill('three', v)); if(v.s2) L.push(fill('pick', v)); }
     return L.join('\n');
   }
   g.TA_OPEN = { tpl:T, fill:fill, db:db, theme:theme, verb:verb, say:say, wagwa:wagwa, fin:fin };
