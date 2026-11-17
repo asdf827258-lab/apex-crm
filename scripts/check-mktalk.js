@@ -57,7 +57,7 @@ is(/const cmpPool = \(\) => P\.filter\(p => p\.terms\)/.test(PAGE), '고르는 �
 is(/cmpOpen\(\[/.test(PAGE), '편집부 비교표에서 그 상품들의 상세 비교로 이어진다');
 is(/\.pc2\{display:grid/.test(PAGE) && /\.tc2\{display:grid/.test(PAGE) && /\.tk-grid\{display:grid/.test(PAGE), 'PC 좌우 화면 — 이번 달·추천(pc2) · 약관 비교(tc2) · 문 열기(tk-grid)');
 
-console.log('\n[6] 📑 편집부 비교표 → 줄마다 약관 원문 (판 X471 · 사장님 말씀 「약관 세개 비교해주는 디테일을 더 높여줘」)');
+console.log('\n[6] 📑 편집부 비교표 → 줄마다 약관 원문 (판 X472 · 사장님 말씀 「약관 세개 비교해주는 디테일을 더 높여줘」)');
 let SEED = null;
 try { const TAG = '<script id="seed" type="application/json">', a = PAGE.indexOf(TAG) + TAG.length; SEED = JSON.parse(PAGE.slice(a, PAGE.indexOf('</script>', a))); } catch (e) {}
 const TDS = SEED ? (SEED.editorial.terms_compare || []).filter(t => t.detail) : [];
