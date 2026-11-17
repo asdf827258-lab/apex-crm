@@ -171,6 +171,41 @@ function judge(f, blind, state) {
   return say.join('\n');
 }
 
+/* ── ③-나. <b>랜딩이 실제로 카톡까지 보내 주나</b> ────────────────────
+   ⚠️ 2026-11-13 에 손으로 다섯 랜딩을 눌러 보고 찾은 것입니다.
+     dbcompare 는 「상담 확인번호」 2단 구조인데, 창 안의 「카카오톡 열기」도
+     주소에 pf.kakao.com 이 들어 있어 <b>같은 가로채기에 다시 걸립니다</b>.
+     preventDefault 가 또 걸려 창만 1→2→3→4 로 쌓이고 카톡은 영영 안 열립니다.
+     라이브 기록이 그대로였습니다 — 11명이 눌렀는데 넘어간 사람 <b>0명</b>.
+     한 달 동안 아무도 몰랐습니다. 그래서 매일 저녁 이것을 봅니다.
+
+   ★ 2단 랜딩에서만 봅니다. 평범한 랜딩은 code 를 애초에 안 보내므로
+     거기까지 세면 멀쩡한 랜딩을 매일 고발하게 됩니다 (8번 — 헛것 금지). */
+function landSay(lands) {
+  const out = [];
+  (lands || []).forEach(L => {
+    if (!L.active) return;
+    if (L.code_ui && L.cta >= 3 && L.code === 0) {
+      out.push('🛑 ' + L.key + ' — <b>눌러도 카톡으로 못 갑니다.</b> ' + L.cta +
+        '명이 눌렀는데 넘어간 사람 0명입니다. 「상담 확인번호」 2단을 끄거나(랜딩 ' +
+        'script 태그에서 data-code="on" 한 글자) 추적기가 그 창의 단추를 ' +
+        '다시 가로채지 않게 고쳐야 합니다.');
+    }
+    if (L.httpOk === false) {
+      out.push('🛑 ' + L.key + ' — 랜딩이 안 열립니다(' + (L.status || '못 받음') + ').');
+    }
+    if (L.liveKakao && L.kakao_url && L.liveKakao !== L.kakao_url) {
+      out.push('⚠️ ' + L.key + ' — 적힌 카톡 주소와 <b>실제로 쓰는 주소가 다릅니다.</b> ' +
+        '적힘 ' + L.kakao_url + ' / 실제 ' + L.liveKakao +
+        '. 다른 방이면 사장님이 보시는 방으로 안 옵니다.');
+    }
+    if (L.httpOk && !L.liveKakao) {
+      out.push('⚠️ ' + L.key + ' — 랜딩에서 카톡 주소를 <b>하나도 못 찾았습니다.</b>');
+    }
+  });
+  return out;
+}
+
 /* ── ④ 부탁할 것. 지켜졌나를 다음 저녁에 이것으로 봅니다 ───────────── */
 function asksOf(blind, f, state) {
   const a = [];
@@ -253,10 +288,13 @@ async function gather() {
     ['방문', '읽음', '카톡', '즉시이탈', '이탈기록'].forEach(f => o[f] += Number(r[f] || 0));
   });
 
+  /* 랜딩을 하루 한 번만 열어 봅니다 — 되풀이해서 부르지 않습니다 (7번) */
+  const lands = await landPeek(ev, from21);
+
   return {
     today: today,
     spendLast: spendLast, spendCloudRows: spendCloudRows, placeView: placeView,
-    eventsLast: eventsLast,
+    eventsLast: eventsLast, lands: lands,
     f: {
       v7: sidsIn(from7, 'view'), r7: sidsIn(from7, 'read25'), cta7: sidsIn(from7, 'cta'),
       v21: sidsIn(from21, 'view'),
@@ -264,6 +302,44 @@ async function gather() {
       places: Object.keys(byPlace).map(k => byPlace[k]).sort((a, b) => b.방문 - a.방문)
     }
   };
+}
+
+/* 랜딩을 실제로 열어 카톡 주소를 긁어 옵니다. 못 열면 못 열었다고 둡니다 (1번).
+   ⚠️ 글자에서 찾습니다 — 머리글(head)만 받으면 단추 주소를 못 봅니다. */
+async function landPeek(ev, from) {
+  let rows = [];
+  try { rows = await sb('ad_landings?select=key,url,kakao_url,code_ui,active&limit=50'); }
+  catch (e) { return null; }
+
+  const cnt = {};
+  (ev || []).forEach(x => {
+    const k = x.landing || '';
+    const o = cnt[k] || (cnt[k] = { cta: {}, code: {} });
+    if (x.ev === 'cta') o.cta[x.sid] = 1;
+    if (x.ev === 'code') o.code[x.sid] = 1;
+  });
+
+  const out = [];
+  for (const L of rows) {
+    const c = cnt[L.key] || { cta: {}, code: {} };
+    const r = { key: L.key, url: L.url, kakao_url: L.kakao_url, code_ui: !!L.code_ui,
+                active: !!L.active, cta: Object.keys(c.cta).length,
+                code: Object.keys(c.code).length, httpOk: null, status: null, liveKakao: null };
+    if (L.active && L.url) {
+      try {
+        const res = await fetch(L.url, { signal: AbortSignal.timeout(15000) });
+        r.status = res.status;
+        r.httpOk = res.ok;
+        if (res.ok) {
+          const html = await res.text();
+          const m = html.match(/https:\/\/(?:pf|open)\.kakao\.com\/[^"'\s<>]+/);
+          r.liveKakao = m ? m[0] : null;
+        }
+      } catch (e) { r.httpOk = false; r.status = String(e.name || 'error'); }
+    }
+    out.push(r);
+  }
+  return out;
 }
 
 /* ── 문구 초안 — 심의 전. 없으면 없다고 둡니다 ──────────────────────── */
@@ -342,8 +418,13 @@ exports.handler = async function (event) {
       blind.push('판단 기록(ad_notes)이 아직 없습니다 — migration_75 를 안 돌렸습니다');
     }
 
-    const verdict = judge(g.f, blind, state);
-    const asks = asksOf(blind, g.f, state);
+    /* ★ 랜딩이 막혔으면 그것부터입니다 — 광고를 아무리 잘 돌려도
+       누를 수 없으면 한 명도 안 옵니다. 눈 점검 바로 다음 자리입니다. */
+    const landWarn = landSay(g.lands);
+    const verdict = [judge(g.f, blind, state)].concat(landWarn).join('\n');
+    const asks = asksOf(blind, g.f, state)
+      .concat(landWarn.filter(w => /못 갑니다/.test(w))
+                      .map(w => w.split(' —')[0].replace('🛑 ', '') + ' 랜딩의 카톡 길 고치기'));
     const back = lookBack(prev, g.f, blind);
     const cp = await draftCopy(g.f, state, null);
 
@@ -351,7 +432,7 @@ exports.handler = async function (event) {
       d: g.today,
       blind: blind,
       state: state,
-      facts: g.f,
+      facts: Object.assign({}, g.f, { lands: g.lands }),
       verdict: verdict,
       asks: asks,
       looked_back: back,
@@ -373,4 +454,4 @@ exports.handler = async function (event) {
 };
 
 /* 점검이 규칙만 따로 재도록 내놓습니다 — 바깥 서버를 안 부르고 표로 잴 수 있게 */
-exports._rules = { RULE, blindList, stateOf, judge, asksOf, lookBack, COPY_SYSTEM, draftCopy };
+exports._rules = { RULE, blindList, stateOf, judge, asksOf, lookBack, COPY_SYSTEM, draftCopy, landSay };

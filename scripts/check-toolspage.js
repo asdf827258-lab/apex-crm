@@ -105,7 +105,39 @@ const SEED = () => {
   is(S.옷,     '  <b>목업 옷</b>을 입는다 (#dynPane 에 t-skin)');
   is(S.줄수 >= 20, '  화면이 <b>여럿 선다</b> — ' + S.줄수 + '줄 · 묶음 ' + S.묶음수 + '칸');
   is(S.지금 && S.칩 > 0, '  <b>「지금 ○○님께」</b> 가 그 단계 도구를 먼저 내민다 — 칩 ' + S.칩 + '개');
-  is(!/홍길동/.test(S.t), '  <b>고객 이름을 가린다</b> (3번) — 날이름이 안 보인다');
+  /* ⚠⚠ <b>이 자리의 약속이 2026-11-14 에 뒤집혔습니다</b> (판 X441).
+     여태는 「늘 가린다」 였습니다. 사장님 말씀 — 「고객의 이름 각자 개인별로
+     보여주지만 <b>* 이렇게 가리는 게 없도록 해. 검색하고 알아보는 데 어려움이
+     크다</b>」 (2026-11-14). 이 화면에는 <b>찾기 칸</b>이 있고 「지금 ○○님께」 가
+     누구를 챌 차례인지 말하는 자리라, 늘 「홍*동」 이면 알아볼 수가 없습니다.
+     ★ 그래서 이제 재는 것은 <b>「가렸나」 가 아니라 「스위치를 따르나」</b> 입니다 —
+       ① 기본은 실명 ② 🙈 를 누르면 가려짐 ③ <b>그 단추가 이 화면에 서 있나</b>.
+       ③ 이 제일 중요합니다: 실명을 찍으면서 가릴 단추를 감추면 고객 앞에서
+       가릴 길이 없습니다 (6번 — 「단추는 정말로 할 일이 없을 때만 감춘다」).
+     ★ 나가는 자리(폰 달력·서버·AI)는 그대로 가립니다 — check-nmshow 가 잽니다. */
+  const NM = await p.evaluate(async () => {
+    const txt = () => { const e = document.getElementById('dynPane'); return e ? e.innerText : ''; };
+    const out = {};
+    try { localStorage.removeItem('apex_hm_hidenm'); } catch (e) {}
+    try { tlpPaint(); } catch (e) {}
+    await new Promise(z => setTimeout(z, 250));
+    out.기본 = txt();
+    const b = document.getElementById('hmNmBtn');
+    out.단추섬 = !!(b && b.offsetParent);
+    try { localStorage.setItem('apex_hm_hidenm', '1'); } catch (e) {}
+    try { tlpPaint(); } catch (e) {}
+    await new Promise(z => setTimeout(z, 250));
+    out.가린뒤 = txt();
+    try { localStorage.removeItem('apex_hm_hidenm'); } catch (e) {}
+    try { tlpPaint(); } catch (e) {}
+    return out;
+  });
+  is(/홍길동/.test(NM.기본),
+     '  ★ <b>기본은 실명</b>이다 — 사장님 말씀 「* 이렇게 가리는 게 없도록」 (2026-11-14)');
+  is(NM.단추섬,
+     '  ★★ <b>가릴 단추(🙈)가 이 화면에 서 있다</b> — 실명을 찍으면서 감추면 고객 앞에서 가릴 길이 없다 (6번)');
+  is(!/홍길동/.test(NM.가린뒤) && /홍\*동|홍○동/.test(NM.가린뒤),
+     '  ★ 🙈 를 누르면 <b>여기도 같이 가려진다</b> (3번)');
   /* ★ <b>왼쪽 여백</b> — 2026-09-26 에 이 화면만 0px 이라 제목이 화면
      가장자리에 붙어 있었습니다. 몰아 보다 눈으로 잡았고, 그때까지 아무
      점검도 이것을 안 봤습니다.

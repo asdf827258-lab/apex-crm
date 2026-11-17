@@ -200,7 +200,20 @@ const srv = http.createServer((rq, rs) => {
 
     const src = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
     const seg = src.slice(src.indexOf('function baSave('), src.indexOf('function baAskSave('));
-    is(/kind:'ba_state'/.test(seg), '저장은 <b>이미 있는 표</b>(saved_reports)에 한다 — 새 표를 안 만든다');
+    /* ⚠ <b>2026-11-15 (판 X458) — 재는 법을 고쳤습니다. 약속은 그대로입니다.</b>
+       여기는 날글자 <b>kind:'ba_state'</b> 가 있는지를 보고 있었습니다. 그런데 바로 그
+       <b>날글자로 흩어 적은 것</b>이 사장님 말씀 「보장분석 전후에서 어디서든 공유가
+       안되잖아」 의 원인이었습니다 — 담는 쪽은 'ba_state', 꺼내는 쪽은 'baba' 라
+       고객 창이 <b>있는 것을 없다고</b> 적었습니다. 이제 갈래를 <b>대장(CHK_KIND)</b>
+       한 곳에서만 알고, 담는 쪽도 그것을 부릅니다.
+       ★ 그래서 <b>셋을 봅니다</b> — 있는 표에 담는가 · 갈래를 대장에게 묻는가 ·
+         <b>날글자를 다시 박지 않았는가</b>. 마지막이 없으면 누가 도로 박아도 조용합니다. */
+    is(/from\('saved_reports'\)/.test(seg),
+       '저장은 <b>이미 있는 표</b>(saved_reports)에 한다 — 새 표를 안 만든다');
+    is(/kind:\s*CHK_KIND/.test(seg),
+       '  ★ 갈래는 <b>대장(CHK_KIND)</b>에게 묻는다 — 여기 글자를 적으면 꺼내는 쪽과 갈립니다 (5번)');
+    is(!/'ba_state'/.test(seg),
+       '  ★ 날글자 <b>\'ba_state\'</b> 를 여기 다시 박지 않았다 (판 X458 에서 데인 자리)');
     is(/BA\.rid[\s\S]{0,200}update\(/.test(seg), '두 번 저장해도 <b>한 고객에 한 줄</b>이다 — 쌓지 않는다');
     is(/osRepMask/.test(seg), '제목은 <b>가린 이름</b>으로 저장한다');
     /* ── 실명이 <b>정말</b> 안 나가는지 서버로 가는 것을 잡아 본다 ──
