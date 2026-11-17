@@ -68,5 +68,7 @@ window.TA5 = {"DBS": [{"key": "broadcast", "label": "방송", "theme": "save", "
     if(f.full){ L.push(fill('three', v)); if(v.s2) L.push(fill('pick', v)); }
     return L.join('\n');
   }
-  g.TA_OPEN = { tpl:T, fill:fill, db:db, theme:theme, verb:verb, say:say, wagwa:wagwa, fin:fin };
+  /* ⚠ 이름이 TA_OPEN 이 아닌 까닭 — db-crm.html 이 「var TA_OPEN = [...]」(여는 다섯 마디 표)를 이미 씁니다.
+     같은 이름이면 그쪽이 덮어 DB 통합 CRM 만 옛 말을 했습니다(check-touch 가 잡음 · 5번). */
+  g.TA_OPENER = { tpl:T, fill:fill, db:db, theme:theme, verb:verb, say:say, wagwa:wagwa, fin:fin };
 })(window);

@@ -26,13 +26,13 @@ win.window = win;
 const ctx = vm.createContext(win);
 vm.runInContext(rd('ta-open.js'), ctx);
 vm.runInContext(rd('apex-stage.js'), ctx);
-const O = win.TA_OPEN, A = win.APEX_STAGE, D = win.TA5;
+const O = win.TA_OPENER, A = win.APEX_STAGE, D = win.TA5;
 
 console.log('\n[1] 대본 화면은 틀을 부른다 (5번)');
 const TS = rd('ta-script.html');
 is(!/반갑습니다/.test(TS) && !/쉽게 말씀드리면/.test(TS) && !/편하신 때로 맞춰/.test(TS),
    '  ta-script.html 에 여는 말 문장이 <b>안 남아 있다</b>');
-is((TS.match(/OP\('(hello|src|srcTm|me|office|easy|three|pick)'\)/g) || []).length >= 7, '  통화 대본이 TA_OPEN 틀로 그린다');
+is((TS.match(/OP\('(hello|src|srcTm|me|office|easy|three|pick)'\)/g) || []).length >= 7, '  통화 대본이 TA_OPENER 틀로 그린다');
 is((TS.match(/OQ\('(hello|src|srcTm|me|office|easy|three|pick)'\)/g) || []).length >= 7, '  인쇄판도 같은 틀로 그린다');
 is(!/window\.TA5\s*=/.test(TS), '  DB 종류 표(TA5)가 화면 안에 <b>두 벌로</b> 있지 않다');
 
@@ -76,6 +76,13 @@ const order = (p, a) => { const s = rd(p); const i = s.indexOf(a + 'ta-open.js"'
 is(order('app/index.html', '<script src="../'), '  홈(app/index.html)');
 is(order('db-crm.html', '<script src="'), '  DB 통합 CRM(db-crm.html)');
 is(order('ta-script.html', '<script src="'), '  TA 스크립트(ta-script.html)');
+/* 이름 — TA_OPEN 은 db-crm.html 이 이미 썼고(여는 다섯 마디 표), 그쪽이 덮어 CRM 만 옛 말을 했습니다 */
+const others = ['db-crm.html', 'app/index.html', 'ta-script.html'].filter(p => /\b(var|let|const|function)\s+TA_OPENER\b/.test(rd(p)));
+is(!others.length, '  TA_OPENER 를 다른 화면이 <b>덮지 않는다</b>' + (others.length ? ' ← ' + others.join(',') : ''));
+const crm = vm.createContext({ window: null });
+crm.window = crm;
+vm.runInContext(rd('ta-open.js') + '\nvar TA_OPEN = [];\n' + rd('apex-stage.js'), crm);
+is(!!crm.APEX_STAGE.taSay('보장분석3DB').ta, '  db-crm 처럼 TA_OPEN 이라는 표가 따로 있어도 대본 글로 말한다');
 
 console.log('\n──────────────────────────────');
 console.log(bad ? ('✗ ' + bad + '가지 어긋납니다') : '✓ 홈 첫 마디가 TA 스크립트 대본에서 옵니다');
