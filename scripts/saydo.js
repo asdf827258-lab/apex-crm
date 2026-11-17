@@ -72,6 +72,22 @@ const 찍 = () => {
              return !!(w && w.getBoundingClientRect().height > 0); })(),
     스크롤: Math.round(window.scrollY),
     덮개: document.querySelectorAll('.ovl,.modal,[id$="Ovl"],[id$="Modal"]').length,
+    /* ★★ 2026-11-17 — <b>네 번째로 제가 틀린 자리입니다.</b> 덮개를 <b>이름으로</b>
+       세고 있었습니다(.ovl · .modal · …Ovl · …Modal). 그런데 「➕ 고객 넣기」 가
+       띄우는 창은 <b>#cregSheet</b> 라 그 어느 것도 아닙니다 — 430×900px 짜리
+       창이 멀쩡히 서는데 이 자는 「아무 일도 안 일어납니다」 라고 고발했습니다.
+       ★ 이름으로 적으면 창이 하나 늘 때마다 이 자가 낡습니다. 그래서
+         <b>「몸(body)에 붙어 떠 있는 것」 자체를</b> 잽니다 — 이름을 안 묻습니다.
+       (헛것을 잡는 자는 안 잡는 자보다 나쁩니다 · 8번) */
+    띄운것: [].slice.call(document.body.children).filter(e => {
+      if (e.id === 'dynPane') return false;
+      if (e.querySelector && e.querySelector('#dynPane')) return false;
+      const s = getComputedStyle(e), r = e.getBoundingClientRect();
+      return (s.position === 'fixed' || s.position === 'absolute')
+        && s.display !== 'none' && s.visibility !== 'hidden' && +s.opacity > 0.05
+        && r.height > 40 && r.width > 40;
+    }).map(e => (e.id || e.className || '?') + ':' + Math.round(e.getBoundingClientRect().height))
+      .sort().join('|'),
     높이: p ? Math.round(p.scrollHeight) : 0
   };
 };
@@ -144,6 +160,7 @@ const 찍 = () => {
     if (전.홈인가 !== 후.홈인가) 바뀜.push('화면');
     if (Math.abs(전.스크롤 - 후.스크롤) > 8) 바뀜.push('스크롤');
     if (전.덮개 !== 후.덮개) 바뀜.push('덮개');
+    if (전.띄운것 !== 후.띄운것) 바뀜.push('띄운 창');
     if (Math.abs(전.높이 - 후.높이) > 8) 바뀜.push('길이');
 
     const 줄 = { ...it, 바뀜: 바뀜.join('·'), 터짐 };
