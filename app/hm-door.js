@@ -26,7 +26,7 @@
     if(band && AGE_CAT[band] && M.CATS[AGE_CAT[band]])
       return { cat:AGE_CAT[band], by:'age', band:band, why:AGE_WHY[band] };
     var d = null;
-    try{ d = (g.TA_OPEN && g.TA_OPEN.db) ? g.TA_OPEN.db(x.src) : null; }catch(e1){ d = null; }
+    try{ d = (g.TA_OPENER && g.TA_OPENER.db) ? g.TA_OPENER.db(x.src) : null; }catch(e1){ d = null; }
     if(d && THEME_CAT[d.theme] && M.CATS[THEME_CAT[d.theme]]){
       var th = (g.TA5 && g.TA5.THEMES && g.TA5.THEMES[d.theme]) || {};
       return { cat:THEME_CAT[d.theme], by:'db', why:(th.name || d.label) + ' 신청이라' };

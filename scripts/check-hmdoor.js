@@ -41,8 +41,8 @@ is(D.pick({ id: 'b', src: '보장분석8DB' }).cat === 'care', '  나이대(60�
 is(D.pick({ id: 'c', src: '' }).cat === 'cancer3', '  40·50대 — 암·뇌·심장');
 is(D.pick({ id: 'e', src: '' }).cat === 'hospital' && /젊고 건강할 때/.test(D.line(D.pick({ id: 'e' }))), '  20·30대 — 병원비·비급여 + 그 나이 꼬리말(MK_TALK.TYPES.y2030)');
 BAND = {};
-const th = k => w.TA5.THEMES[w.TA_OPEN.db(k).theme];
-is(D.pick({ id: 'x', src: '보장분석3DB' }).cat === D.THEME_CAT[w.TA_OPEN.db('보장분석3DB').theme], '  나이 모르면 DB 종류 — 보장분석3DB(' + th('보장분석3DB').name + ') → ' + D.pick({ id: 'x', src: '보장분석3DB' }).cat);
+const th = k => w.TA5.THEMES[w.TA_OPENER.db(k).theme];
+is(D.pick({ id: 'x', src: '보장분석3DB' }).cat === D.THEME_CAT[w.TA_OPENER.db('보장분석3DB').theme], '  나이 모르면 DB 종류 — 보장분석3DB(' + th('보장분석3DB').name + ') → ' + D.pick({ id: 'x', src: '보장분석3DB' }).cat);
 is(D.pick({ id: 'x', src: 'NS홈쇼핑 화재보험' }).cat === 'life', '  화재보험 신청 → 생활·배상');
 is(Object.keys(w.TA5.THEMES).every(t => M.CATS[D.THEME_CAT[t]]), '  TA 대본 주제 ' + Object.keys(w.TA5.THEMES).length + '가지가 모두 미끼 상황으로 이어진다');
 
