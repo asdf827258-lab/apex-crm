@@ -162,6 +162,38 @@ const BAND = () => {
     e.click(); const t = (typeof lastTab !== 'undefined') ? lastTab : ''; go('home'); return t; });
   is(went === 'crm', '  눌러 보니 <b>crm</b> 으로 갔다 — ' + went);
 
+  /* ══ 📒 <b>눌러 보고 묻습니다</b> (판 X463 · 2026-11-17) ═══════════════
+     ⚠⚠ <b>바로 위 줄이 글자만 세고 있었습니다.</b> 「onclick 에 hmBandMonth() 라
+       적혀 있나」 는 초록인데, <b>실제로 누르면 아무 일도 안 일어났습니다</b> —
+       이번 달 셈(.hm-ev)이 🌅 아침 미션 <b>접이 안</b>에 있는데 그 접이가 접혀
+       있어, 접힌 칸에 scrollIntoView 를 걸어도 소리 없이 끝났습니다.
+       판 X462 의 ② 만남 → 📆 이번 주와 <b>똑같은 병</b>입니다.
+     ★ <b>글과 행동이 갈리면 그 글은 거짓입니다</b>(1번). 그래서 눌러 보고,
+       <b>이번 달 셈이 눈에 보이는 키로 섰는지</b>를 묻습니다 (8번).     */
+  const 달 = await P.p.evaluate(async () => {
+    try { const g = document.getElementById('hmFold_ms');
+          if (g && g.classList.contains('on')) hmFoldToggle('ms'); } catch (e) {}
+    try { if (typeof HM_MSEV !== 'undefined' && HM_MSEV.open) hmMsEvToggle(); } catch (e) {}
+    await new Promise(r => setTimeout(r, 250));
+    const 재 = () => { const e = document.querySelector('.hm-ev');
+      return e ? Math.round(e.getBoundingClientRect().height) : -1; };
+    const 전 = 재();
+    const b = [...document.querySelectorAll('#hmBand .t-chip')]
+      .filter(e => /hmBandMonth/.test(e.getAttribute('onclick') || ''))[0];
+    if (!b) return { 없음: true };
+    b.click();
+    await new Promise(r => setTimeout(r, 900));
+    const e2 = document.querySelector('.hm-ev');
+    return { 전, 후: 재(), 폄: !!(document.getElementById('hmFold_ms') || {}).classList &&
+             document.getElementById('hmFold_ms').classList.contains('on'),
+             글: e2 ? (e2.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 40) : '' };
+  });
+  is(!달.없음, '  📒 칸을 <b>화면에서 찾을 수 있다</b>');
+  is(!!달.폄, '  ★★ 누르면 <b>가는 길의 🌅 아침 미션 접이가 펴진다</b> (판 X463)');
+  is(달.후 > 40, '  ★★ 눌러 보니 <b>이번 달 셈이 실제로 선다</b> — 키 ' +
+     달.전 + 'px → ' + 달.후 + 'px  「' + 달.글 + '」');
+  await P.p.evaluate(() => { try { go('home'); } catch (e) {} });
+
   console.log('\n[4] 네 문 — <b>연락 · 만남 · 고객 · 맞는 메뉴</b>');
   is(A.문.join('·') === '연락관리·만남관리·고객관리·맞는 메뉴', '  넷이 다 선다 — ' + A.문.join(' · '));
   const 문간 = await P.p.evaluate(async () => {
