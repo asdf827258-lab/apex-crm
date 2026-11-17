@@ -263,12 +263,53 @@ const LOOK = () => {
   is(allcd.card.indexOf('계약일 모름') < 0,
     '  ★ 모르는 분이 없으면 <b>그 말을 안 적는다</b> — 「0분」 이라고도 안 적습니다');
 
-  console.log('\n[6] ★★ <b>이름이 한 자도 안 찍힌다</b> (3번)');
+  /* ══ 판 X467 — <b>이 토막을 고쳐 적었습니다.</b> 전에는 「이름이 한 자도
+     안 찍힌다」 였습니다. 그것은 <b>사장님이 2026-11-09 에 뒤집으신 규칙</b>
+     입니다 (판 X399 · 「* 이렇게 가리는게 없도록해. <b>검색하고 알아보는데
+     어려움이 커</b>」). CLAUDE.md 3번도 그때 고쳐졌습니다 — 「★ 오늘(홈)
+     화면은 <b>예외 — 실명이 기본</b>이고, 맨 위 띠 「🙈 이름 가리기」 를
+     누르면 그 폰에서 가립니다」.
+     그리고 2026-11-17 에 「<b>오늘에서, 고객들 터치하고 관리할수 있도록</b>」
+     하라 하셨습니다 — <b>누구인지 모르면 터치할 수 없습니다.</b>
+     ★ 그래서 자를 <b>무르게 하지 않고 셋으로 늘렸습니다</b> —
+       ⑴ 접혀 있을 때는 여전히 <b>한 자도 안 찍힙니다</b>(고객 앞에서 여는
+          그 상태입니다 — 옛 약속을 그대로 지킵니다)
+       ⑵ <b>펴면 실명이 섭니다</b>(안 서면 터치를 못 하십니다)
+       ⑶ <b>🙈 를 누르면 가립니다</b>(hmFullNm — 판 X399)
+     ⚠ 옛 줄 「이름을 꺼내 오지도 않는다」 는 거뒀습니다 — 이제 꺼내는 것이
+       맞고, <b>어떻게 꺼내는가</b>를 ⑵⑶ 이 실제로 재어 봅니다 (8번). */
+  console.log('\n[6] ★★ <b>접으면 이름이 없고 · 펴면 실명 · 🙈 면 가림</b> (3번 · 판 X399)');
   const nm = await run([['c1', '2026-09-05', '홍길동A'], ['c2', '2026-07-20', '홍길동B']]);
   is(nm.card.indexOf('홍길동') < 0,
-    '  홈 카드에 <b>이름이 없다</b>' + (nm.card.indexOf('홍길동') >= 0 ? ' ← 찍혔습니다' : ''));
-  is(MD.length > 0 && !/cmName|osMaskName|\.name\b/.test(MD),
-    '  ★★ 이름을 <b>꺼내 오지도 않는다</b> — 꺼내면 언젠가 찍힙니다');
+    '  ⑴ <b>접힌 카드에는 이름이 없다</b>' + (nm.card.indexOf('홍길동') >= 0 ? ' ← 찍혔습니다' : ''));
+  /* ⚠ 견본이 이름을 <b>name</b> 칸에 넣는데 앱은 <b>name_masked</b> 를 읽습니다
+     (cmName — 이 기기에 적어 둔 실명이 없으면 그 칸입니다). 처음에 그래서
+     「(이름 없음)」 이 나와 제 자가 저를 고발했습니다. 칸을 맞춰 줍니다. */
+  const 편이름 = await p.evaluate(() => {
+    const o = { 편: '', 가림: '' };
+    try {
+      OSC.list.forEach(c => { c.name_masked = c.name || c.name_masked || '홍길동'; });
+      HMK4.open = true;
+      o.편 = hmK4BodyHtml(mstDueList()) || '';
+      const 전 = (typeof hmNmHidden === 'function') ? hmNmHidden() : false;
+      try { localStorage.setItem('apex_hm_hidenm', '1'); } catch (e) {}
+      o.가림 = hmK4BodyHtml(mstDueList()) || '';
+      if (!전) { try { localStorage.removeItem('apex_hm_hidenm'); } catch (e) {} }
+      HMK4.open = false;
+    } catch (e) { o.err = e.message; }
+    return o;
+  });
+  is(/홍길동A/.test(편이름.편),
+    '  ⑵ ★★ <b>펴면 실명이 선다</b> — 누구인지 모르면 터치를 못 하십니다'
+      + (편이름.err ? (' ← ' + 편이름.err) : ''));
+  /* ⚠ <b>가리는 꼴을 여기서 다시 적지 않습니다</b> (5번). 처음에 「홍○○」 를
+     기다렸다가 틀렸습니다 — 실제로는 <b>홍**A</b> 입니다(cusMask). 꼴을 아는
+     곳은 cusMask 하나이고, 여기서는 <b>가려졌나</b>만 봅니다: 실명의 가운데가
+     사라졌고, 편 글과 다릅니다. 꼴을 베껴 적으면 cusMask 가 바뀔 때 이 자만
+     낡습니다 (8번 — 헛것을 잡는 점검이 더 나쁩니다). */
+  is(편이름.가림.length > 0 && !/홍길동A/.test(편이름.가림)
+      && !/길동/.test(편이름.가림) && 편이름.가림 !== 편이름.편,
+    '  ⑶ ★★ <b>🙈 이름 가리기를 누르면 가린다</b> — 그 폰에서만 (판 X399 · 꼴은 cusMask 가 정합니다)');
 
   console.log('\n[7] ★★ <b>단추가 정말 그 자리로 간다</b>');
   is(w.btnT.indexOf('보낼 말 보기') >= 0, '  단추 글자가 <b>목각 그대로</b>다 — 「' + w.btnT + '」');
@@ -328,16 +369,42 @@ const LOOK = () => {
     if (!btn) return { no: '단추를 못 찾았습니다' };
     btn.click();
     await new Promise(r => setTimeout(r, 700));
+    /* ══ 판 X467 — <b>이 단추는 이제 그 자리에서 폅니다.</b>
+       사장님 말씀 2026-11-17 「<b>오늘에서</b>, 고객들 터치하고 관리할수
+       있도록 만들어」. 전에는 누르면 고객 365일로 <b>떠났습니다</b> —
+       오늘에서 할 수가 없었습니다.
+       ★ 옛 줄을 <b>안 버렸습니다</b> (6번) — 떠나는 길은 펴면 맨 밑에
+         섭니다. 아래에서 그 단추를 다시 눌러 <b>그 화면이 정말 열리는지</b>
+         까지 잽니다. 즉 <b>옛 약속 + 새 약속</b> 둘 다 재는 자입니다. */
+    const box = document.getElementById('hmK4Box');
+    const 편 = box ? (box.innerText || '') : '';
+    const o = { 편글: 편.replace(/\s+/g, ' ').slice(0, 60),
+                펴짐: !!(box && box.getBoundingClientRect().height > 40),
+                복사: /보낼 말 복사/.test(편), 보냄: /보냈습니다/.test(편),
+                떠난곳: (typeof currentTab === 'function') ? currentTab() : '' };
+    /* 그 자리에서 폈으니 <b>아직 오늘</b>이어야 합니다 */
+    const 밖 = box ? [].slice.call(box.querySelectorAll('button'))
+      .filter(e => (e.textContent || '').indexOf('4년 유지관리 화면') >= 0)[0] : null;
+    if (!밖) return Object.assign(o, { no2: '떠나는 길이 없습니다' });
+    밖.click();
+    await new Promise(r => setTimeout(r, 800));
     const mst = document.getElementById('mstCard');
-    return { tab: (typeof TAB !== 'undefined' ? TAB : (window.OS && OS.tab) || ''),
+    return Object.assign(o, { tab: (typeof TAB !== 'undefined' ? TAB : (window.OS && OS.tab) || ''),
              has: !!mst,
              copy: mst ? /보낼 말 복사/.test(mst.innerText || '') : false,
              done: mst ? /보냈습니다/.test(mst.innerText || '') : false,
-             title: mst ? (mst.innerText || '').replace(/\s+/g, ' ').slice(0, 40) : '' };
+             title: mst ? (mst.innerText || '').replace(/\s+/g, ' ').slice(0, 40) : '' });
   });
-  is(!go.no && go.has,
-    '  ★★ 누르면 <b>「📆 계약 마디 접점」 카드가 거기 있다</b> — 「' + (go.title || '없습니다') + '」');
-  is(!!go.copy, '  ★★ 거기 <b>「📋 보낼 말 복사」</b> 가 있다 — 홈이 그 자리로 모신 것이 맞습니다');
+  is(!go.no && go.펴짐,
+    '  ★★ 누르면 <b>그 자리에서 펴진다</b> — 오늘을 안 떠납니다 · 「' + (go.편글 || '안 펴졌습니다') + '」');
+  is(go.떠난곳 === 'home',
+    '  ★★ 폈을 때 <b>아직 오늘</b>이다 — ' + (go.떠난곳 || '모름'));
+  is(!!go.복사 && !!go.보냄,
+    '  ★★ 거기서 <b>📋 보낼 말 복사 · ✅ 보냈습니다</b> 가 바로 눌린다 (터치하고 관리)');
+  is(!go.no2 && go.has,
+    '  ★ <b>떠나는 길은 안 지웠다</b> (6번) — 「4년 유지관리 화면에서 전부 보기」 로 가면 '
+      + '「📆 계약 마디 접점」 이 거기 있다 — 「' + (go.title || '없습니다') + '」');
+  is(!!go.copy, '  ★★ 거기 <b>「📋 보낼 말 복사」</b> 가 있다 — 48개월 차례표는 여전히 그 화면입니다');
   is(!!go.done, '  ★ <b>「보냈습니다」</b> 도 거기 있다 — 보내고 적는 자리까지 한 곳입니다');
 
   console.log('\n[8] ★★ <b>홈에 보낼 말을 베껴 적지 않았다</b> (5번)');
@@ -376,7 +443,8 @@ const LOOK = () => {
   await b.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '개 — 「보낼 말 보기」 에 구멍이 있습니다')
-                  : '✓ 이번 달 것 전부를 세고 · 보낸 것도 세고 · 모르면 0 이라 하지 않고 · 이름을 안 적고 · 단추가 그 자리로 갑니다');
+                  : '✓ 이번 달 것 전부를 세고 · 보낸 것도 세고 · 모르면 0 이라 하지 않고 · '
+                    + '접으면 이름이 없고 펴면 실명(🙈 면 가림) · <b>오늘에서 바로 터치하고 관리</b>합니다 (판 X467)');
   console.log('  ⚠ 보낸 뒤의 <b>답</b>은 안 셉니다 — 적어 두는 자리가 아직 없습니다 (1번).');
   process.exit(bad ? 1 : 0);
 })().catch(e => { console.log('✗ 점검 자체가 터졌습니다: ' + e.message); srv.close(); process.exit(1); });

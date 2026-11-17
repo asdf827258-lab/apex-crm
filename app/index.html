@@ -38248,10 +38248,19 @@ function hmMadiSideHtml(){
      <b>check-hmmadi 가 CI 에서 잡았습니다</b>(제가 홈 자 열둘만 돌리고 이 자를
      안 돌렸습니다). 🚗 동선 · 📒 기록도 같은 까닭으로 카드 그대로입니다.
      <b>66px 아끼자고 세는 수를 없애지 않습니다</b> (1번 · 6번).           */
-  h='<div class="card"><div class="card-body">'+
+  /* id — 판 X467. 「✅ 보냈습니다」 를 누르면 <b>이 카드를 통째로</b> 다시
+     그립니다. 칸만 다시 그렸다가 자가 잡았습니다: 줄은 내려갔는데 <b>윗줄
+     「아직 3건」 이 그대로</b>라, 한 화면이 같은 물음에 두 답을 했습니다
+     (0-1번). 그리는 자는 hmMadiSideHtml 하나입니다 (5번). */
+  h='<div class="card" id="hmMadiCard"><div class="card-body">'+
     '<div class="hm-rt-h"'+hmSumAttr(L?(L.mon.length?('마디 '+L.mon.length+'건'):'마디 없음'):'')+
+      /* ★ 판 X467 — 이 단추는 이제 <b>이 자리에서</b> 폅니다 (사장님 말씀
+         「오늘에서, 고객들 터치하고 관리할수 있도록」). 전에는 누르면 고객
+         365일로 <b>떠났습니다</b> — 오늘에서 할 수가 없었습니다.
+         ⚠ 떠나는 길은 <b>안 지웠습니다</b> (6번) — 펴면 맨 밑에 섭니다. */
       '><span class="ci">💌</span><b>이번 달 고객 관리</b>'+
-      '<button type="button" class="hm-rt-go" onclick="hmMadiGo()">보낼 말 보기 →</button></div>';
+      '<button type="button" class="hm-rt-go" id="hmK4Btn" onclick="hmK4Toggle()">'+
+        '보낼 말 보기 '+(HMK4.open?'▴':'▾')+'</button></div>';
   if(!L)
     h+='<div class="hm-rt-none"><b>아직 못 읽었습니다.</b> 고객과 적어 두신 것을 '+
        '읽으면 이 자리에 <b>이번 달 마디</b>가 섭니다.</div>';
@@ -38282,7 +38291,84 @@ function hmMadiSideHtml(){
        ((L.ansNo||0)?(' · 답 적을 것 <b data-ask="답적을마디">'+L.ansNo+'건</b>'):'')+
        (L.due.length?(' · 지난 분 <b>'+L.due.length+'분</b>'):'')+
        (L.none?(' · 계약일 모름 <b>'+L.none+'분</b>'):'')+'</div>';
+  /* ★ 판 X467 — 펴면 여기 섭니다. <b>접으면 0px</b> 입니다(빈 칸).
+     홈 선(check-homeone)에 남은 자리가 3~7px 라, 줄을 펴 둘 수가 없어
+     <b>있던 44px 단추</b>를 여는 단추로 바꾸었습니다 — 홈은 한 톨도 안 깁니다. */
+  h+='<div id="hmK4Box">'+(HMK4.open?hmK4BodyHtml(L):'')+'</div>';
   return h+'</div></div>';
+}
+/* ══ 📆 <b>4년 계획을 오늘에서</b> (hmK4*) — 판 X467 · 2026-11-17 ═══════
+   사장님 말씀 — 「4년 계획도 같이 녹여내서 <b>이미 메뉴에 있다</b>.
+   <b>오늘에서, 고객들 터치하고 관리할수 있도록</b> 만들어」.
+
+   ★★ <b>「이미 메뉴에 있다」 를 그대로 지켰습니다</b> — 📆 4년 유지관리
+     (keep4)는 그대로 두고, <b>그 화면의 줄과 단추를 홈에서 그대로</b>
+     세웁니다. 마디 표도 · 세는 자도 · 줄도 · 「보냈습니다」 도 <b>그 화면이
+     쓰는 그 자들</b> 그대로입니다 (5번) — mstDueList · mstRowHtml · mstMark.
+     여기서 또 세었다면 홈과 4년 유지관리가 <b>다른 수</b>를 말했을 것입니다.
+   ⚠ <b>자가 저를 한 번 고발했습니다</b> — 여기 쪽지에 마디 표 이름을 그대로
+     적었더니 check-hmmadi [1] 이 「홈이 마디 표를 직접 읽는다」 로 읽었습니다.
+     글자를 쪼개 숨기지 않고 <b>말을 바꾸었습니다</b> (8번).
+   ★ <b>서버를 한 번도 더 안 부릅니다</b> (7번) — 이미 읽어 둔 것으로만 셉니다.
+   ★ <b>새 CSS 0줄</b> — 있던 .mst-* · .hm-rt-* 뿐입니다.
+   ★ 이름은 홈 규칙대로 <b>실명이 기본</b>이고 🙈 를 누르면 가립니다
+     (mstNmOf → hmFullNm · 판 X399).
+   ★ <b>안 보낸 것만</b> 할 일로 세웁니다 — 보낸 것은 밑의 「답 적을 것」 에
+     섭니다. 윗줄의 「아직 N건」 과 <b>같은 수</b>입니다 (0-1번).
+   ⚠ <b>📞 결과 적기(cshOpen)는 일부러 안 달았습니다.</b> 그 창의 결과는
+     상담·부재·거절이고 단계를 올립니다 — 계약하신 분께 유지관리 전화를
+     드리고 「거절」 로 적으면 그 분 단계가 망가집니다. 맞지 않는 단추는
+     달지 않습니다 (1번).                                              */
+var HMK4={open:false};
+var HMK4_SHOW=5;              /* 한 번에 세우는 줄 — 나머지는 몇 건인지 적습니다 */
+function hmK4Toggle(){ HMK4.open=!HMK4.open; hmK4Paint(); }
+/* 다시 칠하기 — 💌 카드가 서 있을 때만 합니다. 다른 화면이면 아무 일도 없습니다.
+   ★★ <b>카드를 통째로</b> 다시 그립니다. 처음에는 칸(#hmK4Box)만 다시
+     그렸는데 check-hmk4 가 잡았습니다 — 줄은 내려갔는데 <b>윗줄 「아직 3건」 이
+     그대로</b>였습니다. 수를 적는 자리와 줄을 세우는 자리가 따로 칠해지면
+     한 화면이 같은 물음에 <b>두 답</b>을 합니다 (0-1번).
+   ★ 그리는 자는 hmMadiSideHtml <b>하나</b>이고, 그 자가 수도 줄도 단추도
+     같이 짓습니다 (5번). 서버는 안 부릅니다 — 이미 읽어 둔 것으로 셉니다 (7번). */
+function hmK4Paint(){
+  var c=document.getElementById('hmMadiCard'); if(!c)return;
+  try{ c.outerHTML=hmMadiSideHtml(); }catch(e){}
+}
+function hmK4BodyHtml(L){
+  /* ★ 옷을 쓰는 화면에서 부릅니다 (5번) — 안 부르면 홈에서 줄이 벌거벗습니다.
+     전에 「칸 모양 CSS 를 한 화면에서만 입혀 다른 화면이 벌거벗은」 자리가
+     그것입니다. mstCss 는 한 번만 넣고 두 번째부터는 그냥 돌아갑니다. */
+  if(typeof mstCss==='function')try{mstCss();}catch(e0){}
+  if(!L)return '<div class="hm-rt-none"><b>아직 못 읽었습니다.</b> 고객과 적어 두신 것을 '+
+    '읽으면 이 자리에 <b>이번 달 마디</b>가 섭니다.</div>';
+  var h='',i,x,todo=[],S=[];
+  /* 할 일 — 이번 달 마디 가운데 <b>아직 안 보낸 것</b>. 윗줄 「아직 N건」 과 같은 수입니다 */
+  for(i=0;i<L.mon.length;i++){ x=L.mon[i]; if(x&&x.hit&&!x.hit.done)todo.push(x); }
+  if(!todo.length)
+    h+='<div class="hm-rt-none"><b>이번 달 보낼 것은 다 하셨습니다.</b></div>';
+  for(i=0;i<todo.length&&i<HMK4_SHOW;i++)
+    h+=mstRowHtml(todo[i],todo[i].hit.d<=0,true,true);
+  if(todo.length>HMK4_SHOW)
+    h+='<div class="mst-no">그 밖에 <b>'+(todo.length-HMK4_SHOW)+'건</b>이 더 있습니다 — '+
+       '하나를 「✅ 보냈습니다」 로 적으시면 다음 것이 올라옵니다.</div>';
+  /* 💬 보낸 뒤에 온 답 — 적을 것이 있을 때만 (사장님 말씀 2026-10-02) */
+  S=(L.sent&&typeof L.sent.length==='number')?L.sent:[];
+  if(S.length){
+    h+='<div class="mst-sep">💬 보냈습니다 — 답을 적어 주십시오 · '+
+       ((L.ansNo||0)?('아직 <b>'+L.ansNo+'건</b>'):'<b>다 적으셨습니다</b>')+'</div>';
+    for(i=0;i<S.length&&i<HMK4_SHOW;i++)h+=mstAnsRowHtml(S[i],i);
+    if(S.length>HMK4_SHOW)
+      h+='<div class="mst-no">그 밖에 <b>'+(S.length-HMK4_SHOW)+'건</b>이 더 있습니다.</div>';
+    h+='<div class="mst-no">적으신 답은 <b>이 기기에만</b> 담깁니다 — '+
+       '<b>폰과 PC 가 따로 셉니다.</b></div>';
+  }
+  if(L.none)
+    h+='<div class="mst-no"><b>계약일을 아직 안 넣은 분이 '+L.none+'명</b> 있습니다 — '+
+       '그분들은 여기 안 섭니다. 날짜를 짐작해서 채우지 않습니다.</div>';
+  /* ★ 떠나는 길은 안 지웁니다 (6번) — 48개월 차례표와 「왜 4년인가」 는 그 화면에 있습니다 */
+  h+='<div class="mst-btns" style="margin-top:10px">'+
+     '<button type="button" class="mst-b" onclick="hmMadiGo()">📆 4년 유지관리 화면에서 전부 보기 →</button>'+
+     '</div>';
+  return h;
 }
 /* <b>보낼 말 보기</b> — 고객 365일의 「📆 계약 마디 접점」 자리로 모십니다.
    ★ 여기서 또 카드를 그리지 않습니다 (5번) — 그 카드가 보낼 말·복사·
@@ -78917,8 +79003,7 @@ function mstCopy(id,m){
 }
 function mstToggle(id,m){
   mstMark(id,m,!mstIsDone(id,m));
-  if(typeof cli365TopPaint==='function')try{cli365TopPaint();}catch(e){}
-  if(typeof cmDetailPaint==='function'&&OSC.view==='detail')try{cmDetailPaint(id);}catch(e){}
+  mstPaint(id);   /* ★ 판 X467 — 칠하는 길은 mstPaint 하나입니다 (5번 · 홈도 같이) */
 }
 /* ── 고객 365일 맨 위 판 ──
    계약일을 아는 분만 세웁니다. 모르는 분은 <b>몇 분인지 적어</b>
@@ -79003,8 +79088,44 @@ function mstListHtml(h,L){
    다 폅니다. 고객 365일 맨 위 판은 <b>그대로 짧게</b> 둡니다 — 폰에서 3화면을
    넘기면 안 보인다고 하신 화면입니다(check-phonefit). 판은 하나이고 펴는
    정도만 다릅니다 (5번). */
-function mstRowHtml(x,over,full){
-  var c=x.c,st=x.hit.step,nm=(typeof cmName==='function'?cmName(c):'')||c.name_masked||'고객';
+/* ══ 판 X467 — 마디 줄을 <b>홈에서도</b> 세웁니다. 그 전에 둘을 하나로 ══
+   사장님 말씀 2026-11-17 — 「4년 계획도 같이 녹여내서 <b>이미 메뉴에 있다</b>.
+   <b>오늘에서, 고객들 터치하고 관리할수 있도록</b> 만들어」.
+   「이미 메뉴에 있다」 를 그대로 지킵니다 — <b>새 화면·새 셈을 안 만들고</b>
+   이 줄과 이 단추를 홈에서 그대로 세웁니다 (5번).
+
+   ★ <b>이 분 이름을 어떻게 적나 — 묻는 곳은 여기 하나</b>입니다 (5번).
+     전에는 mstRowHtml 과 mstAnsRowHtml 이 <b>각자</b> 같은 글을 베껴 적고
+     있었습니다. 그리고 그 글은 홈에서 틀립니다 — 홈은 <b>실명이 기본</b>이고
+     맨 위 띠 「🙈 이름 가리기」 를 누르면 <b>그 폰에서만</b> 가립니다
+     (2026-11-09 사장님 결정 · 판 X399). 그 자가 <b>hmFullNm</b> 입니다.
+     여기서 cmName 만 쓰면 홈에서 🙈 를 눌러도 이름이 그대로 섭니다.
+   ★ 「지금 어느 화면인가」 는 <b>currentTab() 하나</b>만 압니다 (5번) —
+     다시 세어 답하지 않습니다. */
+function mstNmOf(c){
+  var n=(typeof cmName==='function'?cmName(c):'')||(c&&c.name_masked)||'고객';
+  try{ if(typeof currentTab==='function'&&currentTab()==='home'
+          &&typeof hmFullNm==='function')return hmFullNm(n)||n; }catch(e){}
+  return n;
+}
+/* ★ <b>다시 그리는 길도 하나</b>입니다 (5번). mstToggle 과 mstAnsPaint 가
+   <b>똑같은 두 줄</b>을 각자 적고 있었습니다 — 그래서 홈에 줄을 세우면
+   「✅ 보냈습니다」 를 눌러도 <b>홈은 안 바뀌는</b> 자리가 둘 생깁니다.
+   고칠 자리를 둘로 두지 않고 여기 하나로 모읍니다. 서 있지 않은 화면의
+   칠하는 자는 없으므로 try 로 지나갑니다 — 터뜨리지 않습니다 (1번). */
+function mstPaint(id){
+  if(typeof cli365TopPaint==='function')try{cli365TopPaint();}catch(e){}
+  if(typeof cmDetailPaint==='function'&&typeof OSC!=='undefined'&&OSC.view==='detail')
+    try{cmDetailPaint(id);}catch(e2){}
+  if(typeof hmK4Paint==='function')try{hmK4Paint();}catch(e3){}
+}
+/* home — 홈의 💌 칸에서 세울 때입니다. 더하는 것은 <b>📞 전화 한 자리</b>뿐이고
+   (만드는 자는 hmTelBtnHtml 하나 · 5번), 글과 다른 단추는 한 자도 안 다릅니다.
+   ⚠ 📞 는 홈에서만 답니다 — 그 옷(.hm-rt-tel)이 홈 CSS 라 다른 화면에 붙이면
+     벌거벗고, 고객 365일은 폰에서 3화면을 넘기면 안 되는 화면입니다
+     (check-phonefit). 「다른 화면에도 달면 좋겠다」 는 재어 보고 할 일입니다. */
+function mstRowHtml(x,over,full,home){
+  var c=x.c,st=x.hit.step,nm=mstNmOf(c);
   return '<div class="mst-row">'+
     '<div class="mst-rh">'+
       '<span class="mst-ic">'+st.ic+'</span>'+
@@ -79018,6 +79139,10 @@ function mstRowHtml(x,over,full){
     (full?(mstListHtml('☑ 확인할 것',st.check)+mstListHtml('📣 전달할 것',st.tell)):'')+
     (full&&x.miss?('<div class="mst-no">⚠ 지난 전화('+x.miss.step.m+'개월 · '+osEsc(x.miss.at)+')를 아직 안 챙기셨습니다 — 이번에 같이 여쭤 보십시오.</div>'):'')+
     '<div class="mst-btns">'+
+      /* 📞 홈에서만 — 만드는 자는 hmTelBtnHtml 하나입니다 (5번). 그 자가 세 가지를
+         가릅니다: 번호를 안다 / 서버가 없다고 했다 / 아직 못 물었다 (1번).
+         ★ 번호를 <b>지어내지 않습니다</b> — 모르면 「번호 확인 중」 이라고 섭니다. */
+      ((home&&typeof hmTelBtnHtml==='function')?hmTelBtnHtml(c.id):'')+
       '<button type="button" class="mst-b p" onclick="mstCopy(\''+c.id+'\','+st.m+')">📋 보낼 말 복사</button>'+
       '<button type="button" class="mst-b" onclick="mstToggle(\''+c.id+'\','+st.m+')">'+(st.kind==='call'?'✅ 통화 · 보냈습니다':'✅ 보냈습니다')+'</button>'+
     '</div>'+
@@ -79034,7 +79159,9 @@ function mstRowHtml(x,over,full){
    ★ 이름은 이 화면이 이미 쓰는 <b>cmName</b> 으로만 꺼냅니다 (5번).     */
 function mstAnsRowHtml(x,i){
   var c=x.c,st=x.hit.step,a=x.ans,v=(a&&a.k==='왔')?(a.t||''):'';
-  var nm=(typeof cmName==='function'?cmName(c):'')||c.name_masked||'고객';
+  /* ★ 판 X467 — 이름을 묻는 곳은 mstNmOf 하나입니다 (5번). 전에는 위 줄과
+     여기가 같은 글을 각자 베껴 적어, 홈에서 🙈 를 눌러도 안 가렸습니다. */
+  var nm=mstNmOf(c);
   /* ⚠ <b>data-ans 를 답니다</b> — 새 class 가 아니라 꼬리표입니다.
      CI 가 잡은 자리입니다: check-mstone 은 「보낸 마디가 목록에서 내려가나」 를
      <b>.mst-row 수가 줄었나</b> 로 재는데, 이 답 줄이 같은 이름을 쓰니 수가
@@ -79084,12 +79211,11 @@ function mstAnsClear(id,m){
   toast('적어 둔 답을 지웠습니다 — 다시 「아직 안 적었습니다」 가 됩니다');
   mstAnsPaint(id);
 }
-/* 다시 그리는 길은 <b>보냈습니다 표시와 같은 길</b>입니다 (5번) */
-function mstAnsPaint(id){
-  if(typeof cli365TopPaint==='function')try{cli365TopPaint();}catch(e){}
-  if(typeof cmDetailPaint==='function'&&typeof OSC!=='undefined'&&OSC.view==='detail')
-    try{cmDetailPaint(id);}catch(e){}
-}
+/* 다시 그리는 길은 <b>보냈습니다 표시와 같은 길</b>입니다 (5번).
+   ★ 판 X467 — 그 길이 <b>mstPaint 하나</b>가 되었습니다. 전에는 여기와
+     mstToggle 이 똑같은 두 줄을 각자 적고 있어, 홈을 더하면 고칠 자리가
+     둘이었습니다. */
+function mstAnsPaint(id){ mstPaint(id); }
 function mstCardHtml(full){
   mstCss();
   var L=mstDueList(),i,h='';
