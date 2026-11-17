@@ -691,6 +691,16 @@ function tkMode(k) { TK.mode = k; renderTalk(); }
 function tkPick(id) { TK.pid = id; $('tk-out').innerHTML = tkOutHTML(); $('tk-fit').innerHTML = tkFitHTML(); document.querySelectorAll('.tk-pick').forEach(e => e.classList.toggle('on', e.getAttribute('onclick') === `tkPick('${id}')`)); if (innerWidth < 1100) $('tk-out').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 function tkCat(k) { const i = TK.cats.indexOf(k); if (i >= 0) TK.cats.splice(i, 1); else TK.cats.push(k); renderTalk(); }
 function tkFrom(id) { closeP(); TK.mode = 'prod'; TK.pid = id; go('talk'); }
+/* 🎣 오늘(홈) 「이분께 꺼낼 한 줄」 에서 바로 — 꼬리 #talk/모드/걱정/호칭/번호 (판 X470).
+   걱정이 있으면 그 걱정으로, 없으면 이번 달 1위 상품으로(TK.pid 를 비우면 tkNow 가 1위를 고릅니다). 모르는 값은 안 씁니다. */
+function tkHash() {
+  const h = (location.hash || '').replace(/^#/, '').split('/'), M = MKT();
+  if (h[0] !== 'talk' || !M || !RENDER.talk) return false;
+  if (h[1] === 'sit' && M.CATS[h[2]]) { TK.mode = 'sit'; TK.cats = [h[2]]; } else { TK.mode = 'prod'; TK.pid = ''; }
+  TK.type = M.TYPES[h[3]] ? h[3] : 'general';
+  go('talk'); return true;
+}
+window.addEventListener('hashchange', tkHash);
 function tkCopy() {
   const M = MKT(), n = tkNow(); if (!M || !n) return;
   const r = M.script(TK.type, n.keys);
@@ -1798,6 +1808,7 @@ document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (
   subT();
   renderFooter(); anInit();
   if (!MKT()) { const b = document.querySelector('#tabs [data-t="talk"]'); if (b) b.remove(); $('tabs').style.gridTemplateColumns = 'repeat(4,1fr)'; delete RENDER.talk; }
+  if (tkHash()) return;
   let t = 'home'; try { t = localStorage.getItem('apex-insight-tab') || 'home'; } catch (e) {}
   go(RENDER[t] ? t : 'home');
 })();
