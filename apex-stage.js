@@ -1951,12 +1951,26 @@ var TA_OVR=null;
 function taSayOver(map){ TA_OVR=(map&&typeof map==='object')?map:null; }
 /* 덮기 <b>전</b>의 말 — 「원래 말로 되돌리기」 에서 미리 보여 드립니다 */
 function taSayBase(k){
-  var i; for(i=0;i<TA_SRC.length;i++)if(TA_SRC[i].k===k)return TA_SRC[i];
-  return (TA_ANY.k===k)?TA_ANY:null;
+  var i; for(i=0;i<TA_SRC.length;i++)if(TA_SRC[i].k===k)return taOpen(TA_SRC[i],k);
+  return (TA_ANY.k===k)?taOpen(TA_ANY,''):null;
+}
+/* ☎️ <b>말은 TA 스크립트 대본 틀로</b> (판 X467 · 사장님 말씀 2026-11-17 「첫마디가 너무 허접해 - TA스크립트해서 가져와야만해」)
+   글 틀은 ta-open.js 한 곳(TA_OPEN) — ☎️ TA 스크립트가 그리는 ① 출처 · ② 자기소개 · 세 가지 · 양자택일 그대로입니다 (5번).
+   ★ 원래 짧은 말(TA_SRC.say)은 <b>남겨 둡니다</b> — 틀을 못 실은 화면(거절 근육 훈련 등)과 소개·개척(대본에 없는 갈래)이 씁니다.
+   ★ 설계사 이름은 앱이 아는 것만(OS.profile.name) — 모르면 그 줄을 뺍니다. 고객 이름은 안 넣습니다(「고객님」 · 3번).
+   ★ 사장님이 고치신 말(✏️ TA_OVR)은 이 위에 그대로 덮입니다 — 고치신 것이 이깁니다. */
+var TA_OPEN_SKIP={'소개':1,'개척':1};
+function taOpen(b,v){
+  if(!b||TA_OPEN_SKIP[b.k]||!g.TA_OPEN||!g.TA_OPEN.say)return b;
+  var me=''; try{ me=(g.OS&&g.OS.profile&&g.OS.profile.name)||''; }catch(e){ me=''; }
+  var s=''; try{ s=g.TA_OPEN.say(v,{me:me}); }catch(e1){ s=''; }
+  if(!s)return b;
+  return {k:b.k, re:b.re, t:b.t, say:s, tip:b.tip, ta:true};
 }
 function taSay(src){
   var v=String(src==null?'':src),i,b=TA_ANY;
   for(i=0;i<TA_SRC.length;i++)if(TA_SRC[i].re.test(v)){ b=TA_SRC[i]; break; }
+  b=taOpen(b,v);
   var o=TA_OVR&&TA_OVR[b.k];
   if(!o)return b;
   /* 빈 글은 <b>안 고치신 것</b>으로 봅니다 — 지우신 것이 아닙니다 (1번) */
