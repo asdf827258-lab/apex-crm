@@ -244,7 +244,11 @@ const open = async (pg, who) => {
              저장단추: !!(box && [...box.querySelectorAll('button')].find(b => /저장/.test(b.innerText))),
              /* ⚠ 처음엔 innerText 로 봤는데 멘트는 <b>textarea 안</b>이라
                 안 잡혔습니다 — 앱이 아니라 제 자가 틀렸습니다 (8번). */
-             읽힘: /안녕하세요/.test((document.getElementById('tsaySay') || {}).value || ''),
+             /* ⚠ 판 X469 — 첫 마디가 TA 대본의 ① 출처(「… 신청해 주셔서 감사해요」)로 바뀌어 「안녕하세요」 가
+                없어졌습니다. 낱말 하나가 아니라 <b>원래 말 그대로</b> 들어 있는지로 봅니다 (8번). */
+             읽힘: (function(){ var v = (document.getElementById('tsaySay') || {}).value || '', B = APEX_STAGE.taSayBase('보장분석');
+                     var O = (typeof TSAY !== 'undefined' && TSAY.map && TSAY.map['보장분석']) || null;
+                     return v.length > 20 && !!B && v === ((O && O.say) || B.say); })(),
              글: t.slice(0, 70),
              칸잠김: !!(document.getElementById('tsaySay') || {}).readOnly };
   });
