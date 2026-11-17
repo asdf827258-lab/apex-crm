@@ -166,8 +166,16 @@ const WANT = [
   is(n6 === 6, '  <b>여섯 개 다</b> 있다 — ' + n6 + '/6');
 
   console.log('\n[2] ★★ 결과 다섯이 단계와 다음 날짜를 표대로 바꾼다');
+  /* ★★ 판 X471 — <b>이 자가 앱의 틀린 셈을 그대로 베껴 들고 있었습니다.</b>
+     앱의 cshDayPlus 가 한국 날짜에 +09:00 을 붙여 Date 를 만들고 toISOString()
+     으로 읽어 <b>늘 전날</b>을 돌려주고 있었는데(「상담 3일 뒤」 가 이틀 뒤),
+     이 자는 같은 식을 옮겨 적어 <b>틀린 값을 정답으로</b> 외우고 있었습니다.
+     그래서 날짜가 틀린 채로 465판 동안 초록이었습니다.
+     ★ 자는 앱의 식을 베끼지 않고 <b>제 손으로</b> 셉니다 — 그래야 앱이 틀렸을
+     때 갈라집니다(8번). 날짜글은 Z 로 만들어 UTC 로 읽습니다.
+     ⚠ 셈이 맞는지는 check-kstday 가 열 날 × 일곱 간격으로 따로 잽니다. */
   const plus = (n) => {
-    const d = new Date((new Date(R.today + 'T00:00:00+09:00')).getTime() + n * 86400000);
+    const d = new Date((new Date(R.today + 'T00:00:00Z')).getTime() + n * 86400000);
     return d.toISOString().slice(0, 10);
   };
   WANT.forEach((w, i) => {

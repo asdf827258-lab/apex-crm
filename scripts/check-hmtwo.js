@@ -206,7 +206,14 @@ const SEED = () => {
      '  ★★ 「지금 할 것」 테두리 안이 <b>🧭 다섯 걸음 머리 → ① 카드 → 넷</b> — ' + (two.wk || '(없음)'));
   /* 판 X287 — 🕗 약속이 지난 분이 📅 바로 밑에 들어왔습니다(사장님이 고르신 「고객 관리」 첫째) */
   /* 판 X289 — 💬 소개 여쭐 차례가 🕗 바로 밑에 들어왔습니다(사장님이 고르신 「고객 관리」 셋째) */
-  is(!two.no && two.sk === 'hmRtHost · hmUpHost · hmLateHost · hmReferHost · hmActHost · card',
+  /* ⚠ 판 X469 — 끝 칸 이름이 <b>card → hmMadiCard</b> 로 또렷해졌습니다.
+     여기는 <b>id 가 없으면 className</b> 을 적는 자리라, 💌 칸에 id 가 없을 때는
+     그냥 「card」 였습니다. 그 칸이 「✅ 보냈습니다」 뒤에 <b>제 카드를 통째로</b>
+     다시 그리게 되면서 id 를 달았습니다(안 달면 윗줄 「아직 N건」 이 안 줄어
+     한 화면이 두 답을 합니다 · 0-1번).
+     ★ <b>차례는 한 칸도 안 바뀌었습니다</b> — 이름만 또렷해졌고, 자는
+       오히려 전보다 정확히 가립니다(「card」 는 아무 카드나 맞았습니다). */
+  is(!two.no && two.sk === 'hmRtHost · hmUpHost · hmLateHost · hmReferHost · hmActHost · hmMadiCard',
      '  ★★ 그 안이 <b>🚗 동선 → 📅 약속·이번 주 → 🕗 약속 지난 분 → 💬 소개 여쭐 차례 → 📊 오늘 기록 → 💌 이번 달 관리</b> — ' + (two.sk || '(없음)'));
   is(!two.no && /이번 주/.test(two.rtx) && /알람/.test(two.rtx) &&
      !/오늘 어디로|오늘 기록|이번 달 고객 관리/.test(two.rtx),
