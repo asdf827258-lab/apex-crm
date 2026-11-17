@@ -57,5 +57,24 @@ is(/const cmpPool = \(\) => P\.filter\(p => p\.terms\)/.test(PAGE), '고르는 �
 is(/cmpOpen\(\[/.test(PAGE), '편집부 비교표에서 그 상품들의 상세 비교로 이어진다');
 is(/\.pc2\{display:grid/.test(PAGE) && /\.tc2\{display:grid/.test(PAGE) && /\.tk-grid\{display:grid/.test(PAGE), 'PC 좌우 화면 — 이번 달·추천(pc2) · 약관 비교(tc2) · 문 열기(tk-grid)');
 
+console.log('\n[6] 📑 편집부 비교표 → 줄마다 약관 원문 (판 X471 · 사장님 말씀 「약관 세개 비교해주는 디테일을 더 높여줘」)');
+let SEED = null;
+try { const TAG = '<script id="seed" type="application/json">', a = PAGE.indexOf(TAG) + TAG.length; SEED = JSON.parse(PAGE.slice(a, PAGE.indexOf('</script>', a))); } catch (e) {}
+const TDS = SEED ? (SEED.editorial.terms_compare || []).filter(t => t.detail) : [];
+is(/function tdHTML\(/.test(PAGE) && /tdHTML\(tcs\[TC\]/.test(PAGE), '약관 비교 탭이 편집부 비교 밑에 상세표를 그린다');
+is(TDS.length >= 3, '편집부 비교 ' + TDS.length + '개에 상세표가 붙었다 (3개 이상)');
+let quoted = 0, okc = 0, badLen = 0, wide = 0, fake = 0;
+TDS.forEach(t => (t.detail.rows || []).forEach(r => {
+  if ((r.cells || []).length !== t.detail.ids.length) badLen++;
+  (r.cells || []).forEach(c => { if (c.quote) { quoted++; if (c.vf && c.vf.ok) okc++; if (!c.vf) fake++; } if (String(c.v || '').length > 70) wide++; });
+}));
+is(TDS.length && TDS.every(t => t.detail.rows.length >= 15), '표마다 줄 15개 이상 — 요약표(5~8줄)보다 넓다 (' + TDS.map(t => t.detail.rows.length).join('·') + ')');
+is(badLen === 0, '줄마다 칸 수 = 상품 수');
+is(fake === 0, '원문 문장이 있는 칸은 전부 대조 결과(vf)를 들고 있다 — 대조 안 한 문장을 「약관 문장」 으로 보이지 않게 (' + fake + ')');
+is(quoted > 0 && okc / quoted >= 0.95, '원문 대조 ' + okc + '/' + quoted + ' (95% 이상 · 못 한 것은 약관 PDF 가 없는 칸)');
+is(wide === 0, '쉬운 한 줄은 짧게 (70자 넘는 칸 ' + wide + ')');
+is(/보장을 안 한다는 뜻이 아니라/.test(PAGE), '「약관에서 못 찾음 ≠ 보장 안 함」 을 화면이 말한다');
+is(/발췌 — 원문 대조 안 됨/.test(PAGE), '대조 안 된 칸은 「약관 문장 그대로」 라고 부르지 않는다');
+
 console.log('\n' + (bad ? '✗ ' + bad + '곳이 어긋났습니다' : '✓ 상품전략기 한 칸에서 「무엇을 권할까」 와 「어떻게 말을 꺼낼까」 가 같은 대본으로 이어집니다.'));
 process.exit(bad ? 1 : 0);
