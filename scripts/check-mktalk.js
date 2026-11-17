@@ -51,5 +51,11 @@ is(!!r && r.dambo.length === 5, '담보는 다섯까지 합친다');
 is(!!M && M.detect('운전자 벌금 합의금')[0] === 'driver', '글에서 상황을 찾는다(운전 → 운전·교통)');
 is(!!M && M.script('general', []).keys[0] === 'cancer3', '아무것도 안 고르면 암·뇌·심장 (책과 같은 기본값)');
 
+console.log('\n[5] 약관 직접 비교 · PC 좌우 (같은 판 추가 말씀)');
+is(/function cmpBox\(/.test(PAGE) && /const CMP_MAX = 4;/.test(PAGE) && /id="cmp"/.test(PAGE), '약관 비교 탭에 「약관 원문으로 직접 비교」 가 있다 — 4개까지 나란히');
+is(/const cmpPool = \(\) => P\.filter\(p => p\.terms\)/.test(PAGE), '고르는 상품은 <b>약관을 연 상품 전부</b>(편집부 다섯 주제에 갇히지 않음)');
+is(/cmpOpen\(\[/.test(PAGE), '편집부 비교표에서 그 상품들의 상세 비교로 이어진다');
+is(/\.pc2\{display:grid/.test(PAGE) && /\.tc2\{display:grid/.test(PAGE) && /\.tk-grid\{display:grid/.test(PAGE), 'PC 좌우 화면 — 이번 달·추천(pc2) · 약관 비교(tc2) · 문 열기(tk-grid)');
+
 console.log('\n' + (bad ? '✗ ' + bad + '곳이 어긋났습니다' : '✓ 상품전략기 한 칸에서 「무엇을 권할까」 와 「어떻게 말을 꺼낼까」 가 같은 대본으로 이어집니다.'));
 process.exit(bad ? 1 : 0);
