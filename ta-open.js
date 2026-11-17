@@ -18,7 +18,9 @@ window.TA5 = {"DBS": [{"key": "broadcast", "label": "방송", "theme": "save", "
   /* 글 틀 — TA 스크립트 buildFive() 가 그리던 문장 그대로입니다 */
   var T = {
     hello : '[미소·한 톤 위]안녕하세요, {c}님 맞으시죠?',
-    src   : '네, 반갑습니다. {date}에 {src} <u>{kw}</u> {verb} 감사해요. 그 건으로 제가 담당이 되어 연락드렸어요. [0.5초]혹시 <u>기억나세요?</u>',
+    /* ① 출처는 「고맙다」 와 「담당이 되어 연락」 두 토막 — 대본은 이어 붙여 한 말로, 홈은 줄을 나눠 씁니다 */
+    thanks: '{src} <u>{kw}</u> {verb} 감사해요.',
+    who   : '그 건으로 제가 담당이 되어 연락드렸어요. [0.5초]혹시 <u>기억나세요?</u>',
     srcTm : '네, 반갑습니다. {tm}에 저희 상담원과 통화 나누셨던 거 기억나세요? 그때 <u>보험료 점검</u>이랑 <u>숨은 보험금 확인</u>을 원하셔서, 제가 담당으로 연락드렸어요.',
     me    : '저는 {area} 지역 담당 {me}{ye}.',
     office: ' {office}에서 일하고 있어요.',
@@ -27,6 +29,7 @@ window.TA5 = {"DBS": [{"key": "broadcast", "label": "방송", "theme": "save", "
     pick  : '[양자택일]편하신 때로 맞춰 드릴게요. <u>{s1wa} {s2}</u> 중에 어느 쪽이 조금 더 괜찮으세요?'
   };
   /* 사람이 적는 칸(이름·날짜·지역·사무실)은 TA 스크립트에서 V 로 꾸미고, 기록에서 오는 칸은 esc, 틀이 쥔 글은 그대로 */
+  T.src = '네, 반갑습니다. {date}에 ' + T.thanks + ' ' + T.who;   /* 대본의 ① 출처 — 글은 위 두 토막 그대로 */
   var VF = {c:1, date:1, tm:1, area:1, me:1, office:1}, RAW = {third:1, verb:1, ye:1};
   function fill(k, v, o){
     o = o || {};
@@ -62,7 +65,9 @@ window.TA5 = {"DBS": [{"key": "broadcast", "label": "방송", "theme": "save", "
     var v = { c:f.c||'고객', date:f.date||'얼마 전', src:d?d.src:'', kw:th.kw, verb:verb(d),
               me:f.me||'', area:f.area||'', cnt:f.cnt||'33', third:th.third,
               s1wa:wagwa(f.s1||s[0]||''), s2:f.s2||s[1]||'' };
-    var L = [ fill('hello', v)+' '+fill('src', v) ];
+    /* 첫 줄 = ③ 용건(고맙다) 한 문장 — 인사는 아침 미션 다섯 마디 ①② 가 이미 합니다.
+       홈은 이 줄을 석 줄 칸(.hm-how-t)에 보여 주는데, 인사까지 붙였더니 52~70px 넘쳐 잘렸습니다(check-hmguide). */
+    var L = [ fill('thanks', v), fill('who', v) ];
     if(v.me) L.push(v.area ? fill('me', v) : ('저는 담당 '+v.me+(fin(v.me)?'이에요':'예요')+'.'));
     L.push(fill('easy', v));
     if(f.full){ L.push(fill('three', v)); if(v.s2) L.push(fill('pick', v)); }
