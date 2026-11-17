@@ -7,7 +7,7 @@
    ── 보는 것 (브라우저 없이) ──────────────────────────────────────
      [1] ★★ ta-script.html 에 여는 말 문장이 <b>다시 적혀 있지 않다</b> — 틀을 부른다 (5번)
      [2] ★★ 홈 첫 마디(taSay)가 그 DB 의 <b>출처·주제</b>를 그대로 말한다 (대본과 같은 글)
-     [3] ★ 첫 줄에 인사와 ① 출처가 같이 있다 — 홈은 첫 줄만 보여 줍니다
+     [3] ★ 첫 줄이 ① 출처(용건) 한 문장이다 — 홈은 첫 줄만 석 줄 칸에 보여 줍니다(인사까지 붙이면 잘렸다 · check-hmguide)
      [4] ★★ 못 알아본 DB 종류는 <b>출처를 지어내지 않는다</b> (1번)
      [5] ★ 소개·개척(대본에 없는 갈래)은 원래 말 그대로
      [6] ★ 이름이 안 들어간다 — 고객은 「고객님」(3번), 설계사 이름 줄도 없다(홈·CRM 이 같은 글 · check-touch) · 대본에 이름을 넣을 땐 받침에 맞게
@@ -42,13 +42,15 @@ const s3 = A.taSay('보장분석3DB').say;
 is(s3.indexOf(d3.src) >= 0 && s3.indexOf(th3.kw) >= 0, '  보장분석3DB → 「' + d3.src + ' ' + th3.kw + '」');
 const nh = D.DBS.find(x => x.label === '농협');
 is(A.taSay('농협').say.indexOf(nh.src) >= 0, '  농협 → 「' + nh.src + '」');
-is(/쉽게 말씀드리면/.test(s3) && s3.split(String.fromCharCode(10)).length === 2, '  ② 쉽게 한 줄까지 — <b>두 줄</b>(아침 미션 칸이 한 화면 · check-msfive)');
+is(/쉽게 말씀드리면/.test(s3) && s3.split(String.fromCharCode(10)).length === 3 && /담당이 되어 연락/.test(s3), '  ① 출처 두 토막 · ② 쉽게 한 줄 — <b>세 줄</b>(세 가지·양자택일은 숫자라 뺌 · check-msfive)');
 is(!/[0-9]/.test(s3), '  홈 말에 <b>숫자가 없다</b> — 보험사 수·약속 시각은 빼고(2번 · check-msfive)');
 const full = O.say('보장분석3DB', { full: true });
 is(/세 가지/.test(full) && /중에 어느 쪽이/.test(full), '  {full:true} 면 세 가지 · 양자택일까지');
 const one = s3.split('\n')[0];
 console.log('\n[3] 홈이 보여 주는 첫 줄');
-is(/맞으시죠/.test(one) && one.indexOf(d3.src) >= 0, '  첫 줄에 인사 + ① 출처 — 「' + one.slice(0, 60) + '…」');
+is(one.indexOf(d3.src) >= 0 && /감사해요\.$/.test(one) && one.length <= 45, '  첫 줄 = ① 출처 한 문장(' + one.length + '자) — 「' + one + '」');
+const longest = win.TA5.DBS.map(x => O.say(x.label).split(String.fromCharCode(10))[0]).sort((a, b) => b.length - a.length)[0];
+is(longest.length <= 45, '  ★ 제일 긴 출처도 45자 안 — 홈 석 줄 칸에서 안 잘린다 — 「' + longest + '」(' + longest.length + '자)');
 is(!/[\[\]{}<>]/.test(s3), '  틀 자국([말투] · {자리} · 태그)이 안 남는다');
 
 console.log('\n[4] 모르는 DB 는 출처를 안 지어낸다 (1번)');
@@ -60,7 +62,7 @@ is(A.taSay('소개').say.indexOf('소개를 받고') >= 0 && !A.taSay('소개').
 is(A.taSay('개척').say.indexOf('잠깐만 시간') >= 0 && !A.taSay('개척').ta, '  개척 — 원래 말');
 
 console.log('\n[6] 이름');
-is(/고객님 맞으시죠/.test(s3) && !/홍길동/.test(s3), '  고객은 「고객님」');
+is(!/홍길동|님 맞으시죠/.test(s3), '  고객 이름이 없다(인사는 아침 미션 다섯 마디 ① 「고객님, 안녕하세요!」)');
 is(!/윤시현|저는 담당/.test(s3), '  설계사 이름 줄이 <b>없다</b> — 앱이 이름을 알아도(홈과 CRM 이 같은 글)');
 is(O.say('농협', { me: '윤시현' }).indexOf('윤시현이에요') >= 0, '  대본에 넣을 땐 받침에 맞게 — 「윤시현이에요」');
 is(O.say('농협', { me: '이수지' }).indexOf('이수지예요') >= 0, '  받침 없으면 「이수지예요」');
