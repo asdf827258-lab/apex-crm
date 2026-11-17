@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════
-   check-hmk4.js — <b>4년 계획을 오늘에서.</b> (판 X467 · 2026-11-17)
+   check-hmk4.js — <b>4년 계획을 오늘에서.</b> (판 X469 · 2026-11-17)
 
    사장님 말씀 2026-11-17 — 「4년 계획도 같이 녹여내서 <b>이미 메뉴에
    있다</b>. <b>오늘에서, 고객들 터치하고 관리할수 있도록</b> 만들어」.
@@ -95,6 +95,11 @@ const ROWS = [['c1', '2026-09-05', '홍길동A', '010-0000-0001'],
   await new Promise(r => srv.listen(PORT, r));
   const b = await chromium.launch({ args: ['--no-sandbox'] });
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+  /* ★ <b>바깥을 막습니다</b> — 점검이 사장님 진짜 서버를 읽지 않습니다
+     (check-netblock 이 이것을 셉니다 · CLAUDE.md 8번). 기다리게 두면 곳마다
+     다른 순간을 재므로 <b>끊습니다</b>(abort). */
+  await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0
+                                  ? r.continue() : r.abort());
   const p = await ctx.newPage();
   const 터짐 = [];
   p.on('pageerror', e => 터짐.push(String(e.message || e)));
@@ -263,6 +268,6 @@ const ROWS = [['c1', '2026-09-05', '홍길동A', '010-0000-0001'],
   await b.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '군데 — 오늘에서 고객을 터치·관리하지 못합니다')
-                  : '✓ 접으면 0px · 누르면 그 자리에서 펴지고 · 📞 전화와 ✅ 보냈습니다가 오늘에서 먹습니다 (판 X467)');
+                  : '✓ 접으면 0px · 누르면 그 자리에서 펴지고 · 📞 전화와 ✅ 보냈습니다가 오늘에서 먹습니다 (판 X469)');
   process.exit(bad ? 1 : 0);
 })().catch(e => { console.error('터짐: ' + (e && e.message)); try { srv.close(); } catch (x) {} process.exit(2); });
