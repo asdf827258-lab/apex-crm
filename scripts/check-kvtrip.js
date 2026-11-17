@@ -104,11 +104,18 @@ OS.sb=(function(){
   await ㄱ.evaluate(() => {
     localStorage.setItem('apex_baba_rows', JSON.stringify([{ id: 'b1', 이름: '홍길동' }]));
     localStorage.setItem('apex_mcal_my_me', JSON.stringify({ '2026-11-20': ['홍길동 만남'] }));
+    /* ★★ 판 X465 — <b>apex_ 이름을 안 쓰는 열쇠</b>도 한 가지 실어 보냅니다.
+       이번에 찾은 여섯(🏠 출발지 · ⏱ 상담 분 · ✅ 챙긴 표시 · 🎓 셋)이 전부
+       그런 이름이라, apex_ 둘만 건너보내면 <b>그 길은 한 번도 안 재는 셈</b>입니다
+       — 사장님이 「다시 확인해봐」 하셔서 찾은 자리가 바로 거기입니다 (8번). */
+    localStorage.setItem('apexRouteStayV1', '45');
   });
   await ㄱ.waitForTimeout(2600);
   const 간것 = 보낸것.filter(x => x.tbl === 'apex_user_kv').map(x => x.row.k);
   is(간것.indexOf('apex_baba_rows') >= 0, '보장분석 전·후가 서버로 갔다 — apex_baba_rows');
   is(간것.indexOf('apex_mcal_my_me') >= 0, '내 캘린더 일정도 갔다 — apex_mcal_my_me');
+  is(간것.indexOf('apexRouteStayV1') >= 0,
+     '★★ <b>apex_ 이름이 아닌 것도 갔다</b> — apexRouteStayV1 (⏱ 상담 한 건에 몇 분 · 판 X465)');
   is((보낸것.find(x => x.row.k === 'apex_baba_rows') || { row: {} }).row.user_id === 'me',
      '  누구 것인지 붙여 보낸다 — user_id');
 
@@ -117,11 +124,15 @@ OS.sb=(function(){
   await ㄴ.waitForTimeout(2600);
   const 본것 = await ㄴ.evaluate(() => ({
     baba: localStorage.getItem('apex_baba_rows'),
-    cal: localStorage.getItem('apex_mcal_my_me')
+    cal: localStorage.getItem('apex_mcal_my_me'),
+    stay: localStorage.getItem('apexRouteStayV1')
   }));
   is(!!본것.baba && 본것.baba.indexOf('홍길동') >= 0,
      '★★ <b>기기 ㄴ에 보장분석이 그대로 섰다</b> — ' + String(본것.baba).slice(0, 44));
   is(!!본것.cal && 본것.cal.indexOf('2026-11-20') >= 0, '★★ 내 캘린더 일정도 섰다');
+  is(본것.stay === '45',
+     '★★ <b>⏱ 상담 한 건에 몇 분도 그대로 섰다</b> — ' + String(본것.stay) +
+     '분 (컴퓨터에서 45분으로 잡으면 노트북 동선도 45분으로 하루를 짭니다 · 판 X465)');
 
   sec('[3] ★★ <b>막은 것은 한 톨도 안 간다</b>');
   보낸것 = [];
