@@ -3143,6 +3143,9 @@ body.insight-mode #insightScreen{display:block;}
      저장소 뿌리에 있으므로 이 파일에서는 한 칸 위다. -->
 <script src="../ta-open.js"></script>
 <script src="../apex-stage.js"></script>
+<!-- 🎣 이분께 꺼낼 한 줄 (판 X470) — 말은 미끼 대본 자료 한 곳(상품전략기 「🎣 문 열기」 와 같은 파일) -->
+<script src="상담자료/mikki-talk-data.js"></script>
+<script src="hm-door.js"></script>
 <!-- 🎬 발표 덱 트랙 표 — 계산기와 <b>같은 한 파일</b>을 봅니다 (판 X333).
      사장님 말씀 「오늘 에서 AP, PC 에서 각자 뜰 수 있도록 각 파트별로 다
      넣어줘」 — 트랙 이름을 여기 또 적으면 두 벌이 됩니다 (5번). -->
@@ -33537,12 +33540,18 @@ function hmHowHtml(x){
 }
 function hmMoreSub(x){
   var n=0; try{ n=(hmPicks(x)||[]).length-1; }catch(e){ n=0; }
+  /* 🎣 안에 「이분께 꺼낼 한 줄」 이 섰으면 접힌 머리도 그렇다고 말합니다 (1번 · 판 X470) */
+  var door=false; try{ door=!!(typeof HM_DOOR!=='undefined'&&HM_DOOR.pick(x)); }catch(eD){ door=false; }
   /* ⚠ 「· 할 말」 을 보탰습니다 (판 X197) — 「무엇을 / 어떻게」 가 이 안으로
      들어왔으므로, 안 적으면 그 줄이 <b>거짓말</b>이 됩니다 (1번).        */
-  return ' · 할 말 · 아는 것 · 단계'+(n>0?(' · 도구 '+n):'');
+  return (door?' · 🎣 상품 한 줄':'')+' · 할 말 · 아는 것 · 단계'+(n>0?(' · 도구 '+n):'');
 }
 function hmMoreHtml(x,note){
-  var inner=hmTaHtml(x)+hmBoxHtml(x)+hdbStripHtml(x)+(note||'');
+  /* 🎣 <b>이분께 꺼낼 한 줄</b>을 맨 앞에 (판 X470 · 사장님 말씀 2026-11-17 「상품화법들을, 오늘에 띄워서
+     고객들에게 연락할 접점을 만들어줘」). 고르는 것·말·단추는 hm-door.js 한 곳이고 여기는 세우기만 합니다.
+     ⚠ 접힌 칸 안입니다 — 카드는 이미 예산이 빠듯해(check-hmtwo · check-hmfill) 늘 보이는 줄을 늘리지 않습니다. */
+  var door=''; try{ door=(typeof HM_DOOR!=='undefined')?HM_DOOR.html(x):''; }catch(eD){ door=''; }
+  var inner=door+hmTaHtml(x)+hmBoxHtml(x)+hdbStripHtml(x)+(note||'');
   if(!inner)return '';
   hmMoreCss();
   return '<div class="hm-more">'+
