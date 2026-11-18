@@ -104,5 +104,14 @@ TDS.forEach(t => t.detail.rows.forEach(r => r.cells.forEach(c => { if (c.quote) 
 is(mq >= 580 && mn <= 75, '약관 문장 붙은 칸 ' + mq + '개 · 못 찾음 ' + mn + '칸 (다시 찾기 전 558 · 99칸 — 줄면 안 됨)');
 is(TDS.every(t => !(t.detail.rows || []).some(r => r.cells.some(c => !c.quote && !/못 찾음/.test(c.v || '')))), '원문 없는 칸은 모두 「약관에서 못 찾음」 이라고 말한다 (지어낸 해설 0)');
 
+console.log('\n[10] 📜 상품 카드 약관 근거 넓히기 — 공시실에서 받아 15개 더 (판 X487 · 사장님 말씀 「12. 다음작업 진행해줘」)');
+const TP = SEED ? SEED.products.filter(p => p.terms) : [];
+is(TP.length >= 52, '약관 발췌(지급기준 5줄 · 유리/주의/비교)가 붙은 상품 ' + TP.length + '개 (37 → 52 이상)');
+const NEWT = ['hana-fire-01', 'heungkuk-fire-01', 'lotte-fire-03', 'hyundai-marine-01', 'nh-fire-01', 'kb-fire-03', 'db-fire-05', 'nh-life-02', 'aia-life-03', 'metlife-04', 'kyobo-life-02', 'samsung-life-02', 'shinhan-life-04', 'tongyang-life-02', 'kb-life-01'];
+let tq = 0, tbad = 0;
+NEWT.forEach(id => { const p = TP.find(x => x.id === id); if (!p) { tbad++; return; }
+  [...(p.terms.clauses || []), ...Object.values(p.terms.pay_rules || {})].forEach(q => { if (!q || !q.quote) return; tq++; if (!(q.vf && q.vf.ok)) tbad++; }); });
+is(tq > 0 && tbad === 0, '새로 붙인 15개 상품의 약관 문장 ' + tq + '개가 전부 PDF 에서 글자 그대로 (어긋남 ' + tbad + ')');
+
 console.log('\n' + (bad ? '✗ ' + bad + '곳이 어긋났습니다' : '✓ 상품전략기 한 칸에서 「무엇을 권할까」 와 「어떻게 말을 꺼낼까」 가 같은 대본으로 이어집니다.'));
 process.exit(bad ? 1 : 0);
