@@ -21,10 +21,16 @@
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
 <style>
 :root{ color-scheme:light;  /* 🌗 흰색 고정 (사장님 말씀 2026-10-03) */
-  /* 🗒 강사 노트 띠 높이 — <b>여기 한 곳</b>에서 정합니다 (5번). 띠와 쪽이
-     이 수를 같이 봅니다. 두 곳에 적어 두면 한쪽만 고쳐져 쪽 아래가 띠에
-     가리거나 빈 띠가 남습니다. ⚠ 이 수를 키우면 쪽 자리가 줄어 넘치는
-     쪽이 늘어납니다 — check-pvnote 의 [8] 이 그것을 잽니다. */
+  /* 🗒 강사 노트 띠가 <b>가장 커질 수 있는 높이</b> — 여기 한 곳입니다 (5번).
+     ⚠ 이 수를 키우면 쪽 자리가 줄어 넘치는 쪽이 늘어납니다 —
+       check-pvnote 의 [8] 이 그것을 잽니다.
+     ★★ <b>판 X448 — 쪽은 이제 이 수를 안 봅니다.</b> 띠의 <b>정말 잰 높이</b>
+       (--pvnote-cur)를 봅니다. 여태 쪽이 노트 길이와 상관없이 <b>24vh 를
+       통째로 예약</b>해, 두 줄짜리 노트에도 쪽이 사분의 일을 잃었습니다 —
+       재어 보니 넘치는 쪽이 노트를 끄면 51쪽, 켜면 <b>109쪽</b>이었고 그
+       차이 58쪽이 거의 다 이것이었습니다. 띠는 원래부터 max-height 라
+       글만큼만 큽니다. 예약만 따라가게 고쳤습니다 — <b>글은 한 자도 안
+       없앴습니다</b> (6번). 재는 자는 pvNoteFit 하나입니다 (5번). */
   --pvnote-h:24vh;
   --blue:#3182F6; --blue-dark:#1B64DA; --blue-soft:#E8F1FE;
   --navy:#0B1B33; --ink:#191F28; --gray:#4E5968; --gray2:#8B95A1;
@@ -2256,30 +2262,11 @@ footer small{color:#5F718C;font-size:12px;margin-top:16px;display:block;line-hei
   <div class="note good"><span class="lb">🏆 활용 팁</span><p>신상품 나올 때마다 제안서를 붙여넣으면 <strong>그 상품 전용 미끼·RP</strong>가 바로 나와요. 팀 교육 때 유형만 바꿔가며 즉석 롤플레이 대본으로도 딱이에요.</p></div>
 </section>
 
+<script src="mikki-talk-data.js"></script>
 <script>
 (function(){
-  var CATS={
-   cancer3:{label:'암·뇌·심장',dambo:['암 진단비','뇌혈관 진단비','허혈성심장 진단비'],hook:'요즘 큰 병은 암·뇌·심장 이 3개예요. 이 세 개만 얇게 잡아두는 분들 많아요.',cs:'마흔둘 되신 분이 뇌출혈로 반년을 쉬셨는데, 진단비가 없어서 그동안 수입이 끊긴 게 제일 힘드셨대요.',gap:'실비는 병원비 일부만 돌려주지, 큰 병 때 손에 쥐는 목돈은 안 나와요. 그게 바로 진단비예요.',kw:['암','뇌','심장','뇌혈관','뇌졸중','심근경색','진단비','3대']},
-   hospital:{label:'병원비·비급여',dambo:['비급여 3종(도수·주사·MRI)','질병·상해 수술비','입원일당'],hook:'병원 가면 나라가 안 도와주는 비급여가 제일 부담이에요. 도수치료·주사·MRI 다 내 돈이거든요.',cs:'허리 아파 도수치료를 1년 받으신 분이 이 담보로 몇 백만원을 거의 다 돌려받으셨어요.',gap:'예전 실손은 비급여 자기부담이 커서 절반도 못 돌려받는 경우가 많아요.',kw:['비급여','도수','주사','MRI','실손','실비','수술','입원','병원비']},
-   accident:{label:'상해·사고',dambo:['골절 진단비','상해수술비','상해입원비','응급실 내원비'],hook:'집에서든 밖에서든 다치는 게 제일 흔해요. 넘어져 뼈 부러져도 목돈 나오는 거 있어요.',cs:'계단서 미끄러져 손목이 부러진 분이 골절 진단비로 목돈 받아 일 쉬는 동안 버티셨어요.',gap:'실비만 있으면 치료비 일부뿐이고, 일 못 하는 동안 채워주는 목돈은 없어요.',kw:['골절','화상','상해','깁스','응급실','후유장해','다침','사고']},
-   driver:{label:'운전·교통',dambo:['운전자 3종(합의금·변호사·벌금)','자동차부상치료비','교통상해입원비'],hook:'운전자보험 있다고 안심하시는데, 정작 사고 나면 합의금·벌금이 제일 무서워요.',cs:'신호위반으로 사람을 다치게 한 분이 합의금 수천만원을 담보가 빠져서 자비로 내셨어요.',gap:'"있다"가 중요한 게 아니라 "뭐가 들었냐"가 중요해요.',kw:['운전','자동차','교통','벌금','합의금','면허','대중교통']},
-   life:{label:'생활·배상',dambo:['일상생활배상책임','가족일배책','화재'],hook:'한 달 몇 백원인데, 아이가 남 물건 깨거나 누수로 아랫집 피해 줘도 다 물어주는 담보 있어요.',cs:'반려견이 이웃을 물어 배상액이 컸는데, 일배책으로 해결한 분이 계세요.',gap:'이거 하나면 가족 전체가 커버되는데, 안 든 분이 의외로 많아요.',kw:['배상','일상생활','일배책','화재','누수','반려','자전거']},
-   care:{label:'간병·노후',dambo:['간병·치매','뇌·심장 진단비','입원일당','후유장해'],hook:'이 나이엔 큰 병보다 오래 아픈 게 더 부담이에요. 간병은 몇 년씩 가고 그 부담이 자식한테 가요.',cs:'어머니 간병 3년 하다 형제끼리 돈 문제로 틀어진 이야기를 들으면 다들 공감하세요.',gap:'내 간병은 내가 미리 준비해두는 게 요즘 흐름이에요. 자식한테 짐 안 주려고요.',kw:['간병','치매','요양','노후','장기요양']},
-   women:{label:'여성 특화',dambo:['유방·자궁 진단/수술','3대질병','비급여'],hook:'여성분들은 유방·자궁 쪽이 따로 필요해요. 일반 암 담보만으론 이 부분이 얇거든요.',cs:'유방암 진단받았는데 가입한 진단비가 여성 부위는 일부만 쳐줘서 적게 나온 분이 계셨어요.',gap:'검진은 챙기시면서 정작 그쪽 보장은 비어 있는 분이 많아요.',kw:['여성','유방','자궁','임신']},
-   child:{label:'자녀·태아',dambo:['어린이 3대질병 소액','골절·화상','가족일배책','응급실 내원비'],hook:'애들은 다치고 아픈 게 일상이라 이 세트가 제일 잘 쓰여요.',cs:'아이가 응급실을 자주 가는데, 내원비 담보 덕에 갈 때마다 도움받은 집이 많아요.',gap:'아이 실비만 있고 골절·응급실·배상은 비어 있는 경우가 흔해요.',kw:['어린이','자녀','태아','아이','신생아','출산']},
-   tooth:{label:'치아',dambo:['치아 보존/보철','임플란트','스케일링'],hook:'임플란트 하나에 몇 백 하잖아요. 그거 반값 느낌으로 만들어주는 거 있어요.',cs:'임플란트 여러 개 하신 분이 치아보험으로 부담을 확 줄이셨어요.',gap:'나이 들수록 치아는 무조건 쓰는데 준비 안 된 분이 많아요.',kw:['치아','임플란트','치과','보철','스케일링']},
-   estate:{label:'자산·상속',dambo:['종신/정기보험','간병','상속세 재원'],hook:'자산은 많은데 세금 낼 현금이 없으면 결국 급매로 헐값에 팔아야 해요.',cs:'건물 물려받았는데 상속세 낼 현금이 없어 건물을 헐값에 판 사례가 있어요.',gap:'종신으로 세금 낼 현금을 미리 만들면 자산을 그대로 물려줄 수 있어요.',kw:['상속','종신','자산','증여','세금','부동산']}
-  };
-  var TYPES={
-   general:{addr:'고객님'},
-   y2030:{addr:'고객님',tail:'젊고 건강할 때가 제일 싸니까 지금 시작하는 게 이득이에요.'},
-   head40:{addr:'사장님',tail:'가장이 흔들리면 가족이 흔들려요. 이게 가족을 지키는 준비예요.'},
-   s50:{addr:'어머님',tail:'병원 갈 일 늘어나는 나이라, 지금 챙겨두면 마음이 놓이세요.'},
-   biz:{addr:'사장님',tail:'사장님한텐 이게 몸이자 매출을 지키는 보험이에요.'},
-   woman:{addr:'고객님',tail:'여성분들은 이 부분이 특히 중요해요.'},
-   senior:{addr:'어머님',tail:'자식한테 짐 안 주는, 나를 위한 준비예요.'}
-  };
-  var TYPE_LABEL={general:'일반',y2030:'2030 사회초년생',head40:'40대 가장',s50:'50대',biz:'자영업자·사장님',woman:'여성',senior:'5060 부모부양'};
+  /* 표·대본은 mikki-talk-data.js 한 곳 (판 X468 — 상품전략기 「🎣 문 열기」 와 같이 씁니다) */
+  var MK=window.MK_TALK, CATS=MK.CATS, TYPES=MK.TYPES, TYPE_LABEL=MK.TYPE_LABEL;
 
   var typeChips=document.getElementById('typeChips'), catChips=document.getElementById('catChips');
   var curType='general', curCats={};
@@ -2307,28 +2294,8 @@ footer small{color:#5F718C;font-size:12px;margin-top:16px;display:block;line-hei
   var lastText='';
   function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;');}
   function build(){
-    var keys=Object.keys(curCats).filter(function(k){return curCats[k];});
-    if(!keys.length) keys=['cancer3'];
-    var prim=CATS[keys[0]];
-    var dambo=[]; keys.forEach(function(k){CATS[k].dambo.forEach(function(d){if(dambo.indexOf(d)<0)dambo.push(d);});});
-    dambo=dambo.slice(0,5);
-    var T=TYPES[curType]||TYPES.general, addr=T.addr;
-    var tail=T.tail?(' '+T.tail):'';
-    var lines=[
-      ['fp',addr+', 뭐 가입시키려는 거 아니고요, 딱 3분만 확인해드릴게요. '+prim.hook],
-      ['cx','그런 것도 있어요?'],
-      ['fp','네. '+addr+' 혹시 그쪽은 지금 어떻게 준비돼 있으세요?'],
-      ['cx','글쎄요… 잘 모르겠는데요.'],
-      ['fp','제가 실제로 겪은 일인데요, '+prim.cs],
-      ['cx','아… 남 일 같지 않네요.'],
-      ['fp',prim.gap],
-      ['turn',''],
-      ['cx','그럼 저는 뭘 채워야 해요?'],
-      ['fp','딱 이거예요 — '+dambo.join(', ')+'. 처음부터 크게 안 하셔도 돼요. 부담 안 되는 선에서 소액으로 시작하면 됩니다.'+tail],
-      ['fp','그리고 이건 건강하실 때 얘기예요. 나중에 검사에서 뭐 하나 걸리면 그땐 들고 싶어도 못 들어요. 지금이 제일 싸고 제일 잘 들어오는 때예요.'],
-      ['cx','그 말 들으니 지금 해야겠네요. 그럼 그걸로 시작할게요.'],
-      ['fp','잘 결정하셨어요. 이왕 보는 김에 가족분들 것도 한 장으로 정리해드릴게요. 가족은 지금 건강할 때가 제일 유리하거든요.']
-    ];
+    var r=MK.script(curType, Object.keys(curCats).filter(function(k){return curCats[k];}));
+    var keys=r.keys, prim=r.prim, dambo=r.dambo, lines=r.lines;
     // render
     var html='<div class="setbox"><div class="lb2">🎯 추천 미끼 세트 — '+TYPE_LABEL[curType]+' · '+keys.map(function(k){return CATS[k].label;}).join('+')+'</div>';
     html+='<div class="comp">'+dambo.map(function(d){return '<span>'+esc(d)+'</span>';}).join('')+'</div>';
@@ -3279,7 +3246,7 @@ body.pv #pvNote{display:none;position:fixed;left:0;right:0;bottom:0;z-index:98;
   max-height:var(--pvnote-h);overflow-y:auto;padding:14px clamp(18px,6vw,90px) 16px;
   background:#0F1620;color:#fff;box-shadow:0 -8px 28px rgba(0,0,0,.3)}
 body.pv.pvnoteon #pvNote{display:block}
-body.pv.pvnoteon section.wrap.pon{bottom:var(--pvnote-h)}
+body.pv.pvnoteon section.wrap.pon{bottom:var(--pvnote-cur,var(--pvnote-h))}
 #pvNote .nh{font-size:13px;font-weight:800;letter-spacing:.04em;color:#8FBCFF;margin-bottom:6px}
 #pvNote .nb{font-size:18px;line-height:1.56;font-weight:600}
 #pvNote .nb p{margin:0 0 7px}
@@ -3421,9 +3388,27 @@ body.pv section.wrap.pon .pvhead{display:block;font-size:19px;font-weight:800;
        글이 토막 납니다. 그 쪽만 스크롤이 남고, 「아래로 더 있습니다」 가
        말해 줍니다 (1번 — 안 되는 것을 되는 척하지 않습니다).            */
   function pvMeasure(){
+    /* ⚠⚠ <b>판 X448 — 나눌 때는 띠를 가장 큰 값으로 잡습니다.</b> 안 그러면 나누기가
+       띠 높이를 보고, 띠 높이가 그 쪽 노트를 보고, 노트가 나누기를 보아 <b>서로 물고
+       돕니다.</b> 나눌 때 넉넉히 잡아 두면 보여 줄 때 자리가 <b>남을 뿐</b>이라 쪽이
+       깨지지 않습니다 — 모자라게 잡는 쪽이 위험합니다 (1번). */
+    var _r=document.documentElement, _was=_r.style.getPropertyValue('--pvnote-cur');
+    if(document.body.classList.contains('pvnoteon'))_r.style.setProperty('--pvnote-cur','var(--pvnote-h)');
     var 칸=document.querySelector('section.wrap.pon');
     var 바닥=(칸?칸.clientHeight:(window.innerHeight-52))-28;   /* 아래 여백 몫 */
+    if(_was)_r.style.setProperty('--pvnote-cur',_was); else _r.style.removeProperty('--pvnote-cur');
     if(바닥<300)바닥=window.innerHeight-200;
+    /* ★ <b>둘째 쪽부터 붙는 「장 이름」 머리글도 자리를 먹습니다</b> (판 X451).
+         show() 가 .pvhead 를 끼워 넣는데 쪼개는 쪽은 그것을 안 세고 있었습니다 —
+         노트를 끄면 여백이 빠듯해 그 한 줄에 쪽이 넘쳤습니다 (재어 보고). */
+    var 쪽머리키=0;
+    (function(){
+      var hd=document.querySelector('section.wrap .pvhead');
+      if(!hd)return;
+      var 전=hd.style.display; hd.style.display='';
+      쪽머리키=hd.offsetHeight; hd.style.display=전;
+      if(쪽머리키>0)쪽머리키+=14;
+    })();
     var 새=[];
     secs.forEach(function(sec,k){
       var mine=pgs.filter(function(q){return q.s===sec;});
@@ -3446,22 +3431,115 @@ body.pv section.wrap.pon .pvhead{display:block;font-size:19px;font-weight:800;
          ★ 그래서 <b>조각 하나가 혼자 한 화면을 넘으면 그대로 둡니다.</b> 그 쪽만
            스크롤이 남고 「↓ 아래로 더 있습니다」 가 말해 줍니다 — 안 되는 것을
            되는 척하지 않습니다 (1번).                                        */
-      var h={};
-      units.forEach(function(e,ui){ h[ui]=e.offsetHeight+14; });
-      /* 픽셀로 담습니다 */
-      var out=[], cur=머리.slice(), w=머리키, 첫=true;
-      units.forEach(function(e,ui){
-        var g=h[ui]||0, 새쪽=(e.tagName||'')==='H3';
-        if(cur.length>(첫?머리.length:0) && (새쪽 || w+g>바닥)){
-          out.push(cur); cur=[]; w=0; 첫=false;
+      /* ══ ★★ <b>혼자 한 화면을 넘는 덩이는 한 겹 더 쪼갭니다</b> (판 X451) ══
+         사장님 말씀 2026-11-15 「안 끝낸 10개 뭔지 <b>다하고</b>」.
+         ⚠ <b>판 X314 에서 「안까지 쪼개기」 를 해 봤다가 되돌렸습니다.</b> 그때 깨진 것은
+           <b>격자(grid · 줄바꿈 flex)</b> 였습니다 — 칸 하나를 떼어 내면 남은 칸이 다시
+           흘러 더 높아져, 한 화면에 드는 쪽이 154 → 141쪽으로 <b>오히려 줄었습니다.</b>
+           그래서 <b>격자는 그대로 두고</b> 위아래로 쌓이는 보통 칸만 쪼갭니다.
+         ★ 재어 보니 넘치는 쪽의 거의 다가 <b>.pkg 한 덩이(1,750~1,960px)</b> 였습니다 —
+           화법 한 벌이 통째로 한 조각이라 쪼갤 자리가 아예 없었습니다.
+         ★ 부모(.pkg 테두리)는 <b>그대로 섭니다</b> — 숨기는 것은 조각이지 부모가 아닙니다. */
+      var 쪼갤수있나=function(el){
+        if(!el||!el.children||el.children.length<2)return false;
+        var cs=null; try{ cs=getComputedStyle(el); }catch(e1){ return false; }
+        if(!cs)return false;
+        if(cs.display==='grid'||cs.display==='inline-grid')return false;          /* 격자는 안 건드립니다 */
+        if(cs.display==='flex'||cs.display==='inline-flex'){
+          if(cs.flexWrap&&cs.flexWrap!=='nowrap')return false;                    /* 줄바꿈 flex 도 */
+          if(cs.flexDirection&&cs.flexDirection.indexOf('row')===0)return false;  /* 가로 flex 도 */
         }
-        cur.push(e); w+=g;
+        /* ★ <b>글이 직접 들어 있는 칸은 못 쪼갭니다.</b> children 은 글자 조각을 빼고
+             세기 때문에, 쪼개면 그 글이 <b>모든 쪽에 그대로 남습니다.</b> */
+        var i, nd=el.childNodes;
+        for(i=0;i<nd.length;i++){
+          if(nd[i].nodeType===3 && (nd[i].nodeValue||'').trim())return false;
+        }
+        /* ★ 자식이 <b>위아래로 쌓이는 칸</b>이 아니면 못 쪼갭니다 — 줄 안에 나란히
+             선 것(inline)이나 떠 있는 것(float·absolute)을 갈라 놓으면 토막 납니다. */
+        for(i=0;i<el.children.length;i++){
+          var c2=null; try{ c2=getComputedStyle(el.children[i]); }catch(e2){ return false; }
+          if(!c2)return false;
+          if(c2.position==='absolute'||c2.position==='fixed')return false;
+          if(c2.cssFloat&&c2.cssFloat!=='none')return false;
+          if(!/^(block|flex|grid|table|list-item)$/.test(c2.display))return false;
+        }
+        return true;
+      };
+      /* ★ 쪼갠 조각은 <b>부모의 옷(테두리·안여백·사이여백)을 쪽마다 다시 입습니다.</b>
+         그것을 안 세고 재었더니 넘치는 쪽이 42 → <b>86</b> 으로 오히려 늘었습니다
+         (2026-11-15 · 재어 보고). 그래서 조각마다 <b>지나온 부모</b>를 들고 다니며,
+         그 부모가 이 쪽에 처음 서는 것이면 옷값을 함께 셉니다. */
+      var 옷재기=function(x){
+        var cs=null, f=function(v){ return parseFloat(v)||0; };
+        try{ cs=getComputedStyle(x); }catch(e){ return 0; }
+        return cs?(f(cs.paddingTop)+f(cs.paddingBottom)+f(cs.borderTopWidth)+
+                   f(cs.borderBottomWidth)+f(cs.marginTop)+f(cs.marginBottom)):0;
+      };
+      var 폄=[], 깊이=0, 끼움={};
+      units.forEach(function(e){
+        var q=[{el:e}];
+        while(q.length){
+          var it=q.shift(), x=it.el;
+          if(x.offsetHeight+14>바닥 && 쪼갤수있나(x) && 깊이<200){
+            깊이++;
+            var kids=[].slice.call(x.children);
+            q=kids.map(function(k){ return {el:k}; }).concat(q);
+          } else 폄.push(x);
+        }
       });
-      if(cur.length)out.push(cur);
+      units=폄;
+      /* ★★ <b>조각을 감싼 상자(.pkg 테두리 같은 것)를 전부 찾아 둡니다</b> (판 X451).
+         ⚠ <b>이 자리가 오래 새고 있었습니다.</b> 쪼개기는 처음부터 큰 묶음 <b>안까지</b>
+           내려갔는데, 겉 상자는 「그대로 서 있습니다」 였습니다. 그래서 자식이 하나도
+           없는 쪽에서도 <b>빈 상자가 84px 씩 자리를 먹었습니다</b> — 한 쪽에 다섯이면
+           420px 입니다(2026-11-15 · 재어 보고. 09장 4/24 쪽이 +712px 이던 까닭). */
+      units.forEach(function(e,ui){
+        var ch=[], pp=e.parentElement;
+        while(pp&&pp!==sec){ ch.unshift({el:pp,옷:옷재기(pp)}); pp=pp.parentElement; }
+        끼움[ui]=ch;
+      });
+      /* ★ <b>어림(+14)이 아니라 진짜 좌표로 잽니다</b> (판 X451).
+         조각이 깊어지면 사이 여백이 저마다 달라 「+14」 가 거짓이 됩니다. 한 쪽이
+         먹는 자리는 <b>첫 조각 윗변에서 끝 조각 아랫변까지</b> — 그러면 사이 여백·
+         여백 겹침이 <b>재어진 그대로</b> 들어옵니다. */
+      var 자리={};
+      units.forEach(function(e,ui){
+        var r=e.getBoundingClientRect();
+        자리[ui]={t:r.top+window.scrollY, b:r.bottom+window.scrollY};
+      });
+      /* 쪽으로 담습니다 */
+      var out=[], 쪽부모=[], cur=머리.slice(), 첫=true, 선부모=[], 시작=null, 옷총=0;
+      units.forEach(function(e,ui){
+        var 새쪽=(e.tagName||'')==='H3', anc=끼움[ui]||[], 옷=0;
+        anc.forEach(function(a){ if(선부모.indexOf(a.el)<0)옷+=a.옷; });
+        var 몸=(시작===null||자리[ui].b<=자리[ui].t)?(자리[ui].b-자리[ui].t):(자리[ui].b-시작);
+        var w=(첫?머리키:쪽머리키)+옷총+옷+몸+14;
+        if(cur.length>(첫?머리.length:0) && (새쪽 || w>바닥)){
+          out.push(cur); 쪽부모.push(선부모);
+          cur=[]; 첫=false; 선부모=[]; 시작=null; 옷총=0;
+          옷=0; anc.forEach(function(a){ 옷+=a.옷; });
+        }
+        /* 숨어 있는 조각(강사 노트 등 키 0)은 <b>시작을 잡지 않습니다</b> —
+           잡으면 시작이 0 이 되어 그 뒤가 전부 절대 좌표로 재어집니다. */
+        if(시작===null&&자리[ui].b>자리[ui].t)시작=자리[ui].t;
+        anc.forEach(function(a){ if(선부모.indexOf(a.el)<0)선부모.push(a.el); });
+        옷총+=옷; cur.push(e);
+      });
+      if(cur.length){ out.push(cur); 쪽부모.push(선부모); }
       var 장=label(sec);
+      /* ★ 이 장에서 <b>쪼개느라 지나온 부모</b> 전부 — show() 가 자식 없는 쪽에서
+           이 부모를 접습니다. 안 접으면 <b>빈 테두리가 쪽마다 70px 을 먹습니다</b>
+           (2026-11-15 · 재어 보고 — 그래서 넘치는 쪽이 42 → 86 으로 늘었습니다). */
+      var 온부모=[];
+      쪽부모.forEach(function(ps){ ps.forEach(function(a){ if(온부모.indexOf(a)<0)온부모.push(a); }); });
+      머리.forEach(function(e){ var pp=e.parentElement;
+        while(pp&&pp!==sec){ if(온부모.indexOf(pp)<0)온부모.push(pp);
+          if(쪽부모[0]&&쪽부모[0].indexOf(pp)<0)쪽부모[0].push(pp); pp=pp.parentElement; } });
       out.forEach(function(els,n){
         var h3=els.filter(function(x){return (x.tagName||'')==='H3';})[0];
         새.push({ s:sec, els:els, k:k, n:n, of:out.length,
+          anc:쪽부모[n]||[], allAnc:온부모,
           t:(n===0?장:(h3?h3.textContent.replace(/\s+/g,' ').trim():장)) });
       });
     });
@@ -3479,7 +3557,10 @@ body.pv section.wrap.pon .pvhead{display:block;font-size:19px;font-weight:800;
      발표에서 나갈 때도 같은 자를 부릅니다. 한쪽만 고치면 책으로 돌아왔을 때
      글이 사라진 채로 남습니다 (6번). */
   function pvClear(){
-    pgs.forEach(function(q){ q.els.forEach(function(e){ e.style.display=''; }); });
+    pgs.forEach(function(q){
+      q.els.forEach(function(e){ e.style.display=''; });
+      (q.allAnc||[]).forEach(function(a){ a.style.display=''; });   /* 접어 둔 부모도 */
+    });
   }
   /* 🗒 이 쪽의 강사 노트를 띠에 올립니다 — 노트는 그 글 옆(.pvnote)에 있습니다 */
   function 노트글(pg){
@@ -3515,7 +3596,22 @@ body.pv section.wrap.pon .pvhead{display:block;font-size:19px;font-weight:800;
     }
     /* <b>없으면 없다고 적습니다</b> — 빈 칸을 지어 채우지 않습니다 (1번) */
     box.innerHTML = h || '<span class="non">이 쪽은 아직 강사 노트를 안 썼습니다.</span>';
+    pvNoteFit();
   }
+  /* 🗒 <b>띠가 정말 몇 px 인지</b> 재어 쪽에게 알려 줍니다 (판 X448 · 5번 — 재는 곳 하나).
+     띠는 max-height:24vh 라 글만큼만 큽니다. 그런데 쪽은 24vh 를 <b>통째로</b>
+     예약하고 있었습니다 — 두 줄짜리 노트에도 쪽이 사분의 일을 잃었습니다.
+     ★ 노트를 껐을 때는 <b>0</b> 입니다. 안 지우면 끈 뒤에도 자리가 남습니다.
+     ★ 못 재면(띠가 아직 없음) <b>건드리지 않습니다</b> — 그러면 CSS 가
+       --pvnote-h 로 되돌아가 예전처럼 섭니다 (1번 · 모를 때는 안 바꿉니다). */
+  function pvNoteFit(){
+    var el=document.getElementById('pvNote'), r=document.documentElement;
+    if(!el||!r)return;
+    if(!document.body.classList.contains('pvnoteon')){ r.style.setProperty('--pvnote-cur','0px'); return; }
+    var h=Math.round(el.getBoundingClientRect().height);
+    if(h>0)r.style.setProperty('--pvnote-cur',h+'px');
+  }
+  window.addEventListener('resize',function(){ try{ pvNoteFit(); }catch(e){} });
   function show(i){
     온쪽=코스쪽();
     if(!온쪽.length)온쪽=pgs;
@@ -3532,6 +3628,11 @@ body.pv section.wrap.pon .pvhead{display:block;font-size:19px;font-weight:800;
       q.els.forEach(function(e){ if(pg.els.indexOf(e)<0)e.style.display='none'; });
     });
     pg.els.forEach(function(e){ e.style.display=''; });
+    /* ★ <b>자식이 하나도 없는 쪽에서는 부모도 접습니다.</b> 안 접으면 빈 테두리가
+         쪽마다 자리를 먹습니다 (2026-11-15 · 재어 보고). */
+    (pg.allAnc||[]).forEach(function(a){
+      a.style.display=((pg.anc||[]).indexOf(a)>=0)?'':'none';
+    });
     /* 📑 둘째 쪽부터 「어느 장인지」 를 작게 다시 말해 줍니다 */
     var hd=cur.querySelector('.pvhead');
     if(pg.n>0){

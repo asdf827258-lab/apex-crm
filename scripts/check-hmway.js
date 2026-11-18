@@ -157,6 +157,35 @@ const SEED = () => {
   is(!E.전 && E.펴짐, '  ★ ③ 을 누르면 접혀 있던 🕗 칸이 <b>펴진다</b>');
   is(E.top >= -4 && E.top < 300, '  그 칸이 화면 위쪽으로 온다 — y' + E.top);
 
+  /* ══ 📆 <b>② 를 누르면 이번 주(캘린더)가 펴진다</b> (판 X462 · 2026-11-16) ══
+     ⚠⚠ <b>여기가 2026-11-16 까지 뚫려 있던 구멍입니다.</b> ② 칩은 제 입으로
+       「동선 · 오늘 약속 · <b>이번 주</b>」 라고 적어 놓고, 눌러도 🚗 동선까지만
+       갔습니다 — 📆 이번 주는 접힌 채 두 화면 아래라 <b>사장님 눈에는 없는 칸</b>
+       이었습니다. 사장님 말씀 「오늘에서 <b>캘린더를 쉽게</b>」(2026-11-14) ·
+       「내가 해야할것들 <b>딱 누르면 바로</b> 할 수 있게 정리해줘」(X219).
+     ★ 칩이 제 입으로 말한 것은 <b>눌렀을 때 실제로 와야 합니다</b> — 글과 행동이
+       갈리면 그 글은 거짓입니다 (1번). 그래서 <b>글도 같이</b> 봅니다. */
+  const W = await p.evaluate(async () => {
+    const k = 'hmFold_stk_week';
+    const g0 = document.getElementById(k);
+    if (g0 && g0.classList.contains('on')) hmFoldToggle('stk_week');
+    await new Promise(r => setTimeout(r, 200));
+    const 전 = !!(document.getElementById(k) || {}).classList &&
+               document.getElementById(k).classList.contains('on');
+    const 칩 = document.querySelectorAll('#hmTodayHd .hm-way-c')[1];
+    const 말 = (칩.getAttribute('aria-label') || '');
+    칩.click();
+    await new Promise(r => setTimeout(r, 900));
+    const g = document.getElementById(k);
+    const wk = document.getElementById('hmWkHost');
+    return { 전, 말, 있나: !!g, 펴짐: !!(g && g.classList.contains('on')),
+             주키: wk ? Math.round(wk.getBoundingClientRect().height) : -1 };
+  });
+  is(/이번 주/.test(W.말), '  ② 칩이 제 입으로 <b>「이번 주」</b> 를 말한다 — ' + W.말.slice(0, 40));
+  is(W.있나, '  📆 이번 주가 <b>접이로 선다</b> (hmFold_stk_week)');
+  is(!W.전 && W.펴짐, '  ★★ ② 를 누르면 접혀 있던 <b>📆 이번 주가 펴진다</b> (판 X462)');
+  is(W.주키 > 60, '  ★ 펴지면 <b>달력이 실제로 그려진다</b> — 키 ' + W.주키 + 'px (빈 칸이면 편 뜻이 없습니다)');
+
   console.log('\n[6] 손가락 · 글 · 한 줄');
   const F = await p.evaluate(() => {
     const c = [...document.querySelectorAll('#hmTodayHd .hm-way-c')];

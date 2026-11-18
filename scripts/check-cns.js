@@ -67,7 +67,12 @@ const body = (src, head) => { const i = src.indexOf(head); if (i < 0) return '';
      '  요약 트리거 — clients.consent_status 를 수집·이용 갈래에서 세운다');
   is(iT > 0 && iV > iT, '  표가 판 번호를 적는 줄보다 <b>앞</b>이다 — 번호만 오르고 표가 없는 일이 없다 (판 X84)');
   const stamped = +((sql.match(/'schema_version',\s*'(\d+)'/) || [])[1] || 0);
-  is(stamped === 45 && S.ver === 45, '  판 번호 45 — SQL ' + stamped + ' · 앱 ' + S.ver);
+  /* ⚠ 여기 45 를 손으로 박아 두었다가, 판 X430 이 준비 SQL 을 고쳐 46 으로 올리자
+     <b>멀쩡한 판을 고발했습니다</b>. 이 자가 지켜야 할 것은 「45 인가」 가 아니라
+     「SQL 과 앱이 <b>같은 수</b>를 말하나」 와 「동의가 들어간 45판 아래로
+     안 내려갔나」 입니다 (5번 — 수를 두 곳에 두지 않습니다). */
+  is(stamped === S.ver && stamped >= 45,
+     '  판 번호가 SQL 과 앱에서 같고 45 아래가 아니다 — SQL ' + stamped + ' · 앱 ' + S.ver);
   const seg = iT > 0 ? sql.slice(sql.lastIndexOf('/*', iT), sql.indexOf('execute function public.client_consents_sum();') + 50) : '';
   is(seg && !/(^|\s)--\s/.test(seg.replace(/\/\*[\s\S]*?\*\//g, '')), '  동의 토막에 <code>--</code> 주석이 없다 (9번)');
 
@@ -131,7 +136,11 @@ const body = (src, head) => { const i = src.indexOf(head); if (i < 0) return '';
   const A = await open('c1', 'missing', []);
   is(/준비 전/.test(A.chip), '  머리 칩이 「동의 준비 전」 — ' + A.chip);
   is(A.rrnIn && A.clmIn && !A.lockUid && !A.lockSen, '  주민번호·청구 칸이 <b>그대로 열려 있다</b> — 모르는 것을 「없음」 으로 단정하지 않는다');
-  is(/서버 준비 SQL\(45판\)/.test(A.info) && /아무것도 잠그지 않습니다/.test(A.info), '  무엇을 하면 되는지 말한다 — 준비 SQL 45판');
+  /* 화면이 적어 주는 판 번호도 <b>앱의 SETUP_VER 과 같아야</b> 합니다 —
+     다르면 사장님이 없는 번호를 찾으러 가십니다 (1번). */
+  const 적힌판 = +((A.info.match(/서버 준비 SQL\((\d+)판\)/) || [])[1] || 0);
+  is(적힌판 === S.ver && /아무것도 잠그지 않습니다/.test(A.info),
+     '  무엇을 하면 되는지 말한다 — 화면 ' + 적힌판 + '판 · 앱 ' + S.ver + '판');
   is(/모름/.test(A.info) && !/안 받음/.test(A.info), '  네 갈래 모두 「모름」 — 「안 받음」 이 아니다');
 
   console.log('\n[3] 안다면서 받지 않았으면 — 잠그고 그 자리에서 동의 적기');

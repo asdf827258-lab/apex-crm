@@ -276,12 +276,37 @@ const SEED = (o) => `
      <b>알람이 안 울렸습니다</b> — 되돌려 보고 알았습니다 (8번). 사장님
      말씀은 「오늘 챙길것 + 아침 미션을 <b>하나로</b>」 였으니, 재야 할 것은
      <b>같은 카드 안</b>인가 입니다. */
+  /* ⚠⚠ <b>2026-11-14 (판 X439) — 이 약속이 뒤집혔습니다.</b>
+     옛 말씀(#28) — 「오늘 챙길것 + 아침 미션을 <b>하나로 합치는</b> 거야」.
+     새 말씀(2026-11-14) — 「[아침미션을 오늘 칸에 <b>따로</b> 만들어서] 위 쪽에
+     <b>따로</b> 배치하여서 클릭하면 펼쳐지고」. 두 번 「따로」 라, 합치지 말고
+     <b>따로 · 위에</b> 두라는 말씀입니다. 새 말씀이 이깁니다.
+     ★ 그래도 <b>아침에 두 곳을 안 본다</b> 는 뜻은 지킵니다 — 「오늘」 카드
+       <b>같은 테두리 안</b>이고, 챙길 것 카드 <b>바로 위</b>에 붙어 섭니다.
+     ⚠ 같은 약속을 든 자가 셋이었습니다(check-msfive · check-quest · 그리고
+       자리를 재던 check-hmms). 셋 다 같은 날 같이 뒤집었습니다 (5번). */
   const inside = await B.p.evaluate(() => {
     const box = document.getElementById('hmFold_ms');
+    const tz = document.querySelector('.tz') || document.getElementById('hmToday');
     const card = document.querySelector('#hmToday .hm-card');
-    return { card: !!card, in: !!(box && card && card.contains(box)) };
+    if (!box || !tz) return { card: !!card, in: false, 위: null };
+    const 안 = tz.contains(box);
+    const 위 = card ? (box.getBoundingClientRect().top < card.getBoundingClientRect().top) : true;
+    /* ⚠ 「바로 위에 붙었나」 로는 못 잽니다 — #hmToday 는 홈 <b>아래쪽 묶음</b>이라
+       미션을 맨 위로 올리면 사이가 2,000px 가 됩니다. 그것은 멀어진 것이 아니라
+       <b>위로 올라간 것</b>입니다. 사장님이 바라신 것은 「붙어 있는 것」 이 아니라
+       <b>「먼저 보이는 것」</b> 이라, 그렇게 묻습니다 (8번 — 헛것을 안 잡습니다). */
+    const pane = document.getElementById('dynPane');
+    const top = pane ? pane.getBoundingClientRect().top : 0;
+    const 보임 = Math.round(window.innerHeight - top);
+    return { card: !!card, in: !!(안 && 위),
+             첫화면: Math.round(box.getBoundingClientRect().top - top) <= 보임,
+             y: Math.round(box.getBoundingClientRect().top - top), 보임: 보임 };
   });
-  is(inside.card && inside.in, '  <b>같은 카드 안</b>이다 — 아침에 두 곳을 안 본다');
+  is(inside.card && inside.in,
+     '  ★ <b>「오늘」 칸 안이고 챙길 것 카드 바로 위</b>다 — 아침에 두 곳을 안 본다 (판 X439 · 사장님 말씀 「따로 만들어서 위 쪽에 따로 배치」)');
+  is(inside.첫화면,
+     '  ★★ <b>폰 첫 화면 안</b>에 선다 — y' + inside.y + ' / 보이는 높이 ' + inside.보임 + 'px (사장님 「위 쪽에」)');
   /* ⚠ <b>여기가 실제로 깨졌던 자리입니다.</b> 「오늘 뽑힌 분이 없다」 에서
      그냥 return 하는 바람에 조용한 아침에는 미션이 통째로 사라졌습니다. */
   const Z = await open({ none: true });
