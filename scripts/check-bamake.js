@@ -249,6 +249,9 @@ const srv = http.createServer((rq, rs) => {
       } }; };
       window.toast=function(){};
       baSave({ title:'홍철호 보장 전·후', state:{ v:3, who:{ name:'홍철호', age:'45' } }, sum:{ name:'홍철호' } });
+      /* 판 X476 — 이제 누를 때마다 고르는 창이 뜹니다. 지금 고객(맨 위)을 그대로 누릅니다 */
+      await new Promise(r=>setTimeout(r,300));
+      const cr=document.querySelector('#osCliPick .osCliPickRow.cur'); if(cr)cr.click();
       await new Promise(r=>setTimeout(r,400));
       window.osClient=rc; window.toast=rt; OS.profile=bak.p; OS.session=bak.s;
       if(!sent)return { none:true };
@@ -257,6 +260,70 @@ const srv = http.createServer((rq, rs) => {
     });
     is(!leak.none && leak.real === false,
        '화면에 <b>손으로 적은 실명</b>도 서버로 안 나간다 — 제목 「' + (leak.title||'?') + '」 · 자료 안 「' + (leak.name||'?') + '」');
+
+    /* ── 판 X476 · 사장님 말씀 2026-11-18 「고객 365일에 저장하는 거 클릭하면 다시 재선택할 수 있도록」 ──
+       전에는 한 번 정해진 고객이 있으면 고르는 창 없이 그분께 바로 저장해, 잘못 고른 고객을 바꿀 길이 없었습니다.
+       ① 정해진 고객이 있어도 <b>누를 때마다</b> 고르는 창이 뜨고, 그분이 맨 위에 「지금 저장된 곳」 으로 표시된다
+       ② 다른 고객을 고르면 <b>그분</b>에게 저장되고, 그분의 줄이 이미 있으면 새로 쌓지 않고 <b>그 줄을 고친다</b>
+       ③ 다음에 누르면 이번엔 바꾼 고객이 맨 위다                                                                    */
+    const RP = await page.evaluate(async () => {
+      const bak = { p: OS.profile, s: OS.session };
+      OS.profile = { id:'x', role:'advisor' }; OS.session = { user:{ id:'adv-1' } };
+      BA.cid='c-a'; BA.name='김○○'; BA.rid='r-a';
+      const log=[]; const rc=window.osClient, rt=window.toast; const toasts=[];
+      const fake=function(val,t){
+        const q=val||{data:[],error:null}; const eqs=[];
+        const o={ then:function(f,g){ return Promise.resolve(typeof q==='function'?q(eqs):q).then(f,g); },
+                  catch:function(f){ return Promise.resolve(q).catch(f); } };
+        ['select','neq','in','is','gt','gte','lt','lte','like','ilike','or','not',
+         'order','limit','range','single','maybeSingle'].forEach(function(k){ o[k]=function(){ return o; }; });
+        o.eq=function(k,v){ eqs.push([k,v]); return o; };
+        return o;
+      };
+      window.osClient=function(){ return { from:function(t){
+        let o;
+        if(t==='clients') o=fake({data:[{id:'c-b',name_masked:'이○○'},{id:'c-a',name_masked:'김○○'}],error:null});
+        else if(t==='saved_reports') o=fake(function(eqs){
+          const c=(eqs.find(e=>e[0]==='client_id')||[])[1];
+          return {data:c==='c-b'?[{id:'r-b'}]:[],error:null}; });
+        else o=fake();
+        const put=function(kind){ return function(row){ const eqs=[]; const r=fake({data:[{id:'new'}],error:null});
+          const eq0=r.eq; r.eq=function(k,v){ if(t==='saved_reports')log.push({kind:kind,row:row,where:[k,v]}); return eq0(k,v); };
+          if(t==='saved_reports'&&kind==='insert')log.push({kind:kind,row:row});
+          return r; }; };
+        o.insert=put('insert'); o.update=put('update'); o.upsert=put('upsert'); o.delete=function(){ return fake(); };
+        return o;
+      } }; };
+      window.toast=function(x){ toasts.push(x); };
+      const wait=ms=>new Promise(r=>setTimeout(r,ms));
+      const st={ v:3, who:{ name:'', age:'45' } };
+      /* ① */
+      baSave({ title:'t', state:st, sum:{} }); await wait(300);
+      const box1=document.getElementById('osCliPick');
+      const rows1=box1?[...box1.querySelectorAll('.osCliPickRow')]:[];
+      const first1=rows1[0]?{id:rows1[0].getAttribute('data-id'),cur:rows1[0].classList.contains('cur'),txt:rows1[0].textContent}:null;
+      const head1=box1?box1.querySelector('#osCliPickList').textContent:'';
+      /* ② 다른 고객(이○○)을 고른다 */
+      const other=rows1.find(b=>b.getAttribute('data-id')==='c-b'); if(other)other.click();
+      await wait(400);
+      const after={cid:BA.cid,name:BA.name,rid:BA.rid,log:log.slice(),toast:toasts.join(' | ')};
+      /* ③ 다시 누른다 */
+      baSave({ title:'t', state:st, sum:{} }); await wait(300);
+      const box3=document.getElementById('osCliPick');
+      const r3=box3&&box3.querySelector('.osCliPickRow');
+      const first3=r3?{id:r3.getAttribute('data-id'),cur:r3.classList.contains('cur')}:null;
+      const x=document.getElementById('osCliPickX'); if(x)x.click();
+      window.osClient=rc; window.toast=rt; OS.profile=bak.p; OS.session=bak.s;
+      return { open1:!!box1, first1, head1, n1:rows1.length, after, first3 };
+    });
+    is(RP.open1 && RP.first1 && RP.first1.id==='c-a' && RP.first1.cur && /지금 저장된 곳/.test(RP.first1.txt) && RP.n1===2,
+       '정해진 고객이 있어도 <b>누를 때마다 고르는 창</b>이 뜨고, 그분이 맨 위 「지금 저장된 곳」 (한 번씩만 · ' + RP.n1 + '줄)');
+    is(/지금은 김○○님에게 저장됩니다/.test(RP.head1), '창 위에 「지금은 ○○님에게 저장됩니다」 라고 먼저 말한다');
+    const L=RP.after.log;
+    is(RP.after.cid==='c-b' && L.length===1 && L[0].kind==='update' && L[0].where[1]==='r-b',
+       '다른 고객을 고르면 <b>그분의 줄(r-b)</b>을 고친다 — 김○○ 줄(r-a)도 안 건드리고 새로 쌓지도 않는다 — ' + JSON.stringify(L.map(l=>[l.kind,l.where&&l.where[1]])));
+    is(/이○○님 자료로 저장/.test(RP.after.toast), '저장 알림이 <b>바꾼 고객</b> 이름으로 나온다 — ' + RP.after.toast);
+    is(RP.first3 && RP.first3.id==='c-b' && RP.first3.cur, '다음에 누르면 <b>바꾼 고객</b>이 맨 위다');
   }
 
   sec('[4] 혼자서도 열리는가 — 파일을 그냥 열었을 때');
