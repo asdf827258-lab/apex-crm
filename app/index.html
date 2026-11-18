@@ -22222,7 +22222,7 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-18 10:26';
+var APP_BUILD='2026-11-18 10:29';
 var APP_BUILD_NOTE='🖨 <b>TA 스크립트 인쇄 — 정리본 4장</b>(판 X477 · 사장님 말씀 「인쇄하면 3~5장으로 · 디비 종류는 한눈에 따로 · 멘트 / 거절처리 순으로」) — 인쇄를 누르면 이제 <b>① 멘트(대본 한 장) → ② 베스트 반론 5 → ③ 거절 한눈표 → ④ 별지 DB 종류 한눈표</b> 순서로 나갑니다. ★ 베스트 반론 5는 한현석 지점장님 「TA 시장 및 반론사례」 의 반론극복 장을 옮긴 것이고, 한눈표의 같은 거절에 🏆 가 붙습니다. ★ DB 종류 한눈표만 따로(1장), 예전 짧은 2장 · 자세한 약 30쪽도 고르는 쪽지에서 그대로 고를 수 있습니다.';
 
 
@@ -68074,7 +68074,7 @@ function osNeedLoginHtml(){
 }
 function osBlockedPageHtml(tab){
   if(!OS.profile)
-    return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">LOGIN</div>'+
+    return '<div class="tab-pane on" data-os-login-wall="1"><div class="page-hd"><div class="page-tag">LOGIN</div>'+
       '<div class="page-title">🔑 로그인하면 열립니다</div>'+
       '<div class="page-desc">이 메뉴는 <b>결제가 아니라 로그인</b>이 필요합니다.</div></div>'+
       osNeedLoginHtml()+'</div>';
@@ -72782,7 +72782,13 @@ function osRefreshIfClients(){
   /* <b>어디 있는지 모르면 옮기지 않는다.</b> 예전에는 모를 때 'home' 이 와서
      그대로 홈으로 보냈다 — 보고 있던 화면에서 허락 없이 벗어나는 자리였다.
      모를 때는 메뉴 표시만 되살리고 화면은 그대로 둔다. */
-  if(t&&refresh[t]&&typeof go==='function'){go(t);return;}
+  /* 🔑 <b>로그인 벽이 서 있던 화면은 다시 그린다</b> (판 X476).
+     주소(#ref_underwrite 등)로 바로 열면 로그인 정보가 오기 <b>전에</b> 화면이 서서
+     「로그인하면 열립니다」 가 먼저 그려진다. 로그인이 끝나도 위 표(refresh)에 없는
+     화면은 그대로 두었기 때문에 — 로그인해 있는데도 벽이 안 걷혔다.
+     벽뿐인 화면은 지킬 글이 없으니 다시 그려도 잃는 것이 없다. */
+  var wall=!!document.querySelector('#dynPane [data-os-login-wall]');
+  if(t&&(refresh[t]||wall)&&typeof go==='function'){go(t);return;}
   /* 역할 비민감 탭(도구·계산기 등): 작성 중 내용은 보존하고 사이드바 강조만 복원 */
   try{navMark(t);}catch(e){}
 }
