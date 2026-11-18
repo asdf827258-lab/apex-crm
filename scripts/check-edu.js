@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    check-edu.js — 🌱 <b>성장</b> — 입사부터 경력자까지 한 길로
-   (판 X379 · X380 → X409 → X467 → X470)
+   (판 X379 · X380 → X409 → X467 → X475)
 
    사장님 말씀 (2026-11-06) — 「큰 카테고리에서 <b>교육</b>도 하나 만들어줘
    <b>도구 밑에</b> 거기에 교육자료 쓸것들 다 정리해서 넣어주고」.
@@ -98,7 +98,7 @@ const SEED = () => {
 };
 
 (async () => {
-  console.log('🌱 성장 — 입사부터 경력자까지 한 길로 (판 X379 · X380 → X409 → X467 → X470)');
+  console.log('🌱 성장 — 입사부터 경력자까지 한 길로 (판 X379 · X380 → X409 → X467 → X475)');
 
   await new Promise(r => srv.listen(PORT, r));
   const br = await chromium.launch();
@@ -307,7 +307,7 @@ const SEED = () => {
   is(K.b.some(x => /진단비/.test(x)), '  「암」 → 교재 <b>진단비</b> 장도 선다');
   is(/찾은 것이 없습니다/.test(K.c), '  못 찾으면 <b>못 찾았다</b>고 한다 (1번)');
 
-  /* 판 X470 — 팀원이 처음 봐도 한 번에: 이 칸이 무엇인가 · 쓰는 법 · 「지금 어떤 때예요?」 */
+  /* 판 X475 — 팀원이 처음 봐도 한 번에: 이 칸이 무엇인가 · 쓰는 법 · 「지금 어떤 때예요?」 */
   const KG = await pg.evaluate(() => new Promise(r => {
     grTab('know'); GR.kg = -1; grFind('');
     const 카드 = (document.querySelector('#grHost .gr-intro') || { innerText: '' }).innerText.replace(/\s+/g, ' ');
