@@ -98,5 +98,11 @@ let qn = 0, qbad = 0;
 TDS.forEach(t => t.detail.rows.forEach(r => r.cells.forEach(c => { if (!c.quote) return; qn++; if (!(c.vf && c.vf.ok)) qbad++; })));
 is(qn > 0 && qbad === 0, '상세표 약관 문장 ' + qn + '칸이 전부 PDF 에서 글자 그대로 (못 맞춘 칸 ' + qbad + ')');
 
+console.log('\n[9] 🔎 「약관에서 못 찾음」 칸 다시 찾기 (판 X485 · 사장님 말씀 「11. 다음작업 진행해줘」)');
+let mq = 0, mn = 0;
+TDS.forEach(t => t.detail.rows.forEach(r => r.cells.forEach(c => { if (c.quote) mq++; else mn++; })));
+is(mq >= 580 && mn <= 75, '약관 문장 붙은 칸 ' + mq + '개 · 못 찾음 ' + mn + '칸 (다시 찾기 전 558 · 99칸 — 줄면 안 됨)');
+is(TDS.every(t => !(t.detail.rows || []).some(r => r.cells.some(c => !c.quote && !/못 찾음/.test(c.v || '')))), '원문 없는 칸은 모두 「약관에서 못 찾음」 이라고 말한다 (지어낸 해설 0)');
+
 console.log('\n' + (bad ? '✗ ' + bad + '곳이 어긋났습니다' : '✓ 상품전략기 한 칸에서 「무엇을 권할까」 와 「어떻게 말을 꺼낼까」 가 같은 대본으로 이어집니다.'));
 process.exit(bad ? 1 : 0);
