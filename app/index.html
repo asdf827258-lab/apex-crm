@@ -22223,7 +22223,7 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-18 10:46';
+var APP_BUILD='2026-11-18 11:04';
 var APP_BUILD_NOTE='🎣 <b>오늘 「이분께 꺼낼 한 줄」 에 상품 이름</b>(판 X479 · 사장님 말씀 「응 상품명도 띄워」) — 한마디·담보 밑에 그 걱정으로 이어 갈 <b>이번 달 상품 셋</b>(회사 · 상품 이름)이 바로 섭니다. 걱정을 모르는 분은 이번 달 1위 한 개. 상품전략기 「🎣 문 열기」 가 고르는 것과 같은 셋입니다(홈이 순위를 따로 세지 않습니다). 소식지 상품이라 설계사용입니다 — 고객 화면엔 옮기지 마세요.';
 
 
@@ -32447,7 +32447,7 @@ function hmPexHostHtml(){
   /* 판 번호를 붙입니다 — 안 붙이면 브라우저가 지난번 것을 그대로 씁니다 */
   return '<div class="hm-pex-in" id="hmPexIn">'+
     '<div class="hm-pex-hd"><div class="m"><b>✍️ 예상업적 적기</b>'+
-      '<span>AP · PC 고객만 · 「15」 = 15만원 · 적는 대로 저장되고 위 「진행중 예상」 이 같이 바뀝니다</span></div>'+
+      '<span>AP · PC 고객만 · 이름 · 단계는 눌러 고치고 새 고객은 맨 아래에서 · 「15」 = 15만원</span></div>'+
     '<button type="button" class="t-btn g sm" onclick="hmPexOpen()">접기</button></div>'+
     '<iframe id="hmPexFr" title="예상업적 적기" src="/edu-pipeline.html?quick=1&amp;embed=1&amp;v='+
       encodeURIComponent(APP_BUILD)+'" style="height:'+HMPEX.h+'px"></iframe></div>';
@@ -32476,6 +32476,19 @@ function hmPexPut(id,won){
   var i,v=(+won>0)?(+won):null;
   for(i=0;i<AR.db.length;i++)if((''+AR.db[i].id)===(''+id)){ AR.db[i].expect=v; break; }
   hmPexLinePaint();
+}
+/* 칸 안에서 <b>단계 · 이름을 고치거나 새 고객을 넣으면</b>(pex-row · 판 X477) 📊 상담현황의 칸 수가
+   달라집니다. 금액과 달리 줄 모양을 판이 지어 보내지 않습니다 — 홈이 배정 DB 를 <b>다시 읽습니다</b>.
+   연달아 고쳐도 한 번만 읽게 모읍니다 (7번). 칸(#hmPexHost)은 hmPaint 밖이라 치던 판은 그대로입니다. */
+var HMPEXROW=0;
+function hmPexRow(){
+  clearTimeout(HMPEXROW);
+  HMPEXROW=setTimeout(function(){
+    if(typeof AR==='undefined'||typeof arLoad!=='function')return;
+    arLoad(true);
+    var p=function(){ try{ hmPaint(); }catch(e){} try{ hmPexLinePaint(); }catch(e2){} };
+    setTimeout(p,2400); setTimeout(p,5400);
+  },600);
 }
 function hmPexLinePaint(){
   var L=document.querySelectorAll('[data-pexline]'),i,h;
@@ -32650,7 +32663,7 @@ function hmFullNm(s){
   }catch(e2){}
   return t;
 }
-/* 끼운 판이 알려 오는 셋 — 키(pex-h) · 적은 금액(pex-put) · 「전체 표로 보기」(pex-full).
+/* 끼운 판이 알려 오는 넷 — 키(pex-h) · 적은 금액(pex-put) · 고친 줄(pex-row) · 「전체 표로 보기」(pex-full).
    ★ 같은 집(origin)에서 온 것만 받습니다 (3번). */
 window.addEventListener('message',function(e){
   if(e.origin!==location.origin||!e.data)return;
@@ -32661,6 +32674,7 @@ window.addEventListener('message',function(e){
     return;
   }
   if(d.apex==='pex-put'){ hmPexPut(d.id,d.expect); return; }
+  if(d.apex==='pex-row'){ hmPexRow(); return; }
   if(d.apex==='pex-full'){ hmSheetOpen('pex_full','','📊 DB · 업적관리'); return; }
 });
 /* ── 주소가 없는 화면 — go() 로 가되 <b>돌아오는 길</b>을 띠로 세운다 ──
