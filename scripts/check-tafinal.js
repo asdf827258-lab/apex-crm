@@ -92,8 +92,8 @@ is(/function brO\(id\)\{[^\n]*class="br" data-ob="'\+id\+'">'\+esc\(o\.title\)\+
    '  단계 안 거절은 <b>제목 단추</b>만 — 멘트 미리보기 카드를 늘어놓지 않는다');
 is(/id="dock"/.test(TA) && /id="qfind"/.test(TA) && !/<aside class="side/.test(TA),
    '  거절은 <b>하단 고정 판</b>에 전부 · 찾기 칸 (판 X234 — 오른쪽 칸은 걷었다)');
-is(/function printQuick\(/.test(TA) && /var PRINT_FULL = false;/.test(TA),
-   '  인쇄 기본은 <b>대본 + 거절 한눈표 2장</b>, 자세한 판은 고를 때만 (판 X234)');
+is(/function printQuick\(/.test(TA) && /var PRINT_MODE = 'book';/.test(TA) && /function printBest\(/.test(TA) && /function printDbs\(/.test(TA) && /<script src="ta-best\.js"><\/script>/.test(TA),
+   '  인쇄 기본은 <b>정리본(멘트 → 베스트 반론 → 거절 한눈표 → DB 한눈표)</b>, 짧게·자세히·DB만은 고를 때만 (판 X477)');
 is(/id="fsz"/.test(TA) && /'ta_fsz'/.test(TA) && /\.app,#shB\{zoom:var\(--z,1\)\}/.test(TA), '  <b>글씨 크기</b> 단추(가- 가+)가 있고 이 기기에 기억한다');
 is(/\.cols\{grid-template-columns:minmax\(0,1fr\)\}/.test(TA), '  폰에서 대본 칸이 화면 밖으로 <b>안 밀린다</b> (가로 줄이 칸을 넓히지 않게)');
 

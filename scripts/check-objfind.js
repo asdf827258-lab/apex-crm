@@ -178,28 +178,43 @@ const 보이는수 = (p, sel) => p.evaluate(s => [].slice.call(document.querySel
   const d2 = await 보이는수(p3, '#qbar [data-ob]');
   is(d2 > 0 && d2 < d.오른칸, '  PC 하단 거절판도 <b>그대로 걸러진다</b> (판 X234 — 오른쪽 칸을 아래로) — ' + d.오른칸 + ' → ' + d2 + '가지');
 
-  head('[6-1] ★★ 인쇄 기본은 <b>대본 1장 + 거절 한눈표 1장</b> (판 X234 · 사장님 말씀 2026-10-16 「거절이 너무 많아서 인쇄하면 너무 많은데」)');
-  /* 판 X114~X119 의 「거절 전부 · 화면과 똑같이」 는 <b>지우지 않았습니다</b> — 인쇄 단추의 고르는 쪽지에서
-     「거절 자세히까지」 를 고를 때 나갑니다. 아래 [6] 부터는 그 종이를 예전 그대로 잽니다. */
-  const 기본 = await p3.evaluate(() => { window.dispatchEvent(new Event('beforeprint'));
-    const ps = document.getElementById('printSheet'), 글 = ps.innerText || ps.textContent || '';
-    const names = APEX_STAGE.objList().map(o => o.title);
-    return { 표줄: ps.querySelectorAll('.pq tbody tr').length, 빠진: names.filter(x => 글.indexOf(x) < 0),
-             자세히: ps.querySelectorAll('.pobj').length, 머리: /거절 한눈표/.test(글), 앞장: /보장분석 TA 연속 스크립트/.test(글) }; });
-  is(기본.빠진.length === 0, '  ★★ 한눈표에도 거절 <b>전부</b>가 있다 — 빠진 것 ' + 기본.빠진.length + (기본.빠진.length ? ' ← ' + 기본.빠진.slice(0, 3).join(' · ') : ''));
-  is(기본.표줄 >= 28 && 기본.자세히 === 0, '  한 줄씩 <b>' + 기본.표줄 + '줄</b> — 자세한 칸은 기본 종이에 안 섞인다');
-  is(기본.머리 && 기본.앞장, '  앞장(대본)은 그대로이고 뒤에 <b>「거절 한눈표」</b>');
-  const 기본쪽 = await (async () => {
+  head('[6-1] ★★ 인쇄 기본은 <b>정리본 — 멘트 → 거절처리 → DB 한눈표</b> (판 X477 · 사장님 말씀 2026-11-18 「인쇄하면 3~5장으로 · 디비 종류는 한눈에 따로 · 멘트 / 거절처리 순으로」)');
+  /* 판 X234 의 「대본 + 한눈표 2장」 과 X114~X119 의 「거절 자세히까지」 는 <b>지우지 않았습니다</b> — 인쇄 단추의
+     고르는 쪽지에서 고를 때 나갑니다. 아래 [6] 부터는 「자세히」 종이를 예전 그대로 잽니다. */
+  const 쪽세기 = async () => {
     await p3.emulateMedia({ media: 'print' });
     const buf = await p3.pdf({ format: 'A4', margin: { top:'6mm', bottom:'6mm', left:'7mm', right:'7mm' }, printBackground: true });
     await p3.emulateMedia({ media: 'screen' });
     return (buf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
-  })();
-  is(기본쪽 === 2, '  ★★ 종이로 뽑아 세면 <b>' + 기본쪽 + '쪽</b> — 대본 1장 + 거절 1장 (전에는 31쪽)');
+  };
+  const 기본 = await p3.evaluate(() => { window.dispatchEvent(new Event('beforeprint'));
+    const ps = document.getElementById('printSheet'), 글 = ps.innerText || ps.textContent || '';
+    const names = APEX_STAGE.objList().map(o => o.title), at = x => 글.indexOf(x);
+    const dbs = TA5.DBS.map(d => d.label), asks = (window.TA_BEST ? TA_BEST.list : []).map(b => b.ask);
+    return { 표줄: ps.querySelectorAll('.pq tbody tr').length, 빠진: names.filter(x => 글.indexOf(x) < 0),
+             자세히: ps.querySelectorAll('.pobj').length, 차례: [at('보장분석 TA 연속 스크립트'), at('베스트 반론 5'), at('거절 한눈표'), at('DB 종류 한눈표')],
+             반론: asks.length, 반론빠짐: asks.filter(x => 글.indexOf(x) < 0), 트로피: ps.querySelectorAll('.pq .bm').length,
+             DB빠짐: dbs.filter(x => !ps.querySelector('.ps-dbs') || ps.querySelector('.ps-dbs').innerText.indexOf(x) < 0), 주제: ps.querySelectorAll('.pd-c').length }; });
+  is(기본.빠진.length === 0, '  ★★ 한눈표에도 거절 <b>전부</b>가 있다 — 빠진 것 ' + 기본.빠진.length + (기본.빠진.length ? ' ← ' + 기본.빠진.slice(0, 3).join(' · ') : ''));
+  is(기본.표줄 >= 28 && 기본.자세히 === 0, '  한 줄씩 <b>' + 기본.표줄 + '줄</b> — 자세한 칸은 기본 종이에 안 섞인다');
+  is(기본.차례.every((v, i, a) => v >= 0 && (i === 0 || v > a[i - 1])),
+     '  ★★ 차례가 <b>멘트 → 베스트 반론 → 거절 한눈표 → DB 한눈표</b> — ' + 기본.차례.join(' < '));
+  is(기본.반론 === 5 && 기본.반론빠짐.length === 0 && 기본.트로피 === 5,
+     '  ★ 보내 주신 파일의 <b>베스트 반론 5</b>가 다 나가고, 한눈표의 같은 거절에 🏆 ' + 기본.트로피 + '곳' + (기본.반론빠짐.length ? ' ← 빠짐 ' + 기본.반론빠짐.join(' · ') : ''));
+  is(기본.DB빠짐.length === 0 && 기본.주제 >= 8,
+     '  ★ DB 한눈표에 DB <b>전부</b>(주제 ' + 기본.주제 + '갈래) — 빠진 것 ' + 기본.DB빠짐.length + (기본.DB빠짐.length ? ' ← ' + 기본.DB빠짐.slice(0, 3).join(' · ') : ''));
+  const 기본쪽 = await 쪽세기();
+  is(기본쪽 >= 3 && 기본쪽 <= 5, '  ★★ 종이로 뽑아 세면 <b>' + 기본쪽 + '쪽</b> — 3~5장 (멘트 1 · 베스트 반론 1 · 한눈표 1 · DB 1)');
   const 고름 = await p3.evaluate(() => { document.querySelector('[data-act="print"]').click();
-    const b = [].slice.call(document.querySelectorAll('#shB [data-act="printgo"]')).map(x => x.dataset.full);
+    const b = [].slice.call(document.querySelectorAll('#shB [data-act="printgo"]')).map(x => x.dataset.mode);
     document.getElementById('shX').click(); return b.join(','); });
-  is(고름 === '0,1', '  🖨 인쇄를 누르면 <b>고르는 쪽지</b>가 뜬다 — 「대본 + 한눈표(2장)」 · 「거절 자세히까지(약 30쪽)」');
+  is(고름 === 'book,db,short,full', '  🖨 인쇄를 누르면 <b>고르는 쪽지</b> — 정리본 · DB 한눈표만 · 짧게 2장 · 거절 자세히까지 (' + 고름 + ')');
+  await p3.evaluate(() => TA_APP.setPrintMode('db'));
+  const db쪽 = await 쪽세기();
+  is(db쪽 === 1, '  🗂 DB 한눈표만 고르면 <b>' + db쪽 + '쪽</b>');
+  await p3.evaluate(() => TA_APP.setPrintMode('short'));
+  const 짧쪽 = await 쪽세기();
+  is(짧쪽 === 2, '  📄 짧게 고르면 <b>' + 짧쪽 + '쪽</b> — 대본 1장 + 거절 1장 (판 X234 그대로)');
   await p3.evaluate(() => TA_APP.setPrintFull(true));
 
   head('[6] ★★ 「거절 자세히까지」 를 고르면 거절이 <b>전부</b> 나간다 (사장님 말씀)');
