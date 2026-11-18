@@ -1517,6 +1517,18 @@ function styles(){
   ".rt-mapbox{flex:1;position:relative;min-width:0}",
   "#rtMap{position:absolute;inset:0}",
   ".rt-nokey{position:absolute;inset:0;background:#fff;overflow:auto;padding:26px;display:grid;place-items:start center}",
+  /* ★ 판 X472 — 지도를 숨겨 두셨을 때 그 자리에 서는 한 줄. <b>색은 이 파일이
+     이미 쓰는 이름만</b> 씁니다(새 색을 안 만듭니다). 누르는 것은 44px 입니다. */
+  ".rt-mapoff{display:flex;align-items:center;gap:8px;" +
+    "padding:5px 12px;border-bottom:1px solid var(--line);background:var(--bg);" +
+    "font-size:13px;color:var(--text);line-height:1.4}",
+  ".rt-mapoff b{color:var(--navy)}",
+  ".rt-mapoff[hidden]{display:none}",
+  /* 글은 줄지 않고 <b>줄바꿈만</b> 막습니다 — 좁으면 끝에 … 가 섭니다.
+     단추는 44px 를 지키고 줄을 안 넘깁니다(넘기면 목록 자리를 먹습니다). */
+  ".rt-mapoff>span{flex:1 1 auto;min-width:0;overflow:hidden;" +
+    "text-overflow:ellipsis;white-space:nowrap}",
+  ".rt-mapoff button{flex:0 0 auto;min-height:44px}",
   ".rt-card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:11px}",
   ".rt-h{font-size:13px;font-weight:900;color:var(--navy);margin:16px 0 9px}",
   /* ══ 🧭 <b>홈이 권하는 동네</b> 한 줄 (판 X260) ═══════════════════════
@@ -1803,6 +1815,10 @@ function mapPaint(){
   MAPON=(RTVIEW!=='list');
   /* 지금 보고 있는 것이 아니라 <b>누르면 가는 곳</b>을 적습니다 */
   if(b)b.textContent=RT_LABEL[RT_NEXT[RTVIEW]]||"🔀 지도+목록";
+  /* ★★ 판 X472 — 숨겨 두었으면 <b>그 자리에서 말합니다</b> (1번).
+     조용히 없으면 사장님은 「고장났다」 로 읽으십니다 — 실제로 그러셨습니다. */
+  try{ var off=q("rtMapOff");
+       if(off)off.hidden=(RTVIEW!=='list'); }catch(eO){}
 }
 function mapToggle(){
   RTVIEW=RT_NEXT[RTVIEW]||'both';
@@ -1838,6 +1854,23 @@ function wrap(){
       '<button class="btn btn-light btn-sm" id="rtKey">키 설정</button>'+
       '<button class="btn btn-dark btn-sm" id="rtX">닫기</button>'+
     '</div>'+
+    /* ★★ 판 X472 — <b>지도를 숨겨 두셨으면 그 자리에서 말합니다</b> (1번 · 6번).
+       사장님 말씀 2026-11-17 「지역동선도 꼭 뜨게 하고」 · 2026-11-18 「크롬으로 켰어」.
+       ⚠ 재어 보고 찾은 자리입니다 — 보기 고름이 「목록만」 이면(또는 옛 판에서
+       지도를 꺼 두신 apexRouteMapOnV1='0' 이 남아 있으면) .rt-mapbox 가
+       <b>430×0px</b> 이 되어 지도도 · 열쇠 안내도 <b>통째로 사라집니다.</b>
+       사장님 눈에는 그것이 「지도가 안 뜬다」 이고, <b>왜 없는지 아무 말도</b>
+       없었습니다. 열쇠·주소·카카오 지도는 재어 보니 전부 멀쩡했습니다.
+       ★ 이 줄은 <b>지도 띠 밖</b>에 둡니다 — 띠가 0px 이라 안에 두면 같이 숨습니다.
+       ★ 돌아가는 단추는 <b>도구 띠의 그 단추와 같은 자</b>(mapToggle)입니다 (5번). */
+    /* ⚠ <b>한 줄에 담습니다.</b> 처음에 두 줄(96px)로 적었다가 check-rtuse 가
+       울었습니다 — 판 X272 의 약속 「목록 가득 600px 이상」 이 591px 로 깎였습니다.
+       <b>말을 줄이는 쪽</b>을 골랐습니다: 지도가 왜 없는지와 돌아가는 단추는
+       그대로 두고, 설명 한 토막만 덜었습니다 (1번은 지키고 7번 자리를 안 먹습니다). */
+    '<div class="rt-mapoff" id="rtMapOff" hidden>'+
+      '<span>🗺 <b>지도를 숨겨 두셨습니다</b> — 목록만 보입니다</span>'+
+      '<button type="button" class="btn btn-dark btn-sm" id="rtMapOffGo">지도 보기</button>'+
+    '</div>'+
     '<div class="rt-body">'+
       '<div class="rt-side" id="rtSide"></div>'+
       '<div class="rt-mapbox"><div id="rtMap"></div><div class="rt-nokey hidden" id="rtNokey"></div></div>'+
@@ -1848,6 +1881,9 @@ function wrap(){
   /* 담당자를 <b>손으로</b> 고르셨다는 사실을 적어 둡니다 (판 X274 · 위 쪽지) */
   q("rtOwner").onchange=function(){ OWN_SET=true; render() };
   q("rtMapT").onclick=mapToggle;
+  /* 숨겨 두었을 때 되돌리는 단추 — 부르는 자는 mapToggle 하나입니다 (5번).
+     'list' 에서 한 번 누르면 'both'(지도+목록)로 돌아갑니다 (RT_NEXT). */
+  q("rtMapOffGo").onclick=mapToggle;
   mapPaint();
   q("rtHome").onclick=setHome;
   q("rtFix").onclick=fixAll;
