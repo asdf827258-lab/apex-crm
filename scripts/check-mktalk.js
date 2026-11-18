@@ -91,5 +91,12 @@ TDS.forEach(t => t.detail.rows.forEach(r => r.cells.forEach(c => { if (!c.disp) 
 is(dbad === 0, '읽기용 문장(disp) ' + dn + '칸 — 글자는 원문 그대로, 순서만 화면대로 (어긋남 ' + dbad + ')');
 is(/c\.disp \? '약관 문장 그대로\(PDF 글자 순서가 섞여/.test(PAGE), 'disp 칸은 「순서를 정리했다」 고 화면에 밝힌다');
 
+console.log('\n[8] 🧑‍⚕️ 간병인 비교 4사 — 약관 없는 칸을 빼고 받을 수 있는 약관으로 (판 X483 · 사장님 말씀 「10. 다음작업 진행해줘」)');
+const CARE = TDS.find(t => /^간병인 담보/.test(t.title));
+is(CARE && CARE.detail.ids.length === 4 && !CARE.detail.ids.includes('hanwha-fire-01'), '간병인 비교는 메리츠·KB·DB·삼성 4칸 (약관 PDF 없는 한화손보 칸을 뺐다)');
+let qn = 0, qbad = 0;
+TDS.forEach(t => t.detail.rows.forEach(r => r.cells.forEach(c => { if (!c.quote) return; qn++; if (!(c.vf && c.vf.ok)) qbad++; })));
+is(qn > 0 && qbad === 0, '상세표 약관 문장 ' + qn + '칸이 전부 PDF 에서 글자 그대로 (못 맞춘 칸 ' + qbad + ')');
+
 console.log('\n' + (bad ? '✗ ' + bad + '곳이 어긋났습니다' : '✓ 상품전략기 한 칸에서 「무엇을 권할까」 와 「어떻게 말을 꺼낼까」 가 같은 대본으로 이어집니다.'));
 process.exit(bad ? 1 : 0);
