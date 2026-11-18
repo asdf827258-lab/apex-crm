@@ -1,4 +1,4 @@
-/* 🎣 <b>걱정별 이번 달 상품 작은 목록</b> 뽑기 — app/hm-door-top.js (판 X476)
+/* 🎣 <b>걱정별 이번 달 상품 작은 목록</b> 뽑기 — app/hm-door-top.js (판 X479)
    사장님 말씀 2026-11-18 「응 상품명도 띄워」 — 오늘 카드 「🎣 이분께 꺼낼 한 줄」 에
    그 걱정으로 이어 갈 이번 달 상품 이름이 바로 보이게.
 
@@ -52,7 +52,7 @@ function build() {
   })()`, ctx);
   const o = JSON.parse(r);
   return '/* 🎣 걱정별 이번 달 상품 — scripts/door-top.js 가 상품전략기(app/insight/index.html)에서 뽑은 것입니다.\n' +
-    '   손으로 고치지 마세요. 상품전략기가 바뀌면 node scripts/door-top.js 로 다시 뽑습니다 (판 X476). */\n' +
+    '   손으로 고치지 마세요. 상품전략기가 바뀌면 node scripts/door-top.js 로 다시 뽑습니다 (판 X479). */\n' +
     'window.HM_DOOR_TOP=' + JSON.stringify(o, null, 1).replace(/\n\s*/g, ' ') + ';\n';
 }
 

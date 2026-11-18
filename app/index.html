@@ -22223,8 +22223,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-18 10:27';
-var APP_BUILD_NOTE='🎣 <b>오늘 「이분께 꺼낼 한 줄」 에 상품 이름</b>(판 X476 · 사장님 말씀 「응 상품명도 띄워」) — 한마디·담보 밑에 그 걱정으로 이어 갈 <b>이번 달 상품 셋</b>(회사 · 상품 이름)이 바로 섭니다. 걱정을 모르는 분은 이번 달 1위 한 개. 상품전략기 「🎣 문 열기」 가 고르는 것과 같은 셋입니다(홈이 순위를 따로 세지 않습니다). 소식지 상품이라 설계사용입니다 — 고객 화면엔 옮기지 마세요.';
+var APP_BUILD='2026-11-18 10:46';
+var APP_BUILD_NOTE='🎣 <b>오늘 「이분께 꺼낼 한 줄」 에 상품 이름</b>(판 X479 · 사장님 말씀 「응 상품명도 띄워」) — 한마디·담보 밑에 그 걱정으로 이어 갈 <b>이번 달 상품 셋</b>(회사 · 상품 이름)이 바로 섭니다. 걱정을 모르는 분은 이번 달 1위 한 개. 상품전략기 「🎣 문 열기」 가 고르는 것과 같은 셋입니다(홈이 순위를 따로 세지 않습니다). 소식지 상품이라 설계사용입니다 — 고객 화면엔 옮기지 마세요.';
 
 
 
@@ -68075,7 +68075,7 @@ function osNeedLoginHtml(){
 }
 function osBlockedPageHtml(tab){
   if(!OS.profile)
-    return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">LOGIN</div>'+
+    return '<div class="tab-pane on" data-os-login-wall="1"><div class="page-hd"><div class="page-tag">LOGIN</div>'+
       '<div class="page-title">🔑 로그인하면 열립니다</div>'+
       '<div class="page-desc">이 메뉴는 <b>결제가 아니라 로그인</b>이 필요합니다.</div></div>'+
       osNeedLoginHtml()+'</div>';
@@ -72783,7 +72783,13 @@ function osRefreshIfClients(){
   /* <b>어디 있는지 모르면 옮기지 않는다.</b> 예전에는 모를 때 'home' 이 와서
      그대로 홈으로 보냈다 — 보고 있던 화면에서 허락 없이 벗어나는 자리였다.
      모를 때는 메뉴 표시만 되살리고 화면은 그대로 둔다. */
-  if(t&&refresh[t]&&typeof go==='function'){go(t);return;}
+  /* 🔑 <b>로그인 벽이 서 있던 화면은 다시 그린다</b> (판 X476).
+     주소(#ref_underwrite 등)로 바로 열면 로그인 정보가 오기 <b>전에</b> 화면이 서서
+     「로그인하면 열립니다」 가 먼저 그려진다. 로그인이 끝나도 위 표(refresh)에 없는
+     화면은 그대로 두었기 때문에 — 로그인해 있는데도 벽이 안 걷혔다.
+     벽뿐인 화면은 지킬 글이 없으니 다시 그려도 잃는 것이 없다. */
+  var wall=!!document.querySelector('#dynPane [data-os-login-wall]');
+  if(t&&(refresh[t]||wall)&&typeof go==='function'){go(t);return;}
   /* 역할 비민감 탭(도구·계산기 등): 작성 중 내용은 보존하고 사이드바 강조만 복원 */
   try{navMark(t);}catch(e){}
 }
