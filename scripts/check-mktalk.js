@@ -76,5 +76,20 @@ is(wide === 0, '쉬운 한 줄은 짧게 (70자 넘는 칸 ' + wide + ')');
 is(/보장을 안 한다는 뜻이 아니라/.test(PAGE), '「약관에서 못 찾음 ≠ 보장 안 함」 을 화면이 말한다');
 is(/발췌 — 원문 대조 안 됨/.test(PAGE), '대조 안 된 칸은 「약관 문장 그대로」 라고 부르지 않는다');
 
+console.log('\n[7] 📑 비교 주제 넓히기 — 지난달 상품까지 (판 X480 · 사장님 말씀 「다음 작업 진행해줘」)');
+is(TDS.length >= 8, '줄마다 상세표가 붙은 비교 ' + TDS.length + '개 (8개 이상 — 종신·간편·수술비·장기요양·10월 암까지)');
+const PIDS = new Set(SEED ? SEED.products.map(p => p.id) : []);
+is(TDS.every(t => t.detail.ids.every(id => PIDS.has(id))), '상세표의 상품 id 가 판에 다 있다 (지난달 상품은 2610- 접두어)');
+is(TDS.every(t => t.cols && t.cols.length === t.detail.ids.length && (t.rows || []).every(r => r.length === t.cols.length + 1) && (!(t.best || []).length || t.best.length === t.rows.length)), '요약표 칸·줄·유리 표시 수가 상세표와 짝이 맞는다');
+// disp = 글자층이 뒤섞인 PDF 를 화면 순서로 되돌린 문장. 순서만 바꿀 수 있다 — 글자 묶음이 quote 와 같아야 한다(verify_detail.py 와 같은 규칙)
+const PUA = /[\ue000-\uf8ff]|[\udb80-\udbff][\udc00-\udfff]/g, CIRC = /[\u2460-\u2473\u2776-\u277f]/g;
+const nrm = x => String(x || '').normalize('NFKC').replace(/[\s\u00a0·ㆍ‧∙•「」『』“”"'‘’()\[\]<>〈〉《》,.:;~∼\-–—_\/|]/g, '');
+const bag = x => [...x].sort().join('');
+let dn = 0, dbad = 0;
+TDS.forEach(t => t.detail.rows.forEach(r => r.cells.forEach(c => { if (!c.disp) return; dn++;
+  if (!(c.vf && c.vf.ok) || bag(nrm(c.quote.replace(PUA, '').replace(CIRC, ''))) !== bag(nrm(c.disp.replace(CIRC, '')))) dbad++; })));
+is(dbad === 0, '읽기용 문장(disp) ' + dn + '칸 — 글자는 원문 그대로, 순서만 화면대로 (어긋남 ' + dbad + ')');
+is(/c\.disp \? '약관 문장 그대로\(PDF 글자 순서가 섞여/.test(PAGE), 'disp 칸은 「순서를 정리했다」 고 화면에 밝힌다');
+
 console.log('\n' + (bad ? '✗ ' + bad + '곳이 어긋났습니다' : '✓ 상품전략기 한 칸에서 「무엇을 권할까」 와 「어떻게 말을 꺼낼까」 가 같은 대본으로 이어집니다.'));
 process.exit(bad ? 1 : 0);
