@@ -3146,6 +3146,7 @@ body.insight-mode #insightScreen{display:block;}
 <!-- 🎣 이분께 꺼낼 한 줄 (판 X474) — 말은 미끼 대본 자료 한 곳(상품전략기 「🎣 문 열기」 와 같은 파일) -->
 <script src="상담자료/mikki-talk-data.js"></script>
 <script src="hm-door.js"></script>
+<script src="hm-door-top.js"></script>
 <!-- 🎬 발표 덱 트랙 표 — 계산기와 <b>같은 한 파일</b>을 봅니다 (판 X333).
      사장님 말씀 「오늘 에서 AP, PC 에서 각자 뜰 수 있도록 각 파트별로 다
      넣어줘」 — 트랙 이름을 여기 또 적으면 두 벌이 됩니다 (5번). -->
@@ -21993,8 +21994,18 @@ function baSave(d){
       try{ if(f&&f.contentWindow)f.contentWindow.postMessage({type:'apexBaSaved',name:nm||''},'*'); }catch(e){}
     },function(e){ BA.busy=false; toast('저장하지 못했습니다 — '+svFailText(e),8000); });
   }
-  if(BA.cid)put(BA.cid,BA.name);
-  else osPickClient(function(cid,nm){ BA.rid=null; put(cid,nm); });
+  /* 판 X478 — 사장님 말씀 「고객 365일에 저장하는 거 클릭하면 다시 재선택할 수 있도록」.
+     전에는 한 번 정해진 고객(BA.cid)이 있으면 고르는 창 없이 그분께 바로 저장해 고칠 길이 없었습니다.
+     이제 <b>누를 때마다</b> 고르는 창을 띄우고, 지금 고객을 맨 위에 표시해 둡니다.
+     다른 고객을 고르면 <b>그분의 줄</b>을 찾아 고칩니다 — 한 고객에 한 줄을 지킵니다. */
+  osPickClient(function(cid,nm){
+    if(BA.cid&&String(cid)===String(BA.cid)){ put(cid,nm||BA.name); return; }
+    BA.rid=null;
+    sb.from('saved_reports').select('id').eq('kind',CHK_KIND).eq('client_id',cid)
+      .order('created_at',{ascending:false}).limit(1).then(function(r){
+        var row=(r&&r.data&&r.data[0])||null; BA.rid=row?row.id:null; put(cid,nm);
+      },function(){ put(cid,nm); });
+  },BA.cid?{id:BA.cid,nm:BA.name}:null);
 }
 function baAskSave(){
   var f=$('baFrame');
@@ -22222,7 +22233,7 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-18 11:30';
+var APP_BUILD='2026-11-18 16:26';
 var APP_BUILD_NOTE='🖨 <b>TA 스크립트 인쇄 — 정리본 4장</b>(판 X482 · 사장님 말씀 「인쇄하면 3~5장으로 · 디비 종류는 한눈에 따로 · 멘트 / 거절처리 순으로」) — 인쇄를 누르면 이제 <b>① 멘트(대본 한 장) → ② 베스트 반론 5 → ③ 거절 한눈표 → ④ 별지 DB 종류 한눈표</b> 순서로 나갑니다. ★ 베스트 반론 5는 한현석 지점장님 「TA 시장 및 반론사례」 의 반론극복 장을 옮긴 것이고, 한눈표의 같은 거절에 🏆 가 붙습니다. ★ DB 종류 한눈표만 따로(1장), 예전 짧은 2장 · 자세한 약 30쪽도 고르는 쪽지에서 그대로 고를 수 있습니다.';
 
 
@@ -73867,7 +73878,8 @@ function schTalk(id){
   toast(m.name+' 님과의 소통을 기록했습니다.');
 }
 /* ════════ 고객 365일 — 상담자료 저장(로그인 계정 귀속) ════════ */
-function osPickClient(cb){
+/* cur({id,nm}) 를 주면 <b>지금 고객</b>을 맨 위에 표시해 둡니다 — 그대로 누르거나 다른 고객을 고릅니다 (판 X478) */
+function osPickClient(cb,cur){
   var sb=osClient();if(!sb||!OS.profile){toast('로그인 후 이용하세요');return;}
   var ovl=document.createElement('div');ovl.id='osCliPick';ovl.style.cssText='position:fixed;inset:0;z-index:5200;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:20px';
   ovl.innerHTML='<div style="background:#fff;border-radius:16px;max-width:430px;width:100%;max-height:80vh;display:flex;flex-direction:column;overflow:hidden"><div style="padding:15px 18px;border-bottom:1px solid var(--t-line-2);font-weight:800;color:var(--t-ink)">어느 고객에게 저장할까요?</div><div id="osCliPickList" style="overflow-y:auto;padding:8px 10px;flex:1"><div class="loading" style="padding:12px"><div class="spinner"></div>고객 목록 불러오는 중…</div></div><div style="padding:12px 14px;border-top:1px solid var(--t-line-2);display:flex;gap:8px;flex-wrap:wrap"><input id="osCliPickNew" placeholder="새 고객 이름 (예: 홍길동)" style="flex:1;min-width:140px;border:1px solid var(--t-line);border-radius:9px;padding:9px 11px;font-size:var(--t6)"/><button class="btn btn-primary" id="osCliPickAdd">추가 후 저장</button><button class="btn btn-ghost" id="osCliPickX">취소</button></div></div>';
@@ -73888,7 +73900,14 @@ function osPickClient(cb){
   arAll(sb,'clients','id,name_masked',['-created_at','id']).then(function(r){
     var host=document.getElementById('osCliPickList');if(!host)return;
     var rows=(r&&r.data)||[];
-    host.innerHTML=rows.length?rows.map(function(c){return '<button class="osCliPickRow" data-id="'+c.id+'" data-nm="'+osEsc(c.name_masked||'')+'" style="display:block;width:100%;text-align:left;border:1px solid var(--t-line-2);background:#fff;border-radius:10px;padding:10px 12px;margin:4px 0;font-size:var(--t6);font-weight:700;color:var(--t-ink);cursor:pointer">'+osEsc(c.name_masked||'(이름 없음)')+'</button>';}).join(''):'<div style="padding:12px;color:var(--t-sub2);font-size:var(--t6)">등록된 고객이 없습니다. 아래에서 새 고객을 만들어 바로 저장하세요.</div>';
+    /* 지금 고객은 맨 위로, 파란 테두리에 「지금 저장된 곳」 — 목록에 없어도 한 줄 세운다 */
+    var curId=cur&&cur.id?String(cur.id):'';
+    if(curId){
+      var hit=null;rows=rows.filter(function(c){if(String(c.id)===curId){hit=c;return false;}return true;});
+      rows.unshift(hit||{id:curId,name_masked:cur.nm||''});
+    }
+    host.innerHTML=(curId?'<div style="padding:4px 4px 2px;font-size:var(--t6);color:var(--t-sub);font-weight:700">지금은 <b style="color:var(--t-ink)">'+osEsc(rows[0].name_masked||'고객')+'</b>님에게 저장됩니다 — 다른 고객을 고르면 그분에게 저장합니다</div>':'')+
+    (rows.length?rows.map(function(c){var on=curId&&String(c.id)===curId;return '<button class="osCliPickRow'+(on?' cur':'')+'" data-id="'+c.id+'" data-nm="'+osEsc(c.name_masked||'')+'" style="display:block;width:100%;text-align:left;border:'+(on?'2px solid var(--t-point);background:var(--t-point-l)':'1px solid var(--t-line-2);background:#fff')+';border-radius:10px;padding:10px 12px;margin:4px 0;font-size:var(--t6);font-weight:700;color:var(--t-ink);cursor:pointer">'+(on?'✓ ':'')+osEsc(c.name_masked||'(이름 없음)')+(on?' <span style="font-size:var(--t6);color:var(--t-point)">· 지금 저장된 곳</span>':'')+'</button>';}).join(''):'<div style="padding:12px;color:var(--t-sub2);font-size:var(--t6)">등록된 고객이 없습니다. 아래에서 새 고객을 만들어 바로 저장하세요.</div>');
     var bs=host.querySelectorAll('.osCliPickRow');for(var i=0;i<bs.length;i++){(function(b){b.onclick=function(){var id=b.getAttribute('data-id'),nm=b.getAttribute('data-nm');close();cb(id,nm);};})(bs[i]);}
   });
 }

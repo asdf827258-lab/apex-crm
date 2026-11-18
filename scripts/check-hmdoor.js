@@ -11,6 +11,8 @@
      [4] ★ 호칭은 「고객님」 뿐 — 「사장님 · 어머님」 을 안 붙인다 (3번)
      [5] ★ 이어지는 곳 — 상품전략기가 #talk 꼬리를 읽고 hashchange 로 따라온다
      [6] ★ 홈이 접힌 칸 안에 세우고 접힌 머리도 말한다 · 싣는 차례
+     [7] ★★ 상품 이름(판 X479 「응 상품명도 띄워」) — hm-door-top.js 가 <b>지금 상품전략기</b>에서
+         다시 뽑은 것과 같다(달이 바뀌었는데 안 다시 뽑으면 멈춤) · 🧭 가 여는 셋과 같은 셋이 카드에 · 설계사용
    ════════════════════════════════════════════════════════════════════ */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
@@ -70,6 +72,23 @@ is(/HM_DOOR\.html\(x\)/.test(blk) && /var inner=door\+/.test(blk), '  「이분 
 is(/🎣 상품 한 줄/.test((IX.split('function hmMoreSub(x){')[1] || '').split('\n}')[0]), '  접힌 머리도 「🎣 상품 한 줄」 이라고 말한다');
 const i0 = IX.indexOf('<script src="../ta-open.js">'), i1 = IX.indexOf('<script src="상담자료/mikki-talk-data.js">'), i2 = IX.indexOf('<script src="hm-door.js">');
 is(i0 > 0 && i1 > i0 && i2 > i1, '  싣는 차례 — ta-open → 미끼 대본 자료 → hm-door');
+
+console.log('\n[7] 상품 이름 — 상품전략기에서 뽑은 그대로');
+let TOPSRC = '', fresh = false;
+try { TOPSRC = rd('app/hm-door-top.js').replace(/\r\n/g, '\n'); fresh = TOPSRC === require('./door-top.js').build(); } catch (e) { console.log('    ' + e.message); }
+is(fresh, '  app/hm-door-top.js 가 지금 상품전략기(app/insight/index.html)에서 다시 뽑은 것과 <b>같다</b>' + (fresh ? '' : ' ← node scripts/door-top.js 로 다시 뽑으세요'));
+vm.runInContext(TOPSRC, w);
+const T = w.HM_DOOR_TOP || { cats: {} };
+is(!!T.month && Object.keys(M.CATS).every(k => Array.isArray(T.cats[k])), '  미끼 상황 ' + Object.keys(M.CATS).length + '가지마다 목록이 있다 (' + T.month + ')');
+const hp = html(a), hl = (T.cats[pa.cat] || []);
+is(hl.length > 0 && hl.every(p => hp.indexOf(p.nm) >= 0 && hp.indexOf(p.co) >= 0), '  카드에 그 걱정의 이번 달 상품 ' + hl.length + '개 이름·회사가 선다 — ' + hl.map(p => p.nm).join(' / '));
+is(/설계사용/.test(hp), '  「설계사용 · 소식지 기준」 이라고 붙는다 (소식지 = 고객 제시 금지)');
+const hn = html({ id: 'n', key: 'n', src: '' });
+is(!!T.top && hn.indexOf(T.top.nm) >= 0, '  걱정을 모르면 이번 달 1위 이름이 선다 — ' + (T.top ? T.top.nm : '(없음)'));
+const keep = w.HM_DOOR_TOP; w.HM_DOOR_TOP = undefined;
+is(!/hm-door-p/.test(D.html(a)), '  목록 파일이 없으면 이름 줄을 안 그린다(깨지지 않는다)'); w.HM_DOOR_TOP = keep;
+const i3 = IX.indexOf('<script src="hm-door-top.js">');
+is(i3 > i2, '  hm-door-top.js 를 싣는다');
 
 console.log('\n──────────────────────────────');
 console.log(bad ? ('✗ ' + bad + '가지 어긋납니다') : '✓ 오늘에서 그 분께 꺼낼 상품 한 줄이 섭니다');
