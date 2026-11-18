@@ -360,8 +360,19 @@ const srv = http.createServer((rq, rs) => {
     osRefreshIfClients();
     const onUnknown = went.slice();
 
+    /* ④ 주소로 바로 열어 로그인 벽이 먼저 섰다 — 로그인되면 <b>그 화면을</b> 다시 그린다 (판 X476) */
+    went.length = 0;
+    lastTab = 'ref_underwrite';
+    const dyn = document.getElementById('dynPane'), keep = dyn ? dyn.innerHTML : '';
+    const prof = OS.profile; OS.profile = null;
+    if (dyn) dyn.innerHTML = osBlockedPageHtml('ref_underwrite');
+    OS.profile = prof;
+    osRefreshIfClients();
+    const onWall = went.slice();
+    if (dyn) dyn.innerHTML = keep;
+
     window.go = realGo; lastTab = was;
-    return { onClients, onFinance, onUnknown };
+    return { onClients, onFinance, onUnknown, onWall };
   });
   is(B.onClients.join(',') === 'clients',
      '  고객 365일에 있으면 <b>고객 365일을</b> 다시 그린다 — 홈으로 안 간다 (' +
@@ -370,6 +381,10 @@ const srv = http.createServer((rq, rs) => {
   is(!B.onUnknown.length,
      '  어디 있는지 모르면 <b>안 옮긴다</b> — 예전에는 여기서 홈으로 갔다 (' +
      (B.onUnknown.join(',') || '안 옮김') + ')');
+
+  is(B.onWall.join(',') === 'ref_underwrite',
+     '  로그인 벽이 서 있던 화면은 로그인되면 <b>그 화면을</b> 다시 그린다 — 벽이 안 남는다 (' +
+     (B.onWall.join(',') || '안 옮김') + ')');
 
   console.log('\n[4] 콘솔이 조용하다');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 2).join(' | ') : ''));
