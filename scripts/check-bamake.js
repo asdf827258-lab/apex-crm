@@ -249,7 +249,7 @@ const srv = http.createServer((rq, rs) => {
       } }; };
       window.toast=function(){};
       baSave({ title:'홍철호 보장 전·후', state:{ v:3, who:{ name:'홍철호', age:'45' } }, sum:{ name:'홍철호' } });
-      /* 판 X476 — 이제 누를 때마다 고르는 창이 뜹니다. 지금 고객(맨 위)을 그대로 누릅니다 */
+      /* 판 X478 — 이제 누를 때마다 고르는 창이 뜹니다. 지금 고객(맨 위)을 그대로 누릅니다 */
       await new Promise(r=>setTimeout(r,300));
       const cr=document.querySelector('#osCliPick .osCliPickRow.cur'); if(cr)cr.click();
       await new Promise(r=>setTimeout(r,400));
@@ -261,7 +261,7 @@ const srv = http.createServer((rq, rs) => {
     is(!leak.none && leak.real === false,
        '화면에 <b>손으로 적은 실명</b>도 서버로 안 나간다 — 제목 「' + (leak.title||'?') + '」 · 자료 안 「' + (leak.name||'?') + '」');
 
-    /* ── 판 X476 · 사장님 말씀 2026-11-18 「고객 365일에 저장하는 거 클릭하면 다시 재선택할 수 있도록」 ──
+    /* ── 판 X478 · 사장님 말씀 2026-11-18 「고객 365일에 저장하는 거 클릭하면 다시 재선택할 수 있도록」 ──
        전에는 한 번 정해진 고객이 있으면 고르는 창 없이 그분께 바로 저장해, 잘못 고른 고객을 바꿀 길이 없었습니다.
        ① 정해진 고객이 있어도 <b>누를 때마다</b> 고르는 창이 뜨고, 그분이 맨 위에 「지금 저장된 곳」 으로 표시된다
        ② 다른 고객을 고르면 <b>그분</b>에게 저장되고, 그분의 줄이 이미 있으면 새로 쌓지 않고 <b>그 줄을 고친다</b>
