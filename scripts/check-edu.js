@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    check-edu.js — 🌱 <b>성장</b> — 입사부터 경력자까지 한 길로
-   (판 X379 · X380 → X409 → X467)
+   (판 X379 · X380 → X409 → X467 → X475)
 
    사장님 말씀 (2026-11-06) — 「큰 카테고리에서 <b>교육</b>도 하나 만들어줘
    <b>도구 밑에</b> 거기에 교육자료 쓸것들 다 정리해서 넣어주고」.
@@ -98,7 +98,7 @@ const SEED = () => {
 };
 
 (async () => {
-  console.log('🌱 성장 — 입사부터 경력자까지 한 길로 (판 X379 · X380 → X409 → X467)');
+  console.log('🌱 성장 — 입사부터 경력자까지 한 길로 (판 X379 · X380 → X409 → X467 → X475)');
 
   await new Promise(r => srv.listen(PORT, r));
   const br = await chromium.launch();
@@ -306,6 +306,30 @@ const SEED = () => {
   is(K.a.some(x => /질병 보험가이드/.test(x) && /찾은 병/.test(x)), '  「갑상선」 → <b>질병 보험가이드</b> 와 찾은 병 이름');
   is(K.b.some(x => /진단비/.test(x)), '  「암」 → 교재 <b>진단비</b> 장도 선다');
   is(/찾은 것이 없습니다/.test(K.c), '  못 찾으면 <b>못 찾았다</b>고 한다 (1번)');
+
+  /* 판 X475 — 팀원이 처음 봐도 한 번에: 이 칸이 무엇인가 · 쓰는 법 · 「지금 어떤 때예요?」 */
+  const KG = await pg.evaluate(() => new Promise(r => {
+    grTab('know'); GR.kg = -1; grFind('');
+    const 카드 = (document.querySelector('#grHost .gr-intro') || { innerText: '' }).innerText.replace(/\s+/g, ' ');
+    const 칸 = () => [].slice.call(document.querySelectorAll('#grKnow .gr-tile')).map(x => x.innerText.replace(/\s+/g, ' '));
+    const 마디 = () => [].slice.call(document.querySelectorAll('#grKnow .t-card .gr-hd')).map(x => x.firstChild ? x.firstChild.textContent : '');
+    const 줄수 = () => document.querySelectorAll('#grKnow .gr-row').length;
+    const 처음 = 칸(), 전부줄 = 줄수(), 더보기 = document.querySelectorAll('#grKnow details.gr-more').length;
+    const i = GR_KNOW.findIndex(g => /상담 전날/.test(g.t));
+    grKg(i); const 고른 = 마디(), 고른줄 = 줄수(), 뒤로 = !!document.querySelector('#grKgOut .gr-back');
+    grKg(i); const 다시 = 줄수();
+    grKg(i); grFind('암'); const 찾기칸 = 칸().length; grFind(''); grKg(-1);
+    r({ 카드, 처음, 전부줄, 더보기, 고른, 고른줄, 뒤로, 다시, 찾기칸 });
+  }));
+  is(/일할 때마다/.test(KG.카드) && /①/.test(KG.카드) && /한 길/.test(KG.카드) && /고객 앞/.test(KG.카드),
+     '  맨 위 한 장 — <b>이 칸이 무엇인가 · 쓰는 법 세 걸음 · 세 칸의 차이</b>');
+  is(KG.처음.length >= 6 && /전부 보기/.test(KG.처음[0]) && KG.처음.every(x => /\d+개/.test(x)),
+     '  「지금 어떤 때예요?」 칸 ' + KG.처음.length + '개 — 칸마다 몇 개인지 ← ' + KG.처음.slice(0, 3).join(' / '));
+  is(KG.고른.filter(x => x !== '지금 어떤 때예요?').length === 1 && /상담 전날/.test(KG.고른.join(' ')) && KG.고른줄 < KG.전부줄 && KG.뒤로,
+     '  「상담 전날」 을 누르면 <b>그 때 펴는 것만</b> 남고 「다른 때 고르기」 가 붙는다 ← ' + KG.고른줄 + '/' + KG.전부줄 + '줄');
+  is(KG.다시 === KG.전부줄, '  같은 칸을 다시 누르면 <b>다 돌아온다</b>');
+  is(KG.더보기 >= 1, '  긴 갈래(교재 장별)는 넷만 펴고 <b>더 보기</b>로 접는다');
+  is(KG.찾기칸 === 0, '  찾을 때는 칸을 걷고 <b>전부에서</b> 찾는다');
 
   sec('[9] <b>등급 문</b> — 못 여는 칸은 안 그린다 (1번)');
   const 문 = await pg.evaluate(() => new Promise(r => {

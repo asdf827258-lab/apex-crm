@@ -1517,7 +1517,7 @@ function styles(){
   ".rt-mapbox{flex:1;position:relative;min-width:0}",
   "#rtMap{position:absolute;inset:0}",
   ".rt-nokey{position:absolute;inset:0;background:#fff;overflow:auto;padding:26px;display:grid;place-items:start center}",
-  /* ★ 판 X472 — 지도를 숨겨 두셨을 때 그 자리에 서는 한 줄. <b>색은 이 파일이
+  /* ★ 판 X477 — 지도를 숨겨 두셨을 때 그 자리에 서는 한 줄. <b>색은 이 파일이
      이미 쓰는 이름만</b> 씁니다(새 색을 안 만듭니다). 누르는 것은 44px 입니다. */
   ".rt-mapoff{display:flex;align-items:center;gap:8px;" +
     "padding:5px 12px;border-bottom:1px solid var(--line);background:var(--bg);" +
@@ -1815,7 +1815,7 @@ function mapPaint(){
   MAPON=(RTVIEW!=='list');
   /* 지금 보고 있는 것이 아니라 <b>누르면 가는 곳</b>을 적습니다 */
   if(b)b.textContent=RT_LABEL[RT_NEXT[RTVIEW]]||"🔀 지도+목록";
-  /* ★★ 판 X472 — 숨겨 두었으면 <b>그 자리에서 말합니다</b> (1번).
+  /* ★★ 판 X477 — 숨겨 두었으면 <b>그 자리에서 말합니다</b> (1번).
      조용히 없으면 사장님은 「고장났다」 로 읽으십니다 — 실제로 그러셨습니다. */
   try{ var off=q("rtMapOff");
        if(off)off.hidden=(RTVIEW!=='list'); }catch(eO){}
@@ -1854,7 +1854,7 @@ function wrap(){
       '<button class="btn btn-light btn-sm" id="rtKey">키 설정</button>'+
       '<button class="btn btn-dark btn-sm" id="rtX">닫기</button>'+
     '</div>'+
-    /* ★★ 판 X472 — <b>지도를 숨겨 두셨으면 그 자리에서 말합니다</b> (1번 · 6번).
+    /* ★★ 판 X477 — <b>지도를 숨겨 두셨으면 그 자리에서 말합니다</b> (1번 · 6번).
        사장님 말씀 2026-11-17 「지역동선도 꼭 뜨게 하고」 · 2026-11-18 「크롬으로 켰어」.
        ⚠ 재어 보고 찾은 자리입니다 — 보기 고름이 「목록만」 이면(또는 옛 판에서
        지도를 꺼 두신 apexRouteMapOnV1='0' 이 남아 있으면) .rt-mapbox 가

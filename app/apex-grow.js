@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════
-   🌱 <b>성장</b> — 입사부터 경력자까지 한 길로 (판 X409 → X467)
+   🌱 <b>성장</b> — 입사부터 경력자까지 한 길로 (판 X409 → X467 → X475)
 
    사장님 말씀 (2026-11-10) — 「교육 내용들이 너무 적나라하게 흩어져 있어서
    입사부터, 과정, 경력자까지 레벨업이 되도록 … 교육이나 지식에 관련된
@@ -40,7 +40,7 @@
    ══════════════════════════════════════════════════════════════════ */
 
 var GR_KEY='apex_grow_v1';
-var GR={tab:'path',q:'',pass:null,passBusy:false,passTried:false};
+var GR={tab:'path',q:'',kg:-1,pass:null,passBusy:false,passTried:false};
 
 /* 교재(보험 마스터 아카데미) 장 이름 — 교재 data1/data2 · EXTRA 의 title 그대로.
    check-edu 가 교재 원본과 맞대 봅니다. 다르면 그 자리에서 웁니다. */
@@ -448,6 +448,24 @@ function grCss(){
     '.gr-ax span{font-size:var(--t6);color:var(--t-ink);background:var(--t-bg);border-radius:10px;padding:6px 10px;line-height:1.45}'+
     '.gr-no ul{margin:8px 0 0;padding:0 0 0 20px}'+
     '.gr-no .gr-hd i{color:var(--t-sub)}'+
+    '.gr-three{display:flex;gap:6px;margin-top:8px}'+
+    '.gr-back{margin-top:10px}'+
+    '.gr-three span{flex:1 1 0;min-width:0;font-size:var(--t6);color:var(--t-sub);background:var(--t-bg);border-radius:10px;padding:8px 10px;line-height:1.45;word-break:keep-all}'+
+    '.gr-three span b{display:block;color:var(--t-ink);font-size:var(--t6)}'+
+    '.gr-three span.on{background:var(--t-point-l)}'+
+    '.gr-three span.on b{color:var(--t-point)}'+
+    '.gr-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:10px}'+
+    '.gr-tile{min-height:72px;border:1px solid var(--t-line);border-radius:14px;background:var(--t-card);padding:10px 12px;'+
+      'text-align:left;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px}'+
+    '.gr-tile .e{font-size:20px;line-height:1.2}'+
+    '.gr-tile b{font-size:var(--t5);font-weight:800;color:var(--t-ink);line-height:1.35;word-break:keep-all}'+
+    '.gr-tile i{font-style:normal;font-size:var(--t6);color:var(--t-sub)}'+
+    '.gr-tile.on{background:var(--t-point);border-color:var(--t-point)}'+
+    '.gr-tile.on b,.gr-tile.on i{color:#fff}'+
+    '.gr-more summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:var(--t6);font-weight:800;'+
+      'color:var(--t-point);border-top:1px solid var(--t-line);list-style:none}'+
+    '.gr-more summary::-webkit-details-marker{display:none}'+
+    '.gr-more[open] summary{display:none}'+
     '.gr-no li{font-size:var(--t6);color:var(--t-ink);line-height:1.6;margin:4px 0}';
   document.head.appendChild(st);
 }
@@ -630,8 +648,18 @@ function grGroupOf(id){
     for(j=0;j<(g.items||[]).length;j++)if(g.items[j].id===id)return '☰ '+g.group; }
   return '';
 }
+/* 처음 보는 팀원도 한 번에 — 「이 칸이 무엇인가」 한 장 + 쓰는 법 세 걸음 + 세 칸의 차이.
+   그 밑의 「지금 어떤 때예요?」 칸(grKnowList)을 누르면 그 때 펴는 화면만 남습니다 */
 function grKnowHtml(){
-  return '<div class="t-card"><input class="gr-q" type="search" placeholder="찾기 — 암 · 실손 · 수술 · 연금 · 고지 (고객 앞도 같이)" '+
+  return '<div class="t-card gr-intro"><div class="gr-hd">🧰 매번 — 일할 때마다 꺼내 쓰는 칸'+
+      '<i>공부(🪜 한 길)를 끝낸 뒤에도 연락 · 상담 · 청구 때마다 여기서 폅니다. 외우지 않아도 됩니다.</i></div>'+
+    '<div class="gr-step3"><div><b>① 지금 때 고르기</b>아래 칸에서</div>'+
+      '<div><b>② 화면 누르기</b>그 때 펴는 것만 남습니다</div>'+
+      '<div><b>③ 다 쓰면 뒤로</b>여기로 돌아옵니다</div></div>'+
+    '<div class="gr-three"><span><b>🪜 한 길</b>한 번 걸어 끝내는 공부</span>'+
+      '<span class="on"><b>🧰 매번 · 여기</b>일할 때마다 꺼내 쓰기</span>'+
+      '<span><b>🤝 고객 앞</b>고객과 같이 보는 화면</span></div></div>'+
+    '<div class="t-card"><input class="gr-q" type="search" placeholder="찾기 — 암 · 실손 · 수술 · 연금 · 고지 (고객 앞도 같이)" '+
     'value="'+osEsc(GR.q)+'" oninput="grFind(this.value)" aria-label="지식 찾기"></div>'+
     '<div id="grKnow">'+grKnowList()+'</div>';
 }
@@ -649,19 +677,45 @@ function grCustHtml(){
   return h+'</ul></div>';
 }
 function grFind(v){ GR.q=v||''; var el=document.getElementById('grKnow'); if(el)el.innerHTML=grKnowList(); }
+/* 「지금 어떤 때예요?」 — 같은 칸을 다시 누르거나 「전부」 를 누르면 다 돌아옵니다 */
+function grKg(i){ GR.kg=(GR.kg===i?-1:i); grFind(GR.q); grKgGo(GR.kg>=0?'grKgOut':'grKg'); }
+function grKgGo(id){ var t=document.getElementById(id); if(t&&t.scrollIntoView)t.scrollIntoView({block:'start'}); }
 function grKnowList(){
-  var q=(GR.q||'').replace(/^\s+|\s+$/g,'').toLowerCase(),i,j,g,r,rows,h='',n=0,L=GR_KNOW.slice(0);
+  var q=(GR.q||'').replace(/^\s+|\s+$/g,'').toLowerCase(),i,j,g,r,rows,h='',n=0,L=GR_KNOW.slice(0),B=[],all=0,tl='',w,k;
   /* 찾을 때는 🤝 고객 앞도 같이 — 찾기 칸은 하나입니다 */
   if(q)for(i=0;i<GR_CUST.length;i++)L.push({t:'🤝 고객 앞 · '+GR_CUST[i].t,s:GR_CUST[i].s,it:GR_CUST[i].it});
   for(i=0;i<L.length;i++){
-    g=L[i]; rows='';
+    g=L[i]; rows=[];
     for(j=0;j<g.it.length;j++){
       r=grKnowRow(g.it[j],q);
       if(!r)continue;
       if(q&&!r.hit&&r.t.indexOf(q)<0&&(g.t+' '+g.s).toLowerCase().indexOf(q)<0)continue;
-      rows+=r.h; n++;
+      rows.push(r.h);
     }
-    if(rows)h+='<div class="t-card"><div class="gr-hd">'+osEsc(g.t)+'<i>'+osEsc(g.s)+'</i></div>'+rows+'</div>';
+    B.push(rows); all+=rows.length;
+  }
+  /* 「지금 어떤 때예요?」 — 갈래는 하루 흐름 순서입니다. 등급 때문에 하나도 못 여는 갈래는 칸을 안 세웁니다 */
+  if(!q){
+    if(GR.kg>=0&&!(B[GR.kg]&&B[GR.kg].length))GR.kg=-1;
+    tl='<button type="button" class="gr-tile'+(GR.kg<0?' on':'')+'" onclick="grKg(-1)"><span class="e">🗂</span><b>전부 보기</b><i>'+all+'개</i></button>';
+    for(i=0;i<L.length;i++)if(B[i].length){
+      w=L[i].t.split(' '); k=w.shift();
+      tl+='<button type="button" class="gr-tile'+(GR.kg===i?' on':'')+'" onclick="grKg('+i+')" title="'+osEsc(L[i].s)+'">'+
+        '<span class="e">'+osEsc(k)+'</span><b>'+osEsc(w.join(' '))+'</b><i>'+B[i].length+'개</i></button>';
+    }
+    h+='<div class="t-card" id="grKg"><div class="gr-hd">지금 어떤 때예요?<i>하루 흐름 순서로 놓았습니다 — 누르면 그 때 펴는 것만 남습니다</i></div>'+
+      '<div class="gr-tiles">'+tl+'</div></div>';
+  }
+  for(i=0;i<L.length;i++){
+    rows=B[i]; if(!rows.length)continue;
+    if(!q&&GR.kg>=0&&GR.kg!==i)continue;
+    n+=rows.length;
+    /* 전부 볼 때 긴 갈래(교재 장별)는 넷만 펴 둡니다 — 나머지는 「더 보기」 안에 그대로 있습니다 */
+    h+='<div class="t-card"'+(!q&&GR.kg===i?' id="grKgOut"':'')+'><div class="gr-hd">'+osEsc(L[i].t)+'<i>'+osEsc(L[i].s)+'</i></div>'+
+      (!q&&GR.kg<0&&rows.length>6
+        ?rows.slice(0,4).join('')+'<details class="gr-more"><summary>나머지 '+(rows.length-4)+'개 더 보기 ›</summary>'+rows.slice(4).join('')+'</details>'
+        :rows.join(''))+
+      (!q&&GR.kg===i?'<button type="button" class="gr-b ghost gr-back" onclick="grKgGo(\'grKg\')">↑ 다른 때 고르기</button>':'')+'</div>';
   }
   if(!n)h='<div class="t-card"><div class="gr-none">'+(q?'「'+osEsc(GR.q)+'」 로 찾은 것이 없습니다.':'여실 수 있는 것이 없습니다.')+'</div></div>';
   return h+'<div class="gr-foot">화면은 제자리에 있습니다 — 여기서는 문만 엽니다. 현장에서 쓰던 길(☰ 서랍)도 그대로입니다.</div>';
