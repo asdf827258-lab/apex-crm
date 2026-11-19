@@ -4740,6 +4740,7 @@ function renderHome(){
     '<div id="osNoticeHome"></div>'+
     (OS.profile?'<div id="osMyKeyHome"></div>':'')+
     '<div class="page-hd" style="margin-top:18px"><div class="page-tag">'+osEsc(osRoleLabel(role))+' 홈</div><div class="page-title">역할 맞춤 바로가기</div></div>'+
+    '<div id="rqHomeWarn"></div>'+
     '<div class="quick-grid">'+cards+'</div>'+
     '<div class="page-hd" style="margin-top:22px"><div class="page-tag">WORKSPACE</div><div class="page-title">전체 도구</div></div>'+
     '<div class="quick-grid">'+osAllToolCards()+'</div>'+
@@ -20680,7 +20681,7 @@ function osGuideFab(){
   document.body.appendChild(b);
 }
 function osGuideMaybeAuto(){if(!osGuideSeen()){try{setTimeout(function(){if(OS.profile)osGuideOpen();},800);}catch(e){}}}
-function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osAttendMark==='function')osAttendMark();if(typeof osAiLoad==='function')osAiLoad();if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();if(typeof osGuideFab==='function')osGuideFab();if(typeof osGuideMaybeAuto==='function')osGuideMaybeAuto();}
+function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osAttendMark==='function')osAttendMark();if(typeof osAiLoad==='function')osAiLoad();if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();if(typeof osGuideFab==='function')osGuideFab();if(typeof osGuideMaybeAuto==='function')osGuideMaybeAuto();if(typeof rqPing==='function'){try{rqPing();}catch(e){}}}
 /* 로그인/로그아웃 후: 역할 메뉴 갱신 + 역할·데이터 민감 화면만 재렌더(작성 중 도구는 보존) */
 function osRefreshIfClients(){
   /* 현재 탭을 renderNav()가 .on을 지우기 전에 먼저 읽는다(부팅·복원 탭 보존). */
@@ -24825,6 +24826,232 @@ function rqPaintBoard(){
 }
 
 /* ════════════════════════════════════════════════════════════════
+   채용 5단계 — 점수를 고칠 수 있게, 그리고 놓치지 않게
+   ----------------------------------------------------------------
+   4단계가 "점수가 맞았는지"를 재 준다. 그런데 안 맞는다고 나와도
+   고칠 방법이 없었다. 코드를 고쳐야 했다. 여기서 그걸 연다.
+
+   ※ 가중치는 app_config 에 저장한다. 팀 전체가 같은 기준을 쓴다.
+   ※ 추천은 자동으로 적용하지 않는다. 근거(신호별 입사율)를 표로
+     보여주고, 사람이 보고 누르게 한다.
+   ════════════════════════════════════════════════════════════════ */
+var RQ_W_DEFAULT = {
+  base: 20,
+  finished: 18, unfinished: -6,
+  consistHi: 7, consistMid: 3, consistLo: -8,
+  intentNow: 22, intentSoon: 14, intentMaybe: 6, intentNo: 1,
+  contactTime: 8, memo: 6,
+  tooFast: -10, shortRun: 2, goodRun: 9, longRun: 3,
+  fresh: 8, recent: 4, old: -5, stale: 8
+};
+var RQ_W = null;
+function rqW() {
+  if (RQ_W) return RQ_W;
+  var o = {}, k;
+  for (k in RQ_W_DEFAULT) o[k] = RQ_W_DEFAULT[k];
+  try {
+    var s = (typeof osCfgGet === 'function') ? osCfgGet('recruit_weights', '') : '';
+    if (s) { var j = JSON.parse(s); for (k in RQ_W_DEFAULT) if (typeof j[k] === 'number') o[k] = j[k]; }
+  } catch (e) {}
+  RQ_W = o; return RQ_W;
+}
+function rqWIsDefault() {
+  var w = rqW(), k;
+  for (k in RQ_W_DEFAULT) if (w[k] !== RQ_W_DEFAULT[k]) return false;
+  return true;
+}
+/* 조정 화면에 보일 항목 — 바꿔도 되는 것만 연다 */
+var RQ_W_UI = [
+  { k:'base',        n:'바닥 점수',            d:'아무 신호가 없을 때의 출발점' },
+  { k:'finished',    n:'48문항 끝까지 함',      d:'중도 포기는 진심이 아닐 때가 많다' },
+  { k:'unfinished',  n:'검사를 끝내지 않음',    d:'' },
+  { k:'consistHi',   n:'응답 일관성 80% 이상',  d:'반대로 물은 문항의 답이 어긋나지 않는다' },
+  { k:'consistLo',   n:'응답 일관성 60% 미만',  d:'대충 찍었을 수 있다' },
+  { k:'intentNow',   n:'"지금 알아보는 중"',    d:'본인이 밝힌 의향. 가장 힘센 신호' },
+  { k:'intentSoon',  n:'"3개월 안"',           d:'' },
+  { k:'intentMaybe', n:'"좋은 자리면"',         d:'' },
+  { k:'intentNo',    n:'"궁금해서"',            d:'' },
+  { k:'contactTime', n:'연락 가능 시간 적음',   d:'받을 생각이 있다는 뜻' },
+  { k:'memo',        n:'하고 싶은 말 남김',     d:'' },
+  { k:'tooFast',     n:'1분 안에 끝냄',         d:'허수일 수 있다' },
+  { k:'goodRun',     n:'검사에 3~30분 씀',      d:'' },
+  { k:'fresh',       n:'오늘 들어옴',           d:'날짜 신호 — 검증에서는 빼고 본다' },
+  { k:'old',         n:'일주일 넘음',           d:'날짜 신호' },
+  { k:'stale',       n:'사흘 넘게 방치',        d:'묵은 건을 위로 올린다' }
+];
+function rqWSet(k, v) {
+  var w = rqW(), n = parseInt(v, 10);
+  if (isNaN(n)) return;
+  w[k] = Math.max(-40, Math.min(60, n));
+  rqPaint();
+}
+function rqWSave() {
+  var w = rqW();
+  if (typeof osCfgSet !== 'function') { toast('설정을 저장할 수 없습니다'); return; }
+  osCfgSet('recruit_weights', JSON.stringify(w), function () {
+    toast('가중치를 저장했습니다 — 팀 전체에 같은 기준이 적용됩니다');
+    rqPaint();
+  });
+}
+function rqWReset() {
+  if (!confirm('가중치를 처음 값으로 되돌립니다. 진행할까요?')) return;
+  RQ_W = null; var w = rqW(), k;
+  for (k in RQ_W_DEFAULT) w[k] = RQ_W_DEFAULT[k];
+  rqWSave();
+}
+/* ── 데이터에서 추천 ──────────────────────────────────────────
+   결론이 난 건만 놓고, 신호가 있을 때와 없을 때의 입사율 차이를 본다.
+   한 번에 한 신호씩만 보는 거친 방법이다(다른 신호를 통제하지 않는다).
+   그래서 "참고"라고 적어 두고, 적용은 사람이 누르게 한다.          */
+var RQ_SIG = [
+  { k:'finished',    n:'48문항 끝까지 함',     on:function(r){return !!r.finished;} },
+  { k:'consistHi',   n:'일관성 80% 이상',      on:function(r){return (r.consistency||0)>=80;} },
+  { k:'intentNow',   n:'"지금 알아보는 중"',   on:function(r){return r.intent==='now';} },
+  { k:'contactTime', n:'연락 가능 시간 적음',  on:function(r){return !!r.contact_time;} },
+  { k:'memo',        n:'하고 싶은 말 남김',    on:function(r){return !!r.memo;} },
+  { k:'goodRun',     n:'검사에 3~30분 씀',     on:function(r){var e=r.elapsed_sec||0;return e>=180&&e<=1800;} }
+];
+function rqLift() {
+  var decided = RQ.rows.filter(function (r) {
+    return (r.joined_at || r.stage === 'joined') || r.stage === 'closed';
+  });
+  var joined = decided.filter(function (r) { return r.joined_at || r.stage === 'joined'; }).length;
+  var rows = RQ_SIG.map(function (s) {
+    var yes = decided.filter(s.on), no = decided.filter(function (r) { return !s.on(r); });
+    var yj = yes.filter(function (r) { return r.joined_at || r.stage === 'joined'; }).length;
+    var nj = no.filter(function (r) { return r.joined_at || r.stage === 'joined'; }).length;
+    var p1 = yes.length ? yj * 100 / yes.length : null;
+    var p0 = no.length ? nj * 100 / no.length : null;
+    var thin = (yes.length < 5 || no.length < 5);
+    return { k:s.k, n:s.n, yes:yes.length, no:no.length, p1:p1, p0:p0,
+      lift:(p1 == null || p0 == null) ? null : (p1 - p0), thin:thin };
+  });
+  var usable = rows.filter(function (x) { return !x.thin && x.lift != null; });
+  var maxAbs = 0;
+  usable.forEach(function (x) { maxAbs = Math.max(maxAbs, Math.abs(x.lift)); });
+  var ready = (decided.length >= 20 && joined >= 5 && usable.length >= 3 && maxAbs >= 5);
+  var sug = null;
+  if (ready) {
+    sug = {};
+    usable.forEach(function (x) { sug[x.k] = Math.round(22 * x.lift / maxAbs); });
+    /* 의향은 네 갈래라 하나만 재고 나머지는 지금 비율대로 따라 움직인다 */
+    if (sug.intentNow != null) {
+      var w0 = RQ_W_DEFAULT;
+      sug.intentSoon  = Math.round(sug.intentNow * w0.intentSoon  / w0.intentNow);
+      sug.intentMaybe = Math.round(sug.intentNow * w0.intentMaybe / w0.intentNow);
+      sug.intentNo    = Math.round(sug.intentNow * w0.intentNo    / w0.intentNow);
+    }
+    /* 바닥 점수는 결론 난 건들의 가운데 값이 55가 되게 맞춘다 —
+       이래야 "지금 연락 / 오늘 중 / 이번 주" 구간 뜻이 유지된다 */
+    var tmp = {}, k;
+    for (k in RQ_W_DEFAULT) tmp[k] = (sug[k] != null) ? sug[k] : RQ_W_DEFAULT[k];
+    tmp.base = 0;
+    var save = RQ_W; RQ_W = tmp;
+    var vals = decided.map(function (r) { return rqScore(r).base; }).sort(function (a, b) { return a - b; });
+    RQ_W = save;
+    var med = vals.length ? vals[Math.floor(vals.length / 2)] : 0;
+    sug.base = Math.max(0, Math.min(60, Math.round(55 - med)));
+  }
+  return { rows: rows, decided: decided.length, joined: joined, ready: ready, sug: sug, maxAbs: maxAbs };
+}
+function rqApplySug() {
+  var L = rqLift();
+  if (!L.ready) { toast('아직 추천할 만큼 쌓이지 않았습니다'); return; }
+  if (!confirm('데이터에서 뽑은 가중치로 바꿉니다.\n한 번에 한 신호씩만 본 거친 추정이니, 적용 후 성과판에서 다시 확인하세요.\n진행할까요?')) return;
+  var w = rqW(), k;
+  for (k in L.sug) w[k] = L.sug[k];
+  rqWSave();
+}
+function rqPaintTune() {
+  var host = document.getElementById('rqTune'); if (!host) return;
+  var w = rqW(), L = rqLift();
+  var cur = rqTop(5).map(function (x) { return x.r.name; });
+  var h = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px">' +
+    RQ_W_UI.map(function (u) {
+      return '<div style="display:flex;align-items:center;gap:9px;padding:7px 9px;border:1px solid var(--ink-8);border-radius:10px">' +
+        '<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700">' + osEsc(u.n) + '</div>' +
+        (u.d ? '<div style="font-size:10.5px;color:var(--ink-5);line-height:1.5">' + osEsc(u.d) + '</div>' : '') + '</div>' +
+        '<input type="number" value="' + w[u.k] + '" onchange="rqWSet(\'' + u.k + '\',this.value)" ' +
+          'style="width:62px;padding:5px 7px;border:1px solid var(--ink-7);border-radius:7px;font-size:12.5px;text-align:right;font-family:inherit">' +
+      '</div>';
+    }).join('') + '</div>' +
+    '<div class="btn-row" style="margin-top:11px">' +
+      '<button class="btn btn-primary" onclick="rqWSave()">저장</button>' +
+      '<button class="btn btn-ghost" onclick="rqWReset()">처음 값으로</button>' +
+      '<span style="font-size:11.5px;color:var(--ink-5)">' +
+        (rqWIsDefault() ? '지금은 처음 값 그대로입니다' : '처음 값에서 바뀐 상태입니다') + '</span>' +
+    '</div>' +
+    '<div style="font-size:11.5px;color:var(--ink-5);margin-top:9px">지금 순서 상위 5명 — <b>' +
+      osEsc(cur.join(' · ') || '없음') + '</b> (숫자를 바꾸면 바로 다시 섭니다)</div>';
+  /* 추천 */
+  h += '<div style="margin-top:16px;border-top:1px solid var(--ink-7);padding-top:14px">' +
+    '<div style="font-size:12.5px;font-weight:800;color:var(--ink-3)">데이터에서 뽑은 추천</div>' +
+    '<div style="font-size:11.5px;color:var(--ink-5);line-height:1.6;margin-top:5px">' +
+      '결론이 난 건만 놓고, 신호가 <b>있을 때와 없을 때 입사율이 얼마나 다른지</b> 봅니다. ' +
+      '한 번에 한 신호씩만 보는 거친 방법이라(다른 신호를 통제하지 않습니다) <b>참고</b>로만 쓰세요.</div>' +
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:9px">' +
+    '<thead><tr style="color:var(--ink-5)"><th style="text-align:left;padding:5px">신호</th>' +
+    '<th style="text-align:right;padding:5px">있을 때</th><th style="text-align:right;padding:5px">없을 때</th>' +
+    '<th style="text-align:right;padding:5px">차이</th><th style="text-align:right;padding:5px">지금</th>' +
+    '<th style="text-align:right;padding:5px">추천</th></tr></thead><tbody>' +
+    L.rows.map(function (x) {
+      var sg = (L.sug && L.sug[x.k] != null) ? L.sug[x.k] : null;
+      return '<tr style="border-top:1px solid var(--ink-8)' + (x.thin ? ';opacity:.5' : '') + '">' +
+        '<td style="padding:6px 5px;font-weight:700">' + osEsc(x.n) + (x.thin ? ' <span style="font-weight:400;color:var(--ink-5)">(건수 부족)</span>' : '') + '</td>' +
+        '<td style="text-align:right;padding:6px 5px">' + (x.p1 == null ? '—' : Math.round(x.p1) + '%') + ' <span style="color:var(--ink-5)">(' + x.yes + ')</span></td>' +
+        '<td style="text-align:right;padding:6px 5px">' + (x.p0 == null ? '—' : Math.round(x.p0) + '%') + ' <span style="color:var(--ink-5)">(' + x.no + ')</span></td>' +
+        '<td style="text-align:right;padding:6px 5px;font-weight:800;color:' + (x.lift == null ? 'var(--ink-5)' : (x.lift >= 0 ? '#047857' : '#B91C1C')) + '">' +
+          (x.lift == null ? '—' : (x.lift >= 0 ? '+' : '') + Math.round(x.lift) + 'p') + '</td>' +
+        '<td style="text-align:right;padding:6px 5px;color:var(--ink-5)">' + w[x.k] + '</td>' +
+        '<td style="text-align:right;padding:6px 5px"><b>' + (sg == null ? '—' : sg) + '</b></td></tr>';
+    }).join('') + '</tbody></table></div>' +
+    (L.ready
+      ? '<div class="btn-row" style="margin-top:11px"><button class="btn btn-primary" onclick="rqApplySug()">이 추천대로 바꾸기</button>' +
+        '<span style="font-size:11.5px;color:var(--ink-5)">바꾼 뒤 성과판에서 다시 확인하세요</span></div>'
+      : '<div class="notice" style="margin-top:11px">아직 추천할 수 없습니다 — 결론 난 건 <b>' + L.decided + '건</b>(입사 ' + L.joined + '건). ' +
+        '적어도 <b>결론 20건 · 입사 5건</b>이 쌓이고, 신호마다 양쪽에 5건씩은 있어야 합니다. 그때까지는 처음 값을 그대로 쓰세요.</div>') +
+  '</div>';
+  host.innerHTML = h;
+}
+/* ── 놓치지 않게 — 사이드바 배지와 홈 경고 ─────────────────── */
+function rqCold() {
+  return RQ.rows.filter(function (r) {
+    return r.stage === 'new' && !r.contacted_at && rqDays(r.created_at) >= 2;
+  }).length;
+}
+function rqBadge() {
+  var n = rqTop(99).length, cold = rqCold();
+  var b = document.querySelector('.tab-btn[data-tab="recruit"]');
+  if (!b) return;
+  var tc = b.querySelector('.tc');
+  if (!n) { if (tc) tc.remove(); return; }
+  if (!tc) { tc = document.createElement('span'); tc.className = 'tc'; b.appendChild(tc); }
+  tc.textContent = n;
+  tc.style.background = cold ? '#B91C1C' : '';
+  tc.style.color = cold ? '#fff' : '';
+  tc.title = cold ? (cold + '명은 이틀 넘게 손대지 않았습니다') : (n + '명이 연락을 기다립니다');
+}
+/* 로그인 직후 가볍게 한 번 — 화면을 열지 않아도 숫자가 보이게 한다 */
+function rqPing() {
+  var sb = (typeof osClient === 'function') ? osClient() : null;
+  if (!sb) return;
+  if (typeof osTabAllowed === 'function' && !osTabAllowed('recruit')) return;
+  sb.from('recruits').select(RQ_COLS).order('created_at', { ascending: false }).limit(500)
+    .then(function (r) {
+      if (r && r.error) return;
+      RQ.rows = (r && r.data) || []; RQ.loaded = true;
+      rqBadge();
+      var cold = rqCold();
+      if (cold) {
+        var host = document.getElementById('rqHomeWarn');
+        if (host) host.innerHTML = '<div class="notice" style="margin-top:12px">채용 후보 <b>' + cold + '명</b>이 ' +
+          '들어온 지 이틀이 지나도록 연락을 못 받았습니다. ' +
+          '<button class="btn btn-ghost" style="padding:3px 9px;font-size:11px;margin-left:6px" onclick="go(\'recruit\')">바로 보기</button></div>';
+      }
+    }, function () {});
+}
+
+/* ════════════════════════════════════════════════════════════════
    채용 성과판 — 무엇이 통했는지, 그리고 내 점수가 맞는지
    ----------------------------------------------------------------
    ※ 점수 검증을 할 때는 날짜에서 오는 점수(오늘 들어왔다 / 묵었다)를
@@ -24832,6 +25059,11 @@ function rqPaintBoard(){
      사람은 전부 낮게 나와 "점수가 틀렸다"는 엉뚱한 결론이 나온다.
      rqScore 가 돌려주는 base 가 날짜를 뺀 점수다.
    ════════════════════════════════════════════════════════════════ */
+/* 목록에 필요한 칸만 — 답안·사주 원본(jsonb)은 무거워서 빼고 가져온다.
+   면담 브리프에 쓰는 생년월일·유형·혈액형은 들어 있다. */
+var RQ_COLS = 'id,org,recruiter,recruiter_id,source,name,phone,contact_time,intent,memo,' +
+  'gender,birth_y,birth_m,birth_d,birth_h,no_time,mbti,blood,day_gz,consistency,finished,' +
+  'elapsed_sec,stage,owner_note,created_at,updated_at,next_at,assigned_at,contacted_at,met_at,joined_at';
 var RQ_PERIOD = [{ k: 7, n: '7일' }, { k: 30, n: '30일' }, { k: 90, n: '90일' }, { k: 0, n: '전체' }];
 function rqInPeriod(r) {
   if (!RQ.period) return true;
@@ -25018,33 +25250,34 @@ function rqPaintStats() {
    "지금 전화하면 받을 사람이 누구인가"를 정하는 숫자다.            */
 function rqDays(t){ if(!t) return 999; var d=(Date.now()-new Date(t).getTime())/86400000; return d<0?0:d; }
 function rqScore(r){
-  /* 바닥 20에서 시작해 신호를 더한다. 다 좋아야 98 언저리가 되도록 잡았다 —
-     100 에 몰리면 순서를 못 가린다. */
-  var sc=20, why=[], warn='';
+  /* 숫자는 전부 rqW() 에서 읽는다 — 성과판이 "점수가 안 맞는다"고 할 때
+     코드를 고치지 않고 조정 화면에서 바꿀 수 있어야 한다. */
+  var W=rqW();
+  var sc=W.base, why=[], warn='';
   function add(n,t){ if(!n) return; sc+=n; if(t) why.push({n:n,t:t}); }
-  add(r.finished?18:-6, r.finished?'48문항을 끝까지 했다':'검사를 끝내지 않았다');
+  add(r.finished?W.finished:W.unfinished, r.finished?'48문항을 끝까지 했다':'검사를 끝내지 않았다');
   var c=r.consistency||0;
-  if(c>=80) add(7,'응답이 일관된다 ('+c+'%)');
-  else if(c>=60) add(3,'응답이 대체로 일관된다 ('+c+'%)');
-  else if(c>0) add(-8,'응답 일관성이 낮다 ('+c+'%) — 대충 찍었을 수 있다');
-  var im={now:22,soon:14,maybe:6,no:1}[r.intent];
+  if(c>=80) add(W.consistHi,'응답이 일관된다 ('+c+'%)');
+  else if(c>=60) add(W.consistMid,'응답이 대체로 일관된다 ('+c+'%)');
+  else if(c>0) add(W.consistLo,'응답 일관성이 낮다 ('+c+'%) — 대충 찍었을 수 있다');
+  var im={now:W.intentNow,soon:W.intentSoon,maybe:W.intentMaybe,no:W.intentNo}[r.intent];
   if(im!=null) add(im,'본인 말로 "'+(RQ_INTENT[r.intent]||'')+'"');
-  if(r.contact_time) add(8,'연락 가능한 시간을 적어 뒀다');
-  if(r.memo) add(6,'하고 싶은 말을 남겼다');
+  if(r.contact_time) add(W.contactTime,'연락 가능한 시간을 적어 뒀다');
+  if(r.memo) add(W.memo,'하고 싶은 말을 남겼다');
   var e=r.elapsed_sec||0;
-  if(e>0&&e<60) add(-10,'너무 빨리 끝냈다 ('+e+'초) — 허수일 수 있다');
-  else if(e<180) add(2,'');
-  else if(e<=1800) add(9,'검사에 충분히 시간을 썼다');
-  else add(3,'시간을 아주 오래 썼다');
+  if(e>0&&e<60) add(W.tooFast,'너무 빨리 끝냈다 ('+e+'초) — 허수일 수 있다');
+  else if(e<180) add(W.shortRun,'');
+  else if(e<=1800) add(W.goodRun,'검사에 충분히 시간을 썼다');
+  else add(W.longRun,'시간을 아주 오래 썼다');
   /* 여기까지가 날짜와 무관한 점수다. 성과판에서 "점수가 맞았나"를 볼 때는
      이 base 를 쓴다. 날짜 점수를 섞으면 오래된 건이 전부 낮아져서
      "점수가 틀렸다"는 엉뚱한 결론이 나온다. */
   var base=Math.max(0,Math.min(100,Math.round(sc)));
   var d=rqDays(r.created_at);
-  if(d<=1) add(8,'오늘 들어왔다');
-  else if(d<=3) add(4,'사흘 안에 들어왔다');
-  else if(d>7) add(-5,'들어온 지 일주일이 넘었다');
-  if(r.stage==='new'&&d>=3){ add(8,''); warn=Math.floor(d)+'일째 연락 안 함'; }
+  if(d<=1) add(W.fresh,'오늘 들어왔다');
+  else if(d<=3) add(W.recent,'사흘 안에 들어왔다');
+  else if(d>7) add(W.old,'들어온 지 일주일이 넘었다');
+  if(r.stage==='new'&&d>=3){ add(W.stale,''); warn=Math.floor(d)+'일째 연락 안 함'; }
   sc=Math.max(0,Math.min(100,Math.round(sc)));
   why.sort(function(a,b){return Math.abs(b.n)-Math.abs(a.n);});
   return { score:sc, base:base, why:why, warn:warn, days:Math.floor(d) };
@@ -25169,6 +25402,12 @@ function renderRecruit() {
     '안 맞으면 안 맞는다고 적습니다.</div></div><div class="card-body">' +
     '<div id="rqPeriod" style="display:flex;gap:6px;flex-wrap:wrap"></div>' +
     '<div id="rqStats"></div>' +
+  '</div></div>' +
+  '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🎚️</span>우선순위 점수 조정</div>' +
+    '<div class="card-desc">성과판이 "점수가 안 맞는다"고 하면 여기서 고칩니다. ' +
+    '숫자를 바꾸면 <b>오늘 연락할 사람 순서가 바로 다시</b> 섭니다. 저장하면 팀 전체가 같은 기준을 씁니다. ' +
+    '여전히 성향·사주·혈액형은 들어가지 않습니다 — 조정할 수 있는 건 행동 신호뿐입니다.</div></div><div class="card-body">' +
+    '<div id="rqTune"></div>' +
   '</div></div>';
 }
 function osRecruitAfterRender() { if (!RQ.loaded) rqLoad(); else rqPaint(); }
@@ -25179,7 +25418,7 @@ function rqLoad() {
   sb.from('profiles').select('id,name,active').order('name').then(function (pr) {
     RQ.people = ((pr && pr.data) || []).filter(function (p) { return p.active !== false; });
   }, function () {});
-  sb.from('recruits').select('*').order('created_at', { ascending: false }).limit(500).then(function (r) {
+  sb.from('recruits').select(RQ_COLS).order('created_at', { ascending: false }).limit(500).then(function (r) {
     RQ.loaded = true;
     if (r && r.error) {
       RQ.err = r.error.message || '';
@@ -25224,7 +25463,7 @@ function rqPaint() {
   if(pe) pe.innerHTML=RQ_PERIOD.map(function(x){
     return '<button class="btn '+(RQ.period===x.k?'btn-primary':'btn-ghost')+
       '" style="padding:5px 11px;font-size:11.5px" onclick="rqSetPeriod('+x.k+')">'+x.n+'</button>';}).join('');
-  rqPaintStats();
+  rqPaintStats(); rqPaintTune(); rqBadge();
   var sb = document.getElementById('rqSortBtn');
   if (sb) sb.textContent = (RQ.sort === 'new') ? '↕ 최신순' : '↕ 우선순위순';
   var rows = rqFiltered();

@@ -1187,6 +1187,105 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   ok(stamp.again, '되돌렸다 다시 와도 처음 시각을 덮어쓰지 않는다 (응답 속도를 되감을 수 없다)');
   await p4.close();
 
+  console.log('\n채용 5단계 — 가중치 조정과 추천');
+  const p5 = await ctx.newPage();
+  await p5.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
+  await p5.waitForTimeout(1200);
+
+  const wset = await p5.evaluate(() => {
+    function H(n) { return new Date(Date.now() - n * 3600000).toISOString(); }
+    const r = { id: 'x', name: '가', stage: 'new', intent: 'now', finished: true, consistency: 88,
+      elapsed_sec: 400, contact_time: '저녁', memo: '메모', created_at: H(1) };
+    RQ_W = null; const d = rqScore(r).score;
+    rqWSet('intentNow', 0); const z = rqScore(r).score;
+    rqWSet('intentNow', 22);
+    /* 저장된 값을 읽어 쓰는지 */
+    const realGet = osCfgGet;
+    osCfgGet = (k, def) => k === 'recruit_weights' ? JSON.stringify({ finished: 40 }) : realGet(k, def);
+    RQ_W = null; const loaded = rqW().finished;
+    const keptOthers = rqW().intentNow;
+    osCfgGet = realGet; RQ_W = null;
+    return { d: d, z: z, drop: d - z, loaded: loaded, keptOthers: keptOthers, def: rqW().finished };
+  });
+  ok(wset.drop === 22, '가중치를 0으로 바꾸면 점수가 그만큼 내려간다 (' + wset.d + ' → ' + wset.z + ')');
+  ok(wset.loaded === 40 && wset.keptOthers === 22,
+     '저장된 가중치를 읽어 쓰고, 저장 안 된 항목은 기본값을 지킨다');
+  ok(wset.def === 18, '설정을 지우면 기본값으로 돌아온다');
+
+  const rec = await p5.evaluate(() => {
+    function H(n) { return new Date(Date.now() - n * 3600000).toISOString(); }
+    OS.profile = { id: 'p1', name: '윤시현', role: 'admin' };
+    RQ.loaded = true; RQ.people = []; RQ_W = null;
+    const B = { phone: '01000000000', contact_time: '저녁', owner_note: '', day_gz: '갑자', blood: 'O',
+      mbti: 'ENFP', birth_y: 1994, birth_m: 8, birth_d: 3, birth_h: 14, elapsed_sec: 400,
+      consistency: 88, next_at: null, source: 'link', recruiter_id: null, intent: 'now' };
+    const rows = [];
+    /* 신호마다 갈리는 정도를 다르게 심는다 —
+       끝까지함은 아주 강하게, 한마디는 거의 무관하게, 일관성은 살짝 반대로. */
+    function mk(id, nm, fin, i, joined) {
+      return Object.assign({}, B, { id: id, name: nm, finished: fin,
+        memo: i % 2 === 0 ? '말' : '',              // 거의 무관
+        consistency: i % 3 !== 0 ? 88 : 50,          // 살짝 반대
+        elapsed_sec: i < 5 ? 400 : 100,              // 중간쯤 갈림
+        intent: i < 8 ? 'now' : 'maybe',             // 꽤 갈림
+        created_at: H(400 + i), contacted_at: H(396 + i),
+        stage: joined ? 'joined' : 'closed', joined_at: joined ? H(300) : null });
+    }
+    for (let i = 0; i < 15; i++) rows.push(mk('f' + i, '완' + i, true, i, i < 9));
+    for (let i = 0; i < 15; i++) rows.push(mk('n' + i, '미' + i, false, i, i < 1));
+    RQ.rows = rows;
+    const L = rqLift();
+    const fin = L.rows.filter(x => x.k === 'finished')[0];
+    const mem = L.rows.filter(x => x.k === 'memo')[0];
+    return { ready: L.ready, finLift: Math.round(fin.lift), memLift: Math.round(mem.lift),
+      finSug: L.sug.finished, memSug: L.sug.memo, base: L.sug.base,
+      soon: L.sug.intentSoon, now: L.sug.intentNow };
+  });
+  ok(rec.ready, '결론이 충분히 쌓이면 추천이 열린다');
+  ok(rec.finLift > rec.memLift + 20,
+     '실제로 갈리는 신호와 그렇지 않은 신호를 가려낸다 — 끝까지함 +' + rec.finLift + 'p, 한마디 +' + rec.memLift + 'p');
+  ok(rec.finSug > rec.memSug * 2 && rec.finSug <= 22,
+     '추천 가중치가 그 차이를 따라간다 — 끝까지함 ' + rec.finSug + ' vs 한마디 ' + rec.memSug);
+  ok(rec.soon < rec.now && rec.soon > 0, '의향 네 갈래는 지금 비율을 지키며 같이 움직인다');
+  ok(rec.base >= 0 && rec.base <= 60, '바닥 점수를 다시 잡아 구간 뜻이 유지된다 (' + rec.base + ')');
+
+  const thin = await p5.evaluate(() => {
+    RQ.rows = RQ.rows.slice(0, 6);
+    const L = rqLift();
+    const t = (function () { document.getElementById('dynPane').innerHTML = renderRecruit(); rqPaint();
+      return document.getElementById('rqTune').textContent; })();
+    return { ready: L.ready, msg: /아직 추천할 수 없습니다/.test(t), btn: /이 추천대로 바꾸기/.test(t) };
+  });
+  ok(!thin.ready && thin.msg && !thin.btn,
+     '건수가 모자라면 추천 버튼을 아예 띄우지 않고 몇 건이 더 필요한지 적는다');
+
+  const badge = await p5.evaluate(() => {
+    function H(n) { return new Date(Date.now() - n * 3600000).toISOString(); }
+    const b = document.createElement('button');
+    b.className = 'tab-btn'; b.setAttribute('data-tab', 'recruit'); document.body.appendChild(b);
+    const B = { phone: '01000000000', contact_time: '저녁', memo: '말', intent: 'now', finished: true,
+      consistency: 88, elapsed_sec: 400, next_at: null, source: 'link', recruiter_id: null };
+    RQ.rows = [
+      Object.assign({}, B, { id: 'c1', name: '찬', stage: 'new', created_at: H(80), contacted_at: null }),
+      Object.assign({}, B, { id: 'c2', name: '둘', stage: 'new', created_at: H(2), contacted_at: null })
+    ];
+    rqBadge();
+    const tc = b.querySelector('.tc');
+    const out = { n: tc ? tc.textContent : '', red: tc ? tc.style.background : '', cold: rqCold() };
+    b.remove(); return out;
+  });
+  ok(badge.n === '2' && badge.cold === 1,
+     '사이드바에 기다리는 사람 수가 뜨고, 이틀 넘은 건을 따로 센다 (' + badge.n + '명 중 ' + badge.cold + '명 방치)');
+  ok(/rgb\(185, 28, 28\)|#B91C1C/i.test(badge.red), '방치된 건이 있으면 배지가 빨개진다');
+
+  const cols = await p5.evaluate(() => ({
+    noHeavy: !/answers|,saju|scores/.test(RQ_COLS),
+    hasBrief: /birth_y/.test(RQ_COLS) && /mbti/.test(RQ_COLS) && /joined_at/.test(RQ_COLS)
+  }));
+  ok(cols.noHeavy && cols.hasBrief,
+     '목록은 무거운 답안·사주 원본을 빼고 가져온다 (브리프에 쓰는 칸은 유지)');
+  await p5.close();
+
   console.log('\n화면 · 스크롤 칸');
   for (const t of await page.evaluate(() => tabsFor('both'))) {
     await page.evaluate(x => goTab(x), t);
