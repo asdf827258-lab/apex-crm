@@ -45,6 +45,18 @@
      [3] ★ 바닥을 <b>한 곳</b>에 깔았나 (소스)
      [4] ★ 옆으로 미는 화면이 없나 — 바닥을 깔다 가로가 터지지 않게
      [5] ★ 조용한가 · <b>서버</b> 요청 0
+
+   ── 판 X491 — <b>이 자가 못 보던 자리</b> ────────────────────────────
+   라이브에서 손으로 재어 보니 <b>6곳</b>이 44px 아래였는데, 이 자는 「0개」
+   라고 적고 있었습니다. 까닭이 둘이었습니다 —
+     ① ★★ 샌드박스에 <b>뉴스가 없어</b> news_live·biz_news 가 빈 껍데기였습니다.
+        그 줄의 「원문 ↗」 다섯이 <b>32px</b> 인데 줄 자체가 안 서니 셀 것이
+        없었습니다. 이제 <b>가짜 뉴스를 심어</b> 봅니다 (NEWS_SEED).
+     ② 나머지 1곳은 <b>헛것</b>이었습니다 — hm-ig-m 의 「출처 · 날짜 · 원문 ↗」
+        은 <b>문장 속 링크</b>라 44px 로 만들면 그 줄이 통째로 벌어집니다.
+        판 X266 이 그렇게 적어 두었고 그 말이 맞습니다 — 그래서 <b>자를 좁혔습니다.</b>
+   ★ 앱은 nl-mini 쪽만 고쳤습니다 — 패딩 7+7 을 걷고 바닥을 링크 자신에게
+     달아 링크 32 → <b>44px</b>, 줄 47 → <b>45px</b> (화면이 10px 줄었습니다).
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -89,6 +101,17 @@ const srv = http.createServer((rq, rs) => {
   fs.createReadStream(f).pipe(rs);
 });
 
+/* 📰 점검용 가짜 뉴스 — 실제 기사가 아닙니다 (1번·9번).
+   NLIVE 한 건의 꼴은 {t 제목, u 주소, s 출처, d 날짜, cats 갈래} 입니다. */
+const NEWS_SEED = JSON.stringify({
+  at: '2026-11-19 09:00', got: 5, drop: 0,
+  items: [1, 2, 3, 4, 5].map(n => ({
+    t: '점검용 가짜 기사 ' + n + ' — 실제 기사가 아니며 줄 높이를 재려고 둔 글입니다',
+    u: 'https://example.com/apex-check/' + n,
+    s: '점검용', d: '2026-11-19', cats: ['ins']
+  }))
+});
+
 const 잼 = `(() => {
   const p = document.getElementById('dynPane');
   if (!p) return { 센것: 0, 작은것: [], 옆으로: 0 };
@@ -101,6 +124,21 @@ const 잼 = `(() => {
     /* 누르는 자리만 — 위 머리글의 두 가지 뺌 */
     if (tag === 'label' && !e.querySelector('input,select,textarea')) return;
     if (ty === 'checkbox' || ty === 'radio' || ty === 'range' || ty === 'hidden') return;
+    /* 글 속 링크(그냥 <a> 가 문장 안에 흐르는 것)는 안 셉니다 — 판 X266 의
+       결정이고, 44px 로 만들면 그 문장 줄이 통째로 벌어집니다.
+       ★ 가리는 자는 <b>display 와 든 줄의 글</b> 둘입니다 —
+         · 문장 안에 흐르는 링크만 display:inline 이고,
+         · 그 줄에 <b>링크 말고 다른 글</b>이 더 있습니다.
+         라이브에서 재어 갈랐습니다 — hm-ig-m 은 「출처 · 날짜 · 원문 ↗」 로
+         inline(든 줄 20px)이고, nl-mini 는 「[칩] 제목 원문 ↗」 로 block 입니다.
+       ⚠ <b>혼자 선 inline 링크는 그대로 셉니다</b> — 「문장 속」 이라는 말로
+         누르는 자리를 숨기면 이 자가 눈이 멉니다 (8번). */
+    if (tag === 'a' && getComputedStyle(e).display === 'inline') {
+      const 든줄 = e.parentElement;
+      const 내글 = (e.innerText || '').replace(/\s+/g, '');
+      const 줄글 = ((든줄 && 든줄.innerText) || '').replace(/\s+/g, '');
+      if (줄글.length > 내글.length + 2) return;
+    }
     센것++;
     const r = e.getBoundingClientRect();
     if (r.height >= 44) return;
@@ -163,6 +201,16 @@ const 잼 = `(() => {
   await pg.goto('http://127.0.0.1:' + P + '/app/index.html', { waitUntil: 'load', timeout: 60000 });
   await pg.waitForTimeout(2400);
   await pg.evaluate(SEED);
+  /* 📰 <b>뉴스를 심습니다</b> (판 X491) — 안 심으면 news_live·biz_news 는
+     <b>빈 껍데기</b>라 이 자가 그 줄을 아예 못 보고 「0개」 라고 적습니다.
+     실제로 그렇게 적었고, 라이브에서는 그 줄의 「원문 ↗」 이 <b>32px</b>
+     이었습니다 — 점검은 초록인데 손으로 재면 걸리던 자리입니다 (0-1번·8번).
+     ★ 글은 <b>분명히 가짜</b>로 둡니다 — 실제 기사처럼 보이는 것을 지어
+       적지 않습니다 (1번·9번). 주소도 example.com 입니다.
+     ⚠ 사장님 서버는 안 부릅니다 — 앱이 쓰는 그 칸(apex_newslive)에 바로 넣습니다 (7번). */
+  await pg.evaluate((j) => {
+    try { localStorage.setItem('apex_newslive', j); if (typeof nlLoad === 'function') nlLoad(); } catch (e) {}
+  }, NEWS_SEED);
   await pg.waitForTimeout(1100);
 
   /* 화면 목록은 앱에게 묻습니다 — 여기서 또 적지 않습니다 (5번) */
