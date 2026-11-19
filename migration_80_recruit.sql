@@ -76,6 +76,10 @@ create index if not exists recruits_owner_idx    on public.recruits(recruiter_id
      부분 조건 없이도 번호 없는 줄은 여러 개 들어간다. */
 create unique index if not exists recruits_phone_uniq
   on public.recruits(phone_hash);
+/* 이미 부분 인덱스로 만들어 둔 곳이라면 지워 준다. 둘 다 있어도 동작은
+   같지만, 쓰기마다 인덱스를 두 번 고치게 되므로 하나만 남긴다.
+   (라이브에는 recruits_phone_uniq_all 이라는 이름으로 먼저 들어가 있다) */
+drop index if exists public.recruits_phone_uniq_all;
 
 alter table public.recruits enable row level security;
 
