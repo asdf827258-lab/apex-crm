@@ -463,7 +463,7 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
       bless: /덕담|🌾/.test(iceTxt), noScript: !/포문|하면 안 되는 말/.test(iceTxt),
       meHidden: meHidden, riskBlocked: riskBlocked };
   });
-  ok(view.agent === 13 && view.client === 8, '내 눈용 ' + view.agent + '탭 · 고객 화면 ' + view.client + '탭으로 갈린다');
+  ok(view.agent === 15 && view.client === 8, '내 눈용 ' + view.agent + '탭 · 고객 화면 ' + view.client + '탭으로 갈린다');
   ok(view.leak === '', '고객 화면에 설계사용 문구가 하나도 새어 나가지 않는다' + (view.leak ? ' — ' + view.leak : ''));
   ok(view.bless && view.noScript, '고객 화면 아이스브레이킹에는 덕담만 남고 화법 대본은 빠진다');
   ok(view.meHidden, '고객 화면에서는 내 카드 버튼도 감춘다');
@@ -570,6 +570,90 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   });
   ok(price.price === 1900 && price.shown && !price.old, '고민 상담 값이 1,900원으로 나온다 (' + price.price + ')');
 
+  console.log('\n브랜드 · 영업 가능성 · 나의 영업법');
+  const brand = await page.evaluate(() => {
+    renderBrand();
+    const bx = document.getElementById('brandBox').innerHTML;
+    BRAND.aplus = 'https://example.com/a.png';
+    BRAND.ontop = 'javascript:alert(1)';
+    const withImg = brandMarks();
+    BRAND.aplus = ''; BRAND.ontop = ''; renderBrand();
+    return { marks: bx, org: /에이플러스에셋/.test(brandMarks()), hq: /온탑본부/.test(brandMarks()),
+      img: /<img src="https:\/\/example\.com\/a\.png"/.test(withImg),
+      blocked: !/javascript:/.test(withImg),
+      band: /bband/.test(brandBand('x')) && /에이플러스에셋 온탑본부/.test(brandBand('x')) };
+  });
+  ok(brand.org && brand.hq, '헤더와 리포트에 에이플러스에셋 · 온탑본부가 함께 들어간다');
+  ok(/bmk/.test(brand.marks), '로고 파일이 없어도 마크가 그려진다(외부 요청 없음)');
+  ok(brand.img, '로고 주소를 넣으면 그 이미지로 바뀐다 (?logo1= / ?logo2=)');
+  ok(brand.blocked, 'javascript: 같은 위험한 로고 주소는 걸러낸다');
+  ok(brand.band, '리포트 머리에 브랜드 밴드가 붙는다');
+
+  const sales = await page.evaluate(() => {
+    S.view = 'agent'; S.tab = 'sales'; draw();
+    const sc = salesCalc(S.cl), ch = salesChannels(sc), cv = salesCurve(sc);
+    const t = document.getElementById('view').textContent;
+    const vals = SALES_AX.map(a => sc.v[a.k]);
+    const wsum = SALES_AX.reduce((x, a) => x + a.w, 0);
+    return { n: SALES_AX.length, vals: vals,
+      inRange: vals.every(v => v >= 6 && v <= 97),
+      wsum: Math.round(wsum * 100) / 100,
+      total: sc.total, totalOk: sc.total >= 6 && sc.total <= 97,
+      why: SALES_AX.every(a => sc.why[a.k].length > 0),
+      chn: ch.length, chnSorted: ch.every((c, i) => i === 0 || ch[i - 1].p >= c.p),
+      chnRange: ch.every(c => c.p >= 8 && c.p <= 97),
+      curve: !!(cv.t && cv.m3 && cv.m6 && cv.y1 && cv.note),
+      risk: salesRisk(sc, S.cl).every(r => r.t && r.d && r.fix),
+      noReject: !/탈락|불합격|부적격|채용 불가/.test(t),
+      guard: /될 사람과 안 될 사람을 가르는 숫자가 아닙니다/.test(t),
+      leader: /리더용/.test(t), axesShown: SALES_AX.every(a => t.indexOf(a.n) >= 0) };
+  });
+  ok(sales.n === 5 && sales.axesShown, '영업 가능성이 다섯 축으로 나온다 — 개척·신뢰·설명·클로징·지속');
+  ok(sales.inRange && sales.totalOk, '다섯 축과 종합 점수가 모두 범위 안이다 (' + sales.vals.join('/') + ' → ' + sales.total + ')');
+  ok(sales.wsum === 1, '다섯 축 가중치 합이 정확히 1이다 (' + sales.wsum + ')');
+  ok(sales.why, '점수마다 "왜 이렇게 나왔는가" 근거가 붙는다');
+  ok(sales.chn === 6 && sales.chnSorted && sales.chnRange, '적합 채널 6개가 점수순으로 정렬돼 나온다');
+  ok(sales.curve, '3개월·6개월·1년 성장 곡선과 관리 포인트가 나온다');
+  ok(sales.risk, '이탈 위험이 증상·처방까지 채워져 나온다');
+  ok(sales.guard && sales.noReject, '"당락을 가르는 점수가 아니다"라고 못 박고, 탈락·부적격 같은 말은 쓰지 않는다');
+  ok(sales.leader, '리더용 칸(이탈 위험·관리 처방)이 들어 있다');
+
+  const how = await page.evaluate(() => {
+    S.tab = 'how'; draw();
+    const t = document.getElementById('view').textContent;
+    const code = personCode(S.cl);
+    const axes = code.split('').every(c => !!SELL_AX[c]);
+    const rt = sellRoutine(salesCalc(S.cl));
+    return { axes: axes, four: Object.keys(SELL_AX).length,
+      mix: /말의 배합/.test(t) && /숫자/.test(t) && /마음/.test(t),
+      routine: rt.nw > 0 && rt.mt > 0 && rt.pr > 0 && !!rt.note,
+      routineShown: /신규 접촉/.test(t) && /면담 약속/.test(t),
+      reject: /거절을 들었을 때/.test(t), close: /맞는 클로징/.test(t),
+      cust: /편한 고객/.test(t) && /어려운 고객/.test(t),
+      saju: !S.cl.saju || /나를 움직이는 힘/.test(t),
+      coach: /이 사람을 어떻게 가르칠까/.test(t),
+      mistakes: /가장 자주 하는 실수/.test(t) };
+  });
+  ok(how.four === 8 && how.axes, '여덟 축(E·I·S·N·T·F·J·P) 모두 영업법이 채워져 있다');
+  ok(how.mix, '숫자와 마음의 배합 비율이 나온다');
+  ok(how.routine && how.routineShown, '하루 활동량(신규접촉·면담·제안)이 숫자로 나온다');
+  ok(how.reject && how.close && how.mistakes, '거절 대응 · 맞는 클로징 · 자주 하는 실수가 함께 나온다');
+  ok(how.cust, '나와 맞는 고객과 어려운 고객이 갈려 나온다');
+  ok(how.saju, '사주가 있으면 "나를 움직이는 힘"까지 붙는다');
+  ok(how.coach, '리더용 "어떻게 가르칠까"가 붙는다');
+
+  const hidden = await page.evaluate(() => {
+    setView('client');
+    const cl = tabsFor(S.mode, 'client');
+    const sBlocked = (function () { S.tab = 'sales'; const h = viewBoard(); S.tab = 'ice'; return h; })();
+    const hBlocked = (function () { S.tab = 'how'; const h = viewBoard(); S.tab = 'ice'; return h; })();
+    setView('agent');
+    return { noSales: cl.indexOf('sales') < 0, noHow: cl.indexOf('how') < 0,
+      sBlocked: /설계사 전용입니다/.test(sBlocked), hBlocked: /설계사 전용입니다/.test(hBlocked) };
+  });
+  ok(hidden.noSales && hidden.noHow, '영업 가능성과 나의 영업법은 고객 화면에 나오지 않는다');
+  ok(hidden.sBlocked && hidden.hBlocked, '고객 화면에서 강제로 열어도 막힌다');
+
   console.log('\n화면 · 스크롤 칸');
   for (const t of await page.evaluate(() => tabsFor('both'))) {
     await page.evaluate(x => goTab(x), t);
@@ -607,6 +691,9 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
        w + '×' + h + ' — 스크롤 칸이 굴러가고 가로 스크롤은 없다' + (r.flow ? ' (문서 스크롤로 되돌림)' : ''));
   }
   await page.setViewportSize({ width: 1200, height: 900 });
+  await page.waitForTimeout(300);            // resize 핸들러(fitShell)가 flow 를 걷어낼 시간
+  await page.evaluate(() => { S.tab = 'life'; draw(); });   // 확실히 넘치는 탭에서 본다
+  await page.waitForTimeout(150);
   const hint = await page.evaluate(() => {
     const p = document.getElementById('pane');
     p.scrollTop = p.scrollHeight;
