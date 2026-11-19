@@ -798,6 +798,80 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   ok(words.noMode, '방식 고르기는 감춘다 (링크에 이미 담겨 있다)');
   await g.close();
 
+  console.log('\n채용 1단계 — 후보 제출');
+  /* 앞 시험에서 쌓인 저장값이 넘어오지 않도록 새 칸에서 연다 —
+     한 번 왔던 후보는 대문을 건너뛰고 보던 자리로 가는 게 맞다. */
+  const rctx = await browser.newContext({ viewport: { width: 1180, height: 1000 } });
+  const rc = await rctx.newPage();
+  let posted = null;
+  await rc.route('**/api/recruit-submit', async route => {
+    posted = JSON.parse(route.request().postData() || '{}');
+    await route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, id: 'test-id-1' }) });
+  });
+  await rc.goto('http://127.0.0.1:' + PORT +
+    '/app/saju-mbti.html?for=client&recruit=1&mode=both&rec=11111111-2222-3333-4444-555555555555&agent=%EC%9C%A4%EC%8B%9C%ED%98%84',
+    { waitUntil: 'domcontentloaded' });
+  await rc.waitForTimeout(700);
+  const rset = await rc.evaluate(() => ({
+    on: RECRUIT.on, guest: GUEST.on, rec: RECRUIT.rec,
+    cover: /상담 신청/.test(document.getElementById('view').textContent),
+    tabs: tabsFor('both', 'client')
+  }));
+  ok(rset.on && rset.guest, '채용 링크는 언제나 손님 화면으로 열린다');
+  ok(rset.tabs[rset.tabs.length - 1] === 'apply', '맨 끝에 상담 신청 칸이 붙는다');
+  ok(rset.cover, '대문에서 미리 "끝에 신청 칸이 있다"고 알려 준다');
+
+  const need = await rc.evaluate(() => {
+    const p = S.cl;
+    p.name = '김후보'; p.gender = '남'; p.y = 1994; p.m = 8; p.d = 3; p.H = 14; p.Mi = 0;
+    calcPerson(p); p.mbti = 'ENFP'; p.blood = 'O';
+    S.step = 'board'; S.tab = 'apply'; draw();
+    const before = RECRUIT.sent;
+    applySubmit();                                  // 동의 없이 눌러 본다
+    return { before: before, sent: RECRUIT.sent };
+  });
+  ok(!need.sent, '동의 없이 누르면 보내지 않는다');
+
+  await rc.evaluate(() => {
+    document.getElementById('apPhone').value = '01022223333';
+    document.getElementById('apTime').value = '평일 저녁 7시 이후';
+    document.getElementById('apMemo').value = '설명 듣고 싶습니다';
+    setApply('intent', 'now');
+    setApply('agree', true);
+  });
+  await rc.waitForTimeout(150);
+  await rc.evaluate(() => applySubmit());
+  await rc.waitForTimeout(500);
+  ok(!!posted, '신청을 누르면 서버 함수로 보낸다');
+  if (posted) {
+    ok(posted.consent === true && posted.name === '김후보' && posted.phone === '01022223333',
+       '동의·이름·연락처가 담겨 간다');
+    ok(posted.recruiterId === '11111111-2222-3333-4444-555555555555' && posted.intent === 'now',
+       '담당자 배정과 본인이 밝힌 의향이 담겨 간다');
+    ok(posted.mbti === 'ENFP' && !!posted.dayGz && posted.blood === 'O',
+       '검사 결과(유형·일주·혈액형)가 함께 간다 — ' + posted.mbti + ' · ' + posted.dayGz);
+    ok(typeof posted.elapsedSec === 'number' && posted.stage === undefined,
+       '행동 신호는 보내고, 단계(stage)는 보내지 않는다 (담당자가 옮긴 단계를 서버가 되돌리지 않는다)');
+  }
+  const after = await rc.evaluate(() => {
+    const t = document.getElementById('view').textContent;
+    return { done: /잘 받았습니다/.test(t), keep: /6개월 뒤 자동으로 지워집니다/.test(t) };
+  });
+  ok(after.done, '보내고 나면 받았다는 화면으로 바뀐다');
+  ok(after.keep, '보관 기간을 후보에게 알려 준다');
+
+  const noReject = await rc.evaluate(() => {
+    const bad = [];
+    tabsFor(S.mode, 'client').forEach(t => {
+      S.tab = t; draw();
+      if (/합격|불합격|탈락|부적격|적합도 점수/.test(document.getElementById('view').textContent)) bad.push(t);
+    });
+    return bad;
+  });
+  ok(noReject.length === 0, '후보 화면 어디에도 합격·탈락 같은 말이 없다' + (noReject.length ? ' — ' + noReject.join(',') : ''));
+  await rc.close(); await rctx.close();
+
   console.log('\n화면 · 스크롤 칸');
   for (const t of await page.evaluate(() => tabsFor('both'))) {
     await page.evaluate(x => goTab(x), t);

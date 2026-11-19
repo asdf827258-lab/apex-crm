@@ -914,7 +914,7 @@ var STRATEGY={
    ══════════════════════════════════════════════════════════════════ */
 var BLANK={name:'',gender:'M',mbti:'',blood:'',rel:'client',y:'',m:'',d:'',H:'',Mi:0,noTime:false,adj:false,saju:null,res:null};
 function blank(){var o={},k;for(k in BLANK)o[k]=BLANK[k];return o;}
-var S={step:'me',tab:'ice',target:'client',i:0,ans:{},mode:'both',view:'agent',worry:{},dang:{},me:blank(),cl:blank()};
+var S={step:'me',tab:'ice',target:'client',i:0,ans:{},mode:'both',view:'agent',worry:{},dang:{},apply:{},me:blank(),cl:blank()};
 /* 보기 모드 — 내 눈용(agent)에는 리스크와 화법까지, 고객 화면(client)에는
    좋은 이야기와 덕담만 남긴다. 설계사 전용 블록은 아예 그리지 않는다. */
 function agentOnly(html){return S.view==='agent'?html:'';}
@@ -1174,7 +1174,7 @@ var AXIS_SELF={
   J:'정해두고 지키는 데서 안정을 얻으십니다. 갑작스러운 변경에 스트레스를 받으십니다.',
   P:'열어두는 데서 편안함을 얻으십니다. 정해지면 답답해하십니다.'
 };
-var TAB_NAME={ice:'아이스브레이킹',sum:'종합',dang:'🕯️ 신당 풀이',sales:'💼 영업 가능성',how:'🎯 나의 영업법',worry:'고민 상담',life:'인생 운',trait:'성향 파악',mind:'MBTI 정밀',
+var TAB_NAME={ice:'아이스브레이킹',sum:'종합',dang:'🕯️ 신당 풀이',apply:'📩 상담 신청',sales:'💼 영업 가능성',how:'🎯 나의 영업법',worry:'고민 상담',life:'인생 운',trait:'성향 파악',mind:'MBTI 정밀',
   deep:'사주 풀이',blood:'혈액형',fit:'궁합',rel:'관계·매니지먼트',talk:'상담 전략',ins:'보험·관리',risk:'🔒 리스크',saju:'만세력'};
 var AGENT_TABS={fit:1,rel:1,talk:1,ins:1,risk:1,sales:1,how:1};   /* 고객 화면에서는 감춘다 */
 function tabsFor(mode,view){
@@ -1186,6 +1186,7 @@ function tabsFor(mode,view){
   else list=['dang','ice','sum','sales','how','worry','life','trait','deep','fit','rel','talk','ins','risk','saju'];
   if(mode!=='blood'&&S.cl&&S.cl.blood)list.splice(list.indexOf('life')>=0?list.indexOf('life')+1:1,0,'blood');
   if(view==='client')list=list.filter(function(k){return !AGENT_TABS[k];});
+  if(RECRUIT.on&&view==='client')list.push('apply');
   return list;
 }
 function draw(){
@@ -1241,7 +1242,15 @@ function goStep(k){
   if(k==='board'&&!ready(S.cl)){toast(GUEST.on?'생년월일과 성향을 먼저 채워주세요':'고객 정보와 성향을 먼저 채워주세요');return;}
   S.step=k;save();draw();
 }
-function goTab(t){S.tab=t;save();draw();$('pane').scrollTop=0;}
+function applyKeep(){
+  if(!$('apName'))return;
+  S.apply=S.apply||{};
+  S.apply.phone=applyField('apPhone');
+  S.apply.time=applyField('apTime');
+  S.apply.memo=applyField('apMemo');
+  if(applyField('apName'))S.cl.name=applyField('apName');
+}
+function goTab(t){applyKeep();S.tab=t;save();draw();$('pane').scrollTop=0;}
 function newClient(){
   S.cl=blank();S.ans={};S.i=0;S.step='client';S.tab='ice';S.view='agent';S.worry={};S.dang={};save();draw();
 }
@@ -1420,6 +1429,7 @@ function viewBoard(){
   var t=S.tab;
   if(t==='ice')return tabIce();
   if(t==='dang')return tabDang();
+  if(t==='apply')return tabApply();
   if(t==='sales')return tabSales();
   if(t==='how')return tabHow();
   if(t==='life')return tabLife();
@@ -1524,9 +1534,119 @@ function viewCover(){
     '태어나신 날과 시만 일러 주시면, 들고 오신 패를 하나씩 풀어 드리겠습니다.</div>'+
     '<div style="margin-top:16px">'+gets.map(function(t,i){
       return '<div class="rx"><div class="no">'+(i+1)+'</div><div class="tx">'+esc(t)+'</div></div>';}).join('')+'</div>'+
+    (RECRUIT.on?'<div class="say quiet">풀이가 끝나면 마지막에 <b>상담 신청</b> 칸이 하나 있습니다. 일 이야기를 들어 보실 생각이 있으시면 그때 남겨 주시면 되고, <b>풀이만 보고 가셔도 됩니다.</b></div>':'')+
     '<button class="btn" style="margin-top:18px" onclick="goStep(\'client\')">🕯️ 들어가기</button>'+
     '<div class="say quiet" style="margin-top:16px">적어 주신 것은 <b>이 기기에만</b> 남습니다. 저희 쪽으로 넘어가지 않습니다. '+
     '풀이는 참고로 보시는 것이고, 몸이 아프시면 병원에, 돈이 걸린 결정은 전문가와 함께 확인하십시오.</div>'+
+  '</div>';
+}
+/* ══════════════════════════════════════════════════════════════════
+   채용 — 후보가 결과를 받고 상담을 신청하는 자리
+   ────────────────────────────────────────────────────────────────
+   ?for=client&recruit=1&rec=<담당자계정> 으로 열면 마지막에 신청 칸이
+   붙는다. 누르면 서버 함수(/api/recruit-submit)가 대기열에 쌓는다.
+   동의 없이는 한 글자도 보내지 않는다.
+   ※ 성향·사주 결과는 "어떻게 대할지"에만 쓰고 당락 기준으로 쓰지 않는다.
+      그래서 이 화면에도 합격·불합격 같은 말이 없다.
+   ══════════════════════════════════════════════════════════════════ */
+var RECRUIT={on:false,rec:'',api:'/api/recruit-submit',src:'link',t0:Date.now(),sent:false,id:''};
+(function(){
+  var q=(location.search||'').replace(/^\?/,'').split('&'),i;
+  for(i=0;i<q.length;i++){
+    var kv=q[i].split('='); if(kv.length<2)continue;
+    var k=decodeURIComponent(kv[0]),v=decodeURIComponent(kv[1].replace(/\+/g,' '));
+    if(k==='recruit'&&v==='1')RECRUIT.on=true;
+    if(k==='rec')RECRUIT.rec=v;
+    if(k==='api')RECRUIT.api=v;
+    if(k==='src'&&['link','qr','seminar'].indexOf(v)>=0)RECRUIT.src=v;
+  }
+  if(RECRUIT.on)GUEST.on=true;   /* 채용 링크는 언제나 손님 화면이다 */
+  try{var m=JSON.parse(localStorage.getItem('apex_recruit_sent')||'null');
+      if(m&&m.id){RECRUIT.sent=true;RECRUIT.id=m.id;}}catch(e){}
+})();
+var INTENTS=[{k:'now',n:'지금 바로 알아보는 중'},{k:'soon',n:'3개월 안에는'},
+             {k:'maybe',n:'좋은 자리면 고민'},{k:'no',n:'당장은 아니고 궁금해서'}];
+function setApply(k,v){applyKeep();S.apply=S.apply||{};S.apply[k]=v;save();draw();}
+function applyField(id){var e=$(id);return e?(e.value||''):'';}
+function applySubmit(){
+  var a=S.apply||{},cl=S.cl;
+  var nm=(applyField('apName')||cl.name||'').replace(/^\s+|\s+$/g,'');
+  var ph=(applyField('apPhone')||'').replace(/[^0-9]/g,'');
+  var ct=applyField('apTime'),mo=applyField('apMemo');
+  if(!a.agree){toast('개인정보 수집·이용에 동의해 주셔야 보낼 수 있습니다');return;}
+  if(!nm){toast('성함을 넣어 주세요');return;}
+  if(ph.length<9||ph.length>11){toast('연락처를 다시 확인해 주세요');return;}
+  var btn=$('apBtn'); if(btn){btn.disabled=true;btn.textContent='보내는 중…';}
+  var s=cl.saju;
+  var body={consent:true,name:nm,phone:ph,contactTime:ct,memo:mo,
+    intent:a.intent||'maybe',org:BRAND.org+' '+BRAND.hq,
+    recruiter:PAY.agent||'',recruiterId:RECRUIT.rec,source:RECRUIT.src,
+    gender:cl.gender||'',y:cl.y,m:cl.m,d:cl.d,H:cl.noTime?null:cl.H,noTime:!!cl.noTime,
+    mbti:personCode(cl)||'',blood:cl.blood||'',
+    dayGz:s?gz(s.dg,s.dj):'',saju:s?{yg:s.yg,yj:s.yj,mg:s.mg,mj:s.mj,dg:s.dg,dj:s.dj,hg:s.hg,hj:s.hj}:{},
+    answers:(cl.res&&S.ans)?S.ans:{},scores:(cl.res&&cl.res.axes)?{axes:cl.res.axes}:{},
+    consistency:(cl.res&&cl.res.consistency)||0,
+    finished:!!(cl.res&&cl.res.code),
+    elapsedSec:Math.max(0,Math.round((Date.now()-RECRUIT.t0)/1000))};
+  var done=function(ok,msg,id){
+    if(btn){btn.disabled=false;btn.textContent='📩 상담 신청하기';}
+    if(ok){
+      RECRUIT.sent=true;RECRUIT.id=id||'1';
+      try{localStorage.setItem('apex_recruit_sent',JSON.stringify({id:RECRUIT.id,at:Date.now()}));}catch(e){}
+      draw();$('pane').scrollTop=0;
+    }else toast(msg||'잠시 후 다시 눌러 주세요');
+  };
+  try{
+    fetch(RECRUIT.api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})
+      .then(function(x){done(x.ok&&x.j&&x.j.ok,(x.j&&x.j.message)||'',x.j&&x.j.id);},
+            function(){done(false,'연결이 되지 않았습니다. 잠시 후 다시 눌러 주세요.');});
+  }catch(e){done(false,'잠시 후 다시 눌러 주세요');}
+}
+function tabApply(){
+  var cl=S.cl,a=S.apply||{};
+  if(RECRUIT.sent)
+    return '<div class="card" style="text-align:center">'+
+      '<div style="font-size:44px">🕯️</div>'+
+      '<h1 style="margin-top:10px">잘 받았습니다</h1>'+
+      '<p>'+esc(cl.name||'')+' 님, 남겨 주신 번호로 <b>'+esc(PAY.agent||(BRAND.org+' '+BRAND.hq))+'</b>에서 연락드리겠습니다. '+
+      '적어 주신 시간대를 지키겠습니다.</p>'+
+      '<div class="note ok">오늘 보신 풀이는 이 화면에 그대로 있습니다. 다른 칸도 편하게 보고 가세요.</div>'+
+      '<div class="note info">연락처를 잘못 넣으셨거나 취소하고 싶으시면 이 화면을 닫고 담당자에게 알려 주세요. '+
+      '남겨 주신 정보는 <b>6개월 뒤 자동으로 지워집니다.</b></div>'+
+    '</div>';
+  return '<div class="card">'+brandBand('상담 신청')+
+    '<h1>조금 더 이야기 나눠 보시겠습니까</h1>'+
+    '<p>오늘 보신 결과를 놓고 <b>'+esc(BRAND.org)+' '+esc(BRAND.hq)+'</b>에서 한 번 더 자세히 풀어 드립니다. '+
+    '일 이야기를 들으실 생각이 있으시면 아래에 남겨 주세요. <b>부담 없이 듣기만 하셔도 됩니다.</b></p>'+
+  '</div>'+
+  '<div class="card"><h2><span class="n">연락처</span>어떻게 연락드릴까요</h2>'+
+    '<div style="margin-top:12px"><label>성함</label>'+
+    '<input class="inp" id="apName" value="'+esc(cl.name||'')+'" placeholder="홍길동"></div>'+
+    '<div style="margin-top:12px"><label>연락처</label>'+
+    '<input class="inp" id="apPhone" type="tel" inputmode="numeric" value="'+esc(a.phone||'')+'" placeholder="01012345678"></div>'+
+    '<div style="margin-top:12px"><label>연락 받기 편한 시간</label>'+
+    '<input class="inp" id="apTime" value="'+esc(a.time||'')+'" placeholder="예) 평일 저녁 7시 이후 / 주말 오전"></div>'+
+    '<div style="margin-top:14px"><label>지금 어느 쪽이신가요</label>'+
+    '<div class="seg" style="margin-top:7px;flex-wrap:wrap">'+INTENTS.map(function(x){
+      return '<button class="'+((a.intent||'maybe')===x.k?'on':'')+'" onclick="setApply(\'intent\',\''+x.k+'\')">'+esc(x.n)+'</button>';}).join('')+'</div>'+
+    '<div class="sub" style="margin-top:7px">솔직하게 고르셔도 됩니다. 급하게 연락드릴지 천천히 드릴지 정하는 데만 씁니다.</div></div>'+
+    '<div style="margin-top:14px"><label>하고 싶은 말 (선택)</label>'+
+    '<textarea class="inp" id="apMemo" rows="3" placeholder="궁금한 점이나 지금 상황을 편하게 적어 주세요" style="resize:vertical">'+esc(a.memo||'')+'</textarea></div>'+
+  '</div>'+
+  '<div class="card"><h2><span class="n">동의</span>개인정보 수집·이용</h2>'+
+    '<div class="tbwrap stack"><table class="tb"><tbody>'+
+    [['수집하는 것','성함 · 연락처 · 연락 가능 시간 · 남기신 말, 그리고 오늘 넣으신 생년월일과 검사 결과'],
+     ['쓰는 곳','채용 상담 연락과 상담 준비. 그 밖의 용도로 쓰지 않고, 다른 곳에 넘기지 않습니다.'],
+     ['보관 기간','6개월. 지나면 자동으로 지웁니다. 입사하시면 인사 기록으로 옮겨 갑니다.'],
+     ['거부하실 수 있습니다','동의하지 않으셔도 오늘 보신 풀이는 그대로 보실 수 있습니다. 다만 연락은 드릴 수 없습니다.']
+    ].map(function(r){return '<tr><td class="head"><b>'+r[0]+'</b></td><td class="plain">'+esc(r[1])+'</td></tr>';}).join('')+
+    '</tbody></table></div>'+
+    '<div class="talk" style="margin-top:14px;cursor:pointer" onclick="setApply(\'agree\',!(S.apply&&S.apply.agree))">'+
+    '<b style="color:'+(a.agree?'#00A05A':'#8B95A1')+';font-size:17px">'+(a.agree?'☑':'☐')+'</b> '+
+    '위 내용을 읽었고, <b>개인정보 수집·이용에 동의합니다.</b></div>'+
+    '<button class="btn" id="apBtn" style="margin-top:14px" onclick="applySubmit()">📩 상담 신청하기</button>'+
+    '<div class="sub" style="margin-top:9px;text-align:center">누르시면 담당자에게 바로 전달됩니다.</div>'+
   '</div>';
 }
 /* ══════════════════════════════════════════════════════════════════

@@ -4230,6 +4230,7 @@ var TABS=[
  {group:'윤시현의 두뇌',items:[{id:'brain',icon:'🧠',title:'윤시현의 두뇌',cnt:''}]},
  {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'ckboard',icon:'📋',title:'실행 체크판',cnt:''},{id:'mycoach',icon:'🌱',title:'내 코칭',cnt:''},{id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
+ {group:'채용',role:'lead',items:[{id:'recruit',icon:'📩',title:'채용 대기열',cnt:''}]},
  {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_org',icon:'🤖',title:'AI 조직 라이브',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
  {group:'성장·교육',items:[{id:'teamx',icon:'👥',title:'팀원 종합',cnt:''},{id:'growth',icon:'📊',title:'팀 성장 대시보드',cnt:''},{id:'ckteam',icon:'🧭',title:'팀 체크 현황',cnt:''}]},
@@ -4431,6 +4432,7 @@ function go(tab){
   else if(tab==='ins_asst'){dyn.innerHTML=renderInsAsst();if(typeof osInsAsstAfter==='function')osInsAsstAfter();}
   else if(tab==='fact_find'){dyn.innerHTML=renderFactFind();if(typeof osFactAfter==='function')osFactAfter();}
   else if(tab==='mbti'){dyn.innerHTML=renderMbti();if(typeof osMbtiAfterRender==='function')osMbtiAfterRender();}
+  else if(tab==='recruit'){dyn.innerHTML=renderRecruit();if(typeof osRecruitAfterRender==='function')osRecruitAfterRender();}
   else if(tab==='pricing'){dyn.innerHTML=renderPricing();if(typeof osPricingAfterRender==='function')osPricingAfterRender();}
   else if(tab==='terms'){dyn.innerHTML=renderTerms();if(typeof osTermsAfterRender==='function')osTermsAfterRender();}
   else if(tab.indexOf('biz_')===0)dyn.innerHTML=(typeof renderBiz==='function')?renderBiz(tab):'';
@@ -24373,6 +24375,196 @@ function mbtiDelete(id) {
   var sb = (typeof osClient === 'function') ? osClient() : null;
   if (sb) { try { sb.from('mbti_tests').delete().eq('id', id).then(function () {}, function () {}); } catch (e) {} }
   toast('지웠습니다.'); mbtiListRefresh();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   채용 대기열 — 후보가 스스로 넣고, 리더는 목록만 본다
+   ----------------------------------------------------------------
+   후보에게 링크(또는 QR)를 보내면 후보가 혼자 사주·성향 검사를 하고
+   마지막에 상담 신청을 누른다. 서버 함수가 recruits 표에 쌓고,
+   여기서는 그 목록을 보며 단계만 옮긴다.
+
+   ※ 정렬과 분류에 성향·사주·혈액형을 쓰지 않는다. 쓰는 것은 행동
+     신호(끝까지 했는가, 얼마나 걸렸는가, 본인이 밝힌 의향)뿐이다.
+     검사 결과는 "어떻게 대할지"를 보는 데만 쓴다.
+   ════════════════════════════════════════════════════════════════ */
+var RQ = { rows: [], stage: 'all', q: '', loaded: false, err: '' };
+var RQ_STAGE = [
+  { k: 'new',       n: '새 접수', c: '#1A56DB', bg: '#EFF6FF' },
+  { k: 'contacted', n: '연락함',  c: '#C2410C', bg: '#FFF7ED' },
+  { k: 'met',       n: '면담함',  c: '#7C3AED', bg: '#F5F3FF' },
+  { k: 'joined',    n: '입사',    c: '#047857', bg: '#ECFDF5' },
+  { k: 'hold',      n: '보류',    c: '#64748B', bg: '#F1F5F9' },
+  { k: 'closed',    n: '종료',    c: '#9CA3AF', bg: '#F8FAFC' }
+];
+var RQ_INTENT = { now: '지금 알아보는 중', soon: '3개월 안', maybe: '좋은 자리면', no: '궁금해서' };
+function rqStage(k) { for (var i = 0; i < RQ_STAGE.length; i++) if (RQ_STAGE[i].k === k) return RQ_STAGE[i]; return RQ_STAGE[0]; }
+function rqPhone(p) { p = (p || '').replace(/[^0-9]/g, ''); return p.length === 11 ? p.slice(0, 3) + '-' + p.slice(3, 7) + '-' + p.slice(7) : (p.length === 10 ? p.slice(0, 3) + '-' + p.slice(3, 6) + '-' + p.slice(6) : p); }
+function rqWhen(t) { if (!t) return '-'; var s = ('' + t).slice(5, 16).replace('T', ' '); return s; }
+function rqMin(sec) { sec = sec || 0; return sec < 60 ? sec + '초' : Math.round(sec / 60) + '분'; }
+
+/* 후보에게 보낼 링크 — 내 계정이 담겨 들어오는 건이 나에게 배정된다 */
+function rqLink(src) {
+  var base = location.origin + location.pathname.replace(/[^/]*$/, '') + 'saju-mbti.html';
+  var q = ['for=client', 'recruit=1', 'mode=both'];
+  var id = OS.profile && OS.profile.id; if (id) q.push('rec=' + encodeURIComponent(id));
+  var nm = OS.profile && OS.profile.name; if (nm) q.push('agent=' + encodeURIComponent(nm));
+  if (src && src !== 'link') q.push('src=' + encodeURIComponent(src));
+  return base + '?' + q.join('&');
+}
+function rqCopy(src) {
+  var u = rqLink(src);
+  function fell() { window.prompt('아래 주소를 복사해서 보내세요', u); }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(u).then(function () { toast('후보용 링크를 복사했습니다'); }, fell);
+    else fell();
+  } catch (e) { fell(); }
+}
+function rqOpen(src) { window.open(rqLink(src), '_blank'); }
+
+function renderRecruit() {
+  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🔗</span>후보에게 보낼 링크</div>' +
+    '<div class="card-desc">후보가 이 링크를 열면 <b>혼자 사주·성향 검사를 하고</b> 마지막에 상담 신청을 누릅니다. ' +
+    '설계사가 안내하고 결과를 받아 정리하던 일이 전부 사라집니다. 들어온 건은 아래 대기열에 자동으로 쌓이고, ' +
+    '<b>내 계정으로 배정</b>됩니다.</div></div><div class="card-body">' +
+    '<div style="font-size:11.5px;color:var(--ink-5);word-break:break-all;background:var(--ink-9);border-radius:9px;padding:10px 12px">' + osEsc(rqLink()) + '</div>' +
+    '<div class="btn-row" style="margin-top:11px">' +
+      '<button class="btn btn-primary" onclick="rqCopy()">🔗 링크 복사</button>' +
+      '<button class="btn btn-ghost" onclick="rqCopy(\'seminar\')">🎤 설명회용 링크</button>' +
+      '<button class="btn btn-ghost" onclick="rqOpen()">👀 후보 화면 미리보기</button>' +
+    '</div>' +
+    '<div class="notice" style="margin-top:11px;font-size:11.5px">후보 화면에는 <b>합격·불합격 같은 말이 없습니다.</b> ' +
+    '성향과 사주는 어떻게 대할지 보는 데만 쓰고, 뽑고 거르는 기준으로 쓰지 않습니다.</div>' +
+  '</div></div>' +
+  '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📩</span>채용 대기열 <span class="badge" id="rqCnt">…</span></div>' +
+    '<div class="card-desc">새로 들어온 순입니다. 연락하면 단계를 옮겨 두세요 — 누가 어디까지 갔는지 기억하지 않아도 됩니다.</div></div>' +
+    '<div class="card-body">' +
+    '<div class="btn-row" style="flex-wrap:wrap">' +
+      '<button class="btn btn-ghost" onclick="rqLoad()">↻ 새로고침</button>' +
+      '<button class="btn btn-ghost" onclick="rqCsv()">⤓ 엑셀로 내보내기</button>' +
+    '</div>' +
+    '<div style="margin-top:11px"><input id="rqQ" placeholder="이름·연락처로 찾기" oninput="rqFind(this.value)" style="width:100%;padding:9px 12px;border:1px solid var(--ink-7);border-radius:9px;font-size:12.5px;font-family:inherit"></div>' +
+    '<div id="rqTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:11px"></div>' +
+    '<div id="rqList" style="margin-top:12px"><div style="font-size:12px;color:var(--ink-5);padding:10px">불러오는 중…</div></div>' +
+  '</div></div>';
+}
+function osRecruitAfterRender() { if (!RQ.loaded) rqLoad(); else rqPaint(); }
+function rqLoad() {
+  var sb = osClient(), host = document.getElementById('rqList');
+  if (!sb) { if (host) host.innerHTML = '<div class="notice" style="font-size:12px">서버 연결이 필요합니다. 로그인 후 다시 열어 주세요.</div>'; return; }
+  if (host) host.innerHTML = '<div style="font-size:12px;color:var(--ink-5);padding:10px">불러오는 중…</div>';
+  sb.from('recruits').select('*').order('created_at', { ascending: false }).limit(500).then(function (r) {
+    RQ.loaded = true;
+    if (r && r.error) {
+      RQ.err = r.error.message || '';
+      if (host) host.innerHTML = '<div class="notice" style="background:#FFFBEB;border-color:#FDE68A;color:#92400E;font-size:11.5px">' +
+        '채용 대기열 표가 아직 없습니다 — Supabase 에서 <b>migration_35_recruit.sql</b> 을 한 번 실행해 주세요.</div>';
+      return;
+    }
+    RQ.rows = (r && r.data) || []; RQ.err = ''; rqPaint();
+  }, function () { if (host) host.innerHTML = '<div class="notice" style="font-size:12px">불러오지 못했습니다.</div>'; });
+}
+function rqFind(v) { RQ.q = (v || '').replace(/^\s+|\s+$/g, ''); rqPaint(); }
+function rqPick(k) { RQ.stage = k; rqPaint(); }
+function rqFiltered() {
+  var q = RQ.q.replace(/[^0-9가-힣a-zA-Z]/g, '');
+  return RQ.rows.filter(function (r) {
+    if (RQ.stage !== 'all' && r.stage !== RQ.stage) return false;
+    if (!q) return true;
+    return ((r.name || '') + (r.phone || '')).indexOf(q) >= 0;
+  });
+}
+function rqPaint() {
+  var host = document.getElementById('rqList'); if (!host) return;
+  var tabs = document.getElementById('rqTabs');
+  if (tabs) {
+    var mk = function (k, n, c) {
+      var on = RQ.stage === k;
+      return '<button class="btn ' + (on ? 'btn-primary' : 'btn-ghost') + '" style="padding:6px 11px;font-size:11.5px" onclick="rqPick(\'' + k + '\')">' + n + ' ' + c + '</button>';
+    };
+    var h = mk('all', '전체', RQ.rows.length);
+    for (var i = 0; i < RQ_STAGE.length; i++) {
+      var st = RQ_STAGE[i], n = RQ.rows.filter(function (r) { return r.stage === st.k; }).length;
+      h += mk(st.k, st.n, n);
+    }
+    tabs.innerHTML = h;
+  }
+  var cnt = document.getElementById('rqCnt');
+  if (cnt) cnt.textContent = RQ.rows.length + '명';
+  var rows = rqFiltered();
+  if (!rows.length) {
+    host.innerHTML = '<div style="font-size:12.5px;color:var(--ink-5);padding:16px;text-align:center;line-height:1.7">' +
+      (RQ.rows.length ? '이 조건에 맞는 후보가 없습니다.' :
+        '아직 들어온 후보가 없습니다.<br>위 <b>링크 복사</b>로 후보에게 보내 보세요.') + '</div>';
+    return;
+  }
+  host.innerHTML = rows.map(rqRow).join('');
+}
+function rqRow(r) {
+  var st = rqStage(r.stage);
+  var sig = [];
+  if (r.finished) sig.push('<span class="badge green">끝까지 함</span>');
+  else sig.push('<span class="badge">중간에 멈춤</span>');
+  if (r.elapsed_sec) sig.push('<span class="badge">' + rqMin(r.elapsed_sec) + '</span>');
+  if (r.intent && RQ_INTENT[r.intent]) sig.push('<span class="badge' + (r.intent === 'now' ? ' green' : '') + '">' + RQ_INTENT[r.intent] + '</span>');
+  var who = [];
+  if (r.mbti) who.push(r.mbti);
+  if (r.day_gz) who.push(r.day_gz + '일주');
+  if (r.blood) who.push(r.blood + '형');
+  var btns = RQ_STAGE.filter(function (x) { return x.k !== r.stage; }).map(function (x) {
+    return '<button class="btn btn-ghost" style="padding:4px 9px;font-size:11px" onclick="rqSet(\'' + r.id + '\',\'' + x.k + '\')">' + x.n + '</button>';
+  }).join('');
+  return '<div style="border:1px solid var(--ink-8);border-radius:12px;padding:13px 15px;margin-bottom:9px;background:var(--white)">' +
+    '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">' +
+      '<b style="font-size:14px">' + osEsc(r.name || '-') + '</b>' +
+      '<span style="font-size:11px;font-weight:800;color:' + st.c + ';background:' + st.bg + ';border-radius:999px;padding:3px 10px">' + st.n + '</span>' +
+      '<span style="margin-left:auto;font-size:11px;color:var(--ink-5)">' + osEsc(rqWhen(r.created_at)) + '</span>' +
+    '</div>' +
+    '<div style="font-size:12.5px;color:var(--ink-3);margin-top:7px">' +
+      '<a href="tel:' + osEsc((r.phone || '').replace(/[^0-9]/g, '')) + '" style="font-weight:700;color:var(--ink-2)">' + osEsc(rqPhone(r.phone)) + '</a>' +
+      (r.contact_time ? ' · ' + osEsc(r.contact_time) : '') +
+      (who.length ? ' · ' + osEsc(who.join(' · ')) : '') +
+    '</div>' +
+    '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px">' + sig.join('') + '</div>' +
+    (r.memo ? '<div style="font-size:12.5px;color:var(--ink-3);background:var(--ink-9);border-radius:9px;padding:9px 11px;margin-top:9px;line-height:1.65">“' + osEsc(r.memo) + '”</div>' : '') +
+    '<div style="margin-top:9px"><input value="' + osEsc(r.owner_note || '') + '" placeholder="내 메모 (연락 결과 등)" ' +
+      'onchange="rqNote(\'' + r.id + '\',this.value)" style="width:100%;padding:7px 10px;border:1px solid var(--ink-8);border-radius:8px;font-size:12px;font-family:inherit"></div>' +
+    '<div class="btn-row" style="margin-top:9px;flex-wrap:wrap">' + btns + '</div>' +
+  '</div>';
+}
+function rqSet(id, stage) {
+  var sb = osClient(); if (!sb) return;
+  sb.from('recruits').update({ stage: stage, updated_at: new Date().toISOString() }).eq('id', id).then(function (r) {
+    if (r && r.error) { toast('변경 실패: ' + r.error.message); return; }
+    for (var i = 0; i < RQ.rows.length; i++) if (RQ.rows[i].id === id) RQ.rows[i].stage = stage;
+    toast(rqStage(stage).n + '으로 옮겼습니다'); rqPaint();
+  }, function () { toast('변경 실패'); });
+}
+function rqNote(id, v) {
+  var sb = osClient(); if (!sb) return;
+  sb.from('recruits').update({ owner_note: (v || '').slice(0, 500), updated_at: new Date().toISOString() }).eq('id', id).then(function (r) {
+    if (r && r.error) { toast('메모 저장 실패'); return; }
+    for (var i = 0; i < RQ.rows.length; i++) if (RQ.rows[i].id === id) RQ.rows[i].owner_note = v;
+    toast('메모를 저장했습니다');
+  }, function () { toast('메모 저장 실패'); });
+}
+function rqCsv() {
+  var rows = rqFiltered();
+  if (!rows.length) { toast('내보낼 후보가 없습니다'); return; }
+  var head = ['이름', '연락처', '연락가능시간', '단계', '의향', '끝까지함', '소요(초)', '유형', '일주', '혈액형', '남긴말', '내메모', '접수일'];
+  var esc2 = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
+  var body = rows.map(function (r) {
+    return [r.name, r.phone, r.contact_time, rqStage(r.stage).n, RQ_INTENT[r.intent] || '',
+      r.finished ? 'Y' : 'N', r.elapsed_sec, r.mbti, r.day_gz, r.blood, r.memo, r.owner_note,
+      rqWhen(r.created_at)].map(esc2).join(',');
+  }).join('\n');
+  var csv = '﻿' + head.map(esc2).join(',') + '\n' + body;
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = '채용대기열_' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  toast(rows.length + '명을 내려받았습니다');
 }
 
 function osMbtiAfterRender() {
