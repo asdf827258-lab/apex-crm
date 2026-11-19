@@ -775,8 +775,22 @@ $$;
 revoke all on function public.recruits_assign(uuid[], uuid) from public;
 grant execute on function public.recruits_assign(uuid[], uuid) to authenticated;
 
+/* ========================================================== */
+/* 채용 4단계 — 단계별 시각 기록. 응답 속도와 전환율을 재기 위한 칸. */
+/* ========================================================== */
+alter table public.recruits add column if not exists contacted_at timestamptz;
+alter table public.recruits add column if not exists met_at       timestamptz;
+alter table public.recruits add column if not exists joined_at    timestamptz;
+
+create index if not exists recruits_joined_idx on public.recruits(joined_at)
+  where joined_at is not null;
+
+grant update (stage, owner_note, recruiter_id, updated_at, next_at, assigned_at,
+              contacted_at, met_at, joined_at)
+  on public.recruits to authenticated;
+
 insert into public.app_config(key, value)
-values ('schema_version', '36')
+values ('schema_version', '37')
 on conflict (key) do update set value = excluded.value, updated_at = now();
 
 notify pgrst, 'reload schema';

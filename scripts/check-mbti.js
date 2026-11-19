@@ -1088,6 +1088,105 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   ok(due.indexOf('잠듦') >= 0, '미뤄 둔 날이 지나면 다시 올라온다');
   await p3.close();
 
+  console.log('\n채용 4단계 — 성과판과 점수 검증');
+  const p4 = await ctx.newPage();
+  await p4.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
+  await p4.waitForTimeout(1200);
+
+  const prep = `
+    function H(n){ return new Date(Date.now()-n*3600000).toISOString(); }
+    var BASE={phone:'01000000000',contact_time:'저녁',memo:'',owner_note:'',day_gz:'갑자',blood:'O',
+      mbti:'ENFP',birth_y:1994,birth_m:8,birth_d:3,birth_h:14,elapsed_sec:400,finished:true,
+      consistency:88,next_at:null,source:'link',recruiter_id:'p2'};
+    function hi(i,joined){ return Object.assign({},BASE,{id:'h'+i,name:'상'+i,intent:'now',
+      created_at:H(400+i*10),contacted_at:H(396+i*10),met_at:H(380+i*10),
+      stage:joined?'joined':'closed',joined_at:joined?H(300+i*10):null}); }
+    function lo(i,joined){ return Object.assign({},BASE,{id:'l'+i,name:'하'+i,intent:'no',consistency:40,
+      elapsed_sec:40,finished:false,created_at:H(420+i*10),contacted_at:H(300+i*10),
+      stage:joined?'joined':'closed',joined_at:joined?H(200):null}); }
+    OS.profile={id:'p1',name:'윤시현',role:'admin'};
+    document.getElementById('dynPane').innerHTML=renderRecruit();
+    RQ.loaded=true; RQ.period=0; RQ.people=[{id:'p1',name:'윤시현'},{id:'p2',name:'박팀장'}];
+  `;
+
+  /* 날짜 점수가 base 에 섞이지 않는지 — 이게 섞이면 검증이 통째로 틀린다 */
+  const baseOk = await p4.evaluate(pre => {
+    eval(pre);
+    function H(n){ return new Date(Date.now()-n*3600000).toISOString(); }
+    const a = Object.assign({}, BASE, { id: 'a', stage: 'new', intent: 'now', created_at: H(1) });
+    const b = Object.assign({}, BASE, { id: 'b', stage: 'new', intent: 'now', created_at: H(24 * 60) });
+    const ra = rqScore(a), rb = rqScore(b);
+    return { sameBase: ra.base === rb.base, diffScore: ra.score !== rb.score, base: ra.base };
+  }, prep);
+  ok(baseOk.sameBase && baseOk.diffScore,
+     '날짜에서 오는 점수는 검증용 base 에 섞이지 않는다 (base ' + baseOk.base + ', 전체 점수는 달라짐)');
+
+  /* 판정 세 갈래 */
+  const verdicts = await p4.evaluate(pre => {
+    eval(pre);
+    const out = {};
+    RQ.rows = [hi(0, true), hi(1, false), lo(0, false)];
+    out.few = rqValidate().verdict.t;
+    RQ.rows = []; for (let i = 0; i < 12; i++) RQ.rows.push(hi(i, i < 5));
+    for (let i = 0; i < 12; i++) RQ.rows.push(lo(i, i < 1));
+    const good = rqValidate(); out.good = good.verdict.t; out.hiP = good.hiP; out.loP = good.loP;
+    RQ.rows = []; for (let i = 0; i < 12; i++) RQ.rows.push(hi(i, i < 1));
+    for (let i = 0; i < 12; i++) RQ.rows.push(lo(i, i < 6));
+    const rev = rqValidate(); out.rev = rev.verdict.t; out.revC = rev.verdict.c;
+    RQ.rows = []; for (let i = 0; i < 12; i++) RQ.rows.push(hi(i, i < 3));
+    for (let i = 0; i < 12; i++) RQ.rows.push(lo(i, i < 3));
+    out.weak = rqValidate().verdict.t;
+    return out;
+  }, prep);
+  ok(/아직 판단할 수 없습니다/.test(verdicts.few),
+     '건수가 적으면 "아직 판단할 수 없다"고 말한다 — 억지로 결론내지 않는다');
+  ok(/맞게 가고 있습니다/.test(verdicts.good),
+     '높은 점수대가 실제로 더 많이 입사하면 맞다고 한다 (' + verdicts.hiP + '% vs ' + verdicts.loP + '%)');
+  ok(/거꾸로 가고 있습니다/.test(verdicts.rev) && verdicts.revC === '#B91C1C',
+     '거꾸로 가면 빨갛게 "점수를 믿지 말라"고 말한다');
+  ok(/상관이 약합니다/.test(verdicts.weak), '차이가 없으면 상관이 약하다고 말한다');
+
+  const fun = await p4.evaluate(pre => {
+    eval(pre);
+    function H(n){ return new Date(Date.now()-n*3600000).toISOString(); }
+    RQ.rows = [hi(0, true), hi(1, true), hi(2, false),
+      Object.assign({}, BASE, { id: 'n1', name: '새', intent: 'now', stage: 'new',
+        created_at: H(60), contacted_at: null, joined_at: null, met_at: null, recruiter_id: null, source: 'qr' })];
+    rqPaint();
+    const s = rqStats();
+    const t = document.getElementById('rqStats').textContent;
+    return { got: s.got, con: s.con, met: s.met, join: s.join, cold: s.cold,
+      resp: s.resp != null, src: /QR/.test(t) && /링크/.test(t), own: /박팀장/.test(t) && /배정 안 됨/.test(t),
+      warn: /이틀이 지나도록/.test(t) };
+  }, prep);
+  ok(fun.got === 4 && fun.con === 3 && fun.met === 3 && fun.join === 2,
+     '퍼널이 맞게 센다 — 접수 ' + fun.got + ' 연락 ' + fun.con + ' 면담 ' + fun.met + ' 입사 ' + fun.join);
+  ok(fun.resp, '접수에서 첫 연락까지 걸린 시간을 잰다');
+  ok(fun.cold === 1 && fun.warn, '이틀 넘게 손 못 댄 건을 따로 세어 경고한다');
+  ok(fun.src && fun.own, '경로별·담당자별로 갈라서 보여준다');
+
+  /* 단계 시각은 처음 한 번만 — 되돌렸다 와도 덮어쓰지 않는다 */
+  const stamp = await p4.evaluate(pre => {
+    eval(pre);
+    function H(n){ return new Date(Date.now()-n*3600000).toISOString(); }
+    const sent = [];
+    osClient = function () {
+      return { from: function () { return { update: function (p) { sent.push(p);
+        return { eq: function () { return Promise.resolve({}); } }; } }; } };
+    };
+    const first = H(5);
+    RQ.rows = [Object.assign({}, BASE, { id: 'z', name: '지', stage: 'new',
+      created_at: H(10), contacted_at: null, met_at: null, joined_at: null })];
+    rqSet('z', 'contacted');
+    RQ.rows[0].contacted_at = first;          // 저장됐다고 치고
+    RQ.rows[0].stage = 'new';                 // 단계를 되돌린 뒤
+    rqSet('z', 'contacted');                  // 다시 연락함으로
+    return { first: !!sent[0].contacted_at, again: sent[1].contacted_at === undefined };
+  }, prep);
+  ok(stamp.first, '처음 연락함으로 옮기면 그 시각을 적는다');
+  ok(stamp.again, '되돌렸다 다시 와도 처음 시각을 덮어쓰지 않는다 (응답 속도를 되감을 수 없다)');
+  await p4.close();
+
   console.log('\n화면 · 스크롤 칸');
   for (const t of await page.evaluate(() => tabsFor('both'))) {
     await page.evaluate(x => goTab(x), t);

@@ -24388,7 +24388,7 @@ function mbtiDelete(id) {
      신호(끝까지 했는가, 얼마나 걸렸는가, 본인이 밝힌 의향)뿐이다.
      검사 결과는 "어떻게 대할지"를 보는 데만 쓴다.
    ════════════════════════════════════════════════════════════════ */
-var RQ = { rows: [], stage: 'all', q: '', loaded: false, err: '', sort: 'score', people: [], board: false, timer: null };
+var RQ = { rows: [], stage: 'all', q: '', loaded: false, err: '', sort: 'score', people: [], board: false, timer: null, period: 30 };
 function rqSort(){ RQ.sort = (RQ.sort === 'score') ? 'new' : 'score'; rqPaint(); }
 var RQ_STAGE = [
   { k: 'new',       n: '새 접수', c: '#1A56DB', bg: '#EFF6FF' },
@@ -24824,6 +24824,194 @@ function rqPaintBoard(){
   '</div>';
 }
 
+/* ════════════════════════════════════════════════════════════════
+   채용 성과판 — 무엇이 통했는지, 그리고 내 점수가 맞는지
+   ----------------------------------------------------------------
+   ※ 점수 검증을 할 때는 날짜에서 오는 점수(오늘 들어왔다 / 묵었다)를
+     빼고 본다. 그 항목은 시간이 가면 저절로 바뀌므로, 반 년 전에 입사한
+     사람은 전부 낮게 나와 "점수가 틀렸다"는 엉뚱한 결론이 나온다.
+     rqScore 가 돌려주는 base 가 날짜를 뺀 점수다.
+   ════════════════════════════════════════════════════════════════ */
+var RQ_PERIOD = [{ k: 7, n: '7일' }, { k: 30, n: '30일' }, { k: 90, n: '90일' }, { k: 0, n: '전체' }];
+function rqInPeriod(r) {
+  if (!RQ.period) return true;
+  return rqDays(r.created_at) <= RQ.period;
+}
+function rqHours(a, b) {
+  if (!a || !b) return null;
+  var h = (new Date(b).getTime() - new Date(a).getTime()) / 3600000;
+  return h >= 0 ? h : null;
+}
+function rqAvg(list) {
+  var v = list.filter(function (x) { return x != null; });
+  if (!v.length) return null;
+  return v.reduce(function (a, b) { return a + b; }, 0) / v.length;
+}
+function rqDur(h) {
+  if (h == null) return '—';
+  if (h < 1) return Math.round(h * 60) + '분';
+  if (h < 48) return (Math.round(h * 10) / 10) + '시간';
+  return (Math.round(h / 24 * 10) / 10) + '일';
+}
+function rqStats() {
+  var rows = RQ.rows.filter(rqInPeriod);
+  var got = rows.length;
+  var con = rows.filter(function (r) { return r.contacted_at || ['contacted', 'met', 'joined'].indexOf(r.stage) >= 0; }).length;
+  var met = rows.filter(function (r) { return r.met_at || ['met', 'joined'].indexOf(r.stage) >= 0; }).length;
+  var join = rows.filter(function (r) { return r.joined_at || r.stage === 'joined'; }).length;
+  var resp = rqAvg(rows.map(function (r) { return rqHours(r.created_at, r.contacted_at); }));
+  var toJoin = rqAvg(rows.map(function (r) { return rqHours(r.created_at, r.joined_at); }));
+  /* 48시간 넘게 손 안 댄 건 — 여기가 가장 많이 새는 자리다 */
+  var cold = rows.filter(function (r) {
+    return r.stage === 'new' && !r.contacted_at && rqDays(r.created_at) >= 2;
+  }).length;
+  return { rows: rows, got: got, con: con, met: met, join: join, resp: resp, toJoin: toJoin, cold: cold };
+}
+function rqPct(a, b) { return b ? Math.round(a * 1000 / b) / 10 : 0; }
+/* 유입 경로별 · 담당자별 */
+function rqBy(rows, keyFn) {
+  var m = {};
+  rows.forEach(function (r) {
+    var k = keyFn(r) || '—';
+    if (!m[k]) m[k] = { n: 0, con: 0, join: 0, resp: [] };
+    m[k].n++;
+    if (r.contacted_at || ['contacted', 'met', 'joined'].indexOf(r.stage) >= 0) m[k].con++;
+    if (r.joined_at || r.stage === 'joined') m[k].join++;
+    m[k].resp.push(rqHours(r.created_at, r.contacted_at));
+  });
+  return Object.keys(m).map(function (k) {
+    return { k: k, n: m[k].n, con: m[k].con, join: m[k].join, resp: rqAvg(m[k].resp) };
+  }).sort(function (a, b) { return b.n - a.n; });
+}
+/* ── 점수가 실제로 맞았는지 ──────────────────────────────────
+   결론이 난 건(입사 또는 종료)만 본다. 아직 진행 중인 건을 섞으면
+   "아직 입사 안 했으니 실패"로 세어 버린다.                        */
+var RQ_BUCKET = [{ lo: 0, hi: 44, n: '0–44' }, { lo: 45, hi: 61, n: '45–61' },
+                 { lo: 62, hi: 77, n: '62–77' }, { lo: 78, hi: 100, n: '78–100' }];
+function rqValidate() {
+  var decided = RQ.rows.filter(function (r) {
+    return (r.joined_at || r.stage === 'joined') || r.stage === 'closed';
+  });
+  var buckets = RQ_BUCKET.map(function (b) {
+    var inB = decided.filter(function (r) {
+      var s = rqScore(r).base; return s >= b.lo && s <= b.hi;
+    });
+    var j = inB.filter(function (r) { return r.joined_at || r.stage === 'joined'; }).length;
+    return { n: b.n, cnt: inB.length, join: j, pct: rqPct(j, inB.length) };
+  });
+  var joined = decided.filter(function (r) { return r.joined_at || r.stage === 'joined'; });
+  var closed = decided.filter(function (r) { return r.stage === 'closed'; });
+  var mj = rqAvg(joined.map(function (r) { return rqScore(r).base; }));
+  var mc = rqAvg(closed.map(function (r) { return rqScore(r).base; }));
+  var hi = buckets[2].cnt + buckets[3].cnt, hiJ = buckets[2].join + buckets[3].join;
+  var lo = buckets[0].cnt + buckets[1].cnt, loJ = buckets[0].join + buckets[1].join;
+  var hiP = rqPct(hiJ, hi), loP = rqPct(loJ, lo);
+  var v;
+  if (decided.length < 20 || joined.length < 5)
+    v = { t: '아직 판단할 수 없습니다', c: '#64748B', bg: '#F1F5F9',
+      d: '결론이 난 건이 <b>' + decided.length + '건</b>(입사 ' + joined.length + '건)뿐입니다. ' +
+         '적어도 <b>결론 20건 · 입사 5건</b>은 쌓여야 점수가 맞는지 말할 수 있습니다. ' +
+         '그때까지는 점수를 참고로만 쓰세요.' };
+  else if (!hi || !lo)
+    v = { t: '한쪽 구간에만 몰려 있습니다', c: '#C2410C', bg: '#FFF7ED',
+      d: '점수가 높은 쪽이나 낮은 쪽 한 곳에만 결론이 쌓여 비교가 안 됩니다. 더 모여야 합니다.' };
+  else if (hiP >= loP * 1.3)
+    v = { t: '점수가 맞게 가고 있습니다', c: '#047857', bg: '#ECFDF5',
+      d: '높은 점수대 입사율 <b>' + hiP + '%</b>, 낮은 점수대 <b>' + loP + '%</b>. ' +
+         '위에서부터 연락하는 것이 실제로 성과로 이어지고 있습니다.' };
+  else if (loP > hiP)
+    v = { t: '점수가 거꾸로 가고 있습니다', c: '#B91C1C', bg: '#FEF2F2',
+      d: '낮은 점수대 입사율 <b>' + loP + '%</b>가 높은 점수대 <b>' + hiP + '%</b>보다 높습니다. ' +
+         '지금 가중치는 현장과 맞지 않습니다. <b>점수를 믿고 순서를 정하지 마세요.</b> ' +
+         '어떤 신호가 실제로 통했는지 다시 봐야 합니다.' };
+  else
+    v = { t: '점수와 결과의 상관이 약합니다', c: '#C2410C', bg: '#FFF7ED',
+      d: '높은 점수대 <b>' + hiP + '%</b>, 낮은 점수대 <b>' + loP + '%</b> — 차이가 거의 없습니다. ' +
+         '지금 점수는 순서를 정하는 데 큰 도움이 되지 않습니다. 가중치를 손봐야 합니다.' };
+  return { buckets: buckets, decided: decided.length, joined: joined.length,
+    meanJoin: mj, meanClosed: mc, verdict: v, hiP: hiP, loP: loP };
+}
+function rqSetPeriod(d) { RQ.period = d; rqPaint(); }
+function rqPaintStats() {
+  var host = document.getElementById('rqStats'); if (!host) return;
+  var s = rqStats(), rows = s.rows;
+  var steps = [
+    { n: '접수', v: s.got, c: '#64748B' },
+    { n: '연락', v: s.con, c: '#1A56DB' },
+    { n: '면담', v: s.met, c: '#7C3AED' },
+    { n: '입사', v: s.join, c: '#047857' }
+  ];
+  var funnel = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:12px">' +
+    steps.map(function (x, i) {
+      var pct = i === 0 ? 100 : rqPct(x.v, s.got);
+      var prev = i === 0 ? null : rqPct(x.v, steps[i - 1].v);
+      return '<div style="background:var(--ink-9);border-radius:12px;padding:12px 11px">' +
+        '<div style="font-size:11.5px;font-weight:800;color:var(--ink-5)">' + x.n + '</div>' +
+        '<div style="font-size:30px;font-weight:900;letter-spacing:-.05em;line-height:1.15;color:' + x.c + '">' + x.v + '</div>' +
+        '<div style="height:5px;border-radius:99px;background:var(--ink-7);margin-top:7px;overflow:hidden">' +
+          '<div style="height:100%;width:' + pct + '%;background:' + x.c + ';border-radius:99px"></div></div>' +
+        '<div style="font-size:10.5px;color:var(--ink-5);margin-top:5px">' + pct + '%' +
+          (prev != null ? ' <span style="color:var(--ink-4)">(앞 단계의 ' + prev + '%)</span>' : '') + '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  var speed = '<div class="btn-row" style="margin-top:12px;gap:14px;flex-wrap:wrap">' +
+    '<div><div style="font-size:11.5px;color:var(--ink-5);font-weight:800">첫 연락까지</div>' +
+      '<div style="font-size:19px;font-weight:900;letter-spacing:-.04em">' + rqDur(s.resp) + '</div></div>' +
+    '<div><div style="font-size:11.5px;color:var(--ink-5);font-weight:800">입사까지</div>' +
+      '<div style="font-size:19px;font-weight:900;letter-spacing:-.04em">' + rqDur(s.toJoin) + '</div></div>' +
+    '<div><div style="font-size:11.5px;color:var(--ink-5);font-weight:800">이틀 넘게 손 못 댄 건</div>' +
+      '<div style="font-size:19px;font-weight:900;letter-spacing:-.04em;color:' + (s.cold ? '#B91C1C' : 'var(--ink-2)') + '">' + s.cold + '명</div></div>' +
+    '</div>' +
+    (s.cold ? '<div class="notice" style="margin-top:10px">들어온 지 이틀이 지나도록 손대지 않은 건이 <b>' + s.cold + '명</b> 있습니다. ' +
+      '채용에서 가장 많이 새는 자리입니다. 위 <b>오늘 연락할 사람</b>부터 처리하세요.</div>' : '');
+  function table(title, list, label) {
+    if (!list.length) return '';
+    return '<div style="margin-top:16px"><div style="font-size:12.5px;font-weight:800;color:var(--ink-3)">' + title + '</div>' +
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:7px">' +
+      '<thead><tr style="color:var(--ink-5)"><th style="text-align:left;padding:5px">' + label + '</th>' +
+      '<th style="text-align:right;padding:5px">접수</th><th style="text-align:right;padding:5px">연락</th>' +
+      '<th style="text-align:right;padding:5px">입사</th><th style="text-align:right;padding:5px">입사율</th>' +
+      '<th style="text-align:right;padding:5px">첫 연락</th></tr></thead><tbody>' +
+      list.map(function (x) {
+        return '<tr style="border-top:1px solid var(--ink-8)">' +
+          '<td style="padding:6px 5px;font-weight:700">' + osEsc(x.k) + '</td>' +
+          '<td style="text-align:right;padding:6px 5px">' + x.n + '</td>' +
+          '<td style="text-align:right;padding:6px 5px">' + x.con + '</td>' +
+          '<td style="text-align:right;padding:6px 5px"><b>' + x.join + '</b></td>' +
+          '<td style="text-align:right;padding:6px 5px">' + rqPct(x.join, x.n) + '%</td>' +
+          '<td style="text-align:right;padding:6px 5px;color:var(--ink-5)">' + rqDur(x.resp) + '</td></tr>';
+      }).join('') + '</tbody></table></div></div>';
+  }
+  var SRC = { link: '링크', qr: 'QR', seminar: '설명회' };
+  var bySrc = table('어디서 들어왔나', rqBy(rows, function (r) { return SRC[r.source] || r.source || '—'; }), '경로');
+  var byOwn = table('누가 맡았나', rqBy(rows, function (r) { return rqOwnerName(r.recruiter_id) || '배정 안 됨'; }), '담당자');
+  /* 점수 검증 */
+  var v = rqValidate();
+  var val = '<div style="margin-top:18px;border-top:1px solid var(--ink-7);padding-top:14px">' +
+    '<div style="font-size:12.5px;font-weight:800;color:var(--ink-3)">우선순위 점수가 실제로 맞았나</div>' +
+    '<div style="font-size:11.5px;color:var(--ink-5);line-height:1.6;margin-top:5px">' +
+      '결론이 난 건(입사·종료)만 봅니다. 날짜에서 오는 점수는 빼고 계산해서, 오래된 건이 불리해지지 않게 했습니다.</div>' +
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:9px">' +
+    '<thead><tr style="color:var(--ink-5)"><th style="text-align:left;padding:5px">점수대</th>' +
+    '<th style="text-align:right;padding:5px">결론 난 건</th><th style="text-align:right;padding:5px">입사</th>' +
+    '<th style="text-align:right;padding:5px">입사율</th></tr></thead><tbody>' +
+    v.buckets.map(function (b) {
+      return '<tr style="border-top:1px solid var(--ink-8)"><td style="padding:6px 5px;font-weight:700">' + b.n + '</td>' +
+        '<td style="text-align:right;padding:6px 5px">' + b.cnt + '</td>' +
+        '<td style="text-align:right;padding:6px 5px">' + b.join + '</td>' +
+        '<td style="text-align:right;padding:6px 5px"><b>' + (b.cnt ? b.pct + '%' : '—') + '</b></td></tr>';
+    }).join('') + '</tbody></table></div>' +
+    '<div style="border-radius:11px;padding:12px 14px;margin-top:11px;background:' + v.verdict.bg + '">' +
+      '<b style="font-size:13px;color:' + v.verdict.c + '">' + v.verdict.t + '</b>' +
+      '<div style="font-size:12px;color:var(--ink-3);line-height:1.7;margin-top:5px">' + v.verdict.d + '</div>' +
+    '</div>' +
+    (v.meanJoin != null && v.meanClosed != null
+      ? '<div style="font-size:11.5px;color:var(--ink-5);margin-top:8px">입사한 분들의 평균 점수 <b>' + Math.round(v.meanJoin) +
+        '</b> · 종료된 분들 <b>' + Math.round(v.meanClosed) + '</b> (날짜 점수 제외)</div>' : '') +
+  '</div>';
+  host.innerHTML = funnel + speed + bySrc + byOwn + val;
+}
+
 /* ── 우선순위 — 행동 신호만 본다 ─────────────────────────────────
    성향·사주·혈액형은 1점도 들어가지 않는다. 쓰는 것은 후보가 실제로
    한 일과 본인이 밝힌 말뿐이다. "누가 더 좋은 사람인가"가 아니라
@@ -24848,6 +25036,10 @@ function rqScore(r){
   else if(e<180) add(2,'');
   else if(e<=1800) add(9,'검사에 충분히 시간을 썼다');
   else add(3,'시간을 아주 오래 썼다');
+  /* 여기까지가 날짜와 무관한 점수다. 성과판에서 "점수가 맞았나"를 볼 때는
+     이 base 를 쓴다. 날짜 점수를 섞으면 오래된 건이 전부 낮아져서
+     "점수가 틀렸다"는 엉뚱한 결론이 나온다. */
+  var base=Math.max(0,Math.min(100,Math.round(sc)));
   var d=rqDays(r.created_at);
   if(d<=1) add(8,'오늘 들어왔다');
   else if(d<=3) add(4,'사흘 안에 들어왔다');
@@ -24855,7 +25047,7 @@ function rqScore(r){
   if(r.stage==='new'&&d>=3){ add(8,''); warn=Math.floor(d)+'일째 연락 안 함'; }
   sc=Math.max(0,Math.min(100,Math.round(sc)));
   why.sort(function(a,b){return Math.abs(b.n)-Math.abs(a.n);});
-  return { score:sc, why:why, warn:warn, days:Math.floor(d) };
+  return { score:sc, base:base, why:why, warn:warn, days:Math.floor(d) };
 }
 function rqBand(s){
   return s>=78 ? {t:'지금 연락',c:'#047857',bg:'#ECFDF5'}
@@ -24970,6 +25162,13 @@ function renderRecruit() {
     '<div style="margin-top:11px"><input id="rqQ" placeholder="이름·연락처로 찾기" oninput="rqFind(this.value)" style="width:100%;padding:9px 12px;border:1px solid var(--ink-7);border-radius:9px;font-size:12.5px;font-family:inherit"></div>' +
     '<div id="rqTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:11px"></div>' +
     '<div id="rqList" style="margin-top:12px"><div style="font-size:12px;color:var(--ink-5);padding:10px">불러오는 중…</div></div>' +
+  '</div></div>' +
+  '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📈</span>성과판</div>' +
+    '<div class="card-desc">무엇이 통했는지 봅니다. 어느 경로에서 들어온 사람이 실제로 남는지, ' +
+    '누가 빨리 연락하는지, 그리고 <b>우선순위 점수가 실제 결과와 맞았는지</b>까지 확인합니다. ' +
+    '안 맞으면 안 맞는다고 적습니다.</div></div><div class="card-body">' +
+    '<div id="rqPeriod" style="display:flex;gap:6px;flex-wrap:wrap"></div>' +
+    '<div id="rqStats"></div>' +
   '</div></div>';
 }
 function osRecruitAfterRender() { if (!RQ.loaded) rqLoad(); else rqPaint(); }
@@ -25021,6 +25220,11 @@ function rqPaint() {
   var cnt = document.getElementById('rqCnt');
   if (cnt) cnt.textContent = RQ.rows.length + '명';
   rqPaintTop(); rqPaintSeg(); rqPaintBoard(); rqPaintAssign();
+  var pe=document.getElementById('rqPeriod');
+  if(pe) pe.innerHTML=RQ_PERIOD.map(function(x){
+    return '<button class="btn '+(RQ.period===x.k?'btn-primary':'btn-ghost')+
+      '" style="padding:5px 11px;font-size:11.5px" onclick="rqSetPeriod('+x.k+')">'+x.n+'</button>';}).join('');
+  rqPaintStats();
   var sb = document.getElementById('rqSortBtn');
   if (sb) sb.textContent = (RQ.sort === 'new') ? '↕ 최신순' : '↕ 우선순위순';
   var rows = rqFiltered();
@@ -25097,9 +25301,20 @@ function rqPaintAssign() {
 }
 function rqSet(id, stage) {
   var sb = osClient(); if (!sb) return;
-  sb.from('recruits').update({ stage: stage, updated_at: new Date().toISOString() }).eq('id', id).then(function (r) {
+  var row = null, i;
+  for (i = 0; i < RQ.rows.length; i++) if (RQ.rows[i].id === id) row = RQ.rows[i];
+  var now = new Date().toISOString();
+  var patch = { stage: stage, updated_at: now };
+  /* 처음 도달한 시각만 적는다. 단계를 되돌렸다가 다시 와도 덮어쓰지 않는다 —
+     응답 속도를 되감아 좋게 만들 수 있으면 지표가 거짓말을 한다. */
+  if (row) {
+    if (['contacted', 'met', 'joined'].indexOf(stage) >= 0 && !row.contacted_at) patch.contacted_at = now;
+    if (['met', 'joined'].indexOf(stage) >= 0 && !row.met_at) patch.met_at = now;
+    if (stage === 'joined' && !row.joined_at) patch.joined_at = now;
+  }
+  sb.from('recruits').update(patch).eq('id', id).then(function (r) {
     if (r && r.error) { toast('변경 실패: ' + r.error.message); return; }
-    for (var i = 0; i < RQ.rows.length; i++) if (RQ.rows[i].id === id) RQ.rows[i].stage = stage;
+    if (row) { row.stage = stage; for (var k in patch) if (k !== 'stage') row[k] = patch[k]; }
     toast(rqStage(stage).n + '으로 옮겼습니다'); rqPaint();
   }, function () { toast('변경 실패'); });
 }
