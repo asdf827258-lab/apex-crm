@@ -393,7 +393,7 @@ body.shrine-on .scrollhint{background:rgba(200,55,45,.92)}
 <div class="shell">
   <div class="top">
     <div class="brandbox" id="brandBox"><span class="bmk a">A+</span></div>
-    <div class="ti"><b>사주 × MBTI 상담카드</b><span id="topSub">생년월일과 태어난 시간, 그리고 48문항</span></div>
+    <div class="ti"><b id="topTtl">사주 × MBTI 상담카드</b><span id="topSub">생년월일과 태어난 시간, 그리고 48문항</span></div>
     <button class="mecard" id="viewBtn" onclick="setView(S.view==='agent'?'client':'agent')" style="display:none">🔒 내 눈용</button>
     <button class="mecard" id="meBtn" onclick="goStep('me')">내 카드</button>
   </div>
@@ -918,7 +918,7 @@ var S={step:'me',tab:'ice',target:'client',i:0,ans:{},mode:'both',view:'agent',w
 /* 보기 모드 — 내 눈용(agent)에는 리스크와 화법까지, 고객 화면(client)에는
    좋은 이야기와 덕담만 남긴다. 설계사 전용 블록은 아예 그리지 않는다. */
 function agentOnly(html){return S.view==='agent'?html:'';}
-function setView(v){S.view=v;var list=tabsFor(S.mode,v);if(list.indexOf(S.tab)<0)S.tab=list[0];save();draw();
+function setView(v){if(GUEST.on)v='client';S.view=v;var list=tabsFor(S.mode,v);if(list.indexOf(S.tab)<0)S.tab=list[0];save();draw();
   toast(v==='agent'?'내 눈용으로 바꿨습니다 — 리스크와 화법이 보입니다':'고객 화면입니다 — 이대로 보여드리세요');}
 function $(id){return document.getElementById(id);}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -964,8 +964,8 @@ function brandBand(sub){
 }
 function toast(m){var t=$('toast');t.textContent=m;t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';
   clearTimeout(t._t);t._t=setTimeout(function(){t.style.opacity='0';t.style.transform='translateX(-50%) translateY(16px)';},2100);}
-function save(){try{localStorage.setItem('sajumbti',JSON.stringify({me:S.me,cl:S.cl,ans:S.ans,i:S.i,step:S.step,tab:S.tab,mode:S.mode,view:S.view,worry:S.worry}));}catch(e){}}
-function load(){try{return JSON.parse(localStorage.getItem('sajumbti')||'null');}catch(e){return null;}}
+function save(){try{localStorage.setItem(storeKey(),JSON.stringify({me:S.me,cl:S.cl,ans:S.ans,i:S.i,step:S.step,tab:S.tab,mode:S.mode,view:S.view,worry:S.worry}));}catch(e){}}
+function load(){try{return JSON.parse(localStorage.getItem(storeKey())||'null');}catch(e){return null;}}
 function val(id){var e=$(id);return e?e.value:'';}
 function num(v){var n=parseInt(v,10);return isNaN(n)?null:n;}
 
@@ -1196,21 +1196,22 @@ function draw(){
     tb.innerHTML=list.map(function(k){return '<button class="'+(S.tab===k?'on':'')+'" onclick="goTab(\''+k+'\')">'+TAB_NAME[k]+'</button>';}).join('')+
       (S.view==='agent'?'<button onclick="newClient()">＋ 새 고객</button>':'');
   }else{
-    tb.innerHTML=['me','client','test'].map(function(k,i){
-      var lb=['① 내 카드','② 고객 정보','③ 성향검사'][i];
+    var steps=GUEST.on?['cover','client','test']:['me','client','test'];
+    var labs =GUEST.on?['🕯️ 대문','① 내 정보','② 성향검사']:['① 내 카드','② 고객 정보','③ 성향검사'];
+    tb.innerHTML=steps.map(function(k,i){
       var off=(k==='test'&&S.mode==='saju');
-      return '<button class="'+(S.step===k?'on':'')+'" onclick="goStep(\''+k+'\')"'+(off?' disabled':'')+'>'+lb+'</button>';
-    }).join('')+(ready(S.cl)?'<button onclick="goStep(\'board\')">④ 결과 보기</button>':'');
+      return '<button class="'+(S.step===k?'on':'')+'" onclick="goStep(\''+k+'\')"'+(off?' disabled':'')+'>'+labs[i]+'</button>';
+    }).join('')+(ready(S.cl)?'<button onclick="goStep(\'board\')">'+(GUEST.on?'③ 내 풀이 보기':'④ 결과 보기')+'</button>':'');
   }
   var vb=$('viewBtn');
   if(vb){
-    vb.style.display=(S.step==='board')?'':'none';
+    vb.style.display=(S.step==='board'&&!GUEST.on)?'':'none';
     vb.className='mecard'+(S.view==='client'?' cl':'');
     var narrow=(window.innerWidth||1000)<520;
     vb.innerHTML=(S.view==='agent'?(narrow?'🔒 내 눈':'🔒 내 눈용'):(narrow?'👀 고객':'👀 고객 화면'));
     vb.title=(S.view==='agent'?'누르면 고객에게 보여줄 화면으로 바뀝니다':'누르면 리스크·화법까지 보이는 내 화면으로 돌아갑니다');
   }
-  $('meBtn').style.display=(S.step==='board'&&S.view==='client')?'none':'';
+  $('meBtn').style.display=(GUEST.on||(S.step==='board'&&S.view==='client'))?'none':'';
   $('meBtn').innerHTML=S.me.name
     ?('👤 '+esc(S.me.name)+((!((window.innerWidth||1000)<520)&&personCode(S.me))?' · '+personCode(S.me):''))
     :((window.innerWidth||1000)<520?'내 카드':'내 카드 설정');
@@ -1218,20 +1219,26 @@ function draw(){
   var mm=(MODES.filter(function(x){return x.k===S.mode;})[0]||MODES[0]);
   sub.textContent=(S.step==='board'&&S.cl.name)
     ?(S.cl.name+' 님'+(personCode(S.cl)?' · '+personCode(S.cl):'')+(S.cl.blood?' · '+S.cl.blood+'형':'')+
-      (S.cl.saju?' · '+gz(S.cl.saju.dg,S.cl.saju.dj)+'일주':'')+' · '+mm.n+(S.view==='client'?' · 고객 화면':''))
+      (S.cl.saju?' · '+gz(S.cl.saju.dg,S.cl.saju.dj)+'일주':'')+' · '+mm.n+((S.view==='client'&&!GUEST.on)?' · 고객 화면':''))
     :(mm.emo+' '+mm.n+' · 48문항 성향검사');
-  if(S.step==='me')v.innerHTML=viewPerson('me');
+  if(S.step==='cover')v.innerHTML=viewCover();
+  else if(S.step==='me')v.innerHTML=viewPerson('me')+shareCard();
   else if(S.step==='client')v.innerHTML=viewPerson('client');
   else if(S.step==='test')v.innerHTML=viewTest();
   else v.innerHTML=viewBoard();
   renderBrand();
-  document.body.classList.toggle('shrine-on', S.step==='board' && S.tab==='dang');
+  var tt=$('topTtl');
+  if(tt)tt.textContent=GUEST.on
+    ?((S.mode==='mbti')?'성향 풀이':(S.mode==='blood')?'혈액형 풀이':'사주 풀이')
+    :'사주 × MBTI 상담카드';
+  document.body.classList.toggle('shrine-on', S.step==='cover' || (S.step==='board' && S.tab==='dang'));
   $('pane').scrollTop=0; hintCheck();
 }
 function gz(g,j){return GAN[g]+JI[j];}
 function gzh(g,j){return GANH[g]+JIH[j];}
 function goStep(k){
-  if(k==='board'&&!ready(S.cl)){toast('고객 정보와 성향을 먼저 채워주세요');return;}
+  if(GUEST.on&&k==='me')return;
+  if(k==='board'&&!ready(S.cl)){toast(GUEST.on?'생년월일과 성향을 먼저 채워주세요':'고객 정보와 성향을 먼저 채워주세요');return;}
   S.step=k;save();draw();
 }
 function goTab(t){S.tab=t;save();draw();$('pane').scrollTop=0;}
@@ -1246,13 +1253,16 @@ function viewPerson(who){
   var intro=isMe
     ? '<div class="card"><h1>먼저 <b style="color:#3182F6">내 카드</b>를 만듭니다</h1>'+
       '<p>궁합과 상담 전략은 <b>나와 고객을 비교</b>해서 나옵니다. 그래서 내 생년월일·시간·성향이 먼저 필요합니다. 한 번만 넣으면 이 기기에 저장됩니다.</p></div>'
-    : '<div class="card"><h1>고객 정보</h1><p>생년월일과 <b>태어난 시간</b>을 넣으면 사주 네 기둥이 자동으로 계산됩니다. 시간을 모르면 시주만 빼고 봅니다.</p>' +
+    : '<div class="card"><h1>'+(GUEST.on?'내 정보':'고객 정보')+'</h1><p>'+
+      (GUEST.on?'태어나신 날과 <b>시간</b>을 넣어 주시면 네 기둥이 자동으로 세워집니다. 시간을 모르시면 시주만 빼고 봅니다.'
+               :'생년월일과 <b>태어난 시간</b>을 넣으면 사주 네 기둥이 자동으로 계산됩니다. 시간을 모르면 시주만 빼고 봅니다.')+'</p>' +
+      (GUEST.on?'':
       '<div class="hr"></div><label>무엇으로 볼까요</label>' +
       '<div class="seg">' + MODES.map(function (m) {
         return '<button class="' + (S.mode === m.k ? 'on' : '') + '" onclick="setMode(\'' + m.k + '\')">' + m.emo + ' ' + m.n + '</button>';
       }).join('') + '</div>' +
-      '<div class="sub" style="margin-top:7px">' + esc((MODES.filter(function (m) { return m.k === S.mode; })[0] || MODES[0]).d) + '</div></div>';
-  var mbtiPick='<div class="card"><h2><span class="n">성향</span>'+(isMe?'내 유형':'고객 유형')+'</h2>'+
+      '<div class="sub" style="margin-top:7px">' + esc((MODES.filter(function (m) { return m.k === S.mode; })[0] || MODES[0]).d) + '</div>')+'</div>';
+  var mbtiPick='<div class="card"><h2><span class="n">성향</span>'+((isMe||GUEST.on)?'내 유형':'고객 유형')+'</h2>'+
     '<p class="sub">이미 알고 있으면 고르고, 모르면 48문항 검사를 하세요. 검사 결과가 더 정확합니다.</p>'+
     '<div class="mbtigrid" style="margin-top:11px">'+TYPE_LIST.map(function(t){
       return '<button class="'+(p.mbti===t&&!p.res?'on':'')+'" onclick="pickType(\''+who+'\',\''+t+'\')">'+t+'</button>';}).join('')+'</div>'+
@@ -1287,7 +1297,8 @@ function viewPerson(who){
     (p.saju?sajuPreview(p):'')+
     '<button class="btn" style="margin-top:14px" onclick="savePerson(\''+who+'\')">'+(isMe?'내 카드 저장':'사주 계산하고 다음')+'</button>'+
   '</div>'+mbtiPick+
-  (isMe?'<div class="foot">내 카드는 이 기기에만 저장됩니다. 고객 정보도 서버로 보내지 않습니다.</div>':'');
+  (isMe?'<div class="foot">내 카드는 이 기기에만 저장됩니다. 고객 정보도 서버로 보내지 않습니다.</div>'
+       :(GUEST.on?'<div class="foot">적어 주신 것은 이 기기에만 남습니다. 저희 쪽으로 넘어가지 않습니다.</div>':''));
 }
 function sajuPreview(p){
   var s=p.saju;
@@ -1424,6 +1435,99 @@ function viewBoard(){
   if(t==='talk')return tabTalk();
   if(t==='saju')return tabSaju();
   return tabSum();
+}
+/* ══════════════════════════════════════════════════════════════════
+   손님용 링크 — 내 것은 내 눈에만
+   ────────────────────────────────────────────────────────────────
+   ?for=client 로 열면 손님 화면으로 잠긴다.
+     · 대문부터 다르다. 설계사용 준비 화면(① 내 카드)이 아예 없다.
+     · 내 눈용으로 바꾸는 버튼이 없다. 눌러서 넘어올 수 없다.
+     · 저장도 다른 칸에 한다. 손님 기기에 내 카드가 섞이지 않고,
+       내가 내 폰에서 손님 링크를 열어봐도 내 자료가 안 건드려진다.
+   ※ 브라우저 안에서 도는 자물쇠다. 개발자도구까지 막지는 못한다.
+     주민번호 같은 걸 넣는 화면이 아니니 이 정도로 충분하다.
+   ══════════════════════════════════════════════════════════════════ */
+var GUEST={on:false};
+(function(){
+  var q=(location.search||'').replace(/^\?/,'').split('&'),i;
+  for(i=0;i<q.length;i++){
+    var kv=q[i].split('='); if(kv.length<2)continue;
+    var k=decodeURIComponent(kv[0]),v=decodeURIComponent(kv[1].replace(/\+/g,' '));
+    if((k==='for'&&v==='client')||(k==='guest'&&v==='1'))GUEST.on=true;
+    if(k==='mode'&&['saju','mbti','blood','both'].indexOf(v)>=0)GUEST.mode=v;
+  }
+})();
+function storeKey(){return GUEST.on?'sajumbti_son':'sajumbti';}
+/* 손님에게 보낼 링크 만들기 */
+function guestLink(){
+  var base=(location.protocol==='file:')
+    ? (location.href.split('?')[0])
+    : (location.origin+location.pathname);
+  var q=['for=client','mode='+encodeURIComponent(S.mode)];
+  if(BRAND.org)q.push('org='+encodeURIComponent(BRAND.org));
+  if(BRAND.hq)q.push('hq='+encodeURIComponent(BRAND.hq));
+  if(BRAND.aplus)q.push('logo1='+encodeURIComponent(BRAND.aplus));
+  if(BRAND.ontop)q.push('logo2='+encodeURIComponent(BRAND.ontop));
+  if(SHRINE.title&&SHRINE.title!=='무당')q.push('title='+encodeURIComponent(SHRINE.title));
+  var who=(S.me&&S.me.name)||PAY.agent;
+  if(who)q.push('agent='+encodeURIComponent(who));
+  if(PAY.tel)q.push('tel='+encodeURIComponent(PAY.tel));
+  return base+'?'+q.join('&');
+}
+function copyGuestLink(){
+  var u=guestLink();
+  function fell(){
+    sheet('손님에게 보낼 링크',
+      '<p class="sub">아래 주소를 길게 눌러 복사해서 보내세요.</p>'+
+      '<textarea class="inp" rows="4" readonly onclick="this.select()" style="margin-top:10px;font-size:12px;word-break:break-all">'+esc(u)+'</textarea>'+
+      '<button class="btn" style="margin-top:12px" onclick="sheetClose()">닫기</button>');
+  }
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(u).then(function(){toast('손님용 링크를 복사했습니다');},fell);
+    }else fell();
+  }catch(e){fell();}
+}
+function shareCard(){
+  if(GUEST.on)return '';
+  return '<div class="card"><h2><span class="n">공유</span>손님에게 보낼 링크</h2>'+
+    '<p class="sub">이 링크로 열면 <b>손님 화면으로 잠깁니다.</b> 내 카드도, 리스크·화법 같은 내 눈용 칸도 보이지 않고 '+
+    '손님은 대문부터 다른 화면을 보게 됩니다.</p>'+
+    '<div class="talk" style="font-size:12px;word-break:break-all">'+esc(guestLink())+'</div>'+
+    '<div class="row" style="margin-top:12px">'+
+      '<button class="btn sm" onclick="copyGuestLink()">🔗 링크 복사</button>'+
+      '<button class="btn line sm" onclick="window.open(guestLink(),\'_blank\')">👀 손님 화면 미리보기</button>'+
+    '</div>'+
+    '<div class="note info">지금 고른 <b>'+esc((MODES.filter(function(m){return m.k===S.mode;})[0]||MODES[0]).n)+'</b> 방식과 상호·로고가 링크에 함께 담깁니다.</div>'+
+  '</div>';
+}
+/* 손님 대문 — 설계사 준비 화면 대신 여기서 시작한다 */
+function viewCover(){
+  var mm=(MODES.filter(function(m){return m.k===S.mode;})[0]||MODES[0]);
+  var gets=(S.mode==='blood')
+    ? ['혈액형으로 보는 나의 결','사람과의 궁합','오늘 바로 쓸 한마디']
+    : (S.mode==='mbti')
+    ? ['48문항으로 보는 내 성향','타고난 강점과 조심할 자리','올해 흐름과 덕담']
+    : ['태어난 날과 시로 세우는 네 기둥','이 사주에 꼭 필요한 기운 한 글자','지금 안고 있는 고민의 뿌리','올해 흐름과 맺는 덕담'];
+  return '<div class="card" style="padding:0;overflow:hidden;border:none;background:transparent">'+
+    '<div class="shr-head">'+
+      '<div style="display:flex;justify-content:center;gap:9px;margin-bottom:16px">'+brandMarks()+'</div>'+
+      '<div class="shr-lamp">🕯️</div>'+
+      '<h1>'+esc(BRAND.org)+' '+esc(BRAND.hq)+'</h1>'+
+      '<div class="who">'+shrineWho()+'</div>'+
+      '<div class="sub2">'+esc(mm.n)+'로 한 분 한 분 풀어 드립니다.<br>생년월일과 <b>태어난 시간</b>만 있으면 됩니다.</div>'+
+    '</div>'+
+  '</div>'+
+  '<div class="card">'+
+    '<div class="say gold"><span class="me">'+shrineWho()+'</span>'+
+    '먼 길 오셨습니다. 바쁘실 텐데 앉으셨으니 <b>허투루 보내지 않겠습니다.</b> '+
+    '태어나신 날과 시만 일러 주시면, 들고 오신 패를 하나씩 풀어 드리겠습니다.</div>'+
+    '<div style="margin-top:16px">'+gets.map(function(t,i){
+      return '<div class="rx"><div class="no">'+(i+1)+'</div><div class="tx">'+esc(t)+'</div></div>';}).join('')+'</div>'+
+    '<button class="btn" style="margin-top:18px" onclick="goStep(\'client\')">🕯️ 들어가기</button>'+
+    '<div class="say quiet" style="margin-top:16px">적어 주신 것은 <b>이 기기에만</b> 남습니다. 저희 쪽으로 넘어가지 않습니다. '+
+    '풀이는 참고로 보시는 것이고, 몸이 아프시면 병원에, 돈이 걸린 결정은 전문가와 함께 확인하십시오.</div>'+
+  '</div>';
 }
 /* ══════════════════════════════════════════════════════════════════
    신당(점집) — 윤시현 무당이 앉아서 풀어드리는 화면
@@ -2202,6 +2306,7 @@ function ohEmblem(p,size){
     '<text x="60" y="74" text-anchor="middle" font-size="42">'+m.emo+'</text></svg>';
 }
 function tabFit(){
+  if(S.view!=='agent')return '<div class="card"><h2>이 화면은 설계사 전용입니다</h2><p>고객 화면에서는 열리지 않습니다.</p></div>';
   if(!ready(S.me))return '<div class="card"><h2>내 카드가 없습니다</h2><p>궁합은 나와 고객을 비교해서 나옵니다. 내 생년월일·시간·성향을 먼저 넣어주세요.</p><button class="btn" style="margin-top:12px" onclick="goStep(\'me\')">내 카드 만들기</button></div>';
   var me=S.me,cl=S.cl,fit=fitCalc(me,cl),mc=personCode(me),cc=personCode(cl);
   function who(p,code){
@@ -2243,6 +2348,7 @@ function tabFit(){
   return head+tb+read+footNote();
 }
 function tabTalk(){
+  if(S.view!=='agent')return '<div class="card"><h2>이 화면은 설계사 전용입니다</h2><p>고객 화면에서는 열리지 않습니다.</p></div>';
   if(!ready(S.me))return '<div class="card"><h2>내 카드가 없습니다</h2><p>"내가 어떻게 말해야 하는지"는 나와 고객을 비교해야 나옵니다.</p><button class="btn" style="margin-top:12px" onclick="goStep(\'me\')">내 카드 만들기</button></div>';
   var me=S.me,cl=S.cl,plan=talkPlan(me,cl),mc=personCode(me),cc=personCode(cl),luck=plan.luck;
   var top='<div class="card"><h1>나는 '+mc+', 고객은 '+cc+'</h1>'+
@@ -2706,6 +2812,7 @@ function insurancePlan(p){
   return {g:g,gi:gi,sipTop:sip?sip.top:'',si:si,lack:lack,many:many,gan:s?GAN_DEEP[s.dg]:null};
 }
 function tabIns(){
+  if(S.view!=='agent')return '<div class="card"><h2>이 화면은 설계사 전용입니다</h2><p>고객 화면에서는 열리지 않습니다.</p></div>';
   var cl=S.cl,ip=insurancePlan(cl),gi=ip.gi,si=ip.si,code=personCode(cl);
   var head='<div class="card"><h1>보험을 어떻게 보는 사람인가</h1>'+
     '<p>같은 상품도 사람마다 사는 이유가 다릅니다. '+esc(cl.name)+' 님은 <b>'+(code||'-')+' · '+gi.n+'</b>'+
@@ -3894,6 +4001,7 @@ function relPlan(me,other,rk){
 }
 function setRel(k){if(S.step==='client')grab('client');S.cl.rel=k;save();draw();}
 function tabRel(){
+  if(S.view!=='agent')return '<div class="card"><h2>이 화면은 설계사 전용입니다</h2><p>고객 화면에서는 열리지 않습니다.</p></div>';
   if(!ready(S.me))return '<div class="card"><h2>내 카드가 없습니다</h2><p>관계는 나와 상대를 비교해야 나옵니다. 내 생년월일·시간·성향을 먼저 넣어주세요.</p><button class="btn" style="margin-top:12px" onclick="goStep(\'me\')">내 카드 만들기</button></div>';
   var cl=S.cl,rk=cl.rel||'client',p=relPlan(S.me,cl,rk),R=p.role,fit=fitCalc(S.me,cl);
   var pick='<div class="card"><h1>이 사람과 어떻게 지낼까</h1>'+
@@ -4032,6 +4140,13 @@ function fitShell(){
     if(d.me)S.me=d.me; if(d.cl)S.cl=d.cl;
     S.ans=d.ans||{};S.i=d.i||0;S.tab=d.tab||'ice';S.mode=d.mode||'both';S.view=d.view||'agent';S.worry=d.worry||{};
     S.step=ready(S.cl)?'board':(S.me.name?'client':'me');
+  }
+  if(GUEST.on){
+    S.view='client';
+    if(GUEST.mode)S.mode=GUEST.mode;
+    if(!d||!ready(S.cl))S.step='cover';
+    var gl=tabsFor(S.mode,'client');
+    if(gl.indexOf(S.tab)<0)S.tab=gl[0];
   }
   fitShell();draw();
   try{tossReturn();}catch(e){}

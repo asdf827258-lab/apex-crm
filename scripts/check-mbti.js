@@ -722,6 +722,82 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   ok(hidden.noSales && hidden.noHow, '영업 가능성과 나의 영업법은 고객 화면에 나오지 않는다');
   ok(hidden.sBlocked && hidden.hBlocked, '고객 화면에서 강제로 열어도 막힌다');
 
+  console.log('\n손님용 링크 — 내 것은 내 눈에만');
+  const glink = await page.evaluate(() => {
+    const u = guestLink();
+    return { u: u, forClient: /[?&]for=client/.test(u), mode: /[?&]mode=/.test(u),
+      org: /[?&]org=/.test(u), card: /손님에게 보낼 링크/.test(shareCard()),
+      hidden: shareCard().length > 0 };
+  });
+  ok(glink.forClient && glink.mode && glink.org, '손님 링크에 손님 표시·방식·상호가 담긴다');
+  ok(glink.card, '내 카드 화면에 손님 링크 카드가 붙는다');
+
+  const g = await ctx.newPage();
+  await g.goto('http://127.0.0.1:' + PORT + '/app/saju-mbti.html?for=client&mode=both&agent=%EC%9C%A4%EC%8B%9C%ED%98%84',
+    { waitUntil: 'domcontentloaded' });
+  await g.waitForTimeout(700);
+  const cover = await g.evaluate(() => ({
+    on: GUEST.on, step: S.step, view: S.view,
+    key: storeKey(),
+    skin: document.body.classList.contains('shrine-on'),
+    txt: document.getElementById('view').textContent.replace(/\s+/g, '').length,
+    brand: /에이플러스에셋/.test(document.getElementById('view').textContent),
+    noMe: document.getElementById('meBtn').style.display === 'none',
+    noView: document.getElementById('viewBtn').style.display === 'none',
+    steps: Array.prototype.map.call(document.querySelectorAll('.tabs button'), b => b.textContent),
+    share: shareCard()
+  }));
+  ok(cover.on && cover.step === 'cover', '손님 링크로 열면 대문부터 뜬다 (설계사 준비 화면이 아니다)');
+  ok(cover.skin && cover.brand && cover.txt > 250, '대문이 점집 화면이고 상호가 박혀 있다 (' + cover.txt + '자)');
+  ok(cover.noMe && cover.noView, '손님 화면에는 내 카드 버튼도, 내 눈용 버튼도 없다');
+  ok(cover.steps.join('|').indexOf('내 카드') < 0 && cover.steps.join('|').indexOf('대문') >= 0,
+     '단계가 손님용으로 바뀐다 — ' + cover.steps.join(' / '));
+  ok(cover.key === 'sajumbti_son', '손님 자료는 다른 칸에 저장한다 (내 카드와 안 섞인다)');
+  ok(cover.share === '', '손님 화면에는 공유 카드도 안 나온다');
+
+  const lock = await g.evaluate(() => {
+    setView('agent');                       // 눌러서 넘어오려는 시도
+    const v1 = S.view;
+    goStep('me');                           // 내 카드로 가려는 시도
+    const s1 = S.step;
+    const agentTabs = tabsFor(S.mode, S.view).filter(t => AGENT_TABS[t]);
+    const blocked = ['risk', 'sales', 'how', 'fit', 'rel', 'talk', 'ins'].every(t => {
+      S.tab = t; const h = viewBoard(); return /설계사 전용입니다/.test(h) || h === '';
+    });
+    S.tab = 'ice';
+    return { v1: v1, s1: s1, nAgent: agentTabs.length, blocked: blocked };
+  });
+  ok(lock.v1 === 'client', '내 눈용으로 바꾸려 해도 손님 화면에 잠겨 있다');
+  ok(lock.s1 !== 'me', '내 카드 화면으로 넘어갈 수 없다');
+  ok(lock.nAgent === 0, '손님 탭 목록에 내 눈용 칸이 하나도 없다');
+  ok(lock.blocked, '주소로 강제로 열어도 내 눈용 칸은 전부 막힌다');
+
+  const gflow = await g.evaluate(() => {
+    goStep('client');
+    const p = S.cl;
+    p.name = '손님'; p.gender = '남'; p.y = 1990; p.m = 5; p.d = 15; p.H = 9; p.Mi = 30;
+    calcPerson(p); p.mbti = 'ISFJ'; p.blood = 'A';
+    S.step = 'board'; S.tab = 'dang'; draw();
+    const t = document.getElementById('view').textContent;
+    return { len: t.replace(/\s+/g, '').length, dang: /앉으시지요/.test(t),
+      tabs: tabsFor(S.mode, S.view).length,
+      sub: document.getElementById('topSub').textContent };
+  });
+  ok(gflow.dang && gflow.len > 1500, '손님이 직접 넣고 신당 풀이까지 받는다 (' + gflow.len + '자)');
+  ok(gflow.tabs === 9, '손님이 보는 칸은 9개다 (' + gflow.tabs + ')');
+  ok(gflow.sub.indexOf('고객 화면') < 0, '손님에게 "고객 화면"이라는 꼬리표를 보이지 않는다');
+  const words = await g.evaluate(() => {
+    goStep('client');
+    const t = document.getElementById('view').textContent;
+    const ttl = document.getElementById('topTtl').textContent;
+    return { noCustomer: !/고객 정보|고객 유형/.test(t), ttl: ttl,
+      mine: /내 정보/.test(t), noMode: !/무엇으로 볼까요/.test(t) };
+  });
+  ok(words.noCustomer && words.mine, '손님 화면에서는 "고객"이 아니라 "내 정보"로 말한다');
+  ok(words.ttl.indexOf('상담카드') < 0, '머리말도 손님용으로 바뀐다 — ' + words.ttl);
+  ok(words.noMode, '방식 고르기는 감춘다 (링크에 이미 담겨 있다)');
+  await g.close();
+
   console.log('\n화면 · 스크롤 칸');
   for (const t of await page.evaluate(() => tabsFor('both'))) {
     await page.evaluate(x => goTab(x), t);
