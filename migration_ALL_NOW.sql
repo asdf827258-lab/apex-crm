@@ -674,7 +674,7 @@ create index if not exists recruits_stage_idx    on public.recruits(stage, creat
 create index if not exists recruits_owner_idx    on public.recruits(recruiter_id, created_at desc);
 /* 같은 번호로 다시 내면 새 줄을 만들지 않고 기존 줄을 갱신한다 */
 create unique index if not exists recruits_phone_uniq
-  on public.recruits(phone_hash) where phone_hash is not null;
+  on public.recruits(phone_hash);
 
 alter table public.recruits enable row level security;
 

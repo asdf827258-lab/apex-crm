@@ -68,9 +68,14 @@ alter table public.recruits add column if not exists updated_at   timestamptz no
 create index if not exists recruits_created_idx  on public.recruits(created_at desc);
 create index if not exists recruits_stage_idx    on public.recruits(stage, created_at desc);
 create index if not exists recruits_owner_idx    on public.recruits(recruiter_id, created_at desc);
-/* 같은 번호로 다시 내면 새 줄을 만들지 않고 기존 줄을 갱신한다 */
+/* 같은 번호로 다시 내면 새 줄을 만들지 않고 기존 줄을 갱신한다.
+   ※ 부분 인덱스(where phone_hash is not null)로 만들면 안 된다 —
+     ON CONFLICT (phone_hash) 가 그 인덱스를 집어내지 못해서 제출이
+     통째로 42P10 으로 떨어진다. PostgREST 의 on_conflict 도 마찬가지다.
+     nullable 칸의 평범한 유니크 인덱스는 NULL 을 서로 다른 값으로 보므로
+     부분 조건 없이도 번호 없는 줄은 여러 개 들어간다. */
 create unique index if not exists recruits_phone_uniq
-  on public.recruits(phone_hash) where phone_hash is not null;
+  on public.recruits(phone_hash);
 
 alter table public.recruits enable row level security;
 
