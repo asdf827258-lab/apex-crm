@@ -24747,9 +24747,98 @@ function rqPaintSeg(){
         '<div class="btn-row" style="margin-top:9px">'+
           '<button class="btn btn-ghost" style="padding:4px 9px;font-size:11px" onclick="rqPick(\'seg'+k+'\')">목록</button>'+
           (list.length?'<button class="btn btn-ghost" style="padding:4px 9px;font-size:11px" onclick="rqSegCsv(\''+k+'\')">⤓ 문구</button>':'')+
+          (list.length?'<button class="btn btn-ghost" style="padding:4px 9px;font-size:11px" onclick="rqSmsPreview(\''+k+'\')">💬 문자</button>':'')+
         '</div>'+
       '</div>';}).join('')+'</div>';
 }
+/* ── 문자 보내기 — 반드시 미리보기를 먼저 거친다 ────────────────
+   돈이 나가는 일이라 한 번에 보내지지 않게 했다.
+   ① 미리보기(dryRun) → 몇 명에게 무엇이 나가는지 확인
+   ② 거기서 한 번 더 눌러야 실제로 나간다
+   보내는 사람 확인·동의 확인·밤 차단·하루 상한은 서버에서 다시 본다. */
+var RQ_SMS = { api: '/api/recruit-sms', busy: false };
+function rqToken() {
+  try { return (OS.session && OS.session.access_token) || ''; } catch (e) { return ''; }
+}
+function rqSmsCall(body, cb) {
+  var t = rqToken();
+  if (!t) { toast('로그인이 필요합니다'); return; }
+  if (RQ_SMS.busy) { toast('보내는 중입니다'); return; }
+  RQ_SMS.busy = true;
+  fetch(RQ_SMS.api, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t },
+    body: JSON.stringify(body)
+  }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    .then(function (x) { RQ_SMS.busy = false; cb(x.ok, x.j || {}); },
+          function () { RQ_SMS.busy = false; cb(false, { message: '연결하지 못했습니다.' }); });
+}
+function rqSmsPreview(seg) {
+  var list = rqSegList(seg).filter(function (r) { return (r.phone || '').replace(/[^0-9]/g, '').length >= 9; });
+  if (!list.length) { toast('이 묶음에 보낼 사람이 없습니다'); return; }
+  var ids = list.map(function (r) { return r.id; });
+  var texts = {}; list.forEach(function (r) { texts[r.id] = rqMsg(r); });
+  toast('보낼 내용을 확인하는 중…');
+  rqSmsCall({ dryRun: true, ids: ids, texts: texts, segment: seg }, function (ok, j) {
+    if (!ok) { rqSmsSheet('<div class="notice">' + osEsc(j.message || '확인하지 못했습니다.') + '</div>'); return; }
+    var skip = (j.skipped || []);
+    var h = '<div style="font-size:13px;line-height:1.7">' +
+      '<b>' + j.count + '명</b>에게 나갑니다. ' + (skip.length ? '<b style="color:#B91C1C">' + skip.length + '명은 빠집니다.</b>' : '') + '</div>' +
+      (skip.length ? '<div style="font-size:11.5px;color:var(--ink-5);margin-top:6px">빠지는 사람 — ' +
+        osEsc(skip.map(function (x) { return (x.name || '') + '(' + x.why + ')'; }).join(', ')) + '</div>' : '') +
+      '<div style="font-size:12px;font-weight:800;color:var(--ink-3);margin-top:12px">이렇게 나갑니다</div>' +
+      (j.preview || []).map(function (p) {
+        return '<div style="background:var(--ink-9);border-radius:10px;padding:10px 12px;margin-top:7px;font-size:12px;line-height:1.65;white-space:pre-wrap">' +
+          '<b>' + osEsc(p.name || '') + '</b> · ' + osEsc(p.to) + '\n' + osEsc(p.text) + '</div>';
+      }).join('') +
+      (j.configured
+        ? '<div class="btn-row" style="margin-top:14px">' +
+            '<button class="btn btn-primary" onclick="rqSmsSend(\'' + seg + '\')">정말 보내기 (' + j.count + '명)</button>' +
+            '<button class="btn btn-ghost" onclick="rqSmsClose()">그만두기</button></div>' +
+          '<div style="font-size:11px;color:var(--ink-5);margin-top:9px;line-height:1.6">' +
+            '밤 21시~08시에는 나가지 않습니다. 하루 상한을 넘으면 거절됩니다. ' +
+            '광고 문구를 보내려면 (광고) 표기와 무료 수신거부 안내가 따로 필요합니다 — ' +
+            '여기 문구는 <b>본인이 상담을 신청한 분께 보내는 회신</b>을 전제로 씁니다.</div>'
+        : '<div class="notice" style="margin-top:14px">' + osEsc(j.message || '') +
+          '<br><br>연결 전에는 위 <b>⤓ 문구</b>로 내려받아 쓰시던 대로 보내시면 됩니다.</div>' +
+          '<div class="btn-row" style="margin-top:10px"><button class="btn btn-ghost" onclick="rqSmsClose()">닫기</button></div>');
+    rqSmsSheet(h);
+  });
+}
+function rqSmsSend(seg) {
+  var list = rqSegList(seg).filter(function (r) { return (r.phone || '').replace(/[^0-9]/g, '').length >= 9; });
+  var ids = list.map(function (r) { return r.id; });
+  var texts = {}; list.forEach(function (r) { texts[r.id] = rqMsg(r); });
+  rqSmsSheet('<div style="font-size:13px;padding:10px 0">보내는 중입니다…</div>');
+  rqSmsCall({ dryRun: false, ids: ids, texts: texts, segment: seg }, function (ok, j) {
+    if (!ok) {
+      rqSmsSheet('<div class="notice">' + osEsc(j.message || '보내지 못했습니다.') + '</div>' +
+        (j.detail ? '<div style="font-size:11px;color:var(--ink-5);margin-top:8px;word-break:break-all">' + osEsc(typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail)) + '</div>' : '') +
+        '<div class="btn-row" style="margin-top:12px"><button class="btn btn-ghost" onclick="rqSmsClose()">닫기</button></div>');
+      return;
+    }
+    rqSmsSheet('<div style="font-size:14px;line-height:1.8"><b style="color:#047857">' + (j.sent || 0) + '명에게 보냈습니다.</b>' +
+      ((j.failed || 0) ? '<br><span style="color:#B91C1C">' + j.failed + '건은 실패했습니다.</span>' : '') + '</div>' +
+      '<div class="btn-row" style="margin-top:12px"><button class="btn btn-ghost" onclick="rqSmsClose()">닫기</button></div>');
+    rqLoad();
+  });
+}
+function rqSmsSheet(inner) {
+  var el = document.getElementById('rqSmsBox');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'rqSmsBox';
+    el.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.45);display:flex;' +
+      'align-items:center;justify-content:center;padding:18px';
+    el.onclick = function (e) { if (e.target === el) rqSmsClose(); };
+    document.body.appendChild(el);
+  }
+  el.innerHTML = '<div style="background:var(--white);border-radius:16px;padding:20px;max-width:520px;width:100%;' +
+    'max-height:84vh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.25)">' +
+    '<div style="font-size:15px;font-weight:800;margin-bottom:10px">💬 문자 보내기</div>' + inner + '</div>';
+}
+function rqSmsClose() { var el = document.getElementById('rqSmsBox'); if (el) el.remove(); }
+
 /* ── 담당자 배정 ───────────────────────────────────────────── */
 function rqOwnerName(id){ for(var i=0;i<RQ.people.length;i++) if(RQ.people[i].id===id) return RQ.people[i].name; return ''; }
 function rqSetOwner(id,owner){
@@ -25532,7 +25621,8 @@ function renderRecruit() {
   '</div></div>' +
   '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🗂️</span>대응 묶음</div>' +
     '<div class="card-desc">같은 사람이라도 <b>지금 전화할 사람 · 자료 먼저 보낼 사람 · 석 달 뒤에 볼 사람 · 검사를 못 끝낸 사람</b>은 할 일이 전혀 다릅니다. ' +
-    '행동 신호로만 나눕니다. 💬 를 누르면 문구를 복사하면서 다음 볼 날짜까지 같이 잡힙니다.</div></div><div class="card-body">' +
+    '행동 신호로만 나눕니다. 💬 를 누르면 문구를 복사하면서 다음 볼 날짜까지 같이 잡힙니다. ' +
+    '<b>💬 문자</b>는 묶음 전체에 한 번에 보냅니다 — 누르면 먼저 미리보기가 뜨고, 거기서 한 번 더 눌러야 나갑니다.</div></div><div class="card-body">' +
     '<div id="rqSeg"></div>' +
   '</div></div>' +
   '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">☎️</span>오늘 연락할 사람 <span class="badge">Top 10</span></div>' +

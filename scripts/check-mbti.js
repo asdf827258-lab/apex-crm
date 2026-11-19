@@ -1362,6 +1362,93 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   ok(sw.mentions, '검증 문구가 고른 기준을 따라 바뀐다');
   await p6.close();
 
+  console.log('\n채용 7단계 — 문자 발송과 장난 제출 막기');
+  const p7 = await ctx.newPage();
+  await p7.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
+  await p7.waitForTimeout(1200);
+
+  /* 미리보기를 거치지 않고는 절대 나가지 않는지 */
+  const smsFlow = await p7.evaluate(() => {
+    function H(n) { return new Date(Date.now() - n * 3600000).toISOString(); }
+    OS.profile = { id: 'p1', name: '윤시현', role: 'admin' };
+    OS.session = { access_token: 'tok-abc' };
+    document.getElementById('dynPane').innerHTML = renderRecruit();
+    RQ.loaded = true; RQ.people = [{ id: 'p1', name: '윤시현' }];
+    const B = { contact_time: '저녁', memo: '말', owner_note: '', day_gz: '', mbti: '', blood: '',
+      elapsed_sec: 400, consistency: 88, next_at: null, source: 'link', recruiter_id: 'p1',
+      stage: 'new', created_at: H(1), contacted_at: null, started_at: null, left_at: null, left_reason: '' };
+    RQ.rows = [
+      Object.assign({}, B, { id: '11111111-1111-1111-1111-111111111111', name: '하나', phone: '01011112222', intent: 'now', finished: true }),
+      Object.assign({}, B, { id: '22222222-2222-2222-2222-222222222222', name: '둘', phone: '01033334444', intent: 'now', finished: true })
+    ];
+    rqPaint();
+    const calls = [];
+    window.fetch = function (u, o) {
+      calls.push({ u: u, body: JSON.parse(o.body), auth: (o.headers || {}).Authorization });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({
+        ok: true, dryRun: true, count: 2, skipped: [], configured: false,
+        preview: [{ to: '010****2222', name: '하나', text: '안녕하세요' }],
+        message: '아직 문자 서비스가 연결되지 않았습니다.' }) });
+    };
+    rqSmsPreview('A');
+    return { n: calls.length, dry: calls[0] && calls[0].body.dryRun, ids: calls[0] && calls[0].body.ids.length,
+      auth: calls[0] && calls[0].auth, url: calls[0] && calls[0].u,
+      hasText: !!(calls[0] && calls[0].body.texts['11111111-1111-1111-1111-111111111111']) };
+  });
+  ok(smsFlow.n === 1 && smsFlow.dry === true,
+     '문자 버튼을 눌러도 바로 나가지 않는다 — 먼저 미리보기(dryRun)로만 부른다');
+  ok(smsFlow.auth === 'Bearer tok-abc' && smsFlow.url === '/api/recruit-sms',
+     '로그인 토큰을 함께 보낸다 (서버가 누가 부르는지 확인할 수 있게)');
+  ok(smsFlow.ids === 2 && smsFlow.hasText, '묶음 전체의 대상과 각자의 문구가 함께 간다');
+
+  await p7.waitForTimeout(60);
+  const smsGuard = await p7.evaluate(() => {
+    const t = document.getElementById('rqSmsBox') ? document.getElementById('rqSmsBox').textContent : '';
+    const hasSend = /정말 보내기/.test(t);
+    const notice = /연결되지 않았습니다/.test(t);
+    rqSmsClose();
+    return { hasSend: hasSend, notice: notice, closed: !document.getElementById('rqSmsBox') };
+  });
+  ok(!smsGuard.hasSend && smsGuard.notice,
+     '문자 서비스가 연결되지 않았으면 "보내기" 단추 자체를 띄우지 않는다');
+  ok(smsGuard.closed, '미리보기 창이 닫힌다');
+
+  const smsReady = await p7.evaluate(async () => {
+    window.fetch = function () {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({
+        ok: true, dryRun: true, count: 2, skipped: [{ name: '셋', why: '동의 없음' }], configured: true,
+        preview: [{ to: '010****2222', name: '하나', text: '안녕하세요' }] }) });
+    };
+    rqSmsPreview('A');
+    await new Promise(r => setTimeout(r, 60));   /* fetch 가 풀릴 때까지 */
+    const box = document.getElementById('rqSmsBox');
+    const t = box ? box.textContent : '';
+    rqSmsClose();
+    return { send: /정말 보내기 \(2명\)/.test(t), skip: /동의 없음/.test(t),
+      night: /21시~08시/.test(t), ad: /광고/.test(t) };
+  });
+  ok(smsReady.send, '연결돼 있으면 몇 명에게 가는지 숫자를 붙여 확인을 받는다');
+  ok(smsReady.skip, '빠지는 사람과 그 이유를 먼저 보여준다');
+  ok(smsReady.night && smsReady.ad, '밤 발송 금지와 광고 표기 규정을 화면에 적는다');
+
+  /* 서버 쪽 — 안전장치가 코드에 실제로 들어 있는지 */
+  const fnSms = fs.readFileSync('netlify/functions/recruit-sms.js', 'utf8');
+  const fnSub = fs.readFileSync('netlify/functions/recruit-submit.js', 'utf8');
+  ok(/auth\/v1\/user/.test(fnSms) && /401/.test(fnSms),
+     '서버가 토큰을 다시 확인한다 — 주소만 알아도 돈을 쓸 수 없다');
+  ok(/consent !== true/.test(fnSms), '동의하지 않은 사람에게는 번호가 있어도 보내지 않는다');
+  ok(/isAdmin && /.test(fnSms) || /!isAdmin/.test(fnSms),
+     '관리자가 아니면 자기 담당에게만 보낸다');
+  ok(/NIGHT_FROM/.test(fnSms) && /SMS_DAILY_CAP/.test(fnSms), '밤 차단과 하루 상한이 서버에 있다');
+  ok(/dryRun = b\.dryRun !== false/.test(fnSms),
+     '서버 기본값이 미리보기다 — 실수로 보내지는 일이 없다');
+  ok(/recruit_sends/.test(fnSms), '보낸 기록을 남긴다');
+  ok(/RATE_PER_HOUR/.test(fnSub) && /429/.test(fnSub),
+     '공개 제출에 시간당 제한이 걸려 있다 (장난 제출 막기)');
+  ok(/ip\|/.test(fnSub) && !/ip:\s*rawIp/.test(fnSub),
+     '주소 원본은 저장하지 않고 소금 섞은 해시만 남긴다');
+  await p7.close();
+
   console.log('\n화면 · 스크롤 칸');
   for (const t of await page.evaluate(() => tabsFor('both'))) {
     await page.evaluate(x => goTab(x), t);

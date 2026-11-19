@@ -20,6 +20,7 @@ const crypto = require("crypto");
 
 const DEFAULT_SUPABASE_URL = "https://miakdhxtqofpndtlyzxa.supabase.co";
 const MAX_BODY = 200 * 1024;          // 본문 상한 — 검사 답안까지 들어와도 넉넉하다
+const RATE_PER_HOUR = 5;              // 한 자리에서 한 시간에 받을 수 있는 제출 수
 const INTENTS = ["now", "soon", "maybe", "no"];
 const SOURCES = ["link", "qr", "seminar"];
 
@@ -87,6 +88,27 @@ exports.handler = async function (event) {
   const salt = process.env.RECRUIT_PHONE_SALT || "apex-recruit";
   const phoneHash = crypto.createHash("sha256").update(salt + "|" + phone).digest("hex");
 
+  /* 같은 자리에서 쏟아지는 장난 제출을 막는다. 주소 원본은 저장하지 않고
+     소금을 섞은 해시만 남긴다 — 누가 어디서 왔는지 알려는 게 아니라
+     한 자리에서 몇 번 넣었는지만 세기 위해서다. */
+  const rawIp = (event.headers["x-nf-client-connection-ip"] ||
+    (event.headers["x-forwarded-for"] || "").split(",")[0] || "").trim();
+  const ipHash = rawIp ? crypto.createHash("sha256").update(salt + "|ip|" + rawIp).digest("hex") : null;
+  if (ipHash) {
+    try {
+      const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const q = SB_URL + "/rest/v1/recruits?select=id&ip_hash=eq." + ipHash +
+        "&created_at=gte." + encodeURIComponent(since) + "&limit=" + (RATE_PER_HOUR + 1);
+      const chk = await fetch(q, { headers: { apikey: SB_KEY, Authorization: "Bearer " + SB_KEY } });
+      if (chk.ok) {
+        const prev = await chk.json();
+        if (Array.isArray(prev) && prev.length >= RATE_PER_HOUR)
+          return { statusCode: 429, headers: cors, body: JSON.stringify({
+            message: "같은 곳에서 너무 여러 번 보내셨습니다. 잠시 후 다시 시도해 주세요." }) };
+      }
+    } catch (e) { /* 세다가 막히면 접수는 막지 않는다 — 진짜 지원자를 놓치는 게 더 나쁘다 */ }
+  }
+
   const recruiterId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     .test(String(b.recruiterId || "")) ? String(b.recruiterId) : null;
 
@@ -98,6 +120,7 @@ exports.handler = async function (event) {
     name: name,
     phone: phone,
     phone_hash: phoneHash,
+    ip_hash: ipHash,
     contact_time: s(b.contactTime, 40),
     intent: pick(b.intent, INTENTS, "maybe"),
     memo: s(b.memo, 500),
