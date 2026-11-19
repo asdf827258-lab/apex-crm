@@ -1286,6 +1286,82 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
      '목록은 무거운 답안·사주 원본을 빼고 가져온다 (브리프에 쓰는 칸은 유지)');
   await p5.close();
 
+  console.log('\n채용 6단계 — 입사 이후 13주 정착');
+  const p6 = await ctx.newPage();
+  await p6.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
+  await p6.waitForTimeout(1200);
+
+  const st = await p6.evaluate(() => {
+    function W(n) { return new Date(Date.now() - n * 7 * 86400000).toISOString(); }
+    function H(n) { return new Date(Date.now() - n * 3600000).toISOString(); }
+    OS.profile = { id: 'p1', name: '윤시현', role: 'admin' };
+    document.getElementById('dynPane').innerHTML = renderRecruit();
+    RQ.loaded = true; RQ.period = 0; RQ.outcome = 'join'; RQ.people = [{ id: 'p1', name: '윤시현' }];
+    const B = { phone: '01000000000', contact_time: '저녁', memo: '말', owner_note: '', day_gz: '갑자',
+      blood: 'O', mbti: 'ENFP', birth_y: 1994, birth_m: 8, birth_d: 3, birth_h: 14, elapsed_sec: 400,
+      finished: true, consistency: 88, next_at: null, source: 'seminar', recruiter_id: 'p1',
+      intent: 'now', stage: 'joined', contacted_at: H(500), met_at: H(480),
+      started_at: null, left_at: null, left_reason: '' };
+    RQ.rows = [
+      Object.assign({}, B, { id: 's1', name: '정착자', created_at: W(20), joined_at: W(18), started_at: W(17) }),
+      Object.assign({}, B, { id: 's2', name: '진행중', created_at: W(6),  joined_at: W(5),  started_at: W(5) }),
+      Object.assign({}, B, { id: 's3', name: '이탈자', created_at: W(12), joined_at: W(11), started_at: W(10),
+        left_at: W(4), left_reason: '지인시장이 마르고 다음 채널을 못 찾음' }),
+      Object.assign({}, B, { id: 's4', name: '위촉전', created_at: W(1),  joined_at: W(0.5) }),
+      Object.assign({}, B, { id: 'c1', name: '종료자', stage: 'closed', joined_at: null, created_at: W(9) })
+    ];
+    rqPaint();
+    const S = rqStats(), t = document.getElementById('rqStay').textContent;
+    const g = n => RQ.rows.filter(r => r.name === n)[0];
+    return {
+      w17: rqWeeks(g('정착자')), w5: rqWeeks(g('진행중')), wLeft: rqWeeks(g('이탈자')), wNone: rqWeeks(g('위촉전')),
+      stayed: rqStayed(g('정착자')), notYet: rqStayed(g('진행중')),
+      leftNotStay: rqStayed(g('이탈자')), isLeft: rqLeft(g('이탈자')),
+      funnelStay: S.stay, funnelJoin: S.join,
+      hasStayStep: /13주 정착/.test(document.getElementById('rqStats').textContent),
+      reason: /지인시장이 마르고/.test(t), next: /다음 고비/.test(t),
+      noDate: /위촉일 없음/.test(t), rate: /50%/.test(t)
+    };
+  });
+  ok(st.w17 === 17 && st.w5 === 5, '위촉일에서 주차를 센다 (' + st.w17 + '주 / ' + st.w5 + '주)');
+  ok(st.wLeft === 6, '그만둔 사람은 그만둔 날까지만 센다 (' + st.wLeft + '주)');
+  ok(st.wNone === null && st.noDate, '위촉일이 없으면 주차를 세지 않고 그렇다고 표시한다');
+  ok(st.stayed && !st.notYet && !st.leftNotStay && st.isLeft,
+     '13주를 넘기고 안 나간 사람만 정착으로 본다');
+  ok(st.funnelJoin === 4 && st.funnelStay === 1 && st.hasStayStep,
+     '퍼널에 정착 칸이 붙는다 — 입사 ' + st.funnelJoin + ' → 정착 ' + st.funnelStay);
+  ok(st.reason && st.next, '그만둔 이유를 남기고, 진행 중인 사람에게는 다음 고비를 알려 준다');
+  ok(st.rate, '정착률을 낸다 (결론 난 건만 놓고)');
+
+  const sw = await p6.evaluate(() => {
+    function W(n) { return new Date(Date.now() - n * 7 * 86400000).toISOString(); }
+    const B = { phone: '0', contact_time: '저녁', memo: '말', intent: 'now', finished: true,
+      consistency: 88, elapsed_sec: 400, next_at: null, source: 'link', recruiter_id: null,
+      stage: 'joined', left_at: null, left_reason: '', day_gz: '', mbti: '', blood: '' };
+    const rows = [];
+    /* 입사는 했지만 반은 13주 전에 나간 상황 */
+    for (let i = 0; i < 12; i++) rows.push(Object.assign({}, B, { id: 'a' + i, name: '남' + i,
+      created_at: W(30), joined_at: W(28), started_at: W(20) }));
+    for (let i = 0; i < 12; i++) rows.push(Object.assign({}, B, { id: 'b' + i, name: '간' + i,
+      created_at: W(30), joined_at: W(28), started_at: W(20), left_at: W(14), left_reason: '적응 못함' }));
+    RQ.rows = rows;
+    RQ.outcome = 'join';
+    const byJoin = { decided: RQ.rows.filter(rqDecided).length, won: RQ.rows.filter(rqWon).length, n: rqOutcomeName() };
+    RQ.outcome = 'stay';
+    const byStay = { decided: RQ.rows.filter(rqDecided).length, won: RQ.rows.filter(rqWon).length, n: rqOutcomeName() };
+    const ready = rqStayReady();
+    rqPaint();
+    const t = document.getElementById('rqStats').textContent;
+    RQ.outcome = 'join';
+    return { byJoin: byJoin, byStay: byStay, ready: ready.ok, mentions: /13주 정착율|13주 정착/.test(t) };
+  });
+  ok(sw.byJoin.won === 24 && sw.byStay.won === 12,
+     '성공 기준을 바꾸면 결과가 달라진다 — 입사로 보면 ' + sw.byJoin.won + '명, 정착으로 보면 ' + sw.byStay.won + '명');
+  ok(sw.byStay.decided === 24 && sw.ready,
+     '정착 결론이 충분히 쌓이면 정착 기준으로 보라고 권한다');
+  ok(sw.mentions, '검증 문구가 고른 기준을 따라 바뀐다');
+  await p6.close();
+
   console.log('\n화면 · 스크롤 칸');
   for (const t of await page.evaluate(() => tabsFor('both'))) {
     await page.evaluate(x => goTab(x), t);

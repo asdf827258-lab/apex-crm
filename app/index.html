@@ -24389,7 +24389,7 @@ function mbtiDelete(id) {
      신호(끝까지 했는가, 얼마나 걸렸는가, 본인이 밝힌 의향)뿐이다.
      검사 결과는 "어떻게 대할지"를 보는 데만 쓴다.
    ════════════════════════════════════════════════════════════════ */
-var RQ = { rows: [], stage: 'all', q: '', loaded: false, err: '', sort: 'score', people: [], board: false, timer: null, period: 30 };
+var RQ = { rows: [], stage: 'all', q: '', loaded: false, err: '', sort: 'score', people: [], board: false, timer: null, period: 30, outcome: 'join' };
 function rqSort(){ RQ.sort = (RQ.sort === 'score') ? 'new' : 'score'; rqPaint(); }
 var RQ_STAGE = [
   { k: 'new',       n: '새 접수', c: '#1A56DB', bg: '#EFF6FF' },
@@ -24912,14 +24912,12 @@ var RQ_SIG = [
   { k:'goodRun',     n:'검사에 3~30분 씀',     on:function(r){var e=r.elapsed_sec||0;return e>=180&&e<=1800;} }
 ];
 function rqLift() {
-  var decided = RQ.rows.filter(function (r) {
-    return (r.joined_at || r.stage === 'joined') || r.stage === 'closed';
-  });
-  var joined = decided.filter(function (r) { return r.joined_at || r.stage === 'joined'; }).length;
+  var decided = RQ.rows.filter(rqDecided);
+  var joined = decided.filter(rqWon).length;
   var rows = RQ_SIG.map(function (s) {
     var yes = decided.filter(s.on), no = decided.filter(function (r) { return !s.on(r); });
-    var yj = yes.filter(function (r) { return r.joined_at || r.stage === 'joined'; }).length;
-    var nj = no.filter(function (r) { return r.joined_at || r.stage === 'joined'; }).length;
+    var yj = yes.filter(rqWon).length;
+    var nj = no.filter(rqWon).length;
     var p1 = yes.length ? yj * 100 / yes.length : null;
     var p0 = no.length ? nj * 100 / no.length : null;
     var thin = (yes.length < 5 || no.length < 5);
@@ -25052,6 +25050,150 @@ function rqPing() {
 }
 
 /* ════════════════════════════════════════════════════════════════
+   채용 6단계 — 입사 이후. 13주를 넘기는가
+   ----------------------------------------------------------------
+   입사는 결과가 아니라 중간 지점이다. 13주를 못 넘기고 나가면 뽑느라
+   쓴 시간이 통째로 사라진다. 그래서 4단계의 점수 검증도 "입사"가
+   아니라 "정착"을 기준으로 볼 수 있게 열어 둔다.
+   ════════════════════════════════════════════════════════════════ */
+var RQ_STAY_WEEKS = 13;
+var RQ_CHECK = [
+  { w: 1,  n: '1주',  d: '기본 교육과 첫 활동. 여기서 안 나오면 거의 못 잡는다.' },
+  { w: 4,  n: '4주',  d: '지인시장이 슬슬 마른다. 다음 채널을 심어야 하는 때.' },
+  { w: 8,  n: '8주',  d: '첫 슬럼프 구간. 활동량이 먼저 무너진다.' },
+  { w: 13, n: '13주', d: '정착 판정. 여기를 넘기면 오래 간다.' }
+];
+function rqWeeks(r) {
+  if (!r.started_at) return null;
+  var end = r.left_at ? new Date(r.left_at).getTime() : Date.now();
+  var w = (end - new Date(r.started_at).getTime()) / (7 * 86400000);
+  return w < 0 ? 0 : Math.floor(w);
+}
+function rqStayed(r) { var w = rqWeeks(r); return w != null && w >= RQ_STAY_WEEKS && !r.left_at; }
+function rqLeft(r) { return !!r.left_at; }
+function rqStarted(r) { return !!r.started_at; }
+/* 결과를 무엇으로 볼 것인가 — 입사냐, 13주 정착이냐 */
+function rqWon(r) {
+  if (RQ.outcome === 'stay') return rqStayed(r);
+  return !!(r.joined_at || r.stage === 'joined');
+}
+function rqDecided(r) {
+  if (RQ.outcome === 'stay') return rqStayed(r) || rqLeft(r);
+  return !!(r.joined_at || r.stage === 'joined') || r.stage === 'closed';
+}
+function rqOutcomeName() { return RQ.outcome === 'stay' ? '13주 정착' : '입사'; }
+function rqSetOutcome(v) { RQ.outcome = v; rqPaint(); }
+/* 정착 쪽으로 볼 만큼 쌓였는지 */
+function rqStayReady() {
+  var d = RQ.rows.filter(function (r) { return rqStayed(r) || rqLeft(r); }).length;
+  var s = RQ.rows.filter(rqStayed).length;
+  return { decided: d, stayed: s, ok: (d >= 20 && s >= 5) };
+}
+/* ── 입사 이후 화면 ───────────────────────────────────────── */
+function rqStartSet(id, v) {
+  var sb = osClient(); if (!sb) return;
+  var at = v ? new Date(v + 'T09:00:00').toISOString() : null;
+  sb.from('recruits').update({ started_at: at, updated_at: new Date().toISOString() }).eq('id', id)
+    .then(function (res) {
+      if (res && res.error) { toast('위촉일 저장 실패'); return; }
+      for (var i = 0; i < RQ.rows.length; i++) if (RQ.rows[i].id === id) RQ.rows[i].started_at = at;
+      toast(at ? '위촉일을 적었습니다 — 여기서부터 주차를 셉니다' : '위촉일을 지웠습니다');
+      rqPaint();
+    }, function () { toast('위촉일 저장 실패'); });
+}
+function rqLeave(id) {
+  var r = null, i;
+  for (i = 0; i < RQ.rows.length; i++) if (RQ.rows[i].id === id) r = RQ.rows[i];
+  if (!r) return;
+  if (r.left_at) {
+    if (!confirm(r.name + ' 님의 이탈 기록을 지우고 다시 활동 중으로 돌릴까요?')) return;
+    var sb0 = osClient(); if (!sb0) return;
+    sb0.from('recruits').update({ left_at: null, left_reason: '', updated_at: new Date().toISOString() })
+      .eq('id', id).then(function (res) {
+        if (res && res.error) { toast('되돌리기 실패'); return; }
+        r.left_at = null; r.left_reason = ''; toast('활동 중으로 되돌렸습니다'); rqPaint();
+      }, function () { toast('되돌리기 실패'); });
+    return;
+  }
+  var why = window.prompt(r.name + ' 님이 그만둔 이유를 한 줄로 적어 주세요.\n(다음 채용에서 가장 값진 정보입니다)', '');
+  if (why === null) return;
+  var sb = osClient(); if (!sb) return;
+  sb.from('recruits').update({ left_at: new Date().toISOString(), left_reason: (why || '').slice(0, 200),
+    updated_at: new Date().toISOString() }).eq('id', id).then(function (res) {
+      if (res && res.error) { toast('저장 실패'); return; }
+      r.left_at = new Date().toISOString(); r.left_reason = (why || '').slice(0, 200);
+      toast('이탈로 기록했습니다'); rqPaint();
+    }, function () { toast('저장 실패'); });
+}
+function rqPaintStay() {
+  var host = document.getElementById('rqStay'); if (!host) return;
+  var joined = RQ.rows.filter(function (r) { return r.joined_at || r.stage === 'joined'; });
+  if (!joined.length) {
+    host.innerHTML = '<div style="font-size:12.5px;color:var(--ink-5);padding:14px;line-height:1.7">' +
+      '아직 입사한 분이 없습니다. 대기열에서 <b>입사</b>로 옮기면 여기에 올라옵니다.</div>';
+    return;
+  }
+  var stayed = joined.filter(rqStayed).length, left = joined.filter(rqLeft).length;
+  var running = joined.length - stayed - left;
+  var leftW = rqAvg(joined.filter(rqLeft).map(rqWeeks));
+  var sum = '<div class="btn-row" style="gap:18px;flex-wrap:wrap">' +
+    '<div><div style="font-size:11.5px;color:var(--ink-5);font-weight:800">입사</div>' +
+      '<div style="font-size:26px;font-weight:900;letter-spacing:-.04em">' + joined.length + '</div></div>' +
+    '<div><div style="font-size:11.5px;color:var(--ink-5);font-weight:800">13주 정착</div>' +
+      '<div style="font-size:26px;font-weight:900;letter-spacing:-.04em;color:#047857">' + stayed + '</div></div>' +
+    '<div><div style="font-size:11.5px;color:var(--ink-5);font-weight:800">이탈</div>' +
+      '<div style="font-size:26px;font-weight:900;letter-spacing:-.04em;color:#B91C1C">' + left + '</div></div>' +
+    '<div><div style="font-size:11.5px;color:var(--ink-5);font-weight:800">진행 중</div>' +
+      '<div style="font-size:26px;font-weight:900;letter-spacing:-.04em;color:var(--ink-4)">' + running + '</div></div>' +
+    ((stayed + left) ? '<div><div style="font-size:11.5px;color:var(--ink-5);font-weight:800">정착률</div>' +
+      '<div style="font-size:26px;font-weight:900;letter-spacing:-.04em;color:#1A56DB">' + rqPct(stayed, stayed + left) + '%</div></div>' : '') +
+    (leftW != null ? '<div><div style="font-size:11.5px;color:var(--ink-5);font-weight:800">이탈까지</div>' +
+      '<div style="font-size:26px;font-weight:900;letter-spacing:-.04em">' + Math.round(leftW) + '주</div></div>' : '') +
+  '</div>';
+  var rows = joined.slice().sort(function (a, b) {
+    var wa = rqWeeks(a), wb = rqWeeks(b);
+    if (wa == null) return -1; if (wb == null) return 1; return wa - wb;
+  }).map(function (r) {
+    var w = rqWeeks(r), ymd = r.started_at ? ('' + r.started_at).slice(0, 10) : '';
+    var st = rqLeft(r) ? { t: '이탈 (' + w + '주차)', c: '#B91C1C', bg: '#FEF2F2' }
+           : rqStayed(r) ? { t: '정착', c: '#047857', bg: '#ECFDF5' }
+           : (w == null) ? { t: '위촉일 없음', c: '#C2410C', bg: '#FFF7ED' }
+           : { t: w + '주차 진행 중', c: '#1A56DB', bg: '#EFF6FF' };
+    /* 지금 주차에서 가장 가까운 체크포인트 */
+    var next = null, i;
+    if (w != null && !rqLeft(r) && !rqStayed(r))
+      for (i = 0; i < RQ_CHECK.length; i++) if (RQ_CHECK[i].w > w) { next = RQ_CHECK[i]; break; }
+    var bar = (w == null) ? '' : (function () {
+      var pct = Math.min(100, Math.round(w * 100 / RQ_STAY_WEEKS));
+      return '<div style="height:6px;border-radius:99px;background:var(--ink-7);margin-top:8px;overflow:hidden">' +
+        '<div style="height:100%;width:' + pct + '%;background:' + st.c + ';border-radius:99px"></div></div>';
+    })();
+    return '<div style="border:1px solid var(--ink-8);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:var(--white)">' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+        '<b style="font-size:13.5px">' + osEsc(r.name || '-') + '</b>' +
+        '<span style="font-size:10.5px;font-weight:800;color:' + st.c + ';background:' + st.bg + ';border-radius:999px;padding:2px 9px">' + st.t + '</span>' +
+        (rqOwnerName(r.recruiter_id) ? '<span class="badge">' + osEsc(rqOwnerName(r.recruiter_id)) + '</span>' : '') +
+        '<span style="margin-left:auto;font-size:11px;color:var(--ink-5)">위촉 ' +
+          '<input type="date" value="' + osEsc(ymd) + '" onchange="rqStartSet(\'' + r.id + '\',this.value)" ' +
+          'style="padding:3px 6px;border:1px solid var(--ink-7);border-radius:7px;font-size:11px;font-family:inherit"></span>' +
+      '</div>' + bar +
+      (next ? '<div style="font-size:11.5px;color:var(--ink-4);margin-top:7px">다음 고비 <b>' + next.n + '</b> — ' + osEsc(next.d) + '</div>' : '') +
+      (r.left_reason ? '<div style="font-size:12px;color:#B91C1C;background:#FEF2F2;border-radius:9px;padding:8px 10px;margin-top:8px">그만둔 이유 — ' + osEsc(r.left_reason) + '</div>' : '') +
+      '<div class="btn-row" style="margin-top:9px">' +
+        '<button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="rqBrief(\'' + r.id + '\')">📋 브리프</button>' +
+        '<button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="go(\'academy\')">🎓 90일 과정</button>' +
+        '<button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;color:' + (rqLeft(r) ? '#047857' : '#B91C1C') + '" onclick="rqLeave(\'' + r.id + '\')">' +
+          (rqLeft(r) ? '↩ 활동 중으로' : '✕ 이탈 기록') + '</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  var guide = '<div style="font-size:11.5px;color:var(--ink-5);line-height:1.7;margin-top:12px">' +
+    '위촉일을 넣어야 주차가 셉니다. 입사 단계로 옮긴 날과 실제 출근 시작일이 다를 수 있어 따로 받습니다. ' +
+    '고비는 <b>1주 · 4주 · 8주 · 13주</b>입니다. 브리프를 다시 열면 그 사람이 어디서 흔들리는지 적혀 있습니다.</div>';
+  host.innerHTML = sum + '<div style="margin-top:14px">' + rows + '</div>' + guide;
+}
+
+/* ════════════════════════════════════════════════════════════════
    채용 성과판 — 무엇이 통했는지, 그리고 내 점수가 맞는지
    ----------------------------------------------------------------
    ※ 점수 검증을 할 때는 날짜에서 오는 점수(오늘 들어왔다 / 묵었다)를
@@ -25063,7 +25205,8 @@ function rqPing() {
    면담 브리프에 쓰는 생년월일·유형·혈액형은 들어 있다. */
 var RQ_COLS = 'id,org,recruiter,recruiter_id,source,name,phone,contact_time,intent,memo,' +
   'gender,birth_y,birth_m,birth_d,birth_h,no_time,mbti,blood,day_gz,consistency,finished,' +
-  'elapsed_sec,stage,owner_note,created_at,updated_at,next_at,assigned_at,contacted_at,met_at,joined_at';
+  'elapsed_sec,stage,owner_note,created_at,updated_at,next_at,assigned_at,contacted_at,met_at,joined_at,' +
+  'started_at,left_at,left_reason';
 var RQ_PERIOD = [{ k: 7, n: '7일' }, { k: 30, n: '30일' }, { k: 90, n: '90일' }, { k: 0, n: '전체' }];
 function rqInPeriod(r) {
   if (!RQ.period) return true;
@@ -25091,13 +25234,14 @@ function rqStats() {
   var con = rows.filter(function (r) { return r.contacted_at || ['contacted', 'met', 'joined'].indexOf(r.stage) >= 0; }).length;
   var met = rows.filter(function (r) { return r.met_at || ['met', 'joined'].indexOf(r.stage) >= 0; }).length;
   var join = rows.filter(function (r) { return r.joined_at || r.stage === 'joined'; }).length;
+  var stay = rows.filter(rqStayed).length;
   var resp = rqAvg(rows.map(function (r) { return rqHours(r.created_at, r.contacted_at); }));
   var toJoin = rqAvg(rows.map(function (r) { return rqHours(r.created_at, r.joined_at); }));
   /* 48시간 넘게 손 안 댄 건 — 여기가 가장 많이 새는 자리다 */
   var cold = rows.filter(function (r) {
     return r.stage === 'new' && !r.contacted_at && rqDays(r.created_at) >= 2;
   }).length;
-  return { rows: rows, got: got, con: con, met: met, join: join, resp: resp, toJoin: toJoin, cold: cold };
+  return { rows: rows, got: got, con: con, met: met, join: join, stay: stay, resp: resp, toJoin: toJoin, cold: cold };
 }
 function rqPct(a, b) { return b ? Math.round(a * 1000 / b) / 10 : 0; }
 /* 유입 경로별 · 담당자별 */
@@ -25121,18 +25265,19 @@ function rqBy(rows, keyFn) {
 var RQ_BUCKET = [{ lo: 0, hi: 44, n: '0–44' }, { lo: 45, hi: 61, n: '45–61' },
                  { lo: 62, hi: 77, n: '62–77' }, { lo: 78, hi: 100, n: '78–100' }];
 function rqValidate() {
-  var decided = RQ.rows.filter(function (r) {
-    return (r.joined_at || r.stage === 'joined') || r.stage === 'closed';
-  });
+  /* 결과를 무엇으로 볼지는 고를 수 있다 — 입사냐, 13주 정착이냐.
+     입사는 중간 지점이다. 13주를 못 넘기면 뽑은 시간이 사라진다. */
+  var W = rqOutcomeName();
+  var decided = RQ.rows.filter(rqDecided);
   var buckets = RQ_BUCKET.map(function (b) {
     var inB = decided.filter(function (r) {
       var s = rqScore(r).base; return s >= b.lo && s <= b.hi;
     });
-    var j = inB.filter(function (r) { return r.joined_at || r.stage === 'joined'; }).length;
+    var j = inB.filter(rqWon).length;
     return { n: b.n, cnt: inB.length, join: j, pct: rqPct(j, inB.length) };
   });
-  var joined = decided.filter(function (r) { return r.joined_at || r.stage === 'joined'; });
-  var closed = decided.filter(function (r) { return r.stage === 'closed'; });
+  var joined = decided.filter(rqWon);
+  var closed = decided.filter(function (r) { return !rqWon(r); });
   var mj = rqAvg(joined.map(function (r) { return rqScore(r).base; }));
   var mc = rqAvg(closed.map(function (r) { return rqScore(r).base; }));
   var hi = buckets[2].cnt + buckets[3].cnt, hiJ = buckets[2].join + buckets[3].join;
@@ -25141,19 +25286,19 @@ function rqValidate() {
   var v;
   if (decided.length < 20 || joined.length < 5)
     v = { t: '아직 판단할 수 없습니다', c: '#64748B', bg: '#F1F5F9',
-      d: '결론이 난 건이 <b>' + decided.length + '건</b>(입사 ' + joined.length + '건)뿐입니다. ' +
-         '적어도 <b>결론 20건 · 입사 5건</b>은 쌓여야 점수가 맞는지 말할 수 있습니다. ' +
+      d: '결론이 난 건이 <b>' + decided.length + '건</b>(' + W + ' ' + joined.length + '건)뿐입니다. ' +
+         '적어도 <b>결론 20건 · ' + W + ' 5건</b>은 쌓여야 점수가 맞는지 말할 수 있습니다. ' +
          '그때까지는 점수를 참고로만 쓰세요.' };
   else if (!hi || !lo)
     v = { t: '한쪽 구간에만 몰려 있습니다', c: '#C2410C', bg: '#FFF7ED',
       d: '점수가 높은 쪽이나 낮은 쪽 한 곳에만 결론이 쌓여 비교가 안 됩니다. 더 모여야 합니다.' };
   else if (hiP >= loP * 1.3)
     v = { t: '점수가 맞게 가고 있습니다', c: '#047857', bg: '#ECFDF5',
-      d: '높은 점수대 입사율 <b>' + hiP + '%</b>, 낮은 점수대 <b>' + loP + '%</b>. ' +
+      d: '높은 점수대 ' + W + '율 <b>' + hiP + '%</b>, 낮은 점수대 <b>' + loP + '%</b>. ' +
          '위에서부터 연락하는 것이 실제로 성과로 이어지고 있습니다.' };
   else if (loP > hiP)
     v = { t: '점수가 거꾸로 가고 있습니다', c: '#B91C1C', bg: '#FEF2F2',
-      d: '낮은 점수대 입사율 <b>' + loP + '%</b>가 높은 점수대 <b>' + hiP + '%</b>보다 높습니다. ' +
+      d: '낮은 점수대 ' + W + '율 <b>' + loP + '%</b>가 높은 점수대 <b>' + hiP + '%</b>보다 높습니다. ' +
          '지금 가중치는 현장과 맞지 않습니다. <b>점수를 믿고 순서를 정하지 마세요.</b> ' +
          '어떤 신호가 실제로 통했는지 다시 봐야 합니다.' };
   else
@@ -25171,9 +25316,10 @@ function rqPaintStats() {
     { n: '접수', v: s.got, c: '#64748B' },
     { n: '연락', v: s.con, c: '#1A56DB' },
     { n: '면담', v: s.met, c: '#7C3AED' },
-    { n: '입사', v: s.join, c: '#047857' }
+    { n: '입사', v: s.join, c: '#047857' },
+    { n: '13주 정착', v: s.stay, c: '#0E7490' }
   ];
-  var funnel = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:12px">' +
+  var funnel = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin-top:12px">' +
     steps.map(function (x, i) {
       var pct = i === 0 ? 100 : rqPct(x.v, s.got);
       var prev = i === 0 ? null : rqPct(x.v, steps[i - 1].v);
@@ -25222,7 +25368,18 @@ function rqPaintStats() {
   var val = '<div style="margin-top:18px;border-top:1px solid var(--ink-7);padding-top:14px">' +
     '<div style="font-size:12.5px;font-weight:800;color:var(--ink-3)">우선순위 점수가 실제로 맞았나</div>' +
     '<div style="font-size:11.5px;color:var(--ink-5);line-height:1.6;margin-top:5px">' +
-      '결론이 난 건(입사·종료)만 봅니다. 날짜에서 오는 점수는 빼고 계산해서, 오래된 건이 불리해지지 않게 했습니다.</div>' +
+      '결론이 난 건만 봅니다. 날짜에서 오는 점수는 빼고 계산해서, 오래된 건이 불리해지지 않게 했습니다.</div>' +
+    (function () {
+      var sr = rqStayReady();
+      return '<div class="btn-row" style="margin-top:9px">' +
+        '<span style="font-size:11.5px;color:var(--ink-5);font-weight:800">무엇을 성공으로 볼까</span>' +
+        '<button class="btn ' + (RQ.outcome === 'join' ? 'btn-primary' : 'btn-ghost') + '" style="padding:4px 11px;font-size:11.5px" onclick="rqSetOutcome(\'join\')">입사</button>' +
+        '<button class="btn ' + (RQ.outcome === 'stay' ? 'btn-primary' : 'btn-ghost') + '" style="padding:4px 11px;font-size:11.5px" onclick="rqSetOutcome(\'stay\')">13주 정착</button>' +
+        '<span style="font-size:11px;color:var(--ink-5)">' +
+          (sr.ok ? '정착 자료가 쌓였습니다 — <b>13주 정착</b>으로 보는 편이 맞습니다'
+                 : '정착 결론 ' + sr.decided + '건 · 정착 ' + sr.stayed + '명. 20건·5명이 되면 정착 기준으로 보세요') +
+        '</span></div>';
+    })() +
     '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:9px">' +
     '<thead><tr style="color:var(--ink-5)"><th style="text-align:left;padding:5px">점수대</th>' +
     '<th style="text-align:right;padding:5px">결론 난 건</th><th style="text-align:right;padding:5px">입사</th>' +
@@ -25238,8 +25395,8 @@ function rqPaintStats() {
       '<div style="font-size:12px;color:var(--ink-3);line-height:1.7;margin-top:5px">' + v.verdict.d + '</div>' +
     '</div>' +
     (v.meanJoin != null && v.meanClosed != null
-      ? '<div style="font-size:11.5px;color:var(--ink-5);margin-top:8px">입사한 분들의 평균 점수 <b>' + Math.round(v.meanJoin) +
-        '</b> · 종료된 분들 <b>' + Math.round(v.meanClosed) + '</b> (날짜 점수 제외)</div>' : '') +
+      ? '<div style="font-size:11.5px;color:var(--ink-5);margin-top:8px">' + rqOutcomeName() + '한 분들의 평균 점수 <b>' + Math.round(v.meanJoin) +
+        '</b> · 그렇지 않은 분들 <b>' + Math.round(v.meanClosed) + '</b> (날짜 점수 제외)</div>' : '') +
   '</div>';
   host.innerHTML = funnel + speed + bySrc + byOwn + val;
 }
@@ -25403,6 +25560,12 @@ function renderRecruit() {
     '<div id="rqPeriod" style="display:flex;gap:6px;flex-wrap:wrap"></div>' +
     '<div id="rqStats"></div>' +
   '</div></div>' +
+  '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🌱</span>입사 이후 · 13주 정착</div>' +
+    '<div class="card-desc">입사는 결과가 아니라 중간 지점입니다. <b>13주를 못 넘기면 뽑느라 쓴 시간이 통째로 사라집니다.</b> ' +
+    '위촉일을 넣으면 주차가 저절로 세어지고, 1·4·8·13주 고비를 알려 줍니다. ' +
+    '그만두면 이유를 남기세요 — 다음 채용에서 가장 값진 정보입니다.</div></div><div class="card-body">' +
+    '<div id="rqStay"></div>' +
+  '</div></div>' +
   '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🎚️</span>우선순위 점수 조정</div>' +
     '<div class="card-desc">성과판이 "점수가 안 맞는다"고 하면 여기서 고칩니다. ' +
     '숫자를 바꾸면 <b>오늘 연락할 사람 순서가 바로 다시</b> 섭니다. 저장하면 팀 전체가 같은 기준을 씁니다. ' +
@@ -25463,7 +25626,7 @@ function rqPaint() {
   if(pe) pe.innerHTML=RQ_PERIOD.map(function(x){
     return '<button class="btn '+(RQ.period===x.k?'btn-primary':'btn-ghost')+
       '" style="padding:5px 11px;font-size:11.5px" onclick="rqSetPeriod('+x.k+')">'+x.n+'</button>';}).join('');
-  rqPaintStats(); rqPaintTune(); rqBadge();
+  rqPaintStats(); rqPaintStay(); rqPaintTune(); rqBadge();
   var sb = document.getElementById('rqSortBtn');
   if (sb) sb.textContent = (RQ.sort === 'new') ? '↕ 최신순' : '↕ 우선순위순';
   var rows = rqFiltered();
@@ -25568,12 +25731,14 @@ function rqNote(id, v) {
 function rqCsv() {
   var rows = rqFiltered();
   if (!rows.length) { toast('내보낼 후보가 없습니다'); return; }
-  var head = ['우선순위', '이름', '연락처', '연락가능시간', '단계', '의향', '끝까지함', '소요(초)', '일관성', '유형', '일주', '혈액형', '남긴말', '내메모', '접수일'];
+  var head = ['우선순위', '이름', '연락처', '연락가능시간', '단계', '의향', '끝까지함', '소요(초)', '일관성', '유형', '일주', '혈액형', '남긴말', '내메모', '접수일', '위촉일', '주차', '정착상태'];
   var esc2 = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
   var body = rows.map(function (r) {
     return [rqScore(r).score, r.name, r.phone, r.contact_time, rqStage(r.stage).n, RQ_INTENT[r.intent] || '',
       r.finished ? 'Y' : 'N', r.elapsed_sec, r.consistency, r.mbti, r.day_gz, r.blood, r.memo, r.owner_note,
-      rqWhen(r.created_at)].map(esc2).join(',');
+      rqWhen(r.created_at), (r.started_at || '').slice(0, 10), rqWeeks(r) == null ? '' : rqWeeks(r),
+      rqLeft(r) ? ('이탈: ' + (r.left_reason || '')) : (rqStayed(r) ? '정착' : (r.started_at ? '진행중' : ''))
+    ].map(esc2).join(',');
   }).join('\n');
   var csv = '﻿' + head.map(esc2).join(',') + '\n' + body;
   var a = document.createElement('a');

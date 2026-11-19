@@ -789,8 +789,22 @@ grant update (stage, owner_note, recruiter_id, updated_at, next_at, assigned_at,
               contacted_at, met_at, joined_at)
   on public.recruits to authenticated;
 
+/* ========================================================== */
+/* 채용 6단계 — 입사 이후. 위촉일·이탈일로 13주 정착을 잰다.        */
+/* ========================================================== */
+alter table public.recruits add column if not exists started_at  timestamptz;
+alter table public.recruits add column if not exists left_at     timestamptz;
+alter table public.recruits add column if not exists left_reason text not null default '';
+
+create index if not exists recruits_started_idx on public.recruits(started_at)
+  where started_at is not null;
+
+grant update (stage, owner_note, recruiter_id, updated_at, next_at, assigned_at,
+              contacted_at, met_at, joined_at, started_at, left_at, left_reason)
+  on public.recruits to authenticated;
+
 insert into public.app_config(key, value)
-values ('schema_version', '37')
+values ('schema_version', '38')
 on conflict (key) do update set value = excluded.value, updated_at = now();
 
 notify pgrst, 'reload schema';
