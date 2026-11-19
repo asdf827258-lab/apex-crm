@@ -8752,8 +8752,7 @@ function baExBk(id){for(var i=0;i<BA_EX_BK.length;i++)if(BA_EX_BK[i].id===id)ret
 /* 보험금이 나오는 모양 — 이름에 적힌 말로만 가른다 */
 var BA_EX_SH=[
  {id:'wv',t:'🛟 보험료 면제',d:'조건이 되면 남은 보험료를 안 냅니다',re:/납입면제|납입지원/},
- {id:'die',t:'🕊 사망하면',d:'정해진 금액',re:/사망/},
- {id:'rate',t:'⚖️ 장해가 남으면',d:'가입금액 × 장해 지급률',re:/후유장해|장해/},
+ {id:'big',t:'⚠️ 크게 다치면 · 사망하면',d:'사망 · 장해가 남으면',re:/사망|후유장해|장해/},
  {id:'real',t:'🧾 쓴 만큼',d:'실제 낸 병원비 안에서',re:/실손|의료비/},
  {id:'day',t:'🛏 날 수만큼',d:'입원 · 간병한 날마다',re:/일당|입원비|입원급여|간병인/},
  {id:'year',t:'🔁 치료할 때마다 · 해마다',d:'치료 종류마다 한 해 한 번씩',re:/연간|매년|해마다|주요치료|통합치료/},
@@ -8768,14 +8767,14 @@ function baExPct(a,b){if(!(b>0))return '';var p=a/b*100;return p>0&&p<0.1?'0.1% 
 /* 글자 인식이 흔히 틀리는 글자만 — 「뭔/원」 · 「1.400 → 1,400」(점 뒤 세 자리) · 로마 숫자 */
 function baExFix(L){return (''+L).replace(/뭔/g,'원').replace(/(\d)\.(\d{3})(?!\d)/g,'$1,$2');}
 function baExName(n){
-  var t=baExOcrNm(''+n).replace(/^\s*[\d]{1,4}\s+/,'').replace(/\[[^\]]{1,20}\]/g,'')
+  var t=baExRoman(baExOcrNm(''+n)).replace(/^\s*[\d]{1,4}\s+/,'').replace(/\[[^\]]{1,20}\]/g,'')
     .replace(/\((맞춤고지|감액없음|무배당|간편고지|건강고지)\)/g,'').replace(/[}{＊*。]/g,'')
-    .replace(/\(\s*특정\s*(\|\||!!|ll|II|ㅣ\||\|ㅣ)\s*\)/g,'(특정Ⅱ)').replace(/\(\s*특정\s*(\||ㅣ|l|I|1)\s*\)/g,'(특정Ⅰ)')
     .replace(/\s*(\|\||!!)\s*/g,'Ⅱ').replace(/\s+/g,' ').trim();
   return t.slice(0,70);}
 /* 글자 인식이 담보 이름에서 실제로 틀린 자리(KB 제안서 그림 14쪽 · 3배) — 앞뒤 낱말이 있을 때만 고친다 */
 var BA_EX_OCR=[[/맘(?=진단|수술|주요|치료|약물)/g,'암'],[/항맘/g,'항암'],[/유사맘/g,'유사암'],[/면간/g,'연간'],[/증합병|공한병|공합병/g,'종합병'],[/병뭔/g,'병원'],
  [/비급며/g,'비급여'],[/본민부담/g,'본인부담'],[/포한\)/g,'포함)'],[/주묘치료/g,'주요치료'],[/\)\s*(?:oF|of|0F)\s*주요치료/g,') 암 주요치료'],[/치료비\s*미45/g,'치료비Plus'],[/치료비\s*!\s*/g,'치료비Ⅱ'],[/손삼/g,'손상'],[/(\d)0096\)/g,'$100%)'],[/10096/g,'100%']];
+function baExRoman(t){return (''+t).replace(/\(\s*특정\s*(\|\||!!|ll|II|ㅣ\||\|ㅣ|ｌ!)\s*\)/g,'(특정Ⅱ)').replace(/\(\s*특정\s*(\||ㅣ|l|I|1)\s*\)/g,'(특정Ⅰ)');}
 function baExOcrNm(t){BA_EX_OCR.forEach(function(x){t=t.replace(x[0],x[1]);});return t;}
 /* 납입 · 만기 — 「20년/90세」 · 「20년/20년」 · 「20년납 90세만기」 · 「종신」 */
 function baExPer(s){var t=(''+(s||'')).replace(/\s+/g,''),m=t.match(/(\d{1,2})년납?\/?(?:(\d{2,3})세|(\d{1,3})년|(종신))/);
@@ -8861,7 +8860,41 @@ function baExFrom(txt,fname,ocr){
   var T=baExTotal(all,sum);
   B.totWon=T.has?sum:(T.lab!==null?T.lab:(P.premMan?Math.round(parseFloat(P.premMan)*10000):null));
   B.refund=baExRefund(lines,B.totWon,B.age);
+  var flat=all.replace(/\s+/g,'');
+  /* 원래 판(손으로 지은 13장)의 그림 몇 장은 제안서 <b>문구가 있을 때만</b> 선다 — 문이 닫히면 그 그림을 안 그린다(1번) */
+  B.gate={jang:/장해지급률을.{0,30}곱한/.test(flat),icu50:/중환자실치료?[:：]?보험가입금액의50%/.test(flat),
+    wvPay:/납입면제대상보장(\(\d+대\))?보험금으로지급/.test(flat),y4:/연간최대4회/.test(flat),
+    pre:(flat.match(/보험금의50%\((\d{2,4})만원한도\)/)||[])[1]||''};
+  B.dz=baExDz(lines,B.rows);B.disc=baExDisc(lines,flat);
   return B;}
+/* 병명 목록 — 「※ 심장질환(특정Ⅰ) : 협심증, …」(꺾인 줄은 이어 붙인다) 또는 「뇌혈관질환(거미막하출혈, 뇌내출혈, … 등 약관참조)」.
+   글자 인식이 뭉갠 이름(영문 · 숫자가 섞인 것)은 버리고, 버린 것이 있으면 <b>일부</b>라고 밝힌다 — 깨진 병명을 고객 앞에 세우지 않는다 */
+function baExDz(lines,rows){
+  var out={},L=lines.map(function(x){return baExRoman(baExOcrNm(x));});
+  rows.forEach(function(r){
+    var key=baExRoman(r.nm).replace(/\s+/g,'').replace(/(진단비|진단).*$/,'');if(key.length<3||!/질환|뇌|심장|종양|혈관/.test(key))return;
+    var kre=new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\(([^()]{4,80})\\)'),raw='';
+    for(var i=0;i<L.length&&!raw;i++){var c=L[i].split(/\s{3,}/)[0],f=c.replace(/\s+/g,'');
+      if(/^※/.test(f)&&(f.indexOf(key+':')>=0||f.indexOf(key+'：')>=0)){
+        var s=c.slice(c.search(/[:：]/)+1);
+        for(var j=i+1;j<L.length&&j<=i+5;j++){var n=L[j].split(/\s{3,}/)[0].trim();if(!n||/^(※|\d{1,3}\s|보험기간|\|)/.test(n))break;s+=n;}
+        raw=s;break;}
+      var m=f.match(kre);if(m&&/,/.test(m[1]))raw=m[1];}
+    if(!raw)return;
+    var got=[],cut=/등/.test(raw);
+    raw.split(/[,，]|\s또는\s/).forEach(function(x){x=x.replace(/(등\s*)?약관\s*참조/g,'').replace(/\s*등\s*$/,'').replace(/[.。]\s*$/,'').trim();
+      if(x.length<2)return;if(!/^[가-힣\s·및]+$/.test(x)||x.length>20){cut=true;return;}got.push(x);});
+    if(got.length>12){got=got.slice(0,12);cut=true;}
+    if(got.length>=2)out[r.nm]={c:got,cut:cut};});
+  return out;}
+/* 할인 — 「영업보험료의 5%를 할인」 · 「37회차 ~ 120회차 → 할인율 : 1%」. 글자 인식이 「할민율」 로 읽어도 받는다 */
+function baExDisc(lines,flat){
+  var d={nod:null,tiers:[],cond:[],ask:/무사고할인을?신청/.test(flat),auto:/신청이없어도/.test(flat)},m=flat.match(/무사고.{0,240}?영업보험료의(\d{1,2})%를?할인/),seen={};
+  if(m)d.nod=+m[1];
+  if(d.nod!==null){if(/무사고판정기간/.test(flat)&&/입원또는수술/.test(flat))d.cond.push('병 · 사고로 <b>입원 · 수술</b>을 안 받음');if(/3대질병/.test(flat))d.cond.push('<b>3대 질병</b> 진단을 안 받음');}
+  lines.forEach(function(L){var f=L.replace(/\s+/g,''),x=f.match(/(\d{1,3})회차~(?:(\d{1,3})회차|납입완료)[^%]{0,20}?(\d{1,2})%/);
+    if(x&&/할[인민]율/.test(f)&&!seen[x[1]]){seen[x[1]]=1;d.tiers.push({a:+x[1],b:x[2]?+x[2]:null,p:+x[3]});}});
+  return d;}
 function baExSum(B){var s=0,ok=false;for(var i=0;i<B.rows.length;i++){var r=B.rows[i];if(!r.on)continue;if(r.premWon===null||r.premWon===undefined||!isFinite(r.premWon))return null;s+=r.premWon;ok=true;}return ok?s:null;}
 /* 맞춰 보기 — ok:true 면 바로 설명서 · false 면 고치기 먼저 · null 이면 대조할 값이 없다 */
 function baExCheck(B){
@@ -8973,6 +9006,11 @@ var BA_EX_CSS=[
 '.tag{display:inline-block;font-size:11.5px;font-weight:800;border-radius:6px;padding:1px 7px;margin-left:4px;background:var(--bl2);color:var(--bl);vertical-align:1px;white-space:nowrap}',
 '.chips{display:flex;flex-wrap:wrap;gap:7px}.chips span{background:var(--bg2);border-radius:999px;padding:6px 13px;font-size:14.5px;font-weight:700}.miss span{background:#fff;border:1.5px dashed #C9CED6;color:var(--gy)}',
 'table.t{width:100%;border-collapse:collapse;font-size:14px}table.t th{background:var(--bg);color:var(--gy);font-size:12.5px;font-weight:800;padding:7px 8px;text-align:left}table.t td{padding:6px 8px;border-bottom:1px solid #EEF0F2}table.t td.r,table.t th.r{text-align:right;white-space:nowrap}',
+'.tag.t2{background:#FFFBEB;color:#B45309}.tag.t3{background:#FEF2F2;color:#DC2626}.tag.t4{background:#ECFDF5;color:#0F766E}',
+'.flow{display:flex;align-items:stretch}.fs{flex:1;min-width:0;background:#fff;border:1px solid var(--ln);border-radius:14px;padding:14px 13px 10px;overflow:hidden}.fs .k{width:30px;height:30px;border-radius:50%;background:var(--nv);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:15px}',
+'.fs .ic{font-size:28px;margin:4px 0 2px}.fs h5{margin:0;font-size:18px;font-weight:800}.fs .w{font-size:12.5px;color:var(--gy3);margin:2px 0 6px;line-height:1.45}.fs .m{font-size:13.5px;line-height:1.5;padding:6px 0;border-top:1px dashed #EEF0F2}.fs .m b{color:var(--bl);font-size:15.5px}.fs .m .tag{margin-left:0;margin-right:3px}',
+'.fa{width:24px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--gd);font-size:22px;font-weight:800}',
+'.roomy .card{padding:20px 22px}.roomy .card h4{font-size:20px}.roomy .lead{font-size:15.5px}.roomy .row{font-size:16px;padding:8px 0}.roomy .note{font-size:14.5px;padding:12px 16px}',
 '.mis .card{min-height:250px;padding:22px 24px}.mis h4{font-size:20px;margin-bottom:14px}.mis .chips span{font-size:17px;padding:9px 16px}.mis .lead{font-size:15.5px}',
 '.dk{background:var(--nv);color:#fff}.dk:before{display:none}.dk .frame{position:absolute;inset:16px;border:1px solid rgba(201,168,106,.32)}',
 '.cv-l{position:absolute;left:80px;top:78px;width:600px}.cv-l .brand{font-size:14px;font-weight:800;letter-spacing:.3em;color:var(--gd3)}.cv-l .ey{margin-top:40px;font-size:14px;letter-spacing:.32em;color:var(--gd3);font-weight:700}',
@@ -8992,9 +9030,11 @@ function baExDoc(B){
   var bk={},order=[];rows.forEach(function(r){if(!bk[r.b]){bk[r.b]={id:r.b,rows:[],prem:0,man:0};order.push(r.b);}bk[r.b].rows.push(r);bk[r.b].prem+=(r.premWon||0);});
   order.sort(function(a,b){return BA_EX_BK.indexOf(baExBk(a))-BA_EX_BK.indexOf(baExBk(b));});
   var byPrem=order.slice().sort(function(a,b){return hasPrem?(bk[b].prem-bk[a].prem):(bk[b].rows.length-bk[a].rows.length);});
+  /* 비중을 말로 — 고객은 「52.4%」 보다 「절반」 을 먼저 알아듣는다. 말로 못 바꾸면 숫자 그대로 */
+  function frac(p){return (p>=45&&p<=55)?'절반':(p>=30&&p<=36.5)?'3분의 1':(p>=22&&p<=28)?'4분의 1':(Math.round(p*10)/10)+'%';}
   function head(t,sub){no++;return pill+'<div class="hd"><h2><span class="no">'+(no<10?'0':'')+no+'.</span>'+t+'</h2><div class="sub">💡 '+sub+'</div></div>';}
   function say(h){return '<div class="say">'+h+'</div>';}
-  function sl(h,t,dk){slides.push('<section class="sl'+(dk?' dk':'')+'" data-t="'+E(t)+'">'+h+'</section>');}
+  function sl(h,t,dk,cl){slides.push('<section class="sl'+(dk?' dk':'')+(cl?' '+cl:'')+'" data-t="'+E(t)+'">'+h+'</section>');}
   function top(list,n){return list.slice().sort(function(a,b){return (b.man||0)-(a.man||0);}).slice(0,n);}
   function per(r){var p=baExPer(r.per);return p?(p.py+'년 납 · '+(p.cv==='종신'?'종신':(/세$/.test(p.cv)?p.cv+'까지':p.cv+' 만기'))):'—';}
   var payTxt=(B.years?B.years+'년 납입':'')+(B.years&&B.term?' · ':'')+(B.term?B.term.replace(/만기$/,' 만기'):'');
@@ -9010,7 +9050,7 @@ function baExDoc(B){
       '<text x="'+cx+'" y="'+(cy-8)+'" text-anchor="middle" fill="#C9A86A" font-size="13" font-weight="700">월 보험료</text><text x="'+cx+'" y="'+(cy+22)+'" text-anchor="middle" fill="#fff" font-size="26" font-weight="800">'+baExWonR(tot)+'</text>'+leg+'</svg>';}
   else donut='<div style="font-size:13px;color:var(--gd3);font-weight:700">담보 묶음</div><div class="chips" style="margin-top:14px">'+order.map(function(id){var K=baExBk(id);return '<span style="background:rgba(255,255,255,.08);color:#fff">'+K.ic+' '+E(K.t)+' · '+bk[id].rows.length+'</span>';}).join('')+'</div>';
   sl('<div class="frame"></div><div class="cv-l"><div class="brand">APEX&nbsp;&nbsp;사업단</div><div class="ey">보 장 설 계 설 명 서</div>'+
-    '<h1>새 보험,<span>한 장씩 쉽게</span></h1><p>'+(B.co?E(B.co)+' ':'')+'<b>「'+E(B.nm||'상품 제안서')+'」</b><br>제안서를 <b>언제 · 무엇이 · 얼마나</b> 나오는지 순서대로 다시 정리했습니다.</p>'+
+    '<h1>새 '+(/건강/.test(B.nm||'')?'건강보험':(/종신/.test(B.nm||'')?'종신보험':'보험'))+',<span>한 장씩 쉽게</span></h1><p>'+(B.co?E(B.co)+' ':'')+'<b>「'+E(B.nm||'상품 제안서')+'」</b><br>제안서를 <b>언제 · 무엇이 · 얼마나</b> 나오는지 순서대로 다시 정리했습니다.</p>'+
     '<div class="cv-t"><div><span>대상</span><b>'+who+'</b>'+(B.age!==null?'&nbsp;&nbsp;'+B.age+'세':'')+(B.sex?' · '+E(B.sex):'')+'</div>'+
     (payTxt?'<div><span>계약 모양</span>'+E(payTxt)+'</div>':'')+(tot>0?'<div><span>월 보험료</span><b class="num">'+baExWonR(tot)+'</b></div>':'')+
     '<div><span>담보</span>'+rows.length+'개</div><div><span>기준</span>제안서 · '+E(B.when)+' 읽음</div></div></div>'+
@@ -9025,7 +9065,8 @@ function baExDoc(B){
         (hasPrem?'<div class="big num" style="color:'+K.c+'">'+Math.round(G.prem).toLocaleString()+'<small>원 · '+baExPct(G.prem,tot)+'</small></div>':'<div class="big num" style="color:'+K.c+'">'+G.rows.length+'<small>개</small></div>')+
         L.map(function(r){return '<div class="row" style="font-size:13px"><span>'+E(r.nm)+'</span><b class="num">'+baExAmt(r.man)+'</b></div>';}).join('')+
         (G.rows.length>L.length?'<div class="lead" style="margin-top:4px">외 '+(G.rows.length-L.length)+'개</div>':'')+'</div>';}).join('')+'</div></div>'+
-    say(hasPrem?('보험료가 가장 많이 가는 곳은&nbsp;<em>'+E(baExBk(byPrem[0]).t)+'</em>('+baExPct(bk[byPrem[0]].prem,tot)+')'+(byPrem[1]?', 다음은&nbsp;<em>'+E(baExBk(byPrem[1]).t)+'</em>('+baExPct(bk[byPrem[1]].prem,tot)+')':'')+'입니다.')
+    say(hasPrem?(function(){var t3=byPrem.slice(0,3),acc=0,o=t3.map(function(id,i){var p=bk[id].prem/tot*100;acc+=p;var w=frac(p);
+        return (i===t3.length-1&&i>0&&acc>=99?'나머지 ':'')+'<em>'+w+(/%$/.test(w)?'는':'은')+' '+E(baExBk(id).t)+'</em>';});return '보험료의&nbsp;'+o.join(', ')+'에 쓰입니다.';})()
       :('담보 '+rows.length+'개가&nbsp;<em>'+order.length+'묶음</em>으로 나뉩니다.')),'묶음');
   /* 2 계약 모양 — 나이 줄 (나이 · 납입을 읽었을 때만) */
   if(B.age!==null&&B.years){
@@ -9052,23 +9093,89 @@ function baExDoc(B){
       '<div class="body"><div class="g" style="grid-template-columns:repeat('+sc+',minmax(0,1fr));height:100%;'+(shL.length>sc?'grid-auto-rows:1fr;':'')+'">'+shL.map(function(id){var G=sh[id],L=top(G.rows,shL.length>sc?3:7);
         return '<div class="card" style="overflow:hidden"><h4>'+G.s.t+'</h4><p class="lead">'+G.s.d+'</p>'+L.map(function(r){return '<div class="row"><span>'+E(r.nm)+'</span><b class="num">'+baExAmt(r.man)+'</b></div>';}).join('')+(G.rows.length>L.length?'<div class="lead" style="margin-top:4px">외 '+(G.rows.length-L.length)+'개</div>':'')+'</div>';}).join('')+'</div></div>'+
       say(shL.map(function(id){return '<em>'+sh[id].s.t.replace(/^\S+\s/,'')+'</em>';}).slice(0,3).join(', ')+'&nbsp;— 담보마다 나오는 모양이 다릅니다.'),'보험금 모양');}
-  /* 4… 묶음마다 한 장 — 담보 줄 + 담보사전 풀이(글 그대로) */
-  order.forEach(function(id){if(id==='wv')return;var K=baExBk(id),G=bk[id],L=top(G.rows,14),fs=L.length>9?13:14.5;
+  /* 4… 묶음마다 한 장. 암 · 뇌심장 · 다쳤을 때는 원래 판(손으로 지은 13장)의 그림대로 — 암은 단계 흐름, 뇌심장은 병명 칩,
+     다쳤을 때는 장해율 막대 · 수술 계단. 그 그림을 세울 재료(줄 · 문구)가 없으면 표 + 담보사전 풀이로 선다 */
+  /* 짧은 이름 — 꼬리표로 따로 서는 괄호(종합병원 · 연간 · 최초 1회 · 매회)와 긴 괄호만 걷는다. 「(특정Ⅰ)」 「(유사암 제외)」 는 남긴다 — 빠지면 다른 담보가 된다 */
+  function shortNm(r){return r.nm.replace(/\(([^()]*)\)/g,function(m,x){return (x.length>8||/종합|연간|최초|매회|1회당|감액|고지/.test(x))?'':m;}).replace(/\s+/g,' ').trim()||r.nm;}
+  function tags(r){var t=r.nm.replace(/\s+/g,''),o='';if(/연간/.test(t))o+='<span class="tag">연 1회</span>';if(/최초1회/.test(t))o+='<span class="tag t2">최초 1회</span>';
+    if(/상급종합/.test(t))o+='<span class="tag t3">상급종합</span>';else if(/종합병원/.test(t))o+='<span class="tag t3">종합병원</span>';if(/매회|1회당/.test(t))o+='<span class="tag">할 때마다</span>';return o;}
+  function endOf(L){var e=0;L.forEach(function(r){var p=baExPer(r.per);if(p&&/세$/.test(p.cv))e=Math.max(e,parseInt(p.cv,10));});return e;}
+  function generic(id){var K=baExBk(id),G=bk[id],L=top(G.rows,14),fs=L.length>9?13:14.5;
     var ds=[],dseen={};top(G.rows,40).forEach(function(r){var R=ppRule(r.nm),D=ppDict(R.d);if(D&&!dseen[D.id]&&ds.length<3){dseen[D.id]=1;ds.push(D);}});
     sl(head(K.ic+' '+E(K.t),'담보 '+G.rows.length+'개'+(hasPrem?' · 보험료 '+baExWonR(G.prem)+' ('+baExPct(G.prem,tot)+')':'')+' — 금액은 제안서, 풀이는 담보사전')+
       '<div class="body"><div class="g" style="grid-template-columns:'+(ds.length?'1.15fr 1fr':'1fr')+';height:100%">'+
       '<div class="card" style="overflow:hidden"><table class="t" style="font-size:'+fs+'px"><thead><tr><th>담보</th><th class="r">가입금액</th><th class="r">납입 · 보장</th></tr></thead><tbody>'+
         L.map(function(r){return '<tr><td>'+E(r.nm)+'</td><td class="r num"><b>'+baExAmt(r.man)+'</b></td><td class="r" style="color:var(--gy3);font-size:12.5px">'+E(per(r))+'</td></tr>';}).join('')+'</tbody></table>'+
-        (G.rows.length>L.length?'<div class="lead" style="margin-top:6px">외 '+(G.rows.length-L.length)+'개 — 마지막 「담보 전체」 장에 있습니다</div>':'')+'</div>'+
+        (G.rows.length>L.length?'<div class="lead" style="margin-top:6px">외 '+(G.rows.length-L.length)+'개 — 「✏️ 읽은 값 고치기」 표에 전부 있습니다</div>':'')+'</div>'+
       (ds.length?'<div class="g" style="align-content:start;overflow:hidden">'+ds.map(function(D){return '<div class="card"><h4>📚 '+E(D.n)+'</h4><p class="lead" style="margin:0"><b>이런 거예요</b> · '+E(D.w)+'</p>'+(D.h?'<p class="lead" style="margin:4px 0 0"><b>이렇게 나와요</b> · '+E(D.h)+'</p>':'')+(D.c&&ds.length<3?'<p class="lead" style="margin:4px 0 0"><b>꼭 볼 것</b> · '+E(D.c)+'</p>':'')+'</div>';}).join('')+'</div>':'')+
-      '</div></div>'+say('<em>'+E(K.t)+'</em>&nbsp;쪽에서 가장 큰 것은&nbsp;<em>'+E(L[0].nm)+' '+baExAmt(L[0].man)+'</em>입니다.'),K.t);});
-  /* 납입면제 */
+      '</div></div>'+say('<em>'+E(K.t)+'</em>&nbsp;쪽에서 가장 큰 것은&nbsp;<em>'+E(L[0].nm)+' '+baExAmt(L[0].man)+'</em>입니다.'),K.t);}
+  /* 🎗 암 — 진단부터 치료까지 한 바퀴 */
+  function canSl(G){
+    var has=function(re,no){return top(G.rows,40).filter(function(r){var t=r.nm.replace(/\s+/g,'');return re.test(t)&&!(no&&no.test(t));});};
+    var yr=has(/연간|매년/),ST=[
+      {k:'진단 확정',ic:'🔬',w:B.keys.d90?'가입 후 90일이 지난 뒤부터':'진단이 확정되면',L:has(/진단/)},
+      {k:'수술',ic:'🏥',w:'수술을 받으면',L:has(/수술|주요치료|통합치료/,/진단/)},
+      {k:'방사선 · 약물',ic:'💊',w:'항암방사선 · 항암약물',L:has(/방사선|약물|표적|면역|주요치료|통합치료/,/진단|중입자|양성자/)},
+      {k:'특수 치료',ic:'⚛️',w:'중입자 · 양성자 등',L:has(/중입자|양성자|세기조절|로봇|다빈치|카티/)}].filter(function(x){return x.L.length;});
+    if(ST.length<2)return false;
+    var end=endOf(yr),cell=function(r){return '<div class="m">'+E(shortNm(r))+'<br><b class="num">'+baExAmt(r.man)+'</b> '+tags(r)+'</div>';};
+    var fl=ST.map(function(x,i){return '<div class="fs"><div class="k">'+(i+1)+'</div><div class="ic">'+x.ic+'</div><h5>'+x.k+'</h5><div class="w">'+x.w+'</div>'+x.L.slice(0,3).map(cell).join('')+(x.L.length>3?'<div class="w">외 '+(x.L.length-3)+'개</div>':'')+'</div>';});
+    if(yr.length)fl.push('<div class="fs" style="background:#F5F3FF;border-color:#DDD6FE"><div class="k" style="background:#7C3AED">'+(ST.length+1)+'</div><div class="ic">🔁</div><h5>다음 해에도</h5><div class="w">치료가 이어지면 해가 바뀔 때마다</div>'+
+      '<div class="m">'+E(shortNm(yr[0]))+(yr.length>1?' 등':'')+'이<br><b style="color:#7C3AED">다시 열립니다</b><br><small>치료 종류별 각 연 1회'+(B.gate.y4?' · 연 최대 4회':'')+(end?' · '+end+'세까지':'')+'</small></div></div>');
+    var nt=[];
+    if(B.keys.half)nt.push('⏳ 제안서에 <b>「1년 미만 50%」</b> 가 적힌 담보가 있습니다 — 가입 1년 안에는 일부만 나올 수 있습니다');
+    if(B.gate.icu50)nt.push('🏥 <b>중환자실</b> 치료는 주요치료비의 <b>50%</b>');
+    if(B.keys.prepay)nt.push('💵 <b>선지급</b> — 치료 날짜를 예약하고 청구하면 치료비 보험금 일부를 미리'+(B.gate.pre?' (<b>50%</b> · '+E(B.gate.pre)+'만원 한도)':'')+' · 조건은 제안서');
+    var dx=ST[0].k==='진단 확정'?ST[0].L[0]:null;
+    sl(head('🎗 암 — 진단부터 치료까지 한 바퀴',(hasPrem?'보험료의 '+baExPct(G.prem,tot)+'가 여기 있습니다 · ':'')+'단계마다 어느 담보가 열리는지')+
+      '<div class="body"><div class="flow" style="height:'+(nt.length?372:440)+'px">'+fl.join('<div class="fa">→</div>')+'</div>'+
+      (nt.length?'<div class="g" style="grid-template-columns:repeat('+nt.length+',1fr);margin-top:12px">'+nt.map(function(x){return '<div class="note">'+x+'</div>';}).join('')+'</div>':'')+'</div>'+
+      say(dx&&yr.length?('진단금&nbsp;<em>'+baExAmt(dx.man)+'</em>은 한 번, 그다음은&nbsp;<em>치료가 이어지는 해마다</em>&nbsp;치료비가 다시 열리는 모양입니다.')
+        :('진단부터 치료까지&nbsp;<em>단계마다 열리는 담보</em>가 다릅니다.')),'암');
+    return true;}
+  /* 🧠❤️ 뇌 · 심장 — 담보마다 한 칸 · 병명은 제안서 본문에서 */
+  function cvSl(G){
+    var L=top(G.rows,4);if(L.length>4||!L.length)return false;
+    var anyDz=L.some(function(r){return B.dz&&B.dz[r.nm];});if(!anyDz&&L.length<2)return false;
+    var cards=L.map(function(r){var t=r.nm.replace(/\s+/g,''),ic=/뇌/.test(t)?'🧠':'❤️',c=/뇌/.test(t)?'var(--bl)':'var(--rd)',Z=B.dz&&B.dz[r.nm],D=ppDict(ppRule(r.nm).d);
+      return '<div class="card" style="border-top:4px solid '+c+';overflow:hidden"><h4>'+ic+' '+E(shortNm(r))+'</h4><div class="big num" style="color:'+c+'">'+baExAmt(r.man).replace(/원$/,'')+'<small>원</small></div><div style="margin:4px 0 8px">'+tags(r)+'</div>'+
+        (Z?'<div class="chips">'+Z.c.map(function(x){return '<span>'+E(x)+'</span>';}).join('')+'</div>'+(Z.cut?'<p class="lead" style="margin-top:8px">제안서 문구 중 일부 · 전체 범위는 약관</p>':''):(D?'<p class="lead">'+E(D.w)+'</p>':''))+'</div>';}).join('');
+    var noTx=!G.rows.some(function(r){return /수술|치료/.test(r.nm);});
+    sl(head('🧠 뇌 · ❤️ 심장 — '+(noTx?'진단금 ':'담보 ')+L.length+'개','어떤 병이 어느 칸인지 — 병명은 제안서에 적힌 그대로')+
+      '<div class="body"><div class="g" style="grid-template-columns:repeat('+L.length+',minmax(0,1fr))">'+cards+'</div>'+
+      (noTx?'<div class="note" style="margin-top:14px">📌 이 설계의 뇌 · 심장 보장은 <b>진단금</b>입니다. 뇌 · 심장 <b>수술비 · 치료비</b> 담보는 이 제안서에 없습니다 → 「이 제안서에 없는 것」 장에서 다시 봅니다.</div>':'')+'</div>'+
+      say(L.map(function(r){return '<em>'+E(shortNm(r))+' '+baExAmt(r.man)+'</em>';}).join(', ')+(noTx?'&nbsp;— 진단되면 받는 돈입니다.':'.')),'뇌 · 심장');
+    return true;}
+  /* 🩹 다쳤을 때 — 장해율 막대(제안서에 「장해지급률을 … 곱한」 이 있을 때) · 1~5종 수술 계단 */
+  function accSl(G){
+    var R=top(G.rows,40),jr=R.filter(function(r){return /후유장해/.test(r.nm)&&/3/.test(r.nm);})[0]||R.filter(function(r){return /후유장해/.test(r.nm);})[0];
+    var sv={};R.forEach(function(r){var m=r.nm.match(/([1-5])종/g);if(m&&/수술/.test(r.nm)){var n=+m[m.length-1].charAt(0);if(!sv[n])sv[n]=r;}});var sk=Object.keys(sv).map(Number).sort();
+    var useJ=!!(jr&&B.gate.jang),useS=sk.length>=3;if(!useJ&&!useS)return false;
+    var dth=R.filter(function(r){return /사망/.test(r.nm);})[0],left='',right='';
+    if(useJ){left='<div class="card"><h4>후유장해 — 남은 장해 비율만큼</h4><p class="lead">가입금액 <b>'+baExAmt(jr.man)+' × 장해지급률</b> (지급률은 약관 장해분류표)</p>'+
+      [3,10,30,50,100].map(function(p){return '<div style="display:flex;align-items:center;gap:10px;margin:6px 0"><span class="num" style="width:46px;font-weight:800;font-size:14px">'+p+'%</span><div style="flex:1;height:20px;background:#F2F4F6;border-radius:6px;overflow:hidden"><i style="display:block;height:100%;width:'+Math.max(p,2)+'%;background:#DC2626;opacity:.85"></i></div><b class="num" style="width:120px;text-align:right">'+baExAmt(jr.man*p/100)+'</b></div>';}).join('')+
+      '<div style="font-size:12px;color:var(--gy3)">'+baExAmt(jr.man)+' × 장해율로 계산한 예시 · 어떤 장해가 몇 %인지는 약관이 정합니다</div>'+
+      '<div class="note" style="margin-top:8px">'+R.filter(function(r){return r!==jr&&/후유장해|사망/.test(r.nm);}).slice(0,3).map(function(r){return E(shortNm(r))+' <b>'+baExAmt(r.man)+'</b>';}).join(' · ')+'</div></div>';}
+    else left='<div class="card"><h4>사망 · 장해</h4>'+R.filter(function(r){return /후유장해|사망/.test(r.nm);}).slice(0,6).map(function(r){return '<div class="row"><span>'+E(r.nm)+'</span><b class="num">'+baExAmt(r.man)+'</b></div>';}).join('')+'</div>';
+    if(useS){var mx=0,bw=80,gap=28,base=230,svg='';sk.forEach(function(n){mx=Math.max(mx,sv[n].man);});
+      sk.forEach(function(n,i){var r=sv[n],hh=Math.max(6,r.man/mx*170),X=30+i*(bw+gap);svg+='<rect x="'+X+'" y="'+(base-hh).toFixed(1)+'" width="'+bw+'" height="'+hh.toFixed(1)+'" rx="6" fill="#B45309" opacity="'+(0.45+i*0.13).toFixed(2)+'"/><text x="'+(X+bw/2)+'" y="'+(base-hh-8).toFixed(1)+'" text-anchor="middle" font-size="16" font-weight="800" fill="#191F28">'+baExAmt(r.man).replace(/원$/,'')+'</text><text x="'+(X+bw/2)+'" y="'+(base+22)+'" text-anchor="middle" font-size="14" font-weight="700" fill="#4E5968">'+n+'종</text>';});
+      var t0=sv[sk[0]].nm.replace(/\s+/g,'');
+      right='<div class="card"><h4>'+(/상해|재해/.test(t0)?'다쳐서 ':'')+'수술 — 1~5종'+(/매회/.test(t0)?' <span class="tag">할 때마다</span>':'')+(endOf([sv[sk[0]]])?' <span class="tag">'+endOf([sv[sk[0]]])+'세까지</span>':'')+'</h4><p class="lead">수술 크기(1~5종 분류표, 약관 참조)에 따라 정해진 금액</p><svg viewBox="0 0 560 260" width="100%" height="300">'+svg+'<line x1="20" y1="'+base+'" x2="560" y2="'+base+'" stroke="#E5E8EB"/></svg></div>';}
+    else right='<div class="card"><h4>그 밖에</h4>'+R.filter(function(r){return !/후유장해|사망/.test(r.nm);}).slice(0,8).map(function(r){return '<div class="row"><span>'+E(r.nm)+'</span><b class="num">'+baExAmt(r.man)+'</b></div>';}).join('')+'</div>';
+    sl(head('🩹 다쳤을 때 — 사망 · 장해 · 수술','사고는 나이와 상관없이 옵니다 — 활동이 많은 때 먼저 쓰이는 보장')+'<div class="body"><div class="g" style="grid-template-columns:1fr 1.15fr">'+left+right+'</div></div>'+
+      say((useS?'다쳐서 수술하면&nbsp;<em>'+(/매회/.test(sv[sk[0]].nm)?'할 때마다 ':'')+baExAmt(sv[sk[0]].man)+'~'+baExAmt(sv[sk[sk.length-1]].man)+'</em>':'')+(useS&&useJ?', ':'')+(useJ?'장해가 남으면&nbsp;<em>'+baExAmt(jr.man)+'에 장해율만큼</em>':'')+'&nbsp;나옵니다.'),'다쳤을 때');
+    return true;}
+  order.forEach(function(id){if(id==='wv')return;
+    if(id==='can'&&canSl(bk[id]))return;if(id==='cv'&&cvSl(bk[id]))return;if(id==='acc'&&accSl(bk[id]))return;generic(id);});
+  /* 🛟 납입면제 — 칸마다 그림 */
   var wvR=bk.wv?bk.wv.rows:[];
-  if(wvR.length||B.wv.length){var D=ppDict('waiver');
-    sl(head('🛟 큰 일이 생기면 남은 보험료 면제','제안서에 적힌 납입면제 — 조건이 되면 다음 회차부터')+
-      '<div class="body">'+(B.wv.length?'<div class="g" style="grid-template-columns:repeat(4,minmax(0,1fr))">'+B.wv.map(function(x,i){return '<div class="card" style="padding:12px 14px;font-size:15px;font-weight:700"><span style="color:var(--gd)">'+(i+1)+'.</span> '+E(x)+'</div>';}).join('')+'</div>':'')+
-      '<div class="g" style="grid-template-columns:1fr 1fr;margin-top:14px">'+(D?'<div class="note">📚 <b>'+E(D.n)+'</b> — '+E(D.w)+' '+E(D.c||'')+'</div>':'')+
-      '<div class="note">'+(wvR.length?wvR.map(function(r){return '<b>'+E(r.nm)+'</b> '+baExAmt(r.man);}).join(' · ')+'<br>':'')+'면제 범위와 예외는 <b>약관</b>에, 실제 면제 여부는 <b>회사 심사</b>에 따릅니다</div></div></div>'+
+  function wvIc(x){var t=x.replace(/\s+/g,'');return /외상/.test(t)?'⚠️':/화상/.test(t)?'🔥':/당뇨/.test(t)?'💉':/빈혈/.test(t)?'🩸':/희귀|산정특례/.test(t)?'📋':/암/.test(t)?'🎗':/뇌/.test(t)?'🧠':/심장|허혈|심근/.test(t)?'❤️':/질병.*장해/.test(t)?'🩺':/장해/.test(t)?'🩹':'🛟';}
+  if(wvR.length||B.wv.length){var D=ppDict('waiver'),w0=wvR[0];
+    sl(head('🛟 큰 일이 생기면 남은 보험료는 안 냅니다','제안서에 적힌 납입면제 — 아래 중 하나라도 생기면 다음 회차부터')+
+      '<div class="body">'+(B.wv.length?'<div class="g" style="grid-template-columns:repeat(4,minmax(0,1fr))">'+B.wv.map(function(x,i){return '<div class="card" style="padding:'+(B.wv.length>8?'12px':'18px')+' 14px;display:flex;align-items:center;gap:10px"><span style="font-size:24px">'+wvIc(x)+'</span><span style="font-size:15.5px;font-weight:700"><span class="num" style="color:var(--gd);font-weight:800">'+(i+1)+'.</span> '+E(x)+'</span></div>';}).join('')+'</div>':'')+
+      '<div class="g" style="grid-template-columns:1fr 1fr;margin-top:14px">'+
+        (w0&&B.gate.wvPay?'<div class="note">💡 이때 <b>'+baExAmt(w0.man)+'</b>도 함께 나옵니다 ('+E(shortNm(w0))+') — 제안서 「보험금으로 지급」 문구 그대로</div>':(D?'<div class="note">📚 <b>'+E(D.n)+'</b> — '+E(D.w)+'</div>':''))+
+        '<div class="note">📄 면제 범위와 예외는 <b>약관</b>에 따릅니다 · 실제 면제 여부는 <b>회사 심사</b>로 정해집니다</div></div></div>'+
       say(B.wv.length?('이 '+B.wv.length+'가지 중&nbsp;<em>하나라도 생기면</em>, 그다음 회차부터&nbsp;<em>남은 보험료 납입이 면제</em>됩니다.'):'제안서에&nbsp;<em>납입면제</em>&nbsp;담보가 들어 있습니다 — 어떤 일이 면제 조건인지는 약관으로 확인합니다.'),'납입면제');}
   /* 해약환급금 — 읽은 줄만 */
   var RF=B.refund.slice().sort(function(a,b){return (a.age-b.age)||((a.mon||0)-(b.mon||0))||(a.paidWon-b.paidWon);});
@@ -9093,6 +9200,21 @@ function baExDoc(B){
         (last!==peak?cd('var(--gy)',last.lb,Math.round(last.refWon/10000).toLocaleString(),'만원 · '+last.pct+'%'):'')+'</div></div></div>'+
       say(zeroPay?('납입 중에 깨면&nbsp;<strong>돌려받는 돈이 없는 대신</strong>, 같은 보장을&nbsp;<em>더 낮은 보험료</em>로 가져가는 설계 — 끝까지 가져갈 계약입니다.')
         :('해지하면 받는 돈은 낸 돈보다 적습니다 — 가장 많을 때가&nbsp;<em>'+E(peak.lb)+' '+peak.pct+'%</em>입니다.')),'해지하면');}
+  /* 💸 할인 — 제안서에 할인율이 적혀 있을 때만. 원 단위는 보험료 × 할인율의 어림값이라고 밝힌다 */
+  var DS=B.disc||{tiers:[]},disc=false;
+  if(tot>0&&(DS.nod!==null||DS.tiers.length)){disc=true;
+    var aw=function(p){return Math.floor(tot*p/100).toLocaleString()+'원';},ny=B.years?B.years*12:null,tiersIn=DS.tiers.filter(function(t){return ny===null||t.a<=ny;}),tiersOut=DS.tiers.length-tiersIn.length;
+    var yy=function(n){return Math.ceil(n/12)+'년차';},c1='',c2='';
+    if(DS.nod!==null)c1='<div class="card" style="border-top:4px solid var(--gr)"><h4>🌿 무사고 할인 <span class="tag t4">'+DS.nod+'%</span></h4><p class="lead">건강하게 지내면 — 조건은 제안서 「보험료 할인에 관한 사항」</p>'+
+      DS.cond.map(function(x,i){return '<div class="row"><span>'+(i?'②':'①')+' '+x+'</span></div>';}).join('')+
+      '<div class="row"><span>어림값 (보험료 '+baExWonR(tot)+' × '+DS.nod+'%)</span><b class="num" style="color:var(--gr)">월 약 '+aw(DS.nod)+'</b></div>'+
+      (DS.ask?'<div class="note" style="margin-top:10px">⚠ <b>신청해야</b> 적용됩니다 — 제안서에 그렇게 적혀 있습니다</div>':'')+'</div>';
+    if(tiersIn.length)c2='<div class="card" style="border-top:4px solid var(--bl)"><h4>⏳ 장기유지 할인'+(DS.auto?' <span class="tag">자동</span>':'')+'</h4><p class="lead">오래 유지하면 회차에 따라</p>'+
+      tiersIn.map(function(t){return '<div class="row"><span>'+t.a+'회차 ~ '+(t.b?t.b+'회차':'납입 끝')+' ('+yy(t.a)+' ~ '+(t.b?yy(t.b):'납입 끝')+')</span><b class="num">'+t.p+'% · 월 약 '+aw(t.p)+'</b></div>';}).join('')+
+      (tiersOut?'<div class="note" style="margin-top:10px">'+B.years+'년납이라 위 구간까지만 들어갑니다</div>':(B.years?'<div class="note" style="margin-top:10px">'+B.years+'년납이라 <b>'+tiersIn[tiersIn.length-1].p+'% 구간까지</b> 들어갑니다</div>':''))+'</div>';
+    sl(head('💸 보험료를 줄이는 '+((c1&&c2)?'두 가지 길':'길'),'제안서에 적힌 할인 제도')+
+      '<div class="body"><div class="g" style="grid-template-columns:repeat('+((c1&&c2)?2:1)+',1fr)">'+c1+c2+'</div><div style="font-size:12px;color:var(--gy3);margin-top:8px">※ 원 단위 금액은 제안서 보험료에 할인율을 곱한 어림값입니다. 실제 할인액은 회사가 계산합니다.</div></div>'+
+      say((DS.nod!==null?'건강하게 지내시면&nbsp;<em>'+DS.nod+'%</em>'+(DS.ask?'(신청)':''):'')+(DS.nod!==null&&tiersIn.length?', ':'')+(tiersIn.length?'오래 유지하시면&nbsp;<em>'+(DS.auto?'자동으로 ':'')+tiersIn.map(function(t){return t.p+'%';}).join('~')+'</em>':'')+'&nbsp;보험료가 내려갑니다.'),'할인',false,'roomy');}
   /* 꼭 알아두실 것 — 제안서 글에 그 말이 있을 때만 */
   var K2=B.keys,nt=[];
   if(K2.d90)nt.push(['⏳ 암은 90일 뒤부터','암 보장은 가입 후 <b>90일이 지난 뒤</b>부터 시작합니다(암보장개시일 — 제안서 · 약관 참고)']);
@@ -9101,19 +9223,12 @@ function baExDoc(B){
   if(K2.kw)nt.push(['🏥 병원 등급을 봅니다','「<b>종합병원</b>」 · 「<b>상급종합병원</b>」 이 붙은 담보는 그 병원에서 치료했을 때입니다']);
   if(K2.bike||K2.job)nt.push(['🛵 직업 · 이륜차는 알리기','직업이 바뀌거나'+(K2.bike?' 이륜차를 타게 되면':' 직무가 바뀌면')+' <b>회사에 알려야</b> 합니다 — 안 알리면 보험금이 줄거나 거절될 수 있습니다']);
   if(K2.prepay)nt.push(['💵 선지급','제안서에 <b>선지급</b> 제도가 적혀 있습니다 — 치료 전에 일부를 먼저 청구하는 방법(조건은 제안서)']);
-  if(K2.nodisc||K2.longdisc)nt.push(['💸 할인 제도',(K2.nodisc?'<b>무사고 할인</b>':'')+(K2.nodisc&&K2.longdisc?' · ':'')+(K2.longdisc?'<b>장기유지 할인</b>':'')+'이 적혀 있습니다 — 조건과 할인율은 제안서 해당 쪽']);
+  if((K2.nodisc||K2.longdisc)&&!disc)nt.push(['💸 할인 제도',(K2.nodisc?'<b>무사고 할인</b>':'')+(K2.nodisc&&K2.longdisc?' · ':'')+(K2.longdisc?'<b>장기유지 할인</b>':'')+'이 적혀 있습니다 — 조건과 할인율은 제안서 해당 쪽']);
   nt.push(['📖 범위는 약관이 정합니다','이 자료는 제안서 요약입니다. 병의 범위와 보장 내용은 <b>약관</b>을, 보험료 · 지급은 <b>심사 결과</b>를 따릅니다']);
   nt=nt.slice(0,6);
   sl(head('📌 꼭 알아두실 것','제안서에 적힌 조건 중 — 「안 나온다」 는 말이 나오는 자리')+
     '<div class="body"><div class="g" style="grid-template-columns:repeat(3,minmax(0,1fr));height:100%;grid-auto-rows:1fr">'+nt.map(function(x){return '<div class="card"><h4 style="font-size:19px">'+x[0]+'</h4><p class="lead" style="font-size:16.5px;line-height:1.65">'+x[1]+'</p></div>';}).join('')+'</div></div>'+
-    say(nt.length>1?('특히&nbsp;<em>'+nt[0][0].replace(/^\S+\s/,'')+'</em>'+(nt.length>2?'과&nbsp;<em>'+nt[1][0].replace(/^\S+\s/,'')+'</em>':'')+'&nbsp;— 꼭 기억해 두세요.'):'범위는&nbsp;<em>약관</em>, 지급은&nbsp;<em>심사 결과</em>를 따릅니다.'),'알아둘 것');
-  /* 담보 전체 — 14줄씩 */
-  for(var p0=0;p0<rows.length;p0+=14){var pr=rows.slice(p0,p0+14),pg=Math.floor(p0/14)+1,pn=Math.ceil(rows.length/14);
-    sl(head('담보 전체'+(pn>1?' ('+pg+'/'+pn+')':''),'제안서 담보 표를 그대로 — 숫자를 원본과 맞춰 보실 때')+
-      '<div class="body"><table class="t"><thead><tr><th>담보</th><th>묶음</th><th class="r">가입금액</th>'+(hasPrem?'<th class="r">보험료</th>':'')+'<th class="r">납입/만기</th></tr></thead><tbody>'+
-      pr.map(function(r){return '<tr><td>'+E(r.nm)+'</td><td style="color:var(--gy3);font-size:12.5px">'+E(baExBk(r.b).t)+'</td><td class="r num"><b>'+baExAmt(r.man)+'</b></td>'+(hasPrem?'<td class="r num">'+baExWonR(r.premWon)+'</td>':'')+'<td class="r" style="color:var(--gy3)">'+E(r.per||'—')+'</td></tr>';}).join('')+
-      (p0+14>=rows.length&&hasPrem?'<tr><td colspan="3" style="font-weight:800">합계 '+(C.ok===true?'<span class="tag">제안서 보험료와 같음 ✓</span>':'')+'</td><td class="r num"><b>'+baExWonR(baExSum(B))+'</b></td><td></td></tr>':'')+
-      '</tbody></table></div>'+say('제안서 표를 그대로 옮겼습니다 —&nbsp;<em>담보 '+rows.length+'개</em>'+(hasPrem?', 보험료 합계&nbsp;<em>'+baExWonR(baExSum(B))+'</em>':'')+'.'),'담보 전체');}
+    say(nt.length>1?('특히&nbsp;<em>'+nt[0][0].replace(/^\S+\s/,'')+'</em>'+(nt.length>2?'과&nbsp;<em>'+nt[1][0].replace(/^\S+\s/,'')+'</em>':'')+'&nbsp;— 꼭 기억해 두세요.'):'범위는&nbsp;<em>약관</em>, 지급은&nbsp;<em>심사 결과</em>를 따릅니다.'),'알아둘 것',false,'roomy');
   /* 이 제안서에 없는 것 */
   var nmAll=rows.map(function(r){return r.nm.replace(/\s+/g,'');}),hasN=function(re){return nmAll.some(function(n){return re.test(n);});};
   var CHK=[['실손의료비',/실손|의료비/],['질병 수술비',/질병.{0,10}수술/],['입원일당',/입원일당|입원비|입원급여/],['뇌 · 심장 수술 · 치료비',/(뇌|심장|심혈관|순환계|허혈).{0,14}(수술|치료)/],
@@ -9127,9 +9242,11 @@ function baExDoc(B){
     say(miss.length?('이 설계는&nbsp;<em>'+E(baExBk(byPrem[0]).t)+'</em>'+(byPrem[1]?' · <em>'+E(baExBk(byPrem[1]).t)+'</em>':'')+'에 집중했습니다.&nbsp;<em>'+E(miss.slice(0,3).join(' · '))+'</em>은 지금 가진 보험에서 확인하겠습니다.')
       :'자주 보는 보장이 고루 들어 있습니다 — 지금 가진 보험과&nbsp;<em>겹치는 곳</em>이 없는지 보겠습니다.'),'없는 것');
   /* 정리 */
-  var t1=tot>0?('월 '+baExWonR(tot)):('담보 '+rows.length+'개'),t1s=payTxt||'제안서 기준',t2=hasPrem?('보험료 '+baExPct(bk[byPrem[0]].prem,tot)+'는 '+baExBk(byPrem[0]).t):(baExBk(byPrem[0]).t+' 중심'),
-    t2s=keyR.length?(E(keyR[0].nm)+' '+baExAmt(keyR[0].man)):'',z=RF.length>=3&&B.age!==null&&B.years&&RF.every(function(r){return r.age>=B.age+B.years||r.refWon===0;});
-  sl('<div class="frame"></div><div class="cv-l" style="width:1110px;top:100px"><div class="ey" style="margin-top:0">정 리 — 세 줄</div><h1 style="font-size:44px">이 제안서를 한 문장으로 하면<span>「'+E(t1)+(B.years?', '+B.years+'년 내고 ':' ')+'큰 일에 대비한다」</span></h1>'+
+  var p0=hasPrem?bk[byPrem[0]].prem/tot*100:0,f0=frac(p0),maxE=endOf(rows),big2=((bk.can?bk.can.prem:0)+(bk.cv?bk.cv.prem:0))>=tot/2,
+    t1=tot>0?('월 '+baExWonR(tot)):('담보 '+rows.length+'개'),t1s=(B.years?B.years+'년'+(B.age!==null?'('+(B.age+B.years)+'세까지)':'')+' 납입':'')+(maxE?' · '+maxE+'세 보장':(B.term?' · '+B.term:''))||'제안서 기준',
+    t2=hasPrem?('보험료 '+(/%$/.test(f0)?f0+'는 ':f0+'은 ')+baExBk(byPrem[0]).t):(baExBk(byPrem[0]).t+' 중심'),
+    t2s=keyR.length?(E(shortNm(keyR[0]))+' '+baExAmt(keyR[0].man)+' 한 번'+(bk[byPrem[0]]&&bk[byPrem[0]].rows.some(function(r){return /연간|매년/.test(r.nm);})?'<br>+ 치료할 때마다 해마다':'')):'',z=RF.length>=3&&B.age!==null&&B.years&&RF.every(function(r){return r.age>=B.age+B.years||r.refWon===0;});
+  sl('<div class="frame"></div><div class="cv-l" style="width:1110px;top:100px"><div class="ey" style="margin-top:0">정 리 — 세 줄</div><h1 style="font-size:44px">이 계약을 한 문장으로 하면<span>「'+(B.years?B.years+'년 내고, ':E(t1)+', ')+(maxE?maxE+'세까지 ':'')+(big2?'큰 병':'큰 일')+'에 대비한다」</span></h1>'+
     '<div class="g" style="grid-template-columns:repeat(3,1fr);margin-top:40px;gap:20px"><div class="ek"><i>01 · 계약</i><b class="num">'+E(t1)+'</b><p>'+E(t1s)+'</p></div><div class="ek"><i>02 · 중심</i><b>'+E(t2)+'</b><p>'+t2s+'</p></div>'+
     '<div class="ek"><i>03 · 약속</i><b>'+(z?'끝까지 가져갈 계약':'담보 '+rows.length+'개')+'</b><p>'+(z?'납입 중 해지하면 0원<br>그 대신 낮은 보험료':order.length+'묶음으로 나눠 지킵니다')+'</p></div></div></div>'+
     '<div class="cv-f">'+(B.co?E(B.co)+' ':'')+'「'+E(B.nm||'상품')+'」 제안서를 옮겨 정리했습니다. 병의 범위와 보장 내용은 약관을, 보험료와 보험금 지급은 심사 결과를 따릅니다.</div>','정리',true);
