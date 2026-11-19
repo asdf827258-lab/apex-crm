@@ -55,10 +55,9 @@ $$;
 revoke all on function public.recruits_assign(uuid[], uuid) from public;
 grant execute on function public.recruits_assign(uuid[], uuid) to authenticated;
 
-insert into public.app_config(key, value)
-values ('schema_version', '36')
-on conflict (key) do update set value = excluded.value, updated_at = now();
-
+/* schema_version 은 적지 않는다. 메인은 47 이후로 이 값을 더 이상
+   쓰지 않는데, 여기서 적으면 라이브(47)를 더 낮은 숫자로 되돌려
+   버린다. 버전 표시는 버려진 칸이라 건드리지 않는다. */
 notify pgrst, 'reload schema';
 
 select
