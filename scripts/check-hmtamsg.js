@@ -19,6 +19,10 @@
      [10] ★★ 고객 365일 줄(touch) — 계약 고객 관리 안부 글(MST_TOUCH)을 읽기만 · 📰 소식 글은 뺀다(1번) ·
               접힌 머리는 「💬 안부 카톡」
      [11] ★ ta-msg.js 앞뒤 빈칸 다듬기가 「s」 글자를 안 지운다
+   ── 판 X497 「다음것 해」 (9차 시안 「TA여는말은 그냥 바로 스크립트로」) ──
+     [12] ★★ 「☎️ 전체 대본」 이 이분의 DB 종류 · 이름 · 약속을 TA 스크립트 칸(ta_final_v1)에 넣고 연다 ·
+              지난 고객 칸은 비우고 설계사 칸은 그대로 · 못 알아본 DB 는 안 바꾼다(1번) · 🙈 가리기면 이름 비움 ·
+              주소에 이름을 안 싣는다(3번)
    ═══════════════════════════════════════════════════════════════ */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
@@ -143,6 +147,26 @@ is(copied === H.text(TL[0], TOUCH, 'kakao'), '  📋 가 그 안부 글을 베�
 console.log('\n[11] ta-msg.js 빈칸 다듬기');
 is(/에이플러스에셋 sam/.test(win.TA_MSG.textFor('hold', { me: 'sam', area: 'south' }, 'sms')) &&
    /south 담당/.test(win.TA_MSG.textFor('hold', { me: 'sam', area: ' south ' }, 'kakao')), '  「s」 로 시작·끝나는 이름·지역을 안 깎는다');
+
+console.log('\n[12] ☎️ 전체 대본 — 이분에 맞춰 연다 (판 X497)');
+let wentTab = '';
+win.go = t => { wentTab = t; };
+LS.ta_final_v1 = JSON.stringify({ db: 'analysis1', age: '40', f: { me: '윤시현', area: '광주 서구', s1: '화 2시', c: '홍정돌', when: '11월 2일(월) 오후 3시', where: '카페', r1: '앞 고객 결과' } });
+H.openTa('k1');
+const O1 = JSON.parse(LS.ta_final_v1);
+is(wentTab === 'ta_script', '  누르면 TA 스크립트 화면으로 간다');
+is(O1.db === 'analysis3', '  이분 DB(보장분석3)로 맞춘다');
+is(O1.f.c === '홍길동' && /11월 20일\(금\) 오후 2시/.test(O1.f.when || ''), '  이분 이름 · 약속 시각을 넣는다');
+is(!O1.f.where && !O1.f.r1, '  지난 고객 칸(장소 · 결과)은 비운다');
+is(O1.f.me === '윤시현' && O1.f.area === '광주 서구' && O1.f.s1 === '화 2시' && O1.age === '40', '  설계사 칸 · 나이대는 그대로');
+H.openTa('k3');
+const O3 = JSON.parse(LS.ta_final_v1);
+is(O3.db === 'analysis3' && O3.f.c === '홍갑돌' && !O3.f.when, '  못 알아본 DB(보장분석1)는 바꾸지 않고 · 약속 없는 분은 시각을 안 넣는다 (1번)');
+win.hmNmHidden = () => true;
+H.openTa('k1');
+is(!JSON.parse(LS.ta_final_v1).f.c, '  🙈 이름 가리기를 켰으면 이름을 비운다');
+delete win.hmNmHidden;
+is(/HM_TAMSG\.openTa\(/.test(IX) && !/ta-script\.html[^'"]*[?#][^'"]*\+/.test(IX), '  본체 「☎️ 전체 대본」 이 openTa 를 부르고 · 주소에 고객을 싣지 않는다 (3번)');
 
 console.log(bad ? `\n✗ ${bad}개가 어긋났습니다` : '\n✓ 오늘 카드가 TA 문자·카톡을 ta-msg.js 에서 읽어 씁니다');
 process.exit(bad ? 1 : 0);

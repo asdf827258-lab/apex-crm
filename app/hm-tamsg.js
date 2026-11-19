@@ -34,6 +34,18 @@
      읽어 「💬 안부 카톡」 으로 세웁니다. 글을 새로 짓지 않습니다 (1번 · 5번).
      📰 「전할 소식 하나」 는 뺍니다 — 기사를 붙이는 자리가 저쪽(mstNews)에만 있어
      여기서 보내면 「소식이 있어」 라고 해 놓고 소식이 없는 글이 됩니다 (1번).
+
+   ── 판 X497 (사장님 말씀 2026-11-20 「다음것 해」 · 9차 시안 때 「TA여는말은 그냥
+      바로 스크립트로 가는거라던지」) ──
+   ★ 오늘 카드 「☎️ 전체 대본 · 거절처리」 가 TA 스크립트를 <b>지난번에 고른 DB</b>로
+     열었습니다 — 실손 DB 고객에게 전화하려고 눌렀는데 보장분석 대본이 서 있는 식.
+     이제 <b>이분의 DB 종류 · 이름 · 약속</b>을 TA 스크립트 칸(ta_final_v1)에 넣고 엽니다.
+     · 주소에 이름을 싣지 않습니다 — 같은 기기 저장소에만 둡니다 (3번).
+     · 🙈 이름 가리기를 켰으면 이름은 비웁니다(고객 앞일 수 있음).
+     · <b>지난 고객의 칸</b>(신청일 · 약속 · 장소 · 결과 세 줄)은 비웁니다 — 남겨 두면
+       앞 고객의 약속이 다음 고객 카톡에 실립니다. 설계사 칸(이름 · 지역 · 지점 · 회사 수
+       · 고르는 시각)은 그대로 둡니다.
+     · DB 종류를 못 알아보면 바꾸지 않고 그렇다고 말합니다 (1번).
    ═══════════════════════════════════════════════════════════════ */
 (function (g) {
   /* 단계 → 이분께 맞는 카톡 (TA 스크립트 갈래 이름 그대로 · 앞의 것이 기본) */
@@ -109,6 +121,39 @@
     if (typeof g.hmPaint === 'function') g.hmPaint();
   }
   function editArea() { AREA_EDIT = true; if (typeof g.hmPaint === 'function') g.hmPaint(); }
+
+  /* ── ☎️ TA 스크립트를 이분에 맞춰 열기 (판 X497) ── */
+  var PER_CUSTOMER = ['c', 'date', 'when', 'where', 'due', 'r1', 'r2', 'r3'];
+  function srcOf(x) {
+    var s = '';
+    try { if (typeof g.hmSrcOf === 'function') s = g.hmSrcOf(x) || ''; } catch (e) { s = ''; }
+    if (!s) { var r = dbRow(x); s = (r && r.src) || ''; }
+    return String(s);
+  }
+  function nameOf(x) {
+    var t = String((x && x.t) || '').trim();
+    try { if (typeof g.hmNmHidden === 'function' && g.hmNmHidden()) return ''; } catch (e) { return ''; }
+    try { if (typeof g.hmFullNm === 'function') t = g.hmFullNm(t) || t; } catch (e2) {}
+    return (t === '고객') ? '' : t;
+  }
+  /* 이분 맞춤 칸 — 부르는 자리가 둘(openTa · 점검)이라 한 곳에서 짓습니다 */
+  function taPrep(x) {
+    var o = taAll(), i, s = srcOf(x), d = null;
+    o.f = o.f || {};
+    for (i = 0; i < PER_CUSTOMER.length; i++) delete o.f[PER_CUSTOMER[i]];
+    try { d = (g.TA_OPENER && g.TA_OPENER.db) ? g.TA_OPENER.db(s) : null; } catch (e) { d = null; }
+    if (d) o.db = d.key;
+    var nm = nameOf(x); if (nm) o.f.c = nm;
+    var w = whenOf(apOf(x)); if (w) o.f.when = w;
+    return { o: o, db: d, src: s };
+  }
+  function openTa(key) {
+    var x = (typeof g.hmStepOf === 'function') ? g.hmStepOf(key) : null, p = taPrep(x);
+    try { g.localStorage.setItem(TAK, JSON.stringify(p.o)); } catch (e) {}
+    if (typeof g.go === 'function') g.go('ta_script');
+    if (typeof g.toast === 'function')
+      g.toast(p.db ? ('☎️ 이분 DB(' + p.db.label + ')로 맞춰 열었습니다') : ('☎️ DB 종류를 몰라 지난번 고른 대본 그대로 엽니다' + (p.src ? ' (' + p.src + ')' : '')));
+  }
   function fields(x) {
     var r = dbRow(x), me = '';
     try { me = (g.OS && g.OS.profile && g.OS.profile.name) || ''; } catch (e) { me = ''; }
@@ -236,5 +281,6 @@
 
   g.HM_TAMSG = { moment: moment, how: how, apptHow: apptHow, list: list, text: text, html: html,
                  copy: copy, pick: pick, setCh: setCh, whenOf: whenOf, BY_STAGE: BY_STAGE,
-                 tag: tag, area: area, setArea: setArea, editArea: editArea };
+                 tag: tag, area: area, setArea: setArea, editArea: editArea,
+                 openTa: openTa, taPrep: taPrep };
 })(typeof window !== 'undefined' ? window : this);
