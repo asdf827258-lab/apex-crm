@@ -123,5 +123,45 @@ is(tq2 > 0 && tbad2 === 0, '새 15개 + AIA 의 약관 문장 ' + tq2 + '개가 
 const HL3 = SEED ? SEED.products.find(p => p.id === 'hana-life-03') : null;
 is(!!HL3 && JSON.stringify(HL3).indexOf('낸 보험료 전부 환급') < 0 && JSON.stringify(HL3).indexOf('지금까지 낸 보험료를 전부') < 0, '하나생명 THE 연결된 종신 — 환급은 「납입하기로 한 보험료 전부」 (「지금까지 낸 보험료」 아님)');
 
+
+console.log('\n[12] 📜 약관 근거 세 번째 묶음 — 17개 더, 카드 문장도 약관에 맞춤 (판 X492 · 사장님 말씀 「다음 작업 진행해줘」)');
+is(TP.length >= 84, '약관 발췌가 붙은 상품 ' + TP.length + '개 (67 → 84 이상)');
+const NEWT3 = ['chubb-01', 'chubb-03', 'metlife-03', 'tongyang-life-05', 'samsung-fire-02', 'samsung-fire-03', 'db-fire-02', 'hyundai-marine-02', 'im-life-01', 'kb-life-04', 'miraeasset-life-01', 'kyobo-life-01', 'lina-life-03', 'lotte-fire-02', 'nh-fire-02', 'heungkuk-fire-02', 'heungkuk-life-01'];
+let tq3 = 0, tbad3 = 0;
+NEWT3.forEach(id => { const p = TP.find(x => x.id === id); if (!p) { tbad3++; return; }
+  [...(p.terms.clauses || []), ...Object.values(p.terms.pay_rules || {})].forEach(q => { if (!q || !q.quote) return; tq3++; if (!(q.vf && q.vf.ok) || q.quote.indexOf('…') >= 0) tbad3++; }); });
+is(tq3 > 0 && tbad3 === 0, '새 17개 상품의 약관 문장 ' + tq3 + '개가 전부 PDF 에서 글자 그대로, 「…」 생략 없음 (어긋남 ' + tbad3 + ')');
+const PJ = id => { const p = SEED ? SEED.products.find(x => x.id === id) : null; return p ? JSON.stringify(p) : ''; };
+const MET = PJ('metlife-03');
+is(MET.indexOf('달러저축전환 뒤 중도인출') >= 0 && MET.indexOf('"중도인출 1회 해약환급금 50% 한도, 추가납입') < 0, '메트 백만인 달러종신 — 중도인출은 「달러저축전환 뒤」 (주계약은 약관 제33조의3 로 불가)');
+const DBF = PJ('db-fire-02');
+is(!!DBF && DBF.indexOf('전이암은 원발부위 기준으로 판정') < 0 && DBF.indexOf('전이된 부위') >= 0, 'DB 마니&또 통합암 — 통합전이암은 「전이된 부위의 부위군」 으로 (원발 기준이라 적지 않음)');
+const HMR = PJ('hyundai-marine-02');
+is(!!HMR && HMR.indexOf('가입금액의 20%') < 0 && HMR.indexOf('일반암 지급액의 20%') >= 0, '현대해상 10억 주요치료 — 기타피부암·갑상선암은 「일반암 지급액의 20%」 (가입금액의 20% 아님)');
+const MRA = PJ('miraeasset-life-01');
+is(!!MRA && MRA.indexOf('10년마다 갱신') < 0 && MRA.indexOf('치료를 받으실 때마다 정액') < 0, '미래에셋 M-케어 — 신약 특약은 처음 10년 뒤 5년마다 갱신, 특약마다 최초 1회 (「받을 때마다」 아님)');
+const KYB = PJ('kyobo-life-01');
+is(!!KYB && KYB.indexOf('납입이 끝나면 1형은 30%로 올라가요') < 0 && KYB.indexOf('(납입 중 10%, 납입종료 후 30%)') < 0, '교보 3밸런스 — 지급 비율은 최초 진단 시점으로 고정 (납입이 끝났다고 30% 로 오르지 않음)');
+
+console.log('\n[13] 📜 약관 근거 네 번째 묶음 — 19개 더, 카드 문장 15상품 약관에 맞춤 (판 X494 · 사장님 말씀 「다음 작업 진행해줘」)');
+is(TP.length >= 103, '약관 발췌가 붙은 상품 ' + TP.length + '개 (84 → 103 이상)');
+const NEWT4 = ['chubb-05', 'kyobo-life-04', 'kb-life-05', 'shinhan-life-02', 'hanwha-life-02', 'db-fire-03', 'heungkuk-fire-04', 'heungkuk-fire-05', 'samsung-fire-04', 'lotte-fire-04', 'nh-life-04', 'nh-life-05', 'lina-life-04', 'heungkuk-life-04', 'hana-life-01', 'hyundai-marine-03', 'nh-fire-03', 'lina-fire-04', 'hana-fire-05'];
+let tq4 = 0, tbad4 = 0;
+NEWT4.forEach(id => { const p = TP.find(x => x.id === id); if (!p) { tbad4++; return; }
+  [...(p.terms.clauses || []), ...Object.values(p.terms.pay_rules || {})].forEach(q => { if (!q || !q.quote) return; tq4++; if (!(q.vf && q.vf.ok) || q.quote.indexOf('…') >= 0) tbad4++; }); });
+is(tq4 > 0 && tbad4 === 0, '새 19개 상품의 약관 문장 ' + tq4 + '개가 전부 PDF 에서 글자 그대로, 「…」 생략 없음 (어긋남 ' + tbad4 + ')');
+const PJ4 = id => { const p = SEED ? SEED.products.find(x => x.id === id) : null; return p ? JSON.stringify(p) : ''; };
+const NHL = PJ4('nh-life-04');
+is(!!NHL && NHL.indexOf('16일 이후에는 한도가 줄어들어 지금이') < 0 && NHL.indexOf('그 전에 한번 보시는 게') < 0 && NHL.indexOf('하루 최대 15만원') >= 0, 'NH 간병안심 — 11.16 한도 축소는 지난 일, 「그 전에 가입」 권유 없음 · 입원 간병인 하루 최대 15만원');
+const HKF = PJ4('heungkuk-fire-04');
+is(!!HKF && HKF.indexOf('"renewal":"비갱신"') < 0 && HKF.indexOf('갱신형_20년') >= 0, '흥국화재 리셋월렛Ⅱ — 「비갱신」 아님, 갱신형_20년');
+const KBL = PJ4('kb-life-05');
+is(!!KBL && KBL.indexOf('사망보험금의 최대 80%를 미리 받아') < 0 && KBL.indexOf('1년 간격') >= 0, 'KB 라이프 파트너 — 간병 선지급은 1년 간격 10·15·20% (「최대 80% 를 미리」 아님)');
+const SHL = PJ4('shinhan-life-02');
+is(!!SHL && SHL.indexOf('상급종합병원') >= 0 && SHL.indexOf('여성유방암·전립선암 제외') >= 0, '신한 3케어리워드 — 완납 후 주요치료비는 상급종합병원 등만, 납입면제 암에서 여성유방암·전립선암 제외');
+const HKL = PJ4('heungkuk-life-04');
+is(!!HKL && HKL.indexOf('선택특약(치매 보장)은 그대로 유지') < 0, '흥국생명 치매담은 — 「특약은 그대로 유지」 를 단정하지 않음 (약관은 전환전 계약 효력 없음만)');
+const HNF = PJ4('hana-fire-05');
+is(!!HNF && HNF.indexOf('치매가 의심되면 감별검사 100만') < 0, '하나 치매플러스 — 감별검사 100만은 치매로 진단될 때만');
 console.log('\n' + (bad ? '✗ ' + bad + '곳이 어긋났습니다' : '✓ 상품전략기 한 칸에서 「무엇을 권할까」 와 「어떻게 말을 꺼낼까」 가 같은 대본으로 이어집니다.'));
 process.exit(bad ? 1 : 0);
