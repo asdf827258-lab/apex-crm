@@ -67,6 +67,13 @@ const TAP_UNDER = 0;
        · apex-sangdam-photo.netlify.app  비대면 상담사진 (같은 꼴)
      셋 다 정당합니다 — 자가 전부 막고 「나가려 한 것」 만 셉니다. */
 const SRV_HOSTS = 3;
+/* 📏 적는 칸 글씨가 16px 아래인 것 — 늘면 빨간불 ([6])
+     2026-11-19 (판 X489) · 315개 전부 13px 이었습니다 → <b>0</b> */
+const FONT_UNDER = 0;
+/* 📏 글자가 잘리는 칸 — 글씨를 키운 값이 아니라 <b>원래</b> 그랬던 둘 ([7])
+     긴 주소를 넣는 칸(kijun·academy_notion)이고, 글씨를 키우기 전부터
+     그랬습니다 — 재어 확인했습니다. 늘면 빨간불입니다. */
+const CLIP_OK = 2;
 const 창 = { width: 390, height: 844 };
 
 let bad = 0;
@@ -104,7 +111,27 @@ const 잼 = `(() => {
       글: (e.innerText || e.title || e.value || e.placeholder || '').replace(/\\s+/g, ' ').trim().slice(0, 18)
     });
   });
-  return { 센것: 센것, 작은것: 작은것,
+  /* ── 📱 <b>적는 칸의 글씨</b>와 <b>글자가 잘리는 칸</b> (판 X489) ──────
+     아이폰·아이패드는 16px 아래 칸에 초점이 가면 <b>화면을 확 키웁니다</b>
+     (사파리·아이폰 크롬 모두 WebKit). 이 앱의 viewport 에는 maximum-scale
+     도 user-scalable=no 도 없어 그 키우기가 그대로 일어납니다.
+     ⚠ 글씨를 키우면 <b>좁은 칸에서 글자가 잘립니다</b> — 그래서 둘을
+       <b>같이</b> 셉니다. 하나만 보면 다른 하나를 망가뜨립니다. */
+  const 작은글 = [], 잘린것 = [];
+  [].slice.call(p.querySelectorAll('input,textarea,select')).forEach(e => {
+    if (!vis(e)) return;
+    const ty = (e.type || '').toLowerCase();
+    if (['checkbox','radio','range','hidden','button','submit'].indexOf(ty) >= 0) return;
+    const f = parseFloat(getComputedStyle(e).fontSize);
+    if (f < 16) 작은글.push({ 꼴: e.tagName.toLowerCase() + '[' + ty + ']', px: Math.round(f * 10) / 10,
+      글: String(e.placeholder || e.value || e.name || e.id || '').slice(0, 16) });
+    /* 여러 줄 칸은 세로로 늘어나니 가로 잘림을 안 봅니다 */
+    if (e.tagName.toLowerCase() !== 'textarea' && e.scrollWidth > e.clientWidth + 2)
+      잘린것.push({ 꼴: e.tagName.toLowerCase() + '[' + ty + ']',
+        w: Math.round(e.getBoundingClientRect().width), 안: e.scrollWidth, 밖: e.clientWidth,
+        값: String(e.value || e.placeholder || '').slice(0, 14) });
+  });
+  return { 센것: 센것, 작은것: 작은것, 작은글: 작은글, 잘린것: 잘린것,
     옆으로: Math.max(0, Math.round(document.documentElement.scrollWidth - window.innerWidth)) };
 })()`;
 
@@ -146,7 +173,7 @@ const 잼 = `(() => {
   });
 
   let 센것 = 0, 옆터짐 = [];
-  const 작은것 = [];
+  const 작은것 = [], 작은글 = [], 잘린것 = [];
   for (const t of 탭들) {
     await pg.evaluate((id) => { try { go(id); } catch (e) {} }, t.id);
     await pg.waitForTimeout(620);
@@ -154,6 +181,8 @@ const 잼 = `(() => {
     센것 += r.센것;
     if (r.옆으로 > 4) 옆터짐.push(t.id + ' +' + r.옆으로 + 'px');
     r.작은것.forEach(x => 작은것.push({ 탭: t.id, 제목: t.title, ...x }));
+    r.작은글.forEach(x => 작은글.push({ 탭: t.id, ...x }));
+    r.잘린것.forEach(x => 잘린것.push({ 탭: t.id, ...x }));
   }
 
   head('[1] ★★ 44px 아래로 누르는 자리가 <b>0개</b>인가');
@@ -177,6 +206,30 @@ const 잼 = `(() => {
   head('[4] ★ 옆으로 미는 화면이 없나 — 바닥을 깔다 가로가 터지지 않게');
   is(옆터짐.length === 0, '  옆으로 미는 화면 <b>' + 옆터짐.length + '개</b>' +
     (옆터짐.length ? ('\n        ← ' + 옆터짐.slice(0, 5).join(' · ')) : ''));
+
+  head('[6] ★★ 📱 <b>적는 칸의 글씨가 16px 아래로 안 내려가나</b> (판 X489)');
+  is(작은글.length <= FONT_UNDER,
+    '  16px 아래 <b>' + 작은글.length + '개</b> / 화면 ' + new Set(작은글.map(x => x.탭)).size + '개 · 눈금 ' + FONT_UNDER + '개' +
+    (작은글.length > FONT_UNDER ? ' ★ 늘었습니다 — 아이폰에서 칸을 누를 때마다 화면이 확 커집니다' :
+      (작은글.length < FONT_UNDER ? ' ★ 줄었습니다 — 눈금도 같이 내리십시오 (0-1번)' : '')));
+  if (작은글.length) {
+    const g = {};
+    작은글.forEach(x => { const k = x.꼴 + ' @' + x.px + 'px'; (g[k] = g[k] || { n: 0, 탭: new Set() }); g[k].n++; g[k].탭.add(x.탭); });
+    Object.entries(g).sort((a, b) => b[1].n - a[1].n).slice(0, 6).forEach(([k, v]) =>
+      console.log('        ' + String(v.n).padStart(4) + '개  ' + k.padEnd(34) + ' ' + [...v.탭].slice(0, 4).join(' ')));
+  }
+  const 바닥글 = /#dynPane textarea,#dynPane select\{font-size:max\(16px,1em\) !important\}/.test(소스);
+  is(바닥글, '    글씨 바닥이 소스에 <b>한 곳</b> 있다 — font-size:max(16px,1em) !important' +
+    (바닥글 ? '' : ' ← !important 가 없으면 .app [style*=…] 의 !important 와 인라인 크기에 집니다'));
+
+  head('[7] ★ 글씨를 키우다 <b>좁은 칸에서 글자가 잘리지 않았나</b>');
+  is(잘린것.length <= CLIP_OK,
+    '  글자가 잘리는 칸 <b>' + 잘린것.length + '개</b> · 눈금 ' + CLIP_OK + '개' +
+    (잘린것.length > CLIP_OK ? ' ★ 늘었습니다 — 글씨를 키운 만큼 담을 자리가 모자랍니다' : ''));
+  잘린것.slice(0, 5).forEach(x => console.log('        ' + x.탭.padEnd(16) + x.꼴.padEnd(16) +
+    ' 넓이' + String(x.w).padStart(4) + '  안' + x.안 + ' > 밖' + x.밖 + '  「' + x.값 + '」'));
+  console.log('      (눈금 ' + CLIP_OK + '개는 긴 주소를 넣는 칸 둘입니다 — 칸 안에서 옆으로 밀려 보는 것이 정상이고,');
+  console.log('       글씨를 키우기 <b>전부터</b> 그랬습니다. 재어 확인했습니다.)');
 
   head('[5] ★ 조용한가 · <b>화면을 열기만 해서</b> 서버로 나가려 한 요청 (7번)');
   const 터 = [...new Set(터짐)];
@@ -210,7 +263,7 @@ const 잼 = `(() => {
 
   await br.close(); srv.close();
   console.log('\n──────────────────────────────');
-  console.log(bad ? ('✗ ' + bad + '군데 — 엄지가 옆을 누릅니다')
-                  : '✓ 화면 ' + 탭들.length + '개 어디서도 누르는 자리가 44px 아래로 안 내려갑니다 (판 X488)');
+  console.log(bad ? ('✗ ' + bad + '군데 — 폰에서 엄지가 옆을 누르거나 글씨가 작습니다')
+                  : '✓ 화면 ' + 탭들.length + '개 어디서도 누르는 자리는 44px, 적는 칸 글씨는 16px 아래로 안 내려갑니다 (판 X488·X489)');
   process.exit(bad ? 1 : 0);
 })().catch(e => { console.error('터짐: ' + (e && e.message)); process.exit(2); });
