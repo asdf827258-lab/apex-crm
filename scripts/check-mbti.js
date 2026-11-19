@@ -463,7 +463,7 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
       bless: /덕담|🌾/.test(iceTxt), noScript: !/포문|하면 안 되는 말/.test(iceTxt),
       meHidden: meHidden, riskBlocked: riskBlocked };
   });
-  ok(view.agent === 16 && view.client === 9, '내 눈용 ' + view.agent + '탭 · 고객 화면 ' + view.client + '탭으로 갈린다');
+  ok(view.agent === 17 && view.client === 9, '내 눈용 ' + view.agent + '탭 · 고객 화면 ' + view.client + '탭으로 갈린다');
   ok(view.leak === '', '고객 화면에 설계사용 문구가 하나도 새어 나가지 않는다' + (view.leak ? ' — ' + view.leak : ''));
   ok(view.bless && view.noScript, '고객 화면 아이스브레이킹에는 덕담만 남고 화법 대본은 빠진다');
   ok(view.meHidden, '고객 화면에서는 내 카드 버튼도 감춘다');
@@ -871,6 +871,122 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   });
   ok(noReject.length === 0, '후보 화면 어디에도 합격·탈락 같은 말이 없다' + (noReject.length ? ' — ' + noReject.join(',') : ''));
   await rc.close(); await rctx.close();
+
+  console.log('\n채용 2단계 — 우선순위 · Top 10 · 면담 브리프');
+  const lead = await ctx.newPage();
+  await lead.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
+  await lead.waitForTimeout(1200);
+  const D = n => new Date(Date.now() - n * 86400000).toISOString();
+  const sc = await lead.evaluate(d => {
+    const mk = o => Object.assign({ id: 'x', name: '', phone: '01000000000', contact_time: '', stage: 'new',
+      intent: 'maybe', finished: true, elapsed_sec: 400, consistency: 85, mbti: '', day_gz: '', blood: '',
+      memo: '', owner_note: '', created_at: d[0] }, o);
+    const best = rqScore(mk({ intent: 'now', contact_time: '저녁', memo: '궁금합니다' })).score;
+    const worst = rqScore(mk({ intent: 'no', finished: false, elapsed_sec: 20, consistency: 30, created_at: d[1] })).score;
+    const mid = rqScore(mk({ intent: 'soon', contact_time: '아무때나' })).score;
+    /* 성향·사주·혈액형이 점수에 끼어드는지 — 그 값만 바꿔 보고 같은지 본다 */
+    const a = rqScore(mk({ mbti: 'ENFP', blood: 'O', day_gz: '갑자' })).score;
+    const b = rqScore(mk({ mbti: 'ISTJ', blood: 'AB', day_gz: '계해' })).score;
+    /* 방치된 건이 위로 올라오는지 */
+    const fresh = rqScore(mk({ created_at: d[0] }));
+    const stale = rqScore(mk({ created_at: d[2] }));
+    return { best: best, worst: worst, mid: mid, same: a === b,
+      warn: stale.warn, staleUp: stale.score, freshUp: fresh.score,
+      why: rqScore(mk({ intent: 'now' })).why.length };
+  }, [D(0.2), D(9), D(5)]);
+  ok(sc.best > sc.mid && sc.mid > sc.worst,
+     '우선순위가 변별된다 — 좋은 신호 ' + sc.best + ' > 보통 ' + sc.mid + ' > 약함 ' + sc.worst);
+  ok(sc.best <= 100 && sc.best >= 85 && sc.worst >= 0 && sc.worst < 40,
+     '점수가 100 에 몰리지도, 바닥에 깔리지도 않는다 (' + sc.worst + '~' + sc.best + ')');
+  ok(sc.same, '성향·사주·혈액형은 우선순위에 1점도 들어가지 않는다');
+  ok(/일째 연락 안 함/.test(sc.warn || ''), '사흘 넘게 방치된 건에 경고가 붙는다 — ' + sc.warn);
+  ok(sc.why >= 3, '점수마다 그렇게 나온 이유가 함께 나온다 (' + sc.why + '개)');
+
+  const top = await lead.evaluate(d => {
+    OS.profile = { id: '11111111-2222-3333-4444-555555555555', name: '윤시현', role: 'admin' };
+    document.getElementById('dynPane').innerHTML = renderRecruit();
+    RQ.loaded = true;
+    RQ.rows = [
+      { id: 'a1', name: '김후보', phone: '01022223333', contact_time: '저녁', stage: 'new', intent: 'now',
+        finished: true, elapsed_sec: 412, consistency: 88, mbti: 'ENFP', day_gz: '신유', blood: 'O',
+        memo: '설명 듣고 싶습니다', owner_note: '', birth_y: 1994, birth_m: 8, birth_d: 3, birth_h: 14, created_at: d[0] },
+      { id: 'a2', name: '이서연', phone: '01077778888', contact_time: '', stage: 'new', intent: 'no',
+        finished: false, elapsed_sec: 48, consistency: 0, mbti: '', day_gz: '계축', blood: 'B',
+        memo: '', owner_note: '', birth_y: 1999, birth_m: 11, birth_d: 30, birth_h: null, created_at: d[1] },
+      { id: 'a3', name: '최민호', phone: '01033334444', contact_time: '아무때나', stage: 'joined', intent: 'soon',
+        finished: true, elapsed_sec: 600, consistency: 91, mbti: 'ESTJ', day_gz: '병인', blood: 'A',
+        memo: '', owner_note: '', birth_y: 1991, birth_m: 6, birth_d: 9, birth_h: 20, created_at: d[1] }
+    ];
+    rqPaint();
+    const names = rqTop(10).map(x => x.r.name);
+    RQ.sort = 'score'; rqPaint();
+    const first = (document.querySelector('#rqList b') || {}).textContent;
+    return { names: names, first: first, topHtml: document.getElementById('rqTop').innerHTML };
+  }, [D(0.2), D(1)]);
+  ok(top.names.indexOf('김후보') >= 0, 'Top 10 에 신호가 뚜렷한 후보가 오른다');
+  ok(top.names.indexOf('이서연') < 0, '점수가 낮은 후보는 "오늘 연락할 사람"에 올리지 않는다');
+  ok(top.names.indexOf('최민호') < 0, '이미 입사한 사람은 연락 목록에서 빠진다');
+  ok(top.first === '김후보', '대기열도 우선순위순으로 선다 (' + top.first + ')');
+  ok(/브리프/.test(top.topHtml), 'Top 10 에서 바로 브리프를 열 수 있다');
+
+  const handoff = await lead.evaluate(() => {
+    localStorage.removeItem('apex_brief_cand');
+    const open = window.open; let url = '';
+    window.open = u => { url = u; return null; };
+    rqBrief('a1');
+    window.open = open;
+    let o = null; try { o = JSON.parse(localStorage.getItem('apex_brief_cand') || 'null'); } catch (e) {}
+    return { url: url, o: o };
+  });
+  ok(/brief=1/.test(handoff.url) && !/[?&](name|phone)=/.test(handoff.url),
+     '브리프는 주소에 개인정보를 싣지 않고 넘긴다');
+  ok(handoff.o && handoff.o.name === '김후보' && handoff.o.y === 1994 && handoff.o.mbti === 'ENFP',
+     '브리프로 넘기는 값에 생년월일·유형이 들어 있다');
+  await lead.close();
+
+  const bctx = await browser.newContext({ viewport: { width: 1100, height: 1000 } });
+  const bp = await bctx.newPage();
+  await bp.goto('http://127.0.0.1:' + PORT + '/app/saju-mbti.html', { waitUntil: 'domcontentloaded' });
+  await bp.waitForTimeout(500);
+  await bp.evaluate(o => {
+    const me = blank(); me.name = '윤시현'; me.gender = '남'; me.y = 1985; me.m = 3; me.d = 12; me.H = 10;
+    me.mbti = 'ENFJ'; me.blood = 'O'; calcPerson(me);
+    localStorage.setItem('sajumbti', JSON.stringify({ me: me, cl: blank(), ans: {}, i: 0, step: 'me',
+      tab: 'ice', mode: 'both', view: 'agent', worry: {} }));
+    localStorage.setItem('apex_brief_cand', JSON.stringify(o));
+  }, { name: '김후보', gender: '남', y: 1994, m: 8, d: 3, H: 14, noTime: false, mbti: 'ENFP', blood: 'O',
+       phone: '01022223333', contactTime: '평일 저녁 7시 이후', memo: '설명 듣고 싶습니다', intent: 'now',
+       when: '11-18 10:21', finished: true, elapsedSec: 412, consistency: 88, stage: 'new' });
+  await bp.goto('http://127.0.0.1:' + PORT + '/app/saju-mbti.html?brief=1', { waitUntil: 'domcontentloaded' });
+  await bp.waitForTimeout(800);
+  const br = await bp.evaluate(() => {
+    const t = document.getElementById('view').textContent;
+    return { tab: S.tab, key: storeKey(), name: S.cl.name, me: S.me.name,
+      len: t.replace(/\s+/g, '').length,
+      tel: /010-2222-3333/.test(t), memo: /설명 듣고 싶습니다/.test(t),
+      sum: /한 줄 요약/.test(t), open: /첫 3분/.test(t), ask: /물어볼 것/.test(t),
+      no: /하지 마세요/.test(t), risk: /흔들리는 자리/.test(t), place: /어디에 붙이고/.test(t),
+      fit: /나와의 궁합/.test(t), rule: /뽑고 거르는 문서가 아닙니다/.test(t),
+      /* 탭 목록에서 빠지는 것과, 주소로 강제로 열었을 때 막히는 것을 따로 본다 */
+      notListed: tabsFor(S.mode, 'client').indexOf('brief') < 0,
+      clientBlocked: (function () {
+        const v = S.view, t = S.tab;
+        S.view = 'client'; S.tab = 'brief';
+        const h = viewBoard();
+        S.view = v; S.tab = t;
+        return /설계사 전용입니다/.test(h);
+      })() };
+  });
+  ok(br.tab === 'brief' && br.name === '김후보' && br.me === '윤시현',
+     '브리프로 열면 그 후보가 올라오고 내 카드는 그대로 쓴다');
+  ok(br.key === 'sajumbti_brief', '브리프는 저장 칸을 따로 써서 보던 고객 자료를 건드리지 않는다');
+  ok(br.tel && br.memo, '연락처는 보기 좋게 끊어 쓰고, 본인이 남긴 말을 그대로 보여준다');
+  ok(br.sum && br.open && br.ask && br.no, '한 줄 요약 · 첫 3분 · 물어볼 것 · 하지 말 것이 모두 나온다');
+  ok(br.risk && br.place && br.fit, '흔들리는 자리 · 어디에 붙일까 · 나와의 궁합까지 붙는다');
+  ok(br.rule, '"뽑고 거르는 문서가 아니다"라고 브리프에도 못 박는다');
+  ok(br.notListed && br.clientBlocked, '브리프는 고객 화면 목록에 없고, 강제로 열어도 막힌다');
+  ok(br.len > 1000, '브리프가 한 장 분량으로 채워진다 (' + br.len + '자)');
+  await bp.close(); await bctx.close();
 
   console.log('\n화면 · 스크롤 칸');
   for (const t of await page.evaluate(() => tabsFor('both'))) {

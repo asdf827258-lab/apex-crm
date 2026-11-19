@@ -914,7 +914,7 @@ var STRATEGY={
    ══════════════════════════════════════════════════════════════════ */
 var BLANK={name:'',gender:'M',mbti:'',blood:'',rel:'client',y:'',m:'',d:'',H:'',Mi:0,noTime:false,adj:false,saju:null,res:null};
 function blank(){var o={},k;for(k in BLANK)o[k]=BLANK[k];return o;}
-var S={step:'me',tab:'ice',target:'client',i:0,ans:{},mode:'both',view:'agent',worry:{},dang:{},apply:{},me:blank(),cl:blank()};
+var S={step:'me',tab:'ice',target:'client',i:0,ans:{},mode:'both',view:'agent',worry:{},dang:{},apply:{},meta:{},me:blank(),cl:blank()};
 /* 보기 모드 — 내 눈용(agent)에는 리스크와 화법까지, 고객 화면(client)에는
    좋은 이야기와 덕담만 남긴다. 설계사 전용 블록은 아예 그리지 않는다. */
 function agentOnly(html){return S.view==='agent'?html:'';}
@@ -1174,9 +1174,9 @@ var AXIS_SELF={
   J:'정해두고 지키는 데서 안정을 얻으십니다. 갑작스러운 변경에 스트레스를 받으십니다.',
   P:'열어두는 데서 편안함을 얻으십니다. 정해지면 답답해하십니다.'
 };
-var TAB_NAME={ice:'아이스브레이킹',sum:'종합',dang:'🕯️ 신당 풀이',apply:'📩 상담 신청',sales:'💼 영업 가능성',how:'🎯 나의 영업법',worry:'고민 상담',life:'인생 운',trait:'성향 파악',mind:'MBTI 정밀',
+var TAB_NAME={ice:'아이스브레이킹',sum:'종합',brief:'📋 면담 브리프',dang:'🕯️ 신당 풀이',apply:'📩 상담 신청',sales:'💼 영업 가능성',how:'🎯 나의 영업법',worry:'고민 상담',life:'인생 운',trait:'성향 파악',mind:'MBTI 정밀',
   deep:'사주 풀이',blood:'혈액형',fit:'궁합',rel:'관계·매니지먼트',talk:'상담 전략',ins:'보험·관리',risk:'🔒 리스크',saju:'만세력'};
-var AGENT_TABS={fit:1,rel:1,talk:1,ins:1,risk:1,sales:1,how:1};   /* 고객 화면에서는 감춘다 */
+var AGENT_TABS={fit:1,rel:1,talk:1,ins:1,risk:1,sales:1,how:1,brief:1};   /* 고객 화면에서는 감춘다 */
 function tabsFor(mode,view){
   view=view||S.view;
   var list;
@@ -1187,6 +1187,10 @@ function tabsFor(mode,view){
   if(mode!=='blood'&&S.cl&&S.cl.blood)list.splice(list.indexOf('life')>=0?list.indexOf('life')+1:1,0,'blood');
   if(view==='client')list=list.filter(function(k){return !AGENT_TABS[k];});
   if(RECRUIT.on&&view==='client')list.push('apply');
+  if(view==='agent'){
+    if(BRIEF.on)list.unshift('brief');
+    else{var ix=list.indexOf('sales');if(ix>=0)list.splice(ix,0,'brief');else list.push('brief');}
+  }
   return list;
 }
 function draw(){
@@ -1429,6 +1433,7 @@ function viewBoard(){
   var t=S.tab;
   if(t==='ice')return tabIce();
   if(t==='dang')return tabDang();
+  if(t==='brief')return tabBrief();
   if(t==='apply')return tabApply();
   if(t==='sales')return tabSales();
   if(t==='how')return tabHow();
@@ -1467,7 +1472,7 @@ var GUEST={on:false};
     if(k==='mode'&&['saju','mbti','blood','both'].indexOf(v)>=0)GUEST.mode=v;
   }
 })();
-function storeKey(){return GUEST.on?'sajumbti_son':'sajumbti';}
+function storeKey(){return GUEST.on?'sajumbti_son':(BRIEF.on?'sajumbti_brief':'sajumbti');}
 /* 손님에게 보낼 링크 만들기 */
 function guestLink(){
   var base=(location.protocol==='file:')
@@ -1648,6 +1653,152 @@ function tabApply(){
     '<button class="btn" id="apBtn" style="margin-top:14px" onclick="applySubmit()">📩 상담 신청하기</button>'+
     '<div class="sub" style="margin-top:9px;text-align:center">누르시면 담당자에게 바로 전달됩니다.</div>'+
   '</div>';
+}
+/* ══════════════════════════════════════════════════════════════════
+   면담 브리프 — 들어가기 30초 전에 읽는 한 장
+   ────────────────────────────────────────────────────────────────
+   채용 대기열에서 "브리프"를 누르면 그 후보를 담아 이 화면으로 온다.
+   ?brief=1 로 열리며 저장 칸을 따로 쓰므로, 내가 보던 고객 자료는
+   건드려지지 않는다. 내 카드(S.me)만 원래 칸에서 그대로 가져온다.
+
+   ※ 뽑고 거르는 문서가 아니다. "이 사람을 어떻게 만날까"를 적는다.
+   ══════════════════════════════════════════════════════════════════ */
+var BRIEF={on:false};
+(function(){
+  var q=(location.search||'').replace(/^\?/,'').split('&'),i;
+  for(i=0;i<q.length;i++){
+    var kv=q[i].split('=');if(kv.length<2)continue;
+    if(decodeURIComponent(kv[0])==='brief'&&decodeURIComponent(kv[1])==='1')BRIEF.on=true;
+  }
+})();
+/* 대기열이 localStorage 에 담아 둔 후보를 꺼낸다 — 주소에 개인정보를 싣지 않는다 */
+function briefTake(){
+  var o=null;
+  try{o=JSON.parse(localStorage.getItem('apex_brief_cand')||'null');}catch(e){o=null;}
+  if(!o)return false;
+  var p=blank();
+  p.name=o.name||'';p.gender=o.gender||'';
+  p.y=o.y||'';p.m=o.m||'';p.d=o.d||'';
+  p.H=(o.H==null?12:o.H);p.Mi=0;p.noTime=!!o.noTime;
+  p.mbti=o.mbti||'';p.blood=o.blood||'';p.rel='junior';
+  if(p.y&&p.m&&p.d)calcPerson(p);
+  S.cl=p;
+  S.meta={phone:o.phone||'',contactTime:o.contactTime||'',memo:o.memo||'',
+    intent:o.intent||'',when:o.when||'',finished:!!o.finished,
+    elapsedSec:o.elapsedSec||0,consistency:o.consistency||0,stage:o.stage||''};
+  /* 내 카드는 원래 칸에서 가져온다 — 궁합을 보려면 있어야 한다 */
+  try{var d=JSON.parse(localStorage.getItem('sajumbti')||'null');if(d&&d.me)S.me=d.me;}catch(e){}
+  return true;
+}
+var BRIEF_INTENT={now:'지금 알아보는 중',soon:'3개월 안',maybe:'좋은 자리면',no:'궁금해서'};
+function briefMin(s){s=s||0;return s<60?(s+'초'):(Math.round(s/60)+'분');}
+function briefTel(p){p=(p||'').replace(/[^0-9]/g,'');
+  return p.length===11?p.slice(0,3)+'-'+p.slice(3,7)+'-'+p.slice(7)
+       :(p.length===10?p.slice(0,3)+'-'+p.slice(3,6)+'-'+p.slice(6):p);}
+function tabBrief(){
+  if(S.view!=='agent')return '<div class="card"><h2>이 화면은 설계사 전용입니다</h2><p>고객 화면에서는 열리지 않습니다.</p></div>';
+  var cl=S.cl,mt=S.meta||{},code=personCode(cl),ty=MBTI_TYPES[code]||null,s=cl.saju;
+  if(!code&&!s)return '<div class="card"><h2>아직 볼 게 없습니다</h2><p>생년월일이나 성향 중 하나는 있어야 브리프가 나옵니다.</p></div>';
+  var y=s?yongsin(s):null,sc=salesCalc(cl),chn=salesChannels(sc),cv=salesCurve(sc);
+  var ice=iceBreak(cl),fit=ready(S.me)?fitCalc(S.me,cl):null;
+  var who=[];if(code)who.push(code+(ty?' · '+ty.nick:''));
+  if(s)who.push(gz(s.dg,s.dj)+'일주');
+  if(cl.blood)who.push(cl.blood+'형');
+  /* ① 머리 — 누구이고 어떻게 닿는가 */
+  var head='<div class="card">'+brandBand('면담 브리프')+
+    '<h1>'+esc(cl.name||'이름 없음')+' 님</h1>'+
+    '<p>'+esc(who.join(' · '))+'</p>'+
+    '<div class="tbwrap stack"><table class="tb"><tbody>'+
+    (mt.phone?'<tr><td class="head"><b>연락처</b></td><td class="plain"><a href="tel:'+esc(mt.phone)+'">'+esc(briefTel(mt.phone))+'</a>'+
+      (mt.contactTime?' · '+esc(mt.contactTime):'')+'</td></tr>':'')+
+    (mt.when?'<tr><td class="head"><b>접수</b></td><td class="plain">'+esc(mt.when)+
+      (mt.intent&&BRIEF_INTENT[mt.intent]?' · 본인 말로는 "'+esc(BRIEF_INTENT[mt.intent])+'"':'')+'</td></tr>':'')+
+    '<tr><td class="head"><b>검사</b></td><td class="plain">'+
+      (mt.finished?'48문항 끝까지 함':'중간에 멈춤 또는 유형 직접 고름')+
+      (mt.elapsedSec?' · '+briefMin(mt.elapsedSec)+' 걸림':'')+
+      (mt.consistency?' · 응답 일관성 '+mt.consistency+'%':'')+
+      ((mt.consistency&&mt.consistency<60)?' <span class="pill" style="background:#FEECEE;color:#F04452">낮음 — 결과를 그대로 믿지 말 것</span>':'')+
+      '</td></tr>'+
+    '</tbody></table></div>'+
+    (mt.memo?'<div class="talk" style="margin-top:12px">“'+esc(mt.memo)+'”<div class="sub" style="margin-top:6px">본인이 직접 적어 보낸 말입니다. 여기부터 물어보면 됩니다.</div></div>':'')+
+  '</div>';
+  /* ② 30초 요약 */
+  var one=(y?'필요한 기운은 <b>'+y.primary+'('+OH_HAN[y.primary]+')</b> — '+esc(OH_META[y.primary].key)+'. ':'')+
+    (ty?esc(ty.line)+' ':'')+
+    '영업으로 보면 <b>'+esc(sc.best[0].ax.n)+'</b>이 가장 세고 <b>'+esc(sc.worst[0].ax.n)+'</b>이 약합니다. '+
+    '맞는 자리는 <b>'+esc(chn[0].n)+'</b>입니다.';
+  var sum='<div class="card"><h2><span class="n">30초</span>이 사람 한 줄 요약</h2>'+
+    '<div class="talk good" style="font-size:15px">'+one+'</div>'+
+    '<div class="tbwrap stack" style="margin-top:12px"><table class="tb"><thead><tr>'+
+      sc.rows.map(function(r){return '<th style="text-align:center">'+r.ax.n+'</th>';}).join('')+
+      '<th style="text-align:center">종합</th></tr></thead><tbody><tr>'+
+      sc.rows.map(function(r){return '<td data-l="'+esc(r.ax.n)+'" style="text-align:center"><b style="color:'+r.ax.c+'">'+r.val+'</b></td>';}).join('')+
+      '<td data-l="종합" style="text-align:center"><b style="color:'+sc.level.c+'">'+sc.total+'</b></td>'+
+    '</tr></tbody></table></div>'+
+    '<div class="note info">예상 곡선은 <b>'+esc(cv.t)+'</b>입니다. '+cv.note+'</div>'+
+  '</div>';
+  /* ③ 첫 3분 */
+  var open='<div class="card"><h2><span class="n">첫 3분</span>이렇게 여세요</h2>'+
+    ice.opens.slice(0,3).map(function(t){return '<div class="talk good">'+esc(t)+'</div>';}).join('')+
+    '<div style="font-size:12.5px;font-weight:900;color:#1B64DA;margin-top:16px">❓ 물어볼 것</div>'+
+    ice.asks.slice(0,5).map(function(t,i){return '<div class="talk">'+(i+1)+'. '+esc(t)+'</div>';}).join('')+
+    '<div style="font-size:12.5px;font-weight:900;color:#F04452;margin-top:16px">🚫 이 말은 하지 마세요</div>'+
+    ice.nos.slice(0,3).map(function(t){return '<div class="talk bad">'+esc(t)+'</div>';}).join('')+
+  '</div>';
+  /* ④ 흔들리는 지점 */
+  var rk=salesRisk(sc,cl).slice(0,3);
+  var risk='<div class="card"><h2><span class="n">조심</span>이 사람이 흔들리는 자리</h2>'+
+    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:118px">언제</th><th>그때 내가 할 일</th></tr></thead><tbody>'+
+    rk.map(function(r){return '<tr><td class="head"><b>'+esc(r.t)+'</b></td>'+
+      '<td class="full" data-l="할 일">'+r.d+'<br><b>'+r.fix+'</b></td></tr>';}).join('')+
+    '</tbody></table></div>'+
+    (ty&&ty.care?'<div class="note warn">'+esc(code)+'라서 — '+esc(ty.care.join(' · '))+'.</div>':'')+
+  '</div>';
+  /* ⑤ 어디에 붙일까 · 나와 맞는가 */
+  var place='<div class="card"><h2><span class="n">배치</span>어디에 붙이고, 내가 어떻게 끌까</h2>'+
+    '<div class="tbwrap stack"><table class="tb"><tbody>'+
+    '<tr><td class="head"><b>첫 3개월</b></td><td class="plain"><b>'+esc(chn[0].n)+'</b>만 시킨다. '+chn[0].txt+'</td></tr>'+
+    '<tr><td class="head"><b>두 번째</b></td><td class="plain">'+esc(chn[1].n)+'</td></tr>'+
+    '<tr><td class="head"><b>시키면 안 되는 것</b></td><td class="plain"><b>'+esc(chn[chn.length-1].n)+'</b> — 시작하기 전에 지친다.</td></tr>'+
+    '<tr><td class="head"><b>가르치는 법</b></td><td class="plain">'+esc(ty&&ty.work?ty.work:'기준과 절차를 먼저 알려 준다.')+'</td></tr>'+
+    (y?'<tr><td class="head"><b>이 사람을 살리는 사람</b></td><td class="plain">'+esc(YONG_RX[y.primary].people)+' — 내가 그 결로 서면 빨리 붙는다.</td></tr>':'')+
+    '</tbody></table></div>'+
+    (fit?'<div class="note '+(fit.score>=65?'ok':'warn')+'" style="margin-top:12px">나와의 궁합 <b>'+fit.score+'점 · '+esc(fit.level.t)+'</b> — '+
+      (fit.score>=65?'내 방식이 그대로 통한다. 자주 보는 게 그대로 효과다.'
+                    :'내 방식 그대로는 어긋난다. 속도를 상대에 맞추고, 결론보다 과정을 먼저 보여줘야 한다.')+'</div>'
+        :'<div class="note info" style="margin-top:12px">내 카드를 만들면 <b>나와의 궁합</b>까지 함께 나옵니다.</div>')+
+  '</div>';
+  /* ⑥ 선 */
+  var rule='<div class="card"><div class="note bad">이 브리프는 <b>뽑고 거르는 문서가 아닙니다.</b> '+
+    '성향과 사주는 "이 사람을 어떻게 만날까"에만 씁니다. 채용 여부는 면담에서 본인이 하는 말과 '+
+    '실제 활동으로 판단하세요. 유형을 이유로 기회를 주지 않는 일은 없어야 합니다.</div>'+
+    '<div class="row" style="margin-top:12px">'+
+    '<button class="btn line sm" onclick="window.print()">🖨 인쇄 · PDF</button>'+
+    '<button class="btn ghost sm" onclick="briefCopy()">📋 요약 복사</button></div>'+
+  '</div>';
+  return head+sum+open+risk+place+rule;
+}
+function briefCopy(){
+  var cl=S.cl,mt=S.meta||{},sc=salesCalc(cl),chn=salesChannels(sc),s=cl.saju,y=s?yongsin(s):null;
+  var ice=iceBreak(cl);
+  var t=[
+    '[면담 브리프] '+(cl.name||''),
+    (personCode(cl)||'')+(s?' · '+gz(s.dg,s.dj)+'일주':'')+(cl.blood?' · '+cl.blood+'형':''),
+    mt.phone?('연락처 '+briefTel(mt.phone)+(mt.contactTime?' · '+mt.contactTime:'')):'',
+    y?('필요한 기운 '+y.primary+' — '+OH_META[y.primary].key):'',
+    '강점 '+sc.best[0].ax.n+' / 약점 '+sc.worst[0].ax.n+' / 맞는 자리 '+chn[0].n,
+    '',
+    '첫마디: '+(ice.opens[0]||''),
+    '물어볼 것: '+ice.asks.slice(0,3).join(' / '),
+    '하지 말 것: '+(ice.nos[0]||''),
+    mt.memo?('본인이 남긴 말: '+mt.memo):''
+  ].filter(function(x){return x!=='';}).join('\n');
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      navigator.clipboard.writeText(t).then(function(){toast('요약을 복사했습니다');},
+        function(){sheet('면담 브리프 요약','<textarea class="inp" rows="12" readonly onclick="this.select()" style="font-size:12px">'+esc(t)+'</textarea>');});
+    else sheet('면담 브리프 요약','<textarea class="inp" rows="12" readonly onclick="this.select()" style="font-size:12px">'+esc(t)+'</textarea>');
+  }catch(e){toast('복사하지 못했습니다');}
 }
 /* ══════════════════════════════════════════════════════════════════
    신당(점집) — 윤시현 무당이 앉아서 풀어드리는 화면
@@ -4260,6 +4411,11 @@ function fitShell(){
     if(d.me)S.me=d.me; if(d.cl)S.cl=d.cl;
     S.ans=d.ans||{};S.i=d.i||0;S.tab=d.tab||'ice';S.mode=d.mode||'both';S.view=d.view||'agent';S.worry=d.worry||{};
     S.step=ready(S.cl)?'board':(S.me.name?'client':'me');
+  }
+  if(BRIEF.on){
+    S.view='agent';
+    if(briefTake()){S.step='board';S.tab='brief';save();}
+    else S.step=ready(S.cl)?'board':'client';
   }
   if(GUEST.on){
     S.view='client';
