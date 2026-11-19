@@ -220,6 +220,13 @@ const 증인 = [
   /* 🛰 판 X336 의 「일정·상담카드·코칭은 아직 안 찾는다」(⛔[아직:X336-이음])는 <b>판 X337 에서 했습니다</b> —
      jvCalRows · jvFactRows · jvCoachRows 셋이 서자 이 자가 울려 대장을 고쳤습니다. 증인을 거뒀습니다.
      그 셋은 이제 check-jvhud [10] 이 「했다」 쪽에서 지킵니다 (0-1번). */
+  /* ☎️ <b>판 X492</b> — TA 문자·카톡을 ta-msg.js 한 곳으로 뗐습니다(첫 단계). 사장님 말씀은 「오늘에서 사용할수
+     있도록」 이라 <b>오늘(홈) 카드가 그 글을 부를 때</b> 끝납니다 — 그래서 대장은 「반만」 입니다.
+     ⚠ <b>이름을 못 박습니다</b> — 홈은 TA_MSG.textFor 로 부르십시오. 다른 이름으로 부르면 이 증인이 못 봅니다.
+     홈 코드를 index.html 밖 파일에 두면 그 파일 이름으로 이 증인의 파일을 바꾸십시오 (1번 — 안 보는 것을 보는 척하지 않습니다). */
+  { 키: 'X492-오늘',
+    뜻: '오늘(홈) 카드가 아직 TA 문자·카톡(ta-msg.js)을 안 부른다 — 부를 때는 TA_MSG.textFor 로',
+    셈: { 파일: 'app/index.html', 글: 'TA_MSG.textFor', 넘으면: 0 } },
 ];
 /* 함수 증인은 본체와 <b>자비스 모드(apex-map.html)</b>를 같이 봅니다 — 판 X277 의 증인이 그쪽에 섭니다 */
 const SRC_FN = SRC + '\n' + (fs.existsSync('app/apex-map.html') ? fs.readFileSync('app/apex-map.html', 'utf8') : '');
