@@ -24388,7 +24388,7 @@ function mbtiDelete(id) {
      신호(끝까지 했는가, 얼마나 걸렸는가, 본인이 밝힌 의향)뿐이다.
      검사 결과는 "어떻게 대할지"를 보는 데만 쓴다.
    ════════════════════════════════════════════════════════════════ */
-var RQ = { rows: [], stage: 'all', q: '', loaded: false, err: '', sort: 'score' };
+var RQ = { rows: [], stage: 'all', q: '', loaded: false, err: '', sort: 'score', people: [], board: false, timer: null };
 function rqSort(){ RQ.sort = (RQ.sort === 'score') ? 'new' : 'score'; rqPaint(); }
 var RQ_STAGE = [
   { k: 'new',       n: '새 접수', c: '#1A56DB', bg: '#EFF6FF' },
@@ -24423,6 +24423,406 @@ function rqCopy(src) {
   } catch (e) { fell(); }
 }
 function rqOpen(src) { window.open(rqLink(src), '_blank'); }
+
+/* ════════════════════════════════════════════════════════════════
+   QR 만들기 — 설명회에서 띄울 코드. 바깥에서 받아오는 것 없이 직접 그린다.
+   ----------------------------------------------------------------
+   바이트 모드, 오류정정 M, 1~10 버전. 주소 하나 담기에 넉넉하다.
+   QR 라이브러리를 가져오지 않는 이유: 후보 주소를 남의 서버로 보내지
+   않기 위해서다(QR 이미지 API 는 주소를 그대로 넘긴다).
+   ════════════════════════════════════════════════════════════════ */
+var QR_EXP = [], QR_LOG = [];
+(function () {                       /* GF(256), 원시다항식 0x11D */
+  var x = 1, i;
+  for (i = 0; i < 255; i++) { QR_EXP[i] = x; QR_LOG[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11D; }
+  for (i = 255; i < 512; i++) QR_EXP[i] = QR_EXP[i - 255];
+})();
+function qrMul(a, b) { return (a === 0 || b === 0) ? 0 : QR_EXP[QR_LOG[a] + QR_LOG[b]]; }
+/* 생성다항식 x^n 에 대한 계수 */
+function qrGenPoly(n) {
+  var g = [1], i, j;
+  for (i = 0; i < n; i++) {
+    var ng = new Array(g.length + 1);
+    for (j = 0; j < ng.length; j++) ng[j] = 0;
+    for (j = 0; j < g.length; j++) {
+      ng[j] ^= g[j];
+      ng[j + 1] ^= qrMul(g[j], QR_EXP[i]);
+    }
+    g = ng;
+  }
+  return g;
+}
+/* 나머지(ECC) 구하기 */
+function qrEcc(data, n) {
+  var g = qrGenPoly(n), res = data.slice().concat(new Array(n).fill(0)), i, j;
+  for (i = 0; i < data.length; i++) {
+    var c = res[i]; if (!c) continue;
+    for (j = 0; j < g.length; j++) res[i + j] ^= qrMul(g[j], c);
+  }
+  return res.slice(data.length);
+}
+/* 버전별 — [전체 코드워드 수, EC 코드워드/블록, 블록1 수, 블록2 수] (오류정정 M) */
+var QR_M = {
+  1:[26,10,1,0], 2:[44,16,1,0], 3:[70,26,1,0], 4:[100,18,2,0], 5:[134,24,2,0],
+  6:[172,16,4,0], 7:[196,18,4,0], 8:[242,22,2,2], 9:[292,22,3,2], 10:[346,26,4,1]
+};
+var QR_ALIGN = { 1:[], 2:[6,18], 3:[6,22], 4:[6,26], 5:[6,30],
+  6:[6,34], 7:[6,22,38], 8:[6,24,42], 9:[6,26,46], 10:[6,28,50] };
+function qrCap(v) {                  /* 바이트 모드로 담을 수 있는 글자 수 */
+  var t = QR_M[v], total = t[0], ecc = t[1] * (t[2] + t[3]);
+  var dataWords = total - ecc;
+  var lenBits = v < 10 ? 8 : 16;
+  return dataWords - 1 - Math.ceil(lenBits / 8);  /* 모드4비트+길이 ≈ 2바이트 */
+}
+function qrUtf8(s) {
+  var out = [], i, c;
+  for (i = 0; i < s.length; i++) {
+    c = s.charCodeAt(i);
+    if (c < 0x80) out.push(c);
+    else if (c < 0x800) { out.push(0xC0 | (c >> 6), 0x80 | (c & 63)); }
+    else if (c < 0xD800 || c >= 0xE000) { out.push(0xE0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63)); }
+    else { i++; var cp = 0x10000 + (((c & 0x3FF) << 10) | (s.charCodeAt(i) & 0x3FF));
+      out.push(0xF0 | (cp >> 18), 0x80 | ((cp >> 12) & 63), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63)); }
+  }
+  return out;
+}
+/* 본체 — 문자열을 0/1 격자로 만든다. 못 담으면 null */
+function qrMake(text) {
+  var bytes = qrUtf8(text), v = 0, i, j;
+  for (i = 1; i <= 10; i++) if (bytes.length <= qrCap(i)) { v = i; break; }
+  if (!v) return null;
+  var t = QR_M[v], ecPer = t[1], nb1 = t[2], nb2 = t[3], nBlocks = nb1 + nb2;
+  var totalWords = t[0], dataWords = totalWords - ecPer * nBlocks;
+  var lenBits = v < 10 ? 8 : 16;
+
+  /* ① 비트열 — 모드(0100) + 길이 + 데이터 */
+  var bits = [];
+  function put(val, n) { for (var k = n - 1; k >= 0; k--) bits.push((val >> k) & 1); }
+  put(4, 4); put(bytes.length, lenBits);
+  for (i = 0; i < bytes.length; i++) put(bytes[i], 8);
+  var cap = dataWords * 8;
+  for (i = 0; i < 4 && bits.length < cap; i++) bits.push(0);     /* 종단자 */
+  while (bits.length % 8) bits.push(0);
+  var pad = [0xEC, 0x11], pi = 0;
+  while (bits.length < cap) { put(pad[pi++ % 2], 8); }
+  var words = [];
+  for (i = 0; i < bits.length; i += 8) {
+    var b = 0; for (j = 0; j < 8; j++) b = (b << 1) | bits[i + j];
+    words.push(b);
+  }
+  /* ② 블록으로 나누고 ECC */
+  var short = Math.floor(dataWords / nBlocks), blocks = [], eccs = [], off = 0;
+  for (i = 0; i < nBlocks; i++) {
+    var len = short + (i >= nb1 ? 1 : 0);
+    var blk = words.slice(off, off + len); off += len;
+    blocks.push(blk); eccs.push(qrEcc(blk, ecPer));
+  }
+  /* ③ 엇갈려 늘어놓기 */
+  var out = [], maxLen = 0;
+  for (i = 0; i < blocks.length; i++) maxLen = Math.max(maxLen, blocks[i].length);
+  for (i = 0; i < maxLen; i++) for (j = 0; j < blocks.length; j++) if (i < blocks[j].length) out.push(blocks[j][i]);
+  for (i = 0; i < ecPer; i++) for (j = 0; j < eccs.length; j++) out.push(eccs[j][i]);
+
+  /* ④ 격자 */
+  var n = v * 4 + 17;
+  var m = [], fixed = [];
+  for (i = 0; i < n; i++) { m.push(new Array(n).fill(0)); fixed.push(new Array(n).fill(false)); }
+  function setF(r, c, val) { if (r < 0 || c < 0 || r >= n || c >= n) return; m[r][c] = val; fixed[r][c] = true; }
+  function finder(r, c) {
+    for (var dr = -1; dr <= 7; dr++) for (var dc = -1; dc <= 7; dc++) {
+      var rr = r + dr, cc = c + dc;
+      if (rr < 0 || cc < 0 || rr >= n || cc >= n) continue;
+      var on = (dr >= 0 && dr <= 6 && (dc === 0 || dc === 6)) ||
+               (dc >= 0 && dc <= 6 && (dr === 0 || dr === 6)) ||
+               (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4);
+      setF(rr, cc, on ? 1 : 0);
+    }
+  }
+  finder(0, 0); finder(0, n - 7); finder(n - 7, 0);
+  for (i = 8; i < n - 8; i++) { setF(6, i, i % 2 === 0 ? 1 : 0); setF(i, 6, i % 2 === 0 ? 1 : 0); }
+  var al = QR_ALIGN[v];
+  for (i = 0; i < al.length; i++) for (j = 0; j < al.length; j++) {
+    var ar = al[i], ac = al[j];
+    if ((ar <= 7 && ac <= 7) || (ar <= 7 && ac >= n - 8) || (ar >= n - 8 && ac <= 7)) continue;
+    for (var dr2 = -2; dr2 <= 2; dr2++) for (var dc2 = -2; dc2 <= 2; dc2++)
+      setF(ar + dr2, ac + dc2, (Math.abs(dr2) === 2 || Math.abs(dc2) === 2 || (dr2 === 0 && dc2 === 0)) ? 1 : 0);
+  }
+  setF(n - 8, 8, 1);                                  /* 늘 검은 칸 */
+  for (i = 0; i < 9; i++) { if (!fixed[8][i]) setF(8, i, 0); if (!fixed[i][8]) setF(i, 8, 0); }
+  for (i = 0; i < 8; i++) { if (!fixed[8][n - 1 - i]) setF(8, n - 1 - i, 0); if (!fixed[n - 1 - i][8]) setF(n - 1 - i, 8, 0); }
+
+  /* ⑤ 데이터 채우기 — 오른쪽 아래부터 지그재그 */
+  var dir = -1, row = n - 1, col = n - 1, bit = 0, total = out.length * 8;
+  var place = [];
+  while (col > 0) {
+    if (col === 6) col--;
+    while (true) {
+      for (var s2 = 0; s2 < 2; s2++) {
+        var cc2 = col - s2;
+        if (!fixed[row][cc2]) {
+          var b2 = bit < total ? ((out[bit >> 3] >> (7 - (bit & 7))) & 1) : 0;
+          m[row][cc2] = b2; place.push([row, cc2]); bit++;
+        }
+      }
+      row += dir;
+      if (row < 0 || row >= n) { row -= dir; dir = -dir; break; }
+    }
+    col -= 2;
+  }
+  /* ⑥ 마스크 8개를 다 해보고 벌점이 가장 낮은 것을 고른다 */
+  function maskAt(k, r, c) {
+    switch (k) {
+      case 0: return (r + c) % 2 === 0;
+      case 1: return r % 2 === 0;
+      case 2: return c % 3 === 0;
+      case 3: return (r + c) % 3 === 0;
+      case 4: return (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0;
+      case 5: return ((r * c) % 2) + ((r * c) % 3) === 0;
+      case 6: return (((r * c) % 2) + ((r * c) % 3)) % 2 === 0;
+      default: return (((r + c) % 2) + ((r * c) % 3)) % 2 === 0;
+    }
+  }
+  var FMT = [                                        /* 오류정정 M, 마스크 0~7 */
+    0x5412, 0x5125, 0x5E7C, 0x5B4B, 0x45F9, 0x40CE, 0x4F97, 0x4AA0];
+  function putFormat(g, k) {
+    var f = FMT[k], p;
+    for (p = 0; p <= 5; p++) g[8][p] = (f >> (14 - p)) & 1;
+    g[8][7] = (f >> 8) & 1; g[8][8] = (f >> 7) & 1; g[7][8] = (f >> 6) & 1;
+    for (p = 9; p <= 14; p++) g[14 - p][8] = (f >> (14 - p)) & 1;
+    for (p = 0; p <= 7; p++) g[n - 1 - p][8] = (f >> p) & 1;
+    for (p = 8; p <= 14; p++) g[8][n - 15 + p] = (f >> p) & 1;
+    g[n - 8][8] = 1;
+  }
+  function penalty(g) {
+    var p = 0, r, c, run, k, dark = 0;
+    for (r = 0; r < n; r++) { run = 1; for (c = 1; c < n; c++) {
+      if (g[r][c] === g[r][c - 1]) { run++; if (run === 5) p += 3; else if (run > 5) p++; } else run = 1; } }
+    for (c = 0; c < n; c++) { run = 1; for (r = 1; r < n; r++) {
+      if (g[r][c] === g[r - 1][c]) { run++; if (run === 5) p += 3; else if (run > 5) p++; } else run = 1; } }
+    for (r = 0; r < n - 1; r++) for (c = 0; c < n - 1; c++)
+      if (g[r][c] === g[r][c + 1] && g[r][c] === g[r + 1][c] && g[r][c] === g[r + 1][c + 1]) p += 3;
+    var pat = [1,0,1,1,1,0,1,0,0,0,0];
+    for (r = 0; r < n; r++) for (c = 0; c + 11 <= n; c++) {
+      var ok1 = true, ok2 = true;
+      for (k = 0; k < 11; k++) { if (g[r][c + k] !== pat[k]) ok1 = false; if (g[r][c + k] !== pat[10 - k]) ok2 = false; }
+      if (ok1 || ok2) p += 40;
+    }
+    for (c = 0; c < n; c++) for (r = 0; r + 11 <= n; r++) {
+      var o1 = true, o2 = true;
+      for (k = 0; k < 11; k++) { if (g[r + k][c] !== pat[k]) o1 = false; if (g[r + k][c] !== pat[10 - k]) o2 = false; }
+      if (o1 || o2) p += 40;
+    }
+    for (r = 0; r < n; r++) for (c = 0; c < n; c++) if (g[r][c]) dark++;
+    p += Math.floor(Math.abs(dark * 100 / (n * n) - 50) / 5) * 10;
+    return p;
+  }
+  var best = null, bestP = Infinity, bestK = 0;
+  for (var k2 = 0; k2 < 8; k2++) {
+    var g2 = m.map(function (r3) { return r3.slice(); });
+    for (i = 0; i < place.length; i++) { var rc = place[i]; if (maskAt(k2, rc[0], rc[1])) g2[rc[0]][rc[1]] ^= 1; }
+    putFormat(g2, k2);
+    var pen = penalty(g2);
+    if (pen < bestP) { bestP = pen; best = g2; bestK = k2; }
+  }
+  return { size: n, version: v, mask: bestK, grid: best, place: place, words: out, dataWords: dataWords, ecPer: ecPer, blocks: nBlocks };
+}
+/* 화면에 그릴 SVG — 바깥 요청 없음 */
+function qrSvg(text, px) {
+  var q = qrMake(text);
+  if (!q) return '<div style="font-size:12px;color:#B91C1C">주소가 너무 길어 QR로 만들지 못했습니다.</div>';
+  var n = q.size, pad = 4, tot = n + pad * 2, s = px || 240, cell = s / tot, d = '', r, c;
+  for (r = 0; r < n; r++) for (c = 0; c < n; c++) if (q.grid[r][c])
+    d += 'M' + ((c + pad) * cell).toFixed(2) + ',' + ((r + pad) * cell).toFixed(2) +
+         'h' + cell.toFixed(2) + 'v' + cell.toFixed(2) + 'h-' + cell.toFixed(2) + 'z';
+  return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 ' + s + ' ' + s + '" role="img" aria-label="QR 코드">' +
+    '<rect width="' + s + '" height="' + s + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+}
+
+/* ── 세그먼트 — 떨어뜨리는 분류가 아니라 "대응 방식" 분류 ────────
+   같은 사람이라도 지금 전화할 사람, 자료 먼저 보낼 사람, 석 달 뒤에
+   다시 볼 사람, 검사를 끝내지 못한 사람은 할 일이 전혀 다르다.
+   여기서도 쓰는 것은 행동 신호뿐이다.                              */
+var RQ_SEG = {
+  A: { n:'지금 전화', c:'#047857', bg:'#ECFDF5', days:0,
+       do:'오늘 안에 전화. 미루면 식는다.' },
+  B: { n:'자료 먼저 · 3일 뒤', c:'#1A56DB', bg:'#EFF6FF', days:3,
+       do:'바로 설득하지 말고 읽을 것을 먼저 보낸다. 사흘 뒤에 다시 연락.' },
+  C: { n:'석 달 뒤 다시', c:'#64748B', bg:'#F1F5F9', days:90,
+       do:'지금은 때가 아니다. 지우지 말고 석 달 뒤로 미뤄 둔다.' },
+  D: { n:'이어하기 보내기', c:'#C2410C', bg:'#FFF7ED', days:1,
+       do:'검사를 끝내지 못했다. 링크를 한 번만 다시 보낸다.' }
+};
+function rqSeg(r){
+  var k=rqScore(r).score;
+  if(!r.finished) return 'D';
+  if(r.intent==='no'||k<45) return 'C';
+  if(k>=62) return 'A';
+  return 'B';
+}
+/* 보낼 문구 — 길면 안 읽는다. 세 줄 안에 끝낸다. */
+function rqMsg(r){
+  var me=(OS.profile&&OS.profile.name)||'담당자';
+  var org='에이플러스에셋 온탑본부';
+  var nm=(r.name||'').replace(/^\s+|\s+$/g,'')||'안녕하세요';
+  var seg=rqSeg(r);
+  if(seg==='D')
+    return nm+'님 안녕하세요, '+org+' '+me+'입니다.\n'+
+      '사주·성향 풀이를 중간까지 보시고 멈추셨더라고요. 아래에서 이어서 하시면 끝까지 보실 수 있습니다.\n'+
+      rqLink()+'\n'+
+      '끝까지 안 하셔도 괜찮습니다. 부담 갖지 마세요.';
+  if(seg==='A')
+    return nm+'님 안녕하세요, '+org+' '+me+'입니다.\n'+
+      '풀이 남겨 주신 것 잘 봤습니다. 적어 주신 시간대'+(r.contact_time?('('+r.contact_time+')'):'')+'에 맞춰 전화드리겠습니다.\n'+
+      '편하게 궁금한 것만 물어보셔도 됩니다.';
+  if(seg==='B')
+    return nm+'님 안녕하세요, '+org+' '+me+'입니다.\n'+
+      '바로 결정하실 일 아니니 먼저 읽어보실 것을 보내드립니다. 하시는 일이 어떤 구조인지 숫자로 정리한 자료입니다.\n'+
+      '보시고 궁금한 게 생기면 그때 말씀 주세요. 사흘 뒤에 한 번만 더 연락드리겠습니다.';
+  return nm+'님 안녕하세요, '+org+' '+me+'입니다.\n'+
+    '지금은 때가 아니라고 하셔서 재촉하지 않겠습니다. 풀이는 그대로 두고 가셔도 됩니다.\n'+
+    '혹시 상황이 바뀌시면 언제든 편하게 연락 주세요.';
+}
+function rqCopyMsg(id){
+  var r=null,i;for(i=0;i<RQ.rows.length;i++)if(RQ.rows[i].id===id)r=RQ.rows[i];
+  if(!r)return;
+  var t=rqMsg(r);
+  function fell(){ window.prompt('아래 문구를 복사해서 보내세요', t); }
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      navigator.clipboard.writeText(t).then(function(){toast('문구를 복사했습니다');},fell);
+    else fell();
+  }catch(e){fell();}
+}
+/* 문구를 복사하면서 다음에 볼 날짜까지 같이 잡는다 — 이게 자동 대응의 실체다 */
+function rqDoSeg(id){
+  var r=null,i;for(i=0;i<RQ.rows.length;i++)if(RQ.rows[i].id===id)r=RQ.rows[i];
+  if(!r)return;
+  rqCopyMsg(id);
+  var days=RQ_SEG[rqSeg(r)].days;
+  if(days>0) rqSnooze(id,days,true);
+  else if(r.stage==='new') rqSet(id,'contacted');
+}
+function rqSnooze(id,days,quiet){
+  var sb=osClient();if(!sb)return;
+  var at=new Date(Date.now()+days*86400000).toISOString();
+  sb.from('recruits').update({next_at:at,updated_at:new Date().toISOString()}).eq('id',id).then(function(res){
+    if(res&&res.error){toast('날짜 저장 실패');return;}
+    for(var i=0;i<RQ.rows.length;i++)if(RQ.rows[i].id===id)RQ.rows[i].next_at=at;
+    if(!quiet)toast(days+'일 뒤로 미뤘습니다');
+    rqPaint();
+  },function(){toast('날짜 저장 실패');});
+}
+function rqSnoozed(r){ return !!(r.next_at && new Date(r.next_at).getTime() > Date.now()); }
+function rqDue(r){ return !!(r.next_at && new Date(r.next_at).getTime() <= Date.now()); }
+/* 세그먼트별 묶음 — 문구를 한 번에 만들고 엑셀로 내린다 */
+function rqSegList(k){
+  return RQ.rows.filter(function(r){
+    return (r.stage==='new'||r.stage==='contacted') && rqSeg(r)===k;
+  });
+}
+function rqSegCsv(k){
+  var rows=rqSegList(k);
+  if(!rows.length){toast('이 묶음에 후보가 없습니다');return;}
+  var esc2=function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';};
+  var csv='﻿'+['이름','연락처','보낼 문구'].map(esc2).join(',')+'\n'+
+    rows.map(function(r){return [r.name,r.phone,rqMsg(r)].map(esc2).join(',');}).join('\n');
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='채용_'+k+'_문구_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  toast(rows.length+'명분 문구를 내려받았습니다');
+}
+function rqPaintSeg(){
+  var host=document.getElementById('rqSeg');if(!host)return;
+  var ks=['A','B','C','D'];
+  host.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px">'+
+    ks.map(function(k){
+      var g=RQ_SEG[k],list=rqSegList(k);
+      return '<div style="border:1px solid var(--ink-8);border-radius:12px;padding:12px 13px;background:'+g.bg+'">'+
+        '<div style="display:flex;align-items:baseline;gap:7px">'+
+          '<b style="font-size:13px;color:'+g.c+'">'+k+'. '+g.n+'</b>'+
+          '<span style="margin-left:auto;font-size:17px;font-weight:900;color:'+g.c+'">'+list.length+'</span></div>'+
+        '<div style="font-size:11.5px;color:var(--ink-4);line-height:1.6;margin-top:6px">'+osEsc(g.do)+'</div>'+
+        '<div class="btn-row" style="margin-top:9px">'+
+          '<button class="btn btn-ghost" style="padding:4px 9px;font-size:11px" onclick="rqPick(\'seg'+k+'\')">목록</button>'+
+          (list.length?'<button class="btn btn-ghost" style="padding:4px 9px;font-size:11px" onclick="rqSegCsv(\''+k+'\')">⤓ 문구</button>':'')+
+        '</div>'+
+      '</div>';}).join('')+'</div>';
+}
+/* ── 담당자 배정 ───────────────────────────────────────────── */
+function rqOwnerName(id){ for(var i=0;i<RQ.people.length;i++) if(RQ.people[i].id===id) return RQ.people[i].name; return ''; }
+function rqSetOwner(id,owner){
+  var sb=osClient();if(!sb)return;
+  var patch={recruiter_id:owner||null,updated_at:new Date().toISOString()};
+  if(owner)patch.assigned_at=new Date().toISOString();
+  sb.from('recruits').update(patch).eq('id',id).then(function(res){
+    if(res&&res.error){toast('배정 실패: '+res.error.message);return;}
+    for(var i=0;i<RQ.rows.length;i++)if(RQ.rows[i].id===id)RQ.rows[i].recruiter_id=owner||null;
+    toast(owner?(rqOwnerName(owner)+' 님에게 맡겼습니다'):'배정을 풀었습니다');rqPaint();
+  },function(){toast('배정 실패');});
+}
+/* 담당자 없는 건을 고른 사람들에게 돌아가며 나눈다 */
+function rqAssignRound(){
+  var sel=document.getElementById('rqTeam');
+  if(!sel){toast('팀원 목록이 없습니다');return;}
+  var picked=Array.prototype.filter.call(sel.options,function(o){return o.selected&&o.value;}).map(function(o){return o.value;});
+  if(!picked.length){toast('나눠 맡을 사람을 한 명 이상 고르세요');return;}
+  var free=RQ.rows.filter(function(r){return !r.recruiter_id;});
+  if(!free.length){toast('담당자 없는 건이 없습니다');return;}
+  if(!confirm('담당자 없는 '+free.length+'명을 '+picked.length+'명에게 나눠 맡깁니다.\n진행할까요?'))return;
+  var sb=osClient();if(!sb)return;
+  var buckets={};picked.forEach(function(p){buckets[p]=[];});
+  free.forEach(function(r,i){buckets[picked[i%picked.length]].push(r.id);});
+  var jobs=picked.map(function(p){return sb.rpc('recruits_assign',{p_ids:buckets[p],p_owner:p});});
+  Promise.all(jobs).then(function(res){
+    var n=0,bad=0;
+    res.forEach(function(x){ if(x&&x.error)bad++; else n+=(typeof x.data==='number'?x.data:0); });
+    if(bad){toast('일부 배정에 실패했습니다. 36번 SQL을 실행했는지 확인하세요.');}
+    else toast(n+'명을 나눠 맡겼습니다');
+    rqLoad();
+  },function(){toast('배정 실패');});
+}
+/* ── 설명회 현황판 ─────────────────────────────────────────── */
+function rqSeminarRows(){
+  var since=Date.now()-6*3600000;   /* 최근 6시간 = 오늘 세션으로 본다 */
+  return RQ.rows.filter(function(r){
+    return r.source==='seminar' && new Date(r.created_at).getTime()>=since;
+  });
+}
+function rqBoardToggle(){
+  RQ.board=!RQ.board;
+  if(RQ.board){ RQ.timer=setInterval(function(){ if(document.getElementById('rqBoard')) rqLoad(); else rqBoardStop(); },20000); }
+  else rqBoardStop();
+  rqPaint();
+}
+function rqBoardStop(){ if(RQ.timer){clearInterval(RQ.timer);RQ.timer=null;} RQ.board=false; }
+function rqPaintBoard(){
+  var host=document.getElementById('rqBoard');if(!host)return;
+  var bb=document.getElementById('rqBoardBtn');
+  if(bb)bb.textContent=RQ.board?'■ 현황판 끄기':'🎤 현황판 켜기';
+  if(!RQ.board){ host.innerHTML=''; return; }
+  var rows=rqSeminarRows(),done=rows.filter(function(r){return r.finished;}).length;
+  var hot=rows.filter(function(r){return rqSeg(r)==='A';}).length;
+  var url=rqLink('seminar');
+  host.innerHTML='<div style="border:1px solid var(--ink-7);border-radius:14px;padding:18px;margin-top:12px;background:var(--white)">'+
+    '<div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">'+
+      '<div style="flex:none">'+qrSvg(url,196)+'</div>'+
+      '<div style="flex:1;min-width:220px">'+
+        '<div style="font-size:13px;color:var(--ink-4);font-weight:800">휴대폰으로 찍으세요</div>'+
+        '<div style="display:flex;gap:24px;margin-top:14px;flex-wrap:wrap">'+
+          '<div><div style="font-size:11.5px;color:var(--ink-5);font-weight:800">들어온 사람</div>'+
+            '<div style="font-size:40px;font-weight:900;letter-spacing:-.05em;line-height:1.1">'+rows.length+'</div></div>'+
+          '<div><div style="font-size:11.5px;color:var(--ink-5);font-weight:800">끝까지 함</div>'+
+            '<div style="font-size:40px;font-weight:900;letter-spacing:-.05em;line-height:1.1;color:#047857">'+done+'</div></div>'+
+          '<div><div style="font-size:11.5px;color:var(--ink-5);font-weight:800">오늘 연락</div>'+
+            '<div style="font-size:40px;font-weight:900;letter-spacing:-.05em;line-height:1.1;color:#1A56DB">'+hot+'</div></div>'+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--ink-5);margin-top:12px;word-break:break-all">'+osEsc(url)+'</div>'+
+        '<div style="font-size:11px;color:var(--ink-5);margin-top:6px">20초마다 저절로 새로고침됩니다. 최근 6시간에 들어온 건만 셉니다.</div>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+}
 
 /* ── 우선순위 — 행동 신호만 본다 ─────────────────────────────────
    성향·사주·혈액형은 1점도 들어가지 않는다. 쓰는 것은 후보가 실제로
@@ -24469,7 +24869,15 @@ function rqTop(n){
      섞어 놓으면 이 칸을 안 믿게 된다. 그 사람들은 아래 대기열에 있다. */
   return RQ.rows.filter(function(r){ return r.stage==='new'||r.stage==='contacted'; })
     .map(function(r){ var k=rqScore(r); return {r:r,k:k}; })
-    .filter(function(x){ return x.k.score>=45; })
+    /* 미뤄 둔 건은 그 날이 올 때까지 빼 둔다. 날이 되면 점수와 무관하게 올린다.
+       C(석 달 뒤)와 D(이어하기)는 오늘 전화할 사람이 아니다 — 대응 묶음에서 다룬다.
+       이 둘을 섞으면 "오늘 연락할 사람" 칸이 제 말과 어긋난다. */
+    .filter(function(x){
+      if(rqDue(x.r)) return true;
+      if(rqSnoozed(x.r)) return false;
+      var g=rqSeg(x.r);
+      return (g==='A'||g==='B') && x.k.score>=45;
+    })
     .sort(function(a,b){ return b.k.score-a.k.score; })
     .slice(0, n||10);
 }
@@ -24491,13 +24899,16 @@ function rqPaintTop(){
           '<b style="font-size:13.5px">'+osEsc(r.name||'-')+'</b>'+
           '<span style="font-size:10.5px;font-weight:800;color:'+b.c+';background:'+b.bg+';border-radius:999px;padding:2px 8px">'+b.t+' '+k.score+'</span>'+
           (k.warn?'<span class="badge red">'+osEsc(k.warn)+'</span>':'')+
+          (rqDue(r)?'<span class="badge">미뤄둔 날 돌아옴</span>':'')+
           (r.stage==='contacted'?'<span class="badge">연락함</span>':'')+
+          (r.recruiter_id&&rqOwnerName(r.recruiter_id)?'<span class="badge">'+osEsc(rqOwnerName(r.recruiter_id))+'</span>':'')+
         '</div>'+
         '<div style="font-size:11.5px;color:var(--ink-5);margin-top:3px">'+osEsc(why||'—')+
           (r.contact_time?' · <b style="color:var(--ink-3)">'+osEsc(r.contact_time)+'</b>':'')+'</div>'+
       '</div>'+
       '<div class="btn-row" style="flex:none">'+
         '<a class="btn btn-ghost" style="padding:5px 10px;font-size:11px;text-decoration:none" href="tel:'+osEsc((r.phone||'').replace(/[^0-9]/g,''))+'">📞</a>'+
+        '<button class="btn btn-ghost" style="padding:5px 10px;font-size:11px" onclick="rqDoSeg(\''+r.id+'\')" title="문구를 복사하고 다음 볼 날짜까지 잡습니다">💬</button>'+
         '<button class="btn btn-primary" style="padding:5px 10px;font-size:11px" onclick="rqBrief(\''+r.id+'\')">📋 브리프</button>'+
       '</div>'+
     '</div>';
@@ -24530,6 +24941,18 @@ function renderRecruit() {
     '<div class="notice" style="margin-top:11px;font-size:11.5px">후보 화면에는 <b>합격·불합격 같은 말이 없습니다.</b> ' +
     '성향과 사주는 어떻게 대할지 보는 데만 쓰고, 뽑고 거르는 기준으로 쓰지 않습니다.</div>' +
   '</div></div>' +
+  '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🎤</span>설명회 현황판</div>' +
+    '<div class="card-desc">설명회장에서 띄워 두세요. QR을 찍은 사람이 실시간으로 쌓입니다. ' +
+    'QR은 이 화면에서 직접 그립니다 — 후보 주소가 바깥으로 나가지 않습니다.</div></div><div class="card-body">' +
+    '<div class="btn-row"><button class="btn btn-primary" onclick="rqBoardToggle()" id="rqBoardBtn">🎤 현황판 켜기</button>' +
+    '<button class="btn btn-ghost" onclick="rqCopy(\'seminar\')">🔗 설명회 링크 복사</button></div>' +
+    '<div id="rqBoard"></div>' +
+  '</div></div>' +
+  '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🗂️</span>대응 묶음</div>' +
+    '<div class="card-desc">같은 사람이라도 <b>지금 전화할 사람 · 자료 먼저 보낼 사람 · 석 달 뒤에 볼 사람 · 검사를 못 끝낸 사람</b>은 할 일이 전혀 다릅니다. ' +
+    '행동 신호로만 나눕니다. 💬 를 누르면 문구를 복사하면서 다음 볼 날짜까지 같이 잡힙니다.</div></div><div class="card-body">' +
+    '<div id="rqSeg"></div>' +
+  '</div></div>' +
   '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">☎️</span>오늘 연락할 사람 <span class="badge">Top 10</span></div>' +
     '<div class="card-desc">성향으로 줄 세운 게 아닙니다. <b>끝까지 했는가 · 본인이 밝힌 의향 · 연락 가능한 시간을 남겼는가 · 며칠 지났는가</b>로 정한 순서입니다. ' +
     '위에서부터 거세요. 같은 시간으로 성과가 달라집니다.</div></div><div class="card-body">' +
@@ -24543,6 +24966,7 @@ function renderRecruit() {
       '<button class="btn btn-ghost" onclick="rqCsv()">⤓ 엑셀로 내보내기</button>' +
       '<button class="btn btn-ghost" id="rqSortBtn" onclick="rqSort()">↕ 우선순위순</button>' +
     '</div>' +
+    '<div id="rqAssign" style="margin-top:11px"></div>' +
     '<div style="margin-top:11px"><input id="rqQ" placeholder="이름·연락처로 찾기" oninput="rqFind(this.value)" style="width:100%;padding:9px 12px;border:1px solid var(--ink-7);border-radius:9px;font-size:12.5px;font-family:inherit"></div>' +
     '<div id="rqTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:11px"></div>' +
     '<div id="rqList" style="margin-top:12px"><div style="font-size:12px;color:var(--ink-5);padding:10px">불러오는 중…</div></div>' +
@@ -24553,6 +24977,9 @@ function rqLoad() {
   var sb = osClient(), host = document.getElementById('rqList');
   if (!sb) { if (host) host.innerHTML = '<div class="notice" style="font-size:12px">서버 연결이 필요합니다. 로그인 후 다시 열어 주세요.</div>'; return; }
   if (host) host.innerHTML = '<div style="font-size:12px;color:var(--ink-5);padding:10px">불러오는 중…</div>';
+  sb.from('profiles').select('id,name,active').order('name').then(function (pr) {
+    RQ.people = ((pr && pr.data) || []).filter(function (p) { return p.active !== false; });
+  }, function () {});
   sb.from('recruits').select('*').order('created_at', { ascending: false }).limit(500).then(function (r) {
     RQ.loaded = true;
     if (r && r.error) {
@@ -24569,7 +24996,8 @@ function rqPick(k) { RQ.stage = k; rqPaint(); }
 function rqFiltered() {
   var q = RQ.q.replace(/[^0-9가-힣a-zA-Z]/g, '');
   return RQ.rows.filter(function (r) {
-    if (RQ.stage !== 'all' && r.stage !== RQ.stage) return false;
+    if (RQ.stage.indexOf('seg') === 0) { if (rqSeg(r) !== RQ.stage.slice(3)) return false; }
+    else if (RQ.stage !== 'all' && r.stage !== RQ.stage) return false;
     if (!q) return true;
     return ((r.name || '') + (r.phone || '')).indexOf(q) >= 0;
   });
@@ -24583,6 +25011,7 @@ function rqPaint() {
       return '<button class="btn ' + (on ? 'btn-primary' : 'btn-ghost') + '" style="padding:6px 11px;font-size:11.5px" onclick="rqPick(\'' + k + '\')">' + n + ' ' + c + '</button>';
     };
     var h = mk('all', '전체', RQ.rows.length);
+    ['A', 'B', 'C', 'D'].forEach(function (sk) { h += mk('seg' + sk, sk + '. ' + RQ_SEG[sk].n, rqSegList(sk).length); });
     for (var i = 0; i < RQ_STAGE.length; i++) {
       var st = RQ_STAGE[i], n = RQ.rows.filter(function (r) { return r.stage === st.k; }).length;
       h += mk(st.k, st.n, n);
@@ -24591,7 +25020,7 @@ function rqPaint() {
   }
   var cnt = document.getElementById('rqCnt');
   if (cnt) cnt.textContent = RQ.rows.length + '명';
-  rqPaintTop();
+  rqPaintTop(); rqPaintSeg(); rqPaintBoard(); rqPaintAssign();
   var sb = document.getElementById('rqSortBtn');
   if (sb) sb.textContent = (RQ.sort === 'new') ? '↕ 최신순' : '↕ 우선순위순';
   var rows = rqFiltered();
@@ -24616,7 +25045,13 @@ function rqRow(r) {
   if (r.mbti) who.push(r.mbti);
   if (r.day_gz) who.push(r.day_gz + '일주');
   if (r.blood) who.push(r.blood + '형');
+  var sg = RQ_SEG[rqSeg(r)];
+  var own = '<select onchange="rqSetOwner(\'' + r.id + '\',this.value)" style="padding:4px 8px;border:1px solid var(--ink-7);border-radius:8px;font-size:11.5px;font-family:inherit;background:var(--white)">' +
+    '<option value="">담당자 없음</option>' +
+    RQ.people.map(function (p) { return '<option value="' + p.id + '"' + (r.recruiter_id === p.id ? ' selected' : '') + '>' + osEsc(p.name || '-') + '</option>'; }).join('') +
+    '</select>';
   var btns = '<button class="btn btn-primary" style="padding:4px 10px;font-size:11px" onclick="rqBrief(\'' + r.id + '\')">📋 면담 브리프</button>' +
+    '<button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="rqDoSeg(\'' + r.id + '\')">💬 문구 복사 + 날짜 잡기</button>' +
     RQ_STAGE.filter(function (x) { return x.k !== r.stage; }).map(function (x) {
     return '<button class="btn btn-ghost" style="padding:4px 9px;font-size:11px" onclick="rqSet(\'' + r.id + '\',\'' + x.k + '\')">' + x.n + '</button>';
   }).join('');
@@ -24627,6 +25062,8 @@ function rqRow(r) {
       '<span style="font-size:10.5px;font-weight:800;color:' + b.c + ';background:' + b.bg + ';border-radius:999px;padding:2px 8px" ' +
         'title="' + osEsc(k.why.map(function (w) { return (w.n > 0 ? '+' : '') + w.n + ' ' + w.t; }).join(' / ')) + '">' + b.t + ' ' + k.score + '</span>' +
       (k.warn ? '<span class="badge red">' + osEsc(k.warn) + '</span>' : '') +
+      '<span style="font-size:10.5px;font-weight:800;color:' + sg.c + ';background:' + sg.bg + ';border-radius:999px;padding:2px 8px">' + sg.n + '</span>' +
+      (rqSnoozed(r) ? '<span class="badge">' + osEsc(rqWhen(r.next_at)) + '에 다시</span>' : '') +
       '<span style="margin-left:auto;font-size:11px;color:var(--ink-5)">' + osEsc(rqWhen(r.created_at)) + '</span>' +
     '</div>' +
     '<div style="font-size:11.5px;color:var(--ink-5);margin-top:5px">' +
@@ -24640,7 +25077,22 @@ function rqRow(r) {
     (r.memo ? '<div style="font-size:12.5px;color:var(--ink-3);background:var(--ink-9);border-radius:9px;padding:9px 11px;margin-top:9px;line-height:1.65">“' + osEsc(r.memo) + '”</div>' : '') +
     '<div style="margin-top:9px"><input value="' + osEsc(r.owner_note || '') + '" placeholder="내 메모 (연락 결과 등)" ' +
       'onchange="rqNote(\'' + r.id + '\',this.value)" style="width:100%;padding:7px 10px;border:1px solid var(--ink-8);border-radius:8px;font-size:12px;font-family:inherit"></div>' +
-    '<div class="btn-row" style="margin-top:9px;flex-wrap:wrap">' + btns + '</div>' +
+    '<div class="btn-row" style="margin-top:9px;flex-wrap:wrap">' + own + btns + '</div>' +
+  '</div>';
+}
+function rqPaintAssign() {
+  var host = document.getElementById('rqAssign'); if (!host) return;
+  var free = RQ.rows.filter(function (r) { return !r.recruiter_id; }).length;
+  if (!RQ.people.length) { host.innerHTML = ''; return; }
+  host.innerHTML = '<div style="border:1px solid var(--ink-8);border-radius:11px;padding:11px 13px;background:var(--ink-9)">' +
+    '<div style="font-size:12px;font-weight:800;color:var(--ink-3)">담당자 없는 건 <b>' + free + '명</b> — 나눠 맡기기</div>' +
+    '<div style="display:flex;gap:8px;align-items:flex-start;margin-top:8px;flex-wrap:wrap">' +
+      '<select id="rqTeam" multiple size="4" style="min-width:190px;padding:6px;border:1px solid var(--ink-7);border-radius:8px;font-size:12px;font-family:inherit">' +
+        RQ.people.map(function (p) { return '<option value="' + p.id + '">' + osEsc(p.name || '-') + '</option>'; }).join('') +
+      '</select>' +
+      '<button class="btn btn-ghost" onclick="rqAssignRound()" ' + (free ? '' : 'disabled ') + 'style="font-size:11.5px">↔ 돌아가며 나누기</button>' +
+    '</div>' +
+    '<div style="font-size:11px;color:var(--ink-5);margin-top:7px">여러 명을 고르려면 Ctrl(⌘)을 누른 채 고르세요. 이미 담당자가 있는 건은 건드리지 않습니다.</div>' +
   '</div>';
 }
 function rqSet(id, stage) {

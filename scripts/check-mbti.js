@@ -988,6 +988,106 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   ok(br.len > 1000, '브리프가 한 장 분량으로 채워진다 (' + br.len + '자)');
   await bp.close(); await bctx.close();
 
+  console.log('\n채용 3단계 — 묶음 · 문구 · QR · 배정');
+  const p3 = await ctx.newPage();
+  await p3.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
+  await p3.waitForTimeout(1200);
+  const D3 = n => new Date(Date.now() - n * 86400000).toISOString();
+
+  /* QR — 규격 표(생성다항식·형식정보)와 대조하고, 내가 그린 격자에서 글자를 되읽는다 */
+  const qr = await p3.evaluate(() => {
+    const REF = { 7:[0,87,229,146,149,238,102,21],
+      10:[0,251,67,46,61,118,70,64,94,32,45],
+      26:[0,173,125,158,2,103,182,118,17,145,201,111,28,165,53,161,21,245,142,13,102,48,227,153,145,218,70] };
+    let genOk = true;
+    Object.keys(REF).forEach(n => {
+      const logs = qrGenPoly(+n).map(c => QR_LOG[c]);
+      if (JSON.stringify(logs) !== JSON.stringify(REF[n])) genOk = false;
+    });
+    function maskAt(k, r, c) {
+      switch (k) { case 0: return (r + c) % 2 === 0; case 1: return r % 2 === 0; case 2: return c % 3 === 0;
+        case 3: return (r + c) % 3 === 0; case 4: return (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0;
+        case 5: return ((r * c) % 2) + ((r * c) % 3) === 0; case 6: return (((r * c) % 2) + ((r * c) % 3)) % 2 === 0;
+        default: return (((r + c) % 2) + ((r * c) % 3)) % 2 === 0; }
+    }
+    /* 격자 → 글자 되읽기 */
+    function roundTrip(txt) {
+      const q = qrMake(txt); if (!q) return null;
+      let bits = [];
+      q.place.forEach(rc => { let v = q.grid[rc[0]][rc[1]]; if (maskAt(q.mask, rc[0], rc[1])) v ^= 1; bits.push(v); });
+      const words = []; for (let i = 0; i + 8 <= bits.length; i += 8) { let b = 0; for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j]; words.push(b); }
+      const t = QR_M[q.version], nb1 = t[2], short = Math.floor(q.dataWords / q.blocks);
+      const lens = []; for (let i = 0; i < q.blocks; i++) lens.push(short + (i >= nb1 ? 1 : 0));
+      const blocks = lens.map(l => new Array(l)); let idx = 0, maxLen = Math.max.apply(null, lens);
+      for (let i = 0; i < maxLen; i++) for (let j = 0; j < q.blocks; j++) if (i < lens[j]) blocks[j][i] = words[idx++];
+      const data = [].concat.apply([], blocks);
+      let bs = []; data.forEach(b => { for (let k = 7; k >= 0; k--) bs.push((b >> k) & 1); });
+      let p = 0; const take = n => { let v = 0; for (let i = 0; i < n; i++) v = (v << 1) | bs[p++]; return v; };
+      if (take(4) !== 4) return { bad: 'mode' };
+      const len = take(q.version < 10 ? 8 : 16), out = [];
+      for (let i = 0; i < len; i++) out.push(take(8));
+      return { text: new TextDecoder().decode(new Uint8Array(out)), q: q };
+    }
+    const long = 'https://apex.example.com/app/saju-mbti.html?for=client&recruit=1&mode=both&rec=11111111-2222-3333-4444-555555555555&src=seminar';
+    const a = roundTrip(long), b = roundTrip('에이플러스에셋 온탑본부');
+    const g = a.q.grid, n = a.q.size;
+    return { genOk: genOk,
+      long: a && a.text === long, kor: b && b.text === '에이플러스에셋 온탑본부',
+      size: n === a.q.version * 4 + 17,
+      finder: g[0][0] === 1 && g[0][6] === 1 && g[1][1] === 0 && g[3][3] === 1,
+      timing: g[6][8] === 1 && g[6][9] === 0, dark: g[n - 8][8] === 1,
+      svg: /^<svg[\s\S]*<\/svg>$/.test(qrSvg('x', 120)) && !/https?:\/\//.test(qrSvg('x', 120)),
+      ver: a.q.version, mask: a.q.mask };
+  });
+  ok(qr.genOk, 'QR 생성다항식이 규격 표와 일치한다 (오류정정 코드가 맞다)');
+  ok(qr.long && qr.kor, '내가 그린 QR 격자에서 원래 글자가 그대로 되읽힌다 (한글 포함)');
+  ok(qr.size && qr.finder && qr.timing && qr.dark,
+     'QR 구조가 규격대로다 — 크기 v' + qr.ver + ' · 마스크 ' + qr.mask + ' · 모서리·타이밍·고정칸');
+  ok(qr.svg, 'QR은 바깥에서 아무것도 받아오지 않고 직접 그린다');
+
+  const seg = await p3.evaluate(d => {
+    OS.profile = { id: 'p1', name: '윤시현', role: 'admin' };
+    document.getElementById('dynPane').innerHTML = renderRecruit();
+    RQ.loaded = true; RQ.board = false;
+    RQ.people = [{ id: 'p1', name: '윤시현' }, { id: 'p2', name: '박팀장' }];
+    const base = { phone: '01000000000', contact_time: '저녁', owner_note: '', memo: '', day_gz: '갑자',
+      blood: 'O', mbti: 'ENFP', birth_y: 1994, birth_m: 8, birth_d: 3, birth_h: 14, source: 'link', recruiter_id: null };
+    RQ.rows = [
+      Object.assign({}, base, { id: 'A1', name: '에이', stage: 'new', intent: 'now',   finished: true,  elapsed_sec: 400, consistency: 88, created_at: d[0] }),
+      Object.assign({}, base, { id: 'B1', name: '비이', stage: 'new', intent: 'maybe', finished: true,  elapsed_sec: 400, consistency: 55, created_at: d[0], contact_time: '' }),
+      Object.assign({}, base, { id: 'C1', name: '씨이', stage: 'new', intent: 'no',    finished: true,  elapsed_sec: 400, consistency: 88, created_at: d[0] }),
+      Object.assign({}, base, { id: 'D1', name: '디이', stage: 'new', intent: 'now',   finished: false, elapsed_sec: 30,  consistency: 0,  created_at: d[0] }),
+      Object.assign({}, base, { id: 'S1', name: '잠듦', stage: 'new', intent: 'now',   finished: true,  elapsed_sec: 400, consistency: 88, created_at: d[0], next_at: d[1] })
+    ];
+    rqPaint();
+    const segs = {}; RQ.rows.forEach(r => { segs[r.name] = rqSeg(r); });
+    const top = rqTop(10).map(x => x.r.name);
+    const msgs = {}; ['A1', 'B1', 'C1', 'D1'].forEach(id => { msgs[id] = rqMsg(RQ.rows.filter(r => r.id === id)[0]); });
+    return { segs: segs, top: top,
+      msgA: msgs.A1, msgD: msgs.D1,
+      dLink: /saju-mbti\.html\?for=client&recruit=1/.test(msgs.D1),
+      noHype: !/합격|보장|확실|무조건|반드시 성공/.test(Object.keys(msgs).map(k => msgs[k]).join(' ')),
+      segCard: /대응 묶음|지금 전화/.test(document.getElementById('rqSeg').textContent),
+      assign: /나눠 맡기기/.test(document.getElementById('rqAssign').textContent) };
+  }, [D3(0.1), D3(-7)]);
+  ok(seg.segs['에이'] === 'A' && seg.segs['비이'] === 'B' && seg.segs['씨이'] === 'C' && seg.segs['디이'] === 'D',
+     '네 묶음으로 갈린다 — ' + Object.keys(seg.segs).map(k => k + ':' + seg.segs[k]).join(' '));
+  ok(seg.top.indexOf('씨이') < 0 && seg.top.indexOf('디이') < 0,
+     '석 달 뒤·이어하기 묶음은 "오늘 연락할 사람"에 섞이지 않는다');
+  ok(seg.top.indexOf('잠듦') < 0, '미뤄 둔 건은 그 날이 올 때까지 올라오지 않는다');
+  ok(seg.top.indexOf('에이') >= 0 && seg.top.indexOf('비이') >= 0, '지금·자료먼저 묶음은 올라온다');
+  ok(seg.dLink, '검사를 못 끝낸 사람 문구에는 이어하기 링크가 들어 있다');
+  ok(seg.noHype, '보낼 문구에 합격·보장 같은 말이 없다');
+  ok(seg.segCard && seg.assign, '대응 묶음 카드와 담당자 나누기 칸이 그려진다');
+
+  const due = await p3.evaluate(d => {
+    RQ.rows = RQ.rows.map(r => r.id === 'S1' ? Object.assign({}, r, { next_at: d[0] }) : r);
+    rqPaint();
+    return rqTop(10).map(x => x.r.name);
+  }, [D3(1)]);
+  ok(due.indexOf('잠듦') >= 0, '미뤄 둔 날이 지나면 다시 올라온다');
+  await p3.close();
+
   console.log('\n화면 · 스크롤 칸');
   for (const t of await page.evaluate(() => tabsFor('both'))) {
     await page.evaluate(x => goTab(x), t);

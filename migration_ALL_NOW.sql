@@ -730,8 +730,53 @@ $$;
 revoke all on function public.recruits_purge(int) from public;
 grant execute on function public.recruits_purge(int) to authenticated;
 
+/* ========================================================== */
+/* 채용 3단계 — 후속 일정(next_at)과 담당자 배정(assigned_at).       */
+/* ========================================================== */
+alter table public.recruits add column if not exists next_at     timestamptz;
+alter table public.recruits add column if not exists assigned_at timestamptz;
+
+create index if not exists recruits_next_idx on public.recruits(next_at)
+  where next_at is not null;
+
+/* 앱에서 고칠 수 있는 칸에 둘을 더한다. 후보가 적어낸 값과 검사 결과는 */
+/* 여전히 앱에서 못 바꾼다.                                              */
+grant update (stage, owner_note, recruiter_id, updated_at, next_at, assigned_at)
+  on public.recruits to authenticated;
+
+/* 담당자 없는 건을 팀원들에게 돌아가며 나눠 맡긴다.                     */
+/* 관리자·대표만 쓸 수 있고, 이미 담당자가 있는 건은 건드리지 않는다.    */
+create or replace function public.recruits_assign(p_ids uuid[], p_owner uuid)
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  n int;
+begin
+  if not (public.is_admin() or public.is_owner()) then
+    return 0;
+  end if;
+  if p_owner is null or not exists (select 1 from public.profiles where id = p_owner) then
+    return 0;
+  end if;
+  update public.recruits
+     set recruiter_id = p_owner,
+         assigned_at  = now(),
+         updated_at   = now()
+   where id = any(p_ids)
+     and recruiter_id is null;
+  get diagnostics n = row_count;
+  return n;
+end;
+$$;
+
+revoke all on function public.recruits_assign(uuid[], uuid) from public;
+grant execute on function public.recruits_assign(uuid[], uuid) to authenticated;
+
 insert into public.app_config(key, value)
-values ('schema_version', '35')
+values ('schema_version', '36')
 on conflict (key) do update set value = excluded.value, updated_at = now();
 
 notify pgrst, 'reload schema';
