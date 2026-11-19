@@ -2464,10 +2464,27 @@ ul.bp-whyl li{font-size:var(--t6);color:var(--t-ink);line-height:1.8}
 .nl-b{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
 .nl-empty{border:1px dashed var(--ink-7,var(--t-line));border-radius:var(--r);padding:22px 16px;text-align:center;
   font-size:var(--t6);color:var(--t-sub)}
-.nl-mini{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--t-line-2);font-size:var(--t6)}
+/* ★★ 판 X491 — 뉴스 줄의 「원문 ↗」 을 <b>44px</b> 로. 줄은 오히려 <b>47 → 44px</b> 로 줄었습니다.
+   ⚠ 판 X266 은 「글 속 링크(그냥 &lt;a&gt;)는 안 올립니다」 라고 적었고, 그 보기로 바로 이
+     「원문 ↗」 을 들었습니다. 라이브에서 재어 보니 <b>두 자리가 서로 다른 것</b>이었습니다 —
+     ① 홈·콘텐츠의 <b>hm-ig-m</b> 은 「출처 · 날짜 · 원문 ↗」 로 <b>한 문장 속</b>입니다
+        (display:inline · 든 줄 20px). 44px 로 만들면 그 줄이 통째로 벌어집니다 — <b>그대로 둡니다.</b>
+        판 X266 의 그 말은 이 자리에서 <b>그대로 맞습니다.</b>
+     ② 여기 <b>nl-mini</b> 는 「[칩] 제목…… 원문 ↗」 로 <b>칸 안에 따로 선 누를 자리</b>이고
+        (display:block · 든 줄이 <b>이미 47px</b>), 제목이 nowrap 이라 줄은 늘 한 줄입니다.
+        그래서 위아래 패딩 7+7 을 걷고 줄 바닥을 44 로 두면, <b>글씨 한 자 안 줄이고</b>
+        링크가 32 → 44px 이 되고 줄은 47 → 44px 로 <b>줄어듭니다</b>
+        (8번 — 「눈금을 올리지 말고 줄이라」).
+     ⚠ 바닥 44 는 <b>누르는 링크 자신</b>에게 답니다. 줄(nl-mini)에 달면 테두리 1px 이
+        속에 들어가 링크가 <b>43px</b> 이 됩니다(box-sizing:border-box). 줄에 남긴 min-height
+        44 는 <b>링크가 없는 줄</b>의 키를 맞추려고 둔 것입니다.
+   ★ <b>라이브에서 재어 찾았습니다.</b> 제 점검(check-tap44)은 샌드박스에 <b>뉴스가 없어</b>
+     이 줄을 아예 못 보고 있었습니다 — 빈 껍데기를 재고 「0개」 라고 적었습니다.
+     이제 그 자가 뉴스를 심어 보게 했습니다 (8번 — 안 울리는 알람은 알람이 아니다). */
+.nl-mini{display:flex;align-items:center;gap:8px;padding:0;min-height:44px;border-bottom:1px solid var(--t-line-2);font-size:var(--t6)}
 .nl-mini:last-of-type{border-bottom:0}
 .nl-mt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#191F28;font-weight:600}
-.nl-mini a{font-size:var(--t6);color:var(--t-point);font-weight:700;text-decoration:none;white-space:nowrap}
+.nl-mini a{font-size:var(--t6);color:var(--t-point);font-weight:700;text-decoration:none;white-space:nowrap;min-height:44px;display:flex;align-items:center}
 /* 자동차사고 과실·보상 분석기 — 미끼 레이더와 같은 틀 */
 #carFaultScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
 body.carfault-mode .app{display:none;}
@@ -2854,6 +2871,68 @@ body.insight-mode #insightScreen{display:block;}
   #dynPane label:has(input[type=checkbox]){min-height:44px;display:flex;
     align-items:center;gap:8px}
   #dynPane input[type=checkbox]{width:20px;height:20px;flex:none}
+  /* ★★ 판 X488 — <b>글 적는 칸도 바닥을 지킵니다.</b>
+     위 줄은 button·.btn·select 만 보았고, 판 X266 쪽지에 「바닥 두 줄은
+     button·.btn 만 보므로 <b>입력칸은 저마다 적어야 합니다</b>」 라고
+     적어 두었습니다. 그런데 「저마다 적는다」 는 <b>잊을 자리가 200곳이
+     넘는다</b>는 뜻입니다 — 폰 390px 에서 화면 105개를 돌며 재어 보니
+     44px 아래로 누르는 자리가 <b>332개 · 48개 화면</b>이었고, 그 가운데
+     <b>217개가 글·숫자·날짜 칸</b>이었습니다
+     (ref_jeonsan 76 · fact_find 29 · calc 23 · inv_fund 13 …).
+     ★ 사장님이 <b>네 번</b> 시키신 것입니다 — 판 X226 「응 그것도 올려」
+       (글 적는 칸 35개) · 판 X238 「응 그것도 고쳐줘」 · 판 X239 · 판 X243.
+     ★ 44px 를 재는 점검이 <b>42가지</b>나 되는데 저마다 <b>제 화면만</b>
+       봅니다 — 전체를 세는 자가 없어 이만큼 남았습니다 (0-1번).
+       그래서 <b>여기 한 곳</b>에 깔고, 세는 자(check-tap44)를 세웁니다.
+     ⚠ 체크·라디오·슬라이더는 <b>빼냅니다</b> — 그것들은 네모가 아니라
+       감싼 줄이 누르는 자리이고, 바로 위에서 줄을 44px 로 세웁니다.
+       네모까지 키우면 모양이 깨집니다.
+     ⚠ 넓이는 안 건드립니다 — min-height 만 깔아 <b>세로로만</b> 큽니다. */
+  #dynPane input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]),
+  #dynPane textarea{min-height:44px;box-sizing:border-box}
+  /* ★★ 판 X489 — <b>적는 칸의 글씨는 16px 아래로 안 내려갑니다.</b>
+     재어 보니 폰에서 적는 칸 <b>315개가 전부 13px</b>(몇은 12.5~15px)
+     이었습니다 — 화면 58개입니다.
+     ⚠ <b>아이폰·아이패드는 16px 아래 칸에 초점이 가면 화면을 확 키웁니다</b>
+       (사파리·아이폰 크롬 모두 WebKit 입니다). 이 앱의 viewport 에는
+       maximum-scale 도 user-scalable=no 도 없어서 그 키우기가 그대로
+       일어납니다 — 칸을 누를 때마다 글이 커졌다, 손으로 다시 줄여야 합니다.
+       ★ 사장님은 <b>크롬</b>으로 여신다고 하셨습니다(판 X481) — 안드로이드·
+         컴퓨터 크롬에서는 그 키우기가 <b>안 일어납니다</b>. 저는 여기서
+         사파리를 띄울 수 없어 <b>그 키우기를 직접 보지는 못했습니다</b> —
+         WebKit 의 알려진 동작으로 적습니다 (1번 · 모르는 것은 모른다고).
+     ★ 그것과 별개로, <b>13px 짜리 칸에 손가락으로 적는 것</b> 자체가
+       사장님이 줄곧 말씀하신 방향(크게·읽히게 · 판 X226·X238·X313)과
+       어긋납니다. 그래서 올립니다.
+     ⚠ <b>폰에서만</b>입니다 — 이 묶음이 640px 아래에서만 켜지므로 컴퓨터
+       화면은 한 글자도 안 바뀝니다.
+     ⚠ 넓이는 안 건드립니다 — 좁은 숫자 칸(52px)도 그대로입니다.
+     ⚠⚠ <b>!important 가 꼭 필요합니다.</b> 처음 없이 깔았더니 315개 중
+       <b>53개가 안 올라갔습니다.</b> 이기는 자가 둘이었습니다 —
+         ⑴ 위쪽 520px 묶음의 <b>.app [style*="font-size:var(--t6)"]
+            {font-size:var(--t6)!important}</b>. 그 자는 자리마다 손으로
+            박아 둔 <b>9px·9.5px 꼬리표를 폰에서 끌어올리려는 바닥</b>이라
+            뜻은 저와 같습니다 — 그런데 적는 칸에서는 13px 로 <b>못 박아</b>
+            더 올라가지 못하게 막습니다. 그 자를 지우지 않고(다른 자리에서
+            여전히 필요합니다) <b>적는 칸만</b> 이깁니다.
+         ⑵ 칸에 <b>인라인으로 박힌</b> 글씨 크기 (endorse 의 12.5px 여섯).
+            규칙의 !important 는 인라인도 이깁니다.
+       ★ 그래서 이 한 줄이 <b>적는 칸·고르는 칸·여러 줄 칸</b>에만 걸립니다 —
+         꼬리표·딱지는 한 글자도 안 건드립니다. */
+  #dynPane input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]),
+  #dynPane textarea,#dynPane select{font-size:max(16px,1em) !important}
+  /* ⚠ 글씨를 키우니 <b>좁은 숫자 칸에서 글자가 잘렸습니다</b> — 재어 보니
+     pricing 의 「3000」 이 3px, 「2.2」 가 5px 모자랐습니다(넓이가 인라인으로
+     54~74px 박혀 있습니다). <b>제가 만든 것</b>이라 제가 고칩니다.
+     ★ 넓이를 늘리지 않고 <b>안쪽 여백만</b> 줄입니다 — 넓이가 그대로라
+       줄이 안 틀어지고, 좌우 8px → 4px 로 담을 자리가 8px 늘어납니다.
+       (늘렸다가 여러 칸이 한 줄에 선 자리에서 옆으로 밀릴 수 있습니다.) */
+  #dynPane input[type=number]{padding-left:4px !important;padding-right:4px !important}
+  /* <b>네모로 선 링크</b>는 제 padding 이 있어 위 「#dynPane a」 줄이 안
+     먹습니다(그 줄은 글 속의 링크용입니다). 재어 보니 .lr-go 가 87곳에서
+     32px 였습니다 — 보험사 전산 화면이 거의 다입니다. */
+  #dynPane a.lr-go,#dynPane a.iv-chip,#dynPane a.rd-go{min-height:44px;
+    box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center}
 }
 </style>
 </head>
@@ -22233,7 +22312,7 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-18 16:26';
+var APP_BUILD='2026-11-19 18:15';
 var APP_BUILD_NOTE='🖨 <b>TA 스크립트 인쇄 — 정리본 4장</b>(판 X482 · 사장님 말씀 「인쇄하면 3~5장으로 · 디비 종류는 한눈에 따로 · 멘트 / 거절처리 순으로」) — 인쇄를 누르면 이제 <b>① 멘트(대본 한 장) → ② 베스트 반론 5 → ③ 거절 한눈표 → ④ 별지 DB 종류 한눈표</b> 순서로 나갑니다. ★ 베스트 반론 5는 한현석 지점장님 「TA 시장 및 반론사례」 의 반론극복 장을 옮긴 것이고, 한눈표의 같은 거절에 🏆 가 붙습니다. ★ DB 종류 한눈표만 따로(1장), 예전 짧은 2장 · 자세한 약 30쪽도 고르는 쪽지에서 그대로 고를 수 있습니다.';
 
 

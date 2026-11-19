@@ -91,5 +91,37 @@ TDS.forEach(t => t.detail.rows.forEach(r => r.cells.forEach(c => { if (!c.disp) 
 is(dbad === 0, '읽기용 문장(disp) ' + dn + '칸 — 글자는 원문 그대로, 순서만 화면대로 (어긋남 ' + dbad + ')');
 is(/c\.disp \? '약관 문장 그대로\(PDF 글자 순서가 섞여/.test(PAGE), 'disp 칸은 「순서를 정리했다」 고 화면에 밝힌다');
 
+console.log('\n[8] 🧑‍⚕️ 간병인 비교 4사 — 약관 없는 칸을 빼고 받을 수 있는 약관으로 (판 X483 · 사장님 말씀 「10. 다음작업 진행해줘」)');
+const CARE = TDS.find(t => /^간병인 담보/.test(t.title));
+is(CARE && CARE.detail.ids.length === 4 && !CARE.detail.ids.includes('hanwha-fire-01'), '간병인 비교는 메리츠·KB·DB·삼성 4칸 (약관 PDF 없는 한화손보 칸을 뺐다)');
+let qn = 0, qbad = 0;
+TDS.forEach(t => t.detail.rows.forEach(r => r.cells.forEach(c => { if (!c.quote) return; qn++; if (!(c.vf && c.vf.ok)) qbad++; })));
+is(qn > 0 && qbad === 0, '상세표 약관 문장 ' + qn + '칸이 전부 PDF 에서 글자 그대로 (못 맞춘 칸 ' + qbad + ')');
+
+console.log('\n[9] 🔎 「약관에서 못 찾음」 칸 다시 찾기 (판 X485 · 사장님 말씀 「11. 다음작업 진행해줘」)');
+let mq = 0, mn = 0;
+TDS.forEach(t => t.detail.rows.forEach(r => r.cells.forEach(c => { if (c.quote) mq++; else mn++; })));
+is(mq >= 580 && mn <= 75, '약관 문장 붙은 칸 ' + mq + '개 · 못 찾음 ' + mn + '칸 (다시 찾기 전 558 · 99칸 — 줄면 안 됨)');
+is(TDS.every(t => !(t.detail.rows || []).some(r => r.cells.some(c => !c.quote && !/못 찾음/.test(c.v || '')))), '원문 없는 칸은 모두 「약관에서 못 찾음」 이라고 말한다 (지어낸 해설 0)');
+
+console.log('\n[10] 📜 상품 카드 약관 근거 넓히기 — 공시실에서 받아 15개 더 (판 X487 · 사장님 말씀 「12. 다음작업 진행해줘」)');
+const TP = SEED ? SEED.products.filter(p => p.terms) : [];
+is(TP.length >= 52, '약관 발췌(지급기준 5줄 · 유리/주의/비교)가 붙은 상품 ' + TP.length + '개 (37 → 52 이상)');
+const NEWT = ['hana-fire-01', 'heungkuk-fire-01', 'lotte-fire-03', 'hyundai-marine-01', 'nh-fire-01', 'kb-fire-03', 'db-fire-05', 'nh-life-02', 'aia-life-03', 'metlife-04', 'kyobo-life-02', 'samsung-life-02', 'shinhan-life-04', 'tongyang-life-02', 'kb-life-01'];
+let tq = 0, tbad = 0;
+NEWT.forEach(id => { const p = TP.find(x => x.id === id); if (!p) { tbad++; return; }
+  [...(p.terms.clauses || []), ...Object.values(p.terms.pay_rules || {})].forEach(q => { if (!q || !q.quote) return; tq++; if (!(q.vf && q.vf.ok)) tbad++; }); });
+is(tq > 0 && tbad === 0, '새로 붙인 15개 상품의 약관 문장 ' + tq + '개가 전부 PDF 에서 글자 그대로 (어긋남 ' + tbad + ')');
+
+console.log('\n[11] 📜 약관 근거 두 번째 묶음 — 근거 없던 회사까지 15개 더 (판 X490 · 사장님 말씀 「다음작업 진행해줘」)');
+is(TP.length >= 67, '약관 발췌가 붙은 상품 ' + TP.length + '개 (52 → 67 이상)');
+const NEWT2 = ['hanwha-life-04', 'hanwha-life-05', 'nh-life-03', 'shinhan-life-03', 'hana-fire-02', 'hana-life-02', 'hana-life-03', 'abl-life-03', 'abl-life-01', 'lina-fire-01', 'lina-fire-02', 'heungkuk-life-02', 'heungkuk-life-05', 'heungkuk-fire-03', 'lina-life-01', 'aia-life-01'];
+let tq2 = 0, tbad2 = 0;
+NEWT2.forEach(id => { const p = TP.find(x => x.id === id); if (!p) { tbad2++; return; }
+  [...(p.terms.clauses || []), ...Object.values(p.terms.pay_rules || {})].forEach(q => { if (!q || !q.quote) return; tq2++; if (!(q.vf && q.vf.ok) || q.quote.indexOf('…') >= 0) tbad2++; }); });
+is(tq2 > 0 && tbad2 === 0, '새 15개 + AIA 의 약관 문장 ' + tq2 + '개가 전부 PDF 에서 글자 그대로, 「…」 생략 없음 (어긋남 ' + tbad2 + ')');
+const HL3 = SEED ? SEED.products.find(p => p.id === 'hana-life-03') : null;
+is(!!HL3 && JSON.stringify(HL3).indexOf('낸 보험료 전부 환급') < 0 && JSON.stringify(HL3).indexOf('지금까지 낸 보험료를 전부') < 0, '하나생명 THE 연결된 종신 — 환급은 「납입하기로 한 보험료 전부」 (「지금까지 낸 보험료」 아님)');
+
 console.log('\n' + (bad ? '✗ ' + bad + '곳이 어긋났습니다' : '✓ 상품전략기 한 칸에서 「무엇을 권할까」 와 「어떻게 말을 꺼낼까」 가 같은 대본으로 이어집니다.'));
 process.exit(bad ? 1 : 0);
