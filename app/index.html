@@ -2464,10 +2464,27 @@ ul.bp-whyl li{font-size:var(--t6);color:var(--t-ink);line-height:1.8}
 .nl-b{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
 .nl-empty{border:1px dashed var(--ink-7,var(--t-line));border-radius:var(--r);padding:22px 16px;text-align:center;
   font-size:var(--t6);color:var(--t-sub)}
-.nl-mini{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--t-line-2);font-size:var(--t6)}
+/* ★★ 판 X491 — 뉴스 줄의 「원문 ↗」 을 <b>44px</b> 로. 줄은 오히려 <b>47 → 44px</b> 로 줄었습니다.
+   ⚠ 판 X266 은 「글 속 링크(그냥 &lt;a&gt;)는 안 올립니다」 라고 적었고, 그 보기로 바로 이
+     「원문 ↗」 을 들었습니다. 라이브에서 재어 보니 <b>두 자리가 서로 다른 것</b>이었습니다 —
+     ① 홈·콘텐츠의 <b>hm-ig-m</b> 은 「출처 · 날짜 · 원문 ↗」 로 <b>한 문장 속</b>입니다
+        (display:inline · 든 줄 20px). 44px 로 만들면 그 줄이 통째로 벌어집니다 — <b>그대로 둡니다.</b>
+        판 X266 의 그 말은 이 자리에서 <b>그대로 맞습니다.</b>
+     ② 여기 <b>nl-mini</b> 는 「[칩] 제목…… 원문 ↗」 로 <b>칸 안에 따로 선 누를 자리</b>이고
+        (display:block · 든 줄이 <b>이미 47px</b>), 제목이 nowrap 이라 줄은 늘 한 줄입니다.
+        그래서 위아래 패딩 7+7 을 걷고 줄 바닥을 44 로 두면, <b>글씨 한 자 안 줄이고</b>
+        링크가 32 → 44px 이 되고 줄은 47 → 44px 로 <b>줄어듭니다</b>
+        (8번 — 「눈금을 올리지 말고 줄이라」).
+     ⚠ 바닥 44 는 <b>누르는 링크 자신</b>에게 답니다. 줄(nl-mini)에 달면 테두리 1px 이
+        속에 들어가 링크가 <b>43px</b> 이 됩니다(box-sizing:border-box). 줄에 남긴 min-height
+        44 는 <b>링크가 없는 줄</b>의 키를 맞추려고 둔 것입니다.
+   ★ <b>라이브에서 재어 찾았습니다.</b> 제 점검(check-tap44)은 샌드박스에 <b>뉴스가 없어</b>
+     이 줄을 아예 못 보고 있었습니다 — 빈 껍데기를 재고 「0개」 라고 적었습니다.
+     이제 그 자가 뉴스를 심어 보게 했습니다 (8번 — 안 울리는 알람은 알람이 아니다). */
+.nl-mini{display:flex;align-items:center;gap:8px;padding:0;min-height:44px;border-bottom:1px solid var(--t-line-2);font-size:var(--t6)}
 .nl-mini:last-of-type{border-bottom:0}
 .nl-mt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#191F28;font-weight:600}
-.nl-mini a{font-size:var(--t6);color:var(--t-point);font-weight:700;text-decoration:none;white-space:nowrap}
+.nl-mini a{font-size:var(--t6);color:var(--t-point);font-weight:700;text-decoration:none;white-space:nowrap;min-height:44px;display:flex;align-items:center}
 /* 자동차사고 과실·보상 분석기 — 미끼 레이더와 같은 틀 */
 #carFaultScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
 body.carfault-mode .app{display:none;}
@@ -22295,8 +22312,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-19 16:30';
-var APP_BUILD_NOTE='📜 <b>상품 카드 약관 근거 52 → 67개 — 지금까지 한 개도 없던 하나생명·흥국생명·ABL·라이나손보 등에 공시실 약관을 붙였습니다</b>(판 X490 · 판 X487 의 다음 묶음). ◾ 새 15개 상품의 약관 문장 213개가 전부 PDF 에서 글자 그대로 찾아집니다. 어제 홈페이지 점검으로 빠졌던 <b>한화생명 H통합보험</b>도 들어갔습니다. ◾ 검수에서 바로잡은 과장 — 한화 치매간병 「등급만 받으면 매달」 → 재가 서비스 두 종류 이상·월 1회, 신한 VIP상속 「사망보험금 50%」 → 기준사망보험금 50%, 흥국생명 「1년 뒤 2배」 → 고급형만, 흥국화재 순환계 질병코드 I38·I14 는 대상 아님. ◾ 하나생명 THE 연결된 종신 요약의 「지금까지 낸 보험료 전부 환급」 → <b>납입하기로 한 보험료 전부</b>(소식지 원문·약관 모두 그렇게 적음). AIA 금리보너스 문장의 「…」 생략도 원문 그대로로.';
+var APP_BUILD='2026-11-19 17:20';
+var APP_BUILD_NOTE='📰 <b>라이브에서 재니 44px 아래가 여섯 — 점검은 「0개」 라고 적고 있었습니다</b>(판 X491 · 판 X489 를 라이브에서 확인하다 찾았습니다). ◾ 사장님 말씀 「초록이면 병합하고 라이브 확인해」 그대로 라이브를 재었더니, 적는 칸 글씨는 <b>0개 · 제일 작은 글씨 16px</b> 로 고쳐져 있었지만 <b>누르는 자리 여섯이 44px 아래</b>(제일 낮은 28px)였습니다. 제 점검은 같은 것을 「0개」 라고 적고 있었습니다. ◾ ★★ 뜯어 보니 <b>둘이 서로 다른 것</b>이었습니다 — ⑴ <b>다섯</b>은 정책·상품 뉴스(biz_news)의 뉴스 줄 「원문 ↗」 로 <b>32px</b>. 칸 안에 따로 선 누를 자리이고 든 줄이 이미 47px 이라, 위아래 패딩 7+7 을 걷고 바닥을 <b>누르는 링크 자신</b>에게 달았습니다 — 글씨 한 자 안 줄이고 링크 32 → <b>44px</b>, 줄 47 → <b>45px</b>, 화면이 10px <b>줄었습니다</b>(8번 「눈금을 올리지 말고 줄이라」). ⑵ <b>하나</b>는 헛것이었습니다 — 홈·콘텐츠의 「출처 · 날짜 · 원문 ↗」 는 <b>문장 속 링크</b>라 44px 로 만들면 그 줄이 통째로 벌어집니다. 판 X266 이 그렇게 적어 두었고 그 자리에서 그 말이 맞습니다 — 그래서 <b>앱이 아니라 자를 좁혔습니다</b>(display:inline 이고 든 줄에 다른 글이 더 있는 것만 뺍니다. 혼자 선 inline 링크는 그대로 셉니다 — 「문장 속」 이라는 말로 누르는 자리를 숨기면 눈이 멉니다). ◾ ★★ <b>점검이 왜 못 봤나</b> — 샌드박스에 뉴스가 없어 그 두 화면이 <b>빈 껍데기</b>였습니다. 셀 것이 없으니 「0개」 였습니다. 이제 점검이 <b>가짜 뉴스를 심어</b> 봅니다(실제 기사처럼 보이는 것은 지어 적지 않습니다 · 주소도 example.com · 1번·9번). 센 누를 자리가 1,691 → <b>1,721개</b>로 늘었습니다. ◾ ⚠ 일부러 되돌려 빨간불 셋 — 앱 고침 되돌리기 → <b>5개</b> · 거기서 뉴스 심기까지 빼기 → <b>초록으로 지나감</b>(제가 눈멀었던 그 상태를 그대로 보여 줍니다) · 문장 속 뺌 빼기 → 헛것 <b>1개</b>. ◾ ★ 이 판에는 판 X489(적는 칸 글씨 16px)가 이미 라이브에 들어 있습니다. ◾ ★ 이 판에는 <b>판 X490</b>(상품 카드 약관 근거 52 → 67개 — 근거가 한 개도 없던 회사까지 공시실 약관을 붙였습니다)도 <b>같이 실려 나갑니다.</b>';
 
 
 
