@@ -463,7 +463,7 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
       bless: /덕담|🌾/.test(iceTxt), noScript: !/포문|하면 안 되는 말/.test(iceTxt),
       meHidden: meHidden, riskBlocked: riskBlocked };
   });
-  ok(view.agent === 15 && view.client === 8, '내 눈용 ' + view.agent + '탭 · 고객 화면 ' + view.client + '탭으로 갈린다');
+  ok(view.agent === 16 && view.client === 9, '내 눈용 ' + view.agent + '탭 · 고객 화면 ' + view.client + '탭으로 갈린다');
   ok(view.leak === '', '고객 화면에 설계사용 문구가 하나도 새어 나가지 않는다' + (view.leak ? ' — ' + view.leak : ''));
   ok(view.bless && view.noScript, '고객 화면 아이스브레이킹에는 덕담만 남고 화법 대본은 빠진다');
   ok(view.meHidden, '고객 화면에서는 내 카드 버튼도 감춘다');
@@ -569,6 +569,74 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
     return { price: PAY.price, shown: /1,900원/.test(t), old: /9,900원/.test(t) };
   });
   ok(price.price === 1900 && price.shown && !price.old, '고민 상담 값이 1,900원으로 나온다 (' + price.price + ')');
+
+  console.log('\n신당(점집) 풀이');
+  const shrine = await page.evaluate(() => {
+    S.view = 'agent'; S.tab = 'dang'; S.dang = {}; draw();
+    const t = document.getElementById('view').textContent;
+    const y = yongsin(S.cl.saju);
+    const skin = document.body.classList.contains('shrine-on');
+    S.tab = 'ice'; draw();
+    const off = !document.body.classList.contains('shrine-on');
+    S.tab = 'dang'; draw();
+    return { len: t.replace(/\s+/g, '').length, skin: skin, off: off,
+      who: /무당/.test(t), yong: /용신/.test(t),
+      primary: y.primary, need: y.need, avoid: y.avoid, lvl: y.st.level,
+      needHasPrimary: y.need.indexOf(y.primary) >= 0,
+      noOverlap: y.need.every(k => y.avoid.indexOf(k) < 0),
+      han: /[木火土金水]/.test(t),
+      dir: /방향은/.test(t), people: /살리는 사람/.test(t),
+      gong: /공망/.test(t), daeun: /대운/.test(t),
+      flowWarn: /운은 흐름이지 정해진 답이 아닙니다/.test(t),
+      pick: document.querySelectorAll('.wpick button').length,
+      noPay: !/결제하고|1,900원|구독/.test(t) };
+  });
+  ok(shrine.len > 1500, '신당 풀이가 길게 나온다 (' + shrine.len + '자)');
+  ok(shrine.who && shrine.yong, '윤시현 무당이 말하는 형식이고, 핵심으로 용신을 짚는다');
+  ok(shrine.needHasPrimary && shrine.noOverlap,
+     '용신이 제대로 잡힌다 — ' + shrine.lvl + ' → 필요 ' + shrine.need.join('·') +
+     ' / 과함 ' + (shrine.avoid.join('·') || '없음') + ' (겹치지 않음)');
+  ok(shrine.han && shrine.dir && shrine.people,
+     '부적 한 글자 · 방향·시간·색 · 나를 살리는 사람까지 나온다');
+  ok(shrine.gong && shrine.daeun, '공망과 대운까지 풀어 준다');
+  ok(shrine.flowWarn, '"운은 흐름이지 정해진 답이 아니다"를 못 박는다');
+  ok(shrine.pick === 10, '고민 열 가지를 고를 수 있다 (' + shrine.pick + ')');
+  ok(shrine.skin && shrine.off, '신당 탭에서만 화면이 점집으로 바뀌고, 나가면 되돌아온다');
+  ok(shrine.noPay, '신당에서는 결제를 걸지 않는다');
+
+  const bridge = await page.evaluate(() => {
+    const out = {};
+    WORRY_CATS.forEach(c => { out[c.k] = !!(APEX_PATH[c.k] && APEX_PATH[c.k].steps.length === 3); });
+    S.tab = 'dang'; setDangCat('health');
+    const t = document.getElementById('view').textContent;
+    const hit = /운이 나쁘|운세가|액운|부정 타|살을 풀|굿을/.test(t);
+    setDangCat('money');
+    const t2 = document.getElementById('view').textContent;
+    const hit2 = /운이 나쁘|운세가|액운|부정 타|살을 풀|굿을/.test(t2);
+    setDangCat('money');
+    return { all: Object.keys(out).every(k => out[k]), n: Object.keys(out).length,
+      apex: /온탑본부에서 할 수 있는 것/.test(t),
+      ground: /여기서부터는/.test(t) && /법으로도 금지/.test(t),
+      treat: /치료비 통장/.test(t), money8: /여덟 칸/.test(t2),
+      fear: hit || hit2 };
+  });
+  const raw = await page.evaluate(() => {
+    const bad = [];
+    S.tab = 'dang';
+    WORRY_CATS.forEach(c => {
+      S.dang = { cat: c.k }; draw();
+      const t = document.getElementById('view').textContent;
+      if (/<\/?b>|<br>|&lt;b&gt;/.test(t)) bad.push(c.k);
+    });
+    S.dang = {}; draw();
+    return bad;
+  });
+  ok(raw.length === 0, '신당 풀이에 HTML 태그가 글자로 새지 않는다' + (raw.length ? ' — ' + raw.join(',') : ''));
+
+  ok(bridge.all && bridge.n === 10, '고민 열 가지 모두 온탑본부에서 할 일이 세 걸음으로 준비돼 있다');
+  ok(bridge.apex && bridge.treat && bridge.money8, '고민별로 실제 하는 일이 달라진다 (건강→치료비 통장, 돈→여덟 칸)');
+  ok(bridge.ground, '"여기서부터는 점이 아니다"라고 선을 긋고, 불안 조장이 금지라고 밝힌다');
+  ok(!bridge.fear, '운이 나쁘다는 식의 겁주는 표현을 쓰지 않는다');
 
   console.log('\n브랜드 · 영업 가능성 · 나의 영업법');
   const brand = await page.evaluate(() => {
