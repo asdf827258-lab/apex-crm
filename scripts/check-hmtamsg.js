@@ -13,6 +13,12 @@
      [6] ★ 달력 약속 줄(id 없음)은 💬·📋 만 — 번호를 모르는 📞 를 세우지 않는다 (1번)
      [7] ★ 단계별 카톡 목록 — 「연락 원치 않음」 은 안 내놓는다(TA 스크립트 쪽지: 기본은 보내지 않는 것)
      [8] ★ 「이분 자세히」 칸이 고르기 · 복사 · 카톡/문자를 갖추고, 글을 이스케이프한다
+   ── 판 X496 「그 다음거 하고 문제되는거 해결해줘」 ──
+     [9]  ★★ 담당 지역 — TA 스크립트 칸(ta_final_v1 · f.area)을 읽어 「○○지역」 이 안 남는다 ·
+              비어 있으면 적는 칸이 서고, 적으면 같은 곳(f.area)에 들어가 TA 스크립트 다른 칸은 그대로다
+     [10] ★★ 고객 365일 줄(touch) — 계약 고객 관리 안부 글(MST_TOUCH)을 읽기만 · 📰 소식 글은 뺀다(1번) ·
+              접힌 머리는 「💬 안부 카톡」
+     [11] ★ ta-msg.js 앞뒤 빈칸 다듬기가 「s」 글자를 안 지운다
    ═══════════════════════════════════════════════════════════════ */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
@@ -101,6 +107,42 @@ const hx = H.html(STEPS.k1);
 is(/HM_TAMSG\.pick\(/.test(hx) && /HM_TAMSG\.copy\(/.test(hx) && /HM_TAMSG\.setCh\(/.test(hx), '  고르기 · 복사 · 카톡/문자가 있다');
 is(H.html({ key: 'x', k: 'db', tk: '<img>', id: 'zz', t: '<b>' }) === '', '  맞는 카톡이 없는 줄은 칸을 안 세운다');
 is(!/<script/i.test(hx), '  글이 그대로 꽂히지 않는다(이스케이프)');
+
+console.log('\n[9] 담당 지역 — TA 스크립트 칸과 한 곳 (판 X496)');
+const LS = {};
+win.localStorage = { getItem: k => (k in LS ? LS[k] : null), setItem: (k, v) => { LS[k] = String(v); } };
+is(/○○지역/.test(H.text('ok', STEPS.k3, 'kakao')), '  지역이 비어 있으면 자리 글 「○○지역」 그대로 (지어내지 않음 · 1번)');
+const ha = H.html(STEPS.k3);
+is(/담당 지역이 비어/.test(ha) && /HM_TAMSG\.setArea\(/.test(ha) && /<input/.test(ha), '  비어 있으면 「이분 자세히」 에 적는 칸이 선다');
+LS.ta_final_v1 = JSON.stringify({ db: 'analysis3', f: { me: '윤시현', s1: '화 2시' } });
+H.setArea('  광주 서구 ');
+const TS = JSON.parse(LS.ta_final_v1);
+is(TS.f.area === '광주 서구' && TS.f.s1 === '화 2시' && TS.db === 'analysis3', '  적으면 ta_final_v1 의 f.area 에 들어가고 TA 스크립트 다른 칸은 그대로');
+const ok3 = H.text('ok', STEPS.k3, 'kakao');
+is(/에이플러스에셋 광주 서구 보장분석 담당/.test(ok3) && !/○○지역/.test(ok3), '  적은 지역이 TA 카톡에 들어가 「○○지역」 이 안 남는다');
+is(!/<input/.test(H.html(STEPS.k3)) && /바꾸기/.test(H.html(STEPS.k3)), '  적은 뒤에는 칸 대신 「담당 지역 광주 서구 · 바꾸기」');
+is(!/담당 지역/.test(H.html(STEPS.k2)), '  지역이 안 들어가는 글(당일 출발)에는 지역 줄을 안 세운다');
+
+console.log('\n[10] 고객 365일 줄 — 안부 카톡 (판 X496)');
+const mi = IX.indexOf('var MST_TOUCH=['), me2 = IX.indexOf('\n];', mi);
+vm.runInContext(IX.slice(mi, me2 + 3), ctx);
+const TOUCH = { key: 'kt', k: 'touch', id: 'c1', t: '홍철호', s: '40일째' };
+STEPS.kt = TOUCH;
+const TL = H.list(TOUCH);
+const nSay = win.MST_TOUCH.filter(m => m.say && m.ic !== '📰').length;
+is(TL.length === nSay && nSay >= 5, '  MST_TOUCH 의 안부 글을 그대로 내놓는다 (' + TL.length + '개)');
+is(!TL.some(k => /소식이 있어/.test(H.text(k, TOUCH, 'kakao'))), '  📰 「소식이 있어」 글은 뺀다 — 여기선 기사를 못 붙인다 (1번)');
+is(TL.every(k => win.MST_TOUCH.some(m => m.say === H.text(k, TOUCH, 'kakao'))), '  글은 MST_TOUCH 의 say 그대로 (다시 적지 않음 · 5번)');
+is(!/홍철호/.test(H.html(TOUCH)) && /💬 안부 카톡/.test(H.html(TOUCH)), '  「💬 안부 카톡」 칸 · 고객 이름을 안 싣는다 (3번)');
+is(H.tag(TOUCH) === '💬 안부 카톡' && H.tag(STEPS.k1) === '💬 TA 카톡', '  접힌 머리 이름 — 365일 줄은 안부 카톡, 배정 DB 는 TA 카톡');
+is(/HM_TAMSG\.tag\(x\)/.test(IX), '  본체 hmMoreSub 가 HM_TAMSG.tag 로 접힌 머리 이름을 받는다');
+is(/- 에이플러스에셋 윤시현$/.test(H.text(TL[0], TOUCH, 'sms')), '  문자로 바꾸면 끝에 설계사 이름을 붙인다');
+H.copy('kt', TL[0]);
+is(copied === H.text(TL[0], TOUCH, 'kakao'), '  📋 가 그 안부 글을 베낀다');
+
+console.log('\n[11] ta-msg.js 빈칸 다듬기');
+is(/에이플러스에셋 sam/.test(win.TA_MSG.textFor('hold', { me: 'sam', area: 'south' }, 'sms')) &&
+   /south 담당/.test(win.TA_MSG.textFor('hold', { me: 'sam', area: ' south ' }, 'kakao')), '  「s」 로 시작·끝나는 이름·지역을 안 깎는다');
 
 console.log(bad ? `\n✗ ${bad}개가 어긋났습니다` : '\n✓ 오늘 카드가 TA 문자·카톡을 ta-msg.js 에서 읽어 씁니다');
 process.exit(bad ? 1 : 0);
