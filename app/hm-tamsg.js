@@ -22,6 +22,18 @@
      · 설계사 이름은 로그인한 <b>본인</b>(OS.profile.name). 모르면 자리 글(○○○) 그대로 (1번).
    ★ 약속 시간은 배정 DB 줄(AR.db · dbs.next_appt) 에 적힌 것만 씁니다. 장소는 앱에
      적는 자리가 없어 「약속 장소」 라고 적습니다 — 지어내지 않습니다 (1번).
+
+   ── 판 X496 (사장님 말씀 2026-11-19 「그 다음거 하고 문제되는거 해결해줘」) ──
+   ★ <b>담당 지역</b> — 「에이플러스에셋 ○○지역 담당」 이 자리 글 그대로 나가던 것.
+     새 칸을 만들지 않고 <b>TA 스크립트의 「담당 지역」 칸(ta_final_v1 · f.area)</b>을
+     같이 읽고, 비어 있으면 「이분 자세히」 안에서 바로 적습니다. 여기서 적으면
+     TA 스크립트에도 같이 들어갑니다 — 적는 곳은 한 곳입니다 (5번).
+     ⚠ TA 스크립트와 같이 <b>이 기기</b>에 적힙니다(폰·PC 따로).
+   ★ <b>고객 365일 줄</b>(☎️ 연락할 분 · k:'touch') — 배정 DB 가 아니라 TA 카톡이
+     안 맞습니다. 앱에 이미 있는 <b>계약 고객 관리(48개월) 안부 글 MST_TOUCH</b> 를
+     읽어 「💬 안부 카톡」 으로 세웁니다. 글을 새로 짓지 않습니다 (1번 · 5번).
+     📰 「전할 소식 하나」 는 뺍니다 — 기사를 붙이는 자리가 저쪽(mstNews)에만 있어
+     여기서 보내면 「소식이 있어」 라고 해 놓고 소식이 없는 글이 됩니다 (1번).
    ═══════════════════════════════════════════════════════════════ */
 (function (g) {
   /* 단계 → 이분께 맞는 카톡 (TA 스크립트 갈래 이름 그대로 · 앞의 것이 기본) */
@@ -84,19 +96,79 @@
     if (d === plus(td, 1)) return 'eve';
     return '';
   }
+  /* ── 담당 지역 — TA 스크립트 칸(ta_final_v1 · f.area) 한 곳 ── */
+  var TAK = 'ta_final_v1', AREA_EDIT = false;
+  function taAll() { try { return JSON.parse(g.localStorage.getItem(TAK)) || {}; } catch (e) { return {}; } }
+  function area() { var f = taAll().f || {}; return String(f.area == null ? '' : f.area).trim(); }
+  function setArea(v) {
+    v = String(v == null ? '' : v).trim().slice(0, 30);
+    try { var o = taAll(); o.f = o.f || {}; o.f.area = v; g.localStorage.setItem(TAK, JSON.stringify(o)); }
+    catch (e) { if (typeof g.toast === 'function') g.toast('이 기기에 적지 못했습니다'); return; }
+    AREA_EDIT = false;
+    if (typeof g.toast === 'function') g.toast(v ? '담당 지역을 적었습니다 — TA 스크립트에도 같이 들어갑니다' : '담당 지역을 비웠습니다');
+    if (typeof g.hmPaint === 'function') g.hmPaint();
+  }
+  function editArea() { AREA_EDIT = true; if (typeof g.hmPaint === 'function') g.hmPaint(); }
   function fields(x) {
     var r = dbRow(x), me = '';
     try { me = (g.OS && g.OS.profile && g.OS.profile.name) || ''; } catch (e) { me = ''; }
-    return { c: '고객', me: me, when: whenOf(apOf(x)), where: '약속 장소', db: (r && r.src) || '' };
+    return { c: '고객', me: me, area: area(), when: whenOf(apOf(x)), where: '약속 장소', db: (r && r.src) || '' };
   }
-  function text(k, x, ch) { return ready() ? g.TA_MSG.textFor(k, fields(x), ch || 'kakao') : ''; }
+
+  /* ── 고객 365일 줄 — 계약 고객 관리 안부 글(MST_TOUCH) 을 읽기만 ── */
+  function isTouch(x) { return !!(x && x.k === 'touch'); }
+  function mst() {
+    var L = (g.MST_TOUCH && g.MST_TOUCH.length) ? g.MST_TOUCH : [], out = [], i;
+    for (i = 0; i < L.length; i++) if (L[i] && L[i].say && L[i].ic !== '📰') out.push({ k: 'm' + i, m: L[i] });
+    return out;
+  }
+  function mstOf(k) { var L = mst(), i; for (i = 0; i < L.length; i++) if (L[i].k === k) return L[i].m; return null; }
+  /* 같은 말을 내리 보내지 않게 — 날마다 맨 앞 주제를 한 칸씩 돌립니다 (MST 쪽지와 같은 뜻) */
+  function dayNo() { var p = today().split('-'); return Math.floor(Date.UTC(+p[0], +p[1] - 1, +p[2]) / 864e5) || 0; }
+  function mstList() {
+    var L = mst().map(function (o) { return o.k; }), n = L.length;
+    if (!n) return [];
+    var s = dayNo() % n;
+    return L.slice(s).concat(L.slice(0, s));
+  }
+
+  function text(k, x, ch) {
+    var M = mstOf(k);
+    if (M) {
+      var me = fields(x).me;
+      return String(M.say) + ((ch === 'sms' && me) ? '\n- 에이플러스에셋 ' + me : '');
+    }
+    return ready() ? g.TA_MSG.textFor(k, fields(x), ch || 'kakao') : '';
+  }
   function list(x) {
+    if (isTouch(x)) return mstList();
     var r = dbRow(x), st = (x && x.k === 'db') ? x.tk : (r && r.stage) || '', L = (BY_STAGE[st] || []).slice(), m = moment(x);
     if (x && x.k === 'appt' && !L.length) L = ['go', 'thanks'];
     if (m) L = [m].concat(L.filter(function (k) { return k !== m; }));
     return ready() ? L : [];
   }
-  function title(k) { var M = ready() ? g.TA_MSG.MSG : [], i; for (i = 0; i < M.length; i++) if (M[i].k === k) return M[i]; return { k: k, t: k }; }
+  /* 접힌 머리에 적을 이름 — 무엇이 들었는지 펴기 전에 압니다 */
+  function tag(x) { return list(x).length ? (isTouch(x) ? '💬 안부 카톡' : '💬 TA 카톡') : ''; }
+  function title(k) {
+    var T = mstOf(k); if (T) return { k: k, t: T.ic + ' ' + T.t, note: T.why };
+    var M = ready() ? g.TA_MSG.MSG : [], i; for (i = 0; i < M.length; i++) if (M[i].k === k) return M[i]; return { k: k, t: k };
+  }
+  /* 이 글에 「○○지역」 자리가 있나 — TA 글을 지역 없이 만들어 봅니다 */
+  function usesArea(k, x) {
+    if (mstOf(k) || !ready()) return false;
+    var f = fields(x); f.area = '';
+    return g.TA_MSG.textFor(k, f, 'kakao').indexOf('○○지역') >= 0;
+  }
+  function areaHtml(k, x) {
+    if (!usesArea(k, x)) return '';
+    var a = area();
+    if (a && !AREA_EDIT) return '<div class="hm-tm-r">📍 담당 지역 <b>' + esc(a) + '</b> <button type="button" class="g" onclick="HM_TAMSG.editArea()">바꾸기</button></div>';
+    return '<div class="hm-tm-r">' + (a ? '📍 담당 지역 바꾸기' : '📍 <b>담당 지역이 비어</b> 「○○지역」 으로 나갑니다') +
+      '<span class="hm-tm-in"><input type="text" maxlength="30" placeholder="예: 광주 서구" value="' + esc(a) + '" ' +
+      'onkeydown="if(event.key===\'Enter\')HM_TAMSG.setArea(this.value)">' +
+      '<button type="button" onclick="HM_TAMSG.setArea(this.previousElementSibling.value)">적기</button></span>' +
+      '<span class="hm-tm-s">TA 스크립트의 「담당 지역」 칸과 같은 곳에 적힙니다(이 기기)</span></div>';
+  }
 
   /* ── 카드 💬 줄 — 약속 내일 · 오늘인 분만 TA 카톡으로 ── */
   function how(x) {
@@ -136,16 +208,26 @@
       '.hm-tm-a{display:flex;gap:6px;margin-top:8px}' +
       '.hm-tm-a button{min-height:44px;padding:0 12px;border:0;border-radius:10px;font-family:inherit;font-size:var(--t6);font-weight:800;cursor:pointer;background:var(--t-point-l);color:var(--t-point)}' +
       '.hm-tm-a button.g{background:var(--t-bg,#F2F4F6);color:var(--t-sub);font-weight:700}' +
-      '.hm-tm-a button.on{background:var(--t-ink);color:#fff}';
+      '.hm-tm-a button.on{background:var(--t-ink);color:#fff}' +
+      '.hm-tm-r{margin-top:8px;font-size:var(--t6);line-height:1.45;color:var(--t-ink)}' +
+      '.hm-tm-r>button{min-height:44px;margin-left:6px;padding:0 12px;border:0;border-radius:10px;font-family:inherit;font-size:var(--t6);font-weight:700;cursor:pointer;background:var(--t-bg,#F2F4F6);color:var(--t-sub)}' +
+      '.hm-tm-in{display:flex;gap:6px;margin-top:6px}' +
+      '.hm-tm-in input{flex:1;min-width:0;min-height:44px;padding:0 12px;border:1px solid var(--t-line);border-radius:10px;font-family:inherit;font-size:16px;color:var(--t-ink);background:var(--t-card,#fff)}' +
+      '.hm-tm-in button{min-height:44px;padding:0 14px;border:0;border-radius:10px;font-family:inherit;font-size:var(--t6);font-weight:800;cursor:pointer;background:var(--t-point-l);color:var(--t-point)}' +
+      '.hm-tm-s{display:block;margin-top:4px;color:var(--t-sub)}';
     document.head.appendChild(st);
   }
   function html(x) {
     var L = list(x); if (!x || !L.length) return '';
     css();
     var key = x.key || '', k = (SEL[key] && L.indexOf(SEL[key]) >= 0) ? SEL[key] : L[0], M = title(k), m = moment(x);
-    return '<div class="hm-tm"><div class="hm-tm-h">💬 TA 카톡 <span>— ' + (m ? (m === 'eve' ? '약속이 내일이라 전날 확인부터' : '오늘 약속이라 출발할 때') : '이 단계에 맞는 것') + ' · TA 스크립트 글 그대로</span></div>' +
+    var head = isTouch(x)
+      ? '💬 안부 카톡 <span>— 연락 주기가 지난 분께 먼저 한 줄 · 고객 관리(48개월) 안부 글 그대로</span>'
+      : '💬 TA 카톡 <span>— ' + (m ? (m === 'eve' ? '약속이 내일이라 전날 확인부터' : '오늘 약속이라 출발할 때') : '이 단계에 맞는 것') + ' · TA 스크립트 글 그대로</span>';
+    return '<div class="hm-tm"><div class="hm-tm-h">' + head + '</div>' +
       '<div class="hm-tm-c">' + L.map(function (q) { return '<button type="button" class="' + (q === k ? 'on' : '') + '" onclick="HM_TAMSG.pick(\'' + esc(key) + '\',\'' + q + '\')">' + esc(title(q).t) + '</button>'; }).join('') + '</div>' +
       '<div class="hm-tm-t">' + esc(text(k, x, CH)) + '</div>' +
+      areaHtml(k, x) +
       (M.note ? '<div class="hm-tm-n">' + String(M.note).replace(/<(?!\/?b>)[^>]*>/g, '') + '</div>' : '') +
       '<div class="hm-tm-a"><button type="button" onclick="HM_TAMSG.copy(\'' + esc(key) + '\',\'' + k + '\')">📋 복사</button>' +
         '<button type="button" class="g' + (CH === 'kakao' ? ' on' : '') + '" onclick="HM_TAMSG.setCh(\'kakao\')">카톡</button>' +
@@ -153,5 +235,6 @@
   }
 
   g.HM_TAMSG = { moment: moment, how: how, apptHow: apptHow, list: list, text: text, html: html,
-                 copy: copy, pick: pick, setCh: setCh, whenOf: whenOf, BY_STAGE: BY_STAGE };
+                 copy: copy, pick: pick, setCh: setCh, whenOf: whenOf, BY_STAGE: BY_STAGE,
+                 tag: tag, area: area, setArea: setArea, editArea: editArea };
 })(typeof window !== 'undefined' ? window : this);
