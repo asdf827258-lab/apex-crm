@@ -22314,8 +22314,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-20 00:30';
-var APP_BUILD_NOTE='☎️ <b>TA 스크립트를 이분에 맞춰 열기</b>(판 X497 · 사장님 말씀 「다음것 해」 · 9차 시안 「TA여는말은 그냥 바로 스크립트로」) — 오늘 카드 「☎️ 전체 대본 · 거절처리」 가 지난번 고른 DB 대본 대신 <b>이분의 DB 종류 · 이름 · 약속 시각</b>으로 맞춰 엽니다(같은 기기 저장소만 · 주소에 이름 안 실음 · 🙈 가리기면 이름 비움 · 앞 고객의 약속·결과 칸은 비움).';
+var APP_BUILD='2026-11-20 01:30';
+var APP_BUILD_NOTE='🧭 <b>오늘 카드에서 상품전략기 바로</b>(판 X498 · 사장님 말씀 「상품전략기 꺼내」) — 접힌 「이분 자세히」 옆에 「🧭 이분 걱정 상품」 단추(걱정을 모르면 「이번 달 1위 상품」), 누르면 상품전략기 「🎣 문 열기」 가 그 걱정으로 열립니다. 새 줄이 아니라 한 줄에 나란히 — 홈 길이 그대로.';
 
 
 
@@ -33556,7 +33556,11 @@ function hmMoreCss(){
       'background:var(--t-bg,#F2F4F6);color:var(--t-sub,#6B7684);'+
       'font-family:inherit;font-size:var(--t6);font-weight:800;cursor:pointer}'+
     '.hm-more-b:hover{background:var(--ink-7,#E5E8EB)}'+
-    '.hm-more-in{margin-top:10px}';
+    '.hm-more-in{margin-top:10px}'+
+    /* 🧭 판 X498 — 접기 단추 옆 상품전략기 단추가 서는 줄. 접기 글은 한 줄로(넘치면 …) — 줄이 늘면 홈이 길어집니다 */
+    '.hm-more-row{display:flex;gap:6px;align-items:stretch}'+
+    '.hm-more-row .hm-more-b{flex:1 1 auto;min-width:0;width:auto}'+
+    '.hm-more-l{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}';
   document.head.appendChild(st);
 }
 /* 단추에 붙일 꼬리 — <b>이미 세는 것</b>만 가져옵니다. 못 세면 안 적습니다 (1번) */
@@ -33673,12 +33677,17 @@ function hmMoreHtml(x,note){
   var inner=door+tam+hmTaHtml(x)+hmBoxHtml(x)+hdbStripHtml(x)+(note||'');
   if(!inner)return '';
   hmMoreCss();
-  return '<div class="hm-more">'+
+  /* 🧭 판 X498 — 사장님 말씀 2026-11-20 「상품전략기 꺼내」(9차 시안 「상품전략기 … 오늘에서 되어야만해」).
+     접혀 있을 때 <b>그 줄 오른쪽</b>에 「🧭 이분 걱정」 단추를 나란히 — 새 줄이 아니라 홈은 안 길어집니다
+     (check-homeone 선이 몇 px 남았습니다). 펴면 안쪽 🎣 칸이 같은 길을 쥐고 있어 밖 단추는 거둡니다(두 벌 금지 · 5번).
+     고르는 것 · 가는 곳은 hm-door.js 한 곳(HM_DOOR.btn → hmDoorGo)입니다. */
+  var dob=''; if(!HM_MORE){ try{ dob=(typeof HM_DOOR!=='undefined'&&HM_DOOR.btn)?HM_DOOR.btn(x):''; }catch(eB){ dob=''; } }
+  return '<div class="hm-more'+(dob?' hm-more-row':'')+'">'+
     '<button type="button" class="hm-more-b" onclick="hmMoreToggle()">'+
       /* ★ 접힌 채로도 <b>무엇이 든지</b> 말합니다 (1번). 「이분 자세히」 만
          적으면 눌러 봐야 압니다 — 사장님이 접으라 하신 것이지 <b>안 보이게</b>
          하라신 것이 아닙니다. 세는 것은 <b>hmPicks 한 곳</b>입니다 (5번).   */
-      (HM_MORE?'접기 ▴':('이분 자세히 ▾'+hmMoreSub(x)))+'</button>'+
+      (HM_MORE?'접기 ▴':((dob?'<span class="hm-more-l">':'')+'이분 자세히 ▾'+hmMoreSub(x)+(dob?'</span>':'')))+'</button>'+dob+
     (HM_MORE?('<div class="hm-more-in">'+inner+'</div>'):'')+
   '</div>';
 }

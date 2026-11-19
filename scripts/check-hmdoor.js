@@ -13,6 +13,8 @@
      [6] ★ 홈이 접힌 칸 안에 세우고 접힌 머리도 말한다 · 싣는 차례
      [7] ★★ 상품 이름(판 X479 「응 상품명도 띄워」) — hm-door-top.js 가 <b>지금 상품전략기</b>에서
          다시 뽑은 것과 같다(달이 바뀌었는데 안 다시 뽑으면 멈춤) · 🧭 가 여는 셋과 같은 셋이 카드에 · 설계사용
+     [8] ★★ 판 X498 「상품전략기 꺼내」 — 접힌 「이분 자세히」 <b>옆</b>에 🧭 단추(HM_DOOR.btn) · 걱정은 pick 그대로 ·
+         모르면 「이번 달 1위」 · 같은 hmDoorGo 길 · 펴면 거둠(두 벌 금지) · 새 줄 없이 한 줄에(접기 글은 한 줄 …)
    ════════════════════════════════════════════════════════════════════ */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
@@ -89,6 +91,22 @@ const keep = w.HM_DOOR_TOP; w.HM_DOOR_TOP = undefined;
 is(!/hm-door-p/.test(D.html(a)), '  목록 파일이 없으면 이름 줄을 안 그린다(깨지지 않는다)'); w.HM_DOOR_TOP = keep;
 const i3 = IX.indexOf('<script src="hm-door-top.js">');
 is(i3 > i2, '  hm-door-top.js 를 싣는다');
+
+console.log('\n[8] 🧭 접힌 줄 옆 상품전략기 단추 (판 X498)');
+BAND = { b: '60' };
+const bb = D.btn({ id: 'b', key: 'b', src: '' });
+is(/class="hm-door-o"/.test(bb) && /hmDoorGo\('care',''\)/.test(bb) && /간병·노후 상품/.test(bb), '  걱정을 아는 분 — 「🧭 간병·노후 상품」 → hmDoorGo(그 걱정) (안쪽 🧭 와 같은 길)');
+BAND = { e: '2030' };
+is(/hmDoorGo\('hospital','y2030'\)/.test(D.btn({ id: 'e', key: 'e', src: '' })), '  20·30대면 그 나이 호칭 꼬리(y2030)까지 같이');
+BAND = {};
+const bn = D.btn({ id: 'n', key: 'n', src: '알수없는종류' });
+is(/이번 달 1위 상품/.test(bn) && /hmDoorGo\(''/.test(bn), '  걱정을 모르면 고르지 않고 「이번 달 1위 상품」 (1번)');
+is(D.btn(null) === '', '  줄이 없으면 단추를 안 세운다');
+is(/var dob=''; if\(!HM_MORE\)/.test(blk) && /HM_DOOR\.btn\(x\)/.test(blk), '  홈은 접혀 있을 때만 밖에 세운다 — 펴면 안쪽 🎣 칸이 같은 길(두 벌 금지 · 5번)');
+is(/hm-more-row/.test(blk) && /'<\/button>'\+dob\+/.test(blk), '  새 줄이 아니라 접기 단추와 한 줄에 나란히 (홈 높이 그대로 · check-homeone)');
+const MC = (IX.split('function hmMoreCss(){')[1] || '').split('\n}')[0];
+is(/\.hm-more-l\{[^}]*white-space:nowrap[^}]*text-overflow:ellipsis/.test(MC), '  접기 글은 한 줄로(넘치면 …) — 줄이 늘면 홈이 길어진다');
+is(/\.hm-door-o\{flex:0 0 auto[^}]*min-height:44px/.test(rd('app/hm-door.js')), '  🧭 단추는 안 줄어들고(글자 안 잘림) 손가락 44px');
 
 console.log('\n──────────────────────────────');
 console.log(bad ? ('✗ ' + bad + '가지 어긋납니다') : '✓ 오늘에서 그 분께 꺼낼 상품 한 줄이 섭니다');
