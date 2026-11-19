@@ -1562,6 +1562,26 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 .ppw{margin:0 0 8px}.ppt em.dup.add{color:#1B6E45;background:#E6F4EC}.ppt em.dup{font-style:normal;font-size:11.5px;font-weight:800;color:#8A6A2F;background:#FFF7E0;border-radius:6px;padding:0 6px;margin-left:4px}
 .kb.pp{margin-bottom:12px}
 .ppv{border:1px solid var(--ln);border-radius:12px;padding:10px 12px;background:#fff;margin-top:8px}
+/* 🎞 제안서 → 설명서 겉 (판 X499) — 위 띠 + 문서 한 벌(iframe) · 고치기 표. 누르는 것은 44px */
+body.bxOn{overflow:hidden}
+.bxo{position:fixed;inset:0;z-index:2000;background:#0F1A2C;display:flex;flex-direction:column}
+.bxo-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 12px;background:#0F1A2C;color:#fff}
+.bxo-bar>b{font-size:16px;margin-right:4px}
+.bxo-ck{font-size:13px;font-weight:800;border-radius:999px;padding:4px 11px}.bxo-ck.ok{background:#ECFDF5;color:#0F766E}.bxo-ck.bad{background:#FEF2F2;color:#DC2626}.bxo-ck.unk{background:#F2F4F6;color:#4E5968}
+.bxo-b{appearance:none;border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;border-radius:10px;padding:0 14px;min-height:44px;font-weight:800;font-size:14px;cursor:pointer}
+.bxo-b.on{background:#fff;color:#0F1A2C}.bxo-b.x{margin-left:auto}.bxo-b.go{background:#1B64DA;border-color:#1B64DA}
+.bxo iframe{flex:1;border:0;width:100%;background:#E9EDF2}
+.bxo-ed{flex:1;overflow:auto;background:#fff;color:var(--nv);padding:14px 16px 40px}
+.bxe-top{border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:14px;line-height:1.6}.bxe-top.ok{background:#ECFDF5}.bxe-top.bad{background:#FEF2F2;color:#991B1B}.bxe-top.unk{background:#F2F4F6}
+.bxe-h{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}.bxe-h label{display:flex;flex-direction:column;gap:3px;font-size:13px;font-weight:700;color:var(--gy)}
+.bxe-h input,.bxe-t input,.bxe-t select{border:1px solid var(--ln);border-radius:8px;padding:6px 8px;min-height:44px;font-size:16px;max-width:100%}
+.bxe-t{width:100%;border-collapse:collapse;font-size:14px}.bxe-t th{background:var(--bg);font-size:12.5px;padding:6px;text-align:left}.bxe-t td{padding:4px 6px;border-bottom:1px solid #EEF0F2}
+.bxe-t input.w{width:100%;min-width:220px}.bxe-t input.n{width:110px;text-align:right}.bxe-t input.p{width:110px}.bxe-t input[type=checkbox]{min-height:0;width:22px;height:22px}
+.bxe-t tr.off td{opacity:.45}
+.bxe-go{position:sticky;bottom:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;padding:10px 0;border-top:1px solid var(--ln);margin-top:10px}
+.bxe-go .bxo-b{color:var(--nv);border-color:var(--ln)}.bxe-go .bxo-b.go{color:#fff;margin-left:auto}
+#bxSum{font-size:14px}
+.bxe-wv{display:flex;flex-direction:column;gap:4px;margin-top:12px;font-size:13px;font-weight:700;color:var(--gy)}.bxe-wv textarea{border:1px solid var(--ln);border-radius:8px;padding:8px;font-size:16px;font-family:inherit;min-height:44px}
 .pph{font-size:13.5px;margin-bottom:8px}
 .ppf{display:flex;flex-wrap:wrap;gap:8px 14px;margin-bottom:8px;font-size:13px;font-weight:700;color:var(--gy)}
 .ppf label{display:flex;align-items:center;gap:6px}.ppf input{min-height:36px;border:1px solid var(--ln);border-radius:8px;padding:4px 8px;font:inherit;font-weight:600;color:var(--nv)}
@@ -8581,16 +8601,20 @@ function ppOcrImgs(srcs,tick){
     return T.createWorker('kor+eng').then(function(w){
       var out=[],chain=Promise.resolve();
       srcs.forEach(function(src,i){chain=chain.then(function(){if(tick)tick(i+1,srcs.length);
-        return pdfWait(w.recognize(src),90000,'글자 인식').then(function(r){out.push((r&&r.data&&r.data.text)||'');},function(){out.push('');});});});
+        /* 판 X499 — 쪽을 <b>읽을 때 그린다</b>(함수로 받으면 그 자리에서 부름) · 열네 쪽을 한꺼번에 그려 두면 폰 메모리가 넘친다 */
+        var img=(typeof src==='function')?src():Promise.resolve(src);
+        return pdfWait(img.then(function(s){return w.recognize(s);}),90000,'글자 인식').then(function(r){out.push((r&&r.data&&r.data.text)||'');},function(){out.push('');});});});
       return chain.then(function(){return w.terminate().then(function(){return out.join('\n');},function(){return out.join('\n');});});});});}
 function ppPdfPages(file,max){
   return ensurePdfJs().then(function(lib){return file.arrayBuffer().then(function(buf){return lib.getDocument({data:buf}).promise.then(function(pdf){
     var n=Math.min(pdf.numPages,max||6),chain=Promise.resolve(),imgs=[];
-    for(var i=1;i<=n;i++){(function(i){chain=chain.then(function(){return pdf.getPage(i).then(function(pg){
-      var vp=pg.getViewport({scale:2}),c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
-      /* 숨겨진 탭에서는 render 가 그리기를 기다리며 멈춘다 — intent:'print' 로 피한다 */
-      return pdfWait(pg.render({canvasContext:c.getContext('2d'),viewport:vp,intent:'print'}).promise,15000,'쪽 그리기').then(function(){imgs.push(c);});});});})(i);}
+    for(var i=1;i<=n;i++){(function(i){chain=chain.then(function(){return ppPageImg(pdf,i,2).then(function(c){imgs.push(c);});});})(i);}
     return chain.then(function(){return imgs;});});});});}
+/* 한 쪽을 그림으로 — 위 ppPdfPages 와 설명서(baExOcr)가 같이 쓴다 (판 X499 · 5번) */
+function ppPageImg(pdf,i,scale){return pdf.getPage(i).then(function(pg){
+  var vp=pg.getViewport({scale:scale||2}),c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
+  /* 숨겨진 탭에서는 render 가 그리기를 기다리며 멈춘다 — intent:'print' 로 피한다 */
+  return pdfWait(pg.render({canvasContext:c.getContext('2d'),viewport:vp,intent:'print'}).promise,15000,'쪽 그리기').then(function(){return c;});});}
 function ppDone(txt,file,ocr){
   var P=ppParse(txt,file.name,ocr);P.ocr=!!ocr;
   if(!P.ok){ppSet('<div class="note w">담보 이름과 금액을 <b>한 줄도 못 찾았습니다.</b> 아무것도 넣지 않았습니다 — <b>「+ 제안 더하기」</b> 로 적어 주세요.</div>');return;}
@@ -8681,13 +8705,444 @@ function ppGo(){
 function ppHtml(){
   return '<div class="kb pp"><div class="kh"><b>📄 상품 제안서(가입설계서) PDF</b>'+
     '<span style="font-size:var(--t6,13px);color:var(--gy);font-weight:700">올리면 회사 · 상품 · 보험료 · 담보를 읽어 표로 띄웁니다 — 틀린 칸은 고쳐서 넣으세요</span>'+
-    '<button class="btn" onclick="ppPick()">제안서 · 사진 고르기</button></div><div id="ppBox"></div>'+
+    '<button class="btn" onclick="ppPick()">제안서 · 사진 고르기</button>'+
+    /* 판 X499 — 같은 제안서로 고객에게 보여 줄 설명서를 바로 */
+    '<button class="btn g" onclick="baExPick()">🎞 바로 설명서로</button>'+(S.bx&&S.bx.rows&&S.bx.rows.length?'<button class="mini" onclick="baExOpen(\'deck\')">최근 설명서 다시 열기</button>':'')+'</div><div id="ppBox"></div>'+
     '<div class="drop" id="ppDrop">여기에 <b>제안서 PDF · 설계서 사진(캡처)</b> 을 끌어다 놓으셔도 됩니다 · 사진 · 스캔은 글자를 <b>짐작해</b> 읽어 틀릴 수 있습니다</div></div>';
 }
 document.addEventListener('drop',function(e){
   var t=e.target&&e.target.closest&&e.target.closest('#ppDrop');if(!t)return;
   e.preventDefault();e.stopImmediatePropagation();t.className='drop';
   var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)ppRead(f);},true);
+/* ══ 🎞 제안서 → 보장 설명서 (판 X499) ═══════════════════════════════════════════
+   사장님 말씀 2026-11-19 「응 제안서 넣으면 바로나오게 기능으로 만들어줘」 — 앞서 KB 제안서 한 부로 손으로 지은
+   13장 설명서(보장 전·후 무대와 같은 결)를, 제안서를 넣으면 <b>바로</b> 서게 했다.
+
+   ■ 읽기는 위 제안서 리더와 <b>같은 길</b>이다 — 글자 뽑기(extractPdfText) · 회사·상품·납입·만기(ppParse) ·
+     금액 낱말(ppMoney · PP_TOK) · 담보 이름 맞추기(ppRule) · 담보 풀이(ppDict = 담보사전). 표를 두 벌 두지 않는다(5번).
+     새로 짠 것은 <b>담보 표 한 줄을 통째로</b> 읽는 baExRows 하나뿐이다 — ppTables 는 ③ 추가 보험에 넣을 줄을 고르느라
+     납입면제 줄을 빼고 같은 담보(1~5종)를 하나로 접는다. 설명서는 <b>찍힌 줄 전부</b>와 <b>줄마다 보험료</b>가 있어야
+     보험료 합계를 맞춰 볼 수 있다.
+   ■ 그림으로 된 제안서 — KB 가 내려 주는 OZ 리포트는 쪽마다 <b>그림 한 장</b>이라 글자가 0자다. 글자 인식으로 읽되
+     <b>3배로</b> 그려 읽는다(2배는 「3억원」 을 「398」 로, 「1,400」 을 「1.400」 으로 읽었다). 쪽은 읽을 때 하나씩 그린다(ppPageImg).
+   ■ ★ <b>숫자를 믿기 전에 맞춰 본다.</b> 줄마다 보험료를 더한 값이 제안서에 찍힌 보험료와 <b>원 단위까지 같아야</b>
+     설명서를 바로 세운다. 안 맞으면 설명서 대신 「읽은 값 고치기」 표를 먼저 띄운다 — 고객 앞 숫자가 틀리면 계약이 깨진다.
+   ■ 지어내지 않는다(1번) — 해약환급금은 <b>표에서 읽은 줄만</b>(사이를 메우지 않고, 낸 돈 = 월 보험료 × 개월 · 환급률이
+     맞는 줄만) · 「꼭 알아두실 것」 은 제안서 글에 <b>그 말이 있을 때만</b> · 담보 풀이는 <b>담보사전 글 그대로</b>.
+     없는 담보는 「이 제안서에는 없는 것」 이지 「없다」 가 아니다 — 다른 계약은 이 종이 밖이다.
+   ■ 이름은 싣지 않는다(3번) — 제안서의 계약자·피보험자 이름은 읽지도 않는다. 표지는 「고객님」, 전·후 칸에 적힌
+     이름이 있으면 가려서(홍○○).
+   ■ 설명서는 <b>문서 한 벌</b>(iframe)이다 — 🖨 은 그 장들만 전부 뽑고, 💾 는 파일 하나로 그대로 열린다.
+     tnum 은 화면에서만 켠다(4-1 — 뽑은 PDF 를 다시 읽을 수 있어야 한다).                                    */
+var BA_EX_SCALE=3,BA_EX_MAXPG=20;
+/* 바구니 — 위에서부터 먼저 걸리는 곳. 「상해수술비」 는 수술보다 상해가 먼저, 「암수술비」 는 암이 먼저 */
+var BA_EX_BK=[
+ {id:'wv',t:'납입면제',ic:'🛟',c:'#0F766E',re:/납입면제|납입지원/},
+ {id:'sil',t:'실손 의료비',ic:'🧾',c:'#0369A1',re:/실손|의료비/},
+ {id:'car',t:'운전자 · 배상',ic:'🚗',c:'#475569',re:/운전|교통사고처리|벌금|변호사|합의금|배상/},
+ {id:'care',t:'간병 · 치매',ic:'🤝',c:'#9D174D',re:/간병|간호|치매|장기요양/},
+ {id:'can',t:'암',ic:'🎗',c:'#7C3AED',re:/암|종양|항암|중입자|양성자|백혈병/},
+ {id:'cv',t:'뇌 · 심장',ic:'🫀',c:'#DC2626',re:/뇌|심장|심근|순환계|심혈관|허혈|혈전|스텐트|부정맥|협심/},
+ {id:'acc',t:'다쳤을 때',ic:'🩹',c:'#B45309',re:/상해|재해|골절|화상|깁스|교통/},
+ {id:'hos',t:'수술 · 입원',ic:'🏥',c:'#1D4ED8',re:/수술|입원|통원|일당|중환자/},
+ {id:'die',t:'사망',ic:'🕊',c:'#334155',re:/사망/},
+ {id:'etc',t:'그 밖의 담보',ic:'📎',c:'#6B7684',re:/./}];
+function baExBkOf(name){var t=(''+name).replace(/\s+/g,'');for(var i=0;i<BA_EX_BK.length;i++)if(BA_EX_BK[i].re.test(t))return BA_EX_BK[i].id;return 'etc';}
+function baExBk(id){for(var i=0;i<BA_EX_BK.length;i++)if(BA_EX_BK[i].id===id)return BA_EX_BK[i];return BA_EX_BK[BA_EX_BK.length-1];}
+/* 보험금이 나오는 모양 — 이름에 적힌 말로만 가른다 */
+var BA_EX_SH=[
+ {id:'wv',t:'🛟 보험료 면제',d:'조건이 되면 남은 보험료를 안 냅니다',re:/납입면제|납입지원/},
+ {id:'die',t:'🕊 사망하면',d:'정해진 금액',re:/사망/},
+ {id:'rate',t:'⚖️ 장해가 남으면',d:'가입금액 × 장해 지급률',re:/후유장해|장해/},
+ {id:'real',t:'🧾 쓴 만큼',d:'실제 낸 병원비 안에서',re:/실손|의료비/},
+ {id:'day',t:'🛏 날 수만큼',d:'입원 · 간병한 날마다',re:/일당|입원비|입원급여|간병인/},
+ {id:'year',t:'🔁 치료할 때마다 · 해마다',d:'치료 종류마다 한 해 한 번씩',re:/연간|매년|해마다|주요치료|통합치료/},
+ {id:'once',t:'💰 목돈 — 한 번 크게',d:'진단 확정 때 정해진 금액',re:/진단|최초1회|최초 1회/},
+ {id:'each',t:'🔂 할 때마다',d:'수술 · 치료를 받을 때마다',re:/수술|매회|1회당|치료비|치료/},
+ {id:'etc',t:'📎 그 밖',d:'조건은 제안서 · 약관 참고',re:/./}];
+function baExShOf(name){var t=(''+name).replace(/\s+/g,'');for(var i=0;i<BA_EX_SH.length;i++)if(BA_EX_SH[i].re.test(t))return BA_EX_SH[i];return BA_EX_SH[BA_EX_SH.length-1];}
+/* 돈 — 가입금액은 만원(man), 보험료는 원(…Won). 이름이 단위를 말한다(4번) */
+function baExAmt(man){if(man===null||man===undefined||!isFinite(man))return '—';if(man>0&&man<1)return Math.round(man*10000).toLocaleString()+'원';return won(man);}
+function baExWonR(v){return (v===null||v===undefined||!isFinite(v))?'—':(Math.round(v).toLocaleString()+'원');}
+function baExPct(a,b){if(!(b>0))return '';var p=a/b*100;return p>0&&p<0.1?'0.1% 미만':(Math.round(p*10)/10)+'%';}
+/* 글자 인식이 흔히 틀리는 글자만 — 「뭔/원」 · 「1.400 → 1,400」(점 뒤 세 자리) · 로마 숫자 */
+function baExFix(L){return (''+L).replace(/뭔/g,'원').replace(/(\d)\.(\d{3})(?!\d)/g,'$1,$2');}
+function baExName(n){
+  var t=baExOcrNm(''+n).replace(/^\s*[\d]{1,4}\s+/,'').replace(/\[[^\]]{1,20}\]/g,'')
+    .replace(/\((맞춤고지|감액없음|무배당|간편고지|건강고지)\)/g,'').replace(/[}{＊*。]/g,'')
+    .replace(/\(\s*특정\s*(\|\||!!|ll|II|ㅣ\||\|ㅣ)\s*\)/g,'(특정Ⅱ)').replace(/\(\s*특정\s*(\||ㅣ|l|I|1)\s*\)/g,'(특정Ⅰ)')
+    .replace(/\s*(\|\||!!)\s*/g,'Ⅱ').replace(/\s+/g,' ').trim();
+  return t.slice(0,70);}
+/* 글자 인식이 담보 이름에서 실제로 틀린 자리(KB 제안서 그림 14쪽 · 3배) — 앞뒤 낱말이 있을 때만 고친다 */
+var BA_EX_OCR=[[/맘(?=진단|수술|주요|치료|약물)/g,'암'],[/항맘/g,'항암'],[/유사맘/g,'유사암'],[/면간/g,'연간'],[/증합병|공한병|공합병/g,'종합병'],[/병뭔/g,'병원'],
+ [/비급며/g,'비급여'],[/본민부담/g,'본인부담'],[/포한\)/g,'포함)'],[/주묘치료/g,'주요치료'],[/\)\s*(?:oF|of|0F)\s*주요치료/g,') 암 주요치료'],[/치료비\s*미45/g,'치료비Plus'],[/치료비\s*!\s*/g,'치료비Ⅱ'],[/손삼/g,'손상'],[/(\d)0096\)/g,'$100%)'],[/10096/g,'100%']];
+function baExOcrNm(t){BA_EX_OCR.forEach(function(x){t=t.replace(x[0],x[1]);});return t;}
+/* 납입 · 만기 — 「20년/90세」 · 「20년/20년」 · 「20년납 90세만기」 · 「종신」 */
+function baExPer(s){var t=(''+(s||'')).replace(/\s+/g,''),m=t.match(/(\d{1,2})년납?\/?(?:(\d{2,3})세|(\d{1,3})년|(종신))/);
+  if(!m)return null;return {py:+m[1],cv:m[2]?(m[2]+'세'):(m[3]?(m[3]+'년'):'종신')};}
+/* 담보 표 한 줄 통째로 — [번호] 이름 · 가입금액 · 보험료 · (비중) · 납입/보험기간 */
+function baExRows(lines){
+  var out=[],seen={};
+  lines.forEach(function(L0){
+    var L=baExFix(L0),M=ppMoney(L).filter(function(x){return x.v!==null&&x.v>0;});if(!M.length)return;
+    var a=M[0],mt=L.slice(a.i).match(new RegExp('^(?:'+PP_TOK.source+')'));if(!mt)return;
+    var head=L.slice(0,a.i),tail=L.slice(a.i+mt[0].length);
+    var tm=tail.match(/^\s*[^\d\s]{0,2}\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{1,6})\s*원?\s+(?:([0-9]{1,3}(?:\.[0-9])?|[^\s]{1,4})\s*%?\s+)?(.{3,24})$/);
+    if(!tm)return;
+    var per=baExPer(tm[3]);if(!per&&!/\d\s*\S{0,2}\s*\/\s*\d/.test(tm[3]))return;      /* 납입/만기 칸 모양이 아니면 표 줄이 아니다 */
+    var nm=baExName(head);if(nm.length<2||!/[가-힣]/.test(nm))return;
+    if(/^보험료\s*$|보험료\s*합계|합계|해약환급|환급률|경과기간|예시/.test(nm))return;   /* 「보험료납입면제대상보장」 은 담보다 */
+    var prem=parseInt(tm[1].replace(/,/g,''),10);if(!(prem>=0))return;
+    /* 같은 표가 두 번 찍힌다 — KB 는 2쪽 「가입담보」 뒤 3~6쪽 「가입설계」 에 같은 줄을 <b>설명 문장 옆에</b> 또 찍는다.
+       가입금액 · 보험료가 같은 줄은 처음 것만. 서로 다른 담보가 우연히 둘 다 같으면 보험료 합계가 모자라
+       baExCheck 가 고치기 표를 먼저 띄운다 — 틀려도 숨지 않는 쪽으로 접는다(8번). */
+    var key=a.v+'|'+prem;if(seen[key])return;seen[key]=1;
+    out.push({nm:nm,man:a.v,premWon:prem,per:per?(per.py+'년/'+per.cv):'',on:true});});
+  return out;}
+/* 해약환급금 표 — 경과 · 낸 돈 · 해지하면 받는 돈 · 환급률. 맞는 줄만 받는다 */
+function baExRefund(lines,premWon,age){
+  var out=[];if(!(premWon>0))return out;
+  lines.forEach(function(L0){
+    var L=baExFix(L0).replace(/\s+/g,' ').replace(/(\d),\s+(\d{3})/g,'$1,$2'),m=L.match(/^(.{1,16}?)\s+([0-9]{1,3}(?:,[0-9]{3})+)\s+(?:([0-9]{1,3}(?:,[0-9]{3})*|0)\s+)?([0-9]{1,3}(?:\.[0-9])?)\s*%/);
+    if(!m)return;var lb=m[1],paid=parseInt(m[2].replace(/,/g,''),10),ref=m[3]!==undefined?parseInt(m[3].replace(/,/g,''),10):null,pc=parseFloat(m[4]);
+    if(ref===null){if(pc===0)ref=0;else return;}
+    if(paid%premWon!==0)return;                                              /* 낸 돈 = 월 보험료 × 개월 — 안 맞으면 잘못 읽은 줄 */
+    /* 환급률이 안 맞으면 잘못 읽은 줄 — 단 점이 빠진 「520%」(52.0%)는 열로 나눠 한 번 더 맞춰 본다 */
+    if(paid>0&&Math.abs(ref/paid*100-pc)>0.15){if(!/\./.test(m[4])&&Math.abs(ref/paid*100-pc/10)<=0.15)pc=pc/10;else return;}
+    var ag=null,mo=lb.match(/(\d{1,2})\s*개월/),am=lb.match(/(\d{2,3})\s*세/)||lb.match(/\((\d{2,3})\s*\S?\)/);
+    if(am)ag=+am[1];else if(mo&&age!==null)ag=age;if(ag===null)return;
+    var mon=mo?+mo[1]:null;
+    out.push({lb:/만기/.test(lb)?('만기('+ag+'세)'):(mon?(mon+'개월'):(ag+'세')),age:ag,mon:mon,paidWon:paid,refWon:ref,pct:pc});});
+  var u={},r=[];out.forEach(function(x){var k=x.lb+'|'+x.paidWon;if(!u[k]){u[k]=1;r.push(x);}});
+  return r;}
+/* 제안서 글에 적힌 조건 — 말이 있을 때만 켠다 */
+function baExKeys(all){var t=(''+all).replace(/\s+/g,'');
+  return {d90:/90일이?지난/.test(t),once:/최초1회/.test(t),half:/1년미만.{0,24}50%/.test(t),bike:/이륜/.test(t),
+    job:/직업.{0,12}변경|직무.{0,8}변경/.test(t),prepay:/선지급/.test(t),nodisc:/무사고.{0,3}할인/.test(t),
+    longdisc:/장기유지.{0,3}할인/.test(t),nonref:/해약환급금미지급/.test(t),
+    kw:/종합병원/.test(t)};}
+/* 납입면제 조건 목록 — 「1. 」 「2. 」 … 번호가 <b>차례로</b> 이어지는 줄만. 꺾인 줄은 앞 번호에 잇는다.
+   긴 괄호(「계약일로부터 그날을 포함하여 …」)만 걷고 짧은 괄호(「유사암 제외」)는 남긴다 — 빠지면 뜻이 바뀐다 */
+function baExWaiver(lines){
+  var best=[];
+  for(var i=0;i<lines.length;i++){if(!/납입면제/.test(lines[i]))continue;
+    var items=[],want=1,cur=null;
+    for(var j=i+1;j<lines.length&&j<i+40;j++){
+      var L=lines[j].split(/\s{3,}/)[0],m=L.match(/^\s*(\d{1,2})\s*[.)]\s*(.+)$/);
+      if(m&&+m[1]===want){cur={t:m[2]};items.push(cur);want++;continue;}
+      if(/^\s*[※■▶]/.test(L)||(m&&items.length))break;
+      if(cur&&items.length)cur.t+=' '+L;else if(j>i+3)break;}
+    var got=items.map(function(x){var t=baExOcrNm(x.t);
+      for(var z=0;z<3;z++)t=t.replace(/\(([^()]{13,})\)/g,'');
+      t=t.replace(/\s+/g,' ').split(/\s*(?:으로|로)\s*진\s*단|\s*진\s*단\s*확\s*정|발생|시\s*$|에\s*해당/)[0].replace(/^암보장개시일\s*이후(?:에)?\s*/,'').trim();
+      return t.slice(0,28);}).filter(function(t){return t.length>=2;});
+    if(got.length>best.length)best=got;}
+  return best.length>=3?best.slice(0,14):[];}
+/* 제안서에 찍힌 월 보험료 — ① 줄 합계와 같은 「N원」 이 글 어딘가에 있으면 그것 ② 없으면 「보험료 : N원」 처럼
+   이름표가 붙은 값 중 가장 많이 나온 것(표지 · 계약 내용 · 1회 보험료 · 할인후초회보험료). 합계와 다르면 다르다고 말해야 하므로
+   ②가 없으면 맞춰 보지 못한 것이다 — 「못 찾음」 을 「맞음」 으로 넘기지 않는다 */
+function baExTotal(all,sum){
+  var t=baExFix(all),re=/([0-9]{1,3}(?:,[0-9]{3})+)\s*원/g,m,c={},lab={},best=null,bn=0;
+  while((m=re.exec(t)))c[parseInt(m[1].replace(/,/g,''),10)]=1;
+  var lr=/(?:합계\s*보험료|보장\s*보험료\s*합계|보장합계|할인후\s*초회\s*보험료|초회\s*보험료|1\s*회\s*(?:차\s*)?보험료|월\s*보험료|보험료)\s*[:：]?\s*([0-9]{1,3}(?:,[0-9]{3})+)\s*원?/g;
+  while((m=lr.exec(t))){var v=parseInt(m[1].replace(/,/g,''),10);lab[v]=(lab[v]||0)+1;if(lab[v]>bn){bn=lab[v];best=v;}}
+  return {has:sum!==null&&!!c[sum],lab:best};}
+function baExFrom(txt,fname,ocr){
+  var lines=(''+txt).split(/\r?\n/).map(function(l){return l.replace(/\s+/g,' ').trim();}).filter(Boolean),all=lines.join('\n');
+  var P=ppParse(txt,fname,ocr),rows=baExRows(lines),how='rows';
+  if(!rows.length){how='amt';
+    P.rows.concat(P.ext,P.other).forEach(function(r){if(r.dup||!(r.v>0))return;rows.push({nm:(''+r.raw).split(' · ')[0].slice(0,70),man:r.v,premWon:null,per:'',on:true});});}
+  var am=all.replace(/\s+/g,'').match(/(\d{1,3})세[|ㅣ,]?(남자|여자|남|여)/);
+  var B={v:1,src:''+(fname||''),ocr:!!ocr,how:how,when:new Date().toISOString().slice(0,10),
+    co:P.co||'',nm:P.nm||'',age:am?+am[1]:null,sex:am?am[2].charAt(0):'',
+    years:P.years?+P.years:null,term:P.term||'',totWon:null,rows:rows,refund:[],keys:baExKeys(all),wv:baExWaiver(lines)};
+  B.rows.forEach(function(r){r.b=baExBkOf(r.nm);});
+  var sum=baExSum(B);
+  var T=baExTotal(all,sum);
+  B.totWon=T.has?sum:(T.lab!==null?T.lab:(P.premMan?Math.round(parseFloat(P.premMan)*10000):null));
+  B.refund=baExRefund(lines,B.totWon,B.age);
+  return B;}
+function baExSum(B){var s=0,ok=false;for(var i=0;i<B.rows.length;i++){var r=B.rows[i];if(!r.on)continue;if(r.premWon===null||r.premWon===undefined||!isFinite(r.premWon))return null;s+=r.premWon;ok=true;}return ok?s:null;}
+/* 맞춰 보기 — ok:true 면 바로 설명서 · false 면 고치기 먼저 · null 이면 대조할 값이 없다 */
+function baExCheck(B){
+  var on=B.rows.filter(function(r){return r.on;}),sum=baExSum(B);
+  if(!on.length)return {ok:false,why:'담보 줄을 한 줄도 못 읽었습니다'};
+  if(sum===null)return {ok:B.ocr?false:null,sum:null,why:B.ocr?'그림에서 읽었는데 줄마다 보험료를 못 읽어 맞춰 볼 수 없습니다':'줄마다 보험료가 없는 서식이라 합계를 맞춰 보지 못했습니다'};
+  if(!(B.totWon>0))return {ok:B.ocr?false:null,sum:sum,why:'제안서에 찍힌 보험료를 못 찾아 맞춰 보지 못했습니다'};
+  if(sum!==B.totWon)return {ok:false,sum:sum,why:'줄마다 보험료를 더하면 '+baExWonR(sum)+'인데 제안서 보험료는 '+baExWonR(B.totWon)+'입니다 — 차이 '+baExWonR(Math.abs(sum-B.totWon))};
+  return {ok:true,sum:sum,why:'줄마다 보험료를 더한 값 '+baExWonR(sum)+' = 제안서 보험료 — 원 단위까지 같습니다'};}
+function baExPick(){var f=document.getElementById('bxFile');
+  if(!f){f=document.createElement('input');f.type='file';f.id='bxFile';f.accept='application/pdf,.pdf,image/*';f.style.display='none';
+    f.addEventListener('change',function(){var x=this.files&&this.files[0];this.value='';baExRead(x);});document.body.appendChild(f);}
+  f.click();}
+function baExMsg(h){ppSet('<div class="note i">🎞 '+h+'</div>');}
+function baExOcr(file,tick){
+  return ensurePdfJs().then(function(lib){return file.arrayBuffer().then(function(buf){return lib.getDocument({data:buf}).promise.then(function(pdf){
+    var n=Math.min(pdf.numPages,BA_EX_MAXPG),fns=[];
+    for(var i=1;i<=n;i++)(function(i){fns.push(function(){return ppPageImg(pdf,i,BA_EX_SCALE);});})(i);
+    return ppOcrImgs(fns,tick);});});});}
+function baExRead(file){
+  if(!file)return;var name=file.name||'제안서';
+  var fail=function(e){ppSet('<div class="note w">설명서를 만들지 못했습니다 — '+esc((e&&e.message)||'')+' · 아무 숫자도 만들지 않았습니다.</div>');};
+  var tick=function(i,n){baExMsg('<b>그림으로 된 제안서</b>입니다 — 글자를 읽는 중… <b>'+i+' / '+n+'쪽</b> · 쪽마다 몇 초씩 걸립니다(처음 한 번은 글자 사전을 받느라 더).');};
+  if(/^image\//.test(file.type||'')||/\.(png|jpe?g|webp|bmp)$/i.test(name)){
+    tick(1,1);ppOcrImgs([function(){return Promise.resolve(file);}],tick).then(function(t){baExGo(baExFrom(t,name,true));},fail);return;}
+  baExMsg('📄 <b>'+esc(name)+'</b> 을(를) 읽는 중…');
+  extractPdfText(file).then(function(txt){
+    if(txt&&txt.replace(/\s/g,'').length>=80){var B=baExFrom(txt,name,false);if(B.rows.length){baExGo(B);return;}}
+    baExMsg('<b>그림으로 된 제안서</b>입니다(글자가 없는 PDF) — 쪽을 그려 글자를 읽습니다…');baExOcr(file,tick).then(function(t){baExGo(baExFrom(t,name,true));},fail);},fail);}
+function baExGo(B){
+  S.bx=B;save();ppSet('');
+  var C=baExCheck(B);
+  if(!B.rows.length){ppSet('<div class="note w">담보 표를 <b>한 줄도 못 찾았습니다.</b> 아무 숫자도 만들지 않았습니다 — 글자가 있는 원본 PDF 로 다시 넣어 주세요.</div>');return;}
+  baExOpen(C.ok===false?'edit':'deck');}
+/* ── 겉 — 위 띠(설명서 · 고치기 · 인쇄 · 저장 · 닫기) + 문서 한 벌(iframe) ── */
+function baExOpen(tab){
+  var B=S.bx;if(!B)return;var o=document.getElementById('bxo');
+  if(!o){o=document.createElement('div');o.id='bxo';o.className='bxo';document.body.appendChild(o);}
+  var C=baExCheck(B);
+  o.innerHTML='<div class="bxo-bar"><b>🎞 보장 설명서</b><span class="bxo-ck '+(C.ok===true?'ok':(C.ok===false?'bad':'unk'))+'">'+(C.ok===true?'✓ 보험료 합계 맞음':(C.ok===false?'⚠ 맞춰 볼 곳 있음':'· 합계 대조 못 함'))+'</span>'+
+    '<button class="bxo-b'+(tab==='deck'?' on':'')+'" onclick="baExOpen(\'deck\')">🎞 설명서</button>'+
+    '<button class="bxo-b'+(tab==='edit'?' on':'')+'" onclick="baExOpen(\'edit\')">✏️ 읽은 값 고치기</button>'+
+    (tab==='deck'?'<button class="bxo-b" onclick="baExPrint()">🖨 전부 인쇄</button><button class="bxo-b" onclick="baExSave()">💾 파일로 저장</button>':'')+
+    '<button class="bxo-b x" onclick="baExClose()">✕ 닫기</button></div>'+
+    (tab==='deck'?'<iframe id="bxf" title="보장 설명서"></iframe>':'<div class="bxo-ed">'+baExEditHtml(B,C)+'</div>');
+  document.body.classList.add('bxOn');
+  if(tab==='deck'){var f=document.getElementById('bxf');f.srcdoc=baExDoc(B);}}
+function baExClose(){var o=document.getElementById('bxo');if(o)o.parentNode.removeChild(o);document.body.classList.remove('bxOn');}
+function baExPrint(){var f=document.getElementById('bxf');try{f.contentWindow.focus();f.contentWindow.print();}catch(e){alert('인쇄를 열지 못했습니다 — 💾 파일로 저장한 뒤 그 파일에서 인쇄해 주세요.');}}
+function baExSave(){var B=S.bx;if(!B)return;
+  var b=new Blob([baExDoc(B)],{type:'text/html;charset=utf-8'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(b);a.download='보장설명서_'+((B.nm||'제안서').replace(/[\\\/:*?"<>|\s]+/g,'_').slice(0,40))+'.html';
+  document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.parentNode.removeChild(a);},500);}
+/* ── 고치기 표 ── */
+function baExEditHtml(B,C){
+  function hf(f,lb,ph,w){return '<label>'+lb+'<input value="'+esc(B[f]===null||B[f]===undefined?'':B[f])+'" placeholder="'+ph+'" style="width:'+(w||120)+'px" oninput="baExHead(\''+f+'\',this.value)"></label>';}
+  var opt=function(sel){return BA_EX_BK.map(function(k){return '<option value="'+k.id+'"'+(k.id===sel?' selected':'')+'>'+k.ic+' '+k.t+'</option>';}).join('');};
+  return '<div class="bxe-top '+(C.ok===true?'ok':(C.ok===false?'bad':'unk'))+'"><b>'+(C.ok===true?'✓ 맞춰 봤습니다':(C.ok===false?'⚠ 고객에게 보여 드리기 전에 맞춰 봐 주세요':'· 맞춰 보지 못했습니다'))+'</b> — '+esc(C.why)+
+    (B.ocr?'<br><small>그림으로 된 제안서라 <b>글자를 짐작해</b> 읽었습니다. 틀린 칸은 여기서 고치면 설명서에 그대로 들어갑니다.</small>':'')+'</div>'+
+    '<div class="bxe-h">'+hf('nm','상품','상품명',300)+hf('co','회사','예) KB손해보험',130)+hf('age','나이','세',56)+hf('sex','성별','남/여',56)+
+      hf('totWon','월 보험료(원)','원',110)+hf('years','납입(년)','년',56)+hf('term','만기','예) 90세만기',100)+'</div>'+
+    '<table class="bxe-t"><thead><tr><th>넣기</th><th>담보 (제안서에서 읽은 이름)</th><th>가입금액<br><small>만원</small></th><th>보험료<br><small>원</small></th><th>납입/만기</th><th>묶음</th></tr></thead><tbody>'+
+    B.rows.map(function(r,i){return '<tr class="'+(r.on?'':'off')+'"><td><input type="checkbox"'+(r.on?' checked':'')+' onchange="baExSet('+i+',\'on\',this.checked)"></td>'+
+      '<td><input class="w" value="'+esc(r.nm)+'" oninput="baExSet('+i+',\'nm\',this.value)"></td>'+
+      '<td><input class="n" inputmode="decimal" value="'+(r.man===null?'':r.man)+'" oninput="baExSet('+i+',\'man\',this.value)"></td>'+
+      '<td><input class="n" inputmode="numeric" value="'+(r.premWon===null||r.premWon===undefined?'':r.premWon)+'" oninput="baExSet('+i+',\'premWon\',this.value)"></td>'+
+      '<td><input class="p" value="'+esc(r.per||'')+'" placeholder="20년/90세" oninput="baExSet('+i+',\'per\',this.value)"></td>'+
+      '<td><select onchange="baExSet('+i+',\'b\',this.value)">'+opt(r.b)+'</select></td></tr>';}).join('')+'</tbody></table>'+
+    '<label class="bxe-wv">🛟 납입면제 조건 — 한 줄에 하나 (제안서에서 읽은 것 · 비우면 그 장은 담보 줄만)<textarea rows="5" oninput="baExWv(this.value)">'+esc((B.wv||[]).join('\n'))+'</textarea></label>'+
+    '<div class="bxe-go"><button class="bxo-b" onclick="baExAdd()">+ 줄 더하기</button><span id="bxSum">'+baExSumTxt(B)+'</span>'+
+    '<button class="bxo-b go" onclick="baExOpen(\'deck\')">🎞 이 값으로 설명서 보기</button></div>';}
+function baExSumTxt(B){var s=baExSum(B);return s===null?'보험료 칸이 빈 줄이 있습니다':('줄 합계 <b>'+baExWonR(s)+'</b>'+(B.totWon>0?(s===B.totWon?' = 제안서 보험료 ✓':' · 제안서 보험료 '+baExWonR(B.totWon)+' ✗'):''));}
+function baExSet(i,f,v){var r=S.bx&&S.bx.rows[i];if(!r)return;
+  if(f==='man'||f==='premWon'){var n=parseFloat((''+v).replace(/,/g,''));r[f]=isFinite(n)?n:null;}else if(f==='on')r.on=!!v;else r[f]=v;
+  if(f==='nm'&&!r.bSet)r.b=baExBkOf(v);if(f==='b')r.bSet=true;
+  save();var e=document.getElementById('bxSum');if(e)e.innerHTML=baExSumTxt(S.bx);
+  if(f==='on'){var tr=document.querySelectorAll('.bxe-t tbody tr')[i];if(tr)tr.classList.toggle('off',!r.on);}}
+function baExHead(f,v){if(!S.bx)return;if(f==='age'||f==='years'||f==='totWon'){var n=parseFloat((''+v).replace(/,/g,''));S.bx[f]=isFinite(n)?n:null;}else S.bx[f]=v;
+  save();var e=document.getElementById('bxSum');if(e)e.innerHTML=baExSumTxt(S.bx);}
+function baExWv(v){if(!S.bx)return;S.bx.wv=(''+v).split(/\n/).map(function(x){return x.trim();}).filter(Boolean).slice(0,14);save();}
+function baExAdd(){if(!S.bx)return;S.bx.rows.push({nm:'',man:null,premWon:null,per:'',on:true,b:'etc'});save();baExOpen('edit');}
+/* 표지에 서는 이름 — 제안서 이름은 안 읽는다. 전·후 칸 이름이 있으면 가려서(3번) */
+function baExWho(){var n=(S.who&&S.who.name)?(''+S.who.name).trim():'';if(!n)return '고객님';
+  if(/○/.test(n))return n+' 님';return n.charAt(0)+'○○ 님';}
+/* ── 설명서 문서 한 벌 — 보장 전·후 무대와 같은 결(남색 표지 · 금색 번호 · 아래 화법 띠) ── */
+var BA_EX_CSS=[
+':root{--nv:#0F1A2C;--ink:#191F28;--gy:#4E5968;--gy3:#6B7684;--ln:#E5E8EB;--bg:#F7F5F0;--bg2:#F2F4F6;--gd:#B08D57;--gd2:#E2C27D;--gd3:#C9A86A;--bl:#2A5BD7;--bl2:#EAF1FF;--rd:#DC2626;--rd2:#FEF2F2;--gr:#0F766E;--or:#B45309;--or2:#FFFBEB;--k:1}',
+'*{box-sizing:border-box}html,body{margin:0;height:100%;background:#E9EDF2;color:var(--ink);font-family:"Pretendard Variable",Pretendard,-apple-system,"Malgun Gothic",sans-serif;letter-spacing:-.02em;-webkit-font-smoothing:antialiased}body{overflow:hidden}',
+'@media screen{.num{font-feature-settings:"tnum"}}',
+'#wrap{position:absolute;left:50%;top:calc(50% - 27px);width:1280px;height:720px;transform:translate(-50%,-50%) scale(var(--k));transform-origin:center}',
+'.sl{position:absolute;inset:0;background:#fff;display:none;overflow:hidden;border-radius:6px;box-shadow:0 6px 30px rgba(15,26,44,.12)}.sl.on{display:block}',
+'.sl:before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:linear-gradient(90deg,var(--nv) 0 70%,var(--gd) 70% 100%)}',
+'#bar{position:fixed;left:0;right:0;bottom:0;height:54px;display:flex;align-items:center;gap:10px;padding:0 14px;background:#fff;border-top:1px solid var(--ln);z-index:9}',
+'#bar button{border:1px solid var(--ln);background:#fff;border-radius:10px;padding:0 18px;font:inherit;font-weight:800;cursor:pointer;min-height:44px;min-width:56px}',
+'#dots{flex:1;display:flex;gap:5px;justify-content:center;flex-wrap:wrap}#dots i{width:9px;height:9px;border-radius:50%;background:#D1D6DB}#dots i.on{background:var(--gd);transform:scale(1.3)}',
+'#cnt{font-weight:800;color:var(--gy);font-size:14px;min-width:54px;text-align:center}',
+'.hd{position:absolute;left:52px;right:250px;top:30px}.hd h2{margin:0;font-size:31px;font-weight:800;letter-spacing:-.04em;display:flex;align-items:baseline;gap:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+'.hd h2 .no{color:var(--gd);font-size:29px;min-width:46px}.hd .sub{margin:6px 0 0 62px;font-size:15px;font-weight:700;color:var(--or)}',
+'.pill{position:absolute;right:28px;top:26px;background:var(--nv);color:#fff;border-radius:999px;padding:7px 15px;font-size:13px;font-weight:800}.pill b{color:var(--gd2)}',
+'.body{position:absolute;left:52px;right:52px;top:124px;bottom:116px}',
+'.say{position:absolute;left:52px;right:52px;bottom:28px;min-height:62px;background:#fff;border:1px solid var(--ln);border-left:5px solid var(--bl);border-radius:12px;padding:12px 22px;font-size:19px;font-weight:700;line-height:1.5;box-shadow:0 2px 10px rgba(15,26,44,.06);display:flex;align-items:center}',
+'.say:before{content:"\\201C";color:var(--gd);font-size:30px;font-weight:800;margin-right:8px;line-height:1}.say em{font-style:normal;color:var(--bl)}.say strong{color:var(--rd)}',
+'.ft{position:absolute;left:52px;right:52px;bottom:7px;font-size:11px;color:var(--gy3)}',
+'.card{background:#fff;border:1px solid var(--ln);border-radius:14px;padding:14px 16px;min-width:0}.card h4{margin:0 0 6px;font-size:17px;font-weight:800;display:flex;align-items:center;gap:7px}',
+'.lead{font-size:13.5px;color:var(--gy);margin:0 0 8px;line-height:1.55}',
+'.row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px;padding:4px 0;border-top:1px dashed #EEF0F2}.row:first-of-type{border-top:0}.row span{color:var(--gy);min-width:0}.row b{white-space:nowrap}',
+'.g{display:grid;gap:14px}.big{font-size:30px;font-weight:800;letter-spacing:-.04em}.big small{font-size:15px;font-weight:700;color:var(--gy);margin-left:3px}',
+'.note{font-size:13px;color:var(--gy);line-height:1.6;background:var(--bg);border-radius:10px;padding:9px 14px}.note b{color:var(--ink)}',
+'.tag{display:inline-block;font-size:11.5px;font-weight:800;border-radius:6px;padding:1px 7px;margin-left:4px;background:var(--bl2);color:var(--bl);vertical-align:1px;white-space:nowrap}',
+'.chips{display:flex;flex-wrap:wrap;gap:7px}.chips span{background:var(--bg2);border-radius:999px;padding:6px 13px;font-size:14.5px;font-weight:700}.miss span{background:#fff;border:1.5px dashed #C9CED6;color:var(--gy)}',
+'table.t{width:100%;border-collapse:collapse;font-size:14px}table.t th{background:var(--bg);color:var(--gy);font-size:12.5px;font-weight:800;padding:7px 8px;text-align:left}table.t td{padding:6px 8px;border-bottom:1px solid #EEF0F2}table.t td.r,table.t th.r{text-align:right;white-space:nowrap}',
+'.mis .card{min-height:250px;padding:22px 24px}.mis h4{font-size:20px;margin-bottom:14px}.mis .chips span{font-size:17px;padding:9px 16px}.mis .lead{font-size:15.5px}',
+'.dk{background:var(--nv);color:#fff}.dk:before{display:none}.dk .frame{position:absolute;inset:16px;border:1px solid rgba(201,168,106,.32)}',
+'.cv-l{position:absolute;left:80px;top:78px;width:600px}.cv-l .brand{font-size:14px;font-weight:800;letter-spacing:.3em;color:var(--gd3)}.cv-l .ey{margin-top:40px;font-size:14px;letter-spacing:.32em;color:var(--gd3);font-weight:700}',
+'.cv-l h1{font-size:50px;line-height:1.15;margin:12px 0 16px;letter-spacing:-.04em}.cv-l h1 span{display:block;color:var(--gd2)}.cv-l p{font-size:16px;color:#D9E0EA;line-height:1.7;margin:0 0 22px}.cv-l p b{color:var(--gd2)}',
+'.cv-t{border-top:1px solid rgba(201,168,106,.35);width:470px}.cv-t div{display:flex;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:15px}.cv-t span{width:100px;flex:none;color:var(--gd3);font-size:13px;font-weight:700;padding-top:2px}',
+'.cv-r{position:absolute;right:80px;top:90px;width:470px;height:490px;border:1px solid rgba(201,168,106,.35);border-radius:14px;padding:22px}',
+'.cv-k{position:absolute;left:22px;right:22px;bottom:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border-top:1px solid rgba(201,168,106,.35);padding-top:12px}.cv-k span{display:block;font-size:12px;color:var(--gd3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cv-k b{font-size:20px}',
+'.cv-f{position:absolute;left:80px;right:80px;bottom:36px;font-size:12px;color:#AEB9CA;line-height:1.7}.cv-f b{color:#fff}.warn{color:#FCA5A5!important}',
+'.ek{border:1px solid rgba(201,168,106,.4);border-radius:14px;padding:22px 24px}.ek i{display:block;font-style:normal;color:var(--gd3);font-weight:800;font-size:14px}.ek b{display:block;font-size:26px;margin-top:6px}.ek p{color:#D9E0EA;font-size:16px;margin:6px 0 0;line-height:1.6}',
+'@media print{@page{size:1280px 720px;margin:0}html,body{background:#fff;overflow:visible;height:auto}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}#bar{display:none}#wrap{position:static;transform:none;width:1280px;height:auto}.sl{display:block!important;position:relative;width:1280px;height:720px;break-after:page;page-break-after:always;border-radius:0;box-shadow:none}}'
+].join('\n');
+function baExDoc(B){
+  var E=esc,rows=B.rows.filter(function(r){return r.on&&(r.man>0||r.premWon>0);}),C=baExCheck(B),who=E(baExWho());
+  var tot=(B.totWon>0)?B.totWon:baExSum(B),hasPrem=baExSum(B)!==null&&tot>0;
+  var pill='<div class="pill">+ <b>'+who+'</b> · 보장 설명</div>',slides=[],no=0;
+  /* 묶음별 합 */
+  var bk={},order=[];rows.forEach(function(r){if(!bk[r.b]){bk[r.b]={id:r.b,rows:[],prem:0,man:0};order.push(r.b);}bk[r.b].rows.push(r);bk[r.b].prem+=(r.premWon||0);});
+  order.sort(function(a,b){return BA_EX_BK.indexOf(baExBk(a))-BA_EX_BK.indexOf(baExBk(b));});
+  var byPrem=order.slice().sort(function(a,b){return hasPrem?(bk[b].prem-bk[a].prem):(bk[b].rows.length-bk[a].rows.length);});
+  function head(t,sub){no++;return pill+'<div class="hd"><h2><span class="no">'+(no<10?'0':'')+no+'.</span>'+t+'</h2><div class="sub">💡 '+sub+'</div></div>';}
+  function say(h){return '<div class="say">'+h+'</div>';}
+  function sl(h,t,dk){slides.push('<section class="sl'+(dk?' dk':'')+'" data-t="'+E(t)+'">'+h+'</section>');}
+  function top(list,n){return list.slice().sort(function(a,b){return (b.man||0)-(a.man||0);}).slice(0,n);}
+  function per(r){var p=baExPer(r.per);return p?(p.py+'년 납 · '+(p.cv==='종신'?'종신':(/세$/.test(p.cv)?p.cv+'까지':p.cv+' 만기'))):'—';}
+  var payTxt=(B.years?B.years+'년 납입':'')+(B.years&&B.term?' · ':'')+(B.term?B.term.replace(/만기$/,' 만기'):'');
+  var big=rows.filter(function(r){return baExShOf(r.nm).id==='once';});var keyR=[],kb={};
+  top(big.length?big:rows,30).forEach(function(r){if(keyR.length<3&&!kb[r.b]){kb[r.b]=1;keyR.push(r);}});
+  /* 0 표지 */
+  var donut='';
+  if(hasPrem){var cx=140,cy=150,R=105,a0=-Math.PI/2,leg='',y=60;
+    byPrem.forEach(function(id,ix){var K=baExBk(id),fr=bk[id].prem/tot,a1=a0+Math.max(fr,0.004)*2*Math.PI;if(a1-a0>=2*Math.PI)a1=a0+2*Math.PI-0.0001;
+      var lg=(a1-a0)>Math.PI?1:0;donut+='<path d="M'+(cx+R*Math.cos(a0)).toFixed(1)+' '+(cy+R*Math.sin(a0)).toFixed(1)+' A'+R+' '+R+' 0 '+lg+' 1 '+(cx+R*Math.cos(a1)).toFixed(1)+' '+(cy+R*Math.sin(a1)).toFixed(1)+'" fill="none" stroke="'+K.c+'" stroke-width="30"/>';a0=a1;
+      if(ix<6){leg+='<rect x="280" y="'+(y-11)+'" width="12" height="12" rx="3" fill="'+K.c+'"/><text x="300" y="'+y+'" fill="#fff" font-size="15" font-weight="700">'+E(K.t)+'</text><text x="300" y="'+(y+19)+'" fill="#AEB9CA" font-size="13">'+baExWonR(bk[id].prem)+' · '+baExPct(bk[id].prem,tot)+'</text>';y+=48;}});
+    donut='<div style="font-size:13px;color:var(--gd3);font-weight:700;letter-spacing:.08em">한 달 보험료가 쓰이는 곳</div><svg viewBox="0 0 430 310" width="426" height="310">'+donut+
+      '<text x="'+cx+'" y="'+(cy-8)+'" text-anchor="middle" fill="#C9A86A" font-size="13" font-weight="700">월 보험료</text><text x="'+cx+'" y="'+(cy+22)+'" text-anchor="middle" fill="#fff" font-size="26" font-weight="800">'+baExWonR(tot)+'</text>'+leg+'</svg>';}
+  else donut='<div style="font-size:13px;color:var(--gd3);font-weight:700">담보 묶음</div><div class="chips" style="margin-top:14px">'+order.map(function(id){var K=baExBk(id);return '<span style="background:rgba(255,255,255,.08);color:#fff">'+K.ic+' '+E(K.t)+' · '+bk[id].rows.length+'</span>';}).join('')+'</div>';
+  sl('<div class="frame"></div><div class="cv-l"><div class="brand">APEX&nbsp;&nbsp;사업단</div><div class="ey">보 장 설 계 설 명 서</div>'+
+    '<h1>새 보험,<span>한 장씩 쉽게</span></h1><p>'+(B.co?E(B.co)+' ':'')+'<b>「'+E(B.nm||'상품 제안서')+'」</b><br>제안서를 <b>언제 · 무엇이 · 얼마나</b> 나오는지 순서대로 다시 정리했습니다.</p>'+
+    '<div class="cv-t"><div><span>대상</span><b>'+who+'</b>'+(B.age!==null?'&nbsp;&nbsp;'+B.age+'세':'')+(B.sex?' · '+E(B.sex):'')+'</div>'+
+    (payTxt?'<div><span>계약 모양</span>'+E(payTxt)+'</div>':'')+(tot>0?'<div><span>월 보험료</span><b class="num">'+baExWonR(tot)+'</b></div>':'')+
+    '<div><span>담보</span>'+rows.length+'개</div><div><span>기준</span>제안서 · '+E(B.when)+' 읽음</div></div></div>'+
+    '<div class="cv-r">'+donut+(keyR.length?'<div class="cv-k">'+keyR.map(function(r){return '<div><span>'+E(r.nm)+'</span><b class="num">'+baExAmt(r.man)+'</b></div>';}).join('')+'</div>':'')+'</div>'+
+    '<div class="cv-f">본 자료는 상담을 돕기 위한 설명서입니다. 금액 · 조건은 제안서를 옮긴 것이며, 보험료와 보험금 지급은 <b>약관과 심사 결과에 따릅니다.</b>'+
+    (C.ok===true?'':'<br><b class="warn">⚠ '+E(C.why)+' — 숫자를 제안서 원본과 맞춰 본 뒤 보여 드리세요.</b>')+'</div>','표지',true);
+  /* 1 보험료가 가는 곳 */
+  var cols=Math.min(order.length,4);
+  sl(head(hasPrem?('한 달 '+baExWonR(tot)+'은 어디로 가나요'):'담보를 묶어 보면','담보 '+rows.length+'개를 '+order.length+'묶음으로 — 묶음마다 '+(hasPrem?'보험료와 ':'')+'보장')+
+    '<div class="body"><div class="g" style="grid-template-columns:repeat('+cols+',minmax(0,1fr));height:100%;'+(order.length>4?'grid-auto-rows:1fr;':'')+'">'+byPrem.slice(0,8).map(function(id){var K=baExBk(id),G=bk[id],lim=order.length>4?3:7,L=top(G.rows,lim);
+      return '<div class="card" style="border-top:4px solid '+K.c+';overflow:hidden"><h4>'+K.ic+' '+E(K.t)+'</h4>'+
+        (hasPrem?'<div class="big num" style="color:'+K.c+'">'+Math.round(G.prem).toLocaleString()+'<small>원 · '+baExPct(G.prem,tot)+'</small></div>':'<div class="big num" style="color:'+K.c+'">'+G.rows.length+'<small>개</small></div>')+
+        L.map(function(r){return '<div class="row" style="font-size:13px"><span>'+E(r.nm)+'</span><b class="num">'+baExAmt(r.man)+'</b></div>';}).join('')+
+        (G.rows.length>L.length?'<div class="lead" style="margin-top:4px">외 '+(G.rows.length-L.length)+'개</div>':'')+'</div>';}).join('')+'</div></div>'+
+    say(hasPrem?('보험료가 가장 많이 가는 곳은&nbsp;<em>'+E(baExBk(byPrem[0]).t)+'</em>('+baExPct(bk[byPrem[0]].prem,tot)+')'+(byPrem[1]?', 다음은&nbsp;<em>'+E(baExBk(byPrem[1]).t)+'</em>('+baExPct(bk[byPrem[1]].prem,tot)+')':'')+'입니다.')
+      :('담보 '+rows.length+'개가&nbsp;<em>'+order.length+'묶음</em>으로 나뉩니다.')),'묶음');
+  /* 2 계약 모양 — 나이 줄 (나이 · 납입을 읽었을 때만) */
+  if(B.age!==null&&B.years){
+    var ends={};rows.forEach(function(r){var p=baExPer(r.per);if(!p)return;var e=/세$/.test(p.cv)?parseInt(p.cv,10):(p.cv==='종신'?999:B.age+parseInt(p.cv,10));if(e<=B.age)return;(ends[e]=ends[e]||{}) [r.b]=1;});
+    var ek=Object.keys(ends).map(Number).sort(function(a,b){return a-b;});
+    if(ek.length){var A0=B.age,A1=Math.max(A0+B.years,ek[ek.length-1]===999?Math.max(100,(ek[ek.length-2]||0)):ek[ek.length-1]),X=function(a){return 40+(Math.min(a,A1)-A0)/(A1-A0)*1090;},svg='',yy=116;
+      svg+='<rect x="'+X(A0)+'" y="70" width="'+(X(A0+B.years)-X(A0))+'" height="34" rx="8" fill="#0F1A2C"/><text x="'+((X(A0)+X(A0+B.years))/2)+'" y="92" text-anchor="middle" fill="#fff" font-size="15" font-weight="800">보험료 내는 '+B.years+'년'+(tot>0?' · 월 '+baExWonR(tot):'')+'</text>';
+      ek.slice(-4).forEach(function(e){var nm=Object.keys(ends[e]).map(function(id){return baExBk(id).t;}).join(' · ');
+        svg+='<rect x="'+X(A0)+'" y="'+yy+'" width="'+(X(e===999?A1:e)-X(A0))+'" height="26" rx="7" fill="#EAF1FF" stroke="#A9C1F5"/><text x="'+(X(A0)+12)+'" y="'+(yy+18)+'" fill="#2A5BD7" font-size="13.5" font-weight="800">'+E(nm)+' — '+(e===999?'종신':e+'세까지')+'</text>';yy+=32;});
+      var marks=[[A0,'가입'],[A0+B.years,'납입 끝']];ek.slice(-4).forEach(function(e){marks.push([e===999?A1:e,e===999?'종신':e+'세']);});
+      var used={};marks.forEach(function(m){var x=Math.round(X(m[0]));if(used[x])return;used[x]=1;svg+='<line x1="'+x+'" y1="40" x2="'+x+'" y2="'+(yy+8)+'" stroke="#B08D57" stroke-dasharray="4 4"/><circle cx="'+x+'" cy="40" r="6" fill="#B08D57"/><text x="'+x+'" y="24" text-anchor="middle" font-size="15" font-weight="800" fill="#191F28">'+m[1]+'</text><text x="'+x+'" y="'+(yy+26)+'" text-anchor="middle" font-size="13" fill="#6B7684">'+(m[0]>=A1&&ek[ek.length-1]===999?'':Math.round(m[0])+'세')+'</text>';});
+      var renew=rows.filter(function(r){return /갱신/.test(r.nm);}).length;
+      sl(head(B.years+'년 내고, '+(ek[ek.length-1]===999?'평생':ek[ek.length-1]+'세까지')+' 지킵니다','언제까지 내고 · 언제까지 받는지 — 나이로 보면 한눈에')+
+        '<div class="body"><svg viewBox="0 0 1176 '+(yy+40)+'" width="1176" height="'+(yy+40)+'">'+svg+'</svg>'+
+        '<div class="g" style="grid-template-columns:repeat(3,1fr);margin-top:6px"><div class="card"><h4>💳 납입</h4><div class="big num">'+B.years+'<small>년 · '+(B.years*12)+'회</small></div>'+(tot>0?'<div class="lead">다 내면 총 <b class="num">'+baExWonR(tot*B.years*12)+'</b> (월 보험료 × '+(B.years*12)+'회)</div>':'')+'</div>'+
+        '<div class="card"><h4>🛡 보장</h4><div class="big num">'+(ek[ek.length-1]===999?'종신':ek[ek.length-1]+'<small>세까지</small>')+'</div><div class="lead">담보마다 끝나는 나이가 다를 수 있습니다 — 위 줄 참고</div></div>'+
+        '<div class="card"><h4>🔄 갱신</h4><div class="big" style="font-size:24px">'+(renew?'갱신 담보 '+renew+'개':'갱신 표시 없음')+'</div><div class="lead">'+(renew?'이름에 「갱신」 이 붙은 담보는 갱신 때 보험료가 다시 계산됩니다':'제안서 담보 이름에 <b>[갱신]</b> 이 붙은 줄이 없습니다')+'</div></div></div></div>'+
+        say(B.years+'년만 내시면&nbsp;<em>'+(A0+B.years)+'세에 납입이 끝나고</em>, 보장은&nbsp;<em>'+(ek[ek.length-1]===999?'종신까지':ek[ek.length-1]+'세까지')+'</em>&nbsp;이어집니다.'),'계약 모양');}}
+  /* 3 보험금 모양 */
+  var sh={},shO=[];rows.forEach(function(r){var s=baExShOf(r.nm);if(!sh[s.id]){sh[s.id]={s:s,rows:[]};shO.push(s.id);}sh[s.id].rows.push(r);});
+  shO.sort(function(a,b){return BA_EX_SH.indexOf(sh[a].s)-BA_EX_SH.indexOf(sh[b].s);});var shL=shO.filter(function(id){return id!=='wv';}).slice(0,6);
+  if(shL.length){var sc=Math.min(shL.length,shL.length>4?3:4);
+    sl(head('보험금은 이런 모양으로 나옵니다','「한 번 크게」 와 「치료할 때마다」 는 다른 돈입니다 — 담보 이름에 적힌 말로 나눴습니다')+
+      '<div class="body"><div class="g" style="grid-template-columns:repeat('+sc+',minmax(0,1fr));height:100%;'+(shL.length>sc?'grid-auto-rows:1fr;':'')+'">'+shL.map(function(id){var G=sh[id],L=top(G.rows,shL.length>sc?3:7);
+        return '<div class="card" style="overflow:hidden"><h4>'+G.s.t+'</h4><p class="lead">'+G.s.d+'</p>'+L.map(function(r){return '<div class="row"><span>'+E(r.nm)+'</span><b class="num">'+baExAmt(r.man)+'</b></div>';}).join('')+(G.rows.length>L.length?'<div class="lead" style="margin-top:4px">외 '+(G.rows.length-L.length)+'개</div>':'')+'</div>';}).join('')+'</div></div>'+
+      say(shL.map(function(id){return '<em>'+sh[id].s.t.replace(/^\S+\s/,'')+'</em>';}).slice(0,3).join(', ')+'&nbsp;— 담보마다 나오는 모양이 다릅니다.'),'보험금 모양');}
+  /* 4… 묶음마다 한 장 — 담보 줄 + 담보사전 풀이(글 그대로) */
+  order.forEach(function(id){if(id==='wv')return;var K=baExBk(id),G=bk[id],L=top(G.rows,14),fs=L.length>9?13:14.5;
+    var ds=[],dseen={};top(G.rows,40).forEach(function(r){var R=ppRule(r.nm),D=ppDict(R.d);if(D&&!dseen[D.id]&&ds.length<3){dseen[D.id]=1;ds.push(D);}});
+    sl(head(K.ic+' '+E(K.t),'담보 '+G.rows.length+'개'+(hasPrem?' · 보험료 '+baExWonR(G.prem)+' ('+baExPct(G.prem,tot)+')':'')+' — 금액은 제안서, 풀이는 담보사전')+
+      '<div class="body"><div class="g" style="grid-template-columns:'+(ds.length?'1.15fr 1fr':'1fr')+';height:100%">'+
+      '<div class="card" style="overflow:hidden"><table class="t" style="font-size:'+fs+'px"><thead><tr><th>담보</th><th class="r">가입금액</th><th class="r">납입 · 보장</th></tr></thead><tbody>'+
+        L.map(function(r){return '<tr><td>'+E(r.nm)+'</td><td class="r num"><b>'+baExAmt(r.man)+'</b></td><td class="r" style="color:var(--gy3);font-size:12.5px">'+E(per(r))+'</td></tr>';}).join('')+'</tbody></table>'+
+        (G.rows.length>L.length?'<div class="lead" style="margin-top:6px">외 '+(G.rows.length-L.length)+'개 — 마지막 「담보 전체」 장에 있습니다</div>':'')+'</div>'+
+      (ds.length?'<div class="g" style="align-content:start;overflow:hidden">'+ds.map(function(D){return '<div class="card"><h4>📚 '+E(D.n)+'</h4><p class="lead" style="margin:0"><b>이런 거예요</b> · '+E(D.w)+'</p>'+(D.h?'<p class="lead" style="margin:4px 0 0"><b>이렇게 나와요</b> · '+E(D.h)+'</p>':'')+(D.c&&ds.length<3?'<p class="lead" style="margin:4px 0 0"><b>꼭 볼 것</b> · '+E(D.c)+'</p>':'')+'</div>';}).join('')+'</div>':'')+
+      '</div></div>'+say('<em>'+E(K.t)+'</em>&nbsp;쪽에서 가장 큰 것은&nbsp;<em>'+E(L[0].nm)+' '+baExAmt(L[0].man)+'</em>입니다.'),K.t);});
+  /* 납입면제 */
+  var wvR=bk.wv?bk.wv.rows:[];
+  if(wvR.length||B.wv.length){var D=ppDict('waiver');
+    sl(head('🛟 큰 일이 생기면 남은 보험료 면제','제안서에 적힌 납입면제 — 조건이 되면 다음 회차부터')+
+      '<div class="body">'+(B.wv.length?'<div class="g" style="grid-template-columns:repeat(4,minmax(0,1fr))">'+B.wv.map(function(x,i){return '<div class="card" style="padding:12px 14px;font-size:15px;font-weight:700"><span style="color:var(--gd)">'+(i+1)+'.</span> '+E(x)+'</div>';}).join('')+'</div>':'')+
+      '<div class="g" style="grid-template-columns:1fr 1fr;margin-top:14px">'+(D?'<div class="note">📚 <b>'+E(D.n)+'</b> — '+E(D.w)+' '+E(D.c||'')+'</div>':'')+
+      '<div class="note">'+(wvR.length?wvR.map(function(r){return '<b>'+E(r.nm)+'</b> '+baExAmt(r.man);}).join(' · ')+'<br>':'')+'면제 범위와 예외는 <b>약관</b>에, 실제 면제 여부는 <b>회사 심사</b>에 따릅니다</div></div></div>'+
+      say(B.wv.length?('이 '+B.wv.length+'가지 중&nbsp;<em>하나라도 생기면</em>, 그다음 회차부터&nbsp;<em>남은 보험료 납입이 면제</em>됩니다.'):'제안서에&nbsp;<em>납입면제</em>&nbsp;담보가 들어 있습니다 — 어떤 일이 면제 조건인지는 약관으로 확인합니다.'),'납입면제');}
+  /* 해약환급금 — 읽은 줄만 */
+  var RF=B.refund.slice().sort(function(a,b){return (a.age-b.age)||((a.mon||0)-(b.mon||0))||(a.paidWon-b.paidWon);});
+  if(RF.length>=3){var mxP=0,peak=RF[0],first=null,payEnd=(B.age!==null&&B.years)?B.age+B.years:null,zeroPay=payEnd!==null;
+    RF.forEach(function(r){if(r.paidWon>mxP)mxP=r.paidWon;if(r.refWon>peak.refWon)peak=r;if(first===null&&r.refWon>0)first=r;if(payEnd!==null&&r.age<payEnd&&r.refWon>0)zeroPay=false;});
+    var a0=RF[0].age,a1=RF[RF.length-1].age,XL=70,XR=780,TT=20,BB=290,xa=function(a){return a1>a0?XL+(a-a0)/(a1-a0)*(XR-XL):XL;},ya=function(v){return BB-v/(mxP*1.08)*(BB-TT);},s2='',pl='',rl='';
+    [0,.25,.5,.75,1].forEach(function(f){var v=mxP*f;s2+='<line x1="'+XL+'" y1="'+ya(v).toFixed(1)+'" x2="'+XR+'" y2="'+ya(v).toFixed(1)+'" stroke="#F0F2F4"/><text x="'+(XL-8)+'" y="'+(ya(v)+4).toFixed(1)+'" text-anchor="end" font-size="12" fill="#6B7684">'+Math.round(v/10000).toLocaleString()+'만</text>';});
+    if(zeroPay&&payEnd>a0)s2+='<rect x="'+xa(a0)+'" y="'+TT+'" width="'+(xa(Math.min(payEnd,a1))-xa(a0)).toFixed(1)+'" height="'+(BB-TT)+'" fill="#FEF2F2" opacity=".8"/><text x="'+((xa(a0)+xa(Math.min(payEnd,a1)))/2).toFixed(1)+'" y="'+(TT+18)+'" text-anchor="middle" font-size="13" font-weight="800" fill="#DC2626">납입 중 해지 — 0원</text>';
+    RF.forEach(function(r,i){pl+=(i?'L':'M')+xa(r.age).toFixed(1)+' '+ya(r.paidWon).toFixed(1)+' ';rl+=(i?'L':'M')+xa(r.age).toFixed(1)+' '+ya(r.refWon).toFixed(1)+' ';});
+    s2+='<path d="'+pl+'" fill="none" stroke="#8B95A1" stroke-width="3"/><path d="'+rl+'" fill="none" stroke="#2A5BD7" stroke-width="3.5"/>';
+    RF.forEach(function(r){s2+='<circle cx="'+xa(r.age).toFixed(1)+'" cy="'+ya(r.refWon).toFixed(1)+'" r="4" fill="#2A5BD7"/>';});
+    var tk={};RF.forEach(function(r){if(tk[r.age])return;tk[r.age]=1;});var tks=Object.keys(tk).map(Number),step=Math.ceil(tks.length/8);
+    tks.forEach(function(a,i){if(i%step&&i!==tks.length-1)return;s2+='<text x="'+xa(a).toFixed(1)+'" y="'+(BB+20)+'" text-anchor="middle" font-size="12.5" fill="#4E5968">'+a+'세</text>';});
+    var last=RF[RF.length-1];
+    function cd(c,t,v,sub){return '<div class="card" style="border-left:4px solid '+c+'"><div style="font-size:13px;color:var(--gy)">'+t+'</div><div class="big num" style="color:'+c+'">'+v+'<small>'+sub+'</small></div></div>';}
+    sl(head('중간에 해지하면'+(B.keys.nonref?' — 「해약환급금 미지급형」':''),'제안서 해약환급금 예시표에서 읽은 줄만 그렸습니다 — 사이는 메우지 않았습니다')+
+      '<div class="body"><div class="g" style="grid-template-columns:1fr 300px;height:100%"><div class="card" style="padding:12px 14px"><svg viewBox="0 0 800 320" width="100%" height="320">'+s2+'</svg>'+
+      '<div style="font-size:12px;color:var(--gy3)">회색 = 낸 보험료 누적 · 파랑 = 그때 해지하면 받는 돈 · 읽은 줄 '+RF.length+'개 (제안서 예시표 기준 · 할인 반영 여부는 제안서 주석 참고)</div></div>'+
+      '<div class="g" style="align-content:start">'+(zeroPay?cd('var(--rd)','납입하는 '+B.years+'년 안에 해지','0','원'):'')+
+        (first?cd('var(--bl)','처음 돈이 생기는 때 ('+first.lb+')',Math.round(first.refWon/10000).toLocaleString(),'만원 · '+first.pct+'%'):'')+
+        cd('var(--gr)','가장 많을 때 ('+peak.lb+')',Math.round(peak.refWon/10000).toLocaleString(),'만원 · '+peak.pct+'%')+
+        (last!==peak?cd('var(--gy)',last.lb,Math.round(last.refWon/10000).toLocaleString(),'만원 · '+last.pct+'%'):'')+'</div></div></div>'+
+      say(zeroPay?('납입 중에 깨면&nbsp;<strong>돌려받는 돈이 없는 대신</strong>, 같은 보장을&nbsp;<em>더 낮은 보험료</em>로 가져가는 설계 — 끝까지 가져갈 계약입니다.')
+        :('해지하면 받는 돈은 낸 돈보다 적습니다 — 가장 많을 때가&nbsp;<em>'+E(peak.lb)+' '+peak.pct+'%</em>입니다.')),'해지하면');}
+  /* 꼭 알아두실 것 — 제안서 글에 그 말이 있을 때만 */
+  var K2=B.keys,nt=[];
+  if(K2.d90)nt.push(['⏳ 암은 90일 뒤부터','암 보장은 가입 후 <b>90일이 지난 뒤</b>부터 시작합니다(암보장개시일 — 제안서 · 약관 참고)']);
+  if(K2.once)nt.push(['1️⃣ 처음 한 번','「<b>최초 1회</b>」 가 붙은 담보는 한 번 받으면 그 담보는 끝납니다']);
+  if(K2.half)nt.push(['🌓 1년 안에는 절반','제안서에 「<b>1년 미만 50%</b>」 가 적힌 담보가 있습니다 — 가입 1년 안에는 일부만 나올 수 있습니다']);
+  if(K2.kw)nt.push(['🏥 병원 등급을 봅니다','「<b>종합병원</b>」 · 「<b>상급종합병원</b>」 이 붙은 담보는 그 병원에서 치료했을 때입니다']);
+  if(K2.bike||K2.job)nt.push(['🛵 직업 · 이륜차는 알리기','직업이 바뀌거나'+(K2.bike?' 이륜차를 타게 되면':' 직무가 바뀌면')+' <b>회사에 알려야</b> 합니다 — 안 알리면 보험금이 줄거나 거절될 수 있습니다']);
+  if(K2.prepay)nt.push(['💵 선지급','제안서에 <b>선지급</b> 제도가 적혀 있습니다 — 치료 전에 일부를 먼저 청구하는 방법(조건은 제안서)']);
+  if(K2.nodisc||K2.longdisc)nt.push(['💸 할인 제도',(K2.nodisc?'<b>무사고 할인</b>':'')+(K2.nodisc&&K2.longdisc?' · ':'')+(K2.longdisc?'<b>장기유지 할인</b>':'')+'이 적혀 있습니다 — 조건과 할인율은 제안서 해당 쪽']);
+  nt.push(['📖 범위는 약관이 정합니다','이 자료는 제안서 요약입니다. 병의 범위와 보장 내용은 <b>약관</b>을, 보험료 · 지급은 <b>심사 결과</b>를 따릅니다']);
+  nt=nt.slice(0,6);
+  sl(head('📌 꼭 알아두실 것','제안서에 적힌 조건 중 — 「안 나온다」 는 말이 나오는 자리')+
+    '<div class="body"><div class="g" style="grid-template-columns:repeat(3,minmax(0,1fr));height:100%;grid-auto-rows:1fr">'+nt.map(function(x){return '<div class="card"><h4 style="font-size:19px">'+x[0]+'</h4><p class="lead" style="font-size:16.5px;line-height:1.65">'+x[1]+'</p></div>';}).join('')+'</div></div>'+
+    say(nt.length>1?('특히&nbsp;<em>'+nt[0][0].replace(/^\S+\s/,'')+'</em>'+(nt.length>2?'과&nbsp;<em>'+nt[1][0].replace(/^\S+\s/,'')+'</em>':'')+'&nbsp;— 꼭 기억해 두세요.'):'범위는&nbsp;<em>약관</em>, 지급은&nbsp;<em>심사 결과</em>를 따릅니다.'),'알아둘 것');
+  /* 담보 전체 — 14줄씩 */
+  for(var p0=0;p0<rows.length;p0+=14){var pr=rows.slice(p0,p0+14),pg=Math.floor(p0/14)+1,pn=Math.ceil(rows.length/14);
+    sl(head('담보 전체'+(pn>1?' ('+pg+'/'+pn+')':''),'제안서 담보 표를 그대로 — 숫자를 원본과 맞춰 보실 때')+
+      '<div class="body"><table class="t"><thead><tr><th>담보</th><th>묶음</th><th class="r">가입금액</th>'+(hasPrem?'<th class="r">보험료</th>':'')+'<th class="r">납입/만기</th></tr></thead><tbody>'+
+      pr.map(function(r){return '<tr><td>'+E(r.nm)+'</td><td style="color:var(--gy3);font-size:12.5px">'+E(baExBk(r.b).t)+'</td><td class="r num"><b>'+baExAmt(r.man)+'</b></td>'+(hasPrem?'<td class="r num">'+baExWonR(r.premWon)+'</td>':'')+'<td class="r" style="color:var(--gy3)">'+E(r.per||'—')+'</td></tr>';}).join('')+
+      (p0+14>=rows.length&&hasPrem?'<tr><td colspan="3" style="font-weight:800">합계 '+(C.ok===true?'<span class="tag">제안서 보험료와 같음 ✓</span>':'')+'</td><td class="r num"><b>'+baExWonR(baExSum(B))+'</b></td><td></td></tr>':'')+
+      '</tbody></table></div>'+say('제안서 표를 그대로 옮겼습니다 —&nbsp;<em>담보 '+rows.length+'개</em>'+(hasPrem?', 보험료 합계&nbsp;<em>'+baExWonR(baExSum(B))+'</em>':'')+'.'),'담보 전체');}
+  /* 이 제안서에 없는 것 */
+  var nmAll=rows.map(function(r){return r.nm.replace(/\s+/g,'');}),hasN=function(re){return nmAll.some(function(n){return re.test(n);});};
+  var CHK=[['실손의료비',/실손|의료비/],['질병 수술비',/질병.{0,10}수술/],['입원일당',/입원일당|입원비|입원급여/],['뇌 · 심장 수술 · 치료비',/(뇌|심장|심혈관|순환계|허혈).{0,14}(수술|치료)/],
+    ['간병 · 간호',/간병|간호/],['치매 · 장기요양',/치매|장기요양/],['질병 사망',/질병사망|일반사망/],['골절',/골절/],['운전자(벌금 · 합의금)',/운전|벌금|교통사고처리/],['일상생활배상책임',/배상/]];
+  var miss=CHK.filter(function(c){return !hasN(c[1]);}).map(function(c){return c[0];});
+  sl(head('이 제안서에 없는 것','이 제안서 한 장만 본 것입니다 — 다른 보험에 이미 있다면 괜찮습니다')+
+    '<div class="body"><div class="g mis" style="grid-template-columns:1fr 1fr"><div class="card"><h4>✅ 이 제안서에 있는 것</h4><div class="chips">'+order.map(function(id){var K=baExBk(id);return '<span>'+K.ic+' '+E(K.t)+' '+bk[id].rows.length+'</span>';}).join('')+'</div></div>'+
+    '<div class="card"><h4>⬜ 이 제안서에는 없는 것</h4>'+(miss.length?'<div class="chips miss">'+miss.map(function(m){return '<span>'+E(m)+'</span>';}).join('')+'</div>':'<p class="lead">자주 보는 열 가지가 모두 들어 있습니다</p>')+
+      '<p class="lead" style="margin-top:10px">없다고 나쁜 설계가 아닙니다 — <b>다른 계약에서 채워져 있는지</b> 확인할 자리입니다</p></div></div>'+
+    '<div class="card" style="margin-top:14px;background:var(--bl2);border-color:#C9DAFB;display:flex;align-items:center;gap:18px"><div style="font-size:38px">🔍</div><div><div style="font-size:18px;font-weight:800">다음 순서 — 지금 가진 보험과 겹쳐 보기 (보장 전·후)</div><div style="font-size:14px;color:var(--gy);margin-top:3px">가입하신 보험을 함께 넣으면, 겹치는 자리와 비는 자리가 한 장에 나옵니다</div></div></div></div>'+
+    say(miss.length?('이 설계는&nbsp;<em>'+E(baExBk(byPrem[0]).t)+'</em>'+(byPrem[1]?' · <em>'+E(baExBk(byPrem[1]).t)+'</em>':'')+'에 집중했습니다.&nbsp;<em>'+E(miss.slice(0,3).join(' · '))+'</em>은 지금 가진 보험에서 확인하겠습니다.')
+      :'자주 보는 보장이 고루 들어 있습니다 — 지금 가진 보험과&nbsp;<em>겹치는 곳</em>이 없는지 보겠습니다.'),'없는 것');
+  /* 정리 */
+  var t1=tot>0?('월 '+baExWonR(tot)):('담보 '+rows.length+'개'),t1s=payTxt||'제안서 기준',t2=hasPrem?('보험료 '+baExPct(bk[byPrem[0]].prem,tot)+'는 '+baExBk(byPrem[0]).t):(baExBk(byPrem[0]).t+' 중심'),
+    t2s=keyR.length?(E(keyR[0].nm)+' '+baExAmt(keyR[0].man)):'',z=RF.length>=3&&B.age!==null&&B.years&&RF.every(function(r){return r.age>=B.age+B.years||r.refWon===0;});
+  sl('<div class="frame"></div><div class="cv-l" style="width:1110px;top:100px"><div class="ey" style="margin-top:0">정 리 — 세 줄</div><h1 style="font-size:44px">이 제안서를 한 문장으로 하면<span>「'+E(t1)+(B.years?', '+B.years+'년 내고 ':' ')+'큰 일에 대비한다」</span></h1>'+
+    '<div class="g" style="grid-template-columns:repeat(3,1fr);margin-top:40px;gap:20px"><div class="ek"><i>01 · 계약</i><b class="num">'+E(t1)+'</b><p>'+E(t1s)+'</p></div><div class="ek"><i>02 · 중심</i><b>'+E(t2)+'</b><p>'+t2s+'</p></div>'+
+    '<div class="ek"><i>03 · 약속</i><b>'+(z?'끝까지 가져갈 계약':'담보 '+rows.length+'개')+'</b><p>'+(z?'납입 중 해지하면 0원<br>그 대신 낮은 보험료':order.length+'묶음으로 나눠 지킵니다')+'</p></div></div></div>'+
+    '<div class="cv-f">'+(B.co?E(B.co)+' ':'')+'「'+E(B.nm||'상품')+'」 제안서를 옮겨 정리했습니다. 병의 범위와 보장 내용은 약관을, 보험료와 보험금 지급은 심사 결과를 따릅니다.</div>','정리',true);
+  var nav='var SL=[].slice.call(document.querySelectorAll(".sl")),cur=0,d=document.getElementById("dots");SL.forEach(function(){d.appendChild(document.createElement("i"));});'+
+    'function show(i){cur=Math.max(0,Math.min(SL.length-1,i));SL.forEach(function(s,k){s.classList.toggle("on",k===cur);});[].forEach.call(d.children,function(e,k){e.classList.toggle("on",k===cur);});document.getElementById("cnt").textContent=(cur+1)+" / "+SL.length;}'+
+    'function mv(x){show(cur+x);}function fit(){var k=Math.min(window.innerWidth/1300,(window.innerHeight-66)/735);document.documentElement.style.setProperty("--k",Math.min(k,1.4));}'+
+    'document.addEventListener("keydown",function(e){if(e.key==="ArrowRight"||e.key===" "||e.key==="PageDown"){mv(1);e.preventDefault();}if(e.key==="ArrowLeft"||e.key==="PageUp"){mv(-1);e.preventDefault();}});'+
+    'var x0=null;document.addEventListener("touchstart",function(e){x0=e.touches[0].clientX;},{passive:true});document.addEventListener("touchend",function(e){if(x0===null)return;var dx=e.changedTouches[0].clientX-x0;if(Math.abs(dx)>50)mv(dx<0?1:-1);x0=null;});'+
+    'window.addEventListener("resize",fit);fit();show(0);';
+  return '<!doctype html><html lang="ko" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light">'+
+    '<title>보장 설명서 — '+E(B.nm||'제안서')+'</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"><style>'+BA_EX_CSS+'</style></head><body>'+
+    '<div id="wrap">'+slides.join('')+'</div><div id="bar"><button onclick="mv(-1)" aria-label="앞 장">◀</button><div id="dots"></div><span id="cnt"></span><button onclick="mv(1)" aria-label="다음 장">▶</button></div>'+
+    '<script>'+nav+'<\/script></body></html>';}
 function kbRead(file){
   if(!file)return;
   kbSet('<div class="note i">📄 <b>'+esc(file.name)+'</b> 을(를) 읽는 중…</div>');
