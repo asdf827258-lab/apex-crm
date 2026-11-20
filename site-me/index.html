@@ -220,6 +220,34 @@ body.shrine-on .shr-lamp{animation:shrFlame 2.6s ease-in-out infinite;transform-
   font-size:13px;font-weight:800;letter-spacing:-.04em}
 .hitlist .tx{font-size:17px;line-height:1.62;color:#F3E7CF;font-weight:700;word-break:keep-all}
 .hitlist .why{font-size:13px;line-height:1.5;color:#8A7A61;word-break:keep-all}
+/* ── 🧿 문간 — 점집에 들어서는 자리 (판 X514) ────────────────────
+   사장님 말씀 2026-11-20 「검색하는 장 부터 … 점집에 들어가는것처럼
+   짜줘 내 이미지로, 무당을 만들고」.
+   그림은 바깥에서 안 받아 옵니다 — 직접 그린 SVG 입니다 (9번).      */
+.mdg-gate{position:relative;overflow:hidden;padding:0 0 26px!important;text-align:center;
+  background:radial-gradient(130% 92% at 50% 0%,#2A1512 0%,#140C0A 62%)!important;
+  border:1px solid #4A201A!important}
+/* 단청 띠 — 색만으로 그립니다(그림 파일 없음) */
+.mdg-dan{height:9px;background:repeating-linear-gradient(90deg,
+  #8C1F17 0 14px,#1E5A52 14px 28px,#E8DCC4 28px 36px,#1A4A86 36px 50px,#C9A227 50px 58px)}
+.mdg-wrap{margin:16px auto 2px;line-height:0}
+.mdg{display:inline-block}
+@keyframes mdgFl{0%,100%{transform:translateY(0) scaleY(1);opacity:1}
+  45%{transform:translateY(-1px) scaleY(1.12);opacity:.88}}
+.mdg-fl{transform-origin:100px 171px;animation:mdgFl 2.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.mdg-fl{animation:none}}
+.mdg-nm{display:inline-block;margin:2px auto 0;padding:5px 16px;border-radius:999px;
+  background:#241408;border:1px solid #6B4A14;color:#E8C877;
+  font-size:14px;font-weight:800;letter-spacing:.02em}
+.mdg-h{margin:14px 0 8px!important;font-size:30px;letter-spacing:-.02em;
+  font-family:'AppleMyungjo','Nanum Myeongjo','Noto Serif KR',Batang,serif}
+.mdg-p{margin:0 20px!important;color:#B9A684;font-size:15px;line-height:1.75;word-break:keep-all}
+.mdg-p b{color:#E8DCC4}
+.mdg-say{margin:16px 20px 0;padding:13px 16px;border-radius:14px;text-align:left;
+  background:#1A100D;border-left:3px solid #8C1F17;color:#E8DCC4;
+  font-size:14.5px;line-height:1.75;word-break:keep-all;
+  font-family:'AppleMyungjo','Nanum Myeongjo','Noto Serif KR',Batang,serif}
+.mdg-say b{color:#F6E2A8}
 .mefit-r{display:grid;grid-template-columns:1fr 92px 58px;grid-template-rows:auto auto;
   column-gap:10px;row-gap:3px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line-l)}
 .mefit-r:last-child{border-bottom:0}
@@ -1351,13 +1379,17 @@ function viewPerson(who){
   var p=(who==='me')?S.me:S.cl, isMe=(who==='me');
   var hrs=[];for(var h=0;h<24;h++)hrs.push('<option value="'+h+'"'+(p.H===h?' selected':'')+'>'+('0'+h).slice(-2)+'시</option>');
   var mins=[];for(var mi=0;mi<60;mi+=10)mins.push('<option value="'+mi+'"'+(p.Mi===mi?' selected':'')+'>'+('0'+mi).slice(-2)+'분</option>');
-  var intro=isMe
+  /* ★ 나만 보는 판은 「고객 정보」 가 아니라 <b>문간</b>입니다
+     (사장님 말씀 2026-11-20 「검색하는 장 부터 … 점집에 들어가는것처럼」). */
+  var intro=MEONLY.on
+    ? mudangGate()
+    : isMe
     ? '<div class="card"><h1>먼저 <b style="color:#3182F6">내 카드</b>를 만듭니다</h1>'+
       '<p>궁합과 상담 전략은 <b>나와 고객을 비교</b>해서 나옵니다. 그래서 내 생년월일·시간·성향이 먼저 필요합니다. 한 번만 넣으면 이 기기에 저장됩니다.</p></div>'
     : '<div class="card"><h1>'+(GUEST.on?'내 정보':'고객 정보')+'</h1><p>'+
       (GUEST.on?'태어나신 날과 <b>시간</b>을 넣어 주시면 네 기둥이 자동으로 세워집니다. 시간을 모르시면 시주만 빼고 봅니다.'
                :'생년월일과 <b>태어난 시간</b>을 넣으면 사주 네 기둥이 자동으로 계산됩니다. 시간을 모르면 시주만 빼고 봅니다.')+'</p>' +
-      (GUEST.on?'':
+      ((GUEST.on||MEONLY.on)?'':
       '<div class="hr"></div><label>무엇으로 볼까요</label>' +
       '<div class="seg">' + MODES.map(function (m) {
         return '<button class="' + (S.mode === m.k ? 'on' : '') + '" onclick="setMode(\'' + m.k + '\')">' + m.emo + ' ' + m.n + '</button>';
@@ -1370,14 +1402,14 @@ function viewPerson(who){
     (p.res?'<div class="note ok" style="margin-top:11px">48문항 검사 결과 <b>'+p.res.code+'</b>'+(p.res.consistency!==null?' · 응답 일관성 '+p.res.consistency+'%':'')+' 를 쓰고 있습니다.</div>':'')+
     '<button class="btn line sm" style="margin-top:11px" onclick="startTest(\''+who+'\')">📝 48문항 검사하기'+(p.res?' (다시)':'')+'</button></div>';
   return intro+
-  '<div class="card"><h2><span class="n">기본</span>'+(isMe?'나':'고객')+'</h2>'+
+  '<div class="card"><h2><span class="n">'+(MEONLY.on?'패':'기본')+'</span>'+(MEONLY.on?'선생님':(isMe?'나':'고객'))+'</h2>'+
     '<div style="margin-top:11px"><label>이름</label><input class="inp" id="pName" value="'+esc(p.name)+'" placeholder="'+(isMe?'예: 윤시현':'예: 김하나')+'" maxlength="20"/></div>'+
-    (isMe?'':'<div style="margin-top:11px"><label>이분은 누구신가요</label><div class="seg">'+
+    ((isMe||MEONLY.on)?'':'<div style="margin-top:11px"><label>이분은 누구신가요</label><div class="seg">'+
       ROLES.map(function(r){return '<button class="'+((p.rel||'client')===r.k?'on':'')+'" onclick="setRel(\''+r.k+'\')">'+r.emo+' '+r.n+'</button>';}).join('')+
       '</div><div class="sub" style="margin-top:6px">고객이 아니어도 됩니다 — 리더·상사·팀원·동료와의 관계도 같은 방식으로 봅니다.</div></div>')+
-    '<div style="margin-top:11px"><label>혈액형 (선택)</label><div class="seg">'+
+    (MEONLY.on?'':'<div style="margin-top:11px"><label>혈액형 (선택)</label><div class="seg">'+
       ['A','B','O','AB'].map(function(x){return '<button class="'+(p.blood===x?'on':'')+'" onclick="setBlood(\''+who+'\',\''+x+'\')">'+x+'형</button>';}).join('')+
-      '<button onclick="setBlood(\''+who+'\',\'\')">모름</button></div></div>'+
+      '<button onclick="setBlood(\''+who+'\',\'\')">모름</button></div></div>')+
     '<div style="margin-top:11px"><label>성별</label><div class="seg">'+
       '<button class="'+(p.gender==='M'?'on':'')+'" onclick="setG(\''+who+'\',\'M\')">남</button>'+
       '<button class="'+(p.gender==='F'?'on':'')+'" onclick="setG(\''+who+'\',\'F\')">여</button></div></div>'+
@@ -2122,6 +2154,92 @@ function shrTurn(du,age){
         이 앱이 할 일이 아닙니다. 어디가 수월하고 어디가 품이 드는지까지입니다.
    MEONLY.on 이면 이 넷만 섭니다.                                      */
 var MEONLY={on:true};
+/* ══ 🧿 무당 — 직접 그립니다 (9번) ═══════════════════════════════════
+   사장님 말씀 2026-11-20 「검색하는 장 부터 디자인을 점집에 들어가는것처럼
+   짜줘 내 이미지로, 무당을 만들고」.
+
+   ⚠ 사진을 쓰지 않습니다 — 저장소 규칙 9번(남의 자료 삽화를 복제하지 않는다 ·
+     직접 SVG 로 그린다)이고, 사진은 인쇄에서 뭉개지고 화면 크기마다 달라집니다.
+     SVG 는 어디서나 같은 선으로 섭니다. 사장님 사진을 쓰고 싶으시면 그때
+     이 자리에 넣으면 됩니다 — 자리는 하나입니다(mudangSvg).
+   ★ 얼굴은 눈을 감긴 채로 둡니다. 웃는 얼굴을 그리면 캐리커처가 되고,
+     점집의 무게가 사라집니다. 부채와 방울은 실제 무구(巫具)입니다.      */
+function mudangSvg(h){
+  h=h||190;
+  return '<svg class="mdg" viewBox="0 0 200 212" width="'+h+'" height="'+Math.round(h*1.06)+'" aria-hidden="true">'+
+  '<defs>'+
+    '<radialGradient id="mdHalo" cx="50%" cy="44%" r="54%">'+
+      '<stop offset="0%" stop-color="#C9A227" stop-opacity=".32"/>'+
+      '<stop offset="60%" stop-color="#8C1F17" stop-opacity=".17"/>'+
+      '<stop offset="100%" stop-color="#8C1F17" stop-opacity="0"/></radialGradient>'+
+    '<linearGradient id="mdRobe" x1="0" y1="0" x2="0" y2="1">'+
+      '<stop offset="0%" stop-color="#321914"/><stop offset="100%" stop-color="#150D0A"/></linearGradient>'+
+  '</defs>'+
+  /* 달·징 */
+  '<circle cx="100" cy="90" r="76" fill="url(#mdHalo)"/>'+
+  '<circle cx="100" cy="90" r="60" fill="none" stroke="#6B4A14" stroke-width="1.1" opacity=".5"/>'+
+  /* 소매 — 먼저 그려 두루마기 뒤에 둡니다 */
+  '<path d="M78 108 C58 112 48 124 44 140 C50 146 60 148 68 144 C70 130 74 118 80 112 Z" '+
+    'fill="#241310" stroke="#6B2A22" stroke-width="1.3"/>'+
+  '<path d="M122 108 C142 112 152 124 156 140 C150 146 140 148 132 144 C130 130 126 118 120 112 Z" '+
+    'fill="#241310" stroke="#6B2A22" stroke-width="1.3"/>'+
+  /* 두루마기 — 어깨에서 무릎으로, 자락이 살짝 퍼집니다 */
+  '<path d="M100 98 C86 99 78 104 74 112 C66 130 62 146 60 162 '+
+            'C72 167 88 169 100 169 C112 169 128 167 140 162 '+
+            'C138 146 134 130 126 112 C122 104 114 99 100 98 Z" '+
+    'fill="url(#mdRobe)" stroke="#7A3228" stroke-width="1.7"/>'+
+  /* 섶 — 가운데 여민 선 */
+  '<path d="M100 104 C97 124 97 146 99 168" stroke="#6B2A22" stroke-width="1.2" fill="none" opacity=".8"/>'+
+  /* 동정(흰 깃) */
+  '<path d="M93 99 L86 108 L95 131 L100 124 Z" fill="#E8DCC4" stroke="#B9A684" stroke-width=".8"/>'+
+  '<path d="M107 99 L114 108 L105 131 L100 124 Z" fill="#E8DCC4" stroke="#B9A684" stroke-width=".8"/>'+
+  /* 띠 */
+  '<path d="M72 136 C86 140 114 140 128 136" stroke="#8C1F17" stroke-width="5.4" '+
+    'stroke-linecap="round" fill="none"/>'+
+  /* 목 */
+  '<path d="M93 84 L107 84 L107 99 L93 99 Z" fill="#2A1512"/>'+
+  /* 얼굴 */
+  '<ellipse cx="100" cy="70" rx="19.5" ry="22.5" fill="#2A1512" stroke="#6B4A14" stroke-width="1.4"/>'+
+  '<path d="M90.5 68.5 q4.2 3.2 8.4 0 M101.1 68.5 q4.2 3.2 8.4 0" '+
+    'stroke="#E8DCC4" stroke-width="1.7" fill="none" stroke-linecap="round"/>'+
+  '<path d="M96 80 q4 2.4 8 0" stroke="#B9A684" stroke-width="1.3" fill="none" stroke-linecap="round"/>'+
+  /* 고깔 — 머리에 얹힙니다 */
+  '<path d="M100 14 L79 52 Q100 58 121 52 Z" fill="#E8DCC4" stroke="#B9A684" stroke-width="1.2"/>'+
+  '<path d="M79 52 Q100 58 121 52" stroke="#8C1F17" stroke-width="3.6" fill="none" stroke-linecap="round"/>'+
+  /* 부채 — 오른손이 듭니다 */
+  '<g transform="translate(150 134) rotate(16)">'+
+    '<path d="M0 0 L-28 -32 A44 44 0 0 1 12 -40 Z" fill="#1E100D" stroke="#C9A227" stroke-width="1.3"/>'+
+    '<path d="M0 0 L-21 -29 M0 0 L-12 -35 M0 0 L-2 -38" stroke="#C9A227" stroke-width=".85" opacity=".7"/>'+
+    '<circle cx="-8" cy="-20" r="4.8" fill="#8C1F17" stroke="#C9A227" stroke-width=".9"/>'+
+    '<circle cx="0" cy="0" r="2.6" fill="#C9A227"/>'+
+  '</g>'+
+  /* 방울대 — 왼손 */
+  '<g transform="translate(48 132)">'+
+    '<path d="M0 2 L0 -16" stroke="#C9A227" stroke-width="2.4" stroke-linecap="round"/>'+
+    '<path d="M-13 -16 Q0 -24 13 -16" stroke="#C9A227" stroke-width="1.8" fill="none"/>'+
+    '<path d="M-13 -16 q-1 10 6 13 q7 -3 6 -13 Z" fill="#241408" stroke="#C9A227" stroke-width="1.2"/>'+
+    '<path d="M1 -16 q-1 10 6 13 q7 -3 6 -13 Z"   fill="#241408" stroke="#C9A227" stroke-width="1.2"/>'+
+    '<path d="M-6 -22 q-1 9 6 12 q7 -3 6 -12 Z"   fill="#2E1A0A" stroke="#C9A227" stroke-width="1.2"/>'+
+    '<circle cx="-7" cy="-2" r="1.5" fill="#C9A227"/><circle cx="7" cy="-2" r="1.5" fill="#C9A227"/>'+
+  '</g>'+
+  /* 상(床)과 촛불 — 앞에 놓입니다 */
+  '<rect x="78" y="184" width="44" height="5" rx="2.5" fill="#2A1512" stroke="#7A3228" stroke-width="1"/>'+
+  '<rect x="96" y="171" width="8" height="13" rx="2.5" fill="#E8DCC4"/>'+
+  '<path d="M100 162 q4.6 5.4 0 8.8 q-4.6 -3.4 0 -8.8 Z" fill="#D7A93E" class="mdg-fl"/>'+
+  '</svg>';
+}
+/* 문간 — 「들어오시지요」. 나만 보는 판의 첫 화면 머리에 섭니다. */
+function mudangGate(){
+  return '<div class="card mdg-gate">'+
+    '<div class="mdg-dan"></div>'+
+    '<div class="mdg-wrap">'+mudangSvg(200)+'</div>'+
+    '<div class="mdg-nm">'+shrineWho()+'</div>'+
+    '<h1 class="mdg-h">들어오시지요</h1>'+
+    '<p class="mdg-p">오늘은 손님을 보는 자리가 아닙니다.<br>'+
+    '<b>선생님 패</b>를 봅니다 — 이 일과 어떻게 맞는지, 어떻게 풀어 가면 되는지.</p>'+
+    '<div class="mdg-say">태어나신 <b>날</b>과 <b>시</b>만 일러 주십시오. 시를 모르시면 세 기둥으로 봅니다.</div>'+
+    '</div>';
+}
 
 /* 보험이라는 일이 요구하는 다섯 — 무엇으로 재는지를 같이 적습니다 */
 var INS_AX=[
