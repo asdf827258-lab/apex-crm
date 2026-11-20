@@ -92,7 +92,7 @@ is(B.g.HOME_V2.on() === false, '처음 기기에서는 꺼져 있다');
 is(B.g.HOME_V2.apply(dyn(B)) === false && !B.pane.classList.has('hm-v2') && !B.els.hv2, '꺼져 있으면 apply 가 아무것도 안 한다(옛 홈 그대로)');
 B.g.HOME_V2.paint();
 is(!B.els.hv2, '꺼져 있으면 hmPaint 가 불러도 새 화면이 안 생긴다');
-is(/새 화면/.test(B.g.HOME_V2.chip()), '꺼져 있을 때 인사 줄 단추는 「✨ 새 화면」');
+is(/새 화면/.test(B.g.HOME_V2.chip()) && B.g.HOME_V2.chip().indexOf('onclick="homeV2Use(true)"') >= 0 && typeof B.g.homeV2Use === 'function', '꺼져 있을 때 인사 줄 단추는 「✨ 새 화면」');
 B = box({ apex_home_v2: '1' }, '');
 is(B.g.HOME_V2.apply(dyn(B)) === true && B.pane.classList.has('hm-v2') && !!B.els.hv2, '켠 기기에서는 판에 hm-v2 와 새 화면(#hv2)이 선다');
 is(/예전 화면/.test(B.g.HOME_V2.chip()), '켜져 있을 때 인사 줄 단추는 「↩ 예전 화면」');

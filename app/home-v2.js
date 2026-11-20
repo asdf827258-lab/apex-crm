@@ -247,15 +247,16 @@
     if (!ALLOWED) return '';
     try { chipCss(); } catch (e) {}
     return on()
-      ? '<button type="button" class="hm-v2-chip" onclick="HOME_V2.use(false)" title="예전 오늘 화면으로 돌아갑니다">↩ 예전 화면</button>'
-      : '<button type="button" class="hm-v2-chip" onclick="HOME_V2.use(true)" title="시안 디자인의 새 오늘 화면 — 언제든 예전 화면으로 돌아갈 수 있습니다">✨ 새 화면</button>';
+      ? '<button type="button" class="hm-v2-chip" onclick="homeV2Use(false)" title="예전 오늘 화면으로 돌아갑니다">↩ 예전 화면</button>'
+      : '<button type="button" class="hm-v2-chip" onclick="homeV2Use(true)" title="시안 디자인의 새 오늘 화면 — 언제든 예전 화면으로 돌아갈 수 있습니다">✨ 새 화면</button>';
   }
   function chipCss() {
     var d = g.document;
     if (d.getElementById('hmV2ChipCss')) return;
     var st = d.createElement('style'); st.id = 'hmV2ChipCss';
-    st.textContent = '.hm-v2-chip{float:right;appearance:none;border:1px solid #E5E8EB;background:#fff;border-radius:999px;padding:4px 10px;min-height:30px;' +
-      'font-family:inherit;font-size:13px;font-weight:800;color:#3182F6;cursor:pointer;letter-spacing:-.02em;margin-top:2px}';
+    /* ⚠ 옛 홈 안이라 <b>목업 색표(ui.css 토큰)만</b> 씁니다 — #3182F6 을 썼다가 「목업에 없는 색 · 대비 3.7」 로 CI 셋이 잡았습니다 */
+    st.textContent = '.hm-v2-chip{float:right;appearance:none;border:1px solid var(--t-line);background:var(--t-card);border-radius:999px;padding:4px 10px;min-height:30px;' +
+      'font-family:inherit;font-size:13px;font-weight:800;color:var(--t-ink);cursor:pointer;letter-spacing:-.02em;margin-top:2px}';
     d.head.appendChild(st);
   }
   function use(v) {
@@ -601,4 +602,6 @@
     var c = r.children[i]; if (c && c.offsetHeight) r.style.height = (c.offsetHeight + 4) + 'px';
   }
   g.HOME_V2 = API;
+  /* 옛 홈 단추가 부르는 이름 — 점(.) 없는 함수여야 check-hmclick 이 「부르는 함수가 있다」 고 읽습니다 */
+  g.homeV2Use = use;
 })(window);
