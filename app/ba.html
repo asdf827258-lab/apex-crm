@@ -2036,26 +2036,37 @@ body.presenting .show:not(.deck){border:0;box-shadow:none}
          혼자 열었을 때는 보내 주는 데가 없어 빈 채로 숨습니다.
          채우는 자리는 renderIn 한 곳입니다 (5번). -->
     <span id="baWho" class="who" style="display:none"></span>
-    <button class="tab on" id="tabEdit" onclick="go('edit')">✍ 만들기</button>
-    <button class="tab" id="tabShow" onclick="go('show')">👤 고객에게 보여주기</button>
-    <button class="tab" id="tabReq" onclick="go('req')">📋 가입설계 요청서</button>
-    <!-- 위 띠에 열한 개가 늘어서 있어 <b>어느 것이 오늘 쓰는 것인지</b>
-         안 보였다. 자주 쓰는 것만 세우고 나머지는 「⋯ 더보기」 안으로. -->
+    <!-- 🧭 판 X506 — 위 띠 <b>누를 것 17개 → 네 걸음 + 저장 ▾ · 도구 ▾</b> (ba-steps.js · 옮긴 곳은 그 파일 머리에).
+         예전 탭 셋은 <b>id 째 남긴다</b> — 다른 화면 · 점검이 부른다. 눈에는 네 걸음이 대신한다. -->
+    <nav class="bsteps" id="bsSteps" aria-label="상담 순서">
+      <button class="tab on" data-s="1" onclick="bsGo(1)">① 고객<em></em></button><span class="arw">›</span>
+      <button class="tab" data-s="2" onclick="bsGo(2)">② 지금 보험<em></em></button><span class="arw">›</span>
+      <button class="tab" data-s="3" onclick="bsGo(3)">③ 바꿀 것<em></em></button><span class="arw">›</span>
+      <button class="tab" data-s="4" onclick="bsGo(4)">④ 보여주기<em></em></button>
+    </nav>
+    <button class="tab on" id="tabEdit" onclick="go('edit')" hidden>✍ 만들기</button>
+    <button class="tab" id="tabShow" onclick="go('show')" hidden>👤 고객에게 보여주기</button>
+    <button class="tab" id="tabReq" onclick="go('req')" hidden>📋 가입설계 요청서</button>
     <div class="sp">
-      <button class="btn" onclick="showPanel('fit');go('edit')">📋 자동 보장분석</button>
-      <button class="btn" onclick="showPanel('brain');go('edit')">🧠 윤시현의 두뇌</button>
-      <button class="btn g" id="baSaveBtn" style="display:none" onclick="baSaveToClient()">💾 고객 365일에 저장</button>
-      <button class="btn g" onclick="doSave()">💾 파일로 저장</button>
-      <button class="btn" onclick="frPrint()">📄 최종 보고서</button>
-      <button class="btn" onclick="window.print()">🖨 인쇄 · PDF</button>
+      <div class="moreWrap" id="barSaveWrap">
+        <button class="btn g" id="barSaveBtn" onclick="bsSave()" aria-expanded="false">💾 저장 ▾</button>
+        <div class="moreBox" id="barSaveBox">
+          <button class="btn g" id="baSaveBtn" style="display:none" onclick="bsSave(false);baSaveToClient()">💾 고객 365일에 저장</button>
+          <button class="btn g" onclick="bsSave(false);doSave()">💾 파일로 저장</button>
+          <button class="btn n" onclick="bsSave(false);document.getElementById('loadFile').click()">📂 불러오기</button>
+        </div>
+      </div>
       <div class="moreWrap">
-        <button class="btn n" id="barMoreBtn" onclick="barMore()" aria-expanded="false">⋯ 더보기</button>
+        <button class="btn n" id="barMoreBtn" onclick="barMore()" aria-expanded="false">🧰 도구 ▾</button>
         <div class="moreBox" id="barMoreBox">
-          <button class="btn g" onclick="barMore(false);frImage()">💬 요약 한 장 이미지 (카톡)</button>
-          <button class="btn g" onclick="barMore(false);showPanel('guide');go('edit')">📘 사용방법</button>
+          <button class="btn" onclick="barMore(false);showPanel('brain');go('edit')">🧠 윤시현의 두뇌</button>
+          <button class="btn n" onclick="barMore(false);showPanel('fit');go('edit')">📋 자동 보장분석</button>
+          <button class="btn n" onclick="barMore(false);go('req')">📋 가입설계 요청서</button>
           <button class="btn n" onclick="barMore(false);showPanel('study');go('edit')">🎓 보장분석 기준</button>
           <button class="btn n" onclick="barMore(false);showPanel('age');go('edit')">👥 연령대별 기준</button>
-          <button class="btn n" onclick="barMore(false);document.getElementById('loadFile').click()">📂 불러오기</button>
+          <button class="btn g" onclick="barMore(false);frImage()">💬 요약 한 장 이미지 (카톡)</button>
+          <button class="btn g" onclick="barMore(false);showPanel('guide');go('edit')">📘 사용방법</button>
+          <button class="btn n" id="bsAllBtn" onclick="barMore(false);bsAllToggle()">📜 한 장으로 다 보기</button>
           <button class="btn n" onclick="barMore(false);doSample()">예시 채우기</button>
           <button class="btn n" onclick="barMore(false);doReset()">전부 지우기</button>
         </div>
@@ -2077,6 +2088,7 @@ body.presenting .show:not(.deck){border:0;box-shadow:none}
 <script src="../apex-next.js"></script>
 <script src="ba-ask.js?v=1"></script>
 <script src="ba-edit.js?v=1"></script>
+<script src="ba-steps.js?v=1"></script>
 <script>
 /* ══════════════════════════════════════════════════════════════════════════
    보장 전 · 후 만들기
@@ -2813,6 +2825,7 @@ function renderIn(){
   document.getElementById('tabEdit').className='tab'+(S.mode==='edit'?' on':'');
   document.getElementById('tabShow').className='tab'+(S.mode==='show'?' on':'');
   document.getElementById('tabReq').className='tab'+(S.mode==='req'?' on':'');
+  if(typeof bsPaint==='function')bsPaint();   /* 판 X506 — 네 걸음 띠 */
   /* ── 🧑 <b>누구 상담인지</b>를 적는다 (2026-10-09 · 판 X76) ────────────
      낮을 걸어 보니 이 화면이 7,212자를 세우는데 <b>그 분 이름이 한 군데도
      없었습니다.</b> 재 보니 이름은 <b>이미 와 있었습니다</b> —
@@ -3729,7 +3742,16 @@ function reqHtml(){
 function editHtml(){
   if(S.panel)return panelPage();
   /* 판 X503 — ✏️ 담보 고치기 한 곳(ba-edit.js). 담보 금액은 여기서만 고치고 ⑤ 표준표는 읽기만 한다 */
-  return '<div class="grid"><div>'+whoHtml()+beforeHtml()+afterHtml()+(typeof beHtml==='function'?beHtml():'')+premHtml()+stHtml()+scenHtml()+claimHtml()+
+  /* 판 X506 — 네 걸음(ba-steps.js). 칸은 다 그리고 고른 걸음만 보인다 · 인쇄는 전부 · 0 = 한 장으로 다 보기 */
+  if(typeof bsSec!=='function')
+    return '<div class="grid"><div>'+whoHtml()+beforeHtml()+afterHtml()+(typeof beHtml==='function'?beHtml():'')+premHtml()+stHtml()+scenHtml()+claimHtml()+
+      '</div><div class="side" id="sideBox">'+sideHtml()+'</div></div>';
+  var st=bsStep();
+  return '<div class="grid"><div id="bsMain" data-step="'+st+'">'+
+    bsSec(1,whoHtml())+
+    bsSec(2,beforeHtml()+bsFitCard()+claimHtml())+
+    bsSec(3,afterHtml()+(typeof beHtml==='function'?beHtml():'')+premHtml()+stHtml()+scenHtml()+bsReqCard())+
+    bsSec(4,bsShowCard())+bsNext(st)+
     '</div><div class="side" id="sideBox">'+sideHtml()+'</div></div>';
 }
 

@@ -84,7 +84,8 @@ function beChanged(x){var o=BE.p0[beKey(x)],p=x.p;if(!o)return false;
 
 /* ── 누르는 것들 ── */
 function beSel(sd,i){var x={p:S[sd][i],sd:sd,i:i},s=beS();s.sel=beKey(x);s.seen[beKey(x)]=1;BE.edit=null;BE.open=null;BE.q='';save();render();}
-function beGo(sd,i){beSel(sd,i);setTimeout(function(){var c=document.getElementById('beCard');if(c)c.scrollIntoView({behavior:'smooth',block:'start'});},30);}
+/* 네 걸음(ba-steps.js) — 이 칸은 ③ 바꿀 것에 있다. ② 의 계약 카드에서 오면 ③ 으로 넘긴다(한 장으로 다 보기면 그대로) */
+function beGo(sd,i){if(typeof bsStep==='function'&&bsStep()!==0)S.step=3;beSel(sd,i);setTimeout(function(){var c=document.getElementById('beCard');if(c)c.scrollIntoView({behavior:'smooth',block:'start'});},30);}
 function beSetAct(i,a,ev){if(ev)ev.stopPropagation();var p=S.before[i],s=beS(),k=p.id||('before'+i);
   s.sel=k;s.seen[k]=1;if((p.act||'keep')===a){save();render();return;}beSnap();setAct(i,a);}
 function beStep(k,dir){var x=beCur(),bag=x&&beBag(x);if(!bag)return;var L=BE_LAD[UNIT[k]]||[],v=num(bag[k])||0,n=v;
@@ -114,7 +115,7 @@ function beSetV(k,v){if(BE.edit!==k)return;BE.edit=null;var x=beCur(),bag=x&&beB
 function beWhy(k){BE.open=(BE.open===k)?null:k;render();}
 function beTold(on){var x=beCur();if(!x)return;beS().told[beKey(x)]=on?1:0;save();render();}
 function bePrem(f,el){var x=beCur();if(!x)return;setPol(x.sd,x.i,f,manOfWon(el.value));wonEchoPut('we_be_'+f,el.value);beGuidePut();}
-function beOld(){var x=beCur();if(!x)return;var key=x.sd+x.i;S.polOpen[x.p.id||key]=true;S.padOpen[key]=true;save();render();qkFocus(key);}
+function beOld(){var x=beCur();if(!x)return;var key=x.sd+x.i;if(typeof bsStep==='function'&&bsStep()!==0)S.step=(x.sd==='before')?2:3;S.polOpen[x.p.id||key]=true;S.padOpen[key]=true;save();render();qkFocus(key);}
 /* 찾기 칸은 한 번만 그린다 — 글자마다 칸을 다시 그리면 한글 조합이 끊긴다. 아래 단추 묶음(#beRes)만 다시 그림 */
 function beQ(v){BE.q=v;var el=document.getElementById('beRes');if(el)el.innerHTML=beResHtml();}
 function beResHtml(){var x=beCur(),bag=x&&beBag(x);if(!bag)return '';var q=BE.q.trim(),all=beHoles(true),holes=BE.more?all:beHoles(),L=[];

@@ -992,6 +992,8 @@ const SEED = `
   console.log('\n[따로] <b>따로 열리는 세 화면</b>도 읽히는가');
   for (const F of SOLO) {
     const sp = await ctx.newPage();
+    /* 판 X506 — 보장 전·후는 네 걸음으로 나뉘어 한 걸음만 보인다. 자가 ① 칸만 재고 「다 나아졌다」 하지 않게 「한 장으로 다 보기」 로 잰다 */
+    if (/ba\.html/.test(F.url)) await sp.addInitScript(() => { window.BA_STEP_DEFAULT = 0; });
     await sp.goto('http://127.0.0.1:' + PORT + F.url, { waitUntil: 'domcontentloaded' }).catch(() => {});
     await sp.waitForTimeout(1800);
     const r = await sp.evaluate(() => {

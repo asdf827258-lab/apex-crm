@@ -116,6 +116,8 @@ const 재기 = () => {
     /* ⚠ 바깥을 <b>다 막습니다</b> — 사장님 서버를 안 읽습니다 (7번) */
     await ctx.route('**://**', r =>
       r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
+    /* 판 X506 — 만들기가 네 걸음으로 나뉘었다. 이 자는 만들기 칸 전부를 보는 자라 「한 장으로 다 보기」 로 연다 */
+    await ctx.addInitScript(() => { window.BA_STEP_DEFAULT = 0; });
     const p = await ctx.newPage();
     p.on('pageerror', e => 터짐.push(String(e.message).slice(0, 90)));
     await p.goto('http://127.0.0.1:' + PORT + '/app/ba.html',

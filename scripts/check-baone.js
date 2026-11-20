@@ -38,6 +38,8 @@ const head = (t) => console.log('\n' + t);
   const errs = [], out = []; pg.on('pageerror', e => errs.push(e.message));
   pg.on('request', q => { if (q.method() !== 'GET') out.push(q.method() + ' ' + q.url()); });   /* 보내는 요청만 — 글꼴 GET 은 막혀 있고 무엇도 안 실어 보냄 */
   await pg.route('**://**', r => /^http:\/\/127\.0\.0\.1/.test(r.request().url()) ? r.continue() : r.abort());
+  /* 판 X506 — 만들기가 네 걸음으로 나뉘었다. 이 자는 만들기 칸 전부를 보는 자라 「한 장으로 다 보기」 로 연다 */
+  await pg.addInitScript(() => { window.BA_STEP_DEFAULT = 0; });
   await pg.goto('http://127.0.0.1:' + port + '/app/ba.html', { waitUntil: 'domcontentloaded' });
   await pg.waitForTimeout(800);
   await pg.evaluate(() => { localStorage.clear(); window.confirm = () => true; doSample(); });

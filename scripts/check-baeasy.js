@@ -33,6 +33,8 @@ const head = (t) => console.log('\n' + t);
   await pg.route('**://**', r => (r.request().url().indexOf('127.0.0.1:' + port) >= 0 ? r.continue() : r.abort()));
   const errs = [];
   pg.on('pageerror', e => errs.push(String(e).slice(0, 160)));
+  /* 판 X506 — 만들기가 네 걸음으로 나뉘었다. 이 자는 만들기 칸 전부를 보는 자라 「한 장으로 다 보기」 로 연다 */
+  await pg.addInitScript(() => { window.BA_STEP_DEFAULT = 0; });
   await pg.goto('http://127.0.0.1:' + port + '/app/ba.html', { waitUntil: 'domcontentloaded' });
   await pg.waitForTimeout(800);
 
