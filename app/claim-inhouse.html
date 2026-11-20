@@ -305,6 +305,8 @@ var CL_GATE={
 var CL_CHK={surg5D:'1~5종 분류표로 봅니다',surg5A:'1~5종 분류표로 봅니다',surgL:'정한 수술인지 확인',surgN:'정한 질병인지 확인',
  nurUD:'간병인을 실제로 썼다면',nurNS:'간호간병 병동이었다면',icu:'중환자실에 있었다면',icuC:'중환자실에 있었다면',
  silNB:'비급여 진료가 있었다면',cast:'깁스·부목을 했다면',fracS:'골절 수술을 했다면'};
+/* 수술 칸 — 「수술 · 시술」 카드를 안 눌렀으면 「수술·시술을 했다면」 꼬리를 답니다 (뇌 · 심장 · 암 · 골절의 수술비) */
+var CL_SURGK=['surgN','brainS','heartOp','circS','stent','canSurg','robotS','fracS'];
 /* 코드 앞글자 → 누를 칸. KCD 장(章) 그대로 — S·T 는 다친 것, Sx2 는 골절 */
 var CL_CODE=[
  {re:/^S\d2/,ev:['frac']},{re:/^[ST]/,ev:['hurt']},
@@ -557,16 +559,19 @@ var CI_LINE=[
 
   /* 고른 일 → 열리는 칸 {k:{why:[일], cond:''}} */
   function clWant(ev,code){
-    var on=CL_EV.filter(function(e){return ev[e.k];}),inj=on.some(function(e){return e.inj;})||/^[ST]/.test(code||''),W={};
+    var on=CL_EV.filter(function(e){return ev[e.k];}),inj=clInj(ev,code),W={};
     on.forEach(function(e){
       var ks=e.k2||(inj?e.a:e.d)||[];
       ks.forEach(function(k){var g=clGate(k,code||'');if(g===0)return;
         W[k]=W[k]||{why:[],cond:''};if(W[k].why.indexOf(e.t)<0)W[k].why.push(e.t);
-        if(g!==1)W[k].cond=g;else if(CL_CHK[k])W[k].cond=CL_CHK[k];});
+        if(g!==1)W[k].cond=g;else if(!ev.surg&&CL_SURGK.indexOf(k)>=0)W[k].cond='수술·시술을 했다면';else if(CL_CHK[k])W[k].cond=CL_CHK[k];});
     });
     return W;
   }
   window.clWant=clWant;
+  /* 다친 일인가 — 고른 카드나 진단코드(S·T)로. 「병인가 다친 것인가」 를 묻는 곳은 여기 하나 (5번) */
+  function clInj(ev,code){return CL_EV.some(function(e){return ev[e.k]&&e.inj;})||/^[ST]/.test(code||'');}
+  window.clInj=clInj;
 
   function clFmtWonR(v){ /* 원 → 「1억 2,000만원」 · 모르면 null 그대로(0 아님) */
     if(v===null||v===undefined||!isFinite(v))return null;
@@ -580,19 +585,36 @@ var CI_LINE=[
   var UNIT_SAY={L:'정해진 금액',D:'하루마다',M:'매달',A:'한도 · 쓴 만큼'};
 
   /* KB 계약 × 열리는 칸 → 회사별 줄. 이름을 못 맞춘 담보는 따로 센다(숨기지 않음) */
-  function clMatch(K,W){
+  /* KB 는 담보 이름 가운데에 괄호를 끼웁니다 — 「상해(일반상해,전체상해를 의미)입원의료비」.
+     그대로 맞추면 「상해」 와 「입원의료비」 가 떨어져 <b>상해 실손이 통째로 안 잡혔습니다</b>(손 점검에서 찾음).
+     괄호를 걷은 이름을 먼저 맞추고, 안 되면 원래 이름으로 — 표(ba-std.js)는 건드리지 않습니다. */
+  function clBare(t){return String(t||'').replace(/\([^()]*\)/g,'').replace(/\s+/g,' ').trim();}
+  function clKeyOf(v){
+    if(typeof mapName!=='function')return null;
+    var c=[clBare(v.std),v.std,clBare(v.raw),v.raw,v.full],i,k;
+    for(i=0;i<c.length;i++){if(!c[i])continue;k=mapName(c[i]);if(k)return k;}
+    return null;
+  }
+  /* 보여 줄 이름 — KB 가 원문을 괄호 앞에서 잘라 「질병(전체질병을 의미)」 만 남을 때는 표준명을 씁니다 */
+  function clShowNm(v){var r=v.raw||'',s=v.std||'';return (/\)$/.test(r)&&s.indexOf(r)===0&&s.length>r.length)?s:(r||s);}
+  window.clKeyOf=clKeyOf;window.clShowNm=clShowNm;
+  function clMatch(K,W,inj){
     var by={},order=[],rows=0,unk=[];
     if(!K||!K.contracts)return {cos:[],rows:0,unk:[]};
     K.contracts.forEach(function(c){
       (c.covs||[]).forEach(function(v){
-        var k=(typeof mapName==='function')?(mapName(v.std||'')||mapName(v.raw||'')||mapName(v.full||'')):null;
-        if(!k){unk.push(v.raw||v.std||'');return;}
+        var k=clKeyOf(v);
+        if(!k){unk.push(clShowNm(v));return;}
         if(!W[k])return;
         var key=c.co||'(회사 모름)';
         if(!by[key]){by[key]={co:key,pols:{}};order.push(key);}
         var pk=(c.nm||'(상품명 모름)')+'|'+(c.issue||'');
         by[key].pols[pk]=by[key].pols[pk]||{nm:c.nm||'(상품명 모름)',issue:c.issue||'',rows:[]};
-        by[key].pols[pk].rows.push({k:k,nm:v.raw||v.std,won:v.won,unit:(ROW[k]&&ROW[k].u)||'',kind:v.kind,cond:W[k].cond,why:W[k].why});
+        var nm=clShowNm(v),cond=W[k].cond;
+        /* 이름이 「질병」 인데 다친 일 · 「상해」 인데 병 — 같은 칸이라도 안 될 수 있다고 밝힙니다 */
+        if(inj&&/질병/.test(nm)&&!/상해/.test(nm))cond='질병으로 정한 담보 — 다친 것은 확인';
+        else if(!inj&&/상해/.test(nm)&&!/질병/.test(nm))cond='상해로 정한 담보 — 병은 확인';
+        by[key].pols[pk].rows.push({k:k,nm:nm,won:v.won,unit:(ROW[k]&&ROW[k].u)||'',kind:v.kind,cond:cond,why:W[k].why});
         rows++;
       });
     });
@@ -631,7 +653,7 @@ var CI_LINE=[
   window.clTelOf=function(co,tel){if(tel)CL.tel=tel;return clTelOf(co);};
 
   function clRender(){
-    var on=CL_EV.filter(function(e){return CL.ev[e.k];}),W=clWant(CL.ev,CL.code),M=clMatch(CL.K,W),h='';
+    var on=CL_EV.filter(function(e){return CL.ev[e.k];}),W=clWant(CL.ev,CL.code),M=clMatch(CL.K,W,clInj(CL.ev,CL.code)),h='';
     if(!on.length)h='<div class="sm">1에서 무슨 일인지 먼저 눌러 주세요.</div>';
     else if(!CL.K)h='<div class="sm">2에서 KB 보장분석을 올리면, 위 일로 <b>청구해 볼 곳</b>이 여기 섭니다.</div>';
     else{

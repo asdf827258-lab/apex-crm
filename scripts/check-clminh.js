@@ -217,6 +217,25 @@ is(/else if\(tab==='clm_inh'\)dyn\.innerHTML=renderClmInhPage\(\);/.test(IDX) &&
     is(/먼저 눌러/.test(await pg.textContent('#clRes')) && !(await pg.$$('#evg .evb.on')).length, '처음부터 — 다 지워진다');
     is(await pg.evaluate(() => [clFmtWonR(300000), clFmtWonR(120000000), clFmtWonR(null), clFmtWonR(48728)].join('|')) === '30만원|1억 2,000만원||4만 8,728원', '원 → 억·만원 (모르면 null)');
 
+    console.log('\n[20] 손 점검에서 찾은 넷 (2026-11-20 · 앱의 진짜 KB 리더로 견본을 읽혀 봄)');
+    /* ① KB 는 이름 가운데 괄호를 끼운다 — 그대로 맞추면 상해 실손이 통째로 「이름 못 맞춤」 이었다 */
+    const KBP = { raw: '상해(일반상해,전체상해를 의미)', std: '상해(일반상해,전체상해를 의미)입원의료비', full: '상해(일반상해,전체상해를 의미) 상해(일반상해,전체상해를 의미)입원의료비', won: 50000000, kind: '실손' };
+    is(await pg.evaluate(v => clKeyOf(v), KBP) === 'silA' && await pg.evaluate(v => clKeyOf(v), { raw: '질병(전체질병을 의미)', std: '질병(전체질병을 의미)통원의료비', full: '' }) === 'silDO', 'KB 의 괄호 낀 이름 — 상해(…)입원의료비 → 상해입원의료비 · 질병(…)통원의료비 → 질병통원의료비');
+    /* ② 원문이 괄호 앞에서 잘리면 표준명으로 보여 준다 */
+    is(await pg.evaluate(v => clShowNm(v), KBP) === KBP.std && await pg.evaluate(() => clShowNm({ raw: '질병수술비', std: '질병수술' })) === '질병수술비', '보여 줄 이름 — 잘린 「상해(…)」 대신 표준명 · 보통은 원문 그대로');
+    await pg.click('.evb[data-ev="frac"]'); await pg.click('.evb[data-ev="adm"]');
+    await pg.evaluate(v => window.clUseKB({ ok: true, contracts: [{ co: '삼성화재', nm: '견본', issue: '2012-05-10', covs: [v,
+      { raw: '간병인사용일당(질병,1일이상)', std: '간병인사용일당', won: 100000, kind: '정액' }] }] }), KBP);
+    const fx = await pg.evaluate(() => [...document.querySelectorAll('#clRes .cr')].map(r => r.getAttribute('data-k') + '|' + r.textContent));
+    is(fx.some(x => /^silA\|/.test(x)), '골절 · 입원 → 괄호 낀 상해 실손이 「청구해 볼 곳」 에 선다');
+    /* ③ 이름이 「질병」 인데 다친 일이면 밝힌다 */
+    is(fx.some(x => /^nurUD\|.*질병으로 정한 담보 — 다친 것은 확인/.test(x)), '다친 일에 「(질병)」 간병인 담보 → 「질병으로 정한 담보 — 다친 것은 확인」');
+    /* ④ 수술 카드를 안 눌렀으면 뇌·심장의 수술 칸에 「수술·시술을 했다면」 */
+    const W3 = await pg.evaluate(() => clWant({ brain: 1, adm: 1 }, 'I63.9'));
+    const W4 = await pg.evaluate(() => clWant({ brain: 1, surg: 1 }, 'I63.9'));
+    is(W3.surgN && /수술·시술을 했다면/.test(W3.surgN.cond) && W4.surgN && !/수술·시술을 했다면/.test(W4.surgN.cond) && W3.brain && !W3.brainh, '뇌경색 입원 — 특정질병수술비는 「수술·시술을 했다면」 · 뇌출혈 진단비는 안 섬');
+    await pg.click('#clReset');
+
     await pg.click('#tabs button[data-t="gil"]');
     console.log('\n[9] 🧭 가입 길 탭');
     is(await pg.isVisible('#g-gj') && !(await pg.isVisible('#s-q')), '가입 길 탭 — ① 알릴의무가 보이고 병원 데스크는 접혀 있다');
