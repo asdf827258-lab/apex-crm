@@ -3215,6 +3215,7 @@ body.insight-mode #insightScreen{display:block;}
 <script src="상담자료/mikki-talk-data.js"></script>
 <script src="hm-door.js"></script>
 <script src="hm-tamsg.js"></script>
+<script src="home-v2.js"></script>
 <script src="hm-door-top.js"></script>
 <!-- 🎬 발표 덱 트랙 표 — 계산기와 <b>같은 한 파일</b>을 봅니다 (판 X333).
      사장님 말씀 「오늘 에서 AP, PC 에서 각자 뜰 수 있도록 각 파트별로 다
@@ -21806,6 +21807,8 @@ function go(tab){
   navMark(tab);
   var dyn=$('dynPane');
   if(tab==='home'||tab==='dashboard'){dyn.innerHTML=(typeof osRole==='function'&&typeof osEsc==='function'&&typeof renderHome==='function')?renderHome():renderDashboard();
+    /* ✨ 새 오늘 화면 (판 X502) — 이 기기에서 켰을 때만 보이는 차례를 바꿉니다. 꺼져 있으면 아무것도 안 합니다 (home-v2.js) */
+    try{ if(window.HOME_V2)HOME_V2.apply(dyn); }catch(eV2){}
     /* 🗂️ 맨 위 왼쪽 칸의 수 — <b>홈 글이 들어간 바로 뒤</b>입니다. 손에 있는
        AR.db 만 세고 서버는 안 부릅니다 (7번). 아직 안 실렸으면 hmPaint 가
        다시 그립니다 — 거기서도 서버에 안 갑니다.                      */
@@ -22305,8 +22308,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-20 14:20';
-var APP_BUILD_NOTE='📩 <b>채용 대기열</b> · 🕯️ <b>점집 사주 풀이</b>(판 X503·X504 · 사장님 말씀 2026-11-19 「채용 1단계 서버 단계 만들자」 → 7단계 · 2026-11-20 「진짜 점집 같은 무서운 사례와 디자인」) — <b>조직 관리 → 📩 채용 대기열</b>이 새로 섭니다. 후보에게 링크나 QR 을 보내면 후보가 <b>혼자</b> 사주·성향 검사를 하고 상담 신청을 누릅니다. 들어온 건은 저절로 쌓이고 「오늘 연락할 사람」이 위에서부터 섭니다. ★ <b>줄 세우는 기준은 행동뿐</b>이고 <b>성향·사주·혈액형은 한 점도 안 들어갑니다</b>(점검이 매번 재니다). 후보 화면에는 합격·불합격 같은 말이 없습니다. 사주 풀이는 손님이 입을 열기 <b>전에</b> 세 줄을 먼저 던지고(십신 개수·일간 강약·대운에서 <b>계산되어 나오는</b> 말만 씁니다), 화면 전체가 먹빛 신당입니다. ⛔ 병·사고·죽음은 한 글자도 안 씁니다. ★ <b>설정 → 시스템 점검에서 새 SQL 한 칸을 한 번 돌리셔야</b> 합니다(SETUP_VER 48). ⚠ QR 은 아직 실제 폰으로 안 찍어 봤습니다 · 로고는 임시 표식입니다 · 문자는 Netlify 환경변수가 있어야 나갑니다. — 같이 실려 나가는 판: X499 · X500(「오늘」 카드 갈래 줄 걷기) · X501(예외질환 중계).';
+var APP_BUILD='2026-11-20 14:40';
+var APP_BUILD_NOTE='✨ <b>새 「오늘」 화면 — 시안 9차 디자인 그대로 (시험)</b>(판 X502 · 사장님 말씀 「목각 그대로 따라가서, 목각 디자인에서, 맞는 기능들을 채우는게 먼저」) — 인사 줄 오른쪽 「✨ 새 화면」 을 누른 기기에서만: 인사 → 이번 달 목표 → 다섯 걸음 → 🛰 챙기는 중 → 지금 이분(옆으로 넘김 · TA 카톡 · 통화 결과) → 🧭 상품전략 → 이번 주 → 영업 한 바퀴 → 🌙 돌아보기 → ☰ 다른 메뉴. 옛 홈은 그 아래 숨긴 채 그대로 돌고, 「↩ 예전 화면」 한 번이면 돌아갑니다.';
 
 
 
@@ -39688,6 +39691,8 @@ function hmCliHtml(){
 function hmPaint(){
   var a=document.getElementById('hmToday');
   if(a)a.innerHTML=hmTodayHtml();
+  /* ✨ 새 오늘 화면(판 X502) — 켠 기기에서만 그 화면도 같이 다시 그립니다(home-v2.js · 꺼져 있으면 아무것도 안 함) */
+  try{ if(window.HOME_V2&&HOME_V2.paint)HOME_V2.paint(); }catch(eV2p){}
   /* 🌙 저녁 칸의 머리줄도 같이 — 미션을 체크하면 그 수가 바로 바뀝니다 */
   try{ hmNightPaint(); }catch(eNp){}
   /* 🗂️ 맨 위 두 칸의 왼쪽 — 배정 DB 가 <b>늦게 실려 와도</b> 여기서 채워집니다.
@@ -40770,7 +40775,10 @@ function hmTossGreet(){
      화면에 「오늘 N분/명/개」 라고 적는 자리는 <b>반드시</b> 답니다 —
      안 달면 check-onesay 가 셉니다. 숫자를 바꾸는 표가 아니라 <b>이름표</b>입니다.
      같은 이름표끼리 수가 다르면 그 자리에서 빨간불이 켜집니다 (5번).       */
-  return '<div class="tz-greet">'+osEsc(nm||'설계사')+'님, '+
+  /* ✨ 오른쪽 작은 단추 — 「새 화면」 ↔ 「예전 화면」 (판 X502 · home-v2.js 가 글을 정함, 줄 높이 그대로) */
+  var v2='';
+  try{ v2=(window.HOME_V2&&HOME_V2.chip)?HOME_V2.chip():''; }catch(eV2){ v2=''; }
+  return '<div class="tz-greet">'+v2+osEsc(nm||'설계사')+'님, '+
     '<span data-ask="오늘몇분">'+(n?('오늘 '+n+'개예요'):'오늘 챙길 것이 없어요')+'</span></div>';
 }
 /* ══ ▬ <b>진행 막대와 「몇 / 몇」</b> — 목업에 있는데 없던 것 ═══════════
