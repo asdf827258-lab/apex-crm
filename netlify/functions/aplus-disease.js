@@ -38,16 +38,25 @@ var PAGE_SIZE = 10;   // 원본이 한 쪽에 내려주는 건수
 var MAX_ROWS  = 500;  // all=1 일 때 한 번에 가져올 상한 (원본 부담·응답 크기 방어)
 var TIMEOUT   = 12000;
 
+// 🌐 다른 주소에서 부르는 곳 — 진료분석(고지체크 사이트 jinryo.html · 내 PC 파일)의 「알릴의무 · 예외질환 한 번에」 (판 X501).
+// 원본이 CORS 를 닫아 둬서 이 중계를 거치는데, 중계마저 허락을 안 주면 거기서도 막힌다.
+// 아무 곳이나(*) 열지 않고 아는 곳만 연다. 'null' = 내 PC 에서 연 파일(file://).
+var CORS_OK = ['https://apex-hb-goji.netlify.app', 'null'];
+var corsFor = '';
+
 function json(status, body) {
-  return {
+  var r = {
     statusCode: status,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       // 같은 검색을 반복해 두드리지 않도록 잠깐 캐시한다. 자료는 하루 단위로 바뀐다.
-      'Cache-Control': 'public, max-age=300'
+      'Cache-Control': 'public, max-age=300',
+      'Vary': 'Origin'
     },
     body: JSON.stringify(body)
   };
+  if (corsFor) r.headers['Access-Control-Allow-Origin'] = corsFor;
+  return r;
 }
 
 // 원본에 한 쪽을 물어본다.
@@ -81,6 +90,9 @@ async function fetchPage(params, num) {
 
 exports.handler = async function (event) {
   var p = (event && event.queryStringParameters) || {};
+  var hd = (event && event.headers) || {};
+  var org = String(hd.origin || hd.Origin || '');
+  corsFor = CORS_OK.indexOf(org) >= 0 ? org : '';
 
   // 화면에서는 '&' 로 여러 질환을 잇는다. 원본이 기대하는 구분자는 '!' 다.
   var q = String(p.q || '').trim().replace(/&/g, '!');

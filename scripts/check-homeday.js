@@ -148,14 +148,22 @@ const SEED = `(function(){
 
   /* ─────────────────────────────────────────────────────────── */
   head('[1] 홈이 <b>순서를 정해 준다</b>');
-  const rows = await pg.evaluate(() => Array.from(document.querySelectorAll('#hmToday .hm-row')).map(r => ({
-    no: (r.querySelector('.hm-no') || {}).textContent || '',
-    t: (r.querySelector('.hm-m b') || {}).textContent || '',
-    n: (r.querySelector('.hm-n') || {}).textContent || ''
-  })));
-  is(rows.length >= 5, '오늘 줄이 <b>갈래별로</b> 섰다 — ' + rows.length + '줄');
-  is(rows.map(r => r.no).join('') === rows.map((r, i) => String(i + 1)).join(''),
-     '번호가 <b>1부터 빠짐없이</b> 붙는다 — ' + rows.map(r => r.no).join(''));
+  /* ⚠ 판 X500 — 「오늘」 카드의 <b>갈래별 줄(.hm-row)은 이제 안 섭니다</b>(사장님 고르심
+     2026-11-20 「맨 밑 갈래 줄 걷기」). 그 줄은 홈 맨 위 「오늘 볼 분」 과 같은 분들을
+     갈래로 또 센 것이었습니다(5번). ★ <b>차례를 재는 것은 그대로</b>입니다 — 차례는
+     이제 「오늘 볼 분」 이 쓰는 hmSteps 에서 읽고(같은 HM_ORD 점수 · hmW), 갈래마다의
+     수는 세는 자 hmCount 에서 읽습니다(인사 「오늘 N개예요」 가 씁니다).
+     갈래 이름은 앱의 표(HM_ORD)에서 그대로 읽습니다 — 여기 적지 않습니다 (5번). */
+  const dayK = await pg.evaluate(() => {
+    const T = {}; HM_ORD.forEach(x => { T[x.k] = x.t; });
+    const K = []; hmSteps().forEach(z => { if (K.indexOf(z.k) < 0) K.push(z.k); });
+    const c = hmCount() || {};
+    return { rows: K.map(k => ({ t: T[k] || k, n: String(c[k] || 0) })),
+             rowN: document.querySelectorAll('#hmToday .hm-row').length };
+  });
+  const rows = dayK.rows;
+  is(dayK.rowN === 0, '「오늘」 카드에 갈래별 줄이 <b>안 선다</b> — ' + dayK.rowN + '줄 (판 X500 · 오늘 볼 분과 두 벌 금지)');
+  is(rows.length >= 5, '오늘 목록에 <b>갈래가 여럿</b> 든다 — ' + rows.map(r => r.t).join(' · '));
   is(rows[0] && rows[0].t === '약속', '<b>약속이 맨 위</b>다 — 시간이 정해진 것부터 (' + (rows[0] || {}).t + ')');
   is(rows[1] && rows[1].t === '계약 마디', '그다음이 <b>계약 마디</b> — ' + (rows[1] || {}).t);
   /* ⚠ 2026-09-23 · <b>어느 칸인지 박지 않는다.</b> 여태 `#hmToday .hm-big`
@@ -222,16 +230,26 @@ const SEED = `(function(){
     window.__seed = keep; window.mstDueList = realMadi;
     return h;
   });
-  /* 「hm-rows」 가 「hm-row」 를 품고 있어, 느슨하게 세면 한 줄인데 둘로 셉니다 */
-  is((one.match(/class="hm-row"/g) || []).length === 1, '갈래가 하나면 <b>한 줄만</b> 선다');
+  /* ⚠ 판 X500 — 갈래별 줄은 이제 안 섭니다. 갈래가 하나여도 <b>줄 없이 온전한 카드</b>로
+     섭니다(📅 자리 #hmUpDown 이 그 표지) — 「없습니다」 판으로 떨어지면 안 됩니다. */
+  is((one.match(/class="hm-row"/g) || []).length === 0 && /id="hmUpDown"/.test(one),
+     '갈래가 하나면 <b>줄 없이</b> 온전한 카드가 선다 (판 X500)');
   /* ⚠ 2026-09-25 — 여태 <b>홈 날글 전체</b>에서 「약속」 을 찾았습니다. 그러다
      자리 이름표(data-ask="전화로약속잡을분")가 붙자 그 낱말이 <b>속성 안</b>에
      들어와, 갈래 줄은 하나뿐인데 빨간불이 켜졌습니다 — <b>헛것</b>입니다 (8번).
      묻는 것은 「<b>갈래 줄</b>에 없는 갈래가 적히나」 이므로, 이제 hm-row
      단추 안만 봅니다. 전보다 조인 것입니다.                              */
-  const 줄들 = (one.match(/class="hm-row"[\s\S]*?<\/button>/g) || []).join(' ');
-  is(/생일/.test(줄들) && !/약속/.test(줄들),
-     '<b>있는 갈래만</b> 적는다 — 갈래 줄에 생일만 있고 약속은 없다');
+  /* 판 X500 — 갈래 줄 대신 <b>오늘 목록(hmSteps)</b> 에 있는 갈래만 드는지 봅니다 */
+  const oneK = await pg.evaluate(() => {
+    const keep = window.__seed, realMadi = window.mstDueList;
+    window.__seed = {}; window.__seed[mcalToday()] = [{ k: 'bd', t: '심청' }];
+    window.mstDueList = function () { return { due: [], soon: [], mon: [], monLeft: 0, none: 0, total: 0 }; };
+    const K = hmSteps().map(z => z.k);
+    window.__seed = keep; window.mstDueList = realMadi;
+    return K;
+  });
+  is(oneK.indexOf('bd') >= 0 && oneK.indexOf('appt') < 0,
+     '<b>있는 갈래만</b> 든다 — 오늘 목록에 생일만 있고 약속은 없다 (' + oneK.join(',') + ')');
 
   /* ─────────────────────────────────────────────────────────── */
   /* ─────────────────────────────────────────────────────────── */
@@ -560,7 +578,8 @@ const SEED = `(function(){
   await clearOvl(pg);
   const now = await pg.evaluate(() => {
     const d = document.querySelector('.hm-now');
-    const rows = document.querySelector('.hm-rows');
+    /* 판 X500 — 갈래별 줄(.hm-rows)이 없어져 견줄 자리를 「오늘」 카드(#hmToday)로 옮깁니다 */
+    const rows = document.querySelector('#hmToday');
     return { there: !!d, txt: d ? d.textContent.replace(/\s+/g, ' ') : '',
              nm: (d && d.querySelector('.hm-now-m b')) ? d.querySelector('.hm-now-m b').textContent : '',
              /* 「열기 · 했습니다」 두 단추를 <b>「무엇을 할까요?」 갈래</b>로
@@ -590,7 +609,7 @@ const SEED = `(function(){
      '<b>한 건</b>이 크게 서고 <b>큰 단추 한 방</b> + 갈래가 선다 — 「'+
      (now.doTxt || '단추가 없다')+'」('+now.doH+'px) + '+now.btn+'가지');
   is(now.hasDid, '그 갈래 안에 <b>「이미 했습니다」</b> 가 있다 — 끝냈다고 말할 자리가 없으면 목록이 안 줄어든다');
-  is(now.first, '갈래별 줄보다 <b>위에</b> 선다 — 제일 먼저 눈에 들어와야 한다');
+  is(now.first, '「오늘」 카드보다 <b>위에</b> 선다 — 제일 먼저 눈에 들어와야 한다 (판 X500 · 갈래 줄이 없어져 카드로 견줌)');
   is(/1번째/.test(now.txt), '<b>몇 번째인지</b> 적는다 — 「' + (now.txt.match(/\d+건 중 \S+번째[^·]*/) || [''])[0].trim() + '」');
   /* 차례는 <b>HM_ORD 가 정한 그대로</b>입니다 — 시간이 정해진 약속이 맨 위,
      그다음이 계약 마디. 여기서 차례를 따로 적으면 갈라집니다 (5번). */
