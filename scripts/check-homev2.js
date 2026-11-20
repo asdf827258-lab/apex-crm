@@ -9,7 +9,7 @@
      새 화면 사진을 나란히 놓고 봅니다(PR 쪽지). 여기서는 깨짐만 봅니다.
 
    ── 보는 것 (브라우저 없이) ──────────────────────────────────────
-     [1] ★★ 기본은 <b>꺼짐</b> — 켠 기기(localStorage)에서만, 끄면 apply·paint 가 아무것도 안 한다
+     [1] ★★ 기본은 <b>새 화면</b>(판 X505) — 「↩ 예전 화면」 고른 기기(old)·자동 점검(webdriver)만 예전 화면, 그때 apply·paint 는 아무것도 안 한다
      [2] ★★ 모두에게 끄는 한 줄(ALLOWED=false)이 있고, 그러면 단추도 새 화면도 안 선다
      [3] ★★ 옛 홈(index.html)은 <b>네 자리만</b> — 싣기 · 홈 그린 뒤 apply · hmPaint 안 paint · 인사 단추, 모두 try 안
      [4] ★★ 시안 칸 차례가 시안 rHome 그대로(인사 → 목표 → 다섯 걸음 → 챙기는 중 → 지금 이분 → 상품전략 → 이번 주 → 영업 한 바퀴 → 돌아보기 → 메뉴)
@@ -57,7 +57,7 @@ function box(store, search, opt) {
     { k: 'db', tk: '미접촉', t: '홍길순', s: '아직 한 번도 안 걸었습니다', src: '보장분석', key: 'db:d1:미접촉' }
   ];
   const g = {
-    localStorage: ls, location: { search: search || '' }, document: doc, toast: () => {}, go: () => {}, setTimeout: () => 0, setInterval: () => 0, clearInterval: () => {},
+    localStorage: ls, navigator: { webdriver: !!opt.robot }, location: { search: search || '' }, document: doc, toast: () => {}, go: () => {}, setTimeout: () => 0, setInterval: () => 0, clearInterval: () => {},
     OS: { profile: { name: '홍판서' } },
     hmLeft: () => ({ list: rows, all: rows.length + 1 }), hmSteps: () => rows,
     hmWhy: x => '이유 — ' + x.s, hmFullNm: t => t, hmNmHidden: () => !!opt.hide, hwhoFor: () => 'me', hwhoBarHtml: () => '',
@@ -73,8 +73,17 @@ function box(store, search, opt) {
     hmWayNow: () => 0, hmWayCall: () => '0 / 2', hmWayMeet: () => '약속 0', hmWayTidy: () => '0 · 0', hmWayRec: () => '☎0 🤝0', hmWayCare: () => '마디 0',
     arApptPast: () => [], hmReferRows: () => [], mstDueList: () => ({ monLeft: 0 }),
     mcalItems: () => ({}), mcalDay: () => [], hmRtNear: () => [],
+    hmRtAppts: () => (opt.appts || []),
+    osClient: () => ({ from: () => ({ select: () => ({ in: () => ({ then: (ok) => ok({ data: opt.geo || [] }) }) }) }) }),
+    navItemOf: id => { let f = null; g.TABS.forEach(gr => (gr.items || []).forEach(x => { if (x.id === id) f = x; })); return f; },
     arStageN: () => ({ c: { 미접촉: 3, TA: 1 }, tot: 4 }), hmNightSub: () => '오늘 닿은 분 0명',
-    TABS: [{ group: '고객', items: [{ id: 'clients', icon: '📇', title: '고객 365일' }] }], osTabAllowed: () => true,
+    TABS: [{ group: '고객', items: [{ id: 'clients', icon: '📇', title: '고객 365일' }] },
+           { group: '성장', items: [{ id: 'fp_talk', icon: '🗣️', title: '재무설계 실전화법서' }, { id: 'bohum', icon: '📕', title: '보험 마스터 아카데미' }, { id: 'rej_gym', icon: '🥊', title: '거절 근육 훈련' }] },
+           { group: '상담 도구', items: [{ id: 'insight', icon: '🧭', title: '상품전략기' }, { id: 'mikki_talk', icon: '🎣', title: '미끼상품&접촉전략' }] }],
+    osTabAllowed: () => true,
+    hmMsCk: () => (opt.promo ? { d10: true } : {}), actStreak: () => ({ n: 3 }), hmMsDid: () => {},
+    hwhoCan: () => !!opt.lead, hwhoId: () => '', hwhoIsAll: () => false, arMyId: () => 'me', HWHO_ALL: '*', hwhoName: () => '홍철호',
+    hwhoList: () => [{ id: 'me', nm: '홍판서', n: 2 }, { id: 'p2', nm: '홍철호', n: 5 }, { id: 'p3', nm: '홍기동', n: 0 }],
     osEsc: s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
   };
   g.window = g;
@@ -86,13 +95,25 @@ function box(store, search, opt) {
 }
 const dyn = B => ({ querySelector: () => B.pane });
 
-console.log('\n[1] 기본은 꺼짐');
+/* ★ 판 X505 — 사장님 말씀 「새화면을 먼저 기준으로 하고, 구화면을 누르면 전 버전으로」 —
+     고른 적 없는 기기는 <b>새 화면</b>, 「↩ 예전 화면」 을 고른 기기('old')와 자동 점검 브라우저(webdriver)는 예전 화면. */
+console.log('\n[1] 기본은 새 화면 · 예전 화면은 고른 기기만');
 let B = box({}, '');
-is(B.g.HOME_V2.on() === false, '처음 기기에서는 꺼져 있다');
-is(B.g.HOME_V2.apply(dyn(B)) === false && !B.pane.classList.has('hm-v2') && !B.els.hv2, '꺼져 있으면 apply 가 아무것도 안 한다(옛 홈 그대로)');
+is(B.g.HOME_V2.on() === true && B.g.HOME_V2.apply(dyn(B)) === true && !!B.els.hv2, '고른 적 없는 기기는 새 화면이 선다');
+B = box({ apex_home_v2: 'old' }, '');
+is(B.g.HOME_V2.on() === false, '「↩ 예전 화면」 을 고른 기기(old)는 예전 화면');
+is(B.g.HOME_V2.apply(dyn(B)) === false && !B.pane.classList.has('hm-v2') && !B.els.hv2, '예전 화면이면 apply 가 아무것도 안 한다(옛 홈 그대로)');
 B.g.HOME_V2.paint();
-is(!B.els.hv2, '꺼져 있으면 hmPaint 가 불러도 새 화면이 안 생긴다');
-is(/새 화면/.test(B.g.HOME_V2.chip()) && B.g.HOME_V2.chip().indexOf('onclick="homeV2Use(true)"') >= 0 && typeof B.g.homeV2Use === 'function', '꺼져 있을 때 인사 줄 단추는 「✨ 새 화면」');
+is(!B.els.hv2, '예전 화면이면 hmPaint 가 불러도 새 화면이 안 생긴다');
+is(/새 화면/.test(B.g.HOME_V2.chip()) && B.g.HOME_V2.chip().indexOf('onclick="homeV2Use(true)"') >= 0 && typeof B.g.homeV2Use === 'function', '예전 화면 인사 줄 단추는 「✨ 새 화면」(다시 돌아가는 길)');
+B.g.HOME_V2.set(true);
+is(B.store.apex_home_v2 === '1' && B.g.HOME_V2.on() === true, '「✨ 새 화면」 을 누르면 다시 새 화면(1)');
+B.g.HOME_V2.set(false);
+is(B.store.apex_home_v2 === 'old' && B.g.HOME_V2.on() === false, '「↩ 예전 화면」 을 누르면 이 기기에 old 가 남는다');
+B = box({}, '', { robot: true });
+is(B.g.HOME_V2.on() === false && B.g.HOME_V2.apply(dyn(B)) === false, '자동 점검 브라우저(webdriver)는 예전 화면 — 옛 홈 점검이 계속 옛 홈을 잰다');
+B = box({ apex_home_v2: '1' }, '', { robot: true });
+is(B.g.HOME_V2.on() === true, '자동 점검이라도 일부러 켜면(1) 새 화면');
 B = box({ apex_home_v2: '1' }, '');
 is(B.g.HOME_V2.apply(dyn(B)) === true && B.pane.classList.has('hm-v2') && !!B.els.hv2, '켠 기기에서는 판에 hm-v2 와 새 화면(#hv2)이 선다');
 is(/예전 화면/.test(B.g.HOME_V2.chip()), '켜져 있을 때 인사 줄 단추는 「↩ 예전 화면」');
@@ -127,8 +148,14 @@ is(/var TABS=\[/.test(IX) && /var PF=/.test(IX), 'TABS(메뉴 표) · PF(목표)
 is(/openTa\s*:|openTa:/.test(JS) && /prods\s*[,:}]/.test(JS) && /pick\s*[,:}]/.test(JS), 'HM_TAMSG.openTa · HM_DOOR.pick/prods 가 있다');
 
 console.log('\n[6] 서버 · 저장');
-is(!/fetch\(|osClient|supabase|\.from\(/.test(sc), '서버를 직접 부르지 않는다(목표는 기존 pfLoad 만)');
-is((sc.match(/setItem\(/g) || []).length === 1 && /setItem\(KEY, '1'\)/.test(sc), '저장은 이 기기 켜짐 표시(KEY) 하나뿐');
+/* 판 X505 — 서버는 <b>읽기 둘</b>만: 오늘 약속인 분의 좌표(dbs · 지역 동선이 적어 둔 칸)와 지역 동선이 쓰는 길찾기(route-km).
+   쓰기(insert·update·upsert·delete·rpc)는 하나도 없습니다. 목표는 기존 pfLoad. */
+const 부름 = (sc.match(/\.from\('[^']+'\)\.[a-z]+\([^)]*\)/g) || []);
+is(부름.length === 1 && 부름[0] === ".from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng')", '서버 표는 좌표 읽기 하나뿐 — ' + 부름.join(' | '));
+is(!/\.(insert|update|upsert|delete|rpc)\(/.test(sc) && !/supabase\./.test(sc), '서버에 쓰는 것이 하나도 없다');
+is((sc.match(/fetch\('([^']+)'/g) || []).join() === "fetch('/.netlify/functions/route-km'", '부르는 주소는 지역 동선의 길찾기(route-km) 하나뿐');
+const 담기 = (sc.match(/setItem\(([^,]+),/g) || []).map(x => x.replace(/setItem\(|,/g, ''));
+is(담기.length === 2 && 담기.indexOf('KEY') >= 0 && 담기.indexOf("'apexRouteKmV1'") >= 0, '이 기기에 담는 것은 켜짐 표시와 길찾기 거리(지역 동선과 같은 칸)뿐 — ' + 담기.join(', '));
 
 console.log('\n[7] 옛 홈은 숨기기만 · 터지면 예전 화면');
 is(/hm-v2:not\(\.hm-v2-old\)>\*:not\(#hv2\)\{display:none!important\}/.test(sc), '옛 칸은 CSS 로 숨기기만(지우지 않음)');
@@ -139,12 +166,17 @@ is(B.g.HOME_V2.apply(dyn(B)) === false, '「지금 할 것」 카드가 없는 �
 B = box({}, '?go=home&home=v2');
 is(B.g.HOME_V2.apply(dyn(B)) === true && B.store.apex_home_v2 === '1', '?home=v2 로 켠다');
 B = box({ apex_home_v2: '1' }, '?home=old');
-is(B.g.HOME_V2.apply(dyn(B)) === false && !('apex_home_v2' in B.store), '?home=old 로 끈다');
+is(B.g.HOME_V2.apply(dyn(B)) === false && B.store.apex_home_v2 === 'old', '?home=old 로 끈다(이 기기에 old)');
 
 console.log('\n[8] 옷은 .hv2 아래로만');
 const C = (sc.match(/var C = \[([\s\S]*?)\n    \];/) || ['', ''])[1];
 const sels = (C.match(/'([^'{]+)\{/g) || []).map(s => s.slice(1, -1));
-const 바깥 = sels.filter(s => s.split(',').some(x => !/^\s*(\.hv2|#hv2|\.tab-pane\.hm-toss\.hm-v2)/.test(x.trim())));
+/* @media 줄은 속의 고르개를 따로 꺼내 봅니다 — 넓은 화면에서 아래 세 칸을 흐름에 붙이는 한 줄 */
+const 미디어 = (C.match(/'@media[^{]*\{[^']*'/g) || []).map(x => x.replace(/^'@media[^{]*\{/, '').replace(/\}'$/, ''));
+const 속 = [].concat.apply([], 미디어.map(m => (m.match(/([^{}]+)\{/g) || []).map(x => x.slice(0, -1))));
+const 바깥 = sels.filter(s => !/^@media/.test(s)).concat(속)
+  .filter(s => s.split(',').some(x => !/^\s*(\.hv2|#hv2|\.tab-pane\.hm-toss\.hm-v2)/.test(x.trim())));
+is(속.length >= 2, '넓은 화면 줄(@media) 속 고르개도 셌다 — ' + 속.length + '개');
 is(sels.length > 50 && !바깥.length, '옷 ' + sels.length + '줄이 모두 .hv2 · #hv2Sheet · #hv2Dim · 새 화면 판 아래 — 밖 ' + 바깥.length + (바깥.length ? ' ← ' + 바깥.slice(0, 3).join(' | ') : ''));
 
 console.log('\n[9] 가짜 데이터로 그려 본다');
@@ -168,6 +200,44 @@ is(/오늘 할 일 끝/.test(B.els.hv2.innerHTML) && /오늘 볼 분을 다 챙�
 B = box({ apex_home_v2: '1' }, '', { goal: false });
 B.g.HOME_V2.apply(dyn(B));
 is(/목표가 아직 없어요/.test(B.els.hv2.innerHTML), '목표가 없으면 지어내지 않고 「목표가 아직 없어요 — 정하기」');
+
+console.log('\n[10] 시안과 다르던 곳 (알리기 · 아래 세 칸 · 팀원 한 줄)');
+B = box({ apex_home_v2: '1' }, '', {});
+B.g.HOME_V2.apply(dyn(B));
+h = B.els.hv2.innerHTML;
+is(/<span class="sl">알리기<\/span><span class="sn">0\/1<\/span>/.test(h) && h.indexOf('>기록<') < 0, '다섯 걸음 = 연락 · 만남 · 정리 · 관리 · 📣 알리기(0/1) — 시안 그대로, 기록 칸 없음');
+is(/연속 3일/.test(h), '걸음 밑 연속 일수(actStreak)');
+is(/class="dock"/.test(h) && /HOME_V2\.dock\('prod'\)/.test(h) && /HOME_V2\.dock\('talk'\)/.test(h) && /HOME_V2\.dock\('study'\)/.test(h), '아래 떠 있는 세 칸 — 상품전략 · 화법 · 공부 (누르면 그 갈래 판)');
+B.g.HOME_V2.dock('talk');
+let sh = (B.els.hv2Sheet || {}).innerHTML || '';
+is(/재무설계 실전화법서/.test(sh) && /미끼상품&amp;접촉전략|미끼상품&접촉전략/.test(sh) && /거절 근육 훈련/.test(sh) && sh.indexOf('보험 마스터') < 0, '💬 화법 판 — 재무설계 실전화법서 · 미끼상품&접촉전략 · 거절 근육 훈련 (사장님 말씀)');
+B.g.HOME_V2.dock('study');
+sh = (B.els.hv2Sheet || {}).innerHTML || '';
+is(/보험 마스터 아카데미/.test(sh), '📚 공부 판 — 보험 마스터 아카데미 (사장님 말씀)');
+
+console.log('\n[11] 오늘 동선 거리');
+B = box({ apex_home_v2: '1' }, '', { appts: [{ id: 'a1', hm: '10:00' }, { id: 'a2', hm: '14:00' }, { id: 'a3', hm: '16:00' }],
+  geo: [{ id: 'a1', lat: 34.95, lng: 127.49 }, { id: 'a2', next_appt_lat: 34.95, next_appt_lng: 127.58, lat: 1, lng: 1 }, { id: 'a3' }] });
+B.g.HOME_V2.apply(dyn(B));
+h = B.els.hv2.innerHTML;
+const 직선 = (function () { const R = 6371, r = Math.PI / 180, a = { lat: 34.95, lng: 127.49 }, b = { lat: 34.95, lng: 127.58 };
+  const dLo = (b.lng - a.lng) * r, x = Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2); return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x)); })();
+is(h.indexOf('동선 ' + (직선 * 1.35).toFixed(1) + 'km(어림)') >= 0, '약속 장소 좌표가 있으면 그것, 없으면 주소 좌표 — 직선 × 1.35 를 「(어림)」 으로 (' + (직선 * 1.35).toFixed(1) + 'km)');
+is(/약속 3곳/.test(h) && /주소 모르는 곳 1/.test(h), '좌표 없는 곳은 지어내지 않고 「주소 모르는 곳 1」');
+B = box({ apex_home_v2: '1', apexRouteKmV1: JSON.stringify({ '34.9500,127.4900,34.9500,127.5800': { km: 11.2, min: 19 } }) }, '',
+  { appts: [{ id: 'a1' }, { id: 'a2' }], geo: [{ id: 'a1', lat: 34.95, lng: 127.49 }, { id: 'a2', lat: 34.95, lng: 127.58 }] });
+B.g.HOME_V2.apply(dyn(B));
+is(/동선 11\.2km ·/.test(B.els.hv2.innerHTML), '지역 동선이 카카오 길찾기로 재 둔 거리가 있으면 그 값(어림 딱지 없음)');
+B = box({ apex_home_v2: '1' }, '', { appts: [] });
+B.g.HOME_V2.apply(dyn(B));
+is(/📍 오늘 동선 ·/.test(B.els.hv2.innerHTML) && !/km/.test(B.els.hv2.innerHTML), '약속이 없는 날은 거리를 안 적는다');
+B = box({ apex_home_v2: '1' }, '', { promo: true });
+B.g.HOME_V2.apply(dyn(B));
+is(/class="pr done"/.test(B.els.hv2.innerHTML) && /1\/1/.test(B.els.hv2.innerHTML), 'SNS 캐러셀 미션(d10)을 했으면 알리기 1/1');
+B = box({ apex_home_v2: '1' }, '', { lead: true });
+B.g.HOME_V2.apply(dyn(B));
+h = B.els.hv2.innerHTML;
+is((h.match(/class="ring"/g) || []).length === 4 && /who-strip/.test(h) && /hwhoSet\('p2'\)/.test(h) && /hwhoSet\('\*'\)/.test(h), '팀장 — 팀원 동그라미 한 줄(나 · 팀원 둘 · 팀 전체), 누르면 hwhoSet');
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');
 process.exit(bad ? 1 : 0);

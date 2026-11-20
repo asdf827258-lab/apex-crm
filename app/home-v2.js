@@ -23,7 +23,12 @@
    ★ <b>저장 코드를 새로 짜지 않습니다</b> — 누르면 위의 기존 함수를 부르기만 합니다.
 
    ── 깨지지 않게 ─────────────────────────────────────────────────
-     · 기본은 <b>꺼짐</b> — 켠 기기(localStorage apex_home_v2)에서만 보입니다.
+     · ★ 판 X505 — 사장님 말씀 (2026-11-20) 「우선 배포하고 <b>새화면을 먼저 기준</b>으로 하고, 구화면을 누르면
+       전 버전으로 할수 있도록 우선 만들어, 새버전 전부 마무리 될때까지는」.
+       → <b>기본이 새 화면</b>입니다. 「↩ 예전 화면」 을 누른 기기만 예전 화면(localStorage apex_home_v2 = 'old'),
+         옛 홈 인사 줄 「✨ 새 화면」 을 누르면 다시 새 화면('1').
+       ⚠ <b>자동 점검 브라우저(navigator.webdriver)는 예전 화면</b>을 봅니다 — 예전 화면은 「↩ 예전 화면」 으로
+         계속 쓰는 화면이라 그쪽 점검 수십 개가 계속 지켜야 합니다. 새 화면은 check-homev2 가 봅니다.
      · 옛 홈은 <b>지우지 않고 그 아래에 숨겨 둔 채 그대로 돕니다</b> — 옛 칸을 칠하는
        함수가 하나도 안 끊깁니다. 「☰ 다른 메뉴」 맨 위 「예전 오늘 칸 펼치기」 로 다 보입니다.
      · 새 화면을 그리다 오류가 나면 그 자리에서 예전 화면으로 돌아갑니다.
@@ -35,6 +40,7 @@
 (function (g) {
   'use strict';
   var ALLOWED = true;                 /* ③ 모두에게 끄기 — false 한 줄이면 전원이 예전 화면 */
+  var DEFAULT_NEW = true;             /* 판 X505 — 고른 적 없는 기기는 새 화면 (사장님 말씀 「새화면을 먼저 기준으로」) */
   var KEY = 'apex_home_v2';           /* 이 기기에만 · 서버로 안 갑니다 */
   var OLD = false;                    /* 예전 오늘 칸을 아래에 펼쳐 보나 */
   var CH = 'kakao';                   /* 카톡 · 문자 */
@@ -51,12 +57,18 @@
   function Q(s) { return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }   /* onclick 안 글 */
   function strip(s) { return String(s == null ? '' : s).replace(/<[^>]*>/g, ''); }
 
+  function robot() { try { return !!(g.navigator && g.navigator.webdriver); } catch (e) { return false; } }
   function on() {
     if (!ALLOWED) return false;
-    try { return g.localStorage.getItem(KEY) === '1'; } catch (e) { return false; }
+    var v = null;
+    try { v = g.localStorage.getItem(KEY); } catch (e) { v = null; }
+    if (v === '1') return true;
+    if (v === 'old') return false;
+    return DEFAULT_NEW && !robot();   /* 고른 적 없으면 새 화면 · 자동 점검은 예전 화면 */
   }
+  /* 고르면 이 기기에 남깁니다 — 새 화면 '1' · 예전 화면 'old' */
   function set(v) {
-    try { if (v) g.localStorage.setItem(KEY, '1'); else g.localStorage.removeItem(KEY); } catch (e) {}
+    try { g.localStorage.setItem(KEY, v ? '1' : 'old'); } catch (e) {}
   }
   function fromUrl() {
     try {
@@ -88,6 +100,17 @@
       '.hv2 .hello{font-size:23px;font-weight:800;letter-spacing:-.5px;line-height:1.3;margin:4px 2px 12px}',
       '.hv2 .hello b{color:var(--blue)}',
       '.hv2 .whowrap{margin:0 0 12px}',
+      '.hv2 .who-strip{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 0 12px;padding:2px 2px 0}',
+      '.hv2 .who-strip::-webkit-scrollbar{display:none}',
+      '.hv2 .who-strip button{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;width:56px;min-height:64px;text-align:center;font-size:13px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.hv2 .who-strip button small{font-size:13px;color:var(--sub3);font-weight:600}',
+      '.hv2 .who-strip .ring{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:15px;background:#fff;position:relative;flex:none}',
+      '.hv2 .who-strip .ring svg{position:absolute;inset:0;width:44px;height:44px}',
+      '.hv2 .who-strip .ring span{position:relative}',
+      '.hv2 .who-strip button.on{color:var(--ink);font-weight:800}',
+      '.hv2 .who-strip button.on .ring{background:var(--ink);color:#fff}',
+      '.hv2 .whonote{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--warn-l);color:var(--warn);border-radius:12px;padding:6px 6px 6px 12px;font-size:14px;font-weight:700;margin:-4px 0 12px}',
+      '.hv2 .whonote button{height:40px;padding:0 12px;border-radius:10px;background:#fff;color:var(--ink);font-size:14px;font-weight:700;flex:none}',
       /* 이번 달 한 줄 */
       '.hv2 .mon{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border-radius:18px;padding:12px 16px;min-height:60px}',
       '.hv2 .mon .mt{font-size:13px;color:var(--sub2);font-weight:600;white-space:nowrap}',
@@ -109,6 +132,18 @@
       '.hv2 .steps5 .sn{font-size:13px;font-weight:800;color:var(--ink);white-space:nowrap}',
       '.hv2 .steps5 button.cur{background:var(--blue-l)}',
       '.hv2 .steps5 button.cur .sl{color:var(--blue)}',
+      '.hv2 .steps5 button.done .sn{color:var(--green)}',
+      '.hv2 .steps5 button.pr .sn{color:#6D4AE8}',
+      '.hv2 .steps5 button.pr.done .sn{color:var(--green)}',
+      '.hv2 .streak{font-size:13px;color:var(--sub2);text-align:right;margin:6px 4px 0}',
+      '.hv2 .streak b{color:var(--ink)}',
+      '.hv2 .dock{position:fixed;left:12px;right:70px;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:140;display:grid;gap:4px;' +
+        'background:rgba(255,255,255,.96);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:16px;padding:4px;box-shadow:0 6px 24px rgba(25,31,40,.14)}',
+      '.hv2 .dock button{height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:700;text-align:center}',
+      '.hv2 .dock button:active{background:var(--blue-l);color:var(--blue)}',
+      '.hv2 .dock .e{font-size:18px}',
+      '#hv2{padding-bottom:64px}',
+      '@media(min-width:1101px){.hv2 .dock{position:sticky;left:auto;right:auto;bottom:16px;margin-top:12px}#hv2{padding-bottom:0}}',
       /* 🛰 챙기는 중 */
       '.hv2 .jv{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border-radius:18px;padding:12px 16px;margin-top:12px;min-height:60px;border:1.5px solid #CFE0FF}',
       '.hv2 .jv-i{font-size:22px}',
@@ -282,9 +317,33 @@
       '<button type="button" class="nmbtn" onclick="HOME_V2.nm()">' + (hidden() ? '👁 이름 보기' : '🙈 이름 가리기') + '</button>' +
       '<button type="button" class="nmbtn bk" onclick="HOME_V2.use(false)">↩ 예전 화면</button></div></div>';
   }
+  /* 👥 팀원 화면 그대로 보기 — 시안 who-strip(동그라미 한 줄 · 목표 고리).
+     누가 내 팀인지·오늘 몇 건인지는 hwhoList 한 곳, 고르는 것은 hwhoSet 한 곳(옛 고르개와 같은 자 · 5번).
+     고리 = 그 분 이번 달 실적/목표(PF.rows · monthly_perf). 목표가 없으면 주황 고리(시안 그대로) — 지어내지 않습니다. */
   function whoHtml() {
-    var h = T(function () { return g.hwhoBarHtml(); }, '');
-    return h ? '<div class="whowrap">' + h + '</div>' : '';
+    if (!T(function () { return g.hwhoCan(); }, false)) return '';
+    var L = T(function () { return g.hwhoList(); }, []) || [];
+    if (L.length < 2) { var h0 = T(function () { return g.hwhoBarHtml(); }, ''); return h0 ? '<div class="whowrap">' + h0 + '</div>' : ''; }
+    var cur = T(function () { return g.hwhoId(); }, ''), me = T(function () { return g.arMyId(); }, ''), all = T(function () { return g.hwhoIsAll(); }, false);
+    var rows = T(function () { return g.PF.rows; }, []) || [], gp = {};
+    rows.forEach(function (r) { if (r && r.owner_id) gp[r.owner_id] = { g: +r.goal_prem || 0, a: +r.act_prem || 0 }; });
+    var C = 2 * Math.PI * 20;
+    var ring = function (id, mid, on, lab, n) {
+      var q = gp[id], p = (q && q.g) ? Math.min(1, q.a / q.g) : 0;
+      return '<button type="button" class="' + (on ? 'on' : '') + '" onclick="hwhoSet(\'' + Q(id === me ? '' : id) + '\')"><div class="ring"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="20" fill="none" stroke="' + ((q && q.g) ? '#E5E8EB' : '#FFD8BF') + '" stroke-width="3"/>' +
+        ((q && q.g) ? '<circle cx="22" cy="22" r="20" fill="none" stroke="#1A56DB" stroke-width="3" stroke-dasharray="' + (C * p) + ' ' + C + '" transform="rotate(-90 22 22)" stroke-linecap="round"/>' : '') + '</svg><span>' + E(mid) + '</span></div>' +
+        E(lab) + (n != null ? '<small>' + n + '</small>' : '') + '</button>';
+    };
+    var h = '<div class="who-strip">';
+    L.forEach(function (x) {
+      var mine = x.id === me;
+      h += ring(x.id, mine ? '나' : String(x.nm || '').charAt(0), mine ? ((!cur || cur === me) && !all) : cur === x.id, mine ? '내 화면' : (x.nm || '팀원'), x.n);
+    });
+    var A = T(function () { return g.HWHO_ALL; }, '');
+    if (A) h += '<button type="button" class="' + (all ? 'on' : '') + '" onclick="hwhoSet(\'' + Q(A) + '\')"><div class="ring">🏢</div>팀 전체</button>';
+    h += '</div>';
+    if (cur && cur !== me) h += '<div class="whonote"><span>' + (all ? '🏢 팀 전체를 보고 있어요 — 내 것이 아니에요' : '👀 ' + E(T(function () { return g.hwhoName(cur); }, '팀원')) + '님 화면을 그대로 보고 있어요') + '</span><button type="button" onclick="hwhoMe()">← 내 화면</button></div>';
+    return h;
   }
   function helloHtml(L) {
     var nm = T(function () { return g.OS.profile.name; }, '') || '설계사';
@@ -304,14 +363,23 @@
       (act >= goal ? '<em class="ok">넘었어요</em>' : gap > 0 ? '<em>이대로면 ' + gap + '만 모자라요</em>' : '<em class="ok">예상대로면 넘어요</em>') + '</div>' +
       '<div class="mbar"><i class="act" style="width:' + (act / top * 100) + '%"></i><i class="exp" style="width:' + (exp / top * 100) + '%"></i><span class="gl" style="left:' + Math.min(99.5, goal / top * 100) + '%"></span></div></div><span class="ar">›</span></button>';
   }
-  /* 다섯 걸음 — 라이브 HM_WAY 의 다섯(연락 · 만남 · 정리 · 기록 · 관리)과 같은 자 */
-  var WAY = [['📞', '연락', 'hmWayCall'], ['🤝', '만남', 'hmWayMeet'], ['✍️', '정리', 'hmWayTidy'], ['📊', '기록', 'hmWayRec'], ['💌', '관리', 'hmWayCare']];
+  /* 다섯 걸음 — 시안 그대로 영업 넷(연락 · 만남 · 정리 · 관리) + 📣 나를 알리기.
+     영업 넷은 라이브 HM_WAY 와 같은 자(hmWayCall/Meet/Tidy/Care), 알리기는 아침 미션 ⑤
+     「오늘 올릴 SNS 캐러셀」 체크(체크판 day · d10)와 같은 자입니다 — 새로 세지 않습니다(5번). */
+  var WAY = [['📞', '연락', 'hmWayCall'], ['🤝', '만남', 'hmWayMeet'], ['✍️', '정리', 'hmWayTidy'], ['💌', '관리', 'hmWayCare']];
+  var PROMO_CK = 'd10';
+  function promoDone() { return !!T(function () { return g.hmMsCk()[PROMO_CK]; }, false); }
   function stepsHtml() {
-    var now = T(function () { return g.hmWayNow(); }, 0);
+    var now = T(function () { return g.hmWayNow(); }, 0), pd = promoDone();
+    var cur = now === 4 ? 3 : (now === 3 ? -1 : now);
+    if (cur < 0) cur = pd ? -1 : 4;
+    var st = T(function () { return g.actStreak(); }, null);
     return '<div class="steps5">' + WAY.map(function (w, i) {
       var v = T(function () { return g[w[2]](); }, null);
-      return '<button type="button" class="' + (i === now ? 'cur' : '') + '" onclick="HOME_V2.step(' + i + ')"><span class="si">' + w[0] + '</span><span class="sl">' + w[1] + '</span><span class="sn">' + E(v == null ? '—' : v) + '</span></button>';
-    }).join('') + '</div>';
+      return '<button type="button" class="' + (i === cur ? 'cur' : '') + '" onclick="HOME_V2.step(' + i + ')"><span class="si">' + w[0] + '</span><span class="sl">' + w[1] + '</span><span class="sn">' + E(v == null ? '—' : v) + '</span></button>';
+    }).join('') +
+      '<button type="button" class="pr' + (pd ? ' done' : '') + (cur === 4 ? ' cur' : '') + '" onclick="HOME_V2.step(4)"><span class="si">📣</span><span class="sl">알리기</span><span class="sn">' + (pd ? '1/1' : '0/1') + '</span></button></div>' +
+      (st && typeof st.n === 'number' ? '<div class="streak">쉬지 않고 일한 날 <b>연속 ' + st.n + '일</b></div>' : '');
   }
   /* 🛰 챙기는 중 — 끊기기 쉬운 자리: 약속이 지난 분 · 소개 여쭐 차례 · 이번 달 마디 */
   function jvData() {
@@ -429,8 +497,14 @@
       return '<div class="tl"><span class="t">' + E(tm || KO[z.k] || '일정') + '</span><span class="x">' + E([nm, s.replace(/^\d{1,2}:\d{2}\s*·?\s*/, '')].filter(Boolean).join(' · ')) + '</span></div>';
     }).join('') : '<div class="tl" style="color:var(--sub2)">이날은 일정이 없어요</div>';
     if (sel === dow) {
-      var near = T(function () { return g.hmRtNear().length; }, null);
-      h += '<button type="button" class="rtl" onclick="hmRtOpen()"><span>📍 오늘 동선' + (near != null ? ' · 가는 김에 들를 분 ' + near + '명' : '') + '</span><span>›</span></button>';
+      var near = T(function () { return g.hmRtNear().length; }, null), R = route();
+      var parts = [];
+      if (R.km != null) parts.push('동선 ' + (R.km < 1 ? Math.round(R.km * 1000) + 'm' : R.km.toFixed(1) + 'km') + (R.real ? '' : '(어림)'));
+      else parts.push('오늘 동선');
+      if (R.n) parts.push('약속 ' + R.n + '곳');
+      if (R.miss) parts.push('주소 모르는 곳 ' + R.miss);
+      if (near != null) parts.push('가는 김에 들를 분 ' + near + '명');
+      h += '<button type="button" class="rtl" onclick="hmRtOpen()"><span>📍 ' + E(parts.join(' · ')) + '</span><span>›</span></button>';
     }
     return h + '<div class="row2"><button type="button" class="btn g sm" onclick="go(\'mycal\')">＋ 일정</button><button type="button" class="btn g sm" onclick="go(\'mycal\')">📅 달력 크게</button></div></div>';
   }
@@ -477,7 +551,103 @@
     var L = T(function () { return g.hmLeft(); }, { list: [], all: 0 });
     return topHtml() + whoHtml() + helloHtml(L) + monHtml() + stepsHtml() + jvHtml() + railHtml(L) +
       inscHtml() + weekHtml() + roadHtml() + eveHtml(L) + menuHtml() +
-      '<div class="src">새 오늘 화면 (시험) · 시안 9차 디자인 · 맨 위 「↩ 예전 화면」 으로 언제든 돌아갑니다</div>';
+      '<div class="src">새 오늘 화면 (시험) · 시안 9차 디자인 · 맨 위 「↩ 예전 화면」 으로 언제든 돌아갑니다</div>' + dockHtml();
+  }
+  /* 늘 떠 있는 세 칸 — 시안 .dock (🧭 상품전략 · 💬 화법 · 📚 공부). 가는 곳은 앱 메뉴 그대로:
+     상품전략기(insight) · 미끼상품&접촉전략(mikki_talk · 대본) · 성장 로드맵(edu). 열 수 없는 칸은 안 세웁니다.
+     ⚠ 오른쪽 아래 🎙·? 단추를 가리지 않게 오른쪽을 비워 둡니다. */
+  /* 사장님 말씀 (2026-11-20) 「화법에는 재무설계 실전화법서 등이며, 보험마스터아카데미도 있어」 —
+     칸 하나가 화면 하나로 가지 않고 <b>그 갈래 화면을 다 모은 판</b>을 엽니다(시안 openProd 처럼 아래에서 올라옴).
+     ① 먼저 세울 것(손으로 고른 차례) ② 그 밖에 메뉴 표(TABS)에서 이름이 그 갈래인 것 — 새 화면이 생겨도 저절로 들어옵니다.
+     열 수 없는 화면은 안 세웁니다. 이름·그림은 메뉴 표 그대로(여기 안 적음 · 5번). */
+  var DOCK = {
+    prod:  { e: '🧭', t: '상품전략', h: '이번 달 무엇을 들고 갈지', ids: ['insight', 'mikki_talk', 'mikki'], re: /상품전략|미끼|보험사 전산|상품 비교|보험료비교/ },
+    talk:  { e: '💬', t: '화법', h: '전화 · 만남 · 거절 · 재무설계에서 할 말', ids: ['mikki_talk', 'fp_talk', 'ta_script', 'ta_say', 'rej_gym'], re: /화법|대본|거절|스크립트|멘트|상담자료/ },
+    study: { e: '📚', t: '공부', h: '배우고 익히는 곳', ids: ['bohum', 'edu', 'academy', 'ta_train', 'bcd_lec', 'jiin_grow', 'educal', 'growboard'], re: /아카데미|교육|강의|공부|성장|교재|시험|사전/ }
+  };
+  function dockItems(k) {
+    var D = DOCK[k], out = [], seen = {}, it;
+    var add = function (it) { if (it && it.id && !seen[it.id] && can(it.id)) { seen[it.id] = 1; out.push(it); } };
+    var of = function (id) { return T(function () { return g.navItemOf(id); }, null); };
+    D.ids.forEach(function (id) { add(of(id)); });
+    (T(function () { return g.TABS; }, []) || []).forEach(function (gr) { (gr.items || []).forEach(function (x) { if (D.re.test(String(x.title || ''))) add(x); }); });
+    return out;
+  }
+  function dockHtml() {
+    var K = ['prod', 'talk', 'study'].filter(function (k) { return dockItems(k).length; });
+    if (!K.length) return '';
+    return '<div class="dock" style="grid-template-columns:repeat(' + K.length + ',1fr)">' + K.map(function (k) {
+      return '<button type="button" onclick="HOME_V2.dock(\'' + k + '\')"><span class="e">' + DOCK[k].e + '</span>' + DOCK[k].t + '</button>';
+    }).join('') + '</div>';
+  }
+
+  /* 📍 <b>오늘 동선 거리</b> — 사장님 말씀 (2026-11-20) 「동선거리는 재지않고 있다면 해결해야지」.
+     ★ 자리(좌표)는 지역 동선(apex-route.js)이 서버 dbs 에 적어 둔 그것 — 약속 장소(next_appt_lat/lng)가
+       있으면 그것, 없으면 주소(lat/lng). 홈의 AR.db 에는 좌표 칸이 없어 <b>오늘 약속인 분만</b> 한 번 읽습니다.
+     ★ 거리는 지역 동선과 <b>같은 자</b> — 카카오 길찾기로 재 둔 구간(이 기기 apexRouteKmV1)이 있으면 그것,
+       없는 구간은 그 화면이 쓰는 서버 길찾기(/.netlify/functions/route-km)에 한 번 묻고 같은 곳에 적습니다.
+       길찾기를 못 쓰면 지역 동선과 같은 어림(직선 × 1.35)이고 화면에 「(어림)」 이라고 적습니다 (1번).
+     ★ 좌표가 없는 곳은 지어내지 않고 「주소 모르는 곳 N」 으로 적습니다. 약속이 시간 차례로 둘 이상일 때만 잽니다. */
+  var GEO = {}, GEO_ASKED = {}, GEO_OFF = false, RK_ASKED = {}, RK_OFF = false;
+  function rkKey(a, b) { return [a.lat, a.lng, b.lat, b.lng].map(function (v) { return (+v).toFixed(4); }).join(','); }
+  function rkCache() { try { return JSON.parse(g.localStorage.getItem('apexRouteKmV1') || '{}') || {}; } catch (e) { return {}; } }
+  function hav(a, b) {
+    var R = 6371, r = Math.PI / 180, dLa = (b.lat - a.lat) * r, dLo = (b.lng - a.lng) * r;
+    var x = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+    return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  }
+  function ptOf(d) {
+    if (!d) return null;
+    if (d.next_appt_lat && d.next_appt_lng) return { lat: +d.next_appt_lat, lng: +d.next_appt_lng };
+    if (d.lat && d.lng) return { lat: +d.lat, lng: +d.lng };
+    return null;
+  }
+  function geoLoad(ids) {
+    var need = ids.filter(function (id) { return !GEO_ASKED[id]; });
+    if (GEO_OFF || !need.length) return;
+    need.forEach(function (id) { GEO_ASKED[id] = 1; });
+    var sb = T(function () { return g.osClient(); }, null);
+    if (!sb) return;
+    try {
+      sb.from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng').in('id', need).then(function (r) {
+        if (r && r.error) { GEO_OFF = true; return; }       /* 좌표 칸이 없는 서버(migration_46 전) — 조용히 물러남 */
+        ((r && r.data) || []).forEach(function (d) { GEO[d.id] = d; });
+        paint();
+      }, function () { GEO_OFF = true; });
+    } catch (e) { GEO_OFF = true; }
+  }
+  function rkAsk(pairs) {
+    var key = pairs.map(function (p) { return rkKey(p.a, p.b); }).join('|');
+    if (RK_OFF || RK_ASKED[key] || typeof g.fetch !== 'function') return;
+    RK_ASKED[key] = 1;
+    g.fetch('/.netlify/functions/route-km', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ legs: pairs.map(function (p) { return { ox: p.a.lng, oy: p.a.lat, dx: p.b.lng, dy: p.b.lat }; }) }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j || !j.ok) { RK_OFF = true; return; }
+        var C = rkCache();
+        (j.legs || []).forEach(function (v, i) { if (v && v.km != null) C[rkKey(pairs[i].a, pairs[i].b)] = { km: v.km, min: v.min }; });
+        try { g.localStorage.setItem('apexRouteKmV1', JSON.stringify(C)); } catch (e) {}
+        paint();
+      }).catch(function () { RK_OFF = true; });
+  }
+  function route() {
+    var A = T(function () { return g.hmRtAppts(); }, []) || [];
+    var out = { n: A.length, miss: 0, km: null, real: false };
+    if (!A.length) return out;
+    geoLoad(A.map(function (a) { return a.id; }));
+    var P = [];
+    A.forEach(function (a) { var p = ptOf(GEO[a.id]); if (p) P.push(p); else if (GEO[a.id] || GEO_OFF) out.miss++; });
+    if (P.length < 2) return out;
+    var C = rkCache(), km = 0, real = true, ask = [];
+    for (var i = 1; i < P.length; i++) {
+      var w = C[rkKey(P[i - 1], P[i])];
+      if (w && w.km != null) km += +w.km;
+      else { km += hav(P[i - 1], P[i]) * 1.35; real = false; ask.push({ a: P[i - 1], b: P[i] }); }
+    }
+    if (ask.length) rkAsk(ask);
+    out.km = km; out.real = real;
+    return out;
   }
 
   /* ── 그리기 ─────────────────────────────────────────────────────── */
@@ -544,8 +714,30 @@
       if (i === 0) { var r = el('hv2Rail') || el('hv2'); if (r) r.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
       if (i === 1) { var w = el('hv2Week'); if (w) w.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
       if (i === 2) { API.jv(); return; }
-      if (i === 3) { try { g.go('ckboard'); } catch (e) {} return; }
-      try { g.go('clients'); } catch (e2) {}
+      if (i === 3) { try { g.go('clients'); } catch (e) {} return; }
+      API.promo();
+    },
+    /* 📣 알리기 — 아침 미션 ⑤ 와 같은 체크(hmMsDid) · 만드는 곳은 콘텐츠 허브 */
+    promo: function () {
+      var pd = promoDone();
+      sheet('<h1>📣 오늘 나를 알리기</h1><div class="sub">아침 미션 ⑤ 「오늘 올릴 SNS 캐러셀」 과 같은 체크예요</div>' +
+        '<div class="say">' + (pd ? '오늘은 올렸어요 👏' : '오늘의 뉴스로 카드 한 장 만들어 올리기') + '</div>' +
+        '<button type="button" class="btn p" onclick="HOME_V2.close();go(\'content\')">🖼 카드 만들러 가기</button>' +
+        (pd ? '' : '<button type="button" class="btn g" onclick="HOME_V2.promoOk()">✓ 올렸어요</button>'));
+    },
+    promoOk: function () { try { g.hmMsDid(PROMO_CK); } catch (e) {} close(); paint(); },
+    /* 아래 세 칸 — 그 갈래 화면을 다 모은 판 */
+    dock: function (k) {
+      var D = DOCK[k]; if (!D) return;
+      var L = dockItems(k);
+      var desc = function (id) { return strip(T(function () { var m = g.TAB_META[id]; return m && (m.desc || m.d || m.s); }, '') || ''); };
+      sheet('<h1>' + D.e + ' ' + E(D.t) + '</h1><div class="sub">' + E(D.h) + ' · ' + L.length + '곳</div>' +
+        (k === 'prod' ? inscHtml() : '') +
+        '<div class="list" style="margin-top:12px">' + L.map(function (it) {
+          var d = desc(it.id);
+          return '<button type="button" class="li" onclick="HOME_V2.close();go(\'' + Q(it.id) + '\')"><span class="e">' + E(it.icon || '•') + '</span><div class="tx"><div class="t1">' + E(it.title || it.id) + '</div>' +
+            (d ? '<div class="t2">' + E(d) + '</div>' : '') + '</div><span class="ar">›</span></button>';
+        }).join('') + '</div>');
     },
     jv: function () {
       var J = jvData();
