@@ -1380,7 +1380,7 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(morn.blockedSsi, '  <b>「성춘향씨가」</b> 도 막는다');
   is(morn.notFalse, '  <b>「날씨가」 「손님이」 는 안 막는다</b> — 헛것은 안 잡는 것보다 나쁘다 (8번)');
 
-  console.log('\n[23] 하나의 이야기로 쓰나 · <b>한 번에</b> 심의를 지나나 (판 X501)');
+  console.log('\n[23] 하나의 이야기로 쓰나 · <b>한 번에</b> 심의를 지나나 (판 X503)');
   const tale = await page.evaluate(async () => {
     const out = {};
     localStorage.clear(); S.comply = null; await comply();
@@ -1464,6 +1464,87 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(say.newsNoBox, '  뉴스 날에는 한 줄 칸도 안 세운다');
   is(say.writeSay && say.writeNoGet && say.writeBox,
      '  <b>적는 날</b>에는 「적어 주시면」 · 「글감 적으러 가기」 · 한 줄 칸');
+
+  console.log('\n[24] 네이버에서 겪어 보신 규칙 — 내돈내산 · 올리는 법 · 체류시간 (판 X502)');
+  const nav = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.comply = null; await comply();
+    /* ① 「내돈내산」 은 게이트가 막는다 — 체험단으로 찍히면 글이 안 올라온다 */
+    const hit = t => guard(t, null).hits.map(h => h.w);
+    out.ban1 = hit('내돈내산으로 먹어 봤습니다').length > 0;
+    out.ban2 = hit('내 돈 내산 후기입니다').length > 0;
+    out.ban3 = hit('체험단으로 받았습니다').length > 0;
+    out.ban4 = hit('협찬 받아 썼습니다').length > 0;
+    out.banWhy = /체험단/.test((guard('내돈내산 후기', null).hits[0] || {}).why || '');
+    /* 헛것은 안 잡는다 — 「내 돈으로 샀습니다」 는 멀쩡한 말이다 */
+    out.notFalse = hit('제 돈으로 직접 사서 써 봤습니다').length === 0
+                && hit('내산 공원에 다녀왔습니다').length === 0;
+    /* 주문서도 그 말을 쓰지 말라고 시킨다 — 게이트에서 막히기 전에 */
+    S.perweek = 7; plan();
+    const i = todayAt(); if (!KINDS[S.rows[i].kind].mine) S.rows[i].kind = 'ask';
+    S.rows[i].seed = { kind:'ask', title:'질문', src:'상담' };
+    out.order = /내\s*돈\s*내\s*산/.test(sysPrompt());
+
+    /* ② 올리는 법 — 끌어다 놓지 말고 올리기 · GIF · 스티커/링크/장소 */
+    S.rows[i].out = '## 본문\n글입니다. 보장 내용은 심사 결과에 따릅니다.\n';
+    S.rows[i].guard = guard(S.rows[i].out, S.rows[i].kind, S.rows[i]);
+    await show(i);
+    const v = document.getElementById('view').innerText;
+    out.upload = /끌어다 놓지 말고/.test(v) && /«사진» 단추/.test(v);
+    out.gif    = /동영상은 이제 안 올라갑니다/.test(v) && /GIF/.test(v);
+    out.three  = /스티커/.test(v) && /링크/.test(v) && /장소/.test(v);
+    out.mine   = /「내돈내산」 은 쓰지 않습니다/.test(v);
+    out.whose  = /사장님 2026-11-20/.test(v);   /* 우리가 확인한 것이 아니라고 밝힌다 (1번) */
+
+    /* ③ 체류시간 — 2분 30초 기준, 그리고 <b>가정이라고 밝힌다</b> */
+    const long = '## 본문\n' + '가'.repeat(2000) + '\n보장 내용은 심사 결과에 따릅니다.\n';
+    S.rows[i].out = long; S.rows[i].guard = guard(long, S.rows[i].kind, S.rows[i]);
+    await show(i);
+    const vl = document.getElementById('view').innerText;
+    out.stayShown = /다 읽는 데/.test(vl);
+    out.stayGoal  = /2분 30초/.test(vl);
+    out.stayGuess = /예상입니다/.test(vl) && /우리가 가정한/.test(vl);
+    out.stayReal  = /진짜 체류시간은 네이버 통계/.test(vl);
+    out.longOk    = /를 넘습니다/.test(vl);
+    S.rows[i].out = '## 본문\n짧습니다. 보장 내용은 심사 결과에 따릅니다.\n';
+    S.rows[i].guard = guard(S.rows[i].out, S.rows[i].kind, S.rows[i]);
+    await show(i);
+    const vs = document.getElementById('view').innerText;
+    out.shortNo  = /에 모자랍니다/.test(vs);
+    out.shortHow = /소제목을 하나 더/.test(vs);
+    /* ★ <b>읽기 속도를 낮추면 짧은 글도 훌륭해 보입니다.</b> 되돌림에서 분당 500→60자로
+       낮춰 봤더니 아무 자도 안 울었습니다 — 가장 쉬운 속임수에 알람이 없던 것입니다 (8번).
+       가정을 숫자로 못 박습니다. 바꾸려면 이 줄을 고치게 되고, 고치는 손이 까닭을 적게 됩니다. */
+    out.cpm = READ_CPM; out.pic = READ_PIC; out.goal = STAY_GOOD;
+    /* 셈이 손으로 푼 값과 같은가 — <b>packText</b> 를 재므로 준법 문구·글쓴이도 글자에 든다.
+       2,000자만 넣고 2,000자로 기대하면 그 꼬리를 빼먹는다 (처음에 그렇게 틀렸다). */
+    S.rows[i].out = '## 본문\n' + '가'.repeat(2000) + '\n';
+    const seen = stayOf(i);
+    out.calc = seen.sec;
+    out.hand = Math.round(seen.ch / READ_CPM * 60 + seen.pics * READ_PIC);
+    out.tail = seen.ch > 2000;     /* 꼬리가 실제로 들어 있나 */
+    return out;
+  });
+  is(nav.ban1 && nav.ban2 && nav.ban3 && nav.ban4,
+     '  <b>「내돈내산」 · 체험단 · 협찬</b>을 게이트가 막는다 (사장님: 어떤 일이 있어도 쓰지 않는다)');
+  is(nav.banWhy, '  왜 막는지 <b>체험단으로 찍힌다</b>고 적는다 — 심의가 아니라 네이버 쪽 이유다');
+  is(nav.notFalse, '  <b>「제 돈으로 직접 사서」 는 안 막는다</b> — 헛것은 안 잡는 것보다 나쁘다 (8번)');
+  is(nav.order, '  주문서도 그 말을 쓰지 말라고 시킨다 — 게이트에서 막히기 전에');
+  is(nav.upload, '  <b>끌어다 놓지 말고 «사진» 단추로</b> 올리라고 적는다');
+  is(nav.gif, '  <b>동영상 대신 GIF</b> 라고 적는다');
+  is(nav.three, '  <b>스티커 · 링크 · 장소</b> 셋을 챙기라고 적는다');
+  is(nav.mine, '  「내돈내산」 을 쓰지 말라고 그 자리에서도 적는다');
+  is(nav.whose, '  <b>누가 일러 준 것인지</b> 밝힌다 — 우리가 확인한 것이 아니다 (1번)');
+  is(nav.stayShown && nav.stayGoal, '  <b>다 읽는 데 걸리는 시간</b>과 기준 2분 30초를 보여 준다');
+  is(nav.stayGuess && nav.stayReal,
+     '  ★ <b>예상이라고 밝힌다</b> — 읽기 속도는 우리 가정이고, 진짜 체류시간은 네이버에 있다 (1번)');
+  is(nav.longOk && nav.shortNo, '  긴 글은 넘는다고, 짧은 글은 모자란다고 가른다');
+  is(nav.shortHow, '  모자라면 <b>무엇을 하면 되는지</b> 적는다');
+  is(nav.cpm === 500 && nav.pic === 4 && nav.goal === 150,
+     '  ★ 가정을 <b>숫자로 못 박는다</b> — 분당 ' + nav.cpm + '자 · 그림 ' + nav.pic + '초 · 기준 ' + nav.goal + '초. '
+     + '낮추면 짧은 글도 훌륭해 보인다 (8번)');
+  is(nav.calc === nav.hand && nav.tail,
+     '  셈이 손으로 푼 값과 같다 — ' + nav.calc + '초 (준법 문구·글쓴이까지 센 글자로 셈)');
 
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
