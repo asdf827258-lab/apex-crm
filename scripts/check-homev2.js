@@ -75,6 +75,9 @@ function box(store, search, opt) {
     mcalItems: () => ({}), mcalDay: () => [], hmRtNear: () => [],
     arStageN: () => ({ c: { 미접촉: 3, TA: 1 }, tot: 4 }), hmNightSub: () => '오늘 닿은 분 0명',
     TABS: [{ group: '고객', items: [{ id: 'clients', icon: '📇', title: '고객 365일' }] }], osTabAllowed: () => true,
+    hmMsCk: () => (opt.promo ? { d10: true } : {}), actStreak: () => ({ n: 3 }), hmMsDid: () => {},
+    hwhoCan: () => !!opt.lead, hwhoId: () => '', hwhoIsAll: () => false, arMyId: () => 'me', HWHO_ALL: '*', hwhoName: () => '홍철호',
+    hwhoList: () => [{ id: 'me', nm: '홍판서', n: 2 }, { id: 'p2', nm: '홍철호', n: 5 }, { id: 'p3', nm: '홍기동', n: 0 }],
     osEsc: s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
   };
   g.window = g;
@@ -144,7 +147,12 @@ is(B.g.HOME_V2.apply(dyn(B)) === false && !('apex_home_v2' in B.store), '?home=o
 console.log('\n[8] 옷은 .hv2 아래로만');
 const C = (sc.match(/var C = \[([\s\S]*?)\n    \];/) || ['', ''])[1];
 const sels = (C.match(/'([^'{]+)\{/g) || []).map(s => s.slice(1, -1));
-const 바깥 = sels.filter(s => s.split(',').some(x => !/^\s*(\.hv2|#hv2|\.tab-pane\.hm-toss\.hm-v2)/.test(x.trim())));
+/* @media 줄은 속의 고르개를 따로 꺼내 봅니다 — 넓은 화면에서 아래 세 칸을 흐름에 붙이는 한 줄 */
+const 미디어 = (C.match(/'@media[^{]*\{[^']*'/g) || []).map(x => x.replace(/^'@media[^{]*\{/, '').replace(/\}'$/, ''));
+const 속 = [].concat.apply([], 미디어.map(m => (m.match(/([^{}]+)\{/g) || []).map(x => x.slice(0, -1))));
+const 바깥 = sels.filter(s => !/^@media/.test(s)).concat(속)
+  .filter(s => s.split(',').some(x => !/^\s*(\.hv2|#hv2|\.tab-pane\.hm-toss\.hm-v2)/.test(x.trim())));
+is(속.length >= 2, '넓은 화면 줄(@media) 속 고르개도 셌다 — ' + 속.length + '개');
 is(sels.length > 50 && !바깥.length, '옷 ' + sels.length + '줄이 모두 .hv2 · #hv2Sheet · #hv2Dim · 새 화면 판 아래 — 밖 ' + 바깥.length + (바깥.length ? ' ← ' + 바깥.slice(0, 3).join(' | ') : ''));
 
 console.log('\n[9] 가짜 데이터로 그려 본다');
@@ -168,6 +176,21 @@ is(/오늘 할 일 끝/.test(B.els.hv2.innerHTML) && /오늘 볼 분을 다 챙�
 B = box({ apex_home_v2: '1' }, '', { goal: false });
 B.g.HOME_V2.apply(dyn(B));
 is(/목표가 아직 없어요/.test(B.els.hv2.innerHTML), '목표가 없으면 지어내지 않고 「목표가 아직 없어요 — 정하기」');
+
+console.log('\n[10] 시안과 다르던 곳 (알리기 · 아래 세 칸 · 팀원 한 줄)');
+B = box({ apex_home_v2: '1' }, '', {});
+B.g.HOME_V2.apply(dyn(B));
+h = B.els.hv2.innerHTML;
+is(/<span class="sl">알리기<\/span><span class="sn">0\/1<\/span>/.test(h) && h.indexOf('>기록<') < 0, '다섯 걸음 = 연락 · 만남 · 정리 · 관리 · 📣 알리기(0/1) — 시안 그대로, 기록 칸 없음');
+is(/연속 3일/.test(h), '걸음 밑 연속 일수(actStreak)');
+is(/class="dock"/.test(h) && /go\('insight'\)/.test(h) && /go\('mikki_talk'\)/.test(h) && /go\('edu'\)/.test(h), '아래 떠 있는 세 칸 — 상품전략기 · 화법(미끼상품&접촉전략) · 공부(성장 로드맵)');
+B = box({ apex_home_v2: '1' }, '', { promo: true });
+B.g.HOME_V2.apply(dyn(B));
+is(/class="pr done"/.test(B.els.hv2.innerHTML) && /1\/1/.test(B.els.hv2.innerHTML), 'SNS 캐러셀 미션(d10)을 했으면 알리기 1/1');
+B = box({ apex_home_v2: '1' }, '', { lead: true });
+B.g.HOME_V2.apply(dyn(B));
+h = B.els.hv2.innerHTML;
+is((h.match(/class="ring"/g) || []).length === 4 && /who-strip/.test(h) && /hwhoSet\('p2'\)/.test(h) && /hwhoSet\('\*'\)/.test(h), '팀장 — 팀원 동그라미 한 줄(나 · 팀원 둘 · 팀 전체), 누르면 hwhoSet');
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');
 process.exit(bad ? 1 : 0);

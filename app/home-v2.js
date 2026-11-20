@@ -88,6 +88,17 @@
       '.hv2 .hello{font-size:23px;font-weight:800;letter-spacing:-.5px;line-height:1.3;margin:4px 2px 12px}',
       '.hv2 .hello b{color:var(--blue)}',
       '.hv2 .whowrap{margin:0 0 12px}',
+      '.hv2 .who-strip{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 0 12px;padding:2px 2px 0}',
+      '.hv2 .who-strip::-webkit-scrollbar{display:none}',
+      '.hv2 .who-strip button{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;width:56px;min-height:64px;text-align:center;font-size:13px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.hv2 .who-strip button small{font-size:13px;color:var(--sub3);font-weight:600}',
+      '.hv2 .who-strip .ring{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:15px;background:#fff;position:relative;flex:none}',
+      '.hv2 .who-strip .ring svg{position:absolute;inset:0;width:44px;height:44px}',
+      '.hv2 .who-strip .ring span{position:relative}',
+      '.hv2 .who-strip button.on{color:var(--ink);font-weight:800}',
+      '.hv2 .who-strip button.on .ring{background:var(--ink);color:#fff}',
+      '.hv2 .whonote{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--warn-l);color:var(--warn);border-radius:12px;padding:6px 6px 6px 12px;font-size:14px;font-weight:700;margin:-4px 0 12px}',
+      '.hv2 .whonote button{height:40px;padding:0 12px;border-radius:10px;background:#fff;color:var(--ink);font-size:14px;font-weight:700;flex:none}',
       /* 이번 달 한 줄 */
       '.hv2 .mon{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border-radius:18px;padding:12px 16px;min-height:60px}',
       '.hv2 .mon .mt{font-size:13px;color:var(--sub2);font-weight:600;white-space:nowrap}',
@@ -109,6 +120,18 @@
       '.hv2 .steps5 .sn{font-size:13px;font-weight:800;color:var(--ink);white-space:nowrap}',
       '.hv2 .steps5 button.cur{background:var(--blue-l)}',
       '.hv2 .steps5 button.cur .sl{color:var(--blue)}',
+      '.hv2 .steps5 button.done .sn{color:var(--green)}',
+      '.hv2 .steps5 button.pr .sn{color:#6D4AE8}',
+      '.hv2 .steps5 button.pr.done .sn{color:var(--green)}',
+      '.hv2 .streak{font-size:13px;color:var(--sub2);text-align:right;margin:6px 4px 0}',
+      '.hv2 .streak b{color:var(--ink)}',
+      '.hv2 .dock{position:fixed;left:12px;right:70px;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:140;display:grid;gap:4px;' +
+        'background:rgba(255,255,255,.96);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:16px;padding:4px;box-shadow:0 6px 24px rgba(25,31,40,.14)}',
+      '.hv2 .dock button{height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:700;text-align:center}',
+      '.hv2 .dock button:active{background:var(--blue-l);color:var(--blue)}',
+      '.hv2 .dock .e{font-size:18px}',
+      '#hv2{padding-bottom:64px}',
+      '@media(min-width:1101px){.hv2 .dock{position:sticky;left:auto;right:auto;bottom:16px;margin-top:12px}#hv2{padding-bottom:0}}',
       /* 🛰 챙기는 중 */
       '.hv2 .jv{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border-radius:18px;padding:12px 16px;margin-top:12px;min-height:60px;border:1.5px solid #CFE0FF}',
       '.hv2 .jv-i{font-size:22px}',
@@ -282,9 +305,33 @@
       '<button type="button" class="nmbtn" onclick="HOME_V2.nm()">' + (hidden() ? '👁 이름 보기' : '🙈 이름 가리기') + '</button>' +
       '<button type="button" class="nmbtn bk" onclick="HOME_V2.use(false)">↩ 예전 화면</button></div></div>';
   }
+  /* 👥 팀원 화면 그대로 보기 — 시안 who-strip(동그라미 한 줄 · 목표 고리).
+     누가 내 팀인지·오늘 몇 건인지는 hwhoList 한 곳, 고르는 것은 hwhoSet 한 곳(옛 고르개와 같은 자 · 5번).
+     고리 = 그 분 이번 달 실적/목표(PF.rows · monthly_perf). 목표가 없으면 주황 고리(시안 그대로) — 지어내지 않습니다. */
   function whoHtml() {
-    var h = T(function () { return g.hwhoBarHtml(); }, '');
-    return h ? '<div class="whowrap">' + h + '</div>' : '';
+    if (!T(function () { return g.hwhoCan(); }, false)) return '';
+    var L = T(function () { return g.hwhoList(); }, []) || [];
+    if (L.length < 2) { var h0 = T(function () { return g.hwhoBarHtml(); }, ''); return h0 ? '<div class="whowrap">' + h0 + '</div>' : ''; }
+    var cur = T(function () { return g.hwhoId(); }, ''), me = T(function () { return g.arMyId(); }, ''), all = T(function () { return g.hwhoIsAll(); }, false);
+    var rows = T(function () { return g.PF.rows; }, []) || [], gp = {};
+    rows.forEach(function (r) { if (r && r.owner_id) gp[r.owner_id] = { g: +r.goal_prem || 0, a: +r.act_prem || 0 }; });
+    var C = 2 * Math.PI * 20;
+    var ring = function (id, mid, on, lab, n) {
+      var q = gp[id], p = (q && q.g) ? Math.min(1, q.a / q.g) : 0;
+      return '<button type="button" class="' + (on ? 'on' : '') + '" onclick="hwhoSet(\'' + Q(id === me ? '' : id) + '\')"><div class="ring"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="20" fill="none" stroke="' + ((q && q.g) ? '#E5E8EB' : '#FFD8BF') + '" stroke-width="3"/>' +
+        ((q && q.g) ? '<circle cx="22" cy="22" r="20" fill="none" stroke="#1A56DB" stroke-width="3" stroke-dasharray="' + (C * p) + ' ' + C + '" transform="rotate(-90 22 22)" stroke-linecap="round"/>' : '') + '</svg><span>' + E(mid) + '</span></div>' +
+        E(lab) + (n != null ? '<small>' + n + '</small>' : '') + '</button>';
+    };
+    var h = '<div class="who-strip">';
+    L.forEach(function (x) {
+      var mine = x.id === me;
+      h += ring(x.id, mine ? '나' : String(x.nm || '').charAt(0), mine ? ((!cur || cur === me) && !all) : cur === x.id, mine ? '내 화면' : (x.nm || '팀원'), x.n);
+    });
+    var A = T(function () { return g.HWHO_ALL; }, '');
+    if (A) h += '<button type="button" class="' + (all ? 'on' : '') + '" onclick="hwhoSet(\'' + Q(A) + '\')"><div class="ring">🏢</div>팀 전체</button>';
+    h += '</div>';
+    if (cur && cur !== me) h += '<div class="whonote"><span>' + (all ? '🏢 팀 전체를 보고 있어요 — 내 것이 아니에요' : '👀 ' + E(T(function () { return g.hwhoName(cur); }, '팀원')) + '님 화면을 그대로 보고 있어요') + '</span><button type="button" onclick="hwhoMe()">← 내 화면</button></div>';
+    return h;
   }
   function helloHtml(L) {
     var nm = T(function () { return g.OS.profile.name; }, '') || '설계사';
@@ -304,14 +351,23 @@
       (act >= goal ? '<em class="ok">넘었어요</em>' : gap > 0 ? '<em>이대로면 ' + gap + '만 모자라요</em>' : '<em class="ok">예상대로면 넘어요</em>') + '</div>' +
       '<div class="mbar"><i class="act" style="width:' + (act / top * 100) + '%"></i><i class="exp" style="width:' + (exp / top * 100) + '%"></i><span class="gl" style="left:' + Math.min(99.5, goal / top * 100) + '%"></span></div></div><span class="ar">›</span></button>';
   }
-  /* 다섯 걸음 — 라이브 HM_WAY 의 다섯(연락 · 만남 · 정리 · 기록 · 관리)과 같은 자 */
-  var WAY = [['📞', '연락', 'hmWayCall'], ['🤝', '만남', 'hmWayMeet'], ['✍️', '정리', 'hmWayTidy'], ['📊', '기록', 'hmWayRec'], ['💌', '관리', 'hmWayCare']];
+  /* 다섯 걸음 — 시안 그대로 영업 넷(연락 · 만남 · 정리 · 관리) + 📣 나를 알리기.
+     영업 넷은 라이브 HM_WAY 와 같은 자(hmWayCall/Meet/Tidy/Care), 알리기는 아침 미션 ⑤
+     「오늘 올릴 SNS 캐러셀」 체크(체크판 day · d10)와 같은 자입니다 — 새로 세지 않습니다(5번). */
+  var WAY = [['📞', '연락', 'hmWayCall'], ['🤝', '만남', 'hmWayMeet'], ['✍️', '정리', 'hmWayTidy'], ['💌', '관리', 'hmWayCare']];
+  var PROMO_CK = 'd10';
+  function promoDone() { return !!T(function () { return g.hmMsCk()[PROMO_CK]; }, false); }
   function stepsHtml() {
-    var now = T(function () { return g.hmWayNow(); }, 0);
+    var now = T(function () { return g.hmWayNow(); }, 0), pd = promoDone();
+    var cur = now === 4 ? 3 : (now === 3 ? -1 : now);
+    if (cur < 0) cur = pd ? -1 : 4;
+    var st = T(function () { return g.actStreak(); }, null);
     return '<div class="steps5">' + WAY.map(function (w, i) {
       var v = T(function () { return g[w[2]](); }, null);
-      return '<button type="button" class="' + (i === now ? 'cur' : '') + '" onclick="HOME_V2.step(' + i + ')"><span class="si">' + w[0] + '</span><span class="sl">' + w[1] + '</span><span class="sn">' + E(v == null ? '—' : v) + '</span></button>';
-    }).join('') + '</div>';
+      return '<button type="button" class="' + (i === cur ? 'cur' : '') + '" onclick="HOME_V2.step(' + i + ')"><span class="si">' + w[0] + '</span><span class="sl">' + w[1] + '</span><span class="sn">' + E(v == null ? '—' : v) + '</span></button>';
+    }).join('') +
+      '<button type="button" class="pr' + (pd ? ' done' : '') + (cur === 4 ? ' cur' : '') + '" onclick="HOME_V2.step(4)"><span class="si">📣</span><span class="sl">알리기</span><span class="sn">' + (pd ? '1/1' : '0/1') + '</span></button></div>' +
+      (st && typeof st.n === 'number' ? '<div class="streak">쉬지 않고 일한 날 <b>연속 ' + st.n + '일</b></div>' : '');
   }
   /* 🛰 챙기는 중 — 끊기기 쉬운 자리: 약속이 지난 분 · 소개 여쭐 차례 · 이번 달 마디 */
   function jvData() {
@@ -477,7 +533,17 @@
     var L = T(function () { return g.hmLeft(); }, { list: [], all: 0 });
     return topHtml() + whoHtml() + helloHtml(L) + monHtml() + stepsHtml() + jvHtml() + railHtml(L) +
       inscHtml() + weekHtml() + roadHtml() + eveHtml(L) + menuHtml() +
-      '<div class="src">새 오늘 화면 (시험) · 시안 9차 디자인 · 맨 위 「↩ 예전 화면」 으로 언제든 돌아갑니다</div>';
+      '<div class="src">새 오늘 화면 (시험) · 시안 9차 디자인 · 맨 위 「↩ 예전 화면」 으로 언제든 돌아갑니다</div>' + dockHtml();
+  }
+  /* 늘 떠 있는 세 칸 — 시안 .dock (🧭 상품전략 · 💬 화법 · 📚 공부). 가는 곳은 앱 메뉴 그대로:
+     상품전략기(insight) · 미끼상품&접촉전략(mikki_talk · 대본) · 성장 로드맵(edu). 열 수 없는 칸은 안 세웁니다.
+     ⚠ 오른쪽 아래 🎙·? 단추를 가리지 않게 오른쪽을 비워 둡니다. */
+  function dockHtml() {
+    var D = [['insight', '🧭', '상품전략'], ['mikki_talk', '💬', '화법'], ['edu', '📚', '공부']].filter(function (x) { return can(x[0]); });
+    if (!D.length) return '';
+    return '<div class="dock" style="grid-template-columns:repeat(' + D.length + ',1fr)">' + D.map(function (x) {
+      return '<button type="button" onclick="go(\'' + x[0] + '\')"><span class="e">' + x[1] + '</span>' + x[2] + '</button>';
+    }).join('') + '</div>';
   }
 
   /* ── 그리기 ─────────────────────────────────────────────────────── */
@@ -544,9 +610,18 @@
       if (i === 0) { var r = el('hv2Rail') || el('hv2'); if (r) r.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
       if (i === 1) { var w = el('hv2Week'); if (w) w.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
       if (i === 2) { API.jv(); return; }
-      if (i === 3) { try { g.go('ckboard'); } catch (e) {} return; }
-      try { g.go('clients'); } catch (e2) {}
+      if (i === 3) { try { g.go('clients'); } catch (e) {} return; }
+      API.promo();
     },
+    /* 📣 알리기 — 아침 미션 ⑤ 와 같은 체크(hmMsDid) · 만드는 곳은 콘텐츠 허브 */
+    promo: function () {
+      var pd = promoDone();
+      sheet('<h1>📣 오늘 나를 알리기</h1><div class="sub">아침 미션 ⑤ 「오늘 올릴 SNS 캐러셀」 과 같은 체크예요</div>' +
+        '<div class="say">' + (pd ? '오늘은 올렸어요 👏' : '오늘의 뉴스로 카드 한 장 만들어 올리기') + '</div>' +
+        '<button type="button" class="btn p" onclick="HOME_V2.close();go(\'content\')">🖼 카드 만들러 가기</button>' +
+        (pd ? '' : '<button type="button" class="btn g" onclick="HOME_V2.promoOk()">✓ 올렸어요</button>'));
+    },
+    promoOk: function () { try { g.hmMsDid(PROMO_CK); } catch (e) {} close(); paint(); },
     jv: function () {
       var J = jvData();
       var row = function (x, w) { return '<button type="button" class="li" onclick="HOME_V2.close();hmRtPerson(\'' + Q(x.id) + '\')"><span class="e">' + w + '</span><div class="tx"><div class="t1">' + E(nameOf({ t: x.name || x.t || '' })) + '님</div><div class="t2">' + E(x.stage || '') + '</div></div><span class="ar">›</span></button>'; };
