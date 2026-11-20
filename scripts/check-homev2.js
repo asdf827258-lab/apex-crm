@@ -275,5 +275,26 @@ B.g.HOME_V2.apply(dyn(B));
 h = B.els.hv2.innerHTML;
 is((h.match(/class="ring"/g) || []).length === 4 && /who-strip/.test(h) && /hwhoSet\('p2'\)/.test(h) && /hwhoSet\('\*'\)/.test(h), '팀장 — 팀원 동그라미 한 줄(나 · 팀원 둘 · 팀 전체), 누르면 hwhoSet');
 
+console.log('\n[13] 시안과 나란히 보고 고친 것 (판 X511)');
+{
+  const FN = ['홍길동', '홍길순', '홍갑돌', '홍말순', '홍판서', '홍철호', '홍기동', '홍정돌', '임꺽정', '이몽룡', '성춘향', '변학도'];
+  const many = Array.from({ length: 40 }, (_, i) => ({ k: 'db', tk: '미접촉', t: FN[i % FN.length], s: '아직 한 번도 안 걸었습니다', src: '보장분석', key: 'db:m' + i + ':미접촉' }));
+  B = box({ apex_home_v2: '1' }, '', { rows: many });
+  B.g.HOME_V2.apply(dyn(B));
+  h = B.els.hv2.innerHTML;
+  const dm = (h.match(/id="hv2Dots">([\s\S]*?)<\/div>/) || ['', ''])[1];
+  is((h.match(/class="qc/g) || []).length === 40 && (dm.match(/<i /g) || []).length === 8,
+    '카드 40장이어도 점은 시안처럼 8개 — 카드 수만큼 점을 세우면(팀원 화면 147장) 1,600px 넘는 줄이 섰음');
+  is(/function dotOf\(i, n\) \{ return n <= DOT_MAX \? i : Math\.round\(i \* \(DOT_MAX - 1\) \/ \(n - 1\)\); \}/.test(SRC) && /var DOT_MAX = 8;/.test(SRC),
+    '점은 고르게 나눠 맡는다 — 첫 장 = 첫 점, 끝 장 = 끝 점');
+  B = box({ apex_home_v2: '1' }, '', {});
+  B.g.HOME_V2.apply(dyn(B));
+  h = B.els.hv2.innerHTML;
+  is(!/시험\)|시안 9차 디자인|class="src"/.test(h) && /class="dock"/.test(h), '맨 아래 「새 오늘 화면 (시험) · 시안 9차 디자인」 설명 줄이 없다(시안에 없음) · 아래 세 칸은 그대로');
+  B = box({ apex_home_v2: '1' }, '', { rows: many.slice(0, 3) });
+  B.g.HOME_V2.apply(dyn(B));
+  is(((B.els.hv2.innerHTML.match(/id="hv2Dots">([\s\S]*?)<\/div>/) || ['', ''])[1].match(/<i /g) || []).length === 3, '카드가 여덟 장 아래면 점도 그 수만큼');
+}
+
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');
 process.exit(bad ? 1 : 0);

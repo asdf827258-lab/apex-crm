@@ -261,7 +261,6 @@
       '.hv2 .li .t1{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       '.hv2 .li .t2{font-size:13px;color:var(--sub2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       '.hv2 .li .e{font-size:20px;width:28px;text-align:center;flex:none}',
-      '.hv2 .src{font-size:13px;color:var(--sub3);text-align:center;margin:14px 0 4px}',
       /* 시트 — 아래에서 올라오는 판 */
       '#hv2Dim{position:fixed;inset:0;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .2s;z-index:9990}',
       '#hv2Dim.on{opacity:1;pointer-events:auto}',
@@ -462,7 +461,13 @@
     var h = '<div class="qhd"><b>지금 이분</b><span>' + (all - list.length) + ' / ' + all + (list.length > 1 ? ' · 옆으로 넘겨요' : '') + '</span></div>';
     if (!list.length) return h + '<div class="qempty"><b>🎉</b>오늘 볼 분을 다 챙겼어요</div>';
     h += '<div class="qrail" id="hv2Rail" onscroll="HOME_V2.dots()">' + list.map(cardHtml).join('') + '</div>';
-    if (list.length > 1) h += '<div class="dots" id="hv2Dots">' + list.map(function (x, i) { return '<i class="' + (i === 0 ? 'on' : '') + '"></i>'; }).join('') + '</div>';
+    /* 점은 시안처럼 여덟 개까지 — 카드가 많으면(팀원 화면은 100장 넘음) 점 하나가 여러 장을 맡습니다.
+       ⚠ 판 X511 전에는 카드 수만큼 점을 세워, 147장이면 점 147개(1,600px 넘는 줄)가 섰습니다. */
+    if (list.length > 1) {
+      var nd = Math.min(DOT_MAX, list.length), dh = '';
+      for (var di = 0; di < nd; di++) dh += '<i class="' + (di === 0 ? 'on' : '') + '"></i>';
+      h += '<div class="dots" id="hv2Dots">' + dh + '</div>';
+    }
     return h;
   }
   /* 🧭 이번 달 상품전략 — 상황별 1위 상품(HM_DOOR_TOP) · 오늘 볼 분 중 맞는 분 */
@@ -574,7 +579,9 @@
     var L = T(function () { return g.hmLeft(); }, { list: [], all: 0 });
     return topHtml() + whoHtml() + helloHtml(L) + monHtml() + stepsHtml() + jvHtml() + railHtml(L) +
       inscHtml() + weekHtml() + roadHtml() + eveHtml(L) + menuHtml() +
-      '<div class="src">새 오늘 화면 (시험) · 시안 9차 디자인 · 맨 위 「↩ 예전 화면」 으로 언제든 돌아갑니다</div>' + dockHtml();
+      dockHtml();
+    /* ⚠ 판 X511 — 맨 아래 「새 오늘 화면 (시험) · 시안 9차 디자인 · …」 설명 줄을 거뒀습니다
+         (시안에 없음 · 토스 원칙 ③ 화면에 설명 문장 금지). 예전 화면으로 가는 길은 맨 위 「↩ 예전 화면」 단추 하나. */
   }
   /* 늘 떠 있는 세 칸 — 시안 .dock (🧭 상품전략 · 💬 화법 · 📚 공부). 가는 곳은 앱 메뉴 그대로:
      상품전략기(insight) · 미끼상품&접촉전략(mikki_talk · 대본) · 성장 로드맵(edu). 열 수 없는 칸은 안 세웁니다.
@@ -872,11 +879,15 @@
       if (OLD) { var b = el('hv2'); if (b && b.nextElementSibling) b.nextElementSibling.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     }
   };
+  /* 카드 i 번째(0부터) → 점 몇 번째. 카드가 점보다 많으면 고르게 나눠 맡깁니다(첫 장 = 첫 점, 끝 장 = 끝 점) */
+  var DOT_MAX = 8;
+  function dotOf(i, n) { return n <= DOT_MAX ? i : Math.round(i * (DOT_MAX - 1) / (n - 1)); }
   function dots() {
     var r = el('hv2Rail'); if (!r || !r.children.length) return;
     var w = r.children[0].offsetWidth + 10, i = Math.round(r.scrollLeft / (w || 1)), d = el('hv2Dots');
     i = Math.max(0, Math.min(r.children.length - 1, i));
-    if (d) [].forEach.call(d.children, function (e, k) { e.classList.toggle('on', k === i); });
+    var j = dotOf(i, r.children.length);
+    if (d) [].forEach.call(d.children, function (e, k) { e.classList.toggle('on', k === j); });
     /* 줄 높이 = 지금 보는 카드 (+ 아래 그림자 몫 4px) */
     var c = r.children[i]; if (c && c.offsetHeight) r.style.height = (c.offsetHeight + 4) + 'px';
   }
