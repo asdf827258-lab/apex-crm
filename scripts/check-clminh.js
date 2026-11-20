@@ -23,7 +23,17 @@
         보험료 · 갱신 · 환급은 맞바꾸는 것이라 판정 0 · 보험료는 원 단위 차이만
      ⑬ 담보 글은 <b>kijun-dict.js 한 벌</b>에서만 — 여기 다시 적지 않음 (5번)
      ⚠ 되돌림 다섯이 웁니다 — 큰 병 모름에 먼저 견적 · 모름을 좁은 쪽으로 판정 · 고지 기간 외워 적기 ·
-       담보 글 베껴 적기 · 보험료 싼 쪽에 초록                                                   */
+       담보 글 베껴 적기 · 보험료 싼 쪽에 초록
+   판 X503 (사장님 말씀 2026-11-20 「너무 어려운데, 그리고 청구서를 넣으면 어떤어떤 담보에 청구할수 있는지,
+     KB보장분석을 통해서, 총 어디어디 청구하고 어떤 서류 필요하는지도 찾을수 있도록 토스 테마로 다시 다듬어보자 어렵다」) —
+     ⑭ 첫 탭이 🧾 청구 찾기 — 무슨 일 → KB 보장분석 → 청구해 볼 곳 N곳 · 담보 M개 → 챙길 서류
+     ⑮ 담보 칸 이름은 <b>ba-std.js(STD · mapName) 한 벌</b> — 비포&애프터와 같은 이름 맞추기 · ba.html 에 STD 가 다시 없나
+     ⑯ KB 읽기는 <b>앱 본체의 kbParse · extractPdfText</b> 를 빌린다 — 이 파일에 리더를 또 두지 않는다
+     ⑰ 진단 범위(뇌출혈 · 급성심근경색 · 유사암)는 <b>담보 사전 a 칸</b>에서 읽는다 — 코드 숫자를 여기 다시 안 적음
+     ⑱ 서류 · 물어볼 것 · 보험사 번호는 <b>증권전달 매뉴얼 13장에서 읽는다</b> — 바깥 부르는 것은 그 파일 하나뿐
+     ⑲ 가입금액은 KB 에 적힌 그대로 · 모르면 「금액 모름」(0원 아님) · 합계를 내지 않음 · 고객 이름을 안 찍음 · 심사 결과
+     ⚠ 되돌림 여섯이 다 웁니다 — 금액 모름을 0원으로 · 코드 상관없이 뇌출혈 열기 · 고객 이름 찍기 ·
+       이 파일에 KB 리더 두기 · 이름 못 맞춘 담보 숨기기 · 가입금액 합계 내기 (8번)              */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = process.cwd(), PORT = 9163;
@@ -34,9 +44,9 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 const HTML = fs.readFileSync(path.join(ROOT, 'app/claim-inhouse.html'), 'utf8');
 const scripts = [...HTML.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
 const box = {}; vm.createContext(box); vm.runInContext(scripts[0].replace(/^var /gm, 'this.'), box);
-const { CI_NAV_G, CI_GJ_IDEA, CI_GJ_Q, CI_PATH, CI_CMP, CI_DAMBO, CI_FLOW, CI_ASK5, CI_DOCS, CI_PROC, CI_TALK, CI_Q, CI_AGE, CI_FOUR, CI_FOUR_NOTE, CI_FAM, CI_HOOK, CI_LINE } = box;
+const { CL_EV, CL_GATE, CL_CHK, CL_CODE, CI_NAV_G, CI_GJ_IDEA, CI_GJ_Q, CI_PATH, CI_CMP, CI_DAMBO, CI_FLOW, CI_ASK5, CI_DOCS, CI_PROC, CI_TALK, CI_Q, CI_AGE, CI_FOUR, CI_FOUR_NOTE, CI_FAM, CI_HOOK, CI_LINE } = box;
 const plain = t => String(t).replace(/<[^>]+>/g, '');
-const ALLTXT = plain(JSON.stringify([CI_GJ_IDEA, CI_GJ_Q, CI_PATH, CI_CMP, CI_DAMBO, CI_FLOW, CI_ASK5, CI_DOCS, CI_PROC, CI_TALK, CI_Q, CI_AGE, CI_FOUR, CI_FOUR_NOTE, CI_FAM, CI_HOOK, CI_LINE]))
+const ALLTXT = plain(JSON.stringify([CL_EV, CL_CHK, CI_GJ_IDEA, CI_GJ_Q, CI_PATH, CI_CMP, CI_DAMBO, CI_FLOW, CI_ASK5, CI_DOCS, CI_PROC, CI_TALK, CI_Q, CI_AGE, CI_FOUR, CI_FOUR_NOTE, CI_FAM, CI_HOOK, CI_LINE]))
   + plain(HTML.replace(/<script>[\s\S]*?<\/script>/g, '').replace(/<!--[\s\S]*?-->/g, '').replace(/<style>[\s\S]*?<\/style>/g, ''));
 
 console.log('\n[1] 말씀의 갈래가 다 서나');
@@ -73,9 +83,13 @@ is(CI_LINE.some(l => /약속하지 않습니다/.test(l)) && CI_LINE.some(l => /
 
 console.log('\n[6] 이름 칸 0 · 기억 0 · 서버 0 · tnum 0');
 const BODY = HTML.replace(/<script[\s\S]*?<\/script>/g, '');
-is(!/<input[^>]*(type="(text|tel|number)"|placeholder)/i.test(BODY) && !/이름|전화번호|주민/.test(CI_Q.map(g => g.items.map(i => i.q).join()).join() + CI_GJ_Q.map(i => i.q).join() + CI_CMP.map(r => r.n).join()), '이름 · 전화 · 주민번호 칸이 없다 (비교표의 글칸은 상품 조건만)');
+const inputs = BODY.match(/<input[^>]*>/gi) || [];
+is(inputs.every(t => /type="(radio|checkbox|date|file)"/.test(t) || /id="clCode"/.test(t)) && !inputs.some(t => /이름|전화|주민|type="tel"/.test(t)) && !/이름|전화번호|주민/.test(CI_Q.map(g => g.items.map(i => i.q).join()).join() + CI_GJ_Q.map(i => i.q).join() + CI_CMP.map(r => r.n).join()), '이름 · 전화 · 주민번호 칸이 없다 (비교표의 글칸은 상품 조건만)');
 is(!/data-sc(-keep)?[=\s>"]/.test(BODY), '셀프 점검 표만 빌린다 — data-sc · data-sc-keep 이 없어 그쪽도 기억하지 않는다');
-is(!/localStorage|sessionStorage|indexedDB|fetch\(|XMLHttpRequest|sendBeacon/.test(scripts.join('\n')), '기억하지 않고 서버를 부르지 않는다');
+const allJs = scripts.join('\n');
+is(!/localStorage|sessionStorage|indexedDB|XMLHttpRequest|sendBeacon/.test(allJs), '기억하지 않는다');
+const fetches = allJs.match(/fetch\([^)]*\)/g) || [];
+is(fetches.length === 1 && fetches[0] === "fetch('증권전달/index.html')", '부르는 것은 같은 앱의 증권전달 매뉴얼 파일 하나뿐 — 서버 0 (' + fetches.join(' ') + ')');
 is(!/tnum/.test(HTML), 'tnum 이 없다 (4-1번)');
 
 console.log('\n[10] 알릴의무 — 기간 숫자 0 · 사실대로');
@@ -103,6 +117,30 @@ const own = ids.filter(id => DICT[id] && HTML.indexOf(DICT[id].w) >= 0);
 is(own.length === 0, '사전 글을 이 파일에 베껴 적지 않았다' + (own.length ? ' — ' + own.join(',') : ''));
 is(['cancer', 'brain', 'heart-a', 'surg', 'car-settle', 'silson'].every(id => ids.indexOf(id) >= 0), '암 · 뇌 · 심장 · 수술 · 운전자 · 실손이 다 든다');
 
+console.log('\n[15] 담보 칸은 ba-std.js 한 벌 · 리더는 앱 본체 것');
+const sbox = {}; vm.createContext(sbox); vm.runInContext(fs.readFileSync(path.join(ROOT, 'app/ba-std.js'), 'utf8'), sbox);
+const STDK = {}; sbox.STD.forEach(g => g.rows.forEach(r => { STDK[r.k] = r; }));
+const evKeys = [].concat(...CL_EV.map(e => [].concat(e.d || [], e.a || [], e.k2 || [])));
+const lostK = evKeys.filter(k => !STDK[k]);
+is(lostK.length === 0, '고른 일의 담보 칸 ' + evKeys.length + '개가 다 STD 에 있다' + (lostK.length ? ' — 없음: ' + lostK.join(',') : ''));
+is(Object.keys(CL_GATE).concat(Object.keys(CL_CHK)).every(k => STDK[k]), '조건 · 확인 꼬리가 붙는 칸도 다 STD 에 있다');
+const BA = fs.readFileSync(path.join(ROOT, 'app/ba.html'), 'utf8');
+is(/<script src="ba-std\.js"><\/script>/.test(BA) && !/^var STD=\[/m.test(BA) && !/^function mapName\(/m.test(BA), 'ba.html 은 ba-std.js 를 싣고, STD · mapName 을 다시 갖고 있지 않다');
+is(/<script src="ba-std\.js"><\/script>/.test(HTML) && !/var STD\s*=|function mapName/.test(allJs), '이 화면도 ba-std.js 를 싣고 제 표를 만들지 않는다');
+is(!/function (kbParse|kbLooks|extractPdfText|pdfJoin)\b/.test(allJs) && /P\.kbParse/.test(allJs) && /typeof P\.extractPdfText/.test(allJs), 'KB 리더를 또 두지 않고 앱 본체의 것을 빌린다');
+console.log('\n[17] 진단 범위는 담보 사전에서');
+is(!/I6[0-9]|I2[0-5]|C73|C44|D0[0-9]/.test(JSON.stringify(Object.assign({}, CL_GATE, { braini: null }))) && CL_GATE.braini.pre === 'I63' /* 뇌경색만 사전에 홀로 선 줄이 없어 앞글자로 */, '조건 칸에 진단코드 범위를 다시 적지 않았다 (사전의 a 칸에서)');
+is(CL_GATE.brainh.dict === 'brain-h' && CL_GATE.mi.dict === 'heart-a' && CL_GATE.cancer2.dict === 'similar', '뇌출혈 · 급성심근경색 · 유사암 → 사전 id');
+console.log('\n[18] 서류 줄 이름이 13장 표에 있나');
+const MAN = fs.readFileSync(path.join(ROOT, 'app/증권전달/index.html'), 'utf8');
+const sec13 = (/<section id="sec13">([\s\S]*?)<\/section>/.exec(MAN) || [])[1] || '';
+const rowNames = (sec13.match(/<td><strong>([^<]+)<\/strong>/g) || []).map(x => x.replace(/<[^>]+>/g, '').trim());
+const docNames = [].concat(...CL_EV.map(e => e.doc)).concat(['후유장해', '간병인']);
+const lostD = docNames.filter(n => rowNames.indexOf(n) < 0);
+is(lostD.length === 0, '서류 줄 이름 ' + docNames.length + '개가 13장 표 첫 칸에 그대로 있다' + (lostD.length ? ' — 없음: ' + lostD.join(',') : ''));
+const TELS = []; ['INS_LIFE', 'INS_GEN'].forEach(nm => { const m = new RegExp('const ' + nm + '=(\\[[\\s\\S]*?\\n\\]);').exec(MAN); if (m) TELS.push(...JSON.parse(m[1].replace(/'/g, '"'))); });
+is(TELS.length > 20, '보험사 번호 표를 13장 파일에서 읽을 수 있다 (' + TELS.length + '곳)');
+
 const IDX = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
 console.log('\n[8] 메뉴');
 is(/\{id:'clm_inh',tk:'고객',icon:'🏥',title:'청구센터 인하우스'/.test(IDX), 'TABS 에 🏥 청구센터 인하우스');
@@ -126,8 +164,62 @@ is(/else if\(tab==='clm_inh'\)dyn\.innerHTML=renderClmInhPage\(\);/.test(IDX) &&
     const sw = await pg.evaluate(() => document.documentElement.scrollWidth);
     is(sw <= 390, '폰 390px 에서 옆으로 안 밀린다 (' + sw + 'px)');
 
-    console.log('\n[9] 첫 탭은 🧭 가입 길 찾기');
-    is(await pg.isVisible('#g-gj') && !(await pg.isVisible('#s-q')), '처음 열면 ① 알릴의무가 보이고 병원 데스크는 접혀 있다');
+    console.log('\n[14] 첫 탭은 🧾 청구 찾기');
+    is(await pg.isVisible('#c-ev') && !(await pg.isVisible('#g-gj')) && !(await pg.isVisible('#s-q')), '처음 열면 ① 무슨 일로 청구하세요? — 가입 길 · 데스크는 접혀 있다');
+    is((await pg.$$('#evg .evb')).length === CL_EV.length, '일 카드 ' + CL_EV.length + '장');
+    let cr = await pg.textContent('#clRes');
+    is(/먼저 눌러/.test(cr), '아무것도 안 누르면 「먼저 눌러 주세요」 — 빈 결과를 세우지 않는다');
+    await pg.click('.evb[data-ev="surg"]'); await pg.click('.evb[data-ev="adm"]');
+    is(/KB 보장분석을 올리면/.test(await pg.textContent('#clRes')), 'KB 를 안 올리면 「올리면 섭니다」');
+
+    console.log('\n[17] 진단 범위 · 코드');
+    const G = await pg.evaluate(() => [clGate('brainh', 'I61'), clGate('brainh', 'I63'), clGate('braini', 'I63.9'), clGate('mi', 'I21.9'), clGate('mi', 'I20'),
+      clGate('cancer2', 'C73'), clGate('cancer', 'C73'), clGate('cancer', 'C16.9'), typeof clGate('brainh', ''), clGate('surg', 'M51.1')]);
+    is(G.join(',') === '1,0,1,1,0,1,0,1,string,1', '뇌출혈 I61 열림 · I63 닫힘 · 뇌경색 I63 열림 · 급성심근경색 I21 열림 · I20 닫힘 · 유사암 C73 은 유사암만 · 위암 C16 일반암 · 코드 모르면 조건부 — ' + G.join(','));
+    const codeEv = await pg.evaluate(() => { const o = {}; window.clApplyCode('S32.0'); document.querySelectorAll('.evb.on').forEach(b => o[b.getAttribute('data-ev')] = 1); return o; });
+    is(codeEv.frac && codeEv.hurt, '진단코드 S32.0 → 골절 · 다침 카드가 눌린다');
+    const W1 = await pg.evaluate(() => Object.keys(clWant({ surg: 1 }, 'M51.1')));
+    const W2 = await pg.evaluate(() => Object.keys(clWant({ surg: 1, hurt: 1 }, '')));
+    is(W1.indexOf('surg') >= 0 && W1.indexOf('surgL') >= 0 && W1.indexOf('surgA') < 0 && W2.indexOf('surgA') >= 0 && W2.indexOf('surg') < 0, '병(M51.1)은 질병 수술비 · 다침은 상해 수술비로');
+
+    console.log('\n[19] KB → 청구해 볼 곳');
+    await pg.click('#clReset');
+    await pg.click('.evb[data-ev="surg"]'); await pg.click('.evb[data-ev="adm"]');
+    await pg.fill('#clCode', 'M51.1'); await pg.dispatchEvent('#clCode', 'change');
+    await pg.evaluate(() => window.clUseKB({ ok: true, person: { name: '홍길동', age: 52, sex: 'M' }, contracts: [
+      { co: 'KB손보', nm: '견본 건강보험', issue: '2019-03-02', covs: [
+        { raw: '질병수술비', std: '질병수술비', won: 300000, kind: '정액' },
+        { raw: '질병입원일당', std: '질병입원일당', won: 30000, kind: '정액' },
+        { raw: '질병입원의료비', std: '질병입원의료비', won: 50000000, kind: '실손' },
+        { raw: '뇌출혈진단비', std: '뇌출혈진단', won: 20000000, kind: '정액' },
+        { raw: '질병1-5종수술비', std: '질병1~5종수술비', won: null, kind: '정액' }] },
+      { co: '삼성화재', nm: '견본 실손', issue: '2012-05-10', covs: [
+        { raw: '질병입원의료비', std: '질병입원의료비', won: 50000000, kind: '실손' },
+        { raw: '아무개특약', std: '아무개특약', won: 100000, kind: '정액' }] }] }));
+    await pg.waitForFunction(() => /p\.108/.test(document.getElementById('clDocs').textContent), null, { timeout: 8000 }).catch(() => {});
+    cr = await pg.textContent('#clRes');
+    is(await pg.textContent('#clNco') === '2곳' && await pg.textContent('#clNrow') === '5개', '청구해 볼 곳 2곳 · 담보 5개');
+    is(!(await pg.$('#clRes .cr[data-k="brainh"]')), '디스크 수술에 뇌출혈 진단비를 세우지 않는다');
+    is(/금액 모름/.test(cr) && !/(^|[^0-9,])0원/.test(cr), '금액을 못 읽은 담보는 「금액 모름」 — 0원 아님');
+    is(/30만원/.test(cr) && /5,000만원/.test(cr) && /1~5종 분류표/.test(cr), 'KB 가입금액을 억·만원으로 · 분류표 꼬리');
+    is(/이름을 못 맞춘 담보 1개/.test(cr), '이름을 못 맞춘 담보를 숨기지 않고 센다');
+    is(/두 곳 이상/.test(cr), '실손이 두 곳이면 나눠서 낸다고 적는다');
+    is(!/홍길동/.test(await pg.textContent('body')), 'KB 에 적힌 고객 이름을 화면에 찍지 않는다 (3번)');
+    is(/심사 결과에 따릅니다/.test(cr) && !/합계|모두 합쳐/.test(cr), '「심사 결과에 따릅니다」 · 금액 합계를 내지 않는다');
+    const kbTel = (TELS.find(r => [r[0]].concat(r[2] || []).some(x => /KB손해보험|KB손보/.test(x))) || [])[1];
+    is(!!kbTel && (await pg.$$eval('#clRes a.tel', a => a.map(x => x.textContent))).some(t => t.indexOf(kbTel) >= 0), '보험사 번호는 13장 표의 그 번호 (' + kbTel + ')');
+
+    console.log('\n[18] 챙길 서류');
+    const dt = await pg.textContent('#clDocs');
+    is(/진단서/.test(dt) && /p\.108/.test(dt) && /간병인/.test(dt), '입원 · 수술 → 13장의 서류 줄(📖 p.108) · 입원이면 간병인 줄도');
+    is(/회사마다 한 벌/.test(dt) && /영수증 원본인가 사본인가/.test(dt), '회사가 둘 이상이면 한 벌씩 · 회사에 물어볼 것은 13장 그대로');
+    await pg.click('#clReset');
+    is(/먼저 눌러/.test(await pg.textContent('#clRes')) && !(await pg.$$('#evg .evb.on')).length, '처음부터 — 다 지워진다');
+    is(await pg.evaluate(() => [clFmtWonR(300000), clFmtWonR(120000000), clFmtWonR(null), clFmtWonR(48728)].join('|')) === '30만원|1억 2,000만원||4만 8,728원', '원 → 억·만원 (모르면 null)');
+
+    await pg.click('#tabs button[data-t="gil"]');
+    console.log('\n[9] 🧭 가입 길 탭');
+    is(await pg.isVisible('#g-gj') && !(await pg.isVisible('#s-q')), '가입 길 탭 — ① 알릴의무가 보이고 병원 데스크는 접혀 있다');
     is((await pg.$$eval('#nav a', a => a.map(x => x.textContent))).join('|') === CI_NAV_G.map(n => n[1]).join('|'), '위 띠가 가입 길 네 걸음');
 
     console.log('\n[11] 길은 답에서');
