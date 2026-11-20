@@ -104,6 +104,9 @@ console.log('\n[8] 창구가 배포에 실제로 열려 있다');
 is(/^\/api\/aplus-disease\s+\/\.netlify\/functions\/aplus-disease\s+200/m.test(RED),
    '  <code>_redirects</code> 에 창구가 있다 — 없으면 배포에서 404 다');
 is(/apex-aplus-disease\.js/.test(IDX), '  앱이 그 화면 파일을 <b>실제로 부른다</b>');
+/* 진료분석(고지체크 사이트·내 PC 파일)도 이 창구를 쓴다 (판 X501) — 다른 주소에 허락을 주되 아무 곳이나(*) 열지 않는다 */
+is(!/Allow-Origin['"\]]*\s*[:=]\s*['"]\*/.test(FN_C) && /CORS_OK\s*=\s*\[[^\]]*apex-hb-goji\.netlify\.app/.test(FN_C),
+   '  다른 주소 허락은 <b>아는 곳만</b>(고지체크 사이트·내 PC 파일) — 아무 곳이나(*) 안 연다');
 
 console.log('\n[9] 90일 로드맵 — 이어 붙이는 표가 한 곳에 있다 (5번)');
 is(/var ROAD_MAP\s*=\s*\[/.test(BR_C), '  90일 ↔ 교재 표(ROAD_MAP)가 있다');

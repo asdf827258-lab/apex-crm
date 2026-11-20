@@ -414,7 +414,7 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
     S.view = 'agent'; S.tab = 'dang'; S.dang = {}; draw();
     const t = document.getElementById('view').textContent;
     const y = yongsin(S.cl.saju);
-    /* ★ 2026-11-20 (판 X499) — 사장님 말씀 「진짜 점집 같은 … 디자인」.
+    /* ★ 2026-11-20 (판 X504) — 사장님 말씀 「진짜 점집 같은 … 디자인」.
        전에는 「신당 탭에서만 검고 나가면 되돌아온다」 를 쟀습니다. 이제는
        <b>거꾸로</b> 입니다 — 모든 칸이 점집 옷을 입어야 합니다. 넘기다
        흰 화면이 한 칸 나오면 두 프로그램을 왔다 갔다 하는 느낌이 납니다.

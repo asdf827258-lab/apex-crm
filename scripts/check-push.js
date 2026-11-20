@@ -612,7 +612,7 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
        「고쳤는데 안 올렸다」 를 영영 못 잡습니다 (8번).               */
   /* 판 X174 (2026-10-23) — 고객 동의 표(client_consents)를 준비 SQL 에 넣고 판 번호를 <b>45 로 올렸습니다</b>
      (SETUP_VER 과 schema_version 같이). 그래서 지문을 새 값으로 바꿉니다. 아래 X84 쪽지는 그때 일입니다. */
-  const SQL_SIG = 'c53e2c348d6c';   /* 판 X498 (2026-11-19) — <b>채용 대기열</b>(recruits ·
+  const SQL_SIG = 'c53e2c348d6c';   /* 판 X503 (2026-11-19) — <b>채용 대기열</b>(recruits ·
                                        recruit_sends)을 앱 안 SQL 칸('80')으로 넣었습니다.
                                        후보가 혼자 검사하고 상담 신청을 누르면 거기 쌓입니다.
                                        SETUP_VER·schema_version 을 47 → 48 로 같이 올렸고
