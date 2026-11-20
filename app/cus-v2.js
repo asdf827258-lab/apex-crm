@@ -410,9 +410,10 @@
   }
   /* 보낼 말 — TA_MSG.textFor(열쇠, 고객 칸, 'kakao'). 「복사하고 보냈어요」 는 있던 접촉 기록(cmTouchAdd)에 한 줄 */
   function msgCtx(c) {
-    var d = dbRow(), ap = T(function () { return g.cuwAppt(c); }, ''), f = {};
-    try { f = (JSON.parse(g.localStorage.getItem('ta_final_v1') || '{}').f) || {}; } catch (e) { f = {}; }
-    return { c: nameOf(c), me: T(function () { return g.OS.profile.name; }, ''), area: f.area || '', when: ap ? T(function () { return g.cuwApptTxt(ap); }, '') : '',
+    var d = dbRow(), ap = T(function () { return g.cuwAppt(c); }, '');
+    /* 담당 지역은 홈과 같은 한 곳(HM_TAMSG.area — TA 스크립트 칸)에서. 이 파일은 그 칸을 직접 안 읽습니다 */
+    var area = T(function () { return g.HM_TAMSG.area(); }, '') || '';
+    return { c: nameOf(c), me: T(function () { return g.OS.profile.name; }, ''), area: area, when: ap ? T(function () { return g.cuwApptTxt(ap); }, '') : '',
       where: '', date: '', db: d && d.source ? d.source : '' };
   }
   function msgSheet(k) {
