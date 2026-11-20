@@ -1,4 +1,4 @@
-/* 🔤 고객에게 보여 주는 보장 분석 보고서 — 글씨만 다듬었나 (판 X497)
+/* 🔤 고객에게 보여 주는 보장 분석 보고서 — 글씨만 다듬었나 (판 X505)
    사장님 말씀 2026-11-19 「고객에게 보여주는 프레젠테이션도 글씨 디자인만 다듬어봐」.
 
    내용 · 배치 · 숫자는 그대로 두고 글씨만 바꿨다. 그래서 여기서 못 박는 것:
@@ -83,7 +83,7 @@ function scan(k) {
 
   console.log('\n[3] 숫자 같은 폭은 화면에서만');
   const src = fs.readFileSync(path.join(ROOT, 'app/ba-report.html'), 'utf8').replace(/\r/g, '');
-  const blk = src.slice(src.indexOf('판 X497 글씨 다듬기'), src.indexOf('/* 인쇄 — 한 장에 한 쪽 */'));
+  const blk = src.slice(src.indexOf('판 X505 글씨 다듬기'), src.indexOf('/* 인쇄 — 한 장에 한 쪽 */'));
   const tn = blk.split('\n').filter(l => /tabular-nums/.test(l));
   is(blk.length > 100 && tn.length > 0 && tn.every(l => /^@media screen\{/.test(l)), 'tnum 줄 ' + tn.length + '개 — 전부 @media screen 안');
 

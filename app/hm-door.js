@@ -15,6 +15,9 @@
    ★ 판 X479 · 사장님 말씀 2026-11-18 「응 상품명도 띄워」 — 그 셋의 <b>이름</b>을 카드에 바로 적습니다.
      이름은 hm-door-top.js(HM_DOOR_TOP) — scripts/door-top.js 가 상품전략기의 고르기 코드를 그대로 돌려
      뽑은 것이라 🧭 를 누르면 같은 셋이 섭니다. 홈이 순위를 따로 세지 않습니다 (5번).
+   ★ 판 X498 · 사장님 말씀 2026-11-20 「상품전략기 꺼내」 — 접힌 「이분 자세히」 <b>옆</b>에 「🧭 이분 걱정 상품」
+     단추(btn)를 세웁니다. 걱정은 위 pick 그대로, 누르면 hmDoorGo — 안쪽 🎣 칸의 🧭 와 같은 길입니다.
+     새 줄을 안 만듭니다 — 접기 단추와 한 줄에 나란히 서서 홈이 안 길어집니다(check-homeone).
      소식지 상품이라 「설계사용」 이라고 붙입니다 — 고객 화면에 옮기지 않습니다.                */
 (function(g){
   var AGE_CAT = { '2030':'hospital', '4050':'cancer3', '60':'care' };
@@ -73,7 +76,10 @@
       '.hm-door-a{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}'+
       '.hm-door-a button{min-height:44px;padding:0 12px;border:0;border-radius:10px;font-family:inherit;font-size:var(--t6);font-weight:800;cursor:pointer;'+
         'background:var(--t-point-l);color:var(--t-point)}'+
-      '.hm-door-a button.g{background:var(--t-bg,#F2F4F6);color:var(--t-sub);font-weight:700}';
+      '.hm-door-a button.g{background:var(--t-bg,#F2F4F6);color:var(--t-sub);font-weight:700}'+
+      '.hm-door-o{flex:0 0 auto;max-width:48%;min-height:44px;padding:0 12px;border:0;border-radius:var(--t-r-sm,13px);'+
+        'background:var(--t-point-l);color:var(--t-point);font-family:inherit;font-size:var(--t6);font-weight:800;cursor:pointer;'+
+        'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}';
     document.head.appendChild(st);
   }
   function html(x){
@@ -93,6 +99,15 @@
       prodsHtml(prods(P.cat), '🧭 이어 갈 이번 달 상품')+
       '<div class="hm-door-a"><button type="button" class="g" onclick="hmDoorCopy(\''+k+'\')">📋 복사</button>'+
         '<button type="button" onclick="hmDoorGo(\''+esc(P.cat)+'\',\''+(P.band === '2030' ? 'y2030' : '')+'\')">🧭 이어 갈 이번 달 상품</button></div></div>';
+  }
+  /* 🧭 접힌 「이분 자세히」 옆 단추 (판 X498) — 걱정을 모르면 「이번 달 1위」 로 (지어내지 않음 · 1번) */
+  function btn(x){
+    var M = g.MK_TALK, P = pick(x); if(!M || !P) return '';
+    css();
+    var cat = (P.by === 'none') ? '' : P.cat, C = cat ? M.CATS[cat] : null;
+    var lab = C ? (C.label + ' 상품') : '이번 달 1위 상품';
+    return '<button type="button" class="hm-door-o" onclick="hmDoorGo(\''+esc(cat)+'\',\''+(P.band === '2030' ? 'y2030' : '')+'\')" '+
+      'title="상품전략기 「🎣 문 열기」 를 '+esc(C ? C.label + ' 걱정으로' : '이번 달 1위 상품으로')+' 엽니다">🧭 '+esc(lab)+'</button>';
   }
   /* 그린 말을 그 분 열쇠로 들고 있다가 📋 가 그대로 베낍니다 — 다시 고르면 다른 말이 나갈 수 있습니다 */
   var LAST = {};
@@ -114,5 +129,5 @@
       else location.href = u;
     }catch(e){ location.href = u; }
   };
-  g.HM_DOOR = { pick:pick, line:line, html:html, prods:prods, AGE_CAT:AGE_CAT, THEME_CAT:THEME_CAT };
+  g.HM_DOOR = { pick:pick, line:line, html:html, btn:btn, prods:prods, AGE_CAT:AGE_CAT, THEME_CAT:THEME_CAT };
 })(typeof window !== 'undefined' ? window : this);

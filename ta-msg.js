@@ -80,7 +80,7 @@
     var DB = function () { return d || { key: '', label: '', theme: 'general', src: '', crm: '' }; };
     var TH = function () { return D.THEMES[DB().theme] || D.THEMES.general || { kw: '보험 점검', gain: [''] }; };
     var fv = function (key, ph) {
-      var v = String(f[key] == null ? '' : f[key]).replace(/^s+|s+$/g, '');
+      var v = String(f[key] == null ? '' : f[key]).replace(/^\s+|\s+$/g, '');   /* 판 X496 — 여태 /^s+|s+$/ 라 이름·지역 앞뒤의 「s」 글자를 지웠습니다 */
       return v || (ph != null ? ph : '○○○');
     };
     return make(fv, DB, TH).text(k, ch || 'kakao');
