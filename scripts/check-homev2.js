@@ -73,8 +73,14 @@ function box(store, search, opt) {
     hmWayNow: () => 0, hmWayCall: () => '0 / 2', hmWayMeet: () => '약속 0', hmWayTidy: () => '0 · 0', hmWayRec: () => '☎0 🤝0', hmWayCare: () => '마디 0',
     arApptPast: () => [], hmReferRows: () => [], mstDueList: () => ({ monLeft: 0 }),
     mcalItems: () => ({}), mcalDay: () => [], hmRtNear: () => [],
+    hmRtAppts: () => (opt.appts || []),
+    osClient: () => ({ from: () => ({ select: () => ({ in: () => ({ then: (ok) => ok({ data: opt.geo || [] }) }) }) }) }),
+    navItemOf: id => { let f = null; g.TABS.forEach(gr => (gr.items || []).forEach(x => { if (x.id === id) f = x; })); return f; },
     arStageN: () => ({ c: { 미접촉: 3, TA: 1 }, tot: 4 }), hmNightSub: () => '오늘 닿은 분 0명',
-    TABS: [{ group: '고객', items: [{ id: 'clients', icon: '📇', title: '고객 365일' }] }], osTabAllowed: () => true,
+    TABS: [{ group: '고객', items: [{ id: 'clients', icon: '📇', title: '고객 365일' }] },
+           { group: '성장', items: [{ id: 'fp_talk', icon: '🗣️', title: '재무설계 실전화법서' }, { id: 'bohum', icon: '📕', title: '보험 마스터 아카데미' }, { id: 'rej_gym', icon: '🥊', title: '거절 근육 훈련' }] },
+           { group: '상담 도구', items: [{ id: 'insight', icon: '🧭', title: '상품전략기' }, { id: 'mikki_talk', icon: '🎣', title: '미끼상품&접촉전략' }] }],
+    osTabAllowed: () => true,
     hmMsCk: () => (opt.promo ? { d10: true } : {}), actStreak: () => ({ n: 3 }), hmMsDid: () => {},
     hwhoCan: () => !!opt.lead, hwhoId: () => '', hwhoIsAll: () => false, arMyId: () => 'me', HWHO_ALL: '*', hwhoName: () => '홍철호',
     hwhoList: () => [{ id: 'me', nm: '홍판서', n: 2 }, { id: 'p2', nm: '홍철호', n: 5 }, { id: 'p3', nm: '홍기동', n: 0 }],
@@ -130,8 +136,14 @@ is(/var TABS=\[/.test(IX) && /var PF=/.test(IX), 'TABS(메뉴 표) · PF(목표)
 is(/openTa\s*:|openTa:/.test(JS) && /prods\s*[,:}]/.test(JS) && /pick\s*[,:}]/.test(JS), 'HM_TAMSG.openTa · HM_DOOR.pick/prods 가 있다');
 
 console.log('\n[6] 서버 · 저장');
-is(!/fetch\(|osClient|supabase|\.from\(/.test(sc), '서버를 직접 부르지 않는다(목표는 기존 pfLoad 만)');
-is((sc.match(/setItem\(/g) || []).length === 1 && /setItem\(KEY, '1'\)/.test(sc), '저장은 이 기기 켜짐 표시(KEY) 하나뿐');
+/* 판 X505 — 서버는 <b>읽기 둘</b>만: 오늘 약속인 분의 좌표(dbs · 지역 동선이 적어 둔 칸)와 지역 동선이 쓰는 길찾기(route-km).
+   쓰기(insert·update·upsert·delete·rpc)는 하나도 없습니다. 목표는 기존 pfLoad. */
+const 부름 = (sc.match(/\.from\('[^']+'\)\.[a-z]+\([^)]*\)/g) || []);
+is(부름.length === 1 && 부름[0] === ".from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng')", '서버 표는 좌표 읽기 하나뿐 — ' + 부름.join(' | '));
+is(!/\.(insert|update|upsert|delete|rpc)\(/.test(sc) && !/supabase\./.test(sc), '서버에 쓰는 것이 하나도 없다');
+is((sc.match(/fetch\('([^']+)'/g) || []).join() === "fetch('/.netlify/functions/route-km'", '부르는 주소는 지역 동선의 길찾기(route-km) 하나뿐');
+const 담기 = (sc.match(/setItem\(([^,]+),/g) || []).map(x => x.replace(/setItem\(|,/g, ''));
+is(담기.length === 2 && 담기.indexOf('KEY') >= 0 && 담기.indexOf("'apexRouteKmV1'") >= 0, '이 기기에 담는 것은 켜짐 표시와 길찾기 거리(지역 동선과 같은 칸)뿐 — ' + 담기.join(', '));
 
 console.log('\n[7] 옛 홈은 숨기기만 · 터지면 예전 화면');
 is(/hm-v2:not\(\.hm-v2-old\)>\*:not\(#hv2\)\{display:none!important\}/.test(sc), '옛 칸은 CSS 로 숨기기만(지우지 않음)');
@@ -183,7 +195,30 @@ B.g.HOME_V2.apply(dyn(B));
 h = B.els.hv2.innerHTML;
 is(/<span class="sl">알리기<\/span><span class="sn">0\/1<\/span>/.test(h) && h.indexOf('>기록<') < 0, '다섯 걸음 = 연락 · 만남 · 정리 · 관리 · 📣 알리기(0/1) — 시안 그대로, 기록 칸 없음');
 is(/연속 3일/.test(h), '걸음 밑 연속 일수(actStreak)');
-is(/class="dock"/.test(h) && /go\('insight'\)/.test(h) && /go\('mikki_talk'\)/.test(h) && /go\('edu'\)/.test(h), '아래 떠 있는 세 칸 — 상품전략기 · 화법(미끼상품&접촉전략) · 공부(성장 로드맵)');
+is(/class="dock"/.test(h) && /HOME_V2\.dock\('prod'\)/.test(h) && /HOME_V2\.dock\('talk'\)/.test(h) && /HOME_V2\.dock\('study'\)/.test(h), '아래 떠 있는 세 칸 — 상품전략 · 화법 · 공부 (누르면 그 갈래 판)');
+B.g.HOME_V2.dock('talk');
+let sh = (B.els.hv2Sheet || {}).innerHTML || '';
+is(/재무설계 실전화법서/.test(sh) && /미끼상품&amp;접촉전략|미끼상품&접촉전략/.test(sh) && /거절 근육 훈련/.test(sh) && sh.indexOf('보험 마스터') < 0, '💬 화법 판 — 재무설계 실전화법서 · 미끼상품&접촉전략 · 거절 근육 훈련 (사장님 말씀)');
+B.g.HOME_V2.dock('study');
+sh = (B.els.hv2Sheet || {}).innerHTML || '';
+is(/보험 마스터 아카데미/.test(sh), '📚 공부 판 — 보험 마스터 아카데미 (사장님 말씀)');
+
+console.log('\n[11] 오늘 동선 거리');
+B = box({ apex_home_v2: '1' }, '', { appts: [{ id: 'a1', hm: '10:00' }, { id: 'a2', hm: '14:00' }, { id: 'a3', hm: '16:00' }],
+  geo: [{ id: 'a1', lat: 34.95, lng: 127.49 }, { id: 'a2', next_appt_lat: 34.95, next_appt_lng: 127.58, lat: 1, lng: 1 }, { id: 'a3' }] });
+B.g.HOME_V2.apply(dyn(B));
+h = B.els.hv2.innerHTML;
+const 직선 = (function () { const R = 6371, r = Math.PI / 180, a = { lat: 34.95, lng: 127.49 }, b = { lat: 34.95, lng: 127.58 };
+  const dLo = (b.lng - a.lng) * r, x = Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2); return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x)); })();
+is(h.indexOf('동선 ' + (직선 * 1.35).toFixed(1) + 'km(어림)') >= 0, '약속 장소 좌표가 있으면 그것, 없으면 주소 좌표 — 직선 × 1.35 를 「(어림)」 으로 (' + (직선 * 1.35).toFixed(1) + 'km)');
+is(/약속 3곳/.test(h) && /주소 모르는 곳 1/.test(h), '좌표 없는 곳은 지어내지 않고 「주소 모르는 곳 1」');
+B = box({ apex_home_v2: '1', apexRouteKmV1: JSON.stringify({ '34.9500,127.4900,34.9500,127.5800': { km: 11.2, min: 19 } }) }, '',
+  { appts: [{ id: 'a1' }, { id: 'a2' }], geo: [{ id: 'a1', lat: 34.95, lng: 127.49 }, { id: 'a2', lat: 34.95, lng: 127.58 }] });
+B.g.HOME_V2.apply(dyn(B));
+is(/동선 11\.2km ·/.test(B.els.hv2.innerHTML), '지역 동선이 카카오 길찾기로 재 둔 거리가 있으면 그 값(어림 딱지 없음)');
+B = box({ apex_home_v2: '1' }, '', { appts: [] });
+B.g.HOME_V2.apply(dyn(B));
+is(/📍 오늘 동선 ·/.test(B.els.hv2.innerHTML) && !/km/.test(B.els.hv2.innerHTML), '약속이 없는 날은 거리를 안 적는다');
 B = box({ apex_home_v2: '1' }, '', { promo: true });
 B.g.HOME_V2.apply(dyn(B));
 is(/class="pr done"/.test(B.els.hv2.innerHTML) && /1\/1/.test(B.els.hv2.innerHTML), 'SNS 캐러셀 미션(d10)을 했으면 알리기 1/1');

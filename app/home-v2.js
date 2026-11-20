@@ -485,8 +485,14 @@
       return '<div class="tl"><span class="t">' + E(tm || KO[z.k] || '일정') + '</span><span class="x">' + E([nm, s.replace(/^\d{1,2}:\d{2}\s*·?\s*/, '')].filter(Boolean).join(' · ')) + '</span></div>';
     }).join('') : '<div class="tl" style="color:var(--sub2)">이날은 일정이 없어요</div>';
     if (sel === dow) {
-      var near = T(function () { return g.hmRtNear().length; }, null);
-      h += '<button type="button" class="rtl" onclick="hmRtOpen()"><span>📍 오늘 동선' + (near != null ? ' · 가는 김에 들를 분 ' + near + '명' : '') + '</span><span>›</span></button>';
+      var near = T(function () { return g.hmRtNear().length; }, null), R = route();
+      var parts = [];
+      if (R.km != null) parts.push('동선 ' + (R.km < 1 ? Math.round(R.km * 1000) + 'm' : R.km.toFixed(1) + 'km') + (R.real ? '' : '(어림)'));
+      else parts.push('오늘 동선');
+      if (R.n) parts.push('약속 ' + R.n + '곳');
+      if (R.miss) parts.push('주소 모르는 곳 ' + R.miss);
+      if (near != null) parts.push('가는 김에 들를 분 ' + near + '명');
+      h += '<button type="button" class="rtl" onclick="hmRtOpen()"><span>📍 ' + E(parts.join(' · ')) + '</span><span>›</span></button>';
     }
     return h + '<div class="row2"><button type="button" class="btn g sm" onclick="go(\'mycal\')">＋ 일정</button><button type="button" class="btn g sm" onclick="go(\'mycal\')">📅 달력 크게</button></div></div>';
   }
@@ -538,12 +544,98 @@
   /* 늘 떠 있는 세 칸 — 시안 .dock (🧭 상품전략 · 💬 화법 · 📚 공부). 가는 곳은 앱 메뉴 그대로:
      상품전략기(insight) · 미끼상품&접촉전략(mikki_talk · 대본) · 성장 로드맵(edu). 열 수 없는 칸은 안 세웁니다.
      ⚠ 오른쪽 아래 🎙·? 단추를 가리지 않게 오른쪽을 비워 둡니다. */
+  /* 사장님 말씀 (2026-11-20) 「화법에는 재무설계 실전화법서 등이며, 보험마스터아카데미도 있어」 —
+     칸 하나가 화면 하나로 가지 않고 <b>그 갈래 화면을 다 모은 판</b>을 엽니다(시안 openProd 처럼 아래에서 올라옴).
+     ① 먼저 세울 것(손으로 고른 차례) ② 그 밖에 메뉴 표(TABS)에서 이름이 그 갈래인 것 — 새 화면이 생겨도 저절로 들어옵니다.
+     열 수 없는 화면은 안 세웁니다. 이름·그림은 메뉴 표 그대로(여기 안 적음 · 5번). */
+  var DOCK = {
+    prod:  { e: '🧭', t: '상품전략', h: '이번 달 무엇을 들고 갈지', ids: ['insight', 'mikki_talk', 'mikki'], re: /상품전략|미끼|보험사 전산|상품 비교|보험료비교/ },
+    talk:  { e: '💬', t: '화법', h: '전화 · 만남 · 거절 · 재무설계에서 할 말', ids: ['mikki_talk', 'fp_talk', 'ta_script', 'ta_say', 'rej_gym'], re: /화법|대본|거절|스크립트|멘트|상담자료/ },
+    study: { e: '📚', t: '공부', h: '배우고 익히는 곳', ids: ['bohum', 'edu', 'academy', 'ta_train', 'bcd_lec', 'jiin_grow', 'educal', 'growboard'], re: /아카데미|교육|강의|공부|성장|교재|시험|사전/ }
+  };
+  function dockItems(k) {
+    var D = DOCK[k], out = [], seen = {}, it;
+    var add = function (it) { if (it && it.id && !seen[it.id] && can(it.id)) { seen[it.id] = 1; out.push(it); } };
+    var of = function (id) { return T(function () { return g.navItemOf(id); }, null); };
+    D.ids.forEach(function (id) { add(of(id)); });
+    (T(function () { return g.TABS; }, []) || []).forEach(function (gr) { (gr.items || []).forEach(function (x) { if (D.re.test(String(x.title || ''))) add(x); }); });
+    return out;
+  }
   function dockHtml() {
-    var D = [['insight', '🧭', '상품전략'], ['mikki_talk', '💬', '화법'], ['edu', '📚', '공부']].filter(function (x) { return can(x[0]); });
-    if (!D.length) return '';
-    return '<div class="dock" style="grid-template-columns:repeat(' + D.length + ',1fr)">' + D.map(function (x) {
-      return '<button type="button" onclick="go(\'' + x[0] + '\')"><span class="e">' + x[1] + '</span>' + x[2] + '</button>';
+    var K = ['prod', 'talk', 'study'].filter(function (k) { return dockItems(k).length; });
+    if (!K.length) return '';
+    return '<div class="dock" style="grid-template-columns:repeat(' + K.length + ',1fr)">' + K.map(function (k) {
+      return '<button type="button" onclick="HOME_V2.dock(\'' + k + '\')"><span class="e">' + DOCK[k].e + '</span>' + DOCK[k].t + '</button>';
     }).join('') + '</div>';
+  }
+
+  /* 📍 <b>오늘 동선 거리</b> — 사장님 말씀 (2026-11-20) 「동선거리는 재지않고 있다면 해결해야지」.
+     ★ 자리(좌표)는 지역 동선(apex-route.js)이 서버 dbs 에 적어 둔 그것 — 약속 장소(next_appt_lat/lng)가
+       있으면 그것, 없으면 주소(lat/lng). 홈의 AR.db 에는 좌표 칸이 없어 <b>오늘 약속인 분만</b> 한 번 읽습니다.
+     ★ 거리는 지역 동선과 <b>같은 자</b> — 카카오 길찾기로 재 둔 구간(이 기기 apexRouteKmV1)이 있으면 그것,
+       없는 구간은 그 화면이 쓰는 서버 길찾기(/.netlify/functions/route-km)에 한 번 묻고 같은 곳에 적습니다.
+       길찾기를 못 쓰면 지역 동선과 같은 어림(직선 × 1.35)이고 화면에 「(어림)」 이라고 적습니다 (1번).
+     ★ 좌표가 없는 곳은 지어내지 않고 「주소 모르는 곳 N」 으로 적습니다. 약속이 시간 차례로 둘 이상일 때만 잽니다. */
+  var GEO = {}, GEO_ASKED = {}, GEO_OFF = false, RK_ASKED = {}, RK_OFF = false;
+  function rkKey(a, b) { return [a.lat, a.lng, b.lat, b.lng].map(function (v) { return (+v).toFixed(4); }).join(','); }
+  function rkCache() { try { return JSON.parse(g.localStorage.getItem('apexRouteKmV1') || '{}') || {}; } catch (e) { return {}; } }
+  function hav(a, b) {
+    var R = 6371, r = Math.PI / 180, dLa = (b.lat - a.lat) * r, dLo = (b.lng - a.lng) * r;
+    var x = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+    return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  }
+  function ptOf(d) {
+    if (!d) return null;
+    if (d.next_appt_lat && d.next_appt_lng) return { lat: +d.next_appt_lat, lng: +d.next_appt_lng };
+    if (d.lat && d.lng) return { lat: +d.lat, lng: +d.lng };
+    return null;
+  }
+  function geoLoad(ids) {
+    var need = ids.filter(function (id) { return !GEO_ASKED[id]; });
+    if (GEO_OFF || !need.length) return;
+    need.forEach(function (id) { GEO_ASKED[id] = 1; });
+    var sb = T(function () { return g.osClient(); }, null);
+    if (!sb) return;
+    try {
+      sb.from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng').in('id', need).then(function (r) {
+        if (r && r.error) { GEO_OFF = true; return; }       /* 좌표 칸이 없는 서버(migration_46 전) — 조용히 물러남 */
+        ((r && r.data) || []).forEach(function (d) { GEO[d.id] = d; });
+        paint();
+      }, function () { GEO_OFF = true; });
+    } catch (e) { GEO_OFF = true; }
+  }
+  function rkAsk(pairs) {
+    var key = pairs.map(function (p) { return rkKey(p.a, p.b); }).join('|');
+    if (RK_OFF || RK_ASKED[key] || typeof g.fetch !== 'function') return;
+    RK_ASKED[key] = 1;
+    g.fetch('/.netlify/functions/route-km', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ legs: pairs.map(function (p) { return { ox: p.a.lng, oy: p.a.lat, dx: p.b.lng, dy: p.b.lat }; }) }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j || !j.ok) { RK_OFF = true; return; }
+        var C = rkCache();
+        (j.legs || []).forEach(function (v, i) { if (v && v.km != null) C[rkKey(pairs[i].a, pairs[i].b)] = { km: v.km, min: v.min }; });
+        try { g.localStorage.setItem('apexRouteKmV1', JSON.stringify(C)); } catch (e) {}
+        paint();
+      }).catch(function () { RK_OFF = true; });
+  }
+  function route() {
+    var A = T(function () { return g.hmRtAppts(); }, []) || [];
+    var out = { n: A.length, miss: 0, km: null, real: false };
+    if (!A.length) return out;
+    geoLoad(A.map(function (a) { return a.id; }));
+    var P = [];
+    A.forEach(function (a) { var p = ptOf(GEO[a.id]); if (p) P.push(p); else if (GEO[a.id] || GEO_OFF) out.miss++; });
+    if (P.length < 2) return out;
+    var C = rkCache(), km = 0, real = true, ask = [];
+    for (var i = 1; i < P.length; i++) {
+      var w = C[rkKey(P[i - 1], P[i])];
+      if (w && w.km != null) km += +w.km;
+      else { km += hav(P[i - 1], P[i]) * 1.35; real = false; ask.push({ a: P[i - 1], b: P[i] }); }
+    }
+    if (ask.length) rkAsk(ask);
+    out.km = km; out.real = real;
+    return out;
   }
 
   /* ── 그리기 ─────────────────────────────────────────────────────── */
@@ -622,6 +714,19 @@
         (pd ? '' : '<button type="button" class="btn g" onclick="HOME_V2.promoOk()">✓ 올렸어요</button>'));
     },
     promoOk: function () { try { g.hmMsDid(PROMO_CK); } catch (e) {} close(); paint(); },
+    /* 아래 세 칸 — 그 갈래 화면을 다 모은 판 */
+    dock: function (k) {
+      var D = DOCK[k]; if (!D) return;
+      var L = dockItems(k);
+      var desc = function (id) { return strip(T(function () { var m = g.TAB_META[id]; return m && (m.desc || m.d || m.s); }, '') || ''); };
+      sheet('<h1>' + D.e + ' ' + E(D.t) + '</h1><div class="sub">' + E(D.h) + ' · ' + L.length + '곳</div>' +
+        (k === 'prod' ? inscHtml() : '') +
+        '<div class="list" style="margin-top:12px">' + L.map(function (it) {
+          var d = desc(it.id);
+          return '<button type="button" class="li" onclick="HOME_V2.close();go(\'' + Q(it.id) + '\')"><span class="e">' + E(it.icon || '•') + '</span><div class="tx"><div class="t1">' + E(it.title || it.id) + '</div>' +
+            (d ? '<div class="t2">' + E(d) + '</div>' : '') + '</div><span class="ar">›</span></button>';
+        }).join('') + '</div>');
+    },
     jv: function () {
       var J = jvData();
       var row = function (x, w) { return '<button type="button" class="li" onclick="HOME_V2.close();hmRtPerson(\'' + Q(x.id) + '\')"><span class="e">' + w + '</span><div class="tx"><div class="t1">' + E(nameOf({ t: x.name || x.t || '' })) + '님</div><div class="t2">' + E(x.stage || '') + '</div></div><span class="ar">›</span></button>'; };
