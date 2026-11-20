@@ -491,12 +491,32 @@
     }
     h += '</div>';
     var SL = day(selKey), KO = { appt: '약속', next: '할 일', bd: '생일', touch: '연락', sig: '구실', madi: '마디' };
-    h += SL.length ? SL.slice(0, 6).map(function (z) {
+    /* 시안처럼 몇 줄만 — 약속이 먼저, 그 밖은 셋까지(나머지는 「외 N건」 · 달력 크게에서 다 봄) */
+    SL = SL.slice().sort(function (a, b) { return (a.k === 'appt' ? 0 : 1) - (b.k === 'appt' ? 0 : 1); });
+    var SHOW = 3;
+    h += SL.length ? SL.slice(0, SHOW).map(function (z) {
       var s = String(z.s || ''), tm = (s.match(/^\d{1,2}:\d{2}/) || [''])[0];
       var nm = z.t ? nameOf({ t: z.t }) + '님' : '';
       return '<div class="tl"><span class="t">' + E(tm || KO[z.k] || '일정') + '</span><span class="x">' + E([nm, s.replace(/^\d{1,2}:\d{2}\s*·?\s*/, '')].filter(Boolean).join(' · ')) + '</span></div>';
-    }).join('') : '<div class="tl" style="color:var(--sub2)">이날은 일정이 없어요</div>';
-    if (sel === dow) {
+    }).join('') + (SL.length > SHOW ? '<div class="tl" style="color:var(--sub2)"><span class="t"></span><span class="x">외 ' + (SL.length - SHOW) + '건 — 달력 크게에서</span></div>' : '')
+      : '<div class="tl" style="color:var(--sub2)">이날은 일정이 없어요</div>';
+    if (sel === dow && !route().n) {
+      /* 약속이 없는 날 — 추천 동선(recRoute). 시안처럼 시간 자리에 「추천」, 이름 · 단계 · 동네 */
+      var RR = recRoute();
+      if (RR.list.length) {
+        if (!SL.length) h = h.replace('<div class="tl" style="color:var(--sub2)">이날은 일정이 없어요</div>', '<div class="tl" style="color:var(--sub2)">오늘은 약속이 없어요 — 이 동네를 묶어 보세요</div>');
+        h += RR.list.slice(0, 3).map(function (r, i) {
+          return '<div class="tl"><span class="t">추천 ' + (i + 1) + '</span><span class="x">' + E([nameOf({ t: r.name }) + '님', r.stage || '첫 전화', [r.region, r.dong].filter(Boolean).join(' ')].join(' · ')) + '</span></div>';
+        }).join('');
+        var pp = ['추천 동선 ' + RR.rg];
+        if (RR.km != null) pp.push((RR.km < 1 ? Math.round(RR.km * 1000) + 'm' : RR.km.toFixed(1) + 'km') + (RR.real ? '' : '(어림)'));
+        pp.push('들를 분 ' + RR.list.length + '명');
+        if (RR.miss) pp.push('주소 모르는 곳 ' + RR.miss);
+        h += '<button type="button" class="rtl" onclick="hmRtOpen()"><span>📍 ' + E(pp.join(' · ')) + '</span><span>›</span></button>';
+      } else {
+        h += '<button type="button" class="rtl" onclick="hmRtOpen()"><span>📍 동네가 적힌 고객이 아직 없어요 — 지역 동선에서 동네를 고르면 길을 짜 드려요</span><span>›</span></button>';
+      }
+    } else if (sel === dow) {
       var near = T(function () { return g.hmRtNear().length; }, null), R = route();
       var parts = [];
       if (R.km != null) parts.push('동선 ' + (R.km < 1 ? Math.round(R.km * 1000) + 'm' : R.km.toFixed(1) + 'km') + (R.real ? '' : '(어림)'));
@@ -639,15 +659,63 @@
     var P = [];
     A.forEach(function (a) { var p = ptOf(GEO[a.id]); if (p) P.push(p); else if (GEO[a.id] || GEO_OFF) out.miss++; });
     if (P.length < 2) return out;
+    var L = legs(P); out.km = L.km; out.real = L.real;
+    return out;
+  }
+  /* 차례대로 놓인 점들의 거리 — 길찾기로 재 둔 구간은 그 값, 아니면 어림(직선 × 1.35) + 길찾기에 묻기 */
+  function legs(P) {
     var C = rkCache(), km = 0, real = true, ask = [];
     for (var i = 1; i < P.length; i++) {
-      var w = C[rkKey(P[i - 1], P[i])];
+      var w = C[rkKey(P[i - 1], P[i])], st = hav(P[i - 1], P[i]);
+      /* ⚠ 같은 건물·같은 주소(50m 안)는 길찾기가 답을 안 줍니다(라이브에서 null 로 옴) — 0km 로 치고 안 묻습니다.
+           안 그러면 그 한 구간 때문에 전체가 늘 「(어림)」 으로 남았습니다. */
+      if (st < 0.05) continue;
       if (w && w.km != null) km += +w.km;
-      else { km += hav(P[i - 1], P[i]) * 1.35; real = false; ask.push({ a: P[i - 1], b: P[i] }); }
+      else { km += st * 1.35; real = false; ask.push({ a: P[i - 1], b: P[i] }); }
     }
     if (ask.length) rkAsk(ask);
-    out.km = km; out.real = real;
-    return out;
+    return { km: km, real: real };
+  }
+
+  /* 📍 <b>약속이 없는 날의 추천 동선</b> — 사장님 말씀 (2026-11-20) 「약속이 없어도 목각처럼 띄울수 있도록
+     해결할 방법을 찾아서 띄어줘」.
+     ⚠ 라이브의 「권한 동네」(hmRtWhere · hmRtMeet)는 <b>늘 로그인한 본인 기준</b>(hmTmMe)이라, 배정 DB 가
+       거의 없는 대표 계정이나 팀원 화면에서는 비었습니다. 그래서 <b>지금 보고 있는 분(hwhoFor)</b>의 배정 DB 로 셉니다.
+     ★ 동네 — 오늘 볼 분(hmSteps)이 있는 동네가 먼저, 없으면 만날 분이 가장 많은 동네(hmRtKey 로 같은 동네를 묶음).
+     ★ 들를 분 — 그 동네의 만남(AP) → 제안(PC) → 청약(CS) → 연락(TA) → 첫 전화(미접촉·부재) 차례로 여섯 분까지.
+       거절·계약 끝난 분은 안 넣습니다.
+     ★ 길 — 좌표(지역 동선이 적어 둔 dbs 칸)가 있는 분만, 첫 분에서 가장 가까운 분을 차례로 잇습니다.
+       거리는 약속 동선과 같은 자(길찾기 · 어림). 좌표가 없는 분은 「주소 모르는 곳 N」.
+     ★ 동네가 적힌 분이 하나도 없으면 <b>지어내지 않고</b> 지역 동선에서 동네를 고르게 안내합니다. */
+  var REC_ORD = { AP: 1, PC: 2, CS: 3, TA: 4, '미접촉': 5, '부재': 6 };
+  function recRoute() {
+    var who = T(function () { return g.hwhoFor(); }, '') || '', all = T(function () { return g.hwhoIsAll(); }, false);
+    var key = function (v) { return String(v == null ? '' : v).replace(/\s+/g, ''); };
+    var rows = (T(function () { return g.AR.db; }, []) || []).filter(function (r) {
+      return r && r.id && r.region && REC_ORD[String(r.stage || '미접촉')] && (all || !who || r.who === who);
+    });
+    if (!rows.length) return { rg: '', list: [], km: null, miss: 0 };
+    var by = {}, today = {};
+    (T(function () { return g.hmSteps(); }, []) || []).forEach(function (x) { if (x && x.region) today[key(x.region)] = 1; });
+    rows.forEach(function (r) { var k = key(r.region); (by[k] = by[k] || []).push(r); });
+    var ks = Object.keys(by).sort(function (a, b) { return ((today[b] ? 1 : 0) - (today[a] ? 1 : 0)) || (by[b].length - by[a].length); });
+    var pick = by[ks[0]].slice().sort(function (a, b) { return (REC_ORD[a.stage || '미접촉'] - REC_ORD[b.stage || '미접촉']) || ((b.days || 0) - (a.days || 0)); }).slice(0, 6);
+    geoLoad(pick.map(function (r) { return r.id; }));
+    var pts = [], miss = 0;
+    pick.forEach(function (r) { var p = ptOf(GEO[r.id]); if (p) pts.push({ p: p, r: r }); else if (GEO[r.id] || GEO_OFF) miss++; });
+    /* 가장 가까운 분을 차례로 — 첫 분은 단계가 가장 앞선 분 */
+    var ord = [];
+    if (pts.length) {
+      var left = pts.slice(1); ord.push(pts[0]);
+      while (left.length) {
+        var last = ord[ord.length - 1].p, bi = 0, bd = Infinity;
+        left.forEach(function (q, i) { var dd = hav(last, q.p); if (dd < bd) { bd = dd; bi = i; } });
+        ord.push(left.splice(bi, 1)[0]);
+      }
+    }
+    var L = ord.length >= 2 ? legs(ord.map(function (o) { return o.p; })) : null;
+    var list = ord.map(function (o) { return o.r; }).concat(pick.filter(function (r) { return !ord.some(function (o) { return o.r === r; }); }));
+    return { rg: by[ks[0]][0].region, list: list, km: L ? L.km : null, real: L ? L.real : false, miss: miss };
   }
 
   /* ── 그리기 ─────────────────────────────────────────────────────── */
