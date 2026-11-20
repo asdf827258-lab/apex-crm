@@ -86,6 +86,42 @@ exports.handler = async function (event) {
       }
     }
 
+    /* 고민 상담 리포트(1건 결제) — 로그인 없이 여는 화면(app/saju-mbti.html)이라
+       등급은 건드리지 않고 worry_orders 에 결제 기록만 남긴다. */
+    if (res.ok && b.product === "worry") {
+      const SB_URL2 = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
+      const SB_KEY2 = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (SB_URL2 && SB_KEY2) {
+        try {
+          const up2 = await fetch(SB_URL2 + "/rest/v1/worry_orders", {
+            method: "POST",
+            headers: {
+              apikey: SB_KEY2,
+              Authorization: "Bearer " + SB_KEY2,
+              "Content-Type": "application/json",
+              Prefer: "return=minimal",
+            },
+            body: JSON.stringify({
+              order_id: b.orderId || null,
+              payment_key: b.paymentKey || null,
+              amount: Number(b.amount) || null,
+              buyer_name: (b.name || "").slice(0, 40),
+              agent_name: (b.agent || "").slice(0, 40),
+              status: "paid",
+            }),
+          });
+          data.__worryLogged = up2.ok;
+          if (!up2.ok) data.__worryError = (await up2.text()).slice(0, 300);
+        } catch (e) {
+          data.__worryLogged = false;
+          data.__worryError = String(e && e.message ? e.message : e);
+        }
+      } else {
+        data.__worryLogged = false;
+        data.__worryError = "SUPABASE_SERVICE_ROLE_KEY 환경변수가 없습니다.";
+      }
+    }
+
     return { statusCode: res.status, headers: cors, body: JSON.stringify(data) };
   } catch (e) {
     return { statusCode: 500, headers: cors, body: JSON.stringify({ message: "결제 승인 오류: " + (e && e.message ? e.message : String(e)) }) };
