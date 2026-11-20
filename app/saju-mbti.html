@@ -220,6 +220,15 @@ body.shrine-on .shr-lamp{animation:shrFlame 2.6s ease-in-out infinite;transform-
   font-size:13px;font-weight:800;letter-spacing:-.04em}
 .hitlist .tx{font-size:17px;line-height:1.62;color:#F3E7CF;font-weight:700;word-break:keep-all}
 .hitlist .why{font-size:13px;line-height:1.5;color:#8A7A61;word-break:keep-all}
+.mefit-r{display:grid;grid-template-columns:1fr 92px 58px;grid-template-rows:auto auto;
+  column-gap:10px;row-gap:3px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line-l)}
+.mefit-r:last-child{border-bottom:0}
+.mefit-t{font-size:15px;font-weight:700;color:var(--ink)}
+.mefit-b{grid-column:2;grid-row:1;height:9px;border-radius:5px;background:var(--line);overflow:hidden}
+.mefit-b>i{display:block;height:100%;border-radius:5px}
+.mefit-n{grid-column:3;grid-row:1;font-size:13px;font-weight:800;color:var(--amber);text-align:right}
+.mefit-n.hi{color:var(--green)}
+.mefit-w{grid-column:1/4;grid-row:2;font-size:13px;color:var(--ink3)}
 .shr-head{position:relative;border-radius:22px;overflow:hidden;
   background:linear-gradient(180deg,#2B1C18 0%,#1F1915 72%);
   border:1px solid #4A2C24;padding:30px 22px 26px;text-align:center}
@@ -1249,10 +1258,14 @@ var AXIS_SELF={
   P:'열어두는 데서 편안함을 얻으십니다. 정해지면 답답해하십니다.'
 };
 var TAB_NAME={ice:'아이스브레이킹',sum:'종합',brief:'📋 면담 브리프',dang:'🕯️ 신당 풀이',apply:'📩 상담 신청',sales:'💼 영업 가능성',how:'🎯 나의 영업법',worry:'고민 상담',life:'인생 운',trait:'성향 파악',mind:'MBTI 정밀',
-  deep:'사주 풀이',blood:'혈액형',fit:'궁합',rel:'관계·매니지먼트',talk:'상담 전략',ins:'보험·관리',risk:'🔒 리스크',saju:'만세력'};
+  deep:'사주 풀이',blood:'혈액형',fit:'궁합',rel:'관계·매니지먼트',talk:'상담 전략',ins:'보험·관리',risk:'🔒 리스크',saju:'만세력',
+  mepil:'① 내 네 기둥',meins:'② 보험 일과 나',mework:'③ 일 푸는 방식',metime:'④ 올해·내년'};
 var AGENT_TABS={fit:1,rel:1,talk:1,ins:1,risk:1,sales:1,how:1,brief:1};   /* 고객 화면에서는 감춘다 */
 function tabsFor(mode,view){
   view=view||S.view;
+  /* ★ 나만 보는 판 — 네 장이 끝입니다 (사장님 말씀 2026-11-20
+     「그냥 내 사주만 보는거야」). 고객 칸도 채용 칸도 안 섭니다. */
+  if(MEONLY.on)return ['mepil','meins','mework','metime'];
   var list;
   if(mode==='saju')list=['dang','ice','sum','sales','how','worry','life','deep','fit','rel','ins','risk','saju'];
   else if(mode==='mbti')list=['ice','sum','sales','how','worry','life','trait','mind','fit','rel','talk','ins','risk'];
@@ -1273,10 +1286,11 @@ function draw(){
     var list=tabsFor(S.mode,S.view);
     if(list.indexOf(S.tab)<0)S.tab=list[0];
     tb.innerHTML=list.map(function(k){return '<button class="'+(S.tab===k?'on':'')+'" onclick="goTab(\''+k+'\')">'+TAB_NAME[k]+'</button>';}).join('')+
-      (S.view==='agent'?'<button onclick="newClient()">＋ 새 고객</button>':'');
+      ((S.view==='agent'&&!MEONLY.on)?'<button onclick="newClient()">＋ 새 고객</button>':'');
   }else{
-    var steps=GUEST.on?['cover','client','test']:['me','client','test'];
-    var labs =GUEST.on?['🕯️ 대문','① 내 정보','② 성향검사']:['① 내 카드','② 고객 정보','③ 성향검사'];
+    /* ★ 나만 보는 판은 걸음이 하나입니다 — 내 생년월일만 넣으면 끝 */
+    var steps=MEONLY.on?['client']:(GUEST.on?['cover','client','test']:['me','client','test']);
+    var labs =MEONLY.on?['내 생년월일']:(GUEST.on?['🕯️ 대문','① 내 정보','② 성향검사']:['① 내 카드','② 고객 정보','③ 성향검사']);
     tb.innerHTML=steps.map(function(k,i){
       var off=(k==='test'&&S.mode==='saju');
       return '<button class="'+(S.step===k?'on':'')+'" onclick="goStep(\''+k+'\')"'+(off?' disabled':'')+'>'+labs[i]+'</button>';
@@ -1284,13 +1298,13 @@ function draw(){
   }
   var vb=$('viewBtn');
   if(vb){
-    vb.style.display=(S.step==='board'&&!GUEST.on)?'':'none';
+    vb.style.display=(S.step==='board'&&!GUEST.on&&!MEONLY.on)?'':'none';
     vb.className='mecard'+(S.view==='client'?' cl':'');
     var narrow=(window.innerWidth||1000)<520;
     vb.innerHTML=(S.view==='agent'?(narrow?'🔒 내 눈':'🔒 내 눈용'):(narrow?'👀 고객':'👀 고객 화면'));
     vb.title=(S.view==='agent'?'누르면 고객에게 보여줄 화면으로 바뀝니다':'누르면 리스크·화법까지 보이는 내 화면으로 돌아갑니다');
   }
-  $('meBtn').style.display=(GUEST.on||(S.step==='board'&&S.view==='client'))?'none':'';
+  $('meBtn').style.display=(MEONLY.on||GUEST.on||(S.step==='board'&&S.view==='client'))?'none':'';
   $('meBtn').innerHTML=S.me.name
     ?('👤 '+esc(S.me.name)+((!((window.innerWidth||1000)<520)&&personCode(S.me))?' · '+personCode(S.me):''))
     :((window.innerWidth||1000)<520?'내 카드':'내 카드 설정');
@@ -1505,6 +1519,10 @@ function ohBars(oh){
 }
 function viewBoard(){
   var t=S.tab;
+  if(t==='mepil')return tabMePil();
+  if(t==='meins')return tabMeIns();
+  if(t==='mework')return tabMeWork();
+  if(t==='metime')return tabMeTime();
   if(t==='ice')return tabIce();
   if(t==='dang')return tabDang();
   if(t==='brief')return tabBrief();
@@ -2087,6 +2105,182 @@ function shrTurn(du,age){
   for(i=0;i<du.list.length;i++)if(du.list[i].age>age){n=du.list[i];break;}
   if(!n)return null;
   return {age:n.age, ko:ageKo(n.age), yrs:n.age-age, sip:n.sip};
+}
+/* ══ 🧭 나만 보는 판 — 내 사주와 보험 일 ════════════════════════════
+   사장님 말씀 2026-11-20 「그냥 내 사주만 보는거야. 보험과의 어떻게
+   궁합이 좋은지, 일은 어떻게 풀어나갈지 말이야」.
+
+   ⚠ 여태 이 앱의 「내 카드」 는 <b>고객과 궁합을 재는 데만</b> 쓰였습니다 —
+     사장님 자신에 대한 풀이가 한 줄도 없었습니다. 「영업 가능성」·「나의
+     영업법」 도 고객 칸에 들어간 사람을 봅니다. 그래서 새로 만듭니다.
+
+   ★ 규칙은 신당 「먼저 맞히기」 와 같습니다 (1번) —
+     ① 한 줄도 지어내지 않는다. 십신 개수 · 일간 강약 · 오행 · 대운에서만.
+     ② 줄마다 근거를 달아 되짚을 수 있게 한다.
+     ③ ⛔ 병·사고·죽음은 한 글자도. 「그만두라」 「이 일이 안 맞는다」 같은
+        <b>인생을 가르는 말도 하지 않는다</b> — 사주로 직업을 판정하는 것은
+        이 앱이 할 일이 아닙니다. 어디가 수월하고 어디가 품이 드는지까지입니다.
+   MEONLY.on 이면 이 넷만 섭니다.                                      */
+var MEONLY={on:false};
+
+/* 보험이라는 일이 요구하는 다섯 — 무엇으로 재는지를 같이 적습니다 */
+var INS_AX=[
+ {k:'만남', t:'사람 만나기',    why:'식상(말·표현) + 비겁(어울림)',
+  hi:'먼저 말을 거는 것이 품이 덜 드는 자리입니다.',
+  lo:'먼저 말 거는 데 품이 듭니다 — 소개로 가는 길을 넓히는 편이 낫습니다.'},
+ {k:'거절', t:'거절 견디기',    why:'일간 강약 + 인성(받쳐 주는 글자)',
+  hi:'거절을 넘기고 다음으로 가는 힘이 있으십니다.',
+  lo:'거절이 오래 남으시는 자리입니다 — 혼자 삭이면 깎입니다. 털 데가 있어야 합니다.'},
+ {k:'지속', t:'오래 끌고 가기', why:'관성(매듭) + 토(土) 기운',
+  hi:'한 번 잡으면 오래 가십니다. 이 일에서 제일 큰 밑천입니다.',
+  lo:'한자리에 오래 머물기보다 옮겨 다니며 푸는 자리입니다.'},
+ {k:'숫자', t:'숫자 다루기',    why:'인성(들여 익힘) + 금(金) 기운',
+  hi:'표와 숫자를 손에 익히는 데 품이 덜 드십니다.',
+  lo:'숫자를 오래 들여다보는 것이 품이 듭니다 — 자료를 만들어 두고 읽는 편이 낫습니다.'},
+ {k:'자립', t:'혼자 버티기',    why:'비겁(같은 편) + 일간 강약',
+  hi:'혼자서도 굴러가십니다.',
+  lo:'혼자 두면 처지십니다 — 같이 갈 사람이 곁에 있어야 하는 자리입니다.'}
+];
+/* 0~10. 모두 계산된 값에서만 나옵니다 — 손으로 박은 점수가 없습니다. */
+function insFit(s){
+  var c=sipsinTable(s).count, oh=ohCount(s), st=strengthOf(s);
+  var lv=(st.level==='신강'?2:st.level==='중화'?1:0);
+  function cap(n){return Math.max(0,Math.min(10,Math.round(n)));}
+  var v={
+    만남: cap(c.식상*2.2 + c.비겁*1.6 + 2),
+    거절: cap(lv*2.2 + c.인성*1.8 + c.비겁*0.8 + 1),
+    지속: cap(c.관성*1.9 + oh['토']*1.1 + 1),
+    숫자: cap(c.인성*1.9 + oh['금']*1.2 + 1),
+    자립: cap(c.비겁*2.2 + lv*1.8 + 1)
+  };
+  var rows=INS_AX.map(function(a){
+    var n=v[a.k];
+    return {k:a.k,t:a.t,n:n,why:a.why,hi:n>=6,
+      say:(n>=6?a.hi:a.lo),
+      src:(a.k==='만남'?('식상 '+c.식상+' · 비겁 '+c.비겁)
+         : a.k==='거절'?('일간 '+st.level+' · 인성 '+c.인성)
+         : a.k==='지속'?('관성 '+c.관성+' · 토 '+oh['토'])
+         : a.k==='숫자'?('인성 '+c.인성+' · 금 '+oh['금'])
+         :              ('비겁 '+c.비겁+' · 일간 '+st.level))};
+  });
+  var up=rows.filter(function(r){return r.hi;}), dn=rows.filter(function(r){return !r.hi;});
+  return {rows:rows,up:up,dn:dn,cnt:c,oh:oh,st:st,
+    sum:Math.round(rows.reduce(function(a,r){return a+r.n;},0)/rows.length*10)/10};
+}
+/* 일을 푸는 방식 — 용신에서 곧바로 나옵니다 */
+function workWay(s){
+  var y=yongsin(s), c=sipsinTable(s).count, out=[];
+  if(y.st.level==='신약')
+    out.push({t:'먼저 채우고 나서 쓰셔야 하는 자리입니다. 빈손으로 밀어붙이면 꺾이십니다.',
+              w:'일간이 신약 — 도와주는 기운(인성·비겁)이 먼저입니다'});
+  else if(y.st.level==='신강')
+    out.push({t:'담아 두면 체하십니다. 벌여 놓고 내보내야 풀리는 자리입니다.',
+              w:'일간이 신강 — 쓰고 내보내는 기운(식상·재성)이 먼저입니다'});
+  else
+    out.push({t:'크게 모자라지도 넘치지도 않으십니다. 철에 맞춰 속도만 고르시면 됩니다.',
+              w:'일간이 중화'});
+  if(c.인성===0) out.push({t:'배워서 채우는 길이 막혀 있지 않습니다 — 다만 저절로는 안 들어옵니다. 일부러 시간을 떼어 두셔야 합니다.',
+                            w:'인성 0개 — 받쳐 주는 글자가 없습니다'});
+  if(c.비겁===0) out.push({t:'끝까지 같이 갈 사람을 <b>만들어</b> 두셔야 합니다. 저절로 생기는 자리가 아닙니다.',
+                            w:'비겁 0개 — 같은 편 글자가 없습니다'});
+  if(c.관성>=3) out.push({t:'위에서 누르는 틀이 늘 있습니다. 그 틀을 미워하면 지치고, 쓰면 밑천이 됩니다.',
+                            w:'관성 '+c.관성+'개'});
+  if(c.식상>=3) out.push({t:'말이 먼저 나갑니다. 꺼내기 전에 한 박자만 두시면 그 자체가 무기입니다.',
+                            w:'식상 '+c.식상+'개'});
+  if(c.재성>=2&&y.st.level==='신약')
+    out.push({t:'벌이가 보여도 혼자 다 쥐려 하면 놓치십니다. 나눠 맡기셔야 남습니다.',
+              w:'재성 '+c.재성+'개인데 일간이 신약'});
+  return {rows:out.slice(0,5), yong:y};
+}
+/* ── 네 장 ──────────────────────────────────────────────────────── */
+function meWho(){ return (MEONLY.on?S.cl:S.me); }
+function meNeed(){
+  return '<div class="card"><h2>생년월일을 먼저 넣어 주세요</h2>'+
+    '<p>태어난 날과 <b>태어난 시간</b>까지 있으면 네 기둥이 모두 섭니다. 시를 모르시면 세 기둥으로 봅니다.</p>'+
+    '<button class="btn" style="margin-top:12px" onclick="goStep(\'client\')">넣으러 가기</button></div>';
+}
+/* ① 내 네 기둥 */
+function tabMePil(){
+  var p=meWho(), s=p&&p.saju; if(!s)return meNeed();
+  var y=yongsin(s), nm=esc(p.name||'나');
+  return '<div class="card">'+brandBand('내 네 기둥')+
+    '<h1>'+nm+' 님의 패</h1>'+
+    '<p>바꿀 수 없는 넉 자입니다. 바꾸실 수 있는 것은 <b>어떻게 쓰실지</b>뿐입니다.</p></div>'+
+    '<div class="card">'+pillarsHtml(p)+
+      '<div class="say"><span class="me">일간</span>가운데 윗글자 <b>'+GAN[s.dg]+'('+GANH[s.dg]+')</b> 가 '+nm+' 님 본인이십니다. '+
+      '일간은 <b>'+esc(y.st.level)+'</b> 이고, 이 사주에 꼭 필요한 기운은 <b>'+OH_HAN[y.primary]+' '+esc(y.primary)+'</b> 입니다.</div>'+
+      '<div class="say quiet"><span class="me">근거</span>'+esc(y.why)+' '+esc(y.how)+'</div></div>';
+}
+/* ② 보험이라는 일과 나 */
+function tabMeIns(){
+  var p=meWho(), s=p&&p.saju; if(!s)return meNeed();
+  var f=insFit(s), nm=esc(p.name||'나');
+  var bars=f.rows.map(function(r){
+    return '<div class="mefit-r"><div class="mefit-t">'+esc(r.t)+'</div>'+
+      '<div class="mefit-b"><i style="width:'+(r.n*10)+'%;background:'+(r.hi?'var(--green)':'var(--amber)')+'"></i></div>'+
+      '<div class="mefit-n'+(r.hi?' hi':'')+'">'+(r.hi?'맞음':'품이 듦')+'</div>'+
+      '<div class="mefit-w">'+esc(r.src)+'</div></div>';
+  }).join('');
+  return '<div class="card">'+brandBand('보험이라는 일과 나')+
+    '<h1>이 일과 나는 어디가 맞나</h1>'+
+    '<p>보험은 <b>다섯 가지</b>를 요구하는 일입니다. 어디가 수월하고 어디에 품이 드는지만 봅니다 — '+
+    '<b>맞다·안 맞다를 가르지 않습니다.</b> 품이 드는 자리는 사람을 붙이거나 틀을 만들어 메우면 됩니다.</p></div>'+
+    '<div class="card"><h2><span class="n">다섯</span>무엇이 수월하고 무엇에 품이 드나</h2>'+bars+
+      '<div class="say quiet"><span class="me">막대는 어디서 오나</span>'+
+      '손으로 박은 점수가 아닙니다. 십신 개수 · 일간 강약 · 오행 개수에서 그대로 셉니다. '+
+      '같은 사주면 언제 열어도 같은 막대입니다.</div></div>'+
+    (f.up.length?'<div class="card"><h2><span class="n">밑천</span>그대로 쓰시면 되는 것</h2>'+
+      f.up.map(function(r){return '<div class="say"><span class="me">'+esc(r.t)+'</span>'+r.say+'</div>';}).join('')+'</div>':'')+
+    (f.dn.length?'<div class="card"><h2><span class="n">품</span>메워야 하는 것</h2>'+
+      f.dn.map(function(r){return '<div class="say gold"><span class="me">'+esc(r.t)+'</span>'+r.say+'</div>';}).join('')+
+      '<div class="say quiet">여기 적힌 것은 <b>못 한다는 뜻이 아닙니다.</b> 그냥 두면 품이 더 든다는 뜻이고, '+
+      '사람을 붙이거나 틀을 만들어 두면 메워집니다.</div></div>':'')+
+    '<div class="say quiet" style="margin-top:14px">이 풀이는 <b>참고</b>입니다. 사주는 사람을 이해하는 데 쓰는 것이지 '+
+    '사람을 가두는 데 쓰는 것이 아닙니다. 일을 접고 여는 결정은 사주로 하지 마십시오.</div>';
+}
+/* ③ 내가 일을 푸는 방식 */
+function tabMeWork(){
+  var p=meWho(), s=p&&p.saju; if(!s)return meNeed();
+  var w=workWay(s), y=w.yong, rx=YONG_RX[y.primary], nm=esc(p.name||'나');
+  return '<div class="card">'+brandBand('내가 일을 푸는 방식')+
+    '<h1>어떻게 풀어 나가면 되나</h1>'+
+    '<p>남이 잘 되는 방식이 '+nm+' 님께도 되는 것은 아닙니다. 이 패가 풀리는 길만 적습니다.</p></div>'+
+    '<div class="card"><h2><span class="n">길</span>이 패가 풀리는 쪽</h2>'+
+      w.rows.map(function(r){return '<div class="say">'+r.t+
+        '<span style="display:block;font-size:13px;color:var(--ink3);margin-top:6px">'+esc(r.w)+'</span></div>';}).join('')+'</div>'+
+    (rx?'<div class="card"><h2><span class="n">'+OH_HAN[y.primary]+'</span>필요한 기운을 일에 쓰는 법</h2>'+
+      '<div class="say gold">방향은 <b>'+esc(rx.dir)+'</b>, 시간은 <b>'+esc(rx.time)+'</b>, 맞는 일은 <b>'+esc(rx.job)+'</b> 쪽입니다. '+
+      '곁에 두시면 좋은 사람은 <b>'+esc(rx.people)+'</b> 입니다.</div>'+
+      (rx.doit||[]).map(function(d){return '<div class="say">'+d+'</div>';}).join('')+'</div>':'');
+}
+/* ④ 올해·내년 */
+function tabMeTime(){
+  var p=meWho(), s=p&&p.saju; if(!s)return meNeed();
+  var di=((jdnOf(Number(p.y),Number(p.m),Number(p.d))+(p.noTime?0:(p.H>=23?1:0))+49)%60+60)%60;
+  var du=daeun(s,p.gender,p.noTime), age=ageNow(p.y,p.m,p.d);
+  var cur=null,i; for(i=du.list.length-1;i>=0;i--)if(age>=du.list[i].age){cur=du.list[i];break;}
+  var ly=yearLuck(s), turn=shrTurn(du,age);
+  function grp(g){
+    return g==='재성'?'돈이 보이는 흐름입니다. 벌이가 늘기도 하고 나가기도 합니다 — 어느 쪽인지는 쥐는 손에 달렸습니다.'
+      : g==='관성'?'틀이 조여 오는 흐름입니다. 자리가 생기기도 하고 눌리기도 합니다.'
+      : g==='인성'?'배우고 받쳐지는 흐름입니다. 벌이보다 <b>채우는 데</b> 쓰면 남습니다.'
+      : g==='식상'?'내보내는 흐름입니다. 말·자료·새 시도가 잘 나갑니다.'
+      :            '사람이 붙는 흐름입니다. 같이 하기도 하고 나눠 갖기도 합니다.';
+  }
+  return '<div class="card">'+brandBand('올해 · 내년')+
+    '<h1>지금은 어느 때인가</h1>'+
+    '<p>지어낸 해가 아니라 <b>대운과 세운에서 계산된</b> 해입니다.</p></div>'+
+    (cur?'<div class="card"><h2><span class="n">대운</span>지금 선 자리 — '+cur.age+'세부터</h2>'+
+      '<div class="say"><b>'+GAN[cur.g]+JI[cur.j]+'</b> · <b>'+esc(cur.sip)+'</b> 운입니다. '+grp(SIP_GROUP[cur.sip])+'</div></div>':'')+
+    '<div class="card"><h2><span class="n">올해</span>'+ly.year+'년 — '+esc(ly.han)+'</h2>'+
+      '<div class="say"><b>'+esc(ly.sip)+'</b> 해입니다. '+grp(ly.group)+'</div>'+
+      '<div class="say quiet">한 해로 다 되는 일은 없습니다. 올해가 <b>밀어붙일 해인지 숨 고를 해인지</b>, 딱 그만큼만 보십시오.</div></div>'+
+    (turn?'<div class="card"><h2><span class="n">바뀜</span>판이 한 번 바뀌는 때</h2>'+
+      '<div class="say gold"><b>'+esc(turn.ko.replace(/살$/,''))+'</b>. 대운이 <b>'+esc(turn.sip)+'</b>으로 갈립니다. '+
+      (turn.yrs<=2?'얼마 안 남으셨습니다.':'지금부터 '+turn.yrs+'년 뒤입니다.')+
+      ' 그 전까지는 아무리 밀어도 잘 안 열리고, 그 뒤로는 같은 힘이 다르게 먹습니다.</div></div>':'')+
+    '<div class="say quiet" style="margin-top:14px">운은 <b>흐름이지 정해진 답이 아닙니다.</b> '+
+    '좋은 해라고 가만히 있어 되는 일 없고, 나쁜 해라고 못 할 일도 없습니다. 속도를 정하는 데 쓰십시오.</div>';
 }
 /* ── 신당 화면 ── */
 function setDangCat(k){S.dang=S.dang||{};S.dang.cat=(S.dang.cat===k?'':k);save();draw();}
@@ -4562,6 +4756,15 @@ function fitShell(){
     if(d.me)S.me=d.me; if(d.cl)S.cl=d.cl;
     S.ans=d.ans||{};S.i=d.i||0;S.tab=d.tab||'ice';S.mode=d.mode||'both';S.view=d.view||'agent';S.worry=d.worry||{};
     S.step=ready(S.cl)?'board':(S.me.name?'client':'me');
+  }
+  /* ★ 나만 보는 판 — 「나」 가 곧 그 사람입니다. 내 카드 걸음을 건너뛰고
+     바로 생년월일 칸으로 갑니다(안 그러면 적어 넣은 것이 S.me 로 들어가
+     풀이가 영영 안 섭니다 — 실제로 그렇게 막혀 봤습니다). */
+  if(MEONLY.on){
+    S.view='agent'; S.mode='saju';
+    if(!ready(S.cl)&&ready(S.me))S.cl=S.me;          /* 전에 내 카드를 적어 두셨으면 그대로 씁니다 */
+    S.step=ready(S.cl)?'board':'client';
+    if(['mepil','meins','mework','metime'].indexOf(S.tab)<0)S.tab='mepil';
   }
   if(BRIEF.on){
     S.view='agent';
