@@ -9,7 +9,7 @@
      새 화면 사진을 나란히 놓고 봅니다(PR 쪽지). 여기서는 깨짐만 봅니다.
 
    ── 보는 것 (브라우저 없이) ──────────────────────────────────────
-     [1] ★★ 기본은 <b>꺼짐</b> — 켠 기기(localStorage)에서만, 끄면 apply·paint 가 아무것도 안 한다
+     [1] ★★ 기본은 <b>새 화면</b>(판 X505) — 「↩ 예전 화면」 고른 기기(old)·자동 점검(webdriver)만 예전 화면, 그때 apply·paint 는 아무것도 안 한다
      [2] ★★ 모두에게 끄는 한 줄(ALLOWED=false)이 있고, 그러면 단추도 새 화면도 안 선다
      [3] ★★ 옛 홈(index.html)은 <b>네 자리만</b> — 싣기 · 홈 그린 뒤 apply · hmPaint 안 paint · 인사 단추, 모두 try 안
      [4] ★★ 시안 칸 차례가 시안 rHome 그대로(인사 → 목표 → 다섯 걸음 → 챙기는 중 → 지금 이분 → 상품전략 → 이번 주 → 영업 한 바퀴 → 돌아보기 → 메뉴)
@@ -57,7 +57,7 @@ function box(store, search, opt) {
     { k: 'db', tk: '미접촉', t: '홍길순', s: '아직 한 번도 안 걸었습니다', src: '보장분석', key: 'db:d1:미접촉' }
   ];
   const g = {
-    localStorage: ls, location: { search: search || '' }, document: doc, toast: () => {}, go: () => {}, setTimeout: () => 0, setInterval: () => 0, clearInterval: () => {},
+    localStorage: ls, navigator: { webdriver: !!opt.robot }, location: { search: search || '' }, document: doc, toast: () => {}, go: () => {}, setTimeout: () => 0, setInterval: () => 0, clearInterval: () => {},
     OS: { profile: { name: '홍판서' } },
     hmLeft: () => ({ list: rows, all: rows.length + 1 }), hmSteps: () => rows,
     hmWhy: x => '이유 — ' + x.s, hmFullNm: t => t, hmNmHidden: () => !!opt.hide, hwhoFor: () => 'me', hwhoBarHtml: () => '',
@@ -95,13 +95,25 @@ function box(store, search, opt) {
 }
 const dyn = B => ({ querySelector: () => B.pane });
 
-console.log('\n[1] 기본은 꺼짐');
+/* ★ 판 X505 — 사장님 말씀 「새화면을 먼저 기준으로 하고, 구화면을 누르면 전 버전으로」 —
+     고른 적 없는 기기는 <b>새 화면</b>, 「↩ 예전 화면」 을 고른 기기('old')와 자동 점검 브라우저(webdriver)는 예전 화면. */
+console.log('\n[1] 기본은 새 화면 · 예전 화면은 고른 기기만');
 let B = box({}, '');
-is(B.g.HOME_V2.on() === false, '처음 기기에서는 꺼져 있다');
-is(B.g.HOME_V2.apply(dyn(B)) === false && !B.pane.classList.has('hm-v2') && !B.els.hv2, '꺼져 있으면 apply 가 아무것도 안 한다(옛 홈 그대로)');
+is(B.g.HOME_V2.on() === true && B.g.HOME_V2.apply(dyn(B)) === true && !!B.els.hv2, '고른 적 없는 기기는 새 화면이 선다');
+B = box({ apex_home_v2: 'old' }, '');
+is(B.g.HOME_V2.on() === false, '「↩ 예전 화면」 을 고른 기기(old)는 예전 화면');
+is(B.g.HOME_V2.apply(dyn(B)) === false && !B.pane.classList.has('hm-v2') && !B.els.hv2, '예전 화면이면 apply 가 아무것도 안 한다(옛 홈 그대로)');
 B.g.HOME_V2.paint();
-is(!B.els.hv2, '꺼져 있으면 hmPaint 가 불러도 새 화면이 안 생긴다');
-is(/새 화면/.test(B.g.HOME_V2.chip()) && B.g.HOME_V2.chip().indexOf('onclick="homeV2Use(true)"') >= 0 && typeof B.g.homeV2Use === 'function', '꺼져 있을 때 인사 줄 단추는 「✨ 새 화면」');
+is(!B.els.hv2, '예전 화면이면 hmPaint 가 불러도 새 화면이 안 생긴다');
+is(/새 화면/.test(B.g.HOME_V2.chip()) && B.g.HOME_V2.chip().indexOf('onclick="homeV2Use(true)"') >= 0 && typeof B.g.homeV2Use === 'function', '예전 화면 인사 줄 단추는 「✨ 새 화면」(다시 돌아가는 길)');
+B.g.HOME_V2.set(true);
+is(B.store.apex_home_v2 === '1' && B.g.HOME_V2.on() === true, '「✨ 새 화면」 을 누르면 다시 새 화면(1)');
+B.g.HOME_V2.set(false);
+is(B.store.apex_home_v2 === 'old' && B.g.HOME_V2.on() === false, '「↩ 예전 화면」 을 누르면 이 기기에 old 가 남는다');
+B = box({}, '', { robot: true });
+is(B.g.HOME_V2.on() === false && B.g.HOME_V2.apply(dyn(B)) === false, '자동 점검 브라우저(webdriver)는 예전 화면 — 옛 홈 점검이 계속 옛 홈을 잰다');
+B = box({ apex_home_v2: '1' }, '', { robot: true });
+is(B.g.HOME_V2.on() === true, '자동 점검이라도 일부러 켜면(1) 새 화면');
 B = box({ apex_home_v2: '1' }, '');
 is(B.g.HOME_V2.apply(dyn(B)) === true && B.pane.classList.has('hm-v2') && !!B.els.hv2, '켠 기기에서는 판에 hm-v2 와 새 화면(#hv2)이 선다');
 is(/예전 화면/.test(B.g.HOME_V2.chip()), '켜져 있을 때 인사 줄 단추는 「↩ 예전 화면」');
@@ -154,7 +166,7 @@ is(B.g.HOME_V2.apply(dyn(B)) === false, '「지금 할 것」 카드가 없는 �
 B = box({}, '?go=home&home=v2');
 is(B.g.HOME_V2.apply(dyn(B)) === true && B.store.apex_home_v2 === '1', '?home=v2 로 켠다');
 B = box({ apex_home_v2: '1' }, '?home=old');
-is(B.g.HOME_V2.apply(dyn(B)) === false && !('apex_home_v2' in B.store), '?home=old 로 끈다');
+is(B.g.HOME_V2.apply(dyn(B)) === false && B.store.apex_home_v2 === 'old', '?home=old 로 끈다(이 기기에 old)');
 
 console.log('\n[8] 옷은 .hv2 아래로만');
 const C = (sc.match(/var C = \[([\s\S]*?)\n    \];/) || ['', ''])[1];

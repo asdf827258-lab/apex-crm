@@ -23,7 +23,12 @@
    ★ <b>저장 코드를 새로 짜지 않습니다</b> — 누르면 위의 기존 함수를 부르기만 합니다.
 
    ── 깨지지 않게 ─────────────────────────────────────────────────
-     · 기본은 <b>꺼짐</b> — 켠 기기(localStorage apex_home_v2)에서만 보입니다.
+     · ★ 판 X505 — 사장님 말씀 (2026-11-20) 「우선 배포하고 <b>새화면을 먼저 기준</b>으로 하고, 구화면을 누르면
+       전 버전으로 할수 있도록 우선 만들어, 새버전 전부 마무리 될때까지는」.
+       → <b>기본이 새 화면</b>입니다. 「↩ 예전 화면」 을 누른 기기만 예전 화면(localStorage apex_home_v2 = 'old'),
+         옛 홈 인사 줄 「✨ 새 화면」 을 누르면 다시 새 화면('1').
+       ⚠ <b>자동 점검 브라우저(navigator.webdriver)는 예전 화면</b>을 봅니다 — 예전 화면은 「↩ 예전 화면」 으로
+         계속 쓰는 화면이라 그쪽 점검 수십 개가 계속 지켜야 합니다. 새 화면은 check-homev2 가 봅니다.
      · 옛 홈은 <b>지우지 않고 그 아래에 숨겨 둔 채 그대로 돕니다</b> — 옛 칸을 칠하는
        함수가 하나도 안 끊깁니다. 「☰ 다른 메뉴」 맨 위 「예전 오늘 칸 펼치기」 로 다 보입니다.
      · 새 화면을 그리다 오류가 나면 그 자리에서 예전 화면으로 돌아갑니다.
@@ -35,6 +40,7 @@
 (function (g) {
   'use strict';
   var ALLOWED = true;                 /* ③ 모두에게 끄기 — false 한 줄이면 전원이 예전 화면 */
+  var DEFAULT_NEW = true;             /* 판 X505 — 고른 적 없는 기기는 새 화면 (사장님 말씀 「새화면을 먼저 기준으로」) */
   var KEY = 'apex_home_v2';           /* 이 기기에만 · 서버로 안 갑니다 */
   var OLD = false;                    /* 예전 오늘 칸을 아래에 펼쳐 보나 */
   var CH = 'kakao';                   /* 카톡 · 문자 */
@@ -51,12 +57,18 @@
   function Q(s) { return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }   /* onclick 안 글 */
   function strip(s) { return String(s == null ? '' : s).replace(/<[^>]*>/g, ''); }
 
+  function robot() { try { return !!(g.navigator && g.navigator.webdriver); } catch (e) { return false; } }
   function on() {
     if (!ALLOWED) return false;
-    try { return g.localStorage.getItem(KEY) === '1'; } catch (e) { return false; }
+    var v = null;
+    try { v = g.localStorage.getItem(KEY); } catch (e) { v = null; }
+    if (v === '1') return true;
+    if (v === 'old') return false;
+    return DEFAULT_NEW && !robot();   /* 고른 적 없으면 새 화면 · 자동 점검은 예전 화면 */
   }
+  /* 고르면 이 기기에 남깁니다 — 새 화면 '1' · 예전 화면 'old' */
   function set(v) {
-    try { if (v) g.localStorage.setItem(KEY, '1'); else g.localStorage.removeItem(KEY); } catch (e) {}
+    try { g.localStorage.setItem(KEY, v ? '1' : 'old'); } catch (e) {}
   }
   function fromUrl() {
     try {
