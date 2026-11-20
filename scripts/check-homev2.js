@@ -255,6 +255,14 @@ B = box({ apex_home_v2: '1' }, '', { appts: [{ id: 'a1' }, { id: 'a2' }], db: DB
 B.g.hwhoFor = () => 'me';
 B.g.HOME_V2.apply(dyn(B));
 is(!/추천 동선/.test(B.els.hv2.innerHTML) && /약속 2곳/.test(B.els.hv2.innerHTML), '약속이 있는 날은 추천 대신 약속 동선');
+/* 판 X510 — 단계 앞쪽 분들이 좌표가 없어도, 좌표 있는 분부터 골라 거리가 선다 */
+const DB2 = [1, 2, 3, 4, 5, 6, 7, 8].map(i => ({ id: 'q' + i, who: 'me', name: ['홍길동', '홍길순', '홍갑돌', '홍말순', '홍철호', '홍기동', '홍정돌', '임꺽정'][i - 1], region: '광양', stage: i <= 6 ? 'AP' : '미접촉', days: 10 - i }));
+B = box({ apex_home_v2: '1' }, '', { appts: [], db: DB2, geo: DB2.map((r, i) => i < 6 ? { id: r.id } : { id: r.id, lat: 34.9 + i / 100, lng: 127.6 }) });
+B.g.hwhoFor = () => 'me';
+B.g.HOME_V2.apply(dyn(B));
+h = B.els.hv2.innerHTML;
+is(h.indexOf('추천 1</span><span class="x">홍정돌님') >= 0 && h.indexOf('km(어림)') >= 0 && h.indexOf('주소 모르는 곳 4') >= 0,'단계 앞쪽 여섯이 좌표가 없어도 좌표 있는 둘을 먼저 골라 거리가 선다 · 나머지는 「주소 모르는 곳」');
+is(sc.indexOf('.qc:last-child:not(:only-child){scroll-snap-align:end}') >= 0,'마지막 카드는 끝에 맞춰 멈춘다 — 넘기면 끝까지 간다(튕겨 돌아오지 않음)');
 B = box({ apex_home_v2: '1', apexRouteKmV1: JSON.stringify({ '34.9500,127.4900,34.9500,127.5800': { km: 11.2, min: 19 } }) }, '',
   { appts: [{ id: 'a1' }, { id: 'a0' }, { id: 'a2' }], geo: [{ id: 'a1', lat: 34.95, lng: 127.49 }, { id: 'a0', lat: 34.95, lng: 127.49 }, { id: 'a2', lat: 34.95, lng: 127.58 }] });
 B.g.HOME_V2.apply(dyn(B));

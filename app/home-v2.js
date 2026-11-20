@@ -160,6 +160,9 @@
       '.hv2 .qrail::-webkit-scrollbar{display:none}',
       '.hv2 .qc{flex:none;width:calc(100% - 28px);scroll-snap-align:start;background:#fff;border-radius:22px;padding:18px}',
       '.hv2 .qc:only-child{width:100%}',
+      /* ⚠ 판 X510 — 마지막 카드는 「끝에 맞춰」 멈춥니다. 시안처럼 카드 폭이 「100% - 28px」 라 마지막 카드의 왼쪽 끝은
+           스크롤 끝보다 멀어 멈출 자리가 없었고, 넘기면 두 번째 카드로 튕겨 돌아왔습니다(라이브에서 넘겨 보고 찾음). */
+      '.hv2 .qc:last-child:not(:only-child){scroll-snap-align:end}',
       '.hv2 .qtop{display:flex;align-items:center;gap:10px}',
       '.hv2 .av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;flex:none;background:var(--blue-l);color:var(--blue)}',
       '.hv2 .qtop .nm{font-size:19px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
@@ -628,13 +631,16 @@
     need.forEach(function (id) { GEO_ASKED[id] = 1; });
     var sb = T(function () { return g.osClient(); }, null);
     if (!sb) return;
-    try {
-      sb.from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng').in('id', need).then(function (r) {
-        if (r && r.error) { GEO_OFF = true; return; }       /* 좌표 칸이 없는 서버(migration_46 전) — 조용히 물러남 */
-        ((r && r.data) || []).forEach(function (d) { GEO[d.id] = d; });
-        paint();
-      }, function () { GEO_OFF = true; });
-    } catch (e) { GEO_OFF = true; }
+    /* 한 번에 80분씩 — 주소 줄이 너무 길어지지 않게 (판 X510 · 추천 동선이 한 분의 배정 DB 를 다 봄) */
+    for (var c = 0; c < need.length; c += 80) (function (part) {
+      try {
+        sb.from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng').in('id', part).then(function (r) {
+          if (r && r.error) { GEO_OFF = true; return; }       /* 좌표 칸이 없는 서버(migration_46 전) — 조용히 물러남 */
+          ((r && r.data) || []).forEach(function (d) { GEO[d.id] = d; });
+          paint();
+        }, function () { GEO_OFF = true; });
+      } catch (e) { GEO_OFF = true; }
+    })(need.slice(c, c + 80));
   }
   function rkAsk(pairs) {
     var key = pairs.map(function (p) { return rkKey(p.a, p.b); }).join('|');
@@ -690,7 +696,8 @@
   var REC_ORD = { AP: 1, PC: 2, CS: 3, TA: 4, '미접촉': 5, '부재': 6 };
   function recRoute() {
     var who = T(function () { return g.hwhoFor(); }, '') || '', all = T(function () { return g.hwhoIsAll(); }, false);
-    var key = function (v) { return String(v == null ? '' : v).replace(/\s+/g, ''); };
+    /* 같은 동네를 하나로 — 「광양」·「광양시」·「광양 시」 (판 X510 · 라이브에서 좌표 있는 분이 「광양시」 쪽에 따로 있었음) */
+    var key = function (v) { return String(v == null ? '' : v).replace(/\s+/g, '').replace(/(특별자치시|특별자치도|특별시|광역시|시|군)$/, ''); };
     var rows = (T(function () { return g.AR.db; }, []) || []).filter(function (r) {
       return r && r.id && r.region && REC_ORD[String(r.stage || '미접촉')] && (all || !who || r.who === who);
     });
@@ -698,9 +705,21 @@
     var by = {}, today = {};
     (T(function () { return g.hmSteps(); }, []) || []).forEach(function (x) { if (x && x.region) today[key(x.region)] = 1; });
     rows.forEach(function (r) { var k = key(r.region); (by[k] = by[k] || []).push(r); });
-    var ks = Object.keys(by).sort(function (a, b) { return ((today[b] ? 1 : 0) - (today[a] ? 1 : 0)) || (by[b].length - by[a].length); });
-    var pick = by[ks[0]].slice().sort(function (a, b) { return (REC_ORD[a.stage || '미접촉'] - REC_ORD[b.stage || '미접촉']) || ((b.days || 0) - (a.days || 0)); }).slice(0, 6);
-    geoLoad(pick.map(function (r) { return r.id; }));
+    /* ★ 판 X510 — 좌표가 있는 분을 먼저. 라이브에서 팀원 화면을 차례로 열어 보니 단계 차례 앞 여섯 분이
+         모두 좌표가 없어 「주소 모르는 곳 6」 만 서고 거리가 빈 경우가 셋이었습니다.
+         ① 이분의 배정 DB 좌표를 한 번 읽고(80분씩 · 처음 한 번만) ② 동네는 「오늘 볼 분이 있는 곳」 다음
+         「좌표 있는 분이 많은 곳」 다음 「분이 많은 곳」 ③ 그 동네에서 단계 차례는 지키되 <b>좌표가 있는 분부터</b>
+         여섯. 모자라면 좌표 없는 분으로 채우고 「주소 모르는 곳」 으로 적습니다(지어내지 않음). */
+    var ord0 = function (a, b) { return (REC_ORD[a.stage || '미접촉'] - REC_ORD[b.stage || '미접촉']) || ((b.days || 0) - (a.days || 0)); };
+    geoLoad(rows.slice().sort(ord0).slice(0, 400).map(function (r) { return r.id; }));
+    var geoN = function (k) { return by[k].filter(function (r) { return !!ptOf(GEO[r.id]); }).length; };
+    var ks = Object.keys(by).sort(function (a, b) {
+      return ((today[b] ? 1 : 0) - (today[a] ? 1 : 0)) || (geoN(b) - geoN(a)) || (by[b].length - by[a].length);
+    });
+    var pool = by[ks[0]].slice().sort(ord0);
+    var has = pool.filter(function (r) { return !!ptOf(GEO[r.id]); });
+    var pick = has.slice(0, 6);
+    pool.forEach(function (r) { if (pick.length < 6 && pick.indexOf(r) < 0 && !ptOf(GEO[r.id])) pick.push(r); });
     var pts = [], miss = 0;
     pick.forEach(function (r) { var p = ptOf(GEO[r.id]); if (p) pts.push({ p: p, r: r }); else if (GEO[r.id] || GEO_OFF) miss++; });
     /* 가장 가까운 분을 차례로 — 첫 분은 단계가 가장 앞선 분 */
