@@ -22314,8 +22314,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-20 01:30';
-var APP_BUILD_NOTE='🧭 <b>오늘 카드에서 상품전략기 바로</b>(판 X498 · 사장님 말씀 「상품전략기 꺼내」) — 접힌 「이분 자세히」 옆에 「🧭 이분 걱정 상품」 단추(걱정을 모르면 「이번 달 1위 상품」), 누르면 상품전략기 「🎣 문 열기」 가 그 걱정으로 열립니다. 새 줄이 아니라 한 줄에 나란히 — 홈 길이 그대로.';
+var APP_BUILD='2026-11-20 12:00';
+var APP_BUILD_NOTE='☎️ <b>연락할 분을 한 곳에서만</b>(판 X499 · 단순화 ② 홈 한 목록) — 「오늘 볼 분」 에 이미 선 분은 「오늘 안에 연락해야 할 분 ○명」 줄에서 또 세지 않습니다. 같은 분을 두고 3 · 2 · 1 이 나란히 서던 것.';
 
 
 
@@ -39711,6 +39711,10 @@ function hmPaint(){
   try{ hmBandPaint(); }catch(eBd){}
   /* 🧭 하루 다섯 걸음 — 「이분 끝」 을 누르면 띠의 수와 지금 걸음이 바로 따라옵니다 (판 X285) */
   try{ hmWayPaint(); }catch(eWy){}
+  /* ☎️ 「오늘 안에 연락해야 할 분」 한 줄도 같이 (판 X499) — 그 줄은 오늘 목록에
+     <b>이미 선 분</b>을 빼고 셉니다(ccNotToday). 오늘 목록이 늦게 서면 여기서
+     다시 세야 같은 분이 두 곳에 남지 않습니다 (5번). */
+  try{ if(typeof ccHomePaint==='function')ccHomePaint(); }catch(eCc){}
   /* 📒 이번 달 기록도 같이 — 접촉을 하나 남기면 그 수가 바로 바뀝니다 (판 X130) */
   try{ mlogPaint(); }catch(eMl){}
   /* 📍 <b>곁칸 넷을 어디에 세울지</b> — 오늘 카드를 다시 그리면 그 안의 자리도
@@ -75807,6 +75811,16 @@ function ccHomePaint(){
   var mine=ccMyList();
   if(!mine.length){el.innerHTML='';return;}
   var over=ccOverList(mine),soon=ccSoonList(mine);
+  /* ☎️ <b>오늘 목록에 이미 선 분은 여기서 또 안 셉니다</b> (판 X499 · 사장님 말씀
+     「토스처럼 단순하게」 — 같은 숫자는 한 곳에서만 · 5번).
+     라이브를 재 보니 홈 한 화면에 「오늘 볼 분 <b>3분</b>」 · 「☎️ 연락할 분 <b>2</b>」 ·
+     이 줄 「오늘 안에 연락해야 할 분이 <b>1명</b>」 이 나란히 섰습니다. 셋 다 같은
+     분들인데(넘긴 1명 + 첫 연락 전 1명 + DB 1명) 수가 셋이었습니다. 넘긴 분은
+     hmSteps 가 이미 ☎️ 줄로 「오늘 볼 분」 에 세웁니다 — 여기서는 <b>오늘 목록
+     밖에 남은 분</b>만 셉니다. 오늘 목록을 아직 못 세웠으면(읽는 중) 걸러 낼 것이
+     없어 <b>예전처럼 다</b> 셉니다 — 모르는데 0 이라 하지 않습니다 (1번).
+     ★ 「곧 때가 되는 분」 은 오늘 일이 아니라 다른 물음입니다 — 그대로 둡니다. */
+  over=ccNotToday(over);
   if(!over.length&&!soon.length){el.innerHTML='';return;}
   /* 한 줄짜리 옷은 소식 한 자리(hmNotiCss)가 갖고 있습니다 — 여기서 또
      정하면 두 벌이 됩니다 (5번). 쓰는 화면에서 부르는 것이 규칙입니다. */
@@ -75818,6 +75832,18 @@ function ccHomePaint(){
       :('<b>곧 연락할 때가 되는 분이 '+soon.length+'명</b> 있습니다.'))+
     (over.length&&soon.length?(' 곧 다가오는 분도 '+soon.length+'명.'):'')+
     '</span><span class="gt">고객 365일 ›</span></button>';
+}
+/* 오늘 목록(hmSteps)에 <b>이미 선 분</b>을 뺀다 — 고객 id 로만 맞춥니다(이름으로
+   짐작해 붙이지 않습니다 · 1번·3번). 오늘 목록은 <b>지금 홈이 보는 사람</b>의
+   것이라, 팀원 화면을 보고 계시면 겹칠 것이 없어 그대로 남습니다. */
+function ccNotToday(list){
+  var seen={},L=[],i,n=0;
+  try{ L=(typeof hmSteps==='function')?(hmSteps()||[]):[]; }catch(e){ L=[]; }
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].id){ seen[String(L[i].id)]=1; n++; }
+  if(!n)return list;
+  var out=[];
+  for(i=0;i<list.length;i++)if(!(list[i]&&seen[String(list[i].id)]))out.push(list[i]);
+  return out;
 }
 function ccMyList(){
   var all=OSC.list||[],me=(OS.profile&&OS.profile.id)||'',out=[],i;

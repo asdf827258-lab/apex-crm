@@ -187,8 +187,19 @@ function onGrad(el){
   /* ── [2] 소식은 상자가 아니라 한 줄 ───────────────────────────── */
   console.log('\n[2] <b>올려 둔 것이 없을 때</b> 소식은 상자가 아니라 한 줄 — 글을 덮는 단추가 없다');
   const N = await page.evaluate(() => {
+    /* ⚠ 판 X499 — 「오늘 안에 연락해야 할 분」 줄은 이제 <b>오늘 목록에 이미 선 분을 빼고</b>
+       셉니다(ccNotToday). 이 판의 넘긴 분들은 모두 「오늘 볼 분」 에 서 있어 줄이 안 섭니다 —
+       그것은 맞는 일입니다(같은 분을 두 곳에서 안 셈 · 5번). 이 자가 지키려는 것은
+       <b>줄의 꼴</b>(상자로 되돌아가지 않는가)이므로, 줄이 하나도 없으면 오늘 목록을
+       「아직 못 세운」 때로 잠시 돌려 <b>예전 그 줄</b>을 세워 놓고 꼴을 잽니다.
+       잰 뒤에는 되돌립니다 — 줄이 없어도 되는 것이지, 꼴을 안 재도 되는 것이 아닙니다. */
+    let hs = null;
+    if (!document.querySelector('.hm-noti .hm-noti-r') && typeof ccNotToday === 'function' && typeof ccHomePaint === 'function') {
+      hs = window.hmSteps; window.hmSteps = function () { return []; };
+      try { ccHomePaint(); } catch (e) {}
+    }
     const rows = [].slice.call(document.querySelectorAll('.hm-noti .hm-noti-r'));
-    return { n: rows.length,
+    const out = { n: rows.length,
              /* ⚠ <b>72px 입니다.</b> 처음엔 56px 로 두었다가 헛것을 잡았습니다 —
                 390px 폰에서 「오늘 안에 연락해야 할 분이 3명 있습니다」 는
                 <b>두 줄로 감기고</b>(59px), 그것은 정상입니다. 여기서 잡으려는
@@ -202,6 +213,8 @@ function onGrad(el){
              notBtn: rows.filter(e => e.tagName !== 'BUTTON').length,
              inner: rows.filter(e => e.querySelector('button,a[onclick]')).length,
              box: document.querySelectorAll('.hm-noti .notice,.hm-noti .card').length };
+    if (hs) { window.hmSteps = hs; try { ccHomePaint(); } catch (e) {} }
+    return out;
   });
   /* ★ 2026-09-30 — 여기가 <b>둘(경고 · 공지)</b> 이었습니다. 사장님 말씀
      「메인에서 공지사항 홈에서는 없애고, 따로 공지사항 칸 들어가면 거기서

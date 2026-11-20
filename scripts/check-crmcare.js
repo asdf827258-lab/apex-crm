@@ -358,13 +358,18 @@ window.supabase={createClient:function(){
     return new Promise(res => setTimeout(() => {
       ccHomePaint();
       var h = document.getElementById('ccHomeLine');
-      res({ badge: b ? b.textContent.trim() : '', home: h ? h.textContent.trim() : '' });
+      /* 판 X499 — 홈 한 줄은 「오늘 볼 분」 에 이미 선 분을 빼고 셉니다(ccNotToday).
+         그래서 기대값도 <b>같은 자</b>로 셉니다: 넘긴 5명 중 오늘 목록 밖에 남은 분. */
+      var left = (typeof ccNotToday === 'function') ? ccNotToday(ccOverList(ccMyList())).length : 5;
+      res({ badge: b ? b.textContent.trim() : '', home: h ? h.textContent.trim() : '', left: left });
     }, 500));
   });
   /* 내 고객 9명 중 넘긴 사람은 다섯(30일 · 31일 · VIP 20일 둘 · 90일 무연락).
      홍길동 담당인 한 명은 안 센다 — 남의 고객이 내 배지에 섞이면 안 된다. */
   ok(r.badge === '5', '메뉴 「고객 365일」 옆에 5 가 붙는다 — 나온 값 ' + (r.badge || '(없음)'));
-  ok(/오늘 안에 연락해야 할 분이 5명/.test(r.home), '홈에도 한 줄 뜬다 — ' + r.home.slice(0, 40));
+  ok(r.left ? new RegExp('오늘 안에 연락해야 할 분이 ' + r.left + '명').test(r.home)
+            : !/오늘 안에 연락해야 할 분/.test(r.home),
+    '홈 한 줄은 오늘 목록 밖에 남은 분만 센다(판 X499) — 남은 ' + r.left + '명 · ' + (r.home.slice(0, 40) || '(줄 없음)'));
   ok(r.home.indexOf('홍') < 0, '홈 한 줄에 고객 이름은 안 쓴다');
 
   /* ══ [10] TFA 업무관리 — 팀원별 ══════════════════════════════ */
