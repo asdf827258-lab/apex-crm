@@ -17,16 +17,42 @@ const bad = [], ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if 
 const sha = b => crypto.createHash('sha256').update(b).digest('hex').slice(0, 12);
 const SRC = 'app/saju-mbti.html', DST = 'site-saju/index.html';
 
-console.log('\n[1] ★★ 그림자가 <b>임자와 글자 하나까지 같다</b> (5번)');
+/* ★ 바꾸는 줄은 이 하나뿐입니다 — mk-sajusite.js 와 <b>같은 글</b>을 둡니다.
+   여기서 또 적는 것이 꺼림칙하지만(5번), 자가 만드는 쪽을 불러 쓰면
+   만드는 쪽이 망가져도 같이 망가져 <b>둘 다 조용해집니다</b>. 자는 제 눈으로
+   봅니다. 대신 글이 갈라지면 아래 [1] 이 바로 웁니다. */
+const GUEST_OFF = 'var GUEST={on:false};';
+const GUEST_ON  = 'var GUEST={on:true};';
+
+console.log('\n[1] ★★ 그림자가 <b>임자와 한 줄만 다르다</b> (5번)');
 const hasSrc = fs.existsSync(SRC), hasDst = fs.existsSync(DST);
 ok(hasSrc, '임자가 있다 — ' + SRC);
 ok(hasDst, '그림자가 있다 — ' + DST);
 if (hasSrc && hasDst) {
   const a = fs.readFileSync(SRC), b = fs.readFileSync(DST);
-  ok(sha(a) === sha(b),
-    '★★ 둘이 <b>바이트로 같다</b> — 임자 ' + sha(a) + ' / 그림자 ' + sha(b) +
-    (sha(a) === sha(b) ? '' : '\n      ← <b>갈라졌습니다.</b> node scripts/mk-sajusite.js --write 로 맞추십시오'));
+  const want = Buffer.from(a.toString('utf8').replace(GUEST_OFF, GUEST_ON), 'utf8');
+  ok(sha(want) === sha(b),
+    '★★ <b>그 한 줄 말고는 바이트로 같다</b> — 바라는 것 ' + sha(want) + ' / 그림자 ' + sha(b) +
+    (sha(want) === sha(b) ? '' : '\n      ← <b>갈라졌습니다.</b> node scripts/mk-sajusite.js --write 로 맞추십시오'));
   ok(a.length > 200000, '빈 껍데기가 아니다 — ' + Math.round(a.length / 1024) + 'KB (이 자가 헛도는 것을 막습니다 · 8번)');
+}
+
+console.log('\n[1-2] ★★ 올리는 판이 <b>고객 화면으로 못 박혀 있다</b>');
+/* ⚠ 사장님 말씀 2026-11-20 「아니 내것만 먼저 볼수 있도록 해줘야지」.
+   앱 기본값은 설계사 화면이라, 그대로 올리면 주소를 받은 사람이
+   「영업 가능성 · 나의 영업법 · 면담 브리프」 를 그대로 봅니다. */
+if (hasSrc && hasDst) {
+  const a = fs.readFileSync(SRC, 'utf8'), b = fs.readFileSync(DST, 'utf8');
+  ok(a.split(GUEST_OFF).length - 1 === 1,
+    '임자는 <b>설계사 화면이 기본</b>이다 — 사장님은 앱·파일에서 그대로 쓰십니다');
+  ok(b.split(GUEST_ON).length - 1 === 1 && b.indexOf(GUEST_OFF) < 0,
+    '★★ 올리는 판은 <b>GUEST.on 이 켜져 있다</b> — 주소를 받은 사람은 고객 화면만 봅니다');
+  /* 켜 두면 정말 막히는가 — 빗장이 코드에 살아 있는지도 같이 봅니다 */
+  ok(/function setView\(v\)\{if\(GUEST\.on\)v='client';/.test(b),
+    '  setView 가 <b>언제나 client 로 되돌린다</b> (단추로도 못 넘어갑니다)');
+  ok((b.match(/이 화면은 설계사 전용입니다/g) || []).length >= 8,
+    '  설계사 전용 칸 여덟이 <b>주소로 억지로 열어도 막힌다</b> — 빗장 ' +
+    (b.match(/이 화면은 설계사 전용입니다/g) || []).length + '개');
 }
 
 console.log('\n[2] ★ 따로 선 자리에서도 <b>서버 쓰는 둘이 산다</b>');

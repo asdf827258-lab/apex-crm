@@ -15,14 +15,32 @@ const fs = require('fs'), path = require('path'), crypto = require('crypto');
 const SRC = 'app/saju-mbti.html', DST = 'site-saju/index.html';
 const sha = b => crypto.createHash('sha256').update(b).digest('hex').slice(0, 12);
 
-const src = fs.readFileSync(SRC);
+/* ★★ 올리는 판은 <b>고객 화면으로 못 박습니다</b> (사장님 말씀 2026-11-20
+     「아니 내것만 먼저 볼수 있도록 해줘야지」).
+   ⚠ 앱의 기본값은 var GUEST={on:false} 라 <b>설계사 화면</b>입니다. 그대로
+     올리면 주소를 받은 사람이 「영업 가능성 · 나의 영업법 · 면담 브리프」 를
+     그대로 봅니다 — 고객에게 보일 글이 아닙니다.
+   ★ GUEST.on 을 켜면 setView 가 언제나 client 로 되돌리고, 설계사 전용 칸
+     여덟이 주소로 억지로 열어도 막힙니다(AGENT_TABS · 각 tab 함수의 빗장).
+   ★ 바꾸는 줄은 <b>이 한 줄뿐</b>입니다. check-sajusite 가 같은 바꿈을 다시
+     적용해 견주므로, 다른 데가 갈라지면 그대로 빨간불입니다 (5번).        */
+const GUEST_OFF = 'var GUEST={on:false};';
+const GUEST_ON  = 'var GUEST={on:true};';   /* 올리는 판 — 고객 화면 고정 */
+function toSite(buf) {
+  const t = buf.toString('utf8');
+  const n = t.split(GUEST_OFF).length - 1;
+  if (n !== 1) { console.error('✗ ' + GUEST_OFF + ' 가 ' + n + '곳입니다 — 한 곳이어야 합니다'); process.exit(2); }
+  return Buffer.from(t.replace(GUEST_OFF, GUEST_ON), 'utf8');
+}
+
+const src = toSite(fs.readFileSync(SRC));
 if (fs.existsSync(DST) && sha(fs.readFileSync(DST)) === sha(src)) {
   console.log('그대로입니다 — 고칠 것이 없습니다 (' + sha(src) + ')');
   process.exit(0);
 }
 if (process.argv.indexOf('--write') < 0) {
   console.log('달라졌습니다. --write 를 붙이면 씁니다.');
-  console.log('  ' + SRC + '  ' + sha(src));
+  console.log('  ' + SRC + ' (고객 고정 적용) ' + sha(src));
   console.log('  ' + DST + '  ' + (fs.existsSync(DST) ? sha(fs.readFileSync(DST)) : '(없음)'));
   process.exit(1);
 }
