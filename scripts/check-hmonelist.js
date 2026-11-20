@@ -13,6 +13,9 @@
      [4] ★  「곧 때가 되는 분」 은 다른 물음이라 그대로 남는다
      [5] ★  이름이 아니라 고객 id 로만 맞춘다 — 같은 이름의 다른 분을 빼지 않는다 (1번·3번)
      [6] ★  hmPaint 가 그 줄을 다시 센다 — 오늘 목록이 늦게 서도 두 곳에 안 남는다 (5번)
+   ── 판 X500 「맨 밑 갈래 줄 걷기」(사장님 고르심 2026-11-20) ──
+     [7] ★★ 「오늘」 카드가 갈래별 줄(☎️ 연락할 분 N · 📇 DB 고객 N)을 안 세운다 — 오늘 볼 분과 같은 분들을 또 센 것
+     [8] ★  세는 자(hmCount · HM_ORD)는 그대로 — 인사 「오늘 N개예요」 · 빈 날 가리기가 계속 쓴다
    ═══════════════════════════════════════════════════════════════ */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
@@ -76,6 +79,12 @@ is(/오늘 안에 연락해야 할 분이 1명/.test(t), '같은 이름(홍길�
 console.log('\n[6] hmPaint 가 다시 센다');
 const hp = fnSrc('hmPaint');
 is(/ccHomePaint\(\)/.test(hp), 'hmPaint 안에서 ccHomePaint 를 부른다');
+
+console.log('\n[7][8] 「오늘」 카드 갈래 줄 (판 X500)');
+const td = fnSrc('hmTodayHtml').replace(/\/\*[\s\S]*?\*\//g, '');
+is(!/class="hm-row"/.test(td) && !/hm-rows/.test(td), '「오늘」 카드가 갈래별 줄을 안 세운다');
+is(/hmCount\(\)/.test(td) && /c\.total/.test(td), '세는 자 hmCount 는 그대로 부르고 빈 날을 c.total 로 가린다');
+is(/var HM_ORD=\[/.test(IX) && /function hmCount\(/.test(IX), 'HM_ORD 표와 hmCount 는 남아 있다');
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 홈 「연락할 분」 은 한 곳에서만 셉니다');
 process.exit(bad ? 1 : 0);
