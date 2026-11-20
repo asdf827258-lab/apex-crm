@@ -1380,6 +1380,91 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(morn.blockedSsi, '  <b>「성춘향씨가」</b> 도 막는다');
   is(morn.notFalse, '  <b>「날씨가」 「손님이」 는 안 막는다</b> — 헛것은 안 잡는 것보다 나쁘다 (8번)');
 
+  console.log('\n[23] 하나의 이야기로 쓰나 · <b>한 번에</b> 심의를 지나나 (판 X501)');
+  const tale = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.comply = null; await comply();
+    S.perweek = 7; plan();
+    const i = todayAt();
+    if (!KINDS[S.rows[i].kind].mine) S.rows[i].kind = 'ask';
+    S.rows[i].seed = { kind:'ask', title:'질문', src:'상담에서 받은 질문' };
+    /* 주문서에는 <b> 가 섞여 있다 — 글자만 보고 잰다 */
+    const bare = t => String(t).replace(/<\/?b>/g, '');
+    const u = bare(userPrompt(S.rows[i])), sy = bare(sysPrompt());
+
+    /* ① 서론·본론·결론을 <b>시킨다</b> */
+    out.intro = /서론\s*—\s*문제를 세우고/.test(u);
+    out.body  = /본론\s*—\s*해결책과 보기/.test(u);
+    out.end   = /결론\s*—\s*요약하고 움직이게/.test(u);
+    out.oneLine = /한 줄기로 읽히게/.test(u);
+    out.cta   = /오늘 할 수 있는 한 가지/.test(u) && /「상담 받으세요」 로 닫지 않는다/.test(u);
+    /* ② <b>보기를 지어내지 않게</b> 못을 박는다 — 스토리텔링이 지어내기로 새는 자리다 (1번) */
+    out.noFake = /보기를 지어내지 않는다/.test(u) && /근거\] 에 그 일이 적혀 있을 때만/.test(u);
+
+    /* ③ 한 번에 통과 — <b>NEED 표의 글자 그대로</b>를 주문서가 준다 */
+    out.need = NEED.every(n => sy.indexOf(n.fix) >= 0);
+    out.needTrig = NEED.every(n => {
+      const first = String(n.when).replace(/^\/|\/[a-z]*$/g,'').split('|')[0];
+      return sy.indexOf(first) >= 0; });
+    out.needSaid = /글자 그대로 적는다/.test(sy);
+    /* ★ 손으로 또 적지 않았나 — 표를 고치면 주문서도 같이 바뀌어야 한다 (5번) */
+    out.derived = /needWords\(\)/.test(String(sysPrompt));
+    out.rawTag = /<b>/.test(userPrompt(S.rows[i]));   /* 태그를 벗기고 재는 것이 맞는지 */
+
+    /* ④ 주문서대로 쓴 글이 <b>자동 심의를 안 거치고</b> 게이트를 지난다 */
+    const asWritten = '## 제목 후보\n- 제목입니다\n\n## 본문\n'
+      + '보험료가 궁금하실 겁니다. 보장이 어떻게 되는지도요.\n'
+      + NEED[1].fix + '\n\n'
+      + '세액공제도 되는지 물으십니다.\n' + NEED[0].fix + '\n';
+    const nd = autoNeed(asWritten);
+    out.nothingAdded = nd.added.length === 0;        /* 붙일 것이 없다 = 한 번에 통과 */
+    out.passes = guard(nd.out, null).ok;
+    /* 빠뜨리고 쓰면 여전히 잡는다 — 자를 낮춘 것이 아니다 */
+    const sloppy = '## 본문\n보험료가 궁금하실 겁니다. 보장이 어떻게 되는지도요.\n';
+    out.stillCatches = autoNeed(sloppy).added.length === 1;
+    return out;
+  });
+  is(tale.intro && tale.body && tale.end,
+     '  <b>서론 · 본론 · 결론</b>을 시킨다 — 토막 지식을 늘어놓지 않는다');
+  is(tale.oneLine, '  <b>한 줄기</b>로 읽히게 — 뒤 문단이 앞 문단을 받게 시킨다');
+  is(tale.rawTag, '  (주문서에 꾸밈 태그가 섞여 있어 <b>글자만</b> 보고 쟀다)');
+  is(tale.cta, '  결론은 <b>오늘 할 수 있는 한 가지</b>로 닫는다 — 「상담 받으세요」 로 안 닫는다');
+  is(tale.noFake,
+     '  ★ <b>보기를 지어내지 않게</b> 못을 박았다 — 스토리텔링이 지어내기로 새는 자리다 (1번)');
+  is(tale.need && tale.needTrig && tale.needSaid,
+     '  빠지면 막히는 문구를 <b>글자 그대로</b> 알려 준다 — 비슷한 말로 쓰면 못 알아본다');
+  is(tale.derived, '  그 문구를 <b>NEED 표에서 뽑는다</b> — 손으로 또 적으면 표를 고쳐도 주문서는 옛말을 한다 (5번)');
+  is(tale.nothingAdded && tale.passes,
+     '  주문서대로 쓴 글은 <b>자동 심의가 붙일 것이 없다</b> — 한 번에 지나간다');
+  is(tale.stillCatches, '  빠뜨리고 쓰면 <b>여전히 잡는다</b> — 자를 낮춘 것이 아니다 (8번)');
+
+  const say = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.comply = null; await comply();
+    S.perweek = 7; plan();
+    const i = todayAt();
+    const look = () => { paint(); const h = document.getElementById('today');
+      return { txt: h.innerText.replace(/\s+/g,' '), box: !!h.querySelector('input[id^=mine_today_]') }; };
+    /* 뉴스 갈래 — <b>받는</b> 날이라고 말한다 */
+    S.rows[i].kind = 'econ'; S.rows[i].seed = null; S.rows[i].out = '';
+    const n = look();
+    out.newsGet  = /뉴스를 받으면/.test(n.txt) && /뉴스 받으러 가기/.test(n.txt);
+    out.newsNoWrite = !/한 줄만 적어 주시면/.test(n.txt) && !/글감 적으러 가기/.test(n.txt);
+    out.newsNoBox = !n.box;
+    /* 적는 갈래 — <b>적는</b> 날이라고 말한다 */
+    S.rows[i].kind = 'ask'; S.rows[i].seed = null; S.rows[i].out = '';
+    const w = look();
+    out.writeSay = /한 줄만 적어 주시면/.test(w.txt) && /글감 적으러 가기/.test(w.txt);
+    out.writeNoGet = !/뉴스를 받으면/.test(w.txt);
+    out.writeBox = w.box;
+    return out;
+  });
+  is(say.newsGet && say.newsNoWrite,
+     '  <b>뉴스 날</b>에는 「받으면」 · 「뉴스 받으러 가기」 라고만 한다 — 적으라고 안 한다');
+  is(say.newsNoBox, '  뉴스 날에는 한 줄 칸도 안 세운다');
+  is(say.writeSay && say.writeNoGet && say.writeBox,
+     '  <b>적는 날</b>에는 「적어 주시면」 · 「글감 적으러 가기」 · 한 줄 칸');
+
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();
