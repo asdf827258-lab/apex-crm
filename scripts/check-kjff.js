@@ -13,6 +13,10 @@
      [4] ★★ 고객 이름 칸 0 · 적은 것을 기억하지 않는다 — 남는 것은 글씨 크기뿐 · 다시 열면 비어 있다(3번)
      [5] 인쇄 — 단추 · 「자세히」 는 안 나오고 □/☑ 로 찍힌다 · 표 머리가 쪽마다 · tnum 꺼짐(4-1)
      [6] 앱 · 사전 · 지도 · 가이드 · 설계서 · 실비 · 대조표에서 닿는다 · 폰 390px 세 크기 · 요청 0(7번) · 오류 0
+     [7] ★★ 판 X419 (사장님 말씀 2026-11-11 「정말 쉽게 설명하고 눈에 가독성이 가장 중요한데」 → 「응 전부 고치고 병합해」)
+         한 장씩 — 묶음 다섯 · 보장 다섯 장(문항 셋 이하) · 정리 · 처음엔 한 장만 · 넘기면 다음 장 · 폰에서 한 장이 3.3화면 이하 ·
+         👓 설계사 메모(💡 왜 묻나 · 자세히)는 접혀 있다 · 📖 쉬운 말은 kijun-words.js 한 벌 · 화면의 어려운 말은 모두 풀이 · 장마다 처음 자리에 풀이 ·
+         풀이에 괄호 · 금액 · 약속 · 세금 말 0 · 「고지혈증」 을 「고지」 로 잡지 않는다 · 인쇄엔 모든 장이 나온다
    ══════════════════════════════════════════════════════════════════ */
 const fs = require('fs'), path = require('path'), http = require('http'), url = require('url'), vm = require('vm');
 const { chromium } = require('playwright');
@@ -26,7 +30,9 @@ const F = box.window.KJ_FF || { know: [], wrap: [] };
 const DICT = {}, CARE = {};
 (box.window.KJ_DICT || []).forEach(g => g.d.forEach(x => { DICT[x.id] = 1; }));
 (box.window.KJ_CARE || []).forEach(g => g.d.forEach(x => { CARE[x.id] = 1; }));
-const FFJ = rd('kijun-ff.js'), FFH = rd('kijun-ff.html'), CORE = rd('selfcheck-core.js');
+const FFJ = rd('kijun-ff.js'), FFH = rd('kijun-ff.html'), CORE = rd('selfcheck-core.js'), WJ = rd('kijun-words.js');
+vm.runInNewContext(WJ, box);
+const WL = box.window.KJ_WORDS ? box.window.KJ_WORDS.list() : [];
 const items = []; F.know.forEach(g => g.items.forEach(it => items.push(Object.assign({ g: g.g }, it))));
 
 console.log('\n[1] 한 벌 (5번)');
@@ -78,6 +84,7 @@ const srv = http.createServer((q, s) => {
 
   console.log('\n[3] 판정이 셀프 점검과 같은 말');
   const cat = A.catalog();
+  await p.click('[data-allview]');   /* 한 장씩 보기를 풀어 모든 문항을 누를 수 있게 — 한 장씩은 [7] 에서 잰다 */
   is(await p.locator('[data-row]').count() === cat.length && await p.locator('[data-groups] .it').count() === items.length, '  ② 문항 ' + cat.length + '줄 · ① 물음 ' + items.length + '개가 다 선다');
   const std = await p.textContent('[data-std]');
   is(std.indexOf(A.man(T.brain)) >= 0 && std.indexOf(A.man(T.heart)) >= 0 && std.indexOf(T.end + '세') >= 0 && std.indexOf(T.cancer[0] + '~' + T.cancer[1] + '배') >= 0, '  📏 제 기준 — TARGET 그대로(' + A.man(T.brain) + ' · ' + A.man(T.heart) + ' · ' + T.end + '세)');
@@ -102,6 +109,7 @@ const srv = http.createServer((q, s) => {
   const keys = await p.evaluate(() => { const k = []; try { for (let i = 0; i < localStorage.length; i++) k.push(localStorage.key(i)); } catch (e) {} return k; });
   is(keys.every(k => k === 'kjFont'), '  적은 것을 기억하지 않는다 — 남는 것은 글씨 크기뿐 (' + (keys.join(',') || '없음') + ')');
   await p.reload({ waitUntil: 'domcontentloaded' }); await p.waitForTimeout(200);
+  await p.click('[data-allview]');
   is(await p.locator('.op.on').count() === 0 && await p.inputValue('[data-it="keep"] .ln') === '' && await p.locator('[data-s]').count() === 0, '  다시 열면 비어 있다');
 
   console.log('\n[5] 인쇄 (4-1)');
@@ -136,6 +144,66 @@ const srv = http.createServer((q, s) => {
   is(over.length === 0, '  폰 390px — 세 크기 모두 옆으로 안 샌다' + (over.length ? ' ← ' + over.join(', ') : ''));
   is(sent.length === 0, '  요청 0 (7번)' + (sent.length ? ' ← ' + sent[0] : ''));
   is(errs.length === 0, '  자바스크립트 오류 0' + (errs.length ? ' ← ' + errs[0] : ''));
+  console.log('\n[7] 한 장씩 · 설계사 메모 · 쉬운 말 (판 X419)');
+  const q7 = await ctx.newPage(); await q7.goto(O + 'kijun-ff.html', { waitUntil: 'domcontentloaded' }); await q7.waitForTimeout(250);
+  const nStep = await q7.locator('[data-stepbar] .sb').count(), nChunk = await q7.locator('[data-chunk]').count();
+  is(nStep === F.know.length + nChunk + 1 && nChunk >= 4, '  한 장씩 — 묶음 ' + F.know.length + ' · 보장 ' + nChunk + '장 · 정리 1 = ' + nStep + '장');
+  const per = await q7.$$eval('[data-chunk]', a => a.map(e => e.querySelectorAll('[data-row]').length));
+  is(per.every(n => n >= 1 && n <= 3) && per.reduce((x, y) => x + y, 0) === cat.length, '  보장 한 장에 문항 셋 이하 · 열세 문항이 다 한 번씩 (' + per.join('+') + ')');
+  const vis = () => q7.$$eval('.page', a => a.map(e => e.getBoundingClientRect().height > 0));
+  let v = await vis();
+  is(v.filter(Boolean).length === 1 && v[0], '  처음엔 첫 장(가족)만 보인다');
+  is(!(await q7.isVisible('.page:not(.off) .why')) && !(await q7.isVisible('.page:not(.off) .it .to')), '  👓 설계사 메모(💡 왜 묻나 · 자세히)는 처음엔 접혀 있다 — 지금 보이는 장에서 잰다');
+  await q7.click('[data-next]'); v = await vis();
+  is(v.filter(Boolean).length === 1 && v[1] && /2 \/ /.test(await q7.textContent('[data-pos]')), '  「다음」 을 누르면 둘째 장 · 「2 / ' + nStep + '」');
+  await q7.click('[data-stepbar] .sb[data-go="' + (nStep - 1) + '"]'); v = await vis();
+  is(v[nStep - 1] && await q7.isVisible('[data-wrapbox] [data-sum]') && await q7.isDisabled('[data-next]'), '  마지막 장은 「함께 정리」 · 「다음」 은 꺼진다');
+  await q7.click('[data-stepbar] .sb[data-go="0"]'); await q7.click('[data-coach]');
+  is(await q7.isVisible('.page:not(.off) .why'), '  「👓 설계사 메모」 를 누르면 보인다');
+  await q7.click('[data-allview]'); v = await vis();
+  is(v.every(Boolean), '  「📜 한 번에 보기」 — 모든 장이 한 화면에');
+  await q7.click('[data-allview]');
+  await q7.emulateMedia({ media: 'print' });
+  is(await q7.$$eval('.page', a => a.every(e => getComputedStyle(e).display !== 'none')) && await q7.$eval('[data-stepbar]', e => getComputedStyle(e).display) === 'none', '  인쇄에는 모든 장이 나오고 단계 띠 · 넘기기는 안 나온다');
+  await q7.emulateMedia({ media: 'screen' });
+  /* 📖 쉬운 말 */
+  is(/<script src="kijun-words\.js"><\/script>/.test(FFH) && WL.length >= 10 && WL.every(x => x.e && x.e.indexOf('(') < 0 && x.e.indexOf(')') < 0), '  쉬운 말은 kijun-words.js 한 벌 · ' + WL.length + '말 · 풀이에 괄호 0(겹친 괄호가 안 생긴다)');
+  const wtxt = WL.map(x => x.e).join(' ');
+  is(!/\d[\d,]*\s*(만\s*원|만원|원\b|억)|\d\s*%|보장됩니다|지급됩니다|나옵니다|무조건|비과세|절세/.test(wtxt), '  풀이에 금액 · 약속 · 세금 말 0');
+  is(WL.every(x => FFH.indexOf(x.e) < 0 && FFJ.indexOf(x.e) < 0), '  풀이 글을 화면 파일에 또 적지 않았다(5번)');
+  const unglossed = await q7.evaluate(L => {
+    const out = [];
+    document.querySelectorAll('.page').forEach(pg => {
+      const w = document.createTreeWalker(pg, 4); let n;
+      while ((n = w.nextNode())) {
+        let skip = false; for (let e = n.parentElement; e && e !== pg; e = e.parentElement) if (/^(BUTTON|INPUT|TEXTAREA|A|ABBR|LABEL)$/.test(e.tagName) || e.hasAttribute('data-kjw-skip') || e.classList.contains('kjw-g')) { skip = true; break; }
+        if (skip) continue;
+        L.forEach(x => { let k = n.nodeValue.indexOf(x.w); while (k >= 0 && x.not.some(t => n.nodeValue.substr(k, t.length) === t)) k = n.nodeValue.indexOf(x.w, k + 1); if (k >= 0) out.push(x.w + '@' + n.nodeValue.slice(0, 20)); });
+      }
+    });
+    return out;
+  }, WL);
+  is(unglossed.length === 0, '  화면의 어려운 말은 모두 풀이가 붙었다' + (unglossed.length ? ' ← ' + unglossed.slice(0, 3).join(' · ') : ''));
+  const firstsW = await q7.$$eval('.page', a => a.map(pg => { const seen = {}, bad = []; pg.querySelectorAll('abbr.kjw').forEach(e => { const w = e.getAttribute('data-kjw'), g = e.nextSibling && e.nextSibling.classList && e.nextSibling.classList.contains('kjw-g'); if (!seen[w] && !g) bad.push(w); if (seen[w] && g) bad.push(w + '×2'); seen[w] = 1; }); return bad; }).flat());
+  is(firstsW.length === 0, '  장마다 처음 나온 자리에만 풀이가 서고 다음부터는 밑줄만' + (firstsW.length ? ' ← ' + firstsW.join(', ') : ''));
+  /* innerText 는 지금 보이는 장만 읽습니다 — 숨은 장 · 접힌 메모까지 textContent 로 봅니다.
+     「알릴 의무(고지)」 에 풀이가 붙어 「(고지 (…))」 가 된 자리를 이 자가 처음엔 못 봤습니다 */
+  const nest = await q7.$$eval('.page', a => a.map(e => e.textContent.replace(/\s+/g, ' ')).map(t => (t.match(/\([^()]*\([^()]*\)[^()]*\)/) || [])[0]).filter(Boolean));
+  is(!nest.length, '  괄호 안에 괄호가 겹친 자리가 어느 장에도 없다' + (nest.length ? ' ← ' + nest.slice(0, 3).join(' · ') : ''));
+  /* 폰에서 「다음」 을 누르면 새 장의 머리가 화면 위쪽에 와야 합니다 — 맨 위(머리글)로 가면 머리글이 한 화면을 다 먹어 물음이 안 보였습니다.
+     지금 장의 단추도 띠 안에 보여야 합니다(7장 단추가 화면 밖에 있었습니다) */
+  await q7.setViewportSize({ width: 390, height: 844 });
+  await q7.click('[data-stepbar] .sb[data-go="5"]'); await q7.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); await q7.click('[data-next]'); await q7.waitForTimeout(150);
+  const landed = await q7.evaluate(() => { const st = document.querySelector('.step:not(.off)').getBoundingClientRect(), bar = document.querySelector('[data-stepbar]').getBoundingClientRect(), on = document.querySelector('[data-stepbar] .sb.on').getBoundingClientRect(); return { top: Math.round(st.top), inBar: on.left >= bar.left - 1 && on.right <= bar.right + 1 }; });
+  is(landed.top >= 0 && landed.top <= 160 && landed.inBar, '  폰에서 「다음」 → 새 장이 화면 위쪽(' + landed.top + 'px)에 · 지금 장 단추가 띠 안에 보인다');
+  const notTest = await q7.evaluate(() => { const d = document.createElement('div'); d.textContent = '고지혈증 약을 먹어요 · 고지는 청약서에'; window.KJ_WORDS.mark(d, {}); return d.querySelectorAll('abbr[data-kjw="고지"]').length; });
+  is(notTest === 1, '  「고지혈증」 의 「고지」 는 잡지 않고, 「고지」 만 잡는다');
+  const ph = await ctx.newPage(); await ph.setViewportSize({ width: 390, height: 844 }); await ph.goto(O + 'kijun-ff.html', { waitUntil: 'domcontentloaded' }); await ph.waitForTimeout(200);
+  const scr = [];
+  for (let i = 0; i < nStep; i++) { await ph.click('[data-stepbar] .sb[data-go="' + i + '"]'); scr.push(await ph.evaluate(() => +(document.documentElement.scrollHeight * parseFloat(getComputedStyle(document.body).zoom || '1') / innerHeight).toFixed(1))); }
+  is(scr.every(x => x <= 3.3), '  폰(크게)에서 한 장이 3.3화면 이하 — ' + scr.join(' · '));
+  await ph.close(); await q7.close();
+
   await b.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 팩트파인딩 · 함께 점검표 — 셀프 점검과 같은 말로, 이름 없이, 기억하지 않고.');

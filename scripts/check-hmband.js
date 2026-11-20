@@ -116,9 +116,16 @@ const BAND = () => {
   console.log('\n[1] 띠가 <b>「지금 할 것」 바로 위</b>에 서나 (폰 390)');
   is(!A.없음, '  📇 <b>한 장 띠</b>가 홈에 선다 — ' + (A.없음 ? '없습니다' : (A.h + 'px')));
   if (A.없음) { console.log('\n✗ 띠가 없어 더 재지 않습니다'); await b.close(); srv.close(); process.exit(1); }
-  /* 판 X297 — 「지금 할 것」 은 이제 한 테두리(#hmJobWrap) 안의 #hmJobHost 입니다 */
-  is(/hmWhoHost · hmBandHost · (hmJobHost|hmJobWrap)/.test(A.차례),
-     '  차례가 <b>팀원 고르개 → 띠 → 지금 할 것</b> — ' + A.차례.split(' · ').slice(0, 3).join(' → '));
+  /* 판 X297 — 「지금 할 것」 은 이제 한 테두리(#hmJobWrap) 안의 #hmJobHost 입니다.
+     ⚠ 2026-11-14 (판 X439) — 그 사이에 <b>🌅 아침 미션 접이(#hmMsTop)</b> 가 들어왔습니다.
+       사장님 말씀 (2026-11-14) 「[아침미션을 오늘 칸에 따로 만들어서] <b>위 쪽에 따로
+       배치</b>하여서 클릭하면 펼쳐지고」. 접힌 채로 67px 이고, 「지금 할 것」 은
+       여전히 띠 바로 아래 묶음입니다.
+     ★ 이 자의 뜻은 「<b>띠가 지금 할 것 바로 위</b>」 입니다 — 그 뜻은 그대로 두고,
+       <b>사장님이 넣으라 하신 칸 하나</b>만 사이에 설 수 있게 적습니다. 아무거나
+       끼는 것은 여전히 빨간불입니다(이름을 못 박았습니다 · 8번). */
+  is(/hmWhoHost · hmBandHost · (hmMsTop · )?(hmJobHost|hmJobWrap)/.test(A.차례),
+     '  차례가 <b>팀원 고르개 → 띠 → (🌅 아침 미션) → 지금 할 것</b> — ' + A.차례.split(' · ').slice(0, 4).join(' → '));
   is(A.top + A.h <= 844, '  띠가 <b>폰 첫 화면 안</b>에 다 든다 — y' + A.top + '~' + (A.top + A.h));
   /* 띠가 부풀면 「지금 할 것」 이 첫 화면 밖으로 밀립니다. 잰 값 238px — 선은 260 */
   is(A.h <= 260, '  띠가 <b>260px 안</b>이다 — ' + A.h + 'px (「지금 할 것」 을 첫 화면 밖으로 밀지 않게)');
@@ -133,16 +140,59 @@ const BAND = () => {
      '  ★ 못 읽었으면 <b>수를 안 적는다</b> — 「고객 0분」 이 아닙니다 (1번)');
 
   console.log('\n[3] 단계 칸이 <b>표 그대로</b> · 사람 말로 · 누르면 CRM');
-  const 단계칩 = A.칩.filter(c => !/지남/.test(c.t));
+  /* ⚠ 판 X420 — 📒 <b>이번 달</b> 칸이 칩 줄에 보태졌습니다(사장님 말씀의
+     셋째 칸 · 줄을 새로 안 세우려고 여기 넣었습니다). 🕗 지남처럼 <b>단계
+     칩이 아니므로</b> 견줌에서 뺍니다 — 대신 아래에서 <b>정말 서는지</b>를
+     따로 묻습니다. 빼기만 하면 그 칸이 사라져도 아무도 모릅니다 (8번). */
+  const 단계칩 = A.칩.filter(c => !/지남|📒/.test(c.t));
   is(단계칩.length === A.표.length && A.표.every((x, i) => 단계칩[i] &&
        단계칩[i].t === x.n + ' ' + (단계칩[i].t.split(' ')[1]) + ' ' + x.say + ' ' + x.k),
      '  칸이 <b>HM_FLOW 차례 · 수 · 사람 말</b> 그대로 — ' + 단계칩.map(c => c.t).join(' | '));
   is(A.표.every(x => !!x.say), '  표의 단계마다 <b>사람 말(say)</b>이 있다 — ' + A.표.map(x => x.say).join('·'));
   is(단계칩.every(c => c.tag === 'BUTTON' && /go\('crm'\)/.test(c.on)),
      '  ★ 칸이 <b>단추</b>이고 누르면 <b>DB 통합 CRM</b> 으로 간다');
+  /* 📒 이번 달 — 사장님 말씀의 셋째 칸(☎️ 30일 약속)입니다 (판 X420).
+     수가 맞는지·셋이 갈리지 않는지는 check-monthlog [12] 가 봅니다 (5번). */
+  const 달칩 = A.칩.filter(c => /📒/.test(c.t));
+  is(달칩.length === 1, '  📒 <b>이번 달</b> 칸이 칩 줄에 선다 — ' +
+     (달칩.length ? 달칩[0].t : '(없음)') + ' (판 X420 · 줄을 새로 안 세웁니다)');
+  is(!달칩.length || /hmBandMonth\(\)/.test(달칩[0].on),
+     '  ★ 누르면 <b>📒 이번 달 내가 한 일</b> 로 간다 — 수를 두 곳에 안 그립니다 (5번)');
   const went = await P.p.evaluate(() => { const e = document.querySelector('#hmBand .t-chips.hm-flow .t-chip');
     e.click(); const t = (typeof lastTab !== 'undefined') ? lastTab : ''; go('home'); return t; });
   is(went === 'crm', '  눌러 보니 <b>crm</b> 으로 갔다 — ' + went);
+
+  /* ══ 📒 <b>눌러 보고 묻습니다</b> (판 X463 · 2026-11-17) ═══════════════
+     ⚠⚠ <b>바로 위 줄이 글자만 세고 있었습니다.</b> 「onclick 에 hmBandMonth() 라
+       적혀 있나」 는 초록인데, <b>실제로 누르면 아무 일도 안 일어났습니다</b> —
+       이번 달 셈(.hm-ev)이 🌅 아침 미션 <b>접이 안</b>에 있는데 그 접이가 접혀
+       있어, 접힌 칸에 scrollIntoView 를 걸어도 소리 없이 끝났습니다.
+       판 X462 의 ② 만남 → 📆 이번 주와 <b>똑같은 병</b>입니다.
+     ★ <b>글과 행동이 갈리면 그 글은 거짓입니다</b>(1번). 그래서 눌러 보고,
+       <b>이번 달 셈이 눈에 보이는 키로 섰는지</b>를 묻습니다 (8번).     */
+  const 달 = await P.p.evaluate(async () => {
+    try { const g = document.getElementById('hmFold_ms');
+          if (g && g.classList.contains('on')) hmFoldToggle('ms'); } catch (e) {}
+    try { if (typeof HM_MSEV !== 'undefined' && HM_MSEV.open) hmMsEvToggle(); } catch (e) {}
+    await new Promise(r => setTimeout(r, 250));
+    const 재 = () => { const e = document.querySelector('.hm-ev');
+      return e ? Math.round(e.getBoundingClientRect().height) : -1; };
+    const 전 = 재();
+    const b = [...document.querySelectorAll('#hmBand .t-chip')]
+      .filter(e => /hmBandMonth/.test(e.getAttribute('onclick') || ''))[0];
+    if (!b) return { 없음: true };
+    b.click();
+    await new Promise(r => setTimeout(r, 900));
+    const e2 = document.querySelector('.hm-ev');
+    return { 전, 후: 재(), 폄: !!(document.getElementById('hmFold_ms') || {}).classList &&
+             document.getElementById('hmFold_ms').classList.contains('on'),
+             글: e2 ? (e2.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 40) : '' };
+  });
+  is(!달.없음, '  📒 칸을 <b>화면에서 찾을 수 있다</b>');
+  is(!!달.폄, '  ★★ 누르면 <b>가는 길의 🌅 아침 미션 접이가 펴진다</b> (판 X463)');
+  is(달.후 > 40, '  ★★ 눌러 보니 <b>이번 달 셈이 실제로 선다</b> — 키 ' +
+     달.전 + 'px → ' + 달.후 + 'px  「' + 달.글 + '」');
+  await P.p.evaluate(() => { try { go('home'); } catch (e) {} });
 
   console.log('\n[4] 네 문 — <b>연락 · 만남 · 고객 · 맞는 메뉴</b>');
   is(A.문.join('·') === '연락관리·만남관리·고객관리·맞는 메뉴', '  넷이 다 선다 — ' + A.문.join(' · '));

@@ -27,6 +27,9 @@
      [14] 🔎 라이브에 다양한 질문으로 물어 보고 고친 것 (판 X404 · 「라이브 자비스 다양한 질문으로 해봐」) —
           「블로그 글감 뽑아줘」 같은 글 맡기기는 숨은 두뇌 화면으로 안 보내고 이 카드에서 두뇌가 쓴다 ·
           기다리는 사이 밑에 카드가 붙으면 두뇌의 답으로 옮겨 준다 · 「DB 정리」 가 계약 정리 순서로 새지 않는다
+     [15] 캡처로 보고 고친 것 (판 X415 · 「제미나이로 하고, 그거로 진행해 2,3번은 바로 고쳐줘」) —
+          고른 적이 없으면 Gemini 가 먼저(건강정보 도구는 그대로 Claude) · 내 키를 지워도 Claude 로 박지 않는다 ·
+          「치료비 통장 … 스크립트」 가 TA 스크립트로 새지 않는다 · 두뇌 화면 머리글이 「무엇이든 물어보세요」 가 아니다
    ★ 이름은 「홍길동」 (3번).                                                     */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -272,6 +275,30 @@ const MD = '## 결론\n첫 마디는 **질문**으로 엽니다.\n\n| 단계 | �
   const DB = await f.evaluate(() => ['DB 정리', '고객이 보험을 정리하고 싶대'].map(q => { const o = offline(q); return o.how + ':' + (o.top || o.title || ''); }));
   is(/^screen:crm$/.test(DB[0]), '「DB 정리」 → DB 통합 CRM (계약 정리 순서로 새던 자리 · ' + DB[0] + ')');
   is(/^way:/.test(DB[1]) && /정리/.test(DB[1]), '「보험을 정리하고 싶대」 는 그대로 정리 순서 (헛것 0 · ' + DB[1] + ')');
+
+  sec('[15] 캡처로 보고 고친 것 (판 X415)');
+  const PV = await p.evaluate(() => {
+    const kp = LS.get('provider', null), kg = LS.get('gproxy', null), kk = LS.get('apikey', null), kc = LS.get('proxy', null);
+    LS.del('provider'); LS.set('gproxy', '/api/gemini'); LS.set('proxy', '/api/generate');
+    const o = { def: getProvider(), brain: providerForGen('brain'), med: providerForGen('med_silbi') };
+    LS.set('provider', 'claude'); o.chose = providerForGen('brain');
+    if (kp === null) LS.del('provider'); else LS.set('provider', kp);
+    if (kg === null) LS.del('gproxy'); else LS.set('gproxy', kg);
+    if (kc === null) LS.del('proxy'); else LS.set('proxy', kc);
+    o.myk = /function mykClear\(\)\{[\s\S]{0,400}?LS\.del\('provider'\)/.test(document.documentElement.innerHTML) || /LS\.del\('gkey'\);LS\.del\('provider'\)/.test(mykClear.toString());
+    o.mykClaude = /LS\.set\('provider','claude'\)/.test(mykClear.toString());
+    go('brain'); const d = document.getElementById('dynPane'); o.sub = ((d.querySelector('.page-hd') || d).textContent || '').slice(0, 300);
+    go('apexmap'); return o;
+  });
+  is(PV.def === 'gemini' && PV.brain === 'gemini', '고른 적이 없으면 Gemini 가 먼저 — 두뇌도 Gemini (' + PV.def + ' · ' + PV.brain + ')');
+  is(PV.med === 'claude', '건강정보 도구(실비 계산)는 그대로 Claude — 개인정보 때문에 정해 둔 길 (' + PV.med + ')');
+  is(PV.chose === 'claude', '설정에서 Claude 를 고르신 기기는 고르신 대로');
+  is(!PV.mykClaude, '「내 키 지우기」 가 기본 AI 를 Claude 로 박지 않는다 — 기본(Gemini)으로 돌아간다');
+  is(!/무엇이든 물어보세요/.test(PV.sub) && /지난 대화/.test(PV.sub), '두뇌 화면 머리글 — 「무엇이든 물어보세요」 대신 이 화면이 하는 일(지난 대화 · Word · PPT)');
+  await p.waitForTimeout(1500);
+  const RT = await f.evaluate(() => ['치료비 통장을 40대 가장에게 쉽게 설명하는 스크립트', 'TA 스크립트 어디서 봐', '전화 스크립트'].map(q => { const o = offline(q); return o.how + ':' + (o.top || o.title || ''); }));
+  is(/^sec:/.test(RT[0]) && /치료비 통장/.test(RT[0]), '「치료비 통장 … 스크립트」 → 사용가이드 「치료비 통장 & 8통장」 (TA 스크립트로 새던 자리 · ' + RT[0] + ')');
+  is(RT[1] === 'screen:ta_script' && RT[2] === 'screen:ta_script', '「TA 스크립트 어디서 봐」 · 「전화 스크립트」 는 그대로 TA 스크립트 (헛것 0)');
 
   sec('[10] 앱 밖에서 열면 두뇌가 없다 (1번)');
   const p2 = await ctx.newPage(); p2.on('pageerror', e => errs.push(e.message));

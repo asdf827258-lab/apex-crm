@@ -111,6 +111,71 @@ const srv = http.createServer((rq, rs) => {
     is(inside.alive, '화면 안이 <b>멈추지 않고</b> 살아 있다');
     is(inside.inframe && inside.btn && inside.shown, '워크스페이스 안이라 <b>「고객 365일에 저장」</b> 단추가 선다');
 
+    /* ══ 🔁 갱신주기 — 판 X423 ═══════════════════════════════════════════
+       판 X131 이 「갱신일은 못 합니다」 라고 화면에 적어 둔 자리입니다.
+       보험 한 줄에 그 칸이 없었기 때문입니다. 칸을 만들었으니, 이제
+       <b>적은 것만</b> 셈이 되는지 · <b>안 적은 것은 안 세우는지</b> 를 봅니다.
+       ★ 셈을 여기서 베껴 적지 않습니다 — 「7해 전에 들고 3년마다면
+         <b>2해 뒤</b>」 라는 것은 손으로 셀 수 있는 사실이고, 그것만 견줍니다.
+       ★ 오늘이 언제든 같은 답이 나오게 <b>오늘에서 거꾸로</b> 세웁니다.    */
+    sec('[2-1] 🔁 갱신 — 적어 두신 계약만 · 날짜는 가입일+주기로 (판 X423)');
+    const RN = ready ? await fr.evaluate(() => {
+      const d = new Date(), ty = d.getFullYear(), mm = ('0' + (d.getMonth() + 1)).slice(-2);
+      const put = (rnw, start) => {
+        S.before = [{ id: 'p1', co: '삼성', nm: '암보험', term: '', start: start,
+                      years: '', rnw: rnw, premMan: '', act: 'keep', kb: false,
+                      cov: {}, cov2: {} }];
+        const e = baEndOf();
+        return (e && e.rnw) ? (e.rnw.ym + '/' + e.rnw.every) : null;
+      };
+      /* 칸을 <b>진짜로 그려</b> 봅니다 — 손으로 만든 반쪽 계약이 아니라
+         addPol 이 만드는 그 줄로 (그래야 이 자가 화면과 같은 것을 봅니다) */
+      let row = '';
+      try {
+        S.before = []; addPol('before'); S.before[0].rnw = '5';
+        row = polHtml(S.before[0], 'before', 0);
+      } catch (e) { row = 'ERR ' + e; }
+      return {
+        칸: /갱신주기/.test(row) && /'rnw'/.test(row),
+        줄: row.slice(0, 120),
+        고를것: /value="no"[^>]*>비갱신</.test(row) && /value="3"/.test(row),
+        고른것: /value="5" selected/.test(row),
+        기본모름: (typeof addPol === 'function') ? (function () {
+            const keep = S.before.slice(); addPol('before');
+            const v = S.before[S.before.length - 1].rnw; S.before = keep; return v;
+          })() : 'x',
+        셋:       put('3',  (ty - 7) + '-' + mm),
+        모름:     put('',   (ty - 7) + '-' + mm),
+        비갱신:   put('no', (ty - 7) + '-' + mm),
+        가입일없음: put('3', ''),
+        해지한것: (function () {
+            S.before = [{ id: 'p1', co: '삼성', nm: '암보험', start: (ty - 7) + '-' + mm,
+                          rnw: '3', act: 'cancel', cov: {}, cov2: {} }];
+            const e = baEndOf(); return (e && e.rnw) ? e.rnw.ym : null;
+          })(),
+        바람: (ty + 2) + '-' + mm + '/3'
+      };
+    }) : null;
+    is(!!RN && RN.칸, '계약 적는 칸에 <b>갱신주기</b> 가 선다' +
+       (RN && !RN.칸 ? ' — ' + RN.줄 : ''));
+    is(!!RN && RN.고를것 && RN.고른것,
+       '고를 것에 <b>비갱신</b>·햇수가 있고, 적어 둔 것이 골라져 있다');
+    is(!!RN && RN.기본모름 === '',
+       '새 계약은 <b>「모름」 으로 시작한다</b> — 「비갱신」 으로 짐작해 두지 않는다 (1번)');
+    is(!!RN && RN.셋 === RN.바람,
+       '7해 전 가입 · 3년 갱신 → <b>2해 뒤 그 달</b>이다 (받음 ' +
+       (RN && RN.셋) + ' · 바람 ' + (RN && RN.바람) + ')');
+    is(!!RN && RN.모름 === null,
+       '<b>주기를 안 적으면 아무 날도 안 만든다</b> (1번) — 받음 ' + (RN && RN.모름));
+    is(!!RN && RN.비갱신 === null,
+       '<b>「비갱신」 은 아는 답</b>이라 역시 안 세운다 — 받음 ' + (RN && RN.비갱신));
+    is(!!RN && RN.가입일없음 === null,
+       '가입 달을 모르면 <b>주기만으로 날을 만들지 않는다</b> (1번) — 받음 ' +
+       (RN && RN.가입일없음));
+    is(!!RN && RN.해지한것 === null,
+       '<b>해지할 보험</b>의 갱신은 안 세운다 — 없어질 보험입니다 (받음 ' +
+       (RN && RN.해지한것) + ')');
+
     sec('[3] 저장 — 한 고객에 한 줄, 아무나 못 쓴다');
     const said = await page.evaluate(async () => {
       window.__t = [];
@@ -135,7 +200,20 @@ const srv = http.createServer((rq, rs) => {
 
     const src = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
     const seg = src.slice(src.indexOf('function baSave('), src.indexOf('function baAskSave('));
-    is(/kind:'ba_state'/.test(seg), '저장은 <b>이미 있는 표</b>(saved_reports)에 한다 — 새 표를 안 만든다');
+    /* ⚠ <b>2026-11-15 (판 X458) — 재는 법을 고쳤습니다. 약속은 그대로입니다.</b>
+       여기는 날글자 <b>kind:'ba_state'</b> 가 있는지를 보고 있었습니다. 그런데 바로 그
+       <b>날글자로 흩어 적은 것</b>이 사장님 말씀 「보장분석 전후에서 어디서든 공유가
+       안되잖아」 의 원인이었습니다 — 담는 쪽은 'ba_state', 꺼내는 쪽은 'baba' 라
+       고객 창이 <b>있는 것을 없다고</b> 적었습니다. 이제 갈래를 <b>대장(CHK_KIND)</b>
+       한 곳에서만 알고, 담는 쪽도 그것을 부릅니다.
+       ★ 그래서 <b>셋을 봅니다</b> — 있는 표에 담는가 · 갈래를 대장에게 묻는가 ·
+         <b>날글자를 다시 박지 않았는가</b>. 마지막이 없으면 누가 도로 박아도 조용합니다. */
+    is(/from\('saved_reports'\)/.test(seg),
+       '저장은 <b>이미 있는 표</b>(saved_reports)에 한다 — 새 표를 안 만든다');
+    is(/kind:\s*CHK_KIND/.test(seg),
+       '  ★ 갈래는 <b>대장(CHK_KIND)</b>에게 묻는다 — 여기 글자를 적으면 꺼내는 쪽과 갈립니다 (5번)');
+    is(!/'ba_state'/.test(seg),
+       '  ★ 날글자 <b>\'ba_state\'</b> 를 여기 다시 박지 않았다 (판 X458 에서 데인 자리)');
     is(/BA\.rid[\s\S]{0,200}update\(/.test(seg), '두 번 저장해도 <b>한 고객에 한 줄</b>이다 — 쌓지 않는다');
     is(/osRepMask/.test(seg), '제목은 <b>가린 이름</b>으로 저장한다');
     /* ── 실명이 <b>정말</b> 안 나가는지 서버로 가는 것을 잡아 본다 ──
@@ -171,6 +249,9 @@ const srv = http.createServer((rq, rs) => {
       } }; };
       window.toast=function(){};
       baSave({ title:'홍철호 보장 전·후', state:{ v:3, who:{ name:'홍철호', age:'45' } }, sum:{ name:'홍철호' } });
+      /* 판 X478 — 이제 누를 때마다 고르는 창이 뜹니다. 지금 고객(맨 위)을 그대로 누릅니다 */
+      await new Promise(r=>setTimeout(r,300));
+      const cr=document.querySelector('#osCliPick .osCliPickRow.cur'); if(cr)cr.click();
       await new Promise(r=>setTimeout(r,400));
       window.osClient=rc; window.toast=rt; OS.profile=bak.p; OS.session=bak.s;
       if(!sent)return { none:true };
@@ -179,6 +260,70 @@ const srv = http.createServer((rq, rs) => {
     });
     is(!leak.none && leak.real === false,
        '화면에 <b>손으로 적은 실명</b>도 서버로 안 나간다 — 제목 「' + (leak.title||'?') + '」 · 자료 안 「' + (leak.name||'?') + '」');
+
+    /* ── 판 X478 · 사장님 말씀 2026-11-18 「고객 365일에 저장하는 거 클릭하면 다시 재선택할 수 있도록」 ──
+       전에는 한 번 정해진 고객이 있으면 고르는 창 없이 그분께 바로 저장해, 잘못 고른 고객을 바꿀 길이 없었습니다.
+       ① 정해진 고객이 있어도 <b>누를 때마다</b> 고르는 창이 뜨고, 그분이 맨 위에 「지금 저장된 곳」 으로 표시된다
+       ② 다른 고객을 고르면 <b>그분</b>에게 저장되고, 그분의 줄이 이미 있으면 새로 쌓지 않고 <b>그 줄을 고친다</b>
+       ③ 다음에 누르면 이번엔 바꾼 고객이 맨 위다                                                                    */
+    const RP = await page.evaluate(async () => {
+      const bak = { p: OS.profile, s: OS.session };
+      OS.profile = { id:'x', role:'advisor' }; OS.session = { user:{ id:'adv-1' } };
+      BA.cid='c-a'; BA.name='김○○'; BA.rid='r-a';
+      const log=[]; const rc=window.osClient, rt=window.toast; const toasts=[];
+      const fake=function(val,t){
+        const q=val||{data:[],error:null}; const eqs=[];
+        const o={ then:function(f,g){ return Promise.resolve(typeof q==='function'?q(eqs):q).then(f,g); },
+                  catch:function(f){ return Promise.resolve(q).catch(f); } };
+        ['select','neq','in','is','gt','gte','lt','lte','like','ilike','or','not',
+         'order','limit','range','single','maybeSingle'].forEach(function(k){ o[k]=function(){ return o; }; });
+        o.eq=function(k,v){ eqs.push([k,v]); return o; };
+        return o;
+      };
+      window.osClient=function(){ return { from:function(t){
+        let o;
+        if(t==='clients') o=fake({data:[{id:'c-b',name_masked:'이○○'},{id:'c-a',name_masked:'김○○'}],error:null});
+        else if(t==='saved_reports') o=fake(function(eqs){
+          const c=(eqs.find(e=>e[0]==='client_id')||[])[1];
+          return {data:c==='c-b'?[{id:'r-b'}]:[],error:null}; });
+        else o=fake();
+        const put=function(kind){ return function(row){ const eqs=[]; const r=fake({data:[{id:'new'}],error:null});
+          const eq0=r.eq; r.eq=function(k,v){ if(t==='saved_reports')log.push({kind:kind,row:row,where:[k,v]}); return eq0(k,v); };
+          if(t==='saved_reports'&&kind==='insert')log.push({kind:kind,row:row});
+          return r; }; };
+        o.insert=put('insert'); o.update=put('update'); o.upsert=put('upsert'); o.delete=function(){ return fake(); };
+        return o;
+      } }; };
+      window.toast=function(x){ toasts.push(x); };
+      const wait=ms=>new Promise(r=>setTimeout(r,ms));
+      const st={ v:3, who:{ name:'', age:'45' } };
+      /* ① */
+      baSave({ title:'t', state:st, sum:{} }); await wait(300);
+      const box1=document.getElementById('osCliPick');
+      const rows1=box1?[...box1.querySelectorAll('.osCliPickRow')]:[];
+      const first1=rows1[0]?{id:rows1[0].getAttribute('data-id'),cur:rows1[0].classList.contains('cur'),txt:rows1[0].textContent}:null;
+      const head1=box1?box1.querySelector('#osCliPickList').textContent:'';
+      /* ② 다른 고객(이○○)을 고른다 */
+      const other=rows1.find(b=>b.getAttribute('data-id')==='c-b'); if(other)other.click();
+      await wait(400);
+      const after={cid:BA.cid,name:BA.name,rid:BA.rid,log:log.slice(),toast:toasts.join(' | ')};
+      /* ③ 다시 누른다 */
+      baSave({ title:'t', state:st, sum:{} }); await wait(300);
+      const box3=document.getElementById('osCliPick');
+      const r3=box3&&box3.querySelector('.osCliPickRow');
+      const first3=r3?{id:r3.getAttribute('data-id'),cur:r3.classList.contains('cur')}:null;
+      const x=document.getElementById('osCliPickX'); if(x)x.click();
+      window.osClient=rc; window.toast=rt; OS.profile=bak.p; OS.session=bak.s;
+      return { open1:!!box1, first1, head1, n1:rows1.length, after, first3 };
+    });
+    is(RP.open1 && RP.first1 && RP.first1.id==='c-a' && RP.first1.cur && /지금 저장된 곳/.test(RP.first1.txt) && RP.n1===2,
+       '정해진 고객이 있어도 <b>누를 때마다 고르는 창</b>이 뜨고, 그분이 맨 위 「지금 저장된 곳」 (한 번씩만 · ' + RP.n1 + '줄)');
+    is(/지금은 김○○님에게 저장됩니다/.test(RP.head1), '창 위에 「지금은 ○○님에게 저장됩니다」 라고 먼저 말한다');
+    const L=RP.after.log;
+    is(RP.after.cid==='c-b' && L.length===1 && L[0].kind==='update' && L[0].where[1]==='r-b',
+       '다른 고객을 고르면 <b>그분의 줄(r-b)</b>을 고친다 — 김○○ 줄(r-a)도 안 건드리고 새로 쌓지도 않는다 — ' + JSON.stringify(L.map(l=>[l.kind,l.where&&l.where[1]])));
+    is(/이○○님 자료로 저장/.test(RP.after.toast), '저장 알림이 <b>바꾼 고객</b> 이름으로 나온다 — ' + RP.after.toast);
+    is(RP.first3 && RP.first3.id==='c-b' && RP.first3.cur, '다음에 누르면 <b>바꾼 고객</b>이 맨 위다');
   }
 
   sec('[4] 혼자서도 열리는가 — 파일을 그냥 열었을 때');

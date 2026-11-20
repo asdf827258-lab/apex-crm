@@ -208,6 +208,64 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(dom.chips >= 4, '갈래 칩이 선다 (받음 ' + dom.chips + ')');
   is(/지어낸 줄은 한 줄도 없습니다/.test(dom.txt), '지어내지 않았다고 적는다 (1번)');
 
+  console.log('\n[12] 📒 <b>세 칸에 이번 달이 한 줄씩</b> (판 X420 — 이 말씀의 남은 조각)');
+  /* 사장님 말씀 — 「이번주 / 오늘어디로 가시나 / 30일 약속 [내가 한달동안
+     진행했던 기록들 <b>여기에 다</b> 표기되게끔]」.
+     ⚠ 판 X130 은 📒 를 접이 안에만 세우고 「세 칸에도 붙일지 여쭙겠다」 고
+       적어 둔 채 멈춰 있었습니다. 그때 걱정한 것이 <b>「넷이 같은 수를
+       말하면 한쪽만 고쳐 놓고 갈린다」</b> 였고, 이 토막이 그것을 봅니다. */
+  const tail = await page.evaluate(() => {
+    HM_MSEV.open = false; hmMsPaint();
+    const g = s => { const e = document.querySelector(s);
+      return e ? e.textContent.replace(/\s+/g, ' ').trim() : ''; };
+    return { go: g('#hmRtHost .mlog-tail'), meet: g('#hmUpHost .mlog-tail'),
+             band: g('#hmBand [data-ask="이번달닿은번"]'),
+             sum: (typeof mlogSum === 'function') ? mlogSum() : null,
+             bandH: Math.round(((document.getElementById('hmBand') || {}).getBoundingClientRect
+                     ? document.getElementById('hmBand').getBoundingClientRect().height : 0)) };
+  });
+  console.log('      🚗 ' + tail.go + '\n      📅 ' + tail.meet + '\n      📇 ' + tail.band);
+  is(!!tail.go,   '🚗 오늘 어디로 — 이번 달 줄이 선다');
+  is(!!tail.meet, '📅 오늘 약속·이번 주 — 이번 달 줄이 선다');
+  is(!!tail.band, '📇 한 장 띠(30일 약속) — 이번 달 칸이 선다');
+  /* ★★ 칸마다 <b>제 몫</b>을 말한다 — 같은 수를 세 번 말하면 갈립니다 */
+  const S = tail.sum || {};
+  is(tail.go.indexOf(S.days + '일') >= 0,  '🚗 는 <b>며칠 나가셨나</b>(days=' + S.days + ')를 말한다');
+  is(tail.meet.indexOf(S.who + '분') >= 0, '📅 는 <b>몇 분 만나셨나</b>(who=' + S.who + ')를 말한다');
+  is(tail.band.indexOf('' + S.n) >= 0,     '📇 는 <b>몇 번 닿으셨나</b>(n=' + S.n + ')를 말한다');
+  is(tail.bandH <= 260, '★ 내 칸이 띠 예산을 안 넘는다 — ' + tail.bandH + 'px ≤ 260 (「지금 할 것」 을 첫 화면 밖으로 안 민다)');
+  /* ★★★ <b>세는 자가 하나인가</b> — 가짜로 바꾸면 셋이 다 따라와야 합니다 (5번).
+     하나라도 제 손으로 세고 있으면 그 하나만 안 바뀝니다. */
+  const one = await page.evaluate(() => {
+    const real = window.mlogSum;
+    window.mlogSum = () => ({ n: 777, days: 555, who: 333, by: {}, ks: [] });
+    /* ⚠ 띠는 hmBandPaint 가 다시 그립니다 — 안 부르면 옛 DOM 을 재어
+       <b>앱이 아니라 제가</b> 틀립니다 (8번). */
+    hmMsPaint(); hmSidePlace && hmSidePlace(); hmBandPaint && hmBandPaint();
+    const g = s => { const e = document.querySelector(s); return e ? e.textContent : ''; };
+    const out = { go: /555일/.test(g('#hmRtHost .mlog-tail')),
+                  meet: /333분/.test(g('#hmUpHost .mlog-tail')),
+                  band: /777/.test(g('#hmBand [data-ask="이번달닿은번"]')) };
+    window.mlogSum = real; hmMsPaint(); hmSidePlace && hmSidePlace(); hmBandPaint && hmBandPaint();
+    return out;
+  });
+  is(one.go && one.meet && one.band,
+     '★★★ <b>세는 자가 mlogSum 하나</b>다 — 바꾸니 셋이 다 따라왔다 (🚗' +
+     (one.go ? '✓' : '✗') + ' 📅' + (one.meet ? '✓' : '✗') + ' 📇' + (one.band ? '✓' : '✗') + ')');
+  /* ★ 못 읽었으면 <b>안 세웁니다</b> — 「0번」 과 「모른다」 는 다른 말입니다 (1번) */
+  const none = await page.evaluate(() => {
+    const real = window.mlogSum;
+    window.mlogSum = () => null;
+    hmMsPaint(); hmSidePlace && hmSidePlace(); hmBandPaint && hmBandPaint();
+    const out = { go: !!document.querySelector('#hmRtHost .mlog-tail'),
+                  meet: !!document.querySelector('#hmUpHost .mlog-tail'),
+                  band: !!document.querySelector('#hmBand [data-ask="이번달닿은번"]') };
+    window.mlogSum = real; hmMsPaint(); hmSidePlace && hmSidePlace(); hmBandPaint && hmBandPaint();
+    return out;
+  });
+  is(!none.go && !none.meet && !none.band,
+     '★ <b>못 읽었으면 셋 다 안 선다</b> — 0 을 적지 않는다 (1번)');
+
   console.log('\n[11] 화면이 안 터진다');
   is(errs.length === 0, '터진 것 없음' + (errs.length ? ' — ' + errs[0] : ''));
 

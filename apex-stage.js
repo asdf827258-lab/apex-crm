@@ -1933,10 +1933,51 @@ function stageScript(stage,src,age){
   if(A&&A.add)out.say=out.say+'\n'+A.add;
   return out;
 }
+/* ══ ✏️ <b>사장님이 고치신 첫 마디</b> (판 X412) ═══════════════════════
+   사장님 말씀 (2026-11-11) — 「보장분석 신청 한 사람들 <b>멘트가 너무
+   별로여서 내가 수정하고 공유</b>할수 있도록 만들어, <b>수정은 오직
+   운영자만</b> 가능하도록」
+
+   ★ 원래 말(TA_SRC)은 <b>한 글자도 안 지웁니다</b> — 덮어쓰기 한 겹만
+     얹습니다. 덮개를 걷으면 원래 말이 그대로 섭니다 (6번).
+   ★ <b>고치신 칸만</b> 덮습니다 — 제목만 고치시면 말과 조언은 원래
+     것입니다. 빈 칸을 「없다」 로 읽지 않습니다 (1번).
+   ★ 묻는 자는 <b>taSay 하나</b>입니다 (5번) — 홈 한 줄·긴 멘트 카드·
+     📋 복사·고객 카드가 모두 여기로 옵니다. 그래서 한 번 고치시면
+     <b>그 넷이 한꺼번에</b> 바뀝니다.
+   ★ 누가 넣어 주는지는 <b>부르는 쪽</b>이 압니다 — 이 파일은 서버를
+     모릅니다(본체의 tsayLoad 가 받아 와 끼웁니다 · 7번).            */
+var TA_OVR=null;
+function taSayOver(map){ TA_OVR=(map&&typeof map==='object')?map:null; }
+/* 덮기 <b>전</b>의 말 — 「원래 말로 되돌리기」 에서 미리 보여 드립니다 */
+function taSayBase(k){
+  var i; for(i=0;i<TA_SRC.length;i++)if(TA_SRC[i].k===k)return taOpen(TA_SRC[i],k);
+  return (TA_ANY.k===k)?taOpen(TA_ANY,''):null;
+}
+/* ☎️ <b>말은 TA 스크립트 대본 틀로</b> (판 X473 · 사장님 말씀 2026-11-17 「첫마디가 너무 허접해 - TA스크립트해서 가져와야만해」)
+   글 틀은 ta-open.js 한 곳(TA_OPENER) — ☎️ TA 스크립트가 그리는 ① 출처 · ② 자기소개 · 세 가지 · 양자택일 그대로입니다 (5번).
+   ★ 원래 짧은 말(TA_SRC.say)은 <b>남겨 둡니다</b> — 틀을 못 실은 화면(거절 근육 훈련 등)과 소개·개척(대본에 없는 갈래)이 씁니다.
+   ★ 이름은 <b>둘 다 안 넣습니다</b> — 고객은 「고객님」(3번), 설계사 이름 줄(② 자기소개 첫 문장)도 뺍니다.
+     홈과 DB 통합 CRM 이 이름을 아는 길이 달라(OS.profile · profile) 같은 분께 <b>다른 글</b>이 섰습니다(check-touch 가 잡음 · 5번).
+   ★ 사장님이 고치신 말(✏️ TA_OVR)은 이 위에 그대로 덮입니다 — 고치신 것이 이깁니다. */
+var TA_OPEN_SKIP={'소개':1,'개척':1};
+function taOpen(b,v){
+  if(!b||TA_OPEN_SKIP[b.k]||!g.TA_OPENER||!g.TA_OPENER.say)return b;
+  var s=''; try{ s=g.TA_OPENER.say(v,{}); }catch(e1){ s=''; }
+  if(!s)return b;
+  return {k:b.k, re:b.re, t:b.t, say:s, tip:b.tip, ta:true};
+}
 function taSay(src){
-  var v=String(src==null?'':src),i;
-  for(i=0;i<TA_SRC.length;i++)if(TA_SRC[i].re.test(v))return TA_SRC[i];
-  return TA_ANY;
+  var v=String(src==null?'':src),i,b=TA_ANY;
+  for(i=0;i<TA_SRC.length;i++)if(TA_SRC[i].re.test(v)){ b=TA_SRC[i]; break; }
+  b=taOpen(b,v);
+  var o=TA_OVR&&TA_OVR[b.k];
+  if(!o)return b;
+  /* 빈 글은 <b>안 고치신 것</b>으로 봅니다 — 지우신 것이 아닙니다 (1번) */
+  var pick=function(a,d){ a=(a==null?'':(''+a)).replace(/^\s+|\s+$/g,''); return a?a:d; };
+  return { k:b.k, re:b.re,
+           t:pick(o.t,b.t), say:pick(o.say,b.say), tip:pick(o.tip,b.tip),
+           edited:true, at:(o.at||''), by:(o.by||'') };
 }
 
 /* <b>글자만</b> 남긴다 — 화면마다 굵게 쓰는 방법이 달라 태그를 그대로 넘기면
@@ -1951,6 +1992,10 @@ g.APEX_STAGE={
   /* TA 첫 마디 — <b>DB 종류에 맞게</b>. 못 알아본 것은 일반으로 (1번) */
   taSay:taSay,
   taSrc:TA_SRC,
+  /* ✏️ 사장님이 고치신 말을 끼우는 자리 — 받아 오는 것은 본체가 합니다 */
+  taSayOver:taSayOver,
+  taSayBase:taSayBase,
+  taAny:TA_ANY,
   /* 전화를 여는 <b>다섯 마디</b> — 가운데 ③ 만 DB 종류로 갈린다 (정형화) */
   taFrame:TA_FRAME,
   /* <b>나이대</b> — 아는 분께만. 모르면 ageBand 가 <b>빈손</b>으로 돌려준다 (1번) */

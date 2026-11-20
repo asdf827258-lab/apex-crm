@@ -103,16 +103,26 @@ console.log('\n[4] <b>약속이 없는 날에도 동선 자리가 남는다</b>'
    쪽지를 적자 「갈 데가 없습니다」 가 창 <b>밖으로</b> 나가 「없다」 고 울었습니다 —
    코드는 멀쩡한데 자가 틀린 <b>헛것</b>입니다 (8번).
    ★ 이제 <b>다음 function 까지</b>를 봅니다 — 길이를 손으로 안 적습니다.   */
-const rt = (function () {
-  const i = IDX.indexOf('function hmRtHtml'); if (i < 0) return '';
+/* ⚠ 판 X420 — 이 자가 <b>함수 이름 하나</b>를 손잡이로 잡고 있었습니다.
+   📒 이번 달 꼬리를 달면서 hmRtHtml 을 <b>껍데기</b>로 두고 몸을 hmRtBody 로
+   옮기자(칠하는 자가 둘이라 한 곳에서 달려고), 이 자가 껍데기만 읽고
+   「빈 날 글이 없다」 고 울었습니다 — <b>앱이 아니라 손잡이가 틀렸습니다</b>.
+   이제 <b>둘을 이어</b> 읽습니다. 몸을 또 옮겨도 안 흔들립니다 (8번). */
+const 함수글 = function (nm) {
+  const i = IDX.indexOf('function ' + nm); if (i < 0) return '';
   const j = IDX.indexOf('\nfunction ', i + 10);
   return (j > i ? IDX.slice(i, j) : IDX.slice(i));
-})();
+};
+const rt = 함수글('hmRtHtml') + 함수글('hmRtBody');
 is(!/if\(!ap\.length\)return\s*''/.test(rt),
    '  빈 날에 <b>자리를 통째로 지우지 않는다</b> — 지우면 밑엣것이 올라와 어제와 다른 화면이 된다');
 is(/hm-rt-none/.test(rt) && /갈 데가 없습니다/.test(rt),
    '  <b>무엇을 하면 되는지</b> 적는다 — 「지역을 묶어 하루를 잡으시면」');
 is(/hm-rt-none\{/.test(IDX), '  그 줄의 <b>옷</b>도 있다 — 없으면 글자만 덩그러니 남는다');
+/* 📒 이번 달 꼬리는 <b>칸이 섰을 때만</b> 답니다 — 빈 자리에 수만 떠 있으면
+   무엇에 대한 수인지 알 수 없습니다 (1번 · 판 X420). */
+is(/if\(!h\)return\s*'';/.test(함수글('hmRtHtml')),
+   '  📒 이번 달 꼬리는 <b>칸이 정말 섰을 때만</b> 단다 (1번)');
 
 console.log('\n[5] <b>신호 — 오늘 이 분께 걸 구실</b> (명세서의 signals())');
 /* 생일 — D-7 부터 D-1 까지. D-0 은 달력이 이미 세웁니다 (한 곳만 답한다 · 5번) */

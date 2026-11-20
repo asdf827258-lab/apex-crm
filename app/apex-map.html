@@ -519,6 +519,14 @@ body.in-crm{padding-bottom:84px}
   font-weight:700; border-radius:10px; cursor:pointer; text-decoration:none}
 .jr-copy, .jr-say, .jr-img{border:1px solid #DCE4F1; background:#fff; color:#33425C}
 .jf-more{margin-top:6px}
+/* 🖼 관련 그림 · 덱 장 (판 X417) — 폰에서도 세 장이 한 줄에 */
+.j-vis{margin-top:8px; padding:9px 10px; border:1px solid #DCE4F1; border-radius:11px; background:#F7FAFF}
+.j-vis > b{display:block; font-size:var(--t6); margin-bottom:6px}
+.jv-thumbs{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px}
+.jv-th{display:block; text-decoration:none; color:inherit; min-width:0}
+.jv-th img{display:block; width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid #DCE4F1; background:#fff}
+.jv-th span{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-size:var(--t6); line-height:1.35; margin-top:3px; color:#4E5968}
+.jv-decks{flex-wrap:wrap}
 /* 🧮 연금 계산 (판 X276) — 칸은 44px · 색은 이 쪽에 이미 있는 것만 */
 .j-pen{margin-top:10px; background:#F3F6FB; border:1px solid #DCE4F1; border-radius:11px; padding:9px 11px; white-space:normal}
 .j-pen > b{display:block; font-size:var(--t6); color:var(--blue); margin-bottom:6px}
@@ -1079,6 +1087,9 @@ body.dock .deck{display:none}
     <!-- 🎙 자비스 목소리 (판 X336) — 고르는 표는 JV_VOX_OPTS 하나입니다 -->
     <label for="kVox">자비스 목소리</label>
     <select id="kVox"></select>
+    <!-- 🤖 목소리 결 (판 X413) — 고르는 표는 JV_VOX_FX 하나입니다 -->
+    <label for="kVoxFx">목소리 결</label>
+    <select id="kVoxFx"></select>
     <div class="row vtest"><button class="btn" id="kVoxTry" type="button">목소리 들어 보기</button></div>
     <p id="kVoxSay" style="margin:8px 0 0"></p>
     <div class="warn">키는 이 브라우저에만 저장되고 다른 곳으로 보내지 않습니다.
@@ -1541,39 +1552,55 @@ var DATA = {
      ]
     },
     {
-     "t": "🎓 교육",
+     "t": "🌱 성장",
      "leaves": [
       {
-       "t": "교육 한 자리",
+       "t": "성장 로드맵",
        "id": "edu"
       },
       {
-       "t": "보험 마스터 아카데미",
-       "id": "bohum"
+       "t": "APEX 사용가이드",
+       "id": "manual"
       },
       {
-       "t": "신입 TA 교육",
-       "id": "ta_train"
-      },
-      {
-       "t": "지인 8주 성장 프로그램",
-       "id": "jiin_grow"
-      },
-      {
-       "t": "TA 전체 대본",
-       "id": "ta_say"
+       "t": "APEX 마스터 과정",
+       "id": "apexmaster"
       },
       {
        "t": "거절 근육 훈련",
        "id": "rej_gym"
       },
       {
-       "t": "B·C·D 영업 강의",
-       "id": "bcd_lec"
+       "t": "보험 마스터 아카데미",
+       "id": "bohum"
+      },
+      {
+       "t": "90일 아카데미",
+       "id": "academy"
+      },
+      {
+       "t": "신입 TA 교육",
+       "id": "ta_train"
+      },
+      {
+       "t": "TA 전체 대본",
+       "id": "ta_say"
+      },
+      {
+       "t": "지인 8주 성장 프로그램",
+       "id": "jiin_grow"
       },
       {
        "t": "재무설계 실전화법서",
        "id": "fp_talk"
+      },
+      {
+       "t": "내 코칭",
+       "id": "mycoach"
+      },
+      {
+       "t": "B·C·D 영업 강의",
+       "id": "bcd_lec"
       },
       {
        "t": "EM 전용 운영센터 ↗",
@@ -1584,8 +1611,8 @@ var DATA = {
        "id": "educal"
       },
       {
-       "t": "APEX 사용가이드",
-       "id": "manual"
+       "t": "APEX ACADEMY | 노션",
+       "id": "academy_notion"
       },
       {
        "t": "APEX 자비스 모드 🔓",
@@ -1596,24 +1623,8 @@ var DATA = {
        "id": "helpme"
       },
       {
-       "t": "APEX 마스터 과정",
-       "id": "apexmaster"
-      },
-      {
-       "t": "APEX ACADEMY | 노션",
-       "id": "academy_notion"
-      },
-      {
        "t": "실행 체크판 🔓",
        "id": "ckboard"
-      },
-      {
-       "t": "내 코칭",
-       "id": "mycoach"
-      },
-      {
-       "t": "APEX 본인 점검란",
-       "id": "academy"
       }
      ]
     },
@@ -1910,6 +1921,10 @@ var DATA = {
     {
      "t": "🔓 메뉴에서 뺐지만 열리는 곳",
      "leaves": [
+      {
+       "t": "미끼상품&접촉전략",
+       "id": "mikki_talk"
+      },
       {
        "t": "윤시현의 두뇌",
        "id": "brain"
@@ -2442,25 +2457,25 @@ var DATA = {
  "menu": {
    "emcenter": {
     "n": "EM 전용 운영센터",
-    "g": "교육",
+    "g": "성장",
     "d": "팀 업적·시책·월급을 다루는 따로 선 사이트로 간다",
     "k": []
    },
    "insight": {
     "n": "상품전략기",
     "g": "상담 도구",
-    "d": "보험사 GA 소식지·약관을 달마다 읽어 이번 달 결론·추천 순위·조합 세트·약관 비교를 한 쪽에 모은다",
+    "d": "보험사 GA 소식지·약관을 달마다 읽어 이번 달 결론·추천 순위·조합 세트·약관 비교를 한 쪽에 모은다 — 🎣 문 열기(첫 마디·5분 대본) · 📘 약관 원문 직접 비교까지",
     "k": []
    },
    "edu": {
-    "n": "교육 한 자리",
-    "g": "교육",
-    "d": "교재·강의·훈련을 갈래로 묶어 한 번에 보고 들어간다",
+    "n": "성장 로드맵",
+    "g": "성장",
+    "d": "입사부터 경력자까지 레벨 하나씩 — 한 길(열두 주제 합격까지) · 매번 · 고객 앞",
     "k": []
    },
    "educal": {
     "n": "APEX 교육 캘린더",
-    "g": "교육",
+    "g": "성장",
     "d": "월간 교육 일정·신입 교육 주간·팀별 교육·운영표를 한 장에 모은다",
     "k": []
    },
@@ -2614,7 +2629,7 @@ var DATA = {
    },
    "bohum": {
     "n": "보험 마스터 아카데미",
-    "g": "교육",
+    "g": "성장",
     "d": "질병백과·수술분류·치료비·화법을 스스로 익힌다",
     "k": []
    },
@@ -2661,7 +2676,7 @@ var DATA = {
    },
    "fp_talk": {
     "n": "재무설계 실전화법서",
-    "g": "교육",
+    "g": "성장",
     "d": "재무설계 상담에서 쓸 말을 모아 뒀다",
     "k": []
    },
@@ -2689,7 +2704,7 @@ var DATA = {
    },
    "ta_say": {
     "n": "TA 전체 대본",
-    "g": "교육",
+    "g": "성장",
     "d": "화제 일곱 · 여는 말부터 거절처리까지 — 두 자리 중 하나로 약속을 정한다",
     "k": [
      "TA 스크립트와 같은 한 파일 (거절처리 표도 한 곳)"
@@ -2697,7 +2712,7 @@ var DATA = {
    },
    "ta_train": {
     "n": "신입 TA 교육",
-    "g": "교육",
+    "g": "성장",
     "d": "신입이 첫 전화를 걸 수 있게 — 6단계 스크립트 · 질문지 · 거절이 나오면 한 술 원하고 다시 끌고 오기",
     "k": [
      "거절 멘트는 TA 스크립트·거절 근육 훈련과 같은 한 표 (apex-stage.js)"
@@ -2715,7 +2730,7 @@ var DATA = {
    },
    "rej_gym": {
     "n": "거절 근육 훈련",
-    "g": "교육",
+    "g": "성장",
     "d": "거절을 어떻게 해석하고 다룰지 배우고, 10일 연속 과정 목표 · 거절 역할극 · 거절 일기로 익숙해진다",
     "k": [
      "역할극 멘트는 TA 스크립트와 같은 거절처리 표 (한 곳)"
@@ -2733,7 +2748,7 @@ var DATA = {
    },
    "jiin_grow": {
     "n": "지인 8주 성장 프로그램",
-    "g": "교육",
+    "g": "성장",
     "d": "이직·신입 설계사가 지인 명단을 소식 → 보험금 찾아줌 → 보장분석 → 소개 순서로 8주에 한 바퀴 — 찾은 자리에서 보장분석으로 잇는 다리 대본 · 실비 미청구 찾기(진료 내역 × 청구 내역 → 예상 금액 · 고객 안내장) · 고객별 접근 전략 · 성장기록북 인쇄 · 팀장 주간 보고 · 신입 가이드",
     "k": [
      "명단은 비어서 온다 — 실명은 이 기기에만, 인쇄·CSV 는 이름을 가린 채가 기본",
@@ -2742,7 +2757,7 @@ var DATA = {
    },
    "bcd_lec": {
     "n": "B·C·D 영업 강의",
-    "g": "교육",
+    "g": "성장",
     "d": "인생은 B와 D 사이의 C — 리더로서의 실패와 증명 · 자존감 · 자립 → 영업에서의 선택 → 고객의 생애(B~D) · 팩트파인딩 → 고객이 나를 고를 자료. 4시간 발표 · 진행표 · 워크북 · 강사 대본",
     "k": [
      "강사 이야기 · 타임라인은 비어서 온다 — 안 적은 장은 발표에서 건너뛰고 지어 넣지 않는다",
@@ -2752,10 +2767,11 @@ var DATA = {
    "mikki_talk": {
     "n": "미끼상품&접촉전략",
     "g": "상담 도구",
-    "d": "처음 전화에서 꺼낼 말과 미끼 27가지",
+    "d": "처음 전화에서 꺼낼 말과 미끼 27가지 — 서랍에서는 🧭 상품전략기 「🎣 문 열기」 로 합쳤습니다(판 X468)",
     "k": [
      "첫 통화에서 꺼낼 말 27가지 (문서 한 권)"
-    ]
+    ],
+    "hide": true
    },
    "finance": {
     "n": "재무설계 계산기",
@@ -3076,13 +3092,13 @@ var DATA = {
    },
    "manual": {
     "n": "APEX 사용가이드",
-    "g": "교육",
+    "g": "성장",
     "d": "APEX 를 처음 쓸 때 보는 설명서",
     "k": []
    },
    "academy_notion": {
     "n": "APEX ACADEMY | 노션",
-    "g": "교육",
+    "g": "성장",
     "d": "노션에 정리된 교육 자료",
     "k": []
    },
@@ -3183,27 +3199,27 @@ var DATA = {
    },
    "ckboard": {
     "n": "실행 체크판",
-    "g": "교육",
+    "g": "성장",
     "d": "이번 주 할 일을 체크하는 안쪽 화면",
     "k": [],
     "hide": true
    },
    "mycoach": {
     "n": "내 코칭",
-    "g": "교육",
+    "g": "성장",
     "d": "나에게 필요한 코칭 거리를 짚어 준다",
     "k": []
    },
    "apexmaster": {
     "n": "APEX 마스터 과정",
-    "g": "교육",
+    "g": "성장",
     "d": "하루 한 장씩 실제로 만들어 보며 익힌다 — 열넷이면 끝난다",
     "k": []
    },
    "academy": {
-    "n": "APEX 본인 점검란",
-    "g": "교육",
-    "d": "내가 얼마나 하고 있는지 스스로 점검",
+    "n": "90일 아카데미",
+    "g": "성장",
+    "d": "90일 로드맵 · 12주 커리큘럼 · 졸업 기준을 스스로 점검",
     "k": []
    },
    "growboard": {
@@ -3214,14 +3230,14 @@ var DATA = {
    },
    "apexmap": {
     "n": "APEX 자비스 모드",
-    "g": "교육",
+    "g": "성장",
     "d": "지금 보고 있는 이 지도 — 왼쪽 위 단추로 열린다",
     "k": [],
     "hide": true
    },
    "helpme": {
     "n": "무엇을 할지 모르겠다면",
-    "g": "교육",
+    "g": "성장",
     "d": "아홉 줄 중 숫자가 붙은 것만 누르면 된다 — 옆줄 맨 아래 단추로 열린다",
     "k": [],
     "hide": true
@@ -4602,8 +4618,19 @@ var JV_VOX_OPTS = [
   {v:'ai:Iapetus', t:'AI 남자 — 맑고 부드럽게'},
   {v:'dev',        t:'기기 목소리 — 서버를 부르지 않습니다'}
 ];
+/* 🤖 목소리 결 (판 X413) — 사장님 말씀 2026-11-11 「목소리만 조금 더 사이보그 같이 다듬자」.
+   ★ 사이보그 — 받은 목소리(또렷한 말)는 그대로 두고 그 위에 <b>얹습니다</b>: 빠른 금속 공명(짧은 메아리 겹침) ·
+     링 변조(52Hz 디지털 떨림) · 살짝 깨진 디지털 결 · 헬멧 공명(1.4kHz) · 조금 낮은 음 · 말머리 「삐릭」.
+     말이 묻히지 않게 얹는 소리는 원음보다 작게 둡니다.
+   ★ 은은하게 — 판 X336 그대로(짧은 메아리 · 잔향). 언제든 되돌리실 수 있게 남깁니다.
+   ★ 소리는 전부 <b>이 기기에서</b> 입힙니다 — 서버를 더 부르지 않습니다 (7번). 표는 이것 하나 (5번) */
+var JV_VOX_FX = [
+  {v:'cyborg', t:'사이보그 — 금속 공명 · 디지털 떨림 (추천)'},
+  {v:'soft',   t:'은은하게 — 짧은 메아리 · 잔향만 (예전)'}
+];
 var JV_VOX = {
   pick:LS.get('jv_vox', 'ai:Charon'),
+  fx:LS.get('jv_vox_fx', 'cyborg'),
   /* 모델 이름은 구글이 바꿉니다 — 앞의 것이 「없다」 고 하면 다음 것으로 (막힘과 「없음」 은 다릅니다) */
   models:['gemini-2.5-flash-preview-tts', 'gemini-2.5-flash-tts', 'gemini-2.5-pro-preview-tts'],
   model:LS.get('jv_vox_model', ''), dead:'', ok:false, slow:0, wait:false, armed:false,
@@ -4611,6 +4638,9 @@ var JV_VOX = {
 };
 /* 말투 지시는 <b>영어로</b> 둡니다 — 읽을 글(한국어)과 갈라져, 지시문까지 소리 내 읽는 일이 없습니다 */
 var JV_VOX_STYLE = 'Read the following Korean text aloud in a calm, low, composed voice, like a refined AI butler. Text: ';
+/* 사이보그 결은 말투도 고르게 — 높낮이를 덜 싣고 또박또박 (판 X413) */
+var JV_VOX_STYLE_CY = 'Read the following Korean text aloud in a calm, low, precise voice with an even, slightly mechanical cadence and little emotional inflection, like an advanced AI system. Text: ';
+function voxCyborg(){ return JV_VOX.fx !== 'soft'; }
 function voxAiName(){ var m = /^ai:(\w+)$/.exec(JV_VOX.pick || ''); return m ? m[1] : ''; }
 /* ★ <b>누르신 뒤에만</b> 부릅니다 — 창을 열자마자 서는 인사말까지 AI 목소리로 받으면 자비스를 열
    때마다 서버를 부르고, 폰은 누르기 전 소리를 막아 그 소리는 버려집니다 (7번) */
@@ -4651,7 +4681,7 @@ document.addEventListener('keydown', voxWake, true);
 
 function voxReq(text, model){
   var gkey = getGKey(), url, headers = {'Content-Type':'application/json'};
-  var payload = {contents:[{role:'user', parts:[{text:JV_VOX_STYLE + text}]}],
+  var payload = {contents:[{role:'user', parts:[{text:(voxCyborg() ? JV_VOX_STYLE_CY : JV_VOX_STYLE) + text}]}],
     generationConfig:{responseModalities:['AUDIO'],
       speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:voxAiName() || 'Charon'}}}}};
   if (gkey) url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(gkey);
@@ -4674,7 +4704,8 @@ function voxPcm(b64){
   return out;
 }
 function voxFetch(text){
-  var hit = JV_VOX.cache[text];
+  /* 결마다 말투 지시가 달라 기억도 따로 둡니다 (판 X413) */
+  var ck = (voxCyborg() ? 'c|' : 's|') + text, hit = JV_VOX.cache[ck];
   if (hit) return Promise.resolve(hit);
   var list = JV_VOX.model ? [JV_VOX.model].concat(JV_VOX.models.filter(function(m){ return m !== JV_VOX.model; })) : JV_VOX.models.slice();
   function next(i){
@@ -4694,7 +4725,7 @@ function voxFetch(text){
       var rate = +((/rate=(\d+)/.exec(d.inlineData.mimeType || '') || [0, 24000])[1]) || 24000;
       var a = {pcm:voxPcm(d.inlineData.data), rate:rate};
       JV_VOX.model = list[i]; JV_VOX.ok = true; LS.set('jv_vox_model', list[i]);
-      JV_VOX.cache[text] = a; JV_VOX.keys.push(text);
+      JV_VOX.cache[ck] = a; JV_VOX.keys.push(ck);
       if (JV_VOX.keys.length > 12) delete JV_VOX.cache[JV_VOX.keys.shift()];
       return a;
     });
@@ -4710,33 +4741,67 @@ function voxVerb(ctx){
   }
   return b;
 }
-/* 🎛 울림 사슬 — 낮은 웅웅거림 걷기 → 몸통 → 또렷함 → (짧은 금속성 메아리 + 잔향) → 압축 */
+/* 살짝 깨진 디지털 결 — 부드러운 꺾임(tanh). 세게 걸면 말이 뭉개지니 조금만 (판 X413) */
+function voxCurve(k){
+  var n = 1024, c = new Float32Array(n), d = Math.tanh(k);
+  for (var i = 0; i < n; i++){ var x = i * 2 / n - 1; c[i] = Math.tanh(k * x) / d; }
+  return c;
+}
+/* 말머리 「삐릭」 — 높은 데서 내려오는 짧은 디지털 신호. 이 기기에서 만듭니다 */
+function voxChirp(ctx, out, t0){
+  var o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'square'; o.frequency.setValueAtTime(1900, t0); o.frequency.exponentialRampToValueAtTime(620, t0 + 0.06);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.035, t0 + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07);
+  o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.08);
+}
+/* 🎛 울림 사슬 — 낮은 웅웅거림 걷기 → 몸통 → 또렷함 → (짧은 금속성 메아리 + 잔향) → 압축
+   🤖 사이보그(판 X413) — 그 위에 헬멧 공명 · 디지털 결 · 빠른 금속 공명 · 링 변조를 <b>얹습니다</b>.
+   원음(dry)이 늘 가장 크게 남아 말은 또렷합니다. 고르는 곳은 voxCyborg 하나입니다 (5번). */
 function voxPlay(a, seq){
   var ctx = voxCtx();
   if (!ctx) throw new Error('소리판을 못 엽니다');
+  var cy = voxCyborg();
   var buf = ctx.createBuffer(1, a.pcm.length, a.rate);
   if (buf.copyToChannel) buf.copyToChannel(a.pcm, 0); else buf.getChannelData(0).set(a.pcm);
-  var src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = 0.97;
-  var hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 85;
-  var body = ctx.createBiquadFilter(); body.type = 'lowshelf'; body.frequency.value = 220; body.gain.value = 3;
-  var pres = ctx.createBiquadFilter(); pres.type = 'peaking'; pres.frequency.value = 2900; pres.Q.value = 0.9; pres.gain.value = 3.5;
-  var dry = ctx.createGain(); dry.gain.value = 0.9;
-  var dl = ctx.createDelay(0.1); dl.delayTime.value = 0.014;
-  var fb = ctx.createGain(); fb.gain.value = 0.24;
-  var wet = ctx.createGain(); wet.gain.value = 0.15;
+  var src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = cy ? 0.94 : 0.97;
+  var hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = cy ? 110 : 85;
+  var body = ctx.createBiquadFilter(); body.type = 'lowshelf'; body.frequency.value = 220; body.gain.value = cy ? 2 : 3;
+  var pres = ctx.createBiquadFilter(); pres.type = 'peaking'; pres.frequency.value = 2900; pres.Q.value = 0.9; pres.gain.value = cy ? 5 : 3.5;
+  var dry = ctx.createGain(); dry.gain.value = cy ? 0.78 : 0.9;
+  var dl = ctx.createDelay(0.1); dl.delayTime.value = cy ? 0.0065 : 0.014;
+  var fb = ctx.createGain(); fb.gain.value = cy ? 0.42 : 0.24;
+  var wet = ctx.createGain(); wet.gain.value = cy ? 0.22 : 0.15;
   var cv = ctx.createConvolver(); cv.buffer = voxVerb(ctx);
-  var rv = ctx.createGain(); rv.gain.value = 0.11;
-  var comp = ctx.createDynamicsCompressor(); comp.threshold.value = -20; comp.ratio.value = 3;
+  var rv = ctx.createGain(); rv.gain.value = cy ? 0.07 : 0.11;
+  var comp = ctx.createDynamicsCompressor(); comp.threshold.value = cy ? -22 : -20; comp.ratio.value = cy ? 4 : 3;
   var an = ctx.createAnalyser(); an.fftSize = 512;
+  var tail = pres, osc = null;
   src.connect(hp); hp.connect(body); body.connect(pres);
-  pres.connect(dry); dry.connect(comp);
-  pres.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(comp);
-  pres.connect(cv); cv.connect(rv); rv.connect(comp);
-  comp.connect(an); an.connect(ctx.destination);
+  if (cy){
+    /* 헬멧 공명 → 디지털 결 */
+    var helm = ctx.createBiquadFilter(); helm.type = 'peaking'; helm.frequency.value = 1400; helm.Q.value = 2.2; helm.gain.value = 3;
+    var crush = ctx.createWaveShaper(); crush.curve = voxCurve(2.2); crush.oversample = '2x';
+    pres.connect(helm); helm.connect(crush); tail = crush;
+    /* 링 변조 — 52Hz 로 소리를 떨게 한 것을 조금만 섞습니다 */
+    var ring = ctx.createGain(); ring.gain.value = 0;
+    osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 52; osc.connect(ring.gain);
+    var rmix = ctx.createGain(); rmix.gain.value = 0.16;
+    tail.connect(ring); ring.connect(rmix); rmix.connect(comp);
+  }
+  tail.connect(dry); dry.connect(comp);
+  tail.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(comp);
+  tail.connect(cv); cv.connect(rv); rv.connect(comp);
+  /* 얹은 소리만큼 마지막에 한 번 낮춥니다 — 찢어지지 않고(최대 < 1) 예전 결과 비슷한 크기로 (판 X413 · check-jvhud [6]) */
+  var outG = ctx.createGain(); outG.gain.value = cy ? 0.72 : 1;
+  comp.connect(outG); outG.connect(an); an.connect(ctx.destination);
   JV_VOX.src = src; JV_VOX.an = an; JV_VOX.via = 'ai';
-  src.onended = function(){ if (seq === JV_VOX.seq){ JV_VOX.an = null; JV_VOX.src = null; hudSet(busy ? 'think' : 'idle'); } };
+  src.onended = function(){ try { if (osc) osc.stop(); } catch(e){} if (seq === JV_VOX.seq){ JV_VOX.an = null; JV_VOX.src = null; hudSet(busy ? 'think' : 'idle'); } };
   hudSet('talk');
-  src.start(0);
+  var t0 = ctx.currentTime;
+  if (cy){ voxChirp(ctx, comp, t0); t0 += 0.09; }
+  if (osc) osc.start(t0);
+  src.start(t0);
 }
 /* 기기 목소리 — 이 기기 밖으로 안 나갑니다 */
 function speakDev(t, seq){
@@ -4747,7 +4812,9 @@ function speakDev(t, seq){
     if (TTS.v){ u.voice = TTS.v; u.lang = TTS.v.lang; } else { u.lang = 'ko-KR'; }
     /* 남자 목소리가 없으면 낮춰 읽습니다 — 자비스는 차분해야 합니다 */
     var male = !!(TTS.v && VOICE_MALE.test(TTS.v.name || ''));
-    u.rate = 1.02; u.pitch = male ? 0.95 : 0.8; u.volume = 1;
+    /* 기기 목소리에는 효과를 못 입힙니다 — 사이보그 결이면 더 낮고 고르게만 (판 X413) */
+    if (voxCyborg()){ u.rate = 0.98; u.pitch = male ? 0.82 : 0.7; } else { u.rate = 1.02; u.pitch = male ? 0.95 : 0.8; }
+    u.volume = 1;
     u.onstart = function(){ if (seq === JV_VOX.seq){ JV_VOX.via = 'dev'; hudSet('talk'); } };
     u.onend = u.onerror = function(){ if (seq === JV_VOX.seq) hudSet(busy ? 'think' : 'idle'); };
     window.speechSynthesis.speak(u);
@@ -5026,7 +5093,8 @@ function addJ(res, isErr){
   var hasFound = fd.some(function(f){ return f.strong && (f.rows || []).length; }) || (anyRow && res.how === 'none') || (anyRow && res.how === 'ext');
   if (res.act){ h += jvActHtml(res.act); hasFound = true; }
   if (res.pen){ h += jvPenHtml(res.pen); hasFound = true; }    /* 🧮 연금 계산 (판 X276) */      /* 🛠 시키신 일이 맨 위 (판 X271) */
-  if (fd.length) h += jvFoundHtml(fd, !hasFound);
+  if (fd.length) h += jvFoundHtml(fd, !hasFound, res.vis);
+  if (res.vis) h += jvVisualHtml(res.vis);                    /* 🖼 관련 그림 · 덱 장 (판 X417) */
   /* 🧑‍🔧 일꾼이 지금 읽어 온 것 — 「어디로 가세요」 보다 먼저 「지금 이렇습니다」 (판 X221) */
   var wk = (res.work || []).filter(function(x){ return x && (x.say || x.wait); });
   if (wk.length){
@@ -5757,7 +5825,7 @@ function jvUsedIn(id){
   });
 }
 
-/* 화면(top)이 맞춘 낱말을 순서(way)가 하나도 못 맞췄나 — 점수는 jvScore 한 곳에서 (5번 · 판 X404) */
+/* 앞선 것(top)이 맞춘 낱말을 뒤의 것이 하나도 못 맞췄나 — 순서(판 X404) · 화면(판 X415)이 같이 씁니다. 점수는 jvScore 한 곳에서 (5번) */
 function jvMissesTop(way, top, words){
   var hitTop = (words || []).filter(function(w){ return jvScore(top, [w], JV_SYN).s > 0; });
   return hitTop.length > 0 && !hitTop.some(function(w){ return jvScore(way, [w], JV_SYN).s > 0; });
@@ -6098,7 +6166,9 @@ function jvOneOf(q, R){
      「인스타 올릴 거」 는 「SNS 활용법」 편보다 「인스타그램」 화면입니다. 편의 줄은
      그 화면의 「자세히」 에 이미 붙어 있습니다. */
   if (top.d.kind === 'sec'){
-    if (bestScr && bestScr.hitTU > 0 && bestScr.s >= top.s * 0.8) return jvScreenAnswer(bestScr.d.id, R);
+    /* 판 X415 — 「치료비 통장을 40대 가장에게 설명하는 스크립트」 가 「TA 스크립트」 로 샜습니다: 편(치료비 통장 & 8통장)이
+       맞춘 낱말을 화면은 하나도 못 맞추고(「스크립트」 만) 점수만 80% 를 넘었습니다. 그때는 편을 둡니다 (판 X404 와 같은 자) */
+    if (bestScr && bestScr.hitTU > 0 && bestScr.s >= top.s * 0.8 && !jvMissesTop(bestScr.d, top.d, R.words)) return jvScreenAnswer(bestScr.d.id, R);
     return jvSecAnswer(top.d, R);
   }
   /* ④ 화면이 맨 위인데 상황 안내가 거의 같으면 상황 쪽(순서가 있다)이 더 쓸모 있다 */
@@ -6508,7 +6578,8 @@ function jvDz(P){ try { return (P && P.DZ_DATA) || null; } catch(e){ return null
 var JV_PAYNOTE = '실제 지급은 가입한 약관과 보험사 심사 결과에 따릅니다.';
 /* 갈래 하나 — 표 · 셈 · 그리는 법을 한 줄로 묶는다 */
 function jvKnowSrc(k, id, n, list, f, row, note, max, ext){
-  return {k:k, id:id, n:n, know:1, ext:!!ext, find:function(q, P){
+  /* list · f · row 를 밖에서도 봅니다 — 🖼 관련 그림 띠(jvVisual)가 <b>같은 표 · 같은 그리는 법</b>을 씁니다 (판 X417 · 5번) */
+  return {k:k, id:id, n:n, know:1, ext:!!ext, list:list, f:f, row:row, find:function(q, P){
     var L = []; try { L = list(P) || []; } catch(e){ L = []; }
     var hit = jvKnowPick(q, L, f, max || 2);
     if (!hit.length) return null;
@@ -6661,6 +6732,9 @@ function jvExtLoad(){
 /* 읽을 거리가 있는 물음인가 — 「어떻게 써」 처럼 앱 쓰는 법을 묻는 말에는 안 기다리게 한다 */
 function jvExtAsk(q){ return jvKnowWords(q).length > 0; }
 /* 아카데미 표 — 없으면 빈 것 (읽기 전 · 못 읽음) */
+/* 📥 팀이 넣은 자료(판 X438) — 본체 alibLoad 가 세션에 한 번만 받습니다. 받는 동안 물으면 그 물음에는 안 섭니다 —
+   대신 자비스가 열릴 때 미리 한 번 불러 둡니다(아래 jvAlibLoad 부름) */
+function jvAlibLoad(){ var P = kbApp(); try { if (P && typeof P.alibLoad === 'function') P.alibLoad(); } catch(e){} }
 function jvA(k){ return (JV_EXT.st === 'ok' && JV_EXT.A[k]) || null; }
 /* 표 하나를 1~5종 줄로 — 갈래 안의 줄과 「빠른 표」 의 쉼표 낱말을 같이 */
 function jvSurgRows(){
@@ -6845,7 +6919,17 @@ JV_FIND.push(
       return {t:'🎞 ' + x.t, s:['덱 — ' + x.d.n + ' · ' + x.n + '번째 장', '내용 — ' + (x.x.length > 260 ? x.x.slice(0, 260) + '…' : x.x)]
         .concat(JV_TAXW.test(x.t + x.x) ? ['⚠ 세금은 요건 충족 시의 이야기입니다 — 판단은 세무 전문가에게 맡기십시오.'] : []),
         open:{local:1, fn:'jvDeckOpen', to:[x.d.k, x.id], label:'🎞 이 장 바로 열기'}};
-    }, '', 2, 1)
+    }, '', 2, 1),
+  /* 📥 팀이 넣은 자료 — 마스터 아카데미 「자료 넣기」 칸 (판 X438). 본체가 세션에 한 번 받아 둔 것(P.ALIB)을 찾습니다 —
+     자비스가 따로 서버를 부르지 않습니다 (7번 · 5번). 그림은 서명한 주소로, PDF 는 누르면 그때 엽니다 */
+  jvKnowSrc('ulib', '', '팀이 넣은 자료', function(P){ return (P.ALIB && P.ALIB.loaded && P.ALIB.list) || []; },
+    {t:function(x){ return x.title; }, k:function(x){ return x.tags || ''; }, b:function(x){ return (x.descr || '') + ' ' + (x.excerpt || ''); }},
+    function(x, P){
+      var u = ''; try { u = x.kind === 'img' ? (P.alibUrl(x) || '') : ''; } catch(e){ u = ''; }
+      return {t:(x.kind === 'img' ? '🖼 ' : '📄 ') + x.title,
+        s:[].concat(x.descr ? ['내용 — ' + x.descr] : [], ['넣은 사람 — ' + (x.uploader_name || '팀원') + ' · ' + String(x.created_at || '').slice(0, 10) + (x.ai ? ' · 설명은 AI 가 단 것' : '')]),
+        img:u, open:{fn:'alibOpenItem', to:x.id, stay:1, label:x.kind === 'img' ? '🖼 크게 열기' : '📄 이 자료 열기'}};
+    }, '', 3, 0)
 );
 
 /* ══ 🧭 <b>영업 단계 — TA 부터 소개까지, 앱이 이미 아는 것</b> (판 X280) ══════════════════
@@ -7296,6 +7380,120 @@ document.addEventListener('toggle', function(e){
     return '<span class="' + c + '">' + esc(n) + (sc.hit[n] ? ' ' + sc.hit[n] : (sc.wait[n] ? ' · 안 읽음' : '')) + '</span>';
   }).join('');
 }, true);
+/* ══ 🖼 <b>관련 그림 · 상담자료 장 — 자료를 찾으면 그림도 같이</b> (판 X417) ══════════════
+   사장님 말씀 2026-11-11 「내 crm내에서 자료를 찾으면 자료 찾아주고 이미지 띄어주는거까지」.
+   ★ 라이브에서 재어 보니 앱에는 뇌졸중 · 간병 · 실손 · 치료비 통장의 <b>원본 그림 슬라이드</b>와 덱의 장이
+     있는데, 답에는 거의 안 섰습니다. 찾기(jvFind)가 갈래를 <b>넷까지만</b> 세우는데 글 자료(질병 · 담보 · 사례 ·
+     용어)가 그 자리를 다 차지했고, 「간병보험 그림」 의 「그림」 · 「암 진단비 슬라이드」 의 「슬라이드」 가
+     화제 낱말로 세어져 반만 맞은 것으로 떨어졌고, 「실손보험 가입시기별 …」 처럼 이름 <b>안에</b> 든 두 글자
+     (「실손」)는 문턱 아래였습니다.
+   ★ 그래서 그림 · 덱 장은 <b>따로 한 띠</b>로 — 넷까지 세는 자리를 안 다툽니다. 표와 그리는 법은
+     그 갈래의 것(jvKnowSrc 의 list · f · row)을 그대로 씁니다 — 두 벌 안 둡니다 (5번).
+   ★ 세우는 때 — 그림 · 슬라이드 · 자료 · 발표처럼 <b>보여 달라는 말</b>이 있거나, 보험 자료를 이미 찾았을 때.
+     앱 쓰는 법 · 시키신 일 · 연금 셈 · 인사에는 안 세웁니다(부르는 쪽이 거릅니다).
+   ★ 맞추는 법 — 물은 낱말이 <b>하나도 빠짐없이</b> 이름 · 자료 이름 · 본문 어딘가에 있어야 하고, 적어도 하나는
+     이름이나 자료 이름에 있어야 합니다(본문에만 스친 것은 안 세웁니다). 그림 없는 장은 그림 띠에 안 세웁니다.
+   ★ 찾을 것이 없으면 <b>띠를 안 세웁니다</b> — 그림을 지어 붙이지 않습니다 (1번).                      */
+var JV_VISW = /그림|이미지|슬라이드|사진|장표|도해|자료|보여|발표|덱|ppt/i;
+var JV_VIS_SAY = ['atalk', 'fpch', 'fpobj', 'fpsec', 'obj', 'rej', 'stage', 'stagesay'];
+var JV_VISCUT = /그림|이미지|슬라이드|사진|장표|도해|자료|보여\s*줘?|발표|덱|ppt|화면|설명/gi;
+function jvVisPick(q, s, P, max, needImg){
+  var W = jvKnowWords(String(q || '').replace(JV_VISCUT, ' '));
+  if (!W.length) return [];
+  var L = []; try { L = s.list(P) || []; } catch(e){ L = []; }
+  /* 그림이 있는 것만 — 원본 슬라이드는 im, 팀이 넣은 자료(판 X438)는 kind 로 */
+  if (needImg) L = L.filter(function(x){ return s.k === 'ulib' ? x.kind === 'img' : (x.im || []).length; });
+  /* 한 번 씻어 둡니다 — 이름 · 자료 이름 · 본문 */
+  var N = L.map(function(x){ return {t:kbN(s.f.t(x)), k:s.f.k ? kbN(s.f.k(x)) : '', b:s.f.b ? kbN(s.f.b(x)) : ''}; });
+  var has = function(n, ws){ return ws.some(function(w){ return n.t.indexOf(w) >= 0 || n.k.indexOf(w) >= 0 || n.b.indexOf(w) >= 0; }); };
+  /* 제일 <b>드문</b> 낱말 — 「간병인 비용」 이면 「간병인」. 반만 맞을 때는 이 말이 맞아야 합니다.
+     「비용」 하나로 「법인계약과 비용 인정」 장이 서던 자리입니다 */
+  var df = W.map(function(ws){ return N.filter(function(n){ return has(n, ws); }).length; });
+  var rare = df.indexOf(Math.min.apply(null, df));
+  /* 보여 달라는 말이 있으면 반만 맞아도, 없으면(자료를 찾아서 곁에 붙일 때) <b>다</b> 맞아야 세웁니다 —
+     「보험료가 부담돼요」 에 「본인부담상한제」 장이 붙던 자리 */
+  var half = JV_VISW.test(q);
+  var out = [];
+  N.forEach(function(n, i){
+    var sc = 0, named = 0, got = 0, pos = 999, hitRare = false;
+    W.forEach(function(ws, wi){
+      var best = 0;
+      ws.forEach(function(w){
+        var at = n.t.indexOf(w);
+        if (at >= 0){ best = Math.max(best, 3); pos = Math.min(pos, at); }
+        else if (n.k.indexOf(w) >= 0) best = Math.max(best, 2);
+        else if (n.b.indexOf(w) >= 0) best = Math.max(best, 1);
+      });
+      if (best){ got++; if (wi === rare) hitRare = true; }
+      if (best >= 2) named++;
+      sc += best;
+    });
+    /* 하나는 이름 · 자료 이름에 있어야 합니다(본문에만 스친 것은 안 세웁니다) */
+    var ok = named && (got === W.length || (half && hitRare && got * 2 >= W.length));
+    if (ok) out.push({x:L[i], s:sc, i:i, p:pos});
+  });
+  /* 더 잘 맞은 것 먼저 · 같으면 이름 <b>앞쪽</b>에 그 말이 있는 것(「간병보험의 필요성」 이 「… → 장해 → 간병」 보다) ·
+     그다음 원래 차례(덱 · 교재의 쪽 차례) */
+  out.sort(function(a, b){ return b.s - a.s || a.p - b.p || a.i - b.i; });
+  if (out.length) out = out.filter(function(o){ return o.s >= out[0].s * 0.75; });
+  return out.slice(0, max).map(function(o){ return s.row(o.x, P, q); });
+}
+/* 그림 · 덱 장 하나를 가리키는 열쇠 — 띠(jvVisual)와 접힌 줄(jvFoundHtml)이 <b>같은 셈</b>으로 겹침을 봅니다 (판 X422 · 5번) */
+function jvVisKey(r){
+  if (!r) return '';
+  if (r.img) return 'i:' + r.img;
+  if (r.open && r.open.fn === 'jvDeckOpen') return 'd:' + r.open.to.join('|');
+  return '';
+}
+function jvVisual(q, F){
+  var P = kbApp();
+  if (!P || jvIsUse(q)) return null;
+  F = F || [];
+  /* 곁에 붙이는 것은 <b>보험 자료</b>(질병 · 담보 · 치료비 · 수술 · 용어 · 슬라이드 · 덱)를 찾았을 때만 — 화법 · 거절 처리 ·
+     영업 단계를 찾은 물음(「보험료가 부담돼요」)에 「본인부담상한제」 장이 붙던 자리 */
+  var want = JV_VISW.test(q), know = F.some(function(f){ return f.know && JV_VIS_SAY.indexOf(f.k) < 0 && (f.rows || []).length; });
+  if (!want && !know) return null;
+  /* ⭐ 크게 선 줄(jvFoundHtml 의 맨 앞 줄)과 같은 그림 · 장은 또 안 세웁니다 — 접힌 줄의 그림은 안 보이니 띠에 세웁니다 */
+  var seen = {}, f0 = F.filter(function(f){ return (f.rows || []).length; })[0], r0 = f0 && f0.rows[0];
+  if (jvVisKey(r0)) seen[jvVisKey(r0)] = 1;
+  var V = {img:[], deck:[]};
+  JV_FIND.forEach(function(s){
+    if (s.k !== 'aslide' && s.k !== 'deck' && s.k !== 'ulib') return;
+    var rows = [], pic = s.k !== 'deck';
+    try { rows = jvVisPick(q, s, P, pic ? 6 : 3, pic); } catch(e){ rows = []; }
+    rows.forEach(function(r){
+      var key = jvVisKey(r);
+      if (!key || seen[key]) return;
+      if (pic && r.img && V.img.length < 3){ seen[key] = 1; V.img.push(r); }
+      else if (s.k === 'deck' && r.open && V.deck.length < 2){ seen[key] = 1; V.deck.push(r); }
+    });
+  });
+  return (V.img.length || V.deck.length) ? V : null;
+}
+function jvVisualHtml(V){
+  if (!V || !(V.img.length || V.deck.length)) return '';
+  var h = '<div class="j-vis"><b>🖼 관련 그림 · 상담자료 장</b>';
+  if (V.img.length){
+    h += '<div class="jv-thumbs">';
+    V.img.forEach(function(r){
+      var t = String(r.t || '').replace(/^🖼\s*/, '');
+      h += '<a class="jv-th" href="' + esc(r.img) + '" target="_blank" rel="noopener" title="크게 보기">' +
+           '<img src="' + esc(r.img) + '" alt="' + esc(t) + '" loading="lazy"><span>' + esc(t) + '</span></a>';
+    });
+    h += '</div><div class="jf-note">그림을 누르면 크게 열립니다 — 고객께 그대로 보여 드리셔도 됩니다.</div>';
+  }
+  if (V.deck.length){
+    h += '<div class="st-b jv-decks">';
+    V.deck.forEach(function(r){
+      var id = 'r' + (++JV_ROW_N);
+      JV_ROWS[id] = r;
+      var nm = String(r.t || '').replace(/^🎞\s*/, ''), dk = (r.s || [])[0] || '';
+      h += '<button type="button" class="st-here jr-open" data-r="' + id + '" title="' + esc(dk) + '">🎞 ' + esc(nm) + ' — 이 장 열기</button>';
+    });
+    h += '</div>';
+  }
+  return h + '</div>';
+}
 /* 찾은 것을 한 줄로 — 답의 머리와 읽어 주기에 같이 쓴다 (한 곳 · 5번) */
 function jvFoundSay(F){
   var p = [];
@@ -7354,19 +7552,24 @@ function jvSrcTail(f){
     h += '<div class="st-b"><a href="' + BASE + f.id + '" data-id="' + f.id + '" target="_blank" rel="noopener">' + esc(nm) + ' 열기 ›</a></div>';
   return h;
 }
-function jvFoundHtml(F, weak){
+/* V — 🖼 띠에 선 그림 · 덱 장(판 X422). 「더 찾은 것」 에 접힌 같은 장은 <b>빼고</b> 셉니다 —
+   「영수증 보는 법 자료」 에 「영수증 어느 칸」 장이 접힌 칸과 띠에 두 번 서던 자리(라이브에서 재어 봄 · 5번) */
+function jvFoundHtml(F, weak, V){
+  var onVis = {};
+  if (V) V.img.concat(V.deck).forEach(function(r){ var k = jvVisKey(r); if (k) onVis[k] = 1; });
+  var folded = function(f, i){ return (i ? f.rows : f.rows.slice(1)).filter(function(r){ return !onVis[jvVisKey(r)]; }); };
   var h = '<div class="j-find"><b>' + (weak ? '🔎 혹시 이것도 — 앱 자료에서 찾은 것' : '🔎 앱에서 찾아 온 것') + '</b>';
   var withRows = F.filter(function(f){ return (f.rows || []).length; }), notes = F.filter(function(f){ return !(f.rows || []).length; });
   /* ⭐ 맨 앞 갈래의 맨 앞 줄 — 크게 */
   if (withRows.length){
     var f0 = withRows[0];
     h += jvRowHtml(f0.rows[0], f0, true);
-    var restN = withRows.reduce(function(n, f, i){ return n + f.rows.length - (i ? 0 : 1); }, 0);
+    var restN = withRows.reduce(function(n, f, i){ return n + folded(f, i).length; }, 0);
     if (!restN) h += jvSrcTail(f0);
     else {
       h += '<details class="jf-more"><summary>더 찾은 것 ' + restN + '개 ▾</summary>';
       withRows.forEach(function(f, i){
-        var rows = i ? f.rows : f.rows.slice(1), m = MENU[f.id];
+        var rows = folded(f, i), m = MENU[f.id];
         if (rows.length) h += '<div class="jf-src">' + esc(f.n) + (m && m.n !== f.n ? ' · ' + esc(m.n) : '') + '</div>';
         rows.forEach(function(r){ h += jvRowHtml(r, f, false); });
         h += jvSrcTail(f);
@@ -7404,7 +7607,7 @@ document.addEventListener('click', function(e){
     /* 덱은 자비스가 직접 엽니다(jvDeckOpen) — 화면마다 그 장으로 가는 법이 달라서 */
     if (r.open.local){ try { window[r.open.fn].apply(null, r.open.to); } catch(err){} return; }
     if (!P || typeof P[r.open.fn] !== 'function'){ return; }
-    try { P[r.open.fn](r.open.to); if (typeof P.jvDock === 'function') P.jvDock(); } catch(err){}
+    try { P[r.open.fn](r.open.to); if (typeof P.jvDock === 'function' && !r.open.stay) P.jvDock(); } catch(err){}
   }
 });
 /* 고객 한 분의 창 — 자비스는 아래 띠로 남고 창은 본체가 엽니다 */
@@ -8173,6 +8376,81 @@ function logAsk(q, res, how){
    ★ 여는 길은 다른 「화면 열기」 와 <b>같습니다</b>(본체 go · jvDock) — 따로 짜지 않습니다 (5번). */
 var JV_HUB = [{re:/^(?:🧰\s*)?도구(?:\s*(?:화면|모음))?(?:\s*(?:열어\s*(?:줘|주세요)?|열기|보여\s*(?:줘|주세요)|로?\s*가\s*줘))?\s*[?？.!]*$/,
                id:'tools', t:'🧰 도구', d:'하실 일을 「언제 쓰는지」 로 묶어 둔 도구 모음입니다 — 찾기 칸에 하려는 것을 그냥 적으셔도 됩니다.'}];
+/* 📁 <b>PC 자료 찾기</b> (판 X416 · 사장님 말씀 2026-11-11 「앞으로 이렇게 관리해주고, 자비스에서도 찾을수 있게 해」)
+   바탕화면을 「APEX 운영자료」 9칸 · 「원수사 바로가기」 로 정리했습니다. 그 파일을 자비스가 찾아 열어 드립니다.
+   ★ 찾는 일은 사장님 PC 의 작은 도우미(127.0.0.1:8766 · 코드\PC자료찾기\pc_finder.py)가 합니다.
+     파일 이름에 고객 이름이 있어 <b>목록은 앱에 싣지 않습니다</b> — 그때그때 PC 에 묻고, 답은 이 카드에만 섭니다.
+   ★ 도우미는 이 앱 주소에서 온 요청만 받고, 찾기 결과로 준 id 의 파일만 엽니다.
+   ★ 「파일 · 바탕화면 · 폴더 · PC · 컴퓨터 · 운영자료」 + 「찾아 · 열어 · 어디」 일 때만 — 앱 안 자료 찾기(아카데미 · 장표)와 겹치지 않게. */
+var PCF = 'http://127.0.0.1:8766';
+function pcWant(q){ return /(파일|운영\s*자료|바탕\s*화면|폴더|내\s*(pc|컴퓨터)|pc\s*(에서|자료|에)|컴퓨터\s*(에서|에))/i.test(q) && /(찾|열|어디|어딨|보여|있어|있니|있나|갔)/.test(q); }
+function pcFetch(path, ms){
+  var c = typeof AbortController === 'function' ? new AbortController() : null, t = c ? setTimeout(function(){ c.abort(); }, ms || 4000) : 0;
+  return fetch(PCF + path, {cache:'no-store', signal:c ? c.signal : undefined}).then(function(r){ clearTimeout(t); return r.json(); });
+}
+function pcSize(n){ return n >= 1073741824 ? (n / 1073741824).toFixed(1) + 'GB' : n >= 1048576 ? (n / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'KB'; }
+function pcAsk(q){
+  addThinking();
+  pcFetch('/find?q=' + encodeURIComponent(q)).then(function(j){ pcPaint(j, q); }, function(){ pcWhy(function(st){ pcPaint(null, q, st); }); });
+}
+/* 🔒 <b>왜 못 닿았나</b> (판 X428 · 사장님 말씀 2026-11-13 「이렇게 안뜨는거 같은데 이미지 확인해」)
+   라이브에서 도우미가 <b>켜져 있는데도</b> 「꺼져 있어요」 가 섰습니다 — 크롬의 「로컬 네트워크 접근」 권한이 denied 였습니다.
+   ★ 막힌 것을 「꺼졌다」 고 하지 않습니다(1번). 권한을 물어 보고 막혔으면 막혔다고, 푸는 길을 적습니다.
+   ★ 권한과 상관없이 쓰는 길 — 「🖥 PC 도우미 창에서 찾기」 는 새 탭으로 도우미 화면(127.0.0.1:8766/?q=)을 엽니다.
+     탭을 여는 것은 그 권한에 안 막힙니다. 목록은 그 탭에만 서고 앱에는 안 실립니다. */
+function pcWhy(cb){
+  var P = navigator.permissions, names = ['local-network-access', 'loopback-network'], i = 0;
+  if (!P || !P.query) return cb('');
+  (function next(){
+    if (i >= names.length) return cb('');
+    try { P.query({name:names[i++]}).then(function(s){ cb(s.state); }, next); } catch (e) { next(); }
+  })();
+}
+function pcPaint(j, q, st){
+  dropThinking();
+  var d = document.createElement('div'), h = '<div class="bub">', say, it = (j && j.items) || [];
+  d.className = 'msg j';
+  if (!j){
+    var win = '<div class="st-b"><button type="button" data-pc="win" style="background:var(--blue);color:#fff;border-color:var(--blue)">🖥 PC 도우미 창에서 찾기</button></div>';
+    if (st === 'denied'){
+      say = '브라우저가 이 화면에서 PC 자료 찾기 도우미에 닿는 것을 막고 있어요.';
+      h += esc(say) + '<div class="j-work"><div class="jw-s">아래 단추를 누르면 <b>새 탭</b>에서 같은 답이 떠요 — 거기서 📄 열기 · 🗂 있는 곳 보기를 누르시면 돼요.</div>' + win
+         + '<div class="jw-s">이 화면에서 바로 보시려면 — 주소창 왼쪽 아이콘 › <b>사이트 설정</b> › 「<b>로컬 네트워크</b>」 항목을 <b>허용</b>으로 바꾸고 새로고침하세요.</div></div>';
+    } else {
+      say = 'PC 자료 찾기 도우미에 닿지 못했어요 — 꺼져 있을 수 있어요.';
+      h += esc(say) + '<div class="j-work"><div class="jw-s">사장님 PC 에서 「바탕화면 › 코드 › PC자료찾기 › <b>PC자료찾기 켜기</b>」를 한 번 누르면 켜져요. 켠 뒤 아래 단추를 눌러 보세요.</div>' + win
+         + '<div class="jw-s">처음 한 번은 브라우저가 「이 사이트가 내 기기의 다른 앱에 접근」을 물을 수 있어요 — 허용을 누르세요.</div>'
+         + '<div class="jw-s">폰에서는 PC 자료를 찾을 수 없어요 — 파일 목록은 PC 밖으로 내보내지 않아요.</div></div>';
+    }
+  } else if (!it.length){
+    say = '「' + (j.words || []).join(' ') + '」 이름이 들어간 파일을 PC 자료에서 못 찾았어요.';
+    h += esc(say) + '<div class="j-work"><div class="jw-s">파일 이름의 한 낱말로 다시 물어 주세요 — 예) 「TA 스크립트 파일 찾아줘」 「김경애 제안서 어디 있어」 「교육 폴더 열어줘」</div></div>';
+  } else {
+    say = 'PC 자료에서 ' + j.total + '개 찾았어요' + (j.total > it.length ? ' — 맞는 것 ' + it.length + '개를 먼저 보여 드려요.' : '.');
+    h += esc(say) + '<div class="j-work"><b>📁 PC 자료 — 바탕화면 · APEX 운영자료</b>';
+    it.forEach(function(x){
+      h += '<div class="jw-row"><div class="jw-n">' + (x.dir ? '📁 ' : '') + esc(x.name) + '</div>'
+         + '<div class="jw-s">' + esc(x.folder) + ' · ' + esc(x.kind) + (x.size ? ' · ' + pcSize(x.size) : '') + ' · ' + esc(x.date) + '</div>'
+         + '<div class="st-b"><button type="button" data-pc="open" data-id="' + esc(x.id) + '" style="background:var(--blue);color:#fff;border-color:var(--blue)">' + (x.dir ? '📂 폴더 열기' : '📄 열기') + '</button>'
+         + (x.dir ? '' : '<button type="button" data-pc="reveal" data-id="' + esc(x.id) + '">🗂 있는 곳 보기</button>') + '</div></div>';
+    });
+    h += '</div>';
+  }
+  d.innerHTML = h + '</div>';
+  d.addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('[data-pc]'); if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    if (b.getAttribute('data-pc') === 'win'){ window.open(PCF + '/?q=' + encodeURIComponent(q || ''), '_blank', 'noopener'); return; }
+    b.disabled = true;
+    pcFetch('/' + b.getAttribute('data-pc') + '?id=' + encodeURIComponent(b.getAttribute('data-id'))).then(function(r){
+      b.disabled = false; b.textContent = r.ok ? '✓ PC 에서 열었어요' : '⚠ ' + (r.error || '못 열었어요');
+    }, function(){ b.disabled = false; b.textContent = '⚠ 도우미가 꺼져 있어요'; });
+  });
+  jLog.appendChild(d); jLog.scrollTop = jLog.scrollHeight;
+  hudCalm();
+  speak(say, {priv:1});     /* 파일 이름(고객 이름)이 든 답 — 기기 목소리로만 */
+}
+
 function jvHub(q){
   for (var i = 0; i < JV_HUB.length; i++) if (JV_HUB[i].re.test(q)) return JV_HUB[i];
   return null;
@@ -8185,6 +8463,8 @@ function ask(raw){
   addMe(q);
   document.getElementById('ask').value = '';
   document.getElementById('jSay').value = '';
+  /* 📁 PC 자료(바탕화면 · APEX 운영자료)를 찾는 말이면 PC 의 도우미에게 (판 X416) */
+  if (pcWant(q)){ pcAsk(q); return; }
   var hub = jvHub(q);
   if (hub){
     var P0 = inCrm ? window.parent : null, can = !!(P0 && typeof P0.go === 'function');
@@ -8200,6 +8480,7 @@ function ask(raw){
   r0.work = jvWork(q, r0.steps);
   /* 🔎 길을 짜기 전에 <b>앱 안에서 그 값을 찾아 봅니다</b> (판 X270) */
   jvExtLoad();                                   /* 아카데미 · 화법서 — 처음 한 번만 (판 X269) */
+  jvAlibLoad();                                  /* 📥 팀이 넣은 자료 — 본체가 세션에 한 번 (판 X438) */
   var found = jvFind(q), fsay = jvFoundSay(found);
   /* 👤 <b>사람을 두 곳이 답하지 않게</b> — 판 X270 의 「고객 명단」 찾기가 그 분을 이미 찾았으면
      (마지막 연락 · 다음 할 일 · 창 열기까지) 판 X293 의 「사람 찾기」 일꾼 줄은 뺍니다. 둘이 같이 서면
@@ -8248,6 +8529,8 @@ function ask(raw){
   /* 인사 · 고맙다는 말에는 찾은 자료를 안 붙입니다 — 「감사합니다」 밑에 「개념 정리」 장이 서던 자리 (판 X352) */
   if (r0.how === 'hello') found = [];
   r0.found = found;
+  /* 🖼 판 X417 — 자료를 찾았으면 그림 · 덱 장도 같이. 시키신 일 · 연금 셈 · 인사에는 안 붙입니다 */
+  if (!act && !pen && r0.how !== 'hello') r0.vis = jvVisual(q, found);
   r0.scan = JV_SCAN;
   var strong = found.some(function(f){ return f.strong && (f.rows || []).length; });
   if (fsay && (strong || r0.how === 'none')){ r0.wayAns = r0.how === 'none' ? '' : r0.answer; r0.answer = fsay; }
@@ -8431,17 +8714,24 @@ function kVoxPaint(){
   if (!sel) return;
   if (!sel.options.length) sel.innerHTML = JV_VOX_OPTS.map(function(o){ return '<option value="' + o.v + '">' + esc(o.t) + '</option>'; }).join('');
   sel.value = JV_VOX.pick;
+  var fx = document.getElementById('kVoxFx');
+  if (fx){ if (!fx.options.length) fx.innerHTML = JV_VOX_FX.map(function(o){ return '<option value="' + o.v + '">' + esc(o.t) + '</option>'; }).join(''); fx.value = voxCyborg() ? 'cyborg' : 'soft'; }
   var t;
   if (!voxAiName()) t = '기기에 깔린 목소리로 읽습니다' + (TTS.v ? ' — ' + TTS.v.name : '') + '. 서버를 부르지 않습니다.';
   else if (!(getGKey() || getGProxy())) t = 'AI 목소리는 Gemini 키나 회사 서버(/api/gemini)가 있어야 납니다 — 지금은 기기 목소리로 읽습니다.';
   else if (JV_VOX.dead) t = 'AI 목소리가 막혔습니다(' + JV_VOX.dead + ') — 이 창에서는 기기 목소리로 읽습니다. 다시 고르시면 한 번 더 해 봅니다.';
-  else t = 'AI 목소리(' + (JV_VOX.ok ? JV_VOX.model : 'Gemini') + ')로 읽고 울림을 입힙니다. 답마다 머리 한두 문장(160자)만 읽고, 고객 이름·번호가 든 말은 기기 목소리가 읽습니다.';
+  else t = 'AI 목소리(' + (JV_VOX.ok ? JV_VOX.model : 'Gemini') + ')로 읽고 ' + (voxCyborg() ? '사이보그 결(금속 공명 · 디지털 떨림)' : '울림') + '을 입힙니다. 답마다 머리 한두 문장(160자)만 읽고, 고객 이름·번호가 든 말은 기기 목소리가 읽습니다.';
   if (say) say.textContent = t;
 }
 document.getElementById('kVox').onchange = function(){
   JV_VOX.pick = this.value; JV_VOX.dead = ''; JV_VOX.slow = 0;
   LS.set('jv_vox', this.value);
   kVoxPaint(); hudStats();
+};
+document.getElementById('kVoxFx').onchange = function(){
+  JV_VOX.fx = this.value === 'soft' ? 'soft' : 'cyborg';
+  LS.set('jv_vox_fx', JV_VOX.fx);
+  kVoxPaint();
 };
 document.getElementById('kVoxTry').onclick = function(){
   if (!TTS.on){ TTS.on = true; LS.set('map_voice', '1'); }
@@ -8484,7 +8774,7 @@ document.getElementById('kClear').onclick = function(){
 
 modeLabel();
 window.addEventListener('resize', function(){ redraw(); if (!zoomTouched) fitAll(); });
-window.addEventListener('load', function(){ redraw(); fitAll(); setTimeout(centerBrain, 340); });
+window.addEventListener('load', function(){ redraw(); fitAll(); setTimeout(centerBrain, 340); setTimeout(jvAlibLoad, 1500); });
 apply();
 redraw();
 /* 글꼴이 자리를 잡은 뒤 한 번 더 재고, 그다음 뇌를 한가운데로 */

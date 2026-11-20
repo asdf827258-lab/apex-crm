@@ -71,7 +71,53 @@ var STAY=+(localStorage.getItem("apexRouteStayV1")||60);   /* 한 건 상담에 
 /* 🗺 <b>폰에서 지도를 펴 두셨나</b> (판 X272). 폰에서는 목록과 지도가
    <b>둘 중 하나</b>만 섭니다 — 둘로 가르면 목록이 361px 밖에 안 남아
    열두 화면을 굴려야 했습니다. 고르신 것은 이 브라우저에만 남습니다. */
-var MAPON=false; try{ MAPON=localStorage.getItem("apexRouteMapOnV1")==="1" }catch(e){}
+/* ★★ <b>폰에서도 지도가 기본으로 섭니다</b> (판 X432 · 사장님 말씀 2026-11-14
+     「오늘에서 지도, <b>몇 번을 부탁했으나 아직도 안 되는 것</b> — 지역동선에서 계속 안 떠」).
+   ⚠ <b>까닭은 열쇠도 좌표도 아니었습니다.</b> 재어 보니 카카오 열쇠는 서버에 있고
+     (app_config.kakao_js_key · 32자 · 누구나 읽습니다), 배정 줄 2,109개 중
+     <b>520개에 좌표가 있어</b> 찍을 것도 충분했습니다. 그런데 폰(≤860px)에서는
+     .rt-mapbox 가 <b>height:0</b> 이고 rt-mapon 이 붙어야만 펴지는데,
+     그 값의 기본이 <b>false</b> 였습니다 — 즉 폰에서 지역 동선을 열면
+     <b>지도는 처음부터 0px</b> 이고, 작은 「🗺 지도」 단추를 찾아 누르기 전에는
+     영영 안 보였습니다. 사장님이 「몇 번을 부탁했는데 안 된다」 하신 그 자리입니다.
+   ★ 이제 <b>안 고르셨으면 켜 둡니다.</b> 고르신 적이 있으면 그 뜻이 이깁니다 —
+     목록으로 바꾸신 분에게 지도를 도로 들이밀지 않습니다 (6번).
+   ★ 단추는 그대로 둡니다 — 길을 지우지 않습니다 (6번). */
+/* ★ 폰에서 보는 꼴은 <b>셋</b>입니다 (판 X432) —
+     'both' 지도 띠 + 목록 (기본) · 'map' 지도 가득 · 'list' 목록 가득.
+   ⚠ 처음에 'map' 하나로 뒤집었다가 <b>목록이 통째로 사라져</b> 줄마다 있던
+     📞 전화 · 💬 문자 · 🧭 내비가 안 보였습니다(자 넷이 울었습니다).
+     사장님이 바라신 것은 「지도가 보이는 것」 이지 「목록이 사라지는 것」 이
+     아닙니다 — 그래서 <b>둘 다 보이는 것</b>을 기본으로 둡니다.
+   ★ 고르신 적이 있으면 그 뜻이 이깁니다 (6번) — <b>오늘 꼴로 고르신 것</b>
+     (apexRouteViewV1)은 언제나 이깁니다.
+
+   ★★ <b>판 X481 — 옛 열쇠(apexRouteMapOnV1)로 오늘의 꼴을 정하지 않습니다.</b>
+     사장님 말씀 2026-11-17 「<b>지역동선도 꼭 뜨게 하고</b>」 · 2026-11-18
+     「<b>크롬으로 켰어 너가 해봐</b>」 — 그리고 판 X432 에 이미
+     「<b>오늘에서 지도, 몇번을 부탁했으나 아직도 안되는것</b>」 이라 하셨습니다.
+     까닭을 끝까지 재어 보니 밖은 전부 멀쩡했고(열쇠 32자 · SDK 정상 ·
+     타일 다 뜸) <b>이 여섯 줄이 숨기고 있었습니다.</b>
+     옛 열쇠는 <b>두 값뿐인 스위치</b>였고, 그때 UI 는 지도 띠가 <b>덧붙임</b>
+     이었습니다. 오늘은 <b>세 꼴</b>(둘 다 · 지도만 · 목록만)이라 뜻이 안 맞습니다 —
+       · 옛 '1'(지도 띠 켬)  → 'map'  : <b>목록이 통째로 사라집니다.</b> 바로 위
+         쪽지가 경고한 그 일입니다 — 📞 전화·💬 문자·🧭 내비가 안 보입니다.
+       · 옛 '0'(지도 띠 끔)  → 'list' : <b>지도가 통째로 사라집니다.</b> 사장님이
+         여러 번 부탁하신 그것이 안 보입니다.
+     <b>두 읽기가 다 사장님 말씀을 어깁니다.</b> 그래서 옛 열쇠는 더 읽지 않고
+     기본(<b>둘 다 보임</b>)으로 둡니다 — 그것이 「지도가 보이는 것」 과
+     「목록이 사라지지 않는 것」 을 함께 지키는 유일한 꼴입니다.
+   ⚠ <b>지우지는 않습니다</b> (6번) — 옛 값은 그대로 남습니다. 오늘 꼴로 한 번
+     고르시면 apexRouteViewV1 이 적히고 그 뒤로는 그것이 이깁니다.
+   ⚠ 「목록만」 을 <b>오늘 꼴로</b> 고르시면 그대로 지킵니다 — 그때는 지도 자리에
+     「🗺 지도를 숨겨 두셨습니다」 한 줄이 서서 왜 없는지 말합니다 (1번).
+   지키는 자는 check-rtmaphide 입니다. */
+var RTVIEW='both';
+try{
+  var _v=localStorage.getItem("apexRouteViewV1");
+  if(_v==='both'||_v==='map'||_v==='list'){ RTVIEW=_v; }
+}catch(e){}
+var MAPON=(RTVIEW!=='list');   /* 지도 판이 살아 있어야 하는가 */
 /* 마지막으로 지도에 담은 테두리 — 접었던 지도를 펼 때 <b>그 자리로</b>
    돌려놓는다. 0 높이에서 그린 지도는 테두리를 모른 채로 선다. */
 var LASTB=null;
@@ -1490,6 +1536,18 @@ function styles(){
   ".rt-mapbox{flex:1;position:relative;min-width:0}",
   "#rtMap{position:absolute;inset:0}",
   ".rt-nokey{position:absolute;inset:0;background:#fff;overflow:auto;padding:26px;display:grid;place-items:start center}",
+  /* ★ 판 X481 — 지도를 숨겨 두셨을 때 그 자리에 서는 한 줄. <b>색은 이 파일이
+     이미 쓰는 이름만</b> 씁니다(새 색을 안 만듭니다). 누르는 것은 44px 입니다. */
+  ".rt-mapoff{display:flex;align-items:center;gap:8px;" +
+    "padding:5px 12px;border-bottom:1px solid var(--line);background:var(--bg);" +
+    "font-size:13px;color:var(--text);line-height:1.4}",
+  ".rt-mapoff b{color:var(--navy)}",
+  ".rt-mapoff[hidden]{display:none}",
+  /* 글은 줄지 않고 <b>줄바꿈만</b> 막습니다 — 좁으면 끝에 … 가 섭니다.
+     단추는 44px 를 지키고 줄을 안 넘깁니다(넘기면 목록 자리를 먹습니다). */
+  ".rt-mapoff>span{flex:1 1 auto;min-width:0;overflow:hidden;" +
+    "text-overflow:ellipsis;white-space:nowrap}",
+  ".rt-mapoff button{flex:0 0 auto;min-height:44px}",
   ".rt-card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:11px}",
   ".rt-h{font-size:13px;font-weight:900;color:var(--navy);margin:16px 0 9px}",
   /* ══ 🧭 <b>홈이 권하는 동네</b> 한 줄 (판 X260) ═══════════════════════
@@ -1653,12 +1711,19 @@ function styles(){
        카카오 판이 죽고, 다시 펴도 회색 칸만 남습니다. 높이만 0 으로 두고
        펼 때 relayout 으로 되살립니다.                                     */
   "#rtMapT{display:none}",
+  /* ★★ 판 X432 — 폰에서 보는 꼴이 <b>셋</b>입니다.
+       (기본) rt-maplist  지도 띠 <b>260px</b> + 목록   ← 사장님이 바라신 「지도가 보이는 것」
+             rt-maponly  지도가 창을 다 씀
+             (아무것도 안 붙음) 목록이 창을 다 씀        ← 판 X272 가 약속한 그것
+     ⚠ 접힌 지도는 display:none 이 아니라 <b>높이 0</b> 입니다 — 아예 끄면
+       카카오 판이 죽고 다시 펴도 회색 칸만 남습니다. */
   "@media(max-width:860px){"+
     "#rtMapT{display:inline-flex}"+
     ".rt-side{max-height:none;flex:1 1 auto;border-bottom:0}"+
     ".rt-mapbox{flex:0 0 auto;height:0;min-height:0;overflow:hidden}"+
-    "#rtWrap.rt-mapon .rt-side{display:none}"+
-    "#rtWrap.rt-mapon .rt-mapbox{flex:1 1 auto;height:auto}"+
+    "#rtWrap.rt-maplist .rt-mapbox{flex:0 0 auto;height:260px;min-height:260px}"+
+    "#rtWrap.rt-maponly .rt-side{display:none}"+
+    "#rtWrap.rt-maponly .rt-mapbox{flex:1 1 auto;height:auto;min-height:0}"+
   "}",
   /* ══ 👆 줄마다 <b>제일 많이 누르는 넷</b>을 크게 (판 X272) ═══════════
      여쭈니 「<b>🧭 내비 · 📋 멘트 · 💬 문자 · 📞 전화</b>」 넷 다 라고
@@ -1759,15 +1824,26 @@ function stayPut(v){
   return STAY;
 }
 
+var RT_NEXT={both:'map',map:'list',list:'both'};      /* 누르면 가는 차례 */
+var RT_LABEL={map:"🗺 지도 크게",list:"📋 목록만",both:"🔀 지도+목록"};
 function mapPaint(){
   var w=q("rtWrap"), b=q("rtMapT"); if(!w)return;
-  if(MAPON)w.classList.add("rt-mapon"); else w.classList.remove("rt-mapon");
+  w.classList.remove("rt-mapon","rt-maplist","rt-maponly");
+  if(RTVIEW==='map')w.classList.add("rt-mapon","rt-maponly");
+  else if(RTVIEW==='both')w.classList.add("rt-mapon","rt-maplist");
+  MAPON=(RTVIEW!=='list');
   /* 지금 보고 있는 것이 아니라 <b>누르면 가는 곳</b>을 적습니다 */
-  if(b)b.textContent=MAPON?"📋 목록":"🗺 지도";
+  if(b)b.textContent=RT_LABEL[RT_NEXT[RTVIEW]]||"🔀 지도+목록";
+  /* ★★ 판 X481 — 숨겨 두었으면 <b>그 자리에서 말합니다</b> (1번).
+     조용히 없으면 사장님은 「고장났다」 로 읽으십니다 — 실제로 그러셨습니다. */
+  try{ var off=q("rtMapOff");
+       if(off)off.hidden=(RTVIEW!=='list'); }catch(eO){}
 }
 function mapToggle(){
-  MAPON=!MAPON;
-  try{ localStorage.setItem("apexRouteMapOnV1",MAPON?"1":"0") }catch(e){}
+  RTVIEW=RT_NEXT[RTVIEW]||'both';
+  MAPON=(RTVIEW!=='list');
+  try{ localStorage.setItem("apexRouteViewV1",RTVIEW);
+       localStorage.setItem("apexRouteMapOnV1",MAPON?"1":"0") }catch(e){}
   mapPaint();
   /* 접혀 있던 지도는 <b>제 키를 모릅니다</b> — 펴는 그때 다시 재게 하고,
      마지막으로 담아 둔 테두리로 돌려놓습니다. 안 하면 회색 칸만 섭니다. */
@@ -1797,6 +1873,23 @@ function wrap(){
       '<button class="btn btn-light btn-sm" id="rtKey">키 설정</button>'+
       '<button class="btn btn-dark btn-sm" id="rtX">닫기</button>'+
     '</div>'+
+    /* ★★ 판 X481 — <b>지도를 숨겨 두셨으면 그 자리에서 말합니다</b> (1번 · 6번).
+       사장님 말씀 2026-11-17 「지역동선도 꼭 뜨게 하고」 · 2026-11-18 「크롬으로 켰어」.
+       ⚠ 재어 보고 찾은 자리입니다 — 보기 고름이 「목록만」 이면(또는 옛 판에서
+       지도를 꺼 두신 apexRouteMapOnV1='0' 이 남아 있으면) .rt-mapbox 가
+       <b>430×0px</b> 이 되어 지도도 · 열쇠 안내도 <b>통째로 사라집니다.</b>
+       사장님 눈에는 그것이 「지도가 안 뜬다」 이고, <b>왜 없는지 아무 말도</b>
+       없었습니다. 열쇠·주소·카카오 지도는 재어 보니 전부 멀쩡했습니다.
+       ★ 이 줄은 <b>지도 띠 밖</b>에 둡니다 — 띠가 0px 이라 안에 두면 같이 숨습니다.
+       ★ 돌아가는 단추는 <b>도구 띠의 그 단추와 같은 자</b>(mapToggle)입니다 (5번). */
+    /* ⚠ <b>한 줄에 담습니다.</b> 처음에 두 줄(96px)로 적었다가 check-rtuse 가
+       울었습니다 — 판 X272 의 약속 「목록 가득 600px 이상」 이 591px 로 깎였습니다.
+       <b>말을 줄이는 쪽</b>을 골랐습니다: 지도가 왜 없는지와 돌아가는 단추는
+       그대로 두고, 설명 한 토막만 덜었습니다 (1번은 지키고 7번 자리를 안 먹습니다). */
+    '<div class="rt-mapoff" id="rtMapOff" hidden>'+
+      '<span>🗺 <b>지도를 숨겨 두셨습니다</b> — 목록만 보입니다</span>'+
+      '<button type="button" class="btn btn-dark btn-sm" id="rtMapOffGo">지도 보기</button>'+
+    '</div>'+
     '<div class="rt-body">'+
       '<div class="rt-side" id="rtSide"></div>'+
       '<div class="rt-mapbox"><div id="rtMap"></div><div class="rt-nokey hidden" id="rtNokey"></div></div>'+
@@ -1807,6 +1900,9 @@ function wrap(){
   /* 담당자를 <b>손으로</b> 고르셨다는 사실을 적어 둡니다 (판 X274 · 위 쪽지) */
   q("rtOwner").onchange=function(){ OWN_SET=true; render() };
   q("rtMapT").onclick=mapToggle;
+  /* 숨겨 두었을 때 되돌리는 단추 — 부르는 자는 mapToggle 하나입니다 (5번).
+     'list' 에서 한 번 누르면 'both'(지도+목록)로 돌아갑니다 (RT_NEXT). */
+  q("rtMapOffGo").onclick=mapToggle;
   mapPaint();
   q("rtHome").onclick=setHome;
   q("rtFix").onclick=fixAll;

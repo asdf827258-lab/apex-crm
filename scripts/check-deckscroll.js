@@ -174,17 +174,26 @@ const key = (page, k) => page.evaluate(k =>
        <b>지금 보이는 쪽</b>(section.wrap.pon)으로 바꿨습니다.
        ★ 쪽 수는 앱에게 묻습니다(P.total) — 여기서 또 세지 않습니다 (5번). */
     const 쪽수 = P.total;
-    let over = 0, tall = -1;
+    let over = 0, tall = -1, 맞춘쪽 = 0, 제일줄인쪽 = -1, 제일작은 = 2;
     for (let i = 0; i < 쪽수; i++) {
       P.go(i); await new Promise(r => setTimeout(r, 24));
       const cur = document.querySelector('section.wrap.pon');
       if (cur && cur.scrollHeight > cur.clientHeight + 8) { over++; if (tall < 0) tall = i; }
+      /* ★ 판 X484 — 발표 맞추기(pvFit)가 <b>어느 쪽을 줄여</b> 맞췄나도 적어 둡니다.
+         넘치는 쪽이 0 이 되면 [4] 가 시험할 쪽이 없어지므로, 제일 많이 줄인
+         쪽부터 찾아 봅니다 — 그 쪽이 원래 제일 긴 쪽입니다. */
+      if (cur) {
+        const k = parseFloat(cur.style.getPropertyValue('--pvfit') || '1');
+        if (k < 1 || cur.classList.contains('pvtight')) 맞춘쪽++;
+        if (k < 제일작은) { 제일작은 = k; 제일줄인쪽 = i; }
+      }
     }
     /* 넘기는 띠는 <b>남아 있어야</b> 한다 — 없애면 마우스로 못 넘기신다 */
     const L = document.getElementById('pvHitL'), R = document.getElementById('pvHitR');
     const lw = L ? L.getBoundingClientRect().width : 0, rw = R ? R.getBoundingClientRect().width : 0;
     /* 장 수도 <b>앱에게</b> 묻습니다 — 여기서 또 세면 두 벌이 됩니다 (5번) */
-    return { covered, over, tall, n: 쪽수, 장: P.sections, lw: Math.round(lw), rw: Math.round(rw) };
+    return { covered, over, tall, n: 쪽수, 장: P.sections, lw: Math.round(lw), rw: Math.round(rw),
+             맞춘쪽, 제일줄인쪽, 제일작은 };
   });
   is(!mp.err && mp.covered === 0,
      '  가운데 세 자리가 <b>안 덮여 있다</b> — 덮인 곳 ' + mp.covered + '군데 ' +
@@ -192,13 +201,40 @@ const key = (page, k) => page.evaluate(k =>
   is(mp.lw > 20 && mp.rw > 20 && (mp.lw + mp.rw) < 1440 * 0.35,
      '  넘기는 띠는 <b>양옆에 남아 있다</b> — 왼 ' + mp.lw + 'px · 오른 ' + mp.rw + 'px ' +
      '(마우스로 넘기는 길을 없애지 않는다)');
-  /* 넘치는 쪽이 <b>하나는 있어야</b> [4] 가 내려 보는 시험을 할 수 있습니다.
-     ★ 0 이 되는 날은 <b>자료를 다 손본 날</b>입니다 — 그때는 이 줄을 지우지
-       말고 「넘치는 쪽이 없어 [4] 를 건너뜁니다」 로 바꾸십시오 (6번). */
-  is(mp.over > 0, '  한 화면을 넘는 쪽이 있다 — ' + mp.over + ' / ' + mp.n + '쪽 ' +
-     '(장 ' + mp.장 + '개를 쪼갠 것입니다 · 판 X326)');
+  /* ★★ 판 X484 — 여기 <b>「넘치는 쪽이 하나는 있어야 한다」</b>고 적혀
+     있었습니다. [4] 가 「↓ 로 내려가나」 를 시험할 쪽이 필요해서입니다.
+     그런데 2026-11-18 에 발표 맞추기(pvFit · check-pvfit)가 들어가 <b>넘치는
+     쪽이 0 쪽</b>이 되었습니다 — 좋은 일인데 이 자가 빨간불을 켰습니다.
+     ⚠ <b>조용히 넘기지 않습니다.</b> 넘기면 「↓ 더 있습니다」 가 영원히 안
+       재어집니다 (8번 「안 울리는 알람은 알람이 아니다」). 대신 [4] 에서
+       <b>화면을 낮춰</b> 넘치는 쪽을 만들어 그 자리에서 시험합니다 —
+       사장님 노트북이 짧을 때 실제로 겪는 자리이기도 합니다.
+     ⚠ 넘치는 쪽의 <b>수</b>는 check-pvnote 가 셉니다 — 여기서 또 세지
+       않습니다 (5번). 아래는 적어만 둡니다. */
+  console.log('      한 화면을 넘는 쪽 ' + mp.over + ' / ' + mp.n + '쪽 ' +
+     '(장 ' + mp.장 + '개를 쪼갠 것 · 판 X326) · 발표 맞추기가 줄여 맞춘 쪽 ' +
+     mp.맞춘쪽 + '쪽 (제일 많이 줄인 쪽 ×' + mp.제일작은 + ')');
 
   console.log('\n[4] 미끼상품 — ↓ 로 내려가고, 바닥에서 다음 장');
+  /* ★ 시험할 쪽을 반드시 하나 만든다 (위 [3] 쪽지) */
+  let 볼쪽 = mp.tall, 낮춤 = false;
+  if (볼쪽 < 0) {
+    await p2.setViewportSize({ width: 1440, height: 520 });
+    await new Promise(r => setTimeout(r, 400));
+    볼쪽 = await p2.evaluate(async (부터) => {
+      const P = window.__present;
+      for (let d = 0; d < P.total; d++) {
+        const i = (Math.max(0, 부터) + d) % P.total;
+        P.go(i); await new Promise(r => setTimeout(r, 24));
+        const cur = document.querySelector('section.wrap.pon');
+        if (cur && cur.scrollHeight > cur.clientHeight + 8) return i;
+      }
+      return -1;
+    }, mp.제일줄인쪽);
+    낮춤 = true;
+  }
+  is(볼쪽 >= 0, '  내려 볼 쪽을 찾았다 — ' + (볼쪽 + 1) + '쪽' +
+     (낮춤 ? ' (넘치는 쪽이 0 이라 <b>화면을 1440×520 으로 낮춰</b> 만들었습니다)' : ''));
   const mk = await p2.evaluate(async (tall) => {
     const P = window.__present;
     /* 재는 것은 <b>지금 보이는 쪽</b>입니다 — 장을 번호로 집으면 쪽과 어긋납니다 */
@@ -225,7 +261,7 @@ const key = (page, k) => page.evaluate(k =>
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
     await new Promise(r => setTimeout(r, 200));
     return { hint, moved, same, backUp, hintEnd, next, topOnNew, left: P.index !== at, room, want };
-  }, mp.tall);
+  }, 볼쪽);
   is(mk.hint, '  넘치는 쪽에 <b>「더 있습니다」</b>가 뜬다');
   is(mk.moved >= mk.want - 2 && mk.moved > 0 && mk.same,
      '  ↓ 를 누르면 <b>' + mk.moved + 'px 내려가고</b> 장은 그대로다 — ' +

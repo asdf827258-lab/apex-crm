@@ -41,6 +41,13 @@ const js = (page.match(/<script>([\s\S]*)<\/script>/) || [])[1] || '';
 /* 글 속의 한글은 칸 이름이 아니다. 꼴을 볼 때만 글을 걷어 낸다 */
 const noStr = js.replace(/"(?:[^"\\\n]|\\.)*"/g, '""').replace(/'(?:[^'\\\n]|\\.)*'/g, "''");
 
+/* ⚠️ <b>주석은 코드가 아니다.</b> 2026-11-12 에 이 자가 주석에 적힌
+   REV_ST["모름"] 을 「없는 칸을 부른다」 고 고발했습니다 — 화면은 그 자리를
+   부른 적이 없습니다. 헛것을 잡는 점검은 안 잡는 점검보다 나쁩니다(8번).
+   그렇다고 글자를 쪼개 숨기지 않습니다 — <b>보는 데를 자릅니다.</b>
+   ⚠️ 주석 안에 진짜 접근이 들어 있어도 안 봅니다. 주석은 안 돌아갑니다. */
+const jsCode = js.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
+
 /* ── 저장소 SQL 에서 「무엇이 적혀 있나」 를 읽는다 ─────────────────── */
 const sqlFiles = fs.readdirSync('.').filter(f => /^migration_.*\.sql$/.test(f));
 const sqlAll = sqlFiles.map(f => fs.readFileSync(f, 'utf8')).join('\n');
@@ -112,23 +119,24 @@ ok(undeclared.length === 0,
 
 /* ── 2. 화면이 쓰는 한글 칸이 적힌 정의 안에 있나 ──────────────────── */
 console.log('\n[2] 화면이 쓰는 한글 칸 이름이 적힌 정의 안에 있나');
+const noStrCode = jsCode.replace(/"(?:[^"\\\n]|\\.)*"/g, '""').replace(/'(?:[^'\\\n]|\\.)*'/g, "''");
 const want = new Set();
 const add = (s) => { if (s) want.add(s); };
 let g;
 /* r["소재"] · o["돌고있음"] */
 const p1 = /\[\s*"([가-힣0-9a-zA-Z]*[가-힣][가-힣0-9a-zA-Z]*)"\s*\]/g;
-while ((g = p1.exec(js))) add(g[1]);
+while ((g = p1.exec(jsCode))) add(g[1]);
 /* sum("지출") */
 const p2 = /\b(?:sum|reduce)\(\s*"([가-힣0-9a-zA-Z]*[가-힣][가-힣0-9a-zA-Z]*)"\s*\)/g;
-while ((g = p2.exec(js))) add(g[1]);
+while ((g = p2.exec(jsCode))) add(g[1]);
 /* ["지출","노출",…] — 한글 글만 든 배열은 칸 목록이다 */
 const p3 = /\[\s*"[가-힣]+"\s*(?:,\s*"[가-힣]+"\s*)*\]/g;
-while ((g = p3.exec(js))) (g[0].match(/"([가-힣]+)"/g) || []).forEach(x => add(x.slice(1, -1)));
+while ((g = p3.exec(jsCode))) (g[0].match(/"([가-힣]+)"/g) || []).forEach(x => add(x.slice(1, -1)));
 /* { 지출:0, 노출:0 } · o.지출 — 글을 걷어 낸 뒤에만 */
 const p4 = /[{,]\s*([가-힣][가-힣0-9a-zA-Z]*)\s*:/g;
-while ((g = p4.exec(noStr))) add(g[1]);
+while ((g = p4.exec(noStrCode))) add(g[1]);
 const p5 = /\.([가-힣][가-힣0-9a-zA-Z]*)\b/g;
-while ((g = p5.exec(noStr))) add(g[1]);
+while ((g = p5.exec(noStrCode))) add(g[1]);
 
 ok(want.size > 0, '화면이 칸으로 부르는 한글 이름을 찾았다 — ' + [...want].sort().join(' · '));
 

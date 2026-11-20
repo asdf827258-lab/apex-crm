@@ -1576,6 +1576,11 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 .ppt i{font-style:normal;color:var(--gy2);font-size:12px}
 .ppo{margin-top:8px;font-size:13px}.ppo summary{cursor:pointer;color:#8A4B08;padding:4px 0}
 .ppa{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}.ppa span{font-size:12.5px;color:var(--gy)}
+/* 넣기 단추를 표 위로 · 크게 — 표가 길면 맨 아래 단추가 안 보였다 (판 X437) */
+.ppgo{position:sticky;top:0;z-index:6;display:flex;gap:8px;align-items:stretch;background:#fff;padding:6px 0 10px;margin:0 0 8px;border-bottom:1px solid var(--ln)}
+.ppgo .go{flex:1;min-height:60px;font-size:19px;font-weight:900;border-radius:14px;word-break:keep-all}
+.ppgo .mini{min-height:60px;padding:0 18px;font-size:15px}
+.ppa .go{min-height:56px;font-size:17px;padding:0 22px;border-radius:14px}
 /* 🙋 오늘 무엇을 같이 볼까요 · 💡 한 줄 결론 · 🧾 숨은 · 미청구 보험금 (판 X349) */
 .seep{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 .seep .mini{min-height:44px;font-size:14px}.seep .mini.go{background:var(--dkb,#0F1A2C);color:#E2C27D;border-color:var(--dkb,#0F1A2C)}
@@ -2068,6 +2073,7 @@ body.presenting .show:not(.deck){border:0;box-shadow:none}
 <script src="apex-body.js"></script>
 <!-- 「다음 한 걸음」 칸의 <b>모양</b>은 한 곳이다(apex-next.js) — 말만 화면마다 다르다 (5번) -->
 <script src="../apex-next.js"></script>
+<script src="ba-ask.js?v=1"></script>
 <script>
 /* ══════════════════════════════════════════════════════════════════════════
    보장 전 · 후 만들기
@@ -2939,6 +2945,23 @@ function polHtml(p,sd,i){
       '<div class="u"><label>납입기간</label><input value="'+esc(p.years||'')+'" placeholder="예) 20" inputmode="numeric" onfocus="this.select()" oninput="setPol(\''+sd+'\','+i+',\'years\',this.value)"><i>년</i></div>'+
       wonBox('월 보험료',p.premMan,'we_'+sd+'_'+i+'_premMan','setPolWon(&quot;'+sd+'&quot;,'+i+',&quot;premMan&quot;,this)')+
       '<div><label>만기 · 메모</label><input value="'+esc(p.term)+'" placeholder="예) 100세만기" oninput="setPol(\''+sd+'\','+i+',\'term\',this.value)"></div>'+
+      /* ══ 🔁 <b>갱신주기</b> (판 X423) ══════════════════════════════════
+         사장님 말씀 (2026-10-19) — 「<b>새로운 담보 점검</b> / 보험금찾기 /
+         전-후에 입력되신 분, 만들어두고 안 보여드린분」.
+         판 X131 에서 ⛔ 로 남겨 둔 자리입니다 — 「보험 한 줄에 <b>갱신주기
+         칸이 아예 없어</b> 갱신일은 못 합니다. ba.html 이 그 칸을 받기
+         시작하면 그때 바로 붙입니다」. 그 칸을 여기 둡니다.
+         ★★ <b>기본은 「모름」</b> 입니다 — 「비갱신」 이 아닙니다. 안 고르신
+           것을 「비갱신」 으로 읽으면 <b>갱신이 오는 계약을 영영 안 알려</b>
+           드리게 됩니다 (1번).
+         ★★ <b>상품명으로 짐작하지 않습니다</b> — 「갱신형」 이라고 이름에
+           적혀 있어도 몇 년인지는 약관에 있습니다. 모르는 것은 모릅니다.
+         ★ 「비갱신」 은 <b>아는 답</b>입니다 — 그때는 갱신일을 안 세우고,
+           조르지도 않습니다 (8번).                                       */
+      '<div><label>갱신주기</label><select onchange="setPol(\''+sd+'\','+i+',\'rnw\',this.value)">'+
+        BA_RNW.map(function(o){
+          return '<option value="'+o.v+'"'+(((p.rnw||'')===o.v)?' selected':'')+'>'+esc(o.t)+'</option>';
+        }).join('')+'</select></div>'+
     '</div>'+payLine(p,sd,i);
   if(isB&&act==='endo')
     h+='<div class="note w" style="margin-bottom:8px">배서입니다 — 아래 담보판이 <b>「배서 후」</b> 로 바뀝니다. '+
@@ -3054,10 +3077,14 @@ function padSum(bag){
 }
 function padOpen(k){S.padOpen[k]=!S.padOpen[k];save();render();}
 function setPick(k,g){S.pick[k]=g;save();render();}
+/* 🔁 갱신주기 고를 것 — <b>여기 한 곳</b>입니다 (5번 · 판 X423).
+   값은 「해」 숫자이고, 빈 글은 <b>모름</b>, 'no' 는 <b>비갱신</b>입니다. */
+var BA_RNW=[{v:'',t:'모름'},{v:'no',t:'비갱신'},{v:'1',t:'1년'},{v:'3',t:'3년'},
+            {v:'5',t:'5년'},{v:'10',t:'10년'},{v:'15',t:'15년'},{v:'20',t:'20년'}];
 function addPol(sd){
   /* 방금 만든 계약은 <b>펴 놓는다</b> — 적으려고 누른 것이라, 접혀 있으면
      한 번 더 눌러야 한다. */
-  var p={id:nid(),co:'',nm:'',term:'',start:'',years:'',
+  var p={id:nid(),co:'',nm:'',term:'',start:'',years:'',rnw:'',
     premMan:'',premMan2:'',act:'keep',kb:false,cov:{},cov2:{}};
   /* 판 X366 — 담보판도 펴고 「한 번에 적기」 칸에 바로 커서를 둔다: 누르자마자 칠 수 있게 */
   S[sd].push(p);S.polOpen[p.id]=true;S.padOpen[sd+(S[sd].length-1)]=true;save();render();qkFocus(sd+(S[sd].length-1));}
@@ -6938,6 +6965,8 @@ function showHtml(){
     '<span class="cl">분석 모드</span>'+
     '<button class="mini'+(S.view==='full'?' on':'')+'" onclick="setView(\'full\')">🔍 전체 담보 비교</button>'+
     '<button class="mini'+(S.view==='senior'?' on':'')+'" onclick="setView(\'senior\')">👵 시니어 간소화</button>'+
+    /* 판 X429 — 새로 생기는 담보만 질문 → 쉽게 말하면 → 그래서 필요합니다 로 (app/ba-ask.js) */
+    (typeof baqOpen==='function'?'<button class="mini go" onclick="baqOpen()">🙂 심플 — 질문으로 보기</button>':'')+
     '<span class="ch">'+(S.view==='senior'?'적힌 담보만 큰 글씨로 — 어르신·자녀 설명용':'표준 담보 전부 — 설계사·꼼꼼한 고객용')+'</span></div>';
   h+='<div class="noprint showctl">'+
     '<span class="cl">보는 방식</span>'+
@@ -7548,7 +7577,7 @@ var BA_WALK=[
   tip:'월이 오르면 여기서 끝내지 말고 「보험료 변화」 의 앞으로 낼 돈까지 이어요'},
  {k:'s0',nm:'왜 나에게 맞는가',ic:'compass',pt:'나이 · 가족 · 쓰고 남는 돈 — 세 줄이 이 집 숫자인지',
   q:'그게 아닌데요?',a:'말씀해 주시면 다시 셈해 드리겠습니다. 그 줄이 바뀌면 제안도 바뀝니다.'},
- {k:'s4_3d',nm:'보장 분석 보고서',ic:'stethoscope',pt:'아래 ☰ 목차에서 장을 고르고 ← → 로 넘겨요 — 실제 사진 · 치료 예시 · 드는 돈 · 지금/조정 후',
+ {k:'s4_3d',nm:'보장 분석 보고서',ic:'stethoscope',pt:'아래 목차에서 장을 고르고 ← → 로 넘겨요 — 실제 사진 · 치료 예시 · 드는 돈 · 지금/조정 후',
   q:'실손 있는데 또 들어야 해요?',a:'실손은 영수증, 진단비는 월급입니다. 일을 못 하는 동안의 생활비는 실손이 내지 않습니다.',
   tip:'「한눈에 모든 담보」 로 전체를 먼저 보여 주고, 단계 장의 빈 칸(없음)에서 멈춰 기다려요 — 고객 상황에 맞는 병 1~2개만'},
  {k:'r_',nm:'보장 분석 보고서',ic:'stethoscope',pt:'← → 로 한 쪽씩 — 실제 사진 · 치료 예시 · 드는 돈 · 지금/조정 후 · 마지막 쪽은 「어느 회사에서 · 어떻게 나오나」',
@@ -7584,7 +7613,7 @@ var BA_WALK=[
   tip:'이자 · 물가를 안 셈한 나눗셈이라고 꼭 밝혀요'},
  {k:'sEnd',nm:'적어 둘 것',ic:'doc',pt:'어떻게 셈했는지 — 기준 치료비는 예시',
   q:'치료비 기준은 어디서 나온 숫자예요?',a:'평균 예시입니다. 공식 통계가 아닙니다 — 실제 치료비는 병원 · 치료법 · 사람마다 다릅니다.'},
- {k:'sSee',nm:'오늘 같이 볼 것',ic:'list',pt:'고객과 같이 고르기 — 궁금한 장만 켜고, 가장 걱정되는 병에 ★, 시간이 없으면 「짧게 보기」',
+ {k:'sSee',nm:'오늘 같이 볼 것',ic:'list',pt:'고객과 같이 고르기 — 궁금한 장만 켜고, 가장 걱정되는 병에 별표, 시간이 없으면 「짧게 보기」',
   q:'다 봐야 해요?',a:'아닙니다. 궁금하신 것만 보시고 나머지는 종이로 드립니다.',
   tip:'고객에게 화면을 건네고 직접 누르게 해요 — 고른 순간부터 고객의 상담이 됩니다'},
  {k:'sClaim',nm:'숨은 · 미청구 보험금',ic:'search',pt:'① 숨은(안 찾아간) · ② 미청구(청구 안 한 진료)는 다르다 · ③ 3년',
@@ -8528,7 +8557,10 @@ function ppPick(){var f=document.getElementById('ppFile');
   if(!f){f=document.createElement('input');f.type='file';f.id='ppFile';f.accept='application/pdf,.pdf,image/*';f.style.display='none';
     f.addEventListener('change',function(){var x=this.files&&this.files[0];this.value='';ppRead(x);});document.body.appendChild(f);}
   f.click();}
-function ppSet(h){var e=document.getElementById('ppBox');if(e)e.innerHTML=h;}
+function ppSet(h){var e=document.getElementById('ppBox');if(e)e.innerHTML=h;ppGoTop();}
+/* 넣기 단추는 위 머리 띠(.bar · 폰에선 여러 줄) 바로 밑에 붙는다 (판 X437) */
+function ppGoTop(){var g=document.querySelector('.ppgo'),b=document.querySelector('.bar');if(g&&b)g.style.top=b.offsetHeight+'px';}
+window.addEventListener('resize',ppGoTop);
 /* ── 판 X346 — 사진 · 스캔 PDF 도 읽는다 (사장님 말씀 「상품 이미지를 넣어서 체크하고」) ─────────────────
    글자가 없는 파일(설계서 사진 · 캡처 · 스캔 PDF)은 <b>글자 인식(OCR · tesseract.js 한국어)</b> 으로 글자를 짐작한다.
    짐작이라 <b>틀린 곳이 많을 수 있다</b> — 그래서 표에 「사진에서 짐작해 읽음」 을 크게 밝히고, 원문 줄을 나란히 둔다.
@@ -8607,6 +8639,7 @@ function ppPreview(){
     '<td><input class="amt" value="'+(r.v===null||r.v===undefined?'':(Math.round(r.v*100)/100))+'" inputmode="decimal" oninput="ppAmt(\''+arr+'\','+i+',this.value)"> <i>만원</i></td></tr>';}
   var nExt=P.ext.filter(function(r){return !r.dup;}).length,nOn=P.rows.filter(function(r){return r.on;}).length,nDup=P.rows.filter(function(r){return r.dup;}).length,nUsd=P.rows.concat(P.other).filter(function(r){return r.usd;}).length,nAdd=P.rows.filter(function(r){return r.why==='add';}).length,nTv=P.rows.concat(P.ext).filter(function(r){return r.tv!=null;}).length;
   return '<div class="ppv"><div class="pph">📄 <b>'+esc(X.name)+'</b> — 읽었습니다 · <b>틀린 칸은 여기서 고치고</b> 넣으세요</div>'+
+    '<div class="ppgo"><button class="btn go" onclick="ppGo()">✅ 이대로 ③ 추가 보험에 넣기</button><button class="mini" onclick="ppCancel()">취소</button></div>'+
     /* 무엇을 확인해야 하는지 — 세 줄로 먼저 (판 X346) */
     '<div class="ppc"><span class="g">✓ 알아본 담보 <b>'+P.rows.length+'</b>줄 — 체크된 <b>'+nOn+'</b>줄이 들어갑니다</span>'+
       (nDup?'<span class="y">같은 담보 · 조건만 다른 줄 <b>'+nDup+'</b>줄은 <b>큰 금액 하나만</b> 체크해 두었습니다</span>':'')+(nAdd?'<span class="g">따로 붙는 특약 <b>'+nAdd+'</b>줄은 <b>더해서</b> 넣습니다</span>':'')+(nTv?'<span class="y">표 가입금액과 보장내용 지급액이 달라 <b>보장내용</b> 금액으로 읽은 줄 <b>'+nTv+'</b> — 원문을 꼭 보세요</span>':'')+
@@ -8625,7 +8658,7 @@ function ppPreview(){
       '<table class="ppt hidedup" data-a="ext"><tbody>'+P.ext.map(function(r,i){return row(r,i,'ext');}).join('')+'</tbody></table></div>':'')+
     (P.other.length?'<details class="ppo"><summary>담보처럼 보이지만 <b>못 알아본 줄 '+P.other.length+'개</b> — 담보를 골라 체크하면 같이 들어갑니다</summary><table class="ppt" data-a="other"><tbody>'+
       P.other.map(function(r,i){return row(r,i,'other');}).join('')+'</tbody></table></details>':'')+
-    '<div class="ppa"><button class="btn" onclick="ppGo()">이대로 ③ 추가 보험에 넣기</button><button class="mini" onclick="ppCancel()">취소</button>'+
+    '<div class="ppa"><button class="btn go" onclick="ppGo()">✅ 이대로 ③ 추가 보험에 넣기</button><button class="mini" onclick="ppCancel()">취소</button>'+
      '<span>넣은 뒤에도 <b>③ 추가 보험</b>에서 언제든 고칠 수 있습니다. 회사마다 서식이 달라 <b>틀릴 수 있으니</b> 원문 줄과 꼭 맞춰 보세요.</span></div></div>';}
 function ppTog(a,i,on){__PP.P[a][i].on=on;var t=document.querySelector('.ppv .ppt[data-a="'+a+'"]');if(t){var tr=t.querySelectorAll('tbody tr')[i];if(tr)tr.className=on?'':'off';}}
 function ppKey(a,i,k){var r=__PP.P[a][i];r.k=k;if(k)r.d=PP_K2D[k]||r.d;if(k&&a!=='rows')r.on=true;ppSet(ppPreview());if(k&&a==='other'){var d=document.querySelector('.ppo');if(d)d.open=true;}}
@@ -8780,7 +8813,7 @@ function baEndOf(){
   var today=new Date(), ty=today.getFullYear(), tm=today.getMonth()+1;
   var age=parseInt((''+((S.who&&S.who.age)||'')).replace(/[^0-9]/g,''),10);
   if(!age||age<=0||age>120)age=null;
-  var pay=null,cov=null,i,p,nm;
+  var pay=null,cov=null,rnw=null,i,p,nm;
   for(i=0;i<S.before.length;i++){
     p=S.before[i];
     if(!p||p.act==='cancel')continue;                 /* 없어질 보험은 안 셉니다 */
@@ -8794,6 +8827,23 @@ function baEndOf(){
       if(key>=ty*12+tm&&(pay===null||key<pay.key))
         pay={key:key,ym:ey+'-'+((em<10?'0':'')+em),nm:nm};
     }
+    /* ③ <b>다음 갱신일</b> — 가입 달 + 갱신주기 × n (판 X423).
+       ★ <b>둘 다 알 때만</b> 셉니다 (1번) — 가입 달을 모르거나 주기가
+         「모름」 이면 아무것도 안 돌려줍니다. 날짜를 지어내면 고객 앞에서
+         틀립니다(판 X131 에서 그래서 미뤄 둔 자리입니다).
+       ★ 「비갱신」('no')은 <b>아는 답</b>이라 역시 안 셉니다 — 갱신이
+         없는 것이지 모르는 것이 아닙니다 (8번).
+       ★ 셈은 <b>오늘 뒤로 오는 첫 번째</b>입니다. 지난 갱신은 이미 지났고
+         사장님이 하실 일이 없습니다. */
+    var rv=parseInt((''+(p.rnw||'')).replace(/[^0-9]/g,''),10);
+    if(st&&rv>0&&rv<=30){
+      var bm=(+st[2]), by=(+st[1]), now=ty*12+tm, k2=by*12+bm;
+      while(k2<now)k2+=rv*12;                /* 오늘 뒤로 오는 첫 갱신 */
+      if(rnw===null||k2<rnw.key){
+        var ry=Math.floor((k2-1)/12), rm=k2-ry*12;
+        rnw={key:k2,ym:ry+'-'+((rm<10?'0':'')+rm),nm:nm,every:rv};
+      }
+    }
     /* ② 보장 만기 — 만기 나이 − 지금 나이 (해까지) */
     var ea=baEndAge(p.term);
     if(ea&&age&&ea>age){
@@ -8801,9 +8851,11 @@ function baEndOf(){
       if(cov===null||y2<cov.y)cov={y:y2,nm:nm,age:ea};
     }
   }
-  if(!pay&&!cov)return null;
+  if(!pay&&!cov&&!rnw)return null;
   return {pay:pay?{ym:pay.ym,nm:pay.nm}:null,
           cov:cov?{y:cov.y,age:cov.age,nm:cov.nm}:null,
+          /* 🔁 다음 갱신 — 모르면 <b>아예 안 담습니다</b> (1번 · 판 X423) */
+          rnw:rnw?{ym:rnw.ym,nm:rnw.nm,every:rnw.every}:null,
           src:'보장분석에서 셈'};
 }
 function baSaveToClient(){
