@@ -69,6 +69,7 @@ function bsShowCard(){
   return '<div class="card noprint"><h2><span class="n">4</span>보여주기</h2>'+
     '<p>고객 앞에서 쓰는 것만 모았습니다. 숫자는 ①②③ 에서 정한 그대로 나옵니다.</p><div class="bs-grid">'+
     b('💻','노트북으로 보여주기','한 장씩 넘기는 보고서 (짧게 보기 · 다 보기)',"go('show')",'pri')+
+    (typeof bkOpen==='function'?b('📱','카톡판 — 장마다 그림','표지 · 목차부터 내 보험 자세히 · 보험료까지 여러 장 — 넘겨 보는 그림','bkOpen()','pri'):'')+
     (typeof baqOpen==='function'?b('🙂','심플 — 질문으로 보기','늘어나는 담보만 질문 → 쉽게 말하면 → 그래서 필요합니다','baqOpen()'):'')+
     b('📄','최종 보고서','드릴 종이 한 벌 (PDF 로 저장)','frPrint()')+
     b('💬','카톡 한 장 이미지','요약 한 장을 그림으로 — 카톡에 붙여 보내기','frImage()')+
