@@ -217,7 +217,11 @@ var EXTERNAL = ['supabase', 'PENSION', 'APEX_REPORT', 'html2canvas', 'PptxGenJS'
      ⚠ 2026-11-13 에 제가 origin/main 을 받아 붙인 뒤 이 둘이 울었습니다 —
        main 의 CI 는 초록이었는데 제 손에서는 빨간불이었습니다. 코드는 멀쩡합니다
        (apex-grow.js 428·437줄에 선언이 있습니다). <b>자에게 알려 주지 않은 것</b>뿐입니다. */
-  'renderGrow', 'grAfter'];
+  'renderGrow', 'grAfter',
+  /* app/home-v2.js — ✨ 새 「오늘」 화면(판 X502 · #855). index.html 이 <script src> 로 싣고
+     window.HOME_V2 로 부릅니다. 위 apex-grow 와 같은 병 — 2026-11-20 에 main 을 받아 붙인 뒤
+     이 자리에서 울었습니다(CI 는 eslint 가 없어 이 규칙을 건너뛰므로 초록). 코드는 멀쩡합니다. */
+  'HOME_V2'];
 
 function scriptsOf(src) {
   var out = [], re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi, m;
