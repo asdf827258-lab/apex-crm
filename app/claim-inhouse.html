@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="color-scheme" content="light"/>
+<title>청구센터 인하우스 — 받을 돈 먼저</title>
+<link rel="stylesheet" href="ui.css">
+<!-- ══ 🏥 <b>청구센터 인하우스</b> — 판 X499 · 2026-11-20 ══════════════════════════
+     사장님 말씀 — 「보험금청구센터 고객님이 보험금을 / 보험 연결 되는 부분 [암,뇌,심,운전자] 고객을
+       어떻게 연결시켜서 만나야 될지 / 가족 보험 / 미끼 던지는 것 / 고객이 척추전문병원에서 어떻게
+       끌고 올수 있는지 … 고객의 나이는 보통 40~60대 … 연령대별로 어떤 담보와 핵심 … 가장 중요한건
+       보험료비교, 보험료할인제도, 숨은보험금찾기, 질문지를 하나로 만들어서 끌고 오는 방법 … 인하우스
+       전략 … 여기서 하는 어디 시술인지, 소통 하는 부분들을 찾는 것들도 중요하다」
+
+     ★ 줄기는 하나 — <b>받을 돈 먼저, 낼 돈은 나중</b>. 청구를 돕는 자리에서 바로 팔면 그 병원 데스크가 닫힙니다.
+     ★ 무사고 할인 제도의 설명·숫자는 📞 30초 TA(silson5.html)가 쥡니다 — 여기서 다시 적지 않습니다 (5번).
+       여기는 「이번에 치료받은 본인은 대상이 아닐 수 있고 <b>가족</b>이 대상일 수 있다」 는 다리만 둡니다.
+     ★ 금액·한도·할인율 숫자 0 — 「약관과 심사 결과에 따릅니다」 (1번·2번)
+     ★ 이름·전화·주민번호 칸 0 · 기억 0 · 서버 0 (3번·7번) — 종이(인쇄)로 받고 원본은 고객이 가져갑니다.
+     ★ 질문지에서 「모름」 은 「없음」 이 아닙니다 — 모름이면 「증권으로 확인」 이라고 적습니다 (1번).
+     점검 : scripts/check-clminh.js                                                         -->
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--t-bg);color:var(--t-ink);
+  font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Noto Sans KR",system-ui,-apple-system,sans-serif;
+  letter-spacing:-.02em;-webkit-font-smoothing:antialiased;line-height:1.6;overflow-wrap:anywhere}
+button,input,select{font:inherit;color:inherit}
+.w{max-width:780px;margin:0 auto;padding:0 14px 60px}
+.hd{padding:12px 0 4px}
+.hd h1{margin:0;font-size:20px;font-weight:900}
+.hd p{margin:2px 0 0;font-size:13.5px;color:var(--t-sub);font-weight:700}
+.nav{position:sticky;top:0;z-index:10;background:var(--t-bg);padding:8px 0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav a{flex:0 0 auto;min-height:40px;display:flex;align-items:center;padding:0 12px;border:1px solid var(--t-line);border-radius:999px;background:var(--t-card);font-size:13.5px;font-weight:800;color:var(--t-ink);text-decoration:none;white-space:nowrap}
+.sec{background:var(--t-card);border:1px solid var(--t-line);border-radius:14px;padding:12px 14px;margin-top:12px;scroll-margin-top:60px}
+.sec h2{margin:0 0 4px;font-size:17px;font-weight:900}
+.sec .lead{margin:0 0 8px;font-size:13.5px;color:var(--t-sub)}
+.flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.flow div{border:1px solid var(--t-line);border-radius:12px;padding:8px 10px;background:var(--t-bg)}
+.flow b{display:block;font-size:14px}
+.flow i{font-style:normal;display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--t-point);color:var(--t-card);align-items:center;justify-content:center;font-size:12px;font-weight:900;margin-right:4px}
+.flow span{font-size:12.5px;color:var(--t-sub)}
+.card{border:1px solid var(--t-line);border-radius:12px;padding:10px 12px;margin-top:8px}
+.card h3{margin:0;font-size:15px;font-weight:900}
+.card .how{font-size:12.5px;color:var(--t-sub)}
+.card ul{margin:4px 0 0;padding-left:18px;font-size:13.5px}
+.card .say{margin-top:6px;font-size:14.5px;font-weight:700;background:var(--t-point-l);border-radius:10px;padding:6px 10px;white-space:pre-wrap}
+.card .warn{margin-top:6px;font-size:12.5px;color:var(--t-neg);font-weight:700}
+.lbl{font-size:12px;font-weight:900;color:var(--t-point);margin-top:6px}
+.tbl{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;margin:6px 0}
+.tbl th,.tbl td{border:1px solid var(--t-line);padding:6px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+.tbl th{background:var(--t-bg)}
+.q{border-top:1px solid var(--t-line);padding:8px 0}
+.q .qt{font-size:14.5px;font-weight:800}
+.q .why{font-size:12px;color:var(--t-sub)}
+.opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.opts label{display:inline-flex;align-items:center;gap:4px;min-height:40px;padding:0 12px;border:1px solid var(--t-line);border-radius:999px;font-size:13.5px;font-weight:700;cursor:pointer;background:var(--t-card)}
+.opts input{margin:0}
+.opts label.on{border-color:var(--t-point);background:var(--t-point-l);color:var(--t-point-d)}
+.qg{font-size:13px;font-weight:900;color:var(--t-card);background:var(--t-point);display:inline-block;border-radius:8px;padding:1px 8px;margin-top:10px}
+.res{margin-top:10px;border:2px solid var(--t-point);border-radius:12px;padding:10px 12px}
+.res h3{margin:0 0 4px;font-size:15px}
+.res ol{margin:0;padding-left:20px;font-size:14px}
+.res li{margin:3px 0}
+.res .yet{font-size:12.5px;color:var(--t-sub)}
+.res .stop{font-size:13.5px;font-weight:800;color:var(--t-neg)}
+.btns{display:flex;gap:8px;margin-top:10px}
+.btns button{flex:1;min-height:44px;border:1px solid var(--t-line);border-radius:12px;background:var(--t-card);font-weight:800;cursor:pointer}
+.btns button.pri{background:var(--t-point);border-color:var(--t-point);color:#fff}
+.ag{display:flex;gap:6px;margin:6px 0}
+.ag button{flex:1;min-height:44px;border:1px solid var(--t-line);border-radius:12px;background:var(--t-card);font-weight:900;cursor:pointer}
+.ag button.on{background:var(--t-point);border-color:var(--t-point);color:#fff}
+.go{color:var(--t-point);font-weight:800}
+.foot{font-size:12px;color:var(--t-sub);margin-top:14px;line-height:1.55}
+@media (max-width:520px){.flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media print{.nav,.btns,.ag,.noprint{display:none!important}body{background:#fff}.w{padding:0}.sec{break-inside:avoid-page;border-color:#999}
+  .opts label{border-color:#999}.opts input{display:none}.opts label::before{content:"☐"}.opts label.on::before{content:"☑"}}
+</style>
+</head>
+<body>
+<div class="w">
+  <div class="hd"><h1>🏥 청구센터 인하우스</h1><p>받을 돈 먼저, 낼 돈은 나중 — 척추병원 청구 고객을 가족·보장 점검까지</p></div>
+  <nav class="nav noprint" id="nav"></nav>
+
+  <section class="sec" id="s-flow"><h2>① 동선 한눈에</h2>
+    <p class="lead">병원에서는 <b>청구만 돕고</b>, 만남은 <b>지급 결과를 알려 드리는 전화</b>에서 잡습니다. 결과 전화는 고객이 기다리는 전화입니다.</p>
+    <div class="flow" id="flow"></div>
+  </section>
+
+  <section class="sec" id="s-proc"><h2>② 어디 시술인지 찾기</h2>
+    <p class="lead">무슨 시술인지, <b>저절로 아팠는지(질병) · 다쳤는지(상해)</b>에 따라 볼 담보가 갈립니다. 다섯 가지만 물으면 됩니다.</p>
+    <div id="ask5"></div>
+    <div class="lbl">서류에서 찾는 법</div>
+    <table class="tbl" id="docs"></table>
+    <div class="lbl">시술마다 볼 담보 · 서류 · 말 걸 거리</div>
+    <div id="procs"></div>
+  </section>
+
+  <section class="sec" id="s-talk"><h2>③ 장면마다 한마디</h2>
+    <p class="lead">병원에서 「보험 들라」 는 말은 하지 않습니다. 장면마다 <b>도와 드리는 말</b> 하나씩.</p>
+    <div id="talks"></div>
+  </section>
+
+  <section class="sec" id="s-q"><h2>④ 한 장 질문지 — 보험료 비교 · 할인 · 숨은 보험금</h2>
+    <p class="lead">세 가지를 따로 묻지 않고 <b>한 장</b>으로. 고객과 같이 누르면 아래에 <b>먼저 할 것</b>이 차례로 섭니다. 종이로 쓰려면 🖨 인쇄.</p>
+    <div class="ag noprint" id="ageBar"></div>
+    <div id="qs"></div>
+    <div class="res" id="res"></div>
+    <div class="btns noprint"><button id="bReset">처음부터</button><button id="bPrint" class="pri">🖨 질문지 인쇄</button></div>
+  </section>
+
+  <section class="sec" id="s-age"><h2>⑤ 나이대마다 들고 갈 것</h2>
+    <p class="lead">40~60대가 같은 말을 들으면 안 됩니다. 나이대마다 <b>먼저 꺼낼 한마디</b>와 <b>볼 담보</b>.</p>
+    <div id="ages"></div>
+  </section>
+
+  <section class="sec" id="s-four"><h2>⑥ 척추에서 암 · 뇌 · 심 · 운전자로 건너가기</h2>
+    <p class="lead">척추 이야기에서 바로 다른 병으로 넘어가면 겁주는 말이 됩니다. <b>「이번에 겪어 보셨잖아요」</b>에서 건너갑니다.</p>
+    <div id="fours"></div>
+  </section>
+
+  <section class="sec" id="s-fam"><h2>⑦ 한 분에서 가족으로</h2>
+    <p class="lead">청구 고객 한 분 뒤에는 가족이 있습니다. <b>가족 청구도 같이 봐 드린다</b>는 말이 다리입니다.</p>
+    <div id="fams"></div>
+  </section>
+
+  <section class="sec" id="s-hook"><h2>⑧ 미끼 — 돈 안 드는 것부터</h2>
+    <p class="lead">미끼는 <b>진짜 이득</b>이어야 합니다. 못 찾으면 못 찾았다고 말하는 것이 다음 만남을 만듭니다.</p>
+    <table class="tbl" id="hooks"></table>
+  </section>
+
+  <section class="sec" id="s-line"><h2>⑨ 지킬 선</h2>
+    <p class="lead">병원 안 데스크는 한 번 문제가 생기면 다시 못 들어갑니다.</p>
+    <ul id="lines" style="margin:0;padding-left:20px;font-size:14px"></ul>
+    <p class="foot">법 조항의 해석은 회사 준법감시 담당에게 먼저 확인하십시오. 이 화면은 법률 판단이 아닙니다.</p>
+  </section>
+
+  <p class="foot">※ 담보의 지급 여부와 금액은 <b>가입한 약관과 보험사 심사 결과에 따릅니다</b>. 새 가입의 보험료·보장도 <b>심사 결과에 따릅니다</b>. 이 화면은 금액을 셈하거나 약속하지 않습니다.</p>
+</div>
+
+<script>
+/* ── 데이터 — 점검(scripts/check-clminh.js)이 이 블록을 그대로 읽습니다 ── */
+var CI_NAV=[['s-flow','동선'],['s-proc','시술 찾기'],['s-talk','한마디'],['s-q','한 장 질문지'],['s-age','나이대'],['s-four','암·뇌·심·운전자'],['s-fam','가족'],['s-hook','미끼'],['s-line','지킬 선']];
+
+var CI_FLOW=[
+ {t:'청구 돕기',d:'서류 빠진 것 짚어 드리기 · 다시 안 오시게'},
+ {t:'시술 찾기',d:'다섯 질문 · 질병인지 상해인지'},
+ {t:'한 장 질문지',d:'본인 + 가족 · 동의 받고'},
+ {t:'결과 전화',d:'지급 결과 알려 드리며 만남 약속'},
+ {t:'만남',d:'숨은 보험금 · 보험료 비교 · 할인'},
+ {t:'빈칸 채우기',d:'암 · 뇌 · 심 · 운전자 · 가족'}
+];
+
+var CI_ASK5=[
+ {q:'어디가 아프세요? 목, 허리, 등?',w:'부위 — 진단서 코드와 맞춰 봅니다'},
+ {q:'어떻게 시작됐어요? 저절로요, 다치셨어요?',w:'저절로 = 질병 · 넘어짐·사고 = 상해. 담보가 갈립니다'},
+ {q:'수술실 들어가셨어요? 바늘로요, 관을 넣었어요, 째셨어요?',w:'주사 · 시술 · 수술을 가릅니다'},
+ {q:'입원하셨어요?',w:'입원일당 · 간병 담보를 봅니다'},
+ {q:'서류는 어떤 걸 받으셨어요?',w:'진단서 · 수술(시술)확인서 · 진료비 세부내역서'}
+];
+
+var CI_DOCS=[
+ ['진단서','병명과 진단코드(KCD). M50 은 목(경추) 디스크, M51 은 허리 쪽 디스크. <b>S·T 로 시작하면 다친 것(상해)</b>입니다.'],
+ ['수술(시술)확인서','수술명과 수술코드. 수술비 담보는 <b>약관의 「수술」 정의와 분류표</b>로 판단합니다.'],
+ ['진료비 세부내역서','처치·수술료 · 주사 · 검사 항목. <b>비급여</b> 항목은 실손에서 따로 봅니다.'],
+ ['입퇴원확인서','입원했으면 입원일당 · 간병 담보 청구에 씁니다.']
+];
+
+var CI_PROC=[
+ {k:'inj',n:'주사 · 신경차단술',how:'바늘 · 당일',look:['실손 (통원 · 비급여 주사)'],maybe:'수술비는 대개 해당하지 않습니다 — 약관의 「수술」 정의에 따릅니다.',doc:'영수증 · 진료비 세부내역서',say:'몇 번째 맞으세요? 매번 영수증 챙겨 두셨어요? 모아서 한 번에 청구하셔도 돼요.',bridge:'자주 오시는 분 → 실손 세대 확인'},
+ {k:'cath',n:'신경성형술 · 풍선확장술 (관을 넣는 시술)',how:'가는 관 · 시술실 · 당일~짧은 입원',look:['실손','입원했다면 입원일당'],maybe:'수술비는 보험사·약관마다 판단이 갈립니다 — 청구해 보고 심사 결과로 봅니다.',doc:'시술확인서(시술명·코드) · 세부내역서 · 입퇴원확인서',say:'이건 보험사마다 수술로 보기도, 안 보기도 해요. 서류 갖춰서 일단 청구해 보시죠.',bridge:'수술비 담보가 몇 개 있는지 → 증권 보기'},
+ {k:'rf',n:'고주파 수핵감압술 · 수핵성형술',how:'바늘·관 · 시술실',look:['실손','입원했다면 입원일당'],maybe:'수술비는 약관·보험사 판단이 갈립니다 — 심사 결과로 봅니다.',doc:'시술확인서 · 세부내역서',say:'시술확인서에 시술명이 꼭 들어가야 해요. 빠지면 다시 떼러 오셔야 하거든요.',bridge:'수술비 담보 확인'},
+ {k:'scope',n:'내시경 · 현미경 디스크 수술',how:'작게 절개 · 마취 · 입원',look:['질병수술비','종(1~5종) 수술비 — 분류표 기준','N대 수술비','입원일당','실손'],maybe:'',doc:'수술확인서(수술명·코드) · 진단서(KCD) · 입퇴원확인서 · 세부내역서',say:'수술비는 여러 보험에서 따로 나올 수 있어요. 갖고 계신 보험 전부 같이 볼까요?',bridge:'숨은 보험금 — 다른 회사 수술비'},
+ {k:'fuse',n:'척추 유합술 · 인공디스크',how:'큰 수술 · 입원 길게',look:['질병수술비 · 종 수술비 · N대 수술비','입원일당','간병인 담보(가입했다면)','다쳐서 생긴 경우 상해후유장해 — 치료가 끝난 뒤 장해 진단'],maybe:'',doc:'수술확인서 · 진단서 · 입퇴원확인서 · (장해) 후유장해진단서',say:'회복이 길어요. 그동안 일 못 하시는 것까지 보는 담보가 있는지 같이 봐 드릴게요.',bridge:'소득 공백 → 진단비 · 간병'},
+ {k:'comp',n:'척추체성형술 (압박골절 · 시멘트)',how:'바늘 · 짧은 입원',look:['골절진단비 — 진단코드가 골절(S 로 시작)인지 확인','수술비','실손'],maybe:'골다공증으로 생긴 골절(M 코드)이 약관의 「골절」 에 들어가는지는 보험사·약관마다 다릅니다.',doc:'진단서(코드 확인) · 수술확인서 · 세부내역서',say:'어머님 골절 보험 있으세요? 골절은 진단비가 따로 있는 경우가 많아요.',bridge:'부모님 · 낙상 → 가족'},
+ {k:'manual',n:'도수치료 · 체외충격파 · 비급여 MRI',how:'통원 · 반복',look:['실손 — 세대마다 한도·자기부담·횟수 조건이 다릅니다'],maybe:'',doc:'영수증 · 세부내역서 · (필요 시) 소견서',say:'실손을 언제 드셨는지가 중요해요. 오래된 실손은 함부로 바꾸시면 손해일 수 있어요.',bridge:'실손 세대 확인 → 보험료 비교'},
+ {k:'car',n:'교통사고로 다침',how:'원인이 사고',look:['자동차보험 (상대 차 · 내 차)','운전자보험 부상치료비 · 골절','상해수술비 · 상해입원'],maybe:'',doc:'사고 접수번호 · 진단서 · 세부내역서',say:'자동차보험 말고 운전자보험이나 상해보험에서도 따로 나올 수 있어요.',bridge:'운전자보험'},
+ {k:'fall',n:'넘어짐 · 미끄러짐 · 떨어짐',how:'원인이 다침',look:['상해수술비','골절진단비','상해후유장해'],maybe:'',doc:'진단서(상해 코드) · 수술확인서',say:'다치신 거면 질병 보험이 아니라 상해 쪽에서 나오는 게 따로 있어요.',bridge:'부모님 낙상 → 가족'}
+];
+
+var CI_TALK=[
+ {at:'접수 대기',say:'청구 서류 다 챙기셨어요? 빠진 게 있으면 다시 오셔야 해서, 제가 한번 봐 드릴게요.',tip:'첫 말은 돕는 말. 명함보다 서류 체크리스트를 먼저 드립니다.'},
+ {at:'서류 볼 때',say:'목이세요, 허리세요? 저절로 아프셨어요, 다치셨어요?',tip:'② 다섯 질문. 이 둘로 담보가 갈립니다.'},
+ {at:'다리 놓기',say:'이번 거 청구하시는 김에, 예전에 받으실 수 있었는데 놓치신 건 없는지 같이 볼까요? 가족분 것도 돼요.',tip:'④ 한 장 질문지로 넘어갑니다. 동의를 먼저 받습니다.'},
+ {at:'헤어질 때',say:'지급 결과 나오면 제가 먼저 연락드릴게요. 전화가 편하세요, 문자가 편하세요?',tip:'만남 약속이 아니라 「결과 연락」 약속. 이것이 2차 접점입니다.'},
+ {at:'결과 전화',say:'청구하신 거 결과 나왔어요. 그리고 지난번에 같이 본 것 중에 더 찾을 게 있어서요. 뵙고 종이로 보여 드릴게요. 이번 주와 다음 주 중 언제가 편하세요?',tip:'둘 중 하나로 약속. 결과가 안 좋으면 그 까닭부터 설명합니다.'},
+ {at:'만남',say:'오늘은 세 가지만 볼게요. 못 받은 보험금, 지금 내시는 보험료, 할인 붙는지.',tip:'보장 빈칸 이야기는 세 가지를 다 보여 드린 다음에.'}
+];
+
+/* 질문지 — v 값 「모름」 은 「없음」 이 아닙니다 (1번) */
+var CI_Q=[
+ {g:'0',gt:'동의부터 (고객이 직접)',items:[
+   {id:'agPriv',q:'개인정보 수집·이용에 동의합니다',o:['동의','안 함']},
+   {id:'agHealth',q:'건강정보(민감정보) 수집·이용에 따로 동의합니다',o:['동의','안 함']},
+   {id:'agCall',q:'보험 상담 연락을 받겠습니다 (선택)',o:['동의','안 함']}
+ ]},
+ {g:'A',gt:'이번에 오신 일',items:[
+   {id:'part',q:'어디가 아프세요?',o:['목','허리','등','모름']},
+   {id:'cause',q:'어떻게 시작됐어요?',why:'질병 · 상해가 갈립니다',o:['저절로','교통사고','넘어짐·다침','모름']},
+   {id:'proc',q:'어떤 치료를 받으셨어요?',o:['주사','관·고주파 시술','내시경·현미경 수술','유합·인공디스크','압박골절 시멘트','도수·충격파','모름']},
+   {id:'adm',q:'입원하셨어요?',o:['안 함','했음','모름']}
+ ]},
+ {g:'B',gt:'숨은 보험금',items:[
+   {id:'past',q:'청구 기한 안에 받은 치료가 또 있으세요?',why:'내시경 용종 제거 · 깁스 · 치과 치료도 해당될 수 있습니다',o:['있다','없다','모름']},
+   {id:'pastClaim',q:'그건 청구하셨어요?',o:['다 했다','일부만','안 했다','모름']},
+   {id:'famHosp',q:'가족 중에 최근 병원 다니신 분은요?',o:['있다','없다','모름']}
+ ]},
+ {g:'C',gt:'보험료',items:[
+   {id:'burden',q:'지금 내시는 보험료, 어떠세요?',o:['부담된다','적당하다','모름']},
+   {id:'renew',q:'보험료 오른다는 갱신 안내 받으신 적 있으세요?',o:['있다','없다','모름']},
+   {id:'silson',q:'실손은 언제 드셨어요?',why:'세대는 증권으로 확인합니다',o:['오래전','몇 년 안 됨','없다','모름']}
+ ]},
+ {g:'D',gt:'할인',items:[
+   {id:'noacc',q:'가족 중에 한동안 입원·수술 없이 지내신 분 계세요?',why:'무사고 할인 — 이번에 치료받으신 본인보다 가족이 대상일 수 있습니다',o:['있다','없다','모름']}
+ ]},
+ {g:'E',gt:'보장 빈칸',items:[
+   {id:'cancer',q:'암 진단비',o:['있다','없다','모름']},
+   {id:'brain',q:'뇌 진단비',why:'뇌출혈만인지, 더 넓은 범위인지',o:['있다','없다','모름']},
+   {id:'heart',q:'심장 진단비',why:'급성심근경색만인지, 더 넓은 범위인지',o:['있다','없다','모름']},
+   {id:'drive',q:'운전 하세요?',o:['한다','안 한다']},
+   {id:'driver',q:'운전자보험',o:['있다','없다','모름']}
+ ]},
+ {g:'F',gt:'가족',items:[
+   {id:'fam',q:'같이 점검받고 싶은 가족',multi:1,o:['배우자','부모님','자녀','형제']}
+ ]}
+];
+
+var CI_AGE=[
+ {a:'40대',one:'「아직 젊다」 가 함정 — 일을 쉬면 수입이 끊기는 나이입니다.',look:['암 진단비와 치료비','뇌 · 심장 진단비의 범위 (넓은 쪽으로)','운전자보험 (출퇴근 · 운전 많음)','실손 세대'],bridge:'허리로 일 쉬어 보셨잖아요. 그게 더 길었으면 어떠셨을까요?',care:'갱신형이 많으면 나중 보험료가 오릅니다 → 보험료 비교로 보여 드립니다.'},
+ {a:'50대',one:'갱신 보험료가 오르기 시작하고, 큰 병 이야기가 주변에서 들리는 나이입니다.',look:['갱신 내역 → 보험료 비교','암 · 뇌 · 심장 — 진단비만 있고 치료비가 비었는지','수술비 (여러 회사에서 따로 나오는지)','간병인 담보'],bridge:'이번 수술비, 몇 군데서 나오는지 보셨죠? 다른 큰 병도 그렇게 미리 봐 둘까요?',care:'병력이 늘어나는 나이 — 청약서에 사실대로 알리고, 간편심사 상품도 같이 비교합니다. 결과는 심사에 따릅니다.'},
+ {a:'60대',one:'새로 드는 것보다 <b>있는 것을 지키는</b> 나이입니다.',look:['지금 계약의 만기 · 갱신','실손 유지','골절 · 수술비','간병 · 치매 (장기요양)'],bridge:'어머님·아버님 골절이나 낙상은 따로 보는 게 있어요. 지금 것부터 지켜 드릴게요.',care:'있던 계약을 깨고 새로 드는 것은 손해일 때가 많습니다 → 꼭 나란히 비교부터.'}
+];
+
+var CI_FOUR=[
+ {k:'암',bridge:'디스크는 오래 가도 낫는 병이잖아요. 그 나이에 제일 큰돈 드는 병이 뭔지는 같이 한번 보셔야 해요.',look:['일반암 진단비가 있는지','유사암 · 소액암에만 몰려 있지 않은지','치료비 (항암 · 방사선 · 표적) 담보','갱신 · 만기']},
+ {k:'뇌',bridge:'뇌 쪽은 이름이 비슷해도 범위가 많이 달라요. 지금 것이 어디까지인지만 보세요.',look:['뇌출혈만 → 뇌경색까지 → 뇌혈관질환 전체','진단비와 치료비를 나눠서']},
+ {k:'심장',bridge:'심장도 뇌처럼 범위가 갈려요. 급성심근경색만 되는 경우가 많거든요.',look:['급성심근경색만 → 허혈성심장질환 → 더 넓은 범위','진단비와 치료비를 나눠서']},
+ {k:'운전자',bridge:'자동차보험은 차랑 상대방을 보는 거고, 운전한 내가 겪는 형사 쪽 비용은 운전자보험이 봐요.',look:['교통사고처리지원금 · 벌금 · 변호사선임비용','부상치료비 · 골절','가족 중 운전하는 분']}
+];
+var CI_FOUR_NOTE='척추 치료 이력은 청약서에 <b>사실대로 알립니다</b>. 그 부위를 빼고(부담보) 받거나, 보험료가 오르거나, 거절될 수 있습니다 — <b>심사 결과에 따릅니다</b>. 암·뇌·심장은 다른 부위라 진행될 수도 있지만 장담하지 않습니다.';
+
+var CI_FAM=[
+ {w:'배우자',look:'갱신 보험료 · 암 · 뇌 · 심장 범위',say:'사모님(바깥분) 보험도 같은 날 같이 보시면 한 번에 끝나요.'},
+ {w:'부모님',look:'골절 · 수술비 · 간병 · 실손 유지 · 숨은 보험금 (백내장 · 골절 등 지난 치료)',say:'부모님 병원 다니신 것 중에 청구 안 하신 건 없으세요?'},
+ {w:'자녀',look:'실손 · 첫 차라면 운전자보험',say:'자녀분 실손은 있으세요? 운전 시작했으면 운전자보험도요.'},
+ {w:'무사고 할인',look:'이번에 치료받은 본인은 대상이 아닐 수 있습니다 — 한동안 병원 안 가신 가족이 대상',say:'고객님은 이번에 치료받으셔서 아니어도, 가족분은 할인 붙을 수 있어요.',link:'📞 30초 TA · 무사고 할인'}
+];
+
+var CI_HOOK=[
+ {n:'청구 서류 점검 (무료)',get:'다시 안 와도 됨',we:'동의 · 결과 연락 약속',to:'②·③'},
+ {n:'숨은 보험금 조회 — 본인 · 가족',get:'몰랐던 보험금',we:'가족 이야기 · 만남',to:'④ B · 내보험찾아줌(고객이 직접 조회 가능)'},
+ {n:'무사고 할인 확인 — 가족',get:'보험료가 깎일 수 있음',we:'가족 계약 · 증권',to:'📞 30초 TA · 무사고 할인'},
+ {n:'보험료 비교표 (갱신 예정분)',get:'앞으로 오를 보험료를 미리 앎',we:'증권 전체',to:'④ C'},
+ {n:'실손 세대 진단',get:'「바꾸면 손해인지」 앎',we:'신뢰 — 팔지 않는 조언',to:'④ C'},
+ {n:'가족 한 장 점검',get:'가족 보험을 한 번에',we:'가족 만남',to:'⑦'},
+ {n:'작은 상품 (운전자 등)',get:'부담 적은 첫 보장',we:'첫 계약',to:'🧭 상품전략기 「🎣 문 열기」'}
+];
+
+var CI_LINE=[
+ '청구 도움은 <b>무료</b>입니다. 보수를 받고 청구를 대신하면 손해사정 자격 문제가 됩니다 (보험업법).',
+ '병원이 환자 정보를 넘겨주지 않습니다. <b>고객이 직접 적고 동의</b>합니다. 건강정보는 <b>따로</b> 동의받습니다 (개인정보보호법).',
+ '병원과 소개비 · 대가를 주고받지 않습니다 — 환자 유인 문제가 될 수 있습니다 (의료법). 자리는 병원과 정식으로 정합니다.',
+ '시술을 권하거나 말리지 않습니다. 치료 판단은 의사의 몫입니다.',
+ '「나옵니다」 라고 약속하지 않습니다. 「청구해 보고 심사 결과로 알려 드릴게요」.',
+ '있던 계약을 깨고 새로 드는 권유는 <b>나란히 비교</b>부터 — 손해일 때가 많습니다.',
+ '진료 서류 · 신분증 사진을 개인 폰에 쌓아 두지 않습니다. 원본은 고객이 가져갑니다.',
+ '상담 연락에 동의하지 않은 분께는 <b>결과 안내만</b> 하고 만남을 권하지 않습니다.'
+];
+</script>
+
+<script>
+(function(){
+  function $(id){return document.getElementById(id);}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  var A={}, AGE='';
+
+  $('nav').innerHTML=CI_NAV.map(function(n){return '<a href="#'+n[0]+'">'+n[1]+'</a>';}).join('');
+  $('flow').innerHTML=CI_FLOW.map(function(f,i){return '<div><b><i>'+(i+1)+'</i>'+f.t+'</b><span>'+f.d+'</span></div>';}).join('');
+  $('ask5').innerHTML=CI_ASK5.map(function(a,i){return '<div class="card"><h3>'+(i+1)+'. '+a.q+'</h3><div class="how">'+a.w+'</div></div>';}).join('');
+  $('docs').innerHTML='<tr><th style="width:30%">서류</th><th>무엇을 보나</th></tr>'+CI_DOCS.map(function(d){return '<tr><td>'+d[0]+'</td><td>'+d[1]+'</td></tr>';}).join('');
+  function procCard(p){
+    return '<div class="card" id="p-'+p.k+'"><h3>'+p.n+'</h3><div class="how">'+p.how+'</div>'+
+      '<div class="lbl">볼 담보</div><ul>'+p.look.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'+
+      (p.maybe?'<div class="warn">⚠ '+p.maybe+'</div>':'')+
+      '<div class="lbl">서류</div><div style="font-size:13.5px">'+p.doc+'</div>'+
+      '<div class="say">💬 '+p.say+'</div>'+
+      '<div class="how" style="margin-top:4px">➜ 다음 다리: '+p.bridge+'</div></div>';
+  }
+  $('procs').innerHTML=CI_PROC.map(procCard).join('');
+  $('talks').innerHTML=CI_TALK.map(function(t){return '<div class="card"><h3>'+t.at+'</h3><div class="say">💬 '+t.say+'</div><div class="how" style="margin-top:4px">'+t.tip+'</div></div>';}).join('');
+  $('ages').innerHTML=CI_AGE.map(function(a){
+    return '<div class="card" id="age-'+a.a+'"><h3>'+a.a+'</h3><div style="font-size:14px;font-weight:700">'+a.one+'</div>'+
+      '<div class="lbl">먼저 볼 담보</div><ul>'+a.look.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'+
+      '<div class="say">💬 '+a.bridge+'</div><div class="warn">⚠ '+a.care+'</div></div>';
+  }).join('');
+  $('fours').innerHTML=CI_FOUR.map(function(f){
+    return '<div class="card"><h3>'+f.k+'</h3><div class="say">💬 '+f.bridge+'</div><div class="lbl">볼 것</div><ul>'+f.look.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>';
+  }).join('')+'<div class="warn" style="margin-top:8px">⚠ '+CI_FOUR_NOTE+'</div>';
+  $('fams').innerHTML=CI_FAM.map(function(f){
+    return '<div class="card"><h3>'+f.w+'</h3><div class="how">볼 것 — '+f.look+'</div><div class="say">💬 '+f.say+'</div>'+
+      (f.link?'<div class="how go" style="margin-top:4px">➜ 제도 설명은 「'+f.link+'」 화면에 있습니다</div>':'')+'</div>';
+  }).join('');
+  $('hooks').innerHTML='<tr><th>미끼</th><th>고객이 얻는 것</th><th>우리가 얻는 것</th><th>어디서</th></tr>'+
+    CI_HOOK.map(function(h){return '<tr><td><b>'+h.n+'</b></td><td>'+h.get+'</td><td>'+h.we+'</td><td>'+h.to+'</td></tr>';}).join('');
+  $('lines').innerHTML=CI_LINE.map(function(l){return '<li>'+l+'</li>';}).join('');
+
+  /* ── 질문지 ── */
+  $('ageBar').innerHTML=CI_AGE.map(function(a){return '<button type="button" data-age="'+a.a+'">'+a.a+'</button>';}).join('');
+  $('ageBar').addEventListener('click',function(e){
+    var b=e.target.closest('button');if(!b)return;
+    AGE=(AGE===b.getAttribute('data-age'))?'':b.getAttribute('data-age');
+    [].forEach.call($('ageBar').children,function(x){x.classList.toggle('on',x.getAttribute('data-age')===AGE);});
+    renderRes();
+  });
+  $('qs').innerHTML=CI_Q.map(function(g){
+    return '<div class="qg">'+g.g+' · '+g.gt+'</div>'+g.items.map(function(it){
+      return '<div class="q"><div class="qt">'+it.q+'</div>'+(it.why?'<div class="why">'+it.why+'</div>':'')+
+        '<div class="opts">'+it.o.map(function(o){
+          return '<label><input type="'+(it.multi?'checkbox':'radio')+'" name="'+it.id+'" value="'+esc(o)+'">'+esc(o)+'</label>';
+        }).join('')+'</div></div>';
+    }).join('');
+  }).join('');
+  $('qs').addEventListener('change',function(e){
+    var t=e.target;if(!t.name)return;
+    if(t.type==='checkbox'){
+      var arr=A[t.name]||[];var i=arr.indexOf(t.value);
+      if(t.checked&&i<0)arr.push(t.value);if(!t.checked&&i>=0)arr.splice(i,1);
+      A[t.name]=arr.length?arr:undefined;
+    } else A[t.name]=t.value;
+    [].forEach.call(document.querySelectorAll('input[name="'+t.name+'"]'),function(x){x.parentNode.classList.toggle('on',x.checked);});
+    renderRes();
+  });
+  $('bReset').onclick=function(){A={};AGE='';[].forEach.call(document.querySelectorAll('#qs input'),function(x){x.checked=false;x.parentNode.classList.remove('on');});
+    [].forEach.call($('ageBar').children,function(x){x.classList.remove('on');});renderRes();};
+  $('bPrint').onclick=function(){window.print();};
+
+  var PROC_OF={'주사':'inj','관·고주파 시술':'cath','내시경·현미경 수술':'scope','유합·인공디스크':'fuse','압박골절 시멘트':'comp','도수·충격파':'manual'};
+  function procName(k){for(var i=0;i<CI_PROC.length;i++)if(CI_PROC[i].k===k)return CI_PROC[i];return null;}
+
+  /* 답 → 먼저 할 것. 모름은 없음이 아니다 — 「증권으로 확인」 (1번) */
+  function ciPlan(A,age){
+    var out=[], yet=[];
+    var ids=[];CI_Q.forEach(function(g){g.items.forEach(function(it){ids.push(it);});});
+    ids.forEach(function(it){if(A[it.id]===undefined&&it.id!=='fam'&&!(it.id==='driver'&&A.drive==='안 한다'))yet.push(it.q);});
+    var noPriv=(A.agPriv==='안 함'||A.agHealth==='안 함');
+    var call=(A.agCall==='동의');
+    if(noPriv) return {stop:'개인정보·건강정보 동의가 없으면 질문지를 받지 않습니다. 청구 서류 점검만 도와 드립니다.',out:[],yet:[],call:false};
+    if(A.agPriv===undefined||A.agHealth===undefined)out.push({t:'동의부터 — 개인정보·건강정보 동의를 고객이 직접 고른 뒤에 묻습니다',go:'s-line'});
+    var pk=PROC_OF[A.proc];
+    if(pk){var p=procName(pk);out.push({t:'이번 청구 — '+p.n+': '+p.look.join(' · ')+(p.maybe?' (⚠ '+p.maybe+')':''),go:'p-'+pk});}
+    if(A.cause==='교통사고')out.push({t:'교통사고 — 자동차보험 말고 운전자보험·상해보험에서 따로 나오는지 확인',go:'p-car'});
+    if(A.cause==='넘어짐·다침')out.push({t:'다치신 것 — 상해수술비·골절진단비·상해후유장해 확인',go:'p-fall'});
+    if(A.adm==='했음')out.push({t:'입원 — 입원일당·간병 담보 청구 (입퇴원확인서)',go:'s-proc'});
+    if(A.past==='있다'&&A.pastClaim!=='다 했다')out.push({t:'숨은 보험금 — 지난 치료 '+(A.pastClaim==='모름'||!A.pastClaim?'청구했는지부터 확인':'청구 안 한 것 찾기')+' (내보험찾아줌은 고객이 직접 조회할 수 있습니다)',go:'s-hook'});
+    if(A.past==='모름')out.push({t:'숨은 보험금 — 지난 치료가 있었는지 기억이 안 나시면 보험사 지급 내역부터 같이 확인',go:'s-hook'});
+    if(A.famHosp==='있다')out.push({t:'가족 숨은 보험금 — 가족분 지난 치료도 같이 확인',go:'s-fam'});
+    if(A.burden==='부담된다'||A.renew==='있다')out.push({t:'보험료 비교표 — 갱신 예정분과 지금 보험료를 나란히',go:'s-hook'});
+    if(A.silson==='오래전')out.push({t:'실손은 지키는 쪽부터 — 바꾸기 전에 증권으로 세대 확인'+(pk==='manual'||pk==='inj'?' (도수·주사를 자주 받으시는 분은 특히)':''),go:'p-manual'});
+    if(A.silson==='모름')out.push({t:'실손 — 있는지·언제 들었는지 증권으로 확인',go:'p-manual'});
+    if(A.silson==='없다')out.push({t:'실손이 없다고 하심 — 증권으로 한 번 더 확인 (가입은 심사 결과에 따릅니다)',go:'p-manual'});
+    if(A.noacc==='있다')out.push({t:'무사고 할인 — 가족분 계약에 붙는지 확인 (제도 설명은 「📞 30초 TA · 무사고 할인」)',go:'s-fam'});
+    [['cancer','암'],['brain','뇌'],['heart','심장']].forEach(function(x){
+      if(A[x[0]]==='없다')out.push({t:x[1]+' — 비어 있다고 하심: 척추 이야기에서 건너가는 한마디 (⑥)',go:'s-four'});
+      if(A[x[0]]==='모름')out.push({t:x[1]+' — 모르심 (없다는 뜻이 아닙니다): 증권으로 있는지·범위 확인',go:'s-four'});
+      if(A[x[0]]==='있다'&&x[0]!=='cancer')out.push({t:x[1]+' — 있다고 하심: 범위가 좁지 않은지만 확인',go:'s-four'});
+    });
+    if(A.drive==='한다'&&A.driver==='없다')out.push({t:'운전자보험 — 운전하시는데 비어 있다고 하심',go:'s-four'});
+    if(A.drive==='한다'&&A.driver==='모름')out.push({t:'운전자보험 — 모르심: 증권으로 확인',go:'s-four'});
+    if(A.fam&&A.fam.length)out.push({t:'가족 점검 — '+A.fam.join(' · ')+' (⑦)',go:'s-fam'});
+    if(age){var ag=CI_AGE.filter(function(a){return a.a===age;})[0];out.push({t:age+' — '+ag.look.join(' · '),go:'age-'+age});}
+    return {out:out,yet:yet,call:call,callNo:A.agCall==='안 함'};
+  }
+  window.ciPlan=ciPlan;
+
+  function renderRes(){
+    var r=ciPlan(A,AGE), h='<h3>먼저 할 것</h3>';
+    if(r.stop){$('res').innerHTML=h+'<div class="stop">'+r.stop+'</div>';return;}
+    var any=Object.keys(A).some(function(k){return A[k]!==undefined;});
+    if(!any)h+='<div class="yet">아직 고른 답이 없습니다. 답이 없는 칸은 「없음」 으로 세지 않습니다.</div>';
+    if(r.out.length)h+='<ol>'+r.out.map(function(o){return '<li><a class="go" href="#'+o.go+'">'+esc(o.t)+'</a></li>';}).join('')+'</ol>';
+    if(r.callNo)h+='<div class="stop" id="resCall">상담 연락 동의 안 함 — 지급 결과 안내만 하고 만남은 권하지 않습니다.</div>';
+    else if(r.call)h+='<div class="how" id="resCall" style="margin-top:6px">상담 연락 동의 — 지급 결과 전화에서 만남을 둘 중 하나로 잡습니다 (③ 결과 전화).</div>';
+    if(r.yet.length)h+='<div class="yet" style="margin-top:6px">아직 — '+r.yet.length+'칸 (답이 없는 칸은 세지 않았습니다)</div>';
+    h+='<div class="yet" style="margin-top:6px">※ 지급 여부와 금액은 약관과 보험사 심사 결과에 따릅니다.</div>';
+    $('res').innerHTML=h;
+  }
+  renderRes();
+})();
+</script>
+</body>
+</html>
