@@ -17,8 +17,10 @@
        기록 cusLog(CUS.calls, touch) · 팩트파인딩 cmFfCount · 보장 OSCP · 권할 것 MK_TALK · APEX_STAGE · HM_DOOR
    ★ <b>저장 코드를 새로 짜지 않습니다</b> — 누르면 있던 고치기 칸(cuwSheet · cusReveal → cmCare · cmWorry …)이나
      있던 함수(ccSms · cuwWrite · cuwNxOpen · cqaWal · hmDoorGo · cusTab)를 부르기만 합니다.
-   ★ 시안에만 있고 라이브에 <b>칸이 없는 것</b>(하는 일 · 연락 편한 때 · 「보장분석」 단계)은 세우지 않습니다 —
-     빈칸을 「＋ 적기」 로 세우면 적을 곳이 없습니다. 「이분 여정」 은 다음 판입니다.
+   ★ 시안에만 있고 라이브에 <b>칸이 없는 것</b>(하는 일 · 연락 편한 때)은 세우지 않습니다 —
+     빈칸을 「＋ 적기」 로 세우면 적을 곳이 없습니다.
+     「이분 여정」 은 TA 스크립트 순서 열 칸 — 「오늘」 칸은 라이브 단계 · 약속 날로 셉니다. 보낸 날은 라이브에 안 남아 날짜를 지어 붙이지 않습니다.
+     「보낼 말」 은 TA_MSG 그대로, 「복사하고 보냈어요」 만 있던 접촉 기록(cmTouchAdd)에 한 줄 남깁니다.
 
    ── 깨지지 않게 ─────────────────────────────────────────────────
      · 예전 고객 창은 <b>그대로 그려지고 감춰지기만</b> 합니다(요약 탭 · 고치기 화면 아닐 때만).
@@ -67,7 +69,7 @@
       '@media print{#cusWin>.cv2-box{display:none!important}}',
       '.cv2{--bg:#F2F4F6;--card:#fff;--ink:#191F28;--sub:#4E5968;--sub2:#6B7684;--sub3:#8B95A1;--line:#E5E8EB;--line2:#F2F4F6;' +
         '--blue:#1A56DB;--blue-l:#EAF1FF;--green:#0B8A4E;--green-l:#E7F6EE;--warn:#C2410C;--warn-l:#FFF1E6;--r:20px;' +
-        'color:var(--ink);font-size:15px;line-height:1.45;word-break:keep-all;max-width:560px;margin:0 auto 12px;padding:0 12px;-webkit-font-smoothing:antialiased}',
+        'color:var(--ink);font-size:15px;line-height:1.45;word-break:keep-all;max-width:560px;margin:0 auto 12px;padding:0 18px;-webkit-font-smoothing:antialiased}',
       '.cv2 *{box-sizing:border-box}',
       '.cv2 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;text-align:left;margin:0}',
       '.cv2 a{color:inherit;text-decoration:none}',
@@ -138,7 +140,51 @@
       '.cv2 .kc b{font-size:15px;font-weight:700;margin-top:2px;line-height:1.35;word-break:keep-all}',
       '.cv2 .kc.e{background:transparent;border:1.5px dashed #D1D6DB}',
       '.cv2 .kc.e b{color:var(--blue);font-weight:700}',
-      '.cv2 .src{font-size:13px;color:var(--sub3);margin:12px 2px 0}'
+      '.cv2 .src{font-size:13px;color:var(--sub3);margin:12px 2px 0}',
+      /* 이분 여정 */
+      '.cv2 .jr{background:#fff;border-radius:18px;padding:8px 16px;margin-top:8px}',
+      '.cv2 .jr-r{display:flex;align-items:center;gap:10px;min-height:40px;font-size:14px;color:var(--sub3)}',
+      '.cv2 .jr-r i{width:10px;height:10px;border-radius:50%;border:2px solid #D1D6DB;flex:none;background:#fff}',
+      '.cv2 .jr-r.dn{color:var(--sub)}',
+      '.cv2 .jr-r.dn i{background:var(--green);border-color:var(--green)}',
+      '.cv2 .jr-r.now{color:var(--ink);font-weight:800}',
+      '.cv2 .jr-r.now i{background:var(--blue);border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-l)}',
+      '.cv2 .jr-t{flex:1}',
+      '.cv2 .jr-d{font-size:13px;font-weight:600}',
+      '.cv2 .jr-r button{height:44px;padding:0 12px;border-radius:10px;background:var(--blue);color:#fff;font-size:13px;font-weight:700;text-align:center}',
+      /* 시트 — 시안 .sheet · .dim (#cv2Sheet 아래로만) */
+      '#cv2Dim{position:fixed;inset:0;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .2s;z-index:9990}',
+      '#cv2Dim.on{opacity:1;pointer-events:auto}',
+      '#cv2Sheet{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:560px;background:#F2F4F6;border-radius:24px 24px 0 0;max-height:88vh;overflow-y:auto;' +
+        'transform:translateY(102%);transition:transform .28s cubic-bezier(.2,.8,.2,1);z-index:9991;padding:10px 20px calc(30px + env(safe-area-inset-bottom,0px));scrollbar-width:none}',
+      '#cv2Sheet.on{transform:none}',
+      '#cv2Sheet .grab{width:40px;height:5px;border-radius:3px;background:#D1D6DB;margin:0 auto 12px}',
+      '#cv2Sheet h1{font-size:24px;font-weight:800;letter-spacing:-.4px;line-height:1.3;margin:6px 0 4px}',
+      '#cv2Sheet .who2{font-size:14px;color:var(--sub2);font-weight:600}',
+      '#cv2Sheet .basis{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px}',
+      '#cv2Sheet .basis span{font-size:13px;font-weight:700;padding:4px 10px;border-radius:8px;background:var(--blue-l);color:var(--blue)}',
+      '#cv2Sheet .basis span.e{background:var(--warn-l);color:var(--warn)}',
+      '#cv2Sheet .rsec{margin-top:16px}',
+      '#cv2Sheet .rh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:0 2px}',
+      '#cv2Sheet .rh b{font-size:16px;font-weight:800;flex:none}',
+      '#cv2Sheet .rh span{font-size:13px;color:var(--sub3);font-weight:600;text-align:right}',
+      '#cv2Sheet .say{background:#fff;border-radius:16px;padding:16px 18px;font-size:16px;line-height:1.6;margin-top:6px}',
+      '#cv2Sheet .hint{font-size:13px;color:var(--blue);background:var(--blue-l);border-radius:10px;padding:8px 10px;margin:8px 0 10px}',
+      '#cv2Sheet .tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}',
+      '#cv2Sheet .tools span{height:36px;display:inline-flex;align-items:center;padding:0 12px;border-radius:12px;background:#fff;font-size:14px;font-weight:600;color:var(--sub)}',
+      '#cv2Sheet .rprod{margin-top:8px;font-size:14px;line-height:1.6;color:var(--sub);background:#fff;border-radius:14px;padding:12px 14px}',
+      '#cv2Sheet .rprod small{display:block;font-size:13px;color:var(--sub3)}',
+      '#cv2Sheet .card{background:#fff;border-radius:20px;padding:14px 16px;margin-top:6px}',
+      '#cv2Sheet .pt{font-size:16px;font-weight:800;color:var(--blue)}',
+      '#cv2Sheet .ln{font-size:15px;margin-top:6px;line-height:1.55}',
+      '#cv2Sheet .oq{font-size:14px;font-weight:800;color:var(--warn)}',
+      '#cv2Sheet .rno{margin-top:10px;padding-top:10px;border-top:1px solid var(--line2);font-size:14px;color:var(--warn);line-height:1.5}',
+      '#cv2Sheet .li .t2.wr{white-space:normal}',
+      '#cv2Sheet .li .t2 b{color:var(--blue);font-weight:700}',
+      '#cv2Sheet .btn{display:flex;align-items:center;justify-content:center;gap:6px;height:52px;border-radius:14px;font-size:16px;font-weight:700;width:100%;text-align:center;margin-top:12px}',
+      '#cv2Sheet .btn.p{background:var(--blue);color:#fff}',
+      '#cv2Sheet .btn.s{background:#fff;color:var(--ink)}',
+      '#cv2Sheet .btn.g{background:var(--line2);color:var(--ink);margin-top:8px}'
     ];
     var s = d.createElement('style'); s.id = 'cusV2Css'; s.textContent = C.join('\n');
     (d.head || d.documentElement).appendChild(s);
@@ -149,10 +195,12 @@
   function base(id) { return T(function () { return g.CM_BASE[id]; }, {}) || {}; }
   function dbRow() { return T(function () { return g.CUS.db; }, null); }
   function stageOf() { var d = dbRow(); return (d && d.stage) ? String(d.stage) : ''; }
-  /* 단계 다섯 칸 — 라이브 단계(APEX_STAGE.order) 를 시안 칸에 담습니다. 「보장분석」 은 라이브 단계가 아니라 안 세웁니다 */
+  /* 단계 여섯 칸 — 시안 그대로. 라이브 단계(APEX_STAGE.order)를 칸에 담습니다.
+     「보장분석」 은 라이브에 따로 된 단계가 없어(AP 안에서 함) 「지금」 으로는 안 켜지고, 제안(PC)부터 「지남」 으로 켜집니다 */
   var STG = [
     { t: '첫 전화', ab: 'TA', s: ['미접촉', '부재', 'TA'] },
     { t: '첫 만남', ab: 'AP', s: ['AP'] },
+    { t: '보장분석', ab: '', s: [] },
     { t: '제안', ab: 'PC', s: ['PC'] },
     { t: '청약', ab: 'CS', s: ['CS'] },
     { t: '관리', ab: '', s: ['계약완료', '증권전달', '소개완료'] }
@@ -172,12 +220,11 @@
     if (a != null || gd) bits.push([a != null ? a + '세' : '', gd].filter(Boolean).join(' · '));
     var area = d ? [d.region, d.dong].filter(Boolean).join(' ') : '';
     if (area) bits.push(area);
-    var who = T(function () { return g.cmWhoName(c); }, '');
-    if (who) bits.push('담당 ' + who);
+    /* 시안 그대로 — 나이 · 성별 · 동네만. 담당 · 「고치기」 는 시안에 없어 안 붙입니다(고치기는 「아는 것 › 나이 · 성별」) */
     var st = stageOf(), amt = d ? won(d.expect_premium) : '';
     return '<div class="who"><div class="av">' + E(nameOf(c).charAt(0)) + '</div><div class="wm">' +
       '<div class="nm">' + E(nameOf(c)) + '님</div>' +
-      '<div class="mt">' + (bits.length ? E(bits.join(' · ')) : '아직 아는 게 적어요') + ' <button type="button" onclick="oscTopEdit()">고치기</button></div></div>' +
+      '<div class="mt">' + (bits.length ? E(bits.join(' · ')) : '아직 아는 게 적어요') + '</div></div>' +
       (st === '거절' ? '<span class="chip w">거절</span>' : (amt ? '<span class="amt">예상 ' + E(amt) + '</span>' : '')) + '</div>';
   }
   function qaHtml(c) {
@@ -230,8 +277,9 @@
     '은퇴 준비': [{ tab: 'finance', track: 'w' }, { tab: 'finance', track: 'c' }]
   };
   var AGE_CAT = { '2030': 'hospital', '4050': 'cancer3', '60': 'care' };
-  var STAGE_KO = ['TA', 'AP', 'PC', 'CS', '계약완료'];
-  var OBJ_BY = [['think', 'many'], ['family', 'money'], ['think', 'money'], ['money', 'family'], ['agent', 'think']];
+  /* STG 여섯 칸과 같은 차례 (보장분석 칸은 AP 것을 씀) */
+  var STAGE_KO = ['TA', 'AP', 'AP', 'PC', 'CS', '계약완료'];
+  var OBJ_BY = [['think', 'many'], ['family', 'money'], ['family', 'money'], ['think', 'money'], ['money', 'family'], ['agent', 'think']];
   function catPick(c) {
     var M = T(function () { return g.MK_TALK.CATS; }, null); if (!M) return null;
     var m = meta(c.id), b = band(c.id), d = dbRow(), out = null;
@@ -250,38 +298,158 @@
   function appsFor(c) {
     var m = meta(c.id), ci = stgI(stageOf()), K = T(function () { return g.APEX_STAGE.of(STAGE_KO[ci < 0 ? 0 : ci]).know; }, []) || [], out = [], seen = {};
     var add = function (x) {
-      var key = x.tab;   /* 재무설계는 갈래(track)를 골라 여는 길이 없어 한 단추로 */ if (seen[key] || !can(x.tab)) return; seen[key] = 1;
+      var key = x.tab;   /* 재무설계는 갈래(track)를 골라 여는 길이 없어 한 단추로 */
+      if (seen[key]) { var o = seen[key]; if (!o.g && x.g) { o.g = x.g; o.w = x.w || o.w; } return; }   /* 상황 쪽이 먼저 섰으면 단계 쪽 까닭(g·w)만 얹음 */
+      if (!can(x.tab)) return;
       var it = T(function () { return g.navItemOf(x.tab); }, {}) || {};
-      out.push({ tab: x.tab, t: (it.icon ? it.icon + ' ' : '') + strip(it.title || x.tab) });
+      var row = { tab: x.tab, t: (it.icon ? it.icon + ' ' : '') + strip(it.title || x.tab), g: x.g || '', w: x.w || '' };
+      seen[key] = row; out.push(row);
     };
     (CARE_APP[m.care] || []).forEach(add);
     K.forEach(function (k) { if (!(k.tab === 'finance' && k.track)) add(k); });
     return out.slice(0, 4);
   }
-  function recHtml(c) {
-    var P = catPick(c), M = T(function () { return g.MK_TALK.CATS; }, null);
-    if (!M) return '';
-    var ci = stgI(stageOf()), b = band(c.id), tip = (T(function () { return g.APEX_STAGE.taAge; }, []) || []).filter(function (a) { return a.k === b; })[0];
+  /* 권할 것 한 벌 — 요약 칸과 「자세히」 시트가 같이 씁니다(한 곳에서 고름) */
+  function recPack(c) {
+    var M = T(function () { return g.MK_TALK.CATS; }, null);
+    if (!M) return null;
+    var P = catPick(c), ci = stgI(stageOf()), b = band(c.id), tip = (T(function () { return g.APEX_STAGE.taAge; }, []) || []).filter(function (a) { return a.k === b; })[0];
     var K = OBJ_BY[ci < 0 ? 0 : ci].slice();
     if (ci <= 0 && b === '2030') K = ['busy', 'phone'];
     if (ci === 1 && b === '60') K = ['meet', 'family'];
     var OL = T(function () { return g.APEX_STAGE.objList(); }, []) || [];
     var O = K.map(function (k) { return OL.filter(function (o) { return o.key === k; })[0]; }).filter(Boolean);
-    var C = P ? M[P.k] : null, A = appsFor(c);
-    return '<div class="recc"><div class="sit-h"><b>🧭 이분께 권할 것</b>' +
-      '<button type="button" onclick="hmDoorGo(\'' + Q(P ? P.k : '') + '\'' + (b === '2030' ? ',\'y2030\'' : '') + ')">상품전략기 ›</button></div>' +
-      '<div class="rr"><span>무엇을</span><b>' + (C ? E(C.label) + ' — ' + E((C.dambo || []).slice(0, 2).join(' · ')) + (P.why ? ' <i>(' + E(P.why) + ')</i>' : '') : '<i>지금 상황이나 나이를 적으면 나와요 — 지금은 이번 달 1위</i>') + '</b></div>' +
-      '<div class="rr"><span>어떻게</span><b>' + (tip ? E(strip(tip.pt)) : '<i>나이를 적으면 나와요</i>') + '</b></div>' +
-      (O.length ? '<div class="rr"><span>막히면</span><b>' + O.map(function (o) { return '「' + E(o.title) + '」'; }).join(' ') + '</b></div>' : '') +
-      (A.length ? '<div class="rapps">' + A.map(function (x) { return '<button type="button" onclick="go(\'' + Q(x.tab) + '\')">' + E(x.t) + '</button>'; }).join('') + '</div>' : '') +
+    return { P: P, C: P ? M[P.k] : null, b: b, tip: tip, O: O, A: appsFor(c), ci: ci };
+  }
+  function doorGo(R) { return 'hmDoorGo(\'' + Q(R.P ? R.P.k : '') + '\'' + (R.b === '2030' ? ',\'y2030\'' : '') + ')'; }
+  function recHtml(c) {
+    var R = recPack(c); if (!R) return '';
+    return '<div class="recc"><div class="sit-h"><b>🧭 이분께 권할 것</b><button type="button" onclick="cusV2Rec()">자세히</button></div>' +
+      '<div class="rr"><span>무엇을</span><b>' + (R.C ? E(R.C.label) + ' — ' + E((R.C.dambo || []).slice(0, 2).join(' · ')) : '<i>지금 상황이나 나이를 적으면 나와요</i>') + '</b></div>' +
+      '<div class="rr"><span>어떻게</span><b>' + (R.tip ? E(strip(R.tip.pt)) : '<i>나이를 적으면 나와요</i>') + '</b></div>' +
+      (R.O.length ? '<div class="rr"><span>막히면</span><b>' + R.O.map(function (o) { return '「' + E(o.title) + '」'; }).join(' ') + '</b></div>' : '') +
+      (R.A.length ? '<div class="rapps">' + R.A.map(function (x) { return '<button type="button" onclick="go(\'' + Q(x.tab) + '\')">' + E(x.t) + '</button>'; }).join('') + '</div>' : '') +
       '</div>';
   }
+  /* 「자세히」 — 시안 openRec 그대로: ① 무엇을(던지는 한마디 · 담보 · 이번 달 상품) ② 어떻게(나이대) ③ 들고 갈 화면 ④ 이 말이 나오면.
+     글은 전부 라이브 원본(MK_TALK · HM_DOOR_TOP · APEX_STAGE)에서 — 새로 지은 글 없음 */
+  function recSheet() {
+    var c = T(function () { return g.OSC.current; }, null); if (!c) return;
+    var R = recPack(c); if (!R) return;
+    var nm = nameOf(c), m = meta(c.id), d = dbRow(), ci = R.ci < 0 ? 0 : R.ci;
+    var aim = strip(T(function () { return g.APEX_STAGE.aimText(STAGE_KO[ci]); }, '') || '');
+    var h = '<div class="grab"></div><div class="who2">' + E(nm) + '님께 권할 것</div><h1>🧭 ' + (R.C ? E(R.C.label) : '이분께 맞는 것') + '</h1>';
+    h += '<div class="basis">' + (m.care ? '<span>지금 상황 · ' + E(m.care) + '</span>' : '<span class="e">지금 상황 모름</span>') +
+      (R.tip ? '<span>' + E(R.tip.t) + '</span>' : '<span class="e">나이 모름</span>') + '<span>' + E(STG[ci].t + (aim ? ' · ' + aim : '')) + '</span></div>';
+    if (R.C) {
+      var PR = T(function () { return g.HM_DOOR.prods(R.P.k); }, []) || [];
+      h += '<div class="rsec"><div class="rh"><b>① 무엇을</b><span>상품전략기 · ' + E(R.P.why || '') + '</span></div>' +
+        (R.C.hook ? '<div class="say">' + E(nm + '님, ' + R.C.hook) + '</div>' : '') +
+        '<div class="tools">' + (R.C.dambo || []).map(function (x) { return '<span>' + E(x) + '</span>'; }).join('') + '</div>' +
+        (PR.length ? '<div class="rprod">' + PR.map(function (p) { return '이번 달 · ' + E(p.co + ' · ' + p.nm); }).join('<br>') + '<small>설계사용 · 소식지 기준</small></div>' : '') +
+        '<button type="button" class="btn s" onclick="cusV2Close();' + doorGo(R) + '">🧭 상품전략기에서 이어 보기</button></div>';
+    }
+    if (R.tip) {
+      h += '<div class="rsec"><div class="rh"><b>② 어떻게</b><span>TA 스크립트 · ' + E(R.tip.t) + '</span></div><div class="card">' +
+        '<div class="pt">' + E(strip(R.tip.pt)) + '</div><div class="ln">' + E(strip(R.tip.tip)) + '</div>' +
+        (R.tip.add ? '<div class="ln">💬 ' + E(strip(R.tip.add)) + '</div>' : '') + (R.tip.no ? '<div class="rno">✕ ' + E(strip(R.tip.no)) + '</div>' : '') + '</div></div>';
+    } else {
+      h += '<div class="rsec"><div class="rh"><b>② 어떻게</b></div><button type="button" class="sit-empty" onclick="cusV2Close();oscTopEdit()">나이를 적으면 나이대별 권하는 법이 나와요 — 나이대만 알아도 꺼낼 이야기가 정해져요</button></div>';
+    }
+    if (R.A.length) {
+      h += '<div class="rsec"><div class="rh"><b>③ 들고 갈 화면</b><span>' + (m.care ? '상황 먼저 · 그다음 단계' : '단계에 맞춰') + '</span></div><div class="list">' +
+        R.A.map(function (x) { return '<button type="button" class="li" onclick="cusV2Close();go(\'' + Q(x.tab) + '\')"><div class="tx"><div class="t1">' + E(x.t) + '</div>' + (x.w ? '<div class="t2 wr">' + (x.g ? '<b>' + E(x.g.replace(/^▶️\s*/, '')) + '</b> · ' : '') + E(x.w) + '</div>' : '') + '</div><span class="ar">›</span></button>'; }).join('') + '</div></div>';
+    }
+    if (R.O.length) {
+      var src = d && d.source ? d.source : '';
+      var fill = function (t) { return t ? strip(T(function () { return g.APEX_STAGE.objFill(t, nm, src); }, t) || '') : ''; };
+      h += '<div class="rsec"><div class="rh"><b>④ 이 말이 나오면</b><span>TA 스크립트 거절 처리</span></div>' + R.O.map(function (o) {
+        return '<div class="card"><div class="oq">「' + E(o.title) + '」</div>' + (o.one || o.follow ? '<div class="ln">' + E([fill(o.one), fill(o.follow)].filter(Boolean).join(' ')) + '</div>' : '') + (o.avoid ? '<div class="rno">✕ ' + E(fill(o.avoid)) + '</div>' : '') + '</div>';
+      }).join('') + '</div>';
+    }
+    h += '<button type="button" class="btn p" onclick="cusV2Close();cusTab(\'talk\');cuwNxOpen()">📅 이 권유로 연락 일정 잡기</button>';
+    sheet(h);
+  }
+
+  /* 이분 여정 — 시안 그대로 TA 스크립트 순서 열 칸. 「지금」 은 라이브 단계 · 약속 날로 셉니다.
+     ⚠ 칸마다 보낸 날은 라이브에 따로 남지 않아(접촉 기록엔 무엇을 보냈는지 열쇠가 없음) 날짜를 지어 붙이지 않습니다 —
+       지난 칸은 초록 점만 섭니다. 「보낼 말」 은 TA 스크립트 문자·카톡(ta-msg.js TA_MSG) 그대로 */
+  var JSTEP = [
+    { k: 'call', t: '첫 전화', ic: '📞' }, { k: 'ok', t: '예약 확인 카톡', ic: '💬' }, { k: 'eve', t: '전날 확인', ic: '💬' }, { k: 'go', t: '당일 출발', ic: '🚗' },
+    { k: 'meet', t: '만남', ic: '🤝' }, { k: 'thanks', t: '만난 직후 감사', ic: '🙏' }, { k: 'report', t: '분석표 전달', ic: '📑' }, { k: 'later', t: '결정 보류 1주 후', ic: '⏳' },
+    { k: 'signed', t: '계약 감사', ic: '✍️' }, { k: 'pdel', t: '증권 전달', ic: '📬' }
+  ];
+  function jNow(c) {
+    var st = stageOf(), ci = stgI(st), t = T(function () { return g.cuwToday(); }, ''), ap = T(function () { return g.cuwAppt(c); }, '');
+    var ad = ap ? T(function () { return g.cuwApptDay(ap); }, '') : '';
+    var tm = ''; try { var dt = new Date(t + 'T00:00:00Z'); dt.setUTCDate(dt.getUTCDate() + 1); tm = dt.toISOString().slice(0, 10); } catch (e) { tm = ''; }
+    if (st === '거절' || ci < 0) return null;
+    if (ci <= 1) {
+      if (ad && ad === t) return 'go';
+      if (ad && ad === tm) return 'eve';
+      if (ad && ad > tm) return 'ok';
+      if (ci === 1) return (ad && ad < t) ? 'thanks' : 'meet';
+      return 'call';
+    }
+    if (ci === 3) return 'later';
+    if (ci === 4) return 'signed';
+    if (ci === 5) return st === '계약완료' ? 'pdel' : 'done';
+    return null;
+  }
+  function jIdx(k) { for (var i = 0; i < JSTEP.length; i++) if (JSTEP[i].k === k) return i; return -1; }
+  function msgOf(k) { return (T(function () { return g.TA_MSG.MSG; }, []) || []).filter(function (x) { return x.k === k; })[0] || null; }
+  function jHtml(c) {
+    var now = jNow(c); if (now === null) return '';
+    var ni = now === 'done' ? JSTEP.length : jIdx(now);
+    return '<div class="sec"><b>이분 여정</b><small>TA 스크립트 순서</small></div><div class="jr">' + JSTEP.map(function (s, i) {
+      var cls = i < ni ? 'dn' : (i === ni ? 'now' : ''), btn = '';
+      if (i === ni && s.k === 'call') btn = '<button type="button" onclick="go(\'ta_script\')">TA 대본</button>';
+      else if (i === ni && msgOf(s.k)) btn = '<button type="button" onclick="cusV2Msg(\'' + s.k + '\')">보낼 말</button>';
+      return '<div class="jr-r ' + cls + '"><i></i><span class="jr-t">' + s.ic + ' ' + s.t + '</span><span class="jr-d">' + (i === ni ? '오늘' : '') + '</span>' + btn + '</div>';
+    }).join('') + '</div>';
+  }
+  /* 보낼 말 — TA_MSG.textFor(열쇠, 고객 칸, 'kakao'). 「복사하고 보냈어요」 는 있던 접촉 기록(cmTouchAdd)에 한 줄 */
+  function msgCtx(c) {
+    var d = dbRow(), ap = T(function () { return g.cuwAppt(c); }, ''), f = {};
+    try { f = (JSON.parse(g.localStorage.getItem('ta_final_v1') || '{}').f) || {}; } catch (e) { f = {}; }
+    return { c: nameOf(c), me: T(function () { return g.OS.profile.name; }, ''), area: f.area || '', when: ap ? T(function () { return g.cuwApptTxt(ap); }, '') : '',
+      where: '', date: '', db: d && d.source ? d.source : '' };
+  }
+  function msgSheet(k) {
+    var c = T(function () { return g.OSC.current; }, null), M = msgOf(k); if (!c || !M) return;
+    var tx = T(function () { return g.TA_MSG.textFor(k, msgCtx(c), 'kakao'); }, '') || '';
+    MSG_NOW = { k: k, t: M.t, tx: tx };
+    sheet('<div class="grab"></div><div class="who2">' + E(nameOf(c)) + '님 · TA 스크립트</div><h1>' + E(M.t) + '</h1>' +
+      (M.note ? '<div class="hint">' + E(strip(M.note)) + '</div>' : '') +
+      '<div class="say">' + E(tx).replace(/\n/g, '<br>') + '</div>' +
+      '<button type="button" class="btn p" onclick="cusV2Sent()">💬 복사하고 보냈어요</button>' +
+      '<button type="button" class="btn g" onclick="cusV2Copy()">복사만</button>');
+  }
+  var MSG_NOW = null;
+  function copyNow() { if (!MSG_NOW) return; try { g.copyText(MSG_NOW.tx); } catch (e) {} }
+  function sentNow() {
+    var c = T(function () { return g.OSC.current; }, null); if (!c || !MSG_NOW) return;
+    copyNow();
+    try { g.cmTouchAdd(c.id, 'TA 카톡 · ' + MSG_NOW.t, '카톡', T(function () { return g.cuwToday(); }, undefined)); } catch (e) {}
+    close();
+  }
+
+  /* 시트 — 시안 .sheet/.dim 그대로(#cv2Sheet 아래로만) */
+  function sheet(inner) {
+    var d = g.document, dim = el('cv2Dim'), sh = el('cv2Sheet');
+    if (!dim) { dim = d.createElement('div'); dim.id = 'cv2Dim'; dim.setAttribute('onclick', 'cusV2Close()'); d.body.appendChild(dim); }
+    if (!sh) { sh = d.createElement('div'); sh.id = 'cv2Sheet'; sh.className = 'cv2'; d.body.appendChild(sh); }
+    sh.innerHTML = inner; sh.scrollTop = 0;
+    try { g.setTimeout(function () { dim.classList.add('on'); sh.classList.add('on'); }, 10); } catch (e) {}
+  }
+  function close() { var a = el('cv2Dim'), b = el('cv2Sheet'); if (a) a.classList.remove('on'); if (b) b.classList.remove('on'); }
 
   /* 아는 것 — 라이브 고객 칸이 <b>있는 것만</b>. 누르면 그 칸이 있는 고치기 화면으로(cusReveal) */
   function knowCells(c) {
     var id = c.id, m = meta(id), b = base(id), d = dbRow(), a = ageNum(id), gd = b.gd === 'M' ? '남' : (b.gd === 'F' ? '여' : '');
     var L = [{ l: '나이 · 성별', v: [a != null ? a + '세' : '', gd].filter(Boolean).join(' · '), go: 'oscTopEdit()' }];
-    if (d) L.push({ l: '사는 곳', v: [d.region, d.dong].filter(Boolean).join(' '), go: 'cusTab(\'info\')' });
+    /* 사는 곳 — 라이브엔 배정 줄(dbs)의 동네뿐. 줄이 없으면 빈칸(정보 탭으로) */
+    L.push({ l: '사는 곳', v: d ? [d.region, d.dong].filter(Boolean).join(' ') : '', go: 'cusTab(\'info\')' });
     L.push({ l: '가족', v: m.fam, go: 'cusV2Jump(\'cmFam\')' });
     L.push({ l: '생일', v: m.bd, go: 'cusV2Jump(\'cmBd\')' });
     L.push({ l: '계약일', v: m.cd, go: 'cusV2Jump(\'cmCd\')' });
@@ -327,13 +495,15 @@
       return '<button type="button" class="li" onclick="cusTab(\'' + r[0] + '\')"><div class="tile">' + r[1] + '</div><div class="tx"><div class="t1">' + r[2] + (n ? ' <small style="color:var(--blue)">' + n + '</small>' : '') + '</div><div class="t2">' + r[3] + '</div></div><span class="ar">›</span></button>';
     }).join('') + '</div>';
   }
-  function srcHtml() {
-    var d = dbRow();
-    return d && d.source ? '<div class="src">' + E('배정 DB · ' + d.source) + '</div>' : '';
+  /* 맨 아래 한 줄 — 어디서 오신 분인가(시안 그대로). 배정 줄 출처 → 고객 갈래(cregSrcName) → 엑셀 갈래 */
+  function srcHtml(c) {
+    var d = dbRow(), m = meta(c.id);
+    var t = (d && d.source) ? '배정 DB · ' + d.source : (T(function () { return g.cregSrcName(m.src); }, '') || m.xsrc || '');
+    return t ? '<div class="src">' + E(t) + (m.ref ? ' · 소개 ' + E(m.ref) : '') + '</div>' : '';
   }
   function part(fn, c) { try { return fn(c) || ''; } catch (e) { return ''; } }
   function inner(c) {
-    return topHtml() + part(whoHtml, c) + part(qaHtml, c) + part(stepsHtml, c) + part(sitHtml, c) + part(recHtml, c) +
+    return topHtml() + part(whoHtml, c) + part(qaHtml, c) + part(stepsHtml, c) + part(sitHtml, c) + part(recHtml, c) + part(jHtml, c) +
       part(knowHtml, c) + part(insHtml, c) + part(logHtml, c) + part(moreHtml, c) + part(srcHtml, c);
   }
 
@@ -380,10 +550,15 @@
   }
 
   g.CUS_V2 = { on: on, set: set, html: html, paint: paint, use: use, jump: jump, KEY: KEY, allowed: function () { return ALLOWED; },
-    STG: STG, stgI: stgI, catPick: catPick, knowCells: knowCells };
+    STG: STG, stgI: stgI, catPick: catPick, knowCells: knowCells, jNow: jNow, JSTEP: JSTEP };
   /* index.html · onclick 이 부르는 이름 — 점(.) 없는 함수여야 check-hmclick 이 「부르는 함수가 있다」 고 읽습니다 */
   g.cusV2Html = html;
   g.cusV2Paint = paint;
   g.cusV2Use = use;
   g.cusV2Jump = jump;
+  g.cusV2Rec = recSheet;
+  g.cusV2Msg = msgSheet;
+  g.cusV2Sent = sentNow;
+  g.cusV2Copy = copyNow;
+  g.cusV2Close = close;
 })(window);
