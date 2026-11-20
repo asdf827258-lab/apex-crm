@@ -3215,6 +3215,7 @@ body.insight-mode #insightScreen{display:block;}
 <script src="상담자료/mikki-talk-data.js"></script>
 <script src="hm-door.js"></script>
 <script src="hm-tamsg.js"></script>
+<script src="home-v2.js"></script>
 <script src="hm-door-top.js"></script>
 <!-- 🎬 발표 덱 트랙 표 — 계산기와 <b>같은 한 파일</b>을 봅니다 (판 X333).
      사장님 말씀 「오늘 에서 AP, PC 에서 각자 뜰 수 있도록 각 파트별로 다
@@ -21804,6 +21805,8 @@ function go(tab){
   navMark(tab);
   var dyn=$('dynPane');
   if(tab==='home'||tab==='dashboard'){dyn.innerHTML=(typeof osRole==='function'&&typeof osEsc==='function'&&typeof renderHome==='function')?renderHome():renderDashboard();
+    /* ✨ 새 오늘 화면 (판 X502) — 이 기기에서 켰을 때만 보이는 차례를 바꿉니다. 꺼져 있으면 아무것도 안 합니다 (home-v2.js) */
+    try{ if(window.HOME_V2)HOME_V2.apply(dyn); }catch(eV2){}
     /* 🗂️ 맨 위 왼쪽 칸의 수 — <b>홈 글이 들어간 바로 뒤</b>입니다. 손에 있는
        AR.db 만 세고 서버는 안 부릅니다 (7번). 아직 안 실렸으면 hmPaint 가
        다시 그립니다 — 거기서도 서버에 안 갑니다.                      */
@@ -22302,8 +22305,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-20 13:47';
-var APP_BUILD_NOTE='🔎 <b>예외질환 중계를 진료분석에서도</b>(판 X501 · 사장님 말씀 「심평원자료로 알릴의무와 예외질환 까지 찾아주는 원툴」). ◾ 고지체크 사이트의 진료분석이 병력마다 받아 주는 곳(A+에셋 예외질환)을 이 CRM 중계로 바로 가져옵니다 — 아는 주소만 허락.';
+var APP_BUILD='2026-11-20 14:15';
+var APP_BUILD_NOTE='✨ <b>새 「오늘」 화면 (시험)</b>(판 X502 · 사장님 말씀 「목각으로 만든 부분이랑 많이 다른데」 → 「새 홈을 만들어서 … 언제든 빽업할수 있도록」) — 인사 줄 오른쪽 「✨ 새 화면」 을 누른 기기에서만, 시안 차례(인사·다섯 걸음 → 지금 이분 → 이번 주·동선 → 단계 → 오늘 돌아보기)로 보이고 나머지 칸은 맨 밑 「☰ 다른 칸 펼쳐 보기」 에 접힙니다. 「↩ 예전 화면」 한 번이면 그대로 돌아갑니다.';
 
 
 
@@ -40766,7 +40769,10 @@ function hmTossGreet(){
      화면에 「오늘 N분/명/개」 라고 적는 자리는 <b>반드시</b> 답니다 —
      안 달면 check-onesay 가 셉니다. 숫자를 바꾸는 표가 아니라 <b>이름표</b>입니다.
      같은 이름표끼리 수가 다르면 그 자리에서 빨간불이 켜집니다 (5번).       */
-  return '<div class="tz-greet">'+osEsc(nm||'설계사')+'님, '+
+  /* ✨ 오른쪽 작은 단추 — 「새 화면」 ↔ 「예전 화면」 (판 X502 · home-v2.js 가 글을 정함, 줄 높이 그대로) */
+  var v2='';
+  try{ v2=(window.HOME_V2&&HOME_V2.chip)?HOME_V2.chip():''; }catch(eV2){ v2=''; }
+  return '<div class="tz-greet">'+v2+osEsc(nm||'설계사')+'님, '+
     '<span data-ask="오늘몇분">'+(n?('오늘 '+n+'개예요'):'오늘 챙길 것이 없어요')+'</span></div>';
 }
 /* ══ ▬ <b>진행 막대와 「몇 / 몇」</b> — 목업에 있는데 없던 것 ═══════════
