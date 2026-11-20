@@ -86,7 +86,10 @@ window.osClient=function(){
    자가 서버를 부르지 않으므로 여기에 적어 둡니다. 앱이 없는 상태를 보내면
    insert 가 터지고, 있는 상태를 빠뜨리면 그 청구를 적을 길이 없습니다. */
 const 서버상태 = ['intake', 'supplement', 'paid', 'reduced', 'denied', 'reappeal', 'closed'];
-const NEED = 47;
+const NEED = 48;   /* ★ 판 X503 — 채용 대기열을 넣으면서 SETUP_VER 을 47 → 48 로
+                       올렸습니다. 이 자는 셋(SETUP_VER · 앱 안 schema_version · CLM_NEED)이
+                       같은지를 보므로 여기도 같이 올립니다 — 한 곳만 남겨 두면 청구 칸이
+                       「준비가 안 됐습니다」 로 영영 서 있게 됩니다 (5번). */
 
 (async () => {
   const SRC = fs.readFileSync('app/index.html', 'utf8');
