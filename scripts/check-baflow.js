@@ -39,6 +39,8 @@ const head = (t) => console.log('\n' + t);
   const pg = await br.newPage({ viewport: { width: 1100, height: 1000 } });
   const errs = [];
   pg.on('pageerror', e => errs.push(String(e).slice(0, 160)));
+  /* 판 X509 — 두뇌가 쉬운판부터 열린다. 이 자는 예전 다섯 구역(전체 두뇌)을 보는 자라 전체로 연다 */
+  await pg.addInitScript(() => { window.BA_BRAIN_DEFAULT = 'full'; });
   await pg.goto('http://127.0.0.1:' + srv.address().port + '/app/ba.html', { waitUntil: 'domcontentloaded' });
   await pg.waitForTimeout(700);
 

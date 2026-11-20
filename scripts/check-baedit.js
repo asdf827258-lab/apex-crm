@@ -50,6 +50,8 @@ const head = (t) => console.log('\n' + t);
   pg.on('pageerror', e => errs.push(String(e).slice(0, 160)));
   /* 판 X506 — 만들기가 네 걸음으로 나뉘었다. 이 자는 만들기 칸 전부를 보는 자라 「한 장으로 다 보기」 로 연다(안 그러면 높이 자가 ① 칸만 잼) */
   await pg.addInitScript(() => { window.BA_STEP_DEFAULT = 0; });
+  /* 판 X509 — 두뇌가 쉬운판부터 열린다. 이 자는 예전 다섯 구역(전체 두뇌)을 보는 자라 전체로 연다 */
+  await pg.addInitScript(() => { window.BA_BRAIN_DEFAULT = 'full'; });
   await pg.goto('http://127.0.0.1:' + srv.address().port + '/app/ba.html', { waitUntil: 'domcontentloaded' });
   await pg.waitForTimeout(700);
   /* 견본 — 앱이 스스로 넣는 홍철호다. 실제 고객 이름이 아니다. */
