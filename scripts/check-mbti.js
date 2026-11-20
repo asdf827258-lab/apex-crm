@@ -414,11 +414,24 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
     S.view = 'agent'; S.tab = 'dang'; S.dang = {}; draw();
     const t = document.getElementById('view').textContent;
     const y = yongsin(S.cl.saju);
+    /* ★ 2026-11-20 (판 X499) — 사장님 말씀 「진짜 점집 같은 … 디자인」.
+       전에는 「신당 탭에서만 검고 나가면 되돌아온다」 를 쟀습니다. 이제는
+       <b>거꾸로</b> 입니다 — 모든 칸이 점집 옷을 입어야 합니다. 넘기다
+       흰 화면이 한 칸 나오면 두 프로그램을 왔다 갔다 하는 느낌이 납니다.
+       그래서 <b>칸마다 돌며</b> 옷이 벗겨지는 자리가 없는지 봅니다. */
     const skin = document.body.classList.contains('shrine-on');
-    S.tab = 'ice'; draw();
-    const off = !document.body.classList.contains('shrine-on');
+    const bare = [];
+    ['ice','sum','worry','rel','cover','dang'].forEach(function(k){
+      S.tab = k; try{ draw(); }catch(e){}
+      if(!document.body.classList.contains('shrine-on')) bare.push(k);
+      /* 바탕이 정말 먹빛인가 — 클래스만 붙고 색이 안 따라오면 헛것입니다 */
+      const bg = getComputedStyle(document.body).backgroundColor;
+      const m = /rgb\((\d+), (\d+), (\d+)\)/.exec(bg);
+      if(m && (+m[1]+ +m[2]+ +m[3]) > 180) bare.push(k+'(바탕 '+bg+')');
+    });
     S.tab = 'dang'; draw();
-    return { len: t.replace(/\s+/g, '').length, skin: skin, off: off,
+    const off = bare.length === 0;
+    return { len: t.replace(/\s+/g, '').length, skin: skin, off: off, bare: bare,
       who: /무당/.test(t), yong: /용신/.test(t),
       primary: y.primary, need: y.need, avoid: y.avoid, lvl: y.st.level,
       needHasPrimary: y.need.indexOf(y.primary) >= 0,
@@ -440,7 +453,52 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   ok(shrine.gong && shrine.daeun, '공망과 대운까지 풀어 준다');
   ok(shrine.flowWarn, '"운은 흐름이지 정해진 답이 아니다"를 못 박는다');
   ok(shrine.pick === 10, '고민 열 가지를 고를 수 있다 (' + shrine.pick + ')');
-  ok(shrine.skin && shrine.off, '신당 탭에서만 화면이 점집으로 바뀌고, 나가면 되돌아온다');
+
+  /* ══ 먼저 맞히기 — 세게 말하되 <b>지어내지는 않는다</b> ═══════════
+     사장님 말씀 2026-11-20 「진짜 점집 같은 무서운 사례」. 세게 가라는
+     말씀이지, 없는 말을 하라는 말씀이 아닙니다. 그래서 여기가 이 자의
+     제일 중요한 자리입니다 (1번 · 2번).                             */
+  const hit = await page.evaluate(() => {
+    const S0 = S.cl.saju, y = yongsin(S0);
+    const h = shrHits(S0, y);
+    /* ★ 같은 패에는 같은 말이 나와야 합니다 — 무작위로 고르면 두 번 열 때
+       말이 바뀌고, 그건 지어낸 것입니다 (1번). 열 번 불러 견줍니다. */
+    let same = true;
+    for (let i = 0; i < 10; i++)
+      if (JSON.stringify(shrHits(S0, y)) !== JSON.stringify(h)) same = false;
+    /* ★ 줄마다 <b>근거</b>가 달려 있나 — 근거 없는 줄은 점쟁이 말입니다 */
+    const whyOk = h.every(x => x.why && /개|신약|신강|없습니다|많습니다|큽니다/.test(x.why));
+    /* ★ 근거에 적힌 수가 <b>실제 십신 개수와 같은가</b> — 글만 그럴듯하면 안 됩니다 */
+    const cnt = sipsinTable(S0).count;
+    const numOk = h.every(x => {
+      const m = /(비겁|식상|재성|관성|인성) (\d+)개/.exec(x.why);
+      return !m || cnt[m[1]] === +m[2];
+    });
+    /* ★ 패가 다르면 말도 달라져야 합니다 — 누구에게나 같은 말이면 덕담입니다 */
+    const other = sajuCalc(1973, 11, 2, 3, 0, 0);
+    const h2 = shrHits(other, yongsin(other));
+    const differs = JSON.stringify(h2.map(x => x.t)) !== JSON.stringify(h.map(x => x.t));
+    const txt = h.map(x => x.t).join(' ') + ' ' + h2.map(x => x.t).join(' ');
+    const dang = document.getElementById('view').textContent;
+    return { n: h.length, same, whyOk, numOk, differs, n2: h2.length,
+      /* ⛔ 건강·사고·죽음은 한 글자도 */
+      ban: /병|암|사고|다치|죽|수명|요절|단명|이혼|파산/.test(txt),
+      banSrc: typeof HIT_BAN !== 'undefined',
+      esc: /틀리셨으면 아니라고 하십시오/.test(dang),
+      shown: /먼저<\/b> 말씀드리겠습니다|먼저 말씀드리겠습니다/.test(dang.replace(/\s+/g,' ')),
+      turn: /그해에 판이 한 번 바뀝니다/.test(dang) };
+  });
+  ok(hit.n >= 1 && hit.n <= 3, '먼저 맞히는 말이 <b>세 줄 이하</b>로 나온다 — ' + hit.n + '줄 (억지로 셋을 안 채운다)');
+  ok(hit.same, '★ 같은 패에는 <b>언제나 같은 말</b>이 나온다 — 열 번 불러 견줬다 (무작위면 지어낸 것입니다 · 1번)');
+  ok(hit.whyOk, '★ 줄마다 <b>근거</b>가 달려 있다 — 근거 없는 줄은 점쟁이 말입니다');
+  ok(hit.numOk, '★★ 근거에 적힌 수가 <b>실제 십신 개수와 같다</b> — 글만 그럴듯하지 않다 (1번)');
+  ok(hit.differs, '★ <b>패가 다르면 말도 다르다</b> — 누구에게나 같은 말이면 덕담입니다 (' + hit.n + '줄 vs ' + hit.n2 + '줄)');
+  ok(!hit.ban && hit.banSrc, '⛔ <b>병·사고·죽음·이혼·파산은 한 글자도 없다</b> — 겁을 주어 파는 자리가 되면 안 됩니다 (2번)');
+  ok(hit.shown && hit.esc, '화면에 실제로 서고, <b>"틀리셨으면 아니라고 하십시오"</b>를 같이 적는다 (1번)');
+  ok(hit.turn, '시기를 짚는다 — 대운이 바뀌는 해를 적는다 (지어낸 해가 아니라 계산된 해)');
+  ok(shrine.skin && shrine.off,
+     '★ <b>모든 칸이 점집 옷을 입는다</b> — 넘기다 흰 화면이 한 칸도 안 나온다' +
+     (shrine.off ? '' : ' ← 벗겨진 칸: ' + shrine.bare.join(', ')));
   ok(shrine.noPay, '신당에서는 결제를 걸지 않는다');
 
   const bridge = await page.evaluate(() => {
