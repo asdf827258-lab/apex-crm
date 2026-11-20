@@ -160,6 +160,9 @@
       '.hv2 .qrail::-webkit-scrollbar{display:none}',
       '.hv2 .qc{flex:none;width:calc(100% - 28px);scroll-snap-align:start;background:#fff;border-radius:22px;padding:18px}',
       '.hv2 .qc:only-child{width:100%}',
+      /* ⚠ 판 X510 — 마지막 카드는 「끝에 맞춰」 멈춥니다. 시안처럼 카드 폭이 「100% - 28px」 라 마지막 카드의 왼쪽 끝은
+           스크롤 끝보다 멀어 멈출 자리가 없었고, 넘기면 두 번째 카드로 튕겨 돌아왔습니다(라이브에서 넘겨 보고 찾음). */
+      '.hv2 .qc:last-child:not(:only-child){scroll-snap-align:end}',
       '.hv2 .qtop{display:flex;align-items:center;gap:10px}',
       '.hv2 .av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;flex:none;background:var(--blue-l);color:var(--blue)}',
       '.hv2 .qtop .nm{font-size:19px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
@@ -258,7 +261,6 @@
       '.hv2 .li .t1{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       '.hv2 .li .t2{font-size:13px;color:var(--sub2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       '.hv2 .li .e{font-size:20px;width:28px;text-align:center;flex:none}',
-      '.hv2 .src{font-size:13px;color:var(--sub3);text-align:center;margin:14px 0 4px}',
       /* 시트 — 아래에서 올라오는 판 */
       '#hv2Dim{position:fixed;inset:0;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .2s;z-index:9990}',
       '#hv2Dim.on{opacity:1;pointer-events:auto}',
@@ -459,7 +461,13 @@
     var h = '<div class="qhd"><b>지금 이분</b><span>' + (all - list.length) + ' / ' + all + (list.length > 1 ? ' · 옆으로 넘겨요' : '') + '</span></div>';
     if (!list.length) return h + '<div class="qempty"><b>🎉</b>오늘 볼 분을 다 챙겼어요</div>';
     h += '<div class="qrail" id="hv2Rail" onscroll="HOME_V2.dots()">' + list.map(cardHtml).join('') + '</div>';
-    if (list.length > 1) h += '<div class="dots" id="hv2Dots">' + list.map(function (x, i) { return '<i class="' + (i === 0 ? 'on' : '') + '"></i>'; }).join('') + '</div>';
+    /* 점은 시안처럼 여덟 개까지 — 카드가 많으면(팀원 화면은 100장 넘음) 점 하나가 여러 장을 맡습니다.
+       ⚠ 판 X511 전에는 카드 수만큼 점을 세워, 147장이면 점 147개(1,600px 넘는 줄)가 섰습니다. */
+    if (list.length > 1) {
+      var nd = Math.min(DOT_MAX, list.length), dh = '';
+      for (var di = 0; di < nd; di++) dh += '<i class="' + (di === 0 ? 'on' : '') + '"></i>';
+      h += '<div class="dots" id="hv2Dots">' + dh + '</div>';
+    }
     return h;
   }
   /* 🧭 이번 달 상품전략 — 상황별 1위 상품(HM_DOOR_TOP) · 오늘 볼 분 중 맞는 분 */
@@ -491,12 +499,32 @@
     }
     h += '</div>';
     var SL = day(selKey), KO = { appt: '약속', next: '할 일', bd: '생일', touch: '연락', sig: '구실', madi: '마디' };
-    h += SL.length ? SL.slice(0, 6).map(function (z) {
+    /* 시안처럼 몇 줄만 — 약속이 먼저, 그 밖은 셋까지(나머지는 「외 N건」 · 달력 크게에서 다 봄) */
+    SL = SL.slice().sort(function (a, b) { return (a.k === 'appt' ? 0 : 1) - (b.k === 'appt' ? 0 : 1); });
+    var SHOW = 3;
+    h += SL.length ? SL.slice(0, SHOW).map(function (z) {
       var s = String(z.s || ''), tm = (s.match(/^\d{1,2}:\d{2}/) || [''])[0];
       var nm = z.t ? nameOf({ t: z.t }) + '님' : '';
       return '<div class="tl"><span class="t">' + E(tm || KO[z.k] || '일정') + '</span><span class="x">' + E([nm, s.replace(/^\d{1,2}:\d{2}\s*·?\s*/, '')].filter(Boolean).join(' · ')) + '</span></div>';
-    }).join('') : '<div class="tl" style="color:var(--sub2)">이날은 일정이 없어요</div>';
-    if (sel === dow) {
+    }).join('') + (SL.length > SHOW ? '<div class="tl" style="color:var(--sub2)"><span class="t"></span><span class="x">외 ' + (SL.length - SHOW) + '건 — 달력 크게에서</span></div>' : '')
+      : '<div class="tl" style="color:var(--sub2)">이날은 일정이 없어요</div>';
+    if (sel === dow && !route().n) {
+      /* 약속이 없는 날 — 추천 동선(recRoute). 시안처럼 시간 자리에 「추천」, 이름 · 단계 · 동네 */
+      var RR = recRoute();
+      if (RR.list.length) {
+        if (!SL.length) h = h.replace('<div class="tl" style="color:var(--sub2)">이날은 일정이 없어요</div>', '<div class="tl" style="color:var(--sub2)">오늘은 약속이 없어요 — 이 동네를 묶어 보세요</div>');
+        h += RR.list.slice(0, 3).map(function (r, i) {
+          return '<div class="tl"><span class="t">추천 ' + (i + 1) + '</span><span class="x">' + E([nameOf({ t: r.name }) + '님', r.stage || '첫 전화', [r.region, r.dong].filter(Boolean).join(' ')].join(' · ')) + '</span></div>';
+        }).join('');
+        var pp = ['추천 동선 ' + RR.rg];
+        if (RR.km != null) pp.push((RR.km < 1 ? Math.round(RR.km * 1000) + 'm' : RR.km.toFixed(1) + 'km') + (RR.real ? '' : '(어림)'));
+        pp.push('들를 분 ' + RR.list.length + '명');
+        if (RR.miss) pp.push('주소 모르는 곳 ' + RR.miss);
+        h += '<button type="button" class="rtl" onclick="hmRtOpen()"><span>📍 ' + E(pp.join(' · ')) + '</span><span>›</span></button>';
+      } else {
+        h += '<button type="button" class="rtl" onclick="hmRtOpen()"><span>📍 동네가 적힌 고객이 아직 없어요 — 지역 동선에서 동네를 고르면 길을 짜 드려요</span><span>›</span></button>';
+      }
+    } else if (sel === dow) {
       var near = T(function () { return g.hmRtNear().length; }, null), R = route();
       var parts = [];
       if (R.km != null) parts.push('동선 ' + (R.km < 1 ? Math.round(R.km * 1000) + 'm' : R.km.toFixed(1) + 'km') + (R.real ? '' : '(어림)'));
@@ -551,7 +579,9 @@
     var L = T(function () { return g.hmLeft(); }, { list: [], all: 0 });
     return topHtml() + whoHtml() + helloHtml(L) + monHtml() + stepsHtml() + jvHtml() + railHtml(L) +
       inscHtml() + weekHtml() + roadHtml() + eveHtml(L) + menuHtml() +
-      '<div class="src">새 오늘 화면 (시험) · 시안 9차 디자인 · 맨 위 「↩ 예전 화면」 으로 언제든 돌아갑니다</div>' + dockHtml();
+      dockHtml();
+    /* ⚠ 판 X511 — 맨 아래 「새 오늘 화면 (시험) · 시안 9차 디자인 · …」 설명 줄을 거뒀습니다
+         (시안에 없음 · 토스 원칙 ③ 화면에 설명 문장 금지). 예전 화면으로 가는 길은 맨 위 「↩ 예전 화면」 단추 하나. */
   }
   /* 늘 떠 있는 세 칸 — 시안 .dock (🧭 상품전략 · 💬 화법 · 📚 공부). 가는 곳은 앱 메뉴 그대로:
      상품전략기(insight) · 미끼상품&접촉전략(mikki_talk · 대본) · 성장 로드맵(edu). 열 수 없는 칸은 안 세웁니다.
@@ -608,13 +638,16 @@
     need.forEach(function (id) { GEO_ASKED[id] = 1; });
     var sb = T(function () { return g.osClient(); }, null);
     if (!sb) return;
-    try {
-      sb.from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng').in('id', need).then(function (r) {
-        if (r && r.error) { GEO_OFF = true; return; }       /* 좌표 칸이 없는 서버(migration_46 전) — 조용히 물러남 */
-        ((r && r.data) || []).forEach(function (d) { GEO[d.id] = d; });
-        paint();
-      }, function () { GEO_OFF = true; });
-    } catch (e) { GEO_OFF = true; }
+    /* 한 번에 80분씩 — 주소 줄이 너무 길어지지 않게 (판 X510 · 추천 동선이 한 분의 배정 DB 를 다 봄) */
+    for (var c = 0; c < need.length; c += 80) (function (part) {
+      try {
+        sb.from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng').in('id', part).then(function (r) {
+          if (r && r.error) { GEO_OFF = true; return; }       /* 좌표 칸이 없는 서버(migration_46 전) — 조용히 물러남 */
+          ((r && r.data) || []).forEach(function (d) { GEO[d.id] = d; });
+          paint();
+        }, function () { GEO_OFF = true; });
+      } catch (e) { GEO_OFF = true; }
+    })(need.slice(c, c + 80));
   }
   function rkAsk(pairs) {
     var key = pairs.map(function (p) { return rkKey(p.a, p.b); }).join('|');
@@ -639,15 +672,76 @@
     var P = [];
     A.forEach(function (a) { var p = ptOf(GEO[a.id]); if (p) P.push(p); else if (GEO[a.id] || GEO_OFF) out.miss++; });
     if (P.length < 2) return out;
+    var L = legs(P); out.km = L.km; out.real = L.real;
+    return out;
+  }
+  /* 차례대로 놓인 점들의 거리 — 길찾기로 재 둔 구간은 그 값, 아니면 어림(직선 × 1.35) + 길찾기에 묻기 */
+  function legs(P) {
     var C = rkCache(), km = 0, real = true, ask = [];
     for (var i = 1; i < P.length; i++) {
-      var w = C[rkKey(P[i - 1], P[i])];
+      var w = C[rkKey(P[i - 1], P[i])], st = hav(P[i - 1], P[i]);
+      /* ⚠ 같은 건물·같은 주소(50m 안)는 길찾기가 답을 안 줍니다(라이브에서 null 로 옴) — 0km 로 치고 안 묻습니다.
+           안 그러면 그 한 구간 때문에 전체가 늘 「(어림)」 으로 남았습니다. */
+      if (st < 0.05) continue;
       if (w && w.km != null) km += +w.km;
-      else { km += hav(P[i - 1], P[i]) * 1.35; real = false; ask.push({ a: P[i - 1], b: P[i] }); }
+      else { km += st * 1.35; real = false; ask.push({ a: P[i - 1], b: P[i] }); }
     }
     if (ask.length) rkAsk(ask);
-    out.km = km; out.real = real;
-    return out;
+    return { km: km, real: real };
+  }
+
+  /* 📍 <b>약속이 없는 날의 추천 동선</b> — 사장님 말씀 (2026-11-20) 「약속이 없어도 목각처럼 띄울수 있도록
+     해결할 방법을 찾아서 띄어줘」.
+     ⚠ 라이브의 「권한 동네」(hmRtWhere · hmRtMeet)는 <b>늘 로그인한 본인 기준</b>(hmTmMe)이라, 배정 DB 가
+       거의 없는 대표 계정이나 팀원 화면에서는 비었습니다. 그래서 <b>지금 보고 있는 분(hwhoFor)</b>의 배정 DB 로 셉니다.
+     ★ 동네 — 오늘 볼 분(hmSteps)이 있는 동네가 먼저, 없으면 만날 분이 가장 많은 동네(hmRtKey 로 같은 동네를 묶음).
+     ★ 들를 분 — 그 동네의 만남(AP) → 제안(PC) → 청약(CS) → 연락(TA) → 첫 전화(미접촉·부재) 차례로 여섯 분까지.
+       거절·계약 끝난 분은 안 넣습니다.
+     ★ 길 — 좌표(지역 동선이 적어 둔 dbs 칸)가 있는 분만, 첫 분에서 가장 가까운 분을 차례로 잇습니다.
+       거리는 약속 동선과 같은 자(길찾기 · 어림). 좌표가 없는 분은 「주소 모르는 곳 N」.
+     ★ 동네가 적힌 분이 하나도 없으면 <b>지어내지 않고</b> 지역 동선에서 동네를 고르게 안내합니다. */
+  var REC_ORD = { AP: 1, PC: 2, CS: 3, TA: 4, '미접촉': 5, '부재': 6 };
+  function recRoute() {
+    var who = T(function () { return g.hwhoFor(); }, '') || '', all = T(function () { return g.hwhoIsAll(); }, false);
+    /* 같은 동네를 하나로 — 「광양」·「광양시」·「광양 시」 (판 X510 · 라이브에서 좌표 있는 분이 「광양시」 쪽에 따로 있었음) */
+    var key = function (v) { return String(v == null ? '' : v).replace(/\s+/g, '').replace(/(특별자치시|특별자치도|특별시|광역시|시|군)$/, ''); };
+    var rows = (T(function () { return g.AR.db; }, []) || []).filter(function (r) {
+      return r && r.id && r.region && REC_ORD[String(r.stage || '미접촉')] && (all || !who || r.who === who);
+    });
+    if (!rows.length) return { rg: '', list: [], km: null, miss: 0 };
+    var by = {}, today = {};
+    (T(function () { return g.hmSteps(); }, []) || []).forEach(function (x) { if (x && x.region) today[key(x.region)] = 1; });
+    rows.forEach(function (r) { var k = key(r.region); (by[k] = by[k] || []).push(r); });
+    /* ★ 판 X510 — 좌표가 있는 분을 먼저. 라이브에서 팀원 화면을 차례로 열어 보니 단계 차례 앞 여섯 분이
+         모두 좌표가 없어 「주소 모르는 곳 6」 만 서고 거리가 빈 경우가 셋이었습니다.
+         ① 이분의 배정 DB 좌표를 한 번 읽고(80분씩 · 처음 한 번만) ② 동네는 「오늘 볼 분이 있는 곳」 다음
+         「좌표 있는 분이 많은 곳」 다음 「분이 많은 곳」 ③ 그 동네에서 단계 차례는 지키되 <b>좌표가 있는 분부터</b>
+         여섯. 모자라면 좌표 없는 분으로 채우고 「주소 모르는 곳」 으로 적습니다(지어내지 않음). */
+    var ord0 = function (a, b) { return (REC_ORD[a.stage || '미접촉'] - REC_ORD[b.stage || '미접촉']) || ((b.days || 0) - (a.days || 0)); };
+    geoLoad(rows.slice().sort(ord0).slice(0, 400).map(function (r) { return r.id; }));
+    var geoN = function (k) { return by[k].filter(function (r) { return !!ptOf(GEO[r.id]); }).length; };
+    var ks = Object.keys(by).sort(function (a, b) {
+      return ((today[b] ? 1 : 0) - (today[a] ? 1 : 0)) || (geoN(b) - geoN(a)) || (by[b].length - by[a].length);
+    });
+    var pool = by[ks[0]].slice().sort(ord0);
+    var has = pool.filter(function (r) { return !!ptOf(GEO[r.id]); });
+    var pick = has.slice(0, 6);
+    pool.forEach(function (r) { if (pick.length < 6 && pick.indexOf(r) < 0 && !ptOf(GEO[r.id])) pick.push(r); });
+    var pts = [], miss = 0;
+    pick.forEach(function (r) { var p = ptOf(GEO[r.id]); if (p) pts.push({ p: p, r: r }); else if (GEO[r.id] || GEO_OFF) miss++; });
+    /* 가장 가까운 분을 차례로 — 첫 분은 단계가 가장 앞선 분 */
+    var ord = [];
+    if (pts.length) {
+      var left = pts.slice(1); ord.push(pts[0]);
+      while (left.length) {
+        var last = ord[ord.length - 1].p, bi = 0, bd = Infinity;
+        left.forEach(function (q, i) { var dd = hav(last, q.p); if (dd < bd) { bd = dd; bi = i; } });
+        ord.push(left.splice(bi, 1)[0]);
+      }
+    }
+    var L = ord.length >= 2 ? legs(ord.map(function (o) { return o.p; })) : null;
+    var list = ord.map(function (o) { return o.r; }).concat(pick.filter(function (r) { return !ord.some(function (o) { return o.r === r; }); }));
+    return { rg: by[ks[0]][0].region, list: list, km: L ? L.km : null, real: L ? L.real : false, miss: miss };
   }
 
   /* ── 그리기 ─────────────────────────────────────────────────────── */
@@ -785,11 +879,15 @@
       if (OLD) { var b = el('hv2'); if (b && b.nextElementSibling) b.nextElementSibling.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     }
   };
+  /* 카드 i 번째(0부터) → 점 몇 번째. 카드가 점보다 많으면 고르게 나눠 맡깁니다(첫 장 = 첫 점, 끝 장 = 끝 점) */
+  var DOT_MAX = 8;
+  function dotOf(i, n) { return n <= DOT_MAX ? i : Math.round(i * (DOT_MAX - 1) / (n - 1)); }
   function dots() {
     var r = el('hv2Rail'); if (!r || !r.children.length) return;
     var w = r.children[0].offsetWidth + 10, i = Math.round(r.scrollLeft / (w || 1)), d = el('hv2Dots');
     i = Math.max(0, Math.min(r.children.length - 1, i));
-    if (d) [].forEach.call(d.children, function (e, k) { e.classList.toggle('on', k === i); });
+    var j = dotOf(i, r.children.length);
+    if (d) [].forEach.call(d.children, function (e, k) { e.classList.toggle('on', k === j); });
     /* 줄 높이 = 지금 보는 카드 (+ 아래 그림자 몫 4px) */
     var c = r.children[i]; if (c && c.offsetHeight) r.style.height = (c.offsetHeight + 4) + 'px';
   }

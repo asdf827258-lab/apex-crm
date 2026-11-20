@@ -74,6 +74,7 @@ function box(store, search, opt) {
     arApptPast: () => [], hmReferRows: () => [], mstDueList: () => ({ monLeft: 0 }),
     mcalItems: () => ({}), mcalDay: () => [], hmRtNear: () => [],
     hmRtAppts: () => (opt.appts || []),
+    AR: { db: opt.db || [] },
     osClient: () => ({ from: () => ({ select: () => ({ in: () => ({ then: (ok) => ok({ data: opt.geo || [] }) }) }) }) }),
     navItemOf: id => { let f = null; g.TABS.forEach(gr => (gr.items || []).forEach(x => { if (x.id === id) f = x; })); return f; },
     arStageN: () => ({ c: { 미접촉: 3, TA: 1 }, tot: 4 }), hmNightSub: () => '오늘 닿은 분 0명',
@@ -230,7 +231,42 @@ B.g.HOME_V2.apply(dyn(B));
 is(/동선 11\.2km ·/.test(B.els.hv2.innerHTML), '지역 동선이 카카오 길찾기로 재 둔 거리가 있으면 그 값(어림 딱지 없음)');
 B = box({ apex_home_v2: '1' }, '', { appts: [] });
 B.g.HOME_V2.apply(dyn(B));
-is(/📍 오늘 동선 ·/.test(B.els.hv2.innerHTML) && !/km/.test(B.els.hv2.innerHTML), '약속이 없는 날은 거리를 안 적는다');
+is(/동네가 적힌 고객이 아직 없어요/.test(B.els.hv2.innerHTML) && !/km/.test(B.els.hv2.innerHTML), '약속도 동네 적힌 고객도 없으면 지어내지 않고 「지역 동선에서 동네 고르기」 안내');
+
+console.log('\n[12] 약속이 없는 날의 추천 동선 (판 X509)');
+const DB = [
+  { id: 'r1', who: 'me', name: '홍길동', region: '순천시', dong: '연향동', stage: 'TA', days: 3 },
+  { id: 'r2', who: 'me', name: '홍길순', region: '순천시', dong: '조례동', stage: 'AP', days: 1 },
+  { id: 'r3', who: 'me', name: '홍갑돌', region: '순천 시', dong: '왕지동', stage: '미접촉', days: 9 },
+  { id: 'r4', who: 'me', name: '변학도', region: '여수시', dong: '학동', stage: 'PC', days: 2 },
+  { id: 'r5', who: 'me', name: '이몽룡', region: '순천시', dong: '', stage: '거절', days: 1 },
+  { id: 'r6', who: 'p2', name: '성춘향', region: '순천시', dong: '', stage: 'AP', days: 1 }
+];
+B = box({ apex_home_v2: '1' }, '', { appts: [], db: DB, geo: [{ id: 'r2', lat: 34.95, lng: 127.49 }, { id: 'r1', lat: 34.96, lng: 127.52 }, { id: 'r3', lat: null, lng: null }] });
+B.g.hwhoFor = () => 'me';
+B.g.HOME_V2.apply(dyn(B));
+h = B.els.hv2.innerHTML;
+is(/추천 동선 순천시/.test(h), '만날 분이 가장 많은 동네(「순천시」·「순천 시」 를 한 동네로)를 고른다');
+is(/추천 1<\/span><span class="x">홍길순님 · AP · 순천시 조례동/.test(h), '첫 분은 단계가 가장 앞선 분(만남 AP)');
+is(h.indexOf('이몽룡') < 0 && h.indexOf('성춘향') < 0 && h.indexOf('변학도') < 0, '거절한 분 · 남의 배정 · 다른 동네는 안 넣는다');
+is(/들를 분 3명/.test(h) && /주소 모르는 곳 1/.test(h) && /km\(어림\)/.test(h), '좌표 있는 두 분으로 거리(어림) · 좌표 없는 분은 「주소 모르는 곳」');
+is(/오늘은 약속이 없어요 — 이 동네를 묶어 보세요/.test(h), '빈 날 줄은 「이 동네를 묶어 보세요」 로');
+B = box({ apex_home_v2: '1' }, '', { appts: [{ id: 'a1' }, { id: 'a2' }], db: DB, geo: [{ id: 'a1', lat: 34.95, lng: 127.49 }, { id: 'a2', lat: 34.95, lng: 127.58 }] });
+B.g.hwhoFor = () => 'me';
+B.g.HOME_V2.apply(dyn(B));
+is(!/추천 동선/.test(B.els.hv2.innerHTML) && /약속 2곳/.test(B.els.hv2.innerHTML), '약속이 있는 날은 추천 대신 약속 동선');
+/* 판 X510 — 단계 앞쪽 분들이 좌표가 없어도, 좌표 있는 분부터 골라 거리가 선다 */
+const DB2 = [1, 2, 3, 4, 5, 6, 7, 8].map(i => ({ id: 'q' + i, who: 'me', name: ['홍길동', '홍길순', '홍갑돌', '홍말순', '홍철호', '홍기동', '홍정돌', '임꺽정'][i - 1], region: '광양', stage: i <= 6 ? 'AP' : '미접촉', days: 10 - i }));
+B = box({ apex_home_v2: '1' }, '', { appts: [], db: DB2, geo: DB2.map((r, i) => i < 6 ? { id: r.id } : { id: r.id, lat: 34.9 + i / 100, lng: 127.6 }) });
+B.g.hwhoFor = () => 'me';
+B.g.HOME_V2.apply(dyn(B));
+h = B.els.hv2.innerHTML;
+is(h.indexOf('추천 1</span><span class="x">홍정돌님') >= 0 && h.indexOf('km(어림)') >= 0 && h.indexOf('주소 모르는 곳 4') >= 0,'단계 앞쪽 여섯이 좌표가 없어도 좌표 있는 둘을 먼저 골라 거리가 선다 · 나머지는 「주소 모르는 곳」');
+is(sc.indexOf('.qc:last-child:not(:only-child){scroll-snap-align:end}') >= 0,'마지막 카드는 끝에 맞춰 멈춘다 — 넘기면 끝까지 간다(튕겨 돌아오지 않음)');
+B = box({ apex_home_v2: '1', apexRouteKmV1: JSON.stringify({ '34.9500,127.4900,34.9500,127.5800': { km: 11.2, min: 19 } }) }, '',
+  { appts: [{ id: 'a1' }, { id: 'a0' }, { id: 'a2' }], geo: [{ id: 'a1', lat: 34.95, lng: 127.49 }, { id: 'a0', lat: 34.95, lng: 127.49 }, { id: 'a2', lat: 34.95, lng: 127.58 }] });
+B.g.HOME_V2.apply(dyn(B));
+is(/동선 11.2km ·/.test(B.els.hv2.innerHTML), '같은 주소(50m 안) 구간은 0km 로 치고 길찾기에 안 묻는다 — 그 한 구간 때문에 「(어림)」 으로 남지 않는다');
 B = box({ apex_home_v2: '1' }, '', { promo: true });
 B.g.HOME_V2.apply(dyn(B));
 is(/class="pr done"/.test(B.els.hv2.innerHTML) && /1\/1/.test(B.els.hv2.innerHTML), 'SNS 캐러셀 미션(d10)을 했으면 알리기 1/1');
@@ -238,6 +274,27 @@ B = box({ apex_home_v2: '1' }, '', { lead: true });
 B.g.HOME_V2.apply(dyn(B));
 h = B.els.hv2.innerHTML;
 is((h.match(/class="ring"/g) || []).length === 4 && /who-strip/.test(h) && /hwhoSet\('p2'\)/.test(h) && /hwhoSet\('\*'\)/.test(h), '팀장 — 팀원 동그라미 한 줄(나 · 팀원 둘 · 팀 전체), 누르면 hwhoSet');
+
+console.log('\n[13] 시안과 나란히 보고 고친 것 (판 X511)');
+{
+  const FN = ['홍길동', '홍길순', '홍갑돌', '홍말순', '홍판서', '홍철호', '홍기동', '홍정돌', '임꺽정', '이몽룡', '성춘향', '변학도'];
+  const many = Array.from({ length: 40 }, (_, i) => ({ k: 'db', tk: '미접촉', t: FN[i % FN.length], s: '아직 한 번도 안 걸었습니다', src: '보장분석', key: 'db:m' + i + ':미접촉' }));
+  B = box({ apex_home_v2: '1' }, '', { rows: many });
+  B.g.HOME_V2.apply(dyn(B));
+  h = B.els.hv2.innerHTML;
+  const dm = (h.match(/id="hv2Dots">([\s\S]*?)<\/div>/) || ['', ''])[1];
+  is((h.match(/class="qc/g) || []).length === 40 && (dm.match(/<i /g) || []).length === 8,
+    '카드 40장이어도 점은 시안처럼 8개 — 카드 수만큼 점을 세우면(팀원 화면 147장) 1,600px 넘는 줄이 섰음');
+  is(/function dotOf\(i, n\) \{ return n <= DOT_MAX \? i : Math\.round\(i \* \(DOT_MAX - 1\) \/ \(n - 1\)\); \}/.test(SRC) && /var DOT_MAX = 8;/.test(SRC),
+    '점은 고르게 나눠 맡는다 — 첫 장 = 첫 점, 끝 장 = 끝 점');
+  B = box({ apex_home_v2: '1' }, '', {});
+  B.g.HOME_V2.apply(dyn(B));
+  h = B.els.hv2.innerHTML;
+  is(!/시험\)|시안 9차 디자인|class="src"/.test(h) && /class="dock"/.test(h), '맨 아래 「새 오늘 화면 (시험) · 시안 9차 디자인」 설명 줄이 없다(시안에 없음) · 아래 세 칸은 그대로');
+  B = box({ apex_home_v2: '1' }, '', { rows: many.slice(0, 3) });
+  B.g.HOME_V2.apply(dyn(B));
+  is(((B.els.hv2.innerHTML.match(/id="hv2Dots">([\s\S]*?)<\/div>/) || ['', ''])[1].match(/<i /g) || []).length === 3, '카드가 여덟 장 아래면 점도 그 수만큼');
+}
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');
 process.exit(bad ? 1 : 0);
