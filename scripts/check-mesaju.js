@@ -46,6 +46,27 @@ const ME_OFF = 'var MEONLY={on:false};', ME_ON = 'var MEONLY={on:true};';
   await pg.goto('http://127.0.0.1:' + PORT + '/', { waitUntil: 'domcontentloaded' });
   await pg.waitForTimeout(1400);
 
+  console.log('\n[1-2] ★ 문간이 <b>정말 그려진다</b> (판 X515)');
+  /* 사장님 말씀 2026-11-21 「검색하는 장 부터 디자인을 점집에 들어가는것처럼
+     짜줘 … 무당을 만들고」. 그림은 재는 자가 없으면 조용히 빈칸이 됩니다 —
+     SVG 한 줄만 깨져도 문법 검사는 통과하고 화면만 허옇습니다 (8번).       */
+  const g = await pg.evaluate(() => {
+    const w = document.querySelector('.mdg-gate .mdg'); if (!w) return null;
+    const r = w.getBoundingClientRect();
+    const nm = document.querySelector('.mdg-gate .mdg-nm');
+    return { n: w.querySelectorAll('path,rect,ellipse,circle').length,
+             w: Math.round(r.width), h: Math.round(r.height),
+             nm: nm ? nm.textContent.trim() : '' };
+  });
+  ok(!!g, '문간에 <b>그림이 있다</b>');
+  if (g) {
+    ok(g.n >= 60, '★ 장면이다 — 도형 ' + g.n + '개 (픽토그램 하나가 아니라 발·신단·천·무구까지)');
+    ok(g.w >= 200 && g.h >= 150, '★ <b>눈에 보이는 크기</b>로 선다 — ' + g.w + '×' + g.h);
+    ok(g.nm.indexOf('신당') >= 0,
+      '★ 이름표가 <b>자리</b>를 적는다 — 「' + g.nm + '」' +
+      (g.nm.indexOf('신당') >= 0 ? '' : '\n      ← 나만 보는 판에서 선생님은 <b>손님</b>입니다. 선생님을 무당으로 적으면 안 됩니다'));
+  }
+
   console.log('\n[2] ★ 네 장만 서고 <b>고객·채용 칸이 안 선다</b>');
   await pg.evaluate(() => { const S_ = (id, v) => { const e = document.getElementById(id); if (!e) return;
       e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); };
