@@ -199,7 +199,10 @@ const SEED = () => {
     o.ids = ['oscTopBar', 'cusCard', 'cmPanels', 'cliPhone', 'cliIncome', 'oscBaHost', 'oscPolHost', 'oscOld', 'oscReps', 'oscDocs', 'cmRrnIn']
       .filter(k => !document.getElementById(k));
     o.loose = [].slice.call(document.querySelectorAll('#cusWin > *')).filter(e =>
-      !e.hasAttribute('data-cus-tab') && !e.classList.contains('osc-detail-back') && !e.classList.contains('cus-head') && !e.classList.contains('cuw-shd') && e.id !== 'cmPanels')
+      !e.hasAttribute('data-cus-tab') && !e.classList.contains('osc-detail-back') && !e.classList.contains('cus-head') && !e.classList.contains('cuw-shd') && e.id !== 'cmPanels' &&
+      /* 🪪 새 고객 화면 상자(판 X512 · app/cus-v2.js) — 탭 표시 대신 자기 옷(#cusWin[data-tab="sum"][data-sheet=""]>.cv2-box)으로
+         요약 · 고치기 아님일 때만 섭니다. 탭 표시를 붙이면 위 「요약 맨 위」 · 아래 「인쇄 칸 수」 에 섞여 들어가 일부러 안 붙였습니다 (check-cusv2 [3]) */
+      !e.classList.contains('cv2-box'))
       .map(e => e.className || e.tagName);
     /* #cmPanels 안의 칸들도 하나하나 탭에 담겼나 — 안 담긴 칸은 <b>모든 탭</b>에 떠 있습니다 */
     const cp = document.getElementById('cmPanels');
