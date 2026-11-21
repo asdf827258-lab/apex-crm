@@ -269,6 +269,9 @@
       '#hv2Sheet .sch-ok{display:flex;flex-direction:column;gap:4px;background:var(--green-l);border-radius:16px;padding:16px;margin-top:10px}',
       '#hv2Sheet .sch-ok b{color:var(--green);font-size:17px}',
       '#hv2Sheet a.btn{text-decoration:none}',
+      '#hv2Sheet .numin{display:flex;align-items:center;gap:8px;background:#fff;border-radius:14px;height:58px;padding:0 16px}',
+      '#hv2Sheet .numin input{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:22px;font-weight:800;color:var(--ink);outline:none}',
+      '#hv2Sheet .numin span{font-size:16px;font-weight:700;color:var(--sub2)}',
       '#hv2Sheet h2 small{font-size:13px;color:var(--sub2);font-weight:600;margin-left:4px}',
       '.hv2 .tile{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:22px;background:var(--line2);flex:none}',
       '.hv2 .mm{display:flex;align-items:center;gap:10px;width:100%;background:#fff;border-radius:18px;padding:0 16px;min-height:56px;margin-top:12px}',
@@ -558,12 +561,80 @@
     var N = T(function () { return g.arStageN(who()); }, null);
     if (!N) return '';
     var S = T(function () { return g.hmSteps(); }, []) || [];
-    return '<div class="sec"><b>영업 한 바퀴</b><small>칸을 누르면 DB 통합 CRM</small></div><div class="road2">' + ROAD.map(function (r) {
+    return '<div class="sec"><b>영업 한 바퀴</b><small>칸을 누르면 그 단계 분들</small></div><div class="road2">' + ROAD.map(function (r, i) {
       var n = 0, hot = false;
       r[1].forEach(function (k) { n += (N.c[k] || 0); });
       S.forEach(function (x) { if (x.k === 'db' && r[1].indexOf(String(x.tk || '')) >= 0) hot = true; });
-      return '<button type="button" class="' + (hot ? 'hot' : '') + '" onclick="go(\'crm\')"><b>' + n + '</b><span>' + r[0] + '</span></button>';
+      return '<button type="button" class="' + (hot ? 'hot' : '') + '" onclick="HOME_V2.stage(' + i + ')"><b>' + n + '</b><span>' + r[0] + '</span></button>';
     }).join('') + '</div>';
+  }
+  /* 🔁 영업 한 바퀴 칸 → 그 단계 분들 + 이 단계에서 쓰는 것 (시안 9차 openStage · 판 X513)
+     ★ 분들 = 배정 DB(AR.db) — 칸 숫자를 센 자(arStageN)와 <b>같은 거름</b>(지금 보는 분 · 단계)이라 숫자와 줄 수가 같습니다.
+     ★ 한 분을 누르면 자비스 · 추천 동선과 같은 길(hmRtPerson → 그분 한 장). 쓰는 것 = APEX_STAGE.tools(단계) 그대로.
+     ★ 예전 길(DB 통합 CRM 명단)은 맨 아래 단추로 남깁니다 — 지우지 않습니다. */
+  var ROAD_KEY = ['미접촉', 'TA', 'AP', 'PC', 'CS', '계약완료'];
+  function stageRows(i) {
+    var R = ROAD[i], w = who();
+    return (T(function () { return g.AR.db; }, []) || []).filter(function (r) {
+      return r && r.id && R[1].indexOf(String(r.stage || '미접촉')) >= 0 && (!w || r.who === w);
+    }).sort(function (a, b) { return (+(b.days === 9999 ? -1 : b.days) || 0) - (+(a.days === 9999 ? -1 : a.days) || 0); });
+  }
+  function stageSheet(i) {
+    var R = ROAD[i]; if (!R) return;
+    var L = stageRows(i), K = ROAD_KEY[i], MAX = 30;
+    var aim = strip(T(function () { return g.APEX_STAGE.aimText(K); }, '') || '');
+    var tools = (T(function () { return g.APEX_STAGE.tools(K); }, []) || []).filter(function (x) { return x && x.id && can(x.id); });
+    var dTxt = function (d) { return d == null || d === 9999 ? '연락 기록 없음' : (d === 0 ? '오늘 연락' : d + '일 전 연락'); };
+    var h = '<h1>' + E(R[0]) + ' <span style="color:var(--sub2);font-size:17px">' + E(R[1].join(' · ')) + '</span></h1>' +
+      '<div class="sub">' + E([aim, '모두 ' + L.length + '명'].filter(Boolean).join(' · ')) + '</div>';
+    h += '<div class="list" style="margin-top:12px">' + (L.length ? L.slice(0, MAX).map(function (r) {
+      return '<button type="button" class="li" onclick="HOME_V2.close();hmRtPerson(\'' + Q(r.id) + '\')"><div class="tile">' + E(String(nameOf({ t: r.name || '' })).replace(/^\s*\[[^\]]*\]\s*/, '').charAt(0) || '·') + '</div><div class="tx"><div class="t1">' + E(nameOf({ t: r.name || '' })) + '님</div>' +
+        '<div class="t2">' + E([r.stage || '미접촉', [r.region, r.dong].filter(Boolean).join(' '), r.appt ? '약속 ' + String(r.appt).slice(5, 16).replace('T', ' ') : dTxt(r.days)].filter(Boolean).join(' · ')) + '</div></div><span class="ar">›</span></button>';
+    }).join('') : '<div class="li"><div class="tx"><div class="t2">이 단계에 계신 분이 없어요</div></div></div>') +
+      (L.length > MAX ? '<button type="button" class="li" onclick="HOME_V2.close();go(\'crm\')"><div class="tx"><div class="t1" style="color:var(--blue)">나머지 ' + (L.length - MAX) + '명은 DB 통합 CRM 에서 ›</div></div></button>' : '') + '</div>';
+    if (tools.length) h += '<h2>이 단계에서 쓰는 것</h2><div class="list">' + tools.map(function (x) {
+      return '<button type="button" class="li" onclick="HOME_V2.close();go(\'' + Q(x.id) + '\')"><span class="e">' + E(x.e || '•') + '</span><div class="tx"><div class="t1">' + E(x.t || x.id) + '</div></div><span class="ar">›</span></button>';
+    }).join('') + '</div>';
+    h += '<button type="button" class="btn g" onclick="HOME_V2.close();go(\'crm\')">📋 DB 통합 CRM 에서 전부 보기</button>';
+    sheet(h);
+  }
+  /* 🎯 목표 시트 (시안 9차 openGoal · 판 X513) — 금액 · 건수 → 고객 한 분당 목표가 저절로.
+     ★ 저장은 있던 pfSave 하나(monthly_perf 같은 줄 · DB · 업적관리 표와 「내 업적」 이 쓰는 그 칸) — 새 저장 코드 없음.
+       건수만 바꿔도 금액을 같이 보냅니다(DB · 업적관리와 같은 까닭 — 금액이 0 으로 깔리지 않게).
+     ★ 늘 「내」 목표만 적습니다. 팀원 목표는 리더가 DB · 업적관리에서(그쪽 단추). */
+  function goalSheet() {
+    var PF = g.PF || {};
+    if (!PF.loaded) { goalLoad(); sheet('<h1>🎯 이번 달 목표</h1><div class="sub">목표를 읽는 중이에요 — 잠시 뒤 다시 눌러 주세요</div>'); return; }
+    var r = PF.mine || {}, gv = +r.goal_prem || 0, cv = +r.goal_case || 0, av = +r.act_prem || 0, ac = +r.act_case || 0;
+    var ym = T(function () { return g.pfYmLabel(g.pfYm()); }, '') || ((new Date().getMonth() + 1) + '월');
+    var me = T(function () { return g.arMyId(); }, ''), w = who();
+    var lead = !!T(function () { return g.pfIsLead(); }, false);
+    var h = '<h1>🎯 ' + E(ym) + ' 내 목표</h1><div class="sub">월초 보험료 기준 · DB · 업적관리 표와 같은 칸이에요</div>' +
+      (w && me && w !== me ? '<div class="hint">지금 보고 있는 팀원 것이 아니라 <b>내</b> 목표를 적어요</div>' : '') +
+      (r.from_team ? '<div class="hint">팀 사업계획서에서 내려온 목표예요 — 여기서 고치면 내 칸만 바뀌어요</div>' : '') +
+      '<h2>이번 달 목표 금액</h2><label class="numin"><input id="hv2GoalP" type="number" inputmode="numeric" min="0" value="' + (gv || '') + '" placeholder="0" oninput="HOME_V2.goalPer()"><span>만원</span></label>' +
+      '<div class="chipr" style="margin-top:6px">' + [100, 150, 200, 300].map(function (q) { return '<button type="button" onclick="HOME_V2.goalQ(' + q + ')">' + q + '<small>만원</small></button>'; }).join('') + '</div>' +
+      '<h2>목표 건수</h2><label class="numin"><input id="hv2GoalC" type="number" inputmode="numeric" min="0" value="' + (cv || '') + '" placeholder="0" oninput="HOME_V2.goalPer()"><span>건</span></label>' +
+      '<div class="say" id="hv2GoalPer"></div>' +
+      ((av || ac) ? '<div class="sub" style="margin:8px 2px 0">지금 실적 ' + av + '만 · ' + ac + '건</div>' : '') +
+      '<button type="button" class="btn p" onclick="HOME_V2.goalPut()">저장</button>' +
+      (lead ? '<button type="button" class="btn g" onclick="HOME_V2.close();arGoCat(\'dbperf\');go(\'airep\')">👥 팀원 목표는 DB · 업적관리에서</button>' : '') +
+      '<button type="button" class="btn g" onclick="HOME_V2.goalOld()">업적 · 월간보고 자세히</button>';
+    sheet(h);
+    goalPer();
+  }
+  function goalVal(id) { var i = el(id); return Math.max(0, Math.round(+((i && i.value) || 0) || 0)); }
+  function goalPer() {
+    var p = goalVal('hv2GoalP'), c = goalVal('hv2GoalC'), o = el('hv2GoalPer'); if (!o) return;
+    o.innerHTML = (p && c) ? '고객 한 분당 목표 <b>' + (Math.round(p / c * 10) / 10) + '만원</b> — 저절로 나와요' : '금액과 건수를 적으면 고객 한 분당 목표가 나와요';
+  }
+  function goalPut() {
+    var p = goalVal('hv2GoalP'), c = goalVal('hv2GoalC');
+    if (!p) { try { g.toast('목표 금액을 적어 주세요'); } catch (e) {} return; }
+    if (typeof g.pfSave !== 'function') { API.goalOld(); return; }
+    close();
+    var done = function () { if (g.PF && !g.PF.loaded) { try { g.toast('목표를 ' + p + '만원' + (c ? ' · ' + c + '건' : '') + '으로 정했어요'); } catch (e) {} goalLoad(); } };
+    try { var q = g.pfSave({ goal_prem: p, goal_case: c }, true); if (q && q.then) q.then(done); } catch (e) {}
   }
   function eveHtml(L) {
     var sub = T(function () { return g.hmNightSub(); }, '');
@@ -1002,7 +1073,11 @@
   var API = {
     on: on, set: set, use: use, chip: chip, apply: apply, paint: paint, close: close, allowed: function () { return ALLOWED; }, KEY: KEY,
     nm: function () { try { g.hmNmToggle(); } catch (e) {} paint(); },
-    goal: function () { try { g.arGoCat('perf'); } catch (e) {} try { g.go('airep'); } catch (e2) {} },
+    goal: goalSheet, goalPer: goalPer, goalPut: goalPut,
+    goalQ: function (q) { var i = el('hv2GoalP'); if (i) i.value = q; goalPer(); },
+    /* 판 X512 까지 목표 칸이 하던 일 — 「내 업적 · 월간보고」 로. 이제 시트 맨 아래 단추 */
+    goalOld: function () { close(); try { g.arGoCat('perf'); } catch (e) {} try { g.go('airep'); } catch (e2) {} },
+    stage: stageSheet,
     step: function (i) {
       if (i === 0) { var r = el('hv2Rail') || el('hv2'); if (r) r.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
       if (i === 1) { var w = el('hv2Week'); if (w) w.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }

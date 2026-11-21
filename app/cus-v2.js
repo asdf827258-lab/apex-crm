@@ -193,7 +193,12 @@
       '#cv2Sheet .btn{display:flex;align-items:center;justify-content:center;gap:6px;height:52px;border-radius:14px;font-size:16px;font-weight:700;width:100%;text-align:center;margin-top:12px}',
       '#cv2Sheet .btn.p{background:var(--blue);color:#fff}',
       '#cv2Sheet .btn.s{background:#fff;color:var(--ink)}',
-      '#cv2Sheet .btn.g{background:var(--line2);color:var(--ink);margin-top:8px}'
+      '#cv2Sheet .btn.g{background:var(--line2);color:var(--ink);margin-top:8px}',
+      /* 판 X513 — 상황 · 기록 시트 (시안 .carepick · .search 그대로) */
+      '#cv2Sheet .carepick{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 4px}',
+      '#cv2Sheet .carepick button{height:46px;padding:0 14px;border-radius:22px;background:#fff;font-size:15px;font-weight:600;color:var(--sub);text-align:center}',
+      '#cv2Sheet .carepick button.on{background:var(--ink);color:#fff}',
+      '#cv2Sheet .fin{display:block;width:100%;height:56px;border:0;border-radius:14px;background:#fff;padding:0 16px;font:inherit;font-size:16px;color:var(--ink);margin-top:12px;box-sizing:border-box;outline:none}'
     ];
     var s = d.createElement('style'); s.id = 'cusV2Css'; s.textContent = C.join('\n');
     (d.head || d.documentElement).appendChild(s);
@@ -245,7 +250,7 @@
       '<button type="button" onclick="' + (g.MSG_V2 ? 'cusV2Say()' : 'ccSms(\'' + Q(c.id) + '\')') + '">💬<span>카톡·문자</span></button>' +
       /* 📅 — 오늘 화면과 같은 「일정 넣기」 시트(이분이 골라진 채 · 날짜 단추 · 폰 달력). 없으면 예전 「다음 할 일 잡기」 */
       '<button type="button" onclick="' + (g.HOME_V2 && g.HOME_V2.sched ? 'HOME_V2.sched({cid:\'' + Q(c.id) + '\'})' : 'cusTab(\'talk\');cuwNxOpen()') + '">📅<span>일정</span></button>' +
-      '<button type="button" onclick="cuwWrite()">✍️<span>기록</span></button></div>';
+      '<button type="button" onclick="cusV2Log()">✍️<span>기록</span></button></div>';
   }
   function stepsHtml() {
     var ci = stgI(stageOf());
@@ -265,9 +270,9 @@
   }
   function sitHtml(c) {
     var m = meta(c.id), nx = nextTxt(c);
-    return '<div class="sit"><div class="sit-h"><b>지금 상황</b><button type="button" onclick="cusV2Jump(\'cmCare\')">' + (m.care ? '바꾸기' : '고르기') + '</button></div>' +
-      (m.care ? '<div class="sit-care">' + E(m.care) + '</div>' : '<button type="button" class="sit-empty" onclick="cusV2Jump(\'cmCare\')">결혼·출산·이사 같은 일이 상담의 문을 엽니다 — 골라 주세요</button>') +
-      (m.worry ? '<div class="sit-w">「' + E(m.worry) + '」</div>' : '<button type="button" class="sit-empty" onclick="cusV2Jump(\'cmWorry\')">무엇을 제일 걱정하신다고 하셨나요? — 그 한마디가 다음 통화 첫 문장이 됩니다</button>') +
+    return '<div class="sit"><div class="sit-h"><b>지금 상황</b><button type="button" onclick="cusV2Care()">' + (m.care ? '바꾸기' : '고르기') + '</button></div>' +
+      (m.care ? '<div class="sit-care">' + E(m.care) + '</div>' : '<button type="button" class="sit-empty" onclick="cusV2Care()">결혼·출산·이사 같은 일이 상담의 문을 엽니다 — 골라 주세요</button>') +
+      (m.worry ? '<div class="sit-w">「' + E(m.worry) + '」</div>' : '<button type="button" class="sit-empty" onclick="cusV2Worry()">무엇을 제일 걱정하신다고 하셨나요? — 그 한마디가 다음 통화 첫 문장이 됩니다</button>') +
       '<button type="button" class="sit-n" onclick="cusTab(\'talk\')' + (nx ? '' : ';cuwNxOpen()') + '"><span>다음 할 일</span><b>' + (nx ? E(nx) : '아직 안 잡았어요 — 잡기 ›') + '</b></button></div>';
   }
 
@@ -466,12 +471,74 @@
   /* 시트 — 시안 .sheet/.dim 그대로(#cv2Sheet 아래로만) */
   function sheet(inner) {
     var d = g.document, dim = el('cv2Dim'), sh = el('cv2Sheet');
+    try { css(); } catch (e0) {}   /* 판 X513 — 고객 칸을 안 그린 채 시트만 불러도 옷이 있게(한 번만 실림) */
     if (!dim) { dim = d.createElement('div'); dim.id = 'cv2Dim'; dim.setAttribute('onclick', 'cusV2Close()'); d.body.appendChild(dim); }
     if (!sh) { sh = d.createElement('div'); sh.id = 'cv2Sheet'; sh.className = 'cv2'; d.body.appendChild(sh); }
     sh.innerHTML = inner; sh.scrollTop = 0;
     try { g.setTimeout(function () { dim.classList.add('on'); sh.classList.add('on'); }, 10); } catch (e) {}
   }
   function close() { var a = el('cv2Dim'), b = el('cv2Sheet'); if (a) a.classList.remove('on'); if (b) b.classList.remove('on'); }
+
+  /* ✍️ 지금 상황 · 걱정 한마디 · 기록 시트 (시안 9차 editCare · editField · openLog · 판 X513)
+     판 X512 까지는 누르면 예전 고치기 화면(cmCare · cmWorry)이나 예전 「연락」 입력칸(cuwWrite)으로 넘어갔습니다.
+     ★ <b>저장은 있던 함수 그대로</b> — 상황 · 걱정 = cmSave(id, {care}) · cmSave(id, {worry}), 기록 = cmTouchAdd(id, 글, 갈래, 오늘).
+       고를 것은 CM_CARE 한 곳 · 기록 갈래는 CM_HOW 의 넷(전화 · 카톡 · 만남 · 문자). 새 저장 코드 없음.
+     ★ 저장한 뒤 예전 칸(cmDetailPaint)과 새 화면(paint)을 같이 다시 그립니다 — 두 화면이 같은 것을 말하게.
+     ★ 그 함수가 없는 판이면 예전 길 그대로(jump · cuwWrite). */
+  function cur() { return T(function () { return g.OSC.current; }, null); }
+  function after(id, msg) {
+    try { if (msg && typeof g.toast === 'function') g.toast(msg); } catch (e) {}
+    close();
+    try { if (typeof g.cmDetailPaint === 'function') g.cmDetailPaint(id); } catch (e2) {}
+    paint();
+  }
+  function cares() { return (T(function () { return g.CM_CARE; }, []) || []).filter(Boolean); }
+  function careSheet() {
+    var c = cur(); if (!c) return;
+    var L = cares(), m = meta(c.id);
+    if (!L.length || typeof g.cmSave !== 'function') { jump('cmCare'); return; }
+    sheet('<div class="grab"></div><h1>' + E(nameOf(c)) + '님 지금 상황</h1><div class="who2">결혼 · 출산 · 이사 같은 일이 상담의 문을 엽니다</div>' +
+      '<div class="carepick">' + L.map(function (x, i) { return '<button type="button" class="' + (m.care === x ? 'on' : '') + '" onclick="cusV2CarePut(' + i + ')">' + E(x) + '</button>'; }).join('') +
+      '<button type="button" class="' + (m.care ? '' : 'on') + '" onclick="cusV2CarePut(-1)">없음 · 모름</button></div>' +
+      '<button type="button" class="btn g" onclick="cusV2Close()">닫기</button>');
+  }
+  function carePut(i) {
+    var c = cur(); if (!c) return;
+    var L = cares(), v = i < 0 ? '' : (L[i] || ''), id = c.id;
+    if ((meta(id).care || '') === v) { close(); return; }
+    g.cmSave(id, { care: v }, function () { after(id, v ? '「' + v + '」 로 골랐어요 — 권할 것이 바뀌었어요' : '상황을 비웠어요'); });
+  }
+  function worrySheet() {
+    var c = cur(); if (!c) return;
+    if (typeof g.cmSave !== 'function') { jump('cmWorry'); return; }
+    sheet('<div class="grab"></div><h1>' + E(nameOf(c)) + '님 걱정 한마디</h1><div class="who2">그 한마디가 다음 통화 첫 문장이 됩니다</div>' +
+      '<input id="cv2WorryIn" class="fin" type="text" maxlength="200" value="' + E(meta(c.id).worry || '') + '" placeholder="예: 아이 교육비가 제일 걱정이라고 하셨어요" onkeydown="if(event.key===\'Enter\')cusV2WorryPut()">' +
+      '<button type="button" class="btn p" onclick="cusV2WorryPut()">저장</button><button type="button" class="btn g" onclick="cusV2Close()">돌아가기</button>');
+  }
+  function worryPut() {
+    var c = cur(), i = el('cv2WorryIn'); if (!c || !i) return;
+    var v = String(i.value || '').replace(/^\s+|\s+$/g, ''), id = c.id;
+    if ((meta(id).worry || '') === v) { close(); return; }
+    g.cmSave(id, { worry: v }, function () { after(id, v ? '적었어요' : '걱정 한마디를 비웠어요'); });
+  }
+  var LOG_HOW = [['📞', '전화'], ['💬', '카톡'], ['🤝', '만남'], ['✉️', '문자']], LOGK = 0;
+  function logSheet() {
+    var c = cur(); if (!c) return;
+    if (typeof g.cmTouchAdd !== 'function') { try { g.cuwWrite(); } catch (e) {} return; }
+    LOGK = 0;
+    sheet('<div class="grab"></div><h1>' + E(nameOf(c)) + '님 기록</h1><div class="who2">한 줄이면 돼요 — 다음에 무슨 이야기를 했는지 바로 보여요</div>' +
+      '<div class="carepick" id="cv2LogK">' + LOG_HOW.map(function (x, i) { return '<button type="button" class="' + (i ? '' : 'on') + '" onclick="cusV2LogK(' + i + ')">' + x[0] + ' ' + x[1] + '</button>'; }).join('') + '</div>' +
+      '<input id="cv2LogIn" class="fin" type="text" maxlength="140" placeholder="예: 다음 주 화요일 다시 연락" onkeydown="if(event.key===\'Enter\')cusV2LogPut()">' +
+      '<button type="button" class="btn p" onclick="cusV2LogPut()">남기기</button>' +
+      '<button type="button" class="btn g" onclick="cusV2Close();cusTab(\'talk\')">연락 기록 전체 · 다음 할 일 ›</button>');
+  }
+  function logK(i) { LOGK = i; var b = el('cv2LogK'); if (b) [].forEach.call(b.children, function (x, k) { x.classList.toggle('on', k === i); }); }
+  function logPut() {
+    var c = cur(), i = el('cv2LogIn'); if (!c || !i) return;
+    var t = String(i.value || '').replace(/^\s+|\s+$/g, ''), id = c.id;
+    if (!t) { try { g.toast('한 줄 적어 주세요'); } catch (e) {} return; }
+    g.cmTouchAdd(id, t, (LOG_HOW[LOGK] || LOG_HOW[0])[1], T(function () { return g.cuwToday(); }, undefined), { ok: function () { after(id, ''); } });
+  }
 
   /* 아는 것 — 라이브 고객 칸이 <b>있는 것만</b>. 누르면 그 칸이 있는 고치기 화면으로(cusReveal) */
   function knowCells(c) {
@@ -513,7 +580,7 @@
         return '<div class="li"><div class="tile">' + (r.src === 'call' ? '📞' : (HE[r.kind] || '🤝')) + '</div><div class="tx"><div class="t1 wr">' +
           E(r.kind + (r.note ? ' — ' + r.note : '')) + '</div><div class="t2">' + E(String(r.at || '').slice(0, 10)) + '</div></div></div>';
       }).join('') : '<div class="li"><div class="tx"><div class="t2">아직 기록이 없어요</div></div></div>') +
-      '<button type="button" class="more" onclick="cuwWrite()">＋ 기록 남기기</button></div>';
+      '<button type="button" class="more" onclick="cusV2Log()">＋ 기록 남기기</button></div>';
   }
   /* 더 보기 — 예전 탭 넷. 지우지 않고 여기로 옮깁니다(토스 원칙 ⑤) */
   function moreHtml() {
@@ -589,4 +656,11 @@
   g.cusV2Msg = function (k) { say(k); };
   g.cusV2Say = function (ch) { say('', ch); };
   g.cusV2Close = close;
+  g.cusV2Care = careSheet;
+  g.cusV2CarePut = carePut;
+  g.cusV2Worry = worrySheet;
+  g.cusV2WorryPut = worryPut;
+  g.cusV2Log = logSheet;
+  g.cusV2LogK = logK;
+  g.cusV2LogPut = logPut;
 })(window);

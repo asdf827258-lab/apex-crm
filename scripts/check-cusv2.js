@@ -17,6 +17,7 @@
      [7] ★  서버를 안 부르고 저장은 이 기기 고르기 한 칸뿐
      [8] ★  옷은 .cv2 아래 · #cusWin.cv2-on(요약 · 고치기 화면 아닐 때)으로만
      [9] ★  가짜 데이터로 그려 본다 — 단계 칸 · 권할 것 · 배정 줄 없는 분 · 예전 화면 · 한 칸이 터져도
+     [12] ★ 판 X513 — 지금 상황 · 걱정 · 기록 시트: 있던 cmSave({care}·{worry}) · cmTouchAdd 만 부르고, 고른 뒤 두 화면을 다시 그린다
      [10] ★ 이분 여정 — 「지금」 칸을 단계 · 약속 날로 세고, 보낸 날은 지어 붙이지 않는다 · 보낼 말 · 자세히 시트
    ═══════════════════════════════════════════════════════════════ */
 'use strict';
@@ -53,7 +54,8 @@ function box(store, opt) {
   const meta = opt.meta || { care: '부모님 일', worry: '엄마 간병이 걱정이에요', fam: '남편', touch: [{ at: '2026-11-18', how: '전화', note: '다음 주에 다시' }] };
   const said = [];
   const g = {
-    said, copyText: t => said.push(['copy', t]), cmTouchAdd: (id, note, how) => said.push(['touch', id, note, how]),
+    said, copyText: t => said.push(['copy', t]), cmTouchAdd: (id, note, how, at, cb) => { said.push(['touch', id, note, how, at]); if (cb && cb.ok) cb.ok(at); },
+    CM_CARE: ['', '결혼 준비', '부모님 일', '은퇴 준비'], cmSave: (id, p, then) => { said.push(['save', id, JSON.stringify(p)]); if (then) then(); }, cmDetailPaint: id => said.push(['dp', id]),
     MSG_V2: opt.noMsg ? undefined : { open: o => { (g.__msgLog = g.__msgLog || []).push(o); } },
     ccMsgText: () => '[ccMsg] 고객님 안녕하세요',
     HM_TAMSG: { list: x => (x && x.k === 'touch' ? ['m1'] : []), text: (k, x, ch) => '안부 ' + k + '·' + ch, area: () => '' },
@@ -132,7 +134,7 @@ is(['talk', 'cov', 'doc', 'info'].every(k => tabs.indexOf("'" + k + "'") >= 0), 
 
 console.log('\n[6] 「＋ 적기」 가 데려가는 칸이 있다');
 const F = (sc.match(/cusV2Jump\(\\'([A-Za-z]+)\\'\)/g) || []).map(s => s.match(/\\'([A-Za-z]+)\\'/)[1]);
-const Fu = [...new Set(F)];
+const Fu = [...new Set(F.concat(['cmCare', 'cmWorry']))];   /* 상황 · 걱정은 판 X513 부터 시트 — 그 함수가 없는 판에서만 이 칸으로(jump) */
 const nof = Fu.filter(id => !new RegExp('id=\\\\?"' + id + '\\\\?"|id=\\\\?\'' + id + '\\\\?\'').test(IX));
 is(Fu.length >= 8 && !nof.length, '칸 ' + Fu.length + '개(' + Fu.join(' · ') + ')가 고객 창에 있다' + (nof.length ? ' — 없음: ' + nof.join(', ') : ''));
 const ap = IX.slice(IX.indexOf('var CM_FIELDS=['), IX.indexOf('var CM_FIELDS=[') + 12000);
@@ -142,8 +144,12 @@ console.log('\n[7] 서버 · 저장');
 is(!/\.from\(|fetch\(|supabase|XMLHttpRequest|osClient\(/.test(sc), '서버를 부르지 않는다');
 const sets = sc.match(/setItem\([^)]*\)/g) || [];
 is(sets.length === 1 && /setItem\(KEY,/.test(sets[0]), '저장은 이 기기 고르기(apex_cus_v2) 한 칸뿐');
-is(!/cmSave|cshMark|hdbTo|cmNextSave/.test(sc) && (sc.match(/cmTouchAdd\(/g) || []).length === 1 && /function cmTouchAdd\(/.test(IX),
-  '고객 칸을 직접 저장하지 않는다 — 고치기는 있던 화면으로, 「복사하고 보냈어요」 만 있던 접촉 기록(cmTouchAdd) 한 줄');
+{
+  const sv = sc.match(/cmSave\([^)]*\)/g) || [];
+  is(!/cshMark|hdbTo|cmNextSave/.test(sc) && sv.length === 2 && /cmSave\(id, \{ care: v \}/.test(sc) && /cmSave\(id, \{ worry: v \}/.test(sc) &&
+     (sc.match(/cmTouchAdd\(/g) || []).length === 2 && /function cmTouchAdd\(/.test(IX) && /function cmSave\(/.test(IX),
+    '고객 칸 저장은 있던 함수뿐 — 상황 · 걱정 = cmSave({care}) · cmSave({worry}) 두 곳, 기록 · 「보냈어요」 = cmTouchAdd 두 곳 (새 저장 코드 없음)');
+}
 
 console.log('\n[8] 옷은 .cv2 아래 · 요약 탭에서만 감춘다');
 const cssBody = (SRC.match(/var C = \[([\s\S]*?)\];/) || ['', ''])[1];
@@ -244,6 +250,38 @@ console.log('\n[11] 💬 보내기 화면(msg-v2.js) — 「보내는 화면을 
   is(copied[0] === '안녕하세요 kakao', '카톡은 그 채널 글을 복사(고쳐 쓴 것은 채널마다 따로)');
   W.MSG_V2.ch('sms'); W.MSG_V2.sent();
   is(got && got[0] === '🙋 이분께 맞춘 글' && got[1] === 'sms' && got[2] === '고쳐 쓴 글' && !els.mv2Sheet.classList.contains('on'), '「보냈어요」 → onSent(고른 글 · 채널 · 보낸 글) 후 닫힘');
+}
+
+console.log('\n[12] ✍️ 지금 상황 · 걱정 · 기록 시트 (판 X513 · 시안 editCare · editField · openLog)');
+{
+  let B2 = box({}); let h2 = paint(B2);
+  is(/onclick="cusV2Care\(\)">바꾸기/.test(h2) && /onclick="cusV2Log\(\)">✍️/.test(h2) && /class="more" onclick="cusV2Log\(\)">＋ 기록 남기기/.test(h2) && !/cuwWrite\(\)/.test(h2) && !/cusV2Jump\(\\?'cmCare/.test(h2),
+    '상황 「바꾸기」 · ✍️ 기록 · ＋ 기록 남기기 → 새 시트 (예전 고치기 화면 · 연락 입력칸으로 안 넘어감)');
+  B2.g.cusV2Care(); B2.flush(); let ss = B2.els.cv2Sheet.innerHTML;
+  is(/홍\*동님 지금 상황/.test(ss) && /class="on" onclick="cusV2CarePut\(1\)">부모님 일/.test(ss) && /cusV2CarePut\(0\)">결혼 준비/.test(ss) && /cusV2CarePut\(-1\)">없음 · 모름/.test(ss) && B2.els.cv2Sheet.classList.contains('on'),
+    '상황 시트 — CM_CARE 칩(지금 것은 진하게) · 「없음 · 모름」');
+  B2.g.said.length = 0; B2.g.cusV2CarePut(2);
+  const sv = B2.g.said;
+  is(sv[0] && sv[0][0] === 'save' && sv[0][1] === 'c1' && sv[0][2] === '{"care":"은퇴 준비"}' && sv.some(x => x[0] === 'dp') && !B2.els.cv2Sheet.classList.contains('on'),
+    '칩 한 번 → 있던 cmSave(id, {care}) · 예전 칸(cmDetailPaint)도 다시 그림 · 시트 닫힘');
+  B2.g.said.length = 0; B2.g.cusV2CarePut(1);
+  is(!B2.g.said.length, '지금과 같은 상황을 다시 누르면 저장 안 함');
+  B2.g.cusV2Worry(); ss = B2.els.cv2Sheet.innerHTML;
+  is(/걱정 한마디/.test(ss) && /id="cv2WorryIn"[^>]*value="엄마 간병이 걱정이에요"/.test(ss), '걱정 시트 — 적어 둔 한마디가 칸에 들어 있음');
+  B2.els.cv2WorryIn = { value: '  애들 병원비  ' }; B2.g.said.length = 0; B2.g.cusV2WorryPut();
+  is(B2.g.said[0] && B2.g.said[0][2] === '{"worry":"애들 병원비"}', '걱정 저장 → 있던 cmSave(id, {worry}) · 앞뒤 빈칸 걷음');
+  B2.g.cusV2Log(); ss = B2.els.cv2Sheet.innerHTML;
+  is(/홍\*동님 기록/.test(ss) && /class="on" onclick="cusV2LogK\(0\)">📞 전화/.test(ss) && /cusV2LogK\(2\)">🤝 만남/.test(ss) && /id="cv2LogIn"/.test(ss) && /cusTab\('talk'\)/.test(ss),
+    '기록 시트 — 전화 · 카톡 · 만남 · 문자 칩 · 한 줄 · 「연락 기록 전체」(예전 탭)');
+  B2.els.cv2LogIn = { value: '' }; B2.g.said.length = 0; B2.g.cusV2LogPut();
+  is(!B2.g.said.length, '빈 줄이면 안 남김');
+  B2.els.cv2LogK = { children: [0, 1, 2, 3].map(() => { const c = new Set(); return { classList: { toggle: (k, v) => v ? c.add(k) : c.delete(k), has: k => c.has(k) } }; }) };
+  B2.g.cusV2LogK(2); B2.els.cv2LogIn = { value: '다음 주 화요일 다시' }; B2.g.cusV2LogPut();
+  const t = B2.g.said.filter(x => x[0] === 'touch')[0];
+  is(t && t[1] === 'c1' && t[2] === '다음 주 화요일 다시' && t[3] === '만남' && t[4] === '2026-11-20' && B2.g.said.some(x => x[0] === 'dp'),
+    '남기기 → 있던 cmTouchAdd(id, 한 줄, 고른 갈래 「만남」, 오늘) · 두 화면 다시 그림');
+  const B3 = box({}); delete B3.g.cmSave; B3.g.cusV2Care();
+  is(!B3.els.cv2Sheet, 'cmSave 가 없는 판이면 시트 대신 예전 칸으로(jump)');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 고객 화면은 예전 고객 창을 안 깨고 시안 차례로 섭니다');
