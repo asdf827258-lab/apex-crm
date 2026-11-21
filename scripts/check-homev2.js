@@ -146,7 +146,7 @@ console.log('\n[5] 칸 속을 채우는 라이브 함수가 있다');
 const ALL = IX + '\n' + JS;
 ['hmLeft', 'hmSteps', 'hmWhy', 'hmFullNm', 'hmNmHidden', 'hmNmToggle', 'hwhoFor', 'hwhoBarHtml', 'hmTelOf', 'hmSrcOf', 'hmOrdOf', 'hmStepOf',
  'hmQfin', 'hmSkip', 'hmOpen', 'hmDoorGo', 'hmRtOpen', 'hmRtNear', 'hmRtPerson', 'arApptPast', 'hmReferRows', 'mstDueList', 'mcalItems', 'mcalDay',
- 'arStageN', 'hmNightSub', 'hmNightHtml', 'pexSum', 'pfLoad', 'arGoCat', 'hmWayNow', 'hmWayCall', 'hmWayMeet', 'hmWayTidy', 'hmWayRec', 'hmWayCare', 'copyText', 'cregOpen']
+ 'arStageN', 'hmNightSub', 'hmNightHtml', 'pexSum', 'pfLoad', 'arGoCat', 'hmWayNow', 'hmWayCall', 'hmWayMeet', 'hmWayTidy', 'hmWayRec', 'hmWayCare', 'copyText', 'cregOpen', 'mcalMyPut', 'mcalCusPut', 'mcalCusList', 'mcalName', 'mcalOutName', 'icsBuild', 'mcalToday']
   .forEach(f => { if (sc.indexOf(f) >= 0) is(new RegExp('function ' + f + '\\(|g\\.' + f + ' = function').test(ALL), f + ' — 앱에 있다'); });
 is(/var TABS=\[/.test(IX) && /var PF=/.test(IX), 'TABS(메뉴 표) · PF(목표) 가 앱에 있다');
 is(/openTa\s*:|openTa:/.test(JS) && /prods\s*[,:}]/.test(JS) && /pick\s*[,:}]/.test(JS), 'HM_TAMSG.openTa · HM_DOOR.pick/prods 가 있다');
@@ -329,6 +329,42 @@ console.log('\n[14] 오늘 동선 카드 · 카톡처럼 보내기 (판 X512 · 
      op.items[0].text('sms') === '고객님, 안녕하세요 (m1·sms)', '보내기 화면 — 카드와 같은 글(HM_TAMSG.list · text) · 안부 제목은 MST_TOUCH 그대로 · 문자 고르면 문자 글');
   op.onSent && op.onSent(op.items[0], 'kakao');
   is(qf === 'touch:c1:', '「보냈어요」 = 이분 끝(hmQfin) — 저장 코드를 새로 안 짬');
+}
+
+console.log('\n[15] 약속 없어도 추천 · 일정 넣기(갤럭시 · 아이폰) — 판 X512 · 「약속 없어도 추천 띄우고 캘린더 입력이 편해야 하는데 갤럭시든 아이폰 이든」');
+{
+  const DBN = [{ id: 'n1', who: 'me', name: '홍말순', stage: 'PC', days: 2 }, { id: 'n2', who: 'me', name: '홍판서', stage: '미접촉', days: 40 }];
+  let X = box({ apex_home_v2: '1' }, '', { appts: [], db: DBN });
+  X.g.hwhoFor = () => 'me';
+  X.g.HOME_V2.apply(dyn(X)); let hh = X.els.hv2.innerHTML;
+  is(/오늘은 약속이 없어요 · 만날 분 추천 2명/.test(hh) && /추천 1<\/span><span class="x">홍말순님 · PC/.test(hh), '동네가 적힌 분이 없어도 만날 분 추천(카드 · 이번 주 칸) — 동네는 지어내지 않음');
+  X.g.HOME_V2.route(); let s3 = (X.els.hv2Sheet || {}).innerHTML || '';
+  is(/오늘 만날 분 추천/.test(s3) && /동네 모름/.test(s3) && !/mapsvg/.test(s3), '시트 — 그림 없이 만날 분만(만남 → 제안 → 청약 → 연락 차례)');
+  /* 일정 넣기 */
+  const did = [];
+  X = box({ apex_home_v2: '1' }, '', {});
+  Object.assign(X.g, { MCAL: { sel: '' }, mcalToday: () => '2026-11-21', CM_HOW: ['전화', '만남'],
+    mcalMyPut: () => did.push(['me', X.g.MCAL.sel, X.els.mcalMyT.value, X.els.mcalMyH.value]),
+    mcalCusPut: () => did.push(['cus', X.g.MCAL.sel, X.els.mcalCusId.value]),
+    mcalCusList: () => [{ id: 'c1', name_masked: '홍*동' }], mcalName: () => '홍길동', mcalOutName: () => '홍*동',
+    icsBuild: (n, evs) => 'ICS:' + JSON.stringify(evs) });
+  X.g.HOME_V2.apply(dyn(X));
+  is(/HOME_V2\.sched\(\)">＋ 일정/.test(X.els.hv2.innerHTML), '「＋ 일정」 은 달력 화면으로 넘기지 않고 일정 넣기 시트');
+  X.g.HOME_V2.sched(); s3 = (X.els.hv2Sheet || {}).innerHTML || '';
+  is(/📅 일정 넣기/.test(s3) && /schedSet\('ds','2026-11-22'\)">내일/.test(s3) && /schedSet\('hm','14:00'\)">14:00/.test(s3) && /type="date"/.test(s3) && /type="time"/.test(s3) && /📌 내 일정/.test(s3) && /👤 고객 일정/.test(s3),
+    '날짜 · 시각은 단추 한 번(오늘 · 내일 · 모레 / 10 · 14 · 19시) + 폰 기본 고르개(date · time) · 내 일정 / 고객 일정');
+  X.g.HOME_V2.schedSet('ds', '2026-11-22'); X.g.HOME_V2.schedSet('hm', '14:00');
+  X.els.mcalMyT = { value: '지점 회의' }; X.els.mcalMyH = { value: '' };
+  X.g.HOME_V2.schedPut(); s3 = (X.els.hv2Sheet || {}).innerHTML || '';
+  is(did[0] && did[0][0] === 'me' && did[0][1] === '2026-11-22' && did[0][2] === '지점 회의' && did[0][3] === '14:00', '넣기 = 있던 mcalMyPut(내 캘린더와 같은 칸) · 고른 날은 MCAL.sel 한 곳 · 시각 그대로');
+  is(/✓ 넣었어요/.test(s3) && /HOME_V2\.schedIcs\(\)">📲 폰 달력에 넣기/.test(s3) && /calendar\.google\.com\/calendar\/render\?action=TEMPLATE&amp;text=%EC%A7%80%EC%A0%90%20%ED%9A%8C%EC%9D%98&amp;dates=20261122T140000\/20261122T143000/.test(s3),
+    '넣은 뒤 「📲 폰 달력에 넣기」(아이폰 · 갤럭시) · 「Google 캘린더로」(그 일정 · 그 시각)');
+  X.g.HOME_V2.sched(); X.g.HOME_V2.schedSet('tab', 'cus');
+  X.els.mcalCusId = { value: 'c1' }; X.els.mcalCusHow = { value: '만남' }; X.els.mcalCusNote = { value: '보장분석 설명' };
+  X.g.HOME_V2.schedPut(); s3 = (X.els.hv2Sheet || {}).innerHTML || '';
+  is(did[1] && did[1][0] === 'cus' && did[1][2] === 'c1' && /홍길동님 · 만남 — 보장분석 설명/.test(s3) && /text=%ED%99%8D\*%EB%8F%99/.test(s3),
+    '고객 일정 = 있던 mcalCusPut(고객 365일과 같은 자리) · 폰 달력 · 구글로 나가는 이름은 가림(mcalOutName)');
+  is(!/\.from\('dbs'\)\.(insert|update|upsert)|mcalMyAdd\(|cmNextSave\(|cmTouchAdd\(/.test(sc), '일정 저장 코드를 새로 안 짬 — 있던 넣기 두 가지를 부르기만');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');

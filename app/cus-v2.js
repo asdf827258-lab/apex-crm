@@ -243,7 +243,8 @@
       (ph ? '<a href="tel:' + E(ph) + '">📞<span>전화</span></a>' : '<button type="button" onclick="cuwSheet(\'base\')">📞<span>번호 넣기</span></button>') +
       /* 💬 — 문자 앱 바로(ccSms) 대신 보내기 화면(카톡 · 문자 고름). 보내기 화면이 없으면 예전 문자 */
       '<button type="button" onclick="' + (g.MSG_V2 ? 'cusV2Say()' : 'ccSms(\'' + Q(c.id) + '\')') + '">💬<span>카톡·문자</span></button>' +
-      '<button type="button" onclick="cusTab(\'talk\');cuwNxOpen()">📅<span>일정</span></button>' +
+      /* 📅 — 오늘 화면과 같은 「일정 넣기」 시트(이분이 골라진 채 · 날짜 단추 · 폰 달력). 없으면 예전 「다음 할 일 잡기」 */
+      '<button type="button" onclick="' + (g.HOME_V2 && g.HOME_V2.sched ? 'HOME_V2.sched({cid:\'' + Q(c.id) + '\'})' : 'cusTab(\'talk\');cuwNxOpen()') + '">📅<span>일정</span></button>' +
       '<button type="button" onclick="cuwWrite()">✍️<span>기록</span></button></div>';
   }
   function stepsHtml() {
