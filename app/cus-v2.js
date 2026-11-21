@@ -66,6 +66,10 @@
       '#cusWin.cv2-on[data-tab="sum"][data-sheet=""]>.cus-head{display:none!important}',
       '#cusWin.cv2-on[data-tab="sum"][data-sheet=""]>[data-cus-tab="sum"]:not(.cv2-box){display:none!important}',
       '#cusWin.cv2-on[data-tab="sum"][data-sheet=""]>.cv2-box{order:-1}',
+      /* 이 상자는 예전 칸 표시(data-cus-tab)를 안 씁니다 — 예전 고객 창 점검(check-cuswin)이 요약 맨 위 · 인쇄 칸 수를 그 표시로 셉니다.
+         보이는 것은 「요약 탭 + 고치기 화면 아님」 일 때만, 이 두 줄이 정합니다 */
+      '#cusWin>.cv2-box{display:none}',
+      '#cusWin[data-tab="sum"][data-sheet=""]>.cv2-box{display:block}',
       '@media print{#cusWin>.cv2-box{display:none!important}}',
       '.cv2{--bg:#F2F4F6;--card:#fff;--ink:#191F28;--sub:#4E5968;--sub2:#6B7684;--sub3:#8B95A1;--line:#E5E8EB;--line2:#F2F4F6;' +
         '--blue:#1A56DB;--blue-l:#EAF1FF;--green:#0B8A4E;--green-l:#E7F6EE;--warn:#C2410C;--warn-l:#FFF1E6;--r:20px;' +

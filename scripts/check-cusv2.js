@@ -105,7 +105,7 @@ is(/var ALLOWED = true;/.test(SRC) && B.g.CUS_V2.on() === false && !/vchip/.test
 
 console.log('\n[3] index.html 은 세 자리만');
 is((IX.match(/<script src="cus-v2\.js"><\/script>/g) || []).length === 1 && IX.indexOf('<script src="cus-v2.js">') > IX.indexOf('<script src="home-v2.js">'), 'cus-v2.js 를 한 번, home-v2.js 뒤에 싣는다');
-const hostLine = `'<div class="cv2-box" id="cv2Box" data-cus-tab="sum">'+((typeof cusV2Html==='function')?cusV2Html(c):'')+'</div>'+`;
+const hostLine = `'<div class="cv2-box" id="cv2Box">'+((typeof cusV2Html==='function')?cusV2Html(c):'')+'</div>'+`;
 is(IX.split(hostLine).length === 2 && IX.indexOf(hostLine) < IX.indexOf(`cusSec('sum','<div id="cuwNow">'`) && IX.indexOf(hostLine) > IX.indexOf('function osClientDetailHtml(c){'),
   '요약 자리(cv2Box) 한 줄이 osClientDetailHtml 안, 예전 요약(cuwNow) 바로 앞 — 파일이 없어도 빈 칸');
 const cp = IX.slice(IX.indexOf('function cuwPaint(c){'), IX.indexOf('function osClientDetailHtml(c){'));
@@ -150,7 +150,10 @@ const cssBody = (SRC.match(/var C = \[([\s\S]*?)\];/) || ['', ''])[1];
 const rules = [];
 (cssBody.match(/'([^']*)'/g) || []).map(s => s.slice(1, -1)).join('').replace(/@media[^{]*\{((?:[^{}]*\{[^}]*\})*)\}/g, (m0, inner) => { inner.replace(/([^{}]+)\{/g, (m, sel) => { rules.push(sel.trim()); }); return ''; })
   .replace(/([^{}]+)\{[^}]*\}/g, (m, sel) => { rules.push(sel.trim()); return ''; });
-const badSel = rules.filter(r => r.split(',').some(s => !/^\s*(\.cv2\b|#cv2Sheet\b|#cv2Dim\b|#cusWin\.cv2-on\[data-tab="sum"\]\[data-sheet=""\]>|#cusWin>\.cv2-box)/.test(s)));
+const badSel = rules.filter(r => r.split(',').some(s => !/^\s*(\.cv2\b|#cv2Sheet\b|#cv2Dim\b|#cusWin(\.cv2-on)?\[data-tab="sum"\]\[data-sheet=""\]>|#cusWin>\.cv2-box)/.test(s)));
+/* ★ 판 X512 CI — 새 화면 상자에 예전 칸 표시(data-cus-tab)를 붙였더니 check-cuswin 이 「요약 맨 위」 와 「인쇄 칸 수」 에 그 상자를 세어 빨간불 */
+is(!/data-cus-tab/.test(IX.slice(IX.indexOf('id="cv2Box"') - 40, IX.indexOf('id="cv2Box"') + 40)) && /#cusWin>\.cv2-box\{display:none\}/.test(SRC) && /#cusWin\[data-tab="sum"\]\[data-sheet=""\]>\.cv2-box\{display:block\}/.test(SRC),
+  '새 화면 상자는 예전 칸 표시(data-cus-tab)를 안 씀 — 요약 · 고치기 아님일 때만 자기 옷으로 보임(예전 창 점검의 맨 위 · 인쇄 칸 수에 안 섞임)');
 is(rules.length > 30 && !badSel.length, '옷 ' + rules.length + '줄 모두 .cv2 · #cv2Sheet/#cv2Dim · #cusWin.cv2-on(요약·고치기 아닐 때) 아래' + (badSel.length ? ' — 밖: ' + badSel.slice(0, 3).join(' | ') : ''));
 is(/#cusWin\.cv2-on\[data-tab="sum"\]\[data-sheet=""\]>\.cus-head\{display:none!important\}/.test(SRC) && /#cusWin\.cv2-on\[data-tab="sum"\]\[data-sheet=""\]>\[data-cus-tab="sum"\]:not\(\.cv2-box\)\{display:none!important\}/.test(SRC),
   '예전 머리 · 요약은 「요약 탭 + 고치기 화면 아님 + 새 화면」 일 때만 감춘다 — 연락 · 보장 · 서류 · 정보 · 고치기는 예전 그대로');
