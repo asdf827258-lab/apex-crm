@@ -75,6 +75,9 @@ function box(store, search, opt) {
     mcalItems: () => ({}), mcalDay: () => [], hmRtNear: () => [],
     hmRtAppts: () => (opt.appts || []),
     AR: { db: opt.db || [] },
+    MSG_V2: opt.msg ? { open: o => { (g.__msgLog = g.__msgLog || []).push(o); } } : undefined,
+    MST_TOUCH: [{ ic: '🧾', t: '청구는 사진 한 장으로', why: '받을 돈', say: '영수증 사진만' }, { ic: '💳', t: '보험료 잘 빠지는지', why: '미납', say: '이번 달도' }],
+    hmRtPerson: () => {}, hmRtOpen: () => {},
     osClient: () => ({ from: () => ({ select: () => ({ in: () => ({ then: (ok) => ok({ data: opt.geo || [] }) }) }) }) }),
     navItemOf: id => { let f = null; g.TABS.forEach(gr => (gr.items || []).forEach(x => { if (x.id === id) f = x; })); return f; },
     arStageN: () => ({ c: { 미접촉: 3, TA: 1 }, tot: 4 }), hmNightSub: () => '오늘 닿은 분 0명',
@@ -152,7 +155,7 @@ console.log('\n[6] 서버 · 저장');
 /* 판 X505 — 서버는 <b>읽기 둘</b>만: 오늘 약속인 분의 좌표(dbs · 지역 동선이 적어 둔 칸)와 지역 동선이 쓰는 길찾기(route-km).
    쓰기(insert·update·upsert·delete·rpc)는 하나도 없습니다. 목표는 기존 pfLoad. */
 const 부름 = (sc.match(/\.from\('[^']+'\)\.[a-z]+\([^)]*\)/g) || []);
-is(부름.length === 1 && 부름[0] === ".from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng')", '서버 표는 좌표 읽기 하나뿐 — ' + 부름.join(' | '));
+is(부름.length === 1 && 부름[0] === ".from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng,next_appt_place')", '서버 표는 좌표 읽기 하나뿐 — ' + 부름.join(' | '));
 is(!/\.(insert|update|upsert|delete|rpc)\(/.test(sc) && !/supabase\./.test(sc), '서버에 쓰는 것이 하나도 없다');
 is((sc.match(/fetch\('([^']+)'/g) || []).join() === "fetch('/.netlify/functions/route-km'", '부르는 주소는 지역 동선의 길찾기(route-km) 하나뿐');
 const 담기 = (sc.match(/setItem\(([^,]+),/g) || []).map(x => x.replace(/setItem\(|,/g, ''));
@@ -294,6 +297,38 @@ console.log('\n[13] 시안과 나란히 보고 고친 것 (판 X511)');
   B = box({ apex_home_v2: '1' }, '', { rows: many.slice(0, 3) });
   B.g.HOME_V2.apply(dyn(B));
   is(((B.els.hv2.innerHTML.match(/id="hv2Dots">([\s\S]*?)<\/div>/) || ['', ''])[1].match(/<i /g) || []).length === 3, '카드가 여덟 장 아래면 점도 그 수만큼');
+}
+
+console.log('\n[14] 오늘 동선 카드 · 카톡처럼 보내기 (판 X512 · 「오늘 어디가는지랑 지역동선 다 어디갔는데」 · 「안부 카톡이나 문자도 디자인」)');
+{
+  let X = box({ apex_home_v2: '1' }, '', { appts: [], db: [] });
+  X.g.HOME_V2.apply(dyn(X));
+  let hh = X.els.hv2.innerHTML;
+  is(/class="rtc"/.test(hh) && /🗺️ 지역 동선/.test(hh) && hh.indexOf('class="rtc"') > hh.indexOf('id="hv2Week"'), '약속도 동네도 없어도 「📍 · 🗺️ 지역 동선」 카드가 늘 선다(이번 주 다음)');
+  const DB3 = [1, 2, 3].map(i => ({ id: 'q' + i, who: 'me', name: ['홍길동', '홍길순', '홍갑돌'][i - 1], region: '광양', stage: 'AP', days: 3 }));
+  X = box({ apex_home_v2: '1' }, '', { appts: [], db: DB3, geo: DB3.map((r, i) => ({ id: r.id, lat: 34.9 + i / 100, lng: 127.6 })) });
+  X.g.hwhoFor = () => 'me';
+  X.g.HOME_V2.apply(dyn(X)); hh = X.els.hv2.innerHTML;
+  is(/오늘은 약속이 없어요 · 추천 동선 광양/.test(hh) && /들를 분 3명/.test(hh), '약속이 없으면 카드에 추천 동선(동네 · 들를 분)');
+  X.g.HOME_V2.route(); let sh2 = (X.els.hv2Sheet || {}).innerHTML || '';
+  is(/📍 추천 동선/.test(sh2) && /<svg[^>]*class="mapsvg"/.test(sh2) && /<path d="M/.test(sh2) && /<div class="tile no">1<\/div>/.test(sh2) && /홍길동님/.test(sh2) && /hmRtOpen\(\)/.test(sh2), '누르면 시트 — 실제 좌표를 줄인 그림 · 들를 분 · 지역 동선(카카오맵) 단추');
+  X = box({ apex_home_v2: '1' }, '', { appts: [{ id: 'a1', nm: '홍길순', hm: '10:30', rg: '순천', st: 'AP' }, { id: 'a2', nm: '홍갑돌', hm: '14:00', rg: '순천', st: 'PC' }],
+    geo: [{ id: 'a1', next_appt_lat: 34.95, next_appt_lng: 127.49, next_appt_place: '연향동 카페' }, { id: 'a2', lat: 34.96, lng: 127.52 }] });
+  X.g.HOME_V2.apply(dyn(X)); hh = X.els.hv2.innerHTML;
+  is(/오늘 동선 [0-9.]+km(\(어림\))? · 약속 2곳/.test(hh) && (hh.match(/동선 [0-9.]+km/g) || []).length === 1, '약속이 있으면 「오늘 동선 Nkm · 약속 N곳」 — 이번 주 칸에 같은 줄이 또 서지 않는다(한 곳)');
+  X.g.HOME_V2.route(); sh2 = (X.els.hv2Sheet || {}).innerHTML || '';
+  is(/10:30 · 홍길순님/.test(sh2) && /연향동 카페 · AP/.test(sh2) && /14:00 · 홍갑돌님/.test(sh2) && /장소 미정 · PC/.test(sh2), '시트 「약속」 — 시간 · 이름 · 장소(dbs.next_appt_place) · 단계, 장소 모르면 「장소 미정」(지어내지 않음)');
+  X = box({ apex_home_v2: '1' }, '', { msg: true });
+  X.g.HOME_V2.apply(dyn(X)); hh = X.els.hv2.innerHTML;
+  is(/HOME_V2\.say\('touch:c1:'\)">💬 카톡처럼 보고 보내기/.test(hh) && /복사하고 보냈어요/.test(hh), '보내기 화면이 있으면 「💬 카톡처럼 보고 보내기」 · 빠른 「복사하고 보냈어요」 도 그대로');
+  let qf = '';
+  X.g.hmQfin = k => { qf = k; };
+  X.g.HOME_V2.say('touch:c1:');
+  const op = (X.g.__msgLog || [])[0] || { items: [] };
+  is(op.who === '홍길동' && op.items.length === 1 && op.items[0].lb === '💳 보험료 잘 빠지는지' && op.items[0].note === '미납' &&
+     op.items[0].text('sms') === '고객님, 안녕하세요 (m1·sms)', '보내기 화면 — 카드와 같은 글(HM_TAMSG.list · text) · 안부 제목은 MST_TOUCH 그대로 · 문자 고르면 문자 글');
+  op.onSent && op.onSent(op.items[0], 'kakao');
+  is(qf === 'touch:c1:', '「보냈어요」 = 이분 끝(hmQfin) — 저장 코드를 새로 안 짬');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');

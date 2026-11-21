@@ -16,7 +16,7 @@
        지금 상황 · 걱정 · 가족 · 생일 · 계약일 · 만기 · 소개 cmOf(CM_FIELDS) · 할 일 cmNextAll · 약속 cuwAppt
        기록 cusLog(CUS.calls, touch) · 팩트파인딩 cmFfCount · 보장 OSCP · 권할 것 MK_TALK · APEX_STAGE · HM_DOOR
    ★ <b>저장 코드를 새로 짜지 않습니다</b> — 누르면 있던 고치기 칸(cuwSheet · cusReveal → cmCare · cmWorry …)이나
-     있던 함수(ccSms · cuwWrite · cuwNxOpen · cqaWal · hmDoorGo · cusTab)를 부르기만 합니다.
+     있던 함수(cuwWrite · cuwNxOpen · cqaWal · hmDoorGo · cusTab)를 부르기만 합니다.
    ★ 시안에만 있고 라이브에 <b>칸이 없는 것</b>(하는 일 · 연락 편한 때)은 세우지 않습니다 —
      빈칸을 「＋ 적기」 로 세우면 적을 곳이 없습니다.
      「이분 여정」 은 TA 스크립트 순서 열 칸 — 「오늘」 칸은 라이브 단계 · 약속 날로 셉니다. 보낸 날은 라이브에 안 남아 날짜를 지어 붙이지 않습니다.
@@ -141,6 +141,11 @@
       '.cv2 .kc.e{background:transparent;border:1.5px dashed #D1D6DB}',
       '.cv2 .kc.e b{color:var(--blue);font-weight:700}',
       '.cv2 .src{font-size:13px;color:var(--sub3);margin:12px 2px 0}',
+      /* 안부 카톡 · 문자 칸 — 카톡 말풍선 미리보기 */
+      '.cv2 .sayc{display:block;width:100%;margin-top:8px;background:#BACEE0;border-radius:18px;padding:12px 14px;text-align:left}',
+      '.cv2 .sayc .lb{display:block;font-size:13px;font-weight:700;color:#3D4F63}',
+      '.cv2 .sayc .bub{display:block;margin:8px 0 0 auto;max-width:86%;width:fit-content;background:#FEE500;color:#191919;border-radius:14px 4px 14px 14px;padding:9px 12px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-all}',
+      '.cv2 .sayc .go{display:block;margin-top:10px;font-size:14px;font-weight:800;color:#191F28;text-align:right}',
       /* 이분 여정 */
       '.cv2 .jr{background:#fff;border-radius:18px;padding:8px 16px;margin-top:8px}',
       '.cv2 .jr-r{display:flex;align-items:center;gap:10px;min-height:40px;font-size:14px;color:var(--sub3)}',
@@ -232,7 +237,8 @@
     var ph = base(c.id).ph || T(function () { return g.ccTelOf(c.id); }, '') || T(function () { return g.CUS.db.phone; }, '') || '';
     return '<div class="qa4">' +
       (ph ? '<a href="tel:' + E(ph) + '">📞<span>전화</span></a>' : '<button type="button" onclick="cuwSheet(\'base\')">📞<span>번호 넣기</span></button>') +
-      '<button type="button" onclick="ccSms(\'' + Q(c.id) + '\')">💬<span>문자</span></button>' +
+      /* 💬 — 문자 앱 바로(ccSms) 대신 보내기 화면(카톡 · 문자 고름). 보내기 화면이 없으면 예전 문자 */
+      '<button type="button" onclick="' + (g.MSG_V2 ? 'cusV2Say()' : 'ccSms(\'' + Q(c.id) + '\')') + '">💬<span>카톡·문자</span></button>' +
       '<button type="button" onclick="cusTab(\'talk\');cuwNxOpen()">📅<span>일정</span></button>' +
       '<button type="button" onclick="cuwWrite()">✍️<span>기록</span></button></div>';
   }
@@ -416,23 +422,40 @@
     return { c: nameOf(c), me: T(function () { return g.OS.profile.name; }, ''), area: area, when: ap ? T(function () { return g.cuwApptTxt(ap); }, '') : '',
       where: '', date: '', db: d && d.source ? d.source : '' };
   }
-  function msgSheet(k) {
-    var c = T(function () { return g.OSC.current; }, null), M = msgOf(k); if (!c || !M) return;
-    var tx = T(function () { return g.TA_MSG.textFor(k, msgCtx(c), 'kakao'); }, '') || '';
-    MSG_NOW = { k: k, t: M.t, tx: tx };
-    sheet('<div class="grab"></div><div class="who2">' + E(nameOf(c)) + '님 · TA 스크립트</div><h1>' + E(M.t) + '</h1>' +
-      (M.note ? '<div class="hint">' + E(strip(M.note)) + '</div>' : '') +
-      '<div class="say">' + E(tx).replace(/\n/g, '<br>') + '</div>' +
-      '<button type="button" class="btn p" onclick="cusV2Sent()">💬 복사하고 보냈어요</button>' +
-      '<button type="button" class="btn g" onclick="cusV2Copy()">복사만</button>');
+  /* 💬 보낼 글 — 사장님 말씀 (2026-11-21) 「안부 카톡이나 문자도 디자인 짜라니까」 · 「고객 화면에도 안부 보내기」.
+     글은 라이브 원본에서만: ① 이분께 맞춘 글(ccMsgText — 생일 · 할 일 · 소식 · 오래 연락 없음)
+     ② 여정 오늘 칸의 TA 스크립트 글(TA_MSG) ③ 계약 고객 안부 글(MST_TOUCH — HM_TAMSG.list/text, 오늘 화면과 같은 차례).
+     보내기 화면은 msg-v2.js(MSG_V2) 한 곳 — 오늘 화면 카드와 같은 것을 씁니다. 「보냈어요」 는 있던 접촉 기록(cmTouchAdd) 한 줄 */
+  function sayItems(c, first) {
+    var out = [], id = c.id;
+    var mine = T(function () { return g.ccMsgText(id); }, '') || '';
+    if (mine) out.push({ lb: '🙋 이분께 맞춘 글', note: '생일 · 해 두기로 한 일 · 오래 연락 없음 같은 이분 사정으로 만든 글이에요', text: function () { return mine; } });
+    var k = jNow(c), M = k ? msgOf(k) : null;
+    if (M) out.push({ lb: '📜 ' + M.t, k: k, note: 'TA 스크립트 · 이분 여정의 오늘 칸', text: function (ch) { return T(function () { return g.TA_MSG.textFor(k, msgCtx(c), ch); }, '') || ''; } });
+    (T(function () { return g.HM_TAMSG.list({ k: 'touch' }); }, []) || []).forEach(function (mk) {
+      var m = T(function () { return g.MST_TOUCH[+String(mk).slice(1)]; }, null); if (!m) return;
+      out.push({ lb: m.ic + ' ' + m.t, note: m.why, text: function (ch) { return T(function () { return g.HM_TAMSG.text(mk, { k: 'touch' }, ch); }, '') || m.say; } });
+    });
+    if (first) out.sort(function (a, b) { return (b.k === first ? 1 : 0) - (a.k === first ? 1 : 0); });
+    return out;
   }
-  var MSG_NOW = null;
-  function copyNow() { if (!MSG_NOW) return; try { g.copyText(MSG_NOW.tx); } catch (e) {} }
-  function sentNow() {
-    var c = T(function () { return g.OSC.current; }, null); if (!c || !MSG_NOW) return;
-    copyNow();
-    try { g.cmTouchAdd(c.id, 'TA 카톡 · ' + MSG_NOW.t, '카톡', T(function () { return g.cuwToday(); }, undefined)); } catch (e) {}
-    close();
+  function telOf(c) { return base(c.id).ph || T(function () { return g.ccTelOf(c.id); }, '') || T(function () { return g.CUS.db.phone; }, '') || ''; }
+  function say(k, ch) {
+    var c = T(function () { return g.OSC.current; }, null); if (!c || !g.MSG_V2) return;
+    g.MSG_V2.open({ who: nameOf(c), tel: telOf(c), title: k ? '💬 보낼 말' : '💬 안부 카톡 · 문자', ch: ch || 'kakao', items: sayItems(c, k),
+      onSent: function (it, chn) {
+        try { g.cmTouchAdd(c.id, (it && it.k ? 'TA 카톡 · ' : '안부 · ') + strip(it ? it.lb : '').replace(/^\S+\s/, ''), chn === 'sms' ? '문자' : '카톡', T(function () { return g.cuwToday(); }, undefined)); } catch (e) {}
+      } });
+  }
+  /* 고객 화면 칸 — 오늘 보낼 만한 글 한 통을 카톡 말풍선으로 미리 · 누르면 보내기 화면 */
+  function sayHtml(c) {
+    if (!g.MSG_V2) return '';
+    var L = sayItems(c), it = L[0]; if (!it) return '';
+    var tx = String(T(function () { return it.text('kakao'); }, '') || '');
+    return '<div class="sec"><b>안부 카톡 · 문자</b><small>' + L.length + '가지 글</small></div>' +
+      '<button type="button" class="sayc" onclick="cusV2Say()"><span class="lb">' + E(it.lb) + '</span>' +
+      '<span class="bub">' + E(tx.length > 90 ? tx.slice(0, 90) + '…' : tx) + '</span>' +
+      '<span class="go">💬 카톡 · ✉️ 문자로 보내기 ›</span></button>';
   }
 
   /* 시트 — 시안 .sheet/.dim 그대로(#cv2Sheet 아래로만) */
@@ -504,7 +527,7 @@
   }
   function part(fn, c) { try { return fn(c) || ''; } catch (e) { return ''; } }
   function inner(c) {
-    return topHtml() + part(whoHtml, c) + part(qaHtml, c) + part(stepsHtml, c) + part(sitHtml, c) + part(recHtml, c) + part(jHtml, c) +
+    return topHtml() + part(whoHtml, c) + part(qaHtml, c) + part(stepsHtml, c) + part(sitHtml, c) + part(recHtml, c) + part(jHtml, c) + part(sayHtml, c) +
       part(knowHtml, c) + part(insHtml, c) + part(logHtml, c) + part(moreHtml, c) + part(srcHtml, c);
   }
 
@@ -551,15 +574,14 @@
   }
 
   g.CUS_V2 = { on: on, set: set, html: html, paint: paint, use: use, jump: jump, KEY: KEY, allowed: function () { return ALLOWED; },
-    STG: STG, stgI: stgI, catPick: catPick, knowCells: knowCells, jNow: jNow, JSTEP: JSTEP };
+    STG: STG, stgI: stgI, catPick: catPick, knowCells: knowCells, jNow: jNow, JSTEP: JSTEP, sayItems: sayItems };
   /* index.html · onclick 이 부르는 이름 — 점(.) 없는 함수여야 check-hmclick 이 「부르는 함수가 있다」 고 읽습니다 */
   g.cusV2Html = html;
   g.cusV2Paint = paint;
   g.cusV2Use = use;
   g.cusV2Jump = jump;
   g.cusV2Rec = recSheet;
-  g.cusV2Msg = msgSheet;
-  g.cusV2Sent = sentNow;
-  g.cusV2Copy = copyNow;
+  g.cusV2Msg = function (k) { say(k); };
+  g.cusV2Say = function (ch) { say('', ch); };
   g.cusV2Close = close;
 })(window);

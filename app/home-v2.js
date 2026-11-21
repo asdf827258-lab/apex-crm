@@ -244,6 +244,18 @@
       '.hv2 .eve .tx{flex:1;min-width:0}',
       '.hv2 .eve .t1{font-size:15px;font-weight:700}',
       '.hv2 .eve .t2{font-size:13px;color:var(--sub2)}',
+      /* 📍 오늘 동선 카드 · 시트 (시안 4차 routeCard · openRoute) */
+      '.hv2 .rtc{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border-radius:var(--r);padding:14px 16px;margin-top:10px;min-height:72px;text-align:left}',
+      '.hv2 .rtc .tile{background:var(--blue-l)}',
+      '.hv2 .rtc .tx{flex:1;min-width:0}',
+      '.hv2 .rtc .t1{font-size:16px;font-weight:700;line-height:1.35}',
+      '.hv2 .rtc .t2{font-size:13px;color:var(--sub2);margin-top:2px}',
+      '.hv2 .rtc .ar{color:#B0B8C1;font-size:18px}',
+      '.hv2 .mapsvg{display:block;width:100%;height:auto;margin-top:12px}',
+      '.hv2 .mapnote{font-size:13px;color:var(--sub3);margin:6px 2px 0}',
+      '.hv2 .tile.no{background:var(--blue);color:#fff;font-weight:800;font-size:16px}',
+      '.hv2 .tile.w{background:var(--warn-l)}',
+      '#hv2Sheet h2 small{font-size:13px;color:var(--sub2);font-weight:600;margin-left:4px}',
       '.hv2 .tile{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:22px;background:var(--line2);flex:none}',
       '.hv2 .mm{display:flex;align-items:center;gap:10px;width:100%;background:#fff;border-radius:18px;padding:0 16px;min-height:56px;margin-top:12px}',
       '.hv2 .mm span:first-child{flex:1;font-size:15px;font-weight:800}',
@@ -445,7 +457,11 @@
         h += '<div class="qmsg"><div class="lb">' + E(lab) + (tt ? ' · ' + E(tt) : '') + '</div><div class="tx">' + E(t) + '</div>' +
           '<button type="button" class="cp" onclick="HOME_V2.copy(\'' + key + '\',\'' + Q(k) + '\')">복사</button></div>' +
           '<div class="chtg"><button type="button" class="' + (CH === 'kakao' ? 'on' : '') + '" onclick="HOME_V2.ch(\'kakao\')">카톡</button><button type="button" class="' + (CH === 'sms' ? 'on' : '') + '" onclick="HOME_V2.ch(\'sms\')">문자</button></div>';
-        h += '<button type="button" class="btn p" style="margin-top:10px" onclick="HOME_V2.sent(\'' + key + '\',\'' + Q(k) + '\')">💬 복사하고 보냈어요</button>';
+        /* 💬 카톡처럼 보고 보내기 — 사장님 말씀 (2026-11-21) 「안부 카톡이나 문자도 디자인 짜라니까」 → 보내기 화면(msg-v2.js).
+           빨리 끝낼 때를 위해 「복사하고 보냈어요」 는 그대로 둡니다 */
+        if (g.MSG_V2) h += '<button type="button" class="btn p" style="margin-top:10px" onclick="HOME_V2.say(\'' + key + '\')">💬 카톡처럼 보고 보내기</button>' +
+          '<button type="button" class="btn g sm" style="margin-top:8px" onclick="HOME_V2.sent(\'' + key + '\',\'' + Q(k) + '\')">복사하고 보냈어요</button>';
+        else h += '<button type="button" class="btn p" style="margin-top:10px" onclick="HOME_V2.sent(\'' + key + '\',\'' + Q(k) + '\')">💬 복사하고 보냈어요</button>';
       } else {
         h += callBtn + '<button type="button" class="btn g sm" style="margin-top:8px" onclick="hmQfin(\'' + key + '\')">✅ 이분 끝</button>';
       }
@@ -508,31 +524,16 @@
       return '<div class="tl"><span class="t">' + E(tm || KO[z.k] || '일정') + '</span><span class="x">' + E([nm, s.replace(/^\d{1,2}:\d{2}\s*·?\s*/, '')].filter(Boolean).join(' · ')) + '</span></div>';
     }).join('') + (SL.length > SHOW ? '<div class="tl" style="color:var(--sub2)"><span class="t"></span><span class="x">외 ' + (SL.length - SHOW) + '건 — 달력 크게에서</span></div>' : '')
       : '<div class="tl" style="color:var(--sub2)">이날은 일정이 없어요</div>';
+    /* 📍 동선은 이번 주 칸 밑 「오늘 동선」 카드(routeHtml) 한 곳에서 말합니다 — 판 X512 전에는 이 칸 맨 아래 한 줄이었고,
+         카드를 세우면서 같은 수가 두 번 서게 되어 이 줄을 걷었습니다. 약속이 없는 날의 「추천 1~3」 줄은 그대로(오늘 어디 가는지) */
     if (sel === dow && !route().n) {
-      /* 약속이 없는 날 — 추천 동선(recRoute). 시안처럼 시간 자리에 「추천」, 이름 · 단계 · 동네 */
       var RR = recRoute();
       if (RR.list.length) {
         if (!SL.length) h = h.replace('<div class="tl" style="color:var(--sub2)">이날은 일정이 없어요</div>', '<div class="tl" style="color:var(--sub2)">오늘은 약속이 없어요 — 이 동네를 묶어 보세요</div>');
         h += RR.list.slice(0, 3).map(function (r, i) {
           return '<div class="tl"><span class="t">추천 ' + (i + 1) + '</span><span class="x">' + E([nameOf({ t: r.name }) + '님', r.stage || '첫 전화', [r.region, r.dong].filter(Boolean).join(' ')].join(' · ')) + '</span></div>';
         }).join('');
-        var pp = ['추천 동선 ' + RR.rg];
-        if (RR.km != null) pp.push((RR.km < 1 ? Math.round(RR.km * 1000) + 'm' : RR.km.toFixed(1) + 'km') + (RR.real ? '' : '(어림)'));
-        pp.push('들를 분 ' + RR.list.length + '명');
-        if (RR.miss) pp.push('주소 모르는 곳 ' + RR.miss);
-        h += '<button type="button" class="rtl" onclick="hmRtOpen()"><span>📍 ' + E(pp.join(' · ')) + '</span><span>›</span></button>';
-      } else {
-        h += '<button type="button" class="rtl" onclick="hmRtOpen()"><span>📍 동네가 적힌 고객이 아직 없어요 — 지역 동선에서 동네를 고르면 길을 짜 드려요</span><span>›</span></button>';
       }
-    } else if (sel === dow) {
-      var near = T(function () { return g.hmRtNear().length; }, null), R = route();
-      var parts = [];
-      if (R.km != null) parts.push('동선 ' + (R.km < 1 ? Math.round(R.km * 1000) + 'm' : R.km.toFixed(1) + 'km') + (R.real ? '' : '(어림)'));
-      else parts.push('오늘 동선');
-      if (R.n) parts.push('약속 ' + R.n + '곳');
-      if (R.miss) parts.push('주소 모르는 곳 ' + R.miss);
-      if (near != null) parts.push('가는 김에 들를 분 ' + near + '명');
-      h += '<button type="button" class="rtl" onclick="hmRtOpen()"><span>📍 ' + E(parts.join(' · ')) + '</span><span>›</span></button>';
     }
     return h + '<div class="row2"><button type="button" class="btn g sm" onclick="go(\'mycal\')">＋ 일정</button><button type="button" class="btn g sm" onclick="go(\'mycal\')">📅 달력 크게</button></div></div>';
   }
@@ -578,7 +579,7 @@
   function html() {
     var L = T(function () { return g.hmLeft(); }, { list: [], all: 0 });
     return topHtml() + whoHtml() + helloHtml(L) + monHtml() + stepsHtml() + jvHtml() + railHtml(L) +
-      inscHtml() + weekHtml() + roadHtml() + eveHtml(L) + menuHtml() +
+      inscHtml() + weekHtml() + part(routeHtml) + roadHtml() + eveHtml(L) + menuHtml() +
       dockHtml();
     /* ⚠ 판 X511 — 맨 아래 「새 오늘 화면 (시험) · 시안 9차 디자인 · …」 설명 줄을 거뒀습니다
          (시안에 없음 · 토스 원칙 ③ 화면에 설명 문장 금지). 예전 화면으로 가는 길은 맨 위 「↩ 예전 화면」 단추 하나. */
@@ -641,7 +642,7 @@
     /* 한 번에 80분씩 — 주소 줄이 너무 길어지지 않게 (판 X510 · 추천 동선이 한 분의 배정 DB 를 다 봄) */
     for (var c = 0; c < need.length; c += 80) (function (part) {
       try {
-        sb.from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng').in('id', part).then(function (r) {
+        sb.from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng,next_appt_place').in('id', part).then(function (r) {
           if (r && r.error) { GEO_OFF = true; return; }       /* 좌표 칸이 없는 서버(migration_46 전) — 조용히 물러남 */
           ((r && r.data) || []).forEach(function (d) { GEO[d.id] = d; });
           paint();
@@ -742,6 +743,79 @@
     var L = ord.length >= 2 ? legs(ord.map(function (o) { return o.p; })) : null;
     var list = ord.map(function (o) { return o.r; }).concat(pick.filter(function (r) { return !ord.some(function (o) { return o.r === r; }); }));
     return { rg: by[ks[0]][0].region, list: list, km: L ? L.km : null, real: L ? L.real : false, miss: miss };
+  }
+
+  /* 📍 <b>오늘 동선 카드</b> — 사장님 말씀 (2026-11-21) 「오늘 어디가는지랑 지역동선 다 어디갔는데 없잖아」.
+     예전 오늘 화면에는 「🗺️ 지역 동선 →」 카드와 「오늘 약속」 목록이 따로 섰는데, 새 화면에서는 이번 주 칸 맨 아래
+     한 줄로만 남아 거의 안 보였습니다. 시안 4차 routeCard 그대로 카드 한 장을 늘 세우고, 누르면 시안 openRoute 시트.
+     ★ 약속 = hmRtAppts(라이브 「오늘 약속」 그대로) · 장소 = dbs.next_appt_place · 거리 = route()/recRoute() 와 같은 자
+     ★ 들를 분 = 약속이 있으면 hmRtNear(라이브 「가는 김에 걸 분」) · 없으면 추천 동선(recRoute)
+     ★ 그림은 <b>실제 좌표를 줄여 그린 것</b> — 좌표 없는 분은 그리지 않고 「주소 모르는 곳」 으로만. 크게는 지역 동선(hmRtOpen · 카카오맵) */
+  function part(fn) { try { return fn() || ''; } catch (e) { return ''; } }
+  function kmTxt(km, real) { return km == null ? '' : ((km < 1 ? Math.round(km * 1000) + 'm' : km.toFixed(1) + 'km') + (real ? '' : '(어림)')); }
+  function routeData() {
+    var A = T(function () { return g.hmRtAppts(); }, []) || [], R = route();
+    if (A.length) {
+      var near = T(function () { return g.hmRtNear(); }, []) || [];
+      return { kind: 'appt', A: A, km: R.km, real: R.real, miss: R.miss, rg: (A[0] && A[0].rg) || '', near: near.map(function (x) { return { id: x.id, nm: x.t || x.name || x.nm || '', why: [x.sub, x.s].filter(Boolean).join(' · ') }; }) };
+    }
+    var RR = recRoute();
+    if (RR.list.length) return { kind: 'rec', A: [], km: RR.km, real: RR.real, miss: RR.miss, rg: RR.rg,
+      near: RR.list.map(function (r) { return { id: r.id, nm: r.name || '', why: [r.stage || '첫 전화', [r.region, r.dong].filter(Boolean).join(' ')].join(' · '), tel: r.phone || '' }; }) };
+    return { kind: 'none', A: [], near: [] };
+  }
+  function routeHtml() {
+    var D = routeData(), t1, t2;
+    if (D.kind === 'appt') { t1 = '오늘 동선' + (D.km != null ? ' ' + kmTxt(D.km, D.real) : '') + ' · 약속 ' + D.A.length + '곳'; t2 = [D.rg, '가는 김에 들를 분 ' + D.near.length + '명', D.miss ? '주소 모르는 곳 ' + D.miss : ''].filter(Boolean).join(' · '); }
+    else if (D.kind === 'rec') { t1 = '오늘은 약속이 없어요 · 추천 동선 ' + D.rg; t2 = ['들를 분 ' + D.near.length + '명', D.km != null ? kmTxt(D.km, D.real) : '', D.miss ? '주소 모르는 곳 ' + D.miss : ''].filter(Boolean).join(' · '); }
+    else { t1 = '🗺️ 지역 동선'; t2 = '동네가 적힌 고객이 아직 없어요 — 동네를 골라 하루를 묶어요'; }
+    return '<button type="button" class="rtc" onclick="HOME_V2.route()"><div class="tile">📍</div><div class="tx"><div class="t1">' + E(t1) + '</div><div class="t2">' + E(t2) + '</div></div><span class="ar">›</span></button>';
+  }
+  /* 실제 좌표를 340×190 에 줄여 그림 — 약속은 파란 번호, 들를 분은 주황 동그라미 */
+  function mapSvg(stops, near) {
+    var P = [];
+    stops.forEach(function (s, i) { var p = ptOf(GEO[s.id]); if (p) P.push({ p: p, k: 's', n: i + 1 }); });
+    near.forEach(function (s) { var p = ptOf(GEO[s.id]); if (p) P.push({ p: p, k: 'n' }); });
+    if (!P.length) return '';
+    var la = P.map(function (o) { return o.p.lat; }), ln = P.map(function (o) { return o.p.lng; });
+    var a0 = Math.min.apply(null, la), a1 = Math.max.apply(null, la), n0 = Math.min.apply(null, ln), n1 = Math.max.apply(null, ln);
+    var sx = function (v) { return n1 === n0 ? 170 : 30 + (v - n0) / (n1 - n0) * 280; }, sy = function (v) { return a1 === a0 ? 95 : 160 - (v - a0) / (a1 - a0) * 130; };
+    var h = '<svg viewBox="0 0 340 190" class="mapsvg" role="img" aria-label="오늘 동선 그림"><rect width="340" height="190" rx="16" fill="#EEF2F6"/>';
+    var S = P.filter(function (o) { return o.k === 's'; });
+    if (S.length > 1) h += '<path d="' + S.map(function (o, i) { return (i ? 'L' : 'M') + sx(o.p.lng).toFixed(1) + ' ' + sy(o.p.lat).toFixed(1); }).join(' ') + '" stroke="#1A56DB" stroke-width="4" stroke-dasharray="2 7" stroke-linecap="round" fill="none"/>';
+    P.filter(function (o) { return o.k === 'n'; }).forEach(function (o) { h += '<circle cx="' + sx(o.p.lng).toFixed(1) + '" cy="' + sy(o.p.lat).toFixed(1) + '" r="7" fill="#fff" stroke="#C2410C" stroke-width="3"/>'; });
+    /* 같은 건물처럼 거의 같은 자리(12px 안)는 한 점으로 묶어 「1·2·3」 — 겹쳐서 번호가 사라지지 않게 */
+    var G = [];
+    S.forEach(function (o) { var x = sx(o.p.lng), y = sy(o.p.lat), q = G.filter(function (k) { return Math.abs(k.x - x) < 12 && Math.abs(k.y - y) < 12; })[0]; if (q) q.n.push(o.n); else G.push({ x: x, y: y, n: [o.n] }); });
+    G.forEach(function (k) { var t = k.n.join('·'), r = t.length > 2 ? 9 + t.length * 3.6 : 13; h += (t.length > 2 ? '<rect x="' + (k.x - r).toFixed(1) + '" y="' + (k.y - 13).toFixed(1) + '" width="' + (2 * r).toFixed(1) + '" height="26" rx="13" fill="#1A56DB"/>' : '<circle cx="' + k.x.toFixed(1) + '" cy="' + k.y.toFixed(1) + '" r="13" fill="#1A56DB"/>') + '<text x="' + k.x.toFixed(1) + '" y="' + (k.y + 5).toFixed(1) + '" text-anchor="middle" font-size="14" font-weight="800" fill="#fff">' + t + '</text>'; });
+    return h + '</svg><div class="mapnote">실제 위치를 줄여 그린 그림이에요 · 크게는 카카오맵에서</div>';
+  }
+  function routeSheet() {
+    var D = routeData();
+    var lead = D.kind === 'none' ? '오늘 약속도, 동네가 적힌 고객도 아직 없어요' : [D.rg, D.km != null ? '약 ' + kmTxt(D.km, D.real) : '', D.miss ? '주소 모르는 곳 ' + D.miss : ''].filter(Boolean).join(' · ');
+    var h = '<h1>📍 ' + (D.kind === 'rec' ? '추천 동선' : '오늘 동선') + '</h1><div class="sub">' + E(lead) + '</div>';
+    h += D.kind === 'none' ? '' : (D.kind === 'rec' ? mapSvg(D.near, []) : mapSvg(D.A, D.near));
+    if (D.A.length) h += '<h2>약속</h2><div class="list">' + D.A.map(function (a, i) {
+      var pl = (GEO[a.id] && GEO[a.id].next_appt_place) || '';
+      return '<button type="button" class="li" onclick="HOME_V2.close();hmRtPerson(\'' + Q(a.id) + '\')"><div class="tile no">' + (i + 1) + '</div><div class="tx"><div class="t1">' + E((a.hm || '시간 미정') + ' · ' + nameOf({ t: a.nm }) + '님') + '</div>' +
+        '<div class="t2">' + E([pl || '장소 미정', a.st].filter(Boolean).join(' · ')) + '</div></div><span class="ar">›</span></button>';
+    }).join('') + '</div>';
+    if (D.near.length) h += '<h2>' + (D.kind === 'rec' ? '들를 분' : '가는 김에 들를 분') + ' <small>' + (D.kind === 'rec' ? '같은 동네 · 가까운 차례로' : '같은 동네 · 연락 주기가 된 분') + '</small></h2><div class="list">' + D.near.slice(0, 8).map(function (n) {
+      return '<button type="button" class="li" onclick="HOME_V2.close();hmRtPerson(\'' + Q(n.id) + '\')">' + (D.kind === 'rec' ? '<div class="tile no">' + (D.near.indexOf(n) + 1) + '</div>' : '<div class="tile w">📞</div>') + '<div class="tx"><div class="t1">' + E(nameOf({ t: n.nm }) + '님') + '</div><div class="t2">' + E(n.why) + '</div></div><span class="ar">›</span></button>';
+    }).join('') + '</div>';
+    h += '<button type="button" class="btn p" style="margin-top:14px" onclick="HOME_V2.close();hmRtOpen()">🗺 지역 동선 · 카카오맵으로 크게 보기</button>';
+    sheet(h);
+  }
+  /* 💬 보내기 화면 — 오늘 화면 카드의 글(HM_TAMSG.list · text) 그대로. 「보냈어요」 = 이분 끝(hmQfin) */
+  function sayOpen(key) {
+    var x = rowOf(key); if (!x || !g.MSG_V2) return;
+    var items = (T(function () { return g.HM_TAMSG.list(x); }, []) || []).map(function (k) {
+      var m = /^m\d+$/.test(k) ? T(function () { return g.MST_TOUCH[+k.slice(1)]; }, null) : null;
+      var M = m ? null : (T(function () { return g.TA_MSG.MSG; }, []) || []).filter(function (o) { return o.k === k; })[0];
+      return { k: k, lb: m ? m.ic + ' ' + m.t : '📜 ' + ((M && M.t) || k), note: m ? m.why : strip((M && M.note) || ''), text: function (ch) { return msgText(k, x, ch); } };
+    });
+    g.MSG_V2.open({ who: nameOf(x), tel: T(function () { return g.hmTelOf(x); }, ''), title: T(function () { return g.HM_TAMSG.tag(x); }, '') || '💬 보낼 글', ch: CH, items: items,
+      onSent: function () { try { g.hmQfin(key); } catch (e) {} paint(); } });
   }
 
   /* ── 그리기 ─────────────────────────────────────────────────────── */
@@ -864,6 +938,8 @@
     },
     copyRaw: function (key, k) { var x = rowOf(key); if (x) copyT(msgText(k, x, 'kakao')); },
     copy: function (key, k) { var x = rowOf(key); if (x) copyT(msgText(k, x)); },
+    say: sayOpen,
+    route: routeSheet,
     sent: function (key, k) { API.copy(key, k); try { g.hmQfin(key); } catch (e) {} },
     ch: function (c) { CH = c; try { g.HM_TAMSG.setCh(c); } catch (e) {} paint(); },
     next: function (i) { var r = el('hv2Rail'); if (!r || !r.children.length) return; var n = r.children[(i + 1) % r.children.length]; r.scrollTo({ left: n.offsetLeft - r.offsetLeft, behavior: 'smooth' }); },

@@ -53,7 +53,11 @@ function box(store, opt) {
   const meta = opt.meta || { care: '부모님 일', worry: '엄마 간병이 걱정이에요', fam: '남편', touch: [{ at: '2026-11-18', how: '전화', note: '다음 주에 다시' }] };
   const said = [];
   const g = {
-    said, copyText: t => said.push(['copy', t]), cmTouchAdd: (id, note, how) => said.push(['touch', id, note, how]), OS: { profile: { name: '홍판서' } },
+    said, copyText: t => said.push(['copy', t]), cmTouchAdd: (id, note, how) => said.push(['touch', id, note, how]),
+    MSG_V2: opt.noMsg ? undefined : { open: o => { (g.__msgLog = g.__msgLog || []).push(o); } },
+    ccMsgText: () => '[ccMsg] 고객님 안녕하세요',
+    HM_TAMSG: { list: x => (x && x.k === 'touch' ? ['m1'] : []), text: (k, x, ch) => '안부 ' + k + '·' + ch, area: () => '' },
+    MST_TOUCH: [{ ic: '🧾', t: '청구', why: '받을 돈', say: '영수증' }, { ic: '💳', t: '보험료 잘 빠지는지', why: '미납', say: '이번 달도' }], OS: { profile: { name: '홍판서' } },
     TA_MSG: { MSG: [{ k: 'ok', t: '만남 승낙' }, { k: 'eve', t: '전날 확인' }, { k: 'go', t: '당일 출발' }, { k: 'thanks', t: '만난 직후 감사' }, { k: 'later', t: '결정 보류 1주 후' }, { k: 'signed', t: '계약 감사' }],
       textFor: (k, f, ch) => '[' + k + '] ' + f.c + '님 · ' + (f.me || '') + ' · ' + ch },
     localStorage: ls, navigator: { webdriver: !!opt.robot }, document: doc, setTimeout: f => { Q.push(f); return 0; }, toast: () => {},
@@ -188,11 +192,18 @@ is(h.indexOf('class="recc"') < h.indexOf('<b>이분 여정</b>') && h.indexOf('<
 is((jr.match(/jr-r dn/g) || []).length === 2 && /jr-r now"><i><\/i><span class="jr-t">💬 전날 확인/.test(jr) && /cusV2Msg\('eve'\)">보낼 말/.test(jr) && !/\d{1,2}\/\d{1,2}/.test(jr),
   '내일 약속 → 첫 전화 · 예약 확인 지남, 「전날 확인」 지금 + 보낼 말 · 보낸 날은 지어 붙이지 않음');
 B.g.cusV2Msg('eve');
-const sh = B.els.cv2Sheet;
-is(sh && /\[eve\] 홍\*동님 · 홍판서 · kakao/.test(sh.innerHTML) && /cusV2Sent\(\)/.test(sh.innerHTML), '보낼 말 시트 — TA_MSG.textFor(eve, 이분 이름 · 내 이름, 카톡) 그대로');
-B.g.cusV2Sent();
-is(B.g.said.some(x => x[0] === 'copy' && /\[eve\]/.test(x[1])) && B.g.said.some(x => x[0] === 'touch' && x[1] === 'c1' && x[2] === 'TA 카톡 · 전날 확인' && x[3] === '카톡'),
-  '「복사하고 보냈어요」 → 복사 + 있던 접촉 기록에 「TA 카톡 · 전날 확인」 한 줄');
+const op = B.g.__msgLog[0] || { items: [] };
+is(op.items[0] && op.items[0].k === 'eve' && op.items[0].text('kakao') === '[eve] 홍*동님 · 홍판서 · kakao' && op.items[0].text('sms') === '[eve] 홍*동님 · 홍판서 · sms' && op.tel === '010-0000-0000',
+  '보낼 말 → 보내기 화면(MSG_V2) · 맨 앞이 그 TA 글(TA_MSG.textFor · 이분 이름 · 내 이름) · 카톡/문자 따로 · 번호');
+is(op.items.some(x => /이분께 맞춘 글/.test(x.lb)) && op.items.some(x => x.lb === '💳 보험료 잘 빠지는지' && x.note === '미납'),
+  '같은 화면에 이분께 맞춘 글(ccMsgText) · 계약 고객 안부(MST_TOUCH) 도 고를 수 있다');
+op.onSent(op.items[0], 'sms');
+is(B.g.said.some(x => x[0] === 'touch' && x[1] === 'c1' && x[2] === 'TA 카톡 · 전날 확인' && x[3] === '문자'),
+  '「보냈어요」 → 있던 접촉 기록(cmTouchAdd)에 「TA 카톡 · 전날 확인」 · 문자로 보냈으면 「문자」');
+h = paint(B);
+is(/<b>안부 카톡 · 문자<\/b>/.test(h) && /class="sayc" onclick="cusV2Say\(\)"/.test(h) && /class="bub">\[ccMsg\]/.test(h) && h.indexOf('<b>안부 카톡 · 문자</b>') < h.indexOf('<b>아는 것</b>'),
+  '고객 화면 「안부 카톡 · 문자」 칸 — 이분께 맞춘 글을 카톡 말풍선으로 미리 · 누르면 보내기 화면(여정 다음 · 아는 것 앞)');
+is(/onclick="cusV2Say\(\)">💬<span>카톡·문자<\/span>/.test(h), '💬 단추는 보내기 화면(카톡 · 문자 고름)');
 B = box({}, { stage: '미접촉' }); h = paint(B);
 is(/jr-r now"><i><\/i><span class="jr-t">📞 첫 전화[\s\S]*?go\('ta_script'\)">TA 대본/.test(h), '첫 전화가 지금이면 「TA 대본」(TA 스크립트로)');
 B = box({}); paint(B); B.g.cusV2Rec();
@@ -201,6 +212,36 @@ is(/① 무엇을/.test(rs) && /홍\*동님, /.test(rs) && /이번 달 · 홍손
    /③ 들고 갈 화면/.test(rs) && /펴 놓을 것/.test(rs) && /④ 이 말이 나오면/.test(rs) && /홍\*동님 그럼요/.test(rs) && /이 권유로 연락 일정 잡기/.test(rs),
   '자세히 시트 — 시안 openRec 그대로 ①②③④ · 이번 달 상품 · 거절 말에 이분 이름');
 is(!/<b>함께<\/b>/.test(rs) && !/undefined/.test(rs) && /홍\*동님, 요즘 간병비/.test(rs), '라이브 글의 꼬리표는 걷고 글자만 · 빈 글은 안 세움(undefined 없음) · 던지는 한마디에 이분 이름');
+
+console.log('\n[11] 💬 보내기 화면(msg-v2.js) — 「보내는 화면을 카톡처럼」');
+{
+  const MS = fs.readFileSync(path.join(ROOT, 'app/msg-v2.js'), 'utf8'), ms = 걷기(MS);
+  is((IX.match(/<script src="msg-v2\.js"><\/script>/g) || []).length === 1, 'index.html 이 msg-v2.js 를 한 번 싣는다');
+  is(!/\.from\(|fetch\(|supabase|XMLHttpRequest|setItem\(|cmSave|cmTouchAdd|hmQfin/.test(ms), '서버 · 저장 · 기록을 안 함 — 「보냈어요」 는 부르는 쪽 onSent 만');
+  const mc = (MS.match(/var C = \[([\s\S]*?)\];/) || ['', ''])[1], ms2 = [];
+  (mc.match(/'([^']*)'/g) || []).map(x => x.slice(1, -1)).join('').replace(/([^{}]+)\{[^}]*\}/g, (m, sel) => { ms2.push(sel.trim()); return ''; });
+  is(ms2.length > 30 && ms2.every(r => r.split(',').every(x => /^\s*#mv2(Sheet|Dim)\b/.test(x))), '옷 ' + ms2.length + '줄 모두 #mv2Sheet · #mv2Dim 아래');
+  const els = {}, loc = { href: '' };
+  const mk = () => { const cl = new Set(); return { id: '', innerHTML: '', scrollTop: 0, setAttribute() {}, classList: { add: c => cl.add(c), remove: c => cl.delete(c), contains: c => cl.has(c) } }; };
+  const copied = [];
+  const W = { document: { head: { appendChild: e => { els[e.id] = e; } }, body: { appendChild: e => { els[e.id] = e; } }, createElement: () => mk(), getElementById: id => els[id] || null },
+    setTimeout: f => f(), location: loc, copyText: t => copied.push(t), toast: () => {} };
+  W.window = W; vm.createContext(W); vm.runInContext(MS, W);
+  let got = null;
+  W.MSG_V2.open({ who: '홍길동', tel: '010-1234-5678', items: [{ lb: '🙋 이분께 맞춘 글', note: '이분 사정', text: ch => '안녕하세요 ' + ch }, { lb: '💳 보험료', text: () => '이번 달도' }],
+    onSent: (it, ch, t) => { got = [it.lb, ch, t]; } });
+  let hs = els.mv2Sheet.innerHTML;
+  is(/class="ph kk"/.test(hs) && /class="bub">안녕하세요 kakao</.test(hs) && /<b>1<\/b>/.test(hs) && /MSG_V2\.pick\(1\)/.test(hs) && /이분 사정/.test(hs) && /복사하고 카톡에 붙여 넣기/.test(hs),
+    '카톡 — 노란 말풍선 · 안 읽음 1 · 시각, 글 고르는 칩 · 왜 이 글인지 · 「복사하고 카톡에 붙여 넣기」');
+  W.MSG_V2.ch('sms'); hs = els.mv2Sheet.innerHTML;
+  is(/class="ph sm"/.test(hs) && /안녕하세요 sms/.test(hs) && /010-1234-5678/.test(hs) && /문자 앱으로 보내기/.test(hs), '문자 — 파란 말풍선 · 받는 번호 · 문자 글 · 「문자 앱으로 보내기」');
+  W.MSG_V2.edit(true); W.MSG_V2.typed('고쳐 쓴 글'); W.MSG_V2.edit(false); W.MSG_V2.go();
+  is(loc.href === 'sms:01012345678?&body=' + encodeURIComponent('고쳐 쓴 글'), '✏️ 고쳐 쓴 글이 문자 앱으로 간다(번호 · 본문)');
+  W.MSG_V2.ch('kakao'); W.MSG_V2.go();
+  is(copied[0] === '안녕하세요 kakao', '카톡은 그 채널 글을 복사(고쳐 쓴 것은 채널마다 따로)');
+  W.MSG_V2.ch('sms'); W.MSG_V2.sent();
+  is(got && got[0] === '🙋 이분께 맞춘 글' && got[1] === 'sms' && got[2] === '고쳐 쓴 글' && !els.mv2Sheet.classList.contains('on'), '「보냈어요」 → onSent(고른 글 · 채널 · 보낸 글) 후 닫힘');
+}
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 고객 화면은 예전 고객 창을 안 깨고 시안 차례로 섭니다');
 process.exit(bad ? 1 : 0);
