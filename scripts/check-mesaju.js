@@ -124,6 +124,43 @@ const ME_OFF = 'var MEONLY={on:false};', ME_ON = 'var MEONLY={on:true};';
      (r.stuck.length ? ('\n      ← 늘 같은 값인 축: ' + r.stuck.join(', ') + ' — 손으로 박아 둔 것입니다 (1번)') : ''));
   ok(!r.ban, '⛔ <b>병·사고·죽음은 물론, 「그만두라」·「적성이 없다」 도 안 적는다</b> — 사주로 직업을 가르지 않습니다 (1번·2번)');
 
+  console.log('\n[3-2] ★★ <b>독한 소리</b>도 여덟 자에서 나온다 (판 X516 · 1번)');
+  /* 사장님 말씀 2026-11-22 「냉정하고 좋은말만 하지말고 센것도 디테일하게」.
+     ⚠ 세게 말해 달라는 말씀은 <b>지어내도 된다</b>는 말씀이 아닙니다. 아픈 말일수록
+       근거가 있어야 합니다 — 틀린 독설은 그 자리에서 사람을 잃습니다. 그래서
+       줄마다 적힌 수가 실제 십신·오행과 같은지 여기서 직접 셉니다.            */
+  const h = await pg.evaluate(() => {
+    const SEEDS = [[1982,6,9,14],[1973,11,2,3],[1990,1,20,9],[1965,8,30,21],
+                   [2000,3,3,0],[1958,12,12,17],[1995,7,7,7],[1986,5,15,11]];
+    const seen = new Set(); let numOk = true, allHaveWhy = true, maxRows = 0;
+    for (const [y, m, d, H] of SEEDS) {
+      const s = sajuCalc(y, m, d, H, 0, 0), c = sipsinTable(s).count, oh = ohCount(s);
+      const rows = meHard(s); maxRows = Math.max(maxRows, rows.length);
+      for (const r of rows) {
+        seen.add(r.t);
+        if (!r.why) allHaveWhy = false;
+        /* 근거에 적은 수가 진짜인가 — 「관성 3개」 라 써 놓고 실제로 2개면 거짓입니다 */
+        for (const t of (r.why.match(/(비겁|식상|재성|관성|인성) (\d+)개/g) || []))
+          if (c[t.split(' ')[0]] !== +t.match(/(\d+)/)[1]) numOk = false;
+        if (/일간 (신강|중화|신약)/.test(r.why) && RegExp.$1 !== strengthOf(s).level) numOk = false;
+        for (const k of ['목','화','토','금','수'])
+          if (r.why.indexOf('오행에') >= 0 && r.why.indexOf(k) >= 0 && r.why.indexOf(k + '·') < 0
+              && r.why.split('오행에')[1].split('가 0개')[0].indexOf(k) >= 0 && oh[k] !== 0) numOk = false;
+      }
+    }
+    const s0 = sajuCalc(1982, 6, 9, 14, 0, 0);
+    let same = true, f0 = JSON.stringify(meHard(s0));
+    for (let i = 0; i < 10; i++) if (JSON.stringify(meHard(s0)) !== f0) same = false;
+    return { kinds: seen.size, numOk, allHaveWhy, maxRows, same, all: [...seen].join(' ') };
+  });
+  ok(h.maxRows > 0 && h.maxRows <= 4, '한 번에 <b>넷까지만</b> 적는다 — ' + h.maxRows + '줄 (쏟아 부으면 아무것도 안 남습니다)');
+  ok(h.allHaveWhy, '★★ 줄마다 <b>근거</b>가 붙는다 — 근거 없는 독설은 그냥 욕입니다');
+  ok(h.numOk, '★★ 근거에 적힌 수가 <b>실제 십신·오행·강약과 같다</b> (1번)');
+  ok(h.same, '★ 같은 사주면 <b>언제나 같은 말</b>이다 — 열 번 불러 견줬다');
+  ok(h.kinds >= 6, '★ <b>사주마다 다른 말</b>이 나온다 — 여덟 사주에서 ' + h.kinds + '가지');
+  ok(!/병|암|사고|다치|죽|수명|요절|단명|이혼|파산|그만두|적성이 없/.test(h.all),
+     '⛔ 세게 말해도 <b>병·수명·이혼·파산은 안 건드린다</b> — 센 것과 겁주는 것은 다릅니다 (2번)');
+
   console.log('\n[4] ★ 네 장이 다 글을 내고, 조용하다');
   for (const t of ['mepil', 'meins', 'mework', 'metime']) {
     const n = await pg.evaluate(k => { S.tab = k; draw();

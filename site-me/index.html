@@ -230,6 +230,10 @@ body.shrine-on .shr-lamp{animation:shrFlame 2.6s ease-in-out infinite;transform-
 /* 단청 띠 — 색만으로 그립니다(그림 파일 없음) */
 .mdg-dan{height:9px;background:repeating-linear-gradient(90deg,
   #8C1F17 0 14px,#1E5A52 14px 28px,#E8DCC4 28px 36px,#1A4A86 36px 50px,#C9A227 50px 58px)}
+.mehard{border-color:var(--blue-b)}
+.mehard-p{font-size:13px;color:var(--ink3);margin:-2px 0 10px}
+.say.hard{border-left:3px solid var(--red);background:var(--red-l)}
+.hard-w{display:block;font-size:12.5px;color:var(--ink3);margin-top:7px;letter-spacing:-.2px}
 .mdg-wrap{margin:0;line-height:0;overflow:hidden}
 .mdg{display:block;width:100%;height:auto}
 .mdg-fl.b{animation-delay:-1.1s}
@@ -2317,19 +2321,19 @@ function mudangGate(){
 var INS_AX=[
  {k:'만남', t:'사람 만나기',    why:'식상(말·표현) + 비겁(어울림)',
   hi:'먼저 말을 거는 것이 품이 덜 드는 자리입니다.',
-  lo:'먼저 말 거는 데 품이 듭니다 — 소개로 가는 길을 넓히는 편이 낫습니다.'},
+  lo:'먼저 말을 못 거십니다. 소개가 끊기는 달은 그대로 비는 달입니다 — 벌이를 운에 맡기고 계신 겁니다.'},
  {k:'거절', t:'거절 견디기',    why:'일간 강약 + 인성(받쳐 주는 글자)',
   hi:'거절을 넘기고 다음으로 가는 힘이 있으십니다.',
-  lo:'거절이 오래 남으시는 자리입니다 — 혼자 삭이면 깎입니다. 털 데가 있어야 합니다.'},
+  lo:'거절이 오래 남으십니다. 하루에 열 번 거절당하는 일인데 혼자 삭이시면 <b>석 달이면 바닥납니다.</b> 털 데를 먼저 만드십시오.'},
  {k:'지속', t:'오래 끌고 가기', why:'관성(매듭) + 토(土) 기운',
   hi:'한 번 잡으면 오래 가십니다. 이 일에서 제일 큰 밑천입니다.',
-  lo:'한자리에 오래 머물기보다 옮겨 다니며 푸는 자리입니다.'},
+  lo:'오래 못 끄십니다. 계약은 따시는데 유지가 안 되면 <b>그 계약은 남의 것</b>입니다 — 수수료는 환수로 돌아옵니다.'},
  {k:'숫자', t:'숫자 다루기',    why:'인성(들여 익힘) + 금(金) 기운',
   hi:'표와 숫자를 손에 익히는 데 품이 덜 드십니다.',
-  lo:'숫자를 오래 들여다보는 것이 품이 듭니다 — 자료를 만들어 두고 읽는 편이 낫습니다.'},
+  lo:'숫자를 오래 못 보십니다. 그대로 두시면 매번 밤을 새우시고, <b>밤새워 만든 표일수록 틀립니다.</b> 틀을 만들어 두고 채우십시오.'},
  {k:'자립', t:'혼자 버티기',    why:'비겁(같은 편) + 일간 강약',
   hi:'혼자서도 굴러가십니다.',
-  lo:'혼자 두면 처지십니다 — 같이 갈 사람이 곁에 있어야 하는 자리입니다.'}
+  lo:'혼자 두면 처지십니다. 의지가 모자라서가 아니라 <b>구조</b>라, 다짐으로는 안 고쳐집니다 — 같이 갈 사람을 붙이십시오.'}
 ];
 /* 0~10. 모두 계산된 값에서만 나옵니다 — 손으로 박은 점수가 없습니다. */
 function insFit(s){
@@ -2358,6 +2362,51 @@ function insFit(s){
     sum:Math.round(rows.reduce(function(a,r){return a+r.n;},0)/rows.length*10)/10};
 }
 /* 일을 푸는 방식 — 용신에서 곧바로 나옵니다 */
+/* ── 독한 소리 — 아픈 말도 <b>여덟 자에서 나온 것만</b> 합니다 (1번)
+   사장님 말씀 2026-11-22 「냉정하고 좋은말만 하지말고 센것도 디테일하게」.
+   ⚠ 세게 말하는 것과 지어내는 것은 다릅니다. 규칙마다 센 수가 붙고, 화면에
+     그 수를 같이 적습니다. 병·수명·이혼·파산은 HIT_BAN 이 그대로 버립니다. */
+function meHard(s){
+  var c=sipsinTable(s).count, oh=ohCount(s), st=strengthOf(s), weak=(st.level==='신약'), out=[];
+  function add(w,t,why){ if(HIT_BAN.test(t))return; out.push({w:w,t:t,why:why}); }
+
+  if(c.인성===0&&weak) add(10,'배울 틈 없이 버티기만 하셨습니다. 그래서 십 년을 하셔도 삼 년치만 쌓입니다 — 같은 벽에 매번 처음처럼 부딪히십니다.',
+    '인성 0개 · 일간 신약 — 받쳐 주는 글자가 없는데 쓸 힘도 모자랍니다');
+  if(c.재성>=2&&weak) add(10,'버는 족족 나갑니다. 더 버셔도 더 나갈 뿐입니다 — 쥐는 손이 작은 것이라 수입이 두 배가 되어도 남는 것은 그대롭니다.',
+    '재성 '+c.재성+'개인데 일간이 신약 — 쥘 손보다 쥘 것이 큽니다');
+  if(c.관성>=2&&c.인성===0&&weak) add(10,'받쳐 주는 것 없이 눌리기만 하십니다. 이 조합이 제일 고단합니다 — 버티는 데 힘을 다 쓰고 나아가는 데 쓸 것이 안 남습니다.',
+    '관성 '+c.관성+'개 · 인성 0개 · 일간 신약');
+  if(c.관성>=3&&weak) add(9,'참는 것을 성실이라고 부르고 계십니다. 둘은 다릅니다. 눌려서 보낸 세월은 경력으로 안 쌓입니다.',
+    '관성 '+c.관성+'개 · 일간 신약');
+  if(st.level==='신강'&&c.인성>=2) add(9,'본인 판단이 맞다고 믿으십니다. 조언은 듣는 시늉만 하시지요 — 그래서 틀리셨을 때 아무도 안 말립니다.',
+    '일간 신강 · 인성 '+c.인성+'개 — 힘도 있고 제 생각을 받쳐 주는 글자도 많습니다');
+  if(c.식상===0) add(8,'속으로 삭이십니다. 주위는 괜찮은 줄 압니다 — 그래서 터질 때 한 번에 터지고, 그 한 번으로 사람이 끊깁니다.',
+    '식상 0개 — 밖으로 내보내는 글자가 하나도 없습니다');
+  if(c.비겁===0) add(8,'사람은 많은데 진짜 일이 터지면 전화할 데가 없으십니다. 인맥과 내 편은 다른 것입니다.',
+    '비겁 0개 — 나와 같은 편 글자가 하나도 없습니다');
+  if(c.관성===0) add(8,'매인 자리를 못 견디십니다. 그래서 자주 옮기셨고, 옮길 때마다 쌓아 둔 것을 두고 오셨습니다.',
+    '관성 0개 — 나를 눌러 세우는 글자가 하나도 없습니다');
+  if(c.식상>=2&&c.관성>=2) add(8,'하고 싶은 것과 해야 하는 것이 늘 부딪힙니다. 둘 다 쥐고 계셔서 <b>둘 다 반쪽</b>입니다.',
+    '식상 '+c.식상+'개 · 관성 '+c.관성+'개 — 내보내는 글자와 누르는 글자가 같이 셉니다');
+  if(st.level==='신강'&&c.비겁>=3) add(8,'밀어붙이는 힘은 넉넉하십니다. 그 힘으로 사람을 밀어내고 계신 것이 문제입니다.',
+    '일간 신강 · 비겁 '+c.비겁+'개');
+  if(c.인성>=3) add(7,'준비가 덜 됐다고 하십니다. 그 말은 평생 안 끝납니다 — 재는 동안 때가 지나갑니다.',
+    '인성 '+c.인성+'개 — 받아 들이고 재는 글자가 많습니다');
+  if(c.식상>=3) add(7,'말이 먼저 나갑니다. 그 말로 번 것보다 잃은 것이 많으실 겁니다 — 본인만 모르십니다.',
+    '식상 '+c.식상+'개');
+  if(c.비겁>=3) add(7,'사람 좋다는 소리를 들으십니다. 그 소리 값으로 <b>내 몫을 내주고</b> 계신 겁니다.',
+    '비겁 '+c.비겁+'개 — 같은 편이 많으면 나눠 쓰게 됩니다');
+  if(c.재성===0) add(7,'모으는 재주로 사시는 분이 아닙니다. 쥐려고 애쓰실수록 더 빠져나갑니다 — 쥐는 길 말고 버는 길을 넓히셔야 합니다.',
+    '재성 0개 — 내가 다루는 글자가 하나도 없습니다');
+  if(c.인성>=2&&c.식상===0) add(7,'들이기만 하고 내보내지 않으십니다. 머리에는 쌓였는데 손에 잡히는 결과가 없습니다.',
+    '인성 '+c.인성+'개 · 식상 0개');
+  var zero=['목','화','토','금','수'].filter(function(k){return oh[k]===0;});
+  if(zero.length>=2) add(6,'없는 기운이 둘입니다. 사람이 고루 될 리가 없는데, 안 되는 쪽을 자꾸 본인 탓으로 돌리고 계십니다.',
+    '오행에 '+zero.join('·')+' 가 0개 — 여덟 자에 아예 없는 기운입니다');
+
+  out.sort(function(a,b){return b.w-a.w;});
+  return out.slice(0,4);
+}
 function workWay(s){
   var y=yongsin(s), c=sipsinTable(s).count, out=[];
   if(y.st.level==='신약')
@@ -2413,8 +2462,8 @@ function tabMeIns(){
   }).join('');
   return '<div class="card">'+brandBand('보험이라는 일과 나')+
     '<h1>이 일과 나는 어디가 맞나</h1>'+
-    '<p>보험은 <b>다섯 가지</b>를 요구하는 일입니다. 어디가 수월하고 어디에 품이 드는지만 봅니다 — '+
-    '<b>맞다·안 맞다를 가르지 않습니다.</b> 품이 드는 자리는 사람을 붙이거나 틀을 만들어 메우면 됩니다.</p></div>'+
+    '<p>보험은 <b>다섯 가지</b>를 요구하는 일입니다. 어디가 수월하고 어디서 <b>값을 치르시는지</b>를 봅니다 — '+
+    '<b>맞다·안 맞다는 가르지 않습니다.</b></p></div>'+
     '<div class="card"><h2><span class="n">다섯</span>무엇이 수월하고 무엇에 품이 드나</h2>'+bars+
       '<div class="say quiet"><span class="me">막대는 어디서 오나</span>'+
       '손으로 박은 점수가 아닙니다. 십신 개수 · 일간 강약 · 오행 개수에서 그대로 셉니다. '+
@@ -2423,18 +2472,22 @@ function tabMeIns(){
       f.up.map(function(r){return '<div class="say"><span class="me">'+esc(r.t)+'</span>'+r.say+'</div>';}).join('')+'</div>':'')+
     (f.dn.length?'<div class="card"><h2><span class="n">품</span>메워야 하는 것</h2>'+
       f.dn.map(function(r){return '<div class="say gold"><span class="me">'+esc(r.t)+'</span>'+r.say+'</div>';}).join('')+
-      '<div class="say quiet">여기 적힌 것은 <b>못 한다는 뜻이 아닙니다.</b> 그냥 두면 품이 더 든다는 뜻이고, '+
-      '사람을 붙이거나 틀을 만들어 두면 메워집니다.</div></div>':'')+
-    '<div class="say quiet" style="margin-top:14px">이 풀이는 <b>참고</b>입니다. 사주는 사람을 이해하는 데 쓰는 것이지 '+
-    '사람을 가두는 데 쓰는 것이 아닙니다. 일을 접고 여는 결정은 사주로 하지 마십시오.</div>';
+      '</div>':'')+
+    '<div class="say quiet" style="margin-top:14px">막대가 낮다고 <b>못 하는 일</b>이라는 뜻이 아닙니다 — 그냥 두면 그 자리에서 값을 치르신다는 뜻입니다. '+
+    '일을 접고 여는 결정은 사주로 하지 마십시오.</div>';
 }
 /* ③ 내가 일을 푸는 방식 */
 function tabMeWork(){
   var p=meWho(), s=p&&p.saju; if(!s)return meNeed();
-  var w=workWay(s), y=w.yong, rx=YONG_RX[y.primary], nm=esc(p.name||'나');
+  var w=workWay(s), y=w.yong, rx=YONG_RX[y.primary], nm=esc(p.name||'나'), hd=meHard(s);
   return '<div class="card">'+brandBand('내가 일을 푸는 방식')+
     '<h1>어떻게 풀어 나가면 되나</h1>'+
     '<p>남이 잘 되는 방식이 '+nm+' 님께도 되는 것은 아닙니다. 이 패가 풀리는 길만 적습니다.</p></div>'+
+    (hd.length?'<div class="card mehard"><h2><span class="n">독</span>듣기 싫은 것부터</h2>'+
+      '<p class="mehard-p">좋은 말만 적으면 볼 까닭이 없습니다. 아래는 <b>여덟 자에서 나온 것</b>이지 제 짐작이 아닙니다 — 줄마다 어느 수에서 나왔는지 같이 적습니다.</p>'+
+      hd.map(function(r){return '<div class="say hard">'+r.t+
+        '<span class="hard-w">'+esc(r.why)+'</span></div>';}).join('')+
+      '<div class="say quiet">맞는 것만 가져가십시오. 다만 <b>제일 찔리는 줄</b>이 대개 제일 오래 미뤄 두신 자리입니다.</div></div>':'')+
     '<div class="card"><h2><span class="n">길</span>이 패가 풀리는 쪽</h2>'+
       w.rows.map(function(r){return '<div class="say">'+r.t+
         '<span style="display:block;font-size:13px;color:var(--ink3);margin-top:6px">'+esc(r.w)+'</span></div>';}).join('')+'</div>'+
