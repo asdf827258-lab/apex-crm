@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   check-baxl.js — 📊 <b>보장분석 전·후 엑셀이 거짓말하지 않나</b> (판 X527)
+   check-baxl.js — 📊 <b>보장분석 전·후 엑셀이 거짓말하지 않나</b> (판 X528)
 
    사장님 말씀 (2026-11-23) — 「보장분석 전후 비교자료에서, <b>엑셀 버전</b>으로
    <b>한눈에 모든 보험 모든 보장</b>이 나오도록 만들어보자」
@@ -60,7 +60,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   '.svg': 'image/svg+xml', '.jpg': 'image/jpeg' };
 
 (async () => {
-  console.log('══ 📊 보장분석 전·후 엑셀 점검 (판 X527) ══');
+  console.log('══ 📊 보장분석 전·후 엑셀 점검 (판 X528) ══');
 
   /* ── [9] 소스로 먼저 — 바깥 셈틀을 안 들여왔나 ───────────────── */
   const SRC = fs.readFileSync(path.join(ROOT, 'app/ba-xl.js'), 'utf8');
@@ -280,6 +280,6 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   await br.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '군데 — 엑셀이 화면과 다른 말을 합니다')
-    : '✓ 엑셀 한 장에 모든 보험 · 모든 보장이 거짓 없이 들어갑니다 (판 X527)');
+    : '✓ 엑셀 한 장에 모든 보험 · 모든 보장이 거짓 없이 들어갑니다 (판 X528)');
   process.exit(bad ? 1 : 0);
 })().catch(e => { console.error('터짐: ' + e.message); process.exit(2); });
