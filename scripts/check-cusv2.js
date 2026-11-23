@@ -18,6 +18,7 @@
      [8] ★  옷은 .cv2 아래 · #cusWin.cv2-on(요약 · 고치기 화면 아닐 때)으로만
      [9] ★  가짜 데이터로 그려 본다 — 단계 칸 · 권할 것 · 배정 줄 없는 분 · 예전 화면 · 한 칸이 터져도
      [12] ★ 판 X513 — 지금 상황 · 걱정 · 기록 시트: 있던 cmSave({care}·{worry}) · cmTouchAdd 만 부르고, 고른 뒤 두 화면을 다시 그린다
+     [14] ★  판 X526 — 이름 줄 금액 칸 · 청약 단계 「✓ 계약됐어요」 → 오늘 화면의 그 시트(HOME_V2.amt · won) · 시트가 없는 판이면 예전 글자
      [13] ★★ 판 X515 — 고객 탭 목록(시안 rCust · rList): 담당자 · 찾기는 예전 그대로 거친 줄 · 단계 칩 · 한 줄 칸 · 넣기 · 예전 화면 길
      [10] ★ 이분 여정 — 「지금」 칸을 단계 · 약속 날로 세고, 보낸 날은 지어 붙이지 않는다 · 보낼 말 · 자세히 시트
    ═══════════════════════════════════════════════════════════════ */
@@ -360,6 +361,18 @@ console.log('\n[13] 👥 고객 탭 목록 (판 X515 · 시안 rCust · rList)')
   is(L.g.cusV2ListPaint(ROWS, '') === false, '새 틀이 안 서 있으면 false — 예전 목록이 그림');
   is(mkL({}, { robot: true }).g.cusV2ListPage() === '' && mkL({}, { robot: true }).g.cusV2ListBack() === '' && mkL({ apex_cus_v2: '1' }, { allowed: false }).g.cusV2ListPage() === '',
     '자동 점검 브라우저 · 모두 끄기(ALLOWED=false)면 예전 화면 그대로 — 단추도 안 섬(예전 화면 점검이 그대로 돈다)');
+}
+
+console.log('\n[14] 💰 금액 칸 · ✓ 계약됐어요 (판 X526)');
+{
+  let B = box({}); let h = paint(B);
+  is(/<span class="amt">예상 15만원<\/span>/.test(h), '오늘 화면 시트가 없는 판이면 예전처럼 글자만(지어낸 단추 없음)');
+  B = box({}); B.g.HOME_V2 = { amt: () => {}, won: () => {} }; h = paint(B);
+  is(/<button type="button" class="amt" onclick="HOME_V2\.amt\('d1'\)">예상 15만원<\/button>/.test(h) && !/✓ 계약됐어요/.test(h), '이름 줄 금액 칸 → HOME_V2.amt(배정 줄) · 청약 아니면 「계약됐어요」 없음');
+  B = box({}, { stage: 'CS' }); B.g.HOME_V2 = { amt: () => {}, won: () => {} }; B.g.CUS.db.expect_premium = null; h = paint(B);
+  is(/class="amt miss" onclick="HOME_V2\.amt\('d1'\)">금액 \?/.test(h) && /class="btn ok" onclick="HOME_V2\.won\('d1'\)">✓ 계약됐어요/.test(h) && h.indexOf('✓ 계약됐어요') > h.indexOf('class="steps"') && h.indexOf('✓ 계약됐어요') < h.indexOf('class="sit"'),
+    '청약(CS) — 금액이 없으면 「금액 ?」 · 단계 칸 바로 밑 「✓ 계약됐어요」');
+  is(!/\.rpc\(|pipeline_save/.test(sc), '고객 화면은 서버를 안 부름 — 저장은 오늘 화면의 한 곳');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 고객 화면은 예전 고객 창을 안 깨고 시안 차례로 섭니다');
