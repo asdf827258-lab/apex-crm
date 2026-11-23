@@ -138,23 +138,32 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   is(/<sheet name="한눈에"/.test(Z['xl/workbook.xml'] || '') &&
      /<sheet name="계약"/.test(Z['xl/workbook.xml'] || '') &&
      /<sheet name="빠진 담보"/.test(Z['xl/workbook.xml'] || ''), '  시트 이름 셋 — 한눈에 · 계약 · 빠진 담보');
-  is(/<pane xSplit="5" ySplit="4"/.test(s1), '  왼쪽 다섯 칸 · 머리 네 줄이 <b>틀 고정</b>이다');
+  is(/<pane xSplit="4" ySplit="5"/.test(s1), '  왼쪽 네 칸 · 머리 다섯 줄이 <b>틀 고정</b>이다');
+  is(/<sheet name="과부족"/.test(Z['xl/workbook.xml'] || '') && /<sheet name="그래프"/.test(Z['xl/workbook.xml'] || ''),
+    '  시트에 <b>과부족 · 그래프</b> 가 있다 (사장님 자료 31쪽)');
+  const 시트수 = ((Z['xl/workbook.xml'] || '').match(/<sheet /g) || []).length;
+  is(시트수 === 5 + seeded.grp,
+    '  시트 <b>' + 시트수 + '장</b> = 한눈에·계약·과부족·그래프·빠진 담보 + <b>묶음마다 한 장</b> ' + seeded.grp);
 
   head('[2] ★★ 줄 축이 <b>STD 그대로</b>인가 (두 벌 만들지 않았나 · 5번)');
   const rows = (s1.match(/<row r="(\d+)"/g) || []).length;
   is(seeded.std === 77, '  ba.html 의 STD 담보 <b>' + seeded.std + '줄</b>');
-  is(rows === seeded.std + seeded.grp + 5,
-    '  시트1 줄 <b>' + rows + '</b> = 머리 4 + 묶음 띠 ' + seeded.grp + ' + 담보 ' + seeded.std + ' + 보험료 1');
+  is(rows === seeded.std + 6,
+    '  시트1 줄 <b>' + rows + '</b> = 제목·범례 2 + 머리 3 + 담보 ' + seeded.std + ' + 보험료 1');
   is(!/var\s+STD\s*=/.test(SRC), '  ba-xl.js 가 담보 목록을 <b>다시 적지 않았다</b>');
 
   const txt = (s1.match(/<t xml:space="preserve">([^<]*)<\/t>/g) || [])
     .map(x => x.replace(/<[^>]+>/g, ''));
   head('[3] ★★ 칸 축 — 전은 전부, 후는 유지·배서·신규 (<b>해지는 후에 없다</b>)');
-  const 전칸 = txt.filter(t => t.indexOf('[전] ') === 0), 후칸 = txt.filter(t => t.indexOf('[후] ') === 0);
+  /* 머리는 사장님 자료처럼 「(1) 회사 / 상품 / 납입·만기·보험료·처리」 석 줄입니다.
+     전·후는 칸 자리로 가릅니다 — 전 합계(E) 다음이 전, 후 합계 다음이 후. */
+  const 회사줄 = txt.filter(t => /^\(\d+\) /.test(t));
+  const 전칸 = 회사줄.slice(0, 3), 후칸 = 회사줄.slice(3);
   is(전칸.length === 3, '  전 칸 <b>' + 전칸.length + '개</b> — ' + 전칸.join(' · '));
   is(후칸.length === 3, '  후 칸 <b>' + 후칸.length + '개</b> — ' + 후칸.join(' · '));
   is(전칸.some(t => t.indexOf('DB손해보험') >= 0), '  해지 계약도 <b>전</b>에는 선다 (사라진 것이 보이게)');
   is(!후칸.some(t => t.indexOf('DB손해보험') >= 0), '  해지 계약은 <b>후</b>에 칸이 없다');
+  is(txt.some(t => /20납 \/ 100세/.test(t)), '  머리에 <b>납입 / 만기</b> 가 적힌다 (사장님 자료 꼴)');
   is(txt.some(t => t.indexOf('해지') >= 0), '  머리에 「해지」 가 적힌다');
   is(txt.some(t => t.indexOf('배서') >= 0), '  머리에 「배서」 가 적힌다');
 
@@ -182,8 +191,10 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
     '(배서 <b>전</b> 값 1,000 이 아니다 · 해지분도 안 들어왔다)');
 
   head('[2-2] ★★ <b>부위마다 제 색으로 갈라지나</b> (사장님 말씀 「색 별로 따로 나누고, 글씨 크기 부위 전부 나눠」)');
-  const 띠 = (s1.match(/<row r="\d+" ht="20"/g) || []).length;
-  is(띠 === seeded.grp, '  묶음 띠 <b>' + 띠 + '줄</b> — 부위 ' + seeded.grp + '개마다 한 줄씩');
+  /* 사장님 자료(KB 제안서 6쪽)처럼 <b>왼쪽 묶음 칸을 세로로 합칩니다</b> —
+     띠를 한 줄 세우는 대신 A칸을 묶음만큼 합쳐 색을 칠합니다. */
+  const 세로합 = (s1.match(/<mergeCell ref="A\d+:A\d+"/g) || []).length;
+  is(세로합 >= seeded.grp, '  왼쪽 묶음 칸을 <b>세로로 ' + 세로합 + '번</b> 합쳤다 — 부위 ' + seeded.grp + '개');
   const ST = (Z && Z['xl/styles.xml']) || '';
   const 색수 = new Set((seeded.색 || []).map(c => c.replace('#', '').toUpperCase())).size;
   const 쓴색 = (seeded.색 || []).filter(c => ST.indexOf('FF' + c.replace('#', '').toUpperCase()) >= 0).length;
@@ -193,7 +204,30 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   const 크기 = [...new Set((ST.match(/<sz val="([0-9.]+)"/g) || []).map(x => x.replace(/\D*([0-9.]+).*/, '$1')))];
   is(크기.length >= 4, '  글자 크기가 <b>층</b>이다 — ' + 크기.sort((a, b) => b - a).join(' · ') + 'pt');
   is(/<mergeCell ref="A\d+:[A-Z]+\d+"/.test(s1), '  띠 한 줄만 합쳐 글자가 안 잘린다');
-  is(!/<mergeCell ref="(?!A)/.test(s1), '  담보 줄은 <b>안 합친다</b> — 합치면 거르기·정렬이 막힙니다 (4-1)');
+  /* ⚠ <b>머리 줄 합치기까지 잡으면 헛것입니다</b> — 머리(3~5줄)는 사장님 자료처럼
+     세로로 합쳐야 「묶음 / 담보 / 단위」 가 가운데 섭니다. 보는 것은 <b>담보 줄</b>
+     (6줄부터)이고, 거기서 합쳐도 되는 것은 <b>왼쪽 묶음 칸(A)</b> 하나뿐입니다. */
+  const 담보합 = (s1.match(/<mergeCell ref="([A-Z]+)(\d+):/g) || [])
+    .map(x => x.replace('<mergeCell ref="', '').replace(':', ''))
+    .filter(x => +x.replace(/\D/g, '') >= 6 && x.replace(/\d/g, '') !== 'A');
+  is(담보합.length === 0, '  담보 줄에서 합친 것은 <b>왼쪽 묶음 칸뿐</b>이다' +
+    (담보합.length ? (' ← ' + 담보합.slice(0, 4).join(' ')) : '') + ' — 다른 칸을 합치면 거르기·정렬이 막힙니다 (4-1)');
+
+  head('[2-4] ★★ <b>뒤에 그래프</b> · <b>담보별 분리자료</b> (사장님 말씀 2026-11-23)');
+  is(!!(Z['xl/charts/chart1.xml'] && Z['xl/drawings/drawing1.xml'] &&
+        Z['xl/drawings/_rels/drawing1.xml.rels']), '  거미줄 그림 부품 셋이 다 들어 있다');
+  const CH = Z['xl/charts/chart1.xml'] || '';
+  is(/<c:radarChart>/.test(CH), '  <b>거미줄(radar)</b> 그림이다 — 사장님 자료 31쪽 꼴');
+  is((CH.match(/<c:ser>/g) || []).length === 2, '  줄이 둘 — <b>권장</b>과 <b>가입(후)</b> 을 겹쳐 그린다');
+  is(/'그래프'!\$[CD]\$/.test(CH) && !/<c:numLit>/.test(CH),
+    '  그림이 <b>시트 칸을 가리킨다</b> — 숫자를 그림 안에 또 적지 않았다 (5번)');
+  const 묶음시트 = ((Z['xl/workbook.xml'] || '').match(/<sheet /g) || []).length - 5;
+  is(묶음시트 === seeded.grp, '  <b>담보별 분리자료</b> — 묶음마다 한 장 ' + 묶음시트 + '장');
+  const 어느 = (function () { for (const k in Z) if (/sheet(6|7)\.xml$/.test(k)) return Z[k]; return ''; })();
+  is(/충분|부족|미가입/.test(어느), '  분리자료에 <b>충분 · 부족 · 미가입</b> 이 적힌다');
+  const BA2 = fs.readFileSync(path.join(ROOT, 'app/ba-xl.js'), 'utf8');
+  is(/g\.gapState/.test(BA2) && !/function gapState/.test(BA2),
+    '  과부족은 <b>앱의 gapState</b> 가 낸다 — 엑셀에서 다시 셈하지 않는다 (5번)');
 
   head('[2-3] ★ 숫자 꼴 · 인쇄');
   is(/numFmtId="165" formatCode="#,##0\.##"/.test(ST),
@@ -208,9 +242,8 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   is(!/<v>—<\/v>|>—</.test(s1), '  「—」 같은 글자를 <b>숫자 자리에 안 넣는다</b>');
   const 결과칸 = txt.filter(t => t === '빠짐').length;
   is(결과칸 > 0, '  안 적힌 담보는 결과 칸에 「빠짐」 으로만 적고 금액은 <b>빈 칸</b> (' + 결과칸 + '줄)');
-  is(/<c r="A2"[^>]*><is><t[^>]*>[^<]*빈 칸은 「안 적힘\(모름\)」/.test(s1.replace(/\s+/g, ' ')) ||
-     txt.some(t => t.indexOf('빈 칸은 「안 적힘(모름)」') >= 0),
-    '  범례가 <b>빈 칸 = 안 적힘(모름)</b> 이라고 적는다');
+  is(txt.some(t => /빈 칸\s*=\s*안 적힘\(모름\)/.test(t) && /0 은 정말 0/.test(t)),
+    '  범례가 <b>빈 칸 = 안 적힘(모름), 0 은 정말 0 일 때만</b> 이라고 적는다');
 
   head('[6] ★★ 합계는 <b>calc() 그대로</b>인가 (5번)');
   is(seeded.전cancer === 9999, '  손으로 고친 값이 calc 에 들어 있다 (전 일반암 ' + seeded.전cancer + ')');
