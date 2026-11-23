@@ -18,6 +18,8 @@
      [7] ★  옛 홈은 지우지 않고 숨기기만(CSS) — 「예전 오늘 칸 펼치기」 가 있다 · 그리다 터지면 예전 화면
      [8] ★  옷은 .hv2 / #hv2Sheet 아래로만 — 앱의 .card · .btn 같은 옷을 덮지 않는다
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
+     [17] ★★ 판 X514 — 아래 세 칸이 메뉴 목록이 아니라 시안 시트: 화법(단계 칩 · 그대로 말할 문장 · 복사 — 글은 APEX_STAGE · TA_MSG 원본),
+          상품전략(상황별 1위 · 오늘 볼 분 · 구실 — 오늘 화면 상품전략 줄과 같은 자), 공부(성장 로드맵 「지금 할 것 하나」) · 예전 목록은 「모든 화면」
      [16] ★★ 판 X513 — 목표 칸 · 영업 한 바퀴 칸이 다른 화면으로 안 넘어가고 시트(시안 openGoal · openStage):
           목표는 있던 pfSave(금액 · 건수 같이) 하나, 단계 분들은 칸 숫자와 같은 거름(AR.db · 지금 보는 분), 한 분 → hmRtPerson
    ═══════════════════════════════════════════════════════════════ */
@@ -28,7 +30,7 @@ let bad = 0;
 const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
 const SRC = fs.readFileSync(path.join(ROOT, 'app/home-v2.js'), 'utf8');
 const IX = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
-const JS = ['app/hm-door.js', 'app/hm-tamsg.js', 'ta-open.js', 'ta-msg.js']
+const JS = ['app/hm-door.js', 'app/hm-tamsg.js', 'ta-open.js', 'ta-msg.js', 'app/apex-grow.js']
   .map(p => { try { return fs.readFileSync(path.join(ROOT, p), 'utf8'); } catch (e) { return ''; } }).join('\n');
 const 걷기 = s => s.replace(/\/\*[\s\S]*?\*\//g, '');
 const sc = 걷기(SRC);
@@ -148,7 +150,7 @@ console.log('\n[5] 칸 속을 채우는 라이브 함수가 있다');
 const ALL = IX + '\n' + JS;
 ['hmLeft', 'hmSteps', 'hmWhy', 'hmFullNm', 'hmNmHidden', 'hmNmToggle', 'hwhoFor', 'hwhoBarHtml', 'hmTelOf', 'hmSrcOf', 'hmOrdOf', 'hmStepOf',
  'hmQfin', 'hmSkip', 'hmOpen', 'hmDoorGo', 'hmRtOpen', 'hmRtNear', 'hmRtPerson', 'arApptPast', 'hmReferRows', 'mstDueList', 'mcalItems', 'mcalDay',
- 'arStageN', 'hmNightSub', 'hmNightHtml', 'pexSum', 'pfLoad', 'pfSave', 'pfYm', 'pfYmLabel', 'pfIsLead', 'arGoCat', 'hmWayNow', 'hmWayCall', 'hmWayMeet', 'hmWayTidy', 'hmWayRec', 'hmWayCare', 'copyText', 'cregOpen', 'mcalMyPut', 'mcalCusPut', 'mcalCusList', 'mcalName', 'mcalOutName', 'icsBuild', 'mcalToday']
+ 'arStageN', 'hmNightSub', 'hmNightHtml', 'pexSum', 'pfLoad', 'pfSave', 'pfYm', 'pfYmLabel', 'pfIsLead', 'grState', 'grSteps', 'grIsOn', 'arGoCat', 'hmWayNow', 'hmWayCall', 'hmWayMeet', 'hmWayTidy', 'hmWayRec', 'hmWayCare', 'copyText', 'cregOpen', 'mcalMyPut', 'mcalCusPut', 'mcalCusList', 'mcalName', 'mcalOutName', 'icsBuild', 'mcalToday']
   .forEach(f => { if (sc.indexOf(f) >= 0) is(new RegExp('function ' + f + '\\(|g\\.' + f + ' = function').test(ALL), f + ' — 앱에 있다'); });
 is(/var TABS=\[/.test(IX) && /var PF=/.test(IX), 'TABS(메뉴 표) · PF(목표) 가 앱에 있다');
 is(/openTa\s*:|openTa:/.test(JS) && /prods\s*[,:}]/.test(JS) && /pick\s*[,:}]/.test(JS), 'HM_TAMSG.openTa · HM_DOOR.pick/prods 가 있다');
@@ -411,6 +413,66 @@ console.log('\n[16] 🎯 목표 시트 · 🔁 영업 한 바퀴 단계 시트 (
   X.g.HOME_V2.stage(2); s = X.els.hv2Sheet.innerHTML;
   is(/약속 11-25 14:00/.test(s) && /모두 1명/.test(s), '약속이 잡힌 분은 약속 날짜로');
   is(!/\.(insert|update|upsert|delete|rpc)\(/.test(sc) && (sc.match(/pfSave\(/g) || []).length === 1, '목표 저장은 있던 pfSave 한 곳 · 서버에 직접 쓰는 것 없음');
+}
+
+console.log('\n[17] 💬 화법 · 🧭 상품전략 · 📚 공부 시트 (판 X514 · 시안 openTalk · openProd · openStudy)');
+{
+  let X = box({ apex_home_v2: '1' }, '', {});
+  const cp = [];
+  const MAP = { TA: { aim: '<b>만날 날짜</b>를 잡는다', way: '날짜 두 개', q: ['어디서 뵙나'] }, AP: { aim: '다음 자리', way: '재촉 안 함', q: ['가입이 되는 분인가'] },
+    PC: { aim: '걸리는 것', way: '어느 쪽', q: [], note: '보험료·보장은 <b>심사 결과에 따릅니다</b>' }, CS: { aim: '서류', way: '설명 안 함', q: [] }, 계약완료: { aim: '증권', way: '직접', q: [] } };
+  Object.assign(X.g, {
+    copyText: t => cp.push(t),
+    APEX_STAGE: { of: k => MAP[k] || null, aimText: k => (MAP[k] ? MAP[k].aim.replace(/<[^>]*>/g, '') : ''), wayText: k => (MAP[k] ? MAP[k].way : ''),
+      script: k => (k === 'TA' ? { t: '일반 DB', say: '고객님, 안녕하세요.\n잠깐 통화 괜찮으실까요.', tip: '' } : k === '부재' ? { t: '안 받으신 분', say: '며칠 전에 연락드렸다가', tip: '<b>안 받은 시간에</b> 또 걸지 않습니다' } : null),
+      objList: () => Array.from({ length: 8 }, (_, i) => ({ title: '거절 ' + i, one: '한마디 ' + i, tone: '말투 ' + i })),
+      pdel: [{ n: 1, t: '증권을 <b>같이 펴 본다</b>', say: '고객님, 증권 나왔습니다.', no: '다른 상품 이야기 안 함' }] },
+    TA_MSG: { MSG: [{ k: 'eve', t: '전날 확인' }, { k: 'thanks', t: '만난 직후 감사' }, { k: 'miss', t: '부재' }], textFor: (k, f, ch) => (k === 'go' ? '' : '[' + k + '] 안녕하세요 ' + f.c + '님 · ' + f.me + ' · ' + ch) },
+    HM_TAMSG: Object.assign(X.g.HM_TAMSG, { area: () => '순천' }),
+    TAB_META: {},
+    grState: () => ({ lv: 1, done: { 'go:manual': 1 } }),
+    GR_LV: [{ t: '입사 첫 주', s: '길 익히기' }, { t: '첫 달', s: '첫 고객' }],
+    grSteps: lv => [{ k: 'go:manual', ic: '📘', n: '사용 설명서', d: '훑기', open: "grOpen('go','manual')" }, { k: 'cur:c1', cur: 'c1', ic: '🔁', n: '익히기 · 실손', d: '세대별 차이', pass: '30초에 말하면', open: "fpTalkOpen('a1')" }],
+    grIsOn: (x, v) => !!v.done[x.k]
+  });
+  X.g.TABS.push({ group: '상담', items: [{ id: 'ta_script', icon: '📜', title: 'TA 스크립트' }, { id: 'edu', icon: '🌱', title: '성장 로드맵' }, { id: 'academy', icon: '📈', title: '90일 아카데미' }] });
+  X.g.HOME_V2.apply(dyn(X));
+  const sh = () => (X.els.hv2Sheet || {}).innerHTML || '';
+  X.g.HOME_V2.dock('talk'); let t = sh();
+  is(/💬 화법/.test(t) && /HOME_V2\.talk\('rej'\)/.test(t) && /class="on" onclick="HOME_V2\.talk\('ta'\)">📞 첫 전화/.test(t) && /첫 마디 — 일반 DB/.test(t) && /고객님, 안녕하세요\.\n잠깐 통화/.test(t) && /만날 날짜를 잡는다/.test(t) && /HOME_V2\.talkCp\(0\)">📋 복사/.test(t),
+    '화법 시트 — 단계 칩(첫 전화 · 부재 · 거절 · 만남 · 제안 · 청약 · 관리) · 첫 전화 = TA 대본 첫 마디(APEX_STAGE.script) · 할 일 · 복사');
+  is(/재무설계 실전화법서/.test(t) && /전체 대본 · 화법서/.test(t), '맨 아래 전체 대본 · 화법서(실전화법서 포함 — 예전 메뉴 목록)');
+  X.g.HOME_V2.talkCp(0);
+  is(cp[0] === '고객님, 안녕하세요.\n잠깐 통화 괜찮으실까요.', '복사 = 그 문장 그대로(있던 copyText)');
+  X.g.HOME_V2.talk('rej'); t = sh();
+  is(/이 말이 나오면 <small>8가지/.test(t) && /「거절 5」/.test(t) && !/「거절 6」/.test(t) && /HOME_V2\.talkMore\(\)">나머지 2가지/.test(t), '거절 = TA 스크립트 거절(objList) 여섯 개 + 「나머지 더 보기」');
+  X.g.HOME_V2.talkMore(); t = sh();
+  is(/「거절 7」/.test(t), '더 보기 → 전부');
+  X.g.HOME_V2.talk('ap'); t = sh();
+  is(/다음 자리/.test(t) && /가입이 되는 분인가/.test(t) && /카톡 — 전날 확인/.test(t) && /\[eve\] 안녕하세요 고객님 · 홍판서 · kakao/.test(t) && /카톡 — 만난 직후 감사/.test(t) && !/카톡 — go/.test(t),
+    '만남 = 할 일 · 가릴 것 · 카톡(전날 확인 · 만난 직후 감사 — TA_MSG 원본, 빈 글은 안 세움)');
+  X.g.HOME_V2.talk('pc'); t = sh();
+  is(/심사 결과에 따릅니다/.test(t), '제안 — 「심사 결과에 따릅니다」 줄을 빼지 않음');
+  X.g.HOME_V2.talk('cm'); t = sh();
+  is(/증권 전할 때 — 말하는 차례/.test(t) && /1\. 증권을 같이 펴 본다/.test(t) && /고객님, 증권 나왔습니다/.test(t), '관리 = 증권 전달 차례(APEX_STAGE.pdel)');
+  X.g.HOME_V2.talk('miss'); t = sh();
+  is(/며칠 전에 연락드렸다가/.test(t) && /안 받은 시간에 또 걸지 않습니다/.test(t) && /카톡 — 부재/.test(t), '부재 = SAY 부재 + 팁 + 부재 카톡');
+
+  X.g.HOME_V2.dock('prod'); t = sh();
+  is(/🧭 11월 상품전략/.test(t) && /class="pcard"/.test(t) && /병원비·비급여/.test(t) && /오늘 볼 분 1명/.test(t) && /이번 달 1위 · 보험사 · 병원비 상품/.test(t) && /hmOpen\('db:d1:미접촉'\)/.test(t) && /hmDoorGo\('hospital',''\)/.test(t) && /hmDoorGo\('',''\)">상품전략기 전체 열기/.test(t),
+    '상품전략 시트 — 상황별 1위(HM_DOOR_TOP) · 오늘 볼 분(오늘 화면과 같은 자 doorOf) · 이분 한 장 · 그 구실로 문 열기 · 상품전략기');
+
+  X.g.HOME_V2.dock('study'); t = sh();
+  is(/📚 공부/.test(t) && /오늘의 공부 · Lv\.1 다음 걸음/.test(t) && /🔁 익히기 · 실손/.test(t) && /합격 기준<\/b> — 30초에 말하면/.test(t) && /HOME_V2\.close\(\);fpTalkOpen\(&#39;a1&#39;\)">시작하기/.test(t),
+    '공부 시트 — 오늘의 공부 = 성장 로드맵 「지금 할 것 하나」(내 레벨에서 안 끝낸 첫 걸음) · 그 걸음의 문으로 시작');
+  is(/go\('edu'\)/.test(t) && /성장 로드맵 · Lv\.1 첫 달/.test(t) && /1 \/ 2 걸음/.test(t) && /과정 <small>/.test(t) && /보험 마스터 아카데미/.test(t) && !/>성장 로드맵<\/div>/.test(t.slice(t.indexOf('과정 <small>'))),
+    '내 길 = 성장 로드맵(레벨 · 걸음 수) · 과정 = 공부 화면들(성장 로드맵은 위에 한 번만)');
+  X.g.grSteps = () => [];
+  X.g.HOME_V2.dock('study'); t = sh();
+  is(!/오늘의 공부/.test(t) && /과정 <small>/.test(t), '걸음이 없으면 「오늘의 공부」 를 지어내지 않음');
+  X.g.HOME_V2.dockAll('talk'); t = sh();
+  is(/곳<\/div>/.test(t) && /재무설계 실전화법서/.test(t), '「모든 화면」 = 예전 목록 그대로');
+  is(!/\.(insert|update|upsert|delete|rpc)\(/.test(sc) && !/grTick\(|grSave\(|localStorage\.setItem\('apex_grow/.test(sc), '세 시트는 읽기만 — 성장 체크(grTick)도 안 건드림');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');
