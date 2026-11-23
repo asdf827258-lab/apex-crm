@@ -587,6 +587,7 @@
     '.ar-no{font-size:11px;color:#B0B8C1;white-space:nowrap}' +
     '.ar-art{margin:2px 0 12px}.ar-art svg{display:block;width:100%;height:auto}' +
     '.ar-art svg.rd{max-width:150mm;margin:0 auto}' +
+    /* ★ 인쇄에서는 거미줄을 줄입니다 — 안 줄이면 이 장만 두 쪽으로 샙니다(쪽 수를 세는 자가 잡았습니다) */
     '.ar-none{margin:10px 0 14px;padding:14px;border:1px dashed #D5DBE3;border-radius:8px;' +
       'font-size:12px;color:#6B7684;background:#F7F8FA}' +
     '.ar-tb{width:100%;border-collapse:collapse;font-size:12px}' +
@@ -631,8 +632,16 @@
     '.bar0 button{font:inherit;font-weight:700;border:0;border-radius:7px;padding:6px 13px;' +
       'background:#3E6FD9;color:#fff;cursor:pointer}' +
     '.bar0 span{flex:1;opacity:.82;font-size:11.5px}' +
+    /* ★ 인쇄 규칙은 <b>맨 끝</b>에 둡니다 — 가운데 두었더니 뒤에 오는 규칙에
+       덮여 아무 일도 안 했습니다(같은 세기면 뒤가 이깁니다).
+       담보가 14줄인 장(암 치료비)이 한 장을 넘겼고, 화면 자로는 안 보였습니다 —
+       <b>진짜 PDF 쪽 수</b>를 세는 자가 잡았습니다. */
     '@media print{body{background:#fff}.bar0{display:none}' +
       '.pg{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}' +
+      '.ar-art svg.rd{max-width:118mm}' +
+      '.ar-say{padding-top:10px}.ar-say-b{height:20mm}' +
+      '.ar-tb td{padding:5px 6px}' +
+      '.ar-why{margin-top:10px;padding:9px 12px}' +
       '*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}' +
     '@page{size:A4 portrait;margin:11mm}';
 

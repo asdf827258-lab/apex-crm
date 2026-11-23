@@ -160,7 +160,14 @@ const MIME = { '.html': 'text/html;charset=utf-8', '.js': 'text/javascript;chars
   if (m.밖글.length) m.밖글.slice(0, 14).forEach(x => console.log('      · 도해 ' + x[0] + ' 「' + x[1] + '」 ' + x[2]));
   is(m.밖글.length === 0, '  밖으로 나간 글자 <b>0</b> (' + m.밖글.length + '곳)');
 
+  /* ★★ 진짜 종이로 뽑아 쪽을 셉니다 — 화면 자(scrollHeight)로는 안 보입니다.
+     인쇄에서는 min-height 를 0 으로 풀기 때문에 쪽이 늘어나도 화면은 안 넘칩니다.
+     실제로 거미줄 장이 한 장 더 새고 있었고, 화면 자는 「넘침 0」 이라고 말했습니다. */
+  const 종이 = await p2.pdf({ format: 'A4', printBackground: true });
+  const 쪽수 = (종이.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+
   head('[3] 쪽이 A4 를 넘치지 않는가');
+  is(쪽수 === 14, '  ★★ <b>진짜 종이로 14쪽</b> — 한 장도 새지 않는다 (' + 쪽수 + '쪽)');
   is(m.쪽 === 14, '  쪽이 <b>14장</b> — 표지 · 네 방식 · 묶음 11 · 거미줄 (' + m.쪽 + ')');
   is(m.넘침.length === 0, '  넘치는 쪽 <b>0</b>' + (m.넘침.length ? (' — ' + m.넘침.join(',')) : ''));
   is(m.svg === 14, '  도해 + 거미줄이 <b>14개</b> 섰다 — 11 + 네 방식 + 지갑 + 거미줄 (' + m.svg + ')');
