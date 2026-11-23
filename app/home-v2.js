@@ -443,7 +443,7 @@
       '<button type="button" class="pr' + (pd ? ' done' : '') + (cur === 4 ? ' cur' : '') + '" onclick="HOME_V2.step(4)"><span class="si">📣</span><span class="sl">알리기</span><span class="sn">' + (pd ? '1/1' : '0/1') + '</span></button></div>' +
       (st && typeof st.n === 'number' ? '<div class="streak">쉬지 않고 일한 날 <b>연속 ' + st.n + '일</b></div>' : '');
   }
-  /* 🛰 챙기는 중 — 시안 9차 openJv (판 X517) · 「오늘 끊기기 쉬운 자리」 + 「미리 세워 둔 연락」.
+  /* 🛰 챙기는 중 — 시안 9차 openJv (판 X524) · 「오늘 끊기기 쉬운 자리」 + 「미리 세워 둔 연락」.
      ★ 새로 세는 자가 없습니다 — 배정 줄의 약속 · 단계(AR.db) · 약속 지난 분(arApptPast) · 소개 여쭐 차례(hmReferRows)
        · 이번 달 마디(mstDueList) · 달력의 앞날 할 일 · 약속(mcalItems · mcalDay — 달력 탭과 같은 자).
      ★ 시안의 「예약 확인 · 감사 · 철회 안내 보냈나」 는 라이브가 보낸 날을 안 남겨 세우지 않습니다(지어내지 않음).
@@ -691,7 +691,7 @@
     sheet(h);
     goalPer();
   }
-  /* 💰 예상 월납 · ✓ 계약됐어요 — 시안 9차 openAmt · openClose (판 X517 · 사장님 말씀 「5번 해」 · 고르신 것 「같은 서버 문 한 줄」).
+  /* 💰 예상 월납 · ✓ 계약됐어요 — 시안 9차 openAmt · openClose (판 X524 · 사장님 말씀 「5번 해」 · 고르신 것 「같은 서버 문 한 줄」).
      ★ 저장은 「DB · 업적관리」 가 쓰는 <b>그 서버 문 하나</b>(pipeline_save — 진행 칸만 고치는 문)입니다. 본체엔 이 칸을 적는 함수가 없어
        그 문을 부르는 자리를 <b>여기 한 곳</b>(pexSave)만 둡니다. 같은 칸 · 같은 권한이라 표 · EM 상담 보드 · 업적 합계가 그대로 따라옵니다.
      ★ 단위 — 칸(expect_premium · contract_premium)은 <b>원</b>, 손으로 치는 것은 <b>만원</b>. 만 배 하는 자리는 toWon 한 곳.

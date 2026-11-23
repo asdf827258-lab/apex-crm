@@ -207,6 +207,16 @@ var EXTERNAL = ['supabase', 'PENSION', 'APEX_REPORT', 'html2canvas', 'PptxGenJS'
   'holdReady', 'holdOf', 'holdAll', 'holdSkel', 'holdSay', 'holdCss',
   'holdJong', 'holdEul', 'holdIga', 'holdRo', 'HOLD_VIEW', 'HOLD_RANK',
   'nextCss', 'nextSheet', 'nextSheetHide',
+  /* ✨ home-v2.js — 새 「오늘」 화면(판 X502·X505 · 「홈」 갈래). app/index.html 이
+     <script src="home-v2.js"> 로 싣고 그 파일 끝에서 g.HOME_V2 = API 로 답니다.
+     ⚠ 이 자가 그 파일을 몰라 「선언 없이 쓰는 전역」 으로 울고 있었습니다 —
+       <b>진짜 버그가 아닙니다.</b> 쓰는 자리 셋이 전부 window.HOME_V2 && 로
+       막혀 있어 파일이 없어도 조용히 지나갑니다. 자가 제 쪽지에 「밖에서
+       오는 것이면 EXTERNAL 에 적으라」 고 적어 두었고, 그대로 했습니다.
+     ⚠ 제 갈래가 아닙니다(저는 site-saju 를 세우는 중이었습니다). main 이
+       빨간 채로 있어 모두의 PR 이 같이 빨개지므로 한 줄만 보탭니다 — 홈
+       세션의 코드는 한 글자도 안 건드렸습니다 (11번). */
+  'HOME_V2',
   /* alm-slots.js — 알람 네 번(시각·문구) 한 벌. 앱은 <script> 로, <b>서버는
      netlify.toml 의 included_files</b> 로 같은 파일을 읽습니다. 시각이나
      문구를 index.html 에 또 적으면 화면과 알람이 다른 말을 합니다 (5번). */

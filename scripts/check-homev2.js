@@ -18,7 +18,7 @@
      [7] ★  옛 홈은 지우지 않고 숨기기만(CSS) — 「예전 오늘 칸 펼치기」 가 있다 · 그리다 터지면 예전 화면
      [8] ★  옷은 .hv2 / #hv2Sheet 아래로만 — 앱의 .card · .btn 같은 옷을 덮지 않는다
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
-     [18] ★★ 판 X517 — 💰 예상 월납 · ✓ 계약됐어요 시트(시안 openAmt · openClose): 저장은 「DB · 업적관리」 의 그 서버 문(pipeline_save) 한 곳 ·
+     [18] ★★ 판 X524 — 💰 예상 월납 · ✓ 계약됐어요 시트(시안 openAmt · openClose): 저장은 「DB · 업적관리」 의 그 서버 문(pipeline_save) 한 곳 ·
           만원 → 원 한 곳 · 계약완료 규칙은 queueSave 그대로 · 내 고객만 · 🛰 자비스 시트(오늘 끊기기 쉬운 자리 · 미리 세워 둔 연락)
      [17] ★★ 판 X514 — 아래 세 칸이 메뉴 목록이 아니라 시안 시트: 화법(단계 칩 · 그대로 말할 문장 · 복사 — 글은 APEX_STAGE · TA_MSG 원본),
           상품전략(상황별 1위 · 오늘 볼 분 · 구실 — 오늘 화면 상품전략 줄과 같은 자), 공부(성장 로드맵 「지금 할 것 하나」) · 예전 목록은 「모든 화면」
@@ -36,7 +36,7 @@ const JS = ['app/hm-door.js', 'app/hm-tamsg.js', 'ta-open.js', 'ta-msg.js', 'app
   .map(p => { try { return fs.readFileSync(path.join(ROOT, p), 'utf8'); } catch (e) { return ''; } }).join('\n');
 const 걷기 = s => s.replace(/\/\*[\s\S]*?\*\//g, '');
 const sc = 걷기(SRC);
-/* 판 X517 — 사장님이 고르신 「같은 서버 문 한 줄」: 「DB · 업적관리」 가 쓰는 pipeline_save 를 부르는 자리 <b>하나</b>만 빼고 본다 */
+/* 판 X524 — 사장님이 고르신 「같은 서버 문 한 줄」: 「DB · 업적관리」 가 쓰는 pipeline_save 를 부르는 자리 <b>하나</b>만 빼고 본다 */
 const PEX_RPC = ".rpc('pipeline_save', { p_id: id, p: patch })";
 const scW = sc.split(PEX_RPC).join('');
 
@@ -165,7 +165,7 @@ console.log('\n[6] 서버 · 저장');
    쓰기(insert·update·upsert·delete·rpc)는 하나도 없습니다. 목표는 기존 pfLoad. */
 const 부름 = (sc.match(/\.from\('[^']+'\)\.[a-z]+\([^)]*\)/g) || []);
 is(부름.length === 1 && 부름[0] === ".from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng,next_appt_place')", '서버 표는 좌표 읽기 하나뿐 — ' + 부름.join(' | '));
-is(sc.split(PEX_RPC).length === 2 && !/\.(insert|update|upsert|delete|rpc)\(/.test(scW) && !/supabase\./.test(sc), '서버에 쓰는 것은 「DB · 업적관리」 의 그 문(pipeline_save) 한 곳뿐 (판 X517 · 사장님이 고르신 「같은 서버 문 한 줄」)');
+is(sc.split(PEX_RPC).length === 2 && !/\.(insert|update|upsert|delete|rpc)\(/.test(scW) && !/supabase\./.test(sc), '서버에 쓰는 것은 「DB · 업적관리」 의 그 문(pipeline_save) 한 곳뿐 (판 X524 · 사장님이 고르신 「같은 서버 문 한 줄」)');
 is((sc.match(/fetch\('([^']+)'/g) || []).join() === "fetch('/.netlify/functions/route-km'", '부르는 주소는 지역 동선의 길찾기(route-km) 하나뿐');
 const 담기 = (sc.match(/setItem\(([^,]+),/g) || []).map(x => x.replace(/setItem\(|,/g, ''));
 is(담기.length === 2 && 담기.indexOf('KEY') >= 0 && 담기.indexOf("'apexRouteKmV1'") >= 0, '이 기기에 담는 것은 켜짐 표시와 길찾기 거리(지역 동선과 같은 칸)뿐 — ' + 담기.join(', '));
@@ -480,7 +480,7 @@ console.log('\n[17] 💬 화법 · 🧭 상품전략 · 📚 공부 시트 (판 
   is(!/\.(insert|update|upsert|delete|rpc)\(/.test(scW) && !/grTick\(|grSave\(|localStorage\.setItem\('apex_grow/.test(sc), '세 시트는 읽기만 — 성장 체크(grTick)도 안 건드림');
 }
 
-console.log('\n[18] 💰 예상 월납 · ✓ 계약됐어요 · 🛰 자비스 (판 X517 · 시안 openAmt · openClose · openJv)');
+console.log('\n[18] 💰 예상 월납 · ✓ 계약됐어요 · 🛰 자비스 (판 X524 · 시안 openAmt · openClose · openJv)');
 {
   const EP = fs.readFileSync(path.join(ROOT, 'edu-pipeline.html'), 'utf8');
   is(/sb\.rpc\('pipeline_save', \{ p_id: id, p: patch \}\)/.test(EP) && /const NUMF = \{ expect: 'expect_premium', contract: 'contract_premium'/.test(EP) &&
