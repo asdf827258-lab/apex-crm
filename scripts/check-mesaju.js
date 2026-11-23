@@ -177,6 +177,46 @@ const ME_OFF = 'var MEONLY={on:false};', ME_ON = 'var MEONLY={on:true};';
       return document.getElementById('view').innerText.replace(/\s+/g, '').length; }, t);
     ok(n > 150, '  ' + t + ' — 글자 ' + n + '자');
   }
+  console.log('\n[5] ★★ 네 장을 <b>한 벌로 인쇄</b>한다 (판 X523)');
+  /* 사장님 말씀 2026-11-23 「전체적으로 한번에 인쇄할수 있도록」.
+     ⚠ 여기서 <b>실제로 종이가 검게 나오던 것</b>을 찾았습니다 — body 만 희게 해 두고
+       .shell 이 먹빛을 쥐고 있어, 신당 화면은 여태 인쇄하면 통째로 새카맸습니다.
+       화면만 보고는 절대 못 봅니다. 그래서 이 자는 <b>인쇄 상태의 색을 직접 잽니다</b> (4-1번). */
+  const pa = await pg.evaluate(() => {
+    /* ★ 일부러 <b>맨 끝이 아닌 장</b>에서 부릅니다. 앞 칸이 'metime' 으로 끝나 두는 바람에
+       되돌리기를 빼도 그냥 통과했습니다 — 쌓는 차례의 마지막과 같은 장이면 못 봅니다 (8번). */
+    S.tab = 'meins'; draw();
+    const before = S.tab;
+    const realPrint = window.print; window.print = function () {};
+    mePrintAll();
+    window.print = realPrint;
+    const box = document.getElementById('printAll');
+    return { sheets: box.querySelectorAll('.pa-sheet').length,
+             ttls: [].slice.call(box.querySelectorAll('.pa-ttl')).map(x => x.textContent.trim()),
+             chars: box.innerText.replace(/\s+/g, '').length,
+             kept: S.tab === before };
+  });
+  ok(pa.sheets === 4, '네 장이 <b>한 벌로</b> 쌓인다 — ' + pa.sheets + '장');
+  ok(pa.ttls.join('|') === '① 내 네 기둥|② 보험 일과 나|③ 일 푸는 방식|④ 올해·내년',
+     '장마다 <b>제목</b>이 붙는다 — ' + pa.ttls.join(' · '));
+  ok(pa.chars > 600, '네 장에 글이 다 들어 있다 — ' + pa.chars + '자');
+  ok(pa.kept, '★ 인쇄하고 나면 <b>보던 장으로 돌아온다</b> — 딴 장이 떠 있으면 안 됩니다');
+
+  await pg.emulateMedia({ media: 'print' });
+  const pr = await pg.evaluate(() => {
+    const dark = c => { const m = (c || '').match(/\d+/g); return m && (+m[0] + +m[1] + +m[2]) < 300; };
+    const bg = s => getComputedStyle(document.querySelector(s)).backgroundColor;
+    const af = getComputedStyle(document.body, '::after').display;
+    const bf = getComputedStyle(document.body, '::before').display;
+    return { shell: bg('.shell'), body: bg('body'), shellDark: dark(bg('.shell')), bodyDark: dark(bg('body')),
+             overlays: af === 'none' && bf === 'none' };
+  });
+  await pg.emulateMedia({ media: 'screen' });
+  ok(!pr.shellDark && !pr.bodyDark,
+     '★★ 인쇄하면 <b>종이가 희다</b> — .shell ' + pr.shell + ' · body ' + pr.body +
+     ((pr.shellDark || pr.bodyDark) ? '\n      ← 먹빛이 남아 있습니다. 네 장이 통째로 새카맣게 나갑니다' : ''));
+  ok(pr.overlays, '★★ 깔개 둘(한지 결·어둠)이 <b>인쇄에서 내려간다</b> — position:fixed 라 종이를 통째로 덮습니다');
+
   ok(outside === 0, '바깥으로 <b>한 번도 안 나간다</b> — 인터넷 없이도 열립니다 (' + outside + '건)');
   ok(errs.length === 0, '터진 곳이 없다' + (errs.length ? (' ← ' + errs[0]) : ''));
 

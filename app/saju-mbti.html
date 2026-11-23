@@ -160,15 +160,49 @@ textarea.inp{line-height:1.6;font-size:15px}
    값: 먹빛 바탕 #0A0506 · 주사(朱砂) #8C1F17 · 금박 #C9A227 · 한지 #E8DCC4.
    전보다 바탕을 네 단계 어둡게, 붉은색을 한 단계 탁하게 내렸습니다 —
    형광 빨강은 점집이 아니라 경보기처럼 보입니다.                     */
-body.shrine-on{--bg:#0A0506;--card:#140C0A;--line:#30201B;--line-l:#1C1210;
+body.shrine-on{--bg:#050203;--card:#0E0706;--line:#3A2219;--line-l:#160D0B;
   --ink:#E8DCC4;--ink2:#B9A684;--ink3:#8A7A61;--ink4:#6B5D49;
   --blue:#8C1F17;--blue-d:#C23B2E;--blue-l:#1E100D;--blue-b:#4A201A;
   --green:#8FBF6F;--green-l:#15200F;--red:#C23B2E;--red-l:#24100D;
   --amber:#C9A227;--amber-l:#241B0C;}
 body.shrine-on{background:
-  radial-gradient(900px 340px at 50% -10%, rgba(140,31,23,.26), transparent 72%),
-  radial-gradient(620px 260px at 50% 110%, rgba(201,162,39,.10), transparent 72%),
-  #0A0506;}
+  radial-gradient(760px 300px at 50% -8%, rgba(168,26,20,.34), transparent 70%),
+  radial-gradient(560px 240px at 50% 112%, rgba(201,162,39,.09), transparent 72%),
+  #050203;}
+/* ★ 촛불이 방을 흔듭니다 — 아주 천천히, 아주 조금. 멀미 나면 안 됩니다. */
+body.shrine-on::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(70% 55% at 50% 42%, transparent 38%, rgba(0,0,0,.62) 100%);
+  animation:shrBreathe 7.5s ease-in-out infinite}
+@keyframes shrBreathe{0%,100%{opacity:.85}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){body.shrine-on::after{animation:none}}
+body.shrine-on .card{box-shadow:0 1px 0 rgba(168,26,20,.16) inset, 0 10px 30px rgba(0,0,0,.6)}
+body.shrine-on h1{letter-spacing:-.045em}
+body.shrine-on .pane{position:relative;z-index:1}
+.pa-bar{text-align:center}
+.pa-hint{display:block;margin-top:9px;font-size:12.5px;color:var(--ink3);letter-spacing:-.02em}
+/* ★ 제목 밑 붉은 붓자국 — 그림 파일이 아니라 그라디언트입니다(9번).
+   끝이 흐려져야 붓이지, 네모로 끝나면 밑줄입니다. */
+body.shrine-on h1{position:relative;padding-bottom:11px}
+body.shrine-on h1::after{content:'';position:absolute;left:0;bottom:0;width:62px;height:3px;border-radius:2px;
+  background:linear-gradient(90deg, rgba(194,59,46,.95) 0%, rgba(168,26,20,.7) 55%, rgba(168,26,20,0) 100%)}
+/* ★ 번호는 둥근 알약이 아니라 <b>낙관</b>처럼 — 네모에 살짝 기울여 찍습니다 */
+body.shrine-on h2 .n{background:#7E1D14;color:#F2E2C8;border-radius:3px;padding:5px 8px;
+  box-shadow:0 0 0 1px rgba(242,226,200,.22) inset;transform:rotate(-2deg)}
+body.shrine-on .mehard{border-color:#5A1812;box-shadow:0 0 0 1px rgba(168,26,20,.2) inset, 0 12px 34px rgba(0,0,0,.72)}
+body.shrine-on .mehard h2 .n{background:#A81A14}
+body.shrine-on .say.hard{border-left-width:4px}
+@media print{
+  /* ★★ 깔개 둘(한지 결·어둠)은 position:fixed 라 <b>인쇄하면 종이를 통째로 덮습니다</b>.
+     처음에 이 줄이 없어 네 장이 전부 새카맣게 나왔습니다 — 눈으로 PDF 를 뽑아 보고 알았습니다 (4-1번). */
+  body.shrine-on::before, body.shrine-on::after{display:none!important}
+  /* ★★ <b>.shell 이 먹빛을 쥐고 있었습니다</b> — body 만 희게 해 두어서, 신당 화면은
+     여태 인쇄하면 종이가 새카맣게 나왔습니다(한 장짜리 인쇄도 마찬가지였습니다).
+     PDF 를 실제로 뽑아 보고서야 찾았습니다 — 화면만 보고는 절대 못 봅니다 (4-1번). */
+  .shell,.pane,#printAll,.pa-sheet{background:#fff!important}
+  /* 인쇄는 흰 종이입니다 — 붓자국과 낙관은 종이에서도 보이게 먹빛으로 */
+  body.shrine-on h1::after{background:#8C1F17}
+  body.shrine-on h2 .n{background:#8C1F17!important;color:#fff!important;transform:none}
+}
 /* 한지 결 — 그림 파일을 안 받아 옵니다(9번). 결은 그라디언트로 냅니다. */
 body.shrine-on::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
   background:
@@ -493,7 +527,16 @@ body.shrine-on .shr-lamp{animation:shrFlame 2.6s ease-in-out infinite;transform-
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(16px);background:var(--ink);color:#fff;
   font-size:14px;font-weight:600;padding:14px 20px;border-radius:12px;opacity:0;transition:opacity .2s,transform .2s;
   z-index:90;pointer-events:none;max-width:88vw;text-align:center;letter-spacing:-.02em}
+#printAll{display:none}
 @media print{
+  /* ★ 한 벌로 찍을 때는 화면에 떠 있는 한 장을 숨기고 쌓아 둔 네 장을 냅니다
+     (사장님 말씀 2026-11-23 「전체적으로 한번에 인쇄할수 있도록」 · 판 X523) */
+  body.pa-on #view{display:none!important}
+  body.pa-on #printAll{display:block!important}
+  #printAll .pa-sheet{break-before:page}
+  #printAll .pa-sheet:first-child{break-before:auto}
+  #printAll .pa-ttl{font-size:21px;font-weight:900;letter-spacing:-.04em;color:#111!important;
+    border-bottom:2px solid #8C1F17;padding-bottom:7px;margin:0 0 12px}
   html,body{height:auto;overflow:visible;background:#fff}
   .top,.tabs,.scrollhint,.btn,.sheet,.toast{display:none!important}
   .bband{background:#fff;border-bottom:2px solid #1B64DA;border-radius:0;padding:0 0 10px}
@@ -511,7 +554,7 @@ body.shrine-on .shr-lamp{animation:shrFlame 2.6s ease-in-out infinite;transform-
     <button class="mecard" id="meBtn" onclick="goStep('me')">내 카드</button>
   </div>
   <div class="tabs" id="tabs"></div>
-  <div class="pane" id="pane"><div id="view"></div><div class="scrollhint" id="hint">▼ 아래로 더 있어요</div></div>
+  <div class="pane" id="pane"><div id="view"></div><div id="printAll"></div><div class="scrollhint" id="hint">▼ 아래로 더 있어요</div></div>
 </div>
 <div class="sheet" id="sheet" onclick="if(event.target===this)sheetClose()"><div id="sheetBody"></div></div>
 <div class="toast" id="toast"></div>
@@ -1352,7 +1395,9 @@ function draw(){
   else if(S.step==='me')v.innerHTML=viewPerson('me')+shareCard();
   else if(S.step==='client')v.innerHTML=viewPerson('client');
   else if(S.step==='test')v.innerHTML=viewTest();
-  else v.innerHTML=viewBoard();
+  else v.innerHTML=viewBoard()+(MEONLY.on?
+    '<div class="card pa-bar"><button class="btn line sm" onclick="mePrintAll()">🖨 네 장 <b>한 번에</b> 인쇄 · PDF</button>'+
+    '<span class="pa-hint">네 기둥 · 보험 일과 나 · 일 푸는 방식 · 올해·내년 — 한 벌로 나옵니다.</span></div>':'');
   renderBrand();
   var tt=$('topTtl');
   if(tt)tt.textContent=GUEST.on
@@ -2292,6 +2337,22 @@ function mudangSvg(w){
   '<path d="M44 263 Q180 271 316 263" stroke="#6B3A18" stroke-width="1.6" fill="none" opacity=".7"/>'+
   '<rect width="360" height="300" fill="url(#sgVig)"/>'+
   '</svg>';
+}
+/* 한 벌로 인쇄 — 네 장을 쌓아 한 번에 냅니다 (판 X523).
+   ⚠ 탭은 한 번에 한 장만 그려지므로, 인쇄 때만 넷을 모두 그려 숨은 칸에 쌓습니다.
+     보던 탭은 반드시 되돌려 놓습니다 — 인쇄하고 나면 화면이 딴 장이 되어 있으면 안 됩니다. */
+function mePrintAll(){
+  var keep=S.tab, box=$('printAll'), tabs=['mepil','meins','mework','metime'], html='', i;
+  try{
+    for(i=0;i<tabs.length;i++){
+      S.tab=tabs[i];
+      html+='<div class="pa-sheet"><div class="pa-ttl">'+esc(TAB_NAME[tabs[i]])+'</div>'+viewBoard()+'</div>';
+    }
+  }finally{ S.tab=keep; }
+  box.innerHTML=html;
+  document.body.classList.add('pa-on');
+  window.print();
+  setTimeout(function(){ document.body.classList.remove('pa-on'); box.innerHTML=''; },600);
 }
 /* 문간 — 「들어오시지요」. 나만 보는 판의 첫 화면 머리에 섭니다. */
 function mudangGate(){
