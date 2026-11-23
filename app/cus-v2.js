@@ -30,6 +30,16 @@
      · ALLOWED = false 한 줄이면 모두 예전 화면. index.html 은 세 자리만(싣기 · 요약 자리 · cuwPaint 안 다시 그리기).
      · 한 칸이 터져도 그 칸만 빠집니다(T · part). 통째로 터지면 예전 요약이 섭니다.
      · 서버를 부르지 않습니다 · 저장하지 않습니다 — 이 기기 고르기(apex_cus_v2) 한 칸만 적습니다.
+   ── 판 X515 · 👥 고객 탭 목록도 시안 그대로 (사장님 말씀 「3번 해」 — 점검표 고칠 차례 ③) ──
+     시안 rCust · rList: 제목 「고객」 → 찾기(이름 · 전화번호) → 단계 칩(전체 · 첫 전화 … 관리 · 거절) → 한 줄씩
+     (이름 · 나이 / 지금 상황 칩 · 마지막 연락 / 아는 것 n/m · 동네 / 단계 칩) → ＋ 고객 넣기.
+     ★ 명단 · 찾기 · 담당자 고르기는 <b>예전 고객 365일 그대로</b>(olRows · cmHit · CM.pick — osRenderList 가 걸러서 넘김).
+       단계 = 배정 DB 줄(crmDbsOf · 배정 줄은 제 stage) · 상황 = care · 연락 = cmTemp · 아는 것 = cqaTally · 동네 = 배정 줄 region.
+       줄을 누르면 예전 그대로 osOpenClient(내 고객) · hmRtPerson(배정 DB 줄). 넣기는 cregOpen.
+     ★ 「보장분석」 칩은 안 세웁니다 — 라이브에 그 단계가 따로 없어 늘 0명입니다.
+     ★ 같은 고르기(apex_cus_v2) — 「↩ 예전 화면」 이면 고객 365일(미션 · 4년 유지관리 · 달력 · 거르개 열한 개) 그대로.
+       예전 화면 맨 위 「✨ 새 고객 목록」 으로 다시. 자동 점검 브라우저는 예전 화면.
+     ★ index.html 은 세 자리만 — renderClientsPage 첫 줄 · 제목 옆 단추 · osRenderList 가 다 거른 뒤 한 줄.
    점검: scripts/check-cusv2.js
    ═══════════════════════════════════════════════════════════════════ */
 (function (g) {
@@ -198,7 +208,30 @@
       '#cv2Sheet .carepick{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 4px}',
       '#cv2Sheet .carepick button{height:46px;padding:0 14px;border-radius:22px;background:#fff;font-size:15px;font-weight:600;color:var(--sub);text-align:center}',
       '#cv2Sheet .carepick button.on{background:var(--ink);color:#fff}',
-      '#cv2Sheet .fin{display:block;width:100%;height:56px;border:0;border-radius:14px;background:#fff;padding:0 16px;font:inherit;font-size:16px;color:var(--ink);margin-top:12px;box-sizing:border-box;outline:none}'
+      '#cv2Sheet .fin{display:block;width:100%;height:56px;border:0;border-radius:14px;background:#fff;padding:0 16px;font:inherit;font-size:16px;color:var(--ink);margin-top:12px;box-sizing:border-box;outline:none}',
+      /* 판 X515 — 👥 고객 탭 목록 (시안 h1 · .search · .chips · .fchip · .chip.b/.g · .btn.p · .av.s 그대로) */
+      '.cv2.cl2{padding:0;margin:0 auto}',
+      '.cv2.cl2 .hd{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0 14px}',
+      '.cv2.cl2 h1{font-size:24px;font-weight:800;letter-spacing:-.4px;line-height:1.3;margin:0}',
+      '.cv2 .search{display:flex;align-items:center;gap:8px;background:#fff;border-radius:14px;padding:0 14px;height:50px;margin:12px 0}',
+      '.cv2 .search input{border:0;outline:0;flex:1;background:transparent;min-width:0;font:inherit;font-size:16px;color:var(--ink);height:48px}',
+      '.cv2 .chips{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;scrollbar-width:none}',
+      '.cv2 .chips::-webkit-scrollbar{display:none}',
+      '.cv2 .fchip{flex:none;height:44px;padding:0 16px;border-radius:22px;background:#fff;font-size:14px;font-weight:600;color:var(--sub);text-align:center}',
+      '.cv2 .fchip small{font-size:13px;font-weight:600;margin-left:4px;opacity:.75}',
+      '.cv2 .fchip.on{background:var(--ink);color:#fff}',
+      '.cv2 .chip.b{background:var(--blue-l);color:var(--blue)}',
+      '.cv2 .chip.g{background:var(--green-l);color:var(--green)}',
+      '.cv2 .av.s{width:36px;height:36px;font-size:14px}',
+      '.cv2.cl2 .li{align-items:flex-start;text-align:left}',
+      '.cv2.cl2 .li .av{margin-top:2px}',
+      '.cv2.cl2 .li .t1 small{font-size:13px;color:var(--sub3);font-weight:600}',
+      '.cv2.cl2 .li .t2 .chip{margin-right:4px;padding:0 6px}',
+      '.cv2.cl2 .li>.chip{flex:none;margin-top:2px}',
+      '.cv2.cl2 .none{padding:18px 20px;font-size:14px;color:var(--sub2);line-height:1.5}',
+      '.cv2 .btn{display:flex;align-items:center;justify-content:center;gap:6px;height:52px;border-radius:14px;font-size:16px;font-weight:700;width:100%;text-align:center;margin-top:12px}',
+      '.cv2 .btn.p{background:var(--blue);color:#fff}',
+      '.cv2.cl2b{padding:0;margin:0 0 6px;max-width:none;display:flex;justify-content:flex-end}'
     ];
     var s = d.createElement('style'); s.id = 'cusV2Css'; s.textContent = C.join('\n');
     (d.head || d.documentElement).appendChild(s);
@@ -645,8 +678,96 @@
     try { g.setTimeout(f, 80); } catch (x4) { f(); }
   }
 
+  /* ── 👥 고객 탭 목록 (판 X515 · 시안 rCust · rList) ─────────────────── */
+  var CL = { f: 'all', n: 60 };
+  /* 단계 칩 — 시안 차례(전체 · 단계 · 거절). 라이브에 없는 「보장분석」(s 빈 칸)은 안 세웁니다 */
+  function clF() {
+    var F = [['all', '전체']];
+    STG.forEach(function (x, i) { if (x.s.length) F.push(['s' + i, x.t]); });
+    return F.concat([['rej', '거절']]);
+  }
+  function clDb(x) { if (x && x._db) return x; var L = T(function () { return g.crmDbsOf(x.id); }, null); return (L && L[0]) || null; }
+  function clStage(x) { var d = clDb(x); return String((d && d.stage) || (x && (x.stage || x.tk)) || ''); }
+  function clKey(st) { if (st === '거절') return 'rej'; var i = stgI(st); return i < 0 ? '' : 's' + i; }
+  function clHit(x, f) { return f === 'all' || clKey(clStage(x)) === f; }
+  function clRow(x) {
+    var db = !!x._db, id = x.id, nm = db ? (x.name_masked || '') : nameOf(x);
+    var m = db ? null : T(function () { return g.cmMetaOf(id); }, null);
+    var age = db ? null : ageNum(id), d = clDb(x);
+    var st = clStage(x), k = clKey(st), si = (k && k !== 'rej') ? +k.slice(1) : -1;
+    var tp = db ? null : T(function () { return g.cmTemp(id); }, null);
+    var last = db ? ['배정 DB', x.src].filter(Boolean).join(' · ') : (tp ? (tp.d < 0 ? '연락 기록 없음' : tp.t + ' 연락') : '');
+    var kn = db ? null : T(function () { return g.cqaTally(id); }, null);
+    var l2 = [kn ? '아는 것 ' + kn.got + '/' + kn.all : '', d ? (d.region || '') : ''].filter(Boolean).join(' · ');
+    var chip = k === 'rej' ? '<span class="chip w">거절</span>' :
+      (si >= 0 ? '<span class="chip ' + (si === STG.length - 1 ? 'g' : 'b') + '">' + STG[si].t + '</span>' : (st ? '<span class="chip">' + E(st) + '</span>' : ''));
+    var go = db ? 'hmRtPerson(\'' + Q(x._dbid) + '\')' : 'osOpenClient(\'' + Q(id) + '\')';
+    var ini = String(nm || '').replace(/^\s*\[[^\]]*\]\s*/, '').charAt(0) || '?';
+    return '<button type="button" class="li" onclick="' + go + '"><div class="av s">' + E(ini) + '</div><div class="tx">' +
+      '<div class="t1">' + (nm ? E(nm) + '님' : '(이름 없음)') + (age != null ? ' <small>' + age + '세</small>' : '') + '</div>' +
+      ((m && m.care) || last ? '<div class="t2">' + (m && m.care ? '<span class="chip b">' + E(m.care) + '</span>' : '') + E(last) + '</div>' : '') +
+      (l2 ? '<div class="t2">' + E(l2) + '</div>' : '') + '</div>' + chip + '</button>';
+  }
+  /* 틀 — 고객 탭을 열 때(renderClientsPage 첫 줄). 새 화면이 아니면 빈 글 → 예전 고객 365일 */
+  function listPage() {
+    try {
+      if (!on()) return '';
+      css();
+      var q = T(function () { return g.OSC.q; }, '') || '';
+      var who = T(function () { return g.cmWhoChipsHtml(g.OSC.list || []); }, '') || '';
+      var wait = T(function () { return g.holdSayOr('wait', { what: '고객 목록', n: 5 }); }, '') || '';
+      return '<div class="tab-pane on"><div class="osc-wrap">' +
+        '<div class="cv2 cl2"><div class="hd"><h1>고객</h1><button type="button" class="vchip" onclick="cusV2ListUse(false)">↩ 예전 화면</button></div></div>' +
+        /* 담당자 줄은 .cv2 밖 — 그 칩 옷(.t-chip)이 .cv2 button 초기화에 지지 않게 */
+        '<div id="cliWho">' + who + '</div>' +
+        '<div class="cv2 cl2" id="cl2">' +
+          '<label class="search"><span>🔎</span><input id="oscSearch" placeholder="이름 · 전화번호" value="' + E(q) + '" oninput="osClientsFilter(this.value)"></label>' +
+          '<div id="oscList">' + wait + '</div>' +
+          '<button type="button" class="btn p" onclick="cregOpen()">＋ 고객 넣기</button>' +
+          '<div class="list" style="margin-top:12px"><button type="button" class="li" onclick="cusV2ListUse(false)"><div class="tile">📇</div><div class="tx">' +
+            '<div class="t1">고객 365일 · 예전 목록</div><div class="t2">오늘의 미션 · 4년 유지관리 · 이번 달 달력 · 거르개 열한 개</div></div><span class="ar">›</span></button></div>' +
+        '</div></div></div>';
+    } catch (e) { return ''; }
+  }
+  /* 명단 — osRenderList 가 담당자 · 찾기까지 거른 줄을 넘깁니다. 새 틀이 없으면 false → 예전 그리기 */
+  function listPaint(rows, q) {
+    var box = el('oscList');
+    if (!el('cl2') || !box) return false;
+    rows = rows || [];
+    var F = clF(), f = CL.f, i, n = {};
+    if (!F.some(function (x) { return x[0] === f; })) f = CL.f = 'all';
+    F.forEach(function (x) { n[x[0]] = 0; });
+    for (i = 0; i < rows.length; i++) { n.all++; var k = clKey(clStage(rows[i])); if (k && n[k] != null) n[k]++; }
+    var L = rows.filter(function (x) { return clHit(x, f); });
+    try { if (typeof g.cmSortRows === 'function') g.cmSortRows(L); } catch (e0) {}
+    var h = '<div class="chips">' + F.map(function (x) {
+      return '<button type="button" class="fchip' + (f === x[0] ? ' on' : '') + '" onclick="cusV2ListF(\'' + x[0] + '\')">' + x[1] + '<small>' + n[x[0]] + '</small></button>';
+    }).join('') + '</div><div class="list">';
+    if (!L.length) {
+      h += '<div class="none">' + (q ? '「' + E(q) + '」 로 찾는 분이 없어요. 초성 · 연락처 뒷자리 · 가족 이름으로도 찾을 수 있어요.' :
+        (f !== 'all' ? '이 칸에는 아무도 없어요. 위 「전체」 를 누르면 다 돌아와요.' : '아직 고객이 없어요. 아래 「＋ 고객 넣기」 로 시작해요.')) + '</div>';
+    } else {
+      h += L.slice(0, CL.n).map(function (x) { try { return clRow(x); } catch (e1) { return ''; } }).join('');
+      if (L.length > CL.n) h += '<button type="button" class="more" onclick="cusV2ListMore()">' + (L.length - CL.n) + '명 더 보기</button>';
+    }
+    box.innerHTML = h + '</div>';
+    try { if (typeof g.cliWhoPaint === 'function') g.cliWhoPaint(); } catch (e2) {}
+    return true;
+  }
+  function listRe() { try { if (typeof g.osRenderList === 'function') g.osRenderList(); } catch (e) {} }
+  function listF(f) { CL.f = f; CL.n = 60; listRe(); }
+  function listMore() { CL.n += 60; listRe(); }
+  function listUse(v) {
+    set(!!v);
+    try { if (typeof g.toast === 'function') g.toast(v ? '✨ 새 고객 목록입니다 — 맨 위 「↩ 예전 화면」 으로 언제든 돌아갑니다' : '↩ 예전 고객 365일로 돌아왔습니다'); } catch (e) {}
+    try { g.go('clients'); } catch (e2) {}
+  }
+  /* 예전 고객 365일 맨 위 — 다시 새 목록으로 */
+  function listBack() { return (ALLOWED && !on() && !robot()) ? '<div class="cv2 cl2b"><button type="button" class="vchip" onclick="cusV2ListUse(true)">✨ 새 고객 목록</button></div>' : ''; }
+
   g.CUS_V2 = { on: on, set: set, html: html, paint: paint, use: use, jump: jump, KEY: KEY, allowed: function () { return ALLOWED; },
-    STG: STG, stgI: stgI, catPick: catPick, knowCells: knowCells, jNow: jNow, JSTEP: JSTEP, sayItems: sayItems };
+    STG: STG, stgI: stgI, catPick: catPick, knowCells: knowCells, jNow: jNow, JSTEP: JSTEP, sayItems: sayItems,
+    CL: CL, clF: clF, clStage: clStage, clKey: clKey, listPage: listPage, listPaint: listPaint };
   /* index.html · onclick 이 부르는 이름 — 점(.) 없는 함수여야 check-hmclick 이 「부르는 함수가 있다」 고 읽습니다 */
   g.cusV2Html = html;
   g.cusV2Paint = paint;
@@ -663,4 +784,10 @@
   g.cusV2Log = logSheet;
   g.cusV2LogK = logK;
   g.cusV2LogPut = logPut;
+  g.cusV2ListPage = listPage;
+  g.cusV2ListPaint = listPaint;
+  g.cusV2ListF = listF;
+  g.cusV2ListMore = listMore;
+  g.cusV2ListUse = listUse;
+  g.cusV2ListBack = listBack;
 })(window);
