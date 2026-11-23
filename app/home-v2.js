@@ -408,7 +408,7 @@
     var A = T(function () { return g.HWHO_ALL; }, '');
     if (A) h += '<button type="button" class="' + (all ? 'on' : '') + '" onclick="hwhoSet(\'' + Q(A) + '\')"><div class="ring">🏢</div>팀 전체</button>';
     h += '</div>';
-    /* 📊 시안 「팀」 탭 — 아래 탭 띠는 그대로 두라 하셔서 여기서 시트로 (team-v2.js · 판 X527) */
+    /* 📊 시안 「팀」 탭 — 아래 탭 띠는 그대로 두라 하셔서 여기서 시트로 (team-v2.js · 판 X528) */
     if (typeof g.teamV2Open === 'function') h += '<button type="button" class="tmall" onclick="teamV2Open()">📊 우리 팀 한눈에<span>›</span></button>';
     if (cur && cur !== me) h += '<div class="whonote"><span>' + (all ? '🏢 팀 전체를 보고 있어요 — 내 것이 아니에요' : '👀 ' + E(T(function () { return g.hwhoName(cur); }, '팀원')) + '님 화면을 그대로 보고 있어요') + '</span><button type="button" onclick="hwhoMe()">← 내 화면</button></div>';
     return h;
@@ -416,7 +416,7 @@
   function helloHtml(L) {
     var nm = T(function () { return g.OS.profile.name; }, '') || '설계사';
     var n = (L && L.list) ? L.list.length : 0;
-    /* 🙋 나 — 시안 오른쪽 위 단추(openMe). 맨 위 줄은 폰 폭이 꽉 차 인사 줄 오른쪽에 (team-v2.js · 판 X527) */
+    /* 🙋 나 — 시안 오른쪽 위 단추(openMe). 맨 위 줄은 폰 폭이 꽉 차 인사 줄 오른쪽에 (team-v2.js · 판 X528) */
     var meB = typeof g.meV2Open === 'function' ? '<button type="button" class="mebtn" onclick="meV2Open()" aria-label="나 — 알람 · 공지 · 설정">🙋</button>' : '';
     return '<div class="hello"><span>' + E(nm) + '님, ' + (n ? '오늘 <b>' + n + '분</b> 남았어요' : '오늘 할 일 끝! 🎉') + '</span>' + meB + '</div>';
   }
