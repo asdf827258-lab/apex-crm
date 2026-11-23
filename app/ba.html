@@ -2074,6 +2074,8 @@ body.presenting .show:not(.deck){border:0;box-shadow:none}
 <!-- 「다음 한 걸음」 칸의 <b>모양</b>은 한 곳이다(apex-next.js) — 말만 화면마다 다르다 (5번) -->
 <script src="../apex-next.js"></script>
 <script src="ba-ask.js?v=1"></script>
+<!-- 📊 판 X527 — 전·후를 엑셀 한 장으로 (바깥 셈틀 없이 .xlsx 를 손으로 씁니다) -->
+<script src="ba-xl.js?v=1"></script>
 <script>
 /* ══════════════════════════════════════════════════════════════════════════
    보장 전 · 후 만들기
@@ -3320,10 +3322,28 @@ function payPanel(){
   return h+'</table></div></div>';
 }
 
+/* 📊 판 X527 — 엑셀 내려받기. 만드는 일은 ba-xl.js 가 다 합니다(여기서 다시
+   짜지 않습니다 · 5번). 여기서는 <b>물어보고 · 부르고 · 알려 주는</b> 것만 합니다. */
+function baXlGo(real){
+  if(!window.BA_XL||typeof BA_XL.make!=='function'){
+    toast('엑셀 만드는 자를 못 불렀습니다 — 새로고침해 주세요');return;}
+  if(real&&!confirm('고객 <b>실명</b>을 엑셀에 그대로 넣습니다. 파일 이름에도 들어갑니다.\n\n계속할까요?'.replace(/<[^>]+>/g,'')))return;
+  try{
+    var o=BA_XL.make({real:!!real});
+    toast('📊 '+o.name+' 을 내려받았습니다 ('+Math.round(o.size/1024)+'KB · 계약 전 '+
+          o.cols.B.length+' · 후 '+o.cols.A.length+')');
+  }catch(e){ toast('엑셀을 못 만들었습니다 — '+((e&&e.message)||'까닭 모름')); }
+}
 /* ── ⑤ 표준 담보표 ── */
 function stHtml(){
   return '<div class="card"><h2><span class="n">5</span>표준 담보표 — 전 · 후'+
-    '<span class="r"><button class="mini" onclick="stAll(1)">전부 펴기</button>'+
+    /* 📊 판 X527 — 사장님 말씀 「엑셀 버전으로 한눈에 모든 보험 모든 보장이
+       나오도록」. 화면의 이 표는 <b>전·후 합계</b>만 보여 주고 어느 보험이 그
+       담보를 주는지는 안 보여 줍니다. 엑셀에서 계약을 <b>칸</b>으로 세웁니다.
+       ⚠ 이름은 <b>가린 것이 기본</b>입니다 — 「이름 그대로」 는 한 번 더 묻습니다 (3번). */
+    '<span class="r"><button class="mini xl" onclick="baXlGo(0)">📊 엑셀로 내려받기</button>'+
+    '<button class="mini" onclick="baXlGo(1)" title="고객 실명을 그대로 넣습니다 — 한 번 더 묻습니다">이름 그대로</button>'+
+    '<button class="mini" onclick="stAll(1)">전부 펴기</button>'+
     '<button class="mini" onclick="stAll(0)">전부 접기</button>'+
     '<button class="mini d" onclick="manClear()">손으로 고친 것 되돌리기</button></span></h2>'+
     '<p>사장님 엑셀의 <b>담보 목록 · 3단 계층 · 표준금액</b>을 그대로 썼습니다. 위 계약에서 <b>자동으로</b> 채워지고, '+
