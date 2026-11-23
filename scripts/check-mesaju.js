@@ -29,8 +29,11 @@ const ME_OFF = 'var MEONLY={on:false};', ME_ON = 'var MEONLY={on:true};';
   ok(sha(want) === sha(b), '★★ 바라는 것 ' + sha(want) + ' / 그림자 ' + sha(b) +
     (sha(want) === sha(b) ? '' : '\n      ← 갈라졌습니다. node scripts/mk-mesaju.js --write 로 맞추십시오'));
   ok(b.toString('utf8').indexOf(ME_ON) >= 0, '올리는 판은 <b>MEONLY 가 켜져 있다</b>');
-  ok(fs.readdirSync('site-me').sort().join(' ') === '_redirects index.html robots.txt',
-    '올릴 폴더에 세 파일뿐이다 (9번)');
+  /* ★ 판 X525 에 둘이 늘었습니다 — netlify.toml(이 사이트만의 설정)과
+     netlify/edge-functions/gate.js(아이디·비번 문지기). 그래도 <b>고객 자료가
+     섞이지 않았는지</b>는 그대로 봅니다 (9번). 문지기 자체는 check-megate 가 엽니다. */
+  ok(fs.readdirSync('site-me').sort().join(' ') === '_redirects index.html netlify netlify.toml robots.txt',
+    '올릴 폴더에 <b>올릴 것만</b> 있다 (9번) — ' + fs.readdirSync('site-me').sort().join(' '));
 
   const br = await chromium.launch();
   const ctx = await br.newContext({ viewport: { width: 412, height: 900 } });
