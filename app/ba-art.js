@@ -244,8 +244,8 @@
     s += txt(320, 46, '순환계질환 진단비 · 순환계 주요치료비', { sz: 12, b: 1, a: 'middle', c: c });
     s += '<path d="M150 98 Q320 56 490 98 Q470 88 452 98 Q432 86 412 98 Q392 86 372 98 Q352 86 332 98 Q312 86 292 98 Q272 86 252 98 Q232 86 212 98 Q192 86 172 98 Q160 90 150 98 Z" fill="' + tint(c, 0.52) + '" stroke="' + c + '" stroke-width="1.3"/>';
     s += ln(320, 76, 320, 104, c, 1.8);
-    s += txt(12, 276, '따로따로 들면 둘 다 챙기기 쉽고, 한 담보로 덮으면 겹치는 자리를 아껴 쓸 수 있습니다.', { sz: 11.5, c: '#4E5968' });
-    s += foot('어느 쪽이든 ‘비는 자리’ 를 먼저 봅니다 — 이름이 다르면 열리는 병이 다릅니다.', c, 296);
+    s += txt(12, 270, '따로따로 들면 둘 다 챙기기 쉽고, 한 담보로 덮으면 겹치는 자리를 아껴 쓸 수 있습니다.', { sz: 11.5, c: '#4E5968' });
+    s += foot('어느 쪽이든 ‘비는 자리’ 를 먼저 봅니다 — 이름이 다르면 열리는 병이 다릅니다.', c, 290);
     return svg(s);
   };
 
@@ -708,6 +708,253 @@
     var w = g.open(u, '_blank');
     setTimeout(function () { URL.revokeObjectURL(u); }, 60000);
     return { html: html, win: w, url: u };
+  };
+
+
+  /* ── 5. 엑셀 도형으로 옮기기 ───────────────────────────────────────
+     사장님 말씀 2026-11-23 — 「엑셀로 하라니까 왜그러는거야 <b>엑셀로 디자인 짜</b>」.
+     도해를 따로 선 HTML 에만 두면 사장님은 엑셀과 그 문서를 <b>둘 다</b> 들고
+     다니셔야 합니다. 그래서 같은 도해를 <b>엑셀 안으로</b> 넣습니다.
+
+     ★ 그림은 그대로 <b>한 곳</b>입니다 (5번) — SCENE 이 낸 SVG 를 여기서
+       엑셀 도형(DrawingML)으로 <b>옮기기만</b> 합니다. 두 번 그리지 않습니다.
+     ★ 사진으로 넣지 않습니다 (9번) — 래스터는 인쇄에서 뭉개집니다. 엑셀
+       <b>도형</b>이라 크기를 늘려도 같은 선으로 섭니다.
+     ★ 글자 크기는 <b>그룹과 같이 안 늘어납니다</b> — DrawingML 의 글자는 절대
+       크기입니다. 그래서 늘어난 배율을 셈해 pt 로 바꿔 적습니다.          */
+
+  /* 색 — '#RRGGBB' · 'rgb(r,g,b)' · 'none' */
+  function hex6(v) {
+    v = String(v || '').trim();
+    if (!v || v === 'none') return null;
+    var m = v.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+    if (m) {
+      return [1, 2, 3].map(function (i) {
+        return ('0' + Number(m[i]).toString(16)).slice(-2);
+      }).join('').toUpperCase();
+    }
+    m = v.match(/^#([0-9a-fA-F]{6})$/);
+    if (m) return m[1].toUpperCase();
+    m = v.match(/^#([0-9a-fA-F]{3})$/);
+    if (m) return m[1].split('').map(function (c) { return c + c; }).join('').toUpperCase();
+    return null;                       /* url(#…) 같은 것은 부르는 쪽이 대신 정합니다 */
+  }
+  function at(tag, n) {
+    var m = tag.match(new RegExp('\\s' + n + '="([^"]*)"'));
+    return m ? m[1] : null;
+  }
+  function nu(tag, n, d) {
+    var v = at(tag, n);
+    return v === null ? d : parseFloat(v);
+  }
+  function fill(c, alpha) {
+    var h = hex6(c);
+    if (!h) return '<a:noFill/>';
+    return '<a:solidFill><a:srgbClr val="' + h + '"/>' +
+      (alpha !== null && alpha !== undefined && alpha < 1
+        ? '' : '') + '</a:solidFill>';
+  }
+  function fillA(c, alpha) {
+    var h = hex6(c);
+    if (!h) return '<a:noFill/>';
+    var a = (alpha !== null && alpha !== undefined && alpha < 1)
+      ? '<a:alpha val="' + Math.round(alpha * 100000) + '"/>' : '';
+    return '<a:solidFill><a:srgbClr val="' + h + '">' + a + '</a:srgbClr></a:solidFill>';
+  }
+  function line(c, w, dash, U) {
+    var h = hex6(c);
+    if (!h) return '<a:ln><a:noFill/></a:ln>';
+    return '<a:ln w="' + Math.max(3175, Math.round((w || 1) * U)) + '">' +
+      '<a:solidFill><a:srgbClr val="' + h + '"/></a:solidFill>' +
+      (dash ? '<a:prstDash val="sysDash"/>' : '') + '</a:ln>';
+  }
+
+  /* SVG 한 장 → 엑셀 도형 한 묶음. 자식 좌표는 viewBox 를 그대로 씁니다. */
+  A.toDml = function (svg, o) {
+    o = o || {};
+    var vb = (svg.match(/viewBox="([^"]+)"/) || [0, '0 0 640 300'])[1].split(/\s+/).map(Number);
+    var VW = vb[2], VH = vb[3];
+    var EW = o.cx || 6480000, EH = Math.round(EW * VH / VW);
+    var U = EW / VW;                               /* 한 칸이 몇 EMU 인가 */
+    var PT = U / 12700;                            /* 한 칸이 몇 pt 인가 — 글자에 씁니다 */
+    var id = o.id0 || 100, out = [];
+
+    function sp(nm, x, y, w, h, geom, f, ln, body, rot) {
+      return '<xdr:sp macro="" textlink=""><xdr:nvSpPr>' +
+        '<xdr:cNvPr id="' + (id++) + '" name="' + nm + '"/><xdr:cNvSpPr/></xdr:nvSpPr><xdr:spPr>' +
+        '<a:xfrm' + (rot ? (' rot="' + rot + '"') : '') + '>' +
+        '<a:off x="' + Math.round(x * U) + '" y="' + Math.round(y * U) + '"/>' +
+        '<a:ext cx="' + Math.max(1, Math.round(w * U)) + '" cy="' + Math.max(1, Math.round(h * U)) + '"/></a:xfrm>' +
+        geom + f + ln + '</xdr:spPr>' + (body || '<xdr:txBody><a:bodyPr/><a:lstStyle/><a:p/></xdr:txBody>') +
+        '</xdr:sp>';
+    }
+    function prst(p, adj) { return '<a:prstGeom prst="' + p + '">' + (adj || '<a:avLst/>') + '</a:prstGeom>'; }
+
+    /* 글자 — SVG 의 y 는 <b>밑선</b>, 엑셀은 칸의 <b>위</b>입니다 */
+    function txtSp(t, x, y, sz, col, bold, anchor) {
+      /* ★ 칸 너비를 글자 수로 어림하지 않습니다 — 한글·숫자·기호가 섞이면 어림이
+         흔들려 글이 엉뚱한 자리에 섭니다. <b>가장자리까지 넓게</b> 잡고 정렬로만
+         맞춥니다. spAutoFit 도 빼야 합니다 — 엑셀이 칸을 다시 재며 글을 옮깁니다. */
+      var h = sz * 1.8, bx, w, algn;
+      if (anchor === 'middle') { w = Math.min(x, VW - x) * 2; bx = x - w / 2; algn = 'ctr'; }
+      else if (anchor === 'end') { bx = 0; w = x; algn = 'r'; }
+      else { bx = x; w = VW - x; algn = 'l'; }
+      if (w <= 0) { w = 10; }
+      var body = '<xdr:txBody><a:bodyPr wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" anchor="ctr"/>' +
+        '<a:lstStyle/><a:p><a:pPr algn="' + algn + '"/><a:r><a:rPr lang="ko-KR" ' +
+        'sz="' + Math.max(400, Math.round(sz * PT * 100)) + '"' + (bold ? ' b="1"' : '') +
+        '><a:solidFill><a:srgbClr val="' + (hex6(col) || '333D4B') + '"/></a:solidFill>' +
+        '<a:latin typeface="맑은 고딕"/><a:ea typeface="맑은 고딕"/></a:rPr>' +
+        '<a:t>' + t + '</a:t></a:r></a:p></xdr:txBody>';
+      return sp('글', bx, y - sz * 1.2, w, h, prst('rect'), '<a:noFill/>', '<a:ln><a:noFill/></a:ln>', body);
+    }
+
+    /* ★ 길(path)은 <b>제대로 걸어서</b> 읽습니다. 숫자를 둘씩 짝지어 테두리를 재면
+       상대 좌표(l · q · h · v)가 섞인 길에서 음수가 나와 도형이 종이 밖으로 나갑니다 —
+       실제로 영수증의 톱니(l -8 -6)가 그랬고, 엑셀에서 그 자리가 어긋났습니다.
+       걸으면서 <b>절대 좌표</b>로 바꾸고, 그 점들로 테두리를 잽니다. */
+    function walk(d) {
+      var cmds = d.match(/[MmLlHhVvQqTtCcSsAaZz][^MmLlHhVvQqTtCcSsAaZz]*/g) || [];
+      var cx = 0, cy = 0, sx = 0, sy = 0, seg = [], pts = [];
+      function put(x, y) { pts.push([x, y]); }
+      cmds.forEach(function (c) {
+        var k = c[0], rel = (k >= 'a' && k <= 'z');
+        var K = k.toUpperCase();
+        var a = (c.slice(1).match(/-?\d*\.?\d+(?:e-?\d+)?/gi) || []).map(Number);
+        var i, x, y;
+        if (K === 'M') {
+          for (i = 0; i + 1 < a.length; i += 2) {
+            x = rel ? cx + a[i] : a[i]; y = rel ? cy + a[i + 1] : a[i + 1];
+            seg.push(i === 0 ? ['M', x, y] : ['L', x, y]);
+            cx = x; cy = y; if (i === 0) { sx = x; sy = y; } put(x, y);
+          }
+        } else if (K === 'L') {
+          for (i = 0; i + 1 < a.length; i += 2) {
+            x = rel ? cx + a[i] : a[i]; y = rel ? cy + a[i + 1] : a[i + 1];
+            seg.push(['L', x, y]); cx = x; cy = y; put(x, y);
+          }
+        } else if (K === 'H') {
+          a.forEach(function (v) { cx = rel ? cx + v : v; seg.push(['L', cx, cy]); put(cx, cy); });
+        } else if (K === 'V') {
+          a.forEach(function (v) { cy = rel ? cy + v : v; seg.push(['L', cx, cy]); put(cx, cy); });
+        } else if (K === 'Q') {
+          for (i = 0; i + 3 < a.length; i += 4) {
+            var qx = rel ? cx + a[i] : a[i], qy = rel ? cy + a[i + 1] : a[i + 1];
+            x = rel ? cx + a[i + 2] : a[i + 2]; y = rel ? cy + a[i + 3] : a[i + 3];
+            seg.push(['Q', qx, qy, x, y]); put(qx, qy); put(x, y); cx = x; cy = y;
+          }
+        } else if (K === 'C') {
+          for (i = 0; i + 5 < a.length; i += 6) {
+            var c1x = rel ? cx + a[i] : a[i], c1y = rel ? cy + a[i + 1] : a[i + 1];
+            var c2x = rel ? cx + a[i + 2] : a[i + 2], c2y = rel ? cy + a[i + 3] : a[i + 3];
+            x = rel ? cx + a[i + 4] : a[i + 4]; y = rel ? cy + a[i + 5] : a[i + 5];
+            seg.push(['C', c1x, c1y, c2x, c2y, x, y]);
+            put(c1x, c1y); put(c2x, c2y); put(x, y); cx = x; cy = y;
+          }
+        } else if (K === 'Z') { seg.push(['Z']); cx = sx; cy = sy; }
+      });
+      if (!pts.length) return null;
+      var xs = pts.map(function (q) { return q[0]; }), ys = pts.map(function (q) { return q[1]; });
+      return { seg: seg,
+        x: Math.min.apply(null, xs), y: Math.min.apply(null, ys),
+        w: Math.max(1, Math.max.apply(null, xs) - Math.min.apply(null, xs)),
+        h: Math.max(1, Math.max.apply(null, ys) - Math.min.apply(null, ys)) };
+    }
+    function pathGeom(W2) {
+      function P(x, y) {
+        return '<a:pt x="' + Math.round(x - W2.x) + '" y="' + Math.round(y - W2.y) + '"/>';
+      }
+      var p = W2.seg.map(function (q) {
+        if (q[0] === 'M') return '<a:moveTo>' + P(q[1], q[2]) + '</a:moveTo>';
+        if (q[0] === 'L') return '<a:lnTo>' + P(q[1], q[2]) + '</a:lnTo>';
+        if (q[0] === 'Q') return '<a:quadBezTo>' + P(q[1], q[2]) + P(q[3], q[4]) + '</a:quadBezTo>';
+        if (q[0] === 'C') return '<a:cubicBezTo>' + P(q[1], q[2]) + P(q[3], q[4]) + P(q[5], q[6]) + '</a:cubicBezTo>';
+        return '<a:close/>';
+      }).join('');
+      return '<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="r" b="b"/>' +
+        '<a:pathLst><a:path w="' + Math.round(W2.w) + '" h="' + Math.round(W2.h) + '">' + p +
+        '</a:path></a:pathLst></a:custGeom>';
+    }
+
+    /* ★ <b>변환을 따라갑니다</b> — 몸 그림은 <g transform="translate(a,b) scale(s)">
+       안에 있습니다. 이걸 빼먹으면 몸이 제 크기로 서서 종이를 뚫고 나갑니다.
+       자리와 크기만 옮기면 됩니다 — 길(custGeom) 은 제 테두리 안에서 늘어납니다. */
+    var TR = { x: 0, y: 0, s: 1 }, STK = [];
+    function TX(v) { return TR.x + TR.s * v; }
+    function TY(v) { return TR.y + TR.s * v; }
+    function TL(v) { return TR.s * v; }
+
+    /* 하나씩 옮깁니다 — 그린 차례 그대로여야 가린 것이 같습니다 */
+    var toks = svg.match(/<g\b[^>]*>|<\/g>|<(rect|circle|ellipse|line|polygon|path|text)\b[^>]*?(?:\/>|>[\s\S]*?<\/\1>)/g) || [];
+    toks.forEach(function (t) {
+      if (/^<g\b/.test(t)) {
+        STK.push({ x: TR.x, y: TR.y, s: TR.s });
+        var tf = (t.match(/transform="([^"]*)"/) || [0, ''])[1];
+        var mv = tf.match(/translate\(\s*(-?[\d.]+)[ ,]+(-?[\d.]+)\s*\)/);
+        var sc = tf.match(/scale\(\s*(-?[\d.]+)/);
+        var ns = sc ? parseFloat(sc[1]) : 1;
+        if (mv) { TR.x = TR.x + TR.s * parseFloat(mv[1]); TR.y = TR.y + TR.s * parseFloat(mv[2]); }
+        TR.s = TR.s * ns;
+        return;
+      }
+      if (t === '</g>') { var o2 = STK.pop(); if (o2) { TR.x = o2.x; TR.y = o2.y; TR.s = o2.s; } return; }
+      var tag = t.match(/^<\w+[^>]*>/)[0];
+      var f = at(tag, 'fill'), st = at(tag, 'stroke'), sw = nu(tag, 'stroke-width', 1);
+      var op = at(tag, 'opacity'); op = op === null ? 1 : parseFloat(op);
+      var dash = !!at(tag, 'stroke-dasharray');
+      if (/^<rect/.test(tag)) {
+        var x = nu(tag, 'x', 0), y = nu(tag, 'y', 0), w = nu(tag, 'width', 0), h = nu(tag, 'height', 0);
+        var rx = nu(tag, 'rx', 0);
+        var geo = rx > 0 ? prst('roundRect', '<a:avLst><a:gd name="adj" fmla="val ' +
+          Math.min(50000, Math.round(rx / Math.max(1, Math.min(w, h)) * 100000)) + '"/></a:avLst>') : prst('rect');
+        out.push(sp('칸', TX(x), TY(y), TL(w), TL(h), geo, fillA(f, op), line(st, sw * TR.s, dash, U)));
+      } else if (/^<circle/.test(tag)) {
+        var ccx = nu(tag, 'cx', 0), ccy = nu(tag, 'cy', 0), r = nu(tag, 'r', 0);
+        out.push(sp('동글', TX(ccx - r), TY(ccy - r), TL(r * 2), TL(r * 2), prst('ellipse'), fillA(f, op), line(st, sw * TR.s, dash, U)));
+      } else if (/^<ellipse/.test(tag)) {
+        var ex = nu(tag, 'cx', 0), ey = nu(tag, 'cy', 0), rx2 = nu(tag, 'rx', 0), ry2 = nu(tag, 'ry', 0);
+        out.push(sp('타원', TX(ex - rx2), TY(ey - ry2), TL(rx2 * 2), TL(ry2 * 2), prst('ellipse'), fillA(f, op), line(st, sw * TR.s, dash, U)));
+      } else if (/^<line/.test(tag)) {
+        var x1 = nu(tag, 'x1', 0), y1 = nu(tag, 'y1', 0), x2 = nu(tag, 'x2', 0), y2 = nu(tag, 'y2', 0);
+        var lx = TX(Math.min(x1, x2)), ly = TY(Math.min(y1, y2));
+        var lw = TL(Math.abs(x2 - x1)), lh = TL(Math.abs(y2 - y1));
+        var flip = ((x2 - x1) * (y2 - y1) < 0) ? ' flipV="1"' : '';
+        var g = '<a:xfrm' + flip + '><a:off x="' + Math.round(lx * U) + '" y="' + Math.round(ly * U) + '"/>' +
+          '<a:ext cx="' + Math.max(1, Math.round(lw * U)) + '" cy="' + Math.max(1, Math.round(lh * U)) + '"/></a:xfrm>';
+        out.push('<xdr:sp macro="" textlink=""><xdr:nvSpPr><xdr:cNvPr id="' + (id++) + '" name="줄"/>' +
+          '<xdr:cNvSpPr/></xdr:nvSpPr><xdr:spPr>' + g + prst('line') + '<a:noFill/>' +
+          line(st, sw * TR.s, dash, U) + '</xdr:spPr><xdr:txBody><a:bodyPr/><a:lstStyle/><a:p/></xdr:txBody></xdr:sp>');
+      } else if (/^<polygon/.test(tag)) {
+        var pts = (at(tag, 'points') || '').trim().split(/[,\s]+/).map(Number);
+        if (pts.length >= 6) {
+          var d2 = 'M' + pts[0] + ' ' + pts[1];
+          for (var i2 = 2; i2 + 1 < pts.length; i2 += 2) d2 += 'L' + pts[i2] + ' ' + pts[i2 + 1];
+          d2 += 'Z';
+          var b2 = walk(d2);
+          if (b2) out.push(sp('꼴', TX(b2.x), TY(b2.y), TL(b2.w), TL(b2.h), pathGeom(b2),
+            fillA(f, op), line(st, sw * TR.s, dash, U)));
+        }
+      } else if (/^<path/.test(tag)) {
+        var b3 = walk(at(tag, 'd') || '');
+        if (b3 && b3.w > 0 && b3.h > 0) {
+          out.push(sp('꼴', TX(b3.x), TY(b3.y), TL(b3.w), TL(b3.h), pathGeom(b3),
+            fillA(f === null || /url\(/.test(f) ? (o.gradTo || '#F4BCA8') : f, op),
+            line(st, sw * TR.s, dash, U)));
+        }
+      } else if (/^<text/.test(tag)) {
+        var body = t.replace(/^<text[^>]*>/, '').replace(/<\/text>$/, '');
+        if (!body.trim()) return;
+        out.push(txtSp(body, TX(nu(tag, 'x', 0)), TY(nu(tag, 'y', 0)), TL(nu(tag, 'font-size', 12)),
+          at(tag, 'fill'), at(tag, 'font-weight') === '700', at(tag, 'text-anchor') || 'start'));
+      }
+    });
+
+    return { xml: '<xdr:grpSp><xdr:nvGrpSpPr><xdr:cNvPr id="' + (id++) + '" name="도해"/>' +
+      '<xdr:cNvGrpSpPr/></xdr:nvGrpSpPr><xdr:grpSpPr><a:xfrm>' +
+      '<a:off x="0" y="0"/><a:ext cx="' + EW + '" cy="' + EH + '"/>' +
+      '<a:chOff x="0" y="0"/><a:chExt cx="' + Math.round(VW * U) + '" cy="' + Math.round(VH * U) + '"/>' +
+      '</a:xfrm></xdr:grpSpPr>' + out.join('') + '</xdr:grpSp>',
+      id: id, cx: EW, cy: EH, 수: out.length };
   };
 
   g.BA_ART = A;

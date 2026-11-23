@@ -277,6 +277,48 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
     (자료.length ? (' ← ' + 자료.join(' ')) : ''));
   is(true, '  (막은 바깥 ' + 밖.length + '군데 — ' + (밖.join(' · ') || '없음') + ' · 글꼴입니다)');
 
+  /* ══ 🖨 판 X530 — 사장님 말씀 「<b>엑셀로 디자인 짜</b>」 ════════════
+     도해가 따로 선 문서에만 있으면 사장님은 둘을 들고 다니셔야 합니다.
+     같은 도해가 <b>엑셀 안</b>에 들어갔는지, 그리고 엑셀 도형이
+     <b>제 테두리 안에</b> 서는지 잽니다. 사진이 아니라 도형이어야 합니다 (9번). */
+  head('[9] ★★ 도해가 <b>엑셀 안</b>에 들어갔나 (사장님 말씀 「엑셀로 디자인 짜」)');
+  const 그림판들 = Object.keys(Z).filter(k => /^xl\/drawings\/drawing\d+\.xml$/.test(k));
+  is(그림판들.length === 12, '  그림판이 <b>12장</b> — 거미줄 1 + 묶음 도해 11 (' + 그림판들.length + ')');
+  const 도형수 = 그림판들.reduce((a2, k) => a2 + (Z[k].match(/<xdr:sp /g) || []).length, 0);
+  is(도형수 >= 250, '  엑셀 <b>도형</b>이 ' + 도형수 + '개 — 사진이 아니라 선입니다 (9번)');
+  is(!Object.keys(Z).some(k => /^xl\/media\//.test(k)),
+    '  <b>그림 파일(png·jpg)이 하나도 없다</b> — 래스터는 인쇄에서 뭉개집니다 (9번)');
+  /* 뇌 그림판에 그 묶음의 말이 들어 있나 — 엉뚱한 도해가 붙지 않았나 */
+  const 뇌판 = 그림판들.map(k => Z[k]).filter(x => /뇌혈관질환/.test(x) && /뇌졸중/.test(x));
+  is(뇌판.length === 1, '  「뇌」 도해가 <b>그 시트에만</b> 한 벌 (' + 뇌판.length + ')');
+  is(그림판들.every(k => /<xdr:grpSp>/.test(Z[k]) || /graphicFrame/.test(Z[k])),
+    '  그림판마다 <b>한 묶음</b>으로 들어갔다 — 흩어지면 엑셀에서 따로 움직입니다');
+  /* ★★ 도형이 제 테두리 밖으로 나가지 않았나 — SVG 의 getBBox 와 같은 자리를 엑셀에서도 봅니다 */
+  let 넘친것 = [];
+  그림판들.forEach(k => {
+    const g2 = Z[k].match(/<a:chExt cx="(\d+)" cy="(\d+)"\/>/);
+    if (!g2) return;
+    const CX = +g2[1], CY = +g2[2];
+    const re = /<a:off x="(-?\d+)" y="(-?\d+)"\/><a:ext cx="(\d+)" cy="(\d+)"\/>/g;
+    let m2, 처음 = true;
+    while ((m2 = re.exec(Z[k]))) {
+      if (처음) { 처음 = false; continue; }                 /* 첫 줄은 묶음 자신 */
+      const x2 = +m2[1], y2 = +m2[2], w2 = +m2[3], h2 = +m2[4];
+      if (x2 < -5000 || y2 < -5000 || x2 + w2 > CX + 5000 || y2 + h2 > CY + 5000)
+        넘친것.push(k.replace('xl/drawings/', '') + ' 가로 ' + x2 + '+' + w2 + '/' + CX +
+          ' · 세로 ' + y2 + '+' + h2 + '/' + CY);
+    }
+  });
+  if (넘친것.length) 넘친것.slice(0, 6).forEach(x => console.log('      · ' + x));
+  is(넘친것.length === 0, '  ★★ 도형이 <b>제 테두리 밖으로 안 나갔다</b> (' + 넘친것.length + '개)');
+  /* 묶음 시트가 제 그림판을 가리키나 */
+  const 이음 = Object.keys(Z).filter(k => /^xl\/worksheets\/_rels\/sheet\d+\.xml\.rels$/.test(k));
+  is(이음.length === 12, '  시트 → 그림판 이음이 <b>12줄</b> (' + 이음.length + ')');
+  is(이음.every(k => /relationships\/drawing/.test(Z[k])), '  이음이 모두 <b>그림판</b>을 가리킨다');
+  const 타입 = Z['[Content_Types].xml'] || '';
+  is((타입.match(/drawings\/drawing\d+\.xml/g) || []).length === 12,
+    '  Content_Types 에 그림판 <b>12장</b>이 적혔다 — 빠지면 엑셀이 안 엽니다');
+
   await br.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '군데 — 엑셀이 화면과 다른 말을 합니다')

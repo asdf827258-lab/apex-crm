@@ -476,8 +476,13 @@
         cel(6, r, G ? 상태글(G(k, fa)) : null, 18),
         cel(7, r, fa === undefined ? null : 억만(fa), 18)])); r++;
     });
-    return X._sheet(out.join(''), { freeze: [1, 4], fit: true,
-      cols: [36, 7, 11, 12, 12, 12, 11, 15] });
+    /* ★ 판 X530 — 사장님 말씀 「엑셀로 디자인 짜」. 표 아래에 <b>그 묶음의 도해</b>를
+       엑셀 도형으로 얹습니다. 그리는 자는 ba-art.js 한 곳입니다 (5번) —
+       사진이 아니라 <b>도형</b>이라 늘려도 같은 선으로 섭니다 (9번). */
+    var 도해 = (g.BA_ART && typeof g.BA_ART.scene === 'function')
+      ? g.BA_ART.scene(gp.mid, gp.c) : '';
+    return { xml: X._sheet(out.join(''), { freeze: [1, 4], fit: true,
+      cols: [36, 7, 11, 12, 12, 12, 11, 15], draw: !!도해 }), 도해: 도해, 줄: r };
   }
 
   /* ══ 🕸 거미줄 그래프 — 사장님 자료 31쪽 「주요 담보별 과부족 현황」 ═══
@@ -516,6 +521,20 @@
       '<c:delete val="0"/><c:axPos val="l"/><c:majorGridlines/><c:crossAx val="111111111"/></c:valAx>' +
       '</c:plotArea><c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend>' +
       '<c:plotVisOnly val="1"/></c:chart></c:chartSpace>';
+  }
+  /* ══ 🖨 판 X530 — 묶음 도해를 엑셀 도형으로 ════════════════════════
+     사장님 말씀 「<b>엑셀로 디자인 짜</b>」. 따로 선 HTML 에만 두면 사장님이
+     엑셀과 그 문서를 둘 다 들고 다니셔야 합니다.
+     ★ 그리는 자는 <b>ba-art.js 한 곳</b>입니다 — 여기서는 옮기기만 합니다 (5번).
+     ★ 사진이 아니라 <b>도형</b>입니다 — 래스터는 인쇄에서 뭉개집니다 (9번). */
+  function 도해판(svg, 줄) {
+    var G = g.BA_ART.toDml(svg, { id0: 1000 });
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" ' +
+      'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' +
+      '<xdr:absoluteAnchor><xdr:pos x="114300" y="' + Math.round(줄 * 190500) + '"/>' +
+      '<xdr:ext cx="' + G.cx + '" cy="' + G.cy + '"/>' +
+      G.xml + '<xdr:clientData/></xdr:absoluteAnchor></xdr:wsDr>';
   }
   function 그림판(칸) {
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -583,12 +602,23 @@
       /* 같은 이름이 두 번 나오면 엑셀이 안 엽니다 — 뒤에 번호를 답니다 */
       var 겹 = 0, 본 = 이름;
       while (SH.some(function (q) { return q.n === 이름; })) { 겹++; 이름 = (본 + ' ' + (겹 + 1)).slice(0, 31); }
-      SH.push({ n: 이름, x: 묶음시트(gp, gi, C) });
+      var 묶 = 묶음시트(gp, gi, C);
+      SH.push({ n: 이름, x: 묶.xml, 도해: 묶.도해, 도해줄: 묶.줄 });
     });
 
     /* 그림이 붙는 시트가 몇 번째인가 — 없으면 -1 */
     var 그림쪽 = -1;
     SH.forEach(function (q, i2) { if (q.그림) 그림쪽 = i2; });
+
+    /* ★ 판 X530 — 그림판은 <b>시트마다 한 장</b>입니다. 거미줄이 1번,
+       묶음 도해가 2번부터입니다. 사장님 말씀 「엑셀로 디자인 짜」. */
+    var DR = [], no = 1;
+    if (그림쪽 >= 0) DR.push({ no: no++, 시트: 그림쪽, 차트: true });
+    SH.forEach(function (q, i2) {
+      if (!q.도해) return;
+      /* 표 아래에 놓습니다 — 표를 가리면 숫자를 못 읽습니다 */
+      DR.push({ no: no++, 시트: i2, 도해: q.도해, 줄: (q.도해줄 || 20) });
+    });
     function 엑셀글(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
     var files = [
       { name: '[Content_Types].xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -599,8 +629,9 @@
         SH.map(function (q, i2) { return '<Override PartName="/xl/worksheets/sheet' + (i2 + 1) +
           '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'; }).join('') +
         '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
-        (그림쪽 >= 0 ? ('<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>' +
-          '<Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>') : '') +
+        (그림쪽 >= 0 ? '<Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>' : '') +
+        DR.map(function (q) { return '<Override PartName="/xl/drawings/drawing' + q.no +
+          '.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>'; }).join('') +
         '</Types>' },
       { name: '_rels/.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
         '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
@@ -621,22 +652,25 @@
       { name: 'xl/styles.xml', data: X._styles(STD) }
     ];
     SH.forEach(function (q, i2) { files.push({ name: 'xl/worksheets/sheet' + (i2 + 1) + '.xml', data: q.x }); });
-    if (그림쪽 >= 0) {
-      var 그시트 = SH[그림쪽].n;
-      files.push(
-        { name: 'xl/worksheets/_rels/sheet' + (그림쪽 + 1) + '.xml.rels',
-          data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/>' +
-            '</Relationships>' },
-        { name: 'xl/drawings/drawing1.xml', data: 그림판(6) },
-        { name: 'xl/drawings/_rels/drawing1.xml.rels',
-          data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>' +
-            '</Relationships>' },
-        { name: 'xl/charts/chart1.xml', data: 차트(SH[그림쪽].줄, 그시트) });
-    }
+    DR.forEach(function (q) {
+      files.push({ name: 'xl/worksheets/_rels/sheet' + (q.시트 + 1) + '.xml.rels',
+        data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+          '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+          '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" ' +
+          'Target="../drawings/drawing' + q.no + '.xml"/></Relationships>' });
+      if (q.차트) {
+        files.push(
+          { name: 'xl/drawings/drawing' + q.no + '.xml', data: 그림판(6) },
+          { name: 'xl/drawings/_rels/drawing' + q.no + '.xml.rels',
+            data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+              '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+              '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" ' +
+              'Target="../charts/chart1.xml"/></Relationships>' },
+          { name: 'xl/charts/chart1.xml', data: 차트(SH[q.시트].줄, SH[q.시트].n) });
+      } else {
+        files.push({ name: 'xl/drawings/drawing' + q.no + '.xml', data: 도해판(q.도해, q.줄) });
+      }
+    });
 
     var blob = X._zip(files);
     var fn = '보장분석_전후_한눈에_' + nm + '_' + (new Date()).toISOString().slice(0, 10) + '.xlsx';
