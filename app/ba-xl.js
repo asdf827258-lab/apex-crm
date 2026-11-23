@@ -481,8 +481,9 @@
        사진이 아니라 <b>도형</b>이라 늘려도 같은 선으로 섭니다 (9번). */
     var 도해 = (g.BA_ART && typeof g.BA_ART.scene === 'function')
       ? g.BA_ART.scene(gp.mid, gp.c) : '';
+    var 너비 = [36, 7, 11, 12, 12, 12, 11, 15];
     return { xml: X._sheet(out.join(''), { freeze: [1, 4], fit: true,
-      cols: [36, 7, 11, 12, 12, 12, 11, 15], draw: !!도해 }), 도해: 도해, 줄: r };
+      cols: 너비, draw: !!도해 }), 도해: 도해, 줄: r, 폭: 칸폭EMU(너비) };
   }
 
   /* ══ 🕸 거미줄 그래프 — 사장님 자료 31쪽 「주요 담보별 과부족 현황」 ═══
@@ -527,14 +528,25 @@
      엑셀과 그 문서를 둘 다 들고 다니셔야 합니다.
      ★ 그리는 자는 <b>ba-art.js 한 곳</b>입니다 — 여기서는 옮기기만 합니다 (5번).
      ★ 사진이 아니라 <b>도형</b>입니다 — 래스터는 인쇄에서 뭉개집니다 (9번). */
-  function 도해판(svg, 줄) {
-    var G = g.BA_ART.toDml(svg, { id0: 1000 });
+  /* 엑셀 칸 너비(글자 수) → 화면 점 → EMU. 표와 <b>폭을 맞추려고</b> 잽니다. */
+  function 칸폭EMU(ws) {
+    var px = 0;
+    (ws || []).forEach(function (w) { px += Math.round(w * 7) + 5; });
+    return px * 9525;
+  }
+  function 도해판(svg, 줄, 폭) {
+    /* ★ 판 X531 — 사장님 말씀 「도형도 그림으로 깔끔하게 딱 정리」.
+       ① 도해 폭을 <b>표 폭에 맞춥니다</b> — 좁으면 왼쪽으로 치우쳐 보입니다.
+       ② <b>oneCellAnchor</b> 로 칸에 앉힙니다 — 줄을 넣거나 빼도 도해가 따라오고,
+          크기는 그대로입니다(absoluteAnchor 는 종이 위에 떠 있어 어긋납니다). */
+    var G = g.BA_ART.toDml(svg, { id0: 1000, cx: 폭 || 6480000 });
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" ' +
       'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' +
-      '<xdr:absoluteAnchor><xdr:pos x="114300" y="' + Math.round(줄 * 190500) + '"/>' +
+      '<xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff>' +
+      '<xdr:row>' + 줄 + '</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>' +
       '<xdr:ext cx="' + G.cx + '" cy="' + G.cy + '"/>' +
-      G.xml + '<xdr:clientData/></xdr:absoluteAnchor></xdr:wsDr>';
+      G.xml + '<xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>';
   }
   function 그림판(칸) {
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -603,7 +615,7 @@
       var 겹 = 0, 본 = 이름;
       while (SH.some(function (q) { return q.n === 이름; })) { 겹++; 이름 = (본 + ' ' + (겹 + 1)).slice(0, 31); }
       var 묶 = 묶음시트(gp, gi, C);
-      SH.push({ n: 이름, x: 묶.xml, 도해: 묶.도해, 도해줄: 묶.줄 });
+      SH.push({ n: 이름, x: 묶.xml, 도해: 묶.도해, 도해줄: 묶.줄, 도해폭: 묶.폭 });
     });
 
     /* 그림이 붙는 시트가 몇 번째인가 — 없으면 -1 */
@@ -617,7 +629,8 @@
     SH.forEach(function (q, i2) {
       if (!q.도해) return;
       /* 표 아래에 놓습니다 — 표를 가리면 숫자를 못 읽습니다 */
-      DR.push({ no: no++, 시트: i2, 도해: q.도해, 줄: (q.도해줄 || 20) });
+      DR.push({ no: no++, 시트: i2, 도해: q.도해, 줄: (q.도해줄 || 20), 폭: q.도해폭,
+        높이: Math.round((q.도해폭 || 6480000) * 300 / 640) });
     });
     function 엑셀글(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
     var files = [
@@ -642,7 +655,17 @@
         'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
         SH.map(function (q, i2) { return '<sheet name="' + 엑셀글(q.n) + '" sheetId="' + (i2 + 1) +
           '" r:id="rId' + (i2 + 1) + '"/>'; }).join('') +
-        '</sheets></workbook>' },
+        '</sheets>' +
+        /* ★ 판 X531 — 사장님 말씀 「깔끔하게 딱 정리」. 인쇄하면 <b>표와 도해까지만</b>
+           나오게 범위를 못 박습니다. 안 박으면 엑셀이 빈 칸까지 세어 종이가 늘어납니다. */
+        (DR.filter(function (q) { return !q.차트; }).length
+          ? ('<definedNames>' + DR.filter(function (q) { return !q.차트; }).map(function (q) {
+              var 끝 = q.줄 + Math.ceil((q.높이 || 3800000) / 190500) + 2;
+              return '<definedName name="_xlnm.Print_Area" localSheetId="' + q.시트 + '">\'' +
+                엑셀글(String(SH[q.시트].n).replace(/'/g, "''")) + '\'!$A$1:$H$' + 끝 + '</definedName>';
+            }).join('') + '</definedNames>')
+          : '') +
+        '</workbook>' },
       { name: 'xl/_rels/workbook.xml.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
         '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
         SH.map(function (q, i2) { return '<Relationship Id="rId' + (i2 + 1) +
@@ -668,7 +691,7 @@
               'Target="../charts/chart1.xml"/></Relationships>' },
           { name: 'xl/charts/chart1.xml', data: 차트(SH[q.시트].줄, SH[q.시트].n) });
       } else {
-        files.push({ name: 'xl/drawings/drawing' + q.no + '.xml', data: 도해판(q.도해, q.줄) });
+        files.push({ name: 'xl/drawings/drawing' + q.no + '.xml', data: 도해판(q.도해, q.줄, q.폭) });
       }
     });
 
