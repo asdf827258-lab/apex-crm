@@ -18,6 +18,8 @@
      [7] ★  옛 홈은 지우지 않고 숨기기만(CSS) — 「예전 오늘 칸 펼치기」 가 있다 · 그리다 터지면 예전 화면
      [8] ★  옷은 .hv2 / #hv2Sheet 아래로만 — 앱의 .card · .btn 같은 옷을 덮지 않는다
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
+     [16] ★★ 판 X513 — 목표 칸 · 영업 한 바퀴 칸이 다른 화면으로 안 넘어가고 시트(시안 openGoal · openStage):
+          목표는 있던 pfSave(금액 · 건수 같이) 하나, 단계 분들은 칸 숫자와 같은 거름(AR.db · 지금 보는 분), 한 분 → hmRtPerson
    ═══════════════════════════════════════════════════════════════ */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
@@ -75,6 +77,9 @@ function box(store, search, opt) {
     mcalItems: () => ({}), mcalDay: () => [], hmRtNear: () => [],
     hmRtAppts: () => (opt.appts || []),
     AR: { db: opt.db || [] },
+    MSG_V2: opt.msg ? { open: o => { (g.__msgLog = g.__msgLog || []).push(o); } } : undefined,
+    MST_TOUCH: [{ ic: '🧾', t: '청구는 사진 한 장으로', why: '받을 돈', say: '영수증 사진만' }, { ic: '💳', t: '보험료 잘 빠지는지', why: '미납', say: '이번 달도' }],
+    hmRtPerson: () => {}, hmRtOpen: () => {},
     osClient: () => ({ from: () => ({ select: () => ({ in: () => ({ then: (ok) => ok({ data: opt.geo || [] }) }) }) }) }),
     navItemOf: id => { let f = null; g.TABS.forEach(gr => (gr.items || []).forEach(x => { if (x.id === id) f = x; })); return f; },
     arStageN: () => ({ c: { 미접촉: 3, TA: 1 }, tot: 4 }), hmNightSub: () => '오늘 닿은 분 0명',
@@ -143,7 +148,7 @@ console.log('\n[5] 칸 속을 채우는 라이브 함수가 있다');
 const ALL = IX + '\n' + JS;
 ['hmLeft', 'hmSteps', 'hmWhy', 'hmFullNm', 'hmNmHidden', 'hmNmToggle', 'hwhoFor', 'hwhoBarHtml', 'hmTelOf', 'hmSrcOf', 'hmOrdOf', 'hmStepOf',
  'hmQfin', 'hmSkip', 'hmOpen', 'hmDoorGo', 'hmRtOpen', 'hmRtNear', 'hmRtPerson', 'arApptPast', 'hmReferRows', 'mstDueList', 'mcalItems', 'mcalDay',
- 'arStageN', 'hmNightSub', 'hmNightHtml', 'pexSum', 'pfLoad', 'arGoCat', 'hmWayNow', 'hmWayCall', 'hmWayMeet', 'hmWayTidy', 'hmWayRec', 'hmWayCare', 'copyText', 'cregOpen']
+ 'arStageN', 'hmNightSub', 'hmNightHtml', 'pexSum', 'pfLoad', 'pfSave', 'pfYm', 'pfYmLabel', 'pfIsLead', 'arGoCat', 'hmWayNow', 'hmWayCall', 'hmWayMeet', 'hmWayTidy', 'hmWayRec', 'hmWayCare', 'copyText', 'cregOpen', 'mcalMyPut', 'mcalCusPut', 'mcalCusList', 'mcalName', 'mcalOutName', 'icsBuild', 'mcalToday']
   .forEach(f => { if (sc.indexOf(f) >= 0) is(new RegExp('function ' + f + '\\(|g\\.' + f + ' = function').test(ALL), f + ' — 앱에 있다'); });
 is(/var TABS=\[/.test(IX) && /var PF=/.test(IX), 'TABS(메뉴 표) · PF(목표) 가 앱에 있다');
 is(/openTa\s*:|openTa:/.test(JS) && /prods\s*[,:}]/.test(JS) && /pick\s*[,:}]/.test(JS), 'HM_TAMSG.openTa · HM_DOOR.pick/prods 가 있다');
@@ -152,7 +157,7 @@ console.log('\n[6] 서버 · 저장');
 /* 판 X505 — 서버는 <b>읽기 둘</b>만: 오늘 약속인 분의 좌표(dbs · 지역 동선이 적어 둔 칸)와 지역 동선이 쓰는 길찾기(route-km).
    쓰기(insert·update·upsert·delete·rpc)는 하나도 없습니다. 목표는 기존 pfLoad. */
 const 부름 = (sc.match(/\.from\('[^']+'\)\.[a-z]+\([^)]*\)/g) || []);
-is(부름.length === 1 && 부름[0] === ".from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng')", '서버 표는 좌표 읽기 하나뿐 — ' + 부름.join(' | '));
+is(부름.length === 1 && 부름[0] === ".from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng,next_appt_place')", '서버 표는 좌표 읽기 하나뿐 — ' + 부름.join(' | '));
 is(!/\.(insert|update|upsert|delete|rpc)\(/.test(sc) && !/supabase\./.test(sc), '서버에 쓰는 것이 하나도 없다');
 is((sc.match(/fetch\('([^']+)'/g) || []).join() === "fetch('/.netlify/functions/route-km'", '부르는 주소는 지역 동선의 길찾기(route-km) 하나뿐');
 const 담기 = (sc.match(/setItem\(([^,]+),/g) || []).map(x => x.replace(/setItem\(|,/g, ''));
@@ -294,6 +299,118 @@ console.log('\n[13] 시안과 나란히 보고 고친 것 (판 X511)');
   B = box({ apex_home_v2: '1' }, '', { rows: many.slice(0, 3) });
   B.g.HOME_V2.apply(dyn(B));
   is(((B.els.hv2.innerHTML.match(/id="hv2Dots">([\s\S]*?)<\/div>/) || ['', ''])[1].match(/<i /g) || []).length === 3, '카드가 여덟 장 아래면 점도 그 수만큼');
+}
+
+console.log('\n[14] 오늘 동선 카드 · 카톡처럼 보내기 (판 X512 · 「오늘 어디가는지랑 지역동선 다 어디갔는데」 · 「안부 카톡이나 문자도 디자인」)');
+{
+  let X = box({ apex_home_v2: '1' }, '', { appts: [], db: [] });
+  X.g.HOME_V2.apply(dyn(X));
+  let hh = X.els.hv2.innerHTML;
+  is(/class="rtc"/.test(hh) && /🗺️ 지역 동선/.test(hh) && hh.indexOf('class="rtc"') > hh.indexOf('id="hv2Week"'), '약속도 동네도 없어도 「📍 · 🗺️ 지역 동선」 카드가 늘 선다(이번 주 다음)');
+  const DB3 = [1, 2, 3].map(i => ({ id: 'q' + i, who: 'me', name: ['홍길동', '홍길순', '홍갑돌'][i - 1], region: '광양', stage: 'AP', days: 3 }));
+  X = box({ apex_home_v2: '1' }, '', { appts: [], db: DB3, geo: DB3.map((r, i) => ({ id: r.id, lat: 34.9 + i / 100, lng: 127.6 })) });
+  X.g.hwhoFor = () => 'me';
+  X.g.HOME_V2.apply(dyn(X)); hh = X.els.hv2.innerHTML;
+  is(/오늘은 약속이 없어요 · 추천 동선 광양/.test(hh) && /들를 분 3명/.test(hh), '약속이 없으면 카드에 추천 동선(동네 · 들를 분)');
+  X.g.HOME_V2.route(); let sh2 = (X.els.hv2Sheet || {}).innerHTML || '';
+  is(/📍 추천 동선/.test(sh2) && /<svg[^>]*class="mapsvg"/.test(sh2) && /<path d="M/.test(sh2) && /<div class="tile no">1<\/div>/.test(sh2) && /홍길동님/.test(sh2) && /hmRtOpen\(\)/.test(sh2), '누르면 시트 — 실제 좌표를 줄인 그림 · 들를 분 · 지역 동선(카카오맵) 단추');
+  X = box({ apex_home_v2: '1' }, '', { appts: [{ id: 'a1', nm: '홍길순', hm: '10:30', rg: '순천', st: 'AP' }, { id: 'a2', nm: '홍갑돌', hm: '14:00', rg: '순천', st: 'PC' }],
+    geo: [{ id: 'a1', next_appt_lat: 34.95, next_appt_lng: 127.49, next_appt_place: '연향동 카페' }, { id: 'a2', lat: 34.96, lng: 127.52 }] });
+  X.g.HOME_V2.apply(dyn(X)); hh = X.els.hv2.innerHTML;
+  is(/오늘 동선 [0-9.]+km(\(어림\))? · 약속 2곳/.test(hh) && (hh.match(/동선 [0-9.]+km/g) || []).length === 1, '약속이 있으면 「오늘 동선 Nkm · 약속 N곳」 — 이번 주 칸에 같은 줄이 또 서지 않는다(한 곳)');
+  X.g.HOME_V2.route(); sh2 = (X.els.hv2Sheet || {}).innerHTML || '';
+  is(/10:30 · 홍길순님/.test(sh2) && /연향동 카페 · AP/.test(sh2) && /14:00 · 홍갑돌님/.test(sh2) && /장소 미정 · PC/.test(sh2), '시트 「약속」 — 시간 · 이름 · 장소(dbs.next_appt_place) · 단계, 장소 모르면 「장소 미정」(지어내지 않음)');
+  X = box({ apex_home_v2: '1' }, '', { msg: true });
+  X.g.HOME_V2.apply(dyn(X)); hh = X.els.hv2.innerHTML;
+  is(/HOME_V2\.say\('touch:c1:'\)">💬 카톡처럼 보고 보내기/.test(hh) && /복사하고 보냈어요/.test(hh), '보내기 화면이 있으면 「💬 카톡처럼 보고 보내기」 · 빠른 「복사하고 보냈어요」 도 그대로');
+  let qf = '';
+  X.g.hmQfin = k => { qf = k; };
+  X.g.HOME_V2.say('touch:c1:');
+  const op = (X.g.__msgLog || [])[0] || { items: [] };
+  is(op.who === '홍길동' && op.items.length === 1 && op.items[0].lb === '💳 보험료 잘 빠지는지' && op.items[0].note === '미납' &&
+     op.items[0].text('sms') === '고객님, 안녕하세요 (m1·sms)', '보내기 화면 — 카드와 같은 글(HM_TAMSG.list · text) · 안부 제목은 MST_TOUCH 그대로 · 문자 고르면 문자 글');
+  op.onSent && op.onSent(op.items[0], 'kakao');
+  is(qf === 'touch:c1:', '「보냈어요」 = 이분 끝(hmQfin) — 저장 코드를 새로 안 짬');
+}
+
+console.log('\n[15] 약속 없어도 추천 · 일정 넣기(갤럭시 · 아이폰) — 판 X512 · 「약속 없어도 추천 띄우고 캘린더 입력이 편해야 하는데 갤럭시든 아이폰 이든」');
+{
+  const DBN = [{ id: 'n1', who: 'me', name: '홍말순', stage: 'PC', days: 2 }, { id: 'n2', who: 'me', name: '홍판서', stage: '미접촉', days: 40 }];
+  let X = box({ apex_home_v2: '1' }, '', { appts: [], db: DBN });
+  X.g.hwhoFor = () => 'me';
+  X.g.HOME_V2.apply(dyn(X)); let hh = X.els.hv2.innerHTML;
+  is(/오늘은 약속이 없어요 · 만날 분 추천 2명/.test(hh) && /추천 1<\/span><span class="x">홍말순님 · PC/.test(hh), '동네가 적힌 분이 없어도 만날 분 추천(카드 · 이번 주 칸) — 동네는 지어내지 않음');
+  X.g.HOME_V2.route(); let s3 = (X.els.hv2Sheet || {}).innerHTML || '';
+  is(/오늘 만날 분 추천/.test(s3) && /동네 모름/.test(s3) && !/mapsvg/.test(s3), '시트 — 그림 없이 만날 분만(만남 → 제안 → 청약 → 연락 차례)');
+  /* 일정 넣기 */
+  const did = [];
+  X = box({ apex_home_v2: '1' }, '', {});
+  Object.assign(X.g, { MCAL: { sel: '' }, mcalToday: () => '2026-11-21', CM_HOW: ['전화', '만남'],
+    mcalMyPut: () => did.push(['me', X.g.MCAL.sel, X.els.mcalMyT.value, X.els.mcalMyH.value]),
+    mcalCusPut: () => did.push(['cus', X.g.MCAL.sel, X.els.mcalCusId.value]),
+    mcalCusList: () => [{ id: 'c1', name_masked: '홍*동' }], mcalName: () => '홍길동', mcalOutName: () => '홍*동',
+    icsBuild: (n, evs) => 'ICS:' + JSON.stringify(evs) });
+  X.g.HOME_V2.apply(dyn(X));
+  is(/HOME_V2\.sched\(\)">＋ 일정/.test(X.els.hv2.innerHTML), '「＋ 일정」 은 달력 화면으로 넘기지 않고 일정 넣기 시트');
+  X.g.HOME_V2.sched(); s3 = (X.els.hv2Sheet || {}).innerHTML || '';
+  is(/📅 일정 넣기/.test(s3) && /schedSet\('ds','2026-11-22'\)">내일/.test(s3) && /schedSet\('hm','14:00'\)">14:00/.test(s3) && /type="date"/.test(s3) && /type="time"/.test(s3) && /📌 내 일정/.test(s3) && /👤 고객 일정/.test(s3),
+    '날짜 · 시각은 단추 한 번(오늘 · 내일 · 모레 / 10 · 14 · 19시) + 폰 기본 고르개(date · time) · 내 일정 / 고객 일정');
+  X.g.HOME_V2.schedSet('ds', '2026-11-22'); X.g.HOME_V2.schedSet('hm', '14:00');
+  X.els.mcalMyT = { value: '지점 회의' }; X.els.mcalMyH = { value: '' };
+  X.g.HOME_V2.schedPut(); s3 = (X.els.hv2Sheet || {}).innerHTML || '';
+  is(did[0] && did[0][0] === 'me' && did[0][1] === '2026-11-22' && did[0][2] === '지점 회의' && did[0][3] === '14:00', '넣기 = 있던 mcalMyPut(내 캘린더와 같은 칸) · 고른 날은 MCAL.sel 한 곳 · 시각 그대로');
+  is(/✓ 넣었어요/.test(s3) && /HOME_V2\.schedIcs\(\)">📲 폰 달력에 넣기/.test(s3) && /calendar\.google\.com\/calendar\/render\?action=TEMPLATE&amp;text=%EC%A7%80%EC%A0%90%20%ED%9A%8C%EC%9D%98&amp;dates=20261122T140000\/20261122T143000/.test(s3),
+    '넣은 뒤 「📲 폰 달력에 넣기」(아이폰 · 갤럭시) · 「Google 캘린더로」(그 일정 · 그 시각)');
+  X.g.HOME_V2.sched(); X.g.HOME_V2.schedSet('tab', 'cus');
+  X.els.mcalCusId = { value: 'c1' }; X.els.mcalCusHow = { value: '만남' }; X.els.mcalCusNote = { value: '보장분석 설명' };
+  X.g.HOME_V2.schedPut(); s3 = (X.els.hv2Sheet || {}).innerHTML || '';
+  is(did[1] && did[1][0] === 'cus' && did[1][2] === 'c1' && /홍길동님 · 만남 — 보장분석 설명/.test(s3) && /text=%ED%99%8D\*%EB%8F%99/.test(s3),
+    '고객 일정 = 있던 mcalCusPut(고객 365일과 같은 자리) · 폰 달력 · 구글로 나가는 이름은 가림(mcalOutName)');
+  is(!/\.from\('dbs'\)\.(insert|update|upsert)|mcalMyAdd\(|cmNextSave\(|cmTouchAdd\(/.test(sc), '일정 저장 코드를 새로 안 짬 — 있던 넣기 두 가지를 부르기만');
+}
+
+console.log('\n[16] 🎯 목표 시트 · 🔁 영업 한 바퀴 단계 시트 (판 X513)');
+{
+  const db = [
+    { id: 'd1', who: 'me', name: '홍길동', stage: '미접촉', region: '순천', dong: '연향동', days: 3 },
+    { id: 'd2', who: 'me', name: '홍길순', stage: '부재', region: '', dong: '', days: 9 },
+    { id: 'd3', who: 'p2', name: '홍갑돌', stage: '미접촉', days: 20 },
+    { id: 'd4', who: 'me', name: '홍말순', stage: 'AP', appt: '2026-11-25T14:00', days: 1 },
+    { id: 'd5', who: 'me', name: '임꺽정', stage: '', days: 9999 }
+  ];
+  let X = box({ apex_home_v2: '1' }, '', { goal: true, db });
+  const gone = [], saved = [];
+  Object.assign(X.g, { go: id => gone.push(id), arGoCat: c => gone.push('cat:' + c), hmRtPerson: id => gone.push('p:' + id),
+    pfYm: () => '2026-11', pfYmLabel: () => '2026년 11월', pfIsLead: () => true,
+    APEX_STAGE: { aimText: k => '<b>' + k + '</b> 목표', tools: k => (k === '미접촉' ? [{ id: 'ta_script', e: '📞', t: 'TA 스크립트' }, { id: 'nope', e: '•', t: '없는 칸' }] : []) },
+    osTabAllowed: id => id !== 'nope',
+    pfSave: (p, quiet) => { saved.push([JSON.stringify(p), quiet]); X.g.PF.loaded = false; return { then: f => f() }; } });
+  X.g.PF.mine.goal_case = 10;
+  X.g.HOME_V2.apply(dyn(X));
+  const hh = X.els.hv2.innerHTML;
+  is(/class="mon" onclick="HOME_V2\.goal\(\)"/.test(hh) && /HOME_V2\.stage\(0\)"><b>3<\/b><span>첫 전화/.test(hh) && /HOME_V2\.stage\(5\)/.test(hh) && hh.indexOf('class="road2"') > 0 && !/go\('crm'\)/.test(hh.slice(hh.indexOf('class="road2"'), hh.indexOf('class="eve"'))),
+    '목표 칸 · 영업 한 바퀴 여섯 칸 → 시트 (DB 통합 CRM · TFA 로 안 넘어감)');
+  X.g.HOME_V2.goal(); let s = (X.els.hv2Sheet || {}).innerHTML || '';
+  is(/🎯 2026년 11월 내 목표/.test(s) && /id="hv2GoalP"[^>]*value="150"/.test(s) && /id="hv2GoalC"[^>]*value="10"/.test(s) && /HOME_V2\.goalQ\(200\)/.test(s) && /HOME_V2\.goalPut\(\)">저장/.test(s) && /arGoCat\('dbperf'\)/.test(s) && /HOME_V2\.goalOld\(\)/.test(s),
+    '목표 시트 — 지금 목표 금액 · 건수가 칸에 · 빠른 단추 · 저장 · 리더는 「팀원 목표는 DB · 업적관리」 · 예전 「업적 자세히」');
+  X.els.hv2GoalP = { value: '200' }; X.els.hv2GoalC = { value: '8' }; X.els.hv2GoalPer = { innerHTML: '' };
+  X.g.HOME_V2.goalPer();
+  is(/고객 한 분당 목표 <b>25만원<\/b>/.test(X.els.hv2GoalPer.innerHTML), '금액 ÷ 건수 = 고객 한 분당 목표가 저절로');
+  X.g.HOME_V2.goalPut();
+  is(saved.length === 1 && saved[0][0] === '{"goal_prem":200,"goal_case":8}' && saved[0][1] === true, '저장 = 있던 pfSave(금액 · 건수 같이) 한 번 — monthly_perf 그 칸');
+  X.els.hv2GoalP = { value: '' }; X.g.HOME_V2.goalPut();
+  is(saved.length === 1, '금액이 비면 저장 안 함');
+  X.g.PF.loaded = false; X.g.HOME_V2.goal(); s = X.els.hv2Sheet.innerHTML;
+  is(/목표를 읽는 중이에요/.test(s) && !/hv2GoalP/.test(s), '목표를 아직 못 읽었으면 0 을 칸에 깔지 않고 「읽는 중」');
+  X.g.PF.loaded = true;
+  X.g.HOME_V2.stage(0); s = X.els.hv2Sheet.innerHTML;
+  is(/첫 전화/.test(s) && /미접촉 목표 · 모두 3명/.test(s) && /hmRtPerson\('d2'\)/.test(s) && /hmRtPerson\('d1'\)/.test(s) && /hmRtPerson\('d5'\)/.test(s) && !/d3/.test(s) && s.indexOf("'d2'") < s.indexOf("'d1'") && s.indexOf("'d1'") < s.indexOf("'d5'"),
+    '단계 시트 — 칸 숫자와 같은 분들(지금 보는 분 것만 · 오래 연락 못 한 분 먼저 · 기록 없는 분은 끝)');
+  is(/9일 전 연락/.test(s) && /순천 연향동/.test(s) && /연락 기록 없음/.test(s) && /TA 스크립트/.test(s) && !/없는 칸/.test(s) && /go\('crm'\)">📋 DB 통합 CRM 에서 전부 보기/.test(s),
+    '줄마다 단계 · 동네 · 마지막 연락 · 「이 단계에서 쓰는 것」(APEX_STAGE.tools · 열 수 있는 것만) · 예전 길은 맨 아래 단추');
+  X.g.HOME_V2.stage(2); s = X.els.hv2Sheet.innerHTML;
+  is(/약속 11-25 14:00/.test(s) && /모두 1명/.test(s), '약속이 잡힌 분은 약속 날짜로');
+  is(!/\.(insert|update|upsert|delete|rpc)\(/.test(sc) && (sc.match(/pfSave\(/g) || []).length === 1, '목표 저장은 있던 pfSave 한 곳 · 서버에 직접 쓰는 것 없음');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');
