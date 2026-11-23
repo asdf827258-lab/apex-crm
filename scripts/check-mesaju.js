@@ -54,17 +54,27 @@ const ME_OFF = 'var MEONLY={on:false};', ME_ON = 'var MEONLY={on:true};';
     const w = document.querySelector('.mdg-gate .mdg'); if (!w) return null;
     const r = w.getBoundingClientRect();
     const nm = document.querySelector('.mdg-gate .mdg-nm');
+    const im = w.querySelector('image');
+    const src = im ? (im.getAttribute('href') || im.getAttribute('xlink:href') || '') : '';
     return { n: w.querySelectorAll('path,rect,ellipse,circle').length,
              w: Math.round(r.width), h: Math.round(r.height),
+             face: !!im, embedded: src.slice(0, 11) === 'data:image/', srcHead: src.slice(0, 40),
              nm: nm ? nm.textContent.trim() : '' };
   });
   ok(!!g, '문간에 <b>그림이 있다</b>');
   if (g) {
     ok(g.n >= 60, '★ 장면이다 — 도형 ' + g.n + '개 (픽토그램 하나가 아니라 발·신단·천·무구까지)');
     ok(g.w >= 200 && g.h >= 150, '★ <b>눈에 보이는 크기</b>로 선다 — ' + g.w + '×' + g.h);
-    ok(g.nm.indexOf('신당') >= 0,
-      '★ 이름표가 <b>자리</b>를 적는다 — 「' + g.nm + '」' +
-      (g.nm.indexOf('신당') >= 0 ? '' : '\n      ← 나만 보는 판에서 선생님은 <b>손님</b>입니다. 선생님을 무당으로 적으면 안 됩니다'));
+    /* 2026-11-23 사장님이 당신 사진을 주시며 「윤무당으로 해서 마지막 최종 만들자」 하셨습니다.
+       그림이 사장님 얼굴이 되었으니 이제 선생님이 이 신당의 무당이 맞습니다 — 앞서 「신당」 으로
+       바꿔 둔 것을 사장님 말씀대로 되돌립니다. shrineWho() 는 손님용 판 그대로 둡니다 (5번). */
+    /* 사장님 얼굴은 <b>파일 안에</b> 있어야 합니다. 주소로 바꾸면 인터넷 없이 열릴 때
+       얼굴만 빈칸이 되고, 그 주소를 쥔 바깥이 사장님 얼굴을 보게 됩니다 (3번 · 7번). */
+    ok(g.face, '★★ 문간에 <b>사장님 얼굴</b>이 있다 (판 X519)');
+    ok(g.embedded, '★★ 얼굴이 <b>파일 안에 박혀</b> 있다 — 서버를 안 부른다 (7번) · 「' + g.srcHead + '…」');
+    ok(g.nm === '윤무당',
+      '★ 이름표가 <b>윤무당</b>이다 — 「' + g.nm + '」' +
+      (g.nm === '윤무당' ? '' : '\n      ← 사장님 말씀 2026-11-23 「윤무당으로 해서」'));
   }
 
   console.log('\n[2] ★ 네 장만 서고 <b>고객·채용 칸이 안 선다</b>');
