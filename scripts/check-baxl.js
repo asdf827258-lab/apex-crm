@@ -116,7 +116,8 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
     save();
     const C = calc();
     let n = 0; STD.forEach(g => n += g.rows.length);
-    return { std: n, 전cancer: C.b.cancer, 후cancer: C.a.cancer, premB: C.premB, premA: C.premA };
+    return { std: n, grp: STD.length, 색: STD.map(g => g.c),
+      전cancer: C.b.cancer, 후cancer: C.a.cancer, premB: C.premB, premA: C.premA };
   });
 
   const dl = pg.waitForEvent('download', { timeout: 30000 });
@@ -142,7 +143,8 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   head('[2] ★★ 줄 축이 <b>STD 그대로</b>인가 (두 벌 만들지 않았나 · 5번)');
   const rows = (s1.match(/<row r="(\d+)"/g) || []).length;
   is(seeded.std === 77, '  ba.html 의 STD 담보 <b>' + seeded.std + '줄</b>');
-  is(rows === seeded.std + 5, '  시트1 줄 <b>' + rows + '</b> = 머리 4 + 담보 ' + seeded.std + ' + 보험료 1');
+  is(rows === seeded.std + seeded.grp + 5,
+    '  시트1 줄 <b>' + rows + '</b> = 머리 4 + 묶음 띠 ' + seeded.grp + ' + 담보 ' + seeded.std + ' + 보험료 1');
   is(!/var\s+STD\s*=/.test(SRC), '  ba-xl.js 가 담보 목록을 <b>다시 적지 않았다</b>');
 
   const txt = (s1.match(/<t xml:space="preserve">([^<]*)<\/t>/g) || [])
@@ -178,6 +180,29 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   is(seeded.후cancer === 3000 + 2000,
     '  후 일반암 <b>' + seeded.후cancer + '</b> = 유지 3,000 + 배서본 2,000 ' +
     '(배서 <b>전</b> 값 1,000 이 아니다 · 해지분도 안 들어왔다)');
+
+  head('[2-2] ★★ <b>부위마다 제 색으로 갈라지나</b> (사장님 말씀 「색 별로 따로 나누고, 글씨 크기 부위 전부 나눠」)');
+  const 띠 = (s1.match(/<row r="\d+" ht="20"/g) || []).length;
+  is(띠 === seeded.grp, '  묶음 띠 <b>' + 띠 + '줄</b> — 부위 ' + seeded.grp + '개마다 한 줄씩');
+  const ST = (Z && Z['xl/styles.xml']) || '';
+  const 색수 = new Set((seeded.색 || []).map(c => c.replace('#', '').toUpperCase())).size;
+  const 쓴색 = (seeded.색 || []).filter(c => ST.indexOf('FF' + c.replace('#', '').toUpperCase()) >= 0).length;
+  is(쓴색 === (seeded.색 || []).length,
+    '  STD 가 들고 있는 <b>그 색 그대로</b> 칠한다 — ' + 쓴색 + '/' + (seeded.색 || []).length +
+    '개 (화면과 두 벌이 아니다 · 5번, 서로 다른 색 ' + 색수 + '가지)');
+  const 크기 = [...new Set((ST.match(/<sz val="([0-9.]+)"/g) || []).map(x => x.replace(/\D*([0-9.]+).*/, '$1')))];
+  is(크기.length >= 4, '  글자 크기가 <b>층</b>이다 — ' + 크기.sort((a, b) => b - a).join(' · ') + 'pt');
+  is(/<mergeCell ref="A\d+:[A-Z]+\d+"/.test(s1), '  띠 한 줄만 합쳐 글자가 안 잘린다');
+  is(!/<mergeCell ref="(?!A)/.test(s1), '  담보 줄은 <b>안 합친다</b> — 합치면 거르기·정렬이 막힙니다 (4-1)');
+
+  head('[2-3] ★ 숫자 꼴 · 인쇄');
+  is(/numFmtId="165" formatCode="#,##0\.##"/.test(ST),
+    '  보험료는 <b>소수점이 보이는 꼴</b>이다 — 164 만 두니 12.4만이 <b>12</b> 로 찍혔습니다');
+  const 끝줄 = s1.split('<row ').pop();
+  is(/<v>12\.4<\/v>/.test(끝줄) && /<v>27\.2<\/v>/.test(끝줄),
+    '  보험료 줄에 12.4 · 전 합계 27.2 가 그대로 들어간다');
+  is(/fitToWidth="1"/.test(s1) && /orientation="landscape"/.test(s1),
+    '  인쇄는 <b>가로 한 장 폭</b>에 맞춘다 (안 맞추면 열두 장으로 쪼개집니다)');
 
   head('[5] ★★ <b>모름과 0 을 가르나</b> (1번 · 4-1)');
   is(!/<v>—<\/v>|>—</.test(s1), '  「—」 같은 글자를 <b>숫자 자리에 안 넣는다</b>');

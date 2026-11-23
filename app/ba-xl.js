@@ -115,66 +115,126 @@
   }
   function row(r, cells) { return '<row r="' + r + '">' + cells.join('') + '</row>'; }
 
-  /* ══ ③ 꼴(styles) — 쓰는 것만 ════════════════════════════════════
-     0 기본 · 1 제목 · 2 범례 · 3 머리 · 4 머리(전) · 5 머리(후) · 6 머리(해지)
-     7 머리(신규) · 8 라벨 · 9 담보이름 · 10 표준 · 11 전칸 · 12 후칸 · 13 해지칸
-     14 합계전 · 15 합계후 · 16 차이+ · 17 차이- · 18 결과 · 19 합계(손)        */
-  var STYLES = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-    '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
-    '<numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0"/></numFmts>' +
-    '<fonts count="8">' +
-      '<font><sz val="10"/><name val="맑은 고딕"/></font>' +                                  /* 0 */
-      '<font><b/><sz val="13"/><color rgb="FF217346"/><name val="맑은 고딕"/></font>' +        /* 1 */
-      '<font><sz val="9"/><color rgb="FF666666"/><name val="맑은 고딕"/></font>' +             /* 2 */
-      '<font><b/><sz val="10"/><name val="맑은 고딕"/></font>' +                               /* 3 */
-      '<font><b/><sz val="10"/><color rgb="FFC9283A"/><name val="맑은 고딕"/></font>' +        /* 4 해지 */
-      '<font><b/><sz val="10"/><color rgb="FF0B8A3D"/><name val="맑은 고딕"/></font>' +        /* 5 늘어남 */
-      '<font><sz val="9"/><color rgb="FF8A6D00"/><name val="맑은 고딕"/></font>' +             /* 6 표준 */
-      '<font><b/><sz val="10"/><color rgb="FFB45309"/><name val="맑은 고딕"/></font>' +        /* 7 손 */
-    '</fonts>' +
-    '<fills count="10">' +
-      '<fill><patternFill patternType="none"/></fill>' +
-      '<fill><patternFill patternType="gray125"/></fill>' +
-      '<fill><patternFill patternType="solid"><fgColor rgb="FFF6F6F6"/><bgColor indexed="64"/></patternFill></fill>' + /* 2 라벨 */
-      '<fill><patternFill patternType="solid"><fgColor rgb="FFFFFDF3"/><bgColor indexed="64"/></patternFill></fill>' + /* 3 표준 */
-      '<fill><patternFill patternType="solid"><fgColor rgb="FFF7F8FA"/><bgColor indexed="64"/></patternFill></fill>' + /* 4 전 */
-      '<fill><patternFill patternType="solid"><fgColor rgb="FFF2F7FF"/><bgColor indexed="64"/></patternFill></fill>' + /* 5 후 */
-      '<fill><patternFill patternType="solid"><fgColor rgb="FFFDF3F3"/><bgColor indexed="64"/></patternFill></fill>' + /* 6 해지 */
-      '<fill><patternFill patternType="solid"><fgColor rgb="FFEEF1F5"/><bgColor indexed="64"/></patternFill></fill>' + /* 7 합계전 */
-      '<fill><patternFill patternType="solid"><fgColor rgb="FFE6F0FF"/><bgColor indexed="64"/></patternFill></fill>' + /* 8 합계후 */
-      '<fill><patternFill patternType="solid"><fgColor rgb="FFF1FBF4"/><bgColor indexed="64"/></patternFill></fill>' + /* 9 신규 */
-    '</fills>' +
-    '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>' +
+  /* ══ ③ 꼴(styles) — <b>묶음(부위)마다 제 색</b> (판 X527 · 사장님 말씀
+     「색 별로 따로 나누고, 글씨 크기 부위 전부 나눠」) ══════════════════
+
+     STD 가 묶음마다 <b>제 색(c)과 아이콘(ic)</b> 을 이미 들고 있습니다 — 화면에서
+     쓰는 그 색 그대로 엑셀에도 칠합니다(두 벌 안 만듭니다 · 5번).
+     엑셀에는 <b>반투명이 없어</b> 흰색과 섞은 옅은 색을 손으로 냅니다(tint).
+
+     ── 글자 크기 층 ──────────────────────────────────────────
+       13pt 제목 · <b>11.5pt 묶음 머리</b> · 10.5pt 머리 · 10pt 담보·숫자
+       · 9pt 단위·범례. 크기가 다르면 눈이 <b>층을 먼저</b> 읽습니다.          */
+  function tint(hex, p) {           /* p=0 이면 그 색, 1 이면 흰색 */
+    var h = String(hex).replace('#', '');
+    function m(i2) { var v = parseInt(h.substr(i2, 2), 16); return Math.round(v + (255 - v) * p); }
+    function x(v) { var t = v.toString(16); return t.length < 2 ? ('0' + t) : t; }
+    return (x(m(0)) + x(m(2)) + x(m(4))).toUpperCase();
+  }
+  /* 꼴 번호 — 0~19 는 붙박이, 그 뒤는 묶음마다 셋씩:
+       20 + i*3 + 0 : 묶음 머리줄 (그 색 그대로 · 흰 글씨 11.5pt)
+       20 + i*3 + 1 : 대분류·중분류 칸 (아주 옅은 그 색 · 그 색 굵은 글씨)
+       20 + i*3 + 2 : 담보 이름 칸 (더 옅은 그 색 · 검은 글씨)                */
+  function GST(i, k) { return 20 + i * 3 + k; }
+  /* 보험료 줄이 쓰는 꼴 — 묶음 꼴 뒤 일곱 (0 전 · 1 후 · 2 전합 · 3 후합 · 4 해지 · 5 줄음 · 6 늘음) */
+  function PST(n, k) { return 20 + n * 3 + k; }
+
+  function styles(GRP) {
+    var f = '', fi = '', xf = '', i;
+    /* 글꼴 0~8 */
+    var FONT = [
+      '<sz val="10"/><name val="맑은 고딕"/>',                                           /* 0 기본 */
+      '<b/><sz val="13"/><color rgb="FF217346"/><name val="맑은 고딕"/>',                /* 1 제목 */
+      '<sz val="9"/><color rgb="FF666666"/><name val="맑은 고딕"/>',                     /* 2 범례 */
+      '<b/><sz val="10.5"/><name val="맑은 고딕"/>',                                     /* 3 머리 */
+      '<b/><sz val="10.5"/><color rgb="FFC9283A"/><name val="맑은 고딕"/>',              /* 4 해지 */
+      '<b/><sz val="10"/><color rgb="FF0B8A3D"/><name val="맑은 고딕"/>',                /* 5 늘어남 */
+      '<sz val="9"/><color rgb="FF8A6D00"/><name val="맑은 고딕"/>',                     /* 6 표준 */
+      '<b/><sz val="10"/><color rgb="FFB45309"/><name val="맑은 고딕"/>',                /* 7 손 */
+      '<b/><sz val="11.5"/><color rgb="FFFFFFFF"/><name val="맑은 고딕"/>',              /* 8 묶음머리 */
+      '<sz val="9"/><color rgb="FF666666"/><name val="맑은 고딕"/>'                      /* 9 단위 */
+    ];
+    /* 묶음마다 굵은 제 색 글꼴 하나 — 10 + i */
+    /* 묶음 띠가 이미 「대분류 › 중분류」 를 큰 글씨로 말해 줍니다. 줄마다 반복하는
+       이 글자는 <b>거르기·정렬 때문에</b> 남겨 두는 것이라 작고 옅게 둡니다 — 크면
+       눈이 그것부터 읽습니다. (9pt · 그 색을 흰색과 반쯤 섞음)                 */
+    for (i = 0; i < GRP.length; i++) FONT.push('<sz val="9"/><color rgb="FF' + tint(GRP[i].c, 0.42) + '"/><name val="맑은 고딕"/>');
+    for (i = 0; i < FONT.length; i++) f += '<font>' + FONT[i] + '</font>';
+
+    var FILL = ['<patternFill patternType="none"/>', '<patternFill patternType="gray125"/>'];
+    ['FFF6F6F6', 'FFFFFDF3', 'FFF7F8FA', 'FFF2F7FF', 'FFFDF3F3', 'FFEEF1F5', 'FFE6F0FF', 'FFF1FBF4']
+      .forEach(function (c) { FILL.push('<patternFill patternType="solid"><fgColor rgb="' + c + '"/><bgColor indexed="64"/></patternFill>'); });
+    /* 묶음마다 셋 — 진한 띠 · 옅은 라벨 · 더 옅은 담보 */
+    for (i = 0; i < GRP.length; i++) {
+      FILL.push('<patternFill patternType="solid"><fgColor rgb="FF' + tint(GRP[i].c, 0) + '"/><bgColor indexed="64"/></patternFill>');
+      FILL.push('<patternFill patternType="solid"><fgColor rgb="FF' + tint(GRP[i].c, 0.86) + '"/><bgColor indexed="64"/></patternFill>');
+      FILL.push('<patternFill patternType="solid"><fgColor rgb="FF' + tint(GRP[i].c, 0.95) + '"/><bgColor indexed="64"/></patternFill>');
+    }
+    for (i = 0; i < FILL.length; i++) fi += '<fill>' + FILL[i] + '</fill>';
+
+    function X(n, fo, fl, al) {
+      return '<xf numFmtId="' + n + '" fontId="' + fo + '" fillId="' + fl + '" borderId="1" xfId="0" ' +
+        'applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">' +
+        '<alignment ' + (al || 'vertical="center"') + '/></xf>';
+    }
+    xf += '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>';                       /* 0 */
+    xf += '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>';         /* 1 제목 */
+    xf += '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>';         /* 2 범례 */
+    xf += X(0, 3, 2, 'horizontal="center" vertical="center" wrapText="1"');                        /* 3 머리 */
+    xf += X(0, 3, 4, 'horizontal="center" vertical="center" wrapText="1"');                        /* 4 머리전 */
+    xf += X(0, 3, 5, 'horizontal="center" vertical="center" wrapText="1"');                        /* 5 머리후 */
+    xf += X(0, 4, 6, 'horizontal="center" vertical="center" wrapText="1"');                        /* 6 머리해지 */
+    xf += X(0, 5, 9, 'horizontal="center" vertical="center" wrapText="1"');                        /* 7 머리신규 */
+    xf += X(0, 0, 2, 'horizontal="center" vertical="center"');                                     /* 8 라벨 */
+    xf += X(0, 0, 0, 'vertical="center" wrapText="1"');                                            /* 9 담보이름 */
+    xf += X(164, 6, 3);                                                                            /* 10 표준 */
+    xf += X(164, 0, 4);                                                                            /* 11 전칸 */
+    xf += X(164, 0, 5);                                                                            /* 12 후칸 */
+    xf += X(164, 4, 6);                                                                            /* 13 해지칸 */
+    xf += X(164, 3, 7);                                                                            /* 14 합계전 */
+    xf += X(164, 3, 8);                                                                            /* 15 합계후 */
+    xf += X(164, 5, 0);                                                                            /* 16 차이+ */
+    xf += X(164, 4, 0);                                                                            /* 17 차이- */
+    xf += X(0, 0, 0, 'horizontal="center" vertical="center"');                                     /* 18 결과 */
+    xf += X(164, 7, 7);                                                                            /* 19 합계(손) */
+    for (i = 0; i < GRP.length; i++) {
+      var b = 10 + i * 3;                       /* 그 묶음의 fill 세 개 */
+      xf += X(0, 8, b, 'horizontal="left" vertical="center"');          /* 묶음머리 */
+      xf += X(0, 10 + i, b + 1, 'horizontal="center" vertical="center"'); /* 라벨 */
+      xf += X(0, 0, b + 2, 'vertical="center" wrapText="1"');            /* 담보이름 */
+    }
+    /* 보험료 줄 — 소수점이 보이는 꼴(165). 번호는 묶음 꼴 <b>뒤</b>입니다. */
+    xf += X(165, 0, 4);   /* +0 보험료 전 */
+    xf += X(165, 0, 5);   /* +1 보험료 후 */
+    xf += X(165, 3, 7);   /* +2 보험료 전 합계 */
+    xf += X(165, 3, 8);   /* +3 보험료 후 합계 */
+    xf += X(165, 4, 6);   /* +4 보험료 해지 */
+    xf += X(165, 5, 0);   /* +5 보험료 줄었다(초록) */
+    xf += X(165, 4, 0);   /* +6 보험료 늘었다(붉게) */
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      /* ⚠ 164(#,##0)만 두었더니 <b>월 보험료 12.4만이 12 로</b>, 합계 27.2 가 27 로
+         찍혔습니다 — 뽑아서 눈으로 보고 찾았습니다. 담보 금액은 정수라 164 면
+         되지만 보험료는 소수점이 있습니다. 165 를 보탭니다 (1번).            */
+      '<numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0"/>' +
+      '<numFmt numFmtId="165" formatCode="#,##0.##"/></numFmts>' +
+      '<fonts count="' + FONT.length + '">' + f + '</fonts>' +
+      '<fills count="' + FILL.length + '">' + fi + '</fills>' +
+      '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>' +
       '<border><left style="thin"><color rgb="FFD6D6D6"/></left><right style="thin"><color rgb="FFD6D6D6"/></right>' +
       '<top style="thin"><color rgb="FFD6D6D6"/></top><bottom style="thin"><color rgb="FFD6D6D6"/></bottom><diagonal/></border></borders>' +
-    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
-    '<cellXfs count="20">' +
-      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +                                               /* 0 */
-      '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +                                 /* 1 제목 */
-      '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +                                 /* 2 범례 */
-      '<xf numFmtId="0" fontId="3" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' + /* 3 머리 */
-      '<xf numFmtId="0" fontId="3" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' + /* 4 머리전 */
-      '<xf numFmtId="0" fontId="3" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' + /* 5 머리후 */
-      '<xf numFmtId="0" fontId="4" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' + /* 6 머리해지 */
-      '<xf numFmtId="0" fontId="5" fillId="9" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' + /* 7 머리신규 */
-      '<xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' + /* 8 라벨 */
-      '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>' + /* 9 담보이름 */
-      '<xf numFmtId="164" fontId="6" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>' + /* 10 표준 */
-      '<xf numFmtId="164" fontId="0" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1"/>' + /* 11 전칸 */
-      '<xf numFmtId="164" fontId="0" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1"/>' + /* 12 후칸 */
-      '<xf numFmtId="164" fontId="4" fillId="6" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>' + /* 13 해지칸 */
-      '<xf numFmtId="164" fontId="3" fillId="7" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>' + /* 14 합계전 */
-      '<xf numFmtId="164" fontId="3" fillId="8" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>' + /* 15 합계후 */
-      '<xf numFmtId="164" fontId="5" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1"/>' + /* 16 차이+ */
-      '<xf numFmtId="164" fontId="4" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1"/>' + /* 17 차이- */
-      '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' + /* 18 결과 */
-      '<xf numFmtId="164" fontId="7" fillId="7" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>' + /* 19 합계(손) */
-    '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+      '<cellXfs count="' + (20 + GRP.length * 3 + 7) + '">' + xf + '</cellXfs>' +
+      '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  }
 
   function sheet(body, opt) {
     opt = opt || {};
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      /* 인쇄는 <b>가로 한 장 폭</b>에 맞춥니다 — 안 그러면 칸이 옆으로 길어
+         열두 장으로 쪼개집니다(뽑아서 세어 봤습니다). 세로로는 몇 장이든 흐릅니다. */
+      (opt.fit ? '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' : '') +
       '<sheetViews><sheetView workbookViewId="0"' + (opt.tab ? ' tabSelected="1"' : '') + '>' +
       (opt.freeze ? ('<pane xSplit="' + opt.freeze[0] + '" ySplit="' + opt.freeze[1] + '" topLeftCell="' +
         col(opt.freeze[0]) + (opt.freeze[1] + 1) + '" activePane="bottomRight" state="frozen"/>') : '') +
@@ -183,10 +243,18 @@
         return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols>') : '') +
       '<sheetData>' + body + '</sheetData>' +
       (opt.filter ? ('<autoFilter ref="' + opt.filter + '"/>') : '') +
+      /* 묶음 띠 한 줄만 <b>합칩니다</b> — 안 합치면 옆 칸에 막혀 「병원비 보…」
+         로 잘립니다. 합친 자리의 값은 맨 왼쪽 칸에 들어가므로 다시 읽는 데는
+         지장이 없습니다. 담보 줄은 <b>절대 안 합칩니다</b>(거르기·정렬 · 4-1). */
+      (opt.merge && opt.merge.length ? ('<mergeCells count="' + opt.merge.length + '">' +
+        opt.merge.map(function (m) { return '<mergeCell ref="' + m + '"/>'; }).join('') + '</mergeCells>') : '') +
+      (opt.fit ? ('<printOptions/><pageMargins left="0.3" right="0.3" top="0.4" bottom="0.4" header="0.2" footer="0.2"/>' +
+        '<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0" paperSize="9"/>') :
+        '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>') +
       '</worksheet>';
   }
 
-  g.BA_XL = { _zip: zip, _sheet: sheet, _cel: cel, _row: row, _col: col, _mask: mask, _styles: STYLES, _N: N };
+  g.BA_XL = { _zip: zip, _sheet: sheet, _cel: cel, _row: row, _col: col, _mask: mask, _styles: styles, _GST: GST, _PST: PST, _N: N };
 })(window);
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -223,11 +291,14 @@
   }
 
   function 한눈에(S, STD, C, nm) {
-    var cc = cols(S), B = cc.B, A = cc.A, out = [], r, i;
+    var cc = cols(S), B = cc.B, A = cc.A, out = [], merges = [], r, i;
     var nB = B.length, nA = A.length;
     /* 칸 차례 — 0~4 라벨 · 전 nB · 전합계 · 후 nA · 후합계 · 차이 · 결과 */
     var cSumB = 5 + nB, cA0 = cSumB + 1, cSumA = cA0 + nA, cDif = cSumA + 1, cRes = cDif + 1;
-    var w = [11, 13, 34, 7, 9];
+    /* ⚠ A칸 11 로는 「3대질병 의료보장」 이 <b>잘립니다</b> — 뽑아서 눈으로
+       보고 넓혔습니다. 담보 이름 칸도 긴 것(「뇌혈관 주요치료비 (혈전용해 ·
+       혈관중재술 · 수술)」)에 맞춥니다. */
+    var w = [14, 13, 36, 7, 9];   /* A·B 는 이제 <b>거르기용</b>입니다 — 이름은 띠가 말합니다 */
     for (i = 0; i < nB; i++) w.push(13); w.push(11);
     for (i = 0; i < nA; i++) w.push(13); w.push(11, 10, 11);
 
@@ -261,12 +332,26 @@
     h2.push(cel(cSumA, 4, '(만원)', 3), cel(cDif, 4, '후 − 전', 3), cel(cRes, 4, '', 3));
     out.push(row(3, h1), row(4, h2));
 
-    /* 5줄부터 — 담보 77줄 전부 */
+    /* 5줄부터 — <b>묶음(부위)마다 띠 한 줄</b> + 그 묶음의 담보들.
+       사장님 말씀 「색 별로 따로 나누고, 글씨 크기 부위 전부 나눠」 —
+       77줄이 한 덩어리로 붙어 있으면 부위가 안 갈립니다. 묶음마다 <b>제 색</b>으로
+       띠를 세우고(화면에서 쓰는 그 색 그대로 · 5번) 글자 크기를 층으로 나눕니다. */
     r = 5;
-    STD.forEach(function (gp) {
+    STD.forEach(function (gp, gi) {
+      /* ── 묶음 띠 한 줄 — 칸 끝까지 그 색으로 칠합니다 ── */
+      var 띠 = [], ci;
+      var 셈 = 0;
+      gp.rows.forEach(function (rw) { if (C.b[rw.k] !== undefined || C.a[rw.k] !== undefined) 셈++; });
+      띠.push(cel(0, r, gp.ic + ' ' + gp.big + ' › ' + gp.mid +
+        '   (담보 ' + gp.rows.length + '개 · 적힌 것 ' + 셈 + '개)', X._GST(gi, 0)));
+      for (ci = 1; ci <= cRes; ci++) 띠.push(cel(ci, r, ' ', X._GST(gi, 0)));
+      out.push('<row r="' + r + '" ht="20" customHeight="1">' + 띠.join('') + '</row>');
+      merges.push('A' + r + ':' + col(cRes) + r); r++;
+
       gp.rows.forEach(function (rw) {
         var k = rw.k, cells = [];
-        cells.push(cel(0, r, gp.big, 8), cel(1, r, gp.mid, 8), cel(2, r, rw.n, 9),
+        cells.push(cel(0, r, gp.big, X._GST(gi, 1)), cel(1, r, gp.mid, X._GST(gi, 1)),
+          cel(2, r, rw.n, X._GST(gi, 2)),
           cel(3, r, UFULL[rw.u] || '', 8), cel(4, r, rw.std ? rw.std : null, 10));
         B.forEach(function (x, i2) {
           cells.push(cel(5 + i2, r, N(x.cov[k]), x.act === 'cancel' ? 13 : 11)); });
@@ -285,17 +370,18 @@
     });
 
     /* 맨 아래 — 월 보험료.  ⚠ 합계는 calc() 가 낸 값 그대로입니다 (5번) */
+    var P = function (k) { return X._PST(STD.length, k); };
     var pr = [cel(0, r, '', 8), cel(1, r, '', 8), cel(2, r, '월 보험료', 3), cel(3, r, '만원', 8), cel(4, r, '', 10)];
-    B.forEach(function (x, i2) { pr.push(cel(5 + i2, r, N(x.prem), x.act === 'cancel' ? 13 : 11)); });
-    pr.push(cel(cSumB, r, C.premB, 14));
-    A.forEach(function (x, i2) { pr.push(cel(cA0 + i2, r, N(x.prem), 12)); });
-    pr.push(cel(cSumA, r, C.premA, 15));
-    var dp = C.premA - C.premB;
-    pr.push(cel(cDif, r, dp, dp > 0 ? 17 : (dp < 0 ? 16 : 0)));   /* 보험료는 늘면 붉게 */
+    B.forEach(function (x, i2) { pr.push(cel(5 + i2, r, N(x.prem), x.act === 'cancel' ? P(4) : P(0))); });
+    pr.push(cel(cSumB, r, C.premB, P(2)));
+    A.forEach(function (x, i2) { pr.push(cel(cA0 + i2, r, N(x.prem), P(1))); });
+    pr.push(cel(cSumA, r, C.premA, P(3)));
+    var dp = Math.round((C.premA - C.premB) * 100) / 100;
+    pr.push(cel(cDif, r, dp, dp > 0 ? P(6) : (dp < 0 ? P(5) : P(0))));   /* 보험료는 늘면 붉게 */
     pr.push(cel(cRes, r, (C.premBn || C.premAn) ? ('보험료 모름 ' + (C.premBn + C.premAn) + '건') : '', 18));
     out.push(row(r, pr));
 
-    return X._sheet(out.join(''), { tab: true, freeze: [5, 4], cols: w,
+    return X._sheet(out.join(''), { tab: true, freeze: [5, 4], cols: w, merge: merges, fit: true,
       filter: 'A3:' + col(cRes) + (r - 1) });
   }
 
@@ -368,7 +454,7 @@
         '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/>' +
         '<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
         '</Relationships>' },
-      { name: 'xl/styles.xml', data: X._styles },
+      { name: 'xl/styles.xml', data: X._styles(STD) },
       { name: 'xl/worksheets/sheet1.xml', data: 한눈에(S, STD, C, nm) },
       { name: 'xl/worksheets/sheet2.xml', data: 계약시트(S) },
       { name: 'xl/worksheets/sheet3.xml', data: 빠진시트(STD, C) }
