@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════
-   check-deckprint.js — 🖨 <b>보장분석 상담자료를 인쇄하면 전부 나오나</b> (판 X517)
+   check-deckprint.js — 🖨 <b>보장분석 상담자료를 인쇄하면 전부 나오나</b> (판 X524)
 
    사장님 말씀 (2026-11-23) — 「보장분석 상담자료 <b>인쇄버전</b>도 만들어줘
    <b>클릭해서 넘어가는것들을 쭉 나올수 있도록</b>」
@@ -47,7 +47,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webmanifest': 'application/manifest+json' };
 
 (async () => {
-  console.log('══ 🖨 보장분석 상담자료 인쇄 점검 (판 X517) ══');
+  console.log('══ 🖨 보장분석 상담자료 인쇄 점검 (판 X524) ══');
 
   /* ── [7] 소스로 먼저 — 화면을 안 건드렸나 ───────────────────── */
   const SRC = fs.readFileSync(path.join(ROOT, DECK), 'utf8');
@@ -196,6 +196,6 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   await br.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '군데 — 인쇄본에서 빠지는 것이 있습니다')
-    : '✓ 클릭해야 나오던 것이 종이에 전부 나옵니다 (판 X517)');
+    : '✓ 클릭해야 나오던 것이 종이에 전부 나옵니다 (판 X524)');
   process.exit(bad ? 1 : 0);
 })().catch(e => { console.error('터짐: ' + e.message); process.exit(2); });
