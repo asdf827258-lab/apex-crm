@@ -16467,14 +16467,7 @@ function renderHubBoard(key){
   return h;
 }
 /* ✍️ 콘텐츠 제작 — 같은 분류판입니다. 표만 다릅니다 (5번) */
-function renderContentHub(){
-  /* 📣 새 알리기(시안 9차 · 판 X527 · grow-v2.js) — 빈 글이면 아래 예전 콘텐츠 판 */
-  try{ if(typeof growV2Html==='function'){ var v2g=growV2Html(); if(v2g)return v2g; } }catch(eV2g){}
-  var hb=renderHubBoard('content');
-  /* ✨ 새 알리기로 (판 X527) — 예전 판 맨 위 */
-  try{ if(typeof growV2Back==='function'){ var bk=growV2Back(); if(bk)hb=hb.replace('<div class="tab-pane on ct-board">','<div class="tab-pane on ct-board">'+bk); } }catch(eV2b){}
-  return hb;
-}
+function renderContentHub(){ return renderHubBoard('content'); }
 
 /* ══════════════════════════════════════════════════════════════════
    즐겨찾기 · 메뉴 찾기 · 최근 쓴 것
@@ -21881,7 +21874,10 @@ function go(tab){
   else if(tab==='saybook'){sbkCss();dyn.innerHTML=renderSaybook();}
   /* 🎙 전체 대본 — 같은 파일을 대본 칸으로 띄웁니다 (판 X93 · 5번) */
   else if(tab==='ta_say')dyn.innerHTML=renderTaSayPage();
-  else if(tab==='content')dyn.innerHTML=renderContentHub();
+  /* 📣 새 알리기(시안 9차 · 판 X527 · grow-v2.js) — 빈 글이면 예전 콘텐츠 판, 그 맨 위에 「✨ 새 알리기」.
+     ⚠ renderContentHub 는 그대로 둡니다 — 분류판은 한 벌(check-conthub [8]) */
+  else if(tab==='content'){ var v2g=''; try{ if(typeof growV2Html==='function')v2g=growV2Html(); }catch(eV2g){}
+    dyn.innerHTML=v2g||(((typeof growV2Back==='function')?growV2Back():'')+renderContentHub()); }
   else if(tab==='edu'){dyn.innerHTML=renderGrow();grAfter();}   /* 🌱 성장 로드맵 — app/apex-grow.js (판 X409) */
   else if(tab==='rej_gym')dyn.innerHTML=renderRejGymPage();
   else if(tab==='jiin_grow')dyn.innerHTML=renderJiinGrowPage();

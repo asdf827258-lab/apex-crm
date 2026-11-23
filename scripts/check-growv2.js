@@ -7,7 +7,7 @@
 
    ── 보는 것 (브라우저 없이) ──────────────────────────────────────
      [1] ★★ 알리기 — 기본은 새 화면 · 「↩ 예전 화면」 고른 기기(old) · 자동 점검(webdriver)만 예전 콘텐츠 판 · ALLOWED=false 로 모두 끔
-     [2] ★★ index.html 은 정해진 자리만 — 싣기 두 줄 · renderContentHub 첫 줄(빈 글이면 예전) · 예전 판 맨 위 「✨ 새 알리기」 · gbCalc 가 남기는 두 칸
+     [2] ★★ index.html 은 정해진 자리만 — 싣기 두 줄 · 콘텐츠 칸을 그리는 줄(빈 글이면 예전 · renderContentHub 는 그대로) · 예전 판 맨 위 「✨ 새 알리기」 · gbCalc 가 남기는 두 칸
      [3] ★★ 아래 탭 띠(TB)는 그대로 — 다섯 칸 · 「콘텐츠」 이름 그대로 (사장님 말씀 「그대로 둬」)
      [4] ★★ 알리기 차례 — 알리기 → 이번 주 다섯 칸 → 오늘 올릴 것 → 만들기 → 광고 · 심의 먼저 / 「올렸어요」 = 아침 미션 ⑤(d10) 같은 칸
      [5] ★★ 팀 한눈에 — 지점장만 · 목표 · 실적 = monthly_perf · 예상 = APEX_PEX · 오늘 전화 · 알리기 · 활동 0 · 못 읽으면 「…」(0 이라 안 씀)
@@ -66,10 +66,12 @@ is(/var ALLOWED = true;/.test(GR) && grow({ apex_grow_v2: '1' }, { allowed: fals
 console.log('\n[2] index.html 은 정해진 자리만');
 is((IX.match(/<script src="grow-v2\.js"><\/script>/g) || []).length === 1 && (IX.match(/<script src="team-v2\.js"><\/script>/g) || []).length === 1 &&
    IX.indexOf('<script src="team-v2.js">') > IX.indexOf('<script src="home-v2.js">'), 'grow-v2.js · team-v2.js 를 한 번씩, home-v2.js 뒤에 싣는다');
-const RC = IX.slice(IX.indexOf('function renderContentHub(){'), IX.indexOf('function renderContentHub(){') + 700);
-is(/try\{ if\(typeof growV2Html==='function'\)\{ var v2g=growV2Html\(\); if\(v2g\)return v2g; \} \}catch\(eV2g\)\{\}/.test(RC) && /var hb=renderHubBoard\('content'\);/.test(RC) &&
-   /if\(typeof growV2Back==='function'\)/.test(RC) && /return hb;\n\}/.test(RC.replace(/\r/g, '')), 'renderContentHub 첫 줄에서 새 알리기(빈 글이면 예전 판 renderHubBoard 그대로) · 예전 판 맨 위 단추 — typeof · try 안');
-is((IX.match(/growV2/g) || []).length === 4 && (IX.match(/teamV2|meV2/g) || []).length === 0, 'index.html 에 growV2 이름은 네 번뿐 · teamV2 · meV2 는 index.html 에 없음(새 오늘 화면에서만 엶)');
+const RC = IX.slice(IX.indexOf("  else if(tab==='content')"), IX.indexOf("  else if(tab==='content')") + 300);
+is(/else if\(tab==='content'\)\{ var v2g=''; try\{ if\(typeof growV2Html==='function'\)v2g=growV2Html\(\); \}catch\(eV2g\)\{\}/.test(RC) &&
+   /dyn\.innerHTML=v2g\|\|\(\(\(typeof growV2Back==='function'\)\?growV2Back\(\):''\)\+renderContentHub\(\)\); \}/.test(RC) &&
+   /function renderContentHub\(\)\{ return renderHubBoard\('content'\); \}/.test(IX),
+  '콘텐츠 칸을 그리는 줄에서 새 알리기(빈 글이면 예전 판 + 맨 위 「✨ 새 알리기」) — typeof · try 안 · renderContentHub 는 한 글자도 안 바뀜(분류판 한 벌 · check-conthub [8])');
+is((IX.match(/growV2/g) || []).length === 4 && (IX.match(/teamV2|meV2/g) || []).length === 0, 'index.html 에 growV2 이름은 네 번뿐(그리는 줄에만) · teamV2 · meV2 는 index.html 에 없음(새 오늘 화면에서만 엶)');
 const GC = IX.slice(IX.indexOf('function gbCalc('), IX.indexOf('function gbScore('));
 is(/GB\.callDay=\{\};calls\.forEach\(function\(c\)\{var k=c\.created_by,d=gbD\(c\.call_at\);if\(!k\)return;var o=\(GB\.callDay\[k\]=GB\.callDay\[k\]\|\|\{\}\);o\[d\]=\(o\[d\]\|\|0\)\+1;\}\);/.test(GC) &&
    /GB\.ckIt=\{\};/.test(GC) && /\(GB\.ckIt\[row\.member_id\]=GB\.ckIt\[row\.member_id\]\|\|\{\}\)\[row\.check_date\]=row\.items\|\|\{\};/.test(GC) &&
