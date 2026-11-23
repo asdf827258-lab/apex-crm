@@ -18,6 +18,7 @@
      [8] ★  옷은 .cv2 아래 · #cusWin.cv2-on(요약 · 고치기 화면 아닐 때)으로만
      [9] ★  가짜 데이터로 그려 본다 — 단계 칸 · 권할 것 · 배정 줄 없는 분 · 예전 화면 · 한 칸이 터져도
      [12] ★ 판 X513 — 지금 상황 · 걱정 · 기록 시트: 있던 cmSave({care}·{worry}) · cmTouchAdd 만 부르고, 고른 뒤 두 화면을 다시 그린다
+     [13] ★★ 판 X515 — 고객 탭 목록(시안 rCust · rList): 담당자 · 찾기는 예전 그대로 거친 줄 · 단계 칩 · 한 줄 칸 · 넣기 · 예전 화면 길
      [10] ★ 이분 여정 — 「지금」 칸을 단계 · 약속 날로 세고, 보낸 날은 지어 붙이지 않는다 · 보낼 말 · 자세히 시트
    ═══════════════════════════════════════════════════════════════ */
 'use strict';
@@ -112,7 +113,7 @@ is(IX.split(hostLine).length === 2 && IX.indexOf(hostLine) < IX.indexOf(`cusSec(
   '요약 자리(cv2Box) 한 줄이 osClientDetailHtml 안, 예전 요약(cuwNow) 바로 앞 — 파일이 없어도 빈 칸');
 const cp = IX.slice(IX.indexOf('function cuwPaint(c){'), IX.indexOf('function osClientDetailHtml(c){'));
 is(/try\{ if\(typeof cusV2Paint==='function'\)cusV2Paint\(c\); \}catch\(eV2\)\{\}/.test(cp), 'cuwPaint 안에서 다시 그리기 — typeof · try 안');
-is((IX.match(/cusV2/g) || []).length === 4, 'index.html 에 cusV2 이름은 네 번뿐(싣기 빼고 세 자리)');
+is((IX.match(/cusV2/g) || []).length === 10, 'index.html 에 cusV2 이름은 열 번뿐 — 고객 창 세 자리(네 번) + 고객 목록 세 자리(여섯 번 · 판 X515)');
 
 console.log('\n[4] 칸 차례 = 시안 openCust');
 B = box({}); h = paint(B);
@@ -282,6 +283,83 @@ console.log('\n[12] ✍️ 지금 상황 · 걱정 · 기록 시트 (판 X513 ·
     '남기기 → 있던 cmTouchAdd(id, 한 줄, 고른 갈래 「만남」, 오늘) · 두 화면 다시 그림');
   const B3 = box({}); delete B3.g.cmSave; B3.g.cusV2Care();
   is(!B3.els.cv2Sheet, 'cmSave 가 없는 판이면 시트 대신 예전 칸으로(jump)');
+}
+
+console.log('\n[13] 👥 고객 탭 목록 (판 X515 · 시안 rCust · rList)');
+{
+  const RP = IX.slice(IX.indexOf('function renderClientsPage(){'), IX.indexOf('function osClientsAfterRender(){'));
+  is(RP.indexOf("cusV2ListPage") > RP.indexOf("OSC.view==='detail'") && RP.indexOf("cusV2ListPage") < RP.indexOf('<div class="t-h1"') &&
+     /try\{ if\(typeof cusV2ListPage==='function'\)\{ var v2l=cusV2ListPage\(\); if\(v2l\)return v2l; \} \}catch\(eV2l\)\{\}/.test(RP) &&
+     /\(\(typeof cusV2ListBack==='function'\)\?cusV2ListBack\(\):''\)/.test(RP),
+    'renderClientsPage — 고객 한 분 창 다음 · 예전 제목 앞에서 새 목록(빈 글이면 예전 고객 365일) · 예전 화면엔 「✨ 새 고객 목록」 자리 — typeof · try 안');
+  const RL = IX.slice(IX.indexOf('function osRenderList(){'), IX.indexOf('function osSetList(html){'));
+  is(RL.indexOf('cusV2ListPaint') > RL.indexOf('if(cmHit(all[i],q))rows.push(all[i]);') && RL.indexOf('cusV2ListPaint') < RL.indexOf('var chips=cliFHtml(rows);') &&
+     /try\{ if\(typeof cusV2ListPaint==='function'&&cusV2ListPaint\(rows,q\)\)return; \}catch\(eV2p\)\{\}/.test(RL),
+    'osRenderList — 담당자 · 찾기(olRows · CM.pick · cmHit)를 다 거른 뒤, 예전 거르개 칩 앞에서 한 줄 — 명단 · 찾기를 새로 안 짬');
+  const N2 = ['crmDbsOf', 'cmMetaOf', 'cmTemp', 'cqaTally', 'cmSortRows', 'holdSayOr', 'cmWhoChipsHtml', 'cliWhoPaint', 'osRenderList', 'osClientsFilter', 'osOpenClient', 'hmRtPerson', 'cregOpen'];
+  const m2 = N2.filter(n => !has(n));
+  is(!m2.length, '목록이 부르는 라이브 함수 ' + N2.length + '개가 앱에 있다' + (m2.length ? ' — 없음: ' + m2.join(', ') : ''));
+  is(/function cliFStage\(c\)\{ return \(c&&\(c\.stage\|\|c\.tk\)\)\|\|''; \}/.test(IX) && /stage:r\.stage\|\|''/.test(IX) && /L\[i\]\.stage!=='거절'/.test(IX),
+    '단계 값 — 배정 줄(olRows 의 stage) · 거절은 배정 줄 stage 「거절」(rjnTally 와 같은 자)');
+
+  const mkL = (store, opt) => {
+    opt = opt || {};
+    const B = box(store, opt);
+    const g = B.g, said = g.said;
+    B.els.cl2 = {}; B.els.oscList = { innerHTML: '' }; B.els.cliWho = { innerHTML: '' };
+    const DB = { c1: [{ id: 'd1', stage: 'AP', region: '순천' }], c2: [{ id: 'd2', stage: '계약완료', region: '여수' }], c3: [{ id: 'd3', stage: '거절', region: '' }] };
+    Object.assign(g, {
+      OSC: { q: opt.q || '', list: [], current: null },
+      crmDbsOf: id => DB[id] || [],
+      cmMetaOf: id => ({ c1: { care: '부모님 일' }, c2: {} }[id] || null),
+      cmTemp: id => (id === 'c1' ? { e: '🔥', t: '3일 전', d: 3 } : { e: '❄️', t: '기록 없음', d: -1 }),
+      cqaTally: id => (id === 'c1' ? { got: 4, all: 11 } : null),
+      cmSortRows: L => { said.push(['sort', L.length]); },
+      CM_BASE: { c1: { by: 1981 }, c2: {}, c3: {} },
+      cmName: c => c.name_masked, holdSayOr: () => '<i>wait</i>', cmWhoChipsHtml: () => '<b>who</b>',
+      cliWhoPaint: () => said.push(['who']), osRenderList: () => said.push(['re']), go: t => said.push(['go', t])
+    });
+    return B;
+  };
+  const ROWS = [{ id: 'c1', name_masked: '홍길동' }, { id: 'c2', name_masked: '성춘향' }, { id: 'c3', name_masked: '변학도' },
+    { id: 'db:d9', _db: true, _dbid: 'd9', name_masked: '이*룡', stage: 'TA', region: '광양', src: '보장분석' }];
+  let L = mkL({});
+  const pg = L.g.cusV2ListPage();
+  is(/<h1>고객<\/h1>/.test(pg) && /onclick="cusV2ListUse\(false\)">↩ 예전 화면/.test(pg) && /<div id="cliWho"><b>who<\/b><\/div>/.test(pg) && /id="oscSearch" placeholder="이름 · 전화번호"[^>]*oninput="osClientsFilter\(this\.value\)"/.test(pg) &&
+     /<div id="oscList"><i>wait<\/i><\/div>/.test(pg) && /onclick="cregOpen\(\)">＋ 고객 넣기/.test(pg) && pg.indexOf('id="oscSearch"') < pg.indexOf('id="oscList"') && pg.indexOf('id="oscList"') < pg.indexOf('＋ 고객 넣기') &&
+     pg.indexOf('id="cliWho"') < pg.indexOf('class="cv2 cl2" id="cl2"'),
+    '틀 — 시안 차례(고객 → 찾기 → 목록 → ＋ 고객 넣기) · 찾기 · 목록 칸 id 는 예전 그대로(oscSearch · oscList — 기다림 · 못 받음 그림이 그대로 섬) · 담당자 줄은 .cv2 밖');
+  is(/고객 365일 · 예전 목록/.test(pg) && /오늘의 미션 · 4년 유지관리/.test(pg), '예전 고객 365일(미션 · 4년 유지관리 · 달력 · 거르개)로 가는 줄 — 지운 것 없음');
+  is(L.g.cusV2ListPaint(ROWS, '') === true, '새 틀이 서 있으면 목록을 그리고 true(osRenderList 는 거기서 멈춤)');
+  let lh = L.els.oscList.innerHTML;
+  is(/cusV2ListF\('all'\)">전체<small>4/.test(lh) && /cusV2ListF\('s0'\)">첫 전화<small>1/.test(lh) && /cusV2ListF\('s1'\)">첫 만남<small>1/.test(lh) && /cusV2ListF\('s5'\)">관리<small>1/.test(lh) &&
+     /cusV2ListF\('rej'\)">거절<small>1/.test(lh) && !/cusV2ListF\('s2'\)/.test(lh) && /cusV2ListF\('s3'\)">제안/.test(lh) && /class="fchip on"[^>]*>전체/.test(lh),
+    '단계 칩 — 전체 · 첫 전화 · 첫 만남 · 제안 · 청약 · 관리 · 거절(시안 차례) · 수는 지금 명단 · 「보장분석」 칩 없음(늘 0명)');
+  is(/osOpenClient\('c1'\)"><div class="av s">홍<\/div>/.test(lh) && /홍길동님 <small>45세<\/small>/.test(lh) && /<span class="chip b">부모님 일<\/span>3일 전 연락/.test(lh) && /아는 것 4\/11 · 순천/.test(lh) && /<span class="chip b">첫 만남<\/span><\/button>/.test(lh),
+    '한 줄 — 이름 · 나이 / 지금 상황 칩 · 마지막 연락 / 아는 것 n/m · 동네 / 단계 칩 (라이브 값 그대로)');
+  is(/<span class="chip g">관리<\/span>/.test(lh) && /<span class="chip w">거절<\/span>/.test(lh) && /연락 기록 없음/.test(lh) && !/아는 것 null/.test(lh),
+    '관리는 초록 · 거절은 주황 딱지 · 기록 없으면 「연락 기록 없음」 · 모르는 아는 것은 안 적음(0/11 로 지어내지 않음)');
+  is(/hmRtPerson\('d9'\)">/.test(lh) && /이\*룡님/.test(lh) && /배정 DB · 보장분석/.test(lh) && /광양/.test(lh) && /<span class="chip b">첫 전화/.test(lh),
+    '배정 DB 줄(아직 내 고객 아님) — 예전처럼 hmRtPerson · 가린 이름 · 어디서 왔나 · 동네');
+  is(L.g.said.some(x => x[0] === 'sort' && x[1] === 4) && L.g.said.some(x => x[0] === 'who'), '차례는 예전 cmSortRows · 담당자 줄도 같이 다시 그림');
+  L.g.cusV2ListF('rej');
+  is(L.g.CUS_V2.CL.f === 'rej' && L.g.said.some(x => x[0] === 're'), '칩 → 고른 칸만 · 다시 그리기는 osRenderList 한 곳');
+  L.g.cusV2ListPaint(ROWS, ''); lh = L.els.oscList.innerHTML;
+  is(/class="fchip on"[^>]*>거절/.test(lh) && /변학도/.test(lh) && !/홍길동/.test(lh), '거절 칸 = 거절 단계 분만');
+  L.g.cusV2ListF('s3'); L.g.cusV2ListPaint(ROWS, ''); lh = L.els.oscList.innerHTML;
+  is(/이 칸에는 아무도 없어요/.test(lh), '빈 칸이면 「이 칸에는 아무도 없어요 · 전체를 누르면」');
+  L.g.cusV2ListF('all'); L.g.cusV2ListPaint([], '김'); lh = L.els.oscList.innerHTML;
+  is(/「김」 로 찾는 분이 없어요/.test(lh), '찾아서 없으면 그렇다고');
+  const many = Array.from({ length: 75 }, (_, i) => ({ id: 'x' + i, name_masked: '홍갑돌' + i }));
+  L.g.cusV2ListPaint(many, ''); lh = L.els.oscList.innerHTML;
+  is((lh.match(/class="li"/g) || []).length === 60 && /cusV2ListMore\(\)">15명 더 보기/.test(lh), '한 번에 60명 · 나머지는 「n명 더 보기」');
+  L.g.cusV2ListUse(false);
+  is(L.store.apex_cus_v2 === 'old' && L.g.said.some(x => x[0] === 'go' && x[1] === 'clients') && L.g.cusV2ListPage() === '', '「↩ 예전 화면」 → old · 고객 탭 다시 그림 · 틀이 빈 글(→ 예전 고객 365일)');
+  is(/cusV2ListUse\(true\)">✨ 새 고객 목록/.test(L.g.cusV2ListBack()), '예전 고객 365일 맨 위 「✨ 새 고객 목록」');
+  delete L.els.cl2;
+  is(L.g.cusV2ListPaint(ROWS, '') === false, '새 틀이 안 서 있으면 false — 예전 목록이 그림');
+  is(mkL({}, { robot: true }).g.cusV2ListPage() === '' && mkL({}, { robot: true }).g.cusV2ListBack() === '' && mkL({ apex_cus_v2: '1' }, { allowed: false }).g.cusV2ListPage() === '',
+    '자동 점검 브라우저 · 모두 끄기(ALLOWED=false)면 예전 화면 그대로 — 단추도 안 섬(예전 화면 점검이 그대로 돈다)');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 고객 화면은 예전 고객 창을 안 깨고 시안 차례로 섭니다');

@@ -22310,8 +22310,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-23 10:00';
-var APP_BUILD_NOTE='💬 <b>아래 세 칸 — 화법 · 상품전략 · 공부가 메뉴 목록이 아니라 시안 시트로</b>(판 X514 · 사장님 말씀 「2번 해」 — 시안 9차 점검표 고칠 차례 ②) — 💬 화법은 단계 칩(첫 전화 · 부재 · 거절 · 만남 · 제안 · 청약 · 관리)을 누르면 그대로 말할 문장과 복사 단추(TA 대본 첫 마디 · 거절 28가지 · 단계 카톡 · 증권 전달 차례), 맨 아래 실전화법서 등 전체 대본. 🧭 상품전략은 이번 달 상황별 1위 상품 · 오늘 볼 분 · 그 구실로 문 열기. 📚 공부는 성장 로드맵의 「지금 할 것 하나」 를 오늘의 공부로, 내 길 · 과정. 예전 목록은 각 시트 맨 아래 「모든 화면」 에 그대로.';
+var APP_BUILD='2026-11-23 13:00';
+var APP_BUILD_NOTE='👥 <b>고객 탭 목록이 시안 9차 그대로</b>(판 X515 · 사장님 말씀 「3번 해」 — 점검표 고칠 차례 ③) — 아래 「고객」 을 누르면 제목 「고객」 → 찾기(이름 · 전화번호) → 단계 칩(전체 · 첫 전화 · 첫 만남 · 제안 · 청약 · 관리 · 거절, 수 붙음) → 한 줄씩(이름 · 나이 / 지금 상황 · 마지막 연락 / 아는 것 n/m · 동네 / 단계 딱지) → ＋ 고객 넣기. 명단 · 찾기 · 담당자 고르기는 예전 고객 365일 그대로이고, 미션 · 4년 유지관리 · 이번 달 달력 · 거르개 열한 개는 「↩ 예전 화면」(맨 아래 줄도) 에 그대로.';
 
 
 
@@ -81458,6 +81458,8 @@ function renderClientsPage(){
   }
   cmCss();
   if(OSC.view==='detail'&&OSC.current)return osClientDetailHtml(OSC.current);
+  /* 👥 새 고객 목록(시안 9차 · 판 X515 · cus-v2.js) — 빈 글이면 아래 예전 고객 365일 */
+  try{ if(typeof cusV2ListPage==='function'){ var v2l=cusV2ListPage(); if(v2l)return v2l; } }catch(eV2l){}
   /* ⚠ 2026-09-26 · <b>이 화면도 왼쪽 여백이 0</b> 이었습니다. .osc-wrap 은
      폭만 정하고 여백을 안 줍니다 — 찾기 칸도 제목도 화면 끝에 붙습니다.
      ★ 도구 화면 때와 <b>같은 길</b>로 고칩니다 — 여백을 여기서 새로 만들지
@@ -81466,6 +81468,7 @@ function renderClientsPage(){
      ★ check-toolspage 의 「제목이 다른 화면과 같은 자리에서 시작한다」 가
        이 자리를 잡았습니다 — 앞 판에서 만든 자가 바로 일했습니다 (8번). */
   return '<div class="tab-pane on"><div class="osc-wrap">'+
+    ((typeof cusV2ListBack==='function')?cusV2ListBack():'')+   /* ✨ 새 고객 목록으로 (판 X515) */
     /* 목업의 머리 — 제목과 한 줄 설명. 옷은 ui.css 의 .t-h1 · .t-sub 입니다 */
     '<div class="t-h1" style="margin-bottom:4px">고객 <span>한 벌로</span></div>'+
     '<div class="t-sub" style="margin:0 0 4px">배정 DB 와 고객 365일을 '+
@@ -81782,6 +81785,8 @@ function osRenderList(){
     if(CM.pick&&(all[i].advisor_id||'')!==CM.pick)continue;
     if(cmHit(all[i],q))rows.push(all[i]);
   }
+  /* 👥 새 고객 목록 틀이 서 있으면 그쪽이 그립니다 — 담당자 · 찾기까지 거른 줄 그대로 (판 X515 · cus-v2.js) */
+  try{ if(typeof cusV2ListPaint==='function'&&cusV2ListPaint(rows,q))return; }catch(eV2p){}
   /* ★ 칩은 <b>담당자·찾기를 지난 뒤</b>에 셉니다 — 그래야 「오늘 3」 이
      지금 보이는 목록의 3 과 같습니다. 칩 줄 자체도 그 수로 그립니다. */
   var chips=cliFHtml(rows);
