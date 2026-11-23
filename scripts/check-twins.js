@@ -207,6 +207,13 @@ var EXTERNAL = ['supabase', 'PENSION', 'APEX_REPORT', 'html2canvas', 'PptxGenJS'
   'holdReady', 'holdOf', 'holdAll', 'holdSkel', 'holdSay', 'holdCss',
   'holdJong', 'holdEul', 'holdIga', 'holdRo', 'HOLD_VIEW', 'HOLD_RANK',
   'nextCss', 'nextSheet', 'nextSheetHide',
+  /* ★ 판 X517 — <b>home-v2.js 의 HOME_V2</b>. 새 「오늘」 화면이 사는 옆 파일이고
+     app/home-v2.js 끝에서 g.HOME_V2 = API 로 세웁니다. 부르는 세 자리는 모두
+     <b>if(window.HOME_V2)</b> 로 막아 두었는데, 쓸 때는 맨이름이라 이 자가 잡았습니다.
+     ⚠ 부르는 쪽을 window. 로 고쳐도 되지만 <b>check-homev2 가 그 글자를 봅니다</b> —
+       고쳤더니 그 자가 세 군데 울었습니다. 그래서 <b>여기 한 줄</b>로 빠져나갑니다 (8번).
+     ※ CUS_V2 · MSG_V2 는 부르는 쪽이 typeof 로 감싸서 여기 없습니다. */
+  'HOME_V2',
   /* alm-slots.js — 알람 네 번(시각·문구) 한 벌. 앱은 <script> 로, <b>서버는
      netlify.toml 의 included_files</b> 로 같은 파일을 읽습니다. 시각이나
      문구를 index.html 에 또 적으면 화면과 알람이 다른 말을 합니다 (5번). */
