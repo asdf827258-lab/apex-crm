@@ -1061,7 +1061,9 @@
      ★ <b>저장 코드를 새로 짜지 않습니다</b> — 내 일정은 mcalMyPut(내 캘린더와 같은 칸 · 같은 id), 고객 일정은 mcalCusPut
        (앞날은 다음 할 일 · 지난날은 접촉 기록 — 고객 365일과 같은 자리). 고르는 날은 MCAL.sel 한 곳.
      ★ 넣은 뒤 「📲 폰 달력에 넣기」 = 라이브 icsBuild 로 그 일정 한 건 .ics(아이폰 · 갤럭시 달력이 받음 · 알림 포함),
-       「Google 캘린더」 는 구글 달력 추가 화면을 엶(갤럭시에서 구글 달력 쓰실 때). 고객 이름은 폰 달력으로 나갈 때 mcalOutName 으로 가림. */
+       「Google 캘린더」 는 구글 달력 추가 화면을 엶(갤럭시에서 구글 달력 쓰실 때). 고객 이름은 폰 달력으로 나갈 때 mcalOutName 으로 가림.
+     ★ 판 X516 — 달력 탭의 「📲 폰 달력에도 담기」 스위치(CAL_V2.icsOn · 이 기기에만)가 켜져 있으면 「넣기」 를 누른 그 순간 그 한 건의 .ics 를 바로 받습니다
+       (같은 schedIcs · 누르는 손길 안이라 폰이 막지 않음). 웹앱은 폰 달력에 저절로 넣을 권한이 없어 이것이 「담기」 의 전부입니다. */
   var SCH = { tab: 'me', ds: '', hm: '', cid: '', done: null };
   function ymdAdd(n) { var t = T(function () { return g.mcalToday(); }, '') || new Date().toISOString().slice(0, 10); var d = new Date(t + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
   function schedHtml() {
@@ -1073,7 +1075,8 @@
     if (SCH.done) {
       var D = SCH.done;
       return h + '<div class="sch-ok"><b>✓ 넣었어요</b><span>' + E(D.label) + '</span></div>' +
-        '<button type="button" class="btn p" style="margin-top:12px" onclick="HOME_V2.schedIcs()">📲 폰 달력에 넣기 <small style="font-weight:600;opacity:.85">아이폰 · 갤럭시</small></button>' +
+        (D.ics ? '<div class="sub" style="margin-top:8px">📲 폰 달력 파일도 받았어요 — 끄려면 달력 탭 맨 아래 「폰 달력에도 담기」</div>' : '') +
+        '<button type="button" class="btn p" style="margin-top:12px" onclick="HOME_V2.schedIcs()">📲 폰 달력에 ' + (D.ics ? '다시 받기' : '넣기') + ' <small style="font-weight:600;opacity:.85">아이폰 · 갤럭시</small></button>' +
         '<a class="btn g" style="margin-top:8px" target="_blank" rel="noopener" href="' + E(D.gcal) + '">Google 캘린더로</a>' +
         '<div class="sub" style="margin-top:8px">받은 파일을 누르면 폰 달력이 「추가」 를 물어요 · 알림은 그 시각에 울려요</div>' +
         '<button type="button" class="btn g" style="margin-top:12px" onclick="HOME_V2.sched()">＋ 하나 더 넣기</button>';
@@ -1137,6 +1140,8 @@
     else { var d2 = new Date(SCH.ds + 'T00:00:00Z'); d2.setUTCDate(d2.getUTCDate() + 1); en = d2.toISOString().slice(0, 10).replace(/-/g, ''); }
     SCH.done = { ds: SCH.ds, h: hh, m: mm, title: title, label: (+SCH.ds.slice(5, 7)) + '/' + (+SCH.ds.slice(8, 10)) + (SCH.hm ? ' ' + SCH.hm : '') + ' · ' + label,
       gcal: 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(title) + '&dates=' + st + '/' + en + '&ctz=Asia/Seoul' };
+    /* 📲 달력 탭 스위치가 켜져 있으면 그 자리에서 폰 달력 파일까지 (판 X516) */
+    try { if (g.CAL_V2 && g.CAL_V2.icsOn()) { SCH.done.ics = true; schedIcs(); } } catch (eI) {}
     schedPaint(); paint();
   }
   function schedIcs() {
