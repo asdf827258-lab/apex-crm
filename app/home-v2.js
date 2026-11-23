@@ -99,6 +99,10 @@
       '.hv2 .nmbtn.bk{color:var(--blue)}',
       '.hv2 .hello{font-size:23px;font-weight:800;letter-spacing:-.5px;line-height:1.3;margin:4px 2px 12px}',
       '.hv2 .hello b{color:var(--blue)}',
+      '.hv2 .hello{display:flex;align-items:center;justify-content:space-between;gap:10px}',
+      '.hv2 .mebtn{flex:none;width:44px;height:44px;border-radius:50%;background:#fff;font-size:21px;text-align:center}',
+      '.hv2 .tmall{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:44px;margin:-4px 0 12px;padding:0 14px;border-radius:14px;background:#fff;font-size:14px;font-weight:700;color:var(--ink)}',
+      '.hv2 .tmall span{color:#B0B8C1;font-size:18px}',
       '.hv2 .whowrap{margin:0 0 12px}',
       '.hv2 .who-strip{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 0 12px;padding:2px 2px 0}',
       '.hv2 .who-strip::-webkit-scrollbar{display:none}',
@@ -404,13 +408,17 @@
     var A = T(function () { return g.HWHO_ALL; }, '');
     if (A) h += '<button type="button" class="' + (all ? 'on' : '') + '" onclick="hwhoSet(\'' + Q(A) + '\')"><div class="ring">🏢</div>팀 전체</button>';
     h += '</div>';
+    /* 📊 시안 「팀」 탭 — 아래 탭 띠는 그대로 두라 하셔서 여기서 시트로 (team-v2.js · 판 X527) */
+    if (typeof g.teamV2Open === 'function') h += '<button type="button" class="tmall" onclick="teamV2Open()">📊 우리 팀 한눈에<span>›</span></button>';
     if (cur && cur !== me) h += '<div class="whonote"><span>' + (all ? '🏢 팀 전체를 보고 있어요 — 내 것이 아니에요' : '👀 ' + E(T(function () { return g.hwhoName(cur); }, '팀원')) + '님 화면을 그대로 보고 있어요') + '</span><button type="button" onclick="hwhoMe()">← 내 화면</button></div>';
     return h;
   }
   function helloHtml(L) {
     var nm = T(function () { return g.OS.profile.name; }, '') || '설계사';
     var n = (L && L.list) ? L.list.length : 0;
-    return '<div class="hello">' + E(nm) + '님, ' + (n ? '오늘 <b>' + n + '분</b> 남았어요' : '오늘 할 일 끝! 🎉') + '</div>';
+    /* 🙋 나 — 시안 오른쪽 위 단추(openMe). 맨 위 줄은 폰 폭이 꽉 차 인사 줄 오른쪽에 (team-v2.js · 판 X527) */
+    var meB = typeof g.meV2Open === 'function' ? '<button type="button" class="mebtn" onclick="meV2Open()" aria-label="나 — 알람 · 공지 · 설정">🙋</button>' : '';
+    return '<div class="hello"><span>' + E(nm) + '님, ' + (n ? '오늘 <b>' + n + '분</b> 남았어요' : '오늘 할 일 끝! 🎉') + '</span>' + meB + '</div>';
   }
   /* 이번 달 목표 — monthly_perf(목표·실적, 만원) + 진행 중 예상(pexSum, 원 → 만원) */
   function monHtml() {
@@ -1342,7 +1350,7 @@
   function copyT(t) { if (!t) return; try { if (typeof g.copyText === 'function') g.copyText(t); } catch (e) {} }
   var RES = { ok: '🤝 약속 잡음', hold: '🤔 생각해 볼게요', miss: '📵 안 받음', soft: '🙅 거절' };
   var API = {
-    on: on, set: set, use: use, chip: chip, apply: apply, paint: paint, close: close, allowed: function () { return ALLOWED; }, KEY: KEY,
+    on: on, set: set, use: use, chip: chip, apply: apply, paint: paint, close: close, sheet: sheet, allowed: function () { return ALLOWED; }, KEY: KEY,
     nm: function () { try { g.hmNmToggle(); } catch (e) {} paint(); },
     goal: goalSheet, goalPer: goalPer, goalPut: goalPut,
     goalQ: function (q) { var i = el('hv2GoalP'); if (i) i.value = q; goalPer(); },

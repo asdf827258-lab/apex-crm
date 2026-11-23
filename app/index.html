@@ -3219,6 +3219,8 @@ body.insight-mode #insightScreen{display:block;}
 <script src="cus-v2.js"></script>
 <script src="msg-v2.js"></script>
 <script src="cal-v2.js"></script>
+<script src="grow-v2.js"></script>
+<script src="team-v2.js"></script>
 <script src="hm-door-top.js"></script>
 <!-- 🎬 발표 덱 트랙 표 — 계산기와 <b>같은 한 파일</b>을 봅니다 (판 X333).
      사장님 말씀 「오늘 에서 AP, PC 에서 각자 뜰 수 있도록 각 파트별로 다
@@ -16465,7 +16467,14 @@ function renderHubBoard(key){
   return h;
 }
 /* ✍️ 콘텐츠 제작 — 같은 분류판입니다. 표만 다릅니다 (5번) */
-function renderContentHub(){ return renderHubBoard('content'); }
+function renderContentHub(){
+  /* 📣 새 알리기(시안 9차 · 판 X527 · grow-v2.js) — 빈 글이면 아래 예전 콘텐츠 판 */
+  try{ if(typeof growV2Html==='function'){ var v2g=growV2Html(); if(v2g)return v2g; } }catch(eV2g){}
+  var hb=renderHubBoard('content');
+  /* ✨ 새 알리기로 (판 X527) — 예전 판 맨 위 */
+  try{ if(typeof growV2Back==='function'){ var bk=growV2Back(); if(bk)hb=hb.replace('<div class="tab-pane on ct-board">','<div class="tab-pane on ct-board">'+bk); } }catch(eV2b){}
+  return hb;
+}
 
 /* ══════════════════════════════════════════════════════════════════
    즐겨찾기 · 메뉴 찾기 · 최근 쓴 것
@@ -22314,8 +22323,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-23 19:00';
-var APP_BUILD_NOTE='💰 <b>예상 월납 · ✓ 계약됐어요 · 🛰 자비스 시트가 시안 9차 그대로</b>(판 X526 · 사장님 말씀 「5번 해」 — 점검표 고칠 차례 ⑤) — 오늘 카드(만남 · 제안 · 청약 분)와 고객 화면 이름 줄의 「예상 n만 / 금액 ?」 을 누르면 금액 칸 + 5 · 10 · 20 · 30만원 단추로 예상 월납을 적고, 청약 분은 「✓ 계약됐어요」 로 계약 월 보험료를 적으면 계약완료로 옮기고 계약 업적에 적어요(DB · 업적관리 · EM 상담 보드와 같은 칸). 목표 시트엔 「예상 월납 안 적힌 n분」. 🛰 자비스는 오늘 끊기기 쉬운 자리(내일 약속 · 오늘 약속 · 약속 지남 · 증권 전달 전 · 소개 차례)와 2주 안 미리 세워 둔 연락을 한 시트에.';
+var APP_BUILD='2026-11-23 21:00';
+var APP_BUILD_NOTE='📣 <b>알리기 · 👥 팀 한눈에 · 🙋 나가 시안 9차 그대로</b>(판 X527 · 사장님 말씀 「6번 해」 — 점검표 고칠 차례 ⑥) — 아래 「콘텐츠」 칸을 누르면 새 알리기 화면(이번 주 나를 알린 날 다섯 칸 · 오늘 올릴 것 — ✓ 올렸어요는 아침 미션 ⑤ 와 같은 칸 · 만들기 · 광고는 심의 먼저). 지점장은 새 오늘 화면 팀원 동그라미 밑 「📊 우리 팀 한눈에」 — 목표 · 실적 · 예상(업적관리와 같은 숫자) · 오늘 전화 · 오늘 알리기 · 오늘 활동 0 을 한 화면에, 모자란 순 · 실적 순 · 활동 적은 순, 누르면 그분 시트. 인사 줄 오른쪽 🙋 = 나(공지 · 설정 · 요금제 · 약관 · 폰에 설치 · 건의함). 아래 탭 다섯 칸 · 이름은 그대로, 각 화면 맨 위 「↩ 예전 화면」.';
 
 
 
@@ -26055,10 +26064,13 @@ function gbCalc(profs,att,calls,cli,rep,chk){
   };
   att.forEach(function(a){bump(a.member_id,'att',a.att_date);});
   calls.forEach(function(c){bump(c.created_by,'call',c.call_at);});
+  /* 👥 그날 몇 통인지도 남깁니다 — 팀 한눈에(team-v2.js · 판 X527)의 「오늘 전화」. 읽은 것을 버리지 않게만 (5번) */
+  GB.callDay={};calls.forEach(function(c){var k=c.created_by,d=gbD(c.call_at);if(!k)return;var o=(GB.callDay[k]=GB.callDay[k]||{});o[d]=(o[d]||0)+1;});
   cli.forEach(function(c){bump(c.advisor_id,'cli',c.created_at);});
   rep.forEach(function(c){bump(c.advisor_id,'rep',c.created_at);});
   var sum={},cnt={};
   GB.ckDay={};
+  GB.ckIt={};   /* 👥 그날 체크한 칸도 — 팀 한눈에(team-v2.js · 판 X527)의 「오늘 알리기」(d10) */
   chk.forEach(function(row){
     if(row.scope!=='day')return;
     var r=by[row.member_id];if(!r)return;
@@ -26066,6 +26078,7 @@ function gbCalc(profs,att,calls,cli,rep,chk){
     for(kk in (row.items||{}))if(row.items[kk]&&dayIds[kk])n++;
     /* 날짜별로도 <b>남긴다</b> — 달력이 팀원 것을 그릴 때 쓴다 (5번) */
     (GB.ckDay[row.member_id]=GB.ckDay[row.member_id]||{})[row.check_date]=n;
+    (GB.ckIt[row.member_id]=GB.ckIt[row.member_id]||{})[row.check_date]=row.items||{};
     sum[row.member_id]=(sum[row.member_id]||0)+n;
     cnt[row.member_id]=(cnt[row.member_id]||0)+1;
     r.any=true;
