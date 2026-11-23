@@ -18,6 +18,8 @@
      [7] ★  옛 홈은 지우지 않고 숨기기만(CSS) — 「예전 오늘 칸 펼치기」 가 있다 · 그리다 터지면 예전 화면
      [8] ★  옷은 .hv2 / #hv2Sheet 아래로만 — 앱의 .card · .btn 같은 옷을 덮지 않는다
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
+     [18] ★★ 판 X517 — 💰 예상 월납 · ✓ 계약됐어요 시트(시안 openAmt · openClose): 저장은 「DB · 업적관리」 의 그 서버 문(pipeline_save) 한 곳 ·
+          만원 → 원 한 곳 · 계약완료 규칙은 queueSave 그대로 · 내 고객만 · 🛰 자비스 시트(오늘 끊기기 쉬운 자리 · 미리 세워 둔 연락)
      [17] ★★ 판 X514 — 아래 세 칸이 메뉴 목록이 아니라 시안 시트: 화법(단계 칩 · 그대로 말할 문장 · 복사 — 글은 APEX_STAGE · TA_MSG 원본),
           상품전략(상황별 1위 · 오늘 볼 분 · 구실 — 오늘 화면 상품전략 줄과 같은 자), 공부(성장 로드맵 「지금 할 것 하나」) · 예전 목록은 「모든 화면」
      [16] ★★ 판 X513 — 목표 칸 · 영업 한 바퀴 칸이 다른 화면으로 안 넘어가고 시트(시안 openGoal · openStage):
@@ -34,6 +36,9 @@ const JS = ['app/hm-door.js', 'app/hm-tamsg.js', 'ta-open.js', 'ta-msg.js', 'app
   .map(p => { try { return fs.readFileSync(path.join(ROOT, p), 'utf8'); } catch (e) { return ''; } }).join('\n');
 const 걷기 = s => s.replace(/\/\*[\s\S]*?\*\//g, '');
 const sc = 걷기(SRC);
+/* 판 X517 — 사장님이 고르신 「같은 서버 문 한 줄」: 「DB · 업적관리」 가 쓰는 pipeline_save 를 부르는 자리 <b>하나</b>만 빼고 본다 */
+const PEX_RPC = ".rpc('pipeline_save', { p_id: id, p: patch })";
+const scW = sc.split(PEX_RPC).join('');
 
 /* ── 가짜 창 — 라이브 함수 자리에 손으로 셀 수 있는 값 ── */
 function box(store, search, opt) {
@@ -160,7 +165,7 @@ console.log('\n[6] 서버 · 저장');
    쓰기(insert·update·upsert·delete·rpc)는 하나도 없습니다. 목표는 기존 pfLoad. */
 const 부름 = (sc.match(/\.from\('[^']+'\)\.[a-z]+\([^)]*\)/g) || []);
 is(부름.length === 1 && 부름[0] === ".from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng,next_appt_place')", '서버 표는 좌표 읽기 하나뿐 — ' + 부름.join(' | '));
-is(!/\.(insert|update|upsert|delete|rpc)\(/.test(sc) && !/supabase\./.test(sc), '서버에 쓰는 것이 하나도 없다');
+is(sc.split(PEX_RPC).length === 2 && !/\.(insert|update|upsert|delete|rpc)\(/.test(scW) && !/supabase\./.test(sc), '서버에 쓰는 것은 「DB · 업적관리」 의 그 문(pipeline_save) 한 곳뿐 (판 X517 · 사장님이 고르신 「같은 서버 문 한 줄」)');
 is((sc.match(/fetch\('([^']+)'/g) || []).join() === "fetch('/.netlify/functions/route-km'", '부르는 주소는 지역 동선의 길찾기(route-km) 하나뿐');
 const 담기 = (sc.match(/setItem\(([^,]+),/g) || []).map(x => x.replace(/setItem\(|,/g, ''));
 is(담기.length === 2 && 담기.indexOf('KEY') >= 0 && 담기.indexOf("'apexRouteKmV1'") >= 0, '이 기기에 담는 것은 켜짐 표시와 길찾기 거리(지역 동선과 같은 칸)뿐 — ' + 담기.join(', '));
@@ -412,7 +417,7 @@ console.log('\n[16] 🎯 목표 시트 · 🔁 영업 한 바퀴 단계 시트 (
     '줄마다 단계 · 동네 · 마지막 연락 · 「이 단계에서 쓰는 것」(APEX_STAGE.tools · 열 수 있는 것만) · 예전 길은 맨 아래 단추');
   X.g.HOME_V2.stage(2); s = X.els.hv2Sheet.innerHTML;
   is(/약속 11-25 14:00/.test(s) && /모두 1명/.test(s), '약속이 잡힌 분은 약속 날짜로');
-  is(!/\.(insert|update|upsert|delete|rpc)\(/.test(sc) && (sc.match(/pfSave\(/g) || []).length === 1, '목표 저장은 있던 pfSave 한 곳 · 서버에 직접 쓰는 것 없음');
+  is(!/\.(insert|update|upsert|delete|rpc)\(/.test(scW) && (sc.match(/pfSave\(/g) || []).length === 1, '목표 저장은 있던 pfSave 한 곳 · 서버에 직접 쓰는 것 없음');
 }
 
 console.log('\n[17] 💬 화법 · 🧭 상품전략 · 📚 공부 시트 (판 X514 · 시안 openTalk · openProd · openStudy)');
@@ -472,7 +477,69 @@ console.log('\n[17] 💬 화법 · 🧭 상품전략 · 📚 공부 시트 (판 
   is(!/오늘의 공부/.test(t) && /과정 <small>/.test(t), '걸음이 없으면 「오늘의 공부」 를 지어내지 않음');
   X.g.HOME_V2.dockAll('talk'); t = sh();
   is(/곳<\/div>/.test(t) && /재무설계 실전화법서/.test(t), '「모든 화면」 = 예전 목록 그대로');
-  is(!/\.(insert|update|upsert|delete|rpc)\(/.test(sc) && !/grTick\(|grSave\(|localStorage\.setItem\('apex_grow/.test(sc), '세 시트는 읽기만 — 성장 체크(grTick)도 안 건드림');
+  is(!/\.(insert|update|upsert|delete|rpc)\(/.test(scW) && !/grTick\(|grSave\(|localStorage\.setItem\('apex_grow/.test(sc), '세 시트는 읽기만 — 성장 체크(grTick)도 안 건드림');
+}
+
+console.log('\n[18] 💰 예상 월납 · ✓ 계약됐어요 · 🛰 자비스 (판 X517 · 시안 openAmt · openClose · openJv)');
+{
+  const EP = fs.readFileSync(path.join(ROOT, 'edu-pipeline.html'), 'utf8');
+  is(/sb\.rpc\('pipeline_save', \{ p_id: id, p: patch \}\)/.test(EP) && /const NUMF = \{ expect: 'expect_premium', contract: 'contract_premium'/.test(EP) &&
+     /p\.contracted_at = \(r\.stage === '계약완료' \|\| r\.stage === '증권전달'\) \? new Date\(\)\.toISOString\(\)/.test(EP),
+    '같은 문 · 같은 칸 — 「DB · 업적관리」 가 pipeline_save 로 expect_premium · contract_premium · 계약완료면 contracted_at 을 적는 그 규칙');
+  const PS = SRC.slice(SRC.indexOf('  function pexSave('), SRC.indexOf('  function cusSync('));
+  is(/g\.hdbCan\(r\)/.test(PS) && /typeof sb\.rpc !== 'function'/.test(PS) && /res && res\.error/.test(PS), '저장 한 곳(pexSave) — 내 고객만(hdbCan) · 서버 없으면 멈춤 · 못 했으면 그렇다고');
+  is((sc.match(/\* 10000/g) || []).length === 1 && /function toWon\(man\) \{ return Math\.round\(man\) \* 10000; \}/.test(sc), '만원 → 원(칸은 원) 하는 자리는 toWon 한 곳 — 만 배 오류 자리');
+
+  const rpc = [];
+  const DB = [{ id: 'd1', name: '홍길동', stage: 'AP', who: 'me', expect: 150000 }, { id: 'd2', name: '홍말순', stage: 'CS', who: 'me', expect: 200000, appt: '2026-11-24T14:00:00' },
+    { id: 'd3', name: '홍갑돌', stage: 'PC', who: 'me' }, { id: 'd4', name: '홍판서', stage: '계약완료', who: 'me' }, { id: 'd5', name: '임꺽정', stage: 'AP', who: 'p2' }];
+  let X = box({ apex_home_v2: '1' }, '', { db: DB });
+  const said = [];
+  Object.assign(X.g, {
+    mcalToday: () => '2026-11-23', toast: t => said.push(['toast', t]),
+    hdbRow: id => DB.filter(r => r.id === id)[0] || null, hdbCan: r => r.who === 'me',
+    osClient: () => ({ rpc: (n, a) => { rpc.push([n, a]); return { then: ok => ok({ error: null }) }; } }),
+    hmPexPut: (id, w) => said.push(['pexput', id, w]), hdbLocal: (id, p) => said.push(['local', id, JSON.stringify(p)]), hmPexRow: () => said.push(['row']),
+    CUS: { db: { id: 'd2', stage: 'CS', expect_premium: 200000 } }, cusV2Paint: () => said.push(['cus']),
+    arApptPast: () => [{ id: 'd3', name: '홍갑돌', appt: '2026-11-20T10:00:00', stage: 'AP' }], hmReferRows: () => [{ id: 'd4', name: '홍판서' }], mstDueList: () => ({ monLeft: 2 }),
+    mcalItems: () => ({ '2026-11-26': [{ k: 'next', id: 'c9', t: '홍기동' }, { k: 'touch', id: 'c8', t: '변학도' }], '2026-11-24': [{ k: 'next', id: 'c7', t: '홍정돌' }], '2026-11-30': [{ k: 'appt', t: '성춘향', s: '15:00 · 여수' }] }),
+    mcalDay: (I, ds) => I[ds] || []
+  });
+  X.g.HOME_V2.apply(dyn(X));
+  const sh = () => (X.els.hv2Sheet || {}).innerHTML || '';
+  X.g.HOME_V2.amt('d1'); let t = sh();
+  is(/홍길동님 예상 월납/.test(t) && /id="hv2Num"[^>]*value="15"/.test(t) && /HOME_V2\.numQ\(5\)">5<small>만원/.test(t) && /HOME_V2\.numQ\(30\)/.test(t) && /HOME_V2\.amtPut\('d1'\)">저장/.test(t),
+    '예상 월납 시트 — 이름 · 지금 값(원 → 만원 15) · 5 · 10 · 20 · 30만원 단추 · 저장');
+  X.els.hv2Num = { value: '20' }; X.g.HOME_V2.amtPut('d1');
+  is(rpc.length === 1 && rpc[0][0] === 'pipeline_save' && rpc[0][1].p_id === 'd1' && JSON.stringify(rpc[0][1].p) === '{"expect_premium":"200000"}' && said.some(x => x[0] === 'pexput' && x[1] === 'd1' && x[2] === 200000),
+    '저장 → pipeline_save(d1, {expect_premium: 「200000」원}) · 손에 든 줄 · 합계는 있던 hmPexPut');
+  X.els.hv2Num = { value: '' }; X.g.HOME_V2.amtPut('d1');
+  is(rpc.length === 1 && said.some(x => x[0] === 'toast' && /금액을 적어/.test(x[1])), '빈 금액이면 안 보냄');
+  X.els.hv2Num = { value: '30' }; X.g.HOME_V2.amtPut('d5');
+  is(rpc.length === 1 && said.some(x => x[0] === 'toast' && /내 고객이 아니면/.test(x[1])), '남의 고객이면 안 보냄(hdbCan)');
+  X.g.HOME_V2.won('d2'); t = sh();
+  is(/홍말순님 계약 축하해요 🎉/.test(t) && /value="20"/.test(t) && /HOME_V2\.numQ\(50\)/.test(t) && /체결일은 오늘로/.test(t), '계약 시트 — 예상 월납을 먼저 채워 둠 · 10 · 20 · 30 · 50만원');
+  X.els.hv2Num = { value: '25' }; X.g.HOME_V2.wonPut('d2');
+  const p2 = (rpc[1] || [])[1] || { p: {} };
+  is(p2.p_id === 'd2' && p2.p.stage === '계약완료' && /^\d{4}-\d\d-\d\dT/.test(p2.p.contracted_at) && p2.p.policy_sent_at === '' && p2.p.contract_premium === '250000',
+    '✓ 계약됐어요 → pipeline_save(계약완료 · 체결일 지금 · 증권 전달일 비움 · 계약 업적 250000원) — queueSave 규칙 그대로');
+  is(said.some(x => x[0] === 'local' && x[1] === 'd2' && /"stage":"계약완료"/.test(x[2]) && /"contract":250000/.test(x[2])) && said.some(x => x[0] === 'row') && X.g.CUS.db.stage === '계약완료' && said.some(x => x[0] === 'cus'),
+    '그 뒤 손에 든 줄(hdbLocal) · 다시 읽기(hmPexRow) · 열린 고객 화면(CUS.db · cusV2Paint)까지');
+  const SC = SRC.slice(SRC.indexOf('  function cardHtml('), SRC.indexOf('  var ROAD_KEY'));
+  is(/x\.k === 'db' && \/\^\(AP\|PC\|CS\)\$\/\.test\(String\(x\.tk \|\| ''\)\) && x\.id \? amtChip\(x\.id\)/.test(SC) && /String\(x\.tk \|\| ''\) === 'CS' && x\.id\) h \+= '<button type="button" class="btn ok" onclick="HOME_V2\.won/.test(SC),
+    '오늘 카드 — 만남 · 제안 · 청약 분은 이름 옆 금액 칸(없으면 「금액 ?」) · 청약 분은 「✓ 계약됐어요」');
+  X.g.HOME_V2.goal(); t = sh();
+  is(/💰 예상 월납 안 적힌 1분 — 홍갑돌님부터 적기/.test(t) && /HOME_V2\.amt\('d3'\)/.test(t), '목표 시트 — 「예상 월납 안 적힌 n분 — 누구부터」(내 것 · 만남 · 제안 · 청약 중)');
+
+  X.g.HOME_V2.jv(); t = sh();
+  is(/🛰 자비스가 챙기는 중/.test(t) && /<h2>오늘 <small>4곳/.test(t) && /jvw on">노쇼<\/span>.*홍말순님 내일 14:00 약속 — 전날 확인 카톡/.test(t) && /jvw on">증권<\/span>.*홍판서님 계약완료 — 증권 전달이 남았어요/.test(t) &&
+     /jvw on">약속 지남<\/span>.*홍갑돌님 11\/20 약속 지남/.test(t) && /jvw on">소개<\/span>.*홍판서님 소개 여쭐 차례/.test(t) && !/임꺽정/.test(t),
+    '자비스 시트 「오늘」 — 내일 약속(노쇼) · 계약완료인데 증권 전 · 약속 지남 · 소개 차례 (남의 고객 안 섬)');
+  is(/미리 세워 둔 연락 <small>2개/.test(t) && /jvw">11\/26<\/span>.*홍기동 · 할 일/.test(t) && /jvw">11\/30<\/span>.*성춘향 · 약속 15:00/.test(t) && !/홍정돌/.test(t) && !/변학도/.test(t) && /osOpenClient\(&#39;c9&#39;\)|osOpenClient\('c9'\)/.test(t) && /go\('mycal'\)/.test(t),
+    '「미리 세워 둔 연락」 — 달력의 2주 안 할 일 · 약속(내일 것은 위 노쇼로 · 연락 주기 줄은 안 섞음) · 누르면 그분 / 달력 그날');
+  is(/💌 이번 달 보낼 마디 2/.test(t) && /jvnote/.test(t), '마디 · 끊기기 쉬운 자리 설명');
+  const jl = X.g.HOME_V2 && SRC.indexOf("'오늘 끊기기 쉬운 자리 ' + n + '곳'") > 0 && SRC.indexOf("' · 미리 세운 연락 ' + J.P.length + '개'") > 0;
+  is(jl, '오늘 화면 자비스 한 줄 — 「오늘 끊기기 쉬운 자리 n곳 · 미리 세운 연락 m개」(시안 문구)');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');

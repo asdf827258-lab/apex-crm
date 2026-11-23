@@ -231,6 +231,8 @@
       '.cv2.cl2 .none{padding:18px 20px;font-size:14px;color:var(--sub2);line-height:1.5}',
       '.cv2 .btn{display:flex;align-items:center;justify-content:center;gap:6px;height:52px;border-radius:14px;font-size:16px;font-weight:700;width:100%;text-align:center;margin-top:12px}',
       '.cv2 .btn.p{background:var(--blue);color:#fff}',
+      '.cv2 .amt.miss{background:var(--warn-l);color:var(--warn)}',
+      '.cv2 .btn.ok{background:var(--green-l);color:var(--green);margin-top:10px}',
       '.cv2.cl2b{padding:0;margin:0 0 6px;max-width:none;display:flex;justify-content:flex-end}'
     ];
     var s = d.createElement('style'); s.id = 'cusV2Css'; s.textContent = C.join('\n');
@@ -272,7 +274,13 @@
     return '<div class="who"><div class="av">' + E(nameOf(c).charAt(0)) + '</div><div class="wm">' +
       '<div class="nm">' + E(nameOf(c)) + '님</div>' +
       '<div class="mt">' + (bits.length ? E(bits.join(' · ')) : '아직 아는 게 적어요') + '</div></div>' +
-      (st === '거절' ? '<span class="chip w">거절</span>' : (amt ? '<span class="amt">예상 ' + E(amt) + '</span>' : '')) + '</div>';
+      (st === '거절' ? '<span class="chip w">거절</span>' : amtBtn(d, amt)) + '</div>';
+  }
+  /* 💰 예상 금액 칸 — 누르면 오늘 화면의 그 시트(HOME_V2.amt · 판 X517 시안 openAmt). 배정 줄이 없거나 시트가 없는 판이면 예전처럼 글자만 */
+  function amtBtn(d, amt) {
+    var can = d && d.id && T(function () { return typeof g.HOME_V2.amt === 'function'; }, false);
+    if (!can) return amt ? '<span class="amt">예상 ' + E(amt) + '</span>' : '';
+    return '<button type="button" class="amt' + (amt ? '' : ' miss') + '" onclick="HOME_V2.amt(\'' + Q(d.id) + '\')">' + (amt ? '예상 ' + E(amt) : '금액 ?') + '</button>';
   }
   function qaHtml(c) {
     /* 번호 — 고객 기본 칸 → 연락처 표(ccTelOf) → 배정 줄. 「연락할 분」 카드(79539행)와 같은 차례 */
@@ -289,7 +297,13 @@
     var ci = stgI(stageOf());
     return '<div class="steps">' + STG.map(function (x, k) {
       return '<button type="button" class="' + (ci < 0 ? '' : (k < ci ? 'past' : (k === ci ? 'cur' : ''))) + '" onclick="cuwSheet(\'stage\')">' + x.t + (x.ab ? '<small>' + x.ab + '</small>' : '') + '</button>';
-    }).join('') + '</div>';
+    }).join('') + '</div>' + wonBtn();
+  }
+  /* ✓ 계약됐어요 — 청약(CS) 단계일 때만 · 오늘 화면의 그 시트(HOME_V2.won · 판 X517 시안 openClose) */
+  function wonBtn() {
+    var d = dbRow();
+    if (!d || !d.id || stageOf() !== 'CS' || !T(function () { return typeof g.HOME_V2.won === 'function'; }, false)) return '';
+    return '<button type="button" class="btn ok" onclick="HOME_V2.won(\'' + Q(d.id) + '\')">✓ 계약됐어요</button>';
   }
   /* 다음 할 일 — 요약 「지금 할 일」(cuwNowHtml)과 같은 차례: 오늘 약속 → 기한 지난 할 일 → 가까운 할 일 → 다음 약속 */
   function nextTxt(c) {
