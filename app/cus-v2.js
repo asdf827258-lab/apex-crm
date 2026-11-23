@@ -276,7 +276,7 @@
       '<div class="mt">' + (bits.length ? E(bits.join(' · ')) : '아직 아는 게 적어요') + '</div></div>' +
       (st === '거절' ? '<span class="chip w">거절</span>' : amtBtn(d, amt)) + '</div>';
   }
-  /* 💰 예상 금액 칸 — 누르면 오늘 화면의 그 시트(HOME_V2.amt · 판 X524 시안 openAmt). 배정 줄이 없거나 시트가 없는 판이면 예전처럼 글자만 */
+  /* 💰 예상 금액 칸 — 누르면 오늘 화면의 그 시트(HOME_V2.amt · 판 X526 시안 openAmt). 배정 줄이 없거나 시트가 없는 판이면 예전처럼 글자만 */
   function amtBtn(d, amt) {
     var can = d && d.id && T(function () { return typeof g.HOME_V2.amt === 'function'; }, false);
     if (!can) return amt ? '<span class="amt">예상 ' + E(amt) + '</span>' : '';
@@ -299,7 +299,7 @@
       return '<button type="button" class="' + (ci < 0 ? '' : (k < ci ? 'past' : (k === ci ? 'cur' : ''))) + '" onclick="cuwSheet(\'stage\')">' + x.t + (x.ab ? '<small>' + x.ab + '</small>' : '') + '</button>';
     }).join('') + '</div>' + wonBtn();
   }
-  /* ✓ 계약됐어요 — 청약(CS) 단계일 때만 · 오늘 화면의 그 시트(HOME_V2.won · 판 X524 시안 openClose) */
+  /* ✓ 계약됐어요 — 청약(CS) 단계일 때만 · 오늘 화면의 그 시트(HOME_V2.won · 판 X526 시안 openClose) */
   function wonBtn() {
     var d = dbRow();
     if (!d || !d.id || stageOf() !== 'CS' || !T(function () { return typeof g.HOME_V2.won === 'function'; }, false)) return '';
