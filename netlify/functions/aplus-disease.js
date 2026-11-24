@@ -54,7 +54,10 @@ function json(status, body, noStore) {
       // 같은 검색을 반복해 두드리지 않도록 잠깐 캐시한다. 자료는 하루 단위로 바뀐다.
       // ⚠ 일부만 받은 답·실패는 캐시하지 않는다 — 5분 동안 같은 빠진 답을 돌려주던 사고(2026-11-24)
       'Cache-Control': (noStore || status !== 200) ? 'no-store' : 'public, max-age=300',
-      'Vary': 'Origin'
+      'Vary': 'Origin',
+      // ⚠ 2026-11-24 — 함수가 시간 초과(502)를 내면 Netlify 가 <b>다른 검색어의 옛 답</b>을 stale 로 돌려줬다
+      //   (치아 44쪽을 물었는데 「우울」 6건이 옴). 캐시를 검색어·쪽마다 따로 두고, 답에 물은 것을 적어 받는 쪽이 맞대 보게 한다.
+      'Netlify-Vary': 'query=q|insr|prdt|page|all'
     },
     body: JSON.stringify(body)
   };
@@ -164,6 +167,7 @@ exports.handler = async function (event) {
       ok: true,
       total: total,
       count: rows.length,
+      q: params.q, insr: params.insr, prdt: params.prdt, all: wantAll,   // 받는 쪽이 「내가 물은 것의 답인가」를 맞대 본다
       page: wantAll ? 1 : page,
       pageSize: PAGE_SIZE,
       truncated: truncated,   // 상한에 걸려 뒷부분이 잘렸는지
@@ -173,6 +177,6 @@ exports.handler = async function (event) {
       rows: rows
     }, partial);
   } catch (e) {
-    return json(502, { ok: false, error: '원본 조회에 실패했습니다: ' + (e && e.message ? e.message : String(e)) });
+    return json(502, { ok: false, q: params.q, page: page, error: '원본 조회에 실패했습니다: ' + (e && e.message ? e.message : String(e)) });
   }
 };
