@@ -110,6 +110,8 @@ console.log('\n[6] 전·후 만들기 <b>안에</b> 연다 (판 X556 · 사장�
   is(/<div id="baSub" class="ba-sub"/.test(IDX) && /#baScreen \.ba-sub\.on\{display:block\}/.test(IDX),
      '본체 껍데기(#baScreen) 안에 두 칸이 열릴 자리(#baSub)가 있다');
   is(/if\(typeof baSubClose==='function'\)baSubClose\(\);/.test(IDX), '← 워크스페이스 로 나가면 안에서 연 것도 닫힌다');
+  is(/\['tabAiRep','tabPd'\]\.forEach\(function\(id\)\{var b=document\.getElementById\(id\);if\(b\)b\.style\.display=\(S\.mode==='show'&&!sub\)\?'none':'';\}\);/.test(BA),
+     '👤 고객에게 보여주기에서는 두 칸을 숨긴다 — 발표 무대 크기를 안 줄인다 (check-bafix12)');
   const OPEN = "if (baOn()) { if (id === 'frmake') window.baSubClose(); else window.baSubOpen(id); return; }";
   is(SRC.indexOf(OPEN) >= 0 && /window\.baSubOpen = function/.test(SRC),
      '껍데기가 떠 있으면 📑·🧠 는 밖으로 안 나가고 그 안에 그린다 · 없으면 예전처럼 제 화면');
