@@ -187,6 +187,12 @@ console.log('\n[6] 나');
   const HE = HV.slice(HV.indexOf('  function helloHtml('), HV.indexOf('  function helloHtml(') + 900);
   is(/class="mebtn" onclick="meV2Open\(\)" aria-label="나/.test(HE) && /typeof g\.meV2Open === 'function'/.test(HE), '새 오늘 화면 인사 줄 오른쪽 🙋 (team-v2 가 없으면 안 섬)');
   is(/sheet: sheet,/.test(HV), '새 오늘 화면이 시트를 내줌(HOME_V2.sheet)');
+  /* 판 X551 — 🌱 신입 도움말 스위치: 켜고 끄는 것은 새 오늘 화면(HOME_V2.newHelp) · 여기는 단추만 */
+  is(!/신입 도움말/.test(h), '🌱 신입 도움말 — 새 오늘 화면(HOME_V2.newOn)이 없으면 안 섬');
+  let on = false; B = team(); B.g.HOME_V2 = Object.assign(B.g.HOME_V2 || {}, { newOn: () => on }); B.g.meV2Open(); h = B.sheet.box.innerHTML;
+  is(/onclick="HOME_V2\.newHelp\(\);meV2Open\(\)"/.test(h) && /신입 도움말/.test(h) && />꺼짐<\/span>/.test(h) && h.indexOf('신입 도움말') < h.indexOf('공지사항'), '🌱 신입 도움말 — 나 시트 맨 위 · 누르면 HOME_V2.newHelp 후 다시 그림 · 꺼짐 표시');
+  on = true; B.g.meV2Open(); h = B.sheet.box.innerHTML;
+  is(/>켜짐<\/span>/.test(h), '켜져 있으면 「켜짐」');
 }
 
 console.log('\n[7] 서버 · 저장 · 옷');

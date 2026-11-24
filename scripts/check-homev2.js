@@ -18,6 +18,7 @@
      [7] ★  옛 홈은 지우지 않고 숨기기만(CSS) — 「예전 오늘 칸 펼치기」 가 있다 · 그리다 터지면 예전 화면
      [8] ★  옷은 .hv2 / #hv2Sheet 아래로만 — 앱의 .card · .btn 같은 옷을 덮지 않는다
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
+     [24] ★  판 X551 — 🌱 신입 도움말(🙋 나 스위치 · 이 기기): 영업 한 바퀴 머리 · 단계 시트 「이 칸에서 할 일 / 어떻게」 = APEX_STAGE.aimText · wayText 그대로 · 기본 꺼짐
      [23] ★  판 X549 — 자비스 시트에 사장님이 고른 메뉴 더하기(＋ 메뉴 더하기 · ✕ 빼기 · ▲ 위로) — 이 기기 · 사람마다(즐겨찾기와 같은 자리) · 일곱 · 메뉴 표 · 서랍 그대로
      [22] ★  판 X532 — 오늘 카드 🧰 이분께 맞는 도구(고객 화면 권할 것과 같은 CUS_V2.appsBy · 상황 → 단계)
      [21] ★★ 판 X531 — 다른 메뉴를 시안 PLACE 묶음으로(TA 대본 → 화법 · 교육 → 공부 · 고지 → 청약 각 한 자리) · 표에 없는 화면은 예전 묶음 그대로 · 서랍 안 건드림
@@ -173,7 +174,7 @@ is(부름.length === 1 && 부름[0] === ".from('dbs').select('id,lat,lng,next_ap
 is(sc.split(PEX_RPC).length === 2 && !/\.(insert|update|upsert|delete|rpc)\(/.test(scW) && !/supabase\./.test(sc), '서버에 쓰는 것은 「DB · 업적관리」 의 그 문(pipeline_save) 한 곳뿐 (판 X526 · 사장님이 고르신 「같은 서버 문 한 줄」)');
 is((sc.match(/fetch\('([^']+)'/g) || []).join() === "fetch('/.netlify/functions/route-km'", '부르는 주소는 지역 동선의 길찾기(route-km) 하나뿐');
 const 담기 = (sc.match(/setItem\(([^,]+),/g) || []).map(x => x.replace(/setItem\(|,/g, ''));
-is(담기.length === 3 && 담기.indexOf('KEY') >= 0 && 담기.indexOf("'apexRouteKmV1'") >= 0 && 담기.indexOf('aiKey()') >= 0, '이 기기에 담는 것은 켜짐 표시 · 길찾기 거리(지역 동선과 같은 칸) · 자비스에 더한 메뉴(판 X549 · 즐겨찾기와 같은 자리)뿐 — ' + 담기.join(', '));
+is(담기.length === 4 && 담기.indexOf('KEY') >= 0 && 담기.indexOf("'apexRouteKmV1'") >= 0 && 담기.indexOf('aiKey()') >= 0 && 담기.indexOf('newKey()') >= 0, '이 기기에 담는 것은 켜짐 표시 · 길찾기 거리(지역 동선과 같은 칸) · 자비스에 더한 메뉴(판 X549) · 신입 도움말 켜짐(판 X551 · 둘 다 즐겨찾기와 같은 자리)뿐 — ' + 담기.join(', '));
 
 console.log('\n[7] 옛 홈은 숨기기만 · 터지면 예전 화면');
 is(/hm-v2:not\(\.hm-v2-old\)>\*:not\(#hv2\)\{display:none!important\}/.test(sc), '옛 칸은 CSS 로 숨기기만(지우지 않음)');
@@ -730,6 +731,30 @@ console.log('\n[23] ➕ 자비스에 내가 고른 메뉴 더하기 (판 X549 ·
   is(/내가 더한 메뉴 <small>1<\/small>/.test(t) && !/go\('settings'\)/.test(t), '막힌 화면 · 이미 있는 일곱 · 겹친 것 · 이상한 값은 안 섬');
   is(/var AI_IDS = \['apexmap', 'assistant', 'voiceasst', 'brain', 'cs_assist', 'ins_asst', 'helpme'\];/.test(sc) && !/TABS\s*=|g\.TABS\.(push|splice)|navFavToggle|\.rpc\(|\.from\(/.test(sc.slice(sc.indexOf('  var AI_KEY'), sc.indexOf('  function jvSheet()'))),
     '일곱 · 메뉴 표(TABS) · 서랍 · 즐겨찾기는 안 건드림 · 서버 안 부름');
+}
+
+console.log('\n[24] 🌱 신입 도움말 (판 X551 · 단순화 순서 ⑤ · 사장님이 고르신 「🙋 나 시트에 스위치」)');
+{
+  const AIM = { 미접촉: '첫 통화 — 30초 안에 약속만', TA: '만날 날짜를 잡는다' }, WAY = { 미접촉: '누구인지 먼저 밝힌다. 설명은 만나서, 전화로는 날짜만', TA: '상품 설명을 전화로 하지 않는다. 날짜 두 개를 드리고 고르시게 한다' };
+  const X = box({ apex_home_v2: '1' }, '');
+  Object.assign(X.g, { navWho: () => 'u1', meV2Open: () => {}, AR: { db: [{ id: 'd1', name: '홍길동', stage: '미접촉', who: 'me' }] },
+    APEX_STAGE: { aimText: k => AIM[k] || '', wayText: k => WAY[k] || '', tools: () => [] } });
+  X.g.HOME_V2.apply(dyn(X));
+  let h = X.els.hv2.innerHTML;
+  is(X.g.HOME_V2.newOn() === false && /<small>칸을 누르면 그 단계 분들<\/small>/.test(h), '기본은 꺼짐 — 영업 한 바퀴 머리 그대로');
+  X.g.HOME_V2.stage(0); let t = X.els.hv2Sheet.innerHTML;
+  is(!/class="nwh"/.test(t) && /첫 통화 — 30초 안에 약속만 · 모두 1명/.test(t), '꺼져 있으면 단계 시트도 예전 그대로(할 일은 머리 밑 한 줄)');
+  is(X.g.HOME_V2.newHelp() === true && X.store.apex_newhelp_u1 === '1', '켜면 이 기기 · 사람마다(apex_newhelp_<navWho>)');
+  h = X.els.hv2.innerHTML;
+  is(/<small>🌱 칸을 누르면 할 일 · 하는 법<\/small>/.test(h), '켜면 영업 한 바퀴 머리가 「🌱 칸을 누르면 할 일 · 하는 법」');
+  X.g.HOME_V2.stage(0); t = X.els.hv2Sheet.innerHTML;
+  is(/class="nwh"><div><b>🌱 이 칸에서 할 일<\/b>첫 통화 — 30초 안에 약속만<\/div><div><b>어떻게<\/b>누구인지 먼저 밝힌다\. 설명은 만나서, 전화로는 날짜만<\/div><\/div>/.test(t) && /<div class="sub">모두 1명<\/div>/.test(t),
+    '단계 시트 맨 위 「🌱 이 칸에서 할 일 / 어떻게」 — 글은 APEX_STAGE.aimText · wayText 그대로(할 일은 두 번 안 적음)');
+  X.g.HOME_V2.stage(1); t = X.els.hv2Sheet.innerHTML;
+  is(/만날 날짜를 잡는다/.test(t) && /날짜 두 개를 드리고/.test(t), '칸마다 그 단계 글(연락 = TA)');
+  is(X.g.HOME_V2.newHelp() === false && !('apex_newhelp_u1' in X.store), '다시 누르면 끔(지움)');
+  const nb = sc.slice(sc.indexOf('  var NEW_KEY'), sc.indexOf('  var ROAD_KEY'));
+  is(nb.length > 50 && !/\.rpc\(|\.from\(|fetch\(/.test(nb) && !/첫 통화|날짜 두 개|설명은 만나서/.test(sc), '서버 안 부름 · 단계 글을 이 파일에 적지 않음(원본 한 곳)');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');
