@@ -201,6 +201,15 @@
       '.hv2 .qbtns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}',
       '.hv2 .qbtns button{height:44px;border-radius:12px;background:var(--line2);font-size:14px;font-weight:700;text-align:center}',
       '.hv2 .qins{display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:8px}',
+      /* 판 X529 — 시안 qCard 의 「오늘 소식」 · 「🙋 물어볼 것」 */
+      '.hv2 .qnews{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;margin-top:8px;padding:8px 12px;border-radius:12px;background:var(--bg);font-size:14px;text-align:left}',
+      '.hv2 .qnews b{flex:none;font-size:13px;font-weight:800;color:var(--blue)}',
+      '.hv2 .qnews span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);font-weight:600}',
+      '.hv2 .qnews i{flex:none;font-style:normal;font-size:13px;font-weight:700;color:var(--sub2)}',
+      '.hv2 .qask{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--warn-l)}',
+      '.hv2 .qask .q{font-size:14px;font-weight:700;color:var(--ink);line-height:1.45}',
+      '.hv2 .qask .t-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}',
+      '.hv2 .qask .t-chip{min-height:44px;height:auto;padding:0 12px;border:0;border-radius:22px;background:#fff;font-size:14px;font-weight:700;color:var(--ink);text-align:center}',
       '.hv2 .qins .ins{display:grid;grid-template-columns:1fr auto;grid-template-areas:"k a" "p p";row-gap:2px;align-items:center;gap:2px 8px;min-height:52px;padding:8px 12px;border-radius:12px;background:var(--blue-l);text-align:left}',
       '.hv2 .qins .k{grid-area:k;font-size:14px;font-weight:800;color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       '.hv2 .qins .a{grid-area:a;font-size:13px;font-weight:700;color:var(--blue);white-space:nowrap}',
@@ -288,6 +297,9 @@
       '#hv2Sheet .say .tp{font-size:13px;color:var(--sub2);line-height:1.5;margin-top:8px;white-space:normal}',
       '#hv2Sheet .say .cp{display:block;margin:8px 0 0 auto;height:40px;padding:0 14px;border-radius:10px;background:var(--blue-l);color:var(--blue);font-size:14px;font-weight:700}',
       '#hv2Sheet .pcard{background:#fff;border-radius:20px;padding:16px;margin-top:10px}',
+      '#hv2Sheet .who2{font-size:14px;color:var(--sub2);font-weight:600}',
+      '#hv2Sheet .rprod{background:#fff;border-radius:16px;padding:14px 16px;margin-top:10px;font-size:15px;font-weight:600;line-height:1.7}',
+      '#hv2Sheet .rprod small{display:block;font-size:13px;font-weight:500;color:var(--sub3);margin-top:4px}',
       '#hv2Sheet .pcard .ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px}',
       '#hv2Sheet .pcard .ph b{font-size:17px;font-weight:800}',
       '#hv2Sheet .pcard .ph span{font-size:13px;color:var(--blue);font-weight:700;flex:none}',
@@ -558,12 +570,31 @@
         h += callBtn + '<button type="button" class="btn g sm" style="margin-top:8px" onclick="hmQfin(\'' + key + '\')">✅ 이분 끝</button>';
       }
     }
+    h += newsHtml(x) + askHtml(x);
     if (x.k === 'db' && String(x.tk || '') === 'CS' && x.id) h += '<button type="button" class="btn ok" onclick="HOME_V2.won(\'' + Q(x.id) + '\')">✓ 계약됐어요</button>';
     h += '<div class="qbtns"><button type="button" onclick="HOME_V2.next(' + i + ')">다음 →</button><button type="button" onclick="hmSkip(\'' + key + '\')">오늘은 뒤로</button></div>';
     var D = doorOf(x);
     h += '<div class="qins"><button type="button" class="ins" onclick="hmDoorGo(\'' + Q(D.cat) + '\',\'' + D.band + '\')"><span class="k">🧭 ' + E(D.lab) + '</span><span class="a">상품전략기 ›</span><span class="p">' + E(D.prod) + '</span></button>' +
       '<button type="button" class="rc" onclick="hmOpen(\'' + key + '\')">이분 자세히</button></div>';
     return h + '</div>';
+  }
+  /* 📰 오늘 소식 (시안 qCard 「오늘 소식」 · 판 X529) — 이분께 맞는 기사 한 건.
+     고르는 자는 아침 미션 「이 분께 보낼 소식」 과 같은 ccNewsIdx(관심 갈래 ccFitOf × 받아 둔 뉴스 NLIVE) · 누르면 있던 ccNews(복사).
+     고객 365일 고객만(배정 DB 줄은 관심을 몰라 안 섬) · 뉴스를 아직 못 받았거나 맞는 기사가 없으면 줄을 안 세움 — 소식을 지어내지 않습니다. */
+  function cliOf(x) { return (x && x.id && x.k !== 'db' && x.k !== 'my') ? x.id : ''; }
+  function newsHtml(x) {
+    var id = cliOf(x); if (!id) return '';
+    var i = T(function () { return g.ccNewsIdx(id); }, -1); if (!(i >= 0)) return '';
+    var it = T(function () { return g.NLIVE.items[i]; }, null); if (!it || !it.t) return '';
+    return '<button type="button" class="qnews" onclick="ccNews(\'' + Q(id) + '\')"><b>📰 오늘 소식</b><span>' + E(it.t) + '</span><i>복사</i></button>';
+  }
+  /* 🙋 물어볼 것 (시안 qCard qask · 판 X529) — 「한 가지만 여쭙니다」 가 고른 한 가지(cqaAsk)와 그 답 단추(cqaAnsHtml) 그대로.
+     답은 있던 자리(cmSave · cmNextSave · 고객 칸)로만 갑니다 — 저장 코드 새로 없음. 누른 뒤 이 화면도 한 번 다시 그립니다(askAfter). */
+  function askHtml(x) {
+    var id = cliOf(x); if (!id) return '';
+    var a = T(function () { return g.cqaAsk(id); }, null); if (!a || !a.q || !a.q.ask) return '';
+    var ans = T(function () { return g.cqaAnsHtml(id, a); }, '') || '';
+    return '<div class="qask" onclick="HOME_V2.askAfter()"><div class="q">🙋 ' + E(strip(a.q.ask)) + '</div>' + ans + '</div>';
   }
   function railHtml(L) {
     var list = (L && L.list) || [], all = (L && L.all) || list.length;
@@ -589,7 +620,7 @@
     ks.sort(function (a, b) { return (by[b] || 0) - (by[a] || 0); });
     var mo = T(function () { return (+g.HM_DOOR_TOP.month.slice(5)) + '월'; }, '이번 달');
     return '<div class="insc"><div class="insc-h"><b>🧭 ' + E(mo) + ' 상품전략</b><button type="button" onclick="hmDoorGo(\'\',\'\')">상품전략기 열기 ›</button></div><div class="insc-r">' +
-      ks.map(function (k) { var p = tops[k][0]; return '<button type="button" onclick="hmDoorGo(\'' + Q(k) + '\',\'\')"><b>' + E(CATS[k].label) + '</b><span>' + E(p.nm) + '</span><em>' + (by[k] ? '오늘 볼 분 ' + by[k] + '명' : E(p.co || '')) + '</em></button>'; }).join('') +
+      ks.map(function (k) { var p = tops[k][0]; return '<button type="button" onclick="HOME_V2.insK(\'' + Q(k) + '\')"><b>' + E(CATS[k].label) + '</b><span>' + E(p.nm) + '</span><em>' + (by[k] ? '오늘 볼 분 ' + by[k] + '명' : E(p.co || '')) + '</em></button>'; }).join('') +
       '</div></div>';
   }
   /* 이번 주 — 날을 누르면 그날 일정 · 오늘이면 동선 */
@@ -932,6 +963,24 @@
     var L2 = dockItems('prod').filter(function (it) { return it.id !== 'insight'; });
     h += '<button type="button" class="btn p" onclick="HOME_V2.close();hmDoorGo(\'\',\'\')">상품전략기 전체 열기</button>' +
       (L2.length ? '<h2>연락 거리 · 비교</h2>' + dockRows(L2.slice(0, 4)) + allBtn('prod', L2.length > 4 ? L2.length + 1 : 0) : '');
+    sheet(h);
+  }
+
+  /* 🧭 상황 하나 (시안 9차 openInsK · 판 X529) — 오늘 「상품전략」 칸에서 상황을 누르면 앱 안 시트 먼저:
+     구실(MK_TALK hook) → 이번 달 상품 순위(HM_DOOR_TOP — 상품전략기와 같은 순위) → 이 이야기로 연락할 오늘 볼 분(doorOf — 위 시트와 같은 자) → 맨 아래에서 상품전략기 「🎣 문 열기」.
+     시안은 「내 고객」 전부를 세지만 라이브는 오늘 볼 분(hmSteps)만 압니다 — 그렇게 적습니다. */
+  function insKSheet(k) {
+    var tops = T(function () { return g.HM_DOOR_TOP.cats; }, null) || {}, C = T(function () { return g.MK_TALK.CATS[k]; }, null), P = tops[k] || [];
+    if (!C || !P.length) { try { g.hmDoorGo(k, ''); } catch (e) {} return; }
+    var L = (T(function () { return g.hmSteps(); }, []) || []).filter(function (x) { return doorOf(x).cat === k; });
+    var h = '<div class="who2">이번 달 상품전략</div><h1>🧭 ' + E(C.label || k) + '</h1>' +
+      (C.hook ? '<div class="say">「' + E(strip(C.hook)) + '」</div>' : '') +
+      '<div class="rprod">' + P.map(function (p, i) { return (i + 1) + '. ' + E([p.co, p.nm].filter(Boolean).join(' · ')); }).join('<br>') + '<small>설계사용 · 소식지 기준 · 상품전략기와 같은 순위</small></div>' +
+      '<h2>이 이야기로 연락할 오늘 볼 분 <small>' + L.length + '명</small></h2>' +
+      (L.length ? '<div class="pcard">' + L.map(function (x) {
+        return '<button type="button" class="mini" onclick="HOME_V2.close();hmOpen(\'' + Q(x.key) + '\')"><span class="av">' + E(String(nameOf(x)).replace(/^\s*\[[^\]]*\]\s*/, '').charAt(0) || '·') + '</span><span class="tx"><b>' + E(nameOf(x)) + '님</b><small>' + E(strip(T(function () { return g.hmWhy(x); }, '') || x.s || '')) + '</small></span><span class="ar">›</span></button>';
+      }).join('') + '</div>' : '<div class="sub">오늘 볼 분 가운데 이 상황인 분은 없어요</div>') +
+      '<button type="button" class="btn p" onclick="HOME_V2.close();hmDoorGo(\'' + Q(k) + '\',\'\')">상품전략기 「🎣 문 열기」 로 이어 보기</button>';
     sheet(h);
   }
 
@@ -1350,7 +1399,10 @@
   function copyT(t) { if (!t) return; try { if (typeof g.copyText === 'function') g.copyText(t); } catch (e) {} }
   var RES = { ok: '🤝 약속 잡음', hold: '🤔 생각해 볼게요', miss: '📵 안 받음', soft: '🙅 거절' };
   var API = {
-    on: on, set: set, use: use, chip: chip, apply: apply, paint: paint, close: close, sheet: sheet, allowed: function () { return ALLOWED; }, KEY: KEY,
+    on: on, set: set, use: use, chip: chip, apply: apply, paint: paint, close: close, sheet: sheet,
+    insK: insKSheet,
+    /* 🙋 답 단추를 누른 뒤 — 저장이 끝날 즈음 이 화면만 다시 그림(답한 물음이 빠지고 다음 것이 섬) */
+    askAfter: function () { setTimeout(function () { paint(); }, 900); }, allowed: function () { return ALLOWED; }, KEY: KEY,
     nm: function () { try { g.hmNmToggle(); } catch (e) {} paint(); },
     goal: goalSheet, goalPer: goalPer, goalPut: goalPut,
     goalQ: function (q) { var i = el('hv2GoalP'); if (i) i.value = q; goalPer(); },
