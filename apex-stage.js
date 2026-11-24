@@ -367,7 +367,7 @@ var TOOL={
  dz_guide  :{e:'🩺',t:'질병 보험가이드'},
  wallets   :{e:'🗺️',t:'8통장 진단지도'},
  fact_find :{e:'📝',t:'상담카드·팩트파인딩'},
- bojang    :{e:'📑',t:'AI 보장분석'},
+ bojang    :{e:'📑',t:'전&후 만들기 · AI 리포트'},
  compare   :{e:'📊',t:'제안서 비교'},
  onecmp    :{e:'💯',t:'한장 보험료 비교'},
  ai_prop   :{e:'🧾',t:'AI 제안서 생성'},

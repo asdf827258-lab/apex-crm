@@ -417,15 +417,15 @@ async function boot(page) {
   console.log('\n[5] 다른 데서 건너뛴 화면도 메뉴에서 바로 보인다');
   const jump = await page.evaluate(new Function(`
     var visH=${VIS_H};
-    go('bojang');
-    var b = document.querySelector('#navHost .tab-btn[data-tab="bojang"]');
+    /* 판 X553 — AI 보장분석(bojang)은 전&후 만들기 안으로 들어가 목록에서 숨었다. 같은 칸의 제안서 비교로 잰다 */ go('compare');
+    var b = document.querySelector('#navHost .tab-btn[data-tab="compare"]');
     var g = b ? b.parentElement : null;
     while (g && !(g.classList && g.classList.contains('nav-group'))) g = g.parentElement;
     return { marked: !!(b && b.classList.contains('on')), h: b ? visH(b) : 0,
              group: g ? ((g.querySelector('.ngl-t') || {}).textContent || '') : '' };
   `));
   await page.waitForTimeout(350);
-  is(jump.marked === true, 'go(\'bojang\') 하면 그 메뉴에 눌린 표시가 붙는다');
+  is(jump.marked === true, 'go(\'compare\') 하면 그 메뉴에 눌린 표시가 붙는다');
   is(jump.h > 10,
      '그 메뉴가 <b>그냥 눈에 보인다</b> — 「' + jump.group + '」 칸 안 (' + Math.round(jump.h) + 'px)');
 
