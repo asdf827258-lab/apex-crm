@@ -1663,6 +1663,118 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(exp.gone && exp.goneAll,
      '  지우면 주문서에서도 <b>빠진다</b> — 마지막 하나를 지우면 그 대목째 사라진다');
 
+  console.log('\n[26] GEO — 표 · 리스트 · <b>자주 묻는 것</b> 을 시키나 · Q&A 글자가 안 빠지나 (판 X544)');
+  /* 어느 갈래에 시키나를 아는 곳이 <b>하나</b>인가 (5번) */
+  is((SRC.match(/const GEOKIND\s*=/g) || []).length === 1, '  <b>GEOKIND</b> 표가 한 곳뿐이다 (5번)');
+  const bGeo = (() => { const i = SRC.indexOf('function geoOf('); const j = SRC.indexOf('\n}', i);
+                        return i < 0 ? '' : SRC.slice(i, j); })();
+  is(/tableCount\(/.test(bGeo) && /pickQna\(/.test(bGeo),
+     '  눈금이 <b>떠 오는 자에게 묻는다</b> — tableCount · pickQna (따로 세면 한 물음에 두 답 · 5번)');
+
+  const geo = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.comply = null; await comply();
+    S.perweek = 7; plan();
+    const i = todayAt();
+    const bare = t => String(t).replace(/<\/?b>/g, '');
+    const set = (k, seed) => { S.rows[i].kind = k; S.rows[i].seed = seed; S.rows[i].out = ''; };
+
+    /* ① 주문서가 셋을 시킨다 — 다만 <b>갈래를 가려서</b> */
+    set('ask', { kind:'ask', title:'질문', src:'상담에서 받은 질문' });
+    const u = bare(userPrompt(S.rows[i]));
+    out.tbl  = /비교표를 반드시 하나/.test(u);
+    out.list = /「- 」 로 시작하는 줄/.test(u) && /문단으로 풀어 쓰면 집어 갈 수 없다/.test(u);
+    out.qna  = /## 자주 묻는 것/.test(u) && /묻고 답하는 짝 셋/.test(u);
+    out.half = /Q 만 적고 답을 비우지 않는다/.test(u);
+    out.safe = /근거\] 에 없는 숫자·한도·나이·개월 수를 적지 않는다/.test(u)
+            && /요건 충족 시/.test(u) && /심사 결과에 따릅니다/.test(u);
+    /* ★ 「오늘 있었던 일」 은 <b>짧게 끝내라</b>고 시킨 갈래다 — 여기에 Q&A 를
+       시키면 채우려고 지어낸다. 막아 둔 그 자리로 되돌아간다 (1번). */
+    set('day', { kind:'day', title:'오늘 있었던 일', src:'오늘 있었던 일 — 적어 두신 것' });
+    out.dayNo = !/## 자주 묻는 것/.test(bare(userPrompt(S.rows[i])));
+    set('culture', { kind:'culture', title:'문화', src:'우리 문화 — 적어 두신 것' });
+    out.cultNo = !/## 자주 묻는 것/.test(bare(userPrompt(S.rows[i])));
+
+    /* ② 짝만 센다 — 답 없는 Q 도, 토막 밖 Q 도 안 센다 */
+    const QA = '\n## 자주 묻는 것\n'
+      + '**Q. 서류가 반려되면 다시 해야 하나요?**\nA. 모자란 것만 더 내시면 됩니다.\n'
+      + '**Q. 진단비와 통원비를 같이 받나요?**\nA. 담보에 따라 다릅니다. 보장 내용은 심사 결과에 따릅니다.\n'
+      + '**Q. 답이 없는 물음입니다?**\n'
+      + '\n## 마무리\nQ. 토막 밖 물음입니다?\nA. 이것은 안 세야 합니다.\n';
+    out.pairs = pickQna({ out:'## 본문\n글\n' + QA }).length;
+    out.pairQ = (pickQna({ out:'## 본문\n글\n' + QA })[0] || {}).q;
+    out.none  = pickQna({ out:'## 본문\n자주 묻는 것이 없는 글입니다.\n' }).length;
+    /* ★ 머리글 없이 본문에 Q·A 꼴이 섞여 있는 글 — 그것은 <b>자주 묻는 것 토막이 아니다</b>.
+       머리글 요건을 빼 보니 아무 자도 안 울어서 이 자를 더했습니다 (8번). */
+    out.noHead = pickQna({ out:'## 본문\nQ. 이건 본문 속 물음입니다?\nA. 본문 속 답입니다.\n' }).length;
+
+    /* ③ 카드 — 그려지나 · 없으면 못 그린다고 하나 */
+    set('ask', { kind:'ask', title:'질문', src:'상담에서 받은 질문' });
+    S.rows[i].out = '## 본문\n글입니다.\n' + QA;
+    const r = build('qna', S.rows[i]);
+    out.card = !r.err && r.h > 300 && /서류가 반려되면/.test(r.text);
+    out.alt  = !!r.alt && r.alt.indexOf('서류가 반려되면') >= 0;
+    S.rows[i].out = '## 본문\n자주 묻는 것이 없는 글입니다.\n';
+    const r2 = build('qna', S.rows[i]);
+    out.noCard = !!r2.err && /묻기만 하고 답이 없으면 안 그립니다/.test(r2.err);
+    out.inArt = ['econ','news','ask','ours'].every(k => KINDS[k].art.indexOf('qna') >= 0)
+             && ['day','culture','growth'].every(k => KINDS[k].art.indexOf('qna') < 0);
+
+    /* ④ ★★ 카드로 뽑아도 <b>글자가 안 빠진다</b> — 네이버도 AI 도 그림 속 글자는 못 읽는다 */
+    const full = '## 본문\n글입니다.\n\n| 가 | 나 |\n|---|---|\n| 하나 | 둘 |\n' + QA;
+    out.srcEmpty = artSource('qna', full) === '';
+    const cut = cutTaken(full, { '자주 묻는 것 카드':'x', '비교표 카드':'x' });
+    out.kept = /서류가 반려되면/.test(cut) && /모자란 것만 더 내시면/.test(cut);
+
+    /* ⑤ 눈금 — 세고, 모자라면 모자란다고 하고, <b>막지는 않는다</b> */
+    S.rows[i].out = full;
+    S.rows[i].guard = guard(full, 'ask', S.rows[i]);
+    const g = geoOf(i);
+    out.cnt = [g.tbl, g.qna];
+    S.rows[i].out = full.replace(/\n- [^\n]*/g, '') + '\n- 하나\n- 둘\n- 셋\n';
+    out.list3 = geoOf(i).list === 3;
+    await show(i);
+    const v = document.getElementById('view').innerText;
+    out.shown = /정리된 글/.test(v) && /셋 다 있습니다/.test(v);
+    out.why   = /SEO 가 아니라 GEO/.test(v) && /그림 속 글자는 못 읽습니다/.test(v);
+    /* 모자란 글 — 적어 주되 <b>복사 단추는 그대로</b> 선다 */
+    const thin = '## 본문\n표도 리스트도 자주 묻는 것도 없습니다. 보장 내용은 심사 결과에 따릅니다.\n';
+    S.rows[i].out = thin; S.rows[i].guard = guard(thin, 'ask', S.rows[i]);
+    await show(i);
+    const v2 = document.getElementById('view').innerText;
+    out.thinSay = /모자란 것이 있습니다/.test(v2) && /막지는 않습니다/.test(v2);
+    out.thinOk  = S.rows[i].guard.ok === true && !!document.getElementById('cpBtn');
+    /* ⑥ 안 재는 갈래에는 <b>아예 안 세운다</b> — 없는 눈금을 띄우지 않는다 (8번) */
+    S.rows[i].kind = 'day';
+    S.rows[i].seed = { kind:'day', title:'오늘 있었던 일', src:'오늘 있었던 일' };
+    S.rows[i].out = thin; S.rows[i].guard = guard(thin, 'day', S.rows[i]);
+    await show(i);
+    out.dayNoBox = !/정리된 글/.test(document.getElementById('view').innerText);
+    return out;
+  });
+  is(geo.tbl && geo.list, '  주문서가 <b>표</b>와 <b>「- 」 리스트</b>를 시킨다');
+  is(geo.qna, '  주문서가 <b>「## 자주 묻는 것」 짝 셋</b>을 시킨다 — 꼴까지 적어 준다');
+  is(geo.half, '  <b>Q 만 적고 답을 비우지 말라</b>고 시킨다 — 반쪽은 사람도 AI 도 못 읽는다');
+  is(geo.safe, '  ★ 답에 <b>근거 없는 숫자·한도·나이를 적지 말라</b>고, 세금은 「요건 충족 시」 로 시킨다 (1번·2번)');
+  is(geo.dayNo && geo.cultNo,
+     '  ★ <b>「오늘 있었던 일」·문화 갈래에는 안 시킨다</b> — 짧게 끝내라고 시킨 글에 Q&A 를 붙이면 채우려고 지어낸다 (1번)');
+  is(geo.pairs === 2 && /서류가 반려되면/.test(geo.pairQ || ''),
+     '  <b>묻고 답한 짝만</b> 센다 — 답 없는 Q 도, 토막 밖 Q 도 안 센다 (' + geo.pairs + '짝)');
+  is(geo.none === 0, '  자주 묻는 것이 없으면 <b>0짝</b> — 아무 문장이나 Q 로 읽지 않는다 (8번)');
+  is(geo.noHead === 0,
+     '  ★ <b>「## 자주 묻는 것」 머리글이 있어야</b> 센다 — 본문에 섞인 Q·A 꼴은 그 토막이 아니다 (8번)');
+  is(geo.card && geo.alt, '  카드가 <b>그려지고</b> 대체텍스트에 물음이 들어간다');
+  is(geo.noCard, '  짝이 없으면 <b>왜 못 그리는지</b> 적는다 — 빈 카드를 내놓지 않는다');
+  is(geo.inArt, '  Q&A 카드가 <b>네 갈래에만</b> 붙어 있다 (econ·news·ask·ours)');
+  is(geo.srcEmpty && geo.kept,
+     '  ★★ 카드로 뽑아도 <b>글자는 그대로 남는다</b> — 네이버도 AI 도 그림 속 글자는 못 읽는다 (GEO)');
+  is(geo.cnt[0] === 1 && geo.cnt[1] === 2 && geo.list3,
+     '  눈금이 표 ' + geo.cnt[0] + '개 · 짝 ' + geo.cnt[1] + '개 · 리스트 3줄을 <b>맞게</b> 센다');
+  is(geo.shown && geo.why, '  화면에 <b>셋을 나란히</b> 적고 왜 그러는지도 적는다');
+  is(geo.thinSay && geo.thinOk,
+     '  ★ 모자라면 모자란다고 적되 <b>막지는 않는다</b> — 심의가 아니라 모양이다 (6번·복사 단추가 그대로 선다)');
+  is(geo.dayNoBox, '  <b>안 재는 갈래에는 눈금을 안 세운다</b> — 없는 자를 띄우지 않는다 (8번)');
+
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();

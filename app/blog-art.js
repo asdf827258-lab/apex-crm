@@ -241,6 +241,28 @@ function pickQuote(row){
   const q = m ? m[1].trim() : '';
   return (q.length >= 10 && q.length <= 90) ? { q, src: m[0] } : { q:'', src:'' };
 }
+/* 「자주 묻는 것」 토막에서 <b>묻고 답한 짝</b>만 가져온다.
+   ★ 묻기만 하고 답이 없는 줄은 <b>안 센다</b> — 반쪽은 사람도 AI 도 못 읽는다.
+   ★★ 떠 와도 <b>글에서 빼지 않는다</b>(artSource 가 빈 글을 돌려준다). 표는 폰에서
+     잘려 그림으로 한 번 더 주고 글자도 남기는데, Q&A 는 <b>글자가 전부</b>다 —
+     네이버도 AI 도 그림 속 글자는 못 읽는다. 그림은 캡처해 가시라고 덧붙이는 것뿐이다. */
+const QNAHEAD = /^#{2,3}[^\n]*(자주\s*묻|자주\s*하시는\s*질문|Q\s*&\s*A|묻고\s*답)/m;
+function pickQna(row){
+  const t = (row && row.out) || '';
+  const m = t.match(QNAHEAD);
+  if (!m) return [];
+  const rest = t.slice(m.index + m[0].length);
+  const end = rest.search(/^#{1,3}\s/m);
+  const clean = x => x.replace(/\*\*/g, '').replace(/^[-*>\s]+/, '').trim();
+  const out = []; let q = '';
+  (end < 0 ? rest : rest.slice(0, end)).split('\n').forEach(l => {
+    const c = clean(l);
+    const mq = c.match(/^Q[.):\s]\s*(.+)$/i), ma = c.match(/^A[.):\s]\s*(.+)$/i);
+    if (mq){ q = mq[1].trim(); return; }
+    if (ma && q){ out.push({ q, a: ma[1].trim() }); q = ''; }
+  });
+  return out.slice(0, 4);
+}
 /* 카드가 <b>초안에서 떠 온</b> 토막을 돌려준다. 떠 오는 자가 여기 하나뿐이니
    (pickTable·pickQuote), 무엇을 떠 왔는지도 여기서만 답한다 (CLAUDE.md 5).
    실제로 붙여넣어 보니 같은 표가 <b>글로 한 번, 그림으로 또 한 번</b> 나왔다. */
@@ -248,6 +270,8 @@ function artSource(id, text){
   const row = { out: text };
   if (id === 'table'){ const d = pickTable(row); return d ? d.src : ''; }
   if (id === 'quote') return pickQuote(row).src;
+  /* ★ Q&A 는 <b>떠 와도 안 뺀다</b> — 빼면 네이버·AI 가 읽을 글자가 사라진다 (GEO) */
+  if (id === 'qna') return '';
   return '';
 }
 /* 초안에는 사장님이 보시는 «작업란»이 섞여 있다 — 제목 후보·메타 설명 같은 것.
@@ -476,6 +500,33 @@ const ART = {
         '<rect x="64" y="88" width="10" height="'+(H-232)+'" rx="5" fill="'+c+'"/>'+
         tx(ls, 116, 88 + (H - 232 - ls.length * lh) / 2 + size, size, lh, SV.ink, 800)+
         foot(W, H, c)) };
+  }},
+
+ qna:{ t:'자주 묻는 것 카드', need:'draft', scan:true,
+  why:'초안의 <b>자주 묻는 것</b> 짝을 그대로 그린 카드입니다. ★ 글에서는 <b>빼지 않습니다</b> — 네이버와 AI 가 읽어 가는 것은 그림이 아니라 글자입니다.',
+  make(row){
+    const qs = pickQna(row);
+    if (!qs.length) return { err:'초안에 「자주 묻는 것」 짝이 없습니다 — Q 와 A 가 짝으로 서 있어야 그립니다. 묻기만 하고 답이 없으면 안 그립니다.' };
+    const W = SV.w, pad = 64, iw = W - pad * 2, c = kcolor(row);
+    const per = fits(iw - 90, TS.body, 0);
+    const items = qs.map(x => {
+      const ql = wrap('Q. ' + x.q, per), al = wrap('A. ' + x.a, per);
+      return { ql, al, h: 32 + ql.length * 46 + 14 + al.length * 44 + 32 };
+    });
+    const H = 190 + items.reduce((a, x) => a + x.h + 22, 0) + 48;
+    let b = tx(['자주 묻는 것'], pad, 112, TS.h, 0, SV.ink, 800), y = 172;
+    items.forEach(x => {
+      b += '<rect x="'+pad+'" y="'+y+'" width="'+iw+'" height="'+x.h+'" rx="'+RAD+'" fill="'+SV.soft+'"/>'+
+           '<rect x="'+pad+'" y="'+y+'" width="8" height="'+x.h+'" rx="4" fill="'+c+'"/>';
+      let ty = y + 32 + TS.body;
+      b += tx(x.ql, pad + 34, ty, TS.body, 46, SV.ink, 800);
+      ty += x.ql.length * 46 + 14;
+      b += tx(x.al, pad + 34, ty, TS.body, 44, SV.sub, 600);
+      y += x.h + 22;
+    });
+    return { w:W, h:H, per, text: qs.map(x => x.q + ' ' + x.a).join(' '),
+      alt: qs.map(x => x.q).join(' / ') + ' 에 답한 자주 묻는 것 카드',
+      svg: svg(W, H, b + foot(W, H, c)) };
   }},
 
  toc:{ t:'이 글에서 다루는 것', need:'draft', scan:true,
