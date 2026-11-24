@@ -136,6 +136,24 @@ const 씨 = [
     console.log('\n✗ ' + 깬 + '/' + 본 + ' 깨짐'); process.exit(1);
   }
 
+  /* ★★ 제일 먼저 — <b>씨가 거짓말을 못 하게</b> 합니다.
+     check-mstone 이 초록인 채로 샌 까닭이 바로 이것입니다: 그 자는
+     {title, link, source} 를 심고 있었고 앱도 그 이름을 읽고 있어
+     <b>자와 버그가 서로 맞아떨어졌습니다</b>. 자가 쓰는 칸 이름을
+     <b>앱이 실제로 담는 자리(nlPull)</b> 와 맞대어 봅니다 (8번).      */
+  head('[0] 자가 심는 칸 이름이 앱이 담는 그대로인가 — 씨가 거짓말을 못 하게');
+  const SRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  /* <b>nlPull 안</b>에서만 찾습니다 — 파일에 list.push 는 여러 곳에 있습니다 */
+  const i0 = SRC.indexOf('\nfunction nlPull(');
+  const i1 = i0 < 0 ? -1 : SRC.indexOf('\nfunction ', i0 + 1);
+  const 몸 = i0 < 0 ? '' : SRC.slice(i0, i1 < 0 ? i0 + 6000 : i1);
+  const m = 몸.match(/list\.push\(\{([^}]*)\}\)/);
+  const 앱칸 = m ? m[1].split(',').map(x => x.split(':')[0].trim()).filter(Boolean).sort() : [];
+  const 씨칸 = Object.keys(씨[0]).sort();
+  is(앱칸.length > 0, '  앱이 기사를 담는 자리를 찾았다 (nlPull) — [' + 앱칸.join(' ') + ']');
+  is(앱칸.join(',') === 씨칸.join(','),
+    '  ★★ 씨의 칸 이름이 <b>앱이 담는 그대로</b>다 — 씨 [' + 씨칸.join(' ') + ']');
+
   head('[1] 칸에 심은 기사 그대로 서나');
   is(r.NLIVE === 씨.length, '  기사 ' + 씨.length + '줄이 들어갔다 (' + r.NLIVE + ')');
   is(r.줄 >= 1, '  계약 마디 줄이 섰다 (' + r.줄 + ')');

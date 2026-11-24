@@ -176,10 +176,15 @@ const clearOvl = pg => pg.evaluate(sel => {
 
   /* 진짜로 받아 둔 기사가 있으면 — <b>그대로</b> 옮긴다 */
   await pg.evaluate(() => {
-    NLIVE.items = [{ title: '실손보험 청구 절차 간소화 시행', link: 'https://example.com/a1',
-                     source: '보험신문', d: '2026-09-08', cats: ['ins'] },
-                   { title: '기준금리 동결 결정', link: 'https://example.com/a2',
-                     source: '경제일보', d: '2026-09-07', cats: ['econ'] }];
+    /* ★★ 판 X542 — 칸 이름을 <b>nlPull 이 담는 그대로</b> 씁니다.
+       ⚠ 여태 이 자리에 {title, link, source} 를 심고 있었습니다. 앱이 실제로
+         받는 꼴은 {t, u, s, d, cats} 입니다 — <b>자가 버그와 똑같이 틀린 꼴</b>로
+         먹이고 있었으니 둘이 서로 맞아떨어져 <b>둘 다 초록</b>이었습니다.
+         라이브에서 눈으로 보고서야 알았습니다 (8번). */
+    NLIVE.items = [{ t: '실손보험 청구 절차 간소화 시행', u: 'https://example.com/a1',
+                     s: '보험신문', d: '2026-09-08', cats: ['ins'] },
+                   { t: '기준금리 동결 결정', u: 'https://example.com/a2',
+                     s: '경제일보', d: '2026-09-07', cats: ['econ'] }];
   });
   card = await pg.evaluate(() => mstCardHtml());
   is(/실손보험 청구 절차 간소화 시행/.test(card), '<b>제목을 그대로</b> 옮긴다');
