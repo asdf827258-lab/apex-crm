@@ -284,6 +284,15 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
 
   const view = await page.evaluate(() => {
     const agent = tabsFor('both', 'agent'), client = tabsFor('both', 'client');
+    /* ★★ 고객에게 가면 안 되는 탭을 <b>이름으로</b> 적어 둡니다.
+       처음엔 수(17·9)를 박아 두었는데, 탭이 하나 늘 때마다 애먼 빨간불이
+       켜졌습니다(판 X534). 그래서 규칙으로 바꿨더니 이번에는 <b>risk 를
+       AGENT_TABS 에서 빼도 안 울었습니다</b> — 규칙이 「더 선 것은 전부
+       AGENT_TABS 다」 였으니, 빼면 애초에 더 서지를 않아 조용했습니다.
+       안 울리는 알람은 알람이 아닙니다 (8번). 이름으로 적습니다.          */
+    const MUST = ['sales', 'how', 'fit', 'rel', 'talk', 'ins', 'risk', 'brief', 'show'];
+    const only = agent.filter(k => client.indexOf(k) < 0);
+    const leaked = MUST.filter(k => client.indexOf(k) >= 0);
     setView('client');
     const shown = Array.prototype.map.call(document.querySelectorAll('.tabs button'), b => b.textContent);
     const re = /(리스크 진단|거절이 오는 자리|닫히는 순간|민원|불완전판매|중도 이탈|이대로 하면|하면 안 되는 말|이렇게 바꿔라|피할 것|클로징|나만 보는|설계사 전용|고객에게 (말씀|보여))/;
@@ -300,9 +309,16 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
     setView('agent');
     return { agent: agent.length, client: client.length, shown: shown.length, leak: leak,
       bless: /덕담|🌾/.test(iceTxt), noScript: !/포문|하면 안 되는 말/.test(iceTxt),
-      meHidden: meHidden, riskBlocked: riskBlocked };
+      meHidden: meHidden, riskBlocked: riskBlocked,
+      only: only, onlyAllAgent: only.every(k => !!AGENT_TABS[k]),
+      clientClean: client.every(k => !AGENT_TABS[k]), leaked: leaked };
   });
-  ok(view.agent === 17 && view.client === 9, '내 눈용 ' + view.agent + '탭 · 고객 화면 ' + view.client + '탭으로 갈린다');
+  ok(view.leaked.length === 0,
+    '★★ 설계사 전용 아홉 탭이 <b>고객 화면에 하나도 없다</b>' +
+    (view.leaked.length ? ' — 샌 것: ' + view.leaked.join(' ') : ''));
+  ok(view.agent > view.client && view.client >= 7 && view.onlyAllAgent && view.clientClean,
+    '내 눈용 ' + view.agent + '탭 · 고객 화면 ' + view.client + '탭으로 갈린다 — 더 선 ' +
+    view.only.length + '탭이 전부 AGENT_TABS 에 적힌 것이다 (' + view.only.join(' ') + ')');
   ok(view.leak === '', '고객 화면에 설계사용 문구가 하나도 새어 나가지 않는다' + (view.leak ? ' — ' + view.leak : ''));
   ok(view.bless && view.noScript, '고객 화면 아이스브레이킹에는 덕담만 남고 화법 대본은 빠진다');
   ok(view.meHidden, '고객 화면에서는 내 카드 버튼도 감춘다');
