@@ -18,6 +18,9 @@
      [7] ★  옛 홈은 지우지 않고 숨기기만(CSS) — 「예전 오늘 칸 펼치기」 가 있다 · 그리다 터지면 예전 화면
      [8] ★  옷은 .hv2 / #hv2Sheet 아래로만 — 앱의 .card · .btn 같은 옷을 덮지 않는다
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
+     [27] ★★ 판 X558 — 📍 카드에 지금 상황(cmSave 그대로) · ⚙ 상황별 추천 메뉴 더하기 = 대표 · 관리자만(osIsAppAdmin) · 저장 osCfgSet('care_apps') → CUS_V2.appsBy 한 곳
+     [25] ★★ 판 X555 — 🤝 만났어요(시안 jMeet): 오늘 약속 카드 · 이름+시각이 딱 한 분일 때만 · 단계는 있던 hdbTo(id,'PC') 하나 · 감사 카톡 복사 · 이분 끝(hmQfin)
+     [26] ★★ 판 X557 — 🎯 오늘의 미션 다섯(인사 밑 한 판): 끝났나 = 실행 체크판(hmMsCk) · 오늘 약속 카드 그대로 · 이름은 CK_ITEMS 한 곳 · ✓ 했어요 = hmMsDid
      [24] ★  판 X551 — 🌱 신입 도움말(🙋 나 스위치 · 이 기기): 영업 한 바퀴 머리 · 단계 시트 「이 칸에서 할 일 / 어떻게」 = APEX_STAGE.aimText · wayText 그대로 · 기본 꺼짐
      [23] ★  판 X549 — 자비스 시트에 사장님이 고른 메뉴 더하기(＋ 메뉴 더하기 · ✕ 빼기 · ▲ 위로) — 이 기기 · 사람마다(즐겨찾기와 같은 자리) · 일곱 · 메뉴 표 · 서랍 그대로
      [22] ★  판 X532 — 오늘 카드 🧰 이분께 맞는 도구(고객 화면 권할 것과 같은 CUS_V2.appsBy · 상황 → 단계)
@@ -589,7 +592,7 @@ console.log('\n[19] 📰 오늘 소식 · 🙋 물어볼 것 · 🧭 상황 시�
   is(/hmOpen\('next:c2:'\)/.test(t) && /hmOpen\('db:d1:AP'\)/.test(t) && !/touch:c1:/.test(t) && /class="pcard"><button type="button" class="mini"/.test(t), '오늘 볼 분 — 그 상황인 분만(doorOf · 위 상품전략 시트와 같은 자) · 누르면 이분 한 장');
   X.g.HOME_V2.insK('nope');
   is(said.some(x => x[0] === 'door' && x[1] === 'nope'), '상품이 없는 상황이면 예전처럼 상품전략기로');
-  const ws = sc.slice(sc.indexOf('  function newsHtml('), sc.indexOf('  function railHtml('));
+  const ws = sc.slice(sc.indexOf('  function newsHtml('), sc.indexOf('  function isBoss(')) + sc.slice(sc.indexOf('  function toolsOf('), sc.indexOf('  function railHtml('));   /* 판 X558 — 그 사이 📍 지금 상황 · ⚙ 추천 고치기는 있던 cmSave · osCfgSet 을 부름([27] 이 봄) */
   is(!/setItem|cmSave|\.rpc\(|\.from\(|nlLoad|hmIgSet/.test(ws), '두 줄은 읽기만 — 저장 · 뉴스 받아 오기를 새로 안 부름(답은 cqa 단추가 있던 자리로)');
 }
 
@@ -690,7 +693,7 @@ console.log('\n[22] 🧰 오늘 카드 「이분께 맞는 도구」 (판 X532 �
   const c0 = card(0), c1 = card(1), c2 = card(2), c3 = card(3);
   is(/class="qtools"><div class="lb">🧰 이분께 맞는 도구<small>「결혼 준비」 · 첫 만남 단계<\/small>/.test(c0) && c0.indexOf('8가지 통장 진단') < c0.indexOf('재무설계 계산기') && c0.indexOf('재무설계 계산기') < c0.indexOf('팩트파인딩') && /onclick="go\('wallets'\)"/.test(c0),
     '고객 카드 — 상황(결혼 준비) 도구 먼저 → 그분 배정 줄 단계(첫 만남) 도구 · 까닭 꼬리표 · 누르면 그 화면');
-  is((c0.match(/<button type="button" onclick="go\('/g) || []).length === 3 && !/상담 덱/.test(c0), '세 개까지 · 열 수 없는 화면(상담 덱)은 안 섬');
+  is((c0.match(/<button type="button" onclick="go\('/g) || []).length === 3 && /📋 추천 메뉴 4개 모두 보기/.test(c0) && !/상담 덱/.test(c0), '카드엔 맨 앞 셋만 바로 · 넷째부터는 「📋 추천 메뉴 n개 모두 보기」(판 X558) · 열 수 없는 화면(상담 덱)은 안 섬');
   is(/🧰 이분께 맞는 도구<small>첫 만남 단계<\/small>/.test(c1) && /팩트파인딩/.test(c1) && /보장분석/.test(c1), '배정 DB 카드 — 그 줄 단계(AP) 도구(상황은 모름)');
   is(!/qtools/.test(c2), '상황도 단계도 모르면 줄째 안 섬(지어내지 않음)');
   is(!/qtools/.test(c3), '내 일정 카드엔 안 섬');
@@ -755,6 +758,131 @@ console.log('\n[24] 🌱 신입 도움말 (판 X551 · 단순화 순서 ⑤ · �
   is(X.g.HOME_V2.newHelp() === false && !('apex_newhelp_u1' in X.store), '다시 누르면 끔(지움)');
   const nb = sc.slice(sc.indexOf('  var NEW_KEY'), sc.indexOf('  var ROAD_KEY'));
   is(nb.length > 50 && !/\.rpc\(|\.from\(|fetch\(/.test(nb) && !/첫 통화|날짜 두 개|설명은 만나서/.test(sc), '서버 안 부름 · 단계 글을 이 파일에 적지 않음(원본 한 곳)');
+}
+
+console.log('\n[25] 🤝 만났어요 (판 X555 · 시안 jMeet · 3차 점검표 ⑩ · 사장님 말씀 「10번 해」)');
+{
+  const mk = (appts, db, can) => {
+    const rows = [{ k: 'appt', t: '홍길동', s: '14:00 · 순천', key: 'appt:a1' }, { k: 'db', tk: 'AP', id: 'd9', t: '홍길순', s: '만남', key: 'db:d9:AP' }];
+    const X = box({ apex_home_v2: '1' }, '', { rows });
+    const said = [];
+    Object.assign(X.g, { meV2Open: () => {}, hmRtAppts: () => appts, hdbRow: id => db.filter(r => r.id === id)[0] || null, hdbCan: () => can !== false,
+      hdbTo: (id, to) => said.push(['to', id, to]), hmQfin: k => said.push(['fin', k]), copyText: t => said.push(['copy', t]) });
+    X.g.HOME_V2.apply(dyn(X));
+    return { X, said };
+  };
+  const one = [{ id: 'd1', nm: '홍길동', hm: '14:00' }];
+  let A = mk(one, [{ id: 'd1', stage: 'AP' }]);
+  let h = A.X.els.hv2.innerHTML;
+  const c0 = h.slice(h.indexOf('data-i="0"'), h.indexOf('data-i="1"')), c1 = h.slice(h.indexOf('data-i="1"'));
+  is(/onclick="HOME_V2\.met\('appt:a1'\)">🤝 만났어요<\/button>/.test(c0) && !/만났어요/.test(c1), '오늘 약속 카드에만 「🤝 만났어요」 (배정 DB 카드엔 안 섬)');
+  is(!/만났어요/.test(mk([{ id: 'd1', nm: '홍길동', hm: '14:00' }, { id: 'd2', nm: '홍길동', hm: '14:00' }], [{ id: 'd1', stage: 'AP' }, { id: 'd2', stage: 'AP' }]).X.els.hv2.innerHTML) &&
+     !/만났어요/.test(mk([{ id: 'd1', nm: '홍길동', hm: '15:00' }], [{ id: 'd1', stage: 'AP' }]).X.els.hv2.innerHTML) &&
+     !/만났어요/.test(mk([], []).X.els.hv2.innerHTML), '이름 + 시각이 딱 한 분일 때만 — 같은 이름 둘 · 시각 다름 · 없음이면 안 섬(엉뚱한 분을 안 넘김)');
+  A.X.g.HOME_V2.met('appt:a1'); let t = A.X.els.hv2Sheet.innerHTML;
+  is(/<h1>🤝 만났어요<\/h1>/.test(t) && /AP → PC\(제안\)/.test(t) && /\(thanks·kakao\)/.test(t) && /metGo\('appt:a1',1\)">PC로 넘기고 감사 카톡 복사/.test(t) && /metGo\('appt:a1',0\)">단계는 그대로/.test(t),
+    '시트 — 단계 AP → PC(제안) · 감사 카톡(TA 스크립트 thanks) · 넘기기 / 그대로 두 단추');
+  A.X.g.HOME_V2.metGo('appt:a1', 1);
+  is(JSON.stringify(A.said) === JSON.stringify([['copy', '고객님, 안녕하세요 (thanks·kakao)'], ['to', 'd1', 'PC'], ['fin', 'appt:a1']]), '넘기기 = 감사 카톡 복사 → 있던 hdbTo(id, \'PC\') → 이분 끝(hmQfin) — ' + JSON.stringify(A.said));
+  A = mk(one, [{ id: 'd1', stage: 'TA' }]); A.X.g.HOME_V2.metGo('appt:a1', 0);
+  is(!A.said.some(x => x[0] === 'to') && A.said.some(x => x[0] === 'fin'), '「단계는 그대로」 면 단계를 안 건드림');
+  A = mk(one, [{ id: 'd1', stage: 'PC' }]); A.X.g.HOME_V2.met('appt:a1'); t = A.X.els.hv2Sheet.innerHTML; A.X.g.HOME_V2.metGo('appt:a1', 1);
+  is(/이미 「PC」 단계라/.test(t) && !/PC로 넘기고/.test(t) && !A.said.some(x => x[0] === 'to'), '이미 제안(PC) 뒤면 단계는 그대로 · 감사 카톡만');
+  A = mk(one, [{ id: 'd1', stage: 'AP' }], false); A.X.g.HOME_V2.met('appt:a1'); t = A.X.els.hv2Sheet.innerHTML; A.X.g.HOME_V2.metGo('appt:a1', 1);
+  is(/내 고객이 아니라/.test(t) && !A.said.some(x => x[0] === 'to'), '남의 고객이면 단계 단추를 안 냄(hdbCan)');
+  const ms = sc.slice(sc.indexOf('  function metRow('), sc.indexOf('  function cardHtml('));
+  is(ms.length > 100 && (ms.match(/g\.hdbTo\(/g) || []).length === 1 && !/\.rpc\(|\.from\(|setItem|fetch\(/.test(ms), '저장은 있던 hdbTo 한 곳 — 서버 · 이 기기에 새로 쓰지 않음');
+}
+
+console.log('\n[26] 🎯 오늘의 미션 (판 X557 · 사장님 말씀 「오늘 해야 될 미션을 딱 보여주고 그 미션을 해결해나가는게 오늘이야」 → 「제안대로 세워」)');
+{
+  const CKI = [['d4', '전화 10통 (하루 목표)', '안 받아도 카톡으로 이어갑니다', 'DB 통합 CRM', 'crm'], ['d5', '카톡 10건 (하루 목표)', '통화 여부와 상관없이', '', ''],
+    ['d6', '통화 결과 입력', 'TA완료·부재·거절·상담', 'DB 통합 CRM', 'crm'], ['d8', '만난 사람 팩트파인딩 저장', '소득·지출', '상담카드', 'fact_find'],
+    ['d9', '내일 상담 자료 준비', '증권 받았으면 판독까지', 'AI 제안서', 'ai_prop'], ['d10', 'SNS 1건', '주 4회', '', '']];
+  const mk = (ck, rows, doneKeys) => {
+    const X = box({ apex_home_v2: '1' }, '', rows ? { rows } : {});
+    const said = [];
+    Object.assign(X.g, { meV2Open: () => {}, CK_ITEMS: { day: CKI }, hmMsCk: () => ck, hmIsDone: k => (doneKeys || []).indexOf(k) >= 0, hmQdone: () => false,
+      hmMsDid: c => { said.push(['did', c]); ck[c] = 1; }, hmMsUndo: c => { said.push(['undo', c]); delete ck[c]; } });
+    X.g.HOME_V2.apply(dyn(X));
+    return { X, said, ck };
+  };
+  let A = mk({}), h = A.X.els.hv2.innerHTML;
+  const mi = h.indexOf('class="mis"'), he = h.indexOf('class="hello"'), mo = h.indexOf('class="steps5"');
+  is(mi > he && mi < mo, '인사 바로 밑 · 다섯 걸음 위에 한 판');
+  const heads = []; h.replace(/class="mis-r[^"]*" onclick="HOME_V2\.mis\((\d)\)"><span class="mis-c">[^<]*<\/span><span class="mis-t"><b>([^<]*)<\/b>/g, (m0, i, t) => { heads.push(i + t); return m0; });
+  is(heads.join('|') === '0전화 · 카톡|1오늘 약속|2통화 결과 · 만난 분 기록|3내일 상담 자료 준비|4SNS 올리기' && /<b>🎯 오늘의 미션<\/b><span>1 \/ 5<\/span>/.test(h),
+    '다섯 차례 — 전화 · 카톡 → 오늘 약속 → 기록 → 내일 준비 → SNS (약속 없는 날은 약속 미션이 끝난 셈이라 1/5) — ' + heads.join('|'));
+  is(/<small>전화 10통 \(하루 목표\) · 카톡 10건 \(하루 목표\)<\/small>/.test(h) && /<small>오늘 약속 없음<\/small>/.test(h), '칸 이름은 체크판 표(CK_ITEMS.day) 그대로 · 약속 없으면 「오늘 약속 없음」');
+  A = mk({ d4: 1, d5: 1, d9: 1 }); h = A.X.els.hv2.innerHTML;
+  is(/<span>3 \/ 5<\/span>/.test(h) && /class="mis-r done" onclick="HOME_V2\.mis\(0\)"><span class="mis-c">✓/.test(h) && /class="mis-r" onclick="HOME_V2\.mis\(2\)"/.test(h), '끝났나 = 실행 체크판(hmMsCk) 그대로 — 둘 다 해야 끝(d6 만 하면 기록 미션은 아직)');
+  A = mk({ d4: 1, d5: 1, d6: 1, d8: 1, d9: 1, d10: 1 }); h = A.X.els.hv2.innerHTML;
+  is(/class="mis all"/.test(h) && /오늘 미션 완료 🎉/.test(h), '다섯 다 끝 → 「오늘 미션 완료 🎉」');
+  const ap = [{ k: 'appt', t: '홍길동', s: '14:00', key: 'appt:a1' }, { k: 'appt', t: '홍갑돌', s: '16:00', key: 'appt:a2' }, { k: 'db', tk: 'TA', id: 'd9', t: '홍길순', s: '', key: 'db:d9:TA' }];
+  A = mk({}, ap, ['appt:a1']); h = A.X.els.hv2.innerHTML;
+  is(/<small>1 \/ 2곳 · 만나면 「🤝 만났어요」<\/small>/.test(h) && /class="mis-r" onclick="HOME_V2\.mis\(1\)"/.test(h), '약속 미션 = 오늘 약속 카드 그대로(끝낸 카드 hmIsDone · hmQdone) — 1 / 2곳');
+  A = mk({}, ap, ['appt:a1', 'appt:a2']); h = A.X.els.hv2.innerHTML;
+  is(/class="mis-r done" onclick="HOME_V2\.mis\(1\)"/.test(h), '약속 카드를 다 챙기면 약속 미션도 끝');
+  A = mk({ d6: 1 }); A.X.g.HOME_V2.mis(2); let t = A.X.els.hv2Sheet.innerHTML;
+  is(/<h1>✍️ 통화 결과 · 만난 분 기록<\/h1>/.test(t) && /misUndo\(2,'d6'\)">되돌리기/.test(t) && /misDid\(2,'d8'\)">✓ 했어요/.test(t) && /go\('fact_find'\)">상담카드 ›/.test(t), '미션 시트 — 칸마다 ✓ 했어요 / 되돌리기 · 체크판의 가는 곳 그대로');
+  A.X.g.HOME_V2.misDid(2, 'd8'); A.X.g.HOME_V2.misUndo(2, 'd6');
+  is(JSON.stringify(A.said) === '[["did","d8"],["undo","d6"]]', '✓ 했어요 = 있던 hmMsDid · 되돌리기 = hmMsUndo (실행 체크판에 그대로)');
+  const ms = sc.slice(sc.indexOf('  var MIS = ['), sc.indexOf('  var WAY = ['));
+  is(ms.length > 200 && !/setItem|\.rpc\(|\.from\(|fetch\(|ckToggle/.test(ms) && !/전화 10통|카톡 10건|팩트파인딩 저장/.test(ms), '새 저장 없음 · 체크판 칸 이름을 이 파일에 다시 적지 않음');
+}
+
+console.log('\n[27] 📍 지금 상황 · ⚙ 상황별 추천 메뉴 (판 X558 · 사장님 말씀 「고객의 현재 상황이 안보이고 상황에 추천하는 메뉴 두개 정도 있는데 내가 추가할수 있도록 해줘 다른 사람은 손 못대게」)');
+{
+  const CV = fs.readFileSync(path.join(ROOT, 'app/cus-v2.js'), 'utf8');
+  const NAV = { wallets: ['💰', '8가지 통장 진단'], finance: ['📊', '재무설계 계산기'], fact_find: ['📝', '팩트파인딩'], bojang: ['🔍', '보장분석'], insight: ['🧭', '상품전략기'] };
+  const rows = [{ k: 'touch', id: 'c1', t: '홍길동', s: '30일째', key: 'touch:c1:' }, { k: 'touch', id: 'c2', t: '홍갑돌', s: '안부', key: 'touch:c2:' }, { k: 'db', tk: 'TA', id: 'd9', t: '홍길순', s: '', key: 'db:d9:TA' }];
+  const mk = boss => {
+    const X = box({ apex_home_v2: '1' }, '', { rows });
+    const said = [], cfg = {}, CM = { c1: { care: '결혼 준비' }, c2: {} };
+    Object.assign(X.g, {
+      meV2Open: () => {}, CM_CARE: ['', '결혼 준비', '출산 · 육아', '은퇴 준비'], cmOf: id => CM[id] || {}, crmDbsOf: () => [],
+      cmSave: (id, p, cb) => { said.push(['cmSave', id, JSON.stringify(p)]); Object.assign(CM[id], p); if (cb) cb(); },
+      osIsAppAdmin: () => !!boss, osCfgGet: (k, d) => (cfg[k] == null || cfg[k] === '' ? d : cfg[k]), osCfgSet: (k, v, cb) => { said.push(['cfg', k, v]); cfg[k] = v; if (cb) cb(); },
+      APEX_STAGE: { of: () => ({ know: [] }) }, navItemOf: id => (NAV[id] ? { id, icon: NAV[id][0], title: NAV[id][1] } : null),
+      TABS: [{ group: '상담 도구', items: Object.keys(NAV).map(id => ({ id, icon: NAV[id][0], title: NAV[id][1] })) }], CUS: {}, OSC: {}, CM_BASE: {}
+    });
+    vm.runInContext(CV, X.g);
+    X.g.HOME_V2.apply(dyn(X));
+    return { X, said, cfg, CM };
+  };
+  let A = mk(false), h = A.X.els.hv2.innerHTML;
+  const card = (hh, i) => { const a = hh.indexOf('data-i="' + i + '"'), b = hh.indexOf('data-i="' + (i + 1) + '"'); return hh.slice(a, b > 0 ? b : hh.length); };
+  is(/class="qsit"><span class="k">📍 지금 상황<\/span><b>결혼 준비<\/b><button type="button" onclick="HOME_V2\.sit\('touch:c1:'\)">바꾸기/.test(card(h, 0)) &&
+     /<span class="no">몰라요<\/span><button type="button" onclick="HOME_V2\.sit\('touch:c2:'\)">고르기/.test(card(h, 1)) && !/qsit/.test(card(h, 2)), '카드에 📍 지금 상황 — 아는 분은 상황 · 모르는 분은 「몰라요 · 고르기」 · 배정 DB 카드엔 안 섬(상황 칸 없음)');
+  A.X.g.HOME_V2.sit('touch:c2:'); let t = A.X.els.hv2Sheet.innerHTML;
+  is(/sitPut\('touch:c2:',0\)">결혼 준비/.test(t) && /sitPut\('touch:c2:',-1\)">없음 · 모름/.test(t), '고르기 시트 — 고객 화면과 같은 목록(CM_CARE)');
+  A.X.g.HOME_V2.sitPut('touch:c2:', 2);
+  is(JSON.stringify(A.said[0]) === '["cmSave","c2","{\\"care\\":\\"은퇴 준비\\"}"]', '고르면 있던 cmSave(id, {care}) 하나 — ' + JSON.stringify(A.said[0]));
+  is(!/추천 고치기/.test(h), '대표 · 관리자가 아니면 「⚙ 추천 고치기」 단추가 없음');
+  A.X.g.HOME_V2.careEdit('결혼 준비'); A.X.g.HOME_V2.carePut('bojang');
+  is(!A.said.some(x => x[0] === 'cfg'), '대표 · 관리자가 아니면 불러도 저장 안 함(서버 app_config 도 is_owner · is_admin 만 받음)');
+  A = mk(true); h = A.X.els.hv2.innerHTML;
+  is(/onclick="HOME_V2\.careEdit\('결혼 준비'\)">⚙ 추천 고치기/.test(card(h, 0)), '대표 · 관리자에겐 도구 줄에 「⚙ 추천 고치기」 (그 카드 상황으로 열림)');
+  A.X.g.HOME_V2.careEdit('결혼 준비'); t = A.X.els.hv2Sheet.innerHTML;
+  is(/⭐<\/span><div class="tx"><div class="t1">💰 8가지 통장 진단<\/div><div class="t2">기본 · 오늘 카드에 바로/.test(t) && /⭐<\/span><div class="tx"><div class="t1">📊 재무설계 계산기/.test(t) && /carePut\('bojang'\)/.test(t) && !/carePut\('wallets'\)/.test(t) && !/careDel\(0\)/.test(t),
+    '편집 시트 — 기본(CARE_APP)도 차례 안에(⭐ 위 셋 · 기본은 ✕ 없음) · 더할 메뉴는 「다른 메뉴」 묶음에서(기본은 안 섬)');
+  A.X.g.HOME_V2.carePut('bojang'); A.X.g.HOME_V2.carePut('insight');
+  is(A.cfg.care_apps === '{"결혼 준비":["wallets","finance","bojang","insight"]}', '더하기 = 있던 osCfgSet(\'care_apps\', 차례 전체) — ' + A.cfg.care_apps);
+  let ap = A.X.g.CUS_V2.appsBy('결혼 준비', '', true).map(a => a.tab).join(',');
+  is(ap === 'wallets,finance,bojang,insight', '한 곳(CUS_V2.appsBy) → 오늘 카드 · 고객 화면 「권할 것」 같이 — ' + ap);
+  A.X.g.HOME_V2.paint(); h = A.X.els.hv2.innerHTML;
+  is((card(h, 0).match(/<button type="button" onclick="go\('/g) || []).length === 3 && /go\('bojang'\)/.test(card(h, 0)) && !/go\('insight'\)/.test(card(h, 0)) && /onclick="HOME_V2\.tools\('touch:c1:'\)">📋 추천 메뉴 4개 모두 보기/.test(card(h, 0)),
+    '「맨위에 세개 … 클릭 안하고」 — 카드엔 앞 셋만 바로 · 넷째(상품전략기)는 「모두 보기」 안');
+  A.X.g.HOME_V2.tools('touch:c1:'); t = A.X.els.hv2Sheet.innerHTML;
+  is((t.match(/class="li" onclick="HOME_V2\.close\(\);go\('/g) || []).length === 4 && /go\('insight'\)/.test(t) && /⚙ 추천 차례 · 메뉴 고치기/.test(t), '「모두 보기」 시트 — 넷 다 · 대표에겐 고치기 단추');
+  A.X.g.HOME_V2.careUp(3);
+  ap = A.X.g.CUS_V2.appsBy('결혼 준비', '', true).map(a => a.tab).join(',');
+  is(A.cfg.care_apps === '{"결혼 준비":["wallets","finance","insight","bojang"]}' && ap === 'wallets,finance,insight,bojang', '▲ 로 차례를 바꾸면 카드 앞 셋도 바뀜 — ' + ap);
+  A.X.g.HOME_V2.careDel(0); A.X.g.HOME_V2.careDel(3);
+  is(A.cfg.care_apps === '{"결혼 준비":["wallets","finance","insight"]}', '✕ 빼기 — 더한 것만 빠지고 기본(🔒)은 안 빠짐 — ' + A.cfg.care_apps);
+  const cs = sc.slice(sc.indexOf('  function isBoss('), sc.indexOf('  function toolsOf('));
+  is(cs.length > 200 && !/setItem|\.rpc\(|\.from\(|fetch\(/.test(cs) && /g\.osCfgSet\(/.test(cs) && /g\.cmSave\(/.test(cs) && /CARE_KEY = 'care_apps'/.test(CV) && /careMine\(care\)\.forEach\(add\)/.test(CV),
+    '저장은 있던 두 문(cmSave · osCfgSet)뿐 · 새 서버 · 이 기기 저장 없음');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');
