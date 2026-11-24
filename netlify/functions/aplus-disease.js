@@ -36,9 +36,11 @@ var ORIGIN = 'https://www.aplusga.com/APA/SV/diseaseSearch.do';
 
 var PAGE_SIZE = 10;   // 원본이 한 쪽에 내려주는 건수
 var MAX_ROWS  = 500;  // all=1 일 때 한 번에 가져올 상한 (원본 부담·응답 크기 방어)
-var TIMEOUT   = 6000;   // 원본 한 쪽을 기다리는 최대 시간
-var POOL      = 8;      // 동시에 부르는 쪽 수 — ⚠ 수십 쪽을 한꺼번에 부르면 원본이 일부를 떨군다(2026-11-24 실측)
+var TIMEOUT   = 7000;   // 원본 한 쪽을 기다리는 최대 시간 — 원본은 한 쪽에 5초쯤 걸린다(2026-11-25 실측, 중계 거쳐 5.1~6.7초)
+var POOL      = 3;      // 동시에 부르는 쪽 수 — ⚠ 8쪽씩 몰아 부르면 원본이 떨구고, 원본엔 <b>웹방화벽</b>이 있다(직접 부른 PC 가 막힘, 2026-11-25).
+                        //   중계(Netlify)가 막히면 예외질환 기능이 통째로 죽는다 — 넉넉히 받으려고 세게 두드리지 말 것
 var DEADLINE  = 8000;   // 함수 전체가 쓸 시간(Netlify 동기 함수 10초 안). 넘기면 받은 데까지 + partial 로 답한다
+var EXPECT    = 5500;   // 한 쪽에 드는 시간 — 남은 시간이 이보다 짧으면 새 쪽을 시작하지 않는다(끝까지 못 받을 요청으로 원본만 바쁘게 하지 않게)
 
 // 🌐 다른 주소에서 부르는 곳 — 진료분석(고지체크 사이트 jinryo.html · 내 PC 파일)의 「알릴의무 · 예외질환 한 번에」 (판 X501).
 // 원본이 CORS 를 닫아 둬서 이 중계를 거치는데, 중계마저 허락을 안 주면 거기서도 막힌다.
@@ -54,6 +56,9 @@ function json(status, body, noStore) {
       // 같은 검색을 반복해 두드리지 않도록 잠깐 캐시한다. 자료는 하루 단위로 바뀐다.
       // ⚠ 일부만 받은 답·실패는 캐시하지 않는다 — 5분 동안 같은 빠진 답을 돌려주던 사고(2026-11-24)
       'Cache-Control': (noStore || status !== 200) ? 'no-store' : 'public, max-age=300',
+      // 다 받은 답은 Netlify CDN 에 1시간 둔다(여러 설계사가 같은 질환을 물어도 원본은 한 번) — 자료는 하루 단위로 바뀐다.
+      // 실패·일부는 CDN 에도 두지 않는다.
+      'Netlify-CDN-Cache-Control': (noStore || status !== 200) ? 'no-store' : 'public, s-maxage=3600, durable',
       'Vary': 'Origin',
       // ⚠ 2026-11-24 — 함수가 시간 초과(502)를 내면 Netlify 가 <b>다른 검색어의 옛 답</b>을 stale 로 돌려줬다
       //   (치아 44쪽을 물었는데 「우울」 6건이 옴). 캐시를 검색어·쪽마다 따로 두고, 답에 물은 것을 적어 받는 쪽이 맞대 보게 한다.
@@ -86,7 +91,16 @@ async function fetchPage(params, num, ms) {
       signal: ctl.signal
     });
     if (!res.ok) throw new Error('원본 응답 ' + res.status);
-    var text = await res.text();
+    var buf = await res.arrayBuffer();
+    var text = new TextDecoder('utf-8').decode(buf).trim();
+    if (text.charAt(0) !== '[') {
+      // 원본이 표 대신 안내문(EUC-KR HTML)을 준다 — 「웹방화벽에 의해 차단되었습니다」(2026-11-25 실측)
+      var kr = ''; try { kr = new TextDecoder('euc-kr').decode(buf); } catch (e) { kr = text; }
+      var waf = /방화벽|차단/.test(kr) || /방화벽|차단/.test(text);   // 원본은 EUC-KR 로 준다 — 두 글자 방식 다 본다
+      var err = new Error(waf ? '원본(A+에셋) 웹방화벽이 막았습니다 — 잠시 뒤 다시' : '원본이 표가 아닌 답을 줬습니다');
+      err.waf = waf;
+      throw err;
+    }
     var rows = JSON.parse(text);
     return Array.isArray(rows) ? rows : [];
   } finally {
@@ -114,7 +128,16 @@ exports.handler = async function (event) {
   var page = Math.max(1, parseInt(p.page, 10) || 1);
 
   try {
-    var first = await fetchPage(params, wantAll ? 1 : page);
+    // all=1 이면 1쪽과 함께 2·3쪽도 같이 부른다 — 원본이 쪽마다 5초라, 1쪽을 기다린 뒤 부르면 시간 안에 한 쪽도 더 못 받는다.
+    // (30건 이하 — 당뇨·우울·고혈압 같은 흔한 검색 — 는 이 한 번으로 끝난다)
+    var pre = {};
+    var firstSet = wantAll ? [1, 2, 3].slice(0, POOL) : [page];
+    var settled = await Promise.all(firstSet.map(function (n) {
+      return fetchPage(params, n).then(function (r) { return { n: n, rows: r }; }, function (e) { return { n: n, err: e }; });
+    }));
+    if (settled[0].err) throw settled[0].err;
+    settled.slice(1).forEach(function (x) { if (!x.err) pre[x.n] = x.rows; });
+    var first = settled[0].rows;
     var total = first.length ? (parseInt(first[0].CNT, 10) || first.length) : 0;
 
     var rows = first;
@@ -129,15 +152,16 @@ exports.handler = async function (event) {
       // 2쪽부터 나머지를 POOL 개씩 나눠 부르고, 실패한 쪽은 시간이 남는 한 다시 부른다.
       // ⚠ 예전엔 Promise.all 로 수십 쪽을 한꺼번에 불러 실패한 쪽을 [] 로 삼키고 ok 로 답했다 —
       //   갑상선 369건 중 160건, 치아 535건 중 372건만 오고 아무도 몰랐다(2026-11-24). 회사가 통째로 빠진다.
-      var got = {}, queue = [], tries = {};
-      for (var n = 2; n <= lastPage; n++) queue.push(n);
+      var got = {}, queue = [], tries = {}, stop = false;
+      for (var n = 2; n <= lastPage; n++) { if (pre[n]) got[n] = pre[n]; else queue.push(n); }
       var worker = async function () {
         while (queue.length) {
           var left = DEADLINE - (Date.now() - t0);
-          if (left < 600) return;                    // 남은 시간에 한 쪽도 못 받는다 — 여기서 멈추고 partial 로 답한다
+          if (stop || left < EXPECT) return;          // 남은 시간에 한 쪽도 못 받는다 — 여기서 멈추고 partial 로 답한다(나머지는 화면이 page=N 으로)
           var pg = queue.shift();
           try { got[pg] = await fetchPage(params, pg, Math.min(TIMEOUT, left)); }
           catch (e) {
+            if (e && e.waf) { stop = true; return; }   // 방화벽이 막으면 더 두드리지 않는다
             tries[pg] = (tries[pg] || 0) + 1;
             if (tries[pg] < 3) { await new Promise(function (r) { setTimeout(r, 300 * tries[pg]); }); queue.push(pg); }
           }
@@ -177,6 +201,9 @@ exports.handler = async function (event) {
       rows: rows
     }, partial);
   } catch (e) {
-    return json(502, { ok: false, q: params.q, page: page, error: '원본 조회에 실패했습니다: ' + (e && e.message ? e.message : String(e)) });
+    // ⚠ 실패도 200 으로 답한다(ok:false · no-store). 502 로 답하면 Netlify 가 <b>다른 검색어의 옛 200 답</b>을 대신 내줬다
+    //   (2026-11-24: 치아 44쪽 → 「우울」, #884 뒤에도 치아 42쪽 → 「갑상선」 2쪽). 받는 쪽은 ok·q 를 보고 다시 부른다.
+    return json(200, { ok: false, q: params.q, insr: params.insr, prdt: params.prdt, all: wantAll, page: page, waf: !!(e && e.waf), retry: !(e && e.waf),
+      error: (e && e.waf) ? e.message : '원본 조회에 실패했습니다: ' + (e && e.message ? e.message : String(e)) }, true);
   }
 };
