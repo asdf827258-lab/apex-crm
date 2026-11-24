@@ -328,6 +328,49 @@ const MIME = { '.html': 'text/html;charset=utf-8', '.js': 'text/javascript;chars
   is(bp.복사단추 === true && bp.날글 > 200, '  <b>복사</b>할 수 있다 (날글 ' + bp.날글 + '자)');
   is(bp.쓰레기 === 0, '  undefined · NaN 이 없다');
 
+  head('[6-3] 💼 따라만 해도 계약까지 가나 (사장님 말씀 「확인하고 정리해」 → 「다 고쳐줘」)');
+  const cl = await pg.evaluate(() => {
+    doSample(); S.who.incMan = '500'; S.mode = 'edit'; S.panel = 'brain'; render();
+    const b = document.getElementById('bpBox'), t = b ? b.textContent : '';
+    const mids = [].slice.call(document.querySelectorAll('.bp3i b')).map(x => {
+      const nm = x.textContent; let k = '';
+      for (const kk in NAME) if (NAME[kk] === nm) k = kk;
+      return MID[k] || nm;
+    });
+    const uniq = mids.filter((m, i) => mids.indexOf(m) === i).length;
+    /* 구간마다 깨닫게 하는 질문 */
+    const nqNo = AGE_GUIDE.filter(g => !g.nq || g.nq.length < 2).length;
+    const nqAll = []; AGE_GUIDE.forEach(g => (g.nq || []).forEach(q => nqAll.push(q.replace(/<[^>]+>/g, '').trim())));
+    const nqDup = nqAll.filter((q, i) => nqAll.indexOf(q) !== i).length;
+    return {
+      세가지: document.querySelectorAll('.bp3i').length, 묶음: uniq,
+      예산묻기: document.querySelectorAll('.bpask').length,
+      예산먼저: /얼마까지면 해 보시겠다/.test(t),
+      클로징: document.querySelectorAll('.bpcl').length,
+      진행: /이대로 진행하겠습니다/.test(t),
+      날짜: /며칠에 뵐까요/.test(t),
+      안하셔도: /안 하시는 것도 갈래의 하나/.test(t),
+      상의: /상의해 보고요/.test(t), 여유: /여유가 없어서요/.test(t), 다른데: /다른 데서도/.test(t),
+      되받아침: document.querySelectorAll('.bprb').length,
+      nq없는구간: nqNo, nq겹침: nqDup, nq수: nqAll.length,
+      화면nq: (S.panel = 'age', render(), document.querySelectorAll('.ab.nq li').length),
+      해지빈칸: /정리하는 것\(해지\)[^。]{0,80}\.\s*⚠/.test(t)
+    };
+  });
+  is(cl.세가지 === 3, '  ★★ <b>오늘 꼭 말할 세 가지</b>가 선다 (' + cl.세가지 + ') — 열 개를 다 읽지 않습니다');
+  is(cl.묶음 === 3, '  ★ 세 가지가 <b>서로 다른 묶음</b>이다 (' + cl.묶음 + '/3) — 같은 말을 세 번 하지 않습니다');
+  is(cl.예산묻기 >= 1 && cl.예산먼저, '  ★★ 보험료를 말하기 <b>전에 예산을 묻는다</b> — 통보하지 않습니다');
+  is(cl.클로징 === 3, '  ★★ <b>클로징이 세 갈래</b>로 있다 (' + cl.클로징 + ') — 이대로 / 하나만 / 오늘은 안 정함');
+  is(cl.진행 === true, '  ★★ <b>「이대로 진행하겠습니다」</b> — 결정을 요청하는 말이 있다');
+  is(cl.날짜 === true, '  <b>다음 날짜</b>를 잡는다 — 날짜 없이 끝내지 않습니다');
+  is(cl.안하셔도 === true, '  ★ <b>안 하시는 것도 갈래</b>라고 적는다 — 밀어붙이지 않습니다 (6번)');
+  is(cl.상의 && cl.여유 && cl.다른데,
+    '  ★★ 가장 많이 듣는 거절 <b>셋</b>이 다 있다 — 배우자 상의 · 여유 없음 · 다른 데서도');
+  is(cl.되받아침 >= 6, '  되받아침이 <b>' + cl.되받아침 + '가지</b>다');
+  is(cl.nq없는구간 === 0, '  ★★ 구간마다 <b>깨닫게 하는 질문</b>이 둘씩 있다 (' + cl.nq수 + '가지)');
+  is(cl.nq겹침 === 0, '  그 질문이 구간끼리 <b>겹치지 않는다</b>');
+  is(cl.화면nq >= 12, '  연령대 카드에 <b>화면으로 섰다</b> (' + cl.화면nq + '줄)');
+
   head('[7] 📋 자동 보장분석 — 전부 펴기 길이 있나');
   const ft = await pg.evaluate(() => {
     S.mode = 'edit'; S.panel = 'fit'; S.fitAll = false; render();
