@@ -180,6 +180,19 @@ body.shrine-on h1{letter-spacing:-.045em}
 body.shrine-on .pane{position:relative;z-index:1}
 .pa-bar{text-align:center}
 .pa-hint{display:block;margin-top:9px;font-size:12.5px;color:var(--ink3);letter-spacing:-.02em}
+/* 십신 표 — 읽는 글이 아니라 견주는 표라 한 줄에 눕힙니다 */
+.shw-h{background:var(--blue-l);border-color:var(--blue-b)}
+.shw .foot{display:none}
+.shw button[onclick="window.print()"]{display:none}
+
+.shw-s{margin-top:6px;font-size:13px;color:var(--ink2)}
+@media print{.shw-h{break-before:page}}
+.mesip{margin-top:10px;border-top:1px solid var(--line-l)}
+.mesip-r{display:flex;align-items:baseline;gap:9px;padding:8px 2px;border-bottom:1px solid var(--line-l)}
+.mesip-p{flex:none;width:38px;font-size:12.5px;color:var(--ink3);letter-spacing:-.03em}
+.mesip-c{flex:none;width:22px;font-size:15px;font-weight:800;color:var(--ink)}
+.mesip-n{font-size:14.5px;letter-spacing:-.03em;color:var(--ink)}
+.mesip-g{margin-left:auto;font-size:12px;color:var(--ink3)}
 /* ★ 제목 밑 붉은 붓자국 — 그림 파일이 아니라 그라디언트입니다(9번).
    끝이 흐려져야 붓이지, 네모로 끝나면 밑줄입니다. */
 body.shrine-on h1{position:relative;padding-bottom:11px}
@@ -202,6 +215,8 @@ body.shrine-on .say.hard{border-left-width:4px}
   /* 인쇄는 흰 종이입니다 — 붓자국과 낙관은 종이에서도 보이게 먹빛으로 */
   body.shrine-on h1::after{background:#8C1F17}
   body.shrine-on h2 .n{background:#8C1F17!important;color:#fff!important;transform:none}
+  /* 설명회 한 장의 <b>화면용 안내</b>는 종이에 안 찍습니다 */
+  .shw-meta{display:none!important}
 }
 /* 한지 결 — 그림 파일을 안 받아 옵니다(9번). 결은 그라디언트로 냅니다. */
 body.shrine-on::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
@@ -1117,7 +1132,7 @@ function brandMarks(){
 }
 function renderBrand(){var b=$('brandBox');if(b)b.innerHTML=brandMarks();}
 function brandBand(sub){
-  var who=(typeof PAY!=='undefined'&&PAY.agent)?' · '+esc(PAY.agent):'';
+  var who=(typeof AGENT!=='undefined'&&AGENT.name)?' · '+esc(AGENT.name):'';
   return '<div class="bband">'+brandMarks()+
     '<div class="bbtx"><b>'+esc(BRAND.org)+' '+esc(BRAND.hq)+'</b>'+
     '<span>'+esc(sub||'사주 × MBTI 상담 리포트')+who+'</span></div></div>';
@@ -1334,10 +1349,10 @@ var AXIS_SELF={
   J:'정해두고 지키는 데서 안정을 얻으십니다. 갑작스러운 변경에 스트레스를 받으십니다.',
   P:'열어두는 데서 편안함을 얻으십니다. 정해지면 답답해하십니다.'
 };
-var TAB_NAME={ice:'아이스브레이킹',sum:'종합',brief:'📋 면담 브리프',dang:'🕯️ 신당 풀이',apply:'📩 상담 신청',sales:'💼 영업 가능성',how:'🎯 나의 영업법',worry:'고민 상담',life:'인생 운',trait:'성향 파악',mind:'MBTI 정밀',
+var TAB_NAME={ice:'아이스브레이킹',sum:'종합',show:'📣 설명회 한 장',brief:'📋 면담 브리프',dang:'🕯️ 신당 풀이',apply:'📩 상담 신청',sales:'💼 영업 가능성',how:'🎯 나의 영업법',worry:'고민 상담',life:'인생 운',trait:'성향 파악',mind:'MBTI 정밀',
   deep:'사주 풀이',blood:'혈액형',fit:'궁합',rel:'관계·매니지먼트',talk:'상담 전략',ins:'보험·관리',risk:'🔒 리스크',saju:'만세력',
   mepil:'① 내 네 기둥',meins:'② 보험 일과 나',mework:'③ 일 푸는 방식',metime:'④ 올해·내년'};
-var AGENT_TABS={fit:1,rel:1,talk:1,ins:1,risk:1,sales:1,how:1,brief:1};   /* 고객 화면에서는 감춘다 */
+var AGENT_TABS={fit:1,rel:1,talk:1,ins:1,risk:1,sales:1,how:1,brief:1,show:1};   /* 고객 화면에서는 감춘다 */
 function tabsFor(mode,view){
   view=view||S.view;
   /* ★ 나만 보는 판 — 네 장이 끝입니다 (사장님 말씀 2026-11-20
@@ -1349,6 +1364,12 @@ function tabsFor(mode,view){
   else if(mode==='blood')list=['ice','blood','sales','how','fit','rel','ins','risk'];
   else list=['dang','ice','sum','sales','how','worry','life','trait','deep','fit','rel','talk','ins','risk','saju'];
   if(mode!=='blood'&&S.cl&&S.cl.blood)list.splice(list.indexOf('life')>=0?list.indexOf('life')+1:1,0,'blood');
+  /* 📣 설명회 한 장 (판 X545) — 신당 풀이가 서는 갈래에서만 냅니다. 혈액형만
+     받은 자리에서 내면 다섯 꼭지 중 셋이 「생년월일을 넣어 주세요」 로 섭니다 (1번).
+     ★★ <b>고객 화면에서 막는 자는 바로 아래 AGENT_TABS 한 곳뿐입니다.</b>
+     여기서 view 를 또 보면 「고객에게 보이나」 를 두 곳이 각자 답하게 되어,
+     한쪽만 고쳐도 아무도 모릅니다 (5번). 그래서 넣기만 하고 거르지 않습니다. */
+  if(list.indexOf('dang')>=0)list.splice(list.indexOf('sales'),0,'show');
   if(view==='client')list=list.filter(function(k){return !AGENT_TABS[k];});
   if(RECRUIT.on&&view==='client')list.push('apply');
   if(view==='agent'){
@@ -1610,6 +1631,7 @@ function viewBoard(){
   if(t==='dang')return tabDang();
   if(t==='brief')return tabBrief();
   if(t==='apply')return tabApply();
+  if(t==='show')return tabShow();
   if(t==='sales')return tabSales();
   if(t==='how')return tabHow();
   if(t==='life')return tabLife();
@@ -1659,9 +1681,9 @@ function guestLink(){
   if(BRAND.aplus)q.push('logo1='+encodeURIComponent(BRAND.aplus));
   if(BRAND.ontop)q.push('logo2='+encodeURIComponent(BRAND.ontop));
   if(SHRINE.title&&SHRINE.title!=='무당')q.push('title='+encodeURIComponent(SHRINE.title));
-  var who=(S.me&&S.me.name)||PAY.agent;
+  var who=(S.me&&S.me.name)||AGENT.name;
   if(who)q.push('agent='+encodeURIComponent(who));
-  if(PAY.tel)q.push('tel='+encodeURIComponent(PAY.tel));
+  if(AGENT.tel)q.push('tel='+encodeURIComponent(AGENT.tel));
   return base+'?'+q.join('&');
 }
 function copyGuestLink(){
@@ -1760,7 +1782,7 @@ function applySubmit(){
   var s=cl.saju;
   var body={consent:true,name:nm,phone:ph,contactTime:ct,memo:mo,
     intent:a.intent||'maybe',org:BRAND.org+' '+BRAND.hq,
-    recruiter:PAY.agent||'',recruiterId:RECRUIT.rec,source:RECRUIT.src,
+    recruiter:AGENT.name||'',recruiterId:RECRUIT.rec,source:RECRUIT.src,
     gender:cl.gender||'',y:cl.y,m:cl.m,d:cl.d,H:cl.noTime?null:cl.H,noTime:!!cl.noTime,
     mbti:personCode(cl)||'',blood:cl.blood||'',
     dayGz:s?gz(s.dg,s.dj):'',saju:s?{yg:s.yg,yj:s.yj,mg:s.mg,mj:s.mj,dg:s.dg,dj:s.dj,hg:s.hg,hj:s.hj}:{},
@@ -1789,7 +1811,7 @@ function tabApply(){
     return '<div class="card" style="text-align:center">'+
       '<div style="font-size:44px">🕯️</div>'+
       '<h1 style="margin-top:10px">잘 받았습니다</h1>'+
-      '<p>'+esc(cl.name||'')+' 님, 남겨 주신 번호로 <b>'+esc(PAY.agent||(BRAND.org+' '+BRAND.hq))+'</b>에서 연락드리겠습니다. '+
+      '<p>'+esc(cl.name||'')+' 님, 남겨 주신 번호로 <b>'+esc(AGENT.name||(BRAND.org+' '+BRAND.hq))+'</b>에서 연락드리겠습니다. '+
       '적어 주신 시간대를 지키겠습니다.</p>'+
       '<div class="note ok">오늘 보신 풀이는 이 화면에 그대로 있습니다. 다른 칸도 편하게 보고 가세요.</div>'+
       '<div class="note info">연락처를 잘못 넣으셨거나 취소하고 싶으시면 이 화면을 닫고 담당자에게 알려 주세요. '+
@@ -1997,7 +2019,7 @@ var SHRINE={title:'무당'};
   }
 })();
 function shrineWho(){
-  var n=(S.me&&S.me.name)||(typeof PAY!=='undefined'&&PAY.agent)||'윤시현';
+  var n=(S.me&&S.me.name)||(typeof AGENT!=='undefined'&&AGENT.name)||'윤시현';
   return esc(n)+' '+esc(SHRINE.title);
 }
 function uniqArr(a){var o=[],i;for(i=0;i<a.length;i++)if(a[i]&&o.indexOf(a[i])<0)o.push(a[i]);return o;}
@@ -2360,30 +2382,30 @@ function mudangGate(){
     '<div class="mdg-dan"></div>'+
     '<div class="mdg-wrap">'+mudangSvg(360)+'</div>'+
     '<div class="mdg-nm">윤무당</div>'+
-    '<h1 class="mdg-h">들어오시지요</h1>'+
-    '<p class="mdg-p">오늘은 손님을 보는 자리가 아닙니다.<br>'+
-    '<b>선생님 패</b>를 봅니다 — 이 일과 어떻게 맞는지, 어떻게 풀어 가면 되는지.</p>'+
-    '<div class="mdg-say">태어나신 <b>날</b>과 <b>시</b>만 일러 주십시오. 시를 모르시면 세 기둥으로 봅니다.</div>'+
+    '<h1 class="mdg-h">앉아 보게</h1>'+
+    '<p class="mdg-p">오늘은 손님 패 보는 날이 아니야.<br>'+
+    '<b>자네 패</b>를 본다 — 이 일과 어디가 맞물리고, 어디서 막히는지.</p>'+
+    '<div class="mdg-say">태어난 <b>날</b>하고 <b>시</b>만 대. 시를 모르면 세 기둥으로 본다.</div>'+
     '</div>';
 }
 
 /* 보험이라는 일이 요구하는 다섯 — 무엇으로 재는지를 같이 적습니다 */
 var INS_AX=[
  {k:'만남', t:'사람 만나기',    why:'식상(말·표현) + 비겁(어울림)',
-  hi:'먼저 말을 거는 것이 품이 덜 드는 자리입니다.',
-  lo:'먼저 말을 못 거십니다. 소개가 끊기는 달은 그대로 비는 달입니다 — 벌이를 운에 맡기고 계신 겁니다.'},
+  hi:'먼저 말 거는 건 타고났어. 그거 하나는 아끼지 말고 써.',
+  lo:'먼저 말을 못 걸지. 그래서 소개 끊기는 달은 그대로 비는 달이야 — <b>벌이를 운에 맡기고 있는 거다.</b>'},
  {k:'거절', t:'거절 견디기',    why:'일간 강약 + 인성(받쳐 주는 글자)',
-  hi:'거절을 넘기고 다음으로 가는 힘이 있으십니다.',
-  lo:'거절이 오래 남으십니다. 하루에 열 번 거절당하는 일인데 혼자 삭이시면 <b>석 달이면 바닥납니다.</b> 털 데를 먼저 만드십시오.'},
+  hi:'거절 맞고 다음으로 가는 힘은 있어. 그걸로 버티는 거야.',
+  lo:'거절이 오래 남지. 하루 열 번 거절당하는 일인데 혼자 삭여? <b>석 달이면 바닥난다.</b> 털 데부터 만들어.'},
  {k:'지속', t:'오래 끌고 가기', why:'관성(매듭) + 토(土) 기운',
-  hi:'한 번 잡으면 오래 가십니다. 이 일에서 제일 큰 밑천입니다.',
-  lo:'오래 못 끄십니다. 계약은 따시는데 유지가 안 되면 <b>그 계약은 남의 것</b>입니다 — 수수료는 환수로 돌아옵니다.'},
+  hi:'한 번 잡으면 오래 가. 이 일에서 제일 큰 밑천이니 그거 믿고 가라.',
+  lo:'오래를 못 끌어. 계약은 따는데 유지가 안 되면 <b>그건 남의 계약이야</b> — 수수료는 환수로 돌아온다.'},
  {k:'숫자', t:'숫자 다루기',    why:'인성(들여 익힘) + 금(金) 기운',
-  hi:'표와 숫자를 손에 익히는 데 품이 덜 드십니다.',
-  lo:'숫자를 오래 못 보십니다. 그대로 두시면 매번 밤을 새우시고, <b>밤새워 만든 표일수록 틀립니다.</b> 틀을 만들어 두고 채우십시오.'},
+  hi:'표하고 숫자는 손에 붙어. 그건 네 무기다.',
+  lo:'숫자를 오래 못 봐. 그러니 매번 밤을 새지 — <b>밤새워 만든 표일수록 틀린다.</b> 틀을 짜 두고 채워 넣어.'},
  {k:'자립', t:'혼자 버티기',    why:'비겁(같은 편) + 일간 강약',
-  hi:'혼자서도 굴러가십니다.',
-  lo:'혼자 두면 처지십니다. 의지가 모자라서가 아니라 <b>구조</b>라, 다짐으로는 안 고쳐집니다 — 같이 갈 사람을 붙이십시오.'}
+  hi:'혼자서도 굴러가. 그 힘으로 여기까지 온 거다.',
+  lo:'혼자 두면 처져. 의지가 모자라서가 아니라 <b>생긴 게 그래</b> — 다짐으로는 안 고쳐진다. 옆에 사람을 붙여.'}
 ];
 /* 0~10. 모두 계산된 값에서만 나옵니다 — 손으로 박은 점수가 없습니다. */
 function insFit(s){
@@ -2420,38 +2442,38 @@ function meHard(s){
   var c=sipsinTable(s).count, oh=ohCount(s), st=strengthOf(s), weak=(st.level==='신약'), out=[];
   function add(w,t,why){ if(HIT_BAN.test(t))return; out.push({w:w,t:t,why:why}); }
 
-  if(c.인성===0&&weak) add(10,'배울 틈 없이 버티기만 하셨습니다. 그래서 십 년을 하셔도 삼 년치만 쌓입니다 — 같은 벽에 매번 처음처럼 부딪히십니다.',
+  if(c.인성===0&&weak) add(10,'배울 틈도 없이 버티기만 했지. 그러니 십 년을 해도 삼 년치만 쌓여 — <b>같은 벽에 매번 처음처럼 부딪히는 거다.</b>',
     '인성 0개 · 일간 신약 — 받쳐 주는 글자가 없는데 쓸 힘도 모자랍니다');
-  if(c.재성>=2&&weak) add(10,'버는 족족 나갑니다. 더 버셔도 더 나갈 뿐입니다 — 쥐는 손이 작은 것이라 수입이 두 배가 되어도 남는 것은 그대롭니다.',
+  if(c.재성>=2&&weak) add(10,'버는 족족 나가지. 더 벌어 봐야 더 나갈 뿐이야 — 쥐는 손이 작은 거라 수입이 두 배 되도 남는 건 똑같다.',
     '재성 '+c.재성+'개인데 일간이 신약 — 쥘 손보다 쥘 것이 큽니다');
-  if(c.관성>=2&&c.인성===0&&weak) add(10,'받쳐 주는 것 없이 눌리기만 하십니다. 이 조합이 제일 고단합니다 — 버티는 데 힘을 다 쓰고 나아가는 데 쓸 것이 안 남습니다.',
+  if(c.관성>=2&&c.인성===0&&weak) add(10,'받쳐 주는 것 하나 없이 눌리기만 했어. 이 자리가 제일 고단한 자리다 — 버티는 데 힘을 다 쓰니 나아갈 몫이 안 남지.',
     '관성 '+c.관성+'개 · 인성 0개 · 일간 신약');
-  if(c.관성>=3&&weak) add(9,'참는 것을 성실이라고 부르고 계십니다. 둘은 다릅니다. 눌려서 보낸 세월은 경력으로 안 쌓입니다.',
+  if(c.관성>=3&&weak) add(9,'참는 걸 성실이라 부르고 있구나. 그 둘은 달라. <b>눌려서 보낸 세월은 경력으로 안 쌓인다.</b>',
     '관성 '+c.관성+'개 · 일간 신약');
-  if(st.level==='신강'&&c.인성>=2) add(9,'본인 판단이 맞다고 믿으십니다. 조언은 듣는 시늉만 하시지요 — 그래서 틀리셨을 때 아무도 안 말립니다.',
+  if(st.level==='신강'&&c.인성>=2) add(9,'제 판단이 맞다고 믿지. 남의 말은 듣는 시늉만 하고 — 그러니 틀렸을 때 아무도 안 말려 주는 거야.',
     '일간 신강 · 인성 '+c.인성+'개 — 힘도 있고 제 생각을 받쳐 주는 글자도 많습니다');
-  if(c.식상===0) add(8,'속으로 삭이십니다. 주위는 괜찮은 줄 압니다 — 그래서 터질 때 한 번에 터지고, 그 한 번으로 사람이 끊깁니다.',
+  if(c.식상===0) add(8,'속으로만 삭이지. 옆에서는 괜찮은 줄 알아 — 그러다 한 번에 터지고, 그 한 번으로 사람이 끊긴다.',
     '식상 0개 — 밖으로 내보내는 글자가 하나도 없습니다');
-  if(c.비겁===0) add(8,'사람은 많은데 진짜 일이 터지면 전화할 데가 없으십니다. 인맥과 내 편은 다른 것입니다.',
+  if(c.비겁===0) add(8,'사람은 많지. 그런데 진짜 일 터지면 전화할 데가 없어. <b>인맥하고 내 편은 다른 거다.</b>',
     '비겁 0개 — 나와 같은 편 글자가 하나도 없습니다');
-  if(c.관성===0) add(8,'매인 자리를 못 견디십니다. 그래서 자주 옮기셨고, 옮길 때마다 쌓아 둔 것을 두고 오셨습니다.',
+  if(c.관성===0) add(8,'매인 자리를 못 견디지. 그래서 자주 옮겼고, 옮길 때마다 쌓아 둔 걸 거기 두고 왔어.',
     '관성 0개 — 나를 눌러 세우는 글자가 하나도 없습니다');
-  if(c.식상>=2&&c.관성>=2) add(8,'하고 싶은 것과 해야 하는 것이 늘 부딪힙니다. 둘 다 쥐고 계셔서 <b>둘 다 반쪽</b>입니다.',
+  if(c.식상>=2&&c.관성>=2) add(8,'하고 싶은 것하고 해야 하는 것이 늘 부딪히지. 둘 다 쥐고 있으니 <b>둘 다 반쪽인 거다.</b>',
     '식상 '+c.식상+'개 · 관성 '+c.관성+'개 — 내보내는 글자와 누르는 글자가 같이 셉니다');
-  if(st.level==='신강'&&c.비겁>=3) add(8,'밀어붙이는 힘은 넉넉하십니다. 그 힘으로 사람을 밀어내고 계신 것이 문제입니다.',
+  if(st.level==='신강'&&c.비겁>=3) add(8,'밀어붙이는 힘은 넉넉해. 그 힘으로 <b>사람을 밀어내고 있는 게</b> 탈이지.',
     '일간 신강 · 비겁 '+c.비겁+'개');
-  if(c.인성>=3) add(7,'준비가 덜 됐다고 하십니다. 그 말은 평생 안 끝납니다 — 재는 동안 때가 지나갑니다.',
+  if(c.인성>=3) add(7,'준비가 덜 됐다고? 그 말은 평생 안 끝나. 재는 동안 때는 그냥 지나간다.',
     '인성 '+c.인성+'개 — 받아 들이고 재는 글자가 많습니다');
-  if(c.식상>=3) add(7,'말이 먼저 나갑니다. 그 말로 번 것보다 잃은 것이 많으실 겁니다 — 본인만 모르십니다.',
+  if(c.식상>=3) add(7,'말이 먼저 나가지. 그 말로 번 것보다 잃은 게 많을 거야 — <b>너만 모르고 있어.</b>',
     '식상 '+c.식상+'개');
-  if(c.비겁>=3) add(7,'사람 좋다는 소리를 들으십니다. 그 소리 값으로 <b>내 몫을 내주고</b> 계신 겁니다.',
+  if(c.비겁>=3) add(7,'사람 좋다는 소리 듣지. 그 소리 값으로 <b>제 몫을 내주고 있는 거다.</b>',
     '비겁 '+c.비겁+'개 — 같은 편이 많으면 나눠 쓰게 됩니다');
-  if(c.재성===0) add(7,'모으는 재주로 사시는 분이 아닙니다. 쥐려고 애쓰실수록 더 빠져나갑니다 — 쥐는 길 말고 버는 길을 넓히셔야 합니다.',
+  if(c.재성===0) add(7,'모으는 재주로 사는 사람이 아니야. 쥐려고 애쓸수록 더 빠져나가 — 쥐는 길 말고 <b>버는 길</b>을 넓혀.',
     '재성 0개 — 내가 다루는 글자가 하나도 없습니다');
-  if(c.인성>=2&&c.식상===0) add(7,'들이기만 하고 내보내지 않으십니다. 머리에는 쌓였는데 손에 잡히는 결과가 없습니다.',
+  if(c.인성>=2&&c.식상===0) add(7,'들이기만 하고 내보내질 않아. 머리에는 쌓였는데 손에 잡히는 게 없지.',
     '인성 '+c.인성+'개 · 식상 0개');
   var zero=['목','화','토','금','수'].filter(function(k){return oh[k]===0;});
-  if(zero.length>=2) add(6,'없는 기운이 둘입니다. 사람이 고루 될 리가 없는데, 안 되는 쪽을 자꾸 본인 탓으로 돌리고 계십니다.',
+  if(zero.length>=2) add(6,'없는 기운이 둘이야. 사람이 고루 될 리가 없는데 <b>안 되는 쪽을 자꾸 제 탓으로 돌리고 있어.</b>',
     '오행에 '+zero.join('·')+' 가 0개 — 여덟 자에 아예 없는 기운입니다');
 
   out.sort(function(a,b){return b.w-a.w;});
@@ -2460,24 +2482,24 @@ function meHard(s){
 function workWay(s){
   var y=yongsin(s), c=sipsinTable(s).count, out=[];
   if(y.st.level==='신약')
-    out.push({t:'먼저 채우고 나서 쓰셔야 하는 자리입니다. 빈손으로 밀어붙이면 꺾이십니다.',
+    out.push({t:'먼저 채우고 나서 써야 하는 자리야. 빈손으로 밀어붙이면 꺾인다.',
               w:'일간이 신약 — 도와주는 기운(인성·비겁)이 먼저입니다'});
   else if(y.st.level==='신강')
-    out.push({t:'담아 두면 체하십니다. 벌여 놓고 내보내야 풀리는 자리입니다.',
+    out.push({t:'담아 두면 체해. 벌여 놓고 내보내야 풀리는 자리다.',
               w:'일간이 신강 — 쓰고 내보내는 기운(식상·재성)이 먼저입니다'});
   else
-    out.push({t:'크게 모자라지도 넘치지도 않으십니다. 철에 맞춰 속도만 고르시면 됩니다.',
+    out.push({t:'크게 모자라지도 넘치지도 않아. 철에 맞춰 속도만 고르면 돼.',
               w:'일간이 중화'});
-  if(c.인성===0) out.push({t:'배워서 채우는 길이 막혀 있지 않습니다 — 다만 저절로는 안 들어옵니다. 일부러 시간을 떼어 두셔야 합니다.',
+  if(c.인성===0) out.push({t:'배워서 채우는 길이 막힌 건 아니야 — 다만 저절로는 안 들어와. 시간을 일부러 떼어 놔.',
                             w:'인성 0개 — 받쳐 주는 글자가 없습니다'});
-  if(c.비겁===0) out.push({t:'끝까지 같이 갈 사람을 <b>만들어</b> 두셔야 합니다. 저절로 생기는 자리가 아닙니다.',
+  if(c.비겁===0) out.push({t:'끝까지 같이 갈 사람은 <b>만들어</b> 둬야 해. 저절로 생기는 자리가 아니다.',
                             w:'비겁 0개 — 같은 편 글자가 없습니다'});
-  if(c.관성>=3) out.push({t:'위에서 누르는 틀이 늘 있습니다. 그 틀을 미워하면 지치고, 쓰면 밑천이 됩니다.',
+  if(c.관성>=3) out.push({t:'위에서 누르는 틀이 늘 있을 거야. 미워하면 지치고, <b>쓰면 밑천이 된다.</b>',
                             w:'관성 '+c.관성+'개'});
-  if(c.식상>=3) out.push({t:'말이 먼저 나갑니다. 꺼내기 전에 한 박자만 두시면 그 자체가 무기입니다.',
+  if(c.식상>=3) out.push({t:'말이 먼저 나가지. 꺼내기 전에 한 박자만 둬 — 그거면 무기가 돼.',
                             w:'식상 '+c.식상+'개'});
   if(c.재성>=2&&y.st.level==='신약')
-    out.push({t:'벌이가 보여도 혼자 다 쥐려 하면 놓치십니다. 나눠 맡기셔야 남습니다.',
+    out.push({t:'벌이가 보여도 혼자 다 쥐려 들면 놓쳐. 나눠 맡겨야 남는다.',
               w:'재성 '+c.재성+'개인데 일간이 신약'});
   return {rows:out.slice(0,5), yong:y};
 }
@@ -2492,13 +2514,75 @@ function meNeed(){
 function tabMePil(){
   var p=meWho(), s=p&&p.saju; if(!s)return meNeed();
   var y=yongsin(s), nm=esc(p.name||'나');
+  var c=sipsinTable(s), oh=ohCount(s), st=y.st, jh=y.jh;
+  var di=((jdnOf(Number(p.y),Number(p.m),Number(p.d))+(p.noTime?0:(p.H>=23?1:0))+49)%60+60)%60;
+  var gm=gongmang(di), deep=GAN_DEEP[s.dg];
+
+  /* ── 여덟 자가 나와 무슨 사이인가. sipsinTable 이 이미 센 것을 그대로 펴 놓습니다. */
+  var rows=c.rows.map(function(r){
+    return '<div class="mesip-r"><span class="mesip-p">'+esc(r.pos)+'</span>'+
+      '<span class="mesip-c">'+esc(r.src)+'</span>'+
+      '<b class="mesip-n">'+esc(r.name)+'</b>'+
+      '<span class="mesip-g">'+esc(SIP_GROUP[r.name])+'</span></div>';
+  }).join('');
+  var sipTab='<div class="card"><h2><span class="n">십신</span>여덟 자가 자네와 무슨 사이인가</h2>'+
+    '<div class="mesip">'+rows+'</div>'+
+    '<div class="say"><span class="me">무리로 묶으면</span>'+
+    ['비겁','식상','재성','관성','인성'].map(function(k){
+      return esc(k)+' <b>'+c.count[k]+'</b>';}).join(' · ')+
+    ' — 제일 많은 건 <b>'+esc(c.top)+' '+c.topN+'개</b>다. 그게 자네가 제일 많이 쓰는 손이야.</div></div>';
+
+  /* ── 오행 저울. 없는 기운은 <b>없다고</b> 적습니다 — 0 을 숨기면 패를 숨기는 겁니다 (1번). */
+  var zero=['목','화','토','금','수'].filter(function(k){return oh[k]===0;});
+  var bars=['목','화','토','금','수'].map(function(k){
+    var m=OH_META[k], w=Math.min(100,oh[k]*25);
+    return '<div class="mefit-r"><div class="mefit-t">'+m.emo+' '+esc(k)+'('+OH_HAN[k]+')</div>'+
+      '<div class="mefit-b"><i style="width:'+w+'%;background:'+m.c+'"></i></div>'+
+      '<div class="mefit-n'+(oh[k]?'':' hi')+'">'+(oh[k]?oh[k]+'개':'없다')+'</div>'+
+      '<div class="mefit-w">'+esc(m.key)+' — '+esc(m.mind)+'</div></div>';}).join('');
+  var ohCard='<div class="card"><h2><span class="n">오행</span>여덟 자에 기운이 몇씩 들었나</h2>'+bars+
+    (zero.length?'<div class="say gold"><span class="me">없는 기운</span><b>'+zero.join(' · ')+
+      '</b> 가 한 자도 없어. 없는 걸 억지로 쓰려 들지 말고, <b>가진 걸로</b> 가. '+
+      '안 되는 쪽을 제 탓으로 돌리는 버릇부터 고쳐.</div>':
+      '<div class="say"><span class="me">고르다</span>다섯 기운이 다 들었어. 흔한 패가 아니야.</div>')+'</div>';
+
+  /* ── 강약을 어떻게 셌는지 <b>셈까지</b> 보여 줍니다. 「신약이다」 만 적으면 믿을 근거가 없습니다. */
+  var mine=GAN_OH[s.dg];
+  var stCard='<div class="card"><h2><span class="n">강약</span>자네 힘이 센가 약한가</h2>'+
+    '<div class="say"><span class="me">'+esc(st.level)+'</span>도와주는 글자를 세니 <b>'+st.help+'점</b>이다. '+
+    '4.5점 넘으면 신강, 3점 넘으면 중화, 그 아래면 신약 — 그래서 <b>'+esc(st.level)+'</b>이야.</div>'+
+    '<div class="say quiet"><span class="me">세는 법</span>자네 일간이 '+esc(mine)+
+    ' 라, 여덟 자 가운데 <b>'+esc(mine)+'이거나 '+esc(mine)+'을 살리는 '+esc(ohGenOf(mine))+
+    '</b> 이면 한 점. 태어난 달(월지)은 <b>1.5점</b>으로 센다 — 철이 제일 세기 때문이야.'+
+    (st.monthOk?' 자네는 월지가 받쳐 준다.':' 자네는 <b>월지가 안 받쳐 준다.</b> 그게 크다.')+'</div></div>';
+
+  /* ── 철과 공망. 둘 다 이미 세어 둔 값입니다. */
+  var jhCard='<div class="card"><h2><span class="n">철</span>어느 철에 났나</h2>'+
+    '<div class="say"><span class="me">'+esc(jh.season)+'</span>'+esc(jh.season)+'에 난 '+esc(mine)+
+    ' 기운이다. 이 철에는 <b>'+esc(jh.need)+'</b> 기운이 있어야 숨이 트인다.</div>'+
+    '<div class="say quiet"><span class="me">공망</span>'+esc(JI[gm[0]])+' · '+esc(JI[gm[1]])+
+    ' 두 자리가 비었다. 그 자리 일은 <b>애써도 손에 잘 안 남아.</b> 붙들지 말고 흘려 보내.</div></div>';
+
+  /* ── 용신·기신 */
+  var yCard='<div class="card"><h2><span class="n">'+OH_HAN[y.primary]+'</span>무엇이 모자라고 무엇이 넘치나</h2>'+
+    '<div class="say gold"><span class="me">필요한 기운</span><b>'+
+    y.need.map(function(k){return OH_HAN[k]+' '+k;}).join(' · ')+'</b>'+
+    (y.urgent?' — 그런데 <b>여덟 자에 한 자도 없다.</b> 그러니 밖에서 끌어와야 해.':'')+'</div>'+
+    (y.avoid.length?'<div class="say"><span class="me">넘치는 기운</span><b>'+
+      y.avoid.map(function(k){return OH_HAN[k]+' '+k;}).join(' · ')+
+      '</b> 는 더 보태지 마. 여기서 체한다.</div>':'')+'</div>';
+
   return '<div class="card">'+brandBand('내 네 기둥')+
-    '<h1>'+nm+' 님의 패</h1>'+
-    '<p>바꿀 수 없는 넉 자입니다. 바꾸실 수 있는 것은 <b>어떻게 쓰실지</b>뿐입니다.</p></div>'+
+    '<h1>'+nm+', 자네 패다</h1>'+
+    '<p>이 넉 자는 못 바꿔. 바꿀 수 있는 건 <b>쓰는 법</b> 하나야.</p></div>'+
     '<div class="card">'+pillarsHtml(p)+
-      '<div class="say"><span class="me">일간</span>가운데 윗글자 <b>'+GAN[s.dg]+'('+GANH[s.dg]+')</b> 가 '+nm+' 님 본인이십니다. '+
-      '일간은 <b>'+esc(y.st.level)+'</b> 이고, 이 사주에 꼭 필요한 기운은 <b>'+OH_HAN[y.primary]+' '+esc(y.primary)+'</b> 입니다.</div>'+
-      '<div class="say quiet"><span class="me">근거</span>'+esc(y.why)+' '+esc(y.how)+'</div></div>';
+      '<div class="say"><span class="me">일간</span>가운데 윗글자 <b>'+GAN[s.dg]+'('+GANH[s.dg]+')</b> — 그게 자네야. '+
+      '<b>'+esc(deep?deep.n:'')+'</b> 일주다.</div>'+
+      '<div class="say quiet"><span class="me">옛 책은 이렇게 적는다</span>「'+esc(deep?deep.ice:'')+' '+
+      esc(deep?deep.work:'')+'」 — 맞는지 아닌지는 자네가 알지.</div></div>'+
+    sipTab+ohCard+stCard+jhCard+yCard+
+    '<div class="say quiet" style="margin-top:14px">여기 적힌 수는 <b>전부 자네 여덟 자에서 센 것</b>이다. '+
+    '내가 지어낸 건 한 줄도 없어. 못 믿겠거든 위 표를 세어 봐.</div>';
 }
 /* ② 보험이라는 일과 나 */
 function tabMeIns(){
@@ -2507,38 +2591,38 @@ function tabMeIns(){
   var bars=f.rows.map(function(r){
     return '<div class="mefit-r"><div class="mefit-t">'+esc(r.t)+'</div>'+
       '<div class="mefit-b"><i style="width:'+(r.n*10)+'%;background:'+(r.hi?'var(--green)':'var(--amber)')+'"></i></div>'+
-      '<div class="mefit-n'+(r.hi?' hi':'')+'">'+(r.hi?'맞음':'품이 듦')+'</div>'+
+      '<div class="mefit-n'+(r.hi?' hi':'')+'">'+(r.hi?'쓸 만해':'여기서 샌다')+'</div>'+
       '<div class="mefit-w">'+esc(r.src)+'</div></div>';
   }).join('');
   return '<div class="card">'+brandBand('보험이라는 일과 나')+
-    '<h1>이 일과 나는 어디가 맞나</h1>'+
-    '<p>보험은 <b>다섯 가지</b>를 요구하는 일입니다. 어디가 수월하고 어디서 <b>값을 치르시는지</b>를 봅니다 — '+
-    '<b>맞다·안 맞다는 가르지 않습니다.</b></p></div>'+
-    '<div class="card"><h2><span class="n">다섯</span>무엇이 수월하고 무엇에 품이 드나</h2>'+bars+
+    '<h1>이 일하고 자네, 어디가 맞물리나</h1>'+
+    '<p>보험은 <b>다섯 가지</b>를 달라는 일이야. 어디가 수월하고 어디서 <b>값을 치르는지</b>만 본다 — '+
+    '<b>맞다 안 맞다를 가르지는 않아.</b> 그건 패가 할 일이 아니다.</p></div>'+
+    '<div class="card"><h2><span class="n">다섯</span>어디가 수월하고 어디서 값을 치르나</h2>'+bars+
       '<div class="say quiet"><span class="me">막대는 어디서 오나</span>'+
-      '손으로 박은 점수가 아닙니다. 십신 개수 · 일간 강약 · 오행 개수에서 그대로 셉니다. '+
-      '같은 사주면 언제 열어도 같은 막대입니다.</div></div>'+
-    (f.up.length?'<div class="card"><h2><span class="n">밑천</span>그대로 쓰시면 되는 것</h2>'+
+      '내가 손으로 박은 점수가 아니야. 십신 개수 · 일간 강약 · 오행 개수에서 그대로 센 거다. '+
+      '같은 패면 언제 열어도 같은 막대야. 못 믿겠거든 아래 적힌 수를 세어 봐.</div></div>'+
+    (f.up.length?'<div class="card"><h2><span class="n">밑천</span>이건 그냥 쓰면 돼</h2>'+
       f.up.map(function(r){return '<div class="say"><span class="me">'+esc(r.t)+'</span>'+r.say+'</div>';}).join('')+'</div>':'')+
-    (f.dn.length?'<div class="card"><h2><span class="n">품</span>메워야 하는 것</h2>'+
+    (f.dn.length?'<div class="card"><h2><span class="n">값</span>여기서 치르고 있다</h2>'+
       f.dn.map(function(r){return '<div class="say gold"><span class="me">'+esc(r.t)+'</span>'+r.say+'</div>';}).join('')+
       '</div>':'')+
-    '<div class="say quiet" style="margin-top:14px">막대가 낮다고 <b>못 하는 일</b>이라는 뜻이 아닙니다 — 그냥 두면 그 자리에서 값을 치르신다는 뜻입니다. '+
-    '일을 접고 여는 결정은 사주로 하지 마십시오.</div>';
+    '<div class="say quiet" style="margin-top:14px">막대가 낮다고 <b>못 할 일</b>이란 소리가 아니야 — 그냥 두면 거기서 값을 치른다는 소리지. '+
+    '그리고 일을 접고 여는 건 패로 정하는 게 아니다. 그건 자네가 정해.</div>';
 }
 /* ③ 내가 일을 푸는 방식 */
 function tabMeWork(){
   var p=meWho(), s=p&&p.saju; if(!s)return meNeed();
   var w=workWay(s), y=w.yong, rx=YONG_RX[y.primary], nm=esc(p.name||'나'), hd=meHard(s);
   return '<div class="card">'+brandBand('내가 일을 푸는 방식')+
-    '<h1>어떻게 풀어 나가면 되나</h1>'+
-    '<p>남이 잘 되는 방식이 '+nm+' 님께도 되는 것은 아닙니다. 이 패가 풀리는 길만 적습니다.</p></div>'+
-    (hd.length?'<div class="card mehard"><h2><span class="n">독</span>듣기 싫은 것부터</h2>'+
-      '<p class="mehard-p">좋은 말만 적으면 볼 까닭이 없습니다. 아래는 <b>여덟 자에서 나온 것</b>이지 제 짐작이 아닙니다 — 줄마다 어느 수에서 나왔는지 같이 적습니다.</p>'+
+    '<h1>어떻게 풀어 가야 하나</h1>'+
+    '<p>남이 잘 되는 방식이 자네한테도 되는 건 아니야. 이 패가 풀리는 길만 짚는다.</p></div>'+
+    (hd.length?'<div class="card mehard"><h2><span class="n">독</span>듣기 싫은 소리부터 한다</h2>'+
+      '<p class="mehard-p">좋은 소리만 들으러 왔으면 그냥 가. 아래는 <b>여덟 자에서 나온 것</b>이지 내 짐작이 아니야 — 줄마다 어느 수에서 나왔는지 적어 뒀다.</p>'+
       hd.map(function(r){return '<div class="say hard">'+r.t+
         '<span class="hard-w">'+esc(r.why)+'</span></div>';}).join('')+
-      '<div class="say quiet">맞는 것만 가져가십시오. 다만 <b>제일 찔리는 줄</b>이 대개 제일 오래 미뤄 두신 자리입니다.</div></div>':'')+
-    '<div class="card"><h2><span class="n">길</span>이 패가 풀리는 쪽</h2>'+
+      '<div class="say quiet">맞는 것만 가져가. 다만 <b>제일 찔리는 줄</b>이 대개 제일 오래 미뤄 둔 자리다.</div></div>':'')+
+    '<div class="card"><h2><span class="n">길</span>그러니 이쪽으로 가</h2>'+
       w.rows.map(function(r){return '<div class="say">'+r.t+
         '<span style="display:block;font-size:13px;color:var(--ink3);margin-top:6px">'+esc(r.w)+'</span></div>';}).join('')+'</div>'+
     (rx?'<div class="card"><h2><span class="n">'+OH_HAN[y.primary]+'</span>필요한 기운을 일에 쓰는 법</h2>'+
@@ -2561,19 +2645,19 @@ function tabMeTime(){
       :            '사람이 붙는 흐름입니다. 같이 하기도 하고 나눠 갖기도 합니다.';
   }
   return '<div class="card">'+brandBand('올해 · 내년')+
-    '<h1>지금은 어느 때인가</h1>'+
-    '<p>지어낸 해가 아니라 <b>대운과 세운에서 계산된</b> 해입니다.</p></div>'+
+    '<h1>지금이 어느 때냐 하면</h1>'+
+    '<p>지어낸 해가 아니야. <b>대운과 세운에서 뽑은</b> 해다.</p></div>'+
     (cur?'<div class="card"><h2><span class="n">대운</span>지금 선 자리 — '+cur.age+'세부터</h2>'+
       '<div class="say"><b>'+GAN[cur.g]+JI[cur.j]+'</b> · <b>'+esc(cur.sip)+'</b> 운입니다. '+grp(SIP_GROUP[cur.sip])+'</div></div>':'')+
     '<div class="card"><h2><span class="n">올해</span>'+ly.year+'년 — '+esc(ly.han)+'</h2>'+
       '<div class="say"><b>'+esc(ly.sip)+'</b> 해입니다. '+grp(ly.group)+'</div>'+
-      '<div class="say quiet">한 해로 다 되는 일은 없습니다. 올해가 <b>밀어붙일 해인지 숨 고를 해인지</b>, 딱 그만큼만 보십시오.</div></div>'+
+      '<div class="say quiet">한 해로 다 되는 일은 없어. 올해가 <b>밀어붙일 해인지 숨 고를 해인지</b>, 딱 그만큼만 봐.</div></div>'+
     (turn?'<div class="card"><h2><span class="n">바뀜</span>판이 한 번 바뀌는 때</h2>'+
       '<div class="say gold"><b>'+esc(turn.ko.replace(/살$/,''))+'</b>. 대운이 <b>'+esc(turn.sip)+'</b>으로 갈립니다. '+
       (turn.yrs<=2?'얼마 안 남으셨습니다.':'지금부터 '+turn.yrs+'년 뒤입니다.')+
       ' 그 전까지는 아무리 밀어도 잘 안 열리고, 그 뒤로는 같은 힘이 다르게 먹습니다.</div></div>':'')+
-    '<div class="say quiet" style="margin-top:14px">운은 <b>흐름이지 정해진 답이 아닙니다.</b> '+
-    '좋은 해라고 가만히 있어 되는 일 없고, 나쁜 해라고 못 할 일도 없습니다. 속도를 정하는 데 쓰십시오.</div>';
+    '<div class="say quiet" style="margin-top:14px">운은 <b>흐름이지 정해진 답이 아니다.</b> '+
+    '좋은 해라고 가만있어서 되는 일 없고, 나쁜 해라고 못 할 일도 없어. 속도 정하는 데나 써.</div>';
 }
 /* ── 신당 화면 ── */
 function setDangCat(k){S.dang=S.dang||{};S.dang.cat=(S.dang.cat===k?'':k);save();draw();}
@@ -2913,8 +2997,66 @@ function salesRisk(sc,p){
     fix:'목표를 낮게 잡지 마세요. 이 유형은 기대치가 낮으면 같이 낮아집니다.'});
   return out;
 }
-function tabSales(){
-  if(S.view!=='agent')return '<div class="card"><h2>이 화면은 설계사 전용입니다</h2><p>고객 화면에서는 열리지 않습니다.</p></div>';
+/* ── 📣 설명회 한 장 (판 X545)
+   사장님 말씀 2026-11-24 「직업 설명회에서는 신당풀이, 아이스브레이킹,
+   영업가능성, 인생운, 고민상담 정도로 … 디테일하게 한장으로 쭉 풀어줘」.
+
+   ★ 글을 <b>한 줄도 베끼지 않습니다.</b> 다섯 장을 그대로 불러 이어 붙입니다 —
+     베껴 두면 본 장을 고쳐도 여기는 안 고쳐져 한쪽이 늙습니다 (5번).
+   ★★ 그리는 동안 <b>고객 화면으로 바꿔 둡니다.</b> 그래야 각 장 안의
+     「🔒 내 눈」 화법 대본·리더용 위험이 저절로 빠집니다. 띄워 놓고 함께
+     보는 화면에 그것이 뜨면 안 됩니다. 끝나면 반드시 되돌립니다.
+   ★ 영업 가능성은 <b>총점·등급을 뺀 꼴</b>로 부릅니다 (사장님 결정 2026-11-24). */
+function tabShow(){
+  var cl=S.cl; if(!ready(cl))return '<div class="card"><h2>생년월일을 먼저 넣어 주세요</h2>'+
+    '<p>설명회 한 장은 <b>그 자리에 앉은 분</b>의 패로 풉니다.</p>'+
+    '<button class="btn" style="margin-top:12px" onclick="goStep(\'client\')">넣으러 가기</button></div>';
+  var keepV=S.view, keepT=S.tab, parts=[];
+  function sec(no,ttl,sub,html){
+    return '<div class="card shw-h"><h2><span class="n">'+no+'</span>'+esc(ttl)+'</h2>'+
+      '<p class="shw-s">'+esc(sub)+'</p></div>'+html;
+  }
+  try{
+    /* ★★ 고객 화면으로 바꿔 둡니다 — 각 장의 「🔒 내 눈」 이 저절로 빠집니다 */
+    S.view='client';
+    parts.push(sec('하나','신당 풀이','타고난 넉 자를 먼저 봅니다. 여기서 사람들이 제일 먼저 놀랍니다.',tabDang()));
+    parts.push(sec('둘','아이스브레이킹','첫 만남에서 무슨 말부터 꺼내면 되는지.',tabIce()));
+    parts.push(sec('셋','이 일과 어떻게 맞물리나',
+      '다섯 축만 봅니다 — 점수로 사람을 가르지 않습니다.',tabSales({show:true})));
+    parts.push(sec('넷','인생 운','언제 밀고 언제 숨을 고르는지.',tabLife()));
+    parts.push(sec('다섯','고민 상담','지금 걸려 있는 것 하나를 그 자리에서 풀어 봅니다.',tabWorry()));
+  }finally{ S.view=keepV; S.tab=keepT; }
+
+  return '<div class="card">'+brandBand('직업 설명회 · 한 장')+
+    '<h1>'+esc(cl.name||'')+' 님 — 한 장으로 쭉</h1>'+
+    '<p>설명회에서 띄워 놓고 함께 보는 장입니다. 다섯 꼭지가 <b>한 줄로</b> 이어집니다 — '+
+    '탭을 옮겨 다니지 않습니다.</p>'+
+    /* shw-meta — <b>화면에서만</b> 보이는 안내입니다. 종이에 찍히면 설명회에서
+       나눠 준 장에 「🔒 내 눈」 「등급」 같은 말이 그대로 남습니다 (3번 · 4-1번). */
+    '<div class="say quiet shw-meta"><span class="me">여기 없는 것</span>「🔒 내 눈」 화법 대본과 리더용 위험은 '+
+    '<b>이 장에 안 뜹니다.</b> 영업 가능성도 <b>총점과 등급을 빼고</b> 다섯 축만 냅니다 — '+
+    '설명회는 사람을 가르는 자리가 아니기 때문입니다.</div>'+
+    '<button class="btn line sm shw-meta" style="margin-top:12px" onclick="window.print()">🖨 한 장 인쇄 · PDF</button>'+
+    '</div>'+
+    /* ★ .shw 로 싸 둡니다 — 다섯 장이 저마다 들고 있는 <b>꼬리글과 인쇄 단추</b>를
+       여기서만 접습니다. 한 장으로 이으면 같은 꼬리글이 <b>다섯 번</b> 찍히고
+       같은 인쇄 단추가 다섯 개 섭니다. 본 장에서는 그대로 둡니다 (5번 — 글을
+       지우는 것이 아니라 이 자리에서만 안 보이게 합니다). */
+    '<div class="shw">'+parts.join('')+'</div>'+
+    '<div class="say quiet" style="margin-top:14px">이 장의 수는 전부 <b>그분 여덟 자와 48문항</b>에서 나온 것입니다. '+
+    '적성을 가르거나 합격을 말하는 자리가 아닙니다 — 이야기를 여는 자료입니다.</div>'+
+    footNote();
+}
+
+/* opt.show — 설명회 한 장에서 부를 때의 꼴 (판 X545).
+   ★ 총점·등급(head)과 리더용 위험(risk)을 <b>안 냅니다.</b> 설명회에서 후보에게
+     「78점 · 상위권」 을 띄우면 아무리 밑에 아니라고 적어도 평가표로 읽힙니다.
+     채용 쪽은 「후보 화면에 합격·불합격 같은 말이 한 자도 없다」 가 이미 자로
+     걸려 있는 자리입니다 (판 X503). 다섯 축과 근거만 보여 줍니다.
+   ⚠ 글을 따로 적지 않습니다 — 같은 함수에서 꺼내므로 한쪽만 늙지 않습니다. */
+function tabSales(opt){
+  var show=!!(opt&&opt.show);
+  if(!show&&S.view!=='agent')return '<div class="card"><h2>이 화면은 설계사 전용입니다</h2><p>고객 화면에서는 열리지 않습니다.</p></div>';
   var cl=S.cl,sc=salesCalc(cl),chn=salesChannels(sc),cv=salesCurve(sc);
   if(!sc.code&&!cl.saju)return '<div class="card"><h2>아직 볼 게 없습니다</h2><p>성향검사 결과나 생년월일 중 하나는 있어야 영업 가능성을 볼 수 있습니다.</p></div>';
   var head='<div class="card">'+brandBand('영업 적성 리포트 · '+esc(cl.name||'')+' 님')+
@@ -2983,6 +3125,7 @@ function tabSales(){
         '</span></div></div>';
     })():'<div class="note info">내 카드를 만들면 <b>나와 이 사람의 관리 난이도</b>까지 함께 나옵니다.</div>')+
   '</div>');
+  if(show)return axes+bw+ch+curve;
   return head+axes+bw+ch+curve+risk+footNote();
 }
 /* ══════════════════════════════════════════════════════════════════
@@ -4556,126 +4699,29 @@ function worrySolve(p,cat,txt){
   return o;
 }
 /* ══════════════════════════════════════════════════════════════════
-   22. 유료 — 고민 상담 리포트만 결제한다
-   ══════════════════════════════════════════════════════════════════
-   상담카드(성향·궁합·화법)는 설계사 도구라 계속 무료다.
-   고객에게 보내는 고민 상담 리포트만 건당 결제로 연다.
-   설계사 화면(내 눈용)에서는 결제 없이 전부 보인다.                  */
-var PAY={price:1900,tossKey:'',confirmUrl:'/api/toss-confirm',
-  bank:'',account:'',holder:'',naver:'',kakao:'',code:'APEX48',agent:'',tel:''};
+   22. 설계사 신원 — 주소줄로 받는 이름과 번호
+   ──────────────────────────────────────────────────────────────────
+   ⚠ 여기는 2026-11-24 까지 「유료 — 고민 상담 리포트만 결제한다」 였습니다.
+     사장님 말씀 「결제칸 없애고」 로 통째로 걷었습니다.
+   ★ 걷으면서 두 가지가 제자리를 찾았습니다 —
+     ① 이 파일 머리글은 <b>처음부터</b> 「결제 없음. 전부 열려 있다」 고
+        적혀 있었습니다. 쪽지가 거짓말을 하고 있었던 것입니다 (1번).
+     ② 결제 칸이 토스 스크립트를 <b>바깥에서 받아왔습니다</b>
+        (js.tosspayments.com). 머리글의 「혼자 도는 파일이다 — 서버도,
+        인터넷에서 받아오는 그림·글꼴도 없다」 와 어긋났습니다.
+        이제 이 파일이 바깥에서 받아오는 것은 <b>하나도 없습니다</b>.
+   ⚠ PAY 라는 이름은 더 이상 결제를 담지 않으므로 <b>AGENT</b> 로 바꿨습니다.
+     이름이 거짓말하면 부르는 쪽이 틀립니다 (4번).
+   지키는 자는 check-nopay 입니다.                                    */
+var AGENT={name:'',tel:''};
 (function(){
   var q=(location.search||'').replace(/^\?/,'').split('&'),i;
   for(i=0;i<q.length;i++){
     var kv=q[i].split('='); if(kv.length<2)continue;
     var k=decodeURIComponent(kv[0]),v=decodeURIComponent(kv[1].replace(/\+/g,' '));
-    if(k==='key')PAY.tossKey=v; if(k==='price'&&+v>0)PAY.price=+v;
-    if(k==='bank')PAY.bank=v; if(k==='acct')PAY.account=v; if(k==='holder')PAY.holder=v;
-    if(k==='naver')PAY.naver=v; if(k==='kakao')PAY.kakao=v; if(k==='code')PAY.code=v;
-    if(k==='agent')PAY.agent=v; if(k==='tel')PAY.tel=v;
+    if(k==='agent')AGENT.name=v; if(k==='tel')AGENT.tel=v;
   }
 })();
-function won(n){return (''+n).replace(/\B(?=(\d{3})+(?!\d))/g,',')+'원';}
-function paidKey(){var c=S.cl;return 'W-'+(c.name||'')+'-'+(c.y||'')+(c.m||'')+(c.d||'')+'-'+(S.worry&&S.worry.cat||'');}
-function isPaid(){
-  if(S.view==='agent')return true;              /* 내 도구는 무료 */
-  try{var m=JSON.parse(localStorage.getItem('worry_paid')||'{}');return !!m[paidKey()];}catch(e){return false;}
-}
-function setPaid(){
-  try{var m=JSON.parse(localStorage.getItem('worry_paid')||'{}');m[paidKey()]=Date.now();
-    localStorage.setItem('worry_paid',JSON.stringify(m));}catch(e){}
-}
-function payOpen(){
-  var rows='';
-  if(PAY.tossKey)rows+=payRow('💳','#E8F3FF','카드 결제','토스페이먼츠 · 승인되면 바로 열립니다','payCard()');
-  if(PAY.account)rows+=payRow('🏦','#E8F8F0','계좌이체 · 무통장입금','이체 후 확인되면 열립니다','payBank()');
-  if(PAY.naver)rows+=payRow('Ⓝ','#E8F8F0','네이버페이','네이버페이로 결제','paySimple(\'naver\')');
-  if(PAY.kakao)rows+=payRow('🟡','#FFF6E5','카카오페이','카카오로 송금','paySimple(\'kakao\')');
-  if(!rows)rows='<div class="note warn">아직 결제수단이 연결되지 않았습니다. '+(PAY.agent?esc(PAY.agent)+' 설계사':'담당 설계사')+'에게 문의해 주세요.</div>';
-  sheet('고민 상담 리포트 결제',
-    '<div class="sub">'+esc(S.cl.name||'')+' 님 · '+esc((S.worry&&S.worry.catName)||'')+'</div>'+
-    '<div style="font-size:24px;font-weight:900;color:#3182F6;margin:4px 0 14px">'+won(PAY.price)+'</div>'+
-    rows+
-    '<div style="font-size:11px;color:#8B95A1;line-height:1.7;margin-top:12px">결제 전에도 <b>요약</b>과 성향·사주 화면은 계속 무료로 보실 수 있습니다. 환불은 관련 법령과 약관을 따릅니다.</div>'+
-    '<button class="btn ghost sm" style="margin-top:12px" onclick="unlockAsk()">확인 코드로 열기</button>');
-}
-function payRow(em,bg,t,d,fn){
-  return '<button class="pay" onclick="'+fn+'"><span class="em" style="background:'+bg+'">'+em+'</span>'+
-    '<span class="tx"><b>'+esc(t)+'</b><span>'+esc(d)+'</span></span><span class="ar">›</span></button>';
-}
-function payCard(){
-  if(!PAY.tossKey){toast('카드 결제가 아직 연결되지 않았습니다');return;}
-  var orderId='WORRY-'+Date.now();
-  try{localStorage.setItem('worry_order',JSON.stringify({orderId:orderId,key:paidKey()}));}catch(e){}
-  sheetClose();toast('결제창을 여는 중입니다…');
-  var sc=document.createElement('script');
-  sc.src='https://js.tosspayments.com/v1/payment';
-  sc.onerror=function(){toast('결제 모듈을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');};
-  sc.onload=function(){
-    try{
-      var tp=TossPayments(PAY.tossKey);
-      tp.requestPayment('카드',{amount:PAY.price,orderId:orderId,orderName:'고민 상담 리포트',
-        successUrl:location.origin+location.pathname+'?toss=success',
-        failUrl:location.origin+location.pathname+'?toss=fail',
-        customerName:S.cl.name||''});
-    }catch(e){toast('결제창을 열지 못했습니다');}
-  };
-  document.head.appendChild(sc);
-}
-function payBank(){
-  var line=PAY.bank+' '+PAY.account+(PAY.holder?' ('+PAY.holder+')':'');
-  var msg='[고민 상담] '+(S.cl.name||'')+' 님 · '+won(PAY.price)+' 입금했습니다.';
-  sheet('계좌이체 · 무통장입금',
-    '<div class="note ok"><div class="sub" style="color:#00A05A;font-weight:800">입금 계좌</div>'+
-      '<div style="font-size:17px;font-weight:900;color:#00A05A;margin-top:5px">'+esc(line)+'</div>'+
-      '<div class="kv" style="margin-top:8px"><span>입금 금액</span><b>'+won(PAY.price)+'</b></div>'+
-      '<div class="kv"><span>입금자명</span><b>'+esc(S.cl.name||'검사하신 분 성함')+'</b></div></div>'+
-    (PAY.tel?'<a class="btn sm" style="margin-top:10px;display:block;text-align:center;text-decoration:none;box-sizing:border-box;background:var(--green)" href="sms:'+esc(PAY.tel)+'?body='+encodeURIComponent(msg)+'">💬 입금 알리기</a>':'')+
-    '<div style="font-size:11.5px;color:#8B95A1;line-height:1.7;margin-top:12px">입금이 확인되면 <b>확인 코드</b>를 받으실 수 있습니다.</div>'+
-    '<button class="btn ghost sm" style="margin-top:10px" onclick="payOpen()">← 다른 결제수단</button>');
-}
-function paySimple(kind){
-  var url=(kind==='naver')?PAY.naver:PAY.kakao,label=(kind==='naver')?'네이버페이':'카카오페이';
-  if(!url){toast(label+' 링크가 연결되지 않았습니다');return;}
-  try{window.open(url,'_blank','noopener');}catch(e){location.href=url;}
-  sheet(label,'<p>'+esc(label)+' 결제를 마치셨으면 담당자에게 알려주세요. 확인되면 코드를 드립니다.</p>'+
-    '<button class="btn ghost sm" style="margin-top:10px" onclick="payOpen()">← 다른 결제수단</button>');
-}
-function unlockAsk(){
-  sheet('확인 코드','<p>입금이 확인되면 알려드리는 코드를 넣어주세요.</p>'+
-    '<input class="inp" id="ucode" placeholder="확인 코드" style="margin-top:12px" autocomplete="off"/>'+
-    '<button class="btn" style="margin-top:10px" onclick="unlockGo()">리포트 열기</button>');
-}
-function unlockGo(){
-  var v=(val('ucode')||'').replace(/\s/g,'').toUpperCase();
-  if(!v){toast('코드를 입력해 주세요');return;}
-  if(v!==String(PAY.code).toUpperCase()){toast('코드가 맞지 않습니다');return;}
-  setPaid();sheetClose();draw();toast('🎉 리포트가 열렸습니다');
-}
-function tossReturn(){
-  var q=location.search||'';
-  function get(n){var m=q.match(new RegExp('[?&]'+n+'=([^&]*)'));return m?decodeURIComponent(m[1]):'';}
-  var t=get('toss');if(!t)return;
-  try{if(window.history&&history.replaceState)history.replaceState(null,'',location.pathname);}catch(e){}
-  if(t!=='success'){toast('결제가 취소되었습니다');return;}
-  var pk=get('paymentKey'),oid=get('orderId'),amt=get('amount');
-  if(!(pk&&oid&&amt)){toast('결제 정보를 확인하지 못했습니다');return;}
-  var pend=null;try{pend=JSON.parse(localStorage.getItem('worry_order')||'null');}catch(e){}
-  toast('결제를 확인하는 중입니다…');
-  fetch(PAY.confirmUrl,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({paymentKey:pk,orderId:oid,amount:Number(amt),product:'worry',
-      name:(S.cl&&S.cl.name)||'',agent:PAY.agent||''})})
-    .then(function(r){return r.ok;})
-    .then(function(ok2){
-      if(!ok2){toast('결제 승인을 확인하지 못했습니다. 담당자에게 문의해 주세요.');return;}
-      if(pend&&pend.key){try{var m=JSON.parse(localStorage.getItem('worry_paid')||'{}');m[pend.key]=Date.now();
-        localStorage.setItem('worry_paid',JSON.stringify(m));}catch(e){}}
-      else setPaid();
-      try{localStorage.removeItem('worry_order');}catch(e){}
-      S.step='board';S.tab='worry';draw();toast('🎉 결제 완료 · 리포트가 열렸습니다');
-    })
-    .catch(function(){toast('결제 확인 서버에 연결하지 못했습니다. 담당자에게 문의해 주세요.');});
-}
-/* 시트(모달) */
 function sheetClose(){var o=$('sheet');if(o)o.classList.remove('on');}
 function sheet(title,inner){
   $('sheetBody').innerHTML='<div class="sheethd"><b>'+esc(title)+'</b><button class="x" onclick="sheetClose()">✕</button></div>'+inner;
@@ -4713,10 +4759,9 @@ function tabWorry(){
       '<div class="sub" style="margin-top:6px">적지 않으셔도 됩니다. 적어주시면 종류를 자동으로 골라드립니다. 이 내용은 이 기기에만 저장됩니다.</div></div>'+
       '<button class="btn" style="margin-top:14px" onclick="worryStart()">고민 풀어보기</button>'+
     '</div>'+
-    (S.view==='client'?'<div class="card"><div class="note info">요약까지는 무료입니다. 자세한 풀이(원인 · 할 것 · 하지 말 것 · 시기)는 <b>'+won(PAY.price)+'</b>입니다.</div></div>':'')+
     footNote();
   }
-  var o=worrySolve(cl,w.cat,w.txt||''),paid=isPaid();
+  var o=worrySolve(cl,w.cat,w.txt||'');
   var head='<div class="card"><div class="sub">'+o.cat.emo+' '+esc(o.cat.n)+'</div>'+
     '<h1 style="margin-top:4px">'+o.one+'</h1>'+
     (w.txt?'<div class="talk" style="margin-top:10px">"'+esc(w.txt)+'"</div>':'')+
@@ -4724,21 +4769,8 @@ function tabWorry(){
     '<div class="talk good">🌾 '+esc(o.bless)+'</div>'+
     (cl.blood&&BLOOD_DEEP[cl.blood]?'<div class="talk">🩸 '+esc(cl.blood)+'형이시라 '+esc(BLOOD_DEEP[cl.blood].stress)+'</div>':'')+
     '<div class="row" style="margin-top:12px"><button class="btn ghost sm" onclick="worryReset()">다른 고민 물어보기</button>'+
-    (paid?'<button class="btn line sm" onclick="window.print()">🖨 인쇄 · PDF</button>':'')+'</div>'+
+    '<button class="btn line sm" onclick="window.print()">🖨 인쇄 · PDF</button></div>'+
   '</div>';
-  if(!paid){
-    return head+'<div class="card" style="text-align:center;background:var(--blue-l)">'+
-      '<div style="font-size:34px">🔒</div>'+
-      '<h2 style="justify-content:center;margin-top:8px">자세한 풀이는 여기서부터입니다</h2>'+
-      '<ul class="list" style="text-align:left;max-width:520px;margin:12px auto 0">'+
-      ['왜 이 고민이 생겼는지 — 사주 근거와 성향 근거','이번 달에 할 것 세 가지 (구체적으로)','하지 말 것 두 가지',
-       '언제 움직이면 좋은지 — 앞으로 6년의 합·충','인쇄해서 두고 볼 수 있는 리포트'].map(function(x){
-        return '<li><span class="ic">🔒</span><span>'+esc(x)+'</span></li>';}).join('')+'</ul>'+
-      '<div style="font-size:28px;font-weight:900;color:#3182F6;margin-top:14px">'+won(PAY.price)+'</div>'+
-      '<div class="sub">1건 · 한 번 열면 이 기기에서 계속 보실 수 있습니다</div>'+
-      '<button class="btn" style="margin-top:14px" onclick="payOpen()">결제하고 전부 보기</button>'+
-    '</div>'+footNote();
-  }
   var why='<div class="card"><h2><span class="n">원인</span>왜 이 고민이 생겼나</h2>'+
     '<div class="tbwrap stack"><table class="tb"><tbody>'+
     [['사주에서 보면',o.sajuWhy+(o.sajuWhy?' — ':'')+o.now.replace(/<[^>]+>/g,'')],
@@ -4755,7 +4787,7 @@ function tabWorry(){
   var close='<div class="card"><h2><span class="n">맺음</span>드리고 싶은 말</h2>'+
     '<div class="talk good">🌾 '+esc(o.bless)+'</div>'+
     '<p class="sub">이 리포트는 사주와 성향으로 정리한 <b>참고 자료</b>입니다. 의료·법률·투자의 판단을 대신하지 않습니다. 몸이 아프면 병원에, 돈이 걸린 결정은 전문가와 함께 확인하세요.</p>'+
-    (PAY.agent?'<div class="note info">더 이야기 나누고 싶으시면 <b>'+esc(PAY.agent)+'</b> 설계사에게 편하게 연락 주세요.'+(PAY.tel?' <a href="tel:'+esc(PAY.tel)+'">📞 '+esc(PAY.tel)+'</a>':'')+'</div>':'')+
+    (AGENT.name?'<div class="note info">더 이야기 나누고 싶으시면 <b>'+esc(AGENT.name)+'</b> 설계사에게 편하게 연락 주세요.'+(AGENT.tel?' <a href="tel:'+esc(AGENT.tel)+'">📞 '+esc(AGENT.tel)+'</a>':'')+'</div>':'')+
   '</div>';
   return head+why+act+when+close+footNote();
 }
@@ -5072,7 +5104,6 @@ function fitShell(){
     if(gl.indexOf(S.tab)<0)S.tab=gl[0];
   }
   fitShell();draw();
-  try{tossReturn();}catch(e){}
   setTimeout(function(){fitShell();hintCheck();},250);
 })();
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ══════════════════════════════════════════════════════════════════
-   check-mstnews.js — 계약 마디 카톡 칸에 <b>기사가 진짜 붙나</b> (판 X542)
+   check-mstnews.js — 계약 마디 카톡 칸에 <b>기사가 진짜 붙나</b> (판 X546)
 
    사장님 말씀 2026-11-23 — 「고객이 관심있을만한 것들을 뉴스로 보내던」.
 
@@ -50,7 +50,7 @@ const 씨 = [
 ];
 
 (async () => {
-  console.log('══ 📰 계약 마디 카톡 칸에 기사가 진짜 붙나 (판 X542) ══');
+  console.log('══ 📰 계약 마디 카톡 칸에 기사가 진짜 붙나 (판 X546) ══');
   const srv = http.createServer((q, r) => {
     const p = path.join(ROOT, decodeURIComponent(url.parse(q.url).pathname));
     fs.readFile(p, (e, b) => {

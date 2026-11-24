@@ -176,7 +176,7 @@ const clearOvl = pg => pg.evaluate(sel => {
 
   /* 진짜로 받아 둔 기사가 있으면 — <b>그대로</b> 옮긴다 */
   await pg.evaluate(() => {
-    /* ★★ 판 X542 — 칸 이름을 <b>nlPull 이 담는 그대로</b> 씁니다.
+    /* ★★ 판 X546 — 칸 이름을 <b>nlPull 이 담는 그대로</b> 씁니다.
        ⚠ 여태 이 자리에 {title, link, source} 를 심고 있었습니다. 앱이 실제로
          받는 꼴은 {t, u, s, d, cats} 입니다 — <b>자가 버그와 똑같이 틀린 꼴</b>로
          먹이고 있었으니 둘이 서로 맞아떨어져 <b>둘 다 초록</b>이었습니다.

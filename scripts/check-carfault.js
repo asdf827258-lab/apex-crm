@@ -123,7 +123,19 @@ const TOOL = 'app/상담자료/자동차사고_과실분석.html';
 
   console.log('\n[5] 창 안에서 실제로 그려지는가');
   await page.evaluate(() => go('car_fault'));
-  await page.waitForTimeout(2200);
+  /* ⚠ 여기 2,200ms 를 그냥 자고 있었습니다. 2026-11-24 CI 가 느린 날(한 갈래가
+     11.8분) 창의 <b>HTML 은 다 왔는데 그 안 스크립트가 아직 안 돈</b> 채로 재어,
+     「appToken() 이 산다」·「토큰을 읽다 터지지 않는다」 둘이 울었습니다 —
+     고칠 것이 없는데 켜진 빨간불입니다. 사람이 점검을 안 믿게 됩니다 (8번).
+     그래서 <b>자지 않고 그 함수가 설 때까지 기다립니다.</b> 끝내 안 서면
+     그때는 진짜 빨간불이라, 아래 묻는 줄이 그대로 웁니다.                   */
+  try {
+    await page.waitForFunction(() => {
+      const f = document.getElementById('carFaultFrame');
+      return !!(f && f.contentDocument && f.contentDocument.getElementById('go')
+                && typeof f.contentWindow.appToken === 'function');
+    }, { timeout: 15000 });
+  } catch (e) { /* 안 서면 아래에서 울립니다 — 여기서 숨기지 않습니다 */ }
   r = await page.evaluate(() => {
     const f = document.getElementById('carFaultFrame');
     const d = f && f.contentDocument;
