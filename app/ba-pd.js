@@ -114,7 +114,7 @@
       '<div id="bapdList_' + slot + '">' + fileList(slot) + '</div></div>';
   }
   function formHtml() {
-    return '<div class="card bapd-card"><div class="card-body">' +
+    return '<div class="card"><div class="card-body">' +
       '<div class="g2 bapd-g2">' +
         slotBox('bj', '① 보장분석 · 증권 (있으면)', '지금 가입된 보험이 보여야 컨셉이 맞습니다. 없으면 비워 두세요.') +
         slotBox('pr', '② 제안서 · 가입설계서 (1~3개)', '여러 개면 「고르기」, 연금·달러면 「연금 순서」 로 풉니다.') +
@@ -429,7 +429,7 @@
   function deckHtml(plan, client) {
     var n = plan.slides.length, title = fill(plan.title || '{고객}님 상담 설명자료');
     var sl = plan.slides.map(function (s, i) { return slideHtml(s, i, n); }).join('\n');
-    return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(title) + '</title>' +
+    return '<!doctype html><html lang="ko" data-theme="light"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(title) + '</title>' +
       '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">' +
       '<style>' + DECK_CSS + '.brand{font-weight:800;font-size:15px;color:#1d3a8a}.cover .brand{position:absolute;top:40px;right:56px;background:#fff;padding:8px 14px;border-radius:10px}' + (client ? '#cheat,#drawer{display:none!important}' : '') + '</style></head><body><div id="stage">' + sl + '</div>' +
       (client ? '' : '<aside id="drawer"><h4>대본 · <span id="dno"></span></h4><div id="dsay"></div><div class="tip" id="dtip"></div></aside>') +
