@@ -113,7 +113,12 @@
     if (typeof v === 'number' && isFinite(v)) return '<c r="' + a + '"' + s + '><v>' + v + '</v></c>';
     return '<c r="' + a + '"' + s + ' t="inlineStr"><is><t xml:space="preserve">' + esc(v) + '</t></is></c>';
   }
-  function row(r, cells) { return '<row r="' + r + '">' + cells.join('') + '</row>'; }
+  /* ★ 판 X532 — 줄 높이를 줍니다. 전부 기본(15pt)이면 표가 답답하고
+     「엑셀 기본 시트」 처럼 보입니다 (사장님 말씀 「엑셀로 퀄리티는 이것밖에 안되?」). */
+  function row(r, cells, ht) {
+    return '<row r="' + r + '"' + (ht ? (' ht="' + ht + '" customHeight="1"') : '') + '>' +
+      cells.join('') + '</row>';
+  }
 
   /* ══ ③ 꼴(styles) — <b>묶음(부위)마다 제 색</b> (판 X528 · 사장님 말씀
      「색 별로 따로 나누고, 글씨 크기 부위 전부 나눠」) ══════════════════
@@ -138,6 +143,18 @@
   function GST(i, k) { return 20 + i * 3 + k; }
   /* 보험료 줄이 쓰는 꼴 — 묶음 꼴 뒤 일곱 (0 전 · 1 후 · 2 전합 · 3 후합 · 4 해지 · 5 줄음 · 6 늘음) */
   function PST(n, k) { return 20 + n * 3 + k; }
+  /* ★ 판 X532 — 보험료 꼴 <b>뒤</b>: 묶음마다 큰 제목 하나, 그 뒤 상태 셋 + 부제 */
+  function BIG(n, i) { return 20 + n * 3 + 7 + i; }                 /* 묶음 i 의 큰 제목 */
+  function STT(n, k) { return 20 + n * 3 + 7 + n + k; }     /* 0 충분 1 부족 2 미가입 3 부제 4 큰 제목 띠 */
+  /* 큰 제목 띠 한 줄을 만듭니다 — 칸 수만큼 칠해야 띠가 끊기지 않습니다 */
+  function 띠줄(r, t, 칸수, 꼴) {
+    /* ⚠ cel 은 값이 없으면 <b>칸을 안 만듭니다</b>(빈 칸 = 모름 · 1번). 그래서
+       빈 칸에 색만 입히려면 여기서 <b>직접</b> 찍어야 합니다 — 안 그러면 띠가
+       A칸에서 끊깁니다(뽑아서 보고 찾았습니다). */
+    var c2 = [cel(0, r, t, 꼴)], i;
+    for (i = 1; i < 칸수; i++) c2.push('<c r="' + col(i) + r + '" s="' + 꼴 + '"/>');
+    return row(r, c2, 34);
+  }
 
   function styles(GRP) {
     var f = '', fi = '', xf = '', i;
@@ -159,6 +176,12 @@
        이 글자는 <b>거르기·정렬 때문에</b> 남겨 두는 것이라 작고 옅게 둡니다 — 크면
        눈이 그것부터 읽습니다. (9pt · 그 색을 흰색과 반쯤 섞음)                 */
     for (i = 0; i < GRP.length; i++) FONT.push('<sz val="9"/><color rgb="FF' + tint(GRP[i].c, 0.42) + '"/><name val="맑은 고딕"/>');
+    /* ★ 판 X532 — 사장님 말씀 「엑셀로 퀄리티는 이것밖에 안되?」.
+       머리가 10.5pt 한 줄이라 「엑셀 기본 시트」 로 보였습니다. 큰 제목 글꼴을 보탭니다. */
+    var FBIG = FONT.length;                                   /* 큰 제목 — 흰 16pt */
+    FONT.push('<b/><sz val="16"/><color rgb="FFFFFFFF"/><name val="맑은 고딕"/>');
+    FONT.push('<b/><sz val="10"/><color rgb="FFB45309"/><name val="맑은 고딕"/>');   /* +1 부족 */
+    FONT.push('<sz val="10"/><color rgb="FF6B7684"/><name val="맑은 고딕"/>');       /* +2 부제 */
     for (i = 0; i < FONT.length; i++) f += '<font>' + FONT[i] + '</font>';
 
     var FILL = ['<patternFill patternType="none"/>', '<patternFill patternType="gray125"/>'];
@@ -170,8 +193,18 @@
       FILL.push('<patternFill patternType="solid"><fgColor rgb="FF' + tint(GRP[i].c, 0.86) + '"/><bgColor indexed="64"/></patternFill>');
       FILL.push('<patternFill patternType="solid"><fgColor rgb="FF' + tint(GRP[i].c, 0.95) + '"/><bgColor indexed="64"/></patternFill>');
     }
+    /* ★ 판 X532 — 묶음에 매이지 않은 <b>큰 제목 띠</b> 하나 (앞 시트들이 씁니다) */
+    var FNAVY = FILL.length;
+    FILL.push('<patternFill patternType="solid"><fgColor rgb="FF2B3A55"/><bgColor indexed="64"/></patternFill>');
     for (i = 0; i < FILL.length; i++) fi += '<fill>' + FILL[i] + '</fill>';
 
+    /* ★ 판 X532 — 띠는 <b>테두리 없이</b>. 칸마다 테두리를 그으면 띠가 흰 금으로
+       끊겨 보입니다(뽑아서 보고 찾았습니다). */
+    function XN(n, fo, fl, al) {
+      return '<xf numFmtId="' + n + '" fontId="' + fo + '" fillId="' + fl + '" borderId="0" xfId="0" ' +
+        'applyNumberFormat="1" applyFont="1" applyFill="1" applyAlignment="1">' +
+        '<alignment ' + (al || 'vertical="center"') + '/></xf>';
+    }
     function X(n, fo, fl, al) {
       return '<xf numFmtId="' + n + '" fontId="' + fo + '" fillId="' + fl + '" borderId="1" xfId="0" ' +
         'applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">' +
@@ -211,6 +244,14 @@
     xf += X(165, 4, 6);   /* +4 보험료 해지 */
     xf += X(165, 5, 0);   /* +5 보험료 줄었다(초록) */
     xf += X(165, 4, 0);   /* +6 보험료 늘었다(붉게) */
+    /* ★ 판 X532 — 묶음마다 <b>큰 제목 띠</b> 하나 (그 색 바탕 · 흰 16pt) */
+    for (i = 0; i < GRP.length; i++) xf += XN(0, FBIG, 10 + i * 3, 'horizontal="left" vertical="center"');
+    /* 상태 세 가지 — 글자색만이 아니라 <b>칸을 칠합니다</b>. 눈이 색부터 읽습니다. */
+    xf += X(0, 5, 9, 'horizontal="center" vertical="center"');        /* 충분 */
+    xf += X(0, FBIG + 1, 3, 'horizontal="center" vertical="center"'); /* 부족 */
+    xf += X(0, 4, 6, 'horizontal="center" vertical="center"');        /* 미가입 */
+    xf += XN(0, FBIG + 2, 0, 'horizontal="left" vertical="center"');   /* 부제 */
+    xf += XN(0, FBIG, FNAVY, 'horizontal="left" vertical="center"');   /* 큰 제목 띠(남색) */
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
       /* ⚠ 164(#,##0)만 두었더니 <b>월 보험료 12.4만이 12 로</b>, 합계 27.2 가 27 로
@@ -224,7 +265,7 @@
       '<border><left style="thin"><color rgb="FFD6D6D6"/></left><right style="thin"><color rgb="FFD6D6D6"/></right>' +
       '<top style="thin"><color rgb="FFD6D6D6"/></top><bottom style="thin"><color rgb="FFD6D6D6"/></bottom><diagonal/></border></borders>' +
       '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
-      '<cellXfs count="' + (20 + GRP.length * 3 + 7) + '">' + xf + '</cellXfs>' +
+      '<cellXfs count="' + (20 + GRP.length * 3 + 7 + GRP.length + 5) + '">' + xf + '</cellXfs>' +
       '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
   }
 
@@ -235,8 +276,17 @@
       ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
       /* 인쇄는 <b>가로 한 장 폭</b>에 맞춥니다 — 안 그러면 칸이 옆으로 길어
          열두 장으로 쪼개집니다(뽑아서 세어 봤습니다). 세로로는 몇 장이든 흐릅니다. */
-      (opt.fit ? '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' : '') +
-      '<sheetViews><sheetView workbookViewId="0"' + (opt.tab ? ' tabSelected="1"' : '') + '>' +
+      /* ★ 판 X532 — <b>탭에 묶음 색</b>을 입힙니다. 시트가 열여섯 장이라
+         아래 탭 줄만 봐도 어느 부위인지 바로 압니다. */
+      ((opt.fit || opt.tabColor)
+        ? ('<sheetPr>' + (opt.tabColor ? ('<tabColor rgb="FF' + opt.tabColor + '"/>') : '') +
+           (opt.fit ? '<pageSetUpPr fitToPage="1"/>' : '') + '</sheetPr>')
+        : '') +
+      /* ★ <b>격자선을 끕니다</b> — 켜 두면 아무리 칠해도 「날 시트」 로 보입니다.
+         칸의 경계는 우리가 그린 테두리가 말합니다. */
+      '<sheetViews><sheetView showGridLines="0" workbookViewId="0"' +
+      (opt.zoom ? (' zoomScale="' + opt.zoom + '" zoomScaleNormal="' + opt.zoom + '"') : '') +
+      (opt.tab ? ' tabSelected="1"' : '') + '>' +
       (opt.freeze ? ('<pane xSplit="' + opt.freeze[0] + '" ySplit="' + opt.freeze[1] + '" topLeftCell="' +
         col(opt.freeze[0]) + (opt.freeze[1] + 1) + '" activePane="bottomRight" state="frozen"/>') : '') +
       '</sheetView></sheetViews>' +
@@ -249,14 +299,25 @@
          지장이 없습니다. 담보 줄은 <b>절대 안 합칩니다</b>(거르기·정렬 · 4-1). */
       (opt.merge && opt.merge.length ? ('<mergeCells count="' + opt.merge.length + '">' +
         opt.merge.map(function (m) { return '<mergeCell ref="' + m + '"/>'; }).join('') + '</mergeCells>') : '') +
+      /* ★ <b>셀 안 막대</b>(조건부 서식) — 엑셀이 제 손으로 그려 주는 막대입니다.
+         「후 − 권장」 칸에 걸면 모자란 칸은 붉게 왼쪽으로, 넘는 칸은 푸르게
+         오른쪽으로 섭니다. 숫자를 또 적지 않아도 과부족이 한눈에 보입니다. */
+      /* 「후 − 권장」 이 <b>음수인 칸만</b> 붉은 막대가 섭니다 — 모자란 만큼입니다.
+         0 이나 넘치는 칸에는 막대를 안 그립니다(그리면 「다 모자란다」 로 읽힙니다 · 1번). */
+      (opt.bar ? ('<conditionalFormatting sqref="' + opt.bar + '">' +
+        '<cfRule type="dataBar" priority="1"><dataBar showValue="1">' +
+        '<cfvo type="min"/><cfvo type="num" val="0"/><color rgb="FFE89B93"/></dataBar>' +
+        '</cfRule></conditionalFormatting>') : '') +
       (opt.draw ? '<drawing r:id="rId1"/>' : '') +
       (opt.fit ? ('<printOptions/><pageMargins left="0.3" right="0.3" top="0.4" bottom="0.4" header="0.2" footer="0.2"/>' +
-        '<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0" paperSize="9"/>') :
+        '<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="' +
+        (opt.fitH ? '1' : '0') + '" paperSize="9"/>') :
         '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>') +
       '</worksheet>';
   }
 
-  g.BA_XL = { _zip: zip, _sheet: sheet, _cel: cel, _row: row, _col: col, _mask: mask, _styles: styles, _GST: GST, _PST: PST, _N: N };
+  g.BA_XL = { _zip: zip, _sheet: sheet, _cel: cel, _row: row, _col: col, _mask: mask, _styles: styles,
+    _GST: GST, _PST: PST, _BIG: BIG, _STT: STT, _band: 띠줄, _N: N };
 })(window);
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -314,7 +375,9 @@
     for (i = 0; i < nB; i++) w.push(14); w.push(12);
     for (i = 0; i < nA; i++) w.push(14); w.push(11, 11);
 
-    out.push(row(1, [cel(0, 1, '📊 보장분석 전 · 후 — 한눈에 모든 보험 · 모든 보장', 1)]));
+    /* 띠는 <b>표 끝까지</b> — 짧으면 가운데에서 끊겨 보입니다. 칸 수는 뒤에서 정해집니다. */
+    var 띠자리 = out.length;
+    out.push('');
     out.push(row(2, [cel(0, 2,
       nm + ' 님' + (S.who.age ? (' (' + S.who.age + '세' + (S.who.sex ? (', ' + (S.who.sex === 'f' ? '여자' : '남자')) : '') + ')') : '') +
       '   ·   뽑은 날 ' + (new Date()).toISOString().slice(0, 10) +
@@ -381,7 +444,10 @@
     pr.push(cel(cRes, r, (C.premBn || C.premAn) ? ('보험료 모름 ' + (C.premBn + C.premAn) + '건') : '', 18));
     out.push(row(r, pr));
 
+    /* 비워 둔 띠 자리를 이제 채웁니다 — 칸 수를 알게 됐습니다 */
+    out[띠자리] = X._band(1, '  📊  보장분석 전 · 후 — 한눈에 모든 보험 · 모든 보장', w.length, X._STT(STDN(), 4));
     return X._sheet(out.join(''), { tab: true, freeze: [4, 5], cols: w, merge: merges, fit: true,
+      tabColor: '2B3A55', zoom: 85,
       filter: 'B3:' + col(cRes) + (r - 1) });
   }
 
@@ -401,7 +467,8 @@
     }
     for (i = 0; i < S.before.length; i++) put('전', S.before[i]);
     for (i = 0; i < S.after.length; i++) put('후', S.after[i]);
-    return X._sheet(out.join(''), { freeze: [0, 1], cols: [7, 16, 30, 12, 11, 11, 9, 15, 8, 10] });
+    return X._sheet(out.join(''), { freeze: [0, 1], cols: [7, 16, 30, 12, 11, 11, 9, 15, 8, 10],
+      tabColor: '6B7684', zoom: 90 });
   }
 
   function 빠진시트(STD, C) {
@@ -415,7 +482,8 @@
       });
     });
     if (r === 2) out.push(row(r, [cel(0, r, '빠진 담보가 없습니다 — 표준 77가지가 모두 적혔습니다.', 9)]));
-    return X._sheet(out.join(''), { freeze: [0, 1], cols: [11, 13, 36, 7, 12] });
+    return X._sheet(out.join(''), { freeze: [0, 1], cols: [11, 13, 36, 7, 12],
+      tabColor: 'C9283A', zoom: 90 });
   }
 
   /* ══ 📉 과부족 — 사장님 자료 31쪽 「주요 담보별 과부족 현황」 꼴 ═══════
@@ -425,7 +493,7 @@
   function 상태글(st) { return st === 'o' ? '충분' : (st === 'h' ? '부족' : '미가입'); }
   function 과부족시트(S, STD, C) {
     var out = [], r = 1, G = (typeof g.gapState === 'function') ? g.gapState : null;
-    out.push(row(r, [cel(0, r, '📉 담보별 과부족 — 권장과 견주어', 1)])); r++;
+    out.push(X._band(r, '  📉  담보별 과부족 — 권장과 견주어', 9, X._STT(STDN(), 4))); r++;
     out.push(row(r, [cel(0, r, G ? '상태는 앱의 gapState 가 냅니다 — ✓충분 · △부족 · ✗미가입 · 금액은 만원'
       : '⚠ 상태를 내는 자(gapState)를 못 불렀습니다 — 금액만 적습니다 (지어내지 않습니다)', 2)])); r++;
     var H = ['묶음', '담보', '단위', '권장', '전(지금)', '후(조정)', '후 − 권장', '상태(전)', '상태(후)'];
@@ -446,7 +514,7 @@
           cel(8, r, G ? 상태글(G(k, fa)) : null, 18)])); r++;
       });
     });
-    return X._sheet(out.join(''), { freeze: [2, 3], fit: true,
+    return X._sheet(out.join(''), { freeze: [2, 3], fit: true, tabColor: 'B45309', zoom: 90,
       cols: [13, 34, 7, 10, 11, 11, 12, 10, 10], filter: 'A3:I' + (r - 1) });
   }
 
@@ -455,35 +523,55 @@
      담보마다 권장 · 가입(전·후) · 과부족 · 상태를 한 줄에 놓고, 읽기 쉬운
      <b>억·만 글자</b>를 옆 칸에 같이 답니다(숫자 칸은 그대로 둡니다 · 4-1).     */
   function 묶음시트(gp, gi, C) {
+    /* ★ 판 X532 — 사장님 말씀 「<b>엑셀로 퀄리티는 이것밖에 안되?</b>」.
+       표가 엑셀 기본값(글씨 10.5 · 줄 높이 15 · 격자선 켜짐)이라 날 시트로 보였습니다.
+       엑셀이 가진 것을 씁니다 — <b>큰 제목 띠 · 줄 높이 · 탭 색 · 자동 거르기 ·
+       셀 안 막대(조건부 서식) · 인쇄 머리글 반복 · 상태 칸 칠하기</b>. */
     var out = [], r = 1, G = (typeof g.gapState === 'function') ? g.gapState : null;
-    out.push(row(r, [cel(0, r, gp.ic + ' ' + gp.big + ' › ' + gp.mid, 1)])); r++;
+    var N = STDN(), 모자람 = false;
+    /* ① 큰 제목 띠 — 그 묶음 색 바탕에 흰 16pt. A~H 를 합쳐 한 줄로 */
+    out.push(X._band(r, '  ' + gp.ic + '  ' + gp.big + '  ›  ' + gp.mid, 8, X._BIG(N, gi))); r++;
     var 셈 = { o: 0, h: 0, x: 0 };
     gp.rows.forEach(function (rw) { if (G) 셈[G(rw.k, C.a[rw.k])]++; });
     out.push(row(r, [cel(0, r, '담보 ' + gp.rows.length + '가지' +
       (G ? ('   ·   조정 후 — 충분 ' + 셈.o + ' · 부족 ' + 셈.h + ' · 미가입 ' + 셈.x) : '') +
-      '   ·   금액은 만원', 2)])); r++;
+      '   ·   금액은 만원   ·   「후 − 권장」 칸의 막대는 모자란 만큼입니다', X._STT(N, 3))]
+      .concat([1, 2, 3, 4, 5, 6, 7].map(function (c) {
+        return '<c r="' + X._col(c) + r + '" s="' + X._STT(N, 3) + '"/>'; })), 22)); r++;
     var H = ['담보', '단위', '권장', '전(지금)', '후(조정)', '후 − 권장', '상태(후)', '읽는 금액(후)'];
-    out.push(row(r, H.map(function (t, c) { return cel(c, r, t, 3); }))); r++;
+    var 머리줄 = r;
+    out.push(row(r, H.map(function (t, c) { return cel(c, r, t, 3); }), 26)); r++;
+    var 첫줄 = r;
     gp.rows.forEach(function (rw) {
       var k = rw.k, fb = C.b[k], fa = C.a[k], sd = rw.std || 0;
       var 남 = (sd > 0 && fa !== undefined) ? (fa - sd) : null;
+      if (남 !== null && 남 < 0) 모자람 = true;
+      var st = G ? G(k, fa) : null;
       out.push(row(r, [
         cel(0, r, rw.n, X._GST(gi, 2)), cel(1, r, UFULL[rw.u] || '', 8),
         cel(2, r, sd ? sd : null, 10),
         cel(3, r, fb === undefined ? null : fb, 14),
         cel(4, r, fa === undefined ? null : fa, 15),
         cel(5, r, 남, 남 === null ? 0 : (남 >= 0 ? 16 : 17)),
-        cel(6, r, G ? 상태글(G(k, fa)) : null, 18),
-        cel(7, r, fa === undefined ? null : 억만(fa), 18)])); r++;
+        /* 상태는 글자색만이 아니라 <b>칸을 칠합니다</b> — 눈이 색부터 읽습니다 */
+        cel(6, r, st ? 상태글(st) : null,
+          st === 'o' ? X._STT(N, 0) : (st === 'h' ? X._STT(N, 1) : (st === 'x' ? X._STT(N, 2) : 18))),
+        cel(7, r, fa === undefined ? null : 억만(fa), 18)], 21)); r++;
     });
     /* ★ 판 X530 — 사장님 말씀 「엑셀로 디자인 짜」. 표 아래에 <b>그 묶음의 도해</b>를
        엑셀 도형으로 얹습니다. 그리는 자는 ba-art.js 한 곳입니다 (5번) —
        사진이 아니라 <b>도형</b>이라 늘려도 같은 선으로 섭니다 (9번). */
     var 도해 = (g.BA_ART && typeof g.BA_ART.scene === 'function')
       ? g.BA_ART.scene(gp.mid, gp.c) : '';
-    var 너비 = [36, 7, 11, 12, 12, 12, 11, 15];
-    return { xml: X._sheet(out.join(''), { freeze: [1, 4], fit: true,
-      cols: 너비, draw: !!도해 }), 도해: 도해, 줄: r, 폭: 칸폭EMU(너비) };
+    var 너비 = [38, 8, 11, 12, 12, 13, 11, 15];
+    var 끝 = r - 1;
+    return { xml: X._sheet(out.join(''), { freeze: [1, 머리줄], fit: true, fitH: true, cols: 너비, draw: !!도해,
+      /* 탭에 그 묶음 색 · 머리줄에서 거르기 · 「후 − 권장」 칸에 셀 안 막대 */
+      tabColor: String(gp.c || '#3E6FD9').replace('#', '').toUpperCase(),
+      filter: 'A' + 머리줄 + ':H' + 끝,
+      bar: (끝 >= 첫줄 && 모자람) ? ('F' + 첫줄 + ':F' + 끝) : '',
+      merge: ['A1:H1', 'A2:H2'], zoom: 90 }),
+      도해: 도해, 줄: r, 폭: 칸폭EMU(너비), 머리줄: 머리줄 };
   }
 
   /* ══ 🕸 거미줄 그래프 — 사장님 자료 31쪽 「주요 담보별 과부족 현황」 ═══
@@ -534,6 +622,7 @@
     (ws || []).forEach(function (w) { px += Math.round(w * 7) + 5; });
     return px * 9525;
   }
+  function STDN() { return (g.STD || []).length; }
   function 도해판(svg, 줄, 폭) {
     /* ★ 판 X531 — 사장님 말씀 「도형도 그림으로 깔끔하게 딱 정리」.
        ① 도해 폭을 <b>표 폭에 맞춥니다</b> — 좁으면 왼쪽으로 치우쳐 보입니다.
@@ -580,7 +669,7 @@
     /* 모자란 것부터 — 고객이 먼저 보셔야 할 자리입니다 */
     L.sort(function (p1, p2) { return (p1.a - p1.std) - (p2.a - p2.std); });
     L = L.slice(0, 12);
-    out.push(row(r, [cel(0, r, '🕸 주요 담보 — 권장과 가입(조정 후)', 1)])); r++;
+    out.push(X._band(r, '  🕸  주요 담보 — 권장과 가입(조정 후)', 5, X._STT(STDN(), 4))); r++;
     out.push(row(r, [cel(0, r, L.length ? ('권장이 정해진 담보 가운데 <b>모자란 것부터</b> ' + L.length + '가지입니다 · 만원 · 한도형(실손)은 금액으로 안 견주어 뺐습니다')
       : '⚠ 그릴 것이 없습니다 — 권장이 정해진 담보에 적힌 값이 없습니다. 아무 숫자도 만들지 않습니다.', 2)])); r++;
     out.push(row(r, [cel(0, r, 'NO', 3), cel(1, r, '담보', 3), cel(2, r, '권장', 3), cel(3, r, '가입(후)', 3), cel(4, r, '과부족', 3)])); r++;
@@ -588,7 +677,8 @@
       out.push(row(r, [cel(0, r, i2 + 1, 8), cel(1, r, x.n, 9), cel(2, r, x.std, 10),
         cel(3, r, x.a, 15), cel(4, r, x.a - x.std, (x.a - x.std) >= 0 ? 16 : 17)])); r++;
     });
-    return { xml: X._sheet(out.join(''), { cols: [5, 30, 11, 12, 12], draw: L.length > 2 }), n: L.length };
+    return { xml: X._sheet(out.join(''), { cols: [5, 30, 11, 12, 12], draw: L.length > 2,
+      tabColor: '2A5BD7', zoom: 90 }), n: L.length };
   }
 
   /* ══ 내려받기 ══════════════════════════════════════════════════ */
@@ -660,7 +750,8 @@
            나오게 범위를 못 박습니다. 안 박으면 엑셀이 빈 칸까지 세어 종이가 늘어납니다. */
         (DR.filter(function (q) { return !q.차트; }).length
           ? ('<definedNames>' + DR.filter(function (q) { return !q.차트; }).map(function (q) {
-              var 끝 = q.줄 + Math.ceil((q.높이 || 3800000) / 190500) + 2;
+              /* ⚠ +2 로는 도해 아래 한 줄이 잘렸습니다(뽑아서 보고 찾음) */
+              var 끝 = q.줄 + Math.ceil((q.높이 || 3800000) / 190500) + 4;
               return '<definedName name="_xlnm.Print_Area" localSheetId="' + q.시트 + '">\'' +
                 엑셀글(String(SH[q.시트].n).replace(/'/g, "''")) + '\'!$A$1:$H$' + 끝 + '</definedName>';
             }).join('') + '</definedNames>')

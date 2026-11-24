@@ -319,6 +319,46 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   is((타입.match(/drawings\/drawing\d+\.xml/g) || []).length === 12,
     '  Content_Types 에 그림판 <b>12장</b>이 적혔다 — 빠지면 엑셀이 안 엽니다');
 
+  /* ══ ✨ 판 X532 — 사장님 말씀 「<b>엑셀로 퀄리티는 이것밖에 안되?</b>」 ═══════
+     표가 엑셀 기본값이면 아무리 도해를 넣어도 「날 시트」 로 보입니다.
+     엑셀이 가진 것을 쓰고 있는지 잽니다 — 한 번 올린 품질이 조용히 내려가지
+     않게 하는 것이 이 자의 일입니다 (8번). */
+  head('[10] ✨ 엑셀을 <b>엑셀답게</b> 쓰고 있나 (사장님 말씀 「퀄리티는 이것밖에 안되?」)');
+  const 시트들 = Object.keys(Z).filter(k => /^xl\/worksheets\/sheet\d+\.xml$/.test(k));
+  is(시트들.length === 16, '  시트가 <b>16장</b> (' + 시트들.length + ')');
+  const 격자켠 = 시트들.filter(k => !/showGridLines="0"/.test(Z[k]));
+  is(격자켠.length === 0, '  <b>격자선을 껐다</b> — 켜 두면 아무리 칠해도 날 시트로 보입니다 (' +
+    격자켠.length + '장 남음)');
+  const 탭색 = 시트들.filter(k => /<tabColor rgb="FF[0-9A-F]{6}"\/>/.test(Z[k]));
+  is(탭색.length === 16, '  <b>탭마다 색</b>이 있다 — 아래 탭 줄만 봐도 어느 부위인지 압니다 (' +
+    탭색.length + '/16)');
+  /* 묶음 색이 탭에 그대로 갔나 — 두 벌로 칠하면 어긋납니다 (5번) */
+  const 묶음색 = (seeded.색 || []).map(c => String(c).replace('#', '').toUpperCase());
+  const 탭에든색 = 시트들.map(k => (Z[k].match(/<tabColor rgb="FF([0-9A-F]{6})"/) || [])[1]).filter(Boolean);
+  const 맞은색 = 묶음색.filter(c => 탭에든색.indexOf(c) >= 0);
+  is(맞은색.length === 묶음색.length, '  탭 색이 <b>STD 의 그 색 그대로</b> (' +
+    맞은색.length + '/' + 묶음색.length + ')');
+  const 큰띠 = 시트들.filter(k => /ht="34"/.test(Z[k]));
+  is(큰띠.length >= 12, '  <b>큰 제목 띠</b>(높이 34)가 묶음 11장 + 앞 시트들에 (' + 큰띠.length + ')');
+  const 줄높이 = 시트들.filter(k => /ht="21" customHeight="1"/.test(Z[k]));
+  is(줄높이.length === 11, '  담보 줄에 <b>높이를 줬다</b> — 기본 15pt 면 표가 답답합니다 (' +
+    줄높이.length + '/11)');
+  const 거르기 = 시트들.filter(k => /<autoFilter ref="A\d+:H\d+"\/>/.test(Z[k]));
+  is(거르기.length === 11, '  묶음 시트마다 <b>자동 거르기</b> (' + 거르기.length + '/11)');
+  const 막대 = 시트들.filter(k => /type="dataBar"/.test(Z[k]));
+  is(막대.length >= 1, '  <b>셀 안 막대</b>(조건부 서식)가 있다 — 모자란 만큼을 엑셀이 그립니다 (' +
+    막대.length + '장)');
+  is(시트들.every(k => !/type="dataBar"/.test(Z[k]) || /<cfvo type="num" val="0"\/>/.test(Z[k])),
+    '  막대는 <b>0 에서 멈춘다</b> — 넘치는 칸에까지 그리면 「다 모자란다」 로 읽힙니다 (1번)');
+  const 인쇄범위 = (Z['xl/workbook.xml'] || '').match(/_xlnm\.Print_Area/g) || [];
+  is(인쇄범위.length === 11, '  <b>인쇄 범위</b>를 표+도해까지 못 박았다 (' + 인쇄범위.length + '/11)');
+  is(시트들.filter(k => /fitToHeight="1"/.test(Z[k])).length === 11,
+    '  묶음 시트는 <b>한 장에</b> 맞춘다');
+  /* 상태 칸을 칠했나 — 글자색만이면 멀리서 안 보입니다 */
+  const 꼴판 = Z['xl/styles.xml'] || '';
+  is((꼴판.match(/<fill>/g) || []).length >= 10 + 11 * 3 + 1,
+    '  꼴에 <b>묶음 색 + 남색 띠</b>가 다 들어 있다');
+
   await br.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '군데 — 엑셀이 화면과 다른 말을 합니다')
