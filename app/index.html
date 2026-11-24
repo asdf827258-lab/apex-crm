@@ -22325,7 +22325,7 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-25 01:15';
+var APP_BUILD='2026-11-25 01:18';
 var APP_BUILD_NOTE='📍 <b>지금 상황 · 상황별 추천 메뉴</b>(판 X558). ◾ 새 오늘 화면 지금 이분 카드에 「<b>📍 지금 상황</b>」 — 모르면 「고르기」(고객 화면 「지금 상황」 과 같은 칸). ◾ 🧰 이분께 맞는 도구는 <b>맨 위 셋이 바로</b> 보이고, 더 있으면 「📋 추천 메뉴 n개 모두 보기」. ◾ 대표 · 관리자에게만 「<b>⚙ 추천 고치기</b>」 — 상황마다 메뉴를 더하고 ▲ 로 차례를 정합니다(⭐ 위 셋이 카드에 바로 · 기본 🔒 은 자리만 옮김). 팀 모두의 카드 · 고객 화면 「권할 것」 에 같이 뜹니다. ◾ 다른 사람은 <b>서버가 막습니다</b>(앱 설정 app_config 는 대표 · 관리자만 씀). 재는 자 check-homev2 [27].';
 
 
@@ -29291,6 +29291,28 @@ function hmQdoneClear(){
   try{ localStorage.removeItem(HM_QDONE_KEY); }catch(e){}
   if(typeof toast==='function')toast('오늘 끝낸 표시를 지웠습니다');
   hmPaint();
+}
+/* ══ 📋 <b>오늘 목록 수를 남깁니다</b> (판 X550) ═══════════════════════════════
+   사장님 말씀 (2026-11-24) 「오늘 고객 관리는 CRM 에 자동으로 뜨게 했는데, 이 부분을 잘
+   이행했는지 체크한다면 TA 부분은 해결될 것 같은데」.
+   「이분 끝」 표시(apex_hm_qdone_v1 · apex_hm_done)는 이미 apex-kv-sync 가 서버로 올립니다.
+   그런데 <b>오늘 목록이 몇 분이었는지</b>(분모)는 어디에도 안 남아 「몇 분 중 몇 분」 을 못 셉니다.
+   ★ 세는 곳은 <b>hmLeft() 한 곳</b>입니다 — 띠 · 「다음 분으로 — n분 남았습니다」 와 같은 수 (5번).
+   ★ <b>내 화면일 때만</b> 적습니다 — 팀원 화면을 열어 본 지점장의 칸에 남의 수가 들어가면 안 됩니다.
+   ★ 이름 · 고객 id 는 안 남깁니다 — 숫자 셋뿐(n 목록 · done 끝낸 분 · left 남은 분).
+   ★ 그날 가장 컸던 목록 수를 둡니다 — 배정 DB 가 늦게 실려 오면 처음엔 작게 셉니다.
+   ★ 같으면 안 씁니다 — hmPaint 는 자주 돌고, 쓸 때마다 apex-kv-sync 가 서버를 부릅니다 (7번).
+   서버 apex_user_kv → 트리거가 날짜별로 옮겨 쌓음(EM 운영센터 em_hm_log · migration_70). */
+var HM_PLAN_KEY='apex_hm_plan_v1';
+function hmPlanNote(){
+  if(typeof hwhoIsMe==='function'&&!hwhoIsMe())return;
+  var Q=hmLeft(),t=(typeof mcalToday==='function')?mcalToday():'',o=null;
+  if(!t)return;
+  try{ o=JSON.parse(localStorage.getItem(HM_PLAN_KEY)||'null'); }catch(e){ o=null; }
+  var n=Q.all;
+  if(o&&o.d===t&&(o.n|0)>n)n=o.n|0;
+  if(o&&o.d===t&&o.n===n&&o.done===Q.done&&o.left===Q.n)return;
+  try{ localStorage.setItem(HM_PLAN_KEY,JSON.stringify({d:t,n:n,done:Q.done,left:Q.n})); }catch(e2){}
 }
 function hmQfin(key){
   if(!key)return;
@@ -39734,6 +39756,8 @@ function hmPaint(){
   try{ if(typeof ccHomePaint==='function')ccHomePaint(); }catch(eCc){}
   /* 📒 이번 달 기록도 같이 — 접촉을 하나 남기면 그 수가 바로 바뀝니다 (판 X130) */
   try{ mlogPaint(); }catch(eMl){}
+  /* 📋 오늘 목록이 몇 분이었는지 남깁니다 — EM 운영센터 「스케줄 체크」 가 「이분 끝」 을 몇 분 중 몇 분 했나로 셉니다 (hmPlanNote 한 곳) */
+  try{ hmPlanNote(); }catch(ePl){}
   /* 📍 <b>곁칸 넷을 어디에 세울지</b> — 오늘 카드를 다시 그리면 그 안의 자리도
      새로 생기므로, 바로 뒤에서 정합니다 (hmSidePlace 한 곳 · 5번). */
   try{ hmSidePlace(); }catch(eSp){}
