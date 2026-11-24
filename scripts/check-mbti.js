@@ -345,26 +345,23 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   ok(wClient.preview, '잠겨 있어도 덕담과 진단 한 줄은 무료로 보인다');
   ok(wClient.bank && wClient.code, '결제창에 연결된 수단과 확인 코드 열기가 나온다');
 
+  /* 2026-11-24 「결제칸 없애고」 — 자물쇠·확인 코드·결제수단이 통째로 없어졌습니다.
+     이제 고민 상담은 <b>처음부터 전부</b> 열려 있어야 합니다. 자물쇠가 되살아나면 여기서 웁니다. */
   const wOpen = await page.evaluate(() => {
-    unlockAsk(); document.getElementById('ucode').value = 'apex48'; unlockGo();
+    S.view = 'client'; S.worry = { cat: 'money', catName: '돈', done: true }; S.tab = 'worry'; draw();
     const t = document.getElementById('view').textContent;
-    const wrong = (function () {
-      try { localStorage.removeItem('worry_paid'); } catch (e) {}
-      unlockAsk(); document.getElementById('ucode').value = 'zzz'; unlockGo();
-      const bad = isPaid();
-      unlockAsk(); document.getElementById('ucode').value = 'APEX48'; unlockGo();
-      return bad;
-    })();
-    return { paid: isPaid(), full: /이번 달에 이 세 가지만/.test(t), when: /언제 움직이면/.test(t), wrong: wrong };
+    S.view = 'agent'; draw();
+    return { full: /이번 달에 이 세 가지만/.test(t), when: /언제 움직이면/.test(t),
+             lock: /결제|자세한 풀이는 여기서부터|확인 코드/.test(t),
+             pay: typeof window.payOpen === 'function' || typeof window.isPaid === 'function' };
   });
-  ok(wOpen.paid && wOpen.full && wOpen.when, '확인 코드를 넣으면 전부 열린다');
-  ok(wOpen.wrong === false, '틀린 코드로는 열리지 않는다');
-  await page.evaluate(() => { setView('agent'); });
+  ok(wOpen.full && wOpen.when, '★★ 고민 상담이 <b>처음부터 전부</b> 열린다 — 결제도 코드도 없다');
+  ok(!wOpen.lock, '⛔ 화면에 <b>결제·잠금 말이 없다</b>');
+  ok(!wOpen.pay, '⛔ 결제 함수가 <b>한 개도 안 남았다</b> — payOpen · isPaid');
 
-  const payCfg = await page.evaluate(() => ({ agent: PAY.agent, price: PAY.price, bank: PAY.bank, url: PAY.confirmUrl }));
-  ok(payCfg.agent === '윤시현' && payCfg.bank === '국민' && payCfg.price === 1900,
-     '주소 뒤에 붙인 설계사·계좌가 결제에 들어가고, 값은 기본 1,900원이다');
-  ok(payCfg.url === '/api/toss-confirm', '카드 승인은 같은 사이트의 서버 함수로 간다');
+  const who = await page.evaluate(() => ({ name: AGENT.name, tel: AGENT.tel }));
+  ok(who.name === '윤시현', '주소 뒤에 붙인 <b>설계사 이름</b>이 들어간다 — ' + who.name +
+     ' (PAY 는 결제를 안 담으므로 AGENT 로 이름이 바뀌었습니다 · 4번)');
 
   console.log('\n관계 · 매니지먼트');
   const rel = await page.evaluate(() => {
@@ -399,15 +396,13 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   });
   ok(relPick, '고객 정보 화면에서 관계를 고를 수 있다');
 
-  const price = await page.evaluate(() => {
-    S.view = 'client'; S.worry = { cat: 'money', catName: '돈', done: true }; S.tab = 'worry';
-    try { localStorage.removeItem('worry_paid'); } catch (e) {}
-    draw();
+  const noWon = await page.evaluate(() => {
+    S.view = 'client'; S.worry = { cat: 'money', catName: '돈', done: true }; S.tab = 'worry'; draw();
     const t = document.getElementById('view').textContent;
     S.view = 'agent'; draw();
-    return { price: PAY.price, shown: /1,900원/.test(t), old: /9,900원/.test(t) };
+    return /원\s*$|1,900원|9,900원|결제/.test(t);
   });
-  ok(price.price === 1900 && price.shown && !price.old, '고민 상담 값이 1,900원으로 나온다 (' + price.price + ')');
+  ok(!noWon, '⛔ 고객 화면에 <b>값이 안 적힌다</b> — 공짜라서가 아니라 파는 자리가 아니기 때문입니다');
 
   console.log('\n신당(점집) 풀이');
   const shrine = await page.evaluate(() => {

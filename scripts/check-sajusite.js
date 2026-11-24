@@ -65,7 +65,11 @@ ok(/^\/api\/\*\s+https:\/\/\S+\/api\/:splat\s+200\b/m.test(rd),
   '★★ <b>/api/* 를 본 앱으로 넘긴다</b> (200) — 채용 제출 · 결제 확인이 404 가 안 됩니다');
 const app = fs.existsSync(SRC) ? fs.readFileSync(SRC, 'utf8') : '';
 const apis = (app.match(/'(\/api\/[a-z-]+)'/g) || []).map(x => x.replace(/'/g, ''));
-ok(apis.length >= 2 && apis.every(u => /^\/api\//.test(u)),
+/* ⚠ 전에는 「둘 이상」 을 셌습니다(채용 제출 · 결제 확인). 2026-11-24 에 결제를
+   걷어 <b>하나만 남자</b> 이 자가 울었습니다 — 수가 아니라 <b>꼴</b>을 보는 자리라
+   「하나라도 있고, 모두 /api/ 로 시작한다」 로 고칩니다. 수를 세던 것이 거짓 빨간불을
+   켜던 자리입니다 (8번 — 헛것을 잡는 점검은 안 잡는 점검보다 나쁘다). */
+ok(apis.length >= 1 && apis.every(u => /^\/api\//.test(u)),
   '  화면이 부르는 서버 자리가 모두 /api/ 로 시작한다 — ' + [...new Set(apis)].join(' · ') +
   ' (딴 꼴이 생기면 위 규칙이 못 덮습니다)');
 ok(/^\/\*\s+\/index\.html\s+200\b/m.test(rd), '주소를 잘못 쳐도 사주 풀이로 온다');
