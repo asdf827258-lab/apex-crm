@@ -526,7 +526,63 @@
     sheet('<h1>🤖 자비스</h1><div class="sub">말로 물으면 화면을 열어 드려요</div>' +
       (main ? '<button type="button" class="btn p" onclick="HOME_V2.close();go(\'apexmap\')">🤖 자비스에게 묻기' + (n ? ' · 화면 ' + n + '개' : '') + '</button>' : '') +
       '<button type="button" class="btn g" onclick="HOME_V2.jv()">🛰 자비스가 챙기는 중 보기</button>' +
-      (rest.length ? '<h2>자비스로 합친 AI <small>' + rest.length + '</small></h2>' + dockRows(rest) : ''));
+      (rest.length ? '<h2>자비스로 합친 AI <small>' + rest.length + '</small></h2>' + dockRows(rest) : '') +
+      aiMineHtml());
+  }
+  /* ➕ 판 X549 — 사장님 말씀 「자비스로 합친 AI 에서 추천 메뉴를 내가 추가할 수 있도록」(2026-11-24).
+     ★ 일곱(AI_IDS)은 그대로 — 사장님이 고른 메뉴는 그 아래 「내가 더한 메뉴」 한 묶음 · ✕ 로 뺌 · ▲ 로 위로.
+     ★ 이 기기에 · 사람마다 남습니다 — 즐겨찾기(navFav) · 상담 자리 보내기(stg) 와 같은 자리 · 이름도 같은 navWho.
+       서버로 안 나갑니다(새 서버 저장 없음).
+     ★ 메뉴 표(TABS) · ☰ 서랍 · 오늘 「다른 메뉴」 묶음은 안 건드림 — 이름 · 그림 · 설명은 메뉴 표에서 읽기만.
+     ★ 열 수 없는 화면(권한 · 없어진 화면)은 안 섬 — 적어 둔 것은 그대로 두어 다시 열리면 다시 섬. */
+  var AI_KEY = 'apex_ai_mine_';
+  function aiKey() { return AI_KEY + (T(function () { return g.navWho(); }, '') || 'local'); }
+  function aiMine() {
+    var v = T(function () { return JSON.parse(g.localStorage.getItem(aiKey()) || '[]'); }, []), out = [];
+    (v && v.push ? v : []).forEach(function (id) { if (typeof id === 'string' && id && AI_IDS.indexOf(id) < 0 && out.indexOf(id) < 0) out.push(id); });
+    return out;
+  }
+  function aiMineSet(L) { try { g.localStorage.setItem(aiKey(), JSON.stringify(L.slice(0, 30))); } catch (e) {} }
+  function menuBy() {
+    var by = {};
+    (T(function () { return g.TABS; }, []) || []).forEach(function (gr) { (gr.items || []).forEach(function (it) { if (it && it.id && !by[it.id]) by[it.id] = it; }); });
+    return by;
+  }
+  function aiMineItems() { var by = menuBy(); return aiMine().map(function (id) { return by[id]; }).filter(function (it) { return it && can(it.id); }); }
+  function aiMineHtml() {
+    var M = aiMineItems();
+    var desc = function (id) { return strip(T(function () { var m = g.TAB_META[id]; return m && (m.desc || m.d || m.s); }, '') || ''); };
+    var h = M.length ? '<h2>내가 더한 메뉴 <small>' + M.length + '</small></h2><div class="list">' + M.map(function (it, i) {
+      var d = desc(it.id);
+      return '<div class="li" style="padding:0 6px 0 0;gap:0"><button type="button" style="flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:12px 8px 12px 20px;text-align:left" onclick="HOME_V2.close();go(\'' + Q(it.id) + '\')"><span class="e">' + E(it.icon || '•') + '</span><div class="tx"><div class="t1">' + E(it.title || it.id) + '</div>' +
+        (d ? '<div class="t2">' + E(d) + '</div>' : '') + '</div></button>' +
+        (i ? '<button type="button" aria-label="위로" title="위로" style="width:40px;height:44px;font-size:15px;color:var(--sub2)" onclick="HOME_V2.aiUp(\'' + Q(it.id) + '\')">▲</button>' : '') +
+        '<button type="button" aria-label="자비스에서 빼기" title="자비스에서 빼기" style="width:40px;height:44px;font-size:17px;color:var(--sub2)" onclick="HOME_V2.aiDel(\'' + Q(it.id) + '\')">✕</button></div>';
+    }).join('') + '</div>' : '';
+    return h + '<button type="button" class="btn" style="margin-top:12px;background:#fff;color:var(--blue);border:1px dashed #B5C7F2" onclick="HOME_V2.aiAdd()">＋ 메뉴 더하기</button>';
+  }
+  /* 고르는 판 — 「다른 메뉴」 와 같은 묶음(menuGroups) · 일곱은 이미 있으니 뺌 · 이름으로 찾기 */
+  var AIQ = '';
+  function aiPickList() {
+    var mine = aiMine(), q = AIQ.replace(/\s+/g, '').toLowerCase(), n = 0;
+    var h = menuGroups().map(function (gr) {
+      var L = gr.items.filter(function (x) { return AI_IDS.indexOf(x.it.id) < 0 && (!q || String(x.it.title || x.it.id).replace(/\s+/g, '').toLowerCase().indexOf(q) >= 0); });
+      if (!L.length) return '';
+      n += L.length;
+      return '<h2>' + E(gr.t) + ' <small>' + L.length + '</small></h2><div class="list">' + L.map(function (x) {
+        var it = x.it, on = mine.indexOf(it.id) >= 0;
+        return '<button type="button" class="li" onclick="HOME_V2.aiPut(\'' + Q(it.id) + '\')"><span class="e">' + E(it.icon || '•') + '</span><div class="tx"><div class="t1">' + E(it.title || it.id) + '</div>' +
+          (x.sub ? '<div class="t2">' + E(x.sub) + '</div>' : '') + '</div><span style="flex:none;font-size:14px;font-weight:700;color:' + (on ? 'var(--blue)' : 'var(--sub2)') + '">' + (on ? '✓ 들어감' : '＋ 더하기') + '</span></button>';
+      }).join('') + '</div>';
+    }).join('');
+    return n ? h : '<div class="say">「' + E(AIQ) + '」 이(가) 들어간 메뉴가 없어요</div>';
+  }
+  function aiAddSheet() {
+    AIQ = '';
+    sheet('<h1>＋ 자비스에 메뉴 더하기</h1><div class="sub">누르면 자비스 「내가 더한 메뉴」 에 들어가요 · 이 기기에 남아요</div>' +
+      '<input id="hv2AiQ" type="search" placeholder="메뉴 이름으로 찾기" oninput="HOME_V2.aiQ(this.value)" style="width:100%;height:48px;margin-top:12px;border:1px solid #D1D6DB;border-radius:12px;padding:0 14px;font-size:16px;background:#fff">' +
+      '<div id="hv2AiL">' + aiPickList() + '</div>' +
+      '<button type="button" class="btn p" style="margin-top:14px" onclick="HOME_V2.ai()">다 골랐어요 — 자비스로</button>');
   }
   function jvSheet() {
     var J = jvData();
@@ -1532,6 +1588,17 @@
     studyMore: function () { STUDY_ALL = STUDY_ALL ? 0 : 1; studySheet(); },
     jv: jvSheet,
     ai: aiSheet,
+    aiAdd: aiAddSheet,
+    aiQ: function (v) { AIQ = String(v || ''); var b = el('hv2AiL'); if (b) b.innerHTML = aiPickList(); },
+    aiPut: function (id) {
+      var L = aiMine(), i = L.indexOf(id);
+      if (i >= 0) L.splice(i, 1); else L.push(id);
+      aiMineSet(L);
+      var b = el('hv2AiL'); if (b) b.innerHTML = aiPickList();
+      try { if (typeof g.toast === 'function') g.toast(i >= 0 ? '자비스에서 뺐어요' : '🤖 자비스에 넣었어요'); } catch (e) {}
+    },
+    aiDel: function (id) { aiMineSet(aiMine().filter(function (x) { return x !== id; })); aiSheet(); },
+    aiUp: function (id) { var L = aiMine(), i = L.indexOf(id); if (i > 0) { L.splice(i, 1); L.splice(i - 1, 0, id); aiMineSet(L); } aiSheet(); },
     amt: amtSheet, won: wonSheet, amtPut: amtPut, wonPut: wonPut,
     numQ: function (q) { var i = el('hv2Num'); if (i) i.value = q; },
     ta: function (key) { try { g.HM_TAMSG.openTa(key); } catch (e) { try { g.go('ta_script'); } catch (e2) {} } },

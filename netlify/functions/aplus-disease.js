@@ -36,7 +36,9 @@ var ORIGIN = 'https://www.aplusga.com/APA/SV/diseaseSearch.do';
 
 var PAGE_SIZE = 10;   // 원본이 한 쪽에 내려주는 건수
 var MAX_ROWS  = 500;  // all=1 일 때 한 번에 가져올 상한 (원본 부담·응답 크기 방어)
-var TIMEOUT   = 12000;
+var TIMEOUT   = 6000;   // 원본 한 쪽을 기다리는 최대 시간
+var POOL      = 8;      // 동시에 부르는 쪽 수 — ⚠ 수십 쪽을 한꺼번에 부르면 원본이 일부를 떨군다(2026-11-24 실측)
+var DEADLINE  = 8000;   // 함수 전체가 쓸 시간(Netlify 동기 함수 10초 안). 넘기면 받은 데까지 + partial 로 답한다
 
 // 🌐 다른 주소에서 부르는 곳 — 진료분석(고지체크 사이트 jinryo.html · 내 PC 파일)의 「알릴의무 · 예외질환 한 번에」 (판 X501).
 // 원본이 CORS 를 닫아 둬서 이 중계를 거치는데, 중계마저 허락을 안 주면 거기서도 막힌다.
@@ -44,13 +46,14 @@ var TIMEOUT   = 12000;
 var CORS_OK = ['https://apex-hb-goji.netlify.app', 'null'];
 var corsFor = '';
 
-function json(status, body) {
+function json(status, body, noStore) {
   var r = {
     statusCode: status,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       // 같은 검색을 반복해 두드리지 않도록 잠깐 캐시한다. 자료는 하루 단위로 바뀐다.
-      'Cache-Control': 'public, max-age=300',
+      // ⚠ 일부만 받은 답·실패는 캐시하지 않는다 — 5분 동안 같은 빠진 답을 돌려주던 사고(2026-11-24)
+      'Cache-Control': (noStore || status !== 200) ? 'no-store' : 'public, max-age=300',
       'Vary': 'Origin'
     },
     body: JSON.stringify(body)
@@ -60,7 +63,7 @@ function json(status, body) {
 }
 
 // 원본에 한 쪽을 물어본다.
-async function fetchPage(params, num) {
+async function fetchPage(params, num, ms) {
   var body = new URLSearchParams({
     INSR_CD: params.insr || '',
     PSB_PRDT_GB: params.prdt || '',
@@ -71,7 +74,7 @@ async function fetchPage(params, num) {
   }).toString();
 
   var ctl = new AbortController();
-  var timer = setTimeout(function () { ctl.abort(); }, TIMEOUT);
+  var timer = setTimeout(function () { ctl.abort(); }, ms || TIMEOUT);
   try {
     var res = await fetch(ORIGIN, {
       method: 'POST',
@@ -103,6 +106,7 @@ exports.handler = async function (event) {
     return json(400, { ok: false, error: '질환명·보험사·상품구분 중 하나는 넣어 주세요.' });
   }
 
+  var t0 = Date.now();
   var wantAll = String(p.all || '') === '1';
   var page = Math.max(1, parseInt(p.page, 10) || 1);
 
@@ -113,18 +117,33 @@ exports.handler = async function (event) {
     var rows = first;
     var truncated = false;
 
+    var missing = [];
     if (wantAll && total > PAGE_SIZE) {
       var cap = Math.min(total, MAX_ROWS);
       truncated = total > MAX_ROWS;
       var lastPage = Math.ceil(cap / PAGE_SIZE);
 
-      // 2쪽부터 나머지를 한꺼번에 가져온다. 한 쪽이라도 실패하면 그 쪽만 비운다.
-      var rest = await Promise.all(
-        Array.from({ length: lastPage - 1 }, function (_, i) {
-          return fetchPage(params, i + 2).catch(function () { return []; });
-        })
-      );
-      rest.forEach(function (r) { rows = rows.concat(r); });
+      // 2쪽부터 나머지를 POOL 개씩 나눠 부르고, 실패한 쪽은 시간이 남는 한 다시 부른다.
+      // ⚠ 예전엔 Promise.all 로 수십 쪽을 한꺼번에 불러 실패한 쪽을 [] 로 삼키고 ok 로 답했다 —
+      //   갑상선 369건 중 160건, 치아 535건 중 372건만 오고 아무도 몰랐다(2026-11-24). 회사가 통째로 빠진다.
+      var got = {}, queue = [], tries = {};
+      for (var n = 2; n <= lastPage; n++) queue.push(n);
+      var worker = async function () {
+        while (queue.length) {
+          var left = DEADLINE - (Date.now() - t0);
+          if (left < 600) return;                    // 남은 시간에 한 쪽도 못 받는다 — 여기서 멈추고 partial 로 답한다
+          var pg = queue.shift();
+          try { got[pg] = await fetchPage(params, pg, Math.min(TIMEOUT, left)); }
+          catch (e) {
+            tries[pg] = (tries[pg] || 0) + 1;
+            if (tries[pg] < 3) { await new Promise(function (r) { setTimeout(r, 300 * tries[pg]); }); queue.push(pg); }
+          }
+        }
+      };
+      var lanes = [];
+      for (var w = 0; w < POOL; w++) lanes.push(worker());
+      await Promise.all(lanes);
+      for (var m = 2; m <= lastPage; m++) { if (got[m]) rows = rows.concat(got[m]); else missing.push(m); }
 
       // ⚠️ 원본 페이징은 쪽 경계에서 한 건씩 겹쳐 내려온다(1쪽 RN 1~10, 2쪽 RN 10~20 …).
       // 한 쪽씩 보는 원본 화면에서는 드러나지 않지만, 이렇게 합치면 그대로 중복이 된다.
@@ -138,6 +157,9 @@ exports.handler = async function (event) {
       });
     }
 
+    // 다 받았는지는 쪽 성공이 아니라 <b>건수</b>로 본다 — 원본이 빈 쪽을 200 으로 줄 수도 있다.
+    var want = wantAll ? Math.min(total, MAX_ROWS) : rows.length;
+    var partial = wantAll && rows.length < want;
     return json(200, {
       ok: true,
       total: total,
@@ -145,9 +167,11 @@ exports.handler = async function (event) {
       page: wantAll ? 1 : page,
       pageSize: PAGE_SIZE,
       truncated: truncated,   // 상한에 걸려 뒷부분이 잘렸는지
+      partial: partial,       // 원본이 일부 쪽을 끝내 안 줬는지 — true 면 missing 쪽을 page=N 으로 다시 부르면 된다
+      missing: missing,
       source: 'A+에셋 유병자 인수예외질환 검색',
       rows: rows
-    });
+    }, partial);
   } catch (e) {
     return json(502, { ok: false, error: '원본 조회에 실패했습니다: ' + (e && e.message ? e.message : String(e)) });
   }
