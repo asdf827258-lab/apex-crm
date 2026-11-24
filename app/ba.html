@@ -2037,6 +2037,11 @@ body.presenting .show:not(.deck){border:0;box-shadow:none}
     <button class="tab on" id="tabEdit" onclick="go('edit')">✍ 만들기</button>
     <button class="tab" id="tabShow" onclick="go('show')">👤 고객에게 보여주기</button>
     <button class="tab" id="tabReq" onclick="go('req')">📋 가입설계 요청서</button>
+    <!-- 판 X556 · 사장님 말씀 2026-11-25 「보장분석 전후 만들기 클릭하면 그 안에 배치해줘」.
+         두 칸은 <b>이 띠 바로 아래</b>에 열립니다 — 바깥 본체가 같은 껍데기(#baScreen) 안에 그립니다
+         (app/ba-pd.js 의 baSubOpen). 이 파일을 혼자 열었을 때는 본체 주소로 갑니다. -->
+    <button class="tab" id="tabAiRep" onclick="baParentSub('bojang')">📑 AI 리포트</button>
+    <button class="tab" id="tabPd" onclick="baParentSub('bapd')">🧠 제안서 설명자료</button>
     <!-- 위 띠에 열한 개가 늘어서 있어 <b>어느 것이 오늘 쓰는 것인지</b>
          안 보였다. 자주 쓰는 것만 세우고 나머지는 「⋯ 더보기」 안으로. -->
     <div class="sp">
@@ -2782,7 +2787,24 @@ function needList(C){
 }
 
 /* ═══════════════ 그리기 ═══════════════ */
-function go(m){S.mode=m;save();render();window.scrollTo(0,0);}
+function go(m){
+  /* 위 띠의 두 칸(📑·🧠)이 열려 있었으면 닫고 이 화면으로 돌아온다 (판 X556) */
+  if(window.BA_SUB){window.BA_SUB='';try{if(parent&&parent!==window&&parent.baSubClose)parent.baSubClose(1);}catch(e){}}
+  S.mode=m;save();render();window.scrollTo(0,0);
+}
+/* 📑 AI 리포트 · 🧠 제안서 설명자료 — 본체가 이 껍데기 안, 위 띠 바로 아래에 그린다 */
+function baParentSub(t){
+  try{ if(parent&&parent!==window&&typeof parent.baSubOpen==='function'){parent.baSubOpen(t);return;} }catch(e){}
+  location.href='index.html#'+t;   /* 혼자 열었을 때 */
+}
+/* 위 띠 불 켜기는 한 곳만 안다 (5번) — 두 칸이 열려 있으면 만들기·보여주기·요청서는 끈다 */
+function baTabsPaint(){
+  var sub=window.BA_SUB||'',set=function(id,on){var b=document.getElementById(id);if(b)b.className='tab'+(on?' on':'');};
+  set('tabEdit',!sub&&S.mode==='edit');set('tabShow',!sub&&S.mode==='show');set('tabReq',!sub&&S.mode==='req');
+  set('tabAiRep',sub==='bojang');set('tabPd',sub==='bapd');
+  /* 👤 고객에게 보여주기(발표)에서는 두 칸을 숨긴다 — 띠가 한 줄 늘면 무대가 줄어든다(check-bafix12 「컴퓨터 화면은 그대로 · 무대 900px」) */
+  ['tabAiRep','tabPd'].forEach(function(id){var b=document.getElementById(id);if(b)b.style.display=(S.mode==='show'&&!sub)?'none':'';});
+}
 function render(){
   try{ renderIn(); }
   catch(e){
@@ -2832,9 +2854,7 @@ function renderIn(){
       }
     }
   }catch(e){}
-  document.getElementById('tabEdit').className='tab'+(S.mode==='edit'?' on':'');
-  document.getElementById('tabShow').className='tab'+(S.mode==='show'?' on':'');
-  document.getElementById('tabReq').className='tab'+(S.mode==='req'?' on':'');
+  baTabsPaint();
   /* ── 🧑 <b>누구 상담인지</b>를 적는다 (2026-10-09 · 판 X76) ────────────
      낮을 걸어 보니 이 화면이 7,212자를 세우는데 <b>그 분 이름이 한 군데도
      없었습니다.</b> 재 보니 이름은 <b>이미 와 있었습니다</b> —

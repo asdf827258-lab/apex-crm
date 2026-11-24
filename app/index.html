@@ -1589,6 +1589,10 @@ svg.ico{display:block;flex:none;vertical-align:-3px}
 #baScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#F2F4F6;}
 /* 재무설계가 떠 있는 동안에는 보장분석 껍데기를 덮지 않는다 */
 body.finance-mode #baScreen{display:none}
+/* 판 X556 — 전·후 만들기 안에서 여는 두 칸. top 은 안쪽 위 띠 높이로 ba-pd.js 가 맞춘다 */
+#baScreen .ba-sub{display:none;position:absolute;left:0;right:0;bottom:0;top:64px;z-index:310;overflow:auto;background:#F2F4F6;padding:18px 22px 96px}
+#baScreen .ba-sub.on{display:block}
+#baScreen .ba-sub .bapd-sw{display:none}
 #financeScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
 body.finance-mode .app{display:none;}
 body.finance-mode #financeScreen{display:block;}
@@ -2998,6 +3002,8 @@ body.insight-mode #insightScreen{display:block;}
   <!-- allow="fullscreen" 이 있어야 안쪽 「발표 — 화면 가득」 이 진짜 전체화면으로 간다.
        없어도 설계사 도구는 치워지지만, 브라우저 주소창까지는 안 사라진다. -->
   <iframe id="baFrame" class="fin-frame" title="보장분석 전·후 만들기" allow="fullscreen"></iframe>
+  <!-- 📑 AI 리포트 · 🧠 제안서 설명자료가 <b>이 화면 안</b>, 안쪽 위 띠 바로 아래에 열리는 자리 (판 X556 · app/ba-pd.js) -->
+  <div id="baSub" class="ba-sub" role="region" aria-label="보장분석 전&amp;후 만들기 안의 화면"></div>
   <div class="fin-float">
     <button class="ff-back" onclick="exitBa()">← 워크스페이스</button>
     <button class="ff-add" onclick="bapdSw('bojang')" title="보험사 보장분석 PDF 로 AI 리포트">📑 AI 리포트</button>
@@ -22001,6 +22007,7 @@ function baNewTab(){
 }
 function exitBa(){
   /* 틀은 그대로 둔다 — 다음에 <b>즉시</b> 뜬다. 적어 두신 것도 안 사라진다 */
+  if(typeof baSubClose==='function')baSubClose();   /* 안에서 연 📑·🧠 도 닫는다 (판 X556) */
   $('baScreen').classList.remove('on');
   go('home');
 }
@@ -22325,7 +22332,7 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-25 01:18';
+var APP_BUILD='2026-11-25 02:00';
 var APP_BUILD_NOTE='📍 <b>지금 상황 · 상황별 추천 메뉴</b>(판 X558). ◾ 새 오늘 화면 지금 이분 카드에 「<b>📍 지금 상황</b>」 — 모르면 「고르기」(고객 화면 「지금 상황」 과 같은 칸). ◾ 🧰 이분께 맞는 도구는 <b>맨 위 셋이 바로</b> 보이고, 더 있으면 「📋 추천 메뉴 n개 모두 보기」. ◾ 대표 · 관리자에게만 「<b>⚙ 추천 고치기</b>」 — 상황마다 메뉴를 더하고 ▲ 로 차례를 정합니다(⭐ 위 셋이 카드에 바로 · 기본 🔒 은 자리만 옮김). 팀 모두의 카드 · 고객 화면 「권할 것」 에 같이 뜹니다. ◾ 다른 사람은 <b>서버가 막습니다</b>(앱 설정 app_config 는 대표 · 관리자만 씀). 재는 자 check-homev2 [27].';
 
 
