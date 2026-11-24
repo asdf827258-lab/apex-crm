@@ -74,6 +74,20 @@ const WANT = ['신당 풀이', '아이스브레이킹', '이 일과 어떻게 �
   ok(t.cl.indexOf('show') < 0, '★★ 고객 화면 탭에는 <b>없다</b> (AGENT_TABS 가 막는다) — ' + t.cl.join(' '));
   ok(t.blood.indexOf('show') < 0, '★ 혈액형만 받은 갈래에는 <b>안 선다</b> — 신당 풀이가 못 서는 자리다 (1번)');
   ok(/설명회/.test(t.nm), '탭 이름이 <b>설명회</b>라고 말한다 — ' + t.nm);
+  /* ★★ 목록에 없는 것만으로는 모자랍니다. 손님이 주소나 콘솔로 <b>억지로</b>
+     그 탭을 세워 보는 자리가 실제로 있습니다 — 그때도 안 열려야 합니다. */
+  const force = await pg.evaluate(() => {
+    const keep = S.view;
+    /* ⚠ 결과 화면(board)에 서 있어야 draw 가 탭을 추립니다. 처음엔 이 줄이
+       없어 걸음이 board 가 아니었고, 그래서 <b>좋은 판에서도 빨간불</b>이
+       떴습니다 — 헛것을 잡는 자가 될 뻔했습니다 (8번). */
+    S.step = 'board';
+    setView('client'); S.tab = 'show'; draw();
+    const r = { tab: S.tab, txt: document.querySelector('#view').innerText.slice(0, 400) };
+    setView(keep); return r;
+  });
+  ok(force.tab !== 'show', '★★ 고객 화면에서 <b>억지로 세워도</b> 딴 탭으로 돌아간다 — ' + force.tab);
+  ok(!/한 장으로 쭉/.test(force.txt), '★★ 설명회 장의 글이 <b>한 줄도 안 그려진다</b>');
 
   console.log('\n[3] 다섯 꼭지가 <b>전부</b> 한 줄로 선다 (사장님 말씀 그대로)');
   await seed(); await pg.waitForTimeout(400);
