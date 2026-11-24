@@ -173,6 +173,86 @@ const MIME = { '.html': 'text/html;charset=utf-8', '.js': 'text/javascript;chars
   is(ag2.짐작 === false && ag2.안적으면 === true,
     '  ★★ 월소득이 없으면 <b>짐작해 적지 않고</b> 적어 달라고 말한다 (1번)');
 
+  head('[5-2] 🎯 담보 핵심 — 연령대별로 차이가 큰가 (사장님 말씀 「차이가 커야만해」)');
+  const df = await pg.evaluate(() => {
+    S.mode = 'edit'; S.panel = 'age'; render();
+    const G = AGE_GUIDE;
+    const one = G.map(g => ((g.core || [])[0] || {}).g || '');
+    const uniq = one.filter((x, i) => x && one.indexOf(x) === i).length;
+    /* 설계 화법 — 구간 사이에 같은 문장이 있나 */
+    const all = []; G.forEach(g => (g.talk5 || []).forEach(t => all.push((t || '').replace(/<[^>]+>/g, '').trim())));
+    const dup = all.filter((t, i) => t && all.indexOf(t) !== i).length;
+    /* 담보안(AGE_PLAN) — 구간끼리 순위가 실제로 다른가 */
+    const mids = STD.map(x => x.mid);
+    let pairs = 0, diff = 0;
+    for (let a = 0; a < G.length; a++) for (let b = a + 1; b < G.length; b++) {
+      pairs++;
+      let d = 0;
+      mids.forEach(m => {
+        const x = (AGE_PLAN[G[a].k] || {})[m], y = (AGE_PLAN[G[b].k] || {})[m];
+        if (!x || !y) return;
+        if (x.p !== y.p || x.m !== y.m) d++;
+      });
+      if (d >= 3) diff++;
+    }
+    return { 구간: G.length, 일순위: one, 서로다른일순위: uniq,
+      화법줄: all.filter(Boolean).length, 겹친화법: dup,
+      굳이없는구간: G.filter(g => !g.drop || !g.drop.length).length,
+      쌍: pairs, 많이다른쌍: diff,
+      화면핵심: document.querySelectorAll('.acore .ac').length,
+      화면화법: document.querySelectorAll('.atalk5 li').length,
+      표핵심: document.querySelectorAll('table.agcmp td.acore1').length };
+  });
+  is(df.서로다른일순위 === df.구간,
+    '  ★★ <b>1순위 핵심 담보가 여섯 구간 모두 다르다</b> (' + df.서로다른일순위 + '/' + df.구간 + ') — ' +
+    df.일순위.join(' · '));
+  is(df.겹친화법 === 0,
+    '  ★★ 설계 화법 ' + df.화법줄 + '줄에 <b>구간끼리 똑같은 문장이 없다</b> (' + df.겹친화법 + ')');
+  is(df.화법줄 === df.구간 * 5, '  설계 화법이 구간마다 <b>다섯 걸음</b>이다 (' + df.화법줄 + ')');
+  is(df.굳이없는구간 === 0, '  구간마다 <b>「이 나이엔 굳이」</b> 가 적혀 있다');
+  is(df.많이다른쌍 === df.쌍,
+    '  ★ 담보안도 구간끼리 <b>세 묶음 이상 다르다</b> (' + df.많이다른쌍 + '/' + df.쌍 + '쌍)');
+  is(df.화면핵심 >= df.구간, '  핵심 담보가 <b>화면에 섰다</b> (' + df.화면핵심 + '칸)');
+  is(df.화면화법 >= df.구간 * 5, '  설계 화법이 <b>화면에 섰다</b> (' + df.화면화법 + '줄)');
+  is(df.표핵심 === df.구간, '  한눈에 표에 <b>1순위 칸</b>이 있다 (' + df.표핵심 + ')');
+
+  head('[5-3] ✏️ 연령대 기준을 사장님이 고치실 수 있나');
+  const ed = await pg.evaluate(() => {
+    S.mode = 'edit'; S.panel = 'age'; S.agEdit = {}; S.agEditing = ''; render();
+    const btn = document.querySelectorAll('.ag .ah button').length;
+    ageEdOpen('40');
+    const 칸 = { 금액: !!document.getElementById('ageAmt'), 납입: !!document.getElementById('ageTerm'),
+      퍼센트: !!document.getElementById('agePrLo'), 핵심: !!document.getElementById('ageCg0'),
+      화법: !!document.getElementById('ageT0') };
+    /* 실제로 고쳐 봅니다 — 창이 안 열렸으면 <b>터지지 않고</b> 빨간불로 적습니다 (8번) */
+    if (!칸.금액 || !칸.핵심 || !칸.화법)
+      return { 단추: btn, 칸: 칸, 섰나: false, 퍼센트: false, 담겼나: false, 되돌아왔나: false,
+               못연까닭: '✏️ 고치기 창이 안 열렸습니다' };
+    document.getElementById('ageAmt').value = '점검용 금액 기준';
+    document.getElementById('agePrLo').value = '3';
+    document.getElementById('agePrHi').value = '4';
+    document.getElementById('ageCg0').value = '골절 · 화상';
+    document.getElementById('ageCw0').value = '점검용 까닭';
+    document.getElementById('ageT0').value = '점검용 여는 말';
+    ageEdSave('40');
+    const t = document.getElementById('app').textContent;
+    const 섰나 = /점검용 금액 기준/.test(t) && /점검용 여는 말/.test(t) && /점검용 까닭/.test(t);
+    const 퍼센트 = /3~4%/.test(t);
+    const 담겼나 = !!(S.agEdit && S.agEdit['40'] && S.agEdit['40'].amt === '점검용 금액 기준');
+    ageEdReset('40');
+    const u = document.getElementById('app').textContent;
+    const 되돌아왔나 = !/점검용/.test(u) && !(S.agEdit || {})['40'];
+    return { 단추: btn, 칸: 칸, 섰나: 섰나, 퍼센트: 퍼센트, 담겼나: 담겼나, 되돌아왔나: 되돌아왔나 };
+  });
+  is(ed.단추 >= 6, '  구간마다 <b>✏️ 고치기</b> 단추가 있다 (' + ed.단추 + ')');
+  if (ed.못연까닭) console.log('      · ' + ed.못연까닭);
+  ['금액', '납입', '퍼센트', '핵심', '화법'].forEach(k =>
+    is(ed.칸[k] === true, '  고치는 칸에 <b>' + k + '</b> 이 있다'));
+  is(ed.섰나 === true, '  ★★ 고치면 <b>그 자리에서 바뀐다</b> (금액 · 핵심 담보 · 화법)');
+  is(ed.퍼센트 === true, '  보험료 퍼센트도 고쳐진다 (3~4%)');
+  is(ed.담겼나 === true, '  고친 값이 <b>담긴다</b> (S.agEdit)');
+  is(ed.되돌아왔나 === true, '  ★ <b>처음 값으로</b> 되돌아간다 — 길이 한쪽만 있지 않습니다 (6번)');
+
   head('[6] 🧠 두뇌 — 자르지 않나 · 공부방이 펴져 있나');
   const br2 = await pg.evaluate(() => {
     S.mode = 'edit'; S.panel = 'brain'; render();
@@ -196,6 +276,19 @@ const MIME = { '.html': 'text/html;charset=utf-8', '.js': 'text/javascript;chars
     return { 기본닫힘: 닫힘, 길: 길, 열림: 열림, 전체: 전체 };
   });
   is(br3.길 === true, '  <b>카드 속까지 전부 펴기</b> 길이 있다');
+  const br4 = await pg.evaluate(() => {
+    const D = BRAIN_DOC;
+    return { 장: D.length,
+      show없음: D.filter(d => !d.show).length, no없음: D.filter(d => !d.no).length,
+      next없음: D.filter(d => !d.next).length,
+      화면show: document.querySelectorAll('.bshow').length,
+      화면no: document.querySelectorAll('.bno').length,
+      화면next: document.querySelectorAll('.bnext').length };
+  });
+  is(br4.show없음 === 0 && br4.no없음 === 0 && br4.next없음 === 0,
+    '  ★★ 열두 장 <b>모두</b>에 「여기서 보여 주십시오 · 이렇게는 말하지 마십시오 · 그다음 물음」 이 있다');
+  is(br4.화면show >= br4.장 && br4.화면no >= br4.장 && br4.화면next >= br4.장,
+    '  그 세 줄이 <b>화면에 섰다</b> (' + br4.화면show + ' · ' + br4.화면no + ' · ' + br4.화면next + ')');
   is(br3.열림 === br3.전체 && br3.전체 > 0,
     '  누르면 카드 속 <b>' + br3.전체 + '장이 한꺼번에</b> 펴진다 (' + br3.열림 + ')');
 
