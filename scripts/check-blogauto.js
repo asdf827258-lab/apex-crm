@@ -1380,7 +1380,7 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(morn.blockedSsi, '  <b>「성춘향씨가」</b> 도 막는다');
   is(morn.notFalse, '  <b>「날씨가」 「손님이」 는 안 막는다</b> — 헛것은 안 잡는 것보다 나쁘다 (8번)');
 
-  console.log('\n[23] 하나의 이야기로 쓰나 · <b>한 번에</b> 심의를 지나나 (판 X541)');
+  console.log('\n[23] 하나의 이야기로 쓰나 · <b>한 번에</b> 심의를 지나나 (판 X547)');
   const tale = await page.evaluate(async () => {
     const out = {};
     localStorage.clear(); S.comply = null; await comply();
@@ -1465,7 +1465,7 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(say.writeSay && say.writeNoGet && say.writeBox,
      '  <b>적는 날</b>에는 「적어 주시면」 · 「글감 적으러 가기」 · 한 줄 칸');
 
-  console.log('\n[24] 네이버에서 겪어 보신 규칙 — 내돈내산 · 올리는 법 · 체류시간 (판 X540)');
+  console.log('\n[24] 네이버에서 겪어 보신 규칙 — 내돈내산 · 올리는 법 · 체류시간 (판 X546)');
   const nav = await page.evaluate(async () => {
     const out = {};
     localStorage.clear(); S.comply = null; await comply();
