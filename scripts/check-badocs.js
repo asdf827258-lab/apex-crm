@@ -292,6 +292,42 @@ const MIME = { '.html': 'text/html;charset=utf-8', '.js': 'text/javascript;chars
   is(br3.열림 === br3.전체 && br3.전체 > 0,
     '  누르면 카드 속 <b>' + br3.전체 + '장이 한꺼번에</b> 펴진다 (' + br3.열림 + ')');
 
+  head('[6-2] 📣 이 설계를 설명하는 화법 (사장님 말씀 「설계를 하면 설명하는 화법까지」)');
+  const bp0 = await pg.evaluate(() => {
+    doReset(); S.mode = 'edit'; S.panel = 'brain'; render();
+    const t = (document.getElementById('bq0') || { textContent: '' }).textContent;
+    return { 없을때: /아직 설계가 없습니다/.test(t), 지어냄: /여는 말[\s\S]{0,40}닫는 말/.test(t) };
+  });
+  is(bp0.없을때 === true, '  ★ 설계가 없으면 <b>말을 지어내지 않는다</b> — 무엇을 채울지 적는다 (1번)');
+  const bp = await pg.evaluate(() => {
+    doSample(); S.mode = 'edit'; S.panel = 'brain'; render();
+    const b = document.getElementById('bpBox'), t = b ? b.textContent : '';
+    const P = premCalc();
+    return { 칸: document.querySelectorAll('.bps').length,
+      담보: document.querySelectorAll('.bpc').length,
+      핵심표: document.querySelectorAll('.bpk').length,
+      되받아침: document.querySelectorAll('.bprb').length,
+      이름샘: /홍철호|홍길동/.test(t),
+      심사: /심사 결과에 따릅니다/.test(t),
+      세무: /세무 전문가/.test(t),
+      월보험료: t.indexOf(fee(P.monA)) >= 0,
+      앞으로: t.indexOf(won(P.leftA)) >= 0,
+      날글: (typeof bpPlain === 'function') ? bpPlain().length : 0,
+      복사단추: /설명 화법 복사/.test(document.getElementById('app').textContent),
+      쓰레기: (t.match(/undefined|\bNaN\b/g) || []).length };
+  });
+  is(bp.칸 >= 7, '  ★★ 설계가 있으면 <b>여는 말부터 닫는 말까지 ' + bp.칸 + '칸</b>이 선다');
+  is(bp.담보 >= 1, '  늘어나는 담보를 <b>하나씩</b> 말한다 (' + bp.담보 + '가지)');
+  is(bp.핵심표 >= 1, '  <b>이 나이 핵심</b> 담보에 표가 붙는다 (' + bp.핵심표 + ')');
+  is(bp.되받아침 >= 2, '  <b>되받아침</b>을 미리 준다 (' + bp.되받아침 + '가지)');
+  is(bp.이름샘 === false, '  ★★ <b>고객 이름이 한 자도 안 들어간다</b> — 복사해 어디 붙이실지 모릅니다 (3번)');
+  is(bp.월보험료 === true && bp.앞으로 === true,
+    '  ★★ 보험료가 <b>이 도구가 센 값 그대로</b>다 — 다시 셈하지 않습니다 (5번)');
+  is(bp.심사 === true, '  「<b>심사 결과에 따릅니다</b>」 를 닫는 말에서 안 뺀다 (2번)');
+  is(bp.세무 === true, '  세금은 <b>세무 전문가</b>에게 넘긴다 (2번)');
+  is(bp.복사단추 === true && bp.날글 > 200, '  <b>복사</b>할 수 있다 (날글 ' + bp.날글 + '자)');
+  is(bp.쓰레기 === 0, '  undefined · NaN 이 없다');
+
   head('[7] 📋 자동 보장분석 — 전부 펴기 길이 있나');
   const ft = await pg.evaluate(() => {
     S.mode = 'edit'; S.panel = 'fit'; S.fitAll = false; render();

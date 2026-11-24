@@ -2071,6 +2071,35 @@ body.presenting .show:not(.deck){border:0;box-shadow:none}
  font-weight:700;line-height:1.62}
 .bshow span,.bno span,.bnext span{display:block;font-size:11px;font-weight:800;margin-bottom:3px;letter-spacing:.02em}
 .bshow{background:var(--bl2);color:#0B3F8F}.bshow span{color:var(--blt)}
+/* 📣 설계 설명 화법 (판 X560) */
+.bplan{border:1px solid var(--ln);border-radius:13px;padding:14px 16px;background:#fff}
+.bps{display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-top:1px dashed var(--ln)}
+.bps:first-child{border-top:0;padding-top:2px}
+.bps>div:last-child{flex:1;min-width:0}
+.bpn{flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--nv);color:#fff;
+ font-size:12px;font-weight:800;text-align:center;line-height:24px}
+.bpt{font-size:var(--t6);font-weight:800;color:var(--gy);margin-bottom:5px;letter-spacing:.02em}
+.bpl{font-size:var(--t4);font-weight:700;color:var(--nv);line-height:1.72}
+.bpl.i,.bpl .i{font-size:var(--t6);font-weight:700;color:var(--gy2)}
+.bpu{margin:0;padding-left:19px}
+.bpu li{font-size:var(--t5);font-weight:700;color:var(--nv);line-height:1.7;margin-bottom:6px}
+.bpg{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:9px}
+.bpc{border:1px solid var(--ln);border-radius:11px;padding:10px 12px}
+.bpc.core{border-color:var(--bl);background:var(--bl2)}
+.bpch{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px}
+.bpch b{font-size:var(--t5);font-weight:800;color:var(--nv)}
+.bpch em{font-style:normal;font-size:var(--t6);font-weight:800;color:var(--blt);margin-left:auto}
+.bpk{font-size:11px;font-weight:800;color:#fff;background:var(--bl);border-radius:5px;padding:2px 6px}
+.bpk.s{background:var(--gy2)}
+.bpw{font-size:var(--t6);font-weight:700;color:var(--gyd);line-height:1.6;margin-top:5px;
+ border-left:3px solid var(--bl);padding-left:8px}
+.bpw.h{border-left-color:var(--ln)}
+.bpw span{display:block;font-size:11px;font-weight:800;color:var(--gy);margin-bottom:2px}
+.bprb{margin-bottom:9px}
+.bpq{font-size:var(--t5);font-weight:800;color:var(--or);background:var(--or2);
+ border-radius:9px;padding:7px 10px;display:inline-block}
+.bpa{font-size:var(--t5);font-weight:700;color:var(--nv);line-height:1.7;margin-top:5px;padding-left:4px}
+@media print{.bpg{grid-template-columns:1fr 1fr}.bpc,.bps{break-inside:avoid}}
 .bno{background:var(--rd2);color:#991B1B}.bno span{color:var(--rd)}
 .bnext{background:var(--gr2);color:#065F46}.bnext span{color:var(--gr)}
 /* 연령대 — 첫 3분 · 이 집 숫자로 셈한 보험료 · 여섯 구간 한눈에 (판 X556) */
@@ -6723,6 +6752,177 @@ function flowHtml(){
   return h;
 }
 
+/* ══ 📣 이 설계를 <b>이렇게 설명합니다</b> — 설계 설명 화법 (판 X560) ══
+   사장님 말씀 2026-11-24 「보험 설계를 하면 <b>설명하는 화법</b>까지 만들어
+   봐야지 — 윤시현의 두뇌를 업그레이드해서」.
+
+   ★★ 지금까지 두뇌는 <b>보험 일반</b>을 이해시키는 말이었습니다. 정작
+     <b>오늘 짠 이 설계</b>를 어떻게 설명할지는 사장님이 매번 혼자 지으셔야
+     했습니다. 그 자리를 만듭니다 — 화면에 있는 설계를 읽어 <b>여는 말부터
+     닫는 말까지</b> 한 벌로 짓습니다.
+   ★ <b>숫자는 하나도 안 지어냅니다</b> — calc() · diff() · premCalc() ·
+     gapState() · ageOf() 가 이미 센 값만 씁니다 (1번·5번).
+   ★ <b>고객 이름을 한 자도 안 넣습니다</b> — 복사해 어디에 붙이실지 모르고,
+     잘못 가도 누구인지 안 드러나야 합니다 (3번). 「고객님」 으로 부릅니다.
+   ★ 설계가 아직 없으면 <b>말을 지어내지 않고</b> 무엇을 채워야 하는지 적습니다.
+   ★ 「심사 결과에 따릅니다」 를 닫는 말에서 빼지 않습니다 (2번).        */
+function bpAct(p){return p.act||'keep';}
+function bpNm(p){return ((p.co||'')+' '+(p.nm||'')).replace(/^\s+|\s+$/g,'')||'(이름 안 적힌 계약)';}
+/* 이 설계가 건드린 담보마다 <b>왜 필요한가</b> — 사전 한 곳에서 (5번) */
+function bpWhy(k){
+  var d=null;try{d=ppDict(PP_K2D[k]||'');}catch(e){}
+  if(d&&d.y)return d.y;
+  if(DESC[k])return DESC[k];
+  return '';
+}
+function bpHow(k){
+  var d=null;try{d=ppDict(PP_K2D[k]||'');}catch(e){}
+  return (d&&d.h)?d.h:'';
+}
+/* 이 나이 <b>핵심 담보</b>에 드는 담보인가 — 1순위면 ★★ */
+function bpCore(k){
+  var b=ageBand();if(!b)return 0;
+  var g=ageOf(b),m=MID[k],i;
+  for(i=0;i<(g.core||[]).length;i++)if(g.core[i].g===m)return (i===0)?2:1;
+  return 0;
+}
+/* 설계 설명 화법 한 벌 — <b>짓는 곳은 여기 하나</b>입니다 (5번) */
+function bpPlan(){
+  var C=calc(),D=diff(C),P=premCalc(),b=ageBand(),g=b?ageOf(b):null;
+  var o={band:g,has:false,keep:[],endo:[],kill:[],news:[],gain:[],loss:[],
+         miss:[],thin:[],P:P,need:[]};
+  S.before.forEach(function(p){
+    var a=bpAct(p);
+    if(a==='endo')o.endo.push(p);else if(a==='cancel')o.kill.push(p);else o.keep.push(p);
+  });
+  o.news=S.after.slice();
+  o.gain=D.gain.slice().sort(function(x,y){return bpCore(y.k)-bpCore(x.k)||y.v-x.v;});
+  o.loss=D.loss.slice();
+  /* 비는 자리 — 세는 자는 gapState 하나입니다 (5번) */
+  var k;
+  for(k in C.b)if(C.b.hasOwnProperty(k)){
+    var st=gapState(k,C.a[k]);
+    if(st==='x')o.miss.push(k);else if(st==='h')o.thin.push(k);
+  }
+  STD.forEach(function(gr){gr.rows.forEach(function(r){
+    if(C.b[r.k]===undefined&&C.a[r.k]===undefined)o.miss.push(r.k);
+  });});
+  o.has=!!(o.endo.length||o.kill.length||o.news.length||o.gain.length);
+  if(!num(S.who.age))o.need.push('고객 나이');
+  if(!num(S.who.incMan))o.need.push('월 소득');
+  return o;
+}
+/* 복사해 가실 날글 — 꾸밈표를 걷어냅니다 */
+function bpPlain(){
+  var e=document.getElementById('bpBox');
+  if(!e)return '';
+  /* 글은 <b>화면 그대로</b>를 긁습니다 — 날글을 따로 지으면 화면과 갈립니다 (5번).
+     번호만 제 줄에 떨어지므로 다음 줄에 붙여 읽기 좋게 다듬습니다. */
+  return (e.innerText||e.textContent||'')
+    .replace(/\n{3,}/g,'\n\n')
+    .replace(/(^|\n)([①-⑳])\n/g,'\n$2 ')
+    .replace(/^\n+/,'');
+}
+function bpCopy(){
+  var t=bpPlain();
+  if(!t){toast('복사할 것이 없습니다');return;}
+  baCopy(t,'설명 화법을 복사했습니다 — 메모에 붙여 두고 보십시오');
+}
+function brainPlanHtml(){
+  var o=bpPlan(),g=o.band,h='';
+  h='<div class="bplan" id="bpBox">';
+  if(!o.has){
+    return '<div class="note i"><b>아직 설계가 없습니다.</b> 「만들기」 에서 '+
+      '<b>유지 · 배서 · 해지</b>를 고르시거나 <b>새 제안</b>을 넣으시면, '+
+      '이 자리에 <b>그 설계를 설명하는 말</b>이 한 벌로 섭니다. '+
+      '없는 설계를 두고 말을 지어내지 않습니다.</div>';
+  }
+  /* ① 여는 말 */
+  h+='<div class="bps"><div class="bpn">①</div><div><div class="bpt">여는 말</div>'+
+    (g&&g.talk5&&g.talk5[0]?('<div class="bpl">'+g.talk5[0].replace(/^여는 말 — /,'')+'</div>')
+      :'<div class="bpl i">고객 <b>나이</b>를 넣으시면 그 구간의 여는 말이 섭니다 — 짐작해 적지 않습니다.</div>')+
+    '</div></div>';
+  /* ② 지금 이렇습니다 */
+  var now='지금 가지고 계신 계약이 <b>'+(S.before.length)+'건</b>이고, 매달 <b>'+fee(o.P.monB)+'</b>을 내고 계십니다.';
+  if(o.miss.length||o.thin.length)
+    now+=' 표준과 견주면 <b>안 들어 있는 담보가 '+o.miss.length+'가지</b>'+
+         (o.thin.length?(', <b>모자란 담보가 '+o.thin.length+'가지</b>'):'')+' 입니다.';
+  h+='<div class="bps"><div class="bpn">②</div><div><div class="bpt">지금 이렇습니다</div>'+
+    '<div class="bpl">'+now+'</div></div></div>';
+  /* ③ 이렇게 바꿉니다 */
+  var ch='';
+  if(o.keep.length)ch+='<li><b>그대로 두는 것 '+o.keep.length+'건</b> — '+
+    o.keep.map(function(p){return esc(bpNm(p));}).join(' · ')+'. 손대지 않습니다.</li>';
+  if(o.endo.length)ch+='<li><b>담보만 고치는 것(배서) '+o.endo.length+'건</b> — '+
+    o.endo.map(function(p){return esc(bpNm(p));}).join(' · ')+
+    '. 계약을 <b>살려 두고</b> 담보만 바꿉니다 — 가입 시점 나이로 유지되어 <b>가장 싸게</b> 고치는 방법입니다.</li>';
+  if(o.kill.length){
+    ch+='<li><b>정리하는 것(해지) '+o.kill.length+'건</b> — '+
+      o.kill.map(function(p){return esc(bpNm(p));}).join(' · ')+'.';
+    if(o.loss.length)ch+=' 이때 <b>'+o.loss.slice(0,4).map(function(x){return esc(SNAME[x.k]||NAME[x.k]||x.k);}).join(' · ')+
+      (o.loss.length>4?(' 외 '+(o.loss.length-4)+'가지'):'')+'</b> 가 줄거나 없어집니다 — 그것까지 말씀드리고 정합니다.';
+    ch+=' ⚠ <b>새 계약이 승낙된 뒤에</b> 해지합니다.</li>';
+  }
+  if(o.news.length)ch+='<li><b>새로 넣는 것 '+o.news.length+'건</b> — '+
+    o.news.map(function(p){return esc(bpNm(p));}).join(' · ')+'.</li>';
+  h+='<div class="bps"><div class="bpn">③</div><div><div class="bpt">그래서 이렇게 바꿉니다</div>'+
+    '<ul class="bpu">'+ch+'</ul></div></div>';
+  /* ④ 담보 하나씩 */
+  if(o.gain.length){
+    h+='<div class="bps"><div class="bpn">④</div><div><div class="bpt">늘어나는 담보 — 하나씩 이렇게 말합니다</div>'+
+      '<div class="bpg">'+o.gain.slice(0,10).map(function(x){
+        var c=bpCore(x.k),w=bpWhy(x.k),hw=bpHow(x.k);
+        return '<div class="bpc'+(c===2?' core':'')+'">'+
+          '<div class="bpch">'+(c===2?'<span class="bpk">이 나이 1순위</span>':(c===1?'<span class="bpk s">이 나이 핵심</span>':''))+
+            '<b>'+esc(NAME[x.k]||x.k)+'</b><em>'+(x.b>0?('지금 '+amt(x.k,x.b)+' → '):'')+amt(x.k,x.a)+'</em></div>'+
+          (w?('<div class="bpw"><span>왜 필요한가</span>'+w+'</div>'):'')+
+          (hw?('<div class="bpw h"><span>어떻게 나오나</span>'+hw+'</div>'):'')+
+        '</div>';
+      }).join('')+'</div>'+
+      (o.gain.length>10?('<div class="bpl i">그 밖에 <b>'+(o.gain.length-10)+'가지</b>가 더 늘어납니다 — ⑤ 표준 담보표에 전부 있습니다.</div>'):'')+
+      '</div></div>';
+  }
+  /* ⑤ 보험료 */
+  var up=(o.P.monA||0)-(o.P.monB||0);
+  var pm='매달 <b>'+fee(o.P.monB)+' → '+fee(o.P.monA)+'</b>'+
+    (up>0?(' (<b>'+fee(up)+' 더</b>)'):(up<0?(' (<b>'+fee(-up)+' 덜</b>)'):' (그대로)'))+
+    '. 앞으로 낼 돈은 <b>'+won(o.P.leftB)+' → '+won(o.P.leftA)+'</b> 입니다.';
+  var inc=num(S.who.incMan);
+  if(g&&g.pr&&inc>0&&g.premBase==='월 소득'){
+    var hi=Math.round(inc*g.pr[1]/100);
+    pm+='<br>이 구간 기준은 월 소득의 <b>'+(g.pr[0]?(g.pr[0]+'~'+g.pr[1]):g.pr[1])+'%</b> — 월소득 '+man(inc)+
+        ' 기준 <b>'+man(hi)+'</b> 까지입니다. 지금 설계는 <b>'+fee(o.P.monA)+'</b> 입니다.';
+  }else if(g&&g.pr&&g.premBase==='월 소득'){
+    pm+='<br><span class="i">①칸에 <b>월 소득</b>을 적으시면 이 집 기준으로 견줘 드립니다 — 짐작해 말하지 않습니다.</span>';
+  }
+  h+='<div class="bps"><div class="bpn">⑤</div><div><div class="bpt">보험료는 이렇게 됩니다</div>'+
+    '<div class="bpl">'+pm+'</div></div></div>';
+  /* ⑥ 닫는 말 */
+  h+='<div class="bps"><div class="bpn">⑥</div><div><div class="bpt">닫는 말</div>'+
+    '<div class="bpl">'+((g&&g.talk5&&g.talk5[4])?g.talk5[4].replace(/^닫기 — /,''):
+      '"오늘 정하신 것만 먼저 넣고, 나머지는 다음에 보시죠."')+
+    '<br><b>보험료와 보장은 심사 결과에 따릅니다.</b> 세금·비과세는 요건이 걸린 문제라 <b>세무 전문가</b>에게 확인하십시오.</div></div></div>';
+  /* ⑦ 되받아침 — 이 설계에서 실제로 나올 것만 */
+  var rb=[];
+  if(up>0)rb.push({q:'"보험료가 '+fee(up)+'이나 올랐네요."',
+    a:'"올랐습니다. 다만 <b>앞으로 낼 돈</b>으로 보시면 '+won(o.P.leftB)+' → '+won(o.P.leftA)+
+      ' 입니다. 월 얼마가 아니라 <b>끝까지 얼마</b>인지로 같이 보시죠."'});
+  if(o.kill.length)rb.push({q:'"그냥 두면 안 돼요?"',
+    a:'"두셔도 됩니다. 다만 지금 그 계약에서 '+(o.loss.length?('<b>'+esc(SNAME[o.loss[0].k]||NAME[o.loss[0].k])+'</b> 같은 담보가 '):'')+
+      '제 몫을 못 하고 있어서요. <b>없애기 전에</b> 담보만 고치는 길이 되는지부터 알아보겠습니다."'});
+  if(o.endo.length)rb.push({q:'"고치면 보험료가 또 오르는 거 아니에요?"',
+    a:'"배서는 계약을 <b>살려 두는</b> 것이라 가입 시점 나이가 그대로입니다. 새로 드는 것보다 쌉니다."'});
+  rb.push({q:'"좀 생각해 보고요."',
+    a:'"그러셔야죠. 다만 하나만 말씀드리면, <b>가입한 날부터 시계가 돕니다</b> — 면책·감액 기간이 있어서요. '+
+      '오늘 정하실 필요는 없고, <b>언제까지 정하실지</b>만 같이 잡아 두시죠."'});
+  h+='<div class="bps"><div class="bpn">⑦</div><div><div class="bpt">이렇게 되받아치실 겁니다</div>'+
+    rb.map(function(x){return '<div class="bprb"><div class="bpq">'+x.q+'</div><div class="bpa">'+x.a+'</div></div>';}).join('')+
+    '</div></div>';
+  if(o.need.length)
+    h+='<div class="note w noprint">아직 <b>'+esc(o.need.join(' · '))+'</b>을 안 적으셨습니다 — '+
+       '넣으시면 이 화법이 <b>이 집 숫자</b>로 더 정확해집니다. 지금은 아는 것만으로 지었습니다.</div>';
+  return h+'</div>';
+}
 function brainHtml(){
   /* 판 X330 — 「쉽고 가독성 높여서」. 순서를 <b>상담 직전에 보는 것부터</b>로 바꿨다:
      ① 이 고객에게 바로 걸리는 말 ② 이렇게 여십시오 ③ 이 흐름으로 ④ 병원비 공부방(접음) ⑤ 그 밖의 비유. 내용은 그대로. */
@@ -6732,12 +6932,18 @@ function brainHtml(){
     '<button class="mini" onclick="window.print()">🖨 인쇄</button></span></h2>'+
     '<p class="gd2-lead">숫자를 <b>보여 주는 것</b>과 <b>이해시키는 것</b>은 다른 일입니다. 고객은 「3,000만원」을 못 느낍니다 — '+
     '<b>아는 것에 빗대야</b> 압니다.</p>'+
-    gdJump([['bq1','🎯','바로 걸리는 말'],['bq2','👋','이렇게 여십시오'],['bq3','🗺','상담 흐름'],['bq4','🏥','병원비 공부방'],['bq5','📚','그 밖의 비유']])+
+    gdJump([['bq0','📣','이 설계 설명'],['bq1','🎯','바로 걸리는 말'],['bq2','👋','이렇게 여십시오'],['bq3','🗺','상담 흐름'],['bq4','🏥','병원비 공부방'],['bq5','📚','그 밖의 비유']])+
     '<div class="noprint" style="margin:-4px 0 13px">'+
       '<button class="mini'+(S.brainAll?' on':'')+'" onclick="brainAllOpen()">'+
         (S.brainAll?'📂 카드 속까지 펴짐 — 접기':'📂 카드 속(자세히 · 되받아침)까지 전부 펴기')+'</button>'+
       '<span style="font-size:var(--t6,13px);font-weight:700;color:var(--gy2);margin-left:8px">'+
         '상담 전에 통째로 읽으실 때 — <b>인쇄하면 늘 전부 나옵니다</b></span></div>';
+  /* ★★ 판 X560 — <b>오늘 짠 설계를 설명하는 말</b>이 맨 앞입니다.
+     상담 자리에서 제일 먼저 쓰는 것이 이것입니다. */
+  h+='<section id="bq0" class="gd2-sec">'+gdHead(0,'이 설계를 이렇게 설명합니다','화면에 있는 설계를 읽어 여는 말부터 닫는 말까지 — 숫자는 이 도구가 센 것뿐입니다')+
+    '<div class="noprint" style="margin:-4px 0 11px"><button class="mini" onclick="bpCopy()">📋 설명 화법 복사</button>'+
+    '<span style="font-size:var(--t6,13px);font-weight:700;color:var(--gy2);margin-left:8px">메모에 붙여 두고 보십시오</span></div>'+
+    brainPlanHtml()+'</section>';
   h+='<section id="bq1" class="gd2-sec">'+gdHead(1,'이 고객에게 바로 걸리는 말','진단에서 실제로 잡힌 것만 골랐습니다');
   /* ★ 판 X556 — 사장님 말씀 「더보기에 숨겨져있어서 숨기지말고 보이도록 해줘」.
      여섯에서 자르고 나머지를 <b>「더 보기」 안에</b> 넣고 있었습니다(판 X330).
