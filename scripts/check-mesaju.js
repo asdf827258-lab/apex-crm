@@ -215,7 +215,7 @@ const ME_OFF = 'var MEONLY={on:false};', ME_ON = 'var MEONLY={on:true};';
   ok(pil.helpOk, '★★ 강약 점수가 <b>strengthOf 가 센 수</b>와 같다 — ' + pil.help + '점');
   ok(pil.lvOk, '강약 이름이 적힌다 — ' + pil.level);
   ok(pil.gmOk, '★ 공망 두 자리가 <b>gongmang 이 낸 자리</b>와 같다 — ' + pil.gm);
-  ok(pil.chars > 600, '전보다 <b>자세하다</b> — ' + pil.chars + '자 (판 X531 까지는 247자였습니다)');
+  ok(pil.chars > 600, '전보다 <b>자세하다</b> — ' + pil.chars + '자 (판 X536 까지는 247자였습니다)');
 
   console.log('\n[5] ★★ 네 장을 <b>한 벌로 인쇄</b>한다 (판 X523)');
   /* 사장님 말씀 2026-11-23 「전체적으로 한번에 인쇄할수 있도록」.
