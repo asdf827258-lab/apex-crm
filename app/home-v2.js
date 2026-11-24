@@ -99,6 +99,11 @@
       '.hv2 .nmbtn.bk{color:var(--blue)}',
       '.hv2 .hello{font-size:23px;font-weight:800;letter-spacing:-.5px;line-height:1.3;margin:4px 2px 12px}',
       '.hv2 .hello b{color:var(--blue)}',
+      '.hv2 .hello{display:flex;align-items:center;justify-content:space-between;gap:10px}',
+      '.hv2 .mebtn{flex:none;width:44px;height:44px;border-radius:50%;background:#fff;font-size:21px;text-align:center}',
+      '.hv2 .hello .hb{flex:none;display:flex;gap:6px}',
+      '.hv2 .tmall{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:44px;margin:-4px 0 12px;padding:0 14px;border-radius:14px;background:#fff;font-size:14px;font-weight:700;color:var(--ink)}',
+      '.hv2 .tmall span{color:#B0B8C1;font-size:18px}',
       '.hv2 .whowrap{margin:0 0 12px}',
       '.hv2 .who-strip{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 0 12px;padding:2px 2px 0}',
       '.hv2 .who-strip::-webkit-scrollbar{display:none}',
@@ -197,6 +202,15 @@
       '.hv2 .qbtns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}',
       '.hv2 .qbtns button{height:44px;border-radius:12px;background:var(--line2);font-size:14px;font-weight:700;text-align:center}',
       '.hv2 .qins{display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:8px}',
+      /* 판 X529 — 시안 qCard 의 「오늘 소식」 · 「🙋 물어볼 것」 */
+      '.hv2 .qnews{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;margin-top:8px;padding:8px 12px;border-radius:12px;background:var(--bg);font-size:14px;text-align:left}',
+      '.hv2 .qnews b{flex:none;font-size:13px;font-weight:800;color:var(--blue)}',
+      '.hv2 .qnews span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);font-weight:600}',
+      '.hv2 .qnews i{flex:none;font-style:normal;font-size:13px;font-weight:700;color:var(--sub2)}',
+      '.hv2 .qask{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--warn-l)}',
+      '.hv2 .qask .q{font-size:14px;font-weight:700;color:var(--ink);line-height:1.45}',
+      '.hv2 .qask .t-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}',
+      '.hv2 .qask .t-chip{min-height:44px;height:auto;padding:0 12px;border:0;border-radius:22px;background:#fff;font-size:14px;font-weight:700;color:var(--ink);text-align:center}',
       '.hv2 .qins .ins{display:grid;grid-template-columns:1fr auto;grid-template-areas:"k a" "p p";row-gap:2px;align-items:center;gap:2px 8px;min-height:52px;padding:8px 12px;border-radius:12px;background:var(--blue-l);text-align:left}',
       '.hv2 .qins .k{grid-area:k;font-size:14px;font-weight:800;color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
       '.hv2 .qins .a{grid-area:a;font-size:13px;font-weight:700;color:var(--blue);white-space:nowrap}',
@@ -284,6 +298,9 @@
       '#hv2Sheet .say .tp{font-size:13px;color:var(--sub2);line-height:1.5;margin-top:8px;white-space:normal}',
       '#hv2Sheet .say .cp{display:block;margin:8px 0 0 auto;height:40px;padding:0 14px;border-radius:10px;background:var(--blue-l);color:var(--blue);font-size:14px;font-weight:700}',
       '#hv2Sheet .pcard{background:#fff;border-radius:20px;padding:16px;margin-top:10px}',
+      '#hv2Sheet .who2{font-size:14px;color:var(--sub2);font-weight:600}',
+      '#hv2Sheet .rprod{background:#fff;border-radius:16px;padding:14px 16px;margin-top:10px;font-size:15px;font-weight:600;line-height:1.7}',
+      '#hv2Sheet .rprod small{display:block;font-size:13px;font-weight:500;color:var(--sub3);margin-top:4px}',
       '#hv2Sheet .pcard .ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px}',
       '#hv2Sheet .pcard .ph b{font-size:17px;font-weight:800}',
       '#hv2Sheet .pcard .ph span{font-size:13px;color:var(--blue);font-weight:700;flex:none}',
@@ -404,13 +421,19 @@
     var A = T(function () { return g.HWHO_ALL; }, '');
     if (A) h += '<button type="button" class="' + (all ? 'on' : '') + '" onclick="hwhoSet(\'' + Q(A) + '\')"><div class="ring">🏢</div>팀 전체</button>';
     h += '</div>';
+    /* 📊 시안 「팀」 탭 — 아래 탭 띠는 그대로 두라 하셔서 여기서 시트로 (team-v2.js · 판 X528) */
+    if (typeof g.teamV2Open === 'function') h += '<button type="button" class="tmall" onclick="teamV2Open()">📊 우리 팀 한눈에<span>›</span></button>';
     if (cur && cur !== me) h += '<div class="whonote"><span>' + (all ? '🏢 팀 전체를 보고 있어요 — 내 것이 아니에요' : '👀 ' + E(T(function () { return g.hwhoName(cur); }, '팀원')) + '님 화면을 그대로 보고 있어요') + '</span><button type="button" onclick="hwhoMe()">← 내 화면</button></div>';
     return h;
   }
   function helloHtml(L) {
     var nm = T(function () { return g.OS.profile.name; }, '') || '설계사';
     var n = (L && L.list) ? L.list.length : 0;
-    return '<div class="hello">' + E(nm) + '님, ' + (n ? '오늘 <b>' + n + '분</b> 남았어요' : '오늘 할 일 끝! 🎉') + '</div>';
+    /* 🙋 나 — 시안 오른쪽 위 단추(openMe). 맨 위 줄은 폰 폭이 꽉 차 인사 줄 오른쪽에 (team-v2.js · 판 X528) */
+    var meB = typeof g.meV2Open === 'function' ? '<button type="button" class="mebtn" onclick="meV2Open()" aria-label="나 — 알람 · 공지 · 설정">🙋</button>' : '';
+    /* 🤖 자비스 — 시안 오른쪽 위 「자비스에게 말로 묻기」(openJarvis · 판 X530). 🙋 나 옆에 */
+    var jvB = can('apexmap') ? '<button type="button" class="mebtn" onclick="HOME_V2.ai()" aria-label="자비스에게 묻기 · AI 도우미">🤖</button>' : '';
+    return '<div class="hello"><span>' + E(nm) + '님, ' + (n ? '오늘 <b>' + n + '분</b> 남았어요' : '오늘 할 일 끝! 🎉') + '</span><span class="hb">' + jvB + meB + '</span></div>';
   }
   /* 이번 달 목표 — monthly_perf(목표·실적, 만원) + 진행 중 예상(pexSum, 원 → 만원) */
   function monHtml() {
@@ -478,6 +501,24 @@
     var J = jvData(), n = J.L.length;
     return '<button type="button" class="jv" onclick="HOME_V2.jv()"><span class="jv-i">🛰</span><span class="jv-t"><b>자비스가 챙기는 중</b><small>' +
       (n ? '오늘 끊기기 쉬운 자리 ' + n + '곳' : '오늘은 다 챙겼어요') + ' · 미리 세운 연락 ' + J.P.length + '개' + (J.madi ? ' · 마디 ' + J.madi : '') + '</small></span><span class="ar">›</span></button>';
+  }
+  /* 🤖 자비스로 합친 AI (시안 9차 openJarvis · PLACE 의 'ai' 일곱 · 판 X530) — 사장님 말씀 「AI 7개 → 자비스 하나로」(2026-11-24).
+     ★ 묻는 곳은 자비스 하나 — 「APEX 자비스 모드」(apexmap · 서랍 맨 위 그 칸과 같은 길 · 말로 물으면 화면을 엶).
+     ★ 나머지 여섯은 <b>지우지 않고</b> 자비스 밑 한 묶음으로 — 화면 · 메뉴 표(TABS) · 서랍은 그대로, 이름 · 그림 · 설명은 메뉴 표에서.
+       오늘 화면 「☰ 다른 메뉴」 에서도 흩어져 있던 일곱을 맨 아래 한 갈래로 모읍니다(이 화면 안에서만 · TABS 안 건드림). */
+  var AI_IDS = ['apexmap', 'assistant', 'voiceasst', 'brain', 'cs_assist', 'ins_asst', 'helpme'];
+  function aiItems() {
+    var by = {};
+    (T(function () { return g.TABS; }, []) || []).forEach(function (gr) { (gr.items || []).forEach(function (it) { if (it && it.id && AI_IDS.indexOf(it.id) >= 0 && !by[it.id]) by[it.id] = it; }); });
+    return AI_IDS.filter(function (id) { return by[id] && can(id); }).map(function (id) { return by[id]; });
+  }
+  function aiSheet() {
+    var A = aiItems(), main = A.filter(function (it) { return it.id === 'apexmap'; })[0], rest = A.filter(function (it) { return it.id !== 'apexmap'; });
+    var n = T(function () { return g.navJvCount(); }, 0) || 0;
+    sheet('<h1>🤖 자비스</h1><div class="sub">말로 물으면 화면을 열어 드려요</div>' +
+      (main ? '<button type="button" class="btn p" onclick="HOME_V2.close();go(\'apexmap\')">🤖 자비스에게 묻기' + (n ? ' · 화면 ' + n + '개' : '') + '</button>' : '') +
+      '<button type="button" class="btn g" onclick="HOME_V2.jv()">🛰 자비스가 챙기는 중 보기</button>' +
+      (rest.length ? '<h2>자비스로 합친 AI <small>' + rest.length + '</small></h2>' + dockRows(rest) : ''));
   }
   function jvSheet() {
     var J = jvData();
@@ -550,12 +591,31 @@
         h += callBtn + '<button type="button" class="btn g sm" style="margin-top:8px" onclick="hmQfin(\'' + key + '\')">✅ 이분 끝</button>';
       }
     }
+    h += newsHtml(x) + askHtml(x);
     if (x.k === 'db' && String(x.tk || '') === 'CS' && x.id) h += '<button type="button" class="btn ok" onclick="HOME_V2.won(\'' + Q(x.id) + '\')">✓ 계약됐어요</button>';
     h += '<div class="qbtns"><button type="button" onclick="HOME_V2.next(' + i + ')">다음 →</button><button type="button" onclick="hmSkip(\'' + key + '\')">오늘은 뒤로</button></div>';
     var D = doorOf(x);
     h += '<div class="qins"><button type="button" class="ins" onclick="hmDoorGo(\'' + Q(D.cat) + '\',\'' + D.band + '\')"><span class="k">🧭 ' + E(D.lab) + '</span><span class="a">상품전략기 ›</span><span class="p">' + E(D.prod) + '</span></button>' +
       '<button type="button" class="rc" onclick="hmOpen(\'' + key + '\')">이분 자세히</button></div>';
     return h + '</div>';
+  }
+  /* 📰 오늘 소식 (시안 qCard 「오늘 소식」 · 판 X529) — 이분께 맞는 기사 한 건.
+     고르는 자는 아침 미션 「이 분께 보낼 소식」 과 같은 ccNewsIdx(관심 갈래 ccFitOf × 받아 둔 뉴스 NLIVE) · 누르면 있던 ccNews(복사).
+     고객 365일 고객만(배정 DB 줄은 관심을 몰라 안 섬) · 뉴스를 아직 못 받았거나 맞는 기사가 없으면 줄을 안 세움 — 소식을 지어내지 않습니다. */
+  function cliOf(x) { return (x && x.id && x.k !== 'db' && x.k !== 'my') ? x.id : ''; }
+  function newsHtml(x) {
+    var id = cliOf(x); if (!id) return '';
+    var i = T(function () { return g.ccNewsIdx(id); }, -1); if (!(i >= 0)) return '';
+    var it = T(function () { return g.NLIVE.items[i]; }, null); if (!it || !it.t) return '';
+    return '<button type="button" class="qnews" onclick="ccNews(\'' + Q(id) + '\')"><b>📰 오늘 소식</b><span>' + E(it.t) + '</span><i>복사</i></button>';
+  }
+  /* 🙋 물어볼 것 (시안 qCard qask · 판 X529) — 「한 가지만 여쭙니다」 가 고른 한 가지(cqaAsk)와 그 답 단추(cqaAnsHtml) 그대로.
+     답은 있던 자리(cmSave · cmNextSave · 고객 칸)로만 갑니다 — 저장 코드 새로 없음. 누른 뒤 이 화면도 한 번 다시 그립니다(askAfter). */
+  function askHtml(x) {
+    var id = cliOf(x); if (!id) return '';
+    var a = T(function () { return g.cqaAsk(id); }, null); if (!a || !a.q || !a.q.ask) return '';
+    var ans = T(function () { return g.cqaAnsHtml(id, a); }, '') || '';
+    return '<div class="qask" onclick="HOME_V2.askAfter()"><div class="q">🙋 ' + E(strip(a.q.ask)) + '</div>' + ans + '</div>';
   }
   function railHtml(L) {
     var list = (L && L.list) || [], all = (L && L.all) || list.length;
@@ -581,7 +641,7 @@
     ks.sort(function (a, b) { return (by[b] || 0) - (by[a] || 0); });
     var mo = T(function () { return (+g.HM_DOOR_TOP.month.slice(5)) + '월'; }, '이번 달');
     return '<div class="insc"><div class="insc-h"><b>🧭 ' + E(mo) + ' 상품전략</b><button type="button" onclick="hmDoorGo(\'\',\'\')">상품전략기 열기 ›</button></div><div class="insc-r">' +
-      ks.map(function (k) { var p = tops[k][0]; return '<button type="button" onclick="hmDoorGo(\'' + Q(k) + '\',\'\')"><b>' + E(CATS[k].label) + '</b><span>' + E(p.nm) + '</span><em>' + (by[k] ? '오늘 볼 분 ' + by[k] + '명' : E(p.co || '')) + '</em></button>'; }).join('') +
+      ks.map(function (k) { var p = tops[k][0]; return '<button type="button" onclick="HOME_V2.insK(\'' + Q(k) + '\')"><b>' + E(CATS[k].label) + '</b><span>' + E(p.nm) + '</span><em>' + (by[k] ? '오늘 볼 분 ' + by[k] + '명' : E(p.co || '')) + '</em></button>'; }).join('') +
       '</div></div>';
   }
   /* 이번 주 — 날을 누르면 그날 일정 · 오늘이면 동선 */
@@ -787,8 +847,10 @@
   function can(id) { return T(function () { return (typeof g.osTabAllowed !== 'function') || g.osTabAllowed(id); }, true); }
   function menuHtml() {
     var G = (T(function () { return g.TABS; }, []) || []).map(function (gr) {
-      return { t: gr.group || '', items: (gr.items || []).filter(function (it) { return it && it.id && can(it.id); }) };
+      return { t: gr.group || '', items: (gr.items || []).filter(function (it) { return it && it.id && can(it.id) && AI_IDS.indexOf(it.id) < 0; }) };
     }).filter(function (gr) { return gr.items.length; });
+    var AIG = aiItems();   /* 예전처럼 일곱 다 — 자리만 한 갈래로 모음 */
+    if (AIG.length) G.push({ t: '🤖 자비스로 합친 AI', items: AIG });
     var n = G.reduce(function (a, gr) { return a + gr.items.length; }, 0);
     var h = '<button type="button" class="mm" onclick="HOME_V2.menu()"><span>☰ 다른 메뉴 펼쳐 보기</span><small>' + n + '개</small><span class="ar" style="transform:rotate(' + (MOPEN ? 90 : 0) + 'deg)">›</span></button>';
     if (!MOPEN) return h;
@@ -924,6 +986,24 @@
     var L2 = dockItems('prod').filter(function (it) { return it.id !== 'insight'; });
     h += '<button type="button" class="btn p" onclick="HOME_V2.close();hmDoorGo(\'\',\'\')">상품전략기 전체 열기</button>' +
       (L2.length ? '<h2>연락 거리 · 비교</h2>' + dockRows(L2.slice(0, 4)) + allBtn('prod', L2.length > 4 ? L2.length + 1 : 0) : '');
+    sheet(h);
+  }
+
+  /* 🧭 상황 하나 (시안 9차 openInsK · 판 X529) — 오늘 「상품전략」 칸에서 상황을 누르면 앱 안 시트 먼저:
+     구실(MK_TALK hook) → 이번 달 상품 순위(HM_DOOR_TOP — 상품전략기와 같은 순위) → 이 이야기로 연락할 오늘 볼 분(doorOf — 위 시트와 같은 자) → 맨 아래에서 상품전략기 「🎣 문 열기」.
+     시안은 「내 고객」 전부를 세지만 라이브는 오늘 볼 분(hmSteps)만 압니다 — 그렇게 적습니다. */
+  function insKSheet(k) {
+    var tops = T(function () { return g.HM_DOOR_TOP.cats; }, null) || {}, C = T(function () { return g.MK_TALK.CATS[k]; }, null), P = tops[k] || [];
+    if (!C || !P.length) { try { g.hmDoorGo(k, ''); } catch (e) {} return; }
+    var L = (T(function () { return g.hmSteps(); }, []) || []).filter(function (x) { return doorOf(x).cat === k; });
+    var h = '<div class="who2">이번 달 상품전략</div><h1>🧭 ' + E(C.label || k) + '</h1>' +
+      (C.hook ? '<div class="say">「' + E(strip(C.hook)) + '」</div>' : '') +
+      '<div class="rprod">' + P.map(function (p, i) { return (i + 1) + '. ' + E([p.co, p.nm].filter(Boolean).join(' · ')); }).join('<br>') + '<small>설계사용 · 소식지 기준 · 상품전략기와 같은 순위</small></div>' +
+      '<h2>이 이야기로 연락할 오늘 볼 분 <small>' + L.length + '명</small></h2>' +
+      (L.length ? '<div class="pcard">' + L.map(function (x) {
+        return '<button type="button" class="mini" onclick="HOME_V2.close();hmOpen(\'' + Q(x.key) + '\')"><span class="av">' + E(String(nameOf(x)).replace(/^\s*\[[^\]]*\]\s*/, '').charAt(0) || '·') + '</span><span class="tx"><b>' + E(nameOf(x)) + '님</b><small>' + E(strip(T(function () { return g.hmWhy(x); }, '') || x.s || '')) + '</small></span><span class="ar">›</span></button>';
+      }).join('') + '</div>' : '<div class="sub">오늘 볼 분 가운데 이 상황인 분은 없어요</div>') +
+      '<button type="button" class="btn p" onclick="HOME_V2.close();hmDoorGo(\'' + Q(k) + '\',\'\')">상품전략기 「🎣 문 열기」 로 이어 보기</button>';
     sheet(h);
   }
 
@@ -1342,7 +1422,10 @@
   function copyT(t) { if (!t) return; try { if (typeof g.copyText === 'function') g.copyText(t); } catch (e) {} }
   var RES = { ok: '🤝 약속 잡음', hold: '🤔 생각해 볼게요', miss: '📵 안 받음', soft: '🙅 거절' };
   var API = {
-    on: on, set: set, use: use, chip: chip, apply: apply, paint: paint, close: close, allowed: function () { return ALLOWED; }, KEY: KEY,
+    on: on, set: set, use: use, chip: chip, apply: apply, paint: paint, close: close, sheet: sheet,
+    insK: insKSheet,
+    /* 🙋 답 단추를 누른 뒤 — 저장이 끝날 즈음 이 화면만 다시 그림(답한 물음이 빠지고 다음 것이 섬) */
+    askAfter: function () { setTimeout(function () { paint(); }, 900); }, allowed: function () { return ALLOWED; }, KEY: KEY,
     nm: function () { try { g.hmNmToggle(); } catch (e) {} paint(); },
     goal: goalSheet, goalPer: goalPer, goalPut: goalPut,
     goalQ: function (q) { var i = el('hv2GoalP'); if (i) i.value = q; goalPer(); },
@@ -1374,6 +1457,7 @@
     talkCp: function (i) { copyT(TXT[i]); },
     studyMore: function () { STUDY_ALL = STUDY_ALL ? 0 : 1; studySheet(); },
     jv: jvSheet,
+    ai: aiSheet,
     amt: amtSheet, won: wonSheet, amtPut: amtPut, wonPut: wonPut,
     numQ: function (q) { var i = el('hv2Num'); if (i) i.value = q; },
     ta: function (key) { try { g.HM_TAMSG.openTa(key); } catch (e) { try { g.go('ta_script'); } catch (e2) {} } },

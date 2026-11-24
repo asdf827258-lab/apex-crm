@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   ba-xl.js — 📊 <b>보장분석 전·후를 엑셀 한 장으로</b> (판 X528)
+   ba-xl.js — 📊 <b>보장분석 전·후를 엑셀 한 장으로</b> (판 X531)
 
    사장님 말씀 (2026-11-23) — 「보장분석 전후 비교자료에서, <b>엑셀 버전</b>으로
    <b>한눈에 모든 보험 모든 보장</b>이 나오도록 만들어보자」
@@ -113,14 +113,14 @@
     if (typeof v === 'number' && isFinite(v)) return '<c r="' + a + '"' + s + '><v>' + v + '</v></c>';
     return '<c r="' + a + '"' + s + ' t="inlineStr"><is><t xml:space="preserve">' + esc(v) + '</t></is></c>';
   }
-  /* ★ 판 X532 — 줄 높이를 줍니다. 전부 기본(15pt)이면 표가 답답하고
+  /* ★ 판 X535 — 줄 높이를 줍니다. 전부 기본(15pt)이면 표가 답답하고
      「엑셀 기본 시트」 처럼 보입니다 (사장님 말씀 「엑셀로 퀄리티는 이것밖에 안되?」). */
   function row(r, cells, ht) {
     return '<row r="' + r + '"' + (ht ? (' ht="' + ht + '" customHeight="1"') : '') + '>' +
       cells.join('') + '</row>';
   }
 
-  /* ══ ③ 꼴(styles) — <b>묶음(부위)마다 제 색</b> (판 X528 · 사장님 말씀
+  /* ══ ③ 꼴(styles) — <b>묶음(부위)마다 제 색</b> (판 X531 · 사장님 말씀
      「색 별로 따로 나누고, 글씨 크기 부위 전부 나눠」) ══════════════════
 
      STD 가 묶음마다 <b>제 색(c)과 아이콘(ic)</b> 을 이미 들고 있습니다 — 화면에서
@@ -143,7 +143,7 @@
   function GST(i, k) { return 20 + i * 3 + k; }
   /* 보험료 줄이 쓰는 꼴 — 묶음 꼴 뒤 일곱 (0 전 · 1 후 · 2 전합 · 3 후합 · 4 해지 · 5 줄음 · 6 늘음) */
   function PST(n, k) { return 20 + n * 3 + k; }
-  /* ★ 판 X532 — 보험료 꼴 <b>뒤</b>: 묶음마다 큰 제목 하나, 그 뒤 상태 셋 + 부제 */
+  /* ★ 판 X535 — 보험료 꼴 <b>뒤</b>: 묶음마다 큰 제목 하나, 그 뒤 상태 셋 + 부제 */
   function BIG(n, i) { return 20 + n * 3 + 7 + i; }                 /* 묶음 i 의 큰 제목 */
   function STT(n, k) { return 20 + n * 3 + 7 + n + k; }     /* 0 충분 1 부족 2 미가입 3 부제 4 큰 제목 띠 */
   /* 큰 제목 띠 한 줄을 만듭니다 — 칸 수만큼 칠해야 띠가 끊기지 않습니다 */
@@ -176,7 +176,7 @@
        이 글자는 <b>거르기·정렬 때문에</b> 남겨 두는 것이라 작고 옅게 둡니다 — 크면
        눈이 그것부터 읽습니다. (9pt · 그 색을 흰색과 반쯤 섞음)                 */
     for (i = 0; i < GRP.length; i++) FONT.push('<sz val="9"/><color rgb="FF' + tint(GRP[i].c, 0.42) + '"/><name val="맑은 고딕"/>');
-    /* ★ 판 X532 — 사장님 말씀 「엑셀로 퀄리티는 이것밖에 안되?」.
+    /* ★ 판 X535 — 사장님 말씀 「엑셀로 퀄리티는 이것밖에 안되?」.
        머리가 10.5pt 한 줄이라 「엑셀 기본 시트」 로 보였습니다. 큰 제목 글꼴을 보탭니다. */
     var FBIG = FONT.length;                                   /* 큰 제목 — 흰 16pt */
     FONT.push('<b/><sz val="16"/><color rgb="FFFFFFFF"/><name val="맑은 고딕"/>');
@@ -193,12 +193,12 @@
       FILL.push('<patternFill patternType="solid"><fgColor rgb="FF' + tint(GRP[i].c, 0.86) + '"/><bgColor indexed="64"/></patternFill>');
       FILL.push('<patternFill patternType="solid"><fgColor rgb="FF' + tint(GRP[i].c, 0.95) + '"/><bgColor indexed="64"/></patternFill>');
     }
-    /* ★ 판 X532 — 묶음에 매이지 않은 <b>큰 제목 띠</b> 하나 (앞 시트들이 씁니다) */
+    /* ★ 판 X535 — 묶음에 매이지 않은 <b>큰 제목 띠</b> 하나 (앞 시트들이 씁니다) */
     var FNAVY = FILL.length;
     FILL.push('<patternFill patternType="solid"><fgColor rgb="FF2B3A55"/><bgColor indexed="64"/></patternFill>');
     for (i = 0; i < FILL.length; i++) fi += '<fill>' + FILL[i] + '</fill>';
 
-    /* ★ 판 X532 — 띠는 <b>테두리 없이</b>. 칸마다 테두리를 그으면 띠가 흰 금으로
+    /* ★ 판 X535 — 띠는 <b>테두리 없이</b>. 칸마다 테두리를 그으면 띠가 흰 금으로
        끊겨 보입니다(뽑아서 보고 찾았습니다). */
     function XN(n, fo, fl, al) {
       return '<xf numFmtId="' + n + '" fontId="' + fo + '" fillId="' + fl + '" borderId="0" xfId="0" ' +
@@ -244,7 +244,7 @@
     xf += X(165, 4, 6);   /* +4 보험료 해지 */
     xf += X(165, 5, 0);   /* +5 보험료 줄었다(초록) */
     xf += X(165, 4, 0);   /* +6 보험료 늘었다(붉게) */
-    /* ★ 판 X532 — 묶음마다 <b>큰 제목 띠</b> 하나 (그 색 바탕 · 흰 16pt) */
+    /* ★ 판 X535 — 묶음마다 <b>큰 제목 띠</b> 하나 (그 색 바탕 · 흰 16pt) */
     for (i = 0; i < GRP.length; i++) xf += XN(0, FBIG, 10 + i * 3, 'horizontal="left" vertical="center"');
     /* 상태 세 가지 — 글자색만이 아니라 <b>칸을 칠합니다</b>. 눈이 색부터 읽습니다. */
     xf += X(0, 5, 9, 'horizontal="center" vertical="center"');        /* 충분 */
@@ -276,7 +276,7 @@
       ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
       /* 인쇄는 <b>가로 한 장 폭</b>에 맞춥니다 — 안 그러면 칸이 옆으로 길어
          열두 장으로 쪼개집니다(뽑아서 세어 봤습니다). 세로로는 몇 장이든 흐릅니다. */
-      /* ★ 판 X532 — <b>탭에 묶음 색</b>을 입힙니다. 시트가 열여섯 장이라
+      /* ★ 판 X535 — <b>탭에 묶음 색</b>을 입힙니다. 시트가 열여섯 장이라
          아래 탭 줄만 봐도 어느 부위인지 바로 압니다. */
       ((opt.fit || opt.tabColor)
         ? ('<sheetPr>' + (opt.tabColor ? ('<tabColor rgb="FF' + opt.tabColor + '"/>') : '') +
@@ -523,7 +523,7 @@
      담보마다 권장 · 가입(전·후) · 과부족 · 상태를 한 줄에 놓고, 읽기 쉬운
      <b>억·만 글자</b>를 옆 칸에 같이 답니다(숫자 칸은 그대로 둡니다 · 4-1).     */
   function 묶음시트(gp, gi, C) {
-    /* ★ 판 X532 — 사장님 말씀 「<b>엑셀로 퀄리티는 이것밖에 안되?</b>」.
+    /* ★ 판 X535 — 사장님 말씀 「<b>엑셀로 퀄리티는 이것밖에 안되?</b>」.
        표가 엑셀 기본값(글씨 10.5 · 줄 높이 15 · 격자선 켜짐)이라 날 시트로 보였습니다.
        엑셀이 가진 것을 씁니다 — <b>큰 제목 띠 · 줄 높이 · 탭 색 · 자동 거르기 ·
        셀 안 막대(조건부 서식) · 인쇄 머리글 반복 · 상태 칸 칠하기</b>. */
@@ -558,7 +558,7 @@
           st === 'o' ? X._STT(N, 0) : (st === 'h' ? X._STT(N, 1) : (st === 'x' ? X._STT(N, 2) : 18))),
         cel(7, r, fa === undefined ? null : 억만(fa), 18)], 21)); r++;
     });
-    /* ★ 판 X530 — 사장님 말씀 「엑셀로 디자인 짜」. 표 아래에 <b>그 묶음의 도해</b>를
+    /* ★ 판 X533 — 사장님 말씀 「엑셀로 디자인 짜」. 표 아래에 <b>그 묶음의 도해</b>를
        엑셀 도형으로 얹습니다. 그리는 자는 ba-art.js 한 곳입니다 (5번) —
        사진이 아니라 <b>도형</b>이라 늘려도 같은 선으로 섭니다 (9번). */
     var 도해 = (g.BA_ART && typeof g.BA_ART.scene === 'function')
@@ -611,7 +611,7 @@
       '</c:plotArea><c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend>' +
       '<c:plotVisOnly val="1"/></c:chart></c:chartSpace>';
   }
-  /* ══ 🖨 판 X530 — 묶음 도해를 엑셀 도형으로 ════════════════════════
+  /* ══ 🖨 판 X533 — 묶음 도해를 엑셀 도형으로 ════════════════════════
      사장님 말씀 「<b>엑셀로 디자인 짜</b>」. 따로 선 HTML 에만 두면 사장님이
      엑셀과 그 문서를 둘 다 들고 다니셔야 합니다.
      ★ 그리는 자는 <b>ba-art.js 한 곳</b>입니다 — 여기서는 옮기기만 합니다 (5번).
@@ -624,7 +624,7 @@
   }
   function STDN() { return (g.STD || []).length; }
   function 도해판(svg, 줄, 폭) {
-    /* ★ 판 X531 — 사장님 말씀 「도형도 그림으로 깔끔하게 딱 정리」.
+    /* ★ 판 X534 — 사장님 말씀 「도형도 그림으로 깔끔하게 딱 정리」.
        ① 도해 폭을 <b>표 폭에 맞춥니다</b> — 좁으면 왼쪽으로 치우쳐 보입니다.
        ② <b>oneCellAnchor</b> 로 칸에 앉힙니다 — 줄을 넣거나 빼도 도해가 따라오고,
           크기는 그대로입니다(absoluteAnchor 는 종이 위에 떠 있어 어긋납니다). */
@@ -712,7 +712,7 @@
     var 그림쪽 = -1;
     SH.forEach(function (q, i2) { if (q.그림) 그림쪽 = i2; });
 
-    /* ★ 판 X530 — 그림판은 <b>시트마다 한 장</b>입니다. 거미줄이 1번,
+    /* ★ 판 X533 — 그림판은 <b>시트마다 한 장</b>입니다. 거미줄이 1번,
        묶음 도해가 2번부터입니다. 사장님 말씀 「엑셀로 디자인 짜」. */
     var DR = [], no = 1;
     if (그림쪽 >= 0) DR.push({ no: no++, 시트: 그림쪽, 차트: true });
@@ -746,7 +746,7 @@
         SH.map(function (q, i2) { return '<sheet name="' + 엑셀글(q.n) + '" sheetId="' + (i2 + 1) +
           '" r:id="rId' + (i2 + 1) + '"/>'; }).join('') +
         '</sheets>' +
-        /* ★ 판 X531 — 사장님 말씀 「깔끔하게 딱 정리」. 인쇄하면 <b>표와 도해까지만</b>
+        /* ★ 판 X534 — 사장님 말씀 「깔끔하게 딱 정리」. 인쇄하면 <b>표와 도해까지만</b>
            나오게 범위를 못 박습니다. 안 박으면 엑셀이 빈 칸까지 세어 종이가 늘어납니다. */
         (DR.filter(function (q) { return !q.차트; }).length
           ? ('<definedNames>' + DR.filter(function (q) { return !q.차트; }).map(function (q) {

@@ -18,6 +18,8 @@
      [7] ★  옛 홈은 지우지 않고 숨기기만(CSS) — 「예전 오늘 칸 펼치기」 가 있다 · 그리다 터지면 예전 화면
      [8] ★  옷은 .hv2 / #hv2Sheet 아래로만 — 앱의 .card · .btn 같은 옷을 덮지 않는다
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
+     [20] ★  판 X530 — 🤖 AI 7개 → 자비스 하나로: 인사 줄 🤖 · 자비스 시트(묻기 apexmap · 합친 AI) · 다른 메뉴 맨 아래 한 갈래 (TABS 안 건드림)
+     [19] ★  판 X529 — 지금 이분 카드 📰 오늘 소식(ccNewsIdx · ccNews) · 🙋 물어볼 것(cqaAsk · cqaAnsHtml) · 상품전략 칸 → 🧭 상황 시트(openInsK)
      [18] ★★ 판 X526 — 💰 예상 월납 · ✓ 계약됐어요 시트(시안 openAmt · openClose): 저장은 「DB · 업적관리」 의 그 서버 문(pipeline_save) 한 곳 ·
           만원 → 원 한 곳 · 계약완료 규칙은 queueSave 그대로 · 내 고객만 · 🛰 자비스 시트(오늘 끊기기 쉬운 자리 · 미리 세워 둔 연락)
      [17] ★★ 판 X514 — 아래 세 칸이 메뉴 목록이 아니라 시안 시트: 화법(단계 칩 · 그대로 말할 문장 · 복사 — 글은 APEX_STAGE · TA_MSG 원본),
@@ -540,6 +542,85 @@ console.log('\n[18] 💰 예상 월납 · ✓ 계약됐어요 · 🛰 자비스 
   is(/💌 이번 달 보낼 마디 2/.test(t) && /jvnote/.test(t), '마디 · 끊기기 쉬운 자리 설명');
   const jl = X.g.HOME_V2 && SRC.indexOf("'오늘 끊기기 쉬운 자리 ' + n + '곳'") > 0 && SRC.indexOf("' · 미리 세운 연락 ' + J.P.length + '개'") > 0;
   is(jl, '오늘 화면 자비스 한 줄 — 「오늘 끊기기 쉬운 자리 n곳 · 미리 세운 연락 m개」(시안 문구)');
+}
+
+console.log('\n[19] 📰 오늘 소식 · 🙋 물어볼 것 · 🧭 상황 시트 (판 X529 · 시안 qCard qnews · qask · openInsK)');
+{
+  const IXs = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  const need = ['ccNewsIdx', 'ccNews', 'cqaAsk', 'cqaAnsHtml', 'hmOpen'].filter(n => !new RegExp('function ' + n + '\\(').test(IXs));
+  is(!need.length && /var NLIVE\s*=/.test(IXs), '부르는 라이브 함수가 있다 — 이분 소식(ccNewsIdx · ccNews) · 한 가지만 여쭙니다(cqaAsk · cqaAnsHtml)' + (need.length ? ' — 없음: ' + need.join(', ') : ''));
+  const rows = [
+    { k: 'touch', id: 'c1', t: '홍길동', s: '30일째', key: 'touch:c1:' },
+    { k: 'next', id: 'c2', t: '홍길순', s: '할 일', key: 'next:c2:' },
+    { k: 'db', tk: 'AP', id: 'd1', t: '홍갑돌', s: '만남', key: 'db:d1:AP' }
+  ];
+  const X = box({ apex_home_v2: '1' }, '', { rows });
+  const said = [];
+  Object.assign(X.g, {
+    NLIVE: { items: [{ t: '실손 청구, 사진 한 장으로 바뀐다' }] }, ccNewsIdx: id => (id === 'c1' || id === 'd1' ? 0 : -1),
+    cqaAsk: id => (id === 'c2' || id === 'd1' ? { k: 'bd', q: { ask: '<b>생일</b>이 언제세요?', why: '생일 축하' } } : null),
+    cqaAnsHtml: (id, a) => '<div class="t-chips"><button type="button" class="t-chip" onclick="cqaFld(\'cmBd\',\'' + id + '\')">여기에 적기 →</button></div>',
+    HM_DOOR: { pick: x => (x.k === 'db' || x.id === 'c2' ? { cat: 'hospital', by: 'db' } : { cat: '', by: 'none' }), prods: c => [{ co: '보험사', nm: '병원비 상품' }] },
+    HM_DOOR_TOP: { month: '2026-11', cats: { hospital: [{ co: 'A생명', nm: '병원비 상품' }, { co: 'B손보', nm: '비급여 상품' }] }, top: { co: '보험사', nm: '1위 상품' } },
+    MK_TALK: { CATS: { hospital: { label: '병원비·비급여', hook: '요즘 병원비 청구 많이 하세요?' } } },
+    hmDoorGo: (k, b) => said.push(['door', k]), setTimeout: f => { said.push(['later']); return 0; }
+  });
+  X.g.HOME_V2.apply(dyn(X));
+  const h = X.els.hv2.innerHTML;
+  const card = i => { const a = h.indexOf('data-i="' + i + '"'); const b = h.indexOf('data-i="' + (i + 1) + '"'); return h.slice(a, b > 0 ? b : h.indexOf('class="dots"', a) > 0 ? h.indexOf('class="dots"', a) : undefined); };
+  const c0 = card(0), c1 = card(1), c2 = card(2);
+  is(/class="qnews" onclick="ccNews\('c1'\)"><b>📰 오늘 소식<\/b><span>실손 청구, 사진 한 장으로 바뀐다<\/span><i>복사<\/i>/.test(c0), '고객 카드 — 오늘 소식(이분께 맞는 기사 · 누르면 있던 ccNews 로 복사)');
+  is(!/qnews/.test(c1), '맞는 기사가 없으면 줄을 안 세움(지어내지 않음)');
+  is(/class="qask" onclick="HOME_V2\.askAfter\(\)"><div class="q">🙋 생일이 언제세요\?<\/div><div class="t-chips">/.test(c1) && /cqaFld\('cmBd','c2'\)/.test(c1), '물어볼 것 — 한 가지만 여쭙니다(cqaAsk)의 그 물음 · 답 단추는 cqaAnsHtml 그대로(태그는 걷음)');
+  is(!/qask|qnews/.test(c2), '배정 DB 카드엔 안 섬(고객 365일 고객만 — 관심 · 아는 것을 모름)');
+  is(!/qask/.test(c0), '여쭐 것이 없으면 안 섬');
+  X.g.HOME_V2.askAfter(); is(said.some(x => x[0] === 'later'), '답 단추를 누른 뒤 — 잠깐 뒤 이 화면만 다시 그림');
+  const ins = h.slice(h.indexOf('class="insc"'), h.indexOf('</div></div>', h.indexOf('class="insc"')));
+  is(/onclick="HOME_V2\.insK\('hospital'\)"><b>병원비·비급여<\/b>/.test(ins) && !/hmDoorGo\('hospital'/.test(ins) && /onclick="hmDoorGo\('',''\)">상품전략기 열기 ›/.test(ins),
+    '오늘 「상품전략」 칸 — 상황을 누르면 앱 안 상황 시트 먼저(HOME_V2.insK) · 「상품전략기 열기 ›」 는 그대로');
+  X.g.HOME_V2.insK('hospital'); const t = (X.els.hv2Sheet || {}).innerHTML || '';
+  const ORD = ['이번 달 상품전략', '🧭 병원비·비급여', '「요즘 병원비 청구 많이 하세요?」', '1. A생명 · 병원비 상품<br>2. B손보 · 비급여 상품', '상품전략기와 같은 순위', '이 이야기로 연락할 오늘 볼 분 <small>2명', '상품전략기 「🎣 문 열기」 로 이어 보기'];
+  const at = ORD.map(k => t.indexOf(k));
+  is(at.every(x => x >= 0) && at.every((x, i) => !i || x > at[i - 1]), '상황 시트 — 구실 → 이번 달 상품 순위 → 이 이야기로 연락할 오늘 볼 분 → 상품전략기 (시안 openInsK 차례)' + (at.some(x => x < 0) ? ' — 없음: ' + ORD.filter((k, i) => at[i] < 0).join(' | ') : ''));
+  is(/hmOpen\('next:c2:'\)/.test(t) && /hmOpen\('db:d1:AP'\)/.test(t) && !/touch:c1:/.test(t) && /class="pcard"><button type="button" class="mini"/.test(t), '오늘 볼 분 — 그 상황인 분만(doorOf · 위 상품전략 시트와 같은 자) · 누르면 이분 한 장');
+  X.g.HOME_V2.insK('nope');
+  is(said.some(x => x[0] === 'door' && x[1] === 'nope'), '상품이 없는 상황이면 예전처럼 상품전략기로');
+  const ws = sc.slice(sc.indexOf('  function newsHtml('), sc.indexOf('  function railHtml('));
+  is(!/setItem|cmSave|\.rpc\(|\.from\(|nlLoad|hmIgSet/.test(ws), '두 줄은 읽기만 — 저장 · 뉴스 받아 오기를 새로 안 부름(답은 cqa 단추가 있던 자리로)');
+}
+
+console.log('\n[20] 🤖 AI 7개 → 자비스 하나로 (판 X530 · 시안 openJarvis · 사장님 말씀 「AI 7개 → 자비스 하나로」)');
+{
+  const AI = [['apexmap', '🤖', 'APEX 자비스 모드', true], ['assistant', '🤖', '오늘의 AI 비서'], ['voiceasst', '🎙️', '음성 비서'], ['brain', '🧠', '윤시현의 두뇌', true],
+    ['cs_assist', '💬', 'AI 상담 어시스턴트'], ['ins_asst', '🩺', '보험 비서'], ['helpme', '🧭', '무엇을 할지 모르겠다면', true]];
+  const it = a => ({ id: a[0], icon: a[1], title: a[2], hide: !!a[3] });
+  const TABS = [{ group: '하루 시작', items: [{ id: 'home', icon: '🏠', title: '오늘' }, it(AI[1]), it(AI[2]), it(AI[3])] },
+    { group: '상담 도구', items: [{ id: 'insight', icon: '🧭', title: '상품전략기' }, it(AI[4]), it(AI[5])] },
+    { group: '성장', items: [{ id: 'edu', icon: '🌱', title: '성장 로드맵' }, it(AI[0]), it(AI[6])] }];
+  const X = box({ apex_home_v2: '1' }, '');
+  const went = [];
+  Object.assign(X.g, { TABS, navJvCount: () => 113, osTabAllowed: id => id !== 'ins_asst', TAB_META: { assistant: { desc: '오늘 할 일을 AI 가 정리' } }, go: id => went.push(id), meV2Open: () => {} });
+  X.g.HOME_V2.apply(dyn(X));
+  let h = X.els.hv2.innerHTML;
+  const he = h.slice(h.indexOf('class="hello"'), h.indexOf('</div>', h.indexOf('class="hello"')));
+  is(/<span class="hb"><button type="button" class="mebtn" onclick="HOME_V2\.ai\(\)" aria-label="자비스에게 묻기 · AI 도우미">🤖<\/button><button type="button" class="mebtn" onclick="meV2Open\(\)"/.test(he), '인사 줄 오른쪽 — 🤖 자비스 · 🙋 나 (시안 오른쪽 위 두 단추)');
+  X.g.HOME_V2.ai(); const t = (X.els.hv2Sheet || {}).innerHTML || '';
+  const ORD = ['<h1>🤖 자비스</h1>', '말로 물으면 화면을 열어 드려요', "go(\'apexmap\')\">🤖 자비스에게 묻기 · 화면 113개", '🛰 자비스가 챙기는 중 보기', '자비스로 합친 AI <small>5</small>'];
+  const at = ORD.map(k => t.indexOf(k));
+  is(at.every(x => x >= 0) && at.every((x, i) => !i || x > at[i - 1]), '자비스 시트 — 묻기(APEX 자비스 모드 · 서랍 맨 위 그 길) → 챙기는 중 → 자비스로 합친 AI' + (at.some(x => x < 0) ? ' — 없음: ' + ORD.filter((k, i) => at[i] < 0).join(' | ') : ''));
+  const ai = t.slice(t.indexOf('자비스로 합친 AI'));
+  const ord2 = ['오늘의 AI 비서', '음성 비서', '윤시현의 두뇌', 'AI 상담 어시스턴트', '무엇을 할지 모르겠다면'].map(k => ai.indexOf(k));
+  is(ord2.every(x => x >= 0) && ord2.every((x, i) => !i || x > ord2[i - 1]) && !/보험 비서/.test(ai) && /오늘 할 일을 AI 가 정리/.test(ai) && !/APEX 자비스 모드/.test(ai),
+    '합친 AI — 시안 차례 · 이름 · 그림 · 설명은 메뉴 표 · 목록에서 숨긴 것(두뇌 · 길잡이)도 자비스 안엔 섬 · 막힌 것(보험 비서)은 안 섬');
+  X.g.HOME_V2.mg && X.g.HOME_V2.menu(); h = X.els.hv2.innerHTML;
+  const mb = h.slice(h.indexOf('class="mmb"'));
+  const gi = mb.indexOf('🤖 자비스로 합친 AI');
+  is(gi > mb.lastIndexOf('<b>성장</b>') && gi > 0 && /<b>🤖 자비스로 합친 AI<\/b><small>6<\/small>/.test(mb) && /<b>하루 시작<\/b><small>1<\/small>/.test(mb) && /<b>상담 도구<\/b><small>1<\/small>/.test(mb),
+    '오늘 「☰ 다른 메뉴」 — 흩어져 있던 AI 를 맨 아래 한 갈래로(하루 시작 · 상담 도구 · 성장에서 빠짐) · 수는 그대로');
+  is(!/TABS\s*=|\.hide\s*=|g\.TABS\.(push|splice)/.test(sc.slice(sc.indexOf('  var AI_IDS'), sc.indexOf('  function jvSheet()'))) && /var AI_IDS = \['apexmap', 'assistant', 'voiceasst', 'brain', 'cs_assist', 'ins_asst', 'helpme'\];/.test(sc),
+    '메뉴 표(TABS) · 서랍은 안 건드림 — 지우지 않고 이 화면에서 자리만 모음 · 일곱은 시안 PLACE 의 ai 그대로');
+  const n0 = box({ apex_home_v2: '1' }, ''); Object.assign(n0.g, { osTabAllowed: id => id !== 'apexmap', TABS }); n0.g.HOME_V2.apply(dyn(n0));
+  is(!/HOME_V2\.ai\(\)/.test(n0.els.hv2.innerHTML), '자비스 모드를 못 여는 분께는 🤖 단추가 안 섬');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');

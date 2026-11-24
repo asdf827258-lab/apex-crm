@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   check-baxl.js — 📊 <b>보장분석 전·후 엑셀이 거짓말하지 않나</b> (판 X528)
+   check-baxl.js — 📊 <b>보장분석 전·후 엑셀이 거짓말하지 않나</b> (판 X531)
 
    사장님 말씀 (2026-11-23) — 「보장분석 전후 비교자료에서, <b>엑셀 버전</b>으로
    <b>한눈에 모든 보험 모든 보장</b>이 나오도록 만들어보자」
@@ -60,7 +60,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   '.svg': 'image/svg+xml', '.jpg': 'image/jpeg' };
 
 (async () => {
-  console.log('══ 📊 보장분석 전·후 엑셀 점검 (판 X528) ══');
+  console.log('══ 📊 보장분석 전·후 엑셀 점검 (판 X531) ══');
 
   /* ── [9] 소스로 먼저 — 바깥 셈틀을 안 들여왔나 ───────────────── */
   const SRC = fs.readFileSync(path.join(ROOT, 'app/ba-xl.js'), 'utf8');
@@ -277,7 +277,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
     (자료.length ? (' ← ' + 자료.join(' ')) : ''));
   is(true, '  (막은 바깥 ' + 밖.length + '군데 — ' + (밖.join(' · ') || '없음') + ' · 글꼴입니다)');
 
-  /* ══ 🖨 판 X530 — 사장님 말씀 「<b>엑셀로 디자인 짜</b>」 ════════════
+  /* ══ 🖨 판 X533 — 사장님 말씀 「<b>엑셀로 디자인 짜</b>」 ════════════
      도해가 따로 선 문서에만 있으면 사장님은 둘을 들고 다니셔야 합니다.
      같은 도해가 <b>엑셀 안</b>에 들어갔는지, 그리고 엑셀 도형이
      <b>제 테두리 안에</b> 서는지 잽니다. 사진이 아니라 도형이어야 합니다 (9번). */
@@ -319,7 +319,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   is((타입.match(/drawings\/drawing\d+\.xml/g) || []).length === 12,
     '  Content_Types 에 그림판 <b>12장</b>이 적혔다 — 빠지면 엑셀이 안 엽니다');
 
-  /* ══ ✨ 판 X532 — 사장님 말씀 「<b>엑셀로 퀄리티는 이것밖에 안되?</b>」 ═══════
+  /* ══ ✨ 판 X535 — 사장님 말씀 「<b>엑셀로 퀄리티는 이것밖에 안되?</b>」 ═══════
      표가 엑셀 기본값이면 아무리 도해를 넣어도 「날 시트」 로 보입니다.
      엑셀이 가진 것을 쓰고 있는지 잽니다 — 한 번 올린 품질이 조용히 내려가지
      않게 하는 것이 이 자의 일입니다 (8번). */
@@ -362,6 +362,6 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   await br.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '군데 — 엑셀이 화면과 다른 말을 합니다')
-    : '✓ 엑셀 한 장에 모든 보험 · 모든 보장이 거짓 없이 들어갑니다 (판 X528)');
+    : '✓ 엑셀 한 장에 모든 보험 · 모든 보장이 거짓 없이 들어갑니다 (판 X531)');
   process.exit(bad ? 1 : 0);
 })().catch(e => { console.error('터짐: ' + e.message); process.exit(2); });
