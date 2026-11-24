@@ -284,6 +284,15 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
 
   const view = await page.evaluate(() => {
     const agent = tabsFor('both', 'agent'), client = tabsFor('both', 'client');
+    /* ★★ 고객에게 가면 안 되는 탭을 <b>이름으로</b> 적어 둡니다.
+       처음엔 수(17·9)를 박아 두었는데, 탭이 하나 늘 때마다 애먼 빨간불이
+       켜졌습니다(판 X534). 그래서 규칙으로 바꿨더니 이번에는 <b>risk 를
+       AGENT_TABS 에서 빼도 안 울었습니다</b> — 규칙이 「더 선 것은 전부
+       AGENT_TABS 다」 였으니, 빼면 애초에 더 서지를 않아 조용했습니다.
+       안 울리는 알람은 알람이 아닙니다 (8번). 이름으로 적습니다.          */
+    const MUST = ['sales', 'how', 'fit', 'rel', 'talk', 'ins', 'risk', 'brief', 'show'];
+    const only = agent.filter(k => client.indexOf(k) < 0);
+    const leaked = MUST.filter(k => client.indexOf(k) >= 0);
     setView('client');
     const shown = Array.prototype.map.call(document.querySelectorAll('.tabs button'), b => b.textContent);
     const re = /(리스크 진단|거절이 오는 자리|닫히는 순간|민원|불완전판매|중도 이탈|이대로 하면|하면 안 되는 말|이렇게 바꿔라|피할 것|클로징|나만 보는|설계사 전용|고객에게 (말씀|보여))/;
@@ -300,9 +309,16 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
     setView('agent');
     return { agent: agent.length, client: client.length, shown: shown.length, leak: leak,
       bless: /덕담|🌾/.test(iceTxt), noScript: !/포문|하면 안 되는 말/.test(iceTxt),
-      meHidden: meHidden, riskBlocked: riskBlocked };
+      meHidden: meHidden, riskBlocked: riskBlocked,
+      only: only, onlyAllAgent: only.every(k => !!AGENT_TABS[k]),
+      clientClean: client.every(k => !AGENT_TABS[k]), leaked: leaked };
   });
-  ok(view.agent === 17 && view.client === 9, '내 눈용 ' + view.agent + '탭 · 고객 화면 ' + view.client + '탭으로 갈린다');
+  ok(view.leaked.length === 0,
+    '★★ 설계사 전용 아홉 탭이 <b>고객 화면에 하나도 없다</b>' +
+    (view.leaked.length ? ' — 샌 것: ' + view.leaked.join(' ') : ''));
+  ok(view.agent > view.client && view.client >= 7 && view.onlyAllAgent && view.clientClean,
+    '내 눈용 ' + view.agent + '탭 · 고객 화면 ' + view.client + '탭으로 갈린다 — 더 선 ' +
+    view.only.length + '탭이 전부 AGENT_TABS 에 적힌 것이다 (' + view.only.join(' ') + ')');
   ok(view.leak === '', '고객 화면에 설계사용 문구가 하나도 새어 나가지 않는다' + (view.leak ? ' — ' + view.leak : ''));
   ok(view.bless && view.noScript, '고객 화면 아이스브레이킹에는 덕담만 남고 화법 대본은 빠진다');
   ok(view.meHidden, '고객 화면에서는 내 카드 버튼도 감춘다');
@@ -324,47 +340,39 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   ok(wr.bad.length === 0, '열 가지 모두 진단 · 근거 · 할 것 3 · 하지 말 것 2 · 덕담이 채워진다' +
      (wr.bad.length ? ' — 빈 곳: ' + wr.bad.join(',') : ''));
 
-  const wAgent = await page.evaluate(() => {
+  /* 2026-11-24 「결제칸 없애고」 — 여기 있던 세 묶음(내 눈용은 무료 · 고객은 잠김 ·
+     결제창에 수단이 뜬다)은 <b>잴 것이 없어졌습니다.</b> 이제 양쪽 다 전부 열립니다.
+     ⚠ 없는 것을 재면 헛것입니다 (8번) — 지우고, 아래에서 「둘 다 열린다」 를 잽니다. */
+  const wBoth = await page.evaluate(() => {
     setWorryCat('job'); S.worry.txt = '3년째 인정받는 느낌이 없어요'; worryStart();
-    const t = document.getElementById('view').textContent;
-    return { paid: isPaid(), full: /이번 달에 이 세 가지만/.test(t), lock: /결제하고 전부 보기/.test(t) };
-  });
-  ok(wAgent.paid && wAgent.full && !wAgent.lock, '내 눈용에서는 결제 없이 전부 열린다 (설계사 도구는 무료)');
-
-  const wClient = await page.evaluate(() => {
+    const a = document.getElementById('view').textContent;
     setView('client'); goTab('worry');
-    const t = document.getElementById('view').textContent;
-    payOpen();
-    const sh = document.getElementById('sheetBody').textContent;
-    sheetClose();
-    return { lock: /결제하고 전부 보기/.test(t), price: /1,900원/.test(t),
-      preview: /🌾/.test(t), full: /이번 달에 이 세 가지만/.test(t),
-      bank: /계좌이체/.test(sh), code: /확인 코드/.test(sh) };
+    const c = document.getElementById('view').textContent;
+    setView('agent'); draw();
+    return { aFull: /이번 달에 이 세 가지만/.test(a), cFull: /이번 달에 이 세 가지만/.test(c),
+             lock: /결제|자세한 풀이는 여기서부터|확인 코드|1,900원/.test(a + c) };
   });
-  ok(wClient.lock && wClient.price && !wClient.full, '고객 화면에서는 요약까지만 보이고 나머지는 잠긴다');
-  ok(wClient.preview, '잠겨 있어도 덕담과 진단 한 줄은 무료로 보인다');
-  ok(wClient.bank && wClient.code, '결제창에 연결된 수단과 확인 코드 열기가 나온다');
+  ok(wBoth.aFull, '내 눈용에서 고민 상담이 전부 열린다');
+  ok(wBoth.cFull, '★★ <b>고객 화면에서도 전부 열린다</b> — 잠그는 자리가 없어졌습니다');
+  ok(!wBoth.lock, '⛔ 양쪽 어디에도 <b>결제·잠금 말이 없다</b>');
 
+  /* 2026-11-24 「결제칸 없애고」 — 자물쇠·확인 코드·결제수단이 통째로 없어졌습니다.
+     이제 고민 상담은 <b>처음부터 전부</b> 열려 있어야 합니다. 자물쇠가 되살아나면 여기서 웁니다. */
   const wOpen = await page.evaluate(() => {
-    unlockAsk(); document.getElementById('ucode').value = 'apex48'; unlockGo();
+    S.view = 'client'; S.worry = { cat: 'money', catName: '돈', done: true }; S.tab = 'worry'; draw();
     const t = document.getElementById('view').textContent;
-    const wrong = (function () {
-      try { localStorage.removeItem('worry_paid'); } catch (e) {}
-      unlockAsk(); document.getElementById('ucode').value = 'zzz'; unlockGo();
-      const bad = isPaid();
-      unlockAsk(); document.getElementById('ucode').value = 'APEX48'; unlockGo();
-      return bad;
-    })();
-    return { paid: isPaid(), full: /이번 달에 이 세 가지만/.test(t), when: /언제 움직이면/.test(t), wrong: wrong };
+    S.view = 'agent'; draw();
+    return { full: /이번 달에 이 세 가지만/.test(t), when: /언제 움직이면/.test(t),
+             lock: /결제|자세한 풀이는 여기서부터|확인 코드/.test(t),
+             pay: typeof window.payOpen === 'function' || typeof window.isPaid === 'function' };
   });
-  ok(wOpen.paid && wOpen.full && wOpen.when, '확인 코드를 넣으면 전부 열린다');
-  ok(wOpen.wrong === false, '틀린 코드로는 열리지 않는다');
-  await page.evaluate(() => { setView('agent'); });
+  ok(wOpen.full && wOpen.when, '★★ 고민 상담이 <b>처음부터 전부</b> 열린다 — 결제도 코드도 없다');
+  ok(!wOpen.lock, '⛔ 화면에 <b>결제·잠금 말이 없다</b>');
+  ok(!wOpen.pay, '⛔ 결제 함수가 <b>한 개도 안 남았다</b> — payOpen · isPaid');
 
-  const payCfg = await page.evaluate(() => ({ agent: PAY.agent, price: PAY.price, bank: PAY.bank, url: PAY.confirmUrl }));
-  ok(payCfg.agent === '윤시현' && payCfg.bank === '국민' && payCfg.price === 1900,
-     '주소 뒤에 붙인 설계사·계좌가 결제에 들어가고, 값은 기본 1,900원이다');
-  ok(payCfg.url === '/api/toss-confirm', '카드 승인은 같은 사이트의 서버 함수로 간다');
+  const who = await page.evaluate(() => ({ name: AGENT.name, tel: AGENT.tel }));
+  ok(who.name === '윤시현', '주소 뒤에 붙인 <b>설계사 이름</b>이 들어간다 — ' + who.name +
+     ' (PAY 는 결제를 안 담으므로 AGENT 로 이름이 바뀌었습니다 · 4번)');
 
   console.log('\n관계 · 매니지먼트');
   const rel = await page.evaluate(() => {
@@ -399,15 +407,13 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   });
   ok(relPick, '고객 정보 화면에서 관계를 고를 수 있다');
 
-  const price = await page.evaluate(() => {
-    S.view = 'client'; S.worry = { cat: 'money', catName: '돈', done: true }; S.tab = 'worry';
-    try { localStorage.removeItem('worry_paid'); } catch (e) {}
-    draw();
+  const noWon = await page.evaluate(() => {
+    S.view = 'client'; S.worry = { cat: 'money', catName: '돈', done: true }; S.tab = 'worry'; draw();
     const t = document.getElementById('view').textContent;
     S.view = 'agent'; draw();
-    return { price: PAY.price, shown: /1,900원/.test(t), old: /9,900원/.test(t) };
+    return /원\s*$|1,900원|9,900원|결제/.test(t);
   });
-  ok(price.price === 1900 && price.shown && !price.old, '고민 상담 값이 1,900원으로 나온다 (' + price.price + ')');
+  ok(!noWon, '⛔ 고객 화면에 <b>값이 안 적힌다</b> — 공짜라서가 아니라 파는 자리가 아니기 때문입니다');
 
   console.log('\n신당(점집) 풀이');
   const shrine = await page.evaluate(() => {

@@ -100,6 +100,15 @@ is(!/fetch\(\s*['"]https:\/\/www\.aplusga\.com/.test(DZ_C),
 is(/'\/api\/aplus-disease/.test(DZ_C), '  <b>우리 창구</b>(/api/aplus-disease)로 간다');
 is(/aplusga\.com/.test(FN_C), '  원본을 부르는 곳은 <b>서버 한 곳</b>이다');
 
+console.log('\n[6-2] 일부만 받은 답을 「다 받았다」고 하지 않는다 (2026-11-24 사고: 369건 중 160건)');
+/* 중계가 쪽 수십 개를 한꺼번에 불러 실패한 쪽을 [] 로 삼키고 ok 로 답했다. 회사가 통째로 빠진 채 화면은 「총 369건」. */
+is(/POOL\s*=\s*\d+/.test(FN_C) && /queue\.push\(pg\)/.test(FN_C), '  중계가 <b>몇 쪽씩만</b> 부르고 실패한 쪽은 <b>다시</b> 부른다');
+is(/partial\s*:\s*partial/.test(FN_C) && /missing\s*:\s*missing/.test(FN_C), '  다 못 받으면 <b>partial·missing</b> 으로 알린다');
+is(/noStore\s*\|\|/.test(FN_C) && /'no-store'/.test(FN_C), '  일부만 받은 답은 <b>캐시하지 않는다</b>');
+is(/function fillMissing/.test(DZ_C) && /&page='\s*\+\s*n/.test(DZ_C), '  화면이 빈 쪽을 <b>page=N 으로 채운다</b>');
+is(/state\.short/.test(DZ_C) && /끝내 못 받았습니다/.test(DZ_C), '  그래도 모자라면 <b>몇 건 못 받았는지</b> 적는다');
+is(/state\.total\s*>\s*0\)\s*throw/.test(DZ_C), '  원본엔 있는데 0건 받으면 <b>「없습니다」가 아니라 실패</b>라고 한다');
+
 console.log('\n[8] 창구가 배포에 실제로 열려 있다');
 is(/^\/api\/aplus-disease\s+\/\.netlify\/functions\/aplus-disease\s+200/m.test(RED),
    '  <code>_redirects</code> 에 창구가 있다 — 없으면 배포에서 404 다');
