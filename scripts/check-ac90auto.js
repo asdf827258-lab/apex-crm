@@ -317,6 +317,8 @@ const SEED = () => {
   is(T.names.length === 3 && T.names.indexOf('남의 팀') < 0, '내 팀 세 명만 — ' + T.names.join(', '));
   is(T.names[0] === '팀원 자', '기록 없는 사람이 맨 위 — ' + T.names[0]);
   is(/최근 7일 중 3일/.test(T.txt), '5분 공부 날 수가 보인다');
+  is(/이번 주 한 가지: 통화 결과, 30초 만에 남기기/.test(T.txt) && /이번 주 한 가지: 거절을 만남 약속으로/.test(T.txt),
+     '이번 주 한 가지는 <b>그 팀원</b>의 약한 곳 주제다(리더 주차의 커리큘럼이 아니다)');
   is(/이번 주 한 가지/.test(T.txt) && /주간 회의 5분/.test(T.txt), '「이번 주 한 가지」 와 회의 안내');
   is(/리더만/.test(T.notLead) && T.tabs.indexOf('👥 팀 성장표') < 0, '리더가 아니면 안 보이고 탭도 없다');
 

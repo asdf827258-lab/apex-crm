@@ -397,7 +397,9 @@
     '</div>';
     if(!list.length)h+='<div class="acad-note">팀원 명단이 비어 있어요.</div>';
     list.forEach(function(J){
-      var T=ac9Topic(J),f=AC9.team.five[J.who]||0;
+      /* ⚠ 여기는 ac9Topic 을 안 씁니다 — 그것은 <b>보는 사람(리더)</b>의 주차로
+         커리큘럼을 고릅니다. 팀원마다 그 사람의 약한 곳 주제 하나만. */
+      var f=AC9.team.five[J.who]||0,T=TOP[J.topic]?TOP[J.topic]:{title:'지금처럼 — 「'+(J.segName||'이번 구간')+'」 커리큘럼 이어 가기'};
       h+='<div class="a9-mem a9-m-'+J.sig+'">'+
         '<div class="a9-top"><b class="a9-name">'+esc(J.name)+'</b>'+pill(J.sig)+'</div>'+
         '<div class="a9-when">'+(J.day?('DAY '+J.day+' · '+esc(J.segName)):'팀에 들어온 날 기록 없음')+'</div>'+
