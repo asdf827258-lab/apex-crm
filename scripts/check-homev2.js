@@ -18,6 +18,7 @@
      [7] ★  옛 홈은 지우지 않고 숨기기만(CSS) — 「예전 오늘 칸 펼치기」 가 있다 · 그리다 터지면 예전 화면
      [8] ★  옷은 .hv2 / #hv2Sheet 아래로만 — 앱의 .card · .btn 같은 옷을 덮지 않는다
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
+     [26] ★★ 판 X557 — 🎯 오늘의 미션 다섯(인사 밑 한 판): 끝났나 = 실행 체크판(hmMsCk) · 오늘 약속 카드 그대로 · 이름은 CK_ITEMS 한 곳 · ✓ 했어요 = hmMsDid
      [24] ★  판 X551 — 🌱 신입 도움말(🙋 나 스위치 · 이 기기): 영업 한 바퀴 머리 · 단계 시트 「이 칸에서 할 일 / 어떻게」 = APEX_STAGE.aimText · wayText 그대로 · 기본 꺼짐
      [23] ★  판 X549 — 자비스 시트에 사장님이 고른 메뉴 더하기(＋ 메뉴 더하기 · ✕ 빼기 · ▲ 위로) — 이 기기 · 사람마다(즐겨찾기와 같은 자리) · 일곱 · 메뉴 표 · 서랍 그대로
      [22] ★  판 X532 — 오늘 카드 🧰 이분께 맞는 도구(고객 화면 권할 것과 같은 CUS_V2.appsBy · 상황 → 단계)
@@ -755,6 +756,43 @@ console.log('\n[24] 🌱 신입 도움말 (판 X551 · 단순화 순서 ⑤ · �
   is(X.g.HOME_V2.newHelp() === false && !('apex_newhelp_u1' in X.store), '다시 누르면 끔(지움)');
   const nb = sc.slice(sc.indexOf('  var NEW_KEY'), sc.indexOf('  var ROAD_KEY'));
   is(nb.length > 50 && !/\.rpc\(|\.from\(|fetch\(/.test(nb) && !/첫 통화|날짜 두 개|설명은 만나서/.test(sc), '서버 안 부름 · 단계 글을 이 파일에 적지 않음(원본 한 곳)');
+}
+
+console.log('\n[26] 🎯 오늘의 미션 (판 X557 · 사장님 말씀 「오늘 해야 될 미션을 딱 보여주고 그 미션을 해결해나가는게 오늘이야」 → 「제안대로 세워」)');
+{
+  const CKI = [['d4', '전화 10통 (하루 목표)', '안 받아도 카톡으로 이어갑니다', 'DB 통합 CRM', 'crm'], ['d5', '카톡 10건 (하루 목표)', '통화 여부와 상관없이', '', ''],
+    ['d6', '통화 결과 입력', 'TA완료·부재·거절·상담', 'DB 통합 CRM', 'crm'], ['d8', '만난 사람 팩트파인딩 저장', '소득·지출', '상담카드', 'fact_find'],
+    ['d9', '내일 상담 자료 준비', '증권 받았으면 판독까지', 'AI 제안서', 'ai_prop'], ['d10', 'SNS 1건', '주 4회', '', '']];
+  const mk = (ck, rows, doneKeys) => {
+    const X = box({ apex_home_v2: '1' }, '', rows ? { rows } : {});
+    const said = [];
+    Object.assign(X.g, { meV2Open: () => {}, CK_ITEMS: { day: CKI }, hmMsCk: () => ck, hmIsDone: k => (doneKeys || []).indexOf(k) >= 0, hmQdone: () => false,
+      hmMsDid: c => { said.push(['did', c]); ck[c] = 1; }, hmMsUndo: c => { said.push(['undo', c]); delete ck[c]; } });
+    X.g.HOME_V2.apply(dyn(X));
+    return { X, said, ck };
+  };
+  let A = mk({}), h = A.X.els.hv2.innerHTML;
+  const mi = h.indexOf('class="mis"'), he = h.indexOf('class="hello"'), mo = h.indexOf('class="steps5"');
+  is(mi > he && mi < mo, '인사 바로 밑 · 다섯 걸음 위에 한 판');
+  const heads = []; h.replace(/class="mis-r[^"]*" onclick="HOME_V2\.mis\((\d)\)"><span class="mis-c">[^<]*<\/span><span class="mis-t"><b>([^<]*)<\/b>/g, (m0, i, t) => { heads.push(i + t); return m0; });
+  is(heads.join('|') === '0전화 · 카톡|1오늘 약속|2통화 결과 · 만난 분 기록|3내일 상담 자료 준비|4SNS 올리기' && /<b>🎯 오늘의 미션<\/b><span>1 \/ 5<\/span>/.test(h),
+    '다섯 차례 — 전화 · 카톡 → 오늘 약속 → 기록 → 내일 준비 → SNS (약속 없는 날은 약속 미션이 끝난 셈이라 1/5) — ' + heads.join('|'));
+  is(/<small>전화 10통 \(하루 목표\) · 카톡 10건 \(하루 목표\)<\/small>/.test(h) && /<small>오늘 약속 없음<\/small>/.test(h), '칸 이름은 체크판 표(CK_ITEMS.day) 그대로 · 약속 없으면 「오늘 약속 없음」');
+  A = mk({ d4: 1, d5: 1, d9: 1 }); h = A.X.els.hv2.innerHTML;
+  is(/<span>3 \/ 5<\/span>/.test(h) && /class="mis-r done" onclick="HOME_V2\.mis\(0\)"><span class="mis-c">✓/.test(h) && /class="mis-r" onclick="HOME_V2\.mis\(2\)"/.test(h), '끝났나 = 실행 체크판(hmMsCk) 그대로 — 둘 다 해야 끝(d6 만 하면 기록 미션은 아직)');
+  A = mk({ d4: 1, d5: 1, d6: 1, d8: 1, d9: 1, d10: 1 }); h = A.X.els.hv2.innerHTML;
+  is(/class="mis all"/.test(h) && /오늘 미션 완료 🎉/.test(h), '다섯 다 끝 → 「오늘 미션 완료 🎉」');
+  const ap = [{ k: 'appt', t: '홍길동', s: '14:00', key: 'appt:a1' }, { k: 'appt', t: '홍갑돌', s: '16:00', key: 'appt:a2' }, { k: 'db', tk: 'TA', id: 'd9', t: '홍길순', s: '', key: 'db:d9:TA' }];
+  A = mk({}, ap, ['appt:a1']); h = A.X.els.hv2.innerHTML;
+  is(/<small>1 \/ 2곳 · 만나면 「🤝 만났어요」<\/small>/.test(h) && /class="mis-r" onclick="HOME_V2\.mis\(1\)"/.test(h), '약속 미션 = 오늘 약속 카드 그대로(끝낸 카드 hmIsDone · hmQdone) — 1 / 2곳');
+  A = mk({}, ap, ['appt:a1', 'appt:a2']); h = A.X.els.hv2.innerHTML;
+  is(/class="mis-r done" onclick="HOME_V2\.mis\(1\)"/.test(h), '약속 카드를 다 챙기면 약속 미션도 끝');
+  A = mk({ d6: 1 }); A.X.g.HOME_V2.mis(2); let t = A.X.els.hv2Sheet.innerHTML;
+  is(/<h1>✍️ 통화 결과 · 만난 분 기록<\/h1>/.test(t) && /misUndo\(2,'d6'\)">되돌리기/.test(t) && /misDid\(2,'d8'\)">✓ 했어요/.test(t) && /go\('fact_find'\)">상담카드 ›/.test(t), '미션 시트 — 칸마다 ✓ 했어요 / 되돌리기 · 체크판의 가는 곳 그대로');
+  A.X.g.HOME_V2.misDid(2, 'd8'); A.X.g.HOME_V2.misUndo(2, 'd6');
+  is(JSON.stringify(A.said) === '[["did","d8"],["undo","d6"]]', '✓ 했어요 = 있던 hmMsDid · 되돌리기 = hmMsUndo (실행 체크판에 그대로)');
+  const ms = sc.slice(sc.indexOf('  var MIS = ['), sc.indexOf('  var WAY = ['));
+  is(ms.length > 200 && !/setItem|\.rpc\(|\.from\(|fetch\(|ckToggle/.test(ms) && !/전화 10통|카톡 10건|팩트파인딩 저장/.test(ms), '새 저장 없음 · 체크판 칸 이름을 이 파일에 다시 적지 않음');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');
