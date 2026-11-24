@@ -101,6 +101,7 @@
       '.hv2 .hello b{color:var(--blue)}',
       '.hv2 .hello{display:flex;align-items:center;justify-content:space-between;gap:10px}',
       '.hv2 .mebtn{flex:none;width:44px;height:44px;border-radius:50%;background:#fff;font-size:21px;text-align:center}',
+      '.hv2 .hello .hb{flex:none;display:flex;gap:6px}',
       '.hv2 .tmall{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:44px;margin:-4px 0 12px;padding:0 14px;border-radius:14px;background:#fff;font-size:14px;font-weight:700;color:var(--ink)}',
       '.hv2 .tmall span{color:#B0B8C1;font-size:18px}',
       '.hv2 .whowrap{margin:0 0 12px}',
@@ -430,7 +431,9 @@
     var n = (L && L.list) ? L.list.length : 0;
     /* 🙋 나 — 시안 오른쪽 위 단추(openMe). 맨 위 줄은 폰 폭이 꽉 차 인사 줄 오른쪽에 (team-v2.js · 판 X528) */
     var meB = typeof g.meV2Open === 'function' ? '<button type="button" class="mebtn" onclick="meV2Open()" aria-label="나 — 알람 · 공지 · 설정">🙋</button>' : '';
-    return '<div class="hello"><span>' + E(nm) + '님, ' + (n ? '오늘 <b>' + n + '분</b> 남았어요' : '오늘 할 일 끝! 🎉') + '</span>' + meB + '</div>';
+    /* 🤖 자비스 — 시안 오른쪽 위 「자비스에게 말로 묻기」(openJarvis · 판 X530). 🙋 나 옆에 */
+    var jvB = can('apexmap') ? '<button type="button" class="mebtn" onclick="HOME_V2.ai()" aria-label="자비스에게 묻기 · AI 도우미">🤖</button>' : '';
+    return '<div class="hello"><span>' + E(nm) + '님, ' + (n ? '오늘 <b>' + n + '분</b> 남았어요' : '오늘 할 일 끝! 🎉') + '</span><span class="hb">' + jvB + meB + '</span></div>';
   }
   /* 이번 달 목표 — monthly_perf(목표·실적, 만원) + 진행 중 예상(pexSum, 원 → 만원) */
   function monHtml() {
@@ -498,6 +501,24 @@
     var J = jvData(), n = J.L.length;
     return '<button type="button" class="jv" onclick="HOME_V2.jv()"><span class="jv-i">🛰</span><span class="jv-t"><b>자비스가 챙기는 중</b><small>' +
       (n ? '오늘 끊기기 쉬운 자리 ' + n + '곳' : '오늘은 다 챙겼어요') + ' · 미리 세운 연락 ' + J.P.length + '개' + (J.madi ? ' · 마디 ' + J.madi : '') + '</small></span><span class="ar">›</span></button>';
+  }
+  /* 🤖 자비스로 합친 AI (시안 9차 openJarvis · PLACE 의 'ai' 일곱 · 판 X530) — 사장님 말씀 「AI 7개 → 자비스 하나로」(2026-11-24).
+     ★ 묻는 곳은 자비스 하나 — 「APEX 자비스 모드」(apexmap · 서랍 맨 위 그 칸과 같은 길 · 말로 물으면 화면을 엶).
+     ★ 나머지 여섯은 <b>지우지 않고</b> 자비스 밑 한 묶음으로 — 화면 · 메뉴 표(TABS) · 서랍은 그대로, 이름 · 그림 · 설명은 메뉴 표에서.
+       오늘 화면 「☰ 다른 메뉴」 에서도 흩어져 있던 일곱을 맨 아래 한 갈래로 모읍니다(이 화면 안에서만 · TABS 안 건드림). */
+  var AI_IDS = ['apexmap', 'assistant', 'voiceasst', 'brain', 'cs_assist', 'ins_asst', 'helpme'];
+  function aiItems() {
+    var by = {};
+    (T(function () { return g.TABS; }, []) || []).forEach(function (gr) { (gr.items || []).forEach(function (it) { if (it && it.id && AI_IDS.indexOf(it.id) >= 0 && !by[it.id]) by[it.id] = it; }); });
+    return AI_IDS.filter(function (id) { return by[id] && can(id); }).map(function (id) { return by[id]; });
+  }
+  function aiSheet() {
+    var A = aiItems(), main = A.filter(function (it) { return it.id === 'apexmap'; })[0], rest = A.filter(function (it) { return it.id !== 'apexmap'; });
+    var n = T(function () { return g.navJvCount(); }, 0) || 0;
+    sheet('<h1>🤖 자비스</h1><div class="sub">말로 물으면 화면을 열어 드려요</div>' +
+      (main ? '<button type="button" class="btn p" onclick="HOME_V2.close();go(\'apexmap\')">🤖 자비스에게 묻기' + (n ? ' · 화면 ' + n + '개' : '') + '</button>' : '') +
+      '<button type="button" class="btn g" onclick="HOME_V2.jv()">🛰 자비스가 챙기는 중 보기</button>' +
+      (rest.length ? '<h2>자비스로 합친 AI <small>' + rest.length + '</small></h2>' + dockRows(rest) : ''));
   }
   function jvSheet() {
     var J = jvData();
@@ -826,8 +847,10 @@
   function can(id) { return T(function () { return (typeof g.osTabAllowed !== 'function') || g.osTabAllowed(id); }, true); }
   function menuHtml() {
     var G = (T(function () { return g.TABS; }, []) || []).map(function (gr) {
-      return { t: gr.group || '', items: (gr.items || []).filter(function (it) { return it && it.id && can(it.id); }) };
+      return { t: gr.group || '', items: (gr.items || []).filter(function (it) { return it && it.id && can(it.id) && AI_IDS.indexOf(it.id) < 0; }) };
     }).filter(function (gr) { return gr.items.length; });
+    var AIG = aiItems();   /* 예전처럼 일곱 다 — 자리만 한 갈래로 모음 */
+    if (AIG.length) G.push({ t: '🤖 자비스로 합친 AI', items: AIG });
     var n = G.reduce(function (a, gr) { return a + gr.items.length; }, 0);
     var h = '<button type="button" class="mm" onclick="HOME_V2.menu()"><span>☰ 다른 메뉴 펼쳐 보기</span><small>' + n + '개</small><span class="ar" style="transform:rotate(' + (MOPEN ? 90 : 0) + 'deg)">›</span></button>';
     if (!MOPEN) return h;
@@ -1434,6 +1457,7 @@
     talkCp: function (i) { copyT(TXT[i]); },
     studyMore: function () { STUDY_ALL = STUDY_ALL ? 0 : 1; studySheet(); },
     jv: jvSheet,
+    ai: aiSheet,
     amt: amtSheet, won: wonSheet, amtPut: amtPut, wonPut: wonPut,
     numQ: function (q) { var i = el('hv2Num'); if (i) i.value = q; },
     ta: function (key) { try { g.HM_TAMSG.openTa(key); } catch (e) { try { g.go('ta_script'); } catch (e2) {} } },
