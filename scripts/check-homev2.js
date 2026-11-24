@@ -18,6 +18,7 @@
      [7] ★  옛 홈은 지우지 않고 숨기기만(CSS) — 「예전 오늘 칸 펼치기」 가 있다 · 그리다 터지면 예전 화면
      [8] ★  옷은 .hv2 / #hv2Sheet 아래로만 — 앱의 .card · .btn 같은 옷을 덮지 않는다
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
+     [23] ★  판 X549 — 자비스 시트에 사장님이 고른 메뉴 더하기(＋ 메뉴 더하기 · ✕ 빼기 · ▲ 위로) — 이 기기 · 사람마다(즐겨찾기와 같은 자리) · 일곱 · 메뉴 표 · 서랍 그대로
      [22] ★  판 X532 — 오늘 카드 🧰 이분께 맞는 도구(고객 화면 권할 것과 같은 CUS_V2.appsBy · 상황 → 단계)
      [21] ★★ 판 X531 — 다른 메뉴를 시안 PLACE 묶음으로(TA 대본 → 화법 · 교육 → 공부 · 고지 → 청약 각 한 자리) · 표에 없는 화면은 예전 묶음 그대로 · 서랍 안 건드림
      [20] ★  판 X530 — 🤖 AI 7개 → 자비스 하나로: 인사 줄 🤖 · 자비스 시트(묻기 apexmap · 합친 AI) · 다른 메뉴 맨 아래 한 갈래 (TABS 안 건드림)
@@ -172,7 +173,7 @@ is(부름.length === 1 && 부름[0] === ".from('dbs').select('id,lat,lng,next_ap
 is(sc.split(PEX_RPC).length === 2 && !/\.(insert|update|upsert|delete|rpc)\(/.test(scW) && !/supabase\./.test(sc), '서버에 쓰는 것은 「DB · 업적관리」 의 그 문(pipeline_save) 한 곳뿐 (판 X526 · 사장님이 고르신 「같은 서버 문 한 줄」)');
 is((sc.match(/fetch\('([^']+)'/g) || []).join() === "fetch('/.netlify/functions/route-km'", '부르는 주소는 지역 동선의 길찾기(route-km) 하나뿐');
 const 담기 = (sc.match(/setItem\(([^,]+),/g) || []).map(x => x.replace(/setItem\(|,/g, ''));
-is(담기.length === 2 && 담기.indexOf('KEY') >= 0 && 담기.indexOf("'apexRouteKmV1'") >= 0, '이 기기에 담는 것은 켜짐 표시와 길찾기 거리(지역 동선과 같은 칸)뿐 — ' + 담기.join(', '));
+is(담기.length === 3 && 담기.indexOf('KEY') >= 0 && 담기.indexOf("'apexRouteKmV1'") >= 0 && 담기.indexOf('aiKey()') >= 0, '이 기기에 담는 것은 켜짐 표시 · 길찾기 거리(지역 동선과 같은 칸) · 자비스에 더한 메뉴(판 X549 · 즐겨찾기와 같은 자리)뿐 — ' + 담기.join(', '));
 
 console.log('\n[7] 옛 홈은 숨기기만 · 터지면 예전 화면');
 is(/hm-v2:not\(\.hm-v2-old\)>\*:not\(#hv2\)\{display:none!important\}/.test(sc), '옛 칸은 CSS 로 숨기기만(지우지 않음)');
@@ -694,6 +695,41 @@ console.log('\n[22] 🧰 오늘 카드 「이분께 맞는 도구」 (판 X532 �
   is(!/qtools/.test(c3), '내 일정 카드엔 안 섬');
   const ts = sc.slice(sc.indexOf('  function toolsOf('), sc.indexOf('  function askHtml('));
   is(!/setItem|cmSave|\.rpc\(|\.from\(/.test(ts), '읽기만 — 저장 없음');
+}
+
+console.log('\n[23] ➕ 자비스에 내가 고른 메뉴 더하기 (판 X549 · 사장님 말씀 「자비스로 합친 AI 에서 추천 메뉴를 내가 추가할 수 있도록」)');
+{
+  const TABS = [
+    { group: '하루 시작', items: [{ id: 'home', icon: '🏠', title: '오늘' }, { id: 'assistant', icon: '🤖', title: '오늘의 AI 비서' }, { id: 'apexmap', icon: '🤖', title: 'APEX 자비스 모드' }] },
+    { group: '상담 도구', items: [{ id: 'ta_script', icon: '☎️', title: 'TA 스크립트' }, { id: 'insight', icon: '🧭', title: '상품전략기' }, { id: 'bojang', icon: '🔍', title: '보장분석' }] },
+    { group: '시스템', items: [{ id: 'settings', icon: '⚙️', title: '설정' }] }
+  ];
+  const X = box({ apex_home_v2: '1' }, '');
+  const went = [];
+  Object.assign(X.g, { TABS, navWho: () => 'u1', navJvCount: () => 0, osTabAllowed: id => id !== 'settings', TAB_META: { insight: { desc: '이번 달 무엇을 들고 갈지' } }, go: id => went.push(id), meV2Open: () => {} });
+  X.g.HOME_V2.apply(dyn(X));
+  X.g.HOME_V2.ai(); let t = X.els.hv2Sheet.innerHTML;
+  is(/onclick="HOME_V2\.aiAdd\(\)">＋ 메뉴 더하기<\/button>/.test(t) && !/내가 더한 메뉴/.test(t), '처음엔 「＋ 메뉴 더하기」 단추만 (더한 것 없으면 묶음 안 섬)');
+  X.g.HOME_V2.aiAdd(); t = X.els.hv2Sheet.innerHTML;
+  is(/id="hv2AiQ"/.test(t) && /HOME_V2\.aiPut\('insight'\)/.test(t) && /HOME_V2\.aiPut\('ta_script'\)/.test(t) && !/aiPut\('assistant'\)|aiPut\('apexmap'\)/.test(t) && !/aiPut\('settings'\)/.test(t),
+    '고르는 판 — 다른 메뉴 묶음 그대로 · 이미 자비스에 있는 일곱은 안 섬 · 막힌 화면(설정)은 안 섬');
+  X.g.HOME_V2.aiPut('insight'); X.g.HOME_V2.aiPut('bojang'); X.g.HOME_V2.aiPut('ta_script'); X.g.HOME_V2.aiPut('ta_script');
+  is(X.store.apex_ai_mine_u1 === '["insight","bojang"]', '누르면 넣고 · 다시 누르면 뺌 — 이 기기 · 사람마다(apex_ai_mine_<navWho>) — ' + X.store.apex_ai_mine_u1);
+  X.els.hv2AiL = { innerHTML: '' }; X.g.HOME_V2.aiQ('보장'); const L = (X.els.hv2AiL || {}).innerHTML || '';
+  is(/aiPut\('bojang'\)/.test(L) && !/aiPut\('insight'\)/.test(L) && /✓ 들어감/.test(L), '이름으로 찾기 · 넣은 것은 「✓ 들어감」');
+  X.g.HOME_V2.ai(); t = X.els.hv2Sheet.innerHTML;
+  const m = t.slice(t.indexOf('내가 더한 메뉴'));
+  is(/내가 더한 메뉴 <small>2<\/small>/.test(t) && m.indexOf('상품전략기') < m.indexOf('보장분석') && /이번 달 무엇을 들고 갈지/.test(m) && /go\('insight'\)/.test(m) && t.indexOf('자비스로 합친 AI') < t.indexOf('내가 더한 메뉴'),
+    '자비스 시트 — 합친 AI 아래 「내가 더한 메뉴」 · 고른 차례 · 설명은 메뉴 표 · 누르면 그 화면');
+  X.g.HOME_V2.aiUp('bojang');
+  is(X.store.apex_ai_mine_u1 === '["bojang","insight"]', '▲ 위로');
+  X.g.HOME_V2.aiDel('insight');
+  is(X.store.apex_ai_mine_u1 === '["bojang"]' && /내가 더한 메뉴 <small>1<\/small>/.test(X.els.hv2Sheet.innerHTML), '✕ 빼기');
+  X.store.apex_ai_mine_u1 = '["settings","bojang","assistant","bojang",3]';
+  X.g.HOME_V2.ai(); t = X.els.hv2Sheet.innerHTML;
+  is(/내가 더한 메뉴 <small>1<\/small>/.test(t) && !/go\('settings'\)/.test(t), '막힌 화면 · 이미 있는 일곱 · 겹친 것 · 이상한 값은 안 섬');
+  is(/var AI_IDS = \['apexmap', 'assistant', 'voiceasst', 'brain', 'cs_assist', 'ins_asst', 'helpme'\];/.test(sc) && !/TABS\s*=|g\.TABS\.(push|splice)|navFavToggle|\.rpc\(|\.from\(/.test(sc.slice(sc.indexOf('  var AI_KEY'), sc.indexOf('  function jvSheet()'))),
+    '일곱 · 메뉴 표(TABS) · 서랍 · 즐겨찾기는 안 건드림 · 서버 안 부름');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');
