@@ -843,14 +843,56 @@
     return '<button type="button" class="eve" onclick="HOME_V2.night()"><div class="tile">🌙</div><div class="tx"><div class="t1">오늘 돌아보기</div><div class="t2">' +
       E(strip(sub)) + ' · 끝낸 분 ' + done + '</div></div><span class="ar">›</span></button>';
   }
-  /* ☰ 다른 메뉴 — 앱 메뉴 표(TABS) 그대로, 열 수 있는 것만 */
+  /* ☰ 다른 메뉴 — 열 수 있는 것만 */
   function can(id) { return T(function () { return (typeof g.osTabAllowed !== 'function') || g.osTabAllowed(id); }, true); }
+  /* 🗂 판 X531 — 사장님 말씀 「그 다음거 진행해 · 서랍에서는 숨기지마」(2026-11-24) · 단순화 순서 ④ 나머지(TA · 교육 · 고지 각 하나로).
+     이 화면의 「다른 메뉴」 를 <b>시안 9차 PLACE · moreMenus 묶음</b>(쓰는 때 · 목적별)으로 세웁니다 —
+       TA 대본 · 문자 · 화법서 · 거절 연습은 💬 화법 한 갈래, 교육 · 아카데미 · 신입 TA 연습은 📚 공부 한 갈래,
+       고지 · 인수(알릴의무 · 인수 가능 여부)는 영업 한 바퀴 「청약」 칸 한 자리.
+     ★ 표는 시안 PLACE 를 node 로 그대로 옮긴 것(손으로 안 적음) · 이름 · 그림은 메뉴 표(TABS) 한 곳에서.
+     ★ 메뉴 표 · ☰ 서랍 · 화면은 안 건드림(서랍은 예전 묶음 그대로) · 표에 없는 화면(새로 생긴 것)은 <b>예전 묶음 이름 그대로</b> 맨 아래에 — 잃는 화면 없음.
+     ★ AI 일곱은 판 X530 의 자비스 묶음(aiItems) 그대로. */
+  var PLACE_G = {
+    st_ta: ['ref_hidden'],
+    st_ap: ['fact_find', 'fp_deck', 'kijun', 'sangdam', 'utphoto', 'cs_needs'],
+    st_an: ['bojang', 'frmake', 'treatpay', 'wallets', 'interpret'],
+    st_pc: ['onecmp', 'finance', 'compare', 'ai_prop', 'katalk', 'calc'],
+    st_cs: ['ref_underwrite', 'med_disclosure', 'ref_jeonsan', 'cs_gso'],
+    st_cm: ['pdel', 'claims', 'keep4', 'med_silbi', 'endorse', 'contracts', 'car_fault', 'med_checkup'],
+    prod: ['insight', 'mikki_talk', 'mikki', 'biz_news'],
+    talk: ['silson5', 'ta_script', 'ta_say', 'saybook', 'fp_talk', 'rej_gym'],
+    study: ['edu', 'manual', 'apexmaster', 'bohum', 'academy', 'ta_train', 'jiin_grow', 'mycoach', 'bcd_lec', 'academy_notion', 'growboard', 'dz_guide'],
+    grow: ['content', 'news_live', 'blog', 'threads', 'insta', 'video', 'calendar', 'simui', 'mkt_meta', 'mkt_volume', 'mkt_combine', 'mkt_landing', 'mkt_card', 'ext_reply', 'ext_thread', 'ext_naver'],
+    cust: ['clients', 'crm', 'rjnews', 'home', 'ckboard', 'myperf', 'mycal'],
+    find: ['ref_kcd', 'ref_surgery', 'ref_hira'],
+    money: ['biz_diag', 'biz_fund', 'biz_tax', 'biz_ins', 'biz_retire', 'biz_staff', 'inv_stock', 'inv_fund', 'inv_perf', 'inv_econ'],
+    team: ['airep', 'org', 'attend', 'audit', 'teamhub', 'daily', 'report', 'branch_coach', 'hq', 'emcenter', 'educal'],
+    me: ['me', 'notice', 'settings', 'pricing', 'terms', 'ready', 'health', 'phone_app', 'voice'],
+    ai: ['assistant', 'voiceasst', 'brain', 'cs_assist', 'ins_asst', 'apexmap', 'helpme']
+  };
+  var PLACE_T = [['st', '🛠 영업 한 바퀴 도구'], ['prod', '🧭 상품전략'], ['talk', '💬 화법'], ['study', '📚 공부'], ['grow', '📣 알리기'], ['cust', '👥 고객'],
+    ['find', '🔎 찾아보기'], ['money', '🏢 법인 · 투자'], ['team', '👥 팀 관리'], ['me', '🙋 나 · 설정']];
+  var STG_T = { st_ta: '첫 전화', st_ap: '첫 만남', st_an: '보장분석', st_pc: '제안', st_cs: '청약', st_cm: '관리' };
+  function menuGroups() {
+    var by = {}, seen = {}, G = [];
+    (T(function () { return g.TABS; }, []) || []).forEach(function (gr) { (gr.items || []).forEach(function (it) { if (it && it.id && !by[it.id]) by[it.id] = { it: it, gt: gr.group || '' }; }); });
+    var take = function (id) { var x = by[id]; if (!x || seen[id] || !can(id) || AI_IDS.indexOf(id) >= 0) return null; seen[id] = 1; return x.it; };
+    PLACE_T.forEach(function (p) {
+      var items = [];
+      if (p[0] === 'st') ['st_ta', 'st_ap', 'st_an', 'st_pc', 'st_cs', 'st_cm'].forEach(function (k) { PLACE_G[k].forEach(function (id) { var it = take(id); if (it) items.push({ it: it, sub: STG_T[k] }); }); });
+      else PLACE_G[p[0]].forEach(function (id) { var it = take(id); if (it) items.push({ it: it }); });
+      if (items.length) G.push({ t: p[1], items: items });
+    });
+    var AIG = aiItems().filter(function (it) { if (seen[it.id]) return false; seen[it.id] = 1; return true; });
+    if (AIG.length) G.push({ t: '🤖 자비스로 합친 AI', items: AIG.map(function (it) { return { it: it }; }) });
+    /* 표에 없는 화면 — 예전 묶음 이름 그대로 */
+    var rest = {}, rk = [];
+    Object.keys(by).forEach(function (id) { var x = by[id]; if (seen[id] || !can(id)) return; seen[id] = 1; if (!rest[x.gt]) { rest[x.gt] = []; rk.push(x.gt); } rest[x.gt].push({ it: x.it }); });
+    rk.forEach(function (t) { G.push({ t: t, items: rest[t] }); });
+    return G;
+  }
   function menuHtml() {
-    var G = (T(function () { return g.TABS; }, []) || []).map(function (gr) {
-      return { t: gr.group || '', items: (gr.items || []).filter(function (it) { return it && it.id && can(it.id) && AI_IDS.indexOf(it.id) < 0; }) };
-    }).filter(function (gr) { return gr.items.length; });
-    var AIG = aiItems();   /* 예전처럼 일곱 다 — 자리만 한 갈래로 모음 */
-    if (AIG.length) G.push({ t: '🤖 자비스로 합친 AI', items: AIG });
+    var G = menuGroups();
     var n = G.reduce(function (a, gr) { return a + gr.items.length; }, 0);
     var h = '<button type="button" class="mm" onclick="HOME_V2.menu()"><span>☰ 다른 메뉴 펼쳐 보기</span><small>' + n + '개</small><span class="ar" style="transform:rotate(' + (MOPEN ? 90 : 0) + 'deg)">›</span></button>';
     if (!MOPEN) return h;
@@ -858,8 +900,9 @@
     G.forEach(function (gr, gi) {
       var o = !!MG[gi];
       h += '<button type="button" class="mmg' + (o ? ' on' : '') + '" onclick="HOME_V2.mg(' + gi + ')"><b>' + E(gr.t) + '</b><small>' + gr.items.length + '</small><span class="ar">›</span></button>';
-      if (o) h += '<div class="list" style="margin:0 0 8px">' + gr.items.map(function (it) {
-        return '<button type="button" class="li" onclick="go(\'' + Q(it.id) + '\')"><span class="e">' + E(it.icon || '•') + '</span><div class="tx"><div class="t1">' + E(it.title || it.id) + '</div></div><span class="ar">›</span></button>';
+      if (o) h += '<div class="list" style="margin:0 0 8px">' + gr.items.map(function (x) {
+        var it = x.it;
+        return '<button type="button" class="li" onclick="go(\'' + Q(it.id) + '\')"><span class="e">' + E(it.icon || '•') + '</span><div class="tx"><div class="t1">' + E(it.title || it.id) + '</div>' + (x.sub ? '<div class="t2">' + E(x.sub) + '</div>' : '') + '</div><span class="ar">›</span></button>';
       }).join('') + '</div>';
     });
     return h + '</div>';
