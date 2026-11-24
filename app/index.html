@@ -22319,8 +22319,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-24 18:40';
-var APP_BUILD_NOTE='📊 <b>보장분석 엑셀 한 벌 — 도해 · 보장범위 · 지급</b>(판 X534~X541). ◾ 사장님 말씀 여덟 가지를 이었습니다 — 엑셀 한 장 · 담보별 분리자료(A4 14장) · <b>도해를 엑셀 안으로</b>(도형 341개) · 깔끔하게 정리 · <b>엑셀답게</b>(격자선 · 탭 색 · 큰 띠 · 셀 안 막대) · <b>보장범위 · 지급 시트</b>(담보 77줄) · 인쇄 22쪽 · <b>단추를 실제로 눌러</b> 확인. ◾ 「💾 고객 365일」 칸이 돌아왔습니다 — 워크스페이스 밖에서 열면 <b>아예 숨고</b> 있었습니다. 이제 만들기 화면에서는 어디서 열어도 서고, 밖에서는 흐리게 두고 누르면 까닭을 말합니다(6번). 발표 중에는 접습니다 — 띠가 두 줄이 되면 <b>무대가 984 → 890px 로 줄기</b> 때문입니다. ◾ 지어낸 글이 한 줄도 없습니다(1번) — 보장범위는 화면의 담보 설명 그대로, 도해의 수는 화면이 이미 말하는 범위 %뿐. 금액 · 요건 · 기간은 안 적고 「심사 결과에 따릅니다」 를 박았습니다(2번). ◾ 재는 자 셋 — check-baxl · <b>check-baart</b>(도해 글자가 종이 밖으로 나가는지 getBBox 로 실제로 잼) · <b>check-bapress</b>(글자를 세지 않고 정말로 누름). ◾ 같이 실려 나갑니다 — 다른 갈래의 <b>X531~X533</b>(서랍 · 오늘 도구 추천 · 카카오톡 줄맞춤).';
+var APP_BUILD='2026-11-24 21:05';
+var APP_BUILD_NOTE='📰 <b>카톡에 기사가 안 붙던 자리</b>(판 X542). ◾ 「계약 마디 접점」 의 기사 칸에 「<b>제목 없음 · 언론사 미상</b>」 이 찍히고 <b>「📋 보낼 말 복사」 에는 기사가 한 번도 안 붙고</b> 있었습니다 — 기사 한 줄의 칸 이름을 두 곳이 <b>어긋나게 외워</b> 쓰고 있었습니다. ◾ 꺼내는 곳을 <b>한 곳</b>으로 모았습니다(5번) — 이제 제목·언론사·주소가 칸에도, 보내는 말에도 <b>그대로</b> 붙습니다. ◾ 제목이나 주소를 못 읽은 기사는 <b>세우지 않습니다</b> — 「제목 없음」 이라 적고 눌러도 아무 데도 안 가는 줄을 만들지 않습니다(1번). 기사가 없는 갈래는 머리글도 안 적습니다. ◾ 재는 자 <b>check-mstnews</b> 30가지 — 계약 마디 카드를 <b>진짜로 그려</b> 기사가 붙는지 봅니다. 되돌리면 12가지가 웁니다(8번). ◾ 같이 실려 나갑니다 — <b>X534~X541</b>(보장분석 엑셀 한 벌 · 도해 · 보장범위 · 지급 · 「고객 365일」 칸) 과 다른 갈래의 <b>X531~X533</b>(서랍 · 오늘 도구 추천 · 카카오톡 줄맞춤).';
 
 
 
@@ -81024,27 +81024,42 @@ function mstNews(cat,n){
     if((L[i].cats||[]).indexOf(cat)>=0)out.push(L[i]);
   return out;
 }
+/* ★ 판 X542 — 사장님 말씀 2026-11-23 「고객이 관심있을만한 것들을 뉴스로 보내던」.
+   ⚠ 여기 두 곳이 기사 한 줄에서 <b>.title · .link · .source</b> 를 꺼내고 있었습니다.
+     실제 칸 이름은 nlLoad 가 정하는 <b>.t · .u · .s</b> 입니다 — 그래서 카톡 칸에
+     「제목 없음 · 언론사 미상」 이 찍히고 주소는 #, 「보낼 말 복사」 에는 기사가
+     <b>한 번도 안 붙었습니다</b>(라이브에서 그려 보고 찾았습니다).
+   ★ 칸 이름을 <b>외워 쓰지 않습니다</b> — 꺼내는 곳을 여기 하나로 둡니다 (5번).
+   ★ 못 읽은 줄은 <b>버립니다</b> — 「제목 없음」 을 지어 적지 않습니다 (1번).  */
+function mstArt(it){
+  if(!it)return null;
+  var t=(it.t||'').trim(), u=(it.u||'').trim(), sc=(it.s||'').trim();
+  if(!t||!u)return null;
+  return {t:t,u:u,s:sc,d:it.d||''};
+}
 function mstNewsHtml(cat){
-  var L=mstNews(cat,3),i,h='';
-  if(!L.length)
+  var R=[],i,h='',a;
+  mstNews(cat,3).forEach(function(it){var q=mstArt(it);if(q)R.push(q);});
+  if(!R.length)
     return '<div class="mst-nonews">받아 둔 기사가 <b>아직 없습니다.</b> 지어내지 않습니다 — '+
       '<button type="button" class="mst-lk" onclick="go(\'news_live\')">🌐 고객에게 전할 뉴스</button> '+
       '에서 먼저 모아 주시면 이 자리에 <b>그 기사 그대로</b> 붙습니다.</div>';
   h='<div class="mst-news"><div class="mst-nh">붙일 만한 기사 — 제목·언론사·주소 그대로입니다</div>';
-  for(i=0;i<L.length;i++)
-    h+='<a class="mst-ni" href="'+osEsc(L[i].link||'#')+'" target="_blank" rel="noopener">'+
-       '<b>'+osEsc(L[i].title||'제목 없음')+'</b>'+
-       '<span>'+osEsc(L[i].source||'언론사 미상')+(L[i].d?(' · '+osEsc(String(L[i].d).slice(0,10))):'')+'</span></a>';
+  for(i=0;i<R.length;i++){
+    a=R[i];
+    h+='<a class="mst-ni" href="'+osEsc(a.u)+'" target="_blank" rel="noopener">'+
+       '<b>'+osEsc(a.t)+'</b>'+
+       '<span>'+(a.s?osEsc(a.s):'')+(a.d?((a.s?' · ':'')+osEsc(String(a.d).slice(0,10))):'')+'</span></a>';
+  }
   return h+'</div>';
 }
 /* 보낼 말 — 기사를 고르셨으면 제목·주소를 <b>그대로</b> 뒤에 붙입니다 */
 function mstSay(id,m){
   var st=mstStep(m);
   if(!st)return '';
-  var t=st.say,L=mstNews(st.cat,1);
-  if(L.length&&L[0].link)
-    t+='\n\n[읽어 보실 만한 기사]\n'+(L[0].title||'')+
-       (L[0].source?(' — '+L[0].source):'')+'\n'+L[0].link;
+  var t=st.say,a=mstArt(mstNews(st.cat,1)[0]);
+  /* 기사는 <b>제목 · 언론사 · 주소를 그대로</b> 옮깁니다 — 지어내지 않습니다 (9번) */
+  if(a) t+='\n\n[읽어 보실 만한 기사]\n'+a.t+(a.s?(' — '+a.s):'')+'\n'+a.u;
   return t;
 }
 function mstCopy(id,m){
