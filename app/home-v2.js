@@ -1012,7 +1012,7 @@
 
   function html() {
     var L = T(function () { return g.hmLeft(); }, { list: [], all: 0 });
-    return topHtml() + whoHtml() + helloHtml(L) + monHtml() + stepsHtml() + jvHtml() + railHtml(L) +
+    return topHtml() + whoHtml() + helloHtml(L) + monHtml() + part(mydayHtml) + stepsHtml() + jvHtml() + railHtml(L) +
       inscHtml() + weekHtml() + part(routeHtml) + roadHtml() + eveHtml(L) + menuHtml() +
       dockHtml();
     /* ⚠ 판 X511 — 맨 아래 「새 오늘 화면 (시험) · 시안 9차 디자인 · …」 설명 줄을 거뒀습니다
@@ -1329,6 +1329,8 @@
      ★ 들를 분 = 약속이 있으면 hmRtNear(라이브 「가는 김에 걸 분」) · 없으면 추천 동선(recRoute)
      ★ 그림은 <b>실제 좌표를 줄여 그린 것</b> — 좌표 없는 분은 그리지 않고 「주소 모르는 곳」 으로만. 크게는 지역 동선(hmRtOpen · 카카오맵) */
   function part(fn) { try { return fn() || ''; } catch (e) { return ''; } }
+  /* 📅 오늘 내 일정 — 팀원 스스로 체크 · 💌 교육매니저 한마디 (my-day.js 한 곳 · 판 X554) */
+  function mydayHtml() { return g.MY_DAY ? g.MY_DAY.html() : ''; }
   function kmTxt(km, real) { return km == null ? '' : ((km < 1 ? Math.round(km * 1000) + 'm' : km.toFixed(1) + 'km') + (real ? '' : '(어림)')); }
   function routeData() {
     var A = T(function () { return g.hmRtAppts(); }, []) || [], R = route();
