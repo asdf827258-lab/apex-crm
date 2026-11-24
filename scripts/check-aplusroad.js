@@ -108,6 +108,10 @@ is(/noStore\s*\|\|/.test(FN_C) && /'no-store'/.test(FN_C), '  일부만 받은 �
 is(/function fillMissing/.test(DZ_C) && /&page='\s*\+\s*n/.test(DZ_C), '  화면이 빈 쪽을 <b>page=N 으로 채운다</b>');
 is(/state\.short/.test(DZ_C) && /끝내 못 받았습니다/.test(DZ_C), '  그래도 모자라면 <b>몇 건 못 받았는지</b> 적는다');
 is(/state\.total\s*>\s*0\)\s*throw/.test(DZ_C), '  원본엔 있는데 0건 받으면 <b>「없습니다」가 아니라 실패</b>라고 한다');
+/* 시간 초과(502) 때 CDN 이 다른 검색어의 옛 답을 돌려줬다(치아 44쪽 → 「우울」 6건) */
+is(/'Netlify-Vary'\s*:\s*'query=/.test(FN_C), '  캐시를 <b>검색어·쪽마다 따로</b> 둔다(Netlify-Vary)');
+is(/q\s*:\s*params\.q/.test(FN_C), '  답에 <b>물은 검색어</b>를 적는다');
+is(/function sameAns/.test(DZ_C) && /sameAns\(d, q, insr, prdt, n\)/.test(DZ_C) && /sameAns\(d, q, insr, prdt, 0\)/.test(DZ_C), '  화면이 <b>내가 물은 것의 답인지</b> 맞대 보고 아니면 버린다');
 
 console.log('\n[8] 창구가 배포에 실제로 열려 있다');
 is(/^\/api\/aplus-disease\s+\/\.netlify\/functions\/aplus-disease\s+200/m.test(RED),

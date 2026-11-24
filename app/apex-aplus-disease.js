@@ -50,6 +50,17 @@
   /* ⚠ 2026-11-24 — 중계가 원본 쪽 일부를 끝내 못 받으면(partial) 받은 데까지만 온다.
      예전엔 그걸 모른 채 「총 369건」이라 적고 160건만 보여 줬다 → 회사가 통째로 빠진 채 「이 회사는 안 된다」고 말하게 된다.
      RN(검색 결과 안 순번)이 빈 쪽만 page=N 으로 다시 부르고, 그래도 모자라면 화면에 크게 적는다. */
+  /* ⚠ 2026-11-24 — 중계가 시간 초과로 실패하면 CDN 이 <b>다른 검색어의 옛 답</b>을 돌려줄 수 있었다.
+     답에 적힌 검색어·쪽·순번이 내가 물은 것과 다르면 버린다(다른 질환 기준이 섞이면 「이 회사는 된다」가 거짓이 된다). */
+  function sameAns(d, q, insr, prdt, page) {
+    var nq = String(q || '').trim().replace(/&/g, '!');   /* 중계가 '&' 를 '!' 로 바꿔 적는다 */
+    if (!d || !d.ok || d.q !== nq || (d.insr || '') !== String(insr || '').trim() || (d.prdt || '') !== String(prdt || '').trim()) return false;
+    if (page) {
+      if (d.page !== page) return false;
+      if (!(d.rows || []).every(function (r) { var k = +r.RN; return k >= (page - 1) * 10 && k <= page * 10; })) return false;
+    }
+    return true;
+  }
   function fillMissing(base, q, insr, prdt) {
     var want = Math.min(base.total || 0, 500), have = {}, need = [], i = 0;
     (base.rows || []).forEach(function (r) { if (r && r.RN != null) have[r.RN] = r; });
@@ -60,7 +71,7 @@
     var one = function (n, t) {
       return fetch('/api/aplus-disease?q=' + encodeURIComponent(q) + '&insr=' + encodeURIComponent(insr) + '&prdt=' + encodeURIComponent(prdt) + '&page=' + n)
         .then(function (r) { return r.json(); })
-        .then(function (d) { if (!d || !d.ok) throw new Error('x'); (d.rows || []).forEach(function (r) { if (r && r.RN != null && !have[r.RN]) have[r.RN] = r; }); })
+        .then(function (d) { if (!sameAns(d, q, insr, prdt, n)) throw new Error('x'); (d.rows || []).forEach(function (r) { if (r && r.RN != null && !have[r.RN]) have[r.RN] = r; }); })
         ['catch'](function () { if ((t || 0) < 2) return new Promise(function (ok) { setTimeout(ok, 700 * ((t || 0) + 1)); }).then(function () { return one(n, (t || 0) + 1); }); });
     };
     var lane = function () { if (i >= need.length) return Promise.resolve(); return one(need[i++]).then(lane); };
@@ -207,6 +218,7 @@
 
     fetch(url).then(function (r) { return r.json(); }).then(function (d) {
       if (!d || !d.ok) throw new Error((d && d.error) || '조회에 실패했습니다');
+      if (!sameAns(d, q, insr, prdt, 0)) throw new Error('조회에 실패했습니다 — 다른 검색의 답이 와서 버렸습니다. 다시 조회해 주세요');
       state.total = d.total || 0;
       state.truncated = !!d.truncated;
       return fillMissing(d, q, insr, prdt);
