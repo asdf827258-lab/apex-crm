@@ -1358,6 +1358,8 @@ function tabsFor(mode,view){
   /* ★ 나만 보는 판 — 네 장이 끝입니다 (사장님 말씀 2026-11-20
      「그냥 내 사주만 보는거야」). 고객 칸도 채용 칸도 안 섭니다. */
   if(MEONLY.on)return ['mepil','meins','mework','metime'];
+  /* 📣 따로 켠 설명회 판 — 장이 하나뿐입니다 (판 X546). */
+  if(SHOW.on)return ['show'];
   var list;
   if(mode==='saju')list=['dang','ice','sum','sales','how','worry','life','deep','fit','rel','ins','risk','saju'];
   else if(mode==='mbti')list=['ice','sum','sales','how','worry','life','trait','mind','fit','rel','talk','ins','risk'];
@@ -1384,25 +1386,25 @@ function draw(){
     var list=tabsFor(S.mode,S.view);
     if(list.indexOf(S.tab)<0)S.tab=list[0];
     tb.innerHTML=list.map(function(k){return '<button class="'+(S.tab===k?'on':'')+'" onclick="goTab(\''+k+'\')">'+TAB_NAME[k]+'</button>';}).join('')+
-      ((S.view==='agent'&&!MEONLY.on)?'<button onclick="newClient()">＋ 새 고객</button>':'');
+      ((S.view==='agent'&&!MEONLY.on&&!SHOW.on)?'<button onclick="newClient()">＋ 새 고객</button>':'');
   }else{
     /* ★ 나만 보는 판은 걸음이 하나입니다 — 내 생년월일만 넣으면 끝 */
-    var steps=MEONLY.on?['client']:(GUEST.on?['cover','client','test']:['me','client','test']);
-    var labs =MEONLY.on?['내 생년월일']:(GUEST.on?['🕯️ 대문','① 내 정보','② 성향검사']:['① 내 카드','② 고객 정보','③ 성향검사']);
+    var steps=(SHOW.on||MEONLY.on)?['client']:(GUEST.on?['cover','client','test']:['me','client','test']);
+    var labs =SHOW.on?['앉으신 분 생년월일']:(MEONLY.on?['내 생년월일']:(GUEST.on?['🕯️ 대문','① 내 정보','② 성향검사']:['① 내 카드','② 고객 정보','③ 성향검사']));
     tb.innerHTML=steps.map(function(k,i){
       var off=(k==='test'&&S.mode==='saju');
       return '<button class="'+(S.step===k?'on':'')+'" onclick="goStep(\''+k+'\')"'+(off?' disabled':'')+'>'+labs[i]+'</button>';
-    }).join('')+(ready(S.cl)?'<button onclick="goStep(\'board\')">'+(GUEST.on?'③ 내 풀이 보기':'④ 결과 보기')+'</button>':'');
+    }).join('')+(ready(S.cl)?'<button onclick="goStep(\'board\')">'+(SHOW.on?'📣 설명회 한 장 열기':(GUEST.on?'③ 내 풀이 보기':'④ 결과 보기'))+'</button>':'');
   }
   var vb=$('viewBtn');
   if(vb){
-    vb.style.display=(S.step==='board'&&!GUEST.on&&!MEONLY.on)?'':'none';
+    vb.style.display=(S.step==='board'&&!GUEST.on&&!MEONLY.on&&!SHOW.on)?'':'none';
     vb.className='mecard'+(S.view==='client'?' cl':'');
     var narrow=(window.innerWidth||1000)<520;
     vb.innerHTML=(S.view==='agent'?(narrow?'🔒 내 눈':'🔒 내 눈용'):(narrow?'👀 고객':'👀 고객 화면'));
     vb.title=(S.view==='agent'?'누르면 고객에게 보여줄 화면으로 바뀝니다':'누르면 리스크·화법까지 보이는 내 화면으로 돌아갑니다');
   }
-  $('meBtn').style.display=(MEONLY.on||GUEST.on||(S.step==='board'&&S.view==='client'))?'none':'';
+  $('meBtn').style.display=(MEONLY.on||GUEST.on||SHOW.on||(S.step==='board'&&S.view==='client'))?'none':'';
   $('meBtn').innerHTML=S.me.name
     ?('👤 '+esc(S.me.name)+((!((window.innerWidth||1000)<520)&&personCode(S.me))?' · '+personCode(S.me):''))
     :((window.innerWidth||1000)<520?'내 카드':'내 카드 설정');
@@ -1458,7 +1460,9 @@ function viewPerson(who){
     : isMe
     ? '<div class="card"><h1>먼저 <b style="color:#3182F6">내 카드</b>를 만듭니다</h1>'+
       '<p>궁합과 상담 전략은 <b>나와 고객을 비교</b>해서 나옵니다. 그래서 내 생년월일·시간·성향이 먼저 필요합니다. 한 번만 넣으면 이 기기에 저장됩니다.</p></div>'
-    : '<div class="card"><h1>'+(GUEST.on?'내 정보':'고객 정보')+'</h1><p>'+
+    : '<div class="card"><h1>'+(SHOW.on?'📣 설명회 — 앉으신 분':(GUEST.on?'내 정보':'고객 정보'))+'</h1><p>'+
+      (SHOW.on?'<b>이 장 하나만</b> 서는 판입니다. 생년월일만 넣으시면 다섯 꼭지가 한 줄로 이어집니다. '+
+               '「🔒 내 눈」 화법 대본과 리더용 위험은 여기 안 뜹니다 — 띄워 놓고 함께 보셔도 됩니다.<br><br>':'')+
       (GUEST.on?'태어나신 날과 <b>시간</b>을 넣어 주시면 네 기둥이 자동으로 세워집니다. 시간을 모르시면 시주만 빼고 봅니다.'
                :'생년월일과 <b>태어난 시간</b>을 넣으면 사주 네 기둥이 자동으로 계산됩니다. 시간을 모르면 시주만 빼고 봅니다.')+'</p>' +
       ((GUEST.on||MEONLY.on)?'':
@@ -1467,16 +1471,16 @@ function viewPerson(who){
         return '<button class="' + (S.mode === m.k ? 'on' : '') + '" onclick="setMode(\'' + m.k + '\')">' + m.emo + ' ' + m.n + '</button>';
       }).join('') + '</div>' +
       '<div class="sub" style="margin-top:7px">' + esc((MODES.filter(function (m) { return m.k === S.mode; })[0] || MODES[0]).d) + '</div>')+'</div>';
-  var mbtiPick='<div class="card"><h2><span class="n">성향</span>'+((isMe||GUEST.on)?'내 유형':'고객 유형')+'</h2>'+
+  var mbtiPick='<div class="card"><h2><span class="n">성향</span>'+((isMe||GUEST.on)?'내 유형':(SHOW.on?'앉으신 분 유형 (선택)':'고객 유형'))+'</h2>'+
     '<p class="sub">이미 알고 있으면 고르고, 모르면 48문항 검사를 하세요. 검사 결과가 더 정확합니다.</p>'+
     '<div class="mbtigrid" style="margin-top:11px">'+TYPE_LIST.map(function(t){
       return '<button class="'+(p.mbti===t&&!p.res?'on':'')+'" onclick="pickType(\''+who+'\',\''+t+'\')">'+t+'</button>';}).join('')+'</div>'+
     (p.res?'<div class="note ok" style="margin-top:11px">48문항 검사 결과 <b>'+p.res.code+'</b>'+(p.res.consistency!==null?' · 응답 일관성 '+p.res.consistency+'%':'')+' 를 쓰고 있습니다.</div>':'')+
     '<button class="btn line sm" style="margin-top:11px" onclick="startTest(\''+who+'\')">📝 48문항 검사하기'+(p.res?' (다시)':'')+'</button></div>';
   return intro+
-  '<div class="card"><h2><span class="n">'+(MEONLY.on?'패':'기본')+'</span>'+(MEONLY.on?'선생님':(isMe?'나':'고객'))+'</h2>'+
+  '<div class="card"><h2><span class="n">'+(MEONLY.on?'패':'기본')+'</span>'+(MEONLY.on?'선생님':(SHOW.on?'앉으신 분':(isMe?'나':'고객')))+'</h2>'+
     '<div style="margin-top:11px"><label>이름</label><input class="inp" id="pName" value="'+esc(p.name)+'" placeholder="'+(isMe?'예: 윤시현':'예: 김하나')+'" maxlength="20"/></div>'+
-    ((isMe||MEONLY.on)?'':'<div style="margin-top:11px"><label>이분은 누구신가요</label><div class="seg">'+
+    ((isMe||MEONLY.on||SHOW.on)?'':'<div style="margin-top:11px"><label>이분은 누구신가요</label><div class="seg">'+
       ROLES.map(function(r){return '<button class="'+((p.rel||'client')===r.k?'on':'')+'" onclick="setRel(\''+r.k+'\')">'+r.emo+' '+r.n+'</button>';}).join('')+
       '</div><div class="sub" style="margin-top:6px">고객이 아니어도 됩니다 — 리더·상사·팀원·동료와의 관계도 같은 방식으로 봅니다.</div></div>')+
     (MEONLY.on?'':'<div style="margin-top:11px"><label>혈액형 (선택)</label><div class="seg">'+
@@ -1861,11 +1865,19 @@ function tabApply(){
    ※ 뽑고 거르는 문서가 아니다. "이 사람을 어떻게 만날까"를 적는다.
    ══════════════════════════════════════════════════════════════════ */
 var BRIEF={on:false};
+/* 📣 설명회 한 장만 따로 켜는 판 (판 X546 · 사장님 말씀 2026-11-24 「따로 킬수
+   있도록 만들어줘」). ?show=1 로 열면 <b>그 장 하나만</b> 섭니다 —
+   탭도 하나, 「🔒 내 눈용」 단추도 안 섭니다. 설명회에서 띄워 놓는 화면이라
+   옆 탭을 잘못 눌러 리더용 글이 뜨는 일이 없어야 합니다.
+   ⚠ 새 파일을 만들지 않았습니다 — 한 벌 더 두면 한쪽만 늙습니다 (5번).  */
+var SHOW={on:false};
 (function(){
   var q=(location.search||'').replace(/^\?/,'').split('&'),i;
   for(i=0;i<q.length;i++){
     var kv=q[i].split('=');if(kv.length<2)continue;
-    if(decodeURIComponent(kv[0])==='brief'&&decodeURIComponent(kv[1])==='1')BRIEF.on=true;
+    var k=decodeURIComponent(kv[0]),v=decodeURIComponent(kv[1]);
+    if(k==='brief'&&v==='1')BRIEF.on=true;
+    if(k==='show' &&v==='1')SHOW.on=true;
   }
 })();
 /* 대기열이 localStorage 에 담아 둔 후보를 꺼낸다 — 주소에 개인정보를 싣지 않는다 */
@@ -3007,6 +3019,20 @@ function salesRisk(sc,p){
      「🔒 내 눈」 화법 대본·리더용 위험이 저절로 빠집니다. 띄워 놓고 함께
      보는 화면에 그것이 뜨면 안 됩니다. 끝나면 반드시 되돌립니다.
    ★ 영업 가능성은 <b>총점·등급을 뺀 꼴</b>로 부릅니다 (사장님 결정 2026-11-24). */
+/* 📣 이 장만 따로 켜는 주소 — <b>만드는 곳은 여기 하나</b>입니다 (5번).
+   주소에 개인정보를 안 싣습니다(3번) — 생년월일은 그 기기에서 다시 넣습니다. */
+function showUrl(){
+  return location.origin+location.pathname+'?show=1';
+}
+function showCopy(){
+  var u=showUrl();
+  function fell(){ window.prompt('아래 주소를 복사해 두세요 — 즐겨찾기에 넣으시면 설명회 때 한 번에 열립니다',u); }
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      navigator.clipboard.writeText(u).then(function(){toast('주소를 복사했습니다');},fell);
+    else fell();
+  }catch(e){ fell(); }
+}
 function tabShow(){
   var cl=S.cl; if(!ready(cl))return '<div class="card"><h2>생년월일을 먼저 넣어 주세요</h2>'+
     '<p>설명회 한 장은 <b>그 자리에 앉은 분</b>의 패로 풉니다.</p>'+
@@ -3037,6 +3063,14 @@ function tabShow(){
     '<b>이 장에 안 뜹니다.</b> 영업 가능성도 <b>총점과 등급을 빼고</b> 다섯 축만 냅니다 — '+
     '설명회는 사람을 가르는 자리가 아니기 때문입니다.</div>'+
     '<button class="btn line sm shw-meta" style="margin-top:12px" onclick="window.print()">🖨 한 장 인쇄 · PDF</button>'+
+    /* ★ 따로 켠 판에서는 이 둘을 안 냅니다 — 이미 그 판입니다 (6번: 정말로
+       할 일이 없을 때만 감춥니다). */
+    (SHOW.on?'':
+      '<div class="say quiet shw-meta" style="margin-top:12px"><span class="me">설명회 때는</span>'+
+      '<b>이 장만 따로</b> 켜실 수 있습니다 — 탭이 하나뿐이라 옆을 잘못 눌러 '+
+      '리더용 글이 뜰 일이 없습니다. 즐겨찾기에 넣어 두시면 한 번에 열립니다.<br>'+
+      '<button class="btn line sm" style="margin-top:10px" onclick="window.open(showUrl(),\'_blank\')">📣 이 장만 따로 열기</button> '+
+      '<button class="btn line sm" style="margin-top:10px" onclick="showCopy()">🔗 주소 복사</button></div>')+
     '</div>'+
     /* ★ .shw 로 싸 둡니다 — 다섯 장이 저마다 들고 있는 <b>꼬리글과 인쇄 단추</b>를
        여기서만 접습니다. 한 장으로 이으면 같은 꼬리글이 <b>다섯 번</b> 찍히고
@@ -5090,6 +5124,21 @@ function fitShell(){
     if(!ready(S.cl)&&ready(S.me))S.cl=S.me;          /* 전에 내 카드를 적어 두셨으면 그대로 씁니다 */
     S.step=ready(S.cl)?'board':'client';
     if(['mepil','meins','mework','metime'].indexOf(S.tab)<0)S.tab='mepil';
+  }
+  /* 📣 따로 켠 설명회 판 — 생년월일만 받고 바로 그 장으로 (판 X546).
+     ★ 48문항을 아직 안 하신 분이 대부분이라 <b>사주 갈래</b>로 엽니다.
+       이미 해 두신 분(res)이면 그대로 둡니다 — 성향까지 섞여 풀립니다. */
+  /* ★★ 손님용 판(site-saju)과 나만 보는 판(site-me)에서는 <b>안 켭니다.</b>
+     설명회 장은 영업 가능성 다섯 축이 들어 있어 설계사가 띄우는 자리입니다 —
+     손님이 주소 끝에 ?show=1 을 붙여도 열리면 안 됩니다 (3번).
+     ⚠ 여기서 끕니다 — 주소를 읽는 자리는 MEONLY 가 선언되기 <b>전</b>이라
+       거기서는 볼 수가 없습니다. */
+  if(GUEST.on||MEONLY.on)SHOW.on=false;
+  if(SHOW.on){
+    S.view='agent';
+    if(!(S.cl&&S.cl.res))S.mode='saju';
+    S.step=ready(S.cl)?'board':'client';
+    S.tab='show';
   }
   if(BRIEF.on){
     S.view='agent';
