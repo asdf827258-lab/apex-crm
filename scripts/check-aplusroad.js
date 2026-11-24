@@ -116,7 +116,7 @@ is(/function sameAns/.test(DZ_C) && /sameAns\(d, q, insr, prdt, n\)/.test(DZ_C) 
 const POOLN = Number((FN_C.match(/POOL\s*=\s*(\d+)/) || [])[1] || 99);
 is(POOLN <= 3, '  원본을 <b>세 쪽까지만</b> 동시에 부른다(웹방화벽) — POOL ' + POOLN);
 is(!/json\(\s*50\d/.test(FN_C) && /json\(200,\s*\{\s*ok:\s*false/.test(FN_C), '  실패도 <b>200 + ok:false</b>(502 로 답하면 CDN 이 옛 답을 끼워 넣는다)');
-is(/'Netlify-CDN-Cache-Control'/.test(FN_C) && /s-maxage=3600/.test(FN_C), '  다 받은 답은 <b>CDN 에 1시간</b>(원본을 덜 부른다)');
+is(/'Netlify-CDN-Cache-Control'/.test(FN_C) && /s-maxage=86400/.test(FN_C), '  다 받은 답은 <b>CDN 에 하루</b>(원본을 하루 한 번만)');
 is(/방화벽/.test(FN_C) && /e\.waf\)\s*\{\s*stop = true/.test(FN_C), '  웹방화벽 안내문을 알아보고 <b>더 두드리지 않는다</b>');
 is(/left < EXPECT/.test(FN_C), '  끝까지 못 받을 쪽은 <b>시작하지 않는다</b>');
 is(!/lane\(\), lane\(\), lane\(\), lane\(\)/.test(DZ_C), '  화면도 <b>세 줄까지만</b> 채운다');
