@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ══════════════════════════════════════════════════════════════════
-   check-bapress.js — 보장분석 만들기의 <b>단추를 실제로 눌러 본다</b> (판 X538)
+   check-bapress.js — 보장분석 만들기의 <b>단추를 실제로 눌러 본다</b> (판 X541)
 
    사장님 말씀 2026-11-24 — 「엑셀로 다운로드 버튼도 누르고, 보장분석 전후
    만들기에서, <b>파일로저장 옆에 원래 고객 파일에 저장 있었는데 그 칸 다시
@@ -40,7 +40,7 @@ const MIME = { '.html': 'text/html;charset=utf-8', '.js': 'text/javascript;chars
   '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 
 (async () => {
-  console.log('══ 🖱 보장분석 단추를 눌러 본다 (판 X538) ══');
+  console.log('══ 🖱 보장분석 단추를 눌러 본다 (판 X541) ══');
   const srv = http.createServer((q, r) => {
     const p = path.join(ROOT, decodeURIComponent(url.parse(q.url).pathname));
     fs.readFile(p, (e, b) => {

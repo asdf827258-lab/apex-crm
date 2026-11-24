@@ -178,7 +178,7 @@ const head = (t) => console.log('\n' + t);
     more: document.querySelectorAll('#barMoreBox button').length,
     openBefore: document.getElementById('barMoreBox').classList.contains('on')
   }));
-  /* ★ 판 X538 — 기준을 5 → <b>6</b> 으로 올립니다. 사장님이 2026-11-24 에
+  /* ★ 판 X541 — 기준을 5 → <b>6</b> 으로 올립니다. 사장님이 2026-11-24 에
      「파일로저장 옆에 원래 <b>고객 파일에 저장</b> 있었는데 그 칸 다시 확인」 하셨고,
      그 칸은 위 띠에 있어야 합니다. 원래도 워크스페이스 안에서는 <b>여섯</b>이었고
      (baSaveBtn 이 INFRAME 일 때만 섰습니다), 이 자는 밖에서 열어 다섯만 보고
