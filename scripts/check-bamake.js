@@ -331,13 +331,29 @@ const srv = http.createServer((rq, rs) => {
   const se = []; solo.on('pageerror', e => se.push(e.message));
   await solo.goto('http://127.0.0.1:' + srv.address().port + '/app/ba.html', { waitUntil: 'domcontentloaded' });
   await solo.waitForTimeout(1200);
-  const s2 = await solo.evaluate(() => ({
-    app: document.getElementById('app').innerHTML.length,
-    inframe: INFRAME,
-    btn: document.getElementById('baSaveBtn').style.display
-  }));
+  const s2 = await solo.evaluate(() => {
+    const b = document.getElementById('baSaveBtn');
+    const cs = b ? getComputedStyle(b) : null;
+    const r = b ? b.getBoundingClientRect() : null;
+    return {
+      app: document.getElementById('app').innerHTML.length,
+      inframe: INFRAME,
+      섰나: !!(cs && cs.display !== 'none' && r.width > 0),
+      흐린가: !!(b && b.className.indexOf('baOut') >= 0),
+      귀띔: b ? (b.title || '') : ''
+    };
+  });
   is(s2.app > 5000, '워크스페이스 <b>없이도</b> 그대로 열린다 (' + s2.app + '자)');
-  is(s2.inframe === false && s2.btn === 'none', '혼자 열면 <b>고객 저장 단추를 안 세운다</b> — 저장할 데가 없으니');
+  /* ★★ 판 X541 — 이 자는 「혼자 열면 저장 단추를 <b>안 세운다</b>」 를 지키고 있었습니다.
+     그래서 사장님이 「파일로저장 옆에 원래 고객 파일에 저장 있었는데」 하고 찾으셨습니다 —
+     밖에서 열면 그 칸이 <b>아예 사라져</b> 있었기 때문입니다.
+     숨기는 것이 옳지 않습니다 (CLAUDE.md 6번 — 단추는 <b>정말로 할 일이 없을 때만</b>
+     감춥니다). 저장할 데가 아주 없는 것이 아니라 <b>워크스페이스에서 열면 됩니다</b>.
+     그 길을 그 자리에서 말해 주는 것이 맞습니다. 자를 그렇게 고칩니다. */
+  is(s2.inframe === false, '혼자 연 것이 맞다 (INFRAME=false)');
+  is(s2.섰나 === true, '혼자 열어도 <b>고객 저장 단추가 선다</b> — 숨기지 않습니다 (6번)');
+  is(s2.흐린가 === true, '다만 <b>흐리게</b> 둔다 — 지금은 담을 수 없음을 눈으로 알립니다');
+  is(/워크스페이스/.test(s2.귀띔), '<b>귀띔</b>이 까닭을 말한다 — 「' + s2.귀띔.slice(0, 28) + '…」');
 
   sec('[5] 화면이 멈추지 않는가');
   is(errs.length === 0, '워크스페이스에서 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));

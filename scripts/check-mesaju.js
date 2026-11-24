@@ -180,7 +180,7 @@ const ME_OFF = 'var MEONLY={on:false};', ME_ON = 'var MEONLY={on:true};';
       return document.getElementById('view').innerText.replace(/\s+/g, '').length; }, t);
     ok(n > 150, '  ' + t + ' — 글자 ' + n + '자');
   }
-  console.log('\n[4-2] ★★ <b>① 네 기둥</b>에 적은 수가 엔진에서 나온 수와 같다 (판 X537 · 1번)');
+  console.log('\n[4-2] ★★ <b>① 네 기둥</b>에 적은 수가 엔진에서 나온 수와 같다 (판 X544 · 1번)');
   /* 사장님 말씀 2026-11-24 「사주를 조금 더 자세하게 풀어줘야 할거 같은데?」.
      자세히 적을수록 <b>지어낼 자리가 늘어납니다.</b> 화면에 찍힌 수를 엔진에서
      다시 세어 하나하나 맞춰 봅니다 — 글이 길어졌다고 자가 느슨해지면 안 됩니다. */
@@ -215,7 +215,7 @@ const ME_OFF = 'var MEONLY={on:false};', ME_ON = 'var MEONLY={on:true};';
   ok(pil.helpOk, '★★ 강약 점수가 <b>strengthOf 가 센 수</b>와 같다 — ' + pil.help + '점');
   ok(pil.lvOk, '강약 이름이 적힌다 — ' + pil.level);
   ok(pil.gmOk, '★ 공망 두 자리가 <b>gongmang 이 낸 자리</b>와 같다 — ' + pil.gm);
-  ok(pil.chars > 600, '전보다 <b>자세하다</b> — ' + pil.chars + '자 (판 X536 까지는 247자였습니다)');
+  ok(pil.chars > 600, '전보다 <b>자세하다</b> — ' + pil.chars + '자 (판 X543 까지는 247자였습니다)');
 
   console.log('\n[5] ★★ 네 장을 <b>한 벌로 인쇄</b>한다 (판 X523)');
   /* 사장님 말씀 2026-11-23 「전체적으로 한번에 인쇄할수 있도록」.
