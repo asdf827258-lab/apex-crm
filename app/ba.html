@@ -2444,7 +2444,7 @@ function blank(){
     /* 적정 금액을 셈할 때 쓰는 <b>가정치</b> — 전부 고치실 수 있다 */
     assume:{deathPct:'70',depAge:'22',disabPct:'25',disabYears:'20',
             careMon:'150',careMonths:'24',premPct:'30'},
-    src:'APEX 기본 시나리오 (평균 예시)',pick:{},open:{},padOpen:{},polOpen:{},stEmpty:{},brainMore:true,fitAll:false,mode:'edit',view:'full',
+    src:'APEX 기본 시나리오 (평균 예시)',pick:{},open:{},padOpen:{},polOpen:{},stEmpty:{},brainMore:true,fitAll:false,brainAll:false,mode:'edit',view:'full',
     /* 고객에게 보여주는 판은 <b>한 장씩</b>이 기본이다 — 스크롤을 내리면
        고객 눈이 아직 설명 안 한 숫자로 먼저 달아난다. 위 단추로 바꾸신다. */
     deck:true,slide:'sHd',
@@ -6203,7 +6203,7 @@ function brainCard(d,you,why){
     '<div class="bfig">'+d.fig+'</div>'+
     (you?('<div class="byou"><span>이 고객에게</span>'+you+'</div>'):'')+
     /* 판 X330 — 핵심 다섯 줄만 보이고 나머지는 「자세히」 안으로 (글은 그대로) */
-    '<details class="gd2-more bmore"><summary>자세히 <small>비유 · 그래서 · 두루 쓰는 말'+(d.rp&&d.rp.length?' · 되받아침':'')+'</small></summary>'+
+    '<details class="gd2-more bmore"'+(S.brainAll?' open':'')+'><summary>자세히 <small>비유 · 그래서 · 두루 쓰는 말'+(d.rp&&d.rp.length?' · 되받아침':'')+'</small></summary>'+
     '<div class="bex"><span>비유</span>'+d.ex+'</div>'+
     '<div class="bso"><span>그래서</span>'+d.so+'</div>'+
     '<div class="bback'+(you?' sub':'')+'">'+(you?'<em>두루 쓰는 말</em> ':'')+d.back+'</div>'+
@@ -6217,7 +6217,7 @@ function brainCard(d,you,why){
    대본이 없으면 <b>지어내지 않는다</b> — 그 자리를 비워 둔다 (1번). */
 function brainRp(d){
   if(!d.rp||!d.rp.length)return '';
-  return '<details class="brp"><summary>🎭 이렇게 주고받습니다 — 되받아침 '+d.rp.length+'번</summary>'+
+  return '<details class="brp"'+(S.brainAll?' open':'')+'><summary>🎭 이렇게 주고받습니다 — 되받아침 '+d.rp.length+'번</summary>'+
     d.rp.map(function(t){
       return '<div class="brc"><span>고객</span><p>“'+esc(t.c)+'”</p></div>'+
              '<div class="brm"><span>나</span><p>“'+t.m+'”</p></div>';
@@ -6226,6 +6226,10 @@ function brainRp(d){
     '보험료·보장은 <b>심사 결과에 따릅니다.</b></div></details>';
 }
 function brainMore(){S.brainMore=!S.brainMore;save();render();}
+/* ★ 판 X558 — 카드 안 「자세히 · 되받아침」 을 <b>한 번에</b> 폅니다.
+   사장님 말씀 「숨기지말고 보이도록」. 기본은 접힌 채로 둡니다 — 열두 장의
+   속을 다 펴면 한 화면이 아주 길어져 오히려 못 읽습니다. 길은 열어 둡니다 (6번). */
+function brainAllOpen(){ S.brainAll=!S.brainAll; save(); render(); }
 function nhOpen(k){S.nhOpen=(S.nhOpen===k?'':k);save();render();}
 /* ── 병원비 공부방 ────────────────────────────────────────────────
    사장님이 <b>혼자 상담을 준비하시면서 공부하는</b> 자리입니다.
@@ -6466,7 +6470,12 @@ function brainHtml(){
     '<button class="mini" onclick="window.print()">🖨 인쇄</button></span></h2>'+
     '<p class="gd2-lead">숫자를 <b>보여 주는 것</b>과 <b>이해시키는 것</b>은 다른 일입니다. 고객은 「3,000만원」을 못 느낍니다 — '+
     '<b>아는 것에 빗대야</b> 압니다.</p>'+
-    gdJump([['bq1','🎯','바로 걸리는 말'],['bq2','👋','이렇게 여십시오'],['bq3','🗺','상담 흐름'],['bq4','🏥','병원비 공부방'],['bq5','📚','그 밖의 비유']]);
+    gdJump([['bq1','🎯','바로 걸리는 말'],['bq2','👋','이렇게 여십시오'],['bq3','🗺','상담 흐름'],['bq4','🏥','병원비 공부방'],['bq5','📚','그 밖의 비유']])+
+    '<div class="noprint" style="margin:-4px 0 13px">'+
+      '<button class="mini'+(S.brainAll?' on':'')+'" onclick="brainAllOpen()">'+
+        (S.brainAll?'📂 카드 속까지 펴짐 — 접기':'📂 카드 속(자세히 · 되받아침)까지 전부 펴기')+'</button>'+
+      '<span style="font-size:var(--t6,13px);font-weight:700;color:var(--gy2);margin-left:8px">'+
+        '상담 전에 통째로 읽으실 때 — <b>인쇄하면 늘 전부 나옵니다</b></span></div>';
   h+='<section id="bq1" class="gd2-sec">'+gdHead(1,'이 고객에게 바로 걸리는 말','진단에서 실제로 잡힌 것만 골랐습니다');
   /* ★ 판 X556 — 사장님 말씀 「더보기에 숨겨져있어서 숨기지말고 보이도록 해줘」.
      여섯에서 자르고 나머지를 <b>「더 보기」 안에</b> 넣고 있었습니다(판 X330).

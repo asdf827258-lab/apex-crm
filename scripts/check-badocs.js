@@ -186,6 +186,18 @@ const MIME = { '.html': 'text/html;charset=utf-8', '.js': 'text/javascript;chars
   is(br2.선카드 >= br2.hot, '  걸린 말 <b>' + br2.hot + '개가 전부</b> 섰다 (' + br2.선카드 + ')');
   is(br2.공부방열림 === true, '  🏥 병원비 공부방이 <b>펴져 있다</b>');
   is(br2.그밖 >= br2.rest, '  그 밖의 비유 ' + br2.rest + '개도 <b>펴져 있다</b> (' + br2.그밖 + ')');
+  const br3 = await pg.evaluate(() => {
+    const 닫힘 = [].slice.call(document.querySelectorAll('.bmore')).filter(d => !d.open).length;
+    const 길 = /카드 속.*전부 펴기/.test(document.getElementById('app').textContent);
+    brainAllOpen();
+    const 열림 = [].slice.call(document.querySelectorAll('.bmore')).filter(d => d.open).length;
+    const 전체 = document.querySelectorAll('.bmore').length;
+    brainAllOpen();
+    return { 기본닫힘: 닫힘, 길: 길, 열림: 열림, 전체: 전체 };
+  });
+  is(br3.길 === true, '  <b>카드 속까지 전부 펴기</b> 길이 있다');
+  is(br3.열림 === br3.전체 && br3.전체 > 0,
+    '  누르면 카드 속 <b>' + br3.전체 + '장이 한꺼번에</b> 펴진다 (' + br3.열림 + ')');
 
   head('[7] 📋 자동 보장분석 — 전부 펴기 길이 있나');
   const ft = await pg.evaluate(() => {
