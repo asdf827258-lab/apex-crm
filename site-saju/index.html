@@ -180,6 +180,13 @@ body.shrine-on h1{letter-spacing:-.045em}
 body.shrine-on .pane{position:relative;z-index:1}
 .pa-bar{text-align:center}
 .pa-hint{display:block;margin-top:9px;font-size:12.5px;color:var(--ink3);letter-spacing:-.02em}
+/* 십신 표 — 읽는 글이 아니라 견주는 표라 한 줄에 눕힙니다 */
+.mesip{margin-top:10px;border-top:1px solid var(--line-l)}
+.mesip-r{display:flex;align-items:baseline;gap:9px;padding:8px 2px;border-bottom:1px solid var(--line-l)}
+.mesip-p{flex:none;width:38px;font-size:12.5px;color:var(--ink3);letter-spacing:-.03em}
+.mesip-c{flex:none;width:22px;font-size:15px;font-weight:800;color:var(--ink)}
+.mesip-n{font-size:14.5px;letter-spacing:-.03em;color:var(--ink)}
+.mesip-g{margin-left:auto;font-size:12px;color:var(--ink3)}
 /* ★ 제목 밑 붉은 붓자국 — 그림 파일이 아니라 그라디언트입니다(9번).
    끝이 흐려져야 붓이지, 네모로 끝나면 밑줄입니다. */
 body.shrine-on h1{position:relative;padding-bottom:11px}
@@ -2492,13 +2499,75 @@ function meNeed(){
 function tabMePil(){
   var p=meWho(), s=p&&p.saju; if(!s)return meNeed();
   var y=yongsin(s), nm=esc(p.name||'나');
+  var c=sipsinTable(s), oh=ohCount(s), st=y.st, jh=y.jh;
+  var di=((jdnOf(Number(p.y),Number(p.m),Number(p.d))+(p.noTime?0:(p.H>=23?1:0))+49)%60+60)%60;
+  var gm=gongmang(di), deep=GAN_DEEP[s.dg];
+
+  /* ── 여덟 자가 나와 무슨 사이인가. sipsinTable 이 이미 센 것을 그대로 펴 놓습니다. */
+  var rows=c.rows.map(function(r){
+    return '<div class="mesip-r"><span class="mesip-p">'+esc(r.pos)+'</span>'+
+      '<span class="mesip-c">'+esc(r.src)+'</span>'+
+      '<b class="mesip-n">'+esc(r.name)+'</b>'+
+      '<span class="mesip-g">'+esc(SIP_GROUP[r.name])+'</span></div>';
+  }).join('');
+  var sipTab='<div class="card"><h2><span class="n">십신</span>여덟 자가 자네와 무슨 사이인가</h2>'+
+    '<div class="mesip">'+rows+'</div>'+
+    '<div class="say"><span class="me">무리로 묶으면</span>'+
+    ['비겁','식상','재성','관성','인성'].map(function(k){
+      return esc(k)+' <b>'+c.count[k]+'</b>';}).join(' · ')+
+    ' — 제일 많은 건 <b>'+esc(c.top)+' '+c.topN+'개</b>다. 그게 자네가 제일 많이 쓰는 손이야.</div></div>';
+
+  /* ── 오행 저울. 없는 기운은 <b>없다고</b> 적습니다 — 0 을 숨기면 패를 숨기는 겁니다 (1번). */
+  var zero=['목','화','토','금','수'].filter(function(k){return oh[k]===0;});
+  var bars=['목','화','토','금','수'].map(function(k){
+    var m=OH_META[k], w=Math.min(100,oh[k]*25);
+    return '<div class="mefit-r"><div class="mefit-t">'+m.emo+' '+esc(k)+'('+OH_HAN[k]+')</div>'+
+      '<div class="mefit-b"><i style="width:'+w+'%;background:'+m.c+'"></i></div>'+
+      '<div class="mefit-n'+(oh[k]?'':' hi')+'">'+(oh[k]?oh[k]+'개':'없다')+'</div>'+
+      '<div class="mefit-w">'+esc(m.key)+' — '+esc(m.mind)+'</div></div>';}).join('');
+  var ohCard='<div class="card"><h2><span class="n">오행</span>여덟 자에 기운이 몇씩 들었나</h2>'+bars+
+    (zero.length?'<div class="say gold"><span class="me">없는 기운</span><b>'+zero.join(' · ')+
+      '</b> 가 한 자도 없어. 없는 걸 억지로 쓰려 들지 말고, <b>가진 걸로</b> 가. '+
+      '안 되는 쪽을 제 탓으로 돌리는 버릇부터 고쳐.</div>':
+      '<div class="say"><span class="me">고르다</span>다섯 기운이 다 들었어. 흔한 패가 아니야.</div>')+'</div>';
+
+  /* ── 강약을 어떻게 셌는지 <b>셈까지</b> 보여 줍니다. 「신약이다」 만 적으면 믿을 근거가 없습니다. */
+  var mine=GAN_OH[s.dg];
+  var stCard='<div class="card"><h2><span class="n">강약</span>자네 힘이 센가 약한가</h2>'+
+    '<div class="say"><span class="me">'+esc(st.level)+'</span>도와주는 글자를 세니 <b>'+st.help+'점</b>이다. '+
+    '4.5점 넘으면 신강, 3점 넘으면 중화, 그 아래면 신약 — 그래서 <b>'+esc(st.level)+'</b>이야.</div>'+
+    '<div class="say quiet"><span class="me">세는 법</span>자네 일간이 '+esc(mine)+
+    ' 라, 여덟 자 가운데 <b>'+esc(mine)+'이거나 '+esc(mine)+'을 살리는 '+esc(ohGenOf(mine))+
+    '</b> 이면 한 점. 태어난 달(월지)은 <b>1.5점</b>으로 센다 — 철이 제일 세기 때문이야.'+
+    (st.monthOk?' 자네는 월지가 받쳐 준다.':' 자네는 <b>월지가 안 받쳐 준다.</b> 그게 크다.')+'</div></div>';
+
+  /* ── 철과 공망. 둘 다 이미 세어 둔 값입니다. */
+  var jhCard='<div class="card"><h2><span class="n">철</span>어느 철에 났나</h2>'+
+    '<div class="say"><span class="me">'+esc(jh.season)+'</span>'+esc(jh.season)+'에 난 '+esc(mine)+
+    ' 기운이다. 이 철에는 <b>'+esc(jh.need)+'</b> 기운이 있어야 숨이 트인다.</div>'+
+    '<div class="say quiet"><span class="me">공망</span>'+esc(JI[gm[0]])+' · '+esc(JI[gm[1]])+
+    ' 두 자리가 비었다. 그 자리 일은 <b>애써도 손에 잘 안 남아.</b> 붙들지 말고 흘려 보내.</div></div>';
+
+  /* ── 용신·기신 */
+  var yCard='<div class="card"><h2><span class="n">'+OH_HAN[y.primary]+'</span>무엇이 모자라고 무엇이 넘치나</h2>'+
+    '<div class="say gold"><span class="me">필요한 기운</span><b>'+
+    y.need.map(function(k){return OH_HAN[k]+' '+k;}).join(' · ')+'</b>'+
+    (y.urgent?' — 그런데 <b>여덟 자에 한 자도 없다.</b> 그러니 밖에서 끌어와야 해.':'')+'</div>'+
+    (y.avoid.length?'<div class="say"><span class="me">넘치는 기운</span><b>'+
+      y.avoid.map(function(k){return OH_HAN[k]+' '+k;}).join(' · ')+
+      '</b> 는 더 보태지 마. 여기서 체한다.</div>':'')+'</div>';
+
   return '<div class="card">'+brandBand('내 네 기둥')+
     '<h1>'+nm+', 자네 패다</h1>'+
     '<p>이 넉 자는 못 바꿔. 바꿀 수 있는 건 <b>쓰는 법</b> 하나야.</p></div>'+
     '<div class="card">'+pillarsHtml(p)+
       '<div class="say"><span class="me">일간</span>가운데 윗글자 <b>'+GAN[s.dg]+'('+GANH[s.dg]+')</b> — 그게 자네야. '+
-      '일간은 <b>'+esc(y.st.level)+'</b> 이고, 이 패에 모자란 건 <b>'+OH_HAN[y.primary]+' '+esc(y.primary)+'</b> 다.</div>'+
-      '<div class="say quiet"><span class="me">근거</span>'+esc(y.why)+' '+esc(y.how)+'</div></div>';
+      '<b>'+esc(deep?deep.n:'')+'</b> 일주다.</div>'+
+      '<div class="say quiet"><span class="me">옛 책은 이렇게 적는다</span>「'+esc(deep?deep.ice:'')+' '+
+      esc(deep?deep.work:'')+'」 — 맞는지 아닌지는 자네가 알지.</div></div>'+
+    sipTab+ohCard+stCard+jhCard+yCard+
+    '<div class="say quiet" style="margin-top:14px">여기 적힌 수는 <b>전부 자네 여덟 자에서 센 것</b>이다. '+
+    '내가 지어낸 건 한 줄도 없어. 못 믿겠거든 위 표를 세어 봐.</div>';
 }
 /* ② 보험이라는 일과 나 */
 function tabMeIns(){

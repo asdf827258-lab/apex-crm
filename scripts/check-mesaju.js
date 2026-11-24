@@ -180,6 +180,43 @@ const ME_OFF = 'var MEONLY={on:false};', ME_ON = 'var MEONLY={on:true};';
       return document.getElementById('view').innerText.replace(/\s+/g, '').length; }, t);
     ok(n > 150, '  ' + t + ' — 글자 ' + n + '자');
   }
+  console.log('\n[4-2] ★★ <b>① 네 기둥</b>에 적은 수가 엔진에서 나온 수와 같다 (판 X532 · 1번)');
+  /* 사장님 말씀 2026-11-24 「사주를 조금 더 자세하게 풀어줘야 할거 같은데?」.
+     자세히 적을수록 <b>지어낼 자리가 늘어납니다.</b> 화면에 찍힌 수를 엔진에서
+     다시 세어 하나하나 맞춰 봅니다 — 글이 길어졌다고 자가 느슨해지면 안 됩니다. */
+  const pil = await pg.evaluate(() => {
+    S.tab = 'mepil'; draw();
+    const v = document.getElementById('view'), t = v.innerText;
+    const s = S.cl.saju, c = sipsinTable(s), oh = ohCount(s), st = strengthOf(s);
+    const di = ((jdnOf(+S.cl.y, +S.cl.m, +S.cl.d) + (S.cl.noTime ? 0 : (S.cl.H >= 23 ? 1 : 0)) + 49) % 60 + 60) % 60;
+    const gm = gongmang(di);
+    const rows = v.querySelectorAll('.mesip-r').length;
+    /* 무리 개수 다섯이 글에 그대로 찍혔나 */
+    const grpOk = ['비겁','식상','재성','관성','인성']
+      .every(k => t.indexOf(k + ' ' + c.count[k]) >= 0);
+    /* 오행 다섯 — 0 이면 「없다」, 아니면 「N개」 */
+    const ohOk = ['목','화','토','금','수']
+      .every(k => t.indexOf(oh[k] ? (oh[k] + '개') : '없다') >= 0);
+    const zeroNamed = ['목','화','토','금','수'].filter(k => oh[k] === 0)
+      .every(k => t.indexOf(k) >= 0);
+    return { rows, grpOk, ohOk, zeroNamed,
+             helpOk: t.indexOf(st.help + '점') >= 0, help: st.help,
+             lvOk: t.indexOf(st.level) >= 0, level: st.level,
+             gmOk: t.indexOf(JI[gm[0]]) >= 0 && t.indexOf(JI[gm[1]]) >= 0,
+             gm: JI[gm[0]] + '·' + JI[gm[1]],
+             ohSum: ['목','화','토','금','수'].reduce((a, k) => a + oh[k], 0),
+             chars: t.replace(/\s+/g, '').length };
+  });
+  ok(pil.rows === 7, '십신이 <b>일곱 자리</b> 다 선다 — ' + pil.rows + '줄 (년간·월간·시간·년지·월지·일지·시지)');
+  ok(pil.grpOk, '★★ 무리 개수 다섯이 <b>sipsinTable 이 센 수</b> 그대로다');
+  ok(pil.ohSum === 8, '오행 개수 합이 <b>여덟</b>이다 — ' + pil.ohSum + ' (여덟 자니까)');
+  ok(pil.ohOk, '★★ 오행 다섯이 <b>ohCount 가 센 수</b> 그대로다');
+  ok(pil.zeroNamed, '★ <b>없는 기운을 이름으로 적는다</b> — 0 을 숨기면 패를 숨기는 겁니다 (1번)');
+  ok(pil.helpOk, '★★ 강약 점수가 <b>strengthOf 가 센 수</b>와 같다 — ' + pil.help + '점');
+  ok(pil.lvOk, '강약 이름이 적힌다 — ' + pil.level);
+  ok(pil.gmOk, '★ 공망 두 자리가 <b>gongmang 이 낸 자리</b>와 같다 — ' + pil.gm);
+  ok(pil.chars > 600, '전보다 <b>자세하다</b> — ' + pil.chars + '자 (판 X531 까지는 247자였습니다)');
+
   console.log('\n[5] ★★ 네 장을 <b>한 벌로 인쇄</b>한다 (판 X523)');
   /* 사장님 말씀 2026-11-23 「전체적으로 한번에 인쇄할수 있도록」.
      ⚠ 여기서 <b>실제로 종이가 검게 나오던 것</b>을 찾았습니다 — body 만 희게 해 두고
