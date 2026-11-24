@@ -3000,6 +3000,8 @@ body.insight-mode #insightScreen{display:block;}
   <iframe id="baFrame" class="fin-frame" title="보장분석 전·후 만들기" allow="fullscreen"></iframe>
   <div class="fin-float">
     <button class="ff-back" onclick="exitBa()">← 워크스페이스</button>
+    <button class="ff-add" onclick="bapdSw('bojang')" title="보험사 보장분석 PDF 로 AI 리포트">📑 AI 리포트</button>
+    <button class="ff-add" onclick="bapdSw('bapd')" title="보장분석·제안서로 컨셉 잡고 설명자료">🧠 제안서 설명자료</button>
     <button class="ff-ico" onclick="baAskSave()" title="고객 365일에 저장">💾</button>
     <button class="ff-ico" onclick="baReload()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="baNewTab()" title="새 탭에서 열기">↗</button>
@@ -15504,7 +15506,11 @@ var TABS=[
    {id:'crm',tk:'DB CRM',icon:'🗄️',title:'DB 통합 CRM',cnt:'',ak:'DB CRM 지역 동선 지역동선 방문 길찾기'}
  ]},
  {group:'증권 분석',items:[
-   {id:'bojang',icon:'📑',title:'AI 보장분석',cnt:'',ak:'보장분석'},
+   /* 2026-11-24 사장님 말씀 「AI 보장분석 이름을 없애고 보장분석 전후 만들기 안에 넣어서 관리하자」 (판 X553).
+      목록에서는 숨기고(hide) 이름을 「전&후 만들기 · AI 리포트」 로 바꿉니다. go('bojang')·주소·찾기·단계 칩은
+      그대로 열립니다 — 세 화면 머리에 같은 전환 띠(🔀 전·후 · 📑 AI 리포트 · 🧠 설명자료)가 섭니다(app/ba-pd.js). */
+   {id:'bojang',icon:'📑',title:'전&후 만들기 · AI 리포트',cnt:'',hide:true,ak:'보장분석'},
+   {id:'bapd',tk:'보장분석',icon:'🧠',title:'전&후 만들기 · 제안서 설명자료',cnt:'',hide:true,ak:'보장분석 제안서 설명자료 컨셉 연금 비과세 윤시현'},
    /* 비포&애프터는 <b>목록에서만</b> 숨긴다 — 전·후 비교를 메뉴에서 두 곳이
       묻지 않게. 들어가는 길은 고객 365일 → 고객 → 풀리포트의 「🔄 빠른
       비포&애프터」. hide 를 달면 목록에는 안 서지만 🔎 메뉴 찾기·음성·
@@ -15807,7 +15813,7 @@ var TAB_META={
  dz_guide:{tag:'CONSULT',title:'질병 보험가이드',desc:'질병마다 원인·치료과정·그 단계에서 열리는 담보·화법을 한 자리에 모아 둔 자료입니다. 담보 이름은 보장분석이 쓰는 이름 그대로입니다.'},
  treatpay:{tag:'ANALYSIS',title:'치료비 지급지도',desc:'질병별 치료 여정과 단계별 보장 지급, 보험 유무에 따른 가계 부담 차이를 그래프로 보여주는 상담자료입니다.'},
  endorse:{tag:'CONTRACT',title:'배서 안내서 생성',desc:'계약 변경(배서) 유형을 고르고 변경 전·후를 입력하면 필요서류·유의사항·고객 안내문을 한 번에 만들어 줍니다. 실제 배서 접수·심사는 보험사 기준을 따릅니다.'},
- bojang:{tag:'ANALYSIS',title:'AI 보장분석',desc:'보장분석 리포트 PDF를 올리면 1:1 맞춤 상담 리포트로 변환합니다.'},
+ bojang:{tag:'보장분석 전&후 만들기',title:'AI 리포트',desc:'보장분석 리포트 PDF를 올리면 1:1 맞춤 상담 리포트로 변환합니다.'},
  compare:{tag:'ANALYSIS',title:'제안서 비교',desc:'여러 보험사 제안서를 올리면 담보·보험료를 한눈에 비교합니다.'},
  katalk:{tag:'ANALYSIS',title:'제안서 카톡 설명',desc:'제안서 PDF를 고객에게 바로 보낼 카톡 설명 메시지로 만듭니다.'},
  mkt_combine:{tag:'MARKETING',title:'키워드 조합기',desc:'시드 키워드를 조합해 콘텐츠·검색 키워드를 대량 생성합니다.'},
@@ -15890,7 +15896,7 @@ var NAV_WHEN={
  home:'today', airep:'today', myperf:'today', crm:'today', clients:'today', mycal:'today', rjnews:'today',
  assistant:'today', voiceasst:'today', ckboard:'today',
  /* 🤝 고객 만나기 — 준비하고, 앞에서 쓰는 것 */
- fact_find:'meet', bojang:'meet', frmake:'meet', compare:'meet',
+ fact_find:'meet', bojang:'meet', bapd:'meet', frmake:'meet', compare:'meet',
  onecmp:'meet', ai_prop:'meet', katalk:'meet', interpret:'meet', treatpay:'meet',
  wallets:'meet', cs_assist:'meet', cs_needs:'meet', ins_asst:'meet', cs_gso:'meet',
  insight:'meet',  /* 🧭 상품전략기 — 상담 앞에서 이번 달 상품을 고르는 자리 */
@@ -21392,7 +21398,7 @@ function osFullMode(on){
      화면 이름으로 셉니다(제가 그렇게 해서 한 번 울렸습니다 · 8번).          */
 var T_SKIN={myperf:1,emcenter:1,home:1,dashboard:1,clients:1,keep4:1,rjnews:1,news_live:1,mycal:1,me:1,tools:1,
             recruit:1,voiceasst:1,growboard:1,assistant:1,airep:1,brain:1,notice:1,
-            academy_notion:1,apexmaster:1,bojang:1,branch_coach:1,calc:1,calendar:1,
+            academy_notion:1,apexmaster:1,bojang:1,bapd:1,branch_coach:1,calc:1,calendar:1,
             compare:1,cs_assist:1,cs_gso:1,cs_needs:1,ext_naver:1,ext_reply:1,ext_thread:1,
             fp_deck:1,health:1,helpme:1,ins_asst:1,insta:1,katalk:1,med_checkup:1,med_silbi:1,
             mkt_card:1,mkt_combine:1,mkt_landing:1,mkt_meta:1,mkt_volume:1,ref_hidden:1,
@@ -22319,8 +22325,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-24 22:14';
-var APP_BUILD_NOTE='🌱 <b>신입 도움말</b>(판 X551 · 단순화 순서 ⑤). ◾ 새 오늘 화면 🙋 나 → 맨 위 「<b>🌱 신입 도움말</b>」 켜짐/꺼짐. ◾ 켜면 영업 한 바퀴 칸을 눌렀을 때 맨 위에 「<b>이 칸에서 할 일 / 어떻게</b>」 — 글은 TA 스크립트 · 화법 시트와 같은 원본(단계 표) 그대로. ◾ <b>이 기기에만</b> 남고 기본은 꺼짐 — 신입 폰에서 한 번 켜 주세요. ◾ 지점장 화면(팀 동그라미 · 📊 우리 팀 한눈에)과 아래 탭은 그대로. 재는 자 check-homev2 [24] · check-growv2 [6].';
+var APP_BUILD='2026-11-24 23:40';
+var APP_BUILD_NOTE='🧠 <b>보장분석 전&후 만들기 › 제안서 설명자료</b>(판 X553). ◾ 「AI 보장분석」 은 메뉴 목록에서 빠져 <b>전&후 만들기 안</b>으로 들어갔습니다 — 이름 「전&후 만들기 · AI 리포트」. 세 화면 위에 같은 띠(🔀 전·후 · 📑 AI 리포트 · 🧠 제안서 설명자료). ◾ 🧠 보장분석·제안서 PDF 를 넣으면 <b>컨셉 카드</b>를 먼저 세우고 16:9 설명자료(장마다 대본 S)를 만듭니다 — 막대 합계는 앱이 계산, 자료에 없는 숫자는 확인 칸으로, 확인을 다 눌러야 고객용 PDF. ◾ 같이 실린 판: 🌱 신입 도움말(판 X551).';
 
 
 
@@ -25671,7 +25677,7 @@ var GB_AX=[
   fix:'시간을 정하세요. 오전 10시~11시는 전화만 합니다. 마음이 생길 때 하려면 안 하게 됩니다.'},
  {k:'cli', n:'고객', t:8,   u:'명', w:'최근 30일 새 고객 카드', tab:'clients', tn:'고객 365일',
   fix:'약속이 잡히면 끊자마자 카드를 만듭니다. 이따가는 없습니다.'},
- {k:'rep', n:'자료', t:8,   u:'건', w:'최근 30일 만든 자료',    tab:'bojang',  tn:'AI 보장분석',
+ {k:'rep', n:'자료', t:8,   u:'건', w:'최근 30일 만든 자료',    tab:'bojang',  tn:'전&후 만들기 · AI 리포트',
   fix:'만나기 전날 준비합니다. 당일 아침은 늦습니다. 준비 없이 나가면 그 상담은 이미 진 것입니다.'},
  {k:'stu', n:'공부', t:12,  u:'개', w:'합격한 주제',            tab:'growboard',tn:'배워서 터치할 것',
   fix:'하루 한 장만 읽습니다. 읽고 그날 한 명에게 써 봅니다. 안 써 본 화법은 상담에서 안 나옵니다.'}
@@ -27198,7 +27204,7 @@ var FP_ROLE=[
  ['고객 상황을 그림으로 보여 주기','재무&보장 상담자료','fp_deck'],
  ['부족액을 숫자로 못 박기','재무설계 계산기','finance'],
  ['말을 어떻게 꺼낼지','재무설계 실전화법서','fp_talk'],
- ['보장에 뚫린 곳 찾기','AI 보장분석','bojang'],
+ ['보장에 뚫린 곳 찾기','전&후 만들기 · AI 리포트','bojang'],
  ['들은 것을 남기기','상담카드·팩트파인딩','fact_find'],
  ['고객 파일로 쌓기','고객 365일','clients']
 ];
@@ -47716,7 +47722,7 @@ var AC_ROAD=[
  {r:'DAY 15~28',p:'3~4주',goal:'접촉(TA) · 팩트파인딩(AP)',focus:'약속 만들기 · 질문으로 문제 발견',out:'TA 스크립트 · 상담카드 10건',grow:'연락 → 상담 연결',
   tools:[['fact_find','📝','상담카드·팩트파인딩'],['cs_assist','💬','AI 상담 어시스턴트'],['crm','🗄️','DB 통합 CRM']]},
  {r:'DAY 29~42',p:'5~6주',goal:'보장 풀컨셉',focus:'치료비 통장 · 간병 · 생활위험',out:'보장분석 3건 · 3분 설명',grow:'상품 설명 → 가계 방어 설명',
-  tools:[['bojang','📑','AI 보장분석'],['treatpay','💉','치료비 지급지도'],['interpret','🧠','보험 해석']]},
+  tools:[['bojang','📑','전&후 만들기 · AI 리포트'],['treatpay','💉','치료비 지급지도'],['interpret','🧠','보험 해석']]},
  {r:'DAY 43~56',p:'7~8주',goal:'저축 풀컨셉',focus:'현금흐름 · 목적자금 · 세금 · 유동성',out:'8통장 진단 5건 · 목적별 설계표',grow:'수익률 중심 → 목적 중심',
   tools:[['wallets','🗺️','8통장 진단지도'],['finance','📊','재무설계 계산기'],['calc','🧮','실무 계산기']]},
  {r:'DAY 57~70',p:'9~10주',goal:'연금 · 투자 · 재무지도',focus:'위험성향 · 노후 · 보장과 저축 연결',out:'풀컨셉 제안서 1건',grow:'상품 판매 → 삶의 순서 설계',
@@ -47761,7 +47767,7 @@ var AC_WEEKS=[
   study:'진단 · 수술 · 치료 · 소득공백 구조',
   out:'보장분석 3건 · 3분 설명 · 사례 2개',criterion:'보장을 담보가 아니라 가계 방어 구조로 설명한다',
   crm:'AI 보장분석으로 기존계약의 강점을 먼저 정리하고, 치료비 지급지도로 "언제 얼마가 필요한가"를 보여 줍니다.',
-  tools:[['bojang','📑','AI 보장분석'],['treatpay','💉','치료비 지급지도'],['interpret','🧠','보험 해석']],
+  tools:[['bojang','📑','전&후 만들기 · AI 리포트'],['treatpay','💉','치료비 지급지도'],['interpret','🧠','보험 해석']],
   todo:['보장분석 3건 실행 후 고객 365일에 저장','치료비 지급지도로 소득공백 설명 연습','기존계약 강점을 먼저 말하는 순서 지키기']},
 
  {n:6,stage:'보장Ⅱ',topic:'실손 · 간병 · 재가급여 · 생활위험',
@@ -47821,7 +47827,7 @@ var AC_STUDY=[
  ['접촉 TA','첫 멘트·거절 대응·재접촉',3,'cs_assist','AI 상담 어시스턴트'],
  ['팩트파인딩','소득·가족·보장·걱정·우선순위',4,'fact_find','상담카드·팩트파인딩'],
  ['치료비 통장','암·뇌·심 진단/수술/치료/소득공백',5,'treatpay','치료비 지급지도'],
- ['보장분석','강점·공백·중복·구조위험',5,'bojang','AI 보장분석'],
+ ['보장분석','강점·공백·중복·구조위험',5,'bojang','전&후 만들기 · AI 리포트'],
  ['생활보장','실손·간병·재가·운전자·화재',6,'ref_kcd','질병코드·특약'],
  ['청구 실무','지급명세서·서류·부지급 대응',6,'claims','청구·사후관리'],
  ['현금흐름','소득·지출·비상금·부채·저축여력',7,'wallets','8통장 진단지도'],
@@ -48415,7 +48421,7 @@ var MAN_CASE=[
   s:['<b>AI 보장분석</b>에 PDF 를 올립니다 — 계약과 담보가 그대로 섭니다.',
      '숫자가 이상하면 <b>보험 해석</b>에서 담보 하나하나를 봅니다.',
      '고객에게 보여 줄 것은 <b>비포&애프터</b>로 만듭니다.'],
-  c:[['bojang','📑','AI 보장분석'],['interpret','🧠','보험 해석'],['frmake','🔀','보장분석 전&후 만들기']],
+  c:[['bojang','📑','전&후 만들기 · AI 리포트'],['interpret','🧠','보험 해석'],['frmake','🔀','보장분석 전&후 만들기']],
   t:'가지고 계신 보장분석 PDF 를 하나 올려 보십시오. <b>읽은 값 표로</b> 를 눌러 원문과 견줘 보시면, 무엇을 읽고 무엇을 못 읽었는지 그대로 보입니다.'},
 
  {k:'reorg',ic:'🔄',w:'「보험을 정리하고 싶다」 고 한다',
@@ -48735,7 +48741,7 @@ function manFlow(){
   var h='<div style="font-size:var(--t6);color:var(--t-ink);line-height:1.7">APEX YUN PRO 는 <b>‘보험을 파는 설계사가 아닌, 삶을 설계하는 설계사’</b>를 위한 올인원 워크스페이스입니다. 상담 준비 → 상담 → 설계·시각화 → 클로징 → 청구·사후관리 → 콘텐츠까지 한 흐름으로 씁니다. <b>메뉴 갈래가 이 흐름 순서대로</b> 놓여 있습니다 — 위에서 아래로 내려가면 그게 하루입니다.</div>';
   h+=manUL([
     '<b>아침 (15분)</b> · 🌅 하루 시작 · '+manChip('home','🏠','홈')+'에서 오늘 할 일과 팔로업을 봅니다. '+manChip('airep','🧭','TFA 업무관리')+'에서 오늘 터치할 사람이 뜹니다. 리더는 '+manChip('report','📊','대표 브리핑')+'으로 팀 상태를 확인합니다.',
-    '<b>상담 전 (20분)</b> · 🗂 내 고객 → 🛡 증권 분석 · '+manChip('clients','🗂️','고객 365일')+'에서 지난 기록을 확인하고, '+manChip('bojang','📑','AI 보장분석')+'에 증권 PDF 를 넣어 <b>19~21장짜리 리포트</b>를 뽑습니다. 더 파고들 때 '+manChip('interpret','🧠','보험 해석')+' · '+manChip('treatpay','💉','치료비 지급지도')+' · '+manChip('wallets','🗺️','8통장 지도')+'.',
+    '<b>상담 전 (20분)</b> · 🗂 내 고객 → 🛡 증권 분석 · '+manChip('clients','🗂️','고객 365일')+'에서 지난 기록을 확인하고, '+manChip('bojang','📑','전&후 만들기 · AI 리포트')+'에 증권 PDF 를 넣어 <b>19~21장짜리 리포트</b>를 뽑습니다. 더 파고들 때 '+manChip('interpret','🧠','보험 해석')+' · '+manChip('treatpay','💉','치료비 지급지도')+' · '+manChip('wallets','🗺️','8통장 지도')+'.',
     /* 🧭 판 X350 — 짧게(check-read 80자). */
     '<b>상품 고를 때</b> · '+manChip('insight','🧭','상품전략기')+'에서 이번 달 신상품·추천 순위를 봅니다.',
     '<b>상담 중</b> · 💬 상담 도구 · '+manChip('wallets','🗺️','8통장 진단')+'으로 현황을 짚고, '+manChip('cs_needs','⚡','니즈 시뮬레이터')+' · '+manChip('cs_assist','💬','AI 어시스턴트')+'로 니즈를 환기한 뒤 '+manChip('finance','📊','재무설계 계산기')+'의 <b>팩트파인딩 → 재무설계 PPT</b>를 한 장씩 넘기며 설명하고, '+manChip('frmake','🔀','보장분석 전&후 만들기')+'로 전후를 보여줍니다.',
@@ -48765,7 +48771,7 @@ var MAN_MAP=[
      chips:[['clients','🗂️','고객 365일'],['fact_find','📝','상담카드·팩트파인딩'],['crm','🗄️','DB 통합 CRM']],
      how:'고객 365일은 담당자별로 갈라져 있고 이름으로 바로 찾습니다. CRM 에서 배정받은 DB 를 고객 365일로 넘길 수 있습니다.'},
     {no:4,ic:'🛡',cat:'증권 분석',when:'만나기 전, 혼자 뜯어볼 때',
-     chips:[['bojang','📑','AI 보장분석'],['frmake','🔀','보장분석 전&후 만들기'],['compare','📊','제안서 비교'],['onecmp','💯','한장 보험료 비교'],['ai_prop','🧾','AI 제안서 생성'],['katalk','💬','제안서 카톡설명'],['interpret','🧠','보험 해석'],['treatpay','💉','치료비 지급지도'],['wallets','🗺️','8통장 진단지도'],['sangdam','📋','보장분석 상담자료']],
+     chips:[['bojang','📑','전&후 만들기 · AI 리포트'],['frmake','🔀','보장분석 전&후 만들기'],['compare','📊','제안서 비교'],['onecmp','💯','한장 보험료 비교'],['ai_prop','🧾','AI 제안서 생성'],['katalk','💬','제안서 카톡설명'],['interpret','🧠','보험 해석'],['treatpay','💉','치료비 지급지도'],['wallets','🗺️','8통장 진단지도'],['sangdam','📋','보장분석 상담자료']],
      how:'증권을 받아서 분석하고 제안서까지 만드는 전 과정입니다. 열 개가 한 칸에 모여 있어 왔다 갔다 하지 않습니다. 부족한 담보가 나오면 한장 보험료 비교로 어느 회사가 그 담보를 제일 싸게 주는지 바로 봅니다.'},
     {no:5,ic:'💬',cat:'상담 도구',when:'고객 앞에서 쓸 때',
      chips:[['cs_assist','💬','AI 상담 어시스턴트'],['cs_needs','⚡','니즈 시뮬레이터'],['ins_asst','🩺','보험 비서'],['cs_gso','🤖','금소법 AI'],['kijun','📏','보험의 기준 · 셀프 점검'],['utphoto','📸','비대면 상담사진·멘트'],['fp_deck','📊','재무&보장 상담자료'],['dz_guide','🩺','질병 보험가이드'],['mikki_talk','🎣','미끼상품&접촉전략'],['finance','📊','재무설계 계산기'],['calc','🧮','실무 계산기']],
@@ -48940,7 +48946,7 @@ function manFrame(){
 function manProcess(){
   var h='<div style="font-size:var(--t6);color:var(--t-sub);line-height:1.6;margin-bottom:4px">모든 상담은 이 5단계를 따릅니다. 신입에게는 <b>답만 주지 말고 “왜 이 질문을 하는지”</b>를 함께 가르칩니다. 고객의 핵심 문제는 <b>최대 3개</b>로 요약합니다.</div>';
   h+=manStepBox(1,'관계·신뢰 (라포)','상담의 목적을 함께 합의합니다. 파는 자리가 아니라 “현재를 점검하고 빈틈을 함께 찾는 자리”임을 정합니다.');
-  h+=manStepBox(2,'현황 파악','증권·현금흐름·건강을 확인합니다. '+manChip('clients','🗂️','고객 365일')+manChip('interpret','🧠','보험 해석')+manChip('bojang','📑','AI 보장분석')+' <span style="color:var(--t-sub)">— 기존 계약의 강점을 먼저 인정합니다.</span>');
+  h+=manStepBox(2,'현황 파악','증권·현금흐름·건강을 확인합니다. '+manChip('clients','🗂️','고객 365일')+manChip('interpret','🧠','보험 해석')+manChip('bojang','📑','전&후 만들기 · AI 리포트')+' <span style="color:var(--t-sub)">— 기존 계약의 강점을 먼저 인정합니다.</span>');
   h+=manStepBox(3,'핵심 문제 3개로 요약','8통장 지도로 빈틈을 뽑아 <b>가장 중요한 문제 3개</b>로 정리합니다. '+manChip('wallets','🗺️','8통장 진단지도')+' <span style="color:var(--t-sub)">— 많이 나열하지 않고 우선순위를 정합니다.</span>');
   h+=manStepBox(4,'설계·시각화','문제를 숫자와 그림으로 “보이게” 만듭니다. '+manChip('finance','📊','재무설계 계산기')+manChip('frmake','🔀','보장분석 전&후 만들기')+manChip('treatpay','💉','치료비 지급지도')+' <span style="color:var(--t-sub)">— A/B/C 대안을 제시하고 고객이 고르게 합니다.</span>');
   h+=manStepBox(5,'클로징·사후관리 약속','결정을 정리해 발송하고 사후관리를 약속합니다. '+manChip('katalk','💬','제안서 카톡설명')+manChip('claims','🧾','청구·사후관리')+' <span style="color:var(--t-sub)">— 발송 전 준법감시 확인. 고위험 제안은 본부장 승인 후 발송.</span>');
@@ -49175,7 +49181,7 @@ function manLead(){
     '<b>전화를 안 건다</b> · 이유는 셋입니다 — 시간이 없다 / 걸 데가 없다 / 걸기가 두렵다. <b>어느 쪽인지부터 가릅니다.</b> 시간이면 콜 시간을 고정하고, 걸 데가 없으면 미접촉 DB 를 같이 열고, 두려우면 옆에서 한 통을 같이 듣습니다(끼어들지 않습니다).',
     '<b>통화는 도는데 약속이 없다</b> · 통화량 문제가 아니라 <b>첫 30초</b>입니다. 실제로 어떻게 여는지 말해보게 합니다. "언제 시간 되세요"로 묻고 있으면 그게 원인입니다 — <b>두 개 중 고르게</b> 바꿉니다.',
     '<b>약속은 잡히는데 못 만난다</b> · 잡은 날과 만나는 날 사이가 <b>5일</b>을 넘으면 절반이 사라집니다. 당일 확인 문자, 전날 한 번 더.',
-    '<b>상담은 하는데 안 넘어간다</b> · 대개 설명이 깁니다. <b>고객이 말한 걱정 하나</b>로 좁히고 '+manChip('bojang','📑','AI 보장분석')+' · '+manChip('frmake','🔀','보장분석 전&후 만들기')+'로 그 하나만 눈에 보이게 만듭니다. 상품을 더 넣지 않습니다 — 선택지가 늘면 결정이 미뤄집니다.'
+    '<b>상담은 하는데 안 넘어간다</b> · 대개 설명이 깁니다. <b>고객이 말한 걱정 하나</b>로 좁히고 '+manChip('bojang','📑','전&후 만들기 · AI 리포트')+' · '+manChip('frmake','🔀','보장분석 전&후 만들기')+'로 그 하나만 눈에 보이게 만듭니다. 상품을 더 넣지 않습니다 — 선택지가 늘면 결정이 미뤄집니다.'
   ]);
 
   h+='<div style="font-weight:800;color:var(--t-ink);font-size:var(--t6);margin:16px 0 4px">대화 원칙 4가지</div>';
@@ -51127,7 +51133,7 @@ var RT_STEP=[
    {s:'무엇부터 물어볼지 모르겠습니다',w:'만나기 전날',tab:'fact_find',tn:'상담카드·팩트파인딩',
     how:'네 칸을 미리 열어 둡니다. 화면에 있는 순서대로 물으면 됩니다. 외울 필요가 없습니다.',
     out:'질문 순서'},
-   {s:'증권을 받았습니다',w:'받은 그 자리',tab:'bojang',tn:'AI 보장분석',
+   {s:'증권을 받았습니다',w:'받은 그 자리',tab:'bojang',tn:'전&후 만들기 · AI 리포트',
     how:'사진을 올리면 어떤 담보가 있고 어디가 비었는지 정리됩니다. 그 자리에서 판단은 하지 않습니다. 읽어만 줍니다.',
     out:'보장 분석표'},
    {s:'건강 이야기가 나왔습니다',w:'상담 중',tab:'med_disclosure',tn:'알릴의무 필터',
@@ -57748,6 +57754,7 @@ var TAB_ELSEWHERE={insta:{
   go:'biz_news', b:'📅 오늘의 카드뉴스로'}};
 function tabElsewhereHtml(tab){
   var e=TAB_ELSEWHERE[tab]; if(!e)return '';
+  if(typeof e.html==='function')return e.html();   /* 보장분석 전&후 세 칸 띠 (app/ba-pd.js) */
   return '<div class="notice" style="margin:0 0 14px"><b>'+e.t+'</b><br>'+e.d+
     '<div class="btn-row" style="margin-top:9px"><button type="button" class="btn btn-primary" '+
     'style="padding:6px 12px;font-size:var(--t6)" onclick="go(\''+e.go+'\')">'+e.b+'</button></div></div>';
@@ -71474,7 +71481,7 @@ function osLandingJourney(){
 }
 function osLoginGateHtml(){
   var logo='<svg viewBox="0 0 240 220" fill="#fff" style="width:38px;height:36px" aria-hidden="true"><path d="M120 26 212 190 168 190 120 104 72 190 28 190Z"/><path d="M120 120 176 214 146 214 120 168 94 214 64 214Z"/></svg>';
-  var chips=['치료비 통장','AI 보장분석','제2의 두뇌','정책자금','90일 아카데미'];
+  var chips=['치료비 통장','보장분석 전&후','제2의 두뇌','정책자금','90일 아카데미'];
   var chipH='';for(var i=0;i<chips.length;i++){chipH+='<span style="font-size:var(--t6);font-weight:700;background:rgba(255,255,255,.15);padding:5px 11px;border-radius:999px">'+esc(chips[i])+'</span>';}
   var loginCard='<div style="background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.28);padding:26px 24px;width:100%;max-width:380px;box-sizing:border-box">'+
     '<div style="font-size:var(--t3);font-weight:800;color:var(--t-ink);margin-bottom:4px">로그인 후 이용하세요</div>'+
@@ -74696,7 +74703,7 @@ function osQuickGuideBody(){
   var member=[
     ['🤖','APEX 자비스 모드 — 막히면 여기','화면 전부가 한 장에 있습니다. 서랍(☰) 안내 칸의 파란 칸. 막히는 것을 적으면 「자비스」가 순서를 짜서 지도에 불을 켜 주고, 듣기 싫어도 짚어야 할 말까지 해 줍니다. 🎤 를 누르면 말로 물어봐도 됩니다.'],
     ['🧠','윤시현의 두뇌 — 막힘 없는 상담','상담이 막히면 질문만 입력 → 약관·화법·전략을 즉답. "지식 추가"에 내 노하우를 넣을수록 더 나처럼 답합니다.'],
-    ['📑','AI 보장분석','고객 증권을 올리면 담보 공백·중복을 찾아 1:1 리포트. 리모델링 상담의 결정적 무기.'],
+    ['📑','보장분석 전&후 · AI 리포트','고객 증권을 올리면 담보 공백·중복을 찾아 1:1 리포트. 리모델링 상담의 결정적 무기.'],
     ['📝','고객 상담카드','상담 현장에서 정보를 한 장으로 취합 → AI 니즈분석·상담지 인쇄까지.'],
     ['📊','재무설계 계산기','은퇴자금·필요보장액을 즉석 계산 → "숫자로" 니즈를 확정.'],
     ['🃏','카드뉴스·블로그','이미지만 넣으면 5장 카드뉴스, 주제만 넣으면 SEO 블로그가 자동.'],
@@ -75982,7 +75989,7 @@ function osRepListLoad(){var sb=osClient(),host=$('oscReps');if(!sb||!OSC.curren
    ⚠ 여기가 둘이면 한쪽만 고쳐집니다. 실제로 그랬습니다 — 목록 이름표는 'baba' 만
      알고 담는 쪽은 'ba_state' 라, 서류 탭에 날 이름 <b>📄 ba_state</b> 가 떴습니다.
    ★ <b>모르는 갈래는 그대로 적습니다</b> — 지어내지 않습니다 (1번).            */
-var OS_REP_NAME={bojang:'📑 AI 보장분석',baba:'🔄 보장분석 전·후',
+var OS_REP_NAME={bojang:'📑 전&후 · AI 리포트',baba:'🔄 보장분석 전·후',
                  finance:'📊 재무설계',consult:'🎯 컨설팅',fact_find:'📝 상담카드'};
 try{ OS_REP_NAME[CHK_KIND]='🔄 보장분석 전·후'; }catch(eRK){}
 function osRepKindName(k){ return OS_REP_NAME[k]||('📄 '+(k||'자료')); }
@@ -92743,6 +92750,7 @@ try{osBootAuth();}catch(e){}
 try{osNoticeLoad();}catch(e){}
 </script>
 <script src="apex-aplus-disease.js"></script>
+<script src="ba-pd.js"></script>
 <script src="apex-goji-open.js?v=20261117a"></script>
 <script src="apex-cn-themes.js?v=20261104a"></script>
 <script src="insight-inbox.js?v=20261109a"></script>
