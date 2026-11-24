@@ -601,6 +601,7 @@
   }
 
   var CSS =
+    ':root{color-scheme:light}' +
     '*{box-sizing:border-box;margin:0;padding:0}' +
     'body{font-family:-apple-system,"Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",sans-serif;' +
       'color:#191F28;background:#F2F4F6;-webkit-text-size-adjust:100%}' +
@@ -720,7 +721,12 @@
     STD.forEach(function (gp, i) { 쪽.push(묶음장(gp, C, (i + 1) + ' / ' + STD.length)); });
     쪽.push(그래프장(STD, C));
 
-    return '<!doctype html><html lang="ko"><head><meta charset="utf-8">' +
+    /* ★ 판 X538 — <b>흰색 고정</b>. 다크 CSS 는 :root:not([data-theme="light"]) 로
+       가려져 있어, 뿌리에 한 번 못 박지 않으면 폰 다크에서 글이 안 보입니다.
+       뽑아낸 문서에는 ui.css 가 안 따라오므로 <b>제 머리에도</b> 밝다고 적습니다
+       (check-lightmode 가 봅니다). */
+    return '<!doctype html><html lang="ko" data-theme="light"><head><meta charset="utf-8">' +
+      '<meta name="color-scheme" content="light">' +
       '<meta name="viewport" content="width=device-width,initial-scale=1">' +
       '<title>보장분석 담보별 분리자료 — ' + esc(nm) + ' · ' + esc(날) + '</title>' +
       '<style>' + CSS + '</style></head><body>' +
