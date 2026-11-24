@@ -358,7 +358,10 @@
       '#hv2Sheet .say{background:#fff;border-radius:16px;padding:16px 18px;font-size:16px;line-height:1.6;white-space:pre-line;margin-top:10px}',
       '#hv2Sheet .hint{font-size:13px;color:var(--blue);background:var(--blue-l);border-radius:10px;padding:8px 10px;margin-top:10px}',
       '#hv2Sheet .btn{margin-top:8px}',
-      '#hv2Sheet h2{font-size:16px;font-weight:800;margin:18px 2px 8px}'
+      '#hv2Sheet h2{font-size:16px;font-weight:800;margin:18px 2px 8px}',
+      '#hv2Sheet .nwh{margin-top:12px;background:#ECFDF3;border-radius:14px;padding:12px 14px;font-size:15px;line-height:1.5;color:#05603A}',
+      '#hv2Sheet .nwh div+div{margin-top:6px}',
+      '#hv2Sheet .nwh b{display:block;font-size:13px;color:#027A48;margin-bottom:1px}'
     ];
     var st = d.createElement('style'); st.id = 'hmV2Css'; st.textContent = C.join('\n');
     d.head.appendChild(st);
@@ -776,13 +779,23 @@
     var N = T(function () { return g.arStageN(who()); }, null);
     if (!N) return '';
     var S = T(function () { return g.hmSteps(); }, []) || [];
-    return '<div class="sec"><b>영업 한 바퀴</b><small>칸을 누르면 그 단계 분들</small></div><div class="road2">' + ROAD.map(function (r, i) {
+    return '<div class="sec"><b>영업 한 바퀴</b><small>' + (newOn() ? '🌱 칸을 누르면 할 일 · 하는 법' : '칸을 누르면 그 단계 분들') + '</small></div><div class="road2">' + ROAD.map(function (r, i) {
       var n = 0, hot = false;
       r[1].forEach(function (k) { n += (N.c[k] || 0); });
       S.forEach(function (x) { if (x.k === 'db' && r[1].indexOf(String(x.tk || '')) >= 0) hot = true; });
       return '<button type="button" class="' + (hot ? 'hot' : '') + '" onclick="HOME_V2.stage(' + i + ')"><b>' + n + '</b><span>' + r[0] + '</span></button>';
     }).join('') + '</div>';
   }
+  /* 🌱 신입 도움말 (판 X551 · 단순화 순서 ⑤ 「신입 / 설계사 / 지점장 보기」 · 시안 9차 role 'new' 의 「이 칸에서 할 일 — …」).
+     사장님이 고르신 길(2026-11-24) 「🙋 나 시트에 스위치」 — 앱엔 「신입」 직급이 없어 <b>켜는 사람이 정합니다</b>.
+     ★ 켜면: 영업 한 바퀴 머리 「🌱 칸을 누르면 할 일 · 하는 법」 · 단계 시트 맨 위 「🌱 이 칸에서 할 일 / 어떻게」.
+       글은 <b>APEX_STAGE.aimText · wayText 그대로</b>(화법 시트 · TA 스크립트와 같은 원본 · 지어낸 말 없음).
+     ★ 이 기기에 · 사람마다(apex_newhelp_<navWho> · 즐겨찾기와 같은 자리) · 서버 안 나감. 기본은 꺼짐.
+     ★ 지점장 쪽(팀 동그라미 · 📊 우리 팀 한눈에)은 판 X528 그대로 — 아래 탭 띠는 그대로. */
+  var NEW_KEY = 'apex_newhelp_';
+  function newKey() { return NEW_KEY + (T(function () { return g.navWho(); }, '') || 'local'); }
+  function newOn() { return T(function () { return g.localStorage.getItem(newKey()); }, null) === '1'; }
+  function newSet(v) { try { if (v) g.localStorage.setItem(newKey(), '1'); else g.localStorage.removeItem(newKey()); } catch (e) {} }
   /* 🔁 영업 한 바퀴 칸 → 그 단계 분들 + 이 단계에서 쓰는 것 (시안 9차 openStage · 판 X513)
      ★ 분들 = 배정 DB(AR.db) — 칸 숫자를 센 자(arStageN)와 <b>같은 거름</b>(지금 보는 분 · 단계)이라 숫자와 줄 수가 같습니다.
      ★ 한 분을 누르면 자비스 · 추천 동선과 같은 길(hmRtPerson → 그분 한 장). 쓰는 것 = APEX_STAGE.tools(단계) 그대로.
@@ -800,8 +813,10 @@
     var aim = strip(T(function () { return g.APEX_STAGE.aimText(K); }, '') || '');
     var tools = (T(function () { return g.APEX_STAGE.tools(K); }, []) || []).filter(function (x) { return x && x.id && can(x.id); });
     var dTxt = function (d) { return d == null || d === 9999 ? '연락 기록 없음' : (d === 0 ? '오늘 연락' : d + '일 전 연락'); };
+    var nw = newOn(), way = nw ? strip(T(function () { return g.APEX_STAGE.wayText(K); }, '') || '') : '';
     var h = '<h1>' + E(R[0]) + ' <span style="color:var(--sub2);font-size:17px">' + E(R[1].join(' · ')) + '</span></h1>' +
-      '<div class="sub">' + E([aim, '모두 ' + L.length + '명'].filter(Boolean).join(' · ')) + '</div>';
+      '<div class="sub">' + E([nw ? '' : aim, '모두 ' + L.length + '명'].filter(Boolean).join(' · ')) + '</div>' +
+      (nw && (aim || way) ? '<div class="nwh">' + (aim ? '<div><b>🌱 이 칸에서 할 일</b>' + E(aim) + '</div>' : '') + (way ? '<div><b>어떻게</b>' + E(way) + '</div>' : '') + '</div>' : '');
     h += '<div class="list" style="margin-top:12px">' + (L.length ? L.slice(0, MAX).map(function (r) {
       return '<button type="button" class="li" onclick="HOME_V2.close();hmRtPerson(\'' + Q(r.id) + '\')"><div class="tile">' + E(String(nameOf({ t: r.name || '' })).replace(/^\s*\[[^\]]*\]\s*/, '').charAt(0) || '·') + '</div><div class="tx"><div class="t1">' + E(nameOf({ t: r.name || '' })) + '님</div>' +
         '<div class="t2">' + E([r.stage || '미접촉', [r.region, r.dong].filter(Boolean).join(' '), r.appt ? '약속 ' + String(r.appt).slice(5, 16).replace('T', ' ') : dTxt(r.days)].filter(Boolean).join(' · ')) + '</div></div><span class="ar">›</span></button>';
@@ -1589,6 +1604,8 @@
     jv: jvSheet,
     ai: aiSheet,
     aiAdd: aiAddSheet,
+    newOn: newOn,
+    newHelp: function () { var v = !newOn(); newSet(v); try { if (typeof g.toast === 'function') g.toast(v ? '🌱 신입 도움말을 켰어요 — 영업 한 바퀴 칸을 눌러 보세요' : '신입 도움말을 껐어요'); } catch (e) {} try { paint(); } catch (e2) {} return v; },
     aiQ: function (v) { AIQ = String(v || ''); var b = el('hv2AiL'); if (b) b.innerHTML = aiPickList(); },
     aiPut: function (id) {
       var L = aiMine(), i = L.indexOf(id);
