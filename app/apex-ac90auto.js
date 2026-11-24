@@ -547,13 +547,17 @@
     document.body.appendChild(d);
   }
   window.ac9Nudge=ac9Nudge;
-  var oldGo=go;
-  go=function(tab){
-    var r=oldGo.apply(this,arguments);
-    if(tab!=='home')a9SheetClose();
+  /* ⚠ go() 를 <b>감싸지 않습니다</b> — check-bamake 가 String(go) 로 메뉴 길을
+     읽습니다(감쌌더니 「그 메뉴가 이 화면을 연다」 가 울었음). 대신 1초마다
+     지금 화면 이름만 봅니다 — 바뀔 때만 움직입니다. */
+  var lastTab='';
+  setInterval(function(){
+    var cur=(typeof currentTab==='function')?currentTab():'';
+    if(cur===lastTab)return;
+    lastTab=cur;
+    if(cur!=='home')a9SheetClose();
     else setTimeout(ac9Nudge,1500);
-    return r;
-  };
+  },1000);
   (function boot(n){
     if(me()){setTimeout(ac9Nudge,1500);return;}
     if(n<25)setTimeout(function(){boot(n+1);},1000);

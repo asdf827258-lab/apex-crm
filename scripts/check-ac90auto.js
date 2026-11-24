@@ -281,6 +281,11 @@ const SEED = () => {
     fresh(); ac9Nudge(); a9Later(0); ac9Nudge(); out.rest = has();
     fresh(); ac9FiveDone('rec'); ac9Nudge(); out.done = has();
     fresh(); ac9Nudge(); a9Start(); out.start = { sheet: has(), view: AC.view };
+    /* 화면을 바꾸면 저절로 — go() 를 감싸지 않고 1초마다 지금 화면만 본다 */
+    fresh(); window.currentTab = () => 'crm'; await new Promise(r => setTimeout(r, 1300));
+    window.currentTab = () => 'home'; await new Promise(r => setTimeout(r, 3000)); out.watchOn = has();
+    window.currentTab = () => 'crm'; await new Promise(r => setTimeout(r, 1300)); out.watchOff = has();
+    out.goClean = !/ac9|a9Sheet/.test(String(go));
     fresh(); window.__a9Force = false; ac9Nudge(); out.webdriver = has();
     window.currentTab = keepTab; fresh();
     return out;
@@ -291,6 +296,8 @@ const SEED = () => {
   is(!N.rest, '「오늘은 쉴게요」 → 오늘은 안 뜬다');
   is(!N.done, '오늘 5분을 했으면 안 뜬다');
   is(!N.start.sheet && N.start.view === 'five', '「지금 5분 하기」 → 시트 닫고 오늘 5분 화면으로');
+  is(N.watchOn && !N.watchOff, '홈으로 오면 저절로 뜨고, 다른 화면으로 가면 저절로 닫힌다');
+  is(N.goClean, '★ go() 를 감싸지 않는다 — check-bamake 가 go 글을 읽는다');
   is(!N.webdriver, '점검 브라우저에서는 저절로 안 뜬다 — 다른 점검을 가리지 않게');
 
   sec('[12] 리더 팀 성장표');
