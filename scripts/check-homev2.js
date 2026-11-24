@@ -18,6 +18,7 @@
      [7] ★  옛 홈은 지우지 않고 숨기기만(CSS) — 「예전 오늘 칸 펼치기」 가 있다 · 그리다 터지면 예전 화면
      [8] ★  옷은 .hv2 / #hv2Sheet 아래로만 — 앱의 .card · .btn 같은 옷을 덮지 않는다
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
+     [27] ★★ 판 X558 — 📍 카드에 지금 상황(cmSave 그대로) · ⚙ 상황별 추천 메뉴 더하기 = 대표 · 관리자만(osIsAppAdmin) · 저장 osCfgSet('care_apps') → CUS_V2.appsBy 한 곳
      [26] ★★ 판 X557 — 🎯 오늘의 미션 다섯(인사 밑 한 판): 끝났나 = 실행 체크판(hmMsCk) · 오늘 약속 카드 그대로 · 이름은 CK_ITEMS 한 곳 · ✓ 했어요 = hmMsDid
      [24] ★  판 X551 — 🌱 신입 도움말(🙋 나 스위치 · 이 기기): 영업 한 바퀴 머리 · 단계 시트 「이 칸에서 할 일 / 어떻게」 = APEX_STAGE.aimText · wayText 그대로 · 기본 꺼짐
      [23] ★  판 X549 — 자비스 시트에 사장님이 고른 메뉴 더하기(＋ 메뉴 더하기 · ✕ 빼기 · ▲ 위로) — 이 기기 · 사람마다(즐겨찾기와 같은 자리) · 일곱 · 메뉴 표 · 서랍 그대로
@@ -590,7 +591,7 @@ console.log('\n[19] 📰 오늘 소식 · 🙋 물어볼 것 · 🧭 상황 시�
   is(/hmOpen\('next:c2:'\)/.test(t) && /hmOpen\('db:d1:AP'\)/.test(t) && !/touch:c1:/.test(t) && /class="pcard"><button type="button" class="mini"/.test(t), '오늘 볼 분 — 그 상황인 분만(doorOf · 위 상품전략 시트와 같은 자) · 누르면 이분 한 장');
   X.g.HOME_V2.insK('nope');
   is(said.some(x => x[0] === 'door' && x[1] === 'nope'), '상품이 없는 상황이면 예전처럼 상품전략기로');
-  const ws = sc.slice(sc.indexOf('  function newsHtml('), sc.indexOf('  function railHtml('));
+  const ws = sc.slice(sc.indexOf('  function newsHtml('), sc.indexOf('  function isBoss(')) + sc.slice(sc.indexOf('  function toolsOf('), sc.indexOf('  function railHtml('));   /* 판 X558 — 그 사이 📍 지금 상황 · ⚙ 추천 고치기는 있던 cmSave · osCfgSet 을 부름([27] 이 봄) */
   is(!/setItem|cmSave|\.rpc\(|\.from\(|nlLoad|hmIgSet/.test(ws), '두 줄은 읽기만 — 저장 · 뉴스 받아 오기를 새로 안 부름(답은 cqa 단추가 있던 자리로)');
 }
 
@@ -691,7 +692,7 @@ console.log('\n[22] 🧰 오늘 카드 「이분께 맞는 도구」 (판 X532 �
   const c0 = card(0), c1 = card(1), c2 = card(2), c3 = card(3);
   is(/class="qtools"><div class="lb">🧰 이분께 맞는 도구<small>「결혼 준비」 · 첫 만남 단계<\/small>/.test(c0) && c0.indexOf('8가지 통장 진단') < c0.indexOf('재무설계 계산기') && c0.indexOf('재무설계 계산기') < c0.indexOf('팩트파인딩') && /onclick="go\('wallets'\)"/.test(c0),
     '고객 카드 — 상황(결혼 준비) 도구 먼저 → 그분 배정 줄 단계(첫 만남) 도구 · 까닭 꼬리표 · 누르면 그 화면');
-  is((c0.match(/<button type="button" onclick="go\('/g) || []).length === 3 && !/상담 덱/.test(c0), '세 개까지 · 열 수 없는 화면(상담 덱)은 안 섬');
+  is((c0.match(/<button type="button" onclick="go\('/g) || []).length === 4 && !/상담 덱/.test(c0), '여섯까지(판 X558 — 상황 기본 둘 + 단계 둘 = 넷) · 열 수 없는 화면(상담 덱)은 안 섬');
   is(/🧰 이분께 맞는 도구<small>첫 만남 단계<\/small>/.test(c1) && /팩트파인딩/.test(c1) && /보장분석/.test(c1), '배정 DB 카드 — 그 줄 단계(AP) 도구(상황은 모름)');
   is(!/qtools/.test(c2), '상황도 단계도 모르면 줄째 안 섬(지어내지 않음)');
   is(!/qtools/.test(c3), '내 일정 카드엔 안 섬');
@@ -793,6 +794,54 @@ console.log('\n[26] 🎯 오늘의 미션 (판 X557 · 사장님 말씀 「오�
   is(JSON.stringify(A.said) === '[["did","d8"],["undo","d6"]]', '✓ 했어요 = 있던 hmMsDid · 되돌리기 = hmMsUndo (실행 체크판에 그대로)');
   const ms = sc.slice(sc.indexOf('  var MIS = ['), sc.indexOf('  var WAY = ['));
   is(ms.length > 200 && !/setItem|\.rpc\(|\.from\(|fetch\(|ckToggle/.test(ms) && !/전화 10통|카톡 10건|팩트파인딩 저장/.test(ms), '새 저장 없음 · 체크판 칸 이름을 이 파일에 다시 적지 않음');
+}
+
+console.log('\n[27] 📍 지금 상황 · ⚙ 상황별 추천 메뉴 (판 X558 · 사장님 말씀 「고객의 현재 상황이 안보이고 상황에 추천하는 메뉴 두개 정도 있는데 내가 추가할수 있도록 해줘 다른 사람은 손 못대게」)');
+{
+  const CV = fs.readFileSync(path.join(ROOT, 'app/cus-v2.js'), 'utf8');
+  const NAV = { wallets: ['💰', '8가지 통장 진단'], finance: ['📊', '재무설계 계산기'], fact_find: ['📝', '팩트파인딩'], bojang: ['🔍', '보장분석'], insight: ['🧭', '상품전략기'] };
+  const rows = [{ k: 'touch', id: 'c1', t: '홍길동', s: '30일째', key: 'touch:c1:' }, { k: 'touch', id: 'c2', t: '홍갑돌', s: '안부', key: 'touch:c2:' }, { k: 'db', tk: 'TA', id: 'd9', t: '홍길순', s: '', key: 'db:d9:TA' }];
+  const mk = boss => {
+    const X = box({ apex_home_v2: '1' }, '', { rows });
+    const said = [], cfg = {}, CM = { c1: { care: '결혼 준비' }, c2: {} };
+    Object.assign(X.g, {
+      meV2Open: () => {}, CM_CARE: ['', '결혼 준비', '출산 · 육아', '은퇴 준비'], cmOf: id => CM[id] || {}, crmDbsOf: () => [],
+      cmSave: (id, p, cb) => { said.push(['cmSave', id, JSON.stringify(p)]); Object.assign(CM[id], p); if (cb) cb(); },
+      osIsAppAdmin: () => !!boss, osCfgGet: (k, d) => (cfg[k] == null || cfg[k] === '' ? d : cfg[k]), osCfgSet: (k, v, cb) => { said.push(['cfg', k, v]); cfg[k] = v; if (cb) cb(); },
+      APEX_STAGE: { of: () => ({ know: [] }) }, navItemOf: id => (NAV[id] ? { id, icon: NAV[id][0], title: NAV[id][1] } : null),
+      TABS: [{ group: '상담 도구', items: Object.keys(NAV).map(id => ({ id, icon: NAV[id][0], title: NAV[id][1] })) }], CUS: {}, OSC: {}, CM_BASE: {}
+    });
+    vm.runInContext(CV, X.g);
+    X.g.HOME_V2.apply(dyn(X));
+    return { X, said, cfg, CM };
+  };
+  let A = mk(false), h = A.X.els.hv2.innerHTML;
+  const card = (hh, i) => { const a = hh.indexOf('data-i="' + i + '"'), b = hh.indexOf('data-i="' + (i + 1) + '"'); return hh.slice(a, b > 0 ? b : hh.length); };
+  is(/class="qsit"><span class="k">📍 지금 상황<\/span><b>결혼 준비<\/b><button type="button" onclick="HOME_V2\.sit\('touch:c1:'\)">바꾸기/.test(card(h, 0)) &&
+     /<span class="no">몰라요<\/span><button type="button" onclick="HOME_V2\.sit\('touch:c2:'\)">고르기/.test(card(h, 1)) && !/qsit/.test(card(h, 2)), '카드에 📍 지금 상황 — 아는 분은 상황 · 모르는 분은 「몰라요 · 고르기」 · 배정 DB 카드엔 안 섬(상황 칸 없음)');
+  A.X.g.HOME_V2.sit('touch:c2:'); let t = A.X.els.hv2Sheet.innerHTML;
+  is(/sitPut\('touch:c2:',0\)">결혼 준비/.test(t) && /sitPut\('touch:c2:',-1\)">없음 · 모름/.test(t), '고르기 시트 — 고객 화면과 같은 목록(CM_CARE)');
+  A.X.g.HOME_V2.sitPut('touch:c2:', 2);
+  is(JSON.stringify(A.said[0]) === '["cmSave","c2","{\\"care\\":\\"은퇴 준비\\"}"]', '고르면 있던 cmSave(id, {care}) 하나 — ' + JSON.stringify(A.said[0]));
+  is(!/추천 고치기/.test(h), '대표 · 관리자가 아니면 「⚙ 추천 고치기」 단추가 없음');
+  A.X.g.HOME_V2.careEdit('결혼 준비'); A.X.g.HOME_V2.carePut('bojang');
+  is(!A.said.some(x => x[0] === 'cfg'), '대표 · 관리자가 아니면 불러도 저장 안 함(서버 app_config 도 is_owner · is_admin 만 받음)');
+  A = mk(true); h = A.X.els.hv2.innerHTML;
+  is(/onclick="HOME_V2\.careEdit\('결혼 준비'\)">⚙ 추천 고치기/.test(card(h, 0)), '대표 · 관리자에겐 도구 줄에 「⚙ 추천 고치기」 (그 카드 상황으로 열림)');
+  A.X.g.HOME_V2.careEdit('결혼 준비'); t = A.X.els.hv2Sheet.innerHTML;
+  is(/🔒<\/span><div class="tx"><div class="t1">💰 8가지 통장 진단/.test(t) && /🔒<\/span><div class="tx"><div class="t1">📊 재무설계 계산기/.test(t) && /carePut\('bojang'\)/.test(t) && !/carePut\('wallets'\)/.test(t),
+    '편집 시트 — 기본(CARE_APP)은 🔒 그대로 · 더할 메뉴는 「다른 메뉴」 묶음에서(기본은 안 섬)');
+  A.X.g.HOME_V2.carePut('bojang'); A.X.g.HOME_V2.carePut('insight');
+  is(A.cfg.care_apps === '{"결혼 준비":["bojang","insight"]}', '더하기 = 있던 osCfgSet(\'care_apps\', …) — ' + A.cfg.care_apps);
+  const ap = A.X.g.CUS_V2.appsBy('결혼 준비', '', true).map(a => a.tab).join(',');
+  is(ap === 'wallets,finance,bojang,insight', '한 곳(CUS_V2.appsBy)에서 기본 뒤에 붙음 → 오늘 카드 · 고객 화면 「권할 것」 같이 — ' + ap);
+  A.X.g.HOME_V2.paint(); h = A.X.els.hv2.innerHTML;
+  is((card(h, 0).match(/<button type="button" onclick="go\('/g) || []).length === 4 && /go\('insight'\)/.test(card(h, 0)), '오늘 카드 도구 줄에 더한 것까지 섬');
+  A.X.g.HOME_V2.careUp(1); A.X.g.HOME_V2.careDel(1);
+  is(A.cfg.care_apps === '{"결혼 준비":["insight"]}', '▲ 위로 · ✕ 빼기 — ' + A.cfg.care_apps);
+  const cs = sc.slice(sc.indexOf('  function isBoss('), sc.indexOf('  function toolsOf('));
+  is(cs.length > 200 && !/setItem|\.rpc\(|\.from\(|fetch\(/.test(cs) && /g\.osCfgSet\(/.test(cs) && /g\.cmSave\(/.test(cs) && /CARE_KEY = 'care_apps'/.test(CV) && /careMine\(care\)\.forEach\(add\)/.test(CV),
+    '저장은 있던 두 문(cmSave · osCfgSet)뿐 · 새 서버 · 이 기기 저장 없음');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');

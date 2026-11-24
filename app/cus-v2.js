@@ -339,6 +339,16 @@
     '부모님 일': [{ tab: 'treatpay' }, { tab: 'wallets' }],
     '은퇴 준비': [{ tab: 'finance', track: 'w' }, { tab: 'finance', track: 'c' }]
   };
+  /* ➕ 판 X558 — 사장님 말씀 (2026-11-25) 「상황에 추천하는 메뉴 두개 정도 있는데 내가 추가할수 있도록 해줘 다른 사람은 손 못대게」.
+     위 CARE_APP(기본 한두 개)는 그대로 두고, 사장님이 더한 것을 <b>그 뒤에</b> 붙입니다.
+     ★ 담는 곳 = 있던 앱 설정 app_config 의 'care_apps' 한 칸(osCfgGet · 로그인할 때 OS.cfg 로 읽어 둠 · 팀 전체가 같이 봄).
+     ★ 「다른 사람은 손 못대게」 = 서버가 지킴 — app_config 쓰기는 is_owner() · is_admin() 만(라이브 정책 app_config_write 확인 2026-11-25).
+       고치는 화면(새 오늘 화면 HOME_V2.careEdit)도 대표 · 관리자에게만 단추를 냅니다. */
+  var CARE_KEY = 'care_apps';
+  function careMine(care) {
+    var o = T(function () { return JSON.parse(g.osCfgGet(CARE_KEY, '{}') || '{}'); }, {}) || {}, L = (o && o[care]) || [];
+    return (L && L.push ? L : []).filter(function (t) { return typeof t === 'string' && t; }).map(function (t) { return { tab: t, mine: 1 }; });
+  }
   var AGE_CAT = { '2030': 'hospital', '4050': 'cancer3', '60': 'care' };
   /* STG 여섯 칸과 같은 차례 (보장분석 칸은 AP 것을 씀) */
   var STAGE_KO = ['TA', 'AP', 'AP', 'PC', 'CS', '계약완료'];
@@ -373,8 +383,9 @@
       seen[key] = row; out.push(row);
     };
     (CARE_APP[care] || []).forEach(add);
+    careMine(care).forEach(add);
     K.forEach(function (k) { if (!(k.tab === 'finance' && k.track)) add(k); });
-    return out.slice(0, 4);
+    return out.slice(0, 6);
   }
   /* 권할 것 한 벌 — 요약 칸과 「자세히」 시트가 같이 씁니다(한 곳에서 고름) */
   function recPack(c) {
@@ -784,7 +795,7 @@
   function listBack() { return (ALLOWED && !on() && !robot()) ? '<div class="cv2 cl2b"><button type="button" class="vchip" onclick="cusV2ListUse(true)">✨ 새 고객 목록</button></div>' : ''; }
 
   g.CUS_V2 = { on: on, set: set, html: html, paint: paint, use: use, jump: jump, KEY: KEY, allowed: function () { return ALLOWED; },
-    STG: STG, stgI: stgI, catPick: catPick, appsBy: appsBy, knowCells: knowCells, jNow: jNow, JSTEP: JSTEP, sayItems: sayItems,
+    STG: STG, stgI: stgI, catPick: catPick, appsBy: appsBy, CARE_APP: CARE_APP, CARE_KEY: CARE_KEY, careMine: careMine, knowCells: knowCells, jNow: jNow, JSTEP: JSTEP, sayItems: sayItems,
     CL: CL, clF: clF, clStage: clStage, clKey: clKey, listPage: listPage, listPaint: listPaint };
   /* index.html · onclick 이 부르는 이름 — 점(.) 없는 함수여야 check-hmclick 이 「부르는 함수가 있다」 고 읽습니다 */
   g.cusV2Html = html;

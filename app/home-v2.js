@@ -233,6 +233,10 @@
       '.hv2 .qask .t-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}',
       /* 판 X532 — 🧰 이분께 맞는 도구 */
       '.hv2 .qtools{margin-top:8px}',
+      '.hv2 .qtools .lb{display:flex;align-items:center;gap:4px;flex-wrap:wrap}.hv2 .qtools .cfx{margin-left:auto;font-size:13px;font-weight:700;color:var(--blue);padding:2px 4px}',
+      '.hv2 .qsit{display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px 12px;border-radius:12px;background:#F9FAFB}',
+      '.hv2 .qsit .k{font-size:13px;font-weight:700;color:var(--sub2)}.hv2 .qsit b{font-size:15px;font-weight:800}.hv2 .qsit .no{font-size:14px;color:var(--sub3)}',
+      '.hv2 .qsit button{margin-left:auto;height:32px;padding:0 12px;border-radius:8px;background:#fff;border:1px solid var(--line);font-size:13px;font-weight:700;color:var(--blue)}',
       '.hv2 .qtools .lb{font-size:13px;font-weight:700;color:var(--sub2)}',
       '.hv2 .qtools .lb small{font-weight:600;color:var(--sub3);margin-left:4px}',
       '.hv2 .qtools .tc{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}',
@@ -753,7 +757,7 @@
         h += callBtn + '<button type="button" class="btn g sm" style="margin-top:8px" onclick="hmQfin(\'' + key + '\')">✅ 이분 끝</button>';
       }
     }
-    h += newsHtml(x) + askHtml(x) + toolsHtml(x);
+    h += newsHtml(x) + askHtml(x) + sitHtml(x) + toolsHtml(x);
     if (x.k === 'db' && String(x.tk || '') === 'CS' && x.id) h += '<button type="button" class="btn ok" onclick="HOME_V2.won(\'' + Q(x.id) + '\')">✓ 계약됐어요</button>';
     h += '<div class="qbtns"><button type="button" onclick="HOME_V2.next(' + i + ')">다음 →</button><button type="button" onclick="hmSkip(\'' + key + '\')">오늘은 뒤로</button></div>';
     var D = doorOf(x);
@@ -777,6 +781,82 @@
      고르는 자는 고객 화면 「🧭 이분께 권할 것 · 들고 갈 화면」 과 <b>같은 한 곳</b>(CUS_V2.appsBy — 상황 CARE_APP 먼저 → 단계 APEX_STAGE know).
      상황 = 고객 365일 「지금 상황」(cmOf · 배정 DB 카드는 모름) · 단계 = 배정 DB 카드는 그 줄 단계, 고객 카드는 그분 배정 줄 단계(crmDbsOf), 모르면 단계 도구는 안 붙임.
      열 수 없는 화면은 안 섬 · 상황도 단계도 모르면 줄째 안 섬(지어내지 않음). 누르면 그 화면. */
+  /* 📍 지금 상황 · ⚙ 상황별 추천 (판 X558 · 사장님 말씀 2026-11-25 「고객의 현재 상황이 안보이고 상황에 추천하는 메뉴 두개 정도 있는데
+     내가 추가할수 있도록 해줘 다른 사람은 손 못대게」).
+     ① 카드에 「📍 지금 상황」 — 고객 365일 고객만(배정 DB 줄은 상황 칸이 없음). 모르면 「고르기」.
+        고르기는 고객 화면 「지금 상황」 과 같은 칸 — 목록 CM_CARE · 저장 cmSave(id, {care}) 그대로(새 저장 코드 없음).
+     ② 「⚙ 추천 고치기」 — 대표 · 관리자에게만 단추(osIsAppAdmin). 상황마다 기본(CARE_APP · 🔒) 뒤에 더할 메뉴를 고름.
+        저장은 있던 osCfgSet('care_apps', …) — 서버 app_config 는 is_owner() · is_admin() 만 쓸 수 있어 <b>다른 사람은 서버에서 막힘</b>.
+        고른 것은 CUS_V2.appsBy 한 곳으로 들어가 오늘 카드 · 고객 화면 「권할 것」 에 같이 섬. */
+  function isBoss() { return !!T(function () { return g.osIsAppAdmin(); }, false); }
+  function careList() { return (T(function () { return g.CM_CARE; }, []) || []).filter(Boolean); }
+  function sitHtml(x) {
+    var id = cliOf(x); if (!id || !careList().length) return '';
+    var c = T(function () { return g.cmOf(id).care; }, '') || '';
+    return '<div class="qsit"><span class="k">📍 지금 상황</span>' + (c ? '<b>' + E(c) + '</b>' : '<span class="no">몰라요</span>') +
+      '<button type="button" onclick="HOME_V2.sit(\'' + Q(x.key) + '\')">' + (c ? '바꾸기' : '고르기') + '</button></div>';
+  }
+  function sitSheet(key) {
+    var x = rowOf(key), id = cliOf(x); if (!id) return;
+    var L = careList(), c = T(function () { return g.cmOf(id).care; }, '') || '';
+    sheet('<div class="sub">' + E(nameOf(x)) + '님</div><h1>📍 지금 상황</h1><div class="sub">고객 화면 「지금 상황」 과 같은 칸이에요 — 고르면 맞는 도구가 바뀌어요</div>' +
+      '<div class="chipr" style="margin-top:12px;flex-wrap:wrap">' + L.map(function (t, i) { return '<button type="button" class="' + (t === c ? 'on' : '') + '" onclick="HOME_V2.sitPut(\'' + Q(key) + '\',' + i + ')">' + E(t) + '</button>'; }).join('') +
+      '<button type="button" class="' + (c ? '' : 'on') + '" onclick="HOME_V2.sitPut(\'' + Q(key) + '\',-1)">없음 · 모름</button></div>');
+  }
+  function sitPut(key, i) {
+    var x = rowOf(key), id = cliOf(x); if (!id) return;
+    var v = i < 0 ? '' : (careList()[i] || ''), c = T(function () { return g.cmOf(id).care; }, '') || '';
+    if (v === c) { close(); return; }
+    try { g.cmSave(id, { care: v }, function () { try { g.toast(v ? '「' + v + '」 로 골랐어요 — 맞는 도구가 바뀌었어요' : '상황을 비웠어요'); } catch (e) {} close(); paint(); }); } catch (e2) {}
+  }
+  var CE = { care: '', q: '' };
+  function careMap() { return T(function () { var o = JSON.parse(g.osCfgGet(g.CUS_V2.CARE_KEY, '{}') || '{}'); return (o && typeof o === 'object' && !o.push) ? o : {}; }, {}) || {}; }
+  function careSave(M, msg) {
+    var o = {}; Object.keys(M).forEach(function (k) { if (M[k] && M[k].length) o[k] = M[k].slice(0, 12); });
+    try { g.osCfgSet(g.CUS_V2.CARE_KEY, JSON.stringify(o), function () { careEditSheet(); }); } catch (e) {}
+  }
+  function careEditSheet(care) {
+    if (!isBoss()) { try { g.toast('대표 · 관리자만 고칠 수 있어요'); } catch (e) {} return; }
+    var L = careList(); if (care != null) { CE.care = care || CE.care || L[0] || ''; CE.q = ''; }
+    if (!CE.care) CE.care = L[0] || '';
+    var base = T(function () { return g.CUS_V2.CARE_APP[CE.care]; }, []) || [], mine = careMap()[CE.care] || [];
+    var nm = function (tab) { var it = T(function () { return g.navItemOf(tab); }, null) || {}; return (it.icon ? it.icon + ' ' : '') + (it.title || tab); };
+    var seenB = {};
+    var h = '<h1>⚙ 상황별 추천 메뉴</h1><div class="sub">고른 상황의 고객 카드 · 고객 화면 「권할 것」 에 같이 떠요 · 팀 모두에게 · 고치기는 대표 · 관리자만</div>' +
+      '<div class="chipr" style="margin-top:12px;flex-wrap:wrap">' + L.map(function (t, i) { return '<button type="button" class="' + (t === CE.care ? 'on' : '') + '" onclick="HOME_V2.careTo(' + i + ')">' + E(t) + '</button>'; }).join('') + '</div>' +
+      '<h2>' + E(CE.care) + ' <small>기본 ' + base.length + ' · 더한 것 ' + mine.length + '</small></h2><div class="list">' +
+      base.map(function (b) { if (seenB[b.tab]) return ''; seenB[b.tab] = 1; return '<div class="li"><span class="e">🔒</span><div class="tx"><div class="t1">' + E(nm(b.tab)) + '</div><div class="t2">기본</div></div></div>'; }).join('') +
+      mine.map(function (t, i) {
+        return '<div class="li" style="padding-right:6px"><span class="e">➕</span><div class="tx"><div class="t1">' + E(nm(t)) + '</div><div class="t2">사장님이 더함</div></div>' +
+          (i ? '<button type="button" aria-label="위로" style="width:40px;height:44px;font-size:15px;color:var(--sub2)" onclick="HOME_V2.careUp(' + i + ')">▲</button>' : '') +
+          '<button type="button" aria-label="빼기" style="width:40px;height:44px;font-size:17px;color:var(--sub2)" onclick="HOME_V2.careDel(' + i + ')">✕</button></div>';
+      }).join('') + '</div>' +
+      '<h2>메뉴 더하기</h2><input id="hv2CareQ" type="search" placeholder="메뉴 이름으로 찾기" oninput="HOME_V2.careQ(this.value)" value="' + E(CE.q) + '" style="width:100%;height:48px;border:1px solid #D1D6DB;border-radius:12px;padding:0 14px;font-size:16px;background:#fff">' +
+      '<div id="hv2CareL">' + carePick() + '</div>';
+    sheet(h);
+  }
+  function carePick() {
+    var base = (T(function () { return g.CUS_V2.CARE_APP[CE.care]; }, []) || []).map(function (b) { return b.tab; }), mine = careMap()[CE.care] || [];
+    var q = CE.q.replace(/\s+/g, '').toLowerCase(), n = 0;
+    var h = menuGroups().map(function (gr) {
+      var L = gr.items.filter(function (x) { return base.indexOf(x.it.id) < 0 && (!q || String(x.it.title || x.it.id).replace(/\s+/g, '').toLowerCase().indexOf(q) >= 0); });
+      if (!L.length) return '';
+      n += L.length;
+      return '<h2 style="margin-top:12px">' + E(gr.t) + '</h2><div class="list">' + L.map(function (x) {
+        var on = mine.indexOf(x.it.id) >= 0;
+        return '<button type="button" class="li" onclick="HOME_V2.carePut(\'' + Q(x.it.id) + '\')"><span class="e">' + E(x.it.icon || '•') + '</span><div class="tx"><div class="t1">' + E(x.it.title || x.it.id) + '</div></div>' +
+          '<span style="flex:none;font-size:14px;font-weight:700;color:' + (on ? 'var(--blue)' : 'var(--sub2)') + '">' + (on ? '✓ 들어감' : '＋ 더하기') + '</span></button>';
+      }).join('') + '</div>';
+    }).join('');
+    return n ? h : '<div class="say">「' + E(CE.q) + '」 이(가) 들어간 메뉴가 없어요</div>';
+  }
+  function careEdit(fn) {
+    return function (a) {
+      if (!isBoss()) return;
+      var M = careMap(), L = (M[CE.care] || []).slice();
+      fn(L, a); M[CE.care] = L; careSave(M);
+    };
+  }
   function toolsOf(x) {
     if (!x || x.k === 'my') return null;
     var db = x.k === 'db', id = x.id || '';
@@ -786,11 +866,12 @@
     if (!A || !A.length) return null;
     var si = T(function () { return g.CUS_V2.stgI(st); }, -1), sn = si >= 0 ? T(function () { return g.CUS_V2.STG[si].t; }, '') : '';
     var why = [care ? '「' + care + '」' : '', sn ? sn + ' 단계' : ''].filter(Boolean).join(' · ');
-    return { A: A.slice(0, 3), why: why };
+    return { A: A.slice(0, 6), why: why, care: care };
   }
   function toolsHtml(x) {
     var R = toolsOf(x); if (!R) return '';
-    return '<div class="qtools"><div class="lb">🧰 이분께 맞는 도구' + (R.why ? '<small>' + E(R.why) + '</small>' : '') + '</div><div class="tc">' +
+    return '<div class="qtools"><div class="lb">🧰 이분께 맞는 도구' + (R.why ? '<small>' + E(R.why) + '</small>' : '') +
+      (isBoss() ? '<button type="button" class="cfx" onclick="HOME_V2.careEdit(\'' + Q(R.care || '') + '\')">⚙ 추천 고치기</button>' : '') + '</div><div class="tc">' +
       R.A.map(function (a) {
         var ic = T(function () { return g.navItemOf(a.tab).icon; }, '') || '', nm = (ic && a.t.indexOf(ic + ' ') === 0) ? a.t.slice(ic.length + 1) : a.t;
         return '<button type="button" onclick="go(\'' + Q(a.tab) + '\')">' + (ic ? '<i>' + E(ic) + '</i>' : '') + '<span>' + E(nm) + '</span></button>';
@@ -1699,6 +1780,13 @@
     jv: jvSheet,
     ai: aiSheet,
     aiAdd: aiAddSheet,
+    sit: sitSheet, sitPut: sitPut,
+    careEdit: function (care) { careEditSheet(care == null ? '' : care); },
+    careTo: function (i) { CE.care = careList()[i] || CE.care; CE.q = ''; careEditSheet(); },
+    careQ: function (v) { CE.q = String(v || ''); var b = el('hv2CareL'); if (b) b.innerHTML = carePick(); },
+    carePut: careEdit(function (L, id) { var i = L.indexOf(id); if (i >= 0) L.splice(i, 1); else L.push(id); }),
+    careDel: careEdit(function (L, i) { L.splice(i, 1); }),
+    careUp: careEdit(function (L, i) { if (i > 0) { var t = L[i]; L.splice(i, 1); L.splice(i - 1, 0, t); } }),
     mis: misSheet, misDid: function (i, ck) { misDid(i, ck, 0); }, misUndo: function (i, ck) { misDid(i, ck, 1); },
     newOn: newOn,
     newHelp: function () { var v = !newOn(); newSet(v); try { if (typeof g.toast === 'function') g.toast(v ? '🌱 신입 도움말을 켰어요 — 영업 한 바퀴 칸을 눌러 보세요' : '신입 도움말을 껐어요'); } catch (e) {} try { paint(); } catch (e2) {} return v; },
