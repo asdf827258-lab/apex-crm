@@ -111,7 +111,12 @@
     if (v === null || v === undefined || v === '') return '';
     var a = col(c) + r, s = st ? (' s="' + st + '"') : '';
     if (typeof v === 'number' && isFinite(v)) return '<c r="' + a + '"' + s + '><v>' + v + '</v></c>';
-    return '<c r="' + a + '"' + s + ' t="inlineStr"><is><t xml:space="preserve">' + esc(v) + '</t></is></c>';
+    /* ★ 판 X537 — 꾸밈표(&lt;b&gt;)를 <b>여기서 한 번</b> 걷어냅니다. 앱의 글에는
+       &lt;b&gt; 가 섞여 있는데, 부르는 자리마다 지우게 하면 꼭 한 군데를 빠뜨립니다 —
+       실제로 「과부족」 과 「그래프」 두 곳에서 글자 그대로 찍혔습니다. 엑셀에는
+       칸 안의 일부만 굵게 할 길이 없으니 <b>걷어내는 것이 맞습니다</b>. */
+    return '<c r="' + a + '"' + s + ' t="inlineStr"><is><t xml:space="preserve">' +
+      esc(String(v).replace(/<\/?[a-zA-Z][^>]*>/g, '')) + '</t></is></c>';
   }
   /* ★ 판 X535 — 줄 높이를 줍니다. 전부 기본(15pt)이면 표가 답답하고
      「엑셀 기본 시트」 처럼 보입니다 (사장님 말씀 「엑셀로 퀄리티는 이것밖에 안되?」). */
@@ -468,7 +473,7 @@
     for (i = 0; i < S.before.length; i++) put('전', S.before[i]);
     for (i = 0; i < S.after.length; i++) put('후', S.after[i]);
     return X._sheet(out.join(''), { freeze: [0, 1], cols: [7, 16, 30, 12, 11, 11, 9, 15, 8, 10],
-      tabColor: '6B7684', zoom: 90 });
+      tabColor: '6B7684', zoom: 90, fit: true, fitH: true });
   }
 
   function 빠진시트(STD, C) {
@@ -736,8 +741,9 @@
       out.push(row(r, [cel(0, r, i2 + 1, 8), cel(1, r, x.n, 9), cel(2, r, x.std, 10),
         cel(3, r, x.a, 15), cel(4, r, x.a - x.std, (x.a - x.std) >= 0 ? 16 : 17)])); r++;
     });
+    /* ★ 판 X537 — 표와 거미줄이 두 쪽으로 갈라져 각각 반 쪽만 썼습니다. 한 장에 담습니다. */
     return { xml: X._sheet(out.join(''), { cols: [5, 30, 11, 12, 12], draw: L.length > 2,
-      tabColor: '2A5BD7', zoom: 90 }), n: L.length };
+      tabColor: '2A5BD7', zoom: 90, fit: true, fitH: true }), n: L.length };
   }
 
   /* ══ 내려받기 ══════════════════════════════════════════════════ */
@@ -810,14 +816,30 @@
         '</sheets>' +
         /* ★ 판 X534 — 사장님 말씀 「깔끔하게 딱 정리」. 인쇄하면 <b>표와 도해까지만</b>
            나오게 범위를 못 박습니다. 안 박으면 엑셀이 빈 칸까지 세어 종이가 늘어납니다. */
-        (DR.filter(function (q) { return !q.차트; }).length
-          ? ('<definedNames>' + DR.filter(function (q) { return !q.차트; }).map(function (q) {
-              /* ⚠ +2 로는 도해 아래 한 줄이 잘렸습니다(뽑아서 보고 찾음) */
-              var 끝 = q.줄 + Math.ceil((q.높이 || 3800000) / 190500) + 4;
-              return '<definedName name="_xlnm.Print_Area" localSheetId="' + q.시트 + '">\'' +
-                엑셀글(String(SH[q.시트].n).replace(/'/g, "''")) + '\'!$A$1:$H$' + 끝 + '</definedName>';
-            }).join('') + '</definedNames>')
-          : '') +
+        /* ★ 이름 자리는 <b>한 묶음</b>입니다 — 인쇄 범위와 머리글 되풀이를 같이 담습니다.
+           ① Print_Area  — 묶음 시트는 표+도해까지만 인쇄 (판 X534)
+           ② Print_Titles — ★ 판 X537. 사장님 말씀 「전체적으로 이미지 찍어줘」 를 찍어 보니
+              두 쪽째부터 <b>머리글이 없어</b> 숫자만 남아 있었습니다. 이어지는 쪽마다
+              머리 줄을 되풀이합니다.                                              */
+        (function () {
+          var T = [];
+          DR.forEach(function (q) {
+            if (q.차트) return;
+            /* ⚠ +2 로는 도해 아래 한 줄이 잘렸습니다(뽑아서 보고 찾음) */
+            var 끝 = q.줄 + Math.ceil((q.높이 || 3800000) / 190500) + 4;
+            T.push('<definedName name="_xlnm.Print_Area" localSheetId="' + q.시트 + '">\'' +
+              엑셀글(String(SH[q.시트].n).replace(/'/g, "''")) + '\'!$A$1:$H$' + 끝 + '</definedName>');
+          });
+          var 머리 = { '한눈에': '1:4', '과부족': '1:3', '빠진 담보': '1:2', '보장범위 · 지급': '1:3' };
+          SH.forEach(function (q, i3) {
+            var 줄 = q.도해 ? '1:3' : 머리[q.n];
+            if (!줄) return;
+            var ab = 줄.split(':');
+            T.push('<definedName name="_xlnm.Print_Titles" localSheetId="' + i3 + '">\'' +
+              엑셀글(String(q.n).replace(/'/g, "''")) + '\'!$' + ab[0] + ':$' + ab[1] + '</definedName>');
+          });
+          return T.length ? ('<definedNames>' + T.join('') + '</definedNames>') : '';
+        })() +
         '</workbook>' },
       { name: 'xl/_rels/workbook.xml.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
         '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +

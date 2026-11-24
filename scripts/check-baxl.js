@@ -353,8 +353,13 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
     '  막대는 <b>0 에서 멈춘다</b> — 넘치는 칸에까지 그리면 「다 모자란다」 로 읽힙니다 (1번)');
   const 인쇄범위 = (Z['xl/workbook.xml'] || '').match(/_xlnm\.Print_Area/g) || [];
   is(인쇄범위.length === 11, '  <b>인쇄 범위</b>를 표+도해까지 못 박았다 (' + 인쇄범위.length + '/11)');
-  is(시트들.filter(k => /fitToHeight="1"/.test(Z[k])).length === 11,
-    '  묶음 시트는 <b>한 장에</b> 맞춘다');
+  /* 묶음 시트(7~17번)만 봅니다 — 앞 시트도 한 장에 맞추면 수가 늘어 헛것이 됩니다 */
+  const 한장 = [];
+  for (let i4 = 7; i4 <= 17; i4++) {
+    const k4 = 'xl/worksheets/sheet' + i4 + '.xml';
+    if (Z[k4] && /fitToHeight="1"/.test(Z[k4])) 한장.push(i4);
+  }
+  is(한장.length === 11, '  묶음 시트 <b>11장이 한 장에</b> 맞는다 (' + 한장.length + '/11)');
   /* 상태 칸을 칠했나 — 글자색만이면 멀리서 안 보입니다 */
   const 꼴판 = Z['xl/styles.xml'] || '';
   is((꼴판.match(/<fill>/g) || []).length >= 10 + 11 * 3 + 1,
@@ -371,8 +376,11 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   is(범위줄 === 3 + 77, '  담보 <b>77줄 전부</b> + 머리 셋 (' + 범위줄 + ')');
   is(/심사 결과에 따릅니다/.test(범위), '  머리에 <b>「심사 결과에 따릅니다」</b> 가 박혀 있다 (2번)');
   is(/요건 충족 시/.test(범위), '  세금은 <b>「요건 충족 시」</b> 를 빼지 않았다 (2번)');
-  is(범위.indexOf('&lt;b&gt;') < 0 && 범위.indexOf('<b>') < 0,
-    '  꾸밈표(&lt;b&gt;)가 <b>글자로 새지 않았다</b>');
+  /* ★ 판 X537 — 한 시트만 보면 다른 시트에서 샙니다. <b>엑셀 전체</b>를 봅니다.
+     실제로 「과부족」 과 「그래프」 시트에서 글자 그대로 찍혀 있었습니다 (8번). */
+  const 샌곳 = 시트들.filter(k => /&lt;\/?b&gt;|&lt;\/?i&gt;/.test(Z[k]));
+  if (샌곳.length) 샌곳.slice(0, 4).forEach(k => console.log('      · ' + k.replace('xl/worksheets/', '')));
+  is(샌곳.length === 0, '  꾸밈표(&lt;b&gt;)가 <b>엑셀 어디에도 글자로 안 남았다</b> (' + 샌곳.length + '장)');
   /* 지급 문장은 BA_ART.PAY 네 가지 말뿐인가 — 하나라도 다른 문장이 있으면 지어낸 것입니다 */
   const 말 = await pg.evaluate(() => (window.BA_ART ? BA_ART.PAY.map(x => x.say.replace(/<[^>]+>/g, '')) : []));
   is(말.length === 4, '  지급 모양이 <b>네 가지</b> — 한 곳(BA_ART.PAY)에서 옵니다 (' + 말.length + ')');
