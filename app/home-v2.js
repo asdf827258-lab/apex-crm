@@ -210,6 +210,14 @@
       '.hv2 .qask{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--warn-l)}',
       '.hv2 .qask .q{font-size:14px;font-weight:700;color:var(--ink);line-height:1.45}',
       '.hv2 .qask .t-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}',
+      /* 판 X532 — 🧰 이분께 맞는 도구 */
+      '.hv2 .qtools{margin-top:8px}',
+      '.hv2 .qtools .lb{font-size:13px;font-weight:700;color:var(--sub2)}',
+      '.hv2 .qtools .lb small{font-weight:600;color:var(--sub3);margin-left:4px}',
+      '.hv2 .qtools .tc{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}',
+      '.hv2 .qtools .tc button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:64px;padding:6px 4px;border-radius:12px;background:var(--blue-l);color:var(--blue);font-size:13px;font-weight:700;line-height:1.3;text-align:center;word-break:keep-all}',
+      '.hv2 .qtools .tc button i{font-style:normal;font-size:20px;line-height:1}',
+      '.hv2 .qtools .tc button span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}',
       '.hv2 .qask .t-chip{min-height:44px;height:auto;padding:0 12px;border:0;border-radius:22px;background:#fff;font-size:14px;font-weight:700;color:var(--ink);text-align:center}',
       '.hv2 .qins .ins{display:grid;grid-template-columns:1fr auto;grid-template-areas:"k a" "p p";row-gap:2px;align-items:center;gap:2px 8px;min-height:52px;padding:8px 12px;border-radius:12px;background:var(--blue-l);text-align:left}',
       '.hv2 .qins .k{grid-area:k;font-size:14px;font-weight:800;color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
@@ -591,7 +599,7 @@
         h += callBtn + '<button type="button" class="btn g sm" style="margin-top:8px" onclick="hmQfin(\'' + key + '\')">✅ 이분 끝</button>';
       }
     }
-    h += newsHtml(x) + askHtml(x);
+    h += newsHtml(x) + askHtml(x) + toolsHtml(x);
     if (x.k === 'db' && String(x.tk || '') === 'CS' && x.id) h += '<button type="button" class="btn ok" onclick="HOME_V2.won(\'' + Q(x.id) + '\')">✓ 계약됐어요</button>';
     h += '<div class="qbtns"><button type="button" onclick="HOME_V2.next(' + i + ')">다음 →</button><button type="button" onclick="hmSkip(\'' + key + '\')">오늘은 뒤로</button></div>';
     var D = doorOf(x);
@@ -611,6 +619,29 @@
   }
   /* 🙋 물어볼 것 (시안 qCard qask · 판 X529) — 「한 가지만 여쭙니다」 가 고른 한 가지(cqaAsk)와 그 답 단추(cqaAnsHtml) 그대로.
      답은 있던 자리(cmSave · cmNextSave · 고객 칸)로만 갑니다 — 저장 코드 새로 없음. 누른 뒤 이 화면도 한 번 다시 그립니다(askAfter). */
+  /* 🧰 이분께 맞는 도구 (사장님 말씀 2026-11-24 「오늘에서 고객의 상황에 맞게 어떤 도구를 추천해주는지도 띄워줘」 · 판 X532)
+     고르는 자는 고객 화면 「🧭 이분께 권할 것 · 들고 갈 화면」 과 <b>같은 한 곳</b>(CUS_V2.appsBy — 상황 CARE_APP 먼저 → 단계 APEX_STAGE know).
+     상황 = 고객 365일 「지금 상황」(cmOf · 배정 DB 카드는 모름) · 단계 = 배정 DB 카드는 그 줄 단계, 고객 카드는 그분 배정 줄 단계(crmDbsOf), 모르면 단계 도구는 안 붙임.
+     열 수 없는 화면은 안 섬 · 상황도 단계도 모르면 줄째 안 섬(지어내지 않음). 누르면 그 화면. */
+  function toolsOf(x) {
+    if (!x || x.k === 'my') return null;
+    var db = x.k === 'db', id = x.id || '';
+    var care = db ? '' : (T(function () { return g.cmOf(id).care; }, '') || '');
+    var st = db ? String(x.tk || '') : (T(function () { return g.crmDbsOf(id)[0].stage; }, '') || '');
+    var A = T(function () { return g.CUS_V2.appsBy(care, st, true); }, null);
+    if (!A || !A.length) return null;
+    var si = T(function () { return g.CUS_V2.stgI(st); }, -1), sn = si >= 0 ? T(function () { return g.CUS_V2.STG[si].t; }, '') : '';
+    var why = [care ? '「' + care + '」' : '', sn ? sn + ' 단계' : ''].filter(Boolean).join(' · ');
+    return { A: A.slice(0, 3), why: why };
+  }
+  function toolsHtml(x) {
+    var R = toolsOf(x); if (!R) return '';
+    return '<div class="qtools"><div class="lb">🧰 이분께 맞는 도구' + (R.why ? '<small>' + E(R.why) + '</small>' : '') + '</div><div class="tc">' +
+      R.A.map(function (a) {
+        var ic = T(function () { return g.navItemOf(a.tab).icon; }, '') || '', nm = (ic && a.t.indexOf(ic + ' ') === 0) ? a.t.slice(ic.length + 1) : a.t;
+        return '<button type="button" onclick="go(\'' + Q(a.tab) + '\')">' + (ic ? '<i>' + E(ic) + '</i>' : '') + '<span>' + E(nm) + '</span></button>';
+      }).join('') + '</div></div>';
+  }
   function askHtml(x) {
     var id = cliOf(x); if (!id) return '';
     var a = T(function () { return g.cqaAsk(id); }, null); if (!a || !a.q || !a.q.ask) return '';
