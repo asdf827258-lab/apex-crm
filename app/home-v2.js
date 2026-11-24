@@ -719,6 +719,41 @@
     var p = (T(function () { return g.HM_DOOR.prods(cat); }, []) || [])[0] || null;
     return { cat: cat, band: P.band === '2030' ? 'y2030' : '', lab: C ? C.label : '이번 달 1위', prod: p ? ((p.co ? p.co + ' · ' : '') + p.nm) : '상품전략기에서 보기' };
   }
+  /* 🤝 만났어요 (판 X555 · 시안 9차 jMeet · 3차 점검표 ⑩ · 사장님 말씀 「10번 해」 2026-11-25).
+     오늘 약속 카드에서 한 번 — 만남을 마친 분을 <b>제안(PC) 단계로 넘기고</b> 감사 카톡(TA 스크립트 thanks)을 복사.
+     ★ 저장은 <b>있던 함수 하나</b> — DB 통합 CRM 의 「어느 단계로든」 hdbTo(id, 'PC') (내 고객인지 · 서버 · 실패 알림 · 손에 든 줄 고치기 다 그 함수가 함).
+       새 저장 코드 없음. 만남 횟수를 따로 세는 칸은 라이브에 없어 세우지 않음(지어내지 않음).
+     ★ 약속 카드(달력 줄)는 DB 줄 번호를 안 들고 와서, 오늘 약속 목록 hmRtAppts(지역 동선과 같은 자)에서 <b>이름 + 시각이 딱 한 분</b> 맞을 때만 단추를 세움 — 둘 이상이거나 없으면 안 섬(엉뚱한 분을 넘기지 않게).
+     ★ 이미 제안(PC) 뒤인 분은 단계를 안 건드리고 감사 카톡만. 남의 고객(hdbCan 아님)이면 단계 단추를 안 냄. */
+  function metRow(x) {
+    if (!x || x.k !== 'appt' || !x.t) return null;
+    var hm = String(x.s || '').slice(0, 5), nm = String(x.t);
+    var L = (T(function () { return g.hmRtAppts(); }, []) || []).filter(function (a) { return a && a.id && a.nm === nm && (!hm || !a.hm || a.hm === hm); });
+    if (L.length !== 1) return null;
+    var r = T(function () { return g.hdbRow(L[0].id); }, null);
+    return r ? { id: r.id, st: String(r.stage || '미접촉'), can: !!T(function () { return g.hdbCan(r); }, false) } : null;
+  }
+  var MET_TO = 'PC', MET_PRE = ['미접촉', '부재', 'TA', 'AP'];
+  function metSheet(key) {
+    var x = rowOf(key), M = metRow(x); if (!M) return;
+    var t = msgText('thanks', x, 'kakao'), up = M.can && MET_PRE.indexOf(M.st) >= 0;
+    var h = '<div class="sub">' + E(nameOf(x)) + '님 · 오늘 약속</div><h1>🤝 만났어요</h1>';
+    if (up) h += '<div class="hint">단계 <b>' + E(M.st) + ' → ' + MET_TO + '(제안)</b> 으로 넘겨요 — DB 통합 CRM 의 그 단계 칸이 같이 바뀌어요</div>';
+    else if (MET_PRE.indexOf(M.st) < 0) h += '<div class="hint">이미 「' + E(M.st) + '」 단계라 단계는 그대로 두고 감사 카톡만 드려요</div>';
+    else h += '<div class="hint">내 고객이 아니라 단계는 못 바꿔요 — 감사 카톡만 드려요</div>';
+    h += t ? '<div class="say">' + E(t) + '</div>' : '<div class="say">TA 스크립트에 감사 카톡이 없어요</div>';
+    if (up) h += '<button type="button" class="btn p" onclick="HOME_V2.metGo(\'' + Q(key) + '\',1)">' + MET_TO + '로 넘기고' + (t ? ' 감사 카톡 복사' : '') + '</button>' +
+      '<button type="button" class="btn g" onclick="HOME_V2.metGo(\'' + Q(key) + '\',0)">단계는 그대로' + (t ? ' · 감사 카톡만 복사' : '') + '</button>';
+    else h += '<button type="button" class="btn p" onclick="HOME_V2.metGo(\'' + Q(key) + '\',0)">' + (t ? '감사 카톡 복사하고 ' : '') + '이분 끝</button>';
+    sheet(h);
+  }
+  function metGo(key, up) {
+    var x = rowOf(key), M = metRow(x); if (!M) return;
+    copyT(msgText('thanks', x, 'kakao'));
+    if (up && M.can && MET_PRE.indexOf(M.st) >= 0) { try { g.hdbTo(M.id, MET_TO); } catch (e) {} }
+    close();
+    try { g.hmQfin(key); } catch (e2) {}
+  }
   function cardHtml(x, i) {
     var key = Q(x.key), nm = nameOf(x), stg = x.kt || T(function () { return g.hmOrdOf(x.k).t; }, '') || '';
     var why = T(function () { return g.hmWhy(x); }, '') || E(x.s || '');
@@ -755,6 +790,7 @@
     }
     h += newsHtml(x) + askHtml(x) + toolsHtml(x);
     if (x.k === 'db' && String(x.tk || '') === 'CS' && x.id) h += '<button type="button" class="btn ok" onclick="HOME_V2.won(\'' + Q(x.id) + '\')">✓ 계약됐어요</button>';
+    if (metRow(x)) h += '<button type="button" class="btn ok" onclick="HOME_V2.met(\'' + key + '\')">🤝 만났어요</button>';
     h += '<div class="qbtns"><button type="button" onclick="HOME_V2.next(' + i + ')">다음 →</button><button type="button" onclick="hmSkip(\'' + key + '\')">오늘은 뒤로</button></div>';
     var D = doorOf(x);
     h += '<div class="qins"><button type="button" class="ins" onclick="hmDoorGo(\'' + Q(D.cat) + '\',\'' + D.band + '\')"><span class="k">🧭 ' + E(D.lab) + '</span><span class="a">상품전략기 ›</span><span class="p">' + E(D.prod) + '</span></button>' +
@@ -1699,6 +1735,7 @@
     jv: jvSheet,
     ai: aiSheet,
     aiAdd: aiAddSheet,
+    met: metSheet, metGo: metGo,
     mis: misSheet, misDid: function (i, ck) { misDid(i, ck, 0); }, misUndo: function (i, ck) { misDid(i, ck, 1); },
     newOn: newOn,
     newHelp: function () { var v = !newOn(); newSet(v); try { if (typeof g.toast === 'function') g.toast(v ? '🌱 신입 도움말을 켰어요 — 영업 한 바퀴 칸을 눌러 보세요' : '신입 도움말을 껐어요'); } catch (e) {} try { paint(); } catch (e2) {} return v; },

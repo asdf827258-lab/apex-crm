@@ -18,6 +18,7 @@
      [7] ★  옛 홈은 지우지 않고 숨기기만(CSS) — 「예전 오늘 칸 펼치기」 가 있다 · 그리다 터지면 예전 화면
      [8] ★  옷은 .hv2 / #hv2Sheet 아래로만 — 앱의 .card · .btn 같은 옷을 덮지 않는다
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
+     [25] ★★ 판 X555 — 🤝 만났어요(시안 jMeet): 오늘 약속 카드 · 이름+시각이 딱 한 분일 때만 · 단계는 있던 hdbTo(id,'PC') 하나 · 감사 카톡 복사 · 이분 끝(hmQfin)
      [26] ★★ 판 X557 — 🎯 오늘의 미션 다섯(인사 밑 한 판): 끝났나 = 실행 체크판(hmMsCk) · 오늘 약속 카드 그대로 · 이름은 CK_ITEMS 한 곳 · ✓ 했어요 = hmMsDid
      [24] ★  판 X551 — 🌱 신입 도움말(🙋 나 스위치 · 이 기기): 영업 한 바퀴 머리 · 단계 시트 「이 칸에서 할 일 / 어떻게」 = APEX_STAGE.aimText · wayText 그대로 · 기본 꺼짐
      [23] ★  판 X549 — 자비스 시트에 사장님이 고른 메뉴 더하기(＋ 메뉴 더하기 · ✕ 빼기 · ▲ 위로) — 이 기기 · 사람마다(즐겨찾기와 같은 자리) · 일곱 · 메뉴 표 · 서랍 그대로
@@ -756,6 +757,40 @@ console.log('\n[24] 🌱 신입 도움말 (판 X551 · 단순화 순서 ⑤ · �
   is(X.g.HOME_V2.newHelp() === false && !('apex_newhelp_u1' in X.store), '다시 누르면 끔(지움)');
   const nb = sc.slice(sc.indexOf('  var NEW_KEY'), sc.indexOf('  var ROAD_KEY'));
   is(nb.length > 50 && !/\.rpc\(|\.from\(|fetch\(/.test(nb) && !/첫 통화|날짜 두 개|설명은 만나서/.test(sc), '서버 안 부름 · 단계 글을 이 파일에 적지 않음(원본 한 곳)');
+}
+
+console.log('\n[25] 🤝 만났어요 (판 X555 · 시안 jMeet · 3차 점검표 ⑩ · 사장님 말씀 「10번 해」)');
+{
+  const mk = (appts, db, can) => {
+    const rows = [{ k: 'appt', t: '홍길동', s: '14:00 · 순천', key: 'appt:a1' }, { k: 'db', tk: 'AP', id: 'd9', t: '홍길순', s: '만남', key: 'db:d9:AP' }];
+    const X = box({ apex_home_v2: '1' }, '', { rows });
+    const said = [];
+    Object.assign(X.g, { meV2Open: () => {}, hmRtAppts: () => appts, hdbRow: id => db.filter(r => r.id === id)[0] || null, hdbCan: () => can !== false,
+      hdbTo: (id, to) => said.push(['to', id, to]), hmQfin: k => said.push(['fin', k]), copyText: t => said.push(['copy', t]) });
+    X.g.HOME_V2.apply(dyn(X));
+    return { X, said };
+  };
+  const one = [{ id: 'd1', nm: '홍길동', hm: '14:00' }];
+  let A = mk(one, [{ id: 'd1', stage: 'AP' }]);
+  let h = A.X.els.hv2.innerHTML;
+  const c0 = h.slice(h.indexOf('data-i="0"'), h.indexOf('data-i="1"')), c1 = h.slice(h.indexOf('data-i="1"'));
+  is(/onclick="HOME_V2\.met\('appt:a1'\)">🤝 만났어요<\/button>/.test(c0) && !/만났어요/.test(c1), '오늘 약속 카드에만 「🤝 만났어요」 (배정 DB 카드엔 안 섬)');
+  is(!/만났어요/.test(mk([{ id: 'd1', nm: '홍길동', hm: '14:00' }, { id: 'd2', nm: '홍길동', hm: '14:00' }], [{ id: 'd1', stage: 'AP' }, { id: 'd2', stage: 'AP' }]).X.els.hv2.innerHTML) &&
+     !/만났어요/.test(mk([{ id: 'd1', nm: '홍길동', hm: '15:00' }], [{ id: 'd1', stage: 'AP' }]).X.els.hv2.innerHTML) &&
+     !/만났어요/.test(mk([], []).X.els.hv2.innerHTML), '이름 + 시각이 딱 한 분일 때만 — 같은 이름 둘 · 시각 다름 · 없음이면 안 섬(엉뚱한 분을 안 넘김)');
+  A.X.g.HOME_V2.met('appt:a1'); let t = A.X.els.hv2Sheet.innerHTML;
+  is(/<h1>🤝 만났어요<\/h1>/.test(t) && /AP → PC\(제안\)/.test(t) && /\(thanks·kakao\)/.test(t) && /metGo\('appt:a1',1\)">PC로 넘기고 감사 카톡 복사/.test(t) && /metGo\('appt:a1',0\)">단계는 그대로/.test(t),
+    '시트 — 단계 AP → PC(제안) · 감사 카톡(TA 스크립트 thanks) · 넘기기 / 그대로 두 단추');
+  A.X.g.HOME_V2.metGo('appt:a1', 1);
+  is(JSON.stringify(A.said) === JSON.stringify([['copy', '고객님, 안녕하세요 (thanks·kakao)'], ['to', 'd1', 'PC'], ['fin', 'appt:a1']]), '넘기기 = 감사 카톡 복사 → 있던 hdbTo(id, \'PC\') → 이분 끝(hmQfin) — ' + JSON.stringify(A.said));
+  A = mk(one, [{ id: 'd1', stage: 'TA' }]); A.X.g.HOME_V2.metGo('appt:a1', 0);
+  is(!A.said.some(x => x[0] === 'to') && A.said.some(x => x[0] === 'fin'), '「단계는 그대로」 면 단계를 안 건드림');
+  A = mk(one, [{ id: 'd1', stage: 'PC' }]); A.X.g.HOME_V2.met('appt:a1'); t = A.X.els.hv2Sheet.innerHTML; A.X.g.HOME_V2.metGo('appt:a1', 1);
+  is(/이미 「PC」 단계라/.test(t) && !/PC로 넘기고/.test(t) && !A.said.some(x => x[0] === 'to'), '이미 제안(PC) 뒤면 단계는 그대로 · 감사 카톡만');
+  A = mk(one, [{ id: 'd1', stage: 'AP' }], false); A.X.g.HOME_V2.met('appt:a1'); t = A.X.els.hv2Sheet.innerHTML; A.X.g.HOME_V2.metGo('appt:a1', 1);
+  is(/내 고객이 아니라/.test(t) && !A.said.some(x => x[0] === 'to'), '남의 고객이면 단계 단추를 안 냄(hdbCan)');
+  const ms = sc.slice(sc.indexOf('  function metRow('), sc.indexOf('  function cardHtml('));
+  is(ms.length > 100 && (ms.match(/g\.hdbTo\(/g) || []).length === 1 && !/\.rpc\(|\.from\(|setItem|fetch\(/.test(ms), '저장은 있던 hdbTo 한 곳 — 서버 · 이 기기에 새로 쓰지 않음');
 }
 
 console.log('\n[26] 🎯 오늘의 미션 (판 X557 · 사장님 말씀 「오늘 해야 될 미션을 딱 보여주고 그 미션을 해결해나가는게 오늘이야」 → 「제안대로 세워」)');
