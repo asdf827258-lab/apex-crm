@@ -56,9 +56,10 @@ function json(status, body, noStore) {
       // 같은 검색을 반복해 두드리지 않도록 잠깐 캐시한다. 자료는 하루 단위로 바뀐다.
       // ⚠ 일부만 받은 답·실패는 캐시하지 않는다 — 5분 동안 같은 빠진 답을 돌려주던 사고(2026-11-24)
       'Cache-Control': (noStore || status !== 200) ? 'no-store' : 'public, max-age=300',
-      // 다 받은 답은 Netlify CDN 에 1시간 둔다(여러 설계사가 같은 질환을 물어도 원본은 한 번) — 자료는 하루 단위로 바뀐다.
+      // 다 받은 답은 Netlify CDN 에 하루(24시간) 둔다 — 사용자 「하루에 한 번이어도 충분해」(2026-11-25). 자료는 하루 단위로 바뀌고,
+      // 같은 질환은 하루 한 번만 원본(웹방화벽 · 쪽마다 5초)을 부른다. CRM 사이트를 새로 배포하면 Netlify 가 비운다.
       // 실패·일부는 CDN 에도 두지 않는다.
-      'Netlify-CDN-Cache-Control': (noStore || status !== 200) ? 'no-store' : 'public, s-maxage=3600, durable',
+      'Netlify-CDN-Cache-Control': (noStore || status !== 200) ? 'no-store' : 'public, s-maxage=86400, durable',
       'Vary': 'Origin',
       // ⚠ 2026-11-24 — 함수가 시간 초과(502)를 내면 Netlify 가 <b>다른 검색어의 옛 답</b>을 stale 로 돌려줬다
       //   (치아 44쪽을 물었는데 「우울」 6건이 옴). 캐시를 검색어·쪽마다 따로 두고, 답에 물은 것을 적어 받는 쪽이 맞대 보게 한다.
