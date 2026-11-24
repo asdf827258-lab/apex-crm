@@ -98,5 +98,27 @@ console.log('\n[되돌림] 일부러 망가뜨리면 우나');
   is(B3.deck(PLAN, true).indexOf('id="drawer"') >= 0, '③ 고객용 가림을 빼면 [3] 이 운다');
 }
 
+console.log('\n[6] 전·후 만들기 <b>안에</b> 연다 (판 X556 · 사장님 말씀 2026-11-25 「보장분석 전후 만들기 클릭하면 그 안에 배치해줘」)');
+{
+  const BA = fs.readFileSync(path.join(ROOT, 'app/ba.html'), 'utf8');
+  is(/id="tabAiRep" onclick="baParentSub\('bojang'\)"/.test(BA) && /id="tabPd" onclick="baParentSub\('bapd'\)"/.test(BA),
+     '전·후 만들기 위 띠에 📑 AI 리포트 · 🧠 제안서 설명자료 두 칸이 선다');
+  is(/function baTabsPaint\(\)/.test(BA) && /baTabsPaint\(\);/.test(BA) && !/getElementById\('tabEdit'\)\.className=/.test(BA),
+     '위 띠 불 켜기는 baTabsPaint 한 곳 — 두 칸이 열리면 만들기·보여주기·요청서는 꺼진다 (5번)');
+  is(/if\(window\.BA_SUB\)\{window\.BA_SUB='';[\s\S]{0,120}parent\.baSubClose\(1\)/.test(BA),
+     '만들기·보여주기·요청서를 누르면 열린 두 칸이 닫힌다');
+  is(/<div id="baSub" class="ba-sub"/.test(IDX) && /#baScreen \.ba-sub\.on\{display:block\}/.test(IDX),
+     '본체 껍데기(#baScreen) 안에 두 칸이 열릴 자리(#baSub)가 있다');
+  is(/if\(typeof baSubClose==='function'\)baSubClose\(\);/.test(IDX), '← 워크스페이스 로 나가면 안에서 연 것도 닫힌다');
+  is(/\['tabAiRep','tabPd'\]\.forEach\(function\(id\)\{var b=document\.getElementById\(id\);if\(b\)b\.style\.display=\(S\.mode==='show'&&!sub\)\?'none':'';\}\);/.test(BA),
+     '👤 고객에게 보여주기에서는 두 칸을 숨긴다 — 발표 무대 크기를 안 줄인다 (check-bafix12)');
+  const OPEN = "if (baOn()) { if (id === 'frmake') window.baSubClose(); else window.baSubOpen(id); return; }";
+  is(SRC.indexOf(OPEN) >= 0 && /window\.baSubOpen = function/.test(SRC),
+     '껍데기가 떠 있으면 📑·🧠 는 밖으로 안 나가고 그 안에 그린다 · 없으면 예전처럼 제 화면');
+  is(/d\.querySelector\('\.bapd-sw'\)\) d\.innerHTML = ''/.test(SRC), '바깥에 같은 화면이 그려져 있으면 비운다 — id 두 벌 막기');
+  const bad4 = SRC.replace(OPEN, '');
+  is(bad4 !== SRC && bad4.indexOf(OPEN) < 0, '④ 안에서 여는 길을 끊으면 [6] 이 운다');
+}
+
 if (fail) { console.log('\n제안서 설명자료 점검 실패 ' + fail + '개'); process.exit(1); }
 console.log('\n제안서 설명자료 점검 통과');

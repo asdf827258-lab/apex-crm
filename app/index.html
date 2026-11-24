@@ -1589,6 +1589,10 @@ svg.ico{display:block;flex:none;vertical-align:-3px}
 #baScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#F2F4F6;}
 /* 재무설계가 떠 있는 동안에는 보장분석 껍데기를 덮지 않는다 */
 body.finance-mode #baScreen{display:none}
+/* 판 X556 — 전·후 만들기 안에서 여는 두 칸. top 은 안쪽 위 띠 높이로 ba-pd.js 가 맞춘다 */
+#baScreen .ba-sub{display:none;position:absolute;left:0;right:0;bottom:0;top:64px;z-index:310;overflow:auto;background:#F2F4F6;padding:18px 22px 96px}
+#baScreen .ba-sub.on{display:block}
+#baScreen .ba-sub .bapd-sw{display:none}
 #financeScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
 body.finance-mode .app{display:none;}
 body.finance-mode #financeScreen{display:block;}
@@ -2998,6 +3002,8 @@ body.insight-mode #insightScreen{display:block;}
   <!-- allow="fullscreen" 이 있어야 안쪽 「발표 — 화면 가득」 이 진짜 전체화면으로 간다.
        없어도 설계사 도구는 치워지지만, 브라우저 주소창까지는 안 사라진다. -->
   <iframe id="baFrame" class="fin-frame" title="보장분석 전·후 만들기" allow="fullscreen"></iframe>
+  <!-- 📑 AI 리포트 · 🧠 제안서 설명자료가 <b>이 화면 안</b>, 안쪽 위 띠 바로 아래에 열리는 자리 (판 X556 · app/ba-pd.js) -->
+  <div id="baSub" class="ba-sub" role="region" aria-label="보장분석 전&amp;후 만들기 안의 화면"></div>
   <div class="fin-float">
     <button class="ff-back" onclick="exitBa()">← 워크스페이스</button>
     <button class="ff-add" onclick="bapdSw('bojang')" title="보험사 보장분석 PDF 로 AI 리포트">📑 AI 리포트</button>
@@ -22001,6 +22007,7 @@ function baNewTab(){
 }
 function exitBa(){
   /* 틀은 그대로 둔다 — 다음에 <b>즉시</b> 뜬다. 적어 두신 것도 안 사라진다 */
+  if(typeof baSubClose==='function')baSubClose();   /* 안에서 연 📑·🧠 도 닫는다 (판 X556) */
   $('baScreen').classList.remove('on');
   go('home');
 }
@@ -22325,8 +22332,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-25 05:10';
-var APP_BUILD_NOTE='💼 <b>따라만 해도 계약까지 — 구멍 다섯을 고쳤습니다</b>(판 X561). ◾ 한 상담을 처음부터 끝까지 뽑아 읽어 보니 <b>설명은 끝까지 되는데 계약이 안 닫히는</b> 도구였습니다. ◾① <b>클로징</b>을 넣었습니다 — 「이대로 진행하겠습니다 … <b>며칠에 뵐까요?</b>」 / 금액이 걸리시면 <b>하나만</b> / 오늘 안 정하시면 <b>언제까지만</b>. 밀어붙이지 않습니다 — 안 하시는 것도 갈래의 하나입니다. ◾② <b>예산을 먼저 묻습니다</b> — 「매달 얼마까지면 해 보시겠다 싶으세요?」 를 숫자 앞에 두었습니다. ◾③ 가장 많이 듣는 <b>거절 셋</b>(배우자와 상의 · 여유가 없다 · 다른 데서도 알아본다)을 넣었습니다. ◾④ 구간마다 <b>먼저 깨닫게 하는 질문</b> 둘 — 사실 확인이 아니라 고객이 스스로 깨닫는 질문입니다. ◾⑤ <b>오늘 꼭 말할 세 가지</b> — 열 가지를 다 읽으면 하나도 기억하지 못합니다. 셋은 <b>서로 다른 묶음</b>에서 고릅니다. ◾ 재는 자 <b>check-badocs 102가지</b> — 되돌리면 스물두 자리가 웁니다.';
+var APP_BUILD='2026-11-25 10:10';
+var APP_BUILD_NOTE='💼 <b>따라만 해도 계약까지 — 구멍 다섯을 고쳤습니다</b>(판 X561). ◾ 한 상담을 처음부터 끝까지 뽑아 읽어 보니 <b>설명은 끝까지 되는데 계약이 안 닫히는</b> 도구였습니다. ◾① <b>클로징</b>을 넣었습니다 — 「이대로 진행하겠습니다 … <b>며칠에 뵐까요?</b>」 / 금액이 걸리시면 <b>하나만</b> / 오늘 안 정하시면 <b>언제까지만</b>. 밀어붙이지 않습니다 — 안 하시는 것도 갈래의 하나입니다. ◾② <b>예산을 먼저 묻습니다</b> — 「매달 얼마까지면 해 보시겠다 싶으세요?」 를 숫자 앞에 두었습니다. ◾③ 가장 많이 듣는 <b>거절 셋</b>(배우자와 상의 · 여유가 없다 · 다른 데서도 알아본다)을 넣었습니다. ◾④ 구간마다 <b>먼저 깨닫게 하는 질문</b> 둘 — 사실 확인이 아니라 고객이 스스로 깨닫는 질문입니다. ◾⑤ <b>오늘 꼭 말할 세 가지</b> — 열 가지를 다 읽으면 하나도 기억하지 못합니다. 셋은 <b>서로 다른 묶음</b>에서 고릅니다. ◾ 재는 자 <b>check-badocs 102가지</b> — 되돌리면 스물두 자리가 웁니다. ◾ 같이 실려 나가는 판 — <b>📈 90일 아카데미가 기록으로 돕니다</b>(X559 · 시작일 자동 · 판정 카드 · 매일 오늘 5분 · 쉬운 말) · <b>🩺 예외질환 중계</b>(X552·X554 · 다 받은 답을 CDN 에 하루) · <b>🔀 전·후 만들기 안에 📑·🧠</b>(X556) · <b>📋 오늘 목록이 몇 분이었는지 남김</b>(X550).';
 
 
 
@@ -29291,6 +29298,28 @@ function hmQdoneClear(){
   try{ localStorage.removeItem(HM_QDONE_KEY); }catch(e){}
   if(typeof toast==='function')toast('오늘 끝낸 표시를 지웠습니다');
   hmPaint();
+}
+/* ══ 📋 <b>오늘 목록 수를 남깁니다</b> (판 X550) ═══════════════════════════════
+   사장님 말씀 (2026-11-24) 「오늘 고객 관리는 CRM 에 자동으로 뜨게 했는데, 이 부분을 잘
+   이행했는지 체크한다면 TA 부분은 해결될 것 같은데」.
+   「이분 끝」 표시(apex_hm_qdone_v1 · apex_hm_done)는 이미 apex-kv-sync 가 서버로 올립니다.
+   그런데 <b>오늘 목록이 몇 분이었는지</b>(분모)는 어디에도 안 남아 「몇 분 중 몇 분」 을 못 셉니다.
+   ★ 세는 곳은 <b>hmLeft() 한 곳</b>입니다 — 띠 · 「다음 분으로 — n분 남았습니다」 와 같은 수 (5번).
+   ★ <b>내 화면일 때만</b> 적습니다 — 팀원 화면을 열어 본 지점장의 칸에 남의 수가 들어가면 안 됩니다.
+   ★ 이름 · 고객 id 는 안 남깁니다 — 숫자 셋뿐(n 목록 · done 끝낸 분 · left 남은 분).
+   ★ 그날 가장 컸던 목록 수를 둡니다 — 배정 DB 가 늦게 실려 오면 처음엔 작게 셉니다.
+   ★ 같으면 안 씁니다 — hmPaint 는 자주 돌고, 쓸 때마다 apex-kv-sync 가 서버를 부릅니다 (7번).
+   서버 apex_user_kv → 트리거가 날짜별로 옮겨 쌓음(EM 운영센터 em_hm_log · migration_70). */
+var HM_PLAN_KEY='apex_hm_plan_v1';
+function hmPlanNote(){
+  if(typeof hwhoIsMe==='function'&&!hwhoIsMe())return;
+  var Q=hmLeft(),t=(typeof mcalToday==='function')?mcalToday():'',o=null;
+  if(!t)return;
+  try{ o=JSON.parse(localStorage.getItem(HM_PLAN_KEY)||'null'); }catch(e){ o=null; }
+  var n=Q.all;
+  if(o&&o.d===t&&(o.n|0)>n)n=o.n|0;
+  if(o&&o.d===t&&o.n===n&&o.done===Q.done&&o.left===Q.n)return;
+  try{ localStorage.setItem(HM_PLAN_KEY,JSON.stringify({d:t,n:n,done:Q.done,left:Q.n})); }catch(e2){}
 }
 function hmQfin(key){
   if(!key)return;
@@ -39734,6 +39763,8 @@ function hmPaint(){
   try{ if(typeof ccHomePaint==='function')ccHomePaint(); }catch(eCc){}
   /* 📒 이번 달 기록도 같이 — 접촉을 하나 남기면 그 수가 바로 바뀝니다 (판 X130) */
   try{ mlogPaint(); }catch(eMl){}
+  /* 📋 오늘 목록이 몇 분이었는지 남깁니다 — EM 운영센터 「스케줄 체크」 가 「이분 끝」 을 몇 분 중 몇 분 했나로 셉니다 (hmPlanNote 한 곳) */
+  try{ hmPlanNote(); }catch(ePl){}
   /* 📍 <b>곁칸 넷을 어디에 세울지</b> — 오늘 카드를 다시 그리면 그 안의 자리도
      새로 생기므로, 바로 뒤에서 정합니다 (hmSidePlace 한 곳 · 5번). */
   try{ hmSidePlace(); }catch(eSp){}
@@ -92755,5 +92786,6 @@ try{osNoticeLoad();}catch(e){}
 <script src="apex-cn-themes.js?v=20261104a"></script>
 <script src="insight-inbox.js?v=20261109a"></script>
 <script src="apex-grow.js?v=20261117b"></script>
+<script src="apex-ac90auto.js?v=20261125a"></script>
 </body>
 </html>
