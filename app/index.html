@@ -22319,8 +22319,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-24 20:30';
-var APP_BUILD_NOTE='📣 <b>설명회 한 장을 따로 켭니다</b>(판 X546 · 사장님 말씀 「머지하고 따로 킬수 있도록 만들어줘」) — 주소 끝에 <b>?show=1</b> 을 붙이면 그 장 하나만 섭니다. 탭도 하나, 걸음도 하나(「앉으신 분 생년월일」), 「🔒 내 눈용」·「내 카드 설정」 단추는 안 섭니다. ★★ 설명회에서 <b>띄워 놓는 화면</b>이라 그렇게 했습니다 — 탭이 여럿이면 옆을 잘못 눌러 「🔒 리스크」 가 후보 앞에 뜹니다. ★ 48문항을 아직 안 하신 분이 대부분이라 <b>사주 갈래</b>로 엽니다. ★ 새 파일도, Netlify 사이트도 더 만들지 않았습니다 — 한 벌 더 두면 한쪽만 늙습니다. 보통 판의 설명회 장에 「📣 이 장만 따로 열기」·「🔗 주소 복사」 를 세웠습니다. <b>앱 화면(app/index.html)은 이 판에서도 한 글자도 안 바뀝니다.</b>';
+var APP_BUILD='2026-11-24 21:10';
+var APP_BUILD_NOTE='📣 <b>설명회 한 장을 따로 켭니다</b>(판 X547 · 사장님 말씀 「머지하고 따로 킬수 있도록 만들어줘」) — 주소 끝에 <b>?show=1</b> 을 붙이면 그 장 하나만 섭니다. 탭도 하나, 걸음도 하나(「앉으신 분 생년월일」), 「🔒 내 눈용」·「내 카드 설정」 단추는 안 섭니다. ★★ 설명회에서 <b>띄워 놓는 화면</b>이라 그렇게 했습니다 — 탭이 여럿이면 옆을 잘못 눌러 「🔒 리스크」 가 후보 앞에 뜹니다. ★ 48문항을 아직 안 하신 분이 대부분이라 <b>사주 갈래</b>로 엽니다. ★★ 손님용 판·나만 보는 판에서는 <b>안 켜집니다</b> — 설계사가 띄우는 자리입니다. ★ 새 파일도, Netlify 사이트도 더 만들지 않았습니다. 보통 판의 설명회 장에 「📣 이 장만 따로 열기」·「🔗 주소 복사」 를 세웠습니다. <b>앱 화면(app/index.html)은 이 판에서도 한 글자도 안 바뀝니다.</b> ★ 같이 실려 나가는 것 — <b>본체 쪽 판 X546(📰 카톡에 기사가 안 붙던 자리)</b> 도 이 판에 들어 있습니다.';
 
 
 
@@ -81024,27 +81024,42 @@ function mstNews(cat,n){
     if((L[i].cats||[]).indexOf(cat)>=0)out.push(L[i]);
   return out;
 }
+/* ★ 판 X546 — 사장님 말씀 2026-11-23 「고객이 관심있을만한 것들을 뉴스로 보내던」.
+   ⚠ 여기 두 곳이 기사 한 줄에서 <b>.title · .link · .source</b> 를 꺼내고 있었습니다.
+     실제 칸 이름은 nlLoad 가 정하는 <b>.t · .u · .s</b> 입니다 — 그래서 카톡 칸에
+     「제목 없음 · 언론사 미상」 이 찍히고 주소는 #, 「보낼 말 복사」 에는 기사가
+     <b>한 번도 안 붙었습니다</b>(라이브에서 그려 보고 찾았습니다).
+   ★ 칸 이름을 <b>외워 쓰지 않습니다</b> — 꺼내는 곳을 여기 하나로 둡니다 (5번).
+   ★ 못 읽은 줄은 <b>버립니다</b> — 「제목 없음」 을 지어 적지 않습니다 (1번).  */
+function mstArt(it){
+  if(!it)return null;
+  var t=(it.t||'').trim(), u=(it.u||'').trim(), sc=(it.s||'').trim();
+  if(!t||!u)return null;
+  return {t:t,u:u,s:sc,d:it.d||''};
+}
 function mstNewsHtml(cat){
-  var L=mstNews(cat,3),i,h='';
-  if(!L.length)
+  var R=[],i,h='',a;
+  mstNews(cat,3).forEach(function(it){var q=mstArt(it);if(q)R.push(q);});
+  if(!R.length)
     return '<div class="mst-nonews">받아 둔 기사가 <b>아직 없습니다.</b> 지어내지 않습니다 — '+
       '<button type="button" class="mst-lk" onclick="go(\'news_live\')">🌐 고객에게 전할 뉴스</button> '+
       '에서 먼저 모아 주시면 이 자리에 <b>그 기사 그대로</b> 붙습니다.</div>';
   h='<div class="mst-news"><div class="mst-nh">붙일 만한 기사 — 제목·언론사·주소 그대로입니다</div>';
-  for(i=0;i<L.length;i++)
-    h+='<a class="mst-ni" href="'+osEsc(L[i].link||'#')+'" target="_blank" rel="noopener">'+
-       '<b>'+osEsc(L[i].title||'제목 없음')+'</b>'+
-       '<span>'+osEsc(L[i].source||'언론사 미상')+(L[i].d?(' · '+osEsc(String(L[i].d).slice(0,10))):'')+'</span></a>';
+  for(i=0;i<R.length;i++){
+    a=R[i];
+    h+='<a class="mst-ni" href="'+osEsc(a.u)+'" target="_blank" rel="noopener">'+
+       '<b>'+osEsc(a.t)+'</b>'+
+       '<span>'+(a.s?osEsc(a.s):'')+(a.d?((a.s?' · ':'')+osEsc(String(a.d).slice(0,10))):'')+'</span></a>';
+  }
   return h+'</div>';
 }
 /* 보낼 말 — 기사를 고르셨으면 제목·주소를 <b>그대로</b> 뒤에 붙입니다 */
 function mstSay(id,m){
   var st=mstStep(m);
   if(!st)return '';
-  var t=st.say,L=mstNews(st.cat,1);
-  if(L.length&&L[0].link)
-    t+='\n\n[읽어 보실 만한 기사]\n'+(L[0].title||'')+
-       (L[0].source?(' — '+L[0].source):'')+'\n'+L[0].link;
+  var t=st.say,a=mstArt(mstNews(st.cat,1)[0]);
+  /* 기사는 <b>제목 · 언론사 · 주소를 그대로</b> 옮깁니다 — 지어내지 않습니다 (9번) */
+  if(a) t+='\n\n[읽어 보실 만한 기사]\n'+a.t+(a.s?(' — '+a.s):'')+'\n'+a.u;
   return t;
 }
 function mstCopy(id,m){
