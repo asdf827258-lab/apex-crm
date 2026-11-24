@@ -340,7 +340,9 @@
     '은퇴 준비': [{ tab: 'finance', track: 'w' }, { tab: 'finance', track: 'c' }]
   };
   /* ➕ 판 X558 — 사장님 말씀 (2026-11-25) 「상황에 추천하는 메뉴 두개 정도 있는데 내가 추가할수 있도록 해줘 다른 사람은 손 못대게」.
-     위 CARE_APP(기본 한두 개)는 그대로 두고, 사장님이 더한 것을 <b>그 뒤에</b> 붙입니다.
+     위 CARE_APP(기본 한두 개)는 그대로 두고, 사장님이 정한 <b>차례 전체</b>(기본도 그 안에서 자리를 옮길 수 있음 · 더한 것)를 먼저 세웁니다.
+     사장님 말씀 「맨위에 세개 가장 추천하는것을 오늘에서 클릭 안하고 뜰수 있도록」 — 이 차례의 앞 셋이 오늘 카드에 바로 서고, 나머지는 「모두 보기」.
+     차례에 없는 기본(새로 생긴 것)은 그 뒤에 붙어 빠지지 않습니다.
      ★ 담는 곳 = 있던 앱 설정 app_config 의 'care_apps' 한 칸(osCfgGet · 로그인할 때 OS.cfg 로 읽어 둠 · 팀 전체가 같이 봄).
      ★ 「다른 사람은 손 못대게」 = 서버가 지킴 — app_config 쓰기는 is_owner() · is_admin() 만(라이브 정책 app_config_write 확인 2026-11-25).
        고치는 화면(새 오늘 화면 HOME_V2.careEdit)도 대표 · 관리자에게만 단추를 냅니다. */
@@ -382,10 +384,10 @@
       var row = { tab: x.tab, t: (it.icon ? it.icon + ' ' : '') + strip(it.title || x.tab), g: x.g || '', w: x.w || '' };
       seen[key] = row; out.push(row);
     };
-    (CARE_APP[care] || []).forEach(add);
     careMine(care).forEach(add);
+    (CARE_APP[care] || []).forEach(add);
     K.forEach(function (k) { if (!(k.tab === 'finance' && k.track)) add(k); });
-    return out.slice(0, 6);
+    return out.slice(0, 16);
   }
   /* 권할 것 한 벌 — 요약 칸과 「자세히」 시트가 같이 씁니다(한 곳에서 고름) */
   function recPack(c) {
@@ -406,7 +408,7 @@
       '<div class="rr"><span>무엇을</span><b>' + (R.C ? E(R.C.label) + ' — ' + E((R.C.dambo || []).slice(0, 2).join(' · ')) : '<i>지금 상황이나 나이를 적으면 나와요</i>') + '</b></div>' +
       '<div class="rr"><span>어떻게</span><b>' + (R.tip ? E(strip(R.tip.pt)) : '<i>나이를 적으면 나와요</i>') + '</b></div>' +
       (R.O.length ? '<div class="rr"><span>막히면</span><b>' + R.O.map(function (o) { return '「' + E(o.title) + '」'; }).join(' ') + '</b></div>' : '') +
-      (R.A.length ? '<div class="rapps">' + R.A.map(function (x) { return '<button type="button" onclick="go(\'' + Q(x.tab) + '\')">' + E(x.t) + '</button>'; }).join('') + '</div>' : '') +
+      (R.A.length ? '<div class="rapps">' + R.A.slice(0, 3).map(function (x) { return '<button type="button" onclick="go(\'' + Q(x.tab) + '\')">' + E(x.t) + '</button>'; }).join('') + '</div>' : '') +
       '</div>';
   }
   /* 「자세히」 — 시안 openRec 그대로: ① 무엇을(던지는 한마디 · 담보 · 이번 달 상품) ② 어떻게(나이대) ③ 들고 갈 화면 ④ 이 말이 나오면.

@@ -692,7 +692,7 @@ console.log('\n[22] 🧰 오늘 카드 「이분께 맞는 도구」 (판 X532 �
   const c0 = card(0), c1 = card(1), c2 = card(2), c3 = card(3);
   is(/class="qtools"><div class="lb">🧰 이분께 맞는 도구<small>「결혼 준비」 · 첫 만남 단계<\/small>/.test(c0) && c0.indexOf('8가지 통장 진단') < c0.indexOf('재무설계 계산기') && c0.indexOf('재무설계 계산기') < c0.indexOf('팩트파인딩') && /onclick="go\('wallets'\)"/.test(c0),
     '고객 카드 — 상황(결혼 준비) 도구 먼저 → 그분 배정 줄 단계(첫 만남) 도구 · 까닭 꼬리표 · 누르면 그 화면');
-  is((c0.match(/<button type="button" onclick="go\('/g) || []).length === 4 && !/상담 덱/.test(c0), '여섯까지(판 X558 — 상황 기본 둘 + 단계 둘 = 넷) · 열 수 없는 화면(상담 덱)은 안 섬');
+  is((c0.match(/<button type="button" onclick="go\('/g) || []).length === 3 && /📋 추천 메뉴 4개 모두 보기/.test(c0) && !/상담 덱/.test(c0), '카드엔 맨 앞 셋만 바로 · 넷째부터는 「📋 추천 메뉴 n개 모두 보기」(판 X558) · 열 수 없는 화면(상담 덱)은 안 섬');
   is(/🧰 이분께 맞는 도구<small>첫 만남 단계<\/small>/.test(c1) && /팩트파인딩/.test(c1) && /보장분석/.test(c1), '배정 DB 카드 — 그 줄 단계(AP) 도구(상황은 모름)');
   is(!/qtools/.test(c2), '상황도 단계도 모르면 줄째 안 섬(지어내지 않음)');
   is(!/qtools/.test(c3), '내 일정 카드엔 안 섬');
@@ -829,16 +829,22 @@ console.log('\n[27] 📍 지금 상황 · ⚙ 상황별 추천 메뉴 (판 X558 
   A = mk(true); h = A.X.els.hv2.innerHTML;
   is(/onclick="HOME_V2\.careEdit\('결혼 준비'\)">⚙ 추천 고치기/.test(card(h, 0)), '대표 · 관리자에겐 도구 줄에 「⚙ 추천 고치기」 (그 카드 상황으로 열림)');
   A.X.g.HOME_V2.careEdit('결혼 준비'); t = A.X.els.hv2Sheet.innerHTML;
-  is(/🔒<\/span><div class="tx"><div class="t1">💰 8가지 통장 진단/.test(t) && /🔒<\/span><div class="tx"><div class="t1">📊 재무설계 계산기/.test(t) && /carePut\('bojang'\)/.test(t) && !/carePut\('wallets'\)/.test(t),
-    '편집 시트 — 기본(CARE_APP)은 🔒 그대로 · 더할 메뉴는 「다른 메뉴」 묶음에서(기본은 안 섬)');
+  is(/⭐<\/span><div class="tx"><div class="t1">💰 8가지 통장 진단<\/div><div class="t2">기본 · 오늘 카드에 바로/.test(t) && /⭐<\/span><div class="tx"><div class="t1">📊 재무설계 계산기/.test(t) && /carePut\('bojang'\)/.test(t) && !/carePut\('wallets'\)/.test(t) && !/careDel\(0\)/.test(t),
+    '편집 시트 — 기본(CARE_APP)도 차례 안에(⭐ 위 셋 · 기본은 ✕ 없음) · 더할 메뉴는 「다른 메뉴」 묶음에서(기본은 안 섬)');
   A.X.g.HOME_V2.carePut('bojang'); A.X.g.HOME_V2.carePut('insight');
-  is(A.cfg.care_apps === '{"결혼 준비":["bojang","insight"]}', '더하기 = 있던 osCfgSet(\'care_apps\', …) — ' + A.cfg.care_apps);
-  const ap = A.X.g.CUS_V2.appsBy('결혼 준비', '', true).map(a => a.tab).join(',');
-  is(ap === 'wallets,finance,bojang,insight', '한 곳(CUS_V2.appsBy)에서 기본 뒤에 붙음 → 오늘 카드 · 고객 화면 「권할 것」 같이 — ' + ap);
+  is(A.cfg.care_apps === '{"결혼 준비":["wallets","finance","bojang","insight"]}', '더하기 = 있던 osCfgSet(\'care_apps\', 차례 전체) — ' + A.cfg.care_apps);
+  let ap = A.X.g.CUS_V2.appsBy('결혼 준비', '', true).map(a => a.tab).join(',');
+  is(ap === 'wallets,finance,bojang,insight', '한 곳(CUS_V2.appsBy) → 오늘 카드 · 고객 화면 「권할 것」 같이 — ' + ap);
   A.X.g.HOME_V2.paint(); h = A.X.els.hv2.innerHTML;
-  is((card(h, 0).match(/<button type="button" onclick="go\('/g) || []).length === 4 && /go\('insight'\)/.test(card(h, 0)), '오늘 카드 도구 줄에 더한 것까지 섬');
-  A.X.g.HOME_V2.careUp(1); A.X.g.HOME_V2.careDel(1);
-  is(A.cfg.care_apps === '{"결혼 준비":["insight"]}', '▲ 위로 · ✕ 빼기 — ' + A.cfg.care_apps);
+  is((card(h, 0).match(/<button type="button" onclick="go\('/g) || []).length === 3 && /go\('bojang'\)/.test(card(h, 0)) && !/go\('insight'\)/.test(card(h, 0)) && /onclick="HOME_V2\.tools\('touch:c1:'\)">📋 추천 메뉴 4개 모두 보기/.test(card(h, 0)),
+    '「맨위에 세개 … 클릭 안하고」 — 카드엔 앞 셋만 바로 · 넷째(상품전략기)는 「모두 보기」 안');
+  A.X.g.HOME_V2.tools('touch:c1:'); t = A.X.els.hv2Sheet.innerHTML;
+  is((t.match(/class="li" onclick="HOME_V2\.close\(\);go\('/g) || []).length === 4 && /go\('insight'\)/.test(t) && /⚙ 추천 차례 · 메뉴 고치기/.test(t), '「모두 보기」 시트 — 넷 다 · 대표에겐 고치기 단추');
+  A.X.g.HOME_V2.careUp(3);
+  ap = A.X.g.CUS_V2.appsBy('결혼 준비', '', true).map(a => a.tab).join(',');
+  is(A.cfg.care_apps === '{"결혼 준비":["wallets","finance","insight","bojang"]}' && ap === 'wallets,finance,insight,bojang', '▲ 로 차례를 바꾸면 카드 앞 셋도 바뀜 — ' + ap);
+  A.X.g.HOME_V2.careDel(0); A.X.g.HOME_V2.careDel(3);
+  is(A.cfg.care_apps === '{"결혼 준비":["wallets","finance","insight"]}', '✕ 빼기 — 더한 것만 빠지고 기본(🔒)은 안 빠짐 — ' + A.cfg.care_apps);
   const cs = sc.slice(sc.indexOf('  function isBoss('), sc.indexOf('  function toolsOf('));
   is(cs.length > 200 && !/setItem|\.rpc\(|\.from\(|fetch\(/.test(cs) && /g\.osCfgSet\(/.test(cs) && /g\.cmSave\(/.test(cs) && /CARE_KEY = 'care_apps'/.test(CV) && /careMine\(care\)\.forEach\(add\)/.test(CV),
     '저장은 있던 두 문(cmSave · osCfgSet)뿐 · 새 서버 · 이 기기 저장 없음');

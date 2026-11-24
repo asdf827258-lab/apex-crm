@@ -234,6 +234,7 @@
       /* 판 X532 — 🧰 이분께 맞는 도구 */
       '.hv2 .qtools{margin-top:8px}',
       '.hv2 .qtools .lb{display:flex;align-items:center;gap:4px;flex-wrap:wrap}.hv2 .qtools .cfx{margin-left:auto;font-size:13px;font-weight:700;color:var(--blue);padding:2px 4px}',
+      '.hv2 .qtools .tmore{display:block;width:100%;margin-top:6px;height:40px;border-radius:10px;background:var(--line2);font-size:14px;font-weight:700;color:var(--ink)}',
       '.hv2 .qsit{display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px 12px;border-radius:12px;background:#F9FAFB}',
       '.hv2 .qsit .k{font-size:13px;font-weight:700;color:var(--sub2)}.hv2 .qsit b{font-size:15px;font-weight:800}.hv2 .qsit .no{font-size:14px;color:var(--sub3)}',
       '.hv2 .qsit button{margin-left:auto;height:32px;padding:0 12px;border-radius:8px;background:#fff;border:1px solid var(--line);font-size:13px;font-weight:700;color:var(--blue)}',
@@ -819,24 +820,30 @@
     if (!isBoss()) { try { g.toast('대표 · 관리자만 고칠 수 있어요'); } catch (e) {} return; }
     var L = careList(); if (care != null) { CE.care = care || CE.care || L[0] || ''; CE.q = ''; }
     if (!CE.care) CE.care = L[0] || '';
-    var base = T(function () { return g.CUS_V2.CARE_APP[CE.care]; }, []) || [], mine = careMap()[CE.care] || [];
+    var base = careBase(CE.care), O = careOrder(CE.care);
     var nm = function (tab) { var it = T(function () { return g.navItemOf(tab); }, null) || {}; return (it.icon ? it.icon + ' ' : '') + (it.title || tab); };
-    var seenB = {};
     var h = '<h1>⚙ 상황별 추천 메뉴</h1><div class="sub">고른 상황의 고객 카드 · 고객 화면 「권할 것」 에 같이 떠요 · 팀 모두에게 · 고치기는 대표 · 관리자만</div>' +
       '<div class="chipr" style="margin-top:12px;flex-wrap:wrap">' + L.map(function (t, i) { return '<button type="button" class="' + (t === CE.care ? 'on' : '') + '" onclick="HOME_V2.careTo(' + i + ')">' + E(t) + '</button>'; }).join('') + '</div>' +
-      '<h2>' + E(CE.care) + ' <small>기본 ' + base.length + ' · 더한 것 ' + mine.length + '</small></h2><div class="list">' +
-      base.map(function (b) { if (seenB[b.tab]) return ''; seenB[b.tab] = 1; return '<div class="li"><span class="e">🔒</span><div class="tx"><div class="t1">' + E(nm(b.tab)) + '</div><div class="t2">기본</div></div></div>'; }).join('') +
-      mine.map(function (t, i) {
-        return '<div class="li" style="padding-right:6px"><span class="e">➕</span><div class="tx"><div class="t1">' + E(nm(t)) + '</div><div class="t2">사장님이 더함</div></div>' +
+      '<h2>' + E(CE.care) + ' <small>' + O.length + '개 · ⭐ 위 셋이 오늘 카드에 바로 떠요 · ▲ 로 차례</small></h2><div class="list">' +
+      O.map(function (t, i) {
+        var b = base.indexOf(t) >= 0;
+        return '<div class="li" style="padding-right:6px"><span class="e">' + (i < 3 ? '⭐' : (b ? '🔒' : '➕')) + '</span><div class="tx"><div class="t1">' + E(nm(t)) + '</div><div class="t2">' + (b ? '기본' : '사장님이 더함') + (i < 3 ? ' · 오늘 카드에 바로' : '') + '</div></div>' +
           (i ? '<button type="button" aria-label="위로" style="width:40px;height:44px;font-size:15px;color:var(--sub2)" onclick="HOME_V2.careUp(' + i + ')">▲</button>' : '') +
-          '<button type="button" aria-label="빼기" style="width:40px;height:44px;font-size:17px;color:var(--sub2)" onclick="HOME_V2.careDel(' + i + ')">✕</button></div>';
+          (b ? '' : '<button type="button" aria-label="빼기" style="width:40px;height:44px;font-size:17px;color:var(--sub2)" onclick="HOME_V2.careDel(' + i + ')">✕</button>') + '</div>';
       }).join('') + '</div>' +
       '<h2>메뉴 더하기</h2><input id="hv2CareQ" type="search" placeholder="메뉴 이름으로 찾기" oninput="HOME_V2.careQ(this.value)" value="' + E(CE.q) + '" style="width:100%;height:48px;border:1px solid #D1D6DB;border-radius:12px;padding:0 14px;font-size:16px;background:#fff">' +
       '<div id="hv2CareL">' + carePick() + '</div>';
     sheet(h);
   }
+  /* 기본(CARE_APP 의 화면 · 겹친 것 하나로) · 사장님이 정한 차례(저장된 것 + 거기 없는 기본은 뒤에) */
+  function careBase(care) { var o = []; (T(function () { return g.CUS_V2.CARE_APP[care]; }, []) || []).forEach(function (b) { if (b && b.tab && o.indexOf(b.tab) < 0) o.push(b.tab); }); return o; }
+  function careOrder(care) {
+    var o = []; (careMap()[care] || []).forEach(function (t) { if (typeof t === 'string' && t && o.indexOf(t) < 0) o.push(t); });
+    careBase(care).forEach(function (t) { if (o.indexOf(t) < 0) o.push(t); });
+    return o;
+  }
   function carePick() {
-    var base = (T(function () { return g.CUS_V2.CARE_APP[CE.care]; }, []) || []).map(function (b) { return b.tab; }), mine = careMap()[CE.care] || [];
+    var base = careBase(CE.care), mine = careOrder(CE.care);
     var q = CE.q.replace(/\s+/g, '').toLowerCase(), n = 0;
     var h = menuGroups().map(function (gr) {
       var L = gr.items.filter(function (x) { return base.indexOf(x.it.id) < 0 && (!q || String(x.it.title || x.it.id).replace(/\s+/g, '').toLowerCase().indexOf(q) >= 0); });
@@ -853,8 +860,8 @@
   function careEdit(fn) {
     return function (a) {
       if (!isBoss()) return;
-      var M = careMap(), L = (M[CE.care] || []).slice();
-      fn(L, a); M[CE.care] = L; careSave(M);
+      var M = careMap(), L = careOrder(CE.care);
+      fn(L, a, careBase(CE.care)); M[CE.care] = L; careSave(M);
     };
   }
   function toolsOf(x) {
@@ -866,16 +873,29 @@
     if (!A || !A.length) return null;
     var si = T(function () { return g.CUS_V2.stgI(st); }, -1), sn = si >= 0 ? T(function () { return g.CUS_V2.STG[si].t; }, '') : '';
     var why = [care ? '「' + care + '」' : '', sn ? sn + ' 단계' : ''].filter(Boolean).join(' · ');
-    return { A: A.slice(0, 6), why: why, care: care };
+    return { A: A, why: why, care: care };
+  }
+  /* 사장님 말씀 (2026-11-25) 「상황별 추천메뉴가 꽤 많을수도 있거든 그걸 누르면 메뉴들이 뜨도록 … 맨위에 세개 가장 추천하는것을 오늘에서 클릭 안하고 뜰수 있도록」
+     → 카드엔 <b>맨 앞 셋만</b> 바로(누르면 그 화면) · 넷째부터는 「📋 추천 메뉴 n개 모두 보기」 → 시트(toolsSheet)에 전부. 차례는 appsBy 한 곳(사장님이 정한 차례 먼저). */
+  function toolTile(a) {
+    var ic = T(function () { return g.navItemOf(a.tab).icon; }, '') || '', nm = (ic && a.t.indexOf(ic + ' ') === 0) ? a.t.slice(ic.length + 1) : a.t;
+    return '<button type="button" onclick="go(\'' + Q(a.tab) + '\')">' + (ic ? '<i>' + E(ic) + '</i>' : '') + '<span>' + E(nm) + '</span></button>';
   }
   function toolsHtml(x) {
     var R = toolsOf(x); if (!R) return '';
     return '<div class="qtools"><div class="lb">🧰 이분께 맞는 도구' + (R.why ? '<small>' + E(R.why) + '</small>' : '') +
       (isBoss() ? '<button type="button" class="cfx" onclick="HOME_V2.careEdit(\'' + Q(R.care || '') + '\')">⚙ 추천 고치기</button>' : '') + '</div><div class="tc">' +
-      R.A.map(function (a) {
-        var ic = T(function () { return g.navItemOf(a.tab).icon; }, '') || '', nm = (ic && a.t.indexOf(ic + ' ') === 0) ? a.t.slice(ic.length + 1) : a.t;
-        return '<button type="button" onclick="go(\'' + Q(a.tab) + '\')">' + (ic ? '<i>' + E(ic) + '</i>' : '') + '<span>' + E(nm) + '</span></button>';
-      }).join('') + '</div></div>';
+      R.A.slice(0, 3).map(toolTile).join('') + '</div>' +
+      (R.A.length > 3 ? '<button type="button" class="tmore" onclick="HOME_V2.tools(\'' + Q(x.key) + '\')">📋 추천 메뉴 ' + R.A.length + '개 모두 보기 ›</button>' : '') + '</div>';
+  }
+  function toolsSheet(key) {
+    var x = rowOf(key), R = toolsOf(x); if (!R) return;
+    sheet('<div class="sub">' + E(nameOf(x)) + '님</div><h1>🧰 이분께 맞는 도구</h1><div class="sub">' + E(R.why ? R.why + ' · ' : '') + R.A.length + '개 · 위 셋이 카드에 바로 떠요</div>' +
+      '<div class="list" style="margin-top:12px">' + R.A.map(function (a, i) {
+        return '<button type="button" class="li" onclick="HOME_V2.close();go(\'' + Q(a.tab) + '\')"><span class="e">' + (i < 3 ? '⭐' : '•') + '</span><div class="tx"><div class="t1">' + E(a.t) + '</div>' +
+          (a.w ? '<div class="t2">' + E(strip(a.w)) + '</div>' : '') + '</div><span class="ar">›</span></button>';
+      }).join('') + '</div>' +
+      (isBoss() ? '<button type="button" class="btn g" style="margin-top:12px" onclick="HOME_V2.careEdit(\'' + Q(R.care || '') + '\')">⚙ 추천 차례 · 메뉴 고치기</button>' : ''));
   }
   function askHtml(x) {
     var id = cliOf(x); if (!id) return '';
@@ -1780,12 +1800,13 @@
     jv: jvSheet,
     ai: aiSheet,
     aiAdd: aiAddSheet,
-    sit: sitSheet, sitPut: sitPut,
+    sit: sitSheet, sitPut: sitPut, tools: toolsSheet,
     careEdit: function (care) { careEditSheet(care == null ? '' : care); },
     careTo: function (i) { CE.care = careList()[i] || CE.care; CE.q = ''; careEditSheet(); },
     careQ: function (v) { CE.q = String(v || ''); var b = el('hv2CareL'); if (b) b.innerHTML = carePick(); },
-    carePut: careEdit(function (L, id) { var i = L.indexOf(id); if (i >= 0) L.splice(i, 1); else L.push(id); }),
-    careDel: careEdit(function (L, i) { L.splice(i, 1); }),
+    /* 기본(🔒)은 빼지 못함 — 자리만 옮김 */
+    carePut: careEdit(function (L, id, B) { if (B.indexOf(id) >= 0) return; var i = L.indexOf(id); if (i >= 0) L.splice(i, 1); else L.push(id); }),
+    careDel: careEdit(function (L, i, B) { if (L[i] && B.indexOf(L[i]) < 0) L.splice(i, 1); }),
     careUp: careEdit(function (L, i) { if (i > 0) { var t = L[i]; L.splice(i, 1); L.splice(i - 1, 0, t); } }),
     mis: misSheet, misDid: function (i, ck) { misDid(i, ck, 0); }, misUndo: function (i, ck) { misDid(i, ck, 1); },
     newOn: newOn,
