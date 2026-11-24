@@ -23,8 +23,13 @@ const bad = [], ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if 
 
 const srv = http.createServer((q, s) => {
   let p = decodeURIComponent(q.url.split('?')[0]); if (p === '/') p = '/saju-mbti.html';
+  /* 그림자 두 벌도 내줍니다 — 깃발 한 줄만 다른 <b>진짜 그 파일</b>을 열어
+     봐야 「손님용 판에서는 안 켜진다」 가 참말인지 압니다 (8번). */
+  let f = (p === '/guest') ? 'site-saju/index.html'
+        : (p === '/me')    ? 'site-me/index.html'
+        : path.join('app', p.replace(/^\//, ''));
   try { s.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        s.end(fs.readFileSync(path.join(ROOT, p))); } catch (e) { s.writeHead(404); s.end(''); }
+        s.end(fs.readFileSync(path.join(process.cwd(), f))); } catch (e) { s.writeHead(404); s.end(''); }
 }).listen(PORT);
 
 /* 설명회에서 띄우는 다섯 꼭지 — 사장님이 이름으로 말씀하신 그대로 */
@@ -140,6 +145,81 @@ const WANT = ['신당 풀이', '아이스브레이킹', '이 일과 어떻게 �
   });
   ok(dup.foot === 1, '꼬리글이 <b>하나</b>다 — ' + dup.foot + '개');
   ok(dup.pr === 1, '인쇄 단추가 <b>하나</b>다 — ' + dup.pr + '개');
+  ok(await pg.evaluate(() => /이 장만 따로 열기/.test(document.querySelector('#view').innerText)),
+    '★ 보통 판에는 <b>「이 장만 따로 열기」</b> 가 선다 (판 X547)');
+
+  console.log('\n[6-2] ★★ <b>따로 켠 판(?show=1)</b> — 이 장 하나만 선다 (판 X547)');
+  /* 사장님 말씀 2026-11-24 「따로 킬수 있도록 만들어줘」.
+     ⚠ 여기가 위험한 까닭: 설명회에서 <b>띄워 놓는 화면</b>입니다. 탭이 하나가
+       아니면 옆을 잘못 눌러 「🔒 리스크」 가 후보 앞에 뜹니다. 그래서 탭 수를
+       눈으로 믿지 않고 셉니다 (8번).                                        */
+  /* ⚠ <b>새 바구니</b>로 엽니다. 같은 바구니로 열면 앞 장에서 담아 둔
+     생년월일이 그대로 있어 걸음을 건너뛰고 board 로 섭니다 — 「빈 손으로
+     열었을 때」 를 재려던 줄이 엉뚱한 것을 재게 됩니다 (8번). */
+  const sctx = await br.newContext({ viewport: { width: 900, height: 1100 } });
+  await sctx.route('**://**', r =>
+    r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : (outside++, r.abort()));
+  const solo = await sctx.newPage();
+  const sErr = []; solo.on('pageerror', e => sErr.push(e.message));
+  await solo.goto('http://127.0.0.1:' + PORT + '/?show=1', { waitUntil: 'domcontentloaded' });
+  await solo.waitForTimeout(1200);
+  const s1 = await solo.evaluate(() => ({
+    on: SHOW.on, view: S.view, mode: S.mode, step: S.step, tab: S.tab,
+    steps: [].slice.call(document.querySelectorAll('#tabs button')).map(b => b.textContent),
+    me: getComputedStyle(document.getElementById('meBtn')).display,
+    vb: document.getElementById('viewBtn') ? getComputedStyle(document.getElementById('viewBtn')).display : 'none'
+  }));
+  ok(s1.on === true, '?show=1 로 켜진다');
+  ok(s1.mode === 'saju', '★ 48문항을 아직 안 한 분이라 <b>사주 갈래</b>로 연다 — ' + s1.mode);
+  ok(s1.steps.length === 1 && /앉으신 분/.test(s1.steps[0]),
+    '★ 걸음이 <b>하나</b>다 — ' + s1.steps.join(' / '));
+  ok(s1.me === 'none' && s1.vb === 'none',
+    '★★ 「🔒 내 눈용」·「내 카드 설정」 단추가 <b>안 선다</b> — 띄워 놓는 화면이다');
+  const s2 = await solo.evaluate(() => {
+    S.cl = { name: '홍길동', gender: 'M', mbti: '', y: '1983', m: '7', d: '22',
+             H: 14, Mi: 0, noTime: false, adj: false, saju: null, res: null };
+    calcPerson(S.cl); S.step = 'board'; S.tab = 'show'; draw();
+    const v = document.querySelector('#view');
+    return { tabs: [].slice.call(document.querySelectorAll('#tabs button')).map(b => b.textContent),
+             secs: [].slice.call(v.querySelectorAll('.shw-h h2')).map(e => e.innerText.replace(/\s+/g, ' ')),
+             /* ★ 머리 카드는 「총점·등급을 뺐다」 고 제 입으로 말합니다.
+                재는 것은 <b>.shw 안</b>(다섯 꼭지)입니다 — 안 그러면 제가 적은
+                안내문을 샌 것으로 세는 헛 빨간불입니다 (8번). */
+             /* ★ 머리 카드는 「총점·등급을 뺐다」 고 제 입으로 말합니다.
+                새는지 재는 것은 <b>.shw 안</b>(다섯 꼭지)입니다 — 안 그러면 제가
+                적은 안내문을 샌 것으로 세는 헛 빨간불입니다 (8번). */
+             txt: (v.querySelector('.shw') || v).innerText,
+             /* ⚠ 「따로 열기」 단추는 <b>머리 카드</b>에 있습니다. 위 txt 로
+                재면 영영 안 울립니다 — 실제로 되돌려 보고 알았습니다 (8번). */
+             all: v.innerText, tab: S.tab };
+  });
+  ok(s2.tabs.length === 1 && /설명회/.test(s2.tabs[0]),
+    '★★ 탭이 <b>이 장 하나뿐</b>이다 — ' + s2.tabs.join(' / '));
+  ok(s2.secs.length === 5, '다섯 꼭지가 그대로 선다 — ' + s2.secs.length + '개');
+  ok(s2.txt.indexOf('🔒') < 0 && s2.txt.indexOf('리더') < 0 && s2.txt.indexOf('등급') < 0,
+    '★★ 따로 켠 판에도 「🔒 내 눈」·등급이 <b>없다</b>');
+  ok(s2.all.indexOf('이 장만 따로 열기') < 0,
+    '★ 이미 따로 켠 판이라 <b>그 단추를 또 안 낸다</b> (6번)');
+  /* ★ 주소를 만드는 곳이 하나인가 — 두 곳이면 한쪽만 늙습니다 (5번) */
+  const SRCTXT = fs.readFileSync('app/saju-mbti.html', 'utf8');
+  ok((SRCTXT.match(/\?show=1'/g) || []).length === 1,
+    "★ 따로 켜는 주소를 적은 곳이 <b>showUrl() 한 곳</b>이다 (5번)");
+  ok(sErr.length === 0, '따로 켠 판도 조용히 안 터진다 — ' + (sErr.join(' / ') || '없음'));
+  /* ★★ 손님용 판에서는 안 켜져야 합니다 — 영업 가능성 다섯 축이 든 장입니다 (3번).
+     그림자 두 벌은 깃발 한 줄만 다르므로, 그 한 줄을 세워 같은 자리를 재 봅니다. */
+  for (const [who, url] of [['손님용 판(site-saju)', '/guest'], ['나만 보는 판(site-me)', '/me']]) {
+    const g = await sctx.newPage();
+    await g.goto('http://127.0.0.1:' + PORT + url + '?show=1', { waitUntil: 'domcontentloaded' });
+    await g.waitForTimeout(1100);
+    const r2 = await g.evaluate(() => ({
+      show: SHOW.on, tab: S.tab,
+      tabs: [].slice.call(document.querySelectorAll('#tabs button')).map(b => b.textContent)
+    }));
+    ok(r2.show === false && r2.tab !== 'show' && !r2.tabs.some(t => /설명회/.test(t)),
+      '★★ ' + who + '에서는 <b>?show=1 이 안 먹는다</b> — ' + r2.tabs.join(' / '));
+    await g.close();
+  }
+  await solo.close(); await sctx.close();
 
   console.log('\n[7] ★ 인쇄하면 <b>다섯 꼭지가 전부</b> 나온다 (4-1번)');
   /* 사장님이 「한 번에 인쇄」 를 이미 한 번 시키셨던 자리입니다. 설명회 장은
