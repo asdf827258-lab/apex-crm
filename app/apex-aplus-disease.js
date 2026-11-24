@@ -72,10 +72,11 @@
       return fetch('/api/aplus-disease?q=' + encodeURIComponent(q) + '&insr=' + encodeURIComponent(insr) + '&prdt=' + encodeURIComponent(prdt) + '&page=' + n)
         .then(function (r) { return r.json(); })
         .then(function (d) { if (!sameAns(d, q, insr, prdt, n)) throw new Error('x'); (d.rows || []).forEach(function (r) { if (r && r.RN != null && !have[r.RN]) have[r.RN] = r; }); })
-        ['catch'](function () { if ((t || 0) < 2) return new Promise(function (ok) { setTimeout(ok, 700 * ((t || 0) + 1)); }).then(function () { return one(n, (t || 0) + 1); }); });
+        ['catch'](function () { if ((t || 0) < 3) return new Promise(function (ok) { setTimeout(ok, 1500 * ((t || 0) + 1)); }).then(function () { return one(n, (t || 0) + 1); }); });
     };
     var lane = function () { if (i >= need.length) return Promise.resolve(); return one(need[i++]).then(lane); };
-    return Promise.all([lane(), lane(), lane(), lane()]).then(function () {
+    /* ⚠ 2026-11-25 — 원본은 한 쪽에 5초 · 웹방화벽이 있다. 세 줄까지만(중계 POOL 과 같게) */
+    return Promise.all([lane(), lane(), lane()]).then(function () {
       return Object.keys(have).map(function (k) { return have[k]; }).sort(function (a, b) { return (+a.RN) - (+b.RN); });
     });
   }
