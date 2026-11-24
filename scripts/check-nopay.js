@@ -23,7 +23,12 @@ for (const f of FILES) {
   const fns = ['payOpen', 'payCard', 'payBank', 'paySimple', 'isPaid', 'setPaid', 'unlockGo', 'tossReturn']
     .filter(x => new RegExp('function\\s+' + x + '\\s*\\(').test(code));
   ok(fns.length === 0, '★★ 결제 함수가 <b>한 개도 없다</b>' + (fns.length ? ' ← ' + fns.join(', ') : ''));
-  ok(!/\bPAY\s*=/.test(code), '★ PAY 라는 이름이 안 남았다 — 결제를 안 담으므로 AGENT 로 바뀌었다 (4번)');
+  /* ⚠ 처음엔 「PAY=」 <b>선언</b>만 봤습니다. 그래서 한 줄 안에 숨어 있던 PAY.tel 을
+     못 보고 넘겼고, 고객이 고민 상담을 열면 <b>PAY is not defined</b> 로 터졌습니다.
+     CI 가 잡아 줬습니다. 선언이 아니라 <b>쓰는 자리</b>를 봐야 합니다 (8번). */
+  const pays = (code.match(/\bPAY\b\s*[.=]/g) || []);
+  ok(pays.length === 0, '★★ PAY 가 <b>쓰는 자리까지</b> 한 곳도 안 남았다' +
+     (pays.length ? (' ← ' + pays.length + '곳') : '') + ' — 결제를 안 담으므로 AGENT 로 바뀌었다 (4번)');
   ok(/\bAGENT\s*=\s*\{/.test(code), '★ 설계사 신원은 <b>AGENT</b> 가 담는다 — 이름이 담는 것과 같다');
   ok(!/tosspayments|toss-confirm|requestPayment/.test(code),
      '★★ 토스 결제가 <b>한 자도 안 남았다</b>');

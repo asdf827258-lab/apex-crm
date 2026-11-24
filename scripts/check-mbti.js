@@ -324,26 +324,21 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   ok(wr.bad.length === 0, '열 가지 모두 진단 · 근거 · 할 것 3 · 하지 말 것 2 · 덕담이 채워진다' +
      (wr.bad.length ? ' — 빈 곳: ' + wr.bad.join(',') : ''));
 
-  const wAgent = await page.evaluate(() => {
+  /* 2026-11-24 「결제칸 없애고」 — 여기 있던 세 묶음(내 눈용은 무료 · 고객은 잠김 ·
+     결제창에 수단이 뜬다)은 <b>잴 것이 없어졌습니다.</b> 이제 양쪽 다 전부 열립니다.
+     ⚠ 없는 것을 재면 헛것입니다 (8번) — 지우고, 아래에서 「둘 다 열린다」 를 잽니다. */
+  const wBoth = await page.evaluate(() => {
     setWorryCat('job'); S.worry.txt = '3년째 인정받는 느낌이 없어요'; worryStart();
-    const t = document.getElementById('view').textContent;
-    return { paid: isPaid(), full: /이번 달에 이 세 가지만/.test(t), lock: /결제하고 전부 보기/.test(t) };
-  });
-  ok(wAgent.paid && wAgent.full && !wAgent.lock, '내 눈용에서는 결제 없이 전부 열린다 (설계사 도구는 무료)');
-
-  const wClient = await page.evaluate(() => {
+    const a = document.getElementById('view').textContent;
     setView('client'); goTab('worry');
-    const t = document.getElementById('view').textContent;
-    payOpen();
-    const sh = document.getElementById('sheetBody').textContent;
-    sheetClose();
-    return { lock: /결제하고 전부 보기/.test(t), price: /1,900원/.test(t),
-      preview: /🌾/.test(t), full: /이번 달에 이 세 가지만/.test(t),
-      bank: /계좌이체/.test(sh), code: /확인 코드/.test(sh) };
+    const c = document.getElementById('view').textContent;
+    setView('agent'); draw();
+    return { aFull: /이번 달에 이 세 가지만/.test(a), cFull: /이번 달에 이 세 가지만/.test(c),
+             lock: /결제|자세한 풀이는 여기서부터|확인 코드|1,900원/.test(a + c) };
   });
-  ok(wClient.lock && wClient.price && !wClient.full, '고객 화면에서는 요약까지만 보이고 나머지는 잠긴다');
-  ok(wClient.preview, '잠겨 있어도 덕담과 진단 한 줄은 무료로 보인다');
-  ok(wClient.bank && wClient.code, '결제창에 연결된 수단과 확인 코드 열기가 나온다');
+  ok(wBoth.aFull, '내 눈용에서 고민 상담이 전부 열린다');
+  ok(wBoth.cFull, '★★ <b>고객 화면에서도 전부 열린다</b> — 잠그는 자리가 없어졌습니다');
+  ok(!wBoth.lock, '⛔ 양쪽 어디에도 <b>결제·잠금 말이 없다</b>');
 
   /* 2026-11-24 「결제칸 없애고」 — 자물쇠·확인 코드·결제수단이 통째로 없어졌습니다.
      이제 고민 상담은 <b>처음부터 전부</b> 열려 있어야 합니다. 자물쇠가 되살아나면 여기서 웁니다. */
