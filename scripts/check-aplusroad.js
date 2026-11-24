@@ -112,6 +112,14 @@ is(/state\.total\s*>\s*0\)\s*throw/.test(DZ_C), '  원본엔 있는데 0건 받�
 is(/'Netlify-Vary'\s*:\s*'query=/.test(FN_C), '  캐시를 <b>검색어·쪽마다 따로</b> 둔다(Netlify-Vary)');
 is(/q\s*:\s*params\.q/.test(FN_C), '  답에 <b>물은 검색어</b>를 적는다');
 is(/function sameAns/.test(DZ_C) && /sameAns\(d, q, insr, prdt, n\)/.test(DZ_C) && /sameAns\(d, q, insr, prdt, 0\)/.test(DZ_C), '  화면이 <b>내가 물은 것의 답인지</b> 맞대 보고 아니면 버린다');
+/* #884 뒤에도 502 때 Netlify 가 옛 답(치아 42쪽 → 갑상선 2쪽)을 냈다 · 원본엔 웹방화벽이 있다(2026-11-25) */
+const POOLN = Number((FN_C.match(/POOL\s*=\s*(\d+)/) || [])[1] || 99);
+is(POOLN <= 3, '  원본을 <b>세 쪽까지만</b> 동시에 부른다(웹방화벽) — POOL ' + POOLN);
+is(!/json\(\s*50\d/.test(FN_C) && /json\(200,\s*\{\s*ok:\s*false/.test(FN_C), '  실패도 <b>200 + ok:false</b>(502 로 답하면 CDN 이 옛 답을 끼워 넣는다)');
+is(/'Netlify-CDN-Cache-Control'/.test(FN_C) && /s-maxage=3600/.test(FN_C), '  다 받은 답은 <b>CDN 에 1시간</b>(원본을 덜 부른다)');
+is(/방화벽/.test(FN_C) && /e\.waf\)\s*\{\s*stop = true/.test(FN_C), '  웹방화벽 안내문을 알아보고 <b>더 두드리지 않는다</b>');
+is(/left < EXPECT/.test(FN_C), '  끝까지 못 받을 쪽은 <b>시작하지 않는다</b>');
+is(!/lane\(\), lane\(\), lane\(\), lane\(\)/.test(DZ_C), '  화면도 <b>세 줄까지만</b> 채운다');
 
 console.log('\n[8] 창구가 배포에 실제로 열려 있다');
 is(/^\/api\/aplus-disease\s+\/\.netlify\/functions\/aplus-disease\s+200/m.test(RED),

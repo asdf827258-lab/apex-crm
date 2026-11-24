@@ -1,4 +1,4 @@
-/* 📈 90일 아카데미가 기록으로 도는가 (판 X552)
+/* 📈 90일 아카데미가 기록으로 도는가 (판 X559)
 
    사장님 말씀 2026-11-24 「팀원들 스스로가 체크를 안하거든」 → 「메인세션 90일
    로드맵과 연결해서」 → 「응, 1단계부터」 → 「2단계도 같이, 다만 편히 볼수있게
@@ -72,7 +72,7 @@ const SEED = () => {
 };
 
 (async () => {
-  console.log('📈 90일 아카데미 — 팀원이 안 넣어도 기록으로 (판 X552)');
+  console.log('📈 90일 아카데미 — 팀원이 안 넣어도 기록으로 (판 X559)');
   await new Promise(r => srv.listen(PORT, r));
   const br = await chromium.launch();
   const ctx = await br.newContext({ viewport: { width: 390, height: 844 } });
