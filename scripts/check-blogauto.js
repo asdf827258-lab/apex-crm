@@ -1380,7 +1380,7 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(morn.blockedSsi, '  <b>「성춘향씨가」</b> 도 막는다');
   is(morn.notFalse, '  <b>「날씨가」 「손님이」 는 안 막는다</b> — 헛것은 안 잡는 것보다 나쁘다 (8번)');
 
-  console.log('\n[23] 하나의 이야기로 쓰나 · <b>한 번에</b> 심의를 지나나 (판 X503)');
+  console.log('\n[23] 하나의 이야기로 쓰나 · <b>한 번에</b> 심의를 지나나 (판 X541)');
   const tale = await page.evaluate(async () => {
     const out = {};
     localStorage.clear(); S.comply = null; await comply();
@@ -1465,7 +1465,7 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(say.writeSay && say.writeNoGet && say.writeBox,
      '  <b>적는 날</b>에는 「적어 주시면」 · 「글감 적으러 가기」 · 한 줄 칸');
 
-  console.log('\n[24] 네이버에서 겪어 보신 규칙 — 내돈내산 · 올리는 법 · 체류시간 (판 X502)');
+  console.log('\n[24] 네이버에서 겪어 보신 규칙 — 내돈내산 · 올리는 법 · 체류시간 (판 X540)');
   const nav = await page.evaluate(async () => {
     const out = {};
     localStorage.clear(); S.comply = null; await comply();
@@ -1546,7 +1546,7 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(nav.calc === nav.hand && nav.tail,
      '  셈이 손으로 푼 값과 같다 — ' + nav.calc + '초 (준법 문구·글쓴이까지 센 글자로 셈)');
 
-  console.log('\n[25] 겪은 이야기 서랍 — 담은 것만 보기로 나가나 · 이름은 안 새나 (판 X540)');
+  console.log('\n[25] 겪은 이야기 서랍 — 담은 것만 보기로 나가나 · 이름은 안 새나 (판 X543)');
   /* 담는 자가 <b>하나</b>여야 한다 — 서랍이 둘인데 이름 검사가 하나에만 붙으면
      그 길로 실명이 AI 까지 그대로 갑니다 (5번·3번). 글자로 못 박습니다. */
   const body = (nm) => {
