@@ -18,6 +18,7 @@
      [7] ★  옛 홈은 지우지 않고 숨기기만(CSS) — 「예전 오늘 칸 펼치기」 가 있다 · 그리다 터지면 예전 화면
      [8] ★  옷은 .hv2 / #hv2Sheet 아래로만 — 앱의 .card · .btn 같은 옷을 덮지 않는다
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
+     [22] ★  판 X532 — 오늘 카드 🧰 이분께 맞는 도구(고객 화면 권할 것과 같은 CUS_V2.appsBy · 상황 → 단계)
      [21] ★★ 판 X531 — 다른 메뉴를 시안 PLACE 묶음으로(TA 대본 → 화법 · 교육 → 공부 · 고지 → 청약 각 한 자리) · 표에 없는 화면은 예전 묶음 그대로 · 서랍 안 건드림
      [20] ★  판 X530 — 🤖 AI 7개 → 자비스 하나로: 인사 줄 🤖 · 자비스 시트(묻기 apexmap · 합친 AI) · 다른 메뉴 맨 아래 한 갈래 (TABS 안 건드림)
      [19] ★  판 X529 — 지금 이분 카드 📰 오늘 소식(ccNewsIdx · ccNews) · 🙋 물어볼 것(cqaAsk · cqaAnsHtml) · 상품전략 칸 → 🧭 상황 시트(openInsK)
@@ -660,6 +661,39 @@ console.log('\n[21] 🗂 다른 메뉴를 시안 묶음으로 — TA · 교육 �
   is((mb.match(/go\('ta_script'\)/g) || []).length === 1 && !/go\('settings'\)/.test(mb), '메뉴 표에 두 번 적힌 화면도 한 번만 · 막힌 화면(설정)은 안 섬');
   is(/☰ 다른 메뉴 펼쳐 보기<\/span><small>10개<\/small>/.test(h), '수 = 열 수 있는 화면 수(겹친 것 한 번)');
   is(!/TABS\s*=|\.group\s*=|g\.TABS\.(push|splice)/.test(sc.slice(sc.indexOf('  var PLACE_G'), sc.indexOf('  function menuHtml()'))), '메뉴 표(TABS) · ☰ 서랍은 안 건드림 — 이 화면 「다른 메뉴」 묶음만');
+}
+
+console.log('\n[22] 🧰 오늘 카드 「이분께 맞는 도구」 (판 X532 · 사장님 말씀 「오늘에서 고객의 상황에 맞게 어떤 도구를 추천해주는지도 띄워줘」)');
+{
+  const CV = fs.readFileSync(path.join(ROOT, 'app/cus-v2.js'), 'utf8');
+  const rows = [
+    { k: 'touch', id: 'c1', t: '홍길동', s: '30일째', key: 'touch:c1:' },
+    { k: 'db', tk: 'AP', id: 'd1', t: '홍길순', s: '만남', key: 'db:d1:AP' },
+    { k: 'next', id: 'c3', t: '홍갑돌', s: '할 일', key: 'next:c3:' },
+    { k: 'my', my: 'm1', t: '지점 회의', s: '09:30', key: 'my:m1' }
+  ];
+  const X = box({ apex_home_v2: '1' }, '', { rows });
+  const NAV = { wallets: ['💰', '8가지 통장 진단'], finance: ['📊', '재무설계 계산기'], fact_find: ['📝', '팩트파인딩'], fp_deck: ['📑', '상담 덱'], bojang: ['🔍', '보장분석'], med_disclosure: ['📋', '알릴의무 필터'] };
+  Object.assign(X.g, {
+    cmOf: id => ({ c1: { care: '결혼 준비' }, c3: {} }[id] || null), crmDbsOf: id => (id === 'c1' ? [{ stage: 'AP' }] : []),
+    APEX_STAGE: { of: st => ({ know: st === 'AP' ? [{ tab: 'fact_find', g: '▶️ 처음 만나서', w: '물어볼 것' }, { tab: 'fp_deck' }, { tab: 'bojang' }] : [] }) },
+    navItemOf: id => (NAV[id] ? { id, icon: NAV[id][0], title: NAV[id][1] } : null), osTabAllowed: id => id !== 'fp_deck',
+    CUS: {}, OSC: {}, CM_BASE: {}
+  });
+  vm.runInContext(CV, X.g);
+  is(typeof X.g.CUS_V2.appsBy === 'function' && /function appsFor\(c\) \{ return appsBy\(meta\(c\.id\)\.care, stageOf\(\)\); \}/.test(CV), '고르는 곳은 한 곳 — 고객 화면 권할 것(appsFor)도 오늘 카드도 CUS_V2.appsBy');
+  X.g.HOME_V2.apply(dyn(X));
+  const h = X.els.hv2.innerHTML;
+  const card = i => { const a = h.indexOf('data-i="' + i + '"'), b = h.indexOf('data-i="' + (i + 1) + '"'); return h.slice(a, b > 0 ? b : h.length); };
+  const c0 = card(0), c1 = card(1), c2 = card(2), c3 = card(3);
+  is(/class="qtools"><div class="lb">🧰 이분께 맞는 도구<small>「결혼 준비」 · 첫 만남 단계<\/small>/.test(c0) && c0.indexOf('8가지 통장 진단') < c0.indexOf('재무설계 계산기') && c0.indexOf('재무설계 계산기') < c0.indexOf('팩트파인딩') && /onclick="go\('wallets'\)"/.test(c0),
+    '고객 카드 — 상황(결혼 준비) 도구 먼저 → 그분 배정 줄 단계(첫 만남) 도구 · 까닭 꼬리표 · 누르면 그 화면');
+  is((c0.match(/<button type="button" onclick="go\('/g) || []).length === 3 && !/상담 덱/.test(c0), '세 개까지 · 열 수 없는 화면(상담 덱)은 안 섬');
+  is(/🧰 이분께 맞는 도구<small>첫 만남 단계<\/small>/.test(c1) && /팩트파인딩/.test(c1) && /보장분석/.test(c1), '배정 DB 카드 — 그 줄 단계(AP) 도구(상황은 모름)');
+  is(!/qtools/.test(c2), '상황도 단계도 모르면 줄째 안 섬(지어내지 않음)');
+  is(!/qtools/.test(c3), '내 일정 카드엔 안 섬');
+  const ts = sc.slice(sc.indexOf('  function toolsOf('), sc.indexOf('  function askHtml('));
+  is(!/setItem|cmSave|\.rpc\(|\.from\(/.test(ts), '읽기만 — 저장 없음');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');

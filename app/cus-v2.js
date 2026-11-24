@@ -358,8 +358,12 @@
     return out;
   }
   function can(id) { return T(function () { return typeof g.osTabAllowed === 'function' ? g.osTabAllowed(id) !== false : true; }, true) && !!T(function () { return g.navItemOf(id); }, null); }
-  function appsFor(c) {
-    var m = meta(c.id), ci = stgI(stageOf()), K = T(function () { return g.APEX_STAGE.of(STAGE_KO[ci < 0 ? 0 : ci]).know; }, []) || [], out = [], seen = {};
+  /* 들고 갈 화면 — 상황(CARE_APP) 먼저, 그다음 단계(APEX_STAGE know). 고르는 곳은 여기 <b>한 곳</b> —
+     고객 화면 「권할 것」 과 오늘 카드 「🧰 이분께 맞는 도구」(home-v2 · 판 X532)가 같이 부릅니다(CUS_V2.appsBy).
+     strict — 단계를 모르면(-1) 단계 도구를 안 붙임(오늘 카드). 고객 화면은 예전처럼 첫 전화 칸으로 셈. */
+  function appsFor(c) { return appsBy(meta(c.id).care, stageOf()); }
+  function appsBy(care, st, strict) {
+    var ci = stgI(st || ''), K = (strict && ci < 0) ? [] : (T(function () { return g.APEX_STAGE.of(STAGE_KO[ci < 0 ? 0 : ci]).know; }, []) || []), out = [], seen = {};
     var add = function (x) {
       var key = x.tab;   /* 재무설계는 갈래(track)를 골라 여는 길이 없어 한 단추로 */
       if (seen[key]) { var o = seen[key]; if (!o.g && x.g) { o.g = x.g; o.w = x.w || o.w; } return; }   /* 상황 쪽이 먼저 섰으면 단계 쪽 까닭(g·w)만 얹음 */
@@ -368,7 +372,7 @@
       var row = { tab: x.tab, t: (it.icon ? it.icon + ' ' : '') + strip(it.title || x.tab), g: x.g || '', w: x.w || '' };
       seen[key] = row; out.push(row);
     };
-    (CARE_APP[m.care] || []).forEach(add);
+    (CARE_APP[care] || []).forEach(add);
     K.forEach(function (k) { if (!(k.tab === 'finance' && k.track)) add(k); });
     return out.slice(0, 4);
   }
@@ -780,7 +784,7 @@
   function listBack() { return (ALLOWED && !on() && !robot()) ? '<div class="cv2 cl2b"><button type="button" class="vchip" onclick="cusV2ListUse(true)">✨ 새 고객 목록</button></div>' : ''; }
 
   g.CUS_V2 = { on: on, set: set, html: html, paint: paint, use: use, jump: jump, KEY: KEY, allowed: function () { return ALLOWED; },
-    STG: STG, stgI: stgI, catPick: catPick, knowCells: knowCells, jNow: jNow, JSTEP: JSTEP, sayItems: sayItems,
+    STG: STG, stgI: stgI, catPick: catPick, appsBy: appsBy, knowCells: knowCells, jNow: jNow, JSTEP: JSTEP, sayItems: sayItems,
     CL: CL, clF: clF, clStage: clStage, clKey: clKey, listPage: listPage, listPaint: listPaint };
   /* index.html · onclick 이 부르는 이름 — 점(.) 없는 함수여야 check-hmclick 이 「부르는 함수가 있다」 고 읽습니다 */
   g.cusV2Html = html;
