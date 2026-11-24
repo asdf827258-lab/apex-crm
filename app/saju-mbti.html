@@ -181,6 +181,12 @@ body.shrine-on .pane{position:relative;z-index:1}
 .pa-bar{text-align:center}
 .pa-hint{display:block;margin-top:9px;font-size:12.5px;color:var(--ink3);letter-spacing:-.02em}
 /* 십신 표 — 읽는 글이 아니라 견주는 표라 한 줄에 눕힙니다 */
+.shw-h{background:var(--blue-l);border-color:var(--blue-b)}
+.shw .foot{display:none}
+.shw button[onclick="window.print()"]{display:none}
+
+.shw-s{margin-top:6px;font-size:13px;color:var(--ink2)}
+@media print{.shw-h{break-before:page}}
 .mesip{margin-top:10px;border-top:1px solid var(--line-l)}
 .mesip-r{display:flex;align-items:baseline;gap:9px;padding:8px 2px;border-bottom:1px solid var(--line-l)}
 .mesip-p{flex:none;width:38px;font-size:12.5px;color:var(--ink3);letter-spacing:-.03em}
@@ -209,6 +215,8 @@ body.shrine-on .say.hard{border-left-width:4px}
   /* 인쇄는 흰 종이입니다 — 붓자국과 낙관은 종이에서도 보이게 먹빛으로 */
   body.shrine-on h1::after{background:#8C1F17}
   body.shrine-on h2 .n{background:#8C1F17!important;color:#fff!important;transform:none}
+  /* 설명회 한 장의 <b>화면용 안내</b>는 종이에 안 찍습니다 */
+  .shw-meta{display:none!important}
 }
 /* 한지 결 — 그림 파일을 안 받아 옵니다(9번). 결은 그라디언트로 냅니다. */
 body.shrine-on::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
@@ -1341,10 +1349,10 @@ var AXIS_SELF={
   J:'정해두고 지키는 데서 안정을 얻으십니다. 갑작스러운 변경에 스트레스를 받으십니다.',
   P:'열어두는 데서 편안함을 얻으십니다. 정해지면 답답해하십니다.'
 };
-var TAB_NAME={ice:'아이스브레이킹',sum:'종합',brief:'📋 면담 브리프',dang:'🕯️ 신당 풀이',apply:'📩 상담 신청',sales:'💼 영업 가능성',how:'🎯 나의 영업법',worry:'고민 상담',life:'인생 운',trait:'성향 파악',mind:'MBTI 정밀',
+var TAB_NAME={ice:'아이스브레이킹',sum:'종합',show:'📣 설명회 한 장',brief:'📋 면담 브리프',dang:'🕯️ 신당 풀이',apply:'📩 상담 신청',sales:'💼 영업 가능성',how:'🎯 나의 영업법',worry:'고민 상담',life:'인생 운',trait:'성향 파악',mind:'MBTI 정밀',
   deep:'사주 풀이',blood:'혈액형',fit:'궁합',rel:'관계·매니지먼트',talk:'상담 전략',ins:'보험·관리',risk:'🔒 리스크',saju:'만세력',
   mepil:'① 내 네 기둥',meins:'② 보험 일과 나',mework:'③ 일 푸는 방식',metime:'④ 올해·내년'};
-var AGENT_TABS={fit:1,rel:1,talk:1,ins:1,risk:1,sales:1,how:1,brief:1};   /* 고객 화면에서는 감춘다 */
+var AGENT_TABS={fit:1,rel:1,talk:1,ins:1,risk:1,sales:1,how:1,brief:1,show:1};   /* 고객 화면에서는 감춘다 */
 function tabsFor(mode,view){
   view=view||S.view;
   /* ★ 나만 보는 판 — 네 장이 끝입니다 (사장님 말씀 2026-11-20
@@ -1356,6 +1364,12 @@ function tabsFor(mode,view){
   else if(mode==='blood')list=['ice','blood','sales','how','fit','rel','ins','risk'];
   else list=['dang','ice','sum','sales','how','worry','life','trait','deep','fit','rel','talk','ins','risk','saju'];
   if(mode!=='blood'&&S.cl&&S.cl.blood)list.splice(list.indexOf('life')>=0?list.indexOf('life')+1:1,0,'blood');
+  /* 📣 설명회 한 장 (판 X534) — 신당 풀이가 서는 갈래에서만 냅니다. 혈액형만
+     받은 자리에서 내면 다섯 꼭지 중 셋이 「생년월일을 넣어 주세요」 로 섭니다 (1번).
+     ★★ <b>고객 화면에서 막는 자는 바로 아래 AGENT_TABS 한 곳뿐입니다.</b>
+     여기서 view 를 또 보면 「고객에게 보이나」 를 두 곳이 각자 답하게 되어,
+     한쪽만 고쳐도 아무도 모릅니다 (5번). 그래서 넣기만 하고 거르지 않습니다. */
+  if(list.indexOf('dang')>=0)list.splice(list.indexOf('sales'),0,'show');
   if(view==='client')list=list.filter(function(k){return !AGENT_TABS[k];});
   if(RECRUIT.on&&view==='client')list.push('apply');
   if(view==='agent'){
@@ -1617,6 +1631,7 @@ function viewBoard(){
   if(t==='dang')return tabDang();
   if(t==='brief')return tabBrief();
   if(t==='apply')return tabApply();
+  if(t==='show')return tabShow();
   if(t==='sales')return tabSales();
   if(t==='how')return tabHow();
   if(t==='life')return tabLife();
@@ -2982,8 +2997,66 @@ function salesRisk(sc,p){
     fix:'목표를 낮게 잡지 마세요. 이 유형은 기대치가 낮으면 같이 낮아집니다.'});
   return out;
 }
-function tabSales(){
-  if(S.view!=='agent')return '<div class="card"><h2>이 화면은 설계사 전용입니다</h2><p>고객 화면에서는 열리지 않습니다.</p></div>';
+/* ── 📣 설명회 한 장 (판 X534)
+   사장님 말씀 2026-11-24 「직업 설명회에서는 신당풀이, 아이스브레이킹,
+   영업가능성, 인생운, 고민상담 정도로 … 디테일하게 한장으로 쭉 풀어줘」.
+
+   ★ 글을 <b>한 줄도 베끼지 않습니다.</b> 다섯 장을 그대로 불러 이어 붙입니다 —
+     베껴 두면 본 장을 고쳐도 여기는 안 고쳐져 한쪽이 늙습니다 (5번).
+   ★★ 그리는 동안 <b>고객 화면으로 바꿔 둡니다.</b> 그래야 각 장 안의
+     「🔒 내 눈」 화법 대본·리더용 위험이 저절로 빠집니다. 띄워 놓고 함께
+     보는 화면에 그것이 뜨면 안 됩니다. 끝나면 반드시 되돌립니다.
+   ★ 영업 가능성은 <b>총점·등급을 뺀 꼴</b>로 부릅니다 (사장님 결정 2026-11-24). */
+function tabShow(){
+  var cl=S.cl; if(!ready(cl))return '<div class="card"><h2>생년월일을 먼저 넣어 주세요</h2>'+
+    '<p>설명회 한 장은 <b>그 자리에 앉은 분</b>의 패로 풉니다.</p>'+
+    '<button class="btn" style="margin-top:12px" onclick="goStep(\'client\')">넣으러 가기</button></div>';
+  var keepV=S.view, keepT=S.tab, parts=[];
+  function sec(no,ttl,sub,html){
+    return '<div class="card shw-h"><h2><span class="n">'+no+'</span>'+esc(ttl)+'</h2>'+
+      '<p class="shw-s">'+esc(sub)+'</p></div>'+html;
+  }
+  try{
+    /* ★★ 고객 화면으로 바꿔 둡니다 — 각 장의 「🔒 내 눈」 이 저절로 빠집니다 */
+    S.view='client';
+    parts.push(sec('하나','신당 풀이','타고난 넉 자를 먼저 봅니다. 여기서 사람들이 제일 먼저 놀랍니다.',tabDang()));
+    parts.push(sec('둘','아이스브레이킹','첫 만남에서 무슨 말부터 꺼내면 되는지.',tabIce()));
+    parts.push(sec('셋','이 일과 어떻게 맞물리나',
+      '다섯 축만 봅니다 — 점수로 사람을 가르지 않습니다.',tabSales({show:true})));
+    parts.push(sec('넷','인생 운','언제 밀고 언제 숨을 고르는지.',tabLife()));
+    parts.push(sec('다섯','고민 상담','지금 걸려 있는 것 하나를 그 자리에서 풀어 봅니다.',tabWorry()));
+  }finally{ S.view=keepV; S.tab=keepT; }
+
+  return '<div class="card">'+brandBand('직업 설명회 · 한 장')+
+    '<h1>'+esc(cl.name||'')+' 님 — 한 장으로 쭉</h1>'+
+    '<p>설명회에서 띄워 놓고 함께 보는 장입니다. 다섯 꼭지가 <b>한 줄로</b> 이어집니다 — '+
+    '탭을 옮겨 다니지 않습니다.</p>'+
+    /* shw-meta — <b>화면에서만</b> 보이는 안내입니다. 종이에 찍히면 설명회에서
+       나눠 준 장에 「🔒 내 눈」 「등급」 같은 말이 그대로 남습니다 (3번 · 4-1번). */
+    '<div class="say quiet shw-meta"><span class="me">여기 없는 것</span>「🔒 내 눈」 화법 대본과 리더용 위험은 '+
+    '<b>이 장에 안 뜹니다.</b> 영업 가능성도 <b>총점과 등급을 빼고</b> 다섯 축만 냅니다 — '+
+    '설명회는 사람을 가르는 자리가 아니기 때문입니다.</div>'+
+    '<button class="btn line sm shw-meta" style="margin-top:12px" onclick="window.print()">🖨 한 장 인쇄 · PDF</button>'+
+    '</div>'+
+    /* ★ .shw 로 싸 둡니다 — 다섯 장이 저마다 들고 있는 <b>꼬리글과 인쇄 단추</b>를
+       여기서만 접습니다. 한 장으로 이으면 같은 꼬리글이 <b>다섯 번</b> 찍히고
+       같은 인쇄 단추가 다섯 개 섭니다. 본 장에서는 그대로 둡니다 (5번 — 글을
+       지우는 것이 아니라 이 자리에서만 안 보이게 합니다). */
+    '<div class="shw">'+parts.join('')+'</div>'+
+    '<div class="say quiet" style="margin-top:14px">이 장의 수는 전부 <b>그분 여덟 자와 48문항</b>에서 나온 것입니다. '+
+    '적성을 가르거나 합격을 말하는 자리가 아닙니다 — 이야기를 여는 자료입니다.</div>'+
+    footNote();
+}
+
+/* opt.show — 설명회 한 장에서 부를 때의 꼴 (판 X534).
+   ★ 총점·등급(head)과 리더용 위험(risk)을 <b>안 냅니다.</b> 설명회에서 후보에게
+     「78점 · 상위권」 을 띄우면 아무리 밑에 아니라고 적어도 평가표로 읽힙니다.
+     채용 쪽은 「후보 화면에 합격·불합격 같은 말이 한 자도 없다」 가 이미 자로
+     걸려 있는 자리입니다 (판 X503). 다섯 축과 근거만 보여 줍니다.
+   ⚠ 글을 따로 적지 않습니다 — 같은 함수에서 꺼내므로 한쪽만 늙지 않습니다. */
+function tabSales(opt){
+  var show=!!(opt&&opt.show);
+  if(!show&&S.view!=='agent')return '<div class="card"><h2>이 화면은 설계사 전용입니다</h2><p>고객 화면에서는 열리지 않습니다.</p></div>';
   var cl=S.cl,sc=salesCalc(cl),chn=salesChannels(sc),cv=salesCurve(sc);
   if(!sc.code&&!cl.saju)return '<div class="card"><h2>아직 볼 게 없습니다</h2><p>성향검사 결과나 생년월일 중 하나는 있어야 영업 가능성을 볼 수 있습니다.</p></div>';
   var head='<div class="card">'+brandBand('영업 적성 리포트 · '+esc(cl.name||'')+' 님')+
@@ -3052,6 +3125,7 @@ function tabSales(){
         '</span></div></div>';
     })():'<div class="note info">내 카드를 만들면 <b>나와 이 사람의 관리 난이도</b>까지 함께 나옵니다.</div>')+
   '</div>');
+  if(show)return axes+bw+ch+curve;
   return head+axes+bw+ch+curve+risk+footNote();
 }
 /* ══════════════════════════════════════════════════════════════════
