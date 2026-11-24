@@ -1546,6 +1546,123 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(nav.calc === nav.hand && nav.tail,
      '  셈이 손으로 푼 값과 같다 — ' + nav.calc + '초 (준법 문구·글쓴이까지 센 글자로 셈)');
 
+  console.log('\n[25] 겪은 이야기 서랍 — 담은 것만 보기로 나가나 · 이름은 안 새나 (판 X540)');
+  /* 담는 자가 <b>하나</b>여야 한다 — 서랍이 둘인데 이름 검사가 하나에만 붙으면
+     그 길로 실명이 AI 까지 그대로 갑니다 (5번·3번). 글자로 못 박습니다. */
+  const body = (nm) => {
+    const i = SRC.indexOf('function ' + nm + '(');
+    if (i < 0) return '';
+    const j = SRC.indexOf('\n}', i);
+    return j < 0 ? '' : SRC.slice(i, j);
+  };
+  const bMine = body('mineAdd'), bExp = body('expAdd'), bOne = body('oneLineBad');
+  is(!!bOne && /names\(/.test(bOne), '  이름을 재는 자(<b>oneLineBad</b>)가 있다');
+  is(/oneLineBad\(/.test(bMine) && !/names\(/.test(bMine),
+     '  글감 담기가 <b>그 자를 부른다</b> — 제 손으로 또 안 센다 (5번)');
+  is(/oneLineBad\(/.test(bExp) && !/names\(/.test(bExp),
+     '  겪은 이야기 담기도 <b>같은 자를 부른다</b> — 두 벌이 아니다 (5번)');
+
+  const exp = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.comply = null; await comply();
+    S.perweek = 7; plan();
+    const i = todayAt();
+    S.rows[i].kind = 'ask';
+    S.rows[i].seed = { kind:'ask', title:'질문', src:'상담에서 받은 질문' };
+    S.rows[i].out = ''; paint();
+    const bare = t => String(t).replace(/<\/?b>/g, '');
+    const U = () => bare(userPrompt(S.rows[todayAt()]));
+
+    /* ① 비어 있으면 <b>그 대목이 아예 없다</b> — 없는 경험을 있는 척하지 않는다 (1번) */
+    out.box   = !!document.getElementById('expq');
+    if (!out.box) { out.stopped = '겪은 이야기 칸(expq)이 안 서서 나머지를 못 쟀습니다'; return out; }
+    out.empty = U().indexOf('[우리가 겪은 일') < 0;
+    out.emptyLean = U().indexOf('우리가 겪은 일」 을 포함해') < 0;
+
+    /* ② 담으면 주문서의 [근거] 에 <b>그 글자 그대로</b> 실린다 */
+    const put = (t, k) => {
+      const e = document.getElementById('expq'); if (!e) return false;
+      e.value = t;
+      const sel = document.getElementById('expk'); if (sel) sel.value = k || '';
+      expAdd(); return true;
+    };
+    put('청구 서류가 반려돼 병원에 두 번 다녀온 일');
+    const u1 = U();
+    out.rode  = u1.indexOf('청구 서류가 반려돼 병원에 두 번 다녀온 일') >= 0;
+    out.inSrc = u1.indexOf('우리가 겪은 일') > u1.indexOf('[근거]')
+             && u1.indexOf('우리가 겪은 일') < u1.indexOf('[이 글이 하는 일]');
+    out.real  = /실제로 있었던 일/.test(u1);
+    out.pick  = /맞는 것이 있으면 한둘만/.test(u1) && /억지로 끼워 넣으면 실패/.test(u1);
+    out.noName= /이름.*지어 붙이지 않는다/.test(u1);
+    out.notSrc= /딛고 선 것」 에는 옮겨 적지 않는다/.test(u1);
+    out.lean  = /우리가 겪은 일」 을 포함해/.test(u1);   /* 본론의 못도 같이 풀어 준다 */
+
+    /* ③ 갈래를 고른 것은 <b>그 갈래 글에만</b> 실린다 */
+    put('금리가 내려 저축 상담이 몰린 주', 'econ');
+    out.offKind = U().indexOf('금리가 내려 저축 상담이 몰린 주') < 0;
+    S.rows[i].kind = 'econ';
+    S.rows[i].seed = { kind:'econ', title:'기사', src:'기사 「금리」' }; paint();
+    out.onKind  = U().indexOf('금리가 내려 저축 상담이 몰린 주') >= 0;
+    S.rows[i].kind = 'ask';
+    S.rows[i].seed = { kind:'ask', title:'질문', src:'상담에서 받은 질문' }; paint();
+
+    /* ④ 많이 담아도 <b>세 개까지</b> — 많이 주면 안 맞는 것까지 끼워 넣는다 */
+    const n0 = exps().length;
+    for (let j = 0; j < 5; j++) put('서류를 ' + '다'.repeat(j + 1) + ' 챙겨 간 일');
+    out.grew = exps().length === n0 + 5;
+    out.cap  = expFor('ask').length;
+    out.capN = EXP_MAX;
+    /* 그 대목만 떼어 센다 — 주문서 다른 데도 「· 」 로 시작하는 줄이 많다 */
+    const only = t => {
+      const a = t.indexOf('[우리가 겪은 일'), b = t.indexOf('이 중 글에 ');
+      return (a < 0 || b < 0) ? '' : t.slice(a, b);
+    };
+    out.rodeN = (only(U()).match(/^· /gm) || []).length;
+
+    /* ⑤ 이름은 <b>이 길에서도</b> 막는다 — 여기가 새면 AI 로 그대로 간다 (3번) */
+    const n1 = exps().length;
+    put('임꺽정님이 겪으신 반려 건입니다');
+    out.blockName = exps().length === n1;
+    put('성춘향씨가 겪으신 반려 건입니다');
+    out.blockSsi  = exps().length === n1;
+    put('짧다');
+    out.blockShort= exps().length === n1;
+    /* ⑥ 헛것은 안 막는다 (8번) */
+    put('손님이 우산을 두고 가신 일이 있었습니다');
+    out.notFalse  = exps().length === n1 + 1;
+
+    /* ⑦ 지우면 주문서에서도 빠진다 — 담은 것만 나간다.
+       ★ <b>서랍을 비우고</b> 한 개만 두고 잰다. 가득 찬 서랍에서 지우면 지운 것이
+       원래 세 개 밖이라 지운 척만 해도 통과한다 — 처음에 그 헛자를 썼다 (8번). */
+    localStorage.removeItem(EXPK); paint();
+    put('창구가 닫혀 다음 날 다시 간 일이 있었습니다');
+    out.one   = expFor('ask').length === 1 && U().indexOf('창구가 닫혀') >= 0;
+    expDel(0);
+    out.gone  = U().indexOf('창구가 닫혀') < 0;
+    out.goneAll = U().indexOf('[우리가 겪은 일') < 0 && exps().length === 0;
+    return out;
+  });
+  is(exp.box, '  ①-나 칸에 <b>겪은 이야기 적는 자리</b>가 선다'
+     + (exp.stopped ? ' — ' + exp.stopped : ''));
+  if (exp.stopped) is(false, '  그래서 [25] 의 나머지를 못 봤습니다 — 위를 먼저 고치십시오');
+  is(exp.empty && exp.emptyLean, '  ★ <b>비어 있으면 아무것도 안 실어 보낸다</b> — 없는 경험을 있는 척하지 않고, <b>없는 대목을 가리키지도</b> 않는다 (1번)');
+  is(exp.rode && exp.inSrc, '  담으면 <b>[근거] 안에</b> 그 글자 그대로 실린다');
+  is(exp.real, '  <b>「실제로 있었던 일」</b> 이라고 밝혀 보낸다 — 가정과 가르라고');
+  is(exp.pick, '  ★ <b>맞는 것이 없으면 쓰지 말라</b>고 시킨다 — 억지로 끼우면 그것도 지어낸 글이다 (1번)');
+  is(exp.noName, '  <b>이름을 지어 붙이지 말라</b>고 시킨다 — 서랍에는 이름이 없다 (3번)');
+  is(exp.notSrc, '  <b>「딛고 선 것」 에는 옮기지 말라</b>고 시킨다 — 출처가 아니라 우리 경험이다');
+  is(exp.lean, '  본론의 <b>「지어내지 마라」 가 이것을 가리킨다</b> — 막기만 하지 않는다');
+  is(exp.offKind && exp.onKind, '  갈래를 고른 이야기는 <b>그 갈래 글에만</b> 실린다');
+  is(exp.grew && exp.cap === exp.capN && exp.rodeN === exp.capN,
+     '  많이 담아도 <b>' + exp.capN + '개까지</b>만 실어 보낸다 (지금 ' + exp.rodeN + '개)');
+  is(exp.blockName, '  <b>「임꺽정님이」</b> 는 안 담긴다 — 이 서랍은 AI 로 나가는 길이다 (3번)');
+  is(exp.blockSsi, '  <b>「성춘향씨가」</b> 도 안 담긴다');
+  is(exp.blockShort, '  너무 짧은 것도 안 담긴다');
+  is(exp.notFalse, '  <b>「손님이 우산을」</b> 은 담긴다 — 헛것은 안 잡는 것보다 나쁘다 (8번)');
+  is(exp.one, '  서랍에 하나만 두면 <b>그 하나가</b> 실린다');
+  is(exp.gone && exp.goneAll,
+     '  지우면 주문서에서도 <b>빠진다</b> — 마지막 하나를 지우면 그 대목째 사라진다');
+
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();
