@@ -18,6 +18,7 @@
      [7] ★  옛 홈은 지우지 않고 숨기기만(CSS) — 「예전 오늘 칸 펼치기」 가 있다 · 그리다 터지면 예전 화면
      [8] ★  옷은 .hv2 / #hv2Sheet 아래로만 — 앱의 .card · .btn 같은 옷을 덮지 않는다
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
+     [21] ★★ 판 X531 — 다른 메뉴를 시안 PLACE 묶음으로(TA 대본 → 화법 · 교육 → 공부 · 고지 → 청약 각 한 자리) · 표에 없는 화면은 예전 묶음 그대로 · 서랍 안 건드림
      [20] ★  판 X530 — 🤖 AI 7개 → 자비스 하나로: 인사 줄 🤖 · 자비스 시트(묻기 apexmap · 합친 AI) · 다른 메뉴 맨 아래 한 갈래 (TABS 안 건드림)
      [19] ★  판 X529 — 지금 이분 카드 📰 오늘 소식(ccNewsIdx · ccNews) · 🙋 물어볼 것(cqaAsk · cqaAnsHtml) · 상품전략 칸 → 🧭 상황 시트(openInsK)
      [18] ★★ 판 X526 — 💰 예상 월납 · ✓ 계약됐어요 시트(시안 openAmt · openClose): 저장은 「DB · 업적관리」 의 그 서버 문(pipeline_save) 한 곳 ·
@@ -614,13 +615,51 @@ console.log('\n[20] 🤖 AI 7개 → 자비스 하나로 (판 X530 · 시안 ope
     '합친 AI — 시안 차례 · 이름 · 그림 · 설명은 메뉴 표 · 목록에서 숨긴 것(두뇌 · 길잡이)도 자비스 안엔 섬 · 막힌 것(보험 비서)은 안 섬');
   X.g.HOME_V2.mg && X.g.HOME_V2.menu(); h = X.els.hv2.innerHTML;
   const mb = h.slice(h.indexOf('class="mmb"'));
-  const gi = mb.indexOf('🤖 자비스로 합친 AI');
-  is(gi > mb.lastIndexOf('<b>성장</b>') && gi > 0 && /<b>🤖 자비스로 합친 AI<\/b><small>6<\/small>/.test(mb) && /<b>하루 시작<\/b><small>1<\/small>/.test(mb) && /<b>상담 도구<\/b><small>1<\/small>/.test(mb),
-    '오늘 「☰ 다른 메뉴」 — 흩어져 있던 AI 를 맨 아래 한 갈래로(하루 시작 · 상담 도구 · 성장에서 빠짐) · 수는 그대로');
+  is(/<b>🤖 자비스로 합친 AI<\/b><small>6<\/small>/.test(mb) && !/<b>하루 시작<\/b>|<b>상담 도구<\/b>|<b>성장<\/b>/.test(mb),
+    '오늘 「☰ 다른 메뉴」 — 흩어져 있던 AI 를 한 갈래로(하루 시작 · 상담 도구 · 성장에서 빠짐 — 판 X531 부터는 그 묶음 자체가 시안 묶음으로 바뀜)');
   is(!/TABS\s*=|\.hide\s*=|g\.TABS\.(push|splice)/.test(sc.slice(sc.indexOf('  var AI_IDS'), sc.indexOf('  function jvSheet()'))) && /var AI_IDS = \['apexmap', 'assistant', 'voiceasst', 'brain', 'cs_assist', 'ins_asst', 'helpme'\];/.test(sc),
     '메뉴 표(TABS) · 서랍은 안 건드림 — 지우지 않고 이 화면에서 자리만 모음 · 일곱은 시안 PLACE 의 ai 그대로');
   const n0 = box({ apex_home_v2: '1' }, ''); Object.assign(n0.g, { osTabAllowed: id => id !== 'apexmap', TABS }); n0.g.HOME_V2.apply(dyn(n0));
   is(!/HOME_V2\.ai\(\)/.test(n0.els.hv2.innerHTML), '자비스 모드를 못 여는 분께는 🤖 단추가 안 섬');
+}
+
+console.log('\n[21] 🗂 다른 메뉴를 시안 묶음으로 — TA · 교육 · 고지 각 한 자리 (판 X531 · 시안 PLACE · moreMenus)');
+{
+  const PG = (sc.match(/var PLACE_G = \{([\s\S]*?)\n  \};/) || ['', ''])[1];
+  const grp = k => ((PG.match(new RegExp('\\n    ' + k + ': \\[([^\\]]*)\\]')) || ['', ''])[1].match(/'([a-z0-9_]+)'/g) || []).map(x => x.slice(1, -1));
+  is(['ta_script', 'ta_say', 'saybook', 'silson5', 'fp_talk', 'rej_gym'].every(id => grp('talk').indexOf(id) >= 0), 'TA 대본 · 전체 대본 · 문자 · 30초 첫 전화 · 화법서 · 거절 연습 = 💬 화법 한 갈래');
+  is(['edu', 'manual', 'bohum', 'academy', 'ta_train', 'academy_notion'].every(id => grp('study').indexOf(id) >= 0), '성장 로드맵 · 매뉴얼 · 보험 기초 · 아카데미 · 신입 TA 연습 = 📚 공부 한 갈래');
+  is(['ref_underwrite', 'med_disclosure'].every(id => grp('st_cs').indexOf(id) >= 0), '인수 가능 여부 · 알릴의무 = 영업 한 바퀴 「청약」 한 자리');
+  const all = ['st_ta', 'st_ap', 'st_an', 'st_pc', 'st_cs', 'st_cm', 'prod', 'talk', 'study', 'grow', 'cust', 'find', 'money', 'team', 'me', 'ai'].map(grp);
+  const flat = [].concat.apply([], all), dup = flat.filter((x, i) => flat.indexOf(x) !== i);
+  is(flat.length >= 110 && !dup.length, '표 ' + flat.length + '칸 · 한 화면은 한 자리만' + (dup.length ? ' — 겹침: ' + dup.join(', ') : ''));
+  const IXs = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  const ta = IXs.slice(IXs.indexOf('var TABS=['), IXs.indexOf('var TABS=[') + 60000);
+  const live = []; ta.replace(/\{\s*id\s*:\s*'([a-z0-9_]+)'[^}]*?title\s*:/g, (m0, id) => { if (live.indexOf(id) < 0) live.push(id); return m0; });
+  const out = live.filter(id => flat.indexOf(id) < 0);
+  is(live.length > 100 && out.length <= 5, '라이브 메뉴 ' + live.length + '칸 중 표에 없는 것 ' + out.length + '칸(' + out.join(', ') + ') — 그것은 예전 묶음 이름 그대로 맨 아래');
+
+  /* 가짜 메뉴로 그려 본다 */
+  const TABS = [
+    { group: '하루 시작', items: [{ id: 'home', icon: '🏠', title: '오늘' }, { id: 'assistant', icon: '🤖', title: '오늘의 AI 비서' }] },
+    { group: '상담 도구', items: [{ id: 'ta_script', icon: '☎️', title: 'TA 스크립트' }, { id: 'med_disclosure', icon: '🩺', title: '알릴의무' }, { id: 'insight', icon: '🧭', title: '상품전략기' }] },
+    { group: '성장', items: [{ id: 'ta_train', icon: '🎓', title: '신입 TA 연습' }, { id: 'edu', icon: '🌱', title: '성장 로드맵' }, { id: 'rej_gym', icon: '🥊', title: '거절 연습' }] },
+    { group: '조직 관리', items: [{ id: 'recruit', icon: '🧲', title: '채용 대기열' }, { id: 'org', icon: '🏢', title: '조직도' }] },
+    { group: '시스템', items: [{ id: 'settings', icon: '⚙️', title: '설정' }, { id: 'ta_script', icon: '☎️', title: 'TA 스크립트' }] }
+  ];
+  const X = box({ apex_home_v2: '1' }, '');
+  Object.assign(X.g, { TABS, osTabAllowed: id => id !== 'settings', meV2Open: () => {} });
+  X.g.HOME_V2.apply(dyn(X)); X.g.HOME_V2.menu();
+  for (let i = 0; i < 12; i++) X.g.HOME_V2.mg(i);
+  const h = X.els.hv2.innerHTML, mb = h.slice(h.indexOf('class="mmb"'));
+  const heads = []; mb.replace(/class="mmg[^"]*" onclick="HOME_V2\.mg\(\d+\)"><b>([^<]*)<\/b><small>(\d+)<\/small>/g, (m0, t, n) => { heads.push(t + ' ' + n); return m0; });
+  is(heads.join(' | ') === '🛠 영업 한 바퀴 도구 1 | 🧭 상품전략 1 | 💬 화법 2 | 📚 공부 2 | 👥 고객 1 | 👥 팀 관리 1 | 🤖 자비스로 합친 AI 1 | 조직 관리 1',
+    '시안 차례(영업 한 바퀴 → 상품전략 → 화법 → 공부 → 알리기 → 고객 → 찾아보기 → 법인 · 투자 → 팀 관리 → 나 → 자비스) · 빈 갈래는 안 섬 · 표에 없는 채용 대기열은 「조직 관리」 그대로 맨 아래 — 지금: ' + heads.join(' | '));
+  is(/>📊 알릴의무<|알릴의무<\/div><div class="t2">청약<\/div>/.test(mb) && /TA 스크립트<\/div><\/div>/.test(mb) && /신입 TA 연습/.test(mb.slice(mb.indexOf('📚 공부'))),
+    '고지는 「청약」 꼬리표 · TA 스크립트는 화법 · 신입 TA 연습은 공부');
+  is((mb.match(/go\('ta_script'\)/g) || []).length === 1 && !/go\('settings'\)/.test(mb), '메뉴 표에 두 번 적힌 화면도 한 번만 · 막힌 화면(설정)은 안 섬');
+  is(/☰ 다른 메뉴 펼쳐 보기<\/span><small>10개<\/small>/.test(h), '수 = 열 수 있는 화면 수(겹친 것 한 번)');
+  is(!/TABS\s*=|\.group\s*=|g\.TABS\.(push|splice)/.test(sc.slice(sc.indexOf('  var PLACE_G'), sc.indexOf('  function menuHtml()'))), '메뉴 표(TABS) · ☰ 서랍은 안 건드림 — 이 화면 「다른 메뉴」 묶음만');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');
