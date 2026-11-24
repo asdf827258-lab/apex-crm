@@ -142,8 +142,8 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   is(/<sheet name="과부족"/.test(Z['xl/workbook.xml'] || '') && /<sheet name="그래프"/.test(Z['xl/workbook.xml'] || ''),
     '  시트에 <b>과부족 · 그래프</b> 가 있다 (사장님 자료 31쪽)');
   const 시트수 = ((Z['xl/workbook.xml'] || '').match(/<sheet /g) || []).length;
-  is(시트수 === 5 + seeded.grp,
-    '  시트 <b>' + 시트수 + '장</b> = 한눈에·계약·과부족·그래프·빠진 담보 + <b>묶음마다 한 장</b> ' + seeded.grp);
+  is(시트수 === 6 + seeded.grp,
+    '  시트 <b>' + 시트수 + '장</b> = 한눈에·계약·과부족·그래프·빠진 담보·보장범위 + <b>묶음마다 한 장</b> ' + seeded.grp);
 
   head('[2] ★★ 줄 축이 <b>STD 그대로</b>인가 (두 벌 만들지 않았나 · 5번)');
   const rows = (s1.match(/<row r="(\d+)"/g) || []).length;
@@ -221,9 +221,10 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   is((CH.match(/<c:ser>/g) || []).length === 2, '  줄이 둘 — <b>권장</b>과 <b>가입(후)</b> 을 겹쳐 그린다');
   is(/'그래프'!\$[CD]\$/.test(CH) && !/<c:numLit>/.test(CH),
     '  그림이 <b>시트 칸을 가리킨다</b> — 숫자를 그림 안에 또 적지 않았다 (5번)');
-  const 묶음시트 = ((Z['xl/workbook.xml'] || '').match(/<sheet /g) || []).length - 5;
+  /* 앞 시트 여섯(한눈에 · 계약 · 과부족 · 그래프 · 빠진 담보 · 보장범위) 뒤가 묶음입니다 */
+  const 묶음시트 = ((Z['xl/workbook.xml'] || '').match(/<sheet /g) || []).length - 6;
   is(묶음시트 === seeded.grp, '  <b>담보별 분리자료</b> — 묶음마다 한 장 ' + 묶음시트 + '장');
-  const 어느 = (function () { for (const k in Z) if (/sheet(6|7)\.xml$/.test(k)) return Z[k]; return ''; })();
+  const 어느 = (function () { for (const k in Z) if (/sheet(7|8)\.xml$/.test(k)) return Z[k]; return ''; })();
   is(/충분|부족|미가입/.test(어느), '  분리자료에 <b>충분 · 부족 · 미가입</b> 이 적힌다');
   const BA2 = fs.readFileSync(path.join(ROOT, 'app/ba-xl.js'), 'utf8');
   is(/g\.gapState/.test(BA2) && !/function gapState/.test(BA2),
@@ -325,13 +326,13 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
      않게 하는 것이 이 자의 일입니다 (8번). */
   head('[10] ✨ 엑셀을 <b>엑셀답게</b> 쓰고 있나 (사장님 말씀 「퀄리티는 이것밖에 안되?」)');
   const 시트들 = Object.keys(Z).filter(k => /^xl\/worksheets\/sheet\d+\.xml$/.test(k));
-  is(시트들.length === 16, '  시트가 <b>16장</b> (' + 시트들.length + ')');
+  is(시트들.length === 17, '  시트가 <b>17장</b> — 앞 6 + 묶음 11 (' + 시트들.length + ')');
   const 격자켠 = 시트들.filter(k => !/showGridLines="0"/.test(Z[k]));
   is(격자켠.length === 0, '  <b>격자선을 껐다</b> — 켜 두면 아무리 칠해도 날 시트로 보입니다 (' +
     격자켠.length + '장 남음)');
   const 탭색 = 시트들.filter(k => /<tabColor rgb="FF[0-9A-F]{6}"\/>/.test(Z[k]));
-  is(탭색.length === 16, '  <b>탭마다 색</b>이 있다 — 아래 탭 줄만 봐도 어느 부위인지 압니다 (' +
-    탭색.length + '/16)');
+  is(탭색.length === 17, '  <b>탭마다 색</b>이 있다 — 아래 탭 줄만 봐도 어느 부위인지 압니다 (' +
+    탭색.length + '/17)');
   /* 묶음 색이 탭에 그대로 갔나 — 두 벌로 칠하면 어긋납니다 (5번) */
   const 묶음색 = (seeded.색 || []).map(c => String(c).replace('#', '').toUpperCase());
   const 탭에든색 = 시트들.map(k => (Z[k].match(/<tabColor rgb="FF([0-9A-F]{6})"/) || [])[1]).filter(Boolean);
@@ -358,6 +359,52 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   const 꼴판 = Z['xl/styles.xml'] || '';
   is((꼴판.match(/<fill>/g) || []).length >= 10 + 11 * 3 + 1,
     '  꼴에 <b>묶음 색 + 남색 띠</b>가 다 들어 있다');
+
+  /* ══ 📖 판 X536 — 사장님 말씀 「<b>보장범위도 엑셀에 포함시키고,
+     어떻게 지급되는지 추측 되도록</b>」 ═══════════════════════════════
+     ★ 이 자의 일은 <b>지어낸 문장이 섞이지 않게</b> 하는 것입니다 (1번). */
+  head('[11] 📖 보장범위 · 어떻게 나오나 (사장님 말씀 2026-11-24)');
+  const 범위키 = Object.keys(Z).filter(k => /^xl\/worksheets\/sheet6\.xml$/.test(k));
+  const 범위 = 범위키.length ? Z[범위키[0]] : '';
+  is(/보장범위/.test(범위), '  <b>보장범위 · 지급</b> 시트가 섰다');
+  const 범위줄 = (범위.match(/<row /g) || []).length;
+  is(범위줄 === 3 + 77, '  담보 <b>77줄 전부</b> + 머리 셋 (' + 범위줄 + ')');
+  is(/심사 결과에 따릅니다/.test(범위), '  머리에 <b>「심사 결과에 따릅니다」</b> 가 박혀 있다 (2번)');
+  is(/요건 충족 시/.test(범위), '  세금은 <b>「요건 충족 시」</b> 를 빼지 않았다 (2번)');
+  is(범위.indexOf('&lt;b&gt;') < 0 && 범위.indexOf('<b>') < 0,
+    '  꾸밈표(&lt;b&gt;)가 <b>글자로 새지 않았다</b>');
+  /* 지급 문장은 BA_ART.PAY 네 가지 말뿐인가 — 하나라도 다른 문장이 있으면 지어낸 것입니다 */
+  const 말 = await pg.evaluate(() => (window.BA_ART ? BA_ART.PAY.map(x => x.say.replace(/<[^>]+>/g, '')) : []));
+  is(말.length === 4, '  지급 모양이 <b>네 가지</b> — 한 곳(BA_ART.PAY)에서 옵니다 (' + 말.length + ')');
+  const 쓰인말 = 말.filter(t => 범위.indexOf(t) >= 0);
+  is(쓰인말.length >= 3, '  그 말이 <b>시트에 그대로</b> 들어갔다 (' + 쓰인말.length + '/4)');
+  /* 「보장범위」 칸이 화면의 DESC 에서 왔나 — 두 벌로 쓰면 한쪽만 고쳐집니다 (5번) */
+  const 설명표본 = await pg.evaluate(() => {
+    const k = ['cancer', 'brain', 'ltcF', 'deathD'];
+    return k.map(x => (window.DESC && DESC[x])
+      ? String(DESC[x]).split(/<br\s*\/?>|\n/)[0].replace(/<[^>]+>/g, '').trim() : '');
+  });
+  const 맞은설명 = 설명표본.filter(t => t && 범위.indexOf(t.slice(0, 18)) >= 0);
+  is(맞은설명.length === 설명표본.filter(Boolean).length,
+    '  보장범위 글이 <b>화면의 담보 설명(DESC) 그대로</b> (' + 맞은설명.length + '/' +
+    설명표본.filter(Boolean).length + ') — 다시 쓰지 않았습니다 (5번·1번)');
+  is(/같이 걸리는 이름/.test(범위) && /이건 아닙니다/.test(범위),
+    '  <b>같이 걸리는 이름</b>과 <b>이건 아닙니다</b> 칸이 있다 — 상품마다 이름이 다릅니다');
+  is(/<autoFilter/.test(범위), '  <b>거르기</b>가 걸려 있다 — 77줄을 담보 이름으로 찾습니다');
+  /* 묶음 시트는 같은 말을 되풀이하지 않는다 (5번) */
+  /* ⚠ 처음에는 시트 한 장의 한 문장만 봤더니 되돌려도 안 울었습니다.
+     <b>묶음 시트 전부</b>에서 <b>네 말 모두</b>를 셉니다 (8번). */
+  const 묶음들 = [];
+  for (let i3 = 7; i3 <= 17; i3++) if (Z['xl/worksheets/sheet' + i3 + '.xml']) 묶음들.push(Z['xl/worksheets/sheet' + i3 + '.xml']);
+  is(묶음들.length === 11, '  묶음 시트를 <b>11장</b> 집었다 (' + 묶음들.length + ')');
+  is(묶음들.every(t => /나오는 모양 —/.test(t)), '  묶음 시트는 나오는 모양을 <b>부제에 한 번만</b> 적는다');
+  let 되풀이 = 0;
+  묶음들.forEach(t => 말.forEach(w => {
+    const n3 = (t.split(w).length - 1);
+    if (n3 >= 2) 되풀이 += n3;
+  }));
+  is(되풀이 === 0, '  줄마다 <b>같은 말을 되풀이하지 않는다</b> — 거르기·정렬만 무거워집니다 (' +
+    되풀이 + '번 겹침)');
 
   await br.close(); srv.close();
   console.log('\n──────────────────────────────');
