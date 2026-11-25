@@ -187,7 +187,30 @@ footer small{color:#5F718C;font-size:12px;margin-top:16px;display:block;line-hei
 .btn-top{position:fixed;bottom:22px;right:18px;width:46px;height:46px;border-radius:50%;background:var(--blue);color:#fff;
   border:none;font-size:20px;cursor:pointer;box-shadow:var(--shadow2);z-index:80;opacity:0;pointer-events:none;transition:.25s}
 .btn-top.show{opacity:1;pointer-events:auto}
-@media print{#topbar,#drawer,#overlay,#progress,.btn-top,#cover .scroll{display:none}section{padding:20px 0}}
+/* ★★ 판 X565 — <b>흰 글씨가 흰 종이에 앉아 사라졌습니다.</b>
+   사장님 말씀 (2026-11-02) 「모든 인쇄 하는 부분이 <b>안 깨지고 그대로</b> 인쇄」.
+   ⚠ 브라우저는 인쇄할 때 <b>바탕색을 기본으로 버립니다.</b> 이 책은 말풍선(.msg)·
+   표 머리(th)·강 번호(.chap-no)·꾸러미(.pkg)·칩(.chip)이 <b>짙은 바탕 위 흰 글씨</b>라,
+   바탕이 날아가면 흰 종이에 흰 글씨만 남습니다. 인쇄 꼴로 재어 보니
+   <b>89곳</b>이었습니다 — 표지 7곳 · 본문(#content) 82곳.
+   ★ 「그대로」 라 하셨으므로 <b>바탕을 그대로 찍습니다</b>(print-color-adjust:exact) —
+     글자색을 바꾸면 화면과 종이가 달라집니다. 증권전달·본체 제안서가 이미 같은 길입니다 (5번). */
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #topbar,#drawer,#overlay,#progress,.btn-top,#cover .scroll{display:none}
+  section{padding:20px 0}
+  /* ★ 판 X565 — <b>말풍선이 종이 밖으로 44px 나갔습니다.</b> A4 안쪽 폭이
+     794px 인데 재어 보니 838px 이었습니다. <code>.wrap{max-width:760px}</code> 에
+     좌우 패딩 18px 가 더해지는 자리라, 종이에서는 쪽 폭에 맞춥니다.
+     글은 한 자도 안 지웁니다 — 줄이 한 줄 더 접힐 뿐입니다 (6번). */
+  .wrap{max-width:100%!important;padding-left:0!important;padding-right:0!important}
+  .bubble{max-width:100%!important;box-sizing:border-box!important}
+  /* ⚠ 말풍선은 왼쪽에 그림자리(아바타)를 두고 서므로, 글칸을 100% 로 두면
+     그림자리 폭만큼 또 넘칩니다 — 재어 보니 838 → 803px 이었습니다.
+     글칸을 <b>남은 자리에 맞춰</b> 줄입니다 (min-width:0 이 없으면 flex 가 안 줄입니다). */
+  .msg{max-width:100%!important;min-width:0!important;box-sizing:border-box!important}
+  .bubble>*{min-width:0!important}
+}
 
 .subh{font-size:20px;font-weight:800;margin:34px 0 4px;display:flex;align-items:center;gap:9px;letter-spacing:-.02em}
 .subh .bar{width:5px;height:22px;background:var(--blue);border-radius:3px;flex:none}
