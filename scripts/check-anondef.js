@@ -1,4 +1,4 @@
-/* ══ 🔒 check-anondef — 로그인 안 한 사람이 서버 함수를 부를 수 없나 (판 X574) ═════════════
+/* ══ 🔒 check-anondef — 로그인 안 한 사람이 서버 함수를 부를 수 없나 (판 X575) ═════════════
    보안 점검(get_advisors security · 2026-11-26)에 anon_security_definer_function_executable
    경고 다섯이 남아 있었습니다 — is_my_client · is_my_client_or_admin · mbti_mark_paid ·
    recruits_assign · recruits_purge. 로그인 안 한 사람이 /rest/v1/rpc/... 로 부를 수 있었습니다.
