@@ -15486,6 +15486,10 @@ var TABS=[
  ]},
  {group:'하루 시작',items:[
    {id:'home',icon:'🏠',title:'홈',cnt:'',ak:'홈'},
+   /* 🩺 고지체크 — 2026-11-26 사장님 「단숨에 고지체크가 메인메뉴가 되고 여기 안에서 예외질환에 맞는 상품까지 찾아서 연계」.
+      알릴의무 · 가입 가능한 회사·상품 · 보험금 찾아줌 · 청구 한 건이 이 한 화면(고지체크 진료분석) 안에 있다. 예외질환 인수확인 목록 메뉴는 숨겼다.
+      id 는 그대로 med_disclosure — 찾기 낱말·영업 한 바퀴·점검이 id 로 가리킨다. 권한(ak)도 원래 그대로. */
+   {id:'med_disclosure',tk:'청구·사후관리',icon:'🩺',title:'고지체크',cnt:'',ak:'청구·사후관리 고지체크 고지 알릴의무 병력 수술 이력 심사 심평원 진료내역 예외질환 가입 가능 상품 보험금 찾아줌'},
    {id:'airep',icon:'🧭',title:'TFA 업무관리',cnt:'',ak:'홈'},
    /* ✍️ <b>내 업적 입력</b> — 2026-11-03 사장님 말씀 「crm 메뉴에도 넣어주고」.
       몸은 EM 전용 운영센터의 「내 업적 · 받을 돈」(팀원 모드) — 넣은 업적이 담당 EM 업적 입력에
@@ -15718,15 +15722,13 @@ var TABS=[
    {id:'claims',tk:'청구·사후관리',icon:'🧾',title:'청구·사후관리',cnt:'',ak:'청구·사후관리 보험금 서류'},
    {id:'med_silbi',tk:'청구·사후관리',icon:'🧮',title:'AI 실비계산기',cnt:'',ak:'청구·사후관리 실손 실비 병원비 얼마'},
    {id:'med_checkup',icon:'🩺',title:'AI 건강검진',cnt:'',ak:'청구·사후관리'},
-   /* 📋 알릴의무 · 💰 보험금 찾아줌 — 2026-11-26 사장님 「CRM 메뉴 나누길 원해」. 고지체크 진료분석의 두 메뉴를 그대로 연다(apex-alril-claim.js).
-      id 는 그대로 — 찾기 낱말·영업 한 바퀴·점검이 id 로 가리킨다. 보험금 찾아줌은 자료 조회에서 이리로 옮겼다. */
-   {id:'med_disclosure',tk:'청구·사후관리',icon:'📋',title:'알릴의무',cnt:'',ak:'청구·사후관리 고지 알릴의무 병력 수술 이력 심사 심평원 진료내역 예외질환'},
-   {id:'ref_hidden',tk:'청구·사후관리',icon:'💰',title:'보험금 찾아줌',cnt:'',ak:'청구·사후관리 보험금 찾아줌 숨은보험금 미청구 잠자는 보험금 시효 실손'},
+   /* 💰 보험금 찾아줌 — 2026-11-26 「🩺 고지체크」 안으로 들어갔다(메뉴에서는 숨김 · 화면은 그대로 열림 · apex-alril-claim.js). */
+   {id:'ref_hidden',tk:'청구·사후관리',icon:'💰',title:'보험금 찾아줌',cnt:'',hide:true,ak:'청구·사후관리 보험금 찾아줌 숨은보험금 미청구 잠자는 보험금 시효 실손'},
    {id:'car_fault',icon:'🚗',title:'자동차사고 과실·보상',cnt:'',ak:'청구·사후관리'}
  ]},
  {group:'자료 조회',items:[
    {id:'ref_jeonsan',icon:'🏢',title:'보험사 전산',cnt:'',ak:'보험 레퍼런스'},
-   {id:'ref_underwrite',tk:'보험 레퍼런스',icon:'⚠️',title:'예외질환 인수확인',cnt:'',ak:'보험 레퍼런스 유병자 인수 거절 병력'},
+   {id:'ref_underwrite',tk:'보험 레퍼런스',icon:'⚠️',title:'예외질환 인수확인',cnt:'',hide:true,ak:'보험 레퍼런스 유병자 인수 거절 병력'},
    {id:'ref_kcd',icon:'📕',title:'질병코드·특약',cnt:'',ak:'계약관리'},
    {id:'ref_surgery',icon:'🔪',title:'수술명 검색',cnt:'',ak:'계약관리'},
    {id:'ref_hira',icon:'🔗',title:'건강보험심사평가원',cnt:'',ak:'보험 레퍼런스'}
@@ -24835,7 +24837,7 @@ var VA_ALIAS={
  '계산기':'finance','재무설계계산기':'finance','재무계산기':'finance','실무계산기':'calc',
  '제안서':'ai_prop','비교':'compare','카톡':'katalk',
  '청구':'claims','사후관리':'claims','실비':'med_silbi','실비계산기':'med_silbi',
- '건강검진':'med_checkup','알릴의무':'med_disclosure','고지':'med_disclosure',
+ '건강검진':'med_checkup','알릴의무':'med_disclosure','고지':'med_disclosure','고지체크':'med_disclosure','예외질환':'med_disclosure',
  '인수':'ref_underwrite','인수기준':'ref_underwrite','전산':'ref_jeonsan',
  '코칭':'branch_coach','팀코칭':'branch_coach','내코칭':'mycoach',
  '조직도':'org','조직':'org','매뉴얼':'manual','업무매뉴얼':'manual',
@@ -49222,7 +49224,7 @@ function manFlow(){
     '<b>계약하면</b> · '+manChip('myperf','✍️','내 업적 입력')+'에 한 번 넣습니다.',
     /* 💬 판 X275 — 상황마다 보낼 문자를 한자리에서 (보낼 말 모음). */
     '<b>상담 후</b> · 📁 계약·청구 · '+manChip('katalk','💬','제안서 카톡설명')+'으로 요약을 발송(준법 확인)하고, '+manChip('saybook','💬','보낼 말 모음')+'에서 그 상황에 맞는 문자를 골라 보냅니다. '+manChip('contracts','📜','계약관리 판단')+' · '+manChip('endorse','✍️','배서 안내서')+'로 후속 처리합니다.',
-    '<b>청구 발생 시</b> · '+manChip('claims','🧾','청구·사후관리')+'에서 접수하고 '+manChip('med_silbi','🧮','AI 실비계산기')+' · '+manChip('med_disclosure','📋','알릴의무')+'로 점검합니다.',
+    '<b>청구 발생 시</b> · '+manChip('claims','🧾','청구·사후관리')+'에서 접수하고 '+manChip('med_silbi','🧮','AI 실비계산기')+' · '+manChip('med_disclosure','🩺','고지체크')+'로 점검합니다.',
     '<b>저녁 (마케팅 20분)</b> · ✍️ 콘텐츠 제작 · '+manChip('blog','📝','블로그')+' · '+manChip('threads','🧵','Threads')+' · '+manChip('insta','📸','인스타')+'로 콘텐츠 하나를 만들고, '+manChip('simui','🛡️','외부글 심의필터')+'로 준법 통과 후 발행합니다.'
   ]);
   h+='<div style="background:var(--t-bg-b);border:1px solid var(--t-line-b);border-radius:11px;padding:11px 13px;margin-top:9px;font-size:var(--t6);color:var(--t-point-d);line-height:1.68">왼쪽 메뉴는 <b>늘 펴져 있습니다</b> — 접히지 않습니다. 칸이 많으니 <b>아래로 내려</b> 보시고, 자주 쓰는 것은 이름 옆 <b>☆</b> 를 눌러 맨 위 즐겨찾기 띠에 올려 두십시오. 그래도 없으면 <b>요금 등급</b>이나 <b>직급</b> 때문입니다.</div>';
@@ -49253,10 +49255,10 @@ var MAN_MAP=[
      chips:[['inv_stock','📈','주식관리'],['inv_fund','💠','펀드관리'],['inv_perf','📐','성과·자산배분'],['inv_econ','🌡️','경제동향 실시간']],
      how:'고객 계좌의 평가손익·수익률을 보고, 목표 도달과 손절선 이탈을 먼저 알려 줍니다. 성과·자산배분에서는 입출금이 섞여도 정확한 수익률(XIRR)과 목표 비중 대비 조정안을 냅니다. <b>주문은 넣지 않습니다</b> — 실제 매매는 토스 앱에서 직접 하시고, 여기서는 근거와 설명 문장을 만듭니다.'},
     {no:7,ic:'📁',cat:'계약·청구',when:'만난 뒤',
-     chips:[['contracts','📜','계약관리 판단'],['endorse','✍️','배서 안내서'],['claims','🧾','청구·사후관리'],['med_silbi','🧮','AI 실비계산기'],['med_checkup','🩺','AI 건강검진'],['med_disclosure','📋','알릴의무']],
+     chips:[['contracts','📜','계약관리 판단'],['endorse','✍️','배서 안내서'],['claims','🧾','청구·사후관리'],['med_silbi','🧮','AI 실비계산기'],['med_checkup','🩺','AI 건강검진'],['med_disclosure','🩺','고지체크']],
      how:'계약을 바꾸고 지키는 것부터 청구까지. 해지 이야기가 나오면 여기 계약관리 판단부터 엽니다.'},
     {no:8,ic:'🔎',cat:'자료 조회',when:'언제든 꺼내 볼 때',
-     chips:[['ref_jeonsan','🏢','보험사 전산'],['ref_underwrite','⚠️','예외질환 인수확인'],['ref_kcd','📕','질병코드·특약'],['ref_surgery','🔪','수술명 검색'],['ref_hira','🔗','심평원'],['ref_hidden','💰','보험금 찾아줌']],
+     chips:[['ref_jeonsan','🏢','보험사 전산'],['ref_kcd','📕','질병코드·특약'],['ref_surgery','🔪','수술명 검색'],['ref_hira','🔗','심평원']],
      how:'전산 로그인·질병코드·수술명·인수 조회를 한 곳에서 엽니다. 예전에 두 칸으로 흩어져 있던 것을 모았습니다.'},
     {no:9,ic:'🏭',cat:'법인 컨설팅',when:'사업자·법인 고객일 때',
      chips:[['biz_diag','🧭','사업자 진단'],['biz_fund','🏦','정책자금'],['biz_tax','🧾','세금컨설팅'],['biz_ins','☂️','보험 솔루션'],['biz_retire','🪙','퇴직금 관리'],['biz_staff','👥','직원관리']],
@@ -49439,7 +49441,7 @@ function manClaimSop(){
     '접수 → 담보 확인 → 필요서류 안내 → 청구 → 지급 확인 → 사후관리 기록 순으로 진행합니다. '+manChip('claims','🧾','청구·사후관리'),
     '<b>입금 알림만으로 담보를 추정하지 않습니다.</b> 지급명세서로 지급 사유·담보를 확인합니다.',
     '실제 지급사례는 <b>‘지급 보장’ 표현 금지</b>. 동의·검증등급·준법상태가 있는 사례만 사용하고, raw 증거 이미지는 공개 배포하지 않습니다.',
-    '한 번의 치료에서 실손과 여러 정액특약이 각각 작동할 수 있음을 사례로 설명합니다. '+manChip('med_silbi','🧮','AI 실비계산기')+manChip('med_disclosure','📋','알릴의무'),
+    '한 번의 치료에서 실손과 여러 정액특약이 각각 작동할 수 있음을 사례로 설명합니다. '+manChip('med_silbi','🧮','AI 실비계산기')+manChip('med_disclosure','🩺','고지체크'),
     '<b>납입면제</b> 등은 보험금 지급과 별도로 “장기 현금흐름을 지킨 재무 성과”로 기록·관리합니다.'
   ]);
 }
@@ -51609,10 +51611,10 @@ var RT_STEP=[
    {s:'증권을 받았습니다',w:'받은 그 자리',tab:'bojang',tn:'전&후 만들기 · AI 리포트',
     how:'사진을 올리면 어떤 담보가 있고 어디가 비었는지 정리됩니다. 그 자리에서 판단은 하지 않습니다. 읽어만 줍니다.',
     out:'보장 분석표'},
-   {s:'건강 이야기가 나왔습니다',w:'상담 중',tab:'med_disclosure',tn:'알릴의무',
+   {s:'건강 이야기가 나왔습니다',w:'상담 중',tab:'med_disclosure',tn:'고지체크',
     how:'알려야 하는 내용인지 먼저 확인합니다. 가입이 되는지는 다음 화면에서 봅니다. 임의로 판단하지 않습니다.',
     out:'고지 안내'},
-   {s:'치료 이력이 걸릴 것 같습니다',w:'고지 확인 뒤',tab:'ref_underwrite',tn:'예외질환 인수확인',
+   {s:'치료 이력이 걸릴 것 같습니다',w:'고지 확인 뒤',tab:'med_disclosure',tn:'고지체크',
     how:'미리 확인합니다. 청약을 넣고 나서 알면 고객이 먼저 마음을 접습니다.',
     out:'인수 가능 여부'},
    {s:'들은 것을 어디에 적어야 하나요',w:'헤어지고 10분 안',tab:'fact_find',tn:'상담카드·팩트파인딩',
@@ -93224,8 +93226,8 @@ try{osNoticeLoad();}catch(e){}
 </script>
 <script src="apex-aplus-disease.js"></script>
 <script src="ba-pd.js"></script>
-<script src="apex-goji-open.js?v=20261117a"></script>
-<script src="apex-alril-claim.js?v=20261126a"></script>
+<script src="apex-goji-open.js?v=20261126a"></script>
+<script src="apex-alril-claim.js?v=20261126b"></script>
 <script src="apex-cn-themes.js?v=20261104a"></script>
 <script src="insight-inbox.js?v=20261109a"></script>
 <script src="apex-grow.js?v=20261117b"></script>
