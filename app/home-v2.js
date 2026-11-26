@@ -1819,7 +1819,7 @@
      ★ 처음 여는 기기: 서버에 줄이 있으면 서버 것을 이 기기에 내려받고, 없으면 이 기기 것을 올림.
      ★ 표가 아직 없거나 로그인 전 · 서버가 안 되면 조용히 예전처럼 이 기기에만(화면은 안 깨짐).
      ★ 「↩ 예전 화면」 은 기기마다 그대로(그 기기가 깨졌을 때 빠져나가는 문이라). */
-  /* more = 같은 한 줄에 다른 칸이 담은 것(📱 폰 확인 결과 pchk 등 · 판 X574) — 올릴 때 지우지 않고 같이 올림 */
+  /* more = 같은 한 줄에 다른 칸이 담은 것(📱 폰 확인 결과 pchk 등 · 판 X576) — 올릴 때 지우지 않고 같이 올림 */
   var PREF = { done: false, busy: false, more: {} };
   function prefMe() { return T(function () { return g.arMyId(); }, '') || ''; }
   function prefSb() { return T(function () { return g.osClient(); }, null); }
