@@ -20,6 +20,7 @@
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
      [28] ★  판 X564 — 💬 자비스 말풍선: 지금 카드의 맨 앞 추천 도구(toolsOf) → 없으면 안 끝낸 미션 → 다 끝나면 완료 · ✕ 로 닫음(저장 없음)
      [29] ★  판 X568 — 🧭 카드 맨 아래 「권할 것」(고객 카드) → 있던 cusGo({cli}) → cusV2Rec · 이름 누르면 이분 자세히(hmOpen) · 배정 DB 카드는 예전 그대로
+     [30] ★★ 판 X572 — ☁️ 자비스 내 메뉴 · 신입 도움말을 계정에(user_prefs · 그 사람 줄만 · migration_85) — 서버 것을 내려받고, 없으면 올리고, 바꾸면 올림 · 표가 없으면 이 기기에만
      [27] ★★ 판 X558 — 📍 카드에 지금 상황(cmSave 그대로) · ⚙ 상황별 추천 메뉴 더하기 = 대표 · 관리자만(osIsAppAdmin) · 저장 osCfgSet('care_apps') → CUS_V2.appsBy 한 곳
      [25] ★★ 판 X555 — 🤝 만났어요(시안 jMeet): 오늘 약속 카드 · 이름+시각이 딱 한 분일 때만 · 단계는 있던 hdbTo(id,'PC') 하나 · 감사 카톡 복사 · 이분 끝(hmQfin)
      [26] ★★ 판 X557 — 🎯 오늘의 미션 다섯(인사 밑 한 판): 끝났나 = 실행 체크판(hmMsCk) · 오늘 약속 카드 그대로 · 이름은 CK_ITEMS 한 곳 · ✓ 했어요 = hmMsDid
@@ -49,7 +50,12 @@ const 걷기 = s => s.replace(/\/\*[\s\S]*?\*\//g, '');
 const sc = 걷기(SRC);
 /* 판 X526 — 사장님이 고르신 「같은 서버 문 한 줄」: 「DB · 업적관리」 가 쓰는 pipeline_save 를 부르는 자리 <b>하나</b>만 빼고 본다 */
 const PEX_RPC = ".rpc('pipeline_save', { p_id: id, p: patch })";
-const scW = sc.split(PEX_RPC).join('');
+/* 판 X572 — 「기기마다 따로가 아니도록」: 내 설정 한 줄(user_prefs · 그 사람 것만)을 읽고 쓰는 덩어리 <b>하나</b>는 [30] 이 따로 재고,
+   나머지 자는 그 덩어리를 뺀 글(scP)로 잰다 — 다른 자리에서 서버에 새로 쓰면 예전처럼 운다 */
+const PREF_A = sc.indexOf('  var PREF = {'), PREF_B = sc.indexOf('  function apply(dyn) {');
+const PREF_BLK = PREF_A >= 0 && PREF_B > PREF_A ? sc.slice(PREF_A, PREF_B) : '';
+const scP = PREF_BLK ? sc.split(PREF_BLK).join('') : sc;
+const scW = scP.split(PEX_RPC).join('');
 
 /* ── 가짜 창 — 라이브 함수 자리에 손으로 셀 수 있는 값 ── */
 function box(store, search, opt) {
@@ -174,11 +180,11 @@ is(/openTa\s*:|openTa:/.test(JS) && /prods\s*[,:}]/.test(JS) && /pick\s*[,:}]/.t
 console.log('\n[6] 서버 · 저장');
 /* 판 X505 — 서버는 <b>읽기 둘</b>만: 오늘 약속인 분의 좌표(dbs · 지역 동선이 적어 둔 칸)와 지역 동선이 쓰는 길찾기(route-km).
    쓰기(insert·update·upsert·delete·rpc)는 하나도 없습니다. 목표는 기존 pfLoad. */
-const 부름 = (sc.match(/\.from\('[^']+'\)\.[a-z]+\([^)]*\)/g) || []);
+const 부름 = (scP.match(/\.from\('[^']+'\)\.[a-z]+\([^)]*\)/g) || []);
 is(부름.length === 1 && 부름[0] === ".from('dbs').select('id,lat,lng,next_appt_lat,next_appt_lng,next_appt_place')", '서버 표는 좌표 읽기 하나뿐 — ' + 부름.join(' | '));
-is(sc.split(PEX_RPC).length === 2 && !/\.(insert|update|upsert|delete|rpc)\(/.test(scW) && !/supabase\./.test(sc), '서버에 쓰는 것은 「DB · 업적관리」 의 그 문(pipeline_save) 한 곳뿐 (판 X526 · 사장님이 고르신 「같은 서버 문 한 줄」)');
+is(scP.split(PEX_RPC).length === 2 && !/\.(insert|update|upsert|delete|rpc)\(/.test(scW) && !/supabase\./.test(sc), '서버에 쓰는 것은 「DB · 업적관리」 의 그 문(pipeline_save) 한 곳뿐 (판 X526 · 사장님이 고르신 「같은 서버 문 한 줄」)');
 is((sc.match(/fetch\('([^']+)'/g) || []).join() === "fetch('/.netlify/functions/route-km'", '부르는 주소는 지역 동선의 길찾기(route-km) 하나뿐');
-const 담기 = (sc.match(/setItem\(([^,]+),/g) || []).map(x => x.replace(/setItem\(|,/g, ''));
+const 담기 = (scP.match(/setItem\(([^,]+),/g) || []).map(x => x.replace(/setItem\(|,/g, ''));
 is(담기.length === 4 && 담기.indexOf('KEY') >= 0 && 담기.indexOf("'apexRouteKmV1'") >= 0 && 담기.indexOf('aiKey()') >= 0 && 담기.indexOf('newKey()') >= 0, '이 기기에 담는 것은 켜짐 표시 · 길찾기 거리(지역 동선과 같은 칸) · 자비스에 더한 메뉴(판 X549) · 신입 도움말 켜짐(판 X551 · 둘 다 즐겨찾기와 같은 자리)뿐 — ' + 담기.join(', '));
 
 console.log('\n[7] 옛 홈은 숨기기만 · 터지면 예전 화면');
@@ -937,6 +943,36 @@ console.log('\n[29] 🧭 카드 맨 아래 「권할 것」 (판 X568 · 3차 �
   is(JSON.stringify(said) === '[["open","db:d9:TA"]]', '배정 DB 줄이면 이분 자세히로');
   const rs = sc.slice(sc.indexOf('  function recGo('), sc.indexOf('  function recGo(') + 900);
   is(/g\.cusGo\(\{ cli: id \}\)/.test(rs) && /g\.cusV2Rec\(\)/.test(rs) && !/setItem|\.rpc\(|\.from\(|cmSave/.test(rs) && /\+\+n < 20/.test(rs), '있던 두 함수만 · 저장 없음 · 기다림은 3초까지');
+}
+
+console.log('\n[30] ☁️ 내 설정을 계정에 (판 X572 · 사장님 말씀 「기기마다 따로가 아니도록 해줘야지」)');
+{
+  const calls = (PREF_BLK.match(/\.from\('[^']+'\)\.[a-z]+\(/g) || []);
+  is(PREF_BLK.length > 300 && calls.join(' | ') === ".from('user_prefs').upsert( | .from('user_prefs').select(" && /\.eq\('owner_id', me\)/.test(PREF_BLK) && /owner_id: me/.test(PREF_BLK) && !/\.(insert|delete|rpc)\(|fetch\(/.test(PREF_BLK),
+    '덩어리 안 서버 부름은 user_prefs 읽기(내 줄) · 담기(내 줄) 둘뿐 — ' + calls.join(' | '));
+  const MS = fs.readFileSync(path.join(ROOT, 'migration_85_user_prefs.sql'), 'utf8');
+  is(/enable row level security/.test(MS) && (MS.match(/owner_id = auth\.uid\(\)/g) || []).length >= 4 && /revoke all on public\.user_prefs from anon, authenticated/.test(MS) && !/grant[^;]*delete/.test(MS) && !/schema_version/.test(MS.replace(/\/\*[\s\S]*?\*\//g, '')),
+    'migration_85 — 내 줄만 읽고 쓰기(RLS 4자리 auth.uid()) · anon 막음 · delete 안 줌 · schema_version 안 건드림');
+  const mk = (srv, fail) => {
+    const X = box({ apex_home_v2: '1', apex_ai_mine_u1: '["bojang"]' }, '');
+    const said = [];
+    const tbl = { select: () => ({ eq: (k, v) => ({ maybeSingle: () => ({ then: ok => ok(fail ? { error: { message: 'relation does not exist' } } : { data: srv ? { kv: srv } : null }) }) }) }),
+                  upsert: (row, o) => { said.push(['up', JSON.stringify(row.kv), row.owner_id, o && o.onConflict]); return { then: () => {} }; } };
+    Object.assign(X.g, { meV2Open: () => {}, navWho: () => 'u1', arMyId: () => 'me1',
+      osClient: () => ({ from: t => (t === 'user_prefs' ? tbl : { select: () => ({ in: () => ({ then: ok => ok({ data: [] }) }) }) }) }),
+      TABS: [{ group: '상담 도구', items: [{ id: 'bojang', icon: '🔍', title: '보장분석' }, { id: 'insight', icon: '🧭', title: '상품전략기' }] }] });
+    X.g.HOME_V2.apply(dyn(X));
+    return { X, said };
+  };
+  let A = mk({ ai_mine: ['insight'], newhelp: 1 });
+  is(A.X.store.apex_ai_mine_u1 === '["insight"]' && A.X.store.apex_newhelp_u1 === '1' && !A.said.length, '서버에 내 줄이 있으면 그것을 이 기기에 내려받음(폰에서 바꾼 것이 PC 에 뜸) — 올리지는 않음');
+  A = mk(null);
+  is(A.said.length === 1 && A.said[0][1] === '{"ai_mine":["bojang"],"newhelp":0}' && A.said[0][2] === 'me1' && A.said[0][3] === 'owner_id', '처음(내 줄 없음)이면 이 기기 것을 올림 — 내 줄(owner_id)에만');
+  A.X.g.HOME_V2.newHelp();
+  is(A.said.length === 2 && A.said[1][1] === '{"ai_mine":["bojang"],"newhelp":1}', '바꾸면 바로 올림(신입 도움말 켜기)');
+  A = mk(null, true); A.X.g.HOME_V2.newHelp();
+  is(!A.said.length && A.X.store.apex_newhelp_u1 === '1', '표가 아직 없으면(서버 오류) 조용히 이 기기에만 — 화면은 그대로');
+  is(/  function apply\(dyn\) \{[\s\S]{0,1000}prefLoad\(\);/.test(sc) && !/apex_home_v2/.test(PREF_BLK) && !/KEY\b/.test(PREF_BLK.replace(/aiKey|newKey|CARE_KEY/g, '')), '새 화면을 켤 때 한 번 읽음 · 「↩ 예전 화면」(apex_home_v2)은 기기마다 그대로');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');
