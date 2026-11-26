@@ -144,13 +144,22 @@ const SEED = function (opt) {
   const APP = 글('app/index.html');
 
   head('[1] ★★ <b>문이 선다</b> — 고객 365일 화면이 제 입으로 말한다 (1번 · 6번)');
-  /* ⚠ <b>제 자가 틀렸던 자리 ①</b> — 단추의 onclick 은 JS 글자열 안이라 따옴표가
-     <code>\\'</code> 로 이스케이프돼 있습니다. 그것을 안 세고 <code>.function.</code> 로
-     찾으니 멀쩡한 단추를 못 봤습니다. 글자 그대로 찾습니다 (8번). */
-  is(/📥 엑셀로 명단<\/button>/.test(APP) && APP.indexOf("cimpOpen(\\'cli\\')") >= 0,
-     '  고객 365일 머리에 <b>📥 엑셀로 명단</b> 단추가 있고 cimpOpen(\'cli\') 로 간다');
-  is(/onclick="cregOpen\(\)">\+ 새 고객<\/button>/.test(APP),
-     '  <b>옛 단추(+ 새 고객)도 그대로</b> 있다 — 길을 안 지웁니다 (6번)');
+  /* ⚠ <b>제 자가 틀렸던 자리 ①</b> — 처음에 고객 365일 띠에 「📥 엑셀로 명단」
+     단추를 <b>하나 더</b> 세우고 그것을 찾게 했습니다. 그런데 폰(390px)에서 띠가
+     358px 인데 찾기 칸 최소 180 · 「+ 새 고객」 86 · 새 단추 113 + 틈 24 =
+     <b>403px</b> 이라 둘째 줄이 생겨, 고객 365일 화면이 <b>56px</b> 길어졌습니다
+     (check-phonefit 의 clients 눈금 3.2 → 3.3 으로 CI 가 울었습니다).
+     ★ 그래서 <b>더하지 않고 이름만 고쳤습니다</b> — 그 자리 주석이 이미
+       「고객을 넣는 길은 cregOpen <b>한 흐름</b>」 이라 적어 두었고 엑셀도 그
+       안에 있습니다. 하나 더 세우면 길이 둘인 척하게 됩니다 (5번).
+     ⚠ 그리고 이 자는 <b>높이를 안 잽니다</b> — check-phonefit 이 그 임자입니다.
+       두 자가 같은 것을 세면 어긋납니다 (5번). 여기서는 <b>단추가 하나이고
+       제 이름에 엑셀을 적나</b> 만 봅니다. */
+  is(/onclick="cregOpen\(\)"[^>]*>➕ 고객 넣기 · 엑셀<\/button>/.test(APP),
+     '  고객 365일 머리 단추가 <b>제 이름에 「엑셀」 을 적는다</b> — 열어 보지 않아도 알 수 있게 (1번)');
+  is((APP.match(/class="osc-search"/g) || []).length === 1 &&
+     !/📥 엑셀로 명단<\/button>/.test(APP),
+     '  그 띠에 고객 넣는 단추가 <b>하나</b>다 — 길이 둘인 척하지 않고 폰에서 한 줄에 선다 (5번)');
   is(/onclick="cregGoXls\(\)"/.test(APP) && /onclick="dbimpOpen\(\)"/.test(APP),
      '  「➕ 고객 넣기」 의 엑셀 문 둘도 그대로 있다');
   is(/function dbimpCliSplit\(/.test(APP) && !/function dbimpCliMake\(/.test(APP),
