@@ -110,7 +110,40 @@
   ].join('\n');
 
   /* ── 상태 ── */
-  var S = { files: { bj: [], pr: [] }, plan: null, busy: false, src: '', flags: [], ok: {}, nameShow: '', deck: '', mode: 'auto' };
+  var S = { files: { bj: [], pr: [] }, plan: null, busy: false, src: '', flags: [], ok: {}, nameShow: '', deck: '', mode: 'auto',
+            said: [], goal: [], saidFree: '', dir: '', kakao: null, kakaoErr: '' };
+  /* 판 X566 · 사장님 말씀 2026-11-25 「질문을 선택할수 있도록 … 고객이 한말들을 인식하는지가 중요」
+     고객이 한 말을 <b>골라</b> 넣는다. 고른 말마다 「몇 장에서 어떻게 답했나」 를 AI 가 적게 하고,
+     빠진 말은 앱이 확인 칸으로 올린다 (audit). 문구는 이 표 한 곳에만 둔다 (5번). */
+  var BAPD_SAID = [
+    ['걱정', ['노후가 걱정돼요', '간병이 걱정돼요', '큰 병 치료비가 걱정돼요', '자녀에게 남겨 주고 싶어요', '가족력이 있어요']],
+    ['보험료', ['보험료가 부담돼요', '지금 내는 것도 많아요', '목돈이 묶이는 게 싫어요']],
+    ['지금 보험', ['지금 보험으로 충분하지 않아요?', '해지하면 손해 아니에요?', '예전에 든 보험이 좋다던데요']],
+    ['가입·결정', ['병력이 있는데 가입이 될까요?', '달러(환율)가 불안해요', '세금은 어떻게 돼요?', '나중에 생각해 볼게요', '가족과 상의해야 해요']]
+  ];
+  var BAPD_GOAL = ['한눈에 보기 쉽게', '해지하고 이렇게 가입', '여러 제안 중 고르기', '지금 보험에 더하기', '노후·연금 준비', '약관 근거로 꼼꼼히'];
+  var BAPD_MAXPR = 6;   /* 사장님 말씀 「가입설계서 갯수를 더 늘려줘」 — 3 → 6. 그림 PDF 는 회사 한도 안에서 고르게 나눠 읽는다(aiFitImagesFair) */
+  function saidAll() {
+    var free = String(S.saidFree || '').split(/\n+/).map(function (x) { return x.replace(/^\s+|\s+$/g, ''); }).filter(Boolean);
+    return S.said.concat(free);
+  }
+  function chip(kind, t) {
+    var on = (kind === 'said' ? S.said : S.goal).indexOf(t) >= 0;
+    return '<button type="button" class="bapd-chip' + (on ? ' on' : '') + '" aria-pressed="' + on + '" onclick="bapdChip(\'' + kind + '\',this)" data-t="' + esc(t) + '">' + esc(t) + '</button>';
+  }
+  window.bapdChip = function (kind, el) {
+    var t = el.getAttribute('data-t'), L = kind === 'said' ? S.said : S.goal, i = L.indexOf(t);
+    keepInputs();
+    if (i >= 0) L.splice(i, 1); else L.push(t);
+    el.classList.toggle('on', i < 0); el.setAttribute('aria-pressed', String(i < 0));
+  };
+  /* 칸에 적어 둔 것을 상태로 옮겨 둔다 — 다시 그려도 안 사라지게 */
+  function keepInputs() {
+    var n = val('bapdName'), w = val('bapdWho'), d = document.getElementById('bapdDir'), f = document.getElementById('bapdSaidFree');
+    if (document.getElementById('bapdName')) S.nameShow = n;
+    if (document.getElementById('bapdWho')) S.who = w;
+    if (d) S.dir = String(d.value || ''); if (f) S.saidFree = String(f.value || '');
+  }
   window.BAPD = S;
 
   function esc(s) { return (typeof osEsc === 'function') ? osEsc(s == null ? '' : String(s)) : String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -143,14 +176,19 @@
     return '<div class="card"><div class="card-body">' +
       '<div class="g2 bapd-g2">' +
         slotBox('bj', '① 보장분석 · 증권 (있으면)', '지금 가입된 보험이 보여야 컨셉이 맞습니다. 없으면 비워 두세요.') +
-        slotBox('pr', '② 제안서 · 가입설계서 (1~3개)', '여러 개면 「고르기」, 연금·달러면 「연금 순서」 로 풉니다.') +
+        slotBox('pr', '② 제안서 · 가입설계서 (1~' + BAPD_MAXPR + '개)', '여러 개면 「고르기」, 연금·달러면 「연금 순서」 로 풉니다. 제안서마다 카톡 설명도 만듭니다.') +
       '</div>' +
       '<div class="bapd-row">' +
         '<label>고객 호칭<input id="bapdName" placeholder="김○○" value="' + esc(S.nameShow) + '"></label>' +
-        '<label>담당 설계사<input id="bapdWho" placeholder="예: 홍길동 컨설턴트"></label>' +
+        '<label>담당 설계사<input id="bapdWho" placeholder="예: 홍길동 컨설턴트" value="' + esc(S.who || '') + '"></label>' +
         '<label>장 수<select id="bapdMode"><option value="auto">알아서</option><option value="short">한눈에 7~8장</option><option value="long">자세히 12~18장</option></select></label>' +
       '</div>' +
-      '<label class="bapd-wide">방향 · 고객이 한 말 (선택)<textarea id="bapdDir" rows="2" placeholder="예: 운전자보험 4만 9천 원 해지하고 이렇게 가입 · 보기 쉽게 / 의사, 노후는 달러로 나눠 두고 싶다"></textarea></label>' +
+      '<div class="bapd-q"><div class="bapd-q-t">상담 방향 <span>골라 주세요 · 여럿 가능</span></div><div class="bapd-chips">' +
+        BAPD_GOAL.map(function (t) { return chip('goal', t); }).join('') + '</div></div>' +
+      '<div class="bapd-q"><div class="bapd-q-t">👂 고객이 한 말 · 질문 <span>고른 말마다 「몇 장에서 어떻게 답했는지」 를 확인합니다</span></div>' +
+        BAPD_SAID.map(function (g) { return '<div class="bapd-chips"><b>' + esc(g[0]) + '</b>' + g[1].map(function (t) { return chip('said', t); }).join('') + '</div>'; }).join('') + '</div>' +
+      '<label class="bapd-wide">고객이 직접 한 말 (한 줄에 하나 · 그대로 적어 주세요)<textarea id="bapdSaidFree" rows="2" placeholder="예: 우리 엄마가 간병비로 고생하셨어요&#10;예: 의사라 은퇴가 늦어요">' + esc(S.saidFree) + '</textarea></label>' +
+      '<label class="bapd-wide">덧붙일 방향 (선택)<textarea id="bapdDir" rows="2" placeholder="예: 운전자보험 4만 9천 원 해지하고 이렇게 가입 / 노후는 달러로 나눠 두고 싶다">' + esc(S.dir) + '</textarea></label>' +
       '<div class="btn-row" style="margin-top:12px"><button type="button" class="btn btn-primary" id="bapdGo" onclick="bapdGen()">🧠 컨셉 잡고 설명자료 만들기</button>' +
       (S.plan ? '<button type="button" class="btn btn-ghost" onclick="bapdReset()">새로 만들기</button>' : '') + '</div>' +
       '<div class="bapd-fine">고객 이름은 AI 로 보내지 않습니다(자리표로 보내고 이 화면에서 바꿉니다). 파일과 결과는 서버에 남기지 않습니다 — 새로고침하면 사라집니다.</div>' +
@@ -177,6 +215,15 @@
       '.bapd-chk label{display:flex;gap:9px;align-items:flex-start;font-size:var(--t6);color:var(--t-ink);line-height:1.6;padding:7px 0;border-bottom:1px solid var(--t-line-2)}' +
       '.bapd-chk input{margin-top:4px}.bapd-chk .w{color:var(--t-sub)}' +
       '.bapd-frame{width:100%;aspect-ratio:16/9;border:1px solid var(--t-line);border-radius:14px;background:var(--t-bg);display:block}' +
+      '.bapd-q{margin-top:12px}.bapd-q-t{font-size:var(--t6);font-weight:800;color:var(--t-ink);margin-bottom:6px}.bapd-q-t span{font-weight:600;color:var(--t-sub);margin-left:6px}' +
+      '.bapd-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}.bapd-chips b{font-size:var(--t6);color:var(--t-sub);min-width:64px}' +
+      '.bapd-chip{border:1px solid var(--t-line);background:var(--t-card);color:var(--t-ink);border-radius:999px;padding:7px 13px;font-size:var(--t6);font-weight:700;font-family:inherit;cursor:pointer}' +
+      '.bapd-chip.on{background:var(--t-point);border-color:var(--t-point);color:#fff}' +
+      '.bapd-heard{width:100%;border-collapse:collapse;font-size:var(--t6);color:var(--t-ink)}.bapd-heard td,.bapd-heard th{border-bottom:1px solid var(--t-line-2);padding:8px 6px;text-align:left;vertical-align:top}' +
+      '.bapd-heard th{color:var(--t-sub);font-weight:800}.bapd-heard .no{color:var(--t-warn-d,#C2410C);font-weight:800}' +
+      '.bapd-kk{border:1px solid var(--t-line-2);border-radius:13px;padding:12px 14px;margin-top:10px;background:var(--t-card)}' +
+      '.bapd-kk-t{font-size:var(--t6);font-weight:800;color:var(--t-ink)}.bapd-kk-t span{font-weight:600;color:var(--t-sub);margin-left:6px}' +
+      '.bapd-kk textarea{display:block;width:100%;box-sizing:border-box;margin:8px 0;border:1px solid var(--t-line);border-radius:10px;padding:10px 12px;font-size:var(--t6);line-height:1.7;font-family:inherit;color:var(--t-ink);background:#FFFDE7;min-height:230px}' +
       '</style>';
   }
   function page() { return css() + formHtml(); }
@@ -184,7 +231,13 @@
   /* ── 파일 ── */
   function add(slot, list) {
     var L = [].slice.call(list || []);
-    L.forEach(function (f) { if (/\.pdf$|^image\//i.test(f.name) || /^image\//.test(f.type)) S.files[slot].push(f); });
+    var over = 0;
+    L.forEach(function (f) {
+      if (!(/\.pdf$|^image\//i.test(f.name) || /^image\//.test(f.type))) return;
+      if (slot === 'pr' && S.files.pr.length >= BAPD_MAXPR) { over++; return; }
+      S.files[slot].push(f);
+    });
+    if (over) toastx('제안서는 ' + BAPD_MAXPR + '개까지입니다 — ' + over + '개는 넣지 않았습니다');
     var box = document.getElementById('bapdList_' + slot); if (box) box.innerHTML = fileList(slot);
   }
   window.bapdAdd = function (slot, inp) { add(slot, inp.files); inp.value = ''; };
@@ -215,8 +268,9 @@
     if (S.busy) return;
     if (typeof aiReady === 'function' && !aiReady()) { toastx('설정에서 AI 연결을 먼저 하세요'); return; }
     if (!S.files.pr.length && !S.files.bj.length) { toastx('제안서나 보장분석을 하나 이상 넣으세요'); return; }
-    S.nameShow = val('bapdName'); S.who = val('bapdWho'); S.mode = val('bapdMode') || 'auto';
-    var dir = val('bapdDir');
+    keepInputs(); S.mode = val('bapdMode') || 'auto';
+    var dir = [S.goal.join(' · '), String(S.dir || '').replace(/^\s+|\s+$/g, '')].filter(Boolean).join(' / ');
+    var said = saidAll(); S.saidUsed = said.slice(); S.kakao = null; S.kakaoErr = '';
     var btn = document.getElementById('bapdGo');
     var say = function (t) { if (btn) btn.textContent = t; };
     S.busy = true; if (btn) btn.disabled = true; say('문서 읽는 중…');
@@ -238,15 +292,20 @@
         });
       });
     }).then(function (got) {
-      S.src = got.text; S.readNote = got.note || '';
+      S.src = got.text; S.readNote = got.note || ''; S.userBase = '';
       var want = { auto: '장 수는 규칙대로 알아서', short: '한눈에 7~8장', long: '자세히 12~18장' }[S.mode];
       var user = '[오늘] ' + (typeof osTodayStr === 'function' ? osTodayStr() : '') + '\n[장 수] ' + want +
-        '\n[방향·고객이 한 말] ' + (dir || '(없음 — 자료만 보고 해석하고 세운 가정을 적는다)') +
+        '\n[상담 방향] ' + (dir || '(없음 — 자료만 보고 해석하고 세운 가정을 적는다)') +
+        '\n[고객이 한 말 — 하나도 빼지 말고 각각 답한다. 그 장의 say 에서 고객 말을 그대로 되받아 공감부터 하고 답한다]' +
+        (said.length ? said.map(function (x, i) { return '\n' + (i + 1) + ') ' + x; }).join('') : '\n(없음)') +
+        '\n[제안서 파일] ' + (S.files.pr.map(function (f) { return f.name; }).join(' · ') || '(없음)') +
         '\n[고객 이름] 쓰지 않는다. 화면과 대본에는 {고객} 이라고만 쓴다.' +
         '\n\n[첨부 자료]' + got.text;
+      S.userBase = user;   /* 카톡만 다시 만들 때 PDF 를 다시 안 읽는다 */
       say('컨셉 잡는 중…');
       var sys1 = BAPD_BRAIN + '\n\n[이번에 할 일] 컨셉 카드만 만든다. JSON 하나만 출력한다:\n' +
-        '{"type":"유형","line":"한 줄 컨셉(앵커 금액 포함)","anchor":"앵커","chain":["니즈 고리 3~5단계"],"loses":["빠지는 것·불리한 것"],"alt":"대안","plan":["장 제목 순서"],"assume":["세운 가정"],"added":["제가 덧붙인 안전장치"],"checks":["고객·세무·회사에 확인할 것"],"mismatch":["설계서끼리 다른 곳"]}';
+        '{"type":"유형","line":"한 줄 컨셉(앵커 금액 포함)","anchor":"앵커","chain":["니즈 고리 3~5단계"],"loses":["빠지는 것·불리한 것"],"alt":"대안","plan":["장 제목 순서"],"assume":["세운 가정"],"added":["제가 덧붙인 안전장치"],"checks":["고객·세무·회사에 확인할 것"],"mismatch":["설계서끼리 다른 곳"],"heard":[{"said":"고객이 한 말 그대로","where":"답하는 장 번호(예: 3장)","how":"어떻게 답하나 한 줄"}]}\n' +
+        '[heard] 는 [고객이 한 말] 하나마다 한 줄씩, 빠짐없이. 답할 장이 없으면 장을 하나 더 만든다.';
       return callAI(sys1, user, 2600, 'proposal').then(function (t1) {
         var c = (typeof prJson === 'function') ? prJson(t1) : JSON.parse(t1);
         if (!c || !c.line) throw new Error('컨셉 카드를 만들지 못했습니다');
@@ -264,7 +323,8 @@
       S.flags = audit(plan);
       S.deck = deckHtml(plan, false);
       S.busy = false; repaint();
-      toastx('설명자료 ' + plan.slides.length + '장 · 확인할 것 ' + S.flags.length + '개');
+      toastx('설명자료 ' + plan.slides.length + '장 · 확인할 것 ' + S.flags.length + '개' + (S.files.pr.length ? ' · 카톡 설명 만드는 중…' : ''));
+      if (S.files.pr.length) window.bapdKakao();
       var o = document.getElementById('bapdOut'); if (o && o.scrollIntoView) o.scrollIntoView({ behavior: 'smooth', block: 'start' });
     })['catch'](function (e) {
       S.busy = false; if (btn) { btn.disabled = false; btn.textContent = '🧠 컨셉 잡고 설명자료 만들기'; }
@@ -274,6 +334,64 @@
         '<div style="margin-top:10px"><button type="button" class="btn btn-ghost" onclick="bapdGen()">🔄 다시 시도</button></div></div>';
       toastx('만들지 못했습니다 — 아래 안내를 보세요');
     });
+  };
+
+  /* ── 💬 제안서마다 카카오톡 설명 (사장님 말씀 2026-11-25 「제안서 별로 카카오톡으로 설명해서 보낼수 있도록」) ──
+     장(덱)과 따로 한 번 더 부른다 — 한 번에 다 쓰게 하면 길이에 걸려 뒤가 잘린다.
+     숫자·세금 점검(audit)을 메시지에도 똑같이 건다. 고객용이라 확인 칸을 다 눌러야 복사가 열린다. */
+  var BAPD_KAKAO = [
+    '[이번에 할 일] [제안서 파일] 마다 고객에게 카카오톡으로 보낼 설명 메시지를 하나씩 쓴다. JSON 하나만 출력한다:',
+    '{"kakao":[{"file":"파일 이름 그대로","title":"한 줄 제목","msg":"본문"}]}',
+    '■ {고객}님 으로 시작한다. 다정하고 짧은 줄로 400~600자. 이모지는 2~3개까지.',
+    '■ 이 제안서로 무엇이 좋아지는지 2~3가지 — 숫자는 첨부 자료에 있는 것만. 불리한 점·조건도 한 가지 솔직하게.',
+    '■ [고객이 한 말] 중 이 제안서와 닿는 말이 있으면 그대로 받아 한 줄로 답한다.',
+    '■ 마지막 줄 앞은 질문 하나로 맺는다(예: "이 중에 제일 마음에 걸리는 게 뭐세요?").',
+    '■ 맨 끝 줄은 그대로: ※ 자세한 보장·조건은 약관과 상품설명서를 따르며, 가입은 심사 결과에 따라 달라질 수 있어요.',
+    '■ 세금 한도·세율 숫자, "무조건·최고·확정" 같은 말, 다른 회사 비방, 링크·전화번호는 쓰지 않는다. 고객 이름은 {고객} 그대로.'
+  ].join('\n');
+  window.bapdKakao = function () {
+    if (!S.plan || !S.userBase) return;
+    S.kakao = null; S.kakaoErr = ''; paintKakao('만드는 중…');
+    var sys3 = BAPD_BRAIN + '\n\n' + BAPD_KAKAO + '\n[컨셉 카드]\n' + JSON.stringify(S.concept || {});
+    return callAI(sys3, S.userBase, 3800, 'proposal').then(function (t) {
+      var o = (typeof prJson === 'function') ? prJson(t) : JSON.parse(t);
+      var L = (o && o.kakao) || [];
+      if (!L.length) throw new Error('카톡 메시지를 정리하지 못했습니다');
+      S.kakao = L; S.flags = audit(S.plan); S.ok = {};
+      var box = document.getElementById('bapdOut'); if (box) box.innerHTML = outHtml();
+      toastx('카톡 설명 ' + L.length + '개 · 확인할 것 ' + S.flags.length + '개');
+    })['catch'](function (e) { S.kakaoErr = (e && e.message) || String(e || ''); paintKakao(); });
+  };
+  function kakaoHtml() {
+    var allOk = S.flags.every(function (f) { return S.ok[f.k]; });
+    var h = '<div class="card" style="margin-top:12px" id="bapdKk"><div class="card-body"><div class="bapd-line" style="font-size:var(--t5)">💬 제안서마다 카톡 설명' +
+      (S.kakao ? ' ' + S.kakao.length + '개' : '') + '</div>';
+    if (!S.kakao) {
+      h += '<div class="bapd-fine">' + (S.kakaoErr ? '⚠️ 만들지 못했습니다: ' + esc(S.kakaoErr) : (S.files.pr.length ? '만드는 중… (20~40초)' : '제안서를 넣으면 제안서마다 만듭니다.')) + '</div>' +
+        (S.kakaoErr ? '<div class="btn-row"><button type="button" class="btn btn-ghost" onclick="bapdKakao()">🔄 카톡 설명만 다시 만들기</button></div>' : '');
+      return h + '</div></div>';
+    }
+    S.kakao.forEach(function (k, i) {
+      var msg = fill(k.msg);
+      h += '<div class="bapd-kk"><div class="bapd-kk-t">📄 ' + esc(k.file) + '<span>' + esc(fill(k.title)) + ' · ' + msg.length + '자</span></div>' +
+        '<textarea id="bapdKkT' + i + '" aria-label="카톡 설명 ' + (i + 1) + '">' + esc(msg) + '</textarea>' +
+        '<div class="btn-row"><button type="button" class="btn ' + (allOk ? 'btn-primary' : 'btn-ghost') + '" ' + (allOk ? '' : 'disabled ') + 'onclick="bapdKkCopy(' + i + ')">📋 복사' + (allOk ? '' : ' — 아래 확인을 다 누르면 열립니다') + '</button>' +
+        (allOk && typeof navigator !== 'undefined' && navigator.share ? '<button type="button" class="btn btn-ghost" onclick="bapdKkShare(' + i + ')">📤 카톡으로 보내기</button>' : '') + '</div></div>';
+    });
+    return h + '<div class="bapd-fine">칸 안에서 고치셔도 됩니다 — 복사는 고친 글 그대로 나갑니다. 숫자·세금 점검은 아래 확인 칸에 함께 올라가 있습니다.</div>' +
+      '<div class="btn-row"><button type="button" class="btn btn-ghost" onclick="bapdKakao()">🔄 카톡 설명만 다시 만들기</button></div></div></div>';
+  }
+  function paintKakao() { var b = document.getElementById('bapdKk'); if (b) b.outerHTML = kakaoHtml(); }
+  function kkText(i) { var t = document.getElementById('bapdKkT' + i); return t ? t.value : fill((S.kakao[i] || {}).msg); }
+  window.bapdKkCopy = function (i) {
+    if (!S.flags.every(function (f) { return S.ok[f.k]; })) { toastx('확인 칸을 먼저 모두 눌러 주세요'); return; }
+    var t = kkText(i);
+    if (typeof copyText === 'function') { copyText(t); return; }
+    try { navigator.clipboard.writeText(t).then(function () { toastx('복사했습니다 — 카톡에 붙여 넣으세요'); }); } catch (e) { toastx('복사하지 못했습니다'); }
+  };
+  window.bapdKkShare = function (i) {
+    if (!S.flags.every(function (f) { return S.ok[f.k]; })) { toastx('확인 칸을 먼저 모두 눌러 주세요'); return; }
+    try { navigator.share({ text: kkText(i) }); } catch (e) { window.bapdKkCopy(i); }
   };
 
   /* ── 앱이 다시 대 보는 것 — numbers.py 자리 ──
@@ -292,20 +410,33 @@
     });
     return ok;
   }
+  function numTax(t, where, F, seen, src, key) {
+    (t.match(/\d[\d,]*(?:\.\d+)?/g) || []).forEach(function (n) {
+      var d = n.replace(/,/g, '');
+      if (d.replace(/\./g, '').length < 4 || seen[d]) return;
+      seen[d] = 1;
+      if (src.indexOf(d) < 0) F.push({ k: 'n' + d, t: where + ' 「' + n + '」 — 넣은 자료에서 그대로 찾지 못했습니다. 계산한 값이면 맞는지, 아니면 지운다' });
+    });
+    if (/비과세|과세|세율|건강보험료|건보료|종합과세/.test(t)) {
+      var tax = t.match(/\d[\d,]*\s*(?:만\s*원|만원|억|%|세|개월|년)/g);
+      if (tax) F.push({ k: 'tax' + key, t: where + ' 세금 이야기에 숫자(' + tax.slice(0, 3).join(', ') + ')가 있습니다 — 한도·나이·개월은 적지 않습니다(요건만 · 세무 확인)' });
+    }
+  }
+  function norm(x) { return String(x || '').replace(/[\s?!.·,~]/g, ''); }
   function audit(plan) {
     var F = [], seen = sums(plan), src = String(S.src || '').replace(/,/g, '');
+    /* 👂 고객이 한 말 — 고른 말마다 답한 장이 있나 */
+    var heard = (S.concept && S.concept.heard) || [];
+    (S.saidUsed || []).forEach(function (x, j) {
+      var h = heard.filter(function (r) { var a = norm(r.said), b = norm(x); return a && b && (a.indexOf(b) >= 0 || b.indexOf(a) >= 0); })[0];
+      var no = h && parseInt(String(h.where || '').replace(/[^\d]/g, ''), 10);
+      if (!h || !no) F.push({ k: 'hd' + j, t: '고객이 한 말 「' + x + '」 — 답한 장이 없습니다. 대본에 넣거나 다시 만든다' });
+      else if (no > plan.slides.length) F.push({ k: 'hd' + j, t: '고객이 한 말 「' + x + '」 — ' + no + '장에 답했다는데 자료는 ' + plan.slides.length + '장입니다' });
+    });
+    (S.kakao || []).forEach(function (k, i) { numTax(plain(fill(k.msg)), '카톡 ' + (i + 1) + '(' + (k.file || '') + ')', F, seen, src, 'k' + i); });
     plan.slides.forEach(function (sl, i) {
       var t = slideText(sl);
-      (t.match(/\d[\d,]*(?:\.\d+)?/g) || []).forEach(function (n) {
-        var d = n.replace(/,/g, '');
-        if (d.replace(/\./g, '').length < 4 || seen[d]) return;   /* 세 자리 이하(나이·쪽·%)는 넘긴다 */
-        seen[d] = 1;
-        if (src.indexOf(d) < 0) F.push({ k: 'n' + d, t: (i + 1) + '장 「' + n + '」 — 넣은 자료에서 그대로 찾지 못했습니다. 계산한 값이면 맞는지, 아니면 지운다' });
-      });
-      if (/비과세|과세|세율|건강보험료|건보료|종합과세/.test(t)) {
-        var tax = t.match(/\d[\d,]*\s*(?:만\s*원|만원|억|%|세|개월|년)/g);
-        if (tax) F.push({ k: 'tax' + i, t: (i + 1) + '장 세금 이야기에 숫자(' + tax.slice(0, 3).join(', ') + ')가 있습니다 — 한도·나이·개월은 화면에 적지 않습니다(요건만 · 세무 확인)' });
-      }
+      numTax(t, (i + 1) + '장', F, seen, src, i);   /* 장·카톡이 같은 한 곳으로 잰다 (5번) */
       if (sl.kind === 'money' && sl.data && sl.data.rows) {
         sl.data.rows.forEach(function (r) { (r.segs || []).forEach(function (g) { if (typeof g.v !== 'number' || !isFinite(g.v)) F.push({ k: 'mv' + i, t: (i + 1) + '장 막대 금액 「' + esc(g.t) + '」 이 숫자가 아닙니다 — 확인' }); }); });
         /* 큰 글씨 차액(punch)이 막대 줄 합계의 차이와 같은가 — 11-23 「302,042 ↔ 303,042」 같은 1,000원 어긋남을 여기서 잡는다 */
@@ -339,6 +470,16 @@
       '<button type="button" class="btn btn-ghost" onclick="bapdPrint(false)">🖨 설계사용 PDF (대본 포함)</button>' +
       '<button type="button" class="btn ' + (allOk ? 'btn-primary' : 'btn-ghost') + '" id="bapdCli" ' + (allOk ? '' : 'disabled ') + 'onclick="bapdPrint(true)">🖨 고객용 PDF' + (allOk ? '' : ' — 아래 확인을 다 누르면 열립니다') + '</button>' +
       '</div></div></div>';
+    var used = S.saidUsed || [], heard = c.heard || [];
+    if (used.length) {
+      h += '<div class="card" style="margin-top:12px"><div class="card-body"><div class="bapd-line" style="font-size:var(--t5)">👂 고객이 한 말 → 답한 자리</div>' +
+        '<table class="bapd-heard"><tr><th style="width:34%">고객이 한 말</th><th style="width:12%">어디서</th><th>어떻게 답했나</th></tr>' +
+        used.map(function (x) {
+          var r = heard.filter(function (q) { var a = norm(q.said), b = norm(x); return a && b && (a.indexOf(b) >= 0 || b.indexOf(a) >= 0); })[0];
+          return '<tr><td>「' + esc(x) + '」</td>' + (r ? '<td>' + esc(r.where) + '</td><td>' + esc(fill(r.how)) + '</td>' : '<td class="no">없음</td><td class="no">답한 장이 없습니다 — 확인 칸에 올렸습니다</td>') + '</tr>';
+        }).join('') + '</table></div></div>';
+    }
+    h += kakaoHtml();
     h += '<div class="card" style="margin-top:12px"><div class="card-body bapd-chk"><div class="bapd-line" style="font-size:var(--t5)">고객 앞에 내기 전에 — 확인 ' + S.flags.length + '개</div>' +
       S.flags.map(function (f) {
         return '<label><input type="checkbox" ' + (S.ok[f.k] ? 'checked ' : '') + 'onchange="bapdTick(\'' + f.k + '\',this.checked)"><span>' + esc(f.t) + '</span></label>';
@@ -493,6 +634,6 @@
     return true;
   }
   /* 점검(check-bapd)이 안을 들여다보는 문 — 화면은 이걸 쓰지 않는다 */
-  window.bapdT = { audit: audit, deck: deckHtml, S: S, brain: BAPD_BRAIN, sw: swHtml };
+  window.bapdT = { audit: audit, deck: deckHtml, S: S, brain: BAPD_BRAIN, sw: swHtml, kakao: kakaoHtml, out: outHtml, said: BAPD_SAID, maxpr: BAPD_MAXPR, kk: BAPD_KAKAO };
   if (!mount()) document.addEventListener('DOMContentLoaded', mount);
 })();
