@@ -19,6 +19,7 @@
      [8] ★  옷은 .hv2 / #hv2Sheet 아래로만 — 앱의 .card · .btn 같은 옷을 덮지 않는다
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
      [28] ★  판 X564 — 💬 자비스 말풍선: 지금 카드의 맨 앞 추천 도구(toolsOf) → 없으면 안 끝낸 미션 → 다 끝나면 완료 · ✕ 로 닫음(저장 없음)
+     [29] ★  판 X568 — 🧭 카드 맨 아래 「권할 것」(고객 카드) → 있던 cusGo({cli}) → cusV2Rec · 이름 누르면 이분 자세히(hmOpen) · 배정 DB 카드는 예전 그대로
      [27] ★★ 판 X558 — 📍 카드에 지금 상황(cmSave 그대로) · ⚙ 상황별 추천 메뉴 더하기 = 대표 · 관리자만(osIsAppAdmin) · 저장 osCfgSet('care_apps') → CUS_V2.appsBy 한 곳
      [25] ★★ 판 X555 — 🤝 만났어요(시안 jMeet): 오늘 약속 카드 · 이름+시각이 딱 한 분일 때만 · 단계는 있던 hdbTo(id,'PC') 하나 · 감사 카톡 복사 · 이분 끝(hmQfin)
      [26] ★★ 판 X557 — 🎯 오늘의 미션 다섯(인사 밑 한 판): 끝났나 = 실행 체크판(hmMsCk) · 오늘 약속 카드 그대로 · 이름은 CK_ITEMS 한 곳 · ✓ 했어요 = hmMsDid
@@ -913,6 +914,29 @@ console.log('\n[28] 💬 자비스 말풍선 (판 X564 · 사장님 말씀 「�
   is(/'\.hv2 \.jvb\{position:fixed;left:12px;right:70px;/.test(sc), '오른쪽 70px 비움 — 🎙 · ? 단추 안 가림(아래 세 칸과 같은 폭)');
   const jv = sc.slice(sc.indexOf('  var JVB = {'), sc.indexOf('  function dockHtml('));
   is(jv.length > 200 && !/setItem|\.rpc\(|\.from\(|fetch\(/.test(jv), '저장 · 서버 없음 — 고르는 자는 있던 toolsOf · misState');
+}
+
+console.log('\n[29] 🧭 카드 맨 아래 「권할 것」 (판 X568 · 3차 점검표 ⑪ · 시안 qCard 「권할 것」 · 사장님 말씀 「그 다음거 진행해」)');
+{
+  const rows = [{ k: 'touch', id: 'c1', t: '홍길동', s: '30일째', key: 'touch:c1:' }, { k: 'db', tk: 'TA', id: 'd9', t: '홍길순', s: '', key: 'db:d9:TA' }];
+  const X = box({ apex_home_v2: '1' }, '', { rows });
+  const said = [];
+  Object.assign(X.g, { meV2Open: () => {}, OSC: { current: null },
+    cusGo: o => { said.push(['cusGo', JSON.stringify(o)]); X.g.OSC.current = { id: o.cli }; },
+    cusV2Rec: () => said.push(['rec', X.g.OSC.current && X.g.OSC.current.id]), hmOpen: k => said.push(['open', k]) });
+  X.g.HOME_V2.apply(dyn(X));
+  const h = X.els.hv2.innerHTML;
+  const card = i => { const a = h.indexOf('data-i="' + i + '"'), b = h.indexOf('data-i="' + (i + 1) + '"'); return h.slice(a, b > 0 ? b : h.length); };
+  is(/class="rc" onclick="HOME_V2\.rec\('touch:c1:'\)">🧭 권할 것</.test(card(0)) && !/이분 자세히<\/button>/.test(card(0)), '고객 카드 맨 아래 = 「🧭 권할 것」 (시안 qins 오른쪽 칸)');
+  is(/class="rc" onclick="hmOpen\('db:d9:TA'\)">이분 자세히</.test(card(1)), '배정 DB 카드는 고객 창이 없어 예전처럼 「이분 자세히」');
+  is(/<span class="nm" role="button" onclick="hmOpen\('touch:c1:'\)">홍길동님<\/span>/.test(card(0)), '이름을 누르면 「이분 자세히」(시안처럼 이름에 밑줄)');
+  X.g.setTimeout = fn => fn();
+  X.g.HOME_V2.rec('touch:c1:');
+  is(JSON.stringify(said) === '[["cusGo","{\\"cli\\":\\"c1\\"}"],["rec","c1"]]', '누르면 있던 고객 창 하나(cusGo) → 그 분이 열리면 권할 것 시트(cusV2Rec) — ' + JSON.stringify(said));
+  said.length = 0; X.g.HOME_V2.rec('db:d9:TA');
+  is(JSON.stringify(said) === '[["open","db:d9:TA"]]', '배정 DB 줄이면 이분 자세히로');
+  const rs = sc.slice(sc.indexOf('  function recGo('), sc.indexOf('  function recGo(') + 900);
+  is(/g\.cusGo\(\{ cli: id \}\)/.test(rs) && /g\.cusV2Rec\(\)/.test(rs) && !/setItem|\.rpc\(|\.from\(|cmSave/.test(rs) && /\+\+n < 20/.test(rs), '있던 두 함수만 · 저장 없음 · 기다림은 3초까지');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');
