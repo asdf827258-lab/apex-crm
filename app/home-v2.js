@@ -239,6 +239,7 @@
       '.hv2 .qask .t-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}',
       /* 판 X532 — 🧰 이분께 맞는 도구 */
       '.hv2 .qtools{margin-top:8px}',
+      '.hv2 .qtop .nm[role=button]{cursor:pointer;text-decoration:underline;text-decoration-color:#D1D6DB;text-underline-offset:4px}',
       '.hv2 .qtools .lb{display:flex;align-items:center;gap:4px;flex-wrap:wrap}.hv2 .qtools .cfx{margin-left:auto;font-size:13px;font-weight:700;color:var(--blue);padding:2px 4px}',
       '.hv2 .qtools .tmore{display:block;width:100%;margin-top:6px;height:40px;border-radius:10px;background:var(--line2);font-size:14px;font-weight:700;color:var(--ink)}',
       '.hv2 .qsit{display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px 12px;border-radius:12px;background:#F9FAFB}',
@@ -769,7 +770,7 @@
   function cardHtml(x, i) {
     var key = Q(x.key), nm = nameOf(x), stg = x.kt || T(function () { return g.hmOrdOf(x.k).t; }, '') || '';
     var why = T(function () { return g.hmWhy(x); }, '') || E(x.s || '');
-    var h = '<div class="qc" data-i="' + i + '"><div class="qtop"><div class="av">' + E(nm.charAt(0)) + '</div><span class="nm">' + E(nm) + '님</span>' + (stg ? '<span class="sg">' + E(stg) + '</span>' : '') + (x.k === 'db' && /^(AP|PC|CS)$/.test(String(x.tk || '')) && x.id ? amtChip(x.id) : '') + '</div>';
+    var h = '<div class="qc" data-i="' + i + '"><div class="qtop"><div class="av">' + E(nm.charAt(0)) + '</div><span class="nm" role="button" onclick="hmOpen(\'' + key + '\')">' + E(nm) + '님</span>' + (stg ? '<span class="sg">' + E(stg) + '</span>' : '') + (x.k === 'db' && /^(AP|PC|CS)$/.test(String(x.tk || '')) && x.id ? amtChip(x.id) : '') + '</div>';
     h += '<div class="qwhy">' + why + (x.s && why.indexOf(strip(x.s)) < 0 ? '<small>' + E(x.s) + '</small>' : '') + '</div>';
     var tel = T(function () { return g.hmTelOf(x); }, '');
     var callBtn = tel ? '<a class="btn p" style="margin-top:10px" href="tel:' + E(String(tel).replace(/[^0-9+]/g, '')) + '">📞 전화 걸기</a>'
@@ -806,8 +807,23 @@
     h += '<div class="qbtns"><button type="button" onclick="HOME_V2.next(' + i + ')">다음 →</button><button type="button" onclick="hmSkip(\'' + key + '\')">오늘은 뒤로</button></div>';
     var D = doorOf(x);
     h += '<div class="qins"><button type="button" class="ins" onclick="hmDoorGo(\'' + Q(D.cat) + '\',\'' + D.band + '\')"><span class="k">🧭 ' + E(D.lab) + '</span><span class="a">상품전략기 ›</span><span class="p">' + E(D.prod) + '</span></button>' +
-      '<button type="button" class="rc" onclick="hmOpen(\'' + key + '\')">이분 자세히</button></div>';
+      (cliOf(x) ? '<button type="button" class="rc" onclick="HOME_V2.rec(\'' + key + '\')">🧭 권할 것</button>' : '<button type="button" class="rc" onclick="hmOpen(\'' + key + '\')">이분 자세히</button>') + '</div>';
     return h + '</div>';
+  }
+  /* 🧭 권할 것 (판 X568 · 3차 점검표 ⑪ · 시안 9차 qCard 맨 아래 「권할 것」 · 사장님 말씀 「그 다음거 진행해」 2026-11-26).
+     고객 365일 고객 카드는 맨 아래 단추가 「🧭 권할 것」 — 한 번에 고객 화면 「이분께 권할 것」 시트(cusV2Rec · 무엇을 · 어떻게 · 들고 갈 화면 · 이 말이 나오면).
+     여는 길은 있던 두 함수 — 고객 창 하나 cusGo({cli}) → 그 분이 열리면(OSC.current) cusV2Rec. 명단에 없는 분은 cusGo 가 한 줄 받아 열어서 잠깐 기다림(최대 3초).
+     「이분 자세히」 는 이름을 누르면(시안처럼 이름에 밑줄) · 배정 DB 카드는 고객 창이 없어 단추도 예전처럼 「이분 자세히」. 새 저장 없음. */
+  function recGo(key) {
+    var x = rowOf(key), id = cliOf(x);
+    if (!id) { try { g.hmOpen(key); } catch (e) {} return; }
+    try { g.cusGo({ cli: id }); } catch (e1) { return; }
+    var n = 0;
+    (function wait() {
+      var c = T(function () { return g.OSC.current; }, null);
+      if (c && c.id === id) { setTimeout(function () { try { g.cusV2Rec(); } catch (e2) {} }, 150); return; }
+      if (++n < 20) setTimeout(wait, 150);
+    })();
   }
   /* 📰 오늘 소식 (시안 qCard 「오늘 소식」 · 판 X529) — 이분께 맞는 기사 한 건.
      고르는 자는 아침 미션 「이 분께 보낼 소식」 과 같은 ccNewsIdx(관심 갈래 ccFitOf × 받아 둔 뉴스 NLIVE) · 누르면 있던 ccNews(복사).
@@ -1877,7 +1893,7 @@
     ai: aiSheet,
     aiAdd: aiAddSheet,
     met: metSheet, metGo: metGo,
-    sit: sitSheet, sitPut: sitPut, tools: toolsSheet,
+    sit: sitSheet, sitPut: sitPut, tools: toolsSheet, rec: recGo,
     careEdit: function (care) { careEditSheet(care == null ? '' : care); },
     careTo: function (i) { CE.care = careList()[i] || CE.care; CE.q = ''; careEditSheet(); },
     careQ: function (v) { CE.q = String(v || ''); var b = el('hv2CareL'); if (b) b.innerHTML = carePick(); },
