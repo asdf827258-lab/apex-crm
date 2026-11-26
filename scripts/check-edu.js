@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    check-edu.js — 🌱 <b>성장</b> — 입사부터 경력자까지 한 길로
-   (판 X379 · X380 → X409 → X467 → X475)
+   (판 X379 · X380 → X409 → X467 → X475 → X566)
 
    사장님 말씀 (2026-11-06) — 「큰 카테고리에서 <b>교육</b>도 하나 만들어줘
    <b>도구 밑에</b> 거기에 교육자료 쓸것들 다 정리해서 넣어주고」.
@@ -364,19 +364,34 @@ const SEED = () => {
       const 글 = (document.querySelector('#grHost') || { innerText: '' }).innerText;
       const 줄 = [].slice.call(document.querySelectorAll('#grHost .gr-row b')).map(x => x.innerText);
       const 안됨 = (document.querySelector('#grHost .gr-no') || { innerText: '' }).innerText;
+      const 칸 = [].slice.call(document.querySelectorAll('#grHost .gr-step7'));
+      const 기준 = 칸.filter(x => x.querySelector('.gr-ok')).length;
+      const 한마디 = 칸.filter(x => x.querySelector('.gr-say')).length;
+      const 별칸 = 칸.filter(x => x.querySelector('.gr-row')).length;
+      const 별 = 칸.filter(x => [].filter.call(x.querySelectorAll('.gr-row b'), b => /^★/.test(b.innerText)).length === 1).length;
+      const 돈 = 칸.filter(x => /돈 먼저 찾아 드리기/.test(x.innerText))[0];
+      const 돈칸 = !!돈 && /진료분석/.test(돈.innerText);
+      const 보장앞 = 칸.findIndex(x => /돈 먼저 찾아 드리기/.test(x.innerText)) < 칸.findIndex(x => /보장 같이 보기/.test(x.innerText));
       const 표안됨 = GR_CUST.some(g => g.it.some(s => ['insight', 'ta_script', 'ta_say', 'dz_guide', 'keep4', 'growboard', 'emcenter'].indexOf(s.go) >= 0));
       grTab('path'); grLv(1);
       const 꼬리 = [].slice.call(document.querySelectorAll('#grHost .gr-use')).map(x => x.innerText);
       const why = document.querySelector('#grHost details.gr-why');
       const 축 = why ? why.querySelectorAll('.gr-ax')[0] : null;
-      r({ 마디, 줄: 줄.length, 안됨, 표안됨, 꼬리, why: !!why, 접힘: why ? !why.open : false,
+      r({ 마디, 줄: 줄.length, 안됨, 표안됨, 기준, 한마디, 별칸, 별, 돈칸, 보장앞, 꼬리, why: !!why, 접힘: why ? !why.open : false,
           축: 축 ? 축.querySelectorAll('span').length : 0, 축수: GB_AX.length,
           구간: why ? (why.querySelectorAll('.gr-ax')[1] || { children: [] }).children.length : 0,
           구간수: AC_ROAD.filter(x => /→/.test(x.grow || '')).length, 글 });
     }, 300);
   }));
-  const 마디 = C.마디.filter(x => /^[①②③④⑤]/.test(x));
-  is(마디.length === 5 && 마디.every((x, i) => x.indexOf('①②③④⑤'[i]) === 0), '  고객 앞이 <b>상담 순서 다섯 마디</b>로 선다 ← ' + 마디.join(' · '));
+  /* 사장님 말씀 (2026-11-26) — 「이 순서로 확정」: 입구 → 첫 대화 → 돈 먼저 찾아 드리기 → 보장 → 제안 → 계약 · 전달 → 소개 (판 X566) */
+  const 마디 = C.마디.filter(x => /^[⓪①②③④⑤⑥]/.test(x));
+  const 일곱 = ['입구', '첫 대화', '돈 먼저 찾아 드리기', '보장 같이 보기', '제안', '계약', '소개'];
+  is(마디.length === 7 && 마디.every((x, i) => x.indexOf('⓪①②③④⑤⑥'[i]) === 0 && x.indexOf(일곱[i]) >= 0),
+     '  ★ 고객 앞이 <b>세일즈 일곱 칸</b>(입구 → … → 돈 먼저 찾아 드리기 → … → 소개)으로 선다 ← ' + 마디.join(' · '));
+  is(C.기준 === 7 && C.한마디 >= 6, '  칸마다 <b>넘어가는 기준</b>이 있고(' + C.기준 + '/7), 고객 앞 칸엔 <b>한 마디</b>가 있다(' + C.한마디 + ')');
+  is(C.별 === C.별칸 && C.별 >= 6, '  화면이 있는 칸마다 <b>★ 먼저 꺼낼 화면이 하나</b>다 ← ★ ' + C.별 + ' / 칸 ' + C.별칸);
+  is(C.돈칸, '  「돈 먼저 찾아 드리기」 칸에 <b>진료분석으로 가는 길</b>이 적혀 있다(단추 또는 여는 곳 안내)');
+  is(C.보장앞, '  ★ 돈 먼저 찾아 드리기가 <b>보장 같이 보기보다 앞</b>이다 (확정한 순서)');
   is(C.줄 >= 15, '  고객과 같이 보거나 보내는 화면 ' + C.줄 + '개');
   is(/고객 제시 불가/.test(C.안됨), '  상품전략기는 <b>그 화면에 적힌 말</b>(「고객 제시 불가」)로 막는다');
   is(!C.표안됨, '  ★ 설계사만 보는 것(소식지 · 대본 · 화법 · 팀 숫자)은 <b>고객 앞 표에 없다</b>');

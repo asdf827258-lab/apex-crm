@@ -216,22 +216,32 @@ var GR_KNOW=[
      「고객 링크」 · 「고객 안내문」 · 「발표 모드」 처럼 <b>그 화면 스스로 고객용이라고 적은 것</b>만
      세웠습니다(2026-11-11 41개 확인). 근거를 못 찾은 것(실무 계산기 · 숨은보험금)과 결과가
      복사 · 고객 저장뿐인 것(실비 계산기 · 건강검진)은 🧰 매번에 둡니다.
-   마디는 90일 아카데미의 흐름(접촉 → 팩트파인딩 → 보장 → 제안 → 사후)을 그대로 따릅니다. */
+   ★ 2026-11-26 사장님이 확정하신 <b>세일즈 일곱 칸</b>(판 X566) — 「입구 → 첫 대화 → 돈 먼저 찾아 드리기 →
+     보장 같이 보기 → 제안 → 계약 · 전달 → 소개」. 칸마다 <b>넘어가는 기준(ok) 하나</b>와
+     <b>고객에게 하는 한 마디(say)</b>, 그리고 먼저 꺼낼 화면 하나(it 의 <b>첫 줄</b> = ★ 기본)를 둡니다.
+     앱 밖에서 일어나는 일(랜딩 · 광고 · 카톡채널)은 out 에 글로만 적습니다 — 화면을 지어 세우지 않습니다.
+     2칸의 진료분석은 고지체크(다른 주소)에 있어 이 표의 화면 줄이 아니라 <b>여는 단추(goji)</b>로 둡니다 —
+     그 화면은 설계사가 여는 도구라 「고객용 화면만」 이라는 이 표의 원칙을 깨지 않습니다. */
 var GR_CUST=[
- {t:'① 처음 연락 · 비대면',s:'만나기 전, 고객 손에 가는 것',it:[
-   {go:'saybook',d:'상황별로 보낼 문자 · 카톡 — 고르고 다듬어 보낸다'},
-   {go:'utphoto',d:'비대면 상담 사진 · 그 사진과 같이 보낼 말'},
-   {go:'rjnews',d:'거절했던 고객에게 안부 + 소식 카톡'},
+ {t:'⓪ 입구',s:'고객이 먼저 말을 걸게 하는 곳',ok:'고객이 먼저 카톡 · DM 으로 말을 걸어옴',
+  out:'보험금비서 랜딩 · 광고 · 카톡채널 · 인스타에서 들어옵니다 — 앱 밖의 일입니다. 아래는 내가 먼저 문을 두드릴 때.',it:[
    {go:'news_live',d:'오늘의 소식을 골라 고객에게 보낼 글로'},
-   {go:'mkt_card',d:'모바일 명함 — 링크 · QR'}]},
- {t:'② 첫 만남 — 기준 세우기',s:'고객이 스스로 점검해 보게',it:[
-   {go:'kijun',d:'보험의 기준 — 강의 덱 · 고객 셀프 점검 링크 · QR'}]},
- {t:'③ 보장 같이 보기',s:'지금 무엇이 있고 어디가 비었나',it:[
+   {go:'rjnews',d:'거절했던 고객에게 안부 + 소식 카톡'}]},
+ {t:'① 첫 대화',s:'처음부터 숫자를 묻지 않습니다',ok:'진료내역을 받거나 만날 약속을 잡음',
+  say:'혹시 최근 3년 안에 병원 다녀오신 적 있으세요?',it:[
+   {go:'saybook',d:'상황별로 보낼 문자 · 카톡 — 고르고 다듬어 보낸다'},
+   {go:'utphoto',d:'비대면 상담 사진 · 그 사진과 같이 보낼 말'}]},
+ {t:'② 돈 먼저 찾아 드리기',s:'계약 이야기 전에 고객 돈부터',ok:'청구 1건 진행, 또는 「빠진 건 없어요」 확인',
+  say:'못 받으신 게 있는지 먼저 봐 드릴게요. 괜찮으시죠?',goji:1,it:[]},
+ {t:'③ 보장 같이 보기',s:'지금 무엇이 있고 어디가 비었나',ok:'고객이 빈 곳을 직접 말함',
+  say:'지금 보험이 이런 일에도 나오는지 같이 볼까요?',it:[
    {go:'sangdam',d:'보장분석 상담 덱'},
+   {go:'kijun',d:'보험의 기준 — 강의 덱 · 고객 셀프 점검 링크 · QR'},
    {go:'bojang',d:'보장분석 PDF → 1:1 상담 리포트'},
    {go:'treatpay',d:'암 · 뇌 · 심장 — 어느 담보에서 얼마가 나오나'},
    {go:'wallets',d:'8통장으로 빈 곳 찾기'}]},
- {t:'④ 제안 · 비교',s:'바꾸면 무엇이 달라지나',it:[
+ {t:'④ 제안',s:'바꾸면 무엇이 달라지나',ok:'전 · 후를 보고 고객이 고개를 끄덕임',
+  say:'바꾸면 이렇게 달라지는데, 어떠세요?',it:[
    {go:'frmake',d:'보장 전 · 후 한 장'},
    {go:'compare',d:'제안서끼리 견주기 — PDF 로 저장'},
    {go:'ai_prop',d:'증권 · 제안서를 고객이 읽을 수 있는 설명서로'},
@@ -239,10 +249,14 @@ var GR_CUST=[
    {go:'fp_deck',d:'재무 · 보장 상담 덱'},
    {go:'finance',d:'연금 · 노후 · 목돈 · 현금흐름 · 상속 — 발표 덱'},
    {go:'katalk',d:'제안서를 고객에게 보낼 카톡 설명으로'}]},
- {t:'⑤ 계약 뒤 · 사고 · 변경',s:'계약을 지키는 것 — 고객에게 건네는 종이',it:[
+ {t:'⑤ 계약 · 전달',s:'계약을 지키는 것 — 고객에게 건네는 종이',ok:'증권 전달을 마침',
+  say:'앞으로 병원 가시면 저한테 먼저 알려 주세요.',it:[
    {go:'pdel',d:'증권 전달 — 고객 속지 · 안내장 · 발표 모드'},
    {go:'endorse',d:'계약 변경 — 필요서류 · 고객 안내문'},
-   {go:'car_fault',d:'자동차사고 — 고객에게 건네는 안내문 인쇄'}]}
+   {go:'car_fault',d:'자동차사고 — 고객에게 건네는 안내문 인쇄'}]},
+ {t:'⑥ 소개',s:'보험금이 나온 날이 부탁하기 가장 좋은 날',ok:'소개 1명',
+  say:'주변에 못 받은 보험금 있을 분 계시면 저한테 연결해 주실래요?',it:[
+   {go:'mkt_card',d:'소개받은 분께 보낼 모바일 명함 — 링크 · QR'}]}
 ];
 /* 고객 앞에 꺼내지 않는 것 — 까닭과 함께 */
 var GR_CUST_NO=[
@@ -438,6 +452,9 @@ function grCss(){
     '.gr-cur .gr-tx .d b{color:var(--t-ink)}'+
     '.gr-now .d b{color:var(--t-ink)}'+
     '.gr-none{font-size:var(--t6);color:var(--t-sub);line-height:1.6}'+
+    '.gr-ok,.gr-say{font-size:var(--t6);color:var(--t-ink);line-height:1.6;margin:6px 0 2px;word-break:keep-all}'+
+    '.gr-ok b,.gr-say b{display:inline-block;margin-right:6px;font-weight:800;color:var(--t-point)}'+
+    '.gr-step7 .gr-none{margin:4px 0}'+
     '.gr-foot{font-size:var(--t6);color:var(--t-sub);line-height:1.6;margin:12px 0 0;padding:0 16px;word-break:keep-all}'+
     '.gr-seg button{padding:0 2px;word-break:keep-all}'+
     '.gr-use{display:inline-block;font-size:var(--t6);font-weight:800;color:var(--t-point);margin-top:3px}'+
@@ -663,13 +680,27 @@ function grKnowHtml(){
     'value="'+osEsc(GR.q)+'" oninput="grFind(this.value)" aria-label="지식 찾기"></div>'+
     '<div id="grKnow">'+grKnowList()+'</div>';
 }
-/* 🤝 고객 앞 — 상담 순서대로. 찾기 칸은 없습니다 — 다섯 마디를 위에서 아래로 따라가면 됩니다 */
+/* 🤝 고객 앞 — 세일즈 일곱 칸. 찾기 칸은 없습니다 — 위에서 아래로 따라가면 됩니다.
+   칸마다: 넘어가는 기준 · 고객에게 하는 한 마디 · ★ 먼저 꺼낼 화면(첫 줄) · 나머지 화면 */
 function grCustHtml(){
-  var h='<div class="t-card"><div class="gr-hd">고객과 같이 보거나 보내는 것<i>상담 순서대로 놓았습니다 — 그 화면 스스로 「고객용」 이라고 적은 것만 골랐습니다</i></div></div>',i,j,g,r,rows,n=0;
+  var h='<div class="t-card"><div class="gr-hd">세일즈 일곱 칸 — 고객과 같이 보거나 보내는 것'+
+    '<i>칸마다 넘어가는 기준 하나 · 고객에게 하는 한 마디 · ★ 먼저 꺼낼 화면 하나. 화면은 그 스스로 「고객용」 이라고 적은 것만 골랐습니다</i></div></div>',
+    i,j,g,r,rows,n=0,first,gj=(typeof gojiOpen==='function'&&(typeof osTabAllowed!=='function'||osTabAllowed('ref_underwrite')));
   for(i=0;i<GR_CUST.length;i++){
-    g=GR_CUST[i]; rows='';
-    for(j=0;j<g.it.length;j++){ r=grKnowRow(g.it[j],''); if(r){ rows+=r.h; n++; } }
-    if(rows)h+='<div class="t-card"><div class="gr-hd">'+osEsc(g.t)+'<i>'+osEsc(g.s)+'</i></div>'+rows+'</div>';
+    g=GR_CUST[i]; rows=''; first=1;
+    if(g.goji&&gj){
+      rows+='<button type="button" class="gr-row" onclick="gojiOpen()"><span class="ic">🩺</span>'+
+        '<span class="tx"><b>★ 고지체크 열기 → 진료분석 · 청구 한 건</b><span>심평원 진료내역으로 못 받은 보험금을 찾습니다 · 설계사가 여는 도구 · 새 창</span></span>'+
+        '<span class="go">›</span></button>';
+      first=0; n++;
+    }
+    for(j=0;j<g.it.length;j++){ r=grKnowRow(g.it[j],''); if(r){ rows+=(first?r.h.replace('<b>','<b>★ '):r.h); first=0; n++; } }
+    h+='<div class="t-card gr-step7"><div class="gr-hd">'+osEsc(g.t)+'<i>'+osEsc(g.s)+'</i></div>'+
+      (g.ok?'<div class="gr-ok"><b>넘어가는 기준</b>'+osEsc(g.ok)+'</div>':'')+
+      (g.say?'<div class="gr-say"><b>한 마디</b>「'+osEsc(g.say)+'」</div>':'')+
+      (g.out?'<div class="gr-none">'+osEsc(g.out)+'</div>':'')+
+      (g.goji&&!gj?'<div class="gr-none">진료분석은 자료 조회 › 예외질환 인수확인 맨 위 「🩺 고지체크 열기」 에서 엽니다.</div>':'')+
+      rows+'</div>';
   }
   if(!n)h+='<div class="t-card"><div class="gr-none">여실 수 있는 것이 없습니다.</div></div>';
   h+='<div class="t-card gr-no"><div class="gr-hd">고객 앞에 꺼내지 않는 것<i>설계사만 봅니다 — 화면을 돌려 보여 주지 마십시오</i></div><ul>';
