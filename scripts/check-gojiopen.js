@@ -4,7 +4,7 @@
    고지체크는 다른 주소라 CRM 로그인을 같이 못 쓴다. 그래서 CRM 이 일회용 표를 받아 건넨다.
 
    지키는 것
-     1. 카드가 [⚠️ 예외질환 인수확인](ref_underwrite) 탭에 선다
+     1. 카드가 [⚠️ 예외질환 인수확인](ref_underwrite) 탭과 메인 메뉴 [🩺 고지체크](med_disclosure, 2026-11-26) 탭에 선다
      2. 누르면 CRM 토큰을 Authorization 에만 싣고 goji-open 을 부른다 — 주소에 토큰을 안 싣는다
      3. 고지체크는 표(#h=)로만 연다 — CRM 토큰(access/refresh)을 넘기지 않는다
         (같은 토큰을 두 곳이 갱신하면 CRM 이 로그아웃된다)
@@ -45,7 +45,7 @@ function run(session, reply) {
 
   /* 1. 카드 자리 */
   const a = run(null, {});
-  is(a.ctx.CUSTOM.length === 1 && a.ctx.CUSTOM[0].tab === 'ref_underwrite', '카드가 ref_underwrite 탭에 선다');
+  is(a.ctx.CUSTOM.length === 2 && a.ctx.CUSTOM.some(c => c.tab === 'ref_underwrite') && a.ctx.CUSTOM.some(c => c.tab === 'med_disclosure'), '카드가 ref_underwrite · med_disclosure(🩺 고지체크) 탭에 선다');
   is(/gojiOpen\(\)/.test(a.ctx.CUSTOM[0].render()), '카드 단추가 gojiOpen 을 부른다');
 
   /* 2·3·4. 정상 — 표로만 연다 */
