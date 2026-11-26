@@ -20,8 +20,8 @@
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
      [28] ★  판 X564 — 💬 자비스 말풍선: 지금 카드의 맨 앞 추천 도구(toolsOf) → 없으면 안 끝낸 미션 → 다 끝나면 완료 · ✕ 로 닫음(저장 없음)
      [29] ★  판 X568 — 🧭 카드 맨 아래 「권할 것」(고객 카드) → 있던 cusGo({cli}) → cusV2Rec · 이름 누르면 이분 자세히(hmOpen) · 배정 DB 카드는 예전 그대로
-     [31] ★★ 판 X579 — ✅ 챙기는 중 갈래(약속 확인 · 약속 지남 · 증권 · 소개) · 완료는 있던 함수(hmDaySkip · hmLateSkip · hmReferSkip · hdbTo · hdbOpen · hmLateAgain · hmLateEnd · hmReferGot)
-     [32] ★★ 판 X579 — 📍 오늘 칸 동선 그림 · 💬 카톡 글 전체 보기 · 말풍선 글만큼 · 칸 따라다님 · 📅 무엇 여섯 갈래 · 새 고객 · 👤 실명표를 내 설정에
+     [31] ★★ 판 X584 — ✅ 챙기는 중 갈래(약속 확인 · 약속 지남 · 증권 · 소개) · 완료는 있던 함수(hmDaySkip · hmLateSkip · hmReferSkip · hdbTo · hdbOpen · hmLateAgain · hmLateEnd · hmReferGot)
+     [32] ★★ 판 X584 — 📍 오늘 칸 동선 그림 · 💬 카톡 글 전체 보기 · 말풍선 글만큼 · 칸 따라다님 · 📅 무엇 여섯 갈래 · 새 고객 · 👤 실명표를 내 설정에
      [30] ★★ 판 X572 — ☁️ 자비스 내 메뉴 · 신입 도움말을 계정에(user_prefs · 그 사람 줄만 · migration_85) — 서버 것을 내려받고, 없으면 올리고, 바꾸면 올림 · 표가 없으면 이 기기에만
      [27] ★★ 판 X558 — 📍 카드에 지금 상황(cmSave 그대로) · ⚙ 상황별 추천 메뉴 더하기 = 대표 · 관리자만(osIsAppAdmin) · 저장 osCfgSet('care_apps') → CUS_V2.appsBy 한 곳
      [25] ★★ 판 X555 — 🤝 만났어요(시안 jMeet): 오늘 약속 카드 · 이름+시각이 딱 한 분일 때만 · 단계는 있던 hdbTo(id,'PC') 하나 · 감사 카톡 복사 · 이분 끝(hmQfin)
@@ -163,7 +163,7 @@ const hp = (IX.match(/function hmPaint\(\)\{[\s\S]*?\n\}/) || [''])[0];
 is(/try\{ if\(window\.HOME_V2&&HOME_V2\.paint\)HOME_V2\.paint\(\); \}catch/.test(hp) && (ixc.match(/HOME_V2\.paint\(/g) || []).length === 1, 'hmPaint 안 한 곳 · try 안 (데이터가 늦게 와도 새 화면이 따라옴)');
 is((ixc.match(/HOME_V2\.chip\(/g) || []).length === 1 && /try\{ v2=\(window\.HOME_V2&&HOME_V2\.chip\)\?HOME_V2\.chip\(\):''; \}catch/.test(ixc), '인사 줄 단추 한 곳 · try 안');
 is((ixc.match(/HOME_V2/g) || []).length <= 11 && (ixc.match(/HOME_V2\.prefPut\(/g) || []).length === 1 && /cmLSSet\('apex_cli_real_'\+cmWho\(\),o\);\n  try\{ if\(window\.HOME_V2&&typeof HOME_V2\.prefPut==='function'\)HOME_V2\.prefPut\('real',o\); \}catch\(e\)\{\}/.test(IX.split('\r\n').join('\n').replace(/\n  \/\*[^\n]*\*\//g, '')),
-  'index.html 안 HOME_V2 는 그 네 자리 + 실명 적는 한 곳(cmRealSet → prefPut · 판 X579) — ' + (ixc.match(/HOME_V2/g) || []).length + '번');
+  'index.html 안 HOME_V2 는 그 네 자리 + 실명 적는 한 곳(cmRealSet → prefPut · 판 X584) — ' + (ixc.match(/HOME_V2/g) || []).length + '번');
 
 console.log('\n[4] 칸 차례 = 시안 rHome');
 const H = (sc.match(/function html\(\) \{[\s\S]*?\n  \}/) || [''])[0];
@@ -561,7 +561,7 @@ console.log('\n[18] 💰 예상 월납 · ✓ 계약됐어요 · 🛰 자비스 
   const jl = X.g.HOME_V2 && SRC.indexOf("'오늘 끊기기 쉬운 자리 ' + n + '곳'") > 0 && SRC.indexOf("' · 미리 세운 연락 ' + J.P.length + '개'") > 0;
   is(jl, '오늘 화면 자비스 한 줄 — 「오늘 끊기기 쉬운 자리 n곳 · 미리 세운 연락 m개」(시안 문구)');
 
-  console.log('\n[31] ✅ 챙기는 중 — 갈래 · 완료 (판 X579 · 사장님 말씀 「30명 정리하는데 깔끔하게 · 완료 처리 · 매일 스케줄 관리」)');
+  console.log('\n[31] ✅ 챙기는 중 — 갈래 · 완료 (판 X584 · 사장님 말씀 「30명 정리하는데 깔끔하게 · 완료 처리 · 매일 스케줄 관리」)');
   const pos = ['📌 약속 확인', '⏰ 약속 지남', '📄 증권 전달', '🙌 소개 요청', '미리 세워 둔 연락'].map(k => t.indexOf(k));
   is(pos.every((p, i) => p > 0 && (!i || p > pos[i - 1])) && /오늘 0 \/ 4 마침/.test(t), '갈래 넷(약속 확인 → 약속 지남 → 증권 → 소개) → 미리 세운 연락 · 「오늘 0 / 4 마침」');
   is(/HOME_V2\.close\(\);hdbOpen\('d4','증권전달'\)">✓ 전달했어요/.test(t) && /HOME_V2\.jvDo\('met','d3'\)">🤝 만났어요/.test(t) && /HOME_V2\.jvDo\('again','d3'\)">📅 다시 약속/.test(t) &&
@@ -581,7 +581,7 @@ console.log('\n[18] 💰 예상 월납 · ✓ 계약됐어요 · 🛰 자비스 
   const JVS = sc.slice(sc.indexOf('  var JV_DONE ='), sc.indexOf('  function jvHtml() {')) + sc.slice(sc.indexOf('  var JVG = ['), sc.indexOf('  function isCall('));
   is(JVS.length > 1500 && !/setItem|\.rpc\(|\.from\(|fetch\(/.test(JVS), '이 덩어리는 서버 · 이 기기 담기를 직접 안 함(있던 함수만)');
 
-  console.log('\n[32] 📍 💬 📅 👤 오늘 칸 그림 · 카톡 전체 보기 · 말풍선 · 일정 넣기 · 실명 (판 X579)');
+  console.log('\n[32] 📍 💬 📅 👤 오늘 칸 그림 · 카톡 전체 보기 · 말풍선 · 일정 넣기 · 실명 (판 X584)');
   is(/var mp = D\.kind === 'appt' \? T\(function \(\) \{ return mapSvg\(D\.A, D\.near\); \}, ''\)/.test(sc) && /return '<div class="rtw">' \+ btn \+ '<div class="rtmap" role="button" onclick="HOME_V2\.route\(\)">' \+ mp/.test(sc) && /if \(!mp\) return btn;/.test(sc),
     '동선 — 시트의 그 그림(mapSvg)을 오늘 칸에 바로 · 좌표 모르면 예전 한 줄 · 누르면 시트');
   is(/\(longMsg\(t\) \? '<button type="button" class="more" onclick="HOME_V2\.msgAll\(this\)">전체 보기 ▾<\/button>'/.test(sc) && /\.qmsg\.open \.tx\{display:block;-webkit-line-clamp:unset/.test(sc) && /function longMsg\(t\) \{ t = String\(t \|\| ''\); return t\.split\('\\n'\)\.length > 5 \|\| t\.length > 120; \}/.test(sc),

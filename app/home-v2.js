@@ -312,15 +312,15 @@
       '.hv2 .rtc .ar{color:#B0B8C1;font-size:18px}',
       '.hv2 .mapsvg{display:block;width:100%;height:auto;margin-top:12px}',
       '.hv2 .mapnote{font-size:13px;color:var(--sub3);margin:6px 2px 0}',
-      /* ① 오늘 칸 동선 그림 (판 X579) */
+      /* ① 오늘 칸 동선 그림 (판 X584) */
       '.hv2 .rtw{background:#fff;border-radius:var(--r);margin-top:10px;overflow:hidden}',
       '.hv2 .rtw .rtc{margin-top:0;border-radius:0}',
       '.hv2 .rtmap{padding:0 14px 12px;cursor:pointer}',
       '.hv2 .rtmap .mapsvg{margin-top:0;border-radius:12px;background:#F7F9FC}',
-      /* ④ 카톡 글 전체 보기 (판 X579) */
+      /* ④ 카톡 글 전체 보기 (판 X584) */
       '.hv2 .qmsg.open .tx{display:block;-webkit-line-clamp:unset;overflow:visible}',
       '.hv2 .qmsg .more{display:block;height:40px;margin-top:2px;padding:0;font-size:14px;font-weight:700;color:var(--blue);background:none}',
-      /* ② 챙기는 중 — 갈래 · 완료 (판 X579) */
+      /* ② 챙기는 중 — 갈래 · 완료 (판 X584) */
       '#hv2Sheet .jvp{display:flex;align-items:center;gap:10px;margin:8px 0 4px}',
       '#hv2Sheet .jvp .bar{flex:1;height:8px;border-radius:99px;background:var(--line);overflow:hidden}#hv2Sheet .jvp .bar i{display:block;height:100%;background:var(--green);border-radius:99px}',
       '#hv2Sheet .jvp span{font-size:14px;font-weight:700;color:var(--sub)}',
@@ -335,7 +335,7 @@
       '#hv2Sheet .jvr-b button.y{background:var(--green);color:#fff}#hv2Sheet .jvr-b button.p{background:var(--blue);color:#fff}',
       '#hv2Sheet .jvmore{display:block;width:100%;height:44px;font-size:14px;font-weight:700;color:var(--blue);background:none;border-top:1px solid var(--line2)}',
       '#hv2Sheet .jvdone{font-size:13px;color:var(--sub2);margin:8px 4px 0}',
-      /* ⑤ 일정 넣기 — 무엇 여섯 갈래 · 새 고객 (판 X579) */
+      /* ⑤ 일정 넣기 — 무엇 여섯 갈래 · 새 고객 (판 X584) */
       '#hv2Sheet .whatr{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}',
       '#hv2Sheet .whatr button{height:44px;border-radius:12px;background:#fff;border:1px solid var(--line);font-size:14px;font-weight:700;color:var(--ink)}',
       '#hv2Sheet .whatr button.on{background:var(--blue);border-color:var(--blue);color:#fff}',
@@ -619,7 +619,7 @@
      ★ 시안의 「예약 확인 · 감사 · 철회 안내 보냈나」 는 라이브가 보낸 날을 안 남겨 세우지 않습니다(지어내지 않음).
        그 대신 라이브가 아는 자리 — 내일 약속(노쇼) · 오늘 약속 · 약속 지남 · 계약완료인데 증권 전달 전 · 소개 차례. */
   function ymdPlus(n) { var t = T(function () { return g.mcalToday(); }, '') || new Date().toISOString().slice(0, 10), d = new Date(t + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
-  /* ✅ 판 X579 — 사장님 말씀 「챙기는 중에서 손승훈 들어가면 30명 … 깔끔하게 정리해 주고, 완료 처리를 할 수 있도록 · 이걸로 매일 스케줄 관리」.
+  /* ✅ 판 X584 — 사장님 말씀 「챙기는 중에서 손승훈 들어가면 30명 … 깔끔하게 정리해 주고, 완료 처리를 할 수 있도록 · 이걸로 매일 스케줄 관리」.
      ★ 갈래(g): appt 약속 확인 · late 약속 지남 · pol 증권 전달 · ref 소개 요청 — 시트가 갈래마다 묶어 그림.
      ★ 「오늘 마침 · 오늘 넘김」 은 <b>있던 하루 넘김 칸</b>을 씀 — 약속 지남 = hmLateSkip(홈 🕗 와 같은 칸) · 소개 = hmReferSkip(홈 💬 와 같은 칸) ·
        약속 확인 · 증권은 hmDaySkip(JV_DONE · 같은 꼴 · 날이 바뀌면 다시 섬). 새 저장 코드 없음.
@@ -811,7 +811,7 @@
     var th = d ? T(function () { return g.TA5.THEMES[d.theme]; }, null) : null;
     return { db: d, th: th, src: s };
   }
-  /* 💬 판 X579 — 사장님 말씀 「카톡 TA 에서 말 안 잘리게 열어 보는 칸」: 카드 글은 다섯 줄까지만 보이므로(.qmsg .tx) 넘으면 「전체 보기 ▾」 */
+  /* 💬 판 X584 — 사장님 말씀 「카톡 TA 에서 말 안 잘리게 열어 보는 칸」: 카드 글은 다섯 줄까지만 보이므로(.qmsg .tx) 넘으면 「전체 보기 ▾」 */
   function longMsg(t) { t = String(t || ''); return t.split('\n').length > 5 || t.length > 120; }
   function msgAll(b) {
     var q = b && b.parentNode; if (!q) return;
@@ -1549,7 +1549,7 @@
      ★ 오른쪽 🎙 · ? 단추와 아래 탭은 안 가림(오른쪽 70px 비움 · 아래 세 칸 위) · ✕ 로 닫으면 이 화면을 다시 열 때까지 안 뜸(저장 없음 · 기억은 이 창 안에서만).
      ★ 🤖 를 누르면 자비스 시트(HOME_V2.ai) — 인사 줄 🤖 와 같은 곳. */
   var JVB = { off: false, i: 0, sec: 'card', watch: false };
-  /* 💬 판 X579 — 사장님 말씀 「말풍선 크기가 너무 큰데, 텍스트에 맞춰서 해야 될 것들을 칸 별로 따라다니면서 알려 줄 수 있는지」.
+  /* 💬 판 X584 — 사장님 말씀 「말풍선 크기가 너무 큰데, 텍스트에 맞춰서 해야 될 것들을 칸 별로 따라다니면서 알려 줄 수 있는지」.
      ★ 크기는 글만큼(.jvb-b flex 0 1 auto · 최대 300px) · 빈 자리는 누름을 막지 않음.
      ★ 화면을 내리면 지금 보는 칸(미션 · 고객 카드 · 동선 · 챙기는 중)에 맞춰 말이 바뀜 — 고르는 자는 있던 것(misState · routeData · jvData · toolsOf).
        고객 카드를 보고 있을 때는 예전 그대로 그 분 추천 도구. */
@@ -1792,7 +1792,7 @@
     else if (D.kind === 'any') { t1 = '오늘은 약속이 없어요 · 만날 분 추천 ' + D.near.length + '명'; t2 = '동네가 적힌 고객이 아직 없어요 — 지역 동선에서 동네를 고르면 길까지 짜 드려요'; }
     else { t1 = '🗺️ 지역 동선'; t2 = '동네가 적힌 고객이 아직 없어요 — 동네를 골라 하루를 묶어요'; }
     var btn = '<button type="button" class="rtc" onclick="HOME_V2.route()"><div class="tile">📍</div><div class="tx"><div class="t1">' + E(t1) + '</div><div class="t2">' + E(t2) + '</div></div><span class="ar">›</span></button>';
-    /* 📍 판 X579 — 사장님 말씀 「지역 동선에서 오늘 바로 이미지 띄워줄 수 있는지」: 시트의 그 그림(mapSvg)을 오늘 칸에도 바로.
+    /* 📍 판 X584 — 사장님 말씀 「지역 동선에서 오늘 바로 이미지 띄워줄 수 있는지」: 시트의 그 그림(mapSvg)을 오늘 칸에도 바로.
        좌표를 아는 곳이 하나도 없으면 그림 없이 예전 한 줄 그대로. 누르면 시트(크게 · 카카오맵) */
     var mp = D.kind === 'appt' ? T(function () { return mapSvg(D.A, D.near); }, '') : D.kind === 'rec' ? T(function () { return mapSvg(D.near, []); }, '') : '';
     if (!mp) return btn;
@@ -1843,7 +1843,7 @@
      ★ 판 X516 — 달력 탭의 「📲 폰 달력에도 담기」 스위치(CAL_V2.icsOn · 이 기기에만)가 켜져 있으면 「넣기」 를 누른 그 순간 그 한 건의 .ics 를 바로 받습니다
        (같은 schedIcs · 누르는 손길 안이라 폰이 막지 않음). 웹앱은 폰 달력에 저절로 넣을 권한이 없어 이것이 「담기」 의 전부입니다. */
   var SCH = { tab: 'me', ds: '', hm: '', cid: '', done: null, what: '' };
-  /* 📅 판 X579 — 사장님 말씀 「무엇도 업무 전화 / 상담 / 계약 / 청구 / 소개요청 / 증권전달로 나누어」 ·
+  /* 📅 판 X584 — 사장님 말씀 「무엇도 업무 전화 / 상담 / 계약 / 청구 / 소개요청 / 증권전달로 나누어」 ·
      「일정 넣기에서 누구에 고객 추가 칸을 연동」. 무엇은 이 여섯 갈래 단추(내 일정 · 고객 일정 같이).
      ★ 저장은 그대로 mcalMyPut · mcalCusPut — 고객 일정은 갈래가 「방법」 칸(mcalCusHow)으로 들어가 다음 할 일 · 접촉 기록에 「상담 — …」 처럼 남음,
        내 일정은 「상담 · 한 줄」 로 제목 앞에 붙음. 새 고객은 있던 「➕ 고객 추가」 흐름(cregOpen) 그대로. */
@@ -2005,7 +2005,7 @@
         var kv = r.data && r.data.kv;
         if (!kv || typeof kv !== 'object') { prefPush(); return; }   /* 처음 — 이 기기 것을 올림 */
         Object.keys(kv).forEach(function (k) { if (k !== 'ai_mine' && k !== 'newhelp' && !(k in PREF.more)) PREF.more[k] = kv[k]; });
-        /* 👤 판 X579 — 고객 실명표(이 기기 cmReal)를 계정 것과 합침: 이 기기에 없는 이름만 받아 오고, 이 기기에만 있던 이름은 올림.
+        /* 👤 판 X584 — 고객 실명표(이 기기 cmReal)를 계정 것과 합침: 이 기기에 없는 이름만 받아 오고, 이 기기에만 있던 이름은 올림.
            사장님 말씀 「누구도 고객 365도 모든 고객 이름을 * 로 가리지 마 — 자기 고객만 뜨니까」 · 고름 「내 설정 한 줄에」(그 사람 줄만 · 남은 못 봄) */
         try {
           var mine = g.cmReal(), got = kv.real && typeof kv.real === 'object' ? kv.real : {}, mg = {}, k2;

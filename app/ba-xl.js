@@ -313,11 +313,17 @@
         '<cfRule type="dataBar" priority="1"><dataBar showValue="1">' +
         '<cfvo type="min"/><cfvo type="num" val="0"/><color rgb="FFE89B93"/></dataBar>' +
         '</cfRule></conditionalFormatting>') : '') +
-      (opt.draw ? '<drawing r:id="rId1"/>' : '') +
       (opt.fit ? ('<printOptions/><pageMargins left="0.3" right="0.3" top="0.4" bottom="0.4" header="0.2" footer="0.2"/>' +
         '<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="' +
         (opt.fitH ? '1' : '0') + '" paperSize="9"/>') :
         '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>') +
+      /* ★★ <b>&lt;drawing&gt; 은 인쇄 설정(pageSetup) 뒤</b>입니다 — 판 X579 · 사장님 말씀 2026-11-26
+         「엑셀다운로드 계속 오류된다. 다운로드해서 오류확인까지」. 엑셀은 시트 안 칸의 <b>차례</b>를
+         규격(CT_Worksheet)대로 따집니다: … mergeCells → conditionalFormatting → printOptions →
+         pageMargins → pageSetup → … → <b>drawing</b>. 앞에 두었더니 <b>엑셀이 파일을 통째로 못 열었습니다</b>
+         (복구도 안 됨 · 이 PC 엑셀로 재어 확인). 파이썬·브라우저는 차례를 안 따져 「열린다」 로 속았습니다.
+         check-baxl [12] 가 시트마다 차례를 잽니다. */
+      (opt.draw ? '<drawing r:id="rId1"/>' : '') +
       '</worksheet>';
   }
 
