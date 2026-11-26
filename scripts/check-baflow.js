@@ -66,7 +66,12 @@ const head = (t) => console.log('\n' + t);
 
   head('[2] 나이대 — <20대부터 70대까지> 여섯 구간이 다 채워져 있다');
   const age = await pg.evaluate(() => {
-    var need = ['one', 'first', 'later', 'amt', 'term', 'prem', 'miss', 'ask', 'push', 'talk'];
+    /* ★ 판 X562 — 보험료 칸이 <b>prem 한 칸</b>에서 <b>pr·premTail·premBase</b> 로 갈렸습니다.
+       퍼센트가 글과 숫자 두 곳에 있어 한쪽만 고쳐지던 자리를 pr 한 곳으로 모은 것입니다 (5번).
+       pr 은 <b>70대만 없습니다</b> — 「연금의 몇 %」 로 셈할 수 없는 구간이라 agePremLine 이
+       「낼 수 있는 만큼만」 으로 갈라 말합니다. 그래서 pr 을 필수 칸으로 두면 헛것을 잡습니다 (8번).
+       ★ 칸 이름이 아니라 <b>지어진 한 줄</b>을 아래에서 따로 잽니다 — 이름이 또 바뀌어도 안 샙니다. */
+    var need = ['one', 'first', 'later', 'amt', 'term', 'premTail', 'premBase', 'miss', 'ask', 'push', 'talk'];
     var hole = [];
     AGE_GUIDE.forEach(function (g) {
       need.forEach(function (k) {
@@ -91,6 +96,40 @@ const head = (t) => console.log('\n' + t);
   is(age.gap.length === 0,
      age.gap.length ? ('나이가 <어디에도 안 걸리거나 두 곳에> 걸린다 — ' + age.gap.slice(0, 5).join(' ')) :
      '20세부터 79세까지 <어느 나이든 꼭 한 구간>에 걸린다');
+
+  /* ★★ 판 X562 — <b>보험료 한 줄이 정말 지어지나.</b> 칸이 있는지만 보면 이름이 바뀔 때
+     조용히 샙니다 — 실제로 prem → pr 로 갈릴 때 이 자가 「빈 칸」 이라 울었습니다.
+     지어진 글을 봅니다: 여섯 구간 전부 한 줄이 서고, 70대처럼 퍼센트로 셈할 수 없는
+     구간은 「낼 수 있는 만큼만」 으로 <b>갈라 말하는지</b>까지. 짐작한 금액을 안 적습니다 (1번). */
+  const prem = await pg.evaluate(() => {
+    var bad = [], guess = [], noCalc = [], keep = S.who.incMan;
+    /* ① 월소득을 <b>비워 두고</b> — 짐작한 금액을 적으면 안 된다 (1번) */
+    S.who.incMan = '';
+    AGE_GUIDE.forEach(function (g) {
+      var t = ''; try { t = agePremLine(g) || ''; } catch (e) { t = ''; }
+      var plain = t.replace(/<[^>]*>/g, '').trim();
+      if (!plain || plain.length < 8) bad.push(g.t);
+      /* 이 집 금액을 셈해 적었다면 짐작이다 — 셈한 줄에만 붙는 말로 가린다 */
+      if (/이 집 월소득/.test(t)) guess.push(g.t);
+    });
+    /* ② 월소득을 <b>적으면</b> — 이 집 금액으로 셈해 줘야 한다 (적어 놓고 안 쓰면 헛말이다) */
+    S.who.incMan = '400';
+    AGE_GUIDE.forEach(function (g) {
+      var t = ''; try { t = agePremLine(g) || ''; } catch (e) { t = ''; }
+      if (g.premBase === '월 소득' && g.pr && !/이 집 월소득/.test(t)) noCalc.push(g.t);
+    });
+    S.who.incMan = keep;
+    return { bad: bad, guess: guess, noCalc: noCalc, n: AGE_GUIDE.length };
+  });
+  is(prem.bad.length === 0,
+     prem.bad.length ? ('보험료 한 줄이 안 서는 구간 — ' + prem.bad.join(' / ')) :
+     '구간 ' + prem.n + '곳 <전부> 보험료 한 줄이 선다 — 칸 이름이 아니라 <지어진 글>을 봤다');
+  is(prem.guess.length === 0,
+     prem.guess.length ? ('월소득을 <비웠는데도> 이 집 금액을 셈해 적는 구간 — ' + prem.guess.join(' / ')) :
+     '월소득을 안 적으셨으면 <셈해 적지 않는다> — 적어 달라고 말한다 (1번)');
+  is(prem.noCalc.length === 0,
+     prem.noCalc.length ? ('월소득을 적었는데 <셈해 주지 않는> 구간 — ' + prem.noCalc.join(' / ')) :
+     '월소득을 적으면 <이 집 금액으로 셈한다> — 적어 둔 값을 안 놀린다');
 
   head('[3] 진단서에 <이 고객 나이의 한 구간>이 선다');
   const fit = await pg.evaluate(() => {

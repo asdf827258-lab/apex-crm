@@ -178,7 +178,21 @@
       '#apexDeckBar.on .apex-deck-full{display:block}' +
       '#apexDeckBar .apex-deck-full li{margin:6px 0;color:#B6C2D6}' +
       '#apexDeckBar .apex-deck-full b{color:#FDE68A}' +
+      /* ★★ 판 X565 — <b>광고심의 꼬리글이 종이에서 안 읽혔습니다.</b>
+         사장님 말씀 (2026-11-02) 「모든 인쇄 하는 부분이 <b>안 깨지고 그대로</b> 인쇄」.
+         ⚠ 아래 @media print 가 띠 바탕을 <b>흰색</b>으로 돌리는데, 꼬리글의
+           <code>li{color:#B6C2D6}</code> · <code>b{color:#FDE68A}</code> 는 <b>어두운 띠</b>를
+           보고 고른 색이고 <b>더 좁은 선택자라 이깁니다</b>. 그래서 흰 종이에
+           흐린 회색·연노랑으로 찍혀 재어 보니 대비가 <b>1.9</b> 였습니다.
+         ★ 이 글은 <b>청약 권유가 아님 · 약관이 우선 · 승환 주의 · 15일 청약철회 ·
+           설명받을 권리</b>를 적는 자리라 <b>반드시 읽혀야 합니다</b> (CLAUDE.md 2번).
+         ★ 여기 한 곳을 고치면 이 띠를 쓰는 <b>덱 열 개</b>가 같이 낫습니다 (5번) —
+           화면은 한 픽셀도 안 바뀝니다(@media print 안에만 있습니다).
+         지키는 자는 check-coverprint 이고, 되돌리면 그 자리에서 웁니다 (8번). */
       '@media print{#apexDeckBar{position:static;background:#fff;color:#333}' +
+      '#apexDeckBar .apex-deck-full li{color:#333D4B}' +
+      '#apexDeckBar .apex-deck-full b{color:#8A5A0B}' +
+      '#apexDeckBar .apex-deck-me,#apexDeckBar .apex-deck-big{color:#191F28}' +
       '#apexDeckBar.on .apex-deck-full,#apexDeckBar .apex-deck-full{display:block}}';
     document.head.appendChild(css);
 

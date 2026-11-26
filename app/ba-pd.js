@@ -45,8 +45,34 @@
     });
     return h + '</div>';
   }
+  /* 사장님 말씀 2026-11-25 「보장분석 전후 만들기 클릭하면 그 안에 배치해줘」 (판 X556)
+     → 전·후 만들기 껍데기(#baScreen)가 떠 있으면 <b>밖으로 나가지 않고</b> 그 안, 안쪽 위 띠
+       바로 아래(#baSub)에 그린다. 껍데기가 없을 때(메뉴 찾기·주소)는 예전처럼 제 화면으로 간다. */
+  function baOn() { var sc = document.getElementById('baScreen'); return !!(sc && sc.classList.contains('on')); }
+  function frameWin() { var f = document.getElementById('baFrame'); try { return f && f.contentWindow; } catch (e) { return null; } }
+  function fitTop() {
+    var box = document.getElementById('baSub'), w = frameWin(), top = 64;
+    try { var bar = w && w.document.querySelector('.bar'); if (bar) top = Math.round(bar.getBoundingClientRect().bottom); } catch (e) {}
+    if (box) box.style.top = Math.max(40, top) + 'px';
+  }
+  window.baSubOpen = function (tab) {
+    if (tab !== 'bojang' && tab !== 'bapd') return;
+    if (!baOn() && typeof openBa === 'function') openBa();
+    var box = document.getElementById('baSub'); if (!box) { if (typeof go === 'function') go(tab); return; }
+    /* 같은 화면이 바깥(#dynPane)에도 그려져 있으면 id 가 두 벌이 된다 — 바깥 것을 비운다 */
+    try { var d = document.getElementById('dynPane'); if (d && d.querySelector('.bapd-sw')) d.innerHTML = ''; } catch (e) {}
+    box.innerHTML = (typeof renderToolPage === 'function') ? renderToolPage(tab) : '';
+    box.classList.add('on'); box.scrollTop = 0; box.setAttribute('data-tab', tab);
+    var w = frameWin(); try { if (w) { w.BA_SUB = tab; if (w.baTabsPaint) w.baTabsPaint(); } } catch (e) {}
+    fitTop(); setTimeout(fitTop, 300);
+  };
+  window.baSubClose = function (fromInside) {
+    var box = document.getElementById('baSub'); if (box) { box.classList.remove('on'); box.innerHTML = ''; box.removeAttribute('data-tab'); }
+    if (!fromInside) { var w = frameWin(); try { if (w) { w.BA_SUB = ''; if (w.baTabsPaint) w.baTabsPaint(); } } catch (e) {} }
+  };
+  if (window.addEventListener) window.addEventListener('resize', function () { var b = document.getElementById('baSub'); if (b && b.classList.contains('on')) fitTop(); });
   window.bapdSw = function (id) {
-    try { var sc = document.getElementById('baScreen'); if (sc && id !== 'frmake') sc.classList.remove('on'); } catch (e) {}
+    if (baOn()) { if (id === 'frmake') window.baSubClose(); else window.baSubOpen(id); return; }
     if (typeof go === 'function') go(id);
   };
   window.bapdSwHtml = swHtml;
