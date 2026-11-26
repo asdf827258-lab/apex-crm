@@ -652,7 +652,7 @@
     (v && v.push ? v : []).forEach(function (id) { if (typeof id === 'string' && id && AI_IDS.indexOf(id) < 0 && out.indexOf(id) < 0) out.push(id); });
     return out;
   }
-  function aiMineSet(L) { try { g.localStorage.setItem(aiKey(), JSON.stringify(L.slice(0, 30))); } catch (e) {} }
+  function aiMineSet(L) { try { g.localStorage.setItem(aiKey(), JSON.stringify(L.slice(0, 30))); } catch (e) {} prefPush(); }
   function menuBy() {
     var by = {};
     (T(function () { return g.TABS; }, []) || []).forEach(function (gr) { (gr.items || []).forEach(function (it) { if (it && it.id && !by[it.id]) by[it.id] = it; }); });
@@ -1049,7 +1049,8 @@
   var NEW_KEY = 'apex_newhelp_';
   function newKey() { return NEW_KEY + (T(function () { return g.navWho(); }, '') || 'local'); }
   function newOn() { return T(function () { return g.localStorage.getItem(newKey()); }, null) === '1'; }
-  function newSet(v) { try { if (v) g.localStorage.setItem(newKey(), '1'); else g.localStorage.removeItem(newKey()); } catch (e) {} }
+  function newSet(v) { try { if (v) g.localStorage.setItem(newKey(), '1'); else g.localStorage.removeItem(newKey()); } catch (e) {} prefPush(); }
+
   /* 🔁 영업 한 바퀴 칸 → 그 단계 분들 + 이 단계에서 쓰는 것 (시안 9차 openStage · 판 X513)
      ★ 분들 = 배정 DB(AR.db) — 칸 숫자를 센 자(arStageN)와 <b>같은 거름</b>(지금 보는 분 · 단계)이라 숫자와 줄 수가 같습니다.
      ★ 한 분을 누르면 자비스 · 추천 동선과 같은 길(hmRtPerson → 그분 한 장). 쓰는 것 = APEX_STAGE.tools(단계) 그대로.
@@ -1811,6 +1812,40 @@
     try { if (typeof g.toast === 'function') g.toast('새 오늘 화면을 못 세워 예전 화면으로 보여 드립니다'); } catch (e3) {}
   }
   /* 홈을 그린 바로 뒤 — go('home') 이 부릅니다. 꺼져 있으면 아무것도 안 합니다. */
+  /* ☁️ 내 설정을 계정에 (판 X572 · 사장님 말씀 2026-11-26 「기기마다 따로가 아니도록 해줘야지」).
+     🤖 자비스 「내가 더한 메뉴」 · 🌱 신입 도움말이 이 기기에만 남아 폰 · PC 가 따로 놀았습니다 →
+     서버 표 user_prefs(사람마다 한 줄 · 그 사람만 읽고 씀 · migration_85) 에도 같이 담습니다.
+     ★ 이 기기 칸(localStorage)은 그대로 — 빠르게 그리는 몫(먼저 그리고, 서버 것을 받으면 다시 그림).
+     ★ 처음 여는 기기: 서버에 줄이 있으면 서버 것을 이 기기에 내려받고, 없으면 이 기기 것을 올림.
+     ★ 표가 아직 없거나 로그인 전 · 서버가 안 되면 조용히 예전처럼 이 기기에만(화면은 안 깨짐).
+     ★ 「↩ 예전 화면」 은 기기마다 그대로(그 기기가 깨졌을 때 빠져나가는 문이라). */
+  var PREF = { done: false, busy: false };
+  function prefMe() { return T(function () { return g.arMyId(); }, '') || ''; }
+  function prefSb() { return T(function () { return g.osClient(); }, null); }
+  function prefKv() { return { ai_mine: aiMine(), newhelp: newOn() ? 1 : 0 }; }
+  function prefPush() {
+    var sb = prefSb(), me = prefMe(); if (!sb || !me || !PREF.done) return;
+    try { sb.from('user_prefs').upsert({ owner_id: me, kv: prefKv(), updated_at: new Date().toISOString() }, { onConflict: 'owner_id' }).then(function () {}, function () {}); } catch (e) {}
+  }
+  function prefLoad() {
+    if (PREF.done || PREF.busy) return;
+    var sb = prefSb(), me = prefMe(); if (!sb || !me) return;
+    PREF.busy = true;
+    try {
+      sb.from('user_prefs').select('kv').eq('owner_id', me).maybeSingle().then(function (r) {
+        PREF.busy = false;
+        if (!r || r.error) return;                       /* 표가 아직 없음 등 — 이 기기에만, 다음에 다시 */
+        PREF.done = true;
+        var kv = r.data && r.data.kv;
+        if (!kv || typeof kv !== 'object') { prefPush(); return; }   /* 처음 — 이 기기 것을 올림 */
+        try {
+          if (kv.ai_mine && kv.ai_mine.push) g.localStorage.setItem(aiKey(), JSON.stringify(kv.ai_mine.slice(0, 30)));
+          if (kv.newhelp) g.localStorage.setItem(newKey(), '1'); else g.localStorage.removeItem(newKey());
+        } catch (e) {}
+        try { paint(); } catch (e2) {}
+      }, function () { PREF.busy = false; });
+    } catch (e) { PREF.busy = false; }
+  }
   function apply(dyn) {
     fromUrl();
     if (!on()) return false;
@@ -1825,6 +1860,7 @@
       box.innerHTML = html();
       dots();
       goalLoad();
+      prefLoad();
       return true;
     } catch (e) { fallback(e); return false; }
   }
