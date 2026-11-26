@@ -18,6 +18,7 @@
      [7] ★  옛 홈은 지우지 않고 숨기기만(CSS) — 「예전 오늘 칸 펼치기」 가 있다 · 그리다 터지면 예전 화면
      [8] ★  옷은 .hv2 / #hv2Sheet 아래로만 — 앱의 .card · .btn 같은 옷을 덮지 않는다
      [9] ★  가짜 데이터로 실제로 그려 본다 — 이름 가리기 · 첫 전화 카드 · 카톡 카드 · 빈 날
+     [28] ★  판 X564 — 💬 자비스 말풍선: 지금 카드의 맨 앞 추천 도구(toolsOf) → 없으면 안 끝낸 미션 → 다 끝나면 완료 · ✕ 로 닫음(저장 없음)
      [29] ★  판 X568 — 🧭 카드 맨 아래 「권할 것」(고객 카드) → 있던 cusGo({cli}) → cusV2Rec · 이름 누르면 이분 자세히(hmOpen) · 배정 DB 카드는 예전 그대로
      [27] ★★ 판 X558 — 📍 카드에 지금 상황(cmSave 그대로) · ⚙ 상황별 추천 메뉴 더하기 = 대표 · 관리자만(osIsAppAdmin) · 저장 osCfgSet('care_apps') → CUS_V2.appsBy 한 곳
      [25] ★★ 판 X555 — 🤝 만났어요(시안 jMeet): 오늘 약속 카드 · 이름+시각이 딱 한 분일 때만 · 단계는 있던 hdbTo(id,'PC') 하나 · 감사 카톡 복사 · 이분 끝(hmQfin)
@@ -884,6 +885,35 @@ console.log('\n[27] 📍 지금 상황 · ⚙ 상황별 추천 메뉴 (판 X558 
   const cs = sc.slice(sc.indexOf('  function isBoss('), sc.indexOf('  function toolsOf('));
   is(cs.length > 200 && !/setItem|\.rpc\(|\.from\(|fetch\(/.test(cs) && /g\.osCfgSet\(/.test(cs) && /g\.cmSave\(/.test(cs) && /CARE_KEY = 'care_apps'/.test(CV) && /careMine\(care\)\.forEach\(add\)/.test(CV),
     '저장은 있던 두 문(cmSave · osCfgSet)뿐 · 새 서버 · 이 기기 저장 없음');
+}
+
+console.log('\n[28] 💬 자비스 말풍선 (판 X564 · 사장님 말씀 「추천 메뉴와 자비스는 어디있어 자비스가 알아서 말풍선을 띄워서 추천할수 있게 해줘」)');
+{
+  const CV = fs.readFileSync(path.join(ROOT, 'app/cus-v2.js'), 'utf8');
+  const NAV = { wallets: ['💰', '8가지 통장 진단'], finance: ['📊', '재무설계 계산기'] };
+  const CKI = [['d4', '전화 10통', '', '', ''], ['d5', '카톡 10건', '', '', ''], ['d6', '통화 결과 입력', '', '', ''], ['d8', '팩트파인딩', '', '', ''], ['d9', '내일 준비', '', '', ''], ['d10', 'SNS 1건', '', '', '']];
+  const mk = (rows, ck) => {
+    const X = box({ apex_home_v2: '1' }, '', { rows });
+    Object.assign(X.g, { meV2Open: () => {}, CM_CARE: ['', '결혼 준비'], cmOf: id => (id === 'c1' ? { care: '결혼 준비' } : {}), crmDbsOf: () => [],
+      APEX_STAGE: { of: () => ({ know: [] }) }, navItemOf: id => (NAV[id] ? { id, icon: NAV[id][0], title: NAV[id][1] } : null),
+      CK_ITEMS: { day: CKI }, hmMsCk: () => ck || {}, hmIsDone: () => false, hmQdone: () => false, osCfgGet: (k, d) => d, CUS: {}, OSC: {}, CM_BASE: {} });
+    vm.runInContext(CV, X.g);
+    X.g.HOME_V2.apply(dyn(X));
+    return X;
+  };
+  let X = mk([{ k: 'touch', id: 'c1', t: '홍길동', s: '30일째', key: 'touch:c1:' }]), h = X.els.hv2.innerHTML;
+  const jb = h.slice(h.indexOf('id="hv2Jvb"'));
+  is(h.indexOf('class="dock"') < h.indexOf('id="hv2Jvb"') && /onclick="HOME_V2\.ai\(\)" aria-label="자비스">🤖/.test(jb), '아래 세 칸 다음에 말풍선 · 🤖 누르면 자비스 시트');
+  is(/홍길동님 · 「결혼 준비」 — 「💰 8가지 통장 진단」 부터 열어 볼까요\?/.test(jb) && /class="jvb-go" onclick="go\('wallets'\)">열기 ›/.test(jb), '지금 카드의 맨 앞 추천 도구(카드 🧰 와 같은 toolsOf) — 「열기」 = 그 화면');
+  X = mk([{ k: 'touch', id: 'c9', t: '홍갑돌', s: '안부', key: 'touch:c9:' }], { d4: 1, d5: 1 }); h = X.els.hv2.innerHTML;
+  is(/오늘 미션 2 \/ 5 — 다음은 「통화 결과 · 만난 분 기록」 예요/.test(h) && /onclick="HOME_V2\.mis\(2\)">보기 ›/.test(h), '추천 도구가 없으면 안 끝낸 첫 미션(약속 없는 날은 약속 미션이 끝난 셈) — 「보기」 = 그 미션 시트');
+  X = mk([], { d4: 1, d5: 1, d6: 1, d8: 1, d9: 1, d10: 1 }); h = X.els.hv2.innerHTML;
+  is(/오늘 미션 완료 🎉/.test(h) && !/jvb-go/.test(h), '다 끝나면 「오늘 미션 완료 🎉」 (단추 없음)');
+  X.g.HOME_V2.jvbOff(); X.g.HOME_V2.paint();
+  is(!/hv2Jvb/.test(X.els.hv2.innerHTML), '✕ 로 닫으면 다시 그려도 안 뜸');
+  is(/'\.hv2 \.jvb\{position:fixed;left:12px;right:70px;/.test(sc), '오른쪽 70px 비움 — 🎙 · ? 단추 안 가림(아래 세 칸과 같은 폭)');
+  const jv = sc.slice(sc.indexOf('  var JVB = {'), sc.indexOf('  function dockHtml('));
+  is(jv.length > 200 && !/setItem|\.rpc\(|\.from\(|fetch\(/.test(jv), '저장 · 서버 없음 — 고르는 자는 있던 toolsOf · misState');
 }
 
 console.log('\n[29] 🧭 카드 맨 아래 「권할 것」 (판 X568 · 3차 점검표 ⑪ · 시안 qCard 「권할 것」 · 사장님 말씀 「그 다음거 진행해」)');
