@@ -39,7 +39,7 @@
     '<div class="card-body">' +
       '<div class="btn-row" style="margin-bottom:10px">' +
         '<a class="btn btn-primary" href="' + src + '" target="_blank" rel="noopener">' + p.icon + ' 새 창으로 크게 열기</a>' +
-        '<button type="button" class="btn" onclick="alcOpen(this)" data-src="' + src + '">이 화면 안에서 열기</button>' +
+        '<button type="button" class="btn btn-ghost" onclick="alcOpen(this)" data-src="' + src + '">이 화면 안에서 열기</button>' +
       '</div>' +
       // 화면을 여는 것만으로 바깥 서버를 부르지 않는다(check-tap44 SRV_HOSTS) — 누를 때만 불러온다
       '<iframe data-alc title="' + p.title + '" hidden ' +
