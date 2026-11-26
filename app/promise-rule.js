@@ -30,7 +30,10 @@
   'use strict';
 
   var STALE_DAYS = 3;          /* 날짜 없는 약속 — 적은 지 사흘이면 「놓칠 뻔」 */
-  var PUSH_H = 10;             /* 지점장 · 대표 알람 시각(한국 시각) — 다른 알람(8·9·11·13·17·21)과 안 겹침 */
+  var PUSH_H = 8;              /* 지점장 · 대표 알람 시각(한국 시각) — ☀️ 아침 조회(8:30) 전에 폰에 와 있게. push-cron 은 매시 정각이라 8시.
+                                  8시 「블로그 한 줄」 과 같은 시각이지만 TAG 가 달라 서로 안 지웁니다 */
+  var PEOPLE_MAX = 8;          /* 알람에 이름을 적는 팀원 수 — 넘으면 「외 N명」 */
+  var TAG = 'apex-promise';      /* 폰 알람 딱지 — sw.js 기본(apex-today)과 달라야 같은 시각 알람끼리 안 덮어씀 */
   var LIST_MAX = 4;            /* 알람에 이름까지 적는 줄 수 — 잠긴 화면에 다 들어가게 */
 
   function kstYmd(ms) {
@@ -149,13 +152,34 @@
     });
     return o;
   }
+  /* 팀원마다 숫자 — [{id, name, open, miss}] · 놓친 것 많은 사람이 앞 (아침 조회에서 먼저 부를 사람) */
+  function byMember(rows, nm, today) {
+    var by = {};
+    (rows || []).forEach(function (p) {
+      if (!p || p.status === 'done') return;
+      var id = p.member_id || '';
+      var o = by[id] = by[id] || { id: id, name: (nm && nm[id]) || '팀원', open: 0, miss: 0 };
+      o.open++; if (missed(p, today)) o.miss++;
+    });
+    return Object.keys(by).map(function (k) { return by[k]; })
+      .sort(function (a, b) { return b.miss - a.miss || b.open - a.open || String(a.name).localeCompare(String(b.name)); });
+  }
+  function personLine(L) {
+    return L.map(function (x) { return x.name + ' 열린 ' + x.open + (x.miss ? '·놓친 ' + x.miss : ''); }).join(' / ');
+  }
+  /* ☀️ 아침 조회 알람 (2026-11-26 · 사업단장 「아침에 통솔이 되어야 해」)
+     제목  ☀️ 아침 조회 · 팀원 약속 N건 · 놓친 M건      (대표는 「사업단 약속」)
+     1줄   (대표만) 팀마다 숫자
+     2줄   팀원마다 「열린 n·놓친 n」 — 지점장은 약속 있는 팀원 전부, 대표는 놓친 사람부터
+     3줄~  ⚠ 놓친 약속 — 누가 · 가린 고객 · 무엇 · 며칠 (LIST_MAX 줄)
+     ★ tag 를 따로 둡니다 — 서비스워커(sw.js)는 같은 tag 면 덮어써서, 같은 시각의 다른 알람과 서로 지웁니다. */
   function pushFor(rows, nm, today, opt) {
     opt = opt || {};
     today = today || kstYmd();
     var open = (rows || []).filter(function (p) { return p && p.status !== 'done'; });
     if (!open.length) return null;
     var c = count(open, today);
-    var title = (opt.all ? '사업단 약속 ' : '팀원 약속 ') + c.open + '건 · 놓친 ' + c.miss + '건';
+    var title = '☀️ 아침 조회 · ' + (opt.all ? '사업단 약속 ' : '팀원 약속 ') + c.open + '건 · 놓친 ' + c.miss + '건';
     var L = [];
     if (opt.all && opt.teams) {       /* 대표 — 팀마다 숫자 한 줄 */
       var by = {};
@@ -164,19 +188,24 @@
         .sort(function (a, b) { return b.m - a.m || b.o - a.o; });
       L.push(T.map(function (x) { return x.n + ' ' + x.o + (x.m ? '(놓침 ' + x.m + ')' : ''); }).join(' · '));
     }
+    var P = byMember(open, nm, today);
+    if (opt.all) { var PM = P.filter(function (x) { return x.miss; }); if (PM.length) P = PM; }
+    var pl = personLine(P.slice(0, PEOPLE_MAX));
+    L.push(pl + (P.length > PEOPLE_MAX ? ' / 외 ' + (P.length - PEOPLE_MAX) + '명' : ''));
     var miss = sort(open.filter(function (p) { return missed(p, today); }), today);
     var show = miss.length ? miss : sort(open.filter(function (p) { return state(p, today).k === 'today'; }), today);
+    if (miss.length) L.push('⚠ 놓친 약속');
+    else L.push(show.length ? '놓친 약속은 없어요 · 오늘 마감' : '놓친 약속은 없어요');
     show.slice(0, LIST_MAX).forEach(function (p) { L.push(lineOf(p, nm, today)); });
     if (show.length > LIST_MAX) L.push('외 ' + (show.length - LIST_MAX) + '건 — 앱에서 보기');
-    if (!miss.length && !show.length) L.push('놓친 약속은 없어요');
-    return { title: title, body: L.join('\n'), go: '/app/index.html', n: c };
+    return { title: title, body: L.join('\n'), go: '/app/index.html', tag: TAG, n: c, people: byMember(open, nm, today) };
   }
 
   var API = {
-    STALE_DAYS: STALE_DAYS, PUSH_H: PUSH_H, LIST_MAX: LIST_MAX, LABEL: LABEL,
+    STALE_DAYS: STALE_DAYS, PUSH_H: PUSH_H, LIST_MAX: LIST_MAX, PEOPLE_MAX: PEOPLE_MAX, TAG: TAG, LABEL: LABEL,
     kstYmd: kstYmd, ymdOf: ymdOf, state: state, missed: missed, sort: sort, count: count,
     maskName: maskName, maskPhone: maskPhone, maskText: maskText,
-    lineOf: lineOf, pushFor: pushFor
+    lineOf: lineOf, byMember: byMember, pushFor: pushFor
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;   /* 서버 */
   root.MPR = API;                                                             /* 앱 */

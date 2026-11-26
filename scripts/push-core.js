@@ -411,7 +411,7 @@ async function promisePush(h, opt) {
   for (const row of onePerDevice(s.json)) {
     const m = msgs.get(row.owner_id); if (!m) continue;
     let r;
-    try { r = await sendOne(row, { title: m.title, body: m.body, go: m.go }); }
+    try { r = await sendOne(row, { title: m.title, body: m.body, go: m.go, tag: m.tag }); }
     catch (e) { failed++; continue; }
     if (r.ok) { sent++; await touch(row.endpoint, 0); }
     else if (r.status === 404 || r.status === 410) { gone++; await drop(row.endpoint); }

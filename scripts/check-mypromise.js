@@ -7,7 +7,7 @@
    ── 보는 것 (브라우저 없이 · 몇 초) ────────────────────────────────
      [1] ★★ 판정 — 마감 지남 = 늦음 · 날짜 없이 3일 = 놓칠 뻔 · 2일은 아직 · 오늘 · 끝냄 · 한국 날짜
      [2] ★★ 이름 가리기 — 호칭 앞 이름 · 카톡 말한 사람 칸 · 전화번호 · 「고객님」 같은 말은 안 가림
-     [3] ★★ 알람 글 — 0건이면 안 울림 · 「팀원 약속 N건 · 놓친 M건」 · 가린 이름만 · 줄 수 상한 · 대표는 팀마다 숫자
+     [3] ★★ 알람 글(☀️ 아침 조회) — 0건이면 안 울림 · 「팀원 약속 N건 · 놓친 M건」 · 팀원마다 「열린 n·놓친 n」 · 가린 이름만 · 줄 수 상한 · 대표는 팀마다 숫자
      [4] ★★ 서버가 <b>실제로</b> 받는 사람을 가르나 — 지점장은 자기 팀만 · 대표는 전부 · 팀원 · 쉬는 사람은 안 받음
           (가짜 장부로 promisePush 를 돌림) · 규칙은 promise-rule.js 한 곳(서버 · 앱 같은 파일 · included_files)
      [5] ★★ migration — 표 · RLS · 지점장 = leader·branch_manager(자기 팀) · 대표 = admin·owner·master ·
@@ -71,14 +71,16 @@ const ROWS = [
 const NM = { a: '홍판서', b: '홍참판' };
 is(M.pushFor([], NM, T0) === null && M.pushFor([ROWS[3]], NM, T0) === null, '열린 약속 0건이면 안 울림(「0건」 알람은 방해)');
 const P1 = M.pushFor(ROWS, NM, T0);
-is(P1 && P1.title === '팀원 약속 3건 · 놓친 2건', '제목에 숫자 — ' + (P1 && P1.title));
+is(P1 && P1.title === '☀️ 아침 조회 · 팀원 약속 3건 · 놓친 2건', '제목에 숫자 — ' + (P1 && P1.title));
+is(P1 && P1.body.split('\n')[0] === '홍판서 열린 2·놓친 2 / 홍참판 열린 1', '팀원마다 「열린 n·놓친 n」 — 놓친 사람이 앞(아침 조회에서 먼저 부를 사람) — ' + (P1 && P1.body.split('\n')[0]));
+is(P1 && P1.tag === M.TAG && M.TAG !== 'apex-today', '알람 딱지가 따로(같은 시각 다른 알람과 안 덮어씀)');
 is(P1 && P1.body.indexOf('홍판서 · 임*정님 청구서류 보내드리기 · 6일째') >= 0 && P1.body.indexOf('홍*순님') >= 0, '내용 — 팀원 이름 · 가린 고객 이름 · 무엇 · 며칠');
 is(P1 && !leaks(P1.body) && P1.body.indexOf('홍말순') < 0, '알람 글에 고객 실명 0(잠긴 화면에 뜸 · 3번)');
 const many = Array.from({ length: 9 }, (_, i) => ({ member_id: 'a', text: '일' + i, due: '2026-11-0' + (i + 1) }));
 const P2 = M.pushFor(many, NM, T0);
-is(P2 && P2.body.split('\n').length === M.LIST_MAX + 1 && /외 5건/.test(P2.body), '이름 적는 줄은 ' + M.LIST_MAX + '줄까지 · 나머지는 「외 N건」');
+is(P2 && P2.body.split('\n').length === M.LIST_MAX + 3 && /외 5건/.test(P2.body), '이름 적는 줄은 ' + M.LIST_MAX + '줄까지 · 나머지는 「외 N건」');
 const P3 = M.pushFor(ROWS, NM, T0, { all: true, teams: { t1: '상승지점' } });
-is(P3 && P3.title.indexOf('사업단 약속 3건') === 0 && P3.body.split('\n')[0] === '상승지점 3(놓침 2)', '대표 — 사업단 숫자 + 팀마다 숫자 한 줄');
+is(P3 && P3.title.indexOf('☀️ 아침 조회 · 사업단 약속 3건') === 0 && P3.body.split('\n')[0] === '상승지점 3(놓침 2)' && P3.body.split('\n')[1] === '홍판서 열린 2·놓친 2', '대표 — 사업단 숫자 + 팀마다 숫자 한 줄 + 놓친 팀원만');
 
 /* ── [4] 서버가 받는 사람을 가르나 ───────────────────────────── */
 console.log('[4] 서버 — 받는 사람');
@@ -119,15 +121,16 @@ async function serverRun(coreSrc, ruleSrc) {
   const mm = (S0.r && S0.r.msgs) || new Map();
   const b = id => (mm.get(id) || {}).body || '', t = id => (mm.get(id) || {}).title || '';
   is(S0.r && S0.r.ok && mm.size === 4, '받는 사람 넷 — 지점장 둘 · 대표 둘 (팀원 · 쉬는 사람 · 0건 아님)');
-  is(t('L1') === '팀원 약속 1건 · 놓친 1건' && b('L1').indexOf('임*정') >= 0 && b('L1').indexOf('홍*순') < 0, 'leader — 자기 팀(갑팀) 것만');
-  is(t('B1') === '팀원 약속 2건 · 놓친 1건' && b('B1').indexOf('홍*순') >= 0 && b('B1').indexOf('임*정') < 0, 'branch_manager — 자기 팀(을팀) 것만(모든 팀 아님)');
-  is(t('A1').indexOf('사업단 약속 3건 · 놓친 2건') === 0 && t('M9') === t('A1') && b('A1').indexOf('갑팀') >= 0, '대표(admin · master) — 전부 + 팀마다 숫자');
+  is(t('L1') === '☀️ 아침 조회 · 팀원 약속 1건 · 놓친 1건' && b('L1').indexOf('임*정') >= 0 && b('L1').indexOf('홍*순') < 0, 'leader — 자기 팀(갑팀) 것만');
+  is(t('B1') === '☀️ 아침 조회 · 팀원 약속 2건 · 놓친 1건' && b('B1').indexOf('홍*순') >= 0 && b('B1').indexOf('임*정') < 0, 'branch_manager — 자기 팀(을팀) 것만(모든 팀 아님)');
+  is(t('A1').indexOf('☀️ 아침 조회 · 사업단 약속 3건 · 놓친 2건') === 0 && t('M9') === t('A1') && b('A1').indexOf('갑팀') >= 0, '대표(admin · master) — 전부 + 팀마다 숫자');
   is(!mm.has('X1') && !mm.has('u1'), '쉬는 지점장 · 팀원에게는 안 감');
   is([...mm.values()].every(x => !leaks(x.body)), '서버 알람 글에도 고객 실명 0');
   is(/require\('\.\.\/app\/promise-rule\.js'\)/.test(CORE) && !/STALE_DAYS\s*=|maskName\s*\(\s*s\s*\)\s*\{/.test(CORE), '서버는 promise-rule.js 를 불러 씀 — 규칙을 다시 안 적음(5번)');
   is(/P\.promisePush\(h\)/.test(CRON) && /try\s*\{\s*promise = await P\.promisePush/.test(CRON), 'push-cron 이 한 줄로 부르고 · 터져도 다른 알람은 이미 나감');
   is(/included_files[^\]]*"app\/promise-rule\.js"/.test(TOML), 'netlify.toml included_files 에 promise-rule.js(서버가 같은 파일을 읽음)');
-  is(/PUSH_H\s*=\s*10\b/.test(RULE) && [8, 9, 11, 13, 17, 21].indexOf(M.PUSH_H) < 0, '보고 시각 ' + M.PUSH_H + '시 — 다른 알람 시각과 안 겹침 · 한 곳');
+  is(/PUSH_H\s*=\s*8\b/.test(RULE) && M.PUSH_H < 9, '보고 시각 ' + M.PUSH_H + '시 — ☀️ 아침 조회(8:30) 전에 폰에 와 있음 · 한 곳');
+  is(/tag:\s*m\.tag/.test(CORE) && /tag:\s*d\.tag\s*\|\|/.test(rd('app/sw.js')), '서버가 딱지를 실어 보내고 sw.js 가 그 딱지로 띄움 — 8시 「블로그 한 줄」 과 서로 안 지움');
 
   /* ── [5] migration ─────────────────────────────────────────── */
   console.log('[5] migration_85');
@@ -183,7 +186,7 @@ async function serverRun(coreSrc, ruleSrc) {
   is(!judge(ruleOf(RULE.replace('var STALE_DAYS = 3;', 'var STALE_DAYS = 9;'))), '3일을 9일로 바꾸면 → 판정이 틀렸다고 잡음');
   const S1 = await serverRun(CORE.replace('mine = rows.filter(r => ids.has(r.member_id));', 'mine = rows;'), RULE);
   const t1 = ((S1.r.msgs || new Map()).get('L1') || {}).title || '';
-  is(t1 !== '팀원 약속 1건 · 놓친 1건', '지점장 거름을 빼면 → 남의 팀 것까지 간다고 잡음');
+  is(t1 !== '☀️ 아침 조회 · 팀원 약속 1건 · 놓친 1건', '지점장 거름을 빼면 → 남의 팀 것까지 간다고 잡음');
   const U2 = await uiRun(UI.replace('return {\n      text: M.maskText(c.what, raw ? [raw] : []).slice(0, 200),\n      who: who || null,', 'return {\n      text: c.what,\n      who: c.who || null,'), RULE);
   is(U2.ins.length === 1 && leaks(JSON.stringify(U2.ins)), '저장 직전 가리기를 빼면 → 실명이 저장된다고 잡음');
 
