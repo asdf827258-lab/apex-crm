@@ -165,9 +165,10 @@
       '.hv2 .streak b{color:var(--ink)}',
       '.hv2 .dock{position:fixed;left:12px;right:70px;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:140;display:grid;gap:4px;' +
         'background:rgba(255,255,255,.96);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:16px;padding:4px;box-shadow:0 6px 24px rgba(25,31,40,.14)}',
-      '.hv2 .jvb{position:fixed;left:12px;right:70px;bottom:calc(126px + env(safe-area-inset-bottom,0px));z-index:141;display:flex;align-items:flex-end;gap:8px;}',
+      '.hv2 .jvb{position:fixed;left:12px;right:70px;bottom:calc(126px + env(safe-area-inset-bottom,0px));z-index:141;display:flex;align-items:flex-end;gap:8px;pointer-events:none}',
+      '.hv2 .jvb>*{pointer-events:auto}',
       '.hv2 .jvb-a{flex:none;width:44px;height:44px;border-radius:22px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.14);font-size:22px}',
-      '.hv2 .jvb-b{position:relative;flex:1;min-width:0;background:#fff;border-radius:16px 16px 16px 4px;box-shadow:0 6px 20px rgba(0,0,0,.14);padding:10px 12px;font-size:14px;line-height:1.45;color:var(--ink)}',
+      '.hv2 .jvb-b{position:relative;flex:0 1 auto;min-width:0;max-width:300px;background:#fff;border-radius:16px 16px 16px 4px;box-shadow:0 6px 20px rgba(0,0,0,.14);padding:10px 12px;font-size:14px;line-height:1.45;color:var(--ink)}',
       '.hv2 .jvb-b small{display:block;font-size:13px;font-weight:800;color:var(--blue);margin-bottom:2px}',
       '.hv2 .jvb-go{display:inline-block;margin-top:6px;height:32px;padding:0 12px;border-radius:8px;background:var(--blue);color:#fff;font-size:13px;font-weight:700}',
       '.hv2 .jvb-x{flex:none;align-self:flex-start;width:28px;height:28px;border-radius:14px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);font-size:13px;color:var(--sub2)}',
@@ -311,6 +312,34 @@
       '.hv2 .rtc .ar{color:#B0B8C1;font-size:18px}',
       '.hv2 .mapsvg{display:block;width:100%;height:auto;margin-top:12px}',
       '.hv2 .mapnote{font-size:13px;color:var(--sub3);margin:6px 2px 0}',
+      /* ① 오늘 칸 동선 그림 (판 X579) */
+      '.hv2 .rtw{background:#fff;border-radius:var(--r);margin-top:10px;overflow:hidden}',
+      '.hv2 .rtw .rtc{margin-top:0;border-radius:0}',
+      '.hv2 .rtmap{padding:0 14px 12px;cursor:pointer}',
+      '.hv2 .rtmap .mapsvg{margin-top:0;border-radius:12px;background:#F7F9FC}',
+      /* ④ 카톡 글 전체 보기 (판 X579) */
+      '.hv2 .qmsg.open .tx{display:block;-webkit-line-clamp:unset;overflow:visible}',
+      '.hv2 .qmsg .more{display:block;height:40px;margin-top:2px;padding:0;font-size:14px;font-weight:700;color:var(--blue);background:none}',
+      /* ② 챙기는 중 — 갈래 · 완료 (판 X579) */
+      '#hv2Sheet .jvp{display:flex;align-items:center;gap:10px;margin:8px 0 4px}',
+      '#hv2Sheet .jvp .bar{flex:1;height:8px;border-radius:99px;background:var(--line);overflow:hidden}#hv2Sheet .jvp .bar i{display:block;height:100%;background:var(--green);border-radius:99px}',
+      '#hv2Sheet .jvp span{font-size:14px;font-weight:700;color:var(--sub)}',
+      '#hv2Sheet .jvg{background:#fff;border-radius:16px;margin-top:10px;overflow:hidden}',
+      '#hv2Sheet .jvg-h{display:block;padding:12px 16px 4px;font-size:16px;font-weight:800}',
+      '#hv2Sheet .jvg-h small{display:block;margin-top:2px;font-size:13px;font-weight:600;color:var(--sub2)}',
+      '#hv2Sheet .jvr{padding:10px 16px 12px}#hv2Sheet .jvr+.jvr{border-top:1px solid var(--line2)}',
+      '#hv2Sheet .jvr-n{display:block;width:100%;text-align:left;font-size:16px;font-weight:700;color:var(--ink);background:none;padding:0}',
+      '#hv2Sheet .jvr-n small{display:block;font-size:13px;font-weight:500;color:var(--sub2);margin-top:2px;line-height:1.4}',
+      '#hv2Sheet .jvr-b{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}',
+      '#hv2Sheet .jvr-b button{height:38px;padding:0 12px;border-radius:10px;font-size:14px;font-weight:700;background:var(--line2);color:var(--ink)}',
+      '#hv2Sheet .jvr-b button.y{background:var(--green);color:#fff}#hv2Sheet .jvr-b button.p{background:var(--blue);color:#fff}',
+      '#hv2Sheet .jvmore{display:block;width:100%;height:44px;font-size:14px;font-weight:700;color:var(--blue);background:none;border-top:1px solid var(--line2)}',
+      '#hv2Sheet .jvdone{font-size:13px;color:var(--sub2);margin:8px 4px 0}',
+      /* ⑤ 일정 넣기 — 무엇 여섯 갈래 · 새 고객 (판 X579) */
+      '#hv2Sheet .whatr{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}',
+      '#hv2Sheet .whatr button{height:44px;border-radius:12px;background:#fff;border:1px solid var(--line);font-size:14px;font-weight:700;color:var(--ink)}',
+      '#hv2Sheet .whatr button.on{background:var(--blue);border-color:var(--blue);color:#fff}',
+      '#hv2Sheet .sch-add{display:block;width:100%;height:44px;margin-top:6px;border-radius:12px;border:1px dashed #B5C7F2;background:#fff;font-size:14px;font-weight:700;color:var(--blue)}',
       '.hv2 .tile.no{background:var(--blue);color:#fff;font-weight:800;font-size:16px}',
       '.hv2 .tile.w{background:var(--warn-l)}',
       /* 📅 일정 넣기 시트 */
@@ -590,20 +619,30 @@
      ★ 시안의 「예약 확인 · 감사 · 철회 안내 보냈나」 는 라이브가 보낸 날을 안 남겨 세우지 않습니다(지어내지 않음).
        그 대신 라이브가 아는 자리 — 내일 약속(노쇼) · 오늘 약속 · 약속 지남 · 계약완료인데 증권 전달 전 · 소개 차례. */
   function ymdPlus(n) { var t = T(function () { return g.mcalToday(); }, '') || new Date().toISOString().slice(0, 10), d = new Date(t + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+  /* ✅ 판 X579 — 사장님 말씀 「챙기는 중에서 손승훈 들어가면 30명 … 깔끔하게 정리해 주고, 완료 처리를 할 수 있도록 · 이걸로 매일 스케줄 관리」.
+     ★ 갈래(g): appt 약속 확인 · late 약속 지남 · pol 증권 전달 · ref 소개 요청 — 시트가 갈래마다 묶어 그림.
+     ★ 「오늘 마침 · 오늘 넘김」 은 <b>있던 하루 넘김 칸</b>을 씀 — 약속 지남 = hmLateSkip(홈 🕗 와 같은 칸) · 소개 = hmReferSkip(홈 💬 와 같은 칸) ·
+       약속 확인 · 증권은 hmDaySkip(JV_DONE · 같은 꼴 · 날이 바뀌면 다시 섬). 새 저장 코드 없음.
+     ★ 진짜 끝내기는 있던 단계 함수: 증권 = hdbOpen(id,'증권전달')(전달일을 묻는 그 창) · 만났어요 = hdbTo(id,'PC') ·
+       다시 약속 = hmLateAgain · 거절로 정리 = hmLateEnd · 소개 받음 = hmReferGot — 단계가 바뀌면 줄에서 저절로 빠짐. */
+  var JV_DONE = 'apex_hv2_jv_done_v1';
+  function jvSk(k) { return T(function () { return g.hmDaySkips(k); }, []) || []; }
   function jvData() {
-    var w = who(), td = ymdPlus(0), tm = ymdPlus(1), L = [], P = [];
+    var w = who(), td = ymdPlus(0), tm = ymdPlus(1), L = [], P = [], done = 0;
     var nm = function (r) { return nameOf({ t: r.name || r.t || '' }) + '님'; };
+    var dn = jvSk(JV_DONE), lsk = T(function () { return g.hmLateSkips(); }, []) || [], rsk = jvSk(T(function () { return g.HM_REFER_KEY; }, '') || 'apex_hm_refer_skip_v1');
+    var add = function (o, skip) { if (skip) done++; else L.push(o); };
     var db = (T(function () { return g.AR.db; }, []) || []).filter(function (r) { return r && r.id && (!w || r.who === w); });
     db.forEach(function (r) {
       var ad = r.appt ? String(r.appt).slice(0, 10) : '', hm = r.appt ? String(r.appt).slice(11, 16) : '';
-      if (ad === tm) L.push({ id: r.id, w: '노쇼', t: nm(r) + ' 내일' + (hm ? ' ' + hm : '') + ' 약속 — 전날 확인 카톡' });
-      else if (ad === td) L.push({ id: r.id, w: '오늘', t: nm(r) + (hm ? ' ' + hm : '') + ' 약속 — 출발할 때 카톡' });
-      if (r.stage === '계약완료') L.push({ id: r.id, w: '증권', t: nm(r) + ' 계약완료 — 증권 전달이 남았어요' });
+      if (ad === tm) add({ id: r.id, g: 'appt', w: '노쇼', t: nm(r) + ' 내일' + (hm ? ' ' + hm : '') + ' 약속 — 전날 확인 카톡' }, dn.indexOf('노쇼:' + r.id) >= 0);
+      else if (ad === td) add({ id: r.id, g: 'appt', w: '오늘', t: nm(r) + (hm ? ' ' + hm : '') + ' 약속 — 출발할 때 카톡' }, dn.indexOf('오늘:' + r.id) >= 0);
+      if (r.stage === '계약완료') add({ id: r.id, g: 'pol', w: '증권', t: nm(r) + ' 계약완료 — 증권 전달이 남았어요' }, dn.indexOf('증권:' + r.id) >= 0);
     });
     (T(function () { return g.arApptPast(w); }, []) || []).forEach(function (r) {
-      L.push({ id: r.id, w: '약속 지남', t: nm(r) + ' ' + String(r.appt || '').slice(5, 10).replace('-', '/') + ' 약속 지남 — 만났으면 감사, 못 만났으면 다시 약속' });
+      add({ id: r.id, g: 'late', w: '약속 지남', st: String(r.stage || ''), t: nm(r) + ' ' + String(r.appt || '').slice(5, 10).replace('-', '/') + ' 약속 지남 — 만났으면 감사, 못 만났으면 다시 약속' }, lsk.indexOf(r.id) >= 0);
     });
-    (T(function () { return g.hmReferRows(w); }, []) || []).forEach(function (r) { L.push({ id: r.id, w: '소개', t: nm(r) + ' 소개 여쭐 차례' }); });
+    (T(function () { return g.hmReferRows(w); }, []) || []).forEach(function (r) { add({ id: r.id, g: 'ref', w: '소개', t: nm(r) + ' 소개 여쭐 차례' }, rsk.indexOf(r.id) >= 0); });
     var I = T(function () { return g.mcalItems(); }, {}) || {};
     for (var n = 2; n <= 14; n++) {
       var ds = ymdPlus(n);
@@ -613,12 +652,12 @@
         P.push({ ds: ds, cid: x.id || '', w: (+ds.slice(5, 7)) + '/' + (+ds.slice(8, 10)), t: (t || '') + ' · ' + (x.k === 'appt' ? '약속' + (x.s ? ' ' + String(x.s).slice(0, 5) : '') : '할 일') });
       });
     }
-    return { L: L, P: P, madi: T(function () { return g.mstDueList().monLeft; }, 0) || 0 };
+    return { L: L, P: P, done: done, madi: T(function () { return g.mstDueList().monLeft; }, 0) || 0 };
   }
   function jvHtml() {
     var J = jvData(), n = J.L.length;
     return '<button type="button" class="jv" onclick="HOME_V2.jv()"><span class="jv-i">🛰</span><span class="jv-t"><b>자비스가 챙기는 중</b><small>' +
-      (n ? '오늘 끊기기 쉬운 자리 ' + n + '곳' : '오늘은 다 챙겼어요') + ' · 미리 세운 연락 ' + J.P.length + '개' + (J.madi ? ' · 마디 ' + J.madi : '') + '</small></span><span class="ar">›</span></button>';
+      (n ? '오늘 끊기기 쉬운 자리 ' + n + '곳' : '오늘은 다 챙겼어요') + (J.done ? ' · ✓ ' + J.done : '') + ' · 미리 세운 연락 ' + J.P.length + '개' + (J.madi ? ' · 마디 ' + J.madi : '') + '</small></span><span class="ar">›</span></button>';
   }
   /* 🤖 자비스로 합친 AI (시안 9차 openJarvis · PLACE 의 'ai' 일곱 · 판 X530) — 사장님 말씀 「AI 7개 → 자비스 하나로」(2026-11-24).
      ★ 묻는 곳은 자비스 하나 — 「APEX 자비스 모드」(apexmap · 서랍 맨 위 그 칸과 같은 길 · 말로 물으면 화면을 엶).
@@ -694,19 +733,75 @@
       '<div id="hv2AiL">' + aiPickList() + '</div>' +
       '<button type="button" class="btn p" style="margin-top:14px" onclick="HOME_V2.ai()">다 골랐어요 — 자비스로</button>');
   }
+  var JVG = [['appt', '📌 약속 확인', '내일 · 오늘 약속 — 카톡 한 통'], ['late', '⏰ 약속 지남', '만났으면 다음 단계 · 못 만났으면 다시 약속'],
+    ['pol', '📄 증권 전달', '계약완료 — 증권을 전해 드릴 차례'], ['ref', '🙌 소개 요청', '증권 전해 드린 분 — 소개 여쭐 차례']];
+  var JVO = { more: {}, late: '' };
+  function jvBtns(x) {
+    var r = T(function () { return g.hdbRow(x.id); }, null), can = !!(r && T(function () { return g.hdbCan(r); }, false)), id = Q(x.id), b = [];
+    var B = function (cls, on, t) { return '<button type="button"' + (cls ? ' class="' + cls + '"' : '') + ' onclick="' + on + '">' + t + '</button>'; };
+    if (x.g === 'appt') {
+      b.push(B('p', 'HOME_V2.close();hmRtPerson(\'' + id + '\')', '💬 카톡 보내기'));
+      b.push(B('y', 'HOME_V2.jvDo(\'done\',\'' + Q(x.w) + ':' + id + '\')', '✓ 했어요'));
+    } else if (x.g === 'late') {
+      if (can && x.st === 'AP') b.push(B('y', 'HOME_V2.jvDo(\'met\',\'' + id + '\')', '🤝 만났어요'));
+      if (can) b.push(B('p', 'HOME_V2.jvDo(\'again\',\'' + id + '\')', '📅 다시 약속'));
+      b.push(B('', 'HOME_V2.jvDo(\'lateskip\',\'' + id + '\')', '⏭ 오늘 넘김'));
+      if (can) b.push(B('', 'HOME_V2.jvDo(\'end\',\'' + id + '\')', '✖ 거절로 정리'));
+    } else if (x.g === 'pol') {
+      if (can) b.push(B('y', 'HOME_V2.close();hdbOpen(\'' + id + '\',\'증권전달\')', '✓ 전달했어요'));
+      b.push(B('', 'HOME_V2.jvDo(\'done\',\'증권:' + id + '\')', '⏭ 오늘 넘김'));
+    } else if (x.g === 'ref') {
+      if (can) b.push(B('y', 'HOME_V2.jvDo(\'ref\',\'' + id + '\')', '🤝 소개 받았어요'));
+      b.push(B('', 'HOME_V2.jvDo(\'refskip\',\'' + id + '\')', '⏭ 오늘 넘김'));
+    }
+    var f = (x.g === 'late' && can && JVO.late === x.id) ? '<div class="jvr-b"><input type="datetime-local" id="hmLateAt" aria-label="새 약속 일시" oninput="hmLateKeep(this.value)" onchange="hmLateKeep(this.value)" style="flex:1;min-width:0;height:40px;border:1px solid #D1D6DB;border-radius:10px;padding:0 8px;font-size:16px">' +
+      B('p', 'HOME_V2.jvDo(\'againPut\',\'' + id + '\')', '저장') + '</div>' : '';
+    return '<div class="jvr-b">' + b.join('') + '</div>' + f;
+  }
+  function jvRow(x) {
+    var t = String(x.t || ''), i = t.indexOf(' — ');
+    var head = i > 0 ? t.slice(0, i) : t, tail = i > 0 ? t.slice(i + 3) : '';
+    return '<div class="jvr"><button type="button" class="jvr-n" onclick="HOME_V2.close();hmRtPerson(\'' + Q(x.id) + '\')"><span class="jvw on">' + E(x.w) + '</span> ' + E(head) + (tail ? '<small>' + E(tail) + '</small>' : '') + '</button>' + jvBtns(x) + '</div>';
+  }
   function jvSheet() {
-    var J = jvData();
+    var J = jvData(), all = J.L.length + J.done;
     var row = function (x, on) {
       var go = x.id ? 'HOME_V2.close();hmRtPerson(\'' + Q(x.id) + '\')' : (x.cid ? 'HOME_V2.close();osOpenClient(\'' + Q(x.cid) + '\')' : 'HOME_V2.close();try{MCAL.sel=\'' + Q(x.ds) + '\'}catch(e){};go(\'mycal\')');
       return '<button type="button" class="li" onclick="' + go + '"><span class="jvw' + (on ? ' on' : '') + '">' + E(x.w) + '</span><div class="tx"><div class="t1" style="white-space:normal;font-size:15px">' + E(x.t) + '</div></div><span class="ar">›</span></button>';
     };
-    var none = '<div class="li"><div class="tx"><div class="t2">오늘은 다 챙겼어요</div></div></div>';
-    sheet('<h1>🛰 자비스가 챙기는 중</h1><div class="sub">고객이 중간에 끊기기 쉬운 자리를 모아 두었어요</div>' +
-      '<h2>오늘 <small>' + J.L.length + '곳</small></h2><div class="list">' + (J.L.length ? J.L.map(function (x) { return row(x, true); }).join('') : none) + '</div>' +
-      '<h2>미리 세워 둔 연락 <small>' + J.P.length + '개 · 2주 안 · 달력에도 있어요</small></h2><div class="list">' + (J.P.length ? J.P.slice(0, 20).map(function (x) { return row(x, false); }).join('') : '<div class="li"><div class="tx"><div class="t2">2주 안에 잡아 둔 연락이 없어요</div></div></div>') +
+    var h = '<h1>🛰 자비스가 챙기는 중</h1><div class="sub">고객이 중간에 끊기기 쉬운 자리 — 하나씩 끝내면 줄에서 빠져요</div>' +
+      '<div class="jvp"><div class="bar"><i style="width:' + (all ? Math.round(J.done * 100 / all) : 100) + '%"></i></div><span>오늘 ' + J.done + ' / ' + all + ' 마침</span></div>' +
+      '<h2>오늘 <small>' + J.L.length + '곳 남음</small></h2>';
+    if (!J.L.length) h += '<div class="list"><div class="li"><div class="tx"><div class="t2">오늘은 다 챙겼어요</div></div></div></div>';
+    JVG.forEach(function (G) {
+      var L = J.L.filter(function (x) { return x.g === G[0]; }); if (!L.length) return;
+      var open = !!JVO.more[G[0]], S = open ? L : L.slice(0, 5);
+      h += '<div class="jvg"><div class="jvg-h">' + G[1] + ' <small>' + L.length + '곳 · ' + E(G[2]) + '</small></div>' + S.map(jvRow).join('') +
+        (L.length > 5 ? '<button type="button" class="jvmore" onclick="HOME_V2.jvDo(\'more\',\'' + G[0] + '\')">' + (open ? '접기 ▴' : '나머지 ' + (L.length - 5) + '곳 더 보기 ▾') + '</button>' : '') + '</div>';
+    });
+    if (J.done) h += '<div class="jvdone">✓ 오늘 마치거나 넘긴 ' + J.done + '곳은 내일 다시 확인해요(단계를 바꾼 분은 다시 안 서요)</div>';
+    h += '<h2>미리 세워 둔 연락 <small>' + J.P.length + '개 · 2주 안 · 달력에도 있어요</small></h2><div class="list">' + (J.P.length ? J.P.slice(0, 20).map(function (x) { return row(x, false); }).join('') : '<div class="li"><div class="tx"><div class="t2">2주 안에 잡아 둔 연락이 없어요</div></div></div>') +
         (J.P.length > 20 ? '<button type="button" class="li" onclick="HOME_V2.close();go(\'mycal\')"><div class="tx"><div class="t1" style="color:var(--blue)">나머지 ' + (J.P.length - 20) + '개는 달력에서 ›</div></div></button>' : '') + '</div>' +
       (J.madi ? '<button type="button" class="btn g" style="margin-top:12px" onclick="HOME_V2.close();go(\'clients\')">💌 이번 달 보낼 마디 ' + J.madi + ' — 고객 365일에서</button>' : '') +
-      '<div class="jvnote">끊기기 쉬운 자리 — 약속 전날 확인을 안 함(노쇼) · 약속이 지난 뒤 연락이 끊김 · 계약 뒤 증권 전달이 빠짐 · 소개 여쭐 때를 놓침. 앞날 연락은 고객 칸의 「다음 할 일」 과 약속에서 와요.</div>');
+      '<div class="jvnote">끊기기 쉬운 자리 — 약속 전날 확인을 안 함(노쇼) · 약속이 지난 뒤 연락이 끊김 · 계약 뒤 증권 전달이 빠짐 · 소개 여쭐 때를 놓침. 앞날 연락은 고객 칸의 「다음 할 일」 과 약속에서 와요.</div>';
+    sheet(h);
+  }
+  /* 누르면 — 있던 함수를 부르고, 같은 자리(스크롤)에서 다시 그림. 서버를 거치는 것(단계 · 약속)은 돌아올 즈음 한 번 더 */
+  function jvDo(k, v) {
+    var sh = el('hv2Sheet'), y = sh ? sh.scrollTop : 0, later = false;
+    try {
+      if (k === 'done') g.hmDaySkip(JV_DONE, v);
+      else if (k === 'lateskip') g.hmLateSkip(v);
+      else if (k === 'refskip') g.hmReferSkip(v);
+      else if (k === 'met') { g.hdbTo(v, MET_TO); later = true; }
+      else if (k === 'end') { g.hmLateEnd(v); later = true; }
+      else if (k === 'ref') { g.hmReferGot(v); later = true; }
+      else if (k === 'again') { JVO.late = JVO.late === v ? '' : v; }
+      else if (k === 'againPut') { g.hmLateAgain(v); JVO.late = ''; later = true; }
+      else if (k === 'more') JVO.more[v] = !JVO.more[v];
+    } catch (e) {}
+    var re = function () { jvSheet(); var s2 = el('hv2Sheet'); if (s2) s2.scrollTop = y; try { paint(); } catch (e2) {} };
+    re(); if (later) setTimeout(re, 1200);
   }
   /* 지금 이분 — 한 분 = 한 카드(옆으로 넘김) */
   function isCall(x) { return x && x.k === 'db' && /미접촉|TA|부재/.test(String(x.tk || '')); }
@@ -715,6 +810,14 @@
     var d = T(function () { return g.TA_OPENER.db(s); }, null);
     var th = d ? T(function () { return g.TA5.THEMES[d.theme]; }, null) : null;
     return { db: d, th: th, src: s };
+  }
+  /* 💬 판 X579 — 사장님 말씀 「카톡 TA 에서 말 안 잘리게 열어 보는 칸」: 카드 글은 다섯 줄까지만 보이므로(.qmsg .tx) 넘으면 「전체 보기 ▾」 */
+  function longMsg(t) { t = String(t || ''); return t.split('\n').length > 5 || t.length > 120; }
+  function msgAll(b) {
+    var q = b && b.parentNode; if (!q) return;
+    var on = q.classList.toggle('open'); b.textContent = on ? '접기 ▴' : '전체 보기 ▾';
+    var c = q; while (c && !(c.classList && c.classList.contains('qc'))) c = c.parentNode;
+    var r = el('hv2Rail'); if (r && c && c.offsetHeight) r.style.height = (c.offsetHeight + 4) + 'px';
   }
   function msgKey(x) { var L = T(function () { return g.HM_TAMSG.list(x); }, []) || []; return L[0] || ''; }
   function msgText(k, x, ch) { return k ? String(T(function () { return g.HM_TAMSG.text(k, x, ch || CH); }, '') || '') : ''; }
@@ -789,6 +892,7 @@
         var lab = T(function () { return g.HM_TAMSG.tag(x); }, '💬 보낼 문구') || '💬 보낼 문구';
         var tt = msgTitle(k);
         h += '<div class="qmsg"><div class="lb">' + E(lab) + (tt ? ' · ' + E(tt) : '') + '</div><div class="tx">' + E(t) + '</div>' +
+          (longMsg(t) ? '<button type="button" class="more" onclick="HOME_V2.msgAll(this)">전체 보기 ▾</button>' : '') +
           '<button type="button" class="cp" onclick="HOME_V2.copy(\'' + key + '\',\'' + Q(k) + '\')">복사</button></div>' +
           '<div class="chtg"><button type="button" class="' + (CH === 'kakao' ? 'on' : '') + '" onclick="HOME_V2.ch(\'kakao\')">카톡</button><button type="button" class="' + (CH === 'sms' ? 'on' : '') + '" onclick="HOME_V2.ch(\'sms\')">문자</button></div>';
         /* 💬 카톡처럼 보고 보내기 — 사장님 말씀 (2026-11-21) 「안부 카톡이나 문자도 디자인 짜라니까」 → 보내기 화면(msg-v2.js).
@@ -1444,17 +1548,59 @@
      ③ 다 끝났으면 「오늘 미션 완료 🎉」 (단추 없음)
      ★ 오른쪽 🎙 · ? 단추와 아래 탭은 안 가림(오른쪽 70px 비움 · 아래 세 칸 위) · ✕ 로 닫으면 이 화면을 다시 열 때까지 안 뜸(저장 없음 · 기억은 이 창 안에서만).
      ★ 🤖 를 누르면 자비스 시트(HOME_V2.ai) — 인사 줄 🤖 와 같은 곳. */
-  var JVB = { off: false, i: 0 };
+  var JVB = { off: false, i: 0, sec: 'card', watch: false };
+  /* 💬 판 X579 — 사장님 말씀 「말풍선 크기가 너무 큰데, 텍스트에 맞춰서 해야 될 것들을 칸 별로 따라다니면서 알려 줄 수 있는지」.
+     ★ 크기는 글만큼(.jvb-b flex 0 1 auto · 최대 300px) · 빈 자리는 누름을 막지 않음.
+     ★ 화면을 내리면 지금 보는 칸(미션 · 고객 카드 · 동선 · 챙기는 중)에 맞춰 말이 바뀜 — 고르는 자는 있던 것(misState · routeData · jvData · toolsOf).
+       고객 카드를 보고 있을 때는 예전 그대로 그 분 추천 도구. */
+  var JVB_SEC = [['mis', '.hv2 .mis'], ['card', '#hv2Rail'], ['route', '.hv2 .rtc'], ['jv', '.hv2 .jv']];
+  function jvbMis() {
+    var j = -1, n = 0; MIS.forEach(function (m, k) { if (misState(m).done) n++; else if (j < 0) j = k; });
+    if (!T(function () { return g.CK_ITEMS.day.length; }, 0) || typeof g.hmMsCk !== 'function') return null;
+    if (j >= 0) return { t: '오늘 미션 ' + n + ' / ' + MIS.length + ' — 다음은 「' + MIS[j].t + '」 예요', go: 'HOME_V2.mis(' + j + ')', lab: '보기' };
+    return { t: '오늘 미션 완료 🎉 수고 많으셨어요', go: '', lab: '' };
+  }
+  function jvbSecData(k) {
+    if (k === 'mis') return jvbMis();
+    if (k === 'route') {
+      var D = routeData();
+      if (D.kind === 'appt') return { t: '오늘 약속 ' + D.A.length + '곳' + (D.near.length ? ' · 가는 김에 들를 분 ' + D.near.length + '명' : '') + ' — 그림을 누르면 크게 봐요', go: 'HOME_V2.route()', lab: '동선' };
+      if (D.kind === 'rec') return { t: '약속 없는 날 — ' + (D.rg ? D.rg + ' ' : '') + '들를 분 ' + D.near.length + '명을 묶어 뒀어요', go: 'HOME_V2.route()', lab: '동선' };
+      return null;
+    }
+    if (k === 'jv') {
+      var J = jvData();
+      return J.L.length ? { t: '챙길 자리 ' + J.L.length + '곳 남았어요 — 하나씩 열어 ✓ 완료', go: 'HOME_V2.jv()', lab: '보기' } : { t: '오늘 챙길 자리를 다 마쳤어요 👏', go: '', lab: '' };
+    }
+    return null;
+  }
+  function jvbSec() {
+    if (JVB.off || !g.document || !g.document.querySelector) return;
+    var H = g.innerHeight || 800, best = 'card', bd = 1e9;
+    JVB_SEC.forEach(function (p) {
+      var e = g.document.querySelector(p[1]); if (!e || !e.getBoundingClientRect) return;
+      var r = e.getBoundingClientRect(); if (r.bottom < 60 || r.top > H - 140) return;
+      var c = Math.abs((r.top + r.bottom) / 2 - H * 0.42); if (c < bd) { bd = c; best = p[0]; }
+    });
+    if (best === JVB.sec) return; JVB.sec = best; jvbRe();
+  }
+  function jvbWatch() {
+    if (JVB.watch || typeof g.addEventListener !== 'function') return; JVB.watch = true;
+    var t = 0; g.addEventListener('scroll', function () { if (t) return; t = setTimeout(function () { t = 0; jvbSec(); }, 150); }, true);
+  }
+  function jvbRe() {
+    var b = el('hv2Jvb'); if (!b) return;
+    var h = jvbHtml(), t = g.document.createElement('div'); t.innerHTML = h;
+    if (t.firstChild) b.parentNode.replaceChild(t.firstChild, b); else b.parentNode.removeChild(b);
+  }
   function jvbData(i) {
+    var d = JVB.sec !== 'card' ? T(function () { return jvbSecData(JVB.sec); }, null) : null; if (d) return d;
     var L = (T(function () { return g.hmLeft(); }, { list: [] }) || { list: [] }).list || [], x = L[i] || L[0];
     if (x) {
       var R = toolsOf(x), a = R && R.A && R.A[0];
       if (a) return { t: nameOf(x) + '님' + (R.why ? ' · ' + R.why : '') + ' — 「' + strip(a.t) + '」 부터 열어 볼까요?', go: 'go(\'' + Q(a.tab) + '\')', lab: '열기' };
     }
-    var j = -1, n = 0; MIS.forEach(function (m, k) { if (misState(m).done) n++; else if (j < 0) j = k; });
-    if (!T(function () { return g.CK_ITEMS.day.length; }, 0) || typeof g.hmMsCk !== 'function') return null;
-    if (j >= 0) return { t: '오늘 미션 ' + n + ' / ' + MIS.length + ' — 다음은 「' + MIS[j].t + '」 예요', go: 'HOME_V2.mis(' + j + ')', lab: '보기' };
-    return { t: '오늘 미션 완료 🎉 수고 많으셨어요', go: '', lab: '' };
+    return jvbMis();
   }
   function jvbHtml() {
     if (JVB.off) return '';
@@ -1464,10 +1610,8 @@
       '<button type="button" class="jvb-x" onclick="HOME_V2.jvbOff()" aria-label="말풍선 닫기">✕</button></div>';
   }
   function jvbAt(i) {
-    if (JVB.off || JVB.i === i) return; JVB.i = i;
-    var b = el('hv2Jvb'); if (!b) return;
-    var h = jvbHtml(), t = g.document.createElement('div'); t.innerHTML = h;
-    if (t.firstChild) b.parentNode.replaceChild(t.firstChild, b); else b.parentNode.removeChild(b);
+    if (JVB.off || JVB.i === i) return; JVB.i = i; JVB.sec = 'card';
+    jvbRe();
   }
   function dockHtml() {
     var K = ['prod', 'talk', 'study'].filter(function (k) { return dockItems(k).length; });
@@ -1647,7 +1791,12 @@
     else if (D.kind === 'rec') { t1 = '오늘은 약속이 없어요 · 추천 동선 ' + D.rg; t2 = ['들를 분 ' + D.near.length + '명', D.km != null ? kmTxt(D.km, D.real) : '', D.miss ? '주소 모르는 곳 ' + D.miss : ''].filter(Boolean).join(' · '); }
     else if (D.kind === 'any') { t1 = '오늘은 약속이 없어요 · 만날 분 추천 ' + D.near.length + '명'; t2 = '동네가 적힌 고객이 아직 없어요 — 지역 동선에서 동네를 고르면 길까지 짜 드려요'; }
     else { t1 = '🗺️ 지역 동선'; t2 = '동네가 적힌 고객이 아직 없어요 — 동네를 골라 하루를 묶어요'; }
-    return '<button type="button" class="rtc" onclick="HOME_V2.route()"><div class="tile">📍</div><div class="tx"><div class="t1">' + E(t1) + '</div><div class="t2">' + E(t2) + '</div></div><span class="ar">›</span></button>';
+    var btn = '<button type="button" class="rtc" onclick="HOME_V2.route()"><div class="tile">📍</div><div class="tx"><div class="t1">' + E(t1) + '</div><div class="t2">' + E(t2) + '</div></div><span class="ar">›</span></button>';
+    /* 📍 판 X579 — 사장님 말씀 「지역 동선에서 오늘 바로 이미지 띄워줄 수 있는지」: 시트의 그 그림(mapSvg)을 오늘 칸에도 바로.
+       좌표를 아는 곳이 하나도 없으면 그림 없이 예전 한 줄 그대로. 누르면 시트(크게 · 카카오맵) */
+    var mp = D.kind === 'appt' ? T(function () { return mapSvg(D.A, D.near); }, '') : D.kind === 'rec' ? T(function () { return mapSvg(D.near, []); }, '') : '';
+    if (!mp) return btn;
+    return '<div class="rtw">' + btn + '<div class="rtmap" role="button" onclick="HOME_V2.route()">' + mp + '</div></div>';
   }
   /* 실제 좌표를 340×190 에 줄여 그림 — 약속은 파란 번호, 들를 분은 주황 동그라미 */
   function mapSvg(stops, near) {
@@ -1693,10 +1842,18 @@
        「Google 캘린더」 는 구글 달력 추가 화면을 엶(갤럭시에서 구글 달력 쓰실 때). 고객 이름은 폰 달력으로 나갈 때 mcalOutName 으로 가림.
      ★ 판 X516 — 달력 탭의 「📲 폰 달력에도 담기」 스위치(CAL_V2.icsOn · 이 기기에만)가 켜져 있으면 「넣기」 를 누른 그 순간 그 한 건의 .ics 를 바로 받습니다
        (같은 schedIcs · 누르는 손길 안이라 폰이 막지 않음). 웹앱은 폰 달력에 저절로 넣을 권한이 없어 이것이 「담기」 의 전부입니다. */
-  var SCH = { tab: 'me', ds: '', hm: '', cid: '', done: null };
+  var SCH = { tab: 'me', ds: '', hm: '', cid: '', done: null, what: '' };
+  /* 📅 판 X579 — 사장님 말씀 「무엇도 업무 전화 / 상담 / 계약 / 청구 / 소개요청 / 증권전달로 나누어」 ·
+     「일정 넣기에서 누구에 고객 추가 칸을 연동」. 무엇은 이 여섯 갈래 단추(내 일정 · 고객 일정 같이).
+     ★ 저장은 그대로 mcalMyPut · mcalCusPut — 고객 일정은 갈래가 「방법」 칸(mcalCusHow)으로 들어가 다음 할 일 · 접촉 기록에 「상담 — …」 처럼 남음,
+       내 일정은 「상담 · 한 줄」 로 제목 앞에 붙음. 새 고객은 있던 「➕ 고객 추가」 흐름(cregOpen) 그대로. */
+  var WHAT = [['📞', '업무 전화'], ['🤝', '상담'], ['✍️', '계약'], ['💰', '청구'], ['🙌', '소개요청'], ['📄', '증권전달']];
+  function whatHtml() {
+    return '<div class="whatr">' + WHAT.map(function (w) { return '<button type="button" class="' + (SCH.what === w[1] ? 'on' : '') + '" onclick="HOME_V2.schedSet(\'what\',\'' + w[1] + '\')">' + w[0] + ' ' + w[1] + '</button>'; }).join('') + '</div>';
+  }
   function ymdAdd(n) { var t = T(function () { return g.mcalToday(); }, '') || new Date().toISOString().slice(0, 10); var d = new Date(t + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
   function schedHtml() {
-    var cs = T(function () { return g.mcalCusList(); }, []) || [], HOW = T(function () { return g.CM_HOW; }, ['전화']) || ['전화'];
+    var cs = T(function () { return g.mcalCusList(); }, []) || [];
     var dayB = [[0, '오늘'], [1, '내일'], [2, '모레']].map(function (x) { var d = ymdAdd(x[0]); return '<button type="button" class="' + (SCH.ds === d ? 'on' : '') + '" onclick="HOME_V2.schedSet(\'ds\',\'' + d + '\')">' + x[1] + '<small>' + (+d.slice(5, 7)) + '/' + (+d.slice(8, 10)) + '</small></button>'; }).join('');
     var tmB = ['10:00', '14:00', '19:00'].map(function (t) { return '<button type="button" class="' + (SCH.hm === t ? 'on' : '') + '" onclick="HOME_V2.schedSet(\'hm\',\'' + t + '\')">' + t + '</button>'; }).join('') +
       '<button type="button" class="' + (!SCH.hm ? 'on' : '') + '" onclick="HOME_V2.schedSet(\'hm\',\'\')">시각 없이</button>';
@@ -1716,13 +1873,15 @@
     h += '<div class="chipr" style="margin-top:6px">' + tmB + '<label class="pick">🕘 시각<input type="time" value="' + E(SCH.hm) + '" onchange="HOME_V2.schedSet(\'hm\',this.value)"></label></div>';
     h += '<div class="sub" style="margin-top:6px">' + E(SCH.ds ? (+SCH.ds.slice(5, 7)) + '월 ' + (+SCH.ds.slice(8, 10)) + '일' + (SCH.hm ? ' ' + SCH.hm : ' · 시각 없음') : '날짜를 골라 주세요') + '</div>';
     if (SCH.tab === 'me') {
-      h += '<h2>무엇</h2><input id="mcalMyT" class="sch-in" type="text" maxlength="80" placeholder="한 줄로 (예: 지점 회의 · 홍○동님 보장분석)">' +
+      h += '<h2>무엇</h2>' + whatHtml() + '<input id="mcalMyT" class="sch-in" style="margin-top:6px" type="text" maxlength="80" placeholder="한 줄로 (예: 지점 회의 · 홍○동님 보장분석)">' +
         '<input id="mcalMyH" type="hidden" value="' + E(SCH.hm) + '">' +
         '<button type="button" class="btn p" style="margin-top:12px" onclick="HOME_V2.schedPut()">넣기</button>';
     } else {
+      if (!SCH.what) SCH.what = WHAT[0][1];
       h += '<h2>누구</h2>' + (cs.length ? '<select id="mcalCusId" class="sch-in">' + cs.map(function (c) { var nm = T(function () { return g.mcalName(c); }, '') || c.name_masked || '고객'; return '<option value="' + E(c.id) + '"' + (c.id === SCH.cid ? ' selected' : '') + '>' + E(nm) + '</option>'; }).join('') + '</select>'
         : '<div class="sub">고객 명단을 아직 못 읽었어요 — 고객 탭을 한 번 열면 여기서 고를 수 있어요</div>') +
-        '<h2>무엇</h2><select id="mcalCusHow" class="sch-in">' + HOW.map(function (x) { return '<option value="' + E(x) + '">' + E(x) + '</option>'; }).join('') + '</select>' +
+        (typeof g.cregOpen === 'function' ? '<button type="button" class="sch-add" onclick="HOME_V2.close();cregOpen()">➕ 명단에 없으면 — 새 고객 추가</button>' : '') +
+        '<h2>무엇</h2>' + whatHtml() + '<input id="mcalCusHow" type="hidden" value="' + E(SCH.what) + '">' +
         '<input id="mcalCusNote" class="sch-in" style="margin-top:6px" type="text" maxlength="140" placeholder="무엇을 할지 한 줄 (예: 보장분석 설명)">' +
         (cs.length ? '<button type="button" class="btn p" style="margin-top:12px" onclick="HOME_V2.schedPut()">넣기</button>' : '');
     }
@@ -1730,7 +1889,7 @@
   }
   function schedOpen(o) {
     o = o || {};
-    SCH.done = null; SCH.tab = o.cid ? 'cus' : (SCH.tab || 'me'); SCH.cid = o.cid || ''; if (!SCH.ds) SCH.ds = ymdAdd(0);
+    SCH.done = null; SCH.tab = o.cid ? 'cus' : (SCH.tab || 'me'); SCH.cid = o.cid || ''; SCH.what = ''; if (!SCH.ds) SCH.ds = ymdAdd(0);
     sheet('<div id="hv2Sch">' + schedHtml() + '</div>');
   }
   function schedPaint() {
@@ -1751,6 +1910,7 @@
     var title = '', label = '', ok = false;
     if (SCH.tab === 'me') {
       var t = ((el('mcalMyT') || {}).value || '').trim(); if (el('mcalMyH')) el('mcalMyH').value = SCH.hm;
+      if (SCH.what) { t = t ? SCH.what + ' · ' + t : SCH.what; if (el('mcalMyT')) el('mcalMyT').value = t; }
       if (!t) { try { g.toast('무엇을 하는 일정인지 한 줄만 적어 주세요'); } catch (e1) {} return; }
       try { g.mcalMyPut(); ok = true; } catch (e2) { ok = false; }
       title = t; label = t;
@@ -1845,6 +2005,17 @@
         var kv = r.data && r.data.kv;
         if (!kv || typeof kv !== 'object') { prefPush(); return; }   /* 처음 — 이 기기 것을 올림 */
         Object.keys(kv).forEach(function (k) { if (k !== 'ai_mine' && k !== 'newhelp' && !(k in PREF.more)) PREF.more[k] = kv[k]; });
+        /* 👤 판 X579 — 고객 실명표(이 기기 cmReal)를 계정 것과 합침: 이 기기에 없는 이름만 받아 오고, 이 기기에만 있던 이름은 올림.
+           사장님 말씀 「누구도 고객 365도 모든 고객 이름을 * 로 가리지 마 — 자기 고객만 뜨니까」 · 고름 「내 설정 한 줄에」(그 사람 줄만 · 남은 못 봄) */
+        try {
+          var mine = g.cmReal(), got = kv.real && typeof kv.real === 'object' ? kv.real : {}, mg = {}, k2;
+          for (k2 in got) if (Object.prototype.hasOwnProperty.call(got, k2) && typeof got[k2] === 'string' && got[k2]) mg[k2] = got[k2].slice(0, 20);
+          for (k2 in mine) if (Object.prototype.hasOwnProperty.call(mine, k2) && mine[k2]) mg[k2] = mine[k2];
+          if (Object.keys(mg).length) {
+            if (JSON.stringify(mg) !== JSON.stringify(mine)) { g.cmLSSet('apex_cli_real_' + g.cmWho(), mg); try { g.MCAL_REAL.src = null; } catch (e3) {} }
+            PREF.more.real = mg;
+          }
+        } catch (e4) {}
         try {
           if (kv.ai_mine && kv.ai_mine.push) g.localStorage.setItem(aiKey(), JSON.stringify(kv.ai_mine.slice(0, 30)));
           if (kv.newhelp) g.localStorage.setItem(newKey(), '1'); else g.localStorage.removeItem(newKey());
@@ -1870,6 +2041,7 @@
       dots();
       goalLoad();
       prefLoad();
+      jvbWatch();
       return true;
     } catch (e) { fallback(e); return false; }
   }
@@ -1933,7 +2105,7 @@
     talkMore: function () { REJ_ALL = 1; talkSheet(); },
     talkCp: function (i) { copyT(TXT[i]); },
     studyMore: function () { STUDY_ALL = STUDY_ALL ? 0 : 1; studySheet(); },
-    jv: jvSheet,
+    jv: jvSheet, jvDo: jvDo,
     ai: aiSheet,
     aiAdd: aiAddSheet,
     met: metSheet, metGo: metGo,
@@ -1948,6 +2120,7 @@
     jvbOff: function () { JVB.off = true; var b = el('hv2Jvb'); if (b && b.parentNode) b.parentNode.removeChild(b); },
     mis: misSheet, misDid: function (i, ck) { misDid(i, ck, 0); }, misUndo: function (i, ck) { misDid(i, ck, 1); },
     newOn: newOn,
+    msgAll: msgAll,
     /* 같은 내 설정 한 줄(user_prefs)에 다른 칸이 얹는 몫 — 📱 폰 확인(pchk-v2.js) · 새로 서버 부름을 만들지 않으려고 */
     prefPut: function (k, v) { return prefPut(k, v); },
     prefGet: function (k) { return PREF.more[k]; },
