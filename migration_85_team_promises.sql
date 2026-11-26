@@ -92,6 +92,9 @@ begin
 end;
 $fn$;
 revoke all on function public.tp_fill() from public, anon;
+/* 트리거 전용 — 사람이 부를 일이 없어 authenticated 에서도 거둡니다(트리거는 권한과 상관없이 돕니다).
+   Supabase 는 새 함수를 authenticated 에도 따로 주므로 public 만 거두면 남습니다 (2026-11-26 적용 때 확인). */
+revoke all on function public.tp_fill() from authenticated;
 
 drop trigger if exists team_promises_fill on public.team_promises;
 create trigger team_promises_fill before insert or update on public.team_promises
