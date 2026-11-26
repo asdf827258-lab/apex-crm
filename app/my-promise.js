@@ -75,7 +75,7 @@
     return '<h2>💬 내가 한 약속 <small id="mpCnt">' + cntTxt() + '</small></h2>' +
       '<div class="list" id="mpList">' + listHtml() + '</div>' +
       '<h2>📋 카톡 붙여넣기 <small>약속한 대화를 붙여 넣으면 한 줄로 뽑아 드려요</small></h2>' +
-      '<div class="mp-share" data-mp="share">🔔 이 약속은 <b>담당 지점장·사업단장에게 공유돼요</b> · 고객 이름은 가운데 글자를 가리고, 카톡 원문은 저장하지 않아요</div>' +
+      '<div class="mp-share" data-mp="share">🔔 이 약속은 <b>담당 지점장·사업단장에게 공유돼요</b> · 고객 이름은 가운데 글자를 가리고, 카톡 원문은 저장하지 않아요<br>⏰ 폰 알람을 켜 두면 <b>아침 8시 · 12시 · 17시</b>(남은 게 있을 때만)와 <b>시각 있는 약속 30분 전</b>에 내 폰으로 알려 드려요</div>' +
       '<div id="mpForm"></div>';
   }
   function cntTxt() {

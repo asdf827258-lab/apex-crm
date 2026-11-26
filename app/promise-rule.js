@@ -30,10 +30,24 @@
   'use strict';
 
   var STALE_DAYS = 3;          /* 날짜 없는 약속 — 적은 지 사흘이면 「놓칠 뻔」 */
-  var PUSH_H = 8;              /* 지점장 · 대표 알람 시각(한국 시각) — ☀️ 아침 조회(8:30) 전에 폰에 와 있게. push-cron 은 매시 정각이라 8시.
+  var PUSH_H = 8;              /* 지점장 · 대표 알람 시각(한국 시각) — ☀️ 아침 조회(8:30) 전에 폰에 와 있게. 정각에만 보내므로 8시.
                                   8시 「블로그 한 줄」 과 같은 시각이지만 TAG 가 달라 서로 안 지웁니다 */
   var PEOPLE_MAX = 8;          /* 알람에 이름을 적는 팀원 수 — 넘으면 「외 N명」 */
-  var TAG = 'apex-promise';      /* 폰 알람 딱지 — sw.js 기본(apex-today)과 달라야 같은 시각 알람끼리 안 덮어씀 */
+  /* 폰 알람 딱지 — sw.js 는 같은 딱지면 <b>덮어씁니다</b>(기본 apex-today). 같은 시각에 뜨는 알람끼리
+     서로 지우지 않게 셋을 따로 둡니다 — 지점장은 8시에 팀 보고와 자기 약속을 둘 다 받습니다. */
+  var TAG = 'apex-promise';          /* 지점장 · 대표 — 팀 보고 */
+  var TAG_ME = 'apex-promise-me';    /* 팀원 본인 — 오늘 챙길 약속 */
+  var TAG_SOON = 'apex-promise-soon';/* 팀원 본인 — 시각 있는 약속 30분 전 */
+  /* 팀원 본인 알람 (2026-11-26 · 사업단장 「각자 팀원들에게도 매일 할일들 완료 해야될것들에 대해서
+     수시적으로 안내 연락까지 갈수 있도록 해」)
+       8시   ☀️ 오늘 챙길 약속 N건 · 놓친 M건  — 앞 3개
+       12시 · 17시  📋 아직 남은 약속 N건      — 남은 게 있을 때만(다 끝냈으면 안 울림)
+       시각 있는 약속  ⏰ 30분 전               — promise-cron 이 30분마다 깨어나 30~59분 뒤 약속을 봅니다
+     「챙길」 = 놓친(늦음 · 놓칠 뻔) + 오늘 마감. 마감이 아직 남은 약속으로는 울리지 않습니다.
+     「✓ 했어요」 를 누르면 status=done 이 되어 다음 알람부터 저절로 빠집니다. */
+  var MEM_H = [8, 12, 17];
+  var SOON_MIN = 30;
+  var ME_MAX = 3;              /* 팀원 본인 알람에 적는 줄 수 */
   var LIST_MAX = 4;            /* 알람에 이름까지 적는 줄 수 — 잠긴 화면에 다 들어가게 */
 
   function kstYmd(ms) {
@@ -201,11 +215,59 @@
     return { title: title, body: L.join('\n'), go: '/app/index.html', tag: TAG, n: c, people: byMember(open, nm, today) };
   }
 
+  /* ── 팀원 본인 알람 ─────────────────────────────────────────────── */
+  function hmOf(t) {            /* '15:00' · '15:00:00' → 분(900) · 없으면 -1 */
+    var m = /^(\d{1,2}):(\d{2})/.exec(String(t || ''));
+    return m ? (+m[1]) * 60 + (+m[2]) : -1;
+  }
+  function hhmm(n) { return ('0' + Math.floor(n / 60)).slice(-2) + ':' + ('0' + (n % 60)).slice(-2); }
+  function mustToday(p, today) { var k = state(p, today).k; return k === 'late' || k === 'stale' || k === 'today'; }
+  function meLine(p, today) {   /* 내 알람 한 줄 — 팀원 이름 없이 「홍*동님 무엇 · 상태」 */
+    var s = state(p, today), n = hmOf(p.time);
+    var who = p.who ? maskName(p.who) + '님 ' : '';
+    var t = maskText(String(p.text || ''), p.who ? [p.who] : []).slice(0, 30);
+    var tail = s.k === 'late' ? s.days + '일 늦음' : s.k === 'stale' ? '날짜 없이 ' + s.days + '일째' : s.k === 'today' ? '오늘' + (n >= 0 ? ' ' + hhmm(n) : '') : '';
+    return '· ' + who + t + (tail ? ' — ' + tail : '');
+  }
+  /* h = 한국 시각(8 · 12 · 17). 챙길 것이 없으면 null — 「0건」 알람은 방해입니다. */
+  function memberPush(rows, h, today) {
+    today = today || kstYmd();
+    if (MEM_H.indexOf(h) < 0) return null;
+    var L = sort((rows || []).filter(function (p) { return p && p.status !== 'done' && mustToday(p, today); }), today);
+    if (!L.length) return null;
+    var c = count(L, today);
+    var title = h === MEM_H[0]
+      ? '☀️ 오늘 챙길 약속 ' + L.length + '건' + (c.miss ? ' · 놓친 ' + c.miss + '건' : '')
+      : '📋 아직 남은 약속 ' + L.length + '건' + (c.miss ? ' · 놓친 ' + c.miss + '건' : '');
+    var B = L.slice(0, ME_MAX).map(function (p) { return meLine(p, today); });
+    if (L.length > ME_MAX) B.push('외 ' + (L.length - ME_MAX) + '건');
+    B.push('끝냈으면 앱에서 ✓ 했어요 — 다음 알림에서 빠져요');
+    return { title: title, body: B.join('\n'), go: '/app/index.html', tag: TAG_ME, n: L.length };
+  }
+  /* nowMin = 깨어난 시각(한국 시각, 하루의 분). 오늘 마감 · 시각이 nowMin+30 ~ nowMin+59 인 약속.
+     30분마다 깨어나므로 한 약속은 <b>한 번만</b> 걸립니다(창이 겹치지 않음). */
+  function soonPush(rows, today, nowMin) {
+    today = today || kstYmd();
+    var a = nowMin + SOON_MIN, b = a + 30;
+    var L = (rows || []).filter(function (p) {
+      if (!p || p.status === 'done' || ymdOf(p.due) !== today) return false;
+      var n = hmOf(p.time); return n >= a && n < b;
+    }).sort(function (x, y) { return hmOf(x.time) - hmOf(y.time); });
+    if (!L.length) return null;
+    var one = function (p) {
+      return hhmm(hmOf(p.time)) + ' ' + (p.who ? maskName(p.who) + '님 ' : '') + maskText(String(p.text || ''), p.who ? [p.who] : []).slice(0, 30);
+    };
+    if (L.length === 1) return { title: '⏰ ' + one(L[0]), body: '30분쯤 뒤예요 · 끝나면 앱에서 ✓ 했어요', go: '/app/index.html', tag: TAG_SOON, n: 1 };
+    return { title: '⏰ 곧 약속 ' + L.length + '건', body: L.map(one).join('\n'), go: '/app/index.html', tag: TAG_SOON, n: L.length };
+  }
+
   var API = {
     STALE_DAYS: STALE_DAYS, PUSH_H: PUSH_H, LIST_MAX: LIST_MAX, PEOPLE_MAX: PEOPLE_MAX, TAG: TAG, LABEL: LABEL,
     kstYmd: kstYmd, ymdOf: ymdOf, state: state, missed: missed, sort: sort, count: count,
     maskName: maskName, maskPhone: maskPhone, maskText: maskText,
-    lineOf: lineOf, byMember: byMember, pushFor: pushFor
+    lineOf: lineOf, byMember: byMember, pushFor: pushFor,
+    MEM_H: MEM_H, SOON_MIN: SOON_MIN, ME_MAX: ME_MAX, TAG_ME: TAG_ME, TAG_SOON: TAG_SOON,
+    hmOf: hmOf, mustToday: mustToday, memberPush: memberPush, soonPush: soonPush
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;   /* 서버 */
   root.MPR = API;                                                             /* 앱 */

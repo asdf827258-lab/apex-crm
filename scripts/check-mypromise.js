@@ -24,7 +24,7 @@ let bad = 0;
 const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
 const rd = p => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const RULE = rd('app/promise-rule.js'), UI = rd('app/my-promise.js'), HV2 = rd('app/home-v2.js');
-const IX = rd('app/index.html'), CORE = rd('scripts/push-core.js'), CRON = rd('netlify/functions/push-cron.js');
+const IX = rd('app/index.html'), CORE = rd('scripts/push-core.js'), CRON = rd('netlify/functions/push-cron.js'), PCRON = rd('netlify/functions/promise-cron.js');
 const TOML = rd('netlify.toml'), SQL = rd('migration_85_team_promises.sql');
 
 function ruleOf(src) { const box = { module: { exports: {} } }; box.globalThis = box; vm.runInNewContext(src, box); return box.module.exports; }
@@ -81,10 +81,23 @@ const P2 = M.pushFor(many, NM, T0);
 is(P2 && P2.body.split('\n').length === M.LIST_MAX + 3 && /외 5건/.test(P2.body), '이름 적는 줄은 ' + M.LIST_MAX + '줄까지 · 나머지는 「외 N건」');
 const P3 = M.pushFor(ROWS, NM, T0, { all: true, teams: { t1: '상승지점' } });
 is(P3 && P3.title.indexOf('☀️ 아침 조회 · 사업단 약속 3건') === 0 && P3.body.split('\n')[0] === '상승지점 3(놓침 2)' && P3.body.split('\n')[1] === '홍판서 열린 2·놓친 2', '대표 — 사업단 숫자 + 팀마다 숫자 한 줄 + 놓친 팀원만');
+/* 팀원 본인 — 8 · 12 · 17 · 30분 전 */
+const ME8 = M.memberPush(ROWS, 8, T0), ME12 = M.memberPush(ROWS, 12, T0);
+is(ME8 && ME8.title === '☀️ 오늘 챙길 약속 3건 · 놓친 2건' && ME12 && ME12.title === '📋 아직 남은 약속 3건 · 놓친 2건' && ME8.tag === M.TAG_ME, '본인 8시 「오늘 챙길」 · 12시 「아직 남은」 — ' + (ME8 && ME8.title));
+is(M.memberPush(ROWS, 10, T0) === null && M.memberPush(ROWS, 12, T0, 0) && M.MEM_H.join() === '8,12,17', '본인 알람은 8 · 12 · 17시만');
+is(M.memberPush([{ text: '나중 일', who: '홍길동', due: '2999-01-01' }], 12, T0) === null, '마감이 남은 약속만 있으면 안 울림(「0건」 은 방해)');
+is(M.memberPush(ROWS.map(p => Object.assign({}, p, { status: 'done' })), 17, T0) === null, '「✓ 했어요」 를 다 누르면 다음 알림이 안 옴');
+const TM = [{ text: '보장분석 전화', who: '홍갑돌', due: T0, time: '15:00:00' }, { text: '증권 전달', who: '홍길순', due: T0, time: '15:20' }];
+const SO = M.soonPush(TM, T0, 14 * 60 + 30);
+is(SO && SO.title === '⏰ 곧 약속 2건' && SO.body === '15:00 홍*돌님 보장분석 전화\n15:20 홍*순님 증권 전달' && SO.tag === M.TAG_SOON, '30분 전 — 둘이면 한 장에 시각 순 — ' + (SO && SO.title));
+is(M.soonPush(TM, T0, 14 * 60) === null && M.soonPush(TM, T0, 15 * 60) === null && M.soonPush([TM[0]], T0, 14 * 60 + 30).title === '⏰ 15:00 홍*돌님 보장분석 전화', '30분 전 창은 겹치지 않음 — 한 약속에 한 번');
+is(M.soonPush([Object.assign({}, TM[0], { due: '2026-11-27' })], T0, 14 * 60 + 30) === null, '내일 약속은 오늘 30분 전 알람에 안 걸림');
+is(new Set([M.TAG, M.TAG_ME, M.TAG_SOON, 'apex-today']).size === 4, '딱지 넷이 다 다름 — 지점장이 8시에 팀 보고와 자기 약속을 둘 다 봄');
+is(!leaks(ME8.body + ME8.title + SO.body + SO.title), '본인 알람 글에도 고객 실명 0');
 
 /* ── [4] 서버가 받는 사람을 가르나 ───────────────────────────── */
 console.log('[4] 서버 — 받는 사람');
-async function serverRun(coreSrc, ruleSrc) {
+async function serverRun(coreSrc, ruleSrc, call, extra) {
   const FAKE = {
     profiles: [
       { id: 'L1', name: '지점장갑', role: 'leader' }, { id: 'B1', name: '지점장을', role: 'branch_manager' },
@@ -99,10 +112,12 @@ async function serverRun(coreSrc, ruleSrc) {
       { member_id: 'u1', team_id: 't1', text: '청구서류', who: '임꺽정', due: '2000-01-01', status: 'open' },
       { member_id: 'u2', team_id: 't2', text: '설계안', who: '홍말순', status: 'open', created_at: '2000-01-01' },
       { member_id: 'u3', team_id: 't2', text: '보장분석', who: '홍갑돌', due: '2999-01-01', status: 'open' }
-    ]
+    ].concat(extra || [])
   };
+  const urls = [];
   const box = { module: { exports: {} }, require: null, process: { env: {} }, Buffer, URL, console };
   box.fetch = async (u) => {
+    urls.push(u);
     const t = Object.keys(FAKE).find(k => u.indexOf('/rest/v1/' + k + '?') >= 0);
     const body = JSON.stringify(t ? FAKE[t] : []);
     return { ok: true, status: 200, text: async () => body, json: async () => JSON.parse(body) };
@@ -113,8 +128,8 @@ async function serverRun(coreSrc, ruleSrc) {
   };
   vm.runInNewContext(coreSrc, box);
   const P = box.module.exports;
-  const r = await P.promisePush(0, { force: true, dry: true });
-  return { r, P };
+  const r = await (call ? call(P) : P.promisePush(0, { force: true, dry: true }));
+  return { r, P, urls };
 }
 (async () => {
   const S0 = await serverRun(CORE, RULE);
@@ -127,7 +142,27 @@ async function serverRun(coreSrc, ruleSrc) {
   is(!mm.has('X1') && !mm.has('u1'), '쉬는 지점장 · 팀원에게는 안 감');
   is([...mm.values()].every(x => !leaks(x.body)), '서버 알람 글에도 고객 실명 0');
   is(/require\('\.\.\/app\/promise-rule\.js'\)/.test(CORE) && !/STALE_DAYS\s*=|maskName\s*\(\s*s\s*\)\s*\{/.test(CORE), '서버는 promise-rule.js 를 불러 씀 — 규칙을 다시 안 적음(5번)');
-  is(/P\.promisePush\(h\)/.test(CRON) && /try\s*\{\s*promise = await P\.promisePush/.test(CRON), 'push-cron 이 한 줄로 부르고 · 터져도 다른 알람은 이미 나감');
+  is(/P\.promisePush\(h,\s*\{\s*min:\s*min\s*\}\)/.test(PCRON) && !/promisePush/.test(CRON), 'promise-cron 이 한 줄로 부르고 · push-cron 은 약속을 모름(30분마다 돌려도 다른 알람이 두 번 안 감)');
+  is(/\[functions\."promise-cron"\]\s*\r?\n\s*schedule = "0,30 \* \* \* \*"/.test(TOML) && /\[functions\."push-cron"\]\s*\r?\n\s*schedule = "0 \* \* \* \*"/.test(TOML), '예약 — promise-cron 은 30분마다 · push-cron 은 그대로 정각');
+
+  /* ── [4b] 팀원 본인 알람 (사업단장 「각자 팀원들에게도 … 수시적으로 안내」) ── */
+  console.log('[4b] 팀원 본인 알람');
+  const S8 = await serverRun(CORE, RULE, P => P.promisePush(8, { dry: true, today: '2026-11-27' }));
+  const o8 = (S8.r && S8.r.out) || new Map();
+  const me = id => (o8.get(id) || []).filter(x => x.tag === M.TAG_ME)[0];
+  is(me('u1') && me('u1').title === '☀️ 오늘 챙길 약속 1건 · 놓친 1건' && me('u2') && !me('u3'), '8시 — 팀원 본인에게 오늘 챙길 약속(마감이 남은 약속만 있는 사람은 안 울림) — ' + (me('u1') && me('u1').title));
+  is((o8.get('L1') || []).some(x => x.tag === M.TAG) && !(o8.get('X1')), '8시 — 지점장은 팀 보고도 같이 · 쉬는 사람은 안 받음');
+  is([].concat.apply([], [...o8.values()]).every(x => !leaks(x.body) && !leaks(x.title)), '본인 알람에도 고객 실명 0');
+  const S10 = await serverRun(CORE, RULE, P => P.promisePush(10, { dry: true, today: '2026-11-27' }));
+  is(S10.r && S10.r.ok && S10.r.people === 0, '10시 — 보고도 본인 알람도 없음(오늘 시각 있는 약속이 없으면 조용)');
+  is(S10.urls.every(u => u.indexOf('/rest/v1/profiles') < 0) && S10.urls.some(u => /due=eq\.2026-11-27&time=not\.is\.null/.test(u)), '정각 보고가 없는 판은 오늘 시각 있는 약속만 읽음(30분마다 가볍게 · 7번)');
+  const SOON = [{ member_id: 'u3', team_id: 't2', text: '보장분석 전화', who: '홍갑돌', due: '2026-11-27', time: '15:00:00', status: 'open' }];
+  const S1430 = await serverRun(CORE, RULE, P => P.promisePush(14, { min: 30, dry: true, today: '2026-11-27' }), SOON);
+  const s3 = ((S1430.r && S1430.r.out && S1430.r.out.get('u3')) || [])[0];
+  is(s3 && s3.tag === M.TAG_SOON && s3.title === '⏰ 15:00 홍*돌님 보장분석 전화', '14:30 — 15:00 약속 30분 전 알람 — ' + (s3 && s3.title));
+  const S1500 = await serverRun(CORE, RULE, P => P.promisePush(15, { min: 0, dry: true, today: '2026-11-27' }), SOON);
+  const S1400 = await serverRun(CORE, RULE, P => P.promisePush(14, { min: 0, dry: true, today: '2026-11-27' }), SOON);
+  is(S1500.r.people === 0 && S1400.r.people === 0, '같은 약속은 한 번만 — 14:00 · 15:00 판에는 안 걸림');
   is(/included_files[^\]]*"app\/promise-rule\.js"/.test(TOML), 'netlify.toml included_files 에 promise-rule.js(서버가 같은 파일을 읽음)');
   is(/PUSH_H\s*=\s*8\b/.test(RULE) && M.PUSH_H < 9, '보고 시각 ' + M.PUSH_H + '시 — ☀️ 아침 조회(8:30) 전에 폰에 와 있음 · 한 곳');
   is(/tag:\s*m\.tag/.test(CORE) && /tag:\s*d\.tag\s*\|\|/.test(rd('app/sw.js')), '서버가 딱지를 실어 보내고 sw.js 가 그 딱지로 띄움 — 8시 「블로그 한 줄」 과 서로 안 지움');
@@ -184,11 +219,16 @@ async function serverRun(coreSrc, ruleSrc) {
   const U1 = await uiRun(UI.replace('S.masked = M.maskText(raw.slice(0, 6000));', 'S.masked = raw.slice(0, 6000);'), RULE, { noMore: true });
   is(U1.sent && leaks(U1.sent), '가리기를 빼면 → AI 로 실명이 간다고 잡음');
   is(!judge(ruleOf(RULE.replace('var STALE_DAYS = 3;', 'var STALE_DAYS = 9;'))), '3일을 9일로 바꾸면 → 판정이 틀렸다고 잡음');
-  const S1 = await serverRun(CORE.replace('mine = rows.filter(r => ids.has(r.member_id));', 'mine = rows;'), RULE);
+  const S1 = await serverRun(CORE.replace('L = rows.filter(r => ids.has(r.member_id));', 'L = rows;'), RULE);
   const t1 = ((S1.r.msgs || new Map()).get('L1') || {}).title || '';
   is(t1 !== '☀️ 아침 조회 · 팀원 약속 1건 · 놓친 1건', '지점장 거름을 빼면 → 남의 팀 것까지 간다고 잡음');
   const U2 = await uiRun(UI.replace('return {\n      text: M.maskText(c.what, raw ? [raw] : []).slice(0, 200),\n      who: who || null,', 'return {\n      text: c.what,\n      who: c.who || null,'), RULE);
   is(U2.ins.length === 1 && leaks(JSON.stringify(U2.ins)), '저장 직전 가리기를 빼면 → 실명이 저장된다고 잡음');
+  const RB = ruleOf(RULE.replace("p.status !== 'done' && mustToday(p, today)", "p.status !== 'done'"));
+  is(RB.memberPush([{ text: '나중 일', who: '홍길동', due: '2999-01-01' }], 12, '2026-11-26') !== null, '「오늘 챙길 것」 거름을 빼면 → 마감 남은 약속으로도 울린다고 잡음');
+  const RS = ruleOf(RULE.replace('var a = nowMin + SOON_MIN, b = a + 30;', 'var a = nowMin, b = a + 60;'));
+  const hit = R0 => [14 * 60, 14 * 60 + 30].filter(n => R0.soonPush([{ text: '전화', due: '2026-11-26', time: '14:40' }], '2026-11-26', n)).length;
+  is(hit(M) === 1 && hit(RS) === 2, '30분 창을 넓히면 → 같은 약속이 두 번 울린다고 잡음');
 
   console.log(bad ? '\n✗ ' + bad + '곳이 어긋났습니다' : '\n✓ 팀원 약속 비서 — 다 맞습니다');
   process.exit(bad ? 1 : 0);
