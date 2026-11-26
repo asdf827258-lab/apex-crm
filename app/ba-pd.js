@@ -112,7 +112,7 @@
   /* ── 상태 ── */
   var S = { files: { bj: [], pr: [] }, plan: null, busy: false, src: '', flags: [], ok: {}, nameShow: '', deck: '', mode: 'auto',
             said: [], goal: [], saidFree: '', dir: '', kakao: null, kakaoErr: '' };
-  /* 판 X561 · 사장님 말씀 2026-11-25 「질문을 선택할수 있도록 … 고객이 한말들을 인식하는지가 중요」
+  /* 판 X566 · 사장님 말씀 2026-11-25 「질문을 선택할수 있도록 … 고객이 한말들을 인식하는지가 중요」
      고객이 한 말을 <b>골라</b> 넣는다. 고른 말마다 「몇 장에서 어떻게 답했나」 를 AI 가 적게 하고,
      빠진 말은 앱이 확인 칸으로 올린다 (audit). 문구는 이 표 한 곳에만 둔다 (5번). */
   var BAPD_SAID = [
