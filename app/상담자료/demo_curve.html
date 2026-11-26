@@ -3,35 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<!-- 🌗 <b>「나는 밝은 화면이다」</b> — 이 말이 없으면 폰이 다크 모드일 때
-     브라우저가 <b>제멋대로 뒤집어</b> 칠합니다. 2026-09-30 사장님이 폰에서
-     「블랙인데」 하신 자리입니다. 색은 한 톨도 안 바뀝니다.
-     ★ 2026-10-03 사장님 말씀 <b>「화면은 무조건 흰색 고정으로 가자」</b> —
-     이제 <b>면제가 없습니다.</b> 다크 한 벌을 갖춘 문서도 CSS 를 지우지 않고
-     <b>가림막</b>(:not([data-theme=light]))으로 껐을 뿐입니다. 재는 자는
-     scripts/check-lightmode.js -->
+<!-- 🌗 「나는 밝은 화면이다」 — 폰 다크모드가 색을 뒤집지 못하게 고정.
+     2026-10-03 사장님 말씀 「화면은 무조건 흰색 고정으로 가자」. 이 덱은 설계상 다크 테마이며
+     color-scheme:light 로 '자동 반전'만 막는다. scripts/check-lightmode.js 로 잰다. -->
 <meta name="color-scheme" content="light"/>
-<title>인생 자산 곡선과 질병 충격</title>
+<title>인생 자산 시뮬레이션 · 왜 다른가부터 연금까지</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard-dynamic-subset.css">
 <style>
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-  :root{ color-scheme:light;  /* 🌗 흰색 고정 (사장님 말씀 2026-10-03) */
+  :root{ color-scheme:light;
     --bg:#0d0f14; --bg2:#11141c;
     --green:#34d399; --greenD:#10b981;
-    --red:#f87171; --redD:#ef4444; --amber:#fbbf24;
+    --red:#f87171; --redD:#ef4444; --amber:#fbbf24; --gold:#fcd34d; --goldD:#f59e0b;
     --blue:#60a5fa; --purple:#c084fc;
     --txt:#eef2f8; --mut:#8a95ab; --mut2:#5b6478;
     --line:rgba(255,255,255,.10);
     --font:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Segoe UI','Malgun Gothic',system-ui,sans-serif;
   }
   html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--txt);overflow:hidden;}
-  /* 콘텐츠 전체를 화면 세로 중앙으로 균형 정렬 */
   #app{position:fixed;inset:0;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;
-    justify-content:center;padding:18px 0;}
+    justify-content:center;padding:16px 0;}
 
   /* 배경 */
   .orb{position:absolute;border-radius:50%;filter:blur(100px);opacity:.4;pointer-events:none;transition:background 1s ease,opacity 1s ease;will-change:opacity;}
   #orbA{width:62vw;height:62vw;top:-18vw;left:-12vw;background:#1e3a8a;}
   #orbB{width:54vw;height:54vw;bottom:-20vw;right:-14vw;background:#5b21b6;}
+  #app.chap-pension #orbB{background:#065f46;}
+  #app.chap-end #orbB{background:#0f766e;}
   #orbA.danger{background:#7f1d1d;opacity:.55;}
   .vignette{position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,transparent 34%,rgba(8,9,13,.78) 92%);pointer-events:none;}
 
@@ -40,100 +38,145 @@
     background:linear-gradient(90deg,var(--blue),var(--purple),var(--green));
     transition:width .6s cubic-bezier(.4,0,.2,1);box-shadow:0 0 12px rgba(99,102,241,.6);}
 
-  /* 헤더 — 보조로 축소(멘트가 주인공이 되도록) */
-  header{position:relative;z-index:20;text-align:center;padding:16px 20px 4px;flex:0 0 auto;}
-  header .eyebrow{font-size:10.5px;letter-spacing:3px;color:var(--mut2);font-weight:800;text-transform:uppercase;margin-bottom:6px;}
-  header h1{font-size:clamp(15px,3.2vw,20px);font-weight:800;line-height:1.3;letter-spacing:-.4px;color:#aeb8cb;}
-  header h1 .g-blue,header h1 .g-green{filter:saturate(.9);}
+  /* 헤더 — 챕터 꼬리표만(큰 제목은 멘트 카드가 가짐) */
+  header{position:relative;z-index:20;text-align:center;padding:14px 20px 2px;flex:0 0 auto;}
+  header .eyebrow{font-size:11px;letter-spacing:3px;color:var(--mut2);font-weight:800;text-transform:uppercase;transition:color .4s ease;}
   .g-blue{background:linear-gradient(120deg,#7dd3fc,#c084fc);-webkit-background-clip:text;background-clip:text;color:transparent;}
   .g-warn{background:linear-gradient(120deg,#f87171,#fbbf24);-webkit-background-clip:text;background-clip:text;color:transparent;}
   .g-green{background:linear-gradient(120deg,#34d399,#10b981);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .g-gold{background:linear-gradient(120deg,#fcd34d,#f59e0b);-webkit-background-clip:text;background-clip:text;color:transparent;}
 
-
-  /* 무대(그래프) — 보조: 멘트와 분리. flex로 공간을 독점하지 않게(0 1)해서 위로 쏠림 방지 */
-  #stage{flex:0 1 auto;position:relative;display:flex;align-items:center;justify-content:center;
-    min-height:0;max-height:46vh;padding:4px 14px 0;z-index:10;}
-  #chartWrap{position:relative;width:min(620px,90vw);max-height:100%;}
-  #chartWrap.shake{animation:shake .5s cubic-bezier(.36,.07,.19,.97);}
-  @keyframes shake{
-    10%,90%{transform:translate(-1px,0)}20%,80%{transform:translate(3px,-1px)}
-    30%,50%,70%{transform:translate(-5px,1px)}40%,60%{transform:translate(5px,-2px)}
-  }
-  svg{width:100%;height:auto;max-height:44vh;display:block;overflow:visible;transition:opacity .5s ease;}
-  .curve{transition:opacity .5s ease;}
-
-  .axisLine{stroke:rgba(255,255,255,.16);stroke-width:1.2;}
-  .gridLine{stroke:rgba(255,255,255,.05);stroke-width:1;}
-  .axisLab{fill:var(--mut);font-size:13px;font-weight:700;font-family:var(--font);}
-  .axisTitle{fill:var(--mut2);font-size:12px;font-weight:800;letter-spacing:.5px;font-family:var(--font);}
-  .axisArrow{fill:rgba(255,255,255,.32);}
-  .markLab{fill:#fca5a5;font-size:12.5px;font-weight:800;font-family:var(--font);}
-  .lifeLab{fill:rgba(255,255,255,.5);font-size:13px;font-weight:800;letter-spacing:.5px;font-family:var(--font);}
-  #lifeLab2{fill:rgba(110,231,183,.7);}
-
-  /* 50세 기준선 */
-  #line50{opacity:0;transition:opacity .6s ease;}
-  #line50.on{opacity:1;}
-  #line50 line{stroke:rgba(248,113,113,.55);stroke-width:1.4;stroke-dasharray:5 5;}
-
-  /* 곡선 path — 드로잉 */
-  .curve{fill:none;stroke-linecap:round;stroke-linejoin:round;}
-  .curve.draw{transition:stroke-dashoffset 1.25s cubic-bezier(.45,.05,.3,1);}
-  #segFlat1{stroke:#7c8aa8;stroke-width:4.5;filter:drop-shadow(0 0 6px rgba(124,138,168,.4));}
-  #segRise2{stroke:url(#gGreen);stroke-width:4.5;filter:drop-shadow(0 0 7px rgba(52,211,153,.5));}
-  #segDrop{stroke:url(#gRed);stroke-width:4.5;filter:drop-shadow(0 0 9px rgba(248,113,113,.6));}
-  #segRecover{stroke:url(#gBlue);stroke-width:4.5;filter:drop-shadow(0 0 9px rgba(96,165,250,.6));}
-  #segCrash{stroke:url(#gAmber);stroke-width:4.5;filter:drop-shadow(0 0 9px rgba(239,68,68,.6));}
-
-  /* 충격 펄스 */
-  #shockGrp{opacity:0;}
-  #shockGrp.on{opacity:1;}
-  .ripple{fill:none;stroke:#ef4444;stroke-width:2.5;opacity:0;}
-  #shockGrp.on .ripple{animation:ripple 1.8s ease-out infinite;}
-  #shockGrp.on .ripple.r2{animation-delay:.6s;}
-  #shockGrp.on .ripple.r3{animation-delay:1.2s;}
-  @keyframes ripple{0%{r:6;opacity:.9;stroke-width:3}100%{r:46;opacity:0;stroke-width:0}}
-  .shockCore{fill:#ef4444;filter:drop-shadow(0 0 12px rgba(239,68,68,.9));}
-  #shockGrp.on .shockCore{animation:corePulse 1.1s ease-in-out infinite;}
-  @keyframes corePulse{0%,100%{r:6.5}50%{r:9}}
-  .shockEmoji{font-size:26px;}
-
-  /* 움직이는 포인트(현재 위치 글로우) */
-  #dot{opacity:0;transition:opacity .5s ease;}
-  #dot.on{opacity:1;}
-  #dotGlow{fill:#fff;filter:drop-shadow(0 0 10px rgba(255,255,255,.9));}
-  #dotRing{fill:none;stroke-width:2;}
-
-
-  /* 멘트(주인공) 카드 — 가장 크고 눈에 띄게, 그래프 위 상단 중앙 */
+  /* 멘트(주인공) 카드 */
   #cap{position:relative;z-index:20;flex:0 0 auto;display:flex;justify-content:center;padding:10px 16px 6px;}
-  #capInner{width:min(820px,95vw);background:rgba(13,15,20,.66);border:1px solid var(--line);
+  #capInner{width:min(840px,95vw);background:rgba(13,15,20,.66);border:1px solid var(--line);
     border-radius:22px;padding:22px 30px;text-align:center;backdrop-filter:blur(14px);
     box-shadow:0 18px 50px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.03) inset;
     transition:opacity .45s ease,transform .45s cubic-bezier(.2,.8,.2,1),border-color .45s ease,background .45s ease,box-shadow .45s ease;}
   #capInner.flash{opacity:0;transform:translateY(16px);}
   #capStep{font-size:11px;font-weight:900;letter-spacing:2.5px;color:var(--mut2);margin-bottom:10px;}
-  /* 핵심 멘트: 크게·굵게 */
-  #capTitle{font-size:clamp(24px,6.2vw,42px);font-weight:900;letter-spacing:-.8px;line-height:1.28;
+  #capTitle{font-size:clamp(23px,5.8vw,40px);font-weight:900;letter-spacing:-.8px;line-height:1.26;
     text-shadow:0 6px 26px rgba(0,0,0,.55);}
-  /* 정성 자막을 강조 라인으로(곡선에서 빼내 멘트 영역에) */
-  #capStatus{font-size:clamp(15px,4vw,22px);font-weight:800;line-height:1.4;margin-top:13px;
+  #capStatus{font-size:clamp(15px,3.9vw,21px);font-weight:800;line-height:1.4;margin-top:13px;
     letter-spacing:-.3px;min-height:0;opacity:0;transform:translateY(8px);
     transition:opacity .4s ease,transform .4s cubic-bezier(.2,.85,.3,1),color .3s ease;}
   #capStatus.show{opacity:1;transform:translateY(0);}
   #capStatus::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
-    margin-right:9px;vertical-align:middle;background:currentColor;
-    box-shadow:0 0 10px currentColor;}
+    margin-right:9px;vertical-align:middle;background:currentColor;box-shadow:0 0 10px currentColor;}
   #capStatus.up{color:#6ee7b7;} #capStatus.down{color:#fca5a5;}
-  #capStatus.blue{color:#93c5fd;} #capStatus.gray{color:#aeb8cb;}
+  #capStatus.blue{color:#93c5fd;} #capStatus.gold{color:#fcd34d;} #capStatus.gray{color:#aeb8cb;}
   #capSub{font-size:clamp(13px,3.3vw,16px);color:#c4cdda;line-height:1.65;margin-top:11px;font-weight:500;
-    max-width:680px;margin-left:auto;margin-right:auto;}
+    max-width:700px;margin-left:auto;margin-right:auto;}
+  #capSub b{color:#fff;font-weight:800;}
   #capInner.tone-red{border-color:rgba(248,113,113,.45);background:rgba(45,12,12,.7);box-shadow:0 18px 50px rgba(120,20,20,.32),0 0 40px rgba(248,113,113,.12);}
   #capInner.tone-blue{border-color:rgba(96,165,250,.45);background:rgba(12,22,48,.7);box-shadow:0 18px 50px rgba(20,40,120,.32),0 0 40px rgba(96,165,250,.12);}
   #capInner.tone-green{border-color:rgba(52,211,153,.45);background:rgba(8,32,24,.7);box-shadow:0 18px 50px rgba(10,80,55,.32),0 0 40px rgba(52,211,153,.12);}
+  #capInner.tone-gold{border-color:rgba(251,191,36,.5);background:rgba(34,24,6,.72);box-shadow:0 18px 50px rgba(120,90,10,.3),0 0 40px rgba(251,191,36,.12);}
+
+  /* 무대 */
+  #stage{flex:0 1 auto;position:relative;display:flex;align-items:center;justify-content:center;
+    min-height:0;width:100%;padding:8px 16px 0;z-index:10;}
+  .layer{display:none;width:100%;align-items:center;justify-content:center;}
+  .layer.on{display:flex;}
+
+  /* 차트 공통 */
+  #chartWrap.shakeable.shake{animation:shake .5s cubic-bezier(.36,.07,.19,.97);}
+  @keyframes shake{10%,90%{transform:translate(-1px,0)}20%,80%{transform:translate(3px,-1px)}
+    30%,50%,70%{transform:translate(-5px,1px)}40%,60%{transform:translate(5px,-2px)}}
+  svg{width:min(640px,92vw);height:auto;max-height:46vh;display:block;overflow:visible;}
+  .axisLine{stroke:rgba(255,255,255,.16);stroke-width:1.3;}
+  .axisLab{fill:var(--mut);font-size:13px;font-weight:700;font-family:var(--font);}
+  .axisTitle{fill:var(--mut2);font-size:12px;font-weight:800;font-family:var(--font);}
+  .markLab{font-size:12.5px;font-weight:800;font-family:var(--font);}
+  .lifeLab{fill:rgba(255,255,255,.5);font-size:13px;font-weight:800;font-family:var(--font);}
+
+  /* 생애 자산 곡선 */
+  #line50{opacity:0;transition:opacity .6s ease;}
+  #line50.on{opacity:1;}
+  .curve{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-width:4.5;}
+  .curve.draw{transition:stroke-dashoffset 1.2s cubic-bezier(.45,.05,.3,1);}
+  #segFlat1{stroke:#7c8aa8;filter:drop-shadow(0 0 6px rgba(124,138,168,.4));}
+  #segRise2{stroke:url(#gGreen);filter:drop-shadow(0 0 7px rgba(52,211,153,.5));}
+  #segDrop{stroke:url(#gRed);filter:drop-shadow(0 0 9px rgba(248,113,113,.6));}
+  #segRecover{stroke:url(#gBlue);filter:drop-shadow(0 0 9px rgba(96,165,250,.6));}
+  #segCrash{stroke:url(#gAmber);filter:drop-shadow(0 0 9px rgba(239,68,68,.6));}
+  #shockGrp{opacity:0;}#shockGrp.on{opacity:1;}
+  .ripple{fill:none;stroke:#ef4444;stroke-width:2.5;opacity:0;}
+  #shockGrp.on .ripple{animation:ripple 1.8s ease-out infinite;}
+  #shockGrp.on .ripple.r2{animation-delay:.6s;}#shockGrp.on .ripple.r3{animation-delay:1.2s;}
+  @keyframes ripple{0%{r:6;opacity:.9;stroke-width:3}100%{r:44;opacity:0;stroke-width:0}}
+  .shockCore{fill:#ef4444;filter:drop-shadow(0 0 12px rgba(239,68,68,.9));}
+  #shockGrp.on .shockCore{animation:corePulse 1.1s ease-in-out infinite;}
+  @keyframes corePulse{0%,100%{r:6.5}50%{r:9}}
+  #dot{opacity:0;transition:opacity .5s ease;}#dot.on{opacity:1;}
+  #dotGlow{fill:#fff;filter:drop-shadow(0 0 10px rgba(255,255,255,.9));}
+  #dotRing{fill:none;stroke-width:2;}
+
+  /* 국민연금 그래프 */
+  #pchartWrap.on #pplot{animation:pReveal .6s cubic-bezier(.2,.8,.2,1) both;}
+  @keyframes pReveal{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+  /* 원칙 3카드 */
+  .cards{display:flex;flex-direction:column;gap:14px;width:min(760px,90vw);}
+  .rowc{display:flex;align-items:center;gap:16px;background:rgba(13,15,20,.78);border:1px solid var(--line);
+    border-radius:18px;padding:18px 22px;box-shadow:0 12px 34px rgba(0,0,0,.4);
+    opacity:0;transform:translateY(20px) scale(.96);}
+  #principles.on .rowc{animation:popIn .55s cubic-bezier(.2,.85,.3,1) forwards;}
+  #principles.on .rowc:nth-child(1){animation-delay:.08s;}
+  #principles.on .rowc:nth-child(2){animation-delay:.28s;}
+  #principles.on .rowc:nth-child(3){animation-delay:.48s;}
+  @keyframes popIn{to{opacity:1;transform:translateY(0) scale(1)}}
+  .rowc .tag{flex:0 0 auto;width:46px;height:46px;border-radius:14px;display:flex;align-items:center;
+    justify-content:center;font-size:22px;font-weight:900;font-family:var(--font);}
+  .rowc .tx{font-size:clamp(15px,3.6vw,20px);line-height:1.42;color:#d7deea;font-weight:600;text-align:left;}
+  .rowc .tx b{color:#fff;font-weight:900;}
+  .rowc.a .tag{background:rgba(96,165,250,.18);color:#93c5fd;border:1px solid rgba(96,165,250,.4);}
+  .rowc.b .tag{background:rgba(251,191,36,.18);color:#fcd34d;border:1px solid rgba(251,191,36,.42);}
+  .rowc.c .tag{background:rgba(52,211,153,.18);color:#6ee7b7;border:1px solid rgba(52,211,153,.45);}
+
+  /* 말풍선 */
+  #bubbleWrap .bubInner{position:relative;width:min(640px,92vw);height:min(44vh,360px);}
+  .bub{position:absolute;max-width:52%;background:rgba(255,255,255,.07);border:1px solid var(--line);
+    border-radius:16px;padding:11px 16px;font-size:clamp(13px,3vw,16px);font-weight:700;color:#dbe2ee;
+    backdrop-filter:blur(8px);box-shadow:0 8px 24px rgba(0,0,0,.35);opacity:0;transform:translateY(18px) scale(.92);}
+  #bubbleWrap.on .bub{animation:popIn .55s cubic-bezier(.2,.85,.3,1) forwards;}
+
+  /* 조회 목업 */
+  .mock{width:min(460px,88vw);background:rgba(13,15,20,.84);border:1px solid rgba(96,165,250,.35);
+    border-radius:24px;padding:26px 28px;box-shadow:0 20px 56px rgba(20,40,120,.3),0 0 40px rgba(96,165,250,.1);
+    opacity:0;transform:translateY(20px) scale(.96);}
+  #route.on .mock{animation:popIn .6s cubic-bezier(.2,.85,.3,1) forwards;}
+  .mock .mh{display:flex;align-items:center;gap:13px;margin-bottom:18px;}
+  .mock .ic{width:52px;height:52px;border-radius:15px;background:linear-gradient(135deg,#1d4ed8,#2563eb);
+    display:flex;align-items:center;justify-content:center;font-size:27px;flex:0 0 auto;}
+  .mock .mt{font-size:clamp(17px,4vw,22px);font-weight:900;color:#eaf0fb;text-align:left;}
+  .mock .ms{font-size:12.5px;color:var(--mut);font-weight:600;margin-top:2px;text-align:left;}
+  .mock .amt{background:rgba(96,165,250,.1);border:1px dashed rgba(96,165,250,.4);border-radius:15px;padding:20px;text-align:center;}
+  .mock .amt .lab{font-size:13px;color:#93c5fd;font-weight:800;letter-spacing:1px;}
+  .mock .amt .big{font-size:clamp(28px,7vw,38px);font-weight:900;color:#dbe8ff;margin-top:6px;letter-spacing:-1px;}
+  .mock .amt .big small{font-size:15px;color:var(--mut);font-weight:700;}
+
+  /* 정리 2패널 */
+  #final2 .wrap{display:flex;flex-direction:column;align-items:center;width:min(760px,92vw);gap:18px;}
+  .f2{display:flex;gap:16px;width:100%;justify-content:center;flex-wrap:wrap;}
+  .f2 .pane{flex:1 1 220px;max-width:340px;border-radius:20px;padding:24px 20px;text-align:center;
+    border:1px solid var(--line);background:rgba(13,15,20,.8);box-shadow:0 16px 44px rgba(0,0,0,.42);
+    opacity:0;transform:translateY(22px) scale(.95);}
+  #final2.on .pane{animation:popIn .6s cubic-bezier(.2,.85,.3,1) forwards;}
+  #final2.on .pane:nth-child(2){animation-delay:.22s;}
+  .f2 .pane.blue{border-color:rgba(96,165,250,.45);background:rgba(12,22,48,.72);}
+  .f2 .pane.gold{border-color:rgba(251,191,36,.48);background:rgba(34,24,6,.72);}
+  .f2 .pane .em{font-size:clamp(32px,8vw,44px);}
+  .f2 .pane .hh{font-size:clamp(19px,4.6vw,26px);font-weight:900;margin-top:8px;letter-spacing:-.6px;}
+  .f2 .pane.blue .hh{color:#93c5fd;} .f2 .pane.gold .hh{color:#fcd34d;}
+  .f2 .pane .dd{font-size:clamp(13px,3.3vw,17px);color:#cdd5e3;line-height:1.5;margin-top:10px;font-weight:600;}
+  .f2 .pane .dd b{color:#fff;font-weight:900;}
+  .f2note{text-align:center;font-size:clamp(14px,3.4vw,18px);color:#aeb8cb;font-weight:700;line-height:1.5;
+    opacity:0;transform:translateY(16px);}
+  #final2.on .f2note{animation:popIn .6s cubic-bezier(.2,.85,.3,1) forwards;animation-delay:.5s;}
+  .f2note b{color:#6ee7b7;font-weight:900;}
 
   /* HUD */
-  #hud{position:relative;z-index:20;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:9px;padding:8px 0 16px;}
+  #hud{position:relative;z-index:20;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:9px;padding:8px 0 14px;}
   #dots{display:flex;gap:6px;}
   #dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.2);transition:.4s;}
   #dots i.on{width:22px;border-radius:4px;background:linear-gradient(90deg,var(--blue),var(--purple));}
@@ -141,72 +184,23 @@
   #tap{font-size:11.5px;letter-spacing:1.5px;color:var(--mut2);display:flex;align-items:center;gap:8px;font-weight:600;}
   #tap .pulse{width:8px;height:8px;border-radius:50%;background:var(--blue);animation:p 1.5s infinite;}
   @keyframes p{0%{box-shadow:0 0 0 0 rgba(96,165,250,.5)}70%{box-shadow:0 0 0 11px rgba(96,165,250,0)}100%{box-shadow:0 0 0 0 rgba(96,165,250,0)}}
-
   #restart{display:none;margin-top:2px;padding:11px 28px;border:1px solid rgba(255,255,255,.22);
     background:rgba(255,255,255,.07);color:#fff;border-radius:30px;font-size:13.5px;font-weight:800;
     cursor:pointer;font-family:inherit;backdrop-filter:blur(6px);transition:.25s;}
   #restart:hover{background:rgba(255,255,255,.14);transform:translateY(-1px);}
   #restart.show{display:inline-block;}
 
-  /* 오프닝 질문 오버레이 */
-  #askOverlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
-    justify-content:center;text-align:center;gap:16px;opacity:0;pointer-events:none;
-    transition:opacity .6s ease,transform .6s cubic-bezier(.2,.8,.2,1);transform:scale(.96);}
-  #askOverlay.on{opacity:1;transform:scale(1);}
-  .askLead{font-size:13px;letter-spacing:2px;font-weight:800;color:var(--mut);}
-  .askQ{font-size:clamp(24px,6vw,46px);font-weight:900;line-height:1.32;letter-spacing:-.8px;
-    text-shadow:0 8px 30px rgba(0,0,0,.5);}
-
-  /* 답변 말풍선 오버레이 */
-  #bubbleOverlay{position:absolute;inset:0;pointer-events:none;opacity:0;}
-  #bubbleOverlay.on{opacity:1;}
-  .bubble{position:absolute;left:var(--bx);top:var(--by);max-width:46%;
-    background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:16px;
-    padding:11px 16px;font-size:clamp(13px,2.9vw,16px);font-weight:700;color:#dbe2ee;
-    backdrop-filter:blur(8px);box-shadow:0 8px 24px rgba(0,0,0,.35);
-    opacity:0;transform:translateY(18px) scale(.92);}
-  #bubbleOverlay.on .bubble{animation:bubbleIn .55s cubic-bezier(.2,.85,.3,1) forwards;animation-delay:var(--bd);}
-  @keyframes bubbleIn{to{opacity:1;transform:translateY(0) scale(1)}}
-
-  /* 정리 요약 카드 오버레이(마지막 단계) */
-  #summaryOverlay{position:absolute;inset:0;display:flex;flex-direction:column;
-    justify-content:center;gap:13px;padding:6px 4%;opacity:0;pointer-events:none;}
-  #summaryOverlay.on{opacity:1;}
-  .sumCard{display:flex;align-items:center;gap:15px;width:100%;max-width:560px;margin:0 auto;
-    background:rgba(13,15,20,.78);border:1px solid var(--line);border-radius:16px;
-    padding:15px 18px;backdrop-filter:blur(10px);box-shadow:0 10px 30px rgba(0,0,0,.45);
-    opacity:0;transform:translateY(22px) scale(.95);}
-  #summaryOverlay.on .sumCard{animation:bubbleIn .6s cubic-bezier(.2,.85,.3,1) forwards;animation-delay:var(--sd);}
-  .sumTag{flex:0 0 auto;width:38px;height:38px;border-radius:11px;display:flex;align-items:center;
-    justify-content:center;font-size:19px;font-weight:900;font-family:var(--font);}
-  .sumCard.a .sumTag{background:rgba(96,165,250,.18);color:#93c5fd;border:1px solid rgba(96,165,250,.4);}
-  .sumCard.b .sumTag{background:rgba(251,191,36,.18);color:#fcd34d;border:1px solid rgba(251,191,36,.4);}
-  .sumCard.c .sumTag{background:rgba(52,211,153,.18);color:#6ee7b7;border:1px solid rgba(52,211,153,.45);}
-  .sumTxt{font-size:clamp(14px,3.4vw,17px);line-height:1.45;color:#cdd5e3;font-weight:600;}
-  .sumTxt b{color:#fff;font-weight:900;font-size:1.06em;}
-  .sumCard.c{border-color:rgba(52,211,153,.4);background:rgba(8,32,24,.74);}
-  .sumCard.c .sumTxt b{color:#6ee7b7;}
-
-  @media(max-width:640px){
-    .bubble{max-width:62%;padding:9px 13px;}
-    .sumCard{padding:13px 15px;gap:12px;}
-    header{padding:12px 16px 2px;}
-    #cap{padding:8px 12px 4px;}
-    #capInner{padding:17px 18px;border-radius:18px;}
-    #stage{max-height:42vh;}
+  @media(max-height:720px){
+    header{padding:8px 16px 0;}
+    #capInner{padding:16px 20px;}
+    #capTitle{font-size:clamp(20px,5.4vw,30px);}
     svg{max-height:40vh;}
   }
-  /* 멘트가 주인공이므로, 화면 낮으면 헤더부터 정리 */
-  @media(max-height:760px){
-    header{padding:11px 16px 2px;}
-    header h1{font-size:clamp(14px,3vw,17px);}
-  }
-  @media(max-height:600px){
+  @media(max-height:560px){
     header{display:none;}
-    #app{padding:8px 0;}
-    #capInner{padding:14px 18px;}
-    #stage{max-height:38vh;}
-    svg{max-height:36vh;}
+    #app{padding:6px 0;}
+    #capInner{padding:13px 18px;}
+    svg{max-height:34vh;}
   }
 </style>
 </head>
@@ -217,108 +211,96 @@
   <div class="vignette"></div>
   <div id="prog"></div>
 
-  <header>
-    <div class="eyebrow">인생 자산 곡선 · 보험의 본질</div>
-    <h1>보험은 <span class="g-blue">노후자금</span>을 지키는 <span class="g-green">안전장치</span>입니다</h1>
-  </header>
+  <header><div class="eyebrow" id="eye">APEX · 상담</div></header>
 
-  <!-- 멘트(주인공) — 그래프 위, 화면 상단 중앙 -->
   <div id="cap">
     <div id="capInner">
       <div id="capStep">START</div>
       <div id="capTitle">화면을 탭하면 상담이 시작됩니다</div>
       <div id="capStatus"></div>
-      <div id="capSub">자산 곡선이 한 단계씩 그려집니다. 탭하여 시작하세요.</div>
+      <div id="capSub">왜 다른 설계사인지부터, 보험과 연금까지 한 번에 짚어드립니다. 탭하여 시작하세요.</div>
     </div>
   </div>
 
   <div id="stage">
-    <div id="chartWrap">
-      <svg id="chart" viewBox="0 0 840 460" preserveAspectRatio="xMidYMid meet" aria-label="인생 자산 곡선">
+    <!-- 생애 자산 곡선 -->
+    <div class="layer" id="chartWrap">
+      <svg id="chart" viewBox="0 0 840 470" preserveAspectRatio="xMidYMid meet" aria-label="인생 자산 곡선">
         <defs>
-          <linearGradient id="gGreen" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="#10b981"/><stop offset="1" stop-color="#34d399"/></linearGradient>
-          <linearGradient id="gRed" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#ef4444"/></linearGradient>
-          <linearGradient id="gAmber" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="#ef4444"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
-          <linearGradient id="gBlue" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#60a5fa"/></linearGradient>
+          <linearGradient id="gGreen" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#10b981"/><stop offset="1" stop-color="#34d399"/></linearGradient>
+          <linearGradient id="gRed" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#ef4444"/></linearGradient>
+          <linearGradient id="gAmber" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ef4444"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
+          <linearGradient id="gBlue" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#60a5fa"/></linearGradient>
         </defs>
-
-        <!-- 그리드 -->
-        <g id="grid"></g>
-
-        <!-- 축 (Y축 = 화살표 + '노후자금' 글자만, 금액 눈금 없음) -->
-        <line class="axisLine" x1="70" y1="44" x2="70" y2="400"/>
-        <line class="axisLine" x1="70" y1="400" x2="800" y2="400"/>
-        <!-- Y축 위쪽 화살표(많아짐 방향만 암시) -->
-        <path class="axisArrow" d="M70 36 L65 46 L75 46 Z"/>
-        <text class="axisTitle" x="80" y="34" text-anchor="start">노후자금 ↑</text>
-        <text class="axisTitle" x="800" y="430" text-anchor="end">나이 →</text>
-        <g id="xticks"></g>
-
-        <!-- 50세 기준선 + 인생기 라벨 -->
+        <g id="cplot"></g>
         <g id="line50">
-          <line x1="0" y1="40" x2="0" y2="400"/>
-          <text class="markLab" x="0" y="32" text-anchor="middle">50세</text>
-          <text id="lifeLab1" class="lifeLab" y="392" text-anchor="middle">1의 인생기</text>
-          <text id="lifeLab2" class="lifeLab" y="392" text-anchor="middle">2의 인생기</text>
+          <line x1="0" y1="44" x2="0" y2="398"/>
+          <text class="markLab" x="0" y="34" text-anchor="middle" fill="#fca5a5">50세</text>
+          <text id="lifeLab1" class="lifeLab" y="386" text-anchor="middle">1의 인생기</text>
+          <text id="lifeLab2" class="lifeLab" y="386" text-anchor="middle">2의 인생기</text>
         </g>
-
-        <!-- 곡선 세그먼트 -->
-        <path id="segFlat1"   class="curve" d=""/>
-        <path id="segRise2"   class="curve" d=""/>
-        <path id="segDrop"    class="curve" d=""/>
+        <path id="segFlat1" class="curve" d=""/>
+        <path id="segRise2" class="curve" d=""/>
+        <path id="segDrop"  class="curve" d=""/>
         <path id="segRecover" class="curve" d=""/>
-        <path id="segCrash"   class="curve" d=""/>
-
-        <!-- 충격 그룹 -->
+        <path id="segCrash" class="curve" d=""/>
         <g id="shockGrp">
-          <circle class="ripple r1" cx="0" cy="0" r="6"/>
-          <circle class="ripple r2" cx="0" cy="0" r="6"/>
-          <circle class="ripple r3" cx="0" cy="0" r="6"/>
+          <circle class="ripple r1" cx="0" cy="0" r="6"/><circle class="ripple r2" cx="0" cy="0" r="6"/><circle class="ripple r3" cx="0" cy="0" r="6"/>
           <circle class="shockCore" cx="0" cy="0" r="6.5"/>
-          <text class="shockEmoji" x="0" y="0" text-anchor="middle" dy="-22">💥</text>
+          <text class="shockEmoji" x="0" y="0" text-anchor="middle" dy="-20" font-size="26">💥</text>
         </g>
-
-        <!-- 현재 위치 점 -->
-        <g id="dot">
-          <circle id="dotRing" cx="0" cy="0" r="12"/>
-          <circle id="dotGlow" cx="0" cy="0" r="5.5"/>
-        </g>
+        <g id="dot"><circle id="dotRing" cx="0" cy="0" r="12"/><circle id="dotGlow" cx="0" cy="0" r="5.5"/></g>
       </svg>
+    </div>
 
-      <!-- 오프닝 질문 오버레이 -->
-      <div id="askOverlay">
-        <div class="askLead">상담사가 늘 드리는 질문</div>
-        <div class="askQ">고객님은<br><span class="g-blue">보험을 왜</span> 가입하셨나요?</div>
+    <!-- 국민연금 현금흐름 그래프 -->
+    <div class="layer" id="pchartWrap">
+      <svg id="pchart" viewBox="0 0 840 470" preserveAspectRatio="xMidYMid meet" aria-label="노후 현금흐름">
+        <defs>
+          <linearGradient id="gNps" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#065f46"/><stop offset="1" stop-color="#34d399"/></linearGradient>
+          <linearGradient id="gPriv" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#b45309"/><stop offset="1" stop-color="#fcd34d"/></linearGradient>
+        </defs>
+        <g id="pplot"></g>
+      </svg>
+    </div>
+
+    <!-- 원칙 3카드 -->
+    <div class="layer" id="principles">
+      <div class="cards">
+        <div class="rowc a"><div class="tag">①</div><div class="tx">더 파는 게 아니라 <b>덜 새게</b> — 먼저 <b>새는 돈</b>부터 찾습니다</div></div>
+        <div class="rowc b"><div class="tag">②</div><div class="tx">지금 보장만이 아니라 <b>인생 전체</b> — 목돈과 '매달 들어올 돈'까지</div></div>
+        <div class="rowc c"><div class="tag">③</div><div class="tx">감이 아니라 <b>약관과 데이터</b>로 설명드립니다</div></div>
       </div>
+    </div>
 
-      <!-- 고객 전형 답변 말풍선 -->
-      <div id="bubbleOverlay">
-        <div class="bubble" style="--bx:6%;  --by:8%; --bd:.05s">💬 아플 때 병원비 때문에요</div>
-        <div class="bubble" style="--bx:52%; --by:2%; --bd:.20s">💬 큰 병 걸리면 목돈 나갈까 봐</div>
-        <div class="bubble" style="--bx:2%;  --by:38%;--bd:.35s">💬 가족한테 부담 주기 싫어서</div>
-        <div class="bubble" style="--bx:55%; --by:42%;--bd:.50s">💬 노후에 보장받으려고</div>
-        <div class="bubble" style="--bx:10%; --by:72%;--bd:.65s">💬 남들 다 하니까 하나쯤은…</div>
-        <div class="bubble" style="--bx:50%; --by:76%;--bd:.80s">💬 아는 사람이 권해서</div>
+    <!-- 말풍선 -->
+    <div class="layer" id="bubbleWrap">
+      <div class="bubInner">
+        <div class="bub" style="left:4%;top:4%;animation-delay:.05s"></div>
+        <div class="bub" style="left:50%;top:0%;animation-delay:.18s"></div>
+        <div class="bub" style="left:0%;top:38%;animation-delay:.31s"></div>
+        <div class="bub" style="left:48%;top:40%;animation-delay:.44s"></div>
+        <div class="bub" style="left:8%;top:74%;animation-delay:.57s"></div>
+        <div class="bub" style="left:46%;top:78%;animation-delay:.70s"></div>
       </div>
+    </div>
 
-      <!-- 정리 요약 카드(마지막 단계) — 꼭 기억하실 세 가지, 순차 등장 -->
-      <div id="summaryOverlay">
-        <div class="sumCard a" style="--sd:.10s">
-          <span class="sumTag">①</span>
-          <div class="sumTxt"><b>더 이상 보험료가 올라가면 안 됩니다</b></div>
+    <!-- 조회 목업 -->
+    <div class="layer" id="route">
+      <div class="mock">
+        <div class="mh"><div class="ic">📱</div><div><div class="mt">내 곁에 국민연금</div><div class="ms">국민연금공단 공식 앱 · nps.or.kr</div></div></div>
+        <div class="amt"><div class="lab">예상 노령연금(월)</div><div class="big">? <small>원 · 1분이면 조회</small></div></div>
+      </div>
+    </div>
+
+    <!-- 정리 2패널 -->
+    <div class="layer" id="final2">
+      <div class="wrap">
+        <div class="f2">
+          <div class="pane blue"><div class="em">🛡️</div><div class="hh">목돈 지키기</div><div class="dd">큰 병에도 모은 돈이<br>안 무너지게 = <b>보험</b></div></div>
+          <div class="pane gold"><div class="em">💰</div><div class="hh">매달 월급</div><div class="dd">은퇴 후에도 월급이<br>끊기지 않게 = <b>연금</b></div></div>
         </div>
-        <div class="sumCard b" style="--sd:.45s">
-          <span class="sumTag">②</span>
-          <div class="sumTxt"><b>보험은 로또가 아니라,</b><br>노후자금을 지키는 안전장치입니다</div>
-        </div>
-        <div class="sumCard c" style="--sd:.80s">
-          <span class="sumTag">③</span>
-          <div class="sumTxt"><b>너무 많이 들 필요도,</b><br>너무 적게 들 필요도 없습니다</div>
-        </div>
+        <div class="f2note">그리고 저는 이 둘을 <b>딱 맞게</b> — 그리고 <b>평생 곁에서</b> 관리합니다.</div>
       </div>
     </div>
   </div>
@@ -335,418 +317,241 @@
   "use strict";
   const $=s=>document.querySelector(s);
   const NS="http://www.w3.org/2000/svg";
+  function el(t,at){var e=document.createElementNS(NS,t);for(var k in at)e.setAttribute(k,at[k]);return e;}
+  function tx(g,s,at){var e=el('text',at);e.textContent=s;g.appendChild(e);return e;}
 
-  // ── 좌표계 ─────────────────────────────────
-  // X: 나이 30~80, Y: 자산(만원). 차트 박스: x[70..800], y[40..400]
-  const X0=70, X1=800, Y0=400, Ytop=40;
-  const ageMin=30, ageMax=80;
-  const assetMax=33000; // Y축 최대(만원) ≈ 3.3억
-  const x=age=> X0 + (age-ageMin)/(ageMax-ageMin)*(X1-X0);
-  const y=val=> Y0 - (val/assetMax)*(Y0-Ytop);
-
-  // 곡선 핵심 포인트(나이→노후자금 만원)
-  // 1의 인생기: 30~50 낮게 평탄 / 2의 인생기: 50~65 우상향 정점 3억
-  // 65세 질병 충격 → 보험 있으면 평탄 회복 / 없으면 0 가까이 추락
-  const PEAK=30000;       // 정점(3억)
-  const ILL_AGE=65;       // 질병 충격 나이
-  const DROP_V=13000;     // 충격 직후 일시 하락 지점
-  const FLAT1=4000;       // 1의 인생기 자금 수준
-
-  // ── 그리드 & 눈금 그리기 ───────────────────
-  function buildGrid(){
-    const grid=$("#grid"), xt=$("#xticks");
-    // Y축은 금액 눈금 없이 '많아짐 방향'만 암시 — 가로 그리드/숫자 라벨 미생성
-    // (구체 금액 제거: 상대적 박탈감 방지)
-    // X 눈금(나이)
-    [30,40,50,60,70,80].forEach(a=>{
-      const xx=x(a);
-      const l=document.createElementNS(NS,"line");
-      l.setAttribute("class","gridLine");
-      l.setAttribute("x1",xx); l.setAttribute("x2",xx);
-      l.setAttribute("y1",Ytop); l.setAttribute("y2",Y0);
-      grid.appendChild(l);
-      const t=document.createElementNS(NS,"text");
-      t.setAttribute("class","axisLab");
-      t.setAttribute("x",xx); t.setAttribute("y",Y0+22);
-      t.setAttribute("text-anchor","middle");
-      t.textContent=a;
-      xt.appendChild(t);
-    });
-    // 50세 기준선 위치
-    const l50=$("#line50");
-    l50.querySelector("line").setAttribute("x1",x(50));
-    l50.querySelector("line").setAttribute("x2",x(50));
-    l50.querySelector(".markLab").setAttribute("x",x(50));
-    // 인생기 라벨 — 구간 중앙에 배치
-    $("#lifeLab1").setAttribute("x",x(40));
-    $("#lifeLab2").setAttribute("x",x(58));
-  }
-
-  // 부드러운 곡선 path(Catmull-Rom→베지어)
-  function smoothPath(pts){
-    if(pts.length<2) return "";
-    let d=`M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
-    for(let i=0;i<pts.length-1;i++){
-      const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
-      const c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
-      const c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
-      d+=` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
-    }
-    return d;
-  }
-
-  // 세그먼트별 path 정의(나이→노후자금)
+  // ── 생애 자산 곡선 좌표계 ──
+  const X0=72,X1=800,Y0=398,Ytop=44, ageMin=30,ageMax=80, assetMax=33000;
+  const x=a=>X0+(a-ageMin)/(ageMax-ageMin)*(X1-X0);
+  const y=v=>Y0-(v/assetMax)*(Y0-Ytop);
+  const PEAK=30000, ILL_AGE=65, DROP_V=13000, FLAT1=4000;
   const segs={
-    // 1의 인생기(30~50): 자녀양육 등으로 거의 못 모음 — 낮게 평탄
-    flat1:   [[x(30),y(3500)],[x(38),y(4200)],[x(44),y(3800)],[x(50),y(FLAT1)]],
-    // 2의 인생기(50~65): 본격적으로 모음 — 우상향 정점 3억
-    rise2:   [[x(50),y(FLAT1)],[x(55),y(11000)],[x(60),y(22000)],[x(65),y(PEAK)]],
-    // 질병 충격(65~69): 급락
-    drop:    [[x(65),y(PEAK)],[x(66),y(25000)],[x(67.5),y(17000)],[x(69),y(DROP_V)]],
-    // 보험 있으면(69~80): 평탄한 삶으로 회복
-    recover: [[x(69),y(DROP_V)],[x(72),y(22000)],[x(76),y(28500)],[x(80),y(PEAK)]],
-    // 보험 없으면(69~80): 노후자금이 0 가까이 추락
-    crash:   [[x(69),y(DROP_V)],[x(72),y(6500)],[x(76),y(2500)],[x(80),y(800)]],
+    flat1:[[x(30),y(3500)],[x(38),y(4200)],[x(44),y(3800)],[x(50),y(FLAT1)]],
+    rise2:[[x(50),y(FLAT1)],[x(55),y(11000)],[x(60),y(22000)],[x(65),y(PEAK)]],
+    drop:[[x(65),y(PEAK)],[x(66),y(25000)],[x(67.5),y(17000)],[x(69),y(DROP_V)]],
+    recover:[[x(69),y(DROP_V)],[x(72),y(22000)],[x(76),y(28500)],[x(80),y(PEAK)]],
+    crash:[[x(69),y(DROP_V)],[x(72),y(6500)],[x(76),y(2500)],[x(80),y(800)]],
   };
+  function smooth(pts){if(pts.length<2)return"";let d="M "+pts[0][0].toFixed(1)+" "+pts[0][1].toFixed(1);
+    for(let i=0;i<pts.length-1;i++){const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;
+      const c1x=p1[0]+(p2[0]-p0[0])/6,c1y=p1[1]+(p2[1]-p0[1])/6,c2x=p2[0]-(p3[0]-p1[0])/6,c2y=p2[1]-(p3[1]-p1[1])/6;
+      d+=" C "+c1x.toFixed(1)+" "+c1y.toFixed(1)+", "+c2x.toFixed(1)+" "+c2y.toFixed(1)+", "+p2[0].toFixed(1)+" "+p2[1].toFixed(1);}return d;}
 
-  function setupSeg(id, key){
-    const p=$("#"+id);
-    p.setAttribute("d", smoothPath(segs[key]));
-    const len=p.getTotalLength();
-    p.style.strokeDasharray=len;
-    p.style.strokeDashoffset=len;
-    p.dataset.len=len;
+  function buildCurveBase(){
+    const g=$("#cplot");
+    g.appendChild(el("line",{class:"axisLine",x1:X0,y1:Ytop,x2:X0,y2:Y0}));
+    g.appendChild(el("line",{class:"axisLine",x1:X0,y1:Y0,x2:X1,y2:Y0}));
+    g.appendChild(el("path",{fill:"rgba(255,255,255,.32)",d:"M"+X0+" "+(Ytop-8)+" L"+(X0-5)+" "+(Ytop+2)+" L"+(X0+5)+" "+(Ytop+2)+" Z"}));
+    tx(g,"노후자금 ↑",{class:"axisTitle",x:X0+10,y:Ytop-4,"text-anchor":"start"});
+    tx(g,"나이 →",{class:"axisTitle",x:X1,y:Y0+56,"text-anchor":"end"});
+    [30,40,50,60,70,80].forEach(a=>tx(g,a,{class:"axisLab",x:x(a),y:Y0+26,"text-anchor":"middle"}));
+    const l50=$("#line50");
+    l50.querySelector("line").setAttribute("x1",x(50)); l50.querySelector("line").setAttribute("x2",x(50));
+    l50.querySelector(".markLab").setAttribute("x",x(50));
+    $("#lifeLab1").setAttribute("x",x(40)); $("#lifeLab2").setAttribute("x",x(58));
+    $("#lifeLab2").setAttribute("fill","rgba(110,231,183,.75)");
   }
-  function drawSeg(id){
-    const p=$("#"+id);
-    p.classList.add("draw");
-    // reflow 후 offset 0 → 그려짐
-    void p.getBoundingClientRect();
-    requestAnimationFrame(()=>{ p.style.strokeDashoffset=0; });
-  }
-  function hideSeg(id){
-    const p=$("#"+id);
-    p.classList.remove("draw");
-    p.style.strokeDashoffset=p.dataset.len;
+  function setupSeg(id,key){const p=$("#"+id);p.setAttribute("d",smooth(segs[key]));const len=p.getTotalLength();
+    p.style.strokeDasharray=len;p.style.strokeDashoffset=len;p.dataset.len=len;}
+  function drawSeg(id){const p=$("#"+id);p.classList.add("draw");void p.getBoundingClientRect();
+    requestAnimationFrame(()=>{p.style.strokeDashoffset=0;});}
+  function hideSeg(id){const p=$("#"+id);p.classList.remove("draw");if(p.dataset.len)p.style.strokeDashoffset=p.dataset.len;}
+  function dimSeg(id,on){$("#"+id).style.opacity=on?.26:1;}
+  function moveDot(age,val,color){$("#dotGlow").setAttribute("cx",x(age));$("#dotGlow").setAttribute("cy",y(val));
+    const r=$("#dotRing");r.setAttribute("cx",x(age));r.setAttribute("cy",y(val));r.setAttribute("stroke",color);$("#dot").classList.add("on");}
+  function showShock(age,val){const g=$("#shockGrp");g.querySelectorAll(".ripple").forEach(r=>{r.setAttribute("cx",x(age));r.setAttribute("cy",y(val));});
+    g.querySelector(".shockCore").setAttribute("cx",x(age));g.querySelector(".shockCore").setAttribute("cy",y(val));
+    g.querySelector(".shockEmoji").setAttribute("x",x(age));g.querySelector(".shockEmoji").setAttribute("y",y(val));g.classList.add("on");}
+  function hideShock(){$("#shockGrp").classList.remove("on");}
+  function shakeChart(){const w=$("#chartWrap");w.classList.add("shakeable");w.classList.remove("shake");void w.offsetWidth;w.classList.add("shake");}
+
+  // ── 국민연금 현금흐름 그래프 ──
+  function buildPension(){
+    const g=$("#pplot"); if(g.childNodes.length) return;
+    const PX0=72,PX1=800,PY0=398,PYt=54,paMin=55,paMax=90,pvMax=300;
+    const px=a=>PX0+(a-paMin)/(paMax-paMin)*(PX1-PX0);
+    const py=v=>PY0-(v/pvMax)*(PY0-PYt);
+    const need=220,nps=70;
+    g.appendChild(el("line",{class:"axisLine",x1:PX0,y1:PYt-6,x2:PX0,y2:PY0}));
+    g.appendChild(el("line",{class:"axisLine",x1:PX0,y1:PY0,x2:PX1,y2:PY0}));
+    g.appendChild(el("path",{fill:"rgba(255,255,255,.32)",d:"M"+PX0+" "+(PYt-14)+" L"+(PX0-5)+" "+(PYt-4)+" L"+(PX0+5)+" "+(PYt-4)+" Z"}));
+    tx(g,"매달 들어오는 돈 ↑",{class:"axisTitle",x:PX0+10,y:PYt-18,"text-anchor":"start"});
+    tx(g,"나이 →",{class:"axisTitle",x:PX1,y:PY0+56,"text-anchor":"end"});
+    [60,65,70,80,90].forEach(a=>tx(g,a,{class:"axisLab",x:px(a),y:PY0+26,"text-anchor":"middle"}));
+    g.appendChild(el("line",{x1:PX0,y1:py(need),x2:PX1,y2:py(need),stroke:"#fca5a5","stroke-width":1.7,"stroke-dasharray":"8 7"}));
+    tx(g,"매달 필요한 생활비",{class:"markLab",fill:"#fca5a5",x:PX1-4,y:py(need)-10,"text-anchor":"end"});
+    g.appendChild(el("path",{d:"M"+px(55)+" "+py(265)+" L"+px(60)+" "+py(265)+" L"+px(60)+" "+PY0+" L"+px(55)+" "+PY0+" Z",fill:"rgba(148,163,184,.22)",stroke:"rgba(148,163,184,.5)","stroke-width":1}));
+    tx(g,"근로소득",{class:"markLab",fill:"#aeb8cb",x:px(57.5),y:py(265)-11,"text-anchor":"middle"});
+    g.appendChild(el("line",{x1:px(60),y1:PYt,x2:px(60),y2:PY0,stroke:"rgba(248,113,113,.5)","stroke-width":1.3,"stroke-dasharray":"4 4"}));
+    tx(g,"은퇴 60세",{class:"markLab",fill:"#fca5a5",x:px(60),y:PYt-8,"text-anchor":"middle"});
+    g.appendChild(el("line",{x1:px(65),y1:PYt,x2:px(65),y2:PY0,stroke:"rgba(52,211,153,.45)","stroke-width":1.3,"stroke-dasharray":"4 4"}));
+    tx(g,"국민연금 65세",{class:"markLab",fill:"#6ee7b7",x:px(65),y:PYt-8,"text-anchor":"middle"});
+    g.appendChild(el("rect",{x:px(60),y:PYt,width:px(65)-px(60),height:PY0-PYt,fill:"rgba(248,113,113,.10)"}));
+    tx(g,"소득 공백",{class:"markLab",fill:"#fca5a5",x:(px(60)+px(65))/2,y:PY0-12,"text-anchor":"middle"});
+    g.appendChild(el("path",{d:"M"+px(65)+" "+PY0+" L"+px(65)+" "+py(nps)+" L"+px(90)+" "+py(nps)+" L"+px(90)+" "+PY0+" Z",fill:"url(#gNps)",opacity:.92}));
+    tx(g,"국민연금 (나라가 주는 바닥)",{class:"markLab",fill:"#063f2e",x:px(78),y:py(34),"text-anchor":"middle"});
+    g.appendChild(el("path",{d:"M"+px(60)+" "+PY0+" L"+px(65)+" "+PY0+" L"+px(65)+" "+py(nps)+" L"+px(90)+" "+py(nps)+" L"+px(90)+" "+py(need)+" L"+px(60)+" "+py(need)+" Z",fill:"url(#gPriv)",opacity:.92}));
+    tx(g,"두 번째 월급 (개인연금)",{class:"markLab",fill:"#5a3a06",x:px(76),y:(py(nps)+py(need))/2+2,"text-anchor":"middle"});
+    tx(g,"↑ 공백·부족을 메움",{class:"markLab",fill:"#fef3c7",x:px(76),y:(py(nps)+py(need))/2+22,"text-anchor":"middle","font-size":11});
   }
 
-  // 현재 점 위치 이동
-  function moveDot(age,val,color){
-    const d=$("#dot");
-    $("#dotGlow").setAttribute("cx",x(age)); $("#dotGlow").setAttribute("cy",y(val));
-    const r=$("#dotRing");
-    r.setAttribute("cx",x(age)); r.setAttribute("cy",y(val));
-    r.setAttribute("stroke",color);
-    d.classList.add("on");
-  }
+  // ── 레이어/자막 제어 ──
+  const LAYERS=["chartWrap","pchartWrap","principles","bubbleWrap","route","final2"];
+  function showLayer(name){LAYERS.forEach(v=>$("#"+v).classList.toggle("on",v===name));}
+  function setBubbles(arr){const b=$("#bubbleWrap").querySelectorAll(".bub");b.forEach((el,i)=>{el.textContent="💬 "+(arr[i]||"");});}
+  function retrigger(id){const n=$("#"+id);n.classList.remove("on");void n.offsetWidth;n.classList.add("on");}
+  function setCaption(text,cls){const el=$("#capStatus");el.classList.remove("up","down","blue","gold","gray","show");
+    el.classList.add(cls||"gray");if(!text){el.textContent="";return;}void el.offsetWidth;el.textContent=text;
+    requestAnimationFrame(()=>el.classList.add("show"));}
+  function chap(c){const a=$("#app");a.classList.remove("chap-pension","chap-end");if(c)a.classList.add("chap-"+c);}
 
-  // 정성적 자막 표시 — 숫자 없이 상태를 말로 전달
-  // text가 없으면 자막을 숨긴다(예: 빈 초기 상태)
-  function setCaption(text, cls){
-    const el=$("#capStatus");
-    el.classList.remove("up","down","blue","gray","show");
-    el.classList.add(cls||"gray");
-    if(!text){ el.textContent=""; return; }
-    void el.offsetWidth;
-    el.textContent=text;
-    requestAnimationFrame(()=>el.classList.add("show"));
-  }
-
-  // (구) 곡선 위 자막 배치 — 멘트 영역으로 이동해 더 이상 사용 안 함(no-op)
-  function placeAmount(){ /* 멘트가 #capStatus로 이동: 위치 계산 불필요 */ }
-
-  // 충격 펄스 위치
-  function showShock(age,val){
-    const g=$("#shockGrp");
-    g.querySelectorAll(".ripple").forEach(r=>{r.setAttribute("cx",x(age));r.setAttribute("cy",y(val));});
-    g.querySelector(".shockCore").setAttribute("cx",x(age));
-    g.querySelector(".shockCore").setAttribute("cy",y(val));
-    g.querySelector(".shockEmoji").setAttribute("x",x(age));
-    g.querySelector(".shockEmoji").setAttribute("y",y(val));
-    g.classList.add("on");
-  }
-  function hideShock(){ $("#shockGrp").classList.remove("on"); }
-  function shakeChart(){
-    const w=$("#chartWrap");
-    w.classList.remove("shake"); void w.offsetWidth; w.classList.add("shake");
-  }
-
-  // 오버레이(오프닝 질문 / 답변 말풍선) 제어
-  function showAsk(on){ $("#askOverlay").classList.toggle("on",!!on); }
-  function showBubbles(on){
-    const b=$("#bubbleOverlay");
-    if(on){ b.classList.remove("on"); void b.offsetWidth; b.classList.add("on"); }
-    else b.classList.remove("on");
-  }
-  // 정리 요약 카드(마지막 단계) — 순차 페이드인 리트리거
-  function showSummary(on){
-    const s=$("#summaryOverlay");
-    if(on){ s.classList.remove("on"); void s.offsetWidth; s.classList.add("on"); }
-    else s.classList.remove("on");
-  }
-  // 차트 표시 토글 — 오프닝(질문/말풍선) 동안 숨김
-  function showChart(on){
-    $("#chart").style.opacity = on?1:0;
-  }
-  // 세그먼트 흐리게(대비 강조용)
-  function dimSeg(id,on){ $("#"+id).style.opacity = on?.28:1; }
-
-  // ── 스텝 정의 (상담 스크립트 10단계) ─────────
-  const NSTEP=10; // 0~9
+  // ── 스텝(4막 10장) ──
   const STEPS=[
-    { // 0 오프닝 질문
-      step:"STEP 1 / 11",
-      title:'잠깐, <span class="g-blue">한 가지만</span> 여쭐게요',
-      sub:"고객님, 저는 고객님들을 만나뵐 때 꼭 드리는 질문이 있어요.",
-      tone:"blue",
-      enter(){
-        showChart(false);
-        $("#line50").classList.remove("on");
-        showBubbles(false);
-        showAsk(true);
-        setCaption("","gray");
-        $("#orbA").classList.remove("danger");
-      }
+    { step:"STEP 1 / 10", eye:"APEX · 왜 다른가", tone:"blue",
+      title:'저는 보험을 <span class="g-blue">‘더 파는’</span> 사람이 아니에요',
+      status:"많이 가입시키는 게 목적이 아닙니다", statusCls:"blue",
+      sub:"이미 내고 계신 보험료가 <b>헛되지 않게</b> — 그리고 <b>딱 필요한 만큼만</b> 지켜드리는 사람이에요.",
+      enter(){ chap(null); $("#orbA").classList.remove("danger"); showLayer("none"); setCaption("","gray"); $("#dot").classList.remove("on"); }
     },
-    { // 1 고객 전형 답변 말풍선
-      step:"STEP 2 / 11",
-      title:'대부분 <span class="g-blue">이렇게</span> 답하세요',
-      sub:"맞아요, 다들 비슷한 이유를 떠올리세요. 그런데 보험의 진짜 역할은 조금 달라요.",
-      tone:"blue",
-      enter(){
-        showAsk(false);
-        showChart(false);
-        showBubbles(true);
-        setCaption("","gray");
-      }
+    { step:"STEP 2 / 10", eye:"APEX · 왜 다른가", tone:"green",
+      title:'그래서 저는, <span class="g-green">세 가지</span>가 달라요',
+      status:"", sub:"오늘 이 세 가지로 상담을 끌어갈게요.",
+      enter(){ chap(null); setCaption("","gray"); showLayer("principles"); retrigger("principles"); }
     },
-    { // 2 인생기 프레임
-      step:"STEP 3 / 11",
-      title:'저는 <span class="g-warn">50대</span>를 기준으로 인생을 둘로 나눠 봐요',
-      sub:"<b>1의 인생기</b>와 <b>2의 인생기</b>가 있다고 말씀드려요. 가로축은 나이, 세로축은 노후자금이에요.",
-      tone:"red",
-      enter(){
-        showAsk(false); showBubbles(false);
-        showChart(true);
-        $("#line50").classList.add("on");
-        $("#orbA").classList.remove("danger");
-        placeAmount(50,FLAT1); setCaption("","gray");
-        $("#dot").classList.remove("on");
-      }
+    { step:"STEP 3 / 10", eye:"보험의 본질", tone:"blue",
+      title:'고객님은 <span class="g-blue">보험을 왜</span> 가입하셨어요?',
+      status:"", sub:"대부분 이렇게 답하세요 — 그런데 보험의 <b>진짜 역할</b>은 조금 달라요.",
+      enter(){ chap(null); setCaption("","gray");
+        setBubbles(["아플 때 병원비 때문에","큰 병 걸리면 목돈 나갈까 봐","가족한테 부담 주기 싫어서","노후에 보장받으려고","남들 다 하니까","아는 사람이 권해서"]);
+        showLayer("bubbleWrap"); retrigger("bubbleWrap"); }
     },
-    { // 3 1의 인생기
-      step:"STEP 4 / 11",
-      title:'<span style="color:#a3b0c8">1의 인생기</span> — 거의 못 모으는 시기',
-      sub:"자녀를 양육하거나 여러 이유로, <b>대부분 노후자금을 못 모으세요.</b> 곡선이 이렇게 낮게 깔려 있죠.",
-      tone:"red",
-      enter(){
-        showChart(true);
-        $("#line50").classList.add("on");
-        setupSeg("segFlat1","flat1"); drawSeg("segFlat1");
-        moveDot(50,FLAT1,"#7c8aa8");
-        placeAmount(50,FLAT1); setCaption("아직 모으기 어려운 시기","gray");
-      }
+    { step:"STEP 4 / 10", eye:"보험의 본질", tone:"green",
+      title:'열심히 모은 <span class="g-green">노후자금</span>, 이렇게 쌓여요',
+      status:"50대부터 본격적으로 모으는 노후자금", statusCls:"up",
+      sub:"<b>1의 인생기</b>엔 모으기 어렵고, <b>50대 이후 2의 인생기</b>에 정점을 찍어요.",
+      enter(){ chap(null); $("#orbA").classList.remove("danger"); hideShock();
+        showLayer("chartWrap"); $("#line50").classList.add("on");
+        hideSeg("segDrop");hideSeg("segRecover");hideSeg("segCrash");dimSeg("segRecover",false);dimSeg("segCrash",false);
+        setupSeg("segFlat1","flat1");drawSeg("segFlat1");
+        setupSeg("segRise2","rise2");setTimeout(()=>drawSeg("segRise2"),260);
+        moveDot(65,PEAK,"#34d399"); setCaption("차곡차곡 모아가는 노후자금","up"); }
     },
-    { // 4 2의 인생기
-      step:"STEP 5 / 11",
-      title:'<span class="g-green">2의 인생기</span> — 본격적으로 모으는 시기',
-      sub:"그래서 <b>50대 이후</b>에 대부분 노후자금을 본격적으로 모아가세요. 곡선이 쭉 올라갑니다.",
-      tone:"green",
-      enter(){
-        setupSeg("segRise2","rise2"); drawSeg("segRise2");
-        moveDot(65,PEAK,"#34d399");
-        placeAmount(65,PEAK); setCaption("차곡차곡 모아가는 노후자금","up");
-      }
+    { step:"STEP 5 / 10", eye:"보험의 본질", tone:"red",
+      title:'그런데 — <span class="g-warn">💥 한순간</span>에 무너질 때가 옵니다',
+      status:"있으면 다시 평탄한 삶으로, 없으면 그대로…", statusCls:"down",
+      sub:"암·뇌·심장… 같은 일이 와도 <b>보험이 있으면 회복</b>, 없으면 쌓은 게 <b>그대로 사라져요.</b>",
+      enter(){ chap(null); showLayer("chartWrap"); $("#line50").classList.add("on");
+        setupSeg("segFlat1","flat1");$("#segFlat1").classList.add("draw");$("#segFlat1").style.strokeDashoffset=0;
+        setupSeg("segRise2","rise2");$("#segRise2").classList.add("draw");$("#segRise2").style.strokeDashoffset=0;
+        $("#orbA").classList.add("danger"); showShock(ILL_AGE,PEAK); shakeChart();
+        setupSeg("segDrop","drop");drawSeg("segDrop");
+        setupSeg("segRecover","recover");setupSeg("segCrash","crash");
+        setTimeout(()=>{dimSeg("segCrash",true);drawSeg("segCrash");drawSeg("segRecover");moveDot(80,PEAK,"#60a5fa");},650);
+        setCaption("같은 일, 두 개의 미래","down"); }
     },
-    { // 5 충격(하락)
-      step:"STEP 6 / 11",
-      title:'그런데 — <span class="g-warn">💥 뚝 떨어질 때</span>가 옵니다',
-      sub:"살다 보면 <b>암·뇌·심장·질병·상해</b>로 노후자금이 한순간에 무너지는 순간이 와요.",
-      tone:"red", amount:DROP_V,
-      enter(){
-        showShock(ILL_AGE,PEAK); shakeChart();
-        $("#orbA").classList.add("danger");
-        setupSeg("segDrop","drop"); drawSeg("segDrop");
-        moveDot(69,DROP_V,"#ef4444");
-        placeAmount(69,DROP_V); setCaption("그동안 모은 게 한순간에…","down");
-        setTimeout(shakeChart,250);
-      }
+    { step:"STEP 6 / 10", eye:"연금 · 두 번째 월급", tone:"green",
+      title:'목돈을 지켰어도, 노후엔 <span class="g-green">매달 들어오는 돈</span>이에요',
+      status:"‘얼마 모았나’가 아니라 ‘매달 얼마 들어오나’", statusCls:"up",
+      sub:"은퇴하면 월급이 끊겨요. 그때부턴 통장 잔액보다 <b>매달 들어오는 돈</b>이 삶의 질을 정합니다.",
+      enter(){ chap("pension"); $("#orbA").classList.remove("danger"); hideShock(); showLayer("none"); setCaption("","gray"); $("#dot").classList.remove("on"); }
     },
-    { // 6 보험의 본질(회복)
-      step:"STEP 7 / 11",
-      title:'보험은 <span class="g-blue">로또 한 방</span>이 아니라 <span class="g-green">안전장치</span>예요',
-      sub:"이때 한 방 맞으려고 드는 게 아니라, 다시 <b>평탄한 삶으로 돌아오게</b> 해주는 안전장치로 드는 거예요.",
-      tone:"blue", amount:PEAK,
-      enter(){
-        hideShock();
-        $("#orbA").classList.remove("danger");
-        setupSeg("segRecover","recover"); drawSeg("segRecover");
-        moveDot(80,PEAK,"#60a5fa");
-        placeAmount(80,PEAK); setCaption("다시 평탄한 삶으로","blue");
-      }
+    { step:"STEP 7 / 10", eye:"연금 · 두 번째 월급", tone:"green",
+      title:'<span class="g-green">국민연금</span>, 매달 얼마 나오는지 아세요?',
+      status:"", sub:"거의 다 정확히는 모르세요 — 그리고 <b>생각보다 적어요.</b>",
+      enter(){ chap("pension"); setCaption("","gray");
+        setBubbles(["한 150만 원쯤?","글쎄, 한 번도 안 봤어요","그거면 충분하지 않나?","65세부터 나오던가?","받긴 받겠지","잘 모르겠어요"]);
+        showLayer("bubbleWrap"); retrigger("bubbleWrap"); }
     },
-    { // 7 적정성
-      step:"STEP 8 / 11",
-      title:'그래서 보험은 <span class="g-green">딱 적당히</span>면 돼요',
-      sub:"<b>너무 많이 들 필요도, 너무 적게 들 필요도 없습니다.</b> 회복에 필요한 만큼이면 충분해요.",
-      tone:"green", amount:PEAK,
-      enter(){
-        // 회복 경로 유지 — 차분하게 강조
-        moveDot(80,PEAK,"#34d399");
-        placeAmount(80,PEAK); setCaption("딱 필요한 만큼이면 충분","up");
-      }
+    { step:"STEP 8 / 10", eye:"노후 현금흐름", tone:"gold",
+      title:'<span class="g-green">국민연금</span>은 바닥, 그 위에 <span class="g-gold">두 번째 월급</span>',
+      status:"국민연금만으론 생활비에 한참 못 미쳐요", statusCls:"gold",
+      sub:"은퇴~국민연금(65세) 사이 <b>소득 공백</b>, 그 후 바닥인 국민연금 위에 <b>개인연금</b>이 얹혀야 평생 월급이 됩니다.",
+      enter(){ chap("pension"); buildPension(); setCaption("","gray"); showLayer("pchartWrap"); retrigger("pchartWrap"); }
     },
-    { // 8 위험(반전 강조)
-      step:"STEP 9 / 11",
-      title:'하지만 <span class="g-warn">제대로 안 돼 있으면</span>…',
-      sub:"같은 일이 닥쳤을 때, 열심히 모은 노후자금이 <b>지켜지지 못하고 그대로 무너집니다.</b>",
-      tone:"red", amount:800,
-      enter(){
-        // 회복 경로 흐리게 → 추락 경로 강조 (같은 나의 두 미래 대비)
-        dimSeg("segRecover",true);
-        $("#orbA").classList.add("danger");
-        showShock(ILL_AGE,PEAK);
-        setupSeg("segCrash","crash"); drawSeg("segCrash");
-        moveDot(80,800,"#f59e0b");
-        shakeChart();
-        placeAmount(80,800); setCaption("쌓아온 게 다 사라집니다","down");
-        setTimeout(shakeChart,300);
-      }
+    { step:"STEP 9 / 10", eye:"연금 · 내 숫자 확인", tone:"blue",
+      title:'그럼 <span class="g-gold">내</span> 국민연금은 얼마일까요?',
+      status:"지금 바로, 같이 확인해봐요", statusCls:"blue",
+      sub:"<b>‘내 곁에 국민연금’</b> 앱이나 <b>nps.or.kr</b>에서 1분이면 나와요. 숫자가 보이면 계획이 달라집니다.",
+      enter(){ chap("pension"); setCaption("","gray"); showLayer("route"); retrigger("route"); }
     },
-    { // 9 결론
-      step:"STEP 10 / 11",
-      title:'그래서 보험은, <span class="g-green">노후자금을 지키는 안전장치</span>입니다',
-      sub:"애써 쌓은 노후자금이 <b>날아가지 않게 지켜주는</b> 것 — 그게 보험의 진짜 역할이에요.",
-      tone:"green", amount:PEAK,
-      enter(){
-        hideShock();
-        dimSeg("segCrash",true);
-        dimSeg("segRecover",false);
-        $("#orbA").classList.remove("danger");
-        moveDot(80,PEAK,"#34d399");
-        placeAmount(80,PEAK); setCaption("끝까지 지켜낸 노후자금","up");
-        showSummary(false);
-      }
-    },
-    { // 10 정리 (꼭 기억하실 세 가지 요약 카드)
-      step:"STEP 11 / 11",
-      title:'<span class="g-blue">정리하자면</span> — 꼭 기억하실 세 가지',
-      sub:"이 세 가지가 오늘 상담의 핵심입니다.",
-      tone:"blue",
-      enter(){
-        // 곡선/펄스는 정리하고 요약 카드에 집중
-        hideShock();
-        $("#dot").classList.remove("on");
-        $("#orbA").classList.remove("danger");
-        showChart(false);     // 그래프는 뒤로 빼고
-        setCaption("","gray"); // 곡선 자막 비움
-        showSummary(true);     // ①②③ 순차 등장
-      }
+    { step:"STEP 10 / 10", eye:"정리", tone:"green",
+      title:'노후 준비는 결국, <span class="g-green">이 두 가지</span>예요',
+      status:"", sub:"너무 많이도, 너무 적게도 아니고 — 딱 이 두 개만 맞추면 됩니다.",
+      enter(){ chap("end"); $("#orbA").classList.remove("danger"); setCaption("","gray"); showLayer("final2"); retrigger("final2"); }
     }
   ];
 
-  // ── 진행 제어 ──────────────────────────────
+  // ── 진행 제어 ──
   let idx=-1; const N=STEPS.length;
   const dotsBox=$("#dots");
-  for(let i=0;i<N;i++){ const d=document.createElement("i"); dotsBox.appendChild(d); }
+  for(let i=0;i<N;i++){const d=document.createElement("i");dotsBox.appendChild(d);}
   const dotEls=[...dotsBox.children];
-
   const SEG_IDS=["segFlat1","segRise2","segDrop","segRecover","segCrash"];
-  function resetVisuals(){
-    SEG_IDS.forEach(id=>{ hideSeg(id); dimSeg(id,false); });
-    hideShock();
-    $("#dot").classList.remove("on");
-    $("#line50").classList.remove("on");
-    $("#orbA").classList.remove("danger");
-    showAsk(false); showBubbles(false); showSummary(false); showChart(true);
-    setCaption("","gray");
-  }
 
+  function resetVisuals(){
+    SEG_IDS.forEach(id=>{hideSeg(id);dimSeg(id,false);});
+    hideShock(); $("#dot").classList.remove("on"); $("#line50").classList.remove("on");
+    $("#orbA").classList.remove("danger"); showLayer("none"); setCaption("","gray");
+  }
   function applyStep(i){
-    const s=STEPS[i];
-    const cap=$("#capInner");
+    const s=STEPS[i]; const cap=$("#capInner");
     cap.classList.add("flash");
     setTimeout(()=>{
+      $("#eye").textContent=s.eye||"APEX · 상담";
       $("#capStep").textContent=s.step;
       $("#capTitle").innerHTML=s.title;
-      $("#capSub").innerHTML=s.sub;
-      cap.classList.remove("tone-red","tone-blue","tone-green");
-      if(s.tone) cap.classList.add("tone-"+s.tone);
+      $("#capSub").innerHTML=s.sub||"";
+      cap.classList.remove("tone-red","tone-blue","tone-green","tone-gold");
+      if(s.tone)cap.classList.add("tone-"+s.tone);
       cap.classList.remove("flash");
       s.enter();
+      if(s.status)setCaption(s.status,s.statusCls);
     },230);
     $("#prog").style.width=((i+1)/N*100)+"%";
-    dotEls.forEach((d,k)=>{ d.className = k<i?"done":(k===i?"on":""); });
-    $("#restart").classList.toggle("show", i===N-1);
+    dotEls.forEach((d,k)=>{d.className=k<i?"done":(k===i?"on":"");});
+    $("#restart").classList.toggle("show",i===N-1);
   }
-
   function go(i){
-    if(i<0||i>=N) return;
-    // 뒤로 가면 전체 리셋 후 처음부터 누적 재생(상태 꼬임 방지)
-    if(i<idx){
-      resetVisuals();
-      // 0..i 까지 누적 시각 상태를 즉시 복원 후 i 적용
-      idx=i;
-      replayUpTo(i);
-      return;
-    }
-    idx=i;
-    applyStep(i);
+    if(i<0||i>=N)return;
+    if(i<idx){ idx=i; replayUpTo(i); return; }
+    idx=i; applyStep(i);
   }
-
-  // 뒤로 갈 때 i 이전 단계들의 누적 결과를 부드럽게 복원
   function replayUpTo(target){
     resetVisuals();
-    // 0..target 순차 즉시 적용(애니메이션 포함되도록 약간의 간격)
-    let k=0;
     $("#prog").style.width=((target+1)/N*100)+"%";
-    dotEls.forEach((d,j)=>{ d.className = j<target?"done":(j===target?"on":""); });
-    const cap=$("#capInner");
-    function run(){
-      const s=STEPS[k];
-      s.enter();
+    dotEls.forEach((d,j)=>{d.className=j<target?"done":(j===target?"on":"");});
+    const cap=$("#capInner"); let k=0;
+    (function run(){
+      const s=STEPS[k]; s.enter();
       if(k===target){
-        $("#capStep").textContent=s.step;
-        $("#capTitle").innerHTML=s.title;
-        $("#capSub").innerHTML=s.sub;
-        cap.classList.remove("tone-red","tone-blue","tone-green");
-        if(s.tone) cap.classList.add("tone-"+s.tone);
-        $("#restart").classList.toggle("show", target===N-1);
+        $("#eye").textContent=s.eye||"APEX · 상담";
+        $("#capStep").textContent=s.step; $("#capTitle").innerHTML=s.title; $("#capSub").innerHTML=s.sub||"";
+        cap.classList.remove("tone-red","tone-blue","tone-green","tone-gold");
+        if(s.tone)cap.classList.add("tone-"+s.tone);
+        if(s.status)setCaption(s.status,s.statusCls);
+        $("#restart").classList.toggle("show",target===N-1);
         return;
       }
-      k++; setTimeout(run, 60);
-    }
-    run();
+      k++; setTimeout(run,55);
+    })();
   }
 
-  // 첫 탭은 안내→STEP1, 이후는 다음 단계로
   let started=false;
-  function next(){
-    if(!started){ started=true; go(0); return; }
-    if(idx<N-1) go(idx+1);
-  }
-  function prev(){
-    if(!started) return;
-    if(idx>0) go(idx-1);
-  }
+  function next(){ if(!started){started=true;go(0);return;} if(idx<N-1)go(idx+1); }
+  function prev(){ if(!started)return; if(idx>0)go(idx-1); }
   function restart(){ started=true; idx=-1; resetVisuals(); go(0); }
 
-  // 입력
-  $("#app").addEventListener("click",e=>{
-    if(e.target.closest("#restart")){ e.stopPropagation(); restart(); return; }
-    next();
-  });
+  $("#app").addEventListener("click",e=>{ if(e.target.closest("#restart")){e.stopPropagation();restart();return;} next(); });
   document.addEventListener("keydown",e=>{
-    if(e.key==="ArrowRight"||e.key===" "){ e.preventDefault(); next(); }
-    else if(e.key==="ArrowLeft"){ e.preventDefault(); prev(); }
-    else if(e.key==="Home"||e.key==="r"||e.key==="R"){ restart(); }
+    if(e.key==="ArrowRight"||e.key===" "){e.preventDefault();next();}
+    else if(e.key==="ArrowLeft"){e.preventDefault();prev();}
+    else if(e.key==="Home"||e.key==="r"||e.key==="R"){restart();}
   });
 
-  // init
-  buildGrid();
+  buildCurveBase();
   $("#prog").style.width="0%";
 })();
 </script>
-  <script src="apex-deck.js"></script>
+<script src="apex-deck.js"></script>
 </body>
 </html>
