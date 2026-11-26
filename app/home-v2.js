@@ -165,6 +165,12 @@
       '.hv2 .streak b{color:var(--ink)}',
       '.hv2 .dock{position:fixed;left:12px;right:70px;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:140;display:grid;gap:4px;' +
         'background:rgba(255,255,255,.96);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:16px;padding:4px;box-shadow:0 6px 24px rgba(25,31,40,.14)}',
+      '.hv2 .jvb{position:fixed;left:12px;right:70px;bottom:calc(126px + env(safe-area-inset-bottom,0px));z-index:141;display:flex;align-items:flex-end;gap:8px;}',
+      '.hv2 .jvb-a{flex:none;width:44px;height:44px;border-radius:22px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.14);font-size:22px}',
+      '.hv2 .jvb-b{position:relative;flex:1;min-width:0;background:#fff;border-radius:16px 16px 16px 4px;box-shadow:0 6px 20px rgba(0,0,0,.14);padding:10px 12px;font-size:14px;line-height:1.45;color:var(--ink)}',
+      '.hv2 .jvb-b small{display:block;font-size:13px;font-weight:800;color:var(--blue);margin-bottom:2px}',
+      '.hv2 .jvb-go{display:inline-block;margin-top:6px;height:32px;padding:0 12px;border-radius:8px;background:var(--blue);color:#fff;font-size:13px;font-weight:700}',
+      '.hv2 .jvb-x{flex:none;align-self:flex-start;width:28px;height:28px;border-radius:14px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);font-size:13px;color:var(--sub2)}',
       '.hv2 .dock button{height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:700;text-align:center}',
       '.hv2 .dock button:active{background:var(--blue-l);color:var(--blue)}',
       '.hv2 .dock .e{font-size:18px}',
@@ -1246,7 +1252,7 @@
     var L = T(function () { return g.hmLeft(); }, { list: [], all: 0 });
     return topHtml() + whoHtml() + helloHtml(L) + part(misHtml) + monHtml() + stepsHtml() + jvHtml() + railHtml(L) +
       inscHtml() + weekHtml() + part(routeHtml) + roadHtml() + eveHtml(L) + menuHtml() +
-      dockHtml();
+      dockHtml() + jvbHtml();
     /* ⚠ 판 X511 — 맨 아래 「새 오늘 화면 (시험) · 시안 9차 디자인 · …」 설명 줄을 거뒀습니다
          (시안에 없음 · 토스 원칙 ③ 화면에 설명 문장 금지). 예전 화면으로 가는 길은 맨 위 「↩ 예전 화면」 단추 하나. */
   }
@@ -1412,6 +1418,39 @@
     if (L.length) h += '<h2>과정 <small>' + L.length + '개</small></h2>' + dockRows(L.slice(0, n)) +
       (L.length > 5 ? '<button type="button" class="btn g" onclick="HOME_V2.studyMore()">' + (STUDY_ALL ? '접기' : '더 보기 ' + (L.length - 5) + '개') + '</button>' : '');
     sheet(h);
+  }
+  /* 💬 자비스 말풍선 (판 X564 · 사장님 말씀 2026-11-25 「추천 메뉴와 자비스는 어디있어 자비스가 알아서 말풍선을 띄워서 추천할수 있게 해줘」).
+     아래 세 칸 위 왼쪽에 🤖 + 말풍선 하나 — <b>지금 보고 있는 카드</b>가 바뀌면(옆으로 넘기면) 말도 그 분 것으로 바뀝니다.
+     ① 그 분께 맞는 도구가 있으면 — 「○○님 · 「결혼 준비」 — 「8가지 통장 진단」 부터 열어 볼까요?」 → 「열기」 = 그 화면(go)
+        고르는 자는 카드 🧰 와 같은 toolsOf(맨 앞 하나 = 사장님이 정한 차례의 첫째) — 새로 고르지 않음.
+     ② 없으면 오늘의 미션 중 안 끝낸 첫 칸 — 「오늘 미션 n / 5 — 다음은 「…」」 → 「보기」 = 그 미션 시트
+     ③ 다 끝났으면 「오늘 미션 완료 🎉」 (단추 없음)
+     ★ 오른쪽 🎙 · ? 단추와 아래 탭은 안 가림(오른쪽 70px 비움 · 아래 세 칸 위) · ✕ 로 닫으면 이 화면을 다시 열 때까지 안 뜸(저장 없음 · 기억은 이 창 안에서만).
+     ★ 🤖 를 누르면 자비스 시트(HOME_V2.ai) — 인사 줄 🤖 와 같은 곳. */
+  var JVB = { off: false, i: 0 };
+  function jvbData(i) {
+    var L = (T(function () { return g.hmLeft(); }, { list: [] }) || { list: [] }).list || [], x = L[i] || L[0];
+    if (x) {
+      var R = toolsOf(x), a = R && R.A && R.A[0];
+      if (a) return { t: nameOf(x) + '님' + (R.why ? ' · ' + R.why : '') + ' — 「' + strip(a.t) + '」 부터 열어 볼까요?', go: 'go(\'' + Q(a.tab) + '\')', lab: '열기' };
+    }
+    var j = -1, n = 0; MIS.forEach(function (m, k) { if (misState(m).done) n++; else if (j < 0) j = k; });
+    if (!T(function () { return g.CK_ITEMS.day.length; }, 0) || typeof g.hmMsCk !== 'function') return null;
+    if (j >= 0) return { t: '오늘 미션 ' + n + ' / ' + MIS.length + ' — 다음은 「' + MIS[j].t + '」 예요', go: 'HOME_V2.mis(' + j + ')', lab: '보기' };
+    return { t: '오늘 미션 완료 🎉 수고 많으셨어요', go: '', lab: '' };
+  }
+  function jvbHtml() {
+    if (JVB.off) return '';
+    var d = T(function () { return jvbData(JVB.i); }, null); if (!d) return '';
+    return '<div class="jvb" id="hv2Jvb"><button type="button" class="jvb-a" onclick="HOME_V2.ai()" aria-label="자비스">🤖</button>' +
+      '<div class="jvb-b"><small>자비스</small><span>' + E(d.t) + '</span>' + (d.go ? '<button type="button" class="jvb-go" onclick="' + d.go + '">' + E(d.lab) + ' ›</button>' : '') + '</div>' +
+      '<button type="button" class="jvb-x" onclick="HOME_V2.jvbOff()" aria-label="말풍선 닫기">✕</button></div>';
+  }
+  function jvbAt(i) {
+    if (JVB.off || JVB.i === i) return; JVB.i = i;
+    var b = el('hv2Jvb'); if (!b) return;
+    var h = jvbHtml(), t = g.document.createElement('div'); t.innerHTML = h;
+    if (t.firstChild) b.parentNode.replaceChild(t.firstChild, b); else b.parentNode.removeChild(b);
   }
   function dockHtml() {
     var K = ['prod', 'talk', 'study'].filter(function (k) { return dockItems(k).length; });
@@ -1845,6 +1884,7 @@
     carePut: careEdit(function (L, id, B) { if (B.indexOf(id) >= 0) return; var i = L.indexOf(id); if (i >= 0) L.splice(i, 1); else L.push(id); }),
     careDel: careEdit(function (L, i, B) { if (L[i] && B.indexOf(L[i]) < 0) L.splice(i, 1); }),
     careUp: careEdit(function (L, i) { if (i > 0) { var t = L[i]; L.splice(i, 1); L.splice(i - 1, 0, t); } }),
+    jvbOff: function () { JVB.off = true; var b = el('hv2Jvb'); if (b && b.parentNode) b.parentNode.removeChild(b); },
     mis: misSheet, misDid: function (i, ck) { misDid(i, ck, 0); }, misUndo: function (i, ck) { misDid(i, ck, 1); },
     newOn: newOn,
     newHelp: function () { var v = !newOn(); newSet(v); try { if (typeof g.toast === 'function') g.toast(v ? '🌱 신입 도움말을 켰어요 — 영업 한 바퀴 칸을 눌러 보세요' : '신입 도움말을 껐어요'); } catch (e) {} try { paint(); } catch (e2) {} return v; },
@@ -1912,6 +1952,7 @@
     if (d) [].forEach.call(d.children, function (e, k) { e.classList.toggle('on', k === j); });
     /* 줄 높이 = 지금 보는 카드 (+ 아래 그림자 몫 4px) */
     var c = r.children[i]; if (c && c.offsetHeight) r.style.height = (c.offsetHeight + 4) + 'px';
+    jvbAt(i);
   }
   g.HOME_V2 = API;
   /* 옛 홈 단추가 부르는 이름 — 점(.) 없는 함수여야 check-hmclick 이 「부르는 함수가 있다」 고 읽습니다 */
