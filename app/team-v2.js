@@ -243,9 +243,11 @@
     }).join('');
     /* 🌱 신입 도움말 스위치 (판 X551) — 켜고 끄는 것은 새 오늘 화면(HOME_V2.newHelp · 이 기기) · 여기는 단추만 */
     var nh = (g.HOME_V2 && typeof g.HOME_V2.newOn === 'function') ? !!T(function () { return g.HOME_V2.newOn(); }, false) : null;
-    var nwRow = nh === null ? '' : '<div class="list" style="margin-bottom:12px"><button type="button" class="li" onclick="HOME_V2.newHelp();meV2Open()"><div class="tile">🌱</div><div class="tx"><div class="t1">신입 도움말</div><div class="t2">칸마다 할 일 · 하는 법 · 이 기기</div></div>' +
+    var nwRow = nh === null ? '' : '<div class="list" style="margin-bottom:12px"><button type="button" class="li" onclick="HOME_V2.newHelp();meV2Open()"><div class="tile">🌱</div><div class="tx"><div class="t1">신입 도움말</div><div class="t2">칸마다 할 일 · 하는 법 · 폰 · PC 같게</div></div>' +
       '<span style="flex:none;min-width:52px;text-align:center;padding:6px 10px;border-radius:99px;font-size:13px;font-weight:700;' + (nh ? 'background:#027A48;color:#fff">켜짐' : 'background:#E5E8EB;color:#4E5968">꺼짐') + '</span></button></div>';
-    return '<h1 style="margin-bottom:12px">나</h1>' + nwRow + (rows ? '<div class="list">' + rows + '</div>' : '<div class="wait">열 수 있는 칸이 없어요</div>') +
+    /* 📱 폰 확인 한 장 (판 X574 · pchk-v2.js) — 대표만 */
+    var pcRow = (typeof g.pchkOpen === 'function' && T(function () { return g.osIsAppAdmin(); }, false)) ? '<div class="list" style="margin-bottom:12px"><button type="button" class="li" onclick="pchkOpen()"><div class="tile">📱</div><div class="tx"><div class="t1">폰 확인 한 장</div><div class="t2">한 줄씩 눌러 보고 ✓ · 이상해요 남기기 · 대표만</div></div><span class="ar">›</span></button></div>' : '';
+    return '<h1 style="margin-bottom:12px">나</h1>' + pcRow + nwRow + (rows ? '<div class="list">' + rows + '</div>' : '<div class="wait">열 수 있는 칸이 없어요</div>') +
       '<div class="foot">메뉴 전체는 위 ☰ 에 그대로 있어요</div>';
   }
   function meOpen() { if (!sheet(meHtml())) { try { g.go('me'); } catch (e) {} } }
