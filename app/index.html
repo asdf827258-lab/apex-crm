@@ -22113,6 +22113,13 @@ function baAskSave(){
   try{ f.contentWindow.postMessage({type:'apexBaAsk'},'*'); }catch(e){}
   toast('저장 준비 중…');
 }
+/* 📁 판 X570 — <b>DB 통합 CRM 안에서</b> 「엑셀로 명단 넣기」 를 누르면 이리로 옵니다.
+   그 화면은 덮개(iframe) 라 엑셀 읽는 기계가 거기 없습니다 — 두 벌 만들지 않고
+   본체의 그 창을 띄웁니다 (5번).                                            */
+window.addEventListener('message',function(ev){
+  var d=ev&&ev.data;
+  if(d&&d.type==='apexDbImp'&&typeof window.dbimpOpen==='function'){ try{ window.dbimpOpen(); }catch(e){} }
+});
 window.addEventListener('message',function(e){
   var d=e&&e.data; if(!d||!d.type)return;
   var fr=$('baFrame');
@@ -22332,8 +22339,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-26 10:47';
-var APP_BUILD_NOTE='📩 <b>「문자로 달라고 할 때」 글 — 두 가지 서비스</b>(판 X569). ◾ 고객이 문자로 달라고 하실 때 보내는 카톡 · 문자가 「보장분석 한 번으로 두 가지를 같이 봐 드려요 — 📋 하나, 내 보험 한눈에 · 💰 둘, 못 받은 보험금 찾기」 로 바뀌었습니다. ◾ 심의에 걸리는 「본인인증」(기능 꺼짐) · 「보험비교」 · 「찾아드린다!」 는 뺐습니다 — 본인인증 불러오기가 준법 승인을 받으면 그때 붙입니다. ◾ 예약 확인 · 부재 · 거절 글은 그대로(이득 문구 없음). 재는 자 check-tamsg [8].';
+var APP_BUILD='2026-11-26 20:10';
+var APP_BUILD_NOTE='📁 <b>DB 고객명단 엑셀을 넣으면 DB 통합 CRM 에 알아서 들어갑니다</b>(판 X570). ◾ 전에는 DB 통합 CRM 에 <b>한 명씩 손으로</b> 적는 길만 있었습니다. ◾ 문 둘 — 🏠 오늘 화면 「<b>➕ 고객 넣기</b> → 📁 엑셀·CSV → DB 통합 CRM」 · 📁 DB 통합 CRM 머리의 「<b>📥 엑셀로 명단</b>」. ◾ <b>알아서 나눕니다</b> — 「소개 DB」·「소개db」 를 이미 쓰시는 <b>「소개」 로 모으고</b>, 주소에서 <b>동·읍·면</b>을 뽑고, <b>나이</b>를 생년에서 셈하고, <b>담당자</b>를 팀원 명단과 맞춥니다. 엑셀이 날짜를 수로 담아도 읽습니다. ◾ <b>같은 분은 두 번 안 들어갑니다</b> — 배정 DB 에 이미 있는 분 · 파일 안 중복 · 이름 없는 줄을 갈라내고 <b>무엇과 겹쳐 안 넣었는지</b> 줄마다 말합니다. ◾ <b>지어내지 않습니다</b> — 단계는 늘 <b>미접촉</b>(상담·계약은 짐작 안 함) · 생년을 못 읽으면 나이를 <b>비움</b> · <b>배정일이 없으면 막고 여쭙습니다</b>(오늘로 몰래 안 채웁니다). ◾ 주민번호 칸은 <b>아예 안 가져옵니다</b> — 팀이 함께 보는 표입니다. ◾ 재는 자 <b>check-dbimp</b> — 되돌리면 여덟 자리가 웁니다. 점검 <b>500가지</b>. ◾ 같이 실려 나가는 판 — <b>📩 「문자로 달라고 할 때」 글</b>(X569) · <b>🧠 제안서 설명자료</b>(X566) · <b>🃏 카드 맨 아래 「권할 것」</b>(X568) · <b>💬 자비스 말풍선</b>(X564).';
 
 
 
@@ -30325,8 +30332,15 @@ function cregPaint(){
        '<input class="creg-in" id="cregPh" maxlength="20" inputmode="tel" autocomplete="off" value="'+osEsc(CREG.ph)+'" placeholder="010-0000-0000" oninput="cregDupPaint()">'+
        '<div id="cregDupBox">'+cregDupHtml()+'</div>'+
        '<button type="button" class="creg-go" onclick="cregStep(2)">다음 — 어디서 오셨나요</button>'+
-       '<button type="button" class="creg-c sm" onclick="cregGoXls()"><span class="e">📁</span><span class="m"><b>엑셀·CSV 에서</b><em>여러 명 한꺼번에</em>'+
-         '<span class="w">'+CREG_K[2].has+'</span><span class="cap">'+CREG_K[2].cap+'</span></span><span class="ar">›</span></button>';
+       /* 📊 판 X570 — 엑셀도 <b>어디로 넣을지 고르십니다.</b> 여태 이 단추 하나뿐이라
+          묻지 않고 늘 <b>고객 365일</b>로 갔습니다. 옛 길은 그대로 두고(6번) 그 옆에
+          <b>DB 통합 CRM</b> 문을 세웁니다 — 사장님 말씀 「DB고객명단 → DB통합CRM에
+          자동으로 입력 분류」 가 이 자리입니다. */
+       '<button type="button" class="creg-c sm" onclick="cregGoXls()"><span class="e">📇</span><span class="m"><b>엑셀·CSV → 고객 365일</b><em>내 고객 여러 명 한꺼번에</em>'+
+         '<span class="w">'+CREG_K[2].has+'</span><span class="cap">'+CREG_K[2].cap+'</span></span><span class="ar">›</span></button>'+
+       '<button type="button" class="creg-c sm" onclick="dbimpOpen()"><span class="e">📁</span><span class="m"><b>엑셀·CSV → DB 통합 CRM</b><em>DB 고객명단을 자동으로 입력·분류</em>'+
+         '<span class="w">종류·지역·나이·담당자를 읽어 나눕니다</span>'+
+         '<span class="cap">팀이 함께 보는 배정 DB 입니다 · 이미 있는 분은 안 넣습니다</span></span><span class="ar">›</span></button>';
   }else if(CREG.step===2){
     h+='<div class="creg-d"><b>'+osEsc(CREG.nm)+'</b>님은 어느 쪽인가요? 둘은 <b>다른 표</b>입니다. 넣는 자리만 여기 하나로 모았습니다.</div>';
     for(i=0;i<2;i++){
@@ -30435,8 +30449,19 @@ function cregGoDb(){
   if(a&&nm&&!a.value)a.value=nm;
   if(b&&ph&&!b.value)b.value=ph;
 }
-function cregGoXls(){ cregClose(); if(typeof cimpOpen==='function')cimpOpen();
+/* 📊 엑셀 — <b>어디로 넣을지 받습니다</b> (판 X570). 안 주시면 예전처럼 내 고객입니다.
+   ★ 「➕ 고객 넣기」 가 이미 「어느 쪽인지 먼저」 묻는 자리라(판 X133), 엑셀도 같은
+     갈래를 따라가게 했습니다 — 여태 엑셀만 <b>묻지 않고 고객으로</b> 갔습니다.    */
+function cregGoXls(dest){ cregClose(); if(typeof cimpOpen==='function')cimpOpen(dest);
   else if(typeof toast==='function')toast('엑셀 가져오기를 아직 못 읽었습니다 — 새로고침해 주세요'); }
+/* 📁 배정 DB(DB 통합 CRM)로 여러 명 — db-crm 에서도 이 문으로 들어옵니다 */
+window.dbimpOpen=function(){
+  if(typeof cregClose==='function')try{ cregClose(); }catch(e){}
+  if(typeof cimpOpen!=='function'){ if(typeof toast==='function')toast('엑셀 가져오기를 아직 못 읽었습니다 — 새로고침해 주세요'); return; }
+  /* 배정 DB 명단을 모르면 <b>지금 읽습니다</b> — 모른 채로 세면 같은 분이 한 줄 더 생깁니다 (1번) */
+  try{ if(typeof AR!=='undefined'&&!AR.loaded&&typeof arLoad==='function')arLoad(); }catch(e2){}
+  cimpOpen('db');
+};
 function cregCss(){
   if(document.getElementById('cregCss'))return;
   var st=document.createElement('style');st.id='cregCss';
@@ -30879,6 +30904,26 @@ var CIMP_F=[
   {k:'memo',t:'메모',       to:'adds', hint:'첫 상담 전',
    w:['메모','비고','특이사항','참고','note','memo','remark','내용'],
    rd:function(v){ return cimpRrnOut(v); }}
+,
+ /* ── 📁 <b>배정 DB(DB 통합 CRM)로 넣을 때만</b> 서는 칸 넷 (판 X570) ──
+    <code>db:true</code> 는 「이 칸은 배정 DB 로 넣을 때만 보여 준다」 는 뜻입니다.
+    표를 <b>두 벌로 나누지 않습니다</b> — 나누면 칸을 하나 더할 때 한쪽만 고쳐집니다 (5번).
+    ⚠ 주민번호 칸은 CIMP_NO 가 <b>아예 잠가</b> 둡니다 — 배정 DB 는 팀이 함께 보는
+      표라 더더욱 올라가면 안 됩니다 (3번 · 사장님 규칙 「서버 호출 0번」). */
+ {k:'rg', t:'지역 · 주소', to:'ex', db:true, hint:'순천시 조례동',
+  w:['지역','주소','거주','거주지','시군구','시도','동네','region','sigungu','address','addr'],
+  rd:function(v){ return cimpRrnOut(v).replace(/^\s+|\s+$/g,'').slice(0,60); }},
+ {k:'src',t:'DB 종류', to:'ex', db:true, hint:'소개 · 인터넷 · 리콜',
+  w:['종류','구분','db종류','디비종류','출처','유입','유입경로','경로','채널','source'],
+  rd:function(v){ return cimpTxt(v).slice(0,40); }},
+ {k:'got',t:'배정일', to:'ex', db:true, hint:'2026-11-26',
+  w:['배정일','배정','등록일','수신일','접수일','유입일','입고일','날짜','date'],
+  rd:function(v){ return dbimpDate(v); }},
+ {k:'who',t:'담당자(팀원)', to:'ex', db:true, hint:'팀원 이름',
+  w:['담당','담당자','배정자','설계사','담당설계사','owner','assignee','manager'],
+  /* ⚠ 여기 적힌 글은 <b>서버로 안 갑니다</b> — 우리 <b>팀원 명단</b>과 맞춰
+     그 팀원의 id 로만 바뀝니다. 못 맞추면 버리고 몇 줄인지 적습니다 (1번·3번). */
+  rd:function(v){ return cimpTxt(v).slice(0,20); }}
 ];
 /* 🙍 <b>사람 이름이 들어가는 칸</b> — 기본을 「안 가져옴」 으로 둡니다 (3번).
    ★★ 진짜 엑셀로 넣어 보고 찾은 자리입니다. 「담당」 열이 「메모에 적어 두기」 로
@@ -30924,10 +30969,23 @@ function cimpLocked(h){
 }
 /* 머리글 → 칸. <b>한 칸은 한 번만</b> 쓰입니다 — 「이름」 과 「고객이름」 이
    둘 다 있으면 앞의 것이 이깁니다. 못 알아본 것은 빈 글자(안 가져옴)입니다. */
+/* ── 📁 <b>어디로 넣나</b> — 묻는 곳은 여기 하나입니다 (판 X570 · 5번) ──
+   두 곳에서 각자 세면 읽은 파일은 배정 DB 로, 넣는 자리는 고객으로 갈라집니다. */
+function cimpDest(){ return (CIMP.dest==='db')?'db':'cli'; }
+function cimpIsDb(){ return cimpDest()==='db'; }
+function cimpDestNm(){ return cimpIsDb()?'📁 DB 통합 CRM (배정 DB)':'📇 고객 365일 (내 고객)'; }
+/* 지금 쓸 수 있는 칸들 — <b>db:true</b> 칸은 배정 DB 로 넣을 때만 섭니다.
+   표는 CIMP_F 한 벌이고 여기서 걸러만 냅니다 (5번). */
+function cimpFL(){
+  var out=[],i;
+  for(i=0;i<CIMP_F.length;i++){ if(CIMP_F[i].db&&!cimpIsDb())continue; out.push(CIMP_F[i]); }
+  return out;
+}
 function cimpGuess(head){
   var map={},used={},i,j,f,n;
-  for(i=0;i<CIMP_F.length;i++){
-    f=CIMP_F[i];
+  var FL=cimpFL();
+  for(i=0;i<FL.length;i++){
+    f=FL[i];
     for(j=0;j<head.length;j++){
       if(used[j]||cimpLocked(head[j]))continue;
       n=cimpNorm(head[j]); if(!n)continue;
@@ -30945,7 +31003,7 @@ function cimpGuess(head){
   }
   return map;
 }
-function cimpFOf(k){ var i; for(i=0;i<CIMP_F.length;i++)if(CIMP_F[i].k===k)return CIMP_F[i]; return null; }
+function cimpFOf(k){ var i,L=cimpFL(); for(i=0;i<L.length;i++)if(L[i].k===k)return L[i]; return null; }
 
 /* ── 값 읽는 자들 — 못 읽으면 <b>null</b> 입니다 (1번) ── */
 function cimpTxt(v){ return (''+(v==null?'':v)).replace(/^\s+|\s+$/g,''); }
@@ -31009,6 +31067,10 @@ var CIMP={open:false,step:'pick',fname:'',enc:'',bad:0,sheets:[],sheet:0,
              「전에 넣은 고객들도 갈래 붙일수 있게 해줘」). 기본은 <b>꺼짐</b>입니다 —
              이미 계신 분의 기록에 쓰는 일이라 사람이 한 번 누르게 합니다 (3번·6번). */
           fill:false,
+          /* 📁 <b>어디로 넣나</b> (판 X570) — 'cli' 내 고객(고객 365일) · 'db' 배정 DB(DB 통합 CRM).
+             묻는 곳은 <b>cimpDest 하나</b>입니다 — 두 곳에서 각자 세면 읽은 파일은 DB 로,
+             넣는 자리는 고객으로 갈라집니다 (5번). */
+          dest:'cli',
           sort:null,err:'',note:'',busy:'',at:0,of:0,res:null,_z:null,_ss:null};
 var CIMP_MAX=500;
 var CIMP_OK_EXT=/\.(xlsx|xlsm|csv|tsv|txt)$/i;
@@ -31022,11 +31084,19 @@ function cimpReset(){
   CIMP.maybe=false;CIMP.sort=null;CIMP.err='';CIMP.note='';CIMP.busy='';
   CIMP._names=null;CIMP._namesAt=-1;
   CIMP.at=0;CIMP.of=0;CIMP.res=null;CIMP._z=null;CIMP._ss=null;
+  /* ⚠ CIMP.dest 는 <b>안 지웁니다</b> — cimpOpen 이 열 때 정하고, 시트를 바꿔
+     다시 읽을 때 지워지면 배정 DB 로 가다가 고객으로 샙니다 (판 X570) */
 }
 /* ── 이미 계신 분을 아는 자 — 번호 뒷 8자리와 <b>이 기기에 둔 실명</b>으로만
    봅니다. 가린 이름(홍○○)으로 보면 성이 같은 분이 다 걸립니다 (3번).  */
 function cimpHaveIx(){
   var o={tel:{},nm:{},n:0,loaded:false},L=[],i,c,t,r;
+  /* 📁 <b>배정 DB 로 넣을 때는 배정 DB 를 봅니다</b> (판 X570 · 5-1번).
+     고객 명단(OSC)과 견주면 「이미 있다」 는 답이 <b>엉뚱한 표</b>에서 나옵니다 —
+     같은 분이 배정 DB 에 한 줄 더 생기고, 그러면 팀이 같은 분께 두 번 전화합니다.
+     ★ 배정 DB 는 <b>팀이 함께 보는 표</b>라 실명이 그 줄에 그대로 있습니다 —
+       그래서 가리지 않고 이름 그대로 견줍니다 (3번 · 이름은 서버로 새 나가지 않습니다). */
+  if(cimpIsDb())return dbimpHave();
   try{ L=(typeof OSC!=='undefined'&&OSC.list)?OSC.list:[]; o.loaded=!!(OSC&&OSC.loaded); }catch(e){ L=[]; }
   for(i=0;i<L.length;i++){
     c=L[i]; if(!c)continue; o.n++;
@@ -31207,8 +31277,11 @@ function cimpClose(){
   CIMP.open=false;
   var e=document.getElementById('cimpSheet'); if(e)e.classList.remove('on');
 }
-function cimpOpen(){
+function cimpOpen(dest){
   cimpCss(); cimpReset(); CIMP.open=true;
+  /* 📁 판 X570 — 어디로 넣을지 <b>열 때 정합니다.</b> 안 주시면 예전처럼 내 고객입니다 */
+  CIMP.dest=(dest==='db')?'db':'cli';
+  if(cimpIsDb())dbimpReset();
   /* 이미 계신 분을 모르면 <b>지금 읽습니다</b> — 모른 채로 세면 같은 분이
      한 줄 더 생깁니다 (1번) */
   try{ if(typeof OSC!=='undefined'&&!OSC.loaded&&typeof osLoadClients==='function')osLoadClients(); }catch(e){}
@@ -31223,6 +31296,11 @@ function cimpPaint(){
 }
 function cimpSay(){
   var h='';
+  /* 📁 판 X570 — <b>어디로 들어가는지</b>를 늘 맨 위에 적습니다. 고객 365일과
+     배정 DB 는 <b>다른 표</b>라, 잘못 들어가면 되돌리는 길이 손으로밖에 없습니다 (1번). */
+  h+='<div class="dbimp-dest'+(cimpIsDb()?' db':'')+'">'+(cimpIsDb()?'📁':'📇')+
+     ' 넣을 곳 — <b>'+osEsc(cimpDestNm().replace(/^[^ ]+ /,''))+'</b>'+
+     (cimpIsDb()?' <i>팀이 함께 보는 배정 DB 입니다</i>':' <i>나만 보는 내 고객입니다</i>')+'</div>';
   if(CIMP.err)h+='<div class="cimp-bad">'+osEsc(CIMP.err)+'</div>';
   if(CIMP.note)h+='<div class="cimp-note">'+osEsc(CIMP.note)+'</div>';
   return h;
@@ -31355,8 +31433,9 @@ function cimpMapHtml(){
       h+='<select onchange="cimpMapSet('+j+',this.value)">'+
          '<option value=""'+(k===''?' selected':'')+'>— 안 가져옴</option>'+
          '<option value="'+CIMP_MEMO+'"'+(k===CIMP_MEMO?' selected':'')+'>메모에 적어 두기</option>';
-      for(i=0;i<CIMP_F.length;i++){
-        f=CIMP_F[i];
+      var FL2=cimpFL();
+      for(i=0;i<FL2.length;i++){
+        f=FL2[i];
         if(used[f.k]&&f.k!==k)continue;        /* 한 칸은 한 번만 */
         h+='<option value="'+f.k+'"'+(k===f.k?' selected':'')+'>'+osEsc(f.t)+'</option>';
       }
@@ -31369,11 +31448,12 @@ function cimpMapHtml(){
   h+='<div class="cimp-lock">🙍 <b>「메모에 적어 두기」 로 고른 칸은 서버에 그대로 올라갑니다.</b> '+
      '사람 이름이 든 칸(담당·소개자)은 <b>안 가져옴</b>으로 두십시오 — 실명은 이 기기에만 둡니다. '+
      '이 파일의 <b>고객 이름</b>은 메모 안에서도 가려서 담습니다.</div>';
-  for(i=0;i<CIMP_F.length;i++)if(CIMP_F[i].man&&used[CIMP_F[i].k])money=true;
+  var FL3=cimpFL();
+  for(i=0;i<FL3.length;i++)if(FL3[i].man&&used[FL3[i].k])money=true;
   if(money){
     h+='<div class="cimp-unit"><b>돈 칸의 단위</b> — 앱은 <b>만원</b>으로 담습니다. 엑셀이 원으로 적혀 있으면 「원」 을 고르십시오.';
-    for(i=0;i<CIMP_F.length;i++){
-      f=CIMP_F[i]; if(!f.man||!used[f.k])continue;
+    for(i=0;i<FL3.length;i++){
+      f=FL3[i]; if(!f.man||!used[f.k])continue;
       h+='<div class="cimp-row"><span class="l">'+osEsc(f.t)+'</span><select onchange="cimpUnitSet(\''+f.k+'\',this.value)">'+
          '<option value="만원"'+((CIMP.unit[f.k]||'만원')==='만원'?' selected':'')+'>만원</option>'+
          '<option value="원"'+(CIMP.unit[f.k]==='원'?' selected':'')+'>원</option></select></div>'+
@@ -31381,6 +31461,8 @@ function cimpMapHtml(){
     }
     h+='</div>';
   }
+  /* 📁 판 X570 — 배정 DB 로 넣으실 때만 서는 세 가지 (배정일·종류·담당자) */
+  if(cimpIsDb())h+=dbimpSetHtml();
   h+='<div class="cimp-row"><span class="l">갈래로 나눌 칸</span><select onchange="cimpGrpSet(this.value)">'+
      '<option value="-1"'+(CIMP.grp<0?' selected':'')+'>— 안 나눔</option>';
   for(j=0;j<CIMP.head.length;j++){
@@ -31532,6 +31614,9 @@ window.cimpGrpOff=function(ix,off){
 };
 /* ── 넣기 — <b>cliMakeMany 하나</b>를 부릅니다 (5번) ── */
 window.cimpGo=function(){
+  /* 📁 <b>배정 DB 로 넣으실 때는 그쪽으로 갑니다</b> (판 X570) — 넣는 자리가
+     갈리는 곳은 여기 하나입니다. 두 곳에서 갈라지면 한쪽만 고쳐집니다 (5번). */
+  if(cimpIsDb())return dbimpGo();
   var P=cimpPickList();
   /* 🗂 <b>이미 계신 분에게 갈래만</b> 붙이러 오셨을 수도 있습니다 (판 X398) */
   var FI=cimpFill(),fill=(CIMP.fill&&FI.put.length)?FI.put:[];
@@ -31571,6 +31656,9 @@ window.cimpGo=function(){
   });
 };
 function cimpDoneHtml(){
+  /* 📁 판 X570 — 배정 DB 로 넣으셨으면 <b>그 말</b>을 합니다. 「고객 365일에서
+     바로 보입니다」 라고 적으면 거짓입니다 — 거기엔 한 줄도 안 들어갑니다 (1번). */
+  if(cimpIsDb())return dbimpDoneHtml();
   var r=CIMP.res||{ok:0,fail:0,noid:0},S=CIMP.sort||{dupHave:[],dupFile:[],noName:[],maybe:[]};
   /* ★ 머리글이 <b>그때 한 일</b>을 말합니다 (판 X398 · 1번) — 갈래만 붙이러
      오셨는데 「0명을 넣었습니다」 라고 적으면 아무것도 안 된 줄 아십니다. */
@@ -31600,10 +31688,51 @@ function cimpDoneHtml(){
      '</div>';
   return h;
 }
+/* ── 📁 <b>배정 DB 로 넣고 난 뒤</b> — 무엇과 겹쳐서 안 넣었는지 말합니다 (5-1번) ──
+   「건너뜀 3건」 만 적으면 사장님은 <b>빠뜨린 줄</b> 아십니다.                */
+function dbimpDoneHtml(){
+  var r=CIMP.res||{ok:0,fail:0},S=CIMP.sort||{dupHave:[],dupFile:[],noName:[],maybe:[],noTel:[]};
+  var h='<div class="cimp-t">'+(r.ok?'✅ ':'⚠️ ')+
+    (r.ok?('<b>'+r.ok+'명</b>을 <b>DB 통합 CRM</b> 에 넣었습니다'):'<b>한 분도 안 들어갔습니다</b>')+'</div>';
+  h+='<div class="cimp-d">📁 DB 관리 목록과 🏠 오늘 화면에서 바로 보입니다 — 단계는 「'+
+     osEsc(dbimpStage0()||'첫 단계')+'」 입니다.</div>';
+  h+='<div class="cimp-bks">'+
+    cimpBucket('✅','넣었습니다',r.ok,'','ok')+
+    cimpBucket('🙈','이름이 없어 안 넣음',S.noName.length,'','no')+
+    cimpBucket('♻️','배정 DB 에 <b>이미 있어</b> 안 넣음',S.dupHave.length,'번호가 같은 분입니다 — 팀이 같은 분께 두 번 전화하지 않게 안 넣었습니다','dup')+
+    cimpBucket('📄','파일 안 중복으로 안 넣음',S.dupFile.length,'','dup')+
+    (CIMP.maybe?'':cimpBucket('🤔','같은 이름이라 안 넣음',S.maybe.length,'번호가 달라 같은 분인지 모릅니다','may'))+
+    cimpBucket('☎️','번호 없이 넣음',S.noTel.length,'번호가 없으면 전화를 못 겁니다 — 나중에 적어 주십시오','warn')+
+    cimpBucket('🙋','엑셀의 담당자가 <b>우리 팀원 명단에 없어</b> 내 것으로',r.noWho||0,
+      (r.noWhoNm&&r.noWhoNm.length)?('엑셀에 적힌 「'+osEsc(r.noWhoNm.slice(0,3).join(' · '))+'」 를 팀원 명단에서 못 찾았습니다'):'','warn')+
+    /* ★ 「명단에 없다」 와 「명단을 볼 수 없다」 는 <b>다른 말</b>입니다 (1번) */
+    cimpBucket('🔒','담당자를 <b>바꿀 수 없어</b> 내 것으로',r.cantWho||0,
+      '팀원에게 배정하는 것은 대표·관리자만 할 수 있습니다 — 엑셀에 적힌 담당자는 그대로 두고 메모에도 안 적었습니다','warn')+
+    cimpBucket('⛔','못 넣었습니다',r.fail,r.why||'','bad')+
+    '</div>';
+  if(r.why&&r.fail)h+='<div class="cimp-bad">'+osEsc(r.why)+'</div>';
+  h+='<div class="cimp-btns">'+
+     '<button type="button" class="cimp-b2" onclick="cimpReset();CIMP.dest=\'db\';dbimpReset();cimpPaint()">또 가져오기</button>'+
+     '<button type="button" class="cimp-b1" onclick="cimpClose();if(typeof go===\'function\')go(\'crm\')">DB 통합 CRM 보기 ›</button>'+
+     '</div>';
+  return h;
+}
 function cimpCss(){
   if(document.getElementById('cimpCss'))return;
   var st=document.createElement('style');st.id='cimpCss';
   st.textContent=
+   /* 📁 판 X570 — 배정 DB 로 넣을 때만 서는 칸들. <b>색은 토큰에서만</b> 옵니다 (5번).
+      ⚠ 처음에 <code>var(--t-warn-bg,#FFF8EE)</code> 처럼 썼는데 <b>--t-warn-bg 는 없는 이름</b>이라
+        늘 되돌림 hex 가 쓰였습니다 — check-onepal 이 「손으로 박은 색 둘」 로 세어 울었습니다.
+        있는 토큰(--t-warn-l · --t-line · --t-warn-d2)만 씁니다. 자가 옳았습니다 (8번). */
+   '.dbimp-dest{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 9px;'+
+     'padding:8px 11px;border-radius:10px;background:var(--t-bg-3);border:1px solid var(--t-line);'+
+     'font-size:var(--t6,13px);font-weight:800;color:var(--t-ink)}'+
+   '.dbimp-dest.db{background:var(--t-warn-l);border-color:var(--t-line)}'+
+   '.dbimp-dest i{font-style:normal;font-weight:700;color:var(--t-sub2);font-size:var(--t7,12px)}'+
+   '.dbimp-set{background:var(--t-warn-l);border-color:var(--t-line)}'+
+   '.dbimp-ok{font-size:var(--t7,12px);font-weight:700;color:var(--t-sub);line-height:1.6}'+
+   '.dbimp-warn{margin-top:8px;font-size:var(--t7,12px);font-weight:700;line-height:1.7;color:var(--t-warn-d2)}'+
    '#cimpSheet{position:fixed;inset:0;z-index:5320;background:rgba(15,23,42,.5);'+
      'display:none;align-items:center;justify-content:center;padding:16px}'+
    '#cimpSheet.on{display:flex}'+
@@ -31693,6 +31822,8 @@ function cimpCss(){
      '.cimp-map td.hd,.cimp-map td.vv{max-width:84px}}';
   document.head.appendChild(st);
 }
+
+
 function hdbOpen(id,wantStage){
   hdbCss();
   var r=id?hdbRow(id):null;
@@ -31876,6 +32007,315 @@ function hdbSave(){
     done(res);
   },fail);
 }
+
+/* ★★ <b>왜 여기에 두나</b> (판 X570) — 이 식구는 <code>dbs</code> 에 <b>여러 줄을 넣는</b> 자리라,
+   한 줄을 넣는 <code>hdbSave</code> 바로 뒤가 제 자리입니다 (CLAUDE.md 11번 — 고치던 자리 가까이).
+   ⚠ 처음에 <code>cimp*</code> 식구 뒤에 두었다가 <b>check-cimp 가 울었습니다</b> —
+     그 자는 「<b>가져오기(cimp) 안에는 서버에 넣는 글이 한 줄도 없다</b>」 를 지키고,
+     제 블록이 딱 그 안에 들어가 그 선을 넘었습니다. 자가 옳습니다 — 읽는 자와
+     넣는 자를 섞지 않는 선이고, 그래서 자 말고 <b>코드를 옮겼습니다</b> (8번). */
+/* ══════════════════════════════════════════════════════════════════════
+   📁 <b>DB 고객명단 엑셀 → DB 통합 CRM 자동 입력·분류</b> (판 X570 · dbimp*)
+
+   사장님 말씀 (2026-11-26) — 「<b>DB고객명단 → DB통합CRM에 자동으로 입력
+   분류 기능 넣기 [엑셀]</b>」.
+
+   ── 손대기 전에 재어 본 것 ─────────────────────────────────────────
+   · <code>db-crm.html</code> 에 엑셀로 넣는 길이 <b>한 곳도 없었습니다.</b>
+     「+ DB 등록」 으로 <b>한 명씩 손으로</b> 적는 길만 있었습니다.
+   · 본체에는 엑셀을 읽는 기계가 <b>이미 다 있습니다</b> — cimp* 식구 쉰 가지
+     (zip·xlsx·CSV·인코딩·칸 맞추기·엑셀 날짜 수·주민번호 잠금·중복 걸러내기).
+     그런데 그것이 넣는 자리는 <b>늘 고객 365일</b> 하나뿐이었습니다.
+     「➕ 고객 넣기」 가 「어느 쪽인지 먼저」 묻는데(판 X133), 엑셀을 고르면
+     묻지 않고 고객으로 갔습니다.
+
+   ── 그래서 한 일 ──────────────────────────────────────────────────
+   ★★ <b>엑셀 읽는 기계를 한 줄도 새로 안 짰습니다</b> (사장님 규칙 · 5번).
+     cimp* 에 <b>「어디로 넣나」(CIMP.dest) 하나</b>를 두고, 넣는 자리만 갈랐습니다.
+   ★★ 넣는 길도 새로 안 짰습니다 — <code>hdbSave</code> 가 한 줄을 넣을 때 지키는
+     규칙(날짜를 지어내지 않는다 · 빈칸은 null · 없는 칸은 안 보낸다)을 <b>그대로</b>
+     따릅니다. 여기는 그것을 <b>여러 줄로</b> 하는 자리입니다.
+
+   ── 무엇을 자동으로 분류하나 ──────────────────────────────────────
+     · <b>DB 종류</b> — 파일의 종류 칸을 읽고, 이미 서버에 있는 종류와 <b>글자를
+       맞춰</b> 같은 것으로 모읍니다(「소개 DB」·「소개db」 → 「소개」). 맞는 것이
+       없으면 적힌 그대로 둡니다. 종류 칸이 없으면 사장님이 <b>한 번 고르십니다</b>.
+     · <b>지역</b> — 주소 칸에서 읽고, 동·읍·면은 <code>hmDongOf</code> 로 뽑습니다 (5번).
+     · <b>나이</b> — 생년에서 셉니다. 생년을 못 읽으면 <b>비웁니다</b>(0 이 아닙니다 · 1번).
+     · <b>단계</b> — 늘 <b>첫 단계</b>(미접촉)입니다. 계약·상담은 <b>절대 짐작하지
+       않습니다</b> — 짐작하면 그것이 계약 기록이 됩니다 (1번).
+     · <b>담당자</b> — 파일의 담당자 칸을 <b>우리 팀원 명단과만</b> 맞춥니다. 못 맞추면
+       버리고 <b>몇 줄인지 적습니다</b>. 적힌 글은 서버로 안 갑니다 (1번·3번).
+     · <b>배정일</b> — 파일에 있으면 그것을, 없으면 사장님이 <b>고르신 하루</b>를 씁니다.
+       서버가 비울 수 없는 칸이라 <b>오늘로 몰래 채우지 않습니다</b> (1번).
+
+   ── 같은 분을 두 번 넣지 않습니다 (5-1번) ──────────────────────────
+   cimpSort 가 이미 다섯 갈래로 갈라 줍니다 — 이름 빈 줄 · 파일 안 중복 ·
+   <b>이미 있는 분</b> · 이름만 같은 분 · 번호 없는 줄. 이 판에서 고친 것은
+   「이미 있는 분」 을 <b>어느 표에서 보나</b> 입니다: 배정 DB 로 넣을 때는
+   <b>배정 DB</b>(AR.db)를 봅니다. 고객 명단과 견주면 「이미 있다」 는 답이
+   엉뚱한 표에서 나와, 같은 분이 배정 DB 에 한 줄 더 생기고 <b>팀이 같은
+   분께 두 번 전화합니다.</b> 무엇과 겹쳐서 안 넣었는지도 적습니다 (5-1번).
+
+   ⚠ <b>주민번호는 아예 못 들어옵니다</b> — CIMP_NO 가 그 머리글을 잠급니다.
+     배정 DB 는 팀이 함께 보는 표라 더더욱입니다 (3번 · 「서버 호출 0번」).
+   ⚠ <b>표를 합치지 않습니다</b> — 여기서 넣는 것은 <code>dbs</code> 뿐이고
+     <code>clients</code> 는 한 줄도 안 건드립니다 (사장님 규칙).
+   ⚠ <b>서버를 아껴 씁니다</b> — 100줄씩 묶어 보내고, 몇 줄째인지 화면에
+     적습니다 (7번).
+   재는 자는 <code>check-dbimp</code> 입니다.
+   ══════════════════════════════════════════════════════════════════════ */
+var DBIMP={got:'',src:'',who:'',busy:'',at:0,of:0,res:null,err:''};
+var DBIMP_CHUNK=100;                 /* 한 번에 보내는 줄 수 (7번) */
+
+function dbimpReset(){
+  DBIMP.got='';DBIMP.src='';DBIMP.who='';DBIMP.busy='';DBIMP.at=0;DBIMP.of=0;
+  DBIMP.res=null;DBIMP.err='';
+}
+
+/* ── 엑셀 날짜 → <b>YYYY-MM-DD</b>. 못 읽으면 빈 글자입니다 (1번) ──
+   엑셀은 날짜를 「46387」 같은 <b>날수</b>로 담습니다(1899-12-30 부터).
+   그 셈은 cimpYear 가 이미 하고 있어 <b>같은 셈을 씁니다</b> (5번).      */
+function dbimpDate(v){
+  var t=cimpTxt(v); if(!t)return '';
+  var m=t.match(/(\d{4})\s*[-.\/년]\s*(\d{1,2})\s*[-.\/월]\s*(\d{1,2})/);
+  if(m)return m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2);
+  var d8=t.replace(/[^0-9]/g,'');
+  if(d8.length===8&&/^(19|20)/.test(d8))
+    return d8.slice(0,4)+'-'+d8.slice(4,6)+'-'+d8.slice(6,8);
+  if(/^\d+$/.test(t)){
+    var n=parseInt(t,10);
+    if(n>=10000&&n<=100000){
+      var dt=new Date(Date.UTC(1899,11,30)+n*86400000);
+      if(dt.getUTCFullYear()>=1900)
+        return dt.toISOString().slice(0,10);
+    }
+  }
+  return '';
+}
+
+/* ── 오늘 (이 기기 시각으로) — UTC 로 자르면 하루가 밀립니다 (판 X466) ── */
+function dbimpToday(){
+  var d=new Date();
+  return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+}
+
+/* ── 이미 배정 DB 에 있는 분 — 번호 뒷자리와 이름으로 ──────────────
+   ★ cimpHaveIx 와 <b>같은 모양</b>으로 돌려줍니다 — 그래야 cimpSort 를
+     한 줄도 안 고치고 그대로 씁니다 (5번).                              */
+function dbimpHave(){
+  var o={tel:{},nm:{},n:0,loaded:false},L=[],i,r,t,n;
+  try{ L=(typeof AR!=='undefined'&&AR.db)?AR.db:[]; o.loaded=!!(typeof AR!=='undefined'&&AR.loaded); }catch(e){ L=[]; }
+  for(i=0;i<L.length;i++){
+    r=L[i]; if(!r)continue; o.n++;
+    t=cimpTail(r.phone||r.ph||'');  if(t&&!o.tel[t])o.tel[t]=r;
+    n=cimpTxt(r.name||r.customer_name||r.nm||'').replace(/\s/g,'');
+    if(n&&!o.nm[n])o.nm[n]=r;
+  }
+  return o;
+}
+
+/* ── 이미 서버에 있는 DB 종류들 — <b>세는 곳은 arSrcCount 하나</b>입니다 (5번) ── */
+function dbimpSrcList(){
+  var c={},out=[],k;
+  try{ c=(typeof arSrcCount==='function')?arSrcCount('', (typeof AR!=='undefined'&&AR.db)||[]):{}; }catch(e){ c={}; }
+  for(k in c)if(c.hasOwnProperty(k)&&k)out.push(k);
+  try{ return (typeof arSrcSort==='function')?arSrcSort(out):out.sort(); }catch(e2){ return out.sort(); }
+}
+/* 적힌 종류를 <b>이미 있는 종류에 붙입니다</b> — 「소개 DB」·「소개db」 는
+   「소개」 와 같은 것입니다. 띄어쓰기·대소문자·「DB」 꼬리만 털어 견줍니다.
+   붙을 것이 없으면 <b>적힌 그대로</b> 둡니다 — 지어내지 않습니다 (1번).  */
+function dbimpSrcKey(v){
+  return cimpTxt(v).replace(/\s+/g,'').replace(/(db|디비)$/i,'').toLowerCase();
+}
+function dbimpSrcSnap(v){
+  var t=cimpTxt(v); if(!t)return '';
+  var L=dbimpSrcList(),k=dbimpSrcKey(t),i;
+  for(i=0;i<L.length;i++)if(dbimpSrcKey(L[i])===k)return L[i];
+  return t;
+}
+
+/* ── 지역 — 주소에서 <b>동·읍·면</b>이 보이면 그것까지 적습니다 ──
+   동을 뽑는 자는 hmDongOf 하나입니다 (5번).                            */
+function dbimpRegion(v){
+  var t=cimpTxt(v); if(!t)return '';
+  return t.slice(0,60);
+}
+
+/* ── 담당자 — <b>우리 팀원 명단과만</b> 맞춥니다 (1번·3번) ──
+   맞는 팀원이 없으면 빈 글자이고, 몇 줄이 그랬는지 화면에 적습니다.    */
+function dbimpWhoList(){
+  var L=[];
+  try{ L=(typeof hdbWhoList==='function')?hdbWhoList():[]; }catch(e){ L=[]; }
+  return L||[];
+}
+/* 팀원에게 배정할 수 있는 자리인가 — <b>대표·관리자만</b> 할 수 있습니다.
+   ★ 명단이 비는 까닭이 둘입니다: ⑴ 권한이 없어 <b>명단을 볼 수 없다</b>
+   ⑵ 명단은 있는데 <b>그 이름이 없다</b>. 둘을 섞어 말하면 거짓이 됩니다 —
+   설계사 한 분이 자기 명단을 넣으시는데 「우리 팀원 명단에 없습니다」 라고
+   적으면, 있는 팀원을 없다고 하는 셈입니다 (1번).                        */
+function dbimpCanWho(){ return dbimpWhoList().length>0; }
+function dbimpWhoOf(v){
+  var t=cimpTxt(v).replace(/\s/g,''); if(!t)return '';
+  var L=dbimpWhoList(),i;
+  for(i=0;i<L.length;i++)if(cimpTxt(L[i].nm).replace(/\s/g,'')===t)return L[i].id;
+  return '';
+}
+
+/* ── 첫 단계 — 늘 미접촉입니다. 계약·상담은 <b>짐작하지 않습니다</b> (1번) ── */
+function dbimpStage0(){
+  var L=[];
+  try{ L=(typeof hdbStages==='function')?hdbStages():[]; }catch(e){ L=[]; }
+  return (L&&L.length)?L[0]:'';
+}
+
+/* ── 한 줄 → <b>dbs 에 넣을 모양</b> (자동 분류가 일어나는 자리) ──────
+   ⚠ hdbSave 가 지키는 규칙 그대로입니다 — <b>빈칸은 null</b>(0 이 아님) ·
+     날짜를 지어내지 않음 · 없는 칸은 안 보냄.                            */
+function dbimpRow(o,me){
+  var e=o.ex||{},nm=cimpTxt(o.nm);
+  if(!nm)return null;
+  var got=cimpTxt(e.got)||DBIMP.got||'';
+  var src=e.src?dbimpSrcSnap(e.src):(DBIMP.src||'');
+  var who=e.who?dbimpWhoOf(e.who):'';
+  var rg=e.rg?dbimpRegion(e.rg):'';
+  var st=dbimpStage0();
+  var r={customer_name:nm,
+         phone:cimpTxt(e.ph)||null,
+         region:rg||null,
+         source:src||'일반',
+         stage:st||undefined,
+         /* 메모는 cimpOne 이 <b>이미 도장을 찍고 이름을 가려</b> 담아 둔 것입니다 —
+            여기서 또 가리지 않습니다 (5번) */
+         memo:cimpTxt(e.memo)?cimpTxt(e.memo).slice(0,500):null,
+         assigned_date:got,
+         updated_at:new Date().toISOString()};
+  if(!r.stage)delete r.stage;
+  /* 나이는 <b>생년에서 셉니다.</b> 생년을 못 읽었으면 비웁니다 — 0 은 「0살」 입니다 (1번) */
+  var by=e.by?Math.round(Number(e.by)):0;
+  if(by>=1900)r.age=(new Date()).getFullYear()-by+1;
+  r.assigned_to=who||DBIMP.who||me||'';
+  if(me)r.created_by=me;
+  /* 못 맞춘 까닭을 <b>갈라</b> 둡니다 — 'no' 명단에 그 이름이 없음 · 'cant' 명단을 볼 수 없음 */
+  r._why={who:(e.who&&!who)?cimpTxt(e.who):'',
+          whyWho:(e.who&&!who)?(dbimpCanWho()?'no':'cant'):'',
+          dong:rg?((typeof hmDongOf==='function')?hmDongOf(rg):''):''};
+  return r;
+}
+
+/* ── 여러 줄 넣기 — <b>100줄씩 묶어</b> 보냅니다 (7번) ────────────────
+   ⚠ 서버에 없는 칸을 보내면 <b>묶음이 통째로 거절당합니다.</b> 그러면 그 칸을
+     떼고 한 번 더 보냅니다 — hdbSave 가 쓰는 그 판정(down)을 그대로 씁니다.   */
+function dbimpMany(rows,prog,done){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){ done({ok:0,fail:rows.length,why:'서버에 연결되어 있지 않습니다.'}); return; }
+  var down=function(m){ return /column|42703|does not exist|schema cache/i.test(''+(m||'')); };
+  var drop=['age','memo','region','created_by'];   /* 없을 수 있는 칸 — 떼는 차례 */
+  var ok=0,fail=0,why='',di=0;
+  var clean=function(L){
+    var i,j,c,out=[];
+    for(i=0;i<L.length;i++){
+      c={};for(j in L[i])if(L[i].hasOwnProperty(j)&&j.charAt(0)!=='_')c[j]=L[i][j];
+      var d;for(d=0;d<di;d++)delete c[drop[d]];
+      out.push(c);
+    }
+    return out;
+  };
+  var send=function(ix){
+    if(ix>=rows.length){ done({ok:ok,fail:fail,why:why}); return; }
+    var part=rows.slice(ix,ix+DBIMP_CHUNK);
+    sb.from('dbs').insert(clean(part)).select('id').then(function(res){
+      if(res&&res.error){
+        if(down(res.error.message)&&di<drop.length){ di++; send(ix); return; }
+        fail+=part.length; if(!why)why=''+(res.error.message||'서버가 받지 않았습니다');
+      } else {
+        ok+=(res&&res.data&&res.data.length)?res.data.length:part.length;
+      }
+      if(prog)prog(Math.min(ix+part.length,rows.length),rows.length);
+      send(ix+DBIMP_CHUNK);
+    },function(er){
+      if(down(er&&er.message)&&di<drop.length){ di++; send(ix); return; }
+      fail+=part.length; if(!why)why=''+((er&&er.message)||'서버를 못 불렀습니다');
+      if(prog)prog(Math.min(ix+part.length,rows.length),rows.length);
+      send(ix+DBIMP_CHUNK);
+    });
+  };
+  send(0);
+}
+
+/* ── 📁 <b>넣기</b> — cimpGo 가 배정 DB 일 때 부르는 자리 ── */
+window.dbimpGo=function(){
+  var P=cimpPickList(),i,r,rows=[],noWho=0,cantWho=0,noWhoNm={},me=null;
+  try{ me=(typeof arMyId==='function')?arMyId():null; }catch(e){ me=null; }
+  if(!P.length){ CIMP.err='넣을 분이 없습니다.';cimpPaint();return; }
+  if(!(CIMP.sort&&CIMP.sort.have.loaded)){
+    CIMP.err='배정 DB 명단을 아직 못 읽었습니다 — 잠시 뒤 다시 눌러 주십시오. 모른 채로 넣으면 같은 분이 한 줄 더 생깁니다.';
+    cimpPaint();return; }
+  if(P.length>CIMP_MAX){ CIMP.err='한 번에 '+CIMP_MAX+'명까지 넣습니다 — 파일을 나눠 주십시오 (지금 '+P.length+'명).';cimpPaint();return; }
+  /* 배정일은 서버가 <b>비울 수 없는 칸</b>입니다. 비운 채 보내면 통째로 거절당하고,
+     오늘로 몰래 채우면 그것이 배정일이 되어 버립니다 — 그 자리에서 여쭙니다 (1번) */
+  for(i=0;i<P.length;i++){
+    r=dbimpRow(P[i],me);
+    if(!r)continue;
+    if(!r.assigned_date){ CIMP.err='배정일을 정해 주십시오 — 서버가 비울 수 없는 칸이고, 오늘 날짜로 몰래 채우지 않습니다.';cimpPaint();return; }
+    if(!r.assigned_to){ CIMP.err='담당자를 정해 주십시오 — 누구 DB 인지 모르면 아무도 못 봅니다.';cimpPaint();return; }
+    if(r._why.who){ if(r._why.whyWho==='cant')cantWho++; else noWho++; noWhoNm[r._why.who]=1; }
+    rows.push(r);
+  }
+  if(!rows.length){ CIMP.err='넣을 분이 없습니다 — 이름 칸이 다 비어 있습니다.';cimpPaint();return; }
+  if(CIMP.busy)return;
+  CIMP.busy='save';DBIMP.at=0;DBIMP.of=rows.length;CIMP.at=0;CIMP.of=rows.length;CIMP.err='';cimpPaint();
+  dbimpMany(rows,function(at,of){ CIMP.at=at;CIMP.of=of;DBIMP.at=at;DBIMP.of=of;cimpPaint(); },function(res){
+    CIMP.busy='';
+    res.noWho=noWho; res.cantWho=cantWho; res.noWhoNm=Object.keys(noWhoNm);
+    CIMP.res=res;CIMP.step='done';cimpPaint();
+    /* 넣은 줄은 손에 든 것으로 못 맞춥니다 — 다시 받습니다 (7번 · 한 번만) */
+    try{ if(typeof arLoad==='function')arLoad(true); }catch(e){}
+    try{ if(typeof hmPaint==='function')hmPaint(); }catch(e2){}
+    try{ if(typeof hdbPaint==='function')hdbPaint(); }catch(e3){}
+  });
+};
+
+/* ── 📁 칸 맞추기 아래에 서는 <b>세 가지</b> — 파일에 없으면 여기서 정합니다 ── */
+function dbimpSetHtml(){
+  var used={},j,i,L,h,sl,st=dbimpStage0();
+  for(j in CIMP.map)if(CIMP.map.hasOwnProperty(j))used[CIMP.map[j]]=1;
+  h='<div class="cimp-unit dbimp-set"><b>📁 배정 DB 로 넣습니다</b> — 파일에 없는 것만 여기서 정합니다.';
+  /* 배정일 */
+  h+='<div class="cimp-row"><span class="l">배정일</span>';
+  if(used.got)h+='<span class="dbimp-ok">엑셀의 <b>배정일</b> 칸에서 읽습니다</span>';
+  else h+='<input type="date" value="'+osEsc(DBIMP.got)+'" onchange="dbimpSet(\'got\',this.value)">';
+  h+='</div>';
+  if(!used.got&&!DBIMP.got)
+    h+='<div class="dbimp-warn">★ 비울 수 없는 칸입니다 — <b>오늘 날짜로 몰래 채우지 않습니다.</b> 직접 골라 주십시오.</div>';
+  /* 종류 */
+  h+='<div class="cimp-row"><span class="l">DB 종류</span>';
+  if(used.src)h+='<span class="dbimp-ok">엑셀의 <b>종류</b> 칸에서 읽고, 이미 쓰시는 종류와 <b>같은 것으로 모읍니다</b></span>';
+  else{
+    L=dbimpSrcList();
+    h+='<select onchange="dbimpSet(\'src\',this.value)"><option value="">— 일반</option>';
+    for(i=0;i<L.length;i++)h+='<option value="'+osEsc(L[i])+'"'+(DBIMP.src===L[i]?' selected':'')+'>'+osEsc(L[i])+'</option>';
+    h+='</select>';
+  }
+  h+='</div>';
+  /* 담당자 */
+  h+='<div class="cimp-row"><span class="l">담당자</span>';
+  sl=[];try{ sl=(typeof hdbWhoList==='function')?hdbWhoList():[]; }catch(e){ sl=[]; }
+  if(used.who)h+='<span class="dbimp-ok">엑셀의 <b>담당자</b> 칸을 <b>우리 팀원 명단과만</b> 맞춥니다 — 못 맞춘 줄은 아래 담당자로 갑니다</span>';
+  if(sl.length){
+    h+='<select onchange="dbimpSet(\'who\',this.value)"><option value="">— 나에게</option>';
+    for(i=0;i<sl.length;i++)h+='<option value="'+osEsc(sl[i].id)+'"'+(DBIMP.who===sl[i].id?' selected':'')+'>'+osEsc(sl[i].nm)+'</option>';
+    h+='</select>';
+  }else h+='<span class="dbimp-ok">나에게 배정합니다</span>';
+  h+='</div>';
+  h+='<div class="dbimp-warn">★ <b>단계는 늘 「'+osEsc(st||'첫 단계')+'」</b> 입니다 — 상담·계약은 짐작하지 않습니다. '+
+     '★ <b>나이</b>는 생년에서 셈하고, 생년을 못 읽으면 <b>비웁니다</b>(0 이 아닙니다). '+
+     '★ <b>주민번호 칸은 아예 안 가져옵니다</b> — 팀이 함께 보는 표입니다.</div>';
+  h+='</div>';
+  return h;
+}
+window.dbimpSet=function(k,v){ DBIMP[k]=v||'';cimpPaint(); };
+
 /* fresh 를 켜면 <b>화면에서 베낄 않는다</b> — 방금 불러온 값으로
    첫 칸을 세우는 자리다. 그 전 화면은 「불러오는 중」이라 베낄 것이 없다. */
 function hdbRepaintForm(fresh){
