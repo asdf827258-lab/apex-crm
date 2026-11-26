@@ -1819,10 +1819,16 @@
      ★ 처음 여는 기기: 서버에 줄이 있으면 서버 것을 이 기기에 내려받고, 없으면 이 기기 것을 올림.
      ★ 표가 아직 없거나 로그인 전 · 서버가 안 되면 조용히 예전처럼 이 기기에만(화면은 안 깨짐).
      ★ 「↩ 예전 화면」 은 기기마다 그대로(그 기기가 깨졌을 때 빠져나가는 문이라). */
-  var PREF = { done: false, busy: false };
+  /* more = 같은 한 줄에 다른 칸이 담은 것(📱 폰 확인 결과 pchk 등 · 판 X576) — 올릴 때 지우지 않고 같이 올림 */
+  var PREF = { done: false, busy: false, more: {} };
   function prefMe() { return T(function () { return g.arMyId(); }, '') || ''; }
   function prefSb() { return T(function () { return g.osClient(); }, null); }
-  function prefKv() { return { ai_mine: aiMine(), newhelp: newOn() ? 1 : 0 }; }
+  function prefKv() {
+    var o = { ai_mine: aiMine(), newhelp: newOn() ? 1 : 0 };
+    Object.keys(PREF.more).forEach(function (k) { if (!(k in o)) o[k] = PREF.more[k]; });
+    return o;
+  }
+  function prefPut(k, v) { if (k === 'ai_mine' || k === 'newhelp') return false; PREF.more[k] = v; prefPush(); return PREF.done; }
   function prefPush() {
     var sb = prefSb(), me = prefMe(); if (!sb || !me || !PREF.done) return;
     try { sb.from('user_prefs').upsert({ owner_id: me, kv: prefKv(), updated_at: new Date().toISOString() }, { onConflict: 'owner_id' }).then(function () {}, function () {}); } catch (e) {}
@@ -1838,10 +1844,13 @@
         PREF.done = true;
         var kv = r.data && r.data.kv;
         if (!kv || typeof kv !== 'object') { prefPush(); return; }   /* 처음 — 이 기기 것을 올림 */
+        Object.keys(kv).forEach(function (k) { if (k !== 'ai_mine' && k !== 'newhelp' && !(k in PREF.more)) PREF.more[k] = kv[k]; });
         try {
           if (kv.ai_mine && kv.ai_mine.push) g.localStorage.setItem(aiKey(), JSON.stringify(kv.ai_mine.slice(0, 30)));
           if (kv.newhelp) g.localStorage.setItem(newKey(), '1'); else g.localStorage.removeItem(newKey());
         } catch (e) {}
+        /* 받기 전에 이 기기에서 얹은 몫(폰 확인 등)이 서버와 다르면 한 번 올림 */
+        if (Object.keys(PREF.more).some(function (k) { return JSON.stringify(PREF.more[k]) !== JSON.stringify(kv[k]); })) prefPush();
         try { paint(); } catch (e2) {}
       }, function () { PREF.busy = false; });
     } catch (e) { PREF.busy = false; }
@@ -1939,6 +1948,10 @@
     jvbOff: function () { JVB.off = true; var b = el('hv2Jvb'); if (b && b.parentNode) b.parentNode.removeChild(b); },
     mis: misSheet, misDid: function (i, ck) { misDid(i, ck, 0); }, misUndo: function (i, ck) { misDid(i, ck, 1); },
     newOn: newOn,
+    /* 같은 내 설정 한 줄(user_prefs)에 다른 칸이 얹는 몫 — 📱 폰 확인(pchk-v2.js) · 새로 서버 부름을 만들지 않으려고 */
+    prefPut: function (k, v) { return prefPut(k, v); },
+    prefGet: function (k) { return PREF.more[k]; },
+    prefOk: function () { return PREF.done; },
     newHelp: function () { var v = !newOn(); newSet(v); try { if (typeof g.toast === 'function') g.toast(v ? '🌱 신입 도움말을 켰어요 — 영업 한 바퀴 칸을 눌러 보세요' : '신입 도움말을 껐어요'); } catch (e) {} try { paint(); } catch (e2) {} return v; },
     aiQ: function (v) { AIQ = String(v || ''); var b = el('hv2AiL'); if (b) b.innerHTML = aiPickList(); },
     aiPut: function (id) {

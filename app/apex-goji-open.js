@@ -57,6 +57,7 @@
   function register() {
     if (typeof CUSTOM === 'undefined') return false;
     CUSTOM.unshift({ tab: 'ref_underwrite', render: card });
+    CUSTOM.unshift({ tab: 'med_disclosure', render: card });   // 2026-11-26 고지체크가 메인 메뉴 — 고객 링크(본인인증)도 여기서
     return true;
   }
   if (!register()) document.addEventListener('DOMContentLoaded', register);
