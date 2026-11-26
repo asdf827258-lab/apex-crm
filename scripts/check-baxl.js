@@ -414,6 +414,32 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   is(되풀이 === 0, '  줄마다 <b>같은 말을 되풀이하지 않는다</b> — 거르기·정렬만 무거워집니다 (' +
     되풀이 + '번 겹침)');
 
+  head('[12] ★★ 시트 안 칸이 <b>엑셀 규격 차례</b>인가 (판 X579 · 사장님 말씀 2026-11-26 「엑셀다운로드 계속 오류된다」)');
+  /* 엑셀은 <worksheet> 아래 칸의 차례가 규격(CT_Worksheet)과 다르면 <b>파일을 통째로 못 엽니다</b>(복구도 안 됨).
+     파이썬·브라우저는 차례를 안 따져 그동안 「열린다」 로 속았습니다 — <drawing> 이 pageSetup 앞에 있었습니다. */
+  const XORD = ['sheetPr', 'dimension', 'sheetViews', 'sheetFormatPr', 'cols', 'sheetData', 'sheetCalcPr', 'sheetProtection',
+    'protectedRanges', 'scenarios', 'autoFilter', 'sortState', 'dataConsolidate', 'customSheetViews', 'mergeCells', 'phoneticPr',
+    'conditionalFormatting', 'dataValidations', 'hyperlinks', 'printOptions', 'pageMargins', 'pageSetup', 'headerFooter',
+    'rowBreaks', 'colBreaks', 'customProperties', 'cellWatches', 'ignoredErrors', 'smartTags', 'drawing', 'legacyDrawing',
+    'legacyDrawingHF', 'picture', 'oleObjects', 'controls', 'webPublishItems', 'tableParts', 'extLst'];
+  const x12차례 = (xml) => {
+    const body = String(xml).replace(/^[\s\S]*?<worksheet[^>]*>/, '').replace(/<\/worksheet>\s*$/, '');
+    const top = []; let d = 0; const re = /<(\/?)([A-Za-z:]+)[^>]*?(\/?)>/g; let m;
+    while ((m = re.exec(body))) { if (m[1]) { d--; continue; } if (d === 0) top.push(m[2]); if (!m[3]) d++; }
+    let last = -1, bad1 = '';
+    top.forEach(t => { const k = XORD.indexOf(t); if (k < 0) { bad1 = bad1 || ('모르는 칸 ' + t); return; } if (k < last) bad1 = bad1 || (t + ' 가 ' + XORD[last] + ' 뒤에 있음'); last = Math.max(last, k); });
+    return bad1;
+  };
+  const x12시트 = Object.keys(Z || {}).filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n));
+  const 어긋남 = x12시트.map(n => { const e = x12차례(Z[n]); return e ? n.replace('xl/worksheets/', '') + ': ' + e : ''; }).filter(Boolean);
+  is(x12시트.length >= 6 && 어긋남.length === 0, '  시트 ' + x12시트.length + '장 모두 규격 차례 (sheetData → … → pageSetup → drawing)' + (어긋남.length ? ' ← ' + 어긋남.slice(0, 3).join(' · ') : ''));
+  is(x12시트.some(n => /<drawing /.test(Z[n])), '  도해가 붙은 시트가 있다 — 차례를 잰 시트에 <drawing> 이 실제로 있다');
+  /* 되돌림 — 자가 진짜 잡는지: 옛 차례(drawing 을 printOptions 앞에)를 만들어 대 봅니다 */
+  const 옛 = '<worksheet><sheetData/><drawing r:id="rId1"/><printOptions/><pageMargins/><pageSetup/></worksheet>';
+  is(/drawing 뒤에|pageSetup 가 drawing|printOptions 가 drawing/.test(x12차례(옛)), '  ⑫ 옛 차례(drawing → printOptions)를 대면 운다 — 「' + x12차례(옛) + '」');
+  const src = fs.readFileSync(path.join(ROOT, 'app/ba-xl.js'), 'utf8');
+  is(src.indexOf('<drawing r:id="rId1"/>') > src.indexOf('paperSize="9"'), '  ba-xl.js 에서 <drawing> 을 쓰는 자리가 pageSetup 뒤다');
+
   await br.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '군데 — 엑셀이 화면과 다른 말을 합니다')
