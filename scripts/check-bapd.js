@@ -120,5 +120,52 @@ console.log('\n[6] 전·후 만들기 <b>안에</b> 연다 (판 X556 · 사장�
   is(bad4 !== SRC && bad4.indexOf(OPEN) < 0, '④ 안에서 여는 길을 끊으면 [6] 이 운다');
 }
 
+console.log('\n[7] 👂 고객이 한 말 · 📄 제안서 6개 · 💬 카톡 설명 (판 X566 · 사장님 말씀 2026-11-25 「질문을 선택할수 있도록 … 가입설계서 갯수를 더 늘려줘 … 고객이 한말들을 인식하는지가 중요 … 제안서 별로 카카오톡으로」)');
+{
+  const K = boot(SRC), Q = K.bapdT;
+  is(Q.maxpr === 6, '제안서는 6개까지 받는다 (예전 3)');
+  for (let i = 0; i < 8; i++) K.bapdAdd('pr', { files: [{ name: '제안' + i + '.pdf', size: 1024, type: 'application/pdf' }], value: '' });
+  is(Q.S.files.pr.length === 6, '여덟 개를 넣으면 여섯 개만 들어간다 — 지금 ' + Q.S.files.pr.length + '개');
+  const chips = [].concat.apply([], Q.said.map(g => g[1]));
+  is(chips.length >= 12 && chips.indexOf('보험료가 부담돼요') >= 0 && chips.indexOf('해지하면 손해 아니에요?') >= 0, '고를 수 있는 고객 말이 ' + chips.length + '개 — 걱정·보험료·지금 보험·가입 네 갈래');
+  is(/\[고객이 한 말 — 하나도 빼지 말고 각각 답한다/.test(SRC) && /"heard":\[\{"said"/.test(SRC), 'AI 주문에 고른 말을 하나씩 넣고, 말마다 「몇 장에서 어떻게」 를 받는다');
+  /* 고른 말 둘 중 하나만 답했으면 빠진 말을 확인 칸으로 */
+  Q.S.src = T.S.src; Q.S.saidUsed = ['보험료가 부담돼요', '해지하면 손해 아니에요?'];
+  Q.S.concept = { heard: [{ said: '보험료가 부담돼요', where: '2장', how: '하루로 치면 얼마인지' }] };
+  const H = Q.audit(PLAN).map(f => f.t).join('\n');
+  is(/「해지하면 손해 아니에요\?」 — 답한 장이 없습니다/.test(H) && !/「보험료가 부담돼요」 — 답한/.test(H), '답 안 한 말만 「답한 장이 없습니다」 로 올린다');
+  Q.S.concept.heard.push({ said: '해지하면 손해 아니에요', where: '9장', how: '…' });
+  is(/9장에 답했다는데 자료는 4장/.test(Q.audit(PLAN).map(f => f.t).join('\n')), '없는 장(9장)을 가리키면 잡는다');
+  /* 카톡 — 숫자·세금 점검을 메시지에도, 확인 전엔 복사가 잠긴다 */
+  Q.S.plan = PLAN; Q.S.nameShow = '홍길동';
+  Q.S.kakao = [{ file: '제안0.pdf', title: '운전자', msg: '{고객}님, 월 11,730원으로 … 비과세는 월 150만 원까지예요. 어떠세요?' }];
+  Q.S.flags = Q.audit(PLAN); Q.S.ok = {};
+  const KF = Q.S.flags.map(f => f.t).join('\n');
+  is(/카톡 1\(제안0\.pdf\) 세금 이야기에 숫자/.test(KF), '카톡 메시지의 세금 숫자도 잡는다 (2번)');
+  const kh = Q.kakao();
+  is(kh.indexOf('홍길동님') >= 0 && kh.indexOf('{고객}') < 0, '카톡 글의 {고객} 을 이 브라우저에서 이름으로 바꾼다');
+  is(/disabled onclick="bapdKkCopy\(0\)"/.test(kh), '확인 칸을 다 누르기 전에는 복사 단추가 잠겨 있다');
+  Q.S.flags.forEach(f => { Q.S.ok[f.k] = true; });
+  is(/class="btn btn-primary" onclick="bapdKkCopy\(0\)"/.test(Q.kakao()), '다 누르면 복사가 열린다');
+  is(/약관과 상품설명서를 따르며, 가입은 심사 결과에 따라/.test(Q.kk) && /세금 한도·세율 숫자/.test(Q.kk), '카톡 규칙에 끝맺음 안내 줄 · 세금 숫자 금지가 들어 있다');
+  /* 되돌림 ⑤ — 고객 말 점검을 끄면 운다 */
+  const bad5 = SRC.replace("if (!h || !no) F.push(", "if (false) F.push(");
+  const B5 = boot(bad5).bapdT; B5.S.src = T.S.src; B5.S.saidUsed = ['해지하면 손해 아니에요?']; B5.S.concept = { heard: [] };
+  is(bad5 !== SRC && !/답한 장이 없습니다/.test(B5.audit(PLAN).map(f => f.t).join('')), '⑤ 고객 말 점검을 끄면 [7] 이 운다');
+}
+
+console.log('\n[8] 📋 담보를 자세히 (판 X571 · 사장님 말씀 2026-11-26 「조금 더 담보를 자세히 알려주면 될거 같아 말투는 너무 좋아」)');
+{
+  const Q = boot(SRC).bapdT;
+  is(/「📋 주요 담보」 를 자세히 — 한 줄에 담보 하나, 6~10줄/.test(Q.kk) && /받는 돈 \(조건\)/.test(Q.kk), '카톡 설명에 주요 담보를 한 줄에 하나씩 6~10줄 (이름 · 받는 돈 · 조건)');
+  is(/금액이 안 보이면 그 줄은 쓰지 않는다/.test(Q.kk), '금액이 안 보이는 담보는 지어 넣지 않는다 (1번)');
+  is(/말투는 지금처럼 따뜻하게/.test(Q.kk), '말투는 그대로 — 사장님이 좋다고 하신 말투를 지킨다');
+  is(/제안서마다 「담보 한눈에」 table 장을 하나씩/.test(Q.brain) && /\["담보\(쉬운 말\)","받는 돈","조건"\]/.test(Q.brain), '설명자료에 제안서마다 「담보 한눈에」 표 한 장 (담보 · 받는 돈 · 조건)');
+  is(/callAI\(sys3, S\.userBase, 6500,/.test(SRC), '카톡은 길어진 만큼 넉넉히 받는다 (뒤가 잘리지 않게)');
+  /* 되돌림 ⑥ — 담보 줄 규칙을 빼면 운다 */
+  const bad6 = SRC.replace("'■ 그다음 「📋 주요 담보」 를 자세히", "'■ 그다음 「요약」");
+  is(bad6 !== SRC && !/「📋 주요 담보」 를 자세히/.test(boot(bad6).bapdT.kk), '⑥ 담보 줄 규칙을 빼면 [8] 이 운다');
+}
+
 if (fail) { console.log('\n제안서 설명자료 점검 실패 ' + fail + '개'); process.exit(1); }
 console.log('\n제안서 설명자료 점검 통과');

@@ -703,7 +703,7 @@
     var none = '<div class="li"><div class="tx"><div class="t2">오늘은 다 챙겼어요</div></div></div>';
     sheet('<h1>🛰 자비스가 챙기는 중</h1><div class="sub">고객이 중간에 끊기기 쉬운 자리를 모아 두었어요</div>' +
       '<h2>오늘 <small>' + J.L.length + '곳</small></h2><div class="list">' + (J.L.length ? J.L.map(function (x) { return row(x, true); }).join('') : none) + '</div>' +
-      T(function () { return g.MY_PROMISE ? g.MY_PROMISE.html() : ''; }, '') +   /* 💬 판 X569 — 내가 한 약속 · 카톡 붙여넣기 (몸은 my-promise.js) */
+      T(function () { return g.MY_PROMISE ? g.MY_PROMISE.html() : ''; }, '') +   /* 💬 판 X573 — 내가 한 약속 · 카톡 붙여넣기 (몸은 my-promise.js) */
       '<h2>미리 세워 둔 연락 <small>' + J.P.length + '개 · 2주 안 · 달력에도 있어요</small></h2><div class="list">' + (J.P.length ? J.P.slice(0, 20).map(function (x) { return row(x, false); }).join('') : '<div class="li"><div class="tx"><div class="t2">2주 안에 잡아 둔 연락이 없어요</div></div></div>') +
         (J.P.length > 20 ? '<button type="button" class="li" onclick="HOME_V2.close();go(\'mycal\')"><div class="tx"><div class="t1" style="color:var(--blue)">나머지 ' + (J.P.length - 20) + '개는 달력에서 ›</div></div></button>' : '') + '</div>' +
       (J.madi ? '<button type="button" class="btn g" style="margin-top:12px" onclick="HOME_V2.close();go(\'clients\')">💌 이번 달 보낼 마디 ' + J.madi + ' — 고객 365일에서</button>' : '') +

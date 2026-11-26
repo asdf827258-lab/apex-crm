@@ -28,7 +28,7 @@
  *   그 분 것만 세고(owner_id = dbs.assigned_to), 한 사람에 <b>한 번만</b>
  *   장부를 읽고, <b>못 읽으면 숫자를 한 자도 안 적습니다</b> (1번·3번·7번).
  *
- * ★★ 2026-11-26 · <b>팀원 약속 보고도 같은 예외</b>입니다 (판 X569 · 사장님 말씀
+ * ★★ 2026-11-26 · <b>팀원 약속 보고도 같은 예외</b>입니다 (판 X573 · 사장님 말씀
  *   「숫자와 내용까지, 각 담당 지점장이 알람으로 보고 받게」). 세는 규칙과 글은
  *   <b>app/promise-rule.js 한 파일</b>이고 앱도 같은 파일을 부릅니다 — 베껴 적는 자리가
  *   없습니다. 여기서는 P.promisePush(h) 한 줄만 부릅니다.
@@ -67,7 +67,7 @@ exports.handler = async function () {
     else if (r.status === 404 || r.status === 410) { gone++; await P.drop(row.endpoint); }
     else { failed++; await P.touch(row.endpoint, (row.fail || 0) + 1); }
   }
-  /* 💬 판 X569 — 팀원 약속 보고(지점장 · 대표). 시각 · 세는 규칙 · 글은 promise-rule.js 한 곳,
+  /* 💬 판 X573 — 팀원 약속 보고(지점장 · 대표). 시각 · 세는 규칙 · 글은 promise-rule.js 한 곳,
      모으고 보내는 일은 push-core.js 의 promisePush 한 곳. 터져도 위의 알람은 이미 나갔습니다. */
   let promise = null;
   try { promise = await P.promisePush(h); }
