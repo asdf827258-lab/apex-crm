@@ -86,6 +86,7 @@
     '■ 장 수: "한눈에/보기 쉽게"면 7~8장, 상품 하나·고르기도 7~8장, 연금·재무설계는 14~18장.',
     '■ 연금은 상품부터 시작하지 않는다: ①"마지막 30년, 월급은 어디서?" 질문 ②노후는 미뤄도 티가 안 남 ③나라 연금의 한계 ④부족분은 숫자로(목돈은 끝나고 연금은 평생) ⑤시간이 가장 비싸다(가입 때 생명표) ⑥둘 중 큰 금액(바닥은 깔고 위는 열어 둠) ⑦달러면 "달러는 투자가 아니라 보험, 맞히지 말고 나눠 갖기" ⑧그래서 얼마(원화·달러 둘 다) ⑧-1 왜 꼭 연금인가(비과세 요건 · 그릇 비교) ⑨물려줄 때 ⑩불리한 것 ⑪반론 "다 맞는 말입니다" ⑫목적을 묻는 질문. 이미 연금이 있는 고객은 "이미 준비하셨습니다 — 그대로 두세요"로 연다. 60대 이상·고소득은 장수·상속·통화 분산이 주인공.',
     '■ 세금(이 앱 규칙): "비과세 상품입니다"라고 결론 내지 않는다. 요건만 보여 주고 "요건 충족 시"를 빼지 않는다. 세금 한도·나이·개월·세율 숫자는 화면에 적지 않는다. 판정은 세무 확인.',
+    '■ 담보는 자세히(사장님 말씀 2026-11-26): 제안서마다 「담보 한눈에」 table 장을 하나씩 넣는다 — head 는 ["담보(쉬운 말)","받는 돈","조건"], 주요 담보 8~12줄. 조건은 면책·감액·갱신·한도·횟수 중 있는 것만. 가입설계서에 적힌 담보·금액만, 안 보이면 그 줄을 빼고 "확인 필요" 를 지어 넣지 않는다. 장 제목(h1)은 결론 한 줄, kick 에 제안서 이름. 7~8장 짜리여도 이 장은 뺄 수 없다.',
     '■ 한 장 = 메시지 하나. h1 은 결론 문장(강조는 <em>…</em>). 숫자는 크게. 0원은 0원이라 쓴다. 불리한 것(빠지는 담보·손해 구간·감액·면책·갱신)은 빨간 칸으로 숨기지 않고 대안을 같이 적는다.',
     '■ say(대본): "{고객}님"을 부르며 다정하고 짧게, 끝은 반드시 질문 하나. 숫자는 귀로 듣는 말("4만 9천 원", "하루로 치면 1,400원 정도"). 가상 사례는 "예를 들어"로 시작. tip(귀띔): 짚는 순서, 고객 답에 따른 갈림길, 조건·함정. 3줄 안쪽.',
     '■ 숫자: 첨부 자료에 있는 숫자만 쓴다. 없으면 "확인 필요". 감액·면책은 예시 옆에. 등급 경계(예: 4주 미만/이상)를 확인. 판례 번호·기사 날짜를 지어내지 않는다. 보장분석의 0원도 담보 목록을 보고 판단. 갱신으로 납입 후에도 나가는 보험료를 숨기지 않는다. 화면 금액은 실제 납입액.',
@@ -342,8 +343,10 @@
   var BAPD_KAKAO = [
     '[이번에 할 일] [제안서 파일] 마다 고객에게 카카오톡으로 보낼 설명 메시지를 하나씩 쓴다. JSON 하나만 출력한다:',
     '{"kakao":[{"file":"파일 이름 그대로","title":"한 줄 제목","msg":"본문"}]}',
-    '■ {고객}님 으로 시작한다. 다정하고 짧은 줄로 400~600자. 이모지는 2~3개까지.',
-    '■ 이 제안서로 무엇이 좋아지는지 2~3가지 — 숫자는 첨부 자료에 있는 것만. 불리한 점·조건도 한 가지 솔직하게.',
+    '■ {고객}님 으로 시작한다. 다정하고 짧은 줄로 600~950자. 이모지는 2~3개까지. 말투는 지금처럼 따뜻하게(사장님이 좋다고 하신 말투 — 바꾸지 않는다).',
+    '■ 먼저 이 제안서로 무엇이 좋아지는지 한두 줄.',
+    '■ 그다음 「📋 주요 담보」 를 자세히 — 한 줄에 담보 하나, 6~10줄. 꼴: ✔ 쉬운 담보 이름 — 받는 돈 (조건). 조건은 면책·감액(예: 1년 미만 50%)·갱신·한도·횟수 중 그 담보에 있는 것만 짧게. 가입설계서에 적힌 담보·금액만 쓰고, 금액이 안 보이면 그 줄은 쓰지 않는다. 담보 이름은 고객이 알아듣는 말로(예: 질병입원일당 → 아파서 입원하면 하루).',
+    '■ 불리한 점·조건도 한 가지 솔직하게.',
     '■ [고객이 한 말] 중 이 제안서와 닿는 말이 있으면 그대로 받아 한 줄로 답한다.',
     '■ 마지막 줄 앞은 질문 하나로 맺는다(예: "이 중에 제일 마음에 걸리는 게 뭐세요?").',
     '■ 맨 끝 줄은 그대로: ※ 자세한 보장·조건은 약관과 상품설명서를 따르며, 가입은 심사 결과에 따라 달라질 수 있어요.',
@@ -353,7 +356,7 @@
     if (!S.plan || !S.userBase) return;
     S.kakao = null; S.kakaoErr = ''; paintKakao('만드는 중…');
     var sys3 = BAPD_BRAIN + '\n\n' + BAPD_KAKAO + '\n[컨셉 카드]\n' + JSON.stringify(S.concept || {});
-    return callAI(sys3, S.userBase, 3800, 'proposal').then(function (t) {
+    return callAI(sys3, S.userBase, 6500, 'proposal').then(function (t) {   /* 담보를 자세히 쓰면 길어진다 — 6개 × 950자 */
       var o = (typeof prJson === 'function') ? prJson(t) : JSON.parse(t);
       var L = (o && o.kakao) || [];
       if (!L.length) throw new Error('카톡 메시지를 정리하지 못했습니다');
@@ -551,7 +554,8 @@
     }
     if (k === 'table') {
       var hi = d.hi || [];
-      h += '<div class="grow" style="margin-top:16px"><table class="t3"><tr>' + (d.head || []).map(function (x) { return '<th>' + R(x) + '</th>'; }).join('') + '</tr>';
+      var many = (d.rows || []).length;   /* 담보 한눈에 8~12줄 — 많으면 글씨·칸을 줄여 장 안에 (판 X571) */
+      h += '<div class="grow" style="margin-top:' + (many > 8 ? 10 : 16) + 'px"><table class="t3' + (many > 10 ? ' t3xs' : many > 7 ? ' t3s' : '') + '"><tr>' + (d.head || []).map(function (x) { return '<th>' + R(x) + '</th>'; }).join('') + '</tr>';
       (d.rows || []).forEach(function (r, i) { h += '<tr' + (hi.indexOf(i) >= 0 ? ' class="money"' : '') + '>' + r.map(function (x) { return '<td>' + R(x) + '</td>'; }).join('') + '</tr>'; });
       return h + '</table>' + (d.note ? '<div class="note" style="margin-top:14px">' + R(d.note) + '</div>' : '') + '</div>';
     }
@@ -598,7 +602,7 @@
     var sl = plan.slides.map(function (s, i) { return slideHtml(s, i, n); }).join('\n');
     return '<!doctype html><html lang="ko" data-theme="light"><head><meta charset="utf-8"><meta name="color-scheme" content="light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc(title) + '</title>' +
       '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">' +
-      '<style>' + DECK_CSS + '.brand{font-weight:800;font-size:15px;color:#1d3a8a}.cover .brand{position:absolute;top:40px;right:56px;background:#fff;padding:8px 14px;border-radius:10px}' + (client ? '#cheat,#drawer{display:none!important}' : '') + '</style></head><body><div id="stage">' + sl + '</div>' +
+      '<style>' + DECK_CSS + '.t3s{font-size:18.5px}.t3s th{font-size:17px;padding:9px 10px}.t3s td{padding:9px 10px}.t3s td small{font-size:15px}.t3xs{font-size:17.5px}.t3xs th{font-size:16px;padding:8px 10px}.t3xs td{padding:7px 10px;line-height:1.3}.t3xs td small{display:inline;font-size:14px;margin-left:4px}.brand{font-weight:800;font-size:15px;color:#1d3a8a}.cover .brand{position:absolute;top:40px;right:56px;background:#fff;padding:8px 14px;border-radius:10px}' + (client ? '#cheat,#drawer{display:none!important}' : '') + '</style></head><body><div id="stage">' + sl + '</div>' +
       (client ? '' : '<aside id="drawer"><h4>대본 · <span id="dno"></span></h4><div id="dsay"></div><div class="tip" id="dtip"></div></aside>') +
       '<div id="nav"><button onclick="go(cur-1)">◀</button>' + (client ? '' : '<button onclick="toggleD()">대본 (S)</button>') + '<button onclick="fs()">전체화면 (F)</button><button onclick="go(cur+1)">▶</button></div>' +
       (client ? '' : '<div id="cheat"></div>') +

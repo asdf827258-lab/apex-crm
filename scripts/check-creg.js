@@ -128,6 +128,9 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     txt += ' ' + (sheet ? sheet.textContent : '');
     return { open: !!(sheet && sheet.classList.contains('on')),
              n: cards.length + c2.length, n1: cards.length, n2: c2.length, step1: step1, stay: stay,
+             /* ★ 판 X568 — <b>단추 제 이름</b>을 따로 들고 옵니다. 화면 글 전체에서 찾으면
+                엉뚱한 자리의 글자에 걸려, 단추 이름을 지워도 자가 안 웁니다 (8번). */
+             c1txt: cards.map(function (c) { return c.textContent.replace(/\s+/g, ' '); }),
              txt: txt.replace(/\s+/g, ' '),
              px: px,
              x: !!document.querySelector('.creg-x'),
@@ -138,8 +141,18 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(W.open, '창이 열린다');
   /* ⚠ 판 X135 에서 <b>셋째 갈래</b>(📁 엑셀·CSV)가 붙었습니다. 수를 박아 두는
      자리라, 늘 때마다 여기도 같이 고칩니다 — 느슨히 >=2 로 풀면 갈래가 조용히
-     사라져도 초록입니다 (8번).                                              */
-  is(W.n === 3 && W.n1 === 1 && W.n2 === 2, '고르는 칸이 셋이다 — ① 📁 하나 · ② 👤📇 둘 (받음 ' + W.n1 + ' · ' + W.n2 + ')');
+     사라져도 초록입니다 (8번).
+     ★★ 판 X568 (사장님 말씀 2026-11-26 「DB고객명단 → DB통합CRM에 자동으로 입력
+       분류 기능 넣기 [엑셀]」) — 엑셀 문이 <b>둘</b>이 되었습니다. 여태 엑셀은
+       <b>묻지 않고 늘 고객 365일</b>로 갔습니다. 이제 ① 에 📇 고객 365일 ·
+       📁 DB 통합 CRM 두 문이 섭니다. 그래서 넷입니다.                        */
+  is(W.n === 4 && W.n1 === 2 && W.n2 === 2, '고르는 칸이 넷이다 — ① 엑셀 둘 · ② 👤📇 둘 (받음 ' + W.n1 + ' · ' + W.n2 + ')');
+  /* ★ 수만 세면 <b>두 문이 같은 곳으로</b> 가도 초록입니다 — <b>단추 제 이름</b>에
+     어디로 가는지 적혀 있는지 봅니다 (1번). */
+  const xl = (W.c1txt || []).join(' | ');
+  is(/고객 365일/.test(xl) && /DB 통합 CRM/.test(xl),
+     '엑셀 문이 저마다 <b>어디로 가는지</b> 제 이름에 적는다 — ' +
+     (W.c1txt || []).map(function (t) { return (t.match(/엑셀·CSV[^·]{0,18}/) || ['?'])[0]; }).join(' · '));
   is(W.step1, '첫 걸음은 <b>누구</b> — 이름 · 번호 칸');
   is(W.stay, '이름 없이 「다음」 을 누르면 안 넘어간다');
   is(/엑셀/.test(W.txt) && /여러 명 한꺼번에/.test(W.txt),
