@@ -73,7 +73,19 @@ const SEED = () => {
              미션: !!document.querySelector('#cli365Top') && /미션|30일/.test((document.getElementById('cli365Top')||{}).innerText||''),
              달력: /이번 달 고객 관리/.test((document.getElementById('dynPane')||{}).innerText||''),
              찾기칸: !!document.getElementById('oscSearch'),
-             새고객: /\+ 새 고객/.test((document.getElementById('dynPane')||{}).innerText||'') };
+             /* ★ 2026-11-26 (판 X573) — <b>이름 글자가 아니라 하는 일</b>로 묻습니다.
+                여기는 「+ 새 고객」 이라는 <b>글자</b>를 찾고 있었는데, 그 단추 이름이
+                「➕ 고객 넣기 · 엑셀」 로 바뀌자 <b>멀쩡한 단추를 없어졌다</b>고 울었습니다.
+                지키려던 것은 글자가 아니라 「<b>고객을 넣는 단추가 그대로 있다</b>」 입니다 —
+                그러니 cregOpen 을 부르는 단추가 그 틀 안에 서 있는지를 봅니다.
+                떼면 그대로 웁니다(글자를 고쳐도 안 웁니다 · 8번).                   */
+             넣기단추: (function(){
+               var pane=document.getElementById('dynPane'); if(!pane)return false;
+               var b=pane.querySelectorAll('button'),i,o;
+               for(i=0;i<b.length;i++){ o=b[i].getAttribute('onclick')||'';
+                 if(o.indexOf('cregOpen')>=0 && b[i].offsetWidth>0)return true; }
+               return false;
+             })() };
   });
   is(M.bar >= 0 && M.bar < M.h,
      '  <b>찾기 칸</b>이 첫 화면 안에 있다 — ' + M.bar + 'px (한 판 ' + M.h + 'px)');
@@ -86,7 +98,7 @@ const SEED = () => {
   is(M.미션,  '  <b>오늘의 미션</b>이 그대로 있다 (목록 아래)');
   is(M.달력,  '  <b>이번 달 고객 관리</b> 달력이 그대로 있다');
   is(M.찾기칸, '  <b>찾기 칸</b>이 그대로 있다');
-  is(M.새고객, '  <b>+ 새 고객</b> 단추가 그대로 있다');
+  is(M.넣기단추, '  <b>고객 넣는 단추</b>가 그대로 있다 — 이름이 아니라 <b>cregOpen 으로 가나</b>를 봅니다 (판 X573)');
 
   console.log('\n[3] 조용히 터지지 않았나');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? (' · ' + errs[0]) : ''));
