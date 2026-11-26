@@ -374,7 +374,7 @@ var TOOL={
  katalk    :{e:'💬',t:'제안서 카톡설명'},
  interpret :{e:'🧠',t:'보험 해석'},
  ins_asst  :{e:'🩺',t:'보험 비서'},
- med_disclosure:{e:'🩺',t:'고지체크'},
+ med_disclosure:{e:'🩺',t:'알릴의무/보험금찾아줌'},
  ref_underwrite:{e:'⚠️',t:'예외질환 인수확인'},
  med_checkup:{e:'🩺',t:'AI 건강검진'},
  cs_gso    :{e:'🤖',t:'금소법 AI'},

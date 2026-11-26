@@ -1,4 +1,4 @@
-/* 🩺 고지체크 — CRM 메인 메뉴 한 곳 (판 X574 · 사장님 말씀 2026-11-26 「CRM 메뉴 나누길 원해」 → 같은 날
+/* 🩺 고지체크 — CRM 메인 메뉴 한 곳 (판 X574·X579 · 사장님 말씀 2026-11-26 「CRM 메뉴 나누길 원해」 → 같은 날
    「예외질환 목록을 아예 없애고, 단숨에 고지체크가 메인메뉴가 되고 여기 안에서 예외질환에 맞는 상품까지 찾아서 연계해서 알려주라고」)
 
    고지체크 진료분석(jinryo.html)은 맨 위 메뉴 「📋 알릴의무 · 💰 보험금 찾아줌 · 🧾 청구 한 건」 을 가졌고,
@@ -31,7 +31,7 @@ tabsSrc.slice(0, tabsSrc.indexOf('\n];') > 0 ? tabsSrc.indexOf('\n];') : 200000)
 });
 const where = id => { for (const G of groups) { const k = G.ids.findIndex(x => x.id === id); if (k >= 0) return { G, k, t: G.ids[k].t, hide: G.ids[k].hide }; } return null; };
 const A = where('med_disclosure'), B = where('ref_hidden'), U = where('ref_underwrite');
-is(!!A && A.t === '고지체크', '  med_disclosure 메뉴 이름 = 「고지체크」 (' + (A && A.t) + ')');
+is(!!A && A.t === '알릴의무/보험금찾아줌', '  med_disclosure 메뉴 이름 = 「알릴의무/보험금찾아줌」 (' + (A && A.t) + ')');
 is(!!A && A.G.g === '하루 시작' && A.k === 1 && A.G.ids[0].id === 'home' && !A.hide, '  <b>메인 메뉴</b> — 「하루 시작」 홈 바로 아래 (' + (A && A.G.g + ' ' + A.k) + ')');
 is(!!B && B.hide, '  보험금 찾아줌은 메뉴에서 숨김(고지체크 안에 있음) · 화면 id 는 남음');
 is(!!U && U.hide, '  예외질환 인수확인(목록) 메뉴는 숨김 · 화면 id 는 남음');
