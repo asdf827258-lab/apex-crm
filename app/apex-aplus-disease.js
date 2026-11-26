@@ -98,6 +98,10 @@
     '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🔎</span>유병자 인수예외질환 조회 <span style="font-size:var(--t6);font-weight:800;color:#1A56DB;background:#EFF4FF;border-radius:999px;padding:3px 8px;margin-left:6px;vertical-align:2px">실제 보험사 기준</span></div>' +
     '<div class="card-desc">질환명을 넣으면 24개 보험사의 <b>인수예외 여부·최소경과·치료기간·수술여부·가능상품구분</b>을 원본 그대로 찾아옵니다. AI 추정이 아니라 보험사가 제출한 실제 기준입니다. (키 불필요)</div></div>' +
     '<div class="card-body">' +
+      /* 2026-11-26 — 우리 중계가 A+ 원본에 응답을 못 받는 동안 공식 화면으로 바로 가는 길 (사장님 「aplusga.com/APA/SV/disease.do 예외질환조회 변경」).
+         병력에 맞는 가입 가능한 회사·이번 달 상품은 「🩺 알릴의무/보험금찾아줌」(고지체크) 안 「A+ 예외질환 직접 조회해 붙여넣기」 에서 */
+      '<div class="btn-row" style="margin-bottom:12px"><a class="btn btn-primary" href="https://www.aplusga.com/APA/SV/disease.do?sales=Y" target="_blank" rel="noopener">A+ 예외질환 조회 열기 ↗</a>' +
+        '<button type="button" class="btn btn-ghost" onclick="go(\'med_disclosure\')">🩺 알릴의무/보험금찾아줌에서 상품까지 →</button></div>' +
       '<div class="frm cols2">' +
         '<div class="fld span2"><label>질환명 (2개 이상은 &amp; 로 연결 · 최대 4개)</label>' +
           '<input id="apd_q" placeholder="예: 당뇨   ·   충수염&amp;복막염" autocomplete="off"></div>' +
