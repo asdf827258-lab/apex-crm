@@ -86,7 +86,8 @@
     '■ 장 수: "한눈에/보기 쉽게"면 7~8장, 상품 하나·고르기도 7~8장, 연금·재무설계는 14~18장.',
     '■ 연금은 상품부터 시작하지 않는다: ①"마지막 30년, 월급은 어디서?" 질문 ②노후는 미뤄도 티가 안 남 ③나라 연금의 한계 ④부족분은 숫자로(목돈은 끝나고 연금은 평생) ⑤시간이 가장 비싸다(가입 때 생명표) ⑥둘 중 큰 금액(바닥은 깔고 위는 열어 둠) ⑦달러면 "달러는 투자가 아니라 보험, 맞히지 말고 나눠 갖기" ⑧그래서 얼마(원화·달러 둘 다) ⑧-1 왜 꼭 연금인가(비과세 요건 · 그릇 비교) ⑨물려줄 때 ⑩불리한 것 ⑪반론 "다 맞는 말입니다" ⑫목적을 묻는 질문. 이미 연금이 있는 고객은 "이미 준비하셨습니다 — 그대로 두세요"로 연다. 60대 이상·고소득은 장수·상속·통화 분산이 주인공.',
     '■ 세금(이 앱 규칙): "비과세 상품입니다"라고 결론 내지 않는다. 요건만 보여 주고 "요건 충족 시"를 빼지 않는다. 세금 한도·나이·개월·세율 숫자는 화면에 적지 않는다. 판정은 세무 확인.',
-    '■ 담보는 자세히(사장님 말씀 2026-11-26): 제안서마다 「담보 한눈에」 table 장을 하나씩 넣는다 — head 는 ["담보(쉬운 말)","받는 돈","조건"], 주요 담보 8~12줄. 조건은 면책·감액·갱신·한도·횟수 중 있는 것만. 가입설계서에 적힌 담보·금액만, 안 보이면 그 줄을 빼고 "확인 필요" 를 지어 넣지 않는다. 장 제목(h1)은 결론 한 줄, kick 에 제안서 이름. 7~8장 짜리여도 이 장은 뺄 수 없다.',
+    '■ 담보는 자세히(사장님 말씀 2026-11-26): 제안서마다 「담보 한눈에」 table 장을 하나씩 넣는다 — head 는 ["담보(쉬운 말)","받는 돈","조건"], 주요 담보 8~12줄. 조건은 면책·감액·갱신·한도·횟수 중 있는 것만. 가입설계서에 적힌 담보·금액만, 안 보이면 그 줄을 빼고 "확인 필요" 를 지어 넣지 않는다. 장 제목(h1)은 결론 한 줄, kick 에 제안서 파일 이름 그대로(앱이 그 제안서 원문과 대 본다). 7~8장 짜리여도 이 장은 뺄 수 없다.',
+    '■ 담보·금액은 [제안서별 담보 발췌 — 원문 그대로] 에서 그 제안서 것만 쓴다(사장님 말씀 2026-11-26 「상품 틀리지 않도록」). 제안서끼리 담보·금액을 섞지 않는다. 지급금액 표(▸ 특약 이름 아래 「○○만원」)가 있으면 받는 돈은 지급금액이다 — 가입금액(만원) 칸 숫자와 다를 수 있다(예: 가입금액 3,000 · 지급금액 300만원). 발췌에 없는 담보·금액은 쓰지 않는다.',
     '■ 한 장 = 메시지 하나. h1 은 결론 문장(강조는 <em>…</em>). 숫자는 크게. 0원은 0원이라 쓴다. 불리한 것(빠지는 담보·손해 구간·감액·면책·갱신)은 빨간 칸으로 숨기지 않고 대안을 같이 적는다.',
     '■ say(대본): "{고객}님"을 부르며 다정하고 짧게, 끝은 반드시 질문 하나. 숫자는 귀로 듣는 말("4만 9천 원", "하루로 치면 1,400원 정도"). 가상 사례는 "예를 들어"로 시작. tip(귀띔): 짚는 순서, 고객 답에 따른 갈림길, 조건·함정. 3줄 안쪽.',
     '■ 숫자: 첨부 자료에 있는 숫자만 쓴다. 없으면 "확인 필요". 감액·면책은 예시 옆에. 등급 경계(예: 4주 미만/이상)를 확인. 판례 번호·기사 날짜를 지어내지 않는다. 보장분석의 0원도 담보 목록을 보고 판단. 갱신으로 납입 후에도 나가는 보험료를 숨기지 않는다. 화면 금액은 실제 납입액.',
@@ -112,7 +113,7 @@
 
   /* ── 상태 ── */
   var S = { files: { bj: [], pr: [] }, plan: null, busy: false, src: '', flags: [], ok: {}, nameShow: '', deck: '', mode: 'auto',
-            said: [], goal: [], saidFree: '', dir: '', kakao: null, kakaoErr: '' };
+            said: [], goal: [], saidFree: '', dir: '', kakao: null, kakaoErr: '', parts: [], exText: '' };
   /* 판 X566 · 사장님 말씀 2026-11-25 「질문을 선택할수 있도록 … 고객이 한말들을 인식하는지가 중요」
      고객이 한 말을 <b>골라</b> 넣는다. 고른 말마다 「몇 장에서 어떻게 답했나」 를 AI 가 적게 하고,
      빠진 말은 앱이 확인 칸으로 올린다 (audit). 문구는 이 표 한 곳에만 둔다 (5번). */
@@ -225,6 +226,12 @@
       '.bapd-kk{border:1px solid var(--t-line-2);border-radius:13px;padding:12px 14px;margin-top:10px;background:var(--t-card)}' +
       '.bapd-kk-t{font-size:var(--t6);font-weight:800;color:var(--t-ink)}.bapd-kk-t span{font-weight:600;color:var(--t-sub);margin-left:6px}' +
       '.bapd-kk textarea{display:block;width:100%;box-sizing:border-box;margin:8px 0;border:1px solid var(--t-line);border-radius:10px;padding:10px 12px;font-size:var(--t6);line-height:1.7;font-family:inherit;color:var(--t-ink);background:#FFFDE7;min-height:230px}' +
+      '.bapd-ex{margin:8px 0;border:1px solid var(--t-line-2);border-radius:11px;background:var(--t-card)}' +
+      '.bapd-ex summary{cursor:pointer;padding:10px 12px;font-size:var(--t6);font-weight:700;color:var(--t-ink);min-height:24px}.bapd-ex summary em{font-style:normal;color:var(--t-warn-d,#C2410C)}' +
+      '.bapd-ex table{width:100%;border-collapse:collapse;font-size:var(--t6);color:var(--t-ink)}.bapd-ex td,.bapd-ex th{border-top:1px solid var(--t-line-2);padding:7px 10px;text-align:left;vertical-align:top;line-height:1.55}' +
+      '.bapd-ex th{color:var(--t-sub);font-weight:800}.bapd-ex tr.other td,.bapd-ex tr.none td{background:#FFF4E5}.bapd-ex tr.other b,.bapd-ex tr.none b{color:var(--t-warn-d,#C2410C)}' +
+      '.bapd-ex td div+div{margin-top:4px;padding-top:4px;border-top:1px dashed var(--t-line-2)}' +
+      '.bapd-ex pre{margin:0;padding:10px 12px;border-top:1px solid var(--t-line-2);white-space:pre-wrap;word-break:keep-all;font-family:inherit;font-size:var(--t6);line-height:1.6;color:var(--t-ink);max-height:420px;overflow:auto}' +
       '</style>';
   }
   function page() { return css() + formHtml(); }
@@ -246,6 +253,165 @@
   window.bapdDel = function (slot, i) { S.files[slot].splice(i, 1); var b = document.getElementById('bapdList_' + slot); if (b) b.innerHTML = fileList(slot); };
   window.bapdReset = function () { S.plan = null; S.flags = []; S.ok = {}; S.deck = ''; repaint(); };
   function repaint() { var p = document.getElementById('bapdPage'); if (p) p.innerHTML = page(); }
+
+  /* ══ 📋 제안서 담보 발췌 — 원문 그대로 (판 X578 · 사장님 말씀 2026-11-26
+     「제안서를 잘 못 읽을때가 있어, 딱 보장부분을 그대로 발췌해서 상품 틀리지 않도록 다시 점검해」) ══
+     PDF 글 전체(안내문·환급 예시·다른 회사 견본 문장)를 통째로 보내면 AI 가 설명 문장 속 금액이나
+     <b>다른 제안서 금액</b>을 집어 온다. 그래서
+       ① 가입설계서의 <b>담보 표</b>(「가입금액 · 보험료」 머리줄 ~ 표 끝)와
+          <b>지급금액 표</b>(「급부명 · 지급사유 · 지급금액」 — NH 처럼 가입금액과 받는 돈이 다른 회사)를
+          원문 줄 그대로 떼어
+       ② 제안서마다 따로 묶어 [첨부 자료] 맨 앞에 싣고
+       ③ 카톡·표 장에 나온 금액을 <b>그 제안서 발췌</b>와 앱이 다시 대 본다(exCheck).
+     ★ 고치거나 요약하지 않는다 — 줄은 PDF 에서 나온 그대로다(쪽 머리·꼬리말과 ※ 안내문만 건너뜀).
+     ★ 실제 제안서 8부(삼성화재·메리츠 3·KB·NH·메트·화재)로 맞췄다 — 점검 check-bapd [9] 이 견본 다섯 꼴을 잰다. */
+  var EX_HEAD = /가입금액/, EX_HEAD2 = /(보험료|보험기간|납입|만기|납기)/,
+    EX_NOTHEAD = /(니다|경우|따라|가입금액인|감액|기준|지급|곱한|요약|상이)/,
+    EX_PAY = /^(급부명|보장명|담보명)?\s*지급사유\s*지급금액$|^급부명\s*지급사유\s*지급금액/,
+    EX_END = /^(가입담보리스트는|가입담보목록은|본 가입담보|상품제안서_|◆|※|\*|주\s?\d\)|설계번호|보험계약관계자|보험가입 조건|선택된 특약이 없습니다|주의사항|\d{12,})/,
+    EX_SKIP = /(PAGE\s*:|발행일|담당자\s*:|준법|본 자료는|약서와 함께|상품제안서번호|고객콜센터|홈페이지|영업담당자|\[계약자용\]|^\d+\s*\/\s*\d+$)/;
+  var EX_SUM_MAX = 6000, EX_PAY_MAX = 5000, EX_DET_MAX = 3000;
+  /* 금액 → 원(달러는 센트). 「1천5백만원」「4만3천원」「10,100만원」「1억2천만원」「$6,000.00」 */
+  function exVal(s) {
+    var tot = 0, cur = 0, num = null, m, re = /(\d[\d,]*(?:\.\d+)?)|(억|만|천|백)/g;
+    while ((m = re.exec(s))) {
+      if (m[1]) { num = parseFloat(m[1].replace(/,/g, '')); continue; }
+      var u = m[2], n = num; num = null;
+      if (u === '천' || u === '백') cur += (n === null ? 1 : n) * (u === '천' ? 1000 : 100);
+      else { tot += (cur + (n === null ? (cur ? 0 : 1) : n)) * (u === '만' ? 1e4 : 1e8); cur = 0; }
+    }
+    return Math.round(tot + cur + (num || 0));
+  }
+  /* 글 속 금액 — 단위(원·만·천·억·달러·$)가 붙은 것만. 「1,280 30년납」 같은 보험료·기간 숫자는 안 센다 */
+  function exAmts(t) {
+    var out = [], m, re = /\$\s?\d[\d,]*(?:\.\d+)?|(?:\d[\d,]*(?:\.\d+)?\s*(?:억|천|백|만)+\s*)+(?:원|달러)?|\d[\d,]*\s*(?:원|달러)/g;
+    t = String(t || '');
+    while ((m = re.exec(t))) {
+      var raw = m[0].replace(/\s+$/, ''), usd = /^\$|달러/.test(raw), v;
+      v = /^\$/.test(raw) ? (parseFloat(raw.replace(/[^\d.]/g, '')) || 0) : exVal(raw);
+      if (v > 0) out.push({ raw: raw, key: (usd ? 'USD' : 'KRW') + Math.round(v * (usd ? 100 : 1)) });
+    }
+    return out;
+  }
+  function exHead(l) { return l.length <= 60 && !/^[·※(\[→\-–•]/.test(l) && EX_HEAD.test(l) && EX_HEAD2.test(l) && !EX_NOTHEAD.test(l); }
+  /* 표 한 줄 = 담보 이름 줄(들) + 금액이 든 줄. 「1,280 30년납 90세만기」 처럼 보험료·기간만 있는 줄은 앞 줄에 붙인다 */
+  function exRows(lines, pay) {
+    var rows = [], pre = [];
+    lines.forEach(function (l) {
+      var a = exAmts(l);
+      if (!a.length || /합계/.test(l)) {
+        if (/합계/.test(l)) { pre = []; return; }
+        if (rows.length && !pre.length && /(년납|년\s*\/|세만기|만기|종신|전기납|\d+년\/)/.test(l) && !/[가-힣]{4,}/.test(l.replace(/(년납|세만기|만기|종신|전기납|보험기간|납입)/g, ''))) rows[rows.length - 1].t += ' ' + l;
+        else if (/[가-힣A-Za-z]/.test(l)) pre.push(l);
+        return;
+      }
+      rows.push({ t: (pay || '') + pre.concat([l]).join(' ').replace(/\s+/g, ' '), a: a.map(function (x) { return x.key; }) });
+      pre = [];
+    });
+    return rows;
+  }
+  function prExcerpt(text) {
+    var L = String(text || '').split('\n').map(function (l) { return l.replace(/^\s+|\s+$/g, ''); });
+    var blocks = [], i, cur = null, prevName = '';
+    for (i = 0; i < L.length; i++) {
+      var l = L[i];
+      if (exHead(l)) { cur = { kind: /보장내용/.test(l) ? 'det' : 'sum', head: l, lines: [] }; blocks.push(cur); continue; }
+      if (EX_PAY.test(l)) { cur = { kind: 'pay', head: prevName, lines: [], amt: 0 }; blocks.push(cur); continue; }
+      if (l && !/^[※*·]/.test(l) && !EX_SKIP.test(l)) prevName = l;
+      if (!cur) continue;
+      if (!l || EX_SKIP.test(l)) continue;
+      if (cur.kind === 'pay') {
+        /* 지급금액 표는 쪽이 갈리며 머리·꼬리말이 끼고, ※ 안내는 금액 <b>뒤</b>에 온다 */
+        if (/^※/.test(l)) { if (cur.amt) cur = null; continue; }
+        if (exAmts(l).length) cur.amt++;
+        if (cur.lines.length > 30) { cur = null; continue; }
+        cur.lines.push(l); continue;
+      }
+      if (EX_END.test(l) || cur.lines.length > 160) { cur = null; continue; }
+      cur.lines.push(l);
+    }
+    var seen = {}, out = { sum: '', pay: '', det: '' }, cap = { sum: EX_SUM_MAX, pay: EX_PAY_MAX, det: EX_DET_MAX }, rows = [];
+    blocks.forEach(function (b) {
+      var body = b.lines.join('\n'); if (!body || seen[b.head + body]) return; seen[b.head + body] = 1;
+      var r = exRows(b.lines, b.kind === 'pay' && b.head ? '[' + b.head + '] ' : '');
+      if (!r.length && b.kind !== 'sum') return;
+      var piece = (b.kind === 'pay' ? '▸ ' + (b.head || '') + '\n' : b.head + '\n') + body + '\n\n';
+      if (out[b.kind].length + piece.length > cap[b.kind]) return;
+      out[b.kind] += piece; rows = rows.concat(r);
+    });
+    var title = '';
+    for (i = 0; i < Math.min(L.length, 120) && !title; i++) {
+      var m = L[i].match(/^상품명\s*[:：]?\s*(.+)$/);
+      if (m) title = m[1];
+      else if (/(무배당|\(무\))/.test(L[i]) && L[i].length < 70 && !/(보험료|가입금액|보험금|계약자|피보험자|보험기간|설계사|보험회사|보험업|등록증|대리점)/.test(L[i])) title = L[i];
+    }
+    return { title: title, sum: out.sum.replace(/\n+$/, ''), pay: out.pay.replace(/\n+$/, ''), det: out.det.replace(/\n+$/, ''), rows: rows };
+  }
+
+  /* 제안서마다 발췌를 [첨부 자료] 맨 앞 한 덩이로 — 이름은 파일 이름 그대로(카톡 file 과 맞춘다) */
+  function exBlock(parts) {
+    var n = 0, out = '';
+    parts.forEach(function (p) {
+      if (p.slot !== 'pr' || !p.ex) return;
+      n++;
+      var e = p.ex;
+      out += '\n===== 제안서 ' + n + ': ' + p.name + ' =====' + (e.title ? '\n상품: ' + e.title : '') +
+        (e.sum ? '\n[담보 표 — 원문]\n' + e.sum : '') + (e.pay ? '\n[받는 돈(지급금액) — 원문]\n' + e.pay : '') +
+        (e.det ? '\n[담보별 조건 — 원문]\n' + e.det : '') + (!e.sum && !e.pay ? '\n(담보 표를 글로 못 찾았습니다 — 아래 전체 글·그림에서 이 제안서 부분만 본다)' : '');
+    });
+    return n ? '\n\n[제안서별 담보 발췌 — 원문 그대로. 담보 이름·금액은 여기서, 그 제안서 것만 쓴다. 제안서끼리 섞지 않는다]' + out : '';
+  }
+  /* 금액 → 그 금액이 든 원문 줄 — 제안서마다 */
+  function exIndex(p) {
+    var ix = {}, t = p.ex ? [p.ex.sum, p.ex.pay, p.ex.det].join('\n') : '';
+    ((p.ex && p.ex.rows) || []).forEach(function (r) { r.a.forEach(function (k) { (ix[k] = ix[k] || []).push(r.t); }); });
+    exAmts(t).forEach(function (a) { if (!ix[a.key]) ix[a.key] = []; });
+    return ix;
+  }
+  function exFind(name) {
+    var L = (S.parts || []).filter(function (p) { return p.slot === 'pr'; }), nm = norm(name);
+    return L.filter(function (p) { return p.name === name; })[0] ||
+      L.filter(function (p) { var a = norm(p.name.replace(/\.pdf$/i, '')); return nm && a && (a.indexOf(nm) >= 0 || nm.indexOf(a) >= 0); })[0] || null;
+  }
+  function exSim(a, b) {
+    var g = function (t) { var h = String(t).replace(/[^가-힣]/g, ''), o = {}, i; for (i = 0; i < h.length - 1; i++) o[h.substr(i, 2)] = 1; return o; };
+    var A = g(a), B = g(b), n = 0, k; for (k in A) if (B[k]) n++; return n;
+  }
+  /* 줄마다: 금액이 그 제안서 발췌에 있나 · 없으면 다른 제안서에 있나 */
+  function exCheck(lines, p) {
+    var me = p ? exIndex(p) : {}, others = (S.parts || []).filter(function (q) { return q.slot === 'pr' && q !== p && q.ex; });
+    return lines.map(function (ln) {
+      var a = exAmts(ln), hits = [], miss = [], other = '';
+      a.forEach(function (x) {
+        if (me[x.key]) { me[x.key].forEach(function (t) { if (hits.indexOf(t) < 0) hits.push(t); }); return; }
+        miss.push(x.raw);
+        others.forEach(function (q) { if (!other && exIndex(q)[x.key]) other = q.name; });
+      });
+      /* 같은 금액 담보가 여럿이면 <b>이름이 닮은 줄</b>을 앞에 — 두 글자 조각이 얼마나 겹치나 */
+      hits.sort(function (x, y) { return exSim(ln, y) - exSim(ln, x); });
+      return { line: ln, n: a.length, hits: hits.slice(0, 2), miss: miss, other: other, st: !a.length ? 'na' : (miss.length ? (other ? 'other' : 'none') : 'ok') };
+    });
+  }
+  /* 카톡 글에서 담보 줄만 — ✔ 로 시작하는 줄(규칙이 그 꼴로 쓰게 한다) */
+  function kkLines(msg) { return String(msg || '').split('\n').filter(function (l) { return /^\s*[✔✅☑]/.test(l) && exAmts(l).length; }).map(function (l) { return l.replace(/^\s+|\s+$/g, ''); }); }
+  /* 표 장(담보 한눈에)의 줄 — 「받는 돈」 칸 */
+  function tblLines(sl) {
+    var d = sl.data || {}, hd = (d.head || []).join(' ');
+    if (sl.kind !== 'table' || !/받는 돈|금액|보장/.test(hd)) return [];
+    return (d.rows || []).map(function (r) { return plain((r || []).filter(function (x) { return String(x || '').replace(/\s+/g, ''); }).join(' — ')); }).filter(function (l) { return exAmts(l).length; });
+  }
+  function tblPart(sl) {
+    var k = plain(sl.kick) + ' ' + plain(sl.h1) + ' ' + plain(sl.src), L = (S.parts || []).filter(function (p) { return p.slot === 'pr' && p.ex; });
+    var by = exFind(plain(sl.kick)); if (by) return by;
+    var best = null, bs = 0, lines = tblLines(sl);
+    L.forEach(function (p) {
+      var ix = exIndex(p), sc = 0;
+      if (p.ex.title && k.indexOf(p.ex.title) >= 0) sc += 5;
+      lines.forEach(function (l) { exAmts(l).forEach(function (x) { if (ix[x.key]) sc++; }); });
+      if (sc > bs) { bs = sc; best = p; }
+    });
+    return best;
+  }
 
   /* ── 읽기 → 컨셉 → 장 ── */
   function readParts() {
@@ -277,6 +443,9 @@
     S.busy = true; if (btn) btn.disabled = true; say('문서 읽는 중…');
 
     readParts().then(function (parts) {
+      /* 자르기(pdfTrimParts) <b>전에</b> 뜬다 — 담보 표는 앞쪽이지만 잘린 글에서 뜨면 표 끝이 날아간다 */
+      S.parts = parts.map(function (p) { return { slot: p.slot, name: p.name, img: !(p.text && p.text.replace(/\s+/g, '').length > 10), ex: p.slot === 'pr' && p.text ? prExcerpt(p.text) : null }; });
+      S.exText = exBlock(S.parts);
       var trim = { parts: parts, note: '' };
       try { trim = pdfTrimParts(parts); } catch (e) {}
       var text = '';
@@ -301,7 +470,7 @@
         (said.length ? said.map(function (x, i) { return '\n' + (i + 1) + ') ' + x; }).join('') : '\n(없음)') +
         '\n[제안서 파일] ' + (S.files.pr.map(function (f) { return f.name; }).join(' · ') || '(없음)') +
         '\n[고객 이름] 쓰지 않는다. 화면과 대본에는 {고객} 이라고만 쓴다.' +
-        '\n\n[첨부 자료]' + got.text;
+        '\n\n[첨부 자료]' + (S.exText || '') + got.text;
       S.userBase = user;   /* 카톡만 다시 만들 때 PDF 를 다시 안 읽는다 */
       say('컨셉 잡는 중…');
       var sys1 = BAPD_BRAIN + '\n\n[이번에 할 일] 컨셉 카드만 만든다. JSON 하나만 출력한다:\n' +
@@ -346,6 +515,7 @@
     '■ {고객}님 으로 시작한다. 다정하고 짧은 줄로 600~950자. 이모지는 2~3개까지. 말투는 지금처럼 따뜻하게(사장님이 좋다고 하신 말투 — 바꾸지 않는다).',
     '■ 먼저 이 제안서로 무엇이 좋아지는지 한두 줄.',
     '■ 그다음 「📋 주요 담보」 를 자세히 — 한 줄에 담보 하나, 6~10줄. 꼴: ✔ 쉬운 담보 이름 — 받는 돈 (조건). 조건은 면책·감액(예: 1년 미만 50%)·갱신·한도·횟수 중 그 담보에 있는 것만 짧게. 가입설계서에 적힌 담보·금액만 쓰고, 금액이 안 보이면 그 줄은 쓰지 않는다. 담보 이름은 고객이 알아듣는 말로(예: 질병입원일당 → 아파서 입원하면 하루).',
+    '■ 담보 줄은 [제안서별 담보 발췌 — 원문 그대로] 에서 그 file 의 것만 — 다른 제안서의 담보·금액을 가져오지 않는다. 지급금액 표가 있으면 받는 돈은 지급금액으로. 앱이 줄마다 원문과 대 본다.',
     '■ 불리한 점·조건도 한 가지 솔직하게.',
     '■ [고객이 한 말] 중 이 제안서와 닿는 말이 있으면 그대로 받아 한 줄로 답한다.',
     '■ 마지막 줄 앞은 질문 하나로 맺는다(예: "이 중에 제일 마음에 걸리는 게 뭐세요?").',
@@ -377,12 +547,24 @@
     S.kakao.forEach(function (k, i) {
       var msg = fill(k.msg);
       h += '<div class="bapd-kk"><div class="bapd-kk-t">📄 ' + esc(k.file) + '<span>' + esc(fill(k.title)) + ' · ' + msg.length + '자</span></div>' +
-        '<textarea id="bapdKkT' + i + '" aria-label="카톡 설명 ' + (i + 1) + '">' + esc(msg) + '</textarea>' +
+        '<textarea id="bapdKkT' + i + '" aria-label="카톡 설명 ' + (i + 1) + '">' + esc(msg) + '</textarea>' + exMatchHtml(k, msg) +
         '<div class="btn-row"><button type="button" class="btn ' + (allOk ? 'btn-primary' : 'btn-ghost') + '" ' + (allOk ? '' : 'disabled ') + 'onclick="bapdKkCopy(' + i + ')">📋 복사' + (allOk ? '' : ' — 아래 확인을 다 누르면 열립니다') + '</button>' +
         (allOk && typeof navigator !== 'undefined' && navigator.share ? '<button type="button" class="btn btn-ghost" onclick="bapdKkShare(' + i + ')">📤 카톡으로 보내기</button>' : '') + '</div></div>';
     });
     return h + '<div class="bapd-fine">칸 안에서 고치셔도 됩니다 — 복사는 고친 글 그대로 나갑니다. 숫자·세금 점검은 아래 확인 칸에 함께 올라가 있습니다.</div>' +
       '<div class="btn-row"><button type="button" class="btn btn-ghost" onclick="bapdKakao()">🔄 카톡 설명만 다시 만들기</button></div></div></div>';
+  }
+  /* 🔎 카톡 담보 줄 ↔ 제안서 원문 줄 (판 X578) — 사람이 눈으로 한 번에 대 본다 */
+  function exMatchHtml(k, msg) {
+    var p = exFind(k.file), L = kkLines(msg);
+    if (!L.length) return '';
+    if (!p || !p.ex || (!p.ex.sum && !p.ex.pay)) return '<div class="bapd-fine">🔎 이 제안서는 담보 원문을 글로 못 떠서 앱이 대 보지 못했습니다 — 제안서와 직접 대 보세요.</div>';
+    var R = exCheck(L, p), ok = R.filter(function (r) { return r.st === 'ok'; }).length;
+    return '<details class="bapd-ex"' + (ok < R.length ? ' open' : '') + '><summary>🔎 담보 원문 대조 — ' + R.length + '줄 중 <b>' + ok + '줄 일치</b>' + (ok < R.length ? ' · <em>' + (R.length - ok) + '줄 확인</em>' : '') + '</summary>' +
+      '<table><tr><th>카톡에 쓴 줄</th><th>제안서 원문(그대로)</th></tr>' + R.map(function (r) {
+        return '<tr class="' + r.st + '"><td>' + esc(r.line) + '</td><td>' + (r.st === 'ok' ? r.hits.map(function (t) { return '<div>' + esc(t) + '</div>'; }).join('') :
+          '<b>' + (r.st === 'other' ? '⚠ 다른 제안서(' + esc(r.other) + ')의 금액' : '⚠ 이 제안서 담보 표에 없는 금액') + '</b> — ' + esc(r.miss.join(', '))) + '</td></tr>';
+      }).join('') + '</table></details>';
   }
   function paintKakao() { var b = document.getElementById('bapdKk'); if (b) b.outerHTML = kakaoHtml(); }
   function kkText(i) { var t = document.getElementById('bapdKkT' + i); return t ? t.value : fill((S.kakao[i] || {}).msg); }
@@ -425,6 +607,29 @@
       if (tax) F.push({ k: 'tax' + key, t: where + ' 세금 이야기에 숫자(' + tax.slice(0, 3).join(', ') + ')가 있습니다 — 한도·나이·개월은 적지 않습니다(요건만 · 세무 확인)' });
     }
   }
+  /* 📋 담보 원문 대조 (판 X578) — 카톡 ✔ 줄 · 「담보 한눈에」 표 줄의 금액이 <b>그 제안서</b> 발췌에 있나 */
+  function exAudit(plan, F) {
+    if (!(S.parts || []).some(function (p) { return p.slot === 'pr'; })) return;
+    (S.parts || []).forEach(function (p, j) {
+      if (p.slot === 'pr' && (!p.ex || (!p.ex.sum && !p.ex.pay))) F.push({ k: 'exn' + j, t: '「' + p.name + '」 — ' + (p.img ? '그림(스캔) PDF 라' : '담보 표 모양을 못 알아봐') + ' 담보 원문 대조를 못 했습니다. 카톡·표의 담보와 금액을 제안서와 직접 대 보세요' });
+    });
+    (S.kakao || []).forEach(function (k, i) {
+      var p = exFind(k.file);
+      if (!p) { F.push({ k: 'exf' + i, t: '카톡 ' + (i + 1) + ' — 「' + (k.file || '') + '」 은 넣은 제안서 이름과 다릅니다. 어느 제안서 설명인지 확인' }); return; }
+      if (!p.ex || (!p.ex.sum && !p.ex.pay)) return;
+      exCheck(kkLines(fill(k.msg)), p).forEach(function (r, j) {
+        if (r.st === 'other') F.push({ k: 'exk' + i + '_' + j, t: '카톡 ' + (i + 1) + ' 「' + r.line + '」 — ' + r.miss.join(', ') + ' 은 이 제안서가 아니라 「' + r.other + '」 의 금액입니다. 상품이 섞였는지 확인' });
+        else if (r.st === 'none') F.push({ k: 'exk' + i + '_' + j, t: '카톡 ' + (i + 1) + ' 「' + r.line + '」 — ' + r.miss.join(', ') + ' 이 「' + p.name + '」 담보 표에 없습니다. 고치거나 지운다' });
+      });
+    });
+    (plan.slides || []).forEach(function (sl, i) {
+      var lines = tblLines(sl); if (!lines.length) return;
+      var p = tblPart(sl); if (!p) return;
+      exCheck(lines, p).forEach(function (r, j) {
+        if (r.st === 'other' || r.st === 'none') F.push({ k: 'ext' + i + '_' + j, t: (i + 1) + '장 표 「' + r.line + '」 — ' + r.miss.join(', ') + (r.st === 'other' ? ' 은 「' + r.other + '」 의 금액입니다(이 장은 「' + p.name + '」)' : ' 이 「' + p.name + '」 담보 표에 없습니다') + '. 확인' });
+      });
+    });
+  }
   function norm(x) { return String(x || '').replace(/[\s?!.·,~]/g, ''); }
   function audit(plan) {
     var F = [], seen = sums(plan), src = String(S.src || '').replace(/,/g, '');
@@ -437,6 +642,7 @@
       else if (no > plan.slides.length) F.push({ k: 'hd' + j, t: '고객이 한 말 「' + x + '」 — ' + no + '장에 답했다는데 자료는 ' + plan.slides.length + '장입니다' });
     });
     (S.kakao || []).forEach(function (k, i) { numTax(plain(fill(k.msg)), '카톡 ' + (i + 1) + '(' + (k.file || '') + ')', F, seen, src, 'k' + i); });
+    exAudit(plan, F);
     plan.slides.forEach(function (sl, i) {
       var t = slideText(sl);
       numTax(t, (i + 1) + '장', F, seen, src, i);   /* 장·카톡이 같은 한 곳으로 잰다 (5번) */
@@ -455,6 +661,17 @@
   }
 
   /* ── 결과 화면 ── */
+  /* 📋 제안서에서 그대로 떠 온 담보 — AI 가 무엇을 보고 썼는지 사람이 본다 (판 X578) */
+  function exListHtml() {
+    var L = (S.parts || []).filter(function (p) { return p.slot === 'pr'; });
+    if (!L.length) return '';
+    return '<div class="card" style="margin-top:12px"><div class="card-body"><div class="bapd-line" style="font-size:var(--t5)">📋 제안서에서 그대로 떠 온 담보 ' + L.length + '개</div>' +
+      L.map(function (p) {
+        var e = p.ex || {}, n = (e.rows || []).length, t = [e.sum ? '[담보 표]\n' + e.sum : '', e.pay ? '[받는 돈(지급금액)]\n' + e.pay : '', e.det ? '[담보별 조건]\n' + e.det : ''].filter(Boolean).join('\n\n');
+        return '<details class="bapd-ex"><summary>📄 ' + esc(p.name) + (e.title ? ' · ' + esc(e.title) : '') + ' — ' + (t ? '담보 ' + n + '줄' : '<em>' + (p.img ? '그림 PDF — 글로 못 뜸' : '표를 못 찾음') + '</em>') + '</summary>' +
+          (t ? '<pre>' + esc(t) + '</pre>' : '<div class="bapd-fine">AI 는 그림·전체 글에서 읽었습니다. 카톡·표의 담보와 금액을 제안서와 직접 대 보세요.</div>') + '</details>';
+      }).join('') + '<div class="bapd-fine">AI 에게는 이 원문을 맨 앞에 붙여 「그 제안서 것만 쓰라」 고 보냈습니다. 카톡·표 장의 금액은 앱이 이 원문과 다시 대 봅니다.</div></div></div>';
+  }
   function li(a) { return (a || []).map(function (x) { return esc(x); }).join(' · ') || '—'; }
   function outHtml() {
     var c = S.concept || {}, p = S.plan;
@@ -465,7 +682,7 @@
       '<b>니즈 고리</b><span>' + li(c.chain) + '</span><b>불리한 것</b><span>' + li(c.loses) + (c.alt ? ' → <b>대안</b> ' + esc(c.alt) : '') + '</span>' +
       '<b>장 구성</b><span>' + li(c.plan) + '</span><b>세운 가정</b><span>' + li(c.assume) + '</span>' +
       '<b>덧붙인 것</b><span>' + li(c.added) + '</span></div>' +
-      (S.readNote ? '<div class="bapd-fine">' + esc(S.readNote) + '</div>' : '') + '</div></div>';
+      (S.readNote ? '<div class="bapd-fine">' + esc(S.readNote) + '</div>' : '') + '</div></div>' + exListHtml();
     h += '<div class="card" style="margin-top:12px"><div class="card-body">' +
       '<iframe class="bapd-frame" id="bapdFrame" title="설명자료 미리보기"></iframe>' +
       '<div class="btn-row" style="margin-top:10px">' +
@@ -638,6 +855,6 @@
     return true;
   }
   /* 점검(check-bapd)이 안을 들여다보는 문 — 화면은 이걸 쓰지 않는다 */
-  window.bapdT = { audit: audit, deck: deckHtml, S: S, brain: BAPD_BRAIN, sw: swHtml, kakao: kakaoHtml, out: outHtml, said: BAPD_SAID, maxpr: BAPD_MAXPR, kk: BAPD_KAKAO };
+  window.bapdT = { audit: audit, deck: deckHtml, S: S, brain: BAPD_BRAIN, sw: swHtml, kakao: kakaoHtml, out: outHtml, said: BAPD_SAID, maxpr: BAPD_MAXPR, kk: BAPD_KAKAO, ex: prExcerpt, amts: exAmts, exCheck: exCheck, exAudit: exAudit, exBlock: exBlock, exMatch: exMatchHtml };
   if (!mount()) document.addEventListener('DOMContentLoaded', mount);
 })();

@@ -1500,6 +1500,18 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
  body.frpOn>#finalRep{display:block!important}
  body.frpOn{background:#fff!important}
 }
+/* 판 X578 — 최종 보고서 쪽 틀: 남색 테 + 안쪽 금색 실선 + 네 귀퉁이 금색 꺾쇠. 한 틀 = 한 쪽 */
+#finalRep .frpw{position:relative;box-sizing:border-box;height:277mm;padding:9mm 10mm 7mm;border:1.4px solid #0F1A2C;overflow:hidden;break-after:page;page-break-after:always;background:#fff}
+#finalRep .frpw:last-child{break-after:auto;page-break-after:auto}
+#finalRep .frpw::before{content:'';position:absolute;inset:2mm;border:.8px solid #C9A86A;pointer-events:none}
+#finalRep .frpw::after{content:'';position:absolute;inset:.9mm;pointer-events:none;background:
+ linear-gradient(#B08D57,#B08D57) left top/9mm 2px no-repeat,linear-gradient(#B08D57,#B08D57) left top/2px 9mm no-repeat,
+ linear-gradient(#B08D57,#B08D57) right top/9mm 2px no-repeat,linear-gradient(#B08D57,#B08D57) right top/2px 9mm no-repeat,
+ linear-gradient(#B08D57,#B08D57) left bottom/9mm 2px no-repeat,linear-gradient(#B08D57,#B08D57) left bottom/2px 9mm no-repeat,
+ linear-gradient(#B08D57,#B08D57) right bottom/9mm 2px no-repeat,linear-gradient(#B08D57,#B08D57) right bottom/2px 9mm no-repeat}
+#finalRep .frpw.long{height:auto;min-height:277mm;overflow:visible}
+#finalRep .frpw>.frpg{break-after:auto;page-break-after:auto;min-height:0}
+.showctl .prgh{flex-basis:100%;font-size:14px;font-weight:800;color:var(--nv,#191F28);margin:6px 0 -2px}
 #finalRep,#frImg{font-family:'Pretendard Variable',Pretendard,'Malgun Gothic',sans-serif;color:#191F28;letter-spacing:-.02em;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .frpg{position:relative;break-after:page;page-break-after:always;min-height:272mm;padding:0 0 12mm}
 .frpg:last-child{break-after:auto;page-break-after:auto}
@@ -2215,8 +2227,11 @@ table.agcmp td.adp{color:var(--or);font-weight:700}
       <button class="btn xlb" onclick="baArtGo(0)" title="묶음마다 한 장 · 직접 그린 도해 · A4">🖨 담보별 분리자료</button>
       <button class="btn g" id="baSaveBtn" onclick="baSaveToClient()">💾 고객 365일</button>
       <button class="btn g" onclick="doSave()">💾 파일로 저장</button>
-      <button class="btn" onclick="frPrint()">📄 최종 보고서</button>
-      <button class="btn" onclick="window.print()">🖨 인쇄 · PDF</button>
+      <!-- 판 X578 · 사장님 말씀 2026-11-26 「인쇄 하면 자꾸 안되고 오류가 생겨 … 인쇄 버튼 누르면 보장분석 전후
+           가로버전으로 인쇄될수 있도록」. 전에는 window.print() 라 <b>지금 화면</b>(만들기의 입력칸·단추)이
+           Letter 종이에 그대로 찍혔습니다. 이제 어느 화면에서 눌러도 전·후 비교 발표를 가로 16:9 로 뽑습니다. -->
+      <button class="btn" onclick="frPrint()" title="A4 세로 · 테두리 · 쪽마다 한 가지 — 인쇄">📄 최종 보고서</button>
+      <button class="btn" onclick="baPrintLand()" title="전·후 비교 발표를 가로 16:9 로 한 쪽에 한 장">🖨 인쇄 (가로)</button>
       <div class="moreWrap">
         <button class="btn n" id="barMoreBtn" onclick="barMore()" aria-expanded="false">⋯ 더보기</button>
         <div class="moreBox" id="barMoreBox">
@@ -8093,12 +8108,15 @@ function showHtml(){
   /* 설계사 단추는 <b>무대 밖</b>에 둔다 — 무대 안에 두면 표지 밑에 붙어 고객이 먼저 본다 */
   h+='</div></div><div class="noprint showctl" style="margin-top:16px">'+
     '<button class="btn n" onclick="go(\'edit\')">← 만들기로 돌아가기</button>'+
-    '<button class="btn g" onclick="frPrint()">📄 최종 보고서 (A4 여러 장 · 고객께 드리는 것)</button>'+
-    '<button class="btn g" onclick="frImage()">💬 요약 한 장 이미지 (카톡으로 보내기)</button>'+   /* 판 X348 */
-    '<button class="btn" onclick="baAllPrint(1)">🖨 담보 한눈 (A4 한 장)</button>'+
-    '<button class="btn" onclick="baAllPrint(2)">🖨 담보 확대 (두 장 이어 붙이기)</button>'+
-    '<button class="btn" onclick="baPrint(\'doc\')">🖨 문서로 (세로 · 잔글까지 전부)</button>'+
-    (S.deck?'<button class="btn" onclick="baPrint(\'land\')">🖥 가로 16:9 (한 쪽에 한 장)</button>':'')+
+    /* 판 X578 · 사장님 말씀 2026-11-26 「맨 밑에 인쇄버튼 여러가지가 있는데 이름을 직관적으로 바꿔라」 —
+       이름 = <b>무엇이</b> 나오나 + <b>어떤 종이로</b>. 제일 많이 쓰는 가로 인쇄를 맨 앞에, 한 장씩 보기가 아니어도 섭니다. */
+    '<span class="prgh">🖨 인쇄 · 보내기</span>'+
+    '<button class="btn g" onclick="baPrintLand()" title="발표 화면을 가로 16:9 로 한 쪽에 한 장">🖨 전·후 비교 — 가로로 인쇄 (화면 그대로 한 장씩)</button>'+
+    '<button class="btn g" onclick="frPrint()" title="A4 세로 여러 쪽 · 테두리 · 고객께 드리는 것">📄 최종 보고서 인쇄 — A4 책자 (고객께 드리는 것)</button>'+
+    '<button class="btn g" onclick="frImage()">💬 카톡으로 보낼 요약 그림 1장</button>'+   /* 판 X348 */
+    '<button class="btn" onclick="baAllPrint(1)">🖨 모든 담보 표 — A4 한 장에</button>'+
+    '<button class="btn" onclick="baAllPrint(2)">🖨 모든 담보 표 — 크게 두 장 (이어 붙이기)</button>'+
+    '<button class="btn" onclick="baPrint(\'doc\')">🖨 설명글까지 전부 — 세로 문서</button>'+
     /* 발표가 끝난 <b>그 자리에서</b> 고객 카드에 남긴다 — 화면을 나갔다
        들어오면 그 사이에 잊는다. 워크스페이스 밖에서는 안 보인다. */
     (INFRAME?'<button class="btn g" onclick="baSaveToClient()">💾 고객 365일에 저장</button>':'')+
@@ -8238,9 +8256,9 @@ function frHtml(){
       '실제 보장 · 지급은 각 보험 약관과 보험사 심사 기준을 따르며, 보험료 · 보장은 심사 결과에 따릅니다.</div>');
   var N=pages.length;
   return pages.map(function(p,n){
-    return '<section class="frpg"><header class="frh"><span>APEX 사업단 · 보험 자산 운용보고서 — '+nm+'</span><span>'+day+'</span></header>'+
+    return '<div class="frpw"><section class="frpg"><header class="frh"><span>APEX 사업단 · 보험 자산 운용보고서 — '+nm+'</span><span>'+day+'</span></header>'+
       '<h2><em>'+(n+1)+'</em>'+p.t+'<small>'+p.s+'</small></h2>'+p.b+
-      '<footer class="frf"><span>상담용 예시 · 지급은 약관과 심사에 따릅니다</span><b>'+(n+1)+' / '+N+'</b></footer></section>';
+      '<footer class="frf"><span>상담용 예시 · 지급은 약관과 심사에 따릅니다</span><b>'+(n+1)+' / '+N+'</b></footer></section></div>';
   }).join('');
 }
 function frPrint(){
@@ -8248,6 +8266,7 @@ function frPrint(){
   if(!box){box=document.createElement('div');box.id='finalRep';document.body.appendChild(box);}
   box.innerHTML=frHtml();
   frTerms(box);   /* 판 X348 — 어려운 말 풀이(처음 나오는 쪽) */
+  frFit(box);     /* 판 X578 — 넘치는 쪽은 그 쪽만 줄여 한 쪽 틀 안에 */
   var st=document.getElementById('baPageCss');
   if(!st){st=document.createElement('style');st.id='baPageCss';document.head.appendChild(st);}
   st.textContent='@page{size:A4 portrait;margin:10mm 11mm}';
@@ -8255,6 +8274,26 @@ function frPrint(){
   setTimeout(function(){window.print();},80);
 }
 window.addEventListener('afterprint',function(){setTimeout(function(){document.body.classList.remove('frpOn');},0);});
+/* 📄 쪽 맞추기 (판 X578 · 사장님 말씀 2026-11-26 「최종보고서도 인쇄하게 만들고 테두리를 만들어서 조금 더 있어보이게」).
+   쪽마다 테두리 틀(.frpw, A4 안쪽 190×277mm)에 담는다. 담보·계약이 많은 고객은 한 쪽이 넘쳐
+   <b>머리말 없는 빈 쪽</b>이 하나 더 생겼다(견본 고객 8쪽 → 9·10쪽). 그래서 뽑기 전에 화면 밖에서
+   종이 폭으로 세워 재고, 넘치는 쪽만 그 쪽을 줄인다(zoom). 너무 많이 줄여야 하면(62% 밑)
+   글씨가 안 읽히니 줄이지 않고 그 쪽만 이어지게 둔다(.long) — 내용을 잘라 숨기지 않는다(1번). */
+function frFit(box){
+  var keep=box.getAttribute('style');
+  box.style.cssText='display:block;position:absolute;left:-12000px;top:0;width:190mm';
+  [].forEach.call(box.querySelectorAll('.frpw'),function(w){
+    var p=w.querySelector('.frpg');if(!p)return;
+    w.classList.remove('long');p.style.zoom='';p.style.minHeight='0px';
+    var cs=getComputedStyle(w),avail=w.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+    var h=p.scrollHeight*1.03;   /* 종이는 화면보다 조금 길게 나온다 — 3% 여유 */
+    var z=h>avail?avail/h:1;
+    if(z<0.62){w.classList.add('long');p.style.minHeight='';return;}
+    if(z<1)p.style.zoom=z.toFixed(3);
+    p.style.minHeight=Math.floor(avail/z)+'px';   /* 꼬리말이 틀 맨 아래에 앉게 */
+  });
+  if(keep===null)box.removeAttribute('style');else box.setAttribute('style',keep);
+}
 function frTerms(root){
   return baTermMark([].slice.call(root.querySelectorAll('.frpg')),function(sec,p){var f=sec.querySelector(':scope>footer.frf');sec.insertBefore(p,f||null);});
 }
@@ -8395,6 +8434,24 @@ function baPrintDone(){
   if(st)st.textContent='';
   document.body.classList.remove('printland');
   deckPaint();
+  /* 판 X578 — 만들기 화면에서 눌렀으면 <b>그 화면으로</b> 돌려 놓는다 */
+  if(BA_LAND_BACK){var b=BA_LAND_BACK;BA_LAND_BACK=null;S.deck=b.deck;go(b.mode);}
+}
+/* 🖨 전·후 인쇄 (가로) — 판 X578 · 사장님 말씀 2026-11-26 「인쇄 버튼 누르면 보장분석 전후 가로버전으로」.
+   가로는 「한 장씩 넘기기」 무대가 있어야 선다. 만들기 화면이나 죽 이어서 보기에서 눌러도
+   잠깐 보여주기(한 장씩)로 가서 뽑고, 끝나면 <b>있던 화면</b>으로 돌아온다(baPrintDone). */
+var BA_LAND_BACK=null;
+function baPrintLand(){
+  if(!baHasCov())return;
+  if(S.mode!=='show'||!S.deck){BA_LAND_BACK={mode:S.mode,deck:S.deck};S.deck=true;go('show');}
+  setTimeout(function(){baPrint('land');},60);
+}
+function baHasCov(){
+  var C=calc(),n=0,k;
+  for(k in C.b)if(C.b[k])n++;
+  for(k in C.a)if(C.a[k])n++;
+  if(!n){toast('담보가 아직 없습니다 — 계약을 먼저 넣어 주세요');return false;}
+  return true;
 }
 /* <b>한 박자 뒤에</b> 되돌린다. afterprint 는 브라우저에 따라 종이를
    다 만들기 <b>전에</b> 불린다 — 그 자리에서 printland 를 떼면 22장이
