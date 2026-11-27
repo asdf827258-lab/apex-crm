@@ -8406,6 +8406,21 @@ function frImgShare(){
    다 읽히면 그 틀에서 인쇄한다(판 X319 · 사장님 말씀 「인쇄해서 두 장으로 붙여서 · 확대버전 / 한눈 버전」) */
 function baAllPrint(m){
   var C=calc(),f=document.getElementById('baAllPrt');
+  /* 판 X587 — 폰·태블릿 + CRM 안(iframe)에서는 숨은 iframe 속 iframe 의 인쇄가 막힌다 →
+     보고서를 <b>새 창</b>으로 열어 거기서 뽑는다(위 baPrintTop 과 같은 까닭). PC 는 아래 그대로. */
+  if(baInFrame()&&baMobile()){
+    var w=null;try{w=window.open(ba3dSrc('sec',C,{secs:['all']}),'_blank');}catch(e){w=null;}
+    if(w){
+      var n=0,t=setInterval(function(){
+        n++;var R=null;try{R=w.REP;}catch(e){}
+        if(R&&w.document.readyState==='complete'){clearInterval(t);
+          setTimeout(function(){try{if(m===2)R.printAll2();else R.printAll1();}catch(e){}},400);}
+        else if(n>60)clearInterval(t);
+      },150);
+      return;
+    }
+    toast('팝업이 막혀 새 창을 못 열었습니다 — 이 화면에서 그대로 인쇄합니다');
+  }
   if(f)f.remove();
   f=document.createElement('iframe');f.id='baAllPrt';f.setAttribute('aria-hidden','true');f.tabIndex=-1;
   f.style.cssText='position:fixed;left:-20000px;top:0;width:1280px;height:800px;border:0';
@@ -8459,6 +8474,68 @@ function baHasCov(){
    보여 한참 못 찾았다. */
 function baAfterPrint(){setTimeout(baPrintDone,0);}
 window.addEventListener('afterprint',baAfterPrint);
+/* ── 판 X587 · 사장님 말씀 2026-11-27 「인쇄 버튼 작동 문제 … 해결해볼래」 ─────────────────
+   CRM 은 이 화면을 <b>iframe</b> 안에 띄운다. PC 크롬은 iframe 안의 window.print() 가 이 화면만
+   뽑지만, <b>폰·태블릿 크롬/사파리</b>는 iframe 안의 인쇄가 막히거나 바깥(CRM 전체)을 찍는 일이 있다.
+   → 폰·태블릿 + iframe 일 때만, 인쇄 직전의 화면(가로 무대·최종 보고서·담보 표 — 단추마다 갖춘 꼴)을
+   <b>그대로 새 창</b>에 옮겨 거기서 뽑는다. 단추 12곳을 하나하나 고치지 않고 window.print 한 곳에서 받는다.
+   PC 는 그대로(바꾸지 않음). 팝업이 막히면 전처럼 이 화면에서 뽑는다. */
+var BA_PRINT_RAW=window.print;
+function baInFrame(){try{return window.top!==window.self;}catch(e){return true;}}
+function baMobile(){
+  var u=navigator.userAgent||'';
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(u)||(navigator.maxTouchPoints>1&&/Macintosh/.test(u));
+}
+function baPrintTop(){
+  var w=null,i,d,src,dst,sc,hd,b,bar;
+  try{w=window.open('','_blank');}catch(e){w=null;}
+  if(!w){
+    toast('팝업이 막혀 새 창을 못 열었습니다 — 이 화면에서 그대로 인쇄합니다');
+    BA_PRINT_RAW.call(window);return;
+  }
+  /* 인쇄 직전 손질(접힌 것 펼치기 printAllOn 등)을 <b>먼저</b> 돌리고 떠 간다 — 진짜 인쇄와 같은 차례 */
+  try{window.dispatchEvent(new Event('beforeprint'));}catch(e){}
+  d=document.documentElement.cloneNode(true);
+  /* 그림판(canvas)은 복제하면 비어 있다 — 그림으로 바꿔 싣는다 */
+  src=document.querySelectorAll('canvas');dst=d.querySelectorAll('canvas');
+  for(i=0;i<src.length&&i<dst.length;i++){
+    try{var im=document.createElement('img');im.src=src[i].toDataURL('image/png');
+      im.setAttribute('style',src[i].getAttribute('style')||'');im.className=src[i].className;
+      if(!im.style.width)im.style.width=src[i].clientWidth?src[i].clientWidth+'px':'';
+      dst[i].parentNode.replaceChild(im,dst[i]);}catch(e){}
+  }
+  /* 스크립트는 뺀다 — 다시 돌면 화면을 새로 그려 <b>지금 꼴</b>이 사라진다 */
+  sc=d.querySelectorAll('script');for(i=sc.length-1;i>=0;i--)sc[i].parentNode.removeChild(sc[i]);
+  hd=d.querySelector('head');
+  b=document.createElement('base');b.href=location.href;hd.insertBefore(b,hd.firstChild);
+  var cs=document.createElement('style');
+  cs.textContent='.baPT{position:fixed;right:12px;top:12px;z-index:99999;font:700 16px/1 sans-serif;'+
+    'padding:12px 18px;border-radius:12px;border:0;background:#0F1A2C;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.2)}'+
+    '.baPT+.baPT{right:auto;left:12px;background:#fff;color:#0F1A2C;border:1px solid #ccd}'+
+    '@media print{.baPT{display:none!important}}';
+  hd.appendChild(cs);
+  bar=d.querySelector('body');
+  if(bar)bar.insertAdjacentHTML('afterbegin','<button class="baPT" onclick="window.print()">🖨 다시 인쇄</button>'+
+    '<button class="baPT" onclick="window.close()">✕ 닫기</button>');
+  try{w.document.open();w.document.write('<!doctype html>'+d.outerHTML);w.document.close();}catch(e){
+    try{w.close();}catch(e2){}
+    BA_PRINT_RAW.call(window);return;
+  }
+  var fired=false;
+  function go(){if(fired)return;fired=true;try{w.focus();w.print();}catch(e){}}
+  function ready(){
+    try{if(w.document.fonts&&w.document.fonts.ready){w.document.fonts.ready.then(function(){setTimeout(go,250);});setTimeout(go,2500);return;}}catch(e){}
+    setTimeout(go,400);
+  }
+  if(w.document.readyState==='complete')ready();
+  else{try{w.addEventListener('load',ready);}catch(e){}setTimeout(go,3000);}
+  /* 이쪽 화면은 바로 제자리로 — 가로 무대·보고서 꼴은 새 창이 들고 갔다(afterprint 처리기 전부: 가로 무대 · 보고서 · 펼침) */
+  try{window.dispatchEvent(new Event('afterprint'));}catch(e){baAfterPrint();}
+}
+window.print=function(){
+  if(baInFrame()&&baMobile())return baPrintTop();
+  return BA_PRINT_RAW.call(window);
+};
 function deckList(){
   var box=document.querySelector('#app .show'),out=[],i,ns;
   if(!box)return out;
@@ -8488,9 +8565,9 @@ function deckAt(L){
 function deckFit(){
   var box=document.querySelector('#app .show'),wrap=document.getElementById('deckWrap');
   if(!box||!wrap)return;
-  if(!S.deck){box.style.transform='';wrap.style.height='';wrap.classList.remove('deck-fit');return;}
+  if(!S.deck){box.style.transform='';box.style.marginTop='';wrap.style.height='';wrap.style.alignItems='';wrap.classList.remove('deck-fit');return;}
   wrap.classList.add('deck-fit');
-  wrap.style.height='';wrap.style.minHeight='';wrap.style.justifyContent='';   /* 판 X351 — 재기 전에 지난번 폰 값을 걷는다 */
+  wrap.style.height='';wrap.style.minHeight='';wrap.style.justifyContent='';wrap.style.alignItems='';box.style.marginTop='';   /* 판 X351 — 재기 전에 지난번 폰 값을 걷는다 */
   var avW=wrap.clientWidth,avH=wrap.clientHeight;
   if(!avW||!avH)return;
   /* 판 X305 — 높이를 <b>실제로</b> 잰다. .deck-fit 의 「100vh - 232px」 는 위 띠가 두 줄일 때의 어림이라,
@@ -8504,10 +8581,21 @@ function deckFit(){
   /* 줄인 만큼 자리도 줄여 준다 — 안 그러면 밑에 빈 자리가 남는다 */
   wrap.style.setProperty('--k',k);
   box.style.marginLeft=Math.max(0,(avW-1280*k)/2)+'px';
+  /* 판 X587 · 사장님 말씀 2026-11-27 「프레젠테이션 모드 … 해결해볼래」 — 갤탭에서 발표하면 무대가 <b>왼쪽 밖으로</b>
+     밀렸다(세로 800 폭: 왼쪽 240px 잘림 · 가로 1280 폭: 14px 잘리고 가운데 아님). 아래 X351 은 700px 밑(폰)만 고쳤고,
+     700~1280 사이(태블릿)는 flex 가운데 정렬이 <b>줄이기 전 1280</b>을 기준으로 양옆에 넘쳐 왼쪽으로 밀렸다.
+     → 가운데는 flex 에 맡기지 않고 <b>여백으로 직접</b> 맞춘다(가로는 언제나, 세로는 발표 중일 때 — 줄인 높이 기준). */
+  wrap.style.justifyContent='flex-start';
+  var pres=document.body.classList.contains('presenting');
+  if(pres){
+    wrap.style.alignItems='flex-start';
+    box.style.marginTop=Math.max(0,(Math.min(wrap.clientHeight,avH)-720*k)/2)+'px';
+  }
   /* 판 X351 — 폰(좁은 화면)에서 무대가 <b>화면 왼쪽 밖</b>(-445px)에 있었다. .deck-fit 이 가운데 정렬(flex center)이라
      1280px 무대가 390px 화면보다 넓으면 양옆으로 넘치고, 줄이는 것(scale)은 왼쪽 위 기준이라 왼쪽으로 밀려났다.
      좁을 때는 왼쪽부터 놓고(가운데는 marginLeft 가 맞춘다), 줄어든 무대 높이만큼만 자리를 잡는다(밑 빈칸 없앰). */
-  if(avW<700){wrap.style.justifyContent='flex-start';wrap.style.height=Math.ceil(720*k+4)+'px';wrap.style.minHeight='0';}
+  /* 발표 중에는 화면을 통째로 쓰므로 줄이지 않는다 — 줄이면 위 가운데 여백(marginTop) 때문에 무대가 잘려 숨는다 */
+  if(avW<700&&!pres){wrap.style.height=Math.ceil(720*k+4)+'px';wrap.style.minHeight='0';}
 }
 var _fitT=null;
 window.addEventListener('resize',function(){
