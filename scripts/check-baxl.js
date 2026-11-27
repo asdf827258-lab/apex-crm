@@ -440,6 +440,20 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   const src = fs.readFileSync(path.join(ROOT, 'app/ba-xl.js'), 'utf8');
   is(src.indexOf('<drawing r:id="rId1"/>') > src.indexOf('paperSize="9"'), '  ba-xl.js 에서 <drawing> 을 쓰는 자리가 pageSetup 뒤다');
 
+  head('[13] ★★ 색이 <b>보이나</b> (판 X583 · 사장님 말씀 2026-11-26 「색상은 안 보여서 체크하고」)');
+  /* 결과 칸이 꼴 18(색 없음) 하나였고 바탕이 흰색과 거의 같았습니다. 그림 문자는 맑은 고딕에 없어 □ 로 찍혔습니다 */
+  const st13 = Z['xl/styles.xml'] || '';
+  const xf13 = (st13.match(/<cellXfs[\s\S]*?<\/cellXfs>/) || [''])[0].match(/<xf [^>]*?(?:\/>|>[\s\S]*?<\/xf>)/g) || [];
+  const fl13 = st13.match(/<fill>[\s\S]*?<\/fill>/g) || [];
+  const s13 = Z['xl/worksheets/sheet1.xml'] || '';
+  const x13결과 = (s13.match(/<c r="[A-Z]+\d+" s="(\d+)" t="inlineStr"><is><t xml:space="preserve">(?:▲ 보장UP|▼ 줄어듦|빠짐|유지)<\/t>/g) || []);
+  const x13색없음 = x13결과.filter(x => { const sid = +x.match(/s="(\d+)"/)[1], f = +((xf13[sid] || '').match(/fillId="(\d+)"/) || [0, 0])[1]; return !/patternType="solid"/.test(fl13[f] || ''); });
+  is(x13결과.length >= 50 && x13색없음.length === 0, '  「결과」 칸 ' + x13결과.length + '곳이 모두 색으로 칠해졌다 (색 없는 칸 ' + x13색없음.length + ')');
+  const x13옅음 = fl13.filter(f => { const m = f.match(/fgColor rgb="FF([0-9A-F]{6})"/); if (!m) return false; const v = [0, 2, 4].map(i => parseInt(m[1].substr(i, 2), 16)); return Math.min(...v) >= 0xF0; });
+  is(x13옅음.length === 0, '  흰색과 거의 같은 바탕(세 값 모두 F0 이상)이 없다 — ' + x13옅음.length + '개');
+  const x13그림 = Object.keys(Z).filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n)).filter(n => /[\uD83C-\uD83E][\uDC00-\uDFFF]|[\u23E9-\u23FA\u2600-\u27BF]/.test(Z[n]));
+  is(x13그림.length === 0, '  칸 글에 그림 문자(엑셀에서 □ 로 찍힘)가 없다' + (x13그림.length ? ' ← ' + x13그림.join(' ') : ''));
+
   await br.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '군데 — 엑셀이 화면과 다른 말을 합니다')

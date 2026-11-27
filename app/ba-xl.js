@@ -116,7 +116,14 @@
        실제로 「과부족」 과 「그래프」 두 곳에서 글자 그대로 찍혔습니다. 엑셀에는
        칸 안의 일부만 굵게 할 길이 없으니 <b>걷어내는 것이 맞습니다</b>. */
     return '<c r="' + a + '"' + s + ' t="inlineStr"><is><t xml:space="preserve">' +
-      esc(String(v).replace(/<\/?[a-zA-Z][^>]*>/g, '')) + '</t></is></c>';
+      esc(noEmoji(String(v).replace(/<\/?[a-zA-Z][^>]*>/g, ''))) + '</t></is></c>';
+  }
+  /* ★ 판 X583 — 그림 문자(📊 🩺 ⏫ …)는 엑셀 글꼴(맑은 고딕)에 없어 <b>□ 로 찍혔습니다</b>
+     (엑셀로 열어 PDF 로 뽑아 확인). 칸 글에서는 걷어냅니다 — ▲▼●■ 같은 도형 글자는 그대로 둡니다. */
+  function noEmoji(t) {
+    return t.replace(/[\uD83C-\uD83E][\uDC00-\uDFFF]/g, '')
+      .replace(/[☀-➿⏩-⏺⬅-⭕⌚⌛⌨⏏]/g, '')
+      .replace(/[️‍]/g, '').replace(/^\s+/, function (m) { return m.length > 2 ? '  ' : ''; }).replace(/ {3,}/g, '  ');
   }
   /* ★ 판 X538 — 줄 높이를 줍니다. 전부 기본(15pt)이면 표가 답답하고
      「엑셀 기본 시트」 처럼 보입니다 (사장님 말씀 「엑셀로 퀄리티는 이것밖에 안되?」). */
@@ -151,6 +158,7 @@
   /* ★ 판 X538 — 보험료 꼴 <b>뒤</b>: 묶음마다 큰 제목 하나, 그 뒤 상태 셋 + 부제 */
   function BIG(n, i) { return 20 + n * 3 + 7 + i; }                 /* 묶음 i 의 큰 제목 */
   function STT(n, k) { return 20 + n * 3 + 7 + n + k; }     /* 0 충분 1 부족 2 미가입 3 부제 4 큰 제목 띠 */
+  function RES(n, k) { return STT(n, 5) + k; }              /* 결과 칸 — 0 보장UP 1 줄어듦 2 빠짐 3 유지 (판 X583) */
   /* 큰 제목 띠 한 줄을 만듭니다 — 칸 수만큼 칠해야 띠가 끊기지 않습니다 */
   function 띠줄(r, t, 칸수, 꼴) {
     /* ⚠ cel 은 값이 없으면 <b>칸을 안 만듭니다</b>(빈 칸 = 모름 · 1번). 그래서
@@ -190,13 +198,15 @@
     for (i = 0; i < FONT.length; i++) f += '<font>' + FONT[i] + '</font>';
 
     var FILL = ['<patternFill patternType="none"/>', '<patternFill patternType="gray125"/>'];
-    ['FFF6F6F6', 'FFFFFDF3', 'FFF7F8FA', 'FFF2F7FF', 'FFFDF3F3', 'FFEEF1F5', 'FFE6F0FF', 'FFF1FBF4']
+    /* 판 X583 · 사장님 말씀 2026-11-26 「색상은 안 보여서 체크하고」 — 전에는 F6F6F6 · F7F8FA · F2F7FF 처럼
+       흰색과 거의 같아 모니터·폰에서 <b>색이 없는 표</b>로 보였습니다. 차례(번호)는 그대로, 한 단계 진하게. */
+    ['FFE9EDF2', 'FFFFF3CC', 'FFE9EDF2', 'FFDCE8FF', 'FFFBDCDC', 'FFDDE3EB', 'FFC9DCFF', 'FFD6F2DF']
       .forEach(function (c) { FILL.push('<patternFill patternType="solid"><fgColor rgb="' + c + '"/><bgColor indexed="64"/></patternFill>'); });
     /* 묶음마다 셋 — 진한 띠 · 옅은 라벨 · 더 옅은 담보 */
     for (i = 0; i < GRP.length; i++) {
       FILL.push('<patternFill patternType="solid"><fgColor rgb="FF' + tint(GRP[i].c, 0) + '"/><bgColor indexed="64"/></patternFill>');
-      FILL.push('<patternFill patternType="solid"><fgColor rgb="FF' + tint(GRP[i].c, 0.86) + '"/><bgColor indexed="64"/></patternFill>');
-      FILL.push('<patternFill patternType="solid"><fgColor rgb="FF' + tint(GRP[i].c, 0.95) + '"/><bgColor indexed="64"/></patternFill>');
+      FILL.push('<patternFill patternType="solid"><fgColor rgb="FF' + tint(GRP[i].c, 0.74) + '"/><bgColor indexed="64"/></patternFill>');
+      FILL.push('<patternFill patternType="solid"><fgColor rgb="FF' + tint(GRP[i].c, 0.88) + '"/><bgColor indexed="64"/></patternFill>');
     }
     /* ★ 판 X538 — 묶음에 매이지 않은 <b>큰 제목 띠</b> 하나 (앞 시트들이 씁니다) */
     var FNAVY = FILL.length;
@@ -231,8 +241,8 @@
     xf += X(164, 4, 6);                                                                            /* 13 해지칸 */
     xf += X(164, 3, 7);                                                                            /* 14 합계전 */
     xf += X(164, 3, 8);                                                                            /* 15 합계후 */
-    xf += X(164, 5, 0);                                                                            /* 16 차이+ */
-    xf += X(164, 4, 0);                                                                            /* 17 차이- */
+    xf += X(164, 5, 9);                                                                            /* 16 차이+ (초록 칸 · 판 X583) */
+    xf += X(164, 4, 6);                                                                            /* 17 차이- (붉은 칸 · 판 X583) */
     xf += X(0, 0, 0, 'horizontal="center" vertical="center"');                                     /* 18 결과 */
     xf += X(164, 7, 7);                                                                            /* 19 합계(손) */
     for (i = 0; i < GRP.length; i++) {
@@ -257,6 +267,11 @@
     xf += X(0, 4, 6, 'horizontal="center" vertical="center"');        /* 미가입 */
     xf += XN(0, FBIG + 2, 0, 'horizontal="left" vertical="center"');   /* 부제 */
     xf += XN(0, FBIG, FNAVY, 'horizontal="left" vertical="center"');   /* 큰 제목 띠(남색) */
+    /* 판 X583 — 「결과」 칸 넷(RES): 0 보장UP 초록 · 1 줄어듦 붉게 · 2 빠짐 노랗게 · 3 유지 회색. 전에는 꼴 18(색 없음) 하나였습니다 */
+    xf += X(0, 5, 9, 'horizontal="center" vertical="center"');
+    xf += X(0, 4, 6, 'horizontal="center" vertical="center"');
+    xf += X(0, FBIG + 1, 3, 'horizontal="center" vertical="center"');
+    xf += X(0, 3, 2, 'horizontal="center" vertical="center"');
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
       /* ⚠ 164(#,##0)만 두었더니 <b>월 보험료 12.4만이 12 로</b>, 합계 27.2 가 27 로
@@ -328,7 +343,7 @@
   }
 
   g.BA_XL = { _zip: zip, _sheet: sheet, _cel: cel, _row: row, _col: col, _mask: mask, _styles: styles,
-    _GST: GST, _PST: PST, _BIG: BIG, _STT: STT, _band: 띠줄, _N: N };
+    _GST: GST, _PST: PST, _BIG: BIG, _STT: STT, _RES: RES, _band: 띠줄, _N: N };
 })(window);
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -437,7 +452,9 @@
         var 둘다없음 = (fb === undefined && fa === undefined);
         var d = (fa || 0) - (fb || 0);
         cells.push(cel(cDif, r, 둘다없음 ? null : d, d > 0 ? 16 : (d < 0 ? 17 : 0)));
-        cells.push(cel(cRes, r, 둘다없음 ? '빠짐' : (d > 0 ? '⏫ 보장UP' : (d < 0 ? '⏬ 줄어듦' : '유지')), 18));
+        /* 판 X583 — ⏫⏬ 는 엑셀 글꼴(맑은 고딕)에 없어 □ 로 찍혔습니다 → ▲▼. 칸도 상태 색으로 칠합니다 */
+        cells.push(cel(cRes, r, 둘다없음 ? '빠짐' : (d > 0 ? '▲ 보장UP' : (d < 0 ? '▼ 줄어듦' : '유지')),
+          X._RES(STDN(), 둘다없음 ? 2 : (d > 0 ? 0 : (d < 0 ? 1 : 3)))));
         out.push(row(r, cells)); r++;
       });
       if (r - 1 > 첫) merges.push('A' + 첫 + ':A' + (r - 1));
