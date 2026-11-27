@@ -19,6 +19,9 @@
      [6] 다섯 함수를 rpc 로 부르는 곳이 로그인한 본체 화면(app/index.html)뿐이다 —
          랜딩이 anon 키로 부르면 이 판이 그 화면을 깨뜨립니다
      [7] -- 주석이 없다 (9번)
+     [8] ★ 앱 안 준비 SQL(HX_SQL · 판 X586)도 같다 — 새 서버를 「한 번에 전부」 로 세우면
+         migration 이 아니라 이 SQL 이 돕니다. 여기서 anon 회수 · 규칙 좁히기가 빠지면
+         새 서버에 같은 경고가 다시 생깁니다. mbti_mark_paid 는 준비 SQL 이 안 만들어서 뺍니다.
    ⚠ 되돌림 — migration_86 에서 recruits_purge 회수 줄을 빼면 [1] 이, 규칙 한 줄을 빼면 [4] 가 웁니다.
    ⚠ 이 자는 <b>저장소의 SQL</b> 을 봅니다. 서버에 정말 걸렸는지는 못 봅니다 — 걸린 뒤에는
      get_advisors security 에서 그 경고 다섯이 사라졌는지로 확인합니다(대장에 적음).
@@ -120,6 +123,28 @@ is(밖.length === 0, '본체 밖에서 부르는 곳 ' + 밖.length + (밖.lengt
 sec('[7] -- 주석이 없다 (9번)');
 const m86 = files.filter(x => /revoke\s+execute\s+on\s+function\s+public\.recruits_purge/i.test(x.s));
 m86.forEach(x => is(!x.s.split('\n').some(l => /^\s*--/.test(l)), x.f + ' — -- 주석 0'));
+
+sec('[8] ★ 앱 안 준비 SQL 도 anon 을 회수하고 규칙을 좁힌다 (판 X586)');
+const APP = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+/* 준비 SQL 은 "…", 줄의 배열이라 따옴표 · 쉼표를 걷어 한 글로 봅니다 */
+const 준비 = body(APP.slice(APP.indexOf('var HX_SQL={'), APP.indexOf('var SETUP_VER='))
+  .replace(/"\s*,\s*"/g, ' '));
+is(준비.length > 1000, '준비 SQL 을 찾았다 (' + 준비.length + '자)');
+FN.filter(x => x[0] !== 'mbti_mark_paid').forEach(([name, args]) => {
+  const mk = new RegExp('create\\s+or\\s+replace\\s+function\\s+public\\.' + name + '\\s*\\(', 'i');
+  const rv = new RegExp('revoke\\s+(?:execute|all)\\s+on\\s+function\\s+public\\.' + name +
+                        '\\s*\\(\\s*' + args + '\\s*\\)\\s+from\\s+[^;]*\\banon\\b', 'i');
+  const ga = new RegExp('grant\\s+[^;]*on\\s+function\\s+public\\.' + name +
+                        '\\s*\\([^)]*\\)\\s+to\\s+[^;]*\\b(anon|public)\\b', 'i');
+  is(mk.test(준비) && rv.test(준비) && !ga.test(준비),
+     name + ' — 준비 SQL 이 만들고 · anon 회수 · anon 에게 주는 줄 없음');
+});
+['policies_mine', 'documents_mine', 'proposals_mine', 'coverage_docs_read', 'coverage_docs_insert',
+ 'coverage_docs_update', 'coverage_docs_delete'].forEach(p => {
+  const mk = 준비.search(new RegExp('create\\s+policy\\s+' + p + '\\b', 'i'));
+  const at = 준비.search(new RegExp('alter\\s+policy\\s+' + p + '\\s+on\\s+\\S+\\s+to\\s+authenticated', 'i'));
+  is(mk >= 0 && at > mk, p + ' — 준비 SQL 에서 만든 뒤 to authenticated 로 좁힌다');
+});
 
 console.log('\n──────────────────────────────');
 console.log(bad ? ('✗ ' + bad + '군데가 걸렸습니다.')
