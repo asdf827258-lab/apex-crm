@@ -22365,7 +22365,7 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-27 13:30';
+var APP_BUILD='2026-11-27 18:50';
 var APP_BUILD_NOTE='🤖 <b>자비스가 적은 오늘의 미션 · ☀️ 팀 아침 점검</b>(판 X589). ◾ 홈 맨 위 「🎯 오늘의 미션」 다섯 칸 밑에 자비스가 오늘 할 것을 한 줄로 — 걸 분(오늘 챙길 줄 앞 두 분 + 외 n명) · 오늘 약속 시각과 이름 · 오늘 건 통수와 만날 분 팩트파인딩 · 내일 약속 · SNS 올리는 날(월화목금). 미션을 누르면 맨 위 「🤖 자비스가 적었어요」 + 사람 칸(누르면 그분 한 장). 말풍선 「다음은 …」 에도 같은 한 줄. ◾ 지점장 · 대표: 팀 동그라미 밑 「☀️ 팀 아침 점검 · 지점장 체크리스트」 — 팀원마다 출근(출근 현황) · 오늘의 미션 네 칸(그날 체크판) · 오늘 약속 곳 수 · 오늘 전화 · 출근 전 → 미션 적은 분 차례. 💬 아침 점검 카톡 문구 복사(팀원 이름만 · 보내기는 직접). 📋 지점장 체크리스트 = 실행 체크판 지점장 탭 그 칸(아침 · 오전 · 오후 · 마감) · ✓ 누르면 체크판 · 달력도 같이. ◾ 새 저장 없음 · 서버에 더 묻지 않음 · 재는 자 check-homev2 [26] · [33] · check-amv2.';
 
 
@@ -53857,7 +53857,7 @@ var HX_SQL={
   "end;",
   "$$;",
   "",
-  "revoke all on function public.recruits_purge(int) from public;",
+  "revoke all on function public.recruits_purge(int) from public, anon;   /* 판 X586 — Supabase 는 anon 에게 따로 준다 */",
   "grant execute on function public.recruits_purge(int) to authenticated;",
   "",
   "/* schema_version 은 적지 않는다. 메인은 47 이후로 이 값을 더 이상",
@@ -53928,7 +53928,7 @@ var HX_SQL={
   "end;",
   "$$;",
   "",
-  "revoke all on function public.recruits_assign(uuid[], uuid) from public;",
+  "revoke all on function public.recruits_assign(uuid[], uuid) from public, anon;   /* 판 X586 */",
   "grant execute on function public.recruits_assign(uuid[], uuid) to authenticated;",
   "",
   "/* schema_version 은 적지 않는다. 메인은 47 이후로 이 값을 더 이상",
@@ -55071,6 +55071,21 @@ var HX_SQL={
   "create policy claims_mine_admin on public.claims for all",
   "  using (public.is_my_client_or_admin(client_id))",
   "  with check (public.is_my_client_or_admin(client_id));",
+  "",
+  "/* 🔒 <b>로그인 안 한 사람(anon)은 이 두 자를 못 부르게</b> (판 X586 · 라이브는 migration_86 · 판 X575)",
+  "   Supabase 는 새 함수를 만들면 anon 에게 실행권을 따로 직접 준다 — grant … to authenticated 만",
+  "   적으면 anon 도 그대로 부른다. 그래서 「from public, anon」 을 같이 회수한다.",
+  "   위 규칙 일곱은 몸에서 is_my_client 를 부르므로 로그인한 사람에게만 건다 — 안 그러면",
+  "   anon 이 그 표를 만질 때 빈 답 대신 「함수 권한 없음」 오류가 난다. 조건은 안 바꾸고 역할만 좁힌다. */",
+  "revoke execute on function public.is_my_client(uuid)          from public, anon;",
+  "revoke execute on function public.is_my_client_or_admin(uuid) from public, anon;",
+  "alter policy policies_mine        on public.policies  to authenticated;",
+  "alter policy documents_mine       on public.documents to authenticated;",
+  "alter policy proposals_mine       on public.proposals to authenticated;",
+  "alter policy coverage_docs_read   on storage.objects  to authenticated;",
+  "alter policy coverage_docs_insert on storage.objects  to authenticated;",
+  "alter policy coverage_docs_update on storage.objects  to authenticated;",
+  "alter policy coverage_docs_delete on storage.objects  to authenticated;",
   "",
   "insert into public.app_config(key, value)",
   "values ('schema_version', '48')",
