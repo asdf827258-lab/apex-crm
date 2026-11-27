@@ -99,10 +99,26 @@ TDS.forEach(t => t.detail.rows.forEach(r => r.cells.forEach(c => { if (!c.quote)
 is(qn > 0 && qbad === 0, '상세표 약관 문장 ' + qn + '칸이 전부 PDF 에서 글자 그대로 (못 맞춘 칸 ' + qbad + ')');
 
 console.log('\n[9] 🔎 「약관에서 못 찾음」 칸 다시 찾기 (판 X485 · 사장님 말씀 「11. 다음작업 진행해줘」)');
+// 판 X590 에서 수술비 비교(2사)가 종수술비 4사 + N대 질병수술비 4사로 바뀌어 [14] 가 따로 잰다 — 여기는 나머지 9개
+const SURG = /^(수술비 2사|종수술비\(1-5종\)|N대 질병수술비)/;
 let mq = 0, mn = 0;
-TDS.forEach(t => t.detail.rows.forEach(r => r.cells.forEach(c => { if (c.quote) mq++; else mn++; })));
-is(mq >= 580 && mn <= 75, '약관 문장 붙은 칸 ' + mq + '개 · 못 찾음 ' + mn + '칸 (다시 찾기 전 558 · 99칸 — 줄면 안 됨)');
+TDS.filter(t => !SURG.test(t.title)).forEach(t => t.detail.rows.forEach(r => r.cells.forEach(c => { if (c.quote) mq++; else mn++; })));
+is(mq >= 541 && mn <= 72, '약관 문장 붙은 칸 ' + mq + '개 · 못 찾음 ' + mn + '칸 (수술비 빼고 · 다시 찾기 뒤 541 · 72칸 — 줄면 안 됨)');
 is(TDS.every(t => !(t.detail.rows || []).some(r => r.cells.some(c => !c.quote && !/못 찾음/.test(c.v || '')))), '원문 없는 칸은 모두 「약관에서 못 찾음」 이라고 말한다 (지어낸 해설 0)');
+
+console.log('\n[14] ✂️ 수술비 — 종수술비(1-5종) 4사 + N대 질병수술비 4사 (판 X590 · 사장님 말씀 「N대 수술비 / 종수술비 의 약관까지 비교까지 하면 … 완전 디테일한 설계가 가능할거 같은데」)');
+const SJ = TDS.find(t => t.title === '종수술비(1-5종) 4사 약관 비교'), SN = TDS.find(t => t.title === 'N대 질병수술비 4사 약관 비교');
+is(!TDS.some(t => /^수술비 2사/.test(t.title)), '옛 「수술비 2사」 는 종수술비 4사로 바뀌었다 (두 벌이 아니다)');
+is(!!SJ && SJ.detail.ids.join() === 'meritz-fire-02,2610-nh-fire-03,db-fire-05,heungkuk-fire-04', '종수술비 4칸 — 메리츠 체증형 · NH 원더풀 · DB · 흥국 (같은 약관 안 동일질병당·매회형은 줄로 가름)');
+is(!!SN && SN.detail.ids.join() === 'samsung-fire-02,meritz-fire-02,hana-fire-01,heungkuk-life-01', 'N대 질병수술비 4칸 — 삼성 111대 · 메리츠 131대 · 하나 136대 · 흥국생명 130대');
+const sIdx = TDS.indexOf(SJ), nIdx = TDS.indexOf(SN);
+is(sIdx >= 0 && nIdx === sIdx + 1, '두 표가 나란히 선다 (종수술비 바로 뒤 N대)');
+let sq = 0, sok = 0, sn = 0;
+[SJ, SN].filter(Boolean).forEach(t => t.detail.rows.forEach(r => r.cells.forEach(c => { if (c.quote) { sq++; if (c.vf && c.vf.ok) sok++; } else sn++; })));
+is(sq >= 144 && sok === sq, '수술비 두 표 약관 문장 ' + sok + '/' + sq + ' 원문 일치 (144칸 이상 · 못 찾음 ' + sn + '칸)');
+is([SJ, SN].every(t => t && t.detail.rows.length >= 20 && t.cols.length === 4 && (t.detail.takeaways || []).length >= 3), '표마다 22줄 안팎 · 요약 4칸 · 약관으로 본 차이 3개 이상');
+is(!!SN && /설계서/.test(SN.takeaway) && !!SJ && /설계서/.test(SJ.takeaway), '「실제 플랜에 든 특약·금액은 설계서로」 를 한 줄 결론이 말한다');
+is(!!SN && SN.cols.every(c => /\d+대/.test(c)), 'N대 칸 이름에 특약(○○대)이 드러난다 — 소식지 상품 이름만 쓰지 않음');
 
 console.log('\n[10] 📜 상품 카드 약관 근거 넓히기 — 공시실에서 받아 15개 더 (판 X487 · 사장님 말씀 「12. 다음작업 진행해줘」)');
 const TP = SEED ? SEED.products.filter(p => p.terms) : [];
