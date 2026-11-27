@@ -294,8 +294,8 @@
   /* 💰 예상 금액 칸 — 누르면 오늘 화면의 그 시트(HOME_V2.amt · 판 X526 시안 openAmt). 배정 줄이 없거나 시트가 없는 판이면 예전처럼 글자만 */
   function amtBtn(d, amt) {
     var can = d && d.id && T(function () { return typeof g.HOME_V2.amt === 'function'; }, false);
-    if (!can) return amt ? '<span class="amt">예상 ' + E(amt) + '</span>' : '';
-    return '<button type="button" class="amt' + (amt ? '' : ' miss') + '" onclick="HOME_V2.amt(\'' + Q(d.id) + '\')">' + (amt ? '예상 ' + E(amt) : '금액 ?') + '</button>';
+    if (!can) return amt ? '<span class="amt">목표 ' + E(amt) + '</span>' : '';
+    return '<button type="button" class="amt' + (amt ? '' : ' miss') + '" onclick="HOME_V2.amt(\'' + Q(d.id) + '\')">' + (amt ? '목표 ' + E(amt) : '목표 계약금액 ?') + '</button>';
   }
   function qaHtml(c) {
     /* 번호 — 고객 기본 칸 → 연락처 표(ccTelOf) → 배정 줄. 「연락할 분」 카드(79539행)와 같은 차례 */

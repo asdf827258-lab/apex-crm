@@ -156,6 +156,19 @@
       '#hv2Sheet .mis-jp{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}#hv2Sheet .mis-jp>*{display:flex;flex-direction:column;align-items:flex-start;min-height:44px;justify-content:center;padding:6px 12px;border-radius:12px;background:#fff;text-align:left}',
       '#hv2Sheet .mis-jp b{font-size:14px;font-weight:700}#hv2Sheet .mis-jp small{font-size:13px;color:#6B7684}',
       '#hv2Sheet .mis-go{flex:none;height:40px;padding:0 10px;font-size:14px;font-weight:700;color:var(--blue)}',
+      /* 판 X591 — 🤖 자비스가 짠 오늘 순서(misPlan): 오늘 화면은 지금 할 미션 밑에 세 가지 · 시트는 전부 */
+      '.hv2 .mis-pl,#hv2Sheet .mis-pl{display:flex;flex-direction:column;gap:6px}',
+      '.hv2 .mis>.mis-pl{margin:0 4px 12px 52px}#hv2Sheet .mis-pl{margin:8px 0 0}',
+      '.hv2 .mis-pl>*,#hv2Sheet .mis-pl>*{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:8px 12px;border-radius:12px;background:#F7F9FC;text-align:left}',
+      '#hv2Sheet .mis-pl>*{background:#fff}',
+      '.hv2 .mis-pl .no,#hv2Sheet .mis-pl .no{flex:none;width:24px;height:24px;border-radius:12px;background:#1A56DB;color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}',
+      '.hv2 .mis-pl .tx,#hv2Sheet .mis-pl .tx{flex:1;min-width:0;display:flex;flex-direction:column}',
+      '.hv2 .mis-pl .tx b,#hv2Sheet .mis-pl .tx b{font-size:15px;font-weight:700;color:#191F28}',
+      '.hv2 .mis-pl .tx small,#hv2Sheet .mis-pl .tx small{font-size:13px;color:#6B7684;line-height:1.4}',
+      '.hv2 .mis-pl .ar,#hv2Sheet .mis-pl .ar{flex:none;color:#8B95A1;font-size:18px}',
+      '.hv2 .mis-pl .more,#hv2Sheet .mis-pl .more{justify-content:center;font-size:14px;font-weight:700;color:#1A56DB;background:none}',
+      '.hv2 .mis-pl+.mis-r{border-top:1px solid var(--line2)}',
+      '#hv2Sheet .mis-plh{display:block;font-size:13px;font-weight:700;color:#1A56DB;margin-top:12px}',
       '.hv2 .steps5{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:#fff;border-radius:18px;padding:8px 6px;margin-top:8px}',
       '.hv2 .steps5 button{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:62px;justify-content:center;border-radius:12px;text-align:center}',
       '.hv2 .steps5 .si{font-size:18px;line-height:1}',
@@ -182,6 +195,9 @@
       '.hv2 .dock .e{font-size:18px}',
       '#hv2{padding-bottom:64px}',
       '@media(min-width:1101px){.hv2 .dock{position:sticky;left:auto;right:auto;bottom:16px;margin-top:12px}#hv2{padding-bottom:0}}',
+      /* 판 X591 — 사장님 말씀 「컴퓨터 버전은 한줄로만 세우지말고 11월 상품전략 이하 내용은 오른쪽으로 배치해서 한눈에」
+         왼쪽 = 인사 ~ 지금 이분 · 오른쪽 = 🧭 상품전략 ~ ☰ 다른 메뉴. 폰 · 좁은 창은 예전처럼 한 줄(왼쪽 다음 오른쪽 = 예전 차례 그대로). */
+      '@media(min-width:1101px){.hv2{max-width:1180px}.hv2 .hv2-g{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 24px;align-items:start}.hv2 .hv2-c{min-width:0}}',
       /* 🛰 챙기는 중 */
       '.hv2 .jv{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border-radius:18px;padding:12px 16px;margin-top:12px;min-height:60px;border:1.5px solid #CFE0FF}',
       '.hv2 .jv-i{font-size:22px}',
@@ -207,7 +223,11 @@
       '.hv2 .qtop .amt{flex:none;margin-left:auto;height:32px;padding:0 10px;border-radius:8px;font-size:13px;font-weight:700;background:var(--blue-l);color:var(--blue);white-space:nowrap}',
       '.hv2 .qtop .amt.miss{background:var(--warn-l);color:var(--warn)}',
       '.hv2 .btn.ok{background:var(--green-l);color:var(--green);margin-top:8px}',
-      '.hv2 .qtop .sg{flex:none;font-size:13px;font-weight:700;color:var(--blue);background:var(--blue-l);border-radius:7px;padding:2px 8px;white-space:nowrap}',
+      /* 판 X591 — 사장님 말씀 「지금 이분 AP · 만남 이거를 글씨를 키우고」 13px → 16px */
+      '.hv2 .qtop .sg{flex:none;font-size:16px;font-weight:800;color:var(--blue);background:var(--blue-l);border-radius:8px;padding:4px 10px;white-space:nowrap}',
+      /* 판 X591 — 「금액 ?」 → 「목표 계약금액」: 이름 줄에서 내려 제 줄에 크게(이름이 안 잘리게) */
+      '.hv2 .qamt{margin-top:10px}.hv2 .qamt .amt{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:12px;font-size:15px;font-weight:800;background:var(--blue-l);color:var(--blue)}',
+      '.hv2 .qamt .amt.miss{background:var(--warn-l);color:var(--warn)}',
       '.hv2 .qwhy{font-size:15px;color:var(--ink);margin:10px 0 0;line-height:1.5}',
       '.hv2 .qwhy small{display:block;font-size:13px;color:var(--sub2);margin-top:2px}',
       '.hv2 .qmsg{margin-top:12px;background:var(--bg);border-radius:14px;padding:12px 14px;font-size:15px;line-height:1.55;position:relative}',
@@ -602,6 +622,56 @@
     var left = S.filter(function (x) { return !T(function () { return g.hmIsDone(x.key) || g.hmQdone(x.key); }, false); });
     return { all: S.length, left: left };
   }
+  /* 🤖 자비스가 짠 오늘 순서 (판 X591 · 사장님 말씀 2026-11-27 「자비스가 오늘의 미션 할일을 세부적으로 만들어줘 미션에 맞게」).
+     ★ 한 줄(misSay)을 할 일 몇 가지로 풉니다 — 사람 · 시각은 misSay 와 <b>같은 줄</b>(hmLeft · hmSteps · AR.calls · AR.db)에서만,
+       「어떻게」 는 체크판 칸 설명(CK_ITEMS d6 · d8 · d9) 그대로. 누르면 있던 화면(hmOpen · go · hmDoorGo · 지금 이분 카드)만 엽니다.
+     ★ 저장 없음 · 서버 안 부름 · 이름은 nameOf(🙈 이름 가리기를 따름). 오늘 화면엔 지금 할 미션 밑에 세 가지, 미션 시트엔 전부. */
+  function misPlan(m) {
+    var R = [], cl = 'HOME_V2.close();';
+    var add = function (t, s, go) { R.push({ t: t, s: s || '', go: go || '' }); };
+    var op = function (x) { return cl + 'hmOpen(\'' + Q(x.key) + '\')'; };
+    var tab = function (id) { return cl + 'go(\'' + Q(id) + '\')'; };
+    var door = cl + 'hmDoorGo(\'\',\'\')', rail = cl + 'HOME_V2.step(0)';
+    var appts = function () { return (T(function () { return g.hmSteps(); }, []) || []).filter(function (x) { return x && x.k === 'appt'; }); };
+    if (m.j === 'call') {
+      var L = (T(function () { return g.hmLeft(); }, { list: [] }) || { list: [] }).list || [];
+      L.slice(0, 5).forEach(function (x) { add('📞 ' + nameOf(x) + '님', strip(x.s || '') || '전화 → 안 받으시면 카톡', op(x)); });
+      if (L.length > 5) add('나머지 ' + (L.length - 5) + '분', '지금 이분 카드에서 한 분씩 넘기며', rail);
+      if (L.length) add('💬 안 받으신 분은 그 자리에서 카톡', '카드의 카톡 문구 복사 → 보내기', rail);
+      else add('오늘 챙길 분은 다 챙겼어요', 'DB 통합 CRM 에서 새 분 걸기', tab('crm'));
+    } else if (m.j === 'appt') {
+      var A = apptRows();
+      A.left.forEach(function (x) { var h = misTm(x.s); add('🤝 ' + (h ? h + ' ' : '') + nameOf(x) + '님', '가기 전 확인 카톡 → 만나면 「🤝 만났어요」', op(x)); });
+      if (A.left.length) add('🧭 들고 갈 이번 달 상품', '상품전략에서 이분 상황 하나 고르기', door);
+      else add(A.all ? '오늘 약속 ' + A.all + '곳을 다 챙겼어요 👏' : '오늘은 잡힌 약속이 없어요', '달력에서 이번 주 약속 보기', tab('mycal'));
+    } else if (m.j === 'rec') {
+      var n = misCalls(), c6 = ckItem('d6'), c8 = ckItem('d8');
+      add('✍️ ' + (n ? '오늘 건 ' + n + '통 — 결과 한 줄씩' : '걸 때마다 그 자리에서 결과 한 줄'), c6.d || 'TA완료 · 부재 · 거절 · 상담', tab(c6.tab || 'crm'));
+      appts().slice(0, 4).forEach(function (x) { add('📝 ' + nameOf(x) + '님 팩트파인딩', c8.d || '소득 · 지출 · 기존보험 · 걱정', tab(c8.tab || 'fact_find')); });
+      add('📅 다시 걸 분은 날짜 잡기', '부재 · 「나중에」 하신 분 — 달력에', tab('mycal'));
+    } else if (m.j === 'prep') {
+      var D = misDb(ymdPlus(1)), c9 = ckItem('d9');
+      D.slice(0, 4).forEach(function (r) { var h = misTm(String(r.appt).slice(11, 16)); add('🩺 내일 ' + (h ? h + ' ' : '') + nameOf({ t: r.name || '' }) + '님', '증권 받기 카톡 → 받았으면 판독 → 제안 초안', tab(c9.tab || 'ai_prop')); });
+      if (D.length) add('🧭 이번 달 상품 맞춰 보기', '내일 만날 분 상황에 맞는 상품 한 장', door);
+      else add('내일 약속 잡기', '오늘 통화에서 「언제 뵐까요?」 한 번 더', rail);
+    } else if (m.j === 'sns') {
+      var wd = new Date(ymdPlus(0) + 'T00:00:00Z').getUTCDay();
+      if ([1, 2, 4, 5].indexOf(wd) < 0) add('오늘은 쉬는 날이에요', '올리면 덤 — 지난 글 댓글 · DM 답하기', '');
+      add('① 주제 하나 고르기', '이번 달 상품전략 · 고객이 자주 묻는 것', door);
+      add('② 캐러셀 한 장 만들기', '콘텐츠에서 카드 만들기', tab('content'));
+      add('③ 심의 받은 문구로 올리기', '블로그 · 인스타는 게시물마다 심의', '');
+      add('④ 댓글 · DM 에 답하기', '그날 안에', '');
+    }
+    return R;
+  }
+  function misPlHtml(R, max, i) {
+    if (!R || !R.length) return '';
+    var S = max ? R.slice(0, max) : R;
+    return '<div class="mis-pl">' + S.map(function (p, k) {
+      var inn = '<span class="no">' + (k + 1) + '</span><span class="tx"><b>' + E(p.t) + '</b>' + (p.s ? '<small>' + E(p.s) + '</small>' : '') + '</span>';
+      return p.go ? '<button type="button" onclick="' + p.go + '">' + inn + '<span class="ar">›</span></button>' : '<div>' + inn + '</div>';
+    }).join('') + (max && R.length > max ? '<button type="button" class="more" onclick="HOME_V2.mis(' + i + ')">자비스가 짠 할 일 ' + R.length + '가지 모두 보기 ›</button>' : '') + '</div>';
+  }
   function misState(m) {
     if (m.appt) {
       var A = apptRows();
@@ -617,11 +687,13 @@
     var h = '<div class="mis' + (all ? ' all' : '') + '"><div class="mis-h"><b>🎯 오늘의 미션</b><span>' + n + ' / ' + MIS.length + '</span></div>' +
       '<div class="mis-bar"><i style="width:' + Math.round(n / MIS.length * 100) + '%"></i></div>';
     if (all) h += '<div class="mis-ok">오늘 미션 완료 🎉 수고 많으셨어요</div>';
+    var cur = -1; S.forEach(function (x, k) { if (cur < 0 && !x.done) cur = k; });
     h += MIS.map(function (m, i) {
       var st = S[i];
       var say = st.done ? null : T(function () { return misSay(m); }, null);
       return '<button type="button" class="mis-r' + (st.done ? ' done' : '') + '" onclick="HOME_V2.mis(' + i + ')"><span class="mis-c">' + (st.done ? '✓' : m.e) + '</span>' +
-        '<span class="mis-t"><b>' + E(m.t) + '</b>' + (say && say.t ? '<small class="mis-j">🤖 ' + E(say.t) + '</small>' : '<small>' + E(st.sub) + '</small>') + '</span><span class="ar">›</span></button>';
+        '<span class="mis-t"><b>' + E(m.t) + '</b>' + (say && say.t ? '<small class="mis-j">🤖 ' + E(say.t) + '</small>' : '<small>' + E(st.sub) + '</small>') + '</span><span class="ar">›</span></button>' +
+        (i === cur ? T(function () { return misPlHtml(misPlan(m), 3, i); }, '') : '');
     }).join('');
     return h + '</div>';
   }
@@ -630,7 +702,8 @@
     if (m.appt) {
       var A = apptRows();
       if (!A.left.length) { sheet('<h1>🤝 오늘 약속</h1><div class="sub">' + (A.all ? '오늘 약속 ' + A.all + '곳을 다 챙겼어요 👏' : '오늘은 잡힌 약속이 없어요') + '</div>' + (A.all ? '' : '<button type="button" class="btn g" onclick="HOME_V2.close();go(\'mycal\')">📅 달력에서 약속 보기</button>')); return; }
-      close(); misRail(A.left[0].key); return;
+      sheet('<h1>🤝 오늘 약속</h1><div class="sub">만나면 「🤝 만났어요」 — 지금 이분 카드에서 눌러요</div>' + misJvHtml(m) +
+        '<button type="button" class="btn p" style="margin-top:12px" onclick="HOME_V2.misRail()">🤝 지금 이분 카드로</button>'); return;
     }
     var ck = T(function () { return g.hmMsCk(); }, {}) || {};
     var h = '<h1>' + m.e + ' ' + E(m.t) + '</h1><div class="sub">끝내면 「✓ 했어요」 — 실행 체크판에도 같이 담겨요</div>' + misJvHtml(m) + '<div class="list" style="margin-top:12px;padding:0">' + m.ck.map(function (id) {
@@ -645,10 +718,8 @@
   }
   function misJvHtml(m) {
     var say = T(function () { return misSay(m); }, null); if (!say || !say.t) return '';
-    return '<div class="mis-jv"><small>🤖 자비스가 적었어요</small><b>' + E(say.t) + '</b>' + (say.P.length ? '<div class="mis-jp">' + say.P.slice(0, 8).map(function (p) {
-      return p.go ? '<button type="button" onclick="' + p.go + '"><b>' + E(p.nm) + '</b>' + (p.s ? '<small>' + E(p.s) + '</small>' : '') + '</button>'
-        : '<span><b>' + E(p.nm) + '</b>' + (p.s ? '<small>' + E(p.s) + '</small>' : '') + '</span>';
-    }).join('') + '</div>' : '') + '</div>';
+    var R = T(function () { return misPlan(m); }, []) || [];
+    return '<div class="mis-jv"><small>🤖 자비스가 적었어요</small><b>' + E(say.t) + '</b>' + (R.length ? '<span class="mis-plh">자비스가 짠 오늘 순서 · ' + R.length + '가지</span>' + misPlHtml(R, 0) : '') + '</div>';
   }
   function misRail(key) {
     var L = (T(function () { return g.hmLeft(); }, { list: [] }) || { list: [] }).list || [], j = -1, k;
@@ -935,7 +1006,7 @@
   function cardHtml(x, i) {
     var key = Q(x.key), nm = nameOf(x), stg = x.kt || T(function () { return g.hmOrdOf(x.k).t; }, '') || '';
     var why = T(function () { return g.hmWhy(x); }, '') || E(x.s || '');
-    var h = '<div class="qc" data-i="' + i + '"><div class="qtop"><div class="av">' + E(nm.charAt(0)) + '</div><span class="nm" role="button" onclick="hmOpen(\'' + key + '\')">' + E(nm) + '님</span>' + (stg ? '<span class="sg">' + E(stg) + '</span>' : '') + (x.k === 'db' && /^(AP|PC|CS)$/.test(String(x.tk || '')) && x.id ? amtChip(x.id) : '') + '</div>';
+    var h = '<div class="qc" data-i="' + i + '"><div class="qtop"><div class="av">' + E(nm.charAt(0)) + '</div><span class="nm" role="button" onclick="hmOpen(\'' + key + '\')">' + E(nm) + '님</span>' + (stg ? '<span class="sg">' + E(stg) + '</span>' : '') + '</div>' + (x.k === 'db' && /^(AP|PC|CS)$/.test(String(x.tk || '')) && x.id ? '<div class="qamt">' + amtChip(x.id) + '</div>' : '');
     h += '<div class="qwhy">' + why + (x.s && why.indexOf(strip(x.s)) < 0 ? '<small>' + E(x.s) + '</small>' : '') + '</div>';
     var tel = T(function () { return g.hmTelOf(x); }, '');
     var callBtn = tel ? '<a class="btn p" style="margin-top:10px" href="tel:' + E(String(tel).replace(/[^0-9+]/g, '')) + '">📞 전화 걸기</a>'
@@ -1285,14 +1356,14 @@
   function dbr(id) { return T(function () { return g.hdbRow(id); }, null) || (T(function () { return g.AR.db; }, []) || []).filter(function (r) { return r && String(r.id) === String(id); })[0] || null; }
   function manOf(won) { var n = +won || 0; return n > 0 ? Math.round(n / 10000) : 0; }
   function toWon(man) { return Math.round(man) * 10000; }
-  function amtChip(id) { var m = manOf((dbr(id) || {}).expect); return '<button type="button" class="amt' + (m ? '' : ' miss') + '" onclick="event.stopPropagation();HOME_V2.amt(\'' + Q(id) + '\')">' + (m ? '예상 ' + m + '만' : '금액 ?') + '</button>'; }
+  function amtChip(id) { var m = manOf((dbr(id) || {}).expect); return '<button type="button" class="amt' + (m ? '' : ' miss') + '" onclick="event.stopPropagation();HOME_V2.amt(\'' + Q(id) + '\')">' + (m ? '💰 목표 계약금액 ' + m + '만원' : '💰 목표 계약금액 ?') + '</button>'; }
   function amtMiss() {
     var w = who();
     return (T(function () { return g.AR.db; }, []) || []).filter(function (r) { return r && r.id && (!w || r.who === w) && /^(AP|PC|CS)$/.test(String(r.stage || '')) && !(+r.expect > 0); });
   }
   function amtMissHtml() {
     var M = amtMiss(); if (!M.length) return '';
-    return '<button type="button" class="btn g" onclick="HOME_V2.amt(\'' + Q(M[0].id) + '\')">💰 예상 월납 안 적힌 ' + M.length + '분 — ' + E(nameOf({ t: M[0].name || '' })) + '님부터 적기</button>';
+    return '<button type="button" class="btn g" onclick="HOME_V2.amt(\'' + Q(M[0].id) + '\')">💰 목표 계약금액 안 적힌 ' + M.length + '분 — ' + E(nameOf({ t: M[0].name || '' })) + '님부터 적기</button>';
   }
   function numSheet(o) {
     sheet('<h1>' + E(o.h1) + '</h1><div class="sub">' + E(o.sub) + '</div>' +
@@ -1304,7 +1375,7 @@
   function numVal() { var i = el('hv2Num'); return Math.max(0, Math.round(+((i && i.value) || 0) || 0)); }
   function amtSheet(id) {
     var r = dbr(id); if (!r) { try { g.toast('그분 줄을 아직 못 읽었어요 — 잠시 뒤 다시'); } catch (e) {} return; }
-    numSheet({ h1: nameOf({ t: r.name || '' }) + '님 예상 월납', sub: '이분이 계약하시면 들어올 월 보험료예요. 어림값이어도 괜찮아요.', val: manOf(r.expect), q: PEX_Q,
+    numSheet({ h1: nameOf({ t: r.name || '' }) + '님 목표 계약금액', sub: '이분과 목표로 잡은 계약의 월 보험료예요. 어림값이어도 괜찮아요.', val: manOf(r.expect), q: PEX_Q,
       note: 'DB · 업적관리 · EM 상담 보드와 같은 칸에 적혀요', put: 'HOME_V2.amtPut(\'' + Q(id) + '\')' });
   }
   function wonSheet(id) {
@@ -1333,7 +1404,7 @@
     pexSave(id, { expect_premium: String(won) }, function () {
       try { g.hmPexPut(id, won); } catch (e) {}
       cusSync(id, { expect_premium: won });
-      try { g.toast('예상 월납 ' + v + '만원 — DB · 업적관리 · EM 상담 보드와 같은 칸에 적었어요'); } catch (e2) {}
+      try { g.toast('목표 계약금액 ' + v + '만원 — DB · 업적관리 · EM 상담 보드와 같은 칸에 적었어요'); } catch (e2) {}
       paint();
     });
   }
@@ -1434,8 +1505,8 @@
 
   function html() {
     var L = T(function () { return g.hmLeft(); }, { list: [], all: 0 });
-    return topHtml() + whoHtml() + helloHtml(L) + part(misHtml) + monHtml() + stepsHtml() + jvHtml() + railHtml(L) +
-      inscHtml() + weekHtml() + part(routeHtml) + roadHtml() + eveHtml(L) + menuHtml() +
+    return topHtml() + '<div class="hv2-g"><div class="hv2-c">' + whoHtml() + helloHtml(L) + part(misHtml) + monHtml() + stepsHtml() + jvHtml() + railHtml(L) +
+      '</div><div class="hv2-c">' + inscHtml() + weekHtml() + part(routeHtml) + roadHtml() + eveHtml(L) + menuHtml() + '</div></div>' +
       dockHtml() + jvbHtml();
     /* ⚠ 판 X511 — 맨 아래 「새 오늘 화면 (시험) · 시안 9차 디자인 · …」 설명 줄을 거뒀습니다
          (시안에 없음 · 토스 원칙 ③ 화면에 설명 문장 금지). 예전 화면으로 가는 길은 맨 위 「↩ 예전 화면」 단추 하나. */
@@ -2185,7 +2256,8 @@
     careDel: careEdit(function (L, i, B) { if (L[i] && B.indexOf(L[i]) < 0) L.splice(i, 1); }),
     careUp: careEdit(function (L, i) { if (i > 0) { var t = L[i]; L.splice(i, 1); L.splice(i - 1, 0, t); } }),
     jvbOff: function () { JVB.off = true; var b = el('hv2Jvb'); if (b && b.parentNode) b.parentNode.removeChild(b); },
-    misSay: function (i) { return MIS[i] ? misSay(MIS[i]) : null; },
+    misSay: function (i) { return MIS[i] ? misSay(MIS[i]) : null; }, misPlan: function (i) { return MIS[i] ? misPlan(MIS[i]) : []; },
+    misRail: function () { close(); var A = apptRows(); if (A.left[0]) misRail(A.left[0].key); },
     mis: misSheet, misDid: function (i, ck) { misDid(i, ck, 0); }, misUndo: function (i, ck) { misDid(i, ck, 1); },
     newOn: newOn,
     msgAll: msgAll,
