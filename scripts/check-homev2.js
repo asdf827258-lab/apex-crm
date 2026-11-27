@@ -22,6 +22,8 @@
      [29] ★  판 X568 — 🧭 카드 맨 아래 「권할 것」(고객 카드) → 있던 cusGo({cli}) → cusV2Rec · 이름 누르면 이분 자세히(hmOpen) · 배정 DB 카드는 예전 그대로
      [31] ★★ 판 X584 — ✅ 챙기는 중 갈래(약속 확인 · 약속 지남 · 증권 · 소개) · 완료는 있던 함수(hmDaySkip · hmLateSkip · hmReferSkip · hdbTo · hdbOpen · hmLateAgain · hmLateEnd · hmReferGot)
      [32] ★★ 판 X584 — 📍 오늘 칸 동선 그림 · 💬 카톡 글 전체 보기 · 말풍선 글만큼 · 칸 따라다님 · 📅 무엇 여섯 갈래 · 새 고객 · 👤 실명표를 내 설정에
+     [35] ★★ 판 X592 — 🎯 미션 카드 하나 = 미션 → 📊 이번 달 영업활동(TA 통화 · AP 약속 · PC · CS 지금 · 계약) → 지금 이분 · 이름 = 그분 CRM(hdbOpen) ·
+          넓은 화면 좌우 맞춤(bal · 저장 없음)
      [34] ★★ 판 X591 — 🤖 자비스가 짠 오늘 순서(misPlan · 미션마다 할 일 몇 가지 · 같은 줄만 · 저장 없음) · 지금 할 미션 밑 세 가지 · AP · 만남 글씨 16px ·
           「금액 ?」 → 「💰 목표 계약금액」(제 줄) · PC(1101px 이상) 두 줄 — 🧭 상품전략부터 오른쪽
      [33] ★★ 판 X589 — 🤖 자비스가 적은 오늘의 미션: 걸 분 · 약속 시각 · 오늘 건 통수 · 내일 약속 · SNS 요일 — 있던 줄(hmLeft · hmSteps · AR.calls · AR.db)만 · 저장 없음
@@ -170,9 +172,9 @@ is((ixc.match(/HOME_V2/g) || []).length <= 11 && (ixc.match(/HOME_V2\.prefPut\(/
 
 console.log('\n[4] 칸 차례 = 시안 rHome');
 const H = (sc.match(/function html\(\) \{[\s\S]*?\n  \}/) || [''])[0];
-const ord = ['topHtml', 'whoHtml', 'helloHtml', 'monHtml', 'stepsHtml', 'jvHtml', 'railHtml', 'inscHtml', 'weekHtml', 'roadHtml', 'eveHtml', 'menuHtml'];
+const ord = ['topHtml', 'whoHtml', 'helloHtml', 'misHtml', 'railHtml', 'monHtml', 'stepsHtml', 'jvHtml', 'inscHtml', 'weekHtml', 'roadHtml', 'eveHtml', 'menuHtml'];
 const pos = ord.map(n => H.indexOf(n + '('));
-is(pos.every(p => p > 0) && pos.every((p, i) => !i || p > pos[i - 1]), '인사 → 목표 → 다섯 걸음 → 챙기는 중 → 지금 이분 → 상품전략 → 이번 주 → 영업 한 바퀴 → 돌아보기 → 메뉴');
+is(pos.every(p => p > 0) && pos.every((p, i) => !i || p > pos[i - 1]), '인사 → 🎯 미션 카드(영업활동 · 지금 이분 · 판 X592) → 목표 → 다섯 걸음 → 챙기는 중 → 상품전략 → 이번 주 → 영업 한 바퀴 → 돌아보기 → 메뉴');
 
 console.log('\n[5] 칸 속을 채우는 라이브 함수가 있다');
 const ALL = IX + '\n' + JS;
@@ -434,7 +436,7 @@ console.log('\n[16] 🎯 목표 시트 · 🔁 영업 한 바퀴 단계 시트 (
   is(/목표를 읽는 중이에요/.test(s) && !/hv2GoalP/.test(s), '목표를 아직 못 읽었으면 0 을 칸에 깔지 않고 「읽는 중」');
   X.g.PF.loaded = true;
   X.g.HOME_V2.stage(0); s = X.els.hv2Sheet.innerHTML;
-  is(/첫 전화/.test(s) && /미접촉 목표 · 모두 3명/.test(s) && /hmRtPerson\('d2'\)/.test(s) && /hmRtPerson\('d1'\)/.test(s) && /hmRtPerson\('d5'\)/.test(s) && !/d3/.test(s) && s.indexOf("'d2'") < s.indexOf("'d1'") && s.indexOf("'d1'") < s.indexOf("'d5'"),
+  is(/첫 전화/.test(s) && /미접촉 목표 · 모두 3명/.test(s) && /HOME_V2\.crm\('d2',''\)/.test(s) && /HOME_V2\.crm\('d1',''\)/.test(s) && /HOME_V2\.crm\('d5',''\)/.test(s) && !/d3/.test(s) && s.indexOf("'d2'") < s.indexOf("'d1'") && s.indexOf("'d1'") < s.indexOf("'d5'"),
     '단계 시트 — 칸 숫자와 같은 분들(지금 보는 분 것만 · 오래 연락 못 한 분 먼저 · 기록 없는 분은 끝)');
   is(/9일 전 연락/.test(s) && /순천 연향동/.test(s) && /연락 기록 없음/.test(s) && /TA 스크립트/.test(s) && !/없는 칸/.test(s) && /go\('crm'\)">📋 DB 통합 CRM 에서 전부 보기/.test(s),
     '줄마다 단계 · 동네 · 마지막 연락 · 「이 단계에서 쓰는 것」(APEX_STAGE.tools · 열 수 있는 것만) · 예전 길은 맨 아래 단추');
@@ -487,7 +489,7 @@ console.log('\n[17] 💬 화법 · 🧭 상품전략 · 📚 공부 시트 (판 
   is(/며칠 전에 연락드렸다가/.test(t) && /안 받은 시간에 또 걸지 않습니다/.test(t) && /카톡 — 부재/.test(t), '부재 = SAY 부재 + 팁 + 부재 카톡');
 
   X.g.HOME_V2.dock('prod'); t = sh();
-  is(/🧭 11월 상품전략/.test(t) && /class="pcard"/.test(t) && /병원비·비급여/.test(t) && /오늘 볼 분 1명/.test(t) && /이번 달 1위 · 보험사 · 병원비 상품/.test(t) && /hmOpen\('db:d1:미접촉'\)/.test(t) && /hmDoorGo\('hospital',''\)/.test(t) && /hmDoorGo\('',''\)">상품전략기 전체 열기/.test(t),
+  is(/🧭 11월 상품전략/.test(t) && /class="pcard"/.test(t) && /병원비·비급여/.test(t) && /오늘 볼 분 1명/.test(t) && /이번 달 1위 · 보험사 · 병원비 상품/.test(t) && /HOME_V2\.crm\('[^']*','db:d1:미접촉'\)/.test(t) && /hmDoorGo\('hospital',''\)/.test(t) && /hmDoorGo\('',''\)">상품전략기 전체 열기/.test(t),
     '상품전략 시트 — 상황별 1위(HM_DOOR_TOP) · 오늘 볼 분(오늘 화면과 같은 자 doorOf) · 이분 한 장 · 그 구실로 문 열기 · 상품전략기');
 
   X.g.HOME_V2.dock('study'); t = sh();
@@ -647,7 +649,7 @@ console.log('\n[19] 📰 오늘 소식 · 🙋 물어볼 것 · 🧭 상황 시�
   const ORD = ['이번 달 상품전략', '🧭 병원비·비급여', '「요즘 병원비 청구 많이 하세요?」', '1. A생명 · 병원비 상품<br>2. B손보 · 비급여 상품', '상품전략기와 같은 순위', '이 이야기로 연락할 오늘 볼 분 <small>2명', '상품전략기 「🎣 문 열기」 로 이어 보기'];
   const at = ORD.map(k => t.indexOf(k));
   is(at.every(x => x >= 0) && at.every((x, i) => !i || x > at[i - 1]), '상황 시트 — 구실 → 이번 달 상품 순위 → 이 이야기로 연락할 오늘 볼 분 → 상품전략기 (시안 openInsK 차례)' + (at.some(x => x < 0) ? ' — 없음: ' + ORD.filter((k, i) => at[i] < 0).join(' | ') : ''));
-  is(/hmOpen\('next:c2:'\)/.test(t) && /hmOpen\('db:d1:AP'\)/.test(t) && !/touch:c1:/.test(t) && /class="pcard"><button type="button" class="mini"/.test(t), '오늘 볼 분 — 그 상황인 분만(doorOf · 위 상품전략 시트와 같은 자) · 누르면 이분 한 장');
+  is(/HOME_V2\.crm\('','next:c2:'\)/.test(t) && /HOME_V2\.crm\('[^']*','db:d1:AP'\)/.test(t) && !/touch:c1:/.test(t) && /class="pcard"><button type="button" class="mini"/.test(t), '오늘 볼 분 — 그 상황인 분만(doorOf · 위 상품전략 시트와 같은 자) · 누르면 이분 한 장');
   X.g.HOME_V2.insK('nope');
   is(said.some(x => x[0] === 'door' && x[1] === 'nope'), '상품이 없는 상황이면 예전처럼 상품전략기로');
   const ws = sc.slice(sc.indexOf('  function newsHtml('), sc.indexOf('  function isBoss(')) + sc.slice(sc.indexOf('  function toolsOf('), sc.indexOf('  function railHtml('));   /* 판 X558 — 그 사이 📍 지금 상황 · ⚙ 추천 고치기는 있던 cmSave · osCfgSet 을 부름([27] 이 봄) */
@@ -987,7 +989,7 @@ console.log('\n[29] 🧭 카드 맨 아래 「권할 것」 (판 X568 · 3차 �
   const card = i => { const a = h.indexOf('data-i="' + i + '"'), b = h.indexOf('data-i="' + (i + 1) + '"'); return h.slice(a, b > 0 ? b : h.length); };
   is(/class="rc" onclick="HOME_V2\.rec\('touch:c1:'\)">🧭 권할 것</.test(card(0)) && !/이분 자세히<\/button>/.test(card(0)), '고객 카드 맨 아래 = 「🧭 권할 것」 (시안 qins 오른쪽 칸)');
   is(/class="rc" onclick="hmOpen\('db:d9:TA'\)">이분 자세히</.test(card(1)), '배정 DB 카드는 고객 창이 없어 예전처럼 「이분 자세히」');
-  is(/<span class="nm" role="button" onclick="hmOpen\('touch:c1:'\)">홍길동님<\/span>/.test(card(0)), '이름을 누르면 「이분 자세히」(시안처럼 이름에 밑줄)');
+  is(/<span class="nm" role="button" onclick="HOME_V2\.crm\('','touch:c1:'\)">홍길동님<\/span>/.test(card(0)), '이름을 누르면 HOME_V2.crm — 배정 DB 분은 그분 CRM 고치기 창 · 고객 365일 분은 예전처럼 그분 카드(판 X592)');
   X.g.setTimeout = fn => fn();
   X.g.HOME_V2.rec('touch:c1:');
   is(JSON.stringify(said) === '[["cusGo","{\\"cli\\":\\"c1\\"}"],["rec","c1"]]', '누르면 있던 고객 창 하나(cusGo) → 그 분이 열리면 권할 것 시트(cusV2Rec) — ' + JSON.stringify(said));
@@ -1061,7 +1063,7 @@ console.log('\n[33] 🤖 자비스가 적은 오늘의 미션 (판 X589 · 사�
   is(/<div class="mis-jv"><small>🤖 자비스가 적었어요<\/small><b>내일 10:00 이몽룡님 — 증권 받았으면 판독까지<\/b><span class="mis-plh">자비스가 짠 오늘 순서 · 2가지<\/span><div class="mis-pl"><button type="button" onclick="HOME_V2\.close\(\);go\('ai_prop'\)"><span class="no">1<\/span><span class="tx"><b>🩺 내일 10:00 이몽룡님<\/b>/.test(t) && /misDid\(3,'d9'\)">✓ 했어요/.test(t),
     '미션 시트 맨 위 「🤖 자비스가 적었어요」 + 자비스가 짠 순서(판 X591) · 그 밑 체크판 칸(✓ 했어요)은 그대로');
   X.g.HOME_V2.mis(0); t = X.els.hv2Sheet.innerHTML;
-  is(/<button type="button" onclick="HOME_V2\.close\(\);hmOpen\('touch:c1:'\)"><span class="no">1<\/span><span class="tx"><b>📞 홍길동님<\/b><small>30일째<\/small>/.test(t), '걸 분을 누르면 있던 hmOpen(그분 한 장)');
+  is(/<button type="button" onclick="HOME_V2\.crm\('','touch:c1:'\)"><span class="no">1<\/span><span class="tx"><b>📞 홍길동님<\/b><small>30일째<\/small>/.test(t), '걸 분을 누르면 HOME_V2.crm(그분 CRM · 고객 365일 분은 그분 카드)');
   X = mk({ ck: { d4: 1, d5: 1 } }); let h = X.els.hv2.innerHTML;
   is(!/🤖 홍길동님/.test(h) && /<small class="mis-j">🤖 14:00 임꺽정님/.test(h), '끝난 칸에는 자비스 줄을 안 띄움 · 다음 칸부터');
   const M = sc.slice(sc.indexOf('  function misTm('), sc.indexOf('  function ckItem('));
@@ -1092,8 +1094,8 @@ console.log('\n[34] 🤖 자비스가 짠 오늘 순서 · AP 글씨 · 목표 �
   };
   let X = mk(), P = i => X.g.HOME_V2.misPlan(i), T0 = i => P(i).map(p => p.t);
   const p0 = P(0);
-  is(p0.length === 7 && p0[0].t === '📞 홍길동님' && p0[0].s === '30일째' && p0[0].go === "HOME_V2.close();hmOpen('touch:c1:')" && p0[4].t === '📞 월매님' && p0[5].t === '나머지 3분' && p0[6].t === '💬 안 받으신 분은 그 자리에서 카톡' && /HOME_V2\.step\(0\)/.test(p0[6].go),
-    '📞 전화 · 카톡 — 걸 분 다섯(오늘 챙길 줄 차례 · 누르면 hmOpen) · 나머지 n분 · 안 받으면 카톡(지금 이분 카드) — ' + T0(0).join(' / '));
+  is(p0.length === 7 && p0[0].t === '📞 홍길동님' && p0[0].s === '30일째' && p0[0].go === "HOME_V2.crm('','touch:c1:')" && p0[4].t === '📞 월매님' && p0[5].t === '나머지 3분' && p0[6].t === '💬 안 받으신 분은 그 자리에서 카톡' && /HOME_V2\.step\(0\)/.test(p0[6].go),
+    '📞 전화 · 카톡 — 걸 분 다섯(오늘 챙길 줄 차례 · 누르면 그분 CRM) · 나머지 n분 · 안 받으면 카톡(지금 이분 카드) — ' + T0(0).join(' / '));
   is(JSON.stringify(T0(1)) === JSON.stringify(['🤝 14:00 임꺽정님', '🤝 16:30 성춘향님', '🧭 들고 갈 이번 달 상품']) && /hmDoorGo/.test(P(1)[2].go), '🤝 오늘 약속 — 남은 약속 시각 · 이름 + 들고 갈 상품(상품전략) — ' + T0(1).join(' / '));
   is(JSON.stringify(T0(2)) === JSON.stringify(['✍️ 오늘 건 2통 — 결과 한 줄씩', '📝 임꺽정님 팩트파인딩', '📝 성춘향님 팩트파인딩', '📅 다시 걸 분은 날짜 잡기']) && P(2)[0].s === 'TA완료·부재·거절·상담' && P(2)[1].go === "HOME_V2.close();go('fact_find')",
     '✍️ 기록 — 오늘 건 통수 · 만날 분 팩트파인딩(체크판 d8 설명 · 상담카드로) · 다시 걸 날짜 — ' + T0(2).join(' / '));
@@ -1105,20 +1107,64 @@ console.log('\n[34] 🤖 자비스가 짠 오늘 순서 · AP 글씨 · 목표 �
   is(X.g.HOME_V2.misPlan(0)[0].t === '📞 홍○○님', '🙈 이름 가리기를 따름');
   X = mk(); let h = X.els.hv2.innerHTML;
   const i0 = h.indexOf('class="mis-pl"');
-  is(i0 > 0 && (h.match(/class="mis-pl"/g) || []).length === 1 && /<span class="no">3<\/span>/.test(h.slice(i0)) && !/<span class="no">4<\/span>/.test(h.slice(i0, h.indexOf('</div></div>', i0) + 12)) && /onclick="HOME_V2\.mis\(0\)">자비스가 짠 할 일 7가지 모두 보기 ›/.test(h),
-    '오늘 화면 — 지금 할 미션(처음 안 끝난 칸) 밑에만 세 가지 + 「7가지 모두 보기」');
-  X = mk({ ck: { d4: 1, d5: 1 } }); h = X.els.hv2.innerHTML;
-  is(/<span class="tx"><b>🤝 14:00 임꺽정님/.test(h) && !/📞 홍길동님/.test(h), '전화 칸을 끝내면 다음 칸(오늘 약속) 밑으로 옮겨 감');
-  X.g.HOME_V2.mis(1); let t = X.els.hv2Sheet.innerHTML;
+  is(i0 < 0 && /<div class="mis-now"><div class="qhd"><b>지금 이분<\/b>/.test(h) && h.indexOf('class="mis-now"') > h.indexOf('class="mis-r'), '오늘 화면 — 지금 할 미션이 📞 면 세 줄 순서 대신 미션 카드 안 「지금 이분」 카드(판 X592)');
+  X = mk({ ck: { d4: 1, d5: 1 }, done: ['appt:a1', 'appt:a2'] }); h = X.els.hv2.innerHTML;
+  is(/<span class="tx"><b>✍️ 오늘 건 2통 — 결과 한 줄씩/.test(h) && /onclick="HOME_V2\.mis\(2\)">자비스가 짠 할 일 4가지 모두 보기 ›/.test(h) && !/📞 홍길동님/.test(h), '전화 · 약속을 끝내면 ✍️ 기록 칸 밑에 세 줄 순서 + 「n가지 모두 보기」');
+  X = mk(); X.g.HOME_V2.mis(1); let t = X.els.hv2Sheet.innerHTML;
   is(/<h1>🤝 오늘 약속<\/h1>/.test(t) && /자비스가 짠 오늘 순서 · 3가지/.test(t) && /onclick="HOME_V2\.misRail\(\)">🤝 지금 이분 카드로/.test(t), '🤝 약속 칸 — 시트로(자비스 순서 + 「지금 이분 카드로」)');
   const M = sc.slice(sc.indexOf('  function misPlan('), sc.indexOf('  function misState('));
   is(M.length > 800 && !/setItem|\.rpc\(|\.from\(|fetch\(|ckToggle|cmLSSet|hmMsDid/.test(M), '자비스 순서는 서버를 안 부르고 아무것도 안 저장 — 이미 읽은 줄만');
   is(/'\.hv2 \.qtop \.sg\{flex:none;font-size:16px;font-weight:800/.test(SRC), '지금 이분 「AP · 만남」 칩 글씨 13px → 16px');
   is(/\(m \? '💰 목표 계약금액 ' \+ m \+ '만원' : '💰 목표 계약금액 \?'\)/.test(SRC) && /님 목표 계약금액', sub: '이분과 목표로 잡은 계약의 월 보험료예요/.test(SRC) && !/금액 \?'/.test(SRC.replace("'💰 목표 계약금액 ?'", '')),
     '「금액 ?」 → 「💰 목표 계약금액」 · 시트 제목도 「목표 계약금액」(칸은 같은 expect_premium)');
-  is(/return topHtml\(\) \+ '<div class="hv2-g"><div class="hv2-c">' \+ whoHtml\(\)[^\n]*railHtml\(L\) \+\n\s*'<\/div><div class="hv2-c">' \+ inscHtml\(\)[^\n]*menuHtml\(\) \+ '<\/div><\/div>'/.test(SRC.split('\r\n').join('\n')),
-    'PC 두 줄 — 왼쪽 = 인사 ~ 지금 이분 · 오른쪽 = 🧭 상품전략 ~ ☰ 다른 메뉴(폰은 왼쪽 다음 오른쪽 = 예전 차례)');
+  is(/return topHtml\(\) \+ whoHtml\(\) \+ helloHtml\(L\) \+ '<div class="hv2-g"><div class="hv2-c">' \+ \(part\(function \(\) \{ return misHtml\(L\); \}\) \|\| railHtml\(L\)\) \+\n\s*'<\/div><div class="hv2-c">' \+ mb\(monHtml\(\)\) \+ mb\(stepsHtml\(\)\) \+ mb\(jvHtml\(\)\) \+ inscHtml\(\)[^\n]*menuHtml\(\) \+ '<\/div><\/div>'/.test(SRC.split('\r\n').join('\n')),
+    'PC 두 줄(판 X592) — 인사까지 위 한 줄 · 왼쪽 = 🎯 미션 카드 · 오른쪽 = 목표 · 다섯 걸음 · 챙기는 중(옮길 수 있음) → 🧭 상품전략 ~ ☰ 다른 메뉴');
   is(/@media\(min-width:1101px\)\{\.hv2\{max-width:1180px\}\.hv2 \.hv2-g\{display:grid;grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)/.test(SRC), '1101px 이상에서만 두 줄 · 그 밑은 예전처럼 한 줄(560px)');
+}
+
+console.log('\n[35] 🎯 미션 + 지금 이분 한 카드 · 📊 이번 달 영업활동 · 이름 = 그분 CRM · 좌우 맞춤 (판 X592)');
+{
+  const CKI = [['d4', '전화 10통 (하루 목표)', '', '', ''], ['d5', '카톡 10건 (하루 목표)', '', '', ''], ['d6', '통화 결과 입력', '', '', 'crm'], ['d8', '만난 사람 팩트파인딩 저장', '', '', 'fact_find'],
+    ['d9', '내일 상담 자료 준비', '', '', 'ai_prop'], ['d10', 'SNS 1건', '', '', '']];
+  const rows = [{ k: 'touch', t: '홍길동', s: '30일째', key: 'touch:c1:' }, { k: 'db', t: '이몽룡', s: '', key: 'db:x1:TA', id: 'x1', tk: 'TA' }];
+  const log = [];
+  const mk = (o) => {
+    o = o || {};
+    const X = box({ apex_home_v2: '1' }, '', { rows,
+      db: [{ id: 'x1', who: 'me', stage: 'TA', appt: '2026-11-28T10:00:00', name: '이몽룡', region: '여수' }, { id: 'x3', who: 'me', stage: 'AP', appt: '2026-11-29T09:00:00', name: '변학도' },
+        { id: 'p1', who: 'me', stage: 'PC', name: '홍갑돌', expect: 300000 }, { id: 'c9', who: 'me', stage: 'CS', name: '성춘향' },
+        { id: 'w1', who: 'me', stage: '계약완료', cAt: '2026-11-20', name: '월매', contract: 250000 }, { id: 'o1', who: 'p2', stage: 'PC', name: '방자' }] });
+    Object.assign(X.g, { meV2Open: () => {}, CK_ITEMS: { day: CKI }, hmMsCk: () => (o.ck || {}), hmIsDone: () => false, hmQdone: () => false, mcalToday: () => '2026-11-27',
+      hdbRow: id => X.g.AR.db.filter(r => r.id === id)[0] || null, hdbCan: r => r.who === 'me', hdbOpen: id => log.push(['hdb', id]), hmOpen: k => log.push(['open', k]), hmRtPerson: id => log.push(['rt', id]) });
+    X.g.AR.loaded = true;
+    X.g.AR.calls = [{ w: 'me', d: '2026-11-27', b: 'x1', r: 'TA완료' }, { w: 'me', d: '2026-11-03', b: 'x1', r: '부재' }, { w: 'me', d: '2026-10-30', b: 'p1', r: '부재' }, { w: 'p2', d: '2026-11-27', b: 'o1', r: '' }];
+    X.g.HOME_V2.apply(dyn(X));
+    return X;
+  };
+  let X = mk(), D = X.g.HOME_V2.actData();
+  is(D.taN === 2 && D.taP === 1 && D.ap.length === 2 && D.pc.length === 1 && D.cs.length === 1 && D.won.length === 1,
+    '영업활동 — TA = 이번 달 내 통화 2통(지난달 · 남의 것 안 셈) · AP = 이번 달로 잡힌 약속 2 · PC · CS = 지금 그 단계(남의 PC 안 셈) · 계약 = 계약일이 이번 달');
+  let h = X.els.hv2.innerHTML;
+  is(/<em>TA<\/em><b>2<\/b><small>이번 달 통화/.test(h) && /<em>AP<\/em><b>2<\/b><small>이번 달 약속/.test(h) && /<em>PC<\/em><b>1<\/b><small>지금 제안/.test(h) && /<em>CS<\/em><b>1<\/b><small>지금 청약 · 계약 1/.test(h) && /📊 11월 영업활동/.test(h),
+    '미션 카드 안 📊 11월 영업활동 네 칸 — 「이번 달」 · 「지금」 을 칸마다 적음(지어내지 않음)');
+  const a = h.indexOf('class="mis-r'), b = h.indexOf('class="act"'), c = h.indexOf('class="mis-now"'), e = h.indexOf('</div>', h.lastIndexOf('id="hv2Rail"'));
+  is(a > 0 && b > a && c > b && h.indexOf('<div class="mis') < a && h.indexOf('class="hv2-c"') < h.indexOf('<div class="mis'), '한 카드 차례 — 미션 다섯 줄 → 📊 영업활동 → 지금 이분(카드 안 아래 띠)');
+  X.g.HOME_V2.act('ta'); let t = X.els.hv2Sheet.innerHTML;
+  is(/📞 11월 TA — 통화 2통/.test(t) && /onclick="HOME_V2\.crm\('x1',''\)"/.test(t) && /이몽룡님/.test(t) && /2통 · 마지막 11\/27 TA완료 · 지금 TA/.test(t) && !/방자/.test(t), 'TA 칸 → 이번 달 건 분 명단 · 이름을 누르면 그분 CRM');
+  X.g.HOME_V2.act('cs'); t = X.els.hv2Sheet.innerHTML;
+  is(/CS — 지금 청약 중 1명/.test(t) && /성춘향님/.test(t) && /✓ 계약 11\/20 · 25만원/.test(t), 'CS 칸 → 지금 청약 중 + 이번 달 계약은 맨 아래');
+  X.g.HOME_V2.act('pc'); t = X.els.hv2Sheet.innerHTML;
+  is(/홍갑돌님/.test(t) && /목표 계약금액 30만원/.test(t) && !/방자/.test(t), 'PC 칸 → 지금 제안 중 · 목표 계약금액');
+  log.length = 0; X.g.HOME_V2.crm('x1', 'db:x1:TA'); X.g.HOME_V2.crm('o1', 'db:o1:PC'); X.g.HOME_V2.crm('', 'touch:c1:'); X.g.HOME_V2.crm('zz', '');
+  is(JSON.stringify(log) === JSON.stringify([['hdb', 'x1'], ['open', 'db:o1:PC'], ['open', 'touch:c1:'], ['rt', 'zz']]),
+    '이름 → 내 배정 DB 분은 그분 CRM 고치기 창(hdbOpen) · 내 고객이 아니면 · 고객 365일 분은 예전 길(hmOpen · hmRtPerson) — ' + JSON.stringify(log));
+  is(/<span class="nm" role="button" onclick="HOME_V2\.crm\('x1','db:x1:TA'\)">이몽룡님/.test(h), '지금 이분 카드 이름 → HOME_V2.crm(그분 id)');
+  is((SRC.match(/hmRtPerson\(/g) || []).length === 2 && /'💬 카톡 보내기'/.test(SRC) && !/HOME_V2\.close\(\);hmRtPerson\(\\'' \+ Q\((x|r|a|n)\.id\)/.test(SRC),
+    '지역 동선 · 챙기는 중 · 단계 시트의 이름도 HOME_V2.crm(남은 hmRtPerson = 카톡 보내기 · 되돌아가는 길)');
+  const BL = sc.slice(sc.indexOf('  function bal() {'), sc.indexOf('  function fallback('));
+  is(BL.length > 300 && /innerWidth >= 1101/.test(BL) && /data-mv/.test(BL) && !/setItem|\.rpc\(|\.from\(|fetch\(/.test(BL), '⚖️ 좌우 맞춤 — 넓은 화면에서만 · 오른쪽 위 칸을 옮기고 짧은 쪽을 늘림 · 저장 없음');
+  const AC = sc.slice(sc.indexOf('  function actData() {'), sc.indexOf('  function misPlan('));
+  is(AC.length > 500 && !/setItem|\.rpc\(|\.from\(|fetch\(|insert|update\(/.test(AC), '영업활동은 이미 읽은 줄만 — 서버 · 저장 없음');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');
