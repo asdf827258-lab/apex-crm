@@ -19503,10 +19503,20 @@ var MCAL_REAL={src:null,map:null};
 function mcalRealMap(){
   var D=(typeof AR!=='undefined'&&AR.db)?AR.db:[];
   if(MCAL_REAL.src===D&&MCAL_REAL.map)return MCAL_REAL.map;
-  var m={},i,r,k;
+  var m={},lk={},i,r,k;
+  /* 👤 판 X585 — 고객 번호로 <b>이어진</b> 배정 줄(dbs.client_id)의 실명. 이름 모양 견주기보다 확실해서 먼저 봅니다.
+     한 고객에 이어진 줄들의 이름이 서로 다르면 아무것도 안 씁니다(엉뚱한 이름 금지 · 1번). */
+  for(i=0;i<D.length;i++){
+    r=D[i];
+    if(!r||!r.client_id||!cmDbNameOk(r.name))continue;
+    k=''+r.client_id;
+    if(lk[k]===undefined)lk[k]=r.name;
+    else if(lk[k]!==r.name)lk[k]='';
+  }
+  MCAL_REAL.lk=lk;
   if(typeof osMaskName==='function')for(i=0;i<D.length;i++){
     r=D[i];
-    if(!r||!r.name||!r.who)continue;
+    if(!r||!cmDbNameOk(r.name)||!r.who)continue;
     k=r.who+'|'+osMaskName(r.name).replace(/\s/g,'');
     /* 같은 담당자에게 <b>같은 가린 이름</b>이 둘이면 누구인지 못 가린다 —
        그때는 아무 이름도 쓰지 않는다. 엉뚱한 사람 이름을 붙이면 그 자리가
@@ -19521,7 +19531,16 @@ function mcalRealOf(c){
   if(!c)return '';
   var r=(typeof cmRealOf==='function')?cmRealOf(c.id):'';
   if(r)return r;
-  return mcalRealMap()[(c.advisor_id||'')+'|'+(''+(c.name_masked||'')).replace(/\s/g,'')]||'';
+  return cmDbRealOf(c);
+}
+/* 👤 판 X585 — 사장님 말씀 「가린 이름은 원래 이름이 있을 텐데」 → 「자동으로 띄워」.
+   서버 고객 표(clients)엔 가린 이름뿐이지만, <b>배정 DB 표(dbs.customer_name)</b>엔 실명이 있습니다 — 이미 읽어 온 AR.db 에서 찾습니다(서버 더 안 부름 · 저장 안 함).
+   차례: ① 고객 번호로 이어진 줄(client_id) ② 같은 담당자 · 같은 가린 모양이 <b>딱 한 분</b>일 때(둘 이상이면 안 씀). 실명표(cmRealOf)가 늘 먼저. */
+function cmDbNameOk(n){ n=''+(n||''); return !!n&&n!=='(이름 없음)'&&!/[*○]/.test(n); }
+function cmDbRealOf(c){
+  if(!c||!c.id)return '';
+  var m=mcalRealMap(),lk=MCAL_REAL.lk||{};
+  return lk[''+c.id]||m[(c.advisor_id||'')+'|'+(''+(c.name_masked||'')).replace(/\s/g,'')]||'';
 }
 /* 화면에 쓰는 이름 — <b>아는 대로</b> */
 function mcalName(c){
@@ -77152,6 +77171,7 @@ function cmRrnBirth(v){
 function cmName(c){
   if(!c)return '';
   var r=cmRealOf(c.id);
+  if(!r)try{ r=cmDbRealOf(c); }catch(e){ r=''; }   /* 👤 판 X585 — 배정 DB 의 실명(이어진 줄 · 딱 한 분) */
   return r||c.name_masked||'(이름 없음)';
 }
 
