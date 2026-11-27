@@ -2590,7 +2590,7 @@ function load(){
   }catch(e){}
   return blank();
 }
-function save(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
+function save(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){} try{baPublishCov();}catch(e){}}
 function nid(){return 'p'+(++uid)+'_'+Math.floor(Math.random()*10000);}
 function esc(s){return (''+(s===null||s===undefined?'':s)).replace(/[&<>"']/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
@@ -9898,6 +9898,45 @@ function baEndOf(){
           /* 🔁 다음 갱신 — 모르면 <b>아예 안 담습니다</b> (1번 · 판 X423) */
           rnw:rnw?{ym:rnw.ym,nm:rnw.nm,every:rnw.every}:null,
           src:'보장분석에서 셈'};
+}
+/* ══ 🔗 덱(인생 자산 시뮬레이션) 연동 — 지금 보장을 담보별로 넘긴다 ═══════
+   상담 <b>마지막 장</b>에서 본인인증 뒤 KB 보장분석을 실행하면, 그 결과를
+   덱이 「지금 내 보장」 으로 해석해 보여 줍니다. 담보→갈래(암·뇌·심장·수술·
+   입원·실손·사망) 는 <b>이 화면이 아는 것</b>(MID) 으로 묶습니다 — 덱에서
+   다시 세지 않습니다 (CLAUDE.md 5번). 금액은 <b>원(圓)</b> 으로 보냅니다.
+   ★ 같은 오리진이라 BroadcastChannel·localStorage 로 바로 닿습니다 —
+     index.html·상담자료를 거치지 않습니다.
+   ★ <b>분석 전엔 안 보냅니다</b> — 빈 값을 보내면 덱이 「전부 공백」 으로
+     잘못 섭니다 (1번).                                                  */
+function baCovBucket(mid){
+  if(mid==='실손의료비')return 'silson';
+  if(mid==='암'||mid==='암 치료비')return 'cancer';
+  if(mid==='뇌')return 'brain';
+  if(mid==='심장')return 'heart';
+  if(mid==='순환계 (뇌+심장)')return 'circ';     /* 뇌·심장 둘 다 지킵니다 */
+  if(mid==='수술비')return 'surgery';
+  if(mid==='입원 · 간병')return 'hosp';
+  if(mid==='사망 · 장해')return 'death';
+  return null;                                   /* 골절·배상 등은 덱에 안 씁니다 */
+}
+function baCovByCat(C){
+  var g={cancer:0,brain:0,heart:0,surgery:0,hosp:0,silson:0,death:0},k;
+  var won=function(v){v=+v||0;if(v<=0)return 0;return v<100000?v*10000:v;};  /* 만원·원 둘 다 받습니다 */
+  for(k in C.b){ if(!C.b.hasOwnProperty(k))continue;
+    var cat=baCovBucket(MID[k]); if(!cat)continue;
+    if(cat==='silson'){ g.silson=1; continue; }           /* 실손은 있음/없음만 */
+    if(cat==='circ'){ g.brain+=won(C.b[k]); g.heart+=won(C.b[k]); continue; }
+    g[cat]+=won(C.b[k]);
+  }
+  return g;
+}
+function baPublishCov(){
+  if(!S||!S.before||!S.before.length)return;               /* 분석 전엔 안 보냅니다 */
+  var C=calc(), cov=baCovByCat(C), nm=(S.who&&S.who.name)||'고객';
+  var pk={cov:cov,name:nm,at:(new Date()).toISOString()};
+  try{ localStorage.setItem('apex_cov_cur',JSON.stringify(pk)); }catch(e){}
+  try{ if(!window.__baCovBC)window.__baCovBC=new BroadcastChannel('apex-cov');
+       window.__baCovBC.postMessage(pk); }catch(e){}
 }
 function baSaveToClient(){
   if(!INFRAME){toast('워크스페이스 안에서 여셨을 때만 고객 365일에 저장됩니다 — 지금은 「💾 파일로 저장」을 쓰십시오');return;}

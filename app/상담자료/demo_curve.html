@@ -346,8 +346,8 @@
         <div class="bo" id="boRows"></div>
         <div class="drop" id="boEmpty" style="display:none">
           <div class="ic">📄</div>
-          <div class="dt">KB 보장분석을 넣어 주세요</div>
-          <div class="ds">넣으면 <b>암·뇌·심장·수술·입원·실손</b> 담보별 현황이<br>여기 자동으로 채워집니다.</div>
+          <div class="dt">본인인증 후 · KB 보장분석을 실행하면</div>
+          <div class="ds"><b>암·뇌·심장·수술·입원·실손</b> 담보별 현황이<br>여기 자동으로 정리됩니다 — <b>구멍난 곳만</b> 채우면 돼요.</div>
         </div>
       </div>
     </div>
@@ -472,6 +472,7 @@
       ex:"심근경색 우회수술 584만 · 심부전 반복치료 1,131만"},
   ];
   let COV=null; // {cancer,brain,heart,surgery,hosp,silson,death} (원)
+  let COVNAME=""; // 이 데이터의 임자(고객 이름) — 마지막 장 표시용
   function amtToWon(a){ if(a==null)return 0; var n=parseFloat((''+a).replace(/[^0-9.]/g,''))||0; if(n<=0)return 0; return n<100000? n*10000 : n; }
   function mapCov(rows){
     if(!rows) return null;
@@ -572,13 +573,6 @@
         setTimeout(()=>{dimSeg("segCrash",true);drawSeg("segCrash");drawSeg("segRecover");moveDot(80,PEAK,"#60a5fa");},650);
         setCaption("같은 일, 두 개의 미래","down"); }
     },
-    { eye:"보험의 본질 · 지금 내 보장", tone:"green",
-      title:'그럼 — <span class="g-green">고객님의 지금 보장</span>은 이래요',
-      sub:"KB 보장분석을 넣으면 담보별 현황이 자동으로 채워져요. <b>구멍난 곳만</b> 채우면 됩니다.",
-      enter(){ chap(null); hideShock(); $("#orbA").classList.remove("danger"); $("#dot").classList.remove("on");
-        var has=renderBojang(); showLayer("bojang");
-        setCaption(has?"초록 있음 · 노랑 부족 · 빨강 공백":"여기에 KB 보장분석을 넣어 주세요", has?"up":"gray"); }
-    },
     { eye:"보험의 본질 · 치료비", tone:"red",
       title:'이 병들, <span class="g-warn">치료비</span>는 얼마일까요?',
       sub:"암·뇌·심장 — <b>실제 영수증 기준</b>이에요. 사례이며 개인·병원·시기에 따라 다릅니다.",
@@ -615,6 +609,14 @@
       title:'노후 준비는 결국, <span class="g-green">이 두 가지</span>예요',
       status:"", sub:"너무 많이도, 너무 적게도 아니고 — 딱 이 두 개만 맞추면 됩니다.",
       enter(){ chap("end"); $("#orbA").classList.remove("danger"); setCaption("","gray"); showLayer("final2"); retrigger("final2"); }
+    },
+    // ── 마지막 장: 본인인증 뒤 KB 보장분석을 실행 → 덱이 「지금 내 보장」으로 해석 ──
+    { eye:"APEX · 마지막 · 지금 내 보장", tone:"green",
+      title:'마지막으로 — <span class="g-green">지금 고객님 보장</span>을 봅니다',
+      sub:"본인인증 후 KB 보장분석을 실행하면, 여기 담보별로 자동 정리돼요. <b>구멍난 곳만</b> 채우면 됩니다.",
+      enter(){ chap("end"); hideShock(); $("#orbA").classList.remove("danger"); $("#dot").classList.remove("on");
+        var has=renderBojang(); showLayer("bojang");
+        setCaption(has?(COVNAME?COVNAME+" 님 — 초록 있음·노랑 부족·빨강 공백":"초록 있음 · 노랑 부족 · 빨강 공백"):"본인인증 → KB 보장분석을 실행하면 여기 채워집니다", has?"up":"gray"); }
     }
   ];
 
@@ -685,14 +687,24 @@
     else if(e.key==="Home"||e.key==="r"||e.key==="R"){restart();}
   });
 
-  // ── OS 연동: 고객 보장 데이터 수신(apex:bojang) ──
-  function dataArrived(){ try{renderBojang();renderChiryo();}catch(e){} }
+  // ── 고객 보장 데이터 수신 ──────────────────────────────────────────
+  //  · KB 보장분석(ba.html) → BroadcastChannel('apex-cov') · localStorage['apex_cov_cur']={cov,name,at}
+  //  · 증권 스캔(OS)        → postMessage {t:'apex:bojang',rows:[...]}
+  //  본인인증이 필요한 KB 는 마지막 장에서 실행 → 들어오는 즉시 그 장을 다시 그린다.
+  function covUnwrap(o){ if(!o)return null; if(typeof o==='object'&&o.cov){ if(o.name)COVNAME=o.name; return o.cov; } return o; }
+  function onBojang(){ // 보장분석·치료비 장을 보고 있으면 즉시 다시 그린다
+    try{ if(started&&idx>=0&&STEPS[idx]&&($("#bojang").classList.contains("on")||$("#chiryo").classList.contains("on"))) STEPS[idx].enter(); }catch(e){}
+  }
+  function dataArrived(){ try{renderBojang();renderChiryo();onBojang();}catch(e){} }
+  function setCov(v){ try{COV=mapCov(v);}catch(x){COV=null;} dataArrived(); }
   window.addEventListener("message",function(e){
     if(e.origin!==location.origin)return; var m=e.data;
-    if(m&&typeof m==='object'&&m.t==='apex:bojang'){ try{COV=mapCov(m.rows||m.data||null);}catch(x){COV=null;} dataArrived(); }
+    if(m&&typeof m==='object'&&m.t==='apex:bojang'){ setCov(covUnwrap(m.rows||m.data||m.cov||null)); }
   },false);
-  try{ if(window.__APEX_BOJANG) COV=mapCov(window.__APEX_BOJANG); }catch(e){}
-  if(!COV){ try{ var _ls=localStorage.getItem("apex_cov_cur"); if(_ls) COV=mapCov(JSON.parse(_ls)); }catch(e){} }
+  try{ var _bc=new BroadcastChannel('apex-cov'); _bc.onmessage=function(ev){ setCov(covUnwrap(ev.data)); }; }catch(e){}
+  window.addEventListener("storage",function(e){ if(e.key==='apex_cov_cur'&&e.newValue){ try{ setCov(covUnwrap(JSON.parse(e.newValue))); }catch(x){} } },false);
+  try{ if(window.__APEX_BOJANG) COV=mapCov(covUnwrap(window.__APEX_BOJANG)); }catch(e){}
+  if(!COV){ try{ var _ls=localStorage.getItem("apex_cov_cur"); if(_ls) COV=mapCov(covUnwrap(JSON.parse(_ls))); }catch(e){} }
 
   buildCurveBase();
   $("#prog").style.width="0%";
