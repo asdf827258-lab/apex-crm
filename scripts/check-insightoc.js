@@ -10,6 +10,7 @@
      2. 금액은 회사 한장비교 숫자 — 「설계사용 · 고객에게 보여 주지 마세요」를 카드가 말한다
      3. 종신·연금·달러·기타는 회사 한장비교에 없으니 카드가 서지 않는다
      4. 약관 근거는 원문 대조 ✓ 줄만 싣는다
+     5. B안(보장 넓게)은 한장비교 B_CORE 와 같은 규칙 — 카드에 A안·B안 구성을 나란히 (판 X593)
    node scripts/check-insightoc.js */
 'use strict';
 const fs = require('fs'), path = require('path');
@@ -26,9 +27,12 @@ is(/고객에게 보여 주지 마세요/.test(blk), '<2> 「설계사용 · 고
 is(/if \(!\/\^\(cancer\|health\|brainheart\|simple\|care\|kids\|driver\)\$\/\.test\(cat\)\) return null;/.test(blk), '<3> 종신·연금·달러·기타는 카드 없음');
 is(/r\.vf && r\.vf\.ok \?/.test(blk), '<4> 약관 근거는 원문 대조 ✓ 줄만');
 is(/window\.open\(u, '_blank', 'noopener'\)/.test(blk), '새 창(noopener)으로 연다');
-is(/\n  h \+= ocCardHTML\(p\);\n/.test(S), '상품 서랍(openP)에 💰 카드');
+is(/\n  h \+= ocCardHTML\(p\);\r?\n/.test(S), '상품 서랍(openP)에 💰 카드');
 is(/ocPlan\(n\.p\) \? `<button class="btn g" onclick="ocFrom\('\$\{n\.p\.id\}'\)">💰 금액 보기<\/button>`/.test(S), '🎣 문 열기 대본 카드에 「💰 금액 보기」');
 is(/localStorage\.setItem\('apexOcPick'/.test(blk) && !/sessionStorage|fetch\(/.test(blk), '고른 성별·나이만 이 기기에 기억 — 서버는 안 부른다');
 
+is(blk.includes("const OC_B = [['cancer_diag', 3000], ['cancer_main', 2000], ['brain', 1000], ['heart', 1000], ['surgery', 0], ['nsurg', 0]];"), '<5> B안 규칙 = 한장비교 B_CORE 그대로 (수술은 0 = 회사 기본 가입금액 · 판 X593)');
+is(/B안 · 보장 넓게/.test(blk) && /A안 · 이 상품 담보/.test(blk), '<5> 💰 카드에 A안·B안 구성이 나란히');
+is(blk.includes("if (!/^(cancer|health|brainheart|simple)$/.test(p.category)) return [];"), '<5> B안은 암·건강·뇌심·간편 상품만 (치매·어린이·운전자는 A안만)');
 console.log(bad ? `\n✗ ${bad}건 실패` : '\n✓ 전부 통과');
 process.exit(bad ? 1 : 0);
