@@ -20,6 +20,7 @@
      [12] ★ 판 X513 — 지금 상황 · 걱정 · 기록 시트: 있던 cmSave({care}·{worry}) · cmTouchAdd 만 부르고, 고른 뒤 두 화면을 다시 그린다
      [14] ★  판 X526 — 이름 줄 금액 칸 · 청약 단계 「✓ 계약됐어요」 → 오늘 화면의 그 시트(HOME_V2.amt · won) · 시트가 없는 판이면 예전 글자
      [13] ★★ 판 X515 — 고객 탭 목록(시안 rCust · rList): 담당자 · 찾기는 예전 그대로 거친 줄 · 단계 칩 · 한 줄 칸 · 넣기 · 예전 화면 길
+     [15] ★★ 판 X585 — ✏️ 실명 한 번에 적기: 가린 이름만 있는 분만 띠 · 시트 · 저장은 있던 cmRealSet 만(배정 DB · 실명 있는 분 · 빈 칸은 안 건드림)
      [10] ★ 이분 여정 — 「지금」 칸을 단계 · 약속 날로 세고, 보낸 날은 지어 붙이지 않는다 · 보낼 말 · 자세히 시트
    ═══════════════════════════════════════════════════════════════ */
 'use strict';
@@ -373,6 +374,52 @@ console.log('\n[14] 💰 금액 칸 · ✓ 계약됐어요 (판 X526)');
   is(/class="amt miss" onclick="HOME_V2\.amt\('d1'\)">금액 \?/.test(h) && /class="btn ok" onclick="HOME_V2\.won\('d1'\)">✓ 계약됐어요/.test(h) && h.indexOf('✓ 계약됐어요') > h.indexOf('class="steps"') && h.indexOf('✓ 계약됐어요') < h.indexOf('class="sit"'),
     '청약(CS) — 금액이 없으면 「금액 ?」 · 단계 칸 바로 밑 「✓ 계약됐어요」');
   is(!/\.rpc\(|pipeline_save/.test(sc), '고객 화면은 서버를 안 부름 — 저장은 오늘 화면의 한 곳');
+}
+
+console.log('\n[15] ✏️ 실명 한 번에 적기 (판 X585)');
+{
+  const mk = n => n.charAt(0) + '*' + n.slice(2);
+  const mkR = real => {
+    const B = box({});
+    const g = B.g, put = [];
+    B.els.cl2 = {}; B.els.oscList = { innerHTML: '' }; B.els.cliWho = { innerHTML: '' };
+    Object.assign(g, {
+      OSC: { q: '', list: [], current: null }, crmDbsOf: () => [], cmMetaOf: () => null, cmTemp: () => ({ t: '3일 전', d: 3 }), cqaTally: () => null,
+      cmSortRows: () => {}, CM_BASE: {}, cmName: c => real[c.id] || c.name_masked, cliWhoPaint: () => {}, osRenderList: () => g.said.push(['re']),
+      cmRealOf: id => real[id] || '', cmRealSet: (id, v) => { put.push([id, v]); real[id] = v; }, osMaskName: mk, MCAL_REAL: { src: 'x' }
+    });
+    return { B, g, put };
+  };
+  const RW = [{ id: 'c1', name_masked: '홍*동' }, { id: 'c2', name_masked: '성*향' }, { id: 'c3', name_masked: '변*도' },
+    { id: 'db:d9', _db: true, _dbid: 'd9', name_masked: '이*룡', stage: 'TA' }, { id: 'c4', name_masked: '' }];
+  let R = mkR({ c3: '변학도' });
+  R.g.cusV2ListPaint(RW, '');
+  let lh = R.B.els.oscList.innerHTML;
+  is(/class="nmb" onclick="cusV2Real\(\)">.*가린 이름만 있는 분 2명/.test(lh) && lh.indexOf('class="nmb"') < lh.indexOf('class="chips"'),
+    '목록 맨 위 띠 — 가린 이름만 있는 분 수(실명 있는 분 · 배정 DB · 이름 빈 줄은 안 셈)');
+  R.g.cusV2Real();
+  const sh = R.B.els.cv2Sheet ? R.B.els.cv2Sheet.innerHTML : '';
+  is(/실명 한 번에 적기/.test(sh) && /data-id="c1" data-mk="홍\*동"/.test(sh) && /data-id="c2"/.test(sh) && !/data-id="c3"/.test(sh) && !/data-id="db:d9"/.test(sh) && /oninput="cusV2RealChk\(this\)"/.test(sh) && /onclick="cusV2RealPut\(\)"/.test(sh),
+    '시트 — 그 두 분만 칸 하나씩(가린 이름 · 단계 · 마지막 연락) · 저장 · 닫기');
+  /* 칸 두 개를 가짜로 — 하나는 맞는 모양, 하나는 비움 */
+  const mkIn = (id, m, v) => { const k = { className: '', textContent: '' }; return { value: v, getAttribute: a => (a === 'data-id' ? id : m), parentNode: { querySelector: () => k }, k }; };
+  const I = [mkIn('c1', '홍*동', '홍길동'), mkIn('c2', '성*향', '')];
+  const btn = { textContent: '' }; R.B.els.cv2RealGo = btn;
+  R.g.document.querySelectorAll = () => I;
+  R.g.cusV2RealChk(I[0]);
+  is(I[0].k.className === 'rk ok' && /맞아요/.test(I[0].k.textContent) && btn.textContent === '1명 저장', '적으면 바로 — 가린 이름과 모양이 맞나 · 저장 단추에 몇 명');
+  I[0].value = '임꺽정'; R.g.cusV2RealChk(I[0]);
+  is(I[0].k.className === 'rk w' && /달라요/.test(I[0].k.textContent), '모양이 다르면 주황으로 알림(저장은 막지 않음)');
+  I[0].value = ' 홍길동 ';
+  R.g.cusV2RealPut();
+  is(R.put.length === 1 && R.put[0][0] === 'c1' && R.put[0][1] === '홍길동' && R.g.said.some(x => x[0] === 're') && R.g.MCAL_REAL.src === null,
+    '저장 = 적은 칸만 있던 cmRealSet(id, 이름) · 빈 칸은 안 건드림 · 목록 다시 그림 · 달력 이름표 새로');
+  R = mkR({ c1: '홍길동', c2: '성춘향', c3: '변학도' }); R.g.cusV2ListPaint(RW, '');
+  is(!/class="nmb"/.test(R.B.els.oscList.innerHTML), '다 실명이면 띠 없음');
+  R = mkR({}); delete R.g.cmRealSet; R.g.cusV2ListPaint(RW, '');
+  is(!/class="nmb"/.test(R.B.els.oscList.innerHTML), '실명 적기 함수가 없는 판이면 띠도 없음(지어낸 단추 없음)');
+  const rs = sc.slice(sc.indexOf('function realMiss('), sc.indexOf('function listRe()'));
+  is(rs.length > 200 && !/localStorage|cmLSSet|\.from\(|\.rpc\(|fetch\(|prefPut/.test(rs), '이 묶음은 저장을 직접 안 함 — cmRealSet 한 길(그 함수가 이 기기 + 내 설정에 담음)');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 고객 화면은 예전 고객 창을 안 깨고 시안 차례로 섭니다');
