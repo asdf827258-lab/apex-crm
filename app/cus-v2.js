@@ -233,7 +233,22 @@
       '.cv2 .btn.p{background:var(--blue);color:#fff}',
       '.cv2 .amt.miss{background:var(--warn-l);color:var(--warn)}',
       '.cv2 .btn.ok{background:var(--green-l);color:var(--green);margin-top:10px}',
-      '.cv2.cl2b{padding:0;margin:0 0 6px;max-width:none;display:flex;justify-content:flex-end}'
+      '.cv2.cl2b{padding:0;margin:0 0 6px;max-width:none;display:flex;justify-content:flex-end}',
+      /* 판 X585 — ✏️ 실명 한 번에 적기 (목록 위 띠 · 시트) */
+      '.cv2 .nmb{display:flex;align-items:center;gap:10px;width:100%;background:var(--blue-l);color:var(--blue);border-radius:14px;padding:12px 14px;margin:0 0 12px;text-align:left;font-size:15px;font-weight:700}',
+      '.cv2 .nmb small{display:block;font-size:13px;font-weight:600;opacity:.8;margin-top:2px}',
+      '.cv2 .nmb .ar{margin-left:auto;flex:none}',
+      '#cv2Sheet .rl{display:flex;flex-direction:column;gap:8px;margin:14px 0 4px}',
+      '#cv2Sheet .rr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;background:#fff;border-radius:14px;padding:10px 12px}',
+      '#cv2Sheet .rr .rm{flex:1;min-width:0}',
+      '#cv2Sheet .rr .rm b{display:block;font-size:16px;font-weight:700;color:var(--ink)}',
+      '#cv2Sheet .rr .rm small{display:block;font-size:13px;color:var(--sub2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '#cv2Sheet .rr .rk{flex:0 0 100%;font-size:13px;font-weight:600;text-align:right}',
+      '#cv2Sheet .rr .rk:empty{display:none}',
+      '#cv2Sheet .rr .rk.ok{color:var(--green)}',
+      '#cv2Sheet .rr .rk.w{color:var(--warn)}',
+      '#cv2Sheet .rr input{flex:none;width:44%;height:46px;border:1px solid var(--line);border-radius:12px;padding:0 12px;font:inherit;font-size:16px;color:var(--ink);box-sizing:border-box;outline:none;background:#fff}',
+      '#cv2Sheet .rr input:focus{border-color:var(--blue)}'
     ];
     var s = d.createElement('style'); s.id = 'cusV2Css'; s.textContent = C.join('\n');
     (d.head || d.documentElement).appendChild(s);
@@ -279,8 +294,8 @@
   /* 💰 예상 금액 칸 — 누르면 오늘 화면의 그 시트(HOME_V2.amt · 판 X526 시안 openAmt). 배정 줄이 없거나 시트가 없는 판이면 예전처럼 글자만 */
   function amtBtn(d, amt) {
     var can = d && d.id && T(function () { return typeof g.HOME_V2.amt === 'function'; }, false);
-    if (!can) return amt ? '<span class="amt">예상 ' + E(amt) + '</span>' : '';
-    return '<button type="button" class="amt' + (amt ? '' : ' miss') + '" onclick="HOME_V2.amt(\'' + Q(d.id) + '\')">' + (amt ? '예상 ' + E(amt) : '금액 ?') + '</button>';
+    if (!can) return amt ? '<span class="amt">목표 ' + E(amt) + '</span>' : '';
+    return '<button type="button" class="amt' + (amt ? '' : ' miss') + '" onclick="HOME_V2.amt(\'' + Q(d.id) + '\')">' + (amt ? '목표 ' + E(amt) : '목표 계약금액 ?') + '</button>';
   }
   function qaHtml(c) {
     /* 번호 — 고객 기본 칸 → 연락처 표(ccTelOf) → 배정 줄. 「연락할 분」 카드(79539행)와 같은 차례 */
@@ -771,7 +786,12 @@
     for (i = 0; i < rows.length; i++) { n.all++; var k = clKey(clStage(rows[i])); if (k && n[k] != null) n[k]++; }
     var L = rows.filter(function (x) { return clHit(x, f); });
     try { if (typeof g.cmSortRows === 'function') g.cmSortRows(L); } catch (e0) {}
-    var h = '<div class="chips">' + F.map(function (x) {
+    if (!CL.arAsk && T(function () { return !g.AR.loaded && g.AR.busy !== 'load' && typeof g.arLoad === 'function'; }, false)) {
+      CL.arAsk = 1; try { g.arLoad(); g.setTimeout(listRe, 2500); } catch (e4) {}
+    }
+    CL.nr = rows.filter(realMiss);
+    try { if (CL.nr.length > 1 && typeof g.cmSortRows === 'function') g.cmSortRows(CL.nr); } catch (e3) {}
+    var h = realBand(CL.nr.length) + '<div class="chips">' + F.map(function (x) {
       return '<button type="button" class="fchip' + (f === x[0] ? ' on' : '') + '" onclick="cusV2ListF(\'' + x[0] + '\')">' + x[1] + '<small>' + n[x[0]] + '</small></button>';
     }).join('') + '</div><div class="list">';
     if (!L.length) {
@@ -784,6 +804,59 @@
     box.innerHTML = h + '</div>';
     try { if (typeof g.cliWhoPaint === 'function') g.cliWhoPaint(); } catch (e2) {}
     return true;
+  }
+  /* ✏️ 실명 한 번에 적기 (판 X585) — 사장님 말씀 「누구도 고객 365도 모든 고객 이름을 * 로 가리지 마」 · 4차 점검표 ⑭.
+     서버 고객 표엔 가린 이름(name_masked)뿐이라, 실명을 어느 기기에도 안 적은 분은 「*」 로 남습니다.
+     → 그런 분만 모아 한 시트에서 적습니다. ★ 저장은 있던 실명 적기 cmRealSet(id, 이름) 그대로 —
+       그 함수가 이 기기(apex_cli_real_<나>)와 내 설정 한 줄(user_prefs · 나만)에 같이 담아 폰 · PC 가 같게 봅니다. 새 저장 코드 없음.
+     ★ 배정 DB 에 실명이 있는 분(cmDbRealOf — 이어진 줄 · 딱 한 분)은 이미 그 이름으로 보이니 빼고, 정말 아무 데도 없는 분만 모읍니다.
+     ★ 적은 이름이 가린 이름과 같은 모양인지(osMaskName) 바로 알려 줌 — 다른 분 이름을 잘못 붙이는 것을 막으려고. 달라도 저장은 됩니다. */
+  function realMiss(x) {
+    if (!x || x._db || !x.id || typeof g.cmRealSet !== 'function') return false;
+    if (T(function () { return g.cmRealOf(x.id); }, '') || T(function () { return g.cmDbRealOf(x); }, '')) return false;   /* 배정 DB 에 실명이 있는 분은 이미 그 이름으로 보임 */
+    return !!String(x.name_masked || '').trim();
+  }
+  function realBand(n) {
+    if (!n) return '';
+    return '<button type="button" class="nmb" onclick="cusV2Real()"><span>✏️</span><span>가린 이름만 있는 분 ' + n + '명<small>실명 한 번에 적기 — 폰 · PC 어디서나 그 이름으로</small></span><span class="ar">›</span></button>';
+  }
+  function realSub(x) {
+    var st = clStage(x), k = clKey(st), si = (k && k !== 'rej') ? +k.slice(1) : -1, tp = T(function () { return g.cmTemp(x.id); }, null), m = T(function () { return g.cmMetaOf(x.id); }, null);
+    return [k === 'rej' ? '거절' : (si >= 0 ? STG[si].t : st), m && m.care, tp ? (tp.d < 0 ? '연락 기록 없음' : tp.t + ' 연락') : ''].filter(Boolean).join(' · ');
+  }
+  function realSheet() {
+    var L = (CL.nr || []).filter(realMiss);
+    if (!L.length) { try { g.toast('가린 이름만 있는 분이 없어요 — 다 실명으로 보여요'); } catch (e) {} return; }
+    sheet('<div class="grab"></div><h1>✏️ 실명 한 번에 적기</h1>' +
+      '<div class="who2">가린 이름만 있는 ' + L.length + '명이에요. 아는 분만 적으면 돼요 — 적은 이름은 내 계정(나만 보는 칸)에 담겨 폰 · PC 어디서나 그 이름으로 보여요</div>' +
+      '<div class="rl">' + L.map(function (x) {
+        var mk = String(x.name_masked || '').trim();
+        return '<div class="rr"><div class="rm"><b>' + E(mk) + '</b><small>' + E(realSub(x)) + '</small></div>' +
+          '<input type="text" maxlength="20" autocomplete="off" data-id="' + E(x.id) + '" data-mk="' + E(mk) + '" placeholder="실명" oninput="cusV2RealChk(this)" onkeydown="if(event.key===\'Enter\'){var n=this.parentNode.nextSibling;n=n&&n.querySelector(\'input\');if(n)n.focus();}"><span class="rk"></span></div>';
+      }).join('') + '</div>' +
+      '<button type="button" class="btn p" id="cv2RealGo" onclick="cusV2RealPut()">저장</button><button type="button" class="btn g" onclick="cusV2Close()">닫기</button>');
+  }
+  function realChk(inp) {
+    if (!inp) return;
+    var v = String(inp.value || '').trim(), mk = inp.getAttribute('data-mk') || '', k = inp.parentNode && inp.parentNode.querySelector('.rk');
+    var same = v ? T(function () { return g.osMaskName(v); }, '') === mk : false;
+    if (k) { k.className = 'rk' + (v ? (same ? ' ok' : ' w') : ''); k.textContent = v ? (same ? '✓ 가린 이름과 맞아요' : '가린 이름(' + mk + ')과 모양이 달라요') : ''; }
+    var n = 0, I = g.document.querySelectorAll('#cv2Sheet .rr input'), i;
+    for (i = 0; i < I.length; i++) if (String(I[i].value || '').trim()) n++;
+    var b = el('cv2RealGo'); if (b) b.textContent = n ? n + '명 저장' : '저장';
+  }
+  function realPut() {
+    var I = g.document.querySelectorAll('#cv2Sheet .rr input'), i, n = 0;
+    if (typeof g.cmRealSet !== 'function') return;
+    for (i = 0; i < I.length; i++) {
+      var v = String(I[i].value || '').trim(), id = I[i].getAttribute('data-id');
+      if (v && id) { try { g.cmRealSet(id, v); n++; } catch (e) {} }
+    }
+    if (!n) { try { g.toast('적은 이름이 없어요 — 아는 분 칸에 실명을 적어 주세요'); } catch (e1) {} return; }
+    try { if (g.MCAL_REAL) g.MCAL_REAL.src = null; } catch (e2) {}
+    close();
+    try { g.toast('✏️ ' + n + '명 실명을 적었어요 — 폰 · PC 어디서나 그 이름으로 보여요'); } catch (e3) {}
+    listRe();
   }
   function listRe() { try { if (typeof g.osRenderList === 'function') g.osRenderList(); } catch (e) {} }
   function listF(f) { CL.f = f; CL.n = 60; listRe(); }
@@ -798,7 +871,7 @@
 
   g.CUS_V2 = { on: on, set: set, html: html, paint: paint, use: use, jump: jump, KEY: KEY, allowed: function () { return ALLOWED; },
     STG: STG, stgI: stgI, catPick: catPick, appsBy: appsBy, CARE_APP: CARE_APP, CARE_KEY: CARE_KEY, careMine: careMine, knowCells: knowCells, jNow: jNow, JSTEP: JSTEP, sayItems: sayItems,
-    CL: CL, clF: clF, clStage: clStage, clKey: clKey, listPage: listPage, listPaint: listPaint };
+    CL: CL, clF: clF, clStage: clStage, clKey: clKey, listPage: listPage, listPaint: listPaint, realMiss: realMiss };
   /* index.html · onclick 이 부르는 이름 — 점(.) 없는 함수여야 check-hmclick 이 「부르는 함수가 있다」 고 읽습니다 */
   g.cusV2Html = html;
   g.cusV2Paint = paint;
@@ -821,4 +894,7 @@
   g.cusV2ListMore = listMore;
   g.cusV2ListUse = listUse;
   g.cusV2ListBack = listBack;
+  g.cusV2Real = realSheet;
+  g.cusV2RealChk = realChk;
+  g.cusV2RealPut = realPut;
 })(window);

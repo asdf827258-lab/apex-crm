@@ -371,7 +371,8 @@ const SEED = () => {
     return o;
   });
   const cnt = (t, re) => (t.match(re) || []).length;
-  const nm = await p.evaluate(() => OSC.current.name_masked);
+  /* 판 X585 — 화면에 쓰는 이름은 cmName(적은 실명 → 배정 DB 실명 → 가린 이름). 가린 이름만 세면 DB 실명이 선 고객에서 0 이 됩니다 */
+  const nm = await p.evaluate(() => (typeof cmName === 'function' && cmName(OSC.current)) || OSC.current.name_masked);
   Object.keys(R12).forEach(k => {
     const t = R12[k];
     is(cnt(t, new RegExp(nm.replace(/\*/g, '\\*'), 'g')) === 1, '  ' + k + ' — 이름이 한 번 (' + cnt(t, new RegExp(nm.replace(/\*/g, '\\*'), 'g')) + ')');
