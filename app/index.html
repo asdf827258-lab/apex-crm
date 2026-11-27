@@ -19503,10 +19503,20 @@ var MCAL_REAL={src:null,map:null};
 function mcalRealMap(){
   var D=(typeof AR!=='undefined'&&AR.db)?AR.db:[];
   if(MCAL_REAL.src===D&&MCAL_REAL.map)return MCAL_REAL.map;
-  var m={},i,r,k;
+  var m={},lk={},i,r,k;
+  /* 👤 판 X585 — 고객 번호로 <b>이어진</b> 배정 줄(dbs.client_id)의 실명. 이름 모양 견주기보다 확실해서 먼저 봅니다.
+     한 고객에 이어진 줄들의 이름이 서로 다르면 아무것도 안 씁니다(엉뚱한 이름 금지 · 1번). */
+  for(i=0;i<D.length;i++){
+    r=D[i];
+    if(!r||!r.client_id||!cmDbNameOk(r.name))continue;
+    k=''+r.client_id;
+    if(lk[k]===undefined)lk[k]=r.name;
+    else if(lk[k]!==r.name)lk[k]='';
+  }
+  MCAL_REAL.lk=lk;
   if(typeof osMaskName==='function')for(i=0;i<D.length;i++){
     r=D[i];
-    if(!r||!r.name||!r.who)continue;
+    if(!r||!cmDbNameOk(r.name)||!r.who)continue;
     k=r.who+'|'+osMaskName(r.name).replace(/\s/g,'');
     /* 같은 담당자에게 <b>같은 가린 이름</b>이 둘이면 누구인지 못 가린다 —
        그때는 아무 이름도 쓰지 않는다. 엉뚱한 사람 이름을 붙이면 그 자리가
@@ -19521,7 +19531,16 @@ function mcalRealOf(c){
   if(!c)return '';
   var r=(typeof cmRealOf==='function')?cmRealOf(c.id):'';
   if(r)return r;
-  return mcalRealMap()[(c.advisor_id||'')+'|'+(''+(c.name_masked||'')).replace(/\s/g,'')]||'';
+  return cmDbRealOf(c);
+}
+/* 👤 판 X585 — 사장님 말씀 「가린 이름은 원래 이름이 있을 텐데」 → 「자동으로 띄워」.
+   서버 고객 표(clients)엔 가린 이름뿐이지만, <b>배정 DB 표(dbs.customer_name)</b>엔 실명이 있습니다 — 이미 읽어 온 AR.db 에서 찾습니다(서버 더 안 부름 · 저장 안 함).
+   차례: ① 고객 번호로 이어진 줄(client_id) ② 같은 담당자 · 같은 가린 모양이 <b>딱 한 분</b>일 때(둘 이상이면 안 씀). 실명표(cmRealOf)가 늘 먼저. */
+function cmDbNameOk(n){ n=''+(n||''); return !!n&&n!=='(이름 없음)'&&!/[*○]/.test(n); }
+function cmDbRealOf(c){
+  if(!c||!c.id)return '';
+  var m=mcalRealMap(),lk=MCAL_REAL.lk||{};
+  return lk[''+c.id]||m[(c.advisor_id||'')+'|'+(''+(c.name_masked||'')).replace(/\s/g,'')]||'';
 }
 /* 화면에 쓰는 이름 — <b>아는 대로</b> */
 function mcalName(c){
@@ -22345,8 +22364,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-27 09:13';
-var APP_BUILD_NOTE='📊 <b>엑셀 색이 보입니다</b>(판 X583). ◾ 사장님 말씀 「색상은 안 보여서 체크하고」 — 엑셀로 열어 보니 <b>「결과」 칸(빠짐·보장UP·유지)에 색이 하나도 없었고</b>, 다른 칸 바탕도 흰색과 거의 같은 색(F6F6F6·F2F7FF)이라 모니터·폰에서 색 없는 표로 보였습니다. ◾ 고친 것 — 결과 칸을 상태 색으로 칠함(▲ 보장UP 초록 · ▼ 줄어듦 붉게 · 빠짐 노랗게 · 유지 회색) · 차이 칸도 초록/붉은 바탕 · 옅던 바탕을 한 단계 진하게(번호·차례는 그대로). ◾ <b>⏫⏬📊🩺 같은 그림 문자는 엑셀 글꼴(맑은 고딕)에 없어 □ 로 찍혔습니다</b> — 칸 글에서 걷어내고 ▲▼ 로. ◾ 이 PC 엑셀로 열어 17장 · PDF 24쪽 확인. ◾ <b>같이 실려 나가는 판</b> — 📊 <b>엑셀이 열립니다</b>(X579) · 🖨 <b>보장분석 전·후 인쇄</b>(X578).';
+var APP_BUILD='2026-11-27 09:50';
+var APP_BUILD_NOTE='👤 <b>고객 이름 「*」 줄이기</b>(판 X585). ◾ 배정 DB 표에 실명이 있는 분은 고객 목록 · 고객 화면 · 고객 365일에 자동으로 실명(고객 번호로 이어진 줄 먼저 · 같은 담당자에 같은 모양이 딱 한 분일 때만 · 헷갈리면 안 붙임 · 저장 안 함). ◾ 새 고객 목록 맨 위에 「가린 이름만 있는 분 n명」 띠 — 누르면 그분들만 모아 한 시트에서 실명을 적어요. ◾ 적는 순간 가린 이름과 모양이 맞는지 알려 줘요(다르면 주황). ◾ 저장은 원래 실명 적기 그대로 — 내 계정(나만)에 담겨 폰 · PC 어디서나 그 이름. 재는 자 check-cusv2 [15] · [16].';
 
 
 
@@ -77152,6 +77171,7 @@ function cmRrnBirth(v){
 function cmName(c){
   if(!c)return '';
   var r=cmRealOf(c.id);
+  if(!r)try{ r=cmDbRealOf(c); }catch(e){ r=''; }   /* 👤 판 X585 — 배정 DB 의 실명(이어진 줄 · 딱 한 분) */
   return r||c.name_masked||'(이름 없음)';
 }
 

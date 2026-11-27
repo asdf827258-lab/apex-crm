@@ -128,7 +128,7 @@ console.log('\n[6] 서버 직접 부름 없음 · 담는 칸 하나 · 옷');
 
 console.log('\n[7] home-v2 — 내 설정 한 줄에 얹는 몫');
 {
-  is(/function prefPut\(k, v\) \{ if \(k === 'ai_mine' \|\| k === 'newhelp'\) return false; PREF\.more\[k\] = v; prefPush\(\); return PREF\.done; \}/.test(HV), 'prefPut — ai_mine · newhelp 는 못 덮음 · 얹고 바로 올림');
+  is(/function prefPut\(k, v\) \{ if \(k === 'ai_mine' \|\| k === 'newhelp'\) return false; PREF\.more\[k\] = v; prefSoon\(\); return PREF\.done; \}/.test(HV) && /function prefSoon\(\) \{[^\n]*setTimeout\(prefPush, 400\)/.test(HV), 'prefPut — ai_mine · newhelp 는 못 덮음 · 얹고 0.4초 모아 올림(판 X585)');
   is(/Object\.keys\(PREF\.more\)\.forEach\(function \(k\) \{ if \(!\(k in o\)\) o\[k\] = PREF\.more\[k\]; \}\);/.test(HV), '올릴 때 얹은 몫(pchk)을 지우지 않고 같이');
   is(/Object\.keys\(kv\)\.forEach\(function \(k\) \{ if \(k !== 'ai_mine' && k !== 'newhelp' && !\(k in PREF\.more\)\) PREF\.more\[k\] = kv\[k\]; \}\);/.test(HV), '받아 올 때 얹힌 몫을 기억(다음에 올릴 때 안 사라짐)');
   is(/prefPut: function \(k, v\) \{ return prefPut\(k, v\); \}/.test(HV) && /prefGet: function \(k\) \{ return PREF\.more\[k\]; \}/.test(HV), 'HOME_V2.prefPut · prefGet');
