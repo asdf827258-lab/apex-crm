@@ -38,6 +38,10 @@
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 const zlib = require('zlib');
+/* 🕰 판 X595 — <b>시계를 못 박습니다</b> (lib-clock.js 한 곳). 「오늘 몫」 = 남은 명 ÷ 남은 영업일이라
+   <b>달 끝으로 갈수록 몫이 커져</b> 미션 머리의 「첫 연락 전 6명」 이 빠집니다 — 2026-11-28 0시(KST)부터
+   이 자가 앱을 안 고쳤는데 빨간불을 켰습니다(#926). 달 가운데 금요일(lib-clock DAY)에 박아 언제 돌려도 같게. */
+const CLK = require('./lib-clock.js');
 const ROOT = process.cwd();
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8',
                '.css':'text/css; charset=utf-8', '.json':'application/json; charset=utf-8' };
@@ -106,7 +110,8 @@ const SEED = (renum) => {
   const PORT = srv.address().port;
   const b = await chromium.launch();
   const b64 = Buffer.from(CSV, 'utf8').toString('base64');
-  const ctx = await b.newContext({ viewport: { width: 430, height: 950 } });
+  const ctx = await b.newContext(CLK.ctxOpt({ viewport: { width: 430, height: 950 } }));
+  await CLK.pin(ctx, 14);
   await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
   const p = await ctx.newPage();
   const errs = []; p.on('pageerror', e => errs.push(String(e).slice(0, 140)));
