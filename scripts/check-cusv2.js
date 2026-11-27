@@ -21,6 +21,7 @@
      [14] ★  판 X526 — 이름 줄 금액 칸 · 청약 단계 「✓ 계약됐어요」 → 오늘 화면의 그 시트(HOME_V2.amt · won) · 시트가 없는 판이면 예전 글자
      [13] ★★ 판 X515 — 고객 탭 목록(시안 rCust · rList): 담당자 · 찾기는 예전 그대로 거친 줄 · 단계 칩 · 한 줄 칸 · 넣기 · 예전 화면 길
      [15] ★★ 판 X585 — ✏️ 실명 한 번에 적기: 가린 이름만 있는 분만 띠 · 시트 · 저장은 있던 cmRealSet 만(배정 DB · 실명 있는 분 · 빈 칸은 안 건드림)
+     [16] ★★ 판 X585 — 👤 배정 DB 의 실명을 자동으로: cmName = 실명표 → 이어진 줄(client_id) → 같은 담당자 · 같은 모양 딱 한 분. 둘이 다르면 안 씀 · 서버 더 안 부름
      [10] ★ 이분 여정 — 「지금」 칸을 단계 · 약속 날로 세고, 보낸 날은 지어 붙이지 않는다 · 보낼 말 · 자세히 시트
    ═══════════════════════════════════════════════════════════════ */
 'use strict';
@@ -420,6 +421,43 @@ console.log('\n[15] ✏️ 실명 한 번에 적기 (판 X585)');
   is(!/class="nmb"/.test(R.B.els.oscList.innerHTML), '실명 적기 함수가 없는 판이면 띠도 없음(지어낸 단추 없음)');
   const rs = sc.slice(sc.indexOf('function realMiss('), sc.indexOf('function listRe()'));
   is(rs.length > 200 && !/localStorage|cmLSSet|\.from\(|\.rpc\(|fetch\(|prefPut/.test(rs), '이 묶음은 저장을 직접 안 함 — cmRealSet 한 길(그 함수가 이 기기 + 내 설정에 담음)');
+}
+
+console.log('\n[16] 👤 배정 DB 의 실명을 자동으로 (판 X585)');
+{
+  const cut = (a, b2) => { const i = IX.indexOf(a), j = IX.indexOf(b2, i + 1); return (i >= 0 && j > i) ? IX.slice(i, j) : ''; };
+  const code = cut('var MCAL_REAL={src:null,map:null};', '/* 화면에 쓰는 이름') + '\n' + cut('function cmName(c){', '\n}') + '\n}';
+  is(code.indexOf('function cmDbRealOf(c)') > 0 && code.indexOf('function cmName(c)') > 0, '  index.html 에서 이름 함수 조각을 찾았다');
+  const run = (D, real) => {
+    const ctx = { AR: { db: D }, cmRealOf: id => (real || {})[id] || '', osMaskName: n => n.charAt(0) + '*' + n.slice(2) };
+    vm.createContext(ctx); vm.runInContext(code, ctx); return ctx;
+  };
+  const D = [
+    { id: 'd1', who: 'u1', name: '홍길동', client_id: 'c1' },
+    { id: 'd2', who: 'u1', name: '홍길순' },
+    { id: 'd3', who: 'u1', name: '홍갑돌' }, { id: 'd4', who: 'u1', name: '홍말돌' },
+    { id: 'd5', who: 'u2', name: '성춘향', client_id: 'c5' }, { id: 'd6', who: 'u2', name: '성미향', client_id: 'c5' },
+    { id: 'd7', who: 'u1', name: '(이름 없음)', client_id: 'c7' }, { id: 'd8', who: 'u1', name: '이*룡', client_id: 'c8' }
+  ];
+  let C = run(D);
+  is(C.cmName({ id: 'c1', advisor_id: 'u9', name_masked: '홍*동' }) === '홍길동', '이어진 줄(client_id)의 실명 — 담당자가 달라도 번호로 확실히');
+  is(C.cmName({ id: 'c2', advisor_id: 'u1', name_masked: '홍*순' }) === '홍길순', '이어진 줄이 없으면 같은 담당자 · 같은 가린 모양이 딱 한 분일 때');
+  is(C.cmName({ id: 'c3', advisor_id: 'u1', name_masked: '홍*돌' }) === '홍*돌', '같은 모양이 둘(홍갑돌 · 홍말돌)이면 안 붙임 — 가린 이름 그대로');
+  is(C.cmName({ id: 'c4', advisor_id: 'u2', name_masked: '홍*순' }) === '홍*순', '다른 담당자의 DB 줄 이름은 안 붙임');
+  is(C.cmName({ id: 'c5', advisor_id: 'u2', name_masked: '성*향' }) === '성*향', '한 고객에 이어진 줄들 이름이 서로 다르면 안 붙임');
+  is(C.cmName({ id: 'c7', advisor_id: 'u1', name_masked: '홍*철' }) === '홍*철' && C.cmName({ id: 'c8', advisor_id: 'u1', name_masked: '이*룡' }) === '이*룡', '「(이름 없음)」 · 가린 이름(*)은 실명으로 안 씀');
+  C = run(D, { c2: '홍길녀' });
+  is(C.cmName({ id: 'c2', advisor_id: 'u1', name_masked: '홍*순' }) === '홍길녀', '사장님이 적은 실명(cmRealOf)이 늘 먼저');
+  C = run(null);
+  is(C.cmName({ id: 'c1', advisor_id: 'u1', name_masked: '홍*동' }) === '홍*동', 'DB 를 아직 못 읽었으면 가린 이름 그대로(지어내지 않음)');
+  is(!/\.from\(|\.rpc\(|fetch\(|localStorage|cmLSSet/.test(code.replace(/\/\*[\s\S]*?\*\//g, '')), '이름 함수는 서버를 안 부르고 아무것도 안 저장 — 이미 읽은 AR.db 만');
+  /* 실명 시트에서는 DB 실명이 있는 분을 뺀다 */
+  const B = box({}); const g = B.g;
+  B.els.cl2 = {}; B.els.oscList = { innerHTML: '' }; B.els.cliWho = { innerHTML: '' };
+  Object.assign(g, { OSC: { q: '', list: [] }, crmDbsOf: () => [], cmMetaOf: () => null, cmTemp: () => null, cqaTally: () => null, cmSortRows: () => {}, CM_BASE: {},
+    cliWhoPaint: () => {}, osRenderList: () => {}, cmRealOf: () => '', cmRealSet: () => {}, cmDbRealOf: c => (c.id === 'c1' ? '홍길동' : ''), AR: { loaded: true } });
+  g.cusV2ListPaint([{ id: 'c1', name_masked: '홍*동' }, { id: 'c2', name_masked: '홍*순' }], '');
+  is(/가린 이름만 있는 분 1명/.test(B.els.oscList.innerHTML), '실명 한 번에 적기 띠는 DB 에서도 못 찾은 분만 셈');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 고객 화면은 예전 고객 창을 안 깨고 시안 차례로 섭니다');

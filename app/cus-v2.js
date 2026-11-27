@@ -786,6 +786,9 @@
     for (i = 0; i < rows.length; i++) { n.all++; var k = clKey(clStage(rows[i])); if (k && n[k] != null) n[k]++; }
     var L = rows.filter(function (x) { return clHit(x, f); });
     try { if (typeof g.cmSortRows === 'function') g.cmSortRows(L); } catch (e0) {}
+    if (!CL.arAsk && T(function () { return !g.AR.loaded && g.AR.busy !== 'load' && typeof g.arLoad === 'function'; }, false)) {
+      CL.arAsk = 1; try { g.arLoad(); g.setTimeout(listRe, 2500); } catch (e4) {}
+    }
     CL.nr = rows.filter(realMiss);
     try { if (CL.nr.length > 1 && typeof g.cmSortRows === 'function') g.cmSortRows(CL.nr); } catch (e3) {}
     var h = realBand(CL.nr.length) + '<div class="chips">' + F.map(function (x) {
@@ -806,10 +809,12 @@
      서버 고객 표엔 가린 이름(name_masked)뿐이라, 실명을 어느 기기에도 안 적은 분은 「*」 로 남습니다.
      → 그런 분만 모아 한 시트에서 적습니다. ★ 저장은 있던 실명 적기 cmRealSet(id, 이름) 그대로 —
        그 함수가 이 기기(apex_cli_real_<나>)와 내 설정 한 줄(user_prefs · 나만)에 같이 담아 폰 · PC 가 같게 봅니다. 새 저장 코드 없음.
+     ★ 배정 DB 에 실명이 있는 분(cmDbRealOf — 이어진 줄 · 딱 한 분)은 이미 그 이름으로 보이니 빼고, 정말 아무 데도 없는 분만 모읍니다.
      ★ 적은 이름이 가린 이름과 같은 모양인지(osMaskName) 바로 알려 줌 — 다른 분 이름을 잘못 붙이는 것을 막으려고. 달라도 저장은 됩니다. */
   function realMiss(x) {
     if (!x || x._db || !x.id || typeof g.cmRealSet !== 'function') return false;
-    return !T(function () { return g.cmRealOf(x.id); }, '') && !!String(x.name_masked || '').trim();
+    if (T(function () { return g.cmRealOf(x.id); }, '') || T(function () { return g.cmDbRealOf(x); }, '')) return false;   /* 배정 DB 에 실명이 있는 분은 이미 그 이름으로 보임 */
+    return !!String(x.name_masked || '').trim();
   }
   function realBand(n) {
     if (!n) return '';
