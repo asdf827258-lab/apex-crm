@@ -189,6 +189,7 @@
       (tms.length > 2 ? '<div class="chips">' + tms.map(function (x) { return '<button type="button" class="fchip' + (S.f === x ? ' on' : '') + '" onclick="teamV2F(\'' + Q(x) + '\')">' + E(x) + '</button>'; }).join('') + '</div>' : '<div style="height:12px"></div>') +
       '<div class="seg">' + [['gap', '모자란 순'], ['act', '실적 순'], ['move', '활동 적은 순']].map(function (x) { return '<button type="button" class="' + (S.by === x[0] ? 'on' : '') + '" onclick="teamV2By(\'' + x[0] + '\')">' + x[1] + '</button>'; }).join('') + '</div>' +
       '<div class="rows">' + (L.length ? sorted(L, S.by).map(function (t) { return rowHtml(t, top); }).join('') : '<div class="wait">해당하는 사람이 없어요</div>') + '</div>' +
+      (typeof g.amV2Open === 'function' ? '<button type="button" class="btn g" onclick="amV2Open()">☀️ 팀 아침 점검 · 지점장 체크리스트</button>' : '') +
       '<button type="button" class="btn g" onclick="teamV2Old()">예전 팀 화면(DB · 업적관리)</button>';
   }
   function memberHtml(id) {

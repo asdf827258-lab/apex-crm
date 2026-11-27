@@ -22,6 +22,7 @@
      [29] ★  판 X568 — 🧭 카드 맨 아래 「권할 것」(고객 카드) → 있던 cusGo({cli}) → cusV2Rec · 이름 누르면 이분 자세히(hmOpen) · 배정 DB 카드는 예전 그대로
      [31] ★★ 판 X584 — ✅ 챙기는 중 갈래(약속 확인 · 약속 지남 · 증권 · 소개) · 완료는 있던 함수(hmDaySkip · hmLateSkip · hmReferSkip · hdbTo · hdbOpen · hmLateAgain · hmLateEnd · hmReferGot)
      [32] ★★ 판 X584 — 📍 오늘 칸 동선 그림 · 💬 카톡 글 전체 보기 · 말풍선 글만큼 · 칸 따라다님 · 📅 무엇 여섯 갈래 · 새 고객 · 👤 실명표를 내 설정에
+     [33] ★★ 판 X589 — 🤖 자비스가 적은 오늘의 미션: 걸 분 · 약속 시각 · 오늘 건 통수 · 내일 약속 · SNS 요일 — 있던 줄(hmLeft · hmSteps · AR.calls · AR.db)만 · 저장 없음
      [30] ★★ 판 X572 — ☁️ 자비스 내 메뉴 · 신입 도움말을 계정에(user_prefs · 그 사람 줄만 · migration_85) — 서버 것을 내려받고, 없으면 올리고, 바꾸면 올림 · 표가 없으면 이 기기에만
      [27] ★★ 판 X558 — 📍 카드에 지금 상황(cmSave 그대로) · ⚙ 상황별 추천 메뉴 더하기 = 대표 · 관리자만(osIsAppAdmin) · 저장 osCfgSet('care_apps') → CUS_V2.appsBy 한 곳
      [25] ★★ 판 X555 — 🤝 만났어요(시안 jMeet): 오늘 약속 카드 · 이름+시각이 딱 한 분일 때만 · 단계는 있던 hdbTo(id,'PC') 하나 · 감사 카톡 복사 · 이분 끝(hmQfin)
@@ -868,14 +869,16 @@ console.log('\n[26] 🎯 오늘의 미션 (판 X557 · 사장님 말씀 「오�
   const heads = []; h.replace(/class="mis-r[^"]*" onclick="HOME_V2\.mis\((\d)\)"><span class="mis-c">[^<]*<\/span><span class="mis-t"><b>([^<]*)<\/b>/g, (m0, i, t) => { heads.push(i + t); return m0; });
   is(heads.join('|') === '0전화 · 카톡|1오늘 약속|2통화 결과 · 만난 분 기록|3내일 상담 자료 준비|4SNS 올리기' && /<b>🎯 오늘의 미션<\/b><span>1 \/ 5<\/span>/.test(h),
     '다섯 차례 — 전화 · 카톡 → 오늘 약속 → 기록 → 내일 준비 → SNS (약속 없는 날은 약속 미션이 끝난 셈이라 1/5) — ' + heads.join('|'));
-  is(/<small>전화 10통 \(하루 목표\) · 카톡 10건 \(하루 목표\)<\/small>/.test(h) && /<small>오늘 약속 없음<\/small>/.test(h), '칸 이름은 체크판 표(CK_ITEMS.day) 그대로 · 약속 없으면 「오늘 약속 없음」');
+  is(/<small class="mis-j">🤖 홍길동님 · 홍길순님 — 안 받으시면 카톡으로<\/small>/.test(h) && /<small>오늘 약속 없음<\/small>/.test(h),
+    '안 끝난 칸 밑은 자비스가 적은 한 줄(판 X589) — 걸 분 이름 · 약속 없는 날은 끝난 칸이라 「오늘 약속 없음」');
   A = mk({ d4: 1, d5: 1, d9: 1 }); h = A.X.els.hv2.innerHTML;
+  is(/<small>✓ 전화 10통 \(하루 목표\) · ✓ 카톡 10건 \(하루 목표\)<\/small>/.test(h), '끝난 칸 밑은 체크판 칸 이름 그대로(CK_ITEMS.day · ✓)');
   is(/<span>3 \/ 5<\/span>/.test(h) && /class="mis-r done" onclick="HOME_V2\.mis\(0\)"><span class="mis-c">✓/.test(h) && /class="mis-r" onclick="HOME_V2\.mis\(2\)"/.test(h), '끝났나 = 실행 체크판(hmMsCk) 그대로 — 둘 다 해야 끝(d6 만 하면 기록 미션은 아직)');
   A = mk({ d4: 1, d5: 1, d6: 1, d8: 1, d9: 1, d10: 1 }); h = A.X.els.hv2.innerHTML;
   is(/class="mis all"/.test(h) && /오늘 미션 완료 🎉/.test(h), '다섯 다 끝 → 「오늘 미션 완료 🎉」');
   const ap = [{ k: 'appt', t: '홍길동', s: '14:00', key: 'appt:a1' }, { k: 'appt', t: '홍갑돌', s: '16:00', key: 'appt:a2' }, { k: 'db', tk: 'TA', id: 'd9', t: '홍길순', s: '', key: 'db:d9:TA' }];
   A = mk({}, ap, ['appt:a1']); h = A.X.els.hv2.innerHTML;
-  is(/<small>1 \/ 2곳 · 만나면 「🤝 만났어요」<\/small>/.test(h) && /class="mis-r" onclick="HOME_V2\.mis\(1\)"/.test(h), '약속 미션 = 오늘 약속 카드 그대로(끝낸 카드 hmIsDone · hmQdone) — 1 / 2곳');
+  is(/<small class="mis-j">🤖 1 \/ 2곳 · 다음 16:00 홍갑돌님<\/small>/.test(h) && /class="mis-r" onclick="HOME_V2\.mis\(1\)"/.test(h), '약속 미션 = 오늘 약속 카드 그대로(끝낸 카드 hmIsDone · hmQdone) — 1 / 2곳 · 다음 분');
   A = mk({}, ap, ['appt:a1', 'appt:a2']); h = A.X.els.hv2.innerHTML;
   is(/class="mis-r done" onclick="HOME_V2\.mis\(1\)"/.test(h), '약속 카드를 다 챙기면 약속 미션도 끝');
   A = mk({ d6: 1 }); A.X.g.HOME_V2.mis(2); let t = A.X.els.hv2Sheet.innerHTML;
@@ -959,7 +962,7 @@ console.log('\n[28] 💬 자비스 말풍선 (판 X564 · 사장님 말씀 「�
   is(h.indexOf('class="dock"') < h.indexOf('id="hv2Jvb"') && /onclick="HOME_V2\.ai\(\)" aria-label="자비스">🤖/.test(jb), '아래 세 칸 다음에 말풍선 · 🤖 누르면 자비스 시트');
   is(/홍길동님 · 「결혼 준비」 — 「💰 8가지 통장 진단」 부터 열어 볼까요\?/.test(jb) && /class="jvb-go" onclick="go\('wallets'\)">열기 ›/.test(jb), '지금 카드의 맨 앞 추천 도구(카드 🧰 와 같은 toolsOf) — 「열기」 = 그 화면');
   X = mk([{ k: 'touch', id: 'c9', t: '홍갑돌', s: '안부', key: 'touch:c9:' }], { d4: 1, d5: 1 }); h = X.els.hv2.innerHTML;
-  is(/오늘 미션 2 \/ 5 — 다음은 「통화 결과 · 만난 분 기록」 예요/.test(h) && /onclick="HOME_V2\.mis\(2\)">보기 ›/.test(h), '추천 도구가 없으면 안 끝낸 첫 미션(약속 없는 날은 약속 미션이 끝난 셈) — 「보기」 = 그 미션 시트');
+  is(/오늘 미션 2 \/ 5 — 다음은 「통화 결과 · 만난 분 기록」: 걸 때마다 그 자리에서 결과 한 줄/.test(h) && /onclick="HOME_V2\.mis\(2\)">보기 ›/.test(h), '추천 도구가 없으면 안 끝낸 첫 미션(약속 없는 날은 약속 미션이 끝난 셈) — 「보기」 = 그 미션 시트');
   X = mk([], { d4: 1, d5: 1, d6: 1, d8: 1, d9: 1, d10: 1 }); h = X.els.hv2.innerHTML;
   is(/오늘 미션 완료 🎉/.test(h) && !/jvb-go/.test(h), '다 끝나면 「오늘 미션 완료 🎉」 (단추 없음)');
   X.g.HOME_V2.jvbOff(); X.g.HOME_V2.paint();
@@ -1020,6 +1023,52 @@ console.log('\n[30] ☁️ 내 설정을 계정에 (판 X572 · 사장님 말씀
   A = mk(null, true); A.X.g.HOME_V2.newHelp();
   is(!A.said.length && A.X.store.apex_newhelp_u1 === '1', '표가 아직 없으면(서버 오류) 조용히 이 기기에만 — 화면은 그대로');
   is(/  function apply\(dyn\) \{[\s\S]{0,1000}prefLoad\(\);/.test(sc) && !/apex_home_v2/.test(PREF_BLK) && !/KEY\b/.test(PREF_BLK.replace(/aiKey|newKey|CARE_KEY/g, '')), '새 화면을 켤 때 한 번 읽음 · 「↩ 예전 화면」(apex_home_v2)은 기기마다 그대로');
+}
+
+console.log('\n[33] 🤖 자비스가 적은 오늘의 미션 (판 X589 · 사장님 말씀 「자비스가 오늘의 미션 내용들을 적어줘」)');
+{
+  const CKI = [['d4', '전화 10통 (하루 목표)', '', '', ''], ['d5', '카톡 10건 (하루 목표)', '', '', ''], ['d6', '통화 결과 입력', '', '', ''], ['d8', '만난 사람 팩트파인딩 저장', '', '', ''],
+    ['d9', '내일 상담 자료 준비', '증권 받았으면 판독까지', 'AI 제안서', 'ai_prop'], ['d10', 'SNS 1건', '', '', '']];
+  const rows = [{ k: 'touch', t: '홍길동', s: '30일째', key: 'touch:c1:' }, { k: 'db', t: '홍길순', s: '', key: 'db:d1:미접촉' }, { k: 'db', t: '홍판서', s: '', key: 'db:d2:미접촉' },
+    { k: 'appt', t: '임꺽정', s: '14:00 · 순천', key: 'appt:a1' }, { k: 'appt', t: '성춘향', s: '16:30', key: 'appt:a2' }];
+  const mk = (o) => {
+    o = o || {};
+    const X = box({ apex_home_v2: '1' }, '', { rows, hide: o.hide, lead: o.lead,
+      db: [{ id: 'x1', who: 'me', appt: '2026-11-28T10:00:00', name: '이몽룡', region: '여수' }, { id: 'x2', who: 'p2', appt: '2026-11-28T11:00:00', name: '홍갑돌' },
+        { id: 'x3', who: 'me', appt: '2026-11-29T09:00:00', name: '변학도' }] });
+    Object.assign(X.g, { meV2Open: () => {}, CK_ITEMS: { day: CKI }, hmMsCk: () => (o.ck || {}), hmIsDone: k => (o.done || []).indexOf(k) >= 0, hmQdone: () => false,
+      mcalToday: () => (o.day || '2026-11-27') });
+    X.g.AR.loaded = true; X.g.AR.calls = o.nocall ? [] : [{ w: 'me', d: o.day || '2026-11-27' }, { w: 'me', d: o.day || '2026-11-27' }, { w: 'p2', d: o.day || '2026-11-27' }, { w: 'me', d: '2026-11-26' }];
+    if (o.am) X.g.amV2Open = () => {};
+    X.g.HOME_V2.apply(dyn(X));
+    return X;
+  };
+  let X = mk(), S = i => X.g.HOME_V2.misSay(i).t;
+  is(S(0) === '홍길동님 · 홍길순님 외 3명 — 안 받으시면 카톡으로', '📞 걸 분 = 오늘 챙길 줄(hmLeft) 앞 두 분 + 외 n명 — ' + S(0));
+  is(S(1) === '14:00 임꺽정님 · 16:30 성춘향님', '🤝 오늘 약속 = 오늘 약속 카드 시각 · 이름 — ' + S(1));
+  is(S(2) === '오늘 건 2통 — 결과 한 줄씩 · 만나고 나서 임꺽정님 · 성춘향님 팩트파인딩', '✍️ 오늘 건 통수 = 배정 줄 통화(AR.calls · 나 · 오늘만) · 만날 분 — ' + S(2));
+  is(S(3) === '내일 10:00 이몽룡님 — 증권 받았으면 판독까지', '🩺 내일 약속 = 배정 줄(AR.db · 나 · 내일만 — 다른 담당 · 모레는 안 셈) — ' + S(3));
+  is(S(4) === '오늘은 올리는 날(월 · 화 · 목 · 금) — 캐러셀 한 장' && mk({ day: '2026-11-25' }).g.HOME_V2.misSay(4).t === '오늘은 쉬는 날이에요 — 올리면 덤', '📣 SNS = 체크판 「주 4회 · 월화목금」 그대로 — 금요일은 올리는 날 · 수요일은 쉬는 날');
+  X = mk({ done: ['appt:a1', 'appt:a2'] });
+  is(X.g.HOME_V2.misSay(1).t === '오늘 약속 2곳을 다 챙겼어요 👏', '약속을 다 챙기면 「다 챙겼어요」');
+  X = mk({ day: '2026-11-29', nocall: 1 });
+  is(X.g.HOME_V2.misSay(3).t === '내일 잡힌 약속이 없어요 — 「✓ 했어요」로 닫아도 돼요' && X.g.HOME_V2.misSay(2).t.indexOf('걸 때마다') === 0, '내일 약속 · 오늘 통화가 없으면 지어내지 않고 할 일만');
+  X = mk({ hide: 1 });
+  is(X.g.HOME_V2.misSay(0).t.indexOf('홍○○님 · 홍○○님') === 0 && X.g.HOME_V2.misSay(3).t.indexOf('이○○님') > 0, '🙈 이름 가리기를 켜면 자비스 줄도 가림(nameOf)');
+  X = mk(); X.g.HOME_V2.mis(3); let t = X.els.hv2Sheet.innerHTML;
+  is(/<div class="mis-jv"><small>🤖 자비스가 적었어요<\/small><b>내일 10:00 이몽룡님 — 증권 받았으면 판독까지<\/b><div class="mis-jp"><span><b>이몽룡님<\/b><small>10:00 · 여수<\/small><\/span>/.test(t) && /misDid\(3,'d9'\)">✓ 했어요/.test(t),
+    '미션 시트 맨 위 「🤖 자비스가 적었어요」 + 사람 칸 · 그 밑 체크판 칸(✓ 했어요)은 그대로');
+  X.g.HOME_V2.mis(0); t = X.els.hv2Sheet.innerHTML;
+  is(/<button type="button" onclick="HOME_V2\.close\(\);hmOpen\('touch:c1:'\)"><b>홍길동님<\/b><small>30일째<\/small><\/button>/.test(t), '걸 분을 누르면 있던 hmOpen(그분 한 장)');
+  X = mk({ ck: { d4: 1, d5: 1 } }); let h = X.els.hv2.innerHTML;
+  is(!/🤖 홍길동님/.test(h) && /<small class="mis-j">🤖 14:00 임꺽정님/.test(h), '끝난 칸에는 자비스 줄을 안 띄움 · 다음 칸부터');
+  const M = sc.slice(sc.indexOf('  function misTm('), sc.indexOf('  function ckItem('));
+  is(M.length > 500 && !/setItem|\.rpc\(|\.from\(|fetch\(|ckToggle|cmLSSet/.test(M), '자비스 줄은 서버를 안 부르고 아무것도 안 저장 — 이미 읽은 줄만');
+  is(/var sy = j >= 0 \? T\(function \(\) \{ return misSay\(MIS\[j\]\); \}, null\) : null;/.test(sc), '💬 말풍선 「다음은 「…」」 에도 자비스 한 줄');
+  X = mk({ lead: 1, am: 1 }); h = X.els.hv2.innerHTML;
+  is(/onclick="teamV2Open\(\)">📊 우리 팀 한눈에[\s\S]{0,40}onclick="amV2Open\(\)">☀️ 팀 아침 점검 · 지점장 체크리스트/.test(h) || /onclick="amV2Open\(\)">☀️ 팀 아침 점검 · 지점장 체크리스트/.test(h), '지점장 — 팀 동그라미 밑 「☀️ 팀 아침 점검 · 지점장 체크리스트」(am-v2.js)');
+  X = mk({ lead: 0, am: 1 });
+  is(!/amV2Open/.test(X.els.hv2.innerHTML), '설계사 화면에는 안 섬(hwhoCan)');
 }
 
 console.log(bad ? ('\n✗ ' + bad + '건 어긋남') : '\n✓ 새 오늘 화면은 옛 홈을 안 깨고 시안 차례로 섭니다');
