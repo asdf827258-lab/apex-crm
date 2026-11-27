@@ -1155,9 +1155,14 @@ console.log('\n[35] 🎯 미션 + 지금 이분 한 카드 · 📊 이번 달 �
   is(/CS — 지금 청약 중 1명/.test(t) && /성춘향님/.test(t) && /✓ 계약 11\/20 · 25만원/.test(t), 'CS 칸 → 지금 청약 중 + 이번 달 계약은 맨 아래');
   X.g.HOME_V2.act('pc'); t = X.els.hv2Sheet.innerHTML;
   is(/홍갑돌님/.test(t) && /목표 계약금액 30만원/.test(t) && !/방자/.test(t), 'PC 칸 → 지금 제안 중 · 목표 계약금액');
+  /* 판 X594 — 내 고객은 DB 통합 CRM 으로 들어가 그분 옆창(apexCrmSide) · 못 열면 홈 고치기 창(hdbOpen) */
+  X.g.setTimeout = f => f(); X.g.go = t => log.push(['go', t]);
+  X.els.crmFrame = { contentWindow: { apexCrmReady: () => true, apexCrmSide: id => { log.push(['side', id]); return true; } } };
   log.length = 0; X.g.HOME_V2.crm('x1', 'db:x1:TA'); X.g.HOME_V2.crm('o1', 'db:o1:PC'); X.g.HOME_V2.crm('', 'touch:c1:'); X.g.HOME_V2.crm('zz', '');
-  is(JSON.stringify(log) === JSON.stringify([['hdb', 'x1'], ['open', 'db:o1:PC'], ['open', 'touch:c1:'], ['rt', 'zz']]),
-    '이름 → 내 배정 DB 분은 그분 CRM 고치기 창(hdbOpen) · 내 고객이 아니면 · 고객 365일 분은 예전 길(hmOpen · hmRtPerson) — ' + JSON.stringify(log));
+  is(JSON.stringify(log) === JSON.stringify([['go', 'crm'], ['side', 'x1'], ['open', 'db:o1:PC'], ['open', 'touch:c1:'], ['rt', 'zz']]),
+    '이름 → 내 배정 DB 분은 DB 통합 CRM 그분 옆창(go crm → apexCrmSide · 판 X594) · 내 고객이 아니면 · 고객 365일 분은 예전 길(hmOpen · hmRtPerson) — ' + JSON.stringify(log));
+  X.els.crmFrame = { contentWindow: {} }; log.length = 0; X.g.HOME_V2.crm('x1', 'db:x1:TA');
+  is(JSON.stringify(log) === JSON.stringify([['go', 'crm'], ['hdb', 'x1']]), 'CRM 옆창을 못 열면(옛 판 · 12초) 예전처럼 홈 고치기 창(hdbOpen) — ' + JSON.stringify(log));
   is(/<span class="nm" role="button" onclick="HOME_V2\.crm\('x1','db:x1:TA'\)">이몽룡님/.test(h), '지금 이분 카드 이름 → HOME_V2.crm(그분 id)');
   is((SRC.match(/hmRtPerson\(/g) || []).length === 2 && /'💬 카톡 보내기'/.test(SRC) && !/HOME_V2\.close\(\);hmRtPerson\(\\'' \+ Q\((x|r|a|n)\.id\)/.test(SRC),
     '지역 동선 · 챙기는 중 · 단계 시트의 이름도 HOME_V2.crm(남은 hmRtPerson = 카톡 보내기 · 되돌아가는 길)');
