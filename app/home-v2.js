@@ -642,9 +642,24 @@
      ★ 새 저장 코드 없음 — 저장은 hdbOpen 창이 하던 그대로. 내 고객(지점장은 내 팀)이 아니면(hdbCan) · 배정 DB 분이 아니면(고객 365일 분)
        예전 길 그대로(hmOpen → 그분 카드 · 없으면 hmRtPerson). 「이분 자세히」 단추는 예전처럼 그분 한 장. */
   function crmOk(id) { var r = id ? T(function () { return g.hdbRow(id); }, null) : null; return !!(r && typeof g.hdbOpen === 'function' && T(function () { return g.hdbCan(r); }, false)); }
+  /* 🗂 판 X594 — 사장님 말씀 「DB통합CRM으로 바로 하지만, 고객 누르면 현재 고객 수정하는것처럼 · 한번에 관리되도록」.
+     내 고객이면 <b>DB 통합 CRM 으로 들어가 그분 옆창</b>(crm-side.js · window.apexCrmSide — 고치기 · 통화 · 고객 한 장)을 바로 엽니다.
+     CRM 이 자료를 다 읽은 뒤에 엽니다(apexCrmReady · 지역 동선 hmRtOpen 과 같은 길). 12초 안에 못 열면 예전처럼 홈 고치기 창(hdbOpen). */
+  function crmSide(id) {
+    try { if (g.CRQ) g.CRQ.viaHome = Date.now(); } catch (e0) {}
+    try { g.go('crm'); } catch (e) { try { g.hdbOpen(id); } catch (e1) {} return; }
+    var n = 0, tick = function () {
+      var f = g.document.getElementById('crmFrame'), w = null, ok = false;
+      try { w = f && f.contentWindow; ok = !!(w && typeof w.apexCrmSide === 'function' && (typeof w.apexCrmReady !== 'function' || w.apexCrmReady())); } catch (e2) { ok = false; }
+      if (ok) { var done = false; try { done = !!w.apexCrmSide(id); } catch (e3) {} if (!done) { try { g.hdbOpen(id); } catch (e4) {} } return; }
+      if (++n > 48) { try { g.toast('DB 통합 CRM 을 아직 못 열었어요 — 고치는 창으로 열게요'); } catch (e5) {} try { g.hdbOpen(id); } catch (e6) {} return; }
+      g.setTimeout(tick, 250);
+    };
+    g.setTimeout(tick, 60);
+  }
   function crmGo(id, key) {
     close();
-    if (crmOk(id)) { try { g.hdbOpen(id); } catch (e) {} return; }
+    if (crmOk(id)) { crmSide(id); return; }
     if (key) { try { g.hmOpen(key); } catch (e2) {} return; }
     if (id) { try { g.hmRtPerson(id); } catch (e3) {} }
   }
