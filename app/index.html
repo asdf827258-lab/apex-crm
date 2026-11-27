@@ -22345,8 +22345,8 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-27 09:13';
-var APP_BUILD_NOTE='📊 <b>엑셀 색이 보입니다</b>(판 X583). ◾ 사장님 말씀 「색상은 안 보여서 체크하고」 — 엑셀로 열어 보니 <b>「결과」 칸(빠짐·보장UP·유지)에 색이 하나도 없었고</b>, 다른 칸 바탕도 흰색과 거의 같은 색(F6F6F6·F2F7FF)이라 모니터·폰에서 색 없는 표로 보였습니다. ◾ 고친 것 — 결과 칸을 상태 색으로 칠함(▲ 보장UP 초록 · ▼ 줄어듦 붉게 · 빠짐 노랗게 · 유지 회색) · 차이 칸도 초록/붉은 바탕 · 옅던 바탕을 한 단계 진하게(번호·차례는 그대로). ◾ <b>⏫⏬📊🩺 같은 그림 문자는 엑셀 글꼴(맑은 고딕)에 없어 □ 로 찍혔습니다</b> — 칸 글에서 걷어내고 ▲▼ 로. ◾ 이 PC 엑셀로 열어 17장 · PDF 24쪽 확인. ◾ <b>같이 실려 나가는 판</b> — 📊 <b>엑셀이 열립니다</b>(X579) · 🖨 <b>보장분석 전·후 인쇄</b>(X578).';
+var APP_BUILD='2026-11-27 09:30';
+var APP_BUILD_NOTE='🔒 <b>새 서버를 세워도 로그인 안 한 사람이 서버 함수를 못 부르게</b>(판 X586). ◾ 판 X575 에서 라이브 서버의 anon 실행권 다섯을 회수했는데, 앱 안 준비 SQL(「한 번에 전부」 · 채용 대기열)은 그대로라 새 서버를 그걸로 세우면 경고가 다시 생겼습니다. 이제 준비 SQL 도 같은 줄(anon 회수 · 규칙 일곱 to authenticated)을 돌립니다. 화면은 바뀌지 않습니다. 재는 자 check-anondef [8].';
 
 
 
@@ -53837,7 +53837,7 @@ var HX_SQL={
   "end;",
   "$$;",
   "",
-  "revoke all on function public.recruits_purge(int) from public;",
+  "revoke all on function public.recruits_purge(int) from public, anon;   /* 판 X586 — Supabase 는 anon 에게 따로 준다 */",
   "grant execute on function public.recruits_purge(int) to authenticated;",
   "",
   "/* schema_version 은 적지 않는다. 메인은 47 이후로 이 값을 더 이상",
@@ -53908,7 +53908,7 @@ var HX_SQL={
   "end;",
   "$$;",
   "",
-  "revoke all on function public.recruits_assign(uuid[], uuid) from public;",
+  "revoke all on function public.recruits_assign(uuid[], uuid) from public, anon;   /* 판 X586 */",
   "grant execute on function public.recruits_assign(uuid[], uuid) to authenticated;",
   "",
   "/* schema_version 은 적지 않는다. 메인은 47 이후로 이 값을 더 이상",
@@ -55051,6 +55051,21 @@ var HX_SQL={
   "create policy claims_mine_admin on public.claims for all",
   "  using (public.is_my_client_or_admin(client_id))",
   "  with check (public.is_my_client_or_admin(client_id));",
+  "",
+  "/* 🔒 <b>로그인 안 한 사람(anon)은 이 두 자를 못 부르게</b> (판 X586 · 라이브는 migration_86 · 판 X575)",
+  "   Supabase 는 새 함수를 만들면 anon 에게 실행권을 따로 직접 준다 — grant … to authenticated 만",
+  "   적으면 anon 도 그대로 부른다. 그래서 「from public, anon」 을 같이 회수한다.",
+  "   위 규칙 일곱은 몸에서 is_my_client 를 부르므로 로그인한 사람에게만 건다 — 안 그러면",
+  "   anon 이 그 표를 만질 때 빈 답 대신 「함수 권한 없음」 오류가 난다. 조건은 안 바꾸고 역할만 좁힌다. */",
+  "revoke execute on function public.is_my_client(uuid)          from public, anon;",
+  "revoke execute on function public.is_my_client_or_admin(uuid) from public, anon;",
+  "alter policy policies_mine        on public.policies  to authenticated;",
+  "alter policy documents_mine       on public.documents to authenticated;",
+  "alter policy proposals_mine       on public.proposals to authenticated;",
+  "alter policy coverage_docs_read   on storage.objects  to authenticated;",
+  "alter policy coverage_docs_insert on storage.objects  to authenticated;",
+  "alter policy coverage_docs_update on storage.objects  to authenticated;",
+  "alter policy coverage_docs_delete on storage.objects  to authenticated;",
   "",
   "insert into public.app_config(key, value)",
   "values ('schema_version', '48')",
