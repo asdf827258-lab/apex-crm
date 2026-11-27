@@ -612,7 +612,17 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
        「고쳤는데 안 올렸다」 를 영영 못 잡습니다 (8번).               */
   /* 판 X174 (2026-10-23) — 고객 동의 표(client_consents)를 준비 SQL 에 넣고 판 번호를 <b>45 로 올렸습니다</b>
      (SETUP_VER 과 schema_version 같이). 그래서 지문을 새 값으로 바꿉니다. 아래 X84 쪽지는 그때 일입니다. */
-  const SQL_SIG = 'c53e2c348d6c';   /* 판 X503 (2026-11-19) — <b>채용 대기열</b>(recruits ·
+  const SQL_SIG = '3b193b8f984d';   /* ⚠⚠ 판 X586 (2026-11-27) — <b>판 번호를 일부러 안 올렸습니다</b> (X84 와 같은 판단).
+                                       고친 것: '00' 에 is_my_client · is_my_client_or_admin 의 anon 실행권 회수 +
+                                       규칙 일곱 alter policy … to authenticated, '80' 의 recruits_* 회수를
+                                       「from public, anon」 으로. 권한만 바뀌고 표 · 칸은 안 생깁니다.
+                                       안 올린 까닭 — 이미 준비를 마친 서버는 <b>하나</b>(apex-crm)뿐이고,
+                                       그 서버에는 같은 줄이 migration_86(판 X575 · 11-26)으로 <b>이미 걸려</b>
+                                       있습니다(get_advisors 경고 0 확인). 49 로 올리면 사장님 화면에 배너가
+                                       다시 떠서 다 들어 있는 글을 또 돌리라고 합니다. 얻는 것 없이 잃는 것만
+                                       있어 안 올렸고, 새 서버는 이 글을 처음부터 돌리니 고쳐진 대로 섭니다.
+                                       앞 지문 c53e2c348d6c ↓ */
+  /* 판 X503 (2026-11-19) — <b>채용 대기열</b>(recruits ·
                                        recruit_sends)을 앱 안 SQL 칸('80')으로 넣었습니다.
                                        후보가 혼자 검사하고 상담 신청을 누르면 거기 쌓입니다.
                                        SETUP_VER·schema_version 을 47 → 48 로 같이 올렸고
