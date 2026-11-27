@@ -1134,17 +1134,33 @@ function ocURL(p) {
   return OC_URL + '?' + new URLSearchParams({ from: 'insight', kind: o.kind, ptype: o.ptype, term: o.term, age: OC.age, sex: OC.sex,
     needs: Object.keys(o.nd).map(k => k + ':' + o.nd[k]).join(','), co: p.company || '', pn: nm(p), tr: JSON.stringify(ocTerms(p)) }).toString();
 }
+/* B안 · 보장 넓게 — 한장비교(one.js B_CORE)와 같은 규칙: A안에 없는 3대 진단·치료·수술을 더한다. 0 = 회사 기본 가입금액
+   (2026-11-27 사장님 「CRM상품전략기안에서도 B안 보이게해줘」) 금액은 회사 접속 열쇠가 있는 한장비교에서만 나온다 */
+const OC_B = [['cancer_diag', 3000], ['cancer_main', 2000], ['brain', 1000], ['heart', 1000], ['surgery', 0], ['nsurg', 0]];
+const ocAmt = v => v ? (v >= 1000 ? (v / 1000) + '천' : v) + '만' : '회사 기본';
+function ocB(p, o) {
+  if (!/^(cancer|health|brainheart|simple)$/.test(p.category)) return [];
+  return OC_B.filter(([k]) => !o.nd[k]);
+}
 function ocCardHTML(p) {
   const o = ocPlan(p); if (!o) return '';
-  const nds = Object.keys(o.nd).map(k => `${OC_NEED_L[k]} ${o.nd[k] >= 1000 ? (o.nd[k] / 1000) + '천' : o.nd[k]}만`).join(' · ');
+  const nds = Object.keys(o.nd).map(k => `${OC_NEED_L[k]} ${ocAmt(o.nd[k])}`).join(' · ');
+  const adds = ocB(p, o);
+  const ab = adds.length ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+      <div style="background:var(--bg);border-radius:12px;padding:10px 12px"><div class="s13" style="font-weight:800;color:var(--ink)">A안 · 이 상품 담보</div>
+        <div class="s13" style="margin-top:4px;color:var(--ink2)">${nds ? esc(nds) : '회사 기본 설계'}</div></div>
+      <div style="background:var(--bg);border-radius:12px;padding:10px 12px"><div class="s13" style="font-weight:800;color:var(--ink)">B안 · 보장 넓게</div>
+        <div class="s13" style="margin-top:4px;color:var(--ink2)">A안 + ${esc(adds.map(([k, v]) => `${OC_NEED_L[k]} ${ocAmt(v)}`).join(' · '))}</div></div></div>
+    <div class="s13 mute" style="margin-top:6px">B안은 한장비교에 그 담보가 있을 때만 더해져요 · 두 안의 월 보험료와 차액은 한장비교 초안에서 나란히 보여요</div>` : '';
   return `<div class="card" id="oc-card"><style>#oc-card .seg button:not(.on),#oc-card .search{background:var(--bg)}</style><div class="ct">💰 이 조건으로 금액 보기 <small>한장 보험료 비교 → 설계 초안</small></div>
     <div class="mute s13" style="margin-bottom:10px">회사별 월 보험료와 설계 초안(이 회사 · 같은 구성 최저가)을 한 번에 뽑아요. 담보·금액은 거기서 바꿀 수 있어요.</div>
     ${segHTML([['F', '여성'], ['M', '남성']], OC.sex, 'ocSex')}
     <div style="display:flex;align-items:center;gap:8px;margin-top:10px"><button class="btn g" style="min-width:44px" onclick="ocAge(-5)">−5</button>
       <input class="search" id="oc-age" type="number" inputmode="numeric" min="0" max="100" value="${OC.age}" style="width:96px;text-align:center" onchange="ocAge(0,this.value)">
       <span class="s13 mute">세 (보험나이)</span><button class="btn g" style="min-width:44px" onclick="ocAge(5)">+5</button></div>
-    <div class="s13" style="margin-top:10px;color:var(--ink2)">${o.kind === 'F' ? '손보' : '생보'} · ${esc(o.ptype.split('|')[0])} · ${esc(o.term)}${nds ? '<br>담보: ' + esc(nds) : ' · 회사 기본 설계'}</div>
-    <button class="btn w" style="margin-top:12px" onclick="ocGo('${p.id}')">💰 한장비교에서 금액·설계 초안 보기 ↗</button>
+    <div class="s13" style="margin-top:10px;color:var(--ink2)">${o.kind === 'F' ? '손보' : '생보'} · ${esc(o.ptype.split('|')[0])} · ${esc(o.term)}${adds.length ? '' : nds ? '<br>담보: ' + esc(nds) : ' · 회사 기본 설계'}</div>
+    ${ab}
+    <button class="btn w" style="margin-top:12px" onclick="ocGo('${p.id}')">💰 한장비교에서 ${adds.length ? 'A안·B안 ' : ''}금액·설계 초안 보기 ↗</button>
     <div class="note">설계사용이에요 — 고객에게 보여 주지 마세요. 처음이면 한장비교 첫 화면 ①②③으로 회사 접속을 한 번 이어 두세요.</div></div>`;
 }
 function ocRe() { const sh = $('sheet'), c = $('oc-card'), p = sh && byId(sh.dataset.id); if (c && p) c.outerHTML = ocCardHTML(p); }
