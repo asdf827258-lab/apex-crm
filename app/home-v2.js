@@ -150,6 +150,11 @@
       '#hv2Sheet .mis-s2{display:flex;gap:8px;align-items:center;margin:10px 0 0 30px}',
       '#hv2Sheet .mis-b{flex:none;height:40px;padding:0 14px;border-radius:10px;background:var(--blue);color:#fff;font-size:14px;font-weight:700}',
       '#hv2Sheet .mis-b.g{background:var(--line2);color:var(--ink)}',
+      '.hv2 .mis-t small.mis-j{color:var(--blue);font-weight:600;white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.4;margin-top:2px}',
+      '#hv2Sheet .mis-jv{background:#EAF1FF;border-radius:14px;padding:12px 14px;margin-top:12px}#hv2Sheet .mis-jv>small{display:block;font-size:13px;font-weight:700;color:#1A56DB}',
+      '#hv2Sheet .mis-jv>b{display:block;font-size:16px;font-weight:700;margin-top:4px;line-height:1.45}',
+      '#hv2Sheet .mis-jp{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}#hv2Sheet .mis-jp>*{display:flex;flex-direction:column;align-items:flex-start;min-height:44px;justify-content:center;padding:6px 12px;border-radius:12px;background:#fff;text-align:left}',
+      '#hv2Sheet .mis-jp b{font-size:14px;font-weight:700}#hv2Sheet .mis-jp small{font-size:13px;color:#6B7684}',
       '#hv2Sheet .mis-go{flex:none;height:40px;padding:0 10px;font-size:14px;font-weight:700;color:var(--blue)}',
       '.hv2 .steps5{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:#fff;border-radius:18px;padding:8px 6px;margin-top:8px}',
       '.hv2 .steps5 button{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:62px;justify-content:center;border-radius:12px;text-align:center}',
@@ -496,6 +501,8 @@
     h += '</div>';
     /* 📊 시안 「팀」 탭 — 아래 탭 띠는 그대로 두라 하셔서 여기서 시트로 (team-v2.js · 판 X528) */
     if (typeof g.teamV2Open === 'function') h += '<button type="button" class="tmall" onclick="teamV2Open()">📊 우리 팀 한눈에<span>›</span></button>';
+    /* ☀️ 팀 아침 점검 · 지점장 체크리스트 (am-v2.js · 판 X589) */
+    if (typeof g.amV2Open === 'function') h += '<button type="button" class="tmall" onclick="amV2Open()">☀️ 팀 아침 점검 · 지점장 체크리스트<span>›</span></button>';
     if (cur && cur !== me) h += '<div class="whonote"><span>' + (all ? '🏢 팀 전체를 보고 있어요 — 내 것이 아니에요' : '👀 ' + E(T(function () { return g.hwhoName(cur); }, '팀원')) + '님 화면을 그대로 보고 있어요') + '</span><button type="button" onclick="hwhoMe()">← 내 화면</button></div>';
     return h;
   }
@@ -531,12 +538,60 @@
      ★ 「✓ 했어요」 = 아침 미션 · 📣 알리기 걸음이 쓰던 hmMsDid(ck) · 「되돌리기」 = hmMsUndo — 새 저장 코드 없음.
      ★ 약속 미션은 오늘 약속 카드를 다 챙기면(🤝 만났어요 · 이분 끝) 저절로 끝 · 약속이 없는 날은 「오늘 약속 없음」 으로 끝난 셈. */
   var MIS = [
-    { e: '📞', t: '전화 · 카톡', ck: ['d4', 'd5'], rail: 1 },
-    { e: '🤝', t: '오늘 약속', appt: 1 },
-    { e: '✍️', t: '통화 결과 · 만난 분 기록', ck: ['d6', 'd8'] },
-    { e: '🩺', t: '내일 상담 자료 준비', ck: ['d9'] },
-    { e: '📣', t: 'SNS 올리기', ck: ['d10'], make: 1 }
+    { e: '📞', t: '전화 · 카톡', ck: ['d4', 'd5'], rail: 1, j: 'call' },
+    { e: '🤝', t: '오늘 약속', appt: 1, j: 'appt' },
+    { e: '✍️', t: '통화 결과 · 만난 분 기록', ck: ['d6', 'd8'], j: 'rec' },
+    { e: '🩺', t: '내일 상담 자료 준비', ck: ['d9'], j: 'prep' },
+    { e: '📣', t: 'SNS 올리기', ck: ['d10'], make: 1, j: 'sns' }
   ];
+  /* 🤖 자비스가 적은 오늘의 미션 (판 X589 · 사장님 말씀 2026-11-27 「자비스가 오늘의 미션 내용들을 적어줘」).
+     칸 이름만 있던 다섯 칸에 <b>오늘 누구 · 몇 시 · 몇 통</b>을 자비스가 한 줄로 적습니다.
+     ★ 새로 세지 않습니다 — 걸 분 = 오늘 챙길 줄(hmLeft · 아래 카드 줄과 같은 차례) · 오늘 약속 = hmSteps 의 약속(apptRows) ·
+       오늘 건 통수 = 배정 줄 통화(AR.calls) · 내일 약속 = 배정 줄 약속(AR.db · 챙기는 중과 같은 자) · SNS = 체크판 d10 의 「월화목금」.
+     ★ 못 읽으면 지어내지 않고 칸 설명만 — 이름은 nameOf(🙈 이름 가리기를 따름). 저장 없음. */
+  function misTm(s) { var m = /(\d{1,2}):(\d{2})/.exec(String(s || '')); return m ? m[1] + ':' + m[2] : ''; }
+  function misNames(L, f, max) { return L.slice(0, max).map(f).join(' · ') + (L.length > max ? ' 외 ' + (L.length - max) + '명' : ''); }
+  function misDb(ds) {
+    var w = who();
+    return (T(function () { return g.AR.db; }, []) || []).filter(function (r) { return r && r.appt && String(r.appt).slice(0, 10) === ds && (!w || r.who === w); })
+      .sort(function (a, b) { return String(a.appt) < String(b.appt) ? -1 : 1; });
+  }
+  function misCalls() {
+    var w = who() || T(function () { return g.arMyId(); }, ''), td = ymdPlus(0), n = 0;
+    if (!T(function () { return g.AR.loaded; }, false)) return null;
+    (T(function () { return g.AR.calls; }, []) || []).forEach(function (c) { if (c && c.d === td && (!w || c.w === w)) n++; });
+    return n;
+  }
+  function misSay(m) {
+    var P = [], t = '';
+    var pp = function (x) { return { nm: nameOf(x) + '님', s: strip(x.s || ''), go: 'HOME_V2.close();hmOpen(\'' + Q(x.key) + '\')' }; };
+    var pd = function (r) { return { nm: nameOf({ t: r.name || '' }) + '님', s: misTm(String(r.appt).slice(11, 16)) + (r.region ? ' · ' + r.region : ''), go: '' }; };
+    if (m.j === 'call') {
+      var L = (T(function () { return g.hmLeft(); }, { list: [] }) || { list: [] }).list || [];
+      t = L.length ? misNames(L, function (x) { return nameOf(x) + '님'; }, 2) + ' — 안 받으시면 카톡으로' : '오늘 걸 분은 다 챙겼어요 👏';
+      P = L.slice(0, 8).map(pp);
+    } else if (m.j === 'appt') {
+      var S = (T(function () { return g.hmSteps(); }, []) || []).filter(function (x) { return x && x.k === 'appt'; });
+      var A = S.filter(function (x) { return !T(function () { return g.hmIsDone(x.key) || g.hmQdone(x.key); }, false); });
+      t = !S.length ? '오늘 잡힌 약속이 없어요' : !A.length ? '오늘 약속 ' + S.length + '곳을 다 챙겼어요 👏'
+        : (A.length < S.length ? (S.length - A.length) + ' / ' + S.length + '곳 · 다음 ' : '') +
+          A.slice(0, 3).map(function (x) { var h = misTm(x.s); return (h ? h + ' ' : '') + nameOf(x) + '님'; }).join(' · ') + (A.length > 3 ? ' 외 ' + (A.length - 3) + '곳' : '');
+      P = A.map(pp);
+    } else if (m.j === 'rec') {
+      var M = (T(function () { return g.hmSteps(); }, []) || []).filter(function (x) { return x && x.k === 'appt'; }), n = misCalls();
+      t = (n ? '오늘 건 ' + n + '통 — 결과 한 줄씩' : '걸 때마다 그 자리에서 결과 한 줄') + (M.length ? ' · 만나고 나서 ' + misNames(M, function (x) { return nameOf(x) + '님'; }, 2) + ' 팩트파인딩' : '');
+      P = M.map(pp);
+    } else if (m.j === 'prep') {
+      var D = misDb(ymdPlus(1));
+      t = D.length ? '내일 ' + D.slice(0, 2).map(function (r) { var h = misTm(String(r.appt).slice(11, 16)); return (h ? h + ' ' : '') + nameOf({ t: r.name || '' }) + '님'; }).join(' · ') +
+        (D.length > 2 ? ' 외 ' + (D.length - 2) + '곳' : '') + ' — 증권 받았으면 판독까지' : '내일 잡힌 약속이 없어요 — 「✓ 했어요」로 닫아도 돼요';
+      P = D.map(pd);
+    } else if (m.j === 'sns') {
+      var wd = new Date(ymdPlus(0) + 'T00:00:00Z').getUTCDay();
+      t = [1, 2, 4, 5].indexOf(wd) >= 0 ? '오늘은 올리는 날(월 · 화 · 목 · 금) — 캐러셀 한 장' : '오늘은 쉬는 날이에요 — 올리면 덤';
+    }
+    return { t: t, P: P };
+  }
   function ckItem(id) {
     var L = T(function () { return g.CK_ITEMS.day; }, []) || [], i;
     for (i = 0; i < L.length; i++) if (L[i] && L[i][0] === id) return { id: id, t: strip(L[i][1] || id), d: strip(L[i][2] || ''), gl: L[i][3] || '', tab: L[i][4] || '' };
@@ -564,8 +619,9 @@
     if (all) h += '<div class="mis-ok">오늘 미션 완료 🎉 수고 많으셨어요</div>';
     h += MIS.map(function (m, i) {
       var st = S[i];
+      var say = st.done ? null : T(function () { return misSay(m); }, null);
       return '<button type="button" class="mis-r' + (st.done ? ' done' : '') + '" onclick="HOME_V2.mis(' + i + ')"><span class="mis-c">' + (st.done ? '✓' : m.e) + '</span>' +
-        '<span class="mis-t"><b>' + E(m.t) + '</b><small>' + E(st.sub) + '</small></span><span class="ar">›</span></button>';
+        '<span class="mis-t"><b>' + E(m.t) + '</b>' + (say && say.t ? '<small class="mis-j">🤖 ' + E(say.t) + '</small>' : '<small>' + E(st.sub) + '</small>') + '</span><span class="ar">›</span></button>';
     }).join('');
     return h + '</div>';
   }
@@ -577,7 +633,7 @@
       close(); misRail(A.left[0].key); return;
     }
     var ck = T(function () { return g.hmMsCk(); }, {}) || {};
-    var h = '<h1>' + m.e + ' ' + E(m.t) + '</h1><div class="sub">끝내면 「✓ 했어요」 — 실행 체크판에도 같이 담겨요</div><div class="list" style="margin-top:12px;padding:0">' + m.ck.map(function (id) {
+    var h = '<h1>' + m.e + ' ' + E(m.t) + '</h1><div class="sub">끝내면 「✓ 했어요」 — 실행 체크판에도 같이 담겨요</div>' + misJvHtml(m) + '<div class="list" style="margin-top:12px;padding:0">' + m.ck.map(function (id) {
       var c = ckItem(id), on = !!ck[id];
       return '<div class="mis-s"><div class="mis-s1"><span class="e">' + (on ? '✅' : '⬜') + '</span><div><b>' + E(c.t) + '</b>' + (c.d ? '<small>' + E(c.d) + '</small>' : '') + '</div></div><div class="mis-s2">' +
         (on ? '<button type="button" class="mis-b g" onclick="HOME_V2.misUndo(' + i + ',\'' + id + '\')">되돌리기</button>' : '<button type="button" class="mis-b" onclick="HOME_V2.misDid(' + i + ',\'' + id + '\')">✓ 했어요</button>') +
@@ -586,6 +642,13 @@
     if (m.rail) h += '<button type="button" class="btn p" style="margin-top:12px" onclick="HOME_V2.close();HOME_V2.step(0)">📞 지금 이분 카드로 — 한 분씩 걸기</button>';
     if (m.make) h += '<button type="button" class="btn p" style="margin-top:12px" onclick="HOME_V2.close();go(\'content\')">🖼 카드 만들러 가기</button>';
     sheet(h);
+  }
+  function misJvHtml(m) {
+    var say = T(function () { return misSay(m); }, null); if (!say || !say.t) return '';
+    return '<div class="mis-jv"><small>🤖 자비스가 적었어요</small><b>' + E(say.t) + '</b>' + (say.P.length ? '<div class="mis-jp">' + say.P.slice(0, 8).map(function (p) {
+      return p.go ? '<button type="button" onclick="' + p.go + '"><b>' + E(p.nm) + '</b>' + (p.s ? '<small>' + E(p.s) + '</small>' : '') + '</button>'
+        : '<span><b>' + E(p.nm) + '</b>' + (p.s ? '<small>' + E(p.s) + '</small>' : '') + '</span>';
+    }).join('') + '</div>' : '') + '</div>';
   }
   function misRail(key) {
     var L = (T(function () { return g.hmLeft(); }, { list: [] }) || { list: [] }).list || [], j = -1, k;
@@ -1557,7 +1620,8 @@
   function jvbMis() {
     var j = -1, n = 0; MIS.forEach(function (m, k) { if (misState(m).done) n++; else if (j < 0) j = k; });
     if (!T(function () { return g.CK_ITEMS.day.length; }, 0) || typeof g.hmMsCk !== 'function') return null;
-    if (j >= 0) return { t: '오늘 미션 ' + n + ' / ' + MIS.length + ' — 다음은 「' + MIS[j].t + '」 예요', go: 'HOME_V2.mis(' + j + ')', lab: '보기' };
+    var sy = j >= 0 ? T(function () { return misSay(MIS[j]); }, null) : null;
+    if (j >= 0) return { t: '오늘 미션 ' + n + ' / ' + MIS.length + ' — 다음은 「' + MIS[j].t + '」' + (sy && sy.t ? ': ' + sy.t : ' 예요'), go: 'HOME_V2.mis(' + j + ')', lab: '보기' };
     return { t: '오늘 미션 완료 🎉 수고 많으셨어요', go: '', lab: '' };
   }
   function jvbSecData(k) {
@@ -2121,6 +2185,7 @@
     careDel: careEdit(function (L, i, B) { if (L[i] && B.indexOf(L[i]) < 0) L.splice(i, 1); }),
     careUp: careEdit(function (L, i) { if (i > 0) { var t = L[i]; L.splice(i, 1); L.splice(i - 1, 0, t); } }),
     jvbOff: function () { JVB.off = true; var b = el('hv2Jvb'); if (b && b.parentNode) b.parentNode.removeChild(b); },
+    misSay: function (i) { return MIS[i] ? misSay(MIS[i]) : null; },
     mis: misSheet, misDid: function (i, ck) { misDid(i, ck, 0); }, misUndo: function (i, ck) { misDid(i, ck, 1); },
     newOn: newOn,
     msgAll: msgAll,
