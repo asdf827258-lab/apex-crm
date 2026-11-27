@@ -1011,6 +1011,7 @@
         (L.length > 5 ? '<button type="button" class="jvmore" onclick="HOME_V2.jvDo(\'more\',\'' + G[0] + '\')">' + (open ? '접기 ▴' : '나머지 ' + (L.length - 5) + '곳 더 보기 ▾') + '</button>' : '') + '</div>';
     });
     if (J.done) h += '<div class="jvdone">✓ 오늘 마치거나 넘긴 ' + J.done + '곳은 내일 다시 확인해요(단계를 바꾼 분은 다시 안 서요)</div>';
+    h += T(function () { return g.MY_PROMISE ? g.MY_PROMISE.html() : ''; }, '');   /* 💬 판 X577 — 내가 한 약속 · 카톡 붙여넣기 (몸은 my-promise.js) */
     h += '<h2>미리 세워 둔 연락 <small>' + J.P.length + '개 · 2주 안 · 달력에도 있어요</small></h2><div class="list">' + (J.P.length ? J.P.slice(0, 20).map(function (x) { return row(x, false); }).join('') : '<div class="li"><div class="tx"><div class="t2">2주 안에 잡아 둔 연락이 없어요</div></div></div>') +
         (J.P.length > 20 ? '<button type="button" class="li" onclick="HOME_V2.close();go(\'mycal\')"><div class="tx"><div class="t1" style="color:var(--blue)">나머지 ' + (J.P.length - 20) + '개는 달력에서 ›</div></div></button>' : '') + '</div>' +
       (J.madi ? '<button type="button" class="btn g" style="margin-top:12px" onclick="HOME_V2.close();go(\'clients\')">💌 이번 달 보낼 마디 ' + J.madi + ' — 고객 365일에서</button>' : '') +

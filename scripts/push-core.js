@@ -347,6 +347,105 @@ async function slotMsgFor(h, row, cache) {
   return { title: line.title, body: line.body, go: base.go };
 }
 
+/* ══ 💬 <b>팀원 약속</b> — 지점장 · 대표에게 숫자와 내용 (판 X577) ═══════════
+   사장님 말씀 (2026-11-26) 「숫자와 내용까지, 각 담당 지점장이 알람으로 보고 받게」.
+   ★ 위의 「여기서도 아무것도 안 셉니다」 의 까닭은 「서버에도 또 적어야 한다」 였습니다.
+     약속도 17시 예상업적과 <b>같은 예외</b>입니다 — 늦음 · 놓칠 뻔 · 이름 가리기 · 알람 글이
+     <b>app/promise-rule.js 한 파일</b>(MPR)에 있고 앱도 같은 파일을 부릅니다. 여기서는
+     사람을 모으고 보내기만 합니다. 베껴 적는 자리가 한 곳도 없습니다 (5번).
+   ★ 받는 사람 —
+       지점장 · 팀장 (role leader · branch_manager)  자기 팀(team_members) 사람 것만
+       대표          (role admin · owner · master)    전부 + 팀마다 숫자
+     표의 규칙(migration_85 의 tp_can_read)과 <b>같은 갈림</b>입니다 — 알람으로 못 보는 것을
+     더 보내지 않습니다.
+   ★ 시각은 MPR.PUSH_H(한국 시각) 한 판 — push_subs.hours 와 따로 갑니다. 지점장이
+     다른 알람을 꺼 두었어도 이 보고는 갑니다(사장님이 시키신 보고라서).
+   ★ 열린 약속이 0건인 사람에게는 <b>안 보냅니다</b> — 「0건」 알람은 방해입니다.
+   ★ 고객 이름은 MPR 이 가린 꼴로만 나갑니다(잠긴 화면에 뜹니다 · 3번).
+   ★ 못 읽으면 <b>한 통도 안 보냅니다</b> — 반만 센 수를 보내지 않습니다 (1번).
+   ★ 서버 장부는 그 한 판에 <b>다섯 번</b>만 읽습니다(사람 · 팀 · 소속 · 약속 · 폰) (7번).
+   ★★ 팀원 본인 알람도 여기서 같이 보냅니다(사업단장 「각자 팀원들에게도 … 수시적으로 안내」) —
+     8시 ☀️ 오늘 챙길 약속 · 12 · 17시 📋 아직 남은 약속(남았을 때만) · ⏰ 시각 있는 약속 30분 전.
+     부르는 곳은 netlify/functions/promise-cron.js 하나(30분마다). 글은 MPR.memberPush · soonPush.
+   ★ 자비스 「챙기는 중」 의 다른 칸(노쇼 전날 · 증권 전달 · 소개 차례)은 <b>세지 않습니다</b> — 그 규칙은
+     앱(home-v2 jvData)에만 있어 서버에 또 적으면 화면과 알람이 다른 말을 합니다(위 slotMsg 와 같은 까닭).  */
+const TP_BOSS = ['admin', 'owner', 'master'];
+const TP_LEAD = ['leader', 'branch_manager'];
+async function promisePush(h, opt) {
+  opt = opt || {};
+  let R = null;
+  try { R = require('../app/promise-rule.js'); } catch (e) { R = null; }
+  if (!R) return { ok: false, reason: 'promise-rule.js 를 못 읽었습니다' };
+  const min = opt.min === 30 ? 30 : 0;
+  const team = (h === R.PUSH_H && min === 0) || !!opt.force;          /* 지점장 · 대표 아침 보고 */
+  const mine = (R.MEM_H.indexOf(h) >= 0 && min === 0) || !!opt.force; /* 팀원 본인 8 · 12 · 17 */
+  const today = opt.today || R.kstYmd();
+  const nowMin = opt.nowMin != null ? opt.nowMin : h * 60 + min;     /* ⏰ 30분 전 — 매 판 */
+  const COLS = 'member_id,team_id,text,who,due,time,created_at,status';
+  /* 정각 보고가 없는 판은 <b>오늘 시각 있는 약속만</b> 읽습니다 — 30분마다 깨어나도 가볍게 (7번) */
+  const pq = (team || mine)
+    ? 'team_promises?status=eq.open&select=' + COLS + '&limit=5000'
+    : 'team_promises?status=eq.open&due=eq.' + today + '&time=not.is.null&select=' + COLS + '&limit=2000';
+  const need = [sb(pq)];
+  if (team || mine) need.push(sb('profiles?select=id,name,role,active&limit=2000'));
+  if (team) need.push(sb('teams?select=id,name&limit=500'), sb('team_members?select=team_id,member_id&limit=5000'));
+  const got = await Promise.all(need);
+  for (const x of got) {
+    if (!x.ok || !Array.isArray(x.json)) return { ok: false, reason: '장부를 못 읽었습니다 — ' + String(x.text || '').slice(0, 120) };
+  }
+  const rows = got[0].json, pp = got[1] ? got[1].json : null;
+  const off = new Set(), nm = {};
+  (pp || []).forEach(p => { nm[p.id] = p.name || '팀원'; if (p.active === false) off.add(p.id); });
+  const out = new Map();                       /* 받는 사람 → [글…] */
+  const add = (id, m) => { if (!m || off.has(id)) return; (out.get(id) || out.set(id, []).get(id)).push(m); };
+  /* ① 지점장 · 대표 — 팀 보고 (갈림은 migration_85 의 tp_can_read 와 같음) */
+  const msgs = new Map();
+  if (team) {
+    const teams = {}, teamOf = {}, inTeam = {};
+    got[2].json.forEach(t => { teams[t.id] = t.name || ''; });
+    got[3].json.forEach(m => { (teamOf[m.member_id] = teamOf[m.member_id] || []).push(m.team_id); (inTeam[m.team_id] = inTeam[m.team_id] || []).push(m.member_id); });
+    pp.forEach(p => {
+      if (p.active === false) return;
+      let L = null, all = false;
+      if (TP_BOSS.indexOf(p.role) >= 0) { L = rows; all = true; }
+      else if (TP_LEAD.indexOf(p.role) >= 0) {
+        const ids = new Set();
+        (teamOf[p.id] || []).forEach(t => (inTeam[t] || []).forEach(m => ids.add(m)));
+        L = rows.filter(r => ids.has(r.member_id));
+      }
+      if (!L) return;
+      const m = R.pushFor(L, nm, today, all ? { all: true, teams: teams } : {});
+      if (m) { msgs.set(p.id, m); add(p.id, m); }
+    });
+  }
+  /* ② 팀원 본인 — 자기 약속만 · 고객에게는 아무것도 안 감 */
+  const by = {};
+  rows.forEach(r => { (by[r.member_id] = by[r.member_id] || []).push(r); });
+  let meN = 0, soonN = 0;
+  Object.keys(by).forEach(id => {
+    if (mine) { const m = R.memberPush(by[id], h, today); if (m && !off.has(id)) { meN++; add(id, m); } }
+    const s = R.soonPush(by[id], today, nowMin); if (s && !off.has(id)) { soonN++; add(id, s); }
+  });
+  if (!out.size) return { ok: true, people: 0, sent: 0, rows: rows.length, team: team, mine: mine, min: min };
+  if (opt.dry) return { ok: true, dry: true, people: out.size, rows: rows.length, msgs: msgs, out: out, meN: meN, soonN: soonN };
+  const ids = Array.from(out.keys());
+  const s = await sb(TABLE + '?owner_id=in.(' + ids.join(',') + ')&select=*&limit=' + MAX_PER_RUN);
+  if (!s.ok || !Array.isArray(s.json)) return { ok: false, reason: '폰 장부를 못 읽었습니다' };
+  let sent = 0, gone = 0, failed = 0;
+  for (const row of onePerDevice(s.json)) {
+    const L = out.get(row.owner_id); if (!L) continue;
+    for (const m of L) {
+      let r;
+      try { r = await sendOne(row, { title: m.title, body: m.body, go: m.go, tag: m.tag }); }
+      catch (e) { failed++; continue; }
+      if (r.ok) { sent++; await touch(row.endpoint, 0); }
+      else if (r.status === 404 || r.status === 410) { gone++; await drop(row.endpoint); break; }
+      else { failed++; await touch(row.endpoint, (row.fail || 0) + 1); }
+    }
+  }
+  return { ok: true, people: out.size, rows: rows.length, team: msgs.size, me: meN, soon: soonN, sent: sent, gone: gone, failed: failed };
+}
+
 /* 이 시각에 <b>깨워야 할 폰</b>을 고르는 조건.
    hours(새 칸)에 그 시각이 들어 있거나, 아직 준비 SQL 을 안 돌리셔서
    hours 가 비어 있으면 <b>옛 hour 한 칸</b>으로 고릅니다 — 칸이 생기기
@@ -360,5 +459,6 @@ module.exports = {
   whoIs, isKeyFault, keyDiag, keyShape,
   keys, keysForget,
   b64u, unb64u, seal, vapidAuth, sendOne, sb, drop, touch, ready, kstHour, morning, onePerDevice,
-  slotMsg, pickAt, pexFor, slotMsgFor, PEX_COLS
+  slotMsg, pickAt, pexFor, slotMsgFor, PEX_COLS,
+  promisePush, TP_BOSS, TP_LEAD
 };
