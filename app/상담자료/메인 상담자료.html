@@ -15039,9 +15039,19 @@ ${JSON.stringify(insurances.map(i => ({
     /* 소개 바로 뒤 한 장 — 글은 앱(설정 → 내 소개)에서 온다.
        <b>빈 칸은 그 자리를 통째로 안 세운다</b> — 빈 상자를 고객에게 안 보인다. */
     if (m.t === 'apex:whatwedo') { wdApply(m.data); return; }
+    /* 이야기 덱(storyFrame)이 준비됐다고 알리면, 받아 둔 고객 보장 데이터를 덱으로 넘긴다 */
+    if (m.t === 'apex:ready') {
+      try {
+        var _sf = document.getElementById('storyFrame');
+        if (_sf && ev.source === _sf.contentWindow && window.__apexCovRows)
+          _sf.contentWindow.postMessage({ t: 'apex:bojang', rows: window.__apexCovRows }, location.origin);
+      } catch (e) {}
+      return;
+    }
     if (m.t === 'apex:insurances') {
       var rows = m.rows || [];
       if (!rows.length) return;
+      window.__apexCovRows = rows;
       try {
         if (typeof window.s10ImportInsurances === 'function') window.s10ImportInsurances(rows);
       } catch (e) {}

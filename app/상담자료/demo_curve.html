@@ -175,6 +175,42 @@
   #final2.on .f2note{animation:popIn .6s cubic-bezier(.2,.85,.3,1) forwards;animation-delay:.5s;}
   .f2note b{color:#6ee7b7;font-weight:900;}
 
+  /* 보장분석 담보 표 */
+  #bojang .bo-wrap{width:min(760px,92vw);}
+  .bo{display:flex;flex-direction:column;gap:11px;}
+  .bo-row{display:grid;grid-template-columns:104px 1fr 112px;align-items:center;gap:13px;
+    background:rgba(13,15,20,.72);border:1px solid var(--line);border-radius:15px;padding:12px 16px;box-shadow:0 10px 26px rgba(0,0,0,.34);}
+  .bo-name{font-size:clamp(14px,3.4vw,18px);font-weight:800;color:#e7edf6;text-align:left;}
+  .bo-track{height:15px;border-radius:9px;background:rgba(255,255,255,.07);overflow:hidden;}
+  .bo-fill{height:100%;border-radius:9px;}
+  .f-green{background:linear-gradient(90deg,#10b981,#34d399);} .f-amber{background:linear-gradient(90deg,#d97706,#fbbf24);}
+  .f-red{background:linear-gradient(90deg,#dc2626,#f87171);} .f-blue{background:linear-gradient(90deg,#2563eb,#60a5fa);}
+  .bo-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
+  .bo-amt{font-size:clamp(14px,3.3vw,17px);font-weight:900;color:#fff;letter-spacing:-.3px;} .bo-amt.off{color:#6b7280;}
+  .pill{font-size:11.5px;font-weight:900;padding:2px 9px;border-radius:20px;}
+  .p-green{background:rgba(52,211,153,.16);color:#6ee7b7;border:1px solid rgba(52,211,153,.4);}
+  .p-amber{background:rgba(251,191,36,.16);color:#fcd34d;border:1px solid rgba(251,191,36,.4);}
+  .p-red{background:rgba(248,113,113,.16);color:#fca5a5;border:1px solid rgba(248,113,113,.42);}
+  .p-blue{background:rgba(96,165,250,.16);color:#93c5fd;border:1px solid rgba(96,165,250,.4);}
+  #bojang .drop{border:2px dashed rgba(96,165,250,.5);border-radius:22px;padding:34px 26px;text-align:center;
+    background:rgba(12,22,48,.5);flex-direction:column;align-items:center;}
+  #bojang .drop .ic{font-size:46px;} #bojang .drop .dt{font-size:clamp(18px,4.4vw,24px);font-weight:900;color:#dbe8ff;margin-top:10px;}
+  #bojang .drop .ds{font-size:clamp(13px,3.2vw,16px);color:var(--mut);font-weight:600;margin-top:9px;line-height:1.5;} #bojang .drop .ds b{color:#93c5fd;}
+  /* 치료비 카드 */
+  .cx-wrap{width:min(820px,94vw);}
+  .cx-grid{display:flex;gap:13px;justify-content:center;flex-wrap:wrap;}
+  .cx-card{flex:1 1 200px;max-width:258px;background:rgba(13,15,20,.78);border:1px solid var(--line);
+    border-radius:18px;padding:17px 17px 15px;box-shadow:0 12px 30px rgba(0,0,0,.38);text-align:center;}
+  .cx-top{display:flex;align-items:center;justify-content:center;gap:8px;}
+  .cx-ic{font-size:25px;} .cx-cat{font-size:clamp(17px,4vw,21px);font-weight:900;color:#eef2f8;}
+  .cx-cost{margin-top:9px;font-size:clamp(15px,3.7vw,19px);font-weight:900;color:#fca5a5;letter-spacing:-.4px;}
+  .cx-ex{margin-top:7px;font-size:clamp(11px,2.7vw,13px);color:#aeb8cb;line-height:1.45;font-weight:500;}
+  .cx-cov{margin-top:11px;font-size:clamp(12px,3vw,14.5px);font-weight:800;padding:6px 10px;border-radius:10px;}
+  .cx-cov.wait{background:rgba(148,163,184,.12);color:#9aa6b8;border:1px solid rgba(148,163,184,.28);}
+  .cx-cov.have{background:rgba(52,211,153,.14);color:#6ee7b7;border:1px solid rgba(52,211,153,.36);}
+  .cx-cov.gap{background:rgba(248,113,113,.14);color:#fca5a5;border:1px solid rgba(248,113,113,.4);}
+  .cx-src{margin-top:16px;text-align:center;font-size:11px;color:var(--mut2);line-height:1.5;max-width:640px;margin-left:auto;margin-right:auto;}
+
   /* HUD */
   #hud{position:relative;z-index:20;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:9px;padding:8px 0 14px;}
   #dots{display:flex;gap:6px;}
@@ -303,6 +339,25 @@
         <div class="f2note">그리고 저는 이 둘을 <b>딱 맞게</b> — 그리고 <b>평생 곁에서</b> 관리합니다.</div>
       </div>
     </div>
+
+    <!-- 보장분석: 담보별 현황 -->
+    <div class="layer" id="bojang">
+      <div class="bo-wrap">
+        <div class="bo" id="boRows"></div>
+        <div class="drop" id="boEmpty" style="display:none">
+          <div class="ic">📄</div>
+          <div class="dt">KB 보장분석을 넣어 주세요</div>
+          <div class="ds">넣으면 <b>암·뇌·심장·수술·입원·실손</b> 담보별 현황이<br>여기 자동으로 채워집니다.</div>
+        </div>
+      </div>
+    </div>
+    <!-- 치료비 vs 내 보장 -->
+    <div class="layer" id="chiryo">
+      <div class="cx-wrap">
+        <div class="cx-grid" id="chiryoCards"></div>
+        <div class="cx-src">실제 진료비 영수증 실측(2022~2025) · 사내 교육자료 — 사례이며 개인·병원·시기에 따라 다릅니다.</div>
+      </div>
+    </div>
   </div>
 
   <div id="hud">
@@ -396,7 +451,7 @@
   }
 
   // ── 레이어/자막 제어 ──
-  const LAYERS=["chartWrap","pchartWrap","principles","bubbleWrap","route","final2"];
+  const LAYERS=["chartWrap","pchartWrap","principles","bubbleWrap","route","final2","bojang","chiryo"];
   function showLayer(name){LAYERS.forEach(v=>$("#"+v).classList.toggle("on",v===name));}
   function setBubbles(arr){const b=$("#bubbleWrap").querySelectorAll(".bub");b.forEach((el,i)=>{el.textContent="💬 "+(arr[i]||"");});}
   function retrigger(id){const n=$("#"+id);n.classList.remove("on");void n.offsetWidth;n.classList.add("on");}
@@ -404,6 +459,74 @@
     el.classList.add(cls||"gray");if(!text){el.textContent="";return;}void el.offsetWidth;el.textContent=text;
     requestAnimationFrame(()=>el.classList.add("show"));}
   function chap(c){const a=$("#app");a.classList.remove("chap-pension","chap-end");if(c)a.classList.add("chap-"+c);}
+
+  // ── 보장분석(담보별 현황) + 치료비 ──
+  // 치료비: 실제 진료비 영수증 실측(2022~2025)·사내 교육자료 '병원비 영수증으로 말해요'.
+  //        사례이며 개인·병원·시기에 따라 다름. (출처: app/보험아카데미/costs.js)
+  const COSTS3=[
+    {cat:"암",   key:"cancer", ic:"🎗️", mine:"본인부담 1,500~6,000만원",
+      ex:"위암 비급여수술 1,768만 · 췌장암 중입자 6,000만"},
+    {cat:"뇌",   key:"brain",  ic:"🧠", mine:"본인부담 1,251만원",
+      ex:"뇌출혈 55일 입원 — 총액 1억·산정특례 후(소득공백·간병 별도)"},
+    {cat:"심장", key:"heart",  ic:"❤️", mine:"본인부담 584~1,131만원",
+      ex:"심근경색 우회수술 584만 · 심부전 반복치료 1,131만"},
+  ];
+  let COV=null; // {cancer,brain,heart,surgery,hosp,silson,death} (원)
+  function amtToWon(a){ if(a==null)return 0; var n=parseFloat((''+a).replace(/[^0-9.]/g,''))||0; if(n<=0)return 0; return n<100000? n*10000 : n; }
+  function mapCov(rows){
+    if(!rows) return null;
+    if(!Array.isArray(rows)){ return (typeof rows==='object'&&('cancer' in rows))? rows : null; }
+    var g={cancer:0,brain:0,heart:0,surgery:0,hosp:0,silson:0,death:0};
+    rows.forEach(function(p){ (p&&p.riders||[]).forEach(function(r){
+      var won=amtToWon(r.amount), t=(r.target||''), k=(r.kind||''), nm=(r.name||'');
+      if(t.indexOf('암')>=0||nm.indexOf('암')>=0) g.cancer+=won;
+      else if(t.indexOf('뇌')>=0||nm.indexOf('뇌')>=0) g.brain+=won;
+      else if(t.indexOf('심')>=0||nm.indexOf('심')>=0) g.heart+=won;
+      else if(k.indexOf('수술')>=0) g.surgery+=won;
+      else if(k.indexOf('입원')>=0) g.hosp+=won;
+      else if(k.indexOf('실손')>=0||nm.indexOf('실손')>=0) g.silson=Math.max(g.silson,1);
+      else if(k.indexOf('사망')>=0) g.death+=won;
+    });});
+    return g;
+  }
+  function fmtWon(w){ var man=Math.round(w/10000); if(man>=10000){var eok=Math.floor(man/10000),rem=man%10000;return eok+'억'+(rem?' '+rem.toLocaleString()+'만':'');} return man.toLocaleString()+'만원'; }
+  function boRow(name,pct,fill,amt,off,pill,pc){
+    return '<div class="bo-row"><div class="bo-name">'+name+'</div>'+
+      '<div class="bo-track"><div class="bo-fill '+fill+'" style="width:'+pct+'%"></div></div>'+
+      '<div class="bo-right"><div class="bo-amt'+(off?' off':'')+'">'+amt+'</div><div class="pill '+pc+'">'+pill+'</div></div></div>';
+  }
+  function renderBojang(){
+    var box=$("#boRows"), empty=$("#boEmpty");
+    if(!COV){ if(box)box.style.display='none'; if(empty)empty.style.display='flex'; return false; }
+    if(empty)empty.style.display='none'; if(box)box.style.display='flex';
+    var big3={cancer:["암 진단비",30000000],brain:["뇌혈관",20000000],heart:["심장질환",20000000]};
+    var html='';
+    ["cancer","brain","heart"].forEach(function(k){
+      var won=COV[k]||0, rec=big3[k][1], fill,pill,pc,pct;
+      if(won<=0){fill='f-red';pill='공백 ✕';pc='p-red';pct=4;}
+      else if(won<rec){fill='f-amber';pill='부족 ⚠';pc='p-amber';pct=Math.max(18,Math.round(won/rec*55));}
+      else {fill='f-green';pill='있음 ✓';pc='p-green';pct=Math.min(100,Math.round(won/rec*60));}
+      html+=boRow(big3[k][0],pct,fill,won>0?fmtWon(won):'없음',won<=0,pill,pc);
+    });
+    [["surgery","수술비"],["hosp","입원"],["silson","실손"]].forEach(function(c){
+      var won=COV[c[0]]||0, on=won>0;
+      if(c[0]==='silson') html+=boRow(c[1],on?100:4,on?'f-green':'f-red',on?'가입':'없음',!on,on?'있음 ✓':'공백 ✕',on?'p-green':'p-red');
+      else html+=boRow(c[1],on?62:4,on?'f-blue':'f-red',on?fmtWon(won):'없음',!on,on?'있음 ✓':'공백 ✕',on?'p-blue':'p-red');
+    });
+    if(box)box.innerHTML=html;
+    return true;
+  }
+  function renderChiryo(){
+    var box=$("#chiryoCards"); if(!box)return;
+    box.innerHTML=COSTS3.map(function(d){
+      var covTxt, cls;
+      if(COV==null){ covTxt='보장분석 넣으면 내 보장 표시'; cls='wait'; }
+      else { var cov=COV[d.key]||0; if(cov>0){covTxt='내 보장 '+fmtWon(cov);cls='have';} else {covTxt='내 보장 공백 ✕';cls='gap';} }
+      return '<div class="cx-card"><div class="cx-top"><span class="cx-ic">'+d.ic+'</span><span class="cx-cat">'+d.cat+'</span></div>'+
+        '<div class="cx-cost">'+d.mine+'</div><div class="cx-ex">'+d.ex+'</div>'+
+        '<div class="cx-cov '+cls+'">'+covTxt+'</div></div>';
+    }).join('');
+  }
 
   // ── 스텝(4막 10장) ──
   const STEPS=[
@@ -448,6 +571,20 @@
         setupSeg("segRecover","recover");setupSeg("segCrash","crash");
         setTimeout(()=>{dimSeg("segCrash",true);drawSeg("segCrash");drawSeg("segRecover");moveDot(80,PEAK,"#60a5fa");},650);
         setCaption("같은 일, 두 개의 미래","down"); }
+    },
+    { eye:"보험의 본질 · 지금 내 보장", tone:"green",
+      title:'그럼 — <span class="g-green">고객님의 지금 보장</span>은 이래요',
+      sub:"KB 보장분석을 넣으면 담보별 현황이 자동으로 채워져요. <b>구멍난 곳만</b> 채우면 됩니다.",
+      enter(){ chap(null); hideShock(); $("#orbA").classList.remove("danger"); $("#dot").classList.remove("on");
+        var has=renderBojang(); showLayer("bojang");
+        setCaption(has?"초록 있음 · 노랑 부족 · 빨강 공백":"여기에 KB 보장분석을 넣어 주세요", has?"up":"gray"); }
+    },
+    { eye:"보험의 본질 · 치료비", tone:"red",
+      title:'이 병들, <span class="g-warn">치료비</span>는 얼마일까요?',
+      sub:"암·뇌·심장 — <b>실제 영수증 기준</b>이에요. 사례이며 개인·병원·시기에 따라 다릅니다.",
+      enter(){ chap(null); hideShock(); $("#orbA").classList.remove("danger"); $("#dot").classList.remove("on");
+        renderChiryo(); showLayer("chiryo");
+        setCaption(COV?"치료비 vs 내 보장 — 공백부터 채우면 됩니다":"치료비는 이만큼 — 내 보장은 보장분석을 넣으면 같이 보여요", COV?"down":"gray"); }
     },
     { step:"STEP 6 / 10", eye:"연금 · 두 번째 월급", tone:"green",
       title:'목돈을 지켰어도, 노후엔 <span class="g-green">매달 들어오는 돈</span>이에요',
@@ -498,7 +635,7 @@
     cap.classList.add("flash");
     setTimeout(()=>{
       $("#eye").textContent=s.eye||"APEX · 상담";
-      $("#capStep").textContent=s.step;
+      $("#capStep").textContent="STEP "+(i+1)+" / "+N;
       $("#capTitle").innerHTML=s.title;
       $("#capSub").innerHTML=s.sub||"";
       cap.classList.remove("tone-red","tone-blue","tone-green","tone-gold");
@@ -525,7 +662,7 @@
       const s=STEPS[k]; s.enter();
       if(k===target){
         $("#eye").textContent=s.eye||"APEX · 상담";
-        $("#capStep").textContent=s.step; $("#capTitle").innerHTML=s.title; $("#capSub").innerHTML=s.sub||"";
+        $("#capStep").textContent="STEP "+(target+1)+" / "+N; $("#capTitle").innerHTML=s.title; $("#capSub").innerHTML=s.sub||"";
         cap.classList.remove("tone-red","tone-blue","tone-green","tone-gold");
         if(s.tone)cap.classList.add("tone-"+s.tone);
         if(s.status)setCaption(s.status,s.statusCls);
@@ -547,6 +684,15 @@
     else if(e.key==="ArrowLeft"){e.preventDefault();prev();}
     else if(e.key==="Home"||e.key==="r"||e.key==="R"){restart();}
   });
+
+  // ── OS 연동: 고객 보장 데이터 수신(apex:bojang) ──
+  function dataArrived(){ try{renderBojang();renderChiryo();}catch(e){} }
+  window.addEventListener("message",function(e){
+    if(e.origin!==location.origin)return; var m=e.data;
+    if(m&&typeof m==='object'&&m.t==='apex:bojang'){ try{COV=mapCov(m.rows||m.data||null);}catch(x){COV=null;} dataArrived(); }
+  },false);
+  try{ if(window.__APEX_BOJANG) COV=mapCov(window.__APEX_BOJANG); }catch(e){}
+  if(!COV){ try{ var _ls=localStorage.getItem("apex_cov_cur"); if(_ls) COV=mapCov(JSON.parse(_ls)); }catch(e){} }
 
   buildCurveBase();
   $("#prog").style.width="0%";
