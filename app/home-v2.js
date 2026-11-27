@@ -1988,7 +1988,10 @@
     Object.keys(PREF.more).forEach(function (k) { if (!(k in o)) o[k] = PREF.more[k]; });
     return o;
   }
-  function prefPut(k, v) { if (k === 'ai_mine' || k === 'newhelp') return false; PREF.more[k] = v; prefPush(); return PREF.done; }
+  /* 판 X585 — 실명 한 번에 적기는 cmRealSet 을 여러 번 부름 → 계정 올리기는 0.4초 모아 한 번 */
+  var PREF_T = 0;
+  function prefSoon() { try { g.clearTimeout(PREF_T); } catch (e) {} try { PREF_T = g.setTimeout(prefPush, 400); } catch (e2) { prefPush(); } }
+  function prefPut(k, v) { if (k === 'ai_mine' || k === 'newhelp') return false; PREF.more[k] = v; prefSoon(); return PREF.done; }
   function prefPush() {
     var sb = prefSb(), me = prefMe(); if (!sb || !me || !PREF.done) return;
     try { sb.from('user_prefs').upsert({ owner_id: me, kv: prefKv(), updated_at: new Date().toISOString() }, { onConflict: 'owner_id' }).then(function () {}, function () {}); } catch (e) {}
