@@ -19503,10 +19503,20 @@ var MCAL_REAL={src:null,map:null};
 function mcalRealMap(){
   var D=(typeof AR!=='undefined'&&AR.db)?AR.db:[];
   if(MCAL_REAL.src===D&&MCAL_REAL.map)return MCAL_REAL.map;
-  var m={},i,r,k;
+  var m={},lk={},i,r,k;
+  /* 👤 판 X585 — 고객 번호로 <b>이어진</b> 배정 줄(dbs.client_id)의 실명. 이름 모양 견주기보다 확실해서 먼저 봅니다.
+     한 고객에 이어진 줄들의 이름이 서로 다르면 아무것도 안 씁니다(엉뚱한 이름 금지 · 1번). */
+  for(i=0;i<D.length;i++){
+    r=D[i];
+    if(!r||!r.client_id||!cmDbNameOk(r.name))continue;
+    k=''+r.client_id;
+    if(lk[k]===undefined)lk[k]=r.name;
+    else if(lk[k]!==r.name)lk[k]='';
+  }
+  MCAL_REAL.lk=lk;
   if(typeof osMaskName==='function')for(i=0;i<D.length;i++){
     r=D[i];
-    if(!r||!r.name||!r.who)continue;
+    if(!r||!cmDbNameOk(r.name)||!r.who)continue;
     k=r.who+'|'+osMaskName(r.name).replace(/\s/g,'');
     /* 같은 담당자에게 <b>같은 가린 이름</b>이 둘이면 누구인지 못 가린다 —
        그때는 아무 이름도 쓰지 않는다. 엉뚱한 사람 이름을 붙이면 그 자리가
@@ -19521,7 +19531,16 @@ function mcalRealOf(c){
   if(!c)return '';
   var r=(typeof cmRealOf==='function')?cmRealOf(c.id):'';
   if(r)return r;
-  return mcalRealMap()[(c.advisor_id||'')+'|'+(''+(c.name_masked||'')).replace(/\s/g,'')]||'';
+  return cmDbRealOf(c);
+}
+/* 👤 판 X585 — 사장님 말씀 「가린 이름은 원래 이름이 있을 텐데」 → 「자동으로 띄워」.
+   서버 고객 표(clients)엔 가린 이름뿐이지만, <b>배정 DB 표(dbs.customer_name)</b>엔 실명이 있습니다 — 이미 읽어 온 AR.db 에서 찾습니다(서버 더 안 부름 · 저장 안 함).
+   차례: ① 고객 번호로 이어진 줄(client_id) ② 같은 담당자 · 같은 가린 모양이 <b>딱 한 분</b>일 때(둘 이상이면 안 씀). 실명표(cmRealOf)가 늘 먼저. */
+function cmDbNameOk(n){ n=''+(n||''); return !!n&&n!=='(이름 없음)'&&!/[*○]/.test(n); }
+function cmDbRealOf(c){
+  if(!c||!c.id)return '';
+  var m=mcalRealMap(),lk=MCAL_REAL.lk||{};
+  return lk[''+c.id]||m[(c.advisor_id||'')+'|'+(''+(c.name_masked||'')).replace(/\s/g,'')]||'';
 }
 /* 화면에 쓰는 이름 — <b>아는 대로</b> */
 function mcalName(c){
@@ -22345,7 +22364,7 @@ function owCss(){
    ★ 자로는 안 세웠습니다. CI 는 저장소를 얕게 받아 origin/main 과
      견줄 수 없고, 글자만 보고 짐작하는 자는 <b>헛것을 잡습니다</b> (8번).
      대신 여기 적어 둡니다 — 다음 세션이 이 줄을 먼저 읽습니다. */
-var APP_BUILD='2026-11-27 09:30';
+var APP_BUILD='2026-11-27 10:25';
 var APP_BUILD_NOTE='🔒 <b>새 서버를 세워도 로그인 안 한 사람이 서버 함수를 못 부르게</b>(판 X586). ◾ 판 X575 에서 라이브 서버의 anon 실행권 다섯을 회수했는데, 앱 안 준비 SQL(「한 번에 전부」 · 채용 대기열)은 그대로라 새 서버를 그걸로 세우면 경고가 다시 생겼습니다. 이제 준비 SQL 도 같은 줄(anon 회수 · 규칙 일곱 to authenticated)을 돌립니다. 화면은 바뀌지 않습니다. 재는 자 check-anondef [8].';
 
 
@@ -77167,6 +77186,7 @@ function cmRrnBirth(v){
 function cmName(c){
   if(!c)return '';
   var r=cmRealOf(c.id);
+  if(!r)try{ r=cmDbRealOf(c); }catch(e){ r=''; }   /* 👤 판 X585 — 배정 DB 의 실명(이어진 줄 · 딱 한 분) */
   return r||c.name_masked||'(이름 없음)';
 }
 

@@ -667,7 +667,7 @@ function tkOutHTML() {
   const a = ti < 0 ? r.lines : r.lines.slice(0, ti), b = ti < 0 ? [] : r.lines.slice(ti + 1);
   return `<div class="card"><div class="tk-hd"><div><div class="tk-lb">🎯 미끼 세트 · ${esc(M.TYPE_LABEL[TK.type])} · ${esc(labs)}</div>
     ${n.p ? `<div class="nm" style="margin-top:4px">${esc(nm(n.p))}<span class="mt" style="font-weight:600"> · ${esc(n.p.company)}</span></div>` : ''}</div>
-    <div class="acts"><button class="btn" onclick="tkCopy()">📋 대본 복사</button>${n.p ? `<button class="btn g" onclick="openP('${n.p.id}')">지급기준·약관 보기</button>` : ''}</div></div>
+    <div class="acts"><button class="btn" onclick="tkCopy()">📋 대본 복사</button>${n.p ? `<button class="btn g" onclick="openP('${n.p.id}')">지급기준·약관 보기</button>` : ''}${n.p && ocPlan(n.p) ? `<button class="btn g" onclick="ocFrom('${n.p.id}')">💰 금액 보기</button>` : ''}</div></div>
     <div class="tk-hook"><b>💬 던지는 한마디</b>“${esc(r.prim.hook)}”</div>
     <div class="tk-row"><div class="tk-dam">${r.dambo.map(d => `<span>${esc(d)}</span>`).join('')}</div></div>
     <div class="tk-sub">🎬 5분 대본</div><div class="tk-sc"><div class="tk-bb">${a.map(line).join('')}</div>
@@ -1066,6 +1066,7 @@ function openP(id) {
   if (!isCur(p)) h += `<div class="trust lo"><b>!</b><div>${monLabel(p.month)} 소식지에 나온 상품이에요. 지금도 판매 중인지, 조건이 바뀌지 않았는지 확인하고 권하세요.</div></div>`;
   if (T) h += `<div class="tm-mob">${srcPanel(p)}</div>${tmSec(p, '유리')}${tmSec(p, '주의')}`;
   h += `<div class="card"><div class="ct">지급기준 <small>줄을 누르면 약관 원문</small></div>${payHTML(p)}</div>`;
+  h += ocCardHTML(p);
   if (ez.analogy || (ez.how_pays || []).length) h += `<div class="card"><div class="ct">쉽게 이해하기</div>${ez.analogy ? `<div class="ln" style="margin:0 0 10px;font-size:15px">${esc(ez.analogy)}</div>` : ''}<ul class="steps">${(ez.how_pays || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`;
   if ((p.talk_flow || []).length) h += `<div class="card"><div class="ct">고객에게 이렇게 물어보세요</div><ul class="say">${p.talk_flow.map(x => `<li>${esc(x)}</li>`).join('')}</ul>${cu && cu.c_trust ? `<div class="note">약관을 근거로 말할 때: “${esc(cu.c_trust)}”</div>` : ''}</div>`;
   if (MKT()) { const ks = tkCats(p), c0 = ks.length && MKT().CATS[ks[0]];
@@ -1082,6 +1083,75 @@ function openP(id) {
   const sh = $('sheet'); sh.innerHTML = h; sh.dataset.id = id; sh.classList.add('on'); sh.scrollTop = 0; document.body.style.overflow = 'hidden';
   tmInit();
 }
+/* ───────── 💰 이 조건으로 금액 보기 — 한장 보험료 비교(설계 초안) 잇기 · 2026-11-27
+   사장님 말씀 「이 한장 보험료비교와 상품전략기 궁합을 통해서 설계안부터 금액까지」 → 1단계.
+   상품 → 한장비교 조건(손보/생보 · 상품유형 · 20년/100세 · 담보 묶음별 금액)과 약관 근거 몇 줄을 주소에 실어 새 창으로 연다.
+   ★ 싣는 것은 나이·성별·상품 정보뿐 — 고객 이름·생년월일은 싣지 않는다.
+   ★ 금액은 회사 한장비교 숫자 그대로. 회사 자료가 「설계사 교육용 · 고객 제시 불가」라 초안도 설계사용이라고 그쪽 화면이 말한다.
+   ★ 종신·연금·달러는 회사 한장비교에 없어서 이 카드가 서지 않는다. ───────── */
+const OC_URL = 'https://apex-hb-onecompare.netlify.app/';
+const OC = { sex: 'F', age: 40 };
+try { const v = JSON.parse(localStorage.getItem('apexOcPick') || 'null'); if (v && /^[MF]$/.test(v.sex) && v.age > 0) Object.assign(OC, { sex: v.sex, age: +v.age }); } catch (e) {}
+const ocSave = () => { try { localStorage.setItem('apexOcPick', JSON.stringify(OC)); } catch (e) {} };
+const OC_NEED_L = { cancer_diag: '암 진단', cancer_main: '암 치료', cancer_nonpay: '비급여 암치료', brain: '뇌혈관', heart: '심장', circ: '2·3대 포괄', surgery: '수술비', nsurg: '큰 수술', care: '간병·치매' };
+function ocType(p) {
+  const t = ((D.companies || []).find(c => c.company === p.company) || {}).type || '';
+  if (/손/.test(t)) return 'F'; if (/생/.test(t)) return 'L';
+  return /화재|손해|손보|해상/.test(p.company || '') ? 'F' : 'L';
+}
+function ocPlan(p) {
+  const cat = p.category, txt = [p.name, p.short, ...(p.key_features || []).slice(0, 3)].join(' ');
+  if (!/^(cancer|health|brainheart|simple|care|kids|driver)$/.test(cat)) return null;   // 종신·연금·달러·기타는 한장비교에 없음
+  const kind = ocType(p), s = [p.name, p.short].join(' ').replace(/\s/g, '');
+  const s2 = [p.name, p.short].join(' ');   // 띄어쓰기를 살려야 「3.10.5 1종」이 3.10.51 로 붙지 않는다
+  const m = s2.match(/3\s*[.·・,\-]\s*(10|[2-9])\s*[.·・,\-]\s*(10|[2-9])(?!\d)/) || s2.match(/(?:^|[^0-9])3([2-8])([5-8])(?![0-9])/);
+  const simple = cat === 'simple' || ((p.subcategories || []).includes('simple') && m) || /간편|유병/.test(s);
+  let ptype;
+  if (simple) ptype = (m ? '간편3.' + m[1] + '.' + m[2] + '|간편3.' + m[1] + '.|' : '') + '간편';   // 똑같은 3·N·N → 앞 N 만 같은 것 → 간편 아무거나
+  else if (cat === 'kids') ptype = '어린이(무해지)|청소년(무해지)';
+  else if (cat === 'driver') ptype = kind === 'F' ? '운전자' : '';
+  else if (cat === 'care' && /치매/.test(txt)) ptype = '치매';
+  else if (kind === 'F') ptype = (/여성/.test(s) ? '여성건강|' : '') + (/5[.·]10[.·]10/.test(s) ? '5.10.10|' : '') + '종합(무해지)';
+  else ptype = (cat === 'cancer' ? '암(무해지)|' : '') + '건강(무해지)';
+  if (!ptype) return null;
+  const nd = {};
+  if (cat === 'cancer' || cat === 'health' || cat === 'simple') nd.cancer_diag = 3000;
+  if (cat === 'cancer' && /치료비|주요치료|항암|방사선|표적|면역/.test(txt)) nd.cancer_main = 2000;
+  if (cat === 'cancer' && /비급여|하이클래스/.test(txt)) nd.cancer_nonpay = 2000;
+  if (cat === 'brainheart' || cat === 'health' || cat === 'simple') { nd.brain = 1000; nd.heart = 1000; }
+  if (cat === 'brainheart' && /순환계|2대|3대/.test(txt)) nd.circ = 1000;
+  if (cat === 'health' || (cat === 'simple' && /수술/.test(txt))) nd.surgery = 300;
+  if (/\d+\s*대\s*수술|종\s*수술|N대/.test(txt)) nd.nsurg = 1000;
+  if (cat === 'care') nd.care = 1000;
+  return { kind, ptype, term: cat === 'driver' ? '20년/갱신' : '20년/100세', nd };
+}
+function ocTerms(p) {   // 원문 대조 ✓ 인 지급기준 줄만 — [항목, 값, 쪽]
+  const pr = (p.terms && p.terms.pay_rules) || {};
+  return PR_KEYS.map(k => pr[k]).map((r, i) => r && r.v && r.quote && r.vf && r.vf.ok ? [PR_KEYS[i], String(r.v).slice(0, 80), pgcOf(r) || '원문'] : null).filter(Boolean).slice(0, 5);
+}
+function ocURL(p) {
+  const o = ocPlan(p); if (!o) return '';
+  return OC_URL + '?' + new URLSearchParams({ from: 'insight', kind: o.kind, ptype: o.ptype, term: o.term, age: OC.age, sex: OC.sex,
+    needs: Object.keys(o.nd).map(k => k + ':' + o.nd[k]).join(','), co: p.company || '', pn: nm(p), tr: JSON.stringify(ocTerms(p)) }).toString();
+}
+function ocCardHTML(p) {
+  const o = ocPlan(p); if (!o) return '';
+  const nds = Object.keys(o.nd).map(k => `${OC_NEED_L[k]} ${o.nd[k] >= 1000 ? (o.nd[k] / 1000) + '천' : o.nd[k]}만`).join(' · ');
+  return `<div class="card" id="oc-card"><style>#oc-card .seg button:not(.on),#oc-card .search{background:var(--bg)}</style><div class="ct">💰 이 조건으로 금액 보기 <small>한장 보험료 비교 → 설계 초안</small></div>
+    <div class="mute s13" style="margin-bottom:10px">회사별 월 보험료와 설계 초안(이 회사 · 같은 구성 최저가)을 한 번에 뽑아요. 담보·금액은 거기서 바꿀 수 있어요.</div>
+    ${segHTML([['F', '여성'], ['M', '남성']], OC.sex, 'ocSex')}
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px"><button class="btn g" style="min-width:44px" onclick="ocAge(-5)">−5</button>
+      <input class="search" id="oc-age" type="number" inputmode="numeric" min="0" max="100" value="${OC.age}" style="width:96px;text-align:center" onchange="ocAge(0,this.value)">
+      <span class="s13 mute">세 (보험나이)</span><button class="btn g" style="min-width:44px" onclick="ocAge(5)">+5</button></div>
+    <div class="s13" style="margin-top:10px;color:var(--ink2)">${o.kind === 'F' ? '손보' : '생보'} · ${esc(o.ptype.split('|')[0])} · ${esc(o.term)}${nds ? '<br>담보: ' + esc(nds) : ' · 회사 기본 설계'}</div>
+    <button class="btn w" style="margin-top:12px" onclick="ocGo('${p.id}')">💰 한장비교에서 금액·설계 초안 보기 ↗</button>
+    <div class="note">설계사용이에요 — 고객에게 보여 주지 마세요. 처음이면 한장비교 첫 화면 ①②③으로 회사 접속을 한 번 이어 두세요.</div></div>`;
+}
+function ocRe() { const sh = $('sheet'), c = $('oc-card'), p = sh && byId(sh.dataset.id); if (c && p) c.outerHTML = ocCardHTML(p); }
+function ocSex(k) { OC.sex = k; ocSave(); ocRe(); }
+function ocAge(d, v) { const a = v != null ? +v : OC.age + d; OC.age = Math.max(0, Math.min(100, Math.round(a) || 40)); ocSave(); ocRe(); }
+function ocGo(id) { const p = byId(id), u = p && ocURL(p); if (u) window.open(u, '_blank', 'noopener'); }
+function ocFrom(id) { openP(id); setTimeout(() => { const e = $('oc-card'); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 80); }
 function closeP() { $('sheet').classList.remove('on'); document.body.style.overflow = ''; }
 
 /* ───────── 고객 화면 — 고객에게 보여 줄 말만 ───────── */
