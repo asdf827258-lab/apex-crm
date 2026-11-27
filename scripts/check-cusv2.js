@@ -180,7 +180,7 @@ is(B.win.classList.contains('cv2-on'), '창에 새 화면 표(cv2-on)가 붙는�
 is(/간병·노후 — 간병인 · 치매/.test(h) && B.g.CUS_V2.catPick(B.g.OSC.current).why === '걱정 한마디' && !/\(걱정 한마디\)/.test(h) && /cusV2Rec\(\)">자세히</.test(h),
   '권할 것 — 걱정 한마디(간병)가 지금 상황보다 먼저 · 시안처럼 괄호 설명 없이 · 단추는 「자세히」');
 is(/가족과 함께 보는 자리/.test(h) && /「가족과 상의할게요」 「돈 여유 없어요」/.test(h), '어떻게(나이대 45세 → 4050) · 막히면(AP 단계 거절 둘)');
-is(/<b>예상 15만원<\/b>|예상 15만원/.test(h) && /순천 연향동/.test(h) && /href="tel:010-0000-0000"/.test(h), '배정 줄의 예상 금액 · 동네, 번호가 있으면 📞 전화');
+is(/<b>목표 15만원<\/b>|목표 15만원/.test(h) && /순천 연향동/.test(h) && /href="tel:010-0000-0000"/.test(h), '배정 줄의 목표 계약금액(판 X591) · 동네, 번호가 있으면 📞 전화');
 is(/엄마 간병이 걱정이에요/.test(h) && /다음 주에 다시/.test(h) && /증권 2건/.test(h) && /4 \/ 25칸/.test(h), '걱정 · 기록 · 보험 건수 · 팩트파인딩 칸 수가 라이브 값 그대로');
 B = box({}, { noDb: true, meta: {}, base: {} }); h = paint(B);
 is(/<span>사는 곳<\/span><b>＋ 적기<\/b>/.test(h) && !/class="steps"[\s\S]*?class="cur"/.test(h.slice(h.indexOf('class="steps"'), h.indexOf('class="sit"'))) && /아직 아는 게 적어요/.test(h) && !/담당/.test(h.slice(0, h.indexOf('class="qa4"'))) && /＋ 적기/.test(h),
@@ -368,12 +368,12 @@ console.log('\n[13] 👥 고객 탭 목록 (판 X515 · 시안 rCust · rList)')
 console.log('\n[14] 💰 금액 칸 · ✓ 계약됐어요 (판 X526)');
 {
   let B = box({}); let h = paint(B);
-  is(/<span class="amt">예상 15만원<\/span>/.test(h), '오늘 화면 시트가 없는 판이면 예전처럼 글자만(지어낸 단추 없음)');
+  is(/<span class="amt">목표 15만원<\/span>/.test(h), '오늘 화면 시트가 없는 판이면 예전처럼 글자만(지어낸 단추 없음)');
   B = box({}); B.g.HOME_V2 = { amt: () => {}, won: () => {} }; h = paint(B);
-  is(/<button type="button" class="amt" onclick="HOME_V2\.amt\('d1'\)">예상 15만원<\/button>/.test(h) && !/✓ 계약됐어요/.test(h), '이름 줄 금액 칸 → HOME_V2.amt(배정 줄) · 청약 아니면 「계약됐어요」 없음');
+  is(/<button type="button" class="amt" onclick="HOME_V2\.amt\('d1'\)">목표 15만원<\/button>/.test(h) && !/✓ 계약됐어요/.test(h), '이름 줄 금액 칸 → HOME_V2.amt(배정 줄) · 청약 아니면 「계약됐어요」 없음');
   B = box({}, { stage: 'CS' }); B.g.HOME_V2 = { amt: () => {}, won: () => {} }; B.g.CUS.db.expect_premium = null; h = paint(B);
-  is(/class="amt miss" onclick="HOME_V2\.amt\('d1'\)">금액 \?/.test(h) && /class="btn ok" onclick="HOME_V2\.won\('d1'\)">✓ 계약됐어요/.test(h) && h.indexOf('✓ 계약됐어요') > h.indexOf('class="steps"') && h.indexOf('✓ 계약됐어요') < h.indexOf('class="sit"'),
-    '청약(CS) — 금액이 없으면 「금액 ?」 · 단계 칸 바로 밑 「✓ 계약됐어요」');
+  is(/class="amt miss" onclick="HOME_V2\.amt\('d1'\)">목표 계약금액 \?/.test(h) && /class="btn ok" onclick="HOME_V2\.won\('d1'\)">✓ 계약됐어요/.test(h) && h.indexOf('✓ 계약됐어요') > h.indexOf('class="steps"') && h.indexOf('✓ 계약됐어요') < h.indexOf('class="sit"'),
+    '청약(CS) — 금액이 없으면 「목표 계약금액 ?」(판 X591) · 단계 칸 바로 밑 「✓ 계약됐어요」');
   is(!/\.rpc\(|pipeline_save/.test(sc), '고객 화면은 서버를 안 부름 — 저장은 오늘 화면의 한 곳');
 }
 
