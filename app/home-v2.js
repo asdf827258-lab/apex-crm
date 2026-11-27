@@ -169,6 +169,17 @@
       '.hv2 .mis-pl .more,#hv2Sheet .mis-pl .more{justify-content:center;font-size:14px;font-weight:700;color:#1A56DB;background:none}',
       '.hv2 .mis-pl+.mis-r{border-top:1px solid var(--line2)}',
       '#hv2Sheet .mis-plh{display:block;font-size:13px;font-weight:700;color:#1A56DB;margin-top:12px}',
+      /* 판 X592 — 📊 이번 달 영업활동(TA · AP · PC · CS) 네 칸 · 미션 카드 안 「지금 이분」 띠 */
+      '.hv2 .act{margin:4px 0 6px;padding:12px 4px 4px;border-top:1px solid var(--line2)}',
+      '.hv2 .act-h{display:flex;justify-content:space-between;align-items:baseline;padding:0 2px 8px}.hv2 .act-h b{font-size:16px;font-weight:800}.hv2 .act-h span{font-size:13px;color:var(--sub2)}',
+      '.hv2 .act-r{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}',
+      '.hv2 .act-r button{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:76px;padding:8px 2px;border-radius:14px;background:#F7F9FC;text-align:center}',
+      '.hv2 .act-r em{font-style:normal;font-size:13px;font-weight:800;color:var(--blue)}.hv2 .act-r b{font-size:22px;font-weight:800;line-height:1.2}',
+      '.hv2 .act-r small{font-size:13px;color:var(--sub2);line-height:1.25}',
+      '.hv2 .act-r button.on{background:var(--blue-l);box-shadow:inset 0 0 0 1.5px var(--blue)}',
+      '.hv2 .mis-now{margin:10px -14px -8px;padding:2px 14px 14px;background:#EAF0F9;border-radius:0 0 var(--r) var(--r)}',
+      '.hv2 .mis-now .qhd{margin-top:14px}',
+      '.hv2 .hv2-b:empty{display:none}',
       '.hv2 .steps5{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:#fff;border-radius:18px;padding:8px 6px;margin-top:8px}',
       '.hv2 .steps5 button{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:62px;justify-content:center;border-radius:12px;text-align:center}',
       '.hv2 .steps5 .si{font-size:18px;line-height:1}',
@@ -197,7 +208,7 @@
       '@media(min-width:1101px){.hv2 .dock{position:sticky;left:auto;right:auto;bottom:16px;margin-top:12px}#hv2{padding-bottom:0}}',
       /* 판 X591 — 사장님 말씀 「컴퓨터 버전은 한줄로만 세우지말고 11월 상품전략 이하 내용은 오른쪽으로 배치해서 한눈에」
          왼쪽 = 인사 ~ 지금 이분 · 오른쪽 = 🧭 상품전략 ~ ☰ 다른 메뉴. 폰 · 좁은 창은 예전처럼 한 줄(왼쪽 다음 오른쪽 = 예전 차례 그대로). */
-      '@media(min-width:1101px){.hv2{max-width:1180px}.hv2 .hv2-g{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 24px;align-items:start}.hv2 .hv2-c{min-width:0}}',
+      '@media(min-width:1101px){.hv2{max-width:1180px}.hv2 .hv2-g{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 24px;align-items:start}.hv2 .hv2-c{min-width:0}.hv2 .hv2-c>:first-child,.hv2 .hv2-c>.hv2-b:first-child>:first-child{margin-top:0}.hv2 .hv2-c.sp{display:flex;flex-direction:column;justify-content:space-between}}',
       /* 🛰 챙기는 중 */
       '.hv2 .jv{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border-radius:18px;padding:12px 16px;margin-top:12px;min-height:60px;border:1.5px solid #CFE0FF}',
       '.hv2 .jv-i{font-size:22px}',
@@ -584,7 +595,7 @@
   }
   function misSay(m) {
     var P = [], t = '';
-    var pp = function (x) { return { nm: nameOf(x) + '님', s: strip(x.s || ''), go: 'HOME_V2.close();hmOpen(\'' + Q(x.key) + '\')' }; };
+    var pp = function (x) { return { nm: nameOf(x) + '님', s: strip(x.s || ''), go: nmGo(x) }; };
     var pd = function (r) { return { nm: nameOf({ t: r.name || '' }) + '님', s: misTm(String(r.appt).slice(11, 16)) + (r.region ? ' · ' + r.region : ''), go: '' }; };
     if (m.j === 'call') {
       var L = (T(function () { return g.hmLeft(); }, { list: [] }) || { list: [] }).list || [];
@@ -626,10 +637,92 @@
      ★ 한 줄(misSay)을 할 일 몇 가지로 풉니다 — 사람 · 시각은 misSay 와 <b>같은 줄</b>(hmLeft · hmSteps · AR.calls · AR.db)에서만,
        「어떻게」 는 체크판 칸 설명(CK_ITEMS d6 · d8 · d9) 그대로. 누르면 있던 화면(hmOpen · go · hmDoorGo · 지금 이분 카드)만 엽니다.
      ★ 저장 없음 · 서버 안 부름 · 이름은 nameOf(🙈 이름 가리기를 따름). 오늘 화면엔 지금 할 미션 밑에 세 가지, 미션 시트엔 전부. */
+  /* ✏️ 판 X592 — 사장님 말씀 「고객 이름 뜨면, 클릭하면, 고객 메뉴로 들어가지는거 같은데, 이분 CRM으로 들어가서 수정할수 있도록」.
+     이름을 누르면 <b>그분 배정 DB 고치기 창</b>(hdbOpen — 홈에서 바로 고치는 그 창 · DB 통합 CRM 과 같은 dbs 줄)이 열립니다.
+     ★ 새 저장 코드 없음 — 저장은 hdbOpen 창이 하던 그대로. 내 고객(지점장은 내 팀)이 아니면(hdbCan) · 배정 DB 분이 아니면(고객 365일 분)
+       예전 길 그대로(hmOpen → 그분 카드 · 없으면 hmRtPerson). 「이분 자세히」 단추는 예전처럼 그분 한 장. */
+  function crmOk(id) { var r = id ? T(function () { return g.hdbRow(id); }, null) : null; return !!(r && typeof g.hdbOpen === 'function' && T(function () { return g.hdbCan(r); }, false)); }
+  /* 🗂 판 X594 — 사장님 말씀 「DB통합CRM으로 바로 하지만, 고객 누르면 현재 고객 수정하는것처럼 · 한번에 관리되도록」.
+     내 고객이면 <b>DB 통합 CRM 으로 들어가 그분 옆창</b>(crm-side.js · window.apexCrmSide — 고치기 · 통화 · 고객 한 장)을 바로 엽니다.
+     CRM 이 자료를 다 읽은 뒤에 엽니다(apexCrmReady · 지역 동선 hmRtOpen 과 같은 길). 12초 안에 못 열면 예전처럼 홈 고치기 창(hdbOpen). */
+  function crmSide(id) {
+    try { if (g.CRQ) g.CRQ.viaHome = Date.now(); } catch (e0) {}
+    try { g.go('crm'); } catch (e) { try { g.hdbOpen(id); } catch (e1) {} return; }
+    var n = 0, tick = function () {
+      var f = g.document.getElementById('crmFrame'), w = null, ok = false;
+      try { w = f && f.contentWindow; ok = !!(w && typeof w.apexCrmSide === 'function' && (typeof w.apexCrmReady !== 'function' || w.apexCrmReady())); } catch (e2) { ok = false; }
+      if (ok) { var done = false; try { done = !!w.apexCrmSide(id); } catch (e3) {} if (!done) { try { g.hdbOpen(id); } catch (e4) {} } return; }
+      if (++n > 48) { try { g.toast('DB 통합 CRM 을 아직 못 열었어요 — 고치는 창으로 열게요'); } catch (e5) {} try { g.hdbOpen(id); } catch (e6) {} return; }
+      g.setTimeout(tick, 250);
+    };
+    g.setTimeout(tick, 60);
+  }
+  function crmGo(id, key) {
+    close();
+    if (crmOk(id)) { crmSide(id); return; }
+    if (key) { try { g.hmOpen(key); } catch (e2) {} return; }
+    if (id) { try { g.hmRtPerson(id); } catch (e3) {} }
+  }
+  function nmGo(x) { var id = x && (x.k === 'db' || x.k === 'appt') ? (x.id || '') : ''; return 'HOME_V2.crm(\'' + Q(id) + '\',\'' + Q((x && x.key) || '') + '\')'; }
+  /* 📊 이번 달 영업활동 (판 X592 · 사장님 말씀 「이번달 영업활동 보고 TA-AP-PC-CS 몇건인지 위와 연결해서」).
+     ★ 새로 세는 자 없음 — 배정 줄(AR.db) · 통화 장부(AR.calls) 그대로. 보고 있는 분(hwhoFor · 없으면 나)만.
+       TA = 이번 달 통화(calls · 그달 건 통수) · AP = 이번 달로 잡힌 약속(next_appt 가 이번 달) ·
+       PC · CS = <b>지금</b> 그 단계인 분(단계를 언제 옮겼는지는 서버에 날짜가 없어 「이번 달」로 지어내지 않음) · 계약 = 계약일이 이번 달.
+     ★ 칸을 누르면 그 명단 → 이름을 누르면 그분 CRM(crmGo). */
+  function actData() {
+    if (!T(function () { return g.AR.loaded; }, false)) return null;
+    var w = who() || T(function () { return g.arMyId(); }, ''), ym = ymdPlus(0).slice(0, 7);
+    var db = (T(function () { return g.AR.db; }, []) || []).filter(function (r) { return r && r.id && (!w || r.who === w); }), by = {};
+    db.forEach(function (r) { by[r.id] = r; });
+    var ta = {}, taN = 0;
+    (T(function () { return g.AR.calls; }, []) || []).forEach(function (c) {
+      if (!c || String(c.d || '').slice(0, 7) !== ym || (w && c.w !== w)) return;
+      taN++;
+      if (c.b) { var o = ta[c.b] || (ta[c.b] = { n: 0, d: '', r: '' }); o.n++; if (String(c.d) >= o.d) { o.d = String(c.d); o.r = c.r || ''; } }
+    });
+    var st = function (k) { return db.filter(function (r) { return (r.stage || '미접촉') === k; }); };
+    return { ym: ym, by: by, ta: ta, taN: taN, taP: Object.keys(ta).filter(function (id) { return by[id]; }).length,
+      ap: db.filter(function (r) { return r.appt && String(r.appt).slice(0, 7) === ym; }).sort(function (a, b) { return String(a.appt) < String(b.appt) ? -1 : 1; }),
+      pc: st('PC'), cs: st('CS'), won: db.filter(function (r) { return String(r.cAt || '').slice(0, 7) === ym; }) };
+  }
+  function actHtml() {
+    var D = actData(); if (!D) return '';
+    var t = function (k, lab, n, sm) { return '<button type="button" onclick="HOME_V2.act(\'' + k + '\')"><em>' + lab + '</em><b>' + n + '</b><small>' + sm + '</small></button>'; };
+    return '<div class="act"><div class="act-h"><b>📊 ' + (+D.ym.slice(5)) + '월 영업활동</b><span>누르면 명단 · 이름은 CRM</span></div><div class="act-r">' +
+      t('ta', 'TA', D.taN, '이번 달 통화') + t('ap', 'AP', D.ap.length, '이번 달 약속') + t('pc', 'PC', D.pc.length, '지금 제안') +
+      t('cs', 'CS', D.cs.length, '지금 청약' + (D.won.length ? ' · 계약 ' + D.won.length : '')) + '</div></div>';
+  }
+  function actSheet(k) {
+    var D = actData(); if (!D) { try { g.toast('배정 줄을 아직 못 읽었어요 — 잠시 뒤 다시'); } catch (e) {} return; }
+    var mo = (+D.ym.slice(5)) + '월', md = function (d) { d = String(d || ''); return d.length >= 10 ? (+d.slice(5, 7)) + '/' + (+d.slice(8, 10)) : ''; };
+    var R = [], h1 = '', sub = '';
+    var one = function (r, s) { R.push({ id: r.id, nm: nameOf({ t: r.name || '' }) + '님', s: s }); };
+    if (k === 'ta') {
+      h1 = '📞 ' + mo + ' TA — 통화 ' + D.taN + '통'; sub = '이번 달 건 분 ' + D.taP + '명 · 최근 건 분부터';
+      Object.keys(D.ta).filter(function (id) { return D.by[id]; }).sort(function (a, b) { return D.ta[a].d < D.ta[b].d ? 1 : -1; })
+        .forEach(function (id) { var o = D.ta[id]; one(D.by[id], o.n + '통 · 마지막 ' + md(o.d) + (o.r ? ' ' + o.r : '') + ' · 지금 ' + (D.by[id].stage || '미접촉')); });
+    } else if (k === 'ap') {
+      h1 = '🤝 ' + mo + ' AP — 약속 ' + D.ap.length + '건'; sub = '이번 달로 잡힌 약속 · 날짜 차례';
+      D.ap.forEach(function (r) { one(r, md(r.appt) + ' ' + String(r.appt).slice(11, 16) + ' · 지금 ' + (r.stage || '미접촉') + (r.region ? ' · ' + r.region : '')); });
+    } else if (k === 'pc' || k === 'cs') {
+      var L = k === 'pc' ? D.pc : D.cs, won = function (v) { var m = Math.round((+v || 0) / 10000); return m > 0 ? m + '만원' : ''; };
+      h1 = (k === 'pc' ? '📝 PC — 지금 제안 중 ' : '✍️ CS — 지금 청약 중 ') + L.length + '명';
+      sub = '지금 이 단계인 분' + (k === 'cs' && D.won.length ? ' · ' + mo + ' 계약 ' + D.won.length + '건은 맨 아래' : '');
+      L.forEach(function (r) { one(r, [r.appt ? '약속 ' + md(r.appt) : '', won(r.expect) ? '목표 계약금액 ' + won(r.expect) : '', r.region || ''].filter(Boolean).join(' · ') || '다음 걸음 적기'); });
+      if (k === 'cs') D.won.forEach(function (r) { one(r, '✓ 계약 ' + md(r.cAt) + (won(r.contract) ? ' · ' + won(r.contract) : '')); });
+    } else return;
+    var SHOW = 60;
+    sheet('<h1>' + E(h1) + '</h1><div class="sub">' + E(sub) + ' · 이름을 누르면 그분 CRM 에서 고쳐요</div>' +
+      (R.length ? '<div class="list" style="margin-top:12px">' + R.slice(0, SHOW).map(function (p) {
+        return '<button type="button" class="li" onclick="HOME_V2.crm(\'' + Q(p.id) + '\',\'\')"><span class="e">✏️</span><div class="tx"><div class="t1">' + E(p.nm) + '</div><div class="t2">' + E(p.s) + '</div></div><span class="ar">›</span></button>';
+      }).join('') + '</div>' + (R.length > SHOW ? '<div class="sub" style="margin-top:8px">외 ' + (R.length - SHOW) + '명 — DB 통합 CRM 에서 다 봐요</div>' : '')
+        : '<div class="say" style="margin-top:12px">아직 없어요</div>') +
+      '<button type="button" class="btn g" style="margin-top:12px" onclick="HOME_V2.close();go(\'crm\')">DB 통합 CRM 열기</button>');
+  }
   function misPlan(m) {
     var R = [], cl = 'HOME_V2.close();';
     var add = function (t, s, go) { R.push({ t: t, s: s || '', go: go || '' }); };
-    var op = function (x) { return cl + 'hmOpen(\'' + Q(x.key) + '\')'; };
+    var op = function (x) { return nmGo(x); };
     var tab = function (id) { return cl + 'go(\'' + Q(id) + '\')'; };
     var door = cl + 'hmDoorGo(\'\',\'\')', rail = cl + 'HOME_V2.step(0)';
     var appts = function () { return (T(function () { return g.hmSteps(); }, []) || []).filter(function (x) { return x && x.k === 'appt'; }); };
@@ -681,7 +774,10 @@
     m.ck.forEach(function (id) { if (ck[id]) k++; });
     return { done: k === m.ck.length, sub: m.ck.map(function (id) { return (ck[id] ? '✓ ' : '') + ckItem(id).t; }).join(' · '), k: k };
   }
-  function misHtml() {
+  /* 🎯 판 X592 — 사장님 말씀 「오늘의 미션과 지금 이분을 합쳐서 효율적인 방안을 만들자」:
+     한 카드 = 미션 다섯 줄 → 📊 이번 달 영업활동(TA · AP · PC · CS) → 「지금 이분」 카드(옆으로 넘김).
+     지금 할 미션이 📞 · 🤝 면 사람 카드가 바로 밑에 서니 세 줄 순서는 안 세움(시트엔 그대로) · ✍️ 🩺 📣 는 세 줄 순서. */
+  function misHtml(L) {
     if (typeof g.hmMsCk !== 'function' || !T(function () { return g.CK_ITEMS.day.length; }, 0)) return '';
     var S = MIS.map(misState), n = S.filter(function (x) { return x.done; }).length, all = n === MIS.length;
     var h = '<div class="mis' + (all ? ' all' : '') + '"><div class="mis-h"><b>🎯 오늘의 미션</b><span>' + n + ' / ' + MIS.length + '</span></div>' +
@@ -693,9 +789,10 @@
       var say = st.done ? null : T(function () { return misSay(m); }, null);
       return '<button type="button" class="mis-r' + (st.done ? ' done' : '') + '" onclick="HOME_V2.mis(' + i + ')"><span class="mis-c">' + (st.done ? '✓' : m.e) + '</span>' +
         '<span class="mis-t"><b>' + E(m.t) + '</b>' + (say && say.t ? '<small class="mis-j">🤖 ' + E(say.t) + '</small>' : '<small>' + E(st.sub) + '</small>') + '</span><span class="ar">›</span></button>' +
-        (i === cur ? T(function () { return misPlHtml(misPlan(m), 3, i); }, '') : '');
+        (i === cur && m.j !== 'call' && m.j !== 'appt' ? T(function () { return misPlHtml(misPlan(m), 3, i); }, '') : '');
     }).join('');
-    return h + '</div>';
+    h += part(actHtml);
+    return h + '<div class="mis-now">' + railHtml(L) + '</div></div>';
   }
   function misSheet(i) {
     var m = MIS[i]; if (!m) return;
@@ -895,12 +992,12 @@
   function jvRow(x) {
     var t = String(x.t || ''), i = t.indexOf(' — ');
     var head = i > 0 ? t.slice(0, i) : t, tail = i > 0 ? t.slice(i + 3) : '';
-    return '<div class="jvr"><button type="button" class="jvr-n" onclick="HOME_V2.close();hmRtPerson(\'' + Q(x.id) + '\')"><span class="jvw on">' + E(x.w) + '</span> ' + E(head) + (tail ? '<small>' + E(tail) + '</small>' : '') + '</button>' + jvBtns(x) + '</div>';
+    return '<div class="jvr"><button type="button" class="jvr-n" onclick="HOME_V2.crm(\'' + Q(x.id) + '\',\'\')"><span class="jvw on">' + E(x.w) + '</span> ' + E(head) + (tail ? '<small>' + E(tail) + '</small>' : '') + '</button>' + jvBtns(x) + '</div>';
   }
   function jvSheet() {
     var J = jvData(), all = J.L.length + J.done;
     var row = function (x, on) {
-      var go = x.id ? 'HOME_V2.close();hmRtPerson(\'' + Q(x.id) + '\')' : (x.cid ? 'HOME_V2.close();osOpenClient(\'' + Q(x.cid) + '\')' : 'HOME_V2.close();try{MCAL.sel=\'' + Q(x.ds) + '\'}catch(e){};go(\'mycal\')');
+      var go = x.id ? 'HOME_V2.crm(\'' + Q(x.id) + '\',\'\')' : (x.cid ? 'HOME_V2.close();osOpenClient(\'' + Q(x.cid) + '\')' : 'HOME_V2.close();try{MCAL.sel=\'' + Q(x.ds) + '\'}catch(e){};go(\'mycal\')');
       return '<button type="button" class="li" onclick="' + go + '"><span class="jvw' + (on ? ' on' : '') + '">' + E(x.w) + '</span><div class="tx"><div class="t1" style="white-space:normal;font-size:15px">' + E(x.t) + '</div></div><span class="ar">›</span></button>';
     };
     var h = '<h1>🛰 자비스가 챙기는 중</h1><div class="sub">고객이 중간에 끊기기 쉬운 자리 — 하나씩 끝내면 줄에서 빠져요</div>' +
@@ -1007,7 +1104,7 @@
   function cardHtml(x, i) {
     var key = Q(x.key), nm = nameOf(x), stg = x.kt || T(function () { return g.hmOrdOf(x.k).t; }, '') || '';
     var why = T(function () { return g.hmWhy(x); }, '') || E(x.s || '');
-    var h = '<div class="qc" data-i="' + i + '"><div class="qtop"><div class="av">' + E(nm.charAt(0)) + '</div><span class="nm" role="button" onclick="hmOpen(\'' + key + '\')">' + E(nm) + '님</span>' + (stg ? '<span class="sg">' + E(stg) + '</span>' : '') + '</div>' + (x.k === 'db' && /^(AP|PC|CS)$/.test(String(x.tk || '')) && x.id ? '<div class="qamt">' + amtChip(x.id) + '</div>' : '');
+    var h = '<div class="qc" data-i="' + i + '"><div class="qtop"><div class="av">' + E(nm.charAt(0)) + '</div><span class="nm" role="button" onclick="' + nmGo(x) + '">' + E(nm) + '님</span>' + (stg ? '<span class="sg">' + E(stg) + '</span>' : '') + '</div>' + (x.k === 'db' && /^(AP|PC|CS)$/.test(String(x.tk || '')) && x.id ? '<div class="qamt">' + amtChip(x.id) + '</div>' : '');
     h += '<div class="qwhy">' + why + (x.s && why.indexOf(strip(x.s)) < 0 ? '<small>' + E(x.s) + '</small>' : '') + '</div>';
     var tel = T(function () { return g.hmTelOf(x); }, '');
     var callBtn = tel ? '<a class="btn p" style="margin-top:10px" href="tel:' + E(String(tel).replace(/[^0-9+]/g, '')) + '">📞 전화 걸기</a>'
@@ -1312,7 +1409,7 @@
       '<div class="sub">' + E([nw ? '' : aim, '모두 ' + L.length + '명'].filter(Boolean).join(' · ')) + '</div>' +
       (nw && (aim || way) ? '<div class="nwh">' + (aim ? '<div><b>🌱 이 칸에서 할 일</b>' + E(aim) + '</div>' : '') + (way ? '<div><b>어떻게</b>' + E(way) + '</div>' : '') + '</div>' : '');
     h += '<div class="list" style="margin-top:12px">' + (L.length ? L.slice(0, MAX).map(function (r) {
-      return '<button type="button" class="li" onclick="HOME_V2.close();hmRtPerson(\'' + Q(r.id) + '\')"><div class="tile">' + E(String(nameOf({ t: r.name || '' })).replace(/^\s*\[[^\]]*\]\s*/, '').charAt(0) || '·') + '</div><div class="tx"><div class="t1">' + E(nameOf({ t: r.name || '' })) + '님</div>' +
+      return '<button type="button" class="li" onclick="HOME_V2.crm(\'' + Q(r.id) + '\',\'\')"><div class="tile">' + E(String(nameOf({ t: r.name || '' })).replace(/^\s*\[[^\]]*\]\s*/, '').charAt(0) || '·') + '</div><div class="tx"><div class="t1">' + E(nameOf({ t: r.name || '' })) + '님</div>' +
         '<div class="t2">' + E([r.stage || '미접촉', [r.region, r.dong].filter(Boolean).join(' '), r.appt ? '약속 ' + String(r.appt).slice(5, 16).replace('T', ' ') : dTxt(r.days)].filter(Boolean).join(' · ')) + '</div></div><span class="ar">›</span></button>';
     }).join('') : '<div class="li"><div class="tx"><div class="t2">이 단계에 계신 분이 없어요</div></div></div>') +
       (L.length > MAX ? '<button type="button" class="li" onclick="HOME_V2.close();go(\'crm\')"><div class="tx"><div class="t1" style="color:var(--blue)">나머지 ' + (L.length - MAX) + '명은 DB 통합 CRM 에서 ›</div></div></button>' : '') + '</div>';
@@ -1506,8 +1603,12 @@
 
   function html() {
     var L = T(function () { return g.hmLeft(); }, { list: [], all: 0 });
-    return topHtml() + '<div class="hv2-g"><div class="hv2-c">' + whoHtml() + helloHtml(L) + part(misHtml) + monHtml() + stepsHtml() + jvHtml() + railHtml(L) +
-      '</div><div class="hv2-c">' + inscHtml() + weekHtml() + part(routeHtml) + roadHtml() + eveHtml(L) + menuHtml() + '</div></div>' +
+    /* 판 X592 — 인사까지는 위 한 줄(두 칸이 같은 높이에서 시작) · 왼쪽 = 🎯 미션 카드(영업활동 · 지금 이분) ·
+       오른쪽 = 목표 · 다섯 걸음 · 챙기는 중(data-mv — 넓은 화면에선 bal() 이 높이를 보고 왼쪽으로 옮길 수 있음) → 🧭 상품전략 ~ 다른 메뉴.
+       미션을 못 세우는 판이면 예전처럼 「지금 이분」 만. 폰은 위에서 아래로 같은 차례. */
+    var mb = function (x) { return x ? '<div class="hv2-b" data-mv="1">' + x + '</div>' : ''; };
+    return topHtml() + whoHtml() + helloHtml(L) + '<div class="hv2-g"><div class="hv2-c">' + (part(function () { return misHtml(L); }) || railHtml(L)) +
+      '</div><div class="hv2-c">' + mb(monHtml()) + mb(stepsHtml()) + mb(jvHtml()) + inscHtml() + weekHtml() + part(routeHtml) + roadHtml() + eveHtml(L) + menuHtml() + '</div></div>' +
       dockHtml() + jvbHtml();
     /* ⚠ 판 X511 — 맨 아래 「새 오늘 화면 (시험) · 시안 9차 디자인 · …」 설명 줄을 거뒀습니다
          (시안에 없음 · 토스 원칙 ③ 화면에 설명 문장 금지). 예전 화면으로 가는 길은 맨 위 「↩ 예전 화면」 단추 하나. */
@@ -1618,7 +1719,7 @@
         (C.hook ? '<div class="hk">「' + E(strip(C.hook)) + '」</div>' : '') +
         '<div class="p1">이번 달 1위 · ' + E([P.co, P.nm].filter(Boolean).join(' · ')) + '</div>' +
         L.slice(0, 3).map(function (x) {
-          return '<button type="button" class="mini" onclick="HOME_V2.close();hmOpen(\'' + Q(x.key) + '\')"><span class="av">' + E(String(nameOf(x)).replace(/^\s*\[[^\]]*\]\s*/, '').charAt(0) || '·') + '</span><span class="tx"><b>' + E(nameOf(x)) + '님</b><small>' + E(strip(T(function () { return g.hmWhy(x); }, '') || x.s || '')) + '</small></span><span class="go">이분 ›</span></button>';
+          return '<button type="button" class="mini" onclick="' + nmGo(x) + '"><span class="av">' + E(String(nameOf(x)).replace(/^\s*\[[^\]]*\]\s*/, '').charAt(0) || '·') + '</span><span class="tx"><b>' + E(nameOf(x)) + '님</b><small>' + E(strip(T(function () { return g.hmWhy(x); }, '') || x.s || '')) + '</small></span><span class="go">이분 ›</span></button>';
         }).join('') +
         '<button type="button" class="door" onclick="HOME_V2.close();hmDoorGo(\'' + Q(k) + '\',\'\')">🎣 이 구실로 문 열기 ›</button></div>';
     });
@@ -1640,7 +1741,7 @@
       '<div class="rprod">' + P.map(function (p, i) { return (i + 1) + '. ' + E([p.co, p.nm].filter(Boolean).join(' · ')); }).join('<br>') + '<small>설계사용 · 소식지 기준 · 상품전략기와 같은 순위</small></div>' +
       '<h2>이 이야기로 연락할 오늘 볼 분 <small>' + L.length + '명</small></h2>' +
       (L.length ? '<div class="pcard">' + L.map(function (x) {
-        return '<button type="button" class="mini" onclick="HOME_V2.close();hmOpen(\'' + Q(x.key) + '\')"><span class="av">' + E(String(nameOf(x)).replace(/^\s*\[[^\]]*\]\s*/, '').charAt(0) || '·') + '</span><span class="tx"><b>' + E(nameOf(x)) + '님</b><small>' + E(strip(T(function () { return g.hmWhy(x); }, '') || x.s || '')) + '</small></span><span class="ar">›</span></button>';
+        return '<button type="button" class="mini" onclick="' + nmGo(x) + '"><span class="av">' + E(String(nameOf(x)).replace(/^\s*\[[^\]]*\]\s*/, '').charAt(0) || '·') + '</span><span class="tx"><b>' + E(nameOf(x)) + '님</b><small>' + E(strip(T(function () { return g.hmWhy(x); }, '') || x.s || '')) + '</small></span><span class="ar">›</span></button>';
       }).join('') + '</div>' : '<div class="sub">오늘 볼 분 가운데 이 상황인 분은 없어요</div>') +
       '<button type="button" class="btn p" onclick="HOME_V2.close();hmDoorGo(\'' + Q(k) + '\',\'\')">상품전략기 「🎣 문 열기」 로 이어 보기</button>';
     sheet(h);
@@ -1960,11 +2061,11 @@
     h += (D.kind === 'none' || D.kind === 'any') ? '' : (D.kind === 'rec' ? mapSvg(D.near, []) : mapSvg(D.A, D.near));
     if (D.A.length) h += '<h2>약속</h2><div class="list">' + D.A.map(function (a, i) {
       var pl = (GEO[a.id] && GEO[a.id].next_appt_place) || '';
-      return '<button type="button" class="li" onclick="HOME_V2.close();hmRtPerson(\'' + Q(a.id) + '\')"><div class="tile no">' + (i + 1) + '</div><div class="tx"><div class="t1">' + E((a.hm || '시간 미정') + ' · ' + nameOf({ t: a.nm }) + '님') + '</div>' +
+      return '<button type="button" class="li" onclick="HOME_V2.crm(\'' + Q(a.id) + '\',\'\')"><div class="tile no">' + (i + 1) + '</div><div class="tx"><div class="t1">' + E((a.hm || '시간 미정') + ' · ' + nameOf({ t: a.nm }) + '님') + '</div>' +
         '<div class="t2">' + E([pl || '장소 미정', a.st].filter(Boolean).join(' · ')) + '</div></div><span class="ar">›</span></button>';
     }).join('') + '</div>';
     if (D.near.length) h += '<h2>' + (D.kind === 'rec' ? '들를 분' : D.kind === 'any' ? '만날 분' : '가는 김에 들를 분') + ' <small>' + (D.kind === 'rec' ? '같은 동네 · 가까운 차례로' : D.kind === 'any' ? '만남 → 제안 → 청약 → 연락 차례' : '같은 동네 · 연락 주기가 된 분') + '</small></h2><div class="list">' + D.near.slice(0, 8).map(function (n) {
-      return '<button type="button" class="li" onclick="HOME_V2.close();hmRtPerson(\'' + Q(n.id) + '\')">' + (D.kind === 'rec' ? '<div class="tile no">' + (D.near.indexOf(n) + 1) + '</div>' : '<div class="tile w">📞</div>') + '<div class="tx"><div class="t1">' + E(nameOf({ t: n.nm }) + '님') + '</div><div class="t2">' + E(n.why) + '</div></div><span class="ar">›</span></button>';
+      return '<button type="button" class="li" onclick="HOME_V2.crm(\'' + Q(n.id) + '\',\'\')">' + (D.kind === 'rec' ? '<div class="tile no">' + (D.near.indexOf(n) + 1) + '</div>' : '<div class="tile w">📞</div>') + '<div class="tx"><div class="t1">' + E(nameOf({ t: n.nm }) + '님') + '</div><div class="t2">' + E(n.why) + '</div></div><span class="ar">›</span></button>';
     }).join('') + '</div>';
     h += '<button type="button" class="btn p" style="margin-top:14px" onclick="HOME_V2.close();hmRtOpen()">🗺 지역 동선 · 카카오맵으로 크게 보기</button>';
     sheet(h);
@@ -2102,6 +2203,31 @@
     catch (e) { fallback(e); return; }
     var r2 = el('hv2Rail'); if (r2 && l) r2.scrollLeft = l;
     dots();
+    try { bal(); } catch (e2) {}
+  }
+  /* ⚖️ 판 X592 — 사장님 말씀 「좌우 칸 대칭 맞추고」. 넓은 화면(두 칸)에서만:
+     ① 오른쪽 맨 위 data-mv 칸(목표 · 다섯 걸음 · 챙기는 중)을 차례 그대로 왼쪽 끝으로 옮겨 두 칸 높이 차를 가장 작게
+     ② 남은 차로 바닥을 맞춤 — 왼쪽이 짧으면 「지금 이분」 띠(.mis-now)를 늘리고, 오른쪽이 짧으면 카드 사이를 고르게 벌림(.sp). 화면 크기가 바뀌면 다시. 저장 없음. */
+  var BAL_T = 0, BAL_ON = false;
+  function bal() {
+    var d = g.document, G = d.querySelector('#hv2 .hv2-g'); if (!G || G.children.length < 2) return;
+    var A = G.children[0], B = G.children[1], all = G.querySelectorAll('.hv2-c > *, .mis-now'), i;
+    for (i = 0; i < all.length; i++) all[i].style.minHeight = '';
+    A.style.minHeight = B.style.minHeight = ''; B.classList.remove('sp');
+    var mv = [].slice.call(A.children).filter(function (n) { return n.hasAttribute && n.hasAttribute('data-mv'); });
+    for (i = mv.length - 1; i >= 0; i--) B.insertBefore(mv[i], B.firstChild);
+    if (!BAL_ON) { BAL_ON = true; try { g.addEventListener('resize', function () { g.clearTimeout(BAL_T); BAL_T = g.setTimeout(function () { try { bal(); } catch (e) {} }, 150); }); } catch (e0) {} }
+    if (!(g.innerWidth >= 1101) || g.getComputedStyle(G).display !== 'grid') return;
+    if (!A.offsetHeight || !B.offsetHeight) return;
+    for (;;) {
+      var f = B.firstElementChild; if (!f || !f.hasAttribute('data-mv')) break;
+      var d0 = Math.abs(A.offsetHeight - B.offsetHeight);
+      A.appendChild(f);
+      if (Math.abs(A.offsetHeight - B.offsetHeight) >= d0) { B.insertBefore(f, B.firstChild); break; }
+    }
+    var df = A.offsetHeight - B.offsetHeight;
+    if (df > 2) { B.classList.add('sp'); B.style.minHeight = A.offsetHeight + 'px'; }      /* 오른쪽이 짧으면 카드 사이를 고르게 벌림(카드 하나를 늘리지 않음) */
+    else if (df < -2) { var t = A.querySelector('.mis-now') || A.lastElementChild; if (t) t.style.minHeight = (t.offsetHeight - df) + 'px'; }   /* 왼쪽이 짧으면 「지금 이분」 띠를 늘림 */
   }
   function fallback() {
     try { var p = g.document.querySelector('.tab-pane.hm-toss'); if (p) p.classList.remove('hm-v2', 'hm-v2-old'); var b = el('hv2'); if (b) b.parentNode.removeChild(b); } catch (e2) {}
@@ -2259,6 +2385,7 @@
     jvbOff: function () { JVB.off = true; var b = el('hv2Jvb'); if (b && b.parentNode) b.parentNode.removeChild(b); },
     misSay: function (i) { return MIS[i] ? misSay(MIS[i]) : null; }, misPlan: function (i) { return MIS[i] ? misPlan(MIS[i]) : []; },
     misRail: function () { close(); var A = apptRows(); if (A.left[0]) misRail(A.left[0].key); },
+    crm: crmGo, act: actSheet, actData: actData, bal: bal,
     mis: misSheet, misDid: function (i, ck) { misDid(i, ck, 0); }, misUndo: function (i, ck) { misDid(i, ck, 1); },
     newOn: newOn,
     msgAll: msgAll,
