@@ -921,11 +921,19 @@
       (T(function () { return g.mcalDay(I, ds); }, []) || []).forEach(function (x) {
         if (!x || (x.k !== 'next' && x.k !== 'appt')) return;
         if (x.k === 'appt' && n < 2) return;               /* 위에서 이미 세었습니다 (5번) */
-        var t = x.k === 'appt' ? T(function () { return g.hmFullNm(x.t); }, x.t) : x.t;
+        /* ★ 이름을 적는 곳은 <b>nameOf 하나</b>입니다 (5번). 여태 약속 줄만 hmFullNm 을
+           바로 불러 <b>🙈 이름 가리기를 안 따랐습니다</b> — 가리기를 켠 폰에서 이 줄만
+           실명이 섰습니다 (3번). 할 일 줄은 거꾸로 hmFullNm 을 안 거쳤습니다. */
+        var t = nameOf({ t: x.t });
         var lt = x.late ? String(x.late) : '';
+        /* ★ <b>무엇이 밀렸는지</b> 적습니다 (1번) — mcalItems 가 x.s 에 그 일을 담아 주는데
+           여태 버리고 「할 일」 이라고만 적었습니다. 「무엇이 밀렸나」 를 모르면 정리를
+           할 수가 없습니다. 약속은 예전처럼 시각만(뒤는 자리 이름이라 길어집니다). */
+        var what = x.k === 'appt' ? ('약속' + (x.s ? ' ' + String(x.s).slice(0, 5) : ''))
+                                  : (x.s ? String(x.s).slice(0, 40) : '할 일');
         var o = { ds: ds, cid: x.id || '', late: lt,
                   w: lt ? ((+lt.slice(5, 7)) + '/' + (+lt.slice(8, 10))) : ((+ds.slice(5, 7)) + '/' + (+ds.slice(8, 10))),
-                  t: (t || '') + ' · ' + (x.k === 'appt' ? '약속' + (x.s ? ' ' + String(x.s).slice(0, 5) : '') : '할 일') };
+                  t: (t || '') + ' · ' + what };
         if (lt) D.push(o); else P.push(o);
       });
     }
