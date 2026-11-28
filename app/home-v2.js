@@ -1879,6 +1879,7 @@
 
   function html() {
     jvFresh();                                   /* ⚡ 이번 그리기는 처음부터 — jvData · misItems (7번) */
+    T(function () { return g.hmStepsFresh(); }, 0);   /* ⚡ 오늘 할 일도 — 판 X600 (7번) */
     var L = T(function () { return g.hmLeft(); }, { list: [], all: 0 });
     /* 판 X592 — 인사까지는 위 한 줄(두 칸이 같은 높이에서 시작) · 왼쪽 = 🎯 미션 카드(영업활동 · 지금 이분) ·
        오른쪽 = 목표 · 다섯 걸음 · 챙기는 중(data-mv — 넓은 화면에선 bal() 이 높이를 보고 왼쪽으로 옮길 수 있음) → 🧭 상품전략 ~ 다른 메뉴.
