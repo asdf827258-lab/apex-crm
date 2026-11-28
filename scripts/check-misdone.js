@@ -114,10 +114,13 @@ const SEED = PF.slice(q0 + 1, e0);
       await new Promise((r) => setTimeout(r, 520));
       const bs = sheetBtns();
       const t = (document.querySelector('#hv2Sheet h1') || {}).textContent || '';
-      /* 완료로 치는 것 = 체크줄(.mis-s) 안의 누를 것 */
+      /* 완료로 치는 것 = <b>끝내는 단추를 단 줄</b>.
+         ⚠ 판 X599 전에는 <code>.mis-s</code>(체크줄) 하나만 셌는데, 약속 미션이 챙기는 중과
+           같은 줄(<code>.jvr</code>)로 바뀌자 <b>멀쩡한 줄을 0개로</b> 읽었습니다. 세는 것은
+           옷 이름이 아니라 <b>그 자리에서 끝낼 단추가 달렸나</b> 입니다 (8번). */
       const s = document.getElementById('hv2Sheet');
-      const ck = s ? Array.from(s.querySelectorAll('.mis-s')) : [];
-      const done = ck.filter(function (x) { return x.querySelector('.mis-b'); }).length;
+      const ck = s ? Array.from(s.querySelectorAll('.mis-s,.jvr')) : [];
+      const done = ck.filter(function (x) { return x.querySelector('.mis-b,.jvr-b button'); }).length;
       O.each.push({ i: n, t: t.trim().slice(0, 20), ck: ck.length, done: done, n: bs.length });
     }
 
