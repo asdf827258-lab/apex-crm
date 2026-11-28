@@ -165,10 +165,18 @@ const ixc = 걷기(IX);
 is((IX.match(/<script src="home-v2\.js"><\/script>/g) || []).length === 1 && IX.indexOf('<script src="home-v2.js">') > IX.indexOf('<script src="hm-tamsg.js">'), 'index.html 이 home-v2.js 를 한 번, hm-tamsg.js 뒤에 싣는다');
 is((ixc.match(/HOME_V2\.apply\(/g) || []).length === 1 && /try\{ if\(window\.HOME_V2\)HOME_V2\.apply\(dyn\); \}catch/.test(ixc), '홈을 그린 바로 뒤 한 곳 · try 안');
 const hp = (IX.match(/function hmPaint\(\)\{[\s\S]*?\n\}/) || [''])[0];
-is(/try\{ if\(window\.HOME_V2&&HOME_V2\.paint\)HOME_V2\.paint\(\); \}catch/.test(hp) && (ixc.match(/HOME_V2\.paint\(/g) || []).length === 1, 'hmPaint 안 한 곳 · try 안 (데이터가 늦게 와도 새 화면이 따라옴)');
+/* 🗜 판 X597 — 다시 그리라고 부르는 자리가 <b>둘</b>이 되었습니다. 늘어난 하나는 같은 일을
+   또 하는 것이 아니라 <b>다른 일</b>입니다 — 데이터가 늦게 오면 hmPaint, 사장님이
+   「🗜 짧게」 를 누르면 hmShortApply(옛 홈은 옷으로 감추지만 #hv2 는 한 규칙에도 안 걸립니다).
+   그 <b>두 곳 말고</b> 다른 데서 부르면 여전히 웁니다. */
+const sa = (IX.match(/function hmShortApply\(\)\{[\s\S]*?\n\}/) || [''])[0];
+is(/try\{ if\(window\.HOME_V2&&HOME_V2\.paint\)HOME_V2\.paint\(\); \}catch/.test(hp)
+  && /try\{ if\(window\.HOME_V2&&HOME_V2\.on&&HOME_V2\.on\(\)\)HOME_V2\.paint\(\); \}catch/.test(sa)
+  && (ixc.match(/HOME_V2\.paint\(/g) || []).length === 2,
+  'hmPaint · hmShortApply 두 곳 · 둘 다 try 안 (데이터가 늦게 와도 · 짧게 눌러도 새 화면이 따라옴)');
 is((ixc.match(/HOME_V2\.chip\(/g) || []).length === 1 && /try\{ v2=\(window\.HOME_V2&&HOME_V2\.chip\)\?HOME_V2\.chip\(\):''; \}catch/.test(ixc), '인사 줄 단추 한 곳 · try 안');
-is((ixc.match(/HOME_V2/g) || []).length <= 11 && (ixc.match(/HOME_V2\.prefPut\(/g) || []).length === 1 && /cmLSSet\('apex_cli_real_'\+cmWho\(\),o\);\n  try\{ if\(window\.HOME_V2&&typeof HOME_V2\.prefPut==='function'\)HOME_V2\.prefPut\('real',o\); \}catch\(e\)\{\}/.test(IX.split('\r\n').join('\n').replace(/\n  \/\*[^\n]*\*\//g, '')),
-  'index.html 안 HOME_V2 는 그 네 자리 + 실명 적는 한 곳(cmRealSet → prefPut · 판 X584) — ' + (ixc.match(/HOME_V2/g) || []).length + '번');
+is((ixc.match(/HOME_V2/g) || []).length <= 15 && (ixc.match(/HOME_V2\.prefPut\(/g) || []).length === 1 && /cmLSSet\('apex_cli_real_'\+cmWho\(\),o\);\n  try\{ if\(window\.HOME_V2&&typeof HOME_V2\.prefPut==='function'\)HOME_V2\.prefPut\('real',o\); \}catch\(e\)\{\}/.test(IX.split('\r\n').join('\n').replace(/\n  \/\*[^\n]*\*\//g, '')),
+  'index.html 안 HOME_V2 는 그 네 자리 + 실명 적는 한 곳(cmRealSet → prefPut · 판 X584) + 짧게 보기 한 곳(hmShortApply · 판 X597) — ' + (ixc.match(/HOME_V2/g) || []).length + '번');
 
 console.log('\n[4] 칸 차례 = 시안 rHome');
 const H = (sc.match(/function html\(\) \{[\s\S]*?\n  \}/) || [''])[0];
@@ -193,7 +201,7 @@ is(부름.length === 1 && 부름[0] === ".from('dbs').select('id,lat,lng,next_ap
 is(scP.split(PEX_RPC).length === 2 && !/\.(insert|update|upsert|delete|rpc)\(/.test(scW) && !/supabase\./.test(sc), '서버에 쓰는 것은 「DB · 업적관리」 의 그 문(pipeline_save) 한 곳뿐 (판 X526 · 사장님이 고르신 「같은 서버 문 한 줄」)');
 is((sc.match(/fetch\('([^']+)'/g) || []).join() === "fetch('/.netlify/functions/route-km'", '부르는 주소는 지역 동선의 길찾기(route-km) 하나뿐');
 const 담기 = (scP.match(/setItem\(([^,]+),/g) || []).map(x => x.replace(/setItem\(|,/g, ''));
-is(담기.length === 4 && 담기.indexOf('KEY') >= 0 && 담기.indexOf("'apexRouteKmV1'") >= 0 && 담기.indexOf('aiKey()') >= 0 && 담기.indexOf('newKey()') >= 0, '이 기기에 담는 것은 켜짐 표시 · 길찾기 거리(지역 동선과 같은 칸) · 자비스에 더한 메뉴(판 X549) · 신입 도움말 켜짐(판 X551 · 둘 다 즐겨찾기와 같은 자리)뿐 — ' + 담기.join(', '));
+is(담기.length === 5 && 담기.indexOf('KEY') >= 0 && 담기.indexOf('BIG_KEY') >= 0 && 담기.indexOf("'apexRouteKmV1'") >= 0 && 담기.indexOf('aiKey()') >= 0 && 담기.indexOf('newKey()') >= 0, '이 기기에 담는 것은 켜짐 표시 · 큰 글씨(보기 취향 · 판 X597) · 길찾기 거리(지역 동선과 같은 칸) · 자비스에 더한 메뉴(판 X549) · 신입 도움말 켜짐(판 X551 · 둘 다 즐겨찾기와 같은 자리)뿐 — ' + 담기.join(', '));
 
 console.log('\n[7] 옛 홈은 숨기기만 · 터지면 예전 화면');
 is(/hm-v2:not\(\.hm-v2-old\)>\*:not\(#hv2\)\{display:none!important\}/.test(sc), '옛 칸은 CSS 로 숨기기만(지우지 않음)');
@@ -212,8 +220,12 @@ const sels = (C.match(/'([^'{]+)\{/g) || []).map(s => s.slice(1, -1));
 /* @media 줄은 속의 고르개를 따로 꺼내 봅니다 — 넓은 화면에서 아래 세 칸을 흐름에 붙이는 한 줄 */
 const 미디어 = (C.match(/'@media[^{]*\{[^']*'/g) || []).map(x => x.replace(/^'@media[^{]*\{/, '').replace(/\}'$/, ''));
 const 속 = [].concat.apply([], 미디어.map(m => (m.match(/([^{}]+)\{/g) || []).map(x => x.slice(0, -1))));
+/* 🔎 판 X597 — <b>큰 글씨</b> 겹(<code>body.hv2-big …</code>)만 벗겨 보고, 그 뒤는 예전과
+   똑같이 깐깐하게 봅니다. 벗기는 데 <b>뒤에 빈칸이 있어야</b> 해서, 겹만 쓴
+   <code>body.hv2-big{…}</code>(본체를 물들이는 것)은 그대로 걸립니다. */
+const 벗김 = s => String(s).replace(/^\s*body\.hv2-big\s+/, '');
 const 바깥 = sels.filter(s => !/^@media/.test(s)).concat(속)
-  .filter(s => s.split(',').some(x => !/^\s*(\.hv2|#hv2|\.tab-pane\.hm-toss\.hm-v2)/.test(x.trim())));
+  .filter(s => s.split(',').some(x => !/^\s*(\.hv2|#hv2|\.tab-pane\.hm-toss\.hm-v2)/.test(벗김(x.trim()))));
 is(속.length >= 2, '넓은 화면 줄(@media) 속 고르개도 셌다 — ' + 속.length + '개');
 is(sels.length > 50 && !바깥.length, '옷 ' + sels.length + '줄이 모두 .hv2 · #hv2Sheet · #hv2Dim · 새 화면 판 아래 — 밖 ' + 바깥.length + (바깥.length ? ' ← ' + 바깥.slice(0, 3).join(' | ') : ''));
 
@@ -1127,7 +1139,21 @@ console.log('\n[34] 🤖 자비스가 짠 오늘 순서 · AP 글씨 · 목표 �
   is(/'\.hv2 \.qtop \.sg\{flex:none;font-size:16px;font-weight:800/.test(SRC), '지금 이분 「AP · 만남」 칩 글씨 13px → 16px');
   is(/\(m \? '💰 목표 계약금액 ' \+ m \+ '만원' : '💰 목표 계약금액 \?'\)/.test(SRC) && /님 목표 계약금액', sub: '이분과 목표로 잡은 계약의 월 보험료예요/.test(SRC) && !/금액 \?'/.test(SRC.replace("'💰 목표 계약금액 ?'", '')),
     '「금액 ?」 → 「💰 목표 계약금액」 · 시트 제목도 「목표 계약금액」(칸은 같은 expect_premium)');
-  is(/return topHtml\(\) \+ whoHtml\(\) \+ helloHtml\(L\) \+ '<div class="hv2-g"><div class="hv2-c">' \+ \(part\(function \(\) \{ return misHtml\(L\); \}\) \|\| railHtml\(L\)\) \+\n\s*'<\/div><div class="hv2-c">' \+ mb\(monHtml\(\)\) \+ mb\(stepsHtml\(\)\) \+ mb\(jvHtml\(\)\) \+ inscHtml\(\)[^\n]*menuHtml\(\) \+ '<\/div><\/div>'/.test(SRC.split('\r\n').join('\n')),
+  /* 🗜 판 X597 — 예전에는 이 줄의 <b>글자를 그대로</b> 못 박았는데, 접는 문
+     (<code>sh ? '' : …</code>)이 들어오자 글자가 달라져 울었습니다. 못 박을 것은 글자가
+     아니라 <b>칸이 어느 쪽 기둥에 서는가</b>입니다 — 그것만 봅니다 (8번). */
+  const RET = (SRC.split('\r\n').join('\n').match(/return topHtml\(\)[\s\S]*?jvbHtml\(\);/) || [''])[0];
+  const 기둥 = RET.split('\'</div><div class="hv2-c">\'');
+  const 왼 = 기둥[0] || '', 오른 = 기둥[1] || '';
+  /* ⚠ <code>part(routeHtml)</code> 는 괄호 없이 넘기는 자리라 <code>routeHtml(</code> 로는
+     안 잡힙니다 — 이름만 봅니다 (jvHtml 은 jvbHtml 과 글자가 달라 섞이지 않습니다). */
+  const 차례 = (t, ns) => ns.map(n => t.indexOf(n)).every((q, i, a) => q > 0 && (!i || q > a[i - 1]));
+  is(기둥.length === 2
+    && 차례(왼, ['topHtml', 'whoHtml', 'helloHtml'])
+    && 왼.indexOf('<div class="hv2-g"><div class="hv2-c">') > 왼.indexOf('helloHtml(')
+    && 왼.indexOf('misHtml(') > 0 && 왼.indexOf('railHtml(') > 0 && 왼.indexOf('monHtml(') < 0
+    && 차례(오른, ['monHtml', 'stepsHtml', 'jvHtml', 'inscHtml', 'weekHtml', 'routeHtml', 'roadHtml', 'eveHtml', 'menuHtml'])
+    && /'<\/div><\/div>' \+\n\s*dockHtml\(\) \+ jvbHtml\(\);$/.test(RET),
     'PC 두 줄(판 X592) — 인사까지 위 한 줄 · 왼쪽 = 🎯 미션 카드 · 오른쪽 = 목표 · 다섯 걸음 · 챙기는 중(옮길 수 있음) → 🧭 상품전략 ~ ☰ 다른 메뉴');
   is(/@media\(min-width:1101px\)\{\.hv2\{max-width:1180px\}\.hv2 \.hv2-g\{display:grid;grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)/.test(SRC), '1101px 이상에서만 두 줄 · 그 밑은 예전처럼 한 줄(560px)');
 }
