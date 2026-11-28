@@ -569,9 +569,15 @@ console.log('\n[18] 💰 예상 월납 · ✓ 계약됐어요 · 🛰 자비스 
   is(/💰 목표 계약금액 안 적힌 1분 — 홍갑돌님부터 적기/.test(t) && /HOME_V2\.amt\('d3'\)/.test(t), '목표 시트 — 「목표 계약금액 안 적힌 n분 — 누구부터」(내 것 · 만남 · 제안 · 청약 중)');
 
   X.g.HOME_V2.jv(); t = sh();
-  is(/🛰 자비스가 챙기는 중/.test(t) && /<h2>오늘 <small>4곳 남음/.test(t) && /jvw on">노쇼<\/span> 홍말순님 내일 14:00 약속<small>전날 확인 카톡/.test(t) && /jvw on">증권<\/span> 홍판서님 계약완료<small>증권 전달이 남았어요/.test(t) &&
-     /jvw on">약속 지남<\/span> 홍갑돌님 11\/20 약속 지남<small>/.test(t) && /jvw on">소개<\/span> 홍판서님 소개 여쭐 차례/.test(t) && !/임꺽정/.test(t),
-    '자비스 시트 「오늘」 — 내일 약속(노쇼) · 계약완료인데 증권 전 · 약속 지남 · 소개 차례 (남의 고객 안 섬)');
+  /* 🎯 판 X599 — 사장님 말씀 「챙기는 중이 오늘의 미션하고 비슷한데 <b>이걸 하나로</b>」.
+     <b>약속(노쇼) · 약속 지남은 이제 「오늘의 미션」 이 안습니다</b> — 같은 분이 두 칸에 서던
+     것을 한쪽으로 모았습니다. 여기 남는 것은 📄 증권 · 🙌 소개입니다.
+     ★ <b>소리 없이 사라지면 안 됩니다</b> — 어디로 갔는지 적는지도 같이 봅니다 (1번). */
+  is(/🛰 자비스가 챙기는 중/.test(t) && /<h2>오늘 <small>2곳 남음/.test(t) && /jvw on">증권<\/span> 홍판서님 계약완료<small>증권 전달이 남았어요/.test(t) &&
+     /jvw on">소개<\/span> 홍판서님 소개 여쭐 차례/.test(t) && !/임꺽정/.test(t),
+    '자비스 시트 「오늘」 — 계약완료인데 증권 전 · 소개 차례 (남의 고객 안 섬)');
+  is(!/jvw on">노쇼<\/span>/.test(t) && !/jvw on">약속 지남<\/span>/.test(t) && /약속 · 지난 약속 2곳은 「오늘의 미션」 에서 챙겨요/.test(t),
+    '약속 · 지난 약속은 <b>여기 안 서고</b>, 어디서 챙기는지 그 자리에 적는다 (판 X599 · 1번·5번)');
   /* ★ 2026-11-28 (판 X596) · <b>2개 → 3개</b>. ⚠ 이 수는 <b>버그를 못 박아 둔 수</b>였습니다 —
      jvData 가 달력을 모레(n=2)부터 읽어, 씨의 <b>내일(11/24) 할 일 홍정돌</b>이 빠져
      있었습니다. 사장님 말씀 「오늘 스케줄 밀린 것들 다 정리해 주는데 왜 그거 안 되고」 로
@@ -589,20 +595,39 @@ console.log('\n[18] 💰 예상 월납 · ✓ 계약됐어요 · 🛰 자비스 
   is(jl, '오늘 화면 자비스 한 줄 — 「오늘 끊기기 쉬운 자리 n곳 · 미리 세운 연락 m개」(시안 문구)');
 
   console.log('\n[31] ✅ 챙기는 중 — 갈래 · 완료 (판 X584 · 사장님 말씀 「30명 정리하는데 깔끔하게 · 완료 처리 · 매일 스케줄 관리」)');
-  const pos = ['📌 약속 확인', '⏰ 약속 지남', '📄 증권 전달', '🙌 소개 요청', '미리 세워 둔 연락'].map(k => t.indexOf(k));
-  is(pos.every((p, i) => p > 0 && (!i || p > pos[i - 1])) && /오늘 0 \/ 4 마침/.test(t), '갈래 넷(약속 확인 → 약속 지남 → 증권 → 소개) → 미리 세운 연락 · 「오늘 0 / 4 마침」');
-  is(/HOME_V2\.close\(\);hdbOpen\('d4','증권전달'\)">✓ 전달했어요/.test(t) && /HOME_V2\.jvDo\('met','d3'\)">🤝 만났어요/.test(t) && /HOME_V2\.jvDo\('again','d3'\)">📅 다시 약속/.test(t) &&
-     /HOME_V2\.jvDo\('end','d3'\)">✖ 거절로 정리/.test(t) && /HOME_V2\.jvDo\('ref','d4'\)">🤝 소개 받았어요/.test(t) && /HOME_V2\.jvDo\('done','노쇼:d2'\)">✓ 했어요/.test(t),
-    '끝내기는 있던 길 — 증권 = 전달일 묻는 창(hdbOpen 증권전달) · 만났어요(AP→PC) · 다시 약속 · 거절로 정리 · 소개 받음 · 약속 확인 ✓');
+  /* 판 X599 — 갈래 넷 중 둘(약속 확인 · 약속 지남)이 미션으로 갔습니다 */
+  const pos = ['📄 증권 전달', '🙌 소개 요청', '미리 세워 둔 연락'].map(k => t.indexOf(k));
+  is(pos.every((p, i) => p > 0 && (!i || p > pos[i - 1])) && /오늘 0 \/ 2 마침/.test(t), '갈래 둘(증권 → 소개) → 미리 세운 연락 · 「오늘 0 / 2 마침」');
+  is(t.indexOf('📌 약속 확인') < 0 && t.indexOf('⏰ 약속 지남') < 0, '미션이 안은 갈래 둘은 여기 묶음으로 안 선다');
+  is(/HOME_V2\.close\(\);hdbOpen\('d4','증권전달'\)">✓ 전달했어요/.test(t) && /HOME_V2\.jvDo\('ref','d4'\)">🤝 소개 받았어요/.test(t),
+    '끝내기는 있던 길 — 증권 = 전달일 묻는 창(hdbOpen 증권전달) · 소개 받음');
+  /* 🎯 판 X599 — 옮겨 간 줄의 <b>단추가 미션 시트에서 그대로</b> 서는지 봅니다.
+     옮기기만 하고 단추를 잃으면 「하나로」 가 아니라 <b>없앤 것</b>입니다 (6번). */
+  X.g.HOME_V2.mis(2); const t2 = sh();
+  is(/HOME_V2\.jvDo\('met','d3'\)">🤝 만났어요/.test(t2) && /HOME_V2\.jvDo\('again','d3'\)">📅 다시 약속/.test(t2) && /HOME_V2\.jvDo\('end','d3'\)">✖ 거절로 정리/.test(t2),
+    '③ 기록 미션 — <b>약속 지남</b> 줄과 그 단추(만났어요 · 다시 약속 · 거절로 정리)가 그대로 선다');
+  X.g.HOME_V2.mis(3); const t3 = sh();
+  is(/HOME_V2\.jvDo\('done','노쇼:d2'\)">✓ 했어요/.test(t3) && /노쇼/.test(t3),
+    '④ 내일 준비 미션 — <b>내일 약속 확인</b> 줄과 「✓ 했어요」 가 그대로 선다');
+  X.g.HOME_V2.jv(); t = sh();
   const SK = {}, call = [];
   Object.assign(X.g, { hmDaySkips: k => (SK[k] || []).slice(), hmDaySkip: (k, id) => { (SK[k] = SK[k] || []).push(id); }, HM_REFER_KEY: 'rk',
     hmLateSkips: () => (SK.late || []).slice(), hmLateSkip: id => { (SK.late = SK.late || []).push(id); }, hmReferSkip: id => { (SK.rk = SK.rk || []).push(id); },
     hdbTo: (id, to) => call.push('to:' + id + ':' + to), hmLateEnd: id => call.push('end:' + id), hmReferGot: id => call.push('ref:' + id),
     hmLateAgain: id => call.push('again:' + id), setTimeout: () => 0 });
   X.g.HOME_V2.jvDo('done', '노쇼:d2'); t = sh();
-  is(SK.apex_hv2_jv_done_v1.join() === '노쇼:d2' && /오늘 1 \/ 4 마침/.test(t) && !/홍말순님 내일/.test(t) && /<h2>오늘 <small>3곳 남음/.test(t), '✓ 했어요 → 있던 하루 넘김 칸(hmDaySkip) · 줄에서 빠지고 「1 / 4 마침」');
+  /* 🎯 판 X599 — 「✓ 했어요」 는 이제 <b>미션 시트</b>에서 누릅니다. 담는 칸은 그대로
+     hmDaySkip 이고, 빠지는 곳도 그 미션 줄입니다. ⚠ 챙기는 중의 「n / m 마침」 은
+     <b>여기 남은 갈래만</b> 세야 합니다 — 보이지도 않는 줄을 마침으로 세면 거짓입니다 (1번). */
+  X.g.HOME_V2.mis(3); let t4 = sh();
+  is(SK.apex_hv2_jv_done_v1.join() === '노쇼:d2' && !/홍말순님 내일/.test(t4),
+    '✓ 했어요 → 있던 하루 넘김 칸(hmDaySkip) · <b>미션 ④ 줄에서 빠진다</b>');
+  X.g.HOME_V2.jv(); t = sh();
+  is(/오늘 0 \/ 2 마침/.test(t) && /<h2>오늘 <small>2곳 남음/.test(t) && !/jvdone/.test(t),
+    '챙기는 중 수는 <b>여기 남은 갈래만</b> 센다 — 미션 쪽 완료가 안 섞인다 (1번)');
   X.g.HOME_V2.jvDo('lateskip', 'd3'); X.g.HOME_V2.jvDo('refskip', 'd4'); t = sh();
-  is(SK.late.join() === 'd3' && SK.rk.join() === 'd4' && /오늘 3 \/ 4 마침/.test(t) && /✓ 오늘 마치거나 넘긴 3곳/.test(t), '약속 지남 · 소개 「오늘 넘김」 = 홈 🕗 · 💬 와 같은 칸(hmLateSkip · hmReferSkip)');
+  is(SK.late.join() === 'd3' && SK.rk.join() === 'd4' && /오늘 1 \/ 2 마침/.test(t) && /✓ 오늘 마치거나 넘긴 1곳/.test(t),
+    '약속 지남 · 소개 「오늘 넘김」 = 홈 🕗 · 💬 와 같은 칸(hmLateSkip · hmReferSkip) — 소개 하나만 여기 수에 든다');
   X.g.HOME_V2.jvDo('met', 'd3'); X.g.HOME_V2.jvDo('end', 'd3'); X.g.HOME_V2.jvDo('ref', 'd4'); X.g.HOME_V2.jvDo('againPut', 'd3');
   is(call.join() === 'to:d3:PC,end:d3,ref:d4,again:d3', '만났어요 = hdbTo(PC) · 거절 = hmLateEnd · 소개 = hmReferGot · 다시 약속 저장 = hmLateAgain — 새 저장 없음');
   const JVS = sc.slice(sc.indexOf('  var JV_DONE ='), sc.indexOf('  function jvHtml() {')) + sc.slice(sc.indexOf('  var JVG = ['), sc.indexOf('  function isCall('));
@@ -893,7 +918,8 @@ console.log('\n[26] 🎯 오늘의 미션 (판 X557 · 사장님 말씀 「오�
   const mi = h.indexOf('class="mis"'), he = h.indexOf('class="hello"'), mo = h.indexOf('class="steps5"');
   is(mi > he && mi < mo, '인사 바로 밑 · 다섯 걸음 위에 한 판');
   const heads = []; h.replace(/class="mis-r[^"]*" onclick="HOME_V2\.mis\((\d)\)"><span class="mis-c">[^<]*<\/span><span class="mis-t"><b>([^<]*)<\/b>/g, (m0, i, t) => { heads.push(i + t); return m0; });
-  is(heads.join('|') === '0전화 · 카톡|1오늘 약속|2통화 결과 · 만난 분 기록|3내일 상담 자료 준비|4SNS 올리기' && /<b>🎯 오늘의 미션<\/b><span>1 \/ 5<\/span>/.test(h),
+  /* 판 X599 — 머리에 「· 할 일 N건」 이 붙을 수 있습니다(오늘 할 줄이 몇인지) */
+  is(heads.join('|') === '0전화 · 카톡|1오늘 약속|2통화 결과 · 만난 분 기록|3내일 상담 자료 준비|4SNS 올리기' && /<b>🎯 오늘의 미션<\/b><span>1 \/ 5( · 할 일 \d+건)?<\/span>/.test(h),
     '다섯 차례 — 전화 · 카톡 → 오늘 약속 → 기록 → 내일 준비 → SNS (약속 없는 날은 약속 미션이 끝난 셈이라 1/5) — ' + heads.join('|'));
   is(/<small class="mis-j">🤖 홍길동님 · 홍길순님 — 안 받으시면 카톡으로<\/small>/.test(h) && /<small>오늘 약속 없음<\/small>/.test(h),
     '안 끝난 칸 밑은 자비스가 적은 한 줄(판 X589) — 걸 분 이름 · 약속 없는 날은 끝난 칸이라 「오늘 약속 없음」');
@@ -1070,7 +1096,10 @@ console.log('\n[33] 🤖 자비스가 적은 오늘의 미션 (판 X589 · 사�
     return X;
   };
   let X = mk(), S = i => X.g.HOME_V2.misSay(i).t;
-  is(S(0) === '홍길동님 · 홍길순님 외 3명 — 안 받으시면 카톡으로', '📞 걸 분 = 오늘 챙길 줄(hmLeft) 앞 두 분 + 외 n명 — ' + S(0));
+  /* 🎯 판 X599 — <b>임자가 있는 분은 빠집니다.</b> 약속(②) · 약속 지남(③) · 내일 확인(④) ·
+     증권 · 소개(챙기는 중)가 이미 안고 있는 분을 📞 에서 또 세우면 한 분이 두 줄이 됩니다 (5번).
+     그래서 「외 3명」 → 「외 1명」 입니다. 세는 곳은 misItems 하나입니다. */
+  is(S(0) === '홍길동님 · 홍길순님 외 1명 — 안 받으시면 카톡으로', '📞 걸 분 = 오늘 챙길 줄 중 <b>임자 없는 분</b> 앞 두 분 + 외 n명 — ' + S(0));
   is(S(1) === '14:00 임꺽정님 · 16:30 성춘향님', '🤝 오늘 약속 = 오늘 약속 카드 시각 · 이름 — ' + S(1));
   is(S(2) === '오늘 건 2통 — 결과 한 줄씩 · 만나고 나서 임꺽정님 · 성춘향님 팩트파인딩', '✍️ 오늘 건 통수 = 배정 줄 통화(AR.calls · 나 · 오늘만) · 만날 분 — ' + S(2));
   is(S(3) === '내일 10:00 이몽룡님 — 증권 받았으면 판독까지', '🩺 내일 약속 = 배정 줄(AR.db · 나 · 내일만 — 다른 담당 · 모레는 안 셈) — ' + S(3));

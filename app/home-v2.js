@@ -387,13 +387,19 @@
       '#hv2Sheet .jvg{background:#fff;border-radius:16px;margin-top:10px;overflow:hidden}',
       '#hv2Sheet .jvg-h{display:block;padding:12px 16px 4px;font-size:16px;font-weight:800}',
       '#hv2Sheet .jvg-h small{display:block;margin-top:2px;font-size:13px;font-weight:600;color:var(--sub2)}',
-      '#hv2Sheet .jvr{padding:10px 16px 12px}#hv2Sheet .jvr+.jvr{border-top:1px solid var(--line2)}',
-      '#hv2Sheet .jvr-n{display:block;width:100%;text-align:left;font-size:16px;font-weight:700;color:var(--ink);background:none;padding:0}',
-      '#hv2Sheet .jvr-n small{display:block;font-size:13px;font-weight:500;color:var(--sub2);margin-top:2px;line-height:1.4}',
-      '#hv2Sheet .jvr-b{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}',
-      '#hv2Sheet .jvr-b button{height:38px;padding:0 12px;border-radius:10px;font-size:14px;font-weight:700;background:var(--line2);color:var(--ink)}',
-      '#hv2Sheet .jvr-b button.y{background:var(--green);color:#fff}#hv2Sheet .jvr-b button.p{background:var(--blue);color:#fff}',
-      '#hv2Sheet .jvmore{display:block;width:100%;height:44px;font-size:14px;font-weight:700;color:var(--blue);background:none;border-top:1px solid var(--line2)}',
+      /* 🎯 판 X599 — 같은 줄(.jvr)을 <b>홈 카드 안(.mis-it)에서도</b> 씁니다. 옷을 베껴 두면
+         한쪽만 늙습니다 (5번) — 고르개에 자리만 보탰습니다. 색·크기는 한 톨도 안 바꿨습니다. */
+      '#hv2Sheet .jvr,.hv2 .mis-it .jvr{padding:10px 16px 12px}#hv2Sheet .jvr+.jvr,.hv2 .mis-it .jvr+.jvr{border-top:1px solid var(--line2)}',
+      '#hv2Sheet .jvr-n,.hv2 .mis-it .jvr-n{display:block;width:100%;text-align:left;font-size:16px;font-weight:700;color:var(--ink);background:none;padding:0}',
+      '#hv2Sheet .jvr-n small,.hv2 .mis-it .jvr-n small{display:block;font-size:13px;font-weight:500;color:var(--sub2);margin-top:2px;line-height:1.4}',
+      '#hv2Sheet .jvr-b,.hv2 .mis-it .jvr-b{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}',
+      '#hv2Sheet .jvr-b button,.hv2 .mis-it .jvr-b button{height:38px;padding:0 12px;border-radius:10px;font-size:14px;font-weight:700;background:var(--line2);color:var(--ink)}',
+      '#hv2Sheet .jvr-b button.y,.hv2 .mis-it .jvr-b button.y{background:var(--green);color:#fff}#hv2Sheet .jvr-b button.p,.hv2 .mis-it .jvr-b button.p{background:var(--blue);color:#fff}',
+      '#hv2Sheet .jvmore,.hv2 .mis-it .jvmore{display:block;width:100%;height:44px;font-size:14px;font-weight:700;color:var(--blue);background:none;border-top:1px solid var(--line2)}',
+      /* 🎯 오늘 할 일 줄 묶음 — 미션 줄 바로 밑에 한 칸 들여 세웁니다 */
+      '.hv2 .mis-it{margin:0 0 12px 52px;border:1px solid var(--line2);border-radius:14px;background:#fff;overflow:hidden}',
+      '.hv2 .mis-it .jvr{padding:10px 12px 12px}',
+      '.hv2 .mis-n{flex:none;margin-left:auto;padding:3px 9px;border-radius:999px;background:var(--blue-l);color:var(--blue);font-size:13px;font-weight:800}',
       '#hv2Sheet .jvdone{font-size:13px;color:var(--sub2);margin:8px 4px 0}',
       /* ⑤ 일정 넣기 — 무엇 여섯 갈래 · 새 고객 (판 X584) */
       '#hv2Sheet .whatr{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}',
@@ -660,7 +666,10 @@
     var pp = function (x) { return { nm: nameOf(x) + '님', s: strip(x.s || ''), go: nmGo(x) }; };
     var pd = function (r) { return { nm: nameOf({ t: r.name || '' }) + '님', s: misTm(String(r.appt).slice(11, 16)) + (r.region ? ' · ' + r.region : ''), go: '' }; };
     if (m.j === 'call') {
-      var L = (T(function () { return g.hmLeft(); }, { list: [] }) || { list: [] }).list || [];
+      /* ⚠ 판 X599 — 여기가 hmLeft 를 <b>통째로</b> 세는 바람에, 딱지는 「2건」 인데 이 줄은
+         「외 5명」 이라고 적었습니다 — <b>한 화면이 같은 물음에 두 답</b>을 했습니다 (1번).
+         세는 곳을 misItems 하나로 맞춥니다 (5번). */
+      var L = (T(function () { return misItems(m); }, []) || []).map(function (it) { return it.x; }).filter(Boolean);
       t = L.length ? misNames(L, function (x) { return nameOf(x) + '님'; }, 2) + ' — 안 받으시면 카톡으로' : '오늘 걸 분은 다 챙겼어요 👏';
       P = L.slice(0, 8).map(pp);
     } else if (m.j === 'appt') {
@@ -781,6 +790,104 @@
         : '<div class="say" style="margin-top:12px">아직 없어요</div>') +
       '<button type="button" class="btn g" style="margin-top:12px" onclick="HOME_V2.close();go(\'crm\')">DB 통합 CRM 열기</button>');
   }
+  /* 🎯🛰 <b>미션과 챙기는 중을 한 줄로</b> (판 X599 · 사장님 말씀 2026-11-28
+       「자비스가 챙기는중 이 오늘의 미션하고 비슷한데, 이걸 <b>하나로 오늘 할일을
+        따라가면서 할수 있도록</b> 하고 싶어, 오늘의 미션은 <b>그냥 알려만 주는거라서</b> 아쉽거든」).
+
+     ⚠ <b>재어 보니 사장님 말씀대로였습니다.</b> 같은 분이 두 칸에 나란히 서 있었고
+       (홍길동마님 16:00 약속이 미션 ②와 챙기는 중 「오늘」 양쪽에, 내일 약속이 미션 ④와
+       「노쇼」 양쪽에), <b>할 수 있는 단추는 한쪽에만</b> 있었습니다 —
+       미션 시트의 「자비스가 짠 순서」 는 <b>다른 화면으로 보내는 단추가 8·3·5·3·2개</b>인데
+       그 자리에서 끝내는 단추는 1~2개뿐이었고, 챙기는 중은 줄마다 2~4개였습니다.
+
+     ★ <b>여기가 「이 미션에 딸린 오늘 할 일」 을 답하는 한 곳</b>입니다 (5번).
+       세는 자를 새로 만들지 않습니다 — 걸 분은 hmLeft, 오늘 약속은 apptRows(hmSteps),
+       지난 약속·내일 약속 확인은 jvData 그대로입니다.
+     ★ <b>약속은 두 자리에서 옵니다</b> — 달력(hmSteps)과 배정 줄(AR.db). 한쪽에만 있는
+       분이 있을 수 있어 <b>둘을 합치되 이름+시각이 같으면 한 줄</b>로 둡니다. 어느 한쪽을
+       버리면 그 분이 통째로 사라집니다 (1번).                                        */
+  function misKey(nm, hm) { return String(nm || '').replace(/\s+/g, '') + '@' + String(hm || ''); }
+  /* 📌 <b>이미 임자가 있는 분</b> — 약속 · 약속 지남 · 내일 확인 · 증권 · 소개.
+     묻는 곳은 여기 하나입니다 (5번) — 갈래가 늘어도 여기만 보탭니다. */
+  function misClaimed() {
+    var o = {}, J = jvOnce();
+    /* ⚠ <b>오늘 넘긴 분(K)도 임자가 있는 분</b>입니다. 처음에 남은 줄(L)만 보았더니,
+       「약속 지남」 을 ⏭ 오늘 넘김 으로 치우자 그분이 임자를 잃고 <b>📞 전화 줄로
+       되살아났습니다</b> — 치웠는데 다른 데서 또 뜨면 치운 것이 아닙니다 (1번). */
+    (J.L || []).concat(J.K || []).forEach(function (x) { if (x && x.id) o[x.id] = x.g; });
+    return o;
+  }
+  /* ⚡ 한 번 그리는 동안 <b>jvData 는 한 번만</b> 돕니다 (7번) — 미션 다섯이 저마다 부르면
+     달력(mcalItems)을 다섯 번 훑습니다. 그릴 때마다 비웁니다(아래 html). */
+  var JVC = null;
+  function jvOnce() { if (!JVC) JVC = T(jvData, null) || { L: [], K: [], P: [], D: [] }; return JVC; }
+  /* ⚠ <b>다시 그리기 전에는 반드시 비웁니다.</b> 처음에 html() 에서만 비웠더니,
+     「⏭ 오늘 넘김」 을 눌러 시트를 다시 그릴 때 <b>낡은 값을 그대로 써서 줄이 안 빠졌습니다</b> —
+     눌러도 아무 일이 없는 것처럼 보입니다 (1번). 아끼려다 거짓말을 하면 안 됩니다. */
+  function jvFresh() { JVC = null; MIC = {}; }
+  /* ⚡ 한 번 그리는 동안 <b>미션마다 한 번만</b> 묻습니다 (7번) — 머리의 「할 일 N건」 과
+     줄 펴기가 저마다 부르면 같은 것을 두 번 셉니다. 그릴 때마다 비웁니다(jvFresh). */
+  var MIC = {};
+  function misItems(m) {
+    if (MIC[m.j]) return MIC[m.j];
+    return (MIC[m.j] = misItemsOf(m));
+  }
+  function misItemsOf(m) {
+    var J = jvOnce();
+    var jg = function (f) { return (J.L || []).filter(f); };
+    if (m.j === 'call') {
+      /* ⚠ hmLeft 는 <b>오늘 챙길 분 전부</b>입니다 — 그대로 쓰면 이미 다른 자리가 임자인 분까지
+         여기 또 섭니다. 재어 보니 홍길동가·나님은 「약속 지남」(③)에도, 홍길동다님은
+         「내일 확인」(④)에도, 홍길동라님은 「증권 전달」(챙기는 중)에도 서 있었습니다.
+         한 분을 두 줄로 세우면 <b>어느 줄을 눌러야 하는지</b> 알 수 없습니다 (1번·5번).
+       ★ 그래서 <b>임자가 있는 분은 뺍니다</b> — 약속(②) · 약속 지남(③) · 내일 확인(④) ·
+         증권 · 소개(챙기는 중). 「지금 이분」 카드는 그대로 전부 들고 있어 빠지지 않습니다 (6번). */
+      var own = misClaimed();
+      return ((T(function () { return g.hmLeft(); }, { list: [] }) || { list: [] }).list || [])
+        .filter(function (x) { return x && x.k !== 'appt' && !(x.id && own[x.id]); })
+        .map(function (x) {
+          return { kind: 'call', key: x.key, x: x, w: '전화', t: nameOf(x) + '님', s: strip(x.s || '') || '전화 → 안 받으시면 카톡' };
+        });
+    }
+    if (m.j === 'appt') {
+      var out = [], seen = {};
+      apptRows().left.forEach(function (x) {
+        var hh = misTm(x.s), nm = nameOf(x);
+        seen[misKey(nm, hh)] = 1;
+        out.push({ kind: 'appt', key: x.key, x: x, w: hh || '약속', t: nm + '님', s: '가기 전 확인 카톡 → 만나면 「🤝 만났어요」' });
+      });
+      jg(function (x) { return x.g === 'appt' && x.w === '오늘'; }).forEach(function (x) {
+        var mm = /([^ ]+)님 (\d{1,2}:\d{2})/.exec(String(x.t || '')), nm = mm ? mm[1] : '', hh = mm ? mm[2] : '';
+        if (nm && seen[misKey(nm, hh)]) return;        /* 달력 쪽에 이미 있는 분 (5번) */
+        out.push({ kind: 'jv', jx: x, w: x.w, t: x.t });
+      });
+      return out;
+    }
+    if (m.j === 'rec') return jg(function (x) { return x.g === 'late'; }).map(function (x) { return { kind: 'jv', jx: x, w: x.w, t: x.t }; });
+    if (m.j === 'prep') return jg(function (x) { return x.g === 'appt' && x.w === '노쇼'; }).map(function (x) { return { kind: 'jv', jx: x, w: x.w, t: x.t }; });
+    return [];
+  }
+  /* 한 줄 = 이름 + 무엇 + <b>그 자리에서 끝내는 단추</b>. 단추는 <b>있던 것</b>만 부릅니다 —
+     챙기는 중 줄은 jvBtns 그대로, 전화·약속은 hmQfin(「이분 끝」 과 같은 칸) 과 지금 이분 카드. */
+  function misItemRow(it, i) {
+    if (it.kind === 'jv') return jvRow(it.jx);
+    var nm = String(it.t || ''), b = '';
+    if (it.kind === 'call') {
+      b = '<button type="button" class="p" onclick="' + nmGo(it.x) + '">💬 카드 열기</button>' +
+          '<button type="button" class="y" onclick="HOME_V2.misApt(\'' + Q(it.key) + '\',' + i + ')">✓ 했어요</button>';
+    } else {
+      b = '<button type="button" class="y" onclick="HOME_V2.misApt(\'' + Q(it.key) + '\',' + i + ')">✓ 다녀왔어요</button>' +
+          '<button type="button" class="p" onclick="HOME_V2.misRail(\'' + Q(it.key) + '\')">🤝 만났어요</button>';
+    }
+    return '<div class="jvr"><button type="button" class="jvr-n" onclick="' + nmGo(it.x) + '"><span class="jvw on">' + E(it.w) + '</span> ' + E(nm) +
+      (it.s ? '<small>' + E(it.s) + '</small>' : '') + '</button><div class="jvr-b">' + b + '</div></div>';
+  }
+  function misItemsHtml(R, max, i) {
+    if (!R || !R.length) return '';
+    var S = max ? R.slice(0, max) : R;
+    return '<div class="mis-it">' + S.map(function (x) { return misItemRow(x, i); }).join('') +
+      (max && R.length > max ? '<button type="button" class="jvmore" onclick="HOME_V2.mis(' + i + ')">나머지 ' + (R.length - max) + '건 — 여기서 그대로 ›</button>' : '') + '</div>';
+  }
   function misPlan(m) {
     var R = [], cl = 'HOME_V2.close();';
     var add = function (t, s, go) { R.push({ t: t, s: s || '', go: go || '' }); };
@@ -842,21 +949,37 @@
   function misHtml(L) {
     if (typeof g.hmMsCk !== 'function' || !T(function () { return g.CK_ITEMS.day.length; }, 0)) return '';
     var S = MIS.map(misState), n = S.filter(function (x) { return x.done; }).length, all = n === MIS.length;
-    var h = '<div class="mis' + (all ? ' all' : '') + '"><div class="mis-h"><b>🎯 오늘의 미션</b><span>' + n + ' / ' + MIS.length + '</span></div>' +
+    /* 🎯 판 X599 — 미션 수(0/5)만으로는 <b>하루가 얼마나 남았는지</b> 모릅니다.
+       오늘 실제로 할 줄이 몇 건인지 같이 적습니다 — 세는 자는 misItems 한 곳입니다 (5번). */
+    var todo = 0; MIS.forEach(function (m, k) { if (!S[k].done) todo += (T(function () { return misItems(m); }, []) || []).length; });
+    var h = '<div class="mis' + (all ? ' all' : '') + '"><div class="mis-h"><b>🎯 오늘의 미션</b><span>' + n + ' / ' + MIS.length + (todo ? ' · 할 일 ' + todo + '건' : '') + '</span></div>' +
       '<div class="mis-bar"><i style="width:' + Math.round(n / MIS.length * 100) + '%"></i></div>';
     if (all) h += '<div class="mis-ok">오늘 미션 완료 🎉 수고 많으셨어요</div>';
     var cur = -1; S.forEach(function (x, k) { if (cur < 0 && !x.done) cur = k; });
+    /* 🎯 판 X599 — <b>지금 할 미션은 줄을 펼쳐 그 자리에서 끝냅니다.</b>
+       예전에는 「자비스가 짠 순서」 를 폈는데 그 단추가 거의 다 <b>다른 화면으로 보내는 것</b>
+       이었습니다(재어 보니 8·3·5·3·2개). 사장님 말씀 「그냥 알려만 주는 거라서 아쉽다」 가
+       그 자리입니다 (1번). 이제 사람 줄과 <b>끝내는 단추</b>를 폅니다.
+       ★ 할 사람이 없는 미션(📣 SNS)만 예전처럼 순서를 폅니다 — 그쪽은 길잡이가 맞습니다.
+       ★ 📞 는 <b>안 폅니다</b> — 바로 밑 「지금 이분」 카드가 이미 그 일을 하는 자리입니다
+         (TA 대본 · 카톡 복사 · 「이분 끝」). 여기서 또 펴면 같은 일이 두 번이고(5번)
+         재어 보니 화면이 <b>293px</b> 길어졌습니다. 시트를 열면 거기엔 다 섭니다. */
     h += MIS.map(function (m, i) {
       var st = S[i];
       var say = st.done ? null : T(function () { return misSay(m); }, null);
+      var R = st.done ? [] : (T(function () { return misItems(m); }, []) || []);
+      var cnt = R.length ? '<span class="mis-n">' + R.length + '건</span>' : '';
       return '<button type="button" class="mis-r' + (st.done ? ' done' : '') + '" onclick="HOME_V2.mis(' + i + ')"><span class="mis-c">' + (st.done ? '✓' : m.e) + '</span>' +
-        '<span class="mis-t"><b>' + E(m.t) + '</b>' + (say && say.t ? '<small class="mis-j">🤖 ' + E(say.t) + '</small>' : '<small>' + E(st.sub) + '</small>') + '</span><span class="ar">›</span></button>' +
-        (i === cur && m.j !== 'call' && m.j !== 'appt' ? T(function () { return misPlHtml(misPlan(m), 3, i); }, '') : '');
+        '<span class="mis-t"><b>' + E(m.t) + '</b>' + (say && say.t ? '<small class="mis-j">🤖 ' + E(say.t) + '</small>' : '<small>' + E(st.sub) + '</small>') + '</span>' + cnt + '<span class="ar">›</span></button>' +
+        (i !== cur || m.j === 'call' ? '' : R.length ? T(function () { return misItemsHtml(R, 3, i); }, '')
+          : (m.j !== 'appt' ? T(function () { return misPlHtml(misPlan(m), 3, i); }, '') : ''));
     }).join('');
     h += part(actHtml);
     return h + '<div class="mis-now">' + railHtml(L) + '</div></div>';
   }
   function misSheet(i) {
+    jvFresh();
+    JV_BACK = i;                                 /* 🎯 여기서 누른 것은 여기로 돌아옵니다 (판 X599) */
     var m = MIS[i]; if (!m) return;
     if (m.appt) {
       var A = apptRows();
@@ -875,17 +998,21 @@
            나란히 둡니다 — 「만났어요」 는 단계까지, 「다녀왔어요」 는 오늘 표시만. */
       sheet('<h1>🤝 오늘 약속</h1><div class="sub">만나면 「🤝 만났어요」(단계까지) · 그 밖은 「✓ 다녀왔어요」(오늘 표시만)</div>' + misJvHtml(m) +
         /* 옷은 <b>있는 것</b>을 씁니다 — 바로 아래 체크줄과 같은 칸입니다 (새 CSS 0줄) */
-        '<div class="list" style="margin-top:12px;padding:0">' + A.left.map(function (x) {
-          var hh = misTm(x.s);
-          return '<div class="mis-s"><div class="mis-s1"><span class="e">⬜</span><div><b>' + E((hh ? hh + ' ' : '') + nameOf(x) + '님') + '</b>' +
-            '<small>만나면 단계까지 올리고, 다녀만 왔으면 오늘 표시만</small></div></div><div class="mis-s2">' +
-            '<button type="button" class="mis-b" onclick="HOME_V2.misApt(\'' + Q(x.key) + '\')">✓ 다녀왔어요</button>' +
-            '<button type="button" class="mis-go" onclick="HOME_V2.misRail()">🤝 만났어요 ›</button></div></div>';
-        }).join('') + '</div>' +
+        /* 🎯 판 X599 — 줄을 짓는 곳을 <b>misItems 하나</b>로 모았습니다 (5번). 달력(hmSteps)과
+           배정 줄(AR.db) 양쪽 약속을 합치되 이름+시각이 같으면 한 줄입니다 — 여태 달력 쪽만
+           보아, 배정 줄에만 있는 분은 이 시트에 아예 안 섰습니다. */
+        misItemsHtml(T(function () { return misItems(m); }, []) || [], 0, 1) +
         '<button type="button" class="btn p" style="margin-top:12px" onclick="HOME_V2.misRail()">🤝 지금 이분 카드로</button>'); return;
     }
     var ck = T(function () { return g.hmMsCk(); }, {}) || {};
-    var h = '<h1>' + m.e + ' ' + E(m.t) + '</h1><div class="sub">끝내면 「✓ 했어요」 — 실행 체크판에도 같이 담겨요</div>' + misJvHtml(m) + '<div class="list" style="margin-top:12px;padding:0">' + m.ck.map(function (id) {
+    /* 🎯 판 X599 — <b>할 사람이 있으면 그 줄을 맨 위에</b> 세웁니다. 그 자리에서 끝내는
+       단추(💬 카드 열기 · ✓ 했어요 · 🤝 만났어요 · 📅 다시 약속 · ⏭ 오늘 넘김)가 같이 섭니다 —
+       챙기는 중이 쓰던 그 단추 그대로입니다(jvBtns · 새 저장 코드 0 · 5번).
+       체크판 칸(「✓ 했어요」)은 <b>그 아래 그대로</b> 둡니다 — 없애지 않습니다 (6번). */
+    var IT = T(function () { return misItems(m); }, []) || [];
+    var h = '<h1>' + m.e + ' ' + E(m.t) + '</h1><div class="sub">' +
+      (IT.length ? '오늘 ' + IT.length + '건 — 한 줄씩 그 자리에서 끝내세요 · 다 하면 아래 「✓ 했어요」' : '끝내면 「✓ 했어요」 — 실행 체크판에도 같이 담겨요') + '</div>' +
+      (IT.length ? misItemsHtml(IT, 0, i) : '') + misJvHtml(m) + '<div class="list" style="margin-top:12px;padding:0">' + m.ck.map(function (id) {
       var c = ckItem(id), on = !!ck[id];
       return '<div class="mis-s"><div class="mis-s1"><span class="e">' + (on ? '✅' : '⬜') + '</span><div><b>' + E(c.t) + '</b>' + (c.d ? '<small>' + E(c.d) + '</small>' : '') + '</div></div><div class="mis-s2">' +
         (on ? '<button type="button" class="mis-b g" onclick="HOME_V2.misUndo(' + i + ',\'' + id + '\')">되돌리기</button>' : '<button type="button" class="mis-b" onclick="HOME_V2.misDid(' + i + ',\'' + id + '\')">✓ 했어요</button>') +
@@ -911,12 +1038,16 @@
      입니다 (5번) — 「지금 이분 카드」 의 「이분 끝」 과 같은 칸이라 두 화면이 안 어긋납니다.
      ★ 못 부르면 <b>그렇다고 말합니다</b> — 조용히 삼키면 눌러도 아무 일이 없는데 까닭을
        알 길이 없습니다 (1번). 앞서 misDid 가 try/catch 로 삼키던 그 꼴을 안 따릅니다. */
-  function misApt(key) {
+  function misApt(key, i) {
     if (!key) return;
     var ok = false;
     try { if (typeof g.hmQfin === 'function') { g.hmQfin(key); ok = true; } } catch (e) { ok = false; }
     if (!ok) { try { g.toast('오늘 표시를 못 담았습니다 — 화면을 한 번 새로 열어 주십시오'); } catch (e2) {} return; }
-    paint(); misSheet(1);
+    /* 🎯 판 X599 — 시트에서 눌렀으면 <b>그 시트</b>로, 카드에서 눌렀으면 카드만 다시 그립니다.
+       예전에는 어디서 눌러도 ②번 시트를 열어, 카드에서 누르면 엉뚱한 창이 떴습니다. */
+    paint();
+    if (typeof i === 'number' && i >= 0) misSheet(i);
+    else if (el('hv2Sheet') && el('hv2Sheet').classList.contains('on')) misSheet(1);
   }
   function misDid(i, ck, undo) {
     try { if (undo) g.hmMsUndo(ck); else g.hmMsDid(ck); } catch (e) {}
@@ -955,7 +1086,11 @@
     var w = who(), td = ymdPlus(0), tm = ymdPlus(1), L = [], P = [], D = [], done = 0;
     var nm = function (r) { return nameOf({ t: r.name || r.t || '' }) + '님'; };
     var dn = jvSk(JV_DONE), lsk = T(function () { return g.hmLateSkips(); }, []) || [], rsk = jvSk(T(function () { return g.HM_REFER_KEY; }, '') || 'apex_hm_refer_skip_v1');
-    var add = function (o, skip) { if (skip) done++; else L.push(o); };
+    /* 🎯 판 X599 — <b>끝낸 줄도 갈래를 들고 다닙니다</b>(K). 미션으로 옮겨 간 갈래의 완료가
+       챙기는 중 수에 섞여, 보이지도 않는 줄을 「마침」 으로 세고 있었습니다 (1번).
+       done 은 수 그대로 둡니다 — 부르는 자리가 있습니다 (6번). */
+    var K = [];
+    var add = function (o, skip) { if (skip) { done++; K.push(o); } else L.push(o); };
     var db = (T(function () { return g.AR.db; }, []) || []).filter(function (r) { return r && r.id && (!w || r.who === w); });
     db.forEach(function (r) {
       var ad = r.appt ? String(r.appt).slice(0, 10) : '', hm = r.appt ? String(r.appt).slice(11, 16) : '';
@@ -999,12 +1134,22 @@
         if (lt) D.push(o); else P.push(o);
       });
     }
-    return { L: L, P: P, D: D, done: done, madi: T(function () { return g.mstDueList().monLeft; }, 0) || 0 };
+    return { L: L, K: K, P: P, D: D, done: done, madi: T(function () { return g.mstDueList().monLeft; }, 0) || 0 };
   }
+  /* 🎯🛰 판 X599 — <b>약속·지난 약속은 이제 「오늘의 미션」 이 안습니다.</b>
+     사장님 말씀 「이걸 하나로 오늘 할일을 따라가면서 할수 있도록」 그대로, 같은 분이 두 칸에
+     나란히 서던 것을 한쪽으로 모았습니다 (5번). 여기 남는 것은 미션에 안 붙는 것 —
+     📄 증권 전달 · 🙌 소개 요청 · ⏳ 밀린 것 · 미리 세워 둔 연락입니다.
+     ★ <b>세는 자는 jvData 하나 그대로</b>입니다 — 여기서 거르기만 합니다.
+     ★ <b>어디로 갔는지 적습니다</b> — 소리 없이 줄이 사라지면 사장님은 빠뜨린 줄 아십니다 (1번). */
+  var MIS_OWN = ['appt', 'late'];
+  function jvNotMis(x) { return MIS_OWN.indexOf(x.g) < 0; }
+  function jvLeft(J) { return (J.L || []).filter(jvNotMis); }
+  function jvFin(J) { return (J.K || []).filter(jvNotMis); }
   function jvHtml() {
-    var J = jvData(), n = J.L.length;
+    var J = jvOnce(), Lf = jvLeft(J), n = Lf.length;
     return '<button type="button" class="jv" onclick="HOME_V2.jv()"><span class="jv-i">🛰</span><span class="jv-t"><b>자비스가 챙기는 중</b><small>' +
-      (n ? '오늘 끊기기 쉬운 자리 ' + n + '곳' : '오늘은 다 챙겼어요') + (J.done ? ' · ✓ ' + J.done : '') + ((J.D && J.D.length) ? ' · ⏳ 밀린 것 ' + J.D.length + '개' : '') + ' · 미리 세운 연락 ' + J.P.length + '개' + (J.madi ? ' · 마디 ' + J.madi : '') + '</small></span><span class="ar">›</span></button>';
+      (n ? '오늘 끊기기 쉬운 자리 ' + n + '곳' : '오늘은 다 챙겼어요') + (jvFin(J).length ? ' · ✓ ' + jvFin(J).length : '') + ((J.D && J.D.length) ? ' · ⏳ 밀린 것 ' + J.D.length + '개' : '') + ' · 미리 세운 연락 ' + J.P.length + '개' + (J.madi ? ' · 마디 ' + J.madi : '') + '</small></span><span class="ar">›</span></button>';
   }
   /* 🤖 자비스로 합친 AI (시안 9차 openJarvis · PLACE 의 'ai' 일곱 · 판 X530) — 사장님 말씀 「AI 7개 → 자비스 하나로」(2026-11-24).
      ★ 묻는 곳은 자비스 하나 — 「APEX 자비스 모드」(apexmap · 서랍 맨 위 그 칸과 같은 길 · 말로 물으면 화면을 엶).
@@ -1083,6 +1228,10 @@
   var JVG = [['appt', '📌 약속 확인', '내일 · 오늘 약속 — 카톡 한 통'], ['late', '⏰ 약속 지남', '만났으면 다음 단계 · 못 만났으면 다시 약속'],
     ['pol', '📄 증권 전달', '계약완료 — 증권을 전해 드릴 차례'], ['ref', '🙌 소개 요청', '증권 전해 드린 분 — 소개 여쭐 차례']];
   var JVO = { more: {}, late: '' };
+  /* 🎯 판 X599 — <b>어느 시트에서 눌렀는지</b> 기억합니다. 챙기는 중의 줄을 미션 시트에서도
+     쓰게 되자, 미션에서 「⏭ 오늘 넘김」 을 눌러도 jvDo 가 늘 <b>챙기는 중</b>을 다시 그려
+     보고 있던 창이 엉뚱한 창으로 바뀌었습니다 — 누르면 그 자리에 있어야 합니다 (1번·6번). */
+  var JV_BACK = null;
   function jvBtns(x) {
     var r = T(function () { return g.hdbRow(x.id); }, null), can = !!(r && T(function () { return g.hdbCan(r); }, false)), id = Q(x.id), b = [];
     var B = function (cls, on, t) { return '<button type="button"' + (cls ? ' class="' + cls + '"' : '') + ' onclick="' + on + '">' + t + '</button>'; };
@@ -1111,22 +1260,27 @@
     return '<div class="jvr"><button type="button" class="jvr-n" onclick="HOME_V2.crm(\'' + Q(x.id) + '\',\'\')"><span class="jvw on">' + E(x.w) + '</span> ' + E(head) + (tail ? '<small>' + E(tail) + '</small>' : '') + '</button>' + jvBtns(x) + '</div>';
   }
   function jvSheet() {
-    var J = jvData(), all = J.L.length + J.done;
+    jvFresh();
+    JV_BACK = null;
+    var J = jvOnce(), Lf = jvLeft(J), Kf = jvFin(J), all = Lf.length + Kf.length;
+    var 옮긴 = ((J.L || []).length - Lf.length) + ((J.K || []).length - Kf.length);
     var row = function (x, on) {
       var go = x.id ? 'HOME_V2.crm(\'' + Q(x.id) + '\',\'\')' : (x.cid ? 'HOME_V2.close();osOpenClient(\'' + Q(x.cid) + '\')' : 'HOME_V2.close();try{MCAL.sel=\'' + Q(x.ds) + '\'}catch(e){};go(\'mycal\')');
       return '<button type="button" class="li" onclick="' + go + '"><span class="jvw' + (on ? ' on' : '') + '">' + E(x.w) + '</span><div class="tx"><div class="t1" style="white-space:normal;font-size:15px">' + E(x.t) + '</div></div><span class="ar">›</span></button>';
     };
     var h = '<h1>🛰 자비스가 챙기는 중</h1><div class="sub">고객이 중간에 끊기기 쉬운 자리 — 하나씩 끝내면 줄에서 빠져요</div>' +
-      '<div class="jvp"><div class="bar"><i style="width:' + (all ? Math.round(J.done * 100 / all) : 100) + '%"></i></div><span>오늘 ' + J.done + ' / ' + all + ' 마침</span></div>' +
-      '<h2>오늘 <small>' + J.L.length + '곳 남음</small></h2>';
-    if (!J.L.length) h += '<div class="list"><div class="li"><div class="tx"><div class="t2">오늘은 다 챙겼어요</div></div></div></div>';
+      '<div class="jvp"><div class="bar"><i style="width:' + (all ? Math.round(Kf.length * 100 / all) : 100) + '%"></i></div><span>오늘 ' + Kf.length + ' / ' + all + ' 마침</span></div>' +
+      (옮긴 ? '<div class="jvnote" style="margin:10px 0 0">🎯 <b>약속 · 지난 약속 ' + 옮긴 + '곳은 「오늘의 미션」 에서 챙겨요</b> — 같은 분이 두 곳에 서지 않게 한쪽으로 모았습니다(판 X599). 홈의 🎯 오늘의 미션에서 그 자리에 단추가 섭니다.</div>' : '') +
+      '<h2>오늘 <small>' + Lf.length + '곳 남음</small></h2>';
+    if (!Lf.length) h += '<div class="list"><div class="li"><div class="tx"><div class="t2">' + (옮긴 ? '남은 것은 미션에서 챙겨요' : '오늘은 다 챙겼어요') + '</div></div></div></div>';
     JVG.forEach(function (G) {
-      var L = J.L.filter(function (x) { return x.g === G[0]; }); if (!L.length) return;
+      if (MIS_OWN.indexOf(G[0]) >= 0) return;                 /* 미션이 안은 갈래 (5번) */
+      var L = Lf.filter(function (x) { return x.g === G[0]; }); if (!L.length) return;
       var open = !!JVO.more[G[0]], S = open ? L : L.slice(0, 5);
       h += '<div class="jvg"><div class="jvg-h">' + G[1] + ' <small>' + L.length + '곳 · ' + E(G[2]) + '</small></div>' + S.map(jvRow).join('') +
         (L.length > 5 ? '<button type="button" class="jvmore" onclick="HOME_V2.jvDo(\'more\',\'' + G[0] + '\')">' + (open ? '접기 ▴' : '나머지 ' + (L.length - 5) + '곳 더 보기 ▾') + '</button>' : '') + '</div>';
     });
-    if (J.done) h += '<div class="jvdone">✓ 오늘 마치거나 넘긴 ' + J.done + '곳은 내일 다시 확인해요(단계를 바꾼 분은 다시 안 서요)</div>';
+    if (Kf.length) h += '<div class="jvdone">✓ 오늘 마치거나 넘긴 ' + Kf.length + '곳은 내일 다시 확인해요(단계를 바꾼 분은 다시 안 서요)</div>';
     /* ⏳ 판 X596 — <b>밀린 것</b>을 「앞으로」 위에 따로 세웁니다. 지난 것을 2주 목록에
        섞으면 가장 급한 줄이 맨 아래로 묻힙니다. 날짜는 <b>원래 날</b>을 적습니다 —
        오늘로 끌어온 날을 적으면 「오늘 할 일」 처럼 보여 며칠 밀렸는지 모르십니다 (1번). */
@@ -1153,7 +1307,8 @@
       else if (k === 'againPut') { g.hmLateAgain(v); JVO.late = ''; later = true; }
       else if (k === 'more') JVO.more[v] = !JVO.more[v];
     } catch (e) {}
-    var re = function () { jvSheet(); var s2 = el('hv2Sheet'); if (s2) s2.scrollTop = y; try { paint(); } catch (e2) {} };
+    var back = JV_BACK;
+    var re = function () { if (typeof back === 'number') misSheet(back); else jvSheet(); var s2 = el('hv2Sheet'); if (s2) s2.scrollTop = y; try { paint(); } catch (e2) {} };
     re(); if (later) setTimeout(re, 1200);
   }
   /* 지금 이분 — 한 분 = 한 카드(옆으로 넘김) */
@@ -1723,6 +1878,7 @@
   }
 
   function html() {
+    jvFresh();                                   /* ⚡ 이번 그리기는 처음부터 — jvData · misItems (7번) */
     var L = T(function () { return g.hmLeft(); }, { list: [], all: 0 });
     /* 판 X592 — 인사까지는 위 한 줄(두 칸이 같은 높이에서 시작) · 왼쪽 = 🎯 미션 카드(영업활동 · 지금 이분) ·
        오른쪽 = 목표 · 다섯 걸음 · 챙기는 중(data-mv — 넓은 화면에선 bal() 이 높이를 보고 왼쪽으로 옮길 수 있음) → 🧭 상품전략 ~ 다른 메뉴.
@@ -1945,8 +2101,12 @@
       return null;
     }
     if (k === 'jv') {
-      var J = jvData();
-      return J.L.length ? { t: '챙길 자리 ' + J.L.length + '곳 남았어요 — 하나씩 열어 ✓ 완료', go: 'HOME_V2.jv()', lab: '보기' } : { t: '오늘 챙길 자리를 다 마쳤어요 👏', go: '', lab: '' };
+      /* ⚠ 판 X599 — 여기가 <b>화면을 내릴 때마다</b> jvData 를 통째로 다시 돌렸습니다
+         (달력까지 매번 · 7번). 그리고 미션으로 간 줄까지 세어 <b>카드와 다른 수</b>를
+         말하게 됐습니다 — 한 화면이 같은 물음에 두 답을 하면 안 됩니다 (1번·5번).
+         이제 카드와 <b>같은 자(jvOnce · jvLeft)</b>를 봅니다. */
+      var n = jvLeft(jvOnce()).length;
+      return n ? { t: '챙길 자리 ' + n + '곳 남았어요 — 하나씩 열어 ✓ 완료', go: 'HOME_V2.jv()', lab: '보기' } : { t: '오늘 챙길 자리를 다 마쳤어요 👏', go: '', lab: '' };
     }
     return null;
   }
