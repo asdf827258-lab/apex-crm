@@ -799,7 +799,27 @@
     if (m.appt) {
       var A = apptRows();
       if (!A.left.length) { sheet('<h1>🤝 오늘 약속</h1><div class="sub">' + (A.all ? '오늘 약속 ' + A.all + '곳을 다 챙겼어요 👏' : '오늘은 잡힌 약속이 없어요') + '</div>' + (A.all ? '' : '<button type="button" class="btn g" onclick="HOME_V2.close();go(\'mycal\')">📅 달력에서 약속 보기</button>')); return; }
-      sheet('<h1>🤝 오늘 약속</h1><div class="sub">만나면 「🤝 만났어요」 — 지금 이분 카드에서 눌러요</div>' + misJvHtml(m) +
+      /* ✅ 판 X596 — 사장님 말씀 (2026-11-28) 「오늘 할일에서는 <b>완료를 칠 수가 없는데</b>」.
+         ⚠ <b>재어 보니 미션 다섯 중 이 칸만 완료 단추가 0개였습니다</b>(나머지 넷은 체크판
+           칸이 있어 「✓ 했어요」 가 섭니다). MIS 표에서 이 칸만 ck 가 없고, 이 가지가
+           체크줄을 하나도 안 세우고 먼저 return 했습니다. 그래서 「오늘의 미션 0/5」 가
+           <b>영원히 5/5 가 안 됐습니다</b> — 다 됐다고 적을 길이 없는 자리입니다 (1번·6번).
+         ★ <b>새 저장 코드를 짜지 않았습니다</b> (5번) — 약속 하나하나의 「됐나」 를 묻는 곳은
+           이미 apptRows 의 hmIsDone · hmQdone 이고, <b>적는 자는 hmQfin 하나</b>입니다
+           (apex_hm_qdone_v1 · 하루치 · apex-kv-sync 가 서버로 올림 · 날이 바뀌면 다시 섬).
+           「지금 이분 카드」 의 「이분 끝」 과 <b>같은 칸</b>이라 두 곳이 어긋나지 않습니다.
+         ★ 단계는 <b>안 바꿉니다</b> — 단계를 올리는 것은 「🤝 만났어요」 가 할 일입니다.
+           여기서 올리면 안 만나고 미룬 약속도 PC 로 올라갑니다 (1번). 그래서 두 단추를
+           나란히 둡니다 — 「만났어요」 는 단계까지, 「다녀왔어요」 는 오늘 표시만. */
+      sheet('<h1>🤝 오늘 약속</h1><div class="sub">만나면 「🤝 만났어요」(단계까지) · 그 밖은 「✓ 다녀왔어요」(오늘 표시만)</div>' + misJvHtml(m) +
+        /* 옷은 <b>있는 것</b>을 씁니다 — 바로 아래 체크줄과 같은 칸입니다 (새 CSS 0줄) */
+        '<div class="list" style="margin-top:12px;padding:0">' + A.left.map(function (x) {
+          var hh = misTm(x.s);
+          return '<div class="mis-s"><div class="mis-s1"><span class="e">⬜</span><div><b>' + E((hh ? hh + ' ' : '') + nameOf(x) + '님') + '</b>' +
+            '<small>만나면 단계까지 올리고, 다녀만 왔으면 오늘 표시만</small></div></div><div class="mis-s2">' +
+            '<button type="button" class="mis-b" onclick="HOME_V2.misApt(\'' + Q(x.key) + '\')">✓ 다녀왔어요</button>' +
+            '<button type="button" class="mis-go" onclick="HOME_V2.misRail()">🤝 만났어요 ›</button></div></div>';
+        }).join('') + '</div>' +
         '<button type="button" class="btn p" style="margin-top:12px" onclick="HOME_V2.misRail()">🤝 지금 이분 카드로</button>'); return;
     }
     var ck = T(function () { return g.hmMsCk(); }, {}) || {};
@@ -824,6 +844,17 @@
     var r = el('hv2Rail'); if (!r) return;
     r.scrollIntoView({ behavior: 'smooth', block: 'center' });
     if (j >= 0 && r.children[j]) r.scrollTo({ left: r.children[j].offsetLeft - r.offsetLeft, behavior: 'smooth' });
+  }
+  /* ✅ 판 X596 — 약속 하나를 「오늘 다녀왔다」 로 적습니다. <b>적는 자는 hmQfin 하나</b>
+     입니다 (5번) — 「지금 이분 카드」 의 「이분 끝」 과 같은 칸이라 두 화면이 안 어긋납니다.
+     ★ 못 부르면 <b>그렇다고 말합니다</b> — 조용히 삼키면 눌러도 아무 일이 없는데 까닭을
+       알 길이 없습니다 (1번). 앞서 misDid 가 try/catch 로 삼키던 그 꼴을 안 따릅니다. */
+  function misApt(key) {
+    if (!key) return;
+    var ok = false;
+    try { if (typeof g.hmQfin === 'function') { g.hmQfin(key); ok = true; } } catch (e) { ok = false; }
+    if (!ok) { try { g.toast('오늘 표시를 못 담았습니다 — 화면을 한 번 새로 열어 주십시오'); } catch (e2) {} return; }
+    paint(); misSheet(1);
   }
   function misDid(i, ck, undo) {
     try { if (undo) g.hmMsUndo(ck); else g.hmMsDid(ck); } catch (e) {}
@@ -859,7 +890,7 @@
   var JV_DONE = 'apex_hv2_jv_done_v1';
   function jvSk(k) { return T(function () { return g.hmDaySkips(k); }, []) || []; }
   function jvData() {
-    var w = who(), td = ymdPlus(0), tm = ymdPlus(1), L = [], P = [], done = 0;
+    var w = who(), td = ymdPlus(0), tm = ymdPlus(1), L = [], P = [], D = [], done = 0;
     var nm = function (r) { return nameOf({ t: r.name || r.t || '' }) + '님'; };
     var dn = jvSk(JV_DONE), lsk = T(function () { return g.hmLateSkips(); }, []) || [], rsk = jvSk(T(function () { return g.HM_REFER_KEY; }, '') || 'apex_hm_refer_skip_v1');
     var add = function (o, skip) { if (skip) done++; else L.push(o); };
@@ -874,21 +905,36 @@
       add({ id: r.id, g: 'late', w: '약속 지남', st: String(r.stage || ''), t: nm(r) + ' ' + String(r.appt || '').slice(5, 10).replace('-', '/') + ' 약속 지남 — 만났으면 감사, 못 만났으면 다시 약속' }, lsk.indexOf(r.id) >= 0);
     });
     (T(function () { return g.hmReferRows(w); }, []) || []).forEach(function (r) { add({ id: r.id, g: 'ref', w: '소개', t: nm(r) + ' 소개 여쭐 차례' }, rsk.indexOf(r.id) >= 0); });
+    /* ⏳ 판 X596 — 사장님 말씀 (2026-11-28) 「오늘 스케줄 <b>밀린 것들</b> 다 정리해 주는데 왜 그거 안 되고」.
+       ⚠ <b>재어 보니 여기가 모레(n=2)부터 읽고 있었습니다.</b> mcalItems 는 날이 지난 것을
+         <b>오늘 자리로 끌어다 late 에 원래 날짜를 적어</b> 둡니다(index.html 19777행 그대로).
+         그런데 이 고리가 오늘·내일을 건너뛰어, <b>밀린 것이 한 줄도 안 섰습니다</b> —
+         달력 오늘 자리에 다섯이 있는데 카드는 「미리 세운 연락 0개」 라고 적었습니다 (1번).
+       ★ 그래서 <b>오늘(0)부터</b> 읽습니다. 밀린 것(late)은 D 로 따로 담아 시트가 맨 위에
+         세웁니다 — 「앞으로 할 것」 과 섞으면 지난 것이 2주 목록 안에 묻힙니다.
+       ★ <b>오늘·내일 약속은 여기서 안 셉니다</b> — 바로 위 배정 DB 줄(약속 확인)이 이미
+         세었습니다. 두 곳에서 각자 세면 같은 분이 두 줄로 섭니다 (5번).
+       ★ 세는 자를 새로 만들지 않았습니다 — mcalItems · mcalDay 는 달력 탭과 같은 자입니다. */
     var I = T(function () { return g.mcalItems(); }, {}) || {};
-    for (var n = 2; n <= 14; n++) {
+    for (var n = 0; n <= 14; n++) {
       var ds = ymdPlus(n);
       (T(function () { return g.mcalDay(I, ds); }, []) || []).forEach(function (x) {
         if (!x || (x.k !== 'next' && x.k !== 'appt')) return;
+        if (x.k === 'appt' && n < 2) return;               /* 위에서 이미 세었습니다 (5번) */
         var t = x.k === 'appt' ? T(function () { return g.hmFullNm(x.t); }, x.t) : x.t;
-        P.push({ ds: ds, cid: x.id || '', w: (+ds.slice(5, 7)) + '/' + (+ds.slice(8, 10)), t: (t || '') + ' · ' + (x.k === 'appt' ? '약속' + (x.s ? ' ' + String(x.s).slice(0, 5) : '') : '할 일') });
+        var lt = x.late ? String(x.late) : '';
+        var o = { ds: ds, cid: x.id || '', late: lt,
+                  w: lt ? ((+lt.slice(5, 7)) + '/' + (+lt.slice(8, 10))) : ((+ds.slice(5, 7)) + '/' + (+ds.slice(8, 10))),
+                  t: (t || '') + ' · ' + (x.k === 'appt' ? '약속' + (x.s ? ' ' + String(x.s).slice(0, 5) : '') : '할 일') };
+        if (lt) D.push(o); else P.push(o);
       });
     }
-    return { L: L, P: P, done: done, madi: T(function () { return g.mstDueList().monLeft; }, 0) || 0 };
+    return { L: L, P: P, D: D, done: done, madi: T(function () { return g.mstDueList().monLeft; }, 0) || 0 };
   }
   function jvHtml() {
     var J = jvData(), n = J.L.length;
     return '<button type="button" class="jv" onclick="HOME_V2.jv()"><span class="jv-i">🛰</span><span class="jv-t"><b>자비스가 챙기는 중</b><small>' +
-      (n ? '오늘 끊기기 쉬운 자리 ' + n + '곳' : '오늘은 다 챙겼어요') + (J.done ? ' · ✓ ' + J.done : '') + ' · 미리 세운 연락 ' + J.P.length + '개' + (J.madi ? ' · 마디 ' + J.madi : '') + '</small></span><span class="ar">›</span></button>';
+      (n ? '오늘 끊기기 쉬운 자리 ' + n + '곳' : '오늘은 다 챙겼어요') + (J.done ? ' · ✓ ' + J.done : '') + ((J.D && J.D.length) ? ' · ⏳ 밀린 것 ' + J.D.length + '개' : '') + ' · 미리 세운 연락 ' + J.P.length + '개' + (J.madi ? ' · 마디 ' + J.madi : '') + '</small></span><span class="ar">›</span></button>';
   }
   /* 🤖 자비스로 합친 AI (시안 9차 openJarvis · PLACE 의 'ai' 일곱 · 판 X530) — 사장님 말씀 「AI 7개 → 자비스 하나로」(2026-11-24).
      ★ 묻는 곳은 자비스 하나 — 「APEX 자비스 모드」(apexmap · 서랍 맨 위 그 칸과 같은 길 · 말로 물으면 화면을 엶).
@@ -1011,6 +1057,12 @@
         (L.length > 5 ? '<button type="button" class="jvmore" onclick="HOME_V2.jvDo(\'more\',\'' + G[0] + '\')">' + (open ? '접기 ▴' : '나머지 ' + (L.length - 5) + '곳 더 보기 ▾') + '</button>' : '') + '</div>';
     });
     if (J.done) h += '<div class="jvdone">✓ 오늘 마치거나 넘긴 ' + J.done + '곳은 내일 다시 확인해요(단계를 바꾼 분은 다시 안 서요)</div>';
+    /* ⏳ 판 X596 — <b>밀린 것</b>을 「앞으로」 위에 따로 세웁니다. 지난 것을 2주 목록에
+       섞으면 가장 급한 줄이 맨 아래로 묻힙니다. 날짜는 <b>원래 날</b>을 적습니다 —
+       오늘로 끌어온 날을 적으면 「오늘 할 일」 처럼 보여 며칠 밀렸는지 모르십니다 (1번). */
+    if (J.D && J.D.length) h += '<h2>⏳ 밀린 것 <small>' + J.D.length + '개 · 날이 지났어요 · 날짜는 원래 날</small></h2><div class="list">' +
+      J.D.slice(0, 20).map(function (x) { return row(x, 1); }).join('') +
+      (J.D.length > 20 ? '<button type="button" class="li" onclick="HOME_V2.close();go(\'mycal\')"><div class="tx"><div class="t1" style="color:var(--blue)">나머지 ' + (J.D.length - 20) + '개 — 달력에서 ›</div></div></button>' : '') + '</div>';
     h += '<h2>미리 세워 둔 연락 <small>' + J.P.length + '개 · 2주 안 · 달력에도 있어요</small></h2><div class="list">' + (J.P.length ? J.P.slice(0, 20).map(function (x) { return row(x, false); }).join('') : '<div class="li"><div class="tx"><div class="t2">2주 안에 잡아 둔 연락이 없어요</div></div></div>') +
         (J.P.length > 20 ? '<button type="button" class="li" onclick="HOME_V2.close();go(\'mycal\')"><div class="tx"><div class="t1" style="color:var(--blue)">나머지 ' + (J.P.length - 20) + '개는 달력에서 ›</div></div></button>' : '') + '</div>' +
       (J.madi ? '<button type="button" class="btn g" style="margin-top:12px" onclick="HOME_V2.close();go(\'clients\')">💌 이번 달 보낼 마디 ' + J.madi + ' — 고객 365일에서</button>' : '') +
@@ -2386,6 +2438,7 @@
     misRail: function () { close(); var A = apptRows(); if (A.left[0]) misRail(A.left[0].key); },
     crm: crmGo, act: actSheet, actData: actData, bal: bal,
     mis: misSheet, misDid: function (i, ck) { misDid(i, ck, 0); }, misUndo: function (i, ck) { misDid(i, ck, 1); },
+    misApt: misApt,
     newOn: newOn,
     msgAll: msgAll,
     /* 같은 내 설정 한 줄(user_prefs)에 다른 칸이 얹는 몫 — 📱 폰 확인(pchk-v2.js) · 새로 서버 부름을 만들지 않으려고 */
