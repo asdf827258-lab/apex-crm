@@ -194,6 +194,30 @@
       '.hv2 .streak b{color:var(--ink)}',
       '.hv2 .dock{position:fixed;left:12px;right:70px;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:140;display:grid;gap:4px;' +
         'background:rgba(255,255,255,.96);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:16px;padding:4px;box-shadow:0 6px 24px rgba(25,31,40,.14)}',
+      /* 🗜 판 X597 — 짧게 보는 중 안내 줄. <b>무엇을 접었는지</b>를 적는 자리라
+         접힘 규칙이 이 줄까지 먹으면 안 됩니다(옛 홈이 그 실수를 했습니다). */
+      '.hv2-sn{margin:0 0 12px;padding:12px 14px;border-radius:12px;background:var(--blue-l);' +
+        'color:var(--ink);font-size:15px;line-height:1.6;border:1px solid var(--line2)}',
+      '.hv2-sn b{font-weight:800}',
+      /* 🔎 판 X597 — <b>큰 글씨</b>. 사장님 말씀 「50대가 봐도 할 수 있을 정도로」.
+         재어 보니 이 화면 글자 250덩이 가운데 <b>144덩이</b>가 15px 아래였습니다.
+         ★ <b>칸마다 크기를 적지 않습니다.</b> 처음에는 이름을 열두 개 적어 쫓았는데
+           재어 보니 144 가운데 <b>37만</b> 커졌습니다 — 안 적은 칸은 그대로였고,
+           칸이 늘면 그 명단이 또 낡습니다. <code>zoom</code> 한 줄이면 글자·단추·틈이
+           <b>같은 비율로</b> 같이 커져 칸이 늘어도 따라옵니다 (144 → 5 · 작은 단추 5 → 0).
+         ⚠ <b>고정 띠 둘은 뺍니다.</b> <code>position:fixed</code> 인 것이 zoom 안에 들면
+           <code>bottom</code>·<code>right</code> 까지 1.25배가 되어 <b>자리가 밀립니다</b> —
+           재어 보니 자비스 말풍선이 31px 올라가고 띠가 17px 좁아졌습니다. 그래서
+           <code>#hv2 &gt; *</code> 에서 그 둘만 빼고 걸고, 띠 안 글씨는 따로 올립니다.
+         ⚠ 시트도 같습니다 — <code>#hv2Sheet</code> 는 <code>max-height:88vh</code> 라
+           통째로 키우면 <b>창보다 커져 손잡이가 위로 잘립니다.</b> 안쪽만 키웁니다.
+         ★ 사장님이 정하신 색·토큰은 한 톨도 안 바꿉니다 — 크기만.                 */
+      'body.hv2-big #hv2>*:not(.dock):not(.jvb){zoom:1.25}',
+      'body.hv2-big #hv2Sheet>*{zoom:1.25}',
+      'body.hv2-big #hv2 .nm{min-height:36px}',
+      'body.hv2-big #hv2 .dock button{font-size:15px;min-height:46px}',
+      'body.hv2-big #hv2 .jvb-b{font-size:16px}',
+      'body.hv2-big #hv2 .jvb-b small,body.hv2-big #hv2 .jvb-go,body.hv2-big #hv2 .jvb-x{font-size:15px}',
       '.hv2 .jvb{position:fixed;left:12px;right:70px;bottom:calc(126px + env(safe-area-inset-bottom,0px));z-index:141;display:flex;align-items:flex-end;gap:8px;pointer-events:none}',
       '.hv2 .jvb>*{pointer-events:auto}',
       '.hv2 .jvb-a{flex:none;width:44px;height:44px;border-radius:22px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.14);font-size:22px}',
@@ -500,9 +524,36 @@
   function dayLabel() {
     var d = new Date(); return (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' + '일월화수목금토'.charAt(d.getDay()) + '요일';
   }
+  /* 🗜 짧게 보기가 켜졌나 — <b>묻는 곳은 본체의 hmShortOn 하나</b>입니다 (5번).
+     여기서 또 담으면 단추와 화면이 다른 답을 하게 됩니다. */
+  function shortOn() { return T(function () { return g.hmShortOn(); }, false) === true; }
+  /* <b>무엇을 접었는지 이름으로</b> 적습니다 (1번) — 조용히 사라지면 「어디 갔지」 하십니다.
+     ★ 이 줄은 <b>이 화면이 실제로 접은 것</b>만 적습니다. 옛 홈의 안내 줄을 그대로
+       쓰면 또 거짓말이 됩니다(그 줄은 옛 홈이 접는 것을 적습니다).                */
+  function shortNote() {
+    return '<div class="hv2-sn">🗜 <b>짧게 보는 중</b> — 오늘 할 일과 챙기는 중만 남겼어요.' +
+      ' 접은 것: 👥 팀 명단 · 🎯 이번 달 목표 · 🧭 상품전략 · 📆 이번 주 · 🚗 동선 · 🔁 영업 한 바퀴 · 🌙 저녁 · ☰ 다른 메뉴.' +
+      ' 맨 위 <b>「🗜 다 보기」</b> 를 누르면 그대로 돌아와요.</div>';
+  }
+  /* 🔎 <b>큰 글씨</b> (판 X597) — 사장님 말씀 「50대가 봐도 할 수 있을 정도로」.
+     ★ 켜고 끄는 <b>자리는 여기 하나</b>입니다 — 크기를 정하는 옷은 <code>css()</code> 의
+       <code>body.hv2-big</code> 한 겹에만 있고, 그 겹이 하는 일은 거기 적혀 있습니다.
+     ★ 이 기기에만 담습니다(보기 취향) — 서버로 안 올립니다 (3번 · 7번).
+     ★ 다시 열어도 켜진 채여야 해 <code>paint()</code> 첫 줄에서 <code>bigApply()</code> 를
+       부릅니다 — 「켜 두었는데 새로 열면 꺼져 있다」 가 되지 않게.                */
+  var BIG_KEY = 'apex_hv2_big_v1';
+  function bigOn() { return T(function () { return g.localStorage.getItem(BIG_KEY); }, null) === '1'; }
+  function bigSet(v) {
+    try { if (v) g.localStorage.setItem(BIG_KEY, '1'); else g.localStorage.removeItem(BIG_KEY); } catch (e) {}
+    bigApply();
+  }
+  function bigApply() {
+    try { g.document.body.classList.toggle('hv2-big', bigOn()); } catch (e) {}
+  }
   function topHtml() {
     return '<div class="top"><span class="day">' + E(dayLabel()) + '</span><div class="r">' +
       '<button type="button" class="nmbtn" onclick="HOME_V2.nm()">' + (hidden() ? '👁 이름 보기' : '🙈 이름 가리기') + '</button>' +
+      '<button type="button" class="nmbtn" onclick="HOME_V2.big()">' + (bigOn() ? '🔎 글씨 작게' : '🔎 글씨 크게') + '</button>' +
       '<button type="button" class="nmbtn bk" onclick="HOME_V2.use(false)">↩ 예전 화면</button></div></div>';
   }
   /* 👥 팀원 화면 그대로 보기 — 시안 who-strip(동그라미 한 줄 · 목표 고리).
@@ -1666,8 +1717,26 @@
        오른쪽 = 목표 · 다섯 걸음 · 챙기는 중(data-mv — 넓은 화면에선 bal() 이 높이를 보고 왼쪽으로 옮길 수 있음) → 🧭 상품전략 ~ 다른 메뉴.
        미션을 못 세우는 판이면 예전처럼 「지금 이분」 만. 폰은 위에서 아래로 같은 차례. */
     var mb = function (x) { return x ? '<div class="hv2-b" data-mv="1">' + x + '</div>' : ''; };
-    return topHtml() + whoHtml() + helloHtml(L) + '<div class="hv2-g"><div class="hv2-c">' + (part(function () { return misHtml(L); }) || railHtml(L)) +
-      '</div><div class="hv2-c">' + mb(monHtml()) + mb(stepsHtml()) + mb(jvHtml()) + inscHtml() + weekHtml() + part(routeHtml) + roadHtml() + eveHtml(L) + menuHtml() + '</div></div>' +
+    /* 🗜 판 X597 — <b>짧게 보기를 이 화면이 알아듣습니다</b> (사장님 말씀 2026-11-28
+       「조금 더 쉽게 … 50대가 봐도 할 수 있을 정도로」).
+       ⚠ <b>재어 보니 짧게 보기가 이 화면에서 아무 일도 안 했습니다.</b> 눌러도
+         높이가 2,708px 그대로인데, 화면은 「감춘 것: 📇 고객 띠 · 🌅 아침 미션 ·
+         🚗 동선 · 📅 약속 · 📊 기록 · 📆 이번 주 …」 라고 <b>일곱을 감췄다고</b>
+         적었습니다. 까닭은 그 옷이 <code>#hmTossHost</code>(옛 홈 틀) 밑만 감추는데
+         이 화면은 <code>#hv2</code> 라 <b>한 규칙에도 안 걸린 것</b>입니다 (1번·6번).
+       ★ <b>묻는 곳은 hmShortOn 하나</b>입니다 (5번) — 켜짐을 여기서 또 담지 않습니다.
+       ★ <b>지우는 것이 아니라 접는 것</b>입니다 — 다시 누르면 그대로 돌아옵니다 (6번).
+       ★ 남기는 것은 옛 약속 그대로 — <b>「지금 할 것」(🎯 미션 · 지금 이분)과
+         다섯 걸음</b>, 그리고 사장님이 바로 앞 판에서 고치라 하신 <b>🛰 챙기는 중</b>.
+       ★ <b>짓는 줄은 아래 한 줄 그대로</b>입니다 — 짧게 쓰는 줄을 따로 두었다가
+         칸 차례가 섞였습니다(<code>whoHtml</code> 이 <code>stepsHtml</code> 뒤로 갔습니다).
+         접는 자리에만 문(<code>sh ? '' : …</code>)을 세웁니다 — <b>차례는 한 곳</b>(5번).
+       ★ 접힌 칸은 <b>부르지도 않습니다</b> — 동선처럼 길찾기를 묻는 칸이 있어서입니다 (7번). */
+    var sh = shortOn();
+    return topHtml() + (sh ? '' : whoHtml()) + helloHtml(L) + (sh ? shortNote() : '') +
+      '<div class="hv2-g"><div class="hv2-c">' + (part(function () { return misHtml(L); }) || railHtml(L)) +
+      '</div><div class="hv2-c">' + (sh ? '' : mb(monHtml())) + mb(stepsHtml()) + mb(jvHtml()) +
+      (sh ? '' : inscHtml() + weekHtml() + part(routeHtml) + roadHtml() + eveHtml(L) + menuHtml()) + '</div></div>' +
       dockHtml() + jvbHtml();
     /* ⚠ 판 X511 — 맨 아래 「새 오늘 화면 (시험) · 시안 9차 디자인 · …」 설명 줄을 거뒀습니다
          (시안에 없음 · 토스 원칙 ③ 화면에 설명 문장 금지). 예전 화면으로 가는 길은 맨 위 「↩ 예전 화면」 단추 하나. */
@@ -2257,6 +2326,9 @@
   /* ── 그리기 ─────────────────────────────────────────────────────── */
   function paint() {
     var box = el('hv2'); if (!box) return;
+    /* 🔎 판 X597 — 큰 글씨는 <b>그릴 때마다</b> 몸에 얹습니다. 한 번만 얹으면
+       화면을 떠났다 오거나 다시 그릴 때 조용히 풀립니다 (6번). */
+    bigApply();
     var r = el('hv2Rail'), l = r ? r.scrollLeft : 0;
     try { box.innerHTML = html(); }
     catch (e) { fallback(e); return; }
@@ -2448,6 +2520,10 @@
     mis: misSheet, misDid: function (i, ck) { misDid(i, ck, 0); }, misUndo: function (i, ck) { misDid(i, ck, 1); },
     misApt: misApt,
     newOn: newOn,
+    /* 🔎 큰 글씨 — 누르면 바로 보이고, 다시 누르면 돌아옵니다 (6번) */
+    big: function () { bigSet(!bigOn()); paint();
+      try { g.toast(bigOn() ? '🔎 글씨를 크게 했어요 — 이 기기에만 담겨요' : '🔎 글씨를 원래대로 했어요'); } catch (e) {} },
+    bigOn: bigOn, bigApply: bigApply, shortOn: shortOn,
     msgAll: msgAll,
     /* 같은 내 설정 한 줄(user_prefs)에 다른 칸이 얹는 몫 — 📱 폰 확인(pchk-v2.js) · 새로 서버 부름을 만들지 않으려고 */
     prefPut: function (k, v) { return prefPut(k, v); },
