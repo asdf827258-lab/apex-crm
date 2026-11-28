@@ -135,6 +135,19 @@ const IX = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
     const 큰단추 = () => Array.from(document.querySelectorAll('#hv2 .top button')).filter((b) => /글씨/.test(b.textContent || ''))[0];
     const 글머리 = (b) => b ? (b.textContent || '').trim() : '없음';
 
+    /* 🙈 <b>오늘 화면이 위 띠에 이미 선 단추를 또 세우나</b> (판 X598 · 5번)
+       ⚠ 「지금 이분」 카드는 같은 글이 석 장 나란히 서는 것이 <b>맞습니다</b>(카드마다 하나) —
+         그래서 <b>오늘 화면 안과 밖에 걸쳐</b> 같은 글이 설 때만 셉니다. */
+    const 글 = (x) => String(x.textContent || '').replace(/\s+/g, ' ').trim();
+    const 모든누를것 = Array.from(document.querySelectorAll('button,a[href],[onclick]')).filter(보임);
+    const 묶음 = {};
+    모든누를것.forEach((x) => { const t = 글(x); if (!t || t.length > 18) return;
+      (묶음[t] = 묶음[t] || []).push({ 안: !!x.closest('#hv2'), id: x.id || '',
+        y: Math.round(x.getBoundingClientRect().top), on: String(x.getAttribute('onclick') || '').slice(0, 40) }); });
+    O.안팎겹침 = Object.keys(묶음)
+      .filter((k) => 묶음[k].some((p) => p.안) && 묶음[k].some((p) => !p.안))
+      .map((k) => k + ' ← ' + 묶음[k].map((p) => (p.안 ? '오늘 y' : '위 띠 y') + p.y + (p.id ? '(' + p.id + ')' : '')).join(' · '));
+
     /* ── 처음 ── */
     O.처음 = { 칸: 선칸(), 키: 키(), 옆: 옆(), 잼: 잼('hv2'),
       짧은글: 글머리(짧은단추()), 큰글: 글머리(큰단추()), 띠: 띠() };
@@ -260,6 +273,16 @@ const IX = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
     '  담긴 칸은 보기 취향 둘뿐 — ' + (R.담긴칸 || []).join(' · '));
   is(!/\.(insert|update|upsert|rpc)\(/.test(HV.slice(HV.indexOf('function bigOn'), HV.indexOf('function bigOn') + 900)),
     '  큰 글씨는 <b>서버에 한 글자도 안 올린다</b> — 이 기기 보기 취향입니다');
+
+  head('[10] ★★ <b>오늘 화면이 위 띠에 이미 선 단추를 또 세우나</b> (5번)');
+  /* 재어 보니 「🙈 이름 가리기」 가 글자 하나 안 다르게 <b>69px 차이로 둘</b>이었습니다 —
+     위 띠 y44(#hmNmBtn)와 오늘 화면 y113. 50대 팀원이 보면 어느 것이 참인지 모릅니다 (1번). */
+  is((R.안팎겹침 || []).length === 0, '  같은 글의 단추가 <b>오늘 화면 안과 위 띠에 걸쳐</b> 서지 않는다 — ' +
+    ((R.안팎겹침 || []).length ? (R.안팎겹침.length + '곳 ← ' + R.안팎겹침.slice(0, 2).join(' | ')) : '0곳'));
+  is(/function nmUp\(\)[\s\S]{0,200}HM_NM_TABS/.test(HV),
+    '  묻는 곳은 <b>HM_NM_TABS 하나</b> — 위 띠가 그 단추를 어느 화면에 세우는지 다시 세지 않는다');
+  is(/HM_NM_TABS\[/.test(IX) && /nmUp\(\) \? '' :/.test(HV),
+    '  위 띠가 <b>안 세우는 화면에서는 여기서 세운다</b> — 길을 없앤 것이 아닙니다 (6번)');
 
   head('터진 것');
   is(errs.length === 0, '  화면이 안 터진다 — ' + (errs.length ? errs.slice(0, 2).join(' | ') : '0건'));

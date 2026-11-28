@@ -550,9 +550,20 @@
   function bigApply() {
     try { g.document.body.classList.toggle('hv2-big', bigOn()); } catch (e) {}
   }
+  /* 🙈 <b>위 띠가 이미 세우는 단추를 여기서 또 세우지 않습니다</b> (판 X598 · 5번).
+     재어 보니 「🙈 이름 가리기」 가 <b>글자 하나 안 다르게 69px 차이로 둘</b>이었습니다 —
+     위 띠 y44(<code>#hmNmBtn</code>)와 이 줄 y113. 50대 팀원이 보면 어느 것이 참인지
+     알 수 없고, 둘 중 하나만 눌러 보고 「안 된다」 고 하실 자리입니다 (1번).
+     ★ <b>묻는 곳은 HM_NM_TABS 하나</b>입니다 — 위 띠가 어느 화면에 그 단추를 세우는지
+       아는 곳이 거기 하나라, 여기서 다시 세지 않고 그것을 봅니다 (5번).
+     ★ <b>길을 없앤 것이 아닙니다</b> — 위 띠가 안 세우는 화면에서는 여기서 세웁니다.
+       사장님이 2026-11-09 (판 X399) 에 「맨 위 띠」 에 두라 하신 그 단추가 임자입니다 (6번). */
+  function nmUp() {
+    return T(function () { return !!(g.HM_NM_TABS && g.HM_NM_TABS[g.currentTab()]); }, false);
+  }
   function topHtml() {
     return '<div class="top"><span class="day">' + E(dayLabel()) + '</span><div class="r">' +
-      '<button type="button" class="nmbtn" onclick="HOME_V2.nm()">' + (hidden() ? '👁 이름 보기' : '🙈 이름 가리기') + '</button>' +
+      (nmUp() ? '' : '<button type="button" class="nmbtn" onclick="HOME_V2.nm()">' + (hidden() ? '👁 이름 보기' : '🙈 이름 가리기') + '</button>') +
       '<button type="button" class="nmbtn" onclick="HOME_V2.big()">' + (bigOn() ? '🔎 글씨 작게' : '🔎 글씨 크게') + '</button>' +
       '<button type="button" class="nmbtn bk" onclick="HOME_V2.use(false)">↩ 예전 화면</button></div></div>';
   }
